@@ -864,11 +864,11 @@ define void @test_masked_store_intervening(<8 x i32> %x, ptr %ptr, <8 x i1> %mas
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    sub sp, sp, #96
 ; SVE-NEXT:    stp q1, q0, [sp, #32] // 32-byte Folded Spill
-; SVE-NEXT:    ldp q1, q3, [x0]
 ; SVE-NEXT:    movi v0.2d, #0000000000000000
+; SVE-NEXT:    ldp q1, q3, [x0]
 ; SVE-NEXT:    str d8, [sp, #64] // 8-byte Spill
-; SVE-NEXT:    fmov d8, d2
 ; SVE-NEXT:    stp x30, x19, [sp, #80] // 16-byte Folded Spill
+; SVE-NEXT:    fmov d8, d2
 ; SVE-NEXT:    mov x19, x0
 ; SVE-NEXT:    stp q1, q3, [sp] // 32-byte Folded Spill
 ; SVE-NEXT:    movi v1.2d, #0000000000000000

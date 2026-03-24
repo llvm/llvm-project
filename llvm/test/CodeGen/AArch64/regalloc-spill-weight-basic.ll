@@ -45,9 +45,9 @@ define void @optsize(i32 %arg, i32 %arg1, ptr %arg2, ptr %arg3, ptr %arg4, i32 %
 ; CHECK-NEXT:    b .LBB0_1
 ; CHECK-NEXT:  .LBB0_6: // %bb10
 ; CHECK-NEXT:    // in Loop: Header=BB0_1 Depth=1
+; CHECK-NEXT:    str wzr, [x22]
 ; CHECK-NEXT:    mov w0, w23
 ; CHECK-NEXT:    mov x1, x21
-; CHECK-NEXT:    str wzr, [x22]
 ; CHECK-NEXT:    bl foo
 ; CHECK-NEXT:    b .LBB0_1
 bb:
@@ -105,9 +105,9 @@ define void @optspeed(i32 %arg, i32 %arg1, ptr %arg2, ptr %arg3, ptr %arg4, i32 
 ; CHECK-NEXT:    b .LBB1_2
 ; CHECK-NEXT:  .LBB1_1: // %bb10
 ; CHECK-NEXT:    // in Loop: Header=BB1_2 Depth=1
+; CHECK-NEXT:    str wzr, [x21]
 ; CHECK-NEXT:    mov w0, w22
 ; CHECK-NEXT:    mov x1, x20
-; CHECK-NEXT:    str wzr, [x21]
 ; CHECK-NEXT:    bl foo
 ; CHECK-NEXT:  .LBB1_2: // %bb8
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1

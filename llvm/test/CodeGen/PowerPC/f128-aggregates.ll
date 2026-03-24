@@ -363,8 +363,8 @@ define fp128 @testMixedAggregate_03([4 x i128] %sa.coerce) {
 ; CHECK-P8-NEXT:    .cfi_offset v31, -32
 ; CHECK-P8-NEXT:    li r4, 64
 ; CHECK-P8-NEXT:    std r30, 80(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    extsw r3, r3
 ; CHECK-P8-NEXT:    mr r30, r10
+; CHECK-P8-NEXT:    extsw r3, r3
 ; CHECK-P8-NEXT:    stvx v31, r1, r4 # 16-byte Folded Spill
 ; CHECK-P8-NEXT:    addi r4, r1, 48
 ; CHECK-P8-NEXT:    std r6, 56(r1)
@@ -377,8 +377,8 @@ define fp128 @testMixedAggregate_03([4 x i128] %sa.coerce) {
 ; CHECK-P8-NEXT:    vmr v2, v31
 ; CHECK-P8-NEXT:    bl __addkf3
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    mr r3, r30
 ; CHECK-P8-NEXT:    vmr v31, v2
+; CHECK-P8-NEXT:    mr r3, r30
 ; CHECK-P8-NEXT:    bl __floatdikf
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    vmr v3, v2

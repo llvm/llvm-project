@@ -285,8 +285,8 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; ARM5-NEXT:    push {r4, r5, r6, lr}
 ; ARM5-NEXT:    and r1, r1, #1
 ; ARM5-NEXT:    mov r5, r3
-; ARM5-NEXT:    rsb r1, r1, #0
 ; ARM5-NEXT:    mov r6, r2
+; ARM5-NEXT:    rsb r1, r1, #0
 ; ARM5-NEXT:    mov r2, #9
 ; ARM5-NEXT:    mov r3, #0
 ; ARM5-NEXT:    bl __moddi3
@@ -295,9 +295,9 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; ARM5-NEXT:    orrs r4, r0, r1
 ; ARM5-NEXT:    and r0, r5, #1
 ; ARM5-NEXT:    rsb r1, r0, #0
+; ARM5-NEXT:    movne r4, #1
 ; ARM5-NEXT:    mov r0, r6
 ; ARM5-NEXT:    mov r3, #0
-; ARM5-NEXT:    movne r4, #1
 ; ARM5-NEXT:    bl __moddi3
 ; ARM5-NEXT:    mov r2, #1
 ; ARM5-NEXT:    bic r1, r2, r1
@@ -305,10 +305,10 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; ARM5-NEXT:    eor r0, r0, r2
 ; ARM5-NEXT:    orrs r5, r0, r1
 ; ARM5-NEXT:    ldr r0, [sp, #20]
-; ARM5-NEXT:    mvn r2, #8
-; ARM5-NEXT:    mvn r3, #0
-; ARM5-NEXT:    and r0, r0, #1
 ; ARM5-NEXT:    movne r5, #1
+; ARM5-NEXT:    mvn r2, #8
+; ARM5-NEXT:    and r0, r0, #1
+; ARM5-NEXT:    mvn r3, #0
 ; ARM5-NEXT:    rsb r1, r0, #0
 ; ARM5-NEXT:    ldr r0, [sp, #16]
 ; ARM5-NEXT:    bl __moddi3
@@ -324,8 +324,8 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; ARM6-NEXT:    push {r4, r5, r6, lr}
 ; ARM6-NEXT:    and r1, r1, #1
 ; ARM6-NEXT:    mov r5, r3
-; ARM6-NEXT:    rsb r1, r1, #0
 ; ARM6-NEXT:    mov r6, r2
+; ARM6-NEXT:    rsb r1, r1, #0
 ; ARM6-NEXT:    mov r2, #9
 ; ARM6-NEXT:    mov r3, #0
 ; ARM6-NEXT:    bl __moddi3
@@ -334,9 +334,9 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; ARM6-NEXT:    orrs r4, r0, r1
 ; ARM6-NEXT:    and r0, r5, #1
 ; ARM6-NEXT:    rsb r1, r0, #0
+; ARM6-NEXT:    movne r4, #1
 ; ARM6-NEXT:    mov r0, r6
 ; ARM6-NEXT:    mov r3, #0
-; ARM6-NEXT:    movne r4, #1
 ; ARM6-NEXT:    bl __moddi3
 ; ARM6-NEXT:    mov r2, #1
 ; ARM6-NEXT:    bic r1, r2, r1
@@ -344,10 +344,10 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; ARM6-NEXT:    eor r0, r0, r2
 ; ARM6-NEXT:    orrs r5, r0, r1
 ; ARM6-NEXT:    ldr r0, [sp, #20]
-; ARM6-NEXT:    mvn r2, #8
-; ARM6-NEXT:    mvn r3, #0
-; ARM6-NEXT:    and r0, r0, #1
 ; ARM6-NEXT:    movne r5, #1
+; ARM6-NEXT:    mvn r2, #8
+; ARM6-NEXT:    and r0, r0, #1
+; ARM6-NEXT:    mvn r3, #0
 ; ARM6-NEXT:    rsb r1, r0, #0
 ; ARM6-NEXT:    ldr r0, [sp, #16]
 ; ARM6-NEXT:    bl __moddi3
@@ -383,9 +383,9 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; ARM7-NEXT:    ldr r2, [sp, #40]
 ; ARM7-NEXT:    mov r5, r1
 ; ARM7-NEXT:    and r0, r0, #1
-; ARM7-NEXT:    mvn r3, #0
-; ARM7-NEXT:    rsb r1, r0, #0
 ; ARM7-NEXT:    vmov.32 d9[0], r7
+; ARM7-NEXT:    rsb r1, r0, #0
+; ARM7-NEXT:    mvn r3, #0
 ; ARM7-NEXT:    mov r0, r2
 ; ARM7-NEXT:    mvn r2, #8
 ; ARM7-NEXT:    bl __moddi3
@@ -459,9 +459,9 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; ARM8-NEXT:    ldr r2, [sp, #40]
 ; ARM8-NEXT:    mov r5, r1
 ; ARM8-NEXT:    and r0, r0, #1
-; ARM8-NEXT:    mvn r3, #0
-; ARM8-NEXT:    rsb r1, r0, #0
 ; ARM8-NEXT:    vmov.32 d9[0], r7
+; ARM8-NEXT:    rsb r1, r0, #0
+; ARM8-NEXT:    mvn r3, #0
 ; ARM8-NEXT:    mov r0, r2
 ; ARM8-NEXT:    mvn r2, #8
 ; ARM8-NEXT:    bl __moddi3
@@ -535,9 +535,9 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; NEON7-NEXT:    ldr r2, [sp, #40]
 ; NEON7-NEXT:    mov r5, r1
 ; NEON7-NEXT:    and r0, r0, #1
-; NEON7-NEXT:    mvn r3, #0
-; NEON7-NEXT:    rsb r1, r0, #0
 ; NEON7-NEXT:    vmov.32 d9[0], r7
+; NEON7-NEXT:    rsb r1, r0, #0
+; NEON7-NEXT:    mvn r3, #0
 ; NEON7-NEXT:    mov r0, r2
 ; NEON7-NEXT:    mvn r2, #8
 ; NEON7-NEXT:    bl __moddi3
@@ -611,9 +611,9 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; NEON8-NEXT:    ldr r2, [sp, #40]
 ; NEON8-NEXT:    mov r5, r1
 ; NEON8-NEXT:    and r0, r0, #1
-; NEON8-NEXT:    mvn r3, #0
-; NEON8-NEXT:    rsb r1, r0, #0
 ; NEON8-NEXT:    vmov.32 d9[0], r7
+; NEON8-NEXT:    rsb r1, r0, #0
+; NEON8-NEXT:    mvn r3, #0
 ; NEON8-NEXT:    mov r0, r2
 ; NEON8-NEXT:    mvn r2, #8
 ; NEON8-NEXT:    bl __moddi3

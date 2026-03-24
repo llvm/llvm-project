@@ -16,38 +16,38 @@ define dso_local signext i32 @_Z5test2iPPKc(i32 signext %argc, ptr nocapture rea
 ; 32BIT-NEXT:    mflr r0
 ; 32BIT-NEXT:    stwu r1, -464(r1)
 ; 32BIT-NEXT:    stw r0, 472(r1)
-; 32BIT-NEXT:    stw r30, 320(r1) # 4-byte Folded Spill
-; 32BIT-NEXT:    li r30, 0
+; 32BIT-NEXT:    stw r14, 256(r1) # 4-byte Folded Spill
 ; 32BIT-NEXT:    stxv v20, 64(r1) # 16-byte Folded Spill
 ; 32BIT-NEXT:    stxv v21, 80(r1) # 16-byte Folded Spill
-; 32BIT-NEXT:    stw r31, 324(r1) # 4-byte Folded Spill
-; 32BIT-NEXT:    mr r31, r3
-; 32BIT-NEXT:    stw r14, 256(r1) # 4-byte Folded Spill
-; 32BIT-NEXT:    stxv v22, 96(r1) # 16-byte Folded Spill
 ; 32BIT-NEXT:    stw r15, 260(r1) # 4-byte Folded Spill
-; 32BIT-NEXT:    stxv v23, 112(r1) # 16-byte Folded Spill
+; 32BIT-NEXT:    stxv v22, 96(r1) # 16-byte Folded Spill
 ; 32BIT-NEXT:    stw r16, 264(r1) # 4-byte Folded Spill
-; 32BIT-NEXT:    stxv v24, 128(r1) # 16-byte Folded Spill
+; 32BIT-NEXT:    stxv v23, 112(r1) # 16-byte Folded Spill
 ; 32BIT-NEXT:    stw r17, 268(r1) # 4-byte Folded Spill
 ; 32BIT-NEXT:    stw r18, 272(r1) # 4-byte Folded Spill
-; 32BIT-NEXT:    stxv v25, 144(r1) # 16-byte Folded Spill
+; 32BIT-NEXT:    stxv v24, 128(r1) # 16-byte Folded Spill
 ; 32BIT-NEXT:    stw r19, 276(r1) # 4-byte Folded Spill
-; 32BIT-NEXT:    stxv v26, 160(r1) # 16-byte Folded Spill
+; 32BIT-NEXT:    stxv v25, 144(r1) # 16-byte Folded Spill
 ; 32BIT-NEXT:    stw r20, 280(r1) # 4-byte Folded Spill
-; 32BIT-NEXT:    stxv v27, 176(r1) # 16-byte Folded Spill
+; 32BIT-NEXT:    stxv v26, 160(r1) # 16-byte Folded Spill
 ; 32BIT-NEXT:    stw r21, 284(r1) # 4-byte Folded Spill
 ; 32BIT-NEXT:    stw r22, 288(r1) # 4-byte Folded Spill
-; 32BIT-NEXT:    stxv v28, 192(r1) # 16-byte Folded Spill
+; 32BIT-NEXT:    stxv v27, 176(r1) # 16-byte Folded Spill
 ; 32BIT-NEXT:    stw r23, 292(r1) # 4-byte Folded Spill
-; 32BIT-NEXT:    stxv v29, 208(r1) # 16-byte Folded Spill
+; 32BIT-NEXT:    stxv v28, 192(r1) # 16-byte Folded Spill
 ; 32BIT-NEXT:    stw r24, 296(r1) # 4-byte Folded Spill
-; 32BIT-NEXT:    stxv v30, 224(r1) # 16-byte Folded Spill
+; 32BIT-NEXT:    stxv v29, 208(r1) # 16-byte Folded Spill
 ; 32BIT-NEXT:    stw r25, 300(r1) # 4-byte Folded Spill
 ; 32BIT-NEXT:    stw r26, 304(r1) # 4-byte Folded Spill
-; 32BIT-NEXT:    stxv v31, 240(r1) # 16-byte Folded Spill
+; 32BIT-NEXT:    stxv v30, 224(r1) # 16-byte Folded Spill
 ; 32BIT-NEXT:    stw r27, 308(r1) # 4-byte Folded Spill
+; 32BIT-NEXT:    stxv v31, 240(r1) # 16-byte Folded Spill
 ; 32BIT-NEXT:    stw r28, 312(r1) # 4-byte Folded Spill
 ; 32BIT-NEXT:    stw r29, 316(r1) # 4-byte Folded Spill
+; 32BIT-NEXT:    stw r30, 320(r1) # 4-byte Folded Spill
+; 32BIT-NEXT:    li r30, 0
+; 32BIT-NEXT:    stw r31, 324(r1) # 4-byte Folded Spill
+; 32BIT-NEXT:    mr r31, r3
 ; 32BIT-NEXT:    stfd f15, 328(r1) # 8-byte Folded Spill
 ; 32BIT-NEXT:    stfd f16, 336(r1) # 8-byte Folded Spill
 ; 32BIT-NEXT:    stfd f17, 344(r1) # 8-byte Folded Spill
@@ -68,10 +68,10 @@ define dso_local signext i32 @_Z5test2iPPKc(i32 signext %argc, ptr nocapture rea
 ; 32BIT-NEXT:    #APP
 ; 32BIT-NEXT:    nop
 ; 32BIT-NEXT:    #NO_APP
-; 32BIT-NEXT:  L..tmp0:
+; 32BIT-NEXT:  L..tmp0: # EH_LABEL
 ; 32BIT-NEXT:    bl ._Z4testi[PR]
 ; 32BIT-NEXT:    nop
-; 32BIT-NEXT:  L..tmp1:
+; 32BIT-NEXT:  L..tmp1: # EH_LABEL
 ; 32BIT-NEXT:  L..BB0_1: # %return
 ; 32BIT-NEXT:    lxv v31, 240(r1) # 16-byte Folded Reload
 ; 32BIT-NEXT:    lxv v30, 224(r1) # 16-byte Folded Reload
@@ -126,7 +126,7 @@ define dso_local signext i32 @_Z5test2iPPKc(i32 signext %argc, ptr nocapture rea
 ; 32BIT-NEXT:    mtlr r0
 ; 32BIT-NEXT:    blr
 ; 32BIT-NEXT:  L..BB0_2: # %lpad
-; 32BIT-NEXT:  L..tmp2:
+; 32BIT-NEXT:  L..tmp2: # EH_LABEL
 ; 32BIT-NEXT:    bl .__cxa_begin_catch[PR]
 ; 32BIT-NEXT:    nop
 ; 32BIT-NEXT:    lwz r3, 0(r3)
@@ -140,38 +140,38 @@ define dso_local signext i32 @_Z5test2iPPKc(i32 signext %argc, ptr nocapture rea
 ; 64BIT-NEXT:    mflr r0
 ; 64BIT-NEXT:    stdu r1, -592(r1)
 ; 64BIT-NEXT:    std r0, 608(r1)
-; 64BIT-NEXT:    std r30, 440(r1) # 8-byte Folded Spill
-; 64BIT-NEXT:    li r30, 0
+; 64BIT-NEXT:    std r14, 312(r1) # 8-byte Folded Spill
 ; 64BIT-NEXT:    stxv v20, 112(r1) # 16-byte Folded Spill
 ; 64BIT-NEXT:    stxv v21, 128(r1) # 16-byte Folded Spill
-; 64BIT-NEXT:    std r31, 448(r1) # 8-byte Folded Spill
-; 64BIT-NEXT:    mr r31, r3
-; 64BIT-NEXT:    std r14, 312(r1) # 8-byte Folded Spill
-; 64BIT-NEXT:    stxv v22, 144(r1) # 16-byte Folded Spill
 ; 64BIT-NEXT:    std r15, 320(r1) # 8-byte Folded Spill
-; 64BIT-NEXT:    stxv v23, 160(r1) # 16-byte Folded Spill
+; 64BIT-NEXT:    stxv v22, 144(r1) # 16-byte Folded Spill
 ; 64BIT-NEXT:    std r16, 328(r1) # 8-byte Folded Spill
-; 64BIT-NEXT:    stxv v24, 176(r1) # 16-byte Folded Spill
+; 64BIT-NEXT:    stxv v23, 160(r1) # 16-byte Folded Spill
 ; 64BIT-NEXT:    std r17, 336(r1) # 8-byte Folded Spill
 ; 64BIT-NEXT:    std r18, 344(r1) # 8-byte Folded Spill
-; 64BIT-NEXT:    stxv v25, 192(r1) # 16-byte Folded Spill
+; 64BIT-NEXT:    stxv v24, 176(r1) # 16-byte Folded Spill
 ; 64BIT-NEXT:    std r19, 352(r1) # 8-byte Folded Spill
-; 64BIT-NEXT:    stxv v26, 208(r1) # 16-byte Folded Spill
+; 64BIT-NEXT:    stxv v25, 192(r1) # 16-byte Folded Spill
 ; 64BIT-NEXT:    std r20, 360(r1) # 8-byte Folded Spill
-; 64BIT-NEXT:    stxv v27, 224(r1) # 16-byte Folded Spill
+; 64BIT-NEXT:    stxv v26, 208(r1) # 16-byte Folded Spill
 ; 64BIT-NEXT:    std r21, 368(r1) # 8-byte Folded Spill
 ; 64BIT-NEXT:    std r22, 376(r1) # 8-byte Folded Spill
-; 64BIT-NEXT:    stxv v28, 240(r1) # 16-byte Folded Spill
+; 64BIT-NEXT:    stxv v27, 224(r1) # 16-byte Folded Spill
 ; 64BIT-NEXT:    std r23, 384(r1) # 8-byte Folded Spill
-; 64BIT-NEXT:    stxv v29, 256(r1) # 16-byte Folded Spill
+; 64BIT-NEXT:    stxv v28, 240(r1) # 16-byte Folded Spill
 ; 64BIT-NEXT:    std r24, 392(r1) # 8-byte Folded Spill
-; 64BIT-NEXT:    stxv v30, 272(r1) # 16-byte Folded Spill
+; 64BIT-NEXT:    stxv v29, 256(r1) # 16-byte Folded Spill
 ; 64BIT-NEXT:    std r25, 400(r1) # 8-byte Folded Spill
 ; 64BIT-NEXT:    std r26, 408(r1) # 8-byte Folded Spill
-; 64BIT-NEXT:    stxv v31, 288(r1) # 16-byte Folded Spill
+; 64BIT-NEXT:    stxv v30, 272(r1) # 16-byte Folded Spill
 ; 64BIT-NEXT:    std r27, 416(r1) # 8-byte Folded Spill
+; 64BIT-NEXT:    stxv v31, 288(r1) # 16-byte Folded Spill
 ; 64BIT-NEXT:    std r28, 424(r1) # 8-byte Folded Spill
 ; 64BIT-NEXT:    std r29, 432(r1) # 8-byte Folded Spill
+; 64BIT-NEXT:    std r30, 440(r1) # 8-byte Folded Spill
+; 64BIT-NEXT:    li r30, 0
+; 64BIT-NEXT:    std r31, 448(r1) # 8-byte Folded Spill
+; 64BIT-NEXT:    mr r31, r3
 ; 64BIT-NEXT:    stfd f15, 456(r1) # 8-byte Folded Spill
 ; 64BIT-NEXT:    stfd f16, 464(r1) # 8-byte Folded Spill
 ; 64BIT-NEXT:    stfd f17, 472(r1) # 8-byte Folded Spill
@@ -192,10 +192,10 @@ define dso_local signext i32 @_Z5test2iPPKc(i32 signext %argc, ptr nocapture rea
 ; 64BIT-NEXT:    #APP
 ; 64BIT-NEXT:    nop
 ; 64BIT-NEXT:    #NO_APP
-; 64BIT-NEXT:  L..tmp0:
+; 64BIT-NEXT:  L..tmp0: # EH_LABEL
 ; 64BIT-NEXT:    bl ._Z4testi[PR]
 ; 64BIT-NEXT:    nop
-; 64BIT-NEXT:  L..tmp1:
+; 64BIT-NEXT:  L..tmp1: # EH_LABEL
 ; 64BIT-NEXT:  L..BB0_1: # %return
 ; 64BIT-NEXT:    lxv v31, 288(r1) # 16-byte Folded Reload
 ; 64BIT-NEXT:    lxv v30, 272(r1) # 16-byte Folded Reload
@@ -250,7 +250,7 @@ define dso_local signext i32 @_Z5test2iPPKc(i32 signext %argc, ptr nocapture rea
 ; 64BIT-NEXT:    mtlr r0
 ; 64BIT-NEXT:    blr
 ; 64BIT-NEXT:  L..BB0_2: # %lpad
-; 64BIT-NEXT:  L..tmp2:
+; 64BIT-NEXT:  L..tmp2: # EH_LABEL
 ; 64BIT-NEXT:    bl .__cxa_begin_catch[PR]
 ; 64BIT-NEXT:    nop
 ; 64BIT-NEXT:    lwz r3, 0(r3)

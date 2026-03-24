@@ -5,10 +5,9 @@
 define i32 @bitcast_failure(ptr %0, <1 x i16> %1) {
 ; CHECK-LABEL: bitcast_failure:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, x0
-; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    str h0, [x8]
+; CHECK-NEXT:    str h0, [x0]
+; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
   %3 = bitcast <1 x i16> %1 to <1 x half>
   %4 = extractelement <1 x half> %3, i64 0

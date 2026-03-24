@@ -232,11 +232,11 @@ define void @f5(ptr %a, i32 %n, i32 %k) nounwind {
 ; CHECK-NEXT:  // %bb.1: // %L.preheader
 ; CHECK-NEXT:    str x30, [sp, #-48]! // 8-byte Folded Spill
 ; CHECK-NEXT:    mov w8, #12 // =0xc
+; CHECK-NEXT:    stp x22, x21, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    add x21, x0, #8
 ; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov w19, w1
 ; CHECK-NEXT:    smaddl x20, w2, w8, x0
-; CHECK-NEXT:    stp x22, x21, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    add x21, x0, #8
 ; CHECK-NEXT:    mov w22, #-1 // =0xffffffff
 ; CHECK-NEXT:    b .LBB5_4
 ; CHECK-NEXT:  .LBB5_2: // %if.else

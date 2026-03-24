@@ -150,9 +150,9 @@ define i8 @cas_strong_i8_sc_sc(ptr %mem) {
 ; PPC32-NEXT:    li r6, 255
 ; PPC32-NEXT:    li r7, 1
 ; PPC32-NEXT:    slw r6, r6, r3
+; PPC32-NEXT:    sync
 ; PPC32-NEXT:    not r6, r6
 ; PPC32-NEXT:    slw r7, r7, r3
-; PPC32-NEXT:    sync
 ; PPC32-NEXT:  .LBB8_2: # %cmpxchg.trystore
 ; PPC32-NEXT:    #
 ; PPC32-NEXT:    and r8, r4, r6
@@ -166,8 +166,8 @@ define i8 @cas_strong_i8_sc_sc(ptr %mem) {
 ; PPC32-NEXT:    andi. r8, r8, 255
 ; PPC32-NEXT:    beq+ cr0, .LBB8_2
 ; PPC32-NEXT:  .LBB8_4: # %cmpxchg.nostore
-; PPC32-NEXT:    srw r3, r4, r3
 ; PPC32-NEXT:    lwsync
+; PPC32-NEXT:    srw r3, r4, r3
 ; PPC32-NEXT:    blr
 ;
 ; PPC64-LABEL: cas_strong_i8_sc_sc:
@@ -183,9 +183,9 @@ define i8 @cas_strong_i8_sc_sc(ptr %mem) {
 ; PPC64-NEXT:    li r6, 255
 ; PPC64-NEXT:    li r7, 1
 ; PPC64-NEXT:    slw r6, r6, r3
+; PPC64-NEXT:    sync
 ; PPC64-NEXT:    not r6, r6
 ; PPC64-NEXT:    slw r7, r7, r3
-; PPC64-NEXT:    sync
 ; PPC64-NEXT:  .LBB8_2: # %cmpxchg.trystore
 ; PPC64-NEXT:    #
 ; PPC64-NEXT:    and r8, r4, r6
@@ -199,8 +199,8 @@ define i8 @cas_strong_i8_sc_sc(ptr %mem) {
 ; PPC64-NEXT:    andi. r8, r8, 255
 ; PPC64-NEXT:    beq+ cr0, .LBB8_2
 ; PPC64-NEXT:  .LBB8_4: # %cmpxchg.nostore
-; PPC64-NEXT:    srw r3, r4, r3
 ; PPC64-NEXT:    lwsync
+; PPC64-NEXT:    srw r3, r4, r3
 ; PPC64-NEXT:    blr
   %val = cmpxchg ptr %mem, i8 0, i8 1 seq_cst seq_cst
   %loaded = extractvalue { i8, i1} %val, 0
@@ -266,8 +266,8 @@ define i32 @cas_strong_i32_acqrel_acquire(ptr %mem) {
 ; CHECK-NEXT:    cmplwi r3, 0
 ; CHECK-NEXT:    bne- cr0, .LBB10_4
 ; CHECK-NEXT:  # %bb.1: # %cmpxchg.fencedstore
-; CHECK-NEXT:    li r5, 1
 ; CHECK-NEXT:    lwsync
+; CHECK-NEXT:    li r5, 1
 ; CHECK-NEXT:  .LBB10_2: # %cmpxchg.trystore
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    stwcx. r5, 0, r4
@@ -377,10 +377,10 @@ define i16 @xor_i16_seq_cst(ptr %mem, i16 %operand) {
 ; PPC32-NEXT:    rlwinm r6, r3, 3, 27, 27
 ; PPC32-NEXT:    ori r7, r5, 65535
 ; PPC32-NEXT:    xori r5, r6, 16
+; PPC32-NEXT:    sync
 ; PPC32-NEXT:    rlwinm r3, r3, 0, 0, 29
 ; PPC32-NEXT:    slw r4, r4, r5
 ; PPC32-NEXT:    slw r6, r7, r5
-; PPC32-NEXT:    sync
 ; PPC32-NEXT:  .LBB13_1:
 ; PPC32-NEXT:    lwarx r7, 0, r3
 ; PPC32-NEXT:    xor r8, r4, r7
@@ -401,10 +401,10 @@ define i16 @xor_i16_seq_cst(ptr %mem, i16 %operand) {
 ; PPC64-NEXT:    rlwinm r6, r3, 3, 27, 27
 ; PPC64-NEXT:    ori r7, r5, 65535
 ; PPC64-NEXT:    xori r5, r6, 16
+; PPC64-NEXT:    sync
 ; PPC64-NEXT:    rldicr r3, r3, 0, 61
 ; PPC64-NEXT:    slw r4, r4, r5
 ; PPC64-NEXT:    slw r6, r7, r5
-; PPC64-NEXT:    sync
 ; PPC64-NEXT:  .LBB13_1:
 ; PPC64-NEXT:    lwarx r7, 0, r3
 ; PPC64-NEXT:    xor r8, r4, r7
@@ -430,8 +430,8 @@ define i32 @xchg_i32_acq_rel(ptr %mem, i32 %operand) {
 ; CHECK-NEXT:    stwcx. r4, 0, r3
 ; CHECK-NEXT:    bne- cr0, .LBB14_1
 ; CHECK-NEXT:  # %bb.2:
-; CHECK-NEXT:    mr r3, r5
 ; CHECK-NEXT:    lwsync
+; CHECK-NEXT:    mr r3, r5
 ; CHECK-NEXT:    blr
   %val = atomicrmw xchg ptr %mem, i32 %operand acq_rel
   ret i32 %val

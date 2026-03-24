@@ -24,8 +24,8 @@ define arm_aapcs_vfpcc void @fast_float_mul(ptr nocapture %a, ptr nocapture read
 ; CHECK-NEXT:    cmpeq.w r12, #0
 ; CHECK-NEXT:    beq .LBB0_4
 ; CHECK-NEXT:  @ %bb.2: @ %for.body.preheader
-; CHECK-NEXT:    and r12, r3, #3
 ; CHECK-NEXT:    subs r4, r3, #1
+; CHECK-NEXT:    and r12, r3, #3
 ; CHECK-NEXT:    cmp r4, #3
 ; CHECK-NEXT:    bhs .LBB0_6
 ; CHECK-NEXT:  @ %bb.3:
@@ -215,11 +215,11 @@ define arm_aapcs_vfpcc float @fast_float_mac(ptr nocapture readonly %b, ptr noca
 ; CHECK-NEXT:  .LBB1_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r2
-; CHECK-NEXT:    subs r2, #4
+; CHECK-NEXT:    vmov q1, q0
 ; CHECK-NEXT:    vpstt
 ; CHECK-NEXT:    vldrwt.u32 q2, [r0], #16
 ; CHECK-NEXT:    vldrwt.u32 q3, [r1], #16
-; CHECK-NEXT:    vmov q1, q0
+; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    vfma.f32 q0, q3, q2
 ; CHECK-NEXT:    le lr, .LBB1_2
 ; CHECK-NEXT:  @ %bb.3: @ %middle.block
@@ -291,8 +291,8 @@ define arm_aapcs_vfpcc float @fast_float_half_mac(ptr nocapture readonly %b, ptr
 ; CHECK-NEXT:    sub.w r12, r2, #1
 ; CHECK-NEXT:    adr r2, .LCPI2_1
 ; CHECK-NEXT:    mov lr, lr
-; CHECK-NEXT:    vldrw.u32 q0, [r2]
 ; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    vldrw.u32 q0, [r2]
 ; CHECK-NEXT:    vdup.32 q1, r12
 ; CHECK-NEXT:    vdup.32 q2, r12
 ; CHECK-NEXT:    b .LBB2_3
@@ -305,8 +305,8 @@ define arm_aapcs_vfpcc float @fast_float_half_mac(ptr nocapture readonly %b, ptr
 ; CHECK-NEXT:    vcvtt.f32.f16 s21, s20
 ; CHECK-NEXT:    vcvtb.f32.f16 s20, s20
 ; CHECK-NEXT:    adds r1, #8
-; CHECK-NEXT:    adds r3, #4
 ; CHECK-NEXT:    vadd.f32 q5, q3, q5
+; CHECK-NEXT:    adds r3, #4
 ; CHECK-NEXT:    subs.w lr, lr, #1
 ; CHECK-NEXT:    bne .LBB2_3
 ; CHECK-NEXT:    b .LBB2_19

@@ -92,8 +92,8 @@ define amdgpu_cs void @issue130119(i1 %arg) {
 ; CHECK-NEXT:    s_cselect_b64 s[2:3], -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[2:3]
 ; CHECK-NEXT:    v_cmp_ne_u32_e64 s[2:3], 1, v0
-; CHECK-NEXT:    s_mov_b64 s[10:11], 0
 ; CHECK-NEXT:    ; implicit-def: $sgpr8_sgpr9
+; CHECK-NEXT:    s_mov_b64 s[10:11], 0
 ; CHECK-NEXT:    s_branch .LBB1_4
 ; CHECK-NEXT:  .LBB1_3: ; %Flow1
 ; CHECK-NEXT:    ; in Loop: Header=BB1_4 Depth=2
@@ -116,8 +116,8 @@ define amdgpu_cs void @issue130119(i1 %arg) {
 ; CHECK-NEXT:    s_mov_b64 s[14:15], -1
 ; CHECK-NEXT:  .LBB1_6: ; %Flow
 ; CHECK-NEXT:    ; in Loop: Header=BB1_4 Depth=2
-; CHECK-NEXT:    s_mov_b64 s[12:13], -1
 ; CHECK-NEXT:    s_andn2_b64 vcc, exec, s[14:15]
+; CHECK-NEXT:    s_mov_b64 s[12:13], -1
 ; CHECK-NEXT:    s_mov_b64 s[14:15], -1
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB1_3
 ; CHECK-NEXT:  ; %bb.7: ; %bb8

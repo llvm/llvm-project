@@ -1645,8 +1645,8 @@ define amdgpu_ps float @test_control_flow_3(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX10-W32-NEXT:    image_sample v1, v1, s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_1D
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-W32-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 idxen
-; GFX10-W32-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX10-W32-NEXT:    ; implicit-def: $vgpr0
+; GFX10-W32-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX10-W32-NEXT:    v_cmpx_nlt_f32_e32 0, v1
 ; GFX10-W32-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX10-W32-NEXT:    s_cbranch_execnz .LBB30_3
@@ -1943,9 +1943,9 @@ define amdgpu_ps <4 x float> @test_loop_vcc(<4 x float> %in) nounwind {
 ; GFX9-W64-NEXT:    s_cbranch_execz .LBB35_4
 ; GFX9-W64-NEXT:  .LBB35_2: ; %loop
 ; GFX9-W64-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-W64-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v8
 ; GFX9-W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-W64-NEXT:    v_mov_b32_e32 v0, v4
-; GFX9-W64-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v8
 ; GFX9-W64-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX9-W64-NEXT:    v_mov_b32_e32 v2, v6
 ; GFX9-W64-NEXT:    v_mov_b32_e32 v3, v7
@@ -2175,8 +2175,8 @@ define amdgpu_ps <4 x float> @test_scc(i32 inreg %sel, i32 %idx) #1 {
 ; GFX9-W64:       ; %bb.0: ; %main_body
 ; GFX9-W64-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX9-W64-NEXT:    s_wqm_b64 exec, exec
-; GFX9-W64-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX9-W64-NEXT:    s_cmp_lt_i32 s0, 1
+; GFX9-W64-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX9-W64-NEXT:    s_cbranch_scc0 .LBB39_2
 ; GFX9-W64-NEXT:  ; %bb.1: ; %else
 ; GFX9-W64-NEXT:    v_mov_b32_e32 v0, 0
@@ -2201,8 +2201,8 @@ define amdgpu_ps <4 x float> @test_scc(i32 inreg %sel, i32 %idx) #1 {
 ; GFX10-W32:       ; %bb.0: ; %main_body
 ; GFX10-W32-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX10-W32-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX10-W32-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX10-W32-NEXT:    s_cmp_lt_i32 s0, 1
+; GFX10-W32-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX10-W32-NEXT:    s_cbranch_scc0 .LBB39_2
 ; GFX10-W32-NEXT:  ; %bb.1: ; %else
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v1, 1

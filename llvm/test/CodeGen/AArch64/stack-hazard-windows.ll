@@ -16,10 +16,10 @@ define i32 @fpr_csr_stackobj(double %x) "aarch64_pstate_sm_compatible" "frame-po
 ; CHECK0-NEXT:    add x29, sp, #8
 ; CHECK0-NEXT:    .seh_add_fp 8
 ; CHECK0-NEXT:    .seh_endprologue
-; CHECK0-NEXT:    mov w0, wzr
 ; CHECK0-NEXT:    //APP
 ; CHECK0-NEXT:    //NO_APP
 ; CHECK0-NEXT:    str d0, [x29, #32]
+; CHECK0-NEXT:    mov w0, wzr
 ; CHECK0-NEXT:    .seh_startepilogue
 ; CHECK0-NEXT:    ldp d9, d10, [sp, #24] // 16-byte Folded Reload
 ; CHECK0-NEXT:    .seh_save_fregp d9, 24
@@ -50,10 +50,10 @@ define i32 @fpr_csr_stackobj(double %x) "aarch64_pstate_sm_compatible" "frame-po
 ; CHECK64-NEXT:    add x29, sp, #88
 ; CHECK64-NEXT:    .seh_add_fp 88
 ; CHECK64-NEXT:    .seh_endprologue
-; CHECK64-NEXT:    mov w0, wzr
 ; CHECK64-NEXT:    //APP
 ; CHECK64-NEXT:    //NO_APP
 ; CHECK64-NEXT:    stur d0, [x29, #-16]
+; CHECK64-NEXT:    mov w0, wzr
 ; CHECK64-NEXT:    .seh_startepilogue
 ; CHECK64-NEXT:    ldr d10, [sp, #176] // 8-byte Reload
 ; CHECK64-NEXT:    .seh_save_freg d10, 176
@@ -91,10 +91,10 @@ define i32 @fpr_csr_stackobj(double %x) "aarch64_pstate_sm_compatible" "frame-po
 ; CHECK1024-NEXT:    .seh_add_fp 8
 ; CHECK1024-NEXT:    .seh_endprologue
 ; CHECK1024-NEXT:    sub sp, sp, #1040
-; CHECK1024-NEXT:    mov w0, wzr
 ; CHECK1024-NEXT:    //APP
 ; CHECK1024-NEXT:    //NO_APP
 ; CHECK1024-NEXT:    stur d0, [x29, #-16]
+; CHECK1024-NEXT:    mov w0, wzr
 ; CHECK1024-NEXT:    .seh_startepilogue
 ; CHECK1024-NEXT:    add sp, sp, #1040
 ; CHECK1024-NEXT:    .seh_stackalloc 1040

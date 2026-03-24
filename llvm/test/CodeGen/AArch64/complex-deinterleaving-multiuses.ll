@@ -245,18 +245,18 @@ define <4 x float> @multiple_muls_mul_external(<4 x float> %a, <4 x float> %b, <
 ; CHECK-NEXT:    fmul v7.2s, v0.2s, v7.2s
 ; CHECK-NEXT:    fneg v4.2s, v18.2s
 ; CHECK-NEXT:    fmla v5.2s, v3.2s, v2.2s
-; CHECK-NEXT:    fneg v2.2s, v16.2s
 ; CHECK-NEXT:    fmla v7.2s, v1.2s, v6.2s
 ; CHECK-NEXT:    fmla v4.2s, v1.2s, v0.2s
-; CHECK-NEXT:    fmla v2.2s, v3.2s, v19.2s
-; CHECK-NEXT:    fmul v0.2s, v7.2s, v5.2s
-; CHECK-NEXT:    fmul v17.2s, v4.2s, v5.2s
+; CHECK-NEXT:    fneg v0.2s, v16.2s
+; CHECK-NEXT:    fmla v0.2s, v3.2s, v19.2s
+; CHECK-NEXT:    fmul v2.2s, v4.2s, v5.2s
+; CHECK-NEXT:    fmul v3.2s, v7.2s, v5.2s
 ; CHECK-NEXT:    str d4, [x0]
-; CHECK-NEXT:    fmla v17.2s, v2.2s, v7.2s
-; CHECK-NEXT:    fneg v16.2s, v0.2s
-; CHECK-NEXT:    zip1 v0.4s, v2.4s, v5.4s
-; CHECK-NEXT:    fmla v16.2s, v2.2s, v4.2s
-; CHECK-NEXT:    st2 { v16.2s, v17.2s }, [x1]
+; CHECK-NEXT:    fmla v2.2s, v0.2s, v7.2s
+; CHECK-NEXT:    fneg v1.2s, v3.2s
+; CHECK-NEXT:    fmla v1.2s, v0.2s, v4.2s
+; CHECK-NEXT:    zip1 v0.4s, v0.4s, v5.4s
+; CHECK-NEXT:    st2 { v1.2s, v2.2s }, [x1]
 ; CHECK-NEXT:    ret
 entry:
   %strided.vec = shufflevector <4 x float> %a, <4 x float> poison, <2 x i32> <i32 0, i32 2>

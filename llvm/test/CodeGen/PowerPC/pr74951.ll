@@ -31,9 +31,9 @@ define noundef signext i32 @main() {
 ; CHECK-NEXT:  L..BB0_4: # %g.exit
 ; CHECK-NEXT:    ld r4, L..C1(r2) # @g
 ; CHECK-NEXT:    neg r3, r3
-; CHECK-NEXT:    rldicl r5, r3, 1, 63
+; CHECK-NEXT:    rldicl r3, r3, 1, 63
+; CHECK-NEXT:    stb r3, 0(r4)
 ; CHECK-NEXT:    li r3, 0
-; CHECK-NEXT:    stb r5, 0(r4)
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i32, ptr @b, align 4

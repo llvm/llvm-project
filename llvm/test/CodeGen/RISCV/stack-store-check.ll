@@ -29,37 +29,37 @@ define void @main() local_unnamed_addr nounwind {
 ; CHECK-NEXT:    sw s10, 656(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    sw s11, 652(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    lui a0, %hi(U)
-; CHECK-NEXT:    lw s9, %lo(U)(a0)
-; CHECK-NEXT:    lw s10, %lo(U+4)(a0)
-; CHECK-NEXT:    lw s11, %lo(U+8)(a0)
-; CHECK-NEXT:    lw s5, %lo(U+12)(a0)
+; CHECK-NEXT:    lw s6, %lo(U)(a0)
+; CHECK-NEXT:    lw s7, %lo(U+4)(a0)
+; CHECK-NEXT:    lw s8, %lo(U+8)(a0)
+; CHECK-NEXT:    lw s0, %lo(U+12)(a0)
 ; CHECK-NEXT:    sw zero, 616(sp)
 ; CHECK-NEXT:    sw zero, 620(sp)
 ; CHECK-NEXT:    sw zero, 624(sp)
 ; CHECK-NEXT:    sw zero, 628(sp)
+; CHECK-NEXT:    sw s6, 600(sp)
+; CHECK-NEXT:    sw s7, 604(sp)
+; CHECK-NEXT:    sw s8, 608(sp)
+; CHECK-NEXT:    sw s0, 612(sp)
 ; CHECK-NEXT:    addi a0, sp, 632
 ; CHECK-NEXT:    addi a1, sp, 616
 ; CHECK-NEXT:    addi a2, sp, 600
-; CHECK-NEXT:    sw s9, 600(sp)
-; CHECK-NEXT:    sw s10, 604(sp)
-; CHECK-NEXT:    sw s11, 608(sp)
-; CHECK-NEXT:    sw s5, 612(sp)
 ; CHECK-NEXT:    call __subtf3
 ; CHECK-NEXT:    lw s1, 632(sp)
 ; CHECK-NEXT:    lw s2, 636(sp)
 ; CHECK-NEXT:    lw s3, 640(sp)
 ; CHECK-NEXT:    lw s4, 644(sp)
-; CHECK-NEXT:    sw s9, 552(sp)
-; CHECK-NEXT:    sw s10, 556(sp)
-; CHECK-NEXT:    sw s11, 560(sp)
-; CHECK-NEXT:    sw s5, 564(sp)
-; CHECK-NEXT:    addi a0, sp, 584
-; CHECK-NEXT:    addi a1, sp, 568
-; CHECK-NEXT:    addi a2, sp, 552
+; CHECK-NEXT:    sw s6, 552(sp)
+; CHECK-NEXT:    sw s7, 556(sp)
+; CHECK-NEXT:    sw s8, 560(sp)
+; CHECK-NEXT:    sw s0, 564(sp)
 ; CHECK-NEXT:    sw s1, 568(sp)
 ; CHECK-NEXT:    sw s2, 572(sp)
 ; CHECK-NEXT:    sw s3, 576(sp)
 ; CHECK-NEXT:    sw s4, 580(sp)
+; CHECK-NEXT:    addi a0, sp, 584
+; CHECK-NEXT:    addi a1, sp, 568
+; CHECK-NEXT:    addi a2, sp, 552
 ; CHECK-NEXT:    call __subtf3
 ; CHECK-NEXT:    lw a0, 584(sp)
 ; CHECK-NEXT:    sw a0, 52(sp) # 4-byte Folded Spill
@@ -73,38 +73,38 @@ define void @main() local_unnamed_addr nounwind {
 ; CHECK-NEXT:    sw zero, 508(sp)
 ; CHECK-NEXT:    sw zero, 512(sp)
 ; CHECK-NEXT:    sw zero, 516(sp)
+; CHECK-NEXT:    sw s6, 520(sp)
+; CHECK-NEXT:    sw s7, 524(sp)
+; CHECK-NEXT:    sw s8, 528(sp)
+; CHECK-NEXT:    sw s0, 532(sp)
 ; CHECK-NEXT:    addi a0, sp, 536
 ; CHECK-NEXT:    addi a1, sp, 520
 ; CHECK-NEXT:    addi a2, sp, 504
-; CHECK-NEXT:    sw s9, 520(sp)
-; CHECK-NEXT:    sw s10, 524(sp)
-; CHECK-NEXT:    sw s11, 528(sp)
-; CHECK-NEXT:    sw s5, 532(sp)
 ; CHECK-NEXT:    call __addtf3
-; CHECK-NEXT:    lw s0, 536(sp)
-; CHECK-NEXT:    lw s6, 540(sp)
-; CHECK-NEXT:    lw s7, 544(sp)
-; CHECK-NEXT:    lw s8, 548(sp)
+; CHECK-NEXT:    lw s9, 536(sp)
+; CHECK-NEXT:    lw s10, 540(sp)
+; CHECK-NEXT:    lw s11, 544(sp)
+; CHECK-NEXT:    lw s5, 548(sp)
 ; CHECK-NEXT:    lui a0, %hi(Y1)
 ; CHECK-NEXT:    lw a1, %lo(Y1)(a0)
-; CHECK-NEXT:    sw a1, 20(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw a1, 36(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    lw a2, %lo(Y1+4)(a0)
-; CHECK-NEXT:    sw a2, 16(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw a2, 32(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    lw a3, %lo(Y1+8)(a0)
-; CHECK-NEXT:    sw a3, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw a3, 28(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    lw a0, %lo(Y1+12)(a0)
-; CHECK-NEXT:    sw a0, 8(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw a0, 24(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    sw a1, 312(sp)
 ; CHECK-NEXT:    sw a2, 316(sp)
 ; CHECK-NEXT:    sw a3, 320(sp)
 ; CHECK-NEXT:    sw a0, 324(sp)
-; CHECK-NEXT:    addi a0, sp, 344
-; CHECK-NEXT:    addi a1, sp, 328
-; CHECK-NEXT:    addi a2, sp, 312
 ; CHECK-NEXT:    sw s1, 328(sp)
 ; CHECK-NEXT:    sw s2, 332(sp)
 ; CHECK-NEXT:    sw s3, 336(sp)
 ; CHECK-NEXT:    sw s4, 340(sp)
+; CHECK-NEXT:    addi a0, sp, 344
+; CHECK-NEXT:    addi a1, sp, 328
+; CHECK-NEXT:    addi a2, sp, 312
 ; CHECK-NEXT:    call __multf3
 ; CHECK-NEXT:    lw a0, 344(sp)
 ; CHECK-NEXT:    sw a0, 68(sp) # 4-byte Folded Spill
@@ -114,33 +114,33 @@ define void @main() local_unnamed_addr nounwind {
 ; CHECK-NEXT:    sw a0, 60(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    lw a0, 356(sp)
 ; CHECK-NEXT:    sw a0, 56(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s9, 472(sp)
-; CHECK-NEXT:    sw s10, 476(sp)
-; CHECK-NEXT:    sw s11, 480(sp)
-; CHECK-NEXT:    sw s5, 484(sp)
+; CHECK-NEXT:    sw s6, 472(sp)
+; CHECK-NEXT:    sw s7, 476(sp)
+; CHECK-NEXT:    sw s8, 480(sp)
+; CHECK-NEXT:    sw s0, 484(sp)
+; CHECK-NEXT:    sw s9, 456(sp)
+; CHECK-NEXT:    sw s10, 460(sp)
+; CHECK-NEXT:    sw s11, 464(sp)
+; CHECK-NEXT:    sw s5, 468(sp)
 ; CHECK-NEXT:    addi a0, sp, 488
 ; CHECK-NEXT:    addi a1, sp, 472
 ; CHECK-NEXT:    addi a2, sp, 456
-; CHECK-NEXT:    sw s0, 456(sp)
-; CHECK-NEXT:    sw s6, 460(sp)
-; CHECK-NEXT:    sw s7, 464(sp)
-; CHECK-NEXT:    sw s8, 468(sp)
 ; CHECK-NEXT:    call __addtf3
-; CHECK-NEXT:    lw a3, 488(sp)
-; CHECK-NEXT:    lw a4, 492(sp)
-; CHECK-NEXT:    lw a5, 496(sp)
-; CHECK-NEXT:    lw a6, 500(sp)
+; CHECK-NEXT:    lw a0, 488(sp)
+; CHECK-NEXT:    lw a1, 492(sp)
+; CHECK-NEXT:    lw a2, 496(sp)
+; CHECK-NEXT:    lw a3, 500(sp)
 ; CHECK-NEXT:    sw zero, 424(sp)
 ; CHECK-NEXT:    sw zero, 428(sp)
 ; CHECK-NEXT:    sw zero, 432(sp)
 ; CHECK-NEXT:    sw zero, 436(sp)
+; CHECK-NEXT:    sw a0, 408(sp)
+; CHECK-NEXT:    sw a1, 412(sp)
+; CHECK-NEXT:    sw a2, 416(sp)
+; CHECK-NEXT:    sw a3, 420(sp)
 ; CHECK-NEXT:    addi a0, sp, 440
 ; CHECK-NEXT:    addi a1, sp, 424
 ; CHECK-NEXT:    addi a2, sp, 408
-; CHECK-NEXT:    sw a3, 408(sp)
-; CHECK-NEXT:    sw a4, 412(sp)
-; CHECK-NEXT:    sw a5, 416(sp)
-; CHECK-NEXT:    sw a6, 420(sp)
 ; CHECK-NEXT:    call __subtf3
 ; CHECK-NEXT:    lw a0, 448(sp)
 ; CHECK-NEXT:    lw a1, 452(sp)
@@ -151,45 +151,45 @@ define void @main() local_unnamed_addr nounwind {
 ; CHECK-NEXT:    sw a0, %lo(X+8)(a4)
 ; CHECK-NEXT:    sw a3, %lo(X+4)(a4)
 ; CHECK-NEXT:    sw a2, %lo(X)(a4)
-; CHECK-NEXT:    lw s5, 20(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    sw s5, 216(sp)
-; CHECK-NEXT:    lw s9, 16(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    sw s9, 220(sp)
-; CHECK-NEXT:    lw s10, 12(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    sw s10, 224(sp)
-; CHECK-NEXT:    lw s11, 8(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    sw s11, 228(sp)
+; CHECK-NEXT:    lw s1, 36(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    sw s1, 216(sp)
+; CHECK-NEXT:    lw s2, 32(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    sw s2, 220(sp)
+; CHECK-NEXT:    lw s3, 28(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    sw s3, 224(sp)
+; CHECK-NEXT:    lw s4, 24(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    sw s4, 228(sp)
+; CHECK-NEXT:    lw s0, 52(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    sw s0, 232(sp)
+; CHECK-NEXT:    lw s6, 48(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    sw s6, 236(sp)
+; CHECK-NEXT:    lw s7, 44(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    sw s7, 240(sp)
+; CHECK-NEXT:    lw s8, 40(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    sw s8, 244(sp)
 ; CHECK-NEXT:    addi a0, sp, 248
 ; CHECK-NEXT:    addi a1, sp, 232
 ; CHECK-NEXT:    addi a2, sp, 216
-; CHECK-NEXT:    lw s1, 52(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    sw s1, 232(sp)
-; CHECK-NEXT:    lw s2, 48(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    sw s2, 236(sp)
-; CHECK-NEXT:    lw s3, 44(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    sw s3, 240(sp)
-; CHECK-NEXT:    lw s4, 40(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    sw s4, 244(sp)
 ; CHECK-NEXT:    call __multf3
 ; CHECK-NEXT:    lw a0, 248(sp)
-; CHECK-NEXT:    sw a0, 36(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw a0, 20(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    lw a0, 252(sp)
-; CHECK-NEXT:    sw a0, 32(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw a0, 16(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    lw a0, 256(sp)
-; CHECK-NEXT:    sw a0, 28(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw a0, 12(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    lw a0, 260(sp)
-; CHECK-NEXT:    sw a0, 24(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw a0, 8(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    sw zero, 360(sp)
 ; CHECK-NEXT:    sw zero, 364(sp)
 ; CHECK-NEXT:    sw zero, 368(sp)
 ; CHECK-NEXT:    sw zero, 372(sp)
+; CHECK-NEXT:    sw s9, 376(sp)
+; CHECK-NEXT:    sw s10, 380(sp)
+; CHECK-NEXT:    sw s11, 384(sp)
+; CHECK-NEXT:    sw s5, 388(sp)
 ; CHECK-NEXT:    addi a0, sp, 392
 ; CHECK-NEXT:    addi a1, sp, 376
 ; CHECK-NEXT:    addi a2, sp, 360
-; CHECK-NEXT:    sw s0, 376(sp)
-; CHECK-NEXT:    sw s6, 380(sp)
-; CHECK-NEXT:    sw s7, 384(sp)
-; CHECK-NEXT:    sw s8, 388(sp)
 ; CHECK-NEXT:    call __multf3
 ; CHECK-NEXT:    lw a0, 400(sp)
 ; CHECK-NEXT:    lw a1, 404(sp)
@@ -200,21 +200,21 @@ define void @main() local_unnamed_addr nounwind {
 ; CHECK-NEXT:    sw a0, %lo(S+8)(a4)
 ; CHECK-NEXT:    sw a3, %lo(S+4)(a4)
 ; CHECK-NEXT:    sw a2, %lo(S)(a4)
-; CHECK-NEXT:    sw s1, 264(sp)
-; CHECK-NEXT:    sw s2, 268(sp)
-; CHECK-NEXT:    sw s3, 272(sp)
-; CHECK-NEXT:    sw s4, 276(sp)
+; CHECK-NEXT:    sw s0, 264(sp)
+; CHECK-NEXT:    sw s6, 268(sp)
+; CHECK-NEXT:    sw s7, 272(sp)
+; CHECK-NEXT:    sw s8, 276(sp)
+; CHECK-NEXT:    lw a0, 68(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    sw a0, 280(sp)
+; CHECK-NEXT:    lw a0, 64(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    sw a0, 284(sp)
+; CHECK-NEXT:    lw a0, 60(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    sw a0, 288(sp)
+; CHECK-NEXT:    lw a0, 56(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    sw a0, 292(sp)
 ; CHECK-NEXT:    addi a0, sp, 296
 ; CHECK-NEXT:    addi a1, sp, 280
 ; CHECK-NEXT:    addi a2, sp, 264
-; CHECK-NEXT:    lw a3, 68(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    sw a3, 280(sp)
-; CHECK-NEXT:    lw a3, 64(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    sw a3, 284(sp)
-; CHECK-NEXT:    lw a3, 60(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    sw a3, 288(sp)
-; CHECK-NEXT:    lw a3, 56(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    sw a3, 292(sp)
 ; CHECK-NEXT:    call __subtf3
 ; CHECK-NEXT:    lw a0, 304(sp)
 ; CHECK-NEXT:    lw a1, 308(sp)
@@ -229,17 +229,17 @@ define void @main() local_unnamed_addr nounwind {
 ; CHECK-NEXT:    sw zero, 172(sp)
 ; CHECK-NEXT:    sw zero, 176(sp)
 ; CHECK-NEXT:    sw zero, 180(sp)
+; CHECK-NEXT:    lw a0, 20(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    sw a0, 184(sp)
+; CHECK-NEXT:    lw a0, 16(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    sw a0, 188(sp)
+; CHECK-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    sw a0, 192(sp)
+; CHECK-NEXT:    lw a0, 8(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    sw a0, 196(sp)
 ; CHECK-NEXT:    addi a0, sp, 200
 ; CHECK-NEXT:    addi a1, sp, 184
 ; CHECK-NEXT:    addi a2, sp, 168
-; CHECK-NEXT:    lw a3, 36(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    sw a3, 184(sp)
-; CHECK-NEXT:    lw a3, 32(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    sw a3, 188(sp)
-; CHECK-NEXT:    lw a3, 28(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    sw a3, 192(sp)
-; CHECK-NEXT:    lw a3, 24(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    sw a3, 196(sp)
 ; CHECK-NEXT:    call __addtf3
 ; CHECK-NEXT:    lw a0, 208(sp)
 ; CHECK-NEXT:    lw a1, 212(sp)
@@ -254,30 +254,30 @@ define void @main() local_unnamed_addr nounwind {
 ; CHECK-NEXT:    sw zero, 124(sp)
 ; CHECK-NEXT:    sw zero, 128(sp)
 ; CHECK-NEXT:    sw zero, 132(sp)
+; CHECK-NEXT:    sw s1, 136(sp)
+; CHECK-NEXT:    sw s2, 140(sp)
+; CHECK-NEXT:    sw s3, 144(sp)
+; CHECK-NEXT:    sw s4, 148(sp)
 ; CHECK-NEXT:    addi a0, sp, 152
 ; CHECK-NEXT:    addi a1, sp, 136
 ; CHECK-NEXT:    addi a2, sp, 120
-; CHECK-NEXT:    sw s5, 136(sp)
-; CHECK-NEXT:    sw s9, 140(sp)
-; CHECK-NEXT:    sw s10, 144(sp)
-; CHECK-NEXT:    sw s11, 148(sp)
 ; CHECK-NEXT:    call __multf3
-; CHECK-NEXT:    lw a3, 152(sp)
-; CHECK-NEXT:    lw a4, 156(sp)
-; CHECK-NEXT:    lw a5, 160(sp)
-; CHECK-NEXT:    lw a6, 164(sp)
-; CHECK-NEXT:    lui a2, 786400
+; CHECK-NEXT:    lw a2, 152(sp)
+; CHECK-NEXT:    lw a3, 156(sp)
+; CHECK-NEXT:    lw a4, 160(sp)
+; CHECK-NEXT:    lw a5, 164(sp)
+; CHECK-NEXT:    lui a1, 786400
 ; CHECK-NEXT:    addi a0, sp, 104
-; CHECK-NEXT:    addi a1, sp, 88
 ; CHECK-NEXT:    sw zero, 72(sp)
 ; CHECK-NEXT:    sw zero, 76(sp)
 ; CHECK-NEXT:    sw zero, 80(sp)
-; CHECK-NEXT:    sw a2, 84(sp)
+; CHECK-NEXT:    sw a1, 84(sp)
+; CHECK-NEXT:    addi a1, sp, 88
+; CHECK-NEXT:    sw a2, 88(sp)
+; CHECK-NEXT:    sw a3, 92(sp)
+; CHECK-NEXT:    sw a4, 96(sp)
+; CHECK-NEXT:    sw a5, 100(sp)
 ; CHECK-NEXT:    addi a2, sp, 72
-; CHECK-NEXT:    sw a3, 88(sp)
-; CHECK-NEXT:    sw a4, 92(sp)
-; CHECK-NEXT:    sw a5, 96(sp)
-; CHECK-NEXT:    sw a6, 100(sp)
 ; CHECK-NEXT:    call __addtf3
 ; CHECK-NEXT:    lw a0, 112(sp)
 ; CHECK-NEXT:    lw a1, 116(sp)

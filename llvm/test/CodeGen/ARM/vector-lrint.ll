@@ -812,21 +812,21 @@ define <16 x iXLen> @lrint_v16f16(<16 x half> %x) {
 ; LE-I64-NEXT:    vmov r0, s23
 ; LE-I64-NEXT:    mov r4, r1
 ; LE-I64-NEXT:    bl __aeabi_h2f
-; LE-I64-NEXT:    vmov s0, r0
 ; LE-I64-NEXT:    add lr, sp, #80
 ; LE-I64-NEXT:    vmov.32 d17[0], r6
+; LE-I64-NEXT:    vmov s0, r0
 ; LE-I64-NEXT:    vstmia lr, {d16, d17} @ 16-byte Spill
 ; LE-I64-NEXT:    bl lrintf
 ; LE-I64-NEXT:    mov r6, r0
-; LE-I64-NEXT:    vmov r0, s17
 ; LE-I64-NEXT:    vmov r8, s21
+; LE-I64-NEXT:    vmov r0, s17
 ; LE-I64-NEXT:    str r1, [sp, #76] @ 4-byte Spill
 ; LE-I64-NEXT:    vmov r10, s19
 ; LE-I64-NEXT:    vmov.32 d10[0], r5
 ; LE-I64-NEXT:    bl __aeabi_h2f
-; LE-I64-NEXT:    vmov s0, r0
 ; LE-I64-NEXT:    add lr, sp, #40
 ; LE-I64-NEXT:    vmov.32 d11[0], r6
+; LE-I64-NEXT:    vmov s0, r0
 ; LE-I64-NEXT:    vstmia lr, {d10, d11} @ 16-byte Spill
 ; LE-I64-NEXT:    bl lrintf
 ; LE-I64-NEXT:    vmov.32 d14[0], r0
@@ -845,25 +845,25 @@ define <16 x iXLen> @lrint_v16f16(<16 x half> %x) {
 ; LE-I64-NEXT:    vmov.32 d11[1], r0
 ; LE-I64-NEXT:    vmov r0, s18
 ; LE-I64-NEXT:    bl __aeabi_h2f
-; LE-I64-NEXT:    mov r5, r0
-; LE-I64-NEXT:    vmov r0, s16
 ; LE-I64-NEXT:    vmov.32 d10[1], r7
 ; LE-I64-NEXT:    add lr, sp, #56
+; LE-I64-NEXT:    mov r5, r0
+; LE-I64-NEXT:    vmov r0, s16
 ; LE-I64-NEXT:    vstmia lr, {d10, d11} @ 16-byte Spill
 ; LE-I64-NEXT:    bl __aeabi_h2f
 ; LE-I64-NEXT:    vmov s0, r0
 ; LE-I64-NEXT:    vmov.32 d15[1], r4
 ; LE-I64-NEXT:    bl lrintf
-; LE-I64-NEXT:    vmov.32 d9[0], r0
-; LE-I64-NEXT:    vmov r0, s26
+; LE-I64-NEXT:    vmov.32 d14[1], r9
 ; LE-I64-NEXT:    add lr, sp, #24
 ; LE-I64-NEXT:    vmov r8, s24
-; LE-I64-NEXT:    vmov.32 d14[1], r9
 ; LE-I64-NEXT:    mov r10, r1
-; LE-I64-NEXT:    vmov s24, r5
 ; LE-I64-NEXT:    vldr s0, [sp, #24] @ 4-byte Reload
-; LE-I64-NEXT:    vstmia lr, {d14, d15} @ 16-byte Spill
+; LE-I64-NEXT:    vmov s24, r5
+; LE-I64-NEXT:    vmov.32 d9[0], r0
+; LE-I64-NEXT:    vmov r0, s26
 ; LE-I64-NEXT:    vmov r7, s0
+; LE-I64-NEXT:    vstmia lr, {d14, d15} @ 16-byte Spill
 ; LE-I64-NEXT:    bl __aeabi_h2f
 ; LE-I64-NEXT:    vmov.f32 s0, s24
 ; LE-I64-NEXT:    vmov s22, r0
@@ -880,9 +880,9 @@ define <16 x iXLen> @lrint_v16f16(<16 x half> %x) {
 ; LE-I64-NEXT:    vmov.f32 s0, s24
 ; LE-I64-NEXT:    vmov s22, r0
 ; LE-I64-NEXT:    bl lrintf
-; LE-I64-NEXT:    vmov.f32 s0, s22
 ; LE-I64-NEXT:    vmov.32 d8[0], r0
 ; LE-I64-NEXT:    add lr, sp, #8
+; LE-I64-NEXT:    vmov.f32 s0, s22
 ; LE-I64-NEXT:    mov r9, r1
 ; LE-I64-NEXT:    vmov.32 d15[1], r6
 ; LE-I64-NEXT:    vstmia lr, {d8, d9} @ 16-byte Spill
@@ -918,8 +918,8 @@ define <16 x iXLen> @lrint_v16f16(<16 x half> %x) {
 ; LE-I64-NEXT:    vmov.f32 s0, s18
 ; LE-I64-NEXT:    vmov s16, r0
 ; LE-I64-NEXT:    bl lrintf
-; LE-I64-NEXT:    vmov.f32 s0, s16
 ; LE-I64-NEXT:    vmov.32 d10[0], r0
+; LE-I64-NEXT:    vmov.f32 s0, s16
 ; LE-I64-NEXT:    mov r4, r1
 ; LE-I64-NEXT:    vmov.32 d11[1], r6
 ; LE-I64-NEXT:    bl lrintf
@@ -1160,29 +1160,29 @@ define <16 x iXLen> @lrint_v16f16(<16 x half> %x) {
 ; BE-I64-NEXT:    mov r0, r6
 ; BE-I64-NEXT:    mov r7, r1
 ; BE-I64-NEXT:    bl __aeabi_h2f
+; BE-I64-NEXT:    vmov.32 d10[1], r4
 ; BE-I64-NEXT:    mov r6, r0
 ; BE-I64-NEXT:    vmov r0, s18
-; BE-I64-NEXT:    vmov.32 d10[1], r4
 ; BE-I64-NEXT:    vstr d10, [sp, #40] @ 8-byte Spill
 ; BE-I64-NEXT:    bl __aeabi_h2f
+; BE-I64-NEXT:    vmov.32 d11[1], r7
 ; BE-I64-NEXT:    mov r4, r0
 ; BE-I64-NEXT:    vmov r0, s16
-; BE-I64-NEXT:    vmov.32 d11[1], r7
 ; BE-I64-NEXT:    vstr d11, [sp, #32] @ 8-byte Spill
 ; BE-I64-NEXT:    bl __aeabi_h2f
 ; BE-I64-NEXT:    vmov.32 d15[1], r5
 ; BE-I64-NEXT:    vmov s0, r0
 ; BE-I64-NEXT:    vstr d15, [sp, #16] @ 8-byte Spill
 ; BE-I64-NEXT:    bl lrintf
-; BE-I64-NEXT:    vldr s0, [sp, #28] @ 4-byte Reload
-; BE-I64-NEXT:    vmov r5, s26
 ; BE-I64-NEXT:    vmov.32 d16[0], r0
+; BE-I64-NEXT:    vmov r5, s26
 ; BE-I64-NEXT:    vmov s26, r4
-; BE-I64-NEXT:    vmov r0, s0
 ; BE-I64-NEXT:    mov r8, r1
 ; BE-I64-NEXT:    vmov.32 d14[1], r10
 ; BE-I64-NEXT:    vmov r4, s24
+; BE-I64-NEXT:    vldr s0, [sp, #28] @ 4-byte Reload
 ; BE-I64-NEXT:    vstr d16, [sp] @ 8-byte Spill
+; BE-I64-NEXT:    vmov r0, s0
 ; BE-I64-NEXT:    vstr d14, [sp, #8] @ 8-byte Spill
 ; BE-I64-NEXT:    bl __aeabi_h2f
 ; BE-I64-NEXT:    vmov.f32 s0, s26
@@ -1687,11 +1687,11 @@ define <8 x iXLen> @lrint_v8f32(<8 x float> %x) {
 ; BE-I64-NEXT:    mov r8, r1
 ; BE-I64-NEXT:    vmov.32 d15[0], r0
 ; BE-I64-NEXT:    bl lrintf
-; BE-I64-NEXT:    vrev64.32 d0, d11
-; BE-I64-NEXT:    mov r9, r1
 ; BE-I64-NEXT:    vrev64.32 d8, d9
-; BE-I64-NEXT:    vorr d9, d0, d0
+; BE-I64-NEXT:    mov r9, r1
+; BE-I64-NEXT:    vrev64.32 d0, d11
 ; BE-I64-NEXT:    vmov.32 d14[0], r0
+; BE-I64-NEXT:    vorr d9, d0, d0
 ; BE-I64-NEXT:    vstr d8, [sp, #24] @ 8-byte Spill
 ; BE-I64-NEXT:    bl lrintf
 ; BE-I64-NEXT:    vmov.f32 s0, s17
@@ -1750,8 +1750,8 @@ define <16 x iXLen> @lrint_v16f32(<16 x float> %x) {
 ; LE-I32-NEXT:    .pad #80
 ; LE-I32-NEXT:    sub sp, sp, #80
 ; LE-I32-NEXT:    vorr q5, q3, q3
-; LE-I32-NEXT:    vstmia sp, {d0, d1} @ 16-byte Spill
 ; LE-I32-NEXT:    add lr, sp, #32
+; LE-I32-NEXT:    vstmia sp, {d0, d1} @ 16-byte Spill
 ; LE-I32-NEXT:    vorr q6, q2, q2
 ; LE-I32-NEXT:    vorr q7, q1, q1
 ; LE-I32-NEXT:    vmov.f32 s0, s20
@@ -1760,9 +1760,9 @@ define <16 x iXLen> @lrint_v16f32(<16 x float> %x) {
 ; LE-I32-NEXT:    vmov.f32 s0, s22
 ; LE-I32-NEXT:    vmov.32 d8[0], r0
 ; LE-I32-NEXT:    bl lrintf
-; LE-I32-NEXT:    vmov.f32 s0, s24
 ; LE-I32-NEXT:    add lr, sp, #48
 ; LE-I32-NEXT:    vmov.32 d9[0], r0
+; LE-I32-NEXT:    vmov.f32 s0, s24
 ; LE-I32-NEXT:    vstmia lr, {d8, d9} @ 16-byte Spill
 ; LE-I32-NEXT:    add lr, sp, #16
 ; LE-I32-NEXT:    vstmia lr, {d12, d13} @ 16-byte Spill
@@ -1803,8 +1803,8 @@ define <16 x iXLen> @lrint_v16f32(<16 x float> %x) {
 ; LE-I32-NEXT:    vldmia lr, {d12, d13} @ 16-byte Reload
 ; LE-I32-NEXT:    vmov.f32 s0, s27
 ; LE-I32-NEXT:    bl lrintf
-; LE-I32-NEXT:    vmov.f32 s0, s25
 ; LE-I32-NEXT:    add lr, sp, #64
+; LE-I32-NEXT:    vmov.f32 s0, s25
 ; LE-I32-NEXT:    vldmia lr, {d8, d9} @ 16-byte Reload
 ; LE-I32-NEXT:    vmov.32 d9[1], r0
 ; LE-I32-NEXT:    bl lrintf
@@ -1815,8 +1815,8 @@ define <16 x iXLen> @lrint_v16f32(<16 x float> %x) {
 ; LE-I32-NEXT:    vldmia lr, {d8, d9} @ 16-byte Reload
 ; LE-I32-NEXT:    vmov.f32 s0, s19
 ; LE-I32-NEXT:    bl lrintf
-; LE-I32-NEXT:    vmov.f32 s0, s17
 ; LE-I32-NEXT:    add lr, sp, #48
+; LE-I32-NEXT:    vmov.f32 s0, s17
 ; LE-I32-NEXT:    vldmia lr, {d12, d13} @ 16-byte Reload
 ; LE-I32-NEXT:    vmov.32 d13[1], r0
 ; LE-I32-NEXT:    bl lrintf
@@ -1842,17 +1842,17 @@ define <16 x iXLen> @lrint_v16f32(<16 x float> %x) {
 ; LE-I64-NEXT:    sub sp, sp, #160
 ; LE-I64-NEXT:    add lr, sp, #112
 ; LE-I64-NEXT:    vorr q5, q3, q3
-; LE-I64-NEXT:    vorr q6, q0, q0
+; LE-I64-NEXT:    vorr q7, q1, q1
 ; LE-I64-NEXT:    mov r4, r0
 ; LE-I64-NEXT:    vstmia lr, {d4, d5} @ 16-byte Spill
 ; LE-I64-NEXT:    add lr, sp, #48
-; LE-I64-NEXT:    vorr q7, q1, q1
+; LE-I64-NEXT:    vorr q6, q0, q0
 ; LE-I64-NEXT:    vstmia lr, {d0, d1} @ 16-byte Spill
 ; LE-I64-NEXT:    vmov.f32 s0, s23
 ; LE-I64-NEXT:    bl lrintf
-; LE-I64-NEXT:    vmov.f32 s0, s24
 ; LE-I64-NEXT:    add lr, sp, #144
 ; LE-I64-NEXT:    vmov.32 d17[0], r0
+; LE-I64-NEXT:    vmov.f32 s0, s24
 ; LE-I64-NEXT:    str r1, [sp, #108] @ 4-byte Spill
 ; LE-I64-NEXT:    vstmia lr, {d16, d17} @ 16-byte Spill
 ; LE-I64-NEXT:    bl lrintf
@@ -1860,9 +1860,9 @@ define <16 x iXLen> @lrint_v16f32(<16 x float> %x) {
 ; LE-I64-NEXT:    str r1, [sp, #84] @ 4-byte Spill
 ; LE-I64-NEXT:    vmov.32 d8[0], r0
 ; LE-I64-NEXT:    bl lrintf
-; LE-I64-NEXT:    vmov.f32 s0, s28
 ; LE-I64-NEXT:    add lr, sp, #128
 ; LE-I64-NEXT:    vmov.32 d9[0], r0
+; LE-I64-NEXT:    vmov.f32 s0, s28
 ; LE-I64-NEXT:    str r1, [sp, #44] @ 4-byte Spill
 ; LE-I64-NEXT:    vstmia lr, {d8, d9} @ 16-byte Spill
 ; LE-I64-NEXT:    bl lrintf
@@ -1884,16 +1884,16 @@ define <16 x iXLen> @lrint_v16f32(<16 x float> %x) {
 ; LE-I64-NEXT:    vldmia lr, {d14, d15} @ 16-byte Reload
 ; LE-I64-NEXT:    vmov.f32 s0, s29
 ; LE-I64-NEXT:    bl lrintf
-; LE-I64-NEXT:    vmov.f32 s0, s22
 ; LE-I64-NEXT:    add lr, sp, #24
 ; LE-I64-NEXT:    vmov.32 d17[0], r0
+; LE-I64-NEXT:    vmov.f32 s0, s22
 ; LE-I64-NEXT:    mov r11, r1
 ; LE-I64-NEXT:    vstmia lr, {d16, d17} @ 16-byte Spill
 ; LE-I64-NEXT:    vmov.32 d13[1], r7
 ; LE-I64-NEXT:    bl lrintf
 ; LE-I64-NEXT:    add lr, sp, #144
-; LE-I64-NEXT:    vmov.f32 s0, s21
 ; LE-I64-NEXT:    vmov.32 d12[1], r5
+; LE-I64-NEXT:    vmov.f32 s0, s21
 ; LE-I64-NEXT:    str r1, [sp, #40] @ 4-byte Spill
 ; LE-I64-NEXT:    vldmia lr, {d16, d17} @ 16-byte Reload
 ; LE-I64-NEXT:    vmov.32 d16[0], r0
@@ -1906,9 +1906,9 @@ define <16 x iXLen> @lrint_v16f32(<16 x float> %x) {
 ; LE-I64-NEXT:    vmov.32 d13[0], r0
 ; LE-I64-NEXT:    vmov.32 d9[1], r6
 ; LE-I64-NEXT:    bl lrintf
-; LE-I64-NEXT:    vmov.f32 s0, s31
 ; LE-I64-NEXT:    vmov.32 d12[0], r0
 ; LE-I64-NEXT:    add lr, sp, #8
+; LE-I64-NEXT:    vmov.f32 s0, s31
 ; LE-I64-NEXT:    mov r8, r1
 ; LE-I64-NEXT:    vmov.32 d8[1], r9
 ; LE-I64-NEXT:    vstmia lr, {d12, d13} @ 16-byte Spill
@@ -1925,10 +1925,10 @@ define <16 x iXLen> @lrint_v16f32(<16 x float> %x) {
 ; LE-I64-NEXT:    vmov.f32 s0, s27
 ; LE-I64-NEXT:    vmov.32 d11[1], r0
 ; LE-I64-NEXT:    bl lrintf
-; LE-I64-NEXT:    vmov.f32 s0, s26
 ; LE-I64-NEXT:    vmov.32 d15[0], r0
 ; LE-I64-NEXT:    ldr r0, [sp, #84] @ 4-byte Reload
 ; LE-I64-NEXT:    add lr, sp, #128
+; LE-I64-NEXT:    vmov.f32 s0, s26
 ; LE-I64-NEXT:    mov r7, r1
 ; LE-I64-NEXT:    vmov.32 d10[1], r0
 ; LE-I64-NEXT:    vstmia lr, {d10, d11} @ 16-byte Spill
@@ -2004,17 +2004,17 @@ define <16 x iXLen> @lrint_v16f32(<16 x float> %x) {
 ; BE-I32-NEXT:    vrev64.32 q7, q2
 ; BE-I32-NEXT:    vstmia lr, {d8, d9} @ 16-byte Spill
 ; BE-I32-NEXT:    bl lrintf
-; BE-I32-NEXT:    vmov.f32 s0, s16
 ; BE-I32-NEXT:    vmov.32 d16[0], r0
 ; BE-I32-NEXT:    add lr, sp, #80
+; BE-I32-NEXT:    vmov.f32 s0, s16
 ; BE-I32-NEXT:    vstmia lr, {d16, d17} @ 16-byte Spill
 ; BE-I32-NEXT:    bl lrintf
 ; BE-I32-NEXT:    vmov.f32 s0, s18
 ; BE-I32-NEXT:    vmov.32 d12[0], r0
 ; BE-I32-NEXT:    bl lrintf
-; BE-I32-NEXT:    vmov.f32 s0, s20
 ; BE-I32-NEXT:    add lr, sp, #48
 ; BE-I32-NEXT:    vmov.32 d13[0], r0
+; BE-I32-NEXT:    vmov.f32 s0, s20
 ; BE-I32-NEXT:    vstmia lr, {d12, d13} @ 16-byte Spill
 ; BE-I32-NEXT:    add lr, sp, #16
 ; BE-I32-NEXT:    vstmia lr, {d10, d11} @ 16-byte Spill
@@ -2022,8 +2022,8 @@ define <16 x iXLen> @lrint_v16f32(<16 x float> %x) {
 ; BE-I32-NEXT:    vmov.f32 s0, s22
 ; BE-I32-NEXT:    vmov.32 d8[0], r0
 ; BE-I32-NEXT:    bl lrintf
-; BE-I32-NEXT:    vmov.f32 s0, s28
 ; BE-I32-NEXT:    vmov.32 d9[0], r0
+; BE-I32-NEXT:    vmov.f32 s0, s28
 ; BE-I32-NEXT:    vstmia sp, {d8, d9} @ 16-byte Spill
 ; BE-I32-NEXT:    bl lrintf
 ; BE-I32-NEXT:    add lr, sp, #64
@@ -2031,17 +2031,17 @@ define <16 x iXLen> @lrint_v16f32(<16 x float> %x) {
 ; BE-I32-NEXT:    vldmia lr, {d10, d11} @ 16-byte Reload
 ; BE-I32-NEXT:    vmov.f32 s0, s22
 ; BE-I32-NEXT:    bl lrintf
-; BE-I32-NEXT:    vmov.f32 s0, s30
 ; BE-I32-NEXT:    add lr, sp, #80
+; BE-I32-NEXT:    vmov.f32 s0, s30
 ; BE-I32-NEXT:    vldmia lr, {d8, d9} @ 16-byte Reload
 ; BE-I32-NEXT:    vmov.32 d9[0], r0
 ; BE-I32-NEXT:    bl lrintf
 ; BE-I32-NEXT:    vmov.f32 s0, s23
 ; BE-I32-NEXT:    vmov.32 d13[0], r0
 ; BE-I32-NEXT:    bl lrintf
-; BE-I32-NEXT:    vmov.f32 s0, s31
 ; BE-I32-NEXT:    add lr, sp, #80
 ; BE-I32-NEXT:    vmov.32 d9[1], r0
+; BE-I32-NEXT:    vmov.f32 s0, s31
 ; BE-I32-NEXT:    vstmia lr, {d8, d9} @ 16-byte Spill
 ; BE-I32-NEXT:    bl lrintf
 ; BE-I32-NEXT:    vmov.f32 s0, s29
@@ -2052,18 +2052,18 @@ define <16 x iXLen> @lrint_v16f32(<16 x float> %x) {
 ; BE-I32-NEXT:    vldmia lr, {d8, d9} @ 16-byte Reload
 ; BE-I32-NEXT:    vmov.f32 s0, s19
 ; BE-I32-NEXT:    bl lrintf
-; BE-I32-NEXT:    vmov.f32 s0, s17
 ; BE-I32-NEXT:    vldmia sp, {d10, d11} @ 16-byte Reload
+; BE-I32-NEXT:    vmov.f32 s0, s17
 ; BE-I32-NEXT:    vmov.32 d11[1], r0
 ; BE-I32-NEXT:    bl lrintf
-; BE-I32-NEXT:    add lr, sp, #32
 ; BE-I32-NEXT:    vmov.32 d10[1], r0
+; BE-I32-NEXT:    add lr, sp, #32
 ; BE-I32-NEXT:    vldmia lr, {d8, d9} @ 16-byte Reload
 ; BE-I32-NEXT:    vmov.f32 s0, s19
 ; BE-I32-NEXT:    vorr q7, q5, q5
 ; BE-I32-NEXT:    bl lrintf
-; BE-I32-NEXT:    vmov.f32 s0, s17
 ; BE-I32-NEXT:    add lr, sp, #48
+; BE-I32-NEXT:    vmov.f32 s0, s17
 ; BE-I32-NEXT:    vldmia lr, {d10, d11} @ 16-byte Reload
 ; BE-I32-NEXT:    vmov.32 d11[1], r0
 ; BE-I32-NEXT:    bl lrintf
@@ -2107,12 +2107,12 @@ define <16 x iXLen> @lrint_v16f32(<16 x float> %x) {
 ; BE-I64-NEXT:    str r1, [sp, #88] @ 4-byte Spill
 ; BE-I64-NEXT:    vmov.32 d11[0], r0
 ; BE-I64-NEXT:    bl lrintf
-; BE-I64-NEXT:    vrev64.32 d8, d14
-; BE-I64-NEXT:    add lr, sp, #128
 ; BE-I64-NEXT:    vmov.32 d10[0], r0
+; BE-I64-NEXT:    add lr, sp, #128
 ; BE-I64-NEXT:    str r1, [sp, #92] @ 4-byte Spill
-; BE-I64-NEXT:    vmov.f32 s0, s16
+; BE-I64-NEXT:    vrev64.32 d8, d14
 ; BE-I64-NEXT:    vrev64.32 d9, d12
+; BE-I64-NEXT:    vmov.f32 s0, s16
 ; BE-I64-NEXT:    vstmia lr, {d10, d11} @ 16-byte Spill
 ; BE-I64-NEXT:    vstr d9, [sp, #64] @ 8-byte Spill
 ; BE-I64-NEXT:    bl lrintf
@@ -2148,9 +2148,9 @@ define <16 x iXLen> @lrint_v16f32(<16 x float> %x) {
 ; BE-I64-NEXT:    vrev64.32 d8, d16
 ; BE-I64-NEXT:    vmov.f32 s0, s17
 ; BE-I64-NEXT:    bl lrintf
-; BE-I64-NEXT:    vmov.f32 s0, s16
 ; BE-I64-NEXT:    vmov.32 d14[1], r5
 ; BE-I64-NEXT:    add lr, sp, #64
+; BE-I64-NEXT:    vmov.f32 s0, s16
 ; BE-I64-NEXT:    mov r10, r1
 ; BE-I64-NEXT:    vmov.32 d11[0], r0
 ; BE-I64-NEXT:    vstmia lr, {d14, d15} @ 16-byte Spill
@@ -2165,9 +2165,9 @@ define <16 x iXLen> @lrint_v16f32(<16 x float> %x) {
 ; BE-I64-NEXT:    vrev64.32 d8, d17
 ; BE-I64-NEXT:    vmov.f32 s0, s17
 ; BE-I64-NEXT:    bl lrintf
-; BE-I64-NEXT:    vmov.f32 s0, s16
 ; BE-I64-NEXT:    vmov.32 d12[1], r9
 ; BE-I64-NEXT:    add lr, sp, #96
+; BE-I64-NEXT:    vmov.f32 s0, s16
 ; BE-I64-NEXT:    mov r8, r1
 ; BE-I64-NEXT:    vmov.32 d11[0], r0
 ; BE-I64-NEXT:    vstmia lr, {d12, d13} @ 16-byte Spill
@@ -2185,10 +2185,10 @@ define <16 x iXLen> @lrint_v16f32(<16 x float> %x) {
 ; BE-I64-NEXT:    vmov.32 d11[1], r0
 ; BE-I64-NEXT:    vmov.f32 s0, s17
 ; BE-I64-NEXT:    bl lrintf
-; BE-I64-NEXT:    vmov.f32 s0, s16
 ; BE-I64-NEXT:    vmov.32 d15[0], r0
 ; BE-I64-NEXT:    ldr r0, [sp, #92] @ 4-byte Reload
 ; BE-I64-NEXT:    add lr, sp, #128
+; BE-I64-NEXT:    vmov.f32 s0, s16
 ; BE-I64-NEXT:    mov r7, r1
 ; BE-I64-NEXT:    vmov.32 d10[1], r0
 ; BE-I64-NEXT:    vstmia lr, {d10, d11} @ 16-byte Spill
@@ -2204,9 +2204,9 @@ define <16 x iXLen> @lrint_v16f32(<16 x float> %x) {
 ; BE-I64-NEXT:    vmov.f32 s0, s17
 ; BE-I64-NEXT:    vmov.32 d13[1], r0
 ; BE-I64-NEXT:    bl lrintf
-; BE-I64-NEXT:    vmov.f32 s0, s16
 ; BE-I64-NEXT:    vmov.32 d11[0], r0
 ; BE-I64-NEXT:    ldr r0, [sp, #60] @ 4-byte Reload
+; BE-I64-NEXT:    vmov.f32 s0, s16
 ; BE-I64-NEXT:    mov r6, r1
 ; BE-I64-NEXT:    vmov.32 d12[1], r0
 ; BE-I64-NEXT:    bl lrintf
@@ -2494,8 +2494,8 @@ define <8 x iXLen> @lrint_v8f64(<8 x double> %x) {
 ; LE-I32-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
 ; LE-I32-NEXT:    .pad #32
 ; LE-I32-NEXT:    sub sp, sp, #32
-; LE-I32-NEXT:    vorr q5, q0, q0
 ; LE-I32-NEXT:    add lr, sp, #16
+; LE-I32-NEXT:    vorr q5, q0, q0
 ; LE-I32-NEXT:    vorr d0, d4, d4
 ; LE-I32-NEXT:    vstmia sp, {d6, d7} @ 16-byte Spill
 ; LE-I32-NEXT:    vorr q7, q3, q3
@@ -2541,16 +2541,16 @@ define <8 x iXLen> @lrint_v8f64(<8 x double> %x) {
 ; LE-I64-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
 ; LE-I64-NEXT:    .pad #40
 ; LE-I64-NEXT:    sub sp, sp, #40
-; LE-I64-NEXT:    vorr q4, q0, q0
 ; LE-I64-NEXT:    add lr, sp, #24
+; LE-I64-NEXT:    vorr q4, q0, q0
 ; LE-I64-NEXT:    vorr d0, d7, d7
 ; LE-I64-NEXT:    vstmia lr, {d6, d7} @ 16-byte Spill
 ; LE-I64-NEXT:    vorr q7, q2, q2
 ; LE-I64-NEXT:    vorr q6, q1, q1
 ; LE-I64-NEXT:    bl lrint
-; LE-I64-NEXT:    vorr d0, d14, d14
 ; LE-I64-NEXT:    add lr, sp, #8
 ; LE-I64-NEXT:    vmov.32 d17[0], r0
+; LE-I64-NEXT:    vorr d0, d14, d14
 ; LE-I64-NEXT:    mov r8, r1
 ; LE-I64-NEXT:    vstmia lr, {d16, d17} @ 16-byte Spill
 ; LE-I64-NEXT:    bl lrint
@@ -2606,13 +2606,13 @@ define <8 x iXLen> @lrint_v8f64(<8 x double> %x) {
 ; BE-I32-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
 ; BE-I32-NEXT:    .pad #32
 ; BE-I32-NEXT:    sub sp, sp, #32
-; BE-I32-NEXT:    vorr q5, q0, q0
-; BE-I32-NEXT:    vstmia sp, {d0, d1} @ 16-byte Spill
-; BE-I32-NEXT:    vorr d0, d4, d4
 ; BE-I32-NEXT:    add lr, sp, #16
 ; BE-I32-NEXT:    vorr q7, q3, q3
-; BE-I32-NEXT:    vstmia lr, {d4, d5} @ 16-byte Spill
 ; BE-I32-NEXT:    vorr q6, q1, q1
+; BE-I32-NEXT:    vstmia sp, {d0, d1} @ 16-byte Spill
+; BE-I32-NEXT:    vorr q5, q0, q0
+; BE-I32-NEXT:    vorr d0, d4, d4
+; BE-I32-NEXT:    vstmia lr, {d4, d5} @ 16-byte Spill
 ; BE-I32-NEXT:    bl lrint
 ; BE-I32-NEXT:    vorr d0, d10, d10
 ; BE-I32-NEXT:    vmov.32 d8[0], r0
@@ -2653,16 +2653,16 @@ define <8 x iXLen> @lrint_v8f64(<8 x double> %x) {
 ; BE-I64-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
 ; BE-I64-NEXT:    .pad #40
 ; BE-I64-NEXT:    sub sp, sp, #40
-; BE-I64-NEXT:    vorr q4, q0, q0
 ; BE-I64-NEXT:    add lr, sp, #24
+; BE-I64-NEXT:    vorr q4, q0, q0
 ; BE-I64-NEXT:    vorr d0, d7, d7
 ; BE-I64-NEXT:    vstmia lr, {d6, d7} @ 16-byte Spill
 ; BE-I64-NEXT:    vorr q7, q2, q2
 ; BE-I64-NEXT:    vorr q6, q1, q1
 ; BE-I64-NEXT:    bl lrint
-; BE-I64-NEXT:    vorr d0, d14, d14
 ; BE-I64-NEXT:    add lr, sp, #8
 ; BE-I64-NEXT:    vmov.32 d17[0], r0
+; BE-I64-NEXT:    vorr d0, d14, d14
 ; BE-I64-NEXT:    mov r8, r1
 ; BE-I64-NEXT:    vstmia lr, {d16, d17} @ 16-byte Spill
 ; BE-I64-NEXT:    bl lrint
@@ -2727,10 +2727,10 @@ define <16 x iXLen> @lrint_v16f64(<16 x double> %x) {
 ; LE-I32-NEXT:    add r0, sp, #240
 ; LE-I32-NEXT:    vld1.64 {d16, d17}, [r0]
 ; LE-I32-NEXT:    add r0, sp, #208
-; LE-I32-NEXT:    vorr q6, q0, q0
+; LE-I32-NEXT:    vorr q5, q1, q1
 ; LE-I32-NEXT:    vstmia lr, {d6, d7} @ 16-byte Spill
 ; LE-I32-NEXT:    add lr, sp, #32
-; LE-I32-NEXT:    vorr q5, q1, q1
+; LE-I32-NEXT:    vorr q6, q0, q0
 ; LE-I32-NEXT:    vstmia lr, {d4, d5} @ 16-byte Spill
 ; LE-I32-NEXT:    add lr, sp, #16
 ; LE-I32-NEXT:    vstmia lr, {d0, d1} @ 16-byte Spill
@@ -2871,9 +2871,9 @@ define <16 x iXLen> @lrint_v16f64(<16 x double> %x) {
 ; LE-I64-NEXT:    str r1, [sp, #76] @ 4-byte Spill
 ; LE-I64-NEXT:    vmov.32 d8[0], r0
 ; LE-I64-NEXT:    bl lrint
-; LE-I64-NEXT:    vorr d0, d12, d12
 ; LE-I64-NEXT:    add lr, sp, #160
 ; LE-I64-NEXT:    vmov.32 d9[0], r0
+; LE-I64-NEXT:    vorr d0, d12, d12
 ; LE-I64-NEXT:    str r1, [sp, #72] @ 4-byte Spill
 ; LE-I64-NEXT:    vstmia lr, {d8, d9} @ 16-byte Spill
 ; LE-I64-NEXT:    bl lrint
@@ -2906,9 +2906,9 @@ define <16 x iXLen> @lrint_v16f64(<16 x double> %x) {
 ; LE-I64-NEXT:    vldmia lr, {d8, d9} @ 16-byte Reload
 ; LE-I64-NEXT:    vorr d0, d9, d9
 ; LE-I64-NEXT:    bl lrint
-; LE-I64-NEXT:    vorr d0, d8, d8
 ; LE-I64-NEXT:    vmov.32 d12[1], r7
 ; LE-I64-NEXT:    add lr, sp, #96
+; LE-I64-NEXT:    vorr d0, d8, d8
 ; LE-I64-NEXT:    mov r9, r1
 ; LE-I64-NEXT:    vmov.32 d11[0], r0
 ; LE-I64-NEXT:    vstmia lr, {d12, d13} @ 16-byte Spill
@@ -2935,8 +2935,8 @@ define <16 x iXLen> @lrint_v16f64(<16 x double> %x) {
 ; LE-I64-NEXT:    bl lrint
 ; LE-I64-NEXT:    vmov.32 d15[0], r0
 ; LE-I64-NEXT:    add lr, sp, #160
-; LE-I64-NEXT:    vorr d0, d10, d10
 ; LE-I64-NEXT:    ldr r0, [sp, #72] @ 4-byte Reload
+; LE-I64-NEXT:    vorr d0, d10, d10
 ; LE-I64-NEXT:    vldmia lr, {d8, d9} @ 16-byte Reload
 ; LE-I64-NEXT:    mov r6, r1
 ; LE-I64-NEXT:    vmov.32 d9[1], r0
@@ -2953,8 +2953,8 @@ define <16 x iXLen> @lrint_v16f64(<16 x double> %x) {
 ; LE-I64-NEXT:    bl lrint
 ; LE-I64-NEXT:    vmov.32 d13[0], r0
 ; LE-I64-NEXT:    add lr, sp, #40
-; LE-I64-NEXT:    vorr d0, d10, d10
 ; LE-I64-NEXT:    ldr r0, [sp, #116] @ 4-byte Reload
+; LE-I64-NEXT:    vorr d0, d10, d10
 ; LE-I64-NEXT:    vldmia lr, {d8, d9} @ 16-byte Reload
 ; LE-I64-NEXT:    mov r5, r1
 ; LE-I64-NEXT:    vmov.32 d9[1], r0
@@ -3148,9 +3148,9 @@ define <16 x iXLen> @lrint_v16f64(<16 x double> %x) {
 ; BE-I64-NEXT:    vld1.64 {d16, d17}, [r0]
 ; BE-I64-NEXT:    vstmia lr, {d16, d17} @ 16-byte Spill
 ; BE-I64-NEXT:    bl lrint
-; BE-I64-NEXT:    vorr d0, d14, d14
 ; BE-I64-NEXT:    add lr, sp, #136
 ; BE-I64-NEXT:    vmov.32 d17[0], r0
+; BE-I64-NEXT:    vorr d0, d14, d14
 ; BE-I64-NEXT:    str r1, [sp, #108] @ 4-byte Spill
 ; BE-I64-NEXT:    vstmia lr, {d16, d17} @ 16-byte Spill
 ; BE-I64-NEXT:    bl lrint
@@ -3158,9 +3158,9 @@ define <16 x iXLen> @lrint_v16f64(<16 x double> %x) {
 ; BE-I64-NEXT:    str r1, [sp, #84] @ 4-byte Spill
 ; BE-I64-NEXT:    vmov.32 d10[0], r0
 ; BE-I64-NEXT:    bl lrint
-; BE-I64-NEXT:    vorr d0, d12, d12
 ; BE-I64-NEXT:    add lr, sp, #152
 ; BE-I64-NEXT:    vmov.32 d11[0], r0
+; BE-I64-NEXT:    vorr d0, d12, d12
 ; BE-I64-NEXT:    str r1, [sp, #44] @ 4-byte Spill
 ; BE-I64-NEXT:    vstmia lr, {d10, d11} @ 16-byte Spill
 ; BE-I64-NEXT:    bl lrint
@@ -3192,9 +3192,9 @@ define <16 x iXLen> @lrint_v16f64(<16 x double> %x) {
 ; BE-I64-NEXT:    vldmia lr, {d8, d9} @ 16-byte Reload
 ; BE-I64-NEXT:    vorr d0, d9, d9
 ; BE-I64-NEXT:    bl lrint
-; BE-I64-NEXT:    vorr d0, d8, d8
 ; BE-I64-NEXT:    vmov.32 d12[1], r7
 ; BE-I64-NEXT:    add lr, sp, #64
+; BE-I64-NEXT:    vorr d0, d8, d8
 ; BE-I64-NEXT:    mov r10, r1
 ; BE-I64-NEXT:    vmov.32 d15[0], r0
 ; BE-I64-NEXT:    vstmia lr, {d12, d13} @ 16-byte Spill
@@ -3209,9 +3209,9 @@ define <16 x iXLen> @lrint_v16f64(<16 x double> %x) {
 ; BE-I64-NEXT:    vldmia lr, {d8, d9} @ 16-byte Reload
 ; BE-I64-NEXT:    vorr d0, d9, d9
 ; BE-I64-NEXT:    bl lrint
-; BE-I64-NEXT:    vorr d0, d8, d8
 ; BE-I64-NEXT:    vmov.32 d12[1], r6
 ; BE-I64-NEXT:    add lr, sp, #24
+; BE-I64-NEXT:    vorr d0, d8, d8
 ; BE-I64-NEXT:    mov r8, r1
 ; BE-I64-NEXT:    vmov.32 d11[0], r0
 ; BE-I64-NEXT:    vstmia lr, {d12, d13} @ 16-byte Spill
@@ -3230,8 +3230,8 @@ define <16 x iXLen> @lrint_v16f64(<16 x double> %x) {
 ; BE-I64-NEXT:    bl lrint
 ; BE-I64-NEXT:    vmov.32 d15[0], r0
 ; BE-I64-NEXT:    ldr r0, [sp, #84] @ 4-byte Reload
-; BE-I64-NEXT:    vorr d0, d12, d12
 ; BE-I64-NEXT:    add lr, sp, #152
+; BE-I64-NEXT:    vorr d0, d12, d12
 ; BE-I64-NEXT:    mov r4, r1
 ; BE-I64-NEXT:    vmov.32 d8[1], r0
 ; BE-I64-NEXT:    vstmia lr, {d8, d9} @ 16-byte Spill
@@ -3457,11 +3457,11 @@ define <4 x iXLen> @lrint_v4fp128(<4 x fp128> %x) {
 ; LE-I32-NEXT:    ldm r3, {r0, r1, r2, r3}
 ; LE-I32-NEXT:    bl lrintl
 ; LE-I32-NEXT:    add r3, sp, #28
-; LE-I32-NEXT:    ldr r12, [sp, #24]
 ; LE-I32-NEXT:    vmov.32 d9[0], r0
+; LE-I32-NEXT:    ldr r12, [sp, #24]
 ; LE-I32-NEXT:    ldm r3, {r1, r2, r3}
-; LE-I32-NEXT:    mov r0, r12
 ; LE-I32-NEXT:    vmov.32 d9[1], r4
+; LE-I32-NEXT:    mov r0, r12
 ; LE-I32-NEXT:    bl lrintl
 ; LE-I32-NEXT:    vmov.32 d8[1], r0
 ; LE-I32-NEXT:    vorr q0, q4, q4
@@ -3483,12 +3483,12 @@ define <4 x iXLen> @lrint_v4fp128(<4 x fp128> %x) {
 ; LE-I64-NEXT:    bl lrintl
 ; LE-I64-NEXT:    mov r9, r1
 ; LE-I64-NEXT:    vmov.32 d9[0], r0
+; LE-I64-NEXT:    ldr r8, [sp, #80]
 ; LE-I64-NEXT:    mov r0, r4
+; LE-I64-NEXT:    ldr r10, [sp, #64]
 ; LE-I64-NEXT:    mov r1, r6
 ; LE-I64-NEXT:    mov r2, r7
 ; LE-I64-NEXT:    mov r3, r5
-; LE-I64-NEXT:    ldr r8, [sp, #80]
-; LE-I64-NEXT:    ldr r10, [sp, #64]
 ; LE-I64-NEXT:    bl lrintl
 ; LE-I64-NEXT:    add r3, sp, #68
 ; LE-I64-NEXT:    mov r5, r1
@@ -3530,11 +3530,11 @@ define <4 x iXLen> @lrint_v4fp128(<4 x fp128> %x) {
 ; BE-I32-NEXT:    ldm r3, {r0, r1, r2, r3}
 ; BE-I32-NEXT:    bl lrintl
 ; BE-I32-NEXT:    add r3, sp, #28
-; BE-I32-NEXT:    ldr r12, [sp, #24]
 ; BE-I32-NEXT:    vmov.32 d9[0], r0
+; BE-I32-NEXT:    ldr r12, [sp, #24]
 ; BE-I32-NEXT:    ldm r3, {r1, r2, r3}
-; BE-I32-NEXT:    mov r0, r12
 ; BE-I32-NEXT:    vmov.32 d9[1], r4
+; BE-I32-NEXT:    mov r0, r12
 ; BE-I32-NEXT:    bl lrintl
 ; BE-I32-NEXT:    vmov.32 d8[1], r0
 ; BE-I32-NEXT:    vrev64.32 q0, q4
@@ -3556,12 +3556,12 @@ define <4 x iXLen> @lrint_v4fp128(<4 x fp128> %x) {
 ; BE-I64-NEXT:    bl lrintl
 ; BE-I64-NEXT:    mov r9, r1
 ; BE-I64-NEXT:    vmov.32 d8[0], r0
+; BE-I64-NEXT:    ldr r8, [sp, #72]
 ; BE-I64-NEXT:    mov r0, r4
+; BE-I64-NEXT:    ldr r10, [sp, #56]
 ; BE-I64-NEXT:    mov r1, r6
 ; BE-I64-NEXT:    mov r2, r7
 ; BE-I64-NEXT:    mov r3, r5
-; BE-I64-NEXT:    ldr r8, [sp, #72]
-; BE-I64-NEXT:    ldr r10, [sp, #56]
 ; BE-I64-NEXT:    bl lrintl
 ; BE-I64-NEXT:    add r3, sp, #60
 ; BE-I64-NEXT:    mov r5, r1
@@ -3605,13 +3605,13 @@ define <8 x iXLen> @lrint_v8fp128(<8 x fp128> %x) {
 ; LE-I32-NEXT:    ldm r3, {r0, r1, r2, r3}
 ; LE-I32-NEXT:    bl lrintl
 ; LE-I32-NEXT:    vmov.32 d8[0], r0
+; LE-I32-NEXT:    ldr r8, [sp, #160]
+; LE-I32-NEXT:    ldr r9, [sp, #64]
 ; LE-I32-NEXT:    mov r0, r5
+; LE-I32-NEXT:    ldr r10, [sp, #80]
 ; LE-I32-NEXT:    mov r1, r4
 ; LE-I32-NEXT:    mov r2, r7
 ; LE-I32-NEXT:    mov r3, r6
-; LE-I32-NEXT:    ldr r8, [sp, #160]
-; LE-I32-NEXT:    ldr r9, [sp, #64]
-; LE-I32-NEXT:    ldr r10, [sp, #80]
 ; LE-I32-NEXT:    bl lrintl
 ; LE-I32-NEXT:    add r3, sp, #84
 ; LE-I32-NEXT:    vmov.32 d10[0], r0
@@ -3620,23 +3620,23 @@ define <8 x iXLen> @lrint_v8fp128(<8 x fp128> %x) {
 ; LE-I32-NEXT:    bl lrintl
 ; LE-I32-NEXT:    ldr r6, [sp, #96]
 ; LE-I32-NEXT:    vmov.32 d11[0], r0
-; LE-I32-NEXT:    ldr r1, [sp, #100]
-; LE-I32-NEXT:    ldr r2, [sp, #104]
-; LE-I32-NEXT:    ldr r3, [sp, #108]
-; LE-I32-NEXT:    mov r0, r6
 ; LE-I32-NEXT:    ldr r4, [sp, #68]
 ; LE-I32-NEXT:    ldr r5, [sp, #72]
 ; LE-I32-NEXT:    ldr r10, [sp, #164]
+; LE-I32-NEXT:    mov r0, r6
+; LE-I32-NEXT:    ldr r1, [sp, #100]
 ; LE-I32-NEXT:    ldr r7, [sp, #168]
+; LE-I32-NEXT:    ldr r2, [sp, #104]
+; LE-I32-NEXT:    ldr r3, [sp, #108]
 ; LE-I32-NEXT:    bl lrintl
-; LE-I32-NEXT:    ldr r3, [sp, #76]
 ; LE-I32-NEXT:    vmov.32 d11[1], r0
+; LE-I32-NEXT:    ldr r3, [sp, #76]
 ; LE-I32-NEXT:    mov r0, r9
 ; LE-I32-NEXT:    mov r1, r4
 ; LE-I32-NEXT:    mov r2, r5
 ; LE-I32-NEXT:    bl lrintl
-; LE-I32-NEXT:    ldr r3, [sp, #172]
 ; LE-I32-NEXT:    vmov.32 d10[1], r0
+; LE-I32-NEXT:    ldr r3, [sp, #172]
 ; LE-I32-NEXT:    mov r0, r8
 ; LE-I32-NEXT:    mov r1, r10
 ; LE-I32-NEXT:    mov r2, r7
@@ -3646,11 +3646,11 @@ define <8 x iXLen> @lrint_v8fp128(<8 x fp128> %x) {
 ; LE-I32-NEXT:    ldm r3, {r0, r1, r2, r3}
 ; LE-I32-NEXT:    bl lrintl
 ; LE-I32-NEXT:    add r3, sp, #132
-; LE-I32-NEXT:    ldr r7, [sp, #128]
 ; LE-I32-NEXT:    vmov.32 d9[0], r0
+; LE-I32-NEXT:    ldr r7, [sp, #128]
 ; LE-I32-NEXT:    ldm r3, {r1, r2, r3}
-; LE-I32-NEXT:    mov r0, r7
 ; LE-I32-NEXT:    vmov.32 d9[1], r4
+; LE-I32-NEXT:    mov r0, r7
 ; LE-I32-NEXT:    bl lrintl
 ; LE-I32-NEXT:    vmov.32 d8[1], r0
 ; LE-I32-NEXT:    vorr q0, q5, q5
@@ -3676,8 +3676,8 @@ define <8 x iXLen> @lrint_v8fp128(<8 x fp128> %x) {
 ; LE-I64-NEXT:    ldm r3, {r0, r1, r2, r3}
 ; LE-I64-NEXT:    bl lrintl
 ; LE-I64-NEXT:    add r7, sp, #164
-; LE-I64-NEXT:    ldr r6, [sp, #160]
 ; LE-I64-NEXT:    str r1, [sp, #4] @ 4-byte Spill
+; LE-I64-NEXT:    ldr r6, [sp, #160]
 ; LE-I64-NEXT:    vmov.32 d9[0], r0
 ; LE-I64-NEXT:    ldm r7, {r1, r2, r3, r7}
 ; LE-I64-NEXT:    mov r0, r6
@@ -3704,11 +3704,11 @@ define <8 x iXLen> @lrint_v8fp128(<8 x fp128> %x) {
 ; LE-I64-NEXT:    bl lrintl
 ; LE-I64-NEXT:    mov r9, r1
 ; LE-I64-NEXT:    vmov.32 d13[0], r0
+; LE-I64-NEXT:    ldr r6, [sp, #112]
 ; LE-I64-NEXT:    mov r0, r5
 ; LE-I64-NEXT:    mov r1, r4
 ; LE-I64-NEXT:    mov r2, r10
 ; LE-I64-NEXT:    mov r3, r11
-; LE-I64-NEXT:    ldr r6, [sp, #112]
 ; LE-I64-NEXT:    bl lrintl
 ; LE-I64-NEXT:    add r3, sp, #116
 ; LE-I64-NEXT:    mov r4, r1
@@ -3717,9 +3717,9 @@ define <8 x iXLen> @lrint_v8fp128(<8 x fp128> %x) {
 ; LE-I64-NEXT:    ldm r3, {r1, r2, r3}
 ; LE-I64-NEXT:    bl lrintl
 ; LE-I64-NEXT:    add r3, sp, #196
+; LE-I64-NEXT:    mov r5, r1
 ; LE-I64-NEXT:    vmov.32 d15[0], r0
 ; LE-I64-NEXT:    ldr r0, [sp, #192]
-; LE-I64-NEXT:    mov r5, r1
 ; LE-I64-NEXT:    ldm r3, {r1, r2, r3}
 ; LE-I64-NEXT:    bl lrintl
 ; LE-I64-NEXT:    vmov.32 d8[0], r0
@@ -3773,14 +3773,14 @@ define <8 x iXLen> @lrint_v8fp128(<8 x fp128> %x) {
 ; BE-I32-NEXT:    bl lrintl
 ; BE-I32-NEXT:    ldr r4, [sp, #176]
 ; BE-I32-NEXT:    vmov.32 d9[0], r0
-; BE-I32-NEXT:    ldr r1, [sp, #180]
-; BE-I32-NEXT:    ldr r2, [sp, #184]
-; BE-I32-NEXT:    ldr r3, [sp, #188]
-; BE-I32-NEXT:    mov r0, r4
 ; BE-I32-NEXT:    ldr r5, [sp, #116]
 ; BE-I32-NEXT:    ldr r8, [sp, #120]
 ; BE-I32-NEXT:    ldr r10, [sp, #84]
+; BE-I32-NEXT:    mov r0, r4
+; BE-I32-NEXT:    ldr r1, [sp, #180]
 ; BE-I32-NEXT:    ldr r9, [sp, #88]
+; BE-I32-NEXT:    ldr r2, [sp, #184]
+; BE-I32-NEXT:    ldr r3, [sp, #188]
 ; BE-I32-NEXT:    bl lrintl
 ; BE-I32-NEXT:    vmov.32 d9[1], r0
 ; BE-I32-NEXT:    ldr r3, [sp, #124]
@@ -3794,18 +3794,18 @@ define <8 x iXLen> @lrint_v8fp128(<8 x fp128> %x) {
 ; BE-I32-NEXT:    mov r1, r10
 ; BE-I32-NEXT:    mov r2, r9
 ; BE-I32-NEXT:    bl lrintl
-; BE-I32-NEXT:    ldr r3, [sp, #4] @ 4-byte Reload
 ; BE-I32-NEXT:    mov r4, r0
 ; BE-I32-NEXT:    mov r0, r7
 ; BE-I32-NEXT:    mov r1, r6
 ; BE-I32-NEXT:    mov r2, r11
+; BE-I32-NEXT:    ldr r3, [sp, #4] @ 4-byte Reload
 ; BE-I32-NEXT:    bl lrintl
 ; BE-I32-NEXT:    add r3, sp, #148
-; BE-I32-NEXT:    ldr r7, [sp, #144]
 ; BE-I32-NEXT:    vmov.32 d10[0], r0
+; BE-I32-NEXT:    ldr r7, [sp, #144]
 ; BE-I32-NEXT:    ldm r3, {r1, r2, r3}
-; BE-I32-NEXT:    mov r0, r7
 ; BE-I32-NEXT:    vmov.32 d10[1], r4
+; BE-I32-NEXT:    mov r0, r7
 ; BE-I32-NEXT:    bl lrintl
 ; BE-I32-NEXT:    vmov.32 d8[1], r0
 ; BE-I32-NEXT:    vrev64.32 q0, q5
@@ -3832,8 +3832,8 @@ define <8 x iXLen> @lrint_v8fp128(<8 x fp128> %x) {
 ; BE-I64-NEXT:    mov r5, r0
 ; BE-I64-NEXT:    ldm r3, {r0, r1, r2, r3}
 ; BE-I64-NEXT:    bl lrintl
-; BE-I64-NEXT:    ldr r7, [sp, #176]
 ; BE-I64-NEXT:    add r3, sp, #180
+; BE-I64-NEXT:    ldr r7, [sp, #176]
 ; BE-I64-NEXT:    str r1, [sp, #12] @ 4-byte Spill
 ; BE-I64-NEXT:    vmov.32 d8[0], r0
 ; BE-I64-NEXT:    ldm r3, {r1, r2, r3}
@@ -3858,14 +3858,14 @@ define <8 x iXLen> @lrint_v8fp128(<8 x fp128> %x) {
 ; BE-I64-NEXT:    mov r7, r1
 ; BE-I64-NEXT:    ldm r3, {r0, r1, r2, r3}
 ; BE-I64-NEXT:    bl lrintl
-; BE-I64-NEXT:    ldr r3, [sp, #4] @ 4-byte Reload
 ; BE-I64-NEXT:    mov r8, r1
 ; BE-I64-NEXT:    vmov.32 d11[0], r0
+; BE-I64-NEXT:    ldr r10, [sp, #112]
 ; BE-I64-NEXT:    mov r0, r5
+; BE-I64-NEXT:    vmov.32 d12[0], r9
 ; BE-I64-NEXT:    mov r1, r4
 ; BE-I64-NEXT:    mov r2, r11
-; BE-I64-NEXT:    ldr r10, [sp, #112]
-; BE-I64-NEXT:    vmov.32 d12[0], r9
+; BE-I64-NEXT:    ldr r3, [sp, #4] @ 4-byte Reload
 ; BE-I64-NEXT:    bl lrintl
 ; BE-I64-NEXT:    add r3, sp, #116
 ; BE-I64-NEXT:    mov r4, r1
@@ -3874,9 +3874,9 @@ define <8 x iXLen> @lrint_v8fp128(<8 x fp128> %x) {
 ; BE-I64-NEXT:    ldm r3, {r1, r2, r3}
 ; BE-I64-NEXT:    bl lrintl
 ; BE-I64-NEXT:    add r3, sp, #196
+; BE-I64-NEXT:    mov r5, r1
 ; BE-I64-NEXT:    vmov.32 d14[0], r0
 ; BE-I64-NEXT:    ldr r0, [sp, #192]
-; BE-I64-NEXT:    mov r5, r1
 ; BE-I64-NEXT:    ldm r3, {r1, r2, r3}
 ; BE-I64-NEXT:    bl lrintl
 ; BE-I64-NEXT:    vmov.32 d16[0], r0
@@ -3924,12 +3924,12 @@ define <16 x iXLen> @lrint_v16fp128(<16 x fp128> %x) {
 ; LE-I32-NEXT:    bl lrintl
 ; LE-I32-NEXT:    ldr r4, [sp, #216]
 ; LE-I32-NEXT:    vmov.32 d8[0], r0
-; LE-I32-NEXT:    ldr r1, [sp, #220]
-; LE-I32-NEXT:    ldr r2, [sp, #224]
-; LE-I32-NEXT:    ldr r3, [sp, #228]
-; LE-I32-NEXT:    mov r0, r4
 ; LE-I32-NEXT:    ldr r7, [sp, #152]
 ; LE-I32-NEXT:    ldr r11, [sp, #104]
+; LE-I32-NEXT:    ldr r1, [sp, #220]
+; LE-I32-NEXT:    mov r0, r4
+; LE-I32-NEXT:    ldr r2, [sp, #224]
+; LE-I32-NEXT:    ldr r3, [sp, #228]
 ; LE-I32-NEXT:    bl lrintl
 ; LE-I32-NEXT:    add r3, sp, #156
 ; LE-I32-NEXT:    vmov.32 d10[0], r0
@@ -3938,11 +3938,11 @@ define <16 x iXLen> @lrint_v16fp128(<16 x fp128> %x) {
 ; LE-I32-NEXT:    bl lrintl
 ; LE-I32-NEXT:    ldr r7, [sp, #184]
 ; LE-I32-NEXT:    vmov.32 d12[0], r0
+; LE-I32-NEXT:    ldr r4, [sp, #120]
 ; LE-I32-NEXT:    ldr r1, [sp, #188]
 ; LE-I32-NEXT:    ldr r2, [sp, #192]
-; LE-I32-NEXT:    ldr r3, [sp, #196]
 ; LE-I32-NEXT:    mov r0, r7
-; LE-I32-NEXT:    ldr r4, [sp, #120]
+; LE-I32-NEXT:    ldr r3, [sp, #196]
 ; LE-I32-NEXT:    bl lrintl
 ; LE-I32-NEXT:    add r3, sp, #124
 ; LE-I32-NEXT:    vmov.32 d13[0], r0
@@ -3951,15 +3951,15 @@ define <16 x iXLen> @lrint_v16fp128(<16 x fp128> %x) {
 ; LE-I32-NEXT:    bl lrintl
 ; LE-I32-NEXT:    ldr r5, [sp, #136]
 ; LE-I32-NEXT:    vmov.32 d15[0], r0
-; LE-I32-NEXT:    ldr r1, [sp, #140]
-; LE-I32-NEXT:    ldr r2, [sp, #144]
-; LE-I32-NEXT:    ldr r3, [sp, #148]
-; LE-I32-NEXT:    mov r0, r5
 ; LE-I32-NEXT:    ldr r4, [sp, #108]
 ; LE-I32-NEXT:    ldr r7, [sp, #112]
+; LE-I32-NEXT:    ldr r1, [sp, #140]
+; LE-I32-NEXT:    mov r0, r5
+; LE-I32-NEXT:    ldr r2, [sp, #144]
+; LE-I32-NEXT:    ldr r3, [sp, #148]
 ; LE-I32-NEXT:    bl lrintl
-; LE-I32-NEXT:    ldr r3, [sp, #116]
 ; LE-I32-NEXT:    vmov.32 d15[1], r0
+; LE-I32-NEXT:    ldr r3, [sp, #116]
 ; LE-I32-NEXT:    mov r0, r11
 ; LE-I32-NEXT:    mov r1, r4
 ; LE-I32-NEXT:    mov r2, r7
@@ -3970,15 +3970,15 @@ define <16 x iXLen> @lrint_v16fp128(<16 x fp128> %x) {
 ; LE-I32-NEXT:    mov r2, r9
 ; LE-I32-NEXT:    mov r3, r8
 ; LE-I32-NEXT:    bl lrintl
-; LE-I32-NEXT:    ldr r7, [sp, #200]
 ; LE-I32-NEXT:    vmov.32 d14[0], r0
-; LE-I32-NEXT:    ldr r1, [sp, #204]
-; LE-I32-NEXT:    ldr r2, [sp, #208]
-; LE-I32-NEXT:    ldr r3, [sp, #212]
-; LE-I32-NEXT:    mov r0, r7
+; LE-I32-NEXT:    ldr r7, [sp, #200]
 ; LE-I32-NEXT:    ldr r5, [sp, #172]
-; LE-I32-NEXT:    vmov.32 d14[1], r4
 ; LE-I32-NEXT:    ldr r6, [sp, #176]
+; LE-I32-NEXT:    ldr r1, [sp, #204]
+; LE-I32-NEXT:    vmov.32 d14[1], r4
+; LE-I32-NEXT:    ldr r2, [sp, #208]
+; LE-I32-NEXT:    mov r0, r7
+; LE-I32-NEXT:    ldr r3, [sp, #212]
 ; LE-I32-NEXT:    bl lrintl
 ; LE-I32-NEXT:    vmov.32 d13[1], r0
 ; LE-I32-NEXT:    ldr r3, [sp, #180]
@@ -3992,15 +3992,15 @@ define <16 x iXLen> @lrint_v16fp128(<16 x fp128> %x) {
 ; LE-I32-NEXT:    bl lrintl
 ; LE-I32-NEXT:    ldr r4, [sp, #264]
 ; LE-I32-NEXT:    vmov.32 d11[0], r0
-; LE-I32-NEXT:    ldr r1, [sp, #268]
-; LE-I32-NEXT:    ldr r2, [sp, #272]
-; LE-I32-NEXT:    vmov.32 d12[1], r5
-; LE-I32-NEXT:    ldr r3, [sp, #276]
-; LE-I32-NEXT:    mov r0, r4
 ; LE-I32-NEXT:    ldr r6, [sp, #236]
+; LE-I32-NEXT:    vmov.32 d12[1], r5
 ; LE-I32-NEXT:    ldr r7, [sp, #240]
 ; LE-I32-NEXT:    ldr r8, [sp, #332]
+; LE-I32-NEXT:    mov r0, r4
+; LE-I32-NEXT:    ldr r1, [sp, #268]
 ; LE-I32-NEXT:    ldr r5, [sp, #336]
+; LE-I32-NEXT:    ldr r2, [sp, #272]
+; LE-I32-NEXT:    ldr r3, [sp, #276]
 ; LE-I32-NEXT:    bl lrintl
 ; LE-I32-NEXT:    vmov.32 d11[1], r0
 ; LE-I32-NEXT:    ldr r3, [sp, #244]
@@ -4019,11 +4019,11 @@ define <16 x iXLen> @lrint_v16fp128(<16 x fp128> %x) {
 ; LE-I32-NEXT:    ldm r3, {r0, r1, r2, r3}
 ; LE-I32-NEXT:    bl lrintl
 ; LE-I32-NEXT:    add r3, sp, #300
-; LE-I32-NEXT:    ldr r7, [sp, #296]
 ; LE-I32-NEXT:    vmov.32 d9[0], r0
+; LE-I32-NEXT:    ldr r7, [sp, #296]
 ; LE-I32-NEXT:    ldm r3, {r1, r2, r3}
-; LE-I32-NEXT:    mov r0, r7
 ; LE-I32-NEXT:    vmov.32 d9[1], r4
+; LE-I32-NEXT:    mov r0, r7
 ; LE-I32-NEXT:    bl lrintl
 ; LE-I32-NEXT:    vmov.32 d8[1], r0
 ; LE-I32-NEXT:    vorr q0, q7, q7
@@ -4053,10 +4053,10 @@ define <16 x iXLen> @lrint_v16fp128(<16 x fp128> %x) {
 ; LE-I64-NEXT:    add r5, sp, #176
 ; LE-I64-NEXT:    mov r10, r1
 ; LE-I64-NEXT:    vmov.32 d13[0], r0
-; LE-I64-NEXT:    mov r0, r7
-; LE-I64-NEXT:    ldm r5, {r2, r3, r5}
-; LE-I64-NEXT:    mov r1, r6
 ; LE-I64-NEXT:    ldr r8, [sp, #232]
+; LE-I64-NEXT:    ldm r5, {r2, r3, r5}
+; LE-I64-NEXT:    mov r0, r7
+; LE-I64-NEXT:    mov r1, r6
 ; LE-I64-NEXT:    bl lrintl
 ; LE-I64-NEXT:    add r3, sp, #188
 ; LE-I64-NEXT:    mov r9, r1
@@ -4071,47 +4071,47 @@ define <16 x iXLen> @lrint_v16fp128(<16 x fp128> %x) {
 ; LE-I64-NEXT:    ldm r3, {r1, r2, r3}
 ; LE-I64-NEXT:    bl lrintl
 ; LE-I64-NEXT:    add r3, sp, #252
+; LE-I64-NEXT:    mov r8, r1
 ; LE-I64-NEXT:    vmov.32 d10[0], r0
 ; LE-I64-NEXT:    ldr r0, [sp, #248]
-; LE-I64-NEXT:    mov r8, r1
 ; LE-I64-NEXT:    ldm r3, {r1, r2, r3}
 ; LE-I64-NEXT:    bl lrintl
 ; LE-I64-NEXT:    add r3, sp, #268
+; LE-I64-NEXT:    mov r6, r1
 ; LE-I64-NEXT:    vmov.32 d11[0], r0
 ; LE-I64-NEXT:    ldr r0, [sp, #264]
-; LE-I64-NEXT:    mov r6, r1
 ; LE-I64-NEXT:    ldm r3, {r1, r2, r3}
 ; LE-I64-NEXT:    bl lrintl
 ; LE-I64-NEXT:    add r3, sp, #284
+; LE-I64-NEXT:    mov r7, r1
 ; LE-I64-NEXT:    vmov.32 d14[0], r0
 ; LE-I64-NEXT:    ldr r0, [sp, #280]
-; LE-I64-NEXT:    mov r7, r1
 ; LE-I64-NEXT:    ldm r3, {r1, r2, r3}
 ; LE-I64-NEXT:    bl lrintl
 ; LE-I64-NEXT:    add r3, sp, #316
+; LE-I64-NEXT:    mov r5, r1
 ; LE-I64-NEXT:    vmov.32 d15[0], r0
 ; LE-I64-NEXT:    ldr r0, [sp, #312]
-; LE-I64-NEXT:    mov r5, r1
 ; LE-I64-NEXT:    ldm r3, {r1, r2, r3}
 ; LE-I64-NEXT:    bl lrintl
 ; LE-I64-NEXT:    vmov.32 d15[1], r5
 ; LE-I64-NEXT:    add lr, sp, #56
 ; LE-I64-NEXT:    ldr r5, [sp, #300]
 ; LE-I64-NEXT:    vmov.32 d14[1], r7
+; LE-I64-NEXT:    ldr r7, [sp, #204]
 ; LE-I64-NEXT:    ldr r2, [sp, #304]
-; LE-I64-NEXT:    ldr r3, [sp, #308]
 ; LE-I64-NEXT:    vmov.32 d11[1], r6
 ; LE-I64-NEXT:    ldr r6, [sp, #200]
-; LE-I64-NEXT:    ldr r7, [sp, #204]
+; LE-I64-NEXT:    ldr r3, [sp, #308]
 ; LE-I64-NEXT:    vmov.32 d10[1], r8
 ; LE-I64-NEXT:    ldr r8, [sp, #344]
 ; LE-I64-NEXT:    vmov.32 d9[1], r11
 ; LE-I64-NEXT:    ldr r11, [sp, #216]
 ; LE-I64-NEXT:    vstmia lr, {d14, d15} @ 16-byte Spill
 ; LE-I64-NEXT:    add lr, sp, #40
+; LE-I64-NEXT:    vmov.32 d8[1], r9
 ; LE-I64-NEXT:    vmov.32 d17[0], r0
 ; LE-I64-NEXT:    ldr r0, [sp, #296]
-; LE-I64-NEXT:    vmov.32 d8[1], r9
 ; LE-I64-NEXT:    vstmia lr, {d10, d11} @ 16-byte Spill
 ; LE-I64-NEXT:    add lr, sp, #24
 ; LE-I64-NEXT:    vorr q5, q8, q8
@@ -4122,10 +4122,10 @@ define <16 x iXLen> @lrint_v16fp128(<16 x fp128> %x) {
 ; LE-I64-NEXT:    vmov.32 d9[1], r10
 ; LE-I64-NEXT:    bl lrintl
 ; LE-I64-NEXT:    vmov.32 d10[0], r0
-; LE-I64-NEXT:    ldr r2, [sp, #208]
-; LE-I64-NEXT:    ldr r3, [sp, #212]
 ; LE-I64-NEXT:    add lr, sp, #8
 ; LE-I64-NEXT:    mov r9, r1
+; LE-I64-NEXT:    ldr r2, [sp, #208]
+; LE-I64-NEXT:    ldr r3, [sp, #212]
 ; LE-I64-NEXT:    mov r0, r6
 ; LE-I64-NEXT:    mov r1, r7
 ; LE-I64-NEXT:    vstmia lr, {d10, d11} @ 16-byte Spill
@@ -4143,27 +4143,27 @@ define <16 x iXLen> @lrint_v16fp128(<16 x fp128> %x) {
 ; LE-I64-NEXT:    ldm r3, {r1, r2, r3}
 ; LE-I64-NEXT:    bl lrintl
 ; LE-I64-NEXT:    add r3, sp, #364
+; LE-I64-NEXT:    mov r8, r1
 ; LE-I64-NEXT:    vmov.32 d13[0], r0
 ; LE-I64-NEXT:    ldr r0, [sp, #360]
-; LE-I64-NEXT:    mov r8, r1
 ; LE-I64-NEXT:    ldm r3, {r1, r2, r3}
 ; LE-I64-NEXT:    bl lrintl
 ; LE-I64-NEXT:    add r3, sp, #380
+; LE-I64-NEXT:    mov r5, r1
 ; LE-I64-NEXT:    vmov.32 d14[0], r0
 ; LE-I64-NEXT:    ldr r0, [sp, #376]
-; LE-I64-NEXT:    mov r5, r1
 ; LE-I64-NEXT:    ldm r3, {r1, r2, r3}
 ; LE-I64-NEXT:    bl lrintl
 ; LE-I64-NEXT:    add r3, sp, #396
+; LE-I64-NEXT:    mov r6, r1
 ; LE-I64-NEXT:    vmov.32 d15[0], r0
 ; LE-I64-NEXT:    ldr r0, [sp, #392]
-; LE-I64-NEXT:    mov r6, r1
 ; LE-I64-NEXT:    ldm r3, {r1, r2, r3}
 ; LE-I64-NEXT:    bl lrintl
 ; LE-I64-NEXT:    add r3, sp, #332
+; LE-I64-NEXT:    mov r7, r1
 ; LE-I64-NEXT:    vmov.32 d8[0], r0
 ; LE-I64-NEXT:    ldr r0, [sp, #328]
-; LE-I64-NEXT:    mov r7, r1
 ; LE-I64-NEXT:    ldm r3, {r1, r2, r3}
 ; LE-I64-NEXT:    bl lrintl
 ; LE-I64-NEXT:    add lr, sp, #8
@@ -4221,23 +4221,23 @@ define <16 x iXLen> @lrint_v16fp128(<16 x fp128> %x) {
 ; BE-I32-NEXT:    bl lrintl
 ; BE-I32-NEXT:    ldr r5, [sp, #344]
 ; BE-I32-NEXT:    vmov.32 d11[0], r0
-; BE-I32-NEXT:    ldr r1, [sp, #348]
-; BE-I32-NEXT:    ldr r2, [sp, #352]
-; BE-I32-NEXT:    ldr r3, [sp, #356]
-; BE-I32-NEXT:    mov r0, r5
 ; BE-I32-NEXT:    ldr r7, [sp, #284]
 ; BE-I32-NEXT:    ldr r4, [sp, #288]
 ; BE-I32-NEXT:    ldr r6, [sp, #172]
+; BE-I32-NEXT:    mov r0, r5
+; BE-I32-NEXT:    ldr r1, [sp, #348]
 ; BE-I32-NEXT:    ldr r9, [sp, #176]
+; BE-I32-NEXT:    ldr r2, [sp, #352]
+; BE-I32-NEXT:    ldr r3, [sp, #356]
 ; BE-I32-NEXT:    bl lrintl
-; BE-I32-NEXT:    ldr r3, [sp, #292]
 ; BE-I32-NEXT:    vmov.32 d11[1], r0
+; BE-I32-NEXT:    ldr r3, [sp, #292]
 ; BE-I32-NEXT:    mov r0, r10
 ; BE-I32-NEXT:    mov r1, r7
 ; BE-I32-NEXT:    mov r2, r4
 ; BE-I32-NEXT:    bl lrintl
-; BE-I32-NEXT:    ldr r3, [sp, #180]
 ; BE-I32-NEXT:    vmov.32 d9[1], r0
+; BE-I32-NEXT:    ldr r3, [sp, #180]
 ; BE-I32-NEXT:    mov r0, r8
 ; BE-I32-NEXT:    mov r1, r6
 ; BE-I32-NEXT:    mov r2, r9
@@ -4252,26 +4252,26 @@ define <16 x iXLen> @lrint_v16fp128(<16 x fp128> %x) {
 ; BE-I32-NEXT:    bl lrintl
 ; BE-I32-NEXT:    ldr r5, [sp, #296]
 ; BE-I32-NEXT:    vmov.32 d13[0], r0
-; BE-I32-NEXT:    ldr r1, [sp, #300]
-; BE-I32-NEXT:    ldr r2, [sp, #304]
-; BE-I32-NEXT:    ldr r3, [sp, #308]
-; BE-I32-NEXT:    mov r0, r5
 ; BE-I32-NEXT:    ldr r10, [sp, #216]
 ; BE-I32-NEXT:    ldr r8, [sp, #220]
 ; BE-I32-NEXT:    ldr r9, [sp, #152]
+; BE-I32-NEXT:    mov r0, r5
+; BE-I32-NEXT:    ldr r1, [sp, #300]
+; BE-I32-NEXT:    ldr r2, [sp, #304]
+; BE-I32-NEXT:    ldr r3, [sp, #308]
 ; BE-I32-NEXT:    bl lrintl
 ; BE-I32-NEXT:    ldr r7, [sp, #248]
 ; BE-I32-NEXT:    vmov.32 d10[0], r0
-; BE-I32-NEXT:    ldr r1, [sp, #252]
-; BE-I32-NEXT:    ldr r2, [sp, #256]
-; BE-I32-NEXT:    vmov.32 d8[0], r6
-; BE-I32-NEXT:    ldr r3, [sp, #260]
-; BE-I32-NEXT:    mov r0, r7
 ; BE-I32-NEXT:    ldr r5, [sp, #224]
+; BE-I32-NEXT:    ldr r1, [sp, #252]
+; BE-I32-NEXT:    vmov.32 d8[0], r6
 ; BE-I32-NEXT:    ldr r11, [sp, #120]
+; BE-I32-NEXT:    mov r0, r7
+; BE-I32-NEXT:    ldr r2, [sp, #256]
+; BE-I32-NEXT:    ldr r3, [sp, #260]
 ; BE-I32-NEXT:    bl lrintl
-; BE-I32-NEXT:    ldr r3, [sp, #228]
 ; BE-I32-NEXT:    vmov.32 d8[1], r0
+; BE-I32-NEXT:    ldr r3, [sp, #228]
 ; BE-I32-NEXT:    mov r0, r10
 ; BE-I32-NEXT:    mov r1, r8
 ; BE-I32-NEXT:    mov r2, r5
@@ -4281,25 +4281,25 @@ define <16 x iXLen> @lrint_v16fp128(<16 x fp128> %x) {
 ; BE-I32-NEXT:    ldm r3, {r0, r1, r2, r3}
 ; BE-I32-NEXT:    bl lrintl
 ; BE-I32-NEXT:    vmov.32 d15[0], r0
-; BE-I32-NEXT:    ldr r0, [sp, #184]
-; BE-I32-NEXT:    ldr r1, [sp, #188]
-; BE-I32-NEXT:    ldr r2, [sp, #192]
-; BE-I32-NEXT:    vmov.32 d14[0], r4
-; BE-I32-NEXT:    ldr r3, [sp, #196]
-; BE-I32-NEXT:    vmov.32 d15[1], r5
 ; BE-I32-NEXT:    ldr r7, [sp, #156]
 ; BE-I32-NEXT:    ldr r6, [sp, #160]
+; BE-I32-NEXT:    vmov.32 d14[0], r4
+; BE-I32-NEXT:    ldr r0, [sp, #184]
 ; BE-I32-NEXT:    ldr r4, [sp, #124]
+; BE-I32-NEXT:    vmov.32 d15[1], r5
+; BE-I32-NEXT:    ldr r1, [sp, #188]
 ; BE-I32-NEXT:    ldr r5, [sp, #128]
+; BE-I32-NEXT:    ldr r2, [sp, #192]
+; BE-I32-NEXT:    ldr r3, [sp, #196]
 ; BE-I32-NEXT:    bl lrintl
-; BE-I32-NEXT:    ldr r3, [sp, #164]
 ; BE-I32-NEXT:    vmov.32 d14[1], r0
+; BE-I32-NEXT:    ldr r3, [sp, #164]
 ; BE-I32-NEXT:    mov r0, r9
 ; BE-I32-NEXT:    mov r1, r7
 ; BE-I32-NEXT:    mov r2, r6
 ; BE-I32-NEXT:    bl lrintl
-; BE-I32-NEXT:    ldr r3, [sp, #132]
 ; BE-I32-NEXT:    vmov.32 d13[1], r0
+; BE-I32-NEXT:    ldr r3, [sp, #132]
 ; BE-I32-NEXT:    mov r0, r11
 ; BE-I32-NEXT:    mov r1, r4
 ; BE-I32-NEXT:    mov r2, r5
@@ -4308,11 +4308,11 @@ define <16 x iXLen> @lrint_v16fp128(<16 x fp128> %x) {
 ; BE-I32-NEXT:    ldm sp, {r0, r1, r2, r3} @ 16-byte Folded Reload
 ; BE-I32-NEXT:    bl lrintl
 ; BE-I32-NEXT:    add r3, sp, #316
-; BE-I32-NEXT:    ldr r7, [sp, #312]
 ; BE-I32-NEXT:    vmov.32 d12[0], r0
+; BE-I32-NEXT:    ldr r7, [sp, #312]
 ; BE-I32-NEXT:    ldm r3, {r1, r2, r3}
-; BE-I32-NEXT:    mov r0, r7
 ; BE-I32-NEXT:    vmov.32 d12[1], r4
+; BE-I32-NEXT:    mov r0, r7
 ; BE-I32-NEXT:    bl lrintl
 ; BE-I32-NEXT:    vmov.32 d10[1], r0
 ; BE-I32-NEXT:    vrev64.32 q0, q6
@@ -4340,19 +4340,19 @@ define <16 x iXLen> @lrint_v16fp128(<16 x fp128> %x) {
 ; BE-I64-NEXT:    mov r4, r0
 ; BE-I64-NEXT:    ldm r3, {r0, r1, r2, r3}
 ; BE-I64-NEXT:    bl lrintl
-; BE-I64-NEXT:    ldr r7, [sp, #392]
 ; BE-I64-NEXT:    add r3, sp, #396
+; BE-I64-NEXT:    ldr r7, [sp, #392]
 ; BE-I64-NEXT:    mov r9, r1
 ; BE-I64-NEXT:    vmov.32 d8[0], r0
 ; BE-I64-NEXT:    ldm r3, {r1, r2, r3}
 ; BE-I64-NEXT:    mov r0, r7
 ; BE-I64-NEXT:    ldr r11, [sp, #168]
 ; BE-I64-NEXT:    bl lrintl
-; BE-I64-NEXT:    ldr r2, [sp, #160]
 ; BE-I64-NEXT:    mov r10, r1
-; BE-I64-NEXT:    ldr r3, [sp, #164]
 ; BE-I64-NEXT:    vmov.32 d9[0], r0
+; BE-I64-NEXT:    ldr r2, [sp, #160]
 ; BE-I64-NEXT:    mov r0, r6
+; BE-I64-NEXT:    ldr r3, [sp, #164]
 ; BE-I64-NEXT:    mov r1, r5
 ; BE-I64-NEXT:    bl lrintl
 ; BE-I64-NEXT:    add r3, sp, #172
@@ -4362,37 +4362,37 @@ define <16 x iXLen> @lrint_v16fp128(<16 x fp128> %x) {
 ; BE-I64-NEXT:    ldm r3, {r1, r2, r3}
 ; BE-I64-NEXT:    bl lrintl
 ; BE-I64-NEXT:    add r3, sp, #220
+; BE-I64-NEXT:    mov r11, r1
 ; BE-I64-NEXT:    vmov.32 d11[0], r0
 ; BE-I64-NEXT:    ldr r0, [sp, #216]
-; BE-I64-NEXT:    mov r11, r1
 ; BE-I64-NEXT:    ldm r3, {r1, r2, r3}
 ; BE-I64-NEXT:    bl lrintl
 ; BE-I64-NEXT:    add r3, sp, #236
+; BE-I64-NEXT:    mov r6, r1
 ; BE-I64-NEXT:    vmov.32 d12[0], r0
 ; BE-I64-NEXT:    ldr r0, [sp, #232]
-; BE-I64-NEXT:    mov r6, r1
 ; BE-I64-NEXT:    ldm r3, {r1, r2, r3}
 ; BE-I64-NEXT:    bl lrintl
 ; BE-I64-NEXT:    add r3, sp, #252
+; BE-I64-NEXT:    mov r7, r1
 ; BE-I64-NEXT:    vmov.32 d13[0], r0
 ; BE-I64-NEXT:    ldr r0, [sp, #248]
-; BE-I64-NEXT:    mov r7, r1
 ; BE-I64-NEXT:    ldm r3, {r1, r2, r3}
 ; BE-I64-NEXT:    bl lrintl
 ; BE-I64-NEXT:    add r3, sp, #268
+; BE-I64-NEXT:    mov r5, r1
 ; BE-I64-NEXT:    vmov.32 d14[0], r0
 ; BE-I64-NEXT:    ldr r0, [sp, #264]
-; BE-I64-NEXT:    mov r5, r1
 ; BE-I64-NEXT:    ldm r3, {r1, r2, r3}
 ; BE-I64-NEXT:    bl lrintl
 ; BE-I64-NEXT:    vmov.32 d15[0], r0
 ; BE-I64-NEXT:    ldr r0, [sp, #280]
 ; BE-I64-NEXT:    ldr r2, [sp, #288]
-; BE-I64-NEXT:    vmov.32 d13[1], r7
-; BE-I64-NEXT:    ldr r7, [sp, #284]
-; BE-I64-NEXT:    ldr r3, [sp, #292]
 ; BE-I64-NEXT:    vmov.32 d14[1], r5
 ; BE-I64-NEXT:    ldr r5, [sp, #328]
+; BE-I64-NEXT:    ldr r3, [sp, #292]
+; BE-I64-NEXT:    vmov.32 d13[1], r7
+; BE-I64-NEXT:    ldr r7, [sp, #284]
 ; BE-I64-NEXT:    vmov.32 d12[1], r6
 ; BE-I64-NEXT:    ldr r6, [sp, #300]
 ; BE-I64-NEXT:    vmov.32 d10[1], r8
@@ -4412,8 +4412,8 @@ define <16 x iXLen> @lrint_v16fp128(<16 x fp128> %x) {
 ; BE-I64-NEXT:    bl lrintl
 ; BE-I64-NEXT:    mov r10, r1
 ; BE-I64-NEXT:    ldr r1, [sp, #296]
-; BE-I64-NEXT:    ldr r2, [sp, #304]
 ; BE-I64-NEXT:    vmov.32 d8[0], r0
+; BE-I64-NEXT:    ldr r2, [sp, #304]
 ; BE-I64-NEXT:    ldr r3, [sp, #308]
 ; BE-I64-NEXT:    mov r0, r1
 ; BE-I64-NEXT:    mov r1, r6
@@ -4431,27 +4431,27 @@ define <16 x iXLen> @lrint_v16fp128(<16 x fp128> %x) {
 ; BE-I64-NEXT:    ldm r3, {r1, r2, r3}
 ; BE-I64-NEXT:    bl lrintl
 ; BE-I64-NEXT:    add r3, sp, #204
+; BE-I64-NEXT:    mov r8, r1
 ; BE-I64-NEXT:    vmov.32 d11[0], r0
 ; BE-I64-NEXT:    ldr r0, [sp, #200]
-; BE-I64-NEXT:    mov r8, r1
 ; BE-I64-NEXT:    ldm r3, {r1, r2, r3}
 ; BE-I64-NEXT:    bl lrintl
 ; BE-I64-NEXT:    add r3, sp, #348
+; BE-I64-NEXT:    mov r5, r1
 ; BE-I64-NEXT:    vmov.32 d12[0], r0
 ; BE-I64-NEXT:    ldr r0, [sp, #344]
-; BE-I64-NEXT:    mov r5, r1
 ; BE-I64-NEXT:    ldm r3, {r1, r2, r3}
 ; BE-I64-NEXT:    bl lrintl
 ; BE-I64-NEXT:    add r3, sp, #364
+; BE-I64-NEXT:    mov r9, r1
 ; BE-I64-NEXT:    vmov.32 d13[0], r0
 ; BE-I64-NEXT:    ldr r0, [sp, #360]
-; BE-I64-NEXT:    mov r9, r1
 ; BE-I64-NEXT:    ldm r3, {r1, r2, r3}
 ; BE-I64-NEXT:    bl lrintl
 ; BE-I64-NEXT:    add r3, sp, #316
+; BE-I64-NEXT:    mov r6, r1
 ; BE-I64-NEXT:    vmov.32 d14[0], r0
 ; BE-I64-NEXT:    ldr r0, [sp, #312]
-; BE-I64-NEXT:    mov r6, r1
 ; BE-I64-NEXT:    ldm r3, {r1, r2, r3}
 ; BE-I64-NEXT:    bl lrintl
 ; BE-I64-NEXT:    vldr d18, [sp, #48] @ 8-byte Reload

@@ -272,9 +272,9 @@ define void @f9() optsize {
 ; CHECK-NEXT:    movw r3, #0
 ; CHECK-NEXT:    mov r1, #1065353216
 ; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    strd r0, r1, [sp]
 ; CHECK-NEXT:    movt r2, #16672
 ; CHECK-NEXT:    movt r3, #32704
-; CHECK-NEXT:    strd r0, r1, [sp]
 ; CHECK-NEXT:    bl objc_msgSend
 ; CHECK-NEXT:    add sp, sp, #8
 ; CHECK-NEXT:    pop {r11, pc}
@@ -287,9 +287,9 @@ define void @f9() optsize {
 ; CHECK-NEON-NEXT:    movs r3, #0
 ; CHECK-NEON-NEXT:    mov.w r0, #1065353216
 ; CHECK-NEON-NEXT:    movs r1, #0
+; CHECK-NEON-NEXT:    strd r1, r0, [sp]
 ; CHECK-NEON-NEXT:    movt r2, #16672
 ; CHECK-NEON-NEXT:    movt r3, #32704
-; CHECK-NEON-NEXT:    strd r1, r0, [sp]
 ; CHECK-NEON-NEXT:    bl _objc_msgSend
 ; CHECK-NEON-NEXT:    add sp, #8
 ; CHECK-NEON-NEXT:    ldr lr, [sp], #4

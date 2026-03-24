@@ -76,8 +76,8 @@ define ptr @f3(ptr %base, ptr nocapture %offset, i32 %size) nounwind {
 ; CHECK-NEXT:    blt LBB2_2
 ; CHECK-NEXT:  @ %bb.1: @ %if.end
 ; CHECK-NEXT:    sub r3, r3, r2
-; CHECK-NEXT:    add r9, r0, r3
 ; CHECK-NEXT:    sub r2, r2, r3
+; CHECK-NEXT:    add r9, r0, r3
 ; CHECK-NEXT:    add r2, r3, r2
 ; CHECK-NEXT:    str r2, [r1]
 ; CHECK-NEXT:  LBB2_2: @ %return

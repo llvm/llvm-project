@@ -35,9 +35,8 @@ entry:
 define zeroext i1 @saddo1.i32.addzero(i32 %v1, i32 %v2, ptr %res) {
 ; CHECK-LABEL: saddo1.i32.addzero:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    str w0, [x2]
 ; CHECK-NEXT:    mov w0, wzr
-; CHECK-NEXT:    str w8, [x2]
 ; CHECK-NEXT:    ret
 entry:
   %t = call {i32, i1} @llvm.sadd.with.overflow.i32(i32 %v1, i32 0)
@@ -50,9 +49,8 @@ entry:
 define zeroext i1 @uaddo1.i32.addzero(i32 %v1, i32 %v2, ptr %res) {
 ; CHECK-LABEL: uaddo1.i32.addzero:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    str w0, [x2]
 ; CHECK-NEXT:    mov w0, wzr
-; CHECK-NEXT:    str w8, [x2]
 ; CHECK-NEXT:    ret
 entry:
   %t = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %v1, i32 0)
@@ -93,8 +91,8 @@ entry:
 define zeroext i1 @saddo.canon.i32(i32 %v1, i32 %v2, i32 %v3, i32 %v4, i32 %v5, ptr %res) {
 ; CHECK-LABEL: saddo.canon.i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    str w4, [x5]
+; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
 entry:
   %t = call {i32, i1} @llvm.sadd.with.overflow.i32(i32 0, i32 %v5)
@@ -114,8 +112,8 @@ define zeroext i1 @saddo.add.i32(i32 %v1, i32 %v2, i32 %v3, i32 %v4, i32 %v5, pt
 ;
 ; CHECK-GI-LABEL: saddo.add.i32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov w0, wzr
 ; CHECK-GI-NEXT:    str w4, [x5]
+; CHECK-GI-NEXT:    mov w0, wzr
 ; CHECK-GI-NEXT:    ret
 entry:
   %lhs = add nsw i32 %v5, 100

@@ -868,14 +868,14 @@ define signext i8 @caller_7(ptr nocapture readonly byval([7 x i8]) %data) #0 {
 ; P8BE:       # %bb.0: # %entry
 ; P8BE-NEXT:    mflr r0
 ; P8BE-NEXT:    stdu r1, -128(r1)
-; P8BE-NEXT:    std r0, 144(r1)
 ; P8BE-NEXT:    rldicl r4, r3, 56, 8
+; P8BE-NEXT:    std r0, 144(r1)
 ; P8BE-NEXT:    stb r3, 183(r1)
 ; P8BE-NEXT:    rldicl r3, r3, 40, 24
+; P8BE-NEXT:    sth r4, 181(r1)
 ; P8BE-NEXT:    stw r3, 177(r1)
 ; P8BE-NEXT:    stw r3, 121(r1)
 ; P8BE-NEXT:    lbz r3, 183(r1)
-; P8BE-NEXT:    sth r4, 181(r1)
 ; P8BE-NEXT:    lhz r4, 181(r1)
 ; P8BE-NEXT:    stb r3, 127(r1)
 ; P8BE-NEXT:    addi r3, r1, 121

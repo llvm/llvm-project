@@ -122,11 +122,12 @@ define signext i32 @test(ptr nocapture %FP) local_unnamed_addr #0 {
 ; CHECKAIX-NEXT:    mflr 0
 ; CHECKAIX-NEXT:    stdu 1, -112(1)
 ; CHECKAIX-NEXT:    ld 5, 0(3)
+; CHECKAIX-NEXT:    extsw 4, 4
 ; CHECKAIX-NEXT:    std 0, 128(1)
 ; CHECKAIX-NEXT:    ld 11, 16(3)
 ; CHECKAIX-NEXT:    std 2, 40(1)
 ; CHECKAIX-NEXT:    ld 2, 8(3)
-; CHECKAIX-NEXT:    extsw 3, 4
+; CHECKAIX-NEXT:    mr 3, 4
 ; CHECKAIX-NEXT:    mtctr 5
 ; CHECKAIX-NEXT:    bctrl
 ; CHECKAIX-NEXT:    ld 2, 40(1)
@@ -156,9 +157,9 @@ define signext i32 @test(ptr nocapture %FP) local_unnamed_addr #0 {
 ; CHECKAIX32-NEXT:    stwu 1, -64(1)
 ; CHECKAIX32-NEXT:    lwz 5, 0(3)
 ; CHECKAIX32-NEXT:    stw 0, 72(1)
-; CHECKAIX32-NEXT:    stw 2, 20(1)
 ; CHECKAIX32-NEXT:    mtctr 5
 ; CHECKAIX32-NEXT:    lwz 11, 8(3)
+; CHECKAIX32-NEXT:    stw 2, 20(1)
 ; CHECKAIX32-NEXT:    lwz 2, 4(3)
 ; CHECKAIX32-NEXT:    mr 3, 4
 ; CHECKAIX32-NEXT:    bctrl

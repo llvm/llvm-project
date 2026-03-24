@@ -31,9 +31,10 @@ define <vscale x 2 x i64> @sti32ldi32ext(ptr nocapture %P, <vscale x 2 x i64> %v
 ; CHECK-LABEL: sti32ldi32ext:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov z1.d, z0.d
-; CHECK-NEXT:    sxtw z0.d, p0/m, z0.d
-; CHECK-NEXT:    st1w { z1.d }, p0, [x0]
+; CHECK-NEXT:    movprfx z1, z0
+; CHECK-NEXT:    sxtw z1.d, p0/m, z0.d
+; CHECK-NEXT:    st1w { z0.d }, p0, [x0]
+; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %0 = trunc <vscale x 2 x i64> %v to <vscale x 2 x i32>

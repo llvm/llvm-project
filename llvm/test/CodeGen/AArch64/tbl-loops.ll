@@ -51,8 +51,8 @@ define void @loop1(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-NEXT:    cmp x11, x10
 ; CHECK-NEXT:    b.eq .LBB0_8
 ; CHECK-NEXT:  .LBB0_6: // %for.body.preheader1
-; CHECK-NEXT:    movi d0, #0000000000000000
 ; CHECK-NEXT:    mov w11, #1132396544 // =0x437f0000
+; CHECK-NEXT:    movi d0, #0000000000000000
 ; CHECK-NEXT:    sub w10, w2, w10
 ; CHECK-NEXT:    fmov s1, w11
 ; CHECK-NEXT:  .LBB0_7: // %for.body
@@ -165,8 +165,8 @@ define void @loop2(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-NEXT:    mov x8, x1
 ; CHECK-NEXT:    mov x9, x0
 ; CHECK-NEXT:  .LBB1_5: // %for.body.preheader1
-; CHECK-NEXT:    movi d0, #0000000000000000
 ; CHECK-NEXT:    mov w11, #1132396544 // =0x437f0000
+; CHECK-NEXT:    movi d0, #0000000000000000
 ; CHECK-NEXT:    sub w10, w2, w10
 ; CHECK-NEXT:    fmov s1, w11
 ; CHECK-NEXT:  .LBB1_6: // %for.body
@@ -335,11 +335,11 @@ define void @loop3(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-NEXT:    b.hi .LBB2_6
 ; CHECK-NEXT:  // %bb.3: // %vector.ph
 ; CHECK-NEXT:    add x11, x8, #1
-; CHECK-NEXT:    mov w8, #1132396544 // =0x437f0000
 ; CHECK-NEXT:    adrp x12, .LCPI2_0
+; CHECK-NEXT:    mov w8, #1132396544 // =0x437f0000
 ; CHECK-NEXT:    and x10, x11, #0x1fffffffc
-; CHECK-NEXT:    dup v0.4s, w8
 ; CHECK-NEXT:    ldr q1, [x12, :lo12:.LCPI2_0]
+; CHECK-NEXT:    dup v0.4s, w8
 ; CHECK-NEXT:    add x9, x10, x10, lsl #1
 ; CHECK-NEXT:    and x12, x11, #0x1fffffffc
 ; CHECK-NEXT:    add x8, x1, x9, lsl #2
@@ -381,8 +381,8 @@ define void @loop3(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-NEXT:    mov x8, x1
 ; CHECK-NEXT:    mov x9, x0
 ; CHECK-NEXT:  .LBB2_7: // %for.body.preheader1
-; CHECK-NEXT:    movi d0, #0000000000000000
 ; CHECK-NEXT:    mov w11, #1132396544 // =0x437f0000
+; CHECK-NEXT:    movi d0, #0000000000000000
 ; CHECK-NEXT:    sub w10, w2, w10
 ; CHECK-NEXT:    fmov s1, w11
 ; CHECK-NEXT:  .LBB2_8: // %for.body
@@ -550,8 +550,8 @@ define void @loop4(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-NEXT:    mov x8, x1
 ; CHECK-NEXT:    mov x9, x0
 ; CHECK-NEXT:  .LBB3_5: // %for.body.preheader1
-; CHECK-NEXT:    movi d0, #0000000000000000
 ; CHECK-NEXT:    mov w11, #1132396544 // =0x437f0000
+; CHECK-NEXT:    movi d0, #0000000000000000
 ; CHECK-NEXT:    sub w10, w2, w10
 ; CHECK-NEXT:    fmov s1, w11
 ; CHECK-NEXT:  .LBB3_6: // %for.body
@@ -590,11 +590,11 @@ define void @loop4(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB3_8: // %vector.ph
 ; CHECK-NEXT:    add x11, x8, #1
-; CHECK-NEXT:    mov w8, #1132396544 // =0x437f0000
 ; CHECK-NEXT:    adrp x12, .LCPI3_0
+; CHECK-NEXT:    mov w8, #1132396544 // =0x437f0000
 ; CHECK-NEXT:    and x10, x11, #0x1fffffffc
-; CHECK-NEXT:    dup v0.4s, w8
 ; CHECK-NEXT:    ldr q1, [x12, :lo12:.LCPI3_0]
+; CHECK-NEXT:    dup v0.4s, w8
 ; CHECK-NEXT:    add x8, x1, x10, lsl #4
 ; CHECK-NEXT:    add x9, x0, x10, lsl #2
 ; CHECK-NEXT:    and x12, x11, #0x1fffffffc

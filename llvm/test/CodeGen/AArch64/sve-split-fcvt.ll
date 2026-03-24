@@ -43,9 +43,9 @@ define <vscale x 8 x double> @fcvtd_nxv8f16(<vscale x 8 x half> %a) {
 ; CHECK-NEXT:    uunpkhi z1.d, z1.s
 ; CHECK-NEXT:    uunpklo z3.d, z0.s
 ; CHECK-NEXT:    uunpkhi z4.d, z0.s
-; CHECK-NEXT:    fcvt z1.d, p0/m, z1.h
 ; CHECK-NEXT:    movprfx z0, z2
 ; CHECK-NEXT:    fcvt z0.d, p0/m, z2.h
+; CHECK-NEXT:    fcvt z1.d, p0/m, z1.h
 ; CHECK-NEXT:    movprfx z2, z3
 ; CHECK-NEXT:    fcvt z2.d, p0/m, z3.h
 ; CHECK-NEXT:    movprfx z3, z4
@@ -301,9 +301,9 @@ define <vscale x 16 x float> @scvtf_s_nxv16i8(<vscale x 16 x i8> %a) {
 ; CHECK-NEXT:    sunpkhi z1.s, z1.h
 ; CHECK-NEXT:    sunpklo z3.s, z0.h
 ; CHECK-NEXT:    sunpkhi z4.s, z0.h
-; CHECK-NEXT:    scvtf z1.s, p0/m, z1.s
 ; CHECK-NEXT:    movprfx z0, z2
 ; CHECK-NEXT:    scvtf z0.s, p0/m, z2.s
+; CHECK-NEXT:    scvtf z1.s, p0/m, z1.s
 ; CHECK-NEXT:    movprfx z2, z3
 ; CHECK-NEXT:    scvtf z2.s, p0/m, z3.s
 ; CHECK-NEXT:    movprfx z3, z4

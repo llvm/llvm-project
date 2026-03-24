@@ -1098,9 +1098,9 @@ ret:
 define <3 x ptr> @v3move(<3 x ptr> %a, <3 x ptr> %b, <3 x ptr> %x) {
 ; CHECK-SD-LABEL: v3move:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    ldr d2, [sp]
 ; CHECK-SD-NEXT:    fmov d1, d7
 ; CHECK-SD-NEXT:    fmov d0, d6
-; CHECK-SD-NEXT:    ldr d2, [sp]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v3move:

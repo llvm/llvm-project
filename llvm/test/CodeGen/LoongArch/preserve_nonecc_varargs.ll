@@ -111,7 +111,8 @@ define i32 @caller() nounwind ssp {
 ; LA32-NEXT:    st.w $s8, $sp, 8 # 4-byte Folded Spill
 ; LA32-NEXT:    ori $a0, $zero, 10
 ; LA32-NEXT:    st.w $a0, $sp, 4
-; LA32-NEXT:    ori $t0, $zero, 9
+; LA32-NEXT:    ori $a0, $zero, 9
+; LA32-NEXT:    st.w $a0, $sp, 0
 ; LA32-NEXT:    ori $a0, $zero, 1
 ; LA32-NEXT:    ori $a1, $zero, 2
 ; LA32-NEXT:    ori $a2, $zero, 3
@@ -120,7 +121,6 @@ define i32 @caller() nounwind ssp {
 ; LA32-NEXT:    ori $a5, $zero, 6
 ; LA32-NEXT:    ori $a6, $zero, 7
 ; LA32-NEXT:    ori $a7, $zero, 8
-; LA32-NEXT:    st.w $t0, $sp, 0
 ; LA32-NEXT:    bl callee
 ; LA32-NEXT:    ld.w $s8, $sp, 8 # 4-byte Folded Reload
 ; LA32-NEXT:    ld.w $s7, $sp, 12 # 4-byte Folded Reload
@@ -158,7 +158,8 @@ define i32 @caller() nounwind ssp {
 ; LA64-NEXT:    fst.d $fs7, $sp, 32 # 8-byte Folded Spill
 ; LA64-NEXT:    ori $a0, $zero, 10
 ; LA64-NEXT:    st.d $a0, $sp, 8
-; LA64-NEXT:    ori $t0, $zero, 9
+; LA64-NEXT:    ori $a0, $zero, 9
+; LA64-NEXT:    st.d $a0, $sp, 0
 ; LA64-NEXT:    ori $a0, $zero, 1
 ; LA64-NEXT:    ori $a1, $zero, 2
 ; LA64-NEXT:    ori $a2, $zero, 3
@@ -167,7 +168,6 @@ define i32 @caller() nounwind ssp {
 ; LA64-NEXT:    ori $a5, $zero, 6
 ; LA64-NEXT:    ori $a6, $zero, 7
 ; LA64-NEXT:    ori $a7, $zero, 8
-; LA64-NEXT:    st.d $t0, $sp, 0
 ; LA64-NEXT:    pcaddu18i $ra, %call36(callee)
 ; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    fld.d $fs7, $sp, 32 # 8-byte Folded Reload

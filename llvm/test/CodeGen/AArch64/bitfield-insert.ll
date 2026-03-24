@@ -407,8 +407,8 @@ define i32 @test_or_and_and4(i32 %a, i32 %b, ptr %ptr) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    and w8, w0, #0xffff000f
 ; CHECK-NEXT:    and w9, w1, #0xfff0
-; CHECK-NEXT:    orr w0, w9, w8
 ; CHECK-NEXT:    str w8, [x2]
+; CHECK-NEXT:    orr w0, w9, w8
 ; CHECK-NEXT:    ret
 entry:
   %and = and i32 %a, -65521
@@ -424,8 +424,8 @@ define i32 @test_or_and_and5(i32 %a, i32 %b, ptr %ptr) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    and w8, w1, #0xfff0
 ; CHECK-NEXT:    and w9, w0, #0xffff000f
-; CHECK-NEXT:    orr w0, w8, w9
 ; CHECK-NEXT:    str w8, [x2]
+; CHECK-NEXT:    orr w0, w8, w9
 ; CHECK-NEXT:    ret
 entry:
   %and = and i32 %b, 65520
@@ -740,11 +740,10 @@ define i16 @implicit_trunc_of_imm(ptr %p, i16 %a, i16 %b) {
 ; CHECK-LABEL: implicit_trunc_of_imm:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    and w8, w1, #0xffffe000
-; CHECK-NEXT:    mov x9, x0
-; CHECK-NEXT:    mov w10, w8
+; CHECK-NEXT:    mov w9, w8
+; CHECK-NEXT:    bfxil w9, w2, #0, #1
+; CHECK-NEXT:    strh w9, [x0]
 ; CHECK-NEXT:    mov w0, w8
-; CHECK-NEXT:    bfxil w10, w2, #0, #1
-; CHECK-NEXT:    strh w10, [x9]
 ; CHECK-NEXT:    ret
 entry:
   %and1 = and i16 %a, -8192

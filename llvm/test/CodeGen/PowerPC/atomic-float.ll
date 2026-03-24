@@ -39,8 +39,8 @@ define float @test_add(ptr %ptr, float %incr) {
 ; CHECK-64-NEXT:    crxor 20, 20, 20
 ; CHECK-64-NEXT:    b .LBB0_4
 ; CHECK-64-NEXT:  .LBB0_6: # %atomicrmw.end
-; CHECK-64-NEXT:    fmr 1, 0
 ; CHECK-64-NEXT:    lwsync
+; CHECK-64-NEXT:    fmr 1, 0
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: test_add:
@@ -79,8 +79,8 @@ define float @test_add(ptr %ptr, float %incr) {
 ; CHECK-32-NEXT:    crxor 20, 20, 20
 ; CHECK-32-NEXT:    b .LBB0_4
 ; CHECK-32-NEXT:  .LBB0_6: # %atomicrmw.end
-; CHECK-32-NEXT:    fmr 1, 0
 ; CHECK-32-NEXT:    lwsync
+; CHECK-32-NEXT:    fmr 1, 0
 ; CHECK-32-NEXT:    addi 1, 1, 32
 ; CHECK-32-NEXT:    blr
 entry:

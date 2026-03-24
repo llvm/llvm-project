@@ -161,8 +161,8 @@ define void @za_with_raii(i1 %fail) "aarch64_inout_za" personality ptr @__gxx_pe
 ; CHECK-SDAG-NEXT:  .LBB0_10: // %unwind_dtors
 ; CHECK-SDAG-NEXT:    msr TPIDR2_EL0, xzr
 ; CHECK-SDAG-NEXT:    bl shared_za_call
-; CHECK-SDAG-NEXT:    mov x0, x19
 ; CHECK-SDAG-NEXT:    msr TPIDR2_EL0, x20
+; CHECK-SDAG-NEXT:    mov x0, x19
 ; CHECK-SDAG-NEXT:    bl _Unwind_Resume
 ; CHECK-SDAG-NEXT:    smstart za
 ; CHECK-SDAG-NEXT:    mrs x8, TPIDR2_EL0
@@ -316,8 +316,8 @@ define void @try_catch() "aarch64_inout_za" personality ptr @__gxx_personality_v
 ; CHECK-SDAG-NEXT:  // %bb.5: // %catch
 ; CHECK-SDAG-NEXT:    bl __arm_tpidr2_restore
 ; CHECK-SDAG-NEXT:  .LBB1_6: // %catch
-; CHECK-SDAG-NEXT:    mov x0, x1
 ; CHECK-SDAG-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-SDAG-NEXT:    mov x0, x1
 ; CHECK-SDAG-NEXT:    msr TPIDR2_EL0, x19
 ; CHECK-SDAG-NEXT:    bl __cxa_begin_catch
 ; CHECK-SDAG-NEXT:    smstart za
@@ -474,8 +474,8 @@ define void @try_catch_shared_za_callee() "aarch64_new_za" personality ptr @__gx
 ; CHECK-SDAG-NEXT:  // %bb.5: // %catch
 ; CHECK-SDAG-NEXT:    bl __arm_tpidr2_restore
 ; CHECK-SDAG-NEXT:  .LBB2_6: // %catch
-; CHECK-SDAG-NEXT:    mov x0, x1
 ; CHECK-SDAG-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-SDAG-NEXT:    mov x0, x1
 ; CHECK-SDAG-NEXT:    msr TPIDR2_EL0, x19
 ; CHECK-SDAG-NEXT:    bl __cxa_begin_catch
 ; CHECK-SDAG-NEXT:    smstart za
@@ -939,8 +939,8 @@ define void @try_catch_inout_za_agnostic_za_callee() "aarch64_inout_za" personal
 ; CHECK-SDAG-NEXT:  // %bb.5: // %catch
 ; CHECK-SDAG-NEXT:    bl __arm_tpidr2_restore
 ; CHECK-SDAG-NEXT:  .LBB6_6: // %catch
-; CHECK-SDAG-NEXT:    mov x0, x1
 ; CHECK-SDAG-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-SDAG-NEXT:    mov x0, x1
 ; CHECK-SDAG-NEXT:    msr TPIDR2_EL0, x19
 ; CHECK-SDAG-NEXT:    bl __cxa_begin_catch
 ; CHECK-SDAG-NEXT:    smstart za
@@ -1187,8 +1187,8 @@ define void @try_catch_shared_za_callee_zt0_saved(ptr %callee) "aarch64_inout_za
 ; CHECK-SDAG-NEXT:    str zt0, [x21]
 ; CHECK-SDAG-NEXT:    blr x19
 ; CHECK-SDAG-NEXT:    ldr zt0, [x21]
-; CHECK-SDAG-NEXT:    mov x0, x20
 ; CHECK-SDAG-NEXT:    msr TPIDR2_EL0, x22
+; CHECK-SDAG-NEXT:    mov x0, x20
 ; CHECK-SDAG-NEXT:    str zt0, [x21]
 ; CHECK-SDAG-NEXT:    bl _Unwind_Resume
 ; CHECK-SDAG-NEXT:    smstart za

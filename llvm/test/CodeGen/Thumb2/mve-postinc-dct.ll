@@ -120,9 +120,9 @@ define void @DCT_mve2(ptr nocapture readonly %S, ptr nocapture readonly %pIn, pt
 ; CHECK-NEXT:  .LBB1_2: @ %for.body
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB1_3 Depth 2
-; CHECK-NEXT:    ldr r5, [sp] @ 4-byte Reload
-; CHECK-NEXT:    add.w r9, r4, #1
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
+; CHECK-NEXT:    add.w r9, r4, #1
+; CHECK-NEXT:    ldr r5, [sp] @ 4-byte Reload
 ; CHECK-NEXT:    mov r3, r11
 ; CHECK-NEXT:    mov r0, r6
 ; CHECK-NEXT:    vmov.i32 q1, #0x0
@@ -249,13 +249,13 @@ define void @DCT_mve3(ptr nocapture readonly %S, ptr nocapture readonly %pIn, pt
 ; CHECK-NEXT:    add.w r1, r1, r0, lsl #2
 ; CHECK-NEXT:    add.w r3, r5, r3, lsr #2
 ; CHECK-NEXT:    str r3, [sp, #4] @ 4-byte Spill
-; CHECK-NEXT:    ldr r7, [sp, #4] @ 4-byte Reload
 ; CHECK-NEXT:    lsl.w r11, r0, #2
+; CHECK-NEXT:    ldr r7, [sp, #4] @ 4-byte Reload
 ; CHECK-NEXT:  .LBB2_2: @ %for.body
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB2_3 Depth 2
-; CHECK-NEXT:    ldr r6, [sp, #12] @ 4-byte Reload
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
+; CHECK-NEXT:    ldr r6, [sp, #12] @ 4-byte Reload
 ; CHECK-NEXT:    mov r3, r10
 ; CHECK-NEXT:    mov r0, r12
 ; CHECK-NEXT:    mov r4, r1
@@ -417,8 +417,8 @@ define void @DCT_mve4(ptr nocapture readonly %S, ptr nocapture readonly %pIn, pt
 ; CHECK-NEXT:  .LBB3_2: @ %for.body
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB3_3 Depth 2
-; CHECK-NEXT:    ldr r1, [sp, #20] @ 4-byte Reload
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
+; CHECK-NEXT:    ldr r1, [sp, #20] @ 4-byte Reload
 ; CHECK-NEXT:    mov r3, r12
 ; CHECK-NEXT:    mov r0, r8
 ; CHECK-NEXT:    mov r5, r9
@@ -601,10 +601,10 @@ define void @DCT_mve5(ptr nocapture readonly %S, ptr nocapture readonly %pIn, pt
 ; CHECK-NEXT:  .LBB4_2: @ %for.body
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB4_3 Depth 2
-; CHECK-NEXT:    ldr r4, [sp, #12] @ 4-byte Reload
-; CHECK-NEXT:    add.w r11, r0, #1
 ; CHECK-NEXT:    ldr r7, [sp, #4] @ 4-byte Reload
 ; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    add.w r11, r0, #1
+; CHECK-NEXT:    ldr r4, [sp, #12] @ 4-byte Reload
 ; CHECK-NEXT:    mov r3, r8
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    vmov.i32 q3, #0x0
@@ -804,10 +804,10 @@ define void @DCT_mve6(ptr nocapture readonly %S, ptr nocapture readonly %pIn, pt
 ; CHECK-NEXT:  .LBB5_2: @ %for.body
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB5_3 Depth 2
-; CHECK-NEXT:    ldr r1, [sp, #12] @ 4-byte Reload
-; CHECK-NEXT:    adds r4, r0, #1
 ; CHECK-NEXT:    ldr r7, [sp, #4] @ 4-byte Reload
 ; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    adds r4, r0, #1
+; CHECK-NEXT:    ldr r1, [sp, #12] @ 4-byte Reload
 ; CHECK-NEXT:    mov r3, r8
 ; CHECK-NEXT:    vmov.i32 q3, #0x0
 ; CHECK-NEXT:    vmov.i32 q4, #0x0
@@ -1029,20 +1029,20 @@ define void @DCT_mve7(ptr nocapture readonly %S, ptr nocapture readonly %pIn, pt
 ; CHECK-NEXT:  .LBB6_2: @ %for.body
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB6_3 Depth 2
-; CHECK-NEXT:    ldr r1, [sp, #12] @ 4-byte Reload
-; CHECK-NEXT:    adds r4, r0, #2
-; CHECK-NEXT:    add.w r8, r0, #1
 ; CHECK-NEXT:    ldr r7, [sp, #4] @ 4-byte Reload
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    vmov.i32 q2, #0x0
+; CHECK-NEXT:    adds r4, r0, #2
+; CHECK-NEXT:    add.w r8, r0, #1
+; CHECK-NEXT:    ldr r1, [sp, #12] @ 4-byte Reload
 ; CHECK-NEXT:    mov r3, r9
 ; CHECK-NEXT:    vmov.i32 q4, #0x0
 ; CHECK-NEXT:    vmov.i32 q5, #0x0
 ; CHECK-NEXT:    vmov.i32 q3, #0x0
 ; CHECK-NEXT:    vmov.i32 q6, #0x0
+; CHECK-NEXT:    vstrw.32 q0, [sp, #32] @ 16-byte Spill
 ; CHECK-NEXT:    vmov.i32 q1, #0x0
 ; CHECK-NEXT:    mov r12, r10
-; CHECK-NEXT:    vstrw.32 q0, [sp, #32] @ 16-byte Spill
 ; CHECK-NEXT:    dls lr, r7
 ; CHECK-NEXT:  .LBB6_3: @ %vector.body
 ; CHECK-NEXT:    @ Parent Loop BB6_2 Depth=1
@@ -1301,15 +1301,15 @@ define void @DCT_mve8(ptr nocapture readonly %S, ptr nocapture readonly %pIn, pt
 ; CHECK-NEXT:  .LBB7_2: @ %for.body
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB7_3 Depth 2
-; CHECK-NEXT:    ldr.w r9, [sp, #12] @ 4-byte Reload
+; CHECK-NEXT:    vmov.i32 q0, #0x0
+; CHECK-NEXT:    ldr r7, [sp, #4] @ 4-byte Reload
+; CHECK-NEXT:    vstrw.32 q0, [sp, #32] @ 16-byte Spill
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    adds r4, r0, #3
 ; CHECK-NEXT:    add.w r8, r0, #2
 ; CHECK-NEXT:    adds r1, r0, #1
-; CHECK-NEXT:    ldr r7, [sp, #4] @ 4-byte Reload
-; CHECK-NEXT:    vstrw.32 q0, [sp, #32] @ 16-byte Spill
-; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    vmov.i32 q3, #0x0
+; CHECK-NEXT:    ldr.w r9, [sp, #12] @ 4-byte Reload
 ; CHECK-NEXT:    mov r3, r12
 ; CHECK-NEXT:    vmov.i32 q5, #0x0
 ; CHECK-NEXT:    vmov.i32 q6, #0x0

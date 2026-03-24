@@ -28,9 +28,9 @@ define void @testMultiply(ptr nocapture noundef readonly %a, ptr nocapture nound
 ; CHECK-NEXT:    lxv v30, 0(r4)
 ; CHECK-NEXT:    addi r3, r1, 32
 ; CHECK-NEXT:    vmr v2, v31
-; CHECK-NEXT:    vmr v3, v30
 ; CHECK-NEXT:    std r29, -24(r30) # 8-byte Folded Spill
 ; CHECK-NEXT:    mr r29, r5
+; CHECK-NEXT:    vmr v3, v30
 ; CHECK-NEXT:    bl _Z15buildVectorPairPu13__vector_pairDv16_hS0_@notoc
 ; CHECK-NEXT:    xxsetaccz acc1
 ; CHECK-NEXT:    xvf32gerpp acc1, v31, v30
@@ -70,9 +70,9 @@ define void @testMultiply(ptr nocapture noundef readonly %a, ptr nocapture nound
 ; CHECK-BE-NEXT:    lxv v30, 0(r4)
 ; CHECK-BE-NEXT:    addi r3, r1, 128
 ; CHECK-BE-NEXT:    vmr v2, v31
-; CHECK-BE-NEXT:    vmr v3, v30
 ; CHECK-BE-NEXT:    std r29, -24(r30) # 8-byte Folded Spill
 ; CHECK-BE-NEXT:    mr r29, r5
+; CHECK-BE-NEXT:    vmr v3, v30
 ; CHECK-BE-NEXT:    bl _Z15buildVectorPairPu13__vector_pairDv16_hS0_
 ; CHECK-BE-NEXT:    nop
 ; CHECK-BE-NEXT:    xxsetaccz acc1
@@ -113,9 +113,9 @@ define void @testMultiply(ptr nocapture noundef readonly %a, ptr nocapture nound
 ; CHECK-LE-WACC-NEXT:    lxv v30, 0(r4)
 ; CHECK-LE-WACC-NEXT:    addi r3, r1, 32
 ; CHECK-LE-WACC-NEXT:    std r29, -24(r30) # 8-byte Folded Spill
+; CHECK-LE-WACC-NEXT:    mr r29, r5
 ; CHECK-LE-WACC-NEXT:    vmr v2, v31
 ; CHECK-LE-WACC-NEXT:    vmr v3, v30
-; CHECK-LE-WACC-NEXT:    mr r29, r5
 ; CHECK-LE-WACC-NEXT:    bl _Z15buildVectorPairPu13__vector_pairDv16_hS0_@notoc
 ; CHECK-LE-WACC-NEXT:    dmxxsetaccz wacc0
 ; CHECK-LE-WACC-NEXT:    xvf32gerpp wacc0, v31, v30
@@ -152,9 +152,9 @@ define void @testMultiply(ptr nocapture noundef readonly %a, ptr nocapture nound
 ; CHECK-BE-WACC-NEXT:    lxv v30, 0(r4)
 ; CHECK-BE-WACC-NEXT:    addi r3, r1, 128
 ; CHECK-BE-WACC-NEXT:    std r29, -24(r30) # 8-byte Folded Spill
+; CHECK-BE-WACC-NEXT:    mr r29, r5
 ; CHECK-BE-WACC-NEXT:    vmr v2, v31
 ; CHECK-BE-WACC-NEXT:    vmr v3, v30
-; CHECK-BE-WACC-NEXT:    mr r29, r5
 ; CHECK-BE-WACC-NEXT:    bl _Z15buildVectorPairPu13__vector_pairDv16_hS0_
 ; CHECK-BE-WACC-NEXT:    nop
 ; CHECK-BE-WACC-NEXT:    dmxxsetaccz wacc0

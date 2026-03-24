@@ -34,10 +34,10 @@ define void @histogram_i64(<2 x ptr> %buckets, i64 %inc, <2 x i1> %mask) {
 define void @histogram_i32_literal(ptr %base, <4 x i32> %indices, <4 x i1> %mask) {
 ; CHECK-LABEL: histogram_i32_literal:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    dup v2.2d, x0
-; CHECK-NEXT:    sshll v3.2d, v0.2s, #2
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    umov w8, v1.h[0]
+; CHECK-NEXT:    dup v2.2d, x0
+; CHECK-NEXT:    sshll v3.2d, v0.2s, #2
 ; CHECK-NEXT:    add v3.2d, v2.2d, v3.2d
 ; CHECK-NEXT:    tbz w8, #0, .LBB1_2
 ; CHECK-NEXT:  // %bb.1: // %cond.histogram.update
@@ -146,10 +146,10 @@ define void @histogram_uadd_sat_i64(<2 x ptr> %buckets, i64 %inc, <2 x i1> %mask
 define void @histogram_uadd_sat_i32_literal(ptr %base, <4 x i32> %indices, <4 x i1> %mask) {
 ; CHECK-LABEL: histogram_uadd_sat_i32_literal:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    dup v2.2d, x0
-; CHECK-NEXT:    sshll v3.2d, v0.2s, #2
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    umov w8, v1.h[0]
+; CHECK-NEXT:    dup v2.2d, x0
+; CHECK-NEXT:    sshll v3.2d, v0.2s, #2
 ; CHECK-NEXT:    add v3.2d, v2.2d, v3.2d
 ; CHECK-NEXT:    tbz w8, #0, .LBB4_2
 ; CHECK-NEXT:  // %bb.1: // %cond.histogram.update
@@ -264,10 +264,10 @@ define void @histogram_umax_i64(<2 x ptr> %buckets, i64 %inc, <2 x i1> %mask) {
 define void @histogram_umax_i32_literal(ptr %base, <4 x i32> %indices, <4 x i1> %mask) {
 ; CHECK-LABEL: histogram_umax_i32_literal:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    dup v2.2d, x0
-; CHECK-NEXT:    sshll v3.2d, v0.2s, #2
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    umov w8, v1.h[0]
+; CHECK-NEXT:    dup v2.2d, x0
+; CHECK-NEXT:    sshll v3.2d, v0.2s, #2
 ; CHECK-NEXT:    add v3.2d, v2.2d, v3.2d
 ; CHECK-NEXT:    tbz w8, #0, .LBB7_2
 ; CHECK-NEXT:  // %bb.1: // %cond.histogram.update
@@ -382,10 +382,10 @@ define void @histogram_umin_i64(<2 x ptr> %buckets, i64 %inc, <2 x i1> %mask) {
 define void @histogram_umin_i32_literal(ptr %base, <4 x i32> %indices, <4 x i1> %mask) {
 ; CHECK-LABEL: histogram_umin_i32_literal:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    dup v2.2d, x0
-; CHECK-NEXT:    sshll v3.2d, v0.2s, #2
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    umov w8, v1.h[0]
+; CHECK-NEXT:    dup v2.2d, x0
+; CHECK-NEXT:    sshll v3.2d, v0.2s, #2
 ; CHECK-NEXT:    add v3.2d, v2.2d, v3.2d
 ; CHECK-NEXT:    tbz w8, #0, .LBB10_2
 ; CHECK-NEXT:  // %bb.1: // %cond.histogram.update

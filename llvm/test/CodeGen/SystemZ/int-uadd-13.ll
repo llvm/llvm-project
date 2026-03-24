@@ -9,9 +9,9 @@ define zeroext i1 @f1(i128 %a, i128 %b, ptr %res) {
 ; CHECK-NEXT:    vl %v0, 0(%r3), 3
 ; CHECK-NEXT:    vl %v1, 0(%r2), 3
 ; CHECK-NEXT:    vaccq %v2, %v1, %v0
-; CHECK-NEXT:    vlgvg %r2, %v2, 1
 ; CHECK-NEXT:    vaq %v0, %v1, %v0
 ; CHECK-NEXT:    vst %v0, 0(%r4), 3
+; CHECK-NEXT:    vlgvg %r2, %v2, 1
 ; CHECK-NEXT:    br %r14
   %t = call {i128, i1} @llvm.uadd.with.overflow.i128(i128 %a, i128 %b)
   %val = extractvalue {i128, i1} %t, 0

@@ -115,13 +115,13 @@ define signext i32 @equalityFoldTwoConstants() {
 define signext i32 @equalityFoldOneConstant(ptr %X) {
 ; CHECK-LABEL: equalityFoldOneConstant:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:   lxvd2x 34, 0, 3
-; CHECK-NEXT:   addis 3, 2, .LCPI6_0@toc@ha
-; CHECK-NEXT:   addi 3, 3, .LCPI6_0@toc@l
-; CHECK-NEXT:   lxvd2x 35, 0, 3
-; CHECK-NEXT:   vcmpequb. 2, 2, 3
-; CHECK-NEXT:   mfocrf 3, 2
-; CHECK-NEXT:   rlwinm 3, 3, 25, 31, 31
+; CHECK-NEXT:    lxvd2x 34, 0, 3
+; CHECK-NEXT:    addis 3, 2, .LCPI6_0@toc@ha
+; CHECK-NEXT:    addi 3, 3, .LCPI6_0@toc@l
+; CHECK-NEXT:    lxvd2x 35, 0, 3
+; CHECK-NEXT:    vcmpequb. 2, 2, 3
+; CHECK-NEXT:    mfocrf 3, 2
+; CHECK-NEXT:    rlwinm 3, 3, 25, 31, 31
 ; CHECK-NEXT:    blr
   %call = tail call signext i32 @memcmp(ptr @zeroEqualityTest04.buffer1, ptr %X, i64 16)
   %not.tobool = icmp eq i32 %call, 0
@@ -134,8 +134,8 @@ define i1 @length2_eq_nobuiltin_attr(ptr %X, ptr %Y) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr 0
 ; CHECK-NEXT:    stdu 1, -32(1)
-; CHECK-NEXT:    li 5, 2
 ; CHECK-NEXT:    std 0, 48(1)
+; CHECK-NEXT:    li 5, 2
 ; CHECK-NEXT:    bl memcmp
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    cntlzw 3, 3

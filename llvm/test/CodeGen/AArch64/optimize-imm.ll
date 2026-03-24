@@ -78,10 +78,10 @@ define i64 @PR33100(i64 %arg) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    mov w8, #129 // =0x81
-; CHECK-NEXT:    mov w9, #8 // =0x8
-; CHECK-NEXT:    eor x0, x0, x8
-; CHECK-NEXT:    str x9, [sp, #8]
+; CHECK-NEXT:    mov w8, #8 // =0x8
+; CHECK-NEXT:    mov w9, #129 // =0x81
+; CHECK-NEXT:    str x8, [sp, #8]
+; CHECK-NEXT:    eor x0, x0, x9
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
 entry:

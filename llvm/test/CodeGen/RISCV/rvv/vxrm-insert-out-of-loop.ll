@@ -208,10 +208,10 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV64P670-NEXT:    j .LBB0_4
 ; RV64P670-NEXT:  .LBB0_3: # %for.cond1.for.cond.cleanup3_crit_edge.us
 ; RV64P670-NEXT:    # in Loop: Header=BB0_4 Depth=1
+; RV64P670-NEXT:    addiw t1, t1, 1
 ; RV64P670-NEXT:    add a0, a0, a1
 ; RV64P670-NEXT:    add a2, a2, a3
 ; RV64P670-NEXT:    add a4, a4, a5
-; RV64P670-NEXT:    addiw t1, t1, 1
 ; RV64P670-NEXT:    addi t0, t0, 1
 ; RV64P670-NEXT:    beq t1, a7, .LBB0_11
 ; RV64P670-NEXT:  .LBB0_4: # %for.cond1.preheader.us

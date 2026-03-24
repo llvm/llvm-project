@@ -7,13 +7,13 @@ target triple = "aarch64-unknown-linux-gnu"
 define dso_local void @memset_unroll2(ptr nocapture %array, i64 %size) {
 ; DEFAULT-LABEL: memset_unroll2:
 ; DEFAULT:       // %bb.0: // %entry
-; DEFAULT-NEXT:    fmov v0.2d, #2.00000000
 ; DEFAULT-NEXT:    add x8, x0, #64
+; DEFAULT-NEXT:    fmov v0.2d, #2.00000000
 ; DEFAULT-NEXT:    .p2align 4, , 8
 ; DEFAULT-NEXT:  .LBB0_1: // %vector.body
 ; DEFAULT-NEXT:    // =>This Inner Loop Header: Depth=1
-; DEFAULT-NEXT:    stur q0, [x8, #-64]
 ; DEFAULT-NEXT:    subs x1, x1, #4
+; DEFAULT-NEXT:    stur q0, [x8, #-64]
 ; DEFAULT-NEXT:    stur q0, [x8, #-48]
 ; DEFAULT-NEXT:    str q0, [x8]
 ; DEFAULT-NEXT:    str q0, [x8, #16]
@@ -28,13 +28,13 @@ define dso_local void @memset_unroll2(ptr nocapture %array, i64 %size) {
 ;
 ; ASCEND-LABEL: memset_unroll2:
 ; ASCEND:       // %bb.0: // %entry
-; ASCEND-NEXT:    fmov v0.2d, #2.00000000
 ; ASCEND-NEXT:    add x8, x0, #64
+; ASCEND-NEXT:    fmov v0.2d, #2.00000000
 ; ASCEND-NEXT:    .p2align 4, , 8
 ; ASCEND-NEXT:  .LBB0_1: // %vector.body
 ; ASCEND-NEXT:    // =>This Inner Loop Header: Depth=1
-; ASCEND-NEXT:    stur q0, [x8, #-64]
 ; ASCEND-NEXT:    subs x1, x1, #4
+; ASCEND-NEXT:    stur q0, [x8, #-64]
 ; ASCEND-NEXT:    stur q0, [x8, #-48]
 ; ASCEND-NEXT:    stur q0, [x8, #-32]
 ; ASCEND-NEXT:    stur q0, [x8, #-16]

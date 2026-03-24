@@ -95,8 +95,8 @@ define i32 @load_tls_shared_za() nounwind "aarch64_inout_za" {
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    bl __arm_tpidr2_restore
 ; CHECK-NEXT:  .LBB2_2: // %entry
-; CHECK-NEXT:    mov w0, w8
 ; CHECK-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-NEXT:    mov w0, w8
 ; CHECK-NEXT:    mov sp, x29
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -140,8 +140,8 @@ define i32 @load_tls_streaming_shared_za() nounwind "aarch64_inout_za" "aarch64_
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    bl __arm_tpidr2_restore
 ; CHECK-NEXT:  .LBB3_2: // %entry
-; CHECK-NEXT:    mov w0, w8
 ; CHECK-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-NEXT:    mov w0, w8
 ; CHECK-NEXT:    sub sp, x29, #64
 ; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr x19, [sp, #80] // 8-byte Reload

@@ -991,10 +991,10 @@ define amdgpu_kernel void @analyze_mask_branch() #0 {
 ; GCN-LABEL: analyze_mask_branch:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GCN-NEXT:    s_mov_b32 s0, exec_lo
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    v_mov_b32_e64 v0, 0
 ; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    s_mov_b32 s0, exec_lo
 ; GCN-NEXT:    v_cmpx_nlt_f32_e32 0, v0
 ; GCN-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GCN-NEXT:    s_cbranch_execz .LBB9_2
@@ -1040,10 +1040,10 @@ define amdgpu_kernel void @analyze_mask_branch() #0 {
 ; GCN-ADD-PC64-LABEL: analyze_mask_branch:
 ; GCN-ADD-PC64:       ; %bb.0: ; %entry
 ; GCN-ADD-PC64-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GCN-ADD-PC64-NEXT:    s_mov_b32 s0, exec_lo
 ; GCN-ADD-PC64-NEXT:    ;;#ASMSTART
 ; GCN-ADD-PC64-NEXT:    v_mov_b32_e64 v0, 0
 ; GCN-ADD-PC64-NEXT:    ;;#ASMEND
+; GCN-ADD-PC64-NEXT:    s_mov_b32 s0, exec_lo
 ; GCN-ADD-PC64-NEXT:    v_cmpx_nlt_f32_e32 0, v0
 ; GCN-ADD-PC64-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GCN-ADD-PC64-NEXT:    s_cbranch_execz .LBB9_2

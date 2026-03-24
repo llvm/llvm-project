@@ -66,10 +66,10 @@ define amdgpu_cs void @with_calls_inline_const() #0 {
 ; CHECK-TRUE16-NEXT:    s_mov_b32 s1, callee@abs32@hi
 ; CHECK-TRUE16-NEXT:    s_cmovk_i32 s33, 0x1c0
 ; CHECK-TRUE16-NEXT:    s_mov_b32 s0, callee@abs32@lo
+; CHECK-TRUE16-NEXT:    s_cselect_b32 s32, 0x1d0, 16
 ; CHECK-TRUE16-NEXT:    scratch_store_b8 off, v0, s33 scope:SCOPE_SYS
 ; CHECK-TRUE16-NEXT:    s_wait_storecnt 0x0
 ; CHECK-TRUE16-NEXT:    v_mov_b32_e32 v0, 0x47
-; CHECK-TRUE16-NEXT:    s_cselect_b32 s32, 0x1d0, 16
 ; CHECK-TRUE16-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; CHECK-TRUE16-NEXT:    s_alloc_vgpr 0
 ; CHECK-TRUE16-NEXT:    s_endpgm
@@ -82,10 +82,10 @@ define amdgpu_cs void @with_calls_inline_const() #0 {
 ; CHECK-FAKE16-NEXT:    s_mov_b32 s1, callee@abs32@hi
 ; CHECK-FAKE16-NEXT:    s_cmovk_i32 s33, 0x1c0
 ; CHECK-FAKE16-NEXT:    s_mov_b32 s0, callee@abs32@lo
+; CHECK-FAKE16-NEXT:    s_cselect_b32 s32, 0x1d0, 16
 ; CHECK-FAKE16-NEXT:    scratch_store_b8 off, v0, s33 scope:SCOPE_SYS
 ; CHECK-FAKE16-NEXT:    s_wait_storecnt 0x0
 ; CHECK-FAKE16-NEXT:    v_mov_b32_e32 v0, 0x47
-; CHECK-FAKE16-NEXT:    s_cselect_b32 s32, 0x1d0, 16
 ; CHECK-FAKE16-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; CHECK-FAKE16-NEXT:    s_alloc_vgpr 0
 ; CHECK-FAKE16-NEXT:    s_endpgm
@@ -106,11 +106,11 @@ define amdgpu_cs void @with_calls_no_inline_const() #0 {
 ; CHECK-TRUE16-NEXT:    s_mov_b32 s1, callee@abs32@hi
 ; CHECK-TRUE16-NEXT:    s_cmovk_i32 s33, 0x1c0
 ; CHECK-TRUE16-NEXT:    s_mov_b32 s0, callee@abs32@lo
+; CHECK-TRUE16-NEXT:    s_movk_i32 s32, 0x100
+; CHECK-TRUE16-NEXT:    s_cmovk_i32 s32, 0x2c0
 ; CHECK-TRUE16-NEXT:    scratch_store_b8 off, v0, s33 scope:SCOPE_SYS
 ; CHECK-TRUE16-NEXT:    s_wait_storecnt 0x0
 ; CHECK-TRUE16-NEXT:    v_mov_b32_e32 v0, 0x47
-; CHECK-TRUE16-NEXT:    s_movk_i32 s32, 0x100
-; CHECK-TRUE16-NEXT:    s_cmovk_i32 s32, 0x2c0
 ; CHECK-TRUE16-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; CHECK-TRUE16-NEXT:    s_alloc_vgpr 0
 ; CHECK-TRUE16-NEXT:    s_endpgm
@@ -123,11 +123,11 @@ define amdgpu_cs void @with_calls_no_inline_const() #0 {
 ; CHECK-FAKE16-NEXT:    s_mov_b32 s1, callee@abs32@hi
 ; CHECK-FAKE16-NEXT:    s_cmovk_i32 s33, 0x1c0
 ; CHECK-FAKE16-NEXT:    s_mov_b32 s0, callee@abs32@lo
+; CHECK-FAKE16-NEXT:    s_movk_i32 s32, 0x100
+; CHECK-FAKE16-NEXT:    s_cmovk_i32 s32, 0x2c0
 ; CHECK-FAKE16-NEXT:    scratch_store_b8 off, v0, s33 scope:SCOPE_SYS
 ; CHECK-FAKE16-NEXT:    s_wait_storecnt 0x0
 ; CHECK-FAKE16-NEXT:    v_mov_b32_e32 v0, 0x47
-; CHECK-FAKE16-NEXT:    s_movk_i32 s32, 0x100
-; CHECK-FAKE16-NEXT:    s_cmovk_i32 s32, 0x2c0
 ; CHECK-FAKE16-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; CHECK-FAKE16-NEXT:    s_alloc_vgpr 0
 ; CHECK-FAKE16-NEXT:    s_endpgm
@@ -159,6 +159,8 @@ define amdgpu_cs void @realign_stack(<32 x i32> %x) #0 {
 ; CHECK-NEXT:    s_mov_b32 s1, callee@abs32@hi
 ; CHECK-NEXT:    s_cmovk_i32 s33, 0x200
 ; CHECK-NEXT:    s_mov_b32 s0, callee@abs32@lo
+; CHECK-NEXT:    s_movk_i32 s32, 0x100
+; CHECK-NEXT:    s_cmovk_i32 s32, 0x300
 ; CHECK-NEXT:    scratch_store_b32 off, v32, s33 scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    s_clause 0x7
@@ -171,8 +173,6 @@ define amdgpu_cs void @realign_stack(<32 x i32> %x) #0 {
 ; CHECK-NEXT:    scratch_store_b128 off, v[4:7], s33 offset:16
 ; CHECK-NEXT:    scratch_store_b128 off, v[0:3], s33
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0x47
-; CHECK-NEXT:    s_movk_i32 s32, 0x100
-; CHECK-NEXT:    s_cmovk_i32 s32, 0x300
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; CHECK-NEXT:    s_alloc_vgpr 0
 ; CHECK-NEXT:    s_endpgm

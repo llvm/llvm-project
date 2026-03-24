@@ -237,9 +237,9 @@ define i16 @promote_arg_return(i16 zeroext %arg1, i16 zeroext %arg2, ptr %res) {
 define i16 @signext_bitcast_phi_select(i16 signext %start, ptr %in) {
 ; CHECK-LABEL: signext_bitcast_phi_select:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    mov w9, #-1 // =0xffffffff
 ; CHECK-NEXT:    mov w10, #32768 // =0x8000
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    cmp w9, w0, sxth
 ; CHECK-NEXT:    b.lt .LBB6_3
 ; CHECK-NEXT:  .LBB6_1: // %if.then

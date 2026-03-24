@@ -357,6 +357,7 @@ define amdgpu_cs_chain void @set_inactive_chain_arg_call(ptr addrspace(1) %out, 
 ; GISEL10-NEXT:    s_addc_u32 s1, s1, gfx_callee@gotpcrel32@hi+12
 ; GISEL10-NEXT:    v_mov_b32_e32 v43, v11
 ; GISEL10-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
+; GISEL10-NEXT:    s_mov_b64 s[0:1], s[48:49]
 ; GISEL10-NEXT:    v_mov_b32_e32 v0, 0
 ; GISEL10-NEXT:    v_mov_b32_e32 v1, 0
 ; GISEL10-NEXT:    v_mov_b32_e32 v2, 0
@@ -369,7 +370,6 @@ define amdgpu_cs_chain void @set_inactive_chain_arg_call(ptr addrspace(1) %out, 
 ; GISEL10-NEXT:    v_mov_b32_e32 v9, 0
 ; GISEL10-NEXT:    v_mov_b32_e32 v10, 0
 ; GISEL10-NEXT:    v_mov_b32_e32 v11, 0
-; GISEL10-NEXT:    s_mov_b64 s[0:1], s[48:49]
 ; GISEL10-NEXT:    s_mov_b64 s[2:3], s[50:51]
 ; GISEL10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL10-NEXT:    s_swappc_b64 s[30:31], s[4:5]
@@ -392,7 +392,9 @@ define amdgpu_cs_chain void @set_inactive_chain_arg_call(ptr addrspace(1) %out, 
 ; DAGISEL10-NEXT:    s_addc_u32 s1, s1, gfx_callee@gotpcrel32@hi+12
 ; DAGISEL10-NEXT:    v_mov_b32_e32 v42, v9
 ; DAGISEL10-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
+; DAGISEL10-NEXT:    s_mov_b64 s[0:1], s[48:49]
 ; DAGISEL10-NEXT:    v_mov_b32_e32 v41, v8
+; DAGISEL10-NEXT:    s_mov_b64 s[2:3], s[50:51]
 ; DAGISEL10-NEXT:    v_mov_b32_e32 v0, 0
 ; DAGISEL10-NEXT:    v_mov_b32_e32 v1, 0
 ; DAGISEL10-NEXT:    v_mov_b32_e32 v2, 0
@@ -405,8 +407,6 @@ define amdgpu_cs_chain void @set_inactive_chain_arg_call(ptr addrspace(1) %out, 
 ; DAGISEL10-NEXT:    v_mov_b32_e32 v9, 0
 ; DAGISEL10-NEXT:    v_mov_b32_e32 v10, 0
 ; DAGISEL10-NEXT:    v_mov_b32_e32 v11, 0
-; DAGISEL10-NEXT:    s_mov_b64 s[0:1], s[48:49]
-; DAGISEL10-NEXT:    s_mov_b64 s[2:3], s[50:51]
 ; DAGISEL10-NEXT:    s_waitcnt lgkmcnt(0)
 ; DAGISEL10-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; DAGISEL10-NEXT:    s_or_saveexec_b32 s0, -1
@@ -499,6 +499,7 @@ define amdgpu_cs_chain void @set_inactive_chain_arg_call(ptr addrspace(1) %out, 
 ; GISEL10_W64-NEXT:    s_addc_u32 s1, s1, gfx_callee@gotpcrel32@hi+12
 ; GISEL10_W64-NEXT:    v_mov_b32_e32 v43, v11
 ; GISEL10_W64-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
+; GISEL10_W64-NEXT:    s_mov_b64 s[0:1], s[48:49]
 ; GISEL10_W64-NEXT:    v_mov_b32_e32 v0, 0
 ; GISEL10_W64-NEXT:    v_mov_b32_e32 v1, 0
 ; GISEL10_W64-NEXT:    v_mov_b32_e32 v2, 0
@@ -511,7 +512,6 @@ define amdgpu_cs_chain void @set_inactive_chain_arg_call(ptr addrspace(1) %out, 
 ; GISEL10_W64-NEXT:    v_mov_b32_e32 v9, 0
 ; GISEL10_W64-NEXT:    v_mov_b32_e32 v10, 0
 ; GISEL10_W64-NEXT:    v_mov_b32_e32 v11, 0
-; GISEL10_W64-NEXT:    s_mov_b64 s[0:1], s[48:49]
 ; GISEL10_W64-NEXT:    s_mov_b64 s[2:3], s[50:51]
 ; GISEL10_W64-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL10_W64-NEXT:    s_swappc_b64 s[30:31], s[4:5]
@@ -534,7 +534,9 @@ define amdgpu_cs_chain void @set_inactive_chain_arg_call(ptr addrspace(1) %out, 
 ; DAGISEL10_W64-NEXT:    s_addc_u32 s1, s1, gfx_callee@gotpcrel32@hi+12
 ; DAGISEL10_W64-NEXT:    v_mov_b32_e32 v42, v9
 ; DAGISEL10_W64-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
+; DAGISEL10_W64-NEXT:    s_mov_b64 s[0:1], s[48:49]
 ; DAGISEL10_W64-NEXT:    v_mov_b32_e32 v41, v8
+; DAGISEL10_W64-NEXT:    s_mov_b64 s[2:3], s[50:51]
 ; DAGISEL10_W64-NEXT:    v_mov_b32_e32 v0, 0
 ; DAGISEL10_W64-NEXT:    v_mov_b32_e32 v1, 0
 ; DAGISEL10_W64-NEXT:    v_mov_b32_e32 v2, 0
@@ -547,8 +549,6 @@ define amdgpu_cs_chain void @set_inactive_chain_arg_call(ptr addrspace(1) %out, 
 ; DAGISEL10_W64-NEXT:    v_mov_b32_e32 v9, 0
 ; DAGISEL10_W64-NEXT:    v_mov_b32_e32 v10, 0
 ; DAGISEL10_W64-NEXT:    v_mov_b32_e32 v11, 0
-; DAGISEL10_W64-NEXT:    s_mov_b64 s[0:1], s[48:49]
-; DAGISEL10_W64-NEXT:    s_mov_b64 s[2:3], s[50:51]
 ; DAGISEL10_W64-NEXT:    s_waitcnt lgkmcnt(0)
 ; DAGISEL10_W64-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; DAGISEL10_W64-NEXT:    s_or_saveexec_b64 s[0:1], -1
@@ -639,6 +639,7 @@ define amdgpu_cs_chain void @set_inactive_chain_arg_last_vgpr(ptr addrspace(1) %
 ; GISEL10-NEXT:    s_addc_u32 s1, s1, gfx_callee@gotpcrel32@hi+12
 ; GISEL10-NEXT:    v_mov_b32_e32 v0, 0
 ; GISEL10-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
+; GISEL10-NEXT:    s_mov_b64 s[0:1], s[48:49]
 ; GISEL10-NEXT:    v_mov_b32_e32 v1, 0
 ; GISEL10-NEXT:    v_mov_b32_e32 v2, 0
 ; GISEL10-NEXT:    v_mov_b32_e32 v3, 0
@@ -650,7 +651,6 @@ define amdgpu_cs_chain void @set_inactive_chain_arg_last_vgpr(ptr addrspace(1) %
 ; GISEL10-NEXT:    v_mov_b32_e32 v9, 0
 ; GISEL10-NEXT:    v_mov_b32_e32 v10, 0
 ; GISEL10-NEXT:    v_mov_b32_e32 v11, 0
-; GISEL10-NEXT:    s_mov_b64 s[0:1], s[48:49]
 ; GISEL10-NEXT:    s_mov_b64 s[2:3], s[50:51]
 ; GISEL10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL10-NEXT:    s_swappc_b64 s[30:31], s[4:5]
@@ -672,8 +672,10 @@ define amdgpu_cs_chain void @set_inactive_chain_arg_last_vgpr(ptr addrspace(1) %
 ; DAGISEL10-NEXT:    s_addc_u32 s1, s1, gfx_callee@gotpcrel32@hi+12
 ; DAGISEL10-NEXT:    v_mov_b32_e32 v43, v10
 ; DAGISEL10-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
+; DAGISEL10-NEXT:    s_mov_b64 s[0:1], s[48:49]
 ; DAGISEL10-NEXT:    v_mov_b32_e32 v42, v9
 ; DAGISEL10-NEXT:    v_mov_b32_e32 v41, v8
+; DAGISEL10-NEXT:    s_mov_b64 s[2:3], s[50:51]
 ; DAGISEL10-NEXT:    v_mov_b32_e32 v0, 0
 ; DAGISEL10-NEXT:    v_mov_b32_e32 v1, 0
 ; DAGISEL10-NEXT:    v_mov_b32_e32 v2, 0
@@ -686,8 +688,6 @@ define amdgpu_cs_chain void @set_inactive_chain_arg_last_vgpr(ptr addrspace(1) %
 ; DAGISEL10-NEXT:    v_mov_b32_e32 v9, 0
 ; DAGISEL10-NEXT:    v_mov_b32_e32 v10, 0
 ; DAGISEL10-NEXT:    v_mov_b32_e32 v11, 0
-; DAGISEL10-NEXT:    s_mov_b64 s[0:1], s[48:49]
-; DAGISEL10-NEXT:    s_mov_b64 s[2:3], s[50:51]
 ; DAGISEL10-NEXT:    s_waitcnt lgkmcnt(0)
 ; DAGISEL10-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; DAGISEL10-NEXT:    s_or_saveexec_b32 s0, -1
@@ -781,6 +781,7 @@ define amdgpu_cs_chain void @set_inactive_chain_arg_last_vgpr(ptr addrspace(1) %
 ; GISEL10_W64-NEXT:    s_addc_u32 s1, s1, gfx_callee@gotpcrel32@hi+12
 ; GISEL10_W64-NEXT:    v_mov_b32_e32 v0, 0
 ; GISEL10_W64-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
+; GISEL10_W64-NEXT:    s_mov_b64 s[0:1], s[48:49]
 ; GISEL10_W64-NEXT:    v_mov_b32_e32 v1, 0
 ; GISEL10_W64-NEXT:    v_mov_b32_e32 v2, 0
 ; GISEL10_W64-NEXT:    v_mov_b32_e32 v3, 0
@@ -792,7 +793,6 @@ define amdgpu_cs_chain void @set_inactive_chain_arg_last_vgpr(ptr addrspace(1) %
 ; GISEL10_W64-NEXT:    v_mov_b32_e32 v9, 0
 ; GISEL10_W64-NEXT:    v_mov_b32_e32 v10, 0
 ; GISEL10_W64-NEXT:    v_mov_b32_e32 v11, 0
-; GISEL10_W64-NEXT:    s_mov_b64 s[0:1], s[48:49]
 ; GISEL10_W64-NEXT:    s_mov_b64 s[2:3], s[50:51]
 ; GISEL10_W64-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL10_W64-NEXT:    s_swappc_b64 s[30:31], s[4:5]
@@ -814,8 +814,10 @@ define amdgpu_cs_chain void @set_inactive_chain_arg_last_vgpr(ptr addrspace(1) %
 ; DAGISEL10_W64-NEXT:    s_addc_u32 s1, s1, gfx_callee@gotpcrel32@hi+12
 ; DAGISEL10_W64-NEXT:    v_mov_b32_e32 v43, v10
 ; DAGISEL10_W64-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
+; DAGISEL10_W64-NEXT:    s_mov_b64 s[0:1], s[48:49]
 ; DAGISEL10_W64-NEXT:    v_mov_b32_e32 v42, v9
 ; DAGISEL10_W64-NEXT:    v_mov_b32_e32 v41, v8
+; DAGISEL10_W64-NEXT:    s_mov_b64 s[2:3], s[50:51]
 ; DAGISEL10_W64-NEXT:    v_mov_b32_e32 v0, 0
 ; DAGISEL10_W64-NEXT:    v_mov_b32_e32 v1, 0
 ; DAGISEL10_W64-NEXT:    v_mov_b32_e32 v2, 0
@@ -828,8 +830,6 @@ define amdgpu_cs_chain void @set_inactive_chain_arg_last_vgpr(ptr addrspace(1) %
 ; DAGISEL10_W64-NEXT:    v_mov_b32_e32 v9, 0
 ; DAGISEL10_W64-NEXT:    v_mov_b32_e32 v10, 0
 ; DAGISEL10_W64-NEXT:    v_mov_b32_e32 v11, 0
-; DAGISEL10_W64-NEXT:    s_mov_b64 s[0:1], s[48:49]
-; DAGISEL10_W64-NEXT:    s_mov_b64 s[2:3], s[50:51]
 ; DAGISEL10_W64-NEXT:    s_waitcnt lgkmcnt(0)
 ; DAGISEL10_W64-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; DAGISEL10_W64-NEXT:    s_or_saveexec_b64 s[0:1], -1

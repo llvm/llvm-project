@@ -268,8 +268,8 @@ define i1 @test_fcmpuno(float %a, float %b) #0 {
 define i1 @test_fcmpord(float %a, float %b) #0 {
 ; CHECK-LABEL: test_fcmpord:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 5, 3
 ; CHECK-NEXT:    efscmpeq 0, 4, 4
+; CHECK-NEXT:    mr 5, 3
 ; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    bclr 4, 1, 0
 ; CHECK-NEXT:  # %bb.1: # %entry
@@ -286,8 +286,8 @@ define i1 @test_fcmpord(float %a, float %b) #0 {
 define i1 @test_fcmpueq(float %a, float %b) #0 {
 ; CHECK-LABEL: test_fcmpueq:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 5, 3
 ; CHECK-NEXT:    efscmpgt 0, 3, 4
+; CHECK-NEXT:    mr 5, 3
 ; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    bclr 12, 1, 0
 ; CHECK-NEXT:  # %bb.1: # %entry
@@ -304,8 +304,8 @@ define i1 @test_fcmpueq(float %a, float %b) #0 {
 define i1 @test_fcmpne(float %a, float %b) #0 {
 ; CHECK-LABEL: test_fcmpne:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 5, 3
 ; CHECK-NEXT:    efscmplt 0, 3, 4
+; CHECK-NEXT:    mr 5, 3
 ; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    bc 12, 1, .LBB15_2
 ; CHECK-NEXT:  # %bb.1: # %entry
@@ -384,8 +384,8 @@ ret:
 define i1 @test_fcmpult(float %a, float %b) #0 {
 ; CHECK-LABEL: test_fcmpult:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 5, 3
 ; CHECK-NEXT:    efscmpeq 0, 3, 3
+; CHECK-NEXT:    mr 5, 3
 ; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    bc 4, 1, .LBB18_3
 ; CHECK-NEXT:  # %bb.1: # %entry
@@ -1643,10 +1643,10 @@ define double @test_spill(double %a, i32 %a1, i64 %a2, ptr %a3, ptr %a4, ptr %a5
 ; SPE-NEXT:    #APP
 ; SPE-NEXT:    #NO_APP
 ; SPE-NEXT:    addi 3, 1, 76
+; SPE-NEXT:    li 30, 0
 ; SPE-NEXT:    li 4, 0
 ; SPE-NEXT:    li 5, 24
 ; SPE-NEXT:    li 6, 1
-; SPE-NEXT:    li 30, 0
 ; SPE-NEXT:    bl test_memset
 ; SPE-NEXT:    lwz 3, 20(1) # 4-byte Folded Reload
 ; SPE-NEXT:    stw 30, 0(3)
@@ -1686,10 +1686,10 @@ define double @test_spill(double %a, i32 %a1, i64 %a2, ptr %a3, ptr %a4, ptr %a5
 ; EFPU2:       # %bb.0: # %entry
 ; EFPU2-NEXT:    mflr 0
 ; EFPU2-NEXT:    stwu 1, -128(1)
-; EFPU2-NEXT:    mr 5, 3
-; EFPU2-NEXT:    mr 6, 4
 ; EFPU2-NEXT:    stw 0, 132(1)
+; EFPU2-NEXT:    mr 5, 3
 ; EFPU2-NEXT:    stw 27, 108(1) # 4-byte Folded Spill
+; EFPU2-NEXT:    mr 6, 4
 ; EFPU2-NEXT:    stw 28, 112(1) # 4-byte Folded Spill
 ; EFPU2-NEXT:    stw 29, 116(1) # 4-byte Folded Spill
 ; EFPU2-NEXT:    stw 30, 120(1) # 4-byte Folded Spill
@@ -1697,18 +1697,18 @@ define double @test_spill(double %a, i32 %a1, i64 %a2, ptr %a3, ptr %a4, ptr %a5
 ; EFPU2-NEXT:    bl __adddf3
 ; EFPU2-NEXT:    lis 5, 16393
 ; EFPU2-NEXT:    lis 6, -4069
-; EFPU2-NEXT:    ori 5, 5, 8697
-; EFPU2-NEXT:    ori 6, 6, 34414
 ; EFPU2-NEXT:    #APP
 ; EFPU2-NEXT:    #NO_APP
+; EFPU2-NEXT:    ori 5, 5, 8697
+; EFPU2-NEXT:    ori 6, 6, 34414
 ; EFPU2-NEXT:    bl __adddf3
 ; EFPU2-NEXT:    mr 30, 3
 ; EFPU2-NEXT:    mr 29, 4
 ; EFPU2-NEXT:    addi 3, 1, 56
+; EFPU2-NEXT:    li 27, 0
 ; EFPU2-NEXT:    li 4, 0
 ; EFPU2-NEXT:    li 5, 24
 ; EFPU2-NEXT:    li 6, 1
-; EFPU2-NEXT:    li 27, 0
 ; EFPU2-NEXT:    bl test_memset
 ; EFPU2-NEXT:    stw 27, 0(28)
 ; EFPU2-NEXT:    bl test_func2
@@ -1764,8 +1764,8 @@ define dso_local float @test_fma(i32 %d) local_unnamed_addr #0 {
 ; CHECK-NEXT:    mr 4, 3
 ; CHECK-NEXT:    bl fmaf
 ; CHECK-NEXT:    addi 30, 30, -1
-; CHECK-NEXT:    mr 5, 3
 ; CHECK-NEXT:    cmplwi 30, 0
+; CHECK-NEXT:    mr 5, 3
 ; CHECK-NEXT:    addi 29, 29, 1
 ; CHECK-NEXT:    bc 12, 1, .LBB56_2
 ; CHECK-NEXT:    b .LBB56_4
@@ -1843,17 +1843,17 @@ define void @d(ptr %e, ptr %f) #0 {
 ; EFPU2-NEXT:    mflr 0
 ; EFPU2-NEXT:    stwu 1, -32(1)
 ; EFPU2-NEXT:    stw 0, 36(1)
-; EFPU2-NEXT:    lwz 3, 0(3)
 ; EFPU2-NEXT:    stw 26, 8(1) # 4-byte Folded Spill
 ; EFPU2-NEXT:    stw 27, 12(1) # 4-byte Folded Spill
 ; EFPU2-NEXT:    stw 28, 16(1) # 4-byte Folded Spill
 ; EFPU2-NEXT:    stw 29, 20(1) # 4-byte Folded Spill
 ; EFPU2-NEXT:    stw 30, 24(1) # 4-byte Folded Spill
 ; EFPU2-NEXT:    mr 30, 4
+; EFPU2-NEXT:    lwz 3, 0(3)
 ; EFPU2-NEXT:    bl __extendsfdf2
+; EFPU2-NEXT:    mr 29, 4
 ; EFPU2-NEXT:    mr 28, 3
 ; EFPU2-NEXT:    lwz 3, 0(30)
-; EFPU2-NEXT:    mr 29, 4
 ; EFPU2-NEXT:    bl __extendsfdf2
 ; EFPU2-NEXT:    mr 30, 4
 ; EFPU2-NEXT:    mr 27, 3

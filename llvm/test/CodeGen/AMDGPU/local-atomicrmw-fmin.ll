@@ -6957,8 +6957,8 @@ define <2 x bfloat> @local_atomic_fmin_ret_v2bf16(ptr addrspace(3) %ptr, <2 x bf
 ; GFX7-NEXT:    ds_cmpst_rtn_b32 v5, v0, v3, v4
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    v_cmp_eq_u32_e32 vcc, v5, v3
-; GFX7-NEXT:    v_and_b32_e32 v4, 0xffff0000, v5
 ; GFX7-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX7-NEXT:    v_and_b32_e32 v4, 0xffff0000, v5
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v3, 16, v5
 ; GFX7-NEXT:    s_andn2_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_cbranch_execnz .LBB24_1
@@ -7000,8 +7000,8 @@ define <2 x bfloat> @local_atomic_fmin_ret_v2bf16(ptr addrspace(3) %ptr, <2 x bf
 ; GFX6-NEXT:    ds_cmpst_rtn_b32 v5, v0, v3, v4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, v5, v3
-; GFX6-NEXT:    v_and_b32_e32 v4, 0xffff0000, v5
 ; GFX6-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX6-NEXT:    v_and_b32_e32 v4, 0xffff0000, v5
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v3, 16, v5
 ; GFX6-NEXT:    s_andn2_b64 exec, exec, s[4:5]
 ; GFX6-NEXT:    s_cbranch_execnz .LBB24_1
@@ -7441,8 +7441,8 @@ define <2 x bfloat> @local_atomic_fmin_ret_v2bf16__offset(ptr addrspace(3) %ptr,
 ; GFX7-NEXT:    ds_cmpst_rtn_b32 v5, v0, v3, v4 offset:65532
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    v_cmp_eq_u32_e32 vcc, v5, v3
-; GFX7-NEXT:    v_and_b32_e32 v4, 0xffff0000, v5
 ; GFX7-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX7-NEXT:    v_and_b32_e32 v4, 0xffff0000, v5
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v3, 16, v5
 ; GFX7-NEXT:    s_andn2_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_cbranch_execnz .LBB25_1
@@ -7485,8 +7485,8 @@ define <2 x bfloat> @local_atomic_fmin_ret_v2bf16__offset(ptr addrspace(3) %ptr,
 ; GFX6-NEXT:    ds_cmpst_rtn_b32 v5, v0, v3, v4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, v5, v3
-; GFX6-NEXT:    v_and_b32_e32 v4, 0xffff0000, v5
 ; GFX6-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX6-NEXT:    v_and_b32_e32 v4, 0xffff0000, v5
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v3, 16, v5
 ; GFX6-NEXT:    s_andn2_b64 exec, exec, s[4:5]
 ; GFX6-NEXT:    s_cbranch_execnz .LBB25_1
@@ -7911,8 +7911,8 @@ define void @local_atomic_fmin_noret_v2bf16(ptr addrspace(3) %ptr, <2 x bfloat> 
 ; GFX7-NEXT:    ds_cmpst_rtn_b32 v5, v0, v3, v4
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    v_cmp_eq_u32_e32 vcc, v5, v3
-; GFX7-NEXT:    v_and_b32_e32 v4, 0xffff0000, v5
 ; GFX7-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX7-NEXT:    v_and_b32_e32 v4, 0xffff0000, v5
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v3, 16, v5
 ; GFX7-NEXT:    s_andn2_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_cbranch_execnz .LBB26_1
@@ -7950,8 +7950,8 @@ define void @local_atomic_fmin_noret_v2bf16(ptr addrspace(3) %ptr, <2 x bfloat> 
 ; GFX6-NEXT:    ds_cmpst_rtn_b32 v5, v0, v3, v4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, v5, v3
-; GFX6-NEXT:    v_and_b32_e32 v4, 0xffff0000, v5
 ; GFX6-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX6-NEXT:    v_and_b32_e32 v4, 0xffff0000, v5
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v3, 16, v5
 ; GFX6-NEXT:    s_andn2_b64 exec, exec, s[4:5]
 ; GFX6-NEXT:    s_cbranch_execnz .LBB26_1
@@ -8371,8 +8371,8 @@ define void @local_atomic_fmin_noret_v2bf16__ofset(ptr addrspace(3) %ptr, <2 x b
 ; GFX7-NEXT:    ds_cmpst_rtn_b32 v5, v0, v3, v4 offset:65532
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    v_cmp_eq_u32_e32 vcc, v5, v3
-; GFX7-NEXT:    v_and_b32_e32 v4, 0xffff0000, v5
 ; GFX7-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX7-NEXT:    v_and_b32_e32 v4, 0xffff0000, v5
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v3, 16, v5
 ; GFX7-NEXT:    s_andn2_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_cbranch_execnz .LBB27_1
@@ -8411,8 +8411,8 @@ define void @local_atomic_fmin_noret_v2bf16__ofset(ptr addrspace(3) %ptr, <2 x b
 ; GFX6-NEXT:    ds_cmpst_rtn_b32 v5, v0, v3, v4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, v5, v3
-; GFX6-NEXT:    v_and_b32_e32 v4, 0xffff0000, v5
 ; GFX6-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX6-NEXT:    v_and_b32_e32 v4, 0xffff0000, v5
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v3, 16, v5
 ; GFX6-NEXT:    s_andn2_b64 exec, exec, s[4:5]
 ; GFX6-NEXT:    s_cbranch_execnz .LBB27_1

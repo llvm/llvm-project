@@ -116,9 +116,9 @@ define float @extret2_f32_sf(<4 x float> %a, <4 x float> %b, ptr nocapture %p) {
 ; CHECK-LABEL: extret2_f32_sf:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    mov r0, sp
-; CHECK-NEXT:    vmov d1, r2, r3
-; CHECK-NEXT:    vldrw.u32 q1, [r0]
 ; CHECK-NEXT:    ldr r1, [sp, #16]
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vmov d1, r2, r3
 ; CHECK-NEXT:    vadd.f32 q0, q0, q1
 ; CHECK-NEXT:    vmov r0, s2
 ; CHECK-NEXT:    vstr s2, [r1]

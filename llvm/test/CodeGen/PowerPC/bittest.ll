@@ -7,8 +7,8 @@ define i32 @foo(i32 noundef signext %x) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stwu r1, -64(r1)
-; CHECK-NEXT:    stw r0, 72(r1)
 ; CHECK-NEXT:    cmpwi r3, 8
+; CHECK-NEXT:    stw r0, 72(r1)
 ; CHECK-NEXT:    stw r31, 60(r1) # 4-byte Folded Spill
 ; CHECK-NEXT:    mr r31, r3
 ; CHECK-NEXT:    li r3, 0
@@ -104,8 +104,8 @@ define i32 @goo(i32 noundef signext %x) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stwu r1, -64(r1)
-; CHECK-NEXT:    stw r0, 72(r1)
 ; CHECK-NEXT:    cmplwi r3, 12
+; CHECK-NEXT:    stw r0, 72(r1)
 ; CHECK-NEXT:    stw r31, 60(r1) # 4-byte Folded Spill
 ; CHECK-NEXT:    mr r31, r3
 ; CHECK-NEXT:    bgt cr0, L..BB1_7
@@ -131,8 +131,8 @@ define i32 @goo(i32 noundef signext %x) {
 ; CHECK-NEXT:    cmplwi r31, 7
 ; CHECK-NEXT:    bne cr0, L..BB1_7
 ; CHECK-NEXT:  # %bb.6: # %sw.bb
-; CHECK-NEXT:    li r3, 7
 ; CHECK-NEXT:    li r31, 7
+; CHECK-NEXT:    li r3, 7
 ; CHECK-NEXT:    bl .foo1[PR]
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    b L..BB1_9
@@ -141,8 +141,8 @@ define i32 @goo(i32 noundef signext %x) {
 ; CHECK-NEXT:    li r31, 0
 ; CHECK-NEXT:    bne cr0, L..BB1_9
 ; CHECK-NEXT:  # %bb.8: # %sw.bb3
-; CHECK-NEXT:    li r3, 4
 ; CHECK-NEXT:    li r31, 4
+; CHECK-NEXT:    li r3, 4
 ; CHECK-NEXT:    bl .foo4[PR]
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:  L..BB1_9: # %return

@@ -77,13 +77,13 @@ define <vscale x 8 x double> @fpext_nxv8bf16_to_nxv8f64(<vscale x 8 x bfloat> %a
 ; CHECK-NEXT:    uunpkhi z1.d, z1.s
 ; CHECK-NEXT:    uunpklo z3.d, z0.s
 ; CHECK-NEXT:    uunpkhi z0.d, z0.s
-; CHECK-NEXT:    lsl z1.s, z1.s, #16
 ; CHECK-NEXT:    lsl z2.s, z2.s, #16
+; CHECK-NEXT:    lsl z1.s, z1.s, #16
 ; CHECK-NEXT:    lsl z3.s, z3.s, #16
 ; CHECK-NEXT:    lsl z4.s, z0.s, #16
-; CHECK-NEXT:    fcvt z1.d, p0/m, z1.s
 ; CHECK-NEXT:    movprfx z0, z2
 ; CHECK-NEXT:    fcvt z0.d, p0/m, z2.s
+; CHECK-NEXT:    fcvt z1.d, p0/m, z1.s
 ; CHECK-NEXT:    movprfx z2, z3
 ; CHECK-NEXT:    fcvt z2.d, p0/m, z3.s
 ; CHECK-NEXT:    movprfx z3, z4

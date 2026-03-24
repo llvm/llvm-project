@@ -14,11 +14,11 @@ target triple = "aarch64"
 define %"class.std::complex" @complex_mul_v2f64(ptr %a, ptr %b) {
 ; CHECK-LABEL: complex_mul_v2f64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    cntd x8
-; CHECK-NEXT:    neg x9, x8
 ; CHECK-NEXT:    mov w10, #100 // =0x64
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    neg x9, x8
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    and x9, x9, x10
 ; CHECK-NEXT:    rdvl x10, #2
@@ -178,13 +178,13 @@ exit.block:                                     ; preds = %vector.body
 define %"class.std::complex" @complex_mul_v2f64_unrolled(ptr %a, ptr %b) {
 ; CHECK-LABEL: complex_mul_v2f64_unrolled:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    cntw x8
+; CHECK-NEXT:    mov w10, #1000 // =0x3e8
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    neg x9, x8
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    movi v3.2d, #0000000000000000
-; CHECK-NEXT:    neg x9, x8
-; CHECK-NEXT:    mov w10, #1000 // =0x3e8
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    and x9, x9, x10
 ; CHECK-NEXT:    rdvl x10, #4
@@ -303,14 +303,14 @@ exit.block:                                     ; preds = %vector.body
 define dso_local %"class.std::complex" @reduction_mix(ptr %a, ptr %b, ptr noalias nocapture noundef readnone %c, [2 x double] %d.coerce, ptr nocapture noundef readonly %s, ptr nocapture noundef writeonly %outs) local_unnamed_addr #0 {
 ; CHECK-LABEL: reduction_mix:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    mov w11, #100 // =0x64
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    neg x10, x9
 ; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    neg x10, x9
-; CHECK-NEXT:    mov w11, #100 // =0x64
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    and x10, x10, x11
 ; CHECK-NEXT:    rdvl x11, #2
 ; CHECK-NEXT:  .LBB3_1: // %vector.body
@@ -331,8 +331,8 @@ define dso_local %"class.std::complex" @reduction_mix(ptr %a, ptr %b, ptr noalia
 ; CHECK-NEXT:    uaddv d2, p0, z2.d
 ; CHECK-NEXT:    faddv d0, p0, z3.d
 ; CHECK-NEXT:    faddv d1, p0, z1.d
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    str s2, [x4]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $z1
 ; CHECK-NEXT:    ret
 entry:

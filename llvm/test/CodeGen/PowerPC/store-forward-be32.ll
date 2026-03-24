@@ -15,9 +15,9 @@ target triple = "powerpc-ibm-aix7.2.0.0"
 define i32 @ustc1(ptr noundef byval(%struct.USST) align 4 %s) {
 ; CHECK-LABEL: ustc1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 4, 3
-; CHECK-NEXT:    srwi 3, 3, 24
-; CHECK-NEXT:    stw 4, 24(1)
+; CHECK-NEXT:    srwi 4, 3, 24
+; CHECK-NEXT:    stw 3, 24(1)
+; CHECK-NEXT:    mr 3, 4
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i16, ptr %s, align 4
@@ -30,9 +30,9 @@ entry:
 define i32 @ustc2(ptr noundef byval(%struct.USST) align 4 %s) {
 ; CHECK-LABEL: ustc2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 4, 3
-; CHECK-NEXT:    srwi 3, 3, 16
-; CHECK-NEXT:    stw 4, 24(1)
+; CHECK-NEXT:    srwi 4, 3, 16
+; CHECK-NEXT:    stw 3, 24(1)
+; CHECK-NEXT:    mr 3, 4
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i16, ptr %s, align 4
@@ -44,9 +44,9 @@ entry:
 define i32 @stc1(ptr noundef byval(%struct.SST) align 4 %s) {
 ; CHECK-LABEL: stc1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 4, 3
-; CHECK-NEXT:    srawi 3, 3, 24
-; CHECK-NEXT:    stw 4, 24(1)
+; CHECK-NEXT:    srawi 4, 3, 24
+; CHECK-NEXT:    stw 3, 24(1)
+; CHECK-NEXT:    mr 3, 4
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i16, ptr %s, align 4
@@ -59,9 +59,9 @@ entry:
 define i32 @stc2(ptr noundef byval(%struct.SST) align 4 %s) {
 ; CHECK-LABEL: stc2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 4, 3
-; CHECK-NEXT:    srawi 3, 3, 16
-; CHECK-NEXT:    stw 4, 24(1)
+; CHECK-NEXT:    srawi 4, 3, 16
+; CHECK-NEXT:    stw 3, 24(1)
+; CHECK-NEXT:    mr 3, 4
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i16, ptr %s, align 4
@@ -73,9 +73,9 @@ entry:
 define i32 @ctc(ptr noundef byval(%struct.CST) align 4 %s) {
 ; CHECK-LABEL: ctc:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 4, 3
-; CHECK-NEXT:    srwi 3, 3, 24
-; CHECK-NEXT:    stw 4, 24(1)
+; CHECK-NEXT:    srwi 4, 3, 24
+; CHECK-NEXT:    stw 3, 24(1)
+; CHECK-NEXT:    mr 3, 4
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i8, ptr %s, align 4
@@ -87,9 +87,9 @@ entry:
 define i32 @sctc(ptr noundef byval(%struct.SCST) align 4 %s) {
 ; CHECK-LABEL: sctc:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 4, 3
-; CHECK-NEXT:    srawi 3, 3, 24
-; CHECK-NEXT:    stw 4, 24(1)
+; CHECK-NEXT:    srawi 4, 3, 24
+; CHECK-NEXT:    stw 3, 24(1)
+; CHECK-NEXT:    mr 3, 4
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i8, ptr %s, align 4

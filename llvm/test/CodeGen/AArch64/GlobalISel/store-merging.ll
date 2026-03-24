@@ -95,12 +95,12 @@ define void @test_simple_vector(ptr %ptr) {
 define i32 @test_unknown_alias(ptr %ptr, ptr %aliasptr) {
 ; CHECK-LABEL: test_unknown_alias:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov w9, #4 ; =0x4
-; CHECK-NEXT:    mov x8, x0
-; CHECK-NEXT:    str w9, [x0]
+; CHECK-NEXT:    mov w8, #4 ; =0x4
 ; CHECK-NEXT:    mov w9, #5 ; =0x5
-; CHECK-NEXT:    ldr w0, [x1]
-; CHECK-NEXT:    str w9, [x8, #4]
+; CHECK-NEXT:    str w8, [x0]
+; CHECK-NEXT:    ldr w8, [x1]
+; CHECK-NEXT:    str w9, [x0, #4]
+; CHECK-NEXT:    mov w0, w8
 ; CHECK-NEXT:    ret
   store i32 4, ptr %ptr
   %ld = load i32, ptr %aliasptr
@@ -304,14 +304,14 @@ entry:
 define i32 @test_alias_3xs16(ptr %ptr, ptr %ptr2, ptr %ptr3, ptr noalias %safe_ptr) {
 ; CHECK-LABEL: test_alias_3xs16:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov x8, x0
 ; CHECK-NEXT:    mov w9, #5 ; =0x5
-; CHECK-NEXT:    ldr w0, [x3]
-; CHECK-NEXT:    str w9, [x8, #4]
+; CHECK-NEXT:    ldr w8, [x3]
+; CHECK-NEXT:    str w9, [x0, #4]
 ; CHECK-NEXT:    mov x9, #9 ; =0x9
 ; CHECK-NEXT:    movk x9, #14, lsl #32
-; CHECK-NEXT:    strh wzr, [x8, #4]
-; CHECK-NEXT:    str x9, [x8, #8]
+; CHECK-NEXT:    strh wzr, [x0, #4]
+; CHECK-NEXT:    str x9, [x0, #8]
+; CHECK-NEXT:    mov w0, w8
 ; CHECK-NEXT:    ret
   %safeld = load i32, ptr %safe_ptr
   %addr2 = getelementptr i32, ptr %ptr, i64 1

@@ -604,8 +604,8 @@ define void @test_nest_call() "interrupt"="qci-nest" {
 ; QCI-NEXT:    li a0, 4
 ; QCI-NEXT:    li a2, 1
 ; QCI-NEXT:    li a4, 2
-; QCI-NEXT:    li a6, 3
 ; QCI-NEXT:    sw a0, 0(sp)
+; QCI-NEXT:    li a6, 3
 ; QCI-NEXT:    li a0, 0
 ; QCI-NEXT:    li a1, 0
 ; QCI-NEXT:    li a3, 0
@@ -644,8 +644,8 @@ define void @test_nest_call() "interrupt"="qci-nest" {
 ; QCI-FP-NEXT:    li a0, 4
 ; QCI-FP-NEXT:    li a2, 1
 ; QCI-FP-NEXT:    li a4, 2
-; QCI-FP-NEXT:    li a6, 3
 ; QCI-FP-NEXT:    sw a0, 0(sp)
+; QCI-FP-NEXT:    li a6, 3
 ; QCI-FP-NEXT:    li a0, 0
 ; QCI-FP-NEXT:    li a1, 0
 ; QCI-FP-NEXT:    li a3, 0
@@ -684,8 +684,8 @@ define void @test_nest_call() "interrupt"="qci-nest" {
 ; QCI-PUSH-POP-NEXT:    li a0, 4
 ; QCI-PUSH-POP-NEXT:    li a2, 1
 ; QCI-PUSH-POP-NEXT:    li a4, 2
-; QCI-PUSH-POP-NEXT:    li a6, 3
 ; QCI-PUSH-POP-NEXT:    sw a0, 0(sp)
+; QCI-PUSH-POP-NEXT:    li a6, 3
 ; QCI-PUSH-POP-NEXT:    li a0, 0
 ; QCI-PUSH-POP-NEXT:    li a1, 0
 ; QCI-PUSH-POP-NEXT:    li a3, 0
@@ -723,8 +723,8 @@ define void @test_nest_call() "interrupt"="qci-nest" {
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a0, 4
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a2, 1
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a4, 2
-; QCI-QCCMP-PUSH-POP-NEXT:    li a6, 3
 ; QCI-QCCMP-PUSH-POP-NEXT:    sw a0, 0(sp)
+; QCI-QCCMP-PUSH-POP-NEXT:    li a6, 3
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a0, 0
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a1, 0
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a3, 0
@@ -763,8 +763,8 @@ define void @test_nest_call() "interrupt"="qci-nest" {
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a0, 4
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a2, 1
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a4, 2
-; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a6, 3
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    sw a0, 0(sp)
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a6, 3
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a0, 0
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a1, 0
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a3, 0
@@ -808,8 +808,8 @@ define void @test_nonest_call() "interrupt"="qci-nonest" {
 ; QCI-NEXT:    li a0, 4
 ; QCI-NEXT:    li a2, 1
 ; QCI-NEXT:    li a4, 2
-; QCI-NEXT:    li a6, 3
 ; QCI-NEXT:    sw a0, 0(sp)
+; QCI-NEXT:    li a6, 3
 ; QCI-NEXT:    li a0, 0
 ; QCI-NEXT:    li a1, 0
 ; QCI-NEXT:    li a3, 0
@@ -848,8 +848,8 @@ define void @test_nonest_call() "interrupt"="qci-nonest" {
 ; QCI-FP-NEXT:    li a0, 4
 ; QCI-FP-NEXT:    li a2, 1
 ; QCI-FP-NEXT:    li a4, 2
-; QCI-FP-NEXT:    li a6, 3
 ; QCI-FP-NEXT:    sw a0, 0(sp)
+; QCI-FP-NEXT:    li a6, 3
 ; QCI-FP-NEXT:    li a0, 0
 ; QCI-FP-NEXT:    li a1, 0
 ; QCI-FP-NEXT:    li a3, 0
@@ -888,8 +888,8 @@ define void @test_nonest_call() "interrupt"="qci-nonest" {
 ; QCI-PUSH-POP-NEXT:    li a0, 4
 ; QCI-PUSH-POP-NEXT:    li a2, 1
 ; QCI-PUSH-POP-NEXT:    li a4, 2
-; QCI-PUSH-POP-NEXT:    li a6, 3
 ; QCI-PUSH-POP-NEXT:    sw a0, 0(sp)
+; QCI-PUSH-POP-NEXT:    li a6, 3
 ; QCI-PUSH-POP-NEXT:    li a0, 0
 ; QCI-PUSH-POP-NEXT:    li a1, 0
 ; QCI-PUSH-POP-NEXT:    li a3, 0
@@ -927,8 +927,8 @@ define void @test_nonest_call() "interrupt"="qci-nonest" {
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a0, 4
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a2, 1
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a4, 2
-; QCI-QCCMP-PUSH-POP-NEXT:    li a6, 3
 ; QCI-QCCMP-PUSH-POP-NEXT:    sw a0, 0(sp)
+; QCI-QCCMP-PUSH-POP-NEXT:    li a6, 3
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a0, 0
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a1, 0
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a3, 0
@@ -967,8 +967,8 @@ define void @test_nonest_call() "interrupt"="qci-nonest" {
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a0, 4
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a2, 1
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a4, 2
-; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a6, 3
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    sw a0, 0(sp)
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a6, 3
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a0, 0
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a1, 0
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a3, 0
@@ -2455,8 +2455,8 @@ define void @test_spill_call_nest() "interrupt"="qci-nest" {
 ; QCI-NEXT:    li a0, 4
 ; QCI-NEXT:    li a2, 1
 ; QCI-NEXT:    li a4, 2
-; QCI-NEXT:    li a6, 3
 ; QCI-NEXT:    sw a0, 0(sp)
+; QCI-NEXT:    li a6, 3
 ; QCI-NEXT:    li a0, 0
 ; QCI-NEXT:    li a1, 0
 ; QCI-NEXT:    li a3, 0
@@ -2648,8 +2648,8 @@ define void @test_spill_call_nest() "interrupt"="qci-nest" {
 ; QCI-FP-NEXT:    li a0, 4
 ; QCI-FP-NEXT:    li a2, 1
 ; QCI-FP-NEXT:    li a4, 2
-; QCI-FP-NEXT:    li a6, 3
 ; QCI-FP-NEXT:    sw a0, 0(sp)
+; QCI-FP-NEXT:    li a6, 3
 ; QCI-FP-NEXT:    li a0, 0
 ; QCI-FP-NEXT:    li a1, 0
 ; QCI-FP-NEXT:    li a3, 0
@@ -2832,8 +2832,8 @@ define void @test_spill_call_nest() "interrupt"="qci-nest" {
 ; QCI-PUSH-POP-NEXT:    li a0, 4
 ; QCI-PUSH-POP-NEXT:    li a2, 1
 ; QCI-PUSH-POP-NEXT:    li a4, 2
-; QCI-PUSH-POP-NEXT:    li a6, 3
 ; QCI-PUSH-POP-NEXT:    sw a0, 0(sp)
+; QCI-PUSH-POP-NEXT:    li a6, 3
 ; QCI-PUSH-POP-NEXT:    li a0, 0
 ; QCI-PUSH-POP-NEXT:    li a1, 0
 ; QCI-PUSH-POP-NEXT:    li a3, 0
@@ -3005,8 +3005,8 @@ define void @test_spill_call_nest() "interrupt"="qci-nest" {
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a0, 4
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a2, 1
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a4, 2
-; QCI-QCCMP-PUSH-POP-NEXT:    li a6, 3
 ; QCI-QCCMP-PUSH-POP-NEXT:    sw a0, 0(sp)
+; QCI-QCCMP-PUSH-POP-NEXT:    li a6, 3
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a0, 0
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a1, 0
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a3, 0
@@ -3180,8 +3180,8 @@ define void @test_spill_call_nest() "interrupt"="qci-nest" {
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a0, 4
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a2, 1
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a4, 2
-; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a6, 3
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    sw a0, 0(sp)
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a6, 3
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a0, 0
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a1, 0
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a3, 0
@@ -3371,8 +3371,8 @@ define void @test_spill_call_nonest() "interrupt"="qci-nonest" {
 ; QCI-NEXT:    li a0, 4
 ; QCI-NEXT:    li a2, 1
 ; QCI-NEXT:    li a4, 2
-; QCI-NEXT:    li a6, 3
 ; QCI-NEXT:    sw a0, 0(sp)
+; QCI-NEXT:    li a6, 3
 ; QCI-NEXT:    li a0, 0
 ; QCI-NEXT:    li a1, 0
 ; QCI-NEXT:    li a3, 0
@@ -3564,8 +3564,8 @@ define void @test_spill_call_nonest() "interrupt"="qci-nonest" {
 ; QCI-FP-NEXT:    li a0, 4
 ; QCI-FP-NEXT:    li a2, 1
 ; QCI-FP-NEXT:    li a4, 2
-; QCI-FP-NEXT:    li a6, 3
 ; QCI-FP-NEXT:    sw a0, 0(sp)
+; QCI-FP-NEXT:    li a6, 3
 ; QCI-FP-NEXT:    li a0, 0
 ; QCI-FP-NEXT:    li a1, 0
 ; QCI-FP-NEXT:    li a3, 0
@@ -3748,8 +3748,8 @@ define void @test_spill_call_nonest() "interrupt"="qci-nonest" {
 ; QCI-PUSH-POP-NEXT:    li a0, 4
 ; QCI-PUSH-POP-NEXT:    li a2, 1
 ; QCI-PUSH-POP-NEXT:    li a4, 2
-; QCI-PUSH-POP-NEXT:    li a6, 3
 ; QCI-PUSH-POP-NEXT:    sw a0, 0(sp)
+; QCI-PUSH-POP-NEXT:    li a6, 3
 ; QCI-PUSH-POP-NEXT:    li a0, 0
 ; QCI-PUSH-POP-NEXT:    li a1, 0
 ; QCI-PUSH-POP-NEXT:    li a3, 0
@@ -3921,8 +3921,8 @@ define void @test_spill_call_nonest() "interrupt"="qci-nonest" {
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a0, 4
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a2, 1
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a4, 2
-; QCI-QCCMP-PUSH-POP-NEXT:    li a6, 3
 ; QCI-QCCMP-PUSH-POP-NEXT:    sw a0, 0(sp)
+; QCI-QCCMP-PUSH-POP-NEXT:    li a6, 3
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a0, 0
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a1, 0
 ; QCI-QCCMP-PUSH-POP-NEXT:    li a3, 0
@@ -4096,8 +4096,8 @@ define void @test_spill_call_nonest() "interrupt"="qci-nonest" {
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a0, 4
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a2, 1
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a4, 2
-; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a6, 3
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    sw a0, 0(sp)
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a6, 3
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a0, 0
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a1, 0
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    li a3, 0

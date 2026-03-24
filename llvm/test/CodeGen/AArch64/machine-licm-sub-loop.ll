@@ -9,9 +9,9 @@ define void @foo(i32 noundef %limit, ptr %out, ptr %y) {
 ; CHECK-NEXT:    b.lt .LBB0_10
 ; CHECK-NEXT:  // %bb.1: // %for.cond1.preheader.us.preheader
 ; CHECK-NEXT:    mov w10, w0
-; CHECK-NEXT:    ubfiz x11, x0, #2, #32
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    mov x9, xzr
+; CHECK-NEXT:    ubfiz x11, x0, #2, #32
 ; CHECK-NEXT:    and x12, x10, #0xfffffff0
 ; CHECK-NEXT:    add x13, x1, #32
 ; CHECK-NEXT:    b .LBB0_3

@@ -1415,8 +1415,9 @@ define ptr @avoid_preindex_load(ptr %src, ptr %out) {
 ; CHECK-LABEL: avoid_preindex_load:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ld1rsb { z0.d }, p0/z, [x0, #1]
+; CHECK-NEXT:    mov x8, x0
 ; CHECK-NEXT:    add x0, x0, #1
+; CHECK-NEXT:    ld1rsb { z0.d }, p0/z, [x8, #1]
 ; CHECK-NEXT:    str z0, [x1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %src, i64 1

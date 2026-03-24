@@ -8,9 +8,9 @@ define i32 @test_const(ptr %in1, ptr %in2, ptr %out, i32 %n, ptr %tbl) {
 ; CHECK-NEXT:    b.lt .LBB0_3
 ; CHECK-NEXT:  // %bb.1: // %for.body.preheader
 ; CHECK-NEXT:    mov w9, #1267 // =0x4f3
+; CHECK-NEXT:    mov w8, w3
 ; CHECK-NEXT:    fmov s1, #1.00000000
 ; CHECK-NEXT:    fmov d2, #5.00000000
-; CHECK-NEXT:    mov w8, w3
 ; CHECK-NEXT:    movk w9, #16309, lsl #16
 ; CHECK-NEXT:    fmov s0, w9
 ; CHECK-NEXT:    mov w9, #16 // =0x10

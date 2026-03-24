@@ -349,8 +349,8 @@ define i32 @multi_sint(double %c, ptr nocapture %p, ptr nocapture %q) {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov d16, r0, r1
 ; CHECK-NEXT:    vcvt.s32.f64 s0, d16
-; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    vstr s0, [r2]
+; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    vstr s0, [r3]
 ; CHECK-NEXT:    mov pc, lr
   %conv = fptosi double %c to i32
@@ -364,8 +364,8 @@ define i32 @multi_uint(double %c, ptr nocapture %p, ptr nocapture %q) {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov d16, r0, r1
 ; CHECK-NEXT:    vcvt.u32.f64 s0, d16
-; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    vstr s0, [r2]
+; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    vstr s0, [r3]
 ; CHECK-NEXT:    mov pc, lr
   %conv = fptoui double %c to i32

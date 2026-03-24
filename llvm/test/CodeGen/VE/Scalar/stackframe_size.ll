@@ -31,9 +31,9 @@ define ptr @test_frame8(ptr %0) {
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB1_2:
-; CHECK-NEXT:    ld1b.zx %s1, (, %s0)
+; CHECK-NEXT:    ld1b.zx %s0, (, %s0)
+; CHECK-NEXT:    st1b %s0, 8(, %s11)
 ; CHECK-NEXT:    lea %s0, 8(, %s11)
-; CHECK-NEXT:    st1b %s1, 8(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %2 = alloca [8 x i8], align 1
@@ -58,9 +58,9 @@ define ptr @test_frame16(ptr %0) {
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB2_2:
-; CHECK-NEXT:    ld1b.zx %s1, (, %s0)
+; CHECK-NEXT:    ld1b.zx %s0, (, %s0)
+; CHECK-NEXT:    st1b %s0, (, %s11)
 ; CHECK-NEXT:    lea %s0, (, %s11)
-; CHECK-NEXT:    st1b %s1, (, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %2 = alloca [16 x i8], align 1
@@ -85,9 +85,9 @@ define ptr @test_frame32(ptr %0) {
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB3_2:
-; CHECK-NEXT:    ld1b.zx %s1, (, %s0)
+; CHECK-NEXT:    ld1b.zx %s0, (, %s0)
+; CHECK-NEXT:    st1b %s0, (, %s11)
 ; CHECK-NEXT:    lea %s0, (, %s11)
-; CHECK-NEXT:    st1b %s1, (, %s11)
 ; CHECK-NEXT:    adds.l %s11, 32, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %2 = alloca [32 x i8], align 1
@@ -112,9 +112,9 @@ define ptr @test_frame64(ptr %0) {
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB4_2:
-; CHECK-NEXT:    ld1b.zx %s1, (, %s0)
+; CHECK-NEXT:    ld1b.zx %s0, (, %s0)
+; CHECK-NEXT:    st1b %s0, (, %s11)
 ; CHECK-NEXT:    lea %s0, (, %s11)
-; CHECK-NEXT:    st1b %s1, (, %s11)
 ; CHECK-NEXT:    lea %s11, 64(, %s11)
 ; CHECK-NEXT:    b.l.t (, %s10)
   %2 = alloca [64 x i8], align 1
@@ -139,9 +139,9 @@ define ptr @test_frame128(ptr %0) {
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB5_2:
-; CHECK-NEXT:    ld1b.zx %s1, (, %s0)
+; CHECK-NEXT:    ld1b.zx %s0, (, %s0)
+; CHECK-NEXT:    st1b %s0, (, %s11)
 ; CHECK-NEXT:    lea %s0, (, %s11)
-; CHECK-NEXT:    st1b %s1, (, %s11)
 ; CHECK-NEXT:    lea %s11, 128(, %s11)
 ; CHECK-NEXT:    b.l.t (, %s10)
   %2 = alloca [128 x i8], align 1
@@ -166,9 +166,9 @@ define ptr @test_frame65536(ptr %0) {
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB6_2:
-; CHECK-NEXT:    ld1b.zx %s1, (, %s0)
+; CHECK-NEXT:    ld1b.zx %s0, (, %s0)
+; CHECK-NEXT:    st1b %s0, (, %s11)
 ; CHECK-NEXT:    lea %s0, (, %s11)
-; CHECK-NEXT:    st1b %s1, (, %s11)
 ; CHECK-NEXT:    lea %s11, 65536(, %s11)
 ; CHECK-NEXT:    b.l.t (, %s10)
   %2 = alloca [65536 x i8], align 1
@@ -195,9 +195,9 @@ define ptr @test_frame4294967296(ptr %0) {
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB7_2:
-; CHECK-NEXT:    ld1b.zx %s1, (, %s0)
+; CHECK-NEXT:    ld1b.zx %s0, (, %s0)
+; CHECK-NEXT:    st1b %s0, (, %s11)
 ; CHECK-NEXT:    lea %s0, (, %s11)
-; CHECK-NEXT:    st1b %s1, (, %s11)
 ; CHECK-NEXT:    lea %s13, 0
 ; CHECK-NEXT:    and %s13, %s13, (32)0
 ; CHECK-NEXT:    lea.sl %s11, 1(%s13, %s11)

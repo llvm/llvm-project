@@ -24,34 +24,34 @@ define void @Bork(i64 %range.0.0, i64 %range.0.1, i64 %size) personality ptr @__
 ; CHECK-NEXT:    std 29, 152(31) # 8-byte Folded Spill
 ; CHECK-NEXT:    mr 29, 3
 ; CHECK-NEXT:    rldic 3, 5, 3, 29
-; CHECK-NEXT:    std 27, 136(31) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 30, 160(31) # 8-byte Folded Spill
 ; CHECK-NEXT:    mr 30, 4
 ; CHECK-NEXT:    addi 3, 3, 15
 ; CHECK-NEXT:    rldicl 3, 3, 60, 4
-; CHECK-NEXT:    mr 27, 1
-; CHECK-NEXT:    rldicl 3, 3, 4, 28
 ; CHECK-NEXT:    addi 4, 31, 176
-; CHECK-NEXT:    neg 3, 3
+; CHECK-NEXT:    rldicl 3, 3, 4, 28
+; CHECK-NEXT:    std 27, 136(31) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 28, 144(31) # 8-byte Folded Spill
+; CHECK-NEXT:    mr 27, 1
+; CHECK-NEXT:    neg 3, 3
 ; CHECK-NEXT:    stdux 4, 1, 3
 ; CHECK-NEXT:    addi 3, 1, 112
-; CHECK-NEXT:  .Ltmp0:
+; CHECK-NEXT:  .Ltmp0: # EH_LABEL
 ; CHECK-NEXT:    bl Foo
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:  .Ltmp1:
+; CHECK-NEXT:  .Ltmp1: # EH_LABEL
 ; CHECK-NEXT:  # %bb.1: # %bb30.preheader
 ; CHECK-NEXT:    addi 28, 31, 120
 ; CHECK-NEXT:    cmpldi 30, 0
 ; CHECK-NEXT:    beq 0, .LBB0_4
 ; CHECK-NEXT:  .LBB0_2: # %cond_true
 ; CHECK-NEXT:    #
-; CHECK-NEXT:  .Ltmp3:
+; CHECK-NEXT:  .Ltmp3: # EH_LABEL
 ; CHECK-NEXT:    mr 3, 29
 ; CHECK-NEXT:    mr 4, 28
 ; CHECK-NEXT:    bl Bar
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:  .Ltmp4:
+; CHECK-NEXT:  .Ltmp4: # EH_LABEL
 ; CHECK-NEXT:  # %bb.3: # %invcont23
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    ld 3, 128(31)
@@ -69,10 +69,10 @@ define void @Bork(i64 %range.0.0, i64 %range.0.1, i64 %size) personality ptr @__
 ; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB0_5: # %unwind.loopexit.split-lp
-; CHECK-NEXT:  .Ltmp2:
+; CHECK-NEXT:  .Ltmp2: # EH_LABEL
 ; CHECK-NEXT:    b .LBB0_7
 ; CHECK-NEXT:  .LBB0_6: # %unwind.loopexit
-; CHECK-NEXT:  .Ltmp5:
+; CHECK-NEXT:  .Ltmp5: # EH_LABEL
 ; CHECK-NEXT:  .LBB0_7: # %unwind
 ; CHECK-NEXT:    ld 4, 0(1)
 ; CHECK-NEXT:    mr 1, 27

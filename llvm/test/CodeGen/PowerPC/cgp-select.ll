@@ -5,8 +5,8 @@ define dso_local void @wibble(ptr nocapture readonly %arg, i32 signext %arg1, pt
 ; CHECK-LABEL: wibble:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    lfs 0, 0(3)
-; CHECK-NEXT:    li 7, 7
 ; CHECK-NEXT:    cmpwi 4, 2
+; CHECK-NEXT:    li 7, 7
 ; CHECK-NEXT:    xsaddsp 0, 0, 0
 ; CHECK-NEXT:    blt 0, .LBB0_5
 ; CHECK-NEXT:  # %bb.1: # %bb6

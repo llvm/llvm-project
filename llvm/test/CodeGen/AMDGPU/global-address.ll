@@ -62,33 +62,33 @@ define amdgpu_kernel void @caller_internal() {
 define amdgpu_kernel void @caller_exterinal() {
 ; GFX11-PAL-SDAG-LABEL: caller_exterinal:
 ; GFX11-PAL-SDAG:       ; %bb.0:
-; GFX11-PAL-SDAG-NEXT:    v_mov_b32_e32 v31, v0
+; GFX11-PAL-SDAG-NEXT:    s_mov_b32 s17, external_func@abs32@hi
+; GFX11-PAL-SDAG-NEXT:    s_mov_b32 s16, external_func@abs32@lo
+; GFX11-PAL-SDAG-NEXT:    s_mov_b32 s32, 0
 ; GFX11-PAL-SDAG-NEXT:    s_mov_b32 s12, s13
 ; GFX11-PAL-SDAG-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; GFX11-PAL-SDAG-NEXT:    s_mov_b64 s[8:9], s[4:5]
-; GFX11-PAL-SDAG-NEXT:    s_mov_b32 s17, external_func@abs32@hi
-; GFX11-PAL-SDAG-NEXT:    s_mov_b32 s16, external_func@abs32@lo
 ; GFX11-PAL-SDAG-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX11-PAL-SDAG-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GFX11-PAL-SDAG-NEXT:    s_mov_b32 s13, s14
 ; GFX11-PAL-SDAG-NEXT:    s_mov_b32 s14, s15
-; GFX11-PAL-SDAG-NEXT:    s_mov_b32 s32, 0
+; GFX11-PAL-SDAG-NEXT:    v_mov_b32_e32 v31, v0
 ; GFX11-PAL-SDAG-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX11-PAL-SDAG-NEXT:    s_endpgm
 ;
 ; GFX11-PAL-GISEL-LABEL: caller_exterinal:
 ; GFX11-PAL-GISEL:       ; %bb.0:
-; GFX11-PAL-GISEL-NEXT:    v_mov_b32_e32 v31, v0
+; GFX11-PAL-GISEL-NEXT:    s_mov_b32 s16, external_func@abs32@lo
+; GFX11-PAL-GISEL-NEXT:    s_mov_b32 s17, external_func@abs32@hi
+; GFX11-PAL-GISEL-NEXT:    s_mov_b32 s32, 0
 ; GFX11-PAL-GISEL-NEXT:    s_mov_b32 s12, s13
 ; GFX11-PAL-GISEL-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; GFX11-PAL-GISEL-NEXT:    s_mov_b64 s[8:9], s[4:5]
-; GFX11-PAL-GISEL-NEXT:    s_mov_b32 s16, external_func@abs32@lo
-; GFX11-PAL-GISEL-NEXT:    s_mov_b32 s17, external_func@abs32@hi
 ; GFX11-PAL-GISEL-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX11-PAL-GISEL-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GFX11-PAL-GISEL-NEXT:    s_mov_b32 s13, s14
 ; GFX11-PAL-GISEL-NEXT:    s_mov_b32 s14, s15
-; GFX11-PAL-GISEL-NEXT:    s_mov_b32 s32, 0
+; GFX11-PAL-GISEL-NEXT:    v_mov_b32_e32 v31, v0
 ; GFX11-PAL-GISEL-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX11-PAL-GISEL-NEXT:    s_endpgm
 ;
@@ -96,29 +96,29 @@ define amdgpu_kernel void @caller_exterinal() {
 ; GFX1250-PAL:       ; %bb.0:
 ; GFX1250-PAL-NEXT:    s_mov_b32 s32, 0
 ; GFX1250-PAL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-PAL-NEXT:    v_mov_b32_e32 v31, v0
+; GFX1250-PAL-NEXT:    s_mov_b64 s[12:13], external_func@abs64
 ; GFX1250-PAL-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; GFX1250-PAL-NEXT:    s_mov_b64 s[8:9], s[4:5]
-; GFX1250-PAL-NEXT:    s_mov_b64 s[12:13], external_func@abs64
 ; GFX1250-PAL-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX1250-PAL-NEXT:    s_mov_b64 s[6:7], s[2:3]
+; GFX1250-PAL-NEXT:    v_mov_b32_e32 v31, v0
 ; GFX1250-PAL-NEXT:    s_swap_pc_i64 s[30:31], s[12:13]
 ; GFX1250-PAL-NEXT:    s_endpgm
 ;
 ; GFX11-HSA-LABEL: caller_exterinal:
 ; GFX11-HSA:       ; %bb.0:
-; GFX11-HSA-NEXT:    v_mov_b32_e32 v31, v0
-; GFX11-HSA-NEXT:    s_mov_b32 s12, s13
-; GFX11-HSA-NEXT:    s_mov_b64 s[10:11], s[6:7]
-; GFX11-HSA-NEXT:    s_mov_b64 s[8:9], s[4:5]
 ; GFX11-HSA-NEXT:    s_getpc_b64 s[16:17]
 ; GFX11-HSA-NEXT:    s_add_u32 s16, s16, external_func@rel32@lo+4
 ; GFX11-HSA-NEXT:    s_addc_u32 s17, s17, external_func@rel32@hi+12
+; GFX11-HSA-NEXT:    s_mov_b32 s32, 0
+; GFX11-HSA-NEXT:    s_mov_b32 s12, s13
+; GFX11-HSA-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; GFX11-HSA-NEXT:    s_mov_b64 s[8:9], s[4:5]
 ; GFX11-HSA-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX11-HSA-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GFX11-HSA-NEXT:    s_mov_b32 s13, s14
 ; GFX11-HSA-NEXT:    s_mov_b32 s14, s15
-; GFX11-HSA-NEXT:    s_mov_b32 s32, 0
+; GFX11-HSA-NEXT:    v_mov_b32_e32 v31, v0
 ; GFX11-HSA-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX11-HSA-NEXT:    s_endpgm
 ;
@@ -126,13 +126,13 @@ define amdgpu_kernel void @caller_exterinal() {
 ; GFX1250-HSA:       ; %bb.0:
 ; GFX1250-HSA-NEXT:    s_mov_b32 s32, 0
 ; GFX1250-HSA-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-HSA-NEXT:    v_mov_b32_e32 v31, v0
-; GFX1250-HSA-NEXT:    s_mov_b64 s[10:11], s[6:7]
-; GFX1250-HSA-NEXT:    s_mov_b64 s[8:9], s[4:5]
 ; GFX1250-HSA-NEXT:    s_get_pc_i64 s[12:13]
 ; GFX1250-HSA-NEXT:    s_add_nc_u64 s[12:13], s[12:13], external_func@rel64+4
+; GFX1250-HSA-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; GFX1250-HSA-NEXT:    s_mov_b64 s[8:9], s[4:5]
 ; GFX1250-HSA-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX1250-HSA-NEXT:    s_mov_b64 s[6:7], s[2:3]
+; GFX1250-HSA-NEXT:    v_mov_b32_e32 v31, v0
 ; GFX1250-HSA-NEXT:    s_swap_pc_i64 s[30:31], s[12:13]
 ; GFX1250-HSA-NEXT:    s_endpgm
   call void @external_func()

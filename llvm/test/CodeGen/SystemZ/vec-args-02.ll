@@ -20,9 +20,9 @@ define void @foo() {
 ; CHECK-VEC-NEXT:    vrepif %v0, 4
 ; CHECK-VEC-NEXT:    vst %v0, 176(%r15), 3
 ; CHECK-VEC-NEXT:    vrepif %v0, 3
+; CHECK-VEC-NEXT:    vst %v0, 160(%r15), 3
 ; CHECK-VEC-NEXT:    vrepif %v24, 1
 ; CHECK-VEC-NEXT:    vrepif %v26, 2
-; CHECK-VEC-NEXT:    vst %v0, 160(%r15), 3
 ; CHECK-VEC-NEXT:    brasl %r14, bar@PLT
 ; CHECK-VEC-NEXT:    lmg %r14, %r15, 304(%r15)
 ; CHECK-VEC-NEXT:    br %r14
@@ -37,9 +37,9 @@ define void @foo() {
 ; CHECK-STACK-NEXT:    vrepif %v0, 4
 ; CHECK-STACK-NEXT:    vst %v0, 176(%r15), 3
 ; CHECK-STACK-NEXT:    vrepif %v0, 3
+; CHECK-STACK-NEXT:    vst %v0, 160(%r15), 3
 ; CHECK-STACK-NEXT:    vrepif %v24, 1
 ; CHECK-STACK-NEXT:    vrepif %v26, 2
-; CHECK-STACK-NEXT:    vst %v0, 160(%r15), 3
 ; CHECK-STACK-NEXT:    brasl %r14, bar@PLT
 ; CHECK-STACK-NEXT:    lmg %r14, %r15, 304(%r15)
 ; CHECK-STACK-NEXT:    br %r14

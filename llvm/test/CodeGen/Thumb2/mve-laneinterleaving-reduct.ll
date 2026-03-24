@@ -112,13 +112,13 @@ define void @correlate(ptr nocapture noundef readonly %ID, ptr nocapture noundef
 ; CHECK-NEXT:    blt .LBB4_12
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.lr.ph
 ; CHECK-NEXT:    ldr r7, [sp, #44]
-; CHECK-NEXT:    add.w r10, r2, #3
-; CHECK-NEXT:    ldr.w r11, [sp] @ 4-byte Reload
 ; CHECK-NEXT:    mov r9, r2
 ; CHECK-NEXT:    mov r5, r1
 ; CHECK-NEXT:    mov r0, r2
-; CHECK-NEXT:    uxth.w r12, r7
+; CHECK-NEXT:    add.w r10, r2, #3
 ; CHECK-NEXT:    mov.w r8, #0
+; CHECK-NEXT:    uxth.w r12, r7
+; CHECK-NEXT:    ldr.w r11, [sp] @ 4-byte Reload
 ; CHECK-NEXT:    str.w r9, [sp, #4] @ 4-byte Spill
 ; CHECK-NEXT:    b .LBB4_4
 ; CHECK-NEXT:  .LBB4_2: @ in Loop: Header=BB4_4 Depth=1
@@ -130,9 +130,9 @@ define void @correlate(ptr nocapture noundef readonly %ID, ptr nocapture noundef
 ; CHECK-NEXT:    strh.w r0, [r5, r8, lsl #1]
 ; CHECK-NEXT:    add.w r8, r8, #1
 ; CHECK-NEXT:    add.w r11, r11, #2
-; CHECK-NEXT:    ldr r0, [sp, #4] @ 4-byte Reload
 ; CHECK-NEXT:    sub.w r9, r9, #1
 ; CHECK-NEXT:    cmp r8, r3
+; CHECK-NEXT:    ldr r0, [sp, #4] @ 4-byte Reload
 ; CHECK-NEXT:    beq .LBB4_12
 ; CHECK-NEXT:  .LBB4_4: @ %for.body
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
@@ -176,8 +176,8 @@ define void @correlate(ptr nocapture noundef readonly %ID, ptr nocapture noundef
 ; CHECK-NEXT:    le lr, .LBB4_8
 ; CHECK-NEXT:  @ %bb.9: @ %middle.block
 ; CHECK-NEXT:    @ in Loop: Header=BB4_4 Depth=1
-; CHECK-NEXT:    mov r5, r2
 ; CHECK-NEXT:    cmp r0, r1
+; CHECK-NEXT:    mov r5, r2
 ; CHECK-NEXT:    beq .LBB4_3
 ; CHECK-NEXT:  .LBB4_10: @ %vec.epilog.ph
 ; CHECK-NEXT:    @ in Loop: Header=BB4_4 Depth=1

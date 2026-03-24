@@ -180,10 +180,10 @@ define amdgpu_gfx ptr addrspace(5) @sponentry_gfx(i32 %val, ptr addrspace(5) %pt
 ; DAGISEL-NEXT:    s_wait_samplecnt 0x0
 ; DAGISEL-NEXT:    s_wait_bvhcnt 0x0
 ; DAGISEL-NEXT:    s_wait_kmcnt 0x0
-; DAGISEL-NEXT:    s_mov_b32 s0, exec_lo
 ; DAGISEL-NEXT:    s_wait_storecnt 0x0
 ; DAGISEL-NEXT:    scratch_store_b32 off, v0, s32 offset:4 scope:SCOPE_SYS
 ; DAGISEL-NEXT:    s_wait_storecnt 0x0
+; DAGISEL-NEXT:    s_mov_b32 s0, exec_lo
 ; DAGISEL-NEXT:    v_cmpx_gt_i32_e32 0x43, v0
 ; DAGISEL-NEXT:  ; %bb.1: ; %if.then
 ; DAGISEL-NEXT:    v_mov_b32_e32 v1, s32
@@ -247,12 +247,12 @@ define amdgpu_gfx ptr addrspace(5) @sponentry_gfx_dvgpr_realign(i32 %val) #0 {
 ; CHECK-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; CHECK-NEXT:    s_and_b32 s33, s33, 0xffffff80
 ; CHECK-NEXT:    s_mov_b32 s34, s32
+; CHECK-NEXT:    s_addk_co_i32 s32, 0x180
 ; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    scratch_store_b32 off, v0, s33 offset:128 scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s34
-; CHECK-NEXT:    s_addk_co_i32 s32, 0x180
 ; CHECK-NEXT:    s_mov_b32 s32, s34
 ; CHECK-NEXT:    s_mov_b32 s34, s1
 ; CHECK-NEXT:    s_mov_b32 s33, s0
@@ -435,10 +435,10 @@ define amdgpu_cs_chain void @sponentry_cs_chain(i32 %val, ptr addrspace(5) %ptr)
 ; DAGISEL-NEXT:    s_wait_bvhcnt 0x0
 ; DAGISEL-NEXT:    s_wait_kmcnt 0x0
 ; DAGISEL-NEXT:    v_mov_b32_e32 v0, v9
-; DAGISEL-NEXT:    s_mov_b32 s0, exec_lo
 ; DAGISEL-NEXT:    s_wait_storecnt 0x0
 ; DAGISEL-NEXT:    scratch_store_b32 off, v8, s32 offset:4 scope:SCOPE_SYS
 ; DAGISEL-NEXT:    s_wait_storecnt 0x0
+; DAGISEL-NEXT:    s_mov_b32 s0, exec_lo
 ; DAGISEL-NEXT:    v_cmpx_gt_i32_e32 0x43, v8
 ; DAGISEL-NEXT:  ; %bb.1: ; %if.then
 ; DAGISEL-NEXT:    v_mov_b32_e32 v0, s32
@@ -458,10 +458,10 @@ define amdgpu_cs_chain void @sponentry_cs_chain(i32 %val, ptr addrspace(5) %ptr)
 ; GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GISEL-NEXT:    v_mov_b32_e32 v0, v9
-; GISEL-NEXT:    s_mov_b32 s0, exec_lo
 ; GISEL-NEXT:    s_wait_storecnt 0x0
 ; GISEL-NEXT:    scratch_store_b32 off, v8, s32 offset:4 scope:SCOPE_SYS
 ; GISEL-NEXT:    s_wait_storecnt 0x0
+; GISEL-NEXT:    s_mov_b32 s0, exec_lo
 ; GISEL-NEXT:    v_cmpx_gt_i32_e32 0x43, v8
 ; GISEL-NEXT:  ; %bb.1: ; %if.then
 ; GISEL-NEXT:    s_mov_b32 s1, s32

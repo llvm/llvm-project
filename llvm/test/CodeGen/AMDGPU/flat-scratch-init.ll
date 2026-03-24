@@ -96,12 +96,12 @@ define amdgpu_kernel void @kernel_calls_no_stack() {
 ; FLAT_SCR_ARCH-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; FLAT_SCR_ARCH-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x0
 ; FLAT_SCR_ARCH-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; FLAT_SCR_ARCH-NEXT:    s_mov_b32 s32, 0
 ; FLAT_SCR_ARCH-NEXT:    s_mov_b32 s14, s10
 ; FLAT_SCR_ARCH-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; FLAT_SCR_ARCH-NEXT:    s_mov_b64 s[4:5], s[0:1]
-; FLAT_SCR_ARCH-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; FLAT_SCR_ARCH-NEXT:    v_or3_b32 v31, v0, v1, v2
-; FLAT_SCR_ARCH-NEXT:    s_mov_b32 s32, 0
+; FLAT_SCR_ARCH-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; FLAT_SCR_ARCH-NEXT:    s_waitcnt lgkmcnt(0)
 ; FLAT_SCR_ARCH-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; FLAT_SCR_ARCH-NEXT:    s_endpgm

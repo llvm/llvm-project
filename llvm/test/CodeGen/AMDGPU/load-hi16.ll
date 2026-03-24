@@ -24,8 +24,8 @@ define <2 x i16> @load_local_lo_hi_v2i16_multi_use_lo(ptr addrspace(3) noalias %
 ; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX906-NEXT:    ds_read_u16 v1, v0
 ; GFX906-NEXT:    ds_read_u16 v0, v0 offset:16
-; GFX906-NEXT:    s_mov_b32 s4, 0x5040100
 ; GFX906-NEXT:    v_mov_b32_e32 v2, 0
+; GFX906-NEXT:    s_mov_b32 s4, 0x5040100
 ; GFX906-NEXT:    s_waitcnt lgkmcnt(1)
 ; GFX906-NEXT:    ds_write_b16 v2, v1
 ; GFX906-NEXT:    s_waitcnt lgkmcnt(1)
@@ -77,8 +77,8 @@ define <2 x i16> @load_local_lo_hi_v2i16_multi_use_hi(ptr addrspace(3) noalias %
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    ds_read_u16 v1, v0 offset:16
 ; GFX900-NEXT:    ds_read_u16 v0, v0
-; GFX900-NEXT:    s_mov_b32 s4, 0x5040100
 ; GFX900-NEXT:    v_mov_b32_e32 v2, 0
+; GFX900-NEXT:    s_mov_b32 s4, 0x5040100
 ; GFX900-NEXT:    s_waitcnt lgkmcnt(1)
 ; GFX900-NEXT:    ds_write_b16 v2, v1
 ; GFX900-NEXT:    s_waitcnt lgkmcnt(1)
@@ -91,8 +91,8 @@ define <2 x i16> @load_local_lo_hi_v2i16_multi_use_hi(ptr addrspace(3) noalias %
 ; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX906-NEXT:    ds_read_u16 v1, v0 offset:16
 ; GFX906-NEXT:    ds_read_u16 v0, v0
-; GFX906-NEXT:    s_mov_b32 s4, 0x5040100
 ; GFX906-NEXT:    v_mov_b32_e32 v2, 0
+; GFX906-NEXT:    s_mov_b32 s4, 0x5040100
 ; GFX906-NEXT:    s_waitcnt lgkmcnt(1)
 ; GFX906-NEXT:    ds_write_b16 v2, v1
 ; GFX906-NEXT:    s_waitcnt lgkmcnt(1)
@@ -120,8 +120,8 @@ define <2 x i16> @load_local_lo_hi_v2i16_multi_use_hi(ptr addrspace(3) noalias %
 ; GFX900-FLATSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-FLATSCR-NEXT:    ds_read_u16 v1, v0 offset:16
 ; GFX900-FLATSCR-NEXT:    ds_read_u16 v0, v0
-; GFX900-FLATSCR-NEXT:    s_mov_b32 s0, 0x5040100
 ; GFX900-FLATSCR-NEXT:    v_mov_b32_e32 v2, 0
+; GFX900-FLATSCR-NEXT:    s_mov_b32 s0, 0x5040100
 ; GFX900-FLATSCR-NEXT:    s_waitcnt lgkmcnt(1)
 ; GFX900-FLATSCR-NEXT:    ds_write_b16 v2, v1
 ; GFX900-FLATSCR-NEXT:    s_waitcnt lgkmcnt(1)

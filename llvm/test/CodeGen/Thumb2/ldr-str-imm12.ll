@@ -28,11 +28,11 @@ define ptr @Manifest(ptr %x, ptr %env, ptr %style, ptr %bthr, ptr %fthr, ptr %ta
 ; CHECK-NEXT:    push.w {r8, r10, r11}
 ; CHECK-NEXT:    sub sp, #292
 ; CHECK-NEXT:    add.w r10, r7, #8
-; CHECK-NEXT:    ldrd r8, lr, [r7, #20]
 ; CHECK-NEXT:    movs r5, #0
+; CHECK-NEXT:    ldr.w r12, [r7, #28]
 ; CHECK-NEXT:    cmp r5, #0
 ; CHECK-NEXT:    ldm.w r10, {r4, r9, r10}
-; CHECK-NEXT:    ldr.w r12, [r7, #28]
+; CHECK-NEXT:    ldrd r8, lr, [r7, #20]
 ; CHECK-NEXT:    ittt ne
 ; CHECK-NEXT:    addne sp, #292
 ; CHECK-NEXT:    popne.w {r8, r10, r11}

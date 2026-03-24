@@ -297,14 +297,14 @@ define void @va_aligned_stack_caller() nounwind {
 ; LA64-FPELIM-NEXT:    st.d $zero, $sp, 88
 ; LA64-FPELIM-NEXT:    vrepli.b $vr0, 0
 ; LA64-FPELIM-NEXT:    vst $vr0, $sp, 72
-; LA64-FPELIM-NEXT:    ori $a5, $zero, 1000
+; LA64-FPELIM-NEXT:    ori $a0, $zero, 1000
+; LA64-FPELIM-NEXT:    st.d $a0, $sp, 64
 ; LA64-FPELIM-NEXT:    ori $a0, $zero, 1
 ; LA64-FPELIM-NEXT:    ori $a1, $zero, 11
 ; LA64-FPELIM-NEXT:    addi.d $a2, $sp, 64
 ; LA64-FPELIM-NEXT:    ori $a3, $zero, 12
 ; LA64-FPELIM-NEXT:    ori $a4, $zero, 13
 ; LA64-FPELIM-NEXT:    ori $a7, $zero, 1
-; LA64-FPELIM-NEXT:    st.d $a5, $sp, 64
 ; LA64-FPELIM-NEXT:    move $a6, $zero
 ; LA64-FPELIM-NEXT:    pcaddu18i $ra, %call36(va_aligned_stack_callee)
 ; LA64-FPELIM-NEXT:    jirl $ra, $ra, 0
@@ -339,14 +339,14 @@ define void @va_aligned_stack_caller() nounwind {
 ; LA64-WITHFP-NEXT:    st.d $zero, $fp, -40
 ; LA64-WITHFP-NEXT:    vrepli.b $vr0, 0
 ; LA64-WITHFP-NEXT:    vst $vr0, $fp, -56
-; LA64-WITHFP-NEXT:    ori $a5, $zero, 1000
+; LA64-WITHFP-NEXT:    ori $a0, $zero, 1000
+; LA64-WITHFP-NEXT:    st.d $a0, $fp, -64
 ; LA64-WITHFP-NEXT:    ori $a0, $zero, 1
 ; LA64-WITHFP-NEXT:    ori $a1, $zero, 11
 ; LA64-WITHFP-NEXT:    addi.d $a2, $fp, -64
 ; LA64-WITHFP-NEXT:    ori $a3, $zero, 12
 ; LA64-WITHFP-NEXT:    ori $a4, $zero, 13
 ; LA64-WITHFP-NEXT:    ori $a7, $zero, 1
-; LA64-WITHFP-NEXT:    st.d $a5, $fp, -64
 ; LA64-WITHFP-NEXT:    move $a6, $zero
 ; LA64-WITHFP-NEXT:    pcaddu18i $ra, %call36(va_aligned_stack_callee)
 ; LA64-WITHFP-NEXT:    jirl $ra, $ra, 0

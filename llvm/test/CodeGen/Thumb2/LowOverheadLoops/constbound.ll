@@ -6,8 +6,8 @@ define dso_local i32 @test_500_504(ptr nocapture readonly %x) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    mov.w lr, #126
 ; CHECK-NEXT:    adr r1, .LCPI0_0
+; CHECK-NEXT:    mov.w lr, #126
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
 ; CHECK-NEXT:    mov.w r1, #500
 ; CHECK-NEXT:    mov.w r12, #0

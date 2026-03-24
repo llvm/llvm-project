@@ -9,17 +9,16 @@ declare void @func(i64, i64, i64, i64, i64, i128, i128)
 define void @pr70207(i128 %arg1, i128 %arg2) nounwind {
 ; CHECK-LABEL: pr70207:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, x2
+; CHECK-NEXT:    sub sp, sp, #32
+; CHECK-NEXT:    stp x3, x30, [sp, #8] // 8-byte Folded Spill
 ; CHECK-NEXT:    mov x6, x0
 ; CHECK-NEXT:    mov x7, x1
-; CHECK-NEXT:    mov x9, x3
+; CHECK-NEXT:    str x2, [sp]
 ; CHECK-NEXT:    mov x0, xzr
 ; CHECK-NEXT:    mov x1, xzr
 ; CHECK-NEXT:    mov x2, xzr
 ; CHECK-NEXT:    mov x3, xzr
 ; CHECK-NEXT:    mov x4, xzr
-; CHECK-NEXT:    str x8, [sp, #-32]!
-; CHECK-NEXT:    stp x9, x30, [sp, #8] // 8-byte Folded Spill
 ; CHECK-NEXT:    bl func
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    add sp, sp, #32

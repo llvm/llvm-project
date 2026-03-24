@@ -2765,11 +2765,12 @@ define amdgpu_ps void @flat_addr_64bit_lsr_iv(ptr inreg %arg) {
 ; GFX1250-GISEL-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-GISEL-NEXT:    flat_load_b32 v3, v[0:1] scope:SCOPE_SYS
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, s0, v0, 4
 ; GFX1250-GISEL-NEXT:    v_add_nc_u32_e32 v2, -1, v2
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, s0
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX1250-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v2
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 4
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX1250-GISEL-NEXT:    v_cmp_eq_u32_e64 s0, 0, v2
+; GFX1250-GISEL-NEXT:    s_mov_b32 vcc_lo, s0
 ; GFX1250-GISEL-NEXT:    s_cbranch_vccz .LBB116_1
 ; GFX1250-GISEL-NEXT:  ; %bb.2: ; %bb2
 ; GFX1250-GISEL-NEXT:    s_endpgm
@@ -2841,11 +2842,12 @@ define amdgpu_ps void @flat_addr_64bit_lsr_iv_multiload(ptr inreg %arg, ptr inre
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-GISEL-NEXT:    flat_load_b32 v3, v[0:1] scope:SCOPE_SYS
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, s0, v0, 4
 ; GFX1250-GISEL-NEXT:    v_add_nc_u32_e32 v2, -1, v2
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, s0
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX1250-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v2
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 4
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX1250-GISEL-NEXT:    v_cmp_eq_u32_e64 s0, 0, v2
+; GFX1250-GISEL-NEXT:    s_mov_b32 vcc_lo, s0
 ; GFX1250-GISEL-NEXT:    s_cbranch_vccz .LBB117_1
 ; GFX1250-GISEL-NEXT:  ; %bb.2: ; %bb2
 ; GFX1250-GISEL-NEXT:    s_endpgm

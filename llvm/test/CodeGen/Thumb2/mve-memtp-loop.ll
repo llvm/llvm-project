@@ -461,8 +461,8 @@ define void @multilooped_exit(i32 %b) {
 ; CHECK-NEXT:    @ Child Loop BB18_6 Depth 2
 ; CHECK-NEXT:    @ Child Loop BB18_8 Depth 2
 ; CHECK-NEXT:    @ Child Loop BB18_11 Depth 2
-; CHECK-NEXT:    movw r3, :lower16:arr_56
 ; CHECK-NEXT:    add.w r1, r0, #15
+; CHECK-NEXT:    movw r3, :lower16:arr_56
 ; CHECK-NEXT:    movt r3, :upper16:arr_56
 ; CHECK-NEXT:    lsr.w r12, r1, #4
 ; CHECK-NEXT:    mov r2, r3
@@ -590,12 +590,12 @@ define i32 @reverted(i1 zeroext %b) {
 ; CHECK-NEXT:    adds r3, #152
 ; CHECK-NEXT:    le lr, .LBB19_3
 ; CHECK-NEXT:  @ %bb.4: @ %for.cond.cleanup6
-; CHECK-NEXT:    movw r0, :lower16:arr_22
 ; CHECK-NEXT:    ldr r2, [sp, #4] @ 4-byte Reload
-; CHECK-NEXT:    movt r0, :upper16:arr_22
+; CHECK-NEXT:    movw r0, :lower16:arr_22
 ; CHECK-NEXT:    ldr r3, [sp] @ 4-byte Reload
-; CHECK-NEXT:    add.w r0, r0, #1824
+; CHECK-NEXT:    movt r0, :upper16:arr_22
 ; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    add.w r0, r0, #1824
 ; CHECK-NEXT:    wlstp.8 lr, r2, .LBB19_6
 ; CHECK-NEXT:  .LBB19_5: @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vstrb.8 q1, [r0], #16
@@ -645,12 +645,12 @@ define i32 @reverted(i1 zeroext %b) {
 ; CHECK-NEXT:    adds r3, #152
 ; CHECK-NEXT:    le lr, .LBB19_7
 ; CHECK-NEXT:  @ %bb.8: @ %for.cond.cleanup6.1
-; CHECK-NEXT:    movw r0, :lower16:arr_22
 ; CHECK-NEXT:    ldr r2, [sp, #4] @ 4-byte Reload
-; CHECK-NEXT:    movt r0, :upper16:arr_22
+; CHECK-NEXT:    movw r0, :lower16:arr_22
 ; CHECK-NEXT:    ldr r3, [sp] @ 4-byte Reload
-; CHECK-NEXT:    add.w r0, r0, #3648
+; CHECK-NEXT:    movt r0, :upper16:arr_22
 ; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    add.w r0, r0, #3648
 ; CHECK-NEXT:    wlstp.8 lr, r2, .LBB19_10
 ; CHECK-NEXT:  .LBB19_9: @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vstrb.8 q1, [r0], #16

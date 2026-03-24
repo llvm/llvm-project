@@ -16,10 +16,10 @@ define arm_aapcs_vfpcc void @k() {
 ; CHECK-NEXT:    adr r4, .LCPI0_1
 ; CHECK-NEXT:    vldrw.u32 q6, [r5]
 ; CHECK-NEXT:    vldrw.u32 q5, [r4]
-; CHECK-NEXT:    add r0, sp, #16
 ; CHECK-NEXT:    vmov.i32 q0, #0x1
 ; CHECK-NEXT:    vmov.i8 q1, #0x0
 ; CHECK-NEXT:    vmov.i8 q2, #0xff
+; CHECK-NEXT:    add r0, sp, #16
 ; CHECK-NEXT:    vmov.i16 q3, #0x6
 ; CHECK-NEXT:    vmov.i16 q4, #0x3
 ; CHECK-NEXT:    movs r1, #0
@@ -179,14 +179,14 @@ define dso_local i32 @e() #0 {
 ; CHECK-NEXT:    vmov q1[2], q1[0], r4, r3
 ; CHECK-NEXT:    vmov q2[2], q2[0], r3, r3
 ; CHECK-NEXT:    mov.w r12, #4
-; CHECK-NEXT:    vmov q1[3], q1[1], r2, r4
 ; CHECK-NEXT:    vmov.f32 s14, s13
+; CHECK-NEXT:    vmov q1[3], q1[1], r2, r4
+; CHECK-NEXT:    str.w r8, [sp, #28]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r4, r5
+; CHECK-NEXT:    strh.w r12, [sp, #390]
 ; CHECK-NEXT:    vmov.32 q4[0], r8
 ; CHECK-NEXT:    @ implicit-def: $r2
-; CHECK-NEXT:    str.w r8, [sp, #28]
 ; CHECK-NEXT:    vstrw.32 q3, [sp, #44]
-; CHECK-NEXT:    strh.w r12, [sp, #390]
 ; CHECK-NEXT:    wlstp.8 lr, r1, .LBB1_2
 ; CHECK-NEXT:  .LBB1_1: @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmov.i32 q0, #0x0

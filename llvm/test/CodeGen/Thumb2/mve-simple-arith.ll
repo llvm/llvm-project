@@ -118,8 +118,8 @@ define arm_aapcs_vfpcc <2 x double> @add_float64_t(<2 x double> %src1, <2 x doub
 ; CHECK-NEXT:    vmov r2, r3, d9
 ; CHECK-NEXT:    bl __aeabi_dadd
 ; CHECK-NEXT:    vmov lr, r12, d10
-; CHECK-NEXT:    vmov r2, r3, d8
 ; CHECK-NEXT:    vmov d9, r0, r1
+; CHECK-NEXT:    vmov r2, r3, d8
 ; CHECK-NEXT:    mov r0, lr
 ; CHECK-NEXT:    mov r1, r12
 ; CHECK-NEXT:    bl __aeabi_dadd
@@ -249,8 +249,8 @@ define arm_aapcs_vfpcc <2 x double> @sub_float64_t(<2 x double> %src1, <2 x doub
 ; CHECK-NEXT:    vmov r2, r3, d9
 ; CHECK-NEXT:    bl __aeabi_dsub
 ; CHECK-NEXT:    vmov lr, r12, d10
-; CHECK-NEXT:    vmov r2, r3, d8
 ; CHECK-NEXT:    vmov d9, r0, r1
+; CHECK-NEXT:    vmov r2, r3, d8
 ; CHECK-NEXT:    mov r0, lr
 ; CHECK-NEXT:    mov r1, r12
 ; CHECK-NEXT:    bl __aeabi_dsub
@@ -382,8 +382,8 @@ define arm_aapcs_vfpcc <2 x double> @mul_float64_t(<2 x double> %src1, <2 x doub
 ; CHECK-NEXT:    vmov r2, r3, d9
 ; CHECK-NEXT:    bl __aeabi_dmul
 ; CHECK-NEXT:    vmov lr, r12, d10
-; CHECK-NEXT:    vmov r2, r3, d8
 ; CHECK-NEXT:    vmov d9, r0, r1
+; CHECK-NEXT:    vmov r2, r3, d8
 ; CHECK-NEXT:    mov r0, lr
 ; CHECK-NEXT:    mov r1, r12
 ; CHECK-NEXT:    bl __aeabi_dmul

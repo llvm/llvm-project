@@ -139,8 +139,8 @@ define void @test_no_le(ptr %dst, i32 %n) {
 ; CHECK-NOMVE-LABEL: test_no_le:
 ; CHECK-NOMVE:       @ %bb.0: @ %entry
 ; CHECK-NOMVE-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
-; CHECK-NOMVE-NEXT:    add.w r5, r0, r1, lsl #1
 ; CHECK-NOMVE-NEXT:    mov r4, r1
+; CHECK-NOMVE-NEXT:    add.w r5, r0, r1, lsl #1
 ; CHECK-NOMVE-NEXT:    movs r6, #0
 ; CHECK-NOMVE-NEXT:    mov.w r8, #0
 ; CHECK-NOMVE-NEXT:  .LBB2_1: @ %outer_loop
@@ -167,8 +167,8 @@ define void @test_no_le(ptr %dst, i32 %n) {
 ; CHECK-MVE:       @ %bb.0: @ %entry
 ; CHECK-MVE-NEXT:    push.w {r4, r5, r6, r7, r8, r9, lr}
 ; CHECK-MVE-NEXT:    sub sp, #4
-; CHECK-MVE-NEXT:    add.w r8, r0, r1, lsl #1
 ; CHECK-MVE-NEXT:    mov r9, r1
+; CHECK-MVE-NEXT:    add.w r8, r0, r1, lsl #1
 ; CHECK-MVE-NEXT:    movs r6, #0
 ; CHECK-MVE-NEXT:    movs r7, #0
 ; CHECK-MVE-NEXT:  .LBB2_1: @ %outer_loop
@@ -221,8 +221,8 @@ define void @test_no_le_optsize(ptr %dst, i32 %n) optsize {
 ; CHECK-NOMVE-LABEL: test_no_le_optsize:
 ; CHECK-NOMVE:       @ %bb.0: @ %entry
 ; CHECK-NOMVE-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
-; CHECK-NOMVE-NEXT:    add.w r5, r0, r1, lsl #1
 ; CHECK-NOMVE-NEXT:    mov r4, r1
+; CHECK-NOMVE-NEXT:    add.w r5, r0, r1, lsl #1
 ; CHECK-NOMVE-NEXT:    movs r6, #0
 ; CHECK-NOMVE-NEXT:    mov.w r8, #0
 ; CHECK-NOMVE-NEXT:  .LBB3_1: @ %outer_loop
@@ -249,8 +249,8 @@ define void @test_no_le_optsize(ptr %dst, i32 %n) optsize {
 ; CHECK-MVE:       @ %bb.0: @ %entry
 ; CHECK-MVE-NEXT:    push.w {r4, r5, r6, r7, r8, r9, lr}
 ; CHECK-MVE-NEXT:    sub sp, #4
-; CHECK-MVE-NEXT:    add.w r8, r0, r1, lsl #1
 ; CHECK-MVE-NEXT:    mov r9, r1
+; CHECK-MVE-NEXT:    add.w r8, r0, r1, lsl #1
 ; CHECK-MVE-NEXT:    movs r6, #0
 ; CHECK-MVE-NEXT:    movs r7, #0
 ; CHECK-MVE-NEXT:  .LBB3_1: @ %outer_loop

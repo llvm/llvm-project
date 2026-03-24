@@ -60,9 +60,9 @@ define <2 x float> @sin_v2f32(<2 x float> %x) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    bl sinf
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
@@ -84,9 +84,9 @@ define <3 x float> @sin_v3f32(<3 x float> %x) nounwind {
 ; CHECK-LABEL: sin_v3f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    bl sinf
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
@@ -115,9 +115,9 @@ define <4 x float> @sin_v4f32(<4 x float> %x) nounwind {
 ; CHECK-LABEL: sin_v4f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    bl sinf
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
@@ -278,9 +278,9 @@ define <3 x float> @cos_v3f32(<3 x float> %x) nounwind {
 ; CHECK-LABEL: cos_v3f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    bl cosf
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
@@ -309,9 +309,9 @@ define <3 x float> @tan_v3f32(<3 x float> %x) nounwind {
 ; CHECK-LABEL: tan_v3f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    bl tanf
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
@@ -340,9 +340,9 @@ define <3 x float> @asin_v3f32(<3 x float> %x) nounwind {
 ; CHECK-LABEL: asin_v3f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    bl asinf
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
@@ -371,9 +371,9 @@ define <3 x float> @acos_v3f32(<3 x float> %x) nounwind {
 ; CHECK-LABEL: acos_v3f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    bl acosf
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
@@ -402,9 +402,9 @@ define <3 x float> @atan_v3f32(<3 x float> %x) nounwind {
 ; CHECK-LABEL: atan_v3f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    bl atanf
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
@@ -433,10 +433,10 @@ define <3 x float> @atan2_v3f32(<3 x float> %x, <3 x float> %y) nounwind {
 ; CHECK-LABEL: atan2_v3f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #64
+; CHECK-NEXT:    str x30, [sp, #48] // 8-byte Spill
 ; CHECK-NEXT:    stp q0, q1, [sp, #16] // 32-byte Folded Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
 ; CHECK-NEXT:    mov s1, v1.s[1]
-; CHECK-NEXT:    str x30, [sp, #48] // 8-byte Spill
 ; CHECK-NEXT:    bl atan2f
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
@@ -467,9 +467,9 @@ define <3 x float> @sinh_v3f32(<3 x float> %x) nounwind {
 ; CHECK-LABEL: sinh_v3f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    bl sinhf
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
@@ -497,9 +497,9 @@ define <3 x float> @cosh_v3f32(<3 x float> %x) nounwind {
 ; CHECK-LABEL: cosh_v3f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    bl coshf
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
@@ -528,9 +528,9 @@ define <3 x float> @tanh_v3f32(<3 x float> %x) nounwind {
 ; CHECK-LABEL: tanh_v3f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    bl tanhf
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
@@ -559,9 +559,9 @@ define <3 x float> @exp_v3f32(<3 x float> %x) nounwind {
 ; CHECK-LABEL: exp_v3f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    bl expf
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
@@ -590,9 +590,9 @@ define <3 x float> @exp2_v3f32(<3 x float> %x) nounwind {
 ; CHECK-LABEL: exp2_v3f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    bl exp2f
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
@@ -630,9 +630,9 @@ define <3 x float> @log_v3f32(<3 x float> %x) nounwind {
 ; CHECK-LABEL: log_v3f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    bl logf
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
@@ -661,9 +661,9 @@ define <3 x float> @log10_v3f32(<3 x float> %x) nounwind {
 ; CHECK-LABEL: log10_v3f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    bl log10f
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
@@ -692,9 +692,9 @@ define <3 x float> @log2_v3f32(<3 x float> %x) nounwind {
 ; CHECK-LABEL: log2_v3f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    bl log2f
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Spill

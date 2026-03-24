@@ -547,9 +547,9 @@ define <2 x i64> @stest_f64i64(<2 x double> %x) {
 ; CHECK-CVT-GI-NEXT:    mov x22, #-9223372036854775808 // =0x8000000000000000
 ; CHECK-CVT-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-CVT-GI-NEXT:    bl __fixdfti
-; CHECK-CVT-GI-NEXT:    fmov d0, d8
 ; CHECK-CVT-GI-NEXT:    mov x19, x0
 ; CHECK-CVT-GI-NEXT:    mov x20, x1
+; CHECK-CVT-GI-NEXT:    fmov d0, d8
 ; CHECK-CVT-GI-NEXT:    bl __fixdfti
 ; CHECK-CVT-GI-NEXT:    cmp x19, x21
 ; CHECK-CVT-GI-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
@@ -609,9 +609,9 @@ define <2 x i64> @stest_f64i64(<2 x double> %x) {
 ; CHECK-FP16-GI-NEXT:    mov x22, #-9223372036854775808 // =0x8000000000000000
 ; CHECK-FP16-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-FP16-GI-NEXT:    bl __fixdfti
-; CHECK-FP16-GI-NEXT:    fmov d0, d8
 ; CHECK-FP16-GI-NEXT:    mov x19, x0
 ; CHECK-FP16-GI-NEXT:    mov x20, x1
+; CHECK-FP16-GI-NEXT:    fmov d0, d8
 ; CHECK-FP16-GI-NEXT:    bl __fixdfti
 ; CHECK-FP16-GI-NEXT:    cmp x19, x21
 ; CHECK-FP16-GI-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
@@ -734,9 +734,9 @@ define <2 x i64> @utest_f64i64(<2 x double> %x) {
 ; CHECK-CVT-GI-NEXT:    mov d8, v0.d[1]
 ; CHECK-CVT-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-CVT-GI-NEXT:    bl __fixunsdfti
-; CHECK-CVT-GI-NEXT:    fmov d0, d8
 ; CHECK-CVT-GI-NEXT:    mov x19, x0
 ; CHECK-CVT-GI-NEXT:    mov x20, x1
+; CHECK-CVT-GI-NEXT:    fmov d0, d8
 ; CHECK-CVT-GI-NEXT:    bl __fixunsdfti
 ; CHECK-CVT-GI-NEXT:    cmp x20, #1
 ; CHECK-CVT-GI-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
@@ -768,9 +768,9 @@ define <2 x i64> @utest_f64i64(<2 x double> %x) {
 ; CHECK-FP16-GI-NEXT:    mov d8, v0.d[1]
 ; CHECK-FP16-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-FP16-GI-NEXT:    bl __fixunsdfti
-; CHECK-FP16-GI-NEXT:    fmov d0, d8
 ; CHECK-FP16-GI-NEXT:    mov x19, x0
 ; CHECK-FP16-GI-NEXT:    mov x20, x1
+; CHECK-FP16-GI-NEXT:    fmov d0, d8
 ; CHECK-FP16-GI-NEXT:    bl __fixunsdfti
 ; CHECK-FP16-GI-NEXT:    cmp x20, #1
 ; CHECK-FP16-GI-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
@@ -884,9 +884,9 @@ define <2 x i64> @ustest_f64i64(<2 x double> %x) {
 ; CHECK-CVT-GI-NEXT:    mov d8, v0.d[1]
 ; CHECK-CVT-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-CVT-GI-NEXT:    bl __fixdfti
-; CHECK-CVT-GI-NEXT:    fmov d0, d8
 ; CHECK-CVT-GI-NEXT:    mov x19, x0
 ; CHECK-CVT-GI-NEXT:    mov x20, x1
+; CHECK-CVT-GI-NEXT:    fmov d0, d8
 ; CHECK-CVT-GI-NEXT:    bl __fixdfti
 ; CHECK-CVT-GI-NEXT:    cmp x20, #1
 ; CHECK-CVT-GI-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
@@ -934,9 +934,9 @@ define <2 x i64> @ustest_f64i64(<2 x double> %x) {
 ; CHECK-FP16-GI-NEXT:    mov d8, v0.d[1]
 ; CHECK-FP16-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-FP16-GI-NEXT:    bl __fixdfti
-; CHECK-FP16-GI-NEXT:    fmov d0, d8
 ; CHECK-FP16-GI-NEXT:    mov x19, x0
 ; CHECK-FP16-GI-NEXT:    mov x20, x1
+; CHECK-FP16-GI-NEXT:    fmov d0, d8
 ; CHECK-FP16-GI-NEXT:    bl __fixdfti
 ; CHECK-FP16-GI-NEXT:    cmp x20, #1
 ; CHECK-FP16-GI-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
@@ -1012,9 +1012,9 @@ define <2 x i64> @stest_f32i64(<2 x float> %x) {
 ; CHECK-CVT-GI-NEXT:    mov x22, #-9223372036854775808 // =0x8000000000000000
 ; CHECK-CVT-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-GI-NEXT:    bl __fixsfti
-; CHECK-CVT-GI-NEXT:    fmov s0, s8
 ; CHECK-CVT-GI-NEXT:    mov x19, x0
 ; CHECK-CVT-GI-NEXT:    mov x20, x1
+; CHECK-CVT-GI-NEXT:    fmov s0, s8
 ; CHECK-CVT-GI-NEXT:    bl __fixsfti
 ; CHECK-CVT-GI-NEXT:    cmp x19, x21
 ; CHECK-CVT-GI-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
@@ -1075,9 +1075,9 @@ define <2 x i64> @stest_f32i64(<2 x float> %x) {
 ; CHECK-FP16-GI-NEXT:    mov x22, #-9223372036854775808 // =0x8000000000000000
 ; CHECK-FP16-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-FP16-GI-NEXT:    bl __fixsfti
-; CHECK-FP16-GI-NEXT:    fmov s0, s8
 ; CHECK-FP16-GI-NEXT:    mov x19, x0
 ; CHECK-FP16-GI-NEXT:    mov x20, x1
+; CHECK-FP16-GI-NEXT:    fmov s0, s8
 ; CHECK-FP16-GI-NEXT:    bl __fixsfti
 ; CHECK-FP16-GI-NEXT:    cmp x19, x21
 ; CHECK-FP16-GI-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
@@ -1203,9 +1203,9 @@ define <2 x i64> @utest_f32i64(<2 x float> %x) {
 ; CHECK-CVT-GI-NEXT:    mov s8, v0.s[1]
 ; CHECK-CVT-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-GI-NEXT:    bl __fixunssfti
-; CHECK-CVT-GI-NEXT:    fmov s0, s8
 ; CHECK-CVT-GI-NEXT:    mov x19, x0
 ; CHECK-CVT-GI-NEXT:    mov x20, x1
+; CHECK-CVT-GI-NEXT:    fmov s0, s8
 ; CHECK-CVT-GI-NEXT:    bl __fixunssfti
 ; CHECK-CVT-GI-NEXT:    cmp x20, #1
 ; CHECK-CVT-GI-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
@@ -1238,9 +1238,9 @@ define <2 x i64> @utest_f32i64(<2 x float> %x) {
 ; CHECK-FP16-GI-NEXT:    mov s8, v0.s[1]
 ; CHECK-FP16-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-FP16-GI-NEXT:    bl __fixunssfti
-; CHECK-FP16-GI-NEXT:    fmov s0, s8
 ; CHECK-FP16-GI-NEXT:    mov x19, x0
 ; CHECK-FP16-GI-NEXT:    mov x20, x1
+; CHECK-FP16-GI-NEXT:    fmov s0, s8
 ; CHECK-FP16-GI-NEXT:    bl __fixunssfti
 ; CHECK-FP16-GI-NEXT:    cmp x20, #1
 ; CHECK-FP16-GI-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
@@ -1357,9 +1357,9 @@ define <2 x i64> @ustest_f32i64(<2 x float> %x) {
 ; CHECK-CVT-GI-NEXT:    mov s8, v0.s[1]
 ; CHECK-CVT-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-GI-NEXT:    bl __fixsfti
-; CHECK-CVT-GI-NEXT:    fmov s0, s8
 ; CHECK-CVT-GI-NEXT:    mov x19, x0
 ; CHECK-CVT-GI-NEXT:    mov x20, x1
+; CHECK-CVT-GI-NEXT:    fmov s0, s8
 ; CHECK-CVT-GI-NEXT:    bl __fixsfti
 ; CHECK-CVT-GI-NEXT:    cmp x20, #1
 ; CHECK-CVT-GI-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
@@ -1408,9 +1408,9 @@ define <2 x i64> @ustest_f32i64(<2 x float> %x) {
 ; CHECK-FP16-GI-NEXT:    mov s8, v0.s[1]
 ; CHECK-FP16-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-FP16-GI-NEXT:    bl __fixsfti
-; CHECK-FP16-GI-NEXT:    fmov s0, s8
 ; CHECK-FP16-GI-NEXT:    mov x19, x0
 ; CHECK-FP16-GI-NEXT:    mov x20, x1
+; CHECK-FP16-GI-NEXT:    fmov s0, s8
 ; CHECK-FP16-GI-NEXT:    bl __fixsfti
 ; CHECK-FP16-GI-NEXT:    cmp x20, #1
 ; CHECK-FP16-GI-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
@@ -2349,9 +2349,9 @@ define <2 x i64> @stest_f64i64_mm(<2 x double> %x) {
 ; CHECK-CVT-GI-NEXT:    mov x22, #-9223372036854775808 // =0x8000000000000000
 ; CHECK-CVT-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-CVT-GI-NEXT:    bl __fixdfti
-; CHECK-CVT-GI-NEXT:    fmov d0, d8
 ; CHECK-CVT-GI-NEXT:    mov x19, x0
 ; CHECK-CVT-GI-NEXT:    mov x20, x1
+; CHECK-CVT-GI-NEXT:    fmov d0, d8
 ; CHECK-CVT-GI-NEXT:    bl __fixdfti
 ; CHECK-CVT-GI-NEXT:    cmp x19, x21
 ; CHECK-CVT-GI-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
@@ -2411,9 +2411,9 @@ define <2 x i64> @stest_f64i64_mm(<2 x double> %x) {
 ; CHECK-FP16-GI-NEXT:    mov x22, #-9223372036854775808 // =0x8000000000000000
 ; CHECK-FP16-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-FP16-GI-NEXT:    bl __fixdfti
-; CHECK-FP16-GI-NEXT:    fmov d0, d8
 ; CHECK-FP16-GI-NEXT:    mov x19, x0
 ; CHECK-FP16-GI-NEXT:    mov x20, x1
+; CHECK-FP16-GI-NEXT:    fmov d0, d8
 ; CHECK-FP16-GI-NEXT:    bl __fixdfti
 ; CHECK-FP16-GI-NEXT:    cmp x19, x21
 ; CHECK-FP16-GI-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
@@ -2534,9 +2534,9 @@ define <2 x i64> @utest_f64i64_mm(<2 x double> %x) {
 ; CHECK-CVT-GI-NEXT:    mov d8, v0.d[1]
 ; CHECK-CVT-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-CVT-GI-NEXT:    bl __fixunsdfti
-; CHECK-CVT-GI-NEXT:    fmov d0, d8
 ; CHECK-CVT-GI-NEXT:    mov x19, x0
 ; CHECK-CVT-GI-NEXT:    mov x20, x1
+; CHECK-CVT-GI-NEXT:    fmov d0, d8
 ; CHECK-CVT-GI-NEXT:    bl __fixunsdfti
 ; CHECK-CVT-GI-NEXT:    cmp x20, #1
 ; CHECK-CVT-GI-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
@@ -2568,9 +2568,9 @@ define <2 x i64> @utest_f64i64_mm(<2 x double> %x) {
 ; CHECK-FP16-GI-NEXT:    mov d8, v0.d[1]
 ; CHECK-FP16-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-FP16-GI-NEXT:    bl __fixunsdfti
-; CHECK-FP16-GI-NEXT:    fmov d0, d8
 ; CHECK-FP16-GI-NEXT:    mov x19, x0
 ; CHECK-FP16-GI-NEXT:    mov x20, x1
+; CHECK-FP16-GI-NEXT:    fmov d0, d8
 ; CHECK-FP16-GI-NEXT:    bl __fixunsdfti
 ; CHECK-FP16-GI-NEXT:    cmp x20, #1
 ; CHECK-FP16-GI-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
@@ -2679,9 +2679,9 @@ define <2 x i64> @ustest_f64i64_mm(<2 x double> %x) {
 ; CHECK-CVT-GI-NEXT:    mov d8, v0.d[1]
 ; CHECK-CVT-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-CVT-GI-NEXT:    bl __fixdfti
-; CHECK-CVT-GI-NEXT:    fmov d0, d8
 ; CHECK-CVT-GI-NEXT:    mov x19, x0
 ; CHECK-CVT-GI-NEXT:    mov x20, x1
+; CHECK-CVT-GI-NEXT:    fmov d0, d8
 ; CHECK-CVT-GI-NEXT:    bl __fixdfti
 ; CHECK-CVT-GI-NEXT:    cmp x20, #1
 ; CHECK-CVT-GI-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
@@ -2729,9 +2729,9 @@ define <2 x i64> @ustest_f64i64_mm(<2 x double> %x) {
 ; CHECK-FP16-GI-NEXT:    mov d8, v0.d[1]
 ; CHECK-FP16-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-FP16-GI-NEXT:    bl __fixdfti
-; CHECK-FP16-GI-NEXT:    fmov d0, d8
 ; CHECK-FP16-GI-NEXT:    mov x19, x0
 ; CHECK-FP16-GI-NEXT:    mov x20, x1
+; CHECK-FP16-GI-NEXT:    fmov d0, d8
 ; CHECK-FP16-GI-NEXT:    bl __fixdfti
 ; CHECK-FP16-GI-NEXT:    cmp x20, #1
 ; CHECK-FP16-GI-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
@@ -2805,9 +2805,9 @@ define <2 x i64> @stest_f32i64_mm(<2 x float> %x) {
 ; CHECK-CVT-GI-NEXT:    mov x22, #-9223372036854775808 // =0x8000000000000000
 ; CHECK-CVT-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-GI-NEXT:    bl __fixsfti
-; CHECK-CVT-GI-NEXT:    fmov s0, s8
 ; CHECK-CVT-GI-NEXT:    mov x19, x0
 ; CHECK-CVT-GI-NEXT:    mov x20, x1
+; CHECK-CVT-GI-NEXT:    fmov s0, s8
 ; CHECK-CVT-GI-NEXT:    bl __fixsfti
 ; CHECK-CVT-GI-NEXT:    cmp x19, x21
 ; CHECK-CVT-GI-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
@@ -2868,9 +2868,9 @@ define <2 x i64> @stest_f32i64_mm(<2 x float> %x) {
 ; CHECK-FP16-GI-NEXT:    mov x22, #-9223372036854775808 // =0x8000000000000000
 ; CHECK-FP16-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-FP16-GI-NEXT:    bl __fixsfti
-; CHECK-FP16-GI-NEXT:    fmov s0, s8
 ; CHECK-FP16-GI-NEXT:    mov x19, x0
 ; CHECK-FP16-GI-NEXT:    mov x20, x1
+; CHECK-FP16-GI-NEXT:    fmov s0, s8
 ; CHECK-FP16-GI-NEXT:    bl __fixsfti
 ; CHECK-FP16-GI-NEXT:    cmp x19, x21
 ; CHECK-FP16-GI-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
@@ -2994,9 +2994,9 @@ define <2 x i64> @utest_f32i64_mm(<2 x float> %x) {
 ; CHECK-CVT-GI-NEXT:    mov s8, v0.s[1]
 ; CHECK-CVT-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-GI-NEXT:    bl __fixunssfti
-; CHECK-CVT-GI-NEXT:    fmov s0, s8
 ; CHECK-CVT-GI-NEXT:    mov x19, x0
 ; CHECK-CVT-GI-NEXT:    mov x20, x1
+; CHECK-CVT-GI-NEXT:    fmov s0, s8
 ; CHECK-CVT-GI-NEXT:    bl __fixunssfti
 ; CHECK-CVT-GI-NEXT:    cmp x20, #1
 ; CHECK-CVT-GI-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
@@ -3029,9 +3029,9 @@ define <2 x i64> @utest_f32i64_mm(<2 x float> %x) {
 ; CHECK-FP16-GI-NEXT:    mov s8, v0.s[1]
 ; CHECK-FP16-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-FP16-GI-NEXT:    bl __fixunssfti
-; CHECK-FP16-GI-NEXT:    fmov s0, s8
 ; CHECK-FP16-GI-NEXT:    mov x19, x0
 ; CHECK-FP16-GI-NEXT:    mov x20, x1
+; CHECK-FP16-GI-NEXT:    fmov s0, s8
 ; CHECK-FP16-GI-NEXT:    bl __fixunssfti
 ; CHECK-FP16-GI-NEXT:    cmp x20, #1
 ; CHECK-FP16-GI-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
@@ -3143,9 +3143,9 @@ define <2 x i64> @ustest_f32i64_mm(<2 x float> %x) {
 ; CHECK-CVT-GI-NEXT:    mov s8, v0.s[1]
 ; CHECK-CVT-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-GI-NEXT:    bl __fixsfti
-; CHECK-CVT-GI-NEXT:    fmov s0, s8
 ; CHECK-CVT-GI-NEXT:    mov x19, x0
 ; CHECK-CVT-GI-NEXT:    mov x20, x1
+; CHECK-CVT-GI-NEXT:    fmov s0, s8
 ; CHECK-CVT-GI-NEXT:    bl __fixsfti
 ; CHECK-CVT-GI-NEXT:    cmp x20, #1
 ; CHECK-CVT-GI-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
@@ -3194,9 +3194,9 @@ define <2 x i64> @ustest_f32i64_mm(<2 x float> %x) {
 ; CHECK-FP16-GI-NEXT:    mov s8, v0.s[1]
 ; CHECK-FP16-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-FP16-GI-NEXT:    bl __fixsfti
-; CHECK-FP16-GI-NEXT:    fmov s0, s8
 ; CHECK-FP16-GI-NEXT:    mov x19, x0
 ; CHECK-FP16-GI-NEXT:    mov x20, x1
+; CHECK-FP16-GI-NEXT:    fmov s0, s8
 ; CHECK-FP16-GI-NEXT:    bl __fixsfti
 ; CHECK-FP16-GI-NEXT:    cmp x20, #1
 ; CHECK-FP16-GI-NEXT:    ldr x30, [sp, #8] // 8-byte Reload

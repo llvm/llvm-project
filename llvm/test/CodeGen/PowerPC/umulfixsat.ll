@@ -22,8 +22,8 @@ define i32 @func2(i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: func2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mulhwu 6, 3, 4
-; CHECK-NEXT:    mr 5, 3
 ; CHECK-NEXT:    cmplwi 6, 1
+; CHECK-NEXT:    mr 5, 3
 ; CHECK-NEXT:    li 3, -1
 ; CHECK-NEXT:    bgtlr 0
 ; CHECK-NEXT:  # %bb.1:

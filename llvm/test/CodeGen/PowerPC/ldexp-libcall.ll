@@ -7,8 +7,8 @@ define float @call_ldexpf(float %a, i32 %b) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -32(r1)
-; CHECK-NEXT:    extsw r4, r4
 ; CHECK-NEXT:    std r0, 48(r1)
+; CHECK-NEXT:    extsw r4, r4
 ; CHECK-NEXT:    bl ldexpf
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r1, r1, 32
@@ -24,8 +24,8 @@ define double @call_ldexp(double %a, i32 %b) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -32(r1)
-; CHECK-NEXT:    extsw r4, r4
 ; CHECK-NEXT:    std r0, 48(r1)
+; CHECK-NEXT:    extsw r4, r4
 ; CHECK-NEXT:    bl ldexp
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r1, r1, 32
@@ -41,8 +41,8 @@ define ppc_fp128 @call_ldexpl(ppc_fp128 %a, i32 %b) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -32(r1)
-; CHECK-NEXT:    clrldi r5, r5, 32
 ; CHECK-NEXT:    std r0, 48(r1)
+; CHECK-NEXT:    clrldi r5, r5, 32
 ; CHECK-NEXT:    bl ldexpl
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r1, r1, 32

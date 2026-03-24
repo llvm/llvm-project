@@ -51,11 +51,11 @@ define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) {
 ; SCALAR-NEXT:    push {r4, r5, r6, r7, r8, lr}
 ; SCALAR-NEXT:    mov r8, r0
 ; SCALAR-NEXT:    ldr r0, [sp, #28]
-; SCALAR-NEXT:    mov r4, r1
 ; SCALAR-NEXT:    mov r5, r3
+; SCALAR-NEXT:    mov r6, r2
+; SCALAR-NEXT:    mov r4, r1
 ; SCALAR-NEXT:    and r1, r0, #31
 ; SCALAR-NEXT:    ldr r0, [sp, #24]
-; SCALAR-NEXT:    mov r6, r2
 ; SCALAR-NEXT:    mov r2, #37
 ; SCALAR-NEXT:    mov r3, #0
 ; SCALAR-NEXT:    bl __aeabi_uldivmod
@@ -83,11 +83,11 @@ define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) {
 ; NEON-NEXT:    push {r4, r5, r6, r7, r8, lr}
 ; NEON-NEXT:    mov r4, r1
 ; NEON-NEXT:    ldr r1, [sp, #28]
+; NEON-NEXT:    mov r5, r3
+; NEON-NEXT:    mov r6, r2
 ; NEON-NEXT:    mov r8, r0
 ; NEON-NEXT:    ldr r0, [sp, #24]
 ; NEON-NEXT:    and r1, r1, #31
-; NEON-NEXT:    mov r5, r3
-; NEON-NEXT:    mov r6, r2
 ; NEON-NEXT:    mov r2, #37
 ; NEON-NEXT:    mov r3, #0
 ; NEON-NEXT:    bl __aeabi_uldivmod
@@ -239,11 +239,11 @@ define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) {
 ; SCALAR-NEXT:    push {r4, r5, r6, r7, r11, lr}
 ; SCALAR-NEXT:    mov r5, r0
 ; SCALAR-NEXT:    ldr r0, [sp, #28]
-; SCALAR-NEXT:    mov r4, r1
 ; SCALAR-NEXT:    mov r6, r3
+; SCALAR-NEXT:    mov r7, r2
+; SCALAR-NEXT:    mov r4, r1
 ; SCALAR-NEXT:    and r1, r0, #31
 ; SCALAR-NEXT:    ldr r0, [sp, #24]
-; SCALAR-NEXT:    mov r7, r2
 ; SCALAR-NEXT:    mov r2, #37
 ; SCALAR-NEXT:    mov r3, #0
 ; SCALAR-NEXT:    bl __aeabi_uldivmod
@@ -272,11 +272,11 @@ define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) {
 ; NEON-NEXT:    push {r4, r5, r6, r7, r11, lr}
 ; NEON-NEXT:    mov r4, r1
 ; NEON-NEXT:    ldr r1, [sp, #28]
+; NEON-NEXT:    mov r6, r3
+; NEON-NEXT:    mov r7, r2
 ; NEON-NEXT:    mov r5, r0
 ; NEON-NEXT:    ldr r0, [sp, #24]
 ; NEON-NEXT:    and r1, r1, #31
-; NEON-NEXT:    mov r6, r3
-; NEON-NEXT:    mov r7, r2
 ; NEON-NEXT:    mov r2, #37
 ; NEON-NEXT:    mov r3, #0
 ; NEON-NEXT:    bl __aeabi_uldivmod

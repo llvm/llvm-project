@@ -16,11 +16,11 @@ define i128 @f1(i128 %a, i128 %b) {
 ; CHECK-NEXT:    vl %v0, 0(%r3), 3
 ; CHECK-NEXT:    vl %v1, 0(%r4), 3
 ; CHECK-NEXT:    lgr %r13, %r2
+; CHECK-NEXT:    vst %v1, 160(%r15), 3
+; CHECK-NEXT:    vst %v0, 176(%r15), 3
 ; CHECK-NEXT:    la %r2, 192(%r15)
 ; CHECK-NEXT:    la %r3, 176(%r15)
 ; CHECK-NEXT:    la %r4, 160(%r15)
-; CHECK-NEXT:    vst %v1, 160(%r15), 3
-; CHECK-NEXT:    vst %v0, 176(%r15), 3
 ; CHECK-NEXT:    brasl %r14, __divti3@PLT
 ; CHECK-NEXT:    vl %v0, 192(%r15), 3
 ; CHECK-NEXT:    vst %v0, 0(%r13), 3
@@ -43,11 +43,11 @@ define i128 @f2(i128 %a, i128 %b) {
 ; CHECK-NEXT:    vl %v0, 0(%r3), 3
 ; CHECK-NEXT:    vl %v1, 0(%r4), 3
 ; CHECK-NEXT:    lgr %r13, %r2
+; CHECK-NEXT:    vst %v1, 160(%r15), 3
+; CHECK-NEXT:    vst %v0, 176(%r15), 3
 ; CHECK-NEXT:    la %r2, 192(%r15)
 ; CHECK-NEXT:    la %r3, 176(%r15)
 ; CHECK-NEXT:    la %r4, 160(%r15)
-; CHECK-NEXT:    vst %v1, 160(%r15), 3
-; CHECK-NEXT:    vst %v0, 176(%r15), 3
 ; CHECK-NEXT:    brasl %r14, __udivti3@PLT
 ; CHECK-NEXT:    vl %v0, 192(%r15), 3
 ; CHECK-NEXT:    vst %v0, 0(%r13), 3
@@ -70,11 +70,11 @@ define i128 @f3(i128 %a, i128 %b) {
 ; CHECK-NEXT:    vl %v0, 0(%r3), 3
 ; CHECK-NEXT:    vl %v1, 0(%r4), 3
 ; CHECK-NEXT:    lgr %r13, %r2
+; CHECK-NEXT:    vst %v1, 160(%r15), 3
+; CHECK-NEXT:    vst %v0, 176(%r15), 3
 ; CHECK-NEXT:    la %r2, 192(%r15)
 ; CHECK-NEXT:    la %r3, 176(%r15)
 ; CHECK-NEXT:    la %r4, 160(%r15)
-; CHECK-NEXT:    vst %v1, 160(%r15), 3
-; CHECK-NEXT:    vst %v0, 176(%r15), 3
 ; CHECK-NEXT:    brasl %r14, __modti3@PLT
 ; CHECK-NEXT:    vl %v0, 192(%r15), 3
 ; CHECK-NEXT:    vst %v0, 0(%r13), 3
@@ -97,11 +97,11 @@ define i128 @f4(i128 %a, i128 %b) {
 ; CHECK-NEXT:    vl %v0, 0(%r3), 3
 ; CHECK-NEXT:    vl %v1, 0(%r4), 3
 ; CHECK-NEXT:    lgr %r13, %r2
+; CHECK-NEXT:    vst %v1, 160(%r15), 3
+; CHECK-NEXT:    vst %v0, 176(%r15), 3
 ; CHECK-NEXT:    la %r2, 192(%r15)
 ; CHECK-NEXT:    la %r3, 176(%r15)
 ; CHECK-NEXT:    la %r4, 160(%r15)
-; CHECK-NEXT:    vst %v1, 160(%r15), 3
-; CHECK-NEXT:    vst %v0, 176(%r15), 3
 ; CHECK-NEXT:    brasl %r14, __umodti3@PLT
 ; CHECK-NEXT:    vl %v0, 192(%r15), 3
 ; CHECK-NEXT:    vst %v0, 0(%r13), 3

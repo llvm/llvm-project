@@ -551,11 +551,11 @@ define void @test_phi(ptr %p) #0 {
 ; CHECK-VFP-LABEL: test_phi:
 ; CHECK-VFP:         .save {r4, r5, r6, lr}
 ; CHECK-VFP-NEXT:    push {r4, r5, r6, lr}
-; CHECK-VFP-NEXT:    ldrh r6, [r0]
 ; CHECK-VFP-NEXT:    mov r4, r0
+; CHECK-VFP-NEXT:    ldrh r6, [r0]
 ; CHECK-VFP-NEXT:  .LBB13_1:
-; CHECK-VFP-NEXT:    mov r0, r4
 ; CHECK-VFP-NEXT:    mov r5, r6
+; CHECK-VFP-NEXT:    mov r0, r4
 ; CHECK-VFP-NEXT:    ldrh r6, [r4]
 ; CHECK-VFP-NEXT:    bl test_dummy
 ; CHECK-VFP-NEXT:    tst r0, #1
@@ -566,11 +566,11 @@ define void @test_phi(ptr %p) #0 {
 ; CHECK-NOVFP-LABEL: test_phi:
 ; CHECK-NOVFP:         .save {r4, r5, r6, lr}
 ; CHECK-NOVFP-NEXT:    push {r4, r5, r6, lr}
-; CHECK-NOVFP-NEXT:    ldrh r5, [r0]
 ; CHECK-NOVFP-NEXT:    mov r4, r0
+; CHECK-NOVFP-NEXT:    ldrh r5, [r0]
 ; CHECK-NOVFP-NEXT:  .LBB13_1:
-; CHECK-NOVFP-NEXT:    mov r0, r4
 ; CHECK-NOVFP-NEXT:    mov r6, r5
+; CHECK-NOVFP-NEXT:    mov r0, r4
 ; CHECK-NOVFP-NEXT:    ldrh r5, [r4]
 ; CHECK-NOVFP-NEXT:    bl test_dummy
 ; CHECK-NOVFP-NEXT:    tst r0, #1

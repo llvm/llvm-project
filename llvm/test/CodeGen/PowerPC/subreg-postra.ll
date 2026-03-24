@@ -68,9 +68,9 @@ define void @jbd2_journal_commit_transaction(ptr %journal, i64 %inp1, i32 %inp2,
 ; CHECK-NEXT:  .LBB0_18: # %if.end421
 ; CHECK-NEXT:  .LBB0_19: # %if.then.i1296
 ; CHECK-NEXT:  .LBB0_20: # %while.body392.lr.ph
-; CHECK-NEXT:    lis 26, 4
 ; CHECK-NEXT:    mr 27, 5
 ; CHECK-NEXT:    mr 28, 3
+; CHECK-NEXT:    lis 26, 4
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_21: # %while.body392
 ; CHECK-NEXT:    #
@@ -178,9 +178,9 @@ define void @jbd2_journal_commit_transaction(ptr %journal, i64 %inp1, i32 %inp2,
 ; CHECK-NO-ISEL-NEXT:  .LBB0_18: # %if.end421
 ; CHECK-NO-ISEL-NEXT:  .LBB0_19: # %if.then.i1296
 ; CHECK-NO-ISEL-NEXT:  .LBB0_20: # %while.body392.lr.ph
-; CHECK-NO-ISEL-NEXT:    lis 26, 4
 ; CHECK-NO-ISEL-NEXT:    mr 27, 5
 ; CHECK-NO-ISEL-NEXT:    mr 28, 3
+; CHECK-NO-ISEL-NEXT:    lis 26, 4
 ; CHECK-NO-ISEL-NEXT:    .p2align 4
 ; CHECK-NO-ISEL-NEXT:  .LBB0_21: # %while.body392
 ; CHECK-NO-ISEL-NEXT:    #

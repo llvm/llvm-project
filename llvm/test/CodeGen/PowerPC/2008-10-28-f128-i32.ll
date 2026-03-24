@@ -50,18 +50,18 @@ define i64 @__fixunstfdi(ppc_fp128 %a) nounwind readnone {
 ; CHECK-NEXT:    stfd 1, 296(1)
 ; CHECK-NEXT:    stw 3, 320(1)
 ; CHECK-NEXT:    lwz 3, 300(1)
-; CHECK-NEXT:    stw 29, 340(1)
+; CHECK-NEXT:    lfd 31, 320(1)
 ; CHECK-NEXT:    stw 3, 316(1)
 ; CHECK-NEXT:    lwz 3, 296(1)
-; CHECK-NEXT:    stw 29, 332(1)
-; CHECK-NEXT:    stw 3, 312(1)
-; CHECK-NEXT:    stw 29, 328(1)
-; CHECK-NEXT:    lfd 31, 320(1)
-; CHECK-NEXT:    lfd 30, 312(1)
-; CHECK-NEXT:    lfd 3, 336(1)
 ; CHECK-NEXT:    fmr 1, 31
-; CHECK-NEXT:    lfd 4, 328(1)
+; CHECK-NEXT:    stw 29, 340(1)
+; CHECK-NEXT:    stw 3, 312(1)
+; CHECK-NEXT:    lfd 30, 312(1)
+; CHECK-NEXT:    stw 29, 332(1)
+; CHECK-NEXT:    stw 29, 328(1)
 ; CHECK-NEXT:    fmr 2, 30
+; CHECK-NEXT:    lfd 3, 336(1)
+; CHECK-NEXT:    lfd 4, 328(1)
 ; CHECK-NEXT:    bl __gcc_qmul
 ; CHECK-NEXT:    lis 3, 16864
 ; CHECK-NEXT:    stfd 1, 280(1)

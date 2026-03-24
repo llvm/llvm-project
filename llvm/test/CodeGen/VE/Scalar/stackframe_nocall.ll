@@ -41,9 +41,9 @@ define nonnull ptr @test_frame32(ptr nocapture readonly %0) {
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB1_2:
-; CHECK-NEXT:    ld1b.zx %s1, (, %s0)
+; CHECK-NEXT:    ld1b.zx %s0, (, %s0)
+; CHECK-NEXT:    st1b %s0, (, %s11)
 ; CHECK-NEXT:    lea %s0, (, %s11)
-; CHECK-NEXT:    st1b %s1, (, %s11)
 ; CHECK-NEXT:    adds.l %s11, 32, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
 ;
@@ -61,9 +61,9 @@ define nonnull ptr @test_frame32(ptr nocapture readonly %0) {
 ; PIC-NEXT:    monc
 ; PIC-NEXT:    or %s0, 0, %s62
 ; PIC-NEXT:  .LBB1_2:
-; PIC-NEXT:    ld1b.zx %s1, (, %s0)
+; PIC-NEXT:    ld1b.zx %s0, (, %s0)
+; PIC-NEXT:    st1b %s0, (, %s11)
 ; PIC-NEXT:    lea %s0, (, %s11)
-; PIC-NEXT:    st1b %s1, (, %s11)
 ; PIC-NEXT:    adds.l %s11, 32, %s11
 ; PIC-NEXT:    b.l.t (, %s10)
   %2 = alloca [32 x i8], align 1
@@ -113,9 +113,9 @@ define noalias nonnull ptr @test_align32(i32 signext %0, ptr nocapture readonly 
 ; CHECK-NEXT:    lea %s0, 240(, %s11)
 ; CHECK-NEXT:    ld1b.zx %s1, (, %s2)
 ; CHECK-NEXT:    lea %s0, 31(, %s0)
-; CHECK-NEXT:    and %s2, -32, %s0
+; CHECK-NEXT:    and %s0, -32, %s0
+; CHECK-NEXT:    st1b %s1, (, %s0)
 ; CHECK-NEXT:    lea %s0, 256(, %s17)
-; CHECK-NEXT:    st1b %s1, (, %s2)
 ; CHECK-NEXT:    or %s11, 0, %s9
 ; CHECK-NEXT:    ld %s17, 40(, %s11)
 ; CHECK-NEXT:    ld %s10, 8(, %s11)
@@ -160,9 +160,9 @@ define noalias nonnull ptr @test_align32(i32 signext %0, ptr nocapture readonly 
 ; PIC-NEXT:    lea %s0, 240(, %s11)
 ; PIC-NEXT:    ld1b.zx %s1, (, %s2)
 ; PIC-NEXT:    lea %s0, 31(, %s0)
-; PIC-NEXT:    and %s2, -32, %s0
+; PIC-NEXT:    and %s0, -32, %s0
+; PIC-NEXT:    st1b %s1, (, %s0)
 ; PIC-NEXT:    lea %s0, 256(, %s17)
-; PIC-NEXT:    st1b %s1, (, %s2)
 ; PIC-NEXT:    or %s11, 0, %s9
 ; PIC-NEXT:    ld %s17, 40(, %s11)
 ; PIC-NEXT:    ld %s16, 32(, %s11)
@@ -232,9 +232,9 @@ define nonnull ptr @test_frame32_var(ptr nocapture readnone %0) {
 ; CHECK-NEXT:    lea %s0, data@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s0, data@hi(, %s0)
-; CHECK-NEXT:    ld1b.zx %s1, (, %s0)
+; CHECK-NEXT:    ld1b.zx %s0, (, %s0)
+; CHECK-NEXT:    st1b %s0, (, %s11)
 ; CHECK-NEXT:    lea %s0, (, %s11)
-; CHECK-NEXT:    st1b %s1, (, %s11)
 ; CHECK-NEXT:    adds.l %s11, 32, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
 ;
@@ -262,9 +262,9 @@ define nonnull ptr @test_frame32_var(ptr nocapture readnone %0) {
 ; PIC-NEXT:    and %s0, %s0, (32)0
 ; PIC-NEXT:    lea.sl %s0, data@got_hi(, %s0)
 ; PIC-NEXT:    ld %s0, (%s0, %s15)
-; PIC-NEXT:    ld1b.zx %s1, (, %s0)
+; PIC-NEXT:    ld1b.zx %s0, (, %s0)
+; PIC-NEXT:    st1b %s0, (, %s11)
 ; PIC-NEXT:    lea %s0, (, %s11)
-; PIC-NEXT:    st1b %s1, (, %s11)
 ; PIC-NEXT:    adds.l %s11, 32, %s11
 ; PIC-NEXT:    ld %s16, 32(, %s11)
 ; PIC-NEXT:    ld %s15, 24(, %s11)
@@ -310,9 +310,9 @@ define noalias nonnull ptr @test_align32_var(i32 signext %0, ptr nocapture reado
 ; CHECK-NEXT:    lea %s0, 240(, %s11)
 ; CHECK-NEXT:    ld1b.zx %s1, (, %s2)
 ; CHECK-NEXT:    lea %s0, 31(, %s0)
-; CHECK-NEXT:    and %s2, -32, %s0
+; CHECK-NEXT:    and %s0, -32, %s0
+; CHECK-NEXT:    st1b %s1, (, %s0)
 ; CHECK-NEXT:    lea %s0, 256(, %s17)
-; CHECK-NEXT:    st1b %s1, (, %s2)
 ; CHECK-NEXT:    or %s11, 0, %s9
 ; CHECK-NEXT:    ld %s17, 40(, %s11)
 ; CHECK-NEXT:    ld %s10, 8(, %s11)
@@ -357,9 +357,9 @@ define noalias nonnull ptr @test_align32_var(i32 signext %0, ptr nocapture reado
 ; PIC-NEXT:    lea %s0, 240(, %s11)
 ; PIC-NEXT:    ld1b.zx %s1, (, %s2)
 ; PIC-NEXT:    lea %s0, 31(, %s0)
-; PIC-NEXT:    and %s2, -32, %s0
+; PIC-NEXT:    and %s0, -32, %s0
+; PIC-NEXT:    st1b %s1, (, %s0)
 ; PIC-NEXT:    lea %s0, 256(, %s17)
-; PIC-NEXT:    st1b %s1, (, %s2)
 ; PIC-NEXT:    or %s11, 0, %s9
 ; PIC-NEXT:    ld %s17, 40(, %s11)
 ; PIC-NEXT:    ld %s16, 32(, %s11)

@@ -53,9 +53,9 @@ define i120 @ldi120(ptr %p) nounwind {
 define i280 @ldi280(ptr %p) nounwind {
 ; CHECK-LABEL: ldi280:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldp x8, x1, [x0]
 ; CHECK-NEXT:    ldrb w9, [x0, #34]
 ; CHECK-NEXT:    ldrh w10, [x0, #32]
-; CHECK-NEXT:    ldp x8, x1, [x0]
 ; CHECK-NEXT:    ldp x2, x3, [x0, #16]
 ; CHECK-NEXT:    orr x4, x10, x9, lsl #16
 ; CHECK-NEXT:    mov x0, x8

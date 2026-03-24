@@ -181,9 +181,9 @@ define <3 x float> @exp10_v3f32(<3 x float> %x) {
 ; CHECK-NEXT:    push {r4, r5, r6, lr}
 ; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    vmov d1, r2, r3
+; CHECK-NEXT:    mov r4, r1
 ; CHECK-NEXT:    mov r5, r0
 ; CHECK-NEXT:    vmov d0, r0, r1
-; CHECK-NEXT:    mov r4, r1
 ; CHECK-NEXT:    vmov r0, s2
 ; CHECK-NEXT:    bl exp10f
 ; CHECK-NEXT:    mov r6, r0

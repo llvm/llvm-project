@@ -164,18 +164,16 @@ entry:
 define <3 x i8> @loaddup_str_v3i8(ptr %p) {
 ; CHECK-SD-LABEL: loaddup_str_v3i8:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov x8, x0
-; CHECK-SD-NEXT:    ldrb w0, [x0]
-; CHECK-SD-NEXT:    strb wzr, [x8]
-; CHECK-SD-NEXT:    mov w1, w0
-; CHECK-SD-NEXT:    mov w2, w0
+; CHECK-SD-NEXT:    ldrb w1, [x0]
+; CHECK-SD-NEXT:    strb wzr, [x0]
+; CHECK-SD-NEXT:    mov w0, w1
+; CHECK-SD-NEXT:    mov w2, w1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: loaddup_str_v3i8:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ldr b0, [x0]
-; CHECK-GI-NEXT:    mov x8, x0
-; CHECK-GI-NEXT:    strb wzr, [x8]
+; CHECK-GI-NEXT:    strb wzr, [x0]
 ; CHECK-GI-NEXT:    dup v0.8b, v0.b[0]
 ; CHECK-GI-NEXT:    umov w0, v0.b[0]
 ; CHECK-GI-NEXT:    umov w1, v0.b[1]
@@ -1242,26 +1240,23 @@ entry:
 define <2 x i128> @loaddup_str_v2i128(ptr %p) {
 ; CHECK-SD-LABEL: loaddup_str_v2i128:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov x8, x0
-; CHECK-SD-NEXT:    ldr x0, [x0]
-; CHECK-SD-NEXT:    ldr x1, [x8, #8]
-; CHECK-SD-NEXT:    stp xzr, xzr, [x8]
-; CHECK-SD-NEXT:    mov x2, x0
+; CHECK-SD-NEXT:    ldp x2, x1, [x0]
+; CHECK-SD-NEXT:    stp xzr, xzr, [x0]
+; CHECK-SD-NEXT:    mov x0, x2
 ; CHECK-SD-NEXT:    mov x3, x1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: loaddup_str_v2i128:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ldr q1, [x0]
 ; CHECK-GI-NEXT:    mov v0.d[0], xzr
-; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ldr q1, [x0]
 ; CHECK-GI-NEXT:    mov d2, v1.d[1]
-; CHECK-GI-NEXT:    fmov x0, d1
 ; CHECK-GI-NEXT:    fmov x2, d1
 ; CHECK-GI-NEXT:    mov v0.d[1], xzr
 ; CHECK-GI-NEXT:    fmov x1, d2
 ; CHECK-GI-NEXT:    fmov x3, d2
-; CHECK-GI-NEXT:    str q0, [x8]
+; CHECK-GI-NEXT:    str q0, [x0]
+; CHECK-GI-NEXT:    fmov x0, d1
 ; CHECK-GI-NEXT:    ret
 entry:
   %a = load i128, ptr %p
@@ -1329,29 +1324,27 @@ entry:
 define <3 x i128> @loaddup_str_v3i128(ptr %p) {
 ; CHECK-SD-LABEL: loaddup_str_v3i128:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov x8, x0
-; CHECK-SD-NEXT:    ldp x0, x1, [x0]
-; CHECK-SD-NEXT:    stp xzr, xzr, [x8]
-; CHECK-SD-NEXT:    mov x2, x0
+; CHECK-SD-NEXT:    ldp x2, x1, [x0]
+; CHECK-SD-NEXT:    stp xzr, xzr, [x0]
+; CHECK-SD-NEXT:    mov x0, x2
 ; CHECK-SD-NEXT:    mov x3, x1
-; CHECK-SD-NEXT:    mov x4, x0
+; CHECK-SD-NEXT:    mov x4, x2
 ; CHECK-SD-NEXT:    mov x5, x1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: loaddup_str_v3i128:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ldr q1, [x0]
 ; CHECK-GI-NEXT:    mov v0.d[0], xzr
-; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ldr q1, [x0]
 ; CHECK-GI-NEXT:    mov d2, v1.d[1]
-; CHECK-GI-NEXT:    fmov x0, d1
 ; CHECK-GI-NEXT:    fmov x2, d1
 ; CHECK-GI-NEXT:    fmov x4, d1
 ; CHECK-GI-NEXT:    mov v0.d[1], xzr
 ; CHECK-GI-NEXT:    fmov x1, d2
 ; CHECK-GI-NEXT:    fmov x3, d2
 ; CHECK-GI-NEXT:    fmov x5, d2
-; CHECK-GI-NEXT:    str q0, [x8]
+; CHECK-GI-NEXT:    str q0, [x0]
+; CHECK-GI-NEXT:    fmov x0, d1
 ; CHECK-GI-NEXT:    ret
 entry:
   %a = load i128, ptr %p
@@ -1427,24 +1420,21 @@ entry:
 define <4 x i128> @loaddup_str_v4i128(ptr %p) {
 ; CHECK-SD-LABEL: loaddup_str_v4i128:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov x8, x0
-; CHECK-SD-NEXT:    ldp x0, x1, [x0]
-; CHECK-SD-NEXT:    stp xzr, xzr, [x8]
-; CHECK-SD-NEXT:    mov x2, x0
+; CHECK-SD-NEXT:    ldp x2, x1, [x0]
+; CHECK-SD-NEXT:    stp xzr, xzr, [x0]
+; CHECK-SD-NEXT:    mov x0, x2
 ; CHECK-SD-NEXT:    mov x3, x1
-; CHECK-SD-NEXT:    mov x4, x0
+; CHECK-SD-NEXT:    mov x4, x2
 ; CHECK-SD-NEXT:    mov x5, x1
-; CHECK-SD-NEXT:    mov x6, x0
+; CHECK-SD-NEXT:    mov x6, x2
 ; CHECK-SD-NEXT:    mov x7, x1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: loaddup_str_v4i128:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ldr q1, [x0]
 ; CHECK-GI-NEXT:    mov v0.d[0], xzr
-; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ldr q1, [x0]
 ; CHECK-GI-NEXT:    mov d2, v1.d[1]
-; CHECK-GI-NEXT:    fmov x0, d1
 ; CHECK-GI-NEXT:    fmov x2, d1
 ; CHECK-GI-NEXT:    fmov x4, d1
 ; CHECK-GI-NEXT:    fmov x6, d1
@@ -1453,7 +1443,8 @@ define <4 x i128> @loaddup_str_v4i128(ptr %p) {
 ; CHECK-GI-NEXT:    fmov x3, d2
 ; CHECK-GI-NEXT:    fmov x5, d2
 ; CHECK-GI-NEXT:    fmov x7, d2
-; CHECK-GI-NEXT:    str q0, [x8]
+; CHECK-GI-NEXT:    str q0, [x0]
+; CHECK-GI-NEXT:    fmov x0, d1
 ; CHECK-GI-NEXT:    ret
 entry:
   %a = load i128, ptr %p
@@ -1744,10 +1735,10 @@ entry:
 define <16 x half> @loaddup_str_v16half(ptr %p) {
 ; CHECK-SD-LABEL: loaddup_str_v16half:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    movi d1, #0000000000000000
 ; CHECK-SD-NEXT:    ld1r { v0.8h }, [x0]
-; CHECK-SD-NEXT:    movi d2, #0000000000000000
+; CHECK-SD-NEXT:    str h1, [x0]
 ; CHECK-SD-NEXT:    mov v1.16b, v0.16b
-; CHECK-SD-NEXT:    str h2, [x0]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: loaddup_str_v16half:
@@ -2046,10 +2037,10 @@ entry:
 define <16 x bfloat> @loaddup_str_v16bfloat(ptr %p) {
 ; CHECK-SD-LABEL: loaddup_str_v16bfloat:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    movi d1, #0000000000000000
 ; CHECK-SD-NEXT:    ld1r { v0.8h }, [x0]
-; CHECK-SD-NEXT:    movi d2, #0000000000000000
+; CHECK-SD-NEXT:    str h1, [x0]
 ; CHECK-SD-NEXT:    mov v1.16b, v0.16b
-; CHECK-SD-NEXT:    str h2, [x0]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: loaddup_str_v16bfloat:
@@ -2566,19 +2557,19 @@ entry:
 define <2 x fp128> @loaddup_str_v2fp128(ptr %p) {
 ; CHECK-SD-LABEL: loaddup_str_v2fp128:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ldr q0, [x0]
 ; CHECK-SD-NEXT:    adrp x8, .LCPI155_0
-; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI155_0]
+; CHECK-SD-NEXT:    ldr q0, [x0]
+; CHECK-SD-NEXT:    ldr q1, [x8, :lo12:.LCPI155_0]
+; CHECK-SD-NEXT:    str q1, [x0]
 ; CHECK-SD-NEXT:    mov v1.16b, v0.16b
-; CHECK-SD-NEXT:    str q2, [x0]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: loaddup_str_v2fp128:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-GI-NEXT:    ldr q0, [x0]
-; CHECK-GI-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-GI-NEXT:    str q1, [x0]
 ; CHECK-GI-NEXT:    mov v1.16b, v0.16b
-; CHECK-GI-NEXT:    str q2, [x0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %a = load fp128, ptr %p
@@ -2628,21 +2619,21 @@ entry:
 define <3 x fp128> @loaddup_str_v3fp128(ptr %p) {
 ; CHECK-SD-LABEL: loaddup_str_v3fp128:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ldr q0, [x0]
 ; CHECK-SD-NEXT:    adrp x8, .LCPI159_0
-; CHECK-SD-NEXT:    ldr q3, [x8, :lo12:.LCPI159_0]
-; CHECK-SD-NEXT:    mov v1.16b, v0.16b
+; CHECK-SD-NEXT:    ldr q0, [x0]
+; CHECK-SD-NEXT:    ldr q1, [x8, :lo12:.LCPI159_0]
 ; CHECK-SD-NEXT:    mov v2.16b, v0.16b
-; CHECK-SD-NEXT:    str q3, [x0]
+; CHECK-SD-NEXT:    str q1, [x0]
+; CHECK-SD-NEXT:    mov v1.16b, v0.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: loaddup_str_v3fp128:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-GI-NEXT:    ldr q0, [x0]
-; CHECK-GI-NEXT:    movi v3.2d, #0000000000000000
-; CHECK-GI-NEXT:    mov v1.16b, v0.16b
 ; CHECK-GI-NEXT:    mov v2.16b, v0.16b
-; CHECK-GI-NEXT:    str q3, [x0]
+; CHECK-GI-NEXT:    str q1, [x0]
+; CHECK-GI-NEXT:    mov v1.16b, v0.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %a = load fp128, ptr %p
@@ -2695,23 +2686,23 @@ entry:
 define <4 x fp128> @loaddup_str_v4fp128(ptr %p) {
 ; CHECK-SD-LABEL: loaddup_str_v4fp128:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ldr q0, [x0]
 ; CHECK-SD-NEXT:    adrp x8, .LCPI163_0
-; CHECK-SD-NEXT:    ldr q4, [x8, :lo12:.LCPI163_0]
-; CHECK-SD-NEXT:    mov v1.16b, v0.16b
+; CHECK-SD-NEXT:    ldr q0, [x0]
+; CHECK-SD-NEXT:    ldr q1, [x8, :lo12:.LCPI163_0]
 ; CHECK-SD-NEXT:    mov v2.16b, v0.16b
 ; CHECK-SD-NEXT:    mov v3.16b, v0.16b
-; CHECK-SD-NEXT:    str q4, [x0]
+; CHECK-SD-NEXT:    str q1, [x0]
+; CHECK-SD-NEXT:    mov v1.16b, v0.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: loaddup_str_v4fp128:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-GI-NEXT:    ldr q0, [x0]
-; CHECK-GI-NEXT:    movi v4.2d, #0000000000000000
-; CHECK-GI-NEXT:    mov v1.16b, v0.16b
 ; CHECK-GI-NEXT:    mov v2.16b, v0.16b
 ; CHECK-GI-NEXT:    mov v3.16b, v0.16b
-; CHECK-GI-NEXT:    str q4, [x0]
+; CHECK-GI-NEXT:    str q1, [x0]
+; CHECK-GI-NEXT:    mov v1.16b, v0.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %a = load fp128, ptr %p

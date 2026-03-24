@@ -25,8 +25,8 @@ define <1 x i64> @lrint_v1f16(<1 x half> %x) nounwind {
 ; BE:       # %bb.0:
 ; BE-NEXT:    mflr r0
 ; BE-NEXT:    stdu r1, -112(r1)
-; BE-NEXT:    clrldi r3, r3, 48
 ; BE-NEXT:    std r0, 128(r1)
+; BE-NEXT:    clrldi r3, r3, 48
 ; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    bl lrintf
@@ -40,8 +40,8 @@ define <1 x i64> @lrint_v1f16(<1 x half> %x) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -32(r1)
-; CHECK-NEXT:    clrldi r3, r3, 48
 ; CHECK-NEXT:    std r0, 48(r1)
+; CHECK-NEXT:    clrldi r3, r3, 48
 ; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    bl lrintf
@@ -88,9 +88,9 @@ define <2 x i64> @lrint_v2f16(<2 x half> %x) nounwind {
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -96(r1)
 ; CHECK-NEXT:    li r5, 48
-; CHECK-NEXT:    clrldi r3, r3, 48
 ; CHECK-NEXT:    std r0, 112(r1)
 ; CHECK-NEXT:    std r29, 72(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    clrldi r3, r3, 48
 ; CHECK-NEXT:    std r30, 80(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    mr r30, r4
 ; CHECK-NEXT:    stxvd2x v31, r1, r5 # 16-byte Folded Spill
@@ -127,12 +127,12 @@ define <4 x i64> @lrint_v4f16(<4 x half> %x) nounwind {
 ; BE-NEXT:    stdu r1, -176(r1)
 ; BE-NEXT:    std r0, 192(r1)
 ; BE-NEXT:    std r28, 144(r1) # 8-byte Folded Spill
-; BE-NEXT:    mr r28, r3
-; BE-NEXT:    clrldi r3, r4, 48
 ; BE-NEXT:    std r29, 152(r1) # 8-byte Folded Spill
 ; BE-NEXT:    std r30, 160(r1) # 8-byte Folded Spill
 ; BE-NEXT:    mr r30, r6
 ; BE-NEXT:    mr r29, r5
+; BE-NEXT:    mr r28, r3
+; BE-NEXT:    clrldi r3, r4, 48
 ; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    bl lrintf
@@ -174,8 +174,8 @@ define <4 x i64> @lrint_v4f16(<4 x half> %x) nounwind {
 ; CHECK-NEXT:    stdu r1, -128(r1)
 ; CHECK-NEXT:    li r7, 48
 ; CHECK-NEXT:    std r0, 144(r1)
-; CHECK-NEXT:    clrldi r3, r3, 48
 ; CHECK-NEXT:    std r27, 88(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    clrldi r3, r3, 48
 ; CHECK-NEXT:    std r28, 96(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r29, 104(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    mr r29, r5
@@ -237,8 +237,6 @@ define <8 x i64> @lrint_v8f16(<8 x half> %x) nounwind {
 ; BE-NEXT:    stdu r1, -240(r1)
 ; BE-NEXT:    std r0, 256(r1)
 ; BE-NEXT:    std r24, 176(r1) # 8-byte Folded Spill
-; BE-NEXT:    mr r24, r3
-; BE-NEXT:    clrldi r3, r4, 48
 ; BE-NEXT:    std r25, 184(r1) # 8-byte Folded Spill
 ; BE-NEXT:    std r26, 192(r1) # 8-byte Folded Spill
 ; BE-NEXT:    std r27, 200(r1) # 8-byte Folded Spill
@@ -251,6 +249,8 @@ define <8 x i64> @lrint_v8f16(<8 x half> %x) nounwind {
 ; BE-NEXT:    mr r28, r7
 ; BE-NEXT:    mr r26, r6
 ; BE-NEXT:    mr r25, r5
+; BE-NEXT:    mr r24, r3
+; BE-NEXT:    clrldi r3, r4, 48
 ; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    bl lrintf
@@ -324,8 +324,8 @@ define <8 x i64> @lrint_v8f16(<8 x half> %x) nounwind {
 ; CHECK-NEXT:    stdu r1, -192(r1)
 ; CHECK-NEXT:    li r11, 48
 ; CHECK-NEXT:    std r0, 208(r1)
-; CHECK-NEXT:    clrldi r3, r3, 48
 ; CHECK-NEXT:    std r23, 120(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    clrldi r3, r3, 48
 ; CHECK-NEXT:    std r24, 128(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r25, 136(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    mr r25, r5
@@ -436,23 +436,23 @@ define <16 x i64> @lrint_v16i64_v16f16(<16 x half> %x) nounwind {
 ; BE-NEXT:    mflr r0
 ; BE-NEXT:    stdu r1, -368(r1)
 ; BE-NEXT:    std r0, 384(r1)
-; BE-NEXT:    std r24, 304(r1) # 8-byte Folded Spill
-; BE-NEXT:    mr r24, r3
-; BE-NEXT:    lhz r3, 494(r1)
 ; BE-NEXT:    std r16, 240(r1) # 8-byte Folded Spill
-; BE-NEXT:    lhz r16, 486(r1)
 ; BE-NEXT:    std r17, 248(r1) # 8-byte Folded Spill
 ; BE-NEXT:    std r18, 256(r1) # 8-byte Folded Spill
 ; BE-NEXT:    std r19, 264(r1) # 8-byte Folded Spill
 ; BE-NEXT:    std r20, 272(r1) # 8-byte Folded Spill
 ; BE-NEXT:    std r21, 280(r1) # 8-byte Folded Spill
 ; BE-NEXT:    std r22, 288(r1) # 8-byte Folded Spill
+; BE-NEXT:    std r24, 304(r1) # 8-byte Folded Spill
+; BE-NEXT:    mr r24, r3
 ; BE-NEXT:    lhz r22, 534(r1)
 ; BE-NEXT:    lhz r21, 542(r1)
 ; BE-NEXT:    lhz r20, 518(r1)
 ; BE-NEXT:    lhz r19, 526(r1)
 ; BE-NEXT:    lhz r18, 502(r1)
 ; BE-NEXT:    lhz r17, 510(r1)
+; BE-NEXT:    lhz r16, 486(r1)
+; BE-NEXT:    lhz r3, 494(r1)
 ; BE-NEXT:    std r23, 296(r1) # 8-byte Folded Spill
 ; BE-NEXT:    std r25, 312(r1) # 8-byte Folded Spill
 ; BE-NEXT:    std r26, 320(r1) # 8-byte Folded Spill
@@ -604,29 +604,29 @@ define <16 x i64> @lrint_v16i64_v16f16(<16 x half> %x) nounwind {
 ; CHECK-NEXT:    stdu r1, -320(r1)
 ; CHECK-NEXT:    li r11, 48
 ; CHECK-NEXT:    std r0, 336(r1)
-; CHECK-NEXT:    std r23, 248(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    mr r23, r3
-; CHECK-NEXT:    lhz r3, 416(r1)
 ; CHECK-NEXT:    std r16, 192(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    lhz r16, 424(r1)
 ; CHECK-NEXT:    std r17, 200(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r18, 208(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    lhz r18, 440(r1)
 ; CHECK-NEXT:    lhz r17, 432(r1)
 ; CHECK-NEXT:    stxvd2x v24, r1, r11 # 16-byte Folded Spill
 ; CHECK-NEXT:    li r11, 64
-; CHECK-NEXT:    std r18, 208(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    lhz r18, 440(r1)
-; CHECK-NEXT:    std r19, 216(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    lhz r19, 448(r1)
-; CHECK-NEXT:    lhz r16, 424(r1)
 ; CHECK-NEXT:    stxvd2x v25, r1, r11 # 16-byte Folded Spill
 ; CHECK-NEXT:    li r11, 80
+; CHECK-NEXT:    std r19, 216(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r20, 224(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    lhz r20, 456(r1)
-; CHECK-NEXT:    stxvd2x v26, r1, r11 # 16-byte Folded Spill
-; CHECK-NEXT:    li r11, 96
 ; CHECK-NEXT:    std r21, 232(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r22, 240(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    lhz r22, 472(r1)
 ; CHECK-NEXT:    lhz r21, 464(r1)
+; CHECK-NEXT:    lhz r20, 456(r1)
+; CHECK-NEXT:    lhz r19, 448(r1)
+; CHECK-NEXT:    stxvd2x v26, r1, r11 # 16-byte Folded Spill
+; CHECK-NEXT:    li r11, 96
+; CHECK-NEXT:    std r23, 248(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    mr r23, r3
+; CHECK-NEXT:    lhz r3, 416(r1)
 ; CHECK-NEXT:    stxvd2x v27, r1, r11 # 16-byte Folded Spill
 ; CHECK-NEXT:    li r11, 112
 ; CHECK-NEXT:    std r15, 184(r1) # 8-byte Folded Spill
@@ -1646,12 +1646,12 @@ define <2 x i64> @lrint_v2f32(<2 x float> %x) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -64(r1)
-; CHECK-NEXT:    xxsldwi vs0, v2, v2, 3
 ; CHECK-NEXT:    li r3, 48
+; CHECK-NEXT:    xxsldwi vs0, v2, v2, 3
 ; CHECK-NEXT:    std r0, 80(r1)
-; CHECK-NEXT:    xscvspdpn f1, vs0
 ; CHECK-NEXT:    stxvd2x v31, r1, r3 # 16-byte Folded Spill
 ; CHECK-NEXT:    vmr v31, v2
+; CHECK-NEXT:    xscvspdpn f1, vs0
 ; CHECK-NEXT:    bl lrintf
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    xxswapd vs0, v31
@@ -1709,12 +1709,12 @@ define <4 x i64> @lrint_v4f32(<4 x float> %x) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -80(r1)
-; CHECK-NEXT:    xxsldwi vs0, v2, v2, 3
 ; CHECK-NEXT:    li r3, 48
 ; CHECK-NEXT:    std r0, 96(r1)
-; CHECK-NEXT:    xscvspdpn f1, vs0
+; CHECK-NEXT:    xxsldwi vs0, v2, v2, 3
 ; CHECK-NEXT:    stxvd2x v30, r1, r3 # 16-byte Folded Spill
 ; CHECK-NEXT:    li r3, 64
+; CHECK-NEXT:    xscvspdpn f1, vs0
 ; CHECK-NEXT:    stxvd2x v31, r1, r3 # 16-byte Folded Spill
 ; CHECK-NEXT:    vmr v31, v2
 ; CHECK-NEXT:    bl lrintf
@@ -1724,8 +1724,8 @@ define <4 x i64> @lrint_v4f32(<4 x float> %x) nounwind {
 ; CHECK-NEXT:    xscvspdpn f1, vs0
 ; CHECK-NEXT:    bl lrintf
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    xscvspdpn f1, v31
 ; CHECK-NEXT:    mtfprd f0, r3
+; CHECK-NEXT:    xscvspdpn f1, v31
 ; CHECK-NEXT:    xxmrghd v30, vs0, v30
 ; CHECK-NEXT:    bl lrintf
 ; CHECK-NEXT:    nop
@@ -1810,8 +1810,8 @@ define <8 x i64> @lrint_v8f32(<8 x float> %x) nounwind {
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -112(r1)
 ; CHECK-NEXT:    li r3, 48
-; CHECK-NEXT:    xxsldwi vs0, v2, v2, 3
 ; CHECK-NEXT:    std r0, 128(r1)
+; CHECK-NEXT:    xxsldwi vs0, v2, v2, 3
 ; CHECK-NEXT:    stxvd2x v28, r1, r3 # 16-byte Folded Spill
 ; CHECK-NEXT:    li r3, 64
 ; CHECK-NEXT:    xscvspdpn f1, vs0
@@ -1829,8 +1829,8 @@ define <8 x i64> @lrint_v8f32(<8 x float> %x) nounwind {
 ; CHECK-NEXT:    xscvspdpn f1, vs0
 ; CHECK-NEXT:    bl lrintf
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    xscvspdpn f1, v30
 ; CHECK-NEXT:    mtfprd f0, r3
+; CHECK-NEXT:    xscvspdpn f1, v30
 ; CHECK-NEXT:    xxmrghd v29, vs0, v29
 ; CHECK-NEXT:    bl lrintf
 ; CHECK-NEXT:    nop
@@ -1850,8 +1850,8 @@ define <8 x i64> @lrint_v8f32(<8 x float> %x) nounwind {
 ; CHECK-NEXT:    xscvspdpn f1, vs0
 ; CHECK-NEXT:    bl lrintf
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    xscvspdpn f1, v31
 ; CHECK-NEXT:    mtfprd f0, r3
+; CHECK-NEXT:    xscvspdpn f1, v31
 ; CHECK-NEXT:    xxmrghd v28, vs0, v28
 ; CHECK-NEXT:    bl lrintf
 ; CHECK-NEXT:    nop
@@ -2015,8 +2015,8 @@ define <16 x i64> @lrint_v16i64_v16f32(<16 x float> %x) nounwind {
 ; CHECK-NEXT:    xscvspdpn f1, vs0
 ; CHECK-NEXT:    bl lrintf
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    xscvspdpn f1, v29
 ; CHECK-NEXT:    mtfprd f0, r3
+; CHECK-NEXT:    xscvspdpn f1, v29
 ; CHECK-NEXT:    xxmrghd v30, vs0, v30
 ; CHECK-NEXT:    bl lrintf
 ; CHECK-NEXT:    nop
@@ -2036,8 +2036,8 @@ define <16 x i64> @lrint_v16i64_v16f32(<16 x float> %x) nounwind {
 ; CHECK-NEXT:    xscvspdpn f1, vs0
 ; CHECK-NEXT:    bl lrintf
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    xscvspdpn f1, v26
 ; CHECK-NEXT:    mtfprd f0, r3
+; CHECK-NEXT:    xscvspdpn f1, v26
 ; CHECK-NEXT:    xxmrghd v27, vs0, v27
 ; CHECK-NEXT:    bl lrintf
 ; CHECK-NEXT:    nop
@@ -2057,8 +2057,8 @@ define <16 x i64> @lrint_v16i64_v16f32(<16 x float> %x) nounwind {
 ; CHECK-NEXT:    xscvspdpn f1, vs0
 ; CHECK-NEXT:    bl lrintf
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    xscvspdpn f1, v28
 ; CHECK-NEXT:    mtfprd f0, r3
+; CHECK-NEXT:    xscvspdpn f1, v28
 ; CHECK-NEXT:    xxmrghd v25, vs0, v25
 ; CHECK-NEXT:    bl lrintf
 ; CHECK-NEXT:    nop
@@ -2078,8 +2078,8 @@ define <16 x i64> @lrint_v16i64_v16f32(<16 x float> %x) nounwind {
 ; CHECK-NEXT:    xscvspdpn f1, vs0
 ; CHECK-NEXT:    bl lrintf
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    xscvspdpn f1, v31
 ; CHECK-NEXT:    mtfprd f0, r3
+; CHECK-NEXT:    xscvspdpn f1, v31
 ; CHECK-NEXT:    xxmrghd v24, vs0, v24
 ; CHECK-NEXT:    bl lrintf
 ; CHECK-NEXT:    nop
@@ -2163,8 +2163,8 @@ define <2 x i64> @lrint_v2f64(<2 x double> %x) nounwind {
 ; BE-NEXT:    xxlor f1, v31, v31
 ; BE-NEXT:    bl lrint
 ; BE-NEXT:    nop
-; BE-NEXT:    xxswapd vs1, v31
 ; BE-NEXT:    std r3, 128(r1)
+; BE-NEXT:    xxswapd vs1, v31
 ; BE-NEXT:    bl lrint
 ; BE-NEXT:    nop
 ; BE-NEXT:    std r3, 136(r1)
@@ -2213,23 +2213,23 @@ define <4 x i64> @lrint_v4f64(<4 x double> %x) nounwind {
 ; BE-NEXT:    li r3, 160
 ; BE-NEXT:    std r0, 208(r1)
 ; BE-NEXT:    stxvd2x v30, r1, r3 # 16-byte Folded Spill
-; BE-NEXT:    vmr v30, v2
 ; BE-NEXT:    li r3, 176
-; BE-NEXT:    xxlor f1, v30, v30
+; BE-NEXT:    vmr v30, v2
 ; BE-NEXT:    stxvd2x v31, r1, r3 # 16-byte Folded Spill
 ; BE-NEXT:    vmr v31, v3
+; BE-NEXT:    xxlor f1, v30, v30
 ; BE-NEXT:    bl lrint
 ; BE-NEXT:    nop
-; BE-NEXT:    xxswapd vs1, v30
 ; BE-NEXT:    std r3, 128(r1)
+; BE-NEXT:    xxswapd vs1, v30
 ; BE-NEXT:    bl lrint
 ; BE-NEXT:    nop
-; BE-NEXT:    xxlor f1, v31, v31
 ; BE-NEXT:    std r3, 136(r1)
+; BE-NEXT:    xxlor f1, v31, v31
 ; BE-NEXT:    bl lrint
 ; BE-NEXT:    nop
-; BE-NEXT:    xxswapd vs1, v31
 ; BE-NEXT:    std r3, 144(r1)
+; BE-NEXT:    xxswapd vs1, v31
 ; BE-NEXT:    bl lrint
 ; BE-NEXT:    nop
 ; BE-NEXT:    std r3, 152(r1)
@@ -2253,11 +2253,11 @@ define <4 x i64> @lrint_v4f64(<4 x double> %x) nounwind {
 ; CHECK-NEXT:    li r3, 48
 ; CHECK-NEXT:    std r0, 96(r1)
 ; CHECK-NEXT:    stxvd2x v30, r1, r3 # 16-byte Folded Spill
-; CHECK-NEXT:    vmr v30, v2
 ; CHECK-NEXT:    li r3, 64
-; CHECK-NEXT:    xxlor f1, v30, v30
+; CHECK-NEXT:    vmr v30, v2
 ; CHECK-NEXT:    stxvd2x v31, r1, r3 # 16-byte Folded Spill
 ; CHECK-NEXT:    vmr v31, v3
+; CHECK-NEXT:    xxlor f1, v30, v30
 ; CHECK-NEXT:    bl lrint
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    xxswapd vs1, v30
@@ -2301,8 +2301,8 @@ define <8 x i64> @lrint_v8f64(<8 x double> %x) nounwind {
 ; BE-NEXT:    vmr v28, v2
 ; BE-NEXT:    stxvd2x v29, r1, r3 # 16-byte Folded Spill
 ; BE-NEXT:    li r3, 224
-; BE-NEXT:    xxlor f1, v28, v28
 ; BE-NEXT:    vmr v29, v3
+; BE-NEXT:    xxlor f1, v28, v28
 ; BE-NEXT:    stxvd2x v30, r1, r3 # 16-byte Folded Spill
 ; BE-NEXT:    li r3, 240
 ; BE-NEXT:    vmr v30, v4
@@ -2310,32 +2310,32 @@ define <8 x i64> @lrint_v8f64(<8 x double> %x) nounwind {
 ; BE-NEXT:    vmr v31, v5
 ; BE-NEXT:    bl lrint
 ; BE-NEXT:    nop
-; BE-NEXT:    xxswapd vs1, v28
 ; BE-NEXT:    std r3, 128(r1)
+; BE-NEXT:    xxswapd vs1, v28
 ; BE-NEXT:    bl lrint
 ; BE-NEXT:    nop
-; BE-NEXT:    xxlor f1, v29, v29
 ; BE-NEXT:    std r3, 136(r1)
+; BE-NEXT:    xxlor f1, v29, v29
 ; BE-NEXT:    bl lrint
 ; BE-NEXT:    nop
-; BE-NEXT:    xxswapd vs1, v29
 ; BE-NEXT:    std r3, 144(r1)
+; BE-NEXT:    xxswapd vs1, v29
 ; BE-NEXT:    bl lrint
 ; BE-NEXT:    nop
-; BE-NEXT:    xxlor f1, v30, v30
 ; BE-NEXT:    std r3, 152(r1)
+; BE-NEXT:    xxlor f1, v30, v30
 ; BE-NEXT:    bl lrint
 ; BE-NEXT:    nop
-; BE-NEXT:    xxswapd vs1, v30
 ; BE-NEXT:    std r3, 160(r1)
+; BE-NEXT:    xxswapd vs1, v30
 ; BE-NEXT:    bl lrint
 ; BE-NEXT:    nop
-; BE-NEXT:    xxlor f1, v31, v31
 ; BE-NEXT:    std r3, 168(r1)
+; BE-NEXT:    xxlor f1, v31, v31
 ; BE-NEXT:    bl lrint
 ; BE-NEXT:    nop
-; BE-NEXT:    xxswapd vs1, v31
 ; BE-NEXT:    std r3, 176(r1)
+; BE-NEXT:    xxswapd vs1, v31
 ; BE-NEXT:    bl lrint
 ; BE-NEXT:    nop
 ; BE-NEXT:    std r3, 184(r1)
@@ -2371,8 +2371,8 @@ define <8 x i64> @lrint_v8f64(<8 x double> %x) nounwind {
 ; CHECK-NEXT:    vmr v28, v2
 ; CHECK-NEXT:    stxvd2x v29, r1, r3 # 16-byte Folded Spill
 ; CHECK-NEXT:    li r3, 80
-; CHECK-NEXT:    xxlor f1, v28, v28
 ; CHECK-NEXT:    vmr v29, v3
+; CHECK-NEXT:    xxlor f1, v28, v28
 ; CHECK-NEXT:    stxvd2x v30, r1, r3 # 16-byte Folded Spill
 ; CHECK-NEXT:    li r3, 96
 ; CHECK-NEXT:    vmr v30, v4
@@ -2474,8 +2474,8 @@ define <2 x i64> @lrint_v2f128(<2 x fp128> %x) nounwind {
 ; BE-NEXT:    vmr v2, v3
 ; BE-NEXT:    bl lrintf128
 ; BE-NEXT:    nop
-; BE-NEXT:    vmr v2, v31
 ; BE-NEXT:    std r3, 136(r1)
+; BE-NEXT:    vmr v2, v31
 ; BE-NEXT:    bl lrintf128
 ; BE-NEXT:    nop
 ; BE-NEXT:    std r3, 128(r1)
@@ -2500,8 +2500,8 @@ define <2 x i64> @lrint_v2f128(<2 x fp128> %x) nounwind {
 ; CHECK-NEXT:    vmr v31, v3
 ; CHECK-NEXT:    bl lrintf128
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    vmr v2, v31
 ; CHECK-NEXT:    mtvsrd v30, r3
+; CHECK-NEXT:    vmr v2, v31
 ; CHECK-NEXT:    bl lrintf128
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    mtfprd f0, r3
@@ -2537,16 +2537,16 @@ define <4 x i64> @lrint_v4f128(<4 x fp128> %x) nounwind {
 ; BE-NEXT:    vmr v31, v5
 ; BE-NEXT:    bl lrintf128
 ; BE-NEXT:    nop
-; BE-NEXT:    vmr v2, v29
 ; BE-NEXT:    std r3, 136(r1)
+; BE-NEXT:    vmr v2, v29
 ; BE-NEXT:    bl lrintf128
 ; BE-NEXT:    nop
-; BE-NEXT:    vmr v2, v31
 ; BE-NEXT:    std r3, 128(r1)
+; BE-NEXT:    vmr v2, v31
 ; BE-NEXT:    bl lrintf128
 ; BE-NEXT:    nop
-; BE-NEXT:    vmr v2, v30
 ; BE-NEXT:    std r3, 152(r1)
+; BE-NEXT:    vmr v2, v30
 ; BE-NEXT:    bl lrintf128
 ; BE-NEXT:    nop
 ; BE-NEXT:    std r3, 144(r1)
@@ -2583,8 +2583,8 @@ define <4 x i64> @lrint_v4f128(<4 x fp128> %x) nounwind {
 ; CHECK-NEXT:    vmr v31, v5
 ; CHECK-NEXT:    bl lrintf128
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    vmr v2, v29
 ; CHECK-NEXT:    mtvsrd v28, r3
+; CHECK-NEXT:    vmr v2, v29
 ; CHECK-NEXT:    bl lrintf128
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    mtfprd f0, r3
@@ -2592,8 +2592,8 @@ define <4 x i64> @lrint_v4f128(<4 x fp128> %x) nounwind {
 ; CHECK-NEXT:    xxmrghd v29, vs0, v28
 ; CHECK-NEXT:    bl lrintf128
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    vmr v2, v31
 ; CHECK-NEXT:    mtvsrd v30, r3
+; CHECK-NEXT:    vmr v2, v31
 ; CHECK-NEXT:    bl lrintf128
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    mtfprd f0, r3
@@ -2646,32 +2646,32 @@ define <8 x i64> @lrint_v8f128(<8 x fp128> %x) nounwind {
 ; BE-NEXT:    vmr v31, v9
 ; BE-NEXT:    bl lrintf128
 ; BE-NEXT:    nop
-; BE-NEXT:    vmr v2, v25
 ; BE-NEXT:    std r3, 136(r1)
+; BE-NEXT:    vmr v2, v25
 ; BE-NEXT:    bl lrintf128
 ; BE-NEXT:    nop
-; BE-NEXT:    vmr v2, v27
 ; BE-NEXT:    std r3, 128(r1)
+; BE-NEXT:    vmr v2, v27
 ; BE-NEXT:    bl lrintf128
 ; BE-NEXT:    nop
-; BE-NEXT:    vmr v2, v26
 ; BE-NEXT:    std r3, 152(r1)
+; BE-NEXT:    vmr v2, v26
 ; BE-NEXT:    bl lrintf128
 ; BE-NEXT:    nop
-; BE-NEXT:    vmr v2, v29
 ; BE-NEXT:    std r3, 144(r1)
+; BE-NEXT:    vmr v2, v29
 ; BE-NEXT:    bl lrintf128
 ; BE-NEXT:    nop
-; BE-NEXT:    vmr v2, v28
 ; BE-NEXT:    std r3, 168(r1)
+; BE-NEXT:    vmr v2, v28
 ; BE-NEXT:    bl lrintf128
 ; BE-NEXT:    nop
-; BE-NEXT:    vmr v2, v31
 ; BE-NEXT:    std r3, 160(r1)
+; BE-NEXT:    vmr v2, v31
 ; BE-NEXT:    bl lrintf128
 ; BE-NEXT:    nop
-; BE-NEXT:    vmr v2, v30
 ; BE-NEXT:    std r3, 184(r1)
+; BE-NEXT:    vmr v2, v30
 ; BE-NEXT:    bl lrintf128
 ; BE-NEXT:    nop
 ; BE-NEXT:    std r3, 176(r1)
@@ -2732,8 +2732,8 @@ define <8 x i64> @lrint_v8f128(<8 x fp128> %x) nounwind {
 ; CHECK-NEXT:    vmr v31, v9
 ; CHECK-NEXT:    bl lrintf128
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    vmr v2, v25
 ; CHECK-NEXT:    mtvsrd v24, r3
+; CHECK-NEXT:    vmr v2, v25
 ; CHECK-NEXT:    bl lrintf128
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    mtfprd f0, r3
@@ -2741,8 +2741,8 @@ define <8 x i64> @lrint_v8f128(<8 x fp128> %x) nounwind {
 ; CHECK-NEXT:    xxmrghd v25, vs0, v24
 ; CHECK-NEXT:    bl lrintf128
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    vmr v2, v27
 ; CHECK-NEXT:    mtvsrd v26, r3
+; CHECK-NEXT:    vmr v2, v27
 ; CHECK-NEXT:    bl lrintf128
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    mtfprd f0, r3
@@ -2750,8 +2750,8 @@ define <8 x i64> @lrint_v8f128(<8 x fp128> %x) nounwind {
 ; CHECK-NEXT:    xxmrghd v27, vs0, v26
 ; CHECK-NEXT:    bl lrintf128
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    vmr v2, v29
 ; CHECK-NEXT:    mtvsrd v28, r3
+; CHECK-NEXT:    vmr v2, v29
 ; CHECK-NEXT:    bl lrintf128
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    mtfprd f0, r3
@@ -2759,8 +2759,8 @@ define <8 x i64> @lrint_v8f128(<8 x fp128> %x) nounwind {
 ; CHECK-NEXT:    xxmrghd v29, vs0, v28
 ; CHECK-NEXT:    bl lrintf128
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    vmr v2, v31
 ; CHECK-NEXT:    mtvsrd v30, r3
+; CHECK-NEXT:    vmr v2, v31
 ; CHECK-NEXT:    bl lrintf128
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    mtfprd f0, r3
@@ -2850,44 +2850,44 @@ define <16 x i64> @lrint_v16i64_v16f128(<16 x fp128> %x) nounwind {
 ; BE-NEXT:    lxvw4x v31, 0, r3
 ; BE-NEXT:    bl lrintf128
 ; BE-NEXT:    nop
-; BE-NEXT:    vmr v2, v21
 ; BE-NEXT:    std r3, 184(r1)
+; BE-NEXT:    vmr v2, v21
 ; BE-NEXT:    bl lrintf128
 ; BE-NEXT:    nop
-; BE-NEXT:    vmr v2, v23
 ; BE-NEXT:    std r3, 176(r1)
+; BE-NEXT:    vmr v2, v23
 ; BE-NEXT:    bl lrintf128
 ; BE-NEXT:    nop
-; BE-NEXT:    vmr v2, v22
 ; BE-NEXT:    std r3, 200(r1)
+; BE-NEXT:    vmr v2, v22
 ; BE-NEXT:    bl lrintf128
 ; BE-NEXT:    nop
-; BE-NEXT:    vmr v2, v25
 ; BE-NEXT:    std r3, 192(r1)
+; BE-NEXT:    vmr v2, v25
 ; BE-NEXT:    bl lrintf128
 ; BE-NEXT:    nop
-; BE-NEXT:    vmr v2, v24
 ; BE-NEXT:    std r3, 216(r1)
+; BE-NEXT:    vmr v2, v24
 ; BE-NEXT:    bl lrintf128
 ; BE-NEXT:    nop
-; BE-NEXT:    vmr v2, v27
 ; BE-NEXT:    std r3, 208(r1)
+; BE-NEXT:    vmr v2, v27
 ; BE-NEXT:    bl lrintf128
 ; BE-NEXT:    nop
-; BE-NEXT:    vmr v2, v26
 ; BE-NEXT:    std r3, 232(r1)
+; BE-NEXT:    vmr v2, v26
 ; BE-NEXT:    bl lrintf128
 ; BE-NEXT:    nop
-; BE-NEXT:    vmr v2, v28
 ; BE-NEXT:    std r3, 224(r1)
+; BE-NEXT:    vmr v2, v28
 ; BE-NEXT:    bl lrintf128
 ; BE-NEXT:    nop
-; BE-NEXT:    vmr v2, v29
 ; BE-NEXT:    std r3, 248(r1)
+; BE-NEXT:    vmr v2, v29
 ; BE-NEXT:    bl lrintf128
 ; BE-NEXT:    nop
-; BE-NEXT:    vmr v2, v30
 ; BE-NEXT:    std r3, 240(r1)
+; BE-NEXT:    vmr v2, v30
 ; BE-NEXT:    bl lrintf128
 ; BE-NEXT:    nop
 ; BE-NEXT:    std r3, 264(r1)
@@ -2895,12 +2895,12 @@ define <16 x i64> @lrint_v16i64_v16f128(<16 x fp128> %x) nounwind {
 ; BE-NEXT:    lxvd2x v2, r1, r3 # 16-byte Folded Reload
 ; BE-NEXT:    bl lrintf128
 ; BE-NEXT:    nop
-; BE-NEXT:    vmr v2, v31
 ; BE-NEXT:    std r3, 256(r1)
+; BE-NEXT:    vmr v2, v31
 ; BE-NEXT:    bl lrintf128
 ; BE-NEXT:    nop
-; BE-NEXT:    vmr v2, v20
 ; BE-NEXT:    std r3, 280(r1)
+; BE-NEXT:    vmr v2, v20
 ; BE-NEXT:    bl lrintf128
 ; BE-NEXT:    nop
 ; BE-NEXT:    std r3, 272(r1)
@@ -3020,8 +3020,8 @@ define <16 x i64> @lrint_v16i64_v16f128(<16 x fp128> %x) nounwind {
 ; CHECK-NEXT:    xxswapd v31, vs0
 ; CHECK-NEXT:    bl lrintf128
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    vmr v2, v30
 ; CHECK-NEXT:    mtvsrd v20, r3
+; CHECK-NEXT:    vmr v2, v30
 ; CHECK-NEXT:    bl lrintf128
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    mtfprd f0, r3
@@ -3029,8 +3029,8 @@ define <16 x i64> @lrint_v16i64_v16f128(<16 x fp128> %x) nounwind {
 ; CHECK-NEXT:    xxmrghd v30, vs0, v20
 ; CHECK-NEXT:    bl lrintf128
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    vmr v2, v27
 ; CHECK-NEXT:    mtvsrd v21, r3
+; CHECK-NEXT:    vmr v2, v27
 ; CHECK-NEXT:    bl lrintf128
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    mtfprd f0, r3
@@ -3038,8 +3038,8 @@ define <16 x i64> @lrint_v16i64_v16f128(<16 x fp128> %x) nounwind {
 ; CHECK-NEXT:    xxmrghd v27, vs0, v21
 ; CHECK-NEXT:    bl lrintf128
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    vmr v2, v25
 ; CHECK-NEXT:    mtvsrd v22, r3
+; CHECK-NEXT:    vmr v2, v25
 ; CHECK-NEXT:    bl lrintf128
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    mtfprd f0, r3
@@ -3047,8 +3047,8 @@ define <16 x i64> @lrint_v16i64_v16f128(<16 x fp128> %x) nounwind {
 ; CHECK-NEXT:    xxmrghd v25, vs0, v22
 ; CHECK-NEXT:    bl lrintf128
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    vmr v2, v24
 ; CHECK-NEXT:    mtvsrd v23, r3
+; CHECK-NEXT:    vmr v2, v24
 ; CHECK-NEXT:    bl lrintf128
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    mtfprd f0, r3
@@ -3056,8 +3056,8 @@ define <16 x i64> @lrint_v16i64_v16f128(<16 x fp128> %x) nounwind {
 ; CHECK-NEXT:    xxmrghd v24, vs0, v23
 ; CHECK-NEXT:    bl lrintf128
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    vmr v2, v28
 ; CHECK-NEXT:    mtvsrd v26, r3
+; CHECK-NEXT:    vmr v2, v28
 ; CHECK-NEXT:    bl lrintf128
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    mtfprd f0, r3

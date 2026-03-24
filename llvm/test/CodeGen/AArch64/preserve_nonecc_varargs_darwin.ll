@@ -27,18 +27,19 @@ define i32 @caller() nounwind ssp {
 ; CHECK-NEXT:    sub sp, sp, #208
 ; CHECK-NEXT:    mov w8, #10 ; =0xa
 ; CHECK-NEXT:    mov w9, #9 ; =0x9
-; CHECK-NEXT:    mov w10, #8 ; =0x8
+; CHECK-NEXT:    stp d15, d14, [sp, #48] ; 16-byte Folded Spill
 ; CHECK-NEXT:    stp x9, x8, [sp, #24]
-; CHECK-NEXT:    mov w8, #7 ; =0x7
-; CHECK-NEXT:    mov w9, #6 ; =0x6
+; CHECK-NEXT:    mov w8, #8 ; =0x8
+; CHECK-NEXT:    mov w9, #7 ; =0x7
+; CHECK-NEXT:    stp x9, x8, [sp, #8]
+; CHECK-NEXT:    mov w8, #6 ; =0x6
 ; CHECK-NEXT:    mov w0, #1 ; =0x1
+; CHECK-NEXT:    stp d13, d12, [sp, #64] ; 16-byte Folded Spill
 ; CHECK-NEXT:    mov w1, #2 ; =0x2
 ; CHECK-NEXT:    mov w2, #3 ; =0x3
+; CHECK-NEXT:    stp d11, d10, [sp, #80] ; 16-byte Folded Spill
 ; CHECK-NEXT:    mov w3, #4 ; =0x4
 ; CHECK-NEXT:    mov w4, #5 ; =0x5
-; CHECK-NEXT:    stp d15, d14, [sp, #48] ; 16-byte Folded Spill
-; CHECK-NEXT:    stp d13, d12, [sp, #64] ; 16-byte Folded Spill
-; CHECK-NEXT:    stp d11, d10, [sp, #80] ; 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #96] ; 16-byte Folded Spill
 ; CHECK-NEXT:    stp x28, x27, [sp, #112] ; 16-byte Folded Spill
 ; CHECK-NEXT:    stp x26, x25, [sp, #128] ; 16-byte Folded Spill
@@ -46,8 +47,7 @@ define i32 @caller() nounwind ssp {
 ; CHECK-NEXT:    stp x22, x21, [sp, #160] ; 16-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #176] ; 16-byte Folded Spill
 ; CHECK-NEXT:    stp x29, x30, [sp, #192] ; 16-byte Folded Spill
-; CHECK-NEXT:    stp x8, x10, [sp, #8]
-; CHECK-NEXT:    str x9, [sp]
+; CHECK-NEXT:    str x8, [sp]
 ; CHECK-NEXT:    bl _callee
 ; CHECK-NEXT:    ldp x29, x30, [sp, #192] ; 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x20, x19, [sp, #176] ; 16-byte Folded Reload

@@ -286,8 +286,8 @@ define i32 @test_multiple_sub_uses(i32 %a, i32 %b, i32 %x, i32 %y) {
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    sub w8, w2, w3
 ; CHECK-SD-NEXT:    cmp w0, w1
-; CHECK-SD-NEXT:    mov w0, w8
 ; CHECK-SD-NEXT:    sbc w19, w2, w3
+; CHECK-SD-NEXT:    mov w0, w8
 ; CHECK-SD-NEXT:    bl use
 ; CHECK-SD-NEXT:    mov w0, w19
 ; CHECK-SD-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
@@ -301,10 +301,10 @@ define i32 @test_multiple_sub_uses(i32 %a, i32 %b, i32 %x, i32 %y) {
 ; CHECK-GI-NEXT:    .cfi_offset w19, -8
 ; CHECK-GI-NEXT:    .cfi_offset w20, -16
 ; CHECK-GI-NEXT:    .cfi_offset w30, -32
-; CHECK-GI-NEXT:    sub w19, w2, w3
 ; CHECK-GI-NEXT:    cmp w0, w1
-; CHECK-GI-NEXT:    mov w0, w19
+; CHECK-GI-NEXT:    sub w19, w2, w3
 ; CHECK-GI-NEXT:    cset w20, lo
+; CHECK-GI-NEXT:    mov w0, w19
 ; CHECK-GI-NEXT:    bl use
 ; CHECK-GI-NEXT:    sub w0, w19, w20
 ; CHECK-GI-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload

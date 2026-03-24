@@ -15,24 +15,24 @@ define i32 @func_1(ptr %l_3253) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 128
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    mov w9, #2 // =0x2
-; CHECK-NEXT:    mov w10, #96 // =0x60
+; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    strb wzr, [x9]
 ; CHECK-NEXT:    mov w9, #111 // =0x6f
-; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    str wzr, [x9]
-; CHECK-NEXT:    mov w9, #80 // =0x50
 ; CHECK-NEXT:    adrp x1, .L_MergedGlobals
 ; CHECK-NEXT:    add x1, x1, :lo12:.L_MergedGlobals
+; CHECK-NEXT:    str wzr, [x9]
+; CHECK-NEXT:    mov w9, #96 // =0x60
 ; CHECK-NEXT:    strh wzr, [x8]
+; CHECK-NEXT:    str q0, [x9]
+; CHECK-NEXT:    mov w9, #80 // =0x50
+; CHECK-NEXT:    str q0, [x9]
+; CHECK-NEXT:    mov w9, #64 // =0x40
 ; CHECK-NEXT:    str q0, [x9]
 ; CHECK-NEXT:    mov w9, #48 // =0x30
 ; CHECK-NEXT:    str q0, [x9]
 ; CHECK-NEXT:    mov w9, #32 // =0x20
-; CHECK-NEXT:    str q0, [x10]
-; CHECK-NEXT:    mov w10, #64 // =0x40
 ; CHECK-NEXT:    str q0, [x9]
 ; CHECK-NEXT:    mov w9, #16 // =0x10
-; CHECK-NEXT:    str q0, [x10]
 ; CHECK-NEXT:    str q0, [x9]
 ; CHECK-NEXT:    str q0, [x8]
 ; CHECK-NEXT:    adrp x8, .L_MergedGlobals

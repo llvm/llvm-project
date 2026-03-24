@@ -17,11 +17,11 @@ define dso_local void @check_option(ptr noalias nocapture %A, ptr noalias nocapt
 ; ENABLED-NEXT:  .LBB0_2: @ %vector.ph
 ; ENABLED-NEXT:    @ =>This Loop Header: Depth=1
 ; ENABLED-NEXT:    @ Child Loop BB0_3 Depth 2
+; ENABLED-NEXT:    dlstp.32 lr, r3
 ; ENABLED-NEXT:    mov r12, r0
 ; ENABLED-NEXT:    mov r4, r2
 ; ENABLED-NEXT:    mov r5, r1
 ; ENABLED-NEXT:    mov r6, r3
-; ENABLED-NEXT:    dlstp.32 lr, r6
 ; ENABLED-NEXT:  .LBB0_3: @ %vector.body
 ; ENABLED-NEXT:    @ Parent Loop BB0_2 Depth=1
 ; ENABLED-NEXT:    @ => This Inner Loop Header: Depth=2
@@ -48,12 +48,12 @@ define dso_local void @check_option(ptr noalias nocapture %A, ptr noalias nocapt
 ; DISABLED-NEXT:  .LBB0_2: @ %vector.ph
 ; DISABLED-NEXT:    @ =>This Loop Header: Depth=1
 ; DISABLED-NEXT:    @ Child Loop BB0_3 Depth 2
+; DISABLED-NEXT:    dls lr, r8
 ; DISABLED-NEXT:    mov r7, r8
 ; DISABLED-NEXT:    mov r12, r0
 ; DISABLED-NEXT:    mov r4, r2
 ; DISABLED-NEXT:    mov r5, r1
 ; DISABLED-NEXT:    mov r6, r3
-; DISABLED-NEXT:    dls lr, r8
 ; DISABLED-NEXT:  .LBB0_3: @ %vector.body
 ; DISABLED-NEXT:    @ Parent Loop BB0_2 Depth=1
 ; DISABLED-NEXT:    @ => This Inner Loop Header: Depth=2
@@ -63,8 +63,8 @@ define dso_local void @check_option(ptr noalias nocapture %A, ptr noalias nocapt
 ; DISABLED-NEXT:    vldrwt.u32 q0, [r5], #16
 ; DISABLED-NEXT:    vldrwt.u32 q1, [r4], #16
 ; DISABLED-NEXT:    subs r7, #1
-; DISABLED-NEXT:    subs r6, #4
 ; DISABLED-NEXT:    vadd.i32 q0, q1, q0
+; DISABLED-NEXT:    subs r6, #4
 ; DISABLED-NEXT:    vpst
 ; DISABLED-NEXT:    vstrwt.32 q0, [r12], #16
 ; DISABLED-NEXT:    le lr, .LBB0_3

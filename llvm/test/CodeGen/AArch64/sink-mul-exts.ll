@@ -43,8 +43,8 @@ l2:
 define <4 x i32> @mul_splat_sext_v4i32(ptr %x, ptr %y) {
 ; CHECK-LABEL: mul_splat_sext_v4i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:  .LBB1_1: // %l1
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -81,8 +81,8 @@ l2:
 define <2 x i64> @mul_splat_sext_v2i64(ptr %x, ptr %y) {
 ; CHECK-LABEL: mul_splat_sext_v2i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:  .LBB2_1: // %l1
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -158,8 +158,8 @@ l2:
 define <4 x i32> @mul_sext_splat_v4i32(ptr %x, ptr %y) {
 ; CHECK-LABEL: mul_sext_splat_v4i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:  .LBB4_1: // %l1
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -196,8 +196,8 @@ l2:
 define <2 x i64> @mul_sext_splat_v2i64(ptr %x, ptr %y) {
 ; CHECK-LABEL: mul_sext_splat_v2i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:  .LBB5_1: // %l1
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1

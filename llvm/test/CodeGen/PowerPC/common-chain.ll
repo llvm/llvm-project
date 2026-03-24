@@ -144,8 +144,8 @@ define i64 @not_perfect_chain_all_same_offset_fail(ptr %p, i64 %offset, i64 %bas
 ; CHECK-NEXT:    add r5, r3, r5
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    add r8, r4, r7
-; CHECK-NEXT:    sldi r9, r4, 2
 ; CHECK-NEXT:    mtctr r6
+; CHECK-NEXT:    sldi r9, r4, 2
 ; CHECK-NEXT:    add r10, r4, r9
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_2: # %for.body
@@ -238,8 +238,8 @@ define i64 @no_enough_elements_fail(ptr %p, i64 %offset, i64 %base1, i64 %n) {
 ; CHECK-NEXT:    cmpdi r6, 0
 ; CHECK-NEXT:    ble cr0, .LBB2_4
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
-; CHECK-NEXT:    sldi r7, r4, 1
 ; CHECK-NEXT:    mtctr r6
+; CHECK-NEXT:    sldi r7, r4, 1
 ; CHECK-NEXT:    add r5, r3, r5
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    add r4, r4, r7
@@ -323,8 +323,8 @@ define i64 @no_reuseable_offset_fail(ptr %p, i64 %offset, i64 %base1, i64 %n) {
 ; CHECK-NEXT:    cmpdi r6, 0
 ; CHECK-NEXT:    ble cr0, .LBB3_4
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
-; CHECK-NEXT:    sldi r9, r4, 3
 ; CHECK-NEXT:    mtctr r6
+; CHECK-NEXT:    sldi r9, r4, 3
 ; CHECK-NEXT:    add r5, r3, r5
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    sldi r7, r4, 1
@@ -432,12 +432,12 @@ define i64 @not_same_offset_fail(ptr %p, i64 %offset, i64 %base1, i64 %n) {
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    mtctr r6
-; CHECK-NEXT:    mulli r11, r4, 10
 ; CHECK-NEXT:    sldi r8, r4, 2
 ; CHECK-NEXT:    add r8, r4, r8
 ; CHECK-NEXT:    sldi r9, r4, 3
 ; CHECK-NEXT:    sub r10, r9, r4
 ; CHECK-NEXT:    sldi r7, r4, 1
+; CHECK-NEXT:    mulli r11, r4, 10
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB4_2: # %for.body
 ; CHECK-NEXT:    #
@@ -545,8 +545,8 @@ define i64 @two_chain_different_offsets_succ(ptr %p, i64 %offset, i64 %base1, i6
 ; CHECK-NEXT:    ble cr0, .LBB5_4
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    sldi r8, r4, 2
-; CHECK-NEXT:    add r7, r5, r4
 ; CHECK-NEXT:    mtctr r6
+; CHECK-NEXT:    add r7, r5, r4
 ; CHECK-NEXT:    add r5, r5, r8
 ; CHECK-NEXT:    add r7, r3, r7
 ; CHECK-NEXT:    sldi r4, r4, 1
@@ -642,9 +642,9 @@ define i64 @two_chain_two_bases_succ(ptr %p, i64 %offset, i64 %base1, i64 %base2
 ; CHECK-NEXT:    cmpdi r7, 0
 ; CHECK-NEXT:    ble cr0, .LBB6_4
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
+; CHECK-NEXT:    mtctr r7
 ; CHECK-NEXT:    add r5, r5, r4
 ; CHECK-NEXT:    add r6, r6, r4
-; CHECK-NEXT:    mtctr r7
 ; CHECK-NEXT:    sldi r4, r4, 1
 ; CHECK-NEXT:    add r5, r3, r5
 ; CHECK-NEXT:    add r6, r3, r6
@@ -725,10 +725,8 @@ define signext i32 @spill_reduce_succ(ptr %input1, ptr %input2, ptr %output, i64
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    sldi r6, r6, 2
 ; CHECK-NEXT:    li r11, 1
-; CHECK-NEXT:    std r26, -48(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    mr r26, r10
-; CHECK-NEXT:    cmpdi r6, 1
 ; CHECK-NEXT:    std r14, -144(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    cmpdi r6, 1
 ; CHECK-NEXT:    std r15, -136(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r16, -128(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r17, -120(r1) # 8-byte Folded Spill
@@ -740,6 +738,8 @@ define signext i32 @spill_reduce_succ(ptr %input1, ptr %input2, ptr %output, i64
 ; CHECK-NEXT:    std r23, -72(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r24, -64(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r25, -56(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r26, -48(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    mr r26, r10
 ; CHECK-NEXT:    std r27, -40(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
@@ -816,8 +816,8 @@ define signext i32 @spill_reduce_succ(ptr %input1, ptr %input2, ptr %output, i64
 ; CHECK-NEXT:    addi r8, r8, 1
 ; CHECK-NEXT:    mulld r3, r10, r3
 ; CHECK-NEXT:    mtctr r8
-; CHECK-NEXT:    li r8, 0
 ; CHECK-NEXT:    std r10, -192(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    li r8, 0
 ; CHECK-NEXT:    std r3, -216(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB7_3: # %for.body

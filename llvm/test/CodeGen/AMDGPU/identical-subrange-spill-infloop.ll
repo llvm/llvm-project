@@ -118,16 +118,16 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    v_readlane_b32 s65, v7, 29
 ; CHECK-NEXT:    v_readlane_b32 s66, v7, 30
 ; CHECK-NEXT:    v_readlane_b32 s67, v7, 31
-; CHECK-NEXT:    v_mov_b32_e32 v1, v2
-; CHECK-NEXT:    s_and_b64 vcc, exec, -1
 ; CHECK-NEXT:    v_readlane_b32 s53, v7, 17
 ; CHECK-NEXT:    v_readlane_b32 s54, v7, 18
 ; CHECK-NEXT:    v_readlane_b32 s55, v7, 19
-; CHECK-NEXT:    image_sample_lz v3, v[2:3], s[60:67], s[68:71] dmask:0x1
 ; CHECK-NEXT:    v_readlane_b32 s56, v7, 20
 ; CHECK-NEXT:    v_readlane_b32 s57, v7, 21
+; CHECK-NEXT:    image_sample_lz v3, v[2:3], s[60:67], s[68:71] dmask:0x1
 ; CHECK-NEXT:    v_readlane_b32 s58, v7, 22
 ; CHECK-NEXT:    v_readlane_b32 s59, v7, 23
+; CHECK-NEXT:    v_mov_b32_e32 v1, v2
+; CHECK-NEXT:    s_and_b64 vcc, exec, -1
 ; CHECK-NEXT:  .LBB0_2: ; %bb50
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)

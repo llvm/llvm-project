@@ -14,13 +14,13 @@ define amdgpu_cs_chain void @dynamic_vgprs(i32 inreg %exec, <3 x i32> inreg %sgp
 ; GISEL-GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GISEL-GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GISEL-GFX12-NEXT:    s_mov_b32 s5, s0
-; GISEL-GFX12-NEXT:    s_mov_b32 s0, s1
-; GISEL-GFX12-NEXT:    s_mov_b32 s1, s2
-; GISEL-GFX12-NEXT:    s_mov_b32 s2, s3
 ; GISEL-GFX12-NEXT:    s_mov_b32 s6, callee@abs32@lo
 ; GISEL-GFX12-NEXT:    s_mov_b32 s7, callee@abs32@hi
 ; GISEL-GFX12-NEXT:    s_mov_b32 s8, retry_vgpr_alloc@abs32@lo
 ; GISEL-GFX12-NEXT:    s_mov_b32 s9, retry_vgpr_alloc@abs32@hi
+; GISEL-GFX12-NEXT:    s_mov_b32 s0, s1
+; GISEL-GFX12-NEXT:    s_mov_b32 s1, s2
+; GISEL-GFX12-NEXT:    s_mov_b32 s2, s3
 ; GISEL-GFX12-NEXT:    s_alloc_vgpr s4
 ; GISEL-GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL-GFX12-NEXT:    s_cselect_b64 s[6:7], s[6:7], s[8:9]

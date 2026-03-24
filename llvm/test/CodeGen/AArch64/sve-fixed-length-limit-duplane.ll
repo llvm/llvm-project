@@ -8,15 +8,15 @@ define <4 x i32> @test(ptr %arg1, ptr %arg2) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s, vl8
 ; CHECK-NEXT:    mov x8, #8 // =0x8
-; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0, x8, lsl #2]
-; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x0]
-; CHECK-NEXT:    movprfx z0, z1
-; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #16
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0]
+; CHECK-NEXT:    movprfx z2, z0
+; CHECK-NEXT:    ext z2.b, z2.b, z0.b, #16
+; CHECK-NEXT:    add z3.s, z0.s, z0.s
 ; CHECK-NEXT:    add z1.s, z1.s, z1.s
-; CHECK-NEXT:    add z2.s, z2.s, z2.s
-; CHECK-NEXT:    dup v0.4s, v0.s[2]
-; CHECK-NEXT:    st1w { z1.s }, p0, [x0, x8, lsl #2]
-; CHECK-NEXT:    st1w { z2.s }, p0, [x0]
+; CHECK-NEXT:    dup v0.4s, v2.s[2]
+; CHECK-NEXT:    st1w { z3.s }, p0, [x0, x8, lsl #2]
+; CHECK-NEXT:    st1w { z1.s }, p0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <16 x i32>, ptr %arg1, align 256

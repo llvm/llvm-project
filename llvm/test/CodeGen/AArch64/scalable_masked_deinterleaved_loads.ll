@@ -93,12 +93,12 @@ define { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <v
 define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @foo_ld4_nxv16i8_mul_use_of_mask(<vscale x 16 x i1> %mask, ptr %p, ptr %p2) {
 ; CHECK-LABEL: foo_ld4_nxv16i8_mul_use_of_mask:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip1 p2.b, p0.b, p0.b
 ; CHECK-NEXT:    ld4b { z0.b - z3.b }, p0/z, [x0]
 ; CHECK-NEXT:    zip2 p1.b, p0.b, p0.b
-; CHECK-NEXT:    zip1 p3.b, p2.b, p2.b
+; CHECK-NEXT:    zip1 p2.b, p0.b, p0.b
 ; CHECK-NEXT:    zip2 p0.b, p1.b, p1.b
 ; CHECK-NEXT:    zip1 p1.b, p1.b, p1.b
+; CHECK-NEXT:    zip1 p3.b, p2.b, p2.b
 ; CHECK-NEXT:    zip2 p2.b, p2.b, p2.b
 ; CHECK-NEXT:    // fake_use: $p3
 ; CHECK-NEXT:    // fake_use: $p2

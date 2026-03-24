@@ -8,9 +8,9 @@ declare void @a(...)
 define void @b(i32 %a, i32 %b, i32 %c, ptr %d, ptr %e) minsize {
 ; CHECK-LABEL: b:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    ldr r3, [sp]
 ; CHECK-NEXT:    mov r2, r1
 ; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    ldr r3, [sp]
 ; CHECK-NEXT:    movs r0, #2
 ; CHECK-NEXT:    b a
   tail call void @a(i32 2, i32 %a, i32 %b, ptr %e)
@@ -20,9 +20,9 @@ define void @b(i32 %a, i32 %b, i32 %c, ptr %d, ptr %e) minsize {
 define void @c(i32 %a, i32 %b, i32 %c, ptr %d, ptr %e) minsize {
 ; CHECK-LABEL: c:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    ldr r3, [sp]
 ; CHECK-NEXT:    mov r2, r1
 ; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    ldr r3, [sp]
 ; CHECK-NEXT:    movs r0, #4
 ; CHECK-NEXT:    b a
   tail call void @a(i32 4, i32 %a, i32 %b, ptr %e)

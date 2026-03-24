@@ -32,7 +32,6 @@ define void @needs_align16_default_stack_align(i32 %idx) #0 {
 ; GCN-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-; GCN: ; ScratchSize: 144
   %alloca.align16 = alloca [8 x <4 x i32>], align 16, addrspace(5)
   %gep0 = getelementptr inbounds [8 x <4 x i32>], ptr addrspace(5) %alloca.align16, i32 0, i32 %idx
   store volatile <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr addrspace(5) %gep0, align 16
@@ -71,7 +70,6 @@ define void @needs_align16_stack_align4(i32 %idx) #2 {
 ; GCN-NEXT:    s_mov_b32 s34, s5
 ; GCN-NEXT:    s_mov_b32 s33, s4
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-; GCN: ; ScratchSize: 160
   %alloca.align16 = alloca [8 x <4 x i32>], align 16, addrspace(5)
   %gep0 = getelementptr inbounds [8 x <4 x i32>], ptr addrspace(5) %alloca.align16, i32 0, i32 %idx
   store volatile <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr addrspace(5) %gep0, align 16
@@ -111,7 +109,6 @@ define void @needs_align32(i32 %idx) #0 {
 ; GCN-NEXT:    s_mov_b32 s34, s5
 ; GCN-NEXT:    s_mov_b32 s33, s4
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-; GCN: ; ScratchSize: 192
   %alloca.align16 = alloca [8 x <4 x i32>], align 32, addrspace(5)
   %gep0 = getelementptr inbounds [8 x <4 x i32>], ptr addrspace(5) %alloca.align16, i32 0, i32 %idx
   store volatile <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr addrspace(5) %gep0, align 32
@@ -138,7 +135,6 @@ define void @force_realign4(i32 %idx) #1 {
 ; GCN-NEXT:    s_mov_b32 s34, s5
 ; GCN-NEXT:    s_mov_b32 s33, s4
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-; GCN: ; ScratchSize: 52
   %alloca.align16 = alloca [8 x i32], align 4, addrspace(5)
   %gep0 = getelementptr inbounds [8 x i32], ptr addrspace(5) %alloca.align16, i32 0, i32 %idx
   store volatile i32 3, ptr addrspace(5) %gep0, align 4
@@ -160,15 +156,16 @@ define amdgpu_kernel void @kernel_call_align16_from_8() #0 {
 ; GCN-NEXT:    s_addc_u32 s15, s15, needs_align16_default_stack_align@gotpcrel32@hi+12
 ; GCN-NEXT:    s_load_dwordx2 s[18:19], s[14:15], 0x0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; GCN-NEXT:    v_mov_b32_e32 v3, 2
 ; GCN-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GCN-NEXT:    v_or_b32_e32 v0, v0, v1
-; GCN-NEXT:    v_mov_b32_e32 v3, 2
+; GCN-NEXT:    s_movk_i32 s32, 0x400
+; GCN-NEXT:    buffer_store_dword v3, off, s[0:3], 0
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_or_b32_e32 v31, v0, v2
 ; GCN-NEXT:    s_mov_b32 s14, s16
 ; GCN-NEXT:    v_mov_b32_e32 v0, 1
-; GCN-NEXT:    s_movk_i32 s32, 0x400
-; GCN-NEXT:    buffer_store_dword v3, off, s[0:3], 0
-; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; GCN-NEXT:    s_endpgm
   %alloca = alloca i32, align 4, addrspace(5)
@@ -193,15 +190,16 @@ define amdgpu_kernel void @kernel_call_align16_from_5() {
 ; GCN-NEXT:    s_addc_u32 s15, s15, needs_align16_default_stack_align@gotpcrel32@hi+12
 ; GCN-NEXT:    s_load_dwordx2 s[18:19], s[14:15], 0x0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; GCN-NEXT:    v_mov_b32_e32 v3, 2
 ; GCN-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GCN-NEXT:    v_or_b32_e32 v0, v0, v1
-; GCN-NEXT:    v_mov_b32_e32 v3, 2
+; GCN-NEXT:    s_movk_i32 s32, 0x400
+; GCN-NEXT:    buffer_store_byte v3, off, s[0:3], 0
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_or_b32_e32 v31, v0, v2
 ; GCN-NEXT:    s_mov_b32 s14, s16
 ; GCN-NEXT:    v_mov_b32_e32 v0, 1
-; GCN-NEXT:    s_movk_i32 s32, 0x400
-; GCN-NEXT:    buffer_store_byte v3, off, s[0:3], 0
-; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; GCN-NEXT:    s_endpgm
   %alloca0 = alloca i8, align 1, addrspace(5)
@@ -226,15 +224,16 @@ define amdgpu_kernel void @kernel_call_align4_from_5() {
 ; GCN-NEXT:    s_addc_u32 s15, s15, needs_align16_stack_align4@gotpcrel32@hi+12
 ; GCN-NEXT:    s_load_dwordx2 s[18:19], s[14:15], 0x0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; GCN-NEXT:    v_mov_b32_e32 v3, 2
 ; GCN-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GCN-NEXT:    v_or_b32_e32 v0, v0, v1
-; GCN-NEXT:    v_mov_b32_e32 v3, 2
+; GCN-NEXT:    s_movk_i32 s32, 0x400
+; GCN-NEXT:    buffer_store_byte v3, off, s[0:3], 0
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_or_b32_e32 v31, v0, v2
 ; GCN-NEXT:    s_mov_b32 s14, s16
 ; GCN-NEXT:    v_mov_b32_e32 v0, 1
-; GCN-NEXT:    s_movk_i32 s32, 0x400
-; GCN-NEXT:    buffer_store_byte v3, off, s[0:3], 0
-; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; GCN-NEXT:    s_endpgm
   %alloca0 = alloca i8, align 1, addrspace(5)
@@ -345,16 +344,16 @@ define i32 @needs_align1024_stack_args_used_inside_loop(ptr addrspace(5) nocaptu
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b32 s11, s33
 ; GCN-NEXT:    s_add_i32 s33, s32, 0xffc0
+; GCN-NEXT:    s_and_b32 s33, s33, 0xffff0000
 ; GCN-NEXT:    s_mov_b32 s14, s34
 ; GCN-NEXT:    s_mov_b32 s34, s32
-; GCN-NEXT:    s_and_b32 s33, s33, 0xffff0000
-; GCN-NEXT:    v_lshrrev_b32_e64 v1, 6, s34
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
-; GCN-NEXT:    s_mov_b32 s10, 0
-; GCN-NEXT:    s_mov_b64 s[4:5], 0
 ; GCN-NEXT:    s_add_i32 s32, s32, 0x30000
+; GCN-NEXT:    v_lshrrev_b32_e64 v1, 6, s34
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:1024
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    s_mov_b32 s10, 0
+; GCN-NEXT:    s_mov_b64 s[4:5], 0
 ; GCN-NEXT:    ; implicit-def: $sgpr6_sgpr7
 ; GCN-NEXT:    s_branch .LBB10_2
 ; GCN-NEXT:  .LBB10_1: ; %Flow

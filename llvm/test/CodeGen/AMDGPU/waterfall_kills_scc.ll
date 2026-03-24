@@ -39,9 +39,9 @@ define amdgpu_kernel void  @foo(i1 %cmp1) {
 ; GFX906-NEXT:    v_add_lshl_u32 v2, v0, v2, 4
 ; GFX906-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX906-NEXT:    v_mov_b32_e32 v1, v0
+; GFX906-NEXT:    ds_write_b64 v2, v[0:1]
 ; GFX906-NEXT:    s_cselect_b32 s5, 1, 0
 ; GFX906-NEXT:    s_mov_b64 s[2:3], exec
-; GFX906-NEXT:    ds_write_b64 v2, v[0:1]
 ; GFX906-NEXT:  .LBB0_1: ; =>This Inner Loop Header: Depth=1
 ; GFX906-NEXT:    s_waitcnt vmcnt(3)
 ; GFX906-NEXT:    v_readfirstlane_b32 s0, v3

@@ -9,12 +9,12 @@ define amdgpu_kernel void @entry_fn() {
 ; CHECK-NEXT:    s_sext_i32_i16 s5, s5
 ; CHECK-NEXT:    s_add_co_u32 s4, s4, entry_fn@gotpcrel32@lo+8
 ; CHECK-NEXT:    s_add_co_ci_u32 s5, s5, entry_fn@gotpcrel32@hi+16
-; CHECK-NEXT:    v_mov_b32_e32 v31, v0
+; CHECK-NEXT:    s_mov_b32 s32, 0
 ; CHECK-NEXT:    s_load_b64 s[12:13], s[4:5], 0x0
 ; CHECK-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; CHECK-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; CHECK-NEXT:    s_mov_b64 s[6:7], s[2:3]
-; CHECK-NEXT:    s_mov_b32 s32, 0
+; CHECK-NEXT:    v_mov_b32_e32 v31, v0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[12:13]
 ; CHECK-NEXT:    s_endpgm

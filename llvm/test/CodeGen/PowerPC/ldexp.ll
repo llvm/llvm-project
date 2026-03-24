@@ -8,8 +8,8 @@ define float @ldexp_f32(i8 zeroext %x) nounwind {
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -32(r1)
 ; CHECK-NEXT:    vspltisw v2, 1
-; CHECK-NEXT:    mr r4, r3
 ; CHECK-NEXT:    std r0, 48(r1)
+; CHECK-NEXT:    mr r4, r3
 ; CHECK-NEXT:    xvcvsxwdp vs1, v2
 ; CHECK-NEXT:    bl ldexpf
 ; CHECK-NEXT:    nop
@@ -28,8 +28,8 @@ define double @ldexp_f64(i8 zeroext %x) nounwind {
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -32(r1)
 ; CHECK-NEXT:    vspltisw v2, 1
-; CHECK-NEXT:    mr r4, r3
 ; CHECK-NEXT:    std r0, 48(r1)
+; CHECK-NEXT:    mr r4, r3
 ; CHECK-NEXT:    xvcvsxwdp vs1, v2
 ; CHECK-NEXT:    bl ldexp
 ; CHECK-NEXT:    nop
@@ -165,8 +165,8 @@ define ppc_fp128 @ldexp_fp128(ppc_fp128 %arg0, i32 %arg1) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -32(r1)
-; CHECK-NEXT:    clrldi r5, r5, 32
 ; CHECK-NEXT:    std r0, 48(r1)
+; CHECK-NEXT:    clrldi r5, r5, 32
 ; CHECK-NEXT:    bl ldexpl
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r1, r1, 32

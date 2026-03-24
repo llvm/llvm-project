@@ -330,8 +330,8 @@ define void @callinpreheader(ptr noalias nocapture readonly %pAngle, ptr nocaptu
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.ph
 ; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    bl callee
-; CHECK-NEXT:    dls lr, r6
 ; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:    dls lr, r6
 ; CHECK-NEXT:  .LBB3_2: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr r1, [r5], #4

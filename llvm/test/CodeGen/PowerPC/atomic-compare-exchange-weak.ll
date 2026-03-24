@@ -21,8 +21,8 @@ define i32 @foo(ptr noundef %cp, ptr noundef %old, i32 noundef %c)  {
 ; CHECK-NEXT:    cmplw r6, r7
 ; CHECK-NEXT:    bne- cr0, L..BB0_5
 ; CHECK-NEXT:  # %bb.1: # %cmpxchg.fencedstore
-; CHECK-NEXT:    creqv 4*cr5+lt, 4*cr5+lt, 4*cr5+lt
 ; CHECK-NEXT:    stwcx. r5, 0, r3
+; CHECK-NEXT:    creqv 4*cr5+lt, 4*cr5+lt, 4*cr5+lt
 ; CHECK-NEXT:    bne- cr0, L..BB0_5
 ; CHECK-NEXT:  # %bb.2: # %cmpxchg.end
 ; CHECK-NEXT:    bc 12, 4*cr5+lt, L..BB0_4
@@ -49,8 +49,8 @@ define i32 @foo(ptr noundef %cp, ptr noundef %old, i32 noundef %c)  {
 ; CHECK64-NEXT:    cmplw r6, r7
 ; CHECK64-NEXT:    bne- cr0, L..BB0_5
 ; CHECK64-NEXT:  # %bb.1: # %cmpxchg.fencedstore
-; CHECK64-NEXT:    creqv 4*cr5+lt, 4*cr5+lt, 4*cr5+lt
 ; CHECK64-NEXT:    stwcx. r5, 0, r3
+; CHECK64-NEXT:    creqv 4*cr5+lt, 4*cr5+lt, 4*cr5+lt
 ; CHECK64-NEXT:    bne- cr0, L..BB0_5
 ; CHECK64-NEXT:  # %bb.2: # %cmpxchg.end
 ; CHECK64-NEXT:    bc 12, 4*cr5+lt, L..BB0_4

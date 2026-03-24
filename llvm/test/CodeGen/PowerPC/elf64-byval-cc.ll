@@ -113,8 +113,8 @@ entry:
 define zeroext i8 @test_byval_mem1_3(i64 %v1, i64 %v2, i64 %v3, i64 %v4, i64 %v5, i64 %v6, i64 %v7, ptr byval(%struct_S1) align 1 %s) {
 ; CHECK-LABEL: test_byval_mem1_3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    clrldi 3, 10, 56
 ; CHECK-NEXT:    stb 10, -8(1)
+; CHECK-NEXT:    clrldi 3, 10, 56
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i8, ptr %s, align 1
@@ -129,16 +129,16 @@ define void @call_test_byval_mem1_4() #0 {
 ; CHECK-NEXT:    std 0, 128(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 112
 ; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    li 3, 7
-; CHECK-NEXT:    li 4, 1
+; CHECK-NEXT:    addis 3, 2, .LC0@toc@ha
+; CHECK-NEXT:    li 4, 7
 ; CHECK-NEXT:    li 5, 2
 ; CHECK-NEXT:    li 7, 3
 ; CHECK-NEXT:    li 8, 4
 ; CHECK-NEXT:    li 9, 5
 ; CHECK-NEXT:    li 10, 6
-; CHECK-NEXT:    std 3, 96(1)
-; CHECK-NEXT:    addis 3, 2, .LC0@toc@ha
 ; CHECK-NEXT:    ld 3, .LC0@toc@l(3)
+; CHECK-NEXT:    std 4, 96(1)
+; CHECK-NEXT:    li 4, 1
 ; CHECK-NEXT:    lbz 6, 0(3)
 ; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    bl test_byval_mem1_4
@@ -155,8 +155,8 @@ entry:
 define zeroext i8 @test_byval_mem1_4(i64 %v1, i64 %v2, i64 %v3, ptr byval(%struct_S1) align 1 %s, i64 %v4, i64 %v5, i64 %v6, i64 %v7, i64 %v8) {
 ; CHECK-LABEL: test_byval_mem1_4:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    clrldi 3, 6, 56
 ; CHECK-NEXT:    stb 6, 56(1)
+; CHECK-NEXT:    clrldi 3, 6, 56
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i8, ptr %s, align 1
@@ -195,8 +195,8 @@ entry:
 define zeroext i8 @test_byval_mem1_5(i64 %v1, i64 %v2, i64 %v3, ptr byval(%struct_S1) align 1 %s, i64 %v4, i64 %v5, i64 %v6, i64 %v7) {
 ; CHECK-LABEL: test_byval_mem1_5:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    clrldi 3, 6, 56
 ; CHECK-NEXT:    stb 6, -8(1)
+; CHECK-NEXT:    clrldi 3, 6, 56
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i8, ptr %s, align 1
@@ -385,8 +385,8 @@ define zeroext i8 @test_byval_mem32(ptr byval(%struct_S32) align 1 %s) {
 ; CHECK-LABEL: test_byval_mem32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    std 3, -32(1)
-; CHECK-NEXT:    clrldi 3, 3, 56
 ; CHECK-NEXT:    std 4, -24(1)
+; CHECK-NEXT:    clrldi 3, 3, 56
 ; CHECK-NEXT:    std 5, -16(1)
 ; CHECK-NEXT:    std 6, -8(1)
 ; CHECK-NEXT:    blr
@@ -403,8 +403,8 @@ define void @call_test_byval_mem32_2() #0 {
 ; CHECK-NEXT:    std 0, 48(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    vspltisw 2, 1
 ; CHECK-NEXT:    addis 3, 2, .LC5@toc@ha
+; CHECK-NEXT:    vspltisw 2, 1
 ; CHECK-NEXT:    ld 3, .LC5@toc@l(3)
 ; CHECK-NEXT:    xvcvsxwdp 1, 34
 ; CHECK-NEXT:    ld 7, 24(3)
@@ -425,9 +425,9 @@ entry:
 define zeroext i8 @test_byval_mem32_2(float %f, ptr byval(%struct_S32) align 1 %s) {
 ; CHECK-LABEL: test_byval_mem32_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    clrldi 3, 4, 56
 ; CHECK-NEXT:    std 4, -32(1)
 ; CHECK-NEXT:    std 5, -24(1)
+; CHECK-NEXT:    clrldi 3, 4, 56
 ; CHECK-NEXT:    std 6, -16(1)
 ; CHECK-NEXT:    std 7, -8(1)
 ; CHECK-NEXT:    blr
@@ -477,9 +477,9 @@ entry:
 define zeroext i8 @test_byval_mem32_3(i64 %i1, float %f, i64 %i2, double %d, i32 %i3, ptr byval(%struct_S32) align 1 %s) {
 ; CHECK-LABEL: test_byval_mem32_3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    clrldi 3, 8, 56
 ; CHECK-NEXT:    std 8, 72(1)
 ; CHECK-NEXT:    std 9, 80(1)
+; CHECK-NEXT:    clrldi 3, 8, 56
 ; CHECK-NEXT:    std 10, 88(1)
 ; CHECK-NEXT:    blr
 entry:
@@ -523,8 +523,8 @@ define zeroext i8 @test_byval_mem64(ptr byval(%struct_S64) align 1 %s) {
 ; CHECK-LABEL: test_byval_mem64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    std 3, -64(1)
-; CHECK-NEXT:    clrldi 3, 3, 56
 ; CHECK-NEXT:    std 4, -56(1)
+; CHECK-NEXT:    clrldi 3, 3, 56
 ; CHECK-NEXT:    std 5, -48(1)
 ; CHECK-NEXT:    std 6, -40(1)
 ; CHECK-NEXT:    std 7, -32(1)
@@ -588,8 +588,8 @@ define zeroext i8 @test_byval_mem65(ptr byval(%struct_S65) align 1 %s) {
 ; CHECK-LABEL: test_byval_mem65:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    std 3, 32(1)
-; CHECK-NEXT:    clrldi 3, 3, 56
 ; CHECK-NEXT:    std 4, 40(1)
+; CHECK-NEXT:    clrldi 3, 3, 56
 ; CHECK-NEXT:    std 5, 48(1)
 ; CHECK-NEXT:    std 6, 56(1)
 ; CHECK-NEXT:    std 7, 64(1)

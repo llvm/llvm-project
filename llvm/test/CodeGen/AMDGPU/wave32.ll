@@ -371,8 +371,8 @@ define amdgpu_kernel void @test_loop_with_if(ptr addrspace(1) %arg) #0 {
 ; GFX1032-NEXT:    s_cbranch_execz .LBB10_8
 ; GFX1032-NEXT:  .LBB10_2: ; %bb2
 ; GFX1032-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1032-NEXT:    v_cmp_ge_i32_e64 s4, v1, v0
 ; GFX1032-NEXT:    v_cmp_lt_i32_e32 vcc_lo, v1, v0
+; GFX1032-NEXT:    v_cmp_ge_i32_e64 s4, v1, v0
 ; GFX1032-NEXT:    s_mov_b32 s3, 0
 ; GFX1032-NEXT:    s_and_saveexec_b32 s5, vcc_lo
 ; GFX1032-NEXT:    s_cbranch_execz .LBB10_4
@@ -433,8 +433,8 @@ define amdgpu_kernel void @test_loop_with_if(ptr addrspace(1) %arg) #0 {
 ; GFX1064-NEXT:    s_cbranch_execz .LBB10_8
 ; GFX1064-NEXT:  .LBB10_2: ; %bb2
 ; GFX1064-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1064-NEXT:    v_cmp_ge_i32_e64 s[6:7], v1, v0
 ; GFX1064-NEXT:    v_cmp_lt_i32_e32 vcc, v1, v0
+; GFX1064-NEXT:    v_cmp_ge_i32_e64 s[6:7], v1, v0
 ; GFX1064-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX1064-NEXT:    s_and_saveexec_b64 s[8:9], vcc
 ; GFX1064-NEXT:    s_cbranch_execz .LBB10_4

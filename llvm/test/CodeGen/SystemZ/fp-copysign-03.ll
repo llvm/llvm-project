@@ -209,8 +209,8 @@ define fp128 @f13(fp128 %a, float %b) {
 ;
 ; Z16-LABEL: f13:
 ; Z16:       # %bb.0:
-; Z16-NEXT:    vl %v1, 0(%r3), 3
 ; Z16-NEXT:    vlgvf %r0, %v0, 0
+; Z16-NEXT:    vl %v1, 0(%r3), 3
 ; Z16-NEXT:    tmlh %r0, 32768
 ; Z16-NEXT:    je .LBB13_2
 ; Z16-NEXT:  # %bb.1:
@@ -239,8 +239,8 @@ define fp128 @f14(fp128 %a, double %b) {
 ;
 ; Z16-LABEL: f14:
 ; Z16:       # %bb.0:
-; Z16-NEXT:    vl %v1, 0(%r3), 3
 ; Z16-NEXT:    lgdr %r0, %f0
+; Z16-NEXT:    vl %v1, 0(%r3), 3
 ; Z16-NEXT:    tmhh %r0, 32768
 ; Z16-NEXT:    je .LBB14_2
 ; Z16-NEXT:  # %bb.1:
@@ -274,8 +274,8 @@ define fp128 @f15(fp128 %a, fp128 %b) {
 ; Z16-NEXT:    larl %r1, .LCPI15_0
 ; Z16-NEXT:    vl %v1, 0(%r4), 3
 ; Z16-NEXT:    vl %v2, 0(%r1), 3
-; Z16-NEXT:    vl %v0, 0(%r3), 3
 ; Z16-NEXT:    vtm %v1, %v2
+; Z16-NEXT:    vl %v0, 0(%r3), 3
 ; Z16-NEXT:    je .LBB15_2
 ; Z16-NEXT:  # %bb.1:
 ; Z16-NEXT:    wflnxb %v0, %v0

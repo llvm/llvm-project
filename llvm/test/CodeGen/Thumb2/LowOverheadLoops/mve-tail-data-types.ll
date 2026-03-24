@@ -20,10 +20,10 @@ define arm_aapcs_vfpcc i32 @test_acc_scalar_char(i8 zeroext %a, ptr nocapture re
 ; CHECK-NEXT:  .LBB0_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r2
-; CHECK-NEXT:    subs r2, #4
+; CHECK-NEXT:    vmov q1, q0
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vldrbt.u32 q2, [r1], #4
-; CHECK-NEXT:    vmov q1, q0
+; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    vmla.i32 q0, q2, r0
 ; CHECK-NEXT:    le lr, .LBB0_2
 ; CHECK-NEXT:  @ %bb.3: @ %middle.block
@@ -85,10 +85,10 @@ define arm_aapcs_vfpcc i32 @test_acc_scalar_short(i16 signext %a, ptr nocapture 
 ; CHECK-NEXT:  .LBB1_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r2
-; CHECK-NEXT:    subs r2, #4
+; CHECK-NEXT:    vmov q1, q0
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vldrht.s32 q2, [r1], #8
-; CHECK-NEXT:    vmov q1, q0
+; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    vmla.i32 q0, q2, r0
 ; CHECK-NEXT:    le lr, .LBB1_2
 ; CHECK-NEXT:  @ %bb.3: @ %middle.block
@@ -150,10 +150,10 @@ define arm_aapcs_vfpcc i32 @test_acc_scalar_uchar(i8 zeroext %a, ptr nocapture r
 ; CHECK-NEXT:  .LBB2_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r2
-; CHECK-NEXT:    subs r2, #4
+; CHECK-NEXT:    vmov q1, q0
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vldrbt.u32 q2, [r1], #4
-; CHECK-NEXT:    vmov q1, q0
+; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    vmla.i32 q0, q2, r0
 ; CHECK-NEXT:    le lr, .LBB2_2
 ; CHECK-NEXT:  @ %bb.3: @ %middle.block
@@ -215,10 +215,10 @@ define arm_aapcs_vfpcc i32 @test_acc_scalar_ushort(i16 signext %a, ptr nocapture
 ; CHECK-NEXT:  .LBB3_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r2
-; CHECK-NEXT:    subs r2, #4
+; CHECK-NEXT:    vmov q1, q0
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vldrht.u32 q2, [r1], #8
-; CHECK-NEXT:    vmov q1, q0
+; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    vmla.i32 q0, q2, r0
 ; CHECK-NEXT:    le lr, .LBB3_2
 ; CHECK-NEXT:  @ %bb.3: @ %middle.block
@@ -280,10 +280,10 @@ define arm_aapcs_vfpcc i32 @test_acc_scalar_int(i32 %a, ptr nocapture readonly %
 ; CHECK-NEXT:  .LBB4_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r2
-; CHECK-NEXT:    subs r2, #4
+; CHECK-NEXT:    vmov q1, q0
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vldrwt.u32 q2, [r1], #16
-; CHECK-NEXT:    vmov q1, q0
+; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    vmla.i32 q0, q2, r0
 ; CHECK-NEXT:    le lr, .LBB4_2
 ; CHECK-NEXT:  @ %bb.3: @ %middle.block
@@ -348,8 +348,8 @@ define arm_aapcs_vfpcc void @test_vec_mul_scalar_add_char(ptr nocapture readonly
 ; CHECK-NEXT:    cmpeq r7, #0
 ; CHECK-NEXT:    beq .LBB5_4
 ; CHECK-NEXT:  @ %bb.2: @ %for.body.preheader
-; CHECK-NEXT:    and r12, r4, #3
 ; CHECK-NEXT:    subs r7, r4, #1
+; CHECK-NEXT:    and r12, r4, #3
 ; CHECK-NEXT:    cmp r7, #3
 ; CHECK-NEXT:    bhs .LBB5_6
 ; CHECK-NEXT:  @ %bb.3:
@@ -624,8 +624,8 @@ define arm_aapcs_vfpcc void @test_vec_mul_scalar_add_uchar(ptr nocapture readonl
 ; CHECK-NEXT:    cmpeq r7, #0
 ; CHECK-NEXT:    beq .LBB7_4
 ; CHECK-NEXT:  @ %bb.2: @ %for.body.preheader
-; CHECK-NEXT:    and r12, r4, #3
 ; CHECK-NEXT:    subs r7, r4, #1
+; CHECK-NEXT:    and r12, r4, #3
 ; CHECK-NEXT:    cmp r7, #3
 ; CHECK-NEXT:    bhs .LBB7_6
 ; CHECK-NEXT:  @ %bb.3:
@@ -900,8 +900,8 @@ define arm_aapcs_vfpcc void @test_vec_mul_scalar_add_int(ptr nocapture readonly 
 ; CHECK-NEXT:    cmpeq r7, #0
 ; CHECK-NEXT:    beq .LBB9_4
 ; CHECK-NEXT:  @ %bb.2: @ %for.body.preheader
-; CHECK-NEXT:    and r12, r4, #3
 ; CHECK-NEXT:    subs r7, r4, #1
+; CHECK-NEXT:    and r12, r4, #3
 ; CHECK-NEXT:    cmp r7, #3
 ; CHECK-NEXT:    bhs .LBB9_6
 ; CHECK-NEXT:  @ %bb.3:

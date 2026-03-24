@@ -28,11 +28,11 @@ define void @test(ptr %a) #0 {
 ; CHECK-NEXT:    str x0, [sp, #8]
 ; CHECK-NEXT:    add x0, sp, #16
 ; CHECK-NEXT:    bl _strcpy
+; CHECK-NEXT:    str x19, [sp]
 ; CHECK-NEXT:  Lloh3:
 ; CHECK-NEXT:    adrp x0, l_.str@PAGE
 ; CHECK-NEXT:  Lloh4:
 ; CHECK-NEXT:    add x0, x0, l_.str@PAGEOFF
-; CHECK-NEXT:    str x19, [sp]
 ; CHECK-NEXT:    bl _printf
 ; CHECK-NEXT:  Lloh5:
 ; CHECK-NEXT:    adrp x8, ___stack_chk_guard@GOTPAGE

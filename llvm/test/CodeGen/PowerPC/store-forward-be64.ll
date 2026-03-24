@@ -17,9 +17,9 @@ target triple = "powerpc64-ibm-aix7.2.0.0"
 define zeroext i32 @ustc1(ptr noundef byval(%struct.USST) align 8 %s) {
 ; CHECK-LABEL: ustc1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 4, 3
-; CHECK-NEXT:    rldicl 3, 3, 8, 56
-; CHECK-NEXT:    std 4, 48(1)
+; CHECK-NEXT:    rldicl 4, 3, 8, 56
+; CHECK-NEXT:    std 3, 48(1)
+; CHECK-NEXT:    mr 3, 4
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i16, ptr %s, align 8
@@ -32,9 +32,9 @@ entry:
 define zeroext i32 @ustc2(ptr noundef byval(%struct.USST) align 8 %s) {
 ; CHECK-LABEL: ustc2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 4, 3
-; CHECK-NEXT:    rldicl 3, 3, 16, 48
-; CHECK-NEXT:    std 4, 48(1)
+; CHECK-NEXT:    rldicl 4, 3, 16, 48
+; CHECK-NEXT:    std 3, 48(1)
+; CHECK-NEXT:    mr 3, 4
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i16, ptr %s, align 8
@@ -46,11 +46,11 @@ entry:
 define signext i32 @stc1(ptr noundef byval(%struct.SST) align 8 %s) {
 ; CHECK-LABEL: stc1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 4, 3
-; CHECK-NEXT:    rldicl 3, 3, 16, 48
-; CHECK-NEXT:    std 4, 48(1)
-; CHECK-NEXT:    extsh 3, 3
-; CHECK-NEXT:    srawi 3, 3, 8
+; CHECK-NEXT:    rldicl 4, 3, 16, 48
+; CHECK-NEXT:    std 3, 48(1)
+; CHECK-NEXT:    extsh 4, 4
+; CHECK-NEXT:    srawi 4, 4, 8
+; CHECK-NEXT:    mr 3, 4
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i16, ptr %s, align 8
@@ -63,9 +63,9 @@ entry:
 define signext i32 @stc2(ptr noundef byval(%struct.SST) align 8 %s) {
 ; CHECK-LABEL: stc2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 4, 3
-; CHECK-NEXT:    sradi 3, 3, 48
-; CHECK-NEXT:    std 4, 48(1)
+; CHECK-NEXT:    sradi 4, 3, 48
+; CHECK-NEXT:    std 3, 48(1)
+; CHECK-NEXT:    mr 3, 4
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i16, ptr %s, align 8
@@ -77,9 +77,9 @@ entry:
 define signext i32 @ctc(ptr noundef byval(%struct.CST) align 8 %s) {
 ; CHECK-LABEL: ctc:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 4, 3
-; CHECK-NEXT:    rldicl 3, 3, 8, 56
-; CHECK-NEXT:    std 4, 48(1)
+; CHECK-NEXT:    rldicl 4, 3, 8, 56
+; CHECK-NEXT:    std 3, 48(1)
+; CHECK-NEXT:    mr 3, 4
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i8, ptr %s, align 8
@@ -91,9 +91,9 @@ entry:
 define signext i32 @sctc(ptr noundef byval(%struct.SCST) align 8 %s) {
 ; CHECK-LABEL: sctc:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 4, 3
-; CHECK-NEXT:    sradi 3, 3, 56
-; CHECK-NEXT:    std 4, 48(1)
+; CHECK-NEXT:    sradi 4, 3, 56
+; CHECK-NEXT:    std 3, 48(1)
+; CHECK-NEXT:    mr 3, 4
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i8, ptr %s, align 8
@@ -105,9 +105,9 @@ entry:
 define signext i32 @tc44(ptr noundef byval(%struct.ST) align 8 %s) {
 ; CHECK-LABEL: tc44:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 4, 3
-; CHECK-NEXT:    sradi 3, 3, 32
-; CHECK-NEXT:    std 4, 48(1)
+; CHECK-NEXT:    sradi 4, 3, 32
+; CHECK-NEXT:    std 3, 48(1)
+; CHECK-NEXT:    mr 3, 4
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i32, ptr %s, align 8
@@ -118,9 +118,9 @@ entry:
 define signext i32 @tc41(ptr noundef byval(%struct.ST) align 8 %s) {
 ; CHECK-LABEL: tc41:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 4, 3
-; CHECK-NEXT:    sradi 3, 3, 56
-; CHECK-NEXT:    std 4, 48(1)
+; CHECK-NEXT:    sradi 4, 3, 56
+; CHECK-NEXT:    std 3, 48(1)
+; CHECK-NEXT:    mr 3, 4
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i32, ptr %s, align 8
@@ -132,9 +132,9 @@ entry:
 define signext i32 @tc42(ptr noundef byval(%struct.ST) align 8 %s) {
 ; CHECK-LABEL: tc42:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 4, 3
-; CHECK-NEXT:    sradi 3, 3, 48
-; CHECK-NEXT:    std 4, 48(1)
+; CHECK-NEXT:    sradi 4, 3, 48
+; CHECK-NEXT:    std 3, 48(1)
+; CHECK-NEXT:    mr 3, 4
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i32, ptr %s, align 8
@@ -146,9 +146,9 @@ entry:
 define signext i32 @tc43(ptr noundef byval(%struct.ST) align 8 %s) {
 ; CHECK-LABEL: tc43:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 4, 3
-; CHECK-NEXT:    sradi 3, 3, 40
-; CHECK-NEXT:    std 4, 48(1)
+; CHECK-NEXT:    sradi 4, 3, 40
+; CHECK-NEXT:    std 3, 48(1)
+; CHECK-NEXT:    mr 3, 4
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i32, ptr %s, align 8
@@ -160,9 +160,9 @@ entry:
 define zeroext i32 @utc44(ptr noundef byval(%struct.UST) align 8 %s) #0 {
 ; CHECK-LABEL: utc44:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 4, 3
-; CHECK-NEXT:    rldicl 3, 3, 32, 32
-; CHECK-NEXT:    std 4, 48(1)
+; CHECK-NEXT:    rldicl 4, 3, 32, 32
+; CHECK-NEXT:    std 3, 48(1)
+; CHECK-NEXT:    mr 3, 4
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i32, ptr %s, align 8
@@ -173,9 +173,9 @@ entry:
 define zeroext i32 @utc41(ptr noundef byval(%struct.UST) align 8 %s) {
 ; CHECK-LABEL: utc41:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 4, 3
-; CHECK-NEXT:    rldicl 3, 3, 8, 56
-; CHECK-NEXT:    std 4, 48(1)
+; CHECK-NEXT:    rldicl 4, 3, 8, 56
+; CHECK-NEXT:    std 3, 48(1)
+; CHECK-NEXT:    mr 3, 4
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i32, ptr %s, align 8
@@ -187,9 +187,9 @@ entry:
 define zeroext i32 @utc42(ptr noundef byval(%struct.UST) align 8 %s) {
 ; CHECK-LABEL: utc42:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 4, 3
-; CHECK-NEXT:    rldicl 3, 3, 16, 48
-; CHECK-NEXT:    std 4, 48(1)
+; CHECK-NEXT:    rldicl 4, 3, 16, 48
+; CHECK-NEXT:    std 3, 48(1)
+; CHECK-NEXT:    mr 3, 4
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i32, ptr %s, align 8
@@ -201,9 +201,9 @@ entry:
 define zeroext i32 @utc43(ptr noundef byval(%struct.UST) align 8 %s) {
 ; CHECK-LABEL: utc43:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 4, 3
-; CHECK-NEXT:    rldicl 3, 3, 24, 40
-; CHECK-NEXT:    std 4, 48(1)
+; CHECK-NEXT:    rldicl 4, 3, 24, 40
+; CHECK-NEXT:    std 3, 48(1)
+; CHECK-NEXT:    mr 3, 4
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i32, ptr %s, align 8
@@ -215,10 +215,10 @@ entry:
 define i64 @ltc88(ptr noundef byval(%struct.LST) align 8 %s) {
 ; CHECK-LABEL: ltc88:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 5, 3
-; CHECK-NEXT:    sradi 3, 3, 8
-; CHECK-NEXT:    std 5, 48(1)
+; CHECK-NEXT:    sradi 5, 3, 8
+; CHECK-NEXT:    std 3, 48(1)
 ; CHECK-NEXT:    std 4, 56(1)
+; CHECK-NEXT:    mr 3, 5
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i64, ptr %s, align 8
@@ -230,10 +230,10 @@ entry:
 define i64 @ltc86(ptr noundef byval(%struct.LST) align 8 %s) {
 ; CHECK-LABEL: ltc86:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 5, 3
-; CHECK-NEXT:    sradi 3, 3, 16
-; CHECK-NEXT:    std 5, 48(1)
+; CHECK-NEXT:    sradi 5, 3, 16
+; CHECK-NEXT:    std 3, 48(1)
 ; CHECK-NEXT:    std 4, 56(1)
+; CHECK-NEXT:    mr 3, 5
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i64, ptr %s, align 8
@@ -245,10 +245,10 @@ entry:
 define i64 @ltc85(ptr noundef byval(%struct.LST) align 8 %s) {
 ; CHECK-LABEL: ltc85:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 5, 3
-; CHECK-NEXT:    sradi 3, 3, 24
-; CHECK-NEXT:    std 5, 48(1)
+; CHECK-NEXT:    sradi 5, 3, 24
+; CHECK-NEXT:    std 3, 48(1)
 ; CHECK-NEXT:    std 4, 56(1)
+; CHECK-NEXT:    mr 3, 5
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i64, ptr %s, align 8
@@ -260,10 +260,10 @@ entry:
 define i64 @ltc84(ptr noundef byval(%struct.LST) align 8 %s) {
 ; CHECK-LABEL: ltc84:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 5, 3
-; CHECK-NEXT:    sradi 3, 3, 32
-; CHECK-NEXT:    std 5, 48(1)
+; CHECK-NEXT:    sradi 5, 3, 32
+; CHECK-NEXT:    std 3, 48(1)
 ; CHECK-NEXT:    std 4, 56(1)
+; CHECK-NEXT:    mr 3, 5
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i64, ptr %s, align 8
@@ -275,10 +275,10 @@ entry:
 define i64 @ltc83(ptr noundef byval(%struct.LST) align 8 %s) {
 ; CHECK-LABEL: ltc83:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 5, 3
-; CHECK-NEXT:    sradi 3, 3, 40
-; CHECK-NEXT:    std 5, 48(1)
+; CHECK-NEXT:    sradi 5, 3, 40
+; CHECK-NEXT:    std 3, 48(1)
 ; CHECK-NEXT:    std 4, 56(1)
+; CHECK-NEXT:    mr 3, 5
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i64, ptr %s, align 8
@@ -290,10 +290,10 @@ entry:
 define i64 @ltc82(ptr noundef byval(%struct.LST) align 8 %s) {
 ; CHECK-LABEL: ltc82:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 5, 3
-; CHECK-NEXT:    sradi 3, 3, 48
-; CHECK-NEXT:    std 5, 48(1)
+; CHECK-NEXT:    sradi 5, 3, 48
+; CHECK-NEXT:    std 3, 48(1)
 ; CHECK-NEXT:    std 4, 56(1)
+; CHECK-NEXT:    mr 3, 5
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i64, ptr %s, align 8
@@ -305,10 +305,10 @@ entry:
 define i64 @ltc81(ptr noundef byval(%struct.LST) align 8 %s) {
 ; CHECK-LABEL: ltc81:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 5, 3
-; CHECK-NEXT:    sradi 3, 3, 56
-; CHECK-NEXT:    std 5, 48(1)
+; CHECK-NEXT:    sradi 5, 3, 56
+; CHECK-NEXT:    std 3, 48(1)
 ; CHECK-NEXT:    std 4, 56(1)
+; CHECK-NEXT:    mr 3, 5
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i64, ptr %s, align 8
@@ -332,10 +332,10 @@ entry:
 define i64 @ultc87(ptr noundef byval(%struct.ULST) align 8 %s) {
 ; CHECK-LABEL: ultc87:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 5, 3
-; CHECK-NEXT:    rldicl 3, 3, 56, 8
-; CHECK-NEXT:    std 5, 48(1)
+; CHECK-NEXT:    rldicl 5, 3, 56, 8
+; CHECK-NEXT:    std 3, 48(1)
 ; CHECK-NEXT:    std 4, 56(1)
+; CHECK-NEXT:    mr 3, 5
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i64, ptr %s, align 8
@@ -347,10 +347,10 @@ entry:
 define i64 @ultc86(ptr noundef byval(%struct.ULST) align 8 %s) {
 ; CHECK-LABEL: ultc86:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 5, 3
-; CHECK-NEXT:    rldicl 3, 3, 48, 16
-; CHECK-NEXT:    std 5, 48(1)
+; CHECK-NEXT:    rldicl 5, 3, 48, 16
+; CHECK-NEXT:    std 3, 48(1)
 ; CHECK-NEXT:    std 4, 56(1)
+; CHECK-NEXT:    mr 3, 5
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i64, ptr %s, align 8
@@ -362,10 +362,10 @@ entry:
 define i64 @ultc85(ptr noundef byval(%struct.ULST) align 8 %s) {
 ; CHECK-LABEL: ultc85:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 5, 3
-; CHECK-NEXT:    rldicl 3, 3, 40, 24
-; CHECK-NEXT:    std 5, 48(1)
+; CHECK-NEXT:    rldicl 5, 3, 40, 24
+; CHECK-NEXT:    std 3, 48(1)
 ; CHECK-NEXT:    std 4, 56(1)
+; CHECK-NEXT:    mr 3, 5
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i64, ptr %s, align 8
@@ -377,10 +377,10 @@ entry:
 define i64 @ultc84(ptr noundef byval(%struct.ULST) align 8 %s) {
 ; CHECK-LABEL: ultc84:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 5, 3
-; CHECK-NEXT:    rldicl 3, 3, 32, 32
-; CHECK-NEXT:    std 5, 48(1)
+; CHECK-NEXT:    rldicl 5, 3, 32, 32
+; CHECK-NEXT:    std 3, 48(1)
 ; CHECK-NEXT:    std 4, 56(1)
+; CHECK-NEXT:    mr 3, 5
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i64, ptr %s, align 8
@@ -392,10 +392,10 @@ entry:
 define i64 @ultc83(ptr noundef byval(%struct.ULST) align 8 %s) {
 ; CHECK-LABEL: ultc83:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 5, 3
-; CHECK-NEXT:    rldicl 3, 3, 24, 40
-; CHECK-NEXT:    std 5, 48(1)
+; CHECK-NEXT:    rldicl 5, 3, 24, 40
+; CHECK-NEXT:    std 3, 48(1)
 ; CHECK-NEXT:    std 4, 56(1)
+; CHECK-NEXT:    mr 3, 5
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i64, ptr %s, align 8
@@ -407,10 +407,10 @@ entry:
 define i64 @ultc82(ptr noundef byval(%struct.ULST) align 8 %s) {
 ; CHECK-LABEL: ultc82:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 5, 3
-; CHECK-NEXT:    rldicl 3, 3, 16, 48
-; CHECK-NEXT:    std 5, 48(1)
+; CHECK-NEXT:    rldicl 5, 3, 16, 48
+; CHECK-NEXT:    std 3, 48(1)
 ; CHECK-NEXT:    std 4, 56(1)
+; CHECK-NEXT:    mr 3, 5
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i64, ptr %s, align 8
@@ -422,10 +422,10 @@ entry:
 define i64 @ultc81(ptr noundef byval(%struct.ULST) align 8 %s) {
 ; CHECK-LABEL: ultc81:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 5, 3
-; CHECK-NEXT:    rldicl 3, 3, 8, 56
-; CHECK-NEXT:    std 5, 48(1)
+; CHECK-NEXT:    rldicl 5, 3, 8, 56
+; CHECK-NEXT:    std 3, 48(1)
 ; CHECK-NEXT:    std 4, 56(1)
+; CHECK-NEXT:    mr 3, 5
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i64, ptr %s, align 8

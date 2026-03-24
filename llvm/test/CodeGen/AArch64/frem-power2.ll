@@ -333,8 +333,8 @@ define float @frem4294967296_abs(float %x) {
 ;
 ; CHECK-GI-LABEL: frem4294967296_abs:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    fabs s0, s0
 ; CHECK-GI-NEXT:    mov w8, #1333788672 // =0x4f800000
+; CHECK-GI-NEXT:    fabs s0, s0
 ; CHECK-GI-NEXT:    fmov s1, w8
 ; CHECK-GI-NEXT:    b fmodf
 entry:
@@ -358,8 +358,8 @@ define float @frem1152921504606846976_abs(float %x) {
 ;
 ; CHECK-GI-LABEL: frem1152921504606846976_abs:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    fabs s0, s0
 ; CHECK-GI-NEXT:    mov w8, #1568669696 // =0x5d800000
+; CHECK-GI-NEXT:    fabs s0, s0
 ; CHECK-GI-NEXT:    fmov s1, w8
 ; CHECK-GI-NEXT:    b fmodf
 entry:
@@ -383,8 +383,8 @@ define float @frem4611686018427387904_abs(float %x) {
 ;
 ; CHECK-GI-LABEL: frem4611686018427387904_abs:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    fabs s0, s0
 ; CHECK-GI-NEXT:    mov w8, #1585446912 // =0x5e800000
+; CHECK-GI-NEXT:    fabs s0, s0
 ; CHECK-GI-NEXT:    fmov s1, w8
 ; CHECK-GI-NEXT:    b fmodf
 entry:
@@ -439,10 +439,10 @@ define <4 x float> @frem2_vec(<4 x float> %x) {
 ; CHECK-GI-NEXT:    .cfi_offset b8, -16
 ; CHECK-GI-NEXT:    .cfi_offset b9, -24
 ; CHECK-GI-NEXT:    .cfi_offset b10, -32
-; CHECK-GI-NEXT:    fmov s1, #2.00000000
 ; CHECK-GI-NEXT:    mov s8, v0.s[1]
 ; CHECK-GI-NEXT:    mov s9, v0.s[2]
 ; CHECK-GI-NEXT:    mov s10, v0.s[3]
+; CHECK-GI-NEXT:    fmov s1, #2.00000000
 ; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-GI-NEXT:    bl fmodf
 ; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
@@ -498,10 +498,10 @@ define <4 x float> @frem2_nsz_vec(<4 x float> %x) {
 ; CHECK-GI-NEXT:    .cfi_offset b8, -16
 ; CHECK-GI-NEXT:    .cfi_offset b9, -24
 ; CHECK-GI-NEXT:    .cfi_offset b10, -32
-; CHECK-GI-NEXT:    fmov s1, #2.00000000
 ; CHECK-GI-NEXT:    mov s8, v0.s[1]
 ; CHECK-GI-NEXT:    mov s9, v0.s[2]
 ; CHECK-GI-NEXT:    mov s10, v0.s[3]
+; CHECK-GI-NEXT:    fmov s1, #2.00000000
 ; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-GI-NEXT:    bl fmodf
 ; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0

@@ -56,16 +56,16 @@ define amdgpu_kernel void @blender_no_live_segment_at_def_error(<4 x float> %ext
 ; CHECK-NEXT:    s_load_dwordx2 s[20:21], s[20:21], 0x0
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v3, 10, v1
 ; CHECK-NEXT:    v_add_f32_e64 v1, s17, s18
+; CHECK-NEXT:    s_mov_b32 s48, 0
 ; CHECK-NEXT:    s_mov_b64 s[34:35], s[8:9]
 ; CHECK-NEXT:    s_mov_b64 s[8:9], s[12:13]
-; CHECK-NEXT:    s_mov_b32 s12, s14
 ; CHECK-NEXT:    v_or3_b32 v31, v0, v3, v2
+; CHECK-NEXT:    s_mov_b32 s12, s14
+; CHECK-NEXT:    s_mov_b32 s13, s15
+; CHECK-NEXT:    s_mov_b32 s14, s16
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v1
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0
-; CHECK-NEXT:    s_mov_b32 s13, s15
-; CHECK-NEXT:    s_mov_b32 s14, s16
-; CHECK-NEXT:    s_mov_b32 s48, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[20:21]
 ; CHECK-NEXT:    s_mov_b64 s[8:9], s[34:35]

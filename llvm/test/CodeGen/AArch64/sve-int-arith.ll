@@ -770,11 +770,11 @@ define void @mad_in_loop(ptr %dst, ptr %src1, ptr %src2, i32 %n) {
 ; CHECK-NEXT:    b.lt .LBB70_3
 ; CHECK-NEXT:  // %bb.1: // %for.body.preheader
 ; CHECK-NEXT:    mov w9, w3
-; CHECK-NEXT:    mov z0.s, #1 // =0x1
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    whilelo p1.s, xzr, x9
 ; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov z0.s, #1 // =0x1
+; CHECK-NEXT:    whilelo p1.s, xzr, x9
 ; CHECK-NEXT:    cntw x10
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:  .LBB70_2: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld1w { z1.s }, p1/z, [x1, x8, lsl #2]

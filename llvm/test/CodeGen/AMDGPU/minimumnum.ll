@@ -4002,14 +4002,14 @@ define <3 x half> @v_minimumnum_v3f16(<3 x half> %x, <3 x half> %y) {
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX7-SDAG-NEXT:    v_min_f32_e32 v4, v4, v5
+; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v4, v4
 ; GFX7-SDAG-NEXT:    v_min_f32_e32 v0, v0, v2
 ; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-SDAG-NEXT:    v_min_f32_e32 v1, v1, v3
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX7-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 16, v4
+; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX7-SDAG-NEXT:    v_or_b32_e32 v0, v0, v2
 ; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -4214,14 +4214,14 @@ define <3 x half> @v_minimumnum_v3f16_nnan(<3 x half> %x, <3 x half> %y) {
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX7-SDAG-NEXT:    v_min_f32_e32 v4, v4, v5
+; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v4, v4
 ; GFX7-SDAG-NEXT:    v_min_f32_e32 v0, v0, v2
 ; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-SDAG-NEXT:    v_min_f32_e32 v1, v1, v3
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX7-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 16, v4
+; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX7-SDAG-NEXT:    v_or_b32_e32 v0, v0, v2
 ; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -9792,14 +9792,14 @@ define <3 x half> @v_minimumnum_v3f16_nnan_no_ieee(<3 x half> %x, <3 x half> %y)
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX7-SDAG-NEXT:    v_min_f32_e32 v4, v4, v5
+; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v4, v4
 ; GFX7-SDAG-NEXT:    v_min_f32_e32 v0, v0, v2
 ; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-SDAG-NEXT:    v_min_f32_e32 v1, v1, v3
-; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX7-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 16, v4
+; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX7-SDAG-NEXT:    v_or_b32_e32 v0, v0, v2
 ; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;

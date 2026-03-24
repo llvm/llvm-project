@@ -6,8 +6,8 @@ define void @pass_va(i32 %count, ...) nounwind {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x30, [sp, #-80]! // 8-byte Folded Spill
 ; CHECK-NEXT:    add x8, sp, #24
-; CHECK-NEXT:    add x0, sp, #24
 ; CHECK-NEXT:    stp x1, x2, [sp, #24]
+; CHECK-NEXT:    add x0, sp, #24
 ; CHECK-NEXT:    stp x3, x4, [sp, #40]
 ; CHECK-NEXT:    stp x5, x6, [sp, #56]
 ; CHECK-NEXT:    str x7, [sp, #72]
@@ -65,8 +65,8 @@ define ptr @f7(i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, ..
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #32
 ; CHECK-NEXT:    add x8, sp, #24
-; CHECK-NEXT:    add x0, sp, #24
 ; CHECK-NEXT:    str x7, [sp, #24]
+; CHECK-NEXT:    add x0, sp, #24
 ; CHECK-NEXT:    str x8, [sp, #8]
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
@@ -185,8 +185,8 @@ define void @vla(i32, ptr, ...) local_unnamed_addr {
 ; CHECK-NEXT:    str x8, [x29, #16]
 ; CHECK-NEXT:    add x8, x9, #15
 ; CHECK-NEXT:    mov x23, sp
-; CHECK-NEXT:    lsr x15, x8, #4
 ; CHECK-NEXT:    stp x2, x3, [x29, #24]
+; CHECK-NEXT:    lsr x15, x8, #4
 ; CHECK-NEXT:    stp x4, x5, [x29, #40]
 ; CHECK-NEXT:    stp x6, x7, [x29, #56]
 ; CHECK-NEXT:    bl __chkstk
@@ -300,17 +300,17 @@ define void @fixed_params(i32, double, i32, double, i32, double, i32, double, i3
 ; CHECK-LABEL: fixed_params:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    mov w8, w4
+; CHECK-NEXT:    mov w8, w2
+; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    mov w6, w3
-; CHECK-NEXT:    mov w4, w2
 ; CHECK-NEXT:    mov w2, w1
 ; CHECK-NEXT:    fmov x1, d0
 ; CHECK-NEXT:    fmov x3, d1
 ; CHECK-NEXT:    fmov x5, d2
 ; CHECK-NEXT:    fmov x7, d3
-; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    str d4, [sp, #8]
-; CHECK-NEXT:    str w8, [sp]
+; CHECK-NEXT:    str w4, [sp]
+; CHECK-NEXT:    mov w4, w8
 ; CHECK-NEXT:    bl varargs
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    add sp, sp, #32

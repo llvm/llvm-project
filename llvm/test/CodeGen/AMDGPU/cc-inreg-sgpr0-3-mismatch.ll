@@ -118,6 +118,7 @@ define i32 @caller_passes_42() {
 ; SDAG-NEXT:    s_addc_u32 s17, s17, callee_returns_arg0@gotpcrel32@hi+12
 ; SDAG-NEXT:    s_load_dwordx2 s[40:41], s[16:17], 0x0
 ; SDAG-NEXT:    v_writelane_b32 v18, s30, 0
+; SDAG-NEXT:    v_writelane_b32 v18, s31, 1
 ; SDAG-NEXT:    s_mov_b32 s16, 42
 ; SDAG-NEXT:    s_mov_b32 s17, 1
 ; SDAG-NEXT:    s_mov_b32 s18, 2
@@ -150,7 +151,6 @@ define i32 @caller_passes_42() {
 ; SDAG-NEXT:    v_mov_b32_e32 v15, 29
 ; SDAG-NEXT:    v_mov_b32_e32 v16, 30
 ; SDAG-NEXT:    v_mov_b32_e32 v17, 31
-; SDAG-NEXT:    v_writelane_b32 v18, s31, 1
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-NEXT:    s_swappc_b64 s[30:31], s[40:41]
 ; SDAG-NEXT:    v_readlane_b32 s31, v18, 1
@@ -177,6 +177,7 @@ define i32 @caller_passes_42() {
 ; GISEL-NEXT:    s_addc_u32 s17, s17, callee_returns_arg0@gotpcrel32@hi+12
 ; GISEL-NEXT:    s_load_dwordx2 s[40:41], s[16:17], 0x0
 ; GISEL-NEXT:    v_writelane_b32 v18, s30, 0
+; GISEL-NEXT:    v_writelane_b32 v18, s31, 1
 ; GISEL-NEXT:    s_mov_b32 s16, 42
 ; GISEL-NEXT:    s_mov_b32 s17, 1
 ; GISEL-NEXT:    s_mov_b32 s18, 2
@@ -209,7 +210,6 @@ define i32 @caller_passes_42() {
 ; GISEL-NEXT:    v_mov_b32_e32 v15, 29
 ; GISEL-NEXT:    v_mov_b32_e32 v16, 30
 ; GISEL-NEXT:    v_mov_b32_e32 v17, 31
-; GISEL-NEXT:    v_writelane_b32 v18, s31, 1
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[40:41]
 ; GISEL-NEXT:    v_readlane_b32 s31, v18, 1

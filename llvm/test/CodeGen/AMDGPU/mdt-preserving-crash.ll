@@ -9,8 +9,8 @@ define protected amdgpu_kernel void @_RSENC_PRInit______________________________
 ; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
 ; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; CHECK-NEXT:    flat_load_dword v0, v[0:1]
-; CHECK-NEXT:    s_add_u32 s0, s0, s17
 ; CHECK-NEXT:    s_mov_b32 s4, 0xf19b3
+; CHECK-NEXT:    s_add_u32 s0, s0, s17
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_lshl_add_u32 v0, v0, 1, v0

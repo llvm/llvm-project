@@ -201,19 +201,19 @@ define { <3 x float>, <3 x float> } @test_modf_v3f32(<3 x float> %a) {
 ; CHECK-NEXT:    sub sp, #8
 ; CHECK-NEXT:    vldr d9, [sp, #40]
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    mov r1, sp
-; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    mov r5, r3
 ; CHECK-NEXT:    vmov d8, r2, r3
+; CHECK-NEXT:    mov r1, sp
+; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    bl modff
-; CHECK-NEXT:    add r1, sp, #4
 ; CHECK-NEXT:    mov r6, r0
+; CHECK-NEXT:    add r1, sp, #4
 ; CHECK-NEXT:    mov r0, r5
 ; CHECK-NEXT:    bl modff
-; CHECK-NEXT:    mov r5, r0
-; CHECK-NEXT:    vmov r0, s18
 ; CHECK-NEXT:    vldmia sp, {s0, s1}
 ; CHECK-NEXT:    add.w r1, r4, #16
+; CHECK-NEXT:    mov r5, r0
+; CHECK-NEXT:    vmov r0, s18
 ; CHECK-NEXT:    vst1.32 {d0}, [r1:64]!
 ; CHECK-NEXT:    bl modff
 ; CHECK-NEXT:    vmov s1, r5
@@ -307,8 +307,8 @@ define { <2 x double>, <2 x double> } @test_modf_v2f64(<2 x double> %a) {
 ; CHECK-NEXT:    sub sp, #16
 ; CHECK-NEXT:    mov r1, r3
 ; CHECK-NEXT:    mov r3, r2
-; CHECK-NEXT:    add r2, sp, #8
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    add r2, sp, #8
 ; CHECK-NEXT:    mov r0, r3
 ; CHECK-NEXT:    bl modf
 ; CHECK-NEXT:    ldrd r12, r3, [sp, #40]

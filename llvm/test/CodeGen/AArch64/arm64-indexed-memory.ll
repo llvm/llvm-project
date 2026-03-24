@@ -15,9 +15,8 @@ define ptr @store64(ptr %ptr, i64 %index, i64 %spacing) {
 define ptr @store64idxpos256(ptr %ptr, i64 %index, i64 %spacing) {
 ; CHECK-LABEL: store64idxpos256:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    str x2, [x0]
 ; CHECK-NEXT:    add x0, x0, #256
-; CHECK-NEXT:    str x2, [x8]
 ; CHECK-NEXT:    ret
   %incdec.ptr = getelementptr inbounds i64, ptr %ptr, i64 32
   store i64 %spacing, ptr %ptr, align 4
@@ -47,9 +46,8 @@ define ptr @store32(ptr %ptr, i32 %index, i32 %spacing) {
 define ptr @store32idxpos256(ptr %ptr, i32 %index, i32 %spacing) {
 ; CHECK-LABEL: store32idxpos256:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    str w2, [x0]
 ; CHECK-NEXT:    add x0, x0, #256
-; CHECK-NEXT:    str w2, [x8]
 ; CHECK-NEXT:    ret
   %incdec.ptr = getelementptr inbounds i32, ptr %ptr, i64 64
   store i32 %spacing, ptr %ptr, align 4
@@ -79,9 +77,8 @@ define ptr @store16(ptr %ptr, i16 %index, i16 %spacing) {
 define ptr @store16idxpos256(ptr %ptr, i16 %index, i16 %spacing) {
 ; CHECK-LABEL: store16idxpos256:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    strh w2, [x0]
 ; CHECK-NEXT:    add x0, x0, #256
-; CHECK-NEXT:    strh w2, [x8]
 ; CHECK-NEXT:    ret
   %incdec.ptr = getelementptr inbounds i16, ptr %ptr, i64 128
   store i16 %spacing, ptr %ptr, align 4
@@ -111,9 +108,8 @@ define ptr @store8(ptr %ptr, i8 %index, i8 %spacing) {
 define ptr @store8idxpos256(ptr %ptr, i8 %index, i8 %spacing) {
 ; CHECK-LABEL: store8idxpos256:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    strb w2, [x0]
 ; CHECK-NEXT:    add x0, x0, #256
-; CHECK-NEXT:    strb w2, [x8]
 ; CHECK-NEXT:    ret
   %incdec.ptr = getelementptr inbounds i8, ptr %ptr, i64 256
   store i8 %spacing, ptr %ptr, align 4
@@ -238,9 +234,8 @@ define ptr @pre64(ptr %ptr, i64 %spacing) {
 define ptr @pre64idxpos256(ptr %ptr, i64 %spacing) {
 ; CHECK-LABEL: pre64idxpos256:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    str x1, [x0, #256]
 ; CHECK-NEXT:    add x0, x0, #256
-; CHECK-NEXT:    str x1, [x8, #256]
 ; CHECK-NEXT:    ret
   %incdec.ptr = getelementptr inbounds i64, ptr %ptr, i64 32
   store i64 %spacing, ptr %incdec.ptr, align 4
@@ -270,9 +265,8 @@ define ptr @pre32(ptr %ptr, i32 %spacing) {
 define ptr @pre32idxpos256(ptr %ptr, i32 %spacing) {
 ; CHECK-LABEL: pre32idxpos256:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    str w1, [x0, #256]
 ; CHECK-NEXT:    add x0, x0, #256
-; CHECK-NEXT:    str w1, [x8, #256]
 ; CHECK-NEXT:    ret
   %incdec.ptr = getelementptr inbounds i32, ptr %ptr, i64 64
   store i32 %spacing, ptr %incdec.ptr, align 4
@@ -302,9 +296,8 @@ define ptr @pre16(ptr %ptr, i16 %spacing) {
 define ptr @pre16idxpos256(ptr %ptr, i16 %spacing) {
 ; CHECK-LABEL: pre16idxpos256:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    strh w1, [x0, #256]
 ; CHECK-NEXT:    add x0, x0, #256
-; CHECK-NEXT:    strh w1, [x8, #256]
 ; CHECK-NEXT:    ret
   %incdec.ptr = getelementptr inbounds i16, ptr %ptr, i64 128
   store i16 %spacing, ptr %incdec.ptr, align 4
@@ -334,9 +327,8 @@ define ptr @pre8(ptr %ptr, i8 %spacing) {
 define ptr @pre8idxpos256(ptr %ptr, i8 %spacing) {
 ; CHECK-LABEL: pre8idxpos256:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    strb w1, [x0, #256]
 ; CHECK-NEXT:    add x0, x0, #256
-; CHECK-NEXT:    strb w1, [x8, #256]
 ; CHECK-NEXT:    ret
   %incdec.ptr = getelementptr inbounds i8, ptr %ptr, i64 256
   store i8 %spacing, ptr %incdec.ptr, align 4

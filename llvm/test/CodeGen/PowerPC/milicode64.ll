@@ -302,9 +302,9 @@ define ptr @test_memset(ptr noundef %dst, i32 noundef signext %value, i64 nounde
 ; CHECK-LE-P9-NEXT:    mflr r0
 ; CHECK-LE-P9-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-LE-P9-NEXT:    stdu r1, -48(r1)
-; CHECK-LE-P9-NEXT:    clrldi r4, r4, 56
 ; CHECK-LE-P9-NEXT:    std r0, 64(r1)
 ; CHECK-LE-P9-NEXT:    mr r30, r3
+; CHECK-LE-P9-NEXT:    clrldi r4, r4, 56
 ; CHECK-LE-P9-NEXT:    bl memset
 ; CHECK-LE-P9-NEXT:    nop
 ; CHECK-LE-P9-NEXT:    mr r3, r30
@@ -318,10 +318,10 @@ define ptr @test_memset(ptr noundef %dst, i32 noundef signext %value, i64 nounde
 ; CHECK-BE-P9:       # %bb.0: # %entry
 ; CHECK-BE-P9-NEXT:    mflr r0
 ; CHECK-BE-P9-NEXT:    stdu r1, -128(r1)
-; CHECK-BE-P9-NEXT:    clrldi r4, r4, 56
 ; CHECK-BE-P9-NEXT:    std r0, 144(r1)
 ; CHECK-BE-P9-NEXT:    std r30, 112(r1) # 8-byte Folded Spill
 ; CHECK-BE-P9-NEXT:    mr r30, r3
+; CHECK-BE-P9-NEXT:    clrldi r4, r4, 56
 ; CHECK-BE-P9-NEXT:    bl memset
 ; CHECK-BE-P9-NEXT:    nop
 ; CHECK-BE-P9-NEXT:    mr r3, r30
@@ -335,10 +335,10 @@ define ptr @test_memset(ptr noundef %dst, i32 noundef signext %value, i64 nounde
 ; CHECK-AIX-64-P9:       # %bb.0: # %entry
 ; CHECK-AIX-64-P9-NEXT:    mflr r0
 ; CHECK-AIX-64-P9-NEXT:    stdu r1, -128(r1)
-; CHECK-AIX-64-P9-NEXT:    clrldi r4, r4, 56
 ; CHECK-AIX-64-P9-NEXT:    std r0, 144(r1)
 ; CHECK-AIX-64-P9-NEXT:    std r31, 120(r1) # 8-byte Folded Spill
 ; CHECK-AIX-64-P9-NEXT:    mr r31, r3
+; CHECK-AIX-64-P9-NEXT:    clrldi r4, r4, 56
 ; CHECK-AIX-64-P9-NEXT:    bl .___memset64[PR]
 ; CHECK-AIX-64-P9-NEXT:    nop
 ; CHECK-AIX-64-P9-NEXT:    mr r3, r31
@@ -425,8 +425,8 @@ define ptr @test_memccpy(ptr noalias noundef %dst, ptr noalias noundef %src, i32
 ; CHECK-AIX-64-P9:       # %bb.0: # %entry
 ; CHECK-AIX-64-P9-NEXT:    mflr r0
 ; CHECK-AIX-64-P9-NEXT:    stdu r1, -112(r1)
-; CHECK-AIX-64-P9-NEXT:    clrldi r5, r5, 32
 ; CHECK-AIX-64-P9-NEXT:    std r0, 128(r1)
+; CHECK-AIX-64-P9-NEXT:    clrldi r5, r5, 32
 ; CHECK-AIX-64-P9-NEXT:    bl .___memccpy64[PR]
 ; CHECK-AIX-64-P9-NEXT:    nop
 ; CHECK-AIX-64-P9-NEXT:    addi r1, r1, 112

@@ -283,8 +283,8 @@ define void @mixed_shared_private_za_loop(ptr %cond) "aarch64_inout_za" nounwind
 ; CHECK-SDAG-NEXT:    mov x19, x0
 ; CHECK-SDAG-NEXT:    msub x9, x8, x8, x9
 ; CHECK-SDAG-NEXT:    mov sp, x9
-; CHECK-SDAG-NEXT:    sub x20, x29, #16
 ; CHECK-SDAG-NEXT:    stp x9, x8, [x29, #-16]
+; CHECK-SDAG-NEXT:    sub x20, x29, #16
 ; CHECK-SDAG-NEXT:    b .LBB4_2
 ; CHECK-SDAG-NEXT:  .LBB4_1: // %loop
 ; CHECK-SDAG-NEXT:    // in Loop: Header=BB4_2 Depth=1
@@ -322,8 +322,8 @@ define void @mixed_shared_private_za_loop(ptr %cond) "aarch64_inout_za" nounwind
 ; CHECK-NEXT:    msub x9, x8, x8, x9
 ; CHECK-NEXT:    mov sp, x9
 ; CHECK-NEXT:    mov x19, x0
-; CHECK-NEXT:    sub x20, x29, #16
 ; CHECK-NEXT:    stp x9, x8, [x29, #-16]
+; CHECK-NEXT:    sub x20, x29, #16
 ; CHECK-NEXT:    b .LBB4_2
 ; CHECK-NEXT:  .LBB4_1: // %loop
 ; CHECK-NEXT:    // in Loop: Header=BB4_2 Depth=1

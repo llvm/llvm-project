@@ -14,12 +14,12 @@ define void @issue92561(ptr addrspace(1) %arg) {
 ; SDAG-NEXT:    s_clause 0x1
 ; SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:16
 ; SDAG-NEXT:    global_load_b128 v[0:3], v[0:1], off
-; SDAG-NEXT:    v_mov_b32_e32 v8, 0
 ; SDAG-NEXT:    s_mov_b32 s12, 0
-; SDAG-NEXT:    s_mov_b32 s3, exec_lo
+; SDAG-NEXT:    v_mov_b32_e32 v8, 0
 ; SDAG-NEXT:    s_mov_b32 s13, s12
 ; SDAG-NEXT:    s_mov_b32 s14, s12
 ; SDAG-NEXT:    s_mov_b32 s15, s12
+; SDAG-NEXT:    s_mov_b32 s3, exec_lo
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-NEXT:  .LBB0_1: ; =>This Inner Loop Header: Depth=1
 ; SDAG-NEXT:    v_readfirstlane_b32 s4, v0
@@ -76,9 +76,8 @@ define void @issue92561(ptr addrspace(1) %arg) {
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_load_b128 v[4:7], v[0:1], off
 ; GISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off offset:16
-; GISEL-NEXT:    v_mov_b32_e32 v8, 0
 ; GISEL-NEXT:    s_mov_b32 s20, 0
-; GISEL-NEXT:    s_mov_b32 s3, exec_lo
+; GISEL-NEXT:    v_mov_b32_e32 v8, 0
 ; GISEL-NEXT:    s_mov_b32 s21, s20
 ; GISEL-NEXT:    s_mov_b32 s22, s20
 ; GISEL-NEXT:    s_mov_b32 s23, s20
@@ -90,6 +89,7 @@ define void @issue92561(ptr addrspace(1) %arg) {
 ; GISEL-NEXT:    s_mov_b32 s9, s20
 ; GISEL-NEXT:    s_mov_b32 s10, s20
 ; GISEL-NEXT:    s_mov_b32 s11, s20
+; GISEL-NEXT:    s_mov_b32 s3, exec_lo
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:  .LBB0_1: ; =>This Inner Loop Header: Depth=1
 ; GISEL-NEXT:    v_readfirstlane_b32 s12, v4

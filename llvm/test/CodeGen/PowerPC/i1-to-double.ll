@@ -28,7 +28,6 @@ define double @u1tofp(i1 %i, double %d) #0 {
 ; CHECK-LABEL: u1tofp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi. 3, 3, 1
-; CHECK-NEXT:    fmr 0, 1
 ; CHECK-NEXT:    bc 12, 1, .LBB1_2
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    li 3, .LCPI1_0@l
@@ -38,9 +37,10 @@ define double @u1tofp(i1 %i, double %d) #0 {
 ; CHECK-NEXT:    li 3, .LCPI1_1@l
 ; CHECK-NEXT:    addis 3, 3, .LCPI1_1@ha
 ; CHECK-NEXT:  .LBB1_3: # %entry
-; CHECK-NEXT:    lfs 1, 0(3)
+; CHECK-NEXT:    lfs 0, 0(3)
 ; CHECK-NEXT:    lis 3, foo@ha
-; CHECK-NEXT:    stfd 0, foo@l(3)
+; CHECK-NEXT:    stfd 1, foo@l(3)
+; CHECK-NEXT:    fmr 1, 0
 ; CHECK-NEXT:    blr
 entry:
   %conv = tail call double @llvm.experimental.constrained.uitofp.f64.i1(i1 %i, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
@@ -52,7 +52,6 @@ define double @s1tofp(i1 %i, double %d) #0 {
 ; CHECK-LABEL: s1tofp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi. 3, 3, 1
-; CHECK-NEXT:    fmr 0, 1
 ; CHECK-NEXT:    bc 12, 1, .LBB2_2
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    li 3, .LCPI2_0@l
@@ -62,9 +61,10 @@ define double @s1tofp(i1 %i, double %d) #0 {
 ; CHECK-NEXT:    li 3, .LCPI2_1@l
 ; CHECK-NEXT:    addis 3, 3, .LCPI2_1@ha
 ; CHECK-NEXT:  .LBB2_3: # %entry
-; CHECK-NEXT:    lfs 1, 0(3)
+; CHECK-NEXT:    lfs 0, 0(3)
 ; CHECK-NEXT:    lis 3, foo@ha
-; CHECK-NEXT:    stfd 0, foo@l(3)
+; CHECK-NEXT:    stfd 1, foo@l(3)
+; CHECK-NEXT:    fmr 1, 0
 ; CHECK-NEXT:    blr
 entry:
   %conv = tail call double @llvm.experimental.constrained.sitofp.f64.i1(i1 %i, metadata !"round.dynamic", metadata !"fpexcept.strict") #0

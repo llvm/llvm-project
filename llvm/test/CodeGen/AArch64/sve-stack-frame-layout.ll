@@ -22,10 +22,10 @@ define i32 @csr_d8_allocnxv4i32i32f64(double %d) "aarch64_pstate_sm_compatible" 
 ; CHECK-COMMON-NEXT:    .cfi_offset b8, -16
 ; CHECK-COMMON-NEXT:    mov z1.s, #0 // =0x0
 ; CHECK-COMMON-NEXT:    add x8, sp, #16
-; CHECK-COMMON-NEXT:    mov w0, wzr
 ; CHECK-COMMON-NEXT:    //APP
 ; CHECK-COMMON-NEXT:    //NO_APP
 ; CHECK-COMMON-NEXT:    str wzr, [sp, #12]
+; CHECK-COMMON-NEXT:    mov w0, wzr
 ; CHECK-COMMON-NEXT:    str d0, [sp]
 ; CHECK-COMMON-NEXT:    str z1, [x8]
 ; CHECK-COMMON-NEXT:    addvl sp, sp, #1
@@ -118,10 +118,10 @@ define i32 @csr_d8_allocnxv4i32i32f64_dynamicrealign(double %d) "aarch64_pstate_
 ; CHECK-COMMON-NEXT:    .cfi_offset b8, -32
 ; CHECK-COMMON-NEXT:    mov z1.s, #0 // =0x0
 ; CHECK-COMMON-NEXT:    sub x8, x29, #16
-; CHECK-COMMON-NEXT:    mov w0, wzr
 ; CHECK-COMMON-NEXT:    //APP
 ; CHECK-COMMON-NEXT:    //NO_APP
 ; CHECK-COMMON-NEXT:    str wzr, [sp]
+; CHECK-COMMON-NEXT:    mov w0, wzr
 ; CHECK-COMMON-NEXT:    stur d0, [x29, #-8]
 ; CHECK-COMMON-NEXT:    str z1, [x8, #-1, mul vl]
 ; CHECK-COMMON-NEXT:    sub sp, x29, #16
@@ -182,8 +182,8 @@ define i32 @csr_d8_allocnxv4i32i32f64_vla(double %d, i32 %i) "aarch64_pstate_sm_
 ; CHECK-COMMON-NEXT:    //NO_APP
 ; CHECK-COMMON-NEXT:    str wzr, [x8]
 ; CHECK-COMMON-NEXT:    sub x8, x29, #8
-; CHECK-COMMON-NEXT:    mov w0, wzr
 ; CHECK-COMMON-NEXT:    str wzr, [x9]
+; CHECK-COMMON-NEXT:    mov w0, wzr
 ; CHECK-COMMON-NEXT:    str d0, [x19, #8]
 ; CHECK-COMMON-NEXT:    str z1, [x8, #-1, mul vl]
 ; CHECK-COMMON-NEXT:    sub sp, x29, #8
@@ -226,10 +226,10 @@ define i32 @csr_d8_allocnxv4i32i32f64_stackargsi32f64(double %d0, double %d1, do
 ; CHECK-COMMON-NEXT:    .cfi_offset b8, -16
 ; CHECK-COMMON-NEXT:    mov z1.s, #0 // =0x0
 ; CHECK-COMMON-NEXT:    add x8, sp, #16
-; CHECK-COMMON-NEXT:    mov w0, wzr
 ; CHECK-COMMON-NEXT:    //APP
 ; CHECK-COMMON-NEXT:    //NO_APP
 ; CHECK-COMMON-NEXT:    str wzr, [sp, #12]
+; CHECK-COMMON-NEXT:    mov w0, wzr
 ; CHECK-COMMON-NEXT:    str d0, [sp]
 ; CHECK-COMMON-NEXT:    str z1, [x8]
 ; CHECK-COMMON-NEXT:    addvl sp, sp, #1
@@ -269,12 +269,12 @@ define i32 @svecc_z8_allocnxv4i32i32f64_fp(double %d, <vscale x 4 x i32> %v) "aa
 ; CHECK-COMMON-NEXT:    .cfi_offset w30, -8
 ; CHECK-COMMON-NEXT:    .cfi_offset w29, -16
 ; CHECK-COMMON-NEXT:    .cfi_escape 0x10, 0x48, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x40, 0x1c // $d8 @ cfa - 8 * VG - 16
-; CHECK-COMMON-NEXT:    mov w0, wzr
 ; CHECK-COMMON-NEXT:    //APP
 ; CHECK-COMMON-NEXT:    //NO_APP
 ; CHECK-COMMON-NEXT:    str wzr, [sp, #12]
 ; CHECK-COMMON-NEXT:    str z1, [x29, #-2, mul vl]
 ; CHECK-COMMON-NEXT:    str d0, [sp], #16
+; CHECK-COMMON-NEXT:    mov w0, wzr
 ; CHECK-COMMON-NEXT:    addvl sp, sp, #1
 ; CHECK-COMMON-NEXT:    ldr z8, [sp] // 16-byte Folded Reload
 ; CHECK-COMMON-NEXT:    addvl sp, sp, #1
@@ -313,12 +313,12 @@ define i32 @svecc_z8_allocnxv4i32i32f64_stackargsi32_fp(double %d, i32 %i0, i32 
 ; CHECK-COMMON-NEXT:    .cfi_offset w30, -8
 ; CHECK-COMMON-NEXT:    .cfi_offset w29, -16
 ; CHECK-COMMON-NEXT:    .cfi_escape 0x10, 0x48, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x40, 0x1c // $d8 @ cfa - 8 * VG - 16
-; CHECK-COMMON-NEXT:    mov w0, wzr
 ; CHECK-COMMON-NEXT:    //APP
 ; CHECK-COMMON-NEXT:    //NO_APP
 ; CHECK-COMMON-NEXT:    str wzr, [sp, #12]
 ; CHECK-COMMON-NEXT:    str z1, [x29, #-2, mul vl]
 ; CHECK-COMMON-NEXT:    str d0, [sp], #16
+; CHECK-COMMON-NEXT:    mov w0, wzr
 ; CHECK-COMMON-NEXT:    addvl sp, sp, #1
 ; CHECK-COMMON-NEXT:    ldr z8, [sp] // 16-byte Folded Reload
 ; CHECK-COMMON-NEXT:    addvl sp, sp, #1
@@ -569,8 +569,8 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK-SDAG-NEXT:  // %bb.1: // %entry
 ; CHECK-SDAG-NEXT:    bl __arm_tpidr2_restore
 ; CHECK-SDAG-NEXT:  .LBB8_2: // %entry
-; CHECK-SDAG-NEXT:    mov w0, w20
 ; CHECK-SDAG-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-SDAG-NEXT:    mov w0, w20
 ; CHECK-SDAG-NEXT:    sub sp, x29, #64
 ; CHECK-SDAG-NEXT:    .cfi_def_cfa wsp, 112
 ; CHECK-SDAG-NEXT:    ldp x20, x19, [sp, #96] // 16-byte Folded Reload
@@ -626,8 +626,8 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    msub x9, x8, x8, x9
 ; CHECK-NEXT:    mov sp, x9
-; CHECK-NEXT:    mov w20, w0
 ; CHECK-NEXT:    sub x10, x29, #80
+; CHECK-NEXT:    mov w20, w0
 ; CHECK-NEXT:    stp x9, x8, [x29, #-80]
 ; CHECK-NEXT:    msr TPIDR2_EL0, x10
 ; CHECK-NEXT:    smstop sm
@@ -640,8 +640,8 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    bl __arm_tpidr2_restore
 ; CHECK-NEXT:  .LBB8_2: // %entry
-; CHECK-NEXT:    mov w0, w20
 ; CHECK-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-NEXT:    mov w0, w20
 ; CHECK-NEXT:    sub sp, x29, #64
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 112
 ; CHECK-NEXT:    ldp x20, x19, [sp, #96] // 16-byte Folded Reload
@@ -670,3 +670,5 @@ entry:
   ret i32 %x
 }
 declare void @other()
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; CHECK-FRAMELAYOUT: {{.*}}

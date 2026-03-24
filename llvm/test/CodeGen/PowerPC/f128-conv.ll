@@ -27,9 +27,9 @@ define void @sdwConv2qp(ptr nocapture %a, i64 %b) nounwind {
 ; CHECK-P8-NEXT:    mflr r0
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
+; CHECK-P8-NEXT:    std r0, 64(r1)
 ; CHECK-P8-NEXT:    mr r30, r3
 ; CHECK-P8-NEXT:    mr r3, r4
-; CHECK-P8-NEXT:    std r0, 64(r1)
 ; CHECK-P8-NEXT:    bl __floatdikf
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    xxswapd vs0, v2
@@ -53,10 +53,10 @@ define void @sdwConv2qp_01(ptr nocapture %a, i128 %b) nounwind {
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stdu r1, -48(r1)
+; CHECK-NEXT:    std r0, 64(r1)
 ; CHECK-NEXT:    mr r30, r3
 ; CHECK-NEXT:    mr r3, r4
 ; CHECK-NEXT:    mr r4, r5
-; CHECK-NEXT:    std r0, 64(r1)
 ; CHECK-NEXT:    bl __floattikf
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    stxv v2, 0(r30)
@@ -71,9 +71,9 @@ define void @sdwConv2qp_01(ptr nocapture %a, i128 %b) nounwind {
 ; CHECK-P8-NEXT:    mflr r0
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
+; CHECK-P8-NEXT:    std r0, 64(r1)
 ; CHECK-P8-NEXT:    mr r30, r3
 ; CHECK-P8-NEXT:    mr r3, r4
-; CHECK-P8-NEXT:    std r0, 64(r1)
 ; CHECK-P8-NEXT:    mr r4, r5
 ; CHECK-P8-NEXT:    bl __floattikf
 ; CHECK-P8-NEXT:    nop
@@ -218,9 +218,9 @@ define void @udwConv2qp(ptr nocapture %a, i64 %b) nounwind {
 ; CHECK-P8-NEXT:    mflr r0
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
+; CHECK-P8-NEXT:    std r0, 64(r1)
 ; CHECK-P8-NEXT:    mr r30, r3
 ; CHECK-P8-NEXT:    mr r3, r4
-; CHECK-P8-NEXT:    std r0, 64(r1)
 ; CHECK-P8-NEXT:    bl __floatundikf
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    xxswapd vs0, v2
@@ -244,10 +244,10 @@ define void @udwConv2qp_01(ptr nocapture %a, i128 %b) nounwind {
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stdu r1, -48(r1)
+; CHECK-NEXT:    std r0, 64(r1)
 ; CHECK-NEXT:    mr r30, r3
 ; CHECK-NEXT:    mr r3, r4
 ; CHECK-NEXT:    mr r4, r5
-; CHECK-NEXT:    std r0, 64(r1)
 ; CHECK-NEXT:    bl __floatuntikf
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    stxv v2, 0(r30)
@@ -262,9 +262,9 @@ define void @udwConv2qp_01(ptr nocapture %a, i128 %b) nounwind {
 ; CHECK-P8-NEXT:    mflr r0
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
+; CHECK-P8-NEXT:    std r0, 64(r1)
 ; CHECK-P8-NEXT:    mr r30, r3
 ; CHECK-P8-NEXT:    mr r3, r4
-; CHECK-P8-NEXT:    std r0, 64(r1)
 ; CHECK-P8-NEXT:    mr r4, r5
 ; CHECK-P8-NEXT:    bl __floatuntikf
 ; CHECK-P8-NEXT:    nop
@@ -370,9 +370,9 @@ define void @udwConv2qp_04(ptr nocapture %a, i1 %b) nounwind {
 ; CHECK-P8-NEXT:    mflr r0
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
+; CHECK-P8-NEXT:    std r0, 64(r1)
 ; CHECK-P8-NEXT:    mr r30, r3
 ; CHECK-P8-NEXT:    clrldi r3, r4, 63
-; CHECK-P8-NEXT:    std r0, 64(r1)
 ; CHECK-P8-NEXT:    bl __floatsikf
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    xxswapd vs0, v2
@@ -485,9 +485,9 @@ define void @swConv2qp(ptr nocapture %a, i32 signext %b) nounwind {
 ; CHECK-P8-NEXT:    mflr r0
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
+; CHECK-P8-NEXT:    std r0, 64(r1)
 ; CHECK-P8-NEXT:    mr r30, r3
 ; CHECK-P8-NEXT:    mr r3, r4
-; CHECK-P8-NEXT:    std r0, 64(r1)
 ; CHECK-P8-NEXT:    bl __floatsikf
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    xxswapd vs0, v2
@@ -592,9 +592,9 @@ define void @uwConv2qp(ptr nocapture %a, i32 zeroext %b) nounwind {
 ; CHECK-P8-NEXT:    mflr r0
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
+; CHECK-P8-NEXT:    std r0, 64(r1)
 ; CHECK-P8-NEXT:    mr r30, r3
 ; CHECK-P8-NEXT:    mr r3, r4
-; CHECK-P8-NEXT:    std r0, 64(r1)
 ; CHECK-P8-NEXT:    bl __floatunsikf
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    xxswapd vs0, v2
@@ -739,9 +739,9 @@ define void @uhwConv2qp(ptr nocapture %a, i16 zeroext %b) nounwind {
 ; CHECK-P8-NEXT:    mflr r0
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
+; CHECK-P8-NEXT:    std r0, 64(r1)
 ; CHECK-P8-NEXT:    mr r30, r3
 ; CHECK-P8-NEXT:    mr r3, r4
-; CHECK-P8-NEXT:    std r0, 64(r1)
 ; CHECK-P8-NEXT:    bl __floatunsikf
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    xxswapd vs0, v2
@@ -889,9 +889,9 @@ define void @ubConv2qp(ptr nocapture %a, i8 zeroext %b) nounwind {
 ; CHECK-P8-NEXT:    mflr r0
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
+; CHECK-P8-NEXT:    std r0, 64(r1)
 ; CHECK-P8-NEXT:    mr r30, r3
 ; CHECK-P8-NEXT:    mr r3, r4
-; CHECK-P8-NEXT:    std r0, 64(r1)
 ; CHECK-P8-NEXT:    bl __floatunsikf
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    xxswapd vs0, v2
@@ -1383,8 +1383,8 @@ define fp128 @ext(half %a) nounwind {
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
-; CHECK-P8-NEXT:    clrldi r3, r3, 48
 ; CHECK-P8-NEXT:    std r0, 48(r1)
+; CHECK-P8-NEXT:    clrldi r3, r3, 48
 ; CHECK-P8-NEXT:    bl __extendhfsf2
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    bl __extendsfkf2

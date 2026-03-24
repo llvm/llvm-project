@@ -10,8 +10,8 @@ declare i32 @llvm.amdgcn.workitem.id.x() #0
 define amdgpu_kernel void @reg_coalescer_breaks_dead(ptr addrspace(1) nocapture readonly %arg, i32 %arg1, i32 %arg2, i32 %arg3, i1 %c0) #1 {
 ; GFX6-LABEL: reg_coalescer_breaks_dead:
 ; GFX6:       ; %bb.0: ; %bb
-; GFX6-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GFX6-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX6-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX6-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX6-NEXT:    s_cbranch_execz .LBB0_2
@@ -40,8 +40,8 @@ define amdgpu_kernel void @reg_coalescer_breaks_dead(ptr addrspace(1) nocapture 
 ;
 ; GFX8-LABEL: reg_coalescer_breaks_dead:
 ; GFX8:       ; %bb.0: ; %bb
-; GFX8-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GFX8-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX8-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX8-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX8-NEXT:    s_cbranch_execz .LBB0_2

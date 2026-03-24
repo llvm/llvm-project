@@ -41,9 +41,9 @@ define hidden i32 @_Z1fiz(i32 %n, ...) local_unnamed_addr #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 40
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    add r0, sp, #28
-; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    stm r0!, {r1, r2, r3}
 ; CHECK-NEXT:    add r0, sp, #28
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    cmp r4, #1
 ; CHECK-NEXT:    str r0, [sp, #4]
 ; CHECK-NEXT:    blt .LBB0_2

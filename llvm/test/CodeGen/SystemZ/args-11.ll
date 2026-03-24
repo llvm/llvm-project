@@ -15,8 +15,8 @@ define i32 @fn2() {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 344
 ; CHECK-NEXT:    mvhi 164(%r15), -1
 ; CHECK-NEXT:    mvghi 176(%r15), 0
-; CHECK-NEXT:    la %r2, 168(%r15)
 ; CHECK-NEXT:    mvghi 168(%r15), 0
+; CHECK-NEXT:    la %r2, 168(%r15)
 ; CHECK-NEXT:    brasl %r14, fn1@PLT
 ; CHECK-NEXT:    l %r2, 164(%r15)
 ; CHECK-NEXT:    lmg %r14, %r15, 296(%r15)
@@ -40,8 +40,8 @@ define i32 @fn4() {
 ; CHECK-NEXT:    mvhi 164(%r15), -1
 ; CHECK-NEXT:    mvghi 184(%r15), 0
 ; CHECK-NEXT:    mvghi 176(%r15), 0
-; CHECK-NEXT:    la %r2, 168(%r15)
 ; CHECK-NEXT:    mvghi 168(%r15), 0
+; CHECK-NEXT:    la %r2, 168(%r15)
 ; CHECK-NEXT:    brasl %r14, fn3@PLT
 ; CHECK-NEXT:    l %r2, 164(%r15)
 ; CHECK-NEXT:    lmg %r14, %r15, 304(%r15)

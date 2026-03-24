@@ -416,9 +416,10 @@ define fp128 @test_neg(fp128 %in) {
 ; CHECK-GI-LABEL: test_neg:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov x8, v0.d[1]
-; CHECK-GI-NEXT:    mov v0.d[0], v0.d[0]
+; CHECK-GI-NEXT:    mov v1.d[0], v0.d[0]
 ; CHECK-GI-NEXT:    eor x8, x8, #0x8000000000000000
-; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    mov v1.d[1], x8
+; CHECK-GI-NEXT:    mov v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
   %ret = fneg fp128 %in
   ret fp128 %ret
@@ -762,8 +763,8 @@ define <2 x fp128> @vec_sitofp_32(<2 x i32> %src32) {
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    bl __floatsitf
 ; CHECK-SD-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
@@ -784,11 +785,11 @@ define <2 x fp128> @vec_sitofp_32(<2 x i32> %src32) {
 ; CHECK-GI-NEXT:    .cfi_offset w30, -8
 ; CHECK-GI-NEXT:    .cfi_offset b8, -16
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    fmov w0, s0
 ; CHECK-GI-NEXT:    mov s8, v0.s[1]
+; CHECK-GI-NEXT:    fmov w0, s0
 ; CHECK-GI-NEXT:    bl __floatsitf
-; CHECK-GI-NEXT:    fmov w0, s8
 ; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-GI-NEXT:    fmov w0, s8
 ; CHECK-GI-NEXT:    bl __floatsitf
 ; CHECK-GI-NEXT:    mov v1.16b, v0.16b
 ; CHECK-GI-NEXT:    ldr q0, [sp] // 16-byte Reload
@@ -807,8 +808,8 @@ define <2 x fp128> @vec_sitofp_64(<2 x i64> %src64) {
 ; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
-; CHECK-SD-NEXT:    fmov x0, d0
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-SD-NEXT:    fmov x0, d0
 ; CHECK-SD-NEXT:    bl __floatditf
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
@@ -828,11 +829,11 @@ define <2 x fp128> @vec_sitofp_64(<2 x i64> %src64) {
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-GI-NEXT:    .cfi_offset w30, -8
 ; CHECK-GI-NEXT:    .cfi_offset b8, -16
-; CHECK-GI-NEXT:    fmov x0, d0
 ; CHECK-GI-NEXT:    mov d8, v0.d[1]
+; CHECK-GI-NEXT:    fmov x0, d0
 ; CHECK-GI-NEXT:    bl __floatditf
-; CHECK-GI-NEXT:    fmov x0, d8
 ; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-GI-NEXT:    fmov x0, d8
 ; CHECK-GI-NEXT:    bl __floatditf
 ; CHECK-GI-NEXT:    mov v1.16b, v0.16b
 ; CHECK-GI-NEXT:    ldr q0, [sp] // 16-byte Reload
@@ -852,8 +853,8 @@ define <2 x fp128> @vec_uitofp_32(<2 x i32> %src32) {
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    bl __floatunsitf
 ; CHECK-SD-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
@@ -874,11 +875,11 @@ define <2 x fp128> @vec_uitofp_32(<2 x i32> %src32) {
 ; CHECK-GI-NEXT:    .cfi_offset w30, -8
 ; CHECK-GI-NEXT:    .cfi_offset b8, -16
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    fmov w0, s0
 ; CHECK-GI-NEXT:    mov s8, v0.s[1]
+; CHECK-GI-NEXT:    fmov w0, s0
 ; CHECK-GI-NEXT:    bl __floatunsitf
-; CHECK-GI-NEXT:    fmov w0, s8
 ; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-GI-NEXT:    fmov w0, s8
 ; CHECK-GI-NEXT:    bl __floatunsitf
 ; CHECK-GI-NEXT:    mov v1.16b, v0.16b
 ; CHECK-GI-NEXT:    ldr q0, [sp] // 16-byte Reload
@@ -897,8 +898,8 @@ define <2 x fp128> @vec_uitofp_64(<2 x i64> %src64) {
 ; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
-; CHECK-SD-NEXT:    fmov x0, d0
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-SD-NEXT:    fmov x0, d0
 ; CHECK-SD-NEXT:    bl __floatunditf
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
@@ -918,11 +919,11 @@ define <2 x fp128> @vec_uitofp_64(<2 x i64> %src64) {
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-GI-NEXT:    .cfi_offset w30, -8
 ; CHECK-GI-NEXT:    .cfi_offset b8, -16
-; CHECK-GI-NEXT:    fmov x0, d0
 ; CHECK-GI-NEXT:    mov d8, v0.d[1]
+; CHECK-GI-NEXT:    fmov x0, d0
 ; CHECK-GI-NEXT:    bl __floatunditf
-; CHECK-GI-NEXT:    fmov x0, d8
 ; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-GI-NEXT:    fmov x0, d8
 ; CHECK-GI-NEXT:    bl __floatunditf
 ; CHECK-GI-NEXT:    mov v1.16b, v0.16b
 ; CHECK-GI-NEXT:    ldr q0, [sp] // 16-byte Reload
@@ -1100,8 +1101,8 @@ define <2 x i1> @vec_setcc3(<2 x fp128> %lhs, <2 x fp128> %rhs) {
 ; CHECK-GI-NEXT:    cmp w0, #0
 ; CHECK-GI-NEXT:    cset w19, eq
 ; CHECK-GI-NEXT:    bl __unordtf2
-; CHECK-GI-NEXT:    ldp q1, q0, [sp, #32] // 32-byte Folded Reload
 ; CHECK-GI-NEXT:    cmp w0, #0
+; CHECK-GI-NEXT:    ldp q1, q0, [sp, #32] // 32-byte Folded Reload
 ; CHECK-GI-NEXT:    cset w8, ne
 ; CHECK-GI-NEXT:    orr w19, w19, w8
 ; CHECK-GI-NEXT:    bl __eqtf2
@@ -1452,9 +1453,9 @@ define <2 x fp128> @vec_neg_sub(<2 x fp128> %in) {
 ; CHECK-SD-NEXT:    str x30, [sp, #48] // 8-byte Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    adrp x8, .LCPI47_0
 ; CHECK-SD-NEXT:    str q1, [sp, #32] // 16-byte Spill
 ; CHECK-SD-NEXT:    mov v1.16b, v0.16b
-; CHECK-SD-NEXT:    adrp x8, .LCPI47_0
 ; CHECK-SD-NEXT:    ldr q0, [x8, :lo12:.LCPI47_0]
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-SD-NEXT:    bl __subtf3
@@ -1475,13 +1476,13 @@ define <2 x fp128> @vec_neg_sub(<2 x fp128> %in) {
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-GI-NEXT:    .cfi_offset w30, -16
 ; CHECK-GI-NEXT:    mov v2.16b, v0.16b
-; CHECK-GI-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-GI-NEXT:    str q1, [sp, #16] // 16-byte Spill
+; CHECK-GI-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-GI-NEXT:    mov v1.16b, v2.16b
 ; CHECK-GI-NEXT:    bl __subtf3
+; CHECK-GI-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-GI-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-GI-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-GI-NEXT:    bl __subtf3
 ; CHECK-GI-NEXT:    mov v1.16b, v0.16b
 ; CHECK-GI-NEXT:    ldr q0, [sp] // 16-byte Reload
@@ -1510,12 +1511,14 @@ define <2 x fp128> @vec_neg(<2 x fp128> %in) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov x8, v0.d[1]
 ; CHECK-GI-NEXT:    mov x9, v1.d[1]
-; CHECK-GI-NEXT:    mov v0.d[0], v0.d[0]
-; CHECK-GI-NEXT:    mov v1.d[0], v1.d[0]
+; CHECK-GI-NEXT:    mov v2.d[0], v0.d[0]
+; CHECK-GI-NEXT:    mov v3.d[0], v1.d[0]
 ; CHECK-GI-NEXT:    eor x8, x8, #0x8000000000000000
 ; CHECK-GI-NEXT:    eor x9, x9, #0x8000000000000000
-; CHECK-GI-NEXT:    mov v0.d[1], x8
-; CHECK-GI-NEXT:    mov v1.d[1], x9
+; CHECK-GI-NEXT:    mov v2.d[1], x8
+; CHECK-GI-NEXT:    mov v3.d[1], x9
+; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    mov v1.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
   %ret = fneg <2 x fp128> %in
   ret <2 x fp128> %ret

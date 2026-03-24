@@ -2277,8 +2277,8 @@ define void @test_dynamic_stackalloc_device_multiple_allocas(i32 %n, i32 %m) {
 ; GFX9-SDAG-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX9-SDAG-NEXT:    buffer_store_dword v2, off, s[0:3], s33 offset:64 ; 4-byte Folded Spill
 ; GFX9-SDAG-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX9-SDAG-NEXT:    s_mov_b32 s11, s34
 ; GFX9-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GFX9-SDAG-NEXT:    s_mov_b32 s11, s34
 ; GFX9-SDAG-NEXT:    s_mov_b32 s34, s32
 ; GFX9-SDAG-NEXT:    s_addk_i32 s32, 0x3000
 ; GFX9-SDAG-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -2384,8 +2384,8 @@ define void @test_dynamic_stackalloc_device_multiple_allocas(i32 %n, i32 %m) {
 ; GFX9-GISEL-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX9-GISEL-NEXT:    buffer_store_dword v2, off, s[0:3], s33 offset:64 ; 4-byte Folded Spill
 ; GFX9-GISEL-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX9-GISEL-NEXT:    s_mov_b32 s12, s34
 ; GFX9-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GFX9-GISEL-NEXT:    s_mov_b32 s12, s34
 ; GFX9-GISEL-NEXT:    s_mov_b32 s34, s32
 ; GFX9-GISEL-NEXT:    s_addk_i32 s32, 0x3000
 ; GFX9-GISEL-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -2497,9 +2497,9 @@ define void @test_dynamic_stackalloc_device_multiple_allocas(i32 %n, i32 %m) {
 ; GFX11-SDAG-NEXT:    scratch_store_b32 off, v5, s33 offset:76
 ; GFX11-SDAG-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX11-SDAG-NEXT:    s_mov_b32 s6, s34
-; GFX11-SDAG-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX11-SDAG-NEXT:    s_mov_b32 s34, s32
 ; GFX11-SDAG-NEXT:    s_addk_i32 s32, 0xc0
+; GFX11-SDAG-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX11-SDAG-NEXT:    v_cmpx_eq_u32_e32 0, v0
 ; GFX11-SDAG-NEXT:    s_cbranch_execz .LBB14_2
 ; GFX11-SDAG-NEXT:  ; %bb.1: ; %bb.0
@@ -2608,9 +2608,9 @@ define void @test_dynamic_stackalloc_device_multiple_allocas(i32 %n, i32 %m) {
 ; GFX11-GISEL-NEXT:    scratch_store_b32 off, v5, s33 offset:76
 ; GFX11-GISEL-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX11-GISEL-NEXT:    s_mov_b32 s5, s34
-; GFX11-GISEL-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX11-GISEL-NEXT:    s_mov_b32 s34, s32
 ; GFX11-GISEL-NEXT:    s_addk_i32 s32, 0xc0
+; GFX11-GISEL-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX11-GISEL-NEXT:    v_cmpx_eq_u32_e32 0, v0
 ; GFX11-GISEL-NEXT:    s_cbranch_execz .LBB14_2
 ; GFX11-GISEL-NEXT:  ; %bb.1: ; %bb.0
@@ -2729,8 +2729,8 @@ define void @test_dynamic_stackalloc_device_control_flow(i32 %n, i32 %m) {
 ; GFX9-SDAG-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX9-SDAG-NEXT:    buffer_store_dword v2, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GFX9-SDAG-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX9-SDAG-NEXT:    s_mov_b32 s11, s34
 ; GFX9-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; GFX9-SDAG-NEXT:    s_mov_b32 s11, s34
 ; GFX9-SDAG-NEXT:    s_mov_b32 s34, s32
 ; GFX9-SDAG-NEXT:    s_addk_i32 s32, 0x2000
 ; GFX9-SDAG-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -2814,8 +2814,8 @@ define void @test_dynamic_stackalloc_device_control_flow(i32 %n, i32 %m) {
 ; GFX9-GISEL-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX9-GISEL-NEXT:    buffer_store_dword v2, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GFX9-GISEL-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX9-GISEL-NEXT:    s_mov_b32 s11, s34
 ; GFX9-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; GFX9-GISEL-NEXT:    s_mov_b32 s11, s34
 ; GFX9-GISEL-NEXT:    s_mov_b32 s34, s32
 ; GFX9-GISEL-NEXT:    s_addk_i32 s32, 0x2000
 ; GFX9-GISEL-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -2903,9 +2903,9 @@ define void @test_dynamic_stackalloc_device_control_flow(i32 %n, i32 %m) {
 ; GFX11-SDAG-NEXT:    scratch_store_b32 off, v3, s33 offset:4
 ; GFX11-SDAG-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX11-SDAG-NEXT:    s_mov_b32 s4, s34
-; GFX11-SDAG-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX11-SDAG-NEXT:    s_mov_b32 s34, s32
 ; GFX11-SDAG-NEXT:    s_addk_i32 s32, 0x80
+; GFX11-SDAG-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX11-SDAG-NEXT:    v_cmpx_ne_u32_e32 0, v0
 ; GFX11-SDAG-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX11-SDAG-NEXT:    s_cbranch_execz .LBB15_2
@@ -2991,9 +2991,9 @@ define void @test_dynamic_stackalloc_device_control_flow(i32 %n, i32 %m) {
 ; GFX11-GISEL-NEXT:    scratch_store_b32 off, v3, s33 offset:4
 ; GFX11-GISEL-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX11-GISEL-NEXT:    s_mov_b32 s5, s34
-; GFX11-GISEL-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX11-GISEL-NEXT:    s_mov_b32 s34, s32
 ; GFX11-GISEL-NEXT:    s_addk_i32 s32, 0x80
+; GFX11-GISEL-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX11-GISEL-NEXT:    v_cmpx_ne_u32_e32 0, v0
 ; GFX11-GISEL-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX11-GISEL-NEXT:    s_cbranch_execz .LBB15_2

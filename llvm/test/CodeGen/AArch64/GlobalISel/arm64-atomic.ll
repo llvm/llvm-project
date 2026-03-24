@@ -6000,14 +6000,14 @@ define { i8, i1 } @cmpxchg_i8(ptr %ptr, i8 %desired, i8 %new) {
 ; CHECK-NOLSE-O1-NEXT:    mov w9, #1 ; =0x1
 ; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB67_1
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.3: ; %cmpxchg.end
-; CHECK-NOLSE-O1-NEXT:    mov w1, w9
 ; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
+; CHECK-NOLSE-O1-NEXT:    mov w1, w9
 ; CHECK-NOLSE-O1-NEXT:    ret
 ; CHECK-NOLSE-O1-NEXT:  LBB67_4: ; %cmpxchg.nostore
 ; CHECK-NOLSE-O1-NEXT:    mov w9, wzr
 ; CHECK-NOLSE-O1-NEXT:    clrex
-; CHECK-NOLSE-O1-NEXT:    mov w1, w9
 ; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
+; CHECK-NOLSE-O1-NEXT:    mov w1, w9
 ; CHECK-NOLSE-O1-NEXT:    ret
 ;
 ; CHECK-OUTLINE-O1-LABEL: cmpxchg_i8:
@@ -6108,14 +6108,14 @@ define { i16, i1 } @cmpxchg_i16(ptr %ptr, i16 %desired, i16 %new) {
 ; CHECK-NOLSE-O1-NEXT:    mov w9, #1 ; =0x1
 ; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB68_1
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.3: ; %cmpxchg.end
-; CHECK-NOLSE-O1-NEXT:    mov w1, w9
 ; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
+; CHECK-NOLSE-O1-NEXT:    mov w1, w9
 ; CHECK-NOLSE-O1-NEXT:    ret
 ; CHECK-NOLSE-O1-NEXT:  LBB68_4: ; %cmpxchg.nostore
 ; CHECK-NOLSE-O1-NEXT:    mov w9, wzr
 ; CHECK-NOLSE-O1-NEXT:    clrex
-; CHECK-NOLSE-O1-NEXT:    mov w1, w9
 ; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
+; CHECK-NOLSE-O1-NEXT:    mov w1, w9
 ; CHECK-NOLSE-O1-NEXT:    ret
 ;
 ; CHECK-OUTLINE-O1-LABEL: cmpxchg_i16:
@@ -6215,14 +6215,14 @@ define { i32, i1 } @cmpxchg_i32(ptr %ptr, i32 %desired, i32 %new) {
 ; CHECK-NOLSE-O1-NEXT:    stxr w10, w2, [x8]
 ; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB69_1
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.3: ; %cmpxchg.end
-; CHECK-NOLSE-O1-NEXT:    mov w1, w9
 ; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
+; CHECK-NOLSE-O1-NEXT:    mov w1, w9
 ; CHECK-NOLSE-O1-NEXT:    ret
 ; CHECK-NOLSE-O1-NEXT:  LBB69_4: ; %cmpxchg.nostore
 ; CHECK-NOLSE-O1-NEXT:    mov w9, wzr
 ; CHECK-NOLSE-O1-NEXT:    clrex
-; CHECK-NOLSE-O1-NEXT:    mov w1, w9
 ; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
+; CHECK-NOLSE-O1-NEXT:    mov w1, w9
 ; CHECK-NOLSE-O1-NEXT:    ret
 ;
 ; CHECK-OUTLINE-O1-LABEL: cmpxchg_i32:

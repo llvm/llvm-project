@@ -7023,8 +7023,8 @@ define amdgpu_kernel void @v_fneg_copytoreg_f32(ptr addrspace(1) %out, ptr addrs
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v1, s9
 ; SI-NEXT:    v_add_i32_e32 v0, vcc, s8, v6
-; SI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; SI-NEXT:    s_cmp_lg_u32 s0, 0
+; SI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; SI-NEXT:    v_mul_f32_e32 v3, v7, v3
 ; SI-NEXT:    s_cbranch_scc0 .LBB125_2
 ; SI-NEXT:  ; %bb.1: ; %endif
@@ -7063,8 +7063,8 @@ define amdgpu_kernel void @v_fneg_copytoreg_f32(ptr addrspace(1) %out, ptr addrs
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v1, s9
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s8, v6
-; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    s_cmp_lg_u32 s0, 0
+; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    v_mul_f32_e32 v3, v7, v3
 ; VI-NEXT:    s_cbranch_scc0 .LBB125_2
 ; VI-NEXT:  ; %bb.1: ; %endif

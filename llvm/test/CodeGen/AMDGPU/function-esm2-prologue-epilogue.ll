@@ -43,40 +43,38 @@ bb:
 define amdgpu_kernel void @main(i32 %arg) {
 ; GFX12-LABEL: main:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_load_b32 s14, s[4:5], 0x24
 ; GFX12-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; GFX12-NEXT:    s_getpc_b64 s[6:7]
 ; GFX12-NEXT:    s_sext_i32_i16 s7, s7
 ; GFX12-NEXT:    s_add_co_u32 s6, s6, missing_truncate_promote_bswap@gotpcrel32@lo+8
 ; GFX12-NEXT:    s_add_co_ci_u32 s7, s7, missing_truncate_promote_bswap@gotpcrel32@hi+16
-; GFX12-NEXT:    v_mov_b32_e32 v31, v0
+; GFX12-NEXT:    s_load_b32 s14, s[4:5], 0x24
 ; GFX12-NEXT:    s_load_b64 s[12:13], s[6:7], 0x0
+; GFX12-NEXT:    s_mov_b32 s32, 0
 ; GFX12-NEXT:    s_add_nc_u64 s[8:9], s[4:5], 40
 ; GFX12-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX12-NEXT:    s_mov_b64 s[6:7], s[2:3]
-; GFX12-NEXT:    s_mov_b32 s32, 0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v0, s14
+; GFX12-NEXT:    v_dual_mov_b32 v31, v0 :: v_dual_mov_b32 v0, s14
 ; GFX12-NEXT:    s_swappc_b64 s[30:31], s[12:13]
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX12-ESM-LABEL: main:
 ; GFX12-ESM:       ; %bb.0:
 ; GFX12-ESM-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SCHED_MODE, 0, 2), 2
-; GFX12-ESM-NEXT:    s_load_b32 s14, s[4:5], 0x24
 ; GFX12-ESM-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; GFX12-ESM-NEXT:    s_getpc_b64 s[6:7]
 ; GFX12-ESM-NEXT:    s_sext_i32_i16 s7, s7
 ; GFX12-ESM-NEXT:    s_add_co_u32 s6, s6, missing_truncate_promote_bswap@gotpcrel32@lo+8
 ; GFX12-ESM-NEXT:    s_add_co_ci_u32 s7, s7, missing_truncate_promote_bswap@gotpcrel32@hi+16
-; GFX12-ESM-NEXT:    v_mov_b32_e32 v31, v0
+; GFX12-ESM-NEXT:    s_load_b32 s14, s[4:5], 0x24
 ; GFX12-ESM-NEXT:    s_load_b64 s[12:13], s[6:7], 0x0
+; GFX12-ESM-NEXT:    s_mov_b32 s32, 0
 ; GFX12-ESM-NEXT:    s_add_nc_u64 s[8:9], s[4:5], 40
 ; GFX12-ESM-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX12-ESM-NEXT:    s_mov_b64 s[6:7], s[2:3]
-; GFX12-ESM-NEXT:    s_mov_b32 s32, 0
 ; GFX12-ESM-NEXT:    s_wait_kmcnt 0x0
-; GFX12-ESM-NEXT:    v_mov_b32_e32 v0, s14
+; GFX12-ESM-NEXT:    v_dual_mov_b32 v31, v0 :: v_dual_mov_b32 v0, s14
 ; GFX12-ESM-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SCHED_MODE, 0, 2), 0
 ; GFX12-ESM-NEXT:    s_swappc_b64 s[30:31], s[12:13]
 ; GFX12-ESM-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SCHED_MODE, 0, 2), 2

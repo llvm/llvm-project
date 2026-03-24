@@ -186,8 +186,8 @@ define void @test_nested_if(ptr %ptr, i32 %val, i1 %cond) {
 ; GFX900-NEXT:    flat_load_dword v4, v[0:1]
 ; GFX900-NEXT:    v_and_b32_e32 v3, 1, v3
 ; GFX900-NEXT:    v_cmp_eq_u32_e64 s[6:7], 1, v3
-; GFX900-NEXT:    s_mov_b64 s[10:11], -1
 ; GFX900-NEXT:    s_xor_b64 s[4:5], s[6:7], -1
+; GFX900-NEXT:    s_mov_b64 s[10:11], -1
 ; GFX900-NEXT:    s_mov_b64 s[12:13], s[6:7]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    v_mov_b32_e32 v3, v4

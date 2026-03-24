@@ -332,8 +332,8 @@ define i1 @sadd_add(i32 %a, i32 %b, ptr %p) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvn w8, w0
 ; CHECK-NEXT:    adds w8, w8, w1
-; CHECK-NEXT:    cset w0, vs
 ; CHECK-NEXT:    add w8, w8, #1
+; CHECK-NEXT:    cset w0, vs
 ; CHECK-NEXT:    str w8, [x2]
 ; CHECK-NEXT:    ret
   %nota = xor i32 %a, -1

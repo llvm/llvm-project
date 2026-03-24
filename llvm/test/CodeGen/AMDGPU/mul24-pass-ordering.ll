@@ -55,8 +55,8 @@ define void @lsr_order_mul24_1(i32 %arg, i32 %arg1, i32 %arg2, ptr addrspace(3) 
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_and_b32_e32 v5, 1, v18
-; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v5
 ; GFX9-NEXT:    v_cmp_lt_u32_e64 s[4:5], v0, v1
+; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v5
 ; GFX9-NEXT:    s_and_saveexec_b64 s[8:9], s[4:5]
 ; GFX9-NEXT:    s_cbranch_execz .LBB1_3
 ; GFX9-NEXT:  ; %bb.1: ; %bb19
@@ -68,8 +68,8 @@ define void @lsr_order_mul24_1(i32 %arg, i32 %arg1, i32 %arg2, ptr addrspace(3) 
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v8, 2, v2
 ; GFX9-NEXT:    v_add_u32_e32 v9, v17, v12
 ; GFX9-NEXT:    s_mov_b64 s[10:11], 0
-; GFX9-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-NEXT:    ; implicit-def: $vgpr3
+; GFX9-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-NEXT:  .LBB1_2: ; %bb23
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v3, v0
@@ -209,9 +209,9 @@ define void @slsr1_1(i32 %b.arg, i32 %s.arg) #0 {
 ; GFX9-NEXT:    buffer_store_dword v42, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v40, v1
 ; GFX9-NEXT:    v_mov_b32_e32 v41, v0
-; GFX9-NEXT:    v_mul_u32_u24_e32 v0, v41, v40
 ; GFX9-NEXT:    s_mov_b32 s34, s15
 ; GFX9-NEXT:    v_and_b32_e32 v42, 0xffffff, v40
+; GFX9-NEXT:    v_mul_u32_u24_e32 v0, v41, v40
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[36:37]
 ; GFX9-NEXT:    v_mad_u32_u24 v40, v41, v40, v42

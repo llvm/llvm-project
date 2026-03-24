@@ -42,8 +42,8 @@ define void @call0() {
 ; CHECK-NEXT:    lg %r0, 8(%r1)
 ; CHECK-NEXT:    lg %r1, 0(%r1)
 ; CHECK-NEXT:    stg %r0, 168(%r15)
-; CHECK-NEXT:    la %r2, 160(%r15)
 ; CHECK-NEXT:    stg %r1, 160(%r15)
+; CHECK-NEXT:    la %r2, 160(%r15)
 ; CHECK-NEXT:    brasl %r14, Fnptr@PLT
 ; CHECK-NEXT:    lmg %r14, %r15, 288(%r15)
 ; CHECK-NEXT:    br %r14
@@ -57,8 +57,8 @@ define void @call0() {
 ; VECTOR-NEXT:    .cfi_def_cfa_offset 336
 ; VECTOR-NEXT:    lgrl %r1, Src@GOT
 ; VECTOR-NEXT:    vl %v0, 0(%r1), 3
-; VECTOR-NEXT:    la %r2, 160(%r15)
 ; VECTOR-NEXT:    vst %v0, 160(%r15), 3
+; VECTOR-NEXT:    la %r2, 160(%r15)
 ; VECTOR-NEXT:    brasl %r14, Fnptr@PLT
 ; VECTOR-NEXT:    lmg %r14, %r15, 288(%r15)
 ; VECTOR-NEXT:    br %r14
@@ -145,8 +145,8 @@ define void @call1() {
 ; CHECK-NEXT:    ic %r2, 8(%r1)
 ; CHECK-NEXT:    srlg %r0, %r0, 56
 ; CHECK-NEXT:    stg %r2, 168(%r15)
-; CHECK-NEXT:    la %r2, 160(%r15)
 ; CHECK-NEXT:    stg %r0, 160(%r15)
+; CHECK-NEXT:    la %r2, 160(%r15)
 ; CHECK-NEXT:    brasl %r14, Fnptr@PLT
 ; CHECK-NEXT:    lmg %r14, %r15, 288(%r15)
 ; CHECK-NEXT:    br %r14
@@ -165,8 +165,8 @@ define void @call1() {
 ; VECTOR-NEXT:    vrepib %v2, 8
 ; VECTOR-NEXT:    vslb %v1, %v1, %v2
 ; VECTOR-NEXT:    vo %v0, %v0, %v1
-; VECTOR-NEXT:    la %r2, 160(%r15)
 ; VECTOR-NEXT:    vst %v0, 160(%r15), 3
+; VECTOR-NEXT:    la %r2, 160(%r15)
 ; VECTOR-NEXT:    brasl %r14, Fnptr@PLT
 ; VECTOR-NEXT:    lmg %r14, %r15, 288(%r15)
 ; VECTOR-NEXT:    br %r14
@@ -259,9 +259,9 @@ define void @call2() {
 ; CHECK-NEXT:    stg %r0, 168(%r15)
 ; CHECK-NEXT:    stg %r2, 160(%r15)
 ; CHECK-NEXT:    stg %r3, 184(%r15)
+; CHECK-NEXT:    stg %r1, 176(%r15)
 ; CHECK-NEXT:    la %r2, 176(%r15)
 ; CHECK-NEXT:    la %r3, 160(%r15)
-; CHECK-NEXT:    stg %r1, 176(%r15)
 ; CHECK-NEXT:    brasl %r14, Fnptr@PLT
 ; CHECK-NEXT:    lmg %r14, %r15, 304(%r15)
 ; CHECK-NEXT:    br %r14
@@ -276,10 +276,10 @@ define void @call2() {
 ; VECTOR-NEXT:    lgrl %r1, Src@GOT
 ; VECTOR-NEXT:    vl %v0, 0(%r1), 3
 ; VECTOR-NEXT:    vl %v1, 16(%r1), 3
-; VECTOR-NEXT:    la %r2, 176(%r15)
-; VECTOR-NEXT:    la %r3, 160(%r15)
 ; VECTOR-NEXT:    vst %v1, 160(%r15), 3
 ; VECTOR-NEXT:    vst %v0, 176(%r15), 3
+; VECTOR-NEXT:    la %r2, 176(%r15)
+; VECTOR-NEXT:    la %r3, 160(%r15)
 ; VECTOR-NEXT:    brasl %r14, Fnptr@PLT
 ; VECTOR-NEXT:    lmg %r14, %r15, 304(%r15)
 ; VECTOR-NEXT:    br %r14
@@ -382,9 +382,9 @@ define void @call3() {
 ; CHECK-NEXT:    stg %r3, 168(%r15)
 ; CHECK-NEXT:    stg %r4, 160(%r15)
 ; CHECK-NEXT:    stg %r2, 184(%r15)
+; CHECK-NEXT:    stg %r0, 176(%r15)
 ; CHECK-NEXT:    la %r2, 176(%r15)
 ; CHECK-NEXT:    la %r3, 160(%r15)
-; CHECK-NEXT:    stg %r0, 176(%r15)
 ; CHECK-NEXT:    brasl %r14, Fnptr@PLT
 ; CHECK-NEXT:    lmg %r14, %r15, 304(%r15)
 ; CHECK-NEXT:    br %r14
@@ -404,10 +404,10 @@ define void @call3() {
 ; VECTOR-NEXT:    vslb %v1, %v1, %v2
 ; VECTOR-NEXT:    vo %v0, %v0, %v1
 ; VECTOR-NEXT:    vl %v1, 16(%r1), 3
-; VECTOR-NEXT:    la %r2, 176(%r15)
-; VECTOR-NEXT:    la %r3, 160(%r15)
 ; VECTOR-NEXT:    vst %v1, 160(%r15), 3
 ; VECTOR-NEXT:    vst %v0, 176(%r15), 3
+; VECTOR-NEXT:    la %r2, 176(%r15)
+; VECTOR-NEXT:    la %r3, 160(%r15)
 ; VECTOR-NEXT:    brasl %r14, Fnptr@PLT
 ; VECTOR-NEXT:    lmg %r14, %r15, 304(%r15)
 ; VECTOR-NEXT:    br %r14
@@ -524,8 +524,8 @@ define void @call4() {
 ; CHECK-NEXT:    lb %r2, 4(%r1)
 ; CHECK-NEXT:    st %r14, 164(%r15)
 ; CHECK-NEXT:    stg %r13, 176(%r15)
-; CHECK-NEXT:    la %r6, 168(%r15)
 ; CHECK-NEXT:    stg %r0, 168(%r15)
+; CHECK-NEXT:    la %r6, 168(%r15)
 ; CHECK-NEXT:    brasl %r14, Fnptr@PLT
 ; CHECK-NEXT:    lmg %r6, %r15, 232(%r15)
 ; CHECK-NEXT:    br %r14
@@ -539,16 +539,16 @@ define void @call4() {
 ; VECTOR-NEXT:    aghi %r15, -184
 ; VECTOR-NEXT:    .cfi_def_cfa_offset 344
 ; VECTOR-NEXT:    lgrl %r1, Src@GOT
+; VECTOR-NEXT:    lb %r0, 40(%r1)
+; VECTOR-NEXT:    vl %v1, 24(%r1), 3
 ; VECTOR-NEXT:    lh %r3, 6(%r1)
 ; VECTOR-NEXT:    lb %r2, 4(%r1)
-; VECTOR-NEXT:    lb %r0, 40(%r1)
 ; VECTOR-NEXT:    lg %r5, 16(%r1)
 ; VECTOR-NEXT:    l %r4, 8(%r1)
 ; VECTOR-NEXT:    lde %f0, 0(%r1)
-; VECTOR-NEXT:    vl %v1, 24(%r1), 3
-; VECTOR-NEXT:    la %r6, 168(%r15)
 ; VECTOR-NEXT:    st %r0, 164(%r15)
 ; VECTOR-NEXT:    vst %v1, 168(%r15), 3
+; VECTOR-NEXT:    la %r6, 168(%r15)
 ; VECTOR-NEXT:    brasl %r14, Fnptr@PLT
 ; VECTOR-NEXT:    lmg %r6, %r15, 232(%r15)
 ; VECTOR-NEXT:    br %r14
@@ -689,11 +689,11 @@ define void @call5() {
 ; CHECK-NEXT:    stg %r4, 200(%r15)
 ; CHECK-NEXT:    stg %r3, 192(%r15)
 ; CHECK-NEXT:    stg %r2, 216(%r15)
+; CHECK-NEXT:    stg %r0, 208(%r15)
 ; CHECK-NEXT:    la %r2, 208(%r15)
 ; CHECK-NEXT:    la %r3, 192(%r15)
 ; CHECK-NEXT:    la %r4, 176(%r15)
 ; CHECK-NEXT:    la %r5, 160(%r15)
-; CHECK-NEXT:    stg %r0, 208(%r15)
 ; CHECK-NEXT:    brasl %r14, Fnptr@PLT
 ; CHECK-NEXT:    lmg %r13, %r15, 328(%r15)
 ; CHECK-NEXT:    br %r14
@@ -710,14 +710,14 @@ define void @call5() {
 ; VECTOR-NEXT:    vl %v1, 16(%r1), 3
 ; VECTOR-NEXT:    vl %v2, 32(%r1), 3
 ; VECTOR-NEXT:    vl %v3, 48(%r1), 3
-; VECTOR-NEXT:    la %r2, 208(%r15)
-; VECTOR-NEXT:    la %r3, 192(%r15)
-; VECTOR-NEXT:    la %r4, 176(%r15)
-; VECTOR-NEXT:    la %r5, 160(%r15)
 ; VECTOR-NEXT:    vst %v3, 160(%r15), 3
 ; VECTOR-NEXT:    vst %v2, 176(%r15), 3
 ; VECTOR-NEXT:    vst %v1, 192(%r15), 3
 ; VECTOR-NEXT:    vst %v0, 208(%r15), 3
+; VECTOR-NEXT:    la %r2, 208(%r15)
+; VECTOR-NEXT:    la %r3, 192(%r15)
+; VECTOR-NEXT:    la %r4, 176(%r15)
+; VECTOR-NEXT:    la %r5, 160(%r15)
 ; VECTOR-NEXT:    brasl %r14, Fnptr@PLT
 ; VECTOR-NEXT:    lmg %r14, %r15, 336(%r15)
 ; VECTOR-NEXT:    br %r14
@@ -839,9 +839,9 @@ define void @call6() {
 ; CHECK-NEXT:    stg %r4, 168(%r15)
 ; CHECK-NEXT:    stg %r1, 160(%r15)
 ; CHECK-NEXT:    stg %r3, 184(%r15)
+; CHECK-NEXT:    stg %r0, 176(%r15)
 ; CHECK-NEXT:    la %r2, 176(%r15)
 ; CHECK-NEXT:    la %r3, 160(%r15)
-; CHECK-NEXT:    stg %r0, 176(%r15)
 ; CHECK-NEXT:    brasl %r14, Fnptr@PLT
 ; CHECK-NEXT:    lmg %r14, %r15, 304(%r15)
 ; CHECK-NEXT:    br %r14
@@ -865,10 +865,10 @@ define void @call6() {
 ; VECTOR-NEXT:    vlrepg %v2, 16(%r1)
 ; VECTOR-NEXT:    vslb %v2, %v2, %v3
 ; VECTOR-NEXT:    vo %v0, %v0, %v2
-; VECTOR-NEXT:    la %r2, 176(%r15)
-; VECTOR-NEXT:    la %r3, 160(%r15)
 ; VECTOR-NEXT:    vst %v0, 160(%r15), 3
 ; VECTOR-NEXT:    vst %v1, 176(%r15), 3
+; VECTOR-NEXT:    la %r2, 176(%r15)
+; VECTOR-NEXT:    la %r3, 160(%r15)
 ; VECTOR-NEXT:    brasl %r14, Fnptr@PLT
 ; VECTOR-NEXT:    lmg %r14, %r15, 304(%r15)
 ; VECTOR-NEXT:    br %r14
@@ -972,9 +972,9 @@ define void @call7() {
 ; CHECK-NEXT:    stg %r0, 168(%r15)
 ; CHECK-NEXT:    stg %r2, 160(%r15)
 ; CHECK-NEXT:    stg %r3, 184(%r15)
+; CHECK-NEXT:    stg %r1, 176(%r15)
 ; CHECK-NEXT:    la %r2, 176(%r15)
 ; CHECK-NEXT:    la %r3, 160(%r15)
-; CHECK-NEXT:    stg %r1, 176(%r15)
 ; CHECK-NEXT:    brasl %r14, Fnptr@PLT
 ; CHECK-NEXT:    lmg %r14, %r15, 304(%r15)
 ; CHECK-NEXT:    br %r14
@@ -989,10 +989,10 @@ define void @call7() {
 ; VECTOR-NEXT:    lgrl %r1, Src@GOT
 ; VECTOR-NEXT:    vl %v0, 0(%r1), 3
 ; VECTOR-NEXT:    vl %v1, 16(%r1), 3
-; VECTOR-NEXT:    la %r2, 176(%r15)
-; VECTOR-NEXT:    la %r3, 160(%r15)
 ; VECTOR-NEXT:    vst %v1, 160(%r15), 3
 ; VECTOR-NEXT:    vst %v0, 176(%r15), 3
+; VECTOR-NEXT:    la %r2, 176(%r15)
+; VECTOR-NEXT:    la %r3, 160(%r15)
 ; VECTOR-NEXT:    brasl %r14, Fnptr@PLT
 ; VECTOR-NEXT:    lmg %r14, %r15, 304(%r15)
 ; VECTOR-NEXT:    br %r14

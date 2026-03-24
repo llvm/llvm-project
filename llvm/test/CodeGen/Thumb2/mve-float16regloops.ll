@@ -754,18 +754,18 @@ define void @arm_fir_f32_1_4_mve(ptr nocapture readonly %S, ptr nocapture readon
 ; CHECK-NEXT:    bhi .LBB15_6
 ; CHECK-NEXT:  @ %bb.1: @ %if.then
 ; CHECK-NEXT:    ldr r7, [r0, #8]
-; CHECK-NEXT:    add.w r4, r10, r6, lsl #1
 ; CHECK-NEXT:    lsrs r5, r3, #2
+; CHECK-NEXT:    add.w r4, r10, r6, lsl #1
 ; CHECK-NEXT:    ldrh.w r8, [r7, #6]
 ; CHECK-NEXT:    ldrh.w r12, [r7, #4]
 ; CHECK-NEXT:    ldrh r6, [r7, #2]
 ; CHECK-NEXT:    ldrh r7, [r7]
 ; CHECK-NEXT:    wls lr, r5, .LBB15_5
 ; CHECK-NEXT:  @ %bb.2: @ %while.body.lr.ph
-; CHECK-NEXT:    str.w r9, [sp, #12] @ 4-byte Spill
 ; CHECK-NEXT:    bic r5, r3, #3
-; CHECK-NEXT:    add.w r9, r10, #2
+; CHECK-NEXT:    str.w r9, [sp, #12] @ 4-byte Spill
 ; CHECK-NEXT:    str r5, [sp] @ 4-byte Spill
+; CHECK-NEXT:    add.w r9, r10, #2
 ; CHECK-NEXT:    add.w r5, r2, r5, lsl #1
 ; CHECK-NEXT:    str r5, [sp, #4] @ 4-byte Spill
 ; CHECK-NEXT:    str r1, [sp, #8] @ 4-byte Spill
@@ -813,8 +813,8 @@ define void @arm_fir_f32_1_4_mve(ptr nocapture readonly %S, ptr nocapture readon
 ; CHECK-NEXT:    vstrht.16 q0, [r2]
 ; CHECK-NEXT:    ldr.w r10, [r0, #4]
 ; CHECK-NEXT:  .LBB15_6: @ %if.end
-; CHECK-NEXT:    add.w r0, r10, r3, lsl #1
 ; CHECK-NEXT:    lsr.w r1, r9, #2
+; CHECK-NEXT:    add.w r0, r10, r3, lsl #1
 ; CHECK-NEXT:    wls lr, r1, .LBB15_10
 ; CHECK-NEXT:  @ %bb.7: @ %while.body51.preheader
 ; CHECK-NEXT:    bic r2, r9, #3
@@ -1033,8 +1033,8 @@ define void @fir(ptr nocapture readonly %S, ptr nocapture readonly %pSrc, ptr no
 ; CHECK-NEXT:  .LBB16_5: @ %while.end
 ; CHECK-NEXT:    @ in Loop: Header=BB16_6 Depth=1
 ; CHECK-NEXT:    ldr r0, [sp, #4] @ 4-byte Reload
-; CHECK-NEXT:    subs.w r12, r12, #1
 ; CHECK-NEXT:    vstrb.8 q0, [r2], #8
+; CHECK-NEXT:    subs.w r12, r12, #1
 ; CHECK-NEXT:    add.w r0, r6, r0, lsl #1
 ; CHECK-NEXT:    add.w r5, r0, #8
 ; CHECK-NEXT:    beq.w .LBB16_12
@@ -1352,8 +1352,8 @@ define void @arm_biquad_cascade_df2T_f16(ptr nocapture readonly %S, ptr nocaptur
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    ldrd r6, r12, [r0, #4]
 ; CHECK-NEXT:    ldrb.w r9, [r0]
-; CHECK-NEXT:    vldr.16 s0, .LCPI17_0
 ; CHECK-NEXT:    lsr.w r8, r3, #1
+; CHECK-NEXT:    vldr.16 s0, .LCPI17_0
 ; CHECK-NEXT:    b .LBB17_3
 ; CHECK-NEXT:  .LBB17_1: @ %if.else
 ; CHECK-NEXT:    @ in Loop: Header=BB17_3 Depth=1

@@ -7,8 +7,8 @@
 define void @ld1w_reg_loop(ptr %addr) {
 ; CHECK-LABEL: ld1w_reg_loop:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    cntw x9
 ; CHECK-NEXT:  .LBB0_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -37,8 +37,8 @@ for.cond.cleanup:
 define void @st1w_reg_loop(ptr %addr, <vscale x 4 x i32> %val) {
 ; CHECK-LABEL: st1w_reg_loop:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    cntw x9
 ; CHECK-NEXT:  .LBB1_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1

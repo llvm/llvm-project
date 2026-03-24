@@ -260,7 +260,7 @@ define preserve_nonecc i64 @callee_with_many_param(i64 %a1, i64 %a2, i64 %a3, i6
 ; WIN-NEXT:    .seh_save_reg x30, 16
 ; WIN-NEXT:    .seh_endprologue
 ; WIN-NEXT:    ldr x8, [sp, #32]
-; WIN-NEXT:    mov x15, x20
+; WIN-NEXT:    str x20, [sp]
 ; WIN-NEXT:    mov x20, x21
 ; WIN-NEXT:    mov x21, x22
 ; WIN-NEXT:    mov x22, x23
@@ -284,7 +284,6 @@ define preserve_nonecc i64 @callee_with_many_param(i64 %a1, i64 %a2, i64 %a3, i6
 ; WIN-NEXT:    mov x13, x14
 ; WIN-NEXT:    mov x14, x9
 ; WIN-NEXT:    mov x9, x8
-; WIN-NEXT:    str x15, [sp]
 ; WIN-NEXT:    bl callee_with_many_param2
 ; WIN-NEXT:    .seh_startepilogue
 ; WIN-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
@@ -468,6 +467,7 @@ define i64 @caller3() {
 ; WIN-NEXT:    mov w8, #24 // =0x18
 ; WIN-NEXT:    mov w20, #1 // =0x1
 ; WIN-NEXT:    mov w21, #2 // =0x2
+; WIN-NEXT:    str x8, [sp]
 ; WIN-NEXT:    mov w22, #3 // =0x3
 ; WIN-NEXT:    mov w23, #4 // =0x4
 ; WIN-NEXT:    mov w24, #5 // =0x5
@@ -489,7 +489,6 @@ define i64 @caller3() {
 ; WIN-NEXT:    mov w13, #21 // =0x15
 ; WIN-NEXT:    mov w14, #22 // =0x16
 ; WIN-NEXT:    mov w9, #23 // =0x17
-; WIN-NEXT:    str x8, [sp]
 ; WIN-NEXT:    bl callee_with_many_param
 ; WIN-NEXT:    .seh_startepilogue
 ; WIN-NEXT:    ldp d14, d15, [sp, #152] // 16-byte Folded Reload

@@ -105,8 +105,8 @@ define double @fma_multi_uses1(double %a, double %b, double %c, double %d, ptr %
 ; CHECK-NEXT:    xsmuldp 0, 3, 4
 ; CHECK-NEXT:    stfd 1, 0(7)
 ; CHECK-NEXT:    stfd 1, 0(8)
-; CHECK-NEXT:    xsnmsubadp 1, 3, 4
 ; CHECK-NEXT:    stfd 0, 0(9)
+; CHECK-NEXT:    xsnmsubadp 1, 3, 4
 ; CHECK-NEXT:    blr
   %ab = fmul contract reassoc double %a, %b
   %cd = fmul contract reassoc double %c, %d

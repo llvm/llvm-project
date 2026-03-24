@@ -2699,10 +2699,10 @@ define amdgpu_kernel void @srem_v2i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-NEXT:    v_readfirstlane_b32 s11, v5
 ; GCN-NEXT:    v_readfirstlane_b32 s10, v4
 ; GCN-NEXT:    s_or_b64 s[6:7], s[10:11], s[8:9]
+; GCN-NEXT:    s_cmp_lg_u32 s7, 0
 ; GCN-NEXT:    v_readfirstlane_b32 s3, v3
 ; GCN-NEXT:    v_readfirstlane_b32 s2, v2
 ; GCN-NEXT:    v_readfirstlane_b32 s5, v7
-; GCN-NEXT:    s_cmp_lg_u32 s7, 0
 ; GCN-NEXT:    v_readfirstlane_b32 s4, v6
 ; GCN-NEXT:    s_cbranch_scc0 .LBB10_6
 ; GCN-NEXT:  ; %bb.1:
@@ -4870,6 +4870,7 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-NEXT:    v_readfirstlane_b32 s19, v13
 ; GCN-NEXT:    v_readfirstlane_b32 s18, v12
 ; GCN-NEXT:    s_or_b64 s[6:7], s[18:19], s[16:17]
+; GCN-NEXT:    s_cmp_lg_u32 s7, 0
 ; GCN-NEXT:    v_readfirstlane_b32 s2, v2
 ; GCN-NEXT:    v_readfirstlane_b32 s9, v1
 ; GCN-NEXT:    v_readfirstlane_b32 s8, v0
@@ -4880,7 +4881,6 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-NEXT:    v_readfirstlane_b32 s11, v9
 ; GCN-NEXT:    v_readfirstlane_b32 s10, v8
 ; GCN-NEXT:    v_readfirstlane_b32 s15, v15
-; GCN-NEXT:    s_cmp_lg_u32 s7, 0
 ; GCN-NEXT:    v_readfirstlane_b32 s14, v14
 ; GCN-NEXT:    s_cbranch_scc0 .LBB12_6
 ; GCN-NEXT:  ; %bb.1:

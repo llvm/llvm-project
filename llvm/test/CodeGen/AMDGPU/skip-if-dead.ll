@@ -595,8 +595,8 @@ define amdgpu_ps void @test_kill_control_flow_remainder(i32 inreg %arg) #0 {
 ;
 ; GFX10-WAVE64-LABEL: test_kill_control_flow_remainder:
 ; GFX10-WAVE64:       ; %bb.0: ; %entry
-; GFX10-WAVE64-NEXT:    v_mov_b32_e32 v9, 0
 ; GFX10-WAVE64-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX10-WAVE64-NEXT:    v_mov_b32_e32 v9, 0
 ; GFX10-WAVE64-NEXT:    s_cbranch_scc0 .LBB8_2
 ; GFX10-WAVE64-NEXT:  ; %bb.1: ; %exit
 ; GFX10-WAVE64-NEXT:    global_store_dword v[0:1], v9, off
@@ -639,8 +639,8 @@ define amdgpu_ps void @test_kill_control_flow_remainder(i32 inreg %arg) #0 {
 ;
 ; GFX10-WAVE32-LABEL: test_kill_control_flow_remainder:
 ; GFX10-WAVE32:       ; %bb.0: ; %entry
-; GFX10-WAVE32-NEXT:    v_mov_b32_e32 v9, 0
 ; GFX10-WAVE32-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX10-WAVE32-NEXT:    v_mov_b32_e32 v9, 0
 ; GFX10-WAVE32-NEXT:    s_cbranch_scc0 .LBB8_2
 ; GFX10-WAVE32-NEXT:  ; %bb.1: ; %exit
 ; GFX10-WAVE32-NEXT:    global_store_dword v[0:1], v9, off
@@ -683,8 +683,8 @@ define amdgpu_ps void @test_kill_control_flow_remainder(i32 inreg %arg) #0 {
 ;
 ; GFX11-LABEL: test_kill_control_flow_remainder:
 ; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    v_mov_b32_e32 v9, 0
 ; GFX11-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX11-NEXT:    v_mov_b32_e32 v9, 0
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB8_2
 ; GFX11-NEXT:  ; %bb.1: ; %exit
 ; GFX11-NEXT:    global_store_b32 v[0:1], v9, off
@@ -803,8 +803,8 @@ define amdgpu_ps float @test_kill_control_flow_return(i32 inreg %arg) #0 {
 ; GFX10-WAVE64-NEXT:    s_cbranch_scc0 .LBB9_4
 ; GFX10-WAVE64-NEXT:  ; %bb.1: ; %entry
 ; GFX10-WAVE64-NEXT:    s_and_b64 exec, exec, s[2:3]
-; GFX10-WAVE64-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-WAVE64-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX10-WAVE64-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-WAVE64-NEXT:    s_cbranch_scc0 .LBB9_3
 ; GFX10-WAVE64-NEXT:  ; %bb.2: ; %exit
 ; GFX10-WAVE64-NEXT:    s_branch .LBB9_5
@@ -840,8 +840,8 @@ define amdgpu_ps float @test_kill_control_flow_return(i32 inreg %arg) #0 {
 ; GFX10-WAVE32-NEXT:    s_cbranch_scc0 .LBB9_4
 ; GFX10-WAVE32-NEXT:  ; %bb.1: ; %entry
 ; GFX10-WAVE32-NEXT:    s_and_b32 exec_lo, exec_lo, s1
-; GFX10-WAVE32-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-WAVE32-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX10-WAVE32-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-WAVE32-NEXT:    s_cbranch_scc0 .LBB9_3
 ; GFX10-WAVE32-NEXT:  ; %bb.2: ; %exit
 ; GFX10-WAVE32-NEXT:    s_branch .LBB9_5
@@ -878,8 +878,8 @@ define amdgpu_ps float @test_kill_control_flow_return(i32 inreg %arg) #0 {
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB9_4
 ; GFX11-NEXT:  ; %bb.1: ; %entry
 ; GFX11-NEXT:    s_and_b64 exec, exec, s[2:3]
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB9_3
 ; GFX11-NEXT:  ; %bb.2: ; %exit
 ; GFX11-NEXT:    s_branch .LBB9_5
@@ -932,8 +932,8 @@ exit:
 define amdgpu_ps void @test_kill_divergent_loop(i32 %arg) #0 {
 ; SI-LABEL: test_kill_divergent_loop:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    s_mov_b64 s[0:1], exec
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; SI-NEXT:    s_mov_b64 s[0:1], exec
 ; SI-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; SI-NEXT:    s_xor_b64 s[4:5], exec, s[2:3]
 ; SI-NEXT:    s_cbranch_execz .LBB10_4
@@ -1963,8 +1963,8 @@ define amdgpu_ps void @scc_use_after_kill_inst(float inreg %x, i32 inreg %y) #0 
 ; SI-NEXT:    v_add_f32_e64 v1, s0, 1.0
 ; SI-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v1
 ; SI-NEXT:    s_mov_b64 s[2:3], exec
-; SI-NEXT:    s_cmp_lg_u32 s1, 0
 ; SI-NEXT:    v_cndmask_b32_e64 v0, 0, -1.0, vcc
+; SI-NEXT:    s_cmp_lg_u32 s1, 0
 ; SI-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v1
 ; SI-NEXT:    s_andn2_b64 s[2:3], s[2:3], vcc
 ; SI-NEXT:    s_cbranch_scc0 .LBB17_6

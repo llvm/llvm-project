@@ -122,8 +122,8 @@ define <3 x half> @v_constrained_fptrunc_v3f32_to_v3f16_fpexcept_strict(<3 x flo
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX9-NEXT:    v_cvt_f16_f32_e32 v3, v1
-; GFX9-NEXT:    v_cvt_f16_f32_e32 v1, v2
 ; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
+; GFX9-NEXT:    v_cvt_f16_f32_e32 v1, v2
 ; GFX9-NEXT:    v_perm_b32 v0, v3, v0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;

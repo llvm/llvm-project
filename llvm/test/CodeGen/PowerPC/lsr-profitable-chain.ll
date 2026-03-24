@@ -14,16 +14,16 @@ define void @foo(ptr readonly %0, ptr %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6
 ; CHECK-NEXT:    addi 28, 5, 3
 ; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    addi 30, 5, 1
-; CHECK-NEXT:    mulld 12, 8, 5
-; CHECK-NEXT:    mulld 0, 9, 8
-; CHECK-NEXT:    std 29, -24(1) # 8-byte Folded Spill
-; CHECK-NEXT:    addi 29, 3, 16
-; CHECK-NEXT:    sldi 11, 10, 3
 ; CHECK-NEXT:    std 22, -80(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 23, -72(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 24, -64(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 25, -56(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 26, -48(1) # 8-byte Folded Spill
+; CHECK-NEXT:    std 29, -24(1) # 8-byte Folded Spill
+; CHECK-NEXT:    addi 29, 3, 16
+; CHECK-NEXT:    sldi 11, 10, 3
+; CHECK-NEXT:    mulld 12, 8, 5
+; CHECK-NEXT:    mulld 0, 9, 8
 ; CHECK-NEXT:    mulld 30, 8, 30
 ; CHECK-NEXT:    mulld 28, 8, 28
 ; CHECK-NEXT:    mulld 8, 8, 27

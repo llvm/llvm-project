@@ -12,8 +12,8 @@ define void @call_assert() #0 {
 ; PPC32:       # %bb.0:
 ; PPC32-NEXT:    mflr 0
 ; PPC32-NEXT:    stwu 1, -16(1)
-; PPC32-NEXT:    li 3, 0
 ; PPC32-NEXT:    stw 0, 20(1)
+; PPC32-NEXT:    li 3, 0
 ; PPC32-NEXT:    bl func
 ; PPC32-NEXT:    lwz 0, 20(1)
 ; PPC32-NEXT:    addi 1, 1, 16
@@ -24,8 +24,8 @@ define void @call_assert() #0 {
 ; PPC64:       # %bb.0:
 ; PPC64-NEXT:    mflr 0
 ; PPC64-NEXT:    stdu 1, -112(1)
-; PPC64-NEXT:    li 3, 0
 ; PPC64-NEXT:    std 0, 128(1)
+; PPC64-NEXT:    li 3, 0
 ; PPC64-NEXT:    bl func
 ; PPC64-NEXT:    nop
 ; PPC64-NEXT:    addi 1, 1, 112

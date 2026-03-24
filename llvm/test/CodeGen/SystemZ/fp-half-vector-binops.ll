@@ -457,15 +457,15 @@ define void @fun1(ptr %Src, ptr %Dst) {
 ; VECTOR-NEXT:    .cfi_offset %f13, -208
 ; VECTOR-NEXT:    .cfi_offset %f14, -216
 ; VECTOR-NEXT:    .cfi_offset %f15, -224
-; VECTOR-NEXT:    vlreph %v0, 8(%r2)
 ; VECTOR-NEXT:    vlreph %v8, 6(%r2)
 ; VECTOR-NEXT:    vlreph %v9, 4(%r2)
 ; VECTOR-NEXT:    vlreph %v10, 2(%r2)
-; VECTOR-NEXT:    lgr %r13, %r3
 ; VECTOR-NEXT:    vlreph %v11, 0(%r2)
+; VECTOR-NEXT:    lgr %r13, %r3
 ; VECTOR-NEXT:    vlreph %v12, 14(%r2)
 ; VECTOR-NEXT:    vlreph %v13, 12(%r2)
 ; VECTOR-NEXT:    vlreph %v14, 10(%r2)
+; VECTOR-NEXT:    vlreph %v0, 8(%r2)
 ; VECTOR-NEXT:    brasl %r14, __extendhfsf2@PLT
 ; VECTOR-NEXT:    ldr %f15, %f0
 ; VECTOR-NEXT:    ldr %f0, %f11

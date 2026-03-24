@@ -19,9 +19,9 @@ define void @foo() {
 ; CHECK-VEC-NEXT:    .cfi_def_cfa_offset 336
 ; CHECK-VEC-NEXT:    larl %r1, .LCPI0_0
 ; CHECK-VEC-NEXT:    vl %v0, 0(%r1), 3
+; CHECK-VEC-NEXT:    vst %v0, 160(%r15), 3
 ; CHECK-VEC-NEXT:    vrepib %v24, 1
 ; CHECK-VEC-NEXT:    vrepib %v26, 2
-; CHECK-VEC-NEXT:    vst %v0, 160(%r15), 3
 ; CHECK-VEC-NEXT:    brasl %r14, bar@PLT
 ; CHECK-VEC-NEXT:    lmg %r14, %r15, 288(%r15)
 ; CHECK-VEC-NEXT:    br %r14
@@ -35,9 +35,9 @@ define void @foo() {
 ; CHECK-STACK-NEXT:    .cfi_def_cfa_offset 336
 ; CHECK-STACK-NEXT:    larl %r1, .LCPI0_0
 ; CHECK-STACK-NEXT:    vl %v0, 0(%r1), 3
+; CHECK-STACK-NEXT:    vst %v0, 160(%r15), 3
 ; CHECK-STACK-NEXT:    vrepib %v24, 1
 ; CHECK-STACK-NEXT:    vrepib %v26, 2
-; CHECK-STACK-NEXT:    vst %v0, 160(%r15), 3
 ; CHECK-STACK-NEXT:    brasl %r14, bar@PLT
 ; CHECK-STACK-NEXT:    lmg %r14, %r15, 288(%r15)
 ; CHECK-STACK-NEXT:    br %r14

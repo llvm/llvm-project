@@ -22,8 +22,8 @@ define void @caller_extern(ptr %src) optsize {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pcalau12i $a1, %got_pc_hi20(dest)
 ; CHECK-NEXT:    ld.d $a1, $a1, %got_pc_lo12(dest)
-; CHECK-NEXT:    ori $a2, $zero, 33
 ; CHECK-NEXT:    move $a3, $a0
+; CHECK-NEXT:    ori $a2, $zero, 33
 ; CHECK-NEXT:    move $a0, $a1
 ; CHECK-NEXT:    move $a1, $a3
 ; CHECK-NEXT:    pcaddu18i $t8, %call36(memcpy)
@@ -104,9 +104,9 @@ define void @caller_indirect_args() nounwind {
 ; CHECK-NEXT:    st.d $zero, $sp, 24
 ; CHECK-NEXT:    vrepli.b $vr0, 0
 ; CHECK-NEXT:    vst $vr0, $sp, 8
-; CHECK-NEXT:    ori $a1, $zero, 1
+; CHECK-NEXT:    ori $a0, $zero, 1
+; CHECK-NEXT:    st.d $a0, $sp, 0
 ; CHECK-NEXT:    addi.d $a0, $sp, 0
-; CHECK-NEXT:    st.d $a1, $sp, 0
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(callee_indirect_args)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    ld.d $ra, $sp, 40 # 8-byte Folded Reload

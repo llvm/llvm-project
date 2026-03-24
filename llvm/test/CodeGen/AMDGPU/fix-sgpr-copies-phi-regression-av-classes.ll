@@ -14,8 +14,8 @@ define i64 @test_temporal_divergence(i32 %arg) #0 {
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    v_add_u32_e32 v2, -1, v2
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
-; CHECK-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; CHECK-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
+; CHECK-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; CHECK-NEXT:    s_mov_b64 s[2:3], 1
 ; CHECK-NEXT:    s_andn2_b64 exec, exec, s[0:1]
 ; CHECK-NEXT:    s_cbranch_execnz .LBB0_1

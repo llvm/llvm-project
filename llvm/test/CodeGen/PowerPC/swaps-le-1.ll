@@ -157,8 +157,8 @@ define void @foo() {
 ; NOOPTSWAP-P8-NEXT:    xxswapd 1, 35
 ; NOOPTSWAP-P8-NEXT:    vmuluwm 2, 2, 11
 ; NOOPTSWAP-P8-NEXT:    stxvd2x 0, 7, 3
-; NOOPTSWAP-P8-NEXT:    addi 3, 3, 64
 ; NOOPTSWAP-P8-NEXT:    stxvd2x 1, 11, 8
+; NOOPTSWAP-P8-NEXT:    addi 3, 3, 64
 ; NOOPTSWAP-P8-NEXT:    xxswapd 2, 36
 ; NOOPTSWAP-P8-NEXT:    stxvd2x 2, 11, 9
 ; NOOPTSWAP-P8-NEXT:    xxswapd 3, 34
@@ -221,17 +221,17 @@ define void @foo() {
 ;
 ; NOOPTSWAP-P9-LABEL: foo:
 ; NOOPTSWAP-P9:       # %bb.0: # %entry
+; NOOPTSWAP-P9-NEXT:    li 3, 256
 ; NOOPTSWAP-P9-NEXT:    addis 4, 2, .LC0@toc@ha
 ; NOOPTSWAP-P9-NEXT:    addis 5, 2, .LC1@toc@ha
 ; NOOPTSWAP-P9-NEXT:    addis 6, 2, .LC2@toc@ha
-; NOOPTSWAP-P9-NEXT:    addis 7, 2, .LC3@toc@ha
 ; NOOPTSWAP-P9-NEXT:    std 30, -16(1) # 8-byte Folded Spill
 ; NOOPTSWAP-P9-NEXT:    ld 4, .LC0@toc@l(4)
-; NOOPTSWAP-P9-NEXT:    li 3, 256
+; NOOPTSWAP-P9-NEXT:    addis 7, 2, .LC3@toc@ha
+; NOOPTSWAP-P9-NEXT:    mtctr 3
 ; NOOPTSWAP-P9-NEXT:    ld 5, .LC1@toc@l(5)
 ; NOOPTSWAP-P9-NEXT:    ld 6, .LC2@toc@l(6)
 ; NOOPTSWAP-P9-NEXT:    ld 7, .LC3@toc@l(7)
-; NOOPTSWAP-P9-NEXT:    mtctr 3
 ; NOOPTSWAP-P9-NEXT:    li 3, 0
 ; NOOPTSWAP-P9-NEXT:    li 8, 16
 ; NOOPTSWAP-P9-NEXT:    li 9, 32

@@ -67,8 +67,8 @@ define i32 @v_underflow_compare_fold_i32_multi_use(i32 %a, i32 %b, ptr addrspace
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_sub_u32_e32 v1, v0, v1
-; GFX9-NEXT:    v_min_u32_e32 v0, v1, v0
 ; GFX9-NEXT:    global_store_dword v[2:3], v1, off
+; GFX9-NEXT:    v_min_u32_e32 v0, v1, v0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;

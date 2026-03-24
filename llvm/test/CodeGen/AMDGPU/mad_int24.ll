@@ -196,12 +196,12 @@ define void @mad24_destroyed_knownbits_2(i32 %arg, i32 %arg1, i32 %arg2, ptr add
 ; VI-NEXT:  .LBB3_1: ; %bb6
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; VI-NEXT:    v_mad_i32_i24 v0, v0, v5, v5
-; VI-NEXT:    v_mad_i32_i24 v5, v0, v5, v0
 ; VI-NEXT:    v_add_u32_e32 v1, vcc, -1, v1
-; VI-NEXT:    v_mad_i32_i24 v0, v5, v0, v5
+; VI-NEXT:    v_mad_i32_i24 v5, v0, v5, v0
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
-; VI-NEXT:    v_mad_i32_i24 v0, v0, v5, v0
+; VI-NEXT:    v_mad_i32_i24 v0, v5, v0, v5
 ; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; VI-NEXT:    v_mad_i32_i24 v0, v0, v5, v0
 ; VI-NEXT:    v_mov_b32_e32 v5, v2
 ; VI-NEXT:    s_andn2_b64 exec, exec, s[4:5]
 ; VI-NEXT:    s_cbranch_execnz .LBB3_1

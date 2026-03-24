@@ -41,15 +41,15 @@ define void @__arm_2d_impl_rgb16_colour_filling_with_alpha(ptr noalias nocapture
 ; CHECK-NEXT:    vstrw.32 q0, [sp, #16] @ 16-byte Spill
 ; CHECK-NEXT:    vdup.16 q0, lr
 ; CHECK-NEXT:    subs r3, #8
-; CHECK-NEXT:    vstrw.32 q0, [sp] @ 16-byte Spill
 ; CHECK-NEXT:    movs r4, #1
-; CHECK-NEXT:    vldrw.u32 q7, [sp, #32] @ 16-byte Reload
-; CHECK-NEXT:    add.w r3, r4, r3, lsr #3
-; CHECK-NEXT:    vldrw.u32 q6, [sp, #16] @ 16-byte Reload
-; CHECK-NEXT:    vldrw.u32 q2, [sp] @ 16-byte Reload
+; CHECK-NEXT:    vstrw.32 q0, [sp] @ 16-byte Spill
 ; CHECK-NEXT:    lsls r1, r1, #1
+; CHECK-NEXT:    add.w r3, r4, r3, lsr #3
 ; CHECK-NEXT:    movs r4, #0
 ; CHECK-NEXT:    vmov.i16 q4, #0xf8
+; CHECK-NEXT:    vldrw.u32 q7, [sp, #32] @ 16-byte Reload
+; CHECK-NEXT:    vldrw.u32 q6, [sp, #16] @ 16-byte Reload
+; CHECK-NEXT:    vldrw.u32 q2, [sp] @ 16-byte Reload
 ; CHECK-NEXT:  .LBB0_3: @ %vector.ph
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB0_4 Depth 2
@@ -202,19 +202,19 @@ define void @__arm_2d_impl_rgb16_colour_filling_with_alpha_sched(ptr noalias noc
 ; CHECK-NEXT:    and.w r5, r5, r3, lsr #9
 ; CHECK-NEXT:    uxtb r6, r6
 ; CHECK-NEXT:    and.w r3, r4, r3, lsr #3
-; CHECK-NEXT:    adds r4, r2, #7
 ; CHECK-NEXT:    muls r6, r7, r6
-; CHECK-NEXT:    bic r4, r4, #7
+; CHECK-NEXT:    adds r4, r2, #7
 ; CHECK-NEXT:    mul lr, r3, r7
 ; CHECK-NEXT:    muls r5, r7, r5
+; CHECK-NEXT:    bic r4, r4, #7
 ; CHECK-NEXT:    rsb.w r3, r7, #256
 ; CHECK-NEXT:    lsls r7, r1, #1
 ; CHECK-NEXT:    sub.w r1, r4, #8
 ; CHECK-NEXT:    movs r4, #1
-; CHECK-NEXT:    vmov.i16 q2, #0xf8
-; CHECK-NEXT:    add.w r1, r4, r1, lsr #3
 ; CHECK-NEXT:    vdup.16 q6, r6
 ; CHECK-NEXT:    mov.w r6, #2016
+; CHECK-NEXT:    vmov.i16 q2, #0xf8
+; CHECK-NEXT:    add.w r1, r4, r1, lsr #3
 ; CHECK-NEXT:    movs r4, #0
 ; CHECK-NEXT:    vdup.16 q3, lr
 ; CHECK-NEXT:    vdup.16 q5, r5

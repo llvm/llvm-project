@@ -63,8 +63,8 @@ define amdgpu_cs_chain void @test_alloca_chain() {
 ; GFX12-NEXT:    s_add_co_ci_u32 s1, s1, test_fp_all@gotpcrel32@hi+24
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v8, 57
 ; GFX12-NEXT:    s_mov_b32 s0, s32
+; GFX12-NEXT:    v_mov_b32_e32 v8, 57
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_add_co_i32 s32, s0, 0x400
 ; GFX12-NEXT:    scratch_store_b32 off, v0, s0
@@ -87,9 +87,9 @@ define amdgpu_cs_chain void @test_alloca_chain() {
 ; GFX942-NEXT:    s_addc_u32 s1, s1, test_fp_all@gotpcrel32@hi+12
 ; GFX942-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
 ; GFX942-NEXT:    v_mov_b32_e32 v0, 0
+; GFX942-NEXT:    scratch_store_dword off, v0, s4
 ; GFX942-NEXT:    s_mov_b32 s0, 51
 ; GFX942-NEXT:    v_mov_b32_e32 v8, 57
-; GFX942-NEXT:    scratch_store_dword off, v0, s4
 ; GFX942-NEXT:    s_mov_b32 s32, s33
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    s_mov_b64 exec, -1
@@ -679,10 +679,10 @@ define amdgpu_cs_chain void @test_fp_all_chain() #0 {
 ; GFX12-NEXT:    s_add_co_u32 s0, s0, test_fp_all@gotpcrel32@lo+12
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_add_co_ci_u32 s1, s1, test_fp_all@gotpcrel32@hi+24
-; GFX12-NEXT:    v_mov_b32_e32 v8, 57
+; GFX12-NEXT:    s_mov_b32 s33, s32
 ; GFX12-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
 ; GFX12-NEXT:    s_mov_b32 s0, 51
-; GFX12-NEXT:    s_mov_b32 s33, s32
+; GFX12-NEXT:    v_mov_b32_e32 v8, 57
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_mov_b64 exec, -1
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
@@ -695,9 +695,9 @@ define amdgpu_cs_chain void @test_fp_all_chain() #0 {
 ; GFX942-NEXT:    s_add_u32 s0, s0, test_fp_all@gotpcrel32@lo+4
 ; GFX942-NEXT:    s_addc_u32 s1, s1, test_fp_all@gotpcrel32@hi+12
 ; GFX942-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
+; GFX942-NEXT:    s_mov_b32 s33, s32
 ; GFX942-NEXT:    s_mov_b32 s0, 51
 ; GFX942-NEXT:    v_mov_b32_e32 v8, 57
-; GFX942-NEXT:    s_mov_b32 s33, s32
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    s_mov_b64 exec, -1
 ; GFX942-NEXT:    s_setpc_b64 s[2:3]

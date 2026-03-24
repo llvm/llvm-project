@@ -122,19 +122,19 @@ define <3 x i1> @test_urem_vec(<3 x i11> %X) nounwind {
 ; PPC-LABEL: test_urem_vec:
 ; PPC:       # %bb.0:
 ; PPC-NEXT:    mr 6, 3
+; PPC-NEXT:    mulli 4, 4, 1463
+; PPC-NEXT:    addi 4, 4, -1463
+; PPC-NEXT:    clrlwi 4, 4, 21
 ; PPC-NEXT:    mulli 6, 6, 683
 ; PPC-NEXT:    rlwinm 7, 6, 31, 22, 31
 ; PPC-NEXT:    rlwimi 7, 6, 10, 21, 21
 ; PPC-NEXT:    mulli 5, 5, 819
 ; PPC-NEXT:    addi 5, 5, -1638
 ; PPC-NEXT:    clrlwi 5, 5, 21
-; PPC-NEXT:    mulli 4, 4, 1463
-; PPC-NEXT:    addi 4, 4, -1463
-; PPC-NEXT:    clrlwi 4, 4, 21
+; PPC-NEXT:    cmplwi 5, 4, 292
 ; PPC-NEXT:    li 3, 1
 ; PPC-NEXT:    cmplwi 7, 341
 ; PPC-NEXT:    cmplwi 1, 5, 1
-; PPC-NEXT:    cmplwi 5, 4, 292
 ; PPC-NEXT:    li 4, 1
 ; PPC-NEXT:    bc 12, 21, .LBB4_2
 ; PPC-NEXT:  # %bb.1:

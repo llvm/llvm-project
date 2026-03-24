@@ -34,11 +34,11 @@ define amdgpu_kernel void @indirect_call_known_no_special_inputs() {
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; GFX9-NEXT:    s_cselect_b32 s19, s23, s21
 ; GFX9-NEXT:    s_cselect_b32 s18, s22, s20
+; GFX9-NEXT:    s_mov_b32 s32, 0
 ; GFX9-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; GFX9-NEXT:    s_mov_b32 s14, s16
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v4, 0
-; GFX9-NEXT:    s_mov_b32 s32, 0
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; GFX9-NEXT:    s_endpgm
 ;
@@ -58,9 +58,9 @@ define amdgpu_kernel void @indirect_call_known_no_special_inputs() {
 ; GFX12-NEXT:    s_load_u8 s14, s[4:5], 0x0
 ; GFX12-NEXT:    s_load_b64 s[4:5], s[6:7], 0x0
 ; GFX12-NEXT:    s_load_b64 s[6:7], s[12:13], 0x0
-; GFX12-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v4, 0
-; GFX12-NEXT:    v_mov_b32_e32 v31, v0
 ; GFX12-NEXT:    s_mov_b32 s32, 0
+; GFX12-NEXT:    v_dual_mov_b32 v31, v0 :: v_dual_mov_b32 v4, 0
+; GFX12-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_and_b32 s12, 1, s14
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)

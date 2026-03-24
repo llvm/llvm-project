@@ -86,14 +86,14 @@ end:
 define amdgpu_ps float @else3(i32 %z, float %v, i32 inreg %bound, i32 %x0) #0 {
 ; SI-LABEL: else3:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    s_mov_b32 s1, 0
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 6, v0
+; SI-NEXT:    s_mov_b32 s1, 0
 ; SI-NEXT:    s_branch .LBB2_2
 ; SI-NEXT:  .LBB2_1: ; %if.end
 ; SI-NEXT:    ; in Loop: Header=BB2_2 Depth=1
 ; SI-NEXT:    s_or_b32 exec_lo, exec_lo, s2
-; SI-NEXT:    v_add_nc_u32_e32 v2, 1, v3
 ; SI-NEXT:    s_add_i32 s1, s1, 1
+; SI-NEXT:    v_add_nc_u32_e32 v2, 1, v3
 ; SI-NEXT:    s_cmp_lt_i32 s1, s0
 ; SI-NEXT:    s_cbranch_scc0 .LBB2_6
 ; SI-NEXT:  .LBB2_2: ; %for.body
@@ -165,12 +165,12 @@ define amdgpu_ps float @loop(i32 %z, float %v, i32 inreg %bound, ptr %extern_fun
 ; SI-NEXT:    s_mov_b32 s12, SCRATCH_RSRC_DWORD0
 ; SI-NEXT:    s_mov_b32 s13, SCRATCH_RSRC_DWORD1
 ; SI-NEXT:    s_mov_b32 s14, -1
-; SI-NEXT:    v_mov_b32_e32 v0, v1
-; SI-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 6, v6
 ; SI-NEXT:    s_mov_b32 s15, 0x31c16000
+; SI-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 6, v6
 ; SI-NEXT:    s_add_u32 s12, s12, s1
-; SI-NEXT:    s_addc_u32 s13, s13, 0
 ; SI-NEXT:    s_mov_b32 s32, 0
+; SI-NEXT:    s_addc_u32 s13, s13, 0
+; SI-NEXT:    v_mov_b32_e32 v0, v1
 ; SI-NEXT:    ; implicit-def: $vgpr1
 ; SI-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; SI-NEXT:    s_xor_b32 s6, exec_lo, s0
@@ -240,14 +240,14 @@ define amdgpu_ps float @loop_with_use(i32 %z, float %v, i32 inreg %bound, ptr %e
 ; SI-LABEL: loop_with_use:
 ; SI:       ; %bb.0: ; %main_body
 ; SI-NEXT:    s_mov_b32 s12, SCRATCH_RSRC_DWORD0
+; SI-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 6, v0
 ; SI-NEXT:    s_mov_b32 s13, SCRATCH_RSRC_DWORD1
 ; SI-NEXT:    s_mov_b32 s14, -1
-; SI-NEXT:    v_mov_b32_e32 v40, v1
-; SI-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 6, v0
 ; SI-NEXT:    s_mov_b32 s15, 0x31c16000
 ; SI-NEXT:    s_add_u32 s12, s12, s1
-; SI-NEXT:    s_addc_u32 s13, s13, 0
 ; SI-NEXT:    s_mov_b32 s32, 0
+; SI-NEXT:    s_addc_u32 s13, s13, 0
+; SI-NEXT:    v_mov_b32_e32 v40, v1
 ; SI-NEXT:    ; implicit-def: $vgpr0
 ; SI-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; SI-NEXT:    s_xor_b32 s6, exec_lo, s0
@@ -259,9 +259,9 @@ define amdgpu_ps float @loop_with_use(i32 %z, float %v, i32 inreg %bound, ptr %e
 ; SI-NEXT:    v_readfirstlane_b32 s5, v5
 ; SI-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[4:5]
 ; SI-NEXT:    s_and_saveexec_b32 s8, vcc_lo
-; SI-NEXT:    v_mov_b32_e32 v0, v40
 ; SI-NEXT:    s_mov_b64 s[0:1], s[12:13]
 ; SI-NEXT:    s_mov_b64 s[2:3], s[14:15]
+; SI-NEXT:    v_mov_b32_e32 v0, v40
 ; SI-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; SI-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; SI-NEXT:    s_xor_b32 exec_lo, exec_lo, s8
@@ -279,9 +279,9 @@ define amdgpu_ps float @loop_with_use(i32 %z, float %v, i32 inreg %bound, ptr %e
 ; SI-NEXT:    v_readfirstlane_b32 s5, v3
 ; SI-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[2:3]
 ; SI-NEXT:    s_and_saveexec_b32 s8, vcc_lo
-; SI-NEXT:    v_mov_b32_e32 v0, v40
 ; SI-NEXT:    s_mov_b64 s[0:1], s[12:13]
 ; SI-NEXT:    s_mov_b64 s[2:3], s[14:15]
+; SI-NEXT:    v_mov_b32_e32 v0, v40
 ; SI-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; SI-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; SI-NEXT:    s_xor_b32 exec_lo, exec_lo, s8

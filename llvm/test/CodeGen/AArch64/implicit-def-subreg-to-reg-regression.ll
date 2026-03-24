@@ -45,9 +45,9 @@ define void @widget(i32 %arg, i32 %arg1, ptr %arg2, ptr %arg3, ptr %arg4, i32 %a
 ; CHECK-NEXT:    b LBB0_2
 ; CHECK-NEXT:  LBB0_1: ; %bb10
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
+; CHECK-NEXT:    str wzr, [x21]
 ; CHECK-NEXT:    mov w0, w20
 ; CHECK-NEXT:    mov x1, x22
-; CHECK-NEXT:    str wzr, [x21]
 ; CHECK-NEXT:    bl _putc
 ; CHECK-NEXT:    mov w0, w25
 ; CHECK-NEXT:    mov x1, xzr
@@ -78,11 +78,11 @@ define void @widget(i32 %arg, i32 %arg1, ptr %arg2, ptr %arg3, ptr %arg4, i32 %a
 ; CHECK-NEXT:    tbz w19, #0, LBB0_2
 ; CHECK-NEXT:  ; %bb.7: ; %bb14
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    mov x0, xzr
-; CHECK-NEXT:    mov x1, xzr
 ; CHECK-NEXT:    mov w8, #1 ; =0x1
 ; CHECK-NEXT:    stp xzr, xzr, [sp]
+; CHECK-NEXT:    mov x0, xzr
 ; CHECK-NEXT:    stp x8, xzr, [sp, #16]
+; CHECK-NEXT:    mov x1, xzr
 ; CHECK-NEXT:    bl _fprintf
 ; CHECK-NEXT:    b LBB0_2
 ; CHECK-NEXT:  LBB0_8: ; %bb12

@@ -659,9 +659,9 @@ define <4 x double> @exp10_v4f64(<4 x double> %x) {
 ; SDAG-NEXT:    str x30, [sp, #48] // 8-byte Spill
 ; SDAG-NEXT:    .cfi_def_cfa_offset 64
 ; SDAG-NEXT:    .cfi_offset w30, -16
+; SDAG-NEXT:    str q1, [sp, #32] // 16-byte Spill
 ; SDAG-NEXT:    str q0, [sp] // 16-byte Spill
 ; SDAG-NEXT:    mov d0, v0.d[1]
-; SDAG-NEXT:    str q1, [sp, #32] // 16-byte Spill
 ; SDAG-NEXT:    bl exp10
 ; SDAG-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; SDAG-NEXT:    str q0, [sp, #16] // 16-byte Spill

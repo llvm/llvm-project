@@ -8,9 +8,9 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @histcnt_loop(ptr %0, i64 %1, ptr %2, i64 %3, i64 %4) {
 ; CHECK-LABEL: histcnt_loop:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    mov z0.d, #1 // =0x1
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    add x9, x0, x1
 ; CHECK-NEXT:  .LBB0_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1

@@ -255,23 +255,23 @@ define <16 x i8> @test_call_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; RV32-NEXT:    lw a3, 0(a2)
 ; RV32-NEXT:    lw a4, 4(a2)
 ; RV32-NEXT:    lw a5, 8(a2)
-; RV32-NEXT:    lw a6, 12(a2)
-; RV32-NEXT:    lw a2, 0(a1)
+; RV32-NEXT:    lw a2, 12(a2)
+; RV32-NEXT:    lw a6, 0(a1)
 ; RV32-NEXT:    lw a7, 4(a1)
 ; RV32-NEXT:    lw t0, 8(a1)
 ; RV32-NEXT:    lw a1, 12(a1)
 ; RV32-NEXT:    mv s0, a0
-; RV32-NEXT:    sw a2, 0(sp)
+; RV32-NEXT:    sw a6, 0(sp)
 ; RV32-NEXT:    sw a7, 4(sp)
 ; RV32-NEXT:    sw t0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
-; RV32-NEXT:    addi a0, sp, 32
-; RV32-NEXT:    addi a1, sp, 16
-; RV32-NEXT:    mv a2, sp
 ; RV32-NEXT:    sw a3, 16(sp)
 ; RV32-NEXT:    sw a4, 20(sp)
 ; RV32-NEXT:    sw a5, 24(sp)
-; RV32-NEXT:    sw a6, 28(sp)
+; RV32-NEXT:    sw a2, 28(sp)
+; RV32-NEXT:    addi a0, sp, 32
+; RV32-NEXT:    addi a1, sp, 16
+; RV32-NEXT:    mv a2, sp
 ; RV32-NEXT:    call external_v16i8
 ; RV32-NEXT:    lw a0, 32(sp)
 ; RV32-NEXT:    lw a1, 36(sp)

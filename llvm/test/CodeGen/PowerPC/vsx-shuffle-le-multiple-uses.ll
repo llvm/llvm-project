@@ -7,8 +7,8 @@ define <2 x double> @loadHasMultipleUses(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: loadHasMultipleUses:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lxv 0, 0(3)
-; CHECK-NEXT:    xxswapd 34, 0
 ; CHECK-NEXT:    stxv 0, 0(4)
+; CHECK-NEXT:    xxswapd 34, 0
 ; CHECK-NEXT:    blr
   %v1 = load <2 x double>, ptr %p1
   store <2 x double> %v1, ptr %p2, align 16

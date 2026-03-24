@@ -8179,10 +8179,10 @@ define <32 x bfloat> @v_maximumnum_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y) {
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v23, 16, v22
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v24, 16, v6
 ; GFX8-NEXT:    v_cmp_gt_f32_e32 vcc, v24, v23
-; GFX8-NEXT:    v_cndmask_b32_e32 v22, v22, v6, vcc
 ; GFX8-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX8-NEXT:    buffer_load_dword v41, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
 ; GFX8-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:12 ; 4-byte Folded Reload
+; GFX8-NEXT:    v_cndmask_b32_e32 v22, v22, v6, vcc
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v23, 16, v22
 ; GFX8-NEXT:    v_cmp_eq_f32_e32 vcc, 0, v23
 ; GFX8-NEXT:    v_cmp_eq_u16_e64 s[4:5], 0, v6
@@ -8714,11 +8714,11 @@ define <32 x bfloat> @v_maximumnum_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y) {
 ; GFX900-NEXT:    s_and_b64 vcc, vcc, s[4:5]
 ; GFX900-NEXT:    v_cndmask_b32_e32 v8, v24, v8, vcc
 ; GFX900-NEXT:    v_lshlrev_b32_e32 v24, 16, v7
-; GFX900-NEXT:    v_cmp_u_f32_e32 vcc, v24, v24
-; GFX900-NEXT:    v_lshlrev_b32_e32 v24, 16, v23
 ; GFX900-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX900-NEXT:    buffer_load_dword v41, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
 ; GFX900-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:12 ; 4-byte Folded Reload
+; GFX900-NEXT:    v_cmp_u_f32_e32 vcc, v24, v24
+; GFX900-NEXT:    v_lshlrev_b32_e32 v24, 16, v23
 ; GFX900-NEXT:    v_cndmask_b32_e32 v7, v7, v23, vcc
 ; GFX900-NEXT:    v_cmp_u_f32_e32 vcc, v24, v24
 ; GFX900-NEXT:    v_cndmask_b32_e32 v23, v23, v7, vcc

@@ -46,8 +46,8 @@ define amdgpu_kernel void @copy_to_vreg_1(i32 %0) {
 ; GCN-NEXT:    s_cbranch_execz .LBB0_5
 ; GCN-NEXT:  ; %bb.4: ; %pred.store.if
 ; GCN-NEXT:    ; in Loop: Header=BB0_3 Depth=1
-; GCN-NEXT:    s_or_b64 s[6:7], s[6:7], exec
 ; GCN-NEXT:    global_store_byte v[2:3], v1, off
+; GCN-NEXT:    s_or_b64 s[6:7], s[6:7], exec
 ; GCN-NEXT:  .LBB0_5: ; %Flow2
 ; GCN-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]

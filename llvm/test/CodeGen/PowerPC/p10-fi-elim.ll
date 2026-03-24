@@ -44,11 +44,11 @@ define dso_local signext i32 @test_FI_elim(ptr noalias nocapture dereferenceable
 ; CHECK-NEXT:    mfvsrd r10, v3
 ; CHECK-NEXT:    std r5, 0(r3)
 ; CHECK-NEXT:    lbz r5, 2(r7)
+; CHECK-NEXT:    neg r10, r10
 ; CHECK-NEXT:    stb r11, 0(r3)
 ; CHECK-NEXT:    stb r12, 0(r3)
 ; CHECK-NEXT:    std r2, 0(r3)
 ; CHECK-NEXT:    mr r7, r9
-; CHECK-NEXT:    neg r10, r10
 ; CHECK-NEXT:    rlwinm r5, r5, 0, 27, 27
 ; CHECK-NEXT:    stb r5, 0(0)
 ; CHECK-NEXT:    lbz r5, 2(r8)
@@ -57,8 +57,8 @@ define dso_local signext i32 @test_FI_elim(ptr noalias nocapture dereferenceable
 ; CHECK-NEXT:    li r5, 2
 ; CHECK-NEXT:    std r0, 0(r3)
 ; CHECK-NEXT:    stw r5, 0(r3)
-; CHECK-NEXT:    mr r5, r4
 ; CHECK-NEXT:    std r10, 0(r3)
+; CHECK-NEXT:    mr r5, r4
 ; CHECK-NEXT:    bl foo@notoc
 ; CHECK-NEXT:    extsw r3, r3
 ; CHECK-NEXT:    addi r1, r1, 80
@@ -93,11 +93,11 @@ define dso_local signext i32 @test_FI_elim(ptr noalias nocapture dereferenceable
 ; CHECK-BE-NEXT:    neg r5, r5
 ; CHECK-BE-NEXT:    std r5, 0(r3)
 ; CHECK-BE-NEXT:    lbz r5, 2(r7)
+; CHECK-BE-NEXT:    neg r10, r10
 ; CHECK-BE-NEXT:    stb r11, 0(r3)
 ; CHECK-BE-NEXT:    stb r12, 0(r3)
 ; CHECK-BE-NEXT:    std r30, 0(r3)
 ; CHECK-BE-NEXT:    mr r7, r9
-; CHECK-BE-NEXT:    neg r10, r10
 ; CHECK-BE-NEXT:    rlwinm r5, r5, 0, 27, 27
 ; CHECK-BE-NEXT:    stb r5, 0(0)
 ; CHECK-BE-NEXT:    lbz r5, 2(r8)
@@ -106,8 +106,8 @@ define dso_local signext i32 @test_FI_elim(ptr noalias nocapture dereferenceable
 ; CHECK-BE-NEXT:    li r5, 2
 ; CHECK-BE-NEXT:    std r0, 0(r3)
 ; CHECK-BE-NEXT:    stw r5, 0(r3)
-; CHECK-BE-NEXT:    mr r5, r4
 ; CHECK-BE-NEXT:    std r10, 0(r3)
+; CHECK-BE-NEXT:    mr r5, r4
 ; CHECK-BE-NEXT:    bl foo
 ; CHECK-BE-NEXT:    nop
 ; CHECK-BE-NEXT:    ld r30, 160(r1) # 8-byte Folded Reload

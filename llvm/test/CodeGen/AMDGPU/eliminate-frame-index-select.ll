@@ -18,12 +18,12 @@ define void @wobble() #0 {
 ; CHECK-NEXT:    buffer_store_dword v43, off, s[0:3], s33 offset:24 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b32 exec_lo, s17
 ; CHECK-NEXT:    v_writelane_b32 v43, s16, 15
+; CHECK-NEXT:    s_addk_i32 s32, 0x400
 ; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_store_dword v42, off, s[0:3], s33 ; 4-byte Folded Spill
 ; CHECK-NEXT:    v_mov_b32_e32 v40, v31
 ; CHECK-NEXT:    v_mov_b32_e32 v41, 0
-; CHECK-NEXT:    s_addk_i32 s32, 0x400
 ; CHECK-NEXT:    v_writelane_b32 v43, s30, 0
 ; CHECK-NEXT:    v_writelane_b32 v43, s31, 1
 ; CHECK-NEXT:    v_writelane_b32 v43, s34, 2
@@ -59,17 +59,17 @@ define void @wobble() #0 {
 ; CHECK-NEXT:    v_lshrrev_b32_e64 v0, 5, s33
 ; CHECK-NEXT:    s_cmp_eq_u32 s4, 0
 ; CHECK-NEXT:    flat_store_dword v[41:42], v41
-; CHECK-NEXT:    v_mov_b32_e32 v31, v40
-; CHECK-NEXT:    v_mov_b32_e32 v2, 0
-; CHECK-NEXT:    v_add_nc_u32_e32 v0, 12, v0
 ; CHECK-NEXT:    s_mov_b64 s[6:7], s[38:39]
 ; CHECK-NEXT:    s_mov_b64 s[8:9], s[36:37]
+; CHECK-NEXT:    v_add_nc_u32_e32 v0, 12, v0
 ; CHECK-NEXT:    s_mov_b64 s[10:11], s[34:35]
 ; CHECK-NEXT:    s_mov_b32 s12, s53
-; CHECK-NEXT:    v_readfirstlane_b32 s5, v0
 ; CHECK-NEXT:    s_mov_b32 s13, s52
 ; CHECK-NEXT:    s_mov_b32 s14, s51
+; CHECK-NEXT:    v_readfirstlane_b32 s5, v0
 ; CHECK-NEXT:    s_mov_b32 s15, s50
+; CHECK-NEXT:    v_mov_b32_e32 v31, v40
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0
 ; CHECK-NEXT:    s_cselect_b32 s4, 0, s5
 ; CHECK-NEXT:    s_cselect_b32 s5, 4, s54
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4

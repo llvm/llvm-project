@@ -213,8 +213,8 @@ define <4 x i32> @uaddo_v4i24(<4 x i24> %a0, <4 x i24> %a1, ptr %p2) nounwind {
 ; CHECK-NEXT:    bic v1.4s, #255, lsl #24
 ; CHECK-NEXT:    bic v0.4s, #255, lsl #24
 ; CHECK-NEXT:    add v1.4s, v0.4s, v1.4s
-; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    mov w8, v1.s[3]
+; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    mov w10, v1.s[1]
 ; CHECK-NEXT:    mov w9, v1.s[2]
 ; CHECK-NEXT:    str h1, [x0]
@@ -222,16 +222,16 @@ define <4 x i32> @uaddo_v4i24(<4 x i24> %a0, <4 x i24> %a1, ptr %p2) nounwind {
 ; CHECK-NEXT:    sturh w8, [x0, #9]
 ; CHECK-NEXT:    lsr w8, w8, #16
 ; CHECK-NEXT:    sturh w10, [x0, #3]
-; CHECK-NEXT:    cmeq v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    strb w8, [x0, #11]
 ; CHECK-NEXT:    lsr w8, w10, #16
 ; CHECK-NEXT:    fmov w10, s1
 ; CHECK-NEXT:    strh w9, [x0, #6]
 ; CHECK-NEXT:    lsr w9, w9, #16
+; CHECK-NEXT:    cmeq v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    strb w8, [x0, #5]
-; CHECK-NEXT:    mvn v0.16b, v0.16b
 ; CHECK-NEXT:    strb w9, [x0, #8]
 ; CHECK-NEXT:    lsr w9, w10, #16
+; CHECK-NEXT:    mvn v0.16b, v0.16b
 ; CHECK-NEXT:    strb w9, [x0, #2]
 ; CHECK-NEXT:    ret
   %t = call {<4 x i24>, <4 x i1>} @llvm.uadd.with.overflow.v4i24(<4 x i24> %a0, <4 x i24> %a1)
@@ -249,8 +249,8 @@ define <4 x i32> @uaddo_v4i1(<4 x i1> %a0, <4 x i1> %a1, ptr %p2) nounwind {
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    adrp x8, .LCPI10_0
 ; CHECK-NEXT:    shl v1.4h, v2.4h, #15
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI10_0]
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-NEXT:    cmlt v1.4h, v1.4h, #0
 ; CHECK-NEXT:    shl v0.4s, v0.4s, #31
 ; CHECK-NEXT:    and v1.8b, v1.8b, v2.8b
@@ -278,8 +278,8 @@ define <2 x i32> @uaddo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; CHECK-NEXT:    fmov s0, w13
 ; CHECK-NEXT:    mov v0.s[1], w10
 ; CHECK-NEXT:    ldr x10, [sp]
-; CHECK-NEXT:    stp x11, x12, [x10]
 ; CHECK-NEXT:    stp x8, x9, [x10, #16]
+; CHECK-NEXT:    stp x11, x12, [x10]
 ; CHECK-NEXT:    shl v0.2s, v0.2s, #31
 ; CHECK-NEXT:    cmlt v0.2s, v0.2s, #0
 ; CHECK-NEXT:    ret

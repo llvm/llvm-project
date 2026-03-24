@@ -80,8 +80,8 @@ middle.block:                                     ; preds = %vector.body
 define %"struct.std::complex" @complex_mul_nonzero_init_v2f64(ptr %a, ptr %b) {
 ; CHECK-LABEL: complex_mul_nonzero_init_v2f64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    adrp x8, .LCPI1_0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI1_0]
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:  .LBB1_1: // %vector.body
@@ -143,11 +143,11 @@ middle.block:                                     ; preds = %vector.body
 define %"struct.std::complex" @complex_mul_v2f64_unrolled(ptr %a, ptr %b) {
 ; CHECK-LABEL: complex_mul_v2f64_unrolled:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    adrp x8, .LCPI2_0
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    adrp x8, .LCPI2_0
-; CHECK-NEXT:    movi v3.2d, #0000000000000000
 ; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI2_0]
+; CHECK-NEXT:    movi v3.2d, #0000000000000000
 ; CHECK-NEXT:    add x8, x0, #32
 ; CHECK-NEXT:    add x9, x1, #32
 ; CHECK-NEXT:    mov x10, #-100 // =0xffffffffffffff9c

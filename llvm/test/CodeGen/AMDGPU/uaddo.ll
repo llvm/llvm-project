@@ -941,8 +941,8 @@ define amdgpu_kernel void @s_uaddo_clamp_bit(ptr addrspace(1) %out, ptr addrspac
 ; GFX10-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x34
 ; GFX10-NEXT:    s_mov_b32 s0, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_add_co_u32 v0, s1, s2, s3
 ; GFX10-NEXT:    s_cmp_eq_u32 s2, s3
+; GFX10-NEXT:    v_add_co_u32 v0, s1, s2, s3
 ; GFX10-NEXT:    s_cbranch_scc1 .LBB8_2
 ; GFX10-NEXT:  ; %bb.1: ; %if
 ; GFX10-NEXT:    s_xor_b32 s0, s1, -1
@@ -960,8 +960,8 @@ define amdgpu_kernel void @s_uaddo_clamp_bit(ptr addrspace(1) %out, ptr addrspac
 ; GFX11-NEXT:    s_load_b64 s[2:3], s[4:5], 0x34
 ; GFX11-NEXT:    s_mov_b32 s0, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_add_co_u32 v0, s1, s2, s3
 ; GFX11-NEXT:    s_cmp_eq_u32 s2, s3
+; GFX11-NEXT:    v_add_co_u32 v0, s1, s2, s3
 ; GFX11-NEXT:    s_cbranch_scc1 .LBB8_2
 ; GFX11-NEXT:  ; %bb.1: ; %if
 ; GFX11-NEXT:    s_xor_b32 s0, s1, -1

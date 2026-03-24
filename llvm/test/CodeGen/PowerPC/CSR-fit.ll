@@ -18,11 +18,11 @@ define dso_local signext i32 @caller1(i32 signext %a, i32 signext %b) local_unna
 ; CHECK-PWR8-NEXT:    std r14, -144(r1) # 8-byte Folded Spill
 ; CHECK-PWR8-NEXT:    std r15, -136(r1) # 8-byte Folded Spill
 ; CHECK-PWR8-NEXT:    stdu r1, -176(r1)
+; CHECK-PWR8-NEXT:    std r0, 192(r1)
 ; CHECK-PWR8-NEXT:    #APP
 ; CHECK-PWR8-NEXT:    add r3, r3, r4
 ; CHECK-PWR8-NEXT:    #NO_APP
 ; CHECK-PWR8-NEXT:    extsw r3, r3
-; CHECK-PWR8-NEXT:    std r0, 192(r1)
 ; CHECK-PWR8-NEXT:    bl callee
 ; CHECK-PWR8-NEXT:    nop
 ; CHECK-PWR8-NEXT:    addi r1, r1, 176
@@ -42,11 +42,11 @@ define dso_local signext i32 @caller1(i32 signext %a, i32 signext %b) local_unna
 ; CHECK-PWR9-NEXT:    std r14, -144(r1) # 8-byte Folded Spill
 ; CHECK-PWR9-NEXT:    std r15, -136(r1) # 8-byte Folded Spill
 ; CHECK-PWR9-NEXT:    stdu r1, -176(r1)
+; CHECK-PWR9-NEXT:    std r0, 192(r1)
 ; CHECK-PWR9-NEXT:    #APP
 ; CHECK-PWR9-NEXT:    add r3, r3, r4
 ; CHECK-PWR9-NEXT:    #NO_APP
 ; CHECK-PWR9-NEXT:    extsw r3, r3
-; CHECK-PWR9-NEXT:    std r0, 192(r1)
 ; CHECK-PWR9-NEXT:    bl callee
 ; CHECK-PWR9-NEXT:    nop
 ; CHECK-PWR9-NEXT:    addi r1, r1, 176
@@ -72,11 +72,11 @@ define dso_local signext i32 @caller2(i32 signext %a, i32 signext %b) local_unna
 ; CHECK-PWR8-NEXT:    stfd f14, -144(r1) # 8-byte Folded Spill
 ; CHECK-PWR8-NEXT:    stfd f15, -136(r1) # 8-byte Folded Spill
 ; CHECK-PWR8-NEXT:    stdu r1, -176(r1)
+; CHECK-PWR8-NEXT:    std r0, 192(r1)
 ; CHECK-PWR8-NEXT:    #APP
 ; CHECK-PWR8-NEXT:    add r3, r3, r4
 ; CHECK-PWR8-NEXT:    #NO_APP
 ; CHECK-PWR8-NEXT:    extsw r3, r3
-; CHECK-PWR8-NEXT:    std r0, 192(r1)
 ; CHECK-PWR8-NEXT:    bl callee
 ; CHECK-PWR8-NEXT:    nop
 ; CHECK-PWR8-NEXT:    addi r1, r1, 176
@@ -96,11 +96,11 @@ define dso_local signext i32 @caller2(i32 signext %a, i32 signext %b) local_unna
 ; CHECK-PWR9-NEXT:    stfd f14, -144(r1) # 8-byte Folded Spill
 ; CHECK-PWR9-NEXT:    stfd f15, -136(r1) # 8-byte Folded Spill
 ; CHECK-PWR9-NEXT:    stdu r1, -176(r1)
+; CHECK-PWR9-NEXT:    std r0, 192(r1)
 ; CHECK-PWR9-NEXT:    #APP
 ; CHECK-PWR9-NEXT:    add r3, r3, r4
 ; CHECK-PWR9-NEXT:    #NO_APP
 ; CHECK-PWR9-NEXT:    extsw r3, r3
-; CHECK-PWR9-NEXT:    std r0, 192(r1)
 ; CHECK-PWR9-NEXT:    bl callee
 ; CHECK-PWR9-NEXT:    nop
 ; CHECK-PWR9-NEXT:    addi r1, r1, 176

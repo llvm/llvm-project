@@ -359,9 +359,9 @@ define ppc_fp128 @three_constants_ppcf128(ppc_fp128 %a, ppc_fp128 %c) {
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    .cfi_offset v31, -16
 ; CHECK-NEXT:    xxsplti32dx vs3, 0, 1074935889
-; CHECK-NEXT:    xxlxor f4, f4, f4
 ; CHECK-NEXT:    stxv vs63, 32(r1) # 16-byte Folded Spill
 ; CHECK-NEXT:    xxsplti32dx vs63, 0, 1074935889
+; CHECK-NEXT:    xxlxor f4, f4, f4
 ; CHECK-NEXT:    xxsplti32dx vs3, 1, -343597384
 ; CHECK-NEXT:    bl __gcc_qadd@notoc
 ; CHECK-NEXT:    xxsplti32dx vs3, 0, 1074935889

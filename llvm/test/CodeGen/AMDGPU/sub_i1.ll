@@ -192,8 +192,8 @@ define amdgpu_kernel void @sub_i1_cf(ptr addrspace(1) %out, ptr addrspace(1) %a,
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX11-NEXT:    s_mov_b32 s7, exec_lo
 ; GFX11-NEXT:    ; implicit-def: $sgpr6
+; GFX11-NEXT:    s_mov_b32 s7, exec_lo
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cmpx_lt_u32_e32 15, v0
 ; GFX11-NEXT:    s_xor_b32 s7, exec_lo, s7

@@ -7,9 +7,9 @@ define float @f32_minimum(float %a, float %b) {
 ; NOVSX-LABEL: f32_minimum:
 ; NOVSX:       # %bb.0: # %entry
 ; NOVSX-NEXT:    fcmpu 0, 1, 2
-; NOVSX-NEXT:    fmr 0, 1
 ; NOVSX-NEXT:    stfs 2, -8(1)
 ; NOVSX-NEXT:    stfs 1, -4(1)
+; NOVSX-NEXT:    fmr 0, 1
 ; NOVSX-NEXT:    bc 12, 0, .LBB0_2
 ; NOVSX-NEXT:  # %bb.1: # %entry
 ; NOVSX-NEXT:    fmr 0, 2
@@ -75,9 +75,9 @@ define float @f32_maximum(float %a, float %b) {
 ; NOVSX-LABEL: f32_maximum:
 ; NOVSX:       # %bb.0: # %entry
 ; NOVSX-NEXT:    fcmpu 0, 1, 2
-; NOVSX-NEXT:    fmr 0, 1
 ; NOVSX-NEXT:    stfs 2, -8(1)
 ; NOVSX-NEXT:    stfs 1, -4(1)
+; NOVSX-NEXT:    fmr 0, 1
 ; NOVSX-NEXT:    bc 12, 1, .LBB1_2
 ; NOVSX-NEXT:  # %bb.1: # %entry
 ; NOVSX-NEXT:    fmr 0, 2
@@ -141,9 +141,9 @@ define double @f64_minimum(double %a, double %b) {
 ; NOVSX-LABEL: f64_minimum:
 ; NOVSX:       # %bb.0: # %entry
 ; NOVSX-NEXT:    fcmpu 0, 1, 2
-; NOVSX-NEXT:    fmr 0, 1
 ; NOVSX-NEXT:    stfd 2, -16(1)
 ; NOVSX-NEXT:    stfd 1, -8(1)
+; NOVSX-NEXT:    fmr 0, 1
 ; NOVSX-NEXT:    bc 12, 0, .LBB2_2
 ; NOVSX-NEXT:  # %bb.1: # %entry
 ; NOVSX-NEXT:    fmr 0, 2
@@ -209,9 +209,9 @@ define double @f64_maximum(double %a, double %b) {
 ; NOVSX-LABEL: f64_maximum:
 ; NOVSX:       # %bb.0: # %entry
 ; NOVSX-NEXT:    fcmpu 0, 1, 2
-; NOVSX-NEXT:    fmr 0, 1
 ; NOVSX-NEXT:    stfd 2, -16(1)
 ; NOVSX-NEXT:    stfd 1, -8(1)
+; NOVSX-NEXT:    fmr 0, 1
 ; NOVSX-NEXT:    bc 12, 1, .LBB3_2
 ; NOVSX-NEXT:  # %bb.1: # %entry
 ; NOVSX-NEXT:    fmr 0, 2
@@ -385,11 +385,11 @@ define <2 x double> @v2f64_minimum(<2 x double> %a, <2 x double> %b) {
 ; NOVSX-LABEL: v2f64_minimum:
 ; NOVSX:       # %bb.0: # %entry
 ; NOVSX-NEXT:    fcmpu 0, 1, 3
-; NOVSX-NEXT:    fmr 6, 1
 ; NOVSX-NEXT:    stfd 4, -16(1)
 ; NOVSX-NEXT:    stfd 2, -8(1)
 ; NOVSX-NEXT:    stfd 3, -32(1)
 ; NOVSX-NEXT:    stfd 1, -24(1)
+; NOVSX-NEXT:    fmr 6, 1
 ; NOVSX-NEXT:    bc 12, 0, .LBB6_2
 ; NOVSX-NEXT:  # %bb.1: # %entry
 ; NOVSX-NEXT:    fmr 6, 3
@@ -493,11 +493,11 @@ define <2 x double> @v2f64_maximum(<2 x double> %a, <2 x double> %b) {
 ; NOVSX-LABEL: v2f64_maximum:
 ; NOVSX:       # %bb.0: # %entry
 ; NOVSX-NEXT:    fcmpu 0, 1, 3
-; NOVSX-NEXT:    fmr 6, 1
 ; NOVSX-NEXT:    stfd 4, -16(1)
 ; NOVSX-NEXT:    stfd 2, -8(1)
 ; NOVSX-NEXT:    stfd 3, -32(1)
 ; NOVSX-NEXT:    stfd 1, -24(1)
+; NOVSX-NEXT:    fmr 6, 1
 ; NOVSX-NEXT:    bc 12, 1, .LBB7_2
 ; NOVSX-NEXT:  # %bb.1: # %entry
 ; NOVSX-NEXT:    fmr 6, 3

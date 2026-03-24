@@ -1338,8 +1338,8 @@ define void @loadAndPass__Float16_2() {
 ; CHECK-NEXT:    ldgr %f0, %r0
 ; CHECK-NEXT:    lgdr %r0, %f0
 ; CHECK-NEXT:    srlg %r0, %r0, 48
-; CHECK-NEXT:    la %r2, 166(%r15)
 ; CHECK-NEXT:    sth %r0, 166(%r15)
+; CHECK-NEXT:    la %r2, 166(%r15)
 ; CHECK-NEXT:    brasl %r14, passCallee__Float16_2@PLT
 ; CHECK-NEXT:    lmg %r14, %r15, 280(%r15)
 ; CHECK-NEXT:    br %r14

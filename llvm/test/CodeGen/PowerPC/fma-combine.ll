@@ -148,24 +148,24 @@ define dso_local double @fma_combine_one_use(double %a, double %b, double %c) {
 ; CHECK-FAST-LABEL: fma_combine_one_use:
 ; CHECK-FAST:       # %bb.0: # %entry
 ; CHECK-FAST-NEXT:    xsnegdp 0, 1
-; CHECK-FAST-NEXT:    xsnmaddadp 1, 3, 2
 ; CHECK-FAST-NEXT:    addis 3, 2, v@toc@ha
+; CHECK-FAST-NEXT:    xsnmaddadp 1, 3, 2
 ; CHECK-FAST-NEXT:    stfd 0, v@toc@l(3)
 ; CHECK-FAST-NEXT:    blr
 ;
 ; CHECK-FAST-NOVSX-LABEL: fma_combine_one_use:
 ; CHECK-FAST-NOVSX:       # %bb.0: # %entry
 ; CHECK-FAST-NOVSX-NEXT:    fneg 0, 1
-; CHECK-FAST-NOVSX-NEXT:    fnmadd 1, 3, 2, 1
 ; CHECK-FAST-NOVSX-NEXT:    addis 3, 2, v@toc@ha
+; CHECK-FAST-NOVSX-NEXT:    fnmadd 1, 3, 2, 1
 ; CHECK-FAST-NOVSX-NEXT:    stfd 0, v@toc@l(3)
 ; CHECK-FAST-NOVSX-NEXT:    blr
 ;
 ; CHECK-LABEL: fma_combine_one_use:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xsnegdp 0, 1
-; CHECK-NEXT:    xsnmaddadp 1, 3, 2
 ; CHECK-NEXT:    addis 3, 2, v@toc@ha
+; CHECK-NEXT:    xsnmaddadp 1, 3, 2
 ; CHECK-NEXT:    stfd 0, v@toc@l(3)
 ; CHECK-NEXT:    blr
 entry:

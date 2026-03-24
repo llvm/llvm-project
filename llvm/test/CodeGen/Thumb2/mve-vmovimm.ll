@@ -1143,10 +1143,10 @@ define arm_aapcs_vfpcc <4 x float> @fadd_float_m3(<4 x float> %a) {
 ; CHECKLE-MVE-NEXT:    push {r4, r5, r7, lr}
 ; CHECKLE-MVE-NEXT:    .vsave {d8, d9}
 ; CHECKLE-MVE-NEXT:    vpush {d8, d9}
-; CHECKLE-MVE-NEXT:    vmov q4, q0
 ; CHECKLE-MVE-NEXT:    movs r5, #0
-; CHECKLE-MVE-NEXT:    vmov r4, r0, d9
+; CHECKLE-MVE-NEXT:    vmov q4, q0
 ; CHECKLE-MVE-NEXT:    movt r5, #49216
+; CHECKLE-MVE-NEXT:    vmov r4, r0, d9
 ; CHECKLE-MVE-NEXT:    mov r1, r5
 ; CHECKLE-MVE-NEXT:    bl __aeabi_fadd
 ; CHECKLE-MVE-NEXT:    vmov s19, r0

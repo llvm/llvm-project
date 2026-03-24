@@ -347,13 +347,13 @@ define void @all_stack_areas(<vscale x 16 x i1> %pred, double %fp) {
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x4f, 0x0c, 0x92, 0x2e, 0x00, 0x11, 0xa8, 0x7f, 0x1e, 0x22, 0x11, 0xf0, 0x77, 0x22 // $d15 @ cfa - 88 * VG - 1040
 ; CHECK-NEXT:    add x0, sp, #2080
 ; CHECK-NEXT:    add x8, sp, #2080
-; CHECK-NEXT:    add x1, sp, #1056
+; CHECK-NEXT:    str d0, [sp, #1048]
 ; CHECK-NEXT:    addvl x0, x0, #17
+; CHECK-NEXT:    str p0, [x8, #143, mul vl]
+; CHECK-NEXT:    add x1, sp, #1056
+; CHECK-NEXT:    addpl x0, x0, #7
 ; CHECK-NEXT:    add x2, sp, #1048
 ; CHECK-NEXT:    add x3, sp, #8
-; CHECK-NEXT:    addpl x0, x0, #7
-; CHECK-NEXT:    str d0, [sp, #1048]
-; CHECK-NEXT:    str p0, [x8, #143, mul vl]
 ; CHECK-NEXT:    bl foo
 ; CHECK-NEXT:    add sp, sp, #1056
 ; CHECK-NEXT:    addvl sp, sp, #1
@@ -507,12 +507,12 @@ define void @all_stack_areas_fp(<vscale x 16 x i1> %pred, double %fp) "frame-poi
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x4e, 0x0c, 0x92, 0x2e, 0x00, 0x11, 0xb0, 0x7f, 0x1e, 0x22, 0x11, 0xe0, 0x77, 0x22 // $d14 @ cfa - 80 * VG - 1056
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x4f, 0x0c, 0x92, 0x2e, 0x00, 0x11, 0xa8, 0x7f, 0x1e, 0x22, 0x11, 0xe0, 0x77, 0x22 // $d15 @ cfa - 88 * VG - 1056
 ; CHECK-NEXT:    sub x1, x29, #1024
-; CHECK-NEXT:    addpl x0, x29, #-17
-; CHECK-NEXT:    add x2, sp, #1048
-; CHECK-NEXT:    addvl x1, x1, #-20
-; CHECK-NEXT:    add x3, sp, #8
 ; CHECK-NEXT:    str d0, [sp, #1048]
+; CHECK-NEXT:    addpl x0, x29, #-17
 ; CHECK-NEXT:    str p0, [x29, #-17, mul vl]
+; CHECK-NEXT:    addvl x1, x1, #-20
+; CHECK-NEXT:    add x2, sp, #1048
+; CHECK-NEXT:    add x3, sp, #8
 ; CHECK-NEXT:    bl foo
 ; CHECK-NEXT:    add sp, sp, #1056
 ; CHECK-NEXT:    addvl sp, sp, #1

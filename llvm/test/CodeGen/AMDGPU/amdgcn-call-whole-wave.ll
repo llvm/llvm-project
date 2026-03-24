@@ -19,15 +19,15 @@ define amdgpu_gfx void @basic_test(i32 %x, i32 inreg %c, ptr addrspace(1) %ptr) 
 ; DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL-NEXT:    s_mov_b32 exec_lo, s1
 ; DAGISEL-NEXT:    v_writelane_b32 v42, s0, 2
-; DAGISEL-NEXT:    s_clause 0x1 ; 8-byte Folded Spill
-; DAGISEL-NEXT:    scratch_store_b32 off, v40, s33 offset:4
-; DAGISEL-NEXT:    scratch_store_b32 off, v41, s33
-; DAGISEL-NEXT:    v_dual_mov_b32 v41, v2 :: v_dual_mov_b32 v40, v1
-; DAGISEL-NEXT:    v_add_nc_u32_e32 v1, 13, v0
-; DAGISEL-NEXT:    v_writelane_b32 v42, s30, 0
 ; DAGISEL-NEXT:    s_mov_b32 s1, good_callee@abs32@hi
 ; DAGISEL-NEXT:    s_mov_b32 s0, good_callee@abs32@lo
 ; DAGISEL-NEXT:    s_add_co_i32 s32, s32, 16
+; DAGISEL-NEXT:    s_clause 0x1 ; 8-byte Folded Spill
+; DAGISEL-NEXT:    scratch_store_b32 off, v40, s33 offset:4
+; DAGISEL-NEXT:    scratch_store_b32 off, v41, s33
+; DAGISEL-NEXT:    v_writelane_b32 v42, s30, 0
+; DAGISEL-NEXT:    v_dual_mov_b32 v41, v2 :: v_dual_mov_b32 v40, v1
+; DAGISEL-NEXT:    v_add_nc_u32_e32 v1, 13, v0
 ; DAGISEL-NEXT:    v_writelane_b32 v42, s31, 1
 ; DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL-NEXT:    s_swappc_b64 s[30:31], s[0:1]
@@ -62,15 +62,15 @@ define amdgpu_gfx void @basic_test(i32 %x, i32 inreg %c, ptr addrspace(1) %ptr) 
 ; GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL-NEXT:    s_mov_b32 exec_lo, s1
 ; GISEL-NEXT:    v_writelane_b32 v42, s0, 2
-; GISEL-NEXT:    s_clause 0x1 ; 8-byte Folded Spill
-; GISEL-NEXT:    scratch_store_b32 off, v40, s33 offset:4
-; GISEL-NEXT:    scratch_store_b32 off, v41, s33
-; GISEL-NEXT:    v_dual_mov_b32 v40, v1 :: v_dual_mov_b32 v41, v2
-; GISEL-NEXT:    v_add_nc_u32_e32 v1, 13, v0
-; GISEL-NEXT:    v_writelane_b32 v42, s30, 0
 ; GISEL-NEXT:    s_mov_b32 s0, good_callee@abs32@lo
 ; GISEL-NEXT:    s_mov_b32 s1, good_callee@abs32@hi
 ; GISEL-NEXT:    s_add_co_i32 s32, s32, 16
+; GISEL-NEXT:    s_clause 0x1 ; 8-byte Folded Spill
+; GISEL-NEXT:    scratch_store_b32 off, v40, s33 offset:4
+; GISEL-NEXT:    scratch_store_b32 off, v41, s33
+; GISEL-NEXT:    v_writelane_b32 v42, s30, 0
+; GISEL-NEXT:    v_dual_mov_b32 v40, v1 :: v_dual_mov_b32 v41, v2
+; GISEL-NEXT:    v_add_nc_u32_e32 v1, 13, v0
 ; GISEL-NEXT:    v_writelane_b32 v42, s31, 1
 ; GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[0:1]
@@ -104,9 +104,9 @@ define amdgpu_gfx i32 @tail_call_from_gfx(i32 %x, i32 inreg %c) {
 ; DAGISEL-NEXT:    s_wait_samplecnt 0x0
 ; DAGISEL-NEXT:    s_wait_bvhcnt 0x0
 ; DAGISEL-NEXT:    s_wait_kmcnt 0x0
-; DAGISEL-NEXT:    v_add_nc_u32_e32 v1, 13, v0
 ; DAGISEL-NEXT:    s_mov_b32 s1, good_callee@abs32@hi
 ; DAGISEL-NEXT:    s_mov_b32 s0, good_callee@abs32@lo
+; DAGISEL-NEXT:    v_add_nc_u32_e32 v1, 13, v0
 ; DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL-NEXT:    s_setpc_b64 s[0:1]
 ;
@@ -117,9 +117,9 @@ define amdgpu_gfx i32 @tail_call_from_gfx(i32 %x, i32 inreg %c) {
 ; GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GISEL-NEXT:    s_wait_kmcnt 0x0
-; GISEL-NEXT:    v_add_nc_u32_e32 v1, 13, v0
 ; GISEL-NEXT:    s_mov_b32 s36, good_callee@abs32@lo
 ; GISEL-NEXT:    s_mov_b32 s37, good_callee@abs32@hi
+; GISEL-NEXT:    v_add_nc_u32_e32 v1, 13, v0
 ; GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL-NEXT:    s_setpc_b64 s[36:37]
   %y = add i32 %x, 13

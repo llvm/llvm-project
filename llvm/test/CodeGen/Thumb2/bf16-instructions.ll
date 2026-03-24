@@ -101,9 +101,9 @@ define bfloat @test_fmadd(bfloat %a, bfloat %b, bfloat %c) {
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r4, lr}
 ; CHECK-NOFP-NEXT:    push {r4, lr}
+; CHECK-NOFP-NEXT:    mov r4, r2
 ; CHECK-NOFP-NEXT:    lsls r0, r0, #16
 ; CHECK-NOFP-NEXT:    lsls r1, r1, #16
-; CHECK-NOFP-NEXT:    mov r4, r2
 ; CHECK-NOFP-NEXT:    bl __aeabi_fmul
 ; CHECK-NOFP-NEXT:    bl __truncsfbf2
 ; CHECK-NOFP-NEXT:    lsls r0, r0, #16
@@ -989,10 +989,10 @@ define void @test_br_cc(bfloat %a, bfloat %b, ptr %p1, ptr %p2) {
 ; CHECK-NOFP:       @ %bb.0: @ %common.ret
 ; CHECK-NOFP-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-NOFP-NEXT:    push {r4, r5, r7, lr}
-; CHECK-NOFP-NEXT:    lsls r0, r0, #16
-; CHECK-NOFP-NEXT:    lsls r1, r1, #16
 ; CHECK-NOFP-NEXT:    mov r4, r3
 ; CHECK-NOFP-NEXT:    mov r5, r2
+; CHECK-NOFP-NEXT:    lsls r0, r0, #16
+; CHECK-NOFP-NEXT:    lsls r1, r1, #16
 ; CHECK-NOFP-NEXT:    bl __aeabi_fcmplt
 ; CHECK-NOFP-NEXT:    cmp r0, #0
 ; CHECK-NOFP-NEXT:    mov.w r1, #0
@@ -1029,12 +1029,12 @@ define bfloat @test_phi(ptr %p1) {
 ; CHECK-NOFP:       @ %bb.0: @ %entry
 ; CHECK-NOFP-NEXT:    .save {r4, r5, r6, lr}
 ; CHECK-NOFP-NEXT:    push {r4, r5, r6, lr}
-; CHECK-NOFP-NEXT:    ldrh r6, [r0]
 ; CHECK-NOFP-NEXT:    mov r4, r0
+; CHECK-NOFP-NEXT:    ldrh r6, [r0]
 ; CHECK-NOFP-NEXT:  .LBB36_1: @ %loop
 ; CHECK-NOFP-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NOFP-NEXT:    mov r0, r4
 ; CHECK-NOFP-NEXT:    mov r5, r6
+; CHECK-NOFP-NEXT:    mov r0, r4
 ; CHECK-NOFP-NEXT:    ldrh r6, [r4]
 ; CHECK-NOFP-NEXT:    bl test_dummy
 ; CHECK-NOFP-NEXT:    lsls r0, r0, #31
@@ -2356,9 +2356,9 @@ define bfloat @test_fmuladd(bfloat %a, bfloat %b, bfloat %c) {
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r4, lr}
 ; CHECK-NOFP-NEXT:    push {r4, lr}
+; CHECK-NOFP-NEXT:    mov r4, r2
 ; CHECK-NOFP-NEXT:    lsls r0, r0, #16
 ; CHECK-NOFP-NEXT:    lsls r1, r1, #16
-; CHECK-NOFP-NEXT:    mov r4, r2
 ; CHECK-NOFP-NEXT:    bl __aeabi_fmul
 ; CHECK-NOFP-NEXT:    bl __truncsfbf2
 ; CHECK-NOFP-NEXT:    lsls r0, r0, #16

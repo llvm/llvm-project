@@ -103,8 +103,8 @@ define dso_local signext i32 @test2(ptr %p1) local_unnamed_addr  {
 ; CHECK-PWR9-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-PWR9-NEXT:    stdu r1, -48(r1)
 ; CHECK-PWR9-NEXT:    mr r30, r3
-; CHECK-PWR9-NEXT:    li r3, 0
 ; CHECK-PWR9-NEXT:    std r0, 64(r1)
+; CHECK-PWR9-NEXT:    li r3, 0
 ; CHECK-PWR9-NEXT:    cmpldi r30, 0
 ; CHECK-PWR9-NEXT:    beq cr0, .LBB1_3
 ; CHECK-PWR9-NEXT:  # %bb.1: # %if.end

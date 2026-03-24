@@ -798,30 +798,28 @@ define i32 @ctpop_into_extract(ptr %p) {
 ; NEON:       // %bb.0:
 ; NEON-NEXT:    ldr d0, [x0]
 ; NEON-NEXT:    movi v2.2d, #0xffffffffffffffff
-; NEON-NEXT:    mov x8, x0
-; NEON-NEXT:    mov w0, wzr
-; NEON-NEXT:    fmov w9, s0
-; NEON-NEXT:    fmov s1, w9
+; NEON-NEXT:    fmov w8, s0
+; NEON-NEXT:    fmov s1, w8
 ; NEON-NEXT:    cnt v1.8b, v1.8b
 ; NEON-NEXT:    addv b1, v1.8b
 ; NEON-NEXT:    mov v2.s[1], v1.s[0]
 ; NEON-NEXT:    sub v0.2s, v0.2s, v2.2s
-; NEON-NEXT:    str d0, [x8]
+; NEON-NEXT:    str d0, [x0]
+; NEON-NEXT:    mov w0, wzr
 ; NEON-NEXT:    ret
 ;
 ; DOT-LABEL: ctpop_into_extract:
 ; DOT:       // %bb.0:
 ; DOT-NEXT:    ldr d0, [x0]
 ; DOT-NEXT:    movi v2.2d, #0xffffffffffffffff
-; DOT-NEXT:    mov x8, x0
-; DOT-NEXT:    mov w0, wzr
-; DOT-NEXT:    fmov w9, s0
-; DOT-NEXT:    fmov s1, w9
+; DOT-NEXT:    fmov w8, s0
+; DOT-NEXT:    fmov s1, w8
 ; DOT-NEXT:    cnt v1.8b, v1.8b
 ; DOT-NEXT:    addv b1, v1.8b
 ; DOT-NEXT:    mov v2.s[1], v1.s[0]
 ; DOT-NEXT:    sub v0.2s, v0.2s, v2.2s
-; DOT-NEXT:    str d0, [x8]
+; DOT-NEXT:    str d0, [x0]
+; DOT-NEXT:    mov w0, wzr
 ; DOT-NEXT:    ret
 ;
 ; SVE-LABEL: ctpop_into_extract:
@@ -829,44 +827,41 @@ define i32 @ctpop_into_extract(ptr %p) {
 ; SVE-NEXT:    ldr d0, [x0]
 ; SVE-NEXT:    ptrue p0.s
 ; SVE-NEXT:    movi v2.2d, #0xffffffffffffffff
-; SVE-NEXT:    mov x8, x0
-; SVE-NEXT:    mov w0, wzr
 ; SVE-NEXT:    movprfx z1, z0
 ; SVE-NEXT:    cnt z1.s, p0/m, z0.s
 ; SVE-NEXT:    mov v2.s[1], v1.s[0]
 ; SVE-NEXT:    sub v0.2s, v0.2s, v2.2s
-; SVE-NEXT:    str d0, [x8]
+; SVE-NEXT:    str d0, [x0]
+; SVE-NEXT:    mov w0, wzr
 ; SVE-NEXT:    ret
 ;
 ; BE-LABEL: ctpop_into_extract:
 ; BE:       // %bb.0:
 ; BE-NEXT:    ld1 { v0.2s }, [x0]
 ; BE-NEXT:    movi v2.2d, #0xffffffffffffffff
-; BE-NEXT:    mov x8, x0
-; BE-NEXT:    mov w0, wzr
-; BE-NEXT:    fmov w9, s0
-; BE-NEXT:    fmov s1, w9
+; BE-NEXT:    fmov w8, s0
+; BE-NEXT:    fmov s1, w8
 ; BE-NEXT:    cnt v1.8b, v1.8b
 ; BE-NEXT:    addv b1, v1.8b
 ; BE-NEXT:    mov v2.s[1], v1.s[0]
 ; BE-NEXT:    sub v0.2s, v0.2s, v2.2s
-; BE-NEXT:    st1 { v0.2s }, [x8]
+; BE-NEXT:    st1 { v0.2s }, [x0]
+; BE-NEXT:    mov w0, wzr
 ; BE-NEXT:    ret
 ;
 ; GISEL-LABEL: ctpop_into_extract:
 ; GISEL:       // %bb.0:
 ; GISEL-NEXT:    ldr d0, [x0]
-; GISEL-NEXT:    mov x8, x0
-; GISEL-NEXT:    mov w0, wzr
-; GISEL-NEXT:    fmov w9, s0
-; GISEL-NEXT:    fmov s1, w9
-; GISEL-NEXT:    mov w9, #-1 // =0xffffffff
-; GISEL-NEXT:    fmov s2, w9
+; GISEL-NEXT:    fmov w8, s0
+; GISEL-NEXT:    fmov s1, w8
+; GISEL-NEXT:    mov w8, #-1 // =0xffffffff
+; GISEL-NEXT:    fmov s2, w8
 ; GISEL-NEXT:    cnt v1.8b, v1.8b
 ; GISEL-NEXT:    uaddlv h1, v1.8b
 ; GISEL-NEXT:    mov v2.s[1], v1.s[0]
 ; GISEL-NEXT:    sub v0.2s, v0.2s, v2.2s
-; GISEL-NEXT:    str d0, [x8]
+; GISEL-NEXT:    str d0, [x0]
+; GISEL-NEXT:    mov w0, wzr
 ; GISEL-NEXT:    ret
 ;
 ; GISELO0-LABEL: ctpop_into_extract:

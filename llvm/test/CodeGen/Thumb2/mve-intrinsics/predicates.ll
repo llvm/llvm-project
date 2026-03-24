@@ -21,6 +21,7 @@ define arm_aapcs_vfpcc zeroext i16 @test_vctp8q(i32 %a) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vctp.8 r0
 ; CHECK-NEXT:    vmrs r0, p0
+; CHECK-NEXT:    uxth r0, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = call <16 x i1> @llvm.arm.mve.vctp8(i32 %a)
@@ -36,6 +37,7 @@ define arm_aapcs_vfpcc zeroext i16 @test_vctp8q_m(i32 %a, i16 zeroext %p) {
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vctpt.8 r0
 ; CHECK-NEXT:    vmrs r0, p0
+; CHECK-NEXT:    uxth r0, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
@@ -52,6 +54,7 @@ define arm_aapcs_vfpcc zeroext i16 @test_vctp16q(i32 %a) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vctp.16 r0
 ; CHECK-NEXT:    vmrs r0, p0
+; CHECK-NEXT:    uxth r0, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = call <8 x i1> @llvm.arm.mve.vctp16(i32 %a)
@@ -67,6 +70,7 @@ define arm_aapcs_vfpcc zeroext i16 @test_vctp16q_m(i32 %a, i16 zeroext %p) {
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vctpt.16 r0
 ; CHECK-NEXT:    vmrs r0, p0
+; CHECK-NEXT:    uxth r0, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
@@ -83,6 +87,7 @@ define arm_aapcs_vfpcc zeroext i16 @test_vctp32q(i32 %a) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vctp.32 r0
 ; CHECK-NEXT:    vmrs r0, p0
+; CHECK-NEXT:    uxth r0, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = call <4 x i1> @llvm.arm.mve.vctp32(i32 %a)
@@ -98,6 +103,7 @@ define arm_aapcs_vfpcc zeroext i16 @test_vctp32q_m(i32 %a, i16 zeroext %p) {
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vctpt.32 r0
 ; CHECK-NEXT:    vmrs r0, p0
+; CHECK-NEXT:    uxth r0, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
@@ -114,6 +120,7 @@ define arm_aapcs_vfpcc zeroext i16 @test_vctp64q(i32 %a) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vctp.64 r0
 ; CHECK-NEXT:    vmrs r0, p0
+; CHECK-NEXT:    uxth r0, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = call <2 x i1> @llvm.arm.mve.vctp64(i32 %a)

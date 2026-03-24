@@ -3281,8 +3281,8 @@ define { half, half } @v_fneg_fma_multi_use_fneg_x_y_f16(half %a, half %b, half 
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; SI-NEXT:    v_and_b32_e32 v2, 0x8000, v1
 ; SI-NEXT:    v_mul_f32_e32 v1, v8, v3
-; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; SI-NEXT:    v_or_b32_e32 v0, v2, v0
+; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; SI-NEXT:    v_xor_b32_e32 v0, 0xffff8000, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -3365,10 +3365,10 @@ define { half, half } @v_fneg_fma_multi_use_fneg_x_y_f16_nsz(half %a, half %b, h
 ; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_cndmask_b32_e32 v1, v6, v7, vcc
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v5
+; SI-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
 ; SI-NEXT:    v_mul_f32_e32 v0, v0, v3
 ; SI-NEXT:    v_cndmask_b32_e32 v4, v4, v1, vcc
 ; SI-NEXT:    v_cvt_f16_f32_e32 v1, v0
-; SI-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
 ; SI-NEXT:    v_and_b32_e32 v0, 0x8000, v2
 ; SI-NEXT:    v_or_b32_e32 v0, v0, v4
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -4955,10 +4955,10 @@ define void @v_fneg_copytoreg_f16(ptr addrspace(1) %out, half %a, half %b, half 
 ; SI-NEXT:    v_and_b32_e32 v6, 0x3ff, v31
 ; SI-NEXT:    v_lshlrev_b32_e32 v6, 1, v6
 ; SI-NEXT:    v_add_i32_e32 v0, vcc, v0, v6
-; SI-NEXT:    v_mul_f32_e32 v2, v2, v3
-; SI-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; SI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
+; SI-NEXT:    v_mul_f32_e32 v2, v2, v3
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v5
+; SI-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; SI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; SI-NEXT:    s_cbranch_execz .LBB101_2
 ; SI-NEXT:  ; %bb.1: ; %if
@@ -4981,8 +4981,8 @@ define void @v_fneg_copytoreg_f16(ptr addrspace(1) %out, half %a, half %b, half 
 ; VI-NEXT:    v_lshlrev_b32_e32 v6, 1, v6
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, v0, v6
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    v_mul_f16_e32 v2, v2, v3
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v5
+; VI-NEXT:    v_mul_f16_e32 v2, v2, v3
 ; VI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; VI-NEXT:    s_cbranch_execz .LBB101_2
 ; VI-NEXT:  ; %bb.1: ; %if
@@ -5341,8 +5341,8 @@ define { half, half } @multiuse_fneg_vop2_vop3_users_f16(ptr addrspace(1) %out, 
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; SI-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
 ; SI-NEXT:    v_mul_f32_e32 v1, v5, v4
-; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; SI-NEXT:    v_and_b32_e32 v2, 0x8000, v2
+; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; SI-NEXT:    v_or_b32_e32 v0, v2, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -5699,8 +5699,8 @@ define { half, half } @multi_use_cost_to_fold_into_src(ptr addrspace(1) %out, ha
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; SI-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
 ; SI-NEXT:    v_mul_f32_e32 v1, v5, v4
-; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; SI-NEXT:    v_and_b32_e32 v2, 0x8000, v2
+; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; SI-NEXT:    v_or_b32_e32 v0, v2, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;

@@ -751,8 +751,8 @@ define arm_aapcs_vfpcc <4 x float> @frem_f32(<4 x float> %in1, <4 x float> %in2)
 ; CHECK-NEXT:    mov r1, r5
 ; CHECK-NEXT:    bl fmodf
 ; CHECK-NEXT:    vmov r4, r2, d10
-; CHECK-NEXT:    vmov r5, r1, d8
 ; CHECK-NEXT:    vmov s19, r0
+; CHECK-NEXT:    vmov r5, r1, d8
 ; CHECK-NEXT:    vmov s18, r6
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    bl fmodf
@@ -816,8 +816,8 @@ define arm_aapcs_vfpcc <8 x half> @frem_f16(<8 x half> %in1, <8 x half> %in2) {
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s20
 ; CHECK-NEXT:    vmov r2, s0
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s16
-; CHECK-NEXT:    vmov r1, s0
 ; CHECK-NEXT:    vmov s16, r0
+; CHECK-NEXT:    vmov r1, s0
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    bl fmodf
 ; CHECK-NEXT:    vmov s0, r0
@@ -886,8 +886,8 @@ define arm_aapcs_vfpcc <2 x double> @fdiv_f64(<2 x double> %in1, <2 x double> %i
 ; CHECK-NEXT:    vmov r2, r3, d9
 ; CHECK-NEXT:    bl __aeabi_ddiv
 ; CHECK-NEXT:    vmov lr, r12, d10
-; CHECK-NEXT:    vmov r2, r3, d8
 ; CHECK-NEXT:    vmov d9, r0, r1
+; CHECK-NEXT:    vmov r2, r3, d8
 ; CHECK-NEXT:    mov r0, lr
 ; CHECK-NEXT:    mov r1, r12
 ; CHECK-NEXT:    bl __aeabi_ddiv
@@ -913,8 +913,8 @@ define arm_aapcs_vfpcc <2 x double> @frem_f64(<2 x double> %in1, <2 x double> %i
 ; CHECK-NEXT:    vmov r2, r3, d9
 ; CHECK-NEXT:    bl fmod
 ; CHECK-NEXT:    vmov lr, r12, d10
-; CHECK-NEXT:    vmov r2, r3, d8
 ; CHECK-NEXT:    vmov d9, r0, r1
+; CHECK-NEXT:    vmov r2, r3, d8
 ; CHECK-NEXT:    mov r0, lr
 ; CHECK-NEXT:    mov r1, r12
 ; CHECK-NEXT:    bl fmod

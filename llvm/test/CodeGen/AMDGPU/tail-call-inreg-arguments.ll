@@ -53,10 +53,10 @@ define void @tail_call_i64_inreg_uniform_in_vgpr() {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    ds_read_b64 v[0:1], v0
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
 ; CHECK-NEXT:    s_add_u32 s16, s16, void_func_i64_inreg@gotpcrel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s17, s17, void_func_i64_inreg@gotpcrel32@hi+12
+; CHECK-NEXT:    ds_read_b64 v[0:1], v0
 ; CHECK-NEXT:    s_load_dwordx2 s[18:19], s[16:17], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_readfirstlane_b32 s16, v0

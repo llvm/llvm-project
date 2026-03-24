@@ -493,10 +493,10 @@ define amdgpu_ps i32 @bfe_i64(i64 inreg %val0) {
 ; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[2:3]
 ; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
 ; CHECK-NEXT:    ; return to shader part epilog
   %shl = shl i64 %val0, 56
   %result = ashr i64 %shl, 56

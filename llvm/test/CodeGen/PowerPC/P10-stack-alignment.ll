@@ -62,8 +62,8 @@ define dso_local signext i32 @test_32byte_vector() nounwind {
 ; CHECK-BE-NEXT:    rldic r5, r5, 2, 30
 ; CHECK-BE-NEXT:    rldic r6, r6, 1, 31
 ; CHECK-BE-NEXT:    std r3, 152(r1)
-; CHECK-BE-NEXT:    addi r3, r1, 128
 ; CHECK-BE-NEXT:    std r4, 144(r1)
+; CHECK-BE-NEXT:    addi r3, r1, 128
 ; CHECK-BE-NEXT:    std r5, 136(r1)
 ; CHECK-BE-NEXT:    std r6, 128(r1)
 ; CHECK-BE-NEXT:    bl test
@@ -125,8 +125,8 @@ define dso_local signext i32 @test_32byte_aligned_vector() nounwind {
 ; CHECK-BE-NEXT:    rldic r3, r3, 2, 30
 ; CHECK-BE-NEXT:    rldic r4, r4, 1, 31
 ; CHECK-BE-NEXT:    std r3, 136(r1)
-; CHECK-BE-NEXT:    addi r3, r1, 128
 ; CHECK-BE-NEXT:    std r4, 128(r1)
+; CHECK-BE-NEXT:    addi r3, r1, 128
 ; CHECK-BE-NEXT:    bl test1
 ; CHECK-BE-NEXT:    nop
 ; CHECK-BE-NEXT:    lwa r3, 128(r1)
@@ -159,9 +159,9 @@ define dso_local void @test_Array() nounwind {
 ; CHECK-LE-NEXT:    mflr r0
 ; CHECK-LE-NEXT:    stdu r1, -176(r1)
 ; CHECK-LE-NEXT:    li r3, 0
-; CHECK-LE-NEXT:    addis r4, r2, Arr1@toc@ha
 ; CHECK-LE-NEXT:    li r6, 65
 ; CHECK-LE-NEXT:    std r0, 192(r1)
+; CHECK-LE-NEXT:    addis r4, r2, Arr1@toc@ha
 ; CHECK-LE-NEXT:    addi r5, r1, 46
 ; CHECK-LE-NEXT:    stw r3, 44(r1)
 ; CHECK-LE-NEXT:    addi r4, r4, Arr1@toc@l
@@ -190,13 +190,13 @@ define dso_local void @test_Array() nounwind {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    mflr r0
 ; CHECK-BE-NEXT:    stdu r1, -256(r1)
-; CHECK-BE-NEXT:    addis r5, r2, Arr1@toc@ha
 ; CHECK-BE-NEXT:    li r3, 0
-; CHECK-BE-NEXT:    addi r5, r5, Arr1@toc@l
+; CHECK-BE-NEXT:    addis r5, r2, Arr1@toc@ha
 ; CHECK-BE-NEXT:    std r0, 272(r1)
-; CHECK-BE-NEXT:    addi r4, r1, 126
 ; CHECK-BE-NEXT:    li r6, 65
 ; CHECK-BE-NEXT:    stw r3, 124(r1)
+; CHECK-BE-NEXT:    addi r5, r5, Arr1@toc@l
+; CHECK-BE-NEXT:    addi r4, r1, 126
 ; CHECK-BE-NEXT:    addi r5, r5, -1
 ; CHECK-BE-NEXT:    mtctr r6
 ; CHECK-BE-NEXT:    bdz .LBB2_2

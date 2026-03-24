@@ -105,9 +105,9 @@ define i64 @fun3(i64 %a, i64 %b, half %f1, half %f2) #0 {
 ; CHECK-NEXT:    .cfi_offset %f8, -168
 ; CHECK-NEXT:    .cfi_offset %f9, -176
 ; CHECK-NEXT:    ldr %f8, %f0
-; CHECK-NEXT:    ldr %f0, %f2
 ; CHECK-NEXT:    lgr %r13, %r3
 ; CHECK-NEXT:    lgr %r12, %r2
+; CHECK-NEXT:    ldr %f0, %f2
 ; CHECK-NEXT:    brasl %r14, __extendhfsf2@PLT
 ; CHECK-NEXT:    ldr %f9, %f0
 ; CHECK-NEXT:    ldr %f0, %f8

@@ -12,11 +12,11 @@ define zeroext i1 @f1(i256 %a, i256 %b, ptr %res) {
 ; CHECK-NEXT:    vl %v1, 0(%r2), 3
 ; CHECK-NEXT:    vaccq %v4, %v3, %v2
 ; CHECK-NEXT:    vacccq %v5, %v1, %v0, %v4
-; CHECK-NEXT:    vlgvg %r2, %v5, 1
 ; CHECK-NEXT:    vacq %v0, %v1, %v0, %v4
 ; CHECK-NEXT:    vaq %v1, %v3, %v2
 ; CHECK-NEXT:    vst %v1, 16(%r4), 3
 ; CHECK-NEXT:    vst %v0, 0(%r4), 3
+; CHECK-NEXT:    vlgvg %r2, %v5, 1
 ; CHECK-NEXT:    br %r14
   %t = call {i256, i1} @llvm.uadd.with.overflow.i256(i256 %a, i256 %b)
   %val = extractvalue {i256, i1} %t, 0

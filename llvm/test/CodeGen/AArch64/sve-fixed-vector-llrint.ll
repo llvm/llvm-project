@@ -852,9 +852,9 @@ define <2 x i64> @llrint_v2i64_v2fp128(<2 x fp128> %x) nounwind {
 ; CHECK-LABEL: llrint_v2i64_v2fp128:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    bl llrintl
 ; CHECK-NEXT:    fmov d0, x0
 ; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
@@ -877,9 +877,9 @@ define <4 x i64> @llrint_v4i64_v4fp128(<4 x fp128> %x) nounwind {
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
 ; CHECK-NEXT:    sub sp, sp, #64
 ; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    stp q2, q1, [sp, #16] // 32-byte Folded Spill
 ; CHECK-NEXT:    str q0, [sp, #48] // 16-byte Spill
 ; CHECK-NEXT:    mov v0.16b, v3.16b
-; CHECK-NEXT:    stp q2, q1, [sp, #16] // 32-byte Folded Spill
 ; CHECK-NEXT:    bl llrintl
 ; CHECK-NEXT:    fmov d0, x0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
@@ -922,11 +922,11 @@ define <8 x i64> @llrint_v8i64_v8fp128(<8 x fp128> %x) nounwind {
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
 ; CHECK-NEXT:    sub sp, sp, #128
 ; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    str q0, [sp, #112] // 16-byte Spill
-; CHECK-NEXT:    mov v0.16b, v7.16b
 ; CHECK-NEXT:    stp q6, q5, [sp, #16] // 32-byte Folded Spill
 ; CHECK-NEXT:    stp q4, q3, [sp, #48] // 32-byte Folded Spill
 ; CHECK-NEXT:    stp q2, q1, [sp, #80] // 32-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp, #112] // 16-byte Spill
+; CHECK-NEXT:    mov v0.16b, v7.16b
 ; CHECK-NEXT:    bl llrintl
 ; CHECK-NEXT:    fmov d0, x0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
@@ -1003,16 +1003,16 @@ define <16 x i64> @llrint_v16fp128(<16 x fp128> %x) nounwind {
 ; CHECK-NEXT:    str q1, [sp, #240] // 16-byte Spill
 ; CHECK-NEXT:    ldr q1, [x8, #272]
 ; CHECK-NEXT:    addvl x8, sp, #4
-; CHECK-NEXT:    str q0, [sp, #224] // 16-byte Spill
 ; CHECK-NEXT:    stp q7, q6, [sp, #128] // 32-byte Folded Spill
+; CHECK-NEXT:    stp q5, q4, [sp, #160] // 32-byte Folded Spill
 ; CHECK-NEXT:    str q1, [sp, #112] // 16-byte Spill
 ; CHECK-NEXT:    ldr q1, [x8, #288]
 ; CHECK-NEXT:    addvl x8, sp, #4
-; CHECK-NEXT:    stp q5, q4, [sp, #160] // 32-byte Folded Spill
+; CHECK-NEXT:    stp q3, q2, [sp, #192] // 32-byte Folded Spill
 ; CHECK-NEXT:    str q1, [sp, #96] // 16-byte Spill
 ; CHECK-NEXT:    ldr q1, [x8, #304]
 ; CHECK-NEXT:    addvl x8, sp, #4
-; CHECK-NEXT:    stp q3, q2, [sp, #192] // 32-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp, #224] // 16-byte Spill
 ; CHECK-NEXT:    str q1, [sp, #80] // 16-byte Spill
 ; CHECK-NEXT:    ldr q1, [x8, #320]
 ; CHECK-NEXT:    addvl x8, sp, #4

@@ -1261,12 +1261,12 @@ define <3 x half> @v_min3_v3f16_minimumnum_minimumnum__v_v_v_0(<3 x half> %a, <3
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v6, v6
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX6-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GFX6-NEXT:    v_lshrrev_b32_e32 v8, 16, v4
 ; GFX6-NEXT:    v_min_f32_e32 v6, v6, v7
 ; GFX6-NEXT:    v_cvt_f16_f32_e32 v6, v6
 ; GFX6-NEXT:    v_min_f32_e32 v0, v0, v2
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v2, v3
-; GFX6-NEXT:    v_lshrrev_b32_e32 v8, 16, v4
+; GFX6-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v3, v6
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v6, v8
 ; GFX6-NEXT:    v_cvt_f16_f32_e32 v0, v0
@@ -1281,8 +1281,8 @@ define <3 x half> @v_min3_v3f16_minimumnum_minimumnum__v_v_v_0(<3 x half> %a, <3
 ; GFX6-NEXT:    v_min_f32_e32 v0, v0, v3
 ; GFX6-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX6-NEXT:    v_min_f32_e32 v1, v1, v4
-; GFX6-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; GFX6-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX6-NEXT:    v_or_b32_e32 v0, v0, v2
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1295,12 +1295,12 @@ define <3 x half> @v_min3_v3f16_minimumnum_minimumnum__v_v_v_0(<3 x half> %a, <3
 ; GFX7-NEXT:    v_cvt_f32_f16_e32 v6, v6
 ; GFX7-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GFX7-NEXT:    v_lshrrev_b32_e32 v8, 16, v4
 ; GFX7-NEXT:    v_min_f32_e32 v6, v6, v7
 ; GFX7-NEXT:    v_cvt_f16_f32_e32 v6, v6
 ; GFX7-NEXT:    v_min_f32_e32 v0, v0, v2
 ; GFX7-NEXT:    v_cvt_f32_f16_e32 v2, v3
-; GFX7-NEXT:    v_lshrrev_b32_e32 v8, 16, v4
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX7-NEXT:    v_cvt_f32_f16_e32 v3, v6
 ; GFX7-NEXT:    v_cvt_f32_f16_e32 v6, v8
 ; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
@@ -1315,8 +1315,8 @@ define <3 x half> @v_min3_v3f16_minimumnum_minimumnum__v_v_v_0(<3 x half> %a, <3
 ; GFX7-NEXT:    v_min_f32_e32 v0, v0, v3
 ; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-NEXT:    v_min_f32_e32 v1, v1, v4
-; GFX7-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX7-NEXT:    v_or_b32_e32 v0, v0, v2
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;

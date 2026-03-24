@@ -307,8 +307,8 @@ define <4 x i64> @interleave4_v4i64(<1 x i64> %vec0, <1 x i64> %vec1, <1 x i64> 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    // kill: def $d3 killed $d3 def $q3
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v2.d[1], v3.d[0]
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    mov v1.16b, v2.16b
@@ -398,8 +398,8 @@ define <4 x double> @interleave4_v4f64(<1 x double> %vec0, <1 x double> %vec1, <
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    // kill: def $d3 killed $d3 def $q3
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v2.d[1], v3.d[0]
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    mov v1.16b, v2.16b

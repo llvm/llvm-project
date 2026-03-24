@@ -15,9 +15,9 @@ define i32 @test(i32 %val, i32 %cond) {
 ; GCN-NEXT:    v_cndmask_b32_e64 v3, 0, v0, s4
 ; GCN-NEXT:    v_mov_b32_dpp v2, v3 row_xmask:1 row_mask:0xf bank_mask:0xf
 ; GCN-NEXT:    s_mov_b32 exec_lo, s4
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v1
 ; GCN-NEXT:    v_mov_b32_e32 v5, 0
 ; GCN-NEXT:    v_mov_b32_e32 v4, v2
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v1
 ; GCN-NEXT:    s_and_saveexec_b32 s4, vcc_lo
 ; GCN-NEXT:  ; %bb.1: ; %if
 ; GCN-NEXT:    s_or_saveexec_b32 s5, -1

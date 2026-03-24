@@ -614,10 +614,10 @@ define arm_aapcs_vfpcc void @three_pointer_iv_v4i32(ptr nocapture readonly %x, p
 ; CHECK-NEXT:    adr.w r12, .LCPI10_0
 ; CHECK-NEXT:    adr.w lr, .LCPI10_1
 ; CHECK-NEXT:    adr r4, .LCPI10_2
-; CHECK-NEXT:    vldrw.u32 q1, [lr]
-; CHECK-NEXT:    vldrw.u32 q0, [r4]
-; CHECK-NEXT:    vldrw.u32 q2, [r12]
 ; CHECK-NEXT:    movs r3, #10
+; CHECK-NEXT:    vldrw.u32 q0, [r4]
+; CHECK-NEXT:    vldrw.u32 q1, [lr]
+; CHECK-NEXT:    vldrw.u32 q2, [r12]
 ; CHECK-NEXT:  .LBB10_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q3, [r0, q0]
@@ -696,10 +696,10 @@ define arm_aapcs_vfpcc void @three_pointer_iv_v4i8(ptr nocapture readonly %x, pt
 ; CHECK-NEXT:    adr.w r12, .LCPI11_0
 ; CHECK-NEXT:    adr.w lr, .LCPI11_1
 ; CHECK-NEXT:    adr r4, .LCPI11_2
-; CHECK-NEXT:    vldrw.u32 q1, [lr]
-; CHECK-NEXT:    vldrw.u32 q0, [r4]
-; CHECK-NEXT:    vldrw.u32 q2, [r12]
 ; CHECK-NEXT:    movs r3, #10
+; CHECK-NEXT:    vldrw.u32 q0, [r4]
+; CHECK-NEXT:    vldrw.u32 q1, [lr]
+; CHECK-NEXT:    vldrw.u32 q2, [r12]
 ; CHECK-NEXT:  .LBB11_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrb.u32 q3, [r0, q0]
@@ -784,10 +784,10 @@ define arm_aapcs_vfpcc void @three_pointer_iv_v8i16(ptr nocapture readonly %x, p
 ; CHECK-NEXT:    adr.w r12, .LCPI12_0
 ; CHECK-NEXT:    adr.w lr, .LCPI12_1
 ; CHECK-NEXT:    adr r4, .LCPI12_2
-; CHECK-NEXT:    vldrw.u32 q1, [lr]
-; CHECK-NEXT:    vldrw.u32 q0, [r4]
-; CHECK-NEXT:    vldrw.u32 q2, [r12]
 ; CHECK-NEXT:    movs r3, #10
+; CHECK-NEXT:    vldrw.u32 q0, [r4]
+; CHECK-NEXT:    vldrw.u32 q1, [lr]
+; CHECK-NEXT:    vldrw.u32 q2, [r12]
 ; CHECK-NEXT:  .LBB12_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrh.u16 q3, [r0, q0]
@@ -878,10 +878,10 @@ define arm_aapcs_vfpcc void @three_pointer_iv_v16i8(ptr nocapture readonly %x, p
 ; CHECK-NEXT:    adr.w r12, .LCPI13_0
 ; CHECK-NEXT:    adr.w lr, .LCPI13_1
 ; CHECK-NEXT:    adr r4, .LCPI13_2
-; CHECK-NEXT:    vldrw.u32 q1, [lr]
-; CHECK-NEXT:    vldrw.u32 q0, [r4]
-; CHECK-NEXT:    vldrw.u32 q2, [r12]
 ; CHECK-NEXT:    movs r3, #10
+; CHECK-NEXT:    vldrw.u32 q0, [r4]
+; CHECK-NEXT:    vldrw.u32 q1, [lr]
+; CHECK-NEXT:    vldrw.u32 q2, [r12]
 ; CHECK-NEXT:  .LBB13_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrb.u8 q3, [r0, q0]

@@ -114,16 +114,16 @@ define i64 @extra_use1(i64 %in1, i64 %in2, ptr %p) {
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    lsl x8, x0, #1
 ; GISEL-NEXT:    and x9, x1, #0x1
-; GISEL-NEXT:    orr x0, x8, x9
 ; GISEL-NEXT:    str x8, [x2]
+; GISEL-NEXT:    orr x0, x8, x9
 ; GISEL-NEXT:    ret
 ;
 ; SDAG-LABEL: extra_use1:
 ; SDAG:       ; %bb.0: ; %bb
-; SDAG-NEXT:    bfi x1, x0, #1, #63
 ; SDAG-NEXT:    lsl x8, x0, #1
-; SDAG-NEXT:    mov x0, x1
+; SDAG-NEXT:    bfi x1, x0, #1, #63
 ; SDAG-NEXT:    str x8, [x2]
+; SDAG-NEXT:    mov x0, x1
 ; SDAG-NEXT:    ret
 bb:
   %tmp3 = shl i64 %in1, 1

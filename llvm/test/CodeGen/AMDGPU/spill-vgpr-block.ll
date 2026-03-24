@@ -50,23 +50,22 @@ define i32 @non_entry_func(i32 %x) {
 define amdgpu_kernel void @entry_func(i32 %x) {
 ; GISEL-LABEL: entry_func:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_mov_b64 s[10:11], s[6:7]
-; GISEL-NEXT:    s_load_b32 s6, s[4:5], 0x0
+; GISEL-NEXT:    s_load_b32 s12, s[4:5], 0x0
 ; GISEL-NEXT:    v_mov_b32_e32 v31, v0
-; GISEL-NEXT:    s_mov_b64 s[12:13], s[0:1]
+; GISEL-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; GISEL-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; GISEL-NEXT:    ;;#ASMSTART
 ; GISEL-NEXT:    s_nop
 ; GISEL-NEXT:    ;;#ASMEND
-; GISEL-NEXT:    s_add_co_u32 s8, s4, 4
 ; GISEL-NEXT:    s_mov_b32 s0, non_entry_func@abs32@lo
 ; GISEL-NEXT:    s_mov_b32 s1, non_entry_func@abs32@hi
-; GISEL-NEXT:    s_add_co_ci_u32 s9, s5, 0
-; GISEL-NEXT:    s_mov_b64 s[4:5], s[12:13]
+; GISEL-NEXT:    s_add_co_u32 s8, s4, 4
 ; GISEL-NEXT:    s_mov_b32 s32, 0
-; GISEL-NEXT:    s_wait_kmcnt 0x0
-; GISEL-NEXT:    v_mov_b32_e32 v0, s6
+; GISEL-NEXT:    s_add_co_ci_u32 s9, s5, 0
+; GISEL-NEXT:    s_mov_b64 s[4:5], s[6:7]
 ; GISEL-NEXT:    s_mov_b64 s[6:7], s[2:3]
-; GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GISEL-NEXT:    s_wait_kmcnt 0x0
+; GISEL-NEXT:    v_mov_b32_e32 v0, s12
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GISEL-NEXT:    s_endpgm
 ;
@@ -79,12 +78,12 @@ define amdgpu_kernel void @entry_func(i32 %x) {
 ; DAGISEL-NEXT:    ;;#ASMSTART
 ; DAGISEL-NEXT:    s_nop
 ; DAGISEL-NEXT:    ;;#ASMEND
-; DAGISEL-NEXT:    s_add_nc_u64 s[8:9], s[4:5], 4
 ; DAGISEL-NEXT:    s_mov_b32 s1, non_entry_func@abs32@hi
 ; DAGISEL-NEXT:    s_mov_b32 s0, non_entry_func@abs32@lo
+; DAGISEL-NEXT:    s_mov_b32 s32, 0
+; DAGISEL-NEXT:    s_add_nc_u64 s[8:9], s[4:5], 4
 ; DAGISEL-NEXT:    s_mov_b64 s[4:5], s[6:7]
 ; DAGISEL-NEXT:    s_mov_b64 s[6:7], s[2:3]
-; DAGISEL-NEXT:    s_mov_b32 s32, 0
 ; DAGISEL-NEXT:    s_wait_kmcnt 0x0
 ; DAGISEL-NEXT:    v_mov_b32_e32 v0, s12
 ; DAGISEL-NEXT:    s_swappc_b64 s[30:31], s[0:1]

@@ -8,9 +8,9 @@ declare float @llvm.amdgcn.strict.wqm.f32(float)
 define amdgpu_ps void @main(i32 %arg) {
 ; GFX10-LABEL: main:
 ; GFX10:       ; %bb.0: ; %bb
+; GFX10-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; GFX10-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX10-NEXT:    s_mov_b32 s4, 0
 ; GFX10-NEXT:    s_mov_b32 s2, 0
 ; GFX10-NEXT:    s_branch .LBB0_2

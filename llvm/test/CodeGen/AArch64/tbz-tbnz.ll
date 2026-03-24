@@ -588,8 +588,8 @@ define ptr @tbnz_wzr(i1 %cmp1.not.i, ptr %locflg) {
 ; CHECK-SD-NEXT:  // %bb.1:
 ; CHECK-SD-NEXT:    b .LBB20_4
 ; CHECK-SD-NEXT:  .LBB20_2: // %opnfil.exit.thread
-; CHECK-SD-NEXT:    mov w8, #1 // =0x1
 ; CHECK-SD-NEXT:    str wzr, [x1]
+; CHECK-SD-NEXT:    mov w8, #1 // =0x1
 ; CHECK-SD-NEXT:    tbz w8, #0, .LBB20_4
 ; CHECK-SD-NEXT:  // %bb.3: // %if.else25
 ; CHECK-SD-NEXT:    str wzr, [x1]
@@ -607,8 +607,8 @@ define ptr @tbnz_wzr(i1 %cmp1.not.i, ptr %locflg) {
 ; CHECK-GI-NEXT:    mov x0, xzr
 ; CHECK-GI-NEXT:    ret
 ; CHECK-GI-NEXT:  .LBB20_3: // %opnfil.exit.thread
-; CHECK-GI-NEXT:    mov w8, #1 // =0x1
 ; CHECK-GI-NEXT:    str wzr, [x1]
+; CHECK-GI-NEXT:    mov w8, #1 // =0x1
 ; CHECK-GI-NEXT:    tbz w8, #0, .LBB20_2
 ; CHECK-GI-NEXT:  .LBB20_4: // %if.else25
 ; CHECK-GI-NEXT:    str wzr, [x1]
@@ -716,8 +716,8 @@ define ptr @cbnz_wzr(i1 %cmp1.not.i, ptr %locflg) {
 ; CHECK-SD-NEXT:  // %bb.1:
 ; CHECK-SD-NEXT:    b .LBB22_4
 ; CHECK-SD-NEXT:  .LBB22_2: // %opnfil.exit.thread
-; CHECK-SD-NEXT:    mov w8, #10 // =0xa
 ; CHECK-SD-NEXT:    str wzr, [x1]
+; CHECK-SD-NEXT:    mov w8, #10 // =0xa
 ; CHECK-SD-NEXT:    cbz w8, .LBB22_4
 ; CHECK-SD-NEXT:  // %bb.3: // %if.else25
 ; CHECK-SD-NEXT:    str wzr, [x1]
@@ -730,8 +730,8 @@ define ptr @cbnz_wzr(i1 %cmp1.not.i, ptr %locflg) {
 ; CHECK-GI-NEXT:    mov w8, wzr
 ; CHECK-GI-NEXT:    tbnz w0, #0, .LBB22_2
 ; CHECK-GI-NEXT:  // %bb.1: // %opnfil.exit.thread
-; CHECK-GI-NEXT:    mov w8, #10 // =0xa
 ; CHECK-GI-NEXT:    str wzr, [x1]
+; CHECK-GI-NEXT:    mov w8, #10 // =0xa
 ; CHECK-GI-NEXT:  .LBB22_2: // %if.end10
 ; CHECK-GI-NEXT:    cbz w8, .LBB22_4
 ; CHECK-GI-NEXT:  // %bb.3: // %if.else25
@@ -837,8 +837,8 @@ if.then28:                                        ; preds = %if.end26
 define i1 @avifSequenceHeaderParse() {
 ; CHECK-LABEL: avifSequenceHeaderParse:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
 entry:
   %a = icmp slt i64 0, 0

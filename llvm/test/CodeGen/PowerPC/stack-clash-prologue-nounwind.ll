@@ -44,8 +44,8 @@ entry:
 define i8 @f1() #0 "stack-probe-size"="0" nounwind {
 ; CHECK-LE-LABEL: f1:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    mr r0, r1
 ; CHECK-LE-NEXT:    li r12, 259
+; CHECK-LE-NEXT:    mr r0, r1
 ; CHECK-LE-NEXT:    mtctr r12
 ; CHECK-LE-NEXT:  .LBB1_1: # %entry
 ; CHECK-LE-NEXT:    #
@@ -60,8 +60,8 @@ define i8 @f1() #0 "stack-probe-size"="0" nounwind {
 ;
 ; CHECK-BE-LABEL: f1:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    mr r0, r1
 ; CHECK-BE-NEXT:    li r12, 260
+; CHECK-BE-NEXT:    mr r0, r1
 ; CHECK-BE-NEXT:    mtctr r12
 ; CHECK-BE-NEXT:  .LBB1_1: # %entry
 ; CHECK-BE-NEXT:    #
@@ -76,8 +76,8 @@ define i8 @f1() #0 "stack-probe-size"="0" nounwind {
 ;
 ; CHECK-32-LABEL: f1:
 ; CHECK-32:       # %bb.0: # %entry
-; CHECK-32-NEXT:    mr r0, r1
 ; CHECK-32-NEXT:    li r12, 257
+; CHECK-32-NEXT:    mr r0, r1
 ; CHECK-32-NEXT:    mtctr r12
 ; CHECK-32-NEXT:  .LBB1_1: # %entry
 ; CHECK-32-NEXT:    #

@@ -1843,9 +1843,9 @@ define <2 x iXLen> @lrint_v2fp128(<2 x fp128> %x) nounwind {
 ; CHECK-i64-SD-LABEL: lrint_v2fp128:
 ; CHECK-i64-SD:       // %bb.0:
 ; CHECK-i64-SD-NEXT:    sub sp, sp, #48
+; CHECK-i64-SD-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-i64-SD-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-i64-SD-NEXT:    mov v0.16b, v1.16b
-; CHECK-i64-SD-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-i64-SD-NEXT:    bl lrintl
 ; CHECK-i64-SD-NEXT:    fmov d0, x0
 ; CHECK-i64-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
@@ -1936,10 +1936,10 @@ define <4 x iXLen> @lrint_v4fp128(<4 x fp128> %x) nounwind {
 ; CHECK-i64-SD-LABEL: lrint_v4fp128:
 ; CHECK-i64-SD:       // %bb.0:
 ; CHECK-i64-SD-NEXT:    sub sp, sp, #80
-; CHECK-i64-SD-NEXT:    str q0, [sp] // 16-byte Spill
-; CHECK-i64-SD-NEXT:    mov v0.16b, v1.16b
 ; CHECK-i64-SD-NEXT:    str x30, [sp, #64] // 8-byte Spill
 ; CHECK-i64-SD-NEXT:    stp q3, q2, [sp, #32] // 32-byte Folded Spill
+; CHECK-i64-SD-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-i64-SD-NEXT:    mov v0.16b, v1.16b
 ; CHECK-i64-SD-NEXT:    bl lrintl
 ; CHECK-i64-SD-NEXT:    fmov d0, x0
 ; CHECK-i64-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
@@ -2094,12 +2094,12 @@ define <8 x iXLen> @lrint_v8fp128(<8 x fp128> %x) nounwind {
 ; CHECK-i64-SD-LABEL: lrint_v8fp128:
 ; CHECK-i64-SD:       // %bb.0:
 ; CHECK-i64-SD-NEXT:    sub sp, sp, #144
-; CHECK-i64-SD-NEXT:    str q0, [sp] // 16-byte Spill
-; CHECK-i64-SD-NEXT:    mov v0.16b, v1.16b
 ; CHECK-i64-SD-NEXT:    str x30, [sp, #128] // 8-byte Spill
 ; CHECK-i64-SD-NEXT:    stp q3, q2, [sp, #16] // 32-byte Folded Spill
 ; CHECK-i64-SD-NEXT:    stp q5, q4, [sp, #48] // 32-byte Folded Spill
 ; CHECK-i64-SD-NEXT:    stp q7, q6, [sp, #96] // 32-byte Folded Spill
+; CHECK-i64-SD-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-i64-SD-NEXT:    mov v0.16b, v1.16b
 ; CHECK-i64-SD-NEXT:    bl lrintl
 ; CHECK-i64-SD-NEXT:    fmov d0, x0
 ; CHECK-i64-SD-NEXT:    str q0, [sp, #80] // 16-byte Spill
@@ -2400,11 +2400,11 @@ define <16 x iXLen> @lrint_v16fp128(<16 x fp128> %x) nounwind {
 ; CHECK-i64-SD-NEXT:    sub sp, sp, #272
 ; CHECK-i64-SD-NEXT:    str q2, [sp, #160] // 16-byte Spill
 ; CHECK-i64-SD-NEXT:    ldr q2, [sp, #368]
-; CHECK-i64-SD-NEXT:    stp q0, q3, [sp] // 32-byte Folded Spill
-; CHECK-i64-SD-NEXT:    mov v0.16b, v1.16b
+; CHECK-i64-SD-NEXT:    stp x29, x30, [sp, #256] // 16-byte Folded Spill
 ; CHECK-i64-SD-NEXT:    str q2, [sp, #240] // 16-byte Spill
 ; CHECK-i64-SD-NEXT:    ldr q2, [sp, #384]
-; CHECK-i64-SD-NEXT:    stp x29, x30, [sp, #256] // 16-byte Folded Spill
+; CHECK-i64-SD-NEXT:    stp q0, q3, [sp] // 32-byte Folded Spill
+; CHECK-i64-SD-NEXT:    mov v0.16b, v1.16b
 ; CHECK-i64-SD-NEXT:    str q2, [sp, #224] // 16-byte Spill
 ; CHECK-i64-SD-NEXT:    ldr q2, [sp, #336]
 ; CHECK-i64-SD-NEXT:    stp q5, q7, [sp, #32] // 32-byte Folded Spill

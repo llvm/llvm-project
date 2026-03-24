@@ -552,8 +552,8 @@ define amdgpu_ps void @non_cst_non_compare_input(ptr addrspace(1) %out, i32 %tid
 ;
 ; GFX11-LABEL: non_cst_non_compare_input:
 ; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX11-NEXT:    ; implicit-def: $sgpr0
+; GFX11-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX11-NEXT:    v_cmpx_ne_u32_e32 0, v3
 ; GFX11-NEXT:    s_xor_b32 s1, exec_lo, s1
 ; GFX11-NEXT:  ; %bb.1: ; %B

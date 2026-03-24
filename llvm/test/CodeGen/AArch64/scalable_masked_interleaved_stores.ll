@@ -116,8 +116,8 @@ define void @foo_st4_nxv2i64(<vscale x 2 x i1> %mask, <vscale x 2 x i64> %val1, 
 define void @foo_st2_nxv16i8_mul_use_mask(<vscale x 16 x i1> %mask, <vscale x 16 x i8> %val1, <vscale x 16 x i8> %val2, ptr %p) {
 ; CHECK-LABEL: foo_st2_nxv16i8_mul_use_mask:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip1 p1.b, p0.b, p0.b
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    zip1 p1.b, p0.b, p0.b
 ; CHECK-NEXT:    zip2 p2.b, p0.b, p0.b
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    st2b { z0.b, z1.b }, p0, [x0]

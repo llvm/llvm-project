@@ -239,14 +239,14 @@ define arm_aapcs_vfpcc <8 x i16> @shuffle3_i16(<8 x i16> %src) {
 ; CHECK-LIS-LABEL: shuffle3_i16:
 ; CHECK-LIS:       @ %bb.0: @ %entry
 ; CHECK-LIS-NEXT:    vmov q1, q0
+; CHECK-LIS-NEXT:    vmovx.f16 s1, s7
 ; CHECK-LIS-NEXT:    vmovx.f16 s2, s5
 ; CHECK-LIS-NEXT:    vmovx.f16 s0, s4
 ; CHECK-LIS-NEXT:    vins.f16 s5, s4
 ; CHECK-LIS-NEXT:    vins.f16 s2, s0
-; CHECK-LIS-NEXT:    vmov.f32 s0, s6
-; CHECK-LIS-NEXT:    vmovx.f16 s1, s7
-; CHECK-LIS-NEXT:    vmov.f32 s3, s5
 ; CHECK-LIS-NEXT:    vins.f16 s1, s7
+; CHECK-LIS-NEXT:    vmov.f32 s0, s6
+; CHECK-LIS-NEXT:    vmov.f32 s3, s5
 ; CHECK-LIS-NEXT:    bx lr
 
 entry:
@@ -1223,14 +1223,14 @@ define arm_aapcs_vfpcc <8 x half> @shuffle3_f16(<8 x half> %src) {
 ; CHECK-LIS-LABEL: shuffle3_f16:
 ; CHECK-LIS:       @ %bb.0: @ %entry
 ; CHECK-LIS-NEXT:    vmov q1, q0
+; CHECK-LIS-NEXT:    vmovx.f16 s1, s7
 ; CHECK-LIS-NEXT:    vmovx.f16 s2, s5
 ; CHECK-LIS-NEXT:    vmovx.f16 s0, s4
 ; CHECK-LIS-NEXT:    vins.f16 s5, s4
 ; CHECK-LIS-NEXT:    vins.f16 s2, s0
-; CHECK-LIS-NEXT:    vmov.f32 s0, s6
-; CHECK-LIS-NEXT:    vmovx.f16 s1, s7
-; CHECK-LIS-NEXT:    vmov.f32 s3, s5
 ; CHECK-LIS-NEXT:    vins.f16 s1, s7
+; CHECK-LIS-NEXT:    vmov.f32 s0, s6
+; CHECK-LIS-NEXT:    vmov.f32 s3, s5
 ; CHECK-LIS-NEXT:    bx lr
 
 entry:
@@ -1660,11 +1660,11 @@ define arm_aapcs_vfpcc <4 x double> @shuffle4_f64(<2 x double> %src1, <2 x doubl
 ; CHECK-LABEL: shuffle4_f64:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.f32 s8, s6
-; CHECK-NEXT:    vmov.f32 s6, s0
-; CHECK-NEXT:    vmov.f32 s9, s7
-; CHECK-NEXT:    vmov.f32 s7, s1
 ; CHECK-NEXT:    vmov.f32 s10, s2
+; CHECK-NEXT:    vmov.f32 s9, s7
+; CHECK-NEXT:    vmov.f32 s6, s0
 ; CHECK-NEXT:    vmov.f32 s11, s3
+; CHECK-NEXT:    vmov.f32 s7, s1
 ; CHECK-NEXT:    vmov q0, q2
 ; CHECK-NEXT:    bx lr
 entry:
@@ -1676,10 +1676,10 @@ define arm_aapcs_vfpcc <4 x double> @shuffle5_f64(<2 x double> %src1, <2 x doubl
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.f32 s8, s6
 ; CHECK-NEXT:    vmov.f32 s10, s4
-; CHECK-NEXT:    vmov.f32 s4, s2
-; CHECK-NEXT:    vmov.f32 s6, s0
 ; CHECK-NEXT:    vmov.f32 s9, s7
+; CHECK-NEXT:    vmov.f32 s6, s0
 ; CHECK-NEXT:    vmov.f32 s11, s5
+; CHECK-NEXT:    vmov.f32 s4, s2
 ; CHECK-NEXT:    vmov.f32 s5, s3
 ; CHECK-NEXT:    vmov.f32 s7, s1
 ; CHECK-NEXT:    vmov q0, q2
@@ -1774,11 +1774,11 @@ define arm_aapcs_vfpcc <4 x i64> @shuffle4_i64(<2 x i64> %src1, <2 x i64> %src2)
 ; CHECK-LABEL: shuffle4_i64:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.f32 s8, s6
-; CHECK-NEXT:    vmov.f32 s6, s0
-; CHECK-NEXT:    vmov.f32 s9, s7
-; CHECK-NEXT:    vmov.f32 s7, s1
 ; CHECK-NEXT:    vmov.f32 s10, s2
+; CHECK-NEXT:    vmov.f32 s9, s7
+; CHECK-NEXT:    vmov.f32 s6, s0
 ; CHECK-NEXT:    vmov.f32 s11, s3
+; CHECK-NEXT:    vmov.f32 s7, s1
 ; CHECK-NEXT:    vmov q0, q2
 ; CHECK-NEXT:    bx lr
 entry:
@@ -1790,10 +1790,10 @@ define arm_aapcs_vfpcc <4 x i64> @shuffle5_i64(<2 x i64> %src1, <2 x i64> %src2)
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.f32 s8, s6
 ; CHECK-NEXT:    vmov.f32 s10, s4
-; CHECK-NEXT:    vmov.f32 s4, s2
-; CHECK-NEXT:    vmov.f32 s6, s0
 ; CHECK-NEXT:    vmov.f32 s9, s7
+; CHECK-NEXT:    vmov.f32 s6, s0
 ; CHECK-NEXT:    vmov.f32 s11, s5
+; CHECK-NEXT:    vmov.f32 s4, s2
 ; CHECK-NEXT:    vmov.f32 s5, s3
 ; CHECK-NEXT:    vmov.f32 s7, s1
 ; CHECK-NEXT:    vmov q0, q2

@@ -16,9 +16,10 @@ define fp128 @fabs_f128(fp128 %a) {
 ; CHECK-GI-LABEL: fabs_f128:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov x8, v0.d[1]
-; CHECK-GI-NEXT:    mov v0.d[0], v0.d[0]
+; CHECK-GI-NEXT:    mov v1.d[0], v0.d[0]
 ; CHECK-GI-NEXT:    and x8, x8, #0x7fffffffffffffff
-; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    mov v1.d[1], x8
+; CHECK-GI-NEXT:    mov v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = call fp128 @llvm.fabs.f128(fp128 %a)
@@ -39,9 +40,10 @@ define <1 x fp128> @fabs_v1f128(<1 x fp128> %a) {
 ; CHECK-GI-LABEL: fabs_v1f128:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov x8, v0.d[1]
-; CHECK-GI-NEXT:    mov v0.d[0], v0.d[0]
+; CHECK-GI-NEXT:    mov v1.d[0], v0.d[0]
 ; CHECK-GI-NEXT:    and x8, x8, #0x7fffffffffffffff
-; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    mov v1.d[1], x8
+; CHECK-GI-NEXT:    mov v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = call <1 x fp128> @llvm.fabs.v1f128(<1 x fp128> %a)
@@ -66,12 +68,14 @@ define <2 x fp128> @fabs_v2f128(<2 x fp128> %a) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov x8, v0.d[1]
 ; CHECK-GI-NEXT:    mov x9, v1.d[1]
-; CHECK-GI-NEXT:    mov v0.d[0], v0.d[0]
-; CHECK-GI-NEXT:    mov v1.d[0], v1.d[0]
+; CHECK-GI-NEXT:    mov v2.d[0], v0.d[0]
+; CHECK-GI-NEXT:    mov v3.d[0], v1.d[0]
 ; CHECK-GI-NEXT:    and x8, x8, #0x7fffffffffffffff
 ; CHECK-GI-NEXT:    and x9, x9, #0x7fffffffffffffff
-; CHECK-GI-NEXT:    mov v0.d[1], x8
-; CHECK-GI-NEXT:    mov v1.d[1], x9
+; CHECK-GI-NEXT:    mov v2.d[1], x8
+; CHECK-GI-NEXT:    mov v3.d[1], x9
+; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    mov v1.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = call <2 x fp128> @llvm.fabs.v2f128(<2 x fp128> %a)
@@ -103,15 +107,18 @@ define <3 x fp128> @fabs_v3f128(<3 x fp128> %a) {
 ; CHECK-GI-NEXT:    mov x8, v0.d[1]
 ; CHECK-GI-NEXT:    mov x9, v1.d[1]
 ; CHECK-GI-NEXT:    mov x10, v2.d[1]
-; CHECK-GI-NEXT:    mov v0.d[0], v0.d[0]
-; CHECK-GI-NEXT:    mov v1.d[0], v1.d[0]
-; CHECK-GI-NEXT:    mov v2.d[0], v2.d[0]
+; CHECK-GI-NEXT:    mov v3.d[0], v0.d[0]
+; CHECK-GI-NEXT:    mov v4.d[0], v1.d[0]
+; CHECK-GI-NEXT:    mov v5.d[0], v2.d[0]
 ; CHECK-GI-NEXT:    and x8, x8, #0x7fffffffffffffff
 ; CHECK-GI-NEXT:    and x9, x9, #0x7fffffffffffffff
 ; CHECK-GI-NEXT:    and x10, x10, #0x7fffffffffffffff
-; CHECK-GI-NEXT:    mov v0.d[1], x8
-; CHECK-GI-NEXT:    mov v1.d[1], x9
-; CHECK-GI-NEXT:    mov v2.d[1], x10
+; CHECK-GI-NEXT:    mov v3.d[1], x8
+; CHECK-GI-NEXT:    mov v4.d[1], x9
+; CHECK-GI-NEXT:    mov v5.d[1], x10
+; CHECK-GI-NEXT:    mov v0.16b, v3.16b
+; CHECK-GI-NEXT:    mov v1.16b, v4.16b
+; CHECK-GI-NEXT:    mov v2.16b, v5.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = call <3 x fp128> @llvm.fabs.v3f128(<3 x fp128> %a)
@@ -144,22 +151,25 @@ define <4 x fp128> @fabs_v4f128(<4 x fp128> %a) {
 ; CHECK-GI-LABEL: fabs_v4f128:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov x8, v0.d[1]
-; CHECK-GI-NEXT:    mov v7.d[0], v0.d[0]
+; CHECK-GI-NEXT:    mov v4.d[0], v0.d[0]
 ; CHECK-GI-NEXT:    mov x9, v1.d[1]
 ; CHECK-GI-NEXT:    mov x10, v2.d[1]
 ; CHECK-GI-NEXT:    mov x11, v3.d[1]
-; CHECK-GI-NEXT:    mov v1.d[0], v1.d[0]
-; CHECK-GI-NEXT:    mov v2.d[0], v2.d[0]
-; CHECK-GI-NEXT:    mov v3.d[0], v3.d[0]
+; CHECK-GI-NEXT:    mov v5.d[0], v1.d[0]
+; CHECK-GI-NEXT:    mov v6.d[0], v2.d[0]
+; CHECK-GI-NEXT:    mov v7.d[0], v3.d[0]
 ; CHECK-GI-NEXT:    and x8, x8, #0x7fffffffffffffff
-; CHECK-GI-NEXT:    mov v7.d[1], x8
+; CHECK-GI-NEXT:    mov v4.d[1], x8
 ; CHECK-GI-NEXT:    and x8, x9, #0x7fffffffffffffff
 ; CHECK-GI-NEXT:    and x9, x10, #0x7fffffffffffffff
 ; CHECK-GI-NEXT:    and x10, x11, #0x7fffffffffffffff
-; CHECK-GI-NEXT:    mov v1.d[1], x8
-; CHECK-GI-NEXT:    mov v2.d[1], x9
-; CHECK-GI-NEXT:    mov v3.d[1], x10
-; CHECK-GI-NEXT:    mov v0.16b, v7.16b
+; CHECK-GI-NEXT:    mov v5.d[1], x8
+; CHECK-GI-NEXT:    mov v6.d[1], x9
+; CHECK-GI-NEXT:    mov v7.d[1], x10
+; CHECK-GI-NEXT:    mov v0.16b, v4.16b
+; CHECK-GI-NEXT:    mov v1.16b, v5.16b
+; CHECK-GI-NEXT:    mov v2.16b, v6.16b
+; CHECK-GI-NEXT:    mov v3.16b, v7.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = call <4 x fp128> @llvm.fabs.v4f128(<4 x fp128> %a)
