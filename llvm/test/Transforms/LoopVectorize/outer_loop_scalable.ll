@@ -9,8 +9,8 @@
 ; CHECK: remark: <unknown>:0:0: vectorized outer loop (vectorization width: vscale x 4, interleaved count: 1)
 ; NO_SCALABLE_VECS: remark: <unknown>:0:0: loop not vectorized: the scalable user-specified vectorization width for outer-loop vectorization cannot be used because the target does not support scalable vectors.
 
-@A = external local_unnamed_addr global [1024 x float], align 4
-@B = external local_unnamed_addr global [512 x float], align 4
+@A = external global [1024 x float], align 4
+@B = external global [512 x float], align 4
 
 define void @foo() {
 ; CHECK-LABEL: define void @foo() {

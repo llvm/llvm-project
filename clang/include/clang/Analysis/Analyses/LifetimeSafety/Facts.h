@@ -24,6 +24,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
 #include <cstdint>
+#include <optional>
 
 namespace clang::lifetimes::internal {
 
@@ -101,21 +102,30 @@ public:
             const OriginManager &OM) const override;
 };
 
+/// When an AccessPath expires (e.g., a variable goes out of scope), all loans
+/// that are associated with this path expire. For example, if `x` expires, then
+/// the loan to `x` expires.
 class ExpireFact : public Fact {
-  LoanID LID;
+  // The access path that expires.
+  AccessPath AP;
+
+  // Expired origin (e.g., its variable goes out of scope).
+  std::optional<OriginID> OID;
   SourceLocation ExpiryLoc;
 
 public:
   static bool classof(const Fact *F) { return F->getKind() == Kind::Expire; }
 
-  ExpireFact(LoanID LID, SourceLocation ExpiryLoc)
-      : Fact(Kind::Expire), LID(LID), ExpiryLoc(ExpiryLoc) {}
+  ExpireFact(AccessPath AP, SourceLocation ExpiryLoc,
+             std::optional<OriginID> OID = std::nullopt)
+      : Fact(Kind::Expire), AP(AP), OID(OID), ExpiryLoc(ExpiryLoc) {}
 
-  LoanID getLoanID() const { return LID; }
+  const AccessPath &getAccessPath() const { return AP; }
+  std::optional<OriginID> getOriginID() const { return OID; }
   SourceLocation getExpiryLoc() const { return ExpiryLoc; }
 
   void dump(llvm::raw_ostream &OS, const LoanManager &LM,
-            const OriginManager &) const override;
+            const OriginManager &OM) const override;
 };
 
 class OriginFlowFact : public Fact {

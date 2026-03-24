@@ -24,6 +24,7 @@
 #include "NVPTXSubtarget.h"
 #include "NVPTXTargetMachine.h"
 #include "NVPTXUtilities.h"
+#include "NVVMProperties.h"
 #include "TargetInfo/NVPTXTargetInfo.h"
 #include "cl_common_defines.h"
 #include "llvm/ADT/APFloat.h"
@@ -94,6 +95,21 @@
 using namespace llvm;
 
 #define DEPOTNAME "__local_depot"
+
+static StringRef getTextureName(const Value &V) {
+  assert(V.hasName() && "Found texture variable with no name");
+  return V.getName();
+}
+
+static StringRef getSurfaceName(const Value &V) {
+  assert(V.hasName() && "Found surface variable with no name");
+  return V.getName();
+}
+
+static StringRef getSamplerName(const Value &V) {
+  assert(V.hasName() && "Found sampler variable with no name");
+  return V.getName();
+}
 
 /// discoverDependentGlobals - Return a set of GlobalVariables on which \p V
 /// depends.
@@ -871,12 +887,14 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
     O << ".weak ";
   }
 
-  if (isTexture(*GVar)) {
+  const PTXOpaqueType OpaqueType = getPTXOpaqueType(*GVar);
+
+  if (OpaqueType == PTXOpaqueType::Texture) {
     O << ".global .texref " << getTextureName(*GVar) << ";\n";
     return;
   }
 
-  if (isSurface(*GVar)) {
+  if (OpaqueType == PTXOpaqueType::Surface) {
     O << ".global .surfref " << getSurfaceName(*GVar) << ";\n";
     return;
   }
@@ -890,7 +908,7 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
     return;
   }
 
-  if (isSampler(*GVar)) {
+  if (OpaqueType == PTXOpaqueType::Sampler) {
     O << ".global .samplerref " << getSamplerName(*GVar);
 
     const Constant *Initializer = nullptr;
@@ -1339,22 +1357,26 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
 
     // Handle image/sampler parameters
     if (IsKernelFunc) {
-      const bool IsSampler = isSampler(Arg);
-      const bool IsTexture = !IsSampler && isImageReadOnly(Arg);
-      const bool IsSurface = !IsSampler && !IsTexture &&
-                             (isImageReadWrite(Arg) || isImageWriteOnly(Arg));
-      if (IsSampler || IsTexture || IsSurface) {
+      const PTXOpaqueType ArgOpaqueType = getPTXOpaqueType(Arg);
+      if (ArgOpaqueType != PTXOpaqueType::None) {
         const bool EmitImgPtr = !MFI || !MFI->checkImageHandleSymbol(ParamSym);
         O << "\t.param ";
         if (EmitImgPtr)
           O << ".u64 .ptr ";
 
-        if (IsSampler)
+        switch (ArgOpaqueType) {
+        case PTXOpaqueType::Sampler:
           O << ".samplerref ";
-        else if (IsTexture)
+          break;
+        case PTXOpaqueType::Texture:
           O << ".texref ";
-        else // IsSurface
+          break;
+        case PTXOpaqueType::Surface:
           O << ".surfref ";
+          break;
+        case PTXOpaqueType::None:
+          llvm_unreachable("handled above");
+        }
         O << ParamSym;
         continue;
       }

@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUTargetTransformInfo.h"
+#include "AMDGPUSubtarget.h"
 #include "AMDGPUTargetMachine.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIModeRegisterDefaults.h"
@@ -27,6 +28,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Transforms/Utils/UnrollLoop.h"
 #include <optional>
 
 using namespace llvm;
@@ -166,8 +168,8 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
       // if region and potentially even PHI itself, saving on both divergence
       // and registers used for the PHI.
       // Add a small bonus for each of such "if" statements.
-      if (const BranchInst *Br = dyn_cast<BranchInst>(&I)) {
-        if (UP.Threshold < MaxBoost && Br->isConditional()) {
+      if (const CondBrInst *Br = dyn_cast<CondBrInst>(&I)) {
+        if (UP.Threshold < MaxBoost) {
           BasicBlock *Succ0 = Br->getSuccessor(0);
           BasicBlock *Succ1 = Br->getSuccessor(1);
           if ((L->contains(Succ0) && L->isLoopExiting(Succ0)) ||
@@ -268,6 +270,11 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
     if (L->isInnermost() && BB->size() < UnrollMaxBlockToAnalyze)
       UP.MaxIterationsCountToAnalyze = 32;
   }
+  // If a user provided an explicit unroll pragma (with or without count),
+  // override expensive trip count checks
+  UnrollPragmaInfo PInfo(L);
+  if (PInfo.PragmaEnableUnroll || PInfo.PragmaCount > 0)
+    UP.AllowExpensiveTripCount = true;
 }
 
 void AMDGPUTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
@@ -1729,4 +1736,51 @@ GCNTTIImpl::getInstructionUniformity(const Value *V) const {
     return InstructionUniformity::NeverUniform;
 
   return InstructionUniformity::Default;
+}
+
+InstructionCost GCNTTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
+                                                 StackOffset BaseOffset,
+                                                 bool HasBaseReg, int64_t Scale,
+                                                 unsigned AddrSpace) const {
+  if (HasBaseReg && Scale != 0) {
+    // gfx1250+ can fold base+scale*index when scale matches the memory access
+    // size (scale_offset bit). Supported for flat/global/constant/scratch
+    // (VMEM, max 128 bits) and constant_32bit (SMRD, capped to 128 bits here).
+    if (getST()->hasScaleOffset() && Ty && Ty->isSized() &&
+        (AMDGPU::isExtendedGlobalAddrSpace(AddrSpace) ||
+         AddrSpace == AMDGPUAS::FLAT_ADDRESS ||
+         AddrSpace == AMDGPUAS::PRIVATE_ADDRESS)) {
+      TypeSize StoreSize = getDataLayout().getTypeStoreSize(Ty);
+      if (TypeSize::isKnownLE(StoreSize, TypeSize::getFixed(16)) &&
+          static_cast<int64_t>(StoreSize.getFixedValue()) == Scale)
+        return 0;
+    }
+    return 1;
+  }
+  return BaseT::getScalingFactorCost(Ty, BaseGV, BaseOffset, HasBaseReg, Scale,
+                                     AddrSpace);
+}
+
+bool GCNTTIImpl::isLSRCostLess(const TTI::LSRCost &A,
+                               const TTI::LSRCost &B) const {
+  // Favor lower per-iteration work over preheader/setup costs.
+  // AMDGPU lacks rich addressing modes, so ScaleCost is folded into the
+  // effective instruction count (base+scale*index requires a separate ADD).
+  unsigned EffInsnsA = A.Insns + A.ScaleCost;
+  unsigned EffInsnsB = B.Insns + B.ScaleCost;
+
+  return std::tie(EffInsnsA, A.NumIVMuls, A.AddRecCost, A.NumBaseAdds,
+                  A.SetupCost, A.ImmCost, A.NumRegs) <
+         std::tie(EffInsnsB, B.NumIVMuls, B.AddRecCost, B.NumBaseAdds,
+                  B.SetupCost, B.ImmCost, B.NumRegs);
+}
+
+bool GCNTTIImpl::isNumRegsMajorCostOfLSR() const {
+  // isLSRCostLess de-prioritizes register count; keep consistent.
+  return false;
+}
+
+bool GCNTTIImpl::shouldDropLSRSolutionIfLessProfitable() const {
+  // Prefer the baseline when LSR cannot clearly reduce per-iteration work.
+  return true;
 }

@@ -23,13 +23,12 @@ add_clang_library(clangScalableStaticAnalysisFrameworkCore
   Support/ErrorBuilder.cpp
   TUSummary/ExtractorRegistry.cpp
   TUSummary/TUSummaryBuilder.cpp
+  WholeProgramAnalysis/AnalysisDriver.cpp
+  WholeProgramAnalysis/AnalysisName.cpp
+  WholeProgramAnalysis/AnalysisRegistry.cpp
 
   LINK_LIBS
   clangAST
-  clangASTMatchers
-  clangBasic
-  clangLex
-  clangFrontend
   clangUnifiedSymbolResolution
 
   DEPENDS

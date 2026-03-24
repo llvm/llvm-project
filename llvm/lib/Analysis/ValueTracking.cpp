@@ -499,8 +499,9 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
   KnownOut = KnownBits::computeForAddSub(Add, NSW, NUW, Known2, KnownOut);
 
   if (!Add && NSW && !KnownOut.isNonNegative() &&
-      isImpliedByDomCondition(ICmpInst::ICMP_SLE, Op1, Op0, Q.CxtI, Q.DL)
-          .value_or(false))
+      (isImpliedByDomCondition(ICmpInst::ICMP_SLE, Op1, Op0, Q.CxtI, Q.DL)
+           .value_or(false) ||
+       match(Op1, m_c_SMin(m_Specific(Op0), m_Value()))))
     KnownOut.makeNonNegative();
 
   if (Add)
@@ -3005,7 +3006,7 @@ static bool isKnownNonNullFromDominatingCondition(const Value *V,
           BasicBlock *NonNullSuccessor =
               BI->getSuccessor(NonNullIfTrue ? 0 : 1);
           BasicBlockEdge Edge(BI->getParent(), NonNullSuccessor);
-          if (Edge.isSingleEdge() && DT->dominates(Edge, CtxI->getParent()))
+          if (DT->dominates(Edge, CtxI->getParent()))
             return true;
         } else if (NonNullIfTrue && isGuard(Curr) &&
                    DT->dominates(cast<Instruction>(Curr), CtxI)) {
@@ -5656,6 +5657,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   case Instruction::FRem: {
     const bool WantNan = (InterestedClasses & fcNan) != fcNone;
 
+    if (Op->getOpcode() == Instruction::FRem)
+      Known.knownNot(fcInf);
+
     if (Op->getOperand(0) == Op->getOperand(1) &&
         isGuaranteedNotToBeUndef(Op->getOperand(0), Q.AC, Q.CxtI, Q.DT)) {
       if (Op->getOpcode() == Instruction::FDiv) {
@@ -7529,8 +7533,6 @@ bool llvm::isOverflowIntrinsicNoWrap(const WithOverflowInst *WO,
 
   auto AllUsesGuardedByBranch = [&](const CondBrInst *BI) {
     BasicBlockEdge NoWrapEdge(BI->getParent(), BI->getSuccessor(1));
-    if (!NoWrapEdge.isSingleEdge())
-      return false;
 
     // Check if all users of the add are provably no-wrap.
     for (const auto *Result : Results) {

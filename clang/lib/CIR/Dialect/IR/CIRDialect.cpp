@@ -80,6 +80,11 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
       os << dynCastInfoAttr.getAlias();
       return AliasResult::FinalAlias;
     }
+    if (auto cmpThreeWayInfoAttr =
+            mlir::dyn_cast<cir::CmpThreeWayInfoAttr>(attr)) {
+      os << cmpThreeWayInfoAttr.getAlias();
+      return AliasResult::FinalAlias;
+    }
     return AliasResult::NoAlias;
   }
 };
@@ -278,6 +283,13 @@ static void printOmittedTerminatorRegion(mlir::OpAsmPrinter &printer,
                       /*printEntryBlockArgs=*/false,
                       /*printBlockTerminators=*/!omitRegionTerm(region));
 }
+
+mlir::OptionalParseResult
+parseGlobalAddressSpaceValue(mlir::AsmParser &p,
+                             mlir::ptr::MemorySpaceAttrInterface &attr);
+
+void printGlobalAddressSpaceValue(mlir::AsmPrinter &printer, cir::GlobalOp op,
+                                  mlir::ptr::MemorySpaceAttrInterface attr);
 
 //===----------------------------------------------------------------------===//
 // AllocaOp
@@ -1744,7 +1756,9 @@ mlir::LogicalResult cir::GlobalOp::verify() {
 
 void cir::GlobalOp::build(
     OpBuilder &odsBuilder, OperationState &odsState, llvm::StringRef sym_name,
-    mlir::Type sym_type, bool isConstant, cir::GlobalLinkageKind linkage,
+    mlir::Type sym_type, bool isConstant,
+    mlir::ptr::MemorySpaceAttrInterface addrSpace,
+    cir::GlobalLinkageKind linkage,
     function_ref<void(OpBuilder &, Location)> ctorBuilder,
     function_ref<void(OpBuilder &, Location)> dtorBuilder) {
   odsState.addAttribute(getSymNameAttrName(odsState.name),
@@ -1754,6 +1768,10 @@ void cir::GlobalOp::build(
   if (isConstant)
     odsState.addAttribute(getConstantAttrName(odsState.name),
                           odsBuilder.getUnitAttr());
+
+  addrSpace = normalizeDefaultAddressSpace(addrSpace);
+  if (addrSpace)
+    odsState.addAttribute(getAddrSpaceAttrName(odsState.name), addrSpace);
 
   cir::GlobalLinkageKindAttr linkageAttr =
       cir::GlobalLinkageKindAttr::get(odsBuilder.getContext(), linkage);
@@ -1907,9 +1925,10 @@ cir::GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
            << "' does not reference a valid cir.global or cir.func";
 
   mlir::Type symTy;
+  mlir::ptr::MemorySpaceAttrInterface symAddrSpaceAttr{};
   if (auto g = dyn_cast<GlobalOp>(op)) {
     symTy = g.getSymType();
-    assert(!cir::MissingFeatures::addressSpace());
+    symAddrSpaceAttr = g.getAddrSpaceAttr();
     // Verify that for thread local global access, the global needs to
     // be marked with tls bits.
     if (getTls() && !g.getTlsModel())
@@ -1934,6 +1953,13 @@ cir::GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
     return emitOpError("result type pointee type '")
            << resultType.getPointee() << "' does not match type " << symTy
            << " of the global @" << getName();
+
+  if (symAddrSpaceAttr != resultType.getAddrSpace()) {
+    return emitOpError()
+           << "result type address space does not match the address "
+              "space of the global @"
+           << getName();
+  }
 
   return success();
 }
@@ -2189,17 +2215,18 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
 
   // Parse CXXSpecialMember attribute
   if (parser.parseOptionalKeyword("special_member").succeeded()) {
-    cir::CXXCtorAttr ctorAttr;
-    cir::CXXDtorAttr dtorAttr;
-    cir::CXXAssignAttr assignAttr;
     if (parser.parseLess().failed())
       return failure();
-    if (parser.parseOptionalAttribute(ctorAttr).has_value())
-      state.addAttribute(specialMemberAttr, ctorAttr);
-    else if (parser.parseOptionalAttribute(dtorAttr).has_value())
-      state.addAttribute(specialMemberAttr, dtorAttr);
-    else if (parser.parseOptionalAttribute(assignAttr).has_value())
-      state.addAttribute(specialMemberAttr, assignAttr);
+
+    mlir::Attribute attr;
+    if (parser.parseAttribute(attr).failed())
+      return failure();
+    if (!mlir::isa<cir::CXXCtorAttr, cir::CXXDtorAttr, cir::CXXAssignAttr>(
+            attr))
+      return parser.emitError(parser.getCurrentLocation(),
+                              "expected a C++ special member attribute");
+    state.addAttribute(specialMemberAttr, attr);
+
     if (parser.parseGreater().failed())
       return failure();
   }
@@ -2664,113 +2691,74 @@ LogicalResult cir::LabelOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// UnaryOp
+// IncOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult cir::UnaryOp::verify() {
-  switch (getKind()) {
-  case cir::UnaryOpKind::Inc:
-  case cir::UnaryOpKind::Dec:
-  case cir::UnaryOpKind::Plus:
-  case cir::UnaryOpKind::Minus:
-  case cir::UnaryOpKind::Not:
-    // Nothing to verify.
-    return success();
-  }
-
-  llvm_unreachable("Unknown UnaryOp kind?");
+OpFoldResult cir::IncOp::fold(FoldAdaptor adaptor) {
+  if (mlir::isa_and_present<cir::PoisonAttr>(adaptor.getInput()))
+    return adaptor.getInput();
+  return {};
 }
 
-static bool isBoolNot(cir::UnaryOp op) {
-  return isa<cir::BoolType>(op.getInput().getType()) &&
-         op.getKind() == cir::UnaryOpKind::Not;
+//===----------------------------------------------------------------------===//
+// DecOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult cir::DecOp::fold(FoldAdaptor adaptor) {
+  if (mlir::isa_and_present<cir::PoisonAttr>(adaptor.getInput()))
+    return adaptor.getInput();
+  return {};
 }
 
-// This folder simplifies the sequential boolean not operations.
-// For instance, the next two unary operations will be eliminated:
-//
-// ```mlir
-// %1 = cir.unary(not, %0) : !cir.bool, !cir.bool
-// %2 = cir.unary(not, %1) : !cir.bool, !cir.bool
-// ```
-//
-// and the argument of the first one (%0) will be used instead.
-OpFoldResult cir::UnaryOp::fold(FoldAdaptor adaptor) {
-  if (auto poison =
-          mlir::dyn_cast_if_present<cir::PoisonAttr>(adaptor.getInput())) {
-    // Propagate poison values
-    return poison;
-  }
+//===----------------------------------------------------------------------===//
+// MinusOp
+//===----------------------------------------------------------------------===//
 
-  if (isBoolNot(*this))
-    if (auto previous = getInput().getDefiningOp<cir::UnaryOp>())
-      if (isBoolNot(previous))
-        return previous.getInput();
+OpFoldResult cir::MinusOp::fold(FoldAdaptor adaptor) {
+  if (mlir::isa_and_present<cir::PoisonAttr>(adaptor.getInput()))
+    return adaptor.getInput();
 
-  // Avoid introducing unnecessary duplicate constants in cases where we are
-  // just folding the operation to its input value. If we return the
-  // input attribute from the adapter, a new constant is materialized, but
-  // if we return the input value directly, it avoids that.
-  if (auto srcConst = getInput().getDefiningOp<cir::ConstantOp>()) {
-    if (getKind() == cir::UnaryOpKind::Plus ||
-        (mlir::isa<cir::BoolType>(srcConst.getType()) &&
-         getKind() == cir::UnaryOpKind::Minus))
+  // Avoid materializing a duplicate constant for bool minus (identity).
+  if (auto srcConst = getInput().getDefiningOp<cir::ConstantOp>())
+    if (mlir::isa<cir::BoolType>(srcConst.getType()))
       return srcConst.getResult();
+
+  // Fold with constant inputs.
+  if (mlir::Attribute attr = adaptor.getInput()) {
+    if (auto intAttr = mlir::dyn_cast<cir::IntAttr>(attr)) {
+      APInt val = intAttr.getValue();
+      val.negate();
+      return cir::IntAttr::get(getType(), val);
+    }
+    if (auto fpAttr = mlir::dyn_cast<cir::FPAttr>(attr)) {
+      APFloat val = fpAttr.getValue();
+      val.changeSign();
+      return cir::FPAttr::get(getType(), val);
+    }
   }
 
-  // Fold unary operations with constant inputs. If the input is a ConstantOp,
-  // it "folds" to its value attribute. If it was some other operation that
-  // was folded, it will be an mlir::Attribute that hasn't yet been
-  // materialized. If it was a value that couldn't be folded, it will be null.
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
+// NotOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult cir::NotOp::fold(FoldAdaptor adaptor) {
+  if (mlir::isa_and_present<cir::PoisonAttr>(adaptor.getInput()))
+    return adaptor.getInput();
+
+  // not(not(x)) -> x is handled by the Involution trait.
+
+  // Fold with constant inputs.
   if (mlir::Attribute attr = adaptor.getInput()) {
-    // For now, we only attempt to fold simple scalar values.
-    OpFoldResult result =
-        llvm::TypeSwitch<mlir::Attribute, OpFoldResult>(attr)
-            .Case<cir::IntAttr>([&](cir::IntAttr attrT) {
-              switch (getKind()) {
-              case cir::UnaryOpKind::Not: {
-                APInt val = attrT.getValue();
-                val.flipAllBits();
-                return cir::IntAttr::get(getType(), val);
-              }
-              case cir::UnaryOpKind::Plus:
-                return attrT;
-              case cir::UnaryOpKind::Minus: {
-                APInt val = attrT.getValue();
-                val.negate();
-                return cir::IntAttr::get(getType(), val);
-              }
-              default:
-                return cir::IntAttr{};
-              }
-            })
-            .Case<cir::FPAttr>([&](cir::FPAttr attrT) {
-              switch (getKind()) {
-              case cir::UnaryOpKind::Plus:
-                return attrT;
-              case cir::UnaryOpKind::Minus: {
-                APFloat val = attrT.getValue();
-                val.changeSign();
-                return cir::FPAttr::get(getType(), val);
-              }
-              default:
-                return cir::FPAttr{};
-              }
-            })
-            .Case<cir::BoolAttr>([&](cir::BoolAttr attrT) {
-              switch (getKind()) {
-              case cir::UnaryOpKind::Not:
-                return cir::BoolAttr::get(getContext(), !attrT.getValue());
-              case cir::UnaryOpKind::Plus:
-              case cir::UnaryOpKind::Minus:
-                return attrT;
-              default:
-                return cir::BoolAttr{};
-              }
-            })
-            .Default([&](auto attrT) { return mlir::Attribute{}; });
-    if (result)
-      return result;
+    if (auto intAttr = mlir::dyn_cast<cir::IntAttr>(attr)) {
+      APInt val = intAttr.getValue();
+      val.flipAllBits();
+      return cir::IntAttr::get(getType(), val);
+    }
+    if (auto boolAttr = mlir::dyn_cast<cir::BoolAttr>(attr))
+      return cir::BoolAttr::get(getContext(), !boolAttr.getValue());
   }
 
   return {};

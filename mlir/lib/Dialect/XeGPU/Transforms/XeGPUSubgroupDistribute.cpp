@@ -162,6 +162,11 @@ struct MoveFuncBodyToWarpOp : public OpRewritePattern<gpu::GPUFuncOp> {
           return isa<gpu::WarpExecuteOnLane0Op>(op);
         }))
       return failure();
+    gpu::ReturnOp origReturnOp = dyn_cast_if_present<gpu::ReturnOp>(
+        gpuFuncOp.getBlocks().back().getTerminator());
+    if (!origReturnOp)
+      return rewriter.notifyMatchFailure(
+          gpuFuncOp, "expected gpu.func terminator to be gpu.return");
     // Create a new function with the same signature and same attributes.
     SmallVector<Type> workgroupAttributionsTypes =
         llvm::map_to_vector(gpuFuncOp.getWorkgroupAttributions(),
@@ -187,12 +192,10 @@ struct MoveFuncBodyToWarpOp : public OpRewritePattern<gpu::GPUFuncOp> {
         newGpuFunc.getArgumentTypes());
     Block &warpBodyBlock = warpOp.getBodyRegion().front();
     // Replace the ReturnOp of the original gpu function with a YieldOp.
-    auto origRetunOp =
-        cast<gpu::ReturnOp>(gpuFuncOp.getBlocks().back().getTerminator());
-    rewriter.setInsertionPointAfter(origRetunOp);
-    gpu::YieldOp::create(rewriter, origRetunOp.getLoc(),
-                         origRetunOp.getOperands());
-    rewriter.eraseOp(origRetunOp);
+    rewriter.setInsertionPointAfter(origReturnOp);
+    gpu::YieldOp::create(rewriter, origReturnOp.getLoc(),
+                         origReturnOp.getOperands());
+    rewriter.eraseOp(origReturnOp);
     // Move the original function body to the WarpExecuteOnLane0Op body.
     rewriter.inlineRegionBefore(gpuFuncOp.getBody(), warpOp.getBodyRegion(),
                                 warpOp.getBodyRegion().begin());
@@ -2080,11 +2083,14 @@ struct ConvertLayoutDistribution
                                 PatternRewriter &rewriter) const override {
     auto inputLayout = op.getInputLayoutAttr();
     auto targetLayout = op.getTargetLayoutAttr();
+    auto resShape = cast<VectorType>(op.getResult().getType()).getShape();
 
     if (!inputLayout || !targetLayout)
       return rewriter.notifyMatchFailure(op, "missing layout attributes");
 
-    if (!inputLayout.isCompatibleWith(targetLayout, xegpu::LayoutKind::Lane)) {
+    SmallVector<int64_t> resShapeVec(resShape.begin(), resShape.end());
+    if (!inputLayout.isCompatibleWith(targetLayout, resShapeVec,
+                                      xegpu::LayoutKind::Lane)) {
       return rewriter.notifyMatchFailure(
           op, "lowering incompatible convert_layout not yet supported");
     }

@@ -677,19 +677,6 @@ void LayoutInfoPropagation::visitVectorBroadCastOp(
   auto srcShape = sourceTy.getShape();
   auto resShape = resultTy.getShape();
 
-  size_t dimDiff = resultTy.getRank() - sourceTy.getRank();
-  if (dimDiff == 0) {
-    bool hasUnitDim =
-        llvm::any_of(srcShape, [](int64_t dim) { return dim == 1; });
-    Operation *srcOp = broadcast.getSource().getDefiningOp();
-    if (!srcOp)
-      return;
-    bool produceByShapeCast = isa<vector::ShapeCastOp>(srcOp);
-    assert(
-        hasUnitDim && produceByShapeCast &&
-        "When broadcasting from unit-dim, the producer op must be shape_cast!");
-  }
-
   auto resultLayoutAttr =
       dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
 
@@ -1143,7 +1130,6 @@ void LayoutInfoPropagation::visitLoadMatrixOp(
   if (!hasParamsOfLayoutKind(anchorLayout)) {
     VectorType resVecTy =
         llvm::cast<VectorType>(loadMatrixOp.getRes().getType());
-    assert(resVecTy.getRank() == 2 && "Expecting 2D vector for store matrix.");
     const uArch *uArch = getUArch(getChipStr(loadMatrixOp).value_or(""));
     if (!uArch)
       return;
@@ -1164,7 +1150,6 @@ void LayoutInfoPropagation::visitStoreMatrixOp(
   } else {
     VectorType srcVecTy =
         llvm::cast<VectorType>(storeMatrix.getData().getType());
-    assert(srcVecTy.getRank() == 2 && "Expecting 2D vector for store matrix.");
     const uArch *uArch = getUArch(getChipStr(storeMatrix).value_or(""));
     if (!uArch)
       return;

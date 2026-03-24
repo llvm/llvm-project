@@ -517,6 +517,9 @@ void WebAssemblyPassConfig::addIRPasses() {
   // Expand indirectbr instructions to switches.
   addPass(createIndirectBrExpandPass());
 
+  // Try to expand `vecreduce_{and, or}` into `{any, all}_true`.
+  addPass(createWebAssemblyReduceToAnyAllTrue(getWebAssemblyTargetMachine()));
+
   TargetPassConfig::addIRPasses();
 }
 
