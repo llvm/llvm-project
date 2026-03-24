@@ -228,8 +228,8 @@ void memset1_new_array() {
   memset(array, 0, 10 * sizeof(int));
   clang_analyzer_eval(array[2] == 0); // expected-warning{{TRUE}}
   // FIXME: The analyzer should stop analysis after memset. Maybe the intent of
-  // this test was to test for this as a desired behaviour, but it shouldn't be,
-  // going out-of-bounds with memset is a fatal error, even if we decide not to
+  // this test was to test for this as a desired behaviour, but it shouldn't be.
+  // Going out-of-bounds with memset is a fatal error, even if we decide not to
   // report it.
   memset(array + 1, 'a', 10 * sizeof(9));
   clang_analyzer_eval(array[2] == 0); // expected-warning{{UNKNOWN}}
