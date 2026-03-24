@@ -50,6 +50,7 @@ int main(int argc, char *argv[]) {
   dumpData(DataSpirv, argv[2]);
 
   amd_comgr_(release_data(DataSource));
+  amd_comgr_(release_data(DataSpirv));
   amd_comgr_(destroy_data_set(DataSetSource));
   amd_comgr_(destroy_data_set(DataSetSpirv));
   amd_comgr_(destroy_action_info(DataAction));
