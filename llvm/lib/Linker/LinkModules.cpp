@@ -14,6 +14,7 @@
 #include "llvm-c/Linker.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/IR/Comdat.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -255,6 +256,14 @@ bool ModuleLinker::shouldLinkFromSource(bool &LinkFromSrc,
 
   bool SrcIsDeclaration = Src.isDeclarationForLinker();
   bool DestIsDeclaration = Dest.isDeclarationForLinker();
+
+  // Materializable functions with empty bodies are lazy-loaded placeholders from
+  // bitcode. When the source module is loaded without materializing functions (e.g. with
+  // -save-temps), these appear as definitions with empty body.
+  // Prefer the destination's definition(composite module) for the function.
+  if (const Function *F = dyn_cast<Function>(&Src))
+    if (F->isMaterializable() && F->empty())
+      SrcIsDeclaration = true;
 
   if (SrcIsDeclaration) {
     // If Src is external or if both Src & Dest are external..  Just link the
