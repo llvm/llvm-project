@@ -856,7 +856,7 @@ Error L0DeviceTy::enqueueMemFill(void *Ptr, const void *Pattern,
                         Pattern, PatternSize, Size, Event, 0, nullptr);
     if (!AllErrors)
       CALL_ZE_ACCUM_ERROR(AllErrors, zeEventHostSynchronize, Event,
-                           L0DefaultTimeout);
+                          L0DefaultTimeout);
     if (auto Err = releaseEvent(Event))
       AllErrors = joinErrors(std::move(AllErrors), std::move(Err));
     return AllErrors;
