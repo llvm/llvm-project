@@ -956,6 +956,12 @@ bool Sema::isExternalWithNoLinkageType(const ValueDecl *VD) const {
          !isFunctionOrVarDeclExternC(VD);
 }
 
+bool Sema::isMainFileLoc(SourceLocation Loc) const {
+  if (TUKind != TU_Complete || getLangOpts().IsHeaderFile)
+    return false;
+  return SourceMgr.isInMainFile(Loc);
+}
+
 /// Obtains a sorted list of functions and variables that are undefined but
 /// ODR-used.
 void Sema::getUndefinedButUsed(
@@ -1602,6 +1608,40 @@ void Sema::ActOnEndOfTranslationUnit() {
     }
 
     emitAndClearUnusedLocalTypedefWarnings();
+  }
+
+  if (!Diags.isIgnored(diag::warn_unused_but_set_variable, SourceLocation())) {
+    // Diagnose unused-but-set static globals in a deterministic order.
+    // Not tracking shadowing info for static globals; there's nothing to
+    // shadow.
+    struct LocAndDiag {
+      SourceLocation Loc;
+      PartialDiagnostic PD;
+    };
+    SmallVector<LocAndDiag, 16> DeclDiags;
+    auto addDiag = [&DeclDiags](SourceLocation Loc, PartialDiagnostic PD) {
+      DeclDiags.push_back(LocAndDiag{Loc, std::move(PD)});
+    };
+
+    // For -Wunused-but-set-variable we only care about variables that were
+    // referenced by the TU end.
+    for (const auto &Ref : RefsMinusAssignments) {
+      const VarDecl *VD = Ref.first;
+      // Only diagnose internal linkage file vars defined in the main file to
+      // match -Wunused-variable behavior and avoid false positives from
+      // headers.
+      if (VD->isInternalLinkageFileVar() && isMainFileLoc(VD->getLocation()))
+        DiagnoseUnusedButSetDecl(VD, addDiag);
+    }
+
+    llvm::sort(DeclDiags,
+               [](const LocAndDiag &LHS, const LocAndDiag &RHS) -> bool {
+                 // Sorting purely for determinism; matches behavior in
+                 // Sema::ActOnPopScope.
+                 return LHS.Loc < RHS.Loc;
+               });
+    for (const LocAndDiag &D : DeclDiags)
+      Diag(D.Loc, D.PD);
   }
 
   if (!Diags.isIgnored(diag::warn_unused_private_field, SourceLocation())) {

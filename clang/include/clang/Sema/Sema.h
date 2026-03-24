@@ -973,6 +973,10 @@ public:
   /// unit because its type has no linkage and it's not extern "C".
   bool isExternalWithNoLinkageType(const ValueDecl *VD) const;
 
+  /// Determines whether the given source location is in the main file
+  /// and we're in a context where we should warn about unused entities.
+  bool isMainFileLoc(SourceLocation Loc) const;
+
   /// Obtain a sorted list of functions that are undefined but ODR-used.
   void getUndefinedButUsed(
       SmallVectorImpl<std::pair<NamedDecl *, SourceLocation>> &Undefined);
@@ -7009,6 +7013,9 @@ public:
   /// Increment when we find a reference; decrement when we find an ignored
   /// assignment.  Ultimately the value is 0 if every reference is an ignored
   /// assignment.
+  ///
+  /// Uses canonical VarDecl as key so in-class decls and out-of-class defs of
+  /// static data members get tracked as a single entry.
   llvm::DenseMap<const VarDecl *, int> RefsMinusAssignments;
 
   /// Used to control the generation of ExprWithCleanups.
