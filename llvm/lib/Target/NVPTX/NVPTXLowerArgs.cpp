@@ -138,6 +138,7 @@
 #include "NVPTX.h"
 #include "NVPTXTargetMachine.h"
 #include "NVPTXUtilities.h"
+#include "NVVMProperties.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Analysis/PtrUseVisitor.h"
@@ -154,6 +155,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
+#include "llvm/Support/NVVMAttributes.h"
 #include <queue>
 
 #define DEBUG_TYPE "nvptx-lower-args"
@@ -225,12 +227,13 @@ static void convertToParamAS(ArrayRef<Use *> OldUses, Value *Param) {
       return NewGEP;
     }
     if (auto *BC = dyn_cast<BitCastInst>(OldInst)) {
-      auto *NewBCType = PointerType::get(BC->getContext(), ADDRESS_SPACE_PARAM);
+      auto *NewBCType =
+          PointerType::get(BC->getContext(), ADDRESS_SPACE_ENTRY_PARAM);
       return BitCastInst::Create(BC->getOpcode(), I.NewParam, NewBCType,
                                  BC->getName(), BC->getIterator());
     }
     if (auto *ASC = dyn_cast<AddrSpaceCastInst>(OldInst)) {
-      assert(ASC->getDestAddressSpace() == ADDRESS_SPACE_PARAM);
+      assert(ASC->getDestAddressSpace() == ADDRESS_SPACE_ENTRY_PARAM);
       (void)ASC;
       // Just pass through the argument, the old ASC is no longer needed.
       return I.NewParam;
@@ -339,7 +342,7 @@ static void propagateAlignmentToLoads(Value *Val, Align NewAlign,
         Worklist.push({cast<Instruction>(CurUser), Ctx.Offset});
       else if (auto *I = dyn_cast<GetElementPtrInst>(CurUser)) {
         APInt OffsetAccumulated =
-            APInt::getZero(DL.getIndexSizeInBits(ADDRESS_SPACE_PARAM));
+            APInt::getZero(DL.getIndexSizeInBits(ADDRESS_SPACE_ENTRY_PARAM));
 
         if (!I->accumulateConstantOffset(DL, OffsetAccumulated))
           continue;
@@ -364,16 +367,16 @@ static void propagateAlignmentToLoads(Value *Val, Align NewAlign,
 // alignment of the return value based on the alignment of the argument.
 static CallInst *createNVVMInternalAddrspaceWrap(IRBuilder<> &IRB,
                                                  Argument &Arg) {
-  CallInst *ArgInParam =
-      IRB.CreateIntrinsic(Intrinsic::nvvm_internal_addrspace_wrap,
-                          {IRB.getPtrTy(ADDRESS_SPACE_PARAM), Arg.getType()},
-                          &Arg, {}, Arg.getName() + ".param");
+  CallInst *ArgInParam = IRB.CreateIntrinsic(
+      Intrinsic::nvvm_internal_addrspace_wrap,
+      {IRB.getPtrTy(ADDRESS_SPACE_ENTRY_PARAM), Arg.getType()}, &Arg, {},
+      Arg.getName() + ".param");
 
   if (MaybeAlign ParamAlign = Arg.getParamAlign())
     ArgInParam->addRetAttr(
         Attribute::getWithAlignment(ArgInParam->getContext(), *ParamAlign));
 
-  Arg.addAttr(Attribute::get(Arg.getContext(), "nvvm.grid_constant"));
+  Arg.addAttr(Attribute::get(Arg.getContext(), NVVMAttr::GridConstant));
   Arg.addAttr(Attribute::ReadOnly);
 
   return ArgInParam;
@@ -429,7 +432,7 @@ struct ArgUseChecker : PtrUseVisitor<ArgUseChecker> {
 
   void visitAddrSpaceCastInst(AddrSpaceCastInst &ASC) {
     // ASC to param space are no-ops and do not need a copy
-    if (ASC.getDestAddressSpace() != ADDRESS_SPACE_PARAM)
+    if (ASC.getDestAddressSpace() != ADDRESS_SPACE_ENTRY_PARAM)
       return PI.setEscapedAndAborted(&ASC);
     Base::visitAddrSpaceCastInst(ASC);
   }

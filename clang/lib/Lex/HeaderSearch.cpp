@@ -197,7 +197,7 @@ void HeaderSearch::getHeaderMapFileNames(
     Names.push_back(std::string(HM.first.getName()));
 }
 
-std::string HeaderSearch::getCachedModuleFileName(Module *Module) {
+ModuleFileName HeaderSearch::getCachedModuleFileName(Module *Module) {
   OptionalFileEntryRef ModuleMap =
       getModuleMap().getModuleMapFileForUniquing(Module);
   // The ModuleMap maybe a nullptr, when we load a cached C++ module without
@@ -207,12 +207,12 @@ std::string HeaderSearch::getCachedModuleFileName(Module *Module) {
   return getCachedModuleFileName(Module->Name, ModuleMap->getNameAsRequested());
 }
 
-std::string HeaderSearch::getPrebuiltModuleFileName(StringRef ModuleName,
-                                                    bool FileMapOnly) {
+ModuleFileName HeaderSearch::getPrebuiltModuleFileName(StringRef ModuleName,
+                                                       bool FileMapOnly) {
   // First check the module name to pcm file map.
   auto i(HSOpts.PrebuiltModuleFiles.find(ModuleName));
   if (i != HSOpts.PrebuiltModuleFiles.end())
-    return i->second;
+    return ModuleFileName::makeExplicit(i->second);
 
   if (FileMapOnly || HSOpts.PrebuiltModulePaths.empty())
     return {};
@@ -232,49 +232,52 @@ std::string HeaderSearch::getPrebuiltModuleFileName(StringRef ModuleName,
     else
       llvm::sys::path::append(Result, ModuleName + ".pcm");
     if (getFileMgr().getOptionalFileRef(Result))
-      return std::string(Result);
+      return ModuleFileName::makeExplicit(Result);
   }
 
   return {};
 }
 
-std::string HeaderSearch::getPrebuiltImplicitModuleFileName(Module *Module) {
+ModuleFileName HeaderSearch::getPrebuiltImplicitModuleFileName(Module *Module) {
   OptionalFileEntryRef ModuleMap =
       getModuleMap().getModuleMapFileForUniquing(Module);
   StringRef ModuleName = Module->Name;
   StringRef ModuleMapPath = ModuleMap->getName();
-  StringRef ContextHash = HSOpts.DisableModuleHash ? "" : getContextHash();
   for (const std::string &Dir : HSOpts.PrebuiltModulePaths) {
     SmallString<256> CachePath(Dir);
     FileMgr.makeAbsolutePath(CachePath);
-    llvm::sys::path::append(CachePath, ContextHash);
-    std::string FileName =
+    ModuleFileName FileName =
         getCachedModuleFileNameImpl(ModuleName, ModuleMapPath, CachePath);
     if (!FileName.empty() && getFileMgr().getOptionalFileRef(FileName))
-      return FileName;
+      return ModuleFileName::makeExplicit(FileName);
   }
   return {};
 }
 
-std::string HeaderSearch::getCachedModuleFileName(StringRef ModuleName,
-                                                  StringRef ModuleMapPath) {
+ModuleFileName HeaderSearch::getCachedModuleFileName(StringRef ModuleName,
+                                                     StringRef ModuleMapPath) {
   return getCachedModuleFileNameImpl(ModuleName, ModuleMapPath,
-                                     getSpecificModuleCachePath());
+                                     getNormalizedModuleCachePath());
 }
 
-std::string HeaderSearch::getCachedModuleFileNameImpl(StringRef ModuleName,
-                                                      StringRef ModuleMapPath,
-                                                      StringRef CachePath) {
+ModuleFileName HeaderSearch::getCachedModuleFileNameImpl(
+    StringRef ModuleName, StringRef ModuleMapPath, StringRef CachePath) {
   // If we don't have a module cache path or aren't supposed to use one, we
   // can't do anything.
   if (CachePath.empty())
     return {};
 
+  // Note: This re-implements part of createSpecificModuleCachePathImpl() in
+  // order to be able to correctly construct ModuleFileName.
+
   SmallString<256> Result(CachePath);
+  unsigned SuffixBegin = Result.size();
 
   if (HSOpts.DisableModuleHash) {
     llvm::sys::path::append(Result, ModuleName + ".pcm");
   } else {
+    llvm::sys::path::append(Result, ContextHash);
+
     // Construct the name <ModuleName>-<hash of ModuleMapPath>.pcm which should
     // ideally be globally unique to this particular module. Name collisions
     // in the hash are safe (because any translation unit can only import one
@@ -292,7 +295,7 @@ std::string HeaderSearch::getCachedModuleFileNameImpl(StringRef ModuleName,
     llvm::APInt(64, Hash).toStringUnsigned(HashStr, /*Radix*/36);
     llvm::sys::path::append(Result, ModuleName + "-" + HashStr + ".pcm");
   }
-  return Result.str().str();
+  return ModuleFileName::makeImplicit(Result, Result.size() - SuffixBegin);
 }
 
 Module *HeaderSearch::lookupModule(StringRef ModuleName,

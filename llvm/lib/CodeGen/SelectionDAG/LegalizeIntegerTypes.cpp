@@ -78,6 +78,8 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_CTTZ:
   case ISD::CTTZ_ZERO_UNDEF:
   case ISD::CTTZ:        Res = PromoteIntRes_CTTZ(N); break;
+  case ISD::CTTZ_ELTS_ZERO_POISON:
+  case ISD::CTTZ_ELTS:
   case ISD::VP_CTTZ_ELTS_ZERO_UNDEF:
   case ISD::VP_CTTZ_ELTS:
     Res = PromoteIntRes_VP_CttzElements(N);
@@ -741,15 +743,19 @@ SDValue DAGTypeLegalizer::PromoteIntRes_CTLZ(SDNode *N) {
     // Zero extend to the promoted type and do the count there.
     SDValue Op = ZExtPromotedInteger(N->getOperand(0));
 
+    // At this stage SUB is guaranteed to be positive no-wrap,
+    // that to be used in further KnownBits optimizations.
+    SDNodeFlags SubFlags;
+    SubFlags.setNoUnsignedWrap(true);
     if (!N->isVPOpcode())
       return DAG.getNode(ISD::SUB, dl, NVT,
                          DAG.getNode(N->getOpcode(), dl, NVT, Op),
-                         ExtractLeadingBits);
+                         ExtractLeadingBits, SubFlags);
     SDValue Mask = N->getOperand(1);
     SDValue EVL = N->getOperand(2);
     return DAG.getNode(ISD::VP_SUB, dl, NVT,
                        DAG.getNode(N->getOpcode(), dl, NVT, Op, Mask, EVL),
-                       ExtractLeadingBits, Mask, EVL);
+                       ExtractLeadingBits, Mask, EVL, SubFlags);
   }
   if (CtlzOpcode == ISD::CTLZ_ZERO_UNDEF ||
       CtlzOpcode == ISD::VP_CTLZ_ZERO_UNDEF) {
@@ -3240,6 +3246,11 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::READ_REGISTER:
     ExpandIntRes_READ_REGISTER(N, Lo, Hi);
     break;
+
+  case ISD::CTTZ_ELTS:
+  case ISD::CTTZ_ELTS_ZERO_POISON:
+    ExpandIntRes_CTTZ_ELTS(N, Lo, Hi);
+    break;
   }
 
   // If Lo/Hi is null, the sub-method took care of registering results etc.
@@ -5557,6 +5568,20 @@ void DAGTypeLegalizer::ExpandIntRes_READ_REGISTER(SDNode *N, SDValue &Lo,
   std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(N->getValueType(0));
   Lo = DAG.getPOISON(LoVT);
   Hi = DAG.getPOISON(HiVT);
+}
+
+void DAGTypeLegalizer::ExpandIntRes_CTTZ_ELTS(SDNode *N, SDValue &Lo,
+                                              SDValue &Hi) {
+  // Assume that the maximum number of vector elements fits in getVectorIdxTy
+  // and expand to that.
+  EVT VT = N->getSimpleValueType(0);
+  EVT IdxVT = TLI.getVectorIdxTy(DAG.getDataLayout());
+  assert(IdxVT.bitsLT(VT) &&
+         "VectorIdxTy should be smaller than type to be expanded?");
+
+  SDValue Res = DAG.getNode(N->getOpcode(), SDLoc(N), IdxVT, N->getOperand(0));
+  Res = DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), VT, Res);
+  SplitInteger(Res, Lo, Hi);
 }
 
 //===----------------------------------------------------------------------===//

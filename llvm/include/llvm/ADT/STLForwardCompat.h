@@ -184,10 +184,10 @@ constexpr bool is_sorted_constexpr(ForwardIterator First, ForwardIterator Last,
 // C++23.
 template <typename Optional, typename Function,
           typename Value = typename llvm::remove_cvref_t<Optional>::value_type>
-std::optional<std::invoke_result_t<Function, Value>>
+constexpr std::optional<remove_cvref_t<std::invoke_result_t<Function, Value>>>
 transformOptional(Optional &&O, Function &&F) {
   if (O) {
-    return F(*std::forward<Optional>(O));
+    return llvm::invoke(std::forward<Function>(F), *std::forward<Optional>(O));
   }
   return std::nullopt;
 }

@@ -9,8 +9,7 @@ declare <2 x i32> @llvm.masked.gather.v2i32(<2 x ptr> %ptrs, i32 %align, <2 x i1
 define <2 x i32> @masked_gather_v2i32(ptr %ptr, <2 x i1> %masks, <2 x i32> %passthro) {
 ; X86-LABEL: masked_gather_v2i32:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; X86-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm2[2,3]
+; X86-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,2],zero,zero
 ; X86-NEXT:    vpslld $31, %xmm0, %xmm0
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
@@ -59,8 +58,7 @@ entry:
 define <4 x i32> @masked_gather_v2i32_concat(ptr %ptr, <2 x i1> %masks, <2 x i32> %passthro) {
 ; X86-LABEL: masked_gather_v2i32_concat:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; X86-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm2[2,3]
+; X86-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,2],zero,zero
 ; X86-NEXT:    vpslld $31, %xmm0, %xmm0
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
@@ -112,8 +110,7 @@ declare <2 x float> @llvm.masked.gather.v2float(<2 x ptr> %ptrs, i32 %align, <2 
 define <2 x float> @masked_gather_v2float(ptr %ptr, <2 x i1> %masks, <2 x float> %passthro) {
 ; X86-LABEL: masked_gather_v2float:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; X86-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm2[2,3]
+; X86-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,2],zero,zero
 ; X86-NEXT:    vpslld $31, %xmm0, %xmm0
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
@@ -163,8 +160,7 @@ entry:
 define <4 x float> @masked_gather_v2float_concat(ptr %ptr, <2 x i1> %masks, <2 x float> %passthro) {
 ; X86-LABEL: masked_gather_v2float_concat:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; X86-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm2[2,3]
+; X86-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,2],zero,zero
 ; X86-NEXT:    vpslld $31, %xmm0, %xmm0
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero

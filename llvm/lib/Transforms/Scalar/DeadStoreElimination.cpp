@@ -2256,8 +2256,8 @@ bool DSEState::dominatingConditionImpliesValue(MemoryDef *Def) {
   if (!IDom)
     return false;
 
-  auto *BI = dyn_cast<BranchInst>(IDom->getBlock()->getTerminator());
-  if (!BI || !BI->isConditional())
+  auto *BI = dyn_cast<CondBrInst>(IDom->getBlock()->getTerminator());
+  if (!BI)
     return false;
 
   // In case both blocks are the same, it is not possible to determine

@@ -231,6 +231,9 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_NESTED_BOOL(AlignConsecutiveShortCaseStatements, AcrossComments);
   CHECK_PARSE_NESTED_BOOL(AlignConsecutiveShortCaseStatements, AlignCaseArrows);
   CHECK_PARSE_NESTED_BOOL(AlignConsecutiveShortCaseStatements, AlignCaseColons);
+  CHECK_PARSE_NESTED_BOOL(AllowShortFunctionsOnASingleLine, Empty);
+  CHECK_PARSE_NESTED_BOOL(AllowShortFunctionsOnASingleLine, Inline);
+  CHECK_PARSE_NESTED_BOOL(AllowShortFunctionsOnASingleLine, Other);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterCaseLabel);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterClass);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterEnum);
@@ -334,8 +337,7 @@ TEST(ConfigParseTest, ParsesConfiguration) {
 #define CHECK_ALIGN_CONSECUTIVE(FIELD)                                         \
   do {                                                                         \
     Style.FIELD.Enabled = true;                                                \
-    CHECK_PARSE(#FIELD ": None", FIELD,                                        \
-                FormatStyle::AlignConsecutiveStyle({}));                       \
+    CHECK_PARSE(#FIELD ": None", FIELD, FormatStyle::AlignConsecutiveStyle{}); \
     CHECK_PARSE(                                                               \
         #FIELD ": Consecutive", FIELD,                                         \
         FormatStyle::AlignConsecutiveStyle(                                    \
@@ -366,7 +368,7 @@ TEST(ConfigParseTest, ParsesConfiguration) {
              /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
     /* For backwards compability, false / true should still parse */           \
     CHECK_PARSE(#FIELD ": false", FIELD,                                       \
-                FormatStyle::AlignConsecutiveStyle({}));                       \
+                FormatStyle::AlignConsecutiveStyle{});                         \
     CHECK_PARSE(                                                               \
         #FIELD ": true", FIELD,                                                \
         FormatStyle::AlignConsecutiveStyle(                                    \
@@ -685,20 +687,29 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("AllowShortBlocksOnASingleLine: true",
               AllowShortBlocksOnASingleLine, FormatStyle::SBS_Always);
 
-  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Inline;
   CHECK_PARSE("AllowShortFunctionsOnASingleLine: None",
-              AllowShortFunctionsOnASingleLine, FormatStyle::SFS_None);
+              AllowShortFunctionsOnASingleLine,
+              FormatStyle::ShortFunctionStyle());
   CHECK_PARSE("AllowShortFunctionsOnASingleLine: Inline",
-              AllowShortFunctionsOnASingleLine, FormatStyle::SFS_Inline);
+              AllowShortFunctionsOnASingleLine,
+              FormatStyle::ShortFunctionStyle::setEmptyAndInline());
   CHECK_PARSE("AllowShortFunctionsOnASingleLine: Empty",
-              AllowShortFunctionsOnASingleLine, FormatStyle::SFS_Empty);
+              AllowShortFunctionsOnASingleLine,
+              FormatStyle::ShortFunctionStyle::setEmptyOnly());
   CHECK_PARSE("AllowShortFunctionsOnASingleLine: All",
-              AllowShortFunctionsOnASingleLine, FormatStyle::SFS_All);
+              AllowShortFunctionsOnASingleLine,
+              FormatStyle::ShortFunctionStyle::setAll());
+  CHECK_PARSE("AllowShortFunctionsOnASingleLine: InlineOnly",
+              AllowShortFunctionsOnASingleLine,
+              FormatStyle::ShortFunctionStyle::setInlineOnly());
+
   // For backward compatibility:
   CHECK_PARSE("AllowShortFunctionsOnASingleLine: false",
-              AllowShortFunctionsOnASingleLine, FormatStyle::SFS_None);
+              AllowShortFunctionsOnASingleLine,
+              FormatStyle::ShortFunctionStyle());
   CHECK_PARSE("AllowShortFunctionsOnASingleLine: true",
-              AllowShortFunctionsOnASingleLine, FormatStyle::SFS_All);
+              AllowShortFunctionsOnASingleLine,
+              FormatStyle::ShortFunctionStyle::setAll());
 
   Style.AllowShortLambdasOnASingleLine = FormatStyle::SLS_All;
   CHECK_PARSE("AllowShortLambdasOnASingleLine: None",
@@ -714,6 +725,16 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               AllowShortLambdasOnASingleLine, FormatStyle::SLS_None);
   CHECK_PARSE("AllowShortLambdasOnASingleLine: true",
               AllowShortLambdasOnASingleLine, FormatStyle::SLS_All);
+
+  Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_EmptyAndAttached;
+  CHECK_PARSE("AllowShortRecordOnASingleLine: Never",
+              AllowShortRecordOnASingleLine, FormatStyle::SRS_Never);
+  CHECK_PARSE("AllowShortRecordOnASingleLine: EmptyAndAttached",
+              AllowShortRecordOnASingleLine, FormatStyle::SRS_EmptyAndAttached);
+  CHECK_PARSE("AllowShortRecordOnASingleLine: Empty",
+              AllowShortRecordOnASingleLine, FormatStyle::SRS_Empty);
+  CHECK_PARSE("AllowShortRecordOnASingleLine: Always",
+              AllowShortRecordOnASingleLine, FormatStyle::SRS_Always);
 
   Style.SpaceAroundPointerQualifiers = FormatStyle::SAPQ_Both;
   CHECK_PARSE("SpaceAroundPointerQualifiers: Default",
@@ -1021,13 +1042,6 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               StatementAttributeLikeMacros,
               std::vector<std::string>({"emit", "Q_EMIT"}));
 
-  Style.Macros.clear();
-  CHECK_PARSE("{Macros: [foo]}", Macros, std::vector<std::string>({"foo"}));
-  std::vector<std::string> GoogleMacros;
-  GoogleMacros.push_back("ASSIGN_OR_RETURN(a, b)=a = (b)");
-  GoogleMacros.push_back("ASSIGN_OR_RETURN(a, b, c)=a = (b); if (x) return c");
-  CHECK_PARSE("BasedOnStyle: Google", Macros, GoogleMacros);
-
   Style.StatementMacros.clear();
   CHECK_PARSE("StatementMacros: [QUNUSED]", StatementMacros,
               std::vector<std::string>{"QUNUSED"});
@@ -1035,6 +1049,7 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               std::vector<std::string>({"QUNUSED", "QT_REQUIRE_VERSION"}));
 
   CHECK_PARSE_LIST(JavaImportGroups);
+  CHECK_PARSE_LIST(Macros);
   CHECK_PARSE_LIST(MacrosSkippedByRemoveParentheses);
   CHECK_PARSE_LIST(NamespaceMacros);
   CHECK_PARSE_LIST(ObjCPropertyAttributeOrder);
@@ -1078,7 +1093,7 @@ TEST(ConfigParseTest, ParsesConfiguration) {
       FormatStyle::SortIncludesOptions(
           {/*Enabled=*/true, /*IgnoreCase=*/false, /*IgnoreExtension=*/false}));
   CHECK_PARSE("SortIncludes: false", SortIncludes,
-              FormatStyle::SortIncludesOptions({}));
+              FormatStyle::SortIncludesOptions{});
   CHECK_PARSE(
       "SortIncludes: CaseInsensitive", SortIncludes,
       FormatStyle::SortIncludesOptions(
@@ -1088,7 +1103,7 @@ TEST(ConfigParseTest, ParsesConfiguration) {
       FormatStyle::SortIncludesOptions(
           {/*Enabled=*/true, /*IgnoreCase=*/false, /*IgnoreExtension=*/false}));
   CHECK_PARSE("SortIncludes: Never", SortIncludes,
-              FormatStyle::SortIncludesOptions({}));
+              FormatStyle::SortIncludesOptions{});
 
   Style.RawStringFormats.clear();
   std::vector<FormatStyle::RawStringFormat> ExpectedRawStringFormats = {
@@ -1180,6 +1195,8 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::ABS_Always);
   CHECK_PARSE("BreakAfterAttributes: Leave", BreakAfterAttributes,
               FormatStyle::ABS_Leave);
+  CHECK_PARSE("BreakAfterAttributes: LeaveAll", BreakAfterAttributes,
+              FormatStyle::ABS_LeaveAll);
   CHECK_PARSE("BreakAfterAttributes: Never", BreakAfterAttributes,
               FormatStyle::ABS_Never);
 

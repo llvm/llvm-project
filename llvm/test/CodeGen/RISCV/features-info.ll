@@ -134,6 +134,7 @@
 ; CHECK-NEXT:   short-forward-branch-ialu        - Enable short forward branch optimization for RVI base instructions.
 ; CHECK-NEXT:   short-forward-branch-iload       - Enable short forward branch optimization for load instructions.
 ; CHECK-NEXT:   short-forward-branch-iminmax     - Enable short forward branch optimization for MIN,MAX instructions in Zbb.
+; CHECK-NEXT:   short-forward-branch-imm         - Enable short forward branch optimization for branches with immediates.
 ; CHECK-NEXT:   short-forward-branch-imul        - Enable short forward branch optimization for MUL instruction.
 ; CHECK-NEXT:   shtvala                          - 'Shtvala' (htval provides all needed values).
 ; CHECK-NEXT:   shvsatpa                         - 'Shvsatpa' (vsatp supports all modes supported by satp).

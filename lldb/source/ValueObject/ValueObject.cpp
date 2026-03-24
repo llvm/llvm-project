@@ -25,6 +25,7 @@
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/Variable.h"
+#include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/LanguageRuntime.h"
@@ -1624,6 +1625,16 @@ ValueObject::GetAddressOf(bool scalar_is_load_address) {
     return {LLDB_INVALID_ADDRESS, m_value.GetValueAddressType()};
   }
   llvm_unreachable("Unhandled value type!");
+}
+
+std::optional<addr_t> ValueObject::GetStrippedPointerValue(addr_t address) {
+  if (GetCompilerType().HasPointerAuthQualifier()) {
+    ExecutionContext exe_ctx(GetExecutionContextRef());
+    if (Process *process = exe_ctx.GetProcessPtr())
+      if (ABISP abi_sp = process->GetABI())
+        return abi_sp->FixCodeAddress(address);
+  }
+  return std::nullopt;
 }
 
 ValueObject::AddrAndType ValueObject::GetPointerValue() {

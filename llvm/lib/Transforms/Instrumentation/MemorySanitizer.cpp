@@ -2620,14 +2620,21 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   //    S = (S1 & S2) | (V1 & S2) | (S1 & V2)
   Value *handleBitwiseAnd(IRBuilder<> &IRB, Value *V1, Value *V2, Value *S1,
                           Value *S2) {
+    // "The two arguments to the ‘and’ instruction must be integer or vector
+    //  of integer values. Both arguments must have identical types."
+    //
+    // We enforce this condition for all callers to handleBitwiseAnd(); callers
+    // with non-integer types should call CreateAppToShadowCast() themselves.
+    assert(V1->getType()->isIntOrIntVectorTy());
+    assert(V1->getType() == V2->getType());
+
+    // Conveniently, getShadowTy() of Int/IntVector returns the original type.
+    assert(V1->getType() == S1->getType());
+    assert(V2->getType() == S2->getType());
+
     Value *S1S2 = IRB.CreateAnd(S1, S2);
     Value *V1S2 = IRB.CreateAnd(V1, S2);
     Value *S1V2 = IRB.CreateAnd(S1, V2);
-
-    if (V1->getType() != S1->getType()) {
-      V1 = IRB.CreateIntCast(V1, S1->getType(), false);
-      V2 = IRB.CreateIntCast(V2, S2->getType(), false);
-    }
 
     return IRB.CreateOr({S1S2, V1S2, S1V2});
   }
@@ -2662,10 +2669,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *S2 = getShadow(&I, 1);
     Value *V1 = I.getOperand(0);
     Value *V2 = I.getOperand(1);
-    if (V1->getType() != S1->getType()) {
-      V1 = IRB.CreateIntCast(V1, S1->getType(), false);
-      V2 = IRB.CreateIntCast(V2, S2->getType(), false);
-    }
+
+    // "The two arguments to the ‘or’ instruction must be integer or vector
+    //  of integer values. Both arguments must have identical types."
+    assert(V1->getType()->isIntOrIntVectorTy());
+    assert(V1->getType() == V2->getType());
+
+    // Conveniently, getShadowTy() of Int/IntVector returns the original type.
+    assert(V1->getType() == S1->getType());
+    assert(V2->getType() == S2->getType());
 
     Value *NotV1 = IRB.CreateNot(V1);
     Value *NotV2 = IRB.CreateNot(V2);

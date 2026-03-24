@@ -34,6 +34,7 @@ ModulePass *createWebAssemblyFixFunctionBitcasts();
 FunctionPass *createWebAssemblyOptimizeReturned();
 FunctionPass *createWebAssemblyLowerRefTypesIntPtrConv();
 FunctionPass *createWebAssemblyRefTypeMem2Local();
+FunctionPass *createWebAssemblyReduceToAnyAllTrue(WebAssemblyTargetMachine &TM);
 
 // GlobalISel
 InstructionSelector *
@@ -69,6 +70,7 @@ FunctionPass *createWebAssemblyCFGStackify();
 FunctionPass *createWebAssemblyExplicitLocals();
 FunctionPass *createWebAssemblyLowerBrUnless();
 FunctionPass *createWebAssemblyRegNumbering();
+FunctionPass *createWebAssemblyVecReduce();
 FunctionPass *createWebAssemblyDebugFixup();
 FunctionPass *createWebAssemblyPeephole();
 ModulePass *createWebAssemblyMCLowerPrePass();

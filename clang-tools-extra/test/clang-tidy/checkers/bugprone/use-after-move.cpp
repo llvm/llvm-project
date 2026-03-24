@@ -11,38 +11,21 @@
 // RUN:   }}' -- \
 // RUN:   -fno-delayed-template-parsing
 
+#include <deque>
+#include <forward_list>
+#include <list>
+#include <map>
+#include <set>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <utility>
+#include <memory>
+#include <vector>
 
 typedef decltype(nullptr) nullptr_t;
 
 namespace std {
-
-template <typename T>
-struct unique_ptr {
-  unique_ptr();
-  T *get() const;
-  explicit operator bool() const;
-  void reset(T *ptr);
-  T &operator*() const;
-  T *operator->() const;
-  T& operator[](size_t i) const;
-};
-
-template <typename T>
-struct shared_ptr {
-  shared_ptr();
-  T *get() const;
-  explicit operator bool() const;
-  void reset(T *ptr);
-  T &operator*() const;
-  T *operator->() const;
-};
-
-template <typename T>
-struct weak_ptr {
-  weak_ptr();
-  bool expired() const;
-};
 
 template <typename T>
 struct optional {
@@ -56,62 +39,6 @@ struct any {
   any();
   void reset();
 };
-
-template <typename T1, typename T2>
-struct pair {};
-
-template <typename Key, typename T>
-struct map {
-  struct iterator {};
-
-  map();
-  void clear();
-  bool empty();
-  template <class... Args>
-  pair<iterator, bool> try_emplace(const Key &key, Args &&...args);
-};
-
-template <typename Key, typename T>
-struct unordered_map {
-  struct iterator {};
-
-  unordered_map();
-  void clear();
-  bool empty();
-  template <class... Args>
-  pair<iterator, bool> try_emplace(const Key &key, Args &&...args);
-};
-
-#define DECLARE_STANDARD_CONTAINER(name) \
-  template <typename T>                  \
-  struct name {                          \
-    name();                              \
-    void clear();                        \
-    bool empty();                        \
-  }
-
-#define DECLARE_STANDARD_CONTAINER_WITH_ASSIGN(name) \
-  template <typename T>                              \
-  struct name {                                      \
-    name();                                          \
-    void clear();                                    \
-    bool empty();                                    \
-    void assign(size_t, const T &);                  \
-  }
-
-DECLARE_STANDARD_CONTAINER_WITH_ASSIGN(basic_string);
-DECLARE_STANDARD_CONTAINER_WITH_ASSIGN(vector);
-DECLARE_STANDARD_CONTAINER_WITH_ASSIGN(deque);
-DECLARE_STANDARD_CONTAINER_WITH_ASSIGN(forward_list);
-DECLARE_STANDARD_CONTAINER_WITH_ASSIGN(list);
-DECLARE_STANDARD_CONTAINER(set);
-DECLARE_STANDARD_CONTAINER(multiset);
-DECLARE_STANDARD_CONTAINER(multimap);
-DECLARE_STANDARD_CONTAINER(unordered_set);
-DECLARE_STANDARD_CONTAINER(unordered_multiset);
-DECLARE_STANDARD_CONTAINER(unordered_multimap);
-
-typedef basic_string<char> string;
 
 } // namespace std
 
@@ -224,7 +151,7 @@ void standardSmartPtr() {
     // CHECK-NOTES: [[@LINE-3]]:5: note: move occurred here
   }
   {
-    std::unique_ptr<A> ptr;
+    std::unique_ptr<A[]> ptr;
     std::move(ptr);
     ptr[0];
     // CHECK-NOTES: [[@LINE-1]]:5: warning: 'ptr' used after it was moved
@@ -877,7 +804,7 @@ void standardContainerClearIsReinit() {
     container.empty();
   }
   {
-    std::multimap<int> container;
+    std::multimap<int, int> container;
     std::move(container);
     container.clear();
     container.empty();
@@ -901,7 +828,7 @@ void standardContainerClearIsReinit() {
     container.empty();
   }
   {
-    std::unordered_multimap<int> container;
+    std::unordered_multimap<int, int> container;
     std::move(container);
     container.clear();
     container.empty();
@@ -1048,6 +975,107 @@ void reinitAnnotation() {
     // CHECK-NOTES: [[@LINE-4]]:5: note: move occurred here
   }
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// Tests for annotations on smart-pointer-like types
+
+namespace null_after_move {
+
+template <typename T>
+class [[clang::annotate("clang-tidy",
+                        "bugprone-use-after-move",
+                        "null_after_move")]] SmartPtrAlike {
+public:
+  SmartPtrAlike();
+  ~SmartPtrAlike();
+  SmartPtrAlike(const SmartPtrAlike&) = delete;
+  SmartPtrAlike &operator=(const SmartPtrAlike&) = delete;
+  SmartPtrAlike(SmartPtrAlike&& other);
+  SmartPtrAlike &operator=(SmartPtrAlike&& other);
+  T* get() const;
+  T& operator*() const;
+};
+
+// Don't flag uses of smart-pointer-like types correctly annotated, unless it's
+// a dereference.
+void smartPointerLikeTypeUseAfterMove() {
+  SmartPtrAlike<int> ptr;
+  ptr.get();
+  SmartPtrAlike<int> other_ptr = std::move(ptr);
+  ptr.get();
+  int inv_value = *ptr;
+  // CHECK-NOTES: [[@LINE-1]]:20: warning: 'ptr' used after it was moved
+  // CHECK-NOTES: [[@LINE-4]]:34: note: move occurred here
+}
+
+class [[clang::annotate("other"),
+      clang::annotate("clang-tidy",
+                      "bugprone-use-after-move",
+                      "null_after_move")]] MultipleAnnotationsType {
+public:
+  MultipleAnnotationsType();
+  ~MultipleAnnotationsType();
+  MultipleAnnotationsType(const MultipleAnnotationsType&) = delete;
+  MultipleAnnotationsType &operator=(const MultipleAnnotationsType&) = delete;
+  MultipleAnnotationsType(MultipleAnnotationsType&& other);
+  MultipleAnnotationsType &operator=(MultipleAnnotationsType&& other);
+  int* get() const;
+  int& operator*() const;
+};
+
+// Handle smart-pointer-like types correctly annotated, even in the case of
+// multiple annotations.
+void typeWithMultipleAnnotations() {
+  MultipleAnnotationsType ptr;
+  ptr.get();
+  MultipleAnnotationsType other_ptr = std::move(ptr);
+  ptr.get();
+  int inv_value = *ptr;
+  // CHECK-NOTES: [[@LINE-1]]:20: warning: 'ptr' used after it was moved
+  // CHECK-NOTES: [[@LINE-4]]:39: note: move occurred here
+}
+
+class [[clang::annotate("null_after_move")]] BadAnnotation {
+public:
+  BadAnnotation();
+  ~BadAnnotation();
+  BadAnnotation(const BadAnnotation&) = delete;
+  BadAnnotation &operator=(const BadAnnotation&) = delete;
+  BadAnnotation(BadAnnotation&& other);
+  BadAnnotation &operator=(BadAnnotation&& other);
+  int* get() const;
+};
+
+// Flag uses of smart-pointer-like types with incorrect annotate.
+void badUseAfterMoveAnnotationIgnored() {
+  BadAnnotation ptr;
+  BadAnnotation other_ptr = std::move(ptr);
+  ptr.get();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'ptr' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:29: note: move occurred here
+}
+
+class [[clang::annotate("clang-tidy", "null_after_move")]] BadAnnotationArgs {
+public:
+  BadAnnotationArgs();
+  ~BadAnnotationArgs();
+  BadAnnotationArgs(const BadAnnotationArgs&) = delete;
+  BadAnnotationArgs &operator=(const BadAnnotationArgs&) = delete;
+  BadAnnotationArgs(BadAnnotationArgs&& other);
+  BadAnnotationArgs &operator=(BadAnnotationArgs&& other);
+  int* get() const;
+};
+
+// Flag uses of smart-pointer-like types with wrong annotate arguments.
+void UseAfterMoveAnnotationWithBadArgsIgnored() {
+  BadAnnotationArgs ptr;
+  BadAnnotationArgs other_ptr = std::move(ptr);
+  ptr.get();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'ptr' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:33: note: move occurred here
+}
+
+} // namespace null_after_move
 
 ////////////////////////////////////////////////////////////////////////////////
 // Tests related to order of evaluation within expressions

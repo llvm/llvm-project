@@ -145,6 +145,9 @@
 ; SPIRV-Opt-NEXT:    FunctionPass Manager
 ; SPIRV-Opt-NEXT:      Dominator Tree Construction
 ; SPIRV-Opt-NEXT:      Natural Loop Information
+; SPIRV-Opt-NEXT:      Post-Dominator Tree Construction
+; SPIRV-Opt-NEXT:      Branch Probability Analysis
+; SPIRV-Opt-NEXT:      Block Frequency Analysis
 ; SPIRV-Opt-NEXT:      CodeGen Prepare
 ; SPIRV-Opt-NEXT:      Lower invoke and unwind, for unwindless code generators
 ; SPIRV-Opt-NEXT:      Remove unreachable blocks from the CFG

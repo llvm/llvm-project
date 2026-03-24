@@ -266,7 +266,7 @@ void c11_atomic_cmpxchg_strong(_Atomic(int) *ptr, int *expected, int desired, in
   __c11_atomic_compare_exchange_strong(ptr, expected, desired,
                                        __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
   // CIR:         %[[OLD:.+]], %[[SUCCESS:.+]] = cir.atomic.cmpxchg success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
-  // CIR-NEXT:    %[[FAILED:.+]] = cir.unary(not, %[[SUCCESS]]) : !cir.bool, !cir.bool
+  // CIR-NEXT:    %[[FAILED:.+]] = cir.not %[[SUCCESS]] : !cir.bool
   // CIR-NEXT:    cir.if %[[FAILED]] {
   // CIR-NEXT:      cir.store align(4) %[[OLD]], %{{.+}} : !s32i, !cir.ptr<!s32i>
   // CIR-NEXT:    }
@@ -348,7 +348,7 @@ void c11_atomic_cmpxchg_weak(_Atomic(int) *ptr, int *expected, int desired, int 
   __c11_atomic_compare_exchange_weak(ptr, expected, desired,
                                      __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
   // CIR:         %[[OLD:.+]], %[[SUCCESS:.+]] = cir.atomic.cmpxchg weak success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
-  // CIR-NEXT:    %[[FAILED:.+]] = cir.unary(not, %[[SUCCESS]]) : !cir.bool, !cir.bool
+  // CIR-NEXT:    %[[FAILED:.+]] = cir.not %[[SUCCESS]] : !cir.bool
   // CIR-NEXT:    cir.if %[[FAILED]] {
   // CIR-NEXT:      cir.store align(4) %[[OLD]], %{{.+}} : !s32i, !cir.ptr<!s32i>
   // CIR-NEXT:    }
@@ -429,7 +429,7 @@ void atomic_cmpxchg(int *ptr, int *expected, int *desired, int failure) {
 
   __atomic_compare_exchange(ptr, expected, desired, /*weak=*/0, __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
   // CIR:         %[[OLD:.+]], %[[SUCCESS:.+]] = cir.atomic.cmpxchg success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
-  // CIR-NEXT:    %[[FAILED:.+]] = cir.unary(not, %[[SUCCESS]]) : !cir.bool, !cir.bool
+  // CIR-NEXT:    %[[FAILED:.+]] = cir.not %[[SUCCESS]] : !cir.bool
   // CIR-NEXT:    cir.if %[[FAILED]] {
   // CIR-NEXT:      cir.store align(4) %[[OLD]], %{{.+}} : !s32i, !cir.ptr<!s32i>
   // CIR-NEXT:    }
@@ -460,7 +460,7 @@ void atomic_cmpxchg(int *ptr, int *expected, int *desired, int failure) {
 
   __atomic_compare_exchange(ptr, expected, desired, /*weak=*/1, __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
   // CIR:         %[[OLD:.+]], %[[SUCCESS:.+]] = cir.atomic.cmpxchg weak success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
-  // CIR-NEXT:    %[[FAILED:.+]] = cir.unary(not, %[[SUCCESS]]) : !cir.bool, !cir.bool
+  // CIR-NEXT:    %[[FAILED:.+]] = cir.not %[[SUCCESS]] : !cir.bool
   // CIR-NEXT:    cir.if %[[FAILED]] {
   // CIR-NEXT:      cir.store align(4) %[[OLD]], %{{.+}} : !s32i, !cir.ptr<!s32i>
   // CIR-NEXT:    }
@@ -581,7 +581,7 @@ void atomic_cmpxchg_n(int *ptr, int *expected, int desired, int failure) {
 
   __atomic_compare_exchange_n(ptr, expected, desired, /*weak=*/0, __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
   // CIR:         %[[OLD:.+]], %[[SUCCESS:.+]] = cir.atomic.cmpxchg success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
-  // CIR-NEXT:    %[[FAILED:.+]] = cir.unary(not, %[[SUCCESS]]) : !cir.bool, !cir.bool
+  // CIR-NEXT:    %[[FAILED:.+]] = cir.not %[[SUCCESS]] : !cir.bool
   // CIR-NEXT:    cir.if %[[FAILED]] {
   // CIR-NEXT:      cir.store align(4) %[[OLD]], %{{.+}} : !s32i, !cir.ptr<!s32i>
   // CIR-NEXT:    }
@@ -612,7 +612,7 @@ void atomic_cmpxchg_n(int *ptr, int *expected, int desired, int failure) {
 
   __atomic_compare_exchange_n(ptr, expected, desired, /*weak=*/1, __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
   // CIR:         %[[OLD:.+]], %[[SUCCESS:.+]] = cir.atomic.cmpxchg weak success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
-  // CIR-NEXT:    %[[FAILED:.+]] = cir.unary(not, %[[SUCCESS]]) : !cir.bool, !cir.bool
+  // CIR-NEXT:    %[[FAILED:.+]] = cir.not %[[SUCCESS]] : !cir.bool
   // CIR-NEXT:    cir.if %[[FAILED]] {
   // CIR-NEXT:      cir.store align(4) %[[OLD]], %{{.+}} : !s32i, !cir.ptr<!s32i>
   // CIR-NEXT:    }
@@ -2547,7 +2547,7 @@ void test_op_and_fetch() {
   // CIR: [[VAL0:%.*]] = cir.cast integral {{%.*}} : !u8i -> !s8i
   // CIR: [[RES0:%.*]] = cir.atomic.fetch nand seq_cst syncscope(system) fetch_first {{%.*}}, [[VAL0]] : (!cir.ptr<!s8i>, !s8i) -> !s8i
   // CIR: [[INTERM0:%.*]] = cir.and [[RES0]], [[VAL0]] : !s8i
-  // CIR: [[RET0:%.*]] =  cir.unary(not, [[INTERM0]]) : !s8i, !s8i
+  // CIR: [[RET0:%.*]] =  cir.not [[INTERM0]] : !s8i
   // LLVM:  [[VAL0:%.*]] = load i8, ptr %{{.*}}, align 1
   // LLVM:  [[RES0:%.*]] = atomicrmw nand ptr %{{.*}}, i8 [[VAL0]] seq_cst, align 1
   // LLVM:  [[INTERM0:%.*]] = and i8 [[RES0]], [[VAL0]]
@@ -2562,7 +2562,7 @@ void test_op_and_fetch() {
 
   // CIR: [[RES1:%.*]] = cir.atomic.fetch nand seq_cst syncscope(system) fetch_first {{%.*}}, [[VAL1:%.*]] : (!cir.ptr<!u8i>, !u8i) -> !u8i
   // CIR: [[INTERM1:%.*]] = cir.and [[RES1]], [[VAL1]] : !u8i
-  // CIR: [[RET1:%.*]] = cir.unary(not, [[INTERM1]]) : !u8i, !u8i
+  // CIR: [[RET1:%.*]] = cir.not [[INTERM1]] : !u8i
   // LLVM:  [[VAL1:%.*]] = load i8, ptr %{{.*}}, align 1
   // LLVM:  [[RES1:%.*]] = atomicrmw nand ptr %{{.*}}, i8 [[VAL1]] seq_cst, align 1
   // LLVM:  [[INTERM1:%.*]] = and i8 [[RES1]], [[VAL1]]
@@ -2578,7 +2578,7 @@ void test_op_and_fetch() {
   // CIR: [[VAL2:%.*]] = cir.cast integral {{%.*}} : !u8i -> !s16i
   // CIR: [[RES2:%.*]] = cir.atomic.fetch nand seq_cst syncscope(system) fetch_first {{%.*}}, [[VAL2]] : (!cir.ptr<!s16i>, !s16i) -> !s16i
   // CIR: [[INTERM2:%.*]] = cir.and [[RES2]], [[VAL2]] : !s16i
-  // CIR: [[RET2:%.*]] =  cir.unary(not, [[INTERM2]]) : !s16i, !s16i
+  // CIR: [[RET2:%.*]] =  cir.not [[INTERM2]] : !s16i
   // LLVM:  [[VAL2:%.*]] = load i8, ptr %{{.*}}, align 1
   // LLVM:  [[CONV2:%.*]] = zext i8 [[VAL2]] to i16
   // LLVM:  [[RES2:%.*]] = atomicrmw nand ptr %{{.*}}, i16 [[CONV2]] seq_cst, align 2
@@ -2596,7 +2596,7 @@ void test_op_and_fetch() {
   // CIR: [[VAL3:%.*]] = cir.cast integral {{%.*}} : !u8i -> !u16i
   // CIR: [[RES3:%.*]] = cir.atomic.fetch nand seq_cst syncscope(system) fetch_first {{%.*}}, [[VAL3]] : (!cir.ptr<!u16i>, !u16i) -> !u16i
   // CIR: [[INTERM3:%.*]] = cir.and [[RES3]], [[VAL3]] : !u16i
-  // CIR: [[RET3:%.*]] =  cir.unary(not, [[INTERM3]]) : !u16i, !u16i
+  // CIR: [[RET3:%.*]] =  cir.not [[INTERM3]] : !u16i
   // LLVM:  [[VAL3:%.*]] = load i8, ptr %{{.*}}, align 1
   // LLVM:  [[CONV3:%.*]] = zext i8 [[VAL3]] to i16
   // LLVM:  [[RES3:%.*]] = atomicrmw nand ptr %{{.*}}, i16 [[CONV3]] seq_cst, align 2
@@ -2614,7 +2614,7 @@ void test_op_and_fetch() {
   // CIR: [[VAL4:%.*]] = cir.cast integral {{%.*}} : !u8i -> !s32i
   // CIR: [[RES4:%.*]] = cir.atomic.fetch nand seq_cst syncscope(system) fetch_first {{%.*}}, [[VAL4]] : (!cir.ptr<!s32i>, !s32i) -> !s32i
   // CIR: [[INTERM4:%.*]] = cir.and [[RES4]], [[VAL4]] : !s32i
-  // CIR: [[RET4:%.*]] =  cir.unary(not, [[INTERM4]]) : !s32i, !s32i
+  // CIR: [[RET4:%.*]] =  cir.not [[INTERM4]] : !s32i
   // LLVM:  [[VAL4:%.*]] = load i8, ptr %{{.*}}, align 1
   // LLVM:  [[CONV4:%.*]] = zext i8 [[VAL4]] to i32
   // LLVM:  [[RES4:%.*]] = atomicrmw nand ptr %{{.*}}, i32 [[CONV4]] seq_cst, align 4
@@ -2632,7 +2632,7 @@ void test_op_and_fetch() {
   // CIR: [[VAL5:%.*]] = cir.cast integral {{%.*}} : !u8i -> !u32i
   // CIR: [[RES5:%.*]] = cir.atomic.fetch nand seq_cst syncscope(system) fetch_first {{%.*}}, [[VAL5]] : (!cir.ptr<!u32i>, !u32i) -> !u32i
   // CIR: [[INTERM5:%.*]] = cir.and [[RES5]], [[VAL5]] : !u32i
-  // CIR: [[RET5:%.*]] =  cir.unary(not, [[INTERM5]]) : !u32i, !u32i
+  // CIR: [[RET5:%.*]] =  cir.not [[INTERM5]] : !u32i
   // LLVM:  [[VAL5:%.*]] = load i8, ptr %{{.*}}, align 1
   // LLVM:  [[CONV5:%.*]] = zext i8 [[VAL5]] to i32
   // LLVM:  [[RES5:%.*]] = atomicrmw nand ptr %{{.*}}, i32 [[CONV5]] seq_cst, align 4
@@ -2650,7 +2650,7 @@ void test_op_and_fetch() {
   // CIR: [[VAL6:%.*]] = cir.cast integral {{%.*}} : !u8i -> !s64i
   // CIR: [[RES6:%.*]] = cir.atomic.fetch nand seq_cst syncscope(system) fetch_first {{%.*}}, [[VAL6]] : (!cir.ptr<!s64i>, !s64i) -> !s64i
   // CIR: [[INTERM6:%.*]] = cir.and [[RES6]], [[VAL6]] : !s64i
-  // CIR: [[RET6:%.*]] =  cir.unary(not, [[INTERM6]]) : !s64i, !s64i
+  // CIR: [[RET6:%.*]] =  cir.not [[INTERM6]] : !s64i
   // LLVM:  [[VAL6:%.*]] = load i8, ptr %{{.*}}, align 1
   // LLVM:  [[CONV6:%.*]] = zext i8 [[VAL6]] to i64
   // LLVM:  [[RES6:%.*]] = atomicrmw nand ptr %{{.*}}, i64 [[CONV6]] seq_cst, align 8
@@ -2668,7 +2668,7 @@ void test_op_and_fetch() {
   // CIR: [[VAL7:%.*]] = cir.cast integral {{%.*}} : !u8i -> !u64i
   // CIR: [[RES7:%.*]] = cir.atomic.fetch nand seq_cst syncscope(system) fetch_first {{%.*}}, [[VAL7]] : (!cir.ptr<!u64i>, !u64i) -> !u64i
   // CIR: [[INTERM7:%.*]] = cir.and [[RES7]], [[VAL7]] : !u64i
-  // CIR: [[RET7:%.*]] =  cir.unary(not, [[INTERM7]]) : !u64i, !u64i
+  // CIR: [[RET7:%.*]] =  cir.not [[INTERM7]] : !u64i
   // LLVM:  [[VAL7:%.*]] = load i8, ptr %{{.*}}, align 1
   // LLVM:  [[CONV7:%.*]] = zext i8 [[VAL7]] to i64
   // LLVM:  [[RES7:%.*]] = atomicrmw nand ptr %{{.*}}, i64 [[CONV7]] seq_cst, align 8

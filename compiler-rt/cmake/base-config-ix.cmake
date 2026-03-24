@@ -14,9 +14,27 @@ include(CompilerRTDarwinUtils)
 check_include_file(unwind.h HAVE_UNWIND_H)
 
 # Used by sanitizer_common and tests.
-check_include_file(rpc/xdr.h HAVE_RPC_XDR_H)
+set(_rpc_xdr_header "rpc/xdr.h")
+set(_default_require_rpc_xdr_h OFF)
+if ("${CMAKE_SYSTEM_NAME}" MATCHES AIX)
+  set(_rpc_xdr_header "tirpc/rpc/xdr.h")
+  if (COMPILER_RT_BUILD_SANITIZERS)
+    set(_default_require_rpc_xdr_h ON)
+  endif()
+endif()
+check_include_file(${_rpc_xdr_header} HAVE_RPC_XDR_H)
+option(COMPILER_RT_REQUIRE_RPC_XDR_H
+  "Require ${_rpc_xdr_header} for sanitizer builds (default ON for AIX when sanitizers are enabled, OFF elsewhere). \
+Set to OFF to bypass the missing-header error."
+  ${_default_require_rpc_xdr_h})
 if (NOT HAVE_RPC_XDR_H)
   set(HAVE_RPC_XDR_H 0)
+  if (COMPILER_RT_REQUIRE_RPC_XDR_H)
+    message(FATAL_ERROR
+      "${_rpc_xdr_header} is required for sanitizer builds but was not found. "
+      "Install the appropriate development package (e.g. bos.net.nfs.adt on AIX), "
+      "or set -DCOMPILER_RT_REQUIRE_RPC_XDR_H=OFF to bypass this check.")
+  endif()
 endif()
 
 # Top level target used to build all compiler-rt libraries.

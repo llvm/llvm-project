@@ -2001,6 +2001,13 @@ def TuneShortForwardBranchILoad
           [TuneShortForwardBranchIALU]>;
 def HasShortForwardBranchILoad : Predicate<"Subtarget->hasShortForwardBranchILoad()">;
 
+def TuneShortForwardBranchImm
+    : SubtargetFeature<"short-forward-branch-imm", "HasShortForwardBranchImm",
+                       "true", "Enable short forward branch optimization for branches with immediates",
+                       [TuneShortForwardBranchIALU]>;
+def HasShortForwardBranchImm : Predicate<"Subtarget->hasShortForwardBranchImm()">;
+def NoShortForwardBranchImm : Predicate<"!Subtarget->hasShortForwardBranchImm()">;
+
 // Some subtargets require a S2V transfer buffer to move scalars into vectors.
 // FIXME: Forming .vx/.vf/.wx/.wf can reduce register pressure.
 def TuneNoSinkSplatOperands

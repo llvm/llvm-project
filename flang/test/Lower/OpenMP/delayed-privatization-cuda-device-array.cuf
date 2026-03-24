@@ -1,31 +1,32 @@
-! Test that OpenMP privatization of CUDA Fortran device arrays uses cuf.alloc
-! instead of fir.allocmem so the private copy resides in device memory.
+! Test that OpenMP privatization of CUDA Fortran allocatable device arrays:
+! 1. Allocates the descriptor in managed memory (cuf.alloc) so CUF kernels
+!    can access it from the GPU.
+! 2. Sets allocator_idx = 2 on the null descriptor so that allocate() uses
+!    cudaMalloc.
+! 3. Frees the managed descriptor in the dealloc region (cuf.free).
 
 ! RUN: bbc -emit-hlfir -fcuda -fopenmp %s -o - | FileCheck %s
 
-subroutine omp_private_device_array()
+subroutine omp_private_device_allocatable()
   implicit none
-  integer(4), device :: a(8)
+  real(8), device, allocatable :: adev(:)
 
-  !$omp parallel private(a)
-    a(1) = 42
+  !$omp parallel private(adev)
+    allocate(adev(10))
+    adev(1) = 1.0d0
+    deallocate(adev)
   !$omp end parallel
 end subroutine
 
 ! CHECK-LABEL: omp.private {type = private}
-! CHECK-SAME: @[[PRIVATIZER:.*]] : !fir.box<!fir.array<8xi32>> init {
-
-! CHECK-NEXT: ^bb0(%[[MOLD:.*]]: !fir.ref<!fir.box<!fir.array<8xi32>>>, %[[PRIV:.*]]: !fir.ref<!fir.box<!fir.array<8xi32>>>):
-! CHECK-NEXT:   %[[C8:.*]] = arith.constant 8 : index
-! CHECK-NEXT:   %[[SHAPE:.*]] = fir.shape %[[C8]]
-! CHECK-NEXT:   %[[ALLOC:.*]] = cuf.alloc !fir.array<8xi32> {bindc_name = ".tmp", data_attr = #cuf.cuda<device>}
-! CHECK-NEXT:   %[[DECL:.*]]:2 = hlfir.declare %[[ALLOC]](%[[SHAPE]]) {data_attr = #cuf.cuda<device>, uniq_name = ".tmp"}
-! CHECK:        fir.embox
-! CHECK:        fir.store
-! CHECK-NEXT:   omp.yield
-
-! CHECK: } dealloc {
-! CHECK-NEXT: ^bb0(%[[DEALLOC_ARG:.*]]: !fir.ref<!fir.box<!fir.array<8xi32>>>):
-! CHECK:        cuf.free %{{.*}} {data_attr = #cuf.cuda<device>}
-! CHECK:        omp.yield
-! CHECK-NEXT: }
+! CHECK-SAME: @{{.*}} : !fir.box<!fir.heap<!fir.array<?xf64>>> init {
+! Descriptor must be allocated in managed memory for GPU accessibility.
+! CHECK:          cuf.alloc !fir.box<!fir.heap<!fir.array<?xf64>>> {data_attr = #cuf.cuda<device>}
+! Null descriptor must carry allocator_idx = 2.
+! CHECK:          fir.embox %{{.*}}(%{{.*}}) {allocator_idx = 2 : i32}
+! CHECK:          fir.store
+! CHECK:        } dealloc {
+! Managed descriptor must be freed.
+! CHECK:          cuf.free %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>> {data_attr = #cuf.cuda<device>}
+! CHECK:        }
+! CHECK-LABEL: func.func

@@ -305,11 +305,10 @@ maybeFloatingPointRecurrence(Loop *L, PHINode *PN) {
   // of the loop.  If not, the new IV can overflow and no one will notice.
   // The branch block must be in the loop and one of the successors must be out
   // of the loop.
-  auto *BI = dyn_cast<BranchInst>(Compare->user_back());
+  auto *BI = dyn_cast<CondBrInst>(Compare->user_back());
   if (!BI)
     return std::nullopt;
 
-  assert(BI->isConditional() && "Can't use fcmp if not conditional");
   if (!L->contains(BI->getParent()) ||
       (L->contains(BI->getSuccessor(0)) && L->contains(BI->getSuccessor(1))))
     return std::nullopt;
@@ -432,7 +431,7 @@ static void canonicalizeToIntegerIV(Loop *L, PHINode *PN,
 
   IntegerType *Int32Ty = Type::getInt32Ty(PN->getContext());
   auto *Incr = cast<BinaryOperator>(PN->getIncomingValue(BackEdge));
-  auto *BI = cast<BranchInst>(FPIV.Compare->user_back());
+  auto *BI = cast<CondBrInst>(FPIV.Compare->user_back());
 
   LLVM_DEBUG(dbgs() << "INDVARS: Rewriting floating-point IV to integer IV:\n"
                     << "   Init: " << IIV.InitValue << "\n"
@@ -572,7 +571,7 @@ bool IndVarSimplify::rewriteFirstIterationLoopExitValues(Loop *L) {
         auto *TermInst = IncomingBB->getTerminator();
 
         Value *Cond = nullptr;
-        if (auto *BI = dyn_cast<BranchInst>(TermInst)) {
+        if (auto *BI = dyn_cast<CondBrInst>(TermInst)) {
           // Must be a conditional branch, otherwise the block
           // should not be in the loop.
           Cond = BI->getCondition();
@@ -807,7 +806,7 @@ static PHINode *getLoopPhiForCounter(Value *IncV, Loop *L) {
 /// Whether the current loop exit test is based on this value.  Currently this
 /// is limited to a direct use in the loop condition.
 static bool isLoopExitTestBasedOn(Value *V, BasicBlock *ExitingBB) {
-  BranchInst *BI = cast<BranchInst>(ExitingBB->getTerminator());
+  CondBrInst *BI = cast<CondBrInst>(ExitingBB->getTerminator());
   ICmpInst *ICmp = dyn_cast<ICmpInst>(BI->getCondition());
   // TODO: Allow non-icmp loop test.
   if (!ICmp)
@@ -826,7 +825,7 @@ static bool needsLFTR(Loop *L, BasicBlock *ExitingBB) {
   // test.  This is critical for when SCEV's cached ExitCount is less precise
   // than the current IR (such as after we've proven a particular exit is
   // actually dead and thus the BE count never reaches our ExitCount.)
-  BranchInst *BI = cast<BranchInst>(ExitingBB->getTerminator());
+  CondBrInst *BI = cast<CondBrInst>(ExitingBB->getTerminator());
   if (L->isLoopInvariant(BI->getCondition()))
     return false;
 
@@ -941,7 +940,7 @@ static PHINode *FindLoopCounter(Loop *L, BasicBlock *ExitingBB,
                                 ScalarEvolution *SE, DominatorTree *DT) {
   uint64_t BCWidth = SE->getTypeSizeInBits(BECount->getType());
 
-  Value *Cond = cast<BranchInst>(ExitingBB->getTerminator())->getCondition();
+  Value *Cond = cast<CondBrInst>(ExitingBB->getTerminator())->getCondition();
 
   // Loop over all of the PHI nodes, looking for a simple counter.
   PHINode *BestPhi = nullptr;
@@ -1118,7 +1117,7 @@ linearFunctionTestReplace(Loop *L, BasicBlock *ExitingBB,
   }
 
   // Insert a new icmp_ne or icmp_eq instruction before the branch.
-  BranchInst *BI = cast<BranchInst>(ExitingBB->getTerminator());
+  CondBrInst *BI = cast<CondBrInst>(ExitingBB->getTerminator());
   ICmpInst::Predicate P;
   if (L->contains(BI->getSuccessor(0)))
     P = ICmpInst::ICMP_NE;
@@ -1276,7 +1275,7 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
   return MadeAnyChanges;
 }
 
-static void replaceExitCond(BranchInst *BI, Value *NewCond,
+static void replaceExitCond(CondBrInst *BI, Value *NewCond,
                             SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
   auto *OldCond = BI->getCondition();
   LLVM_DEBUG(dbgs() << "Replacing condition of loop-exiting branch " << *BI
@@ -1288,7 +1287,7 @@ static void replaceExitCond(BranchInst *BI, Value *NewCond,
 
 static Constant *createFoldedExitCond(const Loop *L, BasicBlock *ExitingBB,
                                       bool IsTaken) {
-  BranchInst *BI = cast<BranchInst>(ExitingBB->getTerminator());
+  CondBrInst *BI = cast<CondBrInst>(ExitingBB->getTerminator());
   bool ExitIfTrue = !L->contains(*succ_begin(ExitingBB));
   auto *OldCond = BI->getCondition();
   return ConstantInt::get(OldCond->getType(),
@@ -1297,7 +1296,7 @@ static Constant *createFoldedExitCond(const Loop *L, BasicBlock *ExitingBB,
 
 static void foldExit(const Loop *L, BasicBlock *ExitingBB, bool IsTaken,
                      SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
-  BranchInst *BI = cast<BranchInst>(ExitingBB->getTerminator());
+  CondBrInst *BI = cast<CondBrInst>(ExitingBB->getTerminator());
   auto *NewCond = createFoldedExitCond(L, ExitingBB, IsTaken);
   replaceExitCond(BI, NewCond, DeadInsts);
 }
@@ -1354,7 +1353,7 @@ createInvariantCond(const Loop *L, BasicBlock *ExitingBB,
   if (ExitIfTrue)
     InvariantPred = ICmpInst::getInversePredicate(InvariantPred);
   IRBuilder<> Builder(Preheader->getTerminator());
-  BranchInst *BI = cast<BranchInst>(ExitingBB->getTerminator());
+  CondBrInst *BI = cast<CondBrInst>(ExitingBB->getTerminator());
   return Builder.CreateICmp(InvariantPred, LHSV, RHSV,
                             BI->getCondition()->getName());
 }
@@ -1368,7 +1367,7 @@ createReplacement(ICmpInst *ICmp, const Loop *L, BasicBlock *ExitingBB,
   Value *RHS = ICmp->getOperand(1);
 
   // 'LHS pred RHS' should now mean that we stay in loop.
-  auto *BI = cast<BranchInst>(ExitingBB->getTerminator());
+  auto *BI = cast<CondBrInst>(ExitingBB->getTerminator());
   if (Inverted)
     Pred = ICmpInst::getInverseCmpPredicate(Pred);
 
@@ -1418,7 +1417,7 @@ createReplacement(ICmpInst *ICmp, const Loop *L, BasicBlock *ExitingBB,
 }
 
 static bool optimizeLoopExitWithUnknownExitCount(
-    const Loop *L, BranchInst *BI, BasicBlock *ExitingBB, const SCEV *MaxIter,
+    const Loop *L, CondBrInst *BI, BasicBlock *ExitingBB, const SCEV *MaxIter,
     bool SkipLastIter, ScalarEvolution *SE, SCEVExpander &Rewriter,
     SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
   assert(
@@ -1535,10 +1534,9 @@ bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
   L->getExitingBlocks(ExitingBlocks);
   bool Changed = false;
   for (auto *ExitingBB : ExitingBlocks) {
-    auto *BI = dyn_cast<BranchInst>(ExitingBB->getTerminator());
+    auto *BI = dyn_cast<CondBrInst>(ExitingBB->getTerminator());
     if (!BI)
       continue;
-    assert(BI->isConditional() && "exit branch must be conditional");
 
     auto *ICmp = dyn_cast<ICmpInst>(BI->getCondition());
     if (!ICmp || !ICmp->hasOneUse())
@@ -1580,10 +1578,9 @@ bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
   // Now that we've canonicalized the condition to match the extend,
   // see if we can rotate the extend out of the loop.
   for (auto *ExitingBB : ExitingBlocks) {
-    auto *BI = dyn_cast<BranchInst>(ExitingBB->getTerminator());
+    auto *BI = dyn_cast<CondBrInst>(ExitingBB->getTerminator());
     if (!BI)
       continue;
-    assert(BI->isConditional() && "exit branch must be conditional");
 
     auto *ICmp = dyn_cast<ICmpInst>(BI->getCondition());
     if (!ICmp || !ICmp->hasOneUse() || !ICmp->isUnsigned())
@@ -1671,7 +1668,7 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
       return true;
 
     // Can't rewrite non-branch yet.
-    BranchInst *BI = dyn_cast<BranchInst>(ExitingBB->getTerminator());
+    CondBrInst *BI = dyn_cast<CondBrInst>(ExitingBB->getTerminator());
     if (!BI)
       return true;
 
@@ -1743,7 +1740,7 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
     if (isa<SCEVCouldNotCompute>(ExactExitCount)) {
       // Okay, we do not know the exit count here. Can we at least prove that it
       // will remain the same within iteration space?
-      auto *BI = cast<BranchInst>(ExitingBB->getTerminator());
+      auto *BI = cast<CondBrInst>(ExitingBB->getTerminator());
       auto OptimizeCond = [&](bool SkipLastIter) {
         return optimizeLoopExitWithUnknownExitCount(L, BI, ExitingBB,
                                                     MaxBECount, SkipLastIter,
@@ -1879,7 +1876,7 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
       return true;
 
     // Can't rewrite non-branch yet.
-    BranchInst *BI = dyn_cast<BranchInst>(ExitingBB->getTerminator());
+    CondBrInst *BI = dyn_cast<CondBrInst>(ExitingBB->getTerminator());
     if (!BI)
       return true;
 
@@ -2006,7 +2003,7 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   for (BasicBlock *ExitingBB : ExitingBlocks) {
     const SCEV *ExitCount = SE->getExitCount(L, ExitingBB);
 
-    auto *BI = cast<BranchInst>(ExitingBB->getTerminator());
+    auto *BI = cast<CondBrInst>(ExitingBB->getTerminator());
     if (HasThreadLocalSideEffects) {
       const BasicBlock *Unreachable = nullptr;
       for (const BasicBlock *Succ : BI->successors()) {
@@ -2135,7 +2132,7 @@ bool IndVarSimplify::run(Loop *L) {
     L->getExitingBlocks(ExitingBlocks);
     for (BasicBlock *ExitingBB : ExitingBlocks) {
       // Can't rewrite non-branch yet.
-      if (!isa<BranchInst>(ExitingBB->getTerminator()))
+      if (!isa<CondBrInst>(ExitingBB->getTerminator()))
         continue;
 
       // If our exitting block exits multiple loops, we can only rewrite the

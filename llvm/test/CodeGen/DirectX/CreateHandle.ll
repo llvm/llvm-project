@@ -61,7 +61,7 @@ define void @test_buffers() {
   %typed3_ix = call i32 @some_val()
   %typed3 = call target("dx.TypedBuffer", <4 x float>, 0, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v4f32_0_0_0t(
-          i32 0, i32 7, i32 -1, i32 %typed3_ix, ptr null)
+          i32 0, i32 7, i32 0, i32 %typed3_ix, ptr null)
   ; CHECK: %[[IX:.*]] = add i32 %typed3_ix, 7
   ; CHECK: call %dx.types.Handle @dx.op.createHandle(i32 57, i8 0, i32 0, i32 %[[IX]], i1 false) #[[#ATTR]]
 
