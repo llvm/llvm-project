@@ -120,6 +120,12 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __CLC_XCONCAT(__CLC_FUNCTION,
 #endif
   __CLC_GENTYPE sel =
       __clc_select(r, __clc_nextup(r), __CLC_CONVERT_S_GENTYPE(y < x));
+
+#ifndef __CLC_I2F
+  if (__CLC_GENTYPE_DENORMS_ARE_ZERO)
+    sel = __clc_select(sel, r, __CLC_CONVERT_S_GENTYPE(r == __CLC_FP_LIT(0.0)));
+#endif
+
 #if defined(__CLC_I2F) && (__CLC_FPSIZE == 16) && (__CLC_GENSIZE_SRC >= 16)
   half dst_min = -0x1.ffcp+15h;
   sel = __clc_max(sel, (__CLC_GENTYPE)dst_min);
@@ -141,6 +147,12 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __CLC_XCONCAT(__CLC_FUNCTION,
   c = c || __CLC_CONVERT_S_GENTYPE((__CLC_GENTYPE_SRC)__CLC_SRC_MAX == x);
 #endif
   __CLC_GENTYPE sel = __clc_select(r, __clc_nextdown(r), c);
+
+#ifndef __CLC_I2F
+  if (__CLC_GENTYPE_DENORMS_ARE_ZERO)
+    sel = __clc_select(sel, r, __CLC_CONVERT_S_GENTYPE(r == __CLC_FP_LIT(0.0)));
+#endif
+
 #if defined(__CLC_I2F) && (__CLC_FPSIZE == 16) && (__CLC_GENSIZE_SRC >= 16)
 #if defined(__CLC_GEN_S) && (__CLC_GENSIZE_SRC == 16)
   // short is 16 bits signed, so the maximum value rounded to negative infinity
