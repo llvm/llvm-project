@@ -272,11 +272,19 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
       }
       continue;
     }
+
+    // Handle -mapx-features=egpr-nv:N
+    if (A->getOption().matches(options::OPT_mapx_features_egpr_nv_EQ)) {
+      Features.push_back("+egpr");
+      continue;
+    }
+
     if (IsNegative)
       Name = Name.substr(3);
     Features.push_back(Args.MakeArgString((IsNegative ? "-" : "+") + Name));
   }
 
+  // Handle Windows-style /apx-features=egpr-nv:N option
   if (Args.hasArgNoClaim(options::OPT__SLASH_apx_features_egprnv))
     Features.push_back("+egpr");
 

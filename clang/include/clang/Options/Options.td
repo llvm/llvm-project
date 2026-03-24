@@ -6999,6 +6999,8 @@ def mapx_features_EQ : CommaJoined<["-"], "mapx-features=">, Group<m_x86_Feature
     HelpText<"Enable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu">,  Visibility<[ClangOption, CLOption, FlangOption]>;
 def mno_apx_features_EQ : CommaJoined<["-"], "mno-apx-features=">, Group<m_x86_Features_Group>,
     HelpText<"Disable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu">, Visibility<[ClangOption, CLOption, FlangOption]>;
+def mapx_features_egpr_nv_EQ : Joined<["-"], "mapx-features=egpr-nv:">, Group<m_x86_Features_Group>,
+    HelpText<"Set number of non-volatile registers of APX EGPR feature">;
 def mapxf : Flag<["-"], "mapxf">, Alias<mapx_features_EQ>,
             AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","zu"]>,
             Group<m_x86_Features_Group>;

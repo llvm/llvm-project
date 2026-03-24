@@ -923,7 +923,8 @@ void tools::getTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     CmdArgs.push_back(Feature.data());
   }
 
-  if (Arg *A = Args.getLastArg(options::OPT__SLASH_apx_features_egprnv)) {
+  if (Arg *A = Args.getLastArg(options::OPT__SLASH_apx_features_egprnv,
+                               options::OPT_mapx_features_egpr_nv_EQ)) {
     StringRef Value = A->getValue();
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back(Args.MakeArgString("-apx-egpr-csr=" + Value));
