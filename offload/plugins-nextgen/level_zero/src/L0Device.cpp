@@ -1169,11 +1169,6 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
     return Plugin::error(ErrorCode::INVALID_BINARY, std::move(Err),
                          Buffer.c_str());
   };
-  auto HandleErrStr = [&](const std::string &Msg) {
-    return Plugin::error(ErrorCode::INVALID_BINARY,
-                         "failed to call global %s in the image: %s",
-                         IsCtor ? "constructors" : "destructors", Msg.c_str());
-  };
 
   // The SPIR-V backend cannot handle creating the ctor / dtor array
   // automatically so we must create it ourselves. The backend will emit
@@ -1196,7 +1191,10 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
 
     uint16_t Priority;
     if (NameOrErr->rsplit('_').second.getAsInteger(10, Priority))
-      return HandleErrStr("invalid priority for constructor or destructor");
+      return Plugin::error(
+          ErrorCode::INVALID_BINARY,
+          "failed to call global %s in the image: invalid priority",
+          IsCtor ? "constructors" : "destructors");
 
     Funcs.emplace_back(*NameOrErr, Priority);
   }
@@ -1263,12 +1261,10 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
 
   KernelArgsTy KernelArgs{};
   uint32_t NumBlocksAndThreads[3] = {1u, 1u, 1u};
-  if (auto Err = L0Kernel.launchImpl(*this, NumBlocksAndThreads,
+  auto Err = L0Kernel.launchImpl(*this, NumBlocksAndThreads,
                                      NumBlocksAndThreads, 0, KernelArgs,
-                                     KernelLaunchParamsTy{}, AsyncInfoWrapper))
-    return HandleErr(std::move(Err));
+                                     KernelLaunchParamsTy{}, AsyncInfoWrapper);
 
-  Error Err = Plugin::success();
   AsyncInfoWrapper.finalize(Err);
   if (Err)
     return HandleErr(std::move(Err));
