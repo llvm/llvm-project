@@ -25,12 +25,11 @@
 #include "platform_support.h"
 
 int main(int, char**) {
-#if !defined(__ANDROID__) || (defined(__ANDROID__) && __ANDROID_API__ >= 26)
   auto check_env = []() {
-#  if defined(__linux__) || defined(__FreeBSD__) || defined(__APPLE__)
-    constexpr std::text_encoding::id expected_id = std::text_encoding::ASCII;
-#  elif defined(__ANDROID__)
+#if defined(__ANDROID__)
     constexpr std::text_encoding::id expected_id = std::text_encoding::UTF8;
+#elif defined(__linux__) || defined(__FreeBSD__) || defined(__APPLE__)
+    constexpr std::text_encoding::id expected_id = std::text_encoding::ASCII;
 #  elif defined(_WIN32)
     constexpr std::text_encoding::id expected_id = std::text_encoding::windows1252;
 #  elif defined(_AIX)
@@ -76,6 +75,5 @@ int main(int, char**) {
     assert(te2 != std::text_encoding::UTF8);
     assert(te == te2);
   }
-#endif
   return 0;
 }
