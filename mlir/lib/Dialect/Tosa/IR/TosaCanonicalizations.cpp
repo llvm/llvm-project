@@ -951,17 +951,13 @@ struct CancellingBlockScaledCastsOptimization
 
     const Value innerData = castFromBlockScaledOp.getInputData();
     const Value innerScale = castFromBlockScaledOp.getInputScale();
-    const auto innerDataTy =
-        dyn_cast<ShapedType>(innerData.getType()).getElementType();
-    const auto innerScaleTy =
-        dyn_cast<ShapedType>(innerScale.getType()).getElementType();
+    const auto innerDataTy = llvm::cast<ShapedType>(innerData.getType());
+    const auto innerScaleTy = llvm::cast<ShapedType>(innerScale.getType());
 
     const Value outerData = castToBlockScaledOp.getOutputData();
     const Value outerScale = castToBlockScaledOp.getOutputScale();
-    const auto outerDataTy =
-        dyn_cast<ShapedType>(outerData.getType()).getElementType();
-    const auto outerScaleTy =
-        dyn_cast<ShapedType>(outerScale.getType()).getElementType();
+    const auto outerDataTy = llvm::cast<ShapedType>(outerData.getType());
+    const auto outerScaleTy = llvm::cast<ShapedType>(outerScale.getType());
 
     if (innerDataTy != outerDataTy || innerScaleTy != outerScaleTy) {
       return rewriter.notifyMatchFailure(
