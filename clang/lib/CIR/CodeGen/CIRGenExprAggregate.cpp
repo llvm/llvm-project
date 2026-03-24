@@ -980,7 +980,10 @@ void AggExprEmitter::VisitExprWithCleanups(ExprWithCleanups *e) {
     builder.restoreInsertionPoint(scopeBegin);
     CIRGenFunction::LexicalScope lexScope{cgf, scopeLoc,
                                           builder.getInsertionBlock()};
+
+    cgf.enterFullExprCleanupScope(e->getSubExpr());
     Visit(e->getSubExpr());
+    cgf.exitFullExprCleanupScope();
   }
 }
 

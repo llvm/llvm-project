@@ -94,22 +94,36 @@ public:
 
   typedef void Destroyer(CIRGenFunction &cgf, Address addr, QualType ty);
 
-  /// An entry in the lifetime-extended cleanup stack. Each entry represents a
-  /// cleanup that was deferred past a full-expression boundary (e.g.,
-  /// destroying a temporary bound to a local reference). When the enclosing
-  /// scope exits, these entries are promoted to the EH scope stack.
+  /// A cleanup entry that will be promoted onto the EH scope stack at a later
+  /// point. Used by both the lifetime-extended cleanup stack (promoted when
+  /// the enclosing scope exits) and the deferred conditional cleanup stack
+  /// (promoted at the enclosing full-expression level).
   ///
-  /// Currently only DestroyObject cleanups are lifetime-extended. When other
-  /// cleanup types are needed (e.g., CallLifetimeEnd), this struct can be
-  /// extended with a std::variant of cleanup data types.
-  struct LifetimeExtendedCleanupEntry {
+  /// Currently only DestroyObject cleanups use this. When other cleanup types
+  /// are needed (e.g., CallLifetimeEnd), this struct can be extended with a
+  /// std::variant of cleanup data types.
+  struct PendingCleanupEntry {
     CleanupKind kind;
     Address addr;
     QualType type;
     Destroyer *destroyer;
+    Address activeFlag = Address::invalid();
   };
 
-  llvm::SmallVector<LifetimeExtendedCleanupEntry> lifetimeExtendedCleanupStack;
+  llvm::SmallVector<PendingCleanupEntry> lifetimeExtendedCleanupStack;
+
+  /// Deferred cleanup entries from conditional branches within the current
+  /// full-expression. Emitted into the cleanup region of fullExprCleanupScope
+  /// by exitFullExprCleanupScope.
+  llvm::SmallVector<PendingCleanupEntry> deferredConditionalCleanupStack;
+
+  /// True while between enterFullExprCleanupScope/exitFullExprCleanupScope.
+  bool inFullExprCleanupScope = false;
+
+  /// A lazily-created CleanupScopeOp for the current full-expression. Created
+  /// by createFullExprCleanupScope() when the first conditional cleanup is
+  /// deferred, so expressions without conditional cleanups pay no cost.
+  cir::CleanupScopeOp fullExprCleanupScope = nullptr;
 
   GlobalDecl curSEHParent;
 
@@ -1009,17 +1023,45 @@ public:
   void deactivateCleanupBlock(EHScopeStack::stable_iterator cleanup,
                               mlir::Operation *dominatingIP);
 
+  /// Create an active flag variable for use with conditional cleanups. The
+  /// flag is initialized to false before the outermost conditional and set to
+  /// true at the current insertion point (inside the conditional branch).
+  Address createCleanupActiveFlag();
+
+  /// Enter a full-expression cleanup scope. If \p subExpr contains a
+  /// conditional (ternary, &&, ||), eagerly creates a CleanupScopeOp that
+  /// will wrap the entire expression. Otherwise defers scope creation.
+  void enterFullExprCleanupScope(const Expr *subExpr);
+
+  /// Create the CleanupScopeOp for the current full-expression.
+  /// Called from enterFullExprCleanupScope when a conditional is detected.
+  void createFullExprCleanupScope();
+
+  /// Finalize the full-expression cleanup scope after the sub-expression.
+  void exitFullExprCleanupScope();
+
+  /// Promote a single pending cleanup entry onto the EH scope stack. If the
+  /// entry has a valid activeFlag, the cleanup is configured as conditional.
+  /// Defined in CIRGenDecl.cpp where the concrete cleanup types are visible.
+  void pushPendingCleanupToEHStack(const PendingCleanupEntry &entry);
+
   /// Push a cleanup to be run at the end of the current full-expression.  Safe
   /// against the possibility that we're currently inside a
   /// conditionally-evaluated expression.
   template <class T, class... As>
   void pushFullExprCleanup(CleanupKind kind, As... a) {
-    // If we're not in a conditional branch, or if none of the
-    // arguments requires saving, then use the unconditional cleanup.
     if (!isInConditionalBranch())
       return ehStack.pushCleanup<T>(kind, a...);
 
-    cgm.errorNYI("pushFullExprCleanup in conditional branch");
+    // Defer the cleanup until exitFullExprCleanupScope. We can't push to
+    // the EH stack now because the ternary's inner LexicalScope would pop
+    // it prematurely. The scope must have been eagerly created by
+    // enterFullExprCleanupScope (which detected the conditional in the AST).
+    assert(fullExprCleanupScope &&
+           "conditional cleanup pushed but no full-expression scope created");
+    Address activeFlag = createCleanupActiveFlag();
+    deferredConditionalCleanupStack.push_back(
+        PendingCleanupEntry{kind, a..., activeFlag});
   }
 
   /// Queue a cleanup to be pushed after finishing the current full-expression.
@@ -1271,10 +1313,6 @@ public:
                                    QualType type, Destroyer *destroyer,
                                    bool useEHCleanupForArray);
 
-  /// Promote a single lifetime-extended cleanup entry onto the EH scope stack.
-  /// Defined in CIRGenDecl.cpp where the concrete cleanup types are visible.
-  void pushLifetimeExtendedCleanupToEHStack(
-      const LifetimeExtendedCleanupEntry &entry);
 
   Destroyer *getDestroyer(clang::QualType::DestructionKind kind);
 

@@ -1597,10 +1597,33 @@ mlir::Value ScalarExprEmitter::emitCompoundAssign(
 
 mlir::Value ScalarExprEmitter::VisitExprWithCleanups(ExprWithCleanups *e) {
   CIRGenFunction::RunCleanupsScope cleanups(cgf);
+
+  cgf.enterFullExprCleanupScope(e->getSubExpr());
   mlir::Value v = Visit(e->getSubExpr());
-  // Defend against dominance problems caused by jumps out of expression
-  // evaluation through the shared cleanup block.
-  cleanups.forceCleanup({&v});
+
+  bool hasDeferredCleanups = !cgf.deferredConditionalCleanupStack.empty();
+
+  // When deferred conditional cleanups exist, the expression result lives
+  // inside the cleanup scope body (an MLIR region). Spill it to a temporary
+  // (allocated in the function entry block) while the builder is still inside
+  // the body; we reload it after exitFullExprCleanupScope moves the builder
+  // outside the scope.
+  Address spill = Address::invalid();
+  if (v && hasDeferredCleanups) {
+    spill = cgf.createDefaultAlignTempAlloca(v.getType(), v.getLoc(),
+                                             "tmp.exprcleanup");
+    cgf.getBuilder().createStore(v.getLoc(), v, spill);
+  }
+
+  cgf.exitFullExprCleanupScope();
+
+  if (hasDeferredCleanups) {
+    cleanups.forceCleanup({});
+    if (spill.isValid())
+      v = cgf.getBuilder().createLoad(v.getLoc(), spill);
+  } else {
+    cleanups.forceCleanup({&v});
+  }
   return v;
 }
 
