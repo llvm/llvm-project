@@ -121,6 +121,9 @@ private:
   bool replaceInsts(InstrGroup &OG, InstrGroup &NG);
   bool areAdjacent(const MachineInstr *S1, const MachineInstr *S2);
   bool canSwapInstructions(const MachineInstr *A, const MachineInstr *B);
+  MachineInstr *widenLoadStoreAddAsl(Register NewPairReg,
+                                     const MachineInstr *FirstMem,
+                                     const DebugLoc &DL);
 };
 
 struct HexagonStoreWidening : public MachineFunctionPass {
@@ -538,6 +541,73 @@ bool HexagonLoadStoreWidening::createWideInsts(InstrGroup &OG, InstrGroup &NG,
   return createWideLoads(OG, NG, TotalSize);
 }
 
+// check for the pattern:
+// %def = S2_addasl_rrri %base, %offset, #imm
+// %other = L2_loadrd_io %def, 0
+// to
+// %other = L4_loadrd_rr %base, %offset, #imm
+// If addasl does not define the base of the load,
+// do a normal widening.
+// Same behavior followed for store.
+MachineInstr *HexagonLoadStoreWidening::widenLoadStoreAddAsl(
+    Register NewPairReg, const MachineInstr *FirstMem, const DebugLoc &DL) {
+
+  unsigned Base, Offset;
+  HII->getBaseAndOffsetPosition(*FirstMem, Base, Offset);
+  auto BaseOp = FirstMem->getOperand(Base);
+  auto OffMO = FirstMem->getOperand(Offset);
+  Register BaseReg = BaseOp.getReg();
+
+  MachineInstr *AddaslDef = nullptr;
+  if (Register::isVirtualRegister(BaseReg))
+    AddaslDef = MRI->getVRegDef(BaseReg);
+
+  // Skip through trivial copies to the defining addasl.
+  while (AddaslDef && AddaslDef->getOpcode() == Hexagon::COPY) {
+    const MachineOperand &Src = AddaslDef->getOperand(1);
+    if (!Src.isReg() || !Register::isVirtualRegister(Src.getReg()))
+      break;
+    AddaslDef = MRI->getUniqueVRegDef(Src.getReg());
+  }
+
+  if (!AddaslDef || AddaslDef->getOpcode() != Hexagon::S2_addasl_rrri ||
+      (OffMO.isImm() && OffMO.getImm() != 0))
+    return nullptr;
+
+  int64_t ImmVal = AddaslDef->getOperand(3).getImm();
+  if (ImmVal > 3 || ImmVal < 0)
+    return nullptr;
+
+  MachineInstr *WidenedInstr = nullptr;
+  auto Reg1 = AddaslDef->getOperand(1).getReg();
+  auto Reg2 = AddaslDef->getOperand(2).getReg();
+  auto Reg3 = AddaslDef->getOperand(3).getImm();
+  MachineInstrBuilder MIB;
+
+  if (Mode == WideningMode::Load) {
+    auto LdOp = FirstMem->getOperand(0);
+    MIB = BuildMI(*MF, DL, TII->get(Hexagon::L4_loadrd_rr))
+              .addDef(NewPairReg, getKillRegState(LdOp.isKill()),
+                      LdOp.getSubReg())
+              .addReg(Reg1)
+              .addReg(Reg2)
+              .addImm(Reg3);
+  } else {
+    MIB = BuildMI(*MF, DL, TII->get(Hexagon::S4_storerd_rr))
+              .addReg(Reg1)
+              .addReg(Reg2)
+              .addImm(Reg3)
+              .addReg(NewPairReg);
+  }
+
+  // Reset kill flags of the addasl instruction
+  AddaslDef->getOperand(1).setIsKill(false);
+  AddaslDef->getOperand(2).setIsKill(false);
+
+  WidenedInstr = *&MIB;
+  return WidenedInstr;
+}
+
 /// Given an "old group" OG of stores, create a "new group" NG of instructions
 /// to replace them.  Ideally, NG would only have a single instruction in it,
 /// but that may only be possible for store-immediate.
@@ -623,9 +693,12 @@ bool HexagonLoadStoreWidening::createWideStores(InstrGroup &OG, InstrGroup &NG,
       StI =
           BuildMI(*MF, DL, StD).add(IncDestMO).add(MR).add(IncMO).addReg(VReg);
     } else {
-      const MCInstrDesc &StD = TII->get(Hexagon::S2_storerd_io);
-      auto OffMO = FirstSt->getOperand(1);
-      StI = BuildMI(*MF, DL, StD).add(MR).add(OffMO).addReg(VReg);
+      StI = widenLoadStoreAddAsl(VReg, FirstSt, DL);
+      if (!StI) {
+        const MCInstrDesc &StD = TII->get(Hexagon::S2_storerd_io);
+        auto OffMO = FirstSt->getOperand(1);
+        StI = BuildMI(*MF, DL, StD).add(MR).add(OffMO).addReg(VReg);
+      }
     }
     StI->addMemOperand(*MF, NewM);
     NG.push_back(StI);
@@ -737,12 +810,19 @@ bool HexagonLoadStoreWidening::createWideLoads(InstrGroup &OG, InstrGroup &NG,
               .add(IncMO);
     LdI->addMemOperand(*MF, NewM);
   } else {
-    auto OffMO = FirstLd->getOperand(2);
-    LdI = BuildMI(*MF, DL, TII->get(Hexagon::L2_loadrd_io))
-              .addDef(NewMR, getKillRegState(MR.isKill()), MR.getSubReg())
-              .add(MRBase)
-              .add(OffMO);
-    LdI->addMemOperand(*MF, NewM);
+    // Try rr widening with addasl-defined base; otherwise fall back to io.
+    MachineInstr *RR = widenLoadStoreAddAsl(NewMR, FirstLd, DL);
+    if (RR) {
+      RR->addMemOperand(*MF, NewM);
+      LdI = RR;
+    } else {
+      auto OffMO = FirstLd->getOperand(2);
+      LdI = BuildMI(*MF, DL, TII->get(Hexagon::L2_loadrd_io))
+                .addDef(NewMR, getKillRegState(MR.isKill()), MR.getSubReg())
+                .add(MRBase)
+                .add(OffMO);
+      LdI->addMemOperand(*MF, NewM);
+    }
   }
   NG.push_back(LdI);
 
