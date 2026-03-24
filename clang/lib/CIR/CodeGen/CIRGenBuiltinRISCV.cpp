@@ -47,7 +47,12 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
 
   // Zbb
   case RISCV::BI__builtin_riscv_orc_b_32:
-  case RISCV::BI__builtin_riscv_orc_b_64:
+  case RISCV::BI__builtin_riscv_orc_b_64: {
+    intrinsicName = "riscv.orc.b";
+    returnType = convertType(e->getType());
+    break;
+  }
+
   // Zbc
   case RISCV::BI__builtin_riscv_clmul_32:
   case RISCV::BI__builtin_riscv_clmul_64:
