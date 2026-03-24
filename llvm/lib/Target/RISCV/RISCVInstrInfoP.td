@@ -105,6 +105,30 @@ def simm10_pli_w : RISCVOp {
   }];
 }
 
+class UImmPlus1AsmOperand<int width> : AsmOperandClass {
+  let Name = "UImm" # width # "Plus1";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = "InvalidUImm" # width # "Plus1";
+}
+
+class RISCVUImmPlus1Op<int bitsNum>
+    : RISCVOp, ImmLeaf<XLenVT, "return Imm > 0 && isUInt<" # bitsNum # ">(Imm - 1);"> {
+  let ParserMatchClass = UImmPlus1AsmOperand<bitsNum>;
+  let EncoderMethod = "getImmOpValueMinus1";
+  let DecoderMethod = "decodeUImmPlus1Operand<" # bitsNum # ">";
+  let OperandType = "OPERAND_UIMM" # bitsNum # "_PLUS1";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return Imm > 0 && isUInt<}] # bitsNum # [{>(Imm - 1);
+  }];
+}
+
+def uimm4_plus1 : RISCVUImmPlus1Op<4>;
+def uimm5_plus1 : RISCVUImmPlus1Op<5>;
+def uimm6_plus1 : RISCVUImmPlus1Op<6>;
+
 //===----------------------------------------------------------------------===//
 // Instruction class templates
 //===----------------------------------------------------------------------===//
@@ -220,32 +244,36 @@ class RVPShift_ri<bits<3> f, bits<3> funct3, string opcodestr, Operand ImmType>
   let Inst{27}    = 0b0;
 }
 
-class RVPShiftD_ri<bits<3> f, bits<3> funct3, string opcodestr>
-    : RVPShift_ri<f, funct3, opcodestr, uimm6> {
+class RVPShiftD_ri<bits<3> f, bits<3> funct3, string opcodestr,
+                   Operand ImmType = uimm6>
+    : RVPShift_ri<f, funct3, opcodestr, ImmType> {
   bits<6> shamt;
 
   let Inst{26} = 0b1;
   let Inst{25-20} = shamt;
 }
 
-class RVPShiftW_ri<bits<3> f, bits<3> funct3, string opcodestr>
-    : RVPShift_ri<f, funct3, opcodestr, uimm5> {
+class RVPShiftW_ri<bits<3> f, bits<3> funct3, string opcodestr,
+                   Operand ImmType = uimm5>
+    : RVPShift_ri<f, funct3, opcodestr, ImmType> {
   bits<5> shamt;
 
   let Inst{26-25} = 0b01;
   let Inst{24-20} = shamt;
 }
 
-class RVPShiftH_ri<bits<3> f, bits<3> funct3, string opcodestr>
-    : RVPShift_ri<f, funct3, opcodestr, uimm4> {
+class RVPShiftH_ri<bits<3> f, bits<3> funct3, string opcodestr,
+                   Operand ImmType = uimm4>
+    : RVPShift_ri<f, funct3, opcodestr, ImmType> {
   bits<4> shamt;
 
   let Inst{26-24} = 0b001;
   let Inst{23-20} = shamt;
 }
 
-class RVPShiftB_ri<bits<3> f, bits<3> funct3, string opcodestr>
-    : RVPShift_ri<f, funct3, opcodestr, uimm3> {
+class RVPShiftB_ri<bits<3> f, bits<3> funct3, string opcodestr,
+                   Operand ImmType = uimm3>
+    : RVPShift_ri<f, funct3, opcodestr, ImmType> {
   bits<3> shamt;
 
   let Inst{26-23} = 0b0001;
@@ -636,7 +664,7 @@ let Predicates = [HasStdExtP] in {
   def PSRARI_H   : RVPShiftH_ri<0b101, 0b100, "psrari.h">;
 
   let Defs = [VXSAT] in
-  def PSATI_H    : RVPShiftH_ri<0b110, 0b100, "psati.h">;
+  def PSATI_H    : RVPShiftH_ri<0b110, 0b100, "psati.h", uimm4_plus1>;
 } // Predicates = [HasStdExtP]
 let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
   let Defs = [VXSAT] in
@@ -645,7 +673,7 @@ let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
   def SRARI_RV32 : RVPShiftW_ri<0b101, 0b100, "srari">;
 
   let Defs = [VXSAT] in
-  def SATI_RV32  : RVPShiftW_ri<0b110, 0b100, "sati">;
+  def SATI_RV32  : RVPShiftW_ri<0b110, 0b100, "sati", uimm5_plus1>;
 } // Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only"
 let Predicates = [HasStdExtP, IsRV64] in {
   def PSRLI_W    : RVPShiftW_ri<0b000, 0b100, "psrli.w">;
@@ -660,8 +688,8 @@ let Predicates = [HasStdExtP, IsRV64] in {
   def SRARI_RV64 : RVPShiftD_ri<0b101, 0b100, "srari">;
 
   let Defs = [VXSAT] in {
-  def PSATI_W    : RVPShiftW_ri<0b110, 0b100, "psati.w">;
-  def SATI_RV64  : RVPShiftD_ri<0b110, 0b100, "sati">;
+  def PSATI_W    : RVPShiftW_ri<0b110, 0b100, "psati.w", uimm5_plus1>;
+  def SATI_RV64  : RVPShiftD_ri<0b110, 0b100, "sati", uimm6_plus1>;
   } // Defs = [VXSAT]
 } // Predicates = [HasStdExtP, IsRV64]
 
