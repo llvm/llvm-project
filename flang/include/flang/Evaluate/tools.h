@@ -1311,6 +1311,27 @@ inline bool IsCUDAManagedOrUnifiedSymbol(const Symbol &sym) {
   return false;
 }
 
+// Non-allocatable module-level managed/unified variables use nvcc-style
+// unified memory with shadow pointer indirection. cudaMemcpy targeting
+// these variables would use the shadow address rather than the actual
+// unified memory address, so data transfers must be avoided.
+inline bool IsNonAllocatableModuleCUDAManagedSymbol(const Symbol &sym) {
+  const Symbol &ultimate = sym.GetUltimate();
+  if (!IsCUDAManagedOrUnifiedSymbol(ultimate))
+    return false;
+  if (ultimate.attrs().test(semantics::Attr::ALLOCATABLE))
+    return false;
+  return ultimate.owner().IsModule();
+}
+
+template <typename A>
+inline bool HasNonAllocatableModuleCUDAManagedSymbols(const A &expr) {
+  for (const Symbol &sym : CollectCudaSymbols(expr))
+    if (IsNonAllocatableModuleCUDAManagedSymbol(sym))
+      return true;
+  return false;
+}
+
 // Get the number of distinct symbols with CUDA device
 // attribute in the expression.
 template <typename A> inline int GetNbOfCUDADeviceSymbols(const A &expr) {
@@ -1349,6 +1370,10 @@ inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
   int lhsNbManagedSymbols{GetNbOfCUDAManagedOrUnifiedSymbols(lhs)};
   int rhsNbManagedSymbols{GetNbOfCUDAManagedOrUnifiedSymbols(rhs)};
   int rhsNbSymbols{GetNbOfCUDADeviceSymbols(rhs)};
+
+  if (HasNonAllocatableModuleCUDAManagedSymbols(lhs) ||
+      HasNonAllocatableModuleCUDAManagedSymbols(rhs))
+    return false;
 
   if (lhsNbManagedSymbols >= 1 && lhs.Rank() > 0 && rhsNbSymbols == 0 &&
       rhsNbManagedSymbols == 0 && (IsVariable(rhs) || IsConstantExpr(rhs))) {

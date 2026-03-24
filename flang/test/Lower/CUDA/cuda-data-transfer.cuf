@@ -637,3 +637,17 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPsub34
 ! CHECK:  cuf.data_transfer %{{.*}} to %{{.*}} {hasManagedOrUnifedSymbols, transfer_kind = #cuf.cuda_transfer<host_device>} : f16, !fir.box<!fir.array<?xf16>>
+
+module managed_mod
+  integer, managed :: marray(10)
+end module
+
+subroutine sub35()
+  use managed_mod
+  integer :: host_arr(10)
+  marray = host_arr
+  marray = 0
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub35()
+! CHECK-NOT: cuf.data_transfer
