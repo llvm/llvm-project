@@ -1279,7 +1279,8 @@ void ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
   } else if (HasFloatingRepresentation(new_val_type)) {
     auto value_or_err = new_val_sp->GetValueAsAPFloat();
     if (value_or_err)
-      SetValueFromInteger(value_or_err->bitcastToAPInt(), error, can_update_var);
+      SetValueFromInteger(value_or_err->bitcastToAPInt(), error,
+                          can_update_var);
     else
       error = Status::FromErrorString("error getting APFloat from new_val_sp");
   } else if (new_val_type.IsPointerType()) {
@@ -1291,7 +1292,8 @@ void ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
       if (auto temp = llvm::expectedToOptional(
               new_val_sp->GetCompilerType().GetBitSize(target.get())))
         num_bits = temp.value();
-      SetValueFromInteger(llvm::APInt(num_bits, int_val), error, can_update_var);
+      SetValueFromInteger(llvm::APInt(num_bits, int_val), error,
+                          can_update_var);
     } else
       error = Status::FromErrorString("error converting new_val_sp to integer");
   }
