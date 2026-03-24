@@ -307,6 +307,19 @@ test.format_optional_prop_dict <{b = 2 : i32}>
 test.format_optional_prop_dict <{a = ["foo"], b = 2 : i32}>
 
 //===----------------------------------------------------------------------===//
+// Optional AttrDef attribute before symbol name
+//===----------------------------------------------------------------------===//
+
+// Verify that an optional AttrDef attribute does not greedily consume the @
+// token when the attribute is absent.
+// CHECK: test.format_opt_attrdef_before_symbol @opt_attrdef_sym1
+test.format_opt_attrdef_before_symbol @opt_attrdef_sym1
+
+// Verify round-trip when the optional AttrDef attribute is present (full form).
+// CHECK: test.format_opt_attrdef_before_symbol #test.cmpnd_nested<nested = <1, !test.smpla, [5, 6]>> @opt_attrdef_sym2
+test.format_opt_attrdef_before_symbol #test.cmpnd_nested<nested = <1, !test.smpla, [5, 6]>> @opt_attrdef_sym2
+
+//===----------------------------------------------------------------------===//
 // Format a custom attribute
 //===----------------------------------------------------------------------===//
 

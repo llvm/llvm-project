@@ -477,6 +477,16 @@ def FormatOptionalPropDict : TEST_Op<"format_optional_prop_dict"> {
   let assemblyFormat = "prop-dict attr-dict";
 }
 
+// Test that an optional AttrDef attribute (with a custom parse method) does not
+// greedily consume tokens meant for a later symbol name in the format.
+def FormatOptionalAttrDefBeforeSymbol
+    : TEST_Op<"format_opt_attrdef_before_symbol", [Symbol]> {
+  let arguments = (ins
+    OptionalAttr<CompoundAttrNested>:$opt_compound,
+    SymbolNameAttr:$sym_name);
+  let assemblyFormat = "(qualified($opt_compound)^)? $sym_name attr-dict";
+}
+
 def FormatCompoundAttr : TEST_Op<"format_compound_attr"> {
   let arguments = (ins CompoundAttrA:$compound);
   let assemblyFormat = "$compound attr-dict-with-keyword";
