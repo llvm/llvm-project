@@ -417,7 +417,7 @@ static void buildWorklist(const Record *R,
         // accept 3 args: (shadermodel, X, Y) where X is the availability for
         // the 16-bit half type overload (which will typically be 6.2), and Y is
         // the availability for the non-16-bit half overload. However, this
-        // sitation does not currently arise, so we just assert below that this
+        // situation does not currently arise, so we just assert below that this
         // case will never occur.
         assert(
             !(IsCond16Bit && !Availability.empty()) &&
