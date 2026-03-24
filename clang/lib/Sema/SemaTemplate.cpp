@@ -520,7 +520,27 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
     DeclarationName Name = Found.getLookupName();
     Found.clear();
     // Simple filter callback that, for keywords, only accepts the C++ *_cast
-    DefaultFilterCCC FilterCCC{};
+    struct TemplateQualifierFilter final : CorrectionCandidateCallback {
+      const CXXScopeSpec &SS;
+      TemplateQualifierFilter(const CXXScopeSpec &SS) : SS(SS) {}
+      bool ValidateCandidate(const TypoCorrection &Candidate) override {
+        if (SS.isNotEmpty()) { // Qualified lookup
+          if (NamedDecl *ND = Candidate.getFoundDecl()) {
+            // A template template parameter is a name in the current template
+            // parameter list and cannot be validly qualified by any scope.
+            // Therefore, we should never suggest it as a typo correction for a
+            // qualified name.
+            if (isa<TemplateTemplateParmDecl>(ND))
+              return false;
+          }
+        }
+        return CorrectionCandidateCallback::ValidateCandidate(Candidate);
+      }
+      std::unique_ptr<CorrectionCandidateCallback> clone() override {
+        return std::make_unique<TemplateQualifierFilter>(*this);
+      }
+    };
+    TemplateQualifierFilter FilterCCC{SS};
     FilterCCC.WantTypeSpecifiers = false;
     FilterCCC.WantExpressionKeywords = false;
     FilterCCC.WantRemainingKeywords = false;
