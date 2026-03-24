@@ -67,7 +67,18 @@ public:
   LLVM_ABI std::vector<codeview::TypeIndex>
   findRecordsByName(StringRef Name) const;
 
+  /// Get a type by its index. \p Index must be a valid type index.
   LLVM_ABI codeview::CVType getType(codeview::TypeIndex Index);
+
+  /// The same as getType() except that the return value is defined
+  /// (empty/invalid) if \p Index doesn't exist. Use codeview::CVType::valid()
+  /// to check the return value.
+  LLVM_ABI codeview::CVType getTypeOrEmpty(codeview::TypeIndex Index);
+
+  LLVM_ABI std::optional<codeview::CVType>
+  tryGetType(codeview::TypeIndex Index);
+
+  LLVM_ABI Expected<codeview::CVType> getTypeOrError(codeview::TypeIndex Index);
 
   LLVM_ABI BinarySubstreamRef getTypeRecordsSubstream() const;
 
