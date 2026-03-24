@@ -927,6 +927,8 @@ namespace llvm {
 
     bool isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const override;
 
+    SDValue GenerateVBPERM(SDNode *N, DAGCombinerInfo &DCI) const;
+
     /// getAddrModeForFlags - Based on the set of address flags, select the most
     /// optimal instruction format to match by.
     PPC::AddrMode getAddrModeForFlags(unsigned Flags) const;
