@@ -914,16 +914,14 @@ define float @extra_args_no_fast(ptr %x, float %a, float %b) {
 ; THRESHOLD-LABEL: @extra_args_no_fast(
 ; THRESHOLD-NEXT:    [[ADDC:%.*]] = fadd fast float [[B:%.*]], 3.000000e+00
 ; THRESHOLD-NEXT:    [[ADD:%.*]] = fadd fast float [[A:%.*]], [[ADDC]]
-; THRESHOLD-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds float, ptr [[X:%.*]], i64 1
-; THRESHOLD-NEXT:    [[ARRAYIDX3_1:%.*]] = getelementptr inbounds float, ptr [[X]], i64 2
-; THRESHOLD-NEXT:    [[ARRAYIDX3_2:%.*]] = getelementptr inbounds float, ptr [[X]], i64 3
-; THRESHOLD-NEXT:    [[T0:%.*]] = load float, ptr [[X]], align 4
-; THRESHOLD-NEXT:    [[T1:%.*]] = load float, ptr [[ARRAYIDX3]], align 4
-; THRESHOLD-NEXT:    [[T2:%.*]] = load float, ptr [[ARRAYIDX3_1]], align 4
-; THRESHOLD-NEXT:    [[T3:%.*]] = load float, ptr [[ARRAYIDX3_2]], align 4
+; THRESHOLD-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[X:%.*]], align 4
+; THRESHOLD-NEXT:    [[T0:%.*]] = extractelement <4 x float> [[TMP1]], i32 0
 ; THRESHOLD-NEXT:    [[ADD1:%.*]] = fadd fast float [[T0]], [[ADD]]
+; THRESHOLD-NEXT:    [[T1:%.*]] = extractelement <4 x float> [[TMP1]], i32 1
 ; THRESHOLD-NEXT:    [[ADD4:%.*]] = fadd fast float [[T1]], [[ADD1]]
+; THRESHOLD-NEXT:    [[T2:%.*]] = extractelement <4 x float> [[TMP1]], i32 2
 ; THRESHOLD-NEXT:    [[ADD4_1:%.*]] = fadd float [[T2]], [[ADD4]]
+; THRESHOLD-NEXT:    [[T3:%.*]] = extractelement <4 x float> [[TMP1]], i32 3
 ; THRESHOLD-NEXT:    [[ADD4_2:%.*]] = fadd fast float [[T3]], [[ADD4_1]]
 ; THRESHOLD-NEXT:    [[ADD5:%.*]] = fadd fast float [[ADD4_2]], [[A]]
 ; THRESHOLD-NEXT:    ret float [[ADD5]]

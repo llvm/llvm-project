@@ -1610,13 +1610,12 @@ TEST_F(MemorySSATest, TestLoopInvariantEntryBlockPointer) {
       MemoryLocation ML = MemoryLocation::get(SI);
       // Use the 'upward_defs_iterator' which internally calls
       // IsGuaranteedLoopInvariant
-      auto ItA = upward_defs_begin({MA, ML}, MSSA.getDomTree());
-      auto ItB =
-          upward_defs_begin({ItA->first, ItA->second}, MSSA.getDomTree());
+      auto ItA = upward_defs_begin({MA, ML, false}, MSSA.getDomTree());
+      auto ItB = upward_defs_begin(*ItA, MSSA.getDomTree());
       // Check if the location information have been retained
-      EXPECT_TRUE(ItB->second.Size.isPrecise());
-      EXPECT_TRUE(ItB->second.Size.hasValue());
-      EXPECT_TRUE(ItB->second.Size.getValue() == 8);
+      EXPECT_TRUE(ItB->Loc.Size.isPrecise());
+      EXPECT_TRUE(ItB->Loc.Size.hasValue());
+      EXPECT_TRUE(ItB->Loc.Size.getValue() == 8);
     }
   }
 }

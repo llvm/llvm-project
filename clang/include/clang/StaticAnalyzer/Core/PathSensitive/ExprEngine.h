@@ -83,7 +83,6 @@ class CheckerManager;
 class ConstraintManager;
 class ExplodedNodeSet;
 class ExplodedNode;
-class IndirectGotoNodeBuilder;
 class MemRegion;
 class NodeBuilderContext;
 class ProgramState;
@@ -422,8 +421,8 @@ public:
 
   /// processIndirectGoto - Called by CoreEngine.  Used to generate successor
   ///  nodes by processing the 'effects' of a computed goto jump.
-  void processIndirectGoto(IndirectGotoNodeBuilder &Builder,
-                           ExplodedNode *Pred);
+  void processIndirectGoto(ExplodedNodeSet &Dst, const Expr *Tgt,
+                           const CFGBlock *Dispatch, ExplodedNode *Pred);
 
   /// ProcessSwitch - Called by CoreEngine.  Used to generate successor
   ///  nodes by processing the 'effects' of a switch statement.

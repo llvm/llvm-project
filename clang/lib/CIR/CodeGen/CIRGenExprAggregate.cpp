@@ -19,6 +19,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
+#include "llvm/IR/Value.h"
 #include <cstdint>
 
 using namespace clang;
@@ -326,8 +327,68 @@ public:
     Visit(e->getRHS());
   }
   void VisitBinCmp(const BinaryOperator *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitBinCmp");
+    assert(cgf.getContext().hasSameType(e->getLHS()->getType(),
+                                        e->getRHS()->getType()));
+    const ComparisonCategoryInfo &cmpInfo =
+        cgf.getContext().CompCategories.getInfoForType(e->getType());
+    assert(cmpInfo.Record->isTriviallyCopyable() &&
+           "cannot copy non-trivially copyable aggregate");
+
+    QualType argTy = e->getLHS()->getType();
+
+    if (!argTy->isIntegralOrEnumerationType() && !argTy->isRealFloatingType() &&
+        !argTy->isNullPtrType() && !argTy->isPointerType() &&
+        !argTy->isMemberPointerType() && !argTy->isAnyComplexType())
+      cgf.cgm.errorNYI(e->getBeginLoc(), "aggregate three-way comparison");
+
+    mlir::Location loc = cgf.getLoc(e->getSourceRange());
+    CIRGenBuilderTy builder = cgf.getBuilder();
+
+    if (e->getType()->isAnyComplexType())
+      cgf.cgm.errorNYI(e->getBeginLoc(), "VisitBinCmp: complex type");
+
+    if (e->getType()->isAggregateType())
+      cgf.cgm.errorNYI(e->getBeginLoc(), "VisitBinCmp: aggregate type");
+
+    mlir::Value lhs = cgf.emitAnyExpr(e->getLHS()).getValue();
+    mlir::Value rhs = cgf.emitAnyExpr(e->getRHS()).getValue();
+
+    mlir::Value resultScalar;
+    if (argTy->isNullPtrType()) {
+      resultScalar =
+          builder.getConstInt(loc, cmpInfo.getEqualOrEquiv()->getIntValue());
+    } else {
+      llvm::APSInt ltRes = cmpInfo.getLess()->getIntValue();
+      llvm::APSInt eqRes = cmpInfo.getEqualOrEquiv()->getIntValue();
+      llvm::APSInt gtRes = cmpInfo.getGreater()->getIntValue();
+      if (!cmpInfo.isPartial()) {
+        cir::CmpOrdering ordering = cmpInfo.isStrong()
+                                        ? cir::CmpOrdering::Strong
+                                        : cir::CmpOrdering::Weak;
+        resultScalar = builder.createThreeWayCmpTotalOrdering(
+            loc, lhs, rhs, ltRes, eqRes, gtRes, ordering);
+      } else {
+        // Partial ordering.
+        llvm::APSInt unorderedRes = cmpInfo.getUnordered()->getIntValue();
+        resultScalar = builder.createThreeWayCmpPartialOrdering(
+            loc, lhs, rhs, ltRes, eqRes, gtRes, unorderedRes);
+      }
+    }
+
+    // Create the return value in the destination slot.
+    ensureDest(loc, e->getType());
+    LValue destLVal = cgf.makeAddrLValue(dest.getAddress(), e->getType());
+
+    // Emit the address of the first (and only) field in the comparison category
+    // type, and initialize it from the constant integer value produced above.
+    const FieldDecl *resultField = *cmpInfo.Record->field_begin();
+    LValue fieldLVal = cgf.emitLValueForFieldInitialization(
+        destLVal, resultField, resultField->getName());
+    cgf.emitStoreThroughLValue(RValue::get(resultScalar), fieldLVal);
+
+    // All done! The result is in the dest slot.
   }
+
   void VisitCXXRewrittenBinaryOperator(CXXRewrittenBinaryOperator *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "AggExprEmitter: VisitCXXRewrittenBinaryOperator");
@@ -447,6 +508,9 @@ public:
     assert(arrayType && "std::initializer_list constructed from non-array");
 
     auto *record = e->getType()->castAsRecordDecl();
+    assert(record->getNumFields() == 2 &&
+           "Expected std::initializer_list to only have two fields");
+
     RecordDecl::field_iterator field = record->field_begin();
     assert(field != record->field_end() &&
            ctx.hasSameType(field->getType()->getPointeeType(),
@@ -472,13 +536,14 @@ public:
       // Length.
       cgf.emitStoreThroughLValue(RValue::get(size), endOrLength);
     } else {
-      cgf.cgm.errorNYI(
-          "Aggregate VisitCXXStdInitializerListExpr: field type != sizeTy");
-      return;
+      // End pointer.
+      assert(field->getType()->isPointerType() &&
+             ctx.hasSameType(field->getType()->getPointeeType(),
+                             arrayType->getElementType()) &&
+             "Expected std::initializer_list second field to be const E *");
+      mlir::Value arrayEnd = builder.createPtrStride(loc, arrayStart, size);
+      cgf.emitStoreThroughLValue(RValue::get(arrayEnd), endOrLength);
     }
-
-    assert(++field == record->field_end() &&
-           "Expected std::initializer_list to only have two fields");
   }
 
   void VisitCXXScalarValueInitExpr(CXXScalarValueInitExpr *e) {

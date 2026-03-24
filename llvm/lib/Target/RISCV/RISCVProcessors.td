@@ -351,7 +351,7 @@ def SIFIVE_X390 : RISCVProcessorModel<"sifive-x390",
 }
 
 def SIFIVE_X160 : RISCVProcessorModel<"sifive-x160",
-                                      NoSchedModel,
+                                      SiFiveX100Model,
                                       [Feature32Bit,
                                        FeatureStdExtI,
                                        FeatureStdExtM,
@@ -394,7 +394,7 @@ def SIFIVE_X160 : RISCVProcessorModel<"sifive-x160",
                                        SiFiveIntelligenceTuneFeatures>;
 
 def SIFIVE_X180 : RISCVProcessorModel<"sifive-x180",
-                                      NoSchedModel,
+                                      SiFiveX100Model,
                                       [Feature64Bit,
                                        FeatureStdExtI,
                                        FeatureStdExtM,
@@ -442,7 +442,9 @@ def SIFIVE_X180 : RISCVProcessorModel<"sifive-x180",
                                        FeatureStdExtZicfilp,
                                        FeatureStdExtZvdot4a8i,
                                        FeatureStdExtZvfbfa],
-                                       SiFiveIntelligenceTuneFeatures>;
+                                       SiFiveIntelligenceTuneFeatures> {
+  let ConfigurableTuneFeatures = [TuneHasSingleElementVecFP64];
+}
 
 defvar SiFiveP400TuneFeatures = [TuneNoDefaultUnroll,
                                  TuneConditionalCompressedMoveFusion,
