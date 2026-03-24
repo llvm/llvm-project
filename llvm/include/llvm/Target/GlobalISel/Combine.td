@@ -2054,6 +2054,17 @@ def SubSmaxSub: GICombineRule<
               && MRI.hasOneNonDBGUse(${max}.getReg()); }]),
    (apply (G_SUB $sub1, 0, $A), 
           (G_SMIN $root, $A, $sub1))>;
+          
+// (sub 0, (max X, (sub 0, X))) --> (min X, (sub 0, X))
+def SubUmaxSub: GICombineRule<
+   (defs root:$root),
+   (match (G_SUB $sub, 0, $A),
+          (G_UMAX $max, $A, $sub),
+          (G_SUB $root, 0, $max):$root, 
+          [{ return MRI.hasOneNonDBGUse(${sub}.getReg()) 
+              && MRI.hasOneNonDBGUse(${max}.getReg()); }]),
+   (apply (G_SUB $sub1, 0, $A), 
+          (G_UMIN $root, $A, $sub1))>;
    
 def integer_reassoc_combines: GICombineGroup<[
   APlusBMinusCMinusB,
@@ -2073,7 +2084,8 @@ def integer_reassoc_combines: GICombineGroup<[
   AMinusC1MinusC2,
   C1Minus2MinusC2,
   AMinusC1PlusC2,
-  SubSmaxSub
+  SubSmaxSub, 
+  SubUmaxSub
 ]>;
 
 // fold (A+(shl (0-B), C)) -> (A-(shl B, C))
