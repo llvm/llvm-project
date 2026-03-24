@@ -92,6 +92,7 @@ static bool checkWaveOps(Intrinsic::ID IID) {
   // Wave Active Op Variants
   case Intrinsic::dx_wave_reduce_or:
   case Intrinsic::dx_wave_reduce_xor:
+  case Intrinsic::dx_wave_reduce_and:
   case Intrinsic::dx_wave_reduce_sum:
   case Intrinsic::dx_wave_reduce_usum:
   case Intrinsic::dx_wave_product:
@@ -228,7 +229,7 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
     case Intrinsic::dx_resource_load_typedbuffer: {
       dxil::ResourceTypeInfo &RTI =
           DRTM[cast<TargetExtType>(II->getArgOperand(0)->getType())];
-      if (RTI.isTyped())
+      if (RTI.isTyped() && RTI.isUAV())
         CSF.TypedUAVLoadAdditionalFormats |= RTI.getTyped().ElementCount > 1;
       if (!CSF.TiledResources && checkIfStatusIsExtracted(*II))
         CSF.TiledResources = true;

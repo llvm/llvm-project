@@ -1060,38 +1060,38 @@ define void @memset_pattern_i64_as7_len33_dynval(ptr addrspace(7) inreg align 16
 ; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v4, v1
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v5, v2
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v2, s16, v0
 ; GFX942-GISEL-NEXT:    s_mov_b64 s[4:5], 0
-; GFX942-GISEL-NEXT:    v_add_u32_e32 v1, s16, v0
 ; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[6:7], v[4:5]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[4:5]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[4:5]
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX942-GISEL-NEXT:  .LBB14_1: ; %memset.pattern-expansion-main-body
 ; GFX942-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 32, v2
-; GFX942-GISEL-NEXT:    buffer_store_dwordx4 v[4:7], v1, s[0:3], 0 offen
-; GFX942-GISEL-NEXT:    buffer_store_dwordx4 v[4:7], v1, s[0:3], 0 offen offset:16
-; GFX942-GISEL-NEXT:    buffer_store_dwordx4 v[4:7], v1, s[0:3], 0 offen offset:32
-; GFX942-GISEL-NEXT:    buffer_store_dwordx4 v[4:7], v1, s[0:3], 0 offen offset:48
-; GFX942-GISEL-NEXT:    buffer_store_dwordx4 v[4:7], v1, s[0:3], 0 offen offset:64
-; GFX942-GISEL-NEXT:    buffer_store_dwordx4 v[4:7], v1, s[0:3], 0 offen offset:80
-; GFX942-GISEL-NEXT:    buffer_store_dwordx4 v[4:7], v1, s[0:3], 0 offen offset:96
-; GFX942-GISEL-NEXT:    buffer_store_dwordx4 v[4:7], v1, s[0:3], 0 offen offset:112
-; GFX942-GISEL-NEXT:    buffer_store_dwordx4 v[4:7], v1, s[0:3], 0 offen offset:128
-; GFX942-GISEL-NEXT:    buffer_store_dwordx4 v[4:7], v1, s[0:3], 0 offen offset:144
-; GFX942-GISEL-NEXT:    buffer_store_dwordx4 v[4:7], v1, s[0:3], 0 offen offset:160
-; GFX942-GISEL-NEXT:    buffer_store_dwordx4 v[4:7], v1, s[0:3], 0 offen offset:176
-; GFX942-GISEL-NEXT:    buffer_store_dwordx4 v[4:7], v1, s[0:3], 0 offen offset:192
-; GFX942-GISEL-NEXT:    buffer_store_dwordx4 v[4:7], v1, s[0:3], 0 offen offset:208
-; GFX942-GISEL-NEXT:    buffer_store_dwordx4 v[4:7], v1, s[0:3], 0 offen offset:224
-; GFX942-GISEL-NEXT:    buffer_store_dwordx4 v[4:7], v1, s[0:3], 0 offen offset:240
-; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
+; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 32, v0
+; GFX942-GISEL-NEXT:    buffer_store_dwordx4 v[4:7], v3, s[0:3], 0 offen
+; GFX942-GISEL-NEXT:    buffer_store_dwordx4 v[4:7], v3, s[0:3], 0 offen offset:16
+; GFX942-GISEL-NEXT:    buffer_store_dwordx4 v[4:7], v3, s[0:3], 0 offen offset:32
+; GFX942-GISEL-NEXT:    buffer_store_dwordx4 v[4:7], v3, s[0:3], 0 offen offset:48
+; GFX942-GISEL-NEXT:    buffer_store_dwordx4 v[4:7], v3, s[0:3], 0 offen offset:64
+; GFX942-GISEL-NEXT:    buffer_store_dwordx4 v[4:7], v3, s[0:3], 0 offen offset:80
+; GFX942-GISEL-NEXT:    buffer_store_dwordx4 v[4:7], v3, s[0:3], 0 offen offset:96
+; GFX942-GISEL-NEXT:    buffer_store_dwordx4 v[4:7], v3, s[0:3], 0 offen offset:112
+; GFX942-GISEL-NEXT:    buffer_store_dwordx4 v[4:7], v3, s[0:3], 0 offen offset:128
+; GFX942-GISEL-NEXT:    buffer_store_dwordx4 v[4:7], v3, s[0:3], 0 offen offset:144
+; GFX942-GISEL-NEXT:    buffer_store_dwordx4 v[4:7], v3, s[0:3], 0 offen offset:160
+; GFX942-GISEL-NEXT:    buffer_store_dwordx4 v[4:7], v3, s[0:3], 0 offen offset:176
+; GFX942-GISEL-NEXT:    buffer_store_dwordx4 v[4:7], v3, s[0:3], 0 offen offset:192
+; GFX942-GISEL-NEXT:    buffer_store_dwordx4 v[4:7], v3, s[0:3], 0 offen offset:208
+; GFX942-GISEL-NEXT:    buffer_store_dwordx4 v[4:7], v3, s[0:3], 0 offen offset:224
+; GFX942-GISEL-NEXT:    buffer_store_dwordx4 v[4:7], v3, s[0:3], 0 offen offset:240
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX942-GISEL-NEXT:    s_xor_b64 s[4:5], vcc, -1
 ; GFX942-GISEL-NEXT:    s_xor_b64 s[4:5], s[4:5], -1
-; GFX942-GISEL-NEXT:    v_add_u32_e32 v1, 0x2000, v1
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v3, 0x2000, v3
 ; GFX942-GISEL-NEXT:    s_and_b64 vcc, exec, s[4:5]
 ; GFX942-GISEL-NEXT:    s_cbranch_vccnz .LBB14_1
 ; GFX942-GISEL-NEXT:  ; %bb.2: ; %memset.pattern-expansion-residual-body.preheader
-; GFX942-GISEL-NEXT:    v_add_u32_e32 v0, s16, v0
-; GFX942-GISEL-NEXT:    buffer_store_dwordx2 v[4:5], v0, s[0:3], 0 offen offset:256
+; GFX942-GISEL-NEXT:    buffer_store_dwordx2 v[4:5], v2, s[0:3], 0 offen offset:256
 ; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %p = getelementptr inbounds i8, ptr addrspace(7) %a, i32 %offset

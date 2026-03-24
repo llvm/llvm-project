@@ -1094,7 +1094,7 @@ void BytecodeWriter::writeUseListOrders(EncodingEmitter &emitter,
                                         uint8_t &opEncodingMask,
                                         ValueRange range) {
   // Loop over the results and store the use-list order per result index.
-  DenseMap<unsigned, llvm::SmallVector<unsigned>> map;
+  llvm::MapVector<unsigned, llvm::SmallVector<unsigned>> map;
   for (auto item : llvm::enumerate(range)) {
     auto value = item.value();
     // No need to store a custom use-list order if the result does not have
@@ -1147,10 +1147,7 @@ void BytecodeWriter::writeUseListOrders(EncodingEmitter &emitter,
     emitter.emitVarInt(map.size(), "custom use-list size");
   }
 
-  for (const auto &item : map) {
-    auto resultIdx = item.getFirst();
-    auto useListOrder = item.getSecond();
-
+  for (const auto &[resultIdx, useListOrder] : map) {
     // Compute the number of uses that are actually shuffled. If those are less
     // than half of the total uses, encoding the index pair `(src, dst)` is more
     // space efficient.

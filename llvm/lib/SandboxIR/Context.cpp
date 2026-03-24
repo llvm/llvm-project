@@ -113,10 +113,15 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
           std::unique_ptr<InsertValueInst>(new InsertValueInst(LLVMIns, *this));
       return It->second.get();
     }
-    case llvm::Instruction::UncondBr:
+    case llvm::Instruction::UncondBr: {
+      auto *LLVMBr = cast<llvm::UncondBrInst>(LLVMV);
+      It->second =
+          std::unique_ptr<UncondBrInst>(new UncondBrInst(LLVMBr, *this));
+      return It->second.get();
+    }
     case llvm::Instruction::CondBr: {
-      auto *LLVMBr = cast<llvm::BranchInst>(LLVMV);
-      It->second = std::unique_ptr<BranchInst>(new BranchInst(LLVMBr, *this));
+      auto *LLVMBr = cast<llvm::CondBrInst>(LLVMV);
+      It->second = std::unique_ptr<CondBrInst>(new CondBrInst(LLVMBr, *this));
       return It->second.get();
     }
     case llvm::Instruction::Load: {
@@ -509,9 +514,14 @@ InsertValueInst *Context::createInsertValueInst(llvm::InsertValueInst *IVI) {
   return cast<InsertValueInst>(registerValue(std::move(NewPtr)));
 }
 
-BranchInst *Context::createBranchInst(llvm::BranchInst *BI) {
-  auto NewPtr = std::unique_ptr<BranchInst>(new BranchInst(BI, *this));
-  return cast<BranchInst>(registerValue(std::move(NewPtr)));
+UncondBrInst *Context::createUncondBrInst(llvm::UncondBrInst *UBI) {
+  auto NewPtr = std::unique_ptr<UncondBrInst>(new UncondBrInst(UBI, *this));
+  return cast<UncondBrInst>(registerValue(std::move(NewPtr)));
+}
+
+CondBrInst *Context::createCondBrInst(llvm::CondBrInst *CBI) {
+  auto NewPtr = std::unique_ptr<CondBrInst>(new CondBrInst(CBI, *this));
+  return cast<CondBrInst>(registerValue(std::move(NewPtr)));
 }
 
 LoadInst *Context::createLoadInst(llvm::LoadInst *LI) {

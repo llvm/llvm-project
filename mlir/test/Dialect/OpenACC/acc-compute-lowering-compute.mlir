@@ -105,3 +105,27 @@ func.func @kernels_loop(%buf: memref<8xi32>) {
   acc.copyout accPtr(%dev : memref<8xi32>) to varPtr(%buf : memref<8xi32>)
   return
 }
+
+// -----
+
+// Constant live-ins are cloned into the compute region body so they are not
+// passed through `acc.compute_region` arguments.
+
+// CHECK-LABEL: func.func @constant_livein_materialized_into_compute_region
+func.func @constant_livein_materialized_into_compute_region(%buf: memref<1xi32>) {
+  %c0 = arith.constant 0 : index
+  %c42 = arith.constant 42 : i32
+  %dev = acc.copyin varPtr(%buf : memref<1xi32>) -> memref<1xi32>
+  // CHECK: acc.kernel_environment
+  // CHECK: acc.compute_region ins({{.*}}) : (memref<1xi32>) {
+  // CHECK-DAG: arith.constant 42 : i32
+  // CHECK-DAG: arith.constant 0 : index
+  // CHECK: memref.store
+  // CHECK: acc.yield
+  acc.serial dataOperands(%dev : memref<1xi32>) {
+    memref.store %c42, %dev[%c0] : memref<1xi32>
+    acc.yield
+  }
+  acc.copyout accPtr(%dev : memref<1xi32>) to varPtr(%buf : memref<1xi32>)
+  return
+}

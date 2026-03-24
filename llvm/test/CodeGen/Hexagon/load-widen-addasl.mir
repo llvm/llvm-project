@@ -1,0 +1,35 @@
+# RUN: llc -march=hexagon -run-pass=hexagon-widen-loads -verify-machineinstrs %s -o - | FileCheck %s
+
+# CHECK: S2_addasl_rrri [[VREG0:%[0-9]+]], [[VREG1:%[0-9]+]], [[IMM:[0-9]+]]
+# CHECK-NEXT: doubleregs = L4_loadrd_rr [[VREG0]], [[VREG1]], [[IMM]]
+
+--- |
+  define float @qhl_scalar_dsp_fft_f32(ptr %x, i32 %0) {
+  entry:
+    %arrayidx = getelementptr { float, float }, ptr %x, i32 %0
+    %cgep = getelementptr { float, float }, ptr %x, i32 %0
+    %arrayidx.real = load float, ptr %cgep, align 8
+    store float %arrayidx.real, ptr %x, align 8
+    %arrayidx.imagp = getelementptr i8, ptr %arrayidx, i32 4
+    %arrayidx.imag = load float, ptr %arrayidx.imagp, align 4
+    ret float %arrayidx.imag
+  }
+...
+---
+name:            qhl_scalar_dsp_fft_f32
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$r1', virtual-reg: '%1' }
+body:             |
+  bb.0.entry:
+    liveins: $r0, $r1
+
+    %1:intregs = COPY $r1
+    %0:intregs = COPY $r0
+    %2:intregs = S2_addasl_rrri %0, %1, 3
+    %3:intregs = L2_loadri_io %2, 0 :: (load (s32) from %ir.cgep, align 8)
+    S2_storeri_io %0, 0, killed %3 :: (store (s32) into %ir.x, align 8)
+    %4:intregs = L2_loadri_io %2, 4 :: (load (s32) from %ir.arrayidx.imagp)
+    $r0 = COPY %4
+    PS_jmpret $r31, implicit-def dead $pc, implicit $r0
+...

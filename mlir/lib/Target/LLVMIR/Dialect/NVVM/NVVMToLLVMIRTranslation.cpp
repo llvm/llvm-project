@@ -21,6 +21,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/NVVMAttributes.h"
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -714,7 +715,7 @@ public:
       const std::string attr = llvm::formatv(
           "{0:$[,]}", llvm::make_range(values.asArrayRef().begin(),
                                        values.asArrayRef().end()));
-      llvmFunc->addFnAttr("nvvm.maxntid", attr);
+      llvmFunc->addFnAttr(llvm::NVVMAttr::MaxNTID, attr);
     } else if (attribute.getName() == NVVM::NVVMDialect::getReqntidAttrName()) {
       if (!isa<DenseI32ArrayAttr>(attribute.getValue()))
         return failure();
@@ -722,7 +723,7 @@ public:
       const std::string attr = llvm::formatv(
           "{0:$[,]}", llvm::make_range(values.asArrayRef().begin(),
                                        values.asArrayRef().end()));
-      llvmFunc->addFnAttr("nvvm.reqntid", attr);
+      llvmFunc->addFnAttr(llvm::NVVMAttr::ReqNTID, attr);
     } else if (attribute.getName() ==
                NVVM::NVVMDialect::getClusterDimAttrName()) {
       if (!isa<DenseI32ArrayAttr>(attribute.getValue()))
@@ -731,24 +732,27 @@ public:
       const std::string attr = llvm::formatv(
           "{0:$[,]}", llvm::make_range(values.asArrayRef().begin(),
                                        values.asArrayRef().end()));
-      llvmFunc->addFnAttr("nvvm.cluster_dim", attr);
+      llvmFunc->addFnAttr(llvm::NVVMAttr::ClusterDim, attr);
     } else if (attribute.getName() ==
                NVVM::NVVMDialect::getClusterMaxBlocksAttrName()) {
       auto value = dyn_cast<IntegerAttr>(attribute.getValue());
-      llvmFunc->addFnAttr("nvvm.maxclusterrank", llvm::utostr(value.getInt()));
+      llvmFunc->addFnAttr(llvm::NVVMAttr::MaxClusterRank,
+                          llvm::utostr(value.getInt()));
     } else if (attribute.getName() ==
                NVVM::NVVMDialect::getMinctasmAttrName()) {
       auto value = dyn_cast<IntegerAttr>(attribute.getValue());
-      llvmFunc->addFnAttr("nvvm.minctasm", llvm::utostr(value.getInt()));
+      llvmFunc->addFnAttr(llvm::NVVMAttr::MinCTASm,
+                          llvm::utostr(value.getInt()));
     } else if (attribute.getName() == NVVM::NVVMDialect::getMaxnregAttrName()) {
       auto value = dyn_cast<IntegerAttr>(attribute.getValue());
-      llvmFunc->addFnAttr("nvvm.maxnreg", llvm::utostr(value.getInt()));
+      llvmFunc->addFnAttr(llvm::NVVMAttr::MaxNReg,
+                          llvm::utostr(value.getInt()));
     } else if (attribute.getName() ==
                NVVM::NVVMDialect::getKernelFuncAttrName()) {
       llvmFunc->setCallingConv(llvm::CallingConv::PTX_Kernel);
     } else if (attribute.getName() ==
                NVVM::NVVMDialect::getBlocksAreClustersAttrName()) {
-      llvmFunc->addFnAttr("nvvm.blocksareclusters");
+      llvmFunc->addFnAttr(llvm::NVVMAttr::BlocksAreClusters);
     }
 
     return success();
@@ -764,7 +768,8 @@ public:
 
     if (attribute.getName() == NVVM::NVVMDialect::getGridConstantAttrName()) {
       llvmFunc->addParamAttr(
-          argIdx, llvm::Attribute::get(llvmContext, "nvvm.grid_constant"));
+          argIdx,
+          llvm::Attribute::get(llvmContext, llvm::NVVMAttr::GridConstant));
     }
     return success();
   }

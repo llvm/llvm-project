@@ -2832,35 +2832,13 @@ genACCHostDataOp(Fortran::lower::AbstractConverter &converter,
 
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
-  for (const Fortran::parser::AccClause &clause : accClauseList.v) {
-    mlir::Location clauseLocation = converter.genLocation(clause.source);
-    if (const auto *ifClause =
-            std::get_if<Fortran::parser::AccClause::If>(&clause.u)) {
-      genIfClause(converter, clauseLocation, ifClause, ifCond, stmtCtx);
-    } else if (std::get_if<Fortran::parser::AccClause::IfPresent>(&clause.u)) {
-      addIfPresentAttr = true;
-    }
-  }
-
-  if (ifCond) {
-    if (auto cst =
-            mlir::dyn_cast<mlir::arith::ConstantOp>(ifCond.getDefiningOp()))
-      if (auto boolAttr = mlir::dyn_cast<mlir::BoolAttr>(cst.getValue())) {
-        if (boolAttr.getValue()) {
-          // get rid of the if condition if it is always true.
-          ifCond = mlir::Value();
-        }
-      }
-  }
-
-  AccDataMap dataMap;
-  for (const Fortran::parser::AccClause &clause : accClauseList.v) {
-    if (const auto *useDevice =
-            std::get_if<Fortran::parser::AccClause::UseDevice>(&clause.u)) {
-      // When CUDA Fortran is enabled, extra symbols are used in the host_data
-      // region. Look for them and bind their values with the symbols in the
-      // outer scope.
-      if (semanticsContext.IsEnabled(Fortran::common::LanguageFeature::CUDA)) {
+  // When CUDA Fortran is enabled, extra symbols are created in the host_data
+  // scope for use_device objects. Bind them to the outer scope's symbols before
+  // processing any clauses, since the if clause may reference these symbols.
+  if (semanticsContext.IsEnabled(Fortran::common::LanguageFeature::CUDA)) {
+    for (const Fortran::parser::AccClause &clause : accClauseList.v) {
+      if (const auto *useDevice =
+              std::get_if<Fortran::parser::AccClause::UseDevice>(&clause.u)) {
         const Fortran::parser::AccObjectList &objectList{useDevice->v};
         for (const auto &accObject : objectList.v) {
           const Fortran::semantics::Symbol *newSym = nullptr;
@@ -2894,12 +2872,36 @@ genACCHostDataOp(Fortran::lower::AbstractConverter &converter,
           }
         }
       }
+    }
+  }
+
+  AccDataMap dataMap;
+  for (const Fortran::parser::AccClause &clause : accClauseList.v) {
+    mlir::Location clauseLocation = converter.genLocation(clause.source);
+    if (const auto *ifClause =
+            std::get_if<Fortran::parser::AccClause::If>(&clause.u)) {
+      genIfClause(converter, clauseLocation, ifClause, ifCond, stmtCtx);
+    } else if (std::get_if<Fortran::parser::AccClause::IfPresent>(&clause.u)) {
+      addIfPresentAttr = true;
+    } else if (const auto *useDevice =
+                   std::get_if<Fortran::parser::AccClause::UseDevice>(
+                       &clause.u)) {
       genDataOperandOperations<mlir::acc::UseDeviceOp>(
           useDevice->v, converter, semanticsContext, stmtCtx, dataOperands,
           mlir::acc::DataClause::acc_use_device,
           /*structured=*/true, /*implicit=*/false, /*async=*/{},
           /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{},
           /*setDeclareAttr=*/false, &dataMap);
+    }
+  }
+
+  if (ifCond) {
+    if (auto cst =
+            mlir::dyn_cast<mlir::arith::ConstantOp>(ifCond.getDefiningOp())) {
+      if (auto boolAttr = mlir::dyn_cast<mlir::BoolAttr>(cst.getValue())) {
+        if (boolAttr.getValue()) // get rid of the if condition when true.
+          ifCond = mlir::Value();
+      }
     }
   }
 
@@ -4130,7 +4132,8 @@ void createOpenACCRoutineConstruct(
                                 workerDeviceTypes, vectorDeviceTypes) &&
           routineOp.getNohost() == hasNohost)
         return;
-      mlir::emitError(loc, "Routine already specified with different clauses");
+      fir::emitFatalError(loc,
+                          "Routine already specified with different clauses");
     }
   }
   std::stringstream routineOpName;
@@ -4430,9 +4433,10 @@ void Fortran::lower::attachDeclarePostAllocAction(
   fctName << converter.mangleName(sym) << declarePostAllocSuffix.str();
   mlir::Operation *op = &builder.getInsertionBlock()->back();
 
-  if (auto resOp = mlir::dyn_cast<fir::ResultOp>(*op)) {
-    assert(resOp.getOperands().size() == 0 &&
-           "expect only fir.result op with no operand");
+  if (op && op->hasTrait<mlir::OpTrait::IsTerminator>()) {
+    if (op->getNumOperands() != 0)
+      fir::emitFatalError(op->getLoc(),
+                          "expect only terminator op with no operand");
     op = op->getPrevNode();
   }
   assert(op && "expect operation to attach the post allocation action");
@@ -4503,9 +4507,10 @@ void Fortran::lower::attachDeclarePostDeallocAction(
   std::stringstream fctName;
   fctName << converter.mangleName(sym) << declarePostDeallocSuffix.str();
   mlir::Operation *op = &builder.getInsertionBlock()->back();
-  if (auto resOp = mlir::dyn_cast<fir::ResultOp>(*op)) {
-    assert(resOp.getOperands().size() == 0 &&
-           "expect only fir.result op with no operand");
+  if (op && op->hasTrait<mlir::OpTrait::IsTerminator>()) {
+    if (op->getNumOperands() != 0)
+      fir::emitFatalError(op->getLoc(),
+                          "expect only terminator op with no operand");
     op = op->getPrevNode();
   }
   assert(op && "expect operation to attach the post deallocation action");
