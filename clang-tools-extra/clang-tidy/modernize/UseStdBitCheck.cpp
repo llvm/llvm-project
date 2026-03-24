@@ -95,13 +95,12 @@ void UseStdBitCheck::registerMatchers(MatchFinder *Finder) {
 
   // Rotating an integer by a fixed amount
   Finder->addMatcher(
-      traverse(
-          TK_AsIs,
-          BitwiseOr(ShiftLeft(BindDeclRef("v"),
-                              integerLiteral().bind("shift_left_amount")),
-                    ShiftRight(BoundDeclRef("v"),
-                               integerLiteral().bind("shift_right_amount")))
-              .bind("rotate_expr")),
+      expr(BitwiseOr(ShiftLeft(BindDeclRef("v"),
+                               integerLiteral().bind("shift_left_amount")),
+                     ShiftRight(BoundDeclRef("v"),
+                                integerLiteral().bind("shift_right_amount"))),
+           optionally(hasParent(castExpr(hasType(isInteger())).bind("cast"))))
+          .bind("rotate_expr"),
       this);
 }
 
@@ -114,16 +113,6 @@ void UseStdBitCheck::registerPPCallbacks(const SourceManager &SM,
 void UseStdBitCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
   Options.store(Opts, "StrictMode", StrictMode);
-}
-
-static const Expr *getParentExprOrSelf(const Expr *E, ASTContext &Context) {
-  ParentMapContext &PMap = Context.getParentMapContext();
-  const DynTypedNodeList P = PMap.getParents(*E);
-  if (P.size() != 1)
-    return nullptr;
-
-  const Expr *ParentE = P[0].get<Expr>();
-  return ParentE ? ParentE : E;
 }
 
 void UseStdBitCheck::check(const MatchFinder::MatchResult &Result) {
@@ -172,12 +161,10 @@ void UseStdBitCheck::check(const MatchFinder::MatchResult &Result) {
                  Result.Nodes.getNodeAs<Expr>("rotate_expr")) {
     // Detect if the expression is an explicit cast. If that's the case we don't
     // need to insert a cast.
-    const Expr *ParentExprOrSelf = getParentExprOrSelf(MatchedExpr, Context);
+
     bool HasExplicitIntegerCast = false;
-    if (const auto *CE = dyn_cast<CastExpr>(ParentExprOrSelf)) {
-      HasExplicitIntegerCast =
-          CE->getType()->isIntegerType() && !isa<ImplicitCastExpr>(CE);
-    }
+    if (const Expr *CE = Result.Nodes.getNodeAs<CastExpr>("cast"))
+      HasExplicitIntegerCast = !isa<ImplicitCastExpr>(CE);
 
     const auto *MatchedVarDecl = Result.Nodes.getNodeAs<VarDecl>("v");
     const llvm::APInt ShiftLeftAmount =
@@ -197,7 +184,7 @@ void UseStdBitCheck::check(const MatchFinder::MatchResult &Result) {
     if (MatchedVarSize != (ShiftLeftAmount + ShiftRightAmount))
       return;
 
-    // Only insert cast if the operand is the result is not subject to cast and
+    // Only insert cast if the operand is not subject to cast and
     // some implicit promotion happened.
     const bool NeedsIntCast =
         StrictMode && !HasExplicitIntegerCast &&
@@ -210,19 +197,13 @@ void UseStdBitCheck::check(const MatchFinder::MatchResult &Result) {
     auto Diag = diag(MatchedExpr->getBeginLoc(), "use 'std::%0' instead")
                 << ReplacementFuncName;
     if (auto R = MatchedExpr->getSourceRange();
-        R.getBegin().isMacroID() && !R.getEnd().isMacroID())
+        R.getBegin().isMacroID() || R.getEnd().isMacroID())
       return;
-
-    const SourceLocation PreviousLocation =
-        MatchedExpr->getBeginLoc().getLocWithOffset(-1);
-    const bool NeedsSpace =
-        isAlphanumeric(*Source.getCharacterData(PreviousLocation));
 
     Diag << FixItHint::CreateReplacement(
                 MatchedExpr->getSourceRange(),
-                llvm::formatv("{3}{4}std::{0}({1}, {2}){5}",
-                              ReplacementFuncName, MatchedVarDecl->getName(),
-                              ReplacementShiftAmount, NeedsSpace ? " " : "",
+                llvm::formatv("{3}std::{0}({1}, {2}){4}", ReplacementFuncName,
+                              MatchedVarDecl->getName(), ReplacementShiftAmount,
                               NeedsIntCast ? "static_cast<int>(" : "",
                               NeedsIntCast ? ")" : "")
                     .str())

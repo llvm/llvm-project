@@ -29,6 +29,7 @@ Options
 
   .. code:: c++
 
+    // Return type is deduced as 'int' (not 'unsigned char') due to implicit conversions.
     auto foo(unsigned char x) {
       return x << 3 | x >> 5;
     }
