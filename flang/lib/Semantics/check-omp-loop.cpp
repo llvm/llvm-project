@@ -267,7 +267,6 @@ void OmpStructureChecker::CheckNestedConstruct(
   }
 
   LoopSequence sequence(body, version, true);
-
   auto assoc{llvm::omp::getDirectiveAssociation(dir)};
   auto needRange{GetAffectedLoopRangeWithReason(beginSpec, version)};
   auto haveLength{sequence.length()};

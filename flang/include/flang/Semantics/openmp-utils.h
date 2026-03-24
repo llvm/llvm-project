@@ -24,6 +24,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 
+#include <memory>
 #include <optional>
 #include <string>
 #include <tuple>
@@ -124,6 +125,7 @@ std::optional<bool> IsContiguous(
 std::vector<SomeExpr> GetTopLevelDesignators(const SomeExpr &expr);
 const SomeExpr *HasStorageOverlap(
     const SomeExpr &base, llvm::ArrayRef<SomeExpr> exprs);
+
 bool IsAssignment(const parser::ActionStmt *x);
 bool IsPointerAssignment(const evaluate::Assignment &x);
 
@@ -131,6 +133,21 @@ MaybeExpr MakeEvaluateExpr(const parser::OmpStylizedInstance &inp);
 
 bool IsLoopTransforming(llvm::omp::Directive dir);
 bool IsFullUnroll(const parser::OmpDirectiveSpecification &spec);
+
+struct LoopControl {
+  LoopControl(LoopControl &&x) = default;
+  LoopControl(const LoopControl &x) = default;
+  LoopControl(const parser::LoopControl::Bounds &x);
+  LoopControl(const parser::ConcurrentControl &x);
+
+  const Symbol *iv{nullptr};
+  WithSource<MaybeExpr> lbound, ubound, step;
+
+private:
+  static WithSource<MaybeExpr> fromParserExpr(const parser::Expr &x);
+};
+
+std::vector<LoopControl> GetLoopControls(const parser::DoConstruct &x);
 
 /// A representation of a "because" message.
 struct Reason {
@@ -221,6 +238,12 @@ struct LoopSequence {
 
   WithReason<bool> isWellFormedSequence() const;
   WithReason<bool> isWellFormedNest() const;
+
+  std::vector<LoopControl> getLoopControls() const;
+  // Check if this loop's bounds are invariant in each of the `outer`
+  // constructs.
+  WithReason<bool> isRectangular(
+      const std::vector<const LoopSequence *> &outer) const;
 
 private:
   using Construct = ExecutionPartIterator::Construct;
