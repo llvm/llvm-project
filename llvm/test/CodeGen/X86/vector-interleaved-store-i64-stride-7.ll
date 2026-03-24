@@ -6320,9 +6320,8 @@ define void @store_i64_stride7_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX-NEXT:    vmovaps 224(%rdx), %xmm1
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm5, %ymm5
 ; AVX-NEXT:    vshufpd {{.*#+}} ymm7 = ymm5[0],ymm6[1],ymm5[2],ymm6[2]
-; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX-NEXT:    vmovddup {{.*#+}} xmm5 = mem[0,0]
-; AVX-NEXT:    vblendps {{.*#+}} ymm5 = ymm0[0,1],ymm5[2,3],ymm0[4,5,6,7]
+; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm5, %ymm5
 ; AVX-NEXT:    vmovapd 224(%r8), %ymm3
 ; AVX-NEXT:    vinsertf128 $1, 224(%rax), %ymm3, %ymm6
 ; AVX-NEXT:    vblendps {{.*#+}} ymm6 = ymm6[0,1],ymm5[2,3],ymm6[4,5],ymm5[6,7]
@@ -13425,8 +13424,7 @@ define void @store_i64_stride7_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX-NEXT:    vmovupd %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; AVX-NEXT:    vmovaps 448(%rdi), %xmm4
-; AVX-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm3
-; AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm3[0,1],ymm0[2,3],ymm3[4,5,6,7]
+; AVX-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm0
 ; AVX-NEXT:    vmovapd 448(%r8), %ymm3
 ; AVX-NEXT:    vinsertf128 $1, 448(%rax), %ymm3, %ymm7
 ; AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm7[0,1],ymm0[2,3],ymm7[4,5],ymm0[6,7]
@@ -13443,9 +13441,8 @@ define void @store_i64_stride7_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX-NEXT:    vperm2f128 {{.*#+}} ymm7 = ymm10[2,3],ymm7[2,3]
 ; AVX-NEXT:    vblendpd {{.*#+}} ymm5 = ymm7[0],ymm5[1],ymm7[2],ymm5[3]
 ; AVX-NEXT:    vmovupd %ymm5, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX-NEXT:    vinsertf128 $1, %xmm6, %ymm0, %ymm5
-; AVX-NEXT:    vmovddup {{.*#+}} xmm6 = mem[0,0]
-; AVX-NEXT:    vblendps {{.*#+}} ymm5 = ymm5[0,1],ymm6[2,3],ymm5[4,5,6,7]
+; AVX-NEXT:    vmovddup {{.*#+}} xmm5 = mem[0,0]
+; AVX-NEXT:    vinsertf128 $1, %xmm6, %ymm5, %ymm5
 ; AVX-NEXT:    vmovapd 480(%r8), %ymm13
 ; AVX-NEXT:    vinsertf128 $1, 480(%rax), %ymm13, %ymm6
 ; AVX-NEXT:    vblendps {{.*#+}} ymm5 = ymm6[0,1],ymm5[2,3],ymm6[4,5],ymm5[6,7]

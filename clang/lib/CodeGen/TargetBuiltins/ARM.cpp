@@ -5022,20 +5022,15 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   }
 
   if (BuiltinID == clang::AArch64::BI_ReadStatusReg ||
-      BuiltinID == clang::AArch64::BI_WriteStatusReg ||
-      BuiltinID == clang::AArch64::BI__sys) {
+      BuiltinID == clang::AArch64::BI_WriteStatusReg) {
     LLVMContext &Context = CGM.getLLVMContext();
 
     unsigned SysReg =
       E->getArg(0)->EvaluateKnownConstInt(getContext()).getZExtValue();
 
     std::string SysRegStr;
-    unsigned SysRegOp0 = (BuiltinID == clang::AArch64::BI_ReadStatusReg ||
-                          BuiltinID == clang::AArch64::BI_WriteStatusReg)
-                             ? ((1 << 1) | ((SysReg >> 14) & 1))
-                             : 1;
     llvm::raw_string_ostream(SysRegStr)
-        << SysRegOp0 << ":" << ((SysReg >> 11) & 7) << ":"
+        << (0b10 | SysReg >> 14) << ":" << ((SysReg >> 11) & 7) << ":"
         << ((SysReg >> 7) & 15) << ":" << ((SysReg >> 3) & 15) << ":"
         << (SysReg & 7);
 
@@ -5055,12 +5050,26 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     llvm::Function *F = CGM.getIntrinsic(Intrinsic::write_register, Types);
     llvm::Value *ArgValue = EmitScalarExpr(E->getArg(1));
     llvm::Value *Result = Builder.CreateCall(F, {Metadata, ArgValue});
-    if (BuiltinID == clang::AArch64::BI__sys) {
-      // Return 0 for convenience, even though MSVC returns some other undefined
-      // value.
-      Result = ConstantInt::get(Builder.getInt32Ty(), 0);
-    }
+
     return Result;
+  }
+
+  if (BuiltinID == clang::AArch64::BI__sys) {
+    unsigned SysReg =
+        E->getArg(0)->EvaluateKnownConstInt(getContext()).getZExtValue();
+    const unsigned Op1 = SysReg >> 11;
+    const unsigned CRn = (SysReg >> 7) & 0xf;
+    const unsigned CRm = (SysReg >> 3) & 0xf;
+    const unsigned Op2 = SysReg & 0x7;
+
+    Builder.CreateCall(CGM.getIntrinsic(Intrinsic::aarch64_sys),
+                       {Builder.getInt32(Op1), Builder.getInt32(CRn),
+                        Builder.getInt32(CRm), Builder.getInt32(Op2),
+                        EmitScalarExpr(E->getArg(1))});
+
+    // Return 0 for convenience, even though MSVC returns some other undefined
+    // value.
+    return ConstantInt::get(Builder.getInt32Ty(), 0);
   }
 
   if (BuiltinID == clang::AArch64::BI_AddressOfReturnAddress) {

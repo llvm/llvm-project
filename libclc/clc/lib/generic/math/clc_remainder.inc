@@ -6,10 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_MATH_CLC_EP_LOG_H__
-#define __CLC_MATH_CLC_EP_LOG_H__
-
-#define __CLC_BODY "clc/math/clc_ep_log_decl.inc"
-#include "clc/math/gentype.inc"
-
-#endif // __CLC_MATH_CLC_EP_LOG_H__
+_CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_GENTYPE
+__clc_remainder(__CLC_GENTYPE x, __CLC_GENTYPE y) {
+  __CLC_INTN unused_quo;
+  return __clc_remquo(x, y, &unused_quo);
+}

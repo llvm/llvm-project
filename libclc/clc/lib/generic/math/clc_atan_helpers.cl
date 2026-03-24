@@ -6,11 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if __CLC_FPSIZE == 64
+#include "clc/math/clc_atan_helpers.h"
+#include "clc/math/clc_mad.h"
 
-_CLC_DECL _CLC_OVERLOAD void __clc_ep_log(__CLC_GENTYPE x,
-                                          private __CLC_INTN *xexp,
-                                          private __CLC_GENTYPE *r1,
-                                          private __CLC_GENTYPE *r2);
+#define __CLC_BODY "clc_atan_helpers.inc"
 
-#endif
+#include "clc/math/gentype.inc"

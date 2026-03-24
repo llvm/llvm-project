@@ -256,3 +256,13 @@ add_fp_unittest(
     libc.src.__support.math.tanpif
     libc.src.__support.math.tanpif16
 )
+
+add_fp_unittest(
+  shared_math_constexpr_test
+  SUITE
+    libc-shared-tests
+  SRCS
+    shared_math_constexpr_test.cpp
+  DEPENDS
+    .shared_math_test
+)

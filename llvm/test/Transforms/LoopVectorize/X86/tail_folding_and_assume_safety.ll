@@ -21,8 +21,8 @@ target triple = "x86_64-pc-linux-gnu"
 ;CHECK: call void @llvm.masked.store
 
 ; Function Attrs: nofree norecurse nounwind uwtable
-define dso_local void @fold_tail(ptr noalias nocapture %p, ptr noalias nocapture readonly %q1, ptr noalias nocapture readonly %q2,
-i32 %guard) local_unnamed_addr #0 {
+define void @fold_tail(ptr noalias nocapture %p, ptr noalias nocapture readonly %q1, ptr noalias nocapture readonly %q2,
+i32 %guard) #0 {
 entry:
   %0 = sext i32 %guard to i64
   br label %for.body
@@ -67,7 +67,7 @@ for.inc:
 ;CHECK:  call void @llvm.masked.store
 
 ; Function Attrs: norecurse nounwind uwtable
-define void @assume_safety(ptr nocapture, ptr nocapture readonly, ptr nocapture readonly, i32) local_unnamed_addr #0 {
+define void @assume_safety(ptr nocapture, ptr nocapture readonly, ptr nocapture readonly, i32) #0 {
   %5 = sext i32 %3 to i64
   br label %7
 
@@ -113,8 +113,8 @@ define void @assume_safety(ptr nocapture, ptr nocapture readonly, ptr nocapture 
 ;CHECK: call void @llvm.masked.store
 
 ; Function Attrs: nofree norecurse nounwind uwtable
-define dso_local void @fold_tail_and_assume_safety(ptr noalias nocapture %p, ptr noalias nocapture readonly %q1, ptr noalias nocapture readonly %q2,
-i32 %guard) local_unnamed_addr #0 {
+define void @fold_tail_and_assume_safety(ptr noalias nocapture %p, ptr noalias nocapture readonly %q1, ptr noalias nocapture readonly %q2,
+i32 %guard) #0 {
 entry:
   %0 = sext i32 %guard to i64
   br label %for.body

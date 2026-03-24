@@ -6,18 +6,5 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifdef cl_khr_fp64
-
-#include "clc/clc_convert.h"
-#include "clc/internal/clc.h"
-#include "clc/math/clc_ep_log.h"
-#include "clc/math/clc_fma.h"
-#include "clc/math/math.h"
-#include "clc/math/tables.h"
-
-#pragma OPENCL EXTENSION cl_khr_fp64 : enable
-
-#define __CLC_BODY "clc_ep_log.inc"
-#include "clc/math/gentype.inc"
-
-#endif
+_CLC_DECL _CLC_OVERLOAD _CLC_CONST __CLC_GENTYPE
+__clc_atan_reduced(__CLC_GENTYPE v);
