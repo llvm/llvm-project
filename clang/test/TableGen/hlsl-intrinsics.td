@@ -28,12 +28,19 @@ def test_01_basic_alias : HLSLBuiltin<"myfunc", "__builtin_myfunc"> {
 // ALIAS-NEXT: int2 myfunc(int2);
 // ALIAS-NEXT: _HLSL_BUILTIN_ALIAS(__builtin_myfunc)
 // ALIAS-NEXT: int3 myfunc(int3);
+//
+// ALIAS-NOT: half myfunc
+// ALIAS-NOT: uint myfunc
+// ALIAS-NOT: double myfunc
+//
 // ALIAS: _HLSL_BUILTIN_ALIAS(__builtin_myfunc)
 // ALIAS-NEXT: float myfunc(float);
 // ALIAS-NEXT: _HLSL_BUILTIN_ALIAS(__builtin_myfunc)
 // ALIAS-NEXT: float2 myfunc(float2);
 // ALIAS-NEXT: _HLSL_BUILTIN_ALIAS(__builtin_myfunc)
 // ALIAS-NEXT: float3 myfunc(float3);
+//
+// ALIAS-NOT: myfunc
 
 //===----------------------------------------------------------------------===//
 // VaryingElemType return: return type is scalar even for vector args.
@@ -53,6 +60,8 @@ def test_02_elem_return : HLSLBuiltin<"dotlike", "__builtin_dotlike"> {
 // ALIAS-NEXT: float dotlike(float, float);
 // ALIAS-NEXT: _HLSL_BUILTIN_ALIAS(__builtin_dotlike)
 // ALIAS-NEXT: float dotlike(float3, float3);
+//
+// ALIAS-NOT: dotlike
 
 //===----------------------------------------------------------------------===//
 // VaryingShape return: return shape matches arg shape but with a different
@@ -73,6 +82,8 @@ def test_03_shape_return : HLSLBuiltin<"isspecial", "__builtin_isspecial"> {
 // ALIAS-NEXT: bool isspecial(float);
 // ALIAS-NEXT: _HLSL_BUILTIN_ALIAS(__builtin_isspecial)
 // ALIAS-NEXT: bool2 isspecial(float2);
+//
+// ALIAS-NOT: isspecial
 
 //===----------------------------------------------------------------------===//
 // Fixed VectorType args and return: no Varying types at all.
@@ -87,6 +98,8 @@ def test_04_fixed_vector : HLSLBuiltin<"fixedfunc", "__builtin_fixedfunc"> {
 // ALIAS-LABEL: // fixedfunc overloads
 // ALIAS-NEXT: _HLSL_BUILTIN_ALIAS(__builtin_fixedfunc)
 // ALIAS-NEXT: float3 fixedfunc(float3, float3);
+//
+// ALIAS-NOT: fixedfunc
 
 //===----------------------------------------------------------------------===//
 // Matrix overloads.
@@ -103,6 +116,8 @@ def test_05_matrix : HLSLBuiltin<"matfunc", "__builtin_matfunc"> {
 // ALIAS-LABEL: // matfunc overloads
 // ALIAS-NEXT: _HLSL_BUILTIN_ALIAS(__builtin_matfunc)
 // ALIAS-NEXT: float2x3 matfunc(float2x3);
+//
+// ALIAS-NOT: matfunc(
 
 //===----------------------------------------------------------------------===//
 // Half type: conditionally-16-bit availability.
@@ -120,8 +135,14 @@ def test_06_half : HLSLBuiltin<"halffunc", "__builtin_halffunc"> {
 // ALIAS-NEXT: _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 // ALIAS-NEXT: _HLSL_BUILTIN_ALIAS(__builtin_halffunc)
 // ALIAS-NEXT: half halffunc(half);
+//
+// ALIAS-NOT: int halffunc
+// ALIAS-NOT: double halffunc
+//
 // ALIAS: _HLSL_BUILTIN_ALIAS(__builtin_halffunc)
 // ALIAS-NEXT: float halffunc(float);
+//
+// ALIAS-NOT: halffunc
 
 //===----------------------------------------------------------------------===//
 // 16-bit integer type: ifdef guard + availability.
@@ -142,8 +163,15 @@ def test_07_16bit : HLSLBuiltin<"i16func", "__builtin_i16func"> {
 // ALIAS-NEXT: _HLSL_BUILTIN_ALIAS(__builtin_i16func)
 // ALIAS-NEXT: int16_t i16func(int16_t);
 // ALIAS-NEXT: #endif
+//
+// ALIAS-NOT: half i16func
+// ALIAS-NOT: float i16func
+// ALIAS-NOT: double i16func
+//
 // ALIAS: _HLSL_BUILTIN_ALIAS(__builtin_i16func)
 // ALIAS-NEXT: int i16func(int);
+//
+// ALIAS-NOT: i16func
 
 //===----------------------------------------------------------------------===//
 // Explicit availability (>= SM6.2): half and int16_t both use
@@ -176,6 +204,8 @@ def test_08_avail_ge62 : HLSLBuiltin<"availfunc", "__builtin_availfunc"> {
 // ALIAS: _HLSL_AVAILABILITY(shadermodel, 6.4)
 // ALIAS-NEXT: _HLSL_BUILTIN_ALIAS(__builtin_availfunc)
 // ALIAS-NEXT: float availfunc(float);
+//
+// ALIAS-NOT: availfunc
 
 //===----------------------------------------------------------------------===//
 // Explicit availability (< SM6.2) with 16-bit integer types: the ifdef guard
@@ -204,6 +234,8 @@ def test_08b_avail_lt62 : HLSLBuiltin<"availlt62", "__builtin_availlt62"> {
 // ALIAS: _HLSL_AVAILABILITY(shadermodel, 6.1)
 // ALIAS-NEXT: _HLSL_BUILTIN_ALIAS(__builtin_availlt62)
 // ALIAS-NEXT: int availlt62(int);
+//
+// ALIAS-NOT: availlt62
 
 //===----------------------------------------------------------------------===//
 // Fixed half VectorType arg: conditionally-16-bit flag from fixed arg.
@@ -219,6 +251,8 @@ def test_09_fixed_half_vec : HLSLBuiltin<"fixedhalffunc", "__builtin_fixedhalffu
 // ALIAS-NEXT: _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 // ALIAS-NEXT: _HLSL_BUILTIN_ALIAS(__builtin_fixedhalffunc)
 // ALIAS-NEXT: float fixedhalffunc(half2, half2, float);
+//
+// ALIAS-NOT: fixedhalffunc
 
 //===----------------------------------------------------------------------===//
 // No-arg void function with convergent attribute.
@@ -232,6 +266,8 @@ def test_10_void_convergent : HLSLBuiltin<"barrier", "__builtin_barrier"> {
 // ALIAS-LABEL: // barrier overloads
 // ALIAS-NEXT: _HLSL_BUILTIN_ALIAS(__builtin_barrier)
 // ALIAS-NEXT: __attribute__((convergent)) void barrier();
+//
+// ALIAS-NOT: barrier
 
 //===----------------------------------------------------------------------===//
 // Inline body: constexpr function with literal body.
@@ -248,8 +284,11 @@ def test_11_inline_body : HLSLBuiltin<"inline_only_func"> {
   let IsConstexpr = 1;
 }
 
+// INLINE-NOT: _HLSL_BUILTIN_ALIAS
 // INLINE-LABEL: // inline_only_func overloads
 // INLINE-NEXT: constexpr uint inline_only_func(uint V) { return V; }
+//
+// INLINE-NOT: inline_only_func
 
 //===----------------------------------------------------------------------===//
 // Detail function: inline function calling __detail::helper.
@@ -274,6 +313,8 @@ def test_12_detail_func : HLSLBuiltin<"detailfunc"> {
 // INLINE-NEXT: inline float2 detailfunc(float2 A, float2 B, float C) {
 // INLINE-NEXT:   return __detail::detail_impl(A, B, C);
 // INLINE-NEXT: }
+//
+// INLINE-NOT: detailfunc
 
 //===----------------------------------------------------------------------===//
 // Doc comment emission.
@@ -292,6 +333,8 @@ def test_13_doc : HLSLBuiltin<"docfunc", "__builtin_docfunc"> {
 // ALIAS-NEXT: // docfunc overloads
 // ALIAS-NEXT: _HLSL_BUILTIN_ALIAS(__builtin_docfunc)
 // ALIAS-NEXT: void docfunc();
+//
+// ALIAS-NOT: docfunc
 
 //===----------------------------------------------------------------------===//
 // Canonical type sort order: types emitted in priority order regardless of
@@ -310,10 +353,16 @@ def test_14_sort_order : HLSLBuiltin<"sortedfunc", "__builtin_sortedfunc"> {
 // ALIAS-NEXT: _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 // ALIAS-NEXT: _HLSL_BUILTIN_ALIAS(__builtin_sortedfunc)
 // ALIAS-NEXT: half sortedfunc(half);
+//
+// ALIAS-NOT: double sortedfunc
+// ALIAS-NOT: uint sortedfunc
+//
 // ALIAS: _HLSL_BUILTIN_ALIAS(__builtin_sortedfunc)
 // ALIAS-NEXT: int sortedfunc(int);
 // ALIAS: _HLSL_BUILTIN_ALIAS(__builtin_sortedfunc)
 // ALIAS-NEXT: float sortedfunc(float);
+//
+// ALIAS-NOT: sortedfunc
 
 //===----------------------------------------------------------------------===//
 // Vector and matrix dimension sort order: vector sizes are emitted ascending
@@ -343,6 +392,8 @@ def test_15_shape_sort : HLSLBuiltin<"shapesorted", "__builtin_shapesorted"> {
 // ALIAS-NEXT: float2x3 shapesorted(float2x3);
 // ALIAS-NEXT: _HLSL_BUILTIN_ALIAS(__builtin_shapesorted)
 // ALIAS-NEXT: float3x2 shapesorted(float3x2);
+//
+// ALIAS-NOT: shapesorted
 
 //===----------------------------------------------------------------------===//
 // VaryingElemType as argument: arg is always the scalar element type even when
@@ -363,6 +414,8 @@ def test_16_elemtype_arg : HLSLBuiltin<"elemarg", "__builtin_elemarg"> {
 // ALIAS-NEXT: float elemarg(float, float);
 // ALIAS-NEXT: _HLSL_BUILTIN_ALIAS(__builtin_elemarg)
 // ALIAS-NEXT: float3 elemarg(float3, float);
+//
+// ALIAS-NOT: elemarg
 
 //===----------------------------------------------------------------------===//
 // VaryingShape as argument: arg uses the varying shape but with a fixed element
@@ -383,4 +436,34 @@ def test_17_shape_arg : HLSLBuiltin<"shapearg", "__builtin_shapearg"> {
 // ALIAS-NEXT: float shapearg(float, uint);
 // ALIAS-NEXT: _HLSL_BUILTIN_ALIAS(__builtin_shapearg)
 // ALIAS-NEXT: float2 shapearg(float2, uint2);
+//
+// ALIAS-NOT: shapearg
+
+//===----------------------------------------------------------------------===//
+// Verify no alias intrinsics are generated in the inline header.
+//===----------------------------------------------------------------------===//
+
+// INLINE-NOT: myfunc
+// INLINE-NOT: dotlike
+// INLINE-NOT: isspecial
+// INLINE-NOT: fixedfunc
+// INLINE-NOT: matfunc
+// INLINE-NOT: halffunc
+// INLINE-NOT: i16func
+// INLINE-NOT: availfunc
+// INLINE-NOT: availlt62
+// INLINE-NOT: fixedhalffunc
+// INLINE-NOT: barrier
+// INLINE-NOT: docfunc
+// INLINE-NOT: sortedfunc
+// INLINE-NOT: shapesorted
+// INLINE-NOT: elemarg
+// INLINE-NOT: shapearg
+
+//===----------------------------------------------------------------------===//
+// Verify no inline intrinsics are generated in the alias header.
+//===----------------------------------------------------------------------===//
+
+// ALIAS-NOT: inline_only_func
+// ALIAS-NOT: detailfunc
 
