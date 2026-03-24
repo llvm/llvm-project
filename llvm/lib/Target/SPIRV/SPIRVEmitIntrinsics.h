@@ -15,8 +15,7 @@ namespace llvm {
 
 class SPIRVTargetMachine;
 
-class SPIRVEmitIntrinsicsPass
-    : public PassInfoMixin<SPIRVEmitIntrinsicsPass> {
+class SPIRVEmitIntrinsicsPass : public PassInfoMixin<SPIRVEmitIntrinsicsPass> {
   SPIRVTargetMachine *TM;
 
 public:

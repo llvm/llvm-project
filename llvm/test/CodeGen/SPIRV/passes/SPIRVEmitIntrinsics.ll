@@ -3,7 +3,6 @@
 ;
 ; RUN: opt -S -passes=emit-intrinsics %s -mtriple=spirv64-unknown-unknown -o - | FileCheck %s
 
-
 define spir_kernel void @k() {
 ; CHECK-LABEL: define spir_kernel void @k() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
