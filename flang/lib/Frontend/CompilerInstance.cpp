@@ -310,11 +310,9 @@ getExplicitAndImplicitNVPTXTargetFeatures(clang::DiagnosticsEngine &diags,
   return llvm::join(featuresVec, ",");
 }
 
-static std::string
-getExplicitAndImplicitPPCTargetFeatures(clang::DiagnosticsEngine &diags,
-                                        const TargetOptions &targetOpts,
-                                        const llvm::Triple triple,
-                                        const CodeGenOptions &CGOpts) {
+static std::string getExplicitAndImplicitPPCTargetFeatures(
+    clang::DiagnosticsEngine &diags, const TargetOptions &targetOpts,
+    const llvm::Triple triple, const CodeGenOptions &CGOpts) {
   std::vector<std::string> featuresVec;
   std::optional<llvm::StringMap<bool>> FeaturesOpt =
       llvm::PPC::getPPCDefaultTargetFeatures(triple, targetOpts.cpu);
