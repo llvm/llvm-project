@@ -8218,6 +8218,7 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
   bool HasFSHR = isOperationLegal(ISD::FSHR, HiLoVT);
 
   auto GetFSHR = [&](SDValue Lo, SDValue Hi, unsigned ShiftAmt) {
+    assert(ShiftAmt > 0 && ShiftAmt < HBitWidth);
     if (HasFSHR)
       return DAG.getNode(ISD::FSHR, dl, HiLoVT, Hi, Lo,
                          DAG.getShiftAmountConstant(ShiftAmt, HiLoVT, dl));
@@ -8233,23 +8234,24 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
   // Shift the input by the number of TrailingZeros in the divisor. The
   // shifted out bits will be added to the remainder later.
   SDValue PartialRem;
-  if (TrailingZeros) {
+  if (TrailingZeros && Opcode != ISD::UDIV) {
     // Save the shifted off bits if we need the remainder.
-    if (Opcode != ISD::UDIV) {
-      APInt Mask = APInt::getLowBitsSet(HBitWidth, TrailingZeros);
-      PartialRem = DAG.getNode(ISD::AND, dl, HiLoVT, LL,
-                               DAG.getConstant(Mask, dl, HiLoVT));
-    }
-
-    LL = GetFSHR(LL, LH, TrailingZeros);
-    LH = DAG.getNode(ISD::SRL, dl, HiLoVT, LH,
-                     DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl));
+    APInt Mask = APInt::getLowBitsSet(HBitWidth, TrailingZeros);
+    PartialRem = DAG.getNode(ISD::AND, dl, HiLoVT, LL,
+                             DAG.getConstant(Mask, dl, HiLoVT));
   }
 
   SDValue Sum;
   // If BestChunkWidth is HBitWidth add low and high half. If there is a carry
   // out, add that to the final sum.
   if (BestChunkWidth == HBitWidth) {
+    // Shift LH:LL right if there were trailing zeros in the divisor.
+    if (TrailingZeros) {
+      LL = GetFSHR(LL, LH, TrailingZeros);
+      LH = DAG.getNode(ISD::SRL, dl, HiLoVT, LH,
+                       DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl));
+    }
+
     // Use uaddo_carry if we can, otherwise use a compare to detect overflow.
     EVT SetCCType =
         getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), HiLoVT);
@@ -8278,16 +8280,17 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
         APInt::getLowBitsSet(HBitWidth, BestChunkWidth), dl, HiLoVT);
 
     for (unsigned I = 0; I < BitWidth - TrailingZeros; I += BestChunkWidth) {
+      // If there were trailing zeros in the divisor, increase the shift amount.
+      unsigned Shift = I + TrailingZeros;
       SDValue Chunk;
-      if (I == 0)
+      if (Shift == 0)
         Chunk = LL;
-      else if (I >= HBitWidth)
-        Chunk =
-            DAG.getNode(ISD::SRL, dl, HiLoVT, LH,
-                        DAG.getShiftAmountConstant(I - HBitWidth, HiLoVT, dl));
+      else if (Shift >= HBitWidth)
+        Chunk = DAG.getNode(
+            ISD::SRL, dl, HiLoVT, LH,
+            DAG.getShiftAmountConstant(Shift - HBitWidth, HiLoVT, dl));
       else
-        Chunk = GetFSHR(LL, LH, I);
-
+        Chunk = GetFSHR(LL, LH, Shift);
       // If we're on the last chunk, we don't need an AND.
       if (I + BestChunkWidth < BitWidth - TrailingZeros)
         Chunk = DAG.getNode(ISD::AND, dl, HiLoVT, Chunk, Mask);
@@ -8305,6 +8308,13 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
   SDValue RemH = DAG.getConstant(0, dl, HiLoVT);
 
   if (Opcode != ISD::UREM) {
+    // If we didn't shift LH/LR earlier, do it now.
+    if (BestChunkWidth != HBitWidth && TrailingZeros) {
+      LL = GetFSHR(LL, LH, TrailingZeros);
+      LH = DAG.getNode(ISD::SRL, dl, HiLoVT, LH,
+                       DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl));
+    }
+
     // Subtract the remainder from the shifted dividend.
     SDValue Dividend = DAG.getNode(ISD::BUILD_PAIR, dl, VT, LL, LH);
     SDValue Rem = DAG.getNode(ISD::BUILD_PAIR, dl, VT, RemL, RemH);
@@ -8327,12 +8337,13 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
 
   if (Opcode != ISD::UDIV) {
     // If we shifted the input, shift the remainder left and add the bits we
-    // shifted off the input. This add does not overflow.
+    // shifted off the input.
     if (TrailingZeros) {
       RemL = DAG.getNode(ISD::SHL, dl, HiLoVT, RemL,
                          DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl));
 
-      RemL = DAG.getNode(ISD::ADD, dl, HiLoVT, RemL, PartialRem);
+      RemL = DAG.getNode(ISD::OR, dl, HiLoVT, RemL, PartialRem,
+                         SDNodeFlags::Disjoint);
     }
     Result.push_back(RemL);
     Result.push_back(RemH);
