@@ -3444,7 +3444,7 @@ bool SPIRVEmitIntrinsics::runOnModule(Module &M) {
   return Changed;
 }
 
-PreservedAnalyses 
+PreservedAnalyses
 llvm::SPIRVEmitIntrinsicsPass::run(Module &M, ModuleAnalysisManager &AM) {
   SPIRVEmitIntrinsics Legacy(TM);
   if (Legacy.runOnModule(M))
