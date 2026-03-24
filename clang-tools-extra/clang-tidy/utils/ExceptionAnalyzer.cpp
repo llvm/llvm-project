@@ -487,15 +487,14 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
       }
     }
 
-    CallStack.erase(Func);
     // Optionally treat unannotated functions as potentially throwing if they
     // are not explicitly non-throwing and no throw was discovered.
     if (AssumeUnannotatedFunctionsAsThrowing &&
         Result.getBehaviour() == State::NotThrowing && canThrow(Func)) {
-      CallStack.insert({Func, CallLoc});
       Result.registerUnknownException({Func->getLocation(), CallStack});
-      CallStack.erase(Func);
     }
+
+    CallStack.erase(Func);
     return Result;
   }
 
