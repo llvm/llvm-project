@@ -1408,6 +1408,22 @@ public:
   /// Add a symbol name to the SymbolStringPool and return a pointer to it.
   SymbolStringPtr intern(StringRef SymName) { return EPC->intern(SymName); }
 
+  /// Returns a reference to the bootstrap JITDylib.
+  ///
+  /// This is a bare JITDylib that is created for each ExecutionSession and
+  /// populated with the bootstrap symbol definitions provided by the
+  /// ExecutorProcessControl object.
+  JITDylib &getBootstrapJITDylib() { return BootstrapJD; }
+
+  /// Set a WaitingOnGraph::Recorder to capture WaitingOnGraph operations.
+  ///
+  /// This method can be called at most once. If called, it should be called
+  /// before any symbols are materialized.
+  void setWaitingOnGraphOpRecorder(WaitingOnGraph::OpRecorder &R) {
+    assert(!GOpRecorder && "WaitingOnGraph recorder already set");
+    GOpRecorder = &R;
+  }
+
   /// Set the Platform for this ExecutionSession.
   void setPlatform(std::unique_ptr<Platform> P) { this->P = std::move(P); }
 
@@ -1826,7 +1842,9 @@ private:
   std::vector<ResourceManager *> ResourceManagers;
 
   std::vector<JITDylibSP> JDs;
+  JITDylib &BootstrapJD;
   WaitingOnGraph G;
+  WaitingOnGraph::OpRecorder *GOpRecorder = nullptr;
 
   // FIXME: Remove this (and runOutstandingMUs) once the linking layer works
   //        with callbacks from asynchronous queries.

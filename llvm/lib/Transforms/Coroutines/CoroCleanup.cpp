@@ -225,6 +225,7 @@ void NoopCoroElider::visitCallBase(CallBase &CB) {
 void NoopCoroElider::visitIntrinsicInst(IntrinsicInst &II) {
   if (auto *SubFn = dyn_cast<CoroSubFnInst>(&II)) {
     auto *User = SubFn->getUniqueUndroppableUser();
+    assert(User && "Broken module");
     if (!tryEraseCallInvoke(cast<Instruction>(User)))
       return;
     SubFn->eraseFromParent();
@@ -242,6 +243,7 @@ bool NoopCoroElider::tryEraseCallInvoke(Instruction *I) {
     Builder.SetInsertPoint(II);
     Builder.CreateBr(II->getNormalDest());
     eraseFromWorklist(II);
+    II->getUnwindDest()->removePredecessor(II->getParent());
     II->eraseFromParent();
     return true;
   }

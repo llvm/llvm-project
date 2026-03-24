@@ -172,6 +172,9 @@ private:
   bool memrefIsDeviceData(Operation *memref) const;
 
   mlir::Attribute findCudaDataAttr(Value val) const;
+
+  Value materializeBoxAddressIfNeeded(Value basePtr, PatternRewriter &rewriter,
+                                      Location loc) const;
 };
 
 void FIRToMemRef::populateShapeAndShift(SmallVectorImpl<Value> &shapeVec,
@@ -251,6 +254,18 @@ mlir::Attribute FIRToMemRef::findCudaDataAttr(Value val) const {
   return nullptr;
 }
 
+Value FIRToMemRef::materializeBoxAddressIfNeeded(Value basePtr,
+                                                 PatternRewriter &rewriter,
+                                                 Location loc) const {
+  if (!isa<fir::BoxType>(basePtr.getType()))
+    return basePtr;
+
+  auto boxAddrOp = fir::BoxAddrOp::create(rewriter, loc, basePtr);
+  if (auto cudaAttr = findCudaDataAttr(basePtr))
+    boxAddrOp->setAttr(cuf::getDataAttrName(), cudaAttr);
+  return boxAddrOp.getResult();
+}
+
 void FIRToMemRef::populateShift(SmallVectorImpl<Value> &vec,
                                 fir::ShiftOp shift) const {
   vec.append(shift.getOrigins().begin(), shift.getOrigins().end());
@@ -315,6 +330,7 @@ void FIRToMemRef::rewriteAlloca(fir::AllocaOp firAlloca,
   copyAttribute(firAlloca, alloca, firAlloca.getBindcNameAttrName());
   copyAttribute(firAlloca, alloca, firAlloca.getUniqNameAttrName());
   copyAttribute(firAlloca, alloca, cuf::getDataAttrName());
+  copyAttribute(firAlloca, alloca, acc::getVarNameAttrName());
 
   auto convert = fir::ConvertOp::create(rewriter, loc, type, alloca);
 
@@ -428,8 +444,16 @@ FIRToMemRef::getMemrefIndices(fir::ArrayCoorOp arrayCoorOp, Operation *memref,
     Value stride = isSliced ? sliceStrides[i] : one;
     Value sliceLb = isSliced ? sliceLbs[i] : shift;
 
-    Value oneIdx = arith::ConstantIndexOp::create(rewriter, loc, 1);
-    Value indexAdjustment = isSliced ? oneIdx : sliceLb;
+    // When the array_coor has an explicit slice with a shape_shift (i.e.
+    // non-default lower bounds), the indices are Fortran indices; subtract
+    // the slice lower bound to get 0-based memref indices. Otherwise (the
+    // slice comes from an embox, or the shape has no shift), the indices
+    // are 1-based section indices; subtract 1.
+    bool indicesAreFortran = isShifted && arrayCoorOp.getSlice() != nullptr;
+    Value indexAdjustment =
+        (isSliced && !indicesAreFortran)
+            ? arith::ConstantIndexOp::create(rewriter, loc, 1)
+            : sliceLb;
     Value delta = arith::SubIOp::create(rewriter, loc, index, indexAdjustment);
 
     Value scaled = arith::MulIOp::create(rewriter, loc, delta, stride);
@@ -459,22 +483,23 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
   if (typeConverter.isEmptyArray(firMemref.getType()))
     return failure();
 
-  if (auto blockArg = dyn_cast<BlockArgument>(firMemref)) {
-    Value elemRef = arrayCoorOp.getResult();
-    rewriter.setInsertionPointAfter(arrayCoorOp);
-    Location loc = arrayCoorOp->getLoc();
-    Type elemMemrefTy = typeConverter.convertMemrefType(elemRef.getType());
-    Value converted =
-        fir::ConvertOp::create(rewriter, loc, elemMemrefTy, elemRef);
-    SmallVector<Value> indices;
-    return std::pair{converted, indices};
-  }
+  Location loc = arrayCoorOp->getLoc();
 
-  Operation *memref = firMemref.getDefiningOp();
-
+  // Prefer lowering the array-coordinates computation to a memref + indices.
+  // This allows erasing fir.array_coor when it is only used by load/store even
+  // if the base address is a block argument (e.g. region arguments).
+  Operation *memref = nullptr;
   FailureOr<Value> converted;
-  if (enableFIRConvertOptimizations && isMarshalLike(memref) &&
-      !fir::isa_fir_type(firMemref.getType())) {
+  if (auto blockArg = dyn_cast<BlockArgument>(firMemref)) {
+    rewriter.setInsertionPoint(arrayCoorOp);
+    Value basePtr = materializeBoxAddressIfNeeded(blockArg, rewriter, loc);
+    Type memrefTy = typeConverter.convertMemrefType(basePtr.getType());
+    converted =
+        fir::ConvertOp::create(rewriter, loc, memrefTy, basePtr).getResult();
+    rewriter.setInsertionPointAfter(arrayCoorOp);
+  } else if ((memref = firMemref.getDefiningOp()) &&
+             enableFIRConvertOptimizations && isMarshalLike(memref) &&
+             !fir::isa_fir_type(firMemref.getType())) {
     converted = firMemref;
     rewriter.setInsertionPoint(arrayCoorOp);
   } else {
@@ -504,7 +529,6 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
     rewriter.setInsertionPointAfter(arrayCoorOp);
   }
 
-  Location loc = arrayCoorOp->getLoc();
   Value one = arith::ConstantIndexOp::create(rewriter, loc, 1);
   FailureOr<SmallVector<Value>> failureOrIndices =
       getMemrefIndices(arrayCoorOp, memref, rewriter, *converted, one);
@@ -640,12 +664,7 @@ FIRToMemRef::getFIRConvert(Operation *memOp, Operation *op,
 
   if (isa<fir::BoxType>(basePtr.getType())) {
     Operation *baseOp = basePtr.getDefiningOp();
-    auto boxAddrOp = fir::BoxAddrOp::create(rewriter, loc, basePtr);
-
-    if (auto cudaAttr = findCudaDataAttr(basePtr))
-      boxAddrOp->setAttr(cuf::getDataAttrName(), cudaAttr);
-
-    basePtr = boxAddrOp;
+    basePtr = materializeBoxAddressIfNeeded(basePtr, rewriter, loc);
     memrefTy = typeConverter.convertMemrefType(basePtr.getType());
 
     if (baseOp) {

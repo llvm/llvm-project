@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 class CustomRivosVXI<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
-                string opcodestr, string argstr>
+                     string opcodestr, string argstr>
     : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
   bits<5> imm;
   bits<5> rs1;
@@ -27,7 +27,7 @@ class CustomRivosVXI<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
   let Inst{6-0} = OPC_CUSTOM_2.Value;
 
   let Uses = [VL, VTYPE];
-  let RVVConstraint = NoConstraint;
+  let VMConstraint = false;
   let Constraints = "$vd = $vd_wb";
 
   let UseNamedOperandTable = true;
@@ -50,7 +50,7 @@ class CustomRivosXVI<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
   let Inst{6-0} = OPC_CUSTOM_2.Value;
 
   let Uses = [VL, VTYPE];
-  let RVVConstraint = NoConstraint;
+  let VMConstraint = false;
 
   let UseNamedOperandTable = true;
 }
@@ -61,8 +61,9 @@ class CustomRivosXVI<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
 
 
 let Predicates = [HasVendorXRivosVizip], DecoderNamespace = "XRivos",
-  Constraints = "@earlyclobber $vd", RVVConstraint = Vrgather,
-  Inst<6-0> = OPC_CUSTOM_2.Value, ReadsPastVL = 1 in  {
+  Constraints = "@earlyclobber $vd", VS1VS2Constraint = Vrgather,
+  Inst{6-0} = OPC_CUSTOM_2.Value, ReadsPastVL = 1,
+  ElementsDependOn = EltDepsNone in  {
 defm RI_VZIPEVEN_V : VALU_IV_V<"ri.vzipeven", 0b001100>;
 defm RI_VZIPODD_V : VALU_IV_V<"ri.vzipodd", 0b011100>;
 defm RI_VZIP2A_V : VALU_IV_V<"ri.vzip2a", 0b000100>;
@@ -87,7 +88,7 @@ multiclass RIVPseudoVALU_VV {
 }
 
 let Predicates = [HasVendorXRivosVizip],
-  Constraints = "@earlyclobber $rd, $rd = $passthru" in {
+    Constraints = "@earlyclobber $rd, $rd = $passthru" in {
 defm PseudoRI_VZIPEVEN   : RIVPseudoVALU_VV;
 defm PseudoRI_VZIPODD   : RIVPseudoVALU_VV;
 defm PseudoRI_VZIP2A   : RIVPseudoVALU_VV;
@@ -119,7 +120,8 @@ defm : RIVPatBinaryVL_VV<ri_vunzip2b_vl, "PseudoRI_VUNZIP2B">;
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasVendorXRivosVisni], DecoderNamespace = "XRivos",
-  mayLoad = false, mayStore = false, hasSideEffects = false in {
+  mayLoad = false, mayStore = false, hasSideEffects = false,
+  ElementsDependOn = EltDepsNone in {
 
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in
 def RI_VZERO : RVInstVUnary<0b000000, 0b00000, OPCFG, (outs VR:$vd),
@@ -129,7 +131,7 @@ def RI_VZERO : RVInstVUnary<0b000000, 0b00000, OPCFG, (outs VR:$vd),
 
   let Inst{6-0} = OPC_CUSTOM_2.Value;
 
-  let RVVConstraint = NoConstraint;
+  let VMConstraint = false;
 }
 
 def RI_VINSERT : CustomRivosVXI<0b010000, OPMVX, (outs VR:$vd_wb),

@@ -1643,7 +1643,7 @@ bool X86FastISel::X86SelectSExt(const Instruction *I) {
 bool X86FastISel::X86SelectBranch(const Instruction *I) {
   // Unconditional branches are selected by tablegen-generated code.
   // Handle a conditional branch.
-  const BranchInst *BI = cast<BranchInst>(I);
+  const CondBrInst *BI = cast<CondBrInst>(I);
   MachineBasicBlock *TrueMBB = FuncInfo.getMBB(BI->getSuccessor(0));
   MachineBasicBlock *FalseMBB = FuncInfo.getMBB(BI->getSuccessor(1));
 
@@ -3200,6 +3200,28 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   bool Is64Bit        = Subtarget->is64Bit();
   bool IsWin64        = Subtarget->isCallingConvWin64(CC);
 
+  // If the return type is illegal, check if the ABI requires a type conversion
+  // that FastISel cannot handle. Fall back to DAG ISel in such cases.
+  // For example, bfloat is returned as f16 in XMM0, however FastISel would
+  // assign f32 register type and store it in FuncInfo.ValueMap. This would
+  // cause DAG incorrectly perform type conversion from f32 to bfloat after get
+  // the value from FuncInfo.ValueMap.
+  // However, i1 is promoted to i8 and return i8 defined by ABI, so FastISel can
+  // lower it without switching to DAGISel.
+  MVT RetVT = MVT::Other;
+  if (!isTypeLegal(CLI.RetTy, RetVT) && !CLI.RetTy->isVoidTy()) {
+    if (RetVT == MVT::Other)
+      return false; // Unknown type, let DAG ISel handle it.
+
+    // RetVT is not MVT::Other, it must be simple now. It is something rely on
+    // the logic of isTypeLegal().
+    MVT ABIVT = TLI.getRegisterTypeForCallingConv(CLI.RetTy->getContext(),
+                                                  CLI.CallConv, RetVT);
+    MVT RegVT = TLI.getRegisterType(CLI.RetTy->getContext(), RetVT);
+    if (ABIVT != RegVT)
+      return false;
+  }
+
   // Call / invoke instructions with NoCfCheck attribute require special
   // handling.
   if (CB && CB->doesNoCfCheck())
@@ -3645,7 +3667,7 @@ X86FastISel::fastSelectInstruction(const Instruction *I)  {
     return X86SelectZExt(I);
   case Instruction::SExt:
     return X86SelectSExt(I);
-  case Instruction::Br:
+  case Instruction::CondBr:
     return X86SelectBranch(I);
   case Instruction::LShr:
   case Instruction::AShr:

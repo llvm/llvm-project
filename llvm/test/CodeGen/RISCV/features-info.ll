@@ -6,13 +6,8 @@
 ; CHECK-NEXT:   32bit                            - Implements RV32.
 ; CHECK-NEXT:   64bit                            - Implements RV64.
 ; CHECK-NEXT:   a                                - 'A' (Atomic Instructions).
-; CHECK-NEXT:   add-load-fusion                  - Enable ADD(.UW) + load macrofusion.
-; CHECK-NEXT:   addi-load-fusion                 - Enable ADDI + load macrofusion.
 ; CHECK-NEXT:   andes45                          - Andes 45-Series processors.
-; CHECK-NEXT:   auipc-addi-fusion                - Enable AUIPC+ADDI macrofusion.
-; CHECK-NEXT:   auipc-load-fusion                - Enable AUIPC + load macrofusion.
 ; CHECK-NEXT:   b                                - 'B' (the collection of the Zba, Zbb, Zbs extensions).
-; CHECK-NEXT:   bfext-fusion                     - Enable SLLI+SRLI (bitfield extract) macrofusion.
 ; CHECK-NEXT:   c                                - 'C' (Compressed Instructions).
 ; CHECK-NEXT:   conditional-cmv-fusion           - Enable branch+c.mv fusion.
 ; CHECK-NEXT:   d                                - 'D' (Double-Precision Floating-Point).
@@ -41,24 +36,34 @@
 ; CHECK-NEXT:   experimental-zicfiss             - 'Zicfiss' (Shadow stack).
 ; CHECK-NEXT:   experimental-zvabd               - 'Zvabd' (Vector Absolute Difference).
 ; CHECK-NEXT:   experimental-zvbc32e             - 'Zvbc32e' (Vector Carryless Multiplication with 32-bits elements).
+; CHECK-NEXT:   experimental-zvdot4a8i           - 'Zvdot4a8i' (Vector 4-element Dot Product of packed 8-bit Integers).
 ; CHECK-NEXT:   experimental-zvfbfa              - 'Zvfbfa' (Additional BF16 vector compute support).
 ; CHECK-NEXT:   experimental-zvfofp8min          - 'Zvfofp8min' (Vector OFP8 Converts).
 ; CHECK-NEXT:   experimental-zvkgs               - 'Zvkgs' (Vector-Scalar GCM instructions for Cryptography).
-; CHECK-NEXT:   experimental-zvqdotq             - 'Zvqdotq' (Vector quad widening 4D Dot Product).
+; CHECK-NEXT:   experimental-zvzip               - 'Zvzip' (Vector Reordering Structured Data). 
 ; CHECK-NEXT:   f                                - 'F' (Single-Precision Floating-Point).
 ; CHECK-NEXT:   forced-atomics                   - Assume that lock-free native-width atomics are available.
+; CHECK-NEXT:   fusion-add-load                  - Enable ADD(.UW) + load macrofusion.
 ; CHECK-NEXT:   fusion-add-mem                   - Enable ADD+LOAD/STORE macrofusion.
+; CHECK-NEXT:   fusion-addi-load                 - Enable ADDI + load macrofusion.
+; CHECK-NEXT:   fusion-auipc-addi                - Enable AUIPC+ADDI macrofusion.
+; CHECK-NEXT:   fusion-auipc-load                - Enable AUIPC + load macrofusion.
+; CHECK-NEXT:   fusion-bfext                     - Enable SLLI+SRLI (bitfield extract) macrofusion.
+; CHECK-NEXT:   fusion-ld-add                    - Enable LD+ADD macrofusion.
 ; CHECK-NEXT:   fusion-logic-imm-reg             - Enable ANDI/ORI/XORI+AND/OR/XOR macrofusion.
 ; CHECK-NEXT:   fusion-logic-reg-imm             - Enable AND/OR/XOR+ANDI/ORI/XORI macrofusion.
 ; CHECK-NEXT:   fusion-logic-reg-reg             - Enable AND/OR/XOR+AND/OR/XOR macrofusion.
+; CHECK-NEXT:   fusion-lui-addi                  - Enable LUI+ADDI macro fusion.
+; CHECK-NEXT:   fusion-lui-load                  - Enable LUI + load macrofusion.
 ; CHECK-NEXT:   fusion-mul-add                   - Enable MUL+ADD macrofusion.
 ; CHECK-NEXT:   fusion-shift-bit-extract         - Enable SLLI+SRLI/SRAI macrofusion.
+; CHECK-NEXT:   fusion-shifted-zextw             - Enable SLLI+SRLI to be fused when computing (shifted) word zero extension.
+; CHECK-NEXT:   fusion-shxadd-load               - Enable SH(1|2|3)ADD(.UW) + load macrofusion.
+; CHECK-NEXT:   fusion-zexth                     - Enable SLLI+SRLI to be fused to zero extension of halfword.
+; CHECK-NEXT:   fusion-zextw                     - Enable SLLI+SRLI to be fused to zero extension of word.
 ; CHECK-NEXT:   h                                - 'H' (Hypervisor).
 ; CHECK-NEXT:   i                                - 'I' (Base Integer Instruction Set).
-; CHECK-NEXT:   ld-add-fusion                    - Enable LD+ADD macrofusion.
 ; CHECK-NEXT:   log-vrgather                     - Has vrgather.vv with LMUL*log2(LMUL) latency
-; CHECK-NEXT:   lui-addi-fusion                  - Enable LUI+ADDI macro fusion.
-; CHECK-NEXT:   lui-load-fusion                  - Enable LUI + load macrofusion.
 ; CHECK-NEXT:   m                                - 'M' (Integer Multiplication and Division).
 ; CHECK-NEXT:   mips-p8700                       - MIPS p8700 processor.
 ; CHECK-NEXT:   no-default-unroll                - Disable default unroll preference..
@@ -125,17 +130,16 @@
 ; CHECK-NEXT:   sha                              - 'Sha' (Augmented Hypervisor).
 ; CHECK-NEXT:   shcounterenw                     - 'Shcounterenw' (Support writeable hcounteren enable bit for any hpmcounter that is not read-only zero).
 ; CHECK-NEXT:   shgatpa                          - 'Shgatpa' (SvNNx4 mode supported for all modes supported by satp, as well as Bare).
-; CHECK-NEXT:   shifted-zextw-fusion             - Enable SLLI+SRLI to be fused when computing (shifted) word zero extension.
 ; CHECK-NEXT:   shlcofideleg                     - 'Shlcofideleg' (Delegating LCOFI Interrupts to VS-mode).
 ; CHECK-NEXT:   short-forward-branch-ialu        - Enable short forward branch optimization for RVI base instructions.
 ; CHECK-NEXT:   short-forward-branch-iload       - Enable short forward branch optimization for load instructions.
 ; CHECK-NEXT:   short-forward-branch-iminmax     - Enable short forward branch optimization for MIN,MAX instructions in Zbb.
+; CHECK-NEXT:   short-forward-branch-imm         - Enable short forward branch optimization for branches with immediates.
 ; CHECK-NEXT:   short-forward-branch-imul        - Enable short forward branch optimization for MUL instruction.
 ; CHECK-NEXT:   shtvala                          - 'Shtvala' (htval provides all needed values).
 ; CHECK-NEXT:   shvsatpa                         - 'Shvsatpa' (vsatp supports all modes supported by satp).
 ; CHECK-NEXT:   shvstvala                        - 'Shvstvala' (vstval provides all needed values).
 ; CHECK-NEXT:   shvstvecd                        - 'Shvstvecd' (vstvec supports Direct mode).
-; CHECK-NEXT:   shxadd-load-fusion               - Enable SH(1|2|3)ADD(.UW) + load macrofusion.
 ; CHECK-NEXT:   sifive7                          - SiFive 7-Series processors.
 ; CHECK-NEXT:   single-element-vec-fp64          - Certain vector FP64 operations produce a single result element per cycle.
 ; CHECK-NEXT:   smaia                            - 'Smaia' (Advanced Interrupt Architecture Machine Level).
@@ -200,7 +204,7 @@
 ; CHECK-NEXT:   xcvsimd                          - 'XCVsimd' (CORE-V SIMD ALU).
 ; CHECK-NEXT:   xmipscbop                        - 'XMIPSCBOP' (MIPS Software Prefetch).
 ; CHECK-NEXT:   xmipscmov                        - 'XMIPSCMov' (MIPS conditional move instruction (mips.ccmov)).
-; CHECK-NEXT:   mipsexectl                       - 'XMIPSEXECTL' (MIPS execution control).
+; CHECK-NEXT:   xmipsexectl                      - 'XMIPSEXECTL' (MIPS execution control).
 ; CHECK-NEXT:   xmipslsp                         - 'XMIPSLSP' (MIPS optimization for hardware load-store bonding).
 ; CHECK-NEXT:   xqccmp                           - 'Xqccmp' (Qualcomm 16-bit Push/Pop and Double Moves).
 ; CHECK-NEXT:   xqci                             - 'Xqci' (Qualcomm uC Extension).
@@ -286,8 +290,6 @@
 ; CHECK-NEXT:   zcmp                             - 'Zcmp' (sequenced instructions for code-size reduction).
 ; CHECK-NEXT:   zcmt                             - 'Zcmt' (table jump instructions for code-size reduction).
 ; CHECK-NEXT:   zdinx                            - 'Zdinx' (Double in Integer).
-; CHECK-NEXT:   zexth-fusion                     - Enable SLLI+SRLI to be fused to zero extension of halfword.
-; CHECK-NEXT:   zextw-fusion                     - Enable SLLI+SRLI to be fused to zero extension of word.
 ; CHECK-NEXT:   zfa                              - 'Zfa' (Additional Floating-Point).
 ; CHECK-NEXT:   zfbfmin                          - 'Zfbfmin' (Scalar BF16 Converts).
 ; CHECK-NEXT:   zfh                              - 'Zfh' (Half-Precision Floating-Point).

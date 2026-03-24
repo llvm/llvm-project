@@ -52,17 +52,6 @@ llvm.func @distribute_order(%lb : i32, %ub : i32, %step : i32) {
 
 // -----
 
-llvm.func @ordered_region_par_level_simd() {
-  // expected-error@below {{not yet implemented: Unhandled clause parallelization-level in omp.ordered.region operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.ordered.region}}
-  omp.ordered.region par_level_simd {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
 llvm.func @parallel_allocate(%x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause allocate in omp.parallel operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.parallel}}
@@ -470,16 +459,6 @@ llvm.func @wsloop_order(%lb : i32, %ub : i32, %step : i32) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
       omp.yield
     }
-  }
-  llvm.return
-}
-
-// -----
-llvm.func @task_affinity(%x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause affinity in omp.task operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.task}}
-  omp.task affinity(%x : !llvm.ptr) {
-    omp.terminator
   }
   llvm.return
 }

@@ -1258,6 +1258,7 @@ llvm::Constant *ItaniumCXXABI::EmitMemberPointer(const APValue &MP,
     return pointerAuthResignMemberFunctionPointer(Src, MPType, SrcType, CGM);
   }
 
+  getContext().recordMemberDataPointerEvaluation(MPD);
   CharUnits FieldOffset =
     getContext().toCharUnitsFromBits(getContext().getFieldOffset(MPD));
   return EmitMemberDataPointer(MPT, ThisAdjustment + FieldOffset);
@@ -2273,6 +2274,24 @@ CGCallee ItaniumCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
   auto *MethodDecl = cast<CXXMethodDecl>(GD.getDecl());
   llvm::Value *VTable = CGF.GetVTablePtr(This, PtrTy, MethodDecl->getParent());
 
+  // For the translation of virtual functions, we need to map the (potential)
+  // host vtable to the device vtable. This is done by calling the runtime
+  // function
+  // __llvm_omp_indirect_call_lookup.
+  if (CGM.getLangOpts().OpenMPIsTargetDevice) {
+    auto *NewPtrTy = CGM.VoidPtrTy;
+    llvm::Type *RtlFnArgs[] = {NewPtrTy};
+    llvm::FunctionCallee DeviceRtlFn = CGM.CreateRuntimeFunction(
+        llvm::FunctionType::get(NewPtrTy, RtlFnArgs, false),
+        "__llvm_omp_indirect_call_lookup");
+    auto *BackupTy = VTable->getType();
+    // Need to convert to generic address space
+    VTable = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(VTable, NewPtrTy);
+    VTable = CGF.EmitRuntimeCall(DeviceRtlFn, {VTable});
+    // convert to original address space
+    VTable = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(VTable, BackupTy);
+  }
+
   uint64_t VTableIndex = CGM.getItaniumVTableContext().getMethodVTableIndex(GD);
   llvm::Value *VFunc, *VTableSlotPtr = nullptr;
   auto &Schema = CGM.getCodeGenOpts().PointerAuth.CXXVirtualFunctionPointers;
@@ -2960,8 +2979,12 @@ static void emitGlobalDtorWithCXAAtExit(CodeGenFunction &CGF,
       /*IsVariadic=*/false, /*IsCXXMethod=*/false));
   QualType fnType =
       Context.getFunctionType(Context.VoidTy, {Context.VoidPtrTy}, EPI);
-  llvm::Constant *dtorCallee = cast<llvm::Constant>(dtor.getCallee());
-  dtorCallee = CGF.CGM.getFunctionPointer(dtorCallee, fnType);
+  llvm::Value *dtorCallee = dtor.getCallee();
+  dtorCallee =
+      CGF.CGM.getFunctionPointer(cast<llvm::Constant>(dtorCallee), fnType);
+
+  if (dtorCallee->getType()->getPointerAddressSpace() != AddrAS)
+    dtorCallee = CGF.performAddrSpaceCast(dtorCallee, AddrPtrTy);
 
   if (!addr)
     // addr is null when we are trying to register a dtor annotated with
@@ -3480,6 +3503,10 @@ ItaniumCXXABI::getOrCreateVirtualFunctionPointerThunk(const CXXMethodDecl *MD) {
 
   CGF.StartFunction(GlobalDecl(), FnInfo.getReturnType(), ThunkFn, FnInfo,
                     FunctionArgs, MD->getLocation(), SourceLocation());
+
+  // Emit an artificial location for this function.
+  auto AL = ApplyDebugLocation::CreateArtificial(CGF);
+
   llvm::Value *ThisVal = loadIncomingCXXThis(CGF);
   setCXXABIThisValue(CGF, ThisVal);
 
@@ -3972,6 +3999,7 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty,
 
   case Type::Builtin:
   case Type::BitInt:
+  case Type::OverflowBehavior:
   // GCC treats vector and complex types as fundamental types.
   case Type::Vector:
   case Type::ExtVector:
@@ -4323,6 +4351,9 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
 
   case Type::Atomic:
     // No fields, at least for the moment.
+    break;
+
+  case Type::OverflowBehavior:
     break;
 
   case Type::HLSLAttributedResource:

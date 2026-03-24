@@ -42,6 +42,10 @@ clang_tablegen(DiagnosticIndexName.inc -gen-clang-diags-index-name
   SOURCE Diagnostic.td
   TARGET ClangDiagnosticIndexName)
 
+clang_tablegen(DiagnosticStableIDs.inc -gen-clang-diags-stable-ids
+  SOURCE Diagnostic.td
+  TARGET ClangDiagnosticStableIDs)
+
 clang_tablegen(DiagnosticAllCompatIDs.inc
   -gen-clang-diags-compat-ids
   SOURCE Diagnostic.td

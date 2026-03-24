@@ -303,18 +303,6 @@ declare void @align_decl() align 64
 
 ; // -----
 
-; CHECK-LABEL: @func_attr_no_nans_fp_math_true
-; CHECK-SAME: attributes {no_nans_fp_math = true}
-declare void @func_attr_no_nans_fp_math_true() "no-nans-fp-math"="true"
-
-; // -----
-
-; CHECK-LABEL: @func_attr_no_nans_fp_math_false
-; CHECK-SAME: attributes {no_nans_fp_math = false}
-declare void @func_attr_no_nans_fp_math_false() "no-nans-fp-math"="false"
-
-; // -----
-
 ; CHECK-LABEL: @func_attr_no_signed_zeros_fp_math_true
 ; CHECK-SAME: attributes {no_signed_zeros_fp_math = true}
 declare void @func_attr_no_signed_zeros_fp_math_true() "no-signed-zeros-fp-math"="true"

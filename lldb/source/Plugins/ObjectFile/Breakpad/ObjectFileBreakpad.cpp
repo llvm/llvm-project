@@ -70,7 +70,7 @@ ObjectFile *ObjectFileBreakpad::CreateInstance(const ModuleSP &module_sp,
     extractor_sp = std::make_shared<DataExtractor>(data_sp);
     data_offset = 0;
   }
-  // If this is opearting on a VirtualDataExtractor, it can have
+  // If this is operating on a VirtualDataExtractor, it can have
   // gaps between valid bytes in the DataBuffer. We extract an
   // ArrayRef of the raw bytes, and can segfault.
   DataExtractorSP contiguous_extractor_sp =

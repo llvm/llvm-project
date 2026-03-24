@@ -9,6 +9,7 @@ Navigate to the links below for information on the respective topics:
 .. toctree::
    :maxdepth: 1
 
+   building_docs
    code_style
    source_tree_layout
    entrypoints
@@ -20,3 +21,5 @@ Navigate to the links below for information on the respective topics:
    implementation_standard
    undefined_behavior
    printf_behavior
+   syscall_wrapper_refactor
+   modular_format

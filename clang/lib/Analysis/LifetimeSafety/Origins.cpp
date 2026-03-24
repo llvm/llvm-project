@@ -51,7 +51,19 @@ private:
 } // namespace
 
 bool hasOrigins(QualType QT) {
-  return QT->isPointerOrReferenceType() || isGslPointerType(QT);
+  if (QT->isPointerOrReferenceType() || isGslPointerType(QT))
+    return true;
+  const auto *RD = QT->getAsCXXRecordDecl();
+  if (!RD)
+    return false;
+  // TODO: Limit to lambdas for now. This will be extended to user-defined
+  // structs with pointer-like fields.
+  if (!RD->isLambda())
+    return false;
+  for (const auto *FD : RD->fields())
+    if (hasOrigins(FD->getType()))
+      return true;
+  return false;
 }
 
 /// Determines if an expression has origins that need to be tracked.
@@ -88,9 +100,15 @@ bool doesDeclHaveStorage(const ValueDecl *D) {
 }
 
 OriginManager::OriginManager(ASTContext &AST, const Decl *D) : AST(AST) {
-  if (const auto *MD = llvm::dyn_cast_or_null<CXXMethodDecl>(D);
-      MD && MD->isInstance())
-    ThisOrigins = buildListForType(MD->getThisType(), MD);
+  // Create OriginList for 'this' expr.
+  const auto *MD = llvm::dyn_cast_or_null<CXXMethodDecl>(D);
+  if (!MD || !MD->isInstance())
+    return;
+  // Lambdas can capture 'this' from the surrounding context, but in that case
+  // 'this' does not refer to the lambda object itself.
+  if (const CXXRecordDecl *P = MD->getParent(); P && P->isLambda())
+    return;
+  ThisOrigins = buildListForType(MD->getThisType(), MD);
 }
 
 OriginList *OriginManager::createNode(const ValueDecl *D, QualType QT) {
@@ -146,10 +164,8 @@ OriginList *OriginManager::getOrCreateList(const Expr *E) {
   QualType Type = E->getType();
   // Special handling for 'this' expressions to share origins with the method's
   // implicit object parameter.
-  if (llvm::isa<CXXThisExpr>(E)) {
-    assert(ThisOrigins && "origins for 'this' should be set for a method decl");
+  if (isa<CXXThisExpr>(E) && ThisOrigins)
     return *ThisOrigins;
-  }
 
   // Special handling for expressions referring to a decl to share origins with
   // the underlying decl.

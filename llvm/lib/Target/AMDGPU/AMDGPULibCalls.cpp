@@ -63,6 +63,19 @@ private:
   // "FuncName" exists. It may create a new function prototype in pre-link mode.
   FunctionCallee getFunction(Module *M, const FuncInfo &fInfo);
 
+  /// Wrapper around getFunction which tries to use a faster variant if
+  /// available, and falls back to a less fast option.
+  ///
+  /// Return a replacement function for \p fInfo that has float-typed fast
+  /// variants. \p NewFunc is a base replacement function to use. \p
+  /// NewFuncFastVariant is a faster version to use if the calling context knows
+  /// it's legal. If there is no fast variant to use, \p NewFuncFastVariant
+  /// should be EI_NONE.
+  FunctionCallee getFloatFastVariant(Module *M, const FuncInfo &fInfo,
+                                     FuncInfo &newInfo,
+                                     AMDGPULibFunc::EFuncId NewFunc,
+                                     AMDGPULibFunc::EFuncId NewFuncFastVariant);
+
   bool parseFunctionName(const StringRef &FMangledName, FuncInfo &FInfo);
 
   bool TDOFold(CallInst *CI, const FuncInfo &FInfo);
@@ -75,6 +88,9 @@ private:
   /// Peform a fast math expansion of pow, powr, pown or rootn.
   bool expandFastPow(FPMathOperator *FPOp, IRBuilder<> &B, PowKind Kind);
 
+  bool tryOptimizePow(FPMathOperator *FPOp, IRBuilder<> &B,
+                      const FuncInfo &FInfo);
+
   // rootn
   bool fold_rootn(FPMathOperator *FPOp, IRBuilder<> &B, const FuncInfo &FInfo);
 
@@ -82,8 +98,8 @@ private:
   bool sincosUseNative(CallInst *aCI, const FuncInfo &FInfo);
 
   // evaluate calls if calls' arguments are constants.
-  bool evaluateScalarMathFunc(const FuncInfo &FInfo, double &Res0, double &Res1,
-                              Constant *copr0, Constant *copr1);
+  bool evaluateScalarMathFunc(const FuncInfo &FInfo, APFloat &Res0,
+                              APFloat &Res1, Constant *copr0, Constant *copr1);
   bool evaluateCall(CallInst *aCI, const FuncInfo &FInfo);
 
   /// Insert a value to sincos function \p Fsincos. Returns (value of sin, value
@@ -410,6 +426,22 @@ FunctionCallee AMDGPULibCalls::getFunction(Module *M, const FuncInfo &fInfo) {
                        : AMDGPULibFunc::getFunction(M, fInfo);
 }
 
+FunctionCallee AMDGPULibCalls::getFloatFastVariant(
+    Module *M, const FuncInfo &fInfo, FuncInfo &newInfo,
+    AMDGPULibFunc::EFuncId NewFunc, AMDGPULibFunc::EFuncId FastVariant) {
+  assert(NewFunc != FastVariant);
+
+  if (FastVariant != AMDGPULibFunc::EI_NONE &&
+      getArgType(fInfo) == AMDGPULibFunc::F32) {
+    newInfo = AMDGPULibFunc(FastVariant, fInfo);
+    if (FunctionCallee NewCallee = getFunction(M, newInfo))
+      return NewCallee;
+  }
+
+  newInfo = AMDGPULibFunc(NewFunc, fInfo);
+  return getFunction(M, newInfo);
+}
+
 bool AMDGPULibCalls::parseFunctionName(const StringRef &FMangledName,
                                        FuncInfo &FInfo) {
   return AMDGPULibFunc::parse(FMangledName, FInfo);
@@ -680,71 +712,69 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
           {CI->getType(), CI->getArgOperand(1)->getType()}));
       return true;
     }
-    case AMDGPULibFunc::EI_POW: {
-      Module *M = Callee->getParent();
-      AMDGPULibFunc PowrInfo(AMDGPULibFunc::EI_POWR, FInfo);
-      FunctionCallee PowrFunc = getFunction(M, PowrInfo);
-      CallInst *Call = cast<CallInst>(FPOp);
+    case AMDGPULibFunc::EI_POW:
+    case AMDGPULibFunc::EI_POW_FAST:
+      return tryOptimizePow(FPOp, B, FInfo);
+    case AMDGPULibFunc::EI_POWR:
+    case AMDGPULibFunc::EI_POWR_FAST: {
+      if (fold_pow(FPOp, B, FInfo))
+        return true;
+      if (!FMF.approxFunc())
+        return false;
 
-      // pow(x, y) -> powr(x, y) for x >= -0.0
-      // TODO: Account for flags on current call
-      if (PowrFunc && cannotBeOrderedLessThanZero(
-                          FPOp->getOperand(0), SQ.getWithInstruction(Call))) {
-        Call->setCalledFunction(PowrFunc);
-        return fold_pow(FPOp, B, PowrInfo) || true;
-      }
-
-      // pow(x, y) -> pown(x, y) for known integral y
-      if (isKnownIntegral(FPOp->getOperand(1), SQ.getWithInstruction(CI),
-                          FPOp->getFastMathFlags())) {
-        FunctionType *PownType = getPownType(CI->getFunctionType());
-        AMDGPULibFunc PownInfo(AMDGPULibFunc::EI_POWN, PownType, true);
-        FunctionCallee PownFunc = getFunction(M, PownInfo);
-        if (PownFunc) {
-          // TODO: If the incoming integral value is an sitofp/uitofp, it won't
-          // fold out without a known range. We can probably take the source
-          // value directly.
-          Value *CastedArg =
-              B.CreateFPToSI(FPOp->getOperand(1), PownType->getParamType(1));
-          // Have to drop any nofpclass attributes on the original call site.
-          Call->removeParamAttrs(
-              1, AttributeFuncs::typeIncompatible(CastedArg->getType(),
-                                                  Call->getParamAttributes(1)));
-          Call->setCalledFunction(PownFunc);
-          Call->setArgOperand(1, CastedArg);
-          return fold_pow(FPOp, B, PownInfo) || true;
+      if (FInfo.getId() == AMDGPULibFunc::EI_POWR && FMF.approxFunc() &&
+          getArgType(FInfo) == AMDGPULibFunc::F32) {
+        Module *M = Callee->getParent();
+        AMDGPULibFunc PowrFastInfo(AMDGPULibFunc::EI_POWR_FAST, FInfo);
+        if (FunctionCallee PowrFastFunc = getFunction(M, PowrFastInfo)) {
+          CI->setCalledFunction(PowrFastFunc);
+          return true;
         }
       }
 
-      if (fold_pow(FPOp, B, FInfo))
-        return true;
-
-      if (!FMF.approxFunc())
-        return false;
-      return expandFastPow(FPOp, B, PowKind::Pow);
-    }
-    case AMDGPULibFunc::EI_POWR:
-      if (fold_pow(FPOp, B, FInfo))
-        return true;
-      if (!FMF.approxFunc())
-        return false;
       if (!shouldReplaceLibcallWithIntrinsic(CI))
         return false;
       return expandFastPow(FPOp, B, PowKind::PowR);
+    }
     case AMDGPULibFunc::EI_POWN:
+    case AMDGPULibFunc::EI_POWN_FAST: {
       if (fold_pow(FPOp, B, FInfo))
         return true;
       if (!FMF.approxFunc())
         return false;
+
+      if (FInfo.getId() == AMDGPULibFunc::EI_POWN &&
+          getArgType(FInfo) == AMDGPULibFunc::F32) {
+        Module *M = Callee->getParent();
+        AMDGPULibFunc PownFastInfo(AMDGPULibFunc::EI_POWN_FAST, FInfo);
+        if (FunctionCallee PownFastFunc = getFunction(M, PownFastInfo)) {
+          CI->setCalledFunction(PownFastFunc);
+          return true;
+        }
+      }
+
       if (!shouldReplaceLibcallWithIntrinsic(CI))
         return false;
       return expandFastPow(FPOp, B, PowKind::PowN);
+    }
     case AMDGPULibFunc::EI_ROOTN:
+    case AMDGPULibFunc::EI_ROOTN_FAST: {
       if (fold_rootn(FPOp, B, FInfo))
         return true;
       if (!FMF.approxFunc())
         return false;
+
+      if (getArgType(FInfo) == AMDGPULibFunc::F32) {
+        Module *M = Callee->getParent();
+        AMDGPULibFunc RootnFastInfo(AMDGPULibFunc::EI_ROOTN_FAST, FInfo);
+        if (FunctionCallee RootnFastFunc = getFunction(M, RootnFastInfo)) {
+          CI->setCalledFunction(RootnFastFunc);
+          return true;
+        }
+      }
+
       return expandFastPow(FPOp, B, PowKind::RootN);
+    }
     case AMDGPULibFunc::EI_SQRT:
       // TODO: Allow with strictfp + constrained intrinsic
       return tryReplaceLibcallWithSimpleIntrinsic(
@@ -771,6 +801,21 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
   return false;
 }
 
+static Constant *getConstantFloatVector(const ArrayRef<APFloat> Values,
+                                        const Type *Ty) {
+  Type *ElemTy = Ty->getScalarType();
+  const fltSemantics &FltSem = ElemTy->getFltSemantics();
+
+  SmallVector<Constant *, 4> ConstValues;
+  ConstValues.reserve(Values.size());
+  for (APFloat APF : Values) {
+    bool Unused;
+    APF.convert(FltSem, APFloat::rmNearestTiesToEven, &Unused);
+    ConstValues.push_back(ConstantFP::get(ElemTy, APF));
+  }
+  return ConstantVector::get(ConstValues);
+}
+
 bool AMDGPULibCalls::TDOFold(CallInst *CI, const FuncInfo &FInfo) {
   // Table-Driven optimization
   const TableRef tr = getOptTable(FInfo.getId());
@@ -780,40 +825,26 @@ bool AMDGPULibCalls::TDOFold(CallInst *CI, const FuncInfo &FInfo) {
   int const sz = (int)tr.size();
   Value *opr0 = CI->getArgOperand(0);
 
-  if (getVecSize(FInfo) > 1) {
-    if (ConstantDataVector *CV = dyn_cast<ConstantDataVector>(opr0)) {
-      SmallVector<double, 0> DVal;
-      for (int eltNo = 0; eltNo < getVecSize(FInfo); ++eltNo) {
-        ConstantFP *eltval = dyn_cast<ConstantFP>(
-                               CV->getElementAsConstant((unsigned)eltNo));
-        assert(eltval && "Non-FP arguments in math function!");
-        bool found = false;
-        for (int i=0; i < sz; ++i) {
-          if (eltval->isExactlyValue(tr[i].input)) {
-            DVal.push_back(tr[i].result);
-            found = true;
-            break;
-          }
-        }
-        if (!found) {
-          // This vector constants not handled yet.
+  int vecSize = getVecSize(FInfo);
+  if (vecSize > 1) {
+    // Vector version
+    Constant *CV = dyn_cast<Constant>(opr0);
+    if (CV && CV->getType()->isVectorTy()) {
+      SmallVector<APFloat, 4> Values;
+      Values.reserve(vecSize);
+      for (int eltNo = 0; eltNo < vecSize; ++eltNo) {
+        ConstantFP *eltval =
+            cast<ConstantFP>(CV->getAggregateElement((unsigned)eltNo));
+        auto MatchingRow = llvm::find_if(tr, [eltval](const TableEntry &entry) {
+          return eltval->isExactlyValue(entry.input);
+        });
+        if (MatchingRow == tr.end())
           return false;
-        }
+        Values.push_back(APFloat(MatchingRow->result));
       }
-      LLVMContext &context = CI->getContext();
-      Constant *nval;
-      if (getArgType(FInfo) == AMDGPULibFunc::F32) {
-        SmallVector<float, 0> FVal;
-        for (double D : DVal)
-          FVal.push_back((float)D);
-        ArrayRef<float> tmp(FVal);
-        nval = ConstantDataVector::get(context, tmp);
-      } else { // F64
-        ArrayRef<double> tmp(DVal);
-        nval = ConstantDataVector::get(context, tmp);
-      }
-      LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> " << *nval << "\n");
-      replaceCall(CI, nval);
+      Constant *NewValues = getConstantFloatVector(Values, CI->getType());
+      LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> " << *NewValues << "\n");
+      replaceCall(CI, NewValues);
       return true;
     }
   } else {
@@ -846,8 +877,11 @@ static double log2(double V) {
 bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
                               const FuncInfo &FInfo) {
   assert((FInfo.getId() == AMDGPULibFunc::EI_POW ||
+          FInfo.getId() == AMDGPULibFunc::EI_POW_FAST ||
           FInfo.getId() == AMDGPULibFunc::EI_POWR ||
-          FInfo.getId() == AMDGPULibFunc::EI_POWN) &&
+          FInfo.getId() == AMDGPULibFunc::EI_POWR_FAST ||
+          FInfo.getId() == AMDGPULibFunc::EI_POWN ||
+          FInfo.getId() == AMDGPULibFunc::EI_POWN_FAST) &&
          "fold_pow: encounter a wrong function call");
 
   Module *M = B.GetInsertBlock()->getModule();
@@ -1000,18 +1034,21 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
 
       V = log2(std::abs(V));
       cnval = ConstantFP::get(eltType, V);
-      needcopysign = (FInfo.getId() != AMDGPULibFunc::EI_POWR) &&
+      needcopysign = (FInfo.getId() != AMDGPULibFunc::EI_POWR &&
+                      FInfo.getId() != AMDGPULibFunc::EI_POWR_FAST) &&
                      CF->isNegative();
     } else {
       needlog = true;
-      needcopysign = needabs = FInfo.getId() != AMDGPULibFunc::EI_POWR;
+      needcopysign = needabs = FInfo.getId() != AMDGPULibFunc::EI_POWR &&
+                               FInfo.getId() != AMDGPULibFunc::EI_POWR_FAST;
     }
   } else {
     ConstantDataVector *CDV = dyn_cast<ConstantDataVector>(opr0);
 
     if (!CDV) {
       needlog = true;
-      needcopysign = needabs = FInfo.getId() != AMDGPULibFunc::EI_POWR;
+      needcopysign = needabs = FInfo.getId() != AMDGPULibFunc::EI_POWR &&
+                               FInfo.getId() != AMDGPULibFunc::EI_POWR_FAST;
     } else {
       assert ((int)CDV->getNumElements() == getVecSize(FInfo) &&
               "Wrong vector size detected");
@@ -1036,7 +1073,8 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
     }
   }
 
-  if (needcopysign && (FInfo.getId() == AMDGPULibFunc::EI_POW)) {
+  if (needcopysign && (FInfo.getId() == AMDGPULibFunc::EI_POW ||
+                       FInfo.getId() == AMDGPULibFunc::EI_POW_FAST)) {
     // We cannot handle corner cases for a general pow() function, give up
     // unless y is a constant integral value. Then proceed as if it were pown.
     if (!isKnownIntegral(opr1, SQ.getWithInstruction(cast<Instruction>(FPOp)),
@@ -1064,7 +1102,8 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
     nval = CreateCallEx(B,LogExpr, nval, "__log2");
   }
 
-  if (FInfo.getId() == AMDGPULibFunc::EI_POWN) {
+  if (FInfo.getId() == AMDGPULibFunc::EI_POWN ||
+      FInfo.getId() == AMDGPULibFunc::EI_POWN_FAST) {
     // convert int(32) to fp(f32 or f64)
     opr1 = B.CreateSIToFP(opr1, nval->getType(), "pownI2F");
   }
@@ -1443,13 +1482,88 @@ bool AMDGPULibCalls::expandFastPow(FPMathOperator *FPOp, IRBuilder<> &B,
   }
   case PowKind::RootN: {
     Value *CastY = B.CreateSIToFP(Y, X->getType());
-    Value *RcpY = B.CreateUnaryIntrinsic(Intrinsic::amdgcn_rcp, CastY);
+
+    // This is afn anyway, so we will turn into rcp.
+    Value *RcpY = B.CreateFDiv(ConstantFP::get(X->getType(), 1.0), CastY);
+
     Value *ExpYLnX = emitFastExpYLnx(B, X, RcpY);
     Value *Fixed = emitPowFixup(B, X, Y, ExpYLnX, Kind);
     replaceCall(FPOp, Fixed);
     return true;
   }
   }
+  llvm_unreachable("Unhandled PowKind enum");
+}
+
+bool AMDGPULibCalls::tryOptimizePow(FPMathOperator *FPOp, IRBuilder<> &B,
+                                    const FuncInfo &FInfo) {
+  FastMathFlags FMF = FPOp->getFastMathFlags();
+  CallInst *Call = cast<CallInst>(FPOp);
+  Module *M = Call->getModule();
+
+  FuncInfo PowrInfo;
+  AMDGPULibFunc::EFuncId FastPowrFuncId =
+      FMF.approxFunc() || FInfo.getId() == AMDGPULibFunc::EI_POW_FAST
+          ? AMDGPULibFunc::EI_POWR_FAST
+          : AMDGPULibFunc::EI_NONE;
+  FunctionCallee PowrFunc = getFloatFastVariant(
+      M, FInfo, PowrInfo, AMDGPULibFunc::EI_POWR, FastPowrFuncId);
+
+  // TODO: Prefer fast pown to fast powr, but slow powr to slow pown.
+
+  // pow(x, y) -> powr(x, y) for x >= -0.0
+  // TODO: Account for flags on current call
+  if (PowrFunc && cannotBeOrderedLessThanZero(FPOp->getOperand(0),
+                                              SQ.getWithInstruction(Call))) {
+    Call->setCalledFunction(PowrFunc);
+    return fold_pow(FPOp, B, PowrInfo) || true;
+  }
+
+  // pow(x, y) -> pown(x, y) for known integral y
+  if (isKnownIntegral(FPOp->getOperand(1), SQ.getWithInstruction(Call),
+                      FPOp->getFastMathFlags())) {
+    FunctionType *PownType = getPownType(Call->getFunctionType());
+
+    FuncInfo PownInfo;
+    AMDGPULibFunc::EFuncId FastPownFuncId =
+        FMF.approxFunc() || FInfo.getId() == AMDGPULibFunc::EI_POW_FAST
+            ? AMDGPULibFunc::EI_POWN_FAST
+            : AMDGPULibFunc::EI_NONE;
+    FunctionCallee PownFunc = getFloatFastVariant(
+        M, FInfo, PownInfo, AMDGPULibFunc::EI_POWN, FastPownFuncId);
+
+    if (PownFunc) {
+      // TODO: If the incoming integral value is an sitofp/uitofp, it won't
+      // fold out without a known range. We can probably take the source
+      // value directly.
+      Value *CastedArg =
+          B.CreateFPToSI(FPOp->getOperand(1), PownType->getParamType(1));
+      // Have to drop any nofpclass attributes on the original call site.
+      Call->removeParamAttrs(
+          1, AttributeFuncs::typeIncompatible(CastedArg->getType(),
+                                              Call->getParamAttributes(1)));
+      Call->setCalledFunction(PownFunc);
+      Call->setArgOperand(1, CastedArg);
+      return fold_pow(FPOp, B, PownInfo) || true;
+    }
+  }
+
+  if (fold_pow(FPOp, B, FInfo))
+    return true;
+
+  if (!FMF.approxFunc())
+    return false;
+
+  if (FInfo.getId() == AMDGPULibFunc::EI_POW && FMF.approxFunc() &&
+      getArgType(FInfo) == AMDGPULibFunc::F32) {
+    AMDGPULibFunc PowFastInfo(AMDGPULibFunc::EI_POW_FAST, FInfo);
+    if (FunctionCallee PowFastFunc = getFunction(M, PowFastInfo)) {
+      Call->setCalledFunction(PowFastFunc);
+      return fold_pow(FPOp, B, PowFastInfo) || true;
+    }
+  }
+
+  return expandFastPow(FPOp, B, PowKind::Pow);
 }
 
 // Get a scalar native builtin single argument FP function
@@ -1672,9 +1786,9 @@ bool AMDGPULibCalls::fold_sincos(FPMathOperator *FPOp, IRBuilder<> &B,
   return true;
 }
 
-bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo, double &Res0,
-                                            double &Res1, Constant *copr0,
-                                            Constant *copr1) {
+bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo,
+                                            APFloat &Res0, APFloat &Res1,
+                                            Constant *copr0, Constant *copr1) {
   // By default, opr0/opr1/opr3 holds values of float/double type.
   // If they are not float/double, each function has to its
   // operand separately.
@@ -1694,125 +1808,127 @@ bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo, double &Res0,
   }
 
   switch (FInfo.getId()) {
-  default : return false;
+  default:
+    return false;
 
   case AMDGPULibFunc::EI_ACOS:
-    Res0 = acos(opr0);
+    Res0 = APFloat{acos(opr0)};
     return true;
 
   case AMDGPULibFunc::EI_ACOSH:
     // acosh(x) == log(x + sqrt(x*x - 1))
-    Res0 = log(opr0 + sqrt(opr0*opr0 - 1.0));
+    Res0 = APFloat{log(opr0 + sqrt(opr0 * opr0 - 1.0))};
     return true;
 
   case AMDGPULibFunc::EI_ACOSPI:
-    Res0 = acos(opr0) / MATH_PI;
+    Res0 = APFloat{acos(opr0) / MATH_PI};
     return true;
 
   case AMDGPULibFunc::EI_ASIN:
-    Res0 = asin(opr0);
+    Res0 = APFloat{asin(opr0)};
     return true;
 
   case AMDGPULibFunc::EI_ASINH:
     // asinh(x) == log(x + sqrt(x*x + 1))
-    Res0 = log(opr0 + sqrt(opr0*opr0 + 1.0));
+    Res0 = APFloat{log(opr0 + sqrt(opr0 * opr0 + 1.0))};
     return true;
 
   case AMDGPULibFunc::EI_ASINPI:
-    Res0 = asin(opr0) / MATH_PI;
+    Res0 = APFloat{asin(opr0) / MATH_PI};
     return true;
 
   case AMDGPULibFunc::EI_ATAN:
-    Res0 = atan(opr0);
+    Res0 = APFloat{atan(opr0)};
     return true;
 
   case AMDGPULibFunc::EI_ATANH:
     // atanh(x) == (log(x+1) - log(x-1))/2;
-    Res0 = (log(opr0 + 1.0) - log(opr0 - 1.0))/2.0;
+    Res0 = APFloat{(log(opr0 + 1.0) - log(opr0 - 1.0)) / 2.0};
     return true;
 
   case AMDGPULibFunc::EI_ATANPI:
-    Res0 = atan(opr0) / MATH_PI;
+    Res0 = APFloat{atan(opr0) / MATH_PI};
     return true;
 
   case AMDGPULibFunc::EI_CBRT:
-    Res0 = (opr0 < 0.0) ? -pow(-opr0, 1.0/3.0) : pow(opr0, 1.0/3.0);
+    Res0 =
+        APFloat{(opr0 < 0.0) ? -pow(-opr0, 1.0 / 3.0) : pow(opr0, 1.0 / 3.0)};
     return true;
 
   case AMDGPULibFunc::EI_COS:
-    Res0 = cos(opr0);
+    Res0 = APFloat{cos(opr0)};
     return true;
 
   case AMDGPULibFunc::EI_COSH:
-    Res0 = cosh(opr0);
+    Res0 = APFloat{cosh(opr0)};
     return true;
 
   case AMDGPULibFunc::EI_COSPI:
-    Res0 = cos(MATH_PI * opr0);
+    Res0 = APFloat{cos(MATH_PI * opr0)};
     return true;
 
   case AMDGPULibFunc::EI_EXP:
-    Res0 = exp(opr0);
+    Res0 = APFloat{exp(opr0)};
     return true;
 
   case AMDGPULibFunc::EI_EXP2:
-    Res0 = pow(2.0, opr0);
+    Res0 = APFloat{pow(2.0, opr0)};
     return true;
 
   case AMDGPULibFunc::EI_EXP10:
-    Res0 = pow(10.0, opr0);
+    Res0 = APFloat{pow(10.0, opr0)};
     return true;
 
   case AMDGPULibFunc::EI_LOG:
-    Res0 = log(opr0);
+    Res0 = APFloat{log(opr0)};
     return true;
 
   case AMDGPULibFunc::EI_LOG2:
-    Res0 = log(opr0) / log(2.0);
+    Res0 = APFloat{log(opr0) / log(2.0)};
     return true;
 
   case AMDGPULibFunc::EI_LOG10:
-    Res0 = log(opr0) / log(10.0);
+    Res0 = APFloat{log(opr0) / log(10.0)};
     return true;
 
   case AMDGPULibFunc::EI_RSQRT:
-    Res0 = 1.0 / sqrt(opr0);
+    Res0 = APFloat{1.0 / sqrt(opr0)};
     return true;
 
   case AMDGPULibFunc::EI_SIN:
-    Res0 = sin(opr0);
+    Res0 = APFloat{sin(opr0)};
     return true;
 
   case AMDGPULibFunc::EI_SINH:
-    Res0 = sinh(opr0);
+    Res0 = APFloat{sinh(opr0)};
     return true;
 
   case AMDGPULibFunc::EI_SINPI:
-    Res0 = sin(MATH_PI * opr0);
+    Res0 = APFloat{sin(MATH_PI * opr0)};
     return true;
 
   case AMDGPULibFunc::EI_TAN:
-    Res0 = tan(opr0);
+    Res0 = APFloat{tan(opr0)};
     return true;
 
   case AMDGPULibFunc::EI_TANH:
-    Res0 = tanh(opr0);
+    Res0 = APFloat{tanh(opr0)};
     return true;
 
   case AMDGPULibFunc::EI_TANPI:
-    Res0 = tan(MATH_PI * opr0);
+    Res0 = APFloat{tan(MATH_PI * opr0)};
     return true;
 
   // two-arg functions
   case AMDGPULibFunc::EI_POW:
   case AMDGPULibFunc::EI_POWR:
-    Res0 = pow(opr0, opr1);
+    Res0 = APFloat{pow(opr0, opr1)};
     return true;
 
   case AMDGPULibFunc::EI_POWN: {
     if (ConstantInt *iopr1 = dyn_cast_or_null<ConstantInt>(copr1)) {
       double val = (double)iopr1->getSExtValue();
-      Res0 = pow(opr0, val);
+      Res0 = APFloat{pow(opr0, val)};
       return true;
     }
     return false;
@@ -1821,7 +1937,7 @@ bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo, double &Res0,
   case AMDGPULibFunc::EI_ROOTN: {
     if (ConstantInt *iopr1 = dyn_cast_or_null<ConstantInt>(copr1)) {
       double val = (double)iopr1->getSExtValue();
-      Res0 = pow(opr0, 1.0 / val);
+      Res0 = APFloat{pow(opr0, 1.0 / val)};
       return true;
     }
     return false;
@@ -1829,8 +1945,8 @@ bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo, double &Res0,
 
   // with ptr arg
   case AMDGPULibFunc::EI_SINCOS:
-    Res0 = sin(opr0);
-    Res1 = cos(opr0);
+    Res0 = APFloat{sin(opr0)};
+    Res1 = APFloat{cos(opr0)};
     return true;
   }
 
@@ -1859,11 +1975,12 @@ bool AMDGPULibCalls::evaluateCall(CallInst *aCI, const FuncInfo &FInfo) {
   // At this point, all arguments to aCI are constants.
 
   // max vector size is 16, and sincos will generate two results.
-  double DVal0[16], DVal1[16];
+  SmallVector<APFloat, 16> Val0, Val1;
   int FuncVecSize = getVecSize(FInfo);
   bool hasTwoResults = (FInfo.getId() == AMDGPULibFunc::EI_SINCOS);
   if (FuncVecSize == 1) {
-    if (!evaluateScalarMathFunc(FInfo, DVal0[0], DVal1[0], copr0, copr1)) {
+    if (!evaluateScalarMathFunc(FInfo, Val0.emplace_back(0.0),
+                                Val1.emplace_back(0.0), copr0, copr1)) {
       return false;
     }
   } else {
@@ -1872,39 +1989,22 @@ bool AMDGPULibCalls::evaluateCall(CallInst *aCI, const FuncInfo &FInfo) {
     for (int i = 0; i < FuncVecSize; ++i) {
       Constant *celt0 = CDV0 ? CDV0->getElementAsConstant(i) : nullptr;
       Constant *celt1 = CDV1 ? CDV1->getElementAsConstant(i) : nullptr;
-      if (!evaluateScalarMathFunc(FInfo, DVal0[i], DVal1[i], celt0, celt1)) {
+      if (!evaluateScalarMathFunc(FInfo, Val0.emplace_back(0.0),
+                                  Val1.emplace_back(0.0), celt0, celt1)) {
         return false;
       }
     }
   }
 
-  LLVMContext &context = aCI->getContext();
   Constant *nval0, *nval1;
   if (FuncVecSize == 1) {
-    nval0 = ConstantFP::get(aCI->getType(), DVal0[0]);
+    nval0 = ConstantFP::get(aCI->getType(), Val0[0]);
     if (hasTwoResults)
-      nval1 = ConstantFP::get(aCI->getType(), DVal1[0]);
+      nval1 = ConstantFP::get(aCI->getType(), Val1[0]);
   } else {
-    if (getArgType(FInfo) == AMDGPULibFunc::F32) {
-      SmallVector <float, 0> FVal0, FVal1;
-      for (int i = 0; i < FuncVecSize; ++i)
-        FVal0.push_back((float)DVal0[i]);
-      ArrayRef<float> tmp0(FVal0);
-      nval0 = ConstantDataVector::get(context, tmp0);
-      if (hasTwoResults) {
-        for (int i = 0; i < FuncVecSize; ++i)
-          FVal1.push_back((float)DVal1[i]);
-        ArrayRef<float> tmp1(FVal1);
-        nval1 = ConstantDataVector::get(context, tmp1);
-      }
-    } else {
-      ArrayRef<double> tmp0(DVal0);
-      nval0 = ConstantDataVector::get(context, tmp0);
-      if (hasTwoResults) {
-        ArrayRef<double> tmp1(DVal1);
-        nval1 = ConstantDataVector::get(context, tmp1);
-      }
-    }
+    nval0 = getConstantFloatVector(Val0, aCI->getType());
+    if (hasTwoResults)
+      nval1 = getConstantFloatVector(Val1, aCI->getType());
   }
 
   if (hasTwoResults) {

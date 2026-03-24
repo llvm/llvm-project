@@ -38,8 +38,8 @@ entry:
 ; case (3): conditional jmp followed by an unconditional jmp
 ; CHECK:        w0 = w2
 ; CHECK-NEXT:   if w1 < w2 goto
-; CHECK:        gotol LBB0_4    # encoding: [0x06'A',A,A,A,0x00,0x00,0x00,0x00]
-; CHECK-NEXT:                   # fixup A - offset: 0, value: LBB0_4, kind: FK_BPF_PCRel_4
+; CHECK:        gotol .LBB0_4   # encoding: [0x06'A',A,A,A,0x00,0x00,0x00,0x00]
+; CHECK-NEXT:                   # fixup A - offset: 0, value: .LBB0_4, kind: FK_BPF_PCRel_4
 
 begin:                                            ; preds = %next2, %next
   %s.0 = phi i32 [ %mul3, %next ], [ %mul7, %next2 ]
@@ -49,12 +49,12 @@ begin:                                            ; preds = %next2, %next
 
 ; case (2): conditional jmp
 ; CHECK:        w0 *= w1
-; CHECK-NEXT:   if w0 > w2 goto LBB0_7
-; CHECK:        goto LBB0_4
-; CHECK-LABEL:  LBB0_7:
+; CHECK-NEXT:   if w0 > w2 goto .LBB0_7
+; CHECK:        goto .LBB0_4
+; CHECK-LABEL:  .LBB0_7:
 ; CHECK:        gotol
 
-; CHECK-LABEL:  LBB0_4:
+; CHECK-LABEL:  .LBB0_4:
 
 if.then2:                                         ; preds = %begin
   %mul = mul i32 %div, %div

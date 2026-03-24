@@ -21,7 +21,6 @@
 ; GCN-O0-NEXT:Library Function Lowering Analysis
 ; GCN-O0-NEXT:Assumption Cache Tracker
 ; GCN-O0-NEXT:Profile summary info
-; GCN-O0-NEXT:Argument Register Usage Information Storage
 ; GCN-O0-NEXT:Create Garbage Collector Module Metadata
 ; GCN-O0-NEXT:Register Usage Information Storage
 ; GCN-O0-NEXT:Machine Branch Probability Analysis
@@ -174,7 +173,6 @@
 ; GCN-O1-NEXT:External Alias Analysis
 ; GCN-O1-NEXT:Type-Based Alias Analysis
 ; GCN-O1-NEXT:Scoped NoAlias Alias Analysis
-; GCN-O1-NEXT:Argument Register Usage Information Storage
 ; GCN-O1-NEXT:Create Garbage Collector Module Metadata
 ; GCN-O1-NEXT:Machine Branch Probability Analysis
 ; GCN-O1-NEXT:Register Usage Information Storage
@@ -248,6 +246,9 @@
 ; GCN-O1-NEXT:      Dominator Tree Construction
 ; GCN-O1-NEXT:      AMDGPU Lower Kernel Arguments
 ; GCN-O1-NEXT:      Natural Loop Information
+; GCN-O1-NEXT:      Post-Dominator Tree Construction
+; GCN-O1-NEXT:      Branch Probability Analysis
+; GCN-O1-NEXT:      Block Frequency Analysis
 ; GCN-O1-NEXT:      CodeGen Prepare
 ; GCN-O1-NEXT:    Lower buffer fat pointer operations to buffer resources
 ; GCN-O1-NEXT:    AMDGPU lower intrinsics
@@ -467,7 +468,6 @@
 ; GCN-O1-OPTS-NEXT:External Alias Analysis
 ; GCN-O1-OPTS-NEXT:Type-Based Alias Analysis
 ; GCN-O1-OPTS-NEXT:Scoped NoAlias Alias Analysis
-; GCN-O1-OPTS-NEXT:Argument Register Usage Information Storage
 ; GCN-O1-OPTS-NEXT:Create Garbage Collector Module Metadata
 ; GCN-O1-OPTS-NEXT:Machine Branch Probability Analysis
 ; GCN-O1-OPTS-NEXT:Register Usage Information Storage
@@ -555,6 +555,9 @@
 ; GCN-O1-OPTS-NEXT:      Dominator Tree Construction
 ; GCN-O1-OPTS-NEXT:      AMDGPU Lower Kernel Arguments
 ; GCN-O1-OPTS-NEXT:      Natural Loop Information
+; GCN-O1-OPTS-NEXT:      Post-Dominator Tree Construction
+; GCN-O1-OPTS-NEXT:      Branch Probability Analysis
+; GCN-O1-OPTS-NEXT:      Block Frequency Analysis
 ; GCN-O1-OPTS-NEXT:      CodeGen Prepare
 ; GCN-O1-OPTS-NEXT:      Dominator Tree Construction
 ; GCN-O1-OPTS-NEXT:      Basic Alias Analysis (stateless AA impl)
@@ -787,7 +790,6 @@
 ; GCN-O2-NEXT:External Alias Analysis
 ; GCN-O2-NEXT:Type-Based Alias Analysis
 ; GCN-O2-NEXT:Scoped NoAlias Alias Analysis
-; GCN-O2-NEXT:Argument Register Usage Information Storage
 ; GCN-O2-NEXT:Create Garbage Collector Module Metadata
 ; GCN-O2-NEXT:Machine Branch Probability Analysis
 ; GCN-O2-NEXT:Register Usage Information Storage
@@ -878,6 +880,9 @@
 ; GCN-O2-NEXT:      Dominator Tree Construction
 ; GCN-O2-NEXT:      AMDGPU Lower Kernel Arguments
 ; GCN-O2-NEXT:      Natural Loop Information
+; GCN-O2-NEXT:      Post-Dominator Tree Construction
+; GCN-O2-NEXT:      Branch Probability Analysis
+; GCN-O2-NEXT:      Block Frequency Analysis
 ; GCN-O2-NEXT:      CodeGen Prepare
 ; GCN-O2-NEXT:      Dominator Tree Construction
 ; GCN-O2-NEXT:      Basic Alias Analysis (stateless AA impl)
@@ -1112,7 +1117,6 @@
 ; GCN-O3-NEXT:External Alias Analysis
 ; GCN-O3-NEXT:Type-Based Alias Analysis
 ; GCN-O3-NEXT:Scoped NoAlias Alias Analysis
-; GCN-O3-NEXT:Argument Register Usage Information Storage
 ; GCN-O3-NEXT:Create Garbage Collector Module Metadata
 ; GCN-O3-NEXT:Machine Branch Probability Analysis
 ; GCN-O3-NEXT:Register Usage Information Storage
@@ -1216,6 +1220,9 @@
 ; GCN-O3-NEXT:      Dominator Tree Construction
 ; GCN-O3-NEXT:      AMDGPU Lower Kernel Arguments
 ; GCN-O3-NEXT:      Natural Loop Information
+; GCN-O3-NEXT:      Post-Dominator Tree Construction
+; GCN-O3-NEXT:      Branch Probability Analysis
+; GCN-O3-NEXT:      Block Frequency Analysis
 ; GCN-O3-NEXT:      CodeGen Prepare
 ; GCN-O3-NEXT:      Dominator Tree Construction
 ; GCN-O3-NEXT:      Basic Alias Analysis (stateless AA impl)
