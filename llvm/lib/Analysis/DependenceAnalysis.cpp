@@ -1439,11 +1439,7 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEV *Coeff,
   }
   LLVM_DEBUG(dbgs() << "\t    Distance = " << Distance << "\n");
 
-  // if 2*Coeff doesn't divide Delta, then the equal direction isn't possible
-  APInt Two = APInt(Distance.getBitWidth(), 2, true);
-  Remainder = Distance.srem(Two);
-  LLVM_DEBUG(dbgs() << "\t    Remainder = " << Remainder << "\n");
-  if (Remainder != 0) {
+  if (Distance[0]) {
     // Equal direction isn't possible
     Result.DV[Level].Direction &= ~Dependence::DVEntry::EQ;
     ++WeakCrossingSIVsuccesses;
@@ -1455,7 +1451,9 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEV *Coeff,
           collectUpperBound(CurSrcLoop, Delta->getType())) {
     LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound << "\n");
     ConstantRange UBRange = SE->getSignedRange(UpperBound);
-    ConstantRange MLRange = UBRange.smul_fast(*SafeCoeff).smul_fast(Two);
+    ConstantRange MLRange =
+        UBRange.smul_fast(*SafeCoeff)
+            .smul_fast(APInt(Distance.getBitWidth(), 2, true));
     ConstantRange DeltaRange(*SafeDelta);
     LLVM_DEBUG(dbgs() << "\t    UBRange = " << UBRange << "\n");
     LLVM_DEBUG(dbgs() << "\t    MLRange = " << MLRange << "\n");
