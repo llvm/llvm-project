@@ -772,6 +772,19 @@ static Expected<Module *> makeIncludeTreeModule(CompilerInstance &CI,
       return std::move(Err);
   }
 
+  auto Reqs = Mod.getRequirements();
+  if (!Reqs)
+    return Reqs.takeError();
+  if (*Reqs) {
+    llvm::Error Err = (*Reqs)->forEachRequirement([&](auto R) {
+      M->addRequirement(R.FeatureName, R.RequiredState, CI.getLangOpts(),
+                        CI.getTarget());
+      return llvm::Error::success();
+    });
+    if (Err)
+      return std::move(Err);
+  }
+
   llvm::Error Err = Mod.forEachSubmodule([&](cas::IncludeTree::Module Sub) {
     return makeIncludeTreeModule(CI, Sub, M).takeError();
   });
