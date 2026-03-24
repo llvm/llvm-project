@@ -223,7 +223,7 @@ codeview::CVType TpiStream::getType(codeview::TypeIndex Index) {
 }
 
 codeview::CVType TpiStream::getTypeOrEmpty(codeview::TypeIndex Index) {
-  return Types->tryGetType(Index).value_or({});
+  return Types->tryGetType(Index).value_or<CVType>({});
 }
 
 std::optional<codeview::CVType>
