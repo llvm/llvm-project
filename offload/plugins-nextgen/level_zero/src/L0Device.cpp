@@ -1222,6 +1222,13 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
         "failed to allocate memory for global buffer to run %s",
         IsCtor ? "constructors" : "destructors");
 
+  auto CleanupBufferAndErr = [&](Error RetErr) {
+    if (auto Err = free(Buffer, TARGET_ALLOC_DEVICE)) {
+      return joinErrors(std::move(RetErr), std::move(Err));
+    }
+    return std::move(RetErr);
+  };
+
   auto *GlobalPtrStart = reinterpret_cast<uintptr_t *>(Buffer);
   auto *GlobalPtrStop = reinterpret_cast<uintptr_t *>(Buffer) + Funcs.size();
 
@@ -1230,32 +1237,32 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
   for (auto [Name, Priority] : Funcs) {
     GlobalTy FunctionAddr(Name.str(), sizeof(void *), &FunctionPtrs[Idx++]);
     if (auto Err = Handler.readGlobalFromDevice(*this, Image, FunctionAddr))
-      return HandleErr(std::move(Err));
+      return CleanupBufferAndErr(std::move(Err));
   }
 
   if (auto Err = dataSubmit(GlobalPtrStart, FunctionPtrs.data(),
                             FunctionPtrs.size() * sizeof(void *),
                             /*AsyncInfo=*/nullptr))
-    return HandleErr(std::move(Err));
+    return CleanupBufferAndErr(std::move(Err));
 
   GlobalTy StartGlobal(IsCtor ? "__init_array_start" : "__fini_array_start",
                        sizeof(void *), &GlobalPtrStart);
   if (auto Err = Handler.writeGlobalToDevice(*this, Image, StartGlobal))
-    return HandleErr(std::move(Err));
+    return CleanupBufferAndErr(std::move(Err));
 
   GlobalTy StopGlobal(IsCtor ? "__init_array_end" : "__fini_array_end",
                       sizeof(void *), &GlobalPtrStop);
   if (auto Err = Handler.writeGlobalToDevice(*this, Image, StopGlobal))
-    return HandleErr(std::move(Err));
+    return CleanupBufferAndErr(std::move(Err));
 
   // Call the generated kernel to execute the constructors or destructors.
   auto KernelOrErr = constructKernel(KernelName);
   if (!KernelOrErr)
-    return HandleErr(KernelOrErr.takeError());
+    return CleanupBufferAndErr(KernelOrErr.takeError());
 
   GenericKernelTy &L0Kernel = *KernelOrErr;
   if (auto Err = L0Kernel.init(*this, Image))
-    return HandleErr(std::move(Err));
+    return CleanupBufferAndErr(std::move(Err));
 
   AsyncInfoWrapperTy AsyncInfoWrapper(*this, /*AsyncInfoPtr=*/nullptr);
 
@@ -1267,11 +1274,9 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
 
   AsyncInfoWrapper.finalize(Err);
   if (Err)
-    return HandleErr(std::move(Err));
-  if (auto Err = free(Buffer, TARGET_ALLOC_DEVICE))
-    return HandleErr(std::move(Err));
+    return CleanupBufferAndErr(std::move(Err));
 
-  return Plugin::success();
+  return CleanupBufferAndErr(Plugin::success());
 }
 
 } // namespace llvm::omp::target::plugin
