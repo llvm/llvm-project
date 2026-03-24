@@ -17567,6 +17567,202 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
     }
   }
 
+  // Convert double-precision ordered and unordered comparisons to integral
+  // comparisons of the upper 32 bits where possible.
+  //
+  // EQ/NE:
+  //  If LHS.lo32 == RHS.lo32:
+  //    setcc LHS, RHS, eq/ne => setcc LHS.hi32, RHS.hi32, eq/ne
+  //  If LHS.lo32 != RHS.lo32:
+  //    setcc LHS, RHS, eq/ne => setcc LHS.hi32, RHS.hi32, false/true
+  //  The reduction is not possible if operands may be +0 and -0.
+  //  For ordered eq / unordered ne, at most one operand may be NaN.
+  //  For unordered eq / ordered ne, neither operand can be NaN.
+  //
+  // LT/GE:
+  //  If LHS.lo32 >= RHS.lo32 (unsigned):
+  //    setcc LHS, RHS, [u]lt/ge => LHS.hi32, RHS.hi32, [u]lt/ge
+  //  If LHS.lo32 < RHS.lo32 (unsigned):
+  //    setcc LHS, RHS, [u]lt/ge => LHS.hi32, RHS.hi32, [u]le/gt
+  //  The reduction is only supported if both operands are nonnegative.
+  //  For ordered lt / unordered ge, the RHS cannot be NaN.
+  //  For unordered lt / ordered ge, neither operand can be NaN.
+  //
+  // LE/GT:
+  //  If LHS.lo32 > RHS.lo32 (unsigned):
+  //    setcc LHS, RHS, [u]le/gt => LHS.hi32, RHS.hi32, [u]lt/ge
+  //  If LHS.lo32 <= RHS.lo32 (unsigned):
+  //    setcc LHS, RHS, [u]le/gt => LHS.hi32, RHS.hi32, [u]le/gt
+  //  The reduction is only supported if both operands are nonnegative.
+  //  For unordered le / ordered gt, the LHS cannot be NaN.
+  //  For ordered le / unordered gt, neither operand can be NaN.
+  if (VT == MVT::f64) {
+    // FIXME: need computeKnownFPClass once available (issue #175571)
+
+    const KnownBits LHSKnown = DAG.computeKnownBits(LHS);
+    const KnownBits LHSMan = LHSKnown.extractBits(52, 0);
+    const KnownBits LHSExp = LHSKnown.extractBits(11, 52);
+    const KnownBits LHSSgn = LHSKnown.extractBits(1, 63);
+    const bool LHSMaybeNaN =
+        LHSExp.getMaxValue().isAllOnes() && !LHSMan.getMaxValue().isZero();
+
+    const KnownBits RHSKnown = DAG.computeKnownBits(RHS);
+    const KnownBits RHSMan = RHSKnown.extractBits(52, 0);
+    const KnownBits RHSExp = RHSKnown.extractBits(11, 52);
+    const KnownBits RHSSgn = RHSKnown.extractBits(1, 63);
+    const bool RHSMaybeNaN =
+        RHSExp.getMaxValue().isAllOnes() && !RHSMan.getMaxValue().isZero();
+
+    const KnownBits LHSKnownLo32 = LHSKnown.trunc(32);
+    const KnownBits RHSKnownLo32 = RHSKnown.trunc(32);
+
+    // NewCC is valid iff we can reduce the comparison to an integer comparison
+    // of the upper 32 bits
+    ISD::CondCode NewCC = ISD::SETCC_INVALID;
+
+    switch (CC) {
+    default:
+      break;
+    case ISD::SETOEQ:
+    case ISD::SETUEQ:
+    case ISD::SETONE:
+    case ISD::SETUNE: {
+      // Equality between +0 and -0 cannot be checked on upper 32 bits.
+      const bool LHSMaybeZero =
+          LHSExp.getMinValue().isZero() && LHSMan.getMinValue().isZero();
+      const bool RHSMaybeZero =
+          RHSExp.getMinValue().isZero() && RHSMan.getMinValue().isZero();
+      const bool MaybeDifferentSign =
+          KnownBits::ne(LHSSgn, RHSSgn).value_or(true);
+      if (LHSMaybeZero && RHSMaybeZero && MaybeDifferentSign)
+        break;
+
+      // OEQ should be false if either operand is NaN, so it suffices that at
+      // least one operand is not NaN.
+      if (CC == ISD::SETOEQ && LHSMaybeNaN && RHSMaybeNaN)
+        break;
+      // UEQ should be true if either operand is NaN, but this cannot be checked
+      // on underlying bits.
+      if (CC == ISD::SETUEQ && (LHSMaybeNaN || RHSMaybeNaN))
+        break;
+      // ONE should be false if either operand is NaN, but this cannot be
+      // checked on underlying bits.
+      if (CC == ISD::SETONE && (LHSMaybeNaN || RHSMaybeNaN))
+        break;
+      // UNE should be true if either operand is NaN, so it suffices that they
+      // are not both NaN.
+      if (CC == ISD::SETUNE && LHSMaybeNaN && RHSMaybeNaN)
+        break;
+
+      const std::optional<bool> KnownEq =
+          KnownBits::eq(LHSKnownLo32, RHSKnownLo32);
+      if (KnownEq) {
+        if (*KnownEq)
+          NewCC = (CC == ISD::SETOEQ || CC == ISD::SETUEQ) ? ISD::SETEQ
+                                                           : ISD::SETNE;
+        else
+          NewCC = (CC == ISD::SETOEQ || CC == ISD::SETUEQ) ? ISD::SETFALSE
+                                                           : ISD::SETTRUE;
+      }
+      break;
+    }
+    case ISD::SETOLT:
+    case ISD::SETULT:
+    case ISD::SETOGE:
+    case ISD::SETUGE: {
+      // Comparison may only be reduced to upper 32 bits if both operands are
+      // positive.
+      const bool LHSNeverNegative = LHSSgn.Zero.isOne();
+      const bool RHSNeverNegative = RHSSgn.Zero.isOne();
+      if (!LHSNeverNegative || !RHSNeverNegative)
+        break;
+
+      // OLT should be false if either operand is NaN.
+      // Since NaNs have maximum exponent and nonzero mantissa, false positives
+      // are only possible if the RHS is NaN. (No issue with RHS == +inf since
+      // the inequality is strict)
+      if (CC == ISD::SETOLT && RHSMaybeNaN)
+        break;
+      // ULT should be true if either operand is NaN, but this cannot be ensured
+      // with a truncated comparison.
+      if (CC == ISD::SETULT && (LHSMaybeNaN || RHSMaybeNaN))
+        break;
+      // OGE should be false if either operand is NaN, but this cannot be
+      // ensured with a truncated comparison.
+      if (CC == ISD::SETOGE && (LHSMaybeNaN || RHSMaybeNaN))
+        break;
+      // UGE should be true if either operand is NaN.
+      // False negatives are only possible if the RHS is NaN.
+      // (No issue with RHS == +inf since the inequality is inclusive)
+      if (CC == ISD::SETUGE && RHSMaybeNaN)
+        break;
+
+      const std::optional<bool> KnownUge =
+          KnownBits::uge(LHSKnownLo32, RHSKnownLo32);
+      if (KnownUge) {
+        if (*KnownUge) {
+          // LHS.lo32 uge RHS.lo32, so LHS >= RHS iff LHS.hi32 >= RHS.hi32
+          NewCC = (CC == ISD::SETOLT || CC == ISD::SETULT) ? ISD::SETLT
+                                                           : ISD::SETGE;
+        } else {
+          // LHS.lo32 ult RHS.lo32, so LHS >= RHS iff LHS.hi32 > RHS.hi32
+          NewCC = (CC == ISD::SETOLT || CC == ISD::SETULT) ? ISD::SETLE
+                                                           : ISD::SETGT;
+        }
+      }
+      break;
+    }
+    case ISD::SETOLE:
+    case ISD::SETULE:
+    case ISD::SETOGT:
+    case ISD::SETUGT: {
+      // Comparison may only be reduced to upper 32 bits if both operands are
+      // positive.
+      const bool LHSNeverNegative = LHSSgn.Zero.isOne();
+      const bool RHSNeverNegative = RHSSgn.Zero.isOne();
+      if (!LHSNeverNegative || !RHSNeverNegative)
+        break;
+
+      // OLE should be false if either operand is NaN, but this cannot be
+      // ensured with a truncated comparison.
+      if (CC == ISD::SETOLE && (LHSMaybeNaN || RHSMaybeNaN))
+        break;
+      // ULE should be true if either operand is NaN.
+      // False negatives are only possible if the LHS is NaN.
+      // (No issue with LHS == +inf since the inequality is inclusive)
+      if (CC == ISD::SETULE && LHSMaybeNaN)
+        break;
+      // OGT should be false if either operand is NaN.
+      // False positives are only possible if the LHS is NaN.
+      // (No issue with LHS == +inf since the inequality is strict)
+      if (CC == ISD::SETOGT && LHSMaybeNaN)
+        break;
+      // UGT should be true if either operand is NaN, but this cannot be ensured
+      // with a truncated comparison.
+      if (CC == ISD::SETUGT && (LHSMaybeNaN || RHSMaybeNaN))
+        break;
+
+      const std::optional<bool> KnownUle =
+          KnownBits::ule(LHSKnownLo32, RHSKnownLo32);
+      if (KnownUle) {
+        if (*KnownUle) {
+          // LHS.lo32 ule RHS.lo32, so LHS <= RHS iff LHS.hi32 <= RHS.hi32
+          NewCC = (CC == ISD::SETOLE || CC == ISD::SETULE) ? ISD::SETLE
+                                                           : ISD::SETGT;
+        } else {
+          // LHS.lo32 ugt RHS.lo32, so LHS <= RHS iff LHS.hi32 < RHS.hi32
+          NewCC = (CC == ISD::SETOLE || CC == ISD::SETULE) ? ISD::SETLT
+                                                           : ISD::SETGE;
+        }
+      }
+    } break;
+    }
+
+    if (NewCC != ISD::SETCC_INVALID)
+      return DAG.getSetCC(SL, N->getValueType(0), getHiHalf64(LHS, DAG),
+                          getHiHalf64(RHS, DAG), NewCC);
+  }
+
   return SDValue();
 }
 
