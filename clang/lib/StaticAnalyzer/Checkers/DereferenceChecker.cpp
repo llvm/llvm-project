@@ -399,7 +399,7 @@ namespace llvm {
 template <> struct format_provider<ValueDescStr> {
   static void format(const ValueDescStr &V, raw_ostream &Stream,
                      StringRef Style) {
-    static const char *ValueStr[2][3] = {
+    static constexpr const char *ValueStr[2][3] = {
         {"zero", "nonzero integer value", "probably nonzero integer value"},
         {"null pointer", "non-null pointer", "probably non-null pointer"},
     };

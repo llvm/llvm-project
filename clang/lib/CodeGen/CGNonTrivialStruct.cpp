@@ -32,7 +32,7 @@ static uint64_t getFieldSize(const FieldDecl *FD, QualType FT,
 
 namespace {
 enum { DstIdx = 0, SrcIdx = 1 };
-const char *ValNameStr[2] = {"dst", "src"};
+constexpr const char *ValNameStr[2] = {"dst", "src"};
 
 template <class Derived> struct StructVisitor {
   StructVisitor(ASTContext &Ctx) : Ctx(Ctx) {}

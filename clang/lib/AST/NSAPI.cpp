@@ -21,18 +21,11 @@ NSAPI::NSAPI(ASTContext &ctx)
     NSUTF8StringEncodingId(nullptr) {}
 
 IdentifierInfo *NSAPI::getNSClassId(NSClassIdKindKind K) const {
-  static const char *ClassName[NumClassIds] = {
-    "NSObject",
-    "NSString",
-    "NSArray",
-    "NSMutableArray",
-    "NSDictionary",
-    "NSMutableDictionary",
-    "NSNumber",
-    "NSMutableSet",
-    "NSMutableOrderedSet",
-    "NSValue"
-  };
+  static constexpr const char *ClassName[NumClassIds] = {
+      "NSObject",       "NSString",     "NSArray",
+      "NSMutableArray", "NSDictionary", "NSMutableDictionary",
+      "NSNumber",       "NSMutableSet", "NSMutableOrderedSet",
+      "NSValue"};
 
   if (!ClassIds[K])
     return (ClassIds[K] = &Ctx.Idents.get(ClassName[K]));
@@ -284,43 +277,41 @@ std::optional<NSAPI::NSSetMethodKind> NSAPI::getNSSetMethodKind(Selector Sel) {
 
 Selector NSAPI::getNSNumberLiteralSelector(NSNumberLiteralMethodKind MK,
                                            bool Instance) const {
-  static const char *ClassSelectorName[NumNSNumberLiteralMethods] = {
-    "numberWithChar",
-    "numberWithUnsignedChar",
-    "numberWithShort",
-    "numberWithUnsignedShort",
-    "numberWithInt",
-    "numberWithUnsignedInt",
-    "numberWithLong",
-    "numberWithUnsignedLong",
-    "numberWithLongLong",
-    "numberWithUnsignedLongLong",
-    "numberWithFloat",
-    "numberWithDouble",
-    "numberWithBool",
-    "numberWithInteger",
-    "numberWithUnsignedInteger"
-  };
-  static const char *InstanceSelectorName[NumNSNumberLiteralMethods] = {
-    "initWithChar",
-    "initWithUnsignedChar",
-    "initWithShort",
-    "initWithUnsignedShort",
-    "initWithInt",
-    "initWithUnsignedInt",
-    "initWithLong",
-    "initWithUnsignedLong",
-    "initWithLongLong",
-    "initWithUnsignedLongLong",
-    "initWithFloat",
-    "initWithDouble",
-    "initWithBool",
-    "initWithInteger",
-    "initWithUnsignedInteger"
-  };
+  static constexpr const char *ClassSelectorName[NumNSNumberLiteralMethods] = {
+      "numberWithChar",
+      "numberWithUnsignedChar",
+      "numberWithShort",
+      "numberWithUnsignedShort",
+      "numberWithInt",
+      "numberWithUnsignedInt",
+      "numberWithLong",
+      "numberWithUnsignedLong",
+      "numberWithLongLong",
+      "numberWithUnsignedLongLong",
+      "numberWithFloat",
+      "numberWithDouble",
+      "numberWithBool",
+      "numberWithInteger",
+      "numberWithUnsignedInteger"};
+  static constexpr const char *InstanceSelectorName[NumNSNumberLiteralMethods] =
+      {"initWithChar",
+       "initWithUnsignedChar",
+       "initWithShort",
+       "initWithUnsignedShort",
+       "initWithInt",
+       "initWithUnsignedInt",
+       "initWithLong",
+       "initWithUnsignedLong",
+       "initWithLongLong",
+       "initWithUnsignedLongLong",
+       "initWithFloat",
+       "initWithDouble",
+       "initWithBool",
+       "initWithInteger",
+       "initWithUnsignedInteger"};
 
   Selector *Sels;
-  const char **Names;
+  const char *const *Names;
   if (Instance) {
     Sels = NSNumberInstanceSelectors;
     Names = InstanceSelectorName;

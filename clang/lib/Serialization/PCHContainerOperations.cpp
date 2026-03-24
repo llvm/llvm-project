@@ -56,7 +56,7 @@ std::unique_ptr<ASTConsumer> RawPCHContainerWriter::CreatePCHContainerGenerator(
 }
 
 ArrayRef<llvm::StringRef> RawPCHContainerReader::getFormats() const {
-  static StringRef Raw("raw");
+  static const StringRef Raw("raw");
   return ArrayRef(Raw);
 }
 

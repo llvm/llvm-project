@@ -57,7 +57,7 @@ inline raw_ostream &Indent(raw_ostream &o, const unsigned indent) {
 }
 
 inline raw_ostream &EmitPlistHeader(raw_ostream &o) {
-  static const char *PlistHeader =
+  const char *PlistHeader =
       "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
       "<!DOCTYPE plist PUBLIC \"-//Apple Computer//DTD PLIST 1.0//EN\" "
       "\"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n"

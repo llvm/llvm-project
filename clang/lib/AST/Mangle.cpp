@@ -152,7 +152,7 @@ bool MangleContext::shouldMangleDeclName(const NamedDecl *D) {
   return shouldMangleCXXName(D);
 }
 
-static llvm::StringRef g_lldb_func_call_label_prefix = "$__lldb_func:";
+constexpr llvm::StringRef g_lldb_func_call_label_prefix = "$__lldb_func:";
 
 /// Given an LLDB function call label, this function prints the label
 /// into \c Out, together with the structor type of \c GD (if the
