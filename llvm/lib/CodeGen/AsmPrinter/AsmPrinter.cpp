@@ -2335,13 +2335,14 @@ void AsmPrinter::emitFunctionBody() {
         handleCallsiteForCallgraph(FuncCGInfo, CallSitesInfoMap, MI);
 
       // If there is a post-instruction symbol, emit a label for it here.
-      if (TM.getTargetTriple().isOSBinFormatELF()) {
-        if (MCSymbol *S = MI.getPostInstrSymbol()) {
+      if (MCSymbol *S = MI.getPostInstrSymbol()) {
+        // The weak symbol attribute used for the prefetch target fallback.
+        if (TM.getTargetTriple().isOSBinFormatELF()) {
           MCSymbolELF *ESym = static_cast<MCSymbolELF *>(S);
           if (ESym->getBinding() == ELF::STB_WEAK)
             OutStreamer->emitSymbolAttribute(S, MCSA_Weak);
-          OutStreamer->emitLabel(S);
         }
+        OutStreamer->emitLabel(S);
       }
 
       for (auto &Handler : Handlers)
