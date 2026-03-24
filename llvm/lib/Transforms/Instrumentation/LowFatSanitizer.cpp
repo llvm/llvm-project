@@ -54,7 +54,8 @@ public:
   LowFatSanitizer(Module &M, const LowFatSanitizerOptions &Options)
       : M(M), Options(Options), DL(M.getDataLayout()),
         IntptrTy(DL.getIntPtrType(M.getContext())),
-        UseDarwinMetadataGuard(Triple(M.getTargetTriple()).isOSDarwin()) {}
+        UseDarwinMetadataGuard(Triple(M.getTargetTriple()).isOSDarwin()),
+        TablesBase(kTablesBase) {}
 
   bool run();
 
@@ -64,6 +65,7 @@ private:
   const DataLayout &DL;
   Type *IntptrTy;
   const bool UseDarwinMetadataGuard;
+  const uint64_t TablesBase;
 
   FunctionCallee ReportOobFn = nullptr;
   FunctionCallee WarnOobFn = nullptr;
@@ -128,7 +130,7 @@ private:
 #endif
 
   // Fixed absolute addresses for metadata tables (must match lf_rtl.cpp)
-  static constexpr uint64_t kTablesBase   = 0x200000000ULL;
+  static constexpr uint64_t kTablesBase   = 0x118000000000ULL;
   static constexpr uint64_t kTablesOffset = 0x1000000ULL;
 };
 
@@ -268,9 +270,9 @@ LowFatSanitizer::emitDynamicBaseMagic(IRBuilder<> &IRB, Value *PtrInt,
   Type *I64Ty  = Type::getInt64Ty(Ctx);
   Type *I128Ty = Type::getInt128Ty(Ctx);
 
-  Value *AllocSize64 = loadFromFixedTable(IRB, kTablesBase + 0 * kTablesOffset,
+  Value *AllocSize64 = loadFromFixedTable(IRB, TablesBase + 0 * kTablesOffset,
                                           I64Ty, RegionIndex);
-  Value *Mask64      = loadFromFixedTable(IRB, kTablesBase + 3 * kTablesOffset,
+  Value *Mask64      = loadFromFixedTable(IRB, TablesBase + 3 * kTablesOffset,
                                           I64Ty, RegionIndex);
 
   // Narrow to IntptrTy (which is i64 on 64-bit targets)
@@ -302,7 +304,7 @@ LowFatSanitizer::emitDynamicBaseMagic(IRBuilder<> &IRB, Value *PtrInt,
     return {AllocSize, BaseAnd};
 
   // --- MUL (non-POW2) base ---
-  Value *Magic64     = loadFromFixedTable(IRB, kTablesBase + 1 * kTablesOffset,
+  Value *Magic64     = loadFromFixedTable(IRB, TablesBase + 1 * kTablesOffset,
                                           I64Ty, RegionIndex);
 
   Value *Ptr128   = IRB.CreateZExt(PtrInt, I128Ty);
@@ -375,7 +377,7 @@ bool LowFatSanitizer::instrumentMemoryAccess(Instruction *I, Value *Ptr,
     Value *MaxRegion = ConstantInt::get(IntptrTy, NumSizeClasses);
     IsLowFat = IRB.CreateICmpULT(RegionIndex, MaxRegion);
   } else {
-    AllocSize64 = loadFromFixedTable(IRB, kTablesBase + 0 * kTablesOffset,
+    AllocSize64 = loadFromFixedTable(IRB, TablesBase + 0 * kTablesOffset,
                                      I64Ty, RegionIndex);
     IsLowFat = IRB.CreateICmpNE(AllocSize64, ConstantInt::get(I64Ty, 0));
   }
@@ -387,14 +389,14 @@ bool LowFatSanitizer::instrumentMemoryAccess(Instruction *I, Value *Ptr,
                  isa<AtomicCmpXchgInst>(I);
 
   if (!AllocSize64)
-    AllocSize64 = loadFromFixedTable(ThenIRB, kTablesBase + 0 * kTablesOffset,
+    AllocSize64 = loadFromFixedTable(ThenIRB, TablesBase + 0 * kTablesOffset,
                                      I64Ty, RegionIndex);
   Value *AllocSize = ThenIRB.CreateZExtOrTrunc(AllocSize64, IntptrTy);
 
 #ifdef LOWFAT_CUSTOM_CONFIG
   auto [_, Base] = emitDynamicBaseMagic(ThenIRB, PtrInt, RegionIndex);
 #else
-  Value *Mask64      = loadFromFixedTable(ThenIRB, kTablesBase + 3 * kTablesOffset,
+  Value *Mask64      = loadFromFixedTable(ThenIRB, TablesBase + 3 * kTablesOffset,
                                           I64Ty, RegionIndex);
   Value *Mask      = ThenIRB.CreateZExtOrTrunc(Mask64, IntptrTy);
   Value *Base      = ThenIRB.CreateAnd(PtrInt, Mask);
@@ -428,7 +430,7 @@ bool LowFatSanitizer::instrumentMemoryRange(Instruction *I, Value *Ptr,
     Value *MaxRegion = ConstantInt::get(IntptrTy, NumSizeClasses);
     IsLowFat = IRB.CreateICmpULT(RegionIndex, MaxRegion);
   } else {
-    AllocSize64 = loadFromFixedTable(IRB, kTablesBase + 0 * kTablesOffset,
+    AllocSize64 = loadFromFixedTable(IRB, TablesBase + 0 * kTablesOffset,
                                      I64Ty, RegionIndex);
     IsLowFat = IRB.CreateICmpNE(AllocSize64, ConstantInt::get(I64Ty, 0));
   }
@@ -437,14 +439,14 @@ bool LowFatSanitizer::instrumentMemoryRange(Instruction *I, Value *Ptr,
   IRBuilder<> ThenIRB(ThenTerm);
 
   if (!AllocSize64)
-    AllocSize64 = loadFromFixedTable(ThenIRB, kTablesBase + 0 * kTablesOffset,
+    AllocSize64 = loadFromFixedTable(ThenIRB, TablesBase + 0 * kTablesOffset,
                                      I64Ty, RegionIndex);
   Value *AllocSize = ThenIRB.CreateZExtOrTrunc(AllocSize64, IntptrTy);
 
 #ifdef LOWFAT_CUSTOM_CONFIG
   auto [_, Base] = emitDynamicBaseMagic(ThenIRB, PtrInt, RegionIndex);
 #else
-  Value *Mask64      = loadFromFixedTable(ThenIRB, kTablesBase + 3 * kTablesOffset,
+  Value *Mask64      = loadFromFixedTable(ThenIRB, TablesBase + 3 * kTablesOffset,
                                           I64Ty, RegionIndex);
   Value *Mask      = ThenIRB.CreateZExtOrTrunc(Mask64, IntptrTy);
   Value *Base      = ThenIRB.CreateAnd(PtrInt, Mask);
@@ -503,7 +505,7 @@ bool LowFatSanitizer::instrumentGEP(GetElementPtrInst *GEP) {
     Value *MaxRegion = ConstantInt::get(IntptrTy, NumSizeClasses);
     IsLowFat = IRB.CreateICmpULT(RegionIndex, MaxRegion);
   } else {
-    AllocSize64 = loadFromFixedTable(IRB, kTablesBase + 0 * kTablesOffset,
+    AllocSize64 = loadFromFixedTable(IRB, TablesBase + 0 * kTablesOffset,
                                      I64Ty, RegionIndex);
     IsLowFat = IRB.CreateICmpNE(AllocSize64, ConstantInt::get(I64Ty, 0));
   }
@@ -512,14 +514,14 @@ bool LowFatSanitizer::instrumentGEP(GetElementPtrInst *GEP) {
   IRBuilder<> ThenIRB(ThenTerm);
 
   if (!AllocSize64)
-    AllocSize64 = loadFromFixedTable(ThenIRB, kTablesBase + 0 * kTablesOffset,
+    AllocSize64 = loadFromFixedTable(ThenIRB, TablesBase + 0 * kTablesOffset,
                                      I64Ty, RegionIndex);
   Value *AllocSize = ThenIRB.CreateZExtOrTrunc(AllocSize64, IntptrTy);
 
 #ifdef LOWFAT_CUSTOM_CONFIG
   auto [_, Base] = emitDynamicBaseMagic(ThenIRB, SrcInt, RegionIndex);
 #else
-  Value *Mask64      = loadFromFixedTable(ThenIRB, kTablesBase + 3 * kTablesOffset,
+  Value *Mask64      = loadFromFixedTable(ThenIRB, TablesBase + 3 * kTablesOffset,
                                           I64Ty, RegionIndex);
   Value *Mask      = ThenIRB.CreateZExtOrTrunc(Mask64, IntptrTy);
   Value *Base      = ThenIRB.CreateAnd(SrcInt, Mask);
