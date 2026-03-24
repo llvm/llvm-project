@@ -3385,6 +3385,43 @@ static bool CheckVectorSelect(Sema *S, CallExpr *TheCall) {
   return false;
 }
 
+static bool CheckIndexType(Sema *S, CallExpr *TheCall, unsigned IndexArgIndex) {
+  assert(TheCall->getNumArgs() > IndexArgIndex && "Index argument missing");
+  QualType ArgType = TheCall->getArg(IndexArgIndex)->getType();
+  QualType IndexTy = ArgType;
+  unsigned int ActualDim = 1;
+  if (const auto *VTy = IndexTy->getAs<VectorType>()) {
+    ActualDim = VTy->getNumElements();
+    IndexTy = VTy->getElementType();
+  }
+  if (!IndexTy->isIntegerType()) {
+    S->Diag(TheCall->getArg(IndexArgIndex)->getBeginLoc(),
+            diag::err_typecheck_expect_int)
+        << ArgType;
+    return true;
+  }
+
+  QualType ResourceArgTy = TheCall->getArg(0)->getType();
+  const HLSLAttributedResourceType *ResTy =
+      ResourceArgTy.getTypePtr()->getAs<HLSLAttributedResourceType>();
+  assert(ResTy && "Resource argument must be a resource");
+  HLSLAttributedResourceType::Attributes ResAttrs = ResTy->getAttrs();
+
+  unsigned int ExpectedDim = 1;
+  if (ResAttrs.ResourceDimension != llvm::dxil::ResourceDimension::Unknown)
+    ExpectedDim = getResourceDimensions(ResAttrs.ResourceDimension);
+
+  if (ActualDim != ExpectedDim) {
+    S->Diag(TheCall->getArg(IndexArgIndex)->getBeginLoc(),
+            diag::err_hlsl_builtin_resource_coordinate_dimension_mismatch)
+        << cast<NamedDecl>(TheCall->getCalleeDecl()) << ExpectedDim
+        << ActualDim;
+    return true;
+  }
+
+  return false;
+}
+
 static bool CheckResourceHandle(
     Sema *S, CallExpr *TheCall, unsigned ArgIndex,
     llvm::function_ref<bool(const HLSLAttributedResourceType *ResType)> Check =
@@ -3724,8 +3761,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case Builtin::BI__builtin_hlsl_resource_getpointer: {
     if (SemaRef.checkArgCount(TheCall, 2) ||
         CheckResourceHandle(&SemaRef, TheCall, 0) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1),
-                            SemaRef.getASTContext().UnsignedIntTy))
+        CheckIndexType(&SemaRef, TheCall, 1))
       return true;
 
     auto *ResourceTy =
@@ -3742,8 +3778,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case Builtin::BI__builtin_hlsl_resource_getpointer_typed: {
     if (SemaRef.checkArgCount(TheCall, 3) ||
         CheckResourceHandle(&SemaRef, TheCall, 0) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1),
-                            SemaRef.getASTContext().UnsignedIntTy))
+        CheckIndexType(&SemaRef, TheCall, 1))
       return true;
 
     QualType ElementTy = TheCall->getArg(2)->getType();
@@ -4160,8 +4195,9 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(ArgTyExpr);
     break;
   }
+  case Builtin::BI__builtin_hlsl_wave_active_bit_or:
   case Builtin::BI__builtin_hlsl_wave_active_bit_xor:
-  case Builtin::BI__builtin_hlsl_wave_active_bit_or: {
+  case Builtin::BI__builtin_hlsl_wave_active_bit_and: {
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;
 
@@ -4608,8 +4644,8 @@ bool SemaHLSL::CanPerformScalarCast(QualType SrcTy, QualType DestTy) {
 }
 
 // Can perform an HLSL Aggregate splat cast if the Dest is an aggregate and the
-// Src is a scalar or a vector of length 1
-// Or if Dest is a vector and Src is a vector of length 1
+// Src is a scalar, a vector of length 1, or a 1x1 matrix
+// Or if Dest is a vector and Src is a vector of length 1 or a 1x1 matrix
 bool SemaHLSL::CanPerformAggregateSplatCast(Expr *Src, QualType DestTy) {
 
   QualType SrcTy = Src->getType();
@@ -4620,13 +4656,18 @@ bool SemaHLSL::CanPerformAggregateSplatCast(Expr *Src, QualType DestTy) {
     return false;
 
   const VectorType *SrcVecTy = SrcTy->getAs<VectorType>();
+  const ConstantMatrixType *SrcMatTy = SrcTy->getAs<ConstantMatrixType>();
 
-  // Src isn't a scalar or a vector of length 1
-  if (!SrcTy->isScalarType() && !(SrcVecTy && SrcVecTy->getNumElements() == 1))
+  // Src isn't a scalar, a vector of length 1, or a 1x1 matrix
+  if (!SrcTy->isScalarType() &&
+      !(SrcVecTy && SrcVecTy->getNumElements() == 1) &&
+      !(SrcMatTy && SrcMatTy->getNumElementsFlattened() == 1))
     return false;
 
   if (SrcVecTy)
     SrcTy = SrcVecTy->getElementType();
+  else if (SrcMatTy)
+    SrcTy = SrcMatTy->getElementType();
 
   llvm::SmallVector<QualType> DestTypes;
   BuildFlattenedTypeList(DestTy, DestTypes);
@@ -5566,9 +5607,10 @@ class InitListTransformer {
     }
 
     // If this is a scalar type, just enqueue the expression.
-    QualType Ty = E->getType();
+    QualType Ty = E->getType().getDesugaredType(Ctx);
 
-    if (Ty->isScalarType() || (Ty->isRecordType() && !Ty->isAggregateType()))
+    if (Ty->isScalarType() || (Ty->isRecordType() && !Ty->isAggregateType()) ||
+        Ty->isHLSLAttributedResourceType())
       return castInitializer(E);
 
     if (auto *VecTy = Ty->getAs<VectorType>()) {
@@ -5663,12 +5705,13 @@ class InitListTransformer {
   }
 
   Expr *generateInitListsImpl(QualType Ty) {
+    Ty = Ty.getDesugaredType(Ctx);
     assert(ArgIt != ArgExprs.end() && "Something is off in iteration!");
-    if (Ty->isScalarType() || (Ty->isRecordType() && !Ty->isAggregateType()))
+    if (Ty->isScalarType() || (Ty->isRecordType() && !Ty->isAggregateType()) ||
+        Ty->isHLSLAttributedResourceType())
       return *(ArgIt++);
 
     llvm::SmallVector<Expr *> Inits;
-    Ty = Ty.getDesugaredType(Ctx);
     if (Ty->isVectorType() || Ty->isConstantArrayType() ||
         Ty->isConstantMatrixType()) {
       QualType ElTy;

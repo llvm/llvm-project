@@ -1205,9 +1205,7 @@ struct FoldEmptyTensorWithCastOp : public OpRewritePattern<CastOp> {
     newMixedSizes.reserve(currMixedSizes.size());
     assert(resultShape.size() == currMixedSizes.size() &&
            "mismatch in result shape and sizes of empty op");
-    for (auto it : llvm::zip(resultShape, currMixedSizes)) {
-      int64_t newDim = std::get<0>(it);
-      OpFoldResult currDim = std::get<1>(it);
+    for (auto [newDim, currDim] : llvm::zip(resultShape, currMixedSizes)) {
       // Case 1: The empty tensor dim is static. Check that the tensor cast
       // result dim matches.
       if (auto attr = llvm::dyn_cast_if_present<Attribute>(currDim)) {
@@ -1236,9 +1234,9 @@ struct FoldEmptyTensorWithCastOp : public OpRewritePattern<CastOp> {
       newMixedSizes.push_back(currDim);
     }
 
-    // TODO: Do not drop tensor encoding.
     rewriter.replaceOpWithNewOp<EmptyOp>(castOp, newMixedSizes,
-                                         resultType.getElementType());
+                                         resultType.getElementType(),
+                                         resultType.getEncoding());
     return success();
   }
 };

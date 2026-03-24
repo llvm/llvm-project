@@ -49,6 +49,19 @@ foreach(arch ${BUILTIN_TEST_ARCH})
   set(BUILTINS_TEST_TARGET_ARCH ${arch})
   string(TOLOWER "-${arch}-${OS_NAME}" BUILTINS_TEST_CONFIG_SUFFIX)
   get_test_cc_for_arch(${arch} BUILTINS_TEST_TARGET_CC BUILTINS_TEST_TARGET_CFLAGS)
+
+  if(COMPILER_RT_GPU_BUILD)
+    if("${arch}" MATCHES "amdgcn")
+      list(APPEND BUILTINS_TEST_TARGET_CFLAGS
+           -Wno-multi-gpu -flto -mcpu=native -nogpulib -startfiles -stdlib)
+    elseif("${arch}" MATCHES "nvptx")
+      list(APPEND BUILTINS_TEST_TARGET_CFLAGS
+           -Wno-multi-gpu -flto -march=native -nogpulib -startfiles -stdlib)
+    endif()
+    list(APPEND BUILTINS_TEST_TARGET_CFLAGS --target=${COMPILER_RT_DEFAULT_TARGET_TRIPLE})
+    string(REPLACE ";" " " BUILTINS_TEST_TARGET_CFLAGS "${BUILTINS_TEST_TARGET_CFLAGS}")
+  endif()
+
   if (${arch} STREQUAL "armhf")
     list(APPEND BUILTINS_TEST_TARGET_CFLAGS -fomit-frame-pointer -DCOMPILER_RT_ARMHF_TARGET)
     string(REPLACE ";" " " BUILTINS_TEST_TARGET_CFLAGS "${BUILTINS_TEST_TARGET_CFLAGS}")
@@ -143,7 +156,10 @@ foreach(arch ${BUILTIN_TEST_ARCH})
     # "hexagon/udivsi3.S" => "udivsi3"
     # "udivsi3.c" => "udivsi3"
     get_filename_component(FILE_NAME_FILTERED "${file_name}" NAME_WE)
-    list(APPEND BUILTINS_LIT_SOURCE_FEATURES "librt_has_${FILE_NAME_FILTERED}")
+    get_property(_also_provided SOURCE "${COMPILER_RT_SOURCE_DIR}/lib/builtins/${file_name}" DIRECTORY ${COMPILER_RT_SOURCE_DIR} PROPERTY crt_provides)
+    foreach(_function "${FILE_NAME_FILTERED}" ${_also_provided})
+      list(APPEND BUILTINS_LIT_SOURCE_FEATURES "librt_has_${_function}")
+    endforeach()
   endforeach()
 
   string(TOUPPER ${arch} ARCH_UPPER_CASE)
