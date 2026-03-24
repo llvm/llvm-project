@@ -287,7 +287,7 @@ public:
     }
     // For vector elements we emit a shuffle.
     // For example, extracting lanes 2 and 3 of a <4 x i32> vector %vec:
-    //   %extr0 = shufflevector <4 x i32> %vec, <4 x i32> poison, <2 x i32> <i32 2, i32 3>
+    //  shufflevector <4 x i32> %vec, <4 x i32> poison, <2 x i32> <i32 2, i32 3>
     auto *VecTy = cast<FixedVectorType>(FromVec->getType());
     auto *ExtrVecTy = cast<FixedVectorType>(ExtrTy);
     assert(ExtrVecTy->getElementType() == VecTy->getElementType() &&

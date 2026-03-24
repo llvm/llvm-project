@@ -634,7 +634,7 @@ bb0:
   sandboxir::Value *Vec = F.getArg(0);
   sandboxir::Value *Scalar = F.getArg(1);
 
-  auto *Int32Ty = sandboxir::Type::getInt32Ty(Ctx);;
+  auto *Int32Ty = sandboxir::Type::getInt32Ty(Ctx);
 
   // Check unpacking scalars.
   auto WhereIt = It;
@@ -645,20 +645,23 @@ bb0:
     EXPECT_EQ(ExtrI->getOperand(1), sandboxir::ConstantInt::get(Int32Ty, Lane));
     ExtrI->eraseFromParent();
   }
-  // Check assertions.
-  EXPECT_DEBUG_DEATH(sandboxir::VecUtils::unpack(Scalar, Int32Ty, 0, WhereIt),
-                     ".*vector.*");
-  EXPECT_DEBUG_DEATH(sandboxir::VecUtils::unpack(Vec, Int32Ty, 4, WhereIt),
-                     "Out of bounds.*");
   auto *Int8Ty = sandboxir::Type::getInt8Ty(Ctx);
-  EXPECT_DEBUG_DEATH(sandboxir::VecUtils::unpack(Vec, Int8Ty, 0, WhereIt),
-                     ".*element type.*");
+  // Check assertions.
+#ifndef NDEBUG
+  EXPECT_DEATH(sandboxir::VecUtils::unpack(Scalar, Int32Ty, 0, WhereIt),
+               ".*vector.*");
+  EXPECT_DEATH(sandboxir::VecUtils::unpack(Vec, Int32Ty, 4, WhereIt),
+               "Out of bounds.*");
+  EXPECT_DEATH(sandboxir::VecUtils::unpack(Vec, Int8Ty, 0, WhereIt),
+               ".*element type.*");
+#endif // NDEBUG
 
   // Check unpacking vectors.
   auto *ExtrTy = sandboxir::FixedVectorType::get(Int32Ty, 2);
   auto *VecTy = cast<sandboxir::FixedVectorType>(Vec->getType());
   for (unsigned Lane = 0; Lane != 2; ++Lane) {
-    auto *Shuff = cast<sandboxir::ShuffleVectorInst>(sandboxir::VecUtils::unpack(Vec, ExtrTy, Lane, WhereIt));
+    auto *Shuff = cast<sandboxir::ShuffleVectorInst>(
+        sandboxir::VecUtils::unpack(Vec, ExtrTy, Lane, WhereIt));
     EXPECT_EQ(Shuff->getOperand(0), Vec);
     EXPECT_EQ(Shuff->getOperand(1), sandboxir::PoisonValue::get(VecTy));
     auto Mask = Shuff->getShuffleMask();
