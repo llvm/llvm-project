@@ -58,7 +58,6 @@
 #define __CLC_CONVERT_UINTN __CLC_XCONCAT(__clc_convert_, __CLC_UINTN)
 #define __CLC_CONVERT_ULONGN __CLC_XCONCAT(__clc_convert_, __CLC_ULONGN)
 
-
 // See definitions of __CLC_S_GENTYPE/__CLC_U_GENTYPE below, which depend on the
 // specific size of floating-point type. These are the signed and unsigned
 // integers of the same bitwidth and element count as the GENTYPE. They match
