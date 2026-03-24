@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SPIRVEmitIntrinsics.h"
 #include "SPIRV.h"
 #include "SPIRVBuiltins.h"
 #include "SPIRVSubtarget.h"
@@ -3441,6 +3442,13 @@ bool SPIRVEmitIntrinsics::runOnModule(Module &M) {
     Changed |= processFunctionPointers(M);
 
   return Changed;
+}
+
+PreservedAnalyses llvm::SPIRVEmitIntrinsicsPass::run(Module &M, ModuleAnalysisManager &AM) {
+  SPIRVEmitIntrinsics Legacy(TM);
+  if (Legacy.runOnModule(M))
+    return PreservedAnalyses::none();
+  return PreservedAnalyses::all();
 }
 
 ModulePass *llvm::createSPIRVEmitIntrinsicsPass(SPIRVTargetMachine *TM) {
