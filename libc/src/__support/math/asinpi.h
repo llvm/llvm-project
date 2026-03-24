@@ -42,13 +42,8 @@ LIBC_INLINE double asinpi(double x) {
       // When |x| < 2^-26, asinpi(x) ~ x/pi.
       // The relative error of x/pi is:
       //   |asinpi(x) - x/pi| / |asinpi(x)| < x^2/6 < 2^-54.
-#if defined(LIBC_MATH_HAS_SKIP_ACCURATE_PASS)
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
       return x * ASINPI_COEFFS[0];
-#elif defined(LIBC_TARGET_CPU_HAS_FMA_DOUBLE)
-      return fputil::multiply_add(x, ONE_OVER_PI_DD.hi, x * ONE_OVER_PI_DD.lo);
-#else
-      double hi = x * ONE_OVER_PI_DD.hi;
-      return hi + x * ONE_OVER_PI_DD.lo;
 #endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
     }
 
