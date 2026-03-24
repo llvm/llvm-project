@@ -626,9 +626,7 @@ subroutine sub33(m, n)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPsub33
-! CHECK: cuf.data_transfer 
-! CHECK-COUNT-2: hlfir.elemental
-! CHECK: hlfir.assign
+! CHECK-NOT: cuf.data_transfer 
 
 subroutine sub34(n)
   integer :: n

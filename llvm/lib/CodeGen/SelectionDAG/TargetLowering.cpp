@@ -8217,6 +8217,19 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
 
   bool HasFSHR = isOperationLegal(ISD::FSHR, HiLoVT);
 
+  auto GetFSHR = [&](SDValue Lo, SDValue Hi, unsigned ShiftAmt) {
+    if (HasFSHR)
+      return DAG.getNode(ISD::FSHR, dl, HiLoVT, Hi, Lo,
+                         DAG.getShiftAmountConstant(ShiftAmt, HiLoVT, dl));
+    return DAG.getNode(
+        ISD::OR, dl, HiLoVT,
+        DAG.getNode(ISD::SRL, dl, HiLoVT, Lo,
+                    DAG.getShiftAmountConstant(ShiftAmt, HiLoVT, dl)),
+        DAG.getNode(
+            ISD::SHL, dl, HiLoVT, Hi,
+            DAG.getShiftAmountConstant(HBitWidth - ShiftAmt, HiLoVT, dl)));
+  };
+
   // Shift the input by the number of TrailingZeros in the divisor. The
   // shifted out bits will be added to the remainder later.
   SDValue PartialRem;
@@ -8228,17 +8241,7 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
                                DAG.getConstant(Mask, dl, HiLoVT));
     }
 
-    if (HasFSHR)
-      LL = DAG.getNode(ISD::FSHR, dl, HiLoVT, LH, LL,
-                       DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl));
-    else
-      LL = DAG.getNode(
-          ISD::OR, dl, HiLoVT,
-          DAG.getNode(ISD::SRL, dl, HiLoVT, LL,
-                      DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl)),
-          DAG.getNode(ISD::SHL, dl, HiLoVT, LH,
-                      DAG.getShiftAmountConstant(HBitWidth - TrailingZeros,
-                                                 HiLoVT, dl)));
+    LL = GetFSHR(LL, LH, TrailingZeros);
     LH = DAG.getNode(ISD::SRL, dl, HiLoVT, LH,
                      DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl));
   }
@@ -8274,29 +8277,20 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
     SDValue Mask = DAG.getConstant(
         APInt::getLowBitsSet(HBitWidth, BestChunkWidth), dl, HiLoVT);
 
-    for (unsigned I = 0; I < BitWidth; I += BestChunkWidth) {
+    for (unsigned I = 0; I < BitWidth - TrailingZeros; I += BestChunkWidth) {
       SDValue Chunk;
-      if (I == 0) {
+      if (I == 0)
         Chunk = LL;
-      } else if (I >= HBitWidth) {
+      else if (I >= HBitWidth)
         Chunk =
             DAG.getNode(ISD::SRL, dl, HiLoVT, LH,
                         DAG.getShiftAmountConstant(I - HBitWidth, HiLoVT, dl));
-      } else if (HasFSHR) {
-        Chunk = DAG.getNode(ISD::FSHR, dl, HiLoVT, LH, LL,
-                            DAG.getShiftAmountConstant(I, HiLoVT, dl));
-      } else {
-        Chunk = DAG.getNode(
-            ISD::OR, dl, HiLoVT,
-            DAG.getNode(ISD::SRL, dl, HiLoVT, LL,
-                        DAG.getShiftAmountConstant(I, HiLoVT, dl)),
-            DAG.getNode(ISD::SHL, dl, HiLoVT, LH,
-                        DAG.getShiftAmountConstant(HBitWidth - I, HiLoVT, dl)));
-      }
+      else
+        Chunk = GetFSHR(LL, LH, I);
 
-      // For the last chunk, we might not need a mask if it's smaller than
-      // BestChunkWidth, but applying it is always safe.
-      Chunk = DAG.getNode(ISD::AND, dl, HiLoVT, Chunk, Mask);
+      // If we're on the last chunk, we don't need an AND.
+      if (I + BestChunkWidth < BitWidth - TrailingZeros)
+        Chunk = DAG.getNode(ISD::AND, dl, HiLoVT, Chunk, Mask);
       if (!Sum)
         Sum = Chunk;
       else
@@ -10084,7 +10078,8 @@ SDValue TargetLowering::expandVectorFindLastActive(SDNode *N,
     VScaleRange = getVScaleRange(&DAG.getMachineFunction().getFunction(), 64);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   uint64_t EltWidth = TLI.getBitWidthForCttzElements(
-      BoolVT.getTypeForEVT(*DAG.getContext()), MaskVT.getVectorElementCount(),
+      EVT(getVectorIdxTy(DAG.getDataLayout())).getTypeForEVT(*DAG.getContext()),
+      MaskVT.getVectorElementCount(),
       /*ZeroIsPoison=*/true, &VScaleRange);
   // If the step vector element type is smaller than the mask element type,
   // use the mask type directly to avoid widening issues.

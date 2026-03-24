@@ -307,16 +307,15 @@ define dso_local signext i32 @array0() local_unnamed_addr #0 {
 ; AIX32:       # %bb.0: # %entry
 ; AIX32-NEXT:    mflr r0
 ; AIX32-NEXT:    stwu r1, -96(r1)
-; AIX32-NEXT:    lwz r6, L..C0(r2) # @_MergedGlobals
-; AIX32-NEXT:    li r7, 24
-; AIX32-NEXT:    addi r3, r1, 64
-; AIX32-NEXT:    li r4, 12
+; AIX32-NEXT:    lwz r3, L..C0(r2) # @_MergedGlobals
+; AIX32-NEXT:    li r4, 24
 ; AIX32-NEXT:    stw r0, 104(r1)
-; AIX32-NEXT:    mr r5, r3
-; AIX32-NEXT:    lxvw4x vs0, r6, r7
-; AIX32-NEXT:    rlwimi r5, r4, 0, 28, 29
-; AIX32-NEXT:    stxvw4x vs0, 0, r5
-; AIX32-NEXT:    lxvw4x vs0, r6, r4
+; AIX32-NEXT:    lxvw4x vs0, r3, r4
+; AIX32-NEXT:    addi r4, r1, 76
+; AIX32-NEXT:    stxvw4x vs0, 0, r4
+; AIX32-NEXT:    li r4, 12
+; AIX32-NEXT:    lxvw4x vs0, r3, r4
+; AIX32-NEXT:    addi r3, r1, 64
 ; AIX32-NEXT:    stxvw4x vs0, 0, r3
 ; AIX32-NEXT:    bl .calleeInt[PR]
 ; AIX32-NEXT:    nop
