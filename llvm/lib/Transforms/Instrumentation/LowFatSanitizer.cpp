@@ -26,6 +26,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ModRef.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
@@ -52,7 +53,9 @@ class LowFatSanitizer {
 public:
   LowFatSanitizer(Module &M, const LowFatSanitizerOptions &Options)
       : M(M), Options(Options), DL(M.getDataLayout()),
-        IntptrTy(DL.getIntPtrType(M.getContext())) {}
+        IntptrTy(DL.getIntPtrType(M.getContext())),
+        UseDarwinMetadataGuard(Triple(M.getTargetTriple()).isOSDarwin()),
+        TablesBase(kTablesBase) {}
 
   bool run();
 
@@ -61,6 +64,8 @@ private:
   const LowFatSanitizerOptions &Options;
   const DataLayout &DL;
   Type *IntptrTy;
+  const bool UseDarwinMetadataGuard;
+  const uint64_t TablesBase;
 
   FunctionCallee ReportOobFn = nullptr;
   FunctionCallee WarnOobFn = nullptr;
@@ -125,7 +130,7 @@ private:
 #endif
 
   // Fixed absolute addresses for metadata tables (must match lf_rtl.cpp)
-  static constexpr uint64_t kTablesBase   = 0x200000000ULL;
+  static constexpr uint64_t kTablesBase   = 0x118000000000ULL;
   static constexpr uint64_t kTablesOffset = 0x1000000ULL;
 };
 
@@ -265,9 +270,9 @@ LowFatSanitizer::emitDynamicBaseMagic(IRBuilder<> &IRB, Value *PtrInt,
   Type *I64Ty  = Type::getInt64Ty(Ctx);
   Type *I128Ty = Type::getInt128Ty(Ctx);
 
-  Value *AllocSize64 = loadFromFixedTable(IRB, kTablesBase + 0 * kTablesOffset,
+  Value *AllocSize64 = loadFromFixedTable(IRB, TablesBase + 0 * kTablesOffset,
                                           I64Ty, RegionIndex);
-  Value *Mask64      = loadFromFixedTable(IRB, kTablesBase + 3 * kTablesOffset,
+  Value *Mask64      = loadFromFixedTable(IRB, TablesBase + 3 * kTablesOffset,
                                           I64Ty, RegionIndex);
 
   // Narrow to IntptrTy (which is i64 on 64-bit targets)
@@ -299,7 +304,7 @@ LowFatSanitizer::emitDynamicBaseMagic(IRBuilder<> &IRB, Value *PtrInt,
     return {AllocSize, BaseAnd};
 
   // --- MUL (non-POW2) base ---
-  Value *Magic64     = loadFromFixedTable(IRB, kTablesBase + 1 * kTablesOffset,
+  Value *Magic64     = loadFromFixedTable(IRB, TablesBase + 1 * kTablesOffset,
                                           I64Ty, RegionIndex);
 
   Value *Ptr128   = IRB.CreateZExt(PtrInt, I128Ty);
@@ -360,15 +365,22 @@ bool LowFatSanitizer::instrumentMemoryAccess(Instruction *I, Value *Ptr,
   Value *RegionOffset  = IRB.CreateSub(PtrInt, RegionBaseVal);
   Value *RegionIndex   = IRB.CreateLShr(RegionOffset, RegionSizeLog);
 
-  // 2. Optimized IsLowFat check:
-  // Instead of comparing RegionIndex < NumSizeClasses, we load the Size
-  // from the fixed table and check if it's non-zero. If it's zero, this
-  // is not a LowFat pointer and we skip the check.
+  // 2. Darwin-first safety guard:
+  // On Darwin, prove the pointer is in a valid LowFat region before touching
+  // the fixed metadata tables. Other targets keep the current table-driven
+  // classification for now.
   LLVMContext &Ctx = M.getContext();
   Type *I64Ty = Type::getInt64Ty(Ctx);
-  Value *AllocSize64 = loadFromFixedTable(IRB, kTablesBase + 0 * kTablesOffset,
-                                          I64Ty, RegionIndex);
-  Value *IsLowFat = IRB.CreateICmpNE(AllocSize64, ConstantInt::get(I64Ty, 0));
+  Value *AllocSize64 = nullptr;
+  Value *IsLowFat = nullptr;
+  if (UseDarwinMetadataGuard) {
+    Value *MaxRegion = ConstantInt::get(IntptrTy, NumSizeClasses);
+    IsLowFat = IRB.CreateICmpULT(RegionIndex, MaxRegion);
+  } else {
+    AllocSize64 = loadFromFixedTable(IRB, TablesBase + 0 * kTablesOffset,
+                                     I64Ty, RegionIndex);
+    IsLowFat = IRB.CreateICmpNE(AllocSize64, ConstantInt::get(I64Ty, 0));
+  }
 
   Instruction *ThenTerm = SplitBlockAndInsertIfThen(IsLowFat, I, false);
   IRBuilder<> ThenIRB(ThenTerm);
@@ -376,12 +388,15 @@ bool LowFatSanitizer::instrumentMemoryAccess(Instruction *I, Value *Ptr,
   bool IsWrite = isa<StoreInst>(I) || isa<AtomicRMWInst>(I) ||
                  isa<AtomicCmpXchgInst>(I);
 
+  if (!AllocSize64)
+    AllocSize64 = loadFromFixedTable(ThenIRB, TablesBase + 0 * kTablesOffset,
+                                     I64Ty, RegionIndex);
   Value *AllocSize = ThenIRB.CreateZExtOrTrunc(AllocSize64, IntptrTy);
 
 #ifdef LOWFAT_CUSTOM_CONFIG
   auto [_, Base] = emitDynamicBaseMagic(ThenIRB, PtrInt, RegionIndex);
 #else
-  Value *Mask64      = loadFromFixedTable(ThenIRB, kTablesBase + 3 * kTablesOffset,
+  Value *Mask64      = loadFromFixedTable(ThenIRB, TablesBase + 3 * kTablesOffset,
                                           I64Ty, RegionIndex);
   Value *Mask      = ThenIRB.CreateZExtOrTrunc(Mask64, IntptrTy);
   Value *Base      = ThenIRB.CreateAnd(PtrInt, Mask);
@@ -409,19 +424,29 @@ bool LowFatSanitizer::instrumentMemoryRange(Instruction *I, Value *Ptr,
 
   LLVMContext &Ctx = M.getContext();
   Type *I64Ty = Type::getInt64Ty(Ctx);
-  Value *AllocSize64 = loadFromFixedTable(IRB, kTablesBase + 0 * kTablesOffset,
-                                          I64Ty, RegionIndex);
-  Value *IsLowFat = IRB.CreateICmpNE(AllocSize64, ConstantInt::get(I64Ty, 0));
+  Value *AllocSize64 = nullptr;
+  Value *IsLowFat = nullptr;
+  if (UseDarwinMetadataGuard) {
+    Value *MaxRegion = ConstantInt::get(IntptrTy, NumSizeClasses);
+    IsLowFat = IRB.CreateICmpULT(RegionIndex, MaxRegion);
+  } else {
+    AllocSize64 = loadFromFixedTable(IRB, TablesBase + 0 * kTablesOffset,
+                                     I64Ty, RegionIndex);
+    IsLowFat = IRB.CreateICmpNE(AllocSize64, ConstantInt::get(I64Ty, 0));
+  }
 
   Instruction *ThenTerm = SplitBlockAndInsertIfThen(IsLowFat, I, false);
   IRBuilder<> ThenIRB(ThenTerm);
 
+  if (!AllocSize64)
+    AllocSize64 = loadFromFixedTable(ThenIRB, TablesBase + 0 * kTablesOffset,
+                                     I64Ty, RegionIndex);
   Value *AllocSize = ThenIRB.CreateZExtOrTrunc(AllocSize64, IntptrTy);
 
 #ifdef LOWFAT_CUSTOM_CONFIG
   auto [_, Base] = emitDynamicBaseMagic(ThenIRB, PtrInt, RegionIndex);
 #else
-  Value *Mask64      = loadFromFixedTable(ThenIRB, kTablesBase + 3 * kTablesOffset,
+  Value *Mask64      = loadFromFixedTable(ThenIRB, TablesBase + 3 * kTablesOffset,
                                           I64Ty, RegionIndex);
   Value *Mask      = ThenIRB.CreateZExtOrTrunc(Mask64, IntptrTy);
   Value *Base      = ThenIRB.CreateAnd(PtrInt, Mask);
@@ -474,19 +499,29 @@ bool LowFatSanitizer::instrumentGEP(GetElementPtrInst *GEP) {
 
   LLVMContext &Ctx = M.getContext();
   Type *I64Ty = Type::getInt64Ty(Ctx);
-  Value *AllocSize64 = loadFromFixedTable(IRB, kTablesBase + 0 * kTablesOffset,
-                                          I64Ty, RegionIndex);
-  Value *IsLowFat = IRB.CreateICmpNE(AllocSize64, ConstantInt::get(I64Ty, 0));
+  Value *AllocSize64 = nullptr;
+  Value *IsLowFat = nullptr;
+  if (UseDarwinMetadataGuard) {
+    Value *MaxRegion = ConstantInt::get(IntptrTy, NumSizeClasses);
+    IsLowFat = IRB.CreateICmpULT(RegionIndex, MaxRegion);
+  } else {
+    AllocSize64 = loadFromFixedTable(IRB, TablesBase + 0 * kTablesOffset,
+                                     I64Ty, RegionIndex);
+    IsLowFat = IRB.CreateICmpNE(AllocSize64, ConstantInt::get(I64Ty, 0));
+  }
 
   Instruction *ThenTerm = SplitBlockAndInsertIfThen(IsLowFat, InsertPt, false);
   IRBuilder<> ThenIRB(ThenTerm);
 
+  if (!AllocSize64)
+    AllocSize64 = loadFromFixedTable(ThenIRB, TablesBase + 0 * kTablesOffset,
+                                     I64Ty, RegionIndex);
   Value *AllocSize = ThenIRB.CreateZExtOrTrunc(AllocSize64, IntptrTy);
 
 #ifdef LOWFAT_CUSTOM_CONFIG
   auto [_, Base] = emitDynamicBaseMagic(ThenIRB, SrcInt, RegionIndex);
 #else
-  Value *Mask64      = loadFromFixedTable(ThenIRB, kTablesBase + 3 * kTablesOffset,
+  Value *Mask64      = loadFromFixedTable(ThenIRB, TablesBase + 3 * kTablesOffset,
                                           I64Ty, RegionIndex);
   Value *Mask      = ThenIRB.CreateZExtOrTrunc(Mask64, IntptrTy);
   Value *Base      = ThenIRB.CreateAnd(SrcInt, Mask);

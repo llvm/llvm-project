@@ -77,11 +77,11 @@ static StaticSpinMutex region_locks[kMaxSizeClasses];
 // are mapped during initialization. This allows the LLVM pass to use
 // absolute addressing (imm[index*8]) instead of PC-relative loads.
 //
-//   0x200000000: Sizes (8 bytes per class)
-//   0x201000000: Magics (8 bytes per class)
-//   0x202000000: IsPow2 (1 byte per class)
-//   0x203000000: Masks (8 bytes per class)
-static constexpr uptr kTablesBase   = 0x200000000ULL;
+//   0x118000000000: Sizes (8 bytes per class)
+//   0x118001000000: Magics (8 bytes per class)
+//   0x118002000000: IsPow2 (1 byte per class)
+//   0x118003000000: Masks (8 bytes per class)
+static constexpr uptr kTablesBase   = 0x118000000000ULL;
 static constexpr uptr kTablesOffset = 0x1000000ULL;  // 16 MB between tables
 
 static void InitializeFlags() {
