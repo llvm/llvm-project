@@ -19,38 +19,38 @@ _main:
 
 # Loading var0's address (21 bit range) is optimized to:
 #   nop
-#   adr x0, _var0
+#   adr x1, _var0
 #
 # NOP
 # jitlink-check: *{4}_load_var0 = 0xd503201f
-# ADR x0, ?
-# jitlink-check: (*{4}(_load_var0 + 4)) & 0x9f00001f = 0x10000000
+# ADR x1, ?
+# jitlink-check: (*{4}(_load_var0 + 4)) & 0x9f00001f = 0x10000001
 # jitlink-check: decode_operand(_load_var0 + 4, 1) = _var0 - (_load_var0+4)
         .globl  _load_var0
         .p2align        2
 _load_var0:
         adrp    x1, _var0@GOTPAGE
-        ldr     x0, [x1, _var0@GOTPAGEOFF]
-        ldr     x0, [x0]
+        ldr     x1, [x1, _var0@GOTPAGEOFF]
+        ldr     x0, [x1]
         ret
 
 # Loading var1's address (33 bit range) is optimized to:
 #   adrp x1, _var1
-#   add  x0, x1, _var1@PAGEOFF
+#   add  x1, x1, _var1@PAGEOFF
 #
 # ADRP x1, ?
 # jitlink-check: (*{4}_load_var1) & 0x9f00001f = 0x90000001
 # jitlink-check: decode_operand(_load_var1, 1) = _var1[32:12] - _load_var1[32:12]
-# ADD  x0, x1, ?
-# jitlink-check: (*{4}(_load_var1+4)) & 0xffc003ff = 0x91000020
+# ADD  x1, x1, ?
+# jitlink-check: (*{4}(_load_var1+4)) & 0xffc003ff = 0x91000021
 # jitlink-check: decode_operand(_load_var1+4, 2) = _var1[11:0]
 
         .globl  _load_var1
         .p2align        2
 _load_var1:
         adrp    x1, _var1@GOTPAGE
-        ldr     x0, [x1, _var1@GOTPAGEOFF]
-        ldr     x0, [x0]
+        ldr     x1, [x1, _var1@GOTPAGEOFF]
+        ldr     x0, [x1]
         ret
 
 # Loading var2's address (>33 bit range) is not optimized.
@@ -59,16 +59,16 @@ _load_var1:
 # jitlink-check: (*{4}_load_var2) & 0x9f00001f = 0x90000001
 # jitlink-check: decode_operand(_load_var2, 1) = \
 # jitlink-check:    (got_addr(macho_opt.o, _var2)[32:12] - _load_var2[32:12])
-# LDR  x0, x1, ?
-# jitlink-check: (*{4}(_load_var2+4)) & 0xffc003ff = 0xf9400020
+# LDR  x1, x1, ?
+# jitlink-check: (*{4}(_load_var2+4)) & 0xffc003ff = 0xf9400021
 # jitlink-check: decode_operand(_load_var2+4, 2) = \
 # jitlink-check:    got_addr(macho_opt.o, _var2)[11:3]
         .globl  _load_var2
         .p2align        2
 _load_var2:
         adrp    x1, _var2@GOTPAGE
-        ldr     x0, [x1, _var2@GOTPAGEOFF]
-        ldr     x0, [x0]
+        ldr     x1, [x1, _var2@GOTPAGEOFF]
+        ldr     x0, [x1]
         ret
 
         .subsections_via_symbols

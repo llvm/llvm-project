@@ -449,18 +449,18 @@ Error optimizeGOTAndStubAccesses(LinkGraph &G) {
 
       // GOT indirection optimization:
       //   ADRP x0, :got: symbol            Page21Relaxable
-      //   LDR  x1, [x0 :got_lo12: symbol]  PageOffset12Relaxable
+      //   LDR  x0, [x0 :got_lo12: symbol]  PageOffset12Relaxable
       //     to
       //   ADRP x0, symbol                  Page21
-      //   ADD  x1, x0, :lo12: symbol       PageOffset12
+      //   ADD  x0, x0, :lo12: symbol       PageOffset12
       //     or, when the displacement is small
       //   NOP
-      //   ADR  x1, symbol                  ADRLiteral21
+      //   ADR  x0, symbol                  ADRLiteral21
       if (E2 && E.getKind() == aarch64::Page21Relaxable &&
           E2->getKind() == aarch64::PageOffset12Relaxable &&
           (Instr >> 24 & 0b10011111) == 0b10010000 && // ADRP
           Instr2 >> 22 == 0b1111100101 &&             // LDR (unsigned offset)
-          Rd1 == Rn2 && // ldr source must match adrp dest.
+          Rd1 == Rn2 && Rd1 == Rt2 && // ldr source, dest must match adrp dest.
           &E.getTarget() == &E2->getTarget() && E.getAddend() == 0 &&
           E.getTarget().isDefined() && E2->getAddend() == 0) {
 
