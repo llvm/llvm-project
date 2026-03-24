@@ -665,17 +665,16 @@ private:
 
   // The branches that we can hoist, mapped to the block that marks a
   // convergence point of their control flow.
-  DenseMap<BranchInst *, BasicBlock *> HoistableBranches;
+  DenseMap<CondBrInst *, BasicBlock *> HoistableBranches;
 
 public:
   ControlFlowHoister(LoopInfo *LI, DominatorTree *DT, Loop *CurLoop,
                      MemorySSAUpdater &MSSAU)
       : LI(LI), DT(DT), CurLoop(CurLoop), MSSAU(MSSAU) {}
 
-  void registerPossiblyHoistableBranch(BranchInst *BI) {
+  void registerPossiblyHoistableBranch(CondBrInst *BI) {
     // We can only hoist conditional branches with loop invariant operands.
-    if (!ControlFlowHoisting || !BI->isConditional() ||
-        !CurLoop->hasLoopInvariantOperands(BI))
+    if (!ControlFlowHoisting || !CurLoop->hasLoopInvariantOperands(BI))
       return;
 
     // The branch destinations need to be in the loop, and we don't gain
@@ -775,7 +774,7 @@ public:
 
     // Check if this block is conditional based on a pending branch
     auto HasBBAsSuccessor =
-        [&](DenseMap<BranchInst *, BasicBlock *>::value_type &Pair) {
+        [&](DenseMap<CondBrInst *, BasicBlock *>::value_type &Pair) {
           return BB != Pair.second && (Pair.first->getSuccessor(0) == BB ||
                                        Pair.first->getSuccessor(1) == BB);
         };
@@ -791,7 +790,7 @@ public:
       HoistDestinationMap[BB] = InitialPreheader;
       return InitialPreheader;
     }
-    BranchInst *BI = It->first;
+    CondBrInst *BI = It->first;
     assert(std::none_of(std::next(It), HoistableBranches.end(),
                         HasBBAsSuccessor) &&
            "BB is expected to be the target of at most one branch");
@@ -830,15 +829,15 @@ public:
       BasicBlock *TargetSucc = HoistTarget->getSingleSuccessor();
       assert(TargetSucc && "Expected hoist target to have a single successor");
       HoistCommonSucc->moveBefore(TargetSucc);
-      BranchInst::Create(TargetSucc, HoistCommonSucc);
+      UncondBrInst::Create(TargetSucc, HoistCommonSucc);
     }
     if (!HoistTrueDest->getTerminator()) {
       HoistTrueDest->moveBefore(HoistCommonSucc);
-      BranchInst::Create(HoistCommonSucc, HoistTrueDest);
+      UncondBrInst::Create(HoistCommonSucc, HoistTrueDest);
     }
     if (!HoistFalseDest->getTerminator()) {
       HoistFalseDest->moveBefore(HoistCommonSucc);
-      BranchInst::Create(HoistCommonSucc, HoistFalseDest);
+      UncondBrInst::Create(HoistCommonSucc, HoistFalseDest);
     }
 
     // If BI is being cloned to what was originally the preheader then
@@ -861,7 +860,7 @@ public:
 
     // Now finally clone BI.
     auto *NewBI =
-        BranchInst::Create(HoistTrueDest, HoistFalseDest, BI->getCondition(),
+        CondBrInst::Create(BI->getCondition(), HoistTrueDest, HoistFalseDest,
                            HoistTarget->getTerminator()->getIterator());
     HoistTarget->getTerminator()->eraseFromParent();
     // md_prof should also come from the original branch - since the
@@ -921,8 +920,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
     for (Instruction &I : llvm::make_early_inc_range(*BB)) {
       // Try hoisting the instruction out to the preheader.  We can only do
       // this if all of the operands of the instruction are loop invariant and
-      // if it is safe to hoist the instruction. We also check block frequency
-      // to make sure instruction only gets hoisted into colder blocks.
+      // if it is safe to hoist the instruction.
       // TODO: It may be safe to hoist if we are hoisting to a conditional block
       // and we have accurately duplicated the control flow from the loop header
       // to that block.
@@ -1009,7 +1007,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
 
       // Remember possibly hoistable branches so we can actually hoist them
       // later if needed.
-      if (BranchInst *BI = dyn_cast<BranchInst>(&I))
+      if (CondBrInst *BI = dyn_cast<CondBrInst>(&I))
         CFH.registerPossiblyHoistableBranch(BI);
     }
   }
@@ -2587,11 +2585,11 @@ static bool hoistAdd(ICmpInst::Predicate Pred, Value *VariantLHS,
   // Try to represent VariantLHS as sum of invariant and variant operands.
   using namespace PatternMatch;
   Value *VariantOp, *InvariantOp;
-  if (IsSigned &&
-      !match(VariantLHS, m_NSWAdd(m_Value(VariantOp), m_Value(InvariantOp))))
+  if (IsSigned && !match(VariantLHS, m_NSWAddLike(m_Value(VariantOp),
+                                                  m_Value(InvariantOp))))
     return false;
-  if (!IsSigned &&
-      !match(VariantLHS, m_NUWAdd(m_Value(VariantOp), m_Value(InvariantOp))))
+  if (!IsSigned && !match(VariantLHS, m_NUWAddLike(m_Value(VariantOp),
+                                                   m_Value(InvariantOp))))
     return false;
 
   // LHS itself is a loop-variant, try to represent it in the form:

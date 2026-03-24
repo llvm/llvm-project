@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+
+#
+# Run on macOS against Homebrew Clang
+#
+
+if [ -z "${1}" ] || [ ! -d "${1}" ]; then
+    echo "usage: ${0} <path-to-llvm-monorepo>"
+    echo "error: Please provide a valid path to the LLVM monorepo."
+    exit 1
+fi
+
+MONOREPO_DIR=$(cd "${1}" && pwd)
+
+export SDKROOT=$(xcrun --show-sdk-path)
+
+while true; do
+    ${MONOREPO_DIR}/libcxx/utils/ci/lnt/commit-watch --git-repo ${MONOREPO_DIR}                                 \
+        --lnt-url http://lnt.llvm.org --test-suite libcxx2 --machine apple-m5-clang21 |                         \
+        while read commit; do                                                                                   \
+            ${MONOREPO_DIR}/libcxx/utils/ci/lnt/run-benchmarks                                                  \
+                --test-suite-commit 0eefb2682bf8c04954c46e91916b5164d8424702                                    \
+                --git-repo ${MONOREPO_DIR}                                                                      \
+                --lnt-url http://lnt.llvm.org                                                                   \
+                --test-suite libcxx2                                                                            \
+                --machine apple-m5-clang21                                                                      \
+                --compiler $(brew --prefix)/opt/llvm/bin/clang++                                                \
+                --benchmark-commit ${commit};                                                                   \
+        done
+    sleep 60 # To avoid busy looping in case something goes really wrong
+done

@@ -1876,6 +1876,7 @@
 // CHECK_GNR_M32: #define __FMA__ 1
 // CHECK_GNR_M32: #define __GFNI__ 1
 // CHECK_GNR_M32: #define __INVPCID__ 1
+// CHECK_DMR_M32: #define __JMPABS__ 1
 // CHECK_GNR_M32: #define __LZCNT__ 1
 // CHECK_GNR_M32: #define __MMX__ 1
 // CHECK_GNR_M32: #define __MOVBE__ 1
@@ -1981,6 +1982,7 @@
 // CHECK_GNR_M64: #define __FMA__ 1
 // CHECK_GNR_M64: #define __GFNI__ 1
 // CHECK_GNR_M64: #define __INVPCID__ 1
+// CHECK_DMR_M64: #define __JMPABS__ 1
 // CHECK_GNR_M64: #define __LZCNT__ 1
 // CHECK_GNR_M64: #define __MMX__ 1
 // CHECK_GNR_M64: #define __MOVBE__ 1
@@ -2576,6 +2578,7 @@
 // CHECK_ARL_M32: #define __GFNI__ 1
 // CHECK_ARL_M32: #define __HRESET__ 1
 // CHECK_ARL_M32: #define __INVPCID__ 1
+// CHECK_NVL_M32: #define __JMPABS__ 1
 // CHECK_KL_M32:  #define __KL__ 1
 // CHECK_NKL_M32-NOT: __KL__
 // CHECK_ARL_M32: #define __LZCNT__ 1
@@ -2709,6 +2712,7 @@
 // CHECK_ARL_M64: #define __GFNI__ 1
 // CHECK_ARL_M64: #define __HRESET__ 1
 // CHECK_ARL_M64: #define __INVPCID__ 1
+// CHECK_NVL_M64: #define __JMPABS__ 1
 // CHECK_KL_M64:  #define __KL__ 1
 // CHECK_NKL_M64-NOT: __KL__
 // CHECK_ARL_M64: #define __LZCNT__ 1
@@ -4133,6 +4137,157 @@
 // CHECK_ZNVER5_M64: #define __znver5 1
 // CHECK_ZNVER5_M64: #define __znver5__ 1
 
+// RUN: %clang -march=znver6 -m32 -E -dM %s -o - 2>&1 \
+// RUN:     -target i386-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_ZNVER6_M32
+// CHECK_ZNVER6_M32-NOT: #define __3dNOW_A__ 1
+// CHECK_ZNVER6_M32-NOT: #define __3dNOW__ 1
+// CHECK_ZNVER6_M32: #define __ADX__ 1
+// CHECK_ZNVER6_M32: #define __AES__ 1
+// CHECK_ZNVER6_M32: #define __AVX2__ 1
+// CHECK_ZNVER6_M32: #define __AVX512BF16__ 1
+// CHECK_ZNVER6_M32: #define __AVX512BITALG__ 1
+// CHECK_ZNVER6_M32: #define __AVX512BW__ 1
+// CHECK_ZNVER6_M32: #define __AVX512CD__ 1
+// CHECK_ZNVER6_M32: #define __AVX512DQ__ 1
+// CHECK_ZNVER6_M32: #define __AVX512FP16__ 1
+// CHECK_ZNVER6_M32: #define __AVX512F__ 1
+// CHECK_ZNVER6_M32: #define __AVX512IFMA__ 1
+// CHECK_ZNVER6_M32: #define __AVX512VBMI2__ 1
+// CHECK_ZNVER6_M32: #define __AVX512VBMI__ 1
+// CHECK_ZNVER6_M32: #define __AVX512VL__ 1
+// CHECK_ZNVER6_M32: #define __AVX512VNNI__ 1
+// CHECK_ZNVER6_M32: #define __AVX512VP2INTERSECT__ 1
+// CHECK_ZNVER6_M32: #define __AVX512VPOPCNTDQ__ 1
+// CHECK_ZNVER6_M32: #define __AVXIFMA__ 1
+// CHECK_ZNVER6_M32: #define __AVXNECONVERT__ 1
+// CHECK_ZNVER6_M32: #define __AVXVNNIINT8__ 1
+// CHECK_ZNVER6_M32: #define __AVXVNNI__ 1
+// CHECK_ZNVER6_M32: #define __AVX__ 1
+// CHECK_ZNVER6_M32: #define __BMI2__ 1
+// CHECK_ZNVER6_M32: #define __BMI__ 1
+// CHECK_ZNVER6_M32: #define __CLFLUSHOPT__ 1
+// CHECK_ZNVER6_M32: #define __CLWB__ 1
+// CHECK_ZNVER6_M32: #define __CLZERO__ 1
+// CHECK_ZNVER6_M32: #define __F16C__ 1
+// CHECK_ZNVER6_M32-NOT: #define __FMA4__ 1
+// CHECK_ZNVER6_M32: #define __FMA__ 1
+// CHECK_ZNVER6_M32: #define __FSGSBASE__ 1
+// CHECK_ZNVER6_M32: #define __GFNI__ 1
+// CHECK_ZNVER6_M32: #define __LZCNT__ 1
+// CHECK_ZNVER6_M32: #define __MMX__ 1
+// CHECK_ZNVER6_M32: #define __MOVDIR64B__ 1
+// CHECK_ZNVER6_M32: #define __MOVDIRI__ 1
+// CHECK_ZNVER6_M32: #define __PCLMUL__ 1
+// CHECK_ZNVER6_M32: #define __PKU__ 1
+// CHECK_ZNVER6_M32: #define __POPCNT__ 1
+// CHECK_ZNVER6_M32: #define __PREFETCHI__ 1
+// CHECK_ZNVER6_M32: #define __PRFCHW__ 1
+// CHECK_ZNVER6_M32: #define __RDPID__ 1
+// CHECK_ZNVER6_M32: #define __RDPRU__ 1
+// CHECK_ZNVER6_M32: #define __RDRND__ 1
+// CHECK_ZNVER6_M32: #define __RDSEED__ 1
+// CHECK_ZNVER6_M32: #define __SHA__ 1
+// CHECK_ZNVER6_M32: #define __SSE2_MATH__ 1
+// CHECK_ZNVER6_M32: #define __SSE2__ 1
+// CHECK_ZNVER6_M32: #define __SSE3__ 1
+// CHECK_ZNVER6_M32: #define __SSE4A__ 1
+// CHECK_ZNVER6_M32: #define __SSE4_1__ 1
+// CHECK_ZNVER6_M32: #define __SSE4_2__ 1
+// CHECK_ZNVER6_M32: #define __SSE_MATH__ 1
+// CHECK_ZNVER6_M32: #define __SSE__ 1
+// CHECK_ZNVER6_M32: #define __SSSE3__ 1
+// CHECK_ZNVER6_M32-NOT: #define __TBM__ 1
+// CHECK_ZNVER6_M32: #define __WBNOINVD__ 1
+// CHECK_ZNVER6_M32-NOT: #define __XOP__ 1
+// CHECK_ZNVER6_M32: #define __XSAVEC__ 1
+// CHECK_ZNVER6_M32: #define __XSAVEOPT__ 1
+// CHECK_ZNVER6_M32: #define __XSAVES__ 1
+// CHECK_ZNVER6_M32: #define __XSAVE__ 1
+// CHECK_ZNVER6_M32: #define __i386 1
+// CHECK_ZNVER6_M32: #define __i386__ 1
+// CHECK_ZNVER6_M32: #define __tune_znver6__ 1
+// CHECK_ZNVER6_M32: #define __znver6 1
+// CHECK_ZNVER6_M32: #define __znver6__ 1
+
+// RUN: %clang -march=znver6 -m64 -E -dM %s -o - 2>&1 \
+// RUN:     -target i386-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_ZNVER6_M64
+// CHECK_ZNVER6_M64-NOT: #define __3dNOW_A__ 1
+// CHECK_ZNVER6_M64-NOT: #define __3dNOW__ 1
+// CHECK_ZNVER6_M64: #define __ADX__ 1
+// CHECK_ZNVER6_M64: #define __AES__ 1
+// CHECK_ZNVER6_M64: #define __AVX2__ 1
+// CHECK_ZNVER6_M64: #define __AVX512BF16__ 1
+// CHECK_ZNVER6_M64: #define __AVX512BITALG__ 1
+// CHECK_ZNVER6_M64: #define __AVX512BW__ 1
+// CHECK_ZNVER6_M64: #define __AVX512CD__ 1
+// CHECK_ZNVER6_M64: #define __AVX512DQ__ 1
+// CHECK_ZNVER6_M64: #define __AVX512FP16__ 1
+// CHECK_ZNVER6_M64: #define __AVX512F__ 1
+// CHECK_ZNVER6_M64: #define __AVX512IFMA__ 1
+// CHECK_ZNVER6_M64: #define __AVX512VBMI2__ 1
+// CHECK_ZNVER6_M64: #define __AVX512VBMI__ 1
+// CHECK_ZNVER6_M64: #define __AVX512VL__ 1
+// CHECK_ZNVER6_M64: #define __AVX512VNNI__ 1
+// CHECK_ZNVER6_M64: #define __AVX512VP2INTERSECT__ 1
+// CHECK_ZNVER6_M64: #define __AVX512VPOPCNTDQ__ 1
+// CHECK_ZNVER6_M64: #define __AVXIFMA__ 1
+// CHECK_ZNVER6_M64: #define __AVXNECONVERT__ 1
+// CHECK_ZNVER6_M64: #define __AVXVNNIINT8__ 1
+// CHECK_ZNVER6_M64: #define __AVXVNNI__ 1
+// CHECK_ZNVER6_M64: #define __AVX__ 1
+// CHECK_ZNVER6_M64: #define __BMI2__ 1
+// CHECK_ZNVER6_M64: #define __BMI__ 1
+// CHECK_ZNVER6_M64: #define __CLFLUSHOPT__ 1
+// CHECK_ZNVER6_M64: #define __CLWB__ 1
+// CHECK_ZNVER6_M64: #define __CLZERO__ 1
+// CHECK_ZNVER6_M64: #define __F16C__ 1
+// CHECK_ZNVER6_M64-NOT: #define __FMA4__ 1
+// CHECK_ZNVER6_M64: #define __FMA__ 1
+// CHECK_ZNVER6_M64: #define __FSGSBASE__ 1
+// CHECK_ZNVER6_M64: #define __GFNI__ 1
+// CHECK_ZNVER6_M64: #define __LZCNT__ 1
+// CHECK_ZNVER6_M64: #define __MMX__ 1
+// CHECK_ZNVER6_M64: #define __MOVDIR64B__ 1
+// CHECK_ZNVER6_M64: #define __MOVDIRI__ 1
+// CHECK_ZNVER6_M64: #define __PCLMUL__ 1
+// CHECK_ZNVER6_M64: #define __PKU__ 1
+// CHECK_ZNVER6_M64: #define __POPCNT__ 1
+// CHECK_ZNVER6_M64: #define __PREFETCHI__ 1
+// CHECK_ZNVER6_M64: #define __PRFCHW__ 1
+// CHECK_ZNVER6_M64: #define __RDPID__ 1
+// CHECK_ZNVER6_M64: #define __RDPRU__ 1
+// CHECK_ZNVER6_M64: #define __RDRND__ 1
+// CHECK_ZNVER6_M64: #define __RDSEED__ 1
+// CHECK_ZNVER6_M64: #define __SHA__ 1
+// CHECK_ZNVER6_M64: #define __SSE2_MATH__ 1
+// CHECK_ZNVER6_M64: #define __SSE2__ 1
+// CHECK_ZNVER6_M64: #define __SSE3__ 1
+// CHECK_ZNVER6_M64: #define __SSE4A__ 1
+// CHECK_ZNVER6_M64: #define __SSE4_1__ 1
+// CHECK_ZNVER6_M64: #define __SSE4_2__ 1
+// CHECK_ZNVER6_M64: #define __SSE_MATH__ 1
+// CHECK_ZNVER6_M64: #define __SSE__ 1
+// CHECK_ZNVER6_M64: #define __SSSE3__ 1
+// CHECK_ZNVER6_M64-NOT: #define __TBM__ 1
+// CHECK_ZNVER6_M64: #define __VAES__ 1
+// CHECK_ZNVER6_M64: #define __VPCLMULQDQ__ 1
+// CHECK_ZNVER6_M64: #define __WBNOINVD__ 1
+// CHECK_ZNVER6_M64-NOT: #define __XOP__ 1
+// CHECK_ZNVER6_M64: #define __XSAVEC__ 1
+// CHECK_ZNVER6_M64: #define __XSAVEOPT__ 1
+// CHECK_ZNVER6_M64: #define __XSAVES__ 1
+// CHECK_ZNVER6_M64: #define __XSAVE__ 1
+// CHECK_ZNVER6_M64: #define __amd64 1
+// CHECK_ZNVER6_M64: #define __amd64__ 1
+// CHECK_ZNVER6_M64: #define __tune_znver6__ 1
+// CHECK_ZNVER6_M64: #define __x86_64 1
+// CHECK_ZNVER6_M64: #define __x86_64__ 1
+// CHECK_ZNVER6_M64: #define __znver6 1
+// CHECK_ZNVER6_M64: #define __znver6__ 1
+
+
 // End X86/GCC/Linux tests ------------------
 
 // Begin PPC/GCC/Linux tests ----------------
@@ -4456,19 +4611,19 @@
 
 // Begin amdgcn tests ----------------
 
-// RUN: %clang -mcpu=gfx803 -E -dM %s -o - 2>&1 \
+// RUN: %clang -mcpu=gfx900 -E -dM %s -o - 2>&1 \
 // RUN:     -target amdgcn-unknown-unknown \
-// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_AMDGCN,CHECK_AMDGCN_803
+// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_AMDGCN,CHECK_AMDGCN_900
 // RUN: %clang -E -dM %s -o - 2>&1 \
 // RUN:     -target amdgcn-unknown-unknown \
 // RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_AMDGCN,CHECK_AMDGCN_NONE
+// CHECK_AMDGCN: #define FP_FAST_FMA 1
+// CHECK_AMDGCN_900: #define FP_FAST_FMAF 1
+// CHECK_AMDGCN_NONE-NOT: FP_FAST_FMAF
 // CHECK_AMDGCN: #define __AMDGCN__ 1
-// CHECK_AMDGCN_803: #define __HAS_FMAF__ 1
-// CHECK_AMDGCN_803: #define __HAS_FP64__ 1
-// CHECK_AMDGCN_803: #define __HAS_LDEXPF__ 1
-// CHECK_AMDGCN_NONE-NOT: #define __HAS_FMAF__
-// CHECK_AMDGCN_NONE-NOT: #define __HAS_FP64__
-// CHECK_AMDGCN_NONE-NOT: #define __HAS_LDEXPF__
+// CHECK_AMDGCN: #define __HAS_FMAF__ 1
+// CHECK_AMDGCN: #define __HAS_FP64__ 1
+// CHECK_AMDGCN: #define __HAS_LDEXPF__ 1
 
 // Begin r600 tests ----------------
 

@@ -230,6 +230,43 @@ TEST(AddressSanitizer, ShadowRegionIsPoisonedTest) {
   EXPECT_EQ(ptr, __asan_region_is_poisoned(ptr, 100));
 }
 
+// Test regions fully contained in the last 8 bytes (shadow granularity)
+// of a memory range (LowMem / MidMem / HighMem).
+static void TestIsPoisonedNearMemEnd(uptr end) {
+  static const uptr granularity = 1ULL << 3;  // shadow granularity
+  for (uptr offset = 0; offset < granularity; ++offset) {
+    const uptr first = end - offset;
+    for (uptr last = first; first <= last && last <= end; ++last) {
+      const uptr size = last - first + 1;
+      // __asan_region_is_poisoned() should not crash for the region.
+      uptr first_poisoned = __asan_region_is_poisoned(first, size);
+      EXPECT_TRUE(first_poisoned == 0 ||
+                  (first_poisoned >= first && first_poisoned <= last))
+          << " first=" << (void*)first << " size=" << size
+          << " first_poisoned=" << (void*)first_poisoned;
+
+      // __asan_region_is_poisoned() and __asan_address_is_poisoned() should
+      // behave consistently, i.e. both should return the same result.
+      if (size == 1) {
+        int is_poisoned = __asan_address_is_poisoned((void*)first);
+        EXPECT_EQ((void*)first_poisoned, is_poisoned ? (void*)first : 0);
+      }
+    }
+  }
+}
+
+TEST(AddressSanitizer, IsPoisonedOnMemoryBoundariesTest) {
+  using __asan::kHighMemEnd;
+  using __asan::kMidMemBeg;
+  using __asan::kMidMemEnd;
+
+  TestIsPoisonedNearMemEnd(kLowMemEnd);
+  if (__asan::kMidMemBeg)  // if mid memory is available
+    TestIsPoisonedNearMemEnd(__asan::kMidMemEnd);
+  if (kHighMemBeg)  // if high memory is available
+    TestIsPoisonedNearMemEnd(__asan::kHighMemEnd);
+}
+
 // Test __asan_load1 & friends.
 typedef void (*CB)(uptr p);
 static void TestLoadStoreCallbacks(CB cb[2][5]) {

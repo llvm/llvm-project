@@ -659,7 +659,26 @@ bool SPIRVPrepareFunctions::removeAggregateTypesFromCalls(Function *F) {
 }
 
 bool SPIRVPrepareFunctions::runOnModule(Module &M) {
+  // Resolve the SPIR-V environment from module content before any
+  // function-level processing. This must happen before legalization so that
+  // isShader()/isKernel() return correct values.
+  const_cast<SPIRVTargetMachine &>(TM)
+      .getMutableSubtargetImpl()
+      ->resolveEnvFromModule(M);
+
   bool Changed = false;
+  if (M.functions().empty()) {
+    // If there are no functions, insert a service
+    // function so that the global/constant tracking intrinsics
+    // will be created. Without these intrinsics the generated SPIR-V
+    // will be empty. The service function itself is not emitted.
+    Function *SF = getOrCreateBackendServiceFunction(M);
+    BasicBlock *BB = BasicBlock::Create(M.getContext(), "entry", SF);
+    IRBuilder<> IRB(BB);
+    IRB.CreateRetVoid();
+    Changed = true;
+  }
+
   for (Function &F : M) {
     Changed |= substituteIntrinsicCalls(&F);
     Changed |= sortBlocks(F);

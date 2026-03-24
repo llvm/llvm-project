@@ -8,7 +8,6 @@ module Clang_Analysis {
   umbrella "clang/Analysis"
 
   textual header "clang/Analysis/Analyses/ThreadSafetyOps.def"
-
   module * { export * }
 
   // FIXME: Exclude these headers to avoid pulling all of the AST matchers
@@ -149,6 +148,15 @@ module Clang_Options { requires cplusplus umbrella "clang/Options" module * { ex
 module Clang_Parse { requires cplusplus umbrella "clang/Parse" module * { export * } }
 module Clang_Rewrite { requires cplusplus umbrella "clang/Rewrite/Core" module * { export * } }
 module Clang_RewriteFrontend { requires cplusplus umbrella "clang/Rewrite/Frontend" module * { export * } }
+module Clang_ScalableStaticAnalysisFramework {
+  requires cplusplus
+  umbrella "clang/ScalableStaticAnalysisFramework"
+
+  textual header "clang/ScalableStaticAnalysisFramework/Core/Model/PrivateFieldNames.def"
+
+  module * { export * }
+}
+
 module Clang_Sema { requires cplusplus umbrella "clang/Sema" module * { export * } }
 
 module Clang_Serialization {

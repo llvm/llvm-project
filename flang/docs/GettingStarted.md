@@ -204,9 +204,18 @@ ninja install
 
 
 ### Building Flang-RT for accelerators
-Flang runtime can be built for accelerators in experimental mode, i.e.
-complete enabling is WIP.  CUDA and OpenMP target offload builds
-are currently supported.
+Flang runtime can be built for GPU targets (AMDGPU, NVPTX) using the LLVM
+runtimes build infrastructure. The recommended way to configure a build for GPU
+offloading is via the CMake cache file provided by `offload`.
+
+```bash
+cmake ../llvm -G Ninja                              \
+    -C ../offload/cmake/caches/FlangOffload.cmake   \
+    -DCMAKE_BUILD_TYPE=Release                      \
+    -DCMAKE_INSTALL_PREFIX=<PATH>
+```
+
+An experimental CUDA build of the runtime is also available.
 
 #### Building out-of-tree
 
@@ -298,33 +307,6 @@ Consider building in parallel using the `-j<jobs>` flag, where `<jobs>` is a
 number sufficiently low for all build jobs to fit into the available RAM. Using
 the number of harware threads (`nprocs`) is likely too much for most
 commodity machines.
-
-##### OpenMP target offload build
-Only Clang compiler is currently supported.
-
-```bash
-cd llvm-project
-rm -rf build_flang_runtime
-mkdir build_flang_runtime
-cd build_flang_runtime
-
-cmake \
-  -DLLVM_ENABLE_RUNTIMES=flang-rt \
-  -DFLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT="OpenMP" \
-  -DCMAKE_C_COMPILER=clang \
-  -DCMAKE_CXX_COMPILER=clang++ \
-  -DFLANG_RT_DEVICE_ARCHITECTURES=all \
-  ../runtimes/
-
-make flang-rt
-```
-
-The result of the build is a "device-only" library, i.e. the host
-part of the library is just a container for the device code.
-The resulting library may be linked to user programs using
-Clang-like device linking pipeline.
-
-The same set of CMake variables works for Flang in-tree build.
 
 ### Build options
 

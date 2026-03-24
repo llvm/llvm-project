@@ -1,4 +1,4 @@
-//===- VectorToAMX.cpp - Convert vector to AMX dialect ----------*- C++ -*-===//
+//===- VectorToAMX.cpp - Convert vector to X86 dialect AMX ops --*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,7 +8,6 @@
 
 #include "mlir/Conversion/VectorToAMX/VectorToAMX.h"
 
-#include "mlir/Dialect/AMX/AMXDialect.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Linalg/IR/LinalgInterfaces.h"
@@ -16,6 +15,7 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/X86/X86Dialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -197,7 +197,7 @@ static TypedValue<MemRefType> collapseLastDim(PatternRewriter &rewriter,
 static Operation *
 loadStoreFromTransfer(PatternRewriter &rewriter,
                       VectorTransferOpInterface xferOp, bool isPacked,
-                      TypedValue<amx::TileType> tileToStore = nullptr) {
+                      TypedValue<x86::amx::TileType> tileToStore = nullptr) {
   if (!xferOp || !isa<vector::TransferReadOp, vector::TransferWriteOp>(xferOp))
     return nullptr;
   if (xferOp.hasOutOfBoundsDim() ||
@@ -267,18 +267,18 @@ loadStoreFromTransfer(PatternRewriter &rewriter,
     src = collapseLastDim(rewriter, src);
   int64_t rows = vecShape[0];
   int64_t cols = llvm::product_of(vecShape.drop_front());
-  auto tileType = amx::TileType::get({rows, cols}, vecTy.getElementType());
+  auto tileType = x86::amx::TileType::get({rows, cols}, vecTy.getElementType());
 
   Value zeroIndex = rewriter.createOrFold<arith::ConstantIndexOp>(loc, 0);
   SmallVector<Value> tileIndicides(src.getType().getRank(), zeroIndex);
 
   Operation *amxTileOp = nullptr;
   if (isa<vector::TransferReadOp>(xferOp)) {
-    amxTileOp =
-        amx::TileLoadOp::create(rewriter, loc, tileType, src, tileIndicides);
+    amxTileOp = x86::amx::TileLoadOp::create(rewriter, loc, tileType, src,
+                                             tileIndicides);
   } else if (isa<vector::TransferWriteOp>(xferOp)) {
-    amxTileOp = amx::TileStoreOp::create(rewriter, loc, src, tileIndicides,
-                                         tileToStore);
+    amxTileOp = x86::amx::TileStoreOp::create(rewriter, loc, src, tileIndicides,
+                                              tileToStore);
   } else {
     llvm_unreachable("unsupported vector transfer op");
   }
@@ -289,10 +289,10 @@ loadStoreFromTransfer(PatternRewriter &rewriter,
 /// Attempt to create an AMX tile load operation equivalent to the given
 /// vector transfer `readOp`.
 /// Returns loaded AMX tile if successful.
-static FailureOr<TypedValue<amx::TileType>>
+static FailureOr<TypedValue<x86::amx::TileType>>
 loadFromTransfer(PatternRewriter &rewriter, vector::TransferReadOp readOp,
                  bool isPacked) {
-  amx::TileLoadOp loadOp = dyn_cast_if_present<amx::TileLoadOp>(
+  x86::amx::TileLoadOp loadOp = dyn_cast_if_present<x86::amx::TileLoadOp>(
       loadStoreFromTransfer(rewriter, readOp, isPacked));
   if (!loadOp)
     return failure();
@@ -301,16 +301,16 @@ loadFromTransfer(PatternRewriter &rewriter, vector::TransferReadOp readOp,
 
 /// Attempt to create an AMX tile store operation equivalent to the given
 /// vector transfer `writeOp`.
-static LogicalResult storeFromTransfer(PatternRewriter &rewriter,
-                                       vector::TransferWriteOp writeOp,
-                                       TypedValue<amx::TileType> tileToStore) {
+static LogicalResult
+storeFromTransfer(PatternRewriter &rewriter, vector::TransferWriteOp writeOp,
+                  TypedValue<x86::amx::TileType> tileToStore) {
   return success(loadStoreFromTransfer(rewriter, writeOp, /*isPacked=*/false,
                                        tileToStore));
 }
 
 /// Load vector values to an AMX tile.
-static TypedValue<amx::TileType> loadTile(PatternRewriter &rewriter,
-                                          TypedValue<VectorType> vec) {
+static TypedValue<x86::amx::TileType> loadTile(PatternRewriter &rewriter,
+                                               TypedValue<VectorType> vec) {
   Location loc = vec.getLoc();
 
   VectorType vecTy = vec.getType();
@@ -318,7 +318,7 @@ static TypedValue<amx::TileType> loadTile(PatternRewriter &rewriter,
 
   // Try to load tile directly from vector producer's buffer.
   auto readOp = vec.getDefiningOp<vector::TransferReadOp>();
-  FailureOr<TypedValue<amx::TileType>> tile =
+  FailureOr<TypedValue<x86::amx::TileType>> tile =
       loadFromTransfer(rewriter, readOp, isPacked);
   if (succeeded(tile))
     return *tile;
@@ -337,25 +337,25 @@ static TypedValue<amx::TileType> loadTile(PatternRewriter &rewriter,
   ArrayRef<int64_t> shape = vecTy.getShape();
   int64_t rows = shape[0];
   int64_t cols = llvm::product_of(shape.drop_front());
-  auto tileType = amx::TileType::get({rows, cols}, vecTy.getElementType());
+  auto tileType = x86::amx::TileType::get({rows, cols}, vecTy.getElementType());
 
-  return amx::TileLoadOp::create(rewriter, loc, tileType, buf,
-                                 {zeroIndex, zeroIndex});
+  return x86::amx::TileLoadOp::create(rewriter, loc, tileType, buf,
+                                      {zeroIndex, zeroIndex});
 }
 
 /// Store an AMX tile in a vector.
 static TypedValue<VectorType> storeTile(PatternRewriter &rewriter,
-                                        TypedValue<amx::TileType> tile) {
+                                        TypedValue<x86::amx::TileType> tile) {
   Location loc = tile.getLoc();
 
   // Transfer the tile to a vector through an intermediate buffer.
-  amx::TileType tileTy = tile.getType();
+  x86::amx::TileType tileTy = tile.getType();
   Value buf = memref::AllocaOp::create(
       rewriter, loc,
       MemRefType::get(tileTy.getShape(), tileTy.getElementType()));
   Value zeroIndex = rewriter.createOrFold<arith::ConstantIndexOp>(loc, 0);
   SmallVector<Value> indices(2, zeroIndex);
-  amx::TileStoreOp::create(rewriter, loc, buf, indices, tile);
+  x86::amx::TileStoreOp::create(rewriter, loc, buf, indices, tile);
 
   auto vecTy = VectorType::get(tileTy.getShape(), tileTy.getElementType());
   return vector::TransferReadOp::create(rewriter, loc, vecTy, buf, indices, {});
@@ -374,19 +374,21 @@ struct ContractionToAMX : public OpRewritePattern<vector::ContractionOp> {
     if (failed(validateOperands(rewriter, contractOp)))
       return failure();
 
-    TypedValue<amx::TileType> lhsTile = loadTile(rewriter, contractOp.getLhs());
-    TypedValue<amx::TileType> rhsTile = loadTile(rewriter, contractOp.getRhs());
+    TypedValue<x86::amx::TileType> lhsTile =
+        loadTile(rewriter, contractOp.getLhs());
+    TypedValue<x86::amx::TileType> rhsTile =
+        loadTile(rewriter, contractOp.getRhs());
     auto acc = dyn_cast<TypedValue<VectorType>>(contractOp.getAcc());
     assert(acc && "Invalid accumulator type");
-    TypedValue<amx::TileType> accTile = loadTile(rewriter, acc);
+    TypedValue<x86::amx::TileType> accTile = loadTile(rewriter, acc);
 
-    TypedValue<amx::TileType> tileMul;
+    TypedValue<x86::amx::TileType> tileMul;
     if (acc.getType().getElementType().isFloat()) {
-      tileMul = amx::TileMulFOp::create(rewriter, loc, accTile.getType(),
-                                        lhsTile, rhsTile, accTile);
+      tileMul = x86::amx::TileMulFOp::create(rewriter, loc, accTile.getType(),
+                                             lhsTile, rhsTile, accTile);
     } else {
-      tileMul = amx::TileMulIOp::create(rewriter, loc, accTile.getType(),
-                                        lhsTile, rhsTile, accTile);
+      tileMul = x86::amx::TileMulIOp::create(rewriter, loc, accTile.getType(),
+                                             lhsTile, rhsTile, accTile);
     }
 
     // If the contraction result is only written back to memory, try to replace

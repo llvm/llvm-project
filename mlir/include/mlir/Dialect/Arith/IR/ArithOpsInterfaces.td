@@ -106,6 +106,53 @@ def ArithIntegerOverflowFlagsInterface : OpInterface<"ArithIntegerOverflowFlagsI
   ];
 }
 
+def ArithNonNegFlagInterface : OpInterface<"ArithNonNegFlagInterface"> {
+  let description = [{
+    Access to op non-negative (nneg) flag.
+  }];
+
+  let cppNamespace = "::mlir::arith";
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/        "Returns whether the operation has the nneg flag set",
+      /*returnType=*/  "bool",
+      /*methodName=*/  "getNonNeg",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        return op.getNonNegAttr() != nullptr;
+      }]
+      >,
+    InterfaceMethod<
+      /*desc=*/        "Set the nneg flag for the operation",
+      /*returnType=*/  "void",
+      /*methodName=*/  "setNonNeg",
+      /*args=*/        (ins "bool":$nonNeg),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        if (nonNeg)
+          op.setNonNegAttr(UnitAttr::get(op->getContext()));
+        else
+          op.removeNonNegAttr();
+      }]
+      >,
+    StaticInterfaceMethod<
+      /*desc=*/        [{Returns the name of the NonNeg flag attribute for
+                         the operation}],
+      /*returnType=*/  "StringRef",
+      /*methodName=*/  "getNonNegFlagAttrName",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        return "nonNeg";
+      }]
+      >
+  ];
+}
+
 def ArithRoundingModeInterface : OpInterface<"ArithRoundingModeInterface"> {
   let description = [{
     Access to op rounding mode.

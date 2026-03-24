@@ -46,7 +46,7 @@ public:
   };
 
 private:
-  Triple TargetTriple;
+  const Triple &TargetTriple;
 
 protected:
   bool HasMulI24 = true;
@@ -59,9 +59,10 @@ protected:
   unsigned LocalMemorySize = 0;
   unsigned AddressableLocalMemorySize = 0;
   char WavefrontSizeLog2 = 0;
+  unsigned FlatOffsetBitWidth = 0;
 
 public:
-  AMDGPUSubtarget(Triple TT) : TargetTriple(std::move(TT)) {}
+  AMDGPUSubtarget(const Triple &TT) : TargetTriple(TT) {}
 
   static const AMDGPUSubtarget &get(const MachineFunction &MF);
   static const AMDGPUSubtarget &get(const TargetMachine &TM,
@@ -109,13 +110,6 @@ public:
   /// compatible with minimum/maximum number of waves limited by flat work group
   /// size, register usage, and/or lds usage.
   std::pair<unsigned, unsigned> getWavesPerEU(const Function &F) const;
-
-  /// Overload which uses the specified values for the flat work group sizes,
-  /// rather than querying the function itself. \p FlatWorkGroupSizes Should
-  /// correspond to the function's value for getFlatWorkGroupSizes.
-  std::pair<unsigned, unsigned>
-  getWavesPerEU(const Function &F,
-                std::pair<unsigned, unsigned> FlatWorkGroupSizes) const;
 
   /// Overload which uses the specified values for the flat workgroup sizes and
   /// LDS space rather than querying the function itself. \p FlatWorkGroupSizes

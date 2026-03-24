@@ -4,13 +4,13 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //===----------------------------------------------------------------------===//
 
 #ifndef MLIR_BINDINGS_PYTHON_IRCORE_H
 #define MLIR_BINDINGS_PYTHON_IRCORE_H
 
 #include <cstddef>
+#include <exception>
 #include <optional>
 #include <sstream>
 #include <utility>
@@ -23,14 +23,13 @@
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/Debug.h"
 #include "mlir-c/Diagnostics.h"
+#include "mlir-c/ExtensibleDialect.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/IntegerSet.h"
 #include "mlir-c/Support.h"
 #include "mlir-c/Transforms.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
-
-#include "llvm/Support/ThreadPool.h"
 
 namespace mlir {
 namespace python {
@@ -79,6 +78,18 @@ public:
   }
   PyObjectRef(const PyObjectRef &other)
       : referrent(other.referrent), object(other.object /* copies */) {}
+  PyObjectRef &operator=(const PyObjectRef &other) {
+    referrent = other.referrent;
+    object = other.object;
+    return *this;
+  }
+  PyObjectRef &operator=(PyObjectRef &&other) noexcept {
+    referrent = other.referrent;
+    object = std::move(other.object);
+    other.referrent = nullptr;
+    assert(!other.object);
+    return *this;
+  }
   ~PyObjectRef() = default;
 
   int getRefCount() {
@@ -182,16 +193,17 @@ private:
 class MLIR_PYTHON_API_EXPORTED PyThreadPool {
 public:
   PyThreadPool();
+  ~PyThreadPool();
   PyThreadPool(const PyThreadPool &) = delete;
   PyThreadPool(PyThreadPool &&) = delete;
 
-  int getMaxConcurrency() const { return ownedThreadPool->getMaxConcurrency(); }
-  MlirLlvmThreadPool get() { return wrap(ownedThreadPool.get()); }
+  int getMaxConcurrency() const;
+  MlirLlvmThreadPool get() { return threadPool; }
 
   std::string _mlir_thread_pool_ptr() const;
 
 private:
-  std::unique_ptr<llvm::ThreadPoolInterface> ownedThreadPool;
+  MlirLlvmThreadPool threadPool;
 };
 
 /// Wrapper around MlirContext.
@@ -279,7 +291,7 @@ class MLIR_PYTHON_API_EXPORTED DefaultingPyMlirContext
     : public Defaulting<DefaultingPyMlirContext, PyMlirContext> {
 public:
   using Defaulting::Defaulting;
-  static constexpr const char kTypeDescription[] = "Context";
+  static constexpr const char kTypeDescription[] = "_mlir.ir.Context";
   static PyMlirContext &resolve();
 };
 
@@ -525,7 +537,7 @@ class MLIR_PYTHON_API_EXPORTED DefaultingPyLocation
     : public Defaulting<DefaultingPyLocation, PyLocation> {
 public:
   using Defaulting::Defaulting;
-  static constexpr const char kTypeDescription[] = "Location";
+  static constexpr const char kTypeDescription[] = "_mlir.ir.Location";
   static PyLocation &resolve();
 
   operator MlirLocation() const { return *get(); }
@@ -739,7 +751,7 @@ public:
 
   nanobind::object getOperationObject() { return operationObject; }
 
-  static nanobind::object
+  static nanobind::typed<nanobind::object, PyOperation>
   buildGeneric(std::string_view name, std::tuple<int, bool> opRegionSpec,
                nanobind::object operandSegmentSpecObj,
                nanobind::object resultSegmentSpecObj,
@@ -958,16 +970,12 @@ public:
     auto cls = ClassTy(m, DerivedTy::pyClassName, nanobind::is_generic());
     cls.def(nanobind::init<PyType &>(), nanobind::keep_alive<0, 1>(),
             nanobind::arg("cast_from_type"));
-    cls.def_prop_ro_static(
-        "static_typeid",
-        [](nanobind::object & /*class*/) {
-          if (DerivedTy::getTypeIdFunction)
-            return PyTypeID(DerivedTy::getTypeIdFunction());
-          throw nanobind::attribute_error(
-              (DerivedTy::pyClassName + std::string(" has no typeid."))
-                  .c_str());
-        },
-        nanobind::sig("def static_typeid(/) -> TypeID"));
+    cls.def_prop_ro_static("static_typeid", [](nanobind::object & /*class*/) {
+      if (DerivedTy::getTypeIdFunction)
+        return PyTypeID(DerivedTy::getTypeIdFunction());
+      throw nanobind::attribute_error(
+          (DerivedTy::pyClassName + std::string(" has no typeid.")).c_str());
+    });
     cls.def_prop_ro("typeid", [](PyType &self) {
       return nanobind::cast<PyTypeID>(nanobind::cast(self).attr("typeid"));
     });
@@ -1101,16 +1109,12 @@ public:
           return PyType(attr.getContext(), mlirAttributeGetType(attr))
               .maybeDownCast();
         });
-    cls.def_prop_ro_static(
-        "static_typeid",
-        [](nanobind::object & /*class*/) -> PyTypeID {
-          if (DerivedTy::getTypeIdFunction)
-            return PyTypeID(DerivedTy::getTypeIdFunction());
-          throw nanobind::attribute_error(
-              (DerivedTy::pyClassName + std::string(" has no typeid."))
-                  .c_str());
-        },
-        nanobind::sig("def static_typeid(/) -> TypeID"));
+    cls.def_prop_ro_static("static_typeid", [](nanobind::object & /*class*/) {
+      if (DerivedTy::getTypeIdFunction)
+        return PyTypeID(DerivedTy::getTypeIdFunction());
+      throw nanobind::attribute_error(
+          (DerivedTy::pyClassName + std::string(" has no typeid.")).c_str());
+    });
     cls.def_prop_ro("typeid", [](PyAttribute &self) {
       return nanobind::cast<PyTypeID>(nanobind::cast(self).attr("typeid"));
     });
@@ -1322,12 +1326,17 @@ private:
 };
 
 /// Custom exception that allows access to error diagnostic information. This is
-/// converted to the `ir.MLIRError` python exception when thrown.
-struct MLIR_PYTHON_API_EXPORTED MLIRError {
+/// translated to the `ir.MLIRError` python exception when thrown.
+struct MLIR_PYTHON_API_EXPORTED MLIRError : std::exception {
   MLIRError(std::string message,
             std::vector<PyDiagnostic::DiagnosticInfo> &&errorDiagnostics = {})
       : message(std::move(message)),
         errorDiagnostics(std::move(errorDiagnostics)) {}
+  const char *what() const noexcept override { return message.c_str(); }
+
+  /// Bind the MLIRError exception class to the given module.
+  static void bind(nanobind::module_ &m);
+
   std::string message;
   std::vector<PyDiagnostic::DiagnosticInfo> errorDiagnostics;
 };
@@ -1359,7 +1368,8 @@ struct MLIR_PYTHON_API_EXPORTED PyAttrBuilderMap {
   static nanobind::callable
   dunderGetItemNamed(const std::string &attributeKind);
   static void dunderSetItemNamed(const std::string &attributeKind,
-                                 nanobind::callable func, bool replace);
+                                 nanobind::callable func, bool replace,
+                                 bool allow_existing);
 
   static void bind(nanobind::module_ &m);
 };
@@ -1492,6 +1502,7 @@ private:
 class MLIR_PYTHON_API_EXPORTED PyOpOperand {
 public:
   PyOpOperand(MlirOpOperand opOperand) : opOperand(opOperand) {}
+  operator MlirOpOperand() const { return opOperand; }
 
   nanobind::typed<nanobind::object, PyOpView> getOwner() const;
 
@@ -1844,16 +1855,51 @@ private:
   PyOpAttributeMap attributes;
 };
 
+class MLIR_PYTHON_API_EXPORTED PyDynamicOpTrait {
+public:
+  static bool attach(const nanobind::object &opName,
+                     const nanobind::object &target, PyMlirContext &context);
+
+  static void bind(nanobind::module_ &m);
+};
+
+namespace PyDynamicOpTraits {
+
+class MLIR_PYTHON_API_EXPORTED IsTerminator : public PyDynamicOpTrait {
+public:
+  static bool attach(const nanobind::object &opName, PyMlirContext &context);
+  static void bind(nanobind::module_ &m);
+};
+
+class MLIR_PYTHON_API_EXPORTED NoTerminator : public PyDynamicOpTrait {
+public:
+  static bool attach(const nanobind::object &opName, PyMlirContext &context);
+  static void bind(nanobind::module_ &m);
+};
+
+} // namespace PyDynamicOpTraits
+
 MLIR_PYTHON_API_EXPORTED MlirValue getUniqueResult(MlirOperation operation);
 MLIR_PYTHON_API_EXPORTED void populateIRCore(nanobind::module_ &m);
 MLIR_PYTHON_API_EXPORTED void populateRoot(nanobind::module_ &m);
+
+/// Helper for creating an @classmethod.
+template <class Func, typename... Args>
+inline nanobind::object classmethod(Func f, Args... args) {
+  nanobind::object cf = nanobind::cpp_function(f, args...);
+  static SafeInit<nanobind::object> classmethodFn([]() {
+    return std::make_unique<nanobind::object>(
+        nanobind::module_::import_("builtins").attr("classmethod"));
+  });
+  return classmethodFn.get()(cf);
+}
+
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN
 } // namespace python
 } // namespace mlir
 
 namespace nanobind {
 namespace detail {
-
 template <>
 struct type_caster<
     mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN::DefaultingPyMlirContext>

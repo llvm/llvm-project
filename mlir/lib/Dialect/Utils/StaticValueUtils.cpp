@@ -154,15 +154,14 @@ std::optional<int64_t> getConstantIntValue(OpFoldResult ofr) {
 
 std::optional<SmallVector<int64_t>>
 getConstantIntValues(ArrayRef<OpFoldResult> ofrs) {
-  bool failed = false;
-  SmallVector<int64_t> res = llvm::map_to_vector(ofrs, [&](OpFoldResult ofr) {
+  SmallVector<int64_t> res;
+  res.reserve(ofrs.size());
+  for (OpFoldResult ofr : ofrs) {
     auto cv = getConstantIntValue(ofr);
     if (!cv.has_value())
-      failed = true;
-    return cv.value_or(0);
-  });
-  if (failed)
-    return std::nullopt;
+      return std::nullopt;
+    res.push_back(cv.value());
+  }
   return res;
 }
 
@@ -365,7 +364,13 @@ std::optional<APInt> constantTripCount(
              << (isSigned ? "isSigned" : "isUnsigned") << ")";
       return APInt(bitwidth, 0);
     }
+    // Compute the difference. Since we've already checked that ub > lb, the
+    // result can be interpreted as an unsigned value without overflow concerns.
     diff = ubCst - lbCst;
+    // Convert diff to unsigned. This handles cases like i8: ub=127, lb=-128
+    // where the subtraction yields 255, which wraps to -1 in signed i8 but is
+    // correctly represented as 255 when interpreted as unsigned.
+    diff.setIsUnsigned(true);
   } else {
     if (maybeUbCst)
       return std::nullopt;
@@ -397,11 +402,14 @@ std::optional<APInt> constantTripCount(
     return std::nullopt;
   }
 
-  // Create new APSInt instances with explicit signedness to ensure they match
-  llvm::APInt tripCount = isSigned ? diff.sdiv(stepCst) : diff.udiv(stepCst);
-  llvm::APInt remainder = isSigned ? diff.srem(stepCst) : diff.urem(stepCst);
+  // Both diff and step are non-negative at this point (negative steps are
+  // rejected earlier), so we use unsigned division regardless of the loop
+  // comparison signedness.
+  llvm::APInt tripCount = diff.udiv(stepCst);
+  llvm::APInt remainder = diff.urem(stepCst);
   if (!remainder.isZero())
     tripCount = tripCount + 1;
+
   LDBG() << "constantTripCount found: " << tripCount;
   return tripCount;
 }

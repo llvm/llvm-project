@@ -20,20 +20,23 @@
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_H
 
+#include "clang/AST/Decl.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeStats.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LiveOrigins.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LoanPropagation.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/MovedLoans.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
+#include <cstddef>
+#include <memory>
 
 namespace clang::lifetimes {
 
-/// Enum to track the confidence level of a potential error.
-enum class Confidence : uint8_t {
-  None,
-  Maybe,   // Reported as a potential error (-Wlifetime-safety-strict)
-  Definite // Reported as a definite error (-Wlifetime-safety-permissive)
+struct LifetimeSafetyOpts {
+  /// Maximum number of CFG blocks to analyze. Functions with larger CFGs will
+  /// be skipped.
+  size_t MaxCFGBlocks;
 };
 
 /// Enum to track functions visible across or within TU.
@@ -58,17 +61,32 @@ public:
   virtual ~LifetimeSafetySemaHelper() = default;
 
   virtual void reportUseAfterFree(const Expr *IssueExpr, const Expr *UseExpr,
-                                  SourceLocation FreeLoc,
-                                  Confidence Confidence) {}
+                                  const Expr *MovedExpr,
+                                  SourceLocation FreeLoc) {}
 
   virtual void reportUseAfterReturn(const Expr *IssueExpr,
                                     const Expr *ReturnExpr,
-                                    SourceLocation ExpiryLoc,
-                                    Confidence Confidence) {}
+                                    const Expr *MovedExpr,
+                                    SourceLocation ExpiryLoc) {}
 
   virtual void reportDanglingField(const Expr *IssueExpr,
                                    const FieldDecl *Field,
+                                   const Expr *MovedExpr,
                                    SourceLocation ExpiryLoc) {}
+
+  virtual void reportDanglingGlobal(const Expr *IssueExpr,
+                                    const VarDecl *DanglingGlobal,
+                                    const Expr *MovedExpr,
+                                    SourceLocation ExpiryLoc) {}
+
+  // Reports when a reference/iterator is used after the container operation
+  // that invalidated it.
+  virtual void reportUseAfterInvalidation(const Expr *IssueExpr,
+                                          const Expr *UseExpr,
+                                          const Expr *InvalidationExpr) {}
+  virtual void reportUseAfterInvalidation(const ParmVarDecl *PVD,
+                                          const Expr *UseExpr,
+                                          const Expr *InvalidationExpr) {}
 
   // Suggests lifetime bound annotations for function paramters.
   virtual void suggestLifetimeboundToParmVar(SuggestionScope Scope,
@@ -81,6 +99,10 @@ public:
   // Reports misuse of [[clang::noescape]] when parameter escapes through field
   virtual void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
                                        const FieldDecl *EscapeField) {}
+  // Reports misuse of [[clang::noescape]] when parameter escapes through
+  // assignment to a global variable
+  virtual void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
+                                       const VarDecl *EscapeGlobal) {}
 
   // Suggests lifetime bound annotations for implicit this.
   virtual void suggestLifetimeboundToImplicitThis(SuggestionScope Scope,
@@ -107,6 +129,7 @@ void collectLifetimeStats(AnalysisDeclContext &AC, OriginManager &OM,
 struct LifetimeFactory {
   OriginLoanMap::Factory OriginMapFactory{/*canonicalize=*/false};
   LoanSet::Factory LoanSetFactory{/*canonicalize=*/false};
+  MovedLoansMap::Factory MovedLoansMapFactory{/*canonicalize=*/false};
   LivenessMap::Factory LivenessMapFactory{/*canonicalize=*/false};
 };
 
@@ -115,7 +138,8 @@ struct LifetimeFactory {
 class LifetimeSafetyAnalysis {
 public:
   LifetimeSafetyAnalysis(AnalysisDeclContext &AC,
-                         LifetimeSafetySemaHelper *SemaHelper);
+                         LifetimeSafetySemaHelper *SemaHelper,
+                         const LifetimeSafetyOpts &LSOpts);
 
   void run();
 
@@ -129,10 +153,12 @@ public:
 private:
   AnalysisDeclContext &AC;
   LifetimeSafetySemaHelper *SemaHelper;
+  const LifetimeSafetyOpts LSOpts;
   LifetimeFactory Factory;
   std::unique_ptr<FactManager> FactMgr;
   std::unique_ptr<LiveOriginsAnalysis> LiveOrigins;
   std::unique_ptr<LoanPropagationAnalysis> LoanPropagation;
+  std::unique_ptr<MovedLoansAnalysis> MovedLoans;
 };
 } // namespace internal
 } // namespace clang::lifetimes

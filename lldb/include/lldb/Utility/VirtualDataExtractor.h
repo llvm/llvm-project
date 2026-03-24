@@ -46,6 +46,10 @@ public:
   VirtualDataExtractor(const lldb::DataBufferSP &data_sp,
                        LookupTable lookup_table);
 
+  lldb::DataExtractorSP Clone() const override {
+    return std::make_shared<VirtualDataExtractor>(*this);
+  }
+
   const void *GetData(lldb::offset_t *offset_ptr,
                       lldb::offset_t length) const override;
 
@@ -58,6 +62,27 @@ public:
   lldb::DataExtractorSP GetSubsetExtractorSP(lldb::offset_t offset) override;
 
   llvm::ArrayRef<uint8_t> GetData() const override;
+
+  /// GetByteSize is called by external users often, and we want to
+  /// return the virtual buffer size that the user expects to see.
+  uint64_t GetByteSize() const override { return GetVirtualByteSize(); }
+
+  /// BytesLeft is mostly called by DataExtractor internal methods, to
+  /// ensure we don't read past the end of the DataBuffer.  Use the
+  /// physical buffer size.
+  lldb::offset_t BytesLeft(lldb::offset_t offset) const override {
+    return PhysicalBytesLeft(offset);
+  }
+
+  lldb::offset_t SetData(const void *bytes, lldb::offset_t length,
+                         lldb::ByteOrder byte_order) override;
+
+  lldb::offset_t SetData(const DataExtractor &data, lldb::offset_t offset,
+                         lldb::offset_t length) override;
+
+  lldb::offset_t SetData(const lldb::DataBufferSP &data_sp,
+                         lldb::offset_t offset = 0,
+                         lldb::offset_t length = LLDB_INVALID_OFFSET) override;
 
   /// Unchecked overrides
   /// @{
@@ -75,6 +100,13 @@ protected:
   /// does not cross entry boundaries.
   bool ValidateVirtualRead(lldb::offset_t virtual_addr,
                            lldb::offset_t length) const;
+
+  uint64_t GetVirtualByteSize() const;
+  uint64_t GetPhysicalByteSize() const;
+  lldb::offset_t VirtualBytesLeft(lldb::offset_t virtual_offset) const;
+  lldb::offset_t PhysicalBytesLeft(lldb::offset_t physical_offset) const;
+
+  void ResetLookupTableToMatchPhysical();
 
 private:
   LookupTable m_lookup_table;

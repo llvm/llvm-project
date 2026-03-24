@@ -185,11 +185,10 @@ define void @preserve_flags_narrowing_extends_and_truncs(ptr noalias %A, ptr noa
 ; CHECK-NEXT:    store i64 [[TMP49]], ptr [[TMP48]], align 4
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE28]]
 ; CHECK:       [[PRED_STORE_CONTINUE28]]:
-; CHECK-NEXT:    [[TMP50:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 0
 ; CHECK-NEXT:    [[TMP51:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 1
 ; CHECK-NEXT:    [[TMP52:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 2
 ; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 3
-; CHECK-NEXT:    [[TMP54:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP50]], i32 0
+; CHECK-NEXT:    [[TMP54:%.*]] = insertelement <4 x ptr> poison, ptr [[B]], i32 0
 ; CHECK-NEXT:    [[TMP55:%.*]] = insertelement <4 x ptr> [[TMP54]], ptr [[TMP51]], i32 1
 ; CHECK-NEXT:    [[TMP56:%.*]] = insertelement <4 x ptr> [[TMP55]], ptr [[TMP52]], i32 2
 ; CHECK-NEXT:    [[TMP57:%.*]] = insertelement <4 x ptr> [[TMP56]], ptr [[TMP53]], i32 3
@@ -203,7 +202,7 @@ define void @preserve_flags_narrowing_extends_and_truncs(ptr noalias %A, ptr noa
 ; CHECK-NEXT:    [[TMP65:%.*]] = insertelement <4 x ptr> [[TMP64]], ptr [[TMP61]], i32 3
 ; CHECK-NEXT:    br i1 true, label %[[PRED_LOAD_IF29:.*]], label %[[PRED_LOAD_CONTINUE30:.*]]
 ; CHECK:       [[PRED_LOAD_IF29]]:
-; CHECK-NEXT:    [[TMP66:%.*]] = load i8, ptr [[TMP50]], align 1
+; CHECK-NEXT:    [[TMP66:%.*]] = load i8, ptr [[B]], align 1
 ; CHECK-NEXT:    [[TMP67:%.*]] = insertelement <4 x i8> poison, i8 [[TMP66]], i32 0
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE30]]
 ; CHECK:       [[PRED_LOAD_CONTINUE30]]:
@@ -259,12 +258,10 @@ define void @preserve_flags_narrowing_extends_and_truncs(ptr noalias %A, ptr noa
 ; CHECK-NEXT:    [[TMP89:%.*]] = phi <4 x i8> [ [[TMP86]], %[[PRED_LOAD_CONTINUE42]] ], [ [[TMP88]], %[[PRED_LOAD_IF43]] ]
 ; CHECK-NEXT:    [[TMP90:%.*]] = trunc <4 x i8> [[TMP77]] to <4 x i1>
 ; CHECK-NEXT:    [[TMP91:%.*]] = trunc <4 x i8> [[TMP89]] to <4 x i1>
-; CHECK-NEXT:    [[TMP92:%.*]] = and <4 x i1> [[TMP90]], splat (i1 true)
-; CHECK-NEXT:    [[TMP93:%.*]] = and <4 x i1> [[TMP91]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP94:%.*]] = select <4 x i1> [[TMP90]], <4 x float> splat (float 1.000000e+00), <4 x float> zeroinitializer
 ; CHECK-NEXT:    [[TMP95:%.*]] = select <4 x i1> [[TMP91]], <4 x float> splat (float 1.000000e+00), <4 x float> zeroinitializer
-; CHECK-NEXT:    [[TMP96:%.*]] = select <4 x i1> [[TMP92]], <4 x float> splat (float 3.000000e+00), <4 x float> [[TMP94]]
-; CHECK-NEXT:    [[TMP97:%.*]] = select <4 x i1> [[TMP93]], <4 x float> splat (float 3.000000e+00), <4 x float> [[TMP95]]
+; CHECK-NEXT:    [[TMP96:%.*]] = select <4 x i1> [[TMP90]], <4 x float> splat (float 3.000000e+00), <4 x float> [[TMP94]]
+; CHECK-NEXT:    [[TMP97:%.*]] = select <4 x i1> [[TMP91]], <4 x float> splat (float 3.000000e+00), <4 x float> [[TMP95]]
 ; CHECK-NEXT:    [[TMP98:%.*]] = bitcast <4 x float> [[TMP96]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP99:%.*]] = bitcast <4 x float> [[TMP97]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP100:%.*]] = trunc <4 x i32> [[TMP98]] to <4 x i8>
@@ -272,7 +269,7 @@ define void @preserve_flags_narrowing_extends_and_truncs(ptr noalias %A, ptr noa
 ; CHECK-NEXT:    br i1 true, label %[[PRED_STORE_IF45:.*]], label %[[PRED_STORE_CONTINUE46:.*]]
 ; CHECK:       [[PRED_STORE_IF45]]:
 ; CHECK-NEXT:    [[TMP102:%.*]] = extractelement <4 x i8> [[TMP100]], i32 0
-; CHECK-NEXT:    store i8 [[TMP102]], ptr [[TMP50]], align 1
+; CHECK-NEXT:    store i8 [[TMP102]], ptr [[B]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE46]]
 ; CHECK:       [[PRED_STORE_CONTINUE46]]:
 ; CHECK-NEXT:    br i1 true, label %[[PRED_STORE_IF47:.*]], label %[[PRED_STORE_CONTINUE48:.*]]

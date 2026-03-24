@@ -21,6 +21,7 @@
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACCOpsDialect.h.inc"
 #include "mlir/Dialect/OpenACC/OpenACCOpsEnums.h.inc"
 #include "mlir/Dialect/OpenACC/OpenACCOpsInterfaces.h.inc"
@@ -188,13 +189,13 @@ static constexpr StringLiteral getSpecializedRoutineAttrName() {
 /// Used to check whether the current operation is marked with
 /// `acc routine`. The operation passed in should be a function.
 inline bool isAccRoutine(mlir::Operation *op) {
-  return op->hasAttr(mlir::acc::getRoutineInfoAttrName());
+  return op && op->hasAttr(mlir::acc::getRoutineInfoAttrName());
 }
 
 /// Used to check whether this is a specialized accelerator version of
 /// `acc routine` function.
 inline bool isSpecializedAccRoutine(mlir::Operation *op) {
-  return op->hasAttr(mlir::acc::getSpecializedRoutineAttrName());
+  return op && op->hasAttr(mlir::acc::getSpecializedRoutineAttrName());
 }
 
 static constexpr StringLiteral getFromDefaultClauseAttrName() {
@@ -211,17 +212,20 @@ static constexpr StringLiteral getCombinedConstructsAttrName() {
 
 struct RuntimeCounters
     : public mlir::SideEffects::Resource::Base<RuntimeCounters> {
-  mlir::StringRef getName() final { return "AccRuntimeCounters"; }
+  mlir::StringRef getName() const final { return "AccRuntimeCounters"; }
+  bool isAddressable() const override { return false; }
 };
 
 struct ConstructResource
     : public mlir::SideEffects::Resource::Base<ConstructResource> {
-  mlir::StringRef getName() final { return "AccConstructResource"; }
+  mlir::StringRef getName() const final { return "AccConstructResource"; }
+  bool isAddressable() const override { return false; }
 };
 
 struct CurrentDeviceIdResource
     : public mlir::SideEffects::Resource::Base<CurrentDeviceIdResource> {
-  mlir::StringRef getName() final { return "AccCurrentDeviceIdResource"; }
+  mlir::StringRef getName() const final { return "AccCurrentDeviceIdResource"; }
+  bool isAddressable() const override { return false; }
 };
 
 } // namespace acc

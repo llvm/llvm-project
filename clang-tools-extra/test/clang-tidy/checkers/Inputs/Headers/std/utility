@@ -1,0 +1,60 @@
+#ifndef _UTILITY_
+#define _UTILITY_
+
+#include <type_traits>
+
+namespace std {
+
+template <typename _Tp>
+constexpr typename std::remove_reference<_Tp>::type &&move(_Tp &&__t) {
+  return static_cast<typename std::remove_reference<_Tp>::type &&>(__t);
+}
+
+template <typename T>
+constexpr T &&forward(remove_reference_t<T> &t) noexcept {
+  return static_cast<T &&>(t);
+}
+
+template <typename T>
+constexpr T &&forward(remove_reference_t<T> &&t) noexcept {
+  return static_cast<T &&>(t);
+}
+
+template <typename T>
+void swap(T &a, T &b) {
+  T tmp = move(a);
+  a = move(b);
+  b = move(tmp);
+}
+
+template <typename T1, typename T2>
+struct pair {
+  T1 first;
+  T2 second;
+
+  pair() = default;
+  pair(const pair &) = default;
+  pair(pair &&) = default;
+
+  pair(const T1 &a, const T2 &b) : first(a), second(b) {}
+  pair(T1 &&a, T2 &&b)
+      : first(std::move(a)), second(std::move(b)) {}
+
+  template <typename U1, typename U2>
+  pair(const pair<U1, U2> &p) : first(p.first), second(p.second) {}
+  template <typename U1, typename U2>
+  pair(pair<U1, U2> &&p)
+      : first(std::move(p.first)), second(std::move(p.second)) {}
+
+  pair &operator=(const pair &) = default;
+  pair &operator=(pair &&) = default;
+};
+
+template <typename T1, typename T2>
+pair<T1, T2> make_pair(T1 x, T2 y) {
+  return pair<T1, T2>(x, y);
+}
+
+} // namespace std
+
+#endif // _UTILITY_

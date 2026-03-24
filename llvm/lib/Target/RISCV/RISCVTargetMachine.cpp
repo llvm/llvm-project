@@ -112,7 +112,7 @@ static cl::opt<bool> EnableCFIInstrInserter(
 static cl::opt<bool>
     EnableSelectOpt("riscv-select-opt", cl::Hidden,
                     cl::desc("Enable select to branch optimizations"),
-                    cl::init(false));
+                    cl::init(true));
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   RegisterTargetMachine<RISCVTargetMachine> X(getTheRISCV32Target());
@@ -600,7 +600,7 @@ void RISCVPassConfig::addPreEmitPass2() {
   addPass(createRISCVExpandAtomicPseudoPass());
 
   // KCFI indirect call checks are lowered to a bundle.
-  addPass(createUnpackMachineBundles([&](const MachineFunction &MF) {
+  addPass(createUnpackMachineBundlesLegacy([&](const MachineFunction &MF) {
     return MF.getFunction().getParent()->getModuleFlag("kcfi");
   }));
 

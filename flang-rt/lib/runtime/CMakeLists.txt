@@ -88,8 +88,12 @@ set(host_sources
   stop.cpp
   temporary-stack.cpp
   time-intrinsic.cpp
+  trampoline.cpp
   unit-map.cpp
 )
+if (TARGET llvm-libc-common-utilities)
+  list(APPEND host_sources io-api-server.cpp)
+endif()
 
 # Sources that can be compiled directly for the GPU.
 set(gpu_sources
@@ -106,14 +110,15 @@ set(gpu_sources
   copy.cpp
   derived-api.cpp
   derived.cpp
+  descriptor.cpp
   dot-product.cpp
   edit-output.cpp
   extrema.cpp
+  environment.cpp
   findloc.cpp
   format.cpp
   inquiry.cpp
   internal-unit.cpp
-  io-error.cpp
   iostat.cpp
   matmul-transpose.cpp
   matmul.cpp
@@ -125,6 +130,7 @@ set(gpu_sources
   product.cpp
   ragged.cpp
   stat.cpp
+  stop.cpp
   sum.cpp
   support.cpp
   terminator.cpp
@@ -138,6 +144,7 @@ set(gpu_sources
   reduce.cpp
   reduction.cpp
   temporary-stack.cpp
+  io-api-gpu.cpp
 )
 
 file(GLOB_RECURSE public_headers
@@ -194,7 +201,6 @@ if (NOT WIN32)
   )
 
   enable_cuda_compilation(flang_rt.runtime "${supported_sources}")
-  enable_omp_offload_compilation(flang_rt.runtime "${supported_sources}")
 
   # Select a default runtime, which is used for unit and regression tests.
   get_target_property(default_target flang_rt.runtime.default ALIASED_TARGET)
@@ -228,7 +234,6 @@ else()
       )
 
     enable_cuda_compilation(${name} "${supported_sources}")
-    enable_omp_offload_compilation(${name} "${supported_sources}")
     add_dependencies(flang_rt.runtime ${name})
   endfunction ()
 

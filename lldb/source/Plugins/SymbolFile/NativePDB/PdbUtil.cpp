@@ -252,6 +252,7 @@ PDB_SymType lldb_private::npdb::CVSymToPDBSym(SymbolKind kind) {
   case S_LOCAL:
   case S_BPREL32:
   case S_REGREL32:
+  case S_REGREL32_INDIR:
   case S_MANCONSTANT:
   case S_CONSTANT:
   case S_LDATA32:
@@ -611,6 +612,14 @@ VariableInfo lldb_private::npdb::GetVariableNameInfo(CVSymbol sym) {
     return result;
   }
 
+  if (sym.kind() == S_REGREL32_INDIR) {
+    RegRelativeIndirSym reg(SymbolRecordKind::RegRelativeIndirSym);
+    cantFail(SymbolDeserializer::deserializeAs<RegRelativeIndirSym>(sym, reg));
+    result.type = reg.Type;
+    result.name = reg.Name;
+    return result;
+  }
+
   if (sym.kind() == S_REGISTER) {
     RegisterSym reg(SymbolRecordKind::RegisterSym);
     cantFail(SymbolDeserializer::deserializeAs<RegisterSym>(sym, reg));
@@ -744,6 +753,17 @@ VariableInfo lldb_private::npdb::GetVariableLocationInfo(
     cantFail(SymbolDeserializer::deserializeAs<RegRelativeSym>(sym, reg));
     result.location = DWARFExpressionList(
         module, MakeRegRelLocationExpression(reg.Register, reg.Offset, module),
+        nullptr);
+    return result;
+  }
+
+  if (sym.kind() == S_REGREL32_INDIR) {
+    RegRelativeIndirSym reg(SymbolRecordKind::RegRelativeIndirSym);
+    cantFail(SymbolDeserializer::deserializeAs<RegRelativeIndirSym>(sym, reg));
+    result.location = DWARFExpressionList(
+        module,
+        MakeRegRelIndirLocationExpression(reg.Register, reg.Offset,
+                                          reg.OffsetInUdt, module),
         nullptr);
     return result;
   }

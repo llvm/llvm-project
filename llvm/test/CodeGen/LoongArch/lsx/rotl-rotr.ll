@@ -226,7 +226,7 @@ define void @rotr_v2i64_imm(ptr %dst, ptr %src) nounwind {
 ; LA32-LABEL: rotr_v2i64_imm:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    vld $vr0, $a1, 0
-; LA32-NEXT:    vrepli.w $vr1, -62
+; LA32-NEXT:    vrepli.d $vr1, -62
 ; LA32-NEXT:    vrotr.d $vr0, $vr0, $vr1
 ; LA32-NEXT:    vst $vr0, $a0, 0
 ; LA32-NEXT:    ret

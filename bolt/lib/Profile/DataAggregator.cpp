@@ -127,6 +127,11 @@ cl::opt<std::string>
                             "perf-script output in a textual format"),
                    cl::ReallyHidden, cl::init(""), cl::cat(AggregatorCategory));
 
+cl::opt<bool> GeneratePerfTextProfile(
+    "generate-perf-script",
+    cl::desc("Dump perf-script jobs' output into a file"), cl::Hidden,
+    cl::cat(AggregatorCategory));
+
 static cl::opt<bool>
 TimeAggregator("time-aggr",
   cl::desc("time BOLT aggregator"),
@@ -140,6 +145,8 @@ namespace {
 
 const char TimerGroupName[] = "aggregator";
 const char TimerGroupDesc[] = "Aggregator";
+
+constexpr const StringLiteral PerfTextMagicStr = "PERFTEXT";
 
 std::vector<SectionNameAndRange> getTextSections(const BinaryContext *BC) {
   std::vector<SectionNameAndRange> sections;
@@ -167,6 +174,15 @@ void deleteTempFile(const std::string &FileName) {
     errs() << "PERF2BOLT: failed to delete temporary file " << FileName
            << " with error " << Errc.message() << "\n";
 }
+}
+
+ErrorOr<uint64_t> DataAggregator::getFileSize(StringRef File) {
+  uint64_t Size;
+  if (std::error_code EC = sys::fs::file_size(File, Size)) {
+    errs() << "unable to obtain file size: " << EC.message() << "\n";
+    return EC;
+  }
+  return Size;
 }
 
 void DataAggregator::deleteTempFiles() {
@@ -233,6 +249,8 @@ void DataAggregator::start() {
 
   launchPerfProcess("task events", TaskEventsPPI,
                     "script --show-task-events --no-itrace");
+
+  launchPerfProcess("buildid list", BuildIDProcessInfo, "buildid-list");
 }
 
 void DataAggregator::abort() {
@@ -303,8 +321,6 @@ void DataAggregator::processFileBuildID(StringRef FileBuildID) {
     errs() << "PERF-ERROR: return code " << ReturnCode << "\n" << ErrBuf;
   };
 
-  PerfProcessInfo BuildIDProcessInfo;
-  launchPerfProcess("buildid list", BuildIDProcessInfo, "buildid-list");
   if (prepareToParse("buildid", BuildIDProcessInfo, WarningCallback))
     return;
 
@@ -376,10 +392,83 @@ void DataAggregator::parsePreAggregated() {
   ParsingBuf = FileBuf->getBuffer();
   Col = 0;
   Line = 1;
+
+  // When processing a shared object, filter pre-aggregated entries by buildid.
+  if (BC && !BC->HasFixedLoadAddress &&
+      BC->getFilename().ends_with(".so")) {
+    if (auto FileBID = BC->getFileBuildID()) {
+      FilterBuildID = *FileBID;
+      outs() << "PERF2BOLT: filtering pre-aggregated data for buildid "
+             << *FileBID << "\n";
+    } else {
+      errs() << "PERF2BOLT-WARNING: cannot read buildid from input binary, "
+                "won't filter pre-aggregated data\n";
+    }
+  }
+
   if (parsePreAggregatedLBRSamples()) {
     errs() << "PERF2BOLT: failed to parse samples\n";
     exit(1);
   }
+}
+
+Error DataAggregator::generatePerfTextData() {
+  std::error_code EC;
+  raw_fd_ostream OutFile(opts::OutputFilename, EC, sys::fs::OpenFlags::OF_None);
+  if (EC) {
+    errs() << "error opening output file: " << EC.message() << "\n";
+    return errorCodeToError(EC);
+  }
+
+  SmallVector<PerfProcessInfo *, 5> ProcessInfos = {
+      &BuildIDProcessInfo, &MMapEventsPPI, &MainEventsPPI, &TaskEventsPPI};
+  if (opts::ParseMemProfile)
+    ProcessInfos.push_back(&MemEventsPPI);
+
+  // Create a file header as a Table of Contents.
+  // Initially pre-allocate sufficient space for the header at the beginning of
+  // the file.
+  // The header has a maximum length of 132 character (pre-calculated value
+  // including the magic strings, event names, their maximum sizes,
+  // and the field separators).
+  // PERFTEXT;EVENT1={$SIZE};EVENT2={$SIZE}...
+  // Event sizes are printed in hexadecimal format to ensure a predictable
+  // length.
+  OutFile << std::string(132, ' ') << "\n";
+  std::string Header;
+  raw_string_ostream SS(Header);
+  SS << PerfTextMagicStr << ";";
+  for (const auto PPI : ProcessInfos) {
+    std::string Error;
+    auto PathData = PPI->StdoutPath.data();
+    sys::Wait(PPI->PI, std::nullopt, &Error);
+    if (!Error.empty()) {
+      errs() << "PERF-ERROR: " << PerfPath << ": " << Error << "\n";
+      return errorCodeToError(make_error_code(llvm::errc::no_child_process));
+    }
+
+    ErrorOr<uint64_t> FsRes = getFileSize(PathData);
+    if (std::error_code EC = FsRes.getError())
+      return errorCodeToError(EC);
+    SS << PPI->Type << formatv("={0:x-};", *FsRes);
+
+    // Merge all perf-scripts jobs' output into the single OutputFile
+    ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
+        MemoryBuffer::getFileOrSTDIN(PathData);
+    if (std::error_code EC = MB.getError()) {
+      errs() << "Cannot open " << PathData << ": " << EC.message() << "\n";
+      return errorCodeToError(EC);
+    }
+    OutFile << (*MB)->getBuffer();
+  }
+
+  OutFile.seek(0);
+  OutFile << Header;
+  OutFile.close();
+  outs() << "PERF2BOLT: Profile is saved to file " << opts::OutputFilename
+         << "\n";
+  deleteTempFiles();
+  return Error::success();
 }
 
 void DataAggregator::filterBinaryMMapInfo() {
@@ -594,7 +683,13 @@ void DataAggregator::imputeFallThroughs() {
 Error DataAggregator::preprocessProfile(BinaryContext &BC) {
   this->BC = &BC;
 
-  if (opts::ReadPreAggregated) {
+  if (opts::GeneratePerfTextProfile) {
+    if (Error E = generatePerfTextData()) {
+      deleteTempFiles();
+      exit(1);
+    }
+    exit(0);
+  } else if (opts::ReadPreAggregated) {
     parsePreAggregated();
   } else {
     parsePerfData(BC);
@@ -653,6 +748,8 @@ void DataAggregator::processProfile(BinaryContext &BC) {
     processBasicEvents();
   else
     processBranchEvents();
+
+  printDSODiagnostics();
 
   processMemEvents();
 
@@ -1357,13 +1454,26 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
     return std::error_code();
   }
 
+  int64_t Count = Counters[0];
+  int64_t Mispreds = Counters[1];
+
+  if (Addr[0]) {
+    // Per-DSO sample count
+    DSOSamples[Addr[0]->Name] += Count;
+    // Cross-DSO branch count
+    if (Addr[1] && Addr[1]->Name != Addr[0]->Name)
+      CrossDSOSamples[{Addr[0]->Name, Addr[1]->Name}] += Count;
+  }
+
+  // Reset external addresses.
+  for (std::optional<Location> &Loc : Addr)
+    if (Loc && Loc->Name != FilterBuildID)
+      Loc->Offset = Trace::EXTERNAL;
+
   const uint64_t FromOffset = Addr[0]->Offset;
   BinaryFunction *FromFunc = getBinaryFunctionContainingAddress(FromOffset);
   if (FromFunc)
     FromFunc->setHasProfileAvailable();
-
-  int64_t Count = Counters[0];
-  int64_t Mispreds = Counters[1];
 
   /// Record basic IP sample into \p BasicSamples and return.
   if (Type == SAMPLE) {
@@ -1581,6 +1691,70 @@ void DataAggregator::printBranchStacksDiagnostics(
               "were attributed to the input binary\n";
 }
 
+void DataAggregator::printDSODiagnostics() const {
+  // No buildids (except main binary).
+  if (DSOSamples.size() == 1)
+    return;
+
+  // Main binary: show DSOs covering 95th percentile of sample count.
+  if (FilterBuildID.empty()) {
+    // Sort DSOs by sample count.
+    std::vector<std::pair<std::string, uint64_t>> DSOs;
+    DSOs.reserve(DSOSamples.size());
+    for (const auto &[DSO, Count] : DSOSamples)
+      DSOs.emplace_back(DSO, Count);
+    llvm::sort(DSOs, llvm::less_second());
+
+    outs() << "PERF2BOLT: DSOs covering 95th percentile by samples:\n";
+    uint64_t CumulativeCount = 0;
+    for (auto &[DSO, Count] : llvm::reverse(DSOs)) {
+      CumulativeCount += Count;
+      if (DSO.empty())
+        DSO = "(binary)";
+      outs() << "\t" << DSO << ": " << Count << " samples, "
+             << format("%.1f%%", Count * 100.0f / NumTotalSamples)
+             << " of total, "
+             << format("%.1f%%", CumulativeCount * 100.0f / NumTotalSamples)
+             << " cumulative\n";
+      if (CumulativeCount * 100 >= NumTotalSamples * 95)
+        break;
+    }
+  }
+
+  // Cross-DSO branches: show DSO pairs covering 95th percentile of branch count.
+  if (CrossDSOSamples.size() > 1) {
+    // Sort DSO pairs by branch count.
+    std::vector<std::pair<std::pair<std::string, std::string>, uint64_t>>
+        XDSOs;
+    XDSOs.reserve(CrossDSOSamples.size());
+    // For main binary, include all DSOs. For FilterBuildID case, only include
+    // branches belonging to that DSO.
+    uint64_t NumTotalBranches = 0;
+    for (const auto &[FromTo, Count] : CrossDSOSamples) {
+      bool ShouldInclude = FilterBuildID.empty() || FromTo.first == FilterBuildID;
+      if (!ShouldInclude)
+        continue;
+      NumTotalBranches += Count;
+      XDSOs.emplace_back(FromTo, Count);
+    }
+    llvm::sort(XDSOs, llvm::less_second());
+
+    outs() << "PERF2BOLT: DSO pairs covering 95th percentile of branches:\n";
+    uint64_t CumulativeCount = 0;
+    for (auto &[FromTo, Count] : llvm::reverse(XDSOs)) {
+      CumulativeCount += Count;
+      outs() << "\t" << FromTo.first << " -> " << FromTo.second << ": " << Count
+             << " branches, "
+             << format("%.1f%%", Count * 100.0f / NumTotalBranches)
+             << " of total, "
+             << format("%.1f%%", CumulativeCount * 100.0f / NumTotalBranches)
+             << " cumulative\n";
+      if (CumulativeCount * 100 >= NumTotalBranches * 95)
+        break;
+    }
+  }
+}
+
 std::error_code DataAggregator::parseBranchEvents() {
   std::string BranchEventTypeStr =
       opts::ArmSPE ? "SPE branch events in brstack-format" : "branch events";
@@ -1729,10 +1903,10 @@ std::error_code DataAggregator::parseMemEvents() {
     if (std::error_code EC = Sample.getError())
       return EC;
 
-    if (BinaryFunction *BF = getBinaryFunctionContainingAddress(Sample->PC))
+    if (BinaryFunction *BF = getBinaryFunctionContainingAddress(Sample->PC)) {
       BF->setHasProfileAvailable();
-
-    MemSamples.emplace_back(std::move(Sample.get()));
+      MemSamples.emplace_back(std::move(Sample.get()));
+    }
   }
 
   return std::error_code();

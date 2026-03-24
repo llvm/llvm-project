@@ -5,7 +5,7 @@
 // RUN: mkdir %t.dir/Inputs
 // RUN: cp %S/Inputs/header.h %t.dir/Inputs/header.h
 // RUN: sed -e "s|DIR|%/t.dir|g" %S/Inputs/target-filename-cdb.json > %t.cdb
-// RUN: clang-scan-deps -compilation-database %t.cdb -j 1 | FileCheck %s --check-prefixes=CHECK,%if system-darwin %{CHECK-DARWIN %} %else %{CHECK-NON-DARWIN %}
+// RUN: clang-scan-deps -compilation-database %t.cdb -j 1 | FileCheck %s --check-prefixes=CHECK,%if system-darwin  && target={{.*}}-{{darwin|macos}}{{.*}} %{CHECK-DARWIN %} %else %{CHECK-NON-DARWIN %}
 
 // CHECK: target-filename_input.o:
 // CHECK-DARWIN-NEXT: SDKSettings.json

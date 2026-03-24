@@ -9,8 +9,8 @@
 ; CHECK: remark: <unknown>:0:0: vectorized outer loop (vectorization width: vscale x 4, interleaved count: 1)
 ; NO_SCALABLE_VECS: remark: <unknown>:0:0: loop not vectorized: the scalable user-specified vectorization width for outer-loop vectorization cannot be used because the target does not support scalable vectors.
 
-@A = external local_unnamed_addr global [1024 x float], align 4
-@B = external local_unnamed_addr global [512 x float], align 4
+@A = external global [1024 x float], align 4
+@B = external global [512 x float], align 4
 
 define void @foo() {
 ; CHECK-LABEL: define void @foo() {
@@ -45,8 +45,7 @@ define void @foo() {
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <vscale x 4 x i1> [[TMP14]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP15]], label [[OUTER_LOOP_LATCH4]], label [[INNER_LOOP1]]
 ; CHECK:       vector.latch:
-; CHECK-NEXT:    [[VEC_PHI5:%.*]] = phi <vscale x 4 x float> [ [[TMP12]], [[INNER_LOOP1]] ]
-; CHECK-NEXT:    call void @llvm.masked.scatter.nxv4f32.nxv4p0(<vscale x 4 x float> [[VEC_PHI5]], <vscale x 4 x ptr> align 4 [[TMP10]], <vscale x 4 x i1> splat (i1 true))
+; CHECK-NEXT:    call void @llvm.masked.scatter.nxv4f32.nxv4p0(<vscale x 4 x float> [[TMP12]], <vscale x 4 x ptr> align 4 [[TMP10]], <vscale x 4 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 4 x i64> [[VEC_IND]], [[DOTSPLAT]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

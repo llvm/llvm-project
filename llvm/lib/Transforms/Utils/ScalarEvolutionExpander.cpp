@@ -563,7 +563,7 @@ Value *SCEVExpander::visitAddExpr(const SCEVAddExpr *S) {
     if (isa<PointerType>(Sum->getType())) {
       // The running sum expression is a pointer. Try to form a getelementptr
       // at this level with that as the base.
-      SmallVector<const SCEV *, 4> NewOps;
+      SmallVector<SCEVUse, 4> NewOps;
       for (; I != E && I->first == CurLoop; ++I) {
         // If the operand is SCEVUnknown and not instructions, peek through
         // it, to enable more of it to be folded into the GEP.
@@ -1254,6 +1254,22 @@ Value *SCEVExpander::tryToReuseLCSSAPhi(const SCEVAddRecExpr *S) {
       !SE.DT.dominates(EB, Builder.GetInsertBlock()))
     return nullptr;
 
+  // Helper to check if the diff between S and ExitSCEV is simple enough to
+  // allow reusing the LCSSA phi.
+  auto CanReuse = [&](const SCEV *ExitSCEV) -> const SCEV * {
+    if (isa<SCEVCouldNotCompute>(ExitSCEV))
+      return nullptr;
+    const SCEV *Diff = SE.getMinusSCEV(S, ExitSCEV);
+    const SCEV *Op = Diff;
+    match(Op, m_scev_Add(m_SCEVConstant(), m_SCEV(Op)));
+    match(Op, m_scev_Mul(m_scev_AllOnes(), m_SCEV(Op)));
+    match(Op, m_scev_PtrToAddr(m_SCEV(Op))) ||
+        match(Op, m_scev_PtrToInt(m_SCEV(Op)));
+    if (!isa<SCEVConstant, SCEVUnknown>(Op))
+      return nullptr;
+    return Diff;
+  };
+
   for (auto &PN : EB->phis()) {
     if (!SE.isSCEVable(PN.getType()))
       continue;
@@ -1261,22 +1277,20 @@ Value *SCEVExpander::tryToReuseLCSSAPhi(const SCEVAddRecExpr *S) {
     if (!isa<SCEVAddRecExpr>(ExitSCEV))
       continue;
     Type *PhiTy = PN.getType();
-    if (STy->isIntegerTy() && PhiTy->isPointerTy()) {
-      ExitSCEV = SE.getPtrToIntExpr(ExitSCEV, STy);
-      if (isa<SCEVCouldNotCompute>(ExitSCEV))
-        continue;
-    } else if (S->getType() != PN.getType()) {
-      continue;
+    const SCEV *Diff = nullptr;
+    if (STy->isIntegerTy() && PhiTy->isPointerTy() &&
+        DL.getAddressType(PhiTy) == STy) {
+      // Prefer ptrtoaddr over ptrtoint.
+      const SCEV *AddrSCEV = SE.getPtrToAddrExpr(ExitSCEV);
+      Diff = CanReuse(AddrSCEV);
+      if (!Diff) {
+        const SCEV *IntSCEV = SE.getPtrToIntExpr(ExitSCEV, STy);
+        Diff = CanReuse(IntSCEV);
+      }
+    } else if (STy == PhiTy) {
+      Diff = CanReuse(ExitSCEV);
     }
-
-    // Check if we can re-use the existing PN, by adjusting it with an expanded
-    // offset, if the offset is simpler.
-    const SCEV *Diff = SE.getMinusSCEV(S, ExitSCEV);
-    const SCEV *Op = Diff;
-    match(Op, m_scev_Add(m_SCEVConstant(), m_SCEV(Op)));
-    match(Op, m_scev_Mul(m_scev_AllOnes(), m_SCEV(Op)));
-    match(Op, m_scev_PtrToInt(m_SCEV(Op)));
-    if (!isa<SCEVConstant, SCEVUnknown>(Op))
+    if (!Diff)
       continue;
 
     assert(Diff->getType()->isIntegerTy() &&
@@ -1286,7 +1300,7 @@ Value *SCEVExpander::tryToReuseLCSSAPhi(const SCEVAddRecExpr *S) {
     if (PhiTy->isPointerTy()) {
       if (STy->isPointerTy())
         return Builder.CreatePtrAdd(BaseV, DiffV);
-      BaseV = Builder.CreatePtrToInt(BaseV, DiffV->getType());
+      BaseV = Builder.CreatePtrToAddr(BaseV);
     }
     return Builder.CreateAdd(BaseV, DiffV);
   }
@@ -1322,7 +1336,7 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
   if (CanonicalIV &&
       SE.getTypeSizeInBits(CanonicalIV->getType()) > SE.getTypeSizeInBits(Ty) &&
       !S->getType()->isPointerTy()) {
-    SmallVector<const SCEV *, 4> NewOps(S->getNumOperands());
+    SmallVector<SCEVUse, 4> NewOps(S->getNumOperands());
     for (unsigned i = 0, e = S->getNumOperands(); i != e; ++i)
       NewOps[i] = SE.getAnyExtendExpr(S->getOperand(i), CanonicalIV->getType());
     Value *V = expand(SE.getAddRecExpr(NewOps, S->getLoop(),
@@ -1346,7 +1360,7 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
                             S->getNoWrapFlags(SCEV::FlagNUW));
     }
 
-    SmallVector<const SCEV *, 4> NewOps(S->operands());
+    SmallVector<SCEVUse, 4> NewOps(S->operands());
     NewOps[0] = SE.getConstant(Ty, 0);
     const SCEV *Rest = SE.getAddRecExpr(NewOps, L,
                                         S->getNoWrapFlags(SCEV::FlagNW));
@@ -1436,7 +1450,21 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
 
 Value *SCEVExpander::visitPtrToAddrExpr(const SCEVPtrToAddrExpr *S) {
   Value *V = expand(S->getOperand());
-  return ReuseOrCreateCast(V, S->getType(), CastInst::PtrToAddr,
+  Type *Ty = S->getType();
+
+  // ptrtoaddr and ptrtoint produce the same value, so try to reuse either.
+  if (!isa<Constant>(V)) {
+    BasicBlock::iterator BIP = Builder.GetInsertPoint();
+    for (User *U : V->users()) {
+      auto *CI = dyn_cast<CastInst>(U);
+      if (CI && CI->getType() == Ty &&
+          (CI->getOpcode() == CastInst::PtrToAddr ||
+           CI->getOpcode() == CastInst::PtrToInt) &&
+          &*BIP != CI && SE.DT.dominates(CI, &*BIP))
+        return CI;
+    }
+  }
+  return ReuseOrCreateCast(V, Ty, CastInst::PtrToAddr,
                            GetOptimalInsertionPointForCastOf(V));
 }
 

@@ -35,6 +35,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/ConvertEBCDIC.h"
 #include "llvm/Support/ScopedPrinter.h"
 
 #include <optional>
@@ -915,7 +916,7 @@ static llvm::Constant *pointerAuthResignConstant(
     return nullptr;
 
   assert(CPA->getKey()->getZExtValue() == CurAuthInfo.getKey() &&
-         CPA->getAddrDiscriminator()->isZeroValue() &&
+         CPA->getAddrDiscriminator()->isNullValue() &&
          CPA->getDiscriminator() == CurAuthInfo.getDiscriminator() &&
          "unexpected key or discriminators");
 
@@ -1257,6 +1258,7 @@ llvm::Constant *ItaniumCXXABI::EmitMemberPointer(const APValue &MP,
     return pointerAuthResignMemberFunctionPointer(Src, MPType, SrcType, CGM);
   }
 
+  getContext().recordMemberDataPointerEvaluation(MPD);
   CharUnits FieldOffset =
     getContext().toCharUnitsFromBits(getContext().getFieldOffset(MPD));
   return EmitMemberDataPointer(MPT, ThisAdjustment + FieldOffset);
@@ -2272,6 +2274,24 @@ CGCallee ItaniumCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
   auto *MethodDecl = cast<CXXMethodDecl>(GD.getDecl());
   llvm::Value *VTable = CGF.GetVTablePtr(This, PtrTy, MethodDecl->getParent());
 
+  // For the translation of virtual functions, we need to map the (potential)
+  // host vtable to the device vtable. This is done by calling the runtime
+  // function
+  // __llvm_omp_indirect_call_lookup.
+  if (CGM.getLangOpts().OpenMPIsTargetDevice) {
+    auto *NewPtrTy = CGM.VoidPtrTy;
+    llvm::Type *RtlFnArgs[] = {NewPtrTy};
+    llvm::FunctionCallee DeviceRtlFn = CGM.CreateRuntimeFunction(
+        llvm::FunctionType::get(NewPtrTy, RtlFnArgs, false),
+        "__llvm_omp_indirect_call_lookup");
+    auto *BackupTy = VTable->getType();
+    // Need to convert to generic address space
+    VTable = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(VTable, NewPtrTy);
+    VTable = CGF.EmitRuntimeCall(DeviceRtlFn, {VTable});
+    // convert to original address space
+    VTable = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(VTable, BackupTy);
+  }
+
   uint64_t VTableIndex = CGM.getItaniumVTableContext().getMethodVTableIndex(GD);
   llvm::Value *VFunc, *VTableSlotPtr = nullptr;
   auto &Schema = CGM.getCodeGenOpts().PointerAuth.CXXVirtualFunctionPointers;
@@ -2959,8 +2979,12 @@ static void emitGlobalDtorWithCXAAtExit(CodeGenFunction &CGF,
       /*IsVariadic=*/false, /*IsCXXMethod=*/false));
   QualType fnType =
       Context.getFunctionType(Context.VoidTy, {Context.VoidPtrTy}, EPI);
-  llvm::Constant *dtorCallee = cast<llvm::Constant>(dtor.getCallee());
-  dtorCallee = CGF.CGM.getFunctionPointer(dtorCallee, fnType);
+  llvm::Value *dtorCallee = dtor.getCallee();
+  dtorCallee =
+      CGF.CGM.getFunctionPointer(cast<llvm::Constant>(dtorCallee), fnType);
+
+  if (dtorCallee->getType()->getPointerAddressSpace() != AddrAS)
+    dtorCallee = CGF.performAddrSpaceCast(dtorCallee, AddrPtrTy);
 
   if (!addr)
     // addr is null when we are trying to register a dtor annotated with
@@ -3479,6 +3503,10 @@ ItaniumCXXABI::getOrCreateVirtualFunctionPointerThunk(const CXXMethodDecl *MD) {
 
   CGF.StartFunction(GlobalDecl(), FnInfo.getReturnType(), ThunkFn, FnInfo,
                     FunctionArgs, MD->getLocation(), SourceLocation());
+
+  // Emit an artificial location for this function.
+  auto AL = ApplyDebugLocation::CreateArtificial(CGF);
+
   llvm::Value *ThisVal = loadIncomingCXXThis(CGF);
   setCXXABIThisValue(CGF, ThisVal);
 
@@ -3619,8 +3647,17 @@ llvm::GlobalVariable *ItaniumRTTIBuilder::GetAddrOfTypeName(
   // We know that the mangled name of the type starts at index 4 of the
   // mangled name of the typename, so we can just index into it in order to
   // get the mangled name of the type.
-  llvm::Constant *Init = llvm::ConstantDataArray::getString(VMContext,
-                                                            Name.substr(4));
+  llvm::Constant *Init;
+  if (CGM.getTriple().isOSzOS()) {
+    // On z/OS, typename is stored as 2 encodings: EBCDIC followed by ASCII.
+    SmallString<256> DualEncodedName;
+    llvm::ConverterEBCDIC::convertToEBCDIC(Name.substr(4), DualEncodedName);
+    DualEncodedName += '\0';
+    DualEncodedName += Name.substr(4);
+    Init = llvm::ConstantDataArray::getString(VMContext, DualEncodedName);
+  } else
+    Init = llvm::ConstantDataArray::getString(VMContext, Name.substr(4));
+
   auto Align = CGM.getContext().getTypeAlignInChars(CGM.getContext().CharTy);
 
   llvm::GlobalVariable *GV = CGM.CreateOrReplaceCXXRuntimeVariable(
@@ -3962,6 +3999,7 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty,
 
   case Type::Builtin:
   case Type::BitInt:
+  case Type::OverflowBehavior:
   // GCC treats vector and complex types as fundamental types.
   case Type::Vector:
   case Type::ExtVector:
@@ -4064,8 +4102,7 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty,
     // The vtable address point is 8 bytes after its start:
     // 4 for the offset to top + 4 for the relative offset to rtti.
     llvm::Constant *Eight = llvm::ConstantInt::get(CGM.Int32Ty, 8);
-    VTable =
-        llvm::ConstantExpr::getInBoundsGetElementPtr(CGM.Int8Ty, VTable, Eight);
+    VTable = llvm::ConstantExpr::getInBoundsPtrAdd(VTable, Eight);
   } else {
     llvm::Constant *Two = llvm::ConstantInt::get(PtrDiffTy, 2);
     VTable = llvm::ConstantExpr::getInBoundsGetElementPtr(CGM.GlobalsInt8PtrTy,
@@ -4314,6 +4351,9 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
 
   case Type::Atomic:
     // No fields, at least for the moment.
+    break;
+
+  case Type::OverflowBehavior:
     break;
 
   case Type::HLSLAttributedResource:
