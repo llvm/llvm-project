@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/MDBuilder.h"
@@ -263,6 +264,19 @@ unsigned AMDGPUSubtarget::getMaxWorkitemID(const Function &Kernel,
 }
 
 bool AMDGPUSubtarget::isSingleLaneExecution(const Function &Func) const {
+  // If the function calls the WWM intrinsic, just return false as
+  // all threads will be active at some point
+  for (const_inst_iterator Inst = inst_begin(Func), InstEnd = inst_end(Func);
+       Inst != InstEnd; ++Inst) {
+    const Instruction *I = &(*Inst);
+    if (auto *callInst = dyn_cast<CallInst>(I)) {
+      Function *calledFunc = callInst->getCalledFunction();
+      if (calledFunc && calledFunc->isIntrinsic() &&
+          calledFunc->getIntrinsicID() == Intrinsic::amdgcn_strict_wwm)
+        return false;
+    }
+  }
+
   for (int I = 0; I < 3; ++I) {
     if (getMaxWorkitemID(Func, I) > 0)
       return false;
