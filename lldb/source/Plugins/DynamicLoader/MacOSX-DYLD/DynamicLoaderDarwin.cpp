@@ -769,9 +769,8 @@ bool DynamicLoaderDarwin::AddModulesUsingPreloadedModules(
                   // The __LINKEDIT will need to be mapped so we can figure out
                   // where the symbol table bits are...
                   commpage_image_module_sp = *module_sp_or_err;
-                  bool changed = false;
-                  UpdateImageLoadAddress(commpage_image_module_sp.get(),
-                                         image_info);
+                  bool changed = UpdateImageLoadAddress(
+                      commpage_image_module_sp.get(), image_info);
                   target.GetImages().Append(commpage_image_module_sp);
                   if (changed) {
                     image_info.load_stop_id = m_process->GetStopID();
