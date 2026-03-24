@@ -586,13 +586,11 @@ entry:
 define i128 @ui128_100(i128 %a, i128 %b) {
 ; CHECK-SD-LABEL: ui128_100:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    extr x8, x1, x0, #2
-; CHECK-SD-NEXT:    lsr x9, x1, #2
+; CHECK-SD-NEXT:    extr x8, x1, x0, #62
+; CHECK-SD-NEXT:    ubfx x9, x0, #2, #60
 ; CHECK-SD-NEXT:    mov w10, #25 // =0x19
-; CHECK-SD-NEXT:    extr x9, x9, x8, #60
 ; CHECK-SD-NEXT:    and x8, x8, #0xfffffffffffffff
-; CHECK-SD-NEXT:    and x9, x9, #0xfffffffffffffff
-; CHECK-SD-NEXT:    add x8, x8, x9
+; CHECK-SD-NEXT:    add x8, x9, x8
 ; CHECK-SD-NEXT:    mov x9, #62915 // =0xf5c3
 ; CHECK-SD-NEXT:    movk x9, #23592, lsl #16
 ; CHECK-SD-NEXT:    add x8, x8, x1, lsr #58
@@ -909,8 +907,8 @@ define <4 x i8> @sv4i8_7(<4 x i8> %d, <4 x i8> %e) {
 ; CHECK-SD-NEXT:    dup v1.4h, w8
 ; CHECK-SD-NEXT:    sshr v0.4h, v0.4h, #8
 ; CHECK-SD-NEXT:    smull v1.4s, v0.4h, v1.4h
-; CHECK-SD-NEXT:    sshr v1.4s, v1.4s, #17
-; CHECK-SD-NEXT:    xtn v1.4h, v1.4s
+; CHECK-SD-NEXT:    shrn v1.4h, v1.4s, #16
+; CHECK-SD-NEXT:    sshr v1.4h, v1.4h, #1
 ; CHECK-SD-NEXT:    usra v1.4h, v1.4h, #15
 ; CHECK-SD-NEXT:    mls v0.4h, v1.4h, v2.4h
 ; CHECK-SD-NEXT:    ret
@@ -963,8 +961,8 @@ define <4 x i8> @sv4i8_100(<4 x i8> %d, <4 x i8> %e) {
 ; CHECK-SD-NEXT:    dup v1.4h, w8
 ; CHECK-SD-NEXT:    sshr v0.4h, v0.4h, #8
 ; CHECK-SD-NEXT:    smull v1.4s, v0.4h, v1.4h
-; CHECK-SD-NEXT:    sshr v1.4s, v1.4s, #19
-; CHECK-SD-NEXT:    xtn v1.4h, v1.4s
+; CHECK-SD-NEXT:    shrn v1.4h, v1.4s, #16
+; CHECK-SD-NEXT:    sshr v1.4h, v1.4h, #3
 ; CHECK-SD-NEXT:    usra v1.4h, v1.4h, #15
 ; CHECK-SD-NEXT:    mls v0.4h, v1.4h, v2.4h
 ; CHECK-SD-NEXT:    ret
@@ -3242,35 +3240,31 @@ entry:
 define <2 x i128> @uv2i128_100(<2 x i128> %d, <2 x i128> %e) {
 ; CHECK-SD-LABEL: uv2i128_100:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    lsr x8, x1, #2
-; CHECK-SD-NEXT:    extr x9, x1, x0, #2
-; CHECK-SD-NEXT:    extr x10, x3, x2, #2
-; CHECK-SD-NEXT:    lsr x11, x3, #2
-; CHECK-SD-NEXT:    mov w12, #25 // =0x19
-; CHECK-SD-NEXT:    extr x8, x8, x9, #60
-; CHECK-SD-NEXT:    and x9, x9, #0xfffffffffffffff
-; CHECK-SD-NEXT:    extr x11, x11, x10, #60
-; CHECK-SD-NEXT:    and x8, x8, #0xfffffffffffffff
-; CHECK-SD-NEXT:    add x8, x9, x8
-; CHECK-SD-NEXT:    and x9, x10, #0xfffffffffffffff
-; CHECK-SD-NEXT:    and x10, x11, #0xfffffffffffffff
+; CHECK-SD-NEXT:    extr x9, x1, x0, #62
+; CHECK-SD-NEXT:    ubfx x10, x0, #2, #60
+; CHECK-SD-NEXT:    extr x8, x3, x2, #62
 ; CHECK-SD-NEXT:    mov x11, #62915 // =0xf5c3
-; CHECK-SD-NEXT:    add x9, x9, x10
-; CHECK-SD-NEXT:    add x8, x8, x1, lsr #58
+; CHECK-SD-NEXT:    mov w12, #25 // =0x19
+; CHECK-SD-NEXT:    and x9, x9, #0xfffffffffffffff
+; CHECK-SD-NEXT:    and x8, x8, #0xfffffffffffffff
 ; CHECK-SD-NEXT:    movk x11, #23592, lsl #16
-; CHECK-SD-NEXT:    add x9, x9, x3, lsr #58
-; CHECK-SD-NEXT:    mov x1, xzr
+; CHECK-SD-NEXT:    add x9, x10, x9
+; CHECK-SD-NEXT:    ubfx x10, x2, #2, #60
 ; CHECK-SD-NEXT:    movk x11, #49807, lsl #32
-; CHECK-SD-NEXT:    mov x3, xzr
+; CHECK-SD-NEXT:    add x9, x9, x1, lsr #58
 ; CHECK-SD-NEXT:    movk x11, #10485, lsl #48
-; CHECK-SD-NEXT:    umulh x10, x8, x11
-; CHECK-SD-NEXT:    umulh x11, x9, x11
+; CHECK-SD-NEXT:    mov x1, xzr
+; CHECK-SD-NEXT:    add x8, x10, x8
+; CHECK-SD-NEXT:    add x8, x8, x3, lsr #58
+; CHECK-SD-NEXT:    umulh x10, x9, x11
+; CHECK-SD-NEXT:    mov x3, xzr
+; CHECK-SD-NEXT:    umulh x11, x8, x11
 ; CHECK-SD-NEXT:    lsr x10, x10, #2
 ; CHECK-SD-NEXT:    lsr x11, x11, #2
-; CHECK-SD-NEXT:    msub x8, x10, x12, x8
-; CHECK-SD-NEXT:    msub x9, x11, x12, x9
-; CHECK-SD-NEXT:    bfi x0, x8, #2, #62
-; CHECK-SD-NEXT:    bfi x2, x9, #2, #62
+; CHECK-SD-NEXT:    msub x9, x10, x12, x9
+; CHECK-SD-NEXT:    msub x8, x11, x12, x8
+; CHECK-SD-NEXT:    bfi x0, x9, #2, #62
+; CHECK-SD-NEXT:    bfi x2, x8, #2, #62
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: uv2i128_100:
