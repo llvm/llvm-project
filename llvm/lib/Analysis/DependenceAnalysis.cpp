@@ -1801,9 +1801,6 @@ bool DependenceInfo::weakZeroSIVtestImpl(const SCEVAddRecExpr *AR,
   if (!ConstCoeff)
     return false;
 
-  const SCEV *NewDelta =
-      SE->isKnownNegative(ConstCoeff) ? SE->getNegativeSCEV(Delta) : Delta;
-
   if (const SCEV *UpperBound =
           collectUpperBound(AR->getLoop(), Delta->getType())) {
     LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound << "\n");
@@ -1821,15 +1818,6 @@ bool DependenceInfo::weakZeroSIVtestImpl(const SCEVAddRecExpr *AR,
       }
       return false;
     }
-  }
-
-  // check that Delta/ARCoeff >= 0
-  // really check that NewDelta >= 0
-  if (SE->isKnownNegative(NewDelta)) {
-    // No dependence, newDelta < 0
-    ++WeakZeroSIVindependence;
-    ++WeakZeroSIVsuccesses;
-    return true;
   }
 
   // if ARCoeff doesn't divide Delta, then no dependence
