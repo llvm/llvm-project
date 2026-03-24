@@ -659,3 +659,167 @@ define i32 @popcnt3_negative_i32(i32 noundef %0) {
   %16 = and i32 %15, 63
   ret i32 %16
 }
+
+; Negative test case for popcnt2 i24 - non-power-of-2 bit width (should NOT optimize)
+define i24 @popcnt2_negative_i24(i24 noundef %0) {
+; CHECK-LABEL: @popcnt2_negative_i24(
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i24 [[TMP0:%.*]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = and i24 [[TMP2]], 5592405
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i24 [[TMP0]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = and i24 [[TMP4]], 3355443
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr i24 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP7:%.*]] = and i24 [[TMP6]], 3355443
+; CHECK-NEXT:    [[TMP8:%.*]] = add nuw nsw i24 [[TMP7]], [[TMP5]]
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr i24 [[TMP8]], 4
+; CHECK-NEXT:    [[TMP10:%.*]] = add nuw nsw i24 [[TMP9]], [[TMP8]]
+; CHECK-NEXT:    [[TMP11:%.*]] = and i24 [[TMP10]], 986895
+; CHECK-NEXT:    [[TMP12:%.*]] = lshr i24 [[TMP11]], 8
+; CHECK-NEXT:    [[TMP13:%.*]] = add nuw nsw i24 [[TMP12]], [[TMP11]]
+; CHECK-NEXT:    [[TMP14:%.*]] = lshr i24 [[TMP13]], 16
+; CHECK-NEXT:    [[TMP15:%.*]] = add nuw nsw i24 [[TMP14]], [[TMP13]]
+; CHECK-NEXT:    [[TMP16:%.*]] = and i24 [[TMP15]], 47
+; CHECK-NEXT:    ret i24 [[TMP16]]
+;
+  %2 = lshr i24 %0, 1
+  %3 = and i24 %2, 5592405  ; 0x555555
+  %4 = sub i24 %0, %3
+  %5 = and i24 %4, 3355443  ; 0x333333
+  %6 = lshr i24 %4, 2
+  %7 = and i24 %6, 3355443
+  %8 = add nuw nsw i24 %7, %5
+  %9 = lshr i24 %8, 4
+  %10 = add nuw nsw i24 %9, %8
+  %11 = and i24 %10, 986895  ; 0x0F0F0F
+  %12 = lshr i24 %11, 8
+  %13 = add nuw nsw i24 %12, %11
+  %14 = lshr i24 %13, 16
+  %15 = add nuw nsw i24 %14, %13
+  %16 = and i24 %15, 47  ; 2*24-1 = 47
+  ret i24 %16
+}
+
+; Negative test case for popcnt2 i40 - non-power-of-2 bit width (should NOT optimize)
+define i40 @popcnt2_negative_i40(i40 noundef %0) {
+; CHECK-LABEL: @popcnt2_negative_i40(
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i40 [[TMP0:%.*]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = and i40 [[TMP2]], 366503875925
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i40 [[TMP0]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = and i40 [[TMP4]], 219902325555
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr i40 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP7:%.*]] = and i40 [[TMP6]], 219902325555
+; CHECK-NEXT:    [[TMP8:%.*]] = add nuw nsw i40 [[TMP7]], [[TMP5]]
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr i40 [[TMP8]], 4
+; CHECK-NEXT:    [[TMP10:%.*]] = add nuw nsw i40 [[TMP9]], [[TMP8]]
+; CHECK-NEXT:    [[TMP11:%.*]] = and i40 [[TMP10]], 67818775935
+; CHECK-NEXT:    [[TMP12:%.*]] = lshr i40 [[TMP11]], 8
+; CHECK-NEXT:    [[TMP13:%.*]] = add nuw nsw i40 [[TMP12]], [[TMP11]]
+; CHECK-NEXT:    [[TMP14:%.*]] = lshr i40 [[TMP13]], 16
+; CHECK-NEXT:    [[TMP15:%.*]] = add nuw nsw i40 [[TMP14]], [[TMP13]]
+; CHECK-NEXT:    [[TMP16:%.*]] = lshr i40 [[TMP15]], 32
+; CHECK-NEXT:    [[TMP17:%.*]] = add nuw nsw i40 [[TMP16]], [[TMP15]]
+; CHECK-NEXT:    [[TMP18:%.*]] = and i40 [[TMP17]], 79
+; CHECK-NEXT:    ret i40 [[TMP18]]
+;
+  %2 = lshr i40 %0, 1
+  %3 = and i40 %2, 366503875925  ; 0x5555555555
+  %4 = sub i40 %0, %3
+  %5 = and i40 %4, 219902325555  ; 0x3333333333
+  %6 = lshr i40 %4, 2
+  %7 = and i40 %6, 219902325555
+  %8 = add nuw nsw i40 %7, %5
+  %9 = lshr i40 %8, 4
+  %10 = add nuw nsw i40 %9, %8
+  %11 = and i40 %10, 67818775935  ; 0x0F0F0F0F0F
+  %12 = lshr i40 %11, 8
+  %13 = add nuw nsw i40 %12, %11
+  %14 = lshr i40 %13, 16
+  %15 = add nuw nsw i40 %14, %13
+  %16 = lshr i40 %15, 32
+  %17 = add nuw nsw i40 %16, %15
+  %18 = and i40 %17, 79  ; 2*40-1 = 79
+  ret i40 %18
+}
+
+; Negative test case for popcnt2 i48 - non-power-of-2 bit width (should NOT optimize)
+define i48 @popcnt2_negative_i48(i48 noundef %0) {
+; CHECK-LABEL: @popcnt2_negative_i48(
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i48 [[TMP0:%.*]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = and i48 [[TMP2]], 93824992236885
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i48 [[TMP0]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = and i48 [[TMP4]], 56294995342131
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr i48 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP7:%.*]] = and i48 [[TMP6]], 56294995342131
+; CHECK-NEXT:    [[TMP8:%.*]] = add nuw nsw i48 [[TMP7]], [[TMP5]]
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr i48 [[TMP8]], 4
+; CHECK-NEXT:    [[TMP10:%.*]] = add nuw nsw i48 [[TMP9]], [[TMP8]]
+; CHECK-NEXT:    [[TMP11:%.*]] = and i48 [[TMP10]], 17361641481615
+; CHECK-NEXT:    [[TMP12:%.*]] = lshr i48 [[TMP11]], 8
+; CHECK-NEXT:    [[TMP13:%.*]] = add nuw nsw i48 [[TMP12]], [[TMP11]]
+; CHECK-NEXT:    [[TMP14:%.*]] = lshr i48 [[TMP13]], 16
+; CHECK-NEXT:    [[TMP15:%.*]] = add nuw nsw i48 [[TMP14]], [[TMP13]]
+; CHECK-NEXT:    [[TMP16:%.*]] = lshr i48 [[TMP15]], 32
+; CHECK-NEXT:    [[TMP17:%.*]] = add nuw nsw i48 [[TMP16]], [[TMP15]]
+; CHECK-NEXT:    [[TMP18:%.*]] = and i48 [[TMP17]], 95
+; CHECK-NEXT:    ret i48 [[TMP18]]
+;
+  %2 = lshr i48 %0, 1
+  %3 = and i48 %2, 93824992236885  ; 0x555555555555
+  %4 = sub i48 %0, %3
+  %5 = and i48 %4, 56294995342131  ; 0x333333333333
+  %6 = lshr i48 %4, 2
+  %7 = and i48 %6, 56294995342131
+  %8 = add nuw nsw i48 %7, %5
+  %9 = lshr i48 %8, 4
+  %10 = add nuw nsw i48 %9, %8
+  %11 = and i48 %10, 17361641481615  ; 0x0F0F0F0F0F0F
+  %12 = lshr i48 %11, 8
+  %13 = add nuw nsw i48 %12, %11
+  %14 = lshr i48 %13, 16
+  %15 = add nuw nsw i48 %14, %13
+  %16 = lshr i48 %15, 32
+  %17 = add nuw nsw i48 %16, %15
+  %18 = and i48 %17, 95  ; 2*48-1 = 95
+  ret i48 %18
+}
+
+; Negative test case for popcnt2 i56 - non-power-of-2 bit width (should NOT optimize)
+define i56 @popcnt2_negative_i56(i56 noundef %0) {
+; CHECK-LABEL: @popcnt2_negative_i56(
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i56 [[TMP0:%.*]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = and i56 [[TMP2]], 24019198012642645
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i56 [[TMP0]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = and i56 [[TMP4]], 14411518807585587
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr i56 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP7:%.*]] = and i56 [[TMP6]], 14411518807585587
+; CHECK-NEXT:    [[TMP8:%.*]] = add nuw nsw i56 [[TMP7]], [[TMP5]]
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr i56 [[TMP8]], 4
+; CHECK-NEXT:    [[TMP10:%.*]] = add nuw nsw i56 [[TMP9]], [[TMP8]]
+; CHECK-NEXT:    [[TMP11:%.*]] = and i56 [[TMP10]], 4444132406286415
+; CHECK-NEXT:    [[TMP12:%.*]] = lshr i56 [[TMP11]], 8
+; CHECK-NEXT:    [[TMP13:%.*]] = add nuw nsw i56 [[TMP12]], [[TMP11]]
+; CHECK-NEXT:    [[TMP14:%.*]] = lshr i56 [[TMP13]], 16
+; CHECK-NEXT:    [[TMP15:%.*]] = add nuw nsw i56 [[TMP14]], [[TMP13]]
+; CHECK-NEXT:    [[TMP16:%.*]] = lshr i56 [[TMP15]], 32
+; CHECK-NEXT:    [[TMP17:%.*]] = add nuw nsw i56 [[TMP16]], [[TMP15]]
+; CHECK-NEXT:    [[TMP18:%.*]] = and i56 [[TMP17]], 111
+; CHECK-NEXT:    ret i56 [[TMP18]]
+;
+  %2 = lshr i56 %0, 1
+  %3 = and i56 %2, 24019198012642645  ; 0x55555555555555
+  %4 = sub i56 %0, %3
+  %5 = and i56 %4, 14411518807585587  ; 0x33333333333333
+  %6 = lshr i56 %4, 2
+  %7 = and i56 %6, 14411518807585587
+  %8 = add nuw nsw i56 %7, %5
+  %9 = lshr i56 %8, 4
+  %10 = add nuw nsw i56 %9, %8
+  %11 = and i56 %10, 4444132406286415  ; 0x0F0F0F0F0F0F0F
+  %12 = lshr i56 %11, 8
+  %13 = add nuw nsw i56 %12, %11
+  %14 = lshr i56 %13, 16
+  %15 = add nuw nsw i56 %14, %13
+  %16 = lshr i56 %15, 32
+  %17 = add nuw nsw i56 %16, %15
+  %18 = and i56 %17, 111  ; 2*56-1 = 111
+  ret i56 %18
+}

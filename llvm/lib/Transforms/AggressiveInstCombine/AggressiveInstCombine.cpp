@@ -407,6 +407,10 @@ static bool tryToRecognizePopCount2n3(Instruction &I) {
   if (Len > 64 || Len <= 8 || Len % 8 != 0)
     return false;
 
+  // Len should be a power of 2 for the loop to work correctly
+  if (!isPowerOf2_32(Len))
+    return false;
+
   APInt Mask55 = APInt::getSplat(Len, APInt(8, 0x55));
   APInt Mask33 = APInt::getSplat(Len, APInt(8, 0x33));
   APInt Mask0F = APInt::getSplat(Len, APInt(8, 0x0F));
