@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/SCCPSolver.h"
-#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -417,10 +416,8 @@ static Value *simplifyInstruction(SCCPSolver &Solver,
 
       ICmpInst::Predicate Pred;
       APInt RHS;
-      // If NewCmpCR is just the same as CR, no simplification happens.
-      if (NewCmpCR != *CR) {
-        bool Match [[maybe_unused]] = NewCmpCR.getEquivalentICmp(Pred, RHS);
-        assert(Match && "Incorrect simplifyCmpRange");
+      // NewCmpCR might be CmpCR, i.e., no simplification happens.
+      if (NewCmpCR.getEquivalentICmp(Pred, RHS)) {
         IRBuilder<NoFolder> Builder(&Inst);
         Value *NewICmp =
             Builder.CreateICmp(Pred, X, ConstantInt::get(X->getType(), RHS));
