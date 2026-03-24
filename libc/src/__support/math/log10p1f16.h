@@ -103,8 +103,8 @@ LIBC_INLINE float16 log10p1f16(float16 x) {
       if (auto r = LOG10P1F16_EXCEPTS.lookup(x_u); LIBC_UNLIKELY(r.has_value()))
         return r.value();
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-      constexpr double MIN_NORMAL = 0x1.0p-14;
-      constexpr double midpoint = 0x1.ffcp-15;
+      constexpr float MIN_NORMAL = 0x1.0p-14f;
+      constexpr float midpoint = 0x1.ffcp-15f;
       float xf = x;
       float result = (xf * fputil::polyeval(xf, 0x1.bcb7b2p-2f, -0x1.bcb4cp-3f,
                                             0x1.2875bcp-3f, -0x1.c2946ep-4f,
