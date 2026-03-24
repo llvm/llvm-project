@@ -2334,7 +2334,6 @@ void NVPTXDAGToDAGISel::selectVectorAtomicRMW(SDNode *N) {
      {NVPTX::ATOM_MAX_V_F16_v2, NVPTX::ATOM_MAX_V_F16_v4, NVPTX::ATOM_MAX_V_F16_v8},
      {NVPTX::ATOM_MAX_V_BF16_v2, NVPTX::ATOM_MAX_V_BF16_v4, NVPTX::ATOM_MAX_V_BF16_v8}},
   };
-  // clang-format on
 
   unsigned TypeIdx;
   switch (EltVT.SimpleTy) {
