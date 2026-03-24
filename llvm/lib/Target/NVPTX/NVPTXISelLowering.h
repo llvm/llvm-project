@@ -157,8 +157,8 @@ public:
   AtomicExpansionKind
   shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const override;
 
-  bool shouldExpandAtomicRMWElementwiseInIR(
-      const AtomicRMWInst *AI) const override;
+  bool
+  shouldExpandAtomicRMWElementwiseInIR(const AtomicRMWInst *AI) const override;
 
   bool aggressivelyPreferBuildVectorSources(EVT VecVT) const override {
     // There's rarely any point of packing something into a vector type if we
