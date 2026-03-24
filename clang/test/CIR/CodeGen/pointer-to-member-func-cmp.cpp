@@ -36,7 +36,7 @@ bool cmp_eq(void (Foo::*lhs)(int), void (Foo::*rhs)(int)) {
 // CIR-AFTER:   %[[TMP:.*]] = cir.or %[[PTR_NULL]], %[[ADJ_CMP]] : !cir.bool
 // CIR-AFTER:   %[[RESULT:.*]] = cir.and %[[PTR_CMP]], %[[TMP]] : !cir.bool
 
-// LLVM: define {{.*}} i1 @_Z6cmp_eqM3FooFviES1_
+// LLVM: define {{.*}} noundef i1 @_Z6cmp_eqM3FooFviES1_({ i64, i64 } %{{.*}}, { i64, i64 } %{{.*}})
 // LLVM:   %[[LHS:.*]] = load { i64, i64 }, ptr %{{.+}}
 // LLVM:   %[[RHS:.*]] = load { i64, i64 }, ptr %{{.+}}
 // LLVM:   %[[LHS_PTR:.*]] = extractvalue { i64, i64 } %[[LHS]], 0
@@ -90,7 +90,7 @@ bool cmp_ne(void (Foo::*lhs)(int), void (Foo::*rhs)(int)) {
 // CIR-AFTER:   %[[TMP:.*]] = cir.and %[[PTR_NULL]], %[[ADJ_CMP]] : !cir.bool
 // CIR-AFTER:   %[[RESULT:.*]] = cir.or %[[PTR_CMP]], %[[TMP]] : !cir.bool
 
-// LLVM: define {{.*}} i1 @_Z6cmp_neM3FooFviES1_
+// LLVM: define {{.*}} noundef i1 @_Z6cmp_neM3FooFviES1_({ i64, i64 } %{{.*}}, { i64, i64 } %{{.*}})
 // LLVM:   %[[LHS:.*]] = load { i64, i64 }, ptr %{{.*}}
 // LLVM:   %[[RHS:.*]] = load { i64, i64 }, ptr %{{.*}}
 // LLVM:   %[[LHS_PTR:.*]] = extractvalue { i64, i64 } %[[LHS]], 0

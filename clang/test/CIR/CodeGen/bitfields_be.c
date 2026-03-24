@@ -58,7 +58,7 @@ void load(S* s) {
 // CIR:    %[[GET0:.*]] = cir.get_member %[[VAL0]][0] {name = "a"} : !cir.ptr<!rec_S> -> !cir.ptr<!u32i>
 // CIR:    %[[SET0:.*]] = cir.set_bitfield align(4) (#bfi_a, %[[GET0]] : !cir.ptr<!u32i>, %[[CONST1]] : !s32i) -> !s32i
 
-// LLVM: define dso_local void @load{{.*}}{{.*}}
+// LLVM: define dso_local void @load(ptr noundef
 // LLVM:   %[[PTR0:.*]] = load ptr
 // LLVM:   %[[GET0:.*]] = getelementptr %struct.S, ptr %[[PTR0]], i32 0, i32 0
 // LLVM:   %[[VAL0:.*]] = load i32, ptr %[[GET0]], align 4

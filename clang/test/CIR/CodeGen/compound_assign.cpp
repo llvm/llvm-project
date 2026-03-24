@@ -42,7 +42,7 @@ int compound_assign(int b) {
 // CIR:   %[[OR:.*]] = cir.or %{{.*}}, %{{.*}} : !s32i
 // CIR:   cir.store{{.*}} %[[OR]], %{{.*}} : !s32i, !cir.ptr<!s32i>
 
-// LLVM: define {{.*}}i32 @_Z15compound_assigni
+// LLVM: define {{.*}} noundef i32 @_Z15compound_assigni(i32 noundef %0)
 // LLVM:   %[[MUL:.*]] = mul nsw i32 %{{.*}}, %{{.*}}
 // LLVM:   store i32 %[[MUL]], ptr %{{.*}}
 // LLVM:   %[[DIV:.*]] = sdiv i32 %{{.*}}, %{{.*}}

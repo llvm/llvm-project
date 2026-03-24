@@ -154,7 +154,7 @@ bool to_bool(int Foo::*x) {
 // CIR-AFTER:   %[[NULL_VAL:.*]] = cir.const #cir.int<-1> : !s64i
 // CIR-AFTER:   %[[BOOL_VAL:.*]] = cir.cmp ne %{{.*}}, %[[NULL_VAL]] : !s64i
 
-// LLVM: define {{.*}} i1 @_Z7to_boolM3Fooi
+// LLVM: define {{.*}} noundef i1 @_Z7to_boolM3Fooi(i64 %{{.*}})
 // LLVM:   %[[X:.*]] = load i64, ptr %{{.*}}
 // LLVM:   %[[IS_NULL:.*]] = icmp ne i64 %[[X]], -1
 

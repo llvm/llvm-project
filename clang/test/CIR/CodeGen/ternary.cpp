@@ -24,7 +24,7 @@ int x(int y) {
 // CIR: [[RETVAL_VAL:%.+]] = cir.load [[RETVAL]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.return [[RETVAL_VAL]] : !s32i
 
-// LLVM-LABEL: define{{.*}} i32 @_Z1xi(
+// LLVM-LABEL: define{{.*}} noundef i32 @_Z1xi(
 // LLVM-SAME: i32 {{.*}} %[[ARG0:.+]])
 // LLVM: %[[Y:.*]] = alloca i32
 // LLVM: %[[RETVAL:.*]] = alloca i32
@@ -82,7 +82,7 @@ int foo(int a, int b) {
 // CIR: [[RETVAL_VAL2:%.+]] = cir.load [[RETVAL]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.return [[RETVAL_VAL2]] : !s32i
 
-// LLVM-LABEL: define{{.*}} i32 @_Z3fooii(
+// LLVM-LABEL: define{{.*}} noundef i32 @_Z3fooii(
 // LLVM-SAME: i32 {{.*}} %[[ARG0:.*]], i32 {{.*}} %[[ARG1:.*]])
 // LLVM: %[[A:.*]] = alloca i32
 // LLVM: %[[B:.*]] = alloca i32
@@ -163,7 +163,7 @@ void test_cond_lvalue_assign(bool flag) {
 // CIR: }) : (!cir.bool) -> !cir.ptr<!s32i>
 // CIR: cir.store{{.*}} %{{.*}}, %[[TERNARY_PTR]] : !s32i, !cir.ptr<!s32i>
 
-// LLVM-LABEL: define{{.*}} void @_Z23test_cond_lvalue_assignb(
+// LLVM-LABEL: define{{.*}} void @_Z23test_cond_lvalue_assignb(i1 noundef %0)
 // LLVM: %[[FLAG:.*]] = alloca i8
 // LLVM: %[[A:.*]] = alloca i32
 // LLVM: %[[B:.*]] = alloca i32
@@ -213,7 +213,7 @@ int& test_cond_lvalue_ref(bool cond, int x, int y) {
 // CIR: %[[RET_VAL:.*]] = cir.load
 // CIR: cir.return %[[RET_VAL]] : !cir.ptr<!s32i>
 
-// LLVM-LABEL: define{{.*}} ptr @_Z20test_cond_lvalue_refbii(
+// LLVM-LABEL: define{{.*}} noundef nonnull align 4 dereferenceable(4) ptr @_Z20test_cond_lvalue_refbii(i1 noundef %0, i32 noundef %1, i32 noundef %2)
 // LLVM: %[[COND:.*]] = alloca i8
 // LLVM: %[[X:.*]] = alloca i32
 // LLVM: %[[Y:.*]] = alloca i32
@@ -268,7 +268,7 @@ void test_cond_lvalue_compound(bool flag) {
 // CIR: %[[NEW_VAL:.*]] = cir.add nsw %[[OLD_VAL]], %{{.*}}
 // CIR: cir.store{{.*}} %[[NEW_VAL]], %[[LVAL_PTR]]
 
-// LLVM-LABEL: define{{.*}} void @_Z25test_cond_lvalue_compoundb(
+// LLVM-LABEL: define{{.*}} void @_Z25test_cond_lvalue_compoundb(i1 noundef %0)
 // LLVM: %[[FLAG:.*]] = alloca i8
 // LLVM: %[[A:.*]] = alloca i32
 // LLVM: %[[B:.*]] = alloca i32

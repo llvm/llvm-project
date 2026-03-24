@@ -41,9 +41,9 @@ B::~B() { }
 // CIR:   cir.call @_ZN6MemberD1Ev
 // CIR:   cir.call @_ZN1AD2Ev
 
-// LLVM: define{{.*}} void @_ZN1BD2Ev
-// LLVM:   call void @_ZN6MemberD1Ev
-// LLVM:   call void @_ZN1AD2Ev
+// LLVM: define{{.*}} void @_ZN1BD2Ev(ptr noundef nonnull align 8 dereferenceable(9) {{.*}})
+// LLVM:   call void @_ZN6MemberD1Ev(ptr noundef nonnull align 1 dereferenceable(1) {{.*}})
+// LLVM:   call void @_ZN1AD2Ev(ptr noundef nonnull align 8 dereferenceable(8) {{.*}})
 
 // OGCG: define{{.*}} @_ZN1BD2Ev
 // OGCG:   call void @_ZN6MemberD1Ev
@@ -62,8 +62,8 @@ B::~B() { }
 // CIR:   %[[SIZE:.*]] = cir.const #cir.int<16>
 // CIR:   cir.call @_ZdlPvm(%[[THIS_VOID]], %[[SIZE]])
 
-// LLVM: define{{.*}} void @_ZN1BD0Ev
-// LLVM:   call void @_ZN1BD1Ev(ptr {{.*}} %[[THIS:.*]])
+// LLVM: define{{.*}} void @_ZN1BD0Ev(ptr noundef nonnull align 8 dereferenceable(9) {{.*}})
+// LLVM:   call void @_ZN1BD1Ev(ptr noundef nonnull align 8 dereferenceable(9) %[[THIS:.*]])
 // LLVM:   call void @_ZdlPvm(ptr {{.*}} %[[THIS]], i64 {{.*}} 16)
 
 // OGCG: define{{.*}} @_ZN1BD0Ev
@@ -82,8 +82,8 @@ C::~C() { }
 // CIR:   %[[B:.*]] = cir.base_class_addr %[[THIS:.*]] : !cir.ptr<!rec_C> nonnull [0] -> !cir.ptr<!rec_B>
 // CIR:   cir.call @_ZN1BD2Ev(%[[B]])
 
-// LLVM: define{{.*}} void @_ZN1CD2Ev
-// LLVM:   call void @_ZN1BD2Ev
+// LLVM: define{{.*}} void @_ZN1CD2Ev(ptr noundef nonnull align 8 dereferenceable(9) {{.*}})
+// LLVM:   call void @_ZN1BD2Ev(ptr noundef nonnull align 8 dereferenceable(9) {{.*}})
 
 // OGCG: define{{.*}} @_ZN1CD2Ev
 // OGCG:   call void @_ZN1BD2Ev
@@ -102,8 +102,8 @@ C::~C() { }
 // CIR:   %[[SIZE:.*]] = cir.const #cir.int<16>
 // CIR:   cir.call @_ZdlPvm(%[[THIS_VOID]], %[[SIZE]])
 
-// LLVM: define{{.*}} void @_ZN1CD0Ev
-// LLVM:   call void @_ZN1CD1Ev(ptr {{.*}} %[[THIS:.*]])
+// LLVM: define{{.*}} void @_ZN1CD0Ev(ptr noundef nonnull align 8 dereferenceable(9) {{.*}})
+// LLVM:   call void @_ZN1CD1Ev(ptr noundef nonnull align 8 dereferenceable(9) %[[THIS:.*]])
 // LLVM:   call void @_ZdlPvm(ptr {{.*}} %[[THIS]], i64 {{.*}} 16)
 
 // OGCG: define{{.*}} @_ZN1CD0Ev
@@ -119,8 +119,8 @@ namespace PR12798 {
   // CIR: cir.func{{.*}} @_ZN7PR127981fINS_1AEEEvPT_
   // CIR:   cir.call @_ZN7PR127981AD1Ev
 
-  // LLVM: define{{.*}} @_ZN7PR127981fINS_1AEEEvPT_
-  // LLVM:   call void @_ZN7PR127981AD1Ev
+  // LLVM: define{{.*}} @_ZN7PR127981fINS_1AEEEvPT_(ptr noundef {{.*}})
+  // LLVM:   call void @_ZN7PR127981AD1Ev(ptr noundef nonnull align 8 dereferenceable(8) {{.*}})
 
   // OGCG: define{{.*}} @_ZN7PR127981fINS_1AEEEvPT_
   // OGCG:   call void @_ZN7PR127981AD1Ev

@@ -280,5 +280,5 @@ int test3() { return ({ struct S s = {1}; s; }).x; }
 // Expression is wrapped in an expression attribute (just ensure it does not crash).
 void test4(int x) { ({[[gsl::suppress("foo")]] x;}); }
 // CIR: cir.func {{.*}} @test4
-// LLVM: @test4
+// LLVM: define{{.*}} void @test4(i32 noundef %0)
 // OGCG: @test4

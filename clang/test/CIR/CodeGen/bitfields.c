@@ -100,7 +100,7 @@ int load_field(S* s) {
 // CIR:   [[TMP2:%.*]] = cir.get_member [[TMP1]][0] {name = "c"} : !cir.ptr<!rec_S> -> !cir.ptr<!u64i>
 // CIR:   [[TMP3:%.*]] = cir.get_bitfield align(4) (#bfi_c, [[TMP2]] : !cir.ptr<!u64i>) -> !s32i
 
-// LLVM: define dso_local i32 @load_field
+// LLVM: define dso_local i32 @load_field(ptr noundef
 // LLVM:   [[TMP0:%.*]] = alloca ptr, i64 1, align 8
 // LLVM:   [[TMP1:%.*]] = alloca i32, i64 1, align 4
 // LLVM:   [[TMP2:%.*]] = load ptr, ptr [[TMP0]], align 8
@@ -128,7 +128,7 @@ unsigned int load_field_unsigned(A* s) {
 //CIR:   [[TMP2:%.*]] = cir.get_member [[TMP1]][3] {name = "more_bits"} : !cir.ptr<!rec_A> -> !cir.ptr<!u16i>
 //CIR:   [[TMP3:%.*]] = cir.get_bitfield align(1) (#bfi_more_bits, [[TMP2]] : !cir.ptr<!u16i>) -> !u32i
 
-//LLVM: define dso_local i32 @load_field_unsigned
+//LLVM: define dso_local i32 @load_field_unsigned(ptr noundef
 //LLVM:   [[TMP0:%.*]] = alloca ptr, i64 1, align 8
 //LLVM:   [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8
 //LLVM:   [[TMP2:%.*]] = getelementptr %struct.A, ptr [[TMP1]], i32 0, i32 3
@@ -235,7 +235,7 @@ void get_volatile(V* v) {
 // CIR:   [[TMP3:%.*]] = cir.get_member [[TMP2]][0] {name = "b"} : !cir.ptr<!rec_V> -> !cir.ptr<!u64i>
 // CIR:   [[TMP4:%.*]] = cir.set_bitfield align(4) (#bfi_b, [[TMP3]] : !cir.ptr<!u64i>, [[TMP1]] : !s32i) {is_volatile} -> !s32i
 
-// LLVM: define dso_local void @get_volatile
+// LLVM: define dso_local void @get_volatile(ptr noundef
 // LLVM:   [[TMP0:%.*]] = alloca ptr, i64 1, align 8
 // LLVM:   [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8
 // LLVM:   [[TMP2:%.*]] = getelementptr %struct.V, ptr [[TMP1]], i32 0, i32 0
@@ -262,7 +262,7 @@ void set_volatile(V* v) {
 //CIR:   [[TMP3:%.*]] = cir.get_member [[TMP2]][0] {name = "b"} : !cir.ptr<!rec_V> -> !cir.ptr<!u64i>
 //CIR:   [[TMP4:%.*]] = cir.set_bitfield align(4) (#bfi_b, [[TMP3]] : !cir.ptr<!u64i>, [[TMP1]] : !s32i) {is_volatile} -> !s32i
 
-// LLVM: define dso_local void @set_volatile
+// LLVM: define dso_local void @set_volatile(ptr noundef
 // LLVM:   [[TMP0:%.*]] = alloca ptr, i64 1, align 8
 // LLVM:   [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8
 // LLVM:   [[TMP2:%.*]] = getelementptr %struct.V, ptr [[TMP1]], i32 0, i32 0
@@ -291,7 +291,7 @@ void unOp(S* s) {
 // CIR:   [[TMP4:%.*]] = cir.inc nsw [[TMP3]] : !s32i
 // CIR:   cir.set_bitfield align(4) (#bfi_d, [[TMP2]] : !cir.ptr<!u64i>, [[TMP4]] : !s32i)
 
-// LLVM: define {{.*@unOp}}
+// LLVM: define {{.*}} void @unOp(ptr noundef
 // LLVM:   [[TMP0:%.*]] = getelementptr %struct.S, ptr [[LOAD0:%.*]], i32 0, i32 0
 // LLVM:   [[TMP1:%.*]] = load i64, ptr [[TMP0]], align 4
 // LLVM:   [[TMP2:%.*]] = shl i64 [[TMP1]], 13
@@ -338,7 +338,7 @@ void binOp(S* s) {
 // CIR:   [[TMP3:%.*]] = cir.or [[TMP2]], [[TMP0]] : !s32i
 // CIR:   cir.set_bitfield align(4) (#bfi_d, [[TMP1]] : !cir.ptr<!u64i>, [[TMP3]] : !s32i)
 
-// LLVM: define {{.*@binOp}}
+// LLVM: define {{.*}} void @binOp(ptr noundef
 // LLVM:   [[TMP0:%.*]] = load ptr, ptr {{.*}}, align 8
 // LLVM:   [[TMP1:%.*]] = getelementptr %struct.S, ptr [[TMP0]], i32 0, i32 0
 // LLVM:   [[TMP2:%.*]] = load i64, ptr [[TMP1]], align 4

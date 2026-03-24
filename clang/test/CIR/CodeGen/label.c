@@ -73,7 +73,7 @@ labelD:
 // CIR:      }
 // CIR:    cir.return
 
-// LLVM: define dso_local void @label_in_if{{.*}}
+// LLVM: define dso_local void @label_in_if(i32 noundef %{{[0-9]+}}){{.*}}
 // LLVM:   br label %3
 // LLVM: 3:
 // LLVM:   [[LOAD:%.*]] = load i32, ptr [[COND:%.*]], align 4

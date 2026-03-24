@@ -27,7 +27,7 @@ unsigned char cxxstaticcast_0(unsigned int x) {
 
 int cStyleCasts_0(unsigned x1, int x2, float x3, short x4, double x5) {
 // CIR: cir.func{{.*}} @_Z13cStyleCasts_0jifsd
-// LLVM: define{{.*}} i32 @_Z13cStyleCasts_0jifsd
+// LLVM: define{{.*}} noundef i32 @_Z13cStyleCasts_0jifsd(i32 noundef %{{[0-9]+}}, i32 noundef %{{[0-9]+}}, float noundef %{{[0-9]+}}, i16 noundef %{{[0-9]+}}, double noundef %{{[0-9]+}})
 
   char a = (char)x1; // truncate
   // CIR: %{{[0-9]+}} = cir.cast integral %{{[0-9]+}} : !u32i -> !s8i

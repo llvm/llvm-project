@@ -15,7 +15,7 @@ void f1(void) {
 // CIR-NEXT:    cir.store align(4) %[[INIT]], %[[SLOT]] : !s32i, !cir.ptr<!s32i>
 // CIR:       }
 
-// LLVM-LABEL: @f1
+// LLVM-LABEL: define{{.*}} void @f1(){{.*}}
 // LLVM:         %[[SLOT:.+]] = alloca i32, i64 1, align 4
 // LLVM-NEXT:    store i32 42, ptr %[[SLOT]], align 4
 // LLVM:       }
@@ -36,7 +36,7 @@ void f2(void) {
 // CIR-NEXT:    cir.store align(4) %[[INIT]], %[[SLOT]] : !s32i, !cir.ptr<!s32i>
 // CIR:       }
 
-// LLVM-LABEL: @f2
+// LLVM-LABEL: define{{.*}} void @f2(){{.*}}
 // LLVM:         %[[SLOT:.+]] = alloca i32, i64 1, align 4
 // LLVM-NEXT:    store i32 42, ptr %[[SLOT]], align 4
 // LLVM:       }
@@ -53,7 +53,7 @@ void f3(_Atomic(int) *p) {
 // CIR-LABEL: @f3
 // CIR: cir.store align(4) atomic(seq_cst) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
 
-// LLVM-LABEL: @f3
+// LLVM-LABEL: define{{.*}} void @f3(ptr noundef %{{.*}}){{.*}}
 // LLVM: store atomic i32 42, ptr %{{.+}} seq_cst, align 4
 
 // OGCG-LABEL: @f3
@@ -66,7 +66,7 @@ void f4(_Atomic(float) *p) {
 // CIR-LABEL: @f4
 // CIR: cir.store align(4) atomic(seq_cst) %{{.+}}, %{{.+}} : !cir.float, !cir.ptr<!cir.float>
 
-// LLVM-LABEL: @f4
+// LLVM-LABEL: define{{.*}} void @f4(ptr noundef %{{.*}}){{.*}}
 // LLVM: store atomic float 0x40091EB860000000, ptr %{{.+}} seq_cst, align 4
 
 // OGCG-LABEL: @f4
@@ -116,7 +116,7 @@ void load_n(int *ptr) {
 // CIR:   %{{.+}} = cir.load align(4) syncscope(system) atomic(seq_cst) %{{.+}} : !cir.ptr<!s32i>, !s32i
 // CIR: }
 
-// LLVM-LABEL: @load_n
+// LLVM-LABEL: define{{.*}} void @load_n(ptr noundef %{{.*}}){{.*}}
 // LLVM:   %{{.+}} = load atomic i32, ptr %{{.+}} monotonic, align 4
 // LLVM:   %{{.+}} = load atomic i32, ptr %{{.+}} acquire, align 4
 // LLVM:   %{{.+}} = load atomic i32, ptr %{{.+}} acquire, align 4
@@ -175,7 +175,7 @@ void c11_load_aggregate() {
 // CIR: %{{.*}} = cir.load {{.*}} syncscope(system) atomic(acquire) %{{.*}} : !cir.ptr<!u64i>, !u64i
 // CIR: %{{.*}} = cir.load {{.*}} syncscope(system) atomic(seq_cst) %{{.*}} : !cir.ptr<!u64i>, !u64i
 
-// LLVM-LABEL: @c11_load_aggregate
+// LLVM-LABEL: define{{.*}} void @c11_load_aggregate(){{.*}}
 // LLVM: %{{.*}} = load atomic i64, ptr %{{.*}} monotonic, align 8
 // LLVM: %{{.*}} = load atomic i64, ptr %{{.*}} acquire, align 8
 // LLVM: %{{.*}} = load atomic i64, ptr %{{.*}} seq_cst, align 8
@@ -221,7 +221,7 @@ void store_n(int *ptr, int x) {
 // CIR:   cir.store align(4) syncscope(system) atomic(seq_cst) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
 // CIR: }
 
-// LLVM-LABEL: @store_n
+// LLVM-LABEL: define{{.*}} void @store_n(ptr noundef %{{.*}}, i32 noundef %{{.*}}){{.*}}
 // LLVM:   store atomic i32 %{{.+}}, ptr %{{.+}} monotonic, align 4
 // LLVM:   store atomic i32 %{{.+}}, ptr %{{.+}} release, align 4
 // LLVM:   store atomic i32 %{{.+}}, ptr %{{.+}} seq_cst, align 4
@@ -245,7 +245,7 @@ void c11_store(_Atomic(int) *ptr, int x) {
 // CIR:   cir.store align(4) syncscope(system) atomic(seq_cst) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
 // CIR: }
 
-// LLVM-LABEL: @c11_store
+// LLVM-LABEL: define{{.*}} void @c11_store(ptr noundef %{{.*}}, i32 noundef %{{.*}}){{.*}}
 // LLVM:   store atomic i32 %{{.+}}, ptr %{{.+}} monotonic, align 4
 // LLVM:   store atomic i32 %{{.+}}, ptr %{{.+}} release, align 4
 // LLVM:   store atomic i32 %{{.+}}, ptr %{{.+}} seq_cst, align 4
@@ -259,7 +259,7 @@ void c11_store(_Atomic(int) *ptr, int x) {
 
 void c11_atomic_cmpxchg_strong(_Atomic(int) *ptr, int *expected, int desired, int failure) {
   // CIR-LABEL: @c11_atomic_cmpxchg_strong
-  // LLVM-LABEL: @c11_atomic_cmpxchg_strong
+  // LLVM-LABEL: define{{.*}} void @c11_atomic_cmpxchg_strong(ptr noundef %{{.*}}, ptr noundef %{{.*}}, i32 noundef %{{.*}}){{.*}}
   // OGCG-LABEL: @c11_atomic_cmpxchg_strong
   // CIR: %[[FAILURE:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["failure", init]
 
@@ -341,7 +341,7 @@ void c11_atomic_cmpxchg_strong(_Atomic(int) *ptr, int *expected, int desired, in
 
 void c11_atomic_cmpxchg_weak(_Atomic(int) *ptr, int *expected, int desired, int failure) {
   // CIR-LABEL: @c11_atomic_cmpxchg_weak
-  // LLVM-LABEL: @c11_atomic_cmpxchg_weak
+  // LLVM-LABEL: define{{.*}} void @c11_atomic_cmpxchg_weak(ptr noundef %{{.*}}, ptr noundef %{{.*}}, i32 noundef %{{.*}}){{.*}}
   // OGCG-LABEL: @c11_atomic_cmpxchg_weak
   // CIR: %[[FAILURE:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["failure", init]
 
@@ -575,7 +575,7 @@ void atomic_cmpxchg(int *ptr, int *expected, int *desired, int failure) {
 
 void atomic_cmpxchg_n(int *ptr, int *expected, int desired, int failure) {
   // CIR-LABEL: @atomic_cmpxchg_n
-  // LLVM-LABEL: @atomic_cmpxchg_n
+  // LLVM-LABEL: define{{.*}} void @atomic_cmpxchg_n(ptr noundef %{{.*}}, ptr noundef %{{.*}}, i32 noundef %{{.*}}){{.*}}
   // OGCG-LABEL: @atomic_cmpxchg_n
   // CIR: %[[FAILURE:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["failure", init]
 
@@ -727,7 +727,7 @@ void atomic_cmpxchg_n(int *ptr, int *expected, int desired, int failure) {
 
 void c11_atomic_exchange(_Atomic(int) *ptr, int value) {
   // CIR-LABEL: @c11_atomic_exchange
-  // LLVM-LABEL: @c11_atomic_exchange
+  // LLVM-LABEL: define{{.*}} void @c11_atomic_exchange(ptr noundef %{{.*}}, i32 noundef %{{.*}}){{.*}}
   // OGCG-LABEL: @c11_atomic_exchange
 
   __c11_atomic_exchange(ptr, value, __ATOMIC_RELAXED);
@@ -793,7 +793,7 @@ void atomic_exchange(int *ptr, int *value, int *old) {
 
 void atomic_exchange_n(int *ptr, int value) {
   // CIR-LABEL: @atomic_exchange_n
-  // LLVM-LABEL: @atomic_exchange_n
+  // LLVM-LABEL: define{{.*}} void @atomic_exchange_n(ptr noundef %{{.*}}, i32 noundef %{{.*}}){{.*}}
   // OGCG-LABEL: @atomic_exchange_n
 
   __atomic_exchange_n(ptr, value, __ATOMIC_RELAXED);
@@ -846,7 +846,7 @@ void test_and_set(void *p) {
 
 void test_and_set_volatile(volatile void *p) {
   // CIR-LABEL: @test_and_set_volatile
-  // LLVM-LABEL: @test_and_set_volatile
+  // LLVM-LABEL: define{{.*}} void @test_and_set_volatile(ptr noundef %{{.*}}){{.*}}
   // OGCG-LABEL: @test_and_set_volatile
 
   __atomic_test_and_set(p, __ATOMIC_SEQ_CST);
@@ -881,7 +881,7 @@ void clear(void *p) {
 
 void clear_volatile(volatile void *p) {
   // CIR-LABEL: @clear_volatile
-  // LLVM-LABEL: @clear_volatile
+  // LLVM-LABEL: define{{.*}} void @clear_volatile(ptr noundef %{{.*}}){{.*}}
   // OGCG-LABEL: @clear_volatile
 
   __atomic_clear(p, __ATOMIC_SEQ_CST);
@@ -928,7 +928,7 @@ int atomic_add_fetch(int *ptr, int value) {
 
 int c11_atomic_fetch_add(_Atomic(int) *ptr, int value) {
   // CIR-LABEL: @c11_atomic_fetch_add
-  // LLVM-LABEL: @c11_atomic_fetch_add
+  // LLVM-LABEL: define{{.*}} i32 @c11_atomic_fetch_add(ptr noundef %{{.*}}, i32 noundef %{{.*}}){{.*}}
   // OGCG-LABEL: @c11_atomic_fetch_add
 
   return __c11_atomic_fetch_add(ptr, value, __ATOMIC_SEQ_CST);
@@ -943,7 +943,7 @@ int c11_atomic_fetch_add(_Atomic(int) *ptr, int value) {
 
 int atomic_fetch_sub(int *ptr, int value) {
   // CIR-LABEL: @atomic_fetch_sub
-  // LLVM-LABEL: @atomic_fetch_sub
+  // LLVM-LABEL: define{{.*}} i32 @atomic_fetch_sub(ptr noundef %{{.*}}, i32 noundef %{{.*}}){{.*}}
   // OGCG-LABEL: @atomic_fetch_sub
 
   return __atomic_fetch_sub(ptr, value, __ATOMIC_SEQ_CST);
@@ -958,7 +958,7 @@ int atomic_fetch_sub(int *ptr, int value) {
 
 int atomic_sub_fetch(int *ptr, int value) {
   // CIR-LABEL: @atomic_sub_fetch
-  // LLVM-LABEL: @atomic_sub_fetch
+  // LLVM-LABEL: define{{.*}} i32 @atomic_sub_fetch(ptr noundef %{{.*}}, i32 noundef %{{.*}}){{.*}}
   // OGCG-LABEL: @atomic_sub_fetch
 
   return __atomic_sub_fetch(ptr, value, __ATOMIC_SEQ_CST);
@@ -990,7 +990,7 @@ int c11_atomic_fetch_sub(_Atomic(int) *ptr, int value) {
 
 float atomic_fetch_add_fp(float *ptr, float value) {
   // CIR-LABEL: @atomic_fetch_add_fp
-  // LLVM-LABEL: @atomic_fetch_add_fp
+  // LLVM-LABEL: define{{.*}} float @atomic_fetch_add_fp(ptr noundef %{{.*}}, float noundef %{{.*}}){{.*}}
   // OGCG-LABEL: @atomic_fetch_add_fp
 
   return __atomic_fetch_add(ptr, value, __ATOMIC_SEQ_CST);
@@ -1005,7 +1005,7 @@ float atomic_fetch_add_fp(float *ptr, float value) {
 
 float atomic_add_fetch_fp(float *ptr, float value) {
   // CIR-LABEL: @atomic_add_fetch_fp
-  // LLVM-LABEL: @atomic_add_fetch_fp
+  // LLVM-LABEL: define{{.*}} float @atomic_add_fetch_fp(ptr noundef %{{.*}}, float noundef %{{.*}}){{.*}}
   // OGCG-LABEL: @atomic_add_fetch_fp
 
   return __atomic_add_fetch(ptr, value, __ATOMIC_SEQ_CST);
@@ -1022,7 +1022,7 @@ float atomic_add_fetch_fp(float *ptr, float value) {
 
 float c11_atomic_fetch_sub_fp(_Atomic(float) *ptr, float value) {
   // CIR-LABEL: @c11_atomic_fetch_sub_fp
-  // LLVM-LABEL: @c11_atomic_fetch_sub_fp
+  // LLVM-LABEL: define{{.*}} float @c11_atomic_fetch_sub_fp(ptr noundef %{{.*}}, float noundef %{{.*}}){{.*}}
   // OGCG-LABEL: @c11_atomic_fetch_sub_fp
 
   return __c11_atomic_fetch_sub(ptr, value, __ATOMIC_SEQ_CST);
@@ -1086,7 +1086,7 @@ int c11_atomic_fetch_min(_Atomic(int) *ptr, int value) {
 
 float atomic_fetch_min_fp(float *ptr, float value) {
   // CIR-LABEL: @atomic_fetch_min_fp
-  // LLVM-LABEL: @atomic_fetch_min_fp
+  // LLVM-LABEL: define{{.*}} float @atomic_fetch_min_fp(ptr noundef %{{.*}}, float noundef %{{.*}}){{.*}}
   // OGCG-LABEL: @atomic_fetch_min_fp
 
   return __atomic_fetch_min(ptr, value, __ATOMIC_SEQ_CST);
@@ -1101,7 +1101,7 @@ float atomic_fetch_min_fp(float *ptr, float value) {
 
 float atomic_min_fetch_fp(float *ptr, float value) {
   // CIR-LABEL: @atomic_min_fetch_fp
-  // LLVM-LABEL: @atomic_min_fetch_fp
+  // LLVM-LABEL: define{{.*}} float @atomic_min_fetch_fp(ptr noundef %{{.*}}, float noundef %{{.*}}){{.*}}
   // OGCG-LABEL: @atomic_min_fetch_fp
 
   return __atomic_min_fetch(ptr, value, __ATOMIC_SEQ_CST);
@@ -1118,7 +1118,7 @@ float atomic_min_fetch_fp(float *ptr, float value) {
 
 float c11_atomic_fetch_min_fp(_Atomic(float) *ptr, float value) {
   // CIR-LABEL: @c11_atomic_fetch_min_fp
-  // LLVM-LABEL: @c11_atomic_fetch_min_fp
+  // LLVM-LABEL: define{{.*}} float @c11_atomic_fetch_min_fp(ptr noundef %{{.*}}, float noundef %{{.*}}){{.*}}
   // OGCG-LABEL: @c11_atomic_fetch_min_fp
 
   return __c11_atomic_fetch_min(ptr, value, __ATOMIC_SEQ_CST);
@@ -1182,7 +1182,7 @@ int c11_atomic_fetch_max(_Atomic(int) *ptr, int value) {
 
 float atomic_fetch_max_fp(float *ptr, float value) {
   // CIR-LABEL: @atomic_fetch_max_fp
-  // LLVM-LABEL: @atomic_fetch_max_fp
+  // LLVM-LABEL: define{{.*}} float @atomic_fetch_max_fp(ptr noundef %{{.*}}, float noundef %{{.*}}){{.*}}
   // OGCG-LABEL: @atomic_fetch_max_fp
 
   return __atomic_fetch_max(ptr, value, __ATOMIC_SEQ_CST);
@@ -1197,7 +1197,7 @@ float atomic_fetch_max_fp(float *ptr, float value) {
 
 float atomic_max_fetch_fp(float *ptr, float value) {
   // CIR-LABEL: @atomic_max_fetch_fp
-  // LLVM-LABEL: @atomic_max_fetch_fp
+  // LLVM-LABEL: define{{.*}} float @atomic_max_fetch_fp(ptr noundef %{{.*}}, float noundef %{{.*}}){{.*}}
   // OGCG-LABEL: @atomic_max_fetch_fp
 
   return __atomic_max_fetch(ptr, value, __ATOMIC_SEQ_CST);
@@ -1214,7 +1214,7 @@ float atomic_max_fetch_fp(float *ptr, float value) {
 
 float c11_atomic_fetch_max_fp(_Atomic(float) *ptr, float value) {
   // CIR-LABEL: @c11_atomic_fetch_max_fp
-  // LLVM-LABEL: @c11_atomic_fetch_max_fp
+  // LLVM-LABEL: define{{.*}} float @c11_atomic_fetch_max_fp(ptr noundef %{{.*}}, float noundef %{{.*}}){{.*}}
   // OGCG-LABEL: @c11_atomic_fetch_max_fp
 
   return __c11_atomic_fetch_max(ptr, value, __ATOMIC_SEQ_CST);
@@ -1229,7 +1229,7 @@ float c11_atomic_fetch_max_fp(_Atomic(float) *ptr, float value) {
 
 int atomic_fetch_and(int *ptr, int value) {
   // CIR-LABEL: @atomic_fetch_and
-  // LLVM-LABEL: @atomic_fetch_and
+  // LLVM-LABEL: define{{.*}} i32 @atomic_fetch_and(ptr noundef %{{.*}}, i32 noundef %{{.*}}){{.*}}
   // OGCG-LABEL: @atomic_fetch_and
 
   return __atomic_fetch_and(ptr, value, __ATOMIC_SEQ_CST);
@@ -1244,7 +1244,7 @@ int atomic_fetch_and(int *ptr, int value) {
 
 int atomic_and_fetch(int *ptr, int value) {
   // CIR-LABEL: @atomic_and_fetch
-  // LLVM-LABEL: @atomic_and_fetch
+  // LLVM-LABEL: define{{.*}} i32 @atomic_and_fetch(ptr noundef %{{.*}}, i32 noundef %{{.*}}){{.*}}
   // OGCG-LABEL: @atomic_and_fetch
 
   return __atomic_and_fetch(ptr, value, __ATOMIC_SEQ_CST);
@@ -1261,7 +1261,7 @@ int atomic_and_fetch(int *ptr, int value) {
 
 int c11_atomic_fetch_and(_Atomic(int) *ptr, int value) {
   // CIR-LABEL: @c11_atomic_fetch_and
-  // LLVM-LABEL: @c11_atomic_fetch_and
+  // LLVM-LABEL: define{{.*}} i32 @c11_atomic_fetch_and(ptr noundef %{{.*}}, i32 noundef %{{.*}}){{.*}}
   // OGCG-LABEL: @c11_atomic_fetch_and
 
   return __c11_atomic_fetch_and(ptr, value, __ATOMIC_SEQ_CST);
@@ -1276,7 +1276,7 @@ int c11_atomic_fetch_and(_Atomic(int) *ptr, int value) {
 
 int atomic_fetch_or(int *ptr, int value) {
   // CIR-LABEL: @atomic_fetch_or
-  // LLVM-LABEL: @atomic_fetch_or
+  // LLVM-LABEL: define{{.*}} i32 @atomic_fetch_or(ptr noundef %{{.*}}, i32 noundef %{{.*}}){{.*}}
   // OGCG-LABEL: @atomic_fetch_or
 
   return __atomic_fetch_or(ptr, value, __ATOMIC_SEQ_CST);
@@ -1291,7 +1291,7 @@ int atomic_fetch_or(int *ptr, int value) {
 
 int atomic_or_fetch(int *ptr, int value) {
   // CIR-LABEL: @atomic_or_fetch
-  // LLVM-LABEL: @atomic_or_fetch
+  // LLVM-LABEL: define{{.*}} i32 @atomic_or_fetch(ptr noundef %{{.*}}, i32 noundef %{{.*}}){{.*}}
   // OGCG-LABEL: @atomic_or_fetch
 
   return __atomic_or_fetch(ptr, value, __ATOMIC_SEQ_CST);
@@ -1308,7 +1308,7 @@ int atomic_or_fetch(int *ptr, int value) {
 
 int c11_atomic_fetch_or(_Atomic(int) *ptr, int value) {
   // CIR-LABEL: @c11_atomic_fetch_or
-  // LLVM-LABEL: @c11_atomic_fetch_or
+  // LLVM-LABEL: define{{.*}} i32 @c11_atomic_fetch_or(ptr noundef %{{.*}}, i32 noundef %{{.*}}){{.*}}
   // OGCG-LABEL: @c11_atomic_fetch_or
 
   return __c11_atomic_fetch_or(ptr, value, __ATOMIC_SEQ_CST);
@@ -1323,7 +1323,7 @@ int c11_atomic_fetch_or(_Atomic(int) *ptr, int value) {
 
 int atomic_fetch_xor(int *ptr, int value) {
   // CIR-LABEL: @atomic_fetch_xor
-  // LLVM-LABEL: @atomic_fetch_xor
+  // LLVM-LABEL: define{{.*}} i32 @atomic_fetch_xor(ptr noundef %{{.*}}, i32 noundef %{{.*}}){{.*}}
   // OGCG-LABEL: @atomic_fetch_xor
 
   return __atomic_fetch_xor(ptr, value, __ATOMIC_SEQ_CST);
@@ -1338,7 +1338,7 @@ int atomic_fetch_xor(int *ptr, int value) {
 
 int atomic_xor_fetch(int *ptr, int value) {
   // CIR-LABEL: @atomic_xor_fetch
-  // LLVM-LABEL: @atomic_xor_fetch
+  // LLVM-LABEL: define{{.*}} i32 @atomic_xor_fetch(ptr noundef %{{.*}}, i32 noundef %{{.*}}){{.*}}
   // OGCG-LABEL: @atomic_xor_fetch
 
   return __atomic_xor_fetch(ptr, value, __ATOMIC_SEQ_CST);
@@ -1355,7 +1355,7 @@ int atomic_xor_fetch(int *ptr, int value) {
 
 int c11_atomic_fetch_xor(_Atomic(int) *ptr, int value) {
   // CIR-LABEL: @c11_atomic_fetch_xor
-  // LLVM-LABEL: @c11_atomic_fetch_xor
+  // LLVM-LABEL: define{{.*}} i32 @c11_atomic_fetch_xor(ptr noundef %{{.*}}, i32 noundef %{{.*}}){{.*}}
   // OGCG-LABEL: @c11_atomic_fetch_xor
 
   return __c11_atomic_fetch_xor(ptr, value, __ATOMIC_SEQ_CST);
@@ -1370,7 +1370,7 @@ int c11_atomic_fetch_xor(_Atomic(int) *ptr, int value) {
 
 int atomic_fetch_nand(int *ptr, int value) {
   // CIR-LABEL: @atomic_fetch_nand
-  // LLVM-LABEL: @atomic_fetch_nand
+  // LLVM-LABEL: define{{.*}} i32 @atomic_fetch_nand(ptr noundef %{{.*}}, i32 noundef %{{.*}}){{.*}}
   // OGCG-LABEL: @atomic_fetch_nand
 
   return __atomic_fetch_nand(ptr, value, __ATOMIC_SEQ_CST);
@@ -1385,7 +1385,7 @@ int atomic_fetch_nand(int *ptr, int value) {
 
 int atomic_nand_fetch(int *ptr, int value) {
   // CIR-LABEL: @atomic_nand_fetch
-  // LLVM-LABEL: @atomic_nand_fetch
+  // LLVM-LABEL: define{{.*}} i32 @atomic_nand_fetch(ptr noundef %{{.*}}, i32 noundef %{{.*}}){{.*}}
   // OGCG-LABEL: @atomic_nand_fetch
 
   return __atomic_nand_fetch(ptr, value, __ATOMIC_SEQ_CST);
@@ -1404,7 +1404,7 @@ int atomic_nand_fetch(int *ptr, int value) {
 
 int c11_atomic_fetch_nand(_Atomic(int) *ptr, int value) {
   // CIR-LABEL: @c11_atomic_fetch_nand
-  // LLVM-LABEL: @c11_atomic_fetch_nand
+  // LLVM-LABEL: define{{.*}} i32 @c11_atomic_fetch_nand(ptr noundef %{{.*}}, i32 noundef %{{.*}}){{.*}}
   // OGCG-LABEL: @c11_atomic_fetch_nand
 
   return __c11_atomic_fetch_nand(ptr, value, __ATOMIC_SEQ_CST);
@@ -1938,7 +1938,7 @@ void nand_uchar(unsigned char* a, char b) {
 }
 
 // CIR-LABEL: @test_op_and_fetch
-// LLVM-LABEL: @test_op_and_fetch
+// LLVM-LABEL: define{{.*}} void @test_op_and_fetch(){{.*}}
 void test_op_and_fetch() {
   int *ptr;
   signed char sc;
@@ -2688,7 +2688,7 @@ void test_op_and_fetch() {
 
 int atomic_load_dynamic_order(int *ptr, int order) {
   // CIR-LABEL: atomic_load_dynamic_order
-  // LLVM-LABEL: atomic_load_dynamic_order
+  // LLVM-LABEL: define{{.*}} i32 @atomic_load_dynamic_order(ptr noundef %{{.*}}, i32 noundef %{{.*}}){{.*}}
   // OGCG-LABEL: atomic_load_dynamic_order
 
   return __atomic_load_n(ptr, order);
@@ -2764,7 +2764,7 @@ int atomic_load_dynamic_order(int *ptr, int order) {
 
 void atomic_store_dynamic_order(int *ptr, int order) {
   // CIR-LABEL: atomic_store_dynamic_order
-  // LLVM-LABEL: atomic_store_dynamic_order
+  // LLVM-LABEL: define{{.*}} void @atomic_store_dynamic_order(ptr noundef %{{.*}}, i32 noundef %{{.*}}){{.*}}
   // OGCG-LABEL: atomic_store_dynamic_order
 
   __atomic_store_n(ptr, 10, order);
@@ -2833,7 +2833,7 @@ void atomic_store_dynamic_order(int *ptr, int order) {
 
 int atomic_load_and_store_dynamic_order(int *ptr, int order) {
   // CIR-LABEL: atomic_load_and_store_dynamic_order
-  // LLVM-LABEL: atomic_load_and_store_dynamic_order
+  // LLVM-LABEL: define{{.*}} i32 @atomic_load_and_store_dynamic_order(ptr noundef %{{.*}}, i32 noundef %{{.*}}){{.*}}
   // OGCG-LABEL: atomic_load_and_store_dynamic_order
 
   return __atomic_exchange_n(ptr, 20, order);

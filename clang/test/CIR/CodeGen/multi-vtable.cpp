@@ -158,13 +158,13 @@ Child::Child() {}
 
 // The GEP instructions are different between LLVM and OGCG, but they calculate the same addresses.
 
-// LLVM: define{{.*}} void @_ZN5ChildC2Ev(ptr{{.*}} %[[THIS_ARG:.*]])
+// LLVM: define{{.*}} void @_ZN5ChildC2Ev(ptr noundef nonnull align 8 dereferenceable(16) %[[THIS_ARG:.*]])
 // LLVM:   %[[THIS_ADDR:.*]] = alloca ptr
 // LLVM:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]]
 // LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
-// LLVM:   call void @_ZN6MotherC2Ev(ptr{{.*}} %[[THIS]])
+// LLVM:   call void @_ZN6MotherC2Ev(ptr noundef nonnull align 8 dereferenceable(8) %[[THIS]])
 // LLVM:   %[[FATHER_BASE:.*]] = getelementptr{{.*}} i8, ptr %[[THIS]], i32 8
-// LLVM:   call void @_ZN6FatherC2Ev(ptr{{.*}} %[[FATHER_BASE]])
+// LLVM:   call void @_ZN6FatherC2Ev(ptr noundef nonnull align 8 dereferenceable(8) %[[FATHER_BASE]])
 // LLVM:   store ptr getelementptr inbounds nuw (i8, ptr @_ZTV5Child, i64 16), ptr %[[THIS]]
 // LLVM:   %[[FATHER_BASE:.*]] = getelementptr{{.*}} i8, ptr %[[THIS]], i32 8
 // LLVM:   store ptr getelementptr inbounds nuw (i8, ptr @_ZTV5Child, i64 48), ptr %[[FATHER_BASE]]

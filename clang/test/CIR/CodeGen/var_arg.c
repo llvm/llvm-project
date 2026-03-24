@@ -33,7 +33,7 @@ int varargs(int count, ...) {
 // CIR:   %[[RETVAL:.+]] = cir.load{{.*}} %[[RET_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR:   cir.return %[[RETVAL]] : !s32i
 
-// LLVM-LABEL: define dso_local i32 @varargs(
+// LLVM-LABEL: define dso_local i32 @varargs(i32 noundef %0, ...)
 // LLVM:   %[[COUNT_ADDR:.+]] = alloca i32{{.*}}
 // LLVM:   %[[RET_ADDR:.+]] = alloca i32{{.*}}
 // LLVM:   %[[VAAREA:.+]] = alloca [1 x %struct.__va_list_tag]{{.*}}
@@ -106,7 +106,7 @@ int stdarg_start(int count, ...) {
 // CIR:   %[[RETVAL:.+]] = cir.load{{.*}} %[[RET_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR:   cir.return %[[RETVAL]] : !s32i
 
-// LLVM-LABEL: define dso_local i32 @stdarg_start(
+// LLVM-LABEL: define dso_local i32 @stdarg_start(i32 noundef %0, ...)
 // LLVM:   %[[COUNT_ADDR:.+]] = alloca i32{{.*}}
 // LLVM:   %[[RET_ADDR:.+]] = alloca i32{{.*}}
 // LLVM:   %[[VAAREA:.+]] = alloca [1 x %struct.__va_list_tag]{{.*}}

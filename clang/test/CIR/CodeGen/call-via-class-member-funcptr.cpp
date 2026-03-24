@@ -27,7 +27,7 @@ void fn1() { F f1; }
 // CIR:   %[[H_VAL:.*]] = cir.load{{.*}} %[[H_PTR]] : !cir.ptr<!s32i>, !s32i
 // CIR:   %[[RET:.*]] = cir.call @_ZN1A1bEi(%[[H_VAL]]) : (!s32i {llvm.noundef}) -> (!cir.ptr<!s8i> {llvm.noundef})
 
-// LLVM: define {{.*}} ptr @_ZN1F1bEv
+// LLVM: define {{.*}} noundef ptr @_ZN1F1bEv(ptr noundef nonnull align 1 dereferenceable(1) %0)
 // LLVM:   %[[VAR_H:.*]] = load i32, ptr @h
 // LLVM:   %[[RET:.*]] = call noundef ptr @_ZN1A1bEi(i32 noundef %[[VAR_H]])
 

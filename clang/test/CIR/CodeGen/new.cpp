@@ -462,7 +462,7 @@ void t_new_var_size(size_t n) {
 // CHECK:    %[[N:.*]] = cir.load{{.*}} %[[ARG_ALLOCA:.*]]
 // CHECK:    %[[PTR:.*]] = cir.call @_Znam(%[[N]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef})
 
-// LLVM: define{{.*}} void @_Z14t_new_var_sizem
+// LLVM: define{{.*}} void @_Z14t_new_var_sizem(i64 noundef
 // LLVM:   %[[N:.*]] = load i64, ptr %{{.+}}
 // LLVM:   %[[PTR:.*]] = call noundef ptr @_Znam(i64 {{.*}} %[[N]])
 
@@ -479,7 +479,7 @@ void t_new_var_size2(int n) {
 // CHECK:    %[[N_SIZE_T:.*]] = cir.cast integral %[[N]] : !s32i -> !u64i
 // CHECK:    %[[PTR:.*]] = cir.call @_Znam(%[[N_SIZE_T]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef})
 
-// LLVM: define{{.*}} void @_Z15t_new_var_size2i
+// LLVM: define{{.*}} void @_Z15t_new_var_size2i(i32 noundef
 // LLVM:   %[[N:.*]] = load i32, ptr %{{.+}}
 // LLVM:   %[[N_SIZE_T:.*]] = sext i32 %[[N]] to i64
 // LLVM:   %[[PTR:.*]] = call noundef ptr @_Znam(i64 {{.*}} %[[N_SIZE_T]])
@@ -501,7 +501,7 @@ void t_new_var_size3(size_t n) {
 // CHECK:    %[[ALLOC_SIZE:.*]] = cir.select if %[[OVERFLOW]] then %[[ALL_ONES]] else %[[RESULT]] : (!cir.bool, !u64i, !u64i)
 // CHECK:    %[[PTR:.*]] = cir.call @_Znam(%[[ALLOC_SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef})
 
-// LLVM: define{{.*}} void @_Z15t_new_var_size3m
+// LLVM: define{{.*}} void @_Z15t_new_var_size3m(i64 noundef
 // LLVM:   %[[N:.*]] = load i64, ptr %{{.+}}
 // LLVM:   %[[MUL_OVERFLOW:.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %[[N]], i64 8)
 // LLVM:   %[[ELEMENT_SIZE:.*]] = extractvalue { i64, i1 } %[[MUL_OVERFLOW]], 0
@@ -530,7 +530,7 @@ void t_new_var_size4(int n) {
 // CHECK:    %[[ALLOC_SIZE:.*]] = cir.select if %[[OVERFLOW]] then %[[ALL_ONES]] else %[[RESULT]] : (!cir.bool, !u64i, !u64i)
 // CHECK:    %[[PTR:.*]] = cir.call @_Znam(%[[ALLOC_SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef})
 
-// LLVM: define{{.*}} void @_Z15t_new_var_size4i
+// LLVM: define{{.*}} void @_Z15t_new_var_size4i(i32 noundef
 // LLVM:   %[[N:.*]] = load i32, ptr %{{.+}}
 // LLVM:   %[[N_SIZE_T:.*]] = sext i32 %[[N]] to i64
 // LLVM:   %[[MUL_OVERFLOW:.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %[[N_SIZE_T]], i64 8)
@@ -564,7 +564,7 @@ void t_new_var_size5(int n) {
 // CHECK:    %[[ALLOC_SIZE:.*]] = cir.select if %[[OVERFLOW]] then %[[ALL_ONES]] else %[[RESULT]] : (!cir.bool, !u64i, !u64i)
 // CHECK:    %[[PTR:.*]] = cir.call @_Znam(%[[ALLOC_SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef})
 
-// LLVM: define{{.*}} void @_Z15t_new_var_size5i
+// LLVM: define{{.*}} void @_Z15t_new_var_size5i(i32 noundef
 // LLVM:   %[[N:.*]] = load i32, ptr %{{.+}}
 // LLVM:   %[[N_SIZE_T:.*]] = sext i32 %[[N]] to i64
 // LLVM:   %[[MUL_OVERFLOW:.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %[[N_SIZE_T]], i64 48)
@@ -616,7 +616,7 @@ void t_new_var_size6(int n) {
 // CHECK:    %[[ZERO:.*]] = cir.const #cir.int<0> : !u8i
 // CHECK:    cir.libc.memset{{.*}} bytes at %[[PTR_DOUBLE_3_VOID]] to %[[ZERO]]
 
-// LLVM: define{{.*}} void @_Z15t_new_var_size6i
+// LLVM: define{{.*}} void @_Z15t_new_var_size6i(i32 noundef
 // LLVM:   %[[N:.*]] = load i32, ptr %{{.+}}
 // LLVM:   %[[N_SIZE_T:.*]] = sext i32 %[[N]] to i64
 // LLVM:   %[[LT_MIN_SIZE:.*]] = icmp ult i64 %[[N_SIZE_T]], 3
@@ -667,7 +667,7 @@ void t_new_var_size7(__int128 n) {
 // CHECK:    %[[ALLOC_SIZE:.*]] = cir.select if %[[OVERFLOW]] then %[[ALL_ONES]] else %[[RESULT]] : (!cir.bool, !u64i, !u64i)
 // CHECK:    %[[PTR:.*]] = cir.call @_Znam(%[[ALLOC_SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef})
 
-// LLVM: define{{.*}} void @_Z15t_new_var_size7n
+// LLVM: define{{.*}} void @_Z15t_new_var_size7n(i128 noundef
 // LLVM:   %[[N:.*]] = load i128, ptr %{{.+}}
 // LLVM:   %[[N_SIZE_T:.*]] = trunc i128 %[[N]] to i64
 // LLVM:   %[[MUL_OVERFLOW:.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %[[N_SIZE_T]], i64 8)
@@ -700,7 +700,7 @@ void t_new_var_size_nontrivial(size_t n) {
 // CHECK:    %[[ALLOC_SIZE:.*]] = cir.select if %[[ANY_OVERFLOW]] then %[[ALL_ONES]] else %[[SIZE]] : (!cir.bool, !u64i, !u64i)
 // CHECK:    %[[PTR:.*]] = cir.call @_Znam(%[[ALLOC_SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef})
 
-// LLVM: define{{.*}} void @_Z25t_new_var_size_nontrivialm
+// LLVM: define{{.*}} void @_Z25t_new_var_size_nontrivialm(i64 noundef
 // LLVM:   %[[N:.*]] = load i64, ptr %{{.+}}
 // LLVM:   %[[MUL_OVERFLOW:.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %[[N]], i64 4)
 // LLVM:   %[[MUL_SIZE:.*]] = extractvalue { i64, i1 } %[[MUL_OVERFLOW]], 0

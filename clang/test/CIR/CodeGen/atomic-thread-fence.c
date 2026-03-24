@@ -54,7 +54,7 @@ void modifyWithThreadFence(DataPtr d) {
   // CIR:    cir.store{{.*}} %[[VAL_42]], %[[DATA_VALUE]] : !s32i, !cir.ptr<!s32i>
   // CIR:    cir.return
 
-  // LLVM-LABEL: @modifyWithThreadFence
+  // LLVM-LABEL: @modifyWithThreadFence(ptr noundef
   // LLVM:    %[[DATA:.*]] = alloca ptr, i64 1, align 8
   // LLVM:    fence seq_cst
   // LLVM:    %[[DATA_PTR:.*]] = load ptr, ptr %[[DATA]], align 8
@@ -83,7 +83,7 @@ void modifyWithSignalFence(DataPtr d) {
   // CIR:    cir.store{{.*}} %[[VAL_42]], %[[DATA_VALUE]] : !s32i, !cir.ptr<!s32i>
   // CIR:    cir.return
 
-  // LLVM-LABEL: @modifyWithSignalFence
+  // LLVM-LABEL: @modifyWithSignalFence(ptr noundef
   // LLVM:    %[[DATA:.*]] = alloca ptr, i64 1, align 8
   // LLVM:    fence syncscope("singlethread") seq_cst
   // LLVM:    %[[DATA_PTR:.*]] = load ptr, ptr %[[DATA]], align 8
@@ -114,7 +114,7 @@ void loadWithThreadFence(DataPtr d) {
   // CIR:    %[[ATOMIC_LOAD_PTR:.*]] = cir.load{{.*}} %[[ATOMIC_TEMP]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
   // CIR:    cir.return
 
-  // LLVM-LABEL: @loadWithThreadFence
+  // LLVM-LABEL: @loadWithThreadFence(ptr noundef
   // LLVM:    %[[DATA:.*]] = alloca ptr, i64 1, align 8
   // LLVM:    %[[DATA_TEMP:.*]] = alloca ptr, i64 1, align 8
   // LLVM:    fence seq_cst
@@ -151,7 +151,7 @@ void loadWithSignalFence(DataPtr d) {
   // CIR:    %[[LOAD_ATOMIC_TEMP:.*]] = cir.load{{.*}} %[[ATOMIC_TEMP]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
   // CIR:    cir.return
 
-  // LLVM-LABEL: @loadWithSignalFence
+  // LLVM-LABEL: @loadWithSignalFence(ptr noundef
   // LLVM:    %[[DATA:.*]] = alloca ptr, i64 1, align 8
   // LLVM:    %[[DATA_TEMP:.*]] = alloca ptr, i64 1, align 8
   // LLVM:    fence syncscope("singlethread") seq_cst
@@ -328,7 +328,7 @@ void variable_atomic_thread_fences(int memorder) {
   // CIR:    cir.yield
   // CIR:  }
 
-  // LLVM-LABEL: variable_atomic_thread_fences
+  // LLVM-LABEL: variable_atomic_thread_fences(i32 noundef
   // LLVM:   %[[ORDER:.+]] = load i32, ptr %[[PTR:.+]], align 4
   // LLVM:   br label %[[SWITCH_BLK:.+]]
   // LLVM: [[SWITCH_BLK]]:
@@ -405,7 +405,7 @@ void variable_c11_atomic_thread_fences(int memorder) {
   // CIR:    cir.yield
   // CIR:  }
 
-  // LLVM-LABEL: variable_c11_atomic_thread_fences
+  // LLVM-LABEL: variable_c11_atomic_thread_fences(i32 noundef
   // LLVM:   %[[ORDER:.+]] = load i32, ptr %[[PTR:.+]], align 4
   // LLVM:   br label %[[SWITCH_BLK:.+]]
   // LLVM: [[SWITCH_BLK]]:
@@ -482,7 +482,7 @@ void variable_atomic_signal_fences(int memorder) {
   // CIR:    cir.yield
   // CIR:  }
 
-  // LLVM-LABEL: variable_atomic_signal_fences
+  // LLVM-LABEL: variable_atomic_signal_fences(i32 noundef
   // LLVM:   %[[ORDER:.+]] = load i32, ptr %[[PTR:.+]], align 4
   // LLVM:   br label %[[SWITCH_BLK:.+]]
   // LLVM: [[SWITCH_BLK]]:
@@ -559,7 +559,7 @@ void variable_c11_atomic_signal_fences(int memorder) {
   // CIR:    cir.yield
   // CIR:  }
 
-  // LLVM-LABEL: variable_c11_atomic_signal_fences
+  // LLVM-LABEL: variable_c11_atomic_signal_fences(i32 noundef
   // LLVM:   %[[ORDER:.+]] = load i32, ptr %[[PTR:.+]], align 4
   // LLVM:   br label %[[SWITCH_BLK:.+]]
   // LLVM: [[SWITCH_BLK]]:

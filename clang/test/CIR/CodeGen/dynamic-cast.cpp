@@ -42,7 +42,7 @@ Derived *ptr_cast(Base *b) {
 // CIR-AFTER-NEXT:   }) : (!cir.bool) -> !cir.ptr<!rec_Derived>
 //      CIR-AFTER: }
 
-// LLVM: define {{.*}} @_Z8ptr_castP4Base
+// LLVM: define {{.*}} noundef ptr @_Z8ptr_castP4Base(ptr noundef %0)
 // LLVM:   %[[IS_NOT_NULL:.*]] = icmp ne ptr %[[PTR:.*]], null
 // LLVM:   br i1 %[[IS_NOT_NULL]], label %[[NOT_NULL:.*]], label %[[NULL:.*]]
 // LLVM: [[NOT_NULL]]:
@@ -88,7 +88,7 @@ Derived &ref_cast(Base &b) {
 // CIR-AFTER-NEXT:   %{{.+}} = cir.cast bitcast %[[CASTED_PTR]] : !cir.ptr<!void> -> !cir.ptr<!rec_Derived>
 //      CIR-AFTER: }
 
-// LLVM: define {{.*}} ptr @_Z8ref_castR4Base
+// LLVM: define {{.*}} noundef nonnull align 8 dereferenceable(8) ptr @_Z8ref_castR4Base(ptr noundef nonnull align 8 dereferenceable(8) %0)
 // LLVM:   %[[RESULT:.*]] = call ptr @__dynamic_cast(ptr %{{.*}}, ptr @_ZTI4Base, ptr @_ZTI7Derived, i64 0)
 // LLVM:   %[[IS_NULL:.*]] = icmp eq ptr %[[RESULT]], null
 // LLVM:   br i1 %[[IS_NULL]], label %[[BAD_CAST:.*]], label %[[DONE:.*]]
@@ -130,7 +130,7 @@ void *ptr_cast_to_complete(Base *ptr) {
 // CIR-AFTER-NEXT:   }) : (!cir.bool) -> !cir.ptr<!void>
 //      CIR-AFTER: }
 
-// LLVM: define {{.*}} @_Z20ptr_cast_to_completeP4Base
+// LLVM: define {{.*}} noundef ptr @_Z20ptr_cast_to_completeP4Base(ptr noundef %0)
 // LLVM:   %[[IS_NOT_NULL:.*]] = icmp ne ptr %[[PTR:.*]], null
 // LLVM:   br i1 %[[IS_NOT_NULL]], label %[[NOT_NULL:.*]], label %[[NULL:.*]]
 // LLVM: [[NOT_NULL]]:

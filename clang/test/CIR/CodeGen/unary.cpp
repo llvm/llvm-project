@@ -14,7 +14,7 @@ unsigned up0() {
 // CHECK:   %[[A:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["a", init]
 // CHECK:   %[[INPUT:.*]] = cir.load{{.*}} %[[A]]
 
-// LLVM: define{{.*}} i32 @_Z3up0v()
+// LLVM: define{{.*}} noundef i32 @_Z3up0v()
 // LLVM:   %[[RV:.*]] = alloca i32, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca i32, i64 1, align 4
 // LLVM:   store i32 1, ptr %[[A]], align 4
@@ -35,7 +35,7 @@ unsigned um0() {
 // CHECK:   %[[INPUT:.*]] = cir.load{{.*}} %[[A]]
 // CHECK:   %[[OUTPUT:.*]] = cir.minus %[[INPUT]]
 
-// LLVM: define{{.*}} i32 @_Z3um0v()
+// LLVM: define{{.*}} noundef i32 @_Z3um0v()
 // LLVM:   %[[RV:.*]] = alloca i32, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca i32, i64 1, align 4
 // LLVM:   store i32 1, ptr %[[A]], align 4
@@ -58,7 +58,7 @@ unsigned un0() {
 // CHECK:   %[[INPUT:.*]] = cir.load{{.*}} %[[A]]
 // CHECK:   %[[OUTPUT:.*]] = cir.not %[[INPUT]]
 
-// LLVM: define{{.*}} i32 @_Z3un0v()
+// LLVM: define{{.*}} noundef i32 @_Z3un0v()
 // LLVM:   %[[RV:.*]] = alloca i32, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca i32, i64 1, align 4
 // LLVM:   store i32 1, ptr %[[A]], align 4
@@ -86,7 +86,7 @@ int inc0() {
 // CHECK:   cir.store{{.*}} %[[INCREMENTED]], %[[A]]
 // CHECK:   %[[A_TO_OUTPUT:.*]] = cir.load{{.*}} %[[A]]
 
-// LLVM: define{{.*}} i32 @_Z4inc0v()
+// LLVM: define{{.*}} noundef i32 @_Z4inc0v()
 // LLVM:   %[[RV:.*]] = alloca i32, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca i32, i64 1, align 4
 // LLVM:   store i32 1, ptr %[[A]], align 4
@@ -114,7 +114,7 @@ int dec0() {
 // CHECK:   cir.store{{.*}} %[[DECREMENTED]], %[[A]]
 // CHECK:   %[[A_TO_OUTPUT:.*]] = cir.load{{.*}} %[[A]]
 
-// LLVM: define{{.*}} i32 @_Z4dec0v()
+// LLVM: define{{.*}} noundef i32 @_Z4dec0v()
 // LLVM:   %[[RV:.*]] = alloca i32, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca i32, i64 1, align 4
 // LLVM:   store i32 1, ptr %[[A]], align 4
@@ -142,7 +142,7 @@ int inc1() {
 // CHECK:   cir.store{{.*}} %[[INCREMENTED]], %[[A]]
 // CHECK:   %[[A_TO_OUTPUT:.*]] = cir.load{{.*}} %[[A]]
 
-// LLVM: define{{.*}} i32 @_Z4inc1v()
+// LLVM: define{{.*}} noundef i32 @_Z4inc1v()
 // LLVM:   %[[RV:.*]] = alloca i32, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca i32, i64 1, align 4
 // LLVM:   store i32 1, ptr %[[A]], align 4
@@ -170,7 +170,7 @@ int dec1() {
 // CHECK:   cir.store{{.*}} %[[DECREMENTED]], %[[A]]
 // CHECK:   %[[A_TO_OUTPUT:.*]] = cir.load{{.*}} %[[A]]
 
-// LLVM: define{{.*}} i32 @_Z4dec1v()
+// LLVM: define{{.*}} noundef i32 @_Z4dec1v()
 // LLVM:   %[[RV:.*]] = alloca i32, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca i32, i64 1, align 4
 // LLVM:   store i32 1, ptr %[[A]], align 4
@@ -201,7 +201,7 @@ int inc2() {
 // CHECK:   cir.store{{.*}} %[[ATOB]], %[[B]]
 // CHECK:   %[[B_TO_OUTPUT:.*]] = cir.load{{.*}} %[[B]]
 
-// LLVM: define{{.*}} i32 @_Z4inc2v()
+// LLVM: define{{.*}} noundef i32 @_Z4inc2v()
 // LLVM:   %[[RV:.*]] = alloca i32, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca i32, i64 1, align 4
 // LLVM:   %[[B:.*]] = alloca i32, i64 1, align 4
@@ -231,7 +231,7 @@ float fpPlus() {
 // CHECK:   %[[A:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["a", init]
 // CHECK:   %[[INPUT:.*]] = cir.load{{.*}} %[[A]]
 
-// LLVM: define{{.*}} float @_Z6fpPlusv()
+// LLVM: define{{.*}} noundef float @_Z6fpPlusv()
 // LLVM:   %[[RV:.*]] = alloca float, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca float, i64 1, align 4
 // LLVM:   store float 1.000000e+00, ptr %[[A]], align 4
@@ -252,7 +252,7 @@ float fpMinus() {
 // CHECK:   %[[INPUT:.*]] = cir.load{{.*}} %[[A]]
 // CHECK:   %[[OUTPUT:.*]] = cir.minus %[[INPUT]]
 
-// LLVM: define{{.*}} float @_Z7fpMinusv()
+// LLVM: define{{.*}} noundef float @_Z7fpMinusv()
 // LLVM:   %[[RV:.*]] = alloca float, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca float, i64 1, align 4
 // LLVM:   store float 1.000000e+00, ptr %[[A]], align 4
@@ -277,7 +277,7 @@ float fpPreInc() {
 // CHECK:   %[[INPUT:.*]] = cir.load{{.*}} %[[A]]
 // CHECK:   %[[INCREMENTED:.*]] = cir.inc %[[INPUT]]
 
-// LLVM: define{{.*}} float @_Z8fpPreIncv()
+// LLVM: define{{.*}} noundef float @_Z8fpPreIncv()
 // LLVM:   %[[RV:.*]] = alloca float, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca float, i64 1, align 4
 // LLVM:   store float 1.000000e+00, ptr %[[A]], align 4
@@ -302,7 +302,7 @@ float fpPreDec() {
 // CHECK:   %[[INPUT:.*]] = cir.load{{.*}} %[[A]]
 // CHECK:   %[[DECREMENTED:.*]] = cir.dec %[[INPUT]]
 
-// LLVM: define{{.*}} float @_Z8fpPreDecv()
+// LLVM: define{{.*}} noundef float @_Z8fpPreDecv()
 // LLVM:   %[[RV:.*]] = alloca float, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca float, i64 1, align 4
 // LLVM:   store float 1.000000e+00, ptr %[[A]], align 4
@@ -327,7 +327,7 @@ float fpPostInc() {
 // CHECK:   %[[INPUT:.*]] = cir.load{{.*}} %[[A]]
 // CHECK:   %[[INCREMENTED:.*]] = cir.inc %[[INPUT]]
 
-// LLVM: define{{.*}} float @_Z9fpPostIncv()
+// LLVM: define{{.*}} noundef float @_Z9fpPostIncv()
 // LLVM:   %[[RV:.*]] = alloca float, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca float, i64 1, align 4
 // LLVM:   store float 1.000000e+00, ptr %[[A]], align 4
@@ -352,7 +352,7 @@ float fpPostDec() {
 // CHECK:   %[[INPUT:.*]] = cir.load{{.*}} %[[A]]
 // CHECK:   %[[DECREMENTED:.*]] = cir.dec %[[INPUT]]
 
-// LLVM: define{{.*}} float @_Z9fpPostDecv()
+// LLVM: define{{.*}} noundef float @_Z9fpPostDecv()
 // LLVM:   %[[RV:.*]] = alloca float, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca float, i64 1, align 4
 // LLVM:   store float 1.000000e+00, ptr %[[A]], align 4
@@ -383,7 +383,7 @@ float fpPostInc2() {
 // CHECK:   cir.store{{.*}} %[[ATOB]], %[[B]]
 // CHECK:   %[[B_TO_OUTPUT:.*]] = cir.load{{.*}} %[[B]]
 
-// LLVM: define{{.*}} float @_Z10fpPostInc2v()
+// LLVM: define{{.*}} noundef float @_Z10fpPostInc2v()
 // LLVM:   %[[RV:.*]] = alloca float, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca float, i64 1, align 4
 // LLVM:   %[[B:.*]] = alloca float, i64 1, align 4
@@ -431,7 +431,7 @@ _Float16 fp16UPlus(_Float16 f) {
 // CHECK:   %[[PROMOTED:.*]] = cir.cast floating %[[INPUT]] : !cir.f16 -> !cir.float
 // CHECK:   %[[UNPROMOTED:.*]] = cir.cast floating %[[PROMOTED]] : !cir.float -> !cir.f16
 
-// LLVM: define{{.*}} half @_Z9fp16UPlusDF16_({{.*}})
+// LLVM: define{{.*}} noundef half @_Z9fp16UPlusDF16_(half noundef %0)
 // LLVM:   %[[F_LOAD:.*]] = load half, ptr %{{.*}}, align 2
 // LLVM:   %[[PROMOTED:.*]] = fpext half %[[F_LOAD]] to float
 // LLVM:   %[[UNPROMOTED:.*]] = fptrunc float %[[PROMOTED]] to half
@@ -451,7 +451,7 @@ _Float16 fp16UMinus(_Float16 f) {
 // CHECK:   %[[RESULT:.*]] = cir.minus %[[PROMOTED]]
 // CHECK:   %[[UNPROMOTED:.*]] = cir.cast floating %[[RESULT]] : !cir.float -> !cir.f16
 
-// LLVM: define{{.*}} half @_Z10fp16UMinusDF16_({{.*}})
+// LLVM: define{{.*}} noundef half @_Z10fp16UMinusDF16_(half noundef %0)
 // LLVM:   %[[F_LOAD:.*]] = load half, ptr %{{.*}}, align 2
 // LLVM:   %[[PROMOTED:.*]] = fpext half %[[F_LOAD]] to float
 // LLVM:   %[[RESULT:.*]] = fneg float %[[PROMOTED]]

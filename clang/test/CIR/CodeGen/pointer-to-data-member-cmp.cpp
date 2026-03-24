@@ -29,7 +29,7 @@ bool eq(int Foo::*x, int Foo::*y) {
 // CIR-AFTER:   %[[#y:]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!s64i>, !s64i
 // CIR-AFTER:   %{{.*}} = cir.cmp eq %[[#x]], %[[#y]] : !s64i
 
-// LLVM-LABEL: @_Z2eqM3FooiS0_
+// LLVM: define {{.*}} noundef i1 @_Z2eqM3FooiS0_(i64 %{{.*}}, i64 %{{.*}})
 //      LLVM:   %[[#x:]] = load i64, ptr %{{.+}}, align 8
 // LLVM-NEXT:   %[[#y:]] = load i64, ptr %{{.+}}, align 8
 // LLVM-NEXT:   %{{.+}} = icmp eq i64 %[[#x]], %[[#y]]
@@ -56,7 +56,7 @@ bool ne(int Foo::*x, int Foo::*y) {
 // CIR-AFTER:   %[[#y:]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!s64i>, !s64i
 // CIR-AFTER:   %{{.*}} = cir.cmp ne %[[#x]], %[[#y]] : !s64i
 
-// LLVM-LABEL: @_Z2neM3FooiS0_
+// LLVM: define {{.*}} noundef i1 @_Z2neM3FooiS0_(i64 %{{.*}}, i64 %{{.*}})
 //      LLVM:   %[[#x:]] = load i64, ptr %{{.+}}, align 8
 // LLVM-NEXT:   %[[#y:]] = load i64, ptr %{{.+}}, align 8
 // LLVM-NEXT:   %{{.+}} = icmp ne i64 %[[#x]], %[[#y]]

@@ -298,7 +298,7 @@ void f5(struct NodeS* a) {
 // CIR:   %[[NEXT:.*]] = cir.get_member {{%.}}[0] {name = "next"} : !cir.ptr<!rec_NodeS> -> !cir.ptr<!cir.ptr<!rec_NodeS>>
 // CIR:   cir.store {{.*}}, %[[NEXT]]
 
-// LLVM: define{{.*}} void @f5
+// LLVM: define{{.*}} void @f5(ptr noundef %{{.*}})
 // LLVM:   %[[NEXT:.*]] = getelementptr %struct.NodeS, ptr %{{.*}}, i32 0, i32 0
 // LLVM:   store ptr null, ptr %[[NEXT]]
 
@@ -317,7 +317,7 @@ void f6(struct CycleStart *start) {
 // CIR:   %[[END:.*]] = cir.get_member %{{.*}}[0] {name = "end"} : !cir.ptr<!rec_CycleMiddle> -> !cir.ptr<!cir.ptr<!rec_CycleEnd>>
 // CIR:   %[[START2:.*]] = cir.get_member %{{.*}}[0] {name = "start"} : !cir.ptr<!rec_CycleEnd> -> !cir.ptr<!cir.ptr<!rec_CycleStart>>
 
-// LLVM: define{{.*}} void @f6
+// LLVM: define{{.*}} void @f6(ptr noundef %{{.*}})
 // LLVM:   %[[MIDDLE:.*]] = getelementptr %struct.CycleStart, ptr %{{.*}}, i32 0, i32 0
 // LLVM:   %[[END:.*]] = getelementptr %struct.CycleMiddle, ptr %{{.*}}, i32 0, i32 0
 // LLVM:   %[[START2:.*]] = getelementptr %struct.CycleEnd, ptr %{{.*}}, i32 0, i32 0

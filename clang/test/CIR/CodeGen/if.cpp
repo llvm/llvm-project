@@ -285,7 +285,7 @@ int if_init() {
 // CIR:   }
 // CIR: }
 
-// LLVM: define{{.*}} i32 @_Z7if_initv()
+// LLVM: define{{.*}} noundef i32 @_Z7if_initv()
 // LLVM: %[[X:.*]] = alloca i32, i64 1, align 4
 // LLVM: %[[RETVAL:.*]] = alloca i32, i64 1, align 4
 // LLVM: store i32 42, ptr %[[X]], align 4

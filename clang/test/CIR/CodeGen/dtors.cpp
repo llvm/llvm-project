@@ -71,7 +71,7 @@ bool test_temp_or() { return make_temp(1) || make_temp(2); }
 // CIR:   %[[RETVAL:.*]] = cir.load{{.*}} %[[RET_ADDR]]
 // CIR:   cir.return %[[RETVAL]]
 
-// LLVM: define{{.*}} i1 @_Z12test_temp_orv(){{.*}} {
+// LLVM: define{{.*}} noundef i1 @_Z12test_temp_orv(){{.*}} {
 // LLVM:   %[[REF_TMP0:.*]] = alloca %struct.B
 // LLVM:   %[[REF_TMP1:.*]] = alloca %struct.B
 // LLVM:   %[[TMP_RESULT1:.*]] = alloca i8
@@ -177,7 +177,7 @@ bool test_temp_and() { return make_temp(1) && make_temp(2); }
 // CIR:   %[[RETVAL:.*]] = cir.load{{.*}} %[[RET_ADDR]]
 // CIR:   cir.return %[[RETVAL]]
 
-// LLVM: define{{.*}} i1 @_Z13test_temp_andv(){{.*}} {
+// LLVM: define{{.*}} noundef i1 @_Z13test_temp_andv(){{.*}} {
 // LLVM:   %[[REF_TMP0:.*]] = alloca %struct.B{{.*}}
 // LLVM:   %[[REF_TMP1:.*]] = alloca %struct.B{{.*}}
 // LLVM:   %[[TMP_RESULT:.*]] = alloca i8{{.*}}
@@ -482,7 +482,7 @@ void test_base_dtor_call_virtual_base() {
 // CIR:   %[[VIRTUAL_BASE:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_VirtualBase>
 // CIR:   cir.call @_ZN11VirtualBaseD2Ev(%[[VIRTUAL_BASE]])
 
-// LLVM: define {{.*}} void @_ZN7DerivedD1Ev
+// LLVM: define {{.*}} void @_ZN7DerivedD1Ev(ptr noundef nonnull align 8 dereferenceable(8) %{{.*}})
 // LLVM:   call void @_ZN7DerivedD2Ev(ptr {{.*}} %{{.*}}, ptr {{.*}} @_ZTT7Derived)
 // LLVM:   call void @_ZN11VirtualBaseD2Ev(ptr {{.*}} %{{.*}})
 

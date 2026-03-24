@@ -79,7 +79,7 @@ auto make_virtual() -> void (Foo::*)(int) {
 // CIR-AFTER:   %[[RET:.*]] = cir.load %[[RETVAL]]
 // CIR-AFTER:   cir.return %[[RET]] : !rec_anon_struct
 
-// LLVM: define {{.*}} @_Z12make_virtualv()
+// LLVM: define {{.*}} { i64, i64 } @_Z12make_virtualv()
 // LLVM:   %[[RETVAL:.*]] = alloca { i64, i64 }
 // LLVM:   call void @llvm.memcpy{{.*}}(ptr %[[RETVAL]], ptr @[[VIRT_RET]]
 // LLVM:   %[[RET:.*]] = load { i64, i64 }, ptr %[[RETVAL]]
@@ -106,7 +106,7 @@ auto make_null() -> void (Foo::*)(int) {
 // CIR-AFTER:   %[[RET:.*]] = cir.load %[[RETVAL]]
 // CIR-AFTER:   cir.return %[[RET]] : !rec_anon_struct
 
-// LLVM: define {{.*}} @_Z9make_nullv()
+// LLVM: define {{.*}} { i64, i64 } @_Z9make_nullv()
 // LLVM:   %[[RETVAL:.*]] = alloca { i64, i64 }
 // LLVM:   call void @llvm.memcpy{{.*}}(ptr %[[RETVAL]], ptr @[[NULL_RET]]
 // LLVM:   %[[RET:.*]] = load { i64, i64 }, ptr %[[RETVAL]]
@@ -151,7 +151,7 @@ void call(Foo *obj, void (Foo::*func)(int), int arg) {
 // CIR-AFTER:   %[[ARG:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!s32i>, !s32i
 // CIR-AFTER:   cir.call %[[CALLEE]](%[[ADJUSTED_THIS]], %[[ARG]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>, !cir.ptr<!rec_Foo>, !s32i)>>, !cir.ptr<!void> {{.*}}, !s32i {{.*}}) -> ()
 
-// LLVM: define {{.*}} @_Z4callP3FooMS_FviEi
+// LLVM: define {{.*}} void @_Z4callP3FooMS_FviEi(ptr noundef %{{.*}}, i32 noundef %{{.*}})
 // LLVM:   %[[OBJ:.*]] = load ptr, ptr %{{.*}}
 // LLVM:   %[[MEMFN_PTR:.*]] = load { i64, i64 }, ptr %{{.*}}
 // LLVM:   %[[THIS_ADJ:.*]] = extractvalue { i64, i64 } %[[MEMFN_PTR]], 1

@@ -205,7 +205,7 @@ int f7(int a, int b, int c) {
 // CIR:  %[[B_PLUS_C:.*]] = cir.add nsw %[[B]], %[[C]] : !s32i
 // CIR:  %[[RETVAL:.*]] = cir.add nsw %[[A]], %[[B_PLUS_C]] : !s32i
 
-// LLVM: define{{.*}} i32 @f7
+// LLVM: define{{.*}} i32 @f7(i32 noundef %{{[0-9]+}}, i32 noundef %{{[0-9]+}}, i32 noundef %{{[0-9]+}})
 // LLVM:   %[[A_PTR:.*]] = alloca i32, i64 1, align 4
 // LLVM:   %[[B_PTR:.*]] = alloca i32, i64 1, align 4
 // LLVM:   %[[C_PTR:.*]] = alloca i32, i64 1, align 4
@@ -239,7 +239,7 @@ int f8(int *p) {
 // CIR:    %[[P2:.*]] = cir.load deref{{.*}} %[[P_PTR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
 // CIR:    %[[STAR_P:.*]] = cir.load{{.*}} %[[P2]] : !cir.ptr<!s32i>, !s32i
 
-// LLVM: define{{.*}} i32 @f8
+// LLVM: define{{.*}} i32 @f8(ptr noundef %{{[0-9]+}})
 // LLVM:   %[[P_PTR:.*]] = alloca ptr, i64 1, align 8
 // LLVM:   %[[P:.*]] = load ptr, ptr %[[P_PTR]], align 8
 // LLVM:   store i32 2, ptr %[[P]], align 4

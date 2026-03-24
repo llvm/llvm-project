@@ -279,7 +279,7 @@ int f() {
 // LLVM:   %[[RET:.*]] = load i32, ptr %[[I_ALLOCA]]
 // LLVM:   ret i32 %[[RET]]
 
-// LLVM: define {{.*}} i32 @_Z1fv()
+// LLVM: define {{.*}} noundef i32 @_Z1fv()
 // LLVM:   %[[TMP:.*]] = alloca %[[REC_LAM_G2]]
 // LLVM:   %[[RETVAL:.*]] = alloca i32
 // LLVM:   br label %[[SCOPE_BB:.*]]
@@ -504,7 +504,7 @@ int test_lambda_this1(){
 // CIR:   cir.call @_ZN1A3fooEv(%[[A_THIS]]){{.*}} : (!cir.ptr<!rec_A> {{.*}}) -> (!s32i {llvm.noundef})
 // CIR:   cir.call @_ZN1A3barEv(%[[A_THIS]]){{.*}} : (!cir.ptr<!rec_A> {{.*}}) -> (!s32i {llvm.noundef})
 
-// LLVM: define {{.*}} i32 @_Z17test_lambda_this1v
+// LLVM: define {{.*}} noundef i32 @_Z17test_lambda_this1v
 // LLVM:   %[[A_THIS:.*]] = alloca %struct.A
 // LLVM:   call void @_ZN1AC1Ev(ptr {{.*}} %[[A_THIS]])
 // LLVM:   call noundef i32 @_ZN1A3fooEv(ptr {{.*}} %[[A_THIS]])

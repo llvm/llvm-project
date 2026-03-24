@@ -90,7 +90,7 @@ Derived &ref_cast(Base1 &ref) {
 // CIR-NEXT:   }
 // CIR-NEXT:   %{{.+}} = cir.cast bitcast %[[SRC]] : !cir.ptr<!rec_Base1> -> !cir.ptr<!rec_Derived>
 
-//      LLVM: define{{.*}} ptr @_Z8ref_castR5Base1(ptr{{.*}} %[[SRC:.*]])
+//      LLVM: define{{.*}} noundef nonnull align 8 dereferenceable(8) ptr @_Z8ref_castR5Base1(ptr noundef nonnull{{.*}} dereferenceable(8) %[[SRC:.*]])
 // LLVM-NEXT:   %[[VPTR:.*]] = load ptr, ptr %[[SRC]], align 8
 // LLVM-NEXT:   %[[OK:.*]] = icmp eq ptr %[[VPTR]], getelementptr inbounds nuw (i8, ptr @_ZTV7Derived, i64 16)
 // LLVM-NEXT:   br i1 %[[OK]], label %[[LABEL_OK:.*]], label %[[LABEL_FAIL:.*]]
@@ -182,7 +182,7 @@ Derived *ptr_cast_always_fail(Base2 *ptr) {
 // CIR-NEXT:   %[[RESULT:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!rec_Derived>
 // CIR-NEXT:   cir.store %[[RESULT]], %{{.*}} : !cir.ptr<!rec_Derived>, !cir.ptr<!cir.ptr<!rec_Derived>>
 
-//      LLVM: define {{.*}} ptr @_Z20ptr_cast_always_failP5Base2
+//      LLVM: define {{.*}} noundef ptr @_Z20ptr_cast_always_failP5Base2(ptr noundef{{.*}})
 // LLVM-NEXT:   ret ptr null
 
 //      OGCG: define {{.*}} ptr @_Z20ptr_cast_always_failP5Base2
@@ -198,7 +198,7 @@ Derived &ref_cast_always_fail(Base2 &ref) {
 // CIR-NEXT:   cir.call @__cxa_bad_cast() : () -> ()
 // CIR-NEXT:   cir.unreachable
 
-//      LLVM: define {{.*}} ptr @_Z20ref_cast_always_failR5Base2
+//      LLVM: define {{.*}} noundef nonnull align 8 dereferenceable(8) ptr @_Z20ref_cast_always_failR5Base2(ptr noundef nonnull{{.*}} dereferenceable(8) %0)
 // LLVM-NEXT:   tail call void @__cxa_bad_cast()
 // LLVM-NEXT:   unreachable
 

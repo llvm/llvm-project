@@ -52,7 +52,7 @@ unsigned read8_1() {
 // CIR: [[RET:%.*]] = cir.load {{.*}} : !cir.ptr<!u32i>, !u32i
 // CIR: cir.return [[RET]] : !u32i
 
-// LLVM-LABEL: @_Z7read8_1v
+// LLVM-LABEL: define{{.*}} noundef i32 @_Z7read8_1v
 // LLVM:  [[MEMBER:%.*]] = load i8, ptr getelementptr inbounds nuw (i8, ptr {{.*}}, i64 1), align 1
 // LLVM:  [[BFCAST:%.*]] = zext i8 [[MEMBER]] to i32
 // LLVM:  store i32 [[BFCAST]], ptr {{.*}}, align 4
@@ -93,7 +93,7 @@ unsigned read8_2() {
 // CIR: [[RET:%.*]] = cir.load {{.*}} : !cir.ptr<!u32i>, !u32i
 // CIR: cir.return [[RET]] : !u32i
 
-// LLVM-LABEL: @_Z7read8_2v
+// LLVM-LABEL: define{{.*}} noundef i32 @_Z7read8_2v
 // LLVM:  [[BFLOAD:%.*]] = load i16, ptr getelementptr inbounds nuw (i8, ptr {{.*}}, i64 2), align 2
 // LLVM:  [[BFLSHR:%.*]] = lshr i16 [[BFLOAD]], 4
 // LLVM:  [[BFCLEAR:%.*]] = and i16 [[BFLSHR]], 255
@@ -144,7 +144,7 @@ unsigned read16_1() {
 // CIR: [[RET:%.*]] = cir.load {{.*}} : !cir.ptr<!u32i>, !u32i
 // CIR: cir.return [[RET]] : !u32i
 
-// LLVM-LABEL: @_Z8read16_1v
+// LLVM-LABEL: define{{.*}} noundef i32 @_Z8read16_1v
 // LLVM:  [[BFLOAD:%.*]] = load i16, ptr {{.*}}, align 8
 // LLVM:  [[BFCAST:%.*]] = zext i16 [[BFLOAD]] to i64
 // LLVM:  [[BF:%.*]] = trunc i64 [[BFCAST]] to i32
@@ -170,7 +170,7 @@ unsigned read16_2() {
 // CIR: [[RET:%.*]] = cir.load {{.*}} : !cir.ptr<!u32i>, !u32i
 // CIR: cir.return [[RET]] : !u32i
 
-// LLVM-LABEL: @_Z8read16_2v
+// LLVM-LABEL: define{{.*}} noundef i32 @_Z8read16_2v
 // LLVM:  [[BFLOAD:%.*]] = load i16, ptr getelementptr inbounds nuw (i8, ptr {{.*}}, i64 2), align 2
 // LLVM:  [[BFCAST:%.*]] = zext i16 [[BFLOAD]] to i64
 // LLVM:  [[BF:%.*]] = trunc i64 [[BFCAST]] to i32
@@ -233,7 +233,7 @@ unsigned read32_1() {
 // CIR: [[RET:%.*]] = cir.load {{.*}} : !cir.ptr<!u32i>, !u32i
 // CIR: cir.return [[RET]] : !u32i
 
-// LLVM-LABEL: @_Z8read32_1v
+// LLVM-LABEL: define{{.*}} noundef i32 @_Z8read32_1v
 // LLVM: [[BFLOAD:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr {{.*}}, i64 4), align 4
 // LLVM: [[BFCAST:%.*]] = zext i32 [[BFLOAD]] to i64
 // LLVM: [[BF:%.*]] = trunc i64 [[BFCAST]] to i32

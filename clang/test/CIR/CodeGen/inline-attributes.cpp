@@ -42,20 +42,20 @@ int (*regular_ptr)(int) = &regular_function;
 // CIR-LABEL: cir.func{{.*}} inline_hint {{.*}}@_Z20inline_hint_functioni(%arg0: !s32i {{.*}}) -> (!s32i{{.*}})
 
 // LLVM: ; Function Attrs:{{.*}} noinline
-// LLVM: define{{.*}} i32 @_Z17noinline_functioni
+// LLVM: define{{.*}} noundef i32 @_Z17noinline_functioni(i32 noundef
 
 // LLVM: ; Function Attrs:
 // LLVM-NOT: noinline
 // LLVM-NOT: alwaysinline
 // LLVM-NOT: inlinehint
 // LLVM-SAME: {{$}}
-// LLVM: define{{.*}} i32 @_Z16regular_functioni
+// LLVM: define{{.*}} noundef i32 @_Z16regular_functioni(i32 noundef
 
 // LLVM: ; Function Attrs:{{.*}} alwaysinline
-// LLVM: define{{.*}} i32 @_Z22always_inline_functioni
+// LLVM: define{{.*}} noundef i32 @_Z22always_inline_functioni(i32 noundef
 
 // LLVM: ; Function Attrs:{{.*}} inlinehint
-// LLVM: define{{.*}} i32 @_Z20inline_hint_functioni
+// LLVM: define{{.*}} noundef i32 @_Z20inline_hint_functioni(i32 noundef
 
 // OGCG: ; Function Attrs:{{.*}} noinline
 // OGCG: define{{.*}} i32 @_Z17noinline_functioni

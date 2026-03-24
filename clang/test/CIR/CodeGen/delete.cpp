@@ -34,7 +34,7 @@ void test_sized_delete(SizedDelete *x) {
 // CIR:     }
 // CIR:   }
 
-// LLVM: define dso_local void @_Z17test_sized_deleteP11SizedDelete
+// LLVM: define dso_local void @_Z17test_sized_deleteP11SizedDelete(ptr noundef %0)
 // LLVM:   %[[X:.*]] = load ptr, ptr %{{.*}}
 // LLVM:   %[[NOT_NULL:.*]] = icmp ne ptr %[[X]], null
 // LLVM:   br i1 %[[NOT_NULL]], label %[[DELETE_NOTNULL:.*]], label %[[DELETE_END:.*]]
