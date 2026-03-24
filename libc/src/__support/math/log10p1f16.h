@@ -107,17 +107,16 @@ LIBC_INLINE float16 log10p1f16(float16 x) {
       constexpr double midpoint = 0x1.ffcp-15;
       float xf = x;
       float result = (xf * fputil::polyeval(xf, 0x1.bcb7b2p-2f, -0x1.bcb4cp-3f,
-                                0x1.2875bcp-3f, -0x1.c2946ep-4f,
-                                0x1.69da2p-4f));
+                                            0x1.2875bcp-3f, -0x1.c2946ep-4f,
+                                            0x1.69da2p-4f));
 
-    float result_abs = result > 0 ? result : -result;
-    // [min-ulp/2,min) -> min
-    if (result_abs < MIN_NORMAL && result_abs >= midpoint &&
-        (fputil::fenv_is_round_to_nearest() || fputil::fenv_is_round_up())) {
-      result = (result > 0) ? MIN_NORMAL : -MIN_NORMAL;
-    }
-    return fputil::cast<float16>(result);
-                                
+      float result_abs = result > 0 ? result : -result;
+      // [min-ulp/2,min) -> min
+      if (result_abs < MIN_NORMAL && result_abs >= midpoint &&
+          (fputil::fenv_is_round_to_nearest() || fputil::fenv_is_round_up())) {
+        result = (result > 0) ? MIN_NORMAL : -MIN_NORMAL;
+      }
+      return fputil::cast<float16>(result);
     }
   }
 
