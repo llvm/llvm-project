@@ -6,15 +6,5 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/clc_convert.h"
-#include "clc/float/definitions.h"
-#include "clc/internal/clc.h"
-#include "clc/math/clc_atan_helpers.h"
-#include "clc/math/clc_copysign.h"
-#include "clc/math/clc_fabs.h"
-#include "clc/math/clc_fma.h"
-#include "clc/math/clc_mad.h"
-#include "clc/math/clc_recip_fast.h"
-
-#define __CLC_BODY "clc_atan.inc"
-#include "clc/math/gentype.inc"
+_CLC_DECL _CLC_OVERLOAD _CLC_CONST __CLC_GENTYPE
+__clc_atan_reduced(__CLC_GENTYPE v);
