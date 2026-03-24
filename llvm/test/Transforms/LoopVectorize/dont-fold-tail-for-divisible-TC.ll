@@ -6,7 +6,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 ; Make sure the loop is vectorized under -Os without folding its tail based on
 ; its trip-count's lower bits known to be zero.
 
-define dso_local void @alignTC(ptr noalias nocapture %A, i32 %n) optsize {
+define void @alignTC(ptr noalias nocapture %A, i32 %n) optsize {
 ; CHECK-LABEL: @alignTC(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ALIGNEDTC:%.*]] = and i32 [[N:%.*]], -8
@@ -58,7 +58,7 @@ exit:
 ; Make sure the loop is vectorized under -Os without folding its tail based on
 ; its trip-count's lower bits assumed to be zero.
 
-define dso_local void @assumeAlignedTC(ptr noalias nocapture %A, i32 %p, i32 %q) optsize {
+define void @assumeAlignedTC(ptr noalias nocapture %A, i32 %p, i32 %q) optsize {
 ; CHECK-LABEL: @assumeAlignedTC(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[P:%.*]], 3
@@ -133,7 +133,7 @@ exit:
 ; Make sure the loop's tail is folded when vectorized under -Os based on its trip-count's
 ; not being provably divisible by chosen VF.
 
-define dso_local void @cannotProveAlignedTC(ptr noalias nocapture %A, i32 %p, i32 %q) optsize {
+define void @cannotProveAlignedTC(ptr noalias nocapture %A, i32 %p, i32 %q) optsize {
 ; CHECK-LABEL: @cannotProveAlignedTC(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[P:%.*]], 3
