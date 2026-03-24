@@ -12,8 +12,8 @@
 
 target datalayout = "e-m:e-i64:64-n32:64-v128:128:128"
 
-define dso_local void @f1(ptr noalias %aa, ptr noalias %bb, ptr noalias %cc, i32 signext %N) {
-; CHECK-LABEL: define dso_local void @f1(
+define void @f1(ptr noalias %aa, ptr noalias %bb, ptr noalias %cc, i32 signext %N) {
+; CHECK-LABEL: define void @f1(
 ; CHECK-SAME: ptr noalias [[AA:%.*]], ptr noalias [[BB:%.*]], ptr noalias [[CC:%.*]], i32 signext [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[N]], 0
@@ -87,7 +87,7 @@ define dso_local void @f1(ptr noalias %aa, ptr noalias %bb, ptr noalias %cc, i32
 ; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    ret void
 ;
-; CHECK-PROFITABLE-BY-DEFAULT-LABEL: define dso_local void @f1(
+; CHECK-PROFITABLE-BY-DEFAULT-LABEL: define void @f1(
 ; CHECK-PROFITABLE-BY-DEFAULT-SAME: ptr noalias [[AA:%.*]], ptr noalias [[BB:%.*]], ptr noalias [[CC:%.*]], i32 signext [[N:%.*]]) {
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:  [[ENTRY:.*:]]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[N]], 0
@@ -140,8 +140,8 @@ for.end:                                          ; preds = %for.end.loopexit, %
   ret void
 }
 
-define dso_local signext i32 @f2(ptr noalias %A, ptr noalias %B, i32 signext %n) {
-; CHECK-LABEL: define dso_local signext i32 @f2(
+define signext i32 @f2(ptr noalias %A, ptr noalias %B, i32 signext %n) {
+; CHECK-LABEL: define signext i32 @f2(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i32 signext [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[N]], 1
@@ -238,7 +238,7 @@ define dso_local signext i32 @f2(ptr noalias %A, ptr noalias %B, i32 signext %n)
 ; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    ret i32 0
 ;
-; CHECK-PROFITABLE-BY-DEFAULT-LABEL: define dso_local signext i32 @f2(
+; CHECK-PROFITABLE-BY-DEFAULT-LABEL: define signext i32 @f2(
 ; CHECK-PROFITABLE-BY-DEFAULT-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i32 signext [[N:%.*]]) {
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:  [[ENTRY:.*:]]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[N]], 1
