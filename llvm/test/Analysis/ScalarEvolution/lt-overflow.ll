@@ -25,7 +25,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: Determining loop execution counts for: @test_abnormal_exit
 ; CHECK: Loop %for.body: Unpredictable backedge-taken count.
 ; CHECK: Determining loop execution counts for: @test_other_exit
-; CHECK: Loop %for.body: <multiple exits> Unpredictable backedge-taken count.
+; CHECK: Loop %for.body: <multiple exits> backedge-taken count is (9 umin ((-1 + (2 umax %N)) /u 2))
 ; CHECK: Determining loop execution counts for: @test_gt
 ; CHECK: Loop %for.body: Unpredictable backedge-taken count.
 ; CHECK: Determining loop execution counts for: @test_willreturn

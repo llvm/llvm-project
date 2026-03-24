@@ -31,9 +31,9 @@ for.end:
 define void @sle_post_inc(i32 %len) willreturn {
 ; CHECK-LABEL: 'sle_post_inc'
 ; CHECK-NEXT:  Determining loop execution counts for: @sle_post_inc
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is (-1 + (1 smax (1 + %len)))<nsw>
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 2147483646
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + (1 smax (1 + %len)))<nsw>
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is (0 smax %len)
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 2147483647
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (0 smax %len)
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
 entry:
@@ -105,9 +105,9 @@ for.end:
 define void @ule_post_inc(i32 %len) willreturn {
 ; CHECK-LABEL: 'ule_post_inc'
 ; CHECK-NEXT:  Determining loop execution counts for: @ule_post_inc
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is (-1 + (1 umax (1 + %len)))
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 -2
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + (1 umax (1 + %len)))
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is %len
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 -1
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is %len
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
 entry:
@@ -222,9 +222,9 @@ for.end:
 define void @use_pre_inc(i32 %end) willreturn {
 ; CHECK-LABEL: 'use_pre_inc'
 ; CHECK-NEXT:  Determining loop execution counts for: @use_pre_inc
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is (100 + (-1 * (100 umin (-1 + %end)))<nsw>)<nsw>
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 100
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (100 + (-1 * (100 umin (-1 + %end)))<nsw>)<nsw>
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is (101 + (-1 * (101 umin %end))<nsw>)<nsw>
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 101
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (101 + (-1 * (101 umin %end))<nsw>)<nsw>
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
 entry:
@@ -244,9 +244,9 @@ for.end:
 define void @use_post_inc(i32 %end) willreturn {
 ; CHECK-LABEL: 'use_post_inc'
 ; CHECK-NEXT:  Determining loop execution counts for: @use_post_inc
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is (99 + (-1 * (99 umin (-1 + %end)))<nsw>)<nsw>
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 99
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (99 + (-1 * (99 umin (-1 + %end)))<nsw>)<nsw>
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is (100 + (-1 * (100 umin %end))<nsw>)<nsw>
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 100
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (100 + (-1 * (100 umin %end))<nsw>)<nsw>
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
 entry:

@@ -13,11 +13,11 @@ define void @test_preinc_ult(i64 %len) {
 ; CHECK-NEXT:    --> {2,+,2}<nw><%loop> U: [0,-1) S: [-9223372036854775808,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_preinc_ult
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
-; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    exit count for loop: ((1 + %len) /u 2)
 ; CHECK-NEXT:    exit count for latch: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 9223372036854775807
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((1 + %len) /u 2)
+; CHECK-NEXT:    symbolic max exit count for loop: ((1 + %len) /u 2)
 ; CHECK-NEXT:    symbolic max exit count for latch: ***COULDNOTCOMPUTE***
 ;
 start:
@@ -48,11 +48,11 @@ define void @test_postinc_ult(i64 %len) {
 ; CHECK-NEXT:    --> {2,+,2}<nw><%loop> U: [0,-1) S: [-9223372036854775808,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_postinc_ult
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
-; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    exit count for loop: ((1 umax %len) /u 2)
 ; CHECK-NEXT:    exit count for latch: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 9223372036854775807
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((1 umax %len) /u 2)
+; CHECK-NEXT:    symbolic max exit count for loop: ((1 umax %len) /u 2)
 ; CHECK-NEXT:    symbolic max exit count for latch: ***COULDNOTCOMPUTE***
 ;
 start:
@@ -77,16 +77,16 @@ define void @test_preinc_slt(i64 %len) {
 ; CHECK-LABEL: 'test_preinc_slt'
 ; CHECK-NEXT:  Classifying expressions for: @test_preinc_slt
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %start ], [ %iv.inc2, %latch ]
-; CHECK-NEXT:    --> {0,+,2}<nuw><nsw><%loop> U: [0,-9223372036854775808) S: [0,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,2}<nuw><nsw><%loop> U: [0,9223372036854775807) S: [0,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.inc2 = add nsw i64 %iv, 2
-; CHECK-NEXT:    --> {2,+,2}<nuw><%loop> U: [2,-1) S: [-9223372036854775808,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {2,+,2}<nuw><%loop> U: [2,-9223372036854775807) S: [-9223372036854775808,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_preinc_slt
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
-; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    exit count for loop: ((1 + (0 smax %len))<nuw> /u 2)
 ; CHECK-NEXT:    exit count for latch: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4611686018427387903
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((1 + (0 smax %len))<nuw> /u 2)
+; CHECK-NEXT:    symbolic max exit count for loop: ((1 + (0 smax %len))<nuw> /u 2)
 ; CHECK-NEXT:    symbolic max exit count for latch: ***COULDNOTCOMPUTE***
 ;
 start:
@@ -110,18 +110,18 @@ define void @test_postinc_slt(i64 %len) {
 ; CHECK-LABEL: 'test_postinc_slt'
 ; CHECK-NEXT:  Classifying expressions for: @test_postinc_slt
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %start ], [ %iv.inc2, %latch ]
-; CHECK-NEXT:    --> {0,+,2}<nuw><nsw><%loop> U: [0,-9223372036854775808) S: [0,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,2}<nuw><nsw><%loop> U: [0,9223372036854775807) S: [0,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.inc = add nsw i64 %iv, 1
 ; CHECK-NEXT:    --> {1,+,2}<nuw><nsw><%loop> U: [1,-9223372036854775808) S: [1,-9223372036854775808) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.inc2 = add nsw i64 %iv, 2
-; CHECK-NEXT:    --> {2,+,2}<nuw><%loop> U: [2,-1) S: [-9223372036854775808,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {2,+,2}<nuw><%loop> U: [2,-9223372036854775807) S: [-9223372036854775808,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_postinc_slt
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
-; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    exit count for loop: ((1 smax %len) /u 2)
 ; CHECK-NEXT:    exit count for latch: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4611686018427387903
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((1 smax %len) /u 2)
+; CHECK-NEXT:    symbolic max exit count for loop: ((1 smax %len) /u 2)
 ; CHECK-NEXT:    symbolic max exit count for latch: ***COULDNOTCOMPUTE***
 ;
 start:
@@ -148,14 +148,14 @@ define void @test_preinc_sgt(i64 %lim) {
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %start ], [ %iv.inc2, %latch ]
 ; CHECK-NEXT:    --> {0,+,-2}<nsw><%loop> U: [0,-1) S: [-9223372036854775808,1) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.inc2 = add nsw i64 %iv, -2
-; CHECK-NEXT:    --> {-2,+,-2}<nw><%loop> U: [0,-1) S: [-9223372036854775808,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {-2,+,-2}<nw><%loop> U: [9223372036854775806,-1) S: [-9223372036854775808,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_preinc_sgt
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
-; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    exit count for loop: ((1 + (-1 * (0 smin %lim)))<nuw> /u 2)
 ; CHECK-NEXT:    exit count for latch: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4611686018427387904
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((1 + (-1 * (0 smin %lim)))<nuw> /u 2)
+; CHECK-NEXT:    symbolic max exit count for loop: ((1 + (-1 * (0 smin %lim)))<nuw> /u 2)
 ; CHECK-NEXT:    symbolic max exit count for latch: ***COULDNOTCOMPUTE***
 ;
 start:
@@ -179,19 +179,23 @@ define void @test_postinc_sgt(i64 %lim) {
 ; CHECK-LABEL: 'test_postinc_sgt'
 ; CHECK-NEXT:  Classifying expressions for: @test_postinc_sgt
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %start ], [ %iv.inc2, %latch ]
-; CHECK-NEXT:    --> {0,+,-2}<nsw><%loop> U: [0,-1) S: [-9223372036854775808,1) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,-2}<nsw><%loop> U: [0,-1) S: [-9223372036854775806,1) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.inc = add nsw i64 %iv, -1
-; CHECK-NEXT:    --> {-1,+,-2}<nsw><%loop> U: [-9223372036854775808,0) S: [-9223372036854775808,0) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {-1,+,-2}<nsw><%loop> U: [-9223372036854775807,0) S: [-9223372036854775807,0) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.inc2 = add nsw i64 %iv, -2
-; CHECK-NEXT:    --> {-2,+,-2}<nw><%loop> U: [0,-1) S: [-9223372036854775808,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {-2,+,-2}<nsw><%loop> U: [-9223372036854775808,-1) S: [-9223372036854775808,-1) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_postinc_sgt
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
-; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    exit count for loop: ((-1 * (-1 smin %lim)) /u 2)
 ; CHECK-NEXT:    exit count for latch: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:    symbolic max exit count for latch: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    predicated exit count for latch: ((-1 + (-1 * (-2 smin %lim))) /u 2)
+; CHECK-NEXT:     Predicates:
+; CHECK-EMPTY:
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4611686018427387903
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (((-1 + (-1 * (-2 smin %lim))) /u 2) umin ((-1 * (-1 smin %lim)) /u 2))
+; CHECK-NEXT:    symbolic max exit count for loop: ((-1 * (-1 smin %lim)) /u 2)
+; CHECK-NEXT:    symbolic max exit count for latch: ((-1 + (-1 * (-2 smin %lim))) /u 2)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 start:
   br label %loop

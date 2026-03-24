@@ -8595,6 +8595,24 @@ ScalarEvolution::getPredicatedBackedgeTakenInfo(const Loop *L) {
   if (!Pair.second)
     return Pair.first->second;
 
+  // AddRec flags may have been strengthened (through range computation,
+  // StrengthenNoWrapFlags, etc.) since the non-predicated BTI was cached
+  // in getBackedgeTakenInfo. Recompute the non-predicated BTI to pick up
+  // these improvements before computing the predicated version. This
+  // ensures consistency: if the non-predicated BTI can now compute an exit
+  // without predicates, it does so, avoiding assertion failures from
+  // having predicated != non-predicated with no predicates.
+  {
+    BackedgeTakenInfo FreshBTI = computeBackedgeTakenCount(L);
+    BackedgeTakenCounts.find(L)->second = std::move(FreshBTI);
+    auto &RefreshedBTI = BackedgeTakenCounts.find(L)->second;
+    if (RefreshedBTI.hasFullInfo()) {
+      // All exits now computable — no need for predicates.
+      PredicatedBackedgeTakenCounts.erase(L);
+      return RefreshedBTI;
+    }
+  }
+
   BackedgeTakenInfo Result =
       computeBackedgeTakenCount(L, /*AllowPredicates=*/true);
 
@@ -8617,6 +8635,22 @@ ScalarEvolution::getBackedgeTakenInfo(const Loop *L) {
   // into the BackedgeTakenCounts map transfers ownership. Otherwise, the result
   // must be cleared in this scope.
   BackedgeTakenInfo Result = computeBackedgeTakenCount(L);
+
+  // Collect AddRecs from the loop BEFORE forgetMemoizedResults clears
+  // ValueExprMap. We need these for post-cache flag stabilization below.
+  SmallVector<SCEVAddRecExpr *, 4> LoopAddRecs;
+  for (BasicBlock *BB : L->blocks()) {
+    for (Instruction &I : *BB) {
+      if (!isSCEVable(I.getType()))
+        continue;
+      const SCEV *S = getExistingSCEV(&I);
+      if (!S)
+        continue;
+      auto *AR = dyn_cast<SCEVAddRecExpr>(S);
+      if (AR && AR->getLoop() == L)
+        LoopAddRecs.push_back(const_cast<SCEVAddRecExpr *>(AR));
+    }
+  }
 
   // Now that we know more about the trip count for this loop, forget any
   // existing SCEV values for PHI nodes in this loop since they are only
@@ -8641,7 +8675,52 @@ ScalarEvolution::getBackedgeTakenInfo(const Loop *L) {
   // recusive call to getBackedgeTakenInfo (on a different
   // loop), which would invalidate the iterator computed
   // earlier.
-  return BackedgeTakenCounts.find(L)->second = std::move(Result);
+  auto &CachedBTI = BackedgeTakenCounts.find(L)->second;
+  CachedBTI = std::move(Result);
+
+  // Stabilize AddRec flags: now that ConstantMax is cached,
+  // proveNoWrapViaConstantRanges can infer nuw/nsw flags that were
+  // unprovable during the first computation (when the sentinel blocked
+  // getConstantMaxBackedgeTakenCount). If flags change, recompute the
+  // BTI so it reflects the strengthened flags.
+  //
+  // We loop because flag inference is multi-step: proving NW (no self-wrap)
+  // tightens ranges, which can then enable proving NUW/NSW. The loop is
+  // bounded because flags can only grow (3 independent bits).
+  {
+    bool AnyFlagsChanged = false;
+    for (unsigned Iter = 0; Iter < 3; ++Iter) {
+      bool FlagsChanged = false;
+      for (SCEVAddRecExpr *AR : LoopAddRecs) {
+        auto OldFlags = AR->getNoWrapFlags();
+        auto NewFlags = static_cast<SCEV::NoWrapFlags>(
+            OldFlags | proveNoWrapViaConstantRanges(AR));
+        if (NewFlags != OldFlags) {
+          setNoWrapFlags(AR, NewFlags);
+          FlagsChanged = true;
+        }
+      }
+      if (!FlagsChanged)
+        break;
+      AnyFlagsChanged = true;
+    }
+    if (AnyFlagsChanged) {
+      // Recompute BTI with strengthened flags. The second computation
+      // sees the strengthened AddRecs and the cached ConstantMax
+      // (from the first result, still in the map).
+      BackedgeTakenInfo Result2 = computeBackedgeTakenCount(L);
+      if (Result2.hasAnyInfo()) {
+        SmallVector<SCEVUse, 8> ToForget;
+        auto LoopUsersIt = LoopUsers.find(L);
+        if (LoopUsersIt != LoopUsers.end())
+          append_range(ToForget, LoopUsersIt->second);
+        forgetMemoizedResults(ToForget);
+      }
+      return BackedgeTakenCounts.find(L)->second = std::move(Result2);
+    }
+  }
+
+  return CachedBTI;
 }
 
 void ScalarEvolution::forgetAllLoops() {
@@ -14110,6 +14189,10 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
 
   SmallVector<const SCEVPredicate *, 4> Preds;
   auto *PBT = SE->getPredicatedBackedgeTakenCount(L, Preds);
+  // Re-read BTC: getPredicatedBackedgeTakenCount may have refreshed the
+  // non-predicated cache when AddRec flags were strengthened since the
+  // original computation.
+  BTC = SE->getBackedgeTakenCount(L);
   if (PBT != BTC) {
     assert(!Preds.empty() && "Different predicated BTC, but no predicates");
     OS << "Loop ";
@@ -14129,6 +14212,7 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
 
   auto *PredConstantMax =
       SE->getPredicatedConstantMaxBackedgeTakenCount(L, Preds);
+  ConstantBTC = SE->getConstantMaxBackedgeTakenCount(L);
   if (PredConstantMax != ConstantBTC) {
     assert(!Preds.empty() &&
            "different predicated constant max BTC but no predicates");
@@ -14149,6 +14233,7 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
 
   auto *PredSymbolicMax =
       SE->getPredicatedSymbolicMaxBackedgeTakenCount(L, Preds);
+  SymbolicBTC = SE->getSymbolicMaxBackedgeTakenCount(L);
   if (SymbolicBTC != PredSymbolicMax) {
     assert(!Preds.empty() &&
            "Different predicated symbolic max BTC, but no predicates");

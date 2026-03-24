@@ -50,7 +50,7 @@ define void @f1() #0 {
 ; CHECK-NEXT:    %v1 = phi i32 [ 3, %b0 ], [ %v6, %b1 ]
 ; CHECK-NEXT:    --> {3,+,1}<nuw><nsw><%b1> U: [3,6) S: [3,6) Exits: 5 LoopDispositions: { %b1: Computable }
 ; CHECK-NEXT:    %v2 = trunc i32 %v1 to i16
-; CHECK-NEXT:    --> {3,+,1}<%b1> U: [3,6) S: [3,6) Exits: 5 LoopDispositions: { %b1: Computable }
+; CHECK-NEXT:    --> {3,+,1}<nuw><nsw><%b1> U: [3,6) S: [3,6) Exits: 5 LoopDispositions: { %b1: Computable }
 ; CHECK-NEXT:    %v3 = add i16 %v0, %v2
 ; CHECK-NEXT:    --> {3,+,4,+,1}<%b1> U: full-set S: full-set Exits: 12 LoopDispositions: { %b1: Computable }
 ; CHECK-NEXT:    %v4 = and i16 %v3, 1
