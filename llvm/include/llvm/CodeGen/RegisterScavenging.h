@@ -147,7 +147,7 @@ public:
                                      MachineBasicBlock::iterator To,
                                      bool RestoreAfter, int SPAdj,
                                      bool AllowSpill = true,
-                                    bool InspectNext = false);
+                                     bool InspectNext = false);
 
   /// Tell the scavenger a register is used.
   void setRegUsed(Register Reg, LaneBitmask LaneMask = LaneBitmask::getAll());

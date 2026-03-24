@@ -295,7 +295,8 @@ RegScavenger::spill(Register Reg, const TargetRegisterClass &RC, int SPAdj,
 Register RegScavenger::scavengeRegisterBackwards(const TargetRegisterClass &RC,
                                                  MachineBasicBlock::iterator To,
                                                  bool RestoreAfter, int SPAdj,
-                                                 bool AllowSpill, bool InspectNext) {
+                                                 bool AllowSpill,
+                                                 bool InspectNext) {
   const MachineBasicBlock &MBB = *To->getParent();
   const MachineFunction &MF = *MBB.getParent();
 
@@ -359,10 +360,11 @@ Register RegScavenger::scavengeRegisterBackwards(const TargetRegisterClass &RC,
 /// after the current instruction, otherwise it will only be reserved before the
 /// current instruction.
 /// \p InspectNext controls whether the instruction at MBBI needs to be checked
-/// by scavengeRegisterBackwards for an early-clobber def reg that might constrain
-/// the register allocation.
+/// by scavengeRegisterBackwards for an early-clobber def reg that might
+/// constrain the register allocation.
 static Register scavengeVReg(MachineRegisterInfo &MRI, RegScavenger &RS,
-                             Register VReg, bool ReserveAfter, bool InspectNext) {
+                             Register VReg, bool ReserveAfter,
+                             bool InspectNext) {
   const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
 #ifndef NDEBUG
   // Verify that all definitions and uses are in the same basic block.
