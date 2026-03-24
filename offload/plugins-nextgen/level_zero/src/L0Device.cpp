@@ -1210,7 +1210,7 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
 
   // Sort the created array to be in priority order.
   llvm::sort(Funcs,
-             [=](const auto &X, const auto &Y) { return X.second < Y.second; });
+             [](const auto &X, const auto &Y) { return X.second < Y.second; });
 
   auto BufferOrErr = allocate(Funcs.size() * sizeof(void *),
                               /*HostPtr=*/nullptr, TARGET_ALLOC_DEVICE);
