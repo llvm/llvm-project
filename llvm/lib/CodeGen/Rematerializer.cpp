@@ -213,10 +213,6 @@ void Rematerializer::reviveRegIfDead(RegisterIdx RootIdx) {
 
 void Rematerializer::transferUser(RegisterIdx FromRegIdx, RegisterIdx ToRegIdx,
                                   unsigned UserRegion, MachineInstr &UserMI) {
-  assert(getReg(FromRegIdx).Uses.contains(UserRegion) && "no user in region");
-  assert(getReg(FromRegIdx).Uses.at(UserRegion).contains(&UserMI) &&
-         "not a region user");
-
   transferUserImpl(FromRegIdx, ToRegIdx, UserMI);
   Regs[FromRegIdx].eraseUser(&UserMI, UserRegion);
   Regs[ToRegIdx].addUser(&UserMI, UserRegion);
@@ -690,9 +686,8 @@ void Rematerializer::Reg::addUsers(const RegionUsers &NewUsers,
 }
 
 void Rematerializer::Reg::eraseUser(MachineInstr *MI, unsigned Region) {
-  assert(Uses.contains(Region) && "no user in region");
-  assert(Uses.at(Region).contains(MI) && "user not in region");
-  RegionUsers &RUsers = Uses[Region];
+  RegionUsers &RUsers = Uses.at(Region);
+  assert(RUsers.contains(MI) && "user not in region");
   if (RUsers.size() == 1)
     Uses.erase(Region);
   else
