@@ -8,23 +8,23 @@
 // For sysp, op0 is 0
 
 sysp #0, c8, c0, #0, x0, x2
-// ERRORS: error: second register must be the next consecutive register after the first register
+// ERRORS: error: expected second odd register of a consecutive 64-bit register pair
 sysp #4, c8, c4, #1, x1, x2
-// ERRORS: error: first register must be even-numbered or xzr
+// ERRORS: error: expected xzr/xzr or the first even register of a consecutive 64-bit register pair
 sysp #4, c8, c4, #1, x2, x4
-// ERRORS: error: second register must be the next consecutive register after the first register
+// ERRORS: error: expected second odd register of a consecutive 64-bit register pair
 sysp #0, c8, c0, #0, x29, x31
-// ERRORS: error: first register must be even-numbered or xzr
+// ERRORS: error: expected xzr/xzr or the first even register of a consecutive 64-bit register pair
 sysp #0, c8, c0, #0, x30, x30
-// ERRORS: error: second register must be the next consecutive register after the first register
+// ERRORS: error: expected second odd register of a consecutive 64-bit register pair
 sysp #0, c8, c0, #0, x31, x0
-// ERRORS: error: xzr must be followed by xzr
+// ERRORS: error: expected second xzr in xzr/xzr register pair
 sysp #4, c8, c4, #1, xzr, x1
-// ERRORS: error: xzr must be followed by xzr
+// ERRORS: error: expected second xzr in xzr/xzr register pair
 sysp #0, c8, c0, #0, xzr, x30
-// ERRORS: error: xzr must be followed by xzr
+// ERRORS: error: expected second xzr in xzr/xzr register pair
 sysp #0, c8, c0, #0, w0, w1
-// ERRORS: error: invalid operand for instruction
+// ERRORS: error: expected xzr/xzr or the first even register of a consecutive 64-bit register pair
 sysp #7, c8, c0, #0, x0, x1
 // ERRORS: error: immediate must be an integer in range [0, 6].
 sysp #0, c7, c0, #0, x0, x1
@@ -36,7 +36,7 @@ sysp #0, c8, c8, #0, x0, x1
 sysp #0, c8, c0, #8, x0, x1
 // ERRORS: error: immediate must be an integer in range [0, 7].
 sysp #0, c8, c0, #0, xzr,
-// ERRORS: error: expected register operand
+// ERRORS: error: expected second xzr in xzr/xzr register pair
 
 tlbip RVAE3IS
 // ERRORS: error: expected comma
@@ -45,9 +45,9 @@ tlbip RVAE3IS,
 tlbip VAE3,
 // ERRORS: error: expected register identifier
 tlbip IPAS2E1, x4, x8
-// ERRORS: error: specified tlbip op requires a pair of registers
+// ERRORS: error: expected second odd register of a consecutive 64-bit register pair
 tlbip RVAE3, x11, x11
-// ERRORS: error: specified tlbip op requires a pair of registers
+// ERRORS: error: expected xzr/xzr or the first even register of a consecutive 64-bit register pair
 
 sysp #0, c8, c0, #0, x0
 // ERRORS: error: expected comma
