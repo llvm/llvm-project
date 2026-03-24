@@ -25,7 +25,9 @@
 // 1. Compute constructs: acc.parallel, acc.serial, and acc.kernels are
 //    replaced by acc.kernel_environment containing a single acc.compute_region.
 //    Launch arguments (num_gangs, num_workers, vector_length) become
-//    acc.par_width ops and are passed as compute_region launch operands.
+//    acc.par_width ops (each result is `index`) and are passed as
+//    compute_region launch operands (still required to be acc.par_width
+//    results by the compute_region verifier).
 //
 // 2. acc.loop: Converted according to context and attributes:
 //    - Unstructured: body wrapped in scf.execute_region.
@@ -50,6 +52,7 @@
 #include "mlir/Dialect/OpenACC/OpenACCUtilsLoop.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/IRMapping.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/RegionUtils.h"
@@ -122,6 +125,36 @@ static bool isOpInSerialRegion(Operation *op) {
 
 static void setParDimsAttr(Operation *op, GPUParallelDimsAttr attr) {
   op->setAttr(GPUParallelDimsAttr::name, attr);
+}
+
+/// Clone defining ops of constant live-in values into `region`, rewrite uses
+/// inside the region to the clones, and remove those values from
+/// `liveInValues` so they are not threaded through `acc.compute_region` ins.
+static void materializeConstantLiveInsIntoRegion(Region &region,
+                                                 SetVector<Value> &liveInValues,
+                                                 RewriterBase &rewriter) {
+  SmallVector<Value> constantLiveIns;
+  for (Value v : liveInValues) {
+    Operation *defOp = v.getDefiningOp();
+    if (defOp && matchPattern(defOp, m_Constant())) {
+      // As per the definition of ConstantLike trait, constants must have a
+      // single result.
+      assert(defOp->getNumResults() == 1 &&
+             "constants must have a single result");
+      constantLiveIns.push_back(v);
+    }
+  }
+  if (constantLiveIns.empty())
+    return;
+
+  OpBuilder::InsertionGuard guard(rewriter);
+  rewriter.setInsertionPointToStart(&region.front());
+
+  for (Value v : constantLiveIns) {
+    Value newV = rewriter.clone(*v.getDefiningOp())->getResult(0);
+    replaceAllUsesInRegionWith(v, newV, region);
+    liveInValues.remove(v);
+  }
 }
 
 /// Insert a parallel dimension into the list, maintaining order by
@@ -318,6 +351,7 @@ public:
     Region &region = computeOp.getRegion();
     SetVector<Value> liveInValues;
     getUsedValuesDefinedAbove(region, region, liveInValues);
+    materializeConstantLiveInsIntoRegion(region, liveInValues, rewriter);
     IRMapping mapping;
     auto computeRegion = buildComputeRegion(
         computeOp->getLoc(), launchArgs, liveInValues.getArrayRef(),

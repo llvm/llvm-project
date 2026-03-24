@@ -51,8 +51,8 @@ ModuleFile *ModuleManager::lookupByFileName(StringRef Name) const {
 
 ModuleFile *ModuleManager::lookupByModuleName(StringRef Name) const {
   if (const Module *Mod = HeaderSearchInfo.getModuleMap().findModule(Name))
-    if (OptionalFileEntryRef File = Mod->getASTFile())
-      return lookup(*File);
+    if (const ModuleFileName *FileName = Mod->getASTFileName())
+      return lookupByFileName(*FileName);
 
   return nullptr;
 }
@@ -299,10 +299,8 @@ void ModuleManager::removeModules(ModuleIterator First) {
   }
 
   // Delete the modules.
-  for (ModuleIterator victim = First; victim != Last; ++victim) {
-    Modules.erase(ModuleFileKey(victim->File));
+  for (ModuleIterator victim = First; victim != Last; ++victim)
     Modules.erase(victim->FileKey);
-  }
 
   Chain.erase(Chain.begin() + (First - begin()), Chain.end());
 }

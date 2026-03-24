@@ -393,10 +393,6 @@ def : GCNPat<(i32 (fp_to_uint_sat (f64 (VOP3Mods f64:$src0, i32:$src0_modifiers)
              (V_CVT_U32_F64_e64 $src0_modifiers, $src0)>;
 def : GCNPat<(i32 (fp_to_sint_sat (f64 (VOP3Mods f64:$src0, i32:$src0_modifiers)), i32)),
              (V_CVT_I32_F64_e64 $src0_modifiers, $src0)>;
-def : GCNPat<(i32 (fp_to_uint_sat f32:$src0, i32)), (V_CVT_U32_F32_e32 (f32 $src0))>;
-def : GCNPat<(i32 (fp_to_sint_sat f32:$src0, i32)), (V_CVT_I32_F32_e32 (f32 $src0))>;
-def : GCNPat<(i32 (fp_to_uint_sat f64:$src0, i32)), (V_CVT_U32_F64_e32 (f64 $src0))>;
-def : GCNPat<(i32 (fp_to_sint_sat f64:$src0, i32)), (V_CVT_I32_F64_e32 (f64 $src0))>;
 
 def : GCNPat<(i32 (fp_to_uint_sat_gi (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
              (V_CVT_U32_F32_e64 $src0_modifiers, $src0)>;
@@ -406,10 +402,6 @@ def : GCNPat<(i32 (fp_to_uint_sat_gi (f64 (VOP3Mods f64:$src0, i32:$src0_modifie
              (V_CVT_U32_F64_e64 $src0_modifiers, $src0)>;
 def : GCNPat<(i32 (fp_to_sint_sat_gi (f64 (VOP3Mods f64:$src0, i32:$src0_modifiers)))),
              (V_CVT_I32_F64_e64 $src0_modifiers, $src0)>;
-def : GCNPat<(i32 (fp_to_uint_sat_gi f32:$src0)), (V_CVT_U32_F32_e32 (f32 $src0))>;
-def : GCNPat<(i32 (fp_to_sint_sat_gi f32:$src0)), (V_CVT_I32_F32_e32 (f32 $src0))>;
-def : GCNPat<(i32 (fp_to_uint_sat_gi f64:$src0)), (V_CVT_U32_F64_e32 (f64 $src0))>;
-def : GCNPat<(i32 (fp_to_sint_sat_gi f64:$src0)), (V_CVT_I32_F64_e32 (f64 $src0))>;
 
 defm V_CLREXCP : VOP1Inst <"v_clrexcp", VOP_NO_EXT<VOP_NONE>>;
 
@@ -829,12 +821,25 @@ class Cvt_PK_F32_F8_Pat_OpSel<SDPatternOperator node, int index,
          (inst_e32 $src))
 >;
 
+class Cvt_PK_F32_F8_Pat_t16<SDPatternOperator node, int index,
+    VOP3_Pseudo inst_e64> : GCNPat<
+    (v2f32 (node i32:$src, index)),
+    (inst_e64 0, (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS $src, VGPR_32)),
+      !if(index, hi16, lo16)), 0)
+>;
+
 let SubtargetPredicate = isGFX11Plus, OtherPredicates = [HasFP8ConversionInsts] in {
   foreach Index = [0, -1] in {
-    def : Cvt_PK_F32_F8_Pat_OpSel<int_amdgcn_cvt_pk_f32_fp8, Index,
-                                  V_CVT_PK_F32_FP8_fake16_e32, V_CVT_PK_F32_FP8_fake16_e64>;
-    def : Cvt_PK_F32_F8_Pat_OpSel<int_amdgcn_cvt_pk_f32_bf8, Index,
-                                  V_CVT_PK_F32_BF8_fake16_e32, V_CVT_PK_F32_BF8_fake16_e64>;
+    let True16Predicate = UseFakeTrue16Insts in {
+      def : Cvt_PK_F32_F8_Pat_OpSel<int_amdgcn_cvt_pk_f32_fp8, Index,
+                                    V_CVT_PK_F32_FP8_fake16_e32, V_CVT_PK_F32_FP8_fake16_e64>;
+      def : Cvt_PK_F32_F8_Pat_OpSel<int_amdgcn_cvt_pk_f32_bf8, Index,
+                                    V_CVT_PK_F32_BF8_fake16_e32, V_CVT_PK_F32_BF8_fake16_e64>;
+    }
+    let True16Predicate = UseRealTrue16Insts in {
+      def : Cvt_PK_F32_F8_Pat_t16<int_amdgcn_cvt_pk_f32_fp8, Index, V_CVT_PK_F32_FP8_t16_e64>;
+      def : Cvt_PK_F32_F8_Pat_t16<int_amdgcn_cvt_pk_f32_bf8, Index, V_CVT_PK_F32_BF8_t16_e64>;
+    }
   }
 }
 
