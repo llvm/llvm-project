@@ -1268,9 +1268,9 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
 
   KernelArgsTy KernelArgs{};
   uint32_t NumBlocksAndThreads[3] = {1u, 1u, 1u};
-  auto Err = L0Kernel.launchImpl(*this, NumBlocksAndThreads,
-                                     NumBlocksAndThreads, 0, KernelArgs,
-                                     KernelLaunchParamsTy{}, AsyncInfoWrapper);
+  auto Err =
+      L0Kernel.launchImpl(*this, NumBlocksAndThreads, NumBlocksAndThreads, 0,
+                          KernelArgs, KernelLaunchParamsTy{}, AsyncInfoWrapper);
 
   AsyncInfoWrapper.finalize(Err);
   if (Err)
