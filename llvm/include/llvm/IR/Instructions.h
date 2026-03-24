@@ -3139,7 +3139,7 @@ class UncondBrInst : public BranchInst {
   constexpr static IntrusiveOperandsAllocMarker AllocMarker{1};
 
   UncondBrInst(const UncondBrInst &BI);
-  LLVM_ABI explicit UncondBrInst(BasicBlock *IfTrue,
+  LLVM_ABI explicit UncondBrInst(BasicBlock *Target,
                                  InsertPosition InsertBefore);
 
 protected:
@@ -3149,9 +3149,9 @@ protected:
   LLVM_ABI UncondBrInst *cloneImpl() const;
 
 public:
-  static UncondBrInst *Create(BasicBlock *IfTrue,
+  static UncondBrInst *Create(BasicBlock *Target,
                               InsertPosition InsertBefore = nullptr) {
-    return new (AllocMarker) UncondBrInst(IfTrue, InsertBefore);
+    return new (AllocMarker) UncondBrInst(Target, InsertBefore);
   }
 
   /// Transparently provide more efficient getOperand methods.
