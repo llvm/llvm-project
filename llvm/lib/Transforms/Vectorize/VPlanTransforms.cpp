@@ -6529,7 +6529,7 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
     // Filter out scalar VPlan for the remaining memory operations.
     if (LoopVectorizationPlanner::getDecisionAndClampRange(
             [](ElementCount VF) { return VF.isScalar(); }, Range))
-      return;
+      continue;
 
     if (VPHistogramRecipe *Histogram = RecipeBuilder.widenIfHistogram(VPI)) {
       ReplaceWith(Histogram);
