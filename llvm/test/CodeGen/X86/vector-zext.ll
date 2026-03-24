@@ -2362,54 +2362,45 @@ define <4 x i32> @zext_4i17_to_4i32(ptr %ptr) {
 ; SSE41-LABEL: zext_4i17_to_4i32:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movq (%rdi), %rax
-; SSE41-NEXT:    movq %rax, %rcx
-; SSE41-NEXT:    shrq $17, %rcx
 ; SSE41-NEXT:    movd %eax, %xmm0
-; SSE41-NEXT:    pinsrd $1, %ecx, %xmm0
 ; SSE41-NEXT:    movq %rax, %rcx
+; SSE41-NEXT:    movl 8(%rdi), %edx
+; SSE41-NEXT:    shldq $13, %rax, %rdx
+; SSE41-NEXT:    shrq $17, %rax
+; SSE41-NEXT:    pinsrd $1, %eax, %xmm0
 ; SSE41-NEXT:    shrq $34, %rcx
 ; SSE41-NEXT:    pinsrd $2, %ecx, %xmm0
-; SSE41-NEXT:    movl 8(%rdi), %ecx
-; SSE41-NEXT:    shrq $51, %rax
-; SSE41-NEXT:    shlq $13, %rcx
-; SSE41-NEXT:    orq %rax, %rcx
-; SSE41-NEXT:    pinsrd $3, %ecx, %xmm0
+; SSE41-NEXT:    pinsrd $3, %edx, %xmm0
 ; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: zext_4i17_to_4i32:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    movq (%rdi), %rax
-; AVX1-NEXT:    movq %rax, %rcx
-; AVX1-NEXT:    shrq $17, %rcx
 ; AVX1-NEXT:    vmovd %eax, %xmm0
-; AVX1-NEXT:    vpinsrd $1, %ecx, %xmm0, %xmm0
 ; AVX1-NEXT:    movq %rax, %rcx
+; AVX1-NEXT:    movl 8(%rdi), %edx
+; AVX1-NEXT:    shldq $13, %rax, %rdx
+; AVX1-NEXT:    shrq $17, %rax
+; AVX1-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
 ; AVX1-NEXT:    shrq $34, %rcx
 ; AVX1-NEXT:    vpinsrd $2, %ecx, %xmm0, %xmm0
-; AVX1-NEXT:    movl 8(%rdi), %ecx
-; AVX1-NEXT:    shrq $51, %rax
-; AVX1-NEXT:    shlq $13, %rcx
-; AVX1-NEXT:    orq %rax, %rcx
-; AVX1-NEXT:    vpinsrd $3, %ecx, %xmm0, %xmm0
+; AVX1-NEXT:    vpinsrd $3, %edx, %xmm0, %xmm0
 ; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: zext_4i17_to_4i32:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    movq (%rdi), %rax
-; AVX2-NEXT:    movq %rax, %rcx
-; AVX2-NEXT:    shrq $17, %rcx
 ; AVX2-NEXT:    vmovd %eax, %xmm0
-; AVX2-NEXT:    vpinsrd $1, %ecx, %xmm0, %xmm0
 ; AVX2-NEXT:    movq %rax, %rcx
+; AVX2-NEXT:    movl 8(%rdi), %edx
+; AVX2-NEXT:    shldq $13, %rax, %rdx
+; AVX2-NEXT:    shrq $17, %rax
+; AVX2-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
 ; AVX2-NEXT:    shrq $34, %rcx
 ; AVX2-NEXT:    vpinsrd $2, %ecx, %xmm0, %xmm0
-; AVX2-NEXT:    movl 8(%rdi), %ecx
-; AVX2-NEXT:    shrq $51, %rax
-; AVX2-NEXT:    shlq $13, %rcx
-; AVX2-NEXT:    orq %rax, %rcx
-; AVX2-NEXT:    vpinsrd $3, %ecx, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrd $3, %edx, %xmm0, %xmm0
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [131071,131071,131071,131071]
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
@@ -2417,18 +2408,15 @@ define <4 x i32> @zext_4i17_to_4i32(ptr %ptr) {
 ; AVX512-LABEL: zext_4i17_to_4i32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    movq (%rdi), %rax
-; AVX512-NEXT:    movq %rax, %rcx
-; AVX512-NEXT:    shrq $17, %rcx
 ; AVX512-NEXT:    vmovd %eax, %xmm0
-; AVX512-NEXT:    vpinsrd $1, %ecx, %xmm0, %xmm0
 ; AVX512-NEXT:    movq %rax, %rcx
+; AVX512-NEXT:    movl 8(%rdi), %edx
+; AVX512-NEXT:    shldq $13, %rax, %rdx
+; AVX512-NEXT:    shrq $17, %rax
+; AVX512-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
 ; AVX512-NEXT:    shrq $34, %rcx
 ; AVX512-NEXT:    vpinsrd $2, %ecx, %xmm0, %xmm0
-; AVX512-NEXT:    movl 8(%rdi), %ecx
-; AVX512-NEXT:    shrq $51, %rax
-; AVX512-NEXT:    shlq $13, %rcx
-; AVX512-NEXT:    orq %rax, %rcx
-; AVX512-NEXT:    vpinsrd $3, %ecx, %xmm0, %xmm0
+; AVX512-NEXT:    vpinsrd $3, %edx, %xmm0, %xmm0
 ; AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [131071,131071,131071,131071]
 ; AVX512-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq

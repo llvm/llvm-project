@@ -1221,10 +1221,7 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; X64-NEXT:    shrq %r8
 ; X64-NEXT:    andq %r14, %r8
 ; X64-NEXT:    leaq (%r8,%r13,2), %r8
-; X64-NEXT:    movq %r8, %r13
-; X64-NEXT:    shlq $16, %r13
-; X64-NEXT:    shrq $48, %r9
-; X64-NEXT:    orq %r13, %r9
+; X64-NEXT:    shrdq $48, %r8, %r9
 ; X64-NEXT:    bswapq %rcx
 ; X64-NEXT:    movq %rcx, %r13
 ; X64-NEXT:    shrq $4, %r13
@@ -1242,10 +1239,7 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; X64-NEXT:    shrq %rcx
 ; X64-NEXT:    andq %r14, %rcx
 ; X64-NEXT:    leaq (%rcx,%r13,2), %rcx
-; X64-NEXT:    movq %rcx, %r13
-; X64-NEXT:    shlq $16, %r13
-; X64-NEXT:    shrq $48, %r8
-; X64-NEXT:    orq %r13, %r8
+; X64-NEXT:    shrdq $48, %rcx, %r8
 ; X64-NEXT:    bswapq %rdx
 ; X64-NEXT:    movq %rdx, %r13
 ; X64-NEXT:    shrq $4, %r13
@@ -1263,10 +1257,7 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; X64-NEXT:    shrq %rdx
 ; X64-NEXT:    andq %r14, %rdx
 ; X64-NEXT:    leaq (%rdx,%r13,2), %rdx
-; X64-NEXT:    movq %rdx, %r13
-; X64-NEXT:    shlq $16, %r13
-; X64-NEXT:    shrq $48, %rcx
-; X64-NEXT:    orq %r13, %rcx
+; X64-NEXT:    shrdq $48, %rdx, %rcx
 ; X64-NEXT:    bswapq %rsi
 ; X64-NEXT:    movq %rsi, %r13
 ; X64-NEXT:    shrq $4, %r13
@@ -1284,10 +1275,7 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; X64-NEXT:    shrq %rsi
 ; X64-NEXT:    andq %r14, %rsi
 ; X64-NEXT:    leaq (%rsi,%r10,2), %rsi
-; X64-NEXT:    movq %rsi, %r10
-; X64-NEXT:    shlq $16, %r10
-; X64-NEXT:    shrq $48, %rdx
-; X64-NEXT:    orq %r10, %rdx
+; X64-NEXT:    shrdq $48, %rsi, %rdx
 ; X64-NEXT:    shrq $48, %rsi
 ; X64-NEXT:    movq %rdx, 56(%rax)
 ; X64-NEXT:    movq %rcx, 48(%rax)

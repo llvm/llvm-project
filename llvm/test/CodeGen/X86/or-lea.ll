@@ -175,13 +175,11 @@ define i64 @or_shift1_and1_64(i64 %x, i64 %y) {
 ; X86-LABEL: or_shift1_and1_64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    shll %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    shldl $1, %ecx, %edx
 ; X86-NEXT:    andl $1, %eax
-; X86-NEXT:    leal (%eax,%edx,2), %eax
-; X86-NEXT:    shrl $31, %edx
-; X86-NEXT:    orl %ecx, %edx
+; X86-NEXT:    leal (%eax,%ecx,2), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: or_shift1_and1_64:

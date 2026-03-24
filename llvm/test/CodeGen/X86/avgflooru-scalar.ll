@@ -260,9 +260,7 @@ define i64 @test_fixed_i64(i64 %a0, i64 %a1) nounwind {
 ; X86-NEXT:    setb %dl
 ; X86-NEXT:    movzbl %dl, %edx
 ; X86-NEXT:    shldl $31, %eax, %edx
-; X86-NEXT:    shrl %ecx
-; X86-NEXT:    shll $31, %eax
-; X86-NEXT:    orl %ecx, %eax
+; X86-NEXT:    shldl $31, %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_fixed_i64:
@@ -290,9 +288,7 @@ define i64 @test_lsb_i64(i64 %a0, i64 %a1) nounwind {
 ; X86-NEXT:    setb %dl
 ; X86-NEXT:    movzbl %dl, %edx
 ; X86-NEXT:    shldl $31, %eax, %edx
-; X86-NEXT:    shrl %ecx
-; X86-NEXT:    shll $31, %eax
-; X86-NEXT:    orl %ecx, %eax
+; X86-NEXT:    shldl $31, %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_lsb_i64:
@@ -322,9 +318,7 @@ define i64 @test_ext_i64(i64 %a0, i64 %a1) nounwind {
 ; X86-NEXT:    setb %dl
 ; X86-NEXT:    movzbl %dl, %edx
 ; X86-NEXT:    shldl $31, %eax, %edx
-; X86-NEXT:    shrl %ecx
-; X86-NEXT:    shll $31, %eax
-; X86-NEXT:    orl %ecx, %eax
+; X86-NEXT:    shldl $31, %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_ext_i64:

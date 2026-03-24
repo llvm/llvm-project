@@ -101,9 +101,7 @@ define i128 @knownbits_mask_addc_shl(i64 %a0, i64 %a1, i64 %a2) nounwind {
 ; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    adcl $0, %ecx
 ; X86-NEXT:    shldl $22, %edx, %ecx
-; X86-NEXT:    shrl $10, %esi
-; X86-NEXT:    shll $22, %edx
-; X86-NEXT:    orl %esi, %edx
+; X86-NEXT:    shldl $22, %esi, %edx
 ; X86-NEXT:    movl %edx, 8(%eax)
 ; X86-NEXT:    movl %ecx, 12(%eax)
 ; X86-NEXT:    movl $0, 4(%eax)

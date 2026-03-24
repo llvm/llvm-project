@@ -133,19 +133,14 @@ define i64 @rolq_extract_mul_with_mask(i64 %i) nounwind {
 define i64 @no_extract_shl(i64 %i) nounwind {
 ; X86-LABEL: no_extract_shl:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %esi
-; X86-NEXT:    shll $10, %esi
-; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    shrl $22, %edx
-; X86-NEXT:    orl %esi, %edx
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    shldl $10, %ecx, %edx
 ; X86-NEXT:    shll $10, %ecx
 ; X86-NEXT:    shrl $20, %eax
 ; X86-NEXT:    andl $127, %eax
 ; X86-NEXT:    orl %ecx, %eax
-; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: no_extract_shl:

@@ -351,7 +351,6 @@ define i528 @large_promotion(i528 %A) nounwind {
 ;
 ; CHECK64-LABEL: large_promotion:
 ; CHECK64:       # %bb.0:
-; CHECK64-NEXT:    pushq %r14
 ; CHECK64-NEXT:    pushq %rbx
 ; CHECK64-NEXT:    movq %rdi, %rax
 ; CHECK64-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
@@ -368,25 +367,13 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; CHECK64-NEXT:    bswapq %r9
 ; CHECK64-NEXT:    shrdq $48, %r9, %rbx
 ; CHECK64-NEXT:    bswapq %r8
-; CHECK64-NEXT:    movq %r8, %r14
-; CHECK64-NEXT:    shlq $16, %r14
-; CHECK64-NEXT:    shrq $48, %r9
-; CHECK64-NEXT:    orq %r14, %r9
+; CHECK64-NEXT:    shrdq $48, %r8, %r9
 ; CHECK64-NEXT:    bswapq %rcx
-; CHECK64-NEXT:    movq %rcx, %r14
-; CHECK64-NEXT:    shlq $16, %r14
-; CHECK64-NEXT:    shrq $48, %r8
-; CHECK64-NEXT:    orq %r14, %r8
+; CHECK64-NEXT:    shrdq $48, %rcx, %r8
 ; CHECK64-NEXT:    bswapq %rdx
-; CHECK64-NEXT:    movq %rdx, %r14
-; CHECK64-NEXT:    shlq $16, %r14
-; CHECK64-NEXT:    shrq $48, %rcx
-; CHECK64-NEXT:    orq %r14, %rcx
+; CHECK64-NEXT:    shrdq $48, %rdx, %rcx
 ; CHECK64-NEXT:    bswapq %rsi
-; CHECK64-NEXT:    movq %rsi, %r14
-; CHECK64-NEXT:    shlq $16, %r14
-; CHECK64-NEXT:    shrq $48, %rdx
-; CHECK64-NEXT:    orq %r14, %rdx
+; CHECK64-NEXT:    shrdq $48, %rsi, %rdx
 ; CHECK64-NEXT:    shrq $48, %rsi
 ; CHECK64-NEXT:    movq %rdx, 56(%rax)
 ; CHECK64-NEXT:    movq %rcx, 48(%rax)
@@ -398,7 +385,6 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; CHECK64-NEXT:    movq %rdi, (%rax)
 ; CHECK64-NEXT:    movw %si, 64(%rax)
 ; CHECK64-NEXT:    popq %rbx
-; CHECK64-NEXT:    popq %r14
 ; CHECK64-NEXT:    retq
   %Z = call i528 @llvm.bswap.i528(i528 %A)
   ret i528 %Z

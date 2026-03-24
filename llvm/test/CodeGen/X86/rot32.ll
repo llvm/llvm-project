@@ -187,14 +187,28 @@ entry:
 }
 
 define i32 @xbar(i32 %x, i32 %y, i32 %z) nounwind readnone {
-; CHECK32-LABEL: xbar:
-; CHECK32:       # %bb.0: # %entry
-; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK32-NEXT:    shll $7, %ecx
-; CHECK32-NEXT:    shrl $25, %eax
-; CHECK32-NEXT:    orl %ecx, %eax
-; CHECK32-NEXT:    retl
+; X86-LABEL: xbar:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shldl $7, %ecx, %eax
+; X86-NEXT:    retl
+;
+; SHLD-LABEL: xbar:
+; SHLD:       # %bb.0: # %entry
+; SHLD-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SHLD-NEXT:    shldl $7, %ecx, %eax
+; SHLD-NEXT:    retl
+;
+; BMI2-LABEL: xbar:
+; BMI2:       # %bb.0: # %entry
+; BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; BMI2-NEXT:    shll $7, %ecx
+; BMI2-NEXT:    shrl $25, %eax
+; BMI2-NEXT:    orl %ecx, %eax
+; BMI2-NEXT:    retl
 ;
 ; X64-LABEL: xbar:
 ; X64:       # %bb.0: # %entry
@@ -309,14 +323,28 @@ entry:
 }
 
 define i32 @xbu(i32 %x, i32 %y, i32 %z) nounwind readnone {
-; CHECK32-LABEL: xbu:
-; CHECK32:       # %bb.0: # %entry
-; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK32-NEXT:    shll $25, %ecx
-; CHECK32-NEXT:    shrl $7, %eax
-; CHECK32-NEXT:    orl %ecx, %eax
-; CHECK32-NEXT:    retl
+; X86-LABEL: xbu:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shldl $25, %ecx, %eax
+; X86-NEXT:    retl
+;
+; SHLD-LABEL: xbu:
+; SHLD:       # %bb.0: # %entry
+; SHLD-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SHLD-NEXT:    shldl $25, %ecx, %eax
+; SHLD-NEXT:    retl
+;
+; BMI2-LABEL: xbu:
+; BMI2:       # %bb.0: # %entry
+; BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; BMI2-NEXT:    shll $25, %ecx
+; BMI2-NEXT:    shrl $7, %eax
+; BMI2-NEXT:    orl %ecx, %eax
+; BMI2-NEXT:    retl
 ;
 ; X64-LABEL: xbu:
 ; X64:       # %bb.0: # %entry

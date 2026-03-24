@@ -1455,25 +1455,58 @@ define i256 @ashr_i256_load(ptr %p0, i256 %a1) nounwind {
 }
 
 define i256 @shl_i256_1(i256 %a0) nounwind {
-; CHECK-LABEL: shl_i256_1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    leaq (,%rdx,2), %rdi
-; CHECK-NEXT:    movq %rsi, %r9
-; CHECK-NEXT:    shrq $63, %r9
-; CHECK-NEXT:    orq %rdi, %r9
-; CHECK-NEXT:    leaq (,%rcx,2), %rdi
-; CHECK-NEXT:    shrq $63, %rdx
-; CHECK-NEXT:    orq %rdi, %rdx
-; CHECK-NEXT:    shlq %r8
-; CHECK-NEXT:    shrq $63, %rcx
-; CHECK-NEXT:    orq %r8, %rcx
-; CHECK-NEXT:    addq %rsi, %rsi
-; CHECK-NEXT:    movq %rcx, 24(%rax)
-; CHECK-NEXT:    movq %rdx, 16(%rax)
-; CHECK-NEXT:    movq %r9, 8(%rax)
-; CHECK-NEXT:    movq %rsi, (%rax)
-; CHECK-NEXT:    retq
+; SSE-LABEL: shl_i256_1:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movq %rdi, %rax
+; SSE-NEXT:    shldq $1, %rcx, %r8
+; SSE-NEXT:    shldq $1, %rdx, %rcx
+; SSE-NEXT:    shldq $1, %rsi, %rdx
+; SSE-NEXT:    addq %rsi, %rsi
+; SSE-NEXT:    movq %r8, 24(%rdi)
+; SSE-NEXT:    movq %rcx, 16(%rdi)
+; SSE-NEXT:    movq %rdx, 8(%rdi)
+; SSE-NEXT:    movq %rsi, (%rdi)
+; SSE-NEXT:    retq
+;
+; AVX2-LABEL: shl_i256_1:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    movq %rdi, %rax
+; AVX2-NEXT:    leaq (,%rdx,2), %rdi
+; AVX2-NEXT:    movq %rsi, %r9
+; AVX2-NEXT:    shrq $63, %r9
+; AVX2-NEXT:    orq %rdi, %r9
+; AVX2-NEXT:    leaq (,%rcx,2), %rdi
+; AVX2-NEXT:    shrq $63, %rdx
+; AVX2-NEXT:    orq %rdi, %rdx
+; AVX2-NEXT:    shlq %r8
+; AVX2-NEXT:    shrq $63, %rcx
+; AVX2-NEXT:    orq %r8, %rcx
+; AVX2-NEXT:    addq %rsi, %rsi
+; AVX2-NEXT:    movq %rcx, 24(%rax)
+; AVX2-NEXT:    movq %rdx, 16(%rax)
+; AVX2-NEXT:    movq %r9, 8(%rax)
+; AVX2-NEXT:    movq %rsi, (%rax)
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: shl_i256_1:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    movq %rdi, %rax
+; AVX512-NEXT:    leaq (,%rdx,2), %rdi
+; AVX512-NEXT:    movq %rsi, %r9
+; AVX512-NEXT:    shrq $63, %r9
+; AVX512-NEXT:    orq %rdi, %r9
+; AVX512-NEXT:    leaq (,%rcx,2), %rdi
+; AVX512-NEXT:    shrq $63, %rdx
+; AVX512-NEXT:    orq %rdi, %rdx
+; AVX512-NEXT:    shlq %r8
+; AVX512-NEXT:    shrq $63, %rcx
+; AVX512-NEXT:    orq %r8, %rcx
+; AVX512-NEXT:    addq %rsi, %rsi
+; AVX512-NEXT:    movq %rcx, 24(%rax)
+; AVX512-NEXT:    movq %rdx, 16(%rax)
+; AVX512-NEXT:    movq %r9, 8(%rax)
+; AVX512-NEXT:    movq %rsi, (%rax)
+; AVX512-NEXT:    retq
 ;
 ; X86-LABEL: shl_i256_1:
 ; X86:       # %bb.0:
@@ -1508,27 +1541,62 @@ define i256 @shl_i256_1(i256 %a0) nounwind {
 }
 
 define i256 @lshr_i256_1(i256 %a0) nounwind {
-; CHECK-LABEL: lshr_i256_1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    shrq %rsi
-; CHECK-NEXT:    movq %rdx, %rdi
-; CHECK-NEXT:    shlq $63, %rdi
-; CHECK-NEXT:    orq %rsi, %rdi
-; CHECK-NEXT:    movq %rcx, %rsi
-; CHECK-NEXT:    shlq $63, %rsi
-; CHECK-NEXT:    shrq %rdx
-; CHECK-NEXT:    orq %rsi, %rdx
-; CHECK-NEXT:    shrq %rcx
-; CHECK-NEXT:    movq %r8, %rsi
-; CHECK-NEXT:    shlq $63, %rsi
-; CHECK-NEXT:    orq %rcx, %rsi
-; CHECK-NEXT:    shrq %r8
-; CHECK-NEXT:    movq %r8, 24(%rax)
-; CHECK-NEXT:    movq %rsi, 16(%rax)
-; CHECK-NEXT:    movq %rdx, 8(%rax)
-; CHECK-NEXT:    movq %rdi, (%rax)
-; CHECK-NEXT:    retq
+; SSE-LABEL: lshr_i256_1:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movq %rdi, %rax
+; SSE-NEXT:    shrdq $1, %rdx, %rsi
+; SSE-NEXT:    shrdq $1, %rcx, %rdx
+; SSE-NEXT:    shrdq $1, %r8, %rcx
+; SSE-NEXT:    shrq %r8
+; SSE-NEXT:    movq %r8, 24(%rdi)
+; SSE-NEXT:    movq %rcx, 16(%rdi)
+; SSE-NEXT:    movq %rdx, 8(%rdi)
+; SSE-NEXT:    movq %rsi, (%rdi)
+; SSE-NEXT:    retq
+;
+; AVX2-LABEL: lshr_i256_1:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    movq %rdi, %rax
+; AVX2-NEXT:    shrq %rsi
+; AVX2-NEXT:    movq %rdx, %rdi
+; AVX2-NEXT:    shlq $63, %rdi
+; AVX2-NEXT:    orq %rsi, %rdi
+; AVX2-NEXT:    movq %rcx, %rsi
+; AVX2-NEXT:    shlq $63, %rsi
+; AVX2-NEXT:    shrq %rdx
+; AVX2-NEXT:    orq %rsi, %rdx
+; AVX2-NEXT:    shrq %rcx
+; AVX2-NEXT:    movq %r8, %rsi
+; AVX2-NEXT:    shlq $63, %rsi
+; AVX2-NEXT:    orq %rcx, %rsi
+; AVX2-NEXT:    shrq %r8
+; AVX2-NEXT:    movq %r8, 24(%rax)
+; AVX2-NEXT:    movq %rsi, 16(%rax)
+; AVX2-NEXT:    movq %rdx, 8(%rax)
+; AVX2-NEXT:    movq %rdi, (%rax)
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: lshr_i256_1:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    movq %rdi, %rax
+; AVX512-NEXT:    shrq %rsi
+; AVX512-NEXT:    movq %rdx, %rdi
+; AVX512-NEXT:    shlq $63, %rdi
+; AVX512-NEXT:    orq %rsi, %rdi
+; AVX512-NEXT:    movq %rcx, %rsi
+; AVX512-NEXT:    shlq $63, %rsi
+; AVX512-NEXT:    shrq %rdx
+; AVX512-NEXT:    orq %rsi, %rdx
+; AVX512-NEXT:    shrq %rcx
+; AVX512-NEXT:    movq %r8, %rsi
+; AVX512-NEXT:    shlq $63, %rsi
+; AVX512-NEXT:    orq %rcx, %rsi
+; AVX512-NEXT:    shrq %r8
+; AVX512-NEXT:    movq %r8, 24(%rax)
+; AVX512-NEXT:    movq %rsi, 16(%rax)
+; AVX512-NEXT:    movq %rdx, 8(%rax)
+; AVX512-NEXT:    movq %rdi, (%rax)
+; AVX512-NEXT:    retq
 ;
 ; X86-LABEL: lshr_i256_1:
 ; X86:       # %bb.0:
@@ -1581,27 +1649,62 @@ define i256 @lshr_i256_1(i256 %a0) nounwind {
 }
 
 define i256 @ashr_i256_1(i256 %a0) nounwind {
-; CHECK-LABEL: ashr_i256_1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    shrq %rsi
-; CHECK-NEXT:    movq %rdx, %rdi
-; CHECK-NEXT:    shlq $63, %rdi
-; CHECK-NEXT:    orq %rsi, %rdi
-; CHECK-NEXT:    movq %rcx, %rsi
-; CHECK-NEXT:    shlq $63, %rsi
-; CHECK-NEXT:    shrq %rdx
-; CHECK-NEXT:    orq %rsi, %rdx
-; CHECK-NEXT:    shrq %rcx
-; CHECK-NEXT:    movq %r8, %rsi
-; CHECK-NEXT:    shlq $63, %rsi
-; CHECK-NEXT:    orq %rcx, %rsi
-; CHECK-NEXT:    sarq %r8
-; CHECK-NEXT:    movq %r8, 24(%rax)
-; CHECK-NEXT:    movq %rsi, 16(%rax)
-; CHECK-NEXT:    movq %rdx, 8(%rax)
-; CHECK-NEXT:    movq %rdi, (%rax)
-; CHECK-NEXT:    retq
+; SSE-LABEL: ashr_i256_1:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movq %rdi, %rax
+; SSE-NEXT:    shrdq $1, %rdx, %rsi
+; SSE-NEXT:    shrdq $1, %rcx, %rdx
+; SSE-NEXT:    shrdq $1, %r8, %rcx
+; SSE-NEXT:    sarq %r8
+; SSE-NEXT:    movq %r8, 24(%rdi)
+; SSE-NEXT:    movq %rcx, 16(%rdi)
+; SSE-NEXT:    movq %rdx, 8(%rdi)
+; SSE-NEXT:    movq %rsi, (%rdi)
+; SSE-NEXT:    retq
+;
+; AVX2-LABEL: ashr_i256_1:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    movq %rdi, %rax
+; AVX2-NEXT:    shrq %rsi
+; AVX2-NEXT:    movq %rdx, %rdi
+; AVX2-NEXT:    shlq $63, %rdi
+; AVX2-NEXT:    orq %rsi, %rdi
+; AVX2-NEXT:    movq %rcx, %rsi
+; AVX2-NEXT:    shlq $63, %rsi
+; AVX2-NEXT:    shrq %rdx
+; AVX2-NEXT:    orq %rsi, %rdx
+; AVX2-NEXT:    shrq %rcx
+; AVX2-NEXT:    movq %r8, %rsi
+; AVX2-NEXT:    shlq $63, %rsi
+; AVX2-NEXT:    orq %rcx, %rsi
+; AVX2-NEXT:    sarq %r8
+; AVX2-NEXT:    movq %r8, 24(%rax)
+; AVX2-NEXT:    movq %rsi, 16(%rax)
+; AVX2-NEXT:    movq %rdx, 8(%rax)
+; AVX2-NEXT:    movq %rdi, (%rax)
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: ashr_i256_1:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    movq %rdi, %rax
+; AVX512-NEXT:    shrq %rsi
+; AVX512-NEXT:    movq %rdx, %rdi
+; AVX512-NEXT:    shlq $63, %rdi
+; AVX512-NEXT:    orq %rsi, %rdi
+; AVX512-NEXT:    movq %rcx, %rsi
+; AVX512-NEXT:    shlq $63, %rsi
+; AVX512-NEXT:    shrq %rdx
+; AVX512-NEXT:    orq %rsi, %rdx
+; AVX512-NEXT:    shrq %rcx
+; AVX512-NEXT:    movq %r8, %rsi
+; AVX512-NEXT:    shlq $63, %rsi
+; AVX512-NEXT:    orq %rcx, %rsi
+; AVX512-NEXT:    sarq %r8
+; AVX512-NEXT:    movq %r8, 24(%rax)
+; AVX512-NEXT:    movq %rsi, 16(%rax)
+; AVX512-NEXT:    movq %rdx, 8(%rax)
+; AVX512-NEXT:    movq %rdi, (%rax)
+; AVX512-NEXT:    retq
 ;
 ; X86-LABEL: ashr_i256_1:
 ; X86:       # %bb.0:
