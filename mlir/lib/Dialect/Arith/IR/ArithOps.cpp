@@ -931,6 +931,10 @@ OpFoldResult arith::RemUIOp::fold(FoldAdaptor adaptor) {
   return div0 ? Attribute() : result;
 }
 
+Speculation::Speculatability arith::RemUIOp::getSpeculatability() {
+  return getDivUISpeculatability(getRhs());
+}
+
 //===----------------------------------------------------------------------===//
 // RemSIOp
 //===----------------------------------------------------------------------===//
@@ -952,6 +956,15 @@ OpFoldResult arith::RemSIOp::fold(FoldAdaptor adaptor) {
                                                });
 
   return div0 ? Attribute() : result;
+}
+
+Speculation::Speculatability arith::RemSIOp::getSpeculatability() {
+  // X % 0 => UB
+  // X % -1 is well-defined (always 0), unlike X / -1 which can overflow.
+  if (matchPattern(getRhs(), m_IntRangeWithoutZeroS()))
+    return Speculation::Speculatable;
+
+  return Speculation::NotSpeculatable;
 }
 
 //===----------------------------------------------------------------------===//
