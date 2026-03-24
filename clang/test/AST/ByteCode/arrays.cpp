@@ -835,3 +835,15 @@ namespace MultiDimConstructExpr {
   constexpr b d;
   static_assert(d.m[2][1].p == &d.m[2][1]);
 }
+
+namespace MultiDimArrayInitLoop {
+  struct S {
+    float x[2][2];
+  };
+  struct T {
+    S y;
+  };
+
+  constexpr S s = {1};
+  constexpr T t = {s};
+}

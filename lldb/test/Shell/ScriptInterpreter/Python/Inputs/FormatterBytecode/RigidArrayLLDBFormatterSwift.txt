@@ -17,7 +17,7 @@ let _RigidArray_formatter: (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UIn
     // flags
     0x00,
     // sig_update
-    0x05,
+    0x06,
     // program size
     0x27,
     // program

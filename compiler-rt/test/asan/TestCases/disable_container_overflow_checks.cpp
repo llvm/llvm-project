@@ -11,8 +11,6 @@
 // overflow checks at compile time.
 // RUN: %clangxx_asan -D__SANITIZER_DISABLE_CONTAINER_OVERFLOW__ -O %s -o %t-no-overflow
 // RUN: %run %t-no-overflow 2>&1 | FileCheck --check-prefix=CHECK-NOCRASH %s
-//
-// UNSUPPORTED: true
 
 #include <assert.h>
 #include <stdio.h>

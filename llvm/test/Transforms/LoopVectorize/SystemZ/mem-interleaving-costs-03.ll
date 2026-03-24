@@ -40,4 +40,4 @@ for.cond:                                         ; preds = %for.cond, %func_1.e
 
 declare void @llvm.lifetime.start.p0(ptr nocapture)
 declare void @llvm.lifetime.end.p0(ptr nocapture)
-declare dso_local i64 @safe_sub_func_int64_t_s_s(i64, i64)
+declare i64 @safe_sub_func_int64_t_s_s(i64, i64)

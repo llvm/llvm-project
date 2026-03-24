@@ -4,7 +4,7 @@
 ; RUN: opt < %s -passes=loop-vectorize -mtriple=aarch64--linux-gnu -mattr=+sve -force-vector-width=2 -force-vector-interleave=1 \
 ; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue -scalable-vectorization=on -S -o - | FileCheck --check-prefix=SVE %s
 
-define dso_local double @test(ptr nocapture noundef readonly %data, ptr nocapture noundef readonly %offset, i32 noundef %size) local_unnamed_addr {
+define double @test(ptr nocapture noundef readonly %data, ptr nocapture noundef readonly %offset, i32 noundef %size) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[SIZE:%.*]], 0

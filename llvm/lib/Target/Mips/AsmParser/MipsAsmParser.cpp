@@ -710,6 +710,11 @@ public:
   bool useSoftFloat() const {
     return getSTI().hasFeature(Mips::FeatureSoftFloat);
   }
+
+  bool isSingleFloat() const {
+    return getSTI().hasFeature(Mips::FeatureSingleFloat);
+  }
+
   bool hasMT() const {
     return getSTI().hasFeature(Mips::FeatureMT);
   }

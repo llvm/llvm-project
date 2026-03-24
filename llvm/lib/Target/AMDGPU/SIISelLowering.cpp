@@ -5660,6 +5660,13 @@ static unsigned getDPPOpcForWaveReduction(unsigned Opc,
     return AMDGPU::V_OR_B32_dpp;
   case AMDGPU::S_XOR_B32:
     return AMDGPU::V_XOR_B32_dpp;
+  case AMDGPU::V_ADD_F32_e64:
+  case AMDGPU::V_SUB_F32_e64:
+    return AMDGPU::V_ADD_F32_dpp;
+  case AMDGPU::V_MIN_F32_e64:
+    return AMDGPU::V_MIN_F32_dpp;
+  case AMDGPU::V_MAX_F32_e64:
+    return AMDGPU::V_MAX_F32_dpp;
   default:
     llvm_unreachable("unhandled lane op");
   }
@@ -6217,6 +6224,7 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
     } else {
       assert(ST.hasDPP() && "Sub Target does not support DPP Operations");
 
+      bool IsFPOp = isFloatingPointWaveReduceOperation(Opc);
       Register SrcWithIdentity = MRI.createVirtualRegister(SrcRegClass);
       Register IdentityVGPR = MRI.createVirtualRegister(SrcRegClass);
       Register IdentitySGPR = MRI.createVirtualRegister(DstRegClass);
@@ -6249,14 +6257,38 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
       unsigned DPPOpc = getDPPOpcForWaveReduction(Opc, ST);
       auto BuildDPPMachineInstr = [&](Register Dst, Register Src,
                                       unsigned DPPCtrl) {
-        BuildMI(BB, MI, DL, TII->get(DPPOpc), Dst)
-            .addReg(Src)     // old
-            .addReg(Src)     // src0
+        auto DPPInstr =
+            BuildMI(BB, MI, DL, TII->get(DPPOpc), Dst).addReg(Src); // old
+        if (IsFPOp)
+          DPPInstr.addImm(SISrcMods::NONE); // src0 modifier
+        DPPInstr.addReg(Src);               // src0
+        if (IsFPOp)
+          DPPInstr.addImm(SISrcMods::NONE); // src1 modifier
+        DPPInstr
             .addReg(Src)     // src1
             .addImm(DPPCtrl) // dpp-ctrl
             .addImm(0xf)     // row-mask
             .addImm(0xf)     // bank-mask
             .addImm(0);      // bound-control
+      };
+      auto BuildClampInstr = [&](Register Dst, Register Src0, Register Src1) {
+        unsigned ClampOpc = Opc;
+        if (!IsFPOp) {
+          if (Opc == AMDGPU::S_SUB_I32)
+            ClampOpc = AMDGPU::S_ADD_I32;
+          ClampOpc = TII->getVALUOp(ClampOpc);
+        }
+        auto ClampInstr = BuildMI(BB, MI, DL, TII->get(ClampOpc), Dst);
+        if (IsFPOp)
+          ClampInstr.addImm(SISrcMods::NONE); // src0 mod
+        ClampInstr.addReg(Src0);              // src0
+        if (IsFPOp)
+          ClampInstr.addImm(SISrcMods::NONE); // src1 mod
+        ClampInstr.addReg(Src1);              // src1
+        if (TII->hasIntClamp(*ClampInstr) || TII->hasFPClamp(*ClampInstr))
+          ClampInstr.addImm(0); // clamp
+        if (IsFPOp)
+          ClampInstr.addImm(0); // omod
       };
       // DPP reduction
       BuildDPPMachineInstr(DPPRowShr1, SrcWithIdentity,
@@ -6285,17 +6317,7 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
             .addReg(DPPRowShr8) // addr
             .addImm(0x1E0)      // swizzle offset (i16)
             .addImm(0x0);       // gds (i1)
-        auto ClampInstr =
-            BuildMI(BB, MI, DL,
-                    TII->get(TII->getVALUOp(
-                        Opc == AMDGPU::S_SUB_I32
-                            ? static_cast<unsigned>(AMDGPU::S_ADD_I32)
-                            : Opc)),
-                    RowBcast15)
-                .addReg(DPPRowShr8)
-                .addReg(SwizzledValue);
-        if (TII->hasIntClamp(*ClampInstr) || TII->hasFPClamp(*ClampInstr))
-          ClampInstr.addImm(0);
+        BuildClampInstr(RowBcast15, DPPRowShr8, SwizzledValue);
       }
       FinalDPPResult = RowBcast15;
       if (!IsWave32) {
@@ -6343,19 +6365,21 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
               .addReg(PermuteByteOffset) // addr
               .addReg(RowBcast15)        // data
               .addImm(0);                // offset
-          auto ClampInstr =
-              BuildMI(BB, MI, DL,
-                      TII->get(TII->getVALUOp(
-                          Opc == AMDGPU::S_SUB_I32
-                              ? static_cast<unsigned>(AMDGPU::S_ADD_I32)
-                              : Opc)),
-                      RowBcast31)
-                  .addReg(RowBcast15)
-                  .addReg(PermutedValue);
-          if (TII->hasIntClamp(*ClampInstr) || TII->hasFPClamp(*ClampInstr))
-            ClampInstr.addImm(0);
+          BuildClampInstr(RowBcast31, RowBcast15, PermutedValue);
         }
         FinalDPPResult = RowBcast31;
+      }
+      if (Opc == AMDGPU::V_SUB_F32_e64) {
+        Register NegatedValVGPR =
+            MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+        BuildMI(BB, MI, DL, TII->get(AMDGPU::V_SUB_F32_e64), NegatedValVGPR)
+            .addImm(SISrcMods::NONE)                    // src0 mods
+            .addReg(IdentityVGPR)                       // src0
+            .addImm(SISrcMods::NONE)                    // src1 mods
+            .addReg(IsWave32 ? RowBcast15 : RowBcast31) // src1
+            .addImm(SISrcMods::NONE)                    // clamp
+            .addImm(SISrcMods::NONE);                   // omod
+        FinalDPPResult = NegatedValVGPR;
       }
       // The final reduced value is in the last lane.
       BuildMI(BB, MI, DL, TII->get(AMDGPU::V_READLANE_B32), ReducedValSGPR)

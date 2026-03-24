@@ -48,9 +48,9 @@ ENUM_CLASS(Intent, Default, In, Out, InOut)
 // Union of specifiers for all I/O statements.
 ENUM_CLASS(IoSpecKind, Access, Action, Advance, Asynchronous, Blank, Decimal,
     Delim, Direct, Encoding, End, Eor, Err, Exist, File, Fmt, Form, Formatted,
-    Id, Iomsg, Iostat, Name, Named, Newunit, Nextrec, Nml, Number, Opened, Pad,
-    Pending, Pos, Position, Read, Readwrite, Rec, Recl, Round, Sequential, Sign,
-    Size, Status, Stream, Unformatted, Unit, Write,
+    Id, Iomsg, Iostat, Leading_Zero, Name, Named, Newunit, Nextrec, Nml, Number,
+    Opened, Pad, Pending, Pos, Position, Read, Readwrite, Rec, Recl, Round,
+    Sequential, Sign, Size, Status, Stream, Unformatted, Unit, Write,
     Carriagecontrol, // nonstandard
     Convert, // nonstandard
     Dispose, // nonstandard

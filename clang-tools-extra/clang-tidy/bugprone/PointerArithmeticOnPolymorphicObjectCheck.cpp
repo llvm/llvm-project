@@ -53,7 +53,9 @@ void PointerArithmeticOnPolymorphicObjectCheck::registerMatchers(
                                        ? PointerExprWithVirtualMethod
                                        : PolymorphicPointerExpr;
 
-  const auto ArraySubscript = arraySubscriptExpr(hasBase(SelectedPointerExpr));
+  const auto ArraySubscript =
+      expr(arraySubscriptExpr(hasBase(SelectedPointerExpr)),
+           unless(isInstantiationDependent()));
 
   const auto BinaryOperators =
       binaryOperator(hasAnyOperatorName("+", "-", "+=", "-="),

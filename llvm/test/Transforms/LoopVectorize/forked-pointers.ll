@@ -14,7 +14,7 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 ;;   }
 ;; }
 
-define dso_local void @forked_ptrs_different_base_same_offset(ptr nocapture readonly %Base1, ptr nocapture readonly %Base2, ptr nocapture %Dest, ptr nocapture readonly %Preds) {
+define void @forked_ptrs_different_base_same_offset(ptr nocapture readonly %Base1, ptr nocapture readonly %Base2, ptr nocapture %Dest, ptr nocapture readonly %Preds) {
 ; CHECK-LABEL: @forked_ptrs_different_base_same_offset(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_MEMCHECK:%.*]]
@@ -123,7 +123,7 @@ for.body:
 ;;   }
 ;; }
 
-define dso_local void @forked_ptrs_same_base_different_offset(ptr nocapture readonly %Base, ptr nocapture %Dest, ptr nocapture readonly %Preds) {
+define void @forked_ptrs_same_base_different_offset(ptr nocapture readonly %Base, ptr nocapture %Dest, ptr nocapture readonly %Preds) {
 ; CHECK-LABEL: @forked_ptrs_same_base_different_offset(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]

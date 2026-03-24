@@ -53,7 +53,7 @@ export float TestLoad() {
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::RasterizerOrderedStructuredBuffer", ptr {{.*}}, i32 0, i32 0
 // CHECK-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", float, 1, 1), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
-// DXIL-NEXT: %[[BUFPTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f32_1_1t(target("dx.RawBuffer", float, 1, 1) %[[HANDLE]], i32 %[[INDEX]])
+// DXIL-NEXT: %[[BUFPTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f32_1_1t.i32(target("dx.RawBuffer", float, 1, 1) %[[HANDLE]], i32 %[[INDEX]])
 // CHECK-NEXT: %[[VAL:.*]] = load float, ptr %[[BUFPTR]]
 // CHECK-NEXT: ret float %[[VAL]]
 
@@ -61,7 +61,7 @@ export float TestLoad() {
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::RasterizerOrderedStructuredBuffer.0", ptr {{.*}}, i32 0, i32 0
 // CHECK-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", <2 x i32>, 1, 1), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
-// DXIL-NEXT: %[[BUFPTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_v2i32_1_1t(target("dx.RawBuffer", <2 x i32>, 1, 1) %[[HANDLE]], i32 %[[INDEX]])
+// DXIL-NEXT: %[[BUFPTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_v2i32_1_1t.i32(target("dx.RawBuffer", <2 x i32>, 1, 1) %[[HANDLE]], i32 %[[INDEX]])
 // CHECK-NEXT: %[[VAL:.*]] = load <2 x i32>, ptr %[[BUFPTR]]
 // CHECK-NEXT: ret <2 x i32> %[[VAL]]
 
@@ -136,8 +136,8 @@ export uint TestGetDimensions() {
 
 // DXIL: declare i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_1t(target("dx.RawBuffer", float, 1, 1), i8)
 // DXIL: declare i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_v2i32_1_1t(target("dx.RawBuffer", <2 x i32>, 1, 1), i8)
-// DXIL: declare ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f32_1_1t(target("dx.RawBuffer", float, 1, 1), i32)
-// DXIL: declare ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_v2i32_1_1t(target("dx.RawBuffer", <2 x i32>, 1, 1), i32)
+// DXIL: declare ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f32_1_1t.i32(target("dx.RawBuffer", float, 1, 1), i32)
+// DXIL: declare ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_v2i32_1_1t.i32(target("dx.RawBuffer", <2 x i32>, 1, 1), i32)
 
 // DXIL: declare i32 @llvm.dx.resource.getdimensions.x.tdx.RawBuffer_f32_1_1t(target("dx.RawBuffer", float, 1, 1))
 // DXIL: declare i32 @llvm.dx.resource.getdimensions.x.tdx.RawBuffer_v2i32_1_1t(target("dx.RawBuffer", <2 x i32>, 1, 1))

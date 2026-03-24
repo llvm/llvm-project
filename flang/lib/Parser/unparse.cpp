@@ -1547,6 +1547,9 @@ public:
       FMT(RP);
       FMT(DC);
       FMT(DP);
+      FMT(LZ);
+      FMT(LZS);
+      FMT(LZP);
 #undef FMT
     case format::ControlEditDesc::Kind::Dollar:
       Put('$');

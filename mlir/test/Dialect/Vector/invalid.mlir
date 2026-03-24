@@ -169,6 +169,26 @@ func.func @extract_0d_result(%arg0: vector<f32>) {
 
 // -----
 
+// Extracting a scalar position from a 1-D vector must return a scalar, not a
+// single-element vector (implicit bitcast is not allowed).
+func.func @extract_scalar_as_single_element_vector(%arg0: vector<2xf32>) {
+  // expected-error@+2 {{'vector.extract' op failed to infer returned types}}
+  // expected-error@+1 {{'vector.extract' op inferred type(s) 'f32' are incompatible with return type(s) of operation 'vector<1xf32>'}}
+  %0 = vector.extract %arg0[0] : vector<1xf32> from vector<2xf32>
+}
+
+// -----
+
+// Extracting a single-element sub-vector from an n-D vector must return the
+// inferred vector type, not a scalar (implicit bitcast is not allowed).
+func.func @extract_subvec_as_scalar(%arg0: vector<3x1xf32>) {
+  // expected-error@+2 {{'vector.extract' op failed to infer returned types}}
+  // expected-error@+1 {{'vector.extract' op inferred type(s) 'vector<1xf32>' are incompatible with return type(s) of operation 'f32'}}
+  %0 = vector.extract %arg0[0] : f32 from vector<3x1xf32>
+}
+
+// -----
+
 func.func @extract_position_overflow(%arg0: vector<4x8x16xf32>) {
   // expected-error@+1 {{expected position attribute #3 to be a non-negative integer smaller than the corresponding vector dimension or poison (-1)}}
   %1 = vector.extract %arg0[0, 0, -5] : f32 from vector<4x8x16xf32>

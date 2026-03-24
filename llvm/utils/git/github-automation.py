@@ -60,6 +60,18 @@ def escape_description(str):
     return str
 
 
+def format_author(user) -> str:
+    # user.login is the account name, which everyone has. In theory it can be None,
+    # perhaps for closed accounts. user.name is a longer display name for example
+    # "First Last", which not everyone has set.
+    author = "Author: "
+    if user.name is not None:
+        author += f"{user.name} ({user.login})"
+    else:
+        author += f"{user.login}"
+    return author
+
+
 class IssueSubscriber:
     @property
     def team_name(self) -> str:
@@ -88,7 +100,7 @@ class IssueSubscriber:
         comment = f"""
 @llvm/{team.slug}
 
-Author: {self.issue.user.name} ({self.issue.user.login})
+{format_author(self.issue.user)}
 
 <details>
 {body}
@@ -183,7 +195,7 @@ class PRSubscriber:
 {self.COMMENT_TAG}
 {team_mention}
 
-Author: {self.pr.user.name} ({self.pr.user.login})
+{format_author(self.pr.user)}
 
 <details>
 <summary>Changes</summary>

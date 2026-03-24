@@ -123,6 +123,14 @@ public:
     return *this;
   }
 
+  // A StringSwitch case that is selected if the specified predicate
+  // returns true for the subject string.
+  StringSwitch &Predicate(function_ref<bool(StringRef)> Pred, T Value) {
+    if (!Result && Pred(Str))
+      Result = std::move(Value);
+    return *this;
+  }
+
   [[nodiscard]] R Default(T Value) {
     if (Result)
       return std::move(*Result);

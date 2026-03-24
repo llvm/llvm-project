@@ -6,7 +6,7 @@
 ;; Make sure that nothing gets vectorized, even those with explicit hints.
 ;; The code is based on the C++ reproducer at https://github.com/sparclinux/issues/issues/69#issuecomment-3822053617
 
-@glob = dso_local local_unnamed_addr global i16 0, align 2
+@glob = global i16 0, align 2
 
 define fastcc void @novectorize(ptr %__args1, i16 %__args3) {
 ; SPARC-LABEL: define fastcc void @novectorize(

@@ -160,15 +160,15 @@ psrari.w t5, t6, 7
 # CHECK-ASM-AND-OBJ: srari t6, s11, 63
 # CHECK-ASM: encoding: [0x9b,0xcf,0xfd,0xd7]
 srari t6, s11, 63
-# CHECK-ASM-AND-OBJ: psati.h s11, s10, 9
+# CHECK-ASM-AND-OBJ: psati.h s11, s10, 10
 # CHECK-ASM: encoding: [0x9b,0x4d,0x9d,0xe1]
-psati.h s11, s10, 9
-# CHECK-ASM-AND-OBJ: psati.w s10, s9, 10
+psati.h s11, s10, 10
+# CHECK-ASM-AND-OBJ: psati.w s10, s9, 11
 # CHECK-ASM: encoding: [0x1b,0xcd,0xac,0xe2]
-psati.w s10, s9, 10
-# CHECK-ASM-AND-OBJ: sati s9, s8, 32
+psati.w s10, s9, 11
+# CHECK-ASM-AND-OBJ: sati s9, s8, 33
 # CHECK-ASM: encoding: [0x9b,0x4c,0x0c,0xe6]
-sati s9, s8, 32
+sati s9, s8, 33
 # CHECK-ASM-AND-OBJ: psrl.hs a6, a7, a1
 # CHECK-ASM: encoding: [0x1b,0xc8,0xb8,0x88]
 psrl.hs a6, a7, a1

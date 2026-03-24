@@ -13,7 +13,7 @@
 ;  }
 ;}
 
-define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture readonly %trigger) local_unnamed_addr #0 {
+define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture readonly %trigger) #0 {
 ; RV32-LABEL: @foo4(
 ; RV32-NEXT:  entry:
 ; RV32-NEXT:    br label [[VECTOR_MEMCHECK:%.*]]

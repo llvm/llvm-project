@@ -410,7 +410,7 @@ exit:
   ret void
 }
 
-define dso_local void @forced_optsize(ptr noalias nocapture readonly %x_p, ptr noalias nocapture readonly %y_p, ptr noalias nocapture %z_p) minsize optsize {
+define void @forced_optsize(ptr noalias nocapture readonly %x_p, ptr noalias nocapture readonly %y_p, ptr noalias nocapture %z_p) minsize optsize {
 ; CHECK-LABEL: @forced_optsize(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]

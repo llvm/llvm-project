@@ -308,12 +308,12 @@ void skep6(const S6 &k) {
 // CHECK-NEXT: | | |   `-CXXConstructExpr {{.*}} 'S6' 'void (const S6 &) noexcept'
 // CHECK-NEXT: | | |     `-DeclRefExpr {{.*}} 'const S6' lvalue ParmVar {{.*}} 'k' 'const S6 &'
 // CHECK-NEXT: | | `-OutlinedFunctionDecl {{.*}}
-// CHECK-NEXT: | |   |-ImplicitParamDecl {{.*}} implicit used k 'const S6 &'
+// CHECK-NEXT: | |   |-ImplicitParamDecl {{.*}} implicit used k 'const S6'
 // CHECK-NEXT: | |   `-CompoundStmt {{.*}}
 // CHECK-NEXT: | |     `-CXXOperatorCallExpr {{.*}} 'void' '()'
 // CHECK-NEXT: | |       |-ImplicitCastExpr {{.*}} 'void (*)() const' <FunctionToPointerDecay>
 // CHECK-NEXT: | |       | `-DeclRefExpr {{.*}} 'void () const' lvalue CXXMethod {{.*}} 'operator()' 'void () const'
-// CHECK-NEXT: | |       `-DeclRefExpr {{.*}} 'const S6' lvalue ImplicitParam {{.*}} 'k' 'const S6 &'
+// CHECK-NEXT: | |       `-DeclRefExpr {{.*}} 'const S6' lvalue ImplicitParam {{.*}} 'k' 'const S6'
 // CHECK-NEXT: | `-SYCLKernelEntryPointAttr {{.*}} KN<6>
 
 // Parameter types are not required to be complete at the point of a

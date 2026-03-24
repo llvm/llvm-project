@@ -29,7 +29,7 @@ target triple = "i386-unknown-linux-gnu"
 ;   }
 ; }
 
-define dso_local void @masked_strided1(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i8 zeroext %guard) local_unnamed_addr {
+define void @masked_strided1(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i8 zeroext %guard) {
 ; DISABLED_MASKED_STRIDED-LABEL: @masked_strided1(
 ; DISABLED_MASKED_STRIDED-NEXT:  entry:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[CONV:%.*]] = zext i8 [[GUARD:%.*]] to i32
@@ -202,7 +202,7 @@ for.end:
 ; be vectorized with masked wide-loads with the mask properly shuffled and
 ; And-ed with the gaps mask.
 ;
-define dso_local void @masked_strided1_optsize(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i8 zeroext %guard) local_unnamed_addr optsize {
+define void @masked_strided1_optsize(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i8 zeroext %guard) optsize {
 ; DISABLED_MASKED_STRIDED-LABEL: @masked_strided1_optsize(
 ; DISABLED_MASKED_STRIDED-NEXT:  entry:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[CONV:%.*]] = zext i8 [[GUARD:%.*]] to i32
@@ -381,7 +381,7 @@ for.end:
 ;   }
 ; }
 ;
-define dso_local void @masked_strided1_optsize_unknown_tc(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i8 zeroext %guard, i32 %n) local_unnamed_addr optsize {
+define void @masked_strided1_optsize_unknown_tc(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i8 zeroext %guard, i32 %n) optsize {
 ; DISABLED_MASKED_STRIDED-LABEL: @masked_strided1_optsize_unknown_tc(
 ; DISABLED_MASKED_STRIDED-NEXT:  entry:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[CMP9:%.*]] = icmp sgt i32 [[N:%.*]], 0
@@ -585,7 +585,7 @@ for.end:
 ;   }
 ; }
 ;
-define dso_local void @masked_strided3_optsize_unknown_tc(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i8 zeroext %guard, i32 %n) local_unnamed_addr optsize {
+define void @masked_strided3_optsize_unknown_tc(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i8 zeroext %guard, i32 %n) optsize {
 ; DISABLED_MASKED_STRIDED-LABEL: @masked_strided3_optsize_unknown_tc(
 ; DISABLED_MASKED_STRIDED-NEXT:  entry:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[CMP9:%.*]] = icmp sgt i32 [[N:%.*]], 0
@@ -860,7 +860,7 @@ for.end:
 ;   }
 ; }
 ;
-define dso_local void @unconditional_strided1_optsize(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i8 zeroext %guard) local_unnamed_addr optsize {
+define void @unconditional_strided1_optsize(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i8 zeroext %guard) optsize {
 ; DISABLED_MASKED_STRIDED-LABEL: @unconditional_strided1_optsize(
 ; DISABLED_MASKED_STRIDED-NEXT:  entry:
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -965,7 +965,7 @@ for.end:
 ;         q[ix] = t;
 ;   }
 ;
-define dso_local void @unconditional_strided1_optsize_unknown_tc(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i32 %n) local_unnamed_addr optsize {
+define void @unconditional_strided1_optsize_unknown_tc(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i32 %n) optsize {
 ; DISABLED_MASKED_STRIDED-LABEL: @unconditional_strided1_optsize_unknown_tc(
 ; DISABLED_MASKED_STRIDED-NEXT:  entry:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[N:%.*]], 0
@@ -1152,7 +1152,7 @@ for.end:
 ; }
 ;}
 ;
-define dso_local void @masked_strided2(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i8 zeroext %guard) local_unnamed_addr  {
+define void @masked_strided2(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i8 zeroext %guard)  {
 ; DISABLED_MASKED_STRIDED-LABEL: @masked_strided2(
 ; DISABLED_MASKED_STRIDED-NEXT:  entry:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[CONV:%.*]] = zext i8 [[GUARD:%.*]] to i32
@@ -1557,7 +1557,7 @@ for.end:
 ; }
 ;}
 ;
-define dso_local void @masked_strided2_reverse(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i8 zeroext %guard) local_unnamed_addr  {
+define void @masked_strided2_reverse(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i8 zeroext %guard)  {
 ; DISABLED_MASKED_STRIDED-LABEL: @masked_strided2_reverse(
 ; DISABLED_MASKED_STRIDED-NEXT:  entry:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[CONV:%.*]] = zext i8 [[GUARD:%.*]] to i32
@@ -2268,7 +2268,7 @@ for.end:
 ; }
 ;}
 ;
-define dso_local void @masked_strided2_unknown_tc(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i32 %guard, i32 %n) local_unnamed_addr optsize {
+define void @masked_strided2_unknown_tc(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i32 %guard, i32 %n) optsize {
 ; DISABLED_MASKED_STRIDED-LABEL: @masked_strided2_unknown_tc(
 ; DISABLED_MASKED_STRIDED-NEXT:  entry:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[CMP22:%.*]] = icmp sgt i32 [[N:%.*]], 0
@@ -2706,7 +2706,7 @@ for.end:
 ; }
 ;}
 ;
-define dso_local void @unconditional_masked_strided2_unknown_tc(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i32 %n) local_unnamed_addr optsize {
+define void @unconditional_masked_strided2_unknown_tc(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i32 %n) optsize {
 ; DISABLED_MASKED_STRIDED-LABEL: @unconditional_masked_strided2_unknown_tc(
 ; DISABLED_MASKED_STRIDED-NEXT:  entry:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[CMP20:%.*]] = icmp sgt i32 [[N:%.*]], 0

@@ -14,7 +14,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK-DAG: ![[MD3]] = distinct !{![[MD3]], !"LVerDomain"}
 
 ; Function Attrs: norecurse nounwind uwtable
-define void @test(ptr nocapture readonly %a, ptr nocapture %b) local_unnamed_addr #0 {
+define void @test(ptr nocapture readonly %a, ptr nocapture %b) #0 {
 entry:
   br label %for.body
 

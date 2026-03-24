@@ -109,20 +109,19 @@ define i64 @ctz_nxv8i1_no_range(<vscale x 8 x i16> %a) {
 ;
 ; RV64-LABEL: ctz_nxv8i1_no_range:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    csrr a0, vlenb
-; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
+; RV64-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; RV64-NEXT:    vid.v v16
-; RV64-NEXT:    li a1, -1
+; RV64-NEXT:    li a0, -1
+; RV64-NEXT:    csrr a1, vlenb
 ; RV64-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; RV64-NEXT:    vmsne.vi v0, v8, 0
-; RV64-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
-; RV64-NEXT:    vmv.v.x v8, a0
-; RV64-NEXT:    vmadd.vx v16, a1, v8
-; RV64-NEXT:    vmv.v.i v8, 0
-; RV64-NEXT:    vmerge.vvm v8, v8, v16, v0
-; RV64-NEXT:    vredmaxu.vs v8, v8, v8
-; RV64-NEXT:    vmv.x.s a1, v8
-; RV64-NEXT:    sub a0, a0, a1
+; RV64-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
+; RV64-NEXT:    vmul.vx v8, v16, a0
+; RV64-NEXT:    vmv.v.i v16, 0
+; RV64-NEXT:    vadd.vx v16, v8, a1, v0.t
+; RV64-NEXT:    vredmaxu.vs v8, v16, v16
+; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:    sub a0, a1, a0
 ; RV64-NEXT:    ret
   %res = call i64 @llvm.experimental.cttz.elts.i64.nxv8i16(<vscale x 8 x i16> %a, i1 0)
   ret i64 %res

@@ -25,7 +25,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @uniform_branch(ptr nocapture %a, ptr nocapture readonly %b, i32 %N, i32 %M) local_unnamed_addr {
+define void @uniform_branch(ptr nocapture %a, ptr nocapture readonly %b, i32 %N, i32 %M) {
 entry:
   %cmp39 = icmp sgt i32 %N, 0
   br i1 %cmp39, label %outer.ph, label %for.end19
@@ -77,7 +77,7 @@ for.end19:                                  ; preds = %outer.inc, %entry
 ; CHECK: Unsupported conditional branch.
 ; CHECK: LV: Not vectorizing: Unsupported outer loop.
 
-define void @divergent_branch(ptr nocapture %a, ptr nocapture readonly %b, i32 %N, i32 %M) local_unnamed_addr {
+define void @divergent_branch(ptr nocapture %a, ptr nocapture readonly %b, i32 %N, i32 %M) {
 entry:
   %cmp39 = icmp sgt i32 %N, 0
   br i1 %cmp39, label %outer.ph, label %for.end19

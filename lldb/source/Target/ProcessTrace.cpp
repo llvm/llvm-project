@@ -72,6 +72,10 @@ void ProcessTrace::DidAttach(ArchSpec &process_arch) {
     return;
   }
 
+  // Pretend we stopped so we can show all of the threads
+  // in the trace and explore the final state.
+  SetPrivateState(lldb::eStateStopped);
+
   EventSP event_sp;
   WaitForProcessToStop(std::nullopt, &event_sp, true, listener_sp);
 

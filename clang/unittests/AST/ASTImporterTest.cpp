@@ -8142,7 +8142,7 @@ TEST_P(ImportAttributes, ImportGuardedBy) {
       int test __attribute__((guarded_by(G)));
       )",
       FromAttr, ToAttr);
-  checkImported(FromAttr->getArg(), ToAttr->getArg());
+  checkImportVariadicArg(FromAttr->args(), ToAttr->args());
 }
 
 TEST_P(ImportAttributes, ImportPtGuardedBy) {
@@ -8153,7 +8153,7 @@ TEST_P(ImportAttributes, ImportPtGuardedBy) {
       int *test __attribute__((pt_guarded_by(G)));
       )",
       FromAttr, ToAttr);
-  checkImported(FromAttr->getArg(), ToAttr->getArg());
+  checkImportVariadicArg(FromAttr->args(), ToAttr->args());
 }
 
 TEST_P(ImportAttributes, ImportAcquiredAfter) {

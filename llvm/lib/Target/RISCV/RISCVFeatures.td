@@ -1114,7 +1114,7 @@ def HasStdExtSmctrOrSsctr : Predicate<"Subtarget->hasStdExtSmctrOrSsctr()">,
 
 // Packed SIMD Extensions
 def FeatureStdExtP
-    : RISCVExperimentalExtension<0, 19,
+    : RISCVExperimentalExtension<0, 20,
                                  "'Base P' (Packed SIMD)",
                                  [FeatureStdExtZmmul, FeatureStdExtZba,
                                   FeatureStdExtZbb, FeatureStdExtZicsr]>;

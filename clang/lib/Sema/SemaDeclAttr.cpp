@@ -460,36 +460,33 @@ static void handlePtGuardedVarAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 static bool checkGuardedByAttrCommon(Sema &S, Decl *D, const ParsedAttr &AL,
-                                     Expr *&Arg) {
-  SmallVector<Expr *, 1> Args;
-  // check that all arguments are lockable objects
-  checkAttrArgsAreCapabilityObjs(S, D, AL, Args);
-  unsigned Size = Args.size();
-  if (Size != 1)
+                                     SmallVectorImpl<Expr *> &Args) {
+  if (!AL.checkAtLeastNumArgs(S, 1))
     return false;
 
-  Arg = Args[0];
-
-  return true;
+  checkAttrArgsAreCapabilityObjs(S, D, AL, Args);
+  return !Args.empty();
 }
 
 static void handleGuardedByAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  Expr *Arg = nullptr;
-  if (!checkGuardedByAttrCommon(S, D, AL, Arg))
+  SmallVector<Expr *, 1> Args;
+  if (!checkGuardedByAttrCommon(S, D, AL, Args))
     return;
 
-  D->addAttr(::new (S.Context) GuardedByAttr(S.Context, AL, Arg));
+  D->addAttr(::new (S.Context)
+                 GuardedByAttr(S.Context, AL, Args.data(), Args.size()));
 }
 
 static void handlePtGuardedByAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  Expr *Arg = nullptr;
-  if (!checkGuardedByAttrCommon(S, D, AL, Arg))
+  SmallVector<Expr *, 1> Args;
+  if (!checkGuardedByAttrCommon(S, D, AL, Args))
     return;
 
   if (!threadSafetyCheckIsPointer(S, D, AL))
     return;
 
-  D->addAttr(::new (S.Context) PtGuardedByAttr(S.Context, AL, Arg));
+  D->addAttr(::new (S.Context)
+                 PtGuardedByAttr(S.Context, AL, Args.data(), Args.size()));
 }
 
 static bool checkAcquireOrderAttrCommon(Sema &S, Decl *D, const ParsedAttr &AL,

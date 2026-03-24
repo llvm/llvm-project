@@ -35,8 +35,10 @@ def X86_Dialect : Dialect {
 //===----------------------------------------------------------------------===//
 
 // Operation that is part of the input dialect.
-class AVX512_Op<string mnemonic, list<Trait> traits = []> :
-  Op<X86_Dialect, "avx512." # mnemonic, traits> {}
+class AVX512_Op<string mnemonic, list<Trait> traits = []>
+    : Op<X86_Dialect, "avx512." # mnemonic, traits> {
+  let cppNamespace = X86_Dialect.cppNamespace # "::avx512";
+}
 
 //----------------------------------------------------------------------------//
 // MaskCompressOp
@@ -351,8 +353,10 @@ def CvtPackedF32ToBF16Op : AVX512_Op<"cvt.packed.f32_to_bf16", [Pure,
 //===----------------------------------------------------------------------===//
 
 // Operation that is part of the input dialect.
-class AVX10_Op<string mnemonic, list<Trait> traits = []> :
-  Op<X86_Dialect, "avx10." # mnemonic, traits> {}
+class AVX10_Op<string mnemonic, list<Trait> traits = []>
+    : Op<X86_Dialect, "avx10." # mnemonic, traits> {
+  let cppNamespace = X86_Dialect.cppNamespace # "::avx10";
+}
 
 //----------------------------------------------------------------------------//
 // AVX10 Int8 Dot
@@ -403,14 +407,18 @@ def AVX10DotInt8Op : AVX10_Op<"dot.i8", [Pure,
 //===----------------------------------------------------------------------===//
 
 // Operation that is part of the input dialect.
-class AVX_Op<string mnemonic, list<Trait> traits = []> :
-  Op<X86_Dialect, "avx." # mnemonic, traits> {}
+class AVX_Op<string mnemonic, list<Trait> traits = []>
+  : Op<X86_Dialect, "avx." # mnemonic, traits> {
+  let cppNamespace = X86_Dialect.cppNamespace # "::avx";
+}
 
 // Operation that may be part of the input dialect, but whose
 // form is somewhere between the user view of the operation
 // and the actual lower level intrinsic in LLVM IR.
-class AVX_LowOp<string mnemonic, list<Trait> traits = []> :
-  Op<X86_Dialect, "avx.intr." # mnemonic, traits> {}
+class AVX_LowOp<string mnemonic, list<Trait> traits = []>
+  : Op<X86_Dialect, "avx.intr." # mnemonic, traits> {
+  let cppNamespace = X86_Dialect.cppNamespace # "::avx";
+}
 
 //----------------------------------------------------------------------------//
 // AVX Rsqrt

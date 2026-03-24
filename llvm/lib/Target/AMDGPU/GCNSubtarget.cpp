@@ -338,6 +338,13 @@ void GCNSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
   // SIRegisterInfo::getRegPressureSetLimit()
   Policy.ShouldTrackPressure = true;
 
+  const Function &F = Region.RegionBegin->getMF()->getFunction();
+  if (AMDGPU::getSchedStrategy(F) == "coexec") {
+    Policy.OnlyTopDown = true;
+    Policy.OnlyBottomUp = false;
+    return;
+  }
+
   // Enabling both top down and bottom up scheduling seems to give us less
   // register spills than just using one of these approaches on its own.
   Policy.OnlyTopDown = false;

@@ -6642,6 +6642,15 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
       Ops.push_back(Sub);
       return true;
     }
+    // Handle INSERT_SUBVECTOR(UNDEF, SUB, IDX) iff IDX != 0
+    if (InsertIdx != 0 && Src.isUndef() &&
+        peekThroughBitcasts(Sub).getOpcode() != ISD::EXTRACT_SUBVECTOR) {
+      Mask.assign(NumElts, SM_SentinelUndef);
+      std::iota(Mask.begin() + InsertIdx, Mask.begin() + InsertIdx + NumSubElts,
+                0);
+      Ops.push_back(Sub);
+      return true;
+    }
     if (!N->isOnlyUserOf(Sub.getNode()))
       return false;
 
@@ -42640,7 +42649,8 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
       SDValue N0 = peekThroughOneUseBitcasts(N.getOperand(0));
       SDValue N1 = peekThroughOneUseBitcasts(N.getOperand(1));
       unsigned SrcOpcode = N0.getOpcode();
-      if (TLI.isBinOp(SrcOpcode) && N1.getOpcode() == SrcOpcode &&
+      if ((SrcOpcode == X86ISD::PSADBW || TLI.isBinOp(SrcOpcode)) &&
+          N1.getOpcode() == SrcOpcode &&
           N0.getValueType() == N1.getValueType() &&
           IsSafeToMoveShuffle(N0, SrcOpcode) &&
           IsSafeToMoveShuffle(N1, SrcOpcode)) {
@@ -42666,11 +42676,12 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
             LHS = DAG.getNode(Opc, DL, ShuffleVT, Op00, Op10);
             RHS = DAG.getNode(Opc, DL, ShuffleVT, Op01, Op11);
           }
-          EVT OpVT = N0.getValueType();
+          EVT OpSrcVT = N0.getOperand(0).getValueType();
+          EVT OpDstVT = N0.getValueType();
           return DAG.getBitcast(ShuffleVT,
-                                DAG.getNode(SrcOpcode, DL, OpVT,
-                                            DAG.getBitcast(OpVT, LHS),
-                                            DAG.getBitcast(OpVT, RHS)));
+                                DAG.getNode(SrcOpcode, DL, OpDstVT,
+                                            DAG.getBitcast(OpSrcVT, LHS),
+                                            DAG.getBitcast(OpSrcVT, RHS)));
         }
       }
       if (isUnaryOp(SrcOpcode) && N1.getOpcode() == SrcOpcode &&

@@ -10,6 +10,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcError.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -1576,9 +1577,16 @@ void LookupTask::printDescription(raw_ostream &OS) { OS << "Lookup task"; }
 void LookupTask::run() { LS.continueLookup(Error::success()); }
 
 ExecutionSession::ExecutionSession(std::unique_ptr<ExecutorProcessControl> EPC)
-    : EPC(std::move(EPC)) {
+    : EPC(std::move(EPC)), BootstrapJD(createBareJITDylib("<bootstrap>")) {
   // Associated EPC and this.
   this->EPC->ES = this;
+  SymbolMap BootstrapSymbols;
+  for (auto &[Name, Ptr] : this->EPC->getBootstrapSymbolsMap())
+    BootstrapSymbols[intern(Name)] =
+        ExecutorSymbolDef(Ptr, JITSymbolFlags::Exported);
+  // Can't fail: BootstrapJD is a new, empty JD and the BootstrapSymbols
+  // variable is a map, so can't contain duplicates.
+  cantFail(BootstrapJD.define(absoluteSymbols(std::move(BootstrapSymbols))));
 }
 
 ExecutionSession::~ExecutionSession() {

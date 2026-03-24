@@ -479,7 +479,7 @@ for.body:
 ; which aren't supported by the lowoverhead loop pass, causing the tail-predication
 ; to be reverted which is expensive and what we would like to avoid.
 ;
-define dso_local void @select_not_allowed(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C, i32 %N, ptr noalias nocapture readonly %Cond) {
+define void @select_not_allowed(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C, i32 %N, ptr noalias nocapture readonly %Cond) {
 ; CHECK-LABEL: @select_not_allowed(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP10:%.*]] = icmp sgt i32 [[N:%.*]], 0

@@ -608,10 +608,10 @@ public:
       ParmDeclMap::iterator I = MapRef.find(PVD);
       if (I != MapRef.end()) {
         VarDecl *VD = I->second;
-        assert(SemaRef.getASTContext().hasSameUnqualifiedType(PVD->getType(),
-                                                              VD->getType()));
-        assert(!VD->getType().isMoreQualifiedThan(PVD->getType(),
-                                                  SemaRef.getASTContext()));
+        assert(SemaRef.getASTContext().hasSameUnqualifiedType(
+            PVD->getType().getNonReferenceType(), VD->getType()));
+        assert(!VD->getType().isMoreQualifiedThan(
+            PVD->getType().getNonReferenceType(), SemaRef.getASTContext()));
         VD->setIsUsed();
         return DeclRefExpr::Create(
             SemaRef.getASTContext(), DRE->getQualifierLoc(),
@@ -650,7 +650,7 @@ OutlinedFunctionDecl *BuildSYCLKernelEntryPointOutline(Sema &SemaRef,
   for (ParmVarDecl *PVD : FD->parameters()) {
     ImplicitParamDecl *IPD = ImplicitParamDecl::Create(
         SemaRef.getASTContext(), OFD, SourceLocation(), PVD->getIdentifier(),
-        PVD->getType(), ImplicitParamKind::Other);
+        PVD->getType().getNonReferenceType(), ImplicitParamKind::Other);
     OFD->setParam(i, IPD);
     ParmMap[PVD] = IPD;
     ++i;

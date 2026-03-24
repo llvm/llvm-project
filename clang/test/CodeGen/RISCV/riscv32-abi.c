@@ -124,8 +124,32 @@ struct tiny f_agg_tiny_ret(void) {
   return (struct tiny){1, 2, 3, 4};
 }
 
+// Aggregates <= 2*xlen may be passed in registers, so will be coerced to
+// integer arguments. The rules for return are the same.
+
+struct tinier {
+  uint8_t a, b;
+};
+
+// ILP32-ILP32F-ILP32D-LABEL: define dso_local void @f_agg_tinier
+// ILP32-ILP32F-ILP32D-SAME: (i16 [[X_COERCE:%.*]]) #[[ATTR0]] {
+// ILP32-ILP32F-ILP32D:  entry:
+//
+void f_agg_tinier(struct tinier x) {
+  x.a += x.b;
+}
+
+// ILP32-ILP32F-ILP32D-LABEL: define dso_local i16 @f_agg_tinier_ret
+// ILP32-ILP32F-ILP32D-SAME: () #[[ATTR0]] {
+// ILP32-ILP32F-ILP32D:  entry:
+//
+struct tinier f_agg_tinier_ret(void) {
+  return (struct tinier){1, 2};
+}
+
 typedef uint8_t v4i8 __attribute__((vector_size(4)));
 typedef int32_t v1i32 __attribute__((vector_size(4)));
+typedef uint8_t v2i8 __attribute__((vector_size(2)));
 
 // ILP32-ILP32F-ILP32D-LABEL: define dso_local void @f_vec_tiny_v4i8
 // ILP32-ILP32F-ILP32D-SAME: (i32 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
@@ -158,6 +182,22 @@ void f_vec_tiny_v1i32(v1i32 x) {
 //
 v1i32 f_vec_tiny_v1i32_ret(void) {
   return (v1i32){1};
+}
+
+// ILP32-ILP32F-ILP32D-LABEL: define dso_local void @f_vec_tiny_v2i8
+// ILP32-ILP32F-ILP32D-SAME: (i16 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
+// ILP32-ILP32F-ILP32D:  entry:
+//
+void f_vec_tiny_v2i8(v2i8 x) {
+  x[0] = x[1];
+}
+
+// ILP32-ILP32F-ILP32D-LABEL: define dso_local i16 @f_vec_tiny_v2i8_ret
+// ILP32-ILP32F-ILP32D-SAME: () #[[ATTR0]] {
+// ILP32-ILP32F-ILP32D:  entry:
+//
+v2i8 f_vec_tiny_v2i8_ret(void) {
+  return (v2i8){1, 2};
 }
 
 struct small {
@@ -1542,7 +1582,7 @@ struct float16_s { _Float16 f; };
 // were a standalone floating-point real.
 
 // ILP32-LABEL: define dso_local void @f_float16_s_arg
-// ILP32-SAME: (i32 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// ILP32-SAME: (i16 [[A_COERCE:%.*]]) #[[ATTR0]] {
 // ILP32:  entry:
 //
 // ILP32F-ILP32D-LABEL: define dso_local void @f_float16_s_arg
@@ -1551,7 +1591,7 @@ struct float16_s { _Float16 f; };
 //
 void f_float16_s_arg(struct float16_s a) {}
 
-// ILP32-LABEL: define dso_local i32 @f_ret_float16_s
+// ILP32-LABEL: define dso_local i16 @f_ret_float16_s
 // ILP32-SAME: () #[[ATTR0]] {
 // ILP32:  entry:
 //
@@ -1570,7 +1610,7 @@ struct zbf_float16_s { int : 0; _Float16 f; };
 struct zbf_float16_zbf_s { int : 0; _Float16 f; int : 0; };
 
 // ILP32-LABEL: define dso_local void @f_zbf_float16_s_arg
-// ILP32-SAME: (i32 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// ILP32-SAME: (i16 [[A_COERCE:%.*]]) #[[ATTR0]] {
 // ILP32:  entry:
 //
 // ILP32F-ILP32D-LABEL: define dso_local void @f_zbf_float16_s_arg
@@ -1579,7 +1619,7 @@ struct zbf_float16_zbf_s { int : 0; _Float16 f; int : 0; };
 //
 void f_zbf_float16_s_arg(struct zbf_float16_s a) {}
 
-// ILP32-LABEL: define dso_local i32 @f_ret_zbf_float16_s
+// ILP32-LABEL: define dso_local i16 @f_ret_zbf_float16_s
 // ILP32-SAME: () #[[ATTR0]] {
 // ILP32:  entry:
 //
@@ -1854,7 +1894,7 @@ struct float16complex_s f_ret_float16complex_s(void) {
 struct float16arr1_s { _Float16 a[1]; };
 
 // ILP32-LABEL: define dso_local void @f_float16arr1_s_arg
-// ILP32-SAME: (i32 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// ILP32-SAME: (i16 [[A_COERCE:%.*]]) #[[ATTR0]] {
 // ILP32:  entry:
 //
 // ILP32F-ILP32D-LABEL: define dso_local void @f_float16arr1_s_arg
@@ -1863,7 +1903,7 @@ struct float16arr1_s { _Float16 a[1]; };
 //
 void f_float16arr1_s_arg(struct float16arr1_s a) {}
 
-// ILP32-LABEL: define dso_local i32 @f_ret_float16arr1_s
+// ILP32-LABEL: define dso_local i16 @f_ret_float16arr1_s
 // ILP32-SAME: () #[[ATTR0]] {
 // ILP32:  entry:
 //
@@ -2052,12 +2092,12 @@ struct char_char_float16_s f_ret_char_char_float16_s(void) {
 union float16_u { _Float16 a; };
 
 // ILP32-ILP32F-ILP32D-LABEL: define dso_local void @f_float16_u_arg
-// ILP32-ILP32F-ILP32D-SAME: (i32 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// ILP32-ILP32F-ILP32D-SAME: (i16 [[A_COERCE:%.*]]) #[[ATTR0]] {
 // ILP32-ILP32F-ILP32D:  entry:
 //
 void f_float16_u_arg(union float16_u a) {}
 
-// ILP32-ILP32F-ILP32D-LABEL: define dso_local i32 @f_ret_float16_u
+// ILP32-ILP32F-ILP32D-LABEL: define dso_local i16 @f_ret_float16_u
 // ILP32-ILP32F-ILP32D-SAME: () #[[ATTR0]] {
 // ILP32-ILP32F-ILP32D:  entry:
 //

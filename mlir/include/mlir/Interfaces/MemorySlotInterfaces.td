@@ -53,6 +53,8 @@ def PromotableAllocationOpInterface
     InterfaceMethod<[{
         Hook triggered for every new block argument added to a block.
         This will only be called for slots declared by this operation.
+        This function is called after removal of blocking uses, meaning
+        only operations that will be deleted remain users of the slot.
 
         The builder is located at the beginning of the block on call. All IR
         mutations must happen through the builder.
@@ -66,7 +68,8 @@ def PromotableAllocationOpInterface
     >,
     InterfaceMethod<[{
         Hook triggered once the promotion of a slot is complete. This can
-        also clean up the created default value if necessary.
+        also clean up the created default value if necessary. The default
+        value may be a null value if no default value was created.
         This will only be called for slots declared by this operation.
 
         Must return a new promotable allocation op if this operation produced
@@ -240,7 +243,7 @@ def PromotableOpInterface : OpInterface<"PromotableOpInterface"> {
         operation will be called after the main mutation stage finishes
         (i.e., after all ops have been processed with `removeBlockingUses`).
 
-        Operations should only the replaced values if the intended
+        Operations should only visit the replaced values if the intended
         transformation applies to all the replaced values. Furthermore, replaced
         values must not be deleted.
       }], "bool", "requiresReplacedValues", (ins), [{}],
@@ -259,6 +262,98 @@ def PromotableOpInterface : OpInterface<"PromotableOpInterface"> {
       "void", "visitReplacedValues",
       (ins "::llvm::ArrayRef<std::pair<::mlir::Operation*, ::mlir::Value>>":$mutatedDefs,
            "::mlir::OpBuilder &":$builder), [{}], [{ return; }]
+    >,
+  ];
+}
+
+def PromotableRegionOpInterface
+    : OpInterface<"PromotableRegionOpInterface"> {
+  let description = [{
+    Describes an operation for which memory slots can be promoted to SSA values
+    within the operation's regions.
+  }];
+  let cppNamespace = "::mlir";
+
+  let methods = [
+    InterfaceMethod<[{
+        Returns true when the provided region of the operation can be analyzed
+        for promotion. The provided region must be a child of the operation's
+        region.
+        The `hasValueStores` flag indicates whether the region contains
+        store-like operations that write to the memory slot.
+      }], "bool", "isRegionPromotable",
+      (ins
+        "const ::mlir::MemorySlot &":$slot,
+        "::mlir::Region *":$region,
+        "bool":$hasValueStores
+      )
+    >,
+    InterfaceMethod<[{
+        Called before processing the nested regions in the operation.
+
+        Based on the `reachingDef` value representing the value in the memory
+        slot at the entry into the operation, `setupPromotion` fills in the
+        `regionsToProcess` with the reaching definition at the entry of
+        all its promotable regions.
+
+        `setupPromotion` is allowed to mutate
+        the operation in place, including its nested regions, but cannot
+        delete existing operations or modify successor-bearing terminators.
+        Other mutations are not allowed.
+
+        The `hasValueStores` flag indicates whether the regions contain
+        `store`-like operations that write to the memory slot. This field can be
+        used to reduce the amount of book-keeping required to track the reaching
+        definitions.
+      }], "void", "setupPromotion",
+      (ins
+        "const ::mlir::MemorySlot &":$slot,
+        "::mlir::Value":$reachingDef,
+        "bool":$hasValueStores,
+        "::llvm::SmallMapVector<::mlir::Region *, ::mlir::Value, 2> &":$regionsToProcess
+      )
+    >,
+    InterfaceMethod<[{
+        Called once the reaching definitions have been computed for all the
+        regions, but before the actual removal of the blocking uses.
+
+        Returns the new reaching definition at the exit of the operation. For
+        this purpose, mutation of the operation is allowed under the following
+        constraints:
+        1. If a region is deleted, all of its content must have been moved out
+           (not copied) to a new empty region that remains valid after the
+           deletion.
+        2. Mutation must not change control flow within or between existing or
+           moved regions. This includes adding, removing or reordering blocks.
+        3. Mutation must not modify or add operations that interact with the
+           value of the slot.
+
+        As an example, in order to add new results to the region operation, it
+        is allowed to clone the operation without regions, move (without
+        copying) the old region content into the new regions, and delete the
+        original operation.
+
+        The `entryReachingDef` is the reaching definition at the entry of the
+        region operation.
+
+        The `reachingAtBlockEnd` map contains the reaching definitions after all
+        the terminators within the regions of the operation. If a block of the
+        region is not present in the map, it is either dead code or within a
+        region that does not interact with the value of the slot.
+
+        The `hasValueStores` flag indicates whether the regions contain
+        `store`-like operations that write to the memory slot. This field can be
+        used to reduce the amount of book-keeping required to track the reaching
+        definitions.
+      }],
+      "::mlir::Value", "finalizePromotion",
+      (ins
+        "const ::mlir::MemorySlot &":$slot,
+        "::mlir::Value":$entryReachingDef,
+        "bool":$hasValueStores,
+        "const ::llvm::DenseMap<::mlir::Block *, ::mlir::Value> &":$reachingAtBlockEnd,
+        "::mlir::OpBuilder &":$builder
+      )
     >,
   ];
 }
@@ -304,7 +399,7 @@ def DestructurableAllocationOpInterface
     >,
     InterfaceMethod<[{
         Hook triggered once the destructuring of a slot is complete, meaning the
-        original slot is no longer being refered to and could be deleted.
+        original slot is no longer being referred to and could be deleted.
         This will only be called for slots declared by this operation.
 
         Must return a new destructurable allocation op if this hook creates
@@ -328,7 +423,7 @@ def SafeMemorySlotAccessOpInterface
   let methods = [
     InterfaceMethod<[{
         Returns whether all accesses in this operation to the provided slot are
-        done in a safe manner. To be safe, the access most only access the slot
+        done in a safe manner. To be safe, the access must only access the slot
         inside the bounds that its type implies.
 
         If the safety of the accesses depends on the safety of the accesses to

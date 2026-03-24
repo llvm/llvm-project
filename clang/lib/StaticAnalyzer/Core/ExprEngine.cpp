@@ -1131,7 +1131,7 @@ void ExprEngine::ProcessStmt(const Stmt *currStmt, ExplodedNode *Pred) {
     removeDead(Pred, CleanedStates, currStmt,
                                     Pred->getLocationContext());
   } else
-    CleanedStates.Add(Pred);
+    CleanedStates.insert(Pred);
 
   // Visit the statement.
   ExplodedNodeSet Dst;
@@ -1190,7 +1190,7 @@ void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
       // But we still need to stop tracking the object under construction.
       State = finishObjectConstruction(State, BMI, LC);
       PostStore PS(Init, LC, /*Loc*/ nullptr, /*tag*/ nullptr);
-      Tmp.Add(Engine.makeNode(PS, State, Pred));
+      Tmp.insert(Engine.makeNode(PS, State, Pred));
     } else {
       const ValueDecl *Field;
       if (BMI->isIndirectMemberInitializer()) {
@@ -1245,7 +1245,7 @@ void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
 
   ExplodedNodeSet Dst;
   for (ExplodedNode *Pred : Tmp)
-    Dst.Add(Engine.makeNode(PP, Pred->getState(), Pred));
+    Dst.insert(Engine.makeNode(PP, Pred->getState(), Pred));
   // Enqueue the new nodes onto the work list.
   Engine.enqueueStmtNodes(Dst, getCurrBlock(), currStmtIdx);
 }
@@ -1328,7 +1328,7 @@ void ExprEngine::ProcessNewAllocator(const CXXNewExpr *NE,
     const LocationContext *LCtx = Pred->getLocationContext();
     PostImplicitCall PP(NE->getOperatorNew(), NE->getBeginLoc(), LCtx,
                         getCFGElementRef());
-    Dst.Add(Engine.makeNode(PP, Pred->getState(), Pred));
+    Dst.insert(Engine.makeNode(PP, Pred->getState(), Pred));
   }
   Engine.enqueueStmtNodes(Dst, getCurrBlock(), currStmtIdx);
 }
@@ -2999,7 +2999,7 @@ void ExprEngine::processIndirectGoto(ExplodedNodeSet &Dst, const Expr *Tgt,
       // FIXME: If 'V' was a symbolic value, then record that on this execution
       // path it is equal to the address of the label leading to 'Succ'.
       BlockEdge BE(getCurrBlock(), Succ, Pred->getLocationContext());
-      Dst.Add(Engine.makeNode(BE, State, Pred));
+      Dst.insert(Engine.makeNode(BE, State, Pred));
     }
   }
 }

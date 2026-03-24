@@ -286,12 +286,12 @@ struct TestInit test_init(void) {
 // attribute in a single __attribute__.
 void run(void) __attribute__((guarded_by(mu1), guarded_by(mu1))); // expected-warning 2{{only applies to non-static data members and global variables}}
 
-int value_with_wrong_number_of_args GUARDED_BY(mu1, mu2); // expected-error{{'guarded_by' attribute takes one argument}}
+int value_with_multiple_guarded_args GUARDED_BY(mu1, mu2);
 
-int *ptr_with_wrong_number_of_args PT_GUARDED_BY(mu1, mu2); // expected-error{{'pt_guarded_by' attribute takes one argument}}
+int *ptr_with_multiple_guarded_args PT_GUARDED_BY(mu1, mu2);
 
-int value_with_no_open_brace __attribute__((guarded_by)); // expected-error{{'guarded_by' attribute takes one argument}}
-int *ptr_with_no_open_brace __attribute__((pt_guarded_by)); // expected-error{{'pt_guarded_by' attribute takes one argument}}
+int value_with_no_open_brace __attribute__((guarded_by)); // expected-error{{'guarded_by' attribute takes at least 1 argument}}
+int *ptr_with_no_open_brace __attribute__((pt_guarded_by)); // expected-error{{'pt_guarded_by' attribute takes at least 1 argument}}
 
 int value_with_no_open_brace_on_acquire_after __attribute__((acquired_after)); // expected-error{{'acquired_after' attribute takes at least 1 argument}}
 int value_with_no_open_brace_on_acquire_before __attribute__((acquired_before)); // expected-error{{'acquired_before' attribute takes at least 1 argument}}

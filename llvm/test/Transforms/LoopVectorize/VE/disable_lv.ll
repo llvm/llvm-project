@@ -8,7 +8,7 @@
 ; VE-NOT: llvm.loop.isvectorized
 ; AVX: llvm.loop.isvectorized
 
-define dso_local void @foo(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, i32 signext %n) local_unnamed_addr {
+define void @foo(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, i32 signext %n) {
 entry:
   %cmp = icmp sgt i32 %n, 0
   br i1 %cmp, label %omp.inner.for.body.preheader, label %simd.if.end

@@ -428,6 +428,22 @@ public:
     return ~0U;
   }
 
+  enum class InstSizeVerifyMode {
+    /// Do not verify instruction size.
+    NoVerify,
+    /// Check that the instruction size matches exactly.
+    ExactSize,
+    /// Allow the reported instruction size to be larger than the actual size.
+    AllowOverEstimate,
+  };
+
+  /// Determine whether/how the instruction size returned by
+  /// getInstSizeInBytes() should be verified.
+  virtual InstSizeVerifyMode
+  getInstSizeVerifyMode(const MachineInstr &MI) const {
+    return InstSizeVerifyMode::NoVerify;
+  }
+
   /// Return true if the instruction is as cheap as a move instruction.
   ///
   /// Targets for different archs need to override this, and different

@@ -7,4 +7,4 @@ body: |
     %0:_(<vscale x 4 x p0 X) = IMPLICIT_DEF
 ...
 
-# CHECK: expected <vscale x M x sN> or <vscale M x pA> for vector type
+# CHECK: expected <vscale x M x tN> for vector type, where t = {'s', 'i', 'f', 'bf', 'p'}

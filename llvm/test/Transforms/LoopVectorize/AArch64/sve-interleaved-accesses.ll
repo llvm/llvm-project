@@ -176,7 +176,7 @@ for.end:                                 ; preds = %for.body
 ; }
 
 
-@CD_i16 = dso_local local_unnamed_addr global [1024 x i16] zeroinitializer, align 2
+@CD_i16 = global [1024 x i16] zeroinitializer, align 2
 
 define void @test_array_load2_store2_i16(i32 noundef %C, i32 noundef %D) #1 {
 ; CHECK-LABEL: @test_array_load2_store2_i16(

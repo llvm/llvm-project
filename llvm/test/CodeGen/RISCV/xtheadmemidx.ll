@@ -851,7 +851,7 @@ define void @srd(ptr %a, iXLen %b, i64 %c) {
 ; RV32XTHEADMEMIDX-NEXT:    add a3, a3, a3
 ; RV32XTHEADMEMIDX-NEXT:    sltu a2, a4, a2
 ; RV32XTHEADMEMIDX-NEXT:    th.srw a4, a0, a1, 3
-; RV32XTHEADMEMIDX-NEXT:    add a2, a3, a2
+; RV32XTHEADMEMIDX-NEXT:    or a2, a3, a2
 ; RV32XTHEADMEMIDX-NEXT:    addi a0, a0, 4
 ; RV32XTHEADMEMIDX-NEXT:    th.srw a2, a0, a1, 3
 ; RV32XTHEADMEMIDX-NEXT:    ret
@@ -874,7 +874,7 @@ define void @surd(ptr %a, i32 %b, i64 %c) {
 ; RV32XTHEADMEMIDX-NEXT:    add a3, a3, a3
 ; RV32XTHEADMEMIDX-NEXT:    sltu a2, a4, a2
 ; RV32XTHEADMEMIDX-NEXT:    th.srw a4, a0, a1, 3
-; RV32XTHEADMEMIDX-NEXT:    add a2, a3, a2
+; RV32XTHEADMEMIDX-NEXT:    or a2, a3, a2
 ; RV32XTHEADMEMIDX-NEXT:    addi a0, a0, 4
 ; RV32XTHEADMEMIDX-NEXT:    th.srw a2, a0, a1, 3
 ; RV32XTHEADMEMIDX-NEXT:    ret

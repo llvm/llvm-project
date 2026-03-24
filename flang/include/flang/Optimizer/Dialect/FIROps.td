@@ -2975,6 +2975,34 @@ def fir_ConvertOp
   let hasCanonicalizer = 1;
 }
 
+def fir_BitcastOp : fir_SimpleOneResultOp<"bitcast", [Pure]> {
+  let summary = "bitcast between Fortran scalar types of the same bit size";
+
+  let description = [{
+    Reinterpret the bits of a value from one type to another. Both types must
+    have the same bit size. This is a pure bitwise reinterpretation: no value
+    normalization or conversion takes place, unlike `fir.convert`.
+
+    The supported types are integer, floating-point, `fir.logical`, and
+    singleton `fir.char` (i.e. `fir.char<K>` with length 1 for any kind K).
+    Pointer types are not allowed.
+
+    ```
+      %0 = fir.bitcast %v : (i32) -> !fir.logical<4>
+    ```
+  }];
+
+  let arguments = (ins AnyType:$value);
+  let results = (outs AnyType:$res);
+
+  let assemblyFormat = [{
+    $value attr-dict `:` functional-type($value, results)
+  }];
+
+  let hasFolder = 1;
+  let hasVerifier = 1;
+}
+
 def FortranTypeAttr : Attr<And<[CPred<"mlir::isa<mlir::TypeAttr>($_self)">,
     Or<[CPred<"mlir::isa<fir::CharacterType, fir::IntegerType, "
               "fir::UnsignedType, fir::LogicalType, mlir::FloatType, "

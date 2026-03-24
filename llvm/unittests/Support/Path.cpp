@@ -784,6 +784,152 @@ TEST_F(FileSystemTest, RealPath) {
   ASSERT_NO_ERROR(fs::remove_directories(Twine(TestDirectory) + "/test1"));
 }
 
+TEST_F(FileSystemTest, Readlink) {
+  int FD;
+  SmallString<128> Target(TestDirectory);
+  path::append(Target, "target");
+  ASSERT_NO_ERROR(fs::openFileForWrite(Target, FD, fs::CD_CreateNew));
+  ::close(FD);
+
+  SmallString<128> Link(TestDirectory);
+  path::append(Link, "link");
+  std::error_code EC = fs::create_symlink(Target, Link);
+  if (EC) {
+    ASSERT_NO_ERROR(fs::remove(Target));
+    GTEST_SKIP() << "Symlinks not supported: " << EC.message();
+  }
+
+  SmallString<128> Result;
+  ASSERT_NO_ERROR(fs::readlink(Link, Result));
+  EXPECT_EQ(Target, Result);
+
+  ASSERT_NO_ERROR(fs::remove(Link));
+  ASSERT_NO_ERROR(fs::remove(Target));
+}
+
+TEST_F(FileSystemTest, ReadlinkRelative) {
+  int FD;
+  SmallString<128> Target(TestDirectory);
+  path::append(Target, "target");
+  ASSERT_NO_ERROR(fs::openFileForWrite(Target, FD, fs::CD_CreateNew));
+  ::close(FD);
+
+  SmallString<128> Link(TestDirectory);
+  path::append(Link, "link");
+  std::error_code EC = fs::create_symlink("target", Link);
+  if (EC) {
+    ASSERT_NO_ERROR(fs::remove(Target));
+    GTEST_SKIP() << "Symlinks not supported: " << EC.message();
+  }
+
+  SmallString<128> Result;
+  ASSERT_NO_ERROR(fs::readlink(Link, Result));
+  EXPECT_EQ("target", Result);
+
+  ASSERT_NO_ERROR(fs::remove(Link));
+  ASSERT_NO_ERROR(fs::remove(Target));
+}
+
+TEST_F(FileSystemTest, ReadlinkRelativeWithSlash) {
+  // Verify that a symlink target created with forward slashes is read back
+  // with the native separator. On Windows, create_symlink normalizes forward
+  // slashes to backslashes.
+  SmallString<128> SubDir(TestDirectory);
+  path::append(SubDir, "subdir");
+  ASSERT_NO_ERROR(fs::create_directory(SubDir));
+
+  int FD;
+  SmallString<128> Target(SubDir);
+  path::append(Target, "target");
+  ASSERT_NO_ERROR(fs::openFileForWrite(Target, FD, fs::CD_CreateNew));
+  ::close(FD);
+
+  SmallString<128> Link(TestDirectory);
+  path::append(Link, "link");
+  std::error_code EC = fs::create_symlink("subdir/target", Link);
+  if (EC) {
+    ASSERT_NO_ERROR(fs::remove(Target));
+    ASSERT_NO_ERROR(fs::remove(SubDir));
+    GTEST_SKIP() << "Symlinks not supported: " << EC.message();
+  }
+
+  SmallString<128> Result;
+  ASSERT_NO_ERROR(fs::readlink(Link, Result));
+  SmallString<128> Expected("subdir/target");
+  path::native(Expected);
+  EXPECT_EQ(Expected, Result);
+
+  ASSERT_NO_ERROR(fs::remove(Link));
+  ASSERT_NO_ERROR(fs::remove(Target));
+  ASSERT_NO_ERROR(fs::remove(SubDir));
+}
+
+TEST_F(FileSystemTest, CreateRelativeDirectorySymlink) {
+  // Verify that a relative symlink to a directory is correctly detected as a
+  // directory symlink. On Windows, create_symlink needs to resolve the relative
+  // target against the link's parent to check if the target is a directory.
+  SmallString<128> SubDir(TestDirectory);
+  path::append(SubDir, "subdir");
+  ASSERT_NO_ERROR(fs::create_directory(SubDir));
+
+  SmallString<128> TargetDir(SubDir);
+  path::append(TargetDir, "target_dir");
+  ASSERT_NO_ERROR(fs::create_directory(TargetDir));
+
+  // Create a symlink in TestDirectory pointing to "subdir/target_dir" using a
+  // relative path. The target is relative to the link's parent (TestDirectory),
+  // not the CWD.
+  SmallString<128> Link(TestDirectory);
+  path::append(Link, "link");
+  SmallString<128> RelTarget("subdir");
+  path::append(RelTarget, "target_dir");
+  path::native(RelTarget);
+  std::error_code EC = fs::create_symlink(RelTarget, Link);
+  if (EC) {
+    ASSERT_NO_ERROR(fs::remove(TargetDir));
+    ASSERT_NO_ERROR(fs::remove(SubDir));
+    GTEST_SKIP() << "Symlinks not supported: " << EC.message();
+  }
+
+  // The symlink should be recognized as a directory.
+  EXPECT_TRUE(fs::is_directory(Link));
+
+  // Verify we can access a file through the directory symlink.
+  int FD;
+  SmallString<128> FileInTarget(TargetDir);
+  path::append(FileInTarget, "file");
+  ASSERT_NO_ERROR(fs::openFileForWrite(FileInTarget, FD, fs::CD_CreateNew));
+  ::close(FD);
+
+  SmallString<128> FileThroughLink(Link);
+  path::append(FileThroughLink, "file");
+  EXPECT_TRUE(fs::is_regular_file(FileThroughLink));
+
+  ASSERT_NO_ERROR(fs::remove(FileInTarget));
+  ASSERT_NO_ERROR(fs::remove(Link));
+  ASSERT_NO_ERROR(fs::remove(TargetDir));
+  ASSERT_NO_ERROR(fs::remove(SubDir));
+}
+
+TEST_F(FileSystemTest, ReadlinkNonSymlink) {
+  int FD;
+  SmallString<128> Regular(TestDirectory);
+  path::append(Regular, "regular");
+  ASSERT_NO_ERROR(fs::openFileForWrite(Regular, FD, fs::CD_CreateNew));
+  ::close(FD);
+
+  SmallString<128> Result;
+  EXPECT_EQ(fs::readlink(Regular, Result), errc::invalid_argument);
+
+  ASSERT_NO_ERROR(fs::remove(Regular));
+}
+
+TEST_F(FileSystemTest, ReadlinkNonExistent) {
+  SmallString<128> Result;
+  EXPECT_EQ(fs::readlink(TestDirectory + "/does_not_exist", Result),
+            errc::no_such_file_or_directory);
+}
+
 TEST_F(FileSystemTest, ExpandTilde) {
   SmallString<64> Expected;
   SmallString<64> Actual;
@@ -1179,21 +1325,21 @@ TEST_F(FileSystemTest, BrokenSymlinkDirectoryIteration) {
   // Create a known hierarchy to recurse over.
   ASSERT_NO_ERROR(fs::create_directories(Twine(TestDirectory) + "/symlink"));
   ASSERT_NO_ERROR(
-      fs::create_link("no_such_file", Twine(TestDirectory) + "/symlink/a"));
+      fs::create_symlink("no_such_file", Twine(TestDirectory) + "/symlink/a"));
   ASSERT_NO_ERROR(
       fs::create_directories(Twine(TestDirectory) + "/symlink/b/bb"));
+  ASSERT_NO_ERROR(fs::create_symlink("no_such_file",
+                                     Twine(TestDirectory) + "/symlink/b/ba"));
+  ASSERT_NO_ERROR(fs::create_symlink("no_such_file",
+                                     Twine(TestDirectory) + "/symlink/b/bc"));
   ASSERT_NO_ERROR(
-      fs::create_link("no_such_file", Twine(TestDirectory) + "/symlink/b/ba"));
-  ASSERT_NO_ERROR(
-      fs::create_link("no_such_file", Twine(TestDirectory) + "/symlink/b/bc"));
-  ASSERT_NO_ERROR(
-      fs::create_link("no_such_file", Twine(TestDirectory) + "/symlink/c"));
+      fs::create_symlink("no_such_file", Twine(TestDirectory) + "/symlink/c"));
   ASSERT_NO_ERROR(
       fs::create_directories(Twine(TestDirectory) + "/symlink/d/dd/ddd"));
-  ASSERT_NO_ERROR(fs::create_link(Twine(TestDirectory) + "/symlink/d/dd",
-                                  Twine(TestDirectory) + "/symlink/d/da"));
+  ASSERT_NO_ERROR(fs::create_symlink(Twine(TestDirectory) + "/symlink/d/dd",
+                                     Twine(TestDirectory) + "/symlink/d/da"));
   ASSERT_NO_ERROR(
-      fs::create_link("no_such_file", Twine(TestDirectory) + "/symlink/e"));
+      fs::create_symlink("no_such_file", Twine(TestDirectory) + "/symlink/e"));
 
   typedef std::vector<std::string> v_t;
   v_t VisitedNonBrokenSymlinks;
@@ -2731,13 +2877,13 @@ TEST_F(FileSystemTest, CopyFile) {
   verifyFileContents(Destination, Data[1]);
 
   // Note: The remaining logic is targeted at a potential failure case related
-  // to file cloning and symlinks on Darwin. On Windows, fs::create_link() does
-  // not return success here so the test is skipped.
+  // to file cloning and symlinks on Darwin. On Windows, fs::create_symlink()
+  // may not return success here so the test is skipped.
 #if !defined(_WIN32)
   // Set up a symlink to the third file.
   SmallString<128> Symlink(RootTestDirectory.path());
   path::append(Symlink, "symlink");
-  ASSERT_NO_ERROR(fs::create_link(path::filename(Sources[2]), Symlink));
+  ASSERT_NO_ERROR(fs::create_symlink(path::filename(Sources[2]), Symlink));
   verifyFileContents(Symlink, Data[2]);
 
   // fs::getUniqueID() should follow symlinks. Otherwise, this isn't good test

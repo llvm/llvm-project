@@ -1374,7 +1374,7 @@ LogicalResult mlir::affine::replaceAllMemRefUsesWith(
     if (failed(replaceAllMemRefUsesWith(
             oldMemRef, newMemRef, user, extraIndices, indexRemap, extraOperands,
             symbolOperands, allowNonDereferencingOps)))
-      llvm_unreachable("memref replacement guaranteed to succeed here");
+      return failure();
   }
 
   return success();

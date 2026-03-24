@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -verify=good -pedantic -Wall -std=c2y %s
-// RUN: %clang_cc1 -verify=compat,expected -pedantic -Wall -Wpre-c2y-compat -std=c2y %s
-// RUN: %clang_cc1 -verify=ped,expected -pedantic -Wall -std=c23 %s
-// RUN: %clang_cc1 -verify=ped,expected -pedantic -Wall -std=c17 %s
+// RUN: %clang_cc1 -verify=good -pedantic -Wall -Wno-unused-but-set-variable -std=c2y %s
+// RUN: %clang_cc1 -verify=compat,expected -pedantic -Wall -Wno-unused-but-set-variable -Wpre-c2y-compat -std=c2y %s
+// RUN: %clang_cc1 -verify=ped,expected -pedantic -Wall -Wno-unused-but-set-variable -std=c23 %s
+// RUN: %clang_cc1 -verify=ped,expected -pedantic -Wall -Wno-unused-but-set-variable -std=c17 %s
 // good-no-diagnostics
 
 /* WG14 N3622: Clang 22

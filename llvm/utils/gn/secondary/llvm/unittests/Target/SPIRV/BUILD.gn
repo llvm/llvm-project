@@ -3,6 +3,7 @@ group("dummy") {
   sources = [
     "SPIRVAPITest.cpp",
     "SPIRVConvergenceRegionAnalysisTests.cpp",
+    "SPIRVGlobalRegistryTests.cpp",
     "SPIRVPartialOrderingVisitorTests.cpp",
     "SPIRVSortBlocksTests.cpp",
   ]

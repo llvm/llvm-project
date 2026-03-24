@@ -132,7 +132,7 @@ SmallString<0> DWARFExpressionCopyBytesTest::emitObjFile(StringRef ExprBytes) {
   SmallString<0> Storage;
   raw_svector_ostream VecOS(Storage);
   StreamerContext C = createStreamer(VecOS);
-  C.Streamer->initSections(false, *STI);
+  C.Streamer->initSections(*STI);
   MCSection *Section = C.MOFI->getTextSection();
   Section->setHasInstructions(true);
   C.Streamer->switchSection(Section);

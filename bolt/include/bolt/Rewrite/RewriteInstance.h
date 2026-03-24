@@ -187,9 +187,6 @@ private:
   /// performing final relaxation.
   void emitAndLink();
 
-  /// Link additional runtime code to support instrumentation.
-  void linkRuntime();
-
   /// Process metadata in sections before functions are discovered.
   void processSectionMetadata();
 

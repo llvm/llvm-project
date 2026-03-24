@@ -700,6 +700,9 @@ public:
   ///
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
+  InstSizeVerifyMode
+  getInstSizeVerifyMode(const MachineInstr &MI) const override;
+
   MCInst getNop() const override;
 
   std::pair<unsigned, unsigned>

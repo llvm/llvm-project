@@ -259,7 +259,7 @@ public:
   NodeBuilder(ExplodedNode *SrcNode, ExplodedNodeSet &DstSet,
               const NodeBuilderContext &Ctx)
       : NodeBuilder(DstSet, Ctx) {
-    Frontier.Add(SrcNode);
+    Frontier.insert(SrcNode);
   }
 
   NodeBuilder(const ExplodedNodeSet &SrcSet, ExplodedNodeSet &DstSet,
@@ -314,7 +314,7 @@ public:
 
   void takeNodes(ExplodedNode *N) { Frontier.erase(N); }
   void addNodes(const ExplodedNodeSet &S) { Frontier.insert(S); }
-  void addNodes(ExplodedNode *N) { Frontier.Add(N); }
+  void addNodes(ExplodedNode *N) { Frontier.insert(N); }
 };
 
 /// BranchNodeBuilder is responsible for constructing the nodes

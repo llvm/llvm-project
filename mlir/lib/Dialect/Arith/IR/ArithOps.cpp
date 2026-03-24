@@ -42,8 +42,8 @@ static IntegerAttr
 applyToIntegerAttrs(PatternRewriter &builder, Value res, Attribute lhs,
                     Attribute rhs,
                     function_ref<APInt(const APInt &, const APInt &)> binFn) {
-  APInt lhsVal = llvm::cast<IntegerAttr>(lhs).getValue();
-  APInt rhsVal = llvm::cast<IntegerAttr>(rhs).getValue();
+  const APInt &lhsVal = llvm::cast<IntegerAttr>(lhs).getValue();
+  const APInt &rhsVal = llvm::cast<IntegerAttr>(rhs).getValue();
   APInt value = binFn(lhsVal, rhsVal);
   return IntegerAttr::get(res.getType(), value);
 }

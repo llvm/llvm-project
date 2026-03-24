@@ -112,6 +112,7 @@ static_library("LLVMWebAssemblyCodeGen") {
     "WebAssemblyOptimizeLiveIntervals.cpp",
     "WebAssemblyOptimizeReturned.cpp",
     "WebAssemblyPeephole.cpp",
+    "WebAssemblyReduceToAnyAllTrue.cpp",
     "WebAssemblyRefTypeMem2Local.cpp",
     "WebAssemblyRegColoring.cpp",
     "WebAssemblyRegNumbering.cpp",

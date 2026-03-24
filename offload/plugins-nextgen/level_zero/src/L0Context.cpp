@@ -16,16 +16,28 @@
 namespace llvm::omp::target::plugin {
 
 Error L0ContextTy::init() {
+  auto cleanupOnError = [&]() {
+    if (zeContext) {
+      zeContextDestroy(zeContext);
+      zeContext = nullptr;
+    }
+  };
   CALL_ZE_RET_ERROR(zeDriverGetApiVersion, zeDriver, &APIVersion);
   ODBG(OLDT_Init) << "Driver API version is "
                   << llvm::format(PRIx32, APIVersion);
 
   ze_context_desc_t Desc{ZE_STRUCTURE_TYPE_CONTEXT_DESC, nullptr, 0};
   CALL_ZE_RET_ERROR(zeContextCreate, zeDriver, &Desc, &zeContext);
-  if (auto Err = EventPool.init(zeContext, 0))
+  if (auto Err = EventPool.init(zeContext, 0)) {
+    cleanupOnError();
     return Err;
-  if (auto Err = HostMemAllocator.initHostPool(*this, Plugin.getOptions()))
+  }
+  if (auto Err = HostMemAllocator.initHostPool(*this, Plugin.getOptions())) {
+    if (auto DeinitErr = EventPool.deinit())
+      Err = joinErrors(std::move(Err), std::move(DeinitErr));
+    cleanupOnError();
     return Err;
+  }
   return Plugin::success();
 }
 

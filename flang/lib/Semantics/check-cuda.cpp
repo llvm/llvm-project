@@ -759,10 +759,11 @@ void CUDAChecker::Enter(const parser::AssignmentStmt &x) {
 
   int nbLhs{evaluate::GetNbOfCUDADeviceSymbols(assign->lhs)};
   int nbRhs{evaluate::GetNbOfCUDADeviceSymbols(assign->rhs)};
+  int nbRhsManaged{evaluate::GetNbOfCUDAManagedOrUnifiedSymbols(assign->rhs)};
 
   // device to host transfer with more than one device object on the rhs is not
   // legal.
-  if (nbLhs == 0 && nbRhs > 1) {
+  if (nbLhs == 0 && nbRhs > 1 && nbRhsManaged != nbRhs) {
     context_.Say(lhsLoc,
         "More than one reference to a CUDA object on the right hand side of the assignment"_err_en_US);
   }

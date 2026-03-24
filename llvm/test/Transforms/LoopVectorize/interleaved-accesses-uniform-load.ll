@@ -30,8 +30,8 @@
 %0 zeroinitializer, %0 zeroinitializer, %0 zeroinitializer,
 %0 zeroinitializer], align 8
 
-define dso_local void @test_dead_load(i32 %arg) {
-; CHECK-LABEL: define dso_local void @test_dead_load(
+define void @test_dead_load(i32 %arg) {
+; CHECK-LABEL: define void @test_dead_load(
 ; CHECK-SAME: i32 [[ARG:%.*]]) {
 ; CHECK-NEXT:  [[BB1:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]

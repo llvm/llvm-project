@@ -1613,10 +1613,10 @@ define void @test_readfirstlane_v8i16(ptr addrspace(1) %out, <8 x i16> %src) {
 ; CHECK-GISEL-LABEL: test_readfirstlane_v8i16:
 ; CHECK-GISEL:       ; %bb.0:
 ; CHECK-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s7, v5
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s6, v4
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s5, v3
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s4, v2
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s5, v3
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s6, v4
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s7, v5
 ; CHECK-GISEL-NEXT:    ;;#ASMSTART
 ; CHECK-GISEL-NEXT:    ; use s[4:7]
 ; CHECK-GISEL-NEXT:    ;;#ASMEND
@@ -1646,14 +1646,14 @@ define void @test_readfirstlane_v16i16(ptr addrspace(1) %out, <16 x i16> %src) {
 ; CHECK-GISEL-LABEL: test_readfirstlane_v16i16:
 ; CHECK-GISEL:       ; %bb.0:
 ; CHECK-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s11, v9
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s10, v8
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s9, v7
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s8, v6
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s7, v5
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s6, v4
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s5, v3
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s4, v2
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s5, v3
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s6, v4
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s7, v5
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s8, v6
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s9, v7
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s10, v8
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s11, v9
 ; CHECK-GISEL-NEXT:    ;;#ASMSTART
 ; CHECK-GISEL-NEXT:    ; use s[4:11]
 ; CHECK-GISEL-NEXT:    ;;#ASMEND
@@ -1691,22 +1691,22 @@ define void @test_readfirstlane_v32i16(ptr addrspace(1) %out, <32 x i16> %src) {
 ; CHECK-GISEL-LABEL: test_readfirstlane_v32i16:
 ; CHECK-GISEL:       ; %bb.0:
 ; CHECK-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s19, v17
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s18, v16
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s17, v15
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s16, v14
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s15, v13
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s14, v12
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s13, v11
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s12, v10
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s11, v9
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s10, v8
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s9, v7
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s8, v6
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s7, v5
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s6, v4
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s5, v3
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s4, v2
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s5, v3
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s6, v4
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s7, v5
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s8, v6
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s9, v7
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s10, v8
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s11, v9
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s12, v10
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s13, v11
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s14, v12
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s15, v13
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s16, v14
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s17, v15
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s18, v16
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s19, v17
 ; CHECK-GISEL-NEXT:    ;;#ASMSTART
 ; CHECK-GISEL-NEXT:    ; use s[4:19]
 ; CHECK-GISEL-NEXT:    ;;#ASMEND
@@ -1745,22 +1745,22 @@ define void @test_readfirstlane_v32f16(ptr addrspace(1) %out, <32 x half> %src) 
 ; CHECK-GISEL-LABEL: test_readfirstlane_v32f16:
 ; CHECK-GISEL:       ; %bb.0:
 ; CHECK-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s19, v17
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s18, v16
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s17, v15
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s16, v14
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s15, v13
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s14, v12
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s13, v11
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s12, v10
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s11, v9
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s10, v8
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s9, v7
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s8, v6
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s7, v5
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s6, v4
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s5, v3
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s4, v2
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s5, v3
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s6, v4
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s7, v5
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s8, v6
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s9, v7
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s10, v8
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s11, v9
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s12, v10
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s13, v11
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s14, v12
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s15, v13
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s16, v14
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s17, v15
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s18, v16
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s19, v17
 ; CHECK-GISEL-NEXT:    ;;#ASMSTART
 ; CHECK-GISEL-NEXT:    ; use s[4:19]
 ; CHECK-GISEL-NEXT:    ;;#ASMEND

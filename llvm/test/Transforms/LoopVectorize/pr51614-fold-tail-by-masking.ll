@@ -3,12 +3,12 @@
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 
-@A = external dso_local local_unnamed_addr global [40 x [4 x i16]], align 1
+@A = external global [40 x [4 x i16]], align 1
 
 ; Make sure interleave group of loads with gap is considered masked with fold-tail,
 ; and forbidden with reverse access.
 
-define dso_local i16 @reverse_interleave_load_fold_mask() optsize {
+define i16 @reverse_interleave_load_fold_mask() optsize {
 ; CHECK-LABEL: @reverse_interleave_load_fold_mask(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]

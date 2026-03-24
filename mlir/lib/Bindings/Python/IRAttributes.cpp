@@ -426,7 +426,7 @@ void PyIntegerAttribute::bindDerived(ClassTy &c) {
   });
 }
 
-nb::object PyIntegerAttribute::toPyInt(PyIntegerAttribute &self) {
+nb::int_ PyIntegerAttribute::toPyInt(PyIntegerAttribute &self) {
   MlirType type = mlirAttributeGetType(self);
   unsigned bitWidth = mlirIntegerAttrGetValueBitWidth(self);
 
@@ -463,7 +463,7 @@ nb::object PyIntegerAttribute::toPyInt(PyIntegerAttribute &self) {
     }
   }
 
-  return result;
+  return nb::cast<nb::int_>(result);
 }
 
 void PyBoolAttribute::bindDerived(ClassTy &c) {

@@ -1591,7 +1591,7 @@ static MlirValue getOpResultOrValue(nb::handle operand) {
   throw nb::value_error("is not a Value");
 }
 
-nb::object PyOpView::buildGeneric(
+nb::typed<nb::object, PyOperation> PyOpView::buildGeneric(
     std::string_view name, std::tuple<int, bool> opRegionSpec,
     nb::object operandSegmentSpecObj, nb::object resultSegmentSpecObj,
     std::optional<nb::list> resultTypeList, nb::list operandList,
@@ -4844,12 +4844,12 @@ void populateIRCore(nb::module_ &m) {
           "Returns the string form of value as an operand (i.e., the ValueID).")
       .def_prop_ro(
           "type",
-          [](PyValue &self) -> nb::typed<nb::object, PyType> {
+          [](PyValue &self) {
             return PyType(self.getParentOperation()->getContext(),
                           mlirValueGetType(self.get()))
                 .maybeDownCast();
           },
-          "Returns the type of the value.")
+          "Returns the type of the value.", nb::sig("def type(self) -> _T"))
       .def(
           "set_type",
           [](PyValue &self, const PyType &type) {

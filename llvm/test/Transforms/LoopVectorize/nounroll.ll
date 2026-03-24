@@ -5,7 +5,7 @@ target datalayout = "e-m:e-i64:64-n32:64-S128-v256:256:256-v512:512:512"
 
 ; CHECK: LV: Checking a loop in 'f1'
 ; CHECK: LV: Loop hints: force=? width=0 interleave=1
-define dso_local void @f1(i32 signext %n, ptr %A) {
+define void @f1(i32 signext %n, ptr %A) {
 entry:
   %cmp1 = icmp sgt i32 %n, 0
   br i1 %cmp1, label %for.body.preheader, label %for.end
@@ -32,7 +32,7 @@ for.end:                                          ; preds = %for.end.loopexit, %
 
 ; CHECK: LV: Checking a loop in 'f2'
 ; CHECK: LV: Loop hints: force=? width=0 interleave=4
-define dso_local void @f2(i32 signext %n, ptr %A) {
+define void @f2(i32 signext %n, ptr %A) {
 entry:
   %cmp1 = icmp sgt i32 %n, 0
   br i1 %cmp1, label %for.body.preheader, label %for.end
@@ -59,7 +59,7 @@ for.end:                                          ; preds = %for.end.loopexit, %
 
 ; CHECK: LV: Checking a loop in 'f3'
 ; CHECK: LV: Loop hints: force=? width=0 interleave=1
-define dso_local void @f3(i32 signext %n, ptr %A) {
+define void @f3(i32 signext %n, ptr %A) {
 entry:
   %cmp1 = icmp sgt i32 %n, 0
   br i1 %cmp1, label %for.body.preheader, label %for.end

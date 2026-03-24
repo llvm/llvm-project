@@ -6530,7 +6530,7 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
     // round (ceil x) -> ceil x
     auto *II = dyn_cast<IntrinsicInst>(Op0);
     if ((II && removesFPFraction(II->getIntrinsicID())) ||
-        match(Op0, m_SIToFP(m_Value())) || match(Op0, m_UIToFP(m_Value())))
+        match(Op0, m_IToFP(m_Value())))
       return Op0;
   }
 

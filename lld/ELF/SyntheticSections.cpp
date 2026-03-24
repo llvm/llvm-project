@@ -1483,7 +1483,8 @@ RelocationBaseSection::RelocationBaseSection(Ctx &ctx, StringRef name,
                                              unsigned concurrency)
     : SyntheticSection(ctx, name, type, SHF_ALLOC, ctx.arg.wordsize),
       dynamicTag(dynamicTag), sizeDynamicTag(sizeDynamicTag),
-      relocsVec(concurrency), combreloc(combreloc) {}
+      relocsVec(concurrency), relativeRel(ctx.target->relativeRel),
+      combreloc(combreloc) {}
 
 void RelocationBaseSection::addSymbolReloc(
     RelType dynType, InputSectionBase &isec, uint64_t offsetInSec, Symbol &sym,
@@ -1503,29 +1504,26 @@ void RelocationBaseSection::addAddendOnlyRelocIfNonPreemptible(
 }
 
 void RelocationBaseSection::mergeRels() {
-  size_t newSize = relocs.size();
+  size_t newSize = relativeRelocs.size();
   for (const auto &v : relocsVec)
     newSize += v.size();
-  relocs.reserve(newSize);
+  relativeRelocs.reserve(newSize);
+  // Classify relocsVec entries into relativeRelocs or relocs. Note that
+  // relocsVec may contain non-relative entries (e.g. R_AARCH64_AUTH_RELATIVE)
+  // so we must check the type.
   for (const auto &v : relocsVec)
-    llvm::append_range(relocs, v);
+    for (const DynamicReloc &r : v)
+      addReloc(r);
   relocsVec.clear();
-}
-
-void RelocationBaseSection::partitionRels() {
-  if (!combreloc)
-    return;
-  const RelType relativeRel = ctx.target->relativeRel;
-  numRelativeRelocs =
-      std::stable_partition(relocs.begin(), relocs.end(),
-                            [=](auto &r) { return r.type == relativeRel; }) -
-      relocs.begin();
 }
 
 void RelocationBaseSection::finalizeContents() {
   mergeRels();
-  // Compute DT_RELACOUNT to be used by part.dynamic.
-  partitionRels();
+  // Cache the count for DT_RELACOUNT. DynamicSection<ELFT>::computeContents
+  // uses ctx.arg.zCombreloc (not the per-section combreloc) to decide whether
+  // to emit DT_RELACOUNT, so this must match.
+  if (combreloc)
+    numRelativeRelocs = relativeRelocs.size();
   SymbolTableBaseSection *symTab = getPartition(ctx).dynSymTab.get();
 
   // When linking glibc statically, .rel{,a}.plt contains R_*_IRELATIVE
@@ -1551,26 +1549,29 @@ void DynamicReloc::finalize(Ctx &ctx, SymbolTableBaseSection *symt) {
 
 void RelocationBaseSection::computeRels() {
   SymbolTableBaseSection *symTab = getPartition(ctx).dynSymTab.get();
+  parallelForEach(relativeRelocs, [&ctx = ctx, symTab](DynamicReloc &rel) {
+    rel.finalize(ctx, symTab);
+  });
   parallelForEach(relocs, [&ctx = ctx, symTab](DynamicReloc &rel) {
     rel.finalize(ctx, symTab);
   });
 
+  // Place IRELATIVE relocations last so that other dynamic relocations are
+  // applied before IFUNC resolvers run.
   auto irelative = std::stable_partition(
-      relocs.begin() + numRelativeRelocs, relocs.end(),
+      relocs.begin(), relocs.end(),
       [t = ctx.target->iRelativeRel](auto &r) { return r.type != t; });
 
   // Sort by (!IsRelative,SymIndex,r_offset). DT_REL[A]COUNT requires us to
   // place R_*_RELATIVE first. SymIndex is to improve locality, while r_offset
   // is to make results easier to read.
-  if (combreloc) {
-    auto nonRelative = relocs.begin() + numRelativeRelocs;
-    parallelSort(relocs.begin(), nonRelative,
-                 [&](auto &a, auto &b) { return a.r_offset < b.r_offset; });
-    // Non-relative relocations are few, so don't bother with parallelSort.
-    llvm::sort(nonRelative, irelative, [&](auto &a, auto &b) {
+  parallelSort(relativeRelocs.begin(), relativeRelocs.end(),
+               [](auto &a, auto &b) { return a.r_offset < b.r_offset; });
+  // Non-relative relocations are few, so don't bother with parallelSort.
+  if (combreloc)
+    llvm::sort(relocs.begin(), irelative, [](auto &a, auto &b) {
       return std::tie(a.r_sym, a.r_offset) < std::tie(b.r_sym, b.r_offset);
     });
-  }
 }
 
 template <class ELFT>
@@ -1585,7 +1586,9 @@ RelocationSection<ELFT>::RelocationSection(Ctx &ctx, StringRef name,
 
 template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *buf) {
   computeRels();
-  for (const DynamicReloc &rel : relocs) {
+  // Write relative relocations first for DT_REL[A]COUNT.
+  for (const DynamicReloc &rel :
+       llvm::concat<const DynamicReloc>(relativeRelocs, relocs)) {
     auto *p = reinterpret_cast<Elf_Rela *>(buf);
     p->r_offset = rel.r_offset;
     p->setSymbolAndType(rel.r_sym, rel.type, ctx.arg.isMips64EL);
@@ -1684,23 +1687,22 @@ bool AndroidPackedRelocationSection<ELFT>::updateAllocSize(Ctx &ctx) {
   // The format header includes the number of relocations and the initial
   // offset (we set this to zero because the first relocation group will
   // perform the initial adjustment).
-  add(relocs.size());
+  add(relativeRelocs.size() + relocs.size());
   add(0);
 
-  std::vector<Elf_Rela> relatives, nonRelatives;
-
-  for (const DynamicReloc &rel : relocs) {
+  SymbolTableBaseSection *symTab = getPartition(ctx).dynSymTab.get();
+  auto makeRela = [&](const DynamicReloc &rel) {
     Elf_Rela r;
     r.r_offset = rel.getOffset();
-    r.setSymbolAndType(rel.getSymIndex(getPartition(ctx).dynSymTab.get()),
-                       rel.type, false);
+    r.setSymbolAndType(rel.getSymIndex(symTab), rel.type, false);
     r.r_addend = ctx.arg.isRela ? rel.computeAddend(ctx) : 0;
-
-    if (r.getType(ctx.arg.isMips64EL) == ctx.target->relativeRel)
-      relatives.push_back(r);
-    else
-      nonRelatives.push_back(r);
-  }
+    return r;
+  };
+  std::vector<Elf_Rela> relatives, nonRelatives;
+  for (const DynamicReloc &rel : relativeRelocs)
+    relatives.push_back(makeRela(rel));
+  for (const DynamicReloc &rel : relocs)
+    nonRelatives.push_back(makeRela(rel));
 
   llvm::sort(relatives, [](const Elf_Rel &a, const Elf_Rel &b) {
     return a.r_offset < b.r_offset;

@@ -80,9 +80,9 @@ define void @test_structarray_in_buffer() "hlsl.export" {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[H_OUT:%.*]] = tail call target("dx.RawBuffer", [[STRUCT_S:%.*]], 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_s_struct.Ss_1_0t(i32 0, i32 0, i32 1, i32 0, ptr null)
 ; CHECK-NEXT:    [[H_IN:%.*]] = tail call target("dx.RawBuffer", [[STRUCT_S]], 0, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_s_struct.Ss_0_0t(i32 0, i32 1, i32 1, i32 0, ptr null)
-; CHECK-NEXT:    [[P_OUT:%.*]] = tail call noundef nonnull align 1 dereferenceable(48) ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_s_struct.Ss_1_0t(target("dx.RawBuffer", [[STRUCT_S]], 1, 0) [[H_OUT]], i32 0)
+; CHECK-NEXT:    [[P_OUT:%.*]] = tail call noundef nonnull align 1 dereferenceable(48) ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_s_struct.Ss_1_0t.i32(target("dx.RawBuffer", [[STRUCT_S]], 1, 0) [[H_OUT]], i32 0)
 ; CHECK-NEXT:    [[OUT_I:%.*]] = getelementptr inbounds nuw i8, ptr [[P_OUT]], i32 16
-; CHECK-NEXT:    [[P_IN:%.*]] = tail call noundef nonnull align 1 dereferenceable(48) ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_s_struct.Ss_0_0t(target("dx.RawBuffer", [[STRUCT_S]], 0, 0) [[H_IN]], i32 0)
+; CHECK-NEXT:    [[P_IN:%.*]] = tail call noundef nonnull align 1 dereferenceable(48) ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_s_struct.Ss_0_0t.i32(target("dx.RawBuffer", [[STRUCT_S]], 0, 0) [[H_IN]], i32 0)
 ; CHECK-NEXT:    [[IN_I:%.*]] = getelementptr inbounds nuw i8, ptr [[P_IN]], i32 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[OUT_I]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4

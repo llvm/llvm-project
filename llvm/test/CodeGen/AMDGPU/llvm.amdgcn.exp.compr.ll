@@ -1,7 +1,8 @@
-; RUN: llc -mtriple=amdgcn < %s | FileCheck -strict-whitespace -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -strict-whitespace -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -strict-whitespace -check-prefix=GCN %s
-; RUN: not llc -mtriple=amdgcn -mcpu=gfx1100 < %s 2>&1 | FileCheck -strict-whitespace -check-prefix=ERR %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn < %s | FileCheck -strict-whitespace -check-prefix=GCN %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -strict-whitespace -check-prefix=GCN %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -strict-whitespace -check-prefix=GCN %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -strict-whitespace -check-prefix=GCN %s
+; RUN: not llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 < %s 2>&1 | FileCheck -strict-whitespace -check-prefix=ERR %s
 
 ; ERR: error: <unknown>:0:0: in function test_export_compr_zeroes_v2f16 void (): intrinsic not supported on subtarget
 

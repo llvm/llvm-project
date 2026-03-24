@@ -94,7 +94,8 @@ sig_init = 1
 sig_get_num_children = 2
 sig_get_child_index = 3
 sig_get_child_at_index = 4
-sig_update = 5
+sig_get_value = 5
+sig_update = 6
 
 SIGNATURES = {
     "summary": sig_summary,
@@ -102,6 +103,7 @@ SIGNATURES = {
     "get_num_children": sig_get_num_children,
     "get_child_index": sig_get_child_index,
     "get_child_at_index": sig_get_child_at_index,
+    "get_value": sig_get_value,
     "update": sig_update,
 }
 

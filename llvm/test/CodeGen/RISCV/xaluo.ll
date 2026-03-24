@@ -5193,7 +5193,7 @@ define zeroext i1 @umulo2.br.i64(i64 %v1) {
 ; RV32-NEXT:    add a2, a0, a0
 ; RV32-NEXT:    sltu a0, a2, a0
 ; RV32-NEXT:    add a2, a1, a1
-; RV32-NEXT:    add a2, a2, a0
+; RV32-NEXT:    or a2, a2, a0
 ; RV32-NEXT:    beq a2, a1, .LBB65_2
 ; RV32-NEXT:  # %bb.1: # %entry
 ; RV32-NEXT:    sltu a0, a2, a1
@@ -5222,7 +5222,7 @@ define zeroext i1 @umulo2.br.i64(i64 %v1) {
 ; RV32ZBA-NEXT:    add a2, a0, a0
 ; RV32ZBA-NEXT:    sltu a0, a2, a0
 ; RV32ZBA-NEXT:    add a2, a1, a1
-; RV32ZBA-NEXT:    add a2, a2, a0
+; RV32ZBA-NEXT:    or a2, a2, a0
 ; RV32ZBA-NEXT:    beq a2, a1, .LBB65_2
 ; RV32ZBA-NEXT:  # %bb.1: # %entry
 ; RV32ZBA-NEXT:    sltu a0, a2, a1
@@ -5251,7 +5251,7 @@ define zeroext i1 @umulo2.br.i64(i64 %v1) {
 ; RV32ZICOND-NEXT:    add a2, a0, a0
 ; RV32ZICOND-NEXT:    add a3, a1, a1
 ; RV32ZICOND-NEXT:    sltu a0, a2, a0
-; RV32ZICOND-NEXT:    add a3, a3, a0
+; RV32ZICOND-NEXT:    or a3, a3, a0
 ; RV32ZICOND-NEXT:    xor a2, a3, a1
 ; RV32ZICOND-NEXT:    czero.nez a0, a0, a2
 ; RV32ZICOND-NEXT:    sltu a1, a3, a1

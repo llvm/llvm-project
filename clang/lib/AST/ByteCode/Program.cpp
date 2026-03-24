@@ -384,7 +384,7 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
           (Desc->isPrimitiveArray() && Desc->getPrimType() == PT_Ptr) ||
           (Desc->ElemRecord && Desc->ElemRecord->hasPtrField());
     } else {
-      return nullptr;
+      Desc = allocateDescriptor(FD);
     }
     Fields.emplace_back(FD, Desc, BaseSize);
     BaseSize += align(Desc->getAllocSize());

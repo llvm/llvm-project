@@ -1,6 +1,6 @@
 ; RUN: opt < %s -passes=loop-vectorize -S
 
-define void @foo() local_unnamed_addr {
+define void @foo() {
 entry:
   %exitcond = icmp eq i64 3, 3
   br label %for.body

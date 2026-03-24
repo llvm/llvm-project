@@ -13,9 +13,11 @@
 #include "CrashHandlerFixture.h"
 #include "gtest/gtest.h"
 #include "flang-rt/runtime/descriptor.h"
+#include "flang/Runtime/extensions.h"
 #include "flang/Runtime/io-api.h"
 #include "flang/Runtime/main.h"
 #include "flang/Runtime/stop.h"
+#include <cstdio>
 #include <cstring>
 #include <string_view>
 
@@ -950,6 +952,39 @@ TEST(ExternalIOTests, BigUnitNumbers) {
         IostatUnitOverflow);
     EXPECT_EQ(std::strncmp(msg, expectedMsg, n), 0);
   }
+}
+
+TEST(ExternalIOTests, OpenAppend) {
+  FILE *file{std::fopen("openappend", "w")};
+  std::fprintf(file, "foo");
+  std::fclose(file);
+
+  // OPEN(10,POSITION='APPEND')
+  Cookie io{IONAME(BeginOpenUnit)(10, __FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(SetFile)(io, "openappend", 10)) << "SetFile(openappend)";
+  ASSERT_TRUE(IONAME(SetPosition)(io, "APPEND", 6)) << "SetPosition(APPEND)";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for Open";
+  // FTELL(10)
+  ASSERT_EQ(RTNAME(Ftell)(10), 3u);
+  // CLOSE(10)
+  io = IONAME(BeginClose)(10, __FILE__, __LINE__);
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for Close";
+
+  // OPEN(10,POSITION='APPEND')
+  io = IONAME(BeginOpenUnit)(10, __FILE__, __LINE__);
+  ASSERT_TRUE(IONAME(SetFile)(io, "openappend", 10)) << "SetFile(openappend)";
+  ASSERT_TRUE(IONAME(SetAccess)(io, "APPEND", 6)) << "SetAccess(APPEND)";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for Open";
+  // FTELL(10)
+  ASSERT_EQ(RTNAME(Ftell)(10), 3u);
+  // CLOSE(10)
+  io = IONAME(BeginClose)(10, __FILE__, __LINE__);
+  ASSERT_TRUE(IONAME(SetStatus)(io, "DELETE", 6)) << "SetStatus(DELETE)";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for Close";
 }
 
 TEST(ExternalIOTests, OpenNewExtant) {

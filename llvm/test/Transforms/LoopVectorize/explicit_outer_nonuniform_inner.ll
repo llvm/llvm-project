@@ -25,7 +25,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @iv_start(ptr nocapture %a, ptr nocapture readonly %b, i32 %N, i32 %M) local_unnamed_addr {
+define void @iv_start(ptr nocapture %a, ptr nocapture readonly %b, i32 %N, i32 %M) {
 entry:
   %cmp33 = icmp sgt i32 %N, 0
   br i1 %cmp33, label %outer.ph, label %for.end15
@@ -73,7 +73,7 @@ for.end15:                                  ; preds = %outer.inc, %entry
 ; CHECK: LV: Not vectorizing: Outer loop contains divergent loops.
 ; CHECK: LV: Not vectorizing: Unsupported outer loop.
 
-define void @loop_ub(ptr nocapture %a, ptr nocapture readonly %b, i32 %N, i32 %M) local_unnamed_addr {
+define void @loop_ub(ptr nocapture %a, ptr nocapture readonly %b, i32 %N, i32 %M) {
 entry:
   %cmp32 = icmp sgt i32 %N, 0
   br i1 %cmp32, label %outer.ph, label %for.end15
@@ -119,7 +119,7 @@ for.end15:                                  ; preds = %outer.inc, %entry
 ; CHECK: LV: Not vectorizing: Outer loop contains divergent loops.
 ; CHECK: LV: Not vectorizing: Unsupported outer loop.
 
-define void @iv_step(ptr nocapture %a, ptr nocapture readonly %b, i32 %N, i32 %M) local_unnamed_addr {
+define void @iv_step(ptr nocapture %a, ptr nocapture readonly %b, i32 %N, i32 %M) {
 entry:
   %cmp33 = icmp sgt i32 %N, 0
   br i1 %cmp33, label %outer.ph, label %for.end15

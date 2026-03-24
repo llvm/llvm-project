@@ -18,7 +18,7 @@ unsigned char _RigidArray_formatter[] =
     // flags
     "\x00"
     // sig_update
-    "\x05"
+    "\x06"
     // program size
     "\x27"
     // program

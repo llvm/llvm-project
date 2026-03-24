@@ -93,7 +93,7 @@ void ExprEngine::performTrivialCopy(NodeBuilder &Bldr, ExplodedNode *Pred,
     // In that case, copying the empty base class subobject would overwrite the
     // object that it overlaps with - so let's not do that.
     // See issue-157467.cpp for an example.
-    Dst.Add(Pred);
+    Dst.insert(Pred);
   }
 
   PostStmt PS(CallExpr, LCtx);
@@ -1130,7 +1130,7 @@ void ExprEngine::VisitCXXCatchStmt(const CXXCatchStmt *CS, ExplodedNode *Pred,
                                    ExplodedNodeSet &Dst) {
   const VarDecl *VD = CS->getExceptionDecl();
   if (!VD) {
-    Dst.Add(Pred);
+    Dst.insert(Pred);
     return;
   }
 

@@ -412,8 +412,8 @@ TEST(FormatAndFormatvTest, EquivalentHexFormatting) {
             formatv("0x{0:x-}", fmt_align(N, AlignStyle::Right, HexDigits, '0'))
                 .str());
 
-  EXPECT_EQ("0x000000fe", printToString(format("0x%8.8" PRIx64, 254)));
-  EXPECT_EQ("0x000000fe", formatv("{0:x+8}", 254).str());
+  EXPECT_EQ("0x000000fe", printToString(format("0x%8.8" PRIx64, 0xfeULL)));
+  EXPECT_EQ("0x000000fe", formatv("{0:x+8}", 0xfeULL).str());
 }
 
 TEST(FormatAndFormatvTest, NonNegativePlusInteger) {

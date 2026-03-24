@@ -607,10 +607,25 @@ struct __optional_destruct_base {
 template <class _Tp>
 struct __optional_storage_base : __optional_destruct_base<_Tp> {
   constexpr bool has_value() const noexcept;
+
+  const _Tp& operator*() const&;
+  _Tp& operator*() &;
+  const _Tp&& operator*() const&&;
+  _Tp&& operator*() &&;
+
+  const _Tp* operator->() const;
+  _Tp* operator->();
+
+  const _Tp& value() const&;
+  _Tp& value() &;
+  const _Tp&& value() const&&;
+  _Tp&& value() &&;
 };
 
+// Note: the inheritance may or may not be private:
+// https://github.com/llvm/llvm-project/issues/187788
 template <typename _Tp>
-class optional : private __optional_storage_base<_Tp> {
+class optional : public __optional_storage_base<_Tp> {
   using __base = __optional_storage_base<_Tp>;
 
  public:
@@ -744,19 +759,6 @@ class optional : private __optional_storage_base<_Tp> {
                                      template __enable_assign<_Up>(),
                                  int> = 0>
   constexpr optional& operator=(optional<_Up>&& __v);
-
-  const _Tp& operator*() const&;
-  _Tp& operator*() &;
-  const _Tp&& operator*() const&&;
-  _Tp&& operator*() &&;
-
-  const _Tp* operator->() const;
-  _Tp* operator->();
-
-  const _Tp& value() const&;
-  _Tp& value() &;
-  const _Tp&& value() const&&;
-  _Tp&& value() &&;
 
   template <typename U>
   constexpr _Tp value_or(U&& v) const&;

@@ -83,8 +83,19 @@ Error L0ProgramBuilderTy::addModule(size_t Size, const uint8_t *Image,
   ModuleDesc.pInputModule = Image;
   ModuleDesc.pBuildFlags = BuildOptions.c_str();
   ModuleDesc.pConstants = &SpecConstants;
-  CALL_ZE_RET_ERROR(zeModuleCreate, l0Device.getZeContext(),
-                    l0Device.getZeDevice(), &ModuleDesc, &Module, &BuildLog);
+  Error CreateErrors = Error::success();
+  auto handleError = [&](Error Err) {
+    if (BuildLog)
+      zeModuleBuildLogDestroy(BuildLog);
+    CreateErrors = joinErrors(std::move(CreateErrors), std::move(Err));
+  };
+  CALL_ZE_HANDLE_ERROR(handleError, zeModuleCreate, l0Device.getZeContext(),
+                       l0Device.getZeDevice(), &ModuleDesc, &Module, &BuildLog);
+  if (CreateErrors)
+    return CreateErrors;
+
+  if (BuildLog)
+    zeModuleBuildLogDestroy(BuildLog);
 
   // Check if module link is required. We do not need this check for
   // library module.

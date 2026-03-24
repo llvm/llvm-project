@@ -736,3 +736,44 @@ def testExtDialectWithInvalidOp():
     except ValueError as e:
         # CHECK: only optional operand can be a keyword parameter
         print(e)
+
+
+# CHECK: TEST: testExtDialectWithAttrInOp
+@run
+def testExtDialectWithAttrInOp():
+    class TestAttrInOp(Dialect, name="ext_attr_in_op"):
+        pass
+
+    class OpWithAttr(TestAttrInOp.Operation, name="op_with_attr"):
+        a: IntegerAttr | StringAttr
+        b: IntegerType[32] | IntegerType[64]
+
+    with Context(), Location.unknown():
+        TestAttrInOp.load()
+        # CHECK: irdl.dialect @ext_attr_in_op {
+        # CHECK:   irdl.operation @op_with_attr {
+        # CHECK:     %0 = irdl.base "#builtin.integer"
+        # CHECK:     %1 = irdl.base "#builtin.string"
+        # CHECK:     %2 = irdl.any_of(%0, %1)
+        # CHECK:     %3 = irdl.is i32
+        # CHECK:     %4 = irdl.is i64
+        # CHECK:     %5 = irdl.any_of(%3, %4)
+        # CHECK:     irdl.attributes {"a" = %2, "b" = %5}
+        # CHECK:   }
+        # CHECK: }
+        print(TestAttrInOp._mlir_module)
+
+        i32 = IntegerType.get_signless(32)
+        i64 = IntegerType.get_signless(64)
+        iattr = IntegerAttr.get(i32, 42)
+        sattr = StringAttr.get("hello")
+
+        module = Module.create()
+        with InsertionPoint(module.body):
+            OpWithAttr(iattr, TypeAttr.get(i32))
+            OpWithAttr(sattr, TypeAttr.get(i64))
+
+        assert module.operation.verify()
+        # CHECK: "ext_attr_in_op.op_with_attr"() {a = 42 : i32, b = i32} : () -> ()
+        # CHECK: "ext_attr_in_op.op_with_attr"() {a = "hello", b = i64} : () -> ()
+        print(module)

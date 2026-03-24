@@ -349,6 +349,14 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
   __ptrauth(ptrauth_key_objc_class_ro_pointer, 1,                              \
             __ptrauth_objc_class_ro_discriminator)
 
+#if __has_feature(ptrauth_init_fini_address_discrimination)
+#define __ptrauth_init_fini_pointer                                            \
+  __ptrauth(ptrauth_key_init_fini_pointer, 1, __ptrauth_init_fini_discriminator)
+#else
+#define __ptrauth_init_fini_pointer                                            \
+  __ptrauth(ptrauth_key_init_fini_pointer, 0, __ptrauth_init_fini_discriminator)
+#endif
+
 #else
 
 #define ptrauth_strip(__value, __key)                                          \

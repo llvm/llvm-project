@@ -68,27 +68,27 @@ struct BFloat16 {
     return static_cast<T>(static_cast<float>(*this));
   }
 
-  LIBC_INLINE bool operator==(BFloat16 other) const {
+  LIBC_INLINE constexpr bool operator==(BFloat16 other) const {
     return fputil::equals(*this, other);
   }
 
-  LIBC_INLINE bool operator!=(BFloat16 other) const {
+  LIBC_INLINE constexpr bool operator!=(BFloat16 other) const {
     return !fputil::equals(*this, other);
   }
 
-  LIBC_INLINE bool operator<(BFloat16 other) const {
+  LIBC_INLINE constexpr bool operator<(BFloat16 other) const {
     return fputil::less_than(*this, other);
   }
 
-  LIBC_INLINE bool operator<=(BFloat16 other) const {
+  LIBC_INLINE constexpr bool operator<=(BFloat16 other) const {
     return fputil::less_than_or_equals(*this, other);
   }
 
-  LIBC_INLINE bool operator>(BFloat16 other) const {
+  LIBC_INLINE constexpr bool operator>(BFloat16 other) const {
     return fputil::greater_than(*this, other);
   }
 
-  LIBC_INLINE bool operator>=(BFloat16 other) const {
+  LIBC_INLINE constexpr bool operator>=(BFloat16 other) const {
     return fputil::greater_than_or_equals(*this, other);
   }
 
@@ -98,23 +98,23 @@ struct BFloat16 {
     return result.get_val();
   }
 
-  LIBC_INLINE BFloat16 operator+(BFloat16 other) const {
+  LIBC_INLINE constexpr BFloat16 operator+(BFloat16 other) const {
     return fputil::generic::add<BFloat16>(*this, other);
   }
 
-  LIBC_INLINE BFloat16 operator-(BFloat16 other) const {
+  LIBC_INLINE constexpr BFloat16 operator-(BFloat16 other) const {
     return fputil::generic::sub<BFloat16>(*this, other);
   }
 
-  LIBC_INLINE BFloat16 operator*(BFloat16 other) const {
+  LIBC_INLINE constexpr BFloat16 operator*(BFloat16 other) const {
     return fputil::generic::mul<bfloat16>(*this, other);
   }
 
-  LIBC_INLINE BFloat16 operator/(BFloat16 other) const {
+  LIBC_INLINE constexpr BFloat16 operator/(BFloat16 other) const {
     return fputil::generic::div<bfloat16>(*this, other);
   }
 
-  LIBC_INLINE BFloat16 &operator*=(const BFloat16 &other) {
+  LIBC_INLINE constexpr BFloat16 &operator*=(const BFloat16 &other) {
     *this = *this * other;
     return *this;
   }

@@ -5,7 +5,7 @@ target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 
 ; Test that ARMTTIImpl::preferPredicateOverEpilogue triggers tail-folding.
 
-define dso_local void @f1(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C, i32 %N) {
+define void @f1(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C, i32 %N) {
 ; CHECK-LABEL: f1(
 ; CHECK:       entry:
 ; CHECK:       @llvm.get.active.lane.mask
@@ -37,7 +37,7 @@ for.body:                                         ; preds = %for.body.preheader,
   br i1 %exitcond.not, label %for.cond.cleanup.loopexit, label %for.body
 }
 
-define dso_local void @f32_reduction(ptr nocapture readonly %Input, i32 %N, ptr nocapture %Output) {
+define void @f32_reduction(ptr nocapture readonly %Input, i32 %N, ptr nocapture %Output) {
 ; CHECK-LABEL: f32_reduction(
 ; CHECK:       vector.body:
 ; CHECK:       @llvm.masked.load
@@ -72,7 +72,7 @@ while.end:                                        ; preds = %while.end.loopexit,
   ret void
 }
 
-define dso_local void @f16_reduction(ptr nocapture readonly %Input, i32 %N, ptr nocapture %Output) {
+define void @f16_reduction(ptr nocapture readonly %Input, i32 %N, ptr nocapture %Output) {
 ; CHECK-LABEL: f16_reduction(
 ; CHECK:       vector.body:
 ; CHECK:       @llvm.masked.load
@@ -107,7 +107,7 @@ while.end:                                        ; preds = %while.end.loopexit,
   ret void
 }
 
-define dso_local void @mixed_f32_i32_reduction(ptr nocapture readonly %fInput, ptr nocapture readonly %iInput, i32 %N, ptr nocapture %fOutput, ptr nocapture %iOutput) {
+define void @mixed_f32_i32_reduction(ptr nocapture readonly %fInput, ptr nocapture readonly %iInput, i32 %N, ptr nocapture %fOutput, ptr nocapture %iOutput) {
 ; CHECK-LABEL: mixed_f32_i32_reduction(
 ; CHECK:       vector.body:
 ; CHECK:       @llvm.masked.load
@@ -153,7 +153,7 @@ while.end:
   ret void
 }
 
-define dso_local i32 @i32_mul_reduction(ptr noalias nocapture readonly %B, i32 %N) {
+define i32 @i32_mul_reduction(ptr noalias nocapture readonly %B, i32 %N) {
 ; CHECK-LABEL: i32_mul_reduction(
 ; CHECK:       vector.body:
 ; CHECK:       @llvm.masked.load
@@ -184,7 +184,7 @@ for.body:
   br i1 %exitcond, label %for.cond.cleanup.loopexit, label %for.body
 }
 
-define dso_local i32 @i32_or_reduction(ptr noalias nocapture readonly %B, i32 %N) {
+define i32 @i32_or_reduction(ptr noalias nocapture readonly %B, i32 %N) {
 ; CHECK-LABEL: i32_or_reduction(
 ; CHECK:       vector.body:
 ; CHECK:       @llvm.masked.load
@@ -215,7 +215,7 @@ for.body:                                         ; preds = %for.body.preheader,
   br i1 %exitcond, label %for.cond.cleanup.loopexit, label %for.body
 }
 
-define dso_local i32 @i32_and_reduction(ptr noalias nocapture readonly %A, i32 %N, i32 %S) {
+define i32 @i32_and_reduction(ptr noalias nocapture readonly %A, i32 %N, i32 %S) {
 ; CHECK-LABEL: i32_and_reduction(
 ; CHECK:       vector.body:
 ; CHECK:       @llvm.masked.load

@@ -1408,6 +1408,13 @@ public:
   /// Add a symbol name to the SymbolStringPool and return a pointer to it.
   SymbolStringPtr intern(StringRef SymName) { return EPC->intern(SymName); }
 
+  /// Returns a reference to the bootstrap JITDylib.
+  ///
+  /// This is a bare JITDylib that is created for each ExecutionSession and
+  /// populated with the bootstrap symbol definitions provided by the
+  /// ExecutorProcessControl object.
+  JITDylib &getBootstrapJITDylib() { return BootstrapJD; }
+
   /// Set a WaitingOnGraph::Recorder to capture WaitingOnGraph operations.
   ///
   /// This method can be called at most once. If called, it should be called
@@ -1835,6 +1842,7 @@ private:
   std::vector<ResourceManager *> ResourceManagers;
 
   std::vector<JITDylibSP> JDs;
+  JITDylib &BootstrapJD;
   WaitingOnGraph G;
   WaitingOnGraph::OpRecorder *GOpRecorder = nullptr;
 

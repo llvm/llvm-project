@@ -191,7 +191,7 @@ def FeatureFixR5900 : SubtargetFeature<"fix-r5900", "FixR5900", "true",
 
 def FeatureR5900 : SubtargetFeature<"r5900", "IsR5900", "true",
                                     "R5900 (PS2 Emotion Engine) Support",
-                                    [FeatureMips3, FeatureSoftFloat,
+                                    [FeatureMips3, FeatureSingleFloat,
                                      FeatureFixR5900]>;
 
 def FeatureUseTCCInDIV : SubtargetFeature<

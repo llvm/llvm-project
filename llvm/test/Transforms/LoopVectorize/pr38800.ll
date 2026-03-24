@@ -15,7 +15,7 @@
 ;    *ptr += val;
 ;}
 
-define void @foo(ptr nocapture %ptr, float %val) local_unnamed_addr {
+define void @foo(ptr nocapture %ptr, float %val) {
 entry:
   %ptr.promoted = load float, ptr %ptr, align 4
   br label %for.body

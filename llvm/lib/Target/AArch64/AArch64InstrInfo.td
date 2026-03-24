@@ -2567,12 +2567,12 @@ def MSR_FPMR : Pseudo<(outs), (ins GPR64:$val),
                Sched<[WriteSys]>;
 
 // Generic system instructions
-def SYSxt  : SystemXtI<0, "sys">;
+def SYSxt  : SystemXtI<"sys">;
 def SYSLxt : SystemLXtI<1, "sysl">;
 
 def : InstAlias<"sys $op1, $Cn, $Cm, $op2",
-                (SYSxt imm0_7:$op1, sys_cr_op:$Cn,
-                 sys_cr_op:$Cm, imm0_7:$op2, XZR)>;
+                (SYSxt timm32_0_7:$op1, sys_cr_op:$Cn,
+                 sys_cr_op:$Cm, timm32_0_7:$op2, XZR)>;
 
 
 //===----------------------------------------------------------------------===//

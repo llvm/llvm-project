@@ -5799,6 +5799,11 @@ the configuration (without a prefix: ``Auto``).
   clang-format skips the comment and the next line. Otherwise, clang-format
   skips lines containing a matched token.
 
+  .. note::
+
+   This option does not apply to ``IntegerLiteralSeparator`` and
+   ``NumericLiteralCase``.
+
   .. code-block:: c++
 
      // OneLineFormatOffRegex: ^(// NOLINT|logger$)

@@ -158,7 +158,7 @@ clang_builtins_cxxflags = clang_builtins_static_cxxflags
 
 # FIXME: Right now we don't compile the C99 complex builtins when using
 # clang-cl. Fix that.
-if not is_msvc:
+if not is_msvc and config.target_arch not in ("amdgcn", "nvptx64"):
     config.available_features.add("c99-complex")
 
 builtins_is_msvc = get_required_attr(config, "builtins_is_msvc")

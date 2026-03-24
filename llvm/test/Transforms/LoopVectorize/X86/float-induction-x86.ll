@@ -56,9 +56,6 @@ define void @fp_iv_loop1(ptr noalias nocapture %A, i32 %N) #0 {
 ; AUTO_VEC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; AUTO_VEC-NEXT:    br i1 [[CMP_N]], label %[[FOR_END_LOOPEXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; AUTO_VEC:       [[VEC_EPILOG_ITER_CHECK]]:
-; AUTO_VEC-NEXT:    [[DOTCAST12:%.*]] = sitofp i64 [[N_VEC]] to float
-; AUTO_VEC-NEXT:    [[TMP11:%.*]] = fmul fast float 5.000000e-01, [[DOTCAST12]]
-; AUTO_VEC-NEXT:    [[IND_END1:%.*]] = fadd fast float 1.000000e+00, [[TMP11]]
 ; AUTO_VEC-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 4
 ; AUTO_VEC-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; AUTO_VEC:       [[VEC_EPILOG_PH]]:
@@ -87,7 +84,7 @@ define void @fp_iv_loop1(ptr noalias nocapture %A, i32 %N) #0 {
 ; AUTO_VEC-NEXT:    br i1 [[CMP_N9]], label %[[FOR_END_LOOPEXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; AUTO_VEC:       [[VEC_EPILOG_SCALAR_PH]]:
 ; AUTO_VEC-NEXT:    [[BC_RESUME_VAL12:%.*]] = phi i64 [ [[N_VEC3]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
-; AUTO_VEC-NEXT:    [[BC_RESUME_VAL13:%.*]] = phi float [ [[TMP10]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END1]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 1.000000e+00, %[[ITER_CHECK]] ]
+; AUTO_VEC-NEXT:    [[BC_RESUME_VAL13:%.*]] = phi float [ [[TMP10]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 1.000000e+00, %[[ITER_CHECK]] ]
 ; AUTO_VEC-NEXT:    br label %[[LOOP:.*]]
 ; AUTO_VEC:       [[LOOP]]:
 ; AUTO_VEC-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL12]], %[[VEC_EPILOG_SCALAR_PH]] ]
@@ -349,9 +346,6 @@ define void @fadd_reassoc_FMF(ptr nocapture %p, i32 %N) {
 ; AUTO_VEC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; AUTO_VEC-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; AUTO_VEC:       [[VEC_EPILOG_ITER_CHECK]]:
-; AUTO_VEC-NEXT:    [[DOTCAST16:%.*]] = sitofp i64 [[N_VEC]] to float
-; AUTO_VEC-NEXT:    [[TMP12:%.*]] = fmul reassoc float 4.200000e+01, [[DOTCAST16]]
-; AUTO_VEC-NEXT:    [[IND_END1:%.*]] = fadd reassoc float 1.000000e+00, [[TMP12]]
 ; AUTO_VEC-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 4
 ; AUTO_VEC-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3]]
 ; AUTO_VEC:       [[VEC_EPILOG_PH]]:
@@ -382,7 +376,7 @@ define void @fadd_reassoc_FMF(ptr nocapture %p, i32 %N) {
 ; AUTO_VEC-NEXT:    br i1 [[CMP_N18]], label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; AUTO_VEC:       [[VEC_EPILOG_SCALAR_PH]]:
 ; AUTO_VEC-NEXT:    [[BC_RESUME_VAL16:%.*]] = phi i64 [ [[N_VEC6]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
-; AUTO_VEC-NEXT:    [[BC_RESUME_VAL17:%.*]] = phi float [ [[TMP18]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END1]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 1.000000e+00, %[[ITER_CHECK]] ]
+; AUTO_VEC-NEXT:    [[BC_RESUME_VAL17:%.*]] = phi float [ [[TMP18]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 1.000000e+00, %[[ITER_CHECK]] ]
 ; AUTO_VEC-NEXT:    br label %[[LOOP:.*]]
 ; AUTO_VEC:       [[LOOP]]:
 ; AUTO_VEC-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL16]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[LOOP]] ]

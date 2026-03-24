@@ -25,6 +25,7 @@ namespace llvm {
 
 class Argument;
 class CallInst;
+class GlobalVariable;
 class Module;
 class Value;
 
@@ -34,13 +35,12 @@ inline bool isKernelFunction(const Function &F) {
   return F.getCallingConv() == CallingConv::PTX_Kernel;
 }
 
-bool isTexture(const Value &);
-bool isSurface(const Value &);
-bool isSampler(const Value &);
-bool isImage(const Value &);
-bool isImageReadOnly(const Value &);
-bool isImageWriteOnly(const Value &);
-bool isImageReadWrite(const Value &);
+enum class PTXOpaqueType { None, Texture, Surface, Sampler };
+
+PTXOpaqueType getPTXOpaqueType(const GlobalVariable &);
+PTXOpaqueType getPTXOpaqueType(const Argument &);
+PTXOpaqueType getPTXOpaqueType(const Value &);
+
 bool isManaged(const Value &);
 
 SmallVector<unsigned, 3> getMaxNTID(const Function &);

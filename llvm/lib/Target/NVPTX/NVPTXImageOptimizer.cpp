@@ -38,9 +38,7 @@ public:
   StringRef getPassName() const override { return "NVPTX Image Optimizer"; }
 
 private:
-  bool replaceIsTypePSampler(Instruction &I);
-  bool replaceIsTypePSurface(Instruction &I);
-  bool replaceIsTypePTexture(Instruction &I);
+  bool replaceIsTypeP(Instruction &I, PTXOpaqueType Expected);
   Value *cleanupValue(Value *V);
   void replaceWith(Instruction *From, ConstantInt *To);
 };
@@ -68,13 +66,13 @@ bool NVPTXImageOptimizer::runOnFunction(Function &F) {
           switch (CalledF->getIntrinsicID()) {
           default: break;
           case Intrinsic::nvvm_istypep_sampler:
-            Changed |= replaceIsTypePSampler(Instr);
+            Changed |= replaceIsTypeP(Instr, PTXOpaqueType::Sampler);
             break;
           case Intrinsic::nvvm_istypep_surface:
-            Changed |= replaceIsTypePSurface(Instr);
+            Changed |= replaceIsTypeP(Instr, PTXOpaqueType::Surface);
             break;
           case Intrinsic::nvvm_istypep_texture:
-            Changed |= replaceIsTypePTexture(Instr);
+            Changed |= replaceIsTypeP(Instr, PTXOpaqueType::Texture);
             break;
           }
         }
@@ -89,58 +87,13 @@ bool NVPTXImageOptimizer::runOnFunction(Function &F) {
   return Changed;
 }
 
-bool NVPTXImageOptimizer::replaceIsTypePSampler(Instruction &I) {
-  Value *TexHandle = cleanupValue(I.getOperand(0));
-  if (isSampler(*TexHandle)) {
-    // This is an OpenCL sampler, so it must be a samplerref
-    replaceWith(&I, ConstantInt::getTrue(I.getContext()));
-    return true;
-  } else if (isImage(*TexHandle)) {
-    // This is an OpenCL image, so it cannot be a samplerref
-    replaceWith(&I, ConstantInt::getFalse(I.getContext()));
-    return true;
-  } else {
-    // The image type is unknown, so we cannot eliminate the intrinsic
+bool NVPTXImageOptimizer::replaceIsTypeP(Instruction &I,
+                                         PTXOpaqueType Expected) {
+  PTXOpaqueType OT = getPTXOpaqueType(*cleanupValue(I.getOperand(0)));
+  if (OT == PTXOpaqueType::None)
     return false;
-  }
-}
-
-bool NVPTXImageOptimizer::replaceIsTypePSurface(Instruction &I) {
-  Value *TexHandle = cleanupValue(I.getOperand(0));
-  if (isImageReadWrite(*TexHandle) ||
-      isImageWriteOnly(*TexHandle)) {
-    // This is an OpenCL read-only/read-write image, so it must be a surfref
-    replaceWith(&I, ConstantInt::getTrue(I.getContext()));
-    return true;
-  } else if (isImageReadOnly(*TexHandle) ||
-             isSampler(*TexHandle)) {
-    // This is an OpenCL read-only/ imageor sampler, so it cannot be
-    // a surfref
-    replaceWith(&I, ConstantInt::getFalse(I.getContext()));
-    return true;
-  } else {
-    // The image type is unknown, so we cannot eliminate the intrinsic
-    return false;
-  }
-}
-
-bool NVPTXImageOptimizer::replaceIsTypePTexture(Instruction &I) {
-  Value *TexHandle = cleanupValue(I.getOperand(0));
-  if (isImageReadOnly(*TexHandle)) {
-    // This is an OpenCL read-only image, so it must be a texref
-    replaceWith(&I, ConstantInt::getTrue(I.getContext()));
-    return true;
-  } else if (isImageWriteOnly(*TexHandle) ||
-             isImageReadWrite(*TexHandle) ||
-             isSampler(*TexHandle)) {
-    // This is an OpenCL read-write/write-only image or a sampler, so it
-    // cannot be a texref
-    replaceWith(&I, ConstantInt::getFalse(I.getContext()));
-    return true;
-  } else {
-    // The image type is unknown, so we cannot eliminate the intrinsic
-    return false;
-  }
+  replaceWith(&I, ConstantInt::getBool(I.getContext(), OT == Expected));
+  return true;
 }
 
 void NVPTXImageOptimizer::replaceWith(Instruction *From, ConstantInt *To) {

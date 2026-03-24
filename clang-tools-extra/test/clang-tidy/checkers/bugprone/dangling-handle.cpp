@@ -6,35 +6,11 @@
 // RUN:   -config="{CheckOptions: \
 // RUN:             {bugprone-dangling-handle.HandleClasses: \
 // RUN:               'std::basic_string_view; ::llvm::StringRef;'}}"
+#include <map>
+#include <set>
 #include <string>
+#include <utility>
 #include <vector>
-
-namespace std {
-
-template <typename, typename>
-class pair {};
-
-template <typename T>
-class set {
- public:
-  using const_iterator = const T*;
-  using iterator = T*;
-
-  std::pair<iterator, bool> insert(const T& value);
-  std::pair<iterator, bool> insert(T&& value);
-  iterator insert(const_iterator hint, const T& value);
-  iterator insert(const_iterator hint, T&& value);
-};
-
-template <typename Key, typename Value>
-class map {
- public:
-  using value_type = pair<Key, Value>;
-  value_type& operator[](const Key& key);
-  value_type& operator[](Key&& key);
-};
-
-}  // namespace std
 
 namespace llvm {
 

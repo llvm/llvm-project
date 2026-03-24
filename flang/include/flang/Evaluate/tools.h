@@ -1297,6 +1297,7 @@ bool CheckForCoindexedObject(parser::ContextualMessages &,
     const std::string &argName);
 
 bool IsCUDADeviceSymbol(const Symbol &sym);
+bool IsCUDADeviceOnlySymbol(const Symbol &sym);
 
 inline bool IsCUDAManagedOrUnifiedSymbol(const Symbol &sym) {
   if (const auto *details =
@@ -1358,6 +1359,8 @@ inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
   // - Only managed or unifed symbols are involved on RHS and LHS.
   // - LHS is managed or unified and the RHS is host only.
   if ((lhsNbManagedSymbols >= 1 && rhsNbManagedSymbols == rhsNbSymbols) ||
+      (lhsNbManagedSymbols == 0 && rhsNbManagedSymbols >= 1 &&
+          rhsNbManagedSymbols == rhsNbSymbols) ||
       (lhsNbManagedSymbols >= 1 && rhsNbSymbols == 0)) {
     return false;
   }

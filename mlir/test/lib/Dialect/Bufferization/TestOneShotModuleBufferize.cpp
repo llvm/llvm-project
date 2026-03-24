@@ -35,8 +35,8 @@ struct TestOneShotModuleBufferizePass
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestOneShotModuleBufferizePass)
 
   TestOneShotModuleBufferizePass() = default;
-  TestOneShotModuleBufferizePass(const TestOneShotModuleBufferizePass &pass)
-      : PassWrapper(pass) {}
+  TestOneShotModuleBufferizePass(const TestOneShotModuleBufferizePass &pass) =
+      default;
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<test::TestDialect>();

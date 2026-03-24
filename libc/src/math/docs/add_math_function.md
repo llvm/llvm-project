@@ -11,7 +11,7 @@ detail below.
 To register the function's entry points for supported OSes and architectures,
 together with its specifications:
 
-- Add entry points `libc.src.math.func` to the following files:
+- Add entry points `libc.src.math.<func>` to the following files:
 ```
   libc/config/linux/<arch>/entrypoints.txt
   libc/config/windows/entrypoints.txt
@@ -67,13 +67,17 @@ If the function should be available to internal LLVM projects:
 ```
   libc/shared/math/<func>.h
 ```
-- add a simple test case to
+- Add a simple test case to:
 ```
- libc/test/shared/shared_math_test.cpp
+  libc/test/shared/shared_math_test.cpp
 ```
-- add the corresponding `libc_support_library` and `libc_math_function` to:
+- Add the corresponding entry `libc.src.__support.math.<func>` to:
 ```
-utils/bazel/llvm-project-overlay/libc/BUILD.bazel
+  libc/test/shared/CMakeLists.txt
+```
+- Add the corresponding `libc_support_library` and `libc_math_function` to:
+```
+  utils/bazel/llvm-project-overlay/libc/BUILD.bazel
 ```
 
 ### Floating point utility
@@ -210,7 +214,13 @@ implementation (which is very often glibc).
 - Build and Run a specific unit test:
 ```
   $ ninja libc.test.src.math.<func>_test.__unit__
-  $ projects/libc/test/src/math/libc.test.src.math.<func>_test
+  $ projects/libc/test/src/math/libc.test.src.math.<func>_test.__unit__
+```
+
+- Build and Run shared math test:
+```
+  $ ninja libc.test.shared.shared_math_test.__unit__
+  $ projects/libc/test/shared/libc.test.shared.shared_math_test.__unit__
 ```
 
 - Build and Run exhaustive test (might take hours to run):

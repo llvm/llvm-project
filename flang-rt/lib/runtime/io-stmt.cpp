@@ -1278,6 +1278,12 @@ bool InquireUnitState::Inquire(
         : mutableModes().editingFlags & decimalComma ? "COMMA"
                                                      : "POINT";
     break;
+  case HashInquiryKeyword("Leading_Zero"):
+    str = !unit().IsConnected() || unit().isUnformatted.value_or(true)
+        ? "UNDEFINED"
+        : mutableModes().editingFlags & leadingZeroSuppress ? "SUPPRESS"
+                                                            : "PRINT";
+    break;
   case HashInquiryKeyword("DELIM"):
     if (!unit().IsConnected() || unit().isUnformatted.value_or(true)) {
       str = "UNDEFINED";
@@ -1503,6 +1509,7 @@ bool InquireNoUnitState::Inquire(
   case HashInquiryKeyword("DECIMAL"):
   case HashInquiryKeyword("DELIM"):
   case HashInquiryKeyword("FORM"):
+  case HashInquiryKeyword("Leading_Zero"):
   case HashInquiryKeyword("NAME"):
   case HashInquiryKeyword("PAD"):
   case HashInquiryKeyword("POSITION"):
@@ -1591,6 +1598,7 @@ bool InquireUnconnectedFileState::Inquire(
   case HashInquiryKeyword("DECIMAL"):
   case HashInquiryKeyword("DELIM"):
   case HashInquiryKeyword("FORM"):
+  case HashInquiryKeyword("Leading_Zero"):
   case HashInquiryKeyword("PAD"):
   case HashInquiryKeyword("POSITION"):
   case HashInquiryKeyword("ROUND"):

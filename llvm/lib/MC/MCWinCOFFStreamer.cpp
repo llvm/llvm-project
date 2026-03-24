@@ -134,8 +134,7 @@ WinCOFFObjectWriter &MCWinCOFFStreamer::getWriter() {
   return static_cast<WinCOFFObjectWriter &>(getAssembler().getWriter());
 }
 
-void MCWinCOFFStreamer::initSections(bool NoExecStack,
-                                     const MCSubtargetInfo &STI) {
+void MCWinCOFFStreamer::initSections(const MCSubtargetInfo &STI) {
   // FIXME: this is identical to the ELF one.
   // This emulates the same behavior of GNU as. This makes it easier
   // to compare the output as the major sections are in the same order.

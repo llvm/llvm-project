@@ -1203,7 +1203,7 @@ const AsmToken MasmParser::peekTok(bool ShouldSkipSpace) {
 bool MasmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
   // Create the initial section, if requested.
   if (!NoInitialTextSection)
-    Out.initSections(false, getTargetParser().getSTI());
+    Out.initSections(getTargetParser().getSTI());
 
   // Prime the lexer.
   Lex();
@@ -1273,7 +1273,7 @@ bool MasmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
 bool MasmParser::checkForValidSection() {
   if (!ParsingMSInlineAsm && !(getStreamer().getCurrentFragment() &&
                                getStreamer().getCurrentSectionOnly())) {
-    Out.initSections(false, getTargetParser().getSTI());
+    Out.initSections(getTargetParser().getSTI());
     return Error(getTok().getLoc(),
                  "expected section directive before assembly directive");
   }

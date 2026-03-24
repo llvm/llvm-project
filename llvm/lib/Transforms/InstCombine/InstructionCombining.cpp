@@ -1695,13 +1695,11 @@ Instruction *InstCombinerImpl::foldFBinOpOfIntCasts(BinaryOperator &BO) {
   // Check for:
   //    1) (binop ({s|u}itofp x), ({s|u}itofp y))
   //    2) (binop ({s|u}itofp x), FpC)
-  if (!match(BO.getOperand(0), m_SIToFP(m_Value(IntOps[0]))) &&
-      !match(BO.getOperand(0), m_UIToFP(m_Value(IntOps[0]))))
+  if (!match(BO.getOperand(0), m_IToFP(m_Value(IntOps[0]))))
     return nullptr;
 
   if (!match(BO.getOperand(1), m_Constant(Op1FpC)) &&
-      !match(BO.getOperand(1), m_SIToFP(m_Value(IntOps[1]))) &&
-      !match(BO.getOperand(1), m_UIToFP(m_Value(IntOps[1]))))
+      !match(BO.getOperand(1), m_IToFP(m_Value(IntOps[1]))))
     return nullptr;
 
   // Cache KnownBits a bit to potentially save some analysis.
