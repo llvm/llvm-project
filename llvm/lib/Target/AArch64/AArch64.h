@@ -107,7 +107,7 @@ void initializeAArch64PreLegalizerCombinerPass(PassRegistry &);
 void initializeAArch64PromoteConstantPass(PassRegistry&);
 void initializeAArch64RedundantCopyEliminationPass(PassRegistry&);
 void initializeAArch64RedundantCondBranchPass(PassRegistry &);
-void initializeAArch64SIMDInstrOptPass(PassRegistry &);
+void initializeAArch64SIMDInstrOptLegacyPass(PassRegistry &);
 void initializeAArch64SLSHardeningPass(PassRegistry &);
 void initializeAArch64SpeculationHardeningPass(PassRegistry &);
 void initializeAArch64StackTaggingPass(PassRegistry &);
@@ -184,6 +184,12 @@ public:
 
 class AArch64ConditionOptimizerPass
     : public PassInfoMixin<AArch64ConditionOptimizerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class AArch64SIMDInstrOptPass : public PassInfoMixin<AArch64SIMDInstrOptPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

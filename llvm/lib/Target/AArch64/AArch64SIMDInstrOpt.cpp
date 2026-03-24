@@ -39,6 +39,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -65,9 +66,8 @@ STATISTIC(NumModifiedInstr,
 
 namespace {
 
-struct AArch64SIMDInstrOpt : public MachineFunctionPass {
-  static char ID;
-
+class AArch64SIMDInstrOptImpl {
+public:
   const AArch64InstrInfo *TII;
   MachineRegisterInfo *MRI;
   TargetSchedModel SchedModel;
@@ -151,7 +151,7 @@ struct AArch64SIMDInstrOpt : public MachineFunctionPass {
   // The maximum of N is currently 10 and it is for ST4 case.
   static const unsigned MaxNumRepl = 10;
 
-  AArch64SIMDInstrOpt() : MachineFunctionPass(ID) {}
+  AArch64SIMDInstrOptImpl() {}
 
   /// Based only on latency of instructions, determine if it is cost efficient
   /// to replace the instruction InstDesc by the instructions stored in the
@@ -196,6 +196,14 @@ struct AArch64SIMDInstrOpt : public MachineFunctionPass {
   /// instruction (2 for ST2 and 4 for ST4).
   unsigned determineSrcReg(MachineInstr &MI) const;
 
+  bool run(MachineFunction &MF);
+};
+
+struct AArch64SIMDInstrOptLegacy : public MachineFunctionPass {
+  static char ID;
+
+  AArch64SIMDInstrOptLegacy() : MachineFunctionPass(ID) {}
+
   bool runOnMachineFunction(MachineFunction &Fn) override;
 
   StringRef getPassName() const override {
@@ -203,20 +211,20 @@ struct AArch64SIMDInstrOpt : public MachineFunctionPass {
   }
 };
 
-char AArch64SIMDInstrOpt::ID = 0;
+char AArch64SIMDInstrOptLegacy::ID = 0;
 
 } // end anonymous namespace
 
-INITIALIZE_PASS(AArch64SIMDInstrOpt, "aarch64-simdinstr-opt",
+INITIALIZE_PASS(AArch64SIMDInstrOptLegacy, "aarch64-simdinstr-opt",
                 AARCH64_VECTOR_BY_ELEMENT_OPT_NAME, false, false)
 
 /// Based only on latency of instructions, determine if it is cost efficient
 /// to replace the instruction InstDesc by the instructions stored in the
 /// array InstDescRepl.
 /// Return true if replacement is expected to be faster.
-bool AArch64SIMDInstrOpt::
-shouldReplaceInst(MachineFunction *MF, const MCInstrDesc *InstDesc,
-                  SmallVectorImpl<const MCInstrDesc*> &InstDescRepl) {
+bool AArch64SIMDInstrOptImpl::shouldReplaceInst(
+    MachineFunction *MF, const MCInstrDesc *InstDesc,
+    SmallVectorImpl<const MCInstrDesc *> &InstDescRepl) {
   // Check if replacement decision is already available in the cached table.
   // if so, return it.
   std::string Subtarget = std::string(SchedModel.getSubtargetInfo()->getCPU());
@@ -271,9 +279,9 @@ shouldReplaceInst(MachineFunction *MF, const MCInstrDesc *InstDesc,
 /// check.
 /// Return true if early exit of this pass for a kind of instruction
 /// replacement is recommended for a target.
-bool AArch64SIMDInstrOpt::shouldExitEarly(MachineFunction *MF, Subpass SP) {
-  const MCInstrDesc* OriginalMCID;
-  SmallVector<const MCInstrDesc*, MaxNumRepl> ReplInstrMCID;
+bool AArch64SIMDInstrOptImpl::shouldExitEarly(MachineFunction *MF, Subpass SP) {
+  const MCInstrDesc *OriginalMCID;
+  SmallVector<const MCInstrDesc *, MaxNumRepl> ReplInstrMCID;
 
   switch (SP) {
   // For this optimization, check by comparing the latency of a representative
@@ -316,9 +324,9 @@ bool AArch64SIMDInstrOpt::shouldExitEarly(MachineFunction *MF, Subpass SP) {
 /// created or not.
 /// Return true when the DUP instruction already exists. In this case,
 /// DestReg will point to the destination of the already created DUP.
-bool AArch64SIMDInstrOpt::reuseDUP(MachineInstr &MI, unsigned DupOpcode,
-                                         unsigned SrcReg, unsigned LaneNumber,
-                                         unsigned *DestReg) const {
+bool AArch64SIMDInstrOptImpl::reuseDUP(MachineInstr &MI, unsigned DupOpcode,
+                                       unsigned SrcReg, unsigned LaneNumber,
+                                       unsigned *DestReg) const {
   for (MachineBasicBlock::iterator MII = MI, MIE = MI.getParent()->begin();
        MII != MIE;) {
     MII--;
@@ -350,7 +358,7 @@ bool AArch64SIMDInstrOpt::reuseDUP(MachineInstr &MI, unsigned DupOpcode,
 ///    fmla v0.4s, v1.4s, v3.4s
 ///
 /// Return true if the SIMD instruction is modified.
-bool AArch64SIMDInstrOpt::optimizeVectElement(MachineInstr &MI) {
+bool AArch64SIMDInstrOptImpl::optimizeVectElement(MachineInstr &MI) {
   const MCInstrDesc *MulMCID, *DupMCID;
   const TargetRegisterClass *RC = &AArch64::FPR128RegClass;
 
@@ -502,7 +510,7 @@ bool AArch64SIMDInstrOpt::optimizeVectElement(MachineInstr &MI) {
 /// Currently only instructions related to ST2 and ST4 are considered.
 /// Other may be added later.
 /// Return true if the SIMD instruction is modified.
-bool AArch64SIMDInstrOpt::optimizeLdStInterleave(MachineInstr &MI) {
+bool AArch64SIMDInstrOptImpl::optimizeLdStInterleave(MachineInstr &MI) {
 
   unsigned SeqReg, AddrReg;
   unsigned StReg[4];
@@ -632,10 +640,10 @@ bool AArch64SIMDInstrOpt::optimizeLdStInterleave(MachineInstr &MI) {
 /// Example of such instruction.
 ///    %dest = REG_SEQUENCE %st2_src1, dsub0, %st2_src2, dsub1;
 /// Return true when the instruction is processed successfully.
-bool AArch64SIMDInstrOpt::processSeqRegInst(MachineInstr *DefiningMI,
-                                            unsigned *StReg,
-                                            RegState *StRegKill,
-                                            unsigned NumArg) const {
+bool AArch64SIMDInstrOptImpl::processSeqRegInst(MachineInstr *DefiningMI,
+                                                unsigned *StReg,
+                                                RegState *StRegKill,
+                                                unsigned NumArg) const {
   assert(DefiningMI != nullptr);
   if (DefiningMI->getOpcode() != AArch64::REG_SEQUENCE)
     return false;
@@ -669,7 +677,7 @@ bool AArch64SIMDInstrOpt::processSeqRegInst(MachineInstr *DefiningMI,
 
 /// Return the number of useful source registers for this instruction
 /// (2 for ST2 and 4 for ST4).
-unsigned AArch64SIMDInstrOpt::determineSrcReg(MachineInstr &MI) const {
+unsigned AArch64SIMDInstrOptImpl::determineSrcReg(MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Unsupported instruction for this pass");
@@ -694,10 +702,7 @@ unsigned AArch64SIMDInstrOpt::determineSrcReg(MachineInstr &MI) const {
   }
 }
 
-bool AArch64SIMDInstrOpt::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
-
+bool AArch64SIMDInstrOptImpl::run(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
   TII = ST.getInstrInfo();
@@ -732,8 +737,27 @@ bool AArch64SIMDInstrOpt::runOnMachineFunction(MachineFunction &MF) {
   return Changed;
 }
 
+bool AArch64SIMDInstrOptLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+
+  return AArch64SIMDInstrOptImpl().run(MF);
+}
+
+PreservedAnalyses
+AArch64SIMDInstrOptPass::run(MachineFunction &MF,
+                             MachineFunctionAnalysisManager &MFAM) {
+  const bool Changed = AArch64SIMDInstrOptImpl().run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
+
 /// Returns an instance of the high cost ASIMD instruction replacement
 /// optimization pass.
 FunctionPass *llvm::createAArch64SIMDInstrOptPass() {
-  return new AArch64SIMDInstrOpt();
+  return new AArch64SIMDInstrOptLegacy();
 }
