@@ -40,6 +40,18 @@ LIBC_INLINE float16 log10p1f16(float16 x) {
   uint16_t x_u = x_bits.uintval();
   uint16_t x_abs = x_u & 0x7fffU;
 
+  auto pre_rounding_check = [](double x) {
+    constexpr double MIN_NORMAL = 0x1.0p-14;
+    constexpr double midpoint = 0x1.ffcp-15;
+
+    double x_abs = x > 0 ? x : -x;
+    // [min-ulp/2,min) -> min
+    if (x_abs < MIN_NORMAL && x_abs >= midpoint &&
+        fputil::fenv_is_round_to_nearest()) {
+      x = (x > 0) ? MIN_NORMAL : -MIN_NORMAL;
+    }
+    return static_cast<float16>(x);
+  };
   // If x is +-0, NaN, +/-inf, or |x| <= 2^-3.
   if (LIBC_UNLIKELY(x_abs <= 0x3000U || x_abs >= 0x7c00U)) {
     // log10p1(NaN) = NaN
@@ -105,7 +117,7 @@ LIBC_INLINE float16 log10p1f16(float16 x) {
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
       float xf = x;
-      return fputil::cast<float16>(
+      return pre_rounding_check(
           xf * fputil::polyeval(xf, 0x1.bcb7b2p-2f, -0x1.bcb4cp-3f,
                                 0x1.2875bcp-3f, -0x1.c2946ep-4f,
                                 0x1.69da2p-4f));
@@ -195,7 +207,7 @@ LIBC_INLINE float16 log10p1f16(float16 x) {
       v * fputil::polyeval(v, 0x1.bcb7bp-2f, -0x1.bce168p-3f, 0x1.28acb8p-3f);
   // log10(1.mant) = log10(f) + log10(1 + d/f)
   float log10_1_mant = LOG10F_F[f] + log10p1_d_over_f;
-  return fputil::cast<float16>(
+  return pre_rounding_check(
       fputil::multiply_add(static_cast<float>(m), LOG10F_2, log10_1_mant));
 }
 
