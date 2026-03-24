@@ -162,8 +162,10 @@ define i1 @test6_intrin(float %x, float %y) {
 
 define i1 @test6a(float %x, float %y) {
 ; CHECK-LABEL: @test6a(
-; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.roundeven.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[X_EXT:%.*]] = fpext float [[X:%.*]] to double
+; CHECK-NEXT:    [[ROUND:%.*]] = call double @roundeven(double [[X_EXT]]) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    [[Y_EXT:%.*]] = fpext float [[Y:%.*]] to double
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq double [[ROUND]], [[Y_EXT]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %x.ext = fpext float %x to double
@@ -357,8 +359,10 @@ define i1 @test13_intrin(float %x, float %y) {
 
 define i1 @test13a(float %x, float %y) {
 ; CHECK-LABEL: @test13a(
-; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.roundeven.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[Y:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[X_EXT:%.*]] = fpext float [[X:%.*]] to double
+; CHECK-NEXT:    [[Y_EXT:%.*]] = fpext float [[Y:%.*]] to double
+; CHECK-NEXT:    [[ROUND:%.*]] = call double @roundeven(double [[X_EXT]]) #[[ATTR0]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq double [[ROUND]], [[Y_EXT]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %x.ext = fpext float %x to double

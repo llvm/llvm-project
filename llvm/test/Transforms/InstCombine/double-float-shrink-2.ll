@@ -78,8 +78,10 @@ define float @test_shrink_libcall_round(float %C) {
 
 define float @test_shrink_libcall_roundeven(float %C) {
 ; CHECK-LABEL: @test_shrink_libcall_roundeven(
-; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.roundeven.f32(float [[C:%.*]])
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[D:%.*]] = fpext float [[C:%.*]] to double
+; CHECK-NEXT:    [[E:%.*]] = call double @roundeven(double [[D]])
+; CHECK-NEXT:    [[F:%.*]] = fptrunc double [[E]] to float
+; CHECK-NEXT:    ret float [[F]]
 ;
   %D = fpext float %C to double
   ; --> roundeven
