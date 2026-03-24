@@ -292,12 +292,12 @@ Error L0DeviceTy::synchronizeImpl(__tgt_async_info &AsyncInfo,
     if (Plugin.getOptions().CommandMode == CommandModeTy::AsyncOrdered) {
       // Only need to wait for the last event.
       CALL_ZE_ACCUM_ERROR(SyncErrors, zeEventHostSynchronize, WaitEvents.back(),
-                           L0DefaultTimeout);
+                          L0DefaultTimeout);
       // Synchronize on kernel event to support printf().
       auto KE = AsyncQueue->KernelEvent;
       if (KE && KE != WaitEvents.back() && !SyncErrors) {
         CALL_ZE_ACCUM_ERROR(SyncErrors, zeEventHostSynchronize, KE,
-                             L0DefaultTimeout);
+                            L0DefaultTimeout);
       }
       for (auto &Event : WaitEvents) {
         if (auto Err = releaseEvent(Event))
@@ -314,7 +314,7 @@ Error L0DeviceTy::synchronizeImpl(__tgt_async_info &AsyncInfo,
       for (auto Itr = WaitEvents.rbegin(); Itr != WaitEvents.rend(); Itr++) {
         if (!WaitDone) {
           CALL_ZE_ACCUM_ERROR(SyncErrors, zeEventHostSynchronize, *Itr,
-                               L0DefaultTimeout);
+                              L0DefaultTimeout);
           if (*Itr == AsyncQueue->KernelEvent)
             WaitDone = true;
         }
@@ -828,7 +828,7 @@ Error L0DeviceTy::enqueueMemCopyAsync(void *Dst, const void *Src, size_t Size,
   Error AllErrors = Error::success();
 
   CALL_ZE_ACCUM_ERROR(AllErrors, zeCommandListAppendMemoryCopy, CmdList, Dst,
-                       Src, Size, SignalEvent, NumWaitEvents, WaitEvents);
+                      Src, Size, SignalEvent, NumWaitEvents, WaitEvents);
   if (!AllErrors)
     AsyncQueue->WaitEvents.push_back(SignalEvent);
   else {
@@ -853,7 +853,7 @@ Error L0DeviceTy::enqueueMemFill(void *Ptr, const void *Pattern,
     Error AllErrors = Error::success();
     ze_event_handle_t Event = *EventOrErr;
     CALL_ZE_ACCUM_ERROR(AllErrors, zeCommandListAppendMemoryFill, CmdList, Ptr,
-                         Pattern, PatternSize, Size, Event, 0, nullptr);
+                        Pattern, PatternSize, Size, Event, 0, nullptr);
     if (!AllErrors)
       CALL_ZE_ACCUM_ERROR(AllErrors, zeEventHostSynchronize, Event,
                            L0DefaultTimeout);

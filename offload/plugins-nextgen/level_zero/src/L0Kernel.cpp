@@ -285,8 +285,8 @@ static Error launchKernelWithImmCmdList(L0DeviceTy &l0Device,
   Error AllErrors = Error::success();
 
   CALL_ZE_ACCUM_ERROR(AllErrors, zeCommandListAppendLaunchKernel, CmdList,
-                       zeKernel, &KEnv.GroupCounts, Event, NumWaitEvents,
-                       WaitEvents);
+                      zeKernel, &KEnv.GroupCounts, Event, NumWaitEvents,
+                      WaitEvents);
   KEnv.Lock.unlock();
   if (AllErrors) {
     if (auto Err = l0Device.releaseEvent(Event))
@@ -301,7 +301,7 @@ static Error launchKernelWithImmCmdList(L0DeviceTy &l0Device,
     AsyncQueue->KernelEvent = Event;
   } else {
     CALL_ZE_ACCUM_ERROR(AllErrors, zeEventHostSynchronize, Event,
-                         L0DefaultTimeout);
+                        L0DefaultTimeout);
     if (auto Err = l0Device.releaseEvent(Event))
       AllErrors = joinErrors(std::move(AllErrors), std::move(Err));
     if (AllErrors)
