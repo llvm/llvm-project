@@ -1408,3 +1408,98 @@ entry:
   %ret = fmul <3 x float> %a, <float -0.0, float 0.0, float poison>
   ret <3 x float> %ret
 }
+
+; fmul X, ldexp(1.0, Y) -> ldexp X, Y
+define float @fmul_ldexp(float %x, i32 %exp) {
+; CHECK-LABEL: @fmul_ldexp(
+; CHECK-NEXT:    [[LDEXP:%.*]] = call nnan float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[EXP:%.*]])
+; CHECK-NEXT:    [[MUL:%.*]] = fmul contract float [[X:%.*]], [[LDEXP]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %ldexp = call float @llvm.ldexp(float 1.0, i32 %exp)
+  %mul = fmul contract float %x, %ldexp
+  ret float %mul
+}
+
+define float @fmul_ldexp_comm(float %x, i32 %exp) {
+; CHECK-LABEL: @fmul_ldexp_comm(
+; CHECK-NEXT:    [[LDEXP:%.*]] = call nnan float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[EXP:%.*]])
+; CHECK-NEXT:    [[MUL:%.*]] = fmul contract float [[LDEXP]], [[X:%.*]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %ldexp = call float @llvm.ldexp(float 1.0, i32 %exp)
+  %mul = fmul contract float %ldexp, %x
+  ret float %mul
+}
+
+define double @fmul_ldexp_f64(double %x, i32 %exp) {
+; CHECK-LABEL: @fmul_ldexp_f64(
+; CHECK-NEXT:    [[LDEXP:%.*]] = call nnan double @llvm.ldexp.f64.i32(double 1.000000e+00, i32 [[EXP:%.*]])
+; CHECK-NEXT:    [[MUL:%.*]] = fmul contract double [[X:%.*]], [[LDEXP]]
+; CHECK-NEXT:    ret double [[MUL]]
+;
+  %ldexp = call double @llvm.ldexp(double 1.0, i32 %exp)
+  %mul = fmul contract double %x, %ldexp
+  ret double %mul
+}
+
+define <2 x float> @fmul_ldexp_v2f32(<2 x float> %x, <2 x i32> %exp) {
+; CHECK-LABEL: @fmul_ldexp_v2f32(
+; CHECK-NEXT:    [[LDEXP:%.*]] = call nnan <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> splat (float 1.000000e+00), <2 x i32> [[EXP:%.*]])
+; CHECK-NEXT:    [[MUL:%.*]] = fmul contract <2 x float> [[LDEXP]], [[X:%.*]]
+; CHECK-NEXT:    ret <2 x float> [[MUL]]
+;
+  %ldexp = call <2 x float> @llvm.ldexp(<2 x float> splat (float 1.0), <2 x i32> %exp)
+  %mul = fmul contract <2 x float> %ldexp, %x
+  ret <2 x float> %mul
+}
+
+define float @fmul_ldexp_nocontract(float %x, i32 %exp) {
+; CHECK-LABEL: @fmul_ldexp_nocontract(
+; CHECK-NEXT:    [[LDEXP:%.*]] = call nnan float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[EXP:%.*]])
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X:%.*]], [[LDEXP]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %ldexp = call float @llvm.ldexp(float 1.0, i32 %exp)
+  %mul = fmul float %x, %ldexp
+  ret float %mul
+}
+
+define float @fmul_ldexp_multiuse_ldexp(float %x, i32 %exp) {
+; CHECK-LABEL: @fmul_ldexp_multiuse_ldexp(
+; CHECK-NEXT:    [[LDEXP:%.*]] = call float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[EXP:%.*]])
+; CHECK-NEXT:    [[MUL:%.*]] = fmul contract float [[X:%.*]], [[LDEXP]]
+; CHECK-NEXT:    tail call void @use_f32(float [[LDEXP]])
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %ldexp = call float @llvm.ldexp(float 1.0, i32 %exp)
+  %mul = fmul contract float %x, %ldexp
+  tail call void @use_f32(float %ldexp)
+  ret float %mul
+}
+
+define float @fmul_ldexp_multiuse_x(float %x, i32 %exp) {
+; CHECK-LABEL: @fmul_ldexp_multiuse_x(
+; CHECK-NEXT:    [[LDEXP:%.*]] = call nnan float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[EXP:%.*]])
+; CHECK-NEXT:    [[MUL:%.*]] = fmul contract float [[X:%.*]], [[LDEXP]]
+; CHECK-NEXT:    tail call void @use_f32(float [[X]])
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %ldexp = call float @llvm.ldexp(float 1.0, i32 %exp)
+  %mul = fmul contract float %x, %ldexp
+  tail call void @use_f32(float %x)
+  ret float %mul
+}
+
+define float @fmul_ldexp_not_fpone(float %x, i32 %exp) {
+; CHECK-LABEL: @fmul_ldexp_not_fpone(
+; CHECK-NEXT:    [[LDEXP:%.*]] = call nnan float @llvm.ldexp.f32.i32(float 2.000000e+00, i32 [[EXP:%.*]])
+; CHECK-NEXT:    [[MUL:%.*]] = fmul contract float [[X:%.*]], [[LDEXP]]
+; CHECK-NEXT:    tail call void @use_f32(float [[X]])
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %ldexp = call float @llvm.ldexp(float 2.0, i32 %exp)
+  %mul = fmul contract float %x, %ldexp
+  tail call void @use_f32(float %x)
+  ret float %mul
+}
