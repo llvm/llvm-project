@@ -1226,7 +1226,7 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
     if (auto Err = free(Buffer, TARGET_ALLOC_DEVICE)) {
       return joinErrors(std::move(RetErr), std::move(Err));
     }
-    return std::move(RetErr);
+    return RetErr;
   };
 
   auto *GlobalPtrStart = reinterpret_cast<uintptr_t *>(Buffer);
