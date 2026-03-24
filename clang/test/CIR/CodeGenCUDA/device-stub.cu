@@ -3,17 +3,14 @@
 // Create a dummy GPU binary file for registration.
 // RUN: echo -n "GPU binary would be here." > %t
 
-// CIR output — check fatbin globals are created correctly.
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-cir %s -x cuda \
 // RUN:   -target-sdk-version=12.3 -fcuda-include-gpubinary %t -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
 
-// OGCG output — check LLVM IR parity with original codegen.
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s -x cuda \
 // RUN:   -target-sdk-version=12.3 -fcuda-include-gpubinary %t -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
 
-// No GPU binary — nothing should be generated.
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-cir %s -x cuda \
 // RUN:   -target-sdk-version=12.3 -o %t.nogpu.cir
 // RUN: FileCheck --input-file=%t.nogpu.cir %s --check-prefix=NOGPUBIN

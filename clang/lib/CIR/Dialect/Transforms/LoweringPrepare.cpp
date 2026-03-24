@@ -109,7 +109,6 @@ struct LoweringPreparePass
       cir::GlobalLinkageKind linkage = cir::GlobalLinkageKind::ExternalLinkage,
       cir::VisibilityKind visibility = cir::VisibilityKind::Default);
 
-
   /// ------------
   /// CUDA registration related
   /// ------------
