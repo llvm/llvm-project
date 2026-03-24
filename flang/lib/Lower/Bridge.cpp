@@ -1609,9 +1609,20 @@ private:
 
   void genBranch(mlir::Block *targetBlock) {
     assert(targetBlock && "missing unconditional target block");
-    if (Fortran::lower::genOpenACCRegionExitBranch(*builder, toLocation(),
-                                                   targetBlock))
-      return;
+    if (!accRegionExitStack.empty()) {
+      mlir::Region *curRegion = builder->getBlock()->getParent();
+      if (targetBlock->getParent() != curRegion) {
+        auto &exitInfo = accRegionExitStack.back();
+        int exitId = exitInfo.nextId++;
+        exitInfo.exits.push_back({exitId, targetBlock});
+        mlir::Value id = builder->createIntegerConstant(
+            toLocation(), builder->getI32Type(), exitId);
+        fir::StoreOp::create(*builder, toLocation(), id, exitInfo.selector);
+        Fortran::lower::genOpenACCRegionExitBranch(*builder, toLocation(),
+                                                   targetBlock);
+        return;
+      }
+    }
     mlir::cf::BranchOp::create(*builder, toLocation(), targetBlock);
   }
 
@@ -3701,28 +3712,18 @@ private:
         mlir::Value sel = fir::LoadOp::create(*builder, loc, exitInfo.selector);
         mlir::Block *continueBlock =
             builder->getBlock()->splitBlock(builder->getBlock()->end());
-        if (exitInfo.exits.size() == 1) {
-          mlir::Value id = builder->createIntegerConstant(
-              loc, builder->getI32Type(), exitInfo.exits[0].first);
+        for (auto &[id, target] : exitInfo.exits) {
+          mlir::Value idVal =
+              builder->createIntegerConstant(loc, builder->getI32Type(), id);
           mlir::Value cmp = mlir::arith::CmpIOp::create(
-              *builder, loc, mlir::arith::CmpIPredicate::eq, sel, id);
-          mlir::cf::CondBranchOp::create(
-              *builder, loc, cmp, exitInfo.exits[0].second, continueBlock);
-        } else {
-          // Multiple exit targets: chain of comparisons.
-          for (auto &[id, target] : exitInfo.exits) {
-            mlir::Value idVal =
-                builder->createIntegerConstant(loc, builder->getI32Type(), id);
-            mlir::Value cmp = mlir::arith::CmpIOp::create(
-                *builder, loc, mlir::arith::CmpIPredicate::eq, sel, idVal);
-            mlir::Block *nextCheck =
-                builder->getBlock()->splitBlock(builder->getBlock()->end());
-            mlir::cf::CondBranchOp::create(*builder, loc, cmp, target,
-                                           nextCheck);
-            builder->setInsertionPointToEnd(nextCheck);
-          }
-          mlir::cf::BranchOp::create(*builder, loc, continueBlock);
+              *builder, loc, mlir::arith::CmpIPredicate::eq, sel, idVal);
+          mlir::Block *nextCheck =
+              builder->getBlock()->splitBlock(builder->getBlock()->end());
+          mlir::cf::CondBranchOp::create(*builder, loc, cmp, target,
+                                         nextCheck);
+          builder->setInsertionPointToEnd(nextCheck);
         }
+        mlir::cf::BranchOp::create(*builder, loc, continueBlock);
         builder->setInsertionPointToEnd(continueBlock);
       }
     }
@@ -6289,22 +6290,7 @@ private:
     genConstructExitBranch(*getEval().controlSuccessor);
   }
   void genFIR(const Fortran::parser::GotoStmt &) {
-    auto &targetEval = *getEval().controlSuccessor;
-    mlir::Block *targetBlock = targetEval.block;
-    mlir::Region *currentRegion = &builder->getRegion();
-    if (targetBlock && targetBlock->getParent() != currentRegion &&
-        !accRegionExitStack.empty()) {
-      auto &exitInfo = accRegionExitStack.back();
-      int exitId = exitInfo.nextId++;
-      exitInfo.exits.push_back({exitId, targetBlock});
-      mlir::Value id = builder->createIntegerConstant(
-          toLocation(), builder->getI32Type(), exitId);
-      fir::StoreOp::create(*builder, toLocation(), id, exitInfo.selector);
-      Fortran::lower::genOpenACCRegionExitBranch(*builder, toLocation(),
-                                                 targetBlock);
-      return;
-    }
-    genConstructExitBranch(targetEval);
+    genConstructExitBranch(*getEval().controlSuccessor);
   }
 
   // Nop statements - No code, or code is generated at the construct level.

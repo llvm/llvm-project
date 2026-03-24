@@ -1,42 +1,22 @@
-! RUN: split-file %s %t
-! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %t/acc_loop_multi_level.f90 -o - 2>&1 | FileCheck %s --check-prefix=CHECK1
-! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %t/acc_data_multi_level.f90 -o - 2>&1 | FileCheck %s --check-prefix=CHECK2
+! GOTO exits through two nested ACC data regions. The branch crosses
+! two ACC region boundaries, requiring multi-level exit handling.
 
-//--- acc_loop_multi_level.f90
+! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %s -o - 2>&1 | FileCheck %s
 
-subroutine acc_loop_multi_level(a, n)
+subroutine nested_data_exit(a, n)
   integer :: n, i, j
   real :: a(*)
 
-  !$acc parallel
-  !$acc loop seq
+  !$acc data copy(a(1:n))
+  !$acc data copyout(a(1:n))
   do i = 1, n
     do j = 1, n
-      if (a(j) > 0.0) goto 999
-    end do
-  end do
-  !$acc end parallel
-999 continue
-end subroutine
-
-! CHECK1: not yet implemented: GOTO exiting OpenACC region
-
-//--- acc_data_multi_level.f90
-
-subroutine acc_data_multi_level(a, n)
-  integer :: n, i, j
-  real :: a(*)
-
-  !$acc parallel
-  !$acc data
-  do i = 1, n
-    do j = 1, n
-      if (a(j) > 0.0) goto 999
+      if (a(j) > 0.0) goto 888
     end do
   end do
   !$acc end data
-  !$acc end parallel
-999 continue
+  !$acc end data
+888 continue
 end subroutine
 
-! CHECK2: not yet implemented: GOTO exiting OpenACC region
+! CHECK: not yet implemented: GOTO exiting OpenACC region
