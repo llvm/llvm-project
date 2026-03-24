@@ -245,7 +245,7 @@ __clc_ep_fast_sub(__CLC_EP_PAIR a, __CLC_EP_PAIR b) {
 }
 
 _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_ldexp(__CLC_EP_PAIR a,
-                                                               int e) {
+                                                               __CLC_INTN e) {
   return __clc_ep_make_pair(__clc_ldexp(a.hi, e), __clc_ldexp(a.lo, e));
 }
 
@@ -469,6 +469,28 @@ _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_ln(__CLC_GENTYPE a) {
   return r;
 }
 
+_CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_FLOATN __clc_ep_ln_hi(__CLC_EP_PAIR a,
+                                                              __CLC_INTN ea) {
+  __CLC_INTN a_hi_exp;
+  __CLC_FLOATN a_hi_m = __clc_frexp(a.hi, &a_hi_exp);
+  __CLC_INTN b = a_hi_m < (2.0f / 3.0f);
+  __CLC_INTN e = a_hi_exp - b;
+  __CLC_EP_PAIR m = __clc_ep_ldexp(a, -e);
+  __CLC_EP_PAIR x =
+      __clc_ep_div(__clc_ep_fast_add(-1.0f, m), __clc_ep_fast_add(1.0f, m));
+  __CLC_FLOATN s = x.hi * x.hi;
+  __CLC_FLOATN p = __clc_mad(s, __clc_mad(s, 0x1.36db58p-2f, 0x1.992b46p-2f),
+                             0x1.5555b4p-1f);
+
+  const __CLC_EP_PAIR ln2 = __clc_ep_make_pair(__CLC_FP_LIT(0x1.62e430p-1),
+                                               __CLC_FP_LIT(-0x1.05c610p-29));
+
+  __CLC_EP_PAIR r =
+      __clc_ep_add(__clc_ep_mul(ln2, __CLC_CONVERT_FLOATN(e + ea)),
+                   __clc_ep_fast_add(__clc_ep_ldexp(x, 1), s * x.hi * p));
+  return r.hi;
+}
+
 #elif __CLC_FPSIZE == 64
 
 _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_GENTYPE __clc_ep_exp(__CLC_EP_PAIR x) {
@@ -507,6 +529,42 @@ _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_ln(__CLC_DOUBLEN a) {
                                      __CLC_FP_LIT(0x1.543b0d5df274dp-55)),
                   __clc_ep_mul(s, p)))));
   return r;
+}
+
+_CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_DOUBLEN __clc_ep_ln_hi(__CLC_EP_PAIR a,
+                                                               __CLC_INTN ea) {
+  __CLC_INTN a_hi_exp;
+  __CLC_DOUBLEN m_hi = __clc_frexp(a.hi, &a_hi_exp);
+
+  __CLC_LONGN b = m_hi < (2.0 / 3.0);
+  __CLC_INTN e = a_hi_exp - __CLC_CONVERT_INTN(b);
+  __CLC_EP_PAIR m = __clc_ep_ldexp(a, -e);
+  __CLC_EP_PAIR x =
+      __clc_ep_div(__clc_ep_fast_add(-1.0, m), __clc_ep_fast_add(1.0, m));
+  __CLC_DOUBLEN s = x.hi * x.hi;
+
+  const __CLC_DOUBLEN ln_c1 = 0x1.3ab76bf559e2bp-3;
+  const __CLC_DOUBLEN ln_c2 = 0x1.385386b47b09ap-3;
+  const __CLC_DOUBLEN ln_c3 = 0x1.7474dd7f4df2ep-3;
+  const __CLC_DOUBLEN ln_c4 = 0x1.c71c016291751p-3;
+  const __CLC_DOUBLEN ln_c5 = 0x1.249249b27acf1p-2;
+  const __CLC_DOUBLEN ln_c6 = 0x1.99999998ef7b6p-2;
+  const __CLC_DOUBLEN ln_c7 = 0x1.5555555555780p-1;
+
+  __CLC_DOUBLEN q1 = __clc_mad(s, ln_c1, ln_c2);
+  __CLC_DOUBLEN q2 = __clc_mad(s, q1, ln_c3);
+  __CLC_DOUBLEN q3 = __clc_mad(s, q2, ln_c4);
+  __CLC_DOUBLEN q4 = __clc_mad(s, q3, ln_c5);
+  __CLC_DOUBLEN q5 = __clc_mad(s, q4, ln_c6);
+  __CLC_DOUBLEN p = __clc_mad(s, q5, ln_c7);
+
+  const __CLC_EP_PAIR ln2 = __clc_ep_make_pair(
+      __CLC_FP_LIT(0x1.62e42fefa39efp-1), __CLC_FP_LIT(0x1.abc9e3b39803fp-56));
+
+  __CLC_EP_PAIR r =
+      __clc_ep_add(__clc_ep_mul(ln2, __CLC_CONVERT_DOUBLEN(e + ea)),
+                   __clc_ep_fast_add(__clc_ep_ldexp(x, 1), s * x.hi * p));
+  return r.hi;
 }
 
 #endif
