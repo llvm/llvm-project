@@ -42,8 +42,8 @@ static IntegerAttr
 applyToIntegerAttrs(PatternRewriter &builder, Value res, Attribute lhs,
                     Attribute rhs,
                     function_ref<APInt(const APInt &, const APInt &)> binFn) {
-  APInt lhsVal = llvm::cast<IntegerAttr>(lhs).getValue();
-  APInt rhsVal = llvm::cast<IntegerAttr>(rhs).getValue();
+  const APInt &lhsVal = llvm::cast<IntegerAttr>(lhs).getValue();
+  const APInt &rhsVal = llvm::cast<IntegerAttr>(rhs).getValue();
   APInt value = binFn(lhsVal, rhsVal);
   return IntegerAttr::get(res.getType(), value);
 }
@@ -931,6 +931,10 @@ OpFoldResult arith::RemUIOp::fold(FoldAdaptor adaptor) {
   return div0 ? Attribute() : result;
 }
 
+Speculation::Speculatability arith::RemUIOp::getSpeculatability() {
+  return getDivUISpeculatability(getRhs());
+}
+
 //===----------------------------------------------------------------------===//
 // RemSIOp
 //===----------------------------------------------------------------------===//
@@ -952,6 +956,15 @@ OpFoldResult arith::RemSIOp::fold(FoldAdaptor adaptor) {
                                                });
 
   return div0 ? Attribute() : result;
+}
+
+Speculation::Speculatability arith::RemSIOp::getSpeculatability() {
+  // X % 0 => UB
+  // X % -1 is well-defined (always 0), unlike X / -1 which can overflow.
+  if (matchPattern(getRhs(), m_IntRangeWithoutZeroS()))
+    return Speculation::Speculatable;
+
+  return Speculation::NotSpeculatable;
 }
 
 //===----------------------------------------------------------------------===//

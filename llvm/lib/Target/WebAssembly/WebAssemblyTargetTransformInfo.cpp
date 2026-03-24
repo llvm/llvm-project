@@ -294,6 +294,25 @@ InstructionCost WebAssemblyTTIImpl::getMemoryOpCost(
   return BaseT::getMemoryOpCost(Opcode, Ty, Alignment, AddressSpace, CostKind);
 }
 
+InstructionCost WebAssemblyTTIImpl::getShuffleCost(
+    TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+    ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+    VectorType *SubTp, ArrayRef<const Value *> Args,
+    const Instruction *CxtI) const {
+  // Canonicalize the ShuffleKind in case optimizations didn't.
+  //  Otherwise, we might end up with the wrong ShuffleKind to match against.
+
+  Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
+
+  // Wasm SIMD128 has native splat instructions for all lane types.
+  if (ST->hasSIMD128() && Kind == TTI::SK_Broadcast &&
+      isa<FixedVectorType>(SrcTy))
+    return 1;
+
+  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index, SubTp,
+                               Args, CxtI);
+}
+
 InstructionCost WebAssemblyTTIImpl::getInterleavedMemoryOpCost(
     unsigned Opcode, Type *Ty, unsigned Factor, ArrayRef<unsigned> Indices,
     Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,

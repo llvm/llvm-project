@@ -4212,8 +4212,9 @@ static bool isResultTypeMatchAtomicRMWKind(Type resultType,
   case arith::AtomicRMWKind::muli:
     return isa<IntegerType>(resultType);
   case arith::AtomicRMWKind::maximumf:
-    return isa<FloatType>(resultType);
+  case arith::AtomicRMWKind::maxnumf:
   case arith::AtomicRMWKind::minimumf:
+  case arith::AtomicRMWKind::minnumf:
     return isa<FloatType>(resultType);
   case arith::AtomicRMWKind::maxs: {
     auto intType = dyn_cast<IntegerType>(resultType);
@@ -4232,12 +4233,11 @@ static bool isResultTypeMatchAtomicRMWKind(Type resultType,
     return intType && intType.isUnsigned();
   }
   case arith::AtomicRMWKind::ori:
-    return isa<IntegerType>(resultType);
   case arith::AtomicRMWKind::andi:
+  case arith::AtomicRMWKind::xori:
     return isa<IntegerType>(resultType);
-  default:
-    return false;
   }
+  llvm_unreachable("Unhandled atomic rmw kind");
 }
 
 LogicalResult AffineParallelOp::verify() {
