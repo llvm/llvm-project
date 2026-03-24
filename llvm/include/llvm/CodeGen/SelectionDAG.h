@@ -1292,6 +1292,12 @@ public:
   /// stack arguments from being clobbered.
   LLVM_ABI SDValue getStackArgumentTokenFactor(SDValue Chain);
 
+  /// Lower a memccpy operation into a target library call and return the
+  /// resulting chain and call result as SelectionDAG SDValues.
+  LLVM_ABI std::pair<SDValue, SDValue>
+  getMemccpy(SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src,
+             SDValue C, SDValue Size, const CallInst *CI);
+
   /// Lower a memcmp operation into a target library call and return the
   /// resulting chain and call result as SelectionDAG SDValues.
   LLVM_ABI std::pair<SDValue, SDValue> getMemcmp(SDValue Chain, const SDLoc &dl,
@@ -2077,9 +2083,14 @@ public:
   /// function mirrors \c llvm::salvageDebugInfo.
   LLVM_ABI void salvageDebugInfo(SDNode &N);
 
+  /// Dump the textual format of this DAG. Nodes are not sorted.
+  /// Note that we overload it instead of using default value so that it is
+  /// convenient to be called from debuggers.
+  LLVM_ABI void dump() const;
+
   /// Dump the textual format of this DAG. Print nodes in sorted orders if \p
   /// Sorted is true.
-  LLVM_ABI void dump(bool Sorted = false) const;
+  LLVM_ABI void dump(bool Sorted) const;
 
   /// In most cases this function returns the ABI alignment for a given type,
   /// except for illegal vector types where the alignment exceeds that of the

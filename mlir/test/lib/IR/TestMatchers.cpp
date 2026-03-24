@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/UB/IR/UBMatchers.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
@@ -132,7 +133,7 @@ static void test1(FunctionOpInterface f) {
                << countMatches(f, p17) << " times\n";
 }
 
-void test2(FunctionOpInterface f) {
+static void test2(FunctionOpInterface f) {
   auto a = m_Val(f.getArgument(0));
   FloatAttr floatAttr;
   auto p =
@@ -148,7 +149,7 @@ void test2(FunctionOpInterface f) {
     llvm::outs() << "Pattern add(add(a, constant), a) matched\n";
 }
 
-void test3(FunctionOpInterface f) {
+static void test3(FunctionOpInterface f) {
   arith::FastMathFlagsAttr fastMathAttr;
   auto p = m_Op<arith::MulFOp>(m_Any(),
                                m_Op<arith::AddFOp>(m_Any(), m_Op("test.name")));
@@ -163,6 +164,12 @@ void test3(FunctionOpInterface f) {
                  << fastMathAttr.getValue() << "\n";
 }
 
+static void test4(FunctionOpInterface f) {
+  auto poison = ub::m_Poison();
+  llvm::outs() << "Pattern m_Poison() matched " << countMatches(f, poison)
+               << " times\n";
+}
+
 void TestMatchers::runOnOperation() {
   auto f = getOperation();
   llvm::outs() << f.getName() << "\n";
@@ -172,6 +179,8 @@ void TestMatchers::runOnOperation() {
     test2(f);
   if (f.getName() == "test3")
     test3(f);
+  if (f.getName() == "test4")
+    test4(f);
 }
 
 namespace mlir {

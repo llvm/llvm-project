@@ -402,10 +402,7 @@ ProcessSP Process::FindPlugin(lldb::TargetSP target_sp,
       }
     }
   } else {
-    for (uint32_t idx = 0;
-         (create_callback =
-              PluginManager::GetProcessCreateCallbackAtIndex(idx)) != nullptr;
-         ++idx) {
+    for (auto create_callback : PluginManager::GetProcessCreateCallbacks()) {
       process_sp = create_callback(target_sp, listener_sp, crash_file_path,
                                    can_connect);
       if (process_sp) {
@@ -960,14 +957,11 @@ Event *Process::PeekAtStateChangedEvents() {
   Event *event_ptr;
   event_ptr = GetPrimaryListener()->PeekAtNextEventForBroadcasterWithType(
       this, eBroadcastBitStateChanged);
-  if (log) {
-    if (event_ptr) {
-      LLDB_LOGF(log, "Process::%s (event_ptr) => %s", __FUNCTION__,
-                StateAsCString(ProcessEventData::GetStateFromEvent(event_ptr)));
-    } else {
-      LLDB_LOGF(log, "Process::%s no events found", __FUNCTION__);
-    }
-  }
+  if (event_ptr)
+    LLDB_LOGF(log, "Process::%s (event_ptr) => %s", __FUNCTION__,
+              StateAsCString(ProcessEventData::GetStateFromEvent(event_ptr)));
+  else
+    LLDB_LOGF(log, "Process::%s no events found", __FUNCTION__);
   return event_ptr;
 }
 
@@ -1098,36 +1092,6 @@ bool Process::IsAlive() {
   default:
     return false;
   }
-}
-
-// This static callback can be used to watch for local child processes on the
-// current host. The child process exits, the process will be found in the
-// global target list (we want to be completely sure that the
-// lldb_private::Process doesn't go away before we can deliver the signal.
-bool Process::SetProcessExitStatus(
-    lldb::pid_t pid, bool exited,
-    int signo,      // Zero for no signal
-    int exit_status // Exit value of process if signal is zero
-    ) {
-  Log *log = GetLog(LLDBLog::Process);
-  LLDB_LOGF(log,
-            "Process::SetProcessExitStatus (pid=%" PRIu64
-            ", exited=%i, signal=%i, exit_status=%i)\n",
-            pid, exited, signo, exit_status);
-
-  if (exited) {
-    TargetSP target_sp(Debugger::FindTargetWithProcessID(pid));
-    if (target_sp) {
-      ProcessSP process_sp(target_sp->GetProcessSP());
-      if (process_sp) {
-        llvm::StringRef signal_str =
-            process_sp->GetUnixSignals()->GetSignalAsStringRef(signo);
-        process_sp->SetExitStatus(exit_status, signal_str);
-      }
-    }
-    return true;
-  }
-  return false;
 }
 
 bool Process::UpdateThreadList(ThreadList &old_thread_list,
@@ -4111,14 +4075,11 @@ void Process::HandlePrivateEvent(EventSP &event_sp) {
 
   if (should_broadcast) {
     const bool is_hijacked = IsHijackedForEvent(eBroadcastBitStateChanged);
-    if (log) {
-      LLDB_LOGF(log,
-                "Process::%s (pid = %" PRIu64
-                ") broadcasting new state %s (old state %s) to %s",
-                __FUNCTION__, GetID(), StateAsCString(new_state),
-                StateAsCString(GetState()),
-                is_hijacked ? "hijacked" : "public");
-    }
+    LLDB_LOGF(log,
+              "Process::%s (pid = %" PRIu64
+              ") broadcasting new state %s (old state %s) to %s",
+              __FUNCTION__, GetID(), StateAsCString(new_state),
+              StateAsCString(GetState()), is_hijacked ? "hijacked" : "public");
     Process::ProcessEventData::SetUpdateStateOnRemoval(event_sp.get());
     if (StateIsRunningState(new_state)) {
       // Only push the input handler if we aren't fowarding events, as this
@@ -4170,14 +4131,12 @@ void Process::HandlePrivateEvent(EventSP &event_sp) {
 
     BroadcastEvent(event_sp);
   } else {
-    if (log) {
-      LLDB_LOGF(
-          log,
-          "Process::%s (pid = %" PRIu64
-          ") suppressing state %s (old state %s): should_broadcast == false",
-          __FUNCTION__, GetID(), StateAsCString(new_state),
-          StateAsCString(GetState()));
-    }
+    LLDB_LOGF(
+        log,
+        "Process::%s (pid = %" PRIu64
+        ") suppressing state %s (old state %s): should_broadcast == false",
+        __FUNCTION__, GetID(), StateAsCString(new_state),
+        StateAsCString(GetState()));
   }
 }
 
@@ -4297,7 +4256,7 @@ thread_result_t Process::RunPrivateStateThread() {
             ProcessEventData::SetInterruptedInEvent(event_sp.get(), true);
           }
           interrupt_requested = false;
-        } else if (log) {
+        } else {
           LLDB_LOGF(log,
                     "Process::%s interrupt_requested, but a non-stopped "
                     "state '%s' received.",
@@ -6478,15 +6437,12 @@ void Process::MapSupportedStructuredDataPlugins(
   // we've consumed all the type names.
   // FIXME: should we return an error if there are type names nobody
   // supports?
-  for (uint32_t plugin_index = 0; !type_names.empty(); plugin_index++) {
-    auto create_instance =
-        PluginManager::GetStructuredDataPluginCreateCallbackAtIndex(
-            plugin_index);
-    if (!create_instance)
+  for (auto &cbs : PluginManager::GetStructuredDataPluginCallbacks()) {
+    if (type_names.empty())
       break;
 
     // Create the plugin.
-    StructuredDataPluginSP plugin_sp = (*create_instance)(*this);
+    StructuredDataPluginSP plugin_sp = (*cbs.create_callback)(*this);
     if (!plugin_sp) {
       // This plugin doesn't think it can work with the process. Move on to the
       // next.

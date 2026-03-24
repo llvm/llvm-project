@@ -132,9 +132,9 @@ struct FlattenInfo {
 
   BinaryOperator *InnerIncrement = nullptr;  // Uses of induction variables in
   BinaryOperator *OuterIncrement = nullptr;  // loop control statements that
-  BranchInst *InnerBranch = nullptr;         // are safe to ignore.
+  CondBrInst *InnerBranch = nullptr;         // are safe to ignore.
 
-  BranchInst *OuterBranch = nullptr; // The instruction that needs to be
+  CondBrInst *OuterBranch = nullptr; // The instruction that needs to be
                                      // updated with new tripcount.
 
   SmallPtrSet<PHINode *, 4> InnerPHIsToTransform;
@@ -319,10 +319,10 @@ setLoopComponents(Value *&TC, Value *&TripCount, BinaryOperator *&Increment,
 // complicated now. It is therefore worth revisiting what the additional
 // benefits are of this (compared to relying on canonical loops and pattern
 // matching).
-static bool verifyTripCount(Value *RHS, Loop *L,
-     SmallPtrSetImpl<Instruction *> &IterationInstructions,
+static bool verifyTripCount(
+    Value *RHS, Loop *L, SmallPtrSetImpl<Instruction *> &IterationInstructions,
     PHINode *&InductionPHI, Value *&TripCount, BinaryOperator *&Increment,
-    BranchInst *&BackBranch, ScalarEvolution *SE, bool IsWidened) {
+    CondBrInst *&BackBranch, ScalarEvolution *SE, bool IsWidened) {
   const SCEV *BackedgeTakenCount = SE->getBackedgeTakenCount(L);
   if (isa<SCEVCouldNotCompute>(BackedgeTakenCount)) {
     LLVM_DEBUG(dbgs() << "Backedge-taken count is not predictable\n");
@@ -389,7 +389,7 @@ static bool verifyTripCount(Value *RHS, Loop *L,
 static bool findLoopComponents(
     Loop *L, SmallPtrSetImpl<Instruction *> &IterationInstructions,
     PHINode *&InductionPHI, Value *&TripCount, BinaryOperator *&Increment,
-    BranchInst *&BackBranch, ScalarEvolution *SE, bool IsWidened) {
+    CondBrInst *&BackBranch, ScalarEvolution *SE, bool IsWidened) {
   LLVM_DEBUG(dbgs() << "Finding components of loop: " << L->getName() << "\n");
 
   if (!L->isLoopSimplifyForm()) {
@@ -438,7 +438,7 @@ static bool findLoopComponents(
     LLVM_DEBUG(dbgs() << "Could not find valid comparison\n");
     return false;
   }
-  BackBranch = cast<BranchInst>(Latch->getTerminator());
+  BackBranch = cast<CondBrInst>(Latch->getTerminator());
   IterationInstructions.insert(BackBranch);
   LLVM_DEBUG(dbgs() << "Found back branch: "; BackBranch->dump());
   IterationInstructions.insert(Compare);
@@ -580,9 +580,8 @@ checkOuterLoopInsts(FlattenInfo &FI,
         continue;
       // The unconditional branch to the inner loop's header will turn into
       // a fall-through, so adds no cost.
-      BranchInst *Br = dyn_cast<BranchInst>(&I);
-      if (Br && Br->isUnconditional() &&
-          Br->getSuccessor(0) == FI.InnerLoop->getHeader())
+      UncondBrInst *Br = dyn_cast<UncondBrInst>(&I);
+      if (Br && Br->getSuccessor() == FI.InnerLoop->getHeader())
         continue;
       // Multiplies of the outer iteration variable and inner iteration
       // count will be optimised out.
@@ -785,7 +784,7 @@ static bool DoFlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
   BasicBlock *InnerExitBlock = FI.InnerLoop->getExitBlock();
   BasicBlock *InnerExitingBlock = FI.InnerLoop->getExitingBlock();
   Instruction *Term = InnerExitingBlock->getTerminator();
-  Instruction *BI = BranchInst::Create(InnerExitBlock, InnerExitingBlock);
+  Instruction *BI = UncondBrInst::Create(InnerExitBlock, InnerExitingBlock);
   BI->setDebugLoc(Term->getDebugLoc());
   Term->eraseFromParent();
 
@@ -973,9 +972,7 @@ static bool FlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
 
     // Check for overflow by calculating the new tripcount using
     // umul_with_overflow and then checking if it overflowed.
-    BranchInst *Br = cast<BranchInst>(CheckBlock->getTerminator());
-    assert(Br->isConditional() &&
-           "Expected LoopVersioning to generate a conditional branch");
+    CondBrInst *Br = cast<CondBrInst>(CheckBlock->getTerminator());
     assert(match(Br->getCondition(), m_Zero()) &&
            "Expected branch condition to be false");
     IRBuilder<> Builder(Br);

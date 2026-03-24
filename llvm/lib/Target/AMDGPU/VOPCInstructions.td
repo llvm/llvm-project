@@ -385,6 +385,7 @@ multiclass VOPC_Pseudos <string opName,
     VCMPVCMPXTable<opName#"_e64"> {
     let Defs = !if(DefExec, [EXEC], []);
     let SchedRW = P.Schedule;
+    let isReMaterializable = !not(DefExec);
     let isCompare = 1;
     let isCommutable = 1;
     let AsmMatchConverter = !cond(
@@ -406,7 +407,6 @@ multiclass VOPC_Pseudos <string opName,
       def _e32_dpp : VOP_DPP_Pseudo<opName, P> {
         let Defs = !if(DefExec, [VCC, EXEC], [VCC]);
         let SchedRW = P.Schedule;
-        let isConvergent = DefExec;
         let isCompare = 1;
         let VOPC = 1;
         let Constraints = "";
@@ -471,7 +471,6 @@ multiclass VOPCX_Pseudos <string opName,
       def _nosdst_e32_dpp : VOP_DPP_Pseudo<opName#"_nosdst", P_NoSDst> {
         let Defs = [EXEC];
         let SchedRW = P_NoSDst.Schedule;
-        let isConvergent = 1;
         let isCompare = 1;
         let VOPC = 1;
         let Constraints = "";
@@ -1106,7 +1105,6 @@ multiclass VOPC_Class_Pseudos <string opName, VOPC_Profile p, bit DefExec,
         let Defs = !if(DefExec, !if(DefVcc, [VCC, EXEC], [EXEC]),
                                 !if(DefVcc, [VCC], []));
         let SchedRW = p.Schedule;
-        let isConvergent = DefExec;
         let VOPC = 1;
         let Constraints = "";
       }
@@ -1156,7 +1154,6 @@ multiclass VOPCX_Class_Pseudos <string opName,
       def _nosdst_e32_dpp : VOP_DPP_Pseudo<opName#"_nosdst", P_NoSDst> {
         let Defs = [EXEC];
         let SchedRW = P_NoSDst.Schedule;
-        let isConvergent = 1;
         let VOPC = 1;
         let Constraints = "";
       }

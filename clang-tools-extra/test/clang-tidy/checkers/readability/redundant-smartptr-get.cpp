@@ -1,57 +1,8 @@
 // RUN: %check_clang_tidy %s readability-redundant-smartptr-get %t
+#include <vector>
+#include <memory>
 
 #define NULL __null
-
-namespace std {
-
-template <typename T>
-struct unique_ptr {
-  T& operator*() const;
-  T* operator->() const;
-  T* get() const;
-  explicit operator bool() const noexcept;
-};
-
-template <typename T>
-struct unique_ptr<T[]> {
-  T& operator[](unsigned) const;
-  T* get() const;
-  explicit operator bool() const noexcept;
-};
-
-template <typename T>
-struct shared_ptr {
-  T& operator*() const;
-  T* operator->() const;
-  T* get() const;
-  explicit operator bool() const noexcept;
-};
-
-template <typename T>
-struct shared_ptr<T[]> {
-  T& operator[](unsigned) const;
-  T* get() const;
-  explicit operator bool() const noexcept;
-};
-
-template <typename T>
-struct vector {
-  vector();
-  bool operator==(const vector<T>& other) const;
-  bool operator!=(const vector<T>& other) const;
-  unsigned long size() const;
-  bool empty() const;
-
-  using iterator = T*;
-
-  iterator begin();
-  iterator end();
-
-  T* data;
-  unsigned long sz;
-};
-
-}  // namespace std
 
 struct Bar {
   void Do();

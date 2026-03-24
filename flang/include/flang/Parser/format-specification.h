@@ -95,6 +95,9 @@ struct ControlEditDesc {
     RP,
     DC,
     DP,
+    LZ, // F202X: processor-dependent leading zero, default
+    LZS, // F202X: suppress leading zeros
+    LZP, // F202X: print leading zero
     Dollar, // extension: inhibit newline on output
     Backslash, // ditto, but only on terminals
   };

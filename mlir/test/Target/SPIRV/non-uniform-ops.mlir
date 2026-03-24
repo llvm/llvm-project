@@ -21,6 +21,13 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.3, [Shader, Linkage, GroupNo
     spirv.ReturnValue %0: f32
   }
 
+  // CHECK-LABEL: @group_non_uniform_broadcast_first
+  spirv.func @group_non_uniform_broadcast_first(%value: f32) -> f32 "None" {
+    // CHECK: spirv.GroupNonUniformBroadcastFirst <Subgroup> %{{.*}} : f32
+    %0 = spirv.GroupNonUniformBroadcastFirst <Subgroup> %value : f32
+    spirv.ReturnValue %0: f32
+  }
+
   // CHECK-LABEL: @group_non_uniform_elect
   spirv.func @group_non_uniform_elect() -> i1 "None" {
     // CHECK: %{{.+}} = spirv.GroupNonUniformElect <Workgroup> : i1

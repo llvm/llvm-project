@@ -862,8 +862,16 @@ SourceLocation Lexer::getLocForEndOfToken(SourceLocation Loc, unsigned Offset,
     return {};
 
   if (Loc.isMacroID()) {
+    // Token split (for example, splitting '>>' into two '>' tokens) is
+    // represented in SourceManager as an ExpansionInfo (see
+    // createForTokenSplit), so these locations are MacroIDs even when no user
+    // macro is involved. For split expansions, the expansion end is already
+    // the correct insertion point.
+    const FileID LocFileID = SM.getFileID(Loc);
     if (Offset > 0 || !isAtEndOfMacroExpansion(Loc, SM, LangOpts, &Loc))
       return {}; // Points inside the macro expansion.
+    if (!SM.getSLocEntry(LocFileID).getExpansion().isExpansionTokenRange())
+      return Loc;
   }
 
   unsigned Len = Lexer::MeasureTokenLength(Loc, SM, LangOpts);
@@ -2098,7 +2106,7 @@ bool Lexer::LexNumericConstant(Token &Result, const char *CurPtr) {
   }
 
   // If we have a digit separator, continue.
-  if (C == '\'' && (LangOpts.CPlusPlus14 || LangOpts.C23)) {
+  if (C == '\'' && LangOpts.AllowLiteralDigitSeparator) {
     auto [Next, NextSize] = getCharAndSizeNoWarn(CurPtr + Size, LangOpts);
     if (isAsciiIdentifierContinue(Next)) {
       if (!isLexingRawMode())
@@ -2533,8 +2541,8 @@ bool Lexer::SkipWhitespace(Token &Result, const char *CurPtr) {
 
   // Skip consecutive spaces efficiently.
   while (true) {
-    // Skip horizontal whitespace very aggressively.
-    while (isHorizontalWhitespace(Char))
+    // Skip horizontal whitespace, especially space, very aggressively.
+    while (Char == ' ' || isHorizontalWhitespace(Char))
       Char = *++CurPtr;
 
     // Otherwise if we have something other than whitespace, we're done.
@@ -3231,6 +3239,7 @@ std::optional<Token> Lexer::peekNextPPToken() {
   bool atStartOfLine = IsAtStartOfLine;
   bool atPhysicalStartOfLine = IsAtPhysicalStartOfLine;
   bool leadingSpace = HasLeadingSpace;
+  MultipleIncludeOpt MIOptState = MIOpt;
 
   Token Tok;
   Lex(Tok);
@@ -3241,6 +3250,7 @@ std::optional<Token> Lexer::peekNextPPToken() {
   HasLeadingSpace = leadingSpace;
   IsAtStartOfLine = atStartOfLine;
   IsAtPhysicalStartOfLine = atPhysicalStartOfLine;
+  MIOpt = MIOptState;
   // Restore the lexer back to non-skipping mode.
   LexingRawMode = false;
 
@@ -3757,10 +3767,12 @@ LexStart:
   const char *CurPtr = BufferPtr;
 
   // Small amounts of horizontal whitespace is very common between tokens.
-  if (isHorizontalWhitespace(*CurPtr)) {
+  // Check for space character separately to skip the expensive
+  // isHorizontalWhitespace() check
+  if (*CurPtr == ' ' || isHorizontalWhitespace(*CurPtr)) {
     do {
       ++CurPtr;
-    } while (isHorizontalWhitespace(*CurPtr));
+    } while (*CurPtr == ' ' || isHorizontalWhitespace(*CurPtr));
 
     // If we are keeping whitespace and other tokens, just return what we just
     // skipped.  The next lexer invocation will return the token after the

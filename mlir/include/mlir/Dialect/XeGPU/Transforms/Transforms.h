@@ -61,8 +61,6 @@ struct UnrollOptions {
   }
 };
 
-/// Appends patterns for folding aliasing ops into XeGPU ops into `patterns`.
-void populateXeGPUFoldAliasOpsPatterns(RewritePatternSet &patterns);
 /// Appends patterns for optimizing block load operations into `patterns`.
 void populateXeGPUPeepHoleOptimizerPatterns(RewritePatternSet &patterns);
 /// Appends patterns for XeGPU SIMT distribution into `patterns`.

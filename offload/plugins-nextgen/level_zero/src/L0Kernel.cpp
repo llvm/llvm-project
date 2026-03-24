@@ -413,9 +413,13 @@ Error L0KernelTy::setIndirectFlags(L0DeviceTy &l0Device,
 
 Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                              uint32_t NumThreads[3], uint32_t NumBlocks[3],
-                             KernelArgsTy &KernelArgs,
+                             uint32_t DynBlockMemSize, KernelArgsTy &KernelArgs,
                              KernelLaunchParamsTy LaunchParams,
                              AsyncInfoWrapperTy &AsyncInfoWrapper) const {
+  if (DynBlockMemSize > 0)
+    return Plugin::error(ErrorCode::UNSUPPORTED,
+                         "dynamic shared memory is unsupported in L0 plugin");
+
   auto &l0Device = L0DeviceTy::makeL0Device(GenericDevice);
   __tgt_async_info *AsyncInfo = AsyncInfoWrapper;
 

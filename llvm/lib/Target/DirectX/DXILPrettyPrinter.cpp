@@ -214,7 +214,7 @@ struct FormatBindingSize
 
   void format(llvm::raw_ostream &OS, StringRef Style) override {
     uint32_t Size = Item.getBinding().Size;
-    if (Size == std::numeric_limits<uint32_t>::max())
+    if (Size == 0)
       OS << "unbounded";
     else
       OS << Size;

@@ -12,6 +12,15 @@
 # RUN: llvm-readobj --file-headers %t.exe | FileCheck -check-prefix=BASE-HEADER %s
 # RUN: llvm-objdump -s %t.exe | FileCheck --check-prefix=BASE-TEXT %s
 
+# RUN: echo "LIBRARY \"%t.dll\" BASE=0x280000000" > %t.def
+# RUN: lld-link /out:%t.dll /dll %t.obj /def:%t.def %t.obj
+# RUN: llvm-readobj --file-headers %t.dll | FileCheck -check-prefix=BASE-HEADER %s
+# RUN: llvm-objdump -s %t.dll | FileCheck --check-prefix=BASE-TEXT %s
+# RUN: echo "LIBRARY \"%t.dll\" BASE=10737418240" > %t.def
+# RUN: lld-link /out:%t.dll /dll %t.obj /def:%t.def %t.obj
+# RUN: llvm-readobj --file-headers %t.dll | FileCheck -check-prefix=BASE-HEADER %s
+# RUN: llvm-objdump -s %t.dll | FileCheck --check-prefix=BASE-TEXT %s
+
 # BASE-HEADER: ImageBase: 0x280000000
 # BASE-TEXT:      Contents of section .text:
 # BASE-TEXT-NEXT: 1000 00000080 02000000
@@ -43,6 +52,12 @@ symbols:
       CheckSum:        0
       Number:          0
   - Name:            main
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            _DllMainCRTStartup
     Value:           0
     SectionNumber:   1
     SimpleType:      IMAGE_SYM_TYPE_NULL

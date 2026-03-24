@@ -1267,9 +1267,8 @@ TypeSystemClang::GetOrCreateClangModule(llvm::StringRef name,
 
 CompilerType TypeSystemClang::CreateRecordType(
     clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
-    AccessType access_type, llvm::StringRef name, int kind,
-    LanguageType language, std::optional<ClangASTMetadata> metadata,
-    bool exports_symbols) {
+    llvm::StringRef name, int kind, LanguageType language,
+    std::optional<ClangASTMetadata> metadata, bool exports_symbols) {
   ASTContext &ast = getASTContext();
 
   if (decl_ctx == nullptr)
@@ -1551,7 +1550,7 @@ static bool ClassTemplateAllowsToInstantiationArgs(
 
 ClassTemplateDecl *TypeSystemClang::CreateClassTemplateDecl(
     DeclContext *decl_ctx, OptionalClangModuleID owning_module,
-    lldb::AccessType access_type, llvm::StringRef class_name, int kind,
+    llvm::StringRef class_name, int kind,
     const TemplateParameterInfos &template_param_infos) {
   ASTContext &ast = getASTContext();
 
@@ -2285,13 +2284,12 @@ CompilerType TypeSystemClang::CreateStructForIdentifier(
     return type;
   }
 
-  type = CreateRecordType(
-      nullptr, OptionalClangModuleID(), lldb::eAccessPublic, type_name,
-      llvm::to_underlying(clang::TagTypeKind::Struct), lldb::eLanguageTypeC);
+  type = CreateRecordType(nullptr, OptionalClangModuleID(), type_name,
+                          llvm::to_underlying(clang::TagTypeKind::Struct),
+                          lldb::eLanguageTypeC);
   StartTagDeclarationDefinition(type);
   for (const auto &field : type_fields)
-    AddFieldToRecordType(type, field.first, field.second, lldb::eAccessPublic,
-                         0);
+    AddFieldToRecordType(type, field.first, field.second, 0);
   if (packed)
     SetIsPacked(type);
   CompleteTagDeclarationDefinition(type);
@@ -2401,6 +2399,16 @@ CompilerType TypeSystemClang::GetPointerSizedIntType(bool is_signed) {
 
   return GetIntTypeFromBitSize(
       getASTContext().getTypeSize(getASTContext().VoidPtrTy), is_signed);
+}
+
+CompilerType TypeSystemClang::GetPointerDiffType(bool is_signed) {
+  // Check if builtin types are initialized.
+  if (!getASTContext().VoidPtrTy)
+    return {};
+
+  if (is_signed)
+    return GetType(getASTContext().getPointerDiffType());
+  return GetType(getASTContext().getUnsignedPointerDiffType());
 }
 
 void TypeSystemClang::DumpDeclContextHiearchy(clang::DeclContext *decl_ctx) {
@@ -3161,6 +3169,15 @@ bool TypeSystemClang::IsMemberFunctionPointerType(
   return IsTypeImpl(type, isMemberFunctionPointerType);
 }
 
+bool TypeSystemClang::IsMemberDataPointerType(
+    lldb::opaque_compiler_type_t type) {
+  auto isMemberDataPointerType = [](clang::QualType qual_type) {
+    return qual_type->isMemberDataPointerType();
+  };
+
+  return IsTypeImpl(type, isMemberDataPointerType);
+}
+
 bool TypeSystemClang::IsFunctionPointerType(lldb::opaque_compiler_type_t type) {
   auto isFunctionPointerType = [](clang::QualType qual_type) {
     return qual_type->isFunctionPointerType();
@@ -3624,6 +3641,13 @@ bool TypeSystemClang::IsVoidType(lldb::opaque_compiler_type_t type) {
   if (!type)
     return false;
   return GetCanonicalQualType(type)->isVoidType();
+}
+
+bool TypeSystemClang::HasPointerAuthQualifier(
+    lldb::opaque_compiler_type_t type) {
+  if (!type)
+    return false;
+  return GetCanonicalQualType(type).getPointerAuth().isPresent();
 }
 
 bool TypeSystemClang::CanPassInRegisters(const CompilerType &type) {
@@ -7383,8 +7407,7 @@ TypeSystemClang::GetAsObjCInterfaceDecl(const CompilerType &type) {
 
 clang::FieldDecl *TypeSystemClang::AddFieldToRecordType(
     const CompilerType &type, llvm::StringRef name,
-    const CompilerType &field_clang_type, AccessType access,
-    uint32_t bitfield_bit_size) {
+    const CompilerType &field_clang_type, uint32_t bitfield_bit_size) {
   if (!type.IsValid() || !field_clang_type.IsValid())
     return nullptr;
   auto ast = type.GetTypeSystem<TypeSystemClang>();
@@ -7599,9 +7622,10 @@ void TypeSystemClang::SetIsPacked(const CompilerType &type) {
   }
 }
 
-clang::VarDecl *TypeSystemClang::AddVariableToRecordType(
-    const CompilerType &type, llvm::StringRef name,
-    const CompilerType &var_type, AccessType access) {
+clang::VarDecl *
+TypeSystemClang::AddVariableToRecordType(const CompilerType &type,
+                                         llvm::StringRef name,
+                                         const CompilerType &var_type) {
   if (!type.IsValid() || !var_type.IsValid())
     return nullptr;
 
@@ -7701,8 +7725,8 @@ TypeSystemClang::CreateParameterDeclarations(
 clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
     lldb::opaque_compiler_type_t type, llvm::StringRef name,
     llvm::StringRef asm_label, const CompilerType &method_clang_type,
-    lldb::AccessType access, bool is_virtual, bool is_static, bool is_inline,
-    bool is_explicit, bool is_attr_used, bool is_artificial) {
+    bool is_virtual, bool is_static, bool is_inline, bool is_explicit,
+    bool is_attr_used, bool is_artificial) {
   if (!type || !method_clang_type.IsValid() || name.empty())
     return nullptr;
 
@@ -8986,7 +9010,7 @@ void TypeSystemClang::DumpTypeName(const CompilerType &type) {
 
 clang::ClassTemplateDecl *TypeSystemClang::ParseClassTemplateDecl(
     clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
-    lldb::AccessType access_type, const char *parent_name, int tag_decl_kind,
+    const char *parent_name, int tag_decl_kind,
     const TypeSystemClang::TemplateParameterInfos &template_param_infos) {
   if (template_param_infos.IsValid()) {
     std::string template_basename(parent_name);
@@ -8995,7 +9019,6 @@ clang::ClassTemplateDecl *TypeSystemClang::ParseClassTemplateDecl(
       template_basename.erase(i);
 
     return CreateClassTemplateDecl(decl_ctx, owning_module,
-                                   /*access_type=*/{},
                                    template_basename.c_str(), tag_decl_kind,
                                    template_param_infos);
   }

@@ -68,10 +68,16 @@ def CIR_Dialect : Dialect {
     // difference, but one that reflects Classic Codegen.
     static llvm::StringRef getNoBuiltinsAttrName() { return "nobuiltins"; }
     static llvm::StringRef getNoBuiltinAttrName() { return "nobuiltin"; }
+    static llvm::StringRef getBuiltinAttrName() { return "builtin"; }
     static llvm::StringRef getTrapFuncNameAttrName() { return "trap_func_name"; }
     static llvm::StringRef getZeroCallUsedRegsAttrName() { return "zero_call_used_regs"; }
     static llvm::StringRef getSaveRegParamsAttrName() { return "save_reg_params"; }
     static llvm::StringRef getDefaultFuncAttrsAttrName() { return "default_func_attrs"; }
+    static llvm::StringRef getResAttrsAttrName() { return "res_attrs"; }
+    static llvm::StringRef getArgAttrsAttrName() { return "arg_attrs"; }
+
+    static llvm::StringRef getAMDGPUCodeObjectVersionAttrName() { return "cir.amdhsa_code_object_version"; }
+    static llvm::StringRef getAMDGPUPrintfKindAttrName() { return "cir.amdgpu_printf_kind"; }
 
     void registerAttributes();
     void registerTypes();
