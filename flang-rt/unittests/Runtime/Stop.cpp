@@ -122,9 +122,8 @@ TEST_F(TestProgramEnd, CrashTest) {
   static const std::string fileName{"file name"};
   // CrashHandlerFixture installs a custom crash handler that formats messages
   // as: "Test <name> crashed in file <file>(<line>): <message>"
-  static const std::string fullMessage{
-      "Test CrashTest crashed in file " + fileName + "\\(343\\): " +
-      crashMessage};
+  static const std::string fullMessage{"Test CrashTest crashed in file " +
+      fileName + "\\(343\\): " + crashMessage};
   EXPECT_DEATH(
       RTNAME(ReportFatalUserError)(crashMessage.c_str(), fileName.c_str(), 343),
       fullMessage.c_str());
