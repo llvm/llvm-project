@@ -1,3 +1,5 @@
+.. _implementation_standard:
+
 Convention for implementing entrypoints
 =======================================
 
