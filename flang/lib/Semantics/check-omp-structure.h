@@ -332,6 +332,8 @@ private:
   void CheckScanModifier(const parser::OmpClause::Reduction &x);
   void CheckDistLinear(const parser::OpenMPLoopConstruct &x);
   void CheckSIMDNest(const parser::OpenMPConstruct &x);
+  void CheckRectangularNest(const parser::OmpDirectiveSpecification &spec,
+      const omp::LoopSequence &nest);
   void CheckNestedConstruct(const parser::OpenMPLoopConstruct &x);
   void CheckTargetNest(const parser::OpenMPConstruct &x);
   void CheckTargetUpdate();
