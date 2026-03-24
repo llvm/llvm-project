@@ -39,7 +39,7 @@ private:
   BPCompressionSortSpec(llvm::GlobPattern glob, llvm::StringRef globString,
                         unsigned layoutPriority,
                         std::optional<unsigned> matchPriority)
-      : glob(std::move(glob)), globString(std::move(globString)),
+      : glob(std::move(glob)), globString(globString),
         layoutPriority(layoutPriority), matchPriority(matchPriority) {}
 };
 
