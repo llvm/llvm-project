@@ -117,7 +117,7 @@ def test_05_matrix : HLSLBuiltin<"matfunc", "__builtin_matfunc"> {
 // ALIAS-NEXT: _HLSL_BUILTIN_ALIAS(__builtin_matfunc)
 // ALIAS-NEXT: float2x3 matfunc(float2x3);
 //
-// ALIAS-NOT: matfunc(
+// ALIAS-NOT: matfunc
 
 //===----------------------------------------------------------------------===//
 // Half type: conditionally-16-bit availability.
