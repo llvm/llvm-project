@@ -387,6 +387,29 @@ bool RISCVMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &Hi,
   return false;
 }
 
+static void overwriteMachineOperandInPlace(MachineOperand &MO,
+                                           const MachineOperand &ImmOp) {
+  switch (ImmOp.getType()) {
+  case MachineOperand::MO_ConstantPoolIndex:
+    MO.ChangeToCPI(ImmOp.getIndex(), ImmOp.getOffset(), ImmOp.getTargetFlags());
+    break;
+  case MachineOperand::MO_GlobalAddress:
+    MO.ChangeToGA(ImmOp.getGlobal(), ImmOp.getOffset(), ImmOp.getTargetFlags());
+    break;
+  case MachineOperand::MO_MCSymbol:
+    MO.ChangeToMCSymbol(ImmOp.getMCSymbol(), ImmOp.getTargetFlags());
+    MO.setOffset(ImmOp.getOffset());
+    break;
+  case MachineOperand::MO_BlockAddress:
+    MO.ChangeToBA(ImmOp.getBlockAddress(), ImmOp.getOffset(),
+                  ImmOp.getTargetFlags());
+    break;
+  default:
+    report_fatal_error("unsupported machine operand type");
+    break;
+  }
+}
+
 bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
                                                 MachineInstr &Lo) {
   Register DestReg = Lo.getOperand(0).getReg();
@@ -566,27 +589,7 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
       auto &InlineAsmMemoryOpIndexes = InlineAsmMemoryOpIndexesMap[&UseMI];
       for (unsigned I : InlineAsmMemoryOpIndexes) {
         MachineOperand &MO = UseMI.getOperand(I + 1);
-        switch (ImmOp.getType()) {
-        case MachineOperand::MO_ConstantPoolIndex:
-          MO.ChangeToCPI(ImmOp.getIndex(), ImmOp.getOffset(),
-                         ImmOp.getTargetFlags());
-          break;
-        case MachineOperand::MO_GlobalAddress:
-          MO.ChangeToGA(ImmOp.getGlobal(), ImmOp.getOffset(),
-                        ImmOp.getTargetFlags());
-          break;
-        case MachineOperand::MO_MCSymbol:
-          MO.ChangeToMCSymbol(ImmOp.getMCSymbol(), ImmOp.getTargetFlags());
-          MO.setOffset(ImmOp.getOffset());
-          break;
-        case MachineOperand::MO_BlockAddress:
-          MO.ChangeToBA(ImmOp.getBlockAddress(), ImmOp.getOffset(),
-                        ImmOp.getTargetFlags());
-          break;
-        default:
-          report_fatal_error("unsupported machine operand type");
-          break;
-        }
+        overwriteMachineOperandInPlace(MO, ImmOp);
       }
     } else {
       unsigned ImmIdx;
@@ -636,27 +639,7 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
       if (Hi.getOpcode() == RISCV::QC_E_LI) {
         MO.ChangeToImmediate(0);
       } else {
-        switch (ImmOp.getType()) {
-        case MachineOperand::MO_ConstantPoolIndex:
-          MO.ChangeToCPI(ImmOp.getIndex(), ImmOp.getOffset(),
-                         ImmOp.getTargetFlags());
-          break;
-        case MachineOperand::MO_GlobalAddress:
-          MO.ChangeToGA(ImmOp.getGlobal(), ImmOp.getOffset(),
-                        ImmOp.getTargetFlags());
-          break;
-        case MachineOperand::MO_MCSymbol:
-          MO.ChangeToMCSymbol(ImmOp.getMCSymbol(), ImmOp.getTargetFlags());
-          MO.setOffset(ImmOp.getOffset());
-          break;
-        case MachineOperand::MO_BlockAddress:
-          MO.ChangeToBA(ImmOp.getBlockAddress(), ImmOp.getOffset(),
-                        ImmOp.getTargetFlags());
-          break;
-        default:
-          report_fatal_error("unsupported machine operand type");
-          break;
-        }
+        overwriteMachineOperandInPlace(MO, ImmOp);
       }
     }
   }
