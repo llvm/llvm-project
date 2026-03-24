@@ -1023,7 +1023,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 void forward_list<_Tp, _Alloc>::__move_assign(forw
     _NOEXCEPT_(is_nothrow_move_assignable<allocator_type>::value) {
   clear();
   __base::__move_assign_alloc(__x);
-  __base::__before_begin()->__next_ = std::__exchange(__x.__before_begin()->__next_, nullptr);
+  __base::__before_begin()->__next_ = std::__move_and_reset(__x.__before_begin()->__next_);
 }
 
 template <class _Tp, class _Alloc>
