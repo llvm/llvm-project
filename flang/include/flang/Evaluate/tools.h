@@ -1371,8 +1371,7 @@ inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
   int rhsNbManagedSymbols{GetNbOfCUDAManagedOrUnifiedSymbols(rhs)};
   int rhsNbSymbols{GetNbOfCUDADeviceSymbols(rhs)};
 
-  if (HasNonAllocatableModuleCUDAManagedSymbols(lhs) ||
-      HasNonAllocatableModuleCUDAManagedSymbols(rhs))
+  if (HasNonAllocatableModuleCUDAManagedSymbols(lhs))
     return false;
 
   if (lhsNbManagedSymbols >= 1 && lhs.Rank() > 0 && rhsNbSymbols == 0 &&
@@ -1384,7 +1383,8 @@ inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
   // - Only managed or unifed symbols are involved on RHS and LHS.
   // - LHS is managed or unified and the RHS is host only.
   if ((lhsNbManagedSymbols >= 1 && rhsNbManagedSymbols == rhsNbSymbols) ||
-      (lhsNbManagedSymbols == 0 && rhsNbManagedSymbols >= 1 &&
+      (lhsNbManagedSymbols == 0 && !HasCUDADeviceAttrs(lhs) &&
+          rhsNbManagedSymbols >= 1 &&
           rhsNbManagedSymbols == rhsNbSymbols) ||
       (lhsNbManagedSymbols >= 1 && rhsNbSymbols == 0)) {
     return false;
