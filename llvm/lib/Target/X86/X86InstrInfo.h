@@ -674,6 +674,8 @@ protected:
                                   SmallVectorImpl<unsigned> &Patterns,
                                   bool DoRegPressureReduce) const override;
 
+  CombinerObjective getCombinerObjective(unsigned Pattern) const override;
+
   /// When getMachineCombinerPatterns() finds potential patterns,
   /// this function generates the instructions that could replace the
   /// original code sequence.

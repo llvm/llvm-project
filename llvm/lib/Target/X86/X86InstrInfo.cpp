@@ -10636,6 +10636,15 @@ void X86InstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
   }
 }
 
+CombinerObjective X86InstrInfo::getCombinerObjective(unsigned Pattern) const {
+  switch (Pattern) {
+  case X86MachineCombinerPattern::USHD:
+    return CombinerObjective::MustReduceLatency;
+  default:
+    return TargetInstrInfo::getCombinerObjective(Pattern);
+  }
+}
+
 bool X86InstrInfo::getMachineCombinerPatterns(
     MachineInstr &Root, SmallVectorImpl<unsigned> &Patterns,
     bool DoRegPressureReduce) const {

@@ -397,19 +397,20 @@ bool MachineCombiner::improvesCriticalPathLen(
                     << "\n\tRootDepth + RootLatency + RootSlack = "
                     << OldCycleCount);
 
-  bool IsStrictImprovementRequired =
+  bool IsMustReduceLatency =
       getCombinerObjective(Pattern) == CombinerObjective::MustReduceLatency;
-  bool Improves = IsStrictImprovementRequired ? NewCycleCount < OldCycleCount
-                                              : NewCycleCount <= OldCycleCount;
+  unsigned CompareAgainst =
+      IsMustReduceLatency ? RootDepth + RootLatency : OldCycleCount;
+  bool Improves = IsMustReduceLatency ? NewCycleCount < CompareAgainst
+                                      : NewCycleCount <= CompareAgainst;
 
-  if (IsStrictImprovementRequired)
-    LLVM_DEBUG(
-        dbgs() << "\n\t  (MustReduceLatency: strict improvement required)");
-
+  if (IsMustReduceLatency)
+    LLVM_DEBUG(dbgs() << "\n\t  (MustReduceLatency: chain must be strictly "
+                         "shorter, slack excluded)");
   LLVM_DEBUG(Improves ? dbgs() << "\n\t  It IMPROVES PathLen because"
                       : dbgs() << "\n\t  It DOES NOT improve PathLen because");
   LLVM_DEBUG(dbgs() << "\n\t\tNewCycleCount = " << NewCycleCount
-                    << ", OldCycleCount = " << OldCycleCount << "\n");
+                    << ", OldCycleCount = " << CompareAgainst << "\n");
 
   return Improves;
 }
