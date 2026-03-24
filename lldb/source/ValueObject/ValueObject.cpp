@@ -1203,7 +1203,7 @@ llvm::Expected<bool> ValueObject::GetValueAsBool() {
 }
 
 void ValueObject::SetValueFromInteger(const llvm::APInt &value, Status &error,
-                                      bool CanUpdateVar) {
+                                      bool can_update_var) {
   // Verify the current object is an integer object
   CompilerType val_type = GetCompilerType();
   if (!val_type.IsInteger() && !val_type.IsUnscopedEnumerationType() &&
@@ -1216,7 +1216,7 @@ void ValueObject::SetValueFromInteger(const llvm::APInt &value, Status &error,
 
   // Verify, if current object is associated with a program variable, that
   // we are allowing updating progrma variables in this case.
-  if (GetVariable() && !CanUpdateVar) {
+  if (GetVariable() && !can_update_var) {
     error = Status::FromErrorString(
         "Not allowed to update program variables in this case.");
     return;
@@ -1242,7 +1242,7 @@ void ValueObject::SetValueFromInteger(const llvm::APInt &value, Status &error,
 }
 
 void ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
-                                      Status &error, bool CanUpdateVar) {
+                                      Status &error, bool can_update_var) {
   // Verify the current object is an integer object
   CompilerType val_type = GetCompilerType();
   if (!val_type.IsInteger() && !val_type.IsUnscopedEnumerationType() &&
@@ -1255,7 +1255,7 @@ void ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
 
   // Verify, if current object is associated with a program variable, that
   // we are allowing updating progrma variables in this case.
-  if (GetVariable() && !CanUpdateVar) {
+  if (GetVariable() && !can_update_var) {
     error = Status::FromErrorString(
         "Not allowed to update program variables in this case.");
     return;
@@ -1273,13 +1273,13 @@ void ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
   if (new_val_type.IsInteger()) {
     auto value_or_err = new_val_sp->GetValueAsAPSInt();
     if (value_or_err)
-      SetValueFromInteger(*value_or_err, error, CanUpdateVar);
+      SetValueFromInteger(*value_or_err, error, can_update_var);
     else
       error = Status::FromErrorString("error getting APSInt from new_val_sp");
   } else if (HasFloatingRepresentation(new_val_type)) {
     auto value_or_err = new_val_sp->GetValueAsAPFloat();
     if (value_or_err)
-      SetValueFromInteger(value_or_err->bitcastToAPInt(), error, CanUpdateVar);
+      SetValueFromInteger(value_or_err->bitcastToAPInt(), error, can_update_var);
     else
       error = Status::FromErrorString("error getting APFloat from new_val_sp");
   } else if (new_val_type.IsPointerType()) {
@@ -1291,7 +1291,7 @@ void ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
       if (auto temp = llvm::expectedToOptional(
               new_val_sp->GetCompilerType().GetBitSize(target.get())))
         num_bits = temp.value();
-      SetValueFromInteger(llvm::APInt(num_bits, int_val), error, CanUpdateVar);
+      SetValueFromInteger(llvm::APInt(num_bits, int_val), error, can_update_var);
     } else
       error = Status::FromErrorString("error converting new_val_sp to integer");
   }
