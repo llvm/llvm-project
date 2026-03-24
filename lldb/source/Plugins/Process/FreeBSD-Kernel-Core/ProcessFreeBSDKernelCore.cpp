@@ -248,28 +248,33 @@ bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
     constexpr size_t fbsd_maxcomlen = 19;
 
     // Iterate through a linked list of all processes then order incrementally
-    // by pid.
-    std::vector<lldb::addr_t> process_addrs;
+    // by pid. Though new processes are added to the head of this list, process
+    // ids may be reused as well. So we cannot rely on it being in a particular
+    // order.
+    std::vector<std::pair<lldb::addr_t, int32_t>> process_addrs;
     if (lldb::addr_t allproc_addr = FindSymbol("allproc");
         allproc_addr != LLDB_INVALID_ADDRESS) {
       for (lldb::addr_t proc = ReadPointerFromMemory(allproc_addr, error);
            proc != 0 && proc != LLDB_INVALID_ADDRESS && error.Success();
-           proc = ReadPointerFromMemory(proc + offset_p_list, error))
-        process_addrs.push_back(proc);
+           proc = ReadPointerFromMemory(proc + offset_p_list, error)) {
+        int32_t pid =
+            ReadSignedIntegerFromMemory(proc + offset_p_pid, 4, -1, error);
+        if (error.Fail())
+          return false;
+        process_addrs.emplace_back(proc, pid);
+      }
     }
+
+    if (error.Fail())
+      return false;
+
     std::sort(process_addrs.begin(), process_addrs.end(),
-              [&](lldb::addr_t a, lldb::addr_t b) {
-                Status err;
-                int32_t pid_a =
-                    ReadSignedIntegerFromMemory(a + offset_p_pid, 4, -1, err);
-                int32_t pid_b =
-                    ReadSignedIntegerFromMemory(b + offset_p_pid, 4, -1, err);
-                return pid_a < pid_b;
+              [](const std::pair<lldb::addr_t, int32_t> &a,
+                 const std::pair<lldb::addr_t, int32_t> &b) {
+                return a.second < b.second;
               });
 
-    for (lldb::addr_t proc : process_addrs) {
-      int32_t pid =
-          ReadSignedIntegerFromMemory(proc + offset_p_pid, 4, -1, error);
+    for (auto [proc, pid] : process_addrs) {
       // process' command-line string
       char comm[fbsd_maxcomlen + 1];
       ReadCStringFromMemory(proc + offset_p_comm, comm, sizeof(comm), error);
