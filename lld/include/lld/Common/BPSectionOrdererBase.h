@@ -24,8 +24,8 @@ struct BPCompressionSortSpec {
     auto glob = llvm::GlobPattern::create(globString);
     if (!glob)
       return glob.takeError();
-    return BPCompressionSortSpec(std::move(*glob), globString,
-                                 layoutPriority, matchPriority);
+    return BPCompressionSortSpec(std::move(*glob), globString, layoutPriority,
+                                 matchPriority);
   }
 
   const llvm::GlobPattern glob;

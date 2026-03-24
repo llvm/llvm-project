@@ -2093,8 +2093,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       return;
     }
 
-    auto spec =
-        BPCompressionSortSpec::create(globString, layoutPriority, matchPriority);
+    auto spec = BPCompressionSortSpec::create(globString, layoutPriority,
+                                              matchPriority);
     if (!spec) {
       error("--bp-compression-sort-section: " + toString(spec.takeError()));
       return;

@@ -1230,8 +1230,8 @@ static void parseBPOrdererOptions(Ctx &ctx, opt::InputArgList &args) {
       return;
     }
 
-    auto spec =
-        BPCompressionSortSpec::create(globString, layoutPriority, matchPriority);
+    auto spec = BPCompressionSortSpec::create(globString, layoutPriority,
+                                              matchPriority);
     if (!spec) {
       ErrAlways(ctx) << "--bp-compression-sort-section: "
                      << toString(spec.takeError());
