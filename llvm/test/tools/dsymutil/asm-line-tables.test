@@ -4,6 +4,7 @@ Instructions to reproduce
 $ clang -target arm64-apple-macos26 asm-line-tables.s -o asm-line-tables.o -c -g -fdebug-prefix-map=$PWD=.
 $ clang -target arm64-apple-macos26 -o asm-line-tables.arm64 asm-line-tables.o -nodefaultlibs -nostdlib -static -Wl,-oso_prefix,$PWD
 
+REQUIRES: aarch64-registered-target
 RUN: dsymutil -oso-prepend-path %p/Inputs/ %p/Inputs/private/tmp/asm/asm-line-tables.arm64 -o %t.dSYM
 RUN: llvm-dwarfdump --debug-line %t.dSYM | FileCheck %s
 

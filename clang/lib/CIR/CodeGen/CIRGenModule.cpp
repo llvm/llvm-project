@@ -239,6 +239,13 @@ CharUnits CIRGenModule::getNaturalTypeAlignment(QualType t,
   return alignment;
 }
 
+CharUnits
+CIRGenModule::getNaturalPointeeTypeAlignment(QualType t,
+                                             LValueBaseInfo *baseInfo) {
+  return getNaturalTypeAlignment(t->getPointeeType(), baseInfo,
+                                 /*forPointeeType=*/true);
+}
+
 const TargetCIRGenInfo &CIRGenModule::getTargetCIRGenInfo() {
   if (theTargetCIRGenInfo)
     return *theTargetCIRGenInfo;

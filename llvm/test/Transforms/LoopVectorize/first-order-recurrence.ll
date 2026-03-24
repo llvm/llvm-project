@@ -2319,7 +2319,7 @@ for.end:
 ; sinking, instructions with side effects (e.g. loads) conditioned by those
 ; branches will become users of the condition bit after vectorization and would
 ; need to be sunk if the loop is vectorized.
-define void @do_not_sink_branch(i32 %x, ptr %in, ptr %out, i32 %tc) local_unnamed_addr #0 {
+define void @do_not_sink_branch(i32 %x, ptr %in, ptr %out, i32 %tc) #0 {
 ; UNROLL-NO-IC-LABEL: @do_not_sink_branch(
 ; UNROLL-NO-IC-NEXT:  entry:
 ; UNROLL-NO-IC-NEXT:    [[CMP530:%.*]] = icmp slt i32 0, [[TC:%.*]]

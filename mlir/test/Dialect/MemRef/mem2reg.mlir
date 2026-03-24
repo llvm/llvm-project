@@ -163,3 +163,16 @@ func.func @promotable_nonpromotable_intertwined() -> i32 {
 }
 
 func.func @use(%arg: memref<i32>) { return }
+
+// -----
+
+// CHECK-LABEL: func.func @unused_alloca_store_loop
+func.func @unused_alloca_store_loop() {
+  // CHECK-NOT: memref.alloca
+  %cst = arith.constant 1 : i32
+  %alloca = memref.alloca() : memref<i32>
+  cf.br ^bb1
+^bb1:
+  memref.store %cst, %alloca[] : memref<i32>
+  cf.br ^bb1
+}

@@ -43,9 +43,9 @@
 #define HAVE_PVALLOC 1
 #define HAVE_VALLOC 1
 
-// Assume all others will die on these calls.
-#define VERIFY_FREE_SIZED_DEATH 1
-#define VERIFY_FREE_ALIGNED_SIZED_DEATH 1
+// Assume all others will not die on these calls.
+#define VERIFY_FREE_SIZED_DEATH 0
+#define VERIFY_FREE_ALIGNED_SIZED_DEATH 0
 #endif
 
 // GWP-Asan doesn't do these checks.

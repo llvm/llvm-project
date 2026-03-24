@@ -92,6 +92,15 @@ Changes to LLVM infrastructure
   successor order. This can cause subtle breakage when using ``getOperand`` or
   ``setOperand`` to access successors.
 
+* The ``llvm::sys::fs`` link creation API has been refactored:
+
+  * ``create_link`` now tries to create a symbolic link first, falling back to a
+    hard link if that fails (previously it created a symlink on Unix and a hard
+    link on Windows).
+  * Added ``create_symlink``, which always creates a symbolic link. On windows
+    this may fail if symlink permissions are not available.
+  * Added ``readlink``, which reads the target of a symbolic link.
+
 Changes to building LLVM
 ------------------------
 

@@ -728,17 +728,17 @@ void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
       }
 
       // Check if R is a dead VPPhi <-> update cycle and remove it.
-      auto *PhiR = dyn_cast<VPPhi>(&R);
-      if (!PhiR || PhiR->getNumOperands() != 2)
+      VPValue *Start, *Incoming;
+      if (!match(&R, m_VPPhi(m_VPValue(Start), m_VPValue(Incoming))))
         continue;
+      auto *PhiR = cast<VPPhi>(&R);
       VPUser *PhiUser = PhiR->getSingleUser();
       if (!PhiUser)
         continue;
-      VPValue *Incoming = PhiR->getOperand(1);
       if (PhiUser != Incoming->getDefiningRecipe() ||
           Incoming->getNumUsers() != 1)
         continue;
-      PhiR->replaceAllUsesWith(PhiR->getOperand(0));
+      PhiR->replaceAllUsesWith(Start);
       PhiR->eraseFromParent();
       Incoming->getDefiningRecipe()->eraseFromParent();
     }
@@ -6162,7 +6162,7 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op) {
          "Op should be operand of UpdateR");
 
   std::optional<TTI::PartialReductionExtendKind> OuterExtKind;
-  if (match(Op, m_AnyExtend(m_VPValue()))) {
+  if (match(Op, m_WidenAnyExtend(m_VPValue()))) {
     auto *CastRecipe = cast<VPWidenCastRecipe>(Op);
     VPValue *CastSource = CastRecipe->getOperand(0);
     if (match(CastSource, m_Mul(m_VPValue(), m_VPValue())) ||
@@ -6202,7 +6202,7 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op) {
   VPValue *RHS = BinOp->getOperand(1);
 
   // The LHS of the operation must always be an extend.
-  if (!match(LHS, m_AnyExtend(m_VPValue())))
+  if (!match(LHS, m_WidenAnyExtend(m_VPValue())))
     return std::nullopt;
 
   auto *LHSCast = cast<VPWidenCastRecipe>(LHS);
@@ -6210,7 +6210,7 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op) {
   // The RHS of the operation can be an extend or a constant integer.
   // The constant will be validated in isValidPartialReduction.
   VPWidenCastRecipe *RHSCast = nullptr;
-  if (match(RHS, m_AnyExtend(m_VPValue())))
+  if (match(RHS, m_WidenAnyExtend(m_VPValue())))
     RHSCast = cast<VPWidenCastRecipe>(RHS);
   else if (!isa<VPConstantInt>(RHS))
     return std::nullopt;
