@@ -992,7 +992,7 @@ int8x8_t test_vmin_s8(int8x8_t v1, int8x8_t v2) {
   // CIR: cir.call_llvm_intrinsic "aarch64.neon.smin" %{{.*}}, %{{.*}} : (!cir.vector<8 x !s8i>, !cir.vector<8 x !s8i>) -> !cir.vector<8 x !s8i>
   // LLVM-SAME: <8 x i8> noundef [[V1:%.*]], <8 x i8> noundef [[V2:%.*]]) #[[ATTR0]] {
   // LLVM-NEXT:  [[ENTRY:.*:]]
-  // LLVM-NEXT:    [[VMIN_V_I:%.*]] = call <8 x i8> @llvm.arm.neon.vmins.v8i8(<8 x i8> [[V1]], <8 x i8> [[V2]])
+  // LLVM-NEXT:    [[VMIN_V_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.smin.v8i8(<8 x i8> [[V1]], <8 x i8> [[V2]])
   // LLVM-NEXT:    ret <8 x i8> [[VMIN_V_I]]
   return vmin_s8(v1, v2);
 }
