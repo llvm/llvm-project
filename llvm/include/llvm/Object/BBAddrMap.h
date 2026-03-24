@@ -64,8 +64,7 @@ struct BBAddrMap {
           static_cast<bool>(Val & (1 << 6)), static_cast<bool>(Val & (1 << 7))};
       if (Feat.encode() != Val)
         return createStringError(
-            std::error_code(), "invalid encoding for BBAddrMap::Features: 0x%x",
-            Val);
+            "invalid encoding for BBAddrMap::Features: 0x%x", Val);
       return Feat;
     }
 
@@ -115,8 +114,7 @@ struct BBAddrMap {
                     /*HasIndirectBranch=*/static_cast<bool>(V & (1 << 4))};
         if (MD.encode() != V)
           return createStringError(
-              std::error_code(), "invalid encoding for BBEntry::Metadata: 0x%x",
-              V);
+              "invalid encoding for BBEntry::Metadata: 0x%x", V);
         return MD;
       }
     };
@@ -158,9 +156,7 @@ struct BBAddrMap {
 
     // Equality operator for unit testing.
     bool operator==(const BBRangeEntry &Other) const {
-      return BaseAddress == Other.BaseAddress &&
-             std::equal(BBEntries.begin(), BBEntries.end(),
-                        Other.BBEntries.begin());
+      return BaseAddress == Other.BaseAddress && BBEntries == Other.BBEntries;
     }
   };
 
@@ -202,7 +198,7 @@ struct BBAddrMap {
 
   // Equality operator for unit testing.
   bool operator==(const BBAddrMap &Other) const {
-    return std::equal(BBRanges.begin(), BBRanges.end(), Other.BBRanges.begin());
+    return BBRanges == Other.BBRanges;
   }
 };
 
@@ -238,7 +234,8 @@ struct PGOAnalysisMap {
 
     bool operator==(const PGOBBEntry &Other) const {
       return std::tie(BlockFreq, PostLinkBlockFreq, Successors) ==
-             std::tie(Other.BlockFreq, PostLinkBlockFreq, Other.Successors);
+             std::tie(Other.BlockFreq, Other.PostLinkBlockFreq,
+                      Other.Successors);
     }
   };
 
