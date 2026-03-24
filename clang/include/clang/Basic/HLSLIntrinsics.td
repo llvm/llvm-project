@@ -313,8 +313,163 @@ class HLSLOneArgInlineBuiltin<string name> : HLSLBuiltin<name> {
 // Intrinsic definitions (sorted alphabetically by function name)
 //===----------------------------------------------------------------------===//
 
-// TODO: Convert hand-written overloads from hlsl_intrinsics.h and
-//       hlsl_alias_intrinsics.h into TableGen below.
-//       Include "hlsl_alias_intrinsics_gen.inc" in hlsl_alias_intrinsics.h
-//       Include "hlsl_inline_intrinsics_gen.inc" in hlsl_intrinsics.h
+// Returns the absolute value of the input value, Val.
+def hlsl_abs : HLSLOneArgBuiltin<"abs", "__builtin_elementwise_abs"> {
+  let Doc = [{
+\fn T abs(T Val)
+\brief Returns the absolute value of the input value, \a Val.
+\param Val The input value.
+}];
+  let VaryingTypes = SignedTypes;
+  let VaryingMatDims = [];
+}
+
+// Unsigned abs is a constexpr identity — unsigned values are already non-negative.
+def hlsl_abs_unsigned : HLSLOneArgInlineBuiltin<"abs"> {
+  let ParamNames = ["V"];
+  let Body = "return V;";
+  let IsConstexpr = 1;
+  let VaryingTypes = UnsignedIntTypes;
+  let VaryingMatDims = [];
+}
+
+// Returns the boolean AND of two bool values or vectors.
+def hlsl_and : HLSLTwoArgBuiltin<"and", "__builtin_hlsl_and"> {
+  let Doc = [{
+\fn bool and(bool x, bool y)
+\brief Logically ands two boolean vectors or matrices elementwise and
+produces a bool vector or matrix output.
+}];
+  let VaryingTypes = [BoolTy];
+}
+
+// Returns the cross product of two floating-point, 3D vectors.
+// Two separate defs are needed because the float and half variants alias
+// different builtins (__builtin_hlsl_crossf32 vs __builtin_hlsl_crossf16).
+def hlsl_cross_float : HLSLBuiltin<"cross", "__builtin_hlsl_crossf32"> {
+  let Doc = [{
+\fn T cross(T x, T y)
+\brief Returns the cross product of two floating-point, 3D vectors.
+\param x [in] The first floating-point, 3D vector.
+\param y [in] The second floating-point, 3D vector.
+
+Result is the cross product of x and y, i.e., the resulting
+components are, in order :
+x[1] * y[2] - y[1] * x[2]
+x[2] * y[0] - y[2] * x[0]
+x[0] * y[1] - y[0] * x[1]
+}];
+  let Args = [VectorType<FloatTy, 3>, VectorType<FloatTy, 3>];
+  let ReturnType = VectorType<FloatTy, 3>;
+}
+
+def hlsl_cross_half : HLSLBuiltin<"cross", "__builtin_hlsl_crossf16"> {
+  let Args = [VectorType<HalfTy, 3>, VectorType<HalfTy, 3>];
+  let ReturnType = VectorType<HalfTy, 3>;
+}
+
+// Returns the dot product (a scalar value) of X and Y.
+def hlsl_dot : HLSLTwoArgBuiltin<"dot", "__builtin_hlsl_dot"> {
+  let Doc = [{
+\fn K dot(T X, T Y)
+\brief Return the dot product (a scalar value) of \a X and \a Y.
+\param X The X input value.
+\param Y The Y input value.
+}];
+  let ReturnType = VaryingElemType;
+  let VaryingTypes = NumericTypesNoDbl;
+  let VaryingMatDims = [];
+}
+
+// double dot only has scalar overload (no vectors).
+def hlsl_dot_double : HLSLBuiltin<"dot", "__builtin_hlsl_dot"> {
+  let Args = [Varying, Varying];
+  let ReturnType = VaryingElemType;
+  let VaryingTypes = [DoubleTy];
+  let VaryingScalar = 1;
+}
+
+// Dot product of 2 half vectors plus a float scalar.
+def hlsl_dot2add : HLSLBuiltin<"dot2add"> {
+  let Doc = [{
+\fn float dot2add(half2 A, half2 B, float C)
+\brief Dot product of 2 vector of type half and add a float scalar value.
+\param A The first input value to dot product.
+\param B The second input value to dot product.
+\param C The input value added to the dot product.
+}];
+  let DetailFunc = "dot2add_impl";
+  let ParamNames = ["A", "B", "C"];
+  let Args = [VectorType<HalfTy, 2>, VectorType<HalfTy, 2>, FloatTy];
+  let ReturnType = FloatTy;
+  let Availability = SM6_4;
+}
+
+// Blocks execution of all threads in a group until all group shared accesses
+// have been completed and all threads in the group have reached this call.
+def hlsl_group_memory_barrier_with_group_sync :
+    HLSLBuiltin<"GroupMemoryBarrierWithGroupSync",
+                "__builtin_hlsl_group_memory_barrier_with_group_sync"> {
+  let Doc = [{
+\fn void GroupMemoryBarrierWithGroupSync(void)
+\brief Blocks execution of all threads in a group until all group shared
+accesses have been completed and all threads in the group have reached this
+call.
+}];
+  let IsConvergent = 1;
+}
+
+// Determines if the specified value x is infinite.
+def hlsl_isinf : HLSLOneArgBuiltin<"isinf", "__builtin_hlsl_elementwise_isinf"> {
+  let Doc = [{
+\fn T isinf(T x)
+\brief Determines if the specified value \a x is infinite.
+\param x The specified input value.
+
+Returns a value of the same size as the input, with a value set
+to True if the x parameter is +INF or -INF. Otherwise, False.
+}];
+  let ReturnType = VaryingShape<BoolTy>;
+  let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingMatDims = [];
+}
+
+// Returns a refraction vector using an entering ray, a surface normal, and
+// a refraction index.
+def hlsl_refract : HLSLBuiltin<"refract"> {
+  let Doc = [{
+\fn T refract(T I, T N, T eta)
+\brief Returns a refraction using an entering ray, \a I, a surface
+normal, \a N and refraction index \a eta
+\param I The entering ray.
+\param N The surface normal.
+\param eta The refraction index.
+
+The return value is a floating-point vector that represents the refraction
+using the refraction index, \a eta, for the direction of the entering ray,
+\a I, off a surface with the normal \a N.
+
+This function calculates the refraction vector using the following formulas:
+k = 1.0 - eta * eta * (1.0 - dot(N, I) * dot(N, I))
+if k < 0.0 the result is 0.0
+otherwise, the result is eta * I - (eta * dot(N, I) + sqrt(k)) * N
+
+I and N must already be normalized in order to achieve the desired result.
+
+I and N must be a scalar or vector whose component type is
+floating-point.
+
+eta must be a 16-bit or 32-bit floating-point scalar.
+
+Result type, the type of I, and the type of N must all be the same type.
+}];
+  let DetailFunc = "refract_impl";
+  let ParamNames = ["I", "N", "eta"];
+  let Args = [Varying, Varying, VaryingElemType];
+  let ReturnType = Varying;
+  let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingScalar = 1;
+  let VaryingVecSizes = [2, 3, 4];
+  let VaryingMatDims = [];
+}
 
