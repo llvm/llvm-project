@@ -257,6 +257,8 @@ void llvm::parallelFor(size_t Begin, size_t End,
 #if LLVM_ENABLE_THREADS
   if (parallel::strategy.ThreadsRequested != 1) {
     size_t NumItems = End - Begin;
+    if (NumItems == 0)
+      return;
     // Distribute work via an atomic counter shared by NumWorkers threads,
     // keeping the task count (and thus Linux futex calls) at O(ThreadCount)
     // For lld, per-file work is somewhat uneven, so a multipler > 1 is safer.
