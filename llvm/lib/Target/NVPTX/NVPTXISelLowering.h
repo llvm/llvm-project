@@ -173,10 +173,6 @@ public:
   Instruction *emitTrailingFence(IRBuilderBase &Builder, Instruction *Inst,
                                  AtomicOrdering Ord) const override;
 
-  bool issueAtomicInitLoadForAtomicEmulation() const override {
-    return true;
-  }
-
   unsigned getPreferredFPToIntOpcode(unsigned Op, EVT FromVT,
                                      EVT ToVT) const override;
 

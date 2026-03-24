@@ -1095,9 +1095,10 @@ void AtomicExpandImpl::expandPartwordAtomicRMW(
 
   Value *OldResult;
   if (ExpansionKind == TargetLoweringBase::AtomicExpansionKind::CmpXChg) {
-    OldResult = insertRMWCmpXchgLoop(
-        Builder, PMV.WordType, PMV.AlignedAddr, PMV.AlignedAddrAlignment,
-        MemOpOrder, SSID, AI->isVolatile(), PerformPartwordOp, createCmpXchgInstFun, AI);
+    OldResult = insertRMWCmpXchgLoop(Builder, PMV.WordType, PMV.AlignedAddr,
+                                     PMV.AlignedAddrAlignment, MemOpOrder, SSID,
+                                     AI->isVolatile(), PerformPartwordOp,
+                                     createCmpXchgInstFun, AI);
   } else {
     assert(ExpansionKind == TargetLoweringBase::AtomicExpansionKind::LLSC);
     OldResult = insertRMWLLSCLoop(Builder, PMV.WordType, PMV.AlignedAddr,
@@ -1227,17 +1228,15 @@ bool AtomicExpandImpl::expandPartwordCmpXchg(AtomicCmpXchgInst *CI) {
   // The initial load must be atomic with the same synchronization scope
   // to avoid a data race with concurrent stores. If the instruction being
   // emulated is volatile, issue a volatile load.
-  // addIncoming is done first so that expandAtomicLoadToLibcall's
-  // replaceAllUsesWith correctly updates the PHI incoming value.
+  // addIncoming is done first so that any replaceAllUsesWith calls during
+  // normalization correctly update the PHI incoming value.
   InitLoaded->setVolatile(CI->isVolatile());
-  if (TLI->issueAtomicInitLoadForAtomicEmulation()) {
-    // TODO: Get rid of the target hook once all backends start issuing
-    // atomic loads.
+  if (TLI->shouldIssueAtomicLoadForAtomicEmulationLoop()) {
     InitLoaded->setAtomic(AtomicOrdering::Monotonic, CI->getSyncScopeID());
-    // Atomic loads of unsupported sizes would usually get expanded
-    // to libcalls, so we do that in-place here.
-    if (!atomicSizeSupported(TLI, InitLoaded))
-      expandAtomicLoadToLibcall(InitLoaded);
+    // The newly created load might need to be lowered further. Because it is
+    // created in the same block as the atomicrmw, the AtomicExpand loop will
+    // not process it again.
+    processAtomicInstr(InitLoaded);
   }
 
   // Mask/Or the expected and new values into place in the loaded word.
@@ -1776,17 +1775,15 @@ Value *AtomicExpandImpl::insertRMWCmpXchgLoop(
   // The initial load must be atomic with the same synchronization scope
   // to avoid a data race with concurrent stores. If the instruction being
   // emulated is volatile, issue a volatile load.
-  // addIncoming is done first so that expandAtomicLoadToLibcall's
-  // replaceAllUsesWith correctly updates the PHI incoming value.
+  // addIncoming is done first so that any replaceAllUsesWith calls during
+  // normalization correctly update the PHI incoming value.
   InitLoaded->setVolatile(IsVolatile);
-  if (TLI->issueAtomicInitLoadForAtomicEmulation()) {
-    // TODO: Get rid of the target hook once all backends start issuing
-    // atomic loads.
+  if (TLI->shouldIssueAtomicLoadForAtomicEmulationLoop()) {
     InitLoaded->setAtomic(AtomicOrdering::Monotonic, SSID);
-    // Atomic loads of unsupported sizes would usually get expanded
-    // to libcalls, so we do that in-place here.
-    if (!atomicSizeSupported(TLI, InitLoaded))
-      expandAtomicLoadToLibcall(InitLoaded);
+    // The newly created load might need to be lowered further. Because it is
+    // created in the same block as the atomicrmw, the AtomicExpand loop will
+    // not process it again.
+    processAtomicInstr(InitLoaded);
   }
 
   Value *NewVal = PerformOp(Builder, Loaded);
@@ -1840,8 +1837,8 @@ bool AtomicExpandImpl::tryExpandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
   }
 }
 
-bool AtomicExpandImpl::expandAtomicRMWToCmpXchg(AtomicRMWInst *AI,
-                                    CreateCmpXchgInstFun CreateCmpXchg) {
+bool AtomicExpandImpl::expandAtomicRMWToCmpXchg(
+    AtomicRMWInst *AI, CreateCmpXchgInstFun CreateCmpXchg) {
   ReplacementIRBuilder Builder(AI, AI->getDataLayout());
   Builder.setIsFPConstrained(
       AI->getFunction()->hasFnAttribute(Attribute::StrictFP));
@@ -2012,9 +2009,9 @@ void AtomicExpandImpl::expandAtomicRMWToLibcall(AtomicRMWInst *I) {
   if (!Success) {
     expandAtomicRMWToCmpXchg(
         I, [this, I](IRBuilderBase &Builder, Value *Addr, Value *Loaded,
-                  Value *NewVal, Align Alignment, AtomicOrdering MemOpOrder,
-                  SyncScope::ID SSID, bool IsVolatile, Value *&Success, 
-                  Value *&NewLoaded, Instruction *MetadataSrc) {
+                     Value *NewVal, Align Alignment, AtomicOrdering MemOpOrder,
+                     SyncScope::ID SSID, bool IsVolatile, Value *&Success,
+                     Value *&NewLoaded, Instruction *MetadataSrc) {
           // Create the CAS instruction normally...
           AtomicCmpXchgInst *Pair = Builder.CreateAtomicCmpXchg(
               Addr, Loaded, NewVal, Alignment, MemOpOrder,
