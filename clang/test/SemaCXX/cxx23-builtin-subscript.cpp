@@ -43,35 +43,22 @@ void f(int *p) {
 }
 
 struct Prop {
-  int val = 0;
-
-  constexpr int get_two(int a, int b) { return a + b; }
-  constexpr int get_three(int a, int b, int c) { return a + b + c; }
-
-  constexpr void put_two(int a, int b, int c) { val = a + b + c; }
-  constexpr void put_three(int a, int b, int c, int d) { val = a + b + c + d; }
-
+  constexpr int get_two(int a, int b);
+  constexpr int get_three(int a, int b, int c);
+  constexpr void put_two(int a, int b, int c);
+  constexpr void put_three(int a, int b, int c, int d);
   __declspec(property(get = get_two, put = put_two)) int two[][];
   __declspec(property(get = get_three, put = put_three)) int three[][][];
 };
 
-static_assert(Prop().two[1, 2] == 3);
-static_assert(Prop().three[1, 2, 3] == 6);
-static_assert(Prop().three[1, 2][3] == 6);
-static_assert(Prop().three[1][2, 3] == 6);
-
-constexpr int p1() {
+void f() {
   Prop p;
-  p.two[1, 2] = 3;
-  return p.val;
+  p.two[1, 2]; // expected-error {{property subscript expects exactly one argument}}
+  p.three[1, 2, 3]; // expected-error {{property subscript expects exactly one argument}}
+  p.three[1, 2][3]; // expected-error {{property subscript expects exactly one argument}}
+  p.three[1][2, 3]; // expected-error {{property subscript expects exactly one argument}}
+  p.two[1, 2] = 3; // expected-error {{property subscript expects exactly one argument}}
+  p.three[1, 2, 3] = 4; // expected-error {{property subscript expects exactly one argument}}
+  p.three[1, 2][3] = 4; // expected-error {{property subscript expects exactly one argument}}
+  p.three[1][2, 3] = 4; // expected-error {{property subscript expects exactly one argument}}
 }
-
-static_assert(p1() == 6);
-
-constexpr int p2() {
-  Prop p;
-  p.three[1, 2, 3] = 4;
-  return p.val;
-}
-
-static_assert(p2() == 10);

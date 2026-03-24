@@ -5147,20 +5147,18 @@ ExprResult Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base,
   // The above statement indicates that x[] can be used with one or more array
   // indices. In this case, i=p->x[a][b] will be turned into i=p->GetX(a, b),
   // and p->x[a][b] = i will be turned into p->PutX(a, b, i);
-  //
-  // Since C++23, MSVC accepts multiple arguments; e.g. given
-  //
-  //   struct S {
-  //     int get_x(int, int);
-  //     __declspec(property(get=get_x)) int x[][];
-  //   };
-  //
-  // MSVC accepts both 'S().x[1][2]' and 'S().x[1, 2]'.
   if (IsMSPropertySubscript) {
-    for (Expr *Arg : ArgExprs)
-      base = new (Context) MSPropertySubscriptExpr(
-          base, Arg, Context.PseudoObjectTy, VK_LValue, OK_Ordinary, rbLoc);
-    return base;
+    if (ArgExprs.size() > 1) {
+      Diag(base->getExprLoc(),
+           diag::err_ms_property_subscript_expects_single_arg);
+      return ExprError();
+    }
+
+    // Build MS property subscript expression if base is MS property reference
+    // or MS property subscript.
+    return new (Context)
+        MSPropertySubscriptExpr(base, ArgExprs.front(), Context.PseudoObjectTy,
+                                VK_LValue, OK_Ordinary, rbLoc);
   }
 
   // Use C++ overloaded-operator rules if either operand has record
