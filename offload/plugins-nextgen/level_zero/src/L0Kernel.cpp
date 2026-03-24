@@ -283,16 +283,14 @@ static Error launchKernelWithImmCmdList(L0DeviceTy &l0Device,
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
        "Kernel depends on %zu data copying events.\n", NumWaitEvents);
   Error AllErrors = Error::success();
-  auto addError = [&](Error Err) {
-    AllErrors = joinErrors(std::move(AllErrors), std::move(Err));
-  };
-  CALL_ZE_HANDLE_ERROR(addError, zeCommandListAppendLaunchKernel, CmdList,
+
+  CALL_ZE_ACCUM_ERROR(AllErrors, zeCommandListAppendLaunchKernel, CmdList,
                        zeKernel, &KEnv.GroupCounts, Event, NumWaitEvents,
                        WaitEvents);
   KEnv.Lock.unlock();
   if (AllErrors) {
     if (auto Err = l0Device.releaseEvent(Event))
-      addError(std::move(Err));
+      AllErrors = joinErrors(std::move(AllErrors), std::move(Err));
     return AllErrors;
   }
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
@@ -302,10 +300,10 @@ static Error launchKernelWithImmCmdList(L0DeviceTy &l0Device,
     AsyncQueue->WaitEvents.push_back(Event);
     AsyncQueue->KernelEvent = Event;
   } else {
-    CALL_ZE_HANDLE_ERROR(addError, zeEventHostSynchronize, Event,
+    CALL_ZE_ACCUM_ERROR(AllErrors, zeEventHostSynchronize, Event,
                          L0DefaultTimeout);
     if (auto Err = l0Device.releaseEvent(Event))
-      addError(std::move(Err));
+      AllErrors = joinErrors(std::move(AllErrors), std::move(Err));
     if (AllErrors)
       return AllErrors;
   }
