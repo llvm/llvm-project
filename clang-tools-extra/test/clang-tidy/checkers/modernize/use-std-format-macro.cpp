@@ -9,7 +9,7 @@
 // CHECK-FIXES: #include <fmt/format.h>
 
 namespace String {
-extern std::string Printf(const char *format, ...);
+std::string Printf(const char *format, ...);
 } // namespace String
 
 #define WRAP_MSG(msg) msg
