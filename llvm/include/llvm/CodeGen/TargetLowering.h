@@ -2301,6 +2301,15 @@ public:
     return AtomicOrdering::Monotonic;
   }
 
+  // Whether to issue an atomic load for the initial word value before the
+  // atomicrmw/cmpxchg emulation loop.
+  // TODO: For correctness, an atomic load should be issued for all targets.
+  // Remove uses of this API once this is achieved.
+  virtual bool
+  issueAtomicInitLoadForAtomicEmulation() const {
+    return false;
+  }
+
   /// Perform a load-linked operation on Addr, returning a "Value *" with the
   /// corresponding pointee type. This may entail some non-trivial operations to
   /// truncate or reconstruct types that will be illegal in the backend. See

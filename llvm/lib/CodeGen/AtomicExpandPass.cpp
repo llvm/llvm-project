@@ -122,7 +122,7 @@ private:
   void expandAtomicCmpXchgToMaskedIntrinsic(AtomicCmpXchgInst *CI);
 
   AtomicCmpXchgInst *convertCmpXchgToIntegerType(AtomicCmpXchgInst *CI);
-  static Value *insertRMWCmpXchgLoop(
+  Value *insertRMWCmpXchgLoop(
       IRBuilderBase &Builder, Type *ResultType, Value *Addr, Align AddrAlign,
       AtomicOrdering MemOpOrder, SyncScope::ID SSID, bool IsVolatile,
       function_ref<Value *(IRBuilderBase &, Value *)> PerformOp,
@@ -1216,7 +1216,6 @@ bool AtomicExpandImpl::expandPartwordCmpXchg(AtomicCmpXchgInst *CI) {
   // Load the entire current word, and mask into place the expected and new
   // values
   LoadInst *InitLoaded = Builder.CreateLoad(PMV.WordType, PMV.AlignedAddr);
-  InitLoaded->setVolatile(CI->isVolatile());
   Value *InitLoaded_MaskOut = Builder.CreateAnd(InitLoaded, PMV.Inv_Mask);
   Builder.CreateBr(LoopBB);
 
@@ -1224,6 +1223,22 @@ bool AtomicExpandImpl::expandPartwordCmpXchg(AtomicCmpXchgInst *CI) {
   Builder.SetInsertPoint(LoopBB);
   PHINode *Loaded_MaskOut = Builder.CreatePHI(PMV.WordType, 2);
   Loaded_MaskOut->addIncoming(InitLoaded_MaskOut, BB);
+
+  // The initial load must be atomic with the same synchronization scope
+  // to avoid a data race with concurrent stores. If the instruction being
+  // emulated is volatile, issue a volatile load.
+  // addIncoming is done first so that expandAtomicLoadToLibcall's
+  // replaceAllUsesWith correctly updates the PHI incoming value.
+  InitLoaded->setVolatile(CI->isVolatile());
+  if (TLI->issueAtomicInitLoadForAtomicEmulation()) {
+    // TODO: Get rid of the target hook once all backends start issuing
+    // atomic loads.
+    InitLoaded->setAtomic(AtomicOrdering::Monotonic, CI->getSyncScopeID());
+    // Atomic loads of unsupported sizes would usually get expanded
+    // to libcalls, so we do that in-place here.
+    if (!atomicSizeSupported(TLI, InitLoaded))
+      expandAtomicLoadToLibcall(InitLoaded);
+  }
 
   // Mask/Or the expected and new values into place in the loaded word.
   Value *FullWord_NewVal = Builder.CreateOr(Loaded_MaskOut, NewVal_Shifted);
@@ -1751,16 +1766,28 @@ Value *AtomicExpandImpl::insertRMWCmpXchgLoop(
   std::prev(BB->end())->eraseFromParent();
   Builder.SetInsertPoint(BB);
   LoadInst *InitLoaded = Builder.CreateAlignedLoad(ResultTy, Addr, AddrAlign);
-  InitLoaded->setVolatile(IsVolatile);
-  // TODO: The initial load must be atomic with the same synchronization scope
-  // to avoid a data race with concurrent stores. If the instruction being
-  // emulated is volatile, issue a volatile load.
   Builder.CreateBr(LoopBB);
 
   // Start the main loop block now that we've taken care of the preliminaries.
   Builder.SetInsertPoint(LoopBB);
   PHINode *Loaded = Builder.CreatePHI(ResultTy, 2, "loaded");
   Loaded->addIncoming(InitLoaded, BB);
+
+  // The initial load must be atomic with the same synchronization scope
+  // to avoid a data race with concurrent stores. If the instruction being
+  // emulated is volatile, issue a volatile load.
+  // addIncoming is done first so that expandAtomicLoadToLibcall's
+  // replaceAllUsesWith correctly updates the PHI incoming value.
+  InitLoaded->setVolatile(IsVolatile);
+  if (TLI->issueAtomicInitLoadForAtomicEmulation()) {
+    // TODO: Get rid of the target hook once all backends start issuing
+    // atomic loads.
+    InitLoaded->setAtomic(AtomicOrdering::Monotonic, SSID);
+    // Atomic loads of unsupported sizes would usually get expanded
+    // to libcalls, so we do that in-place here.
+    if (!atomicSizeSupported(TLI, InitLoaded))
+      expandAtomicLoadToLibcall(InitLoaded);
+  }
 
   Value *NewVal = PerformOp(Builder, Loaded);
 
