@@ -465,6 +465,10 @@ class MetadataLoader::MetadataLoaderImpl {
   bool NeedUpgradeToDIGlobalVariableExpression = false;
   bool NeedDeclareExpressionUpgrade = false;
 
+  /// Map DIGlobalVariable to generated DIGlobalVariable, if any.
+  DenseMap<DIGlobalVariable *, DIGlobalVariableExpression *>
+      GlobalVariableExpression;
+
   /// Map DILocalScope to the enclosing DISubprogram, if any.
   DenseMap<DILocalScope *, DISubprogram *> ParentSubprogram;
 
@@ -505,8 +509,11 @@ class MetadataLoader::MetadataLoaderImpl {
           for (unsigned I = 0; I < GVs->getNumOperands(); I++)
             if (auto *GV =
                     dyn_cast_or_null<DIGlobalVariable>(GVs->getOperand(I))) {
-              auto *DGVE = DIGlobalVariableExpression::getDistinct(
-                  Context, GV, DIExpression::get(Context, {}));
+              auto *&DGVE = GlobalVariableExpression[GV];
+              if (!DGVE) {
+                DGVE = DIGlobalVariableExpression::getDistinct(
+                    Context, GV, DIExpression::get(Context, {}));
+              }
               GVs->replaceOperandWith(I, DGVE);
             }
       }
@@ -518,8 +525,11 @@ class MetadataLoader::MetadataLoaderImpl {
       GV.eraseMetadata(LLVMContext::MD_dbg);
       for (auto *MD : MDs)
         if (auto *DGV = dyn_cast<DIGlobalVariable>(MD)) {
-          auto *DGVE = DIGlobalVariableExpression::getDistinct(
-              Context, DGV, DIExpression::get(Context, {}));
+          auto *&DGVE = GlobalVariableExpression[DGV];
+          if (!DGVE) {
+            DGVE = DIGlobalVariableExpression::getDistinct(
+                Context, DGV, DIExpression::get(Context, {}));
+          }
           GV.addMetadata(LLVMContext::MD_dbg, *DGVE);
         } else
           GV.addMetadata(LLVMContext::MD_dbg, *MD);
@@ -2263,10 +2273,13 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
            getDITypeRefOrNull(Record[6]), Record[7], Record[8],
            getMDOrNull(Record[10]), nullptr, AlignInBits, nullptr));
 
-      DIGlobalVariableExpression *DGVE = nullptr;
-      if (Attach || Expr)
-        DGVE = DIGlobalVariableExpression::getDistinct(
-            Context, DGV, Expr ? Expr : DIExpression::get(Context, {}));
+      DIGlobalVariableExpression *&DGVE = GlobalVariableExpression[DGV];
+      if (Attach || Expr) {
+        if (!DGVE) {
+          DGVE = DIGlobalVariableExpression::getDistinct(
+              Context, DGV, Expr ? Expr : DIExpression::get(Context, {}));
+        }
+      }
       if (Attach)
         Attach->addDebugInfo(DGVE);
 

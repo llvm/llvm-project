@@ -4,7 +4,6 @@
 ; CHECK-DAG: ![[G]] = distinct !DIGlobalVariableExpression(var: ![[GVAR:[0-9]+]], expr: !DIExpression())
 ; CHECK-DAG: distinct !DICompileUnit({{.*}}, globals: ![[GLOBS:[0-9]+]]
 ; CHECK-DAG: ![[GLOBS]] = !{![[GEXPR:[0-9]+]]}
-; CHECK-DAG: ![[GEXPR]] = distinct !DIGlobalVariableExpression(var: ![[GVAR]], expr: !DIExpression())
 ; CHECK-DAG: ![[GVAR]] = !DIGlobalVariable(name: "g",
 
 ; Test the bitcode upgrade for DIGlobalVariable -> DIGlobalVariableExpression.
