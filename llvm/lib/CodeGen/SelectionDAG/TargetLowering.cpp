@@ -10643,8 +10643,7 @@ SDValue TargetLowering::expandABS(SDNode *N, SelectionDAG &DAG,
       isOperationLegalOrCustom(ISD::ABS, VT)) {
     SDValue AbsVal = DAG.getNode(ISD::ABS, dl, VT, Op);
     if (IsNegative)
-      return DAG.getNode(ISD::SUB, dl, VT, DAG.getConstant(0, dl, VT),
-                         AbsVal);
+      return DAG.getNegative(AbsVal, dl, VT);
     return AbsVal;
   }
 

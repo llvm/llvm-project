@@ -12120,7 +12120,7 @@ SDValue DAGCombiner::visitABS(SDNode *N) {
   if (SDValue C = DAG.FoldConstantArithmetic(ISD::ABS, DL, VT, {N0}))
     return C;
   // fold (abs (abs x)) -> (abs x)
-  // fold (abs (abs_min_poison x)) -> (abs x)
+  // fold (abs (abs_min_poison x)) -> (abs_min_poison x)
   if (N0.getOpcode() == ISD::ABS || N0.getOpcode() == ISD::ABS_MIN_POISON)
     return N0;
   // fold (abs x) -> x iff not-negative
@@ -15760,7 +15760,8 @@ static SDValue widenCtPop(SDNode *Extend, SelectionDAG &DAG, const SDLoc &DL) {
 }
 
 // If we have (zext (abs X)) where X is a type that will be promoted by type
-// legalization, convert to (abs (sext X)). But don't extend past a legal type.
+// legalization, convert to (abs_min_poison (sext X)). But do not extend
+// past a legal type.
 static SDValue widenAbs(SDNode *Extend, SelectionDAG &DAG) {
   assert(Extend->getOpcode() == ISD::ZERO_EXTEND && "Expected zero extend.");
 
@@ -15784,7 +15785,7 @@ static SDValue widenAbs(SDNode *Extend, SelectionDAG &DAG) {
 
   SDValue SExt =
       DAG.getNode(ISD::SIGN_EXTEND, SDLoc(Abs), LegalVT, Abs.getOperand(0));
-  SDValue NewAbs = DAG.getNode(AbsOpc, SDLoc(Abs), LegalVT, SExt);
+  SDValue NewAbs = DAG.getNode(ISD::ABS_MIN_POISON, SDLoc(Abs), LegalVT, SExt);
   return DAG.getZExtOrTrunc(NewAbs, SDLoc(Extend), VT);
 }
 

@@ -1902,7 +1902,6 @@ SDValue DAGTypeLegalizer::PromoteIntRes_SADDSUBO_CARRY(SDNode *N,
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_ABS(SDNode *N) {
-  unsigned Opc = N->getOpcode();
   EVT OVT = N->getValueType(0);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), OVT);
 
@@ -1918,7 +1917,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ABS(SDNode *N) {
   }
 
   SDValue Op0 = SExtPromotedInteger(N->getOperand(0));
-  return DAG.getNode(Opc, SDLoc(N), Op0.getValueType(), Op0);
+  return DAG.getNode(ISD::ABS_MIN_POISON, SDLoc(N), Op0.getValueType(), Op0);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_XMULO(SDNode *N, unsigned ResNo) {
@@ -4193,12 +4192,14 @@ void DAGTypeLegalizer::ExpandIntRes_ABS(SDNode *N, SDValue &Lo, SDValue &Hi) {
   EVT NVT = Lo.getValueType();
 
   // If the upper half is all sign bits, then we can perform the ABS on the
-  // lower half and zero-extend. We must use ISD::ABS here (not ABS_MIN_POISON)
-  // because the original poison contract is for INT_MIN of the wider type,
-  // but the lower half may be INT_MIN of the narrower type for a valid
-  // (non-INT_MIN) input of the original type.
-  if (DAG.ComputeNumSignBits(N0) > NVT.getScalarSizeInBits()) {
-    Lo = DAG.getNode(ISD::ABS, dl, NVT, Lo);
+  // lower half and zero-extend. We could use ISD::ABS_MIN_POISON here if
+  // DAG.ComputeNumSignBits(N0) is larger than NVT.getScalarSizeInBits() + 1.
+  unsigned NumSignBits = DAG.ComputeNumSignBits(N0);
+  if (NumSignBits > NVT.getScalarSizeInBits()) {
+    unsigned AbsOpc = NumSignBits > NVT.getScalarSizeInBits() + 1
+                          ? ISD::ABS_MIN_POISON
+                          : ISD::ABS;
+    Lo = DAG.getNode(AbsOpc, dl, NVT, Lo);
     Hi = DAG.getConstant(0, dl, NVT);
     return;
   }

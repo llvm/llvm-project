@@ -21441,9 +21441,8 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (VT.isVector() && N0.hasOneUse() && N0.getOpcode() == ISD::SIGN_EXTEND) {
       SDValue Src = N0.getOperand(0);
       SDLoc DL(N);
-      unsigned Opc = N->getOpcode();
       return DAG.getNode(ISD::ZERO_EXTEND, DL, VT,
-                         DAG.getNode(Opc, DL, Src.getValueType(), Src));
+                         DAG.getNode(ISD::ABS, DL, Src.getValueType(), Src));
     }
     break;
   }
