@@ -11,6 +11,7 @@
 #include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManager.h"
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
@@ -138,6 +139,63 @@ TEST(EPCGenericJITLinkMemoryManagerTest, AllocFinalizeFree) {
   EXPECT_THAT_ERROR(std::move(Err2), Succeeded());
 
   cantFail(SelfEPC->disconnect());
+}
+
+TEST(EPCGenericJITLinkMemoryManagerTest, CreateFromSymbolNames) {
+  // Verify that Create successfully looks up symbols and constructs
+  // the memory manager.
+  auto SSP = std::make_shared<SymbolStringPool>();
+  auto EPC =
+      std::make_unique<UnsupportedExecutorProcessControl>(std::move(SSP));
+  ExecutionSession ES(std::move(EPC));
+  auto &JD = ES.createBareJITDylib("JD");
+
+  ExecutorAddr AllocatorAddr(1), ReserveAddr(2), InitAddr(3), DeinitAddr(4),
+      ReleaseAddr(5);
+
+  cantFail(JD.define(absoluteSymbols({
+      {ES.intern("allocator_instance"),
+       {AllocatorAddr, JITSymbolFlags::Exported}},
+      {ES.intern("allocator_reserve"), {ReserveAddr, JITSymbolFlags::Exported}},
+      {ES.intern("allocator_init"), {InitAddr, JITSymbolFlags::Exported}},
+      {ES.intern("allocator_deinit"), {DeinitAddr, JITSymbolFlags::Exported}},
+      {ES.intern("allocator_release"), {ReleaseAddr, JITSymbolFlags::Exported}},
+  })));
+
+  auto Result = EPCGenericJITLinkMemoryManager::Create(
+      JD, {.AllocatorName = "allocator_instance",
+           .ReserveName = "allocator_reserve",
+           .InitializeName = "allocator_init",
+           .DeinitializeName = "allocator_deinit",
+           .ReleaseName = "allocator_release"});
+  EXPECT_THAT_EXPECTED(Result, Succeeded());
+
+  cantFail(ES.endSession());
+}
+
+TEST(EPCGenericJITLinkMemoryManagerTest, CreateFailsOnMissingSymbol) {
+  // Verify that Create returns an error when a symbol is missing.
+  auto SSP = std::make_shared<SymbolStringPool>();
+  auto EPC =
+      std::make_unique<UnsupportedExecutorProcessControl>(std::move(SSP));
+  ExecutionSession ES(std::move(EPC));
+  auto &JD = ES.createBareJITDylib("JD");
+
+  // Only define some of the required symbols.
+  cantFail(JD.define(absoluteSymbols({
+      {ES.intern("allocator_instance"),
+       {ExecutorAddr(1), JITSymbolFlags::Exported}},
+  })));
+
+  auto Result = EPCGenericJITLinkMemoryManager::Create(
+      JD, {.AllocatorName = "allocator_instance",
+           .ReserveName = "allocator_reserve",     // missing
+           .InitializeName = "allocator_init",     // missing
+           .DeinitializeName = "allocator_deinit", // missing
+           .ReleaseName = "allocator_release"});   // missing
+  EXPECT_THAT_EXPECTED(Result, Failed());
+
+  cantFail(ES.endSession());
 }
 
 } // namespace
