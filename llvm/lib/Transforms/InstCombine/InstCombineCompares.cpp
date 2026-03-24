@@ -8984,6 +8984,80 @@ static Instruction *foldFCmpWithFloorAndCeil(FCmpInst &I,
   return nullptr;
 }
 
+/// Fold equality compares against OGT/OGE-driven min/max-like selects:
+///   fcmp oeq/ueq (select (fcmp ogt/oge X, K), X, K), C
+///   fcmp oeq/ueq (select (fcmp ogt/oge X, K), K, X), C
+///
+/// Where one select arm is the compare bound constant K and the other is X.
+/// This performs a local one-step simplification based on C vs K:
+///   max-like select:
+///     C > K  -> X == C
+///     C == K -> X <= K
+///   min-like select:
+///     C < K  -> X == C
+///     C == K -> X >= K
+///
+static Instruction *
+foldFCmpEqWithMinMaxLikeSelect(FCmpInst &I, Instruction *LHSI, Constant *RHSC) {
+  const FCmpInst::Predicate Pred = I.getPredicate();
+  if (Pred != FCmpInst::FCMP_OEQ && Pred != FCmpInst::FCMP_UEQ)
+    return nullptr;
+
+  auto *SI = dyn_cast<SelectInst>(LHSI);
+  const APFloat *C;
+  if (!SI || !match(RHSC, m_APFloat(C)))
+    return nullptr;
+
+  auto *InnerCmp = dyn_cast<FCmpInst>(SI->getCondition());
+  if (!InnerCmp)
+    return nullptr;
+
+  // Restrict to OGT/OGE-driven min/max-like selects.
+  const FCmpInst::Predicate InnerPred = InnerCmp->getPredicate();
+  if (InnerPred != FCmpInst::FCMP_OGT && InnerPred != FCmpInst::FCMP_OGE)
+    return nullptr;
+
+  auto *CmpBound = dyn_cast<ConstantFP>(InnerCmp->getOperand(1));
+  if (!CmpBound)
+    return nullptr;
+  Value *X = InnerCmp->getOperand(0);
+
+  Value *TV = SI->getTrueValue();
+  Value *FV = SI->getFalseValue();
+
+  // select(cmp X, K), K, X is min-like;
+  // select(cmp X, K), X, K is max-like.
+  const bool isMinPattern = (TV == CmpBound && FV == X);
+  const bool isMaxPattern = (TV == X && FV == CmpBound);
+
+  if (!(isMinPattern || isMaxPattern))
+    return nullptr;
+
+  APFloat::cmpResult CmpVsBound = C->compare(CmpBound->getValueAPF());
+  if (isMaxPattern) {
+    // max(X, K) == C:
+    //   C > K  -> X == C
+    //   C == K -> X <= K
+    if (CmpVsBound == APFloat::cmpGreaterThan)
+      return new FCmpInst(FCmpInst::FCMP_OEQ, X, RHSC, "", &I);
+    if (CmpVsBound == APFloat::cmpEqual)
+      return new FCmpInst(FCmpInst::FCMP_ULE, X, RHSC, "", &I);
+    return nullptr;
+  }
+
+  bool Ordered = FCmpInst::isOrdered(Pred);
+  // min(X, K) == C:
+  //   C < K  -> X == C
+  //   C == K -> X >= K
+  if (CmpVsBound == APFloat::cmpLessThan)
+    return new FCmpInst(Ordered ? FCmpInst::FCMP_OEQ : FCmpInst::FCMP_UEQ, X,
+                        RHSC, "", &I);
+  if (CmpVsBound == APFloat::cmpEqual)
+    return new FCmpInst(Ordered ? FCmpInst::FCMP_OGE : FCmpInst::FCMP_UGE, X,
+                        RHSC, "", &I);
+  return nullptr;
+}
+
 /// Returns true if a select that implements a min/max is redundant and
 /// select result can be replaced with its non-constant operand, e.g.,
 ///   select ( (si/ui-to-fp A) <= C ), C, (si/ui-to-fp A)
@@ -9185,6 +9259,8 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
           match(LHSI, m_c_Select(m_FNeg(m_Value(X)), m_Deferred(X))))
         return replaceOperand(I, 0, X);
       if (Instruction *NV = FoldOpIntoSelect(I, cast<SelectInst>(LHSI)))
+        return NV;
+      if (Instruction *NV = foldFCmpEqWithMinMaxLikeSelect(I, LHSI, RHSC))
         return NV;
       break;
     case Instruction::FSub:
