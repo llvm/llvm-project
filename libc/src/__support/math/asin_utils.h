@@ -605,8 +605,8 @@ LIBC_INLINE constexpr Float128 asin_eval(const Float128 &u, unsigned idx) {
 }
 
 // 1/pi as DoubleDouble (~106 bits of precision).
-LIBC_INLINE_VAR constexpr DoubleDouble ONE_OVER_PI_DD = {
-    -0x1.6b01ec5417056p-56, 0x1.45f306dc9c883p-2};
+LIBC_INLINE_VAR constexpr DoubleDouble ONE_OVER_PI_DD = {-0x1.6b01ec5417056p-56,
+                                                         0x1.45f306dc9c883p-2};
 
 // 1/pi as Float128 (~128 bits of precision).
 LIBC_INLINE_VAR constexpr Float128 ONE_OVER_PI_F128 = {

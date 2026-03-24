@@ -53,13 +53,11 @@ TEST_F(LlvmLibcAsinpiTest, InDoubleRange) {
 
       ++count;
 
-      if (!TEST_MPFR_MATCH_ROUNDING_SILENTLY(mpfr::Operation::Asinpi, x,
-                                              result, TOLERANCE + 0.5,
-                                              rounding_mode)) {
+      if (!TEST_MPFR_MATCH_ROUNDING_SILENTLY(mpfr::Operation::Asinpi, x, result,
+                                             TOLERANCE + 0.5, rounding_mode)) {
         ++fails;
         while (!TEST_MPFR_MATCH_ROUNDING_SILENTLY(mpfr::Operation::Asinpi, x,
-                                                   result, tol,
-                                                   rounding_mode)) {
+                                                  result, tol, rounding_mode)) {
           mx = x;
           mr = result;
 
@@ -73,8 +71,7 @@ TEST_F(LlvmLibcAsinpiTest, InDoubleRange) {
     if (fails) {
       tlog << " Asinpi failed: " << fails << "/" << count << "/" << cc
            << " tests.\n";
-      tlog << "   Max ULPs is at most: " << static_cast<uint64_t>(tol)
-           << ".\n";
+      tlog << "   Max ULPs is at most: " << static_cast<uint64_t>(tol) << ".\n";
       EXPECT_MPFR_MATCH(mpfr::Operation::Asinpi, mx, mr, 0.5, rounding_mode);
     }
   };

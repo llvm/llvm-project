@@ -1,4 +1,4 @@
-//===-- Implementation header for asinpi -------------------------*- C++ -*-===//
+//===-- Implementation header for asinpi ------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -45,8 +45,7 @@ LIBC_INLINE double asinpi(double x) {
 #if defined(LIBC_MATH_HAS_SKIP_ACCURATE_PASS)
       return x * ASINPI_COEFFS[0];
 #elif defined(LIBC_TARGET_CPU_HAS_FMA_DOUBLE)
-      return fputil::multiply_add(x, ONE_OVER_PI_DD.hi,
-                                  x * ONE_OVER_PI_DD.lo);
+      return fputil::multiply_add(x, ONE_OVER_PI_DD.hi, x * ONE_OVER_PI_DD.lo);
 #else
       double hi = x * ONE_OVER_PI_DD.hi;
       return hi + x * ONE_OVER_PI_DD.lo;
