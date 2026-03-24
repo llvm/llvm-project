@@ -158,8 +158,7 @@ void UseStdPrintCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (MaybeHeaderToInclude)
     Diag << IncludeInserter.createIncludeInsertion(
-        Result.SourceManager->getFileID(
-            Result.SourceManager->getExpansionLoc(PrintfCall->getBeginLoc())),
+        Result.Context->getSourceManager().getFileID(PrintfCall->getBeginLoc()),
         *MaybeHeaderToInclude);
 }
 
