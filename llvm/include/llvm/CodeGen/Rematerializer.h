@@ -191,30 +191,24 @@ public:
   /// default. Listeners can be added or removed at any time during the
   /// rematerializer's lifetime.
   class Listener {
-  private:
-    /// Called before register \p RegIdx is rematerialized to register \p
-    /// RematRegIdx. At this point the rematerialization does not exist.
-    virtual void beforeRegRematerialized(const Rematerializer &Remater,
-                                         RegisterIdx RegIdx,
-                                         RegisterIdx RematRegIdx) {}
-
-    /// Called just after register \p NewRegIdx is created (following a
-    /// rematerializations). At this point the rematerialization exists but does
-    /// not yet have any user.
-    virtual void newRegCreated(const Rematerializer &Remater,
-                               RegisterIdx NewRegIdx) {}
-
-    /// Called juste before register \p RegIdx is deleted from the MIR. At this
-    /// point the register still exists and is guaranteed to have 0 users.
-    virtual void beforeRegDeleted(const Rematerializer &Remater,
-                                  RegisterIdx RegIdx) {}
-
-    friend Rematerializer;
-
   public:
     using RegisterIdx = Rematerializer::RegisterIdx;
 
+    /// Called just after register \p NewRegIdx is created (following a
+    /// rematerialization). At this point the rematerialization exists in the \p
+    /// Remater state and the MIR but does not yet have any user.
+    virtual void rematerializerNoteRegCreated(const Rematerializer &Remater,
+                                              RegisterIdx NewRegIdx) {}
+
+    /// Called juste before register \p RegIdx is deleted from the MIR. At this
+    /// point the register still exists in the MIR but no longer has any user.
+    virtual void rematerializerNoteRegDeleted(const Rematerializer &Remater,
+                                              RegisterIdx RegIdx) {}
+
     virtual ~Listener() = default;
+
+  private:
+    virtual void anchor();
   };
 
   /// Error value for register indices.
@@ -238,8 +232,19 @@ public:
   /// rematerializable register in regions.
   bool analyze(bool SupportRollback);
 
-  /// Adds a listener to the rematerializer.
-  void addListener(Listener *Listen) { Listeners.push_back(Listen); }
+  /// Adds a new listener to the rematerializer.
+  void addListener(Listener *Listen) {
+    assert(Listen && "null listener");
+    assert(!Listeners.contains(Listen) && "duplicate listener");
+    Listeners.insert(Listen);
+  }
+
+  /// Removes a listener from the rematerializer.
+  void removeListener(Listener *Listen) {
+    assert(Listeners.contains(Listen) && "unknown listener");
+    Listeners.erase(Listen);
+  }
+
   /// Removes all listeners from the rematerializer.
   void clearListeners() { Listeners.clear(); }
 
@@ -422,12 +427,16 @@ private:
   LiveIntervals &LIS;
   const TargetInstrInfo &TII;
   const TargetRegisterInfo &TRI;
-  SmallVector<Listener *, 2> Listeners;
+  SmallPtrSet<Listener *, 1> Listeners;
 
-  template <typename Callback, typename... ArgsTy>
-  void notifyListeners(Callback Cb, ArgsTy &&...Args) const {
+  void noteRegCreated(RegisterIdx RegIdx) const {
     for (Listener *Listen : Listeners)
-      (Listen->*Cb)(*this, std::forward<ArgsTy>(Args)...);
+      Listen->rematerializerNoteRegCreated(*this, RegIdx);
+  }
+
+  void noteRegDeleted(RegisterIdx RegIdx) const {
+    for (Listener *Listen : Listeners)
+      Listen->rematerializerNoteRegDeleted(*this, RegIdx);
   }
 
   /// Rematerializable registers identified since the rematerializer's creation,

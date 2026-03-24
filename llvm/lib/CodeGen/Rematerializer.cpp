@@ -30,6 +30,9 @@
 using namespace llvm;
 using RegisterIdx = Rematerializer::RegisterIdx;
 
+// Pin the vtable to this file.
+void Rematerializer::Listener::anchor() {}
+
 /// Checks whether the value in \p LI at \p UseIdx is identical to \p OVNI (this
 /// implies it is also live there). When \p LI has sub-ranges, checks that
 /// all sub-ranges intersecting with \p Mask are also live at \p UseIdx.
@@ -401,11 +404,10 @@ void Rematerializer::deleteRegIfUnused(RegisterIdx RootIdx) {
 }
 
 void Rematerializer::deleteReg(RegisterIdx RegIdx) {
-  notifyListeners(&Listener::beforeRegDeleted, RegIdx);
+  noteRegDeleted(RegIdx);
 
   Reg &DeleteReg = Regs[RegIdx];
   assert(DeleteReg.DefMI && "register was already deleted");
-
   // It is not possible for the deleted instruction to be the upper region
   // boundary since we don't ever consider them rematerializable.
   MachineBasicBlock::iterator &RegionBegin = Regions[DeleteReg.DefRegion].first;
@@ -577,10 +579,9 @@ RegisterIdx Rematerializer::getDefRegIdx(const MachineInstr &MI) const {
 RegisterIdx Rematerializer::rematerializeReg(
     RegisterIdx RegIdx, MachineBasicBlock::iterator InsertPos,
     SmallVectorImpl<Reg::Dependency> &&Dependencies) {
-  RegisterIdx NewRegIdx = Regs.size();
-  notifyListeners(&Listener::beforeRegRematerialized, RegIdx, NewRegIdx);
-
   unsigned UseRegion = MIRegion.at(&*InsertPos);
+  RegisterIdx NewRegIdx = Regs.size();
+
   Reg &NewReg = Regs.emplace_back();
   Reg &FromReg = Regs[RegIdx];
   NewReg.Mask = FromReg.Mask;
@@ -631,7 +632,7 @@ RegisterIdx Rematerializer::rematerializeReg(
     LISUpdates.insert(NewDep.RegIdx);
   }
 
-  notifyListeners(&Listener::newRegCreated, NewRegIdx);
+  noteRegCreated(NewRegIdx);
 
   LLVM_DEBUG({
     dbgs() << "** Rematerialized " << printID(RegIdx) << " as "
