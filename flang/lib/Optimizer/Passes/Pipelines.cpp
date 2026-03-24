@@ -94,19 +94,16 @@ getEmissionKind(llvm::codegenoptions::DebugInfoKind kind) {
 }
 
 void addDebugInfoPass(mlir::PassManager &pm,
-                      llvm::codegenoptions::DebugInfoKind debugLevel,
-                      llvm::OptimizationLevel optLevel,
-                      bool debugInfoForProfiling, llvm::StringRef inputFilename,
-                      int32_t dwarfVersion, llvm::StringRef splitDwarfFile,
-                      llvm::StringRef dwarfDebugFlags) {
+                      const MLIRToLLVMPassPipelineConfig &config,
+                      llvm::StringRef inputFilename) {
   fir::AddDebugInfoOptions options;
-  options.debugLevel = getEmissionKind(debugLevel);
-  options.isOptimized = optLevel != llvm::OptimizationLevel::O0;
+  options.debugLevel = getEmissionKind(config.DebugInfo);
+  options.isOptimized = config.OptLevel != llvm::OptimizationLevel::O0;
   options.inputFilename = inputFilename;
-  options.debugInfoForProfiling = debugInfoForProfiling;
-  options.dwarfVersion = dwarfVersion;
-  options.splitDwarfFile = splitDwarfFile;
-  options.dwarfDebugFlags = dwarfDebugFlags;
+  options.debugInfoForProfiling = config.DebugInfoForProfiling;
+  options.dwarfVersion = config.DwarfVersion;
+  options.splitDwarfFile = config.SplitDwarfFile;
+  options.dwarfDebugFlags = config.DwarfDebugFlags;
   addPassConditionally(pm, disableDebugInfo,
                        [&]() { return fir::createAddDebugInfoPass(options); });
 }
@@ -371,16 +368,10 @@ void createOpenMPFIRPassPipeline(mlir::PassManager &pm,
 }
 
 void createDebugPasses(mlir::PassManager &pm,
-                       llvm::codegenoptions::DebugInfoKind debugLevel,
-                       llvm::OptimizationLevel OptLevel,
-                       bool debugInfoForProfiling,
-                       llvm::StringRef inputFilename, int32_t dwarfVersion,
-                       llvm::StringRef splitDwarfFile,
-                       llvm::StringRef dwarfDebugFlags) {
-  if (debugLevel != llvm::codegenoptions::NoDebugInfo)
-    addDebugInfoPass(pm, debugLevel, OptLevel, debugInfoForProfiling,
-                     inputFilename, dwarfVersion, splitDwarfFile,
-                     dwarfDebugFlags);
+                       const MLIRToLLVMPassPipelineConfig &config,
+                       llvm::StringRef inputFilename) {
+  if (config.DebugInfo != llvm::codegenoptions::NoDebugInfo)
+    addDebugInfoPass(pm, config, inputFilename);
 }
 
 void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
@@ -398,10 +389,7 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
   fir::addCodeGenRewritePass(
       pm, (config.DebugInfo != llvm::codegenoptions::NoDebugInfo));
   fir::addExternalNameConversionPass(pm, config.Underscoring);
-  fir::createDebugPasses(pm, config.DebugInfo, config.OptLevel,
-                         config.DebugInfoForProfiling, inputFilename,
-                         config.DwarfVersion, config.SplitDwarfFile,
-                         config.DwarfDebugFlags);
+  fir::createDebugPasses(pm, config, inputFilename);
   fir::addTargetRewritePass(pm);
   fir::addCompilerGeneratedNamesConversionPass(pm);
 
