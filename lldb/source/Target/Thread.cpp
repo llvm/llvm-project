@@ -1084,14 +1084,15 @@ Vote Thread::ShouldReportRun(Event *event_ptr) {
   if (GetPlans().AnyCompletedPlans()) {
     // Pass skip_private = false to GetCompletedPlan, since we want to ask
     // the last plan, regardless of whether it is private or not.
+    ThreadPlanSP plan = GetPlans().GetCompletedPlan(/*skip_private=*/false);
+
     LLDB_LOGF(log,
               "Current Plan for thread %d(%p) (0x%4.4" PRIx64
               ", %s): %s being asked whether we should report run.",
               GetIndexID(), static_cast<void *>(this), GetID(),
-              StateAsCString(GetTemporaryResumeState()),
-              GetCompletedPlan()->GetName());
+              StateAsCString(GetTemporaryResumeState()), plan->GetName());
 
-    return GetPlans().GetCompletedPlan(false)->ShouldReportRun(event_ptr);
+    return plan->ShouldReportRun(event_ptr);
   } else {
     LLDB_LOGF(log,
               "Current Plan for thread %d(%p) (0x%4.4" PRIx64
