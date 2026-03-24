@@ -148,9 +148,8 @@ DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
     }
   }
 
-  return BPOrdererMachO().computeOrder(profilePath, compressionSortSpecs,
-                                       forFunctionCompression,
-                                       forDataCompression,
-                                       compressionSortStartupFunctions, verbose,
-                                       sections, rootSymbolToSectionIdxs);
+  return BPOrdererMachO().computeOrder(
+      profilePath, compressionSortSpecs, forFunctionCompression,
+      forDataCompression, compressionSortStartupFunctions, verbose, sections,
+      rootSymbolToSectionIdxs);
 }

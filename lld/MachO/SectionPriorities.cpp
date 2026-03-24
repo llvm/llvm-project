@@ -372,8 +372,7 @@ void macho::PriorityBuilder::parseOrderFile(StringRef path) {
 DenseMap<const InputSection *, int>
 macho::PriorityBuilder::buildInputSectionPriorities() {
   DenseMap<const InputSection *, int> sectionPriorities;
-  if (config->bpStartupFunctionSort ||
-      config->bpFunctionOrderForCompression ||
+  if (config->bpStartupFunctionSort || config->bpFunctionOrderForCompression ||
       config->bpDataOrderForCompression ||
       !config->bpCompressionSortSpecs.empty()) {
     TimeTraceScope timeScope("Balanced Partitioning Section Orderer");
