@@ -60,6 +60,10 @@ protected:
                      const SIRegisterInfo *SRI, unsigned SGPRPressure,
                      unsigned VGPRPressure, bool IsBottomUp);
 
+  /// Estimate how many cycles \p SU must wait due to structural hazards at the
+  /// current boundary cycle. Returns zero when no stall is required.
+  unsigned getStructuralStallCycles(SchedBoundary &Zone, SUnit *SU) const;
+
   /// Evaluates instructions in the pending queue using a subset of scheduling
   /// heuristics.
   ///

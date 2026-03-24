@@ -12322,7 +12322,7 @@ bool ARMAsmParser::parseDirectiveEven(SMLoc L) {
     return true;
 
   if (!Section) {
-    getStreamer().initSections(false, getSTI());
+    getStreamer().initSections(getSTI());
     Section = getStreamer().getCurrentSectionOnly();
   }
 
