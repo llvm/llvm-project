@@ -345,22 +345,19 @@ define <4 x i32> @test_srem_odd_INT_MIN(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: test_srem_odd_INT_MIN:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI13_0
+; CHECK-NEXT:    adrp x9, .LCPI13_1
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI13_0]
-; CHECK-NEXT:    adrp x8, .LCPI13_1
-; CHECK-NEXT:    smull2 v2.2d, v0.4s, v1.4s
-; CHECK-NEXT:    smull v1.2d, v0.2s, v1.2s
-; CHECK-NEXT:    uzp2 v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI13_1]
+; CHECK-NEXT:    ldr q2, [x9, :lo12:.LCPI13_1]
 ; CHECK-NEXT:    adrp x8, .LCPI13_2
-; CHECK-NEXT:    mla v1.4s, v0.4s, v2.4s
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI13_2]
+; CHECK-NEXT:    mla v2.4s, v0.4s, v1.4s
+; CHECK-NEXT:    bic v0.4s, #128, lsl #24
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI13_2]
 ; CHECK-NEXT:    adrp x8, .LCPI13_3
-; CHECK-NEXT:    sshl v2.4s, v1.4s, v2.4s
-; CHECK-NEXT:    usra v2.4s, v1.4s, #31
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI13_3]
-; CHECK-NEXT:    mls v0.4s, v2.4s, v1.4s
-; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
+; CHECK-NEXT:    cmhs v1.4s, v1.4s, v2.4s
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI13_3]
+; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %srem = srem <4 x i32> %X, <i32 5, i32 5, i32 2147483648, i32 5>
@@ -374,22 +371,26 @@ define <4 x i32> @test_srem_even_INT_MIN(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: test_srem_even_INT_MIN:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI14_0
+; CHECK-NEXT:    adrp x9, .LCPI14_1
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI14_0]
-; CHECK-NEXT:    adrp x8, .LCPI14_1
-; CHECK-NEXT:    smull2 v2.2d, v0.4s, v1.4s
-; CHECK-NEXT:    smull v1.2d, v0.2s, v1.2s
-; CHECK-NEXT:    uzp2 v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI14_1]
+; CHECK-NEXT:    ldr q2, [x9, :lo12:.LCPI14_1]
 ; CHECK-NEXT:    adrp x8, .LCPI14_2
-; CHECK-NEXT:    mla v1.4s, v0.4s, v2.4s
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI14_2]
-; CHECK-NEXT:    adrp x8, .LCPI14_3
-; CHECK-NEXT:    sshl v2.4s, v1.4s, v2.4s
-; CHECK-NEXT:    usra v2.4s, v1.4s, #31
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI14_3]
-; CHECK-NEXT:    mls v0.4s, v2.4s, v1.4s
-; CHECK-NEXT:    movi v1.4s, #1
+; CHECK-NEXT:    adrp x9, .LCPI14_3
+; CHECK-NEXT:    mla v2.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI14_2]
+; CHECK-NEXT:    ldr q3, [x9, :lo12:.LCPI14_3]
+; CHECK-NEXT:    adrp x8, .LCPI14_4
+; CHECK-NEXT:    bic v0.4s, #128, lsl #24
+; CHECK-NEXT:    ushl v1.4s, v2.4s, v1.4s
+; CHECK-NEXT:    ushl v2.4s, v2.4s, v3.4s
 ; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
+; CHECK-NEXT:    orr v1.16b, v2.16b, v1.16b
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI14_4]
+; CHECK-NEXT:    adrp x8, .LCPI14_5
+; CHECK-NEXT:    cmhs v1.4s, v2.4s, v1.4s
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI14_5]
+; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %srem = srem <4 x i32> %X, <i32 14, i32 14, i32 2147483648, i32 14>
@@ -403,22 +404,26 @@ define <4 x i32> @test_srem_odd_even_INT_MIN(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: test_srem_odd_even_INT_MIN:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI15_0
+; CHECK-NEXT:    adrp x9, .LCPI15_1
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI15_0]
-; CHECK-NEXT:    adrp x8, .LCPI15_1
-; CHECK-NEXT:    smull2 v2.2d, v0.4s, v1.4s
-; CHECK-NEXT:    smull v1.2d, v0.2s, v1.2s
-; CHECK-NEXT:    uzp2 v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI15_1]
+; CHECK-NEXT:    ldr q2, [x9, :lo12:.LCPI15_1]
 ; CHECK-NEXT:    adrp x8, .LCPI15_2
-; CHECK-NEXT:    mla v1.4s, v0.4s, v2.4s
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI15_2]
-; CHECK-NEXT:    adrp x8, .LCPI15_3
-; CHECK-NEXT:    sshl v2.4s, v1.4s, v2.4s
-; CHECK-NEXT:    usra v2.4s, v1.4s, #31
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI15_3]
-; CHECK-NEXT:    mls v0.4s, v2.4s, v1.4s
-; CHECK-NEXT:    movi v1.4s, #1
+; CHECK-NEXT:    adrp x9, .LCPI15_3
+; CHECK-NEXT:    mla v2.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI15_2]
+; CHECK-NEXT:    ldr q3, [x9, :lo12:.LCPI15_3]
+; CHECK-NEXT:    adrp x8, .LCPI15_4
+; CHECK-NEXT:    bic v0.4s, #128, lsl #24
+; CHECK-NEXT:    ushl v1.4s, v2.4s, v1.4s
+; CHECK-NEXT:    ushl v2.4s, v2.4s, v3.4s
 ; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
+; CHECK-NEXT:    orr v1.16b, v2.16b, v1.16b
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI15_4]
+; CHECK-NEXT:    adrp x8, .LCPI15_5
+; CHECK-NEXT:    cmhs v1.4s, v2.4s, v1.4s
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI15_5]
+; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %srem = srem <4 x i32> %X, <i32 5, i32 14, i32 2147483648, i32 100>

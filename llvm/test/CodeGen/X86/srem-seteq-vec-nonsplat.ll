@@ -2335,127 +2335,82 @@ define <32 x i1> @pr51133(<32 x i8> %x, <32 x i8> %y) {
 ;
 ; CHECK-AVX1-LABEL: pr51133:
 ; CHECK-AVX1:       # %bb.0:
-; CHECK-AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-AVX1-NEXT:    vpunpckhbw {{.*#+}} xmm3 = xmm2[8],xmm0[8],xmm2[9],xmm0[9],xmm2[10],xmm0[10],xmm2[11],xmm0[11],xmm2[12],xmm0[12],xmm2[13],xmm0[13],xmm2[14],xmm0[14],xmm2[15],xmm0[15]
-; CHECK-AVX1-NEXT:    vpmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm3 # [0,133,0,133,0,103,0,147,0,85,0,129,0,86,0,137]
-; CHECK-AVX1-NEXT:    vpsrlw $8, %xmm3, %xmm3
-; CHECK-AVX1-NEXT:    vpunpcklbw {{.*#+}} xmm4 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3],xmm2[4],xmm0[4],xmm2[5],xmm0[5],xmm2[6],xmm0[6],xmm2[7],xmm0[7]
-; CHECK-AVX1-NEXT:    vpmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4, %xmm4 # [0,79,0,103,0,27,0,121,0,129,0,129,0,129,0,47]
-; CHECK-AVX1-NEXT:    vpsrlw $8, %xmm4, %xmm4
-; CHECK-AVX1-NEXT:    vpackuswb %xmm3, %xmm4, %xmm4
-; CHECK-AVX1-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm5 # [0,0,0,0,1,1,1,0,1,1,0,1,0,1,0,1]
-; CHECK-AVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255]
-; CHECK-AVX1-NEXT:    vpand %xmm3, %xmm5, %xmm5
-; CHECK-AVX1-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm6 # [0,0,0,0,0,1,0,0,0,1,0,1,0,1,0,1]
-; CHECK-AVX1-NEXT:    vpsllw $8, %xmm6, %xmm6
-; CHECK-AVX1-NEXT:    vpor %xmm6, %xmm5, %xmm5
-; CHECK-AVX1-NEXT:    vpaddb %xmm5, %xmm4, %xmm4
-; CHECK-AVX1-NEXT:    vpunpckhbw {{.*#+}} xmm5 = xmm4[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; CHECK-AVX1-NEXT:    vpsraw $8, %xmm5, %xmm5
-; CHECK-AVX1-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm5, %xmm5 # [8,8,128,64,8,256,256,8]
-; CHECK-AVX1-NEXT:    vpsrlw $8, %xmm5, %xmm5
-; CHECK-AVX1-NEXT:    vpunpcklbw {{.*#+}} xmm6 = xmm4[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; CHECK-AVX1-NEXT:    vpsraw $8, %xmm6, %xmm6
-; CHECK-AVX1-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm6, %xmm6 # [64,128,128,16,256,64,256,16]
-; CHECK-AVX1-NEXT:    vpsrlw $8, %xmm6, %xmm6
-; CHECK-AVX1-NEXT:    vpackuswb %xmm5, %xmm6, %xmm6
-; CHECK-AVX1-NEXT:    vpsrlw $7, %xmm4, %xmm4
-; CHECK-AVX1-NEXT:    vbroadcastss {{.*#+}} xmm5 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-; CHECK-AVX1-NEXT:    vpand %xmm5, %xmm4, %xmm4
-; CHECK-AVX1-NEXT:    vpaddb %xmm4, %xmm6, %xmm4
-; CHECK-AVX1-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4, %xmm6 # [13,5,19,34,2,8,2,88,62,62,5,7,97,2,3,60]
-; CHECK-AVX1-NEXT:    vpand %xmm3, %xmm6, %xmm6
-; CHECK-AVX1-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4, %xmm4 # [0,5,0,34,0,8,0,88,0,62,0,7,0,2,0,60]
-; CHECK-AVX1-NEXT:    vpsllw $8, %xmm4, %xmm4
-; CHECK-AVX1-NEXT:    vpor %xmm4, %xmm6, %xmm4
-; CHECK-AVX1-NEXT:    vpsubb %xmm4, %xmm0, %xmm4
-; CHECK-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; CHECK-AVX1-NEXT:    vpunpckhbw {{.*#+}} xmm6 = xmm2[8],xmm0[8],xmm2[9],xmm0[9],xmm2[10],xmm0[10],xmm2[11],xmm0[11],xmm2[12],xmm0[12],xmm2[13],xmm0[13],xmm2[14],xmm0[14],xmm2[15],xmm0[15]
-; CHECK-AVX1-NEXT:    vpmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm6, %xmm6 # [0,9,0,0,0,41,0,147,0,129,0,129,0,85,0,141]
-; CHECK-AVX1-NEXT:    vpsrlw $8, %xmm6, %xmm6
-; CHECK-AVX1-NEXT:    vpunpcklbw {{.*#+}} xmm7 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3],xmm2[4],xmm0[4],xmm2[5],xmm0[5],xmm2[6],xmm0[6],xmm2[7],xmm0[7]
-; CHECK-AVX1-NEXT:    vpmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm7, %xmm7 # [0,86,0,95,0,147,0,43,0,49,0,127,0,65,0,147]
-; CHECK-AVX1-NEXT:    vpsrlw $8, %xmm7, %xmm7
-; CHECK-AVX1-NEXT:    vpackuswb %xmm6, %xmm7, %xmm6
-; CHECK-AVX1-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm7 # [0,0,1,0,0,255,0,1,0,1,0,1,1,1,0,1]
-; CHECK-AVX1-NEXT:    vpand %xmm3, %xmm7, %xmm7
-; CHECK-AVX1-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm8 # [0,0,0,0,0,255,0,1,0,1,0,1,0,1,0,1]
-; CHECK-AVX1-NEXT:    vpsllw $8, %xmm8, %xmm8
-; CHECK-AVX1-NEXT:    vpor %xmm7, %xmm8, %xmm7
-; CHECK-AVX1-NEXT:    vpaddb %xmm7, %xmm6, %xmm6
-; CHECK-AVX1-NEXT:    vpunpckhbw {{.*#+}} xmm7 = xmm6[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; CHECK-AVX1-NEXT:    vpsraw $8, %xmm7, %xmm7
-; CHECK-AVX1-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm7, %xmm7 # [64,256,32,64,256,64,8,4]
-; CHECK-AVX1-NEXT:    vpsrlw $8, %xmm7, %xmm7
-; CHECK-AVX1-NEXT:    vpunpcklbw {{.*#+}} xmm8 = xmm6[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; CHECK-AVX1-NEXT:    vpsraw $8, %xmm8, %xmm8
-; CHECK-AVX1-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm8, %xmm8 # [256,8,64,256,16,4,8,8]
-; CHECK-AVX1-NEXT:    vpsrlw $8, %xmm8, %xmm8
-; CHECK-AVX1-NEXT:    vpackuswb %xmm7, %xmm8, %xmm7
-; CHECK-AVX1-NEXT:    vpsrlw $7, %xmm6, %xmm6
-; CHECK-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm6, %xmm6
-; CHECK-AVX1-NEXT:    vpand %xmm5, %xmm6, %xmm5
-; CHECK-AVX1-NEXT:    vpaddb %xmm5, %xmm7, %xmm5
-; CHECK-AVX1-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm5, %xmm6 # [3,87,7,6,84,128,127,56,114,1,50,7,2,8,97,117]
-; CHECK-AVX1-NEXT:    vpand %xmm3, %xmm6, %xmm3
-; CHECK-AVX1-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm5, %xmm5 # [0,87,0,6,0,128,0,56,0,1,0,7,0,8,0,117]
+; CHECK-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; CHECK-AVX1-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm3 # [171,103,183,171,61,1,127,183,9,0,41,183,1,1,161,221]
+; CHECK-AVX1-NEXT:    vbroadcastss {{.*#+}} xmm4 = [255,255,255,255,255,255,255,255]
+; CHECK-AVX1-NEXT:    vpand %xmm4, %xmm3, %xmm3
+; CHECK-AVX1-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm5 # [0,103,0,171,0,1,0,183,0,0,0,183,0,1,0,221]
 ; CHECK-AVX1-NEXT:    vpsllw $8, %xmm5, %xmm5
 ; CHECK-AVX1-NEXT:    vpor %xmm5, %xmm3, %xmm3
-; CHECK-AVX1-NEXT:    vpsubb %xmm3, %xmm0, %xmm0
-; CHECK-AVX1-NEXT:    vpcmpeqb %xmm2, %xmm0, %xmm0
-; CHECK-AVX1-NEXT:    vpcmpeqb %xmm2, %xmm4, %xmm3
-; CHECK-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm3, %ymm0
-; CHECK-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
-; CHECK-AVX1-NEXT:    vpcmpeqb %xmm2, %xmm3, %xmm3
-; CHECK-AVX1-NEXT:    vpcmpeqb %xmm2, %xmm1, %xmm1
-; CHECK-AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
-; CHECK-AVX1-NEXT:    vorps %ymm0, %ymm1, %ymm0
-; CHECK-AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-AVX1-NEXT:    vcmptrueps %ymm1, %ymm1, %ymm1
-; CHECK-AVX1-NEXT:    vxorps %ymm1, %ymm0, %ymm0
+; CHECK-AVX1-NEXT:    vpaddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm3
+; CHECK-AVX1-NEXT:    vpunpckhbw {{.*#+}} xmm5 = xmm3[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
+; CHECK-AVX1-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm5, %xmm5 # [128,1,128,1,128,32,1,1]
+; CHECK-AVX1-NEXT:    vpsrlw $8, %xmm5, %xmm5
+; CHECK-AVX1-NEXT:    vpunpcklbw {{.*#+}} xmm3 = xmm3[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; CHECK-AVX1-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm3 # [1,1,1,128,64,2,1,32]
+; CHECK-AVX1-NEXT:    vpsrlw $8, %xmm3, %xmm3
+; CHECK-AVX1-NEXT:    vpackuswb %xmm5, %xmm3, %xmm3
+; CHECK-AVX1-NEXT:    vpminub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm5
+; CHECK-AVX1-NEXT:    vpcmpeqb %xmm5, %xmm3, %xmm3
+; CHECK-AVX1-NEXT:    vpcmpeqd %xmm5, %xmm5, %xmm5
+; CHECK-AVX1-NEXT:    vpxor %xmm5, %xmm3, %xmm3
+; CHECK-AVX1-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm5 # [197,205,27,241,1,1,1,163,223,223,205,183,161,1,171,239]
+; CHECK-AVX1-NEXT:    vpand %xmm4, %xmm5, %xmm4
+; CHECK-AVX1-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [0,205,0,241,0,1,0,163,0,223,0,183,0,1,0,239]
+; CHECK-AVX1-NEXT:    vpsllw $8, %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpor %xmm0, %xmm4, %xmm0
+; CHECK-AVX1-NEXT:    vpaddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpunpckhbw {{.*#+}} xmm4 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
+; CHECK-AVX1-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4, %xmm4 # [128,128,1,1,1,128,1,64]
+; CHECK-AVX1-NEXT:    vpsrlw $8, %xmm4, %xmm4
+; CHECK-AVX1-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; CHECK-AVX1-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,1,1,128,128,32,128,32]
+; CHECK-AVX1-NEXT:    vpsrlw $8, %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpackuswb %xmm4, %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpmaxub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm4
+; CHECK-AVX1-NEXT:    vpcmpeqb %xmm4, %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
+; CHECK-AVX1-NEXT:    vmovaps {{.*#+}} ymm3 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255]
+; CHECK-AVX1-NEXT:    vandps %ymm3, %ymm0, %ymm0
+; CHECK-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}+16(%rip), %xmm2, %xmm2
+; CHECK-AVX1-NEXT:    vpxor %xmm4, %xmm4, %xmm4
+; CHECK-AVX1-NEXT:    vpcmpgtb %xmm4, %xmm2, %xmm2
+; CHECK-AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm2
+; CHECK-AVX1-NEXT:    vandnps %ymm2, %ymm3, %ymm2
+; CHECK-AVX1-NEXT:    vorps %ymm2, %ymm0, %ymm0
+; CHECK-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; CHECK-AVX1-NEXT:    vpcmpeqb %xmm4, %xmm2, %xmm2
+; CHECK-AVX1-NEXT:    vpcmpeqb %xmm4, %xmm1, %xmm1
+; CHECK-AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
+; CHECK-AVX1-NEXT:    vandnps %ymm0, %ymm1, %ymm0
 ; CHECK-AVX1-NEXT:    retq
 ;
 ; CHECK-AVX2-LABEL: pr51133:
 ; CHECK-AVX2:       # %bb.0:
-; CHECK-AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-AVX2-NEXT:    vpunpckhbw {{.*#+}} ymm3 = ymm2[8],ymm0[8],ymm2[9],ymm0[9],ymm2[10],ymm0[10],ymm2[11],ymm0[11],ymm2[12],ymm0[12],ymm2[13],ymm0[13],ymm2[14],ymm0[14],ymm2[15],ymm0[15],ymm2[24],ymm0[24],ymm2[25],ymm0[25],ymm2[26],ymm0[26],ymm2[27],ymm0[27],ymm2[28],ymm0[28],ymm2[29],ymm0[29],ymm2[30],ymm0[30],ymm2[31],ymm0[31]
-; CHECK-AVX2-NEXT:    vpmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm3, %ymm3 # [0,133,0,133,0,103,0,147,0,85,0,129,0,86,0,137,0,9,0,0,0,41,0,147,0,129,0,129,0,85,0,141]
+; CHECK-AVX2-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm2 # [0,205,0,241,0,1,0,163,0,223,0,183,0,1,0,239,0,103,0,171,0,1,0,183,0,0,0,183,0,1,0,221]
+; CHECK-AVX2-NEXT:    vpsllw $8, %ymm2, %ymm2
+; CHECK-AVX2-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm3 # [197,205,27,241,1,1,1,163,223,223,205,183,161,1,171,239,171,103,183,171,61,1,127,183,9,0,41,183,1,1,161,221]
+; CHECK-AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm3, %ymm3
+; CHECK-AVX2-NEXT:    vpor %ymm2, %ymm3, %ymm2
+; CHECK-AVX2-NEXT:    vpaddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
+; CHECK-AVX2-NEXT:    vpunpckhbw {{.*#+}} ymm3 = ymm2[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
+; CHECK-AVX2-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm3, %ymm3 # [128,128,1,1,1,128,1,64,128,1,128,1,128,32,1,1]
 ; CHECK-AVX2-NEXT:    vpsrlw $8, %ymm3, %ymm3
-; CHECK-AVX2-NEXT:    vpunpcklbw {{.*#+}} ymm4 = ymm2[0],ymm0[0],ymm2[1],ymm0[1],ymm2[2],ymm0[2],ymm2[3],ymm0[3],ymm2[4],ymm0[4],ymm2[5],ymm0[5],ymm2[6],ymm0[6],ymm2[7],ymm0[7],ymm2[16],ymm0[16],ymm2[17],ymm0[17],ymm2[18],ymm0[18],ymm2[19],ymm0[19],ymm2[20],ymm0[20],ymm2[21],ymm0[21],ymm2[22],ymm0[22],ymm2[23],ymm0[23]
-; CHECK-AVX2-NEXT:    vpmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm4, %ymm4 # [0,79,0,103,0,27,0,121,0,129,0,129,0,129,0,47,0,86,0,95,0,147,0,43,0,49,0,127,0,65,0,147]
-; CHECK-AVX2-NEXT:    vpsrlw $8, %ymm4, %ymm4
-; CHECK-AVX2-NEXT:    vpackuswb %ymm3, %ymm4, %ymm3
-; CHECK-AVX2-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm4 # [0,0,0,0,1,1,1,0,1,1,0,1,0,1,0,1,0,0,1,0,0,255,0,1,0,1,0,1,1,1,0,1]
-; CHECK-AVX2-NEXT:    vpbroadcastw {{.*#+}} ymm5 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; CHECK-AVX2-NEXT:    vpand %ymm5, %ymm4, %ymm4
-; CHECK-AVX2-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm6 # [0,0,0,0,0,1,0,0,0,1,0,1,0,1,0,1,0,0,0,0,0,255,0,1,0,1,0,1,0,1,0,1]
-; CHECK-AVX2-NEXT:    vpsllw $8, %ymm6, %ymm6
-; CHECK-AVX2-NEXT:    vpor %ymm6, %ymm4, %ymm4
-; CHECK-AVX2-NEXT:    vpaddb %ymm4, %ymm3, %ymm3
-; CHECK-AVX2-NEXT:    vpunpckhbw {{.*#+}} ymm4 = ymm3[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
-; CHECK-AVX2-NEXT:    vpsraw $8, %ymm4, %ymm4
-; CHECK-AVX2-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm4, %ymm4 # [8,8,128,64,8,256,256,8,64,256,32,64,256,64,8,4]
-; CHECK-AVX2-NEXT:    vpsrlw $8, %ymm4, %ymm4
-; CHECK-AVX2-NEXT:    vpunpcklbw {{.*#+}} ymm6 = ymm3[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
-; CHECK-AVX2-NEXT:    vpsraw $8, %ymm6, %ymm6
-; CHECK-AVX2-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm6, %ymm6 # [64,128,128,16,256,64,256,16,256,8,64,256,16,4,8,8]
-; CHECK-AVX2-NEXT:    vpsrlw $8, %ymm6, %ymm6
-; CHECK-AVX2-NEXT:    vpackuswb %ymm4, %ymm6, %ymm4
-; CHECK-AVX2-NEXT:    vpsrlw $7, %ymm3, %ymm3
-; CHECK-AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm3, %ymm3
-; CHECK-AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm3, %ymm3
-; CHECK-AVX2-NEXT:    vpaddb %ymm3, %ymm4, %ymm3
-; CHECK-AVX2-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm3, %ymm4 # [13,5,19,34,2,8,2,88,62,62,5,7,97,2,3,60,3,87,7,6,84,128,127,56,114,1,50,7,2,8,97,117]
-; CHECK-AVX2-NEXT:    vpand %ymm5, %ymm4, %ymm4
-; CHECK-AVX2-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm3, %ymm3 # [0,5,0,34,0,8,0,88,0,62,0,7,0,2,0,60,0,87,0,6,0,128,0,56,0,1,0,7,0,8,0,117]
-; CHECK-AVX2-NEXT:    vpsllw $8, %ymm3, %ymm3
-; CHECK-AVX2-NEXT:    vpor %ymm3, %ymm4, %ymm3
-; CHECK-AVX2-NEXT:    vpsubb %ymm3, %ymm0, %ymm0
-; CHECK-AVX2-NEXT:    vpcmpeqb %ymm2, %ymm0, %ymm0
-; CHECK-AVX2-NEXT:    vpcmpeqb %ymm2, %ymm1, %ymm1
-; CHECK-AVX2-NEXT:    vpor %ymm0, %ymm1, %ymm0
-; CHECK-AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; CHECK-AVX2-NEXT:    vpxor %ymm1, %ymm0, %ymm0
+; CHECK-AVX2-NEXT:    vpunpcklbw {{.*#+}} ymm2 = ymm2[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
+; CHECK-AVX2-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2 # [1,1,1,128,128,32,128,32,1,1,1,128,64,2,1,32]
+; CHECK-AVX2-NEXT:    vpsrlw $8, %ymm2, %ymm2
+; CHECK-AVX2-NEXT:    vpackuswb %ymm3, %ymm2, %ymm2
+; CHECK-AVX2-NEXT:    vpminub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm3
+; CHECK-AVX2-NEXT:    vpcmpeqb %ymm3, %ymm2, %ymm2
+; CHECK-AVX2-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; CHECK-AVX2-NEXT:    vpxor %ymm3, %ymm2, %ymm2
+; CHECK-AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; CHECK-AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; CHECK-AVX2-NEXT:    vpcmpgtb %ymm3, %ymm0, %ymm0
+; CHECK-AVX2-NEXT:    vmovdqa {{.*#+}} ymm4 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255]
+; CHECK-AVX2-NEXT:    vpblendvb %ymm4, %ymm2, %ymm0, %ymm0
+; CHECK-AVX2-NEXT:    vpcmpeqb %ymm3, %ymm1, %ymm1
+; CHECK-AVX2-NEXT:    vpandn %ymm0, %ymm1, %ymm0
 ; CHECK-AVX2-NEXT:    retq
 ;
 ; CHECK-AVX512VL-LABEL: pr51133:

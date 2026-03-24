@@ -7312,7 +7312,7 @@ SDValue TargetLowering::buildSREMEqFold(EVT SETCCVT, SDValue REMNode,
 }
 
 SDValue
-TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
+TargetLowering::prepareSREMEqFold(EVT ResVT, SDValue REMNode,
                                   SDValue CompTargetNode, ISD::CondCode Cond,
                                   DAGCombinerInfo &DCI, const SDLoc &DL,
                                   SmallVectorImpl<SDNode *> &Created) const {
@@ -7531,28 +7531,38 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
     Created.push_back(Op0.getNode());
   }
 
-  // SREM: (setule/setugt (rotr (add (mul N, P), A), K), Q)
-  SDValue Fold =
-      DAG.getSetCC(DL, SETCCVT, Op0, QVal,
-                   ((Cond == ISD::SETEQ) ? ISD::SETULE : ISD::SETUGT));
-
   // If we didn't have lanes with INT_MIN divisor, then we're done.
-  if (!HadIntMinDivisor)
+  if (!HadIntMinDivisor) {
+    // SREM: (setule/setugt (rotr (add (mul N, P), A), K), Q)
+    SDValue Fold =
+        DAG.getSetCC(DL, ResVT, Op0, QVal,
+                     ((Cond == ISD::SETEQ) ? ISD::SETULE : ISD::SETUGT));
+    Created.push_back(Fold.getNode());
     return Fold;
+  }
+
 
   // That fold is only valid for positive divisors. Which effectively means,
   // it is invalid for INT_MIN divisors. So if we have such a lane,
   // we must fix-up results for said lanes.
   assert(VT.isVector() && "Can/should only get here for vectors.");
 
-  // NOTE: we avoid letting illegal types through even if we're before legalize
-  // ops – legalization has a hard time producing good code for the code that
-  // follows.
-  if (!isOperationLegalOrCustom(ISD::SETCC, SETCCVT) ||
+  // Try to use the setcc result type. If the result VT is larger, assume the
+  // target wants to use that instead.
+  EVT SETCCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+  if (ResVT.bitsGT(SETCCVT))
+    SETCCVT = ResVT;
+
+  if (!DCI.isBeforeLegalizeOps() && (
+      !isOperationLegalOrCustom(ISD::SETCC, SETCCVT) ||
       !isOperationLegalOrCustom(ISD::AND, VT) ||
       !isCondCodeLegalOrCustom(Cond, VT.getSimpleVT()) ||
-      !isOperationLegalOrCustom(ISD::VSELECT, SETCCVT))
+      !isOperationLegalOrCustom(ISD::VSELECT, SETCCVT)))
     return SDValue();
+
+  SDValue Fold =
+    DAG.getSetCC(DL, SETCCVT, Op0, QVal,
+                 ((Cond == ISD::SETEQ) ? ISD::SETULE : ISD::SETUGT));
 
   Created.push_back(Fold.getNode());
 
@@ -7580,7 +7590,7 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
   SDValue Blended = DAG.getNode(ISD::VSELECT, DL, SETCCVT, DivisorIsIntMin,
                                 MaskedIsZero, Fold);
 
-  return Blended;
+  return DAG.getBoolExtOrTrunc(Blended, DL, ResVT, VT);
 }
 
 SDValue TargetLowering::getSqrtInputTest(SDValue Op, SelectionDAG &DAG,
