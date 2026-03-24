@@ -669,7 +669,20 @@ void CIRGenModule::setCommonAttributes(GlobalDecl gd, mlir::Operation *gv) {
   if (isa_and_nonnull<NamedDecl>(d))
     setGVProperties(gv, dyn_cast<NamedDecl>(d));
   assert(!cir::MissingFeatures::defaultVisibility());
-  assert(!cir::MissingFeatures::opGlobalUsedOrCompilerUsed());
+
+  if (auto globalOp = mlir::dyn_cast<cir::GlobalOp>(gv)) {
+    if (d && d->hasAttr<UsedAttr>())
+      addUsedOrCompilerUsedGlobal(globalOp);
+
+    if (const auto *vd = dyn_cast_if_present<VarDecl>(d);
+        vd && ((codeGenOpts.KeepPersistentStorageVariables &&
+                (vd->getStorageDuration() == SD_Static ||
+                 vd->getStorageDuration() == SD_Thread)) ||
+               (codeGenOpts.KeepStaticConsts &&
+                vd->getStorageDuration() == SD_Static &&
+                vd->getType().isConstQualified())))
+      addUsedOrCompilerUsedGlobal(globalOp);
+  }
 }
 
 void CIRGenModule::setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op) {
@@ -684,7 +697,10 @@ void CIRGenModule::setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op) {
   }
 
   assert(!cir::MissingFeatures::opGlobalPragmaClangSection());
-  assert(!cir::MissingFeatures::opGlobalUsedOrCompilerUsed());
+  if (auto globalOp = mlir::dyn_cast<cir::GlobalOp>(op)) {
+    if (d->hasAttr<RetainAttr>())
+      addUsedGlobal(globalOp);
+  }
   assert(!cir::MissingFeatures::opFuncCPUAndFeaturesAttributes());
 
   getTargetCIRGenInfo().setTargetAttributes(gd.getDecl(), op, *this);
@@ -1093,6 +1109,62 @@ cir::GlobalViewAttr CIRGenModule::getAddrOfGlobalVarAttr(const VarDecl *d) {
   cir::PointerType ptrTy =
       builder.getPointerTo(globalOp.getSymType(), globalOp.getAddrSpaceAttr());
   return builder.getGlobalViewAttr(ptrTy, globalOp);
+}
+
+void CIRGenModule::addUsedGlobal(cir::GlobalOp gv) {
+  assert(!gv.isDeclaration() &&
+         "Only globals with definition can force usage.");
+  LLVMUsed.emplace_back(gv);
+}
+
+void CIRGenModule::addCompilerUsedGlobal(cir::GlobalOp gv) {
+  assert(!gv.isDeclaration() &&
+         "Only globals with definition can force usage.");
+  LLVMCompilerUsed.emplace_back(gv);
+}
+
+void CIRGenModule::addUsedOrCompilerUsedGlobal(cir::GlobalOp gv) {
+  assert(!gv.isDeclaration() &&
+         "Only globals with definition can force usage.");
+  if (getTriple().isOSBinFormatELF())
+    LLVMCompilerUsed.emplace_back(gv);
+  else
+    LLVMUsed.emplace_back(gv);
+}
+
+static void emitUsed(CIRGenModule &cgm, StringRef name,
+                     std::vector<cir::GlobalOp> &list) {
+  // Don't create llvm.used if there is no need.
+  if (list.empty())
+    return;
+
+  // Convert List to what ConstantArray needs.
+  auto &builder = cgm.getBuilder();
+  auto loc = builder.getUnknownLoc();
+  llvm::SmallVector<mlir::Attribute, 8> usedArray;
+  usedArray.resize(list.size());
+  for (unsigned i = 0, e = list.size(); i != e; ++i) {
+    usedArray[i] = cir::GlobalViewAttr::get(
+        cgm.voidPtrTy, mlir::FlatSymbolRefAttr::get(list[i].getSymNameAttr()));
+  }
+
+  if (usedArray.empty())
+    return;
+  auto arrayTy = cir::ArrayType::get(cgm.voidPtrTy, usedArray.size());
+
+  auto initAttr = cir::ConstArrayAttr::get(
+      arrayTy, mlir::ArrayAttr::get(&cgm.getMLIRContext(), usedArray));
+
+  auto gv = CIRGenModule::createGlobalOp(cgm, loc, name, arrayTy,
+                                         /*isConstant=*/false);
+  gv.setLinkage(cir::GlobalLinkageKind::AppendingLinkage);
+  gv.setInitialValueAttr(initAttr);
+  // TODO(CIR): Set section to "llvm.metadata" once GlobalOp supports sections.
+}
+
+void CIRGenModule::emitLLVMUsed() {
+  emitUsed(*this, "llvm.used", LLVMUsed);
+  emitUsed(*this, "llvm.compiler.used", LLVMCompilerUsed);
 }
 
 void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
@@ -3108,6 +3180,32 @@ void CIRGenModule::release() {
   if (getTriple().isAMDGPU() ||
       (getTriple().isSPIRV() && getTriple().getVendor() == llvm::Triple::AMD))
     emitAMDGPUMetadata();
+
+  if (getLangOpts().HIP) {
+    // Emit a unique ID so that host and device binaries from the same
+    // compilation unit can be associated.
+    std::string cuidName =
+        ("__hip_cuid_" + getASTContext().getCUIDHash()).str();
+    auto int8Ty = cir::IntType::get(&getMLIRContext(), 8, /*isSigned=*/false);
+    auto loc = builder.getUnknownLoc();
+    mlir::ptr::MemorySpaceAttrInterface addrSpace =
+        cir::LangAddressSpaceAttr::get(&getMLIRContext(),
+                                       getGlobalVarAddressSpace(nullptr));
+
+    auto gv = createGlobalOp(*this, loc, cuidName, int8Ty,
+                             /*isConstant=*/false, addrSpace);
+    gv.setLinkage(cir::GlobalLinkageKind::ExternalLinkage);
+    // Initialize with zero
+    auto zeroAttr = cir::IntAttr::get(int8Ty, 0);
+    gv.setInitialValueAttr(zeroAttr);
+    // External linkage requires public visibility
+    mlir::SymbolTable::setSymbolVisibility(
+        gv, mlir::SymbolTable::Visibility::Public);
+
+    addCompilerUsedGlobal(gv);
+  }
+
+  emitLLVMUsed();
 
   // There's a lot of code that is not implemented yet.
   assert(!cir::MissingFeatures::cgmRelease());
