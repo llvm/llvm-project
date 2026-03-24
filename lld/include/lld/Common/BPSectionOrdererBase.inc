@@ -255,23 +255,9 @@ auto BPOrderer<D>::computeOrder(
     for (const auto &spec : compressionSortSpecs) {
       if (!spec.glob.match(sectionName))
         continue;
-      if (!winner) {
+      if (!winner || spec.matchPriority.value_or(UINT_MAX) <=
+                         winner->matchPriority.value_or(UINT_MAX))
         winner = &spec;
-        continue;
-      }
-      if (spec.matchPriority && !winner->matchPriority) {
-        winner = &spec;
-        continue;
-      }
-      if (!spec.matchPriority && winner->matchPriority)
-        continue;
-      if (spec.matchPriority && winner->matchPriority) {
-        if (*spec.matchPriority <= *winner->matchPriority)
-          winner = &spec;
-        continue;
-      }
-      // Both positional: last match wins.
-      winner = &spec;
     }
     if (winner) {
       auto &group = globGroups[winner->globString];
