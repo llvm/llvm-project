@@ -346,8 +346,7 @@ MLIR_CAPI_EXPORTED MlirLocation mlirLocationNameGet(MlirContext context,
                                                     MlirLocation childLoc);
 
 /// Getter for name of Name.
-MLIR_CAPI_EXPORTED MlirAttribute
-mlirLocationNameGetName(MlirLocation location);
+MLIR_CAPI_EXPORTED MlirAttribute mlirLocationNameGetName(MlirLocation location);
 
 /// Getter for childLoc of Name.
 MLIR_CAPI_EXPORTED MlirLocation

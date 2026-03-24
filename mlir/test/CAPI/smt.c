@@ -11,8 +11,8 @@
  */
 
 #include "mlir-c/Dialect/SMT.h"
-#include "mlir-c/Dialect/Func.h"
 #include "mlir-c/BuiltinAttributes.h"
+#include "mlir-c/Dialect/Func.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
 #include "mlir-c/Target/ExportSMTLIB.h"

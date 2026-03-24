@@ -286,8 +286,8 @@ mlirLocationFileLineColRangeGet(MlirContext context, MlirStringRef filename,
 }
 
 MlirAttribute mlirLocationFileLineColRangeGetFilename(MlirLocation location) {
-  return wrap(
-      Attribute(llvm::dyn_cast<FileLineColRange>(unwrap(location)).getFilename()));
+  return wrap(Attribute(
+      llvm::dyn_cast<FileLineColRange>(unwrap(location)).getFilename()));
 }
 
 int mlirLocationFileLineColRangeGetStartLine(MlirLocation location) {
@@ -600,8 +600,9 @@ MlirOperation mlirOperationCreate(MlirOperationState *state) {
 
   cppState.attributes.reserve(state->nAttributes);
   for (intptr_t i = 0; i < state->nAttributes; ++i)
-    cppState.addAttribute(llvm::cast<StringAttr>(unwrap(state->attributes[i].name)),
-                          unwrap(state->attributes[i].attribute));
+    cppState.addAttribute(
+        llvm::cast<StringAttr>(unwrap(state->attributes[i].name)),
+        unwrap(state->attributes[i].attribute));
 
   for (intptr_t i = 0; i < state->nRegions; ++i)
     cppState.addRegion(std::unique_ptr<Region>(unwrap(state->regions[i])));
