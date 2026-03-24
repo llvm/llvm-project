@@ -16,19 +16,19 @@ define i32 @func() {
 ; CHECK-NEXT:    lea %s0, dst@got_lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s0, dst@got_hi(, %s0)
-; CHECK-NEXT:    ld %s1, (%s0, %s15)
-; CHECK-NEXT:    lea %s0, ptr@got_lo
-; CHECK-NEXT:    and %s0, %s0, (32)0
+; CHECK-NEXT:    ld %s0, (%s0, %s15)
+; CHECK-NEXT:    lea %s1, ptr@got_lo
 ; CHECK-NEXT:    lea %s2, src@got_lo
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    lea.sl %s2, src@got_hi(, %s2)
 ; CHECK-NEXT:    ld %s2, (%s2, %s15)
-; CHECK-NEXT:    lea.sl %s0, ptr@got_hi(, %s0)
-; CHECK-NEXT:    ld %s0, (%s0, %s15)
+; CHECK-NEXT:    and %s1, %s1, (32)0
+; CHECK-NEXT:    lea.sl %s1, ptr@got_hi(, %s1)
+; CHECK-NEXT:    ld %s1, (%s1, %s15)
 ; CHECK-NEXT:    ldl.sx %s2, (, %s2)
-; CHECK-NEXT:    st %s1, (, %s0)
+; CHECK-NEXT:    st %s0, (, %s1)
+; CHECK-NEXT:    stl %s2, (, %s0)
 ; CHECK-NEXT:    or %s0, 1, (0)1
-; CHECK-NEXT:    stl %s2, (, %s1)
 ; CHECK-NEXT:    ld %s16, 32(, %s11)
 ; CHECK-NEXT:    ld %s15, 24(, %s11)
 ; CHECK-NEXT:    b.l.t (, %s10)

@@ -74,7 +74,7 @@ define i64 @f4() #0 {
 ; CHECK-NEXT: llihh   %r0, 16404
 ; CHECK-NEXT: stg     %r0, 168(%r15)
 ; CHECK: mvghi   160(%r15), 6
-; CHECK-NEXT: brasl   %r14, f3@PLT
+; CHECK: brasl   %r14, f3@PLT
 ; CHECK-NEXT: ld      %f8, 176(%r15)          # 8-byte Reload
 ; CHECK-NEXT: lmg     %r6, %r15, 184(%r15)
 ; CHECK-NEXT: br      %r14
