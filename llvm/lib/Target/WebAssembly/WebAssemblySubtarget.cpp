@@ -42,11 +42,11 @@ WebAssemblySubtarget::initializeSubtargetDependencies(StringRef CPU,
 
   // WASIP3 implies using the component model thread context intrinsics by
   // default, unless explicitly disabled.
-  if (!FS.contains("component-model-thread-context") &&
-      !HasComponentModelThreadContext &&
+  if (!FS.contains("component-model-threading") &&
+      !HasComponentModelThreading &&
       TargetTriple.getOS() == Triple::WASIp3) {
-    ToggleFeature(WebAssembly::FeatureComponentModelThreadContext);
-    HasComponentModelThreadContext = true;
+    ToggleFeature(WebAssembly::FeatureComponentModelThreading);
+    HasComponentModelThreading = true;
   }
 
   FeatureBitset Bits = getFeatureBits();

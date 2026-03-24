@@ -53,7 +53,7 @@ public:
 };
 
 void writeGetTLSBase(const Ctx &ctx, raw_ostream &os) {
-  if (ctx.componentModelThreadContext) {
+  if (ctx.externThreadBuiltins) {
     writeU8(os, WASM_OPCODE_CALL, "call");
     writeUleb128(os, ctx.sym.getTLSBase->getFunctionIndex(), "function index");
   } else {

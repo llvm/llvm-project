@@ -124,7 +124,7 @@ private:
 };
 
 void writeSetTLSBase(const Ctx &ctx, raw_ostream &os) {
-  if (ctx.componentModelThreadContext) {
+  if (ctx.externThreadBuiltins) {
     writeU8(os, WASM_OPCODE_CALL, "call");
     writeUleb128(os, ctx.sym.setTLSBase->getFunctionIndex(), "function index");
   } else {
@@ -663,7 +663,7 @@ void Writer::populateTargetFeatures() {
       error("bulk-memory feature must be used in order to use thread-local "
             "storage");
     }
-    if (!ctx.componentModelThreadContext && !allowed.contains("atomics")) {
+    if (ctx.threadModel == ThreadModel::SharedMemory && !allowed.contains("atomics")) {
       error(
           "atomics feature must be used in order to use thread-local storage");
     }
@@ -1049,9 +1049,10 @@ OutputSegment *Writer::createOutputSegment(StringRef name) {
   // threads. In the non-shared memory case, we use passive segments only for
   // TLS segments, so that they can be reused, and for .bss segments, which
   // don't need to be included in the binary at all.
-  bool passiveForCMTC = ctx.componentModelThreadContext &&
-                        (s->isTLS() || s->name.starts_with(".bss"));
-  if (ctx.arg.sharedMemory || passiveForCMTC)
+  bool needsPassiveInit = ctx.threadModel == ThreadModel::SharedMemory ||
+                        (ctx.threadModel == ThreadModel::Cooperative &&
+                         (s->isTLS() || s->name.starts_with(".bss")));
+  if (needsPassiveInit)
     s->initFlags = WASM_DATA_SEGMENT_IS_PASSIVE;
   if (!ctx.arg.relocatable && name.starts_with(".bss"))
     s->isBss = true;
@@ -1652,11 +1653,10 @@ void Writer::createInitTLSFunction() {
 
     writeUleb128(os, 0, "num locals");
     if (tlsSeg) {
-      // When using component model thread context intrinsics, we don't set the
-      // TLS base
+      // When using WASIp3 cooperative threading, we don't set the TLS base
       // inside __init_tls; this should be done as part of the thread startup
       // stub.
-      if (!ctx.componentModelThreadContext) {
+      if (ctx.threadModel != ThreadModel::Cooperative) {
         writeU8(os, WASM_OPCODE_LOCAL_GET, "local.get");
         writeUleb128(os, 0, "local index");
 

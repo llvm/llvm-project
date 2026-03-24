@@ -1,5 +1,5 @@
-; RUN: llc < %s --mtriple=wasm32-unknown-unknown -asm-verbose=false -mattr=+component-model-thread-context | FileCheck --check-prefix=CMTC %s
-; RUN: llc < %s --mtriple=wasm32-unknown-unknown -asm-verbose=false -mattr=-component-model-thread-context | FileCheck --check-prefix=GLOBAL %s
+; RUN: llc < %s --mtriple=wasm32-unknown-unknown -asm-verbose=false -mattr=+component-model-threading | FileCheck --check-prefix=CMTC %s
+; RUN: llc < %s --mtriple=wasm32-unknown-unknown -asm-verbose=false -mattr=-component-model-threading | FileCheck --check-prefix=GLOBAL %s
 
 declare void @force_sp_save()
 define void @use_stack() #0 {

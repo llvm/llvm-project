@@ -966,7 +966,7 @@ static void createPostLTOSymbols() {
 
   bool is64 = ctx.arg.is64.value_or(false);
 
-  auto stack_pointer_name = ctx.componentModelThreadContext
+  auto stack_pointer_name = ctx.externThreadBuiltins
                                 ? "__init_stack_pointer"
                                 : "__stack_pointer";
   if (ctx.isPic) {
@@ -987,16 +987,16 @@ static void createPostLTOSymbols() {
   } else {
     // For non-PIC code
     ctx.sym.stackPointer = createGlobalVariable(
-        stack_pointer_name, !ctx.componentModelThreadContext);
+        stack_pointer_name, !ctx.externThreadBuiltins);
     ctx.sym.stackPointer->markLive();
   }
 
   if (ctx.isMultithreaded()) {
     // TLS symbols are all hidden/dso-local
     auto tls_base_name =
-        ctx.componentModelThreadContext ? "__init_tls_base" : "__tls_base";
+        ctx.externThreadBuiltins ? "__init_tls_base" : "__tls_base";
     ctx.sym.tlsBase =
-        createGlobalVariable(tls_base_name, !ctx.componentModelThreadContext,
+        createGlobalVariable(tls_base_name, !ctx.externThreadBuiltins,
                              WASM_SYMBOL_VISIBILITY_HIDDEN);
     ctx.sym.tlsSize = createGlobalVariable("__tls_size", false,
                                            WASM_SYMBOL_VISIBILITY_HIDDEN);
@@ -1006,7 +1006,7 @@ static void createPostLTOSymbols() {
         "__wasm_init_tls", WASM_SYMBOL_VISIBILITY_HIDDEN,
         make<SyntheticFunction>(is64 ? i64ArgSignature : i32ArgSignature,
                                 "__wasm_init_tls"));
-    if (ctx.componentModelThreadContext) {
+    if (ctx.externThreadBuiltins) {
       ctx.sym.tlsBase->markLive();
       ctx.sym.tlsSize->markLive();
       ctx.sym.tlsAlign->markLive();
@@ -1057,7 +1057,7 @@ static void createOptionalSymbols() {
   //
   // __tls_size and __tls_align are not needed in this case since they are only
   // needed for __wasm_init_tls (which we do not create in this case).
-  if (!ctx.arg.sharedMemory && !ctx.componentModelThreadContext)
+  if (!ctx.sym.tlsBase)
     ctx.sym.tlsBase = createOptionalGlobal("__tls_base", false);
 }
 
@@ -1317,7 +1317,7 @@ static void checkZOptions(opt::InputArgList &args) {
 static void determineThreadContextABI(ArrayRef<ObjFile *> files) {
   // A complication is that a user may attempt to link together object files
   // compiled with different versions of LLVM, where one does not specifiy
-  // -component-model-thread-context when using the global thread context ABI.
+  // -component-model-threading when using the global thread context ABI.
   // They may also attempt to link object files with the global ABI compiled
   // with older LLVM versions, but link them with a newer wasm-ld. To ensure the
   // correct behavior in both of these cases, we treat the import of a
@@ -1332,10 +1332,10 @@ static void determineThreadContextABI(ArrayRef<ObjFile *> files) {
     auto targetFeatures = obj->getWasmObj()->getTargetFeatures();
     auto threadContextFeature =
         llvm::find_if(targetFeatures, [](const auto &f) {
-          return f.Name == "component-model-thread-context";
+          return f.Name == "component-model-threading";
         });
 
-    bool usesComponentModelThreadContext =
+    bool usesComponentModelThreading =
         threadContextFeature != targetFeatures.end() &&
         threadContextFeature->Prefix == WASM_FEATURE_PREFIX_USED;
 
@@ -1356,16 +1356,16 @@ static void determineThreadContextABI(ArrayRef<ObjFile *> files) {
         continue;
       }
       // Treat this as using the globals ABI
-      usesComponentModelThreadContext = false;
+      usesComponentModelThreading = false;
     }
 
-    if (usesComponentModelThreadContext) {
+    if (usesComponentModelThreading) {
       if (threadContextABI == ThreadContextABI::Undetermined) {
         threadContextABI = ThreadContextABI::ComponentModelBuiltins;
       } else if (threadContextABI != ThreadContextABI::ComponentModelBuiltins) {
         error(
             "thread context ABI mismatch: " + obj->getName() +
-            " uses component-model-thread-context but other files disallow it");
+            " uses component-model-threading but other files disallow it");
       }
     } else {
       if (threadContextABI == ThreadContextABI::Undetermined) {
@@ -1373,18 +1373,19 @@ static void determineThreadContextABI(ArrayRef<ObjFile *> files) {
       } else if (threadContextABI != ThreadContextABI::Globals) {
         error(
             "thread context ABI mismatch: " + obj->getName() +
-            " disallows component-model-thread-context but other files use it");
+            " disallows component-model-threading but other files use it");
       }
     }
   }
 
   // If the ABI is undetermined at this point, default to the globals ABI
-  ctx.componentModelThreadContext =
-      (threadContextABI == ThreadContextABI::ComponentModelBuiltins);
-
-  if (ctx.arg.sharedMemory && ctx.componentModelThreadContext) {
-    error("--shared-memory is currently incompatible with component model "
-          "thread context intrinsics");
+  if (threadContextABI == ThreadContextABI::ComponentModelBuiltins) {
+    if (ctx.arg.sharedMemory) {
+      error("--shared-memory is currently incompatible with component model "
+            "thread context intrinsics");
+    }
+    ctx.externThreadBuiltins = true;
+    ctx.threadModel = ThreadModel::Cooperative;
   }
 }
 

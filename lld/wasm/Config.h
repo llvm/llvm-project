@@ -135,6 +135,13 @@ struct Config {
   llvm::SmallVector<uint8_t, 0> buildIdVector;
 };
 
+enum class ThreadModel {
+  Single,
+  SharedMemory,
+  // Used by WASIp3 targets
+  Cooperative,
+};
+
 // The Ctx object hold all other (non-configuration) global state.
 struct Ctx {
   Config arg;
@@ -280,17 +287,18 @@ struct Ctx {
                     0>
       whyExtractRecords;
 
-  // Whether to use component model thread context intrinsics for the stack
-  // pointer and TLS base.
-  bool componentModelThreadContext = false;
+  // Whether to use compiler-rt functions for the stack pointer and TLS base 
+  // instead of globals. This is currently used for WASIp3 cooperative threads support.
+  bool externThreadBuiltins = false;
+
+  // The thread model to use for tuning linker-generated code, segment passivity, etc.
+  ThreadModel threadModel = ThreadModel::Single;
 
   Ctx();
   void reset();
 
-  // This will be true for both shared-memory multi-threading and green threads 
-  // support via externally-controlled stack pointer/TLS base.
   bool isMultithreaded() const {
-    return componentModelThreadContext || arg.sharedMemory;
+    return threadModel != ThreadModel::Single;
   }
 };
 

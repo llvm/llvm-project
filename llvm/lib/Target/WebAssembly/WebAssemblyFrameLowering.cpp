@@ -139,7 +139,7 @@ bool WebAssemblyFrameLowering::needsSPForLocalFrame(
   // info is present so we can allocate a local for DWARF to reference.
   bool NeedsSPForDebug =
       MF.getFunction().getSubprogram() &&
-      MF.getSubtarget<WebAssemblySubtarget>().hasComponentModelThreadContext();
+      MF.getSubtarget<WebAssemblySubtarget>().hasComponentModelThreading();
 
   return MFI.getStackSize() || MFI.adjustsStack() || hasFP(MF) ||
          HasExplicitSPUse || NeedsSPForDebug;
@@ -240,7 +240,7 @@ void WebAssemblyFrameLowering::writeBackSP(
   const auto *TII = MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
 
   if (MF.getSubtarget<WebAssemblySubtarget>()
-          .hasComponentModelThreadContext()) {
+          .hasComponentModelThreading()) {
     const char *ES = "__wasm_set_stack_pointer";
     auto *SPSymbol = MF.createExternalSymbolName(ES);
     BuildMI(MBB, InsertStore, DL, TII->get(WebAssembly::CALL))
@@ -299,7 +299,7 @@ void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
   if (StackSize)
     SPReg = MRI.createVirtualRegister(PtrRC);
 
-  if (ST.hasComponentModelThreadContext()) {
+  if (ST.hasComponentModelThreading()) {
     const char *ES = "__wasm_get_stack_pointer";
     auto *SPSymbol = MF.createExternalSymbolName(ES);
     BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::CALL), SPReg)

@@ -282,7 +282,7 @@ public:
     bool StrippedAtomics = false;
     bool StrippedTLS = false;
 
-    if (Features[WebAssembly::FeatureComponentModelThreadContext]) {
+    if (Features[WebAssembly::FeatureComponentModelThreading]) {
       // Using component model threading intrinsics allows TLS without
       // atomics, so don't strip TLS even if atomics are disabled.
       if (!Features[WebAssembly::FeatureAtomics]) {
@@ -429,13 +429,13 @@ private:
                       wasm::WASM_FEATURE_PREFIX_DISALLOWED);
     }
 
-    // Mark component-model-thread-context as disallowed when not in use to
+    // Mark component-model-threading as disallowed when not in use to
     // prevent linking object files with incompatible threading ABIs.
     // This is implicit for MVP since the feature is not supported at all.
     if (CPU != "mvp" &&
-        !Features[WebAssembly::FeatureComponentModelThreadContext]) {
+        !Features[WebAssembly::FeatureComponentModelThreading]) {
       M.addModuleFlag(Module::ModFlagBehavior::Error,
-                      "wasm-feature-component-model-thread-context",
+                      "wasm-feature-component-model-threading",
                       wasm::WASM_FEATURE_PREFIX_DISALLOWED);
     }
   }

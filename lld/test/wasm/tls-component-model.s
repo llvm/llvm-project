@@ -35,7 +35,7 @@ tls2:
   .int8 2
   .int8 43
   .int8 30
-  .ascii  "component-model-thread-context"
+  .ascii  "component-model-threading"
   .int8 43
   .int8 11
   .ascii  "bulk-memory"

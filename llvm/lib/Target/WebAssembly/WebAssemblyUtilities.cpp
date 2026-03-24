@@ -202,7 +202,7 @@ MachineSDNode *WebAssembly::getTLSBase(SelectionDAG &DAG, const SDLoc &DL,
 
   unsigned Opcode;
   const char *SymName;
-  if (Subtarget->hasComponentModelThreadContext()) {
+  if (Subtarget->hasComponentModelThreading()) {
     Opcode = WebAssembly::CALL;
     SymName = "__wasm_get_tls_base";
   } else {

@@ -88,19 +88,19 @@ static bool WantsPthread(const llvm::Triple &Triple, const ArgList &Args) {
   return WantsPthread;
 }
 
-static bool WantsComponentModelThreadContext(const llvm::Triple &Triple,
+static bool WantsComponentModelThreading(const llvm::Triple &Triple,
                                              const ArgList &Args) {
   // If the target is WASIP3, then enable the
-  // component-model-thread-context feature by default, unless explicitly
+  // component-model-threading feature by default, unless explicitly
   // disabled.
   return Triple.getOS() == llvm::Triple::WASIp3 &&
-         Args.hasFlag(options::OPT_mcomponent_model_thread_context,
-                      options::OPT_mno_component_model_thread_context, true);
+         Args.hasFlag(options::OPT_mcomponent_model_threading,
+                      options::OPT_mno_component_model_threading, true);
 }
 
 static bool WantsSharedMemory(const llvm::Triple &Triple, const ArgList &Args) {
   return WantsPthread(Triple, Args) &&
-         !WantsComponentModelThreadContext(Triple, Args);
+         !WantsComponentModelThreading(Triple, Args);
 }
 
 void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
@@ -336,9 +336,9 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
                           options::OPT_fno_use_init_array, true))
     CC1Args.push_back("-fno-use-init-array");
 
-  if (WantsComponentModelThreadContext(getTriple(), DriverArgs)) {
+  if (WantsComponentModelThreading(getTriple(), DriverArgs)) {
     CC1Args.push_back("-target-feature");
-    CC1Args.push_back("+component-model-thread-context");
+    CC1Args.push_back("+component-model-threading");
   }
 
   // '-pthread' implies bulk-memory, and, if shared memory is also used,

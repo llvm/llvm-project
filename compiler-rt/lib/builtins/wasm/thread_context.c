@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifdef __wasm_component_model_thread_context__
+#ifdef __wasm_component_model_threading__
 
 // We define these function as naked functions with inline assembly because:
 // 1. Defining them as regular C functions would cause infinite recursion in
