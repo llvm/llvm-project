@@ -418,7 +418,7 @@ struct VPlanTransforms {
   /// one step backwards.
   static void optimizeInductionLiveOutUsers(VPlan &Plan,
                                             PredicatedScalarEvolution &PSE,
-                                            bool FoldTail);
+                                            const Loop *L, bool FoldTail);
 
   /// Add explicit broadcasts for live-ins and VPValues defined in \p Plan's entry block if they are used as vectors.
   static void materializeBroadcasts(VPlan &Plan);
