@@ -61,6 +61,8 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::initialize() {
       case InstructionUniformity::NeverUniform:
         markDivergent(instr);
         break;
+      case InstructionUniformity::Custom:
+        break;
       case InstructionUniformity::Default:
         break;
       }
@@ -149,6 +151,12 @@ bool llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::isDivergentUse(
   auto *DefInstr = Def->getParent();
   auto *UseInstr = U.getParent();
   return isTemporalDivergent(*UseInstr->getParent(), *DefInstr);
+}
+
+template <>
+bool GenericUniformityAnalysisImpl<MachineSSAContext>::isCustomUniform(
+    const MachineInstr &MI) const {
+  llvm_unreachable("no MIR instructions use Custom uniformity yet");
 }
 
 // This ensures explicit instantiation of

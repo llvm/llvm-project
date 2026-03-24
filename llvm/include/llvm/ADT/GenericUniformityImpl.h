@@ -407,6 +407,13 @@ public:
   void recordTemporalDivergence(ConstValueRefT, const InstructionT *,
                                 const CycleT *);
 
+  /// Check if an instruction with Custom uniformity can be proven uniform
+  /// based on its operands. This queries the target-specific callback.
+  bool isCustomUniform(const InstructionT &I) const;
+
+  /// \brief Add an instruction that requires custom uniformity analysis.
+  void addCustomUniformityCandidate(const InstructionT *I);
+
 protected:
   const ContextT &Context;
   const FunctionT &F;
@@ -419,6 +426,10 @@ protected:
 
   // Internal worklist for divergence propagation.
   std::vector<const InstructionT *> Worklist;
+
+  // Set of instructions that require custom uniformity analysis based on
+  // operand uniformity.
+  SmallPtrSet<const InstructionT *, 8> CustomUniformityCandidates;
 
   /// \brief Mark \p Term as divergent and push all Instructions that become
   /// divergent as a result on the worklist.
@@ -783,6 +794,13 @@ void GenericUniformityAnalysisImpl<ContextT>::markDivergent(
     const InstructionT &I) {
   if (isAlwaysUniform(I))
     return;
+  // For custom uniformity candidates, check if the instruction can be
+  // proven uniform based on which operands are uniform/divergent.
+  // The candidate will be re-evaluated as operands become divergent.
+  if (CustomUniformityCandidates.contains(&I)) {
+    if (isCustomUniform(I))
+      return;
+  }
   bool Marked = false;
   if (I.isTerminator()) {
     Marked = DivergentTermBlocks.insert(I.getParent()).second;
@@ -812,6 +830,12 @@ template <typename ContextT>
 void GenericUniformityAnalysisImpl<ContextT>::addUniformOverride(
     const InstructionT &Instr) {
   UniformOverrides.insert(&Instr);
+}
+
+template <typename ContextT>
+void GenericUniformityAnalysisImpl<ContextT>::addCustomUniformityCandidate(
+    const InstructionT *I) {
+  CustomUniformityCandidates.insert(I);
 }
 
 // Mark as divergent all external uses of values defined in \p DefCycle.
