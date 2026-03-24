@@ -1284,6 +1284,15 @@ void Debugger::RedrawStatusline(
   m_statusline->Redraw(exe_ctx_ref);
 }
 
+void Debugger::Flush() {
+  std::lock_guard<std::mutex> guard(m_statusline_mutex);
+
+  if (!m_statusline)
+    return;
+
+  m_statusline->Flush();
+}
+
 ExecutionContext Debugger::GetSelectedExecutionContext() {
   bool adopt_selected = true;
   ExecutionContextRef exe_ctx_ref(GetSelectedTarget().get(), adopt_selected);
