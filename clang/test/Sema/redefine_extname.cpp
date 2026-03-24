@@ -24,8 +24,8 @@ int foo_cppvar = 1; // expected-warning {{#pragma redefine_extname is applicable
 
 /// Check that the warning goes away when doing it in a namespace.
 /// Such uses are clearly scoped and need no warning (and often can be intentional).
-#pragma redefine_extname foo_nsfunc bar_nsfunc
-#pragma redefine_extname foo_nsvar bar_nsvar
+#pragma redefine_extname foo_nsfunc check_not_bar_nsfunc
+#pragma redefine_extname foo_nsvar check_not_bar_nsvar
 namespace ns {
 int foo_nsfunc() { return 1; }
 // CHECK-DAG: {{@[^ ]*foo_nsfunc}}
@@ -35,10 +35,10 @@ int foo_nsvar = 1;
 
 /// Check that the warning goes away when doing it in a class.
 /// Such uses are clearly scoped and need no warning (and often can be intentional).
-#pragma redefine_extname foo_classmethod bar_classmethod
-#pragma redefine_extname foo_staticmethod bar_staticmethod
-#pragma redefine_extname foo_classmember bar_classmember
-#pragma redefine_extname foo_staticmember bar_staticmember
+#pragma redefine_extname foo_classmethod check_not_bar_classmethod
+#pragma redefine_extname foo_staticmethod check_not_bar_staticmethod
+#pragma redefine_extname foo_classmember check_not_bar_classmember
+#pragma redefine_extname foo_staticmember check_not_bar_staticmember
 class C {
 public:
   int foo_classmethod();
