@@ -20,4 +20,4 @@ using math::cbrtbf16;
 } // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LIBC_SHARED_MATH_CBRTBF16_H
+#endif // LLVM_LIBC_SHARED_MATH_CBRTBF16_H
