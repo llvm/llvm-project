@@ -162,10 +162,11 @@ bool SystemZFrameLowering::hasReservedCallFrame(
   return true;
 }
 
-void SystemZFrameLowering::emitIncrement(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator &MBBI,
-    const DebugLoc &DL, Register Reg, int64_t NumBytes,
-    const TargetInstrInfo *TII) const {
+void SystemZFrameLowering::emitIncrement(MachineBasicBlock &MBB,
+                                         MachineBasicBlock::iterator &MBBI,
+                                         const DebugLoc &DL, Register Reg,
+                                         int64_t NumBytes,
+                                         const TargetInstrInfo *TII) const {
   while (NumBytes) {
     unsigned Opcode;
     int64_t ThisVal = NumBytes;
@@ -182,7 +183,8 @@ void SystemZFrameLowering::emitIncrement(
         ThisVal = MaxVal;
     }
     MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII->get(Opcode), Reg)
-      .addReg(Reg).addImm(ThisVal);
+                           .addReg(Reg)
+                           .addImm(ThisVal);
     // The CC implicit def is dead.
     MI->getOperand(3).setIsDead();
     NumBytes -= ThisVal;
