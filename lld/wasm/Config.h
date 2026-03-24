@@ -286,6 +286,9 @@ struct Ctx {
 
   Ctx();
   void reset();
+
+  // This will be true for both shared-memory multi-threading and green threads 
+  // support via externally-controlled stack pointer/TLS base.
   bool isMultithreaded() const {
     return componentModelThreadContext || arg.sharedMemory;
   }
