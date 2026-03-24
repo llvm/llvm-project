@@ -146,15 +146,18 @@ static ConstantRange simplifyCmpRange(const ConstantRange &CmpCR,
       /*sge*/ CmpHi.isMinSignedValue())
     return *ActCmpCR;
 
-  // If KnownCR is both nuw and nsw, we cannot relax CmpCR at all.
-  if (KnownCR.isWrappedSet() && KnownCR.isSignWrappedSet())
-    return CmpCR;
-
   const APInt Zero = APInt::getZero(BW);
   const APInt SignMin = APInt::getSignedMinValue(BW);
 
   if (CmpLo == KnownCR.getLower()) {
     // Tie to lower:
+
+    // Try ne
+    //    L------------R   : KnownCR
+    //    L-----------R    : ActiveCmpCR
+    // ---------------RL-- : RelaxedCmpCR
+    if (CmpHi + 1 == KnownCR.getUpper())
+      return ConstantRange::getNonEmpty(KnownCR.getUpper(), CmpHi);
 
     // Try ult
     // 0
@@ -174,6 +177,14 @@ static ConstantRange simplifyCmpRange(const ConstantRange &CmpCR,
 
   } else if (CmpHi == KnownCR.getUpper()) {
     // Tie to upper:
+
+    // Try ne
+    //
+    //    L--------R       : KnownCR
+    //     L-------R       : ActiveCmpCR
+    // ---RL-------------- : RelaxedCmpCR
+    if (KnownCR.getLower() + 1 == CmpLo)
+      return ConstantRange::getNonEmpty(CmpLo, KnownCR.getLower());
 
     // Try uge
     // 0
