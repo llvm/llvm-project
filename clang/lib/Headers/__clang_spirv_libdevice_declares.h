@@ -16,6 +16,7 @@ extern "C" {
 
 #define _CLC_OVERLOAD [[clang::overloadable]]
 #define _CLC_CONSTFN [[gnu::const]]
+// TODO: Add vector versions of the API in case it is required.
 _CLC_OVERLOAD _CLC_CONSTFN unsigned int __spirv_ocl_s_abs(int);
 _CLC_OVERLOAD _CLC_CONSTFN unsigned long __spirv_ocl_s_abs(long);
 _CLC_OVERLOAD _CLC_CONSTFN float __spirv_ocl_acos(float);
@@ -100,6 +101,10 @@ _CLC_OVERLOAD _CLC_CONSTFN float __spirv_ocl_log2(float);
 _CLC_OVERLOAD _CLC_CONSTFN double __spirv_ocl_log2(double);
 _CLC_OVERLOAD _CLC_CONSTFN float __spirv_ocl_modf(float, float *);
 _CLC_OVERLOAD _CLC_CONSTFN double __spirv_ocl_modf(double, double *);
+_CLC_OVERLOAD _CLC_CONSTFN float __spirv_ocl_nan(int);
+_CLC_OVERLOAD _CLC_CONSTFN float __spirv_ocl_nan(unsigned int);
+_CLC_OVERLOAD _CLC_CONSTFN double __spirv_ocl_nan(long);
+_CLC_OVERLOAD _CLC_CONSTFN double __spirv_ocl_nan(unsigned long);
 _CLC_OVERLOAD _CLC_CONSTFN float __spirv_ocl_nextafter(float, float);
 _CLC_OVERLOAD _CLC_CONSTFN double __spirv_ocl_nextafter(double, double);
 _CLC_OVERLOAD _CLC_CONSTFN float __spirv_ocl_sqrt(float);
