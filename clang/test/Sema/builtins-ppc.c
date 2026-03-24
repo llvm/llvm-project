@@ -3,12 +3,12 @@
 // RUN: -triple powerpc64-unknown-unknown -DTEST_HTM -fsyntax-only      \
 // RUN: -verify %s
 
-// RUN: %clang_cc1 -target-feature +altivec -target-feature +crypto                    \
+// RUN: %clang_cc1 -target-feature +crypto -target-feature +power8-vector -target-feature +isa-v207-instructions \
 // RUN: -triple powerpc64le-unknown-unknown -DTEST_CRYPTO -fsyntax-only      \
 // RUN: -verify %s
-// RUN: %clang_cc1 -target-feature +altivec -target-feature +crypto \
+// RUN: %clang_cc1 -target-feature +crypto -target-feature +power8-vector -target-feature +isa-v207-instructions \
 // RUN: -triple powerpc64le-unknown-unknown -DTEST_CRYPTO -fsyntax-only \
-// RUN: -target-feature +vsx -verify %s
+// RUN: -verify %s
 
 // RUN: %clang_cc1 -triple powerpc64le-unknown-unknown -DTEST_MAXMIN -fsyntax-only \
 // RUN: -verify %s
