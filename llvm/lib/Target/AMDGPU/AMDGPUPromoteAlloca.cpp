@@ -90,11 +90,11 @@ static cl::opt<unsigned>
 // VarIndex is A, VarMul is stride, VarShift is shift and ConstIndex is B. All
 // parts are optional.
 struct GEPToVectorIndex {
-  Value *VarIndex = nullptr;         // defaults to 0
+  WeakTrackingVH VarIndex;           // defaults to 0
   ConstantInt *VarMul = nullptr;     // defaults to 1
   ConstantInt *VarShift = nullptr;   // defaults to 0
   ConstantInt *ConstIndex = nullptr; // defaults to 0
-  Value *Full = nullptr;
+  WeakTrackingVH Full;
 };
 
 struct MemTransferInfo {
@@ -102,23 +102,29 @@ struct MemTransferInfo {
   ConstantInt *DestIndex = nullptr;
 };
 
+struct TrackedUse {
+  WeakVH User;
+  unsigned OperandNo = 0;
+};
+
 // Analysis for planning the different strategies of alloca promotion.
 struct AllocaAnalysis {
   AllocaInst *Alloca = nullptr;
   DenseSet<Value *> Pointers;
-  SmallVector<Use *> Uses;
+  SmallVector<TrackedUse> Uses;
+  SmallVector<WeakVH> Dependencies;
   unsigned Score = 0;
   bool HaveSelectOrPHI = false;
   struct {
     FixedVectorType *Ty = nullptr;
-    SmallVector<Instruction *> Worklist;
-    SmallVector<Instruction *> UsersToRemove;
+    SmallVector<WeakVH> Worklist;
+    SmallVector<WeakVH> UsersToRemove;
     MapVector<GetElementPtrInst *, GEPToVectorIndex> GEPVectorIdx;
     MapVector<MemTransferInst *, MemTransferInfo> TransferInfo;
   } Vector;
   struct {
     bool Enable = false;
-    SmallVector<User *> Worklist;
+    SmallVector<WeakVH> Worklist;
   } LDS;
 
   explicit AllocaAnalysis(AllocaInst *Alloca) : Alloca(Alloca) {}
@@ -168,6 +174,8 @@ private:
   finishDeferredAllocaToLDSPromotion(SetVector<IntrinsicInst *> &DeferredIntrs);
 
   void scoreAlloca(AllocaAnalysis &AA) const;
+  bool shouldReanalyzeAlloca(const AllocaAnalysis &AA) const;
+  bool rebuildAllocaAnalysis(AllocaAnalysis &AA, bool PromoteToLDS) const;
 
   void setFunctionLimits(const Function &F);
 
@@ -298,7 +306,7 @@ bool AMDGPUPromoteAllocaImpl::collectAllocaUses(AllocaAnalysis &AA) const {
           return RejectUser(Inst, "pointer escapes via store");
         }
       }
-      AA.Uses.push_back(&U);
+      AA.Uses.push_back({Inst, U.getOperandNo()});
 
       if (isa<GetElementPtrInst>(U.getUser())) {
         WorkList.push_back(Inst);
@@ -337,8 +345,10 @@ void AMDGPUPromoteAllocaImpl::scoreAlloca(AllocaAnalysis &AA) const {
   LLVM_DEBUG(dbgs() << "Scoring: " << *AA.Alloca << "\n");
   unsigned Score = 0;
   // Increment score by one for each user + a bonus for users within loops.
-  for (auto *U : AA.Uses) {
-    Instruction *Inst = cast<Instruction>(U->getUser());
+  for (const TrackedUse &U : AA.Uses) {
+    Instruction *Inst = dyn_cast_or_null<Instruction>((Value *)U.User);
+    if (!Inst)
+      continue;
     if (isa<GetElementPtrInst>(Inst) || isa<SelectInst>(Inst) ||
         isa<PHINode>(Inst))
       continue;
@@ -366,6 +376,103 @@ void AMDGPUPromoteAllocaImpl::setFunctionLimits(const Function &F) {
       PromoteAllocaToVectorVGPRRatio);
   if (PromoteAllocaToVectorVGPRRatio.getNumOccurrences())
     VGPRBudgetRatio = PromoteAllocaToVectorVGPRRatio;
+}
+
+static bool hasLiveHandle(const SmallVectorImpl<WeakVH> &Handles) {
+  return any_of(Handles, [](const WeakVH &Handle) { return (Value *)Handle; });
+}
+
+static bool containsHandle(const SmallVectorImpl<WeakVH> &Handles, Value *V) {
+  return any_of(Handles,
+                [V](const WeakVH &Handle) { return (Value *)Handle == V; });
+}
+
+static SmallVector<Instruction *> getLiveInstructions(
+    const SmallVectorImpl<WeakVH> &Handles) {
+  SmallVector<Instruction *> Result;
+  Result.reserve(Handles.size());
+  for (const WeakVH &Handle : Handles)
+    if (auto *Inst = dyn_cast_or_null<Instruction>((Value *)Handle))
+      Result.push_back(Inst);
+  return Result;
+}
+
+static SmallVector<Value *>
+getLiveValues(const SmallVectorImpl<WeakVH> &Handles) {
+  SmallVector<Value *> Result;
+  Result.reserve(Handles.size());
+  for (const WeakVH &Handle : Handles)
+    if (Value *V = Handle)
+      Result.push_back(V);
+  return Result;
+}
+
+static SmallVector<Instruction *>
+getLiveUseUsers(const SmallVectorImpl<TrackedUse> &Uses) {
+  SmallVector<Instruction *> Result;
+  Result.reserve(Uses.size());
+  for (const TrackedUse &Use : Uses)
+    if (auto *Inst = dyn_cast_or_null<Instruction>((Value *)Use.User))
+      Result.push_back(Inst);
+  return Result;
+}
+
+static void trackDependency(AllocaAnalysis &AA, Value *V) {
+  if (!V || isa<Constant>(V) || AA.Pointers.contains(V) ||
+      containsHandle(AA.Dependencies, V))
+    return;
+  AA.Dependencies.push_back(V);
+}
+
+bool AMDGPUPromoteAllocaImpl::shouldReanalyzeAlloca(
+    const AllocaAnalysis &AA) const {
+  if (!AA.Alloca || !AA.Alloca->getParent() || AA.Alloca->use_empty())
+    return false;
+
+  if (getLiveUseUsers(AA.Uses).size() != AA.Uses.size())
+    return true;
+
+  if (getLiveValues(AA.Dependencies).size() != AA.Dependencies.size())
+    return true;
+
+  if (AA.Vector.Ty) {
+    if (getLiveInstructions(AA.Vector.Worklist).size() !=
+        AA.Vector.Worklist.size())
+      return true;
+    if (getLiveInstructions(AA.Vector.UsersToRemove).size() !=
+        AA.Vector.UsersToRemove.size())
+      return true;
+  }
+
+  if (AA.LDS.Enable &&
+      getLiveValues(AA.LDS.Worklist).size() != AA.LDS.Worklist.size())
+    return true;
+
+  return false;
+}
+
+bool AMDGPUPromoteAllocaImpl::rebuildAllocaAnalysis(AllocaAnalysis &AA,
+                                                    bool PromoteToLDS) const {
+  AllocaInst *AI = AA.Alloca;
+  if (!AI || !AI->getParent() || AI->use_empty())
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Re-analyzing alloca after earlier rewrite: " << *AI
+                    << '\n');
+
+  AllocaAnalysis Updated{AI};
+  if (!collectAllocaUses(Updated))
+    return false;
+
+  analyzePromoteToVector(Updated);
+  if (PromoteToLDS)
+    analyzePromoteToLDS(Updated);
+  if (!Updated.Vector.Ty && !Updated.LDS.Enable)
+    return false;
+
+  scoreAlloca(Updated);
+  AA = std::move(Updated);
+  return true;
 }
 
 bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
@@ -420,7 +527,24 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
 
   bool Changed = false;
   SetVector<IntrinsicInst *> DeferredIntrs;
-  for (AllocaAnalysis &AA : Allocas) {
+  for (auto It : enumerate(Allocas)) {
+    AllocaAnalysis &AA = It.value();
+    if (AA.Alloca->use_empty()) {
+      LLVM_DEBUG(dbgs() << "Skipping dead alloca: " << *AA.Alloca << "\n");
+      continue;
+    }
+
+    if (shouldReanalyzeAlloca(AA)) {
+      if (!rebuildAllocaAnalysis(AA, PromoteToLDS))
+        continue;
+    }
+
+    if (AA.Vector.Ty && !hasLiveHandle(AA.Vector.Worklist)) {
+      LLVM_DEBUG(dbgs() << "Skipping stale vector state with no live worklist: "
+                        << *AA.Alloca << "\n");
+      AA.Vector.Ty = nullptr;
+    }
+
     if (AA.Vector.Ty) {
       std::optional<TypeSize> Size = AA.Alloca->getAllocationSize(*DL);
       assert(Size); // Expected to succeed on non-array alloca.
@@ -483,35 +607,34 @@ static Value *calculateVectorIndex(Value *Ptr, AllocaAnalysis &AA) {
   auto I = AA.Vector.GEPVectorIdx.find(GEP);
   assert(I != AA.Vector.GEPVectorIdx.end() && "Must have entry for GEP!");
 
-  if (!I->second.Full) {
-    Value *Result = nullptr;
-    B.SetInsertPoint(GEP);
+  if (Value *Cached = I->second.Full)
+    return Cached;
 
-    if (I->second.VarIndex) {
-      Result = I->second.VarIndex;
-      Result = B.CreateSExtOrTrunc(Result, B.getInt32Ty());
+  Value *Result = nullptr;
+  B.SetInsertPoint(GEP);
 
-      if (I->second.VarMul)
-        Result = B.CreateMul(Result, I->second.VarMul);
+  if (Value *VarIndex = I->second.VarIndex) {
+    Result = B.CreateSExtOrTrunc(VarIndex, B.getInt32Ty());
 
-      if (I->second.VarShift)
-        Result = B.CreateAShr(Result, I->second.VarShift, "", /*isExact*/ true);
-    }
+    if (I->second.VarMul)
+      Result = B.CreateMul(Result, I->second.VarMul);
 
-    if (I->second.ConstIndex) {
-      if (Result)
-        Result = B.CreateAdd(Result, I->second.ConstIndex);
-      else
-        Result = I->second.ConstIndex;
-    }
-
-    if (!Result)
-      Result = B.getInt32(0);
-
-    I->second.Full = Result;
+    if (I->second.VarShift)
+      Result = B.CreateAShr(Result, I->second.VarShift, "", /*isExact*/ true);
   }
 
-  return I->second.Full;
+  if (I->second.ConstIndex) {
+    if (Result)
+      Result = B.CreateAdd(Result, I->second.ConstIndex);
+    else
+      Result = I->second.ConstIndex;
+  }
+
+  if (!Result)
+    Result = B.getInt32(0);
+
+  I->second.Full = Result;
+  return Result;
 }
 
 static std::optional<GEPToVectorIndex>
@@ -983,12 +1106,12 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
   Type *VecEltTy = AA.Vector.Ty->getElementType();
   unsigned ElementSize = DL->getTypeSizeInBits(VecEltTy) / 8;
   assert(ElementSize > 0);
-  for (auto *U : AA.Uses) {
-    Instruction *Inst = cast<Instruction>(U->getUser());
+  for (const TrackedUse &U : AA.Uses) {
+    Instruction *Inst = cast<Instruction>((Value *)U.User);
 
     if (Value *Ptr = getLoadStorePointerOperand(Inst)) {
       assert(!isa<StoreInst>(Inst) ||
-             U->getOperandNo() == StoreInst::getPointerOperandIndex());
+             U.OperandNo == StoreInst::getPointerOperandIndex());
 
       Type *AccessTy = getLoadStoreType(Inst);
       if (AccessTy->isAggregateType())
@@ -1025,6 +1148,8 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
       if (!Index)
         return RejectUser(Inst, "cannot compute vector index for GEP");
 
+      if (Index->VarIndex)
+        trackDependency(AA, Index->VarIndex);
       AA.Vector.GEPVectorIdx[GEP] = std::move(Index.value());
       AA.Vector.UsersToRemove.push_back(Inst);
       continue;
@@ -1060,7 +1185,7 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
 
       MemTransferInfo *TI =
           &AA.Vector.TransferInfo.try_emplace(TransferInst).first->second;
-      unsigned OpNum = U->getOperandNo();
+      unsigned OpNum = U.OperandNo;
       if (OpNum == 0) {
         Value *Dest = TransferInst->getDest();
         ConstantInt *Index = getConstIndexIntoAlloca(Dest);
@@ -1117,6 +1242,13 @@ void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA) {
   LLVM_DEBUG(dbgs() << "Promoting to vectors: " << *AA.Alloca << '\n');
   LLVM_DEBUG(dbgs() << "  type conversion: " << *AA.Alloca->getAllocatedType()
                     << " -> " << *AA.Vector.Ty << '\n');
+  SmallVector<Instruction *> Worklist = getLiveInstructions(AA.Vector.Worklist);
+  if (Worklist.empty()) {
+    LLVM_DEBUG(dbgs() << "  No live vector users remain\n");
+    return;
+  }
+  SmallVector<Instruction *> UsersToRemove =
+      getLiveInstructions(AA.Vector.UsersToRemove);
   const unsigned VecStoreSize = DL->getTypeStoreSize(AA.Vector.Ty);
 
   Type *VecEltTy = AA.Vector.Ty->getElementType();
@@ -1141,7 +1273,7 @@ void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA) {
   // Insert a placeholder whenever we need the vector value at the top of a
   // basic block.
   SmallVector<Instruction *> Placeholders;
-  forEachWorkListItem(AA.Vector.Worklist, [&](Instruction *I) {
+  forEachWorkListItem(Worklist, [&](Instruction *I) {
     BasicBlock *BB = I->getParent();
     auto GetCurVal = [&]() -> Value * {
       if (Value *CurVal = Updater.FindValueForBlock(BB))
@@ -1182,13 +1314,13 @@ void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA) {
   }
 
   // Delete all instructions.
-  for (Instruction *I : AA.Vector.Worklist) {
+  for (Instruction *I : Worklist) {
     assert(I->use_empty());
     I->eraseFromParent();
   }
 
   // Delete all the users that are known to be removeable.
-  for (Instruction *I : reverse(AA.Vector.UsersToRemove)) {
+  for (Instruction *I : reverse(UsersToRemove)) {
     I->dropDroppableUses();
     assert(I->use_empty());
     I->eraseFromParent();
@@ -1393,19 +1525,21 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToLDS(AllocaAnalysis &AA) const {
     return;
   }
 
-  for (Use *Use : AA.Uses) {
-    auto *User = Use->getUser();
+  for (const TrackedUse &Use : AA.Uses) {
+    auto *TrackedUser = dyn_cast_or_null<llvm::User>((Value *)Use.User);
+    if (!TrackedUser)
+      return;
 
-    if (CallInst *CI = dyn_cast<CallInst>(User)) {
+    if (CallInst *CI = dyn_cast<CallInst>(TrackedUser)) {
       if (!isCallPromotable(CI))
         return;
 
-      if (find(AA.LDS.Worklist, User) == AA.LDS.Worklist.end())
-        AA.LDS.Worklist.push_back(User);
+      if (!containsHandle(AA.LDS.Worklist, TrackedUser))
+        AA.LDS.Worklist.push_back(TrackedUser);
       continue;
     }
 
-    Instruction *UseInst = cast<Instruction>(User);
+    Instruction *UseInst = cast<Instruction>(TrackedUser);
     if (UseInst->getOpcode() == Instruction::PtrToInt)
       return;
 
@@ -1436,11 +1570,13 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToLDS(AllocaAnalysis &AA) const {
     // Only promote a select if we know that the other select operand
     // is from another pointer that will also be promoted.
     if (ICmpInst *ICmp = dyn_cast<ICmpInst>(UseInst)) {
-      if (!binaryOpIsDerivedFromSameAlloca(AA.Alloca, Use->get(), ICmp, 0, 1))
+      if (!binaryOpIsDerivedFromSameAlloca(AA.Alloca,
+                                           ICmp->getOperand(Use.OperandNo), ICmp,
+                                           0, 1))
         return;
 
       // May need to rewrite constant operands.
-      if (find(AA.LDS.Worklist, User) == AA.LDS.Worklist.end())
+      if (!containsHandle(AA.LDS.Worklist, TrackedUser))
         AA.LDS.Worklist.push_back(ICmp);
       continue;
     }
@@ -1450,7 +1586,7 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToLDS(AllocaAnalysis &AA) const {
       // the alloca.
       if (!GEP->isInBounds())
         return;
-    } else if (!isa<ExtractElementInst, SelectInst, PHINode>(User)) {
+    } else if (!isa<ExtractElementInst, SelectInst, PHINode>(TrackedUser)) {
       // Do not promote vector/aggregate type instructions. It is hard to track
       // their users.
 
@@ -1461,8 +1597,8 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToLDS(AllocaAnalysis &AA) const {
       return;
     }
 
-    if (find(AA.LDS.Worklist, User) == AA.LDS.Worklist.end())
-      AA.LDS.Worklist.push_back(User);
+    if (!containsHandle(AA.LDS.Worklist, TrackedUser))
+      AA.LDS.Worklist.push_back(TrackedUser);
   }
 
   AA.LDS.Enable = true;
@@ -1601,6 +1737,11 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(
     SetVector<IntrinsicInst *> &DeferredIntrs) {
   LLVM_DEBUG(dbgs() << "Trying to promote to LDS: " << *AA.Alloca << '\n');
 
+  if (AA.Alloca->use_empty()) {
+    LLVM_DEBUG(dbgs() << "  Alloca already dead, skipping LDS promotion\n");
+    return false;
+  }
+
   // Not likely to have sufficient local memory for promotion.
   if (!SufficientLDS)
     return false;
@@ -1670,7 +1811,8 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(
 
   PointerType *NewPtrTy = PointerType::get(Context, AMDGPUAS::LOCAL_ADDRESS);
 
-  for (Value *V : AA.LDS.Worklist) {
+  SmallVector<Value *> LDSWorklist = getLiveValues(AA.LDS.Worklist);
+  for (Value *V : LDSWorklist) {
     CallInst *Call = dyn_cast<CallInst>(V);
     if (!Call) {
       if (ICmpInst *CI = dyn_cast<ICmpInst>(V)) {
@@ -1783,22 +1925,13 @@ void AMDGPUPromoteAllocaImpl::finishDeferredAllocaToLDSPromotion(
     SetVector<IntrinsicInst *> &DeferredIntrs) {
 
   for (IntrinsicInst *Intr : DeferredIntrs) {
-    IRBuilder<> Builder(Intr);
-    Builder.SetInsertPoint(Intr);
     Intrinsic::ID ID = Intr->getIntrinsicID();
     assert(ID == Intrinsic::memcpy || ID == Intrinsic::memmove);
 
     MemTransferInst *MI = cast<MemTransferInst>(Intr);
-    auto *B = Builder.CreateMemTransferInst(
-        ID, MI->getRawDest(), MI->getDestAlign(), MI->getRawSource(),
-        MI->getSourceAlign(), MI->getLength(), MI->isVolatile());
-
-    for (unsigned I = 0; I != 2; ++I) {
-      if (uint64_t Bytes = Intr->getParamDereferenceableBytes(I)) {
-        B->addDereferenceableParamAttr(I, Bytes);
-      }
-    }
-
-    Intr->eraseFromParent();
+    Type *ArgTys[3] = {MI->getRawDest()->getType(), MI->getRawSource()->getType(),
+                       MI->getLength()->getType()};
+    MI->setCalledFunction(
+        Intrinsic::getOrInsertDeclaration(MI->getModule(), ID, ArgTys));
   }
 }
