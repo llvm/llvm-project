@@ -907,8 +907,8 @@ define <4 x i8> @sv4i8_7(<4 x i8> %d, <4 x i8> %e) {
 ; CHECK-SD-NEXT:    dup v1.4h, w8
 ; CHECK-SD-NEXT:    sshr v0.4h, v0.4h, #8
 ; CHECK-SD-NEXT:    smull v1.4s, v0.4h, v1.4h
-; CHECK-SD-NEXT:    sshr v1.4s, v1.4s, #17
-; CHECK-SD-NEXT:    xtn v1.4h, v1.4s
+; CHECK-SD-NEXT:    shrn v1.4h, v1.4s, #16
+; CHECK-SD-NEXT:    sshr v1.4h, v1.4h, #1
 ; CHECK-SD-NEXT:    usra v1.4h, v1.4h, #15
 ; CHECK-SD-NEXT:    mls v0.4h, v1.4h, v2.4h
 ; CHECK-SD-NEXT:    ret
@@ -961,8 +961,8 @@ define <4 x i8> @sv4i8_100(<4 x i8> %d, <4 x i8> %e) {
 ; CHECK-SD-NEXT:    dup v1.4h, w8
 ; CHECK-SD-NEXT:    sshr v0.4h, v0.4h, #8
 ; CHECK-SD-NEXT:    smull v1.4s, v0.4h, v1.4h
-; CHECK-SD-NEXT:    sshr v1.4s, v1.4s, #19
-; CHECK-SD-NEXT:    xtn v1.4h, v1.4s
+; CHECK-SD-NEXT:    shrn v1.4h, v1.4s, #16
+; CHECK-SD-NEXT:    sshr v1.4h, v1.4h, #3
 ; CHECK-SD-NEXT:    usra v1.4h, v1.4h, #15
 ; CHECK-SD-NEXT:    mls v0.4h, v1.4h, v2.4h
 ; CHECK-SD-NEXT:    ret
