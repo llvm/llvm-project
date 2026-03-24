@@ -1087,7 +1087,7 @@ unifyUnreachableBlocks(Function &F,
 
   for (BasicBlock *BB : UnreachableBlocks) {
     BB->back().eraseFromParent(); // Remove the unreachable inst.
-    BranchInst::Create(UnreachableBlock, BB);
+    UncondBrInst::Create(UnreachableBlock, BB);
     if (DTU)
       DTU->push_back({DominatorTree::Insert, BB, UnreachableBlock});
   }
@@ -1132,7 +1132,7 @@ static bool unifyReturnBlocks(Function &F,
       PN->addIncoming(BB->getTerminator()->getOperand(0), BB);
 
     BB->back().eraseFromParent(); // Remove the return insn
-    BranchInst::Create(NewRetBlock, BB);
+    UncondBrInst::Create(NewRetBlock, BB);
     if (DTU)
       DTU->push_back({DominatorTree::Insert, BB, NewRetBlock});
   }
@@ -1390,7 +1390,7 @@ Error Ripple::propagateShapes(bool &WaitingForSpecialization) {
             setRippleShape(Alloca, *NewShape);
         }
 
-      if (isa<BranchInst>(I) || isa<SwitchInst>(I)) {
+      if (isa<CondBrInst>(I) || isa<SwitchInst>(I)) {
         // Mark masked calls
         if (NewShape->isVector()) {
           BasicBlock *VectorBlock = I->getParent();
@@ -3640,7 +3640,7 @@ void Ripple::genVectorInstructions() {
                    nullptr, Twine(Call->getName()) + ".ripple.call.loop.end");
     setRippleShape(ContinueBlock->getTerminator(), ScalarShape);
 
-    cast<BranchInst>(ContinueBlock->getTerminator())
+    cast<UncondBrInst>(ContinueBlock->getTerminator())
         ->setSuccessor(0, LoopHeader);
     DTU.applyUpdates({{DominatorTree::Delete, ContinueBlock, AfterLoop},
                       {DominatorTree::Insert, ContinueBlock, LoopHeader}});
@@ -4039,10 +4039,9 @@ void Ripple::genVectorInstructions() {
         case Instruction::Select:
           processSelects(cast<SelectInst>(I), toShape);
           break;
-        case Instruction::Br: {
+        case Instruction::CondBr: {
           // Branches are handled by the if-conversion function
-          BranchInst *Branch = cast<BranchInst>(I);
-          assert(Branch->isConditional());
+          CondBrInst *Branch = cast<CondBrInst>(I);
           auto [VectorCondVal, ConditionShape] =
               getTensorUse(Branch->getOperandUse(0));
           assert(*ConditionShape == toShape);
@@ -4397,7 +4396,7 @@ void Ripple::vectorGenerationPostProcess() {
       for (auto *User : I->users()) {
         if (Instruction *UserInst = dyn_cast<Instruction>(User))
           if (!InstructionReplacementMapping.contains(UserInst) &&
-              !(isa<BranchInst>(UserInst) || isa<SwitchInst>(UserInst))) {
+              !(isa<CondBrInst>(UserInst) || isa<SwitchInst>(UserInst))) {
             LLVM_DEBUG(dbgs()
                        << "Instruction " << *I << " has a non-vectorized user "
                        << *User << "\n");
@@ -4552,7 +4551,7 @@ void Ripple::applyMaskToOps(iterator_range<IteratorT> BBs, Value *VectorMask,
           Instruction *Term = BBToProcess->getTerminator();
           irBuilder.SetInsertPoint(BBToProcess);
           irBuilder.SetCurrentDebugLocation(Load->getDebugLoc());
-          BranchInst *Br =
+          CondBrInst *Br =
               irBuilder.CreateCondBr(MaskToApply, LoadBB, AfterLoadBB);
           setRippleShape(Br, ScalarShape);
           invalidateRippleDataFor(Term);
@@ -4660,7 +4659,7 @@ void Ripple::applyMaskToOps(iterator_range<IteratorT> BBs, Value *VectorMask,
           Instruction *Term = BBToProcess->getTerminator();
           irBuilder.SetInsertPoint(BBToProcess);
           irBuilder.SetCurrentDebugLocation(Store->getDebugLoc());
-          BranchInst *Br =
+          CondBrInst *Br =
               irBuilder.CreateCondBr(MaskToApply, StoreBB, AfterStoreBB);
           setRippleShape(Br, ScalarShape);
           invalidateRippleDataFor(Term);
@@ -4807,13 +4806,6 @@ void Ripple::ifConvert() {
     }
   };
 
-  auto brTerminator = [](BasicBlock *BB) {
-    assert(isa<BranchInst>(BB->getTerminator()));
-    BranchInst *BI = cast<BranchInst>(BB->getTerminator());
-    assert(BI->isUnconditional());
-    return BI;
-  };
-
   auto updateSelectInstMaskSet = [&](ValueToValueMapTy &VMap) -> void {
     // Update select to mask set with new arrivals
     SmallPtrSet<SelectInst *, 8> ToMaskAsWell;
@@ -4841,10 +4833,9 @@ void Ripple::ifConvert() {
       // In ifConvert, we are only concerned with branch or switch instructions.
       continue;
     Value *last = BB->getTerminator();
-    BranchInst *Branch = dyn_cast<BranchInst>(last);
+    CondBrInst *Branch = dyn_cast<CondBrInst>(last);
     SwitchInst *Switch = dyn_cast<SwitchInst>(last);
-    bool IsVectorBranch =
-        Branch && Branch->isConditional() && getRippleShape(Branch).isVector();
+    bool IsVectorBranch = Branch && getRippleShape(Branch).isVector();
     bool IsVectorSwitch = Switch && getRippleShape(Switch).isVector();
     if (IsVectorBranch || IsVectorSwitch) {
       BBsWithVectorBranchOrSwitch.push_back(BB);
@@ -4974,7 +4965,7 @@ void Ripple::ifConvert() {
           allBasicBlocksFromToBFS(LoopIncTarget, BranchingBB, postdomTree);
 
       Value *LoopIncMask = nullptr;
-      if (BranchInst *Branch = dyn_cast<BranchInst>(BranchOrSwitch)) {
+      if (auto *Branch = dyn_cast<CondBrInst>(BranchOrSwitch)) {
         irBuilder.SetInsertPoint(Branch);
         if (Branch->getSuccessor(0) == LoopIncTarget) {
           LoopIncMask = VectorConditional;
@@ -5035,7 +5026,7 @@ void Ripple::ifConvert() {
 
     // Build the branch masks
     SmallVector<std::pair<BasicBlock *, Value *>, 2> TargetMasks;
-    if (BranchInst *Branch = dyn_cast<BranchInst>(BranchOrSwitch)) {
+    if (auto *Branch = dyn_cast<CondBrInst>(BranchOrSwitch)) {
       vectorBranchMasks(Branch, VectorConditional, TargetMasks, MaskShape);
     } else {
       assert(isa<SwitchInst>(BranchOrSwitch));
@@ -5060,7 +5051,7 @@ void Ripple::ifConvert() {
     // Insert a new edge from BB to immPostDom
     irBuilder.SetInsertPoint(BranchingBB);
     irBuilder.SetCurrentDebugLocation(BranchOrSwitch->getDebugLoc());
-    BranchInst *Br = irBuilder.CreateBr(BranchPostDom);
+    UncondBrInst *Br = irBuilder.CreateBr(BranchPostDom);
     setRippleShape(Br, ScalarShape);
     // Remove Edges from BB to LHS & RHS
     invalidateRippleDataFor(BranchOrSwitch);
@@ -5093,7 +5084,8 @@ void Ripple::ifConvert() {
 
       // Instead of branching to immPostDom, jump to the branch entry
       BasicBlock *BranchEntryClone = cast<BasicBlock>(&*VMap[BranchEntryBlock]);
-      BranchInst *ToBranchPostDom = brTerminator(PredOfBranchPostDomCurrent);
+      UncondBrInst *ToBranchPostDom =
+          cast<UncondBrInst>(PredOfBranchPostDomCurrent->getTerminator());
       assert(ToBranchPostDom->getSuccessor(0) == BranchPostDom);
       ToBranchPostDom->setSuccessor(0, BranchEntryClone);
       DTUList.push_back({DominatorTree::Insert, PredOfBranchPostDomCurrent,
@@ -5262,7 +5254,7 @@ void Ripple::clonePathStartingWith(BasicBlock *Start,
 }
 
 void Ripple::vectorBranchMasks(
-    BranchInst *Branch, Value *VectorCondition,
+    CondBrInst *Branch, Value *VectorCondition,
     SmallVectorImpl<std::pair<BasicBlock *, Value *>> &TargetMasks,
     const TensorShape &MaskShape) {
   // Create additional masks right before the branch instruction
@@ -6443,13 +6435,12 @@ iterator_range<User::const_op_iterator>
 Ripple::vectorizableOperands(const Instruction *I) {
   auto Begin = I->op_begin();
   auto End = I->op_end();
-  if (const BranchInst *BrInst = dyn_cast<BranchInst>(I)) {
-    // For branches, we skip the basic blocks
-    if (BrInst->isConditional())
-      End = std::next(Begin);
-    else
-      Begin = End;
-  } else if (isa<SwitchInst>(I))
+  // For branches, we skip the basic blocks
+  if (isa<CondBrInst>(I))
+    End = std::next(Begin);
+  else if (isa<UncondBrInst>(I))
+    Begin = End;
+  else if (isa<SwitchInst>(I))
     // We are only interested in the switch's condition
     End = std::next(Begin);
   else if (rippleBlockIntrinsics(I))
@@ -7526,7 +7517,7 @@ Error Ripple::checkVectorBranch(Instruction *BranchOrSwitch) {
       std::string ErrMsg;
       llvm::raw_string_ostream RSO(ErrMsg);
       RSO << "unsupported vectorization of vector "
-          << (isa<BranchInst>(BranchOrSwitch) ? "branch" : "switch")
+          << (isa<CondBrInst>(BranchOrSwitch) ? "branch" : "switch")
           << " when it applies to a non single-entry-single-exit (SESE) "
              "region or simple vector loops (one exit)";
       RSO.flush();
@@ -7686,7 +7677,7 @@ Error Ripple::checkRippleSemantics() {
       AllErrors =
           llvm::joinErrors(std::move(AllErrors), checkTypeCanBeVectorized(&I));
 
-    if ((isa<BranchInst>(&I) || isa<SwitchInst>(&I)) &&
+    if ((isa<CondBrInst>(&I) || isa<SwitchInst>(&I)) &&
         InstructionShape.isVector()) {
       AllErrors = llvm::joinErrors(std::move(AllErrors), checkVectorBranch(&I));
 
@@ -9976,7 +9967,7 @@ void Ripple::emitRippleRemarks(bool ShapePropagationFailure) {
 
   for (auto &P : UniqDILocs) {
     Instruction *I = P.second;
-    if (isa<BranchInst>(I) || isa<SwitchInst>(I)) {
+    if (isa<CondBrInst>(I) || isa<SwitchInst>(I)) {
       auto BranchShape = getRippleShape(I);
       std::string MaskShapeStr;
       {

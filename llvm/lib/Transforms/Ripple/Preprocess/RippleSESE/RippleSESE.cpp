@@ -57,7 +57,9 @@
 #include <utility>
 #include <vector>
 
-namespace llvm { class Value; }
+namespace llvm {
+class Value;
+}
 
 using namespace llvm;
 
@@ -180,7 +182,7 @@ Expected<std::vector<BasicBlock *>> getNonScalarRippleShapedBranches(
     if (BB->back().isSpecialTerminator())
       continue;
     Value *Last = BB->getTerminator();
-    BranchInst *Branch = dyn_cast<BranchInst>(Last);
+    CondBrInst *Branch = dyn_cast<CondBrInst>(Last);
     SwitchInst *Switch = dyn_cast<SwitchInst>(Last);
     if (Branch) {
       if (InstructionToRippleShape.at(Branch).isVector())
@@ -402,7 +404,8 @@ Error fixCFGForSESE(TargetMachine *TM, Function &F, FunctionAnalysisManager &AM,
           auto *IthValue = Phi.getIncomingValue(IOperand);
           auto *IthBlock = Phi.getIncomingBlock(IOperand);
           if (Clones.contains(IthBlock)) {
-            if (auto ClonedIthVal = VMap.find(IthValue); ClonedIthVal != VMap.end()) {
+            if (auto ClonedIthVal = VMap.find(IthValue);
+                ClonedIthVal != VMap.end()) {
               Phi.addIncoming(ClonedIthVal->second, Clones.at(IthBlock));
             } else {
               // Value defined in a dominator of IthBlock -> has not been

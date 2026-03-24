@@ -1767,7 +1767,7 @@ private:
 
   /// @brief Build the masks for the lhs and rhs of the BranchInst
   void vectorBranchMasks(
-      BranchInst *Branch, Value *VectorCondition,
+      CondBrInst *Branch, Value *VectorCondition,
       SmallVectorImpl<std::pair<BasicBlock *, Value *>> &TargetMasks,
       const TensorShape &MaskShape);
 
