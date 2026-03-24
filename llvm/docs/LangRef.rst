@@ -15228,7 +15228,7 @@ Syntax:
 
 ::
 
-      declare ptr elementtype(<allocated_type>)
+      declare elementtype(<allocated_type>) ptr
       @llvm.structured.alloca()
 
 Overview:
@@ -15278,23 +15278,23 @@ Example:
     %S = type { i32, i32, i32, i32 }
 
     ; Allocate one instance of %S on the stack
-    %ptr = call ptr elementtype(%S) @llvm.structured.alloca()
+    %ptr = call elementtype(%S) ptr @llvm.structured.alloca()
 
     ; Access the second field of the allocated struct
     %field_ptr = call ptr @llvm.structured.gep(ptr elementtype(%S) %ptr, i32 1)
     %val = load i32, ptr %field_ptr
 
     ; Allocate an array of 10 i32s on the stack
-    %array_ptr = call ptr elementtype([10 x i32]) @llvm.structured.alloca()
+    %array_ptr = call elementtype([10 x i32]) ptr @llvm.structured.alloca()
 
     ; Allocate a single i32 on the stack
-    %scalar_ptr = call ptr elementtype(i32) @llvm.structured.alloca()
+    %scalar_ptr = call elementtype(i32) ptr @llvm.structured.alloca()
 
     ; Although the exact size of 'i32' or '%S' is opaque, it is constant
     ; for the duration of the module. This allows, for example, reusing
     ; an allocation slot for two different values of the same type.
-    %a = call ptr elementtype(float) @llvm.structured.alloca()
-    %b = call ptr elementtype(float) @llvm.structured.alloca()
+    %a = call elementtype(float) ptr @llvm.structured.alloca()
+    %b = call elementtype(float) ptr @llvm.structured.alloca()
     ; %a and %b are guaranteed to have the same allocation size.
 
 
