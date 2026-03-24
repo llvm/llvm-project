@@ -936,13 +936,13 @@ declare float @roundf(float)
 ; CHECK: declare x86_fp80 @roundl(x86_fp80) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
 declare x86_fp80 @roundl(x86_fp80)
 
-; CHECK: declare double @roundeven(double) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK-LINUX: declare double @roundeven(double) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
 declare double @roundeven(double)
 
-; CHECK: declare float @roundevenf(float) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK-LINUX: declare float @roundevenf(float) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
 declare float @roundevenf(float)
 
-; CHECK: declare x86_fp80 @roundevenl(x86_fp80) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK-LINUX: declare x86_fp80 @roundevenl(x86_fp80) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
 declare x86_fp80 @roundevenl(x86_fp80)
 
 ; CHECK: declare double @scalbln(double, i64) [[ERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]

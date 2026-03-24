@@ -142,6 +142,12 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
   TLI.setUnavailable(LibFunc_fputs_unlocked);
   TLI.setUnavailable(LibFunc_fgets_unlocked);
 
+  // Set roundeven variants as unavailable
+  // Set them as available per system below
+  TLI.setUnavailable(LibFunc_roundeven);
+  TLI.setUnavailable(LibFunc_roundevenf);
+  TLI.setUnavailable(LibFunc_roundevenl);
+
   // There is really no runtime library on AMDGPU.
   if (T.isAMDGPU()) {
     TLI.disableAllFunctions();
@@ -674,6 +680,12 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_sqrtl_finite);
   }
 
+  if (T.isOSLinux() && T.isGNUEnvironment()) {
+    TLI.setAvailable(LibFunc_roundeven);
+    TLI.setAvailable(LibFunc_roundevenf);
+    TLI.setAvailable(LibFunc_roundevenl);
+  }
+
   if ((T.isOSLinux() && T.isGNUEnvironment()) ||
       (T.isAndroid() && !T.isAndroidVersionLT(28))) {
     // available IO unlocked variants on GNU/Linux and Android P or later
@@ -805,9 +817,6 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_ntohs);
     TLI.setUnavailable(LibFunc_reallocarray);
     TLI.setUnavailable(LibFunc_reallocf);
-    TLI.setUnavailable(LibFunc_roundeven);
-    TLI.setUnavailable(LibFunc_roundevenf);
-    TLI.setUnavailable(LibFunc_roundevenl);
     TLI.setUnavailable(LibFunc_stpcpy);
     TLI.setUnavailable(LibFunc_stpncpy);
     TLI.setUnavailable(LibFunc_strlcat);
@@ -838,9 +847,6 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_fminimum_num);
     TLI.setUnavailable(LibFunc_fminimum_numf);
     TLI.setUnavailable(LibFunc_fminimum_numl);
-    TLI.setUnavailable(LibFunc_roundeven);
-    TLI.setUnavailable(LibFunc_roundevenf);
-    TLI.setUnavailable(LibFunc_roundevenl);
   }
 
   // As currently implemented in clang, NVPTX code has no standard library to
