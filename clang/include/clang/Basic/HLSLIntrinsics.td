@@ -65,7 +65,6 @@ def IntTy    : HLSLType<"int">;
 def UIntTy   : HLSLType<"uint">;
 def Int64Ty  : HLSLType<"int64_t">;
 def UInt64Ty : HLSLType<"uint64_t">;
-def UInt32Ty : HLSLType<"uint32_t">;
 
 //===----------------------------------------------------------------------===//
 // Element type groups
