@@ -535,10 +535,11 @@ void DataSharingProcessor::collectPrivatizedSymbols(
   };
 
   llvm::SetVector<const semantics::Scope *> clauseScopes;
-  const semantics::Scope *curScope = collectScopes(semaCtx, eval, clauseScopes);
+  [[maybe_unused]] const semantics::Scope *curScope =
+      collectScopes(semaCtx, eval, clauseScopes);
+  assert(curScope && "couldn't find current scope");
 
   for (const auto *sym : allSymbols) {
-    assert(curScope && "couldn't find current scope");
     if (semantics::omp::IsPrivatizable(*sym) &&
         // Linear symbols are privatized by OpenMP IRBuilder. See comments
         // in collectSymbolsForPrivatization() for more details.
