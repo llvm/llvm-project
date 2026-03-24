@@ -77,7 +77,7 @@ void lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream &s,
   //
   StreamString format_string;
   if (reg_name_left_align_at && (prefix_with_name ^ prefix_with_alt_name))
-    format_string.Printf("%%-%us", reg_name_left_align_at);
+    format_string.Printf("%%%us", reg_name_left_align_at);
   else
     format_string.Printf("%%s");
   std::string fmt = std::string(format_string.GetString());
