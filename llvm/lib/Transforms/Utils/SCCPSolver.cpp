@@ -126,10 +126,6 @@ static ConstantRange simplifyCmpRange(const ConstantRange &CmpCR,
   assert((!KnownCR.isFullSet() && !KnownCR.isEmptySet()) &&
          "Unexpected KnownCR");
 
-  // If KnownCR is both nuw and nsw, we cannot relax CmpCR at all.
-  if (KnownCR.isWrappedSet() && KnownCR.isSignWrappedSet())
-    return CmpCR;
-
   const unsigned BW = CmpCR.getBitWidth();
   // All reachable value satisfy CmpCR --> always true.
   if (CmpCR.contains(KnownCR))
@@ -149,6 +145,10 @@ static ConstantRange simplifyCmpRange(const ConstantRange &CmpCR,
       /*uge*/ CmpHi.isZero() ||
       /*sge*/ CmpHi.isMinSignedValue())
     return *ActCmpCR;
+
+  // If KnownCR is both nuw and nsw, we cannot relax CmpCR at all.
+  if (KnownCR.isWrappedSet() && KnownCR.isSignWrappedSet())
+    return CmpCR;
 
   const APInt Zero = APInt::getZero(BW);
   const APInt SignMin = APInt::getSignedMinValue(BW);
