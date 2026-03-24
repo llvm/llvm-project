@@ -1,4 +1,7 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - | FileCheck %s
+; Fails with:
+;   OpConstantComposite must not have spec constant operands: <id> '37[%37]'
+; Likely same issue as https://github.com/llvm/llvm-project/issues/186756
 ; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK: OpCapability Kernel

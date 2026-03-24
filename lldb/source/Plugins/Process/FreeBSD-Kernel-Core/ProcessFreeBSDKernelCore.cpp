@@ -394,9 +394,6 @@ void ProcessFreeBSDKernelCore::PrintUnreadMessage() {
   Target &target = GetTarget();
   Debugger &debugger = target.GetDebugger();
 
-  if (!debugger.GetCommandInterpreter().IsInteractive())
-    return;
-
   Status error;
 
   // Find msgbufp symbol (pointer to message buffer)

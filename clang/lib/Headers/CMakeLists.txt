@@ -3,6 +3,7 @@
 # to platform specific lists below.
 set(core_files
   builtins.h
+  endian.h
   float.h
   __float_float.h
   __float_header_macro.h

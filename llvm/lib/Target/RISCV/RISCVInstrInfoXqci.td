@@ -1332,19 +1332,6 @@ let EmitPriority = 1 in {
 // Pseudo-instructions
 //===----------------------------------------------------------------------===//
 
-class LongBcciPseudo<DAGOperand InTyImm, int size>
-    : Pseudo<(outs), (ins GPR:$rs1, InTyImm:$imm, simm21_lsb0_jal:$imm20), []>
-{
-  let Size = size;
-  let isBarrier = 1;
-  let isBranch = 1;
-  let hasSideEffects = 0;
-  let mayStore = 0;
-  let mayLoad = 0;
-  let isAsmParserOnly = 1;
-  let hasNoSchedulingInfo = 1;
-}
-
 // This will be expanded into either:
 // QC.BXXX(4 bytes) + JAL(4 bytes)
 // or
@@ -1509,7 +1496,7 @@ class SelectQCbiSFB<CondCode Cond, DAGOperand InTyImm, SDNodeXForm xform>
 let Predicates = [HasVendorXqciac, IsRV32] in {
 def : Pat<(i32 (add GPRNoX0:$rd, (mul GPRNoX0:$rs1, simm12_lo:$imm12))),
           (QC_MULIADD GPRNoX0:$rd, GPRNoX0:$rs1, simm12_lo:$imm12)>;
-def : Pat<(i32 (add_like_non_imm12 (shl GPRNoX0:$rs1, (i32 uimm5gt3:$imm)), GPRNoX0:$rs2)),
+def : Pat<(i32 (riscv_add_like_non_imm12 (shl GPRNoX0:$rs1, (i32 uimm5gt3:$imm)), GPRNoX0:$rs2)),
           (QC_SHLADD GPRNoX0:$rs1, GPRNoX0:$rs2, uimm5gt3:$imm)>;
 def : Pat<(i32 (riscv_shl_add GPRNoX0:$rs1, (i32 tuimm5gt3:$imm), GPRNoX0:$rs2)),
           (QC_SHLADD GPRNoX0:$rs1, GPRNoX0:$rs2, tuimm5gt3:$imm)>;

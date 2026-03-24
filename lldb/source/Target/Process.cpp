@@ -957,14 +957,11 @@ Event *Process::PeekAtStateChangedEvents() {
   Event *event_ptr;
   event_ptr = GetPrimaryListener()->PeekAtNextEventForBroadcasterWithType(
       this, eBroadcastBitStateChanged);
-  if (log) {
-    if (event_ptr) {
-      LLDB_LOGF(log, "Process::%s (event_ptr) => %s", __FUNCTION__,
-                StateAsCString(ProcessEventData::GetStateFromEvent(event_ptr)));
-    } else {
-      LLDB_LOGF(log, "Process::%s no events found", __FUNCTION__);
-    }
-  }
+  if (event_ptr)
+    LLDB_LOGF(log, "Process::%s (event_ptr) => %s", __FUNCTION__,
+              StateAsCString(ProcessEventData::GetStateFromEvent(event_ptr)));
+  else
+    LLDB_LOGF(log, "Process::%s no events found", __FUNCTION__);
   return event_ptr;
 }
 
@@ -4078,14 +4075,11 @@ void Process::HandlePrivateEvent(EventSP &event_sp) {
 
   if (should_broadcast) {
     const bool is_hijacked = IsHijackedForEvent(eBroadcastBitStateChanged);
-    if (log) {
-      LLDB_LOGF(log,
-                "Process::%s (pid = %" PRIu64
-                ") broadcasting new state %s (old state %s) to %s",
-                __FUNCTION__, GetID(), StateAsCString(new_state),
-                StateAsCString(GetState()),
-                is_hijacked ? "hijacked" : "public");
-    }
+    LLDB_LOGF(log,
+              "Process::%s (pid = %" PRIu64
+              ") broadcasting new state %s (old state %s) to %s",
+              __FUNCTION__, GetID(), StateAsCString(new_state),
+              StateAsCString(GetState()), is_hijacked ? "hijacked" : "public");
     Process::ProcessEventData::SetUpdateStateOnRemoval(event_sp.get());
     if (StateIsRunningState(new_state)) {
       // Only push the input handler if we aren't fowarding events, as this
@@ -4137,14 +4131,12 @@ void Process::HandlePrivateEvent(EventSP &event_sp) {
 
     BroadcastEvent(event_sp);
   } else {
-    if (log) {
-      LLDB_LOGF(
-          log,
-          "Process::%s (pid = %" PRIu64
-          ") suppressing state %s (old state %s): should_broadcast == false",
-          __FUNCTION__, GetID(), StateAsCString(new_state),
-          StateAsCString(GetState()));
-    }
+    LLDB_LOGF(
+        log,
+        "Process::%s (pid = %" PRIu64
+        ") suppressing state %s (old state %s): should_broadcast == false",
+        __FUNCTION__, GetID(), StateAsCString(new_state),
+        StateAsCString(GetState()));
   }
 }
 
@@ -4264,7 +4256,7 @@ thread_result_t Process::RunPrivateStateThread() {
             ProcessEventData::SetInterruptedInEvent(event_sp.get(), true);
           }
           interrupt_requested = false;
-        } else if (log) {
+        } else {
           LLDB_LOGF(log,
                     "Process::%s interrupt_requested, but a non-stopped "
                     "state '%s' received.",

@@ -318,6 +318,7 @@ add_header_macro(
   DEPENDS
     .llvm-libc-macros.generic_error_number_macros
     .llvm-libc-macros.error_number_macros
+    .llvm-libc-types.errno_t
 )
 
 add_header_macro(
@@ -359,6 +360,7 @@ add_header_macro(
   ../libc/include/stdio.yaml
   stdio.h
   DEPENDS
+    .llvm-libc-macros._LIBC_MODULAR_FORMAT_PRINTF
     .llvm-libc-macros.file_seek_macros
     .llvm-libc-macros.null_macro
     .llvm-libc-macros.stdio_macros
@@ -381,6 +383,7 @@ add_header_macro(
     .llvm-libc-types.__qsortcompare_t
     .llvm-libc-types.__qsortrcompare_t
     .llvm-libc-types.__search_compare_t
+    .llvm-libc-types.constraint_handler_t
     .llvm-libc-types.div_t
     .llvm-libc-types.ldiv_t
     .llvm-libc-types.lldiv_t
@@ -657,6 +660,21 @@ add_header_macro(
     .llvm-libc-types.time_t
     .llvm-libc-types.struct_timespec
     .llvm-libc-types.struct_timeval
+)
+
+add_header_macro(
+  sys_sem
+  ../libc/include/sys/sem.yaml
+  sys/sem.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_sem_macros
+    .llvm-libc-types.key_t
+    .llvm-libc-types.size_t
+    .llvm-libc-types.struct_ipc_perm
+    .llvm-libc-types.struct_semid_ds
+    .llvm-libc-types.struct_sembuf
+    .llvm-libc-types.struct_seminfo
 )
 
 add_header_macro(

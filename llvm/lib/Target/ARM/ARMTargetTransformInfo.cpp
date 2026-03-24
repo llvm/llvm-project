@@ -2562,8 +2562,8 @@ static bool canTailPredicateLoop(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
   int ICmpCount = 0;
 
   for (BasicBlock *BB : L->blocks()) {
-    for (Instruction &I : BB->instructionsWithoutDebug()) {
-      if (isa<PHINode>(&I))
+    for (Instruction &I : *BB) {
+      if (isa<PHINode>(I) || isa<PseudoProbeInst>(I))
         continue;
       if (!canTailPredicateInstruction(I, ICmpCount)) {
         LLVM_DEBUG(dbgs() << "Instruction not allowed: "; I.dump());

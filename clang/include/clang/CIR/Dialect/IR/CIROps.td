@@ -1284,6 +1284,74 @@ def CIR_CleanupScopeOp : CIR_Op<"cleanup.scope", [
 }
 
 //===----------------------------------------------------------------------===//
+// CmpThreeWayOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CmpThreeWayOp : CIR_Op<"cmp3way", [Pure, SameTypeOperands]> {
+  let summary = "Compare two values with C++ three-way comparison semantics";
+  let description = [{
+    The `cir.cmp3way` operation models the builtin `<=>` operator in C++20.
+    It takes two operands with the same type and produces a result indicating
+    the ordering between the two input operands.
+
+    The result of the operation is a signed integer that indicates the ordering
+    between the two input operands.
+
+    There are three kinds of ordering: strong, weak and partial ordering.
+    Comparing different types of values yields different kinds of orderings.
+    The `info` parameter gives the ordering kind and other necessary information
+    about the comparison.
+
+    Example:
+
+    ```mlir
+    !s32i = !cir.int<s, 32>
+
+    #cmpinfo_partial_ltn1eq0gt1unn127 =
+      #cir.cmp3way_info<partial, lt = -1, eq = 0, gt = 1, unordered = -127>
+    #cmpinfo_strong_ltn1eq0gt1 =
+      #cir.cmp3way_info<strong, lt = -1, eq = 0, gt = 1>
+
+    %0 = cir.const #cir.int<0> : !s32i
+    %1 = cir.const #cir.int<1> : !s32i
+    %2 = cir.cmp3way #cmpinfo_strong_ltn1eq0gt1 %0, %1 : !s32i -> !s8i
+
+    %3 = cir.const #cir.fp<0.0> : !cir.float
+    %4 = cir.const #cir.fp<1.0> : !cir.float
+    %5 = cir.cmp3way #cmpinfo_partial_ltn1eq0gt1unn127 %3, %4 : !cir.float -> !s8i
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_AnyType:$lhs,
+    CIR_AnyType:$rhs,
+    CIR_CmpThreeWayInfoAttr:$info
+  );
+
+  let results = (outs CIR_AnySIntType:$result);
+
+  let assemblyFormat = [{
+    qualified($info) $lhs `,` $rhs `:` qualified(type($lhs))
+    `->` qualified(type($result)) attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    /// Determine whether this three-way comparison produces a partial ordering
+    bool isPartialOrdering() {
+      cir::CmpOrdering o = getInfo().getOrdering();
+      return o == cir::CmpOrdering::Partial;
+    }
+
+    /// Determine whether this three-way comparison compares integral operands.
+    bool isIntegralComparison() {
+      return mlir::isa<cir::IntType>(getLhs().getType());
+    }
+  }];
+
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
 // SwitchOp
 //===----------------------------------------------------------------------===//
 
@@ -2766,6 +2834,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
                        OptionalAttr<StrAttr>:$sym_visibility,
                        TypeAttr:$sym_type,
                        CIR_GlobalLinkageKind:$linkage,
+                       OptionalAttr<MemorySpaceAttrInterface>:$addr_space,
                        OptionalAttr<CIR_TLSModel>:$tls_model,
                        OptionalAttr<AnyAttr>:$initial_value,
                        UnitAttr:$comdat,
@@ -2787,6 +2856,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
     ($tls_model^)?
     (`dso_local` $dso_local^)?
     (`static_local_guard` `` $static_local_guard^)?
+    (` ` custom<GlobalAddressSpaceValue>($addr_space)^ )?
     $sym_name
     custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value,
                                         $ctorRegion, $dtorRegion)
@@ -2807,6 +2877,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
       "llvm::StringRef":$sym_name,
       "mlir::Type":$sym_type,
       CArg<"bool", "false">:$isConstant,
+      CArg<"mlir::ptr::MemorySpaceAttrInterface", "{}">:$addrSpace,
       // CIR defaults to external linkage.
       CArg<"cir::GlobalLinkageKind",
            "cir::GlobalLinkageKind::ExternalLinkage">:$linkage,
@@ -5625,6 +5696,8 @@ def CIR_BitReverseOp : CIR_BitOpBase<"bitreverse",
     %1 = cir.bitreverse %0: !u32i
     ```
   }];
+  
+  let append traits = [Involution];
 }
 
 def CIR_ByteSwapOp : CIR_BitOpBase<"byte_swap",
@@ -5648,6 +5721,8 @@ def CIR_ByteSwapOp : CIR_BitOpBase<"byte_swap",
     %1 = cir.byte_swap %0 : !u32i
     ```
   }];
+  
+  let append traits = [Involution];
 }
 
 //===----------------------------------------------------------------------===//

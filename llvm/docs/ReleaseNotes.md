@@ -86,15 +86,29 @@ Changes to LLVM infrastructure
 * The ``Br`` opcode was split into two opcodes separating unconditional
   (``UncondBr``) and conditional (``CondBr``) branches.
 
+* ``BranchInst`` was deprecated in favor of ``UncondBrInst`` and ``CondBrInst``.
+
 * The operand order of ``CondBr`` instructions was adjusted to match the
   successor order. This can cause subtle breakage when using ``getOperand`` or
   ``setOperand`` to access successors.
+
+* The ``llvm::sys::fs`` link creation API has been refactored:
+
+  * ``create_link`` now tries to create a symbolic link first, falling back to a
+    hard link if that fails (previously it created a symlink on Unix and a hard
+    link on Windows).
+  * Added ``create_symlink``, which always creates a symbolic link. On windows
+    this may fail if symlink permissions are not available.
+  * Added ``readlink``, which reads the target of a symbolic link.
 
 Changes to building LLVM
 ------------------------
 
 Changes to TableGen
 -------------------
+
+* Outer let statements use ``ID{n-m}`` instead of ``ID<n-m>`` to be consistent
+  with inner let statements.
 
 Changes to Interprocedural Optimizations
 ----------------------------------------
@@ -214,6 +228,7 @@ Changes to the LLVM tools
 * `llvm-objcopy` no longer corrupts the symbol table when `--update-section` is called for ELF files.
 * `FileCheck` option `-check-prefix` now accepts a comma-separated list of
   prefixes, making it an alias of the existing `-check-prefixes` option.
+* Add `-mtune` option to `llc`.
 
 Changes to LLDB
 ---------------

@@ -369,7 +369,7 @@ public:
 
   // Return true if the type is an aggregate type.
   bool isAggregateType(SPIRVTypeInst Type) const {
-    return Type && (Type->getOpcode() == SPIRV::OpTypeStruct &&
+    return Type && (Type->getOpcode() == SPIRV::OpTypeStruct ||
                     Type->getOpcode() == SPIRV::OpTypeArray);
   }
 

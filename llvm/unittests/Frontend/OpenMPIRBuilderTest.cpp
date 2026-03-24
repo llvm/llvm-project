@@ -7674,10 +7674,9 @@ TEST_F(OpenMPIRBuilderTest, CreateIteratorLoop) {
                                                        BodyGenCB, "iterator"));
 
     EXPECT_EQ(AfterIP.getBlock()->getName(), "omp.it.cont");
-    auto *ContBr = dyn_cast<BranchInst>(AfterIP.getBlock()->getTerminator());
+    auto *ContBr = dyn_cast<UncondBrInst>(AfterIP.getBlock()->getTerminator());
     ASSERT_NE(ContBr, nullptr);
-    ASSERT_FALSE(ContBr->isConditional());
-    EXPECT_EQ(ContBr->getSuccessor(0), OrigSucc);
+    EXPECT_EQ(ContBr->getSuccessor(), OrigSucc);
 
     Builder.SetInsertPoint(OrigSucc);
     Builder.CreateRetVoid();

@@ -3169,6 +3169,15 @@ bool TypeSystemClang::IsMemberFunctionPointerType(
   return IsTypeImpl(type, isMemberFunctionPointerType);
 }
 
+bool TypeSystemClang::IsMemberDataPointerType(
+    lldb::opaque_compiler_type_t type) {
+  auto isMemberDataPointerType = [](clang::QualType qual_type) {
+    return qual_type->isMemberDataPointerType();
+  };
+
+  return IsTypeImpl(type, isMemberDataPointerType);
+}
+
 bool TypeSystemClang::IsFunctionPointerType(lldb::opaque_compiler_type_t type) {
   auto isFunctionPointerType = [](clang::QualType qual_type) {
     return qual_type->isFunctionPointerType();

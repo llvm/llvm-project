@@ -1336,6 +1336,16 @@ public:
   /// \return the target-provided register class name
   LLVM_ABI const char *getRegisterClassName(unsigned ClassID) const;
 
+  /// \return the cost of spilling a register in the target-provided register
+  /// class to the stack.
+  LLVM_ABI InstructionCost
+  getRegisterClassSpillCost(unsigned ClassID, TargetCostKind CostKind) const;
+
+  /// \return the cost of reloading a register in the target-provided register
+  /// class from the stack.
+  LLVM_ABI InstructionCost
+  getRegisterClassReloadCost(unsigned ClassID, TargetCostKind CostKind) const;
+
   enum RegisterKind { RGK_Scalar, RGK_FixedWidthVector, RGK_ScalableVector };
 
   /// \return The width of the largest scalar or vector register type.

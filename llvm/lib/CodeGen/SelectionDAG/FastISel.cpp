@@ -1417,9 +1417,14 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
     updateValueMap(II, ResultReg);
     return true;
   }
-  case Intrinsic::fake_use:
-    // At -O0, we don't need fake use, so just ignore it.
+  case Intrinsic::fake_use: {
+    const Value *V = II->getArgOperand(0);
+    if (Register Reg = getRegForValue(V))
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+              TII.get(TargetOpcode::FAKE_USE))
+          .addReg(Reg);
     return true;
+  }
   case Intrinsic::experimental_stackmap:
     return selectStackmap(II);
   case Intrinsic::experimental_patchpoint_void:

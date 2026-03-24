@@ -202,7 +202,7 @@ def find_heading(lines: Sequence[str], title: str) -> Optional[int]:
 
 def extract_label(text: str) -> str:
     if m := DOC_LABEL_RN_RE.search(text):
-        return m.group("label")
+        return m.group("label").strip()
     return text
 
 
@@ -221,7 +221,7 @@ def _parse_bullet_blocks(lines: Sequence[str], start: int, end: int) -> BulletBl
     blocks: List[BulletItem] = []
     res = _scan_bullet_blocks(lines, first_bullet, n)
     for _, block in res.blocks_with_pos:
-        key: CheckLabel = extract_label(block[0])
+        key: CheckLabel = extract_label("".join(block))
         blocks.append((key, block))
 
     suffix: Lines = list(lines[res.next_index : n])
@@ -294,16 +294,24 @@ def _find_section_bounds(
         if (h_end := find_heading(lines, next_title)) is None:
             # Scan forward to the next heading-like underline.
             h_end = sec_start
-            while h_end + 1 < len(lines):
-                if lines[h_end].strip() and set(lines[h_end + 1].rstrip("\n")) == {"^"}:
+            while h_end < len(lines):
+                if (
+                    h_end + 1 < len(lines)
+                    and lines[h_end].strip()
+                    and set(lines[h_end + 1].rstrip("\n")) == {"^"}
+                ):
                     break
                 h_end += 1
         sec_end = h_end
     else:
         # Scan to end or until a heading underline is found.
         h_end = sec_start
-        while h_end + 1 < len(lines):
-            if lines[h_end].strip() and set(lines[h_end + 1].rstrip("\n")) == {"^"}:
+        while h_end < len(lines):
+            if (
+                h_end + 1 < len(lines)
+                and lines[h_end].strip()
+                and set(lines[h_end + 1].rstrip("\n")) == {"^"}
+            ):
                 break
             h_end += 1
         sec_end = h_end
