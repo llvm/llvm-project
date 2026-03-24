@@ -2040,7 +2040,7 @@ def TuneVXRMPipelineFlush
 
 def TunePreferAscendingLoadStore
     : RISCVSimpleTuneFeature<"prefer-ascending-load-store",
-                             "HasPreferAscendingLoadStore", "true",
+                             "PreferAscendingLoadStore", "true",
                              "Prefer ascending load/store order for better "
                              "clustering and performance">;
 

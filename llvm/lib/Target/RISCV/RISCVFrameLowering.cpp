@@ -938,7 +938,7 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
   const RISCVRegisterInfo *RI = STI.getRegisterInfo();
   MachineBasicBlock::iterator MBBI = MBB.begin();
-  bool PreferAscendingLS = STI.hasPreferAscendingLoadStore();
+  bool PreferAscendingLS = STI.preferAscendingLoadStore();
 
   Register BPReg = RISCVABI::getBPReg();
 
@@ -1251,7 +1251,7 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   const RISCVRegisterInfo *RI = STI.getRegisterInfo();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
-  bool PreferAscendingLS = STI.hasPreferAscendingLoadStore();
+  bool PreferAscendingLS = STI.preferAscendingLoadStore();
 
   // All calls are tail calls in GHC calling conv, and functions have no
   // prologue/epilogue.
@@ -1444,7 +1444,7 @@ RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
   // pointer (positive offset), otherwise use the frame pointer (negative
   // offset).
   const auto &CSI = getUnmanagedCSI(MF, MFI.getCalleeSavedInfo(),
-                                    STI.hasPreferAscendingLoadStore());
+                                    STI.preferAscendingLoadStore());
   int MinCSFI = 0;
   int MaxCSFI = -1;
   StackOffset Offset;
@@ -2273,7 +2273,7 @@ bool RISCVFrameLowering::spillCalleeSavedRegisters(
 
   // Manually spill values not spilled by libcall & Push/Pop.
   const auto &UnmanagedCSI =
-      getUnmanagedCSI(*MF, CSI, STI.hasPreferAscendingLoadStore());
+      getUnmanagedCSI(*MF, CSI, STI.preferAscendingLoadStore());
   const auto &RVVCSI = getRVVCalleeSavedInfo(*MF, CSI);
 
   auto storeRegsToStackSlots = [&](decltype(UnmanagedCSI) CSInfo) {
@@ -2367,7 +2367,7 @@ bool RISCVFrameLowering::restoreCalleeSavedRegisters(
   // loading RA and return by RA.  loadRegFromStackSlot can insert
   // multiple instructions.
   const auto &UnmanagedCSI =
-      getUnmanagedCSI(*MF, CSI, STI.hasPreferAscendingLoadStore());
+      getUnmanagedCSI(*MF, CSI, STI.preferAscendingLoadStore());
   const auto &RVVCSI = getRVVCalleeSavedInfo(*MF, CSI);
 
   auto loadRegFromStackSlot = [&](decltype(UnmanagedCSI) CSInfo) {
