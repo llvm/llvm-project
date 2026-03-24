@@ -42,8 +42,8 @@ static IntegerAttr
 applyToIntegerAttrs(PatternRewriter &builder, Value res, Attribute lhs,
                     Attribute rhs,
                     function_ref<APInt(const APInt &, const APInt &)> binFn) {
-  APInt lhsVal = llvm::cast<IntegerAttr>(lhs).getValue();
-  APInt rhsVal = llvm::cast<IntegerAttr>(rhs).getValue();
+  const APInt &lhsVal = llvm::cast<IntegerAttr>(lhs).getValue();
+  const APInt &rhsVal = llvm::cast<IntegerAttr>(rhs).getValue();
   APInt value = binFn(lhsVal, rhsVal);
   return IntegerAttr::get(res.getType(), value);
 }
@@ -1451,6 +1451,17 @@ static bool checkWidthChangeCast(TypeRange inputs, TypeRange outputs) {
 static FailureOr<APFloat> convertFloatValue(
     APFloat sourceValue, const llvm::fltSemantics &targetSemantics,
     llvm::RoundingMode roundingMode = llvm::RoundingMode::NearestTiesToEven) {
+  // Reject special values that are not representable in the target type before
+  // calling APFloat::convert, which would llvm_unreachable on them.
+  using fltNonfiniteBehavior = llvm::fltNonfiniteBehavior;
+  if (sourceValue.isInfinity() &&
+      (targetSemantics.nonFiniteBehavior == fltNonfiniteBehavior::NanOnly ||
+       targetSemantics.nonFiniteBehavior == fltNonfiniteBehavior::FiniteOnly))
+    return failure();
+  if (sourceValue.isNaN() &&
+      targetSemantics.nonFiniteBehavior == fltNonfiniteBehavior::FiniteOnly)
+    return failure();
+
   bool losesInfo = false;
   auto status = sourceValue.convert(targetSemantics, roundingMode, &losesInfo);
   if (losesInfo || status != APFloat::opOK)
@@ -2799,9 +2810,10 @@ std::optional<TypedAttr> mlir::arith::getNeutralElement(Operation *op) {
 Value mlir::arith::getIdentityValue(AtomicRMWKind op, Type resultType,
                                     OpBuilder &builder, Location loc,
                                     bool useOnlyFiniteValue) {
-  auto attr =
-      getIdentityValueAttr(op, resultType, builder, loc, useOnlyFiniteValue);
-  return arith::ConstantOp::create(builder, loc, attr);
+  if (auto attr =
+getIdentityValueAttr(op, resultType, builder, loc, useOnlyFiniteValue))
+    return arith::ConstantOp::create(builder, loc, attr);
+  return {};
 }
 
 /// Return the value obtained by applying the reduction operation kind

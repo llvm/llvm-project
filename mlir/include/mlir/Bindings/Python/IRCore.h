@@ -10,6 +10,7 @@
 #define MLIR_BINDINGS_PYTHON_IRCORE_H
 
 #include <cstddef>
+#include <exception>
 #include <optional>
 #include <sstream>
 #include <utility>
@@ -77,6 +78,18 @@ public:
   }
   PyObjectRef(const PyObjectRef &other)
       : referrent(other.referrent), object(other.object /* copies */) {}
+  PyObjectRef &operator=(const PyObjectRef &other) {
+    referrent = other.referrent;
+    object = other.object;
+    return *this;
+  }
+  PyObjectRef &operator=(PyObjectRef &&other) noexcept {
+    referrent = other.referrent;
+    object = std::move(other.object);
+    other.referrent = nullptr;
+    assert(!other.object);
+    return *this;
+  }
   ~PyObjectRef() = default;
 
   int getRefCount() {
@@ -738,7 +751,7 @@ public:
 
   nanobind::object getOperationObject() { return operationObject; }
 
-  static nanobind::object
+  static nanobind::typed<nanobind::object, PyOperation>
   buildGeneric(std::string_view name, std::tuple<int, bool> opRegionSpec,
                nanobind::object operandSegmentSpecObj,
                nanobind::object resultSegmentSpecObj,
@@ -1313,12 +1326,17 @@ private:
 };
 
 /// Custom exception that allows access to error diagnostic information. This is
-/// converted to the `ir.MLIRError` python exception when thrown.
-struct MLIR_PYTHON_API_EXPORTED MLIRError {
+/// translated to the `ir.MLIRError` python exception when thrown.
+struct MLIR_PYTHON_API_EXPORTED MLIRError : std::exception {
   MLIRError(std::string message,
             std::vector<PyDiagnostic::DiagnosticInfo> &&errorDiagnostics = {})
       : message(std::move(message)),
         errorDiagnostics(std::move(errorDiagnostics)) {}
+  const char *what() const noexcept override { return message.c_str(); }
+
+  /// Bind the MLIRError exception class to the given module.
+  static void bind(nanobind::module_ &m);
+
   std::string message;
   std::vector<PyDiagnostic::DiagnosticInfo> errorDiagnostics;
 };
@@ -1350,7 +1368,8 @@ struct MLIR_PYTHON_API_EXPORTED PyAttrBuilderMap {
   static nanobind::callable
   dunderGetItemNamed(const std::string &attributeKind);
   static void dunderSetItemNamed(const std::string &attributeKind,
-                                 nanobind::callable func, bool replace);
+                                 nanobind::callable func, bool replace,
+                                 bool allow_existing);
 
   static void bind(nanobind::module_ &m);
 };

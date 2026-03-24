@@ -488,6 +488,33 @@ optMain(int argc, char **argv,
     return 0;
   }
 
+  // If user just wants to list available options, skip module loading.
+  auto MAttrs = codegen::getMAttrs();
+  bool SkipModule =
+      codegen::getCPUStr() == "help" || is_contained(MAttrs, "help");
+  if (SkipModule) {
+    Triple TheTriple;
+    if (!TargetTriple.empty())
+      TheTriple = Triple(Triple::normalize(TargetTriple));
+    else
+      TheTriple = Triple(sys::getDefaultTargetTriple());
+
+    // Create the target machine just to print the help info. Use unique_ptr
+    // to avoid a memory leak.
+    Expected<std::unique_ptr<TargetMachine>> ExpectedTM =
+        codegen::createTargetMachineForTriple(TheTriple.str(),
+                                              GetCodeGenOptLevel());
+    if (Error E = ExpectedTM.takeError()) {
+      errs() << argv[0] << ": " << toString(std::move(E)) << "\n";
+      return 1;
+    }
+
+    // If we don't have a module then just exit now. We do this down
+    // here since the CPU/Feature help is underneath the target machine
+    // creation.
+    return 0;
+  }
+
   TimeTracerRAII TimeTracer(argv[0]);
 
   SMDiagnostic Err;
@@ -657,7 +684,7 @@ optMain(int argc, char **argv,
 
   // Override function attributes based on CPUStr, FeaturesStr, and command line
   // flags.
-  codegen::setFunctionAttributes(CPUStr, FeaturesStr, *M);
+  codegen::setFunctionAttributes(*M, CPUStr, FeaturesStr);
 
   // If the output is set to be emitted to standard out, and standard out is a
   // console, print out a warning message and refuse to do it.  We don't
