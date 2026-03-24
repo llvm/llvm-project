@@ -3453,7 +3453,7 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
         !mlir::isa<fir::BaseBoxType>(global.getType())) {
       g.setAddrSpace(
           static_cast<unsigned>(mlir::NVVM::NVVMMemorySpace::Global));
-      g->setAttr(NVVM::NVVMDialect::getManagedAttrName(),
+      g->setAttr(mlir::NVVM::NVVMDialect::getManagedAttrName(),
                  mlir::UnitAttr::get(global.getContext()));
     }
 

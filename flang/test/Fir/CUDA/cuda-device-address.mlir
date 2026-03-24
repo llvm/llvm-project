@@ -39,8 +39,10 @@ fir.global internal @_QMtestEmanx.managed.ptr {section = "__nv_managed_data__"} 
 }
 
 func.func @_QPuser() {
+  %c100 = arith.constant 100 : index
   %0 = cuf.device_address @_QMtestEmanx -> !fir.ref<!fir.array<100xi32>>
-  %1 = fir.declare %0 {uniq_name = "_QMtestEmanx"} : (!fir.ref<!fir.array<100xi32>>) -> !fir.ref<!fir.array<100xi32>>
+  %1 = fir.shape %c100 : (index) -> !fir.shape<1>
+  %2 = fir.declare %0(%1) {uniq_name = "_QMtestEmanx"} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<100xi32>>
   return
 }
 
