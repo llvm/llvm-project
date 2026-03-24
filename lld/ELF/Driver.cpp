@@ -1230,14 +1230,14 @@ static void parseBPOrdererOptions(Ctx &ctx, opt::InputArgList &args) {
       return;
     }
 
-    auto glob = GlobPattern::create(globString);
-    if (!glob) {
+    auto spec =
+        BPCompressionSortSpec::create(globString, layoutPriority, matchPriority);
+    if (!spec) {
       ErrAlways(ctx) << "--bp-compression-sort-section: "
-                     << toString(glob.takeError());
+                     << toString(spec.takeError());
       return;
     }
-    ctx.arg.bpCompressionSortSpecs.emplace_back(
-        std::move(*glob), globString.str(), layoutPriority, matchPriority);
+    ctx.arg.bpCompressionSortSpecs.emplace_back(std::move(*spec));
   };
 
   for (auto *arg : args.filtered(OPT_bp_compression_sort_section))
