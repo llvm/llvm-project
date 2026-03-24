@@ -1384,8 +1384,7 @@ inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
   // - LHS is managed or unified and the RHS is host only.
   if ((lhsNbManagedSymbols >= 1 && rhsNbManagedSymbols == rhsNbSymbols) ||
       (lhsNbManagedSymbols == 0 && !HasCUDADeviceAttrs(lhs) &&
-          rhsNbManagedSymbols >= 1 &&
-          rhsNbManagedSymbols == rhsNbSymbols) ||
+          rhsNbManagedSymbols >= 1 && rhsNbManagedSymbols == rhsNbSymbols) ||
       (lhsNbManagedSymbols >= 1 && rhsNbSymbols == 0)) {
     return false;
   }

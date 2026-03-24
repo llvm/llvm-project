@@ -71,11 +71,9 @@ struct CUFDeviceAddressOpConversion
       // companion pointer global (@sym.managed.ptr) that holds the unified
       // memory address. Load from it instead of calling CUFGetDeviceAddress.
       std::string ptrGlobalName = (symName + managedPtrSuffix).str();
-      if (auto ptrGlobal =
-              symTab.lookup<fir::GlobalOp>(ptrGlobalName)) {
-        auto ptrRef = fir::AddrOfOp::create(rewriter, loc,
-                                            ptrGlobal.resultType(),
-                                            ptrGlobal.getSymbol());
+      if (auto ptrGlobal = symTab.lookup<fir::GlobalOp>(ptrGlobalName)) {
+        auto ptrRef = fir::AddrOfOp::create(
+            rewriter, loc, ptrGlobal.resultType(), ptrGlobal.getSymbol());
         auto rawPtr = fir::LoadOp::create(rewriter, loc, ptrRef);
         auto converted =
             fir::ConvertOp::create(rewriter, loc, op.getType(), rawPtr);

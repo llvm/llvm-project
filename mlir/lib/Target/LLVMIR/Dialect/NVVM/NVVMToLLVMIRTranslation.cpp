@@ -710,8 +710,7 @@ public:
             moduleTranslation.lookupGlobal(globalOp));
         llvm::Module *m = gv->getParent();
         llvm::LLVMContext &ctx = m->getContext();
-        llvm::NamedMDNode *md =
-            m->getOrInsertNamedMetadata("nvvm.annotations");
+        llvm::NamedMDNode *md = m->getOrInsertNamedMetadata("nvvm.annotations");
         md->addOperand(llvm::MDNode::get(
             ctx, {llvm::ConstantAsMetadata::get(gv),
                   llvm::MDString::get(ctx, "managed"),

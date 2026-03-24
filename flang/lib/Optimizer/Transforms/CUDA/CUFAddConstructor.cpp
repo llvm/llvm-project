@@ -50,18 +50,16 @@ static fir::GlobalOp createManagedPointerGlobal(fir::FirOpBuilder &builder,
                                                 mlir::ModuleOp mod,
                                                 fir::GlobalOp globalOp) {
   auto *ctx = mod.getContext();
-  std::string ptrGlobalName =
-      (globalOp.getSymName() + managedPtrSuffix).str();
-  auto ptrTy =
-      fir::LLVMPointerType::get(ctx, mlir::IntegerType::get(ctx, 8));
+  std::string ptrGlobalName = (globalOp.getSymName() + managedPtrSuffix).str();
+  auto ptrTy = fir::LLVMPointerType::get(ctx, mlir::IntegerType::get(ctx, 8));
 
   mlir::OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointAfter(globalOp);
 
   llvm::SmallVector<mlir::NamedAttribute> attrs;
-  attrs.push_back(mlir::NamedAttribute(
-      mlir::StringAttr::get(ctx, "section"),
-      mlir::StringAttr::get(ctx, "__nv_managed_data__")));
+  attrs.push_back(
+      mlir::NamedAttribute(mlir::StringAttr::get(ctx, "section"),
+                           mlir::StringAttr::get(ctx, "__nv_managed_data__")));
 
   mlir::DenseElementsAttr initAttr = {};
   auto ptrGlobal = fir::GlobalOp::create(
@@ -179,8 +177,8 @@ struct CUFAddConstructor
             // register with __cudaRegisterManagedVar via the runtime wrapper.
             fir::GlobalOp ptrGlobal =
                 createManagedPointerGlobal(builder, mod, globalOp);
-            func = fir::runtime::getRuntimeFunc<
-                mkRTKey(CUFRegisterManagedVariable)>(loc, builder);
+            func = fir::runtime::getRuntimeFunc<mkRTKey(
+                CUFRegisterManagedVariable)>(loc, builder);
             auto fTy = func.getFunctionType();
             mlir::Value addr = fir::AddrOfOp::create(
                 builder, loc, ptrGlobal.resultType(), ptrGlobal.getSymbol());
