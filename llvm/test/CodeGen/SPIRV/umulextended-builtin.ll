@@ -18,6 +18,23 @@
 ; CHECK-SPIRV-DAG:                    [[v4uint:%[a-z0-9_]+]] = OpTypeVector [[uint]] 4
 ; CHECK-SPIRV-DAG:                 [[vecstruct:%[a-z0-9_]+]] = OpTypeStruct [[v4uint]] [[v4uint]]
 
+; The sret test is placed first because its unmangled name causes it to be
+; emitted before the mangled-name functions in the SPIR-V output.
+define spir_func void @test_builtin_umulext_sret(i32 %a, i32 %b) {
+  entry:
+  %0 = alloca %i32struct
+  call void @__spirv_UMulExtended(ptr sret (%i32struct) %0, i32 %a, i32 %b)
+  ret void
+}
+; CHECK-SPIRV:             [[a_s:%[a-z0-9_]+]] = OpFunctionParameter [[uint]]
+; CHECK-SPIRV-NEXT:        [[b_s:%[a-z0-9_]+]] = OpFunctionParameter [[uint]]
+; CHECK-SPIRV-NEXT:    [[entry_s:%[a-z0-9_]+]] = OpLabel
+; CHECK-SPIRV:           [[var_s:%[a-z0-9_]+]] = OpVariable [[_ptr_Function_i32struct:%[a-z0-9_]+]] Function
+; CHECK-SPIRV:           [[res_s:%[a-z0-9_]+]] = OpUMulExtended [[i32struct]] [[a_s]] [[b_s]]
+; CHECK-SPIRV-NEXT:                              OpStore [[var_s]] [[res_s]]
+; CHECK-SPIRV:                                   OpReturn
+; CHECK-SPIRV-NEXT:                              OpFunctionEnd
+
 define spir_func %i8struct @test_builtin_umulextcc(i8 %a, i8 %b) {
   entry:
   %0 = call %i8struct @_Z20__spirv_UMulExtendedcc(i8 %a, i8 %b)
@@ -94,3 +111,4 @@ declare %i16struct @_Z20__spirv_UMulExtendedss(i16, i16)
 declare %i32struct @_Z20__spirv_UMulExtendedii(i32, i32)
 declare %i64struct @_Z20__spirv_UMulExtendedll(i64, i64)
 declare %vecstruct @_Z20__spirv_UMulExtendedDv4_iS_(<4 x i32>, <4 x i32>)
+declare void @__spirv_UMulExtended(ptr sret (%i32struct), i32, i32)
