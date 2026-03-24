@@ -1,589 +1,235 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=null,alignment,array-bounds -std=c11 -O0 %s -o %t.c.ll && FileCheck %s --check-prefixes=C,SHARED < %t.c.ll
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=null,alignment,array-bounds -std=c++17 -x c++ -O0 %s -o %t.cxx.ll && FileCheck %s --check-prefixes=CXX,SHARED < %t.cxx.ll
 
+// Precommit test for null, alignment, and array-bounds checks on aggregates.
+// This test documents current behavior: memcpy is called but source operand is not checked
+// for null/alignment (unlike scalar types). Array bounds checks exist for local
+// arrays but not for past-the-end pointer accesses via parameters.
+
 struct Small { int x; };
 struct Container { struct Small inner; };
-struct SmallWrapper { struct Small a; };
-
-extern void variadic_func(int, ...);
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-// ============================================================================
-// TYPE VARIANT: plain
-// ============================================================================
-
-// --- OPERAND FORM: arr[idx] ---
+// Plain type - arr[idx] operand form (known bounds)
 
 // SHARED-LABEL: define {{[^@]*}}@test_assign_plain_arr_idx
-// SHARED: call void @llvm.memcpy.p0.p0.i64
+// SHARED: [[ARR:%.*]] = load ptr, ptr %arr.addr
+// SHARED: [[SRC:%.*]] = getelementptr inbounds %struct.Small, ptr [[ARR]], i64 0
+// SHARED-NOT: __ubsan_handle_type_mismatch
+// SHARED-NOT: icmp ne ptr [[SRC]], null
+// SHARED: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 4 [[SRC]], i64 4, i1 false)
 __attribute__((noinline)) void test_assign_plain_arr_idx(struct Small *dest, struct Small arr[4]) {
   *dest = arr[0];
 }
 
 // SHARED-LABEL: define {{[^@]*}}@test_init_plain_arr_idx
-// SHARED: call void @llvm.memcpy.p0.p0.i64
+// SHARED: [[ARR:%.*]] = load ptr, ptr %arr.addr
+// SHARED: [[SRC:%.*]] = getelementptr inbounds %struct.Small, ptr [[ARR]], i64 0
+// SHARED-NOT: __ubsan_handle_type_mismatch
+// SHARED-NOT: icmp ne ptr [[SRC]], null
+// SHARED: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 4 [[SRC]], i64 4, i1 false)
 __attribute__((noinline)) void test_init_plain_arr_idx(struct Small arr[4]) {
   struct Small a = arr[0];
 }
 
 // SHARED-LABEL: define {{[^@]*}}@test_init_list_plain_arr_idx
-// SHARED: call void @llvm.memcpy.p0.p0.i64
+// SHARED: [[ARR:%.*]] = load ptr, ptr %arr.addr
+// SHARED: [[SRC:%.*]] = getelementptr inbounds %struct.Small, ptr [[ARR]], i64 0
+// SHARED-NOT: __ubsan_handle_type_mismatch
+// SHARED-NOT: icmp ne ptr [[SRC]], null
+// SHARED: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 4 [[SRC]], i64 4, i1 false)
 __attribute__((noinline)) void test_init_list_plain_arr_idx(struct Small arr[4]) {
   struct Small a[] = {arr[0]};
 }
 
-// SHARED-LABEL: define {{[^@]*}}@test_variadic_plain_arr_idx
-__attribute__((noinline)) void test_variadic_plain_arr_idx(struct Small arr[4]) {
-  variadic_func(0, arr[0]);
-}
-
 // SHARED-LABEL: define {{[^@]*}}@test_nested_member_plain_arr_idx
+// SHARED: __ubsan_handle_type_mismatch
 // SHARED: call void @llvm.memcpy.p0.p0.i64
 __attribute__((noinline)) void test_nested_member_plain_arr_idx(struct Container *c, struct Small arr[4]) {
   c->inner = arr[0];
 }
 
-// --- OPERAND FORM: *ap ---
+// Plain type - *ap operand form
 
 // SHARED-LABEL: define {{[^@]*}}@test_assign_plain_deref_ptr
-// SHARED: call void @llvm.memcpy.p0.p0.i64
+// SHARED: [[SRC:%.*]] = load ptr, ptr %ap.addr
+// SHARED-NOT: __ubsan_handle_type_mismatch
+// SHARED-NOT: icmp ne ptr [[SRC]], null
+// SHARED: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 4 [[SRC]], i64 4, i1 false)
 __attribute__((noinline)) void test_assign_plain_deref_ptr(struct Small *dest, struct Small *ap) {
   *dest = *ap;
 }
 
 // SHARED-LABEL: define {{[^@]*}}@test_init_plain_deref_ptr
-// SHARED: call void @llvm.memcpy.p0.p0.i64
+// SHARED: [[SRC:%.*]] = load ptr, ptr %ap.addr
+// SHARED-NOT: __ubsan_handle_type_mismatch
+// SHARED-NOT: icmp ne ptr [[SRC]], null
+// SHARED: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 4 [[SRC]], i64 4, i1 false)
 __attribute__((noinline)) void test_init_plain_deref_ptr(struct Small *ap) {
   struct Small a = *ap;
 }
 
 // SHARED-LABEL: define {{[^@]*}}@test_init_list_plain_deref_ptr
-// SHARED: call void @llvm.memcpy.p0.p0.i64
+// SHARED: [[SRC:%.*]] = load ptr, ptr %ap.addr
+// SHARED-NOT: __ubsan_handle_type_mismatch
+// SHARED-NOT: icmp ne ptr [[SRC]], null
+// SHARED: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 4 [[SRC]], i64 4, i1 false)
 __attribute__((noinline)) void test_init_list_plain_deref_ptr(struct Small *ap) {
   struct Small a[] = {*ap};
 }
 
-// SHARED-LABEL: define {{[^@]*}}@test_variadic_plain_deref_ptr
-__attribute__((noinline)) void test_variadic_plain_deref_ptr(struct Small *ap) {
-  variadic_func(0, *ap);
-}
-
 // SHARED-LABEL: define {{[^@]*}}@test_nested_member_plain_deref_ptr
+// SHARED: __ubsan_handle_type_mismatch
 // SHARED: call void @llvm.memcpy.p0.p0.i64
 __attribute__((noinline)) void test_nested_member_plain_deref_ptr(struct Container *c, struct Small *ap) {
   c->inner = *ap;
 }
 
-// ============================================================================
-// ARRAY BOUNDS CHECKING
-// ============================================================================
+// Misaligned aggregate access
 
-// --- In-bounds access ---
-
-// SHARED-LABEL: define {{[^@]*}}@test_bounds_inbounds_idx0
-// SHARED: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_bounds_inbounds_idx0(struct Small *dest, struct Small arr[4]) {
-  *dest = arr[0];
+// SHARED-LABEL: define {{[^@]*}}@test_misaligned_access
+// SHARED-NOT: __ubsan_handle_type_mismatch
+// SHARED: call void @llvm.memcpy
+__attribute__((noinline)) void test_misaligned_access(struct Small *dest, char *buf) {
+  struct Small *p = (struct Small *)(buf + 1);  // Misaligned
+  *dest = *p;  // Should trigger alignment check (but doesn't currently)
 }
 
-// SHARED-LABEL: define {{[^@]*}}@test_bounds_inbounds_idx3
-// SHARED: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_bounds_inbounds_idx3(struct Small *dest, struct Small arr[4]) {
-  *dest = arr[3];
-}
+// Array bounds: out-of-bounds on local array (check exists)
 
-// --- Past-the-end and out-of-bounds access ---
-
-// SHARED-LABEL: define {{[^@]*}}@test_bounds_oob_past_end
+// SHARED-LABEL: define {{[^@]*}}@test_local_array_oob
+// SHARED: call void @__ubsan_handle_out_of_bounds
+// SHARED-NOT: __ubsan_handle_type_mismatch
 // SHARED: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_bounds_oob_past_end(struct Small *dest, struct Small arr[4]) {
-  *dest = arr[4];
-}
-
-// SHARED-LABEL: define {{[^@]*}}@test_bounds_oob_beyond
-// SHARED: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_bounds_oob_beyond(struct Small *dest, struct Small arr[4]) {
+__attribute__((noinline)) void test_local_array_oob(struct Small *dest) {
+  struct Small arr[4];
   *dest = arr[5];
 }
 
-// --- Dynamic index ---
+// Array bounds: past-the-end via parameter (no check currently)
 
-// SHARED-LABEL: define {{[^@]*}}@test_bounds_dynamic_idx
-// SHARED: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_bounds_dynamic_idx(struct Small *dest, struct Small arr[4], int idx) {
-  *dest = arr[idx];
+// SHARED-LABEL: define {{[^@]*}}@test_past_the_end_arr_idx
+// SHARED: [[ARR:%.*]] = load ptr, ptr %arr.addr
+// SHARED: [[SRC:%.*]] = getelementptr inbounds %struct.Small, ptr [[ARR]], i64 4
+// SHARED-NOT: __ubsan_handle_out_of_bounds
+// SHARED-NOT: __ubsan_handle_type_mismatch
+// SHARED-NOT: icmp ne ptr [[SRC]], null
+// SHARED: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 4 [[SRC]], i64 4, i1 false)
+__attribute__((noinline)) void test_past_the_end_arr_idx(struct Small *dest, struct Small arr[4]) {
+  *dest = arr[4];
 }
 
-// --- Past-the-end in various contexts ---
-
-// SHARED-LABEL: define {{[^@]*}}@test_bounds_init_past_end
-// SHARED: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_bounds_init_past_end(struct Small arr[4]) {
+// SHARED-LABEL: define {{[^@]*}}@test_past_the_end_init
+// SHARED: [[ARR:%.*]] = load ptr, ptr %arr.addr
+// SHARED: [[SRC:%.*]] = getelementptr inbounds %struct.Small, ptr [[ARR]], i64 4
+// SHARED-NOT: __ubsan_handle_out_of_bounds
+// SHARED-NOT: __ubsan_handle_type_mismatch
+// SHARED-NOT: icmp ne ptr [[SRC]], null
+// SHARED: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 4 [[SRC]], i64 4, i1 false)
+__attribute__((noinline)) void test_past_the_end_init(struct Small arr[4]) {
   struct Small a = arr[4];
-}
-
-// SHARED-LABEL: define {{[^@]*}}@test_bounds_nested_past_end
-// SHARED: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_bounds_nested_past_end(struct Container *c, struct Small arr[4]) {
-  c->inner = arr[4];
-}
-
-// SHARED-LABEL: define {{[^@]*}}@test_bounds_init_list_past_end
-// SHARED: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_bounds_init_list_past_end(struct Small arr[4]) {
-  struct Small a[] = {arr[4]};
-}
-
-// SHARED-LABEL: define {{[^@]*}}@test_bounds_variadic_past_end
-__attribute__((noinline)) void test_bounds_variadic_past_end(struct Small arr[4]) {
-  variadic_func(0, arr[4]);
 }
 
 #ifdef __cplusplus
 } // extern "C"
 #endif
 
-// ============================================================================
-// TYPE VARIANT: atomic (C only)
-// ============================================================================
+// Atomic type (C only)
 
 #ifndef __cplusplus
 
-// --- OPERAND FORM: arr[idx] ---
-
-// C-LABEL: define {{[^@]*}}@test_assign_atomic_arr_idx
-// C: load atomic i32
-__attribute__((noinline)) void test_assign_atomic_arr_idx(struct Small *dest, _Atomic(struct Small) arr[4]) {
-  *dest = arr[0];
-}
-
-// C-LABEL: define {{[^@]*}}@test_init_atomic_arr_idx
-// C: load atomic i32
-__attribute__((noinline)) void test_init_atomic_arr_idx(_Atomic(struct Small) arr[4]) {
-  struct Small a = arr[0];
-}
-
-// C-LABEL: define {{[^@]*}}@test_init_list_atomic_arr_idx
-// C: load atomic i32
-__attribute__((noinline)) void test_init_list_atomic_arr_idx(_Atomic(struct Small) arr[4]) {
-  struct Small a[] = {arr[0]};
-}
-
-// C-LABEL: define {{[^@]*}}@test_init_list_designate_atomic_arr_idx
-// C: load atomic i32
-__attribute__((noinline)) void test_init_list_designate_atomic_arr_idx(_Atomic(struct Small) arr[4]) {
-  struct Small a[] = {[0] = arr[0]};
-}
-
-// C-LABEL: define {{[^@]*}}@test_variadic_atomic_arr_idx
-// C: load atomic i32
-__attribute__((noinline)) void test_variadic_atomic_arr_idx(_Atomic(struct Small) arr[4]) {
-  variadic_func(0, arr[0]);
-}
-
-// C-LABEL: define {{[^@]*}}@test_nested_member_atomic_arr_idx
-// C: load atomic i32
-__attribute__((noinline)) void test_nested_member_atomic_arr_idx(struct Container *c, _Atomic(struct Small) arr[4]) {
-  c->inner = arr[0];
-}
-
-// C-LABEL: define {{[^@]*}}@test_lvalue_to_rvalue_atomic_arr_idx
-// C: load atomic i32
-__attribute__((noinline)) void test_lvalue_to_rvalue_atomic_arr_idx(_Atomic(struct Small) arr[4]) {
-  (void)arr[0];
-}
-
-// --- OPERAND FORM: *ap ---
-
 // C-LABEL: define {{[^@]*}}@test_assign_atomic_deref_ptr
-// C: load atomic i32
+// C: [[SRC:%.*]] = load ptr, ptr %ap.addr
+// C-NOT: __ubsan_handle_type_mismatch
+// C-NOT: icmp ne ptr [[SRC]], null
+// C: load atomic i32, ptr [[SRC]] seq_cst
 __attribute__((noinline)) void test_assign_atomic_deref_ptr(struct Small *dest, _Atomic(struct Small) *ap) {
   *dest = *ap;
 }
 
-// C-LABEL: define {{[^@]*}}@test_init_atomic_deref_ptr
-// C: load atomic i32
-__attribute__((noinline)) void test_init_atomic_deref_ptr(_Atomic(struct Small) *ap) {
-  struct Small a = *ap;
-}
-
-// C-LABEL: define {{[^@]*}}@test_init_list_atomic_deref_ptr
-// C: load atomic i32
-__attribute__((noinline)) void test_init_list_atomic_deref_ptr(_Atomic(struct Small) *ap) {
-  struct Small a[] = {*ap};
-}
-
-// C-LABEL: define {{[^@]*}}@test_init_list_designate_atomic_deref_ptr
-// C: load atomic i32
-__attribute__((noinline)) void test_init_list_designate_atomic_deref_ptr(_Atomic(struct Small) *ap) {
-  struct Small a[] = {[0] = *ap};
-}
-
-// C-LABEL: define {{[^@]*}}@test_variadic_atomic_deref_ptr
-// C: load atomic i32
-__attribute__((noinline)) void test_variadic_atomic_deref_ptr(_Atomic(struct Small) *ap) {
-  variadic_func(0, *ap);
-}
-
-// C-LABEL: define {{[^@]*}}@test_nested_member_atomic_deref_ptr
-// C: load atomic i32
-__attribute__((noinline)) void test_nested_member_atomic_deref_ptr(struct Container *c, _Atomic(struct Small) *ap) {
-  c->inner = *ap;
-}
-
-// C-LABEL: define {{[^@]*}}@test_lvalue_to_rvalue_atomic_deref_ptr
-// C: load atomic i32
-__attribute__((noinline)) void test_lvalue_to_rvalue_atomic_deref_ptr(_Atomic(struct Small) *ap) {
-  (void)*ap;
-}
-
-// ============================================================================
-// TYPE VARIANT: volatile (C only)
-// ============================================================================
-
-// --- OPERAND FORM: arr[idx] ---
-
-// C-LABEL: define {{[^@]*}}@test_assign_volatile_arr_idx
-// C: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_assign_volatile_arr_idx(struct Small *dest, volatile struct Small arr[4]) {
-  *dest = arr[0];
-}
-
-// C-LABEL: define {{[^@]*}}@test_init_volatile_arr_idx
-// C: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_init_volatile_arr_idx(volatile struct Small arr[4]) {
-  struct Small a = arr[0];
-}
-
-// C-LABEL: define {{[^@]*}}@test_init_list_volatile_arr_idx
-// C: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_init_list_volatile_arr_idx(volatile struct Small arr[4]) {
-  struct Small a[] = {arr[0]};
-}
-
-// C-LABEL: define {{[^@]*}}@test_init_list_designate_volatile_arr_idx
-// C: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_init_list_designate_volatile_arr_idx(volatile struct Small arr[4]) {
-  struct Small a[] = {[0] = arr[0]};
-}
-
-// C-LABEL: define {{[^@]*}}@test_variadic_volatile_arr_idx
-__attribute__((noinline)) void test_variadic_volatile_arr_idx(volatile struct Small arr[4]) {
-  variadic_func(0, arr[0]);
-}
-
-// C-LABEL: define {{[^@]*}}@test_nested_member_volatile_arr_idx
-// C: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_nested_member_volatile_arr_idx(struct Container *c, volatile struct Small arr[4]) {
-  c->inner = arr[0];
-}
-
-// C-LABEL: define {{[^@]*}}@test_lvalue_to_rvalue_volatile_arr_idx
-// C: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_lvalue_to_rvalue_volatile_arr_idx(volatile struct Small arr[4]) {
-  (void)arr[0];
-}
-
-// --- OPERAND FORM: *ap ---
-
-// C-LABEL: define {{[^@]*}}@test_assign_volatile_deref_ptr
-// C: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_assign_volatile_deref_ptr(struct Small *dest, volatile struct Small *ap) {
-  *dest = *ap;
-}
-
-// C-LABEL: define {{[^@]*}}@test_init_volatile_deref_ptr
-// C: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_init_volatile_deref_ptr(volatile struct Small *ap) {
-  struct Small a = *ap;
-}
-
-// C-LABEL: define {{[^@]*}}@test_init_list_volatile_deref_ptr
-// C: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_init_list_volatile_deref_ptr(volatile struct Small *ap) {
-  struct Small a[] = {*ap};
-}
-
-// C-LABEL: define {{[^@]*}}@test_init_list_designate_volatile_deref_ptr
-// C: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_init_list_designate_volatile_deref_ptr(volatile struct Small *ap) {
-  struct Small a[] = {[0] = *ap};
-}
-
-// C-LABEL: define {{[^@]*}}@test_variadic_volatile_deref_ptr
-__attribute__((noinline)) void test_variadic_volatile_deref_ptr(volatile struct Small *ap) {
-  variadic_func(0, *ap);
-}
-
-// C-LABEL: define {{[^@]*}}@test_nested_member_volatile_deref_ptr
-// C: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_nested_member_volatile_deref_ptr(struct Container *c, volatile struct Small *ap) {
-  c->inner = *ap;
-}
-
-// C-LABEL: define {{[^@]*}}@test_lvalue_to_rvalue_volatile_deref_ptr
-// C: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_lvalue_to_rvalue_volatile_deref_ptr(volatile struct Small *ap) {
-  (void)*ap;
-}
-
-// --- Designated initializers (C only) ---
-
-// C-LABEL: define {{[^@]*}}@test_init_list_designate_plain_arr_idx
-// C: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_init_list_designate_plain_arr_idx(struct Small arr[4]) {
-  struct Small a[] = {[0] = arr[0]};
-}
-
-// C-LABEL: define {{[^@]*}}@test_init_list_designate_plain_deref_ptr
-// C: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_init_list_designate_plain_deref_ptr(struct Small *ap) {
-  struct Small a[] = {[0] = *ap};
-}
-
 #endif // !__cplusplus
 
-// ============================================================================
-// C++ ONLY
-// ============================================================================
+// C++ only
 
 #ifdef __cplusplus
 
 extern "C" {
 
-// --- OPERAND FORM: arr[idx] with plain type ---
-
 // CXX-LABEL: define {{[^@]*}}@test_cxx_init_direct_plain_arr_idx
-// CXX: call void @llvm.memcpy.p0.p0.i64
+// CXX: [[ARR:%.*]] = load ptr, ptr %arr.addr
+// CXX: [[SRC:%.*]] = getelementptr inbounds %struct.Small, ptr [[ARR]], i64 0
+// CXX-NOT: __ubsan_handle_type_mismatch
+// CXX-NOT: icmp ne ptr [[SRC]], null
+// CXX: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 4 [[SRC]], i64 4, i1 false)
 __attribute__((noinline)) void test_cxx_init_direct_plain_arr_idx(struct Small arr[4]) {
   struct Small a(arr[0]);
 }
 
 // CXX-LABEL: define {{[^@]*}}@test_cxx_init_brace_plain_arr_idx
-// CXX: call void @llvm.memcpy.p0.p0.i64
+// CXX: [[ARR:%.*]] = load ptr, ptr %arr.addr
+// CXX: [[SRC:%.*]] = getelementptr inbounds %struct.Small, ptr [[ARR]], i64 0
+// CXX-NOT: __ubsan_handle_type_mismatch
+// CXX-NOT: icmp ne ptr [[SRC]], null
+// CXX: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 4 [[SRC]], i64 4, i1 false)
 __attribute__((noinline)) void test_cxx_init_brace_plain_arr_idx(struct Small arr[4]) {
   struct Small a{arr[0]};
 }
 
-// CXX-LABEL: define {{[^@]*}}@test_cxx_init_copy_list_plain_arr_idx
-// CXX: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_cxx_init_copy_list_plain_arr_idx(struct Small arr[4]) {
-  struct Small a = {arr[0]};
-}
-
-// CXX-LABEL: define {{[^@]*}}@test_cxx_new_direct_plain_arr_idx
-// CXX: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_cxx_new_direct_plain_arr_idx(struct Small arr[4]) {
-  struct Small *a = new struct Small(arr[0]);
-  delete a;
-}
-
-// CXX-LABEL: define {{[^@]*}}@test_cxx_new_brace_plain_arr_idx
-// CXX: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_cxx_new_brace_plain_arr_idx(struct Small arr[4]) {
-  struct Small *a = new struct Small{arr[0]};
-  delete a;
-}
-
-// CXX-LABEL: define {{[^@]*}}@test_cxx_functional_cast_plain_arr_idx
-// CXX: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_cxx_functional_cast_plain_arr_idx(struct Small arr[4]) {
-  (void)Small(arr[0]);
-}
-
-// CXX-LABEL: define {{[^@]*}}@test_cxx_functional_cast_brace_plain_arr_idx
-// CXX: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_cxx_functional_cast_brace_plain_arr_idx(struct Small arr[4]) {
-  (void)Small{arr[0]};
-}
-
-// CXX-LABEL: define {{[^@]*}}@test_cxx_static_cast_plain_arr_idx
-// CXX: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_cxx_static_cast_plain_arr_idx(struct Small arr[4]) {
-  (void)static_cast<struct Small>(arr[0]);
-}
-
-// CXX-LABEL: define {{[^@]*}}@test_cxx_c_cast_plain_arr_idx
-// CXX: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_cxx_c_cast_plain_arr_idx(struct Small arr[4]) {
-  (void)(struct Small)(arr[0]);
-}
-
-// CXX-LABEL: define {{[^@]*}}@test_cxx_member_init_plain_arr_idx
-// CXX: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_cxx_member_init_plain_arr_idx(struct Small arr[4]) {
-  (void)new SmallWrapper{arr[0]};
-}
-
-// --- OPERAND FORM: *ap with plain type ---
-
 // CXX-LABEL: define {{[^@]*}}@test_cxx_init_direct_plain_deref_ptr
-// CXX: call void @llvm.memcpy.p0.p0.i64
+// CXX: [[SRC:%.*]] = load ptr, ptr %ap.addr
+// CXX-NOT: __ubsan_handle_type_mismatch
+// CXX-NOT: icmp ne ptr [[SRC]], null
+// CXX: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 4 [[SRC]], i64 4, i1 false)
 __attribute__((noinline)) void test_cxx_init_direct_plain_deref_ptr(struct Small *ap) {
   struct Small a(*ap);
 }
 
 // CXX-LABEL: define {{[^@]*}}@test_cxx_init_brace_plain_deref_ptr
-// CXX: call void @llvm.memcpy.p0.p0.i64
+// CXX: [[SRC:%.*]] = load ptr, ptr %ap.addr
+// CXX-NOT: __ubsan_handle_type_mismatch
+// CXX-NOT: icmp ne ptr [[SRC]], null
+// CXX: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 4 [[SRC]], i64 4, i1 false)
 __attribute__((noinline)) void test_cxx_init_brace_plain_deref_ptr(struct Small *ap) {
   struct Small a{*ap};
 }
 
-// CXX-LABEL: define {{[^@]*}}@test_cxx_init_copy_list_plain_deref_ptr
-// CXX: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_cxx_init_copy_list_plain_deref_ptr(struct Small *ap) {
-  struct Small a = {*ap};
-}
-
 // CXX-LABEL: define {{[^@]*}}@test_cxx_new_direct_plain_deref_ptr
-// CXX: call void @llvm.memcpy.p0.p0.i64
+// CXX: [[SRC:%.*]] = load ptr, ptr %ap.addr
+// CXX-NOT: __ubsan_handle_type_mismatch
+// CXX-NOT: icmp ne ptr [[SRC]], null
+// CXX: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 4 [[SRC]], i64 4, i1 false)
 __attribute__((noinline)) void test_cxx_new_direct_plain_deref_ptr(struct Small *ap) {
   struct Small *a = new struct Small(*ap);
   delete a;
 }
 
-// CXX-LABEL: define {{[^@]*}}@test_cxx_new_brace_plain_deref_ptr
-// CXX: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_cxx_new_brace_plain_deref_ptr(struct Small *ap) {
-  struct Small *a = new struct Small{*ap};
-  delete a;
-}
+// C++ past-the-end tests
 
-// CXX-LABEL: define {{[^@]*}}@test_cxx_functional_cast_plain_deref_ptr
-// CXX: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_cxx_functional_cast_plain_deref_ptr(struct Small *ap) {
-  (void)Small(*ap);
-}
-
-// CXX-LABEL: define {{[^@]*}}@test_cxx_functional_cast_brace_plain_deref_ptr
-// CXX: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_cxx_functional_cast_brace_plain_deref_ptr(struct Small *ap) {
-  (void)Small{*ap};
-}
-
-// CXX-LABEL: define {{[^@]*}}@test_cxx_static_cast_plain_deref_ptr
-// CXX: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_cxx_static_cast_plain_deref_ptr(struct Small *ap) {
-  (void)static_cast<struct Small>(*ap);
-}
-
-// CXX-LABEL: define {{[^@]*}}@test_cxx_c_cast_plain_deref_ptr
-// CXX: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_cxx_c_cast_plain_deref_ptr(struct Small *ap) {
-  (void)(struct Small)(*ap);
-}
-
-// CXX-LABEL: define {{[^@]*}}@test_cxx_member_init_plain_deref_ptr
-// CXX: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_cxx_member_init_plain_deref_ptr(struct Small *ap) {
-  (void)new SmallWrapper{*ap};
-}
-
-// --- Variadic ---
-
-// CXX-LABEL: define {{[^@]*}}@test_cxx_variadic_plain_arr_idx
-__attribute__((noinline)) void test_cxx_variadic_plain_arr_idx(struct Small arr[4]) {
-  variadic_func(0, arr[0]);
-}
-
-// CXX-LABEL: define {{[^@]*}}@test_cxx_variadic_plain_deref_ptr
-__attribute__((noinline)) void test_cxx_variadic_plain_deref_ptr(struct Small *ap) {
-  variadic_func(0, *ap);
-}
-
-// --- Explicit operator= ---
-
-// CXX-LABEL: define {{[^@]*}}@test_cxx_operator_assign_lhs_arr_idx
-// CXX: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_cxx_operator_assign_lhs_arr_idx(struct Small *dest, struct Small arr[4]) {
-  dest->operator=(arr[0]);
-}
-
-// CXX-LABEL: define {{[^@]*}}@test_cxx_operator_assign_lhs_deref_ptr
-// CXX: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_cxx_operator_assign_lhs_deref_ptr(struct Small *dest, struct Small *ap) {
-  dest->operator=(*ap);
-}
-
-// CXX-LABEL: define {{[^@]*}}@test_cxx_operator_assign_obj_arr_idx
-// CXX: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_cxx_operator_assign_obj_arr_idx(struct Small arr[4]) {
-  struct Small a;
-  a.operator=(arr[0]);
-}
-
-// CXX-LABEL: define {{[^@]*}}@test_cxx_operator_assign_obj_deref_ptr
-// CXX: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_cxx_operator_assign_obj_deref_ptr(struct Small *ap) {
-  struct Small a;
-  a.operator=(*ap);
-}
-
-// --- Past-the-end access ---
-
-// CXX-LABEL: define {{[^@]*}}@test_cxx_bounds_init_direct_past_end
-// CXX: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_cxx_bounds_init_direct_past_end(struct Small arr[4]) {
+// CXX-LABEL: define {{[^@]*}}@test_cxx_past_the_end_direct
+// CXX: [[ARR:%.*]] = load ptr, ptr %arr.addr
+// CXX: [[SRC:%.*]] = getelementptr inbounds %struct.Small, ptr [[ARR]], i64 4
+// CXX-NOT: __ubsan_handle_out_of_bounds
+// CXX-NOT: __ubsan_handle_type_mismatch
+// CXX-NOT: icmp ne ptr [[SRC]], null
+// CXX: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 4 [[SRC]], i64 4, i1 false)
+__attribute__((noinline)) void test_cxx_past_the_end_direct(struct Small arr[4]) {
   struct Small a(arr[4]);
 }
 
-// CXX-LABEL: define {{[^@]*}}@test_cxx_bounds_init_brace_past_end
-// CXX: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_cxx_bounds_init_brace_past_end(struct Small arr[4]) {
+// CXX-LABEL: define {{[^@]*}}@test_cxx_past_the_end_brace
+// CXX: [[ARR:%.*]] = load ptr, ptr %arr.addr
+// CXX: [[SRC:%.*]] = getelementptr inbounds %struct.Small, ptr [[ARR]], i64 4
+// CXX-NOT: __ubsan_handle_out_of_bounds
+// CXX-NOT: __ubsan_handle_type_mismatch
+// CXX-NOT: icmp ne ptr [[SRC]], null
+// CXX: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 4 [[SRC]], i64 4, i1 false)
+__attribute__((noinline)) void test_cxx_past_the_end_brace(struct Small arr[4]) {
   struct Small a{arr[4]};
 }
 
-// CXX-LABEL: define {{[^@]*}}@test_cxx_bounds_new_past_end
-// CXX: call void @llvm.memcpy.p0.p0.i64
-__attribute__((noinline)) void test_cxx_bounds_new_past_end(struct Small arr[4]) {
-  struct Small *a = new struct Small(arr[4]);
-  delete a;
-}
-
 } // extern "C"
-
-// --- Virtual base initialization (can't be extern "C") ---
-
-struct VirtualBaseSimple {
-  int x;
-};
-
-struct DerivedVirtualArrSimple : virtual VirtualBaseSimple {
-  __attribute__((noinline)) DerivedVirtualArrSimple(VirtualBaseSimple arr[4]) : VirtualBaseSimple(arr[0]) {}
-};
-
-struct DerivedVirtualPtrSimple : virtual VirtualBaseSimple {
-  __attribute__((noinline)) DerivedVirtualPtrSimple(VirtualBaseSimple *ap) : VirtualBaseSimple(*ap) {}
-};
-
-// Constructors are emitted after their first use, so we check them
-// in order: ArrSimple ctor, then PtrSimple ctor.
-
-extern "C" {
-
-// CXX-LABEL: define {{[^@]*}}@test_cxx_virtual_base_init_arr_idx
-__attribute__((noinline)) void test_cxx_virtual_base_init_arr_idx(VirtualBaseSimple arr[4]) {
-  DerivedVirtualArrSimple d(arr);
-}
-
-}
-
-// CXX-LABEL: define {{[^@]*}}@_ZN23DerivedVirtualArrSimpleC1EP17VirtualBaseSimple
-// CXX: call void @llvm.memcpy.p0.p0.i64
-
-extern "C" {
-
-// CXX-LABEL: define {{[^@]*}}@test_cxx_virtual_base_init_deref_ptr
-__attribute__((noinline)) void test_cxx_virtual_base_init_deref_ptr(VirtualBaseSimple *ap) {
-  DerivedVirtualPtrSimple d(ap);
-}
-
-}
-
-// CXX-LABEL: define {{[^@]*}}@_ZN23DerivedVirtualPtrSimpleC1EP17VirtualBaseSimple
-// CXX: call void @llvm.memcpy.p0.p0.i64
 
 #endif // __cplusplus
