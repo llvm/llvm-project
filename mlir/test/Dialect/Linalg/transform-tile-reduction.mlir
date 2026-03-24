@@ -722,8 +722,9 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
+// CHECK-DAG: #[[$INDEX_MAP:.*]] = affine_map<(d0)[s0] -> (d0 + s0)>
 // CHECK-LABEL: func @reduction_tile_with_linalg_index(
 //       CHECK:   scf.for %[[IV:[a-zA-Z0-9]+]] =
 //       CHECK:     linalg.generic
 //       CHECK:       %[[LOCAL_IDX:.+]] = linalg.index 1 : index
-//       CHECK:       affine.apply {{.*}}(%[[IV]])[%[[LOCAL_IDX]]]
+//       CHECK:       affine.apply #[[$INDEX_MAP]](%[[IV]])[%[[LOCAL_IDX]]]
