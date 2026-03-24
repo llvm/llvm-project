@@ -44,8 +44,8 @@ static constexpr llvm::StringRef cudaFortranCtorName{
 static constexpr llvm::StringRef managedPtrSuffix{".managed.ptr"};
 
 /// Create an 8-byte pointer global in the __nv_managed_data__ section.
-/// The CUDA runtime fills this pointer with the unified memory address
-/// during __cudaRegisterManagedVar.
+/// The CUDA runtime populates this pointer with the unified memory address
+/// when the module is initialized via __cudaInitModule.
 static fir::GlobalOp createManagedPointerGlobal(fir::FirOpBuilder &builder,
                                                 mlir::ModuleOp mod,
                                                 fir::GlobalOp globalOp) {
@@ -172,9 +172,9 @@ struct CUFAddConstructor
           auto sizeVal = builder.createIntegerConstant(loc, idxTy, *size);
 
           if (isNonAllocManagedGlobal) {
-            // Non-allocatable managed globals use nvcc-style unified memory:
-            // create an 8-byte pointer global in __nv_managed_data__ and
-            // register with __cudaRegisterManagedVar via the runtime wrapper.
+            // Non-allocatable managed globals use pointer indirection:
+            // a companion pointer in __nv_managed_data__ holds the unified
+            // memory address, registered via __cudaRegisterManagedVar.
             fir::GlobalOp ptrGlobal =
                 createManagedPointerGlobal(builder, mod, globalOp);
             func = fir::runtime::getRuntimeFunc<mkRTKey(

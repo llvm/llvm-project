@@ -1311,10 +1311,11 @@ inline bool IsCUDAManagedOrUnifiedSymbol(const Symbol &sym) {
   return false;
 }
 
-// Non-allocatable module-level managed/unified variables use nvcc-style
-// unified memory with shadow pointer indirection. cudaMemcpy targeting
-// these variables would use the shadow address rather than the actual
-// unified memory address, so data transfers must be avoided.
+// Non-allocatable module-level managed/unified variables use pointer
+// indirection through a companion global in __nv_managed_data__.
+// Explicit data transfers (cudaMemcpy) must be avoided for these
+// variables since they would target the shadow address rather than
+// the actual unified memory address.
 inline bool IsNonAllocatableModuleCUDAManagedSymbol(const Symbol &sym) {
   const Symbol &ultimate = sym.GetUltimate();
   if (!IsCUDAManagedOrUnifiedSymbol(ultimate))
@@ -1379,9 +1380,10 @@ inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
     return true; // Managed arrays initialization is performed on the device.
   }
 
-  // Special cases performed on the host:
-  // - Only managed or unifed symbols are involved on RHS and LHS.
-  // - LHS is managed or unified and the RHS is host only.
+  // Cases where no explicit data transfer is needed:
+  // - Both sides involve only managed/unified symbols (host-accessible).
+  // - LHS is host-only and RHS has only managed/unified symbols.
+  // - LHS is managed/unified and RHS is host-only.
   if ((lhsNbManagedSymbols >= 1 && rhsNbManagedSymbols == rhsNbSymbols) ||
       (lhsNbManagedSymbols == 0 && !HasCUDADeviceAttrs(lhs) &&
           rhsNbManagedSymbols >= 1 && rhsNbManagedSymbols == rhsNbSymbols) ||
