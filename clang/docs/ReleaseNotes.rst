@@ -355,6 +355,7 @@ Bug Fixes in This Version
 - Fixed a crash when substituting into a non-type template parameter that has a type containing an undeduced placeholder type.
 - Correctly diagnosing and no longer crashing when ``export module foo``
   (without a semicolon) are the final tokens in a module file. (#GH187771)
+- Fixed a crash in duplicate attribute checking caused by comparing constant arguments with different integer signedness. (#GH188259)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
