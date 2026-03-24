@@ -297,8 +297,12 @@ TEST_F(PointerUnionTest, NewCastInfra) {
 // where OverClaimWrapper's PLTT claims more low bits than its inner
 // PointerUnion actually has spare.
 
-struct alignas(8) HighAlign { int x; };
-struct alignas(4) LowAlign { int x; };
+struct alignas(8) HighAlign {
+  int x;
+};
+struct alignas(4) LowAlign {
+  int x;
+};
 
 // Wrapper around a PointerUnion that over-claims NumLowBitsAvailable,
 // mimicking LazyGenerationalUpdatePtr's PLTT on 32-bit.
