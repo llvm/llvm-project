@@ -1194,6 +1194,71 @@ define i32 @add_to_sub2(i32 %A, i32 %M) {
   ret i32 %E
 }
 
+define i32 @add_not_add_m1(i32 %a, i32 %b) {
+; CHECK-LABEL: @add_not_add_m1(
+; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[B:%.*]], -1
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[ADD]], [[NOT]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %not = xor i32 %b, -1
+  %add = add i32 %a, -1
+  %r = add i32 %add, %not
+  ret i32 %r
+}
+
+define <2 x i32> @add_not_add_m1_vec(<2 x i32> %a, <2 x i32> %b) {
+; CHECK-LABEL: @add_not_add_m1_vec(
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i32> [[B:%.*]], splat (i32 -1)
+; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i32> [[A:%.*]], splat (i32 -1)
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i32> [[ADD]], [[NOT]]
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %not = xor <2 x i32> %b, <i32 -1, i32 -1>
+  %add = add <2 x i32> %a, <i32 -1, i32 -1>
+  %r = add <2 x i32> %add, %not
+  ret <2 x i32> %r
+}
+
+define i32 @add_not_add_m1_commuted(i32 %a, i32 %b) {
+; CHECK-LABEL: @add_not_add_m1_commuted(
+; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[B:%.*]], -1
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[ADD]], [[NOT]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %not = xor i32 %b, -1
+  %add = add i32 %a, -1
+  %r = add i32 %not, %add
+  ret i32 %r
+}
+
+define i32 @add_not_add_m1_assoc(i32 %a, i32 %b) {
+; CHECK-LABEL: @add_not_add_m1_assoc(
+; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[B:%.*]], -1
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A:%.*]], [[NOT]]
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[ADD]], -1
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %not = xor i32 %b, -1
+  %add = add i32 %not, %a
+  %r = add i32 %add, -1
+  ret i32 %r
+}
+
+define i32 @add_not_add_intmin(i32 %a, i32 %b) {
+; CHECK-LABEL: @add_not_add_intmin(
+; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[B:%.*]], -1
+; CHECK-NEXT:    [[ADD:%.*]] = xor i32 [[A:%.*]], -2147483648
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[ADD]], [[NOT]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %not = xor i32 %b, -1
+  %add = add i32 %a, -2147483648
+  %r = add i32 %add, %not
+  ret i32 %r
+}
+
 ; (X | C1) + C2 --> (X | C1) ^ C1 iff (C1 == -C2)
 define i32 @test44(i32 %A) {
 ; CHECK-LABEL: @test44(
