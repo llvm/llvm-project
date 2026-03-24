@@ -2226,6 +2226,9 @@ void mlir::populateVectorToLLVMConversionPatterns(
 
 namespace {
 struct VectorToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
+  VectorToLLVMDialectInterface(Dialect *dialect)
+      : ConvertToLLVMPatternInterface(dialect) {}
+
   using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
   void loadDependentDialects(MLIRContext *context) const final {
     context->loadDialect<LLVM::LLVMDialect>();

@@ -53,7 +53,8 @@ void mlir::configureAMXLegalizeForExportTarget(LLVMConversionTarget &target) {
 namespace {
 /// Implement the interface to convert AMX to LLVM.
 struct AMXToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
-  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
+  AMXToLLVMDialectInterface(Dialect *dialect)
+      : ConvertToLLVMPatternInterface(dialect) {}
 
   void populateConvertToLLVMConversionPatterns(
       ConversionTarget &target, LLVMTypeConverter &typeConverter,
