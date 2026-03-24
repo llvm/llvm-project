@@ -302,7 +302,7 @@ private:
 
   void addTargetSpecificPasses(PassManagerBase &PM) const override {
     // Function return is a pseudo-instruction that needs to be expanded
-    PM.add(createAArch64ExpandPseudoPass());
+    PM.add(createAArch64ExpandPseudoLegacyPass());
   }
 };
 

@@ -527,9 +527,9 @@ CGRecordLowering::accumulateBitFields(bool isNonVirtualBaseType,
     return ScissorOffset;
   };
 
-  auto emitAccessUnit = [&](CharUnits BeginOffset, CharUnits EndOffset,
-                            bool Clipped, RecordDecl::field_iterator First,
-                            RecordDecl::field_iterator Last) {
+  auto emitAccessUnit = [this](CharUnits BeginOffset, CharUnits EndOffset,
+                               bool Clipped, RecordDecl::field_iterator First,
+                               RecordDecl::field_iterator Last) {
     CharUnits AccessSize = EndOffset - BeginOffset;
     if (AccessSize.isZero())
       return;
