@@ -333,9 +333,8 @@ int main(int Argc, const char **Argv) {
     if (NewFilename != OldFilename) {
       llvm::sys::fs::remove(ShardPath);
       ++FilesRenamed;
-    } else {
+    } else
       ++FilesUnchanged;
-    }
   });
 
   unsigned Renamed = FilesRenamed.load();
