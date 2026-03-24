@@ -21,7 +21,6 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ShapedOpInterfaces.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
-#include "mlir/Interfaces/ViewLikeInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
@@ -4856,58 +4855,6 @@ LogicalResult AffineVectorStoreOp::verify() {
 // DelinearizeIndexOp
 //===----------------------------------------------------------------------===//
 
-/// Parse format:
-///   affine.delinearize_index %idx into (%c4, %c8)
-///     : index, index         (scalar)
-///   affine.delinearize_index %vec into (%c4, %c8)
-///     : vector<16xindex>, vector<16xindex>  (vector)
-ParseResult AffineDelinearizeIndexOp::parse(OpAsmParser &parser,
-                                            OperationState &result) {
-  OpAsmParser::UnresolvedOperand linearIndex;
-  if (parser.parseOperand(linearIndex) || parser.parseKeyword("into"))
-    return failure();
-
-  SmallVector<OpAsmParser::UnresolvedOperand> dynamicBasis;
-  DenseI64ArrayAttr staticBasis;
-  if (parseDynamicIndexList(parser, dynamicBasis, staticBasis, nullptr,
-                            AsmParser::Delimiter::Paren))
-    return failure();
-
-  if (parser.parseOptionalAttrDict(result.attributes))
-    return failure();
-
-  if (parser.parseColon())
-    return failure();
-
-  SmallVector<Type> resultTypes;
-  if (parser.parseTypeList(resultTypes))
-    return failure();
-
-  // Infer the linear index type from the first result type. All types must
-  // match (enforced by the verifier).
-  Type indexType = resultTypes.empty() ? IndexType::get(parser.getContext())
-                                       : resultTypes.front();
-  if (parser.resolveOperand(linearIndex, indexType, result.operands))
-    return failure();
-  if (parser.resolveOperands(dynamicBasis, IndexType::get(parser.getContext()),
-                             result.operands))
-    return failure();
-
-  result.addTypes(resultTypes);
-  result.getOrAddProperties<AffineDelinearizeIndexOp::Properties>()
-      .static_basis = staticBasis;
-  return success();
-}
-
-void AffineDelinearizeIndexOp::print(OpAsmPrinter &p) {
-  p << ' ' << getLinearIndex() << " into ";
-  printDynamicIndexList(p, *this, getDynamicBasis(), getStaticBasisAttr(),
-                        /*scalableFlags=*/{}, AsmParser::Delimiter::Paren);
-  p.printOptionalAttrDict((*this)->getAttrs(), {getStaticBasisAttrName()});
-  p << " : ";
-  llvm::interleaveComma(getResultTypes(), p);
-}
-
 void AffineDelinearizeIndexOp::build(OpBuilder &odsBuilder,
                                      OperationState &odsState,
                                      Value linearIndex, ValueRange dynamicBasis,
@@ -5304,61 +5251,6 @@ void affine::AffineDelinearizeIndexOp::getCanonicalizationPatterns(
 //===----------------------------------------------------------------------===//
 // LinearizeIndexOp
 //===----------------------------------------------------------------------===//
-
-/// Parse format:
-///   affine.linearize_index [%x, %y] by (%c4, %c8) : index
-///   affine.linearize_index disjoint [%v0, %v1] by (%c4, %c8)
-///     : vector<16xindex>
-ParseResult AffineLinearizeIndexOp::parse(OpAsmParser &parser,
-                                          OperationState &result) {
-  bool disjoint = succeeded(parser.parseOptionalKeyword("disjoint"));
-
-  SmallVector<OpAsmParser::UnresolvedOperand> multiIndex;
-  if (parser.parseOperandList(multiIndex, AsmParser::Delimiter::Square) ||
-      parser.parseKeyword("by"))
-    return failure();
-
-  SmallVector<OpAsmParser::UnresolvedOperand> dynamicBasis;
-  DenseI64ArrayAttr staticBasis;
-  if (parseDynamicIndexList(parser, dynamicBasis, staticBasis, nullptr,
-                            AsmParser::Delimiter::Paren))
-    return failure();
-
-  if (parser.parseOptionalAttrDict(result.attributes))
-    return failure();
-
-  Type resultType;
-  if (parser.parseColonType(resultType))
-    return failure();
-
-  if (parser.resolveOperands(multiIndex, resultType, result.operands))
-    return failure();
-  if (parser.resolveOperands(dynamicBasis, IndexType::get(parser.getContext()),
-                             result.operands))
-    return failure();
-
-  result.addTypes(resultType);
-  auto &props = result.getOrAddProperties<AffineLinearizeIndexOp::Properties>();
-  props.static_basis = staticBasis;
-  props.disjoint = disjoint;
-  props.operandSegmentSizes = {static_cast<int32_t>(multiIndex.size()),
-                               static_cast<int32_t>(dynamicBasis.size())};
-  return success();
-}
-
-void AffineLinearizeIndexOp::print(OpAsmPrinter &p) {
-  if (getDisjoint())
-    p << " disjoint";
-  p << " [";
-  llvm::interleaveComma(getMultiIndex(), p);
-  p << "] by ";
-  printDynamicIndexList(p, *this, getDynamicBasis(), getStaticBasisAttr(),
-                        /*scalableFlags=*/{}, AsmParser::Delimiter::Paren);
-  p.printOptionalAttrDict(
-      (*this)->getAttrs(),
-      {getStaticBasisAttrName(), getOperandSegmentSizesAttrName()});
-  p << " : " << getLinearIndex().getType();
-}
 
 /// Infer the index type from a set of multi-index values. Returns the common
 /// type (index or vector<...xindex>), or IndexType if the set is empty.

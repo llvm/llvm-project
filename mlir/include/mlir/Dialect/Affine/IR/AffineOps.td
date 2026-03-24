@@ -1069,7 +1069,10 @@ def AffineVectorStoreOp : AffineStoreOpBase<"vector_store"> {
 // AffineDelinearizeIndexOp
 //===----------------------------------------------------------------------===//
 
-def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index", [Pure]> {
+def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index",
+    [Pure, TypesMatchWith<"linear_index type must match result types",
+                          "multi_index", "linear_index",
+                          "$_self[0]">]> {
   let summary = "delinearize an index";
   let description = [{
     The `affine.delinearize_index` operation takes a single index value and
@@ -1129,7 +1132,11 @@ def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index", [Pure]> {
     DenseI64ArrayAttr:$static_basis);
   let results = (outs Variadic<Affine_IndexOrVectorOfIndex>:$multi_index);
 
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = [{
+    $linear_index `into`
+    custom<DynamicIndexList>($dynamic_basis, $static_basis, "{}", "::mlir::AsmParser::Delimiter::Paren")
+    attr-dict `:` type($multi_index)
+  }];
 
   let builders = [
     OpBuilder<(ins "Value":$linear_index, "ValueRange":$dynamic_basis, "ArrayRef<int64_t>":$static_basis, CArg<"bool", "true">:$hasOuterBound)>,
@@ -1169,7 +1176,10 @@ def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index", [Pure]> {
 // AffineLinearizeIndexOp
 //===----------------------------------------------------------------------===//
 def AffineLinearizeIndexOp : Affine_Op<"linearize_index",
-    [Pure, AttrSizedOperandSegments]> {
+    [Pure, AttrSizedOperandSegments,
+     TypesMatchWith<"multi_index types must match result type",
+                    "linear_index", "multi_index", "$_self",
+                    "[](::mlir::Type a, ::mlir::TypeRange b) { return llvm::all_of(b, [a](::mlir::Type t) { return t == a; }); }">]> {
   let summary = "linearize an index";
   let description = [{
     The `affine.linearize_index` operation takes a sequence of index values and a
@@ -1229,7 +1239,12 @@ def AffineLinearizeIndexOp : Affine_Op<"linearize_index",
     UnitProp:$disjoint);
   let results = (outs Affine_IndexOrVectorOfIndex:$linear_index);
 
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = [{
+    (`disjoint` $disjoint^)? ` `
+    `[` $multi_index `]` `by`
+    custom<DynamicIndexList>($dynamic_basis, $static_basis, "{}", "::mlir::AsmParser::Delimiter::Paren")
+    attr-dict `:` type($linear_index)
+  }];
 
   let builders = [
     OpBuilder<(ins "ValueRange":$multi_index, "ValueRange":$basis, CArg<"bool", "false">:$disjoint)>,
