@@ -43,9 +43,8 @@ getMachOFatMemoryBuffers(StringRef Filename, MemoryBuffer &Mem,
 }
 
 BinaryHolder::BinaryHolder(IntrusiveRefCntPtr<vfs::FileSystem> VFS,
-                           BinaryHolder::Options Opts,
-                           std::shared_ptr<cas::ObjectStore> CAS)
-    : VFS(VFS), GlobalCAS(std::move(CAS)), Opts(Opts) {}
+                           BinaryHolder::Options Opts)
+    : VFS(VFS), GlobalCAS(nullptr), Opts(Opts) {}
 
 Error BinaryHolder::ArchiveEntry::load(IntrusiveRefCntPtr<vfs::FileSystem> VFS,
                                        StringRef Filename,
@@ -146,9 +145,12 @@ Error BinaryHolder::ObjectEntry::load(IntrusiveRefCntPtr<vfs::FileSystem> VFS,
   return Error::success();
 }
 
-bool BinaryHolder::ObjectEntry::load(cas::ObjectStore &CAS,
+bool BinaryHolder::ObjectEntry::load(cas::ObjectStore *CAS,
                                      StringRef PossibleID, Options Opts) {
-  auto ID = CAS.parseID(PossibleID);
+  if (!CAS)
+    return false;
+
+  auto ID = CAS->parseID(PossibleID);
   if (!ID) {
     // This maybe not a CASID since we always try to load from CAS first. Ignore
     // any error happening when parsing the CASID.
@@ -159,7 +161,7 @@ bool BinaryHolder::ObjectEntry::load(cas::ObjectStore &CAS,
   if (Opts.Verbose)
     WithColor::note() << "resolving cas object " << PossibleID << "\n";
 
-  auto Ref = CAS.getProxy(*ID);
+  auto Ref = CAS->getProxy(*ID);
   if (!Ref) {
     WithColor::warning() << "failed to load CAS object: "
                          << toString(Ref.takeError()) << "\n";
@@ -267,16 +269,54 @@ BinaryHolder::ArchiveEntry::getObjectEntry(StringRef Filename,
   return *(MemberCache[Key] = std::move(OE));
 }
 
-Expected<std::shared_ptr<cas::ObjectStore>>
-BinaryHolder::searchAndCreateCAS(StringRef Path) {
+Error BinaryHolder::setGlobalCASConfiguration(cas::CASConfiguration Config) {
+  if (Config.CASPath.empty())
+    return Error::success();
+
+  auto DB = Config.createDatabases();
+  if (!DB)
+    return DB.takeError();
+
   std::scoped_lock<std::mutex> CASLock(CASMutex);
-  auto Opened = LocalCAS.find(Path);
-  if (Opened != LocalCAS.end())
-    return Opened->second;
+  auto Insert = OpenedCAS.try_emplace(Config, std::move(DB->first));
+  GlobalCAS = Insert.first->second.get();
+  return Error::success();
+}
+
+bool BinaryHolder::updateGlobalCASFromPath(StringRef Path) {
+  auto DB = searchAndCreateCAS(Path);
+  if (!DB) {
+    consumeError(DB.takeError());
+    return false;
+  }
+  if (*DB) {
+    GlobalCAS = *DB;
+    return true;
+  }
+  return false;
+}
+
+Expected<cas::ObjectStore *> BinaryHolder::searchAndCreateCAS(StringRef Path) {
+  std::scoped_lock<std::mutex> CASLock(CASMutex);
+  // The directory has been searched.
+  auto Cached = CASLookupCache.find(Path);
+  if (Cached != CASLookupCache.end())
+    return Cached->second;
+
+  auto addToCache = [&](cas::ObjectStore *CAS) {
+    CASLookupCache.try_emplace(Path, CAS);
+    return CAS;
+  };
 
   auto Config = cas::CASConfiguration::createFromSearchConfigFile(Path);
+  // Use backup CAS if no local CAS can be found.
   if (!Config)
     return nullptr;
+
+  // The configuration has been opened.
+  auto Opened = OpenedCAS.find(Config->second);
+  if (Opened != OpenedCAS.end())
+    return addToCache(Opened->second.get());
 
   auto DB = Config->second.createDatabases();
   if (!DB)
@@ -285,7 +325,9 @@ BinaryHolder::searchAndCreateCAS(StringRef Path) {
   if (Opts.Verbose)
     WithColor::note() << "create CAS using configuration: " << Config->first
                       << "'\n";
-  return LocalCAS.try_emplace(Path, std::move(DB->first)).first->second;
+
+  auto Insert = OpenedCAS.try_emplace(Config->second, std::move(DB->first));
+  return addToCache(Insert.first->second.get());
 }
 
 Expected<const BinaryHolder::ObjectEntry &>
@@ -337,24 +379,20 @@ BinaryHolder::getObjectEntryFromCAS(StringRef MaybeCASID, StringRef Filename) {
     WithColor::note() << "trying to load '" << MaybeCASID << "' from '"
                       << Filename << "'\n";
 
-  auto DB = GlobalCAS;
-  if (!DB) {
-    // If no global CAS, infer from Filename and search from the parent path of
-    // the binary file.
-    auto MaybeCAS = searchAndCreateCAS(sys::path::parent_path(Filename));
-    if (!MaybeCAS)
-      return MaybeCAS.takeError();
-    DB = std::move(*MaybeCAS);
-  }
-  // No CAS available to lookup, return nullptr.
+  auto DB = searchAndCreateCAS(sys::path::parent_path(Filename));
   if (!DB)
+    return DB.takeError();
+
+  // No CAS available to lookup, return nullptr.
+  if (!*DB && !GlobalCAS)
     return nullptr;
 
   std::lock_guard<std::mutex> Lock(ObjectCacheMutex);
   ObjectRefCounter[MaybeCASID]++;
   if (!ObjectCache.count(MaybeCASID)) {
     auto OE = std::make_unique<ObjectEntry>();
-    if (!OE->load(*DB, MaybeCASID, Opts))
+    if (!OE->load(*DB, MaybeCASID, Opts) &&
+        !OE->load(GlobalCAS, MaybeCASID, Opts))
       return nullptr;
     ObjectCache[MaybeCASID] = std::move(OE);
   }

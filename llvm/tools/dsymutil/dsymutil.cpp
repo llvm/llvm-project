@@ -681,24 +681,12 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
       return EXIT_FAILURE;
     }
 
-  // Create CAS. Only support unified database for now.
-  std::shared_ptr<llvm::cas::ObjectStore> CAS;
-  if (!Options.CASOptions.CASPath.empty()) {
-    auto DB = Options.CASOptions.createDatabases();
-    if (!DB) {
-      WithColor::error() << "failed to open CAS: " << toString(DB.takeError())
-                         << "\n";
-      return EXIT_FAILURE;
-    }
-    CAS = std::move(DB->first);
-  }
-
   for (auto &InputFile : Options.InputFiles) {
     // Shared a single binary holder for all the link steps.
     BinaryHolder::Options BinOpts;
     BinOpts.Verbose = Options.LinkOpts.Verbose;
     BinOpts.Warn = !Options.NoObjectTimestamp;
-    BinaryHolder BinHolder(Options.LinkOpts.VFS, BinOpts, CAS);
+    BinaryHolder BinHolder(Options.LinkOpts.VFS, BinOpts);
 
     // Dump the symbol table for each input file and requested arch
     if (Options.DumpStab) {
@@ -748,6 +736,13 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
     }
     Options.LinkOpts.ResourceDir = OutputLocationOrErr->getResourceDir();
 
+    // Compute a global CAS.
+    if (auto E = BinHolder.setGlobalCASConfiguration(Options.CASOptions)) {
+      WithColor::error() << "failed to open CAS: " << toString(std::move(E))
+                         << "\n";
+      return EXIT_FAILURE;
+    }
+
     // Statistics only require different architectures to be processed
     // sequentially, the link itself can still happen in parallel. Change the
     // thread pool strategy here instead of modifying LinkOpts.Threads.
@@ -784,6 +779,15 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
 
         if (Options.DumpDebugMap)
           continue;
+
+        // Update the global CAS if it is not available on the command-line.
+        if (Options.CASOptions.CASPath.empty()) {
+          for (auto &F : *Map) {
+            if (BinHolder.updateGlobalCASFromPath(
+                    sys::path::parent_path(F->getObjectFilename())))
+              break;
+          }
+        }
 
         if (Map->begin() == Map->end()) {
           if (!Options.LinkOpts.Quiet) {
