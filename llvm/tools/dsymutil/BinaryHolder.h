@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/CAS/CASConfiguration.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/Error.h"
@@ -47,8 +48,7 @@ public:
   };
 
   BinaryHolder(IntrusiveRefCntPtr<vfs::FileSystem> VFS,
-               BinaryHolder::Options Opts = {},
-               std::shared_ptr<cas::ObjectStore> CAS = nullptr);
+               BinaryHolder::Options Opts = {});
 
   // Forward declarations for friend declaration.
   class ObjectEntry;
@@ -69,7 +69,7 @@ public:
     Error load(IntrusiveRefCntPtr<vfs::FileSystem> VFS, StringRef Filename,
                TimestampTy Timestamp, BinaryHolder::Options = {});
 
-    bool load(cas::ObjectStore &CAS, StringRef Filename,
+    bool load(cas::ObjectStore *CAS, StringRef Filename,
               BinaryHolder::Options = {});
 
     /// Access all owned ObjectFiles.
@@ -147,9 +147,12 @@ public:
   Expected<const ObjectEntry *> getObjectEntryFromCAS(StringRef MaybeCASID,
                                                       StringRef Filename);
 
+  /// Set GlobalCAS Configuration.
+  Error setGlobalCASConfiguration(cas::CASConfiguration Config);
+  /// Update GlobalCAS with path, return true if a global CAS is set.
+  bool updateGlobalCASFromPath(StringRef Path);
   /// Search and create CAS.
-  Expected<std::shared_ptr<cas::ObjectStore>>
-  searchAndCreateCAS(StringRef Path);
+  Expected<cas::ObjectStore *> searchAndCreateCAS(StringRef Path);
 
   void clear();
   void eraseObjectEntry(StringRef Filename);
@@ -169,9 +172,12 @@ private:
   /// Virtual File System instance.
   IntrusiveRefCntPtr<vfs::FileSystem> VFS;
 
-  /// CAS Instance.
-  std::shared_ptr<cas::ObjectStore> GlobalCAS;
-  StringMap<std::shared_ptr<cas::ObjectStore>> LocalCAS;
+  /// A map for all opened local CAS configurations from directory search.
+  DenseMap<cas::CASConfiguration, std::shared_ptr<cas::ObjectStore>> OpenedCAS;
+  /// A cache to lookup CAS instance from directory path.
+  StringMap<cas::ObjectStore *> CASLookupCache;
+  /// Global CAS used fallback when local CAS are not available.
+  cas::ObjectStore *GlobalCAS;
   std::mutex CASMutex;
 
   Options Opts;
