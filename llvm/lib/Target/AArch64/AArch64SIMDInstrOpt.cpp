@@ -72,14 +72,6 @@ public:
   MachineRegisterInfo *MRI;
   TargetSchedModel SchedModel;
 
-  // The two maps below are used to cache decisions instead of recomputing:
-  // This is used to cache instruction replacement decisions within function
-  // units and across function units.
-  std::map<std::pair<unsigned, std::string>, bool> SIMDInstrTable;
-  // This is used to cache the decision of whether to leave the interleaved
-  // store instructions replacement pass early or not for a particular target.
-  std::unordered_map<std::string, bool> InterlEarlyExit;
-
   typedef enum {
     VectorElem,
     Interleave
@@ -88,64 +80,20 @@ public:
   // Instruction represented by OrigOpc is replaced by instructions in ReplOpc.
   struct InstReplInfo {
     unsigned OrigOpc;
-		std::vector<unsigned> ReplOpc;
-    const TargetRegisterClass RC;
+    std::vector<unsigned> ReplOpc;
+    const TargetRegisterClass *RC;
   };
 
-#define RuleST2(OpcOrg, OpcR0, OpcR1, OpcR2, RC) \
-  {OpcOrg, {OpcR0, OpcR1, OpcR2}, RC}
-#define RuleST4(OpcOrg, OpcR0, OpcR1, OpcR2, OpcR3, OpcR4, OpcR5, OpcR6, \
-                OpcR7, OpcR8, OpcR9, RC) \
-  {OpcOrg, \
-   {OpcR0, OpcR1, OpcR2, OpcR3, OpcR4, OpcR5, OpcR6, OpcR7, OpcR8, OpcR9}, RC}
+#define RuleST2(OpcOrg, OpcR0, OpcR1, OpcR2, RC)                               \
+  {OpcOrg, {OpcR0, OpcR1, OpcR2}, &RC}
+#define RuleST4(OpcOrg, OpcR0, OpcR1, OpcR2, OpcR3, OpcR4, OpcR5, OpcR6,       \
+                OpcR7, OpcR8, OpcR9, RC)                                       \
+  {OpcOrg,                                                                     \
+   {OpcR0, OpcR1, OpcR2, OpcR3, OpcR4, OpcR5, OpcR6, OpcR7, OpcR8, OpcR9},     \
+   &RC}
 
-  // The Instruction Replacement Table:
-  std::vector<InstReplInfo> IRT = {
-    // ST2 instructions
-    RuleST2(AArch64::ST2Twov2d, AArch64::ZIP1v2i64, AArch64::ZIP2v2i64,
-          AArch64::STPQi, AArch64::FPR128RegClass),
-    RuleST2(AArch64::ST2Twov4s, AArch64::ZIP1v4i32, AArch64::ZIP2v4i32,
-          AArch64::STPQi, AArch64::FPR128RegClass),
-    RuleST2(AArch64::ST2Twov2s, AArch64::ZIP1v2i32, AArch64::ZIP2v2i32,
-          AArch64::STPDi, AArch64::FPR64RegClass),
-    RuleST2(AArch64::ST2Twov8h, AArch64::ZIP1v8i16, AArch64::ZIP2v8i16,
-          AArch64::STPQi, AArch64::FPR128RegClass),
-    RuleST2(AArch64::ST2Twov4h, AArch64::ZIP1v4i16, AArch64::ZIP2v4i16,
-          AArch64::STPDi, AArch64::FPR64RegClass),
-    RuleST2(AArch64::ST2Twov16b, AArch64::ZIP1v16i8, AArch64::ZIP2v16i8,
-          AArch64::STPQi, AArch64::FPR128RegClass),
-    RuleST2(AArch64::ST2Twov8b, AArch64::ZIP1v8i8, AArch64::ZIP2v8i8,
-          AArch64::STPDi, AArch64::FPR64RegClass),
-    // ST4 instructions
-    RuleST4(AArch64::ST4Fourv2d, AArch64::ZIP1v2i64, AArch64::ZIP2v2i64,
-          AArch64::ZIP1v2i64, AArch64::ZIP2v2i64, AArch64::ZIP1v2i64,
-          AArch64::ZIP2v2i64, AArch64::ZIP1v2i64, AArch64::ZIP2v2i64,
-          AArch64::STPQi, AArch64::STPQi, AArch64::FPR128RegClass),
-    RuleST4(AArch64::ST4Fourv4s, AArch64::ZIP1v4i32, AArch64::ZIP2v4i32,
-          AArch64::ZIP1v4i32, AArch64::ZIP2v4i32, AArch64::ZIP1v4i32,
-          AArch64::ZIP2v4i32, AArch64::ZIP1v4i32, AArch64::ZIP2v4i32,
-          AArch64::STPQi, AArch64::STPQi, AArch64::FPR128RegClass),
-    RuleST4(AArch64::ST4Fourv2s, AArch64::ZIP1v2i32, AArch64::ZIP2v2i32,
-          AArch64::ZIP1v2i32, AArch64::ZIP2v2i32, AArch64::ZIP1v2i32,
-          AArch64::ZIP2v2i32, AArch64::ZIP1v2i32, AArch64::ZIP2v2i32,
-          AArch64::STPDi, AArch64::STPDi, AArch64::FPR64RegClass),
-    RuleST4(AArch64::ST4Fourv8h, AArch64::ZIP1v8i16, AArch64::ZIP2v8i16,
-          AArch64::ZIP1v8i16, AArch64::ZIP2v8i16, AArch64::ZIP1v8i16,
-          AArch64::ZIP2v8i16, AArch64::ZIP1v8i16, AArch64::ZIP2v8i16,
-          AArch64::STPQi, AArch64::STPQi, AArch64::FPR128RegClass),
-    RuleST4(AArch64::ST4Fourv4h, AArch64::ZIP1v4i16, AArch64::ZIP2v4i16,
-          AArch64::ZIP1v4i16, AArch64::ZIP2v4i16, AArch64::ZIP1v4i16,
-          AArch64::ZIP2v4i16, AArch64::ZIP1v4i16, AArch64::ZIP2v4i16,
-          AArch64::STPDi, AArch64::STPDi, AArch64::FPR64RegClass),
-    RuleST4(AArch64::ST4Fourv16b, AArch64::ZIP1v16i8, AArch64::ZIP2v16i8,
-          AArch64::ZIP1v16i8, AArch64::ZIP2v16i8, AArch64::ZIP1v16i8,
-          AArch64::ZIP2v16i8, AArch64::ZIP1v16i8, AArch64::ZIP2v16i8,
-          AArch64::STPQi, AArch64::STPQi, AArch64::FPR128RegClass),
-    RuleST4(AArch64::ST4Fourv8b, AArch64::ZIP1v8i8, AArch64::ZIP2v8i8,
-          AArch64::ZIP1v8i8, AArch64::ZIP2v8i8, AArch64::ZIP1v8i8,
-          AArch64::ZIP2v8i8, AArch64::ZIP1v8i8, AArch64::ZIP2v8i8,
-          AArch64::STPDi, AArch64::STPDi, AArch64::FPR64RegClass)
-  };
+  // The Instruction Replacement Table.
+  static const std::vector<InstReplInfo> IRT;
 
   // A costly instruction is replaced in this work by N efficient instructions
   // The maximum of N is currently 10 and it is for ST4 case.
@@ -212,6 +160,62 @@ struct AArch64SIMDInstrOptLegacy : public MachineFunctionPass {
 };
 
 char AArch64SIMDInstrOptLegacy::ID = 0;
+
+const std::vector<AArch64SIMDInstrOptImpl::InstReplInfo>
+    AArch64SIMDInstrOptImpl::IRT = {
+        // ST2 instructions
+        RuleST2(AArch64::ST2Twov2d, AArch64::ZIP1v2i64, AArch64::ZIP2v2i64,
+                AArch64::STPQi, AArch64::FPR128RegClass),
+        RuleST2(AArch64::ST2Twov4s, AArch64::ZIP1v4i32, AArch64::ZIP2v4i32,
+                AArch64::STPQi, AArch64::FPR128RegClass),
+        RuleST2(AArch64::ST2Twov2s, AArch64::ZIP1v2i32, AArch64::ZIP2v2i32,
+                AArch64::STPDi, AArch64::FPR64RegClass),
+        RuleST2(AArch64::ST2Twov8h, AArch64::ZIP1v8i16, AArch64::ZIP2v8i16,
+                AArch64::STPQi, AArch64::FPR128RegClass),
+        RuleST2(AArch64::ST2Twov4h, AArch64::ZIP1v4i16, AArch64::ZIP2v4i16,
+                AArch64::STPDi, AArch64::FPR64RegClass),
+        RuleST2(AArch64::ST2Twov16b, AArch64::ZIP1v16i8, AArch64::ZIP2v16i8,
+                AArch64::STPQi, AArch64::FPR128RegClass),
+        RuleST2(AArch64::ST2Twov8b, AArch64::ZIP1v8i8, AArch64::ZIP2v8i8,
+                AArch64::STPDi, AArch64::FPR64RegClass),
+        // ST4 instructions
+        RuleST4(AArch64::ST4Fourv2d, AArch64::ZIP1v2i64, AArch64::ZIP2v2i64,
+                AArch64::ZIP1v2i64, AArch64::ZIP2v2i64, AArch64::ZIP1v2i64,
+                AArch64::ZIP2v2i64, AArch64::ZIP1v2i64, AArch64::ZIP2v2i64,
+                AArch64::STPQi, AArch64::STPQi, AArch64::FPR128RegClass),
+        RuleST4(AArch64::ST4Fourv4s, AArch64::ZIP1v4i32, AArch64::ZIP2v4i32,
+                AArch64::ZIP1v4i32, AArch64::ZIP2v4i32, AArch64::ZIP1v4i32,
+                AArch64::ZIP2v4i32, AArch64::ZIP1v4i32, AArch64::ZIP2v4i32,
+                AArch64::STPQi, AArch64::STPQi, AArch64::FPR128RegClass),
+        RuleST4(AArch64::ST4Fourv2s, AArch64::ZIP1v2i32, AArch64::ZIP2v2i32,
+                AArch64::ZIP1v2i32, AArch64::ZIP2v2i32, AArch64::ZIP1v2i32,
+                AArch64::ZIP2v2i32, AArch64::ZIP1v2i32, AArch64::ZIP2v2i32,
+                AArch64::STPDi, AArch64::STPDi, AArch64::FPR64RegClass),
+        RuleST4(AArch64::ST4Fourv8h, AArch64::ZIP1v8i16, AArch64::ZIP2v8i16,
+                AArch64::ZIP1v8i16, AArch64::ZIP2v8i16, AArch64::ZIP1v8i16,
+                AArch64::ZIP2v8i16, AArch64::ZIP1v8i16, AArch64::ZIP2v8i16,
+                AArch64::STPQi, AArch64::STPQi, AArch64::FPR128RegClass),
+        RuleST4(AArch64::ST4Fourv4h, AArch64::ZIP1v4i16, AArch64::ZIP2v4i16,
+                AArch64::ZIP1v4i16, AArch64::ZIP2v4i16, AArch64::ZIP1v4i16,
+                AArch64::ZIP2v4i16, AArch64::ZIP1v4i16, AArch64::ZIP2v4i16,
+                AArch64::STPDi, AArch64::STPDi, AArch64::FPR64RegClass),
+        RuleST4(AArch64::ST4Fourv16b, AArch64::ZIP1v16i8, AArch64::ZIP2v16i8,
+                AArch64::ZIP1v16i8, AArch64::ZIP2v16i8, AArch64::ZIP1v16i8,
+                AArch64::ZIP2v16i8, AArch64::ZIP1v16i8, AArch64::ZIP2v16i8,
+                AArch64::STPQi, AArch64::STPQi, AArch64::FPR128RegClass),
+        RuleST4(AArch64::ST4Fourv8b, AArch64::ZIP1v8i8, AArch64::ZIP2v8i8,
+                AArch64::ZIP1v8i8, AArch64::ZIP2v8i8, AArch64::ZIP1v8i8,
+                AArch64::ZIP2v8i8, AArch64::ZIP1v8i8, AArch64::ZIP2v8i8,
+                AArch64::STPDi, AArch64::STPDi, AArch64::FPR64RegClass)};
+
+// The two maps below are used to cache decisions instead of recomputing:
+//
+// This is used to cache instruction replacement decisions within function
+// units and across function units.
+static std::map<std::pair<unsigned, std::string>, bool> SIMDInstrTable;
+// This is used to cache the decision of whether to leave the interleaved
+// store instructions replacement pass early or not for a particular target.
+static std::unordered_map<std::string, bool> InterlEarlyExit;
 
 } // end anonymous namespace
 
@@ -537,7 +541,7 @@ bool AArch64SIMDInstrOptImpl::optimizeLdStInterleave(MachineInstr &MI) {
         ReplInstrMCID.push_back(&TII->get(Repl));
         // Generate destination registers but only for non-store instruction.
         if (Repl != AArch64::STPQi && Repl != AArch64::STPDi)
-          ZipDest.push_back(MRI->createVirtualRegister(&I.RC));
+          ZipDest.push_back(MRI->createVirtualRegister(I.RC));
       }
       Match = true;
       break;
