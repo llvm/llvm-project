@@ -12,14 +12,9 @@ define i8 @udiv_i8_by7(i8 %x) nounwind {
 ; CHECK-LABEL: udiv_i8_by7:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzbl %dil, %eax
-; CHECK-NEXT:    leal (%rax,%rax,8), %ecx
-; CHECK-NEXT:    leal (%rax,%rcx,4), %ecx
-; CHECK-NEXT:    shrl $8, %ecx
-; CHECK-NEXT:    subb %cl, %al
-; CHECK-NEXT:    shrb %al
-; CHECK-NEXT:    addb %cl, %al
-; CHECK-NEXT:    shrb $2, %al
-; CHECK-NEXT:    # kill: def $al killed $al killed $rax
+; CHECK-NEXT:    imull $293, %eax, %eax # imm = 0x125
+; CHECK-NEXT:    shrl $11, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %d = udiv i8 %x, 7
   ret i8 %d
@@ -104,15 +99,10 @@ define i8 @udiv_i8_then_add(i8 %x, i8 %y) nounwind {
 ; CHECK-LABEL: udiv_i8_then_add:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzbl %dil, %eax
-; CHECK-NEXT:    leal (%rax,%rax,8), %ecx
-; CHECK-NEXT:    leal (%rax,%rcx,4), %ecx
-; CHECK-NEXT:    shrl $8, %ecx
-; CHECK-NEXT:    subb %cl, %al
-; CHECK-NEXT:    shrb %al
-; CHECK-NEXT:    addb %cl, %al
-; CHECK-NEXT:    shrb $2, %al
+; CHECK-NEXT:    imull $293, %eax, %eax # imm = 0x125
+; CHECK-NEXT:    shrl $11, %eax
 ; CHECK-NEXT:    addb %sil, %al
-; CHECK-NEXT:    # kill: def $al killed $al killed $rax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %d = udiv i8 %x, 7
   %r = add i8 %d, %y
@@ -125,14 +115,9 @@ define i16 @udiv_i16_by7(i16 %x) nounwind {
 ; CHECK-LABEL: udiv_i16_by7:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzwl %di, %eax
-; CHECK-NEXT:    imull $9363, %eax, %ecx # imm = 0x2493
-; CHECK-NEXT:    shrl $16, %ecx
-; CHECK-NEXT:    subl %ecx, %edi
-; CHECK-NEXT:    movzwl %di, %eax
-; CHECK-NEXT:    shrl %eax
-; CHECK-NEXT:    addl %ecx, %eax
-; CHECK-NEXT:    shrl $2, %eax
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    imulq $74899, %rax, %rax # imm = 0x12493
+; CHECK-NEXT:    shrq $19, %rax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $rax
 ; CHECK-NEXT:    retq
   %d = udiv i16 %x, 7
   ret i16 %d
@@ -156,13 +141,9 @@ define i32 @zext_udiv_i16_by7(i16 %x) nounwind {
 ; CHECK-LABEL: zext_udiv_i16_by7:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzwl %di, %eax
-; CHECK-NEXT:    imull $9363, %eax, %ecx # imm = 0x2493
-; CHECK-NEXT:    shrl $16, %ecx
-; CHECK-NEXT:    subl %ecx, %edi
-; CHECK-NEXT:    movzwl %di, %eax
-; CHECK-NEXT:    shrl %eax
-; CHECK-NEXT:    addl %ecx, %eax
-; CHECK-NEXT:    shrl $2, %eax
+; CHECK-NEXT:    imulq $74899, %rax, %rax # imm = 0x12493
+; CHECK-NEXT:    shrq $19, %rax
+; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    retq
   %d = udiv i16 %x, 7
   %z = zext i16 %d to i32

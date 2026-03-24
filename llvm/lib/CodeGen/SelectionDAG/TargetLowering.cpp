@@ -6781,6 +6781,56 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::ADD, dl, VT, Q, T);
 }
 
+/// For narrow scalar types (i8/i16) where Hacker's Delight requires an
+/// add-and-shift fixup (IsAdd), check whether a fixup-free 64-bit magic
+/// multiply exists:
+///   trunc(srl(mul(zext(x, 64), Magic), Shift))
+/// where Magic = ceil(2^Shift / C).
+///
+/// No fixup is needed when two conditions hold:
+///   (1) MaxX * Magic < 2^64    (multiply doesn't overflow 64 bits)
+///   (2) MaxX * (Magic*C - 2^Shift) < 2^Shift  (approximation error is exact)
+///
+/// When IsAdd is required by HD, no 32-bit fixup-free solution exists, so we
+/// search only in 64-bit space. Populates Info and returns true on success.
+struct SimpleWideMagicInfo {
+  APInt Magic;
+  unsigned Shift;
+};
+
+static bool findSimpleWideMagic(const APInt &Divisor, const APInt &MaxX,
+                                SimpleWideMagicInfo &Info) {
+  APInt DivWide = Divisor.zext(64);
+  APInt MaxWide = MaxX.zext(64);
+  unsigned MinShift = Divisor.ceilLogBase2();
+
+  for (unsigned Shift = MinShift; Shift < 64; ++Shift) {
+    APInt TwoToS = APInt(64, 1).shl(Shift);
+    APInt Magic = APIntOps::RoundingUDiv(TwoToS, DivWide, APInt::Rounding::UP);
+
+    // Check (1): MaxX * Magic must fit in 64 bits. Magic = ceil(2^Shift / C)
+    // grows monotonically with Shift, so once this overflows no larger Shift
+    // can succeed either.
+    bool Overflow = false;
+    (void)MaxWide.umul_ov(Magic, Overflow);
+    if (Overflow)
+      break;
+
+    // Check (2): MaxX * (Magic*C - 2^Shift) < 2^Shift.
+    // Magic*C never overflows 64 bits for i8/i16: Magic*C <= 2^Shift + C
+    // <= 2^63 + 65535 < 2^64.
+    APInt Error = Magic * DivWide - TwoToS;
+    APInt MaxError = MaxWide.umul_ov(Error, Overflow);
+    if (Overflow || MaxError.uge(TwoToS))
+      continue;
+
+    Info = {Magic, Shift};
+    return true;
+  }
+
+  return false;
+}
+
 /// Given an ISD::UDIV node expressing a divide by constant,
 /// return a DAG expression to select that will generate the same value by
 /// multiplying by a magic number.
@@ -6852,9 +6902,13 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
 
+  // Compute known bits once; used both to reduce the Hacker's Delight magic
+  // and to check simple-wide-magic conditions below.
+  KnownBits Known0 = DAG.computeKnownBits(N0);
+
   // Try to use leading zeros of the dividend to reduce the multiplier and
   // avoid expensive fixups.
-  unsigned KnownLeadingZeros = DAG.computeKnownBits(N0).countMinLeadingZeros();
+  unsigned KnownLeadingZeros = Known0.countMinLeadingZeros();
 
   // If we're after type legalization and SVT is not legal, use the
   // promoted type for creating constants to avoid creating nodes with
@@ -6882,6 +6936,13 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
 
   bool UseNPQ = false, UsePreShift = false, UsePostShift = false;
   bool UseWiden = false;
+  // For narrow scalar types (i8, i16) a simple fixup-free wide magic may exist:
+  //   trunc(srl(mul(zext(x, W), ceil(2^Shift / C)), Shift))
+  // This is preferred over the NPQ add-and-shift fixup when it applies.
+  // SimpleWideMulMagic being non-null indicates this path was taken.
+  EVT SimpleWideMulVT;
+  SDValue SimpleWideMulMagic;
+  SDValue SimpleWideMulShift;
   SmallVector<SDValue, 16> PreShifts, PostShifts, MagicFactors, NPQFactors;
 
   auto BuildUDIVPattern = [&](ConstantSDNode *C) {
@@ -6927,6 +6988,29 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
       UseNPQ |= magics.IsAdd;
       UsePreShift |= magics.PreShift != 0;
       UsePostShift |= magics.PostShift != 0;
+
+      // For narrow scalar types (i8, i16), when the Hacker's Delight magic
+      // requires the expensive NPQ add-and-shift fixup (IsAdd), check whether
+      // a simple fixup-free 64-bit magic exists:
+      //   trunc(srl(mul(zext(x, 64), ceil(2^Shift / C)), Shift))
+      // When IsAdd is required by HD, no 32-bit fixup-free solution exists, so
+      // we go directly to 64-bit. Only attempt when i64 MUL is natively legal.
+      EVT I64VT = EVT::getIntegerVT(*DAG.getContext(), 64);
+      bool IsScalar = !VT.isVector();
+      bool IsNarrow = EltBits <= 16;
+      bool NeedsAddFixup = magics.IsAdd;
+      bool HasLegalI64Mul =
+          isOperationLegalOrCustom(ISD::MUL, I64VT, IsAfterLegalization);
+      if (IsScalar && IsNarrow && NeedsAddFixup && HasLegalI64Mul) {
+        APInt MaxX = Known0.getMaxValue();
+        SimpleWideMagicInfo Info;
+        if (findSimpleWideMagic(Divisor, MaxX, Info)) {
+          SimpleWideMulVT = I64VT;
+          EVT WideShVT = getShiftAmountTy(I64VT, DAG.getDataLayout());
+          SimpleWideMulMagic = DAG.getConstant(Info.Magic, dl, I64VT);
+          SimpleWideMulShift = DAG.getConstant(Info.Shift, dl, WideShVT);
+        }
+      }
     }
 
     PreShifts.push_back(PreShift);
@@ -6960,6 +7044,21 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
     PreShift = PreShifts[0];
     MagicFactor = MagicFactors[0];
     PostShift = PostShifts[0];
+  }
+
+  // Simple wide magic: trunc(srl(mul(zext(x, 64), Magic), Shift)).
+  // Only applies to narrow scalars (i8, i16); divisor=1 is excluded (never
+  // sets SimpleWideMulMagic), so no IsOne select is needed here.
+  if (SimpleWideMulMagic.getNode()) {
+    SDValue Wide = DAG.getNode(ISD::ZERO_EXTEND, dl, SimpleWideMulVT, N0);
+    Created.push_back(Wide.getNode());
+    SDValue Mul =
+        DAG.getNode(ISD::MUL, dl, SimpleWideMulVT, Wide, SimpleWideMulMagic);
+    Created.push_back(Mul.getNode());
+    SDValue Srl =
+        DAG.getNode(ISD::SRL, dl, SimpleWideMulVT, Mul, SimpleWideMulShift);
+    Created.push_back(Srl.getNode());
+    return DAG.getNode(ISD::TRUNCATE, dl, VT, Srl);
   }
 
   if (UseWiden) {
