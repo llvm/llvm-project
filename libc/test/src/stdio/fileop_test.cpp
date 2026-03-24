@@ -148,6 +148,26 @@ TEST_F(LlvmLibcFILETest, FFlush) {
   ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
 }
 
+TEST_F(LlvmLibcFILETest, FFlushNull) {
+  constexpr char FILENAME[] = APPEND_LIBC_TEST("testdata/fflush_null.test");
+  ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w+");
+  ASSERT_FALSE(file == nullptr);
+  constexpr char CONTENT[] = "1234567890987654321";
+  ASSERT_EQ(sizeof(CONTENT),
+            LIBC_NAMESPACE::fwrite(CONTENT, 1, sizeof(CONTENT), file));
+
+  // Flushing with NULL should flush all streams, including this one.
+  ASSERT_EQ(0, LIBC_NAMESPACE::fflush(nullptr));
+
+  char data[sizeof(CONTENT)];
+  ASSERT_EQ(LIBC_NAMESPACE::fseek(file, 0, SEEK_SET), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::fread(data, 1, sizeof(CONTENT), file),
+            sizeof(CONTENT));
+  ASSERT_STREQ(data, CONTENT);
+
+  ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
+}
+
 TEST_F(LlvmLibcFILETest, FOpenFWriteSizeGreaterThanOne) {
   using MyStruct = struct {
     char c;
