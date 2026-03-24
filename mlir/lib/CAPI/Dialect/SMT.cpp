@@ -107,6 +107,8 @@ MlirType mlirSMTTypeGetSort(MlirContext ctx, MlirAttribute identifier,
   for (size_t i = 0; i < numberOfSortParams; i++)
     sortParamsVec.push_back(unwrap(sortParams[i]));
 
+  assert(isa<StringAttr>(unwrap(identifier)) &&
+         "name attribute name must be a string attribute");
   return wrap(SortType::get(
       unwrap(ctx), llvm::cast<StringAttr>(unwrap(identifier)), sortParamsVec));
 }

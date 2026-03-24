@@ -1316,6 +1316,8 @@ void mlirAttributeDump(MlirAttribute attr) { unwrap(attr).dump(); }
 
 MlirNamedAttribute mlirNamedAttributeGet(MlirAttribute name,
                                          MlirAttribute attr) {
+  assert(isa<StringAttr>(unwrap(name)) &&
+         "name attribute name must be a string attribute");
   return MlirNamedAttribute{name, attr};
 }
 
