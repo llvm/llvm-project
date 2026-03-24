@@ -51,6 +51,8 @@ struct Symbol {
   SymbolID ID;
   /// The symbol information, like symbol kind.
   index::SymbolInfo SymInfo = index::SymbolInfo();
+  /// Where this symbol came from. Usually an index provides a constant value.
+  SymbolOrigin Origin = SymbolOrigin::Unknown;
   /// The unqualified name of the symbol, e.g. "bar" (for ns::bar).
   llvm::StringRef Name;
   /// The containing namespace. e.g. "" (global), "ns::" (top-level namespace).
@@ -70,8 +72,10 @@ struct Symbol {
   /// The number of translation units that reference this symbol from their main
   /// file. This number is only meaningful if aggregated in an index.
   unsigned References = 0;
-  /// Where this symbol came from. Usually an index provides a constant value.
-  SymbolOrigin Origin = SymbolOrigin::Unknown;
+  /// Symbol tags for LSP protocol (Deprecated, Static, Virtual, Abstract,
+  /// Final, ReadOnly, Public, Protected, Private, Declaration, Definition).
+  /// This is a bitmask where each bit represents a SymbolTag.
+  SymbolTags Tags = 0;
   /// A brief description of the symbol that can be appended in the completion
   /// candidate list. For example, "(X x, Y y) const" is a function signature.
   /// Only set when the symbol is indexed for completion.
@@ -96,11 +100,6 @@ struct Symbol {
   /// purposes.
   /// Only set when the symbol is indexed for completion.
   llvm::StringRef Type;
-
-  /// Symbol tags for LSP protocol (Deprecated, Static, Virtual, Abstract,
-  /// Final, ReadOnly, Public, Protected, Private, Declaration, Definition).
-  /// This is a bitmask where each bit represents a SymbolTag.
-  SymbolTags Tags = 0;
 
   enum IncludeDirective : uint8_t {
     Invalid = 0,
