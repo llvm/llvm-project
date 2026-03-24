@@ -377,14 +377,7 @@ static bool deduceAndAssignSpirvType(MachineInstr *I, MachineFunction &MF,
     return false;
 
   LLVM_DEBUG(dbgs() << "Assigned type to " << *I << ": " << *ResType);
-  GR->assignSPIRVTypeToVReg(ResType, ResVReg, MF);
-
-  if (!MRI.getRegClassOrNull(ResVReg)) {
-    LLVM_DEBUG(dbgs() << "Updating the register class.\n");
-    MRI.setRegClass(ResVReg, GR->getRegClass(ResType));
-    if (!MRI.getType(ResVReg).isValid())
-      MRI.setType(ResVReg, GR->getRegType(ResType));
-  }
+  setRegClassType(ResVReg, ResType, GR, &MRI, MF);
   return true;
 }
 

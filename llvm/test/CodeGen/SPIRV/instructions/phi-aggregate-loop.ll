@@ -61,9 +61,34 @@ exit:
   ret void
 }
 
-; CHECK-DAG: %[[#PHI3:]] = OpPhi %[[#STRUCTTY]]
+; CHECK-DAG: %[[#PHI3:]] = OpPhi %[[#ARRTY]]
 ; CHECK-DAG: %[[#]] = OpPhi %[[#]]
 ; CHECK: %[[#]] = OpCompositeExtract %[[#]] %[[#PHI3]]
+; CHECK: %[[#]] = OpFAdd
+; CHECK: %[[#]] = OpCompositeInsert %[[#ARRTY]]
+define void @loop_phi_insert_into_agg(ptr addrspace(1) %out) {
+entry:
+  br label %loop
+
+loop:
+  %i = phi i32 [ %next, %loop ], [ 0, %entry ]
+  %agg = phi [1 x float] [ %agg.new, %loop ], [ zeroinitializer, %entry ]
+  %prev = extractvalue [1 x float] %agg, 0
+  %sum = fadd float %prev, 1.0
+  %agg.new = insertvalue [1 x float] %agg, float %sum, 0
+  %next = add i32 %i, 1
+  %cond = icmp slt i32 %next, 64
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  %final = extractvalue [1 x float] %agg, 0
+  store float %final, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+; CHECK-DAG: %[[#PHI4:]] = OpPhi %[[#STRUCTTY]]
+; CHECK-DAG: %[[#]] = OpPhi %[[#]]
+; CHECK: %[[#]] = OpCompositeExtract %[[#]] %[[#PHI4]]
 ; CHECK: %[[#]] = OpFAdd
 ; CHECK: %[[#]] = OpCompositeInsert %[[#STRUCTTY]]
 define void @loop_phi_struct(ptr addrspace(1) %out) {
