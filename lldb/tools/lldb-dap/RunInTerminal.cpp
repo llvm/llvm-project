@@ -117,7 +117,7 @@ Error RunInTerminalLauncherCommChannel::NotifyPid() {
   return NotifyPid(getpid());
 }
 
-Error RunInTerminalLauncherCommChannel::NotifyPid(int pid) {
+Error RunInTerminalLauncherCommChannel::NotifyPid(lldb::pid_t pid) {
   return m_io.SendJSON(RunInTerminalMessagePid(pid).ToJSON());
 }
 
