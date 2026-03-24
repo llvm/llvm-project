@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIBC_SHARED_MATH_CBRTBF16_H
-#define LIBC_SHARED_MATH_CBRTBF16_H
+#ifndef LLVM_LIBC_SHARED_MATH_CBRTBF16_H
+#define LLVM_LIBC_SHARED_MATH_CBRTBF16_H
 
 #include "shared/libc_common.h"
 #include "src/__support/math/cbrtbf16.h"
