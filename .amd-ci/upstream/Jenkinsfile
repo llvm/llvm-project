@@ -444,7 +444,7 @@ try {
                                 job: 'AOCC-Workloads/TestSuites/' + suiteName,
                                 parameters: suiteParams
                             )
-                            handleBuildResult(result, suite != fujitsuSuiteName)
+                            handleBuildResult(result, suiteName != fujitsuSuiteName)
                         }
                     }
                 }
