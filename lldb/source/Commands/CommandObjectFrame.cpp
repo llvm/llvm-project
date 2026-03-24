@@ -610,11 +610,12 @@ protected:
             uint32_t expr_path_options =
                 StackFrame::eExpressionPathOptionCheckPtrVsMember |
                 StackFrame::eExpressionPathOptionsAllowDirectIVarAccess |
-                StackFrame::eExpressionPathOptionsInspectAnonymousUnions;
+                StackFrame::eExpressionPathOptionsInspectAnonymousUnions |
+                StackFrame::eExpressionPathOptionsAllowVarUpdates;
             lldb::VariableSP var_sp;
             valobj_sp = frame->GetValueForVariableExpressionPath(
                 entry.ref(), m_varobj_options.use_dynamic, expr_path_options,
-                var_sp, error, lldb::eDILModeFull, true);
+                var_sp, error, lldb::eDILModeFull);
             if (valobj_sp) {
               result.GetValueObjectList().Append(valobj_sp);
 

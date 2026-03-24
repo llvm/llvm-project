@@ -524,14 +524,13 @@ StackFrame::GetInScopeVariableList(bool get_file_globals,
 
 ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
     llvm::StringRef var_expr, DynamicValueType use_dynamic, uint32_t options,
-    VariableSP &var_sp, Status &error, lldb::DILMode mode,
-    bool allow_var_updates) {
+    VariableSP &var_sp, Status &error, lldb::DILMode mode) {
   ExecutionContext exe_ctx;
   CalculateExecutionContext(exe_ctx);
   bool use_DIL = exe_ctx.GetTargetRef().GetUseDIL(&exe_ctx);
   if (use_DIL)
     return DILGetValueForVariableExpressionPath(
-        var_expr, use_dynamic, options, var_sp, error, mode, allow_var_updates);
+        var_expr, use_dynamic, options, var_sp, error, mode);
 
   return LegacyGetValueForVariableExpressionPath(var_expr, use_dynamic, options,
                                                  var_sp, error);
@@ -540,7 +539,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
 ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
     llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
     uint32_t options, lldb::VariableSP &var_sp, Status &error,
-    lldb::DILMode mode, bool allow_var_updates) {
+    lldb::DILMode mode) {
 
   const bool check_ptr_vs_member =
       (options & eExpressionPathOptionCheckPtrVsMember) != 0;
@@ -548,6 +547,8 @@ ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
       (options & eExpressionPathOptionsNoFragileObjcIvar) != 0;
   const bool no_synth_child =
       (options & eExpressionPathOptionsNoSyntheticChildren) != 0;
+  const bool allow_var_updates =
+            (options & eExpressionPathOptionsAllowVarUpdates) != 0;
 
   // Lex the expression.
   auto lex_or_err = dil::DILLexer::Create(var_expr, mode);

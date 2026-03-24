@@ -56,7 +56,8 @@ public:
     eExpressionPathOptionsNoSyntheticChildren = (1u << 2),
     eExpressionPathOptionsNoSyntheticArrayRange = (1u << 3),
     eExpressionPathOptionsAllowDirectIVarAccess = (1u << 4),
-    eExpressionPathOptionsInspectAnonymousUnions = (1u << 5)
+    eExpressionPathOptionsInspectAnonymousUnions = (1u << 5),
+    eExpressionPathOptionsAllowVarUpdates = (1u << 6)
   };
 
   enum class Kind {
@@ -325,7 +326,7 @@ public:
   virtual lldb::ValueObjectSP GetValueForVariableExpressionPath(
       llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
       uint32_t options, lldb::VariableSP &var_sp, Status &error,
-      lldb::DILMode mode = lldb::eDILModeFull, bool allow_var_updates = false);
+      lldb::DILMode mode = lldb::eDILModeFull);
 
   /// Determine whether this StackFrame has debug information available or not.
   ///
@@ -621,7 +622,7 @@ private:
   lldb::ValueObjectSP DILGetValueForVariableExpressionPath(
       llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
       uint32_t options, lldb::VariableSP &var_sp, Status &error,
-      lldb::DILMode mode = lldb::eDILModeFull, bool allow_var_updates = false);
+      lldb::DILMode mode = lldb::eDILModeFull);
 
   StackFrame(const StackFrame &) = delete;
   const StackFrame &operator=(const StackFrame &) = delete;
