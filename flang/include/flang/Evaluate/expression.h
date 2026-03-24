@@ -396,13 +396,13 @@ template <typename T> class ConditionalExpr {
 public:
   using Result = T;
   CLASS_BOILERPLATE(ConditionalExpr)
-  ConditionalExpr(
-      Expr<SomeLogical> &&cond, Expr<Result> &&thenVal, Expr<Result> &&elseVal)
+  ConditionalExpr(Expr<LogicalResult> &&cond, Expr<Result> &&thenVal,
+      Expr<Result> &&elseVal)
       : condition_{std::move(cond)}, thenValue_{std::move(thenVal)},
         elseValue_{std::move(elseVal)} {}
   bool operator==(const ConditionalExpr &) const;
-  Expr<SomeLogical> &condition() { return condition_.value(); }
-  const Expr<SomeLogical> &condition() const { return condition_.value(); }
+  Expr<LogicalResult> &condition() { return condition_.value(); }
+  const Expr<LogicalResult> &condition() const { return condition_.value(); }
   Expr<Result> &thenValue() { return thenValue_.value(); }
   const Expr<Result> &thenValue() const { return thenValue_.value(); }
   Expr<Result> &elseValue() { return elseValue_.value(); }
@@ -413,7 +413,7 @@ public:
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
 private:
-  common::CopyableIndirection<Expr<SomeLogical>> condition_;
+  common::CopyableIndirection<Expr<LogicalResult>> condition_;
   common::CopyableIndirection<Expr<Result>> thenValue_;
   common::CopyableIndirection<Expr<Result>> elseValue_;
 };

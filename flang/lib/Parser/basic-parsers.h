@@ -835,38 +835,6 @@ struct NextCh {
 
 constexpr NextCh nextCh;
 
-// Lookahead helper for conditional expressions: checks if input starting with
-// '(' contains '?' at nesting level 1. This avoids exponential backtracking
-// when parsing deeply nested parentheses that are not conditional expressions.
-struct ConditionalExprLookahead {
-  using resultType = Success;
-  constexpr ConditionalExprLookahead() {}
-  std::optional<Success> Parse(ParseState &state) const {
-    if (std::optional<const char *> at{state.PeekAtNextChar()}) {
-      if (**at != '(') {
-        return std::nullopt;
-      }
-      const char *const start{*at};
-      const char *const limit{start + state.BytesRemaining()};
-      int nestLevel{0};
-      for (const char *p{start}; p < limit; ++p) {
-        if (*p == '(') {
-          ++nestLevel;
-        } else if (*p == ')') {
-          --nestLevel;
-          if (nestLevel == 0) {
-            return std::nullopt;
-          }
-        } else if (*p == '?' && nestLevel == 1) {
-          return {Success{}};
-        }
-      }
-    }
-    return std::nullopt;
-  }
-};
-constexpr ConditionalExprLookahead conditionalExprLookahead;
-
 // If a is a parser for some nonstandard language feature LF, extension<LF>(a)
 // is a parser that optionally enabled, sets a strict conformance violation
 // flag, and may emit a warning message, if those are enabled.

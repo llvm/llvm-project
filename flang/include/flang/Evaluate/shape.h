@@ -194,26 +194,15 @@ public:
     // Per F2023 10.1.4(7), the shape is that of the selected branch.
     // When all branches have identical static extents, return the common shape.
     int rank{conditional.thenValue().Rank()};
-    Result result{(*this)(conditional.thenValue())};
-    if (!result) {
+    Result thenShape{(*this)(conditional.thenValue())};
+    if (!thenShape) {
       return Shape(rank, std::nullopt);
     }
-    const Expr<T> *elseExpr{&conditional.elseValue()};
-    while (elseExpr) {
-      const Expr<T> *nextElse{nullptr};
-      Result branchShape;
-      if (const auto *nested{std::get_if<ConditionalExpr<T>>(&elseExpr->u)}) {
-        branchShape = (*this)(nested->thenValue());
-        nextElse = &nested->elseValue();
-      } else {
-        branchShape = (*this)(*elseExpr);
-      }
-      if (branchShape != result) {
-        return Shape(rank, std::nullopt);
-      }
-      elseExpr = nextElse;
+    Result elseShape{(*this)(conditional.elseValue())};
+    if (thenShape != elseShape) {
+      return Shape(rank, std::nullopt);
     }
-    return result;
+    return thenShape;
   }
   template <typename D, typename R, typename LO, typename RO>
   Result operator()(const Operation<D, R, LO, RO> &operation) const {

@@ -1731,18 +1731,12 @@ struct ArgumentExtractor
 
   template <typename T> Result operator()(const ConditionalExpr<T> &x) const {
     // ConditionalExpr is a top-level operation; collect its immediate operands
-    Arguments args;
-    const ConditionalExpr<T> *node{&x};
-    while (true) {
-      args.push_back(AsSomeExpr(node->condition()));
-      args.push_back(AsSomeExpr(node->thenValue()));
-      if (const auto *nested =
-              std::get_if<ConditionalExpr<T>>(&node->elseValue().u)) {
-        node = nested;
-      } else {
-        args.push_back(AsSomeExpr(node->elseValue()));
-        break;
-      }
+    Arguments args{AsSomeExpr(x.condition()), AsSomeExpr(x.thenValue())};
+    if (const auto *nested{std::get_if<ConditionalExpr<T>>(&x.elseValue().u)}) {
+      auto moreArgs{(*this)(*nested).second};
+      args.insert(args.end(), moreArgs.begin(), moreArgs.end());
+    } else {
+      args.push_back(AsSomeExpr(x.elseValue()));
     }
     return {Operator::Conditional, std::move(args)};
   }

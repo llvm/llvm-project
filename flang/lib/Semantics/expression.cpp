@@ -3937,14 +3937,14 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::ConditionalExpr &x) {
           "(e.g., INT(z'FF'), REAL(z'3F800000'))"_err_en_US);
       return std::nullopt;
     }
-    if (std::holds_alternative<evaluate::NullPointer>(value->u)) {
-      Say("NULL() not allowed in conditional expression (expressions must have declared type)"_err_en_US);
+    if (IsNullPointer(&*value)) {
+      Say("NULL() not allowed in a conditional expression"_err_en_US);
       return std::nullopt;
     }
   }
 
   // Determine result type from first value
-  const std::optional<DynamicType> resultType = values[0]->GetType();
+  const std::optional<DynamicType> resultType{values[0]->GetType()};
   if (!resultType) {
     Say("Cannot determine type of conditional expression"_err_en_US);
     return std::nullopt;
@@ -3955,7 +3955,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::ConditionalExpr &x) {
   const TypeCategory resultCategory{resultType->category()};
   const int resultKind{
       resultCategory != TypeCategory::Derived ? resultType->kind() : 0};
-  const int resultRank = values[0]->Rank();
+  const int resultRank{values[0]->Rank()};
   // Check for polymorphic types (not yet supported in lowering)
   if (resultCategory == TypeCategory::Derived && resultType->IsPolymorphic()) {
     Say("Conditional expressions with polymorphic types (CLASS) are not yet supported"_err_en_US);
@@ -3983,11 +3983,10 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::ConditionalExpr &x) {
           resultType->AsFortran(), valueType->AsFortran());
       return std::nullopt;
     }
-    // For derived types, check they are the exact same type (not just
-    // compatible)
+    // For derived types, check they are the same type
     if (resultCategory == TypeCategory::Derived) {
-      if (&resultType->GetDerivedTypeSpec().typeSymbol() !=
-          &valueType->GetDerivedTypeSpec().typeSymbol()) {
+      if (!AreSameDerivedType(resultType->GetDerivedTypeSpec(),
+              valueType->GetDerivedTypeSpec())) {
         Say("All values in conditional expression must be the same derived type; have %s and %s"_err_en_US,
             resultType->AsFortran(), valueType->AsFortran());
         return std::nullopt;
@@ -4011,9 +4010,9 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::ConditionalExpr &x) {
           },
           [&](Expr<SomeDerived> &&elseExpr) -> MaybeExpr {
             Expr<SomeDerived> result{std::move(elseExpr)};
-            for (int i = static_cast<int>(conditions.size()) - 1; i >= 0; --i) {
-              Expr<SomeLogical> cond{
-                  std::move(std::get<Expr<SomeLogical>>(conditions[i]->u))};
+            for (int i{static_cast<int>(conditions.size()) - 1}; i >= 0; --i) {
+              Expr<LogicalResult> cond{ConvertToType<LogicalResult>(
+                  std::move(std::get<Expr<SomeLogical>>(conditions[i]->u)))};
               Expr<SomeDerived> thenVal{
                   std::move(std::get<Expr<SomeDerived>>(values[i]->u))};
               result = Expr<SomeDerived>{evaluate::ConditionalExpr<SomeDerived>{
@@ -4037,10 +4036,11 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::ConditionalExpr &x) {
                     using T =
                         typename std::decay_t<decltype(specificExpr)>::Result;
                     Expr<T> result{std::move(specificExpr)};
-                    for (int i = static_cast<int>(conditions.size()) - 1;
-                        i >= 0; --i) {
-                      Expr<SomeLogical> cond{std::move(
-                          std::get<Expr<SomeLogical>>(conditions[i]->u))};
+                    for (int i{static_cast<int>(conditions.size()) - 1}; i >= 0;
+                        --i) {
+                      Expr<LogicalResult> cond{
+                          ConvertToType<LogicalResult>(std::move(
+                              std::get<Expr<SomeLogical>>(conditions[i]->u)))};
                       Expr<T> thenVal{std::move(std::get<Expr<T>>(
                           std::get<CategoryType>(values[i]->u).u))};
                       result =

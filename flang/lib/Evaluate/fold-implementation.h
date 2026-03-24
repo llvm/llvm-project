@@ -2220,9 +2220,7 @@ Expr<T> FoldOperation(FoldingContext &context, ConditionalExpr<T> &&x) {
   x.thenValue() = Fold(context, std::move(x.thenValue()));
   x.elseValue() = Fold(context, std::move(x.elseValue()));
   // If the condition is a scalar logical constant, select the branch.
-  auto folded{Fold(
-      context, ConvertToType<LogicalResult>(Expr<SomeLogical>{x.condition()}))};
-  if (auto cst{GetScalarConstantValue<LogicalResult>(folded)}) {
+  if (auto cst{GetScalarConstantValue<LogicalResult>(x.condition())}) {
     return cst->IsTrue() ? std::move(x.thenValue()) : std::move(x.elseValue());
   }
   return Expr<T>{std::move(x)};

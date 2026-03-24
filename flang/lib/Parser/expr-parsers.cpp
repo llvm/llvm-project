@@ -99,7 +99,34 @@ constexpr auto level1Expr{sourced(
 //   ( scalar-logical-expr ? expr
 //     [ : scalar-logical-expr ? expr ]...
 //     : expr )
-TYPE_PARSER(conditionalExprLookahead >>
+// Lookahead helper: checks if input starting with '(' contains '?' at nesting
+// level 1. This avoids exponential backtracking when parsing deeply nested
+// parentheses that are not conditional expressions.
+struct ConditionalExprLookahead {
+  using resultType = Success;
+  constexpr ConditionalExprLookahead() {}
+  std::optional<Success> Parse(ParseState &state) const {
+    if (std::optional<const char *> at{state.PeekAtNextChar()}) {
+      if (**at != '(') {
+        return std::nullopt;
+      }
+      const char *const start{*at};
+      const char *const limit{start + state.BytesRemaining()};
+      int nestLevel{0};
+      for (const char *p{start}; p < limit; ++p) {
+        if (*p == '(') {
+          ++nestLevel;
+        } else if (*p == ')' && --nestLevel == 0) {
+          return std::nullopt;
+        } else if (*p == '?' && nestLevel == 1) {
+          return {Success{}};
+        }
+      }
+    }
+    return std::nullopt;
+  }
+};
+TYPE_PARSER(ConditionalExprLookahead{} >>
     parenthesized(construct<ConditionalExpr>(
         some(construct<ConditionalExpr::Branch>(
                  scalarLogicalExpr / "?", indirect(expr)) /

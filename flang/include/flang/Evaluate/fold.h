@@ -107,16 +107,11 @@ std::optional<std::int64_t> ToInt64(const ActualArgument &);
 
 // When an expression is a constant logical scalar, ToLogical() extracts its
 // value.
-inline std::optional<bool> ToLogical(const Expr<SomeLogical> &expr) {
-  return common::visit(
-      [](const auto &kindExpr) -> std::optional<bool> {
-        using LogicalT = typename std::decay_t<decltype(kindExpr)>::Result;
-        if (auto val{GetScalarConstantValue<LogicalT>(kindExpr)}) {
-          return val->IsTrue();
-        }
-        return std::nullopt;
-      },
-      expr.u);
+inline std::optional<bool> ToLogical(const Expr<LogicalResult> &expr) {
+  if (auto val{GetScalarConstantValue<LogicalResult>(expr)}) {
+    return val->IsTrue();
+  }
+  return std::nullopt;
 }
 
 template <typename A>

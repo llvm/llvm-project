@@ -64,8 +64,15 @@ Expr<Type<TypeCategory::Character, KIND>>::LEN() const {
             }
             return std::nullopt;
           },
-          [](const ConditionalExpr<Result> &) -> T {
-            return std::nullopt; // branch lengths may differ
+          [](const ConditionalExpr<Result> &x) -> T {
+            if (auto tlen{x.thenValue().LEN()}) {
+              if (auto elen{x.elseValue().LEN()}) {
+                if (*tlen == *elen) {
+                  return tlen;
+                }
+              }
+            }
+            return std::nullopt;
           },
           [](const Designator<Result> &dr) { return dr.LEN(); },
           [](const FunctionRef<Result> &fr) { return fr.LEN(); },

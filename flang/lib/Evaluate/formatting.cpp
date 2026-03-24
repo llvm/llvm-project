@@ -597,8 +597,8 @@ llvm::raw_ostream &ConditionalExpr<T>::AsFortran(llvm::raw_ostream &o) const {
     node->thenValue().AsFortran(o);
     o << " : ";
     // Continue chain for nested ConditionalExpr; else emit terminal value.
-    if (const auto *nested =
-            std::get_if<ConditionalExpr<T>>(&node->elseValue().u)) {
+    if (const auto *nested{
+            std::get_if<ConditionalExpr<T>>(&node->elseValue().u)}) {
       node = nested;
     } else {
       node->elseValue().AsFortran(o);
