@@ -663,9 +663,27 @@ out:
 !7 = !{i32 4, i32 8, i32 20, i32 31}
 !8 = !{i32 2, i32 5}
 !9 = !{i32 2, i32 5, i32 22, i32 42, i32 45, i32 50}
+define void @hoist_mem_cache_hint_store(i1 %c, ptr %p) {
+; CHECK-LABEL: @hoist_mem_cache_hint_store(
+; CHECK-NEXT:  if:
+; CHECK-NEXT:    store i32 0, ptr [[P:%.*]], align 4, !mem.cache_hint [[META15:![0-9]+]]
+; CHECK-NEXT:    ret void
+;
+if:
+  br i1 %c, label %then, label %else
+then:
+  store i32 0, ptr %p, !mem.cache_hint !12
+  br label %out
+else:
+  store i32 0, ptr %p, !mem.cache_hint !12
+  br label %out
+out:
+  ret void
+}
+
 !10 = !{ i32 0, !11 }
 !11 = !{ !"nvvm.l1_eviction", !"first" }
-
+!12 = !{ i32 1, !11 }
 ;.
 ; CHECK: [[RNG0]] = !{i8 0, i8 1, i8 3, i8 5}
 ; CHECK: [[RNG1]] = !{i8 0, i8 1, i8 3, i8 5, i8 7, i8 9}
@@ -682,4 +700,5 @@ out:
 ; CHECK: [[META12]] = !{i32 3}
 ; CHECK: [[META13]] = !{i32 0, [[META14:![0-9]+]]}
 ; CHECK: [[META14]] = !{!"nvvm.l1_eviction", !"first"}
+; CHECK: [[META15]] = !{i32 1, [[META14]]}
 ;.

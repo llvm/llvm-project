@@ -27,13 +27,19 @@ define void @non_intrinsic_call(ptr %p) {
   ret void
 }
 
-; CHECK: !mem.cache_hint operand_no must refer to a valid memory object operand
+; CHECK: !mem.cache_hint operand_no must refer to a pointer operand
 define void @operand_no_not_pointer(ptr %d, ptr %s) {
   call void @llvm.memcpy.p0.p0.i64(ptr %d, ptr %s, i64 8, i1 false), !mem.cache_hint !{i32 2, !{!"nvvm.l1_eviction", !"first"}}
   ret void
 }
 
-; CHECK: !mem.cache_hint operand_no must refer to a valid memory object operand
+; CHECK: !mem.cache_hint operand_no must refer to a pointer operand
+define void @store_operand_no_is_value(ptr %p) {
+  store i32 0, ptr %p, !mem.cache_hint !{i32 0, !{!"nvvm.l1_eviction", !"first"}}
+  ret void
+}
+
+; CHECK: !mem.cache_hint operand_no is out of range
 define void @operand_no_out_of_range(ptr %p) {
   %v = load i32, ptr %p, !mem.cache_hint !{i32 1, !{!"nvvm.l1_eviction", !"first"}}
   ret void

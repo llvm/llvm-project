@@ -7779,19 +7779,20 @@ must not change the observable behavior of the program.
 
 The value of ``!mem.cache_hint`` is a single metadata node containing a flat
 list of ``(operand_no, hint_node)`` pairs. Each ``operand_no`` is an ``i32``
-constant identifying a memory-object operand (not a raw IR operand). Each
+constant that is the raw IR operand index (for regular instructions) or the
+argument index (for intrinsic calls) of a pointer-typed operand. Each
 ``hint_node`` is a metadata node containing target-prefixed key/value string
 pairs.
 
 The ``!mem.cache_hint`` node must contain an even number of entries, alternating
 ``i32`` operand numbers and metadata nodes. Operand numbers must be unique within
-a ``!mem.cache_hint`` node and must be valid for the instruction. Keys within a
-single hint node must also be unique.
+a ``!mem.cache_hint`` node and must refer to a pointer-typed operand. Keys within
+a single hint node must also be unique.
 
-Most instructions have a single memory-object operand (``operand_no = 0``).
-Copy-like instructions such as ``llvm.memcpy`` conceptually access multiple
-memory objects: e.g., destination is ``operand_no = 0`` and source is
-``operand_no = 1``.
+For a ``load``, the pointer is operand 0. For a ``store``, the value is
+operand 0 and the pointer is operand 1. For intrinsic calls such as
+``llvm.memcpy``, operand numbers correspond to argument positions: e.g.,
+destination is argument 0 and source is argument 1.
 
 The hint node keys are prefixed with a target identifier (e.g., ``nvvm.``) and
 their interpretation is entirely target-dependent. The IR verifier enforces only
@@ -7819,7 +7820,7 @@ Example: store with cache hints (NVIDIA GPU):
 
     store i32 %v, ptr addrspace(1) %p, align 4, !mem.cache_hint !0
 
-    !0 = !{ i32 0, !1 }
+    !0 = !{ i32 1, !1 }
     !1 = !{ !"nvvm.l1_eviction", !"last",
             !"nvvm.l2_eviction", !"last" }
 

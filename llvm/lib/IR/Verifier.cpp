@@ -5641,21 +5641,12 @@ void Verifier::visitMemCacheHintMetadata(Instruction &I, MDNode *MD) {
         "(operand_no, hint_node pairs)",
         MD);
 
-  auto IsMemoryObjectOperand = [](const Value *V) {
-    return V->getType()->isPtrOrPtrVectorTy();
-  };
-
-  unsigned NumMemoryObjectOperands = 0;
-  if (const auto *CB = dyn_cast<CallBase>(&I)) {
+  const auto *CB = dyn_cast<CallBase>(&I);
+  if (CB)
     Check(CB->getIntrinsicID() != Intrinsic::not_intrinsic,
           "!mem.cache_hint is not supported on non-intrinsic calls", &I);
-    NumMemoryObjectOperands = count_if(
-        CB->args(), [&](Value *Arg) { return IsMemoryObjectOperand(Arg); });
-  } else {
-    NumMemoryObjectOperands = count_if(I.operands(), [&](const Use &Op) {
-      return IsMemoryObjectOperand(Op.get());
-    });
-  }
+
+  unsigned NumOperands = CB ? CB->arg_size() : I.getNumOperands();
 
   SmallDenseSet<unsigned, 4> SeenOperandNos;
 
@@ -5669,10 +5660,13 @@ void Verifier::visitMemCacheHintMetadata(Instruction &I, MDNode *MD) {
           "!mem.cache_hint operand_no must be non-negative", MD);
 
     uint64_t OperandNo = OpNoCI->getZExtValue();
-    Check(OperandNo < NumMemoryObjectOperands,
-          "!mem.cache_hint operand_no must refer to a valid memory object "
-          "operand",
+    Check(OperandNo < NumOperands, "!mem.cache_hint operand_no is out of range",
           &I);
+
+    Value *Operand =
+        CB ? CB->getArgOperand(OperandNo) : I.getOperand(OperandNo);
+    Check(Operand->getType()->isPtrOrPtrVectorTy(),
+          "!mem.cache_hint operand_no must refer to a pointer operand", &I);
 
     Check(SeenOperandNos.insert(OperandNo).second,
           "!mem.cache_hint contains duplicate operand_no", MD);
