@@ -519,8 +519,8 @@ set(all_target_specific_generated_files
   ${arm_common_generated_files}
   ${arm_only_generated_files}
   ${aarch64_only_generated_files}
-  ${riscv_generated_files}
-  ${hlsl_generated_files})
+  ${hlsl_generated_files}
+  ${riscv_generated_files})
 foreach( f ${generated_files} )
   if (NOT ${f} IN_LIST all_target_specific_generated_files)
     message(WARNING "${f} is a generated header but it is not included in any "
