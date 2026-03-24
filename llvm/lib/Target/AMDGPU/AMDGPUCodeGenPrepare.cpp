@@ -256,7 +256,6 @@ public:
   bool visitSelectInst(SelectInst &I);
   bool visitPHINode(PHINode &I);
   bool visitAddrSpaceCastInst(AddrSpaceCastInst &I);
-  bool visitFenceInst(FenceInst &I);
 
   bool visitIntrinsicInst(IntrinsicInst &I);
   bool visitFMinLike(IntrinsicInst &I);
@@ -2022,25 +2021,6 @@ bool AMDGPUCodeGenPrepareImpl::visitAddrSpaceCastInst(AddrSpaceCastInst &I) {
       I.getType(), Intrinsic::amdgcn_addrspacecast_nonnull, {I.getOperand(0)});
   I.replaceAllUsesWith(Intrin);
   DeadVals.push_back(&I);
-  return true;
-}
-
-// When all waves of the workgroup fit in one wave, workgroup fences can be
-// lowered to wavefront scope.
-bool AMDGPUCodeGenPrepareImpl::visitFenceInst(FenceInst &I) {
-  unsigned WGMaxSize = ST.getFlatWorkGroupSizes(F).second;
-  if (WGMaxSize > ST.getWavefrontSize())
-    return false;
-
-  SyncScope::ID WorkgroupSSID =
-      F.getContext().getOrInsertSyncScopeID("workgroup");
-  SyncScope::ID WavefrontSSID =
-      F.getContext().getOrInsertSyncScopeID("wavefront");
-
-  if (I.getSyncScopeID() != WorkgroupSSID)
-    return false;
-
-  I.setSyncScopeID(WavefrontSSID);
   return true;
 }
 

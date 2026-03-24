@@ -634,7 +634,7 @@ private:
                    MachineBasicBlock::iterator &MI);
   /// Expands atomic fence operation \p MI. Returns true if
   /// instructions are added/deleted or \p MI is modified, false otherwise.
-  bool expandAtomicFence(const SIMemOpInfo &MOI,
+  bool expandAtomicFence(const GCNSubtarget &ST, const SIMemOpInfo &MOI,
                          MachineBasicBlock::iterator &MI);
   /// Expands atomic cmpxchg or rmw operation \p MI. Returns true if
   /// instructions are added/deleted or \p MI is modified, false otherwise.
@@ -2380,7 +2380,7 @@ bool SIMemoryLegalizer::expandStore(const SIMemOpInfo &MOI,
   return Changed;
 }
 
-bool SIMemoryLegalizer::expandAtomicFence(const SIMemOpInfo &MOI,
+bool SIMemoryLegalizer::expandAtomicFence(const GCNSubtarget &ST, const SIMemOpInfo &MOI,
                                           MachineBasicBlock::iterator &MI) {
   assert(MI->getOpcode() == AMDGPU::ATOMIC_FENCE);
 
@@ -2391,6 +2391,16 @@ bool SIMemoryLegalizer::expandAtomicFence(const SIMemOpInfo &MOI,
 
   const SIAtomicAddrSpace OrderingAddrSpace = MOI.getOrderingAddrSpace();
 
+  // When all waves of the workgroup fit in one wave, workgroup fences can be
+  // lowered to wavefront scope.
+  SIAtomicScope ScopeForFence = MOI.getScope();
+  if (ScopeForFence == SIAtomicScope::WORKGROUP) {
+    const Function &F = MI->getMF()->getFunction();
+    const unsigned WGMaxSize = ST.getFlatWorkGroupSizes(F).second;
+    if (WGMaxSize <= ST.getWavefrontSize())
+      ScopeForFence = SIAtomicScope::WAVEFRONT;
+  }
+
   if (MOI.isAtomic()) {
     LLVM_DEBUG(dbgs() << "  Atomic: ordering=" << toIRString(MOI.getOrdering())
                       << ", scope=" << toString(MOI.getScope())
@@ -2398,7 +2408,7 @@ bool SIMemoryLegalizer::expandAtomicFence(const SIMemOpInfo &MOI,
     const AtomicOrdering Order = MOI.getOrdering();
     if (Order == AtomicOrdering::Acquire) {
       // Acquire fences only need to wait on the previous atomic they pair with.
-      Changed |= CC->insertWait(MI, MOI.getScope(), OrderingAddrSpace,
+      Changed |= CC->insertWait(MI, ScopeForFence, OrderingAddrSpace,
                                 SIMemOp::LOAD | SIMemOp::STORE,
                                 MOI.getIsCrossAddressSpaceOrdering(),
                                 Position::BEFORE, Order, /*AtomicsOnly=*/true);
@@ -2414,7 +2424,7 @@ bool SIMemoryLegalizer::expandAtomicFence(const SIMemOpInfo &MOI,
       /// generate a fence. Could add support in this file for
       /// barrier. SIInsertWaitcnt.cpp could then stop unconditionally
       /// adding S_WAITCNT before a S_BARRIER.
-      Changed |= CC->insertRelease(MI, MOI.getScope(), OrderingAddrSpace,
+      Changed |= CC->insertRelease(MI, ScopeForFence, OrderingAddrSpace,
                                    MOI.getIsCrossAddressSpaceOrdering(),
                                    Position::BEFORE);
 
@@ -2426,7 +2436,7 @@ bool SIMemoryLegalizer::expandAtomicFence(const SIMemOpInfo &MOI,
     if (Order == AtomicOrdering::Acquire ||
         Order == AtomicOrdering::AcquireRelease ||
         Order == AtomicOrdering::SequentiallyConsistent)
-      Changed |= CC->insertAcquire(MI, MOI.getScope(), OrderingAddrSpace,
+        Changed |= CC->insertAcquire(MI, ScopeForFence, OrderingAddrSpace,
                                    Position::BEFORE);
 
     return Changed;
@@ -2561,7 +2571,7 @@ bool SIMemoryLegalizer::run(MachineFunction &MF) {
         else if (const auto &MOI = MOA.getLDSDMAInfo(MI))
           Changed |= expandLDSDMA(*MOI, MI);
         else if (const auto &MOI = MOA.getAtomicFenceInfo(MI))
-          Changed |= expandAtomicFence(*MOI, MI);
+          Changed |= expandAtomicFence(ST,*MOI, MI);
         else if (const auto &MOI = MOA.getAtomicCmpxchgOrRmwInfo(MI))
           Changed |= expandAtomicCmpxchgOrRmw(*MOI, MI);
       }
