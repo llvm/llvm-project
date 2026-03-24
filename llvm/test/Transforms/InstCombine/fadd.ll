@@ -1146,3 +1146,74 @@ define float @fadd_reduce_sqr_sum_varB2_invalid3(float %a, float %b) {
 }
 
 declare void @fake_func(float)
+
+; Mask 240 = fcPosSubnormal (128) | fcPosZero (64) | fcNegZero (32) | fcNegSubnormal (16)
+define i1 @fadd_pos_normal_not_zero_or_subnormal(float %a) {
+; CHECK-LABEL: @fadd_pos_normal_not_zero_or_subnormal(
+; CHECK-NEXT:    ret i1 false
+;
+  %abs = call float @llvm.fabs.f32(float %a)
+  %add = fadd float %abs, 1.0
+  %class = call i1 @llvm.is.fpclass.f32(float %add, i32 240)
+  ret i1 %class
+}
+
+define <2 x i1> @fadd_vector_pos_normal_not_zero_or_subnormal(<2 x float> %a) {
+; CHECK-LABEL: @fadd_vector_pos_normal_not_zero_or_subnormal(
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+  %abs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %a)
+  %add = fadd <2 x float> %abs, splat (float 1.0)
+  %class = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> %add, i32 240)
+  ret <2 x i1> %class
+}
+
+define i1 @fadd_neg_normal_not_zero_or_subnormal(float %a) {
+; CHECK-LABEL: @fadd_neg_normal_not_zero_or_subnormal(
+; CHECK-NEXT:    ret i1 false
+;
+  %abs = call float @llvm.fabs.f32(float %a)
+  %neg_abs = fneg float %abs
+  %add = fadd float %neg_abs, -1.0
+  %class = call i1 @llvm.is.fpclass.f32(float %add, i32 240)
+  ret i1 %class
+}
+
+define <2 x i1> @fadd_vector_neg_normal_not_zero_or_subnormal(<2 x float> %a) {
+; CHECK-LABEL: @fadd_vector_neg_normal_not_zero_or_subnormal(
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+  %abs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %a)
+  %neg_abs = fneg <2 x float> %abs
+  %add = fadd <2 x float> %neg_abs, splat (float -1.0)
+  %class = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> %add, i32 240)
+  ret <2 x i1> %class
+}
+
+; Negative case: LHS is NOT known non-negative.
+; If %a is -1.0, the result is +0.0.
+define i1 @fadd_unknown_lhs_normal_rhs(float %a) {
+; CHECK-LABEL: @fadd_unknown_lhs_normal_rhs(
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[A:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ADD]], i32 208)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %add = fadd float %a, 1.0
+  %class = call i1 @llvm.is.fpclass.f32(float %add, i32 208)
+  ret i1 %class
+}
+
+; Negative case: RHS is a negative constant.
+; If %a is 1.0, the result is +0.0.
+define i1 @fadd_pos_lhs_negative_rhs(float %a) {
+; CHECK-LABEL: @fadd_pos_lhs_negative_rhs(
+; CHECK-NEXT:    [[ABS:%.*]] = call float @llvm.fabs.f32(float [[A:%.*]])
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ABS]], -1.000000e+00
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ADD]], i32 208)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %abs = call float @llvm.fabs.f32(float %a)
+  %add = fadd float %abs, -1.0
+  %class = call i1 @llvm.is.fpclass.f32(float %add, i32 208)
+  ret i1 %class
+}

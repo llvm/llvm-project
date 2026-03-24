@@ -27,7 +27,6 @@ RISCVMCAsmInfo::RISCVMCAsmInfo(const Triple &TT) {
   AlignmentIsInBytes = false;
   SupportsDebugInformation = true;
   ExceptionsType = ExceptionHandling::DwarfCFI;
-  UseAtForSpecifier = false;
   Data16bitsDirective = "\t.half\t";
   Data32bitsDirective = "\t.word\t";
 }
@@ -61,7 +60,7 @@ void RISCVMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
 
 RISCVMCAsmInfoDarwin::RISCVMCAsmInfoDarwin() {
   CodePointerSize = 4;
-  PrivateGlobalPrefix = "L";
+  InternalSymbolPrefix = "L";
   PrivateLabelPrefix = "L";
   SeparatorString = "%%";
   CommentString = ";";

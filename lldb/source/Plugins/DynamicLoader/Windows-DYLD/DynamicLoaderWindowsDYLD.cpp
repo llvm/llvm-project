@@ -36,7 +36,9 @@ void DynamicLoaderWindowsDYLD::Initialize() {
                                 GetPluginDescriptionStatic(), CreateInstance);
 }
 
-void DynamicLoaderWindowsDYLD::Terminate() {}
+void DynamicLoaderWindowsDYLD::Terminate() {
+  PluginManager::UnregisterPlugin(CreateInstance);
+}
 
 llvm::StringRef DynamicLoaderWindowsDYLD::GetPluginDescriptionStatic() {
   return "Dynamic loader plug-in that watches for shared library "

@@ -170,7 +170,6 @@ void llvm::constrainSelectedInstRegOperands(MachineInstr &I,
       continue;
 
     LLVM_DEBUG(dbgs() << "Converting operand: " << MO << '\n');
-    assert(MO.isReg() && "Unsupported non-reg operand");
 
     Register Reg = MO.getReg();
     // Physical registers don't need to be constrained.
@@ -770,12 +769,8 @@ llvm::ConstantFoldFPBinOp(unsigned Opcode, const Register Op1,
     C1.copySign(C2);
     return C1;
   case TargetOpcode::G_FMINNUM:
-    if (C1.isSignaling() || C2.isSignaling())
-      return std::nullopt;
     return minnum(C1, C2);
   case TargetOpcode::G_FMAXNUM:
-    if (C1.isSignaling() || C2.isSignaling())
-      return std::nullopt;
     return maxnum(C1, C2);
   case TargetOpcode::G_FMINIMUM:
     return minimum(C1, C2);

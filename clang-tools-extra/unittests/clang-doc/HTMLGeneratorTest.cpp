@@ -46,6 +46,7 @@ protected:
                           Base,
                           UserStylesheets,
                           Diags,
+                          OutputFormatTy::html,
                           false};
     CDCtx.UserStylesheets.insert(
         CDCtx.UserStylesheets.begin(),

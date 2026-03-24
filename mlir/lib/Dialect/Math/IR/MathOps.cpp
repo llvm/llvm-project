@@ -518,6 +518,28 @@ OpFoldResult math::PowFOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// RsqrtOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::RsqrtOp::fold(FoldAdaptor adaptor) {
+  return constFoldUnaryOpConditional<FloatAttr>(
+      adaptor.getOperands(), [](const APFloat &a) -> std::optional<APFloat> {
+        if (a.isNegative())
+          return {};
+
+        APFloat one(a.getSemantics(), 1);
+        switch (a.getSizeInBits(a.getSemantics())) {
+        case 64:
+          return one / APFloat(sqrt(a.convertToDouble()));
+        case 32:
+          return one / APFloat(sqrtf(a.convertToFloat()));
+        default:
+          return {};
+        }
+      });
+}
+
+//===----------------------------------------------------------------------===//
 // SqrtOp folder
 //===----------------------------------------------------------------------===//
 
