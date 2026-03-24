@@ -518,7 +518,7 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
         Value *C = I.getOperand(1);
 
         // Form "A op V" when "B op C" is a symmetric pair
-        if (I.isCommutative()) {
+        if (I.isCommutative() && Op0->hasOneUse()) {
           if (auto Pair = matchSymmetricPair(B, C)) {
             replaceOperand(*Op0, 0, Pair->first);
             replaceOperand(*Op0, 1, Pair->second);

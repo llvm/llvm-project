@@ -87,6 +87,24 @@ define i32 @add_min_max_assoc_wrong(i32 %0, i32 %1, i32 %2) {
   ret i32 %7
 }
 
+define i32 @add_min_max_assoc_wrong2(i32 %0, i32 %1, i32 %2, ptr %p) {
+; CHECK-LABEL: define i32 @add_min_max_assoc_wrong2(
+; CHECK-SAME: i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], i32 [[TMP2:%.*]], ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP0]], i32 [[TMP1]])
+; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP0]], i32 [[TMP1]])
+; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    store i32 [[TMP5]], ptr [[P]], align 4
+; CHECK-NEXT:    ret i32 [[TMP7]]
+;
+  %4 = call i32 @llvm.smin.i32(i32 %0, i32 %1)
+  %5 = add i32 %2, %4
+  %6 = call i32 @llvm.smax.i32(i32 %0, i32 %1)
+  %7 = add i32 %5, %6
+  store i32 %5, ptr %p
+  ret i32 %7
+}
+
 define i32 @mul_min_max_assoc_wrong(i32 %0, i32 %1, i32 %2) {
 ; CHECK-LABEL: define i32 @mul_min_max_assoc_wrong(
 ; CHECK-SAME: i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], i32 [[TMP2:%.*]]) {
