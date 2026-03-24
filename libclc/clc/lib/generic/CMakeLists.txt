@@ -62,6 +62,7 @@ libclc_configure_source_list(CLC_GENERIC_SOURCES
   math/clc_asinh.cl
   math/clc_asinpi.cl
   math/clc_atan.cl
+  math/clc_atan_helpers.cl
   math/clc_atan2.cl
   math/clc_atan2pi.cl
   math/clc_atanh.cl
