@@ -7941,12 +7941,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
         // Collect all the ripple's runtime libs (.bc files) available for the
         // target.
         std::vector<std::string> TargetRTLibs;
-        llvm::SmallString<256> RippleRTLibPath(
-            getToolChain().getDriver().ResourceDir);
-        llvm::sys::path::append(
-            RippleRTLibPath, "lib",
-            llvm::Triple::getOSTypeName(TargetTriple.getOS()), "ripple");
-        // On Hexagon, libraries are versioned by architecture.
+        llvm::SmallString<256> RippleRTLibPath(D.ResourceDir);
+        llvm::sys::path::append(RippleRTLibPath, "lib", "ripple");
+        // On Hexagon, Ripple libraries are versioned by architecture.
         if (TargetTriple.isHexagon())
           llvm::sys::path::append(
               RippleRTLibPath,

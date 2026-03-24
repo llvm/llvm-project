@@ -102,7 +102,7 @@ foreach(HEXAGON_ARCH_VERSION IN LISTS HEXAGON_ARCH_VERSIONS)
   # Output/Install dirs
   get_compiler_rt_output_dir(${HEXAGON} output_dir)
   get_compiler_rt_install_dir(${HEXAGON} install_dir)
-  set(BC_BUILD_DIR ${output_dir}/v${HEXAGON_ARCH_VERSION}/ripple)
+  set(BC_BUILD_DIR ${output_dir}/ripple/v${HEXAGON_ARCH_VERSION})
 
   # Create .bc rules per source (no external cmake invocation)
   ripple_add_bc_rules(

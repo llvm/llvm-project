@@ -127,6 +127,7 @@ jobs:
             -DLLVM_ENABLE_ASSERTIONS=ON \
             -DCMAKE_C_COMPILER=${{ github.workspace }}/build/bin/clang \
             -DCMAKE_CXX_COMPILER=${{ github.workspace }}/build/bin/clang++ \
+            -DCOMPILER_RT_OS_DIR= \
             -DCOMPILER_RT_BUILD_BUILTINS=OFF \
             -DCOMPILER_RT_BUILD_CRT=OFF \
             -DCOMPILER_RT_BUILD_CTX_PROFILE=OFF \
