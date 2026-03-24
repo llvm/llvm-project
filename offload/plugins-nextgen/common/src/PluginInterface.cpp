@@ -1623,7 +1623,7 @@ Error GenericPluginTy::deinit() {
     delete GlobalHandler;
 
   if (RPCServer) {
-    if (Error Err = RPCServer->shutDown())
+    if (Error Err = RPCServer->shutDown(*this))
       return Err;
     delete RPCServer;
   }
