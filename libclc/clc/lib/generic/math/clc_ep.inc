@@ -441,6 +441,40 @@ _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_GENTYPE __clc_ep_exp(__CLC_EP_PAIR x) {
   return __clc_isinf(z) ? z : zz;
 }
 
+_CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR
+__clc_ep_exp_extended(__CLC_EP_PAIR x) {
+  const __CLC_FLOATN LOG2E = 0x1.715476p+0f;
+  const __CLC_FLOATN LN2_HI = 0x1.62e400p-1f;
+  const __CLC_FLOATN LN2_MED = 0x1.7f7800p-20f;
+  const __CLC_FLOATN LN2_LO = 0x1.473de6p-34f;
+
+  const __CLC_FLOATN POLY_C1 = 0x1.6850e4p-10f;
+  const __CLC_FLOATN POLY_C2 = 0x1.123bccp-7f;
+  const __CLC_FLOATN POLY_C3 = 0x1.555b98p-5f;
+  const __CLC_FLOATN POLY_C4 = 0x1.55548ep-3f;
+  const __CLC_FLOATN POLY_C5 = 0x1.fffff8p-2f;
+
+  __CLC_FLOATN fn = __clc_rint(x.hi * LOG2E);
+
+  __CLC_EP_PAIR term_hi = __clc_ep_fast_add(__clc_mad(fn, -LN2_HI, x.hi), x.lo);
+  __CLC_EP_PAIR term_med = __clc_ep_fast_sub(term_hi, fn * LN2_MED);
+  __CLC_EP_PAIR t = __clc_ep_fast_sub(term_med, fn * LN2_LO);
+
+  __CLC_FLOATN th = t.hi;
+
+  __CLC_FLOATN poly1 = __clc_mad(th, POLY_C1, POLY_C2);
+  __CLC_FLOATN poly2 = __clc_mad(th, poly1, POLY_C3);
+  __CLC_FLOATN poly3 = __clc_mad(th, poly2, POLY_C4);
+  __CLC_FLOATN p = __clc_mad(th, poly3, POLY_C5);
+
+  __CLC_EP_PAIR sqr_t = __clc_ep_sqr(t);
+  __CLC_EP_PAIR poly_term = __clc_ep_mul(sqr_t, p);
+  __CLC_EP_PAIR inner_sum = __clc_ep_fast_add(t, poly_term);
+  __CLC_EP_PAIR r = __clc_ep_fast_add(1.0f, inner_sum);
+
+  return __clc_ep_ldexp(r, __CLC_CONVERT_INTN(fn));
+}
+
 _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_ln(__CLC_GENTYPE a) {
   __CLC_INTN a_exp;
   __CLC_GENTYPE m = __clc_frexp(a, &a_exp);
@@ -497,6 +531,50 @@ _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_GENTYPE __clc_ep_exp(__CLC_EP_PAIR x) {
   __CLC_GENTYPE z = __clc_exp(x.hi);
   __CLC_GENTYPE zz = __clc_mad(z, x.lo, z);
   return __clc_isinf(z) ? z : zz;
+}
+
+_CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR
+__clc_ep_exp_extended(__CLC_EP_PAIR x) {
+  const __CLC_DOUBLEN LOG2E = 0x1.71547652b82fep+0;
+  const __CLC_DOUBLEN LN2_HI = 0x1.62e42fefa3000p-1;
+  const __CLC_DOUBLEN LN2_MED = 0x1.3de6af278e000p-42;
+  const __CLC_DOUBLEN LN2_LO = 0x1.9cc01f97b57a0p-83;
+
+  const __CLC_DOUBLEN POLY_C1 = 0x1.ade156a5dcb37p-26;
+  const __CLC_DOUBLEN POLY_C2 = 0x1.28af3fca7ab0cp-22;
+  const __CLC_DOUBLEN POLY_C3 = 0x1.71dee623fde64p-19;
+  const __CLC_DOUBLEN POLY_C4 = 0x1.a01997c89e6b0p-16;
+  const __CLC_DOUBLEN POLY_C5 = 0x1.a01a014761f6ep-13;
+  const __CLC_DOUBLEN POLY_C6 = 0x1.6c16c1852b7b0p-10;
+  const __CLC_DOUBLEN POLY_C7 = 0x1.1111111122322p-7;
+  const __CLC_DOUBLEN POLY_C8 = 0x1.55555555502a1p-5;
+  const __CLC_DOUBLEN POLY_C9 = 0x1.5555555555511p-3;
+  const __CLC_DOUBLEN POLY_C10 = 0x1.000000000000bp-1;
+
+  __CLC_DOUBLEN dn = __clc_rint(x.hi * LOG2E);
+
+  __CLC_EP_PAIR term_hi = __clc_ep_fast_add(__clc_mad(dn, -LN2_HI, x.hi), x.lo);
+  __CLC_EP_PAIR term_med = __clc_ep_fast_sub(term_hi, dn * LN2_MED);
+  __CLC_EP_PAIR t = __clc_ep_fast_sub(term_med, dn * LN2_LO);
+
+  __CLC_DOUBLEN th = t.hi;
+
+  __CLC_DOUBLEN poly1 = __clc_mad(th, POLY_C1, POLY_C2);
+  __CLC_DOUBLEN poly2 = __clc_mad(th, poly1, POLY_C3);
+  __CLC_DOUBLEN poly3 = __clc_mad(th, poly2, POLY_C4);
+  __CLC_DOUBLEN poly4 = __clc_mad(th, poly3, POLY_C5);
+  __CLC_DOUBLEN poly5 = __clc_mad(th, poly4, POLY_C6);
+  __CLC_DOUBLEN poly6 = __clc_mad(th, poly5, POLY_C7);
+  __CLC_DOUBLEN poly7 = __clc_mad(th, poly6, POLY_C8);
+  __CLC_DOUBLEN poly8 = __clc_mad(th, poly7, POLY_C9);
+  __CLC_DOUBLEN p = __clc_mad(th, poly8, POLY_C10);
+
+  __CLC_EP_PAIR sqr_t = __clc_ep_sqr(t);
+  __CLC_EP_PAIR poly_term = __clc_ep_mul(sqr_t, p);
+  __CLC_EP_PAIR inner_sum = __clc_ep_fast_add(t, poly_term);
+  __CLC_EP_PAIR r = __clc_ep_fast_add(1.0, inner_sum);
+
+  return __clc_ep_ldexp(r, __CLC_CONVERT_INTN(dn));
 }
 
 _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_ln(__CLC_DOUBLEN a) {
