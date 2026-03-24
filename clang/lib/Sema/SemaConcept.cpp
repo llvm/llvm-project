@@ -487,6 +487,10 @@ class ConstraintSatisfactionChecker {
   // right context.
   ConceptDecl *ParentConcept = nullptr;
 
+public:
+  llvm::DenseMap<llvm::FoldingSetNodeID, TemplateArgumentLoc>
+      CachedTemplateArgs;
+
 private:
   ExprResult
   EvaluateAtomicConstraint(const Expr *AtomicExpr,
@@ -657,6 +661,9 @@ ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
       S, Constraint.getPackSubstitutionIndex()
              ? Constraint.getPackSubstitutionIndex()
              : PackSubstitutionIndex);
+
+  llvm::SaveAndRestore PushTemplateArgsCache(S.CurrentCachedTemplateArgs,
+                                             &CachedTemplateArgs);
 
   if (S.SubstTemplateArgumentsInParameterMapping(
           Constraint.getParameterMapping(), Constraint.getBeginLoc(), MLTAL,

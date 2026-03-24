@@ -15091,6 +15091,9 @@ public:
                  UnsubstitutedConstraintSatisfactionCacheResult>
       UnsubstitutedConstraintSatisfactionCache;
 
+  llvm::DenseMap<llvm::FoldingSetNodeID, TemplateArgumentLoc>
+      *CurrentCachedTemplateArgs = nullptr;
+
 private:
   /// Caches pairs of template-like decls whose associated constraints were
   /// checked for subsumption and whether or not the first's constraints did in

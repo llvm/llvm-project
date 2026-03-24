@@ -1329,6 +1329,8 @@ namespace {
     // Whether an incomplete substituion should be treated as an error.
     bool BailOutOnIncomplete;
 
+    std::optional<llvm::FoldingSetNodeID> TemplateArgsHashValue;
+
     // CWG2770: Function parameters should be instantiated when they are
     // needed by a satisfaction check of an atomic constraint or
     // (recursively) by another function parameter.
@@ -1358,7 +1360,12 @@ namespace {
                          SourceLocation Loc,
                          const MultiLevelTemplateArgumentList &TemplateArgs)
         : inherited(SemaRef), TemplateArgs(TemplateArgs), Loc(Loc),
-          BailOutOnIncomplete(false) {}
+          BailOutOnIncomplete(false) {
+      auto &V = TemplateArgsHashValue.emplace();
+      for (auto &Level : TemplateArgs)
+        for (auto &Arg : Level.Args)
+          Arg.Profile(V, SemaRef.Context);
+    }
 
     /// Determine whether the given type \p T has already been
     /// transformed.
@@ -1611,6 +1618,7 @@ namespace {
       }
       return Type;
     }
+
     // Override the default version to handle a rewrite-template-arg-pack case
     // for building a deduction guide.
     bool TransformTemplateArgument(const TemplateArgumentLoc &Input,
@@ -1618,6 +1626,19 @@ namespace {
                                    bool Uneval = false) {
       const TemplateArgument &Arg = Input.getArgument();
       std::vector<TemplateArgument> TArgs;
+      if (auto *Cache = SemaRef.CurrentCachedTemplateArgs;
+          TemplateArgsHashValue && Cache) {
+        llvm::FoldingSetNodeID ID = *TemplateArgsHashValue;
+        Input.getArgument().Profile(ID, SemaRef.Context);
+        if (auto Iter = Cache->find(ID); Iter != Cache->end()) {
+          Output = Iter->second;
+          return false;
+        }
+        bool Ret = inherited::TransformTemplateArgument(Input, Output, Uneval);
+        if (!Ret)
+          Cache->insert({ID, Output});
+        return Ret;
+      }
       switch (Arg.getKind()) {
       case TemplateArgument::Pack:
         assert(SemaRef.CodeSynthesisContexts.empty() ||
