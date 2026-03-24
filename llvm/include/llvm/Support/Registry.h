@@ -141,6 +141,7 @@ public:
     node Node;
 
     static std::unique_ptr<T> CtorFn(CtorParamTypes &&...Params) {
+      static_assert(std::has_virtual_destructor_v<T>);
       return std::make_unique<V>(std::forward<CtorParamTypes>(Params)...);
     }
 

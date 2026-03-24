@@ -41,4 +41,5 @@ function(add_tree_sitter_grammar name source_dir binary_dir)
   )
 endfunction()
 
+add_subdirectory(Rust)
 add_subdirectory(Swift)

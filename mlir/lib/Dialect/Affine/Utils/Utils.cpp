@@ -1374,7 +1374,7 @@ LogicalResult mlir::affine::replaceAllMemRefUsesWith(
     if (failed(replaceAllMemRefUsesWith(
             oldMemRef, newMemRef, user, extraIndices, indexRemap, extraOperands,
             symbolOperands, allowNonDereferencingOps)))
-      llvm_unreachable("memref replacement guaranteed to succeed here");
+      return failure();
   }
 
   return success();
@@ -1821,10 +1821,9 @@ mlir::affine::normalizeMemRef(memref::ReinterpretCastOp reinterpretCastOp) {
                        oldLayoutMap.getResult(i)),
         mapOperands));
   }
-  for (unsigned i = 0, e = newSizes.size(); i < e; i++) {
-    newSizes[i] =
-        arith::AddIOp::create(b, loc, newSizes[i].getType(), newSizes[i],
-                              arith::ConstantIndexOp::create(b, loc, 1));
+  for (auto &newSize : newSizes) {
+    newSize = arith::AddIOp::create(b, loc, newSize.getType(), newSize,
+                                    arith::ConstantIndexOp::create(b, loc, 1));
   }
   // Create the new reinterpret_cast op.
   auto newReinterpretCast = memref::ReinterpretCastOp::create(

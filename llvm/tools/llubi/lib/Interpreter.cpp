@@ -12,12 +12,16 @@
 
 #include "Context.h"
 #include "Value.h"
+#include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Allocator.h"
 
 namespace llvm::ubi {
+
+using namespace PatternMatch;
 
 enum class FrameState {
   // It is about to enter the function.
@@ -119,6 +123,7 @@ static AnyValue mulNoWrap(const APInt &LHS, const APInt &RHS, bool HasNSW,
 /// InstExecutor only maintains the state for call frames.
 class InstExecutor : public InstVisitor<InstExecutor, void> {
   Context &Ctx;
+  const DataLayout &DL;
   EventHandler &Handler;
   std::list<Frame> CallStack;
   // Used to indicate whether the interpreter should continue execution.
@@ -246,10 +251,174 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
     return false;
   }
 
+  /// Check if the upcoming memory access is valid. Returns the offset relative
+  /// to the underlying object if it is valid.
+  std::optional<uint64_t> verifyMemAccess(const MemoryObject &MO,
+                                          const APInt &Address,
+                                          uint64_t AccessSize, Align Alignment,
+                                          bool IsStore) {
+    // Loading from a stack object outside its lifetime is not undefined
+    // behavior and returns a poison value instead. Storing to it is still
+    // undefined behavior.
+    if (IsStore ? MO.getState() != MemoryObjectState::Alive
+                : MO.getState() == MemoryObjectState::Freed) {
+      reportImmediateUB("Try to access a dead memory object.");
+      return std::nullopt;
+    }
+
+    if (Address.countr_zero() < Log2(Alignment)) {
+      reportImmediateUB("Misaligned memory access.");
+      return std::nullopt;
+    }
+
+    if (AccessSize > MO.getSize() || Address.ult(MO.getAddress())) {
+      reportImmediateUB("Memory access is out of bounds.");
+      return std::nullopt;
+    }
+
+    APInt Offset = Address - MO.getAddress();
+
+    if (Offset.ugt(MO.getSize() - AccessSize)) {
+      reportImmediateUB("Memory access is out of bounds.");
+      return std::nullopt;
+    }
+
+    return Offset.getZExtValue();
+  }
+
+  AnyValue load(const AnyValue &Ptr, Align Alignment, Type *ValTy) {
+    if (Ptr.isPoison()) {
+      reportImmediateUB("Invalid memory access with a poison pointer.");
+      return AnyValue::getPoisonValue(Ctx, ValTy);
+    }
+    auto &PtrVal = Ptr.asPointer();
+    auto *MO = PtrVal.getMemoryObject();
+    if (!MO) {
+      reportImmediateUB(
+          "Invalid memory access via a pointer with nullary provenance.");
+      return AnyValue::getPoisonValue(Ctx, ValTy);
+    }
+    // TODO: pointer capability check
+    if (auto Offset =
+            verifyMemAccess(*MO, PtrVal.address(),
+                            Ctx.getEffectiveTypeStoreSize(ValTy), Alignment,
+                            /*IsStore=*/false)) {
+      // Load from a dead stack object yields poison value.
+      if (MO->getState() == MemoryObjectState::Dead)
+        return AnyValue::getPoisonValue(Ctx, ValTy);
+
+      return Ctx.load(*MO, *Offset, ValTy);
+    }
+    return AnyValue::getPoisonValue(Ctx, ValTy);
+  }
+
+  void store(const AnyValue &Ptr, Align Alignment, const AnyValue &Val,
+             Type *ValTy) {
+    if (Ptr.isPoison()) {
+      reportImmediateUB("Invalid memory access with a poison pointer.");
+      return;
+    }
+    auto &PtrVal = Ptr.asPointer();
+    auto *MO = PtrVal.getMemoryObject();
+    if (!MO) {
+      reportImmediateUB(
+          "Invalid memory access via a pointer with nullary provenance.");
+      return;
+    }
+    // TODO: pointer capability check
+    if (auto Offset =
+            verifyMemAccess(*MO, PtrVal.address(),
+                            Ctx.getEffectiveTypeStoreSize(ValTy), Alignment,
+                            /*IsStore=*/true))
+      Ctx.store(*MO, *Offset, Val, ValTy);
+  }
+
+  AnyValue computePtrAdd(const Pointer &Ptr, const APInt &Offset,
+                         GEPNoWrapFlags Flags, AnyValue &AccumulatedOffset) {
+    if (Offset.isZero())
+      return Ptr;
+    APInt IndexBits = Ptr.address().trunc(Offset.getBitWidth());
+    auto NewIndex = addNoWrap(IndexBits, Offset, /*HasNSW=*/false,
+                              Flags.hasNoUnsignedWrap());
+    if (NewIndex.isPoison())
+      return AnyValue::poison();
+    if (Flags.hasNoUnsignedSignedWrap()) {
+      // The successive addition of the current address, truncated to the
+      // pointer index type and interpreted as an unsigned number, and each
+      // offset, interpreted as a signed number, does not wrap the pointer index
+      // type.
+      if (Offset.isNonNegative() ? NewIndex.asInteger().ult(IndexBits)
+                                 : NewIndex.asInteger().ugt(IndexBits))
+        return AnyValue::poison();
+    }
+    APInt NewAddr = Ptr.address();
+    NewAddr.insertBits(NewIndex.asInteger(), 0);
+
+    auto *MO = Ptr.getMemoryObject();
+    if (Flags.isInBounds() && (!MO || !MO->inBounds(NewAddr)))
+      return AnyValue::poison();
+
+    if (!AccumulatedOffset.isPoison()) {
+      AccumulatedOffset =
+          addNoWrap(AccumulatedOffset.asInteger(), Offset,
+                    Flags.hasNoUnsignedSignedWrap(), Flags.hasNoUnsignedWrap());
+      if (AccumulatedOffset.isPoison())
+        return AnyValue::poison();
+    }
+
+    // Should not expose provenance here even if the new address doesn't point
+    // to the original object.
+    return Ptr.getWithNewAddr(NewAddr);
+  }
+
+  AnyValue computePtrAdd(const AnyValue &Ptr, const APInt &Offset,
+                         GEPNoWrapFlags Flags, AnyValue &AccumulatedOffset) {
+    if (Ptr.isPoison())
+      return AnyValue::poison();
+    return computePtrAdd(Ptr.asPointer(), Offset, Flags, AccumulatedOffset);
+  }
+
+  AnyValue computeScaledPtrAdd(const AnyValue &Ptr, const AnyValue &Index,
+                               const APInt &Scale, GEPNoWrapFlags Flags,
+                               AnyValue &AccumulatedOffset) {
+    if (Ptr.isPoison() || Index.isPoison())
+      return AnyValue::poison();
+    assert(Ptr.isPointer() && Index.isInteger() && "Unexpected type.");
+    if (Scale.isOne())
+      return computePtrAdd(Ptr, Index.asInteger(), Flags, AccumulatedOffset);
+    auto ScaledOffset =
+        mulNoWrap(Index.asInteger(), Scale, Flags.hasNoUnsignedSignedWrap(),
+                  Flags.hasNoUnsignedWrap());
+    if (ScaledOffset.isPoison())
+      return AnyValue::poison();
+    return computePtrAdd(Ptr, ScaledOffset.asInteger(), Flags,
+                         AccumulatedOffset);
+  }
+
+  AnyValue canonicalizeIndex(const AnyValue &Idx, unsigned IndexBitWidth,
+                             GEPNoWrapFlags Flags) {
+    if (Idx.isPoison())
+      return AnyValue::poison();
+    auto &IdxInt = Idx.asInteger();
+    if (IdxInt.getBitWidth() == IndexBitWidth)
+      return Idx;
+    if (IdxInt.getBitWidth() > IndexBitWidth) {
+      if (Flags.hasNoUnsignedSignedWrap() &&
+          !IdxInt.isSignedIntN(IndexBitWidth))
+        return AnyValue::poison();
+
+      if (Flags.hasNoUnsignedWrap() && !IdxInt.isIntN(IndexBitWidth))
+        return AnyValue::poison();
+
+      return IdxInt.trunc(IndexBitWidth);
+    }
+    return IdxInt.sext(IndexBitWidth);
+  }
+
 public:
   InstExecutor(Context &C, EventHandler &H, Function &F,
                ArrayRef<AnyValue> Args, AnyValue &RetVal)
-      : Ctx(C), Handler(H), Status(true) {
+      : Ctx(C), DL(Ctx.getDataLayout()), Handler(H), Status(true) {
     CallStack.emplace_back(F, /*CallSite=*/nullptr, /*LastFrame=*/nullptr, Args,
                            RetVal, Ctx.getTLIImpl());
   }
@@ -261,21 +430,20 @@ public:
     Status &= Handler.onInstructionExecuted(RI, None);
   }
 
-  void visitBranchInst(BranchInst &BI) {
-    if (BI.isConditional()) {
-      switch (getValue(BI.getCondition()).asBoolean()) {
-      case BooleanKind::True:
-        jumpTo(BI, BI.getSuccessor(0));
-        return;
-      case BooleanKind::False:
-        jumpTo(BI, BI.getSuccessor(1));
-        return;
-      case BooleanKind::Poison:
-        reportImmediateUB("Branch on poison condition.");
-        return;
-      }
+  void visitUncondBrInst(UncondBrInst &BI) { jumpTo(BI, BI.getSuccessor()); }
+
+  void visitCondBrInst(CondBrInst &BI) {
+    switch (getValue(BI.getCondition()).asBoolean()) {
+    case BooleanKind::True:
+      jumpTo(BI, BI.getSuccessor(0));
+      return;
+    case BooleanKind::False:
+      jumpTo(BI, BI.getSuccessor(1));
+      return;
+    case BooleanKind::Poison:
+      reportImmediateUB("Branch on poison condition.");
+      return;
     }
-    jumpTo(BI, BI.getSuccessor(0));
   }
 
   void visitSwitchInst(SwitchInst &SI) {
@@ -354,6 +522,22 @@ public:
       }
       // TODO: handle llvm.assume with operand bundles
       return AnyValue();
+    case Intrinsic::lifetime_start:
+    case Intrinsic::lifetime_end: {
+      auto *Ptr = CB.getArgOperand(0);
+      if (isa<PoisonValue>(Ptr))
+        return AnyValue();
+      auto *MO = getValue(Ptr).asPointer().getMemoryObject();
+      assert(MO && "Memory object accessed by lifetime intrinsic should be "
+                   "always valid.");
+      if (IID == Intrinsic::lifetime_start) {
+        MO->setState(MemoryObjectState::Alive);
+        fill(MO->getBytes(), Byte::undef());
+      } else {
+        MO->setState(MemoryObjectState::Dead);
+      }
+      return AnyValue();
+    }
     default:
       Handler.onUnrecognizedInstruction(CB);
       Status = false;
@@ -714,6 +898,146 @@ public:
     setResult(SI, std::move(Res));
   }
 
+  void visitAllocaInst(AllocaInst &AI) {
+    uint64_t AllocSize = Ctx.getEffectiveTypeAllocSize(AI.getAllocatedType());
+    if (AI.isArrayAllocation()) {
+      auto &Size = getValue(AI.getArraySize());
+      if (Size.isPoison()) {
+        reportImmediateUB("Alloca with poison array size.");
+        return;
+      }
+      if (Size.asInteger().getActiveBits() > 64) {
+        reportImmediateUB(
+            "Alloca with large array size that overflows uint64_t.");
+        return;
+      }
+      bool Overflowed = false;
+      AllocSize = SaturatingMultiply(AllocSize, Size.asInteger().getZExtValue(),
+                                     &Overflowed);
+      if (Overflowed) {
+        reportImmediateUB(
+            "Alloca with allocation size that overflows uint64_t.");
+        return;
+      }
+    }
+    // If it is used by llvm.lifetime.start, it should be initially dead.
+    bool IsInitiallyDead = any_of(AI.users(), [](User *U) {
+      return match(U, m_Intrinsic<Intrinsic::lifetime_start>());
+    });
+    auto Obj = Ctx.allocate(AllocSize, AI.getPointerAlignment(DL).value(),
+                            AI.getName(), AI.getAddressSpace(),
+                            IsInitiallyDead ? MemInitKind::Poisoned
+                                            : MemInitKind::Uninitialized);
+    if (!Obj) {
+      reportError("Insufficient stack space.");
+      return;
+    }
+    CurrentFrame->Allocas.push_back(Obj);
+    setResult(AI, Ctx.deriveFromMemoryObject(Obj));
+  }
+
+  void visitGetElementPtrInst(GetElementPtrInst &GEP) {
+    uint32_t IndexBitWidth =
+        DL.getIndexSizeInBits(GEP.getType()->getPointerAddressSpace());
+    GEPNoWrapFlags Flags = GEP.getNoWrapFlags();
+    AnyValue Res = getValue(GEP.getPointerOperand());
+    AnyValue AccumulatedOffset = APInt(IndexBitWidth, 0);
+    if (Res.isAggregate())
+      AccumulatedOffset =
+          AnyValue::getVectorSplat(AccumulatedOffset, Res.asAggregate().size());
+    auto ApplyScaledOffset = [&](const AnyValue &Index, const APInt &Scale) {
+      if (Index.isAggregate() && !Res.isAggregate()) {
+        Res = AnyValue::getVectorSplat(Res, Index.asAggregate().size());
+        AccumulatedOffset = AnyValue::getVectorSplat(
+            AccumulatedOffset, Index.asAggregate().size());
+      }
+      if (Index.isAggregate() && Res.isAggregate()) {
+        for (auto &&[ResElem, IndexElem, OffsetElem] :
+             zip(Res.asAggregate(), Index.asAggregate(),
+                 AccumulatedOffset.asAggregate()))
+          ResElem = computeScaledPtrAdd(
+              ResElem, canonicalizeIndex(IndexElem, IndexBitWidth, Flags),
+              Scale, Flags, OffsetElem);
+      } else {
+        AnyValue CanonicalIndex =
+            canonicalizeIndex(Index, IndexBitWidth, Flags);
+        if (Res.isAggregate()) {
+          for (auto &&[ResElem, OffsetElem] :
+               zip(Res.asAggregate(), AccumulatedOffset.asAggregate()))
+            ResElem = computeScaledPtrAdd(ResElem, CanonicalIndex, Scale, Flags,
+                                          OffsetElem);
+        } else {
+          Res = computeScaledPtrAdd(Res, CanonicalIndex, Scale, Flags,
+                                    AccumulatedOffset);
+        }
+      }
+    };
+
+    for (gep_type_iterator GTI = gep_type_begin(GEP), GTE = gep_type_end(GEP);
+         GTI != GTE; ++GTI) {
+      Value *V = GTI.getOperand();
+
+      // Fast path for zero offsets.
+      if (auto *CI = dyn_cast<ConstantInt>(V)) {
+        if (CI->isZero())
+          continue;
+      }
+      if (isa<ConstantAggregateZero>(V))
+        continue;
+
+      // Handle a struct index, which adds its field offset to the pointer.
+      if (StructType *STy = GTI.getStructTypeOrNull()) {
+        unsigned ElementIdx = cast<ConstantInt>(V)->getZExtValue();
+        const StructLayout *SL = DL.getStructLayout(STy);
+        // Element offset is in bytes.
+        ApplyScaledOffset(
+            APInt(IndexBitWidth, SL->getElementOffset(ElementIdx)),
+            APInt(IndexBitWidth, 1));
+        continue;
+      }
+
+      // Truncate if type size exceeds index space.
+      // TODO: Should be documented in LangRef: GEPs with nowrap flags should
+      // return poison when the type size exceeds index space.
+      TypeSize Offset = GTI.getSequentialElementStride(DL);
+      APInt Scale(IndexBitWidth, Ctx.getEffectiveTypeSize(Offset),
+                  /*isSigned=*/false, /*implicitTrunc=*/true);
+      if (!Scale.isZero())
+        ApplyScaledOffset(getValue(V), Scale);
+    }
+
+    setResult(GEP, std::move(Res));
+  }
+
+  void visitIntToPtr(IntToPtrInst &I) {
+    return visitUnOp(I, [&](const AnyValue &V) -> AnyValue {
+      if (V.isPoison())
+        return AnyValue::poison();
+      // TODO: expose provenance
+      // TODO: check metadata
+      return Pointer(V.asInteger().zextOrTrunc(
+          DL.getPointerSizeInBits(I.getType()->getPointerAddressSpace())));
+    });
+  }
+
+  void visitLoadInst(LoadInst &LI) {
+    auto RetVal =
+        load(getValue(LI.getPointerOperand()), LI.getAlign(), LI.getType());
+    // TODO: track volatile loads
+    // TODO: handle metadata
+    setResult(LI, std::move(RetVal));
+  }
+
+  void visitStoreInst(StoreInst &SI) {
+    auto &Ptr = getValue(SI.getPointerOperand());
+    auto &Val = getValue(SI.getValueOperand());
+    // TODO: track volatile stores
+    // TODO: handle metadata
+    store(Ptr, SI.getAlign(), Val, SI.getValueOperand()->getType());
+    if (Status)
+      Status &= Handler.onInstructionExecuted(SI, AnyValue());
+  }
+
   void visitInstruction(Instruction &I) {
     Handler.onUnrecognizedInstruction(I);
     Status = false;
@@ -783,6 +1107,23 @@ public:
     setResult(SVI, std::move(Res));
   }
 
+  void visitBitCastInst(BitCastInst &BCI) {
+    // The conversion is done as if the value had been stored to memory and read
+    // back as the target type.
+    SmallVector<Byte> Bytes;
+    Bytes.resize(Ctx.getEffectiveTypeStoreSize(BCI.getType()),
+                 Byte::concrete(0));
+    Ctx.toBytes(getValue(BCI.getOperand(0)), BCI.getOperand(0)->getType(),
+                Bytes);
+    setResult(BCI, Ctx.fromBytes(Bytes, BCI.getType()));
+  }
+
+  void visitFreezeInst(FreezeInst &FI) {
+    AnyValue Val = getValue(FI.getOperand(0));
+    Ctx.freeze(Val, FI.getType());
+    setResult(FI, std::move(Val));
+  }
+
   /// This function implements the main interpreter loop.
   /// It handles function calls in a non-recursive manner to avoid stack
   /// overflows.
@@ -834,6 +1175,9 @@ public:
         assert((Top.Func.getReturnType()->isVoidTy() || !Top.RetVal.isNone()) &&
                "Expected return value to be set on function exit.");
         Handler.onFunctionExit(Top.Func, Top.RetVal);
+        // Free stack objects allocated in this frame.
+        for (auto &Obj : Top.Allocas)
+          Ctx.free(Obj->getAddress());
         CallStack.pop_back();
       } else {
         assert(Top.State == FrameState::Pending &&

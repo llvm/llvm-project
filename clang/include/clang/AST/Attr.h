@@ -275,8 +275,12 @@ public:
 /// A single parameter index whose accessors require each use to make explicit
 /// the parameter index encoding needed.
 class ParamIdx {
+public:
+  constexpr static unsigned IdxBitWidth = 30;
+
+private:
   // Idx is exposed only via accessors that specify specific encodings.
-  unsigned Idx : 30;
+  unsigned Idx : IdxBitWidth;
   LLVM_PREFERRED_TYPE(bool)
   unsigned HasThis : 1;
   LLVM_PREFERRED_TYPE(bool)

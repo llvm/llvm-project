@@ -1,0 +1,47 @@
+# RUN: llc -march=hexagon -run-pass=hexagon-widen-stores -verify-machineinstrs %s -o - | FileCheck %s
+
+# CHECK: S2_addasl_rrri [[VREG0:%[0-9]+]], [[VREG1:%[0-9]+]], 3
+# CHECK-NEXT: [[NEWREG:%[0-9]+]]:doubleregs = A2_combinew
+# CHECK-NEXT: S4_storerd_rr [[VREG0]], [[VREG1]], 3, [[NEWREG]]
+# CHECK: [[VREG6:%[0-9]+]]:intregs = S2_addasl_rrri [[VREG0]], [[VREG1]], 4
+# CHECK-NEXT: [[NEWREG2:%[0-9]+]]:doubleregs = A2_combinew
+# CHECK-NEXT: S2_storerd_io [[VREG6]], 0, [[NEWREG2]]
+
+--- |
+  define float @qhl_scalar_dsp_fft_f32(ptr %0, ptr %1, i32 %2, i32 %3, i32 %4) {
+  entry:
+    %arrayidx = getelementptr { float, float }, ptr %1, i32 %2
+    %cgep = getelementptr { float, float }, ptr %0, i32 %3
+    %arrayidx.real = load float, ptr %cgep, align 8
+    store float %arrayidx.real, ptr %1, align 8
+    %arrayidx.imagp = getelementptr i8, ptr %arrayidx, i32 4
+    %arrayidx.imag = load float, ptr %arrayidx.imagp, align 4
+    ret float %arrayidx.imag
+  }
+...
+---
+name:            qhl_scalar_dsp_fft_f32
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$r1', virtual-reg: '%1' }
+  - { reg: '$r2', virtual-reg: '%2' }
+  - { reg: '$r3', virtual-reg: '%3' }
+  - { reg: '$r4', virtual-reg: '%4' }
+body:             |
+  bb.0.entry:
+    liveins: $r0, $r1, $r2, $r3
+
+    %0:intregs = COPY $r0
+    %1:intregs = COPY $r1
+    %2:intregs = COPY $r2
+    %3:intregs = COPY $r3
+    %4:intregs = COPY $r4
+    %5:intregs = S2_addasl_rrri %0, %1, 3
+    S2_storeri_io %5, 0, killed %3 :: (store (s32) into %ir.arrayidx, align 8)
+    S2_storeri_io %5, 4, killed %4 :: (store (s32) into %ir.cgep, align 4)
+    %6:intregs = S2_addasl_rrri %0, %1, 4
+    S2_storeri_io %6, 0, killed %3 :: (store (s32) into %ir.arrayidx, align 8)
+    S2_storeri_io %6, 4, killed %4 :: (store (s32) into %ir.cgep, align 4)
+    $r0 = COPY %3
+    PS_jmpret $r31, implicit-def dead $pc, implicit $r0
+...

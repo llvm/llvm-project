@@ -22,6 +22,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/TargetParser/PPCTargetParser.h"
 
 namespace clang {
 
@@ -99,6 +100,10 @@ static bool isPPC_64Builtin(unsigned BuiltinID) {
   case PPC::BI__builtin_amo_stdat:
   case PPC::BI__builtin_amo_stwat_s:
   case PPC::BI__builtin_amo_stdat_s:
+  case PPC::BI__builtin_amo_lwat_csne:
+  case PPC::BI__builtin_amo_ldat_csne:
+  case PPC::BI__builtin_amo_lwat_csne_s:
+  case PPC::BI__builtin_amo_ldat_csne_s:
     return true;
   }
   return false;
@@ -569,4 +574,72 @@ bool SemaPPC::BuiltinVSX(CallExpr *TheCall) {
   return false;
 }
 
+bool SemaPPC::checkTargetClonesAttr(const SmallVectorImpl<StringRef> &Params,
+                                    const SmallVectorImpl<SourceLocation> &Locs,
+                                    SmallVectorImpl<SmallString<64>> &NewParams,
+                                    SourceLocation AttrLoc) {
+  using namespace DiagAttrParams;
+
+  assert(Params.size() == Locs.size() &&
+         "Mismatch between number of string parameters and locations");
+
+  auto &TargetInfo = getASTContext().getTargetInfo();
+  bool HasDefault = false;
+  bool HasComma = false;
+  for (unsigned I = 0, E = Params.size(); I < E; ++I) {
+    const StringRef Param = Params[I].trim();
+    const SourceLocation &Loc = Locs[I];
+
+    if (Param.empty() || Param.ends_with(','))
+      return Diag(Loc, diag::warn_unsupported_target_attribute)
+             << Unsupported << None << "" << TargetClones;
+
+    if (Param.contains(','))
+      HasComma = true;
+
+    StringRef LHS;
+    StringRef RHS = Param;
+    do {
+      std::tie(LHS, RHS) = RHS.split(',');
+      LHS = LHS.trim();
+      const SourceLocation &CurLoc =
+          Loc.getLocWithOffset(LHS.data() - Param.data());
+
+      if (LHS.starts_with("cpu=")) {
+        StringRef CPUStr = LHS.drop_front(sizeof("cpu=") - 1);
+        if (!TargetInfo.isValidCPUName(CPUStr))
+          return Diag(CurLoc, diag::warn_unsupported_target_attribute)
+                 << Unknown << CPU << CPUStr << TargetClones;
+        else if (!TargetInfo.validateCpuIs(CPUStr))
+          return Diag(CurLoc, diag::warn_unsupported_target_attribute)
+                 << Unsupported << CPU << CPUStr << TargetClones;
+      } else if (LHS == "default") {
+        HasDefault = true;
+      } else {
+        // it's a feature string, but not supported yet.
+        return Diag(CurLoc, diag::warn_unsupported_target_attribute)
+               << Unsupported << None << LHS << TargetClones;
+      }
+      SmallString<64> CPU;
+      if (LHS.starts_with("cpu=")) {
+        CPU.append("cpu=");
+        CPU.append(
+            llvm::PPC::normalizeCPUName(LHS.drop_front(sizeof("cpu=") - 1)));
+        LHS = CPU.str();
+      }
+      if (llvm::is_contained(NewParams, LHS)) {
+        Diag(CurLoc, diag::warn_target_clone_duplicate_options);
+        continue;
+      }
+      NewParams.push_back(LHS);
+    } while (!RHS.empty());
+  }
+  if (HasComma && Params.size() > 1)
+    Diag(Locs[0], diag::warn_target_clone_mixed_values);
+
+  if (!HasDefault)
+    return Diag(AttrLoc, diag::err_target_clone_must_have_default);
+
+  return false;
+}
 } // namespace clang

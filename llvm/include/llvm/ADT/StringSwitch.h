@@ -87,67 +87,11 @@ public:
 
   StringSwitch &Cases(std::initializer_list<StringLiteral> CaseStrings,
                       T Value) {
-    return CasesImpl(CaseStrings, Value);
-  }
-
-  [[deprecated("Pass cases in std::initializer_list instead")]]
-  StringSwitch &Cases(StringLiteral S0, StringLiteral S1, T Value) {
-    return CasesImpl({S0, S1}, Value);
-  }
-
-  [[deprecated("Pass cases in std::initializer_list instead")]]
-  StringSwitch &Cases(StringLiteral S0, StringLiteral S1, StringLiteral S2,
-                      T Value) {
-    return CasesImpl({S0, S1, S2}, Value);
-  }
-
-  [[deprecated("Pass cases in std::initializer_list instead")]]
-  StringSwitch &Cases(StringLiteral S0, StringLiteral S1, StringLiteral S2,
-                      StringLiteral S3, T Value) {
-    return CasesImpl({S0, S1, S2, S3}, Value);
-  }
-
-  [[deprecated("Pass cases in std::initializer_list instead")]]
-  StringSwitch &Cases(StringLiteral S0, StringLiteral S1, StringLiteral S2,
-                      StringLiteral S3, StringLiteral S4, T Value) {
-    return CasesImpl({S0, S1, S2, S3, S4}, Value);
-  }
-
-  [[deprecated("Pass cases in std::initializer_list instead")]]
-  StringSwitch &Cases(StringLiteral S0, StringLiteral S1, StringLiteral S2,
-                      StringLiteral S3, StringLiteral S4, StringLiteral S5,
-                      T Value) {
-    return CasesImpl({S0, S1, S2, S3, S4, S5}, Value);
-  }
-
-  [[deprecated("Pass cases in std::initializer_list instead")]]
-  StringSwitch &Cases(StringLiteral S0, StringLiteral S1, StringLiteral S2,
-                      StringLiteral S3, StringLiteral S4, StringLiteral S5,
-                      StringLiteral S6, T Value) {
-    return CasesImpl({S0, S1, S2, S3, S4, S5, S6}, Value);
-  }
-
-  [[deprecated("Pass cases in std::initializer_list instead")]]
-  StringSwitch &Cases(StringLiteral S0, StringLiteral S1, StringLiteral S2,
-                      StringLiteral S3, StringLiteral S4, StringLiteral S5,
-                      StringLiteral S6, StringLiteral S7, T Value) {
-    return CasesImpl({S0, S1, S2, S3, S4, S5, S6, S7}, Value);
-  }
-
-  [[deprecated("Pass cases in std::initializer_list instead")]]
-  StringSwitch &Cases(StringLiteral S0, StringLiteral S1, StringLiteral S2,
-                      StringLiteral S3, StringLiteral S4, StringLiteral S5,
-                      StringLiteral S6, StringLiteral S7, StringLiteral S8,
-                      T Value) {
-    return CasesImpl({S0, S1, S2, S3, S4, S5, S6, S7, S8}, Value);
-  }
-
-  [[deprecated("Pass cases in std::initializer_list instead")]]
-  StringSwitch &Cases(StringLiteral S0, StringLiteral S1, StringLiteral S2,
-                      StringLiteral S3, StringLiteral S4, StringLiteral S5,
-                      StringLiteral S6, StringLiteral S7, StringLiteral S8,
-                      StringLiteral S9, T Value) {
-    return CasesImpl({S0, S1, S2, S3, S4, S5, S6, S7, S8, S9}, Value);
+    // Stop matching after the string is found.
+    for (StringLiteral S : CaseStrings)
+      if (CaseImpl(S, Value))
+        break;
+    return *this;
   }
 
   // Case-insensitive case matchers.
@@ -172,30 +116,11 @@ public:
 
   StringSwitch &CasesLower(std::initializer_list<StringLiteral> CaseStrings,
                            T Value) {
-    return CasesLowerImpl(CaseStrings, Value);
-  }
-
-  [[deprecated("Pass cases in std::initializer_list instead")]]
-  StringSwitch &CasesLower(StringLiteral S0, StringLiteral S1, T Value) {
-    return CasesLowerImpl({S0, S1}, Value);
-  }
-
-  [[deprecated("Pass cases in std::initializer_list instead")]]
-  StringSwitch &CasesLower(StringLiteral S0, StringLiteral S1, StringLiteral S2,
-                           T Value) {
-    return CasesLowerImpl({S0, S1, S2}, Value);
-  }
-
-  [[deprecated("Pass cases in std::initializer_list instead")]]
-  StringSwitch &CasesLower(StringLiteral S0, StringLiteral S1, StringLiteral S2,
-                           StringLiteral S3, T Value) {
-    return CasesLowerImpl({S0, S1, S2, S3}, Value);
-  }
-
-  [[deprecated("Pass cases in std::initializer_list instead")]]
-  StringSwitch &CasesLower(StringLiteral S0, StringLiteral S1, StringLiteral S2,
-                           StringLiteral S3, StringLiteral S4, T Value) {
-    return CasesLowerImpl({S0, S1, S2, S3, S4}, Value);
+    // Stop matching after the string is found.
+    for (StringLiteral S : CaseStrings)
+      if (CaseLowerImpl(S, Value))
+        break;
+    return *this;
   }
 
   [[nodiscard]] R Default(T Value) {
@@ -239,24 +164,6 @@ private:
 
     Result = std::move(Value);
     return true;
-  }
-
-  StringSwitch &CasesImpl(std::initializer_list<StringLiteral> Cases,
-                          T &Value) {
-    // Stop matching after the string is found.
-    for (StringLiteral S : Cases)
-      if (CaseImpl(S, Value))
-        break;
-    return *this;
-  }
-
-  StringSwitch &CasesLowerImpl(std::initializer_list<StringLiteral> Cases,
-                               T &Value) {
-    // Stop matching after the string is found.
-    for (StringLiteral S : Cases)
-      if (CaseLowerImpl(S, Value))
-        break;
-    return *this;
   }
 };
 

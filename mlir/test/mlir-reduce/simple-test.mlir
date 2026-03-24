@@ -1,5 +1,8 @@
 // UNSUPPORTED: system-windows
-// RUN: mlir-reduce %s -reduction-tree='traversal-mode=0 test=%S/test.sh'
+// RUN: mlir-reduce %s -reduction-tree='traversal-mode=0 test=%S/test.sh' | FileCheck %s
+
+// Since the test.sh always returns 1 (interesting), 
+// all operations within the ModuleOp should be erased.
 
 func.func @simple1(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   cf.cond_br %arg0, ^bb1, ^bb2
@@ -11,3 +14,6 @@ func.func @simple1(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 ^bb3(%1: memref<2xf32>):
   return
 }
+
+// CHECK: module {
+// CHECK: }

@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc_convert.h>
-#include <clc/float/definitions.h>
-#include <clc/internal/clc.h>
-#include <clc/math/clc_fabs.h>
-#include <clc/math/clc_fma.h>
-#include <clc/math/clc_log.h>
-#include <clc/math/clc_mad.h>
-#include <clc/math/clc_sinpi.h>
-#include <clc/math/math.h>
+#include "clc/clc_convert.h"
+#include "clc/float/definitions.h"
+#include "clc/internal/clc.h"
+#include "clc/math/clc_fabs.h"
+#include "clc/math/clc_fma.h"
+#include "clc/math/clc_log.h"
+#include "clc/math/clc_mad.h"
+#include "clc/math/clc_sinpi.h"
+#include "clc/math/math.h"
 
 // ====================================================
 // Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
@@ -597,25 +597,25 @@ _CLC_OVERLOAD _CLC_DEF half __clc_lgamma_r(half x, private int *iptr) {
 #define __CLC_FUNCTION __clc_lgamma_r
 #define __CLC_ARG2_TYPE int
 #define __CLC_ADDRSPACE private
-#define __CLC_BODY <clc/shared/unary_def_with_ptr_scalarize.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc/shared/unary_def_with_ptr_scalarize.inc"
+#include "clc/math/gentype.inc"
 #undef __CLC_ADDRSPACE
 #undef __CLC_ARG2_TYPE
 #undef __CLC_FUNCTION
 
 #define __CLC_ADDRSPACE global
-#define __CLC_BODY <clc_lgamma_r.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc_lgamma_r.inc"
+#include "clc/math/gentype.inc"
 #undef __CLC_ADDRSPACE
 
 #define __CLC_ADDRSPACE local
-#define __CLC_BODY <clc_lgamma_r.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc_lgamma_r.inc"
+#include "clc/math/gentype.inc"
 #undef __CLC_ADDRSPACE
 
 #if _CLC_DISTINCT_GENERIC_AS_SUPPORTED
 #define __CLC_ADDRSPACE generic
-#define __CLC_BODY <clc_lgamma_r.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc_lgamma_r.inc"
+#include "clc/math/gentype.inc"
 #undef __CLC_ADDRSPACE
 #endif

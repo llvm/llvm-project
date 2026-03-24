@@ -35,6 +35,7 @@
 
 #define GET_INSTRINFO_MC_DESC
 #define ENABLE_INSTR_PREDICATE_VERIFIER
+#define GET_INSTRINFO_NAMED_OPS
 #include "RISCVGenInstrInfo.inc"
 
 #define GET_REGINFO_MC_DESC
@@ -258,7 +259,8 @@ public:
 
   void resetState() override { GPRValidMask.reset(); }
 
-  void updateState(const MCInst &Inst, uint64_t Addr) override {
+  void updateState(const MCInst &Inst, const MCSubtargetInfo *STI,
+                   uint64_t Addr) override {
     // Terminators mark the end of a basic block which means the sequentially
     // next instruction will be the first of another basic block and the current
     // state will typically not be valid anymore. For calls, we assume all

@@ -12,14 +12,17 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/TensorEncoding.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CheckedArithmetic.h"
+#include <cstring>
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -58,6 +61,39 @@ LogicalResult ComplexType::verify(function_ref<InFlightDiagnostic()> emitError,
   return success();
 }
 
+size_t ComplexType::getDenseElementBitSize() const {
+  auto elemTy = cast<DenseElementType>(getElementType());
+  return llvm::alignTo<8>(elemTy.getDenseElementBitSize()) * 2;
+}
+
+Attribute ComplexType::convertToAttribute(ArrayRef<char> rawData) const {
+  auto elemTy = cast<DenseElementType>(getElementType());
+  size_t singleElementBytes =
+      llvm::alignTo<8>(elemTy.getDenseElementBitSize()) / 8;
+  Attribute real =
+      elemTy.convertToAttribute(rawData.take_front(singleElementBytes));
+  Attribute imag =
+      elemTy.convertToAttribute(rawData.take_back(singleElementBytes));
+  return ArrayAttr::get(getContext(), {real, imag});
+}
+
+LogicalResult
+ComplexType::convertFromAttribute(Attribute attr,
+                                  SmallVectorImpl<char> &result) const {
+  auto arrayAttr = dyn_cast<ArrayAttr>(attr);
+  if (!arrayAttr || arrayAttr.size() != 2)
+    return failure();
+  auto elemTy = cast<DenseElementType>(getElementType());
+  SmallVector<char> realData, imagData;
+  if (failed(elemTy.convertFromAttribute(arrayAttr[0], realData)))
+    return failure();
+  if (failed(elemTy.convertFromAttribute(arrayAttr[1], imagData)))
+    return failure();
+  result.append(realData);
+  result.append(imagData);
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // Integer Type
 //===----------------------------------------------------------------------===//
@@ -83,6 +119,57 @@ IntegerType IntegerType::scaleElementBitwidth(unsigned scale) {
   if (!scale)
     return IntegerType();
   return IntegerType::get(getContext(), scale * getWidth(), getSignedness());
+}
+
+size_t IntegerType::getDenseElementBitSize() const {
+  // Return the actual bit width. Storage alignment is handled separately.
+  return getWidth();
+}
+
+Attribute IntegerType::convertToAttribute(ArrayRef<char> rawData) const {
+  APInt value = detail::readBits(rawData.data(), /*bitPos=*/0, getWidth());
+  return IntegerAttr::get(*this, value);
+}
+
+static void writeAPIntToVector(APInt apInt, SmallVectorImpl<char> &result) {
+  size_t byteSize = llvm::divideCeil(apInt.getBitWidth(), CHAR_BIT);
+  size_t bitPos = result.size() * CHAR_BIT;
+  result.resize(result.size() + byteSize);
+  detail::writeBits(result.data(), bitPos, apInt);
+}
+
+LogicalResult
+IntegerType::convertFromAttribute(Attribute attr,
+                                  SmallVectorImpl<char> &result) const {
+  auto intAttr = dyn_cast<IntegerAttr>(attr);
+  if (!intAttr || intAttr.getType() != *this)
+    return failure();
+  writeAPIntToVector(intAttr.getValue(), result);
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// Index Type
+//===----------------------------------------------------------------------===//
+
+size_t IndexType::getDenseElementBitSize() const {
+  return kInternalStorageBitWidth;
+}
+
+Attribute IndexType::convertToAttribute(ArrayRef<char> rawData) const {
+  APInt value =
+      detail::readBits(rawData.data(), /*bitPos=*/0, kInternalStorageBitWidth);
+  return IntegerAttr::get(*this, value);
+}
+
+LogicalResult
+IndexType::convertFromAttribute(Attribute attr,
+                                SmallVectorImpl<char> &result) const {
+  auto intAttr = dyn_cast<IntegerAttr>(attr);
+  if (!intAttr || intAttr.getType() != *this)
+    return failure();
+  writeAPIntToVector(intAttr.getValue(), result);
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

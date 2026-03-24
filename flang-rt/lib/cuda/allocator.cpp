@@ -21,8 +21,6 @@
 
 namespace Fortran::runtime::cuda {
 
-static thread_local cudaStream_t defaultStream{nullptr};
-
 struct DeviceAllocation {
   void *ptr;
   std::size_t size;
@@ -121,6 +119,15 @@ static void eraseAllocation(int pos) {
   --numDeviceAllocations;
 }
 
+void CUFResetStream(cudaStream_t stream) {
+  CriticalSection critical{lock};
+  for (int i = 0; i < numDeviceAllocations; ++i) {
+    if (deviceAllocations[i].stream == stream) {
+      deviceAllocations[i].stream = nullptr;
+    }
+  }
+}
+
 extern "C" {
 
 void RTDEF(CUFRegisterAllocator)() {
@@ -155,12 +162,6 @@ int RTDECL(CUFSetAssociatedStream)(void *p, cudaStream_t stream) {
   }
   return StatOk;
 }
-
-void RTDECL(CUFSetDefaultStream)(cudaStream_t stream) {
-  defaultStream = stream;
-}
-
-cudaStream_t RTDECL(CUFGetDefaultStream)() { return defaultStream; }
 }
 
 void *CUFAllocPinned(

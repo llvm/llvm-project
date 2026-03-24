@@ -31,10 +31,10 @@ define amdgpu_kernel void @test_iglp_opt_rev_mfma_gemm(<1 x i64> %L1) {
 ; GCN-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.iglp.opt(i32 1)
-  %load.4 = load <32 x float>, ptr addrspace(3) null, align 128
+  %load.4 = load <32 x float>, ptr addrspace(3) zeroinitializer, align 128
   %B = urem <1 x i64> zeroinitializer, %L1
-  store <32 x float> %load.4, ptr addrspace(3) null, align 128
-  store <1 x i64> %B, ptr addrspace(3) null, align 8
+  store <32 x float> %load.4, ptr addrspace(3) zeroinitializer, align 128
+  store <1 x i64> %B, ptr addrspace(3) zeroinitializer, align 8
   ret void
 }
 

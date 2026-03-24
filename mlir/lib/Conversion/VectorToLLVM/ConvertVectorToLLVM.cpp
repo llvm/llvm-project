@@ -290,6 +290,7 @@ public:
     MemRefType memRefType = dyn_cast<MemRefType>(gather.getBaseType());
     assert(memRefType && "The base should be bufferized");
 
+    // TODO: Add support for strided MemRef.
     if (failed(isMemRefTypeSupported(memRefType, *this->getTypeConverter())))
       return rewriter.notifyMatchFailure(gather, "memref type not supported");
 
@@ -348,6 +349,7 @@ public:
     auto memRefType = dyn_cast<MemRefType>(scatter.getBaseType());
     assert(memRefType && "The base should be bufferized");
 
+    // TODO: Add support for strided MemRef.
     if (failed(isMemRefTypeSupported(memRefType, *this->getTypeConverter())))
       return rewriter.notifyMatchFailure(scatter, "memref type not supported");
 
@@ -1279,6 +1281,11 @@ public:
 
     Value result = sourceAggregate;
     if (isNestedAggregate) {
+      if (!llvm::all_of(positionOf1DVectorWithinAggregate,
+                        llvm::IsaPred<Attribute>)) {
+        // llvm.insertvalue does not support dynamic dimensions.
+        return failure();
+      }
       result = LLVM::InsertValueOp::create(
           rewriter, loc, adaptor.getDest(), sourceAggregate,
           getAsIntegers(positionOf1DVectorWithinAggregate));

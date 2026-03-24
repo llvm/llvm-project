@@ -74,9 +74,9 @@ bool HardwareLoopInfo::canAnalyze(LoopInfo &LI) {
 
 IntrinsicCostAttributes::IntrinsicCostAttributes(
     Intrinsic::ID Id, const CallBase &CI, InstructionCost ScalarizationCost,
-    bool TypeBasedOnly, const TargetLibraryInfo *LibInfo)
+    bool TypeBasedOnly)
     : II(dyn_cast<IntrinsicInst>(&CI)), RetTy(CI.getType()), IID(Id),
-      ScalarizationCost(ScalarizationCost), LibInfo(LibInfo) {
+      ScalarizationCost(ScalarizationCost) {
 
   if (const auto *FPMO = dyn_cast<FPMathOperator>(&CI))
     FMF = FPMO->getFastMathFlags();
@@ -106,12 +106,13 @@ IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id, Type *Ty,
     ParamTys.push_back(Argument->getType());
 }
 
-IntrinsicCostAttributes::IntrinsicCostAttributes(
-    Intrinsic::ID Id, Type *RTy, ArrayRef<const Value *> Args,
-    ArrayRef<Type *> Tys, FastMathFlags Flags, const IntrinsicInst *I,
-    InstructionCost ScalarCost, TargetLibraryInfo const *LibInfo)
-    : II(I), RetTy(RTy), IID(Id), FMF(Flags), ScalarizationCost(ScalarCost),
-      LibInfo(LibInfo) {
+IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
+                                                 ArrayRef<const Value *> Args,
+                                                 ArrayRef<Type *> Tys,
+                                                 FastMathFlags Flags,
+                                                 const IntrinsicInst *I,
+                                                 InstructionCost ScalarCost)
+    : II(I), RetTy(RTy), IID(Id), FMF(Flags), ScalarizationCost(ScalarCost) {
   ParamTys.insert(ParamTys.begin(), Tys.begin(), Tys.end());
   Arguments.insert(Arguments.begin(), Args.begin(), Args.end());
 }
@@ -183,12 +184,9 @@ bool HardwareLoopInfo::isHardwareLoopCandidate(ScalarEvolution &SE,
     if (!TI)
       continue;
 
-    if (BranchInst *BI = dyn_cast<BranchInst>(TI)) {
-      if (!BI->isConditional())
-        continue;
-
+    if (CondBrInst *BI = dyn_cast<CondBrInst>(TI))
       ExitBranch = BI;
-    } else
+    else
       continue;
 
     // Note that this block may not be the loop latch block, even if the loop
@@ -339,6 +337,11 @@ KnownBits TargetTransformInfo::computeKnownBitsAddrSpaceCast(
   return TTIImpl->computeKnownBitsAddrSpaceCast(FromAS, ToAS, FromPtrBits);
 }
 
+APInt TargetTransformInfo::getAddrSpaceCastPreservedPtrMask(
+    unsigned SrcAS, unsigned DstAS) const {
+  return TTIImpl->getAddrSpaceCastPreservedPtrMask(SrcAS, DstAS);
+}
+
 bool TargetTransformInfo::canHaveNonUndefGlobalInitializerInAddressSpace(
     unsigned AS) const {
   return TTIImpl->canHaveNonUndefGlobalInitializerInAddressSpace(AS);
@@ -381,9 +384,8 @@ bool TargetTransformInfo::preferPredicateOverEpilogue(
   return TTIImpl->preferPredicateOverEpilogue(TFI);
 }
 
-TailFoldingStyle TargetTransformInfo::getPreferredTailFoldingStyle(
-    bool IVUpdateMayOverflow) const {
-  return TTIImpl->getPreferredTailFoldingStyle(IVUpdateMayOverflow);
+TailFoldingStyle TargetTransformInfo::getPreferredTailFoldingStyle() const {
+  return TTIImpl->getPreferredTailFoldingStyle();
 }
 
 std::optional<Instruction *>
@@ -463,7 +465,7 @@ bool TargetTransformInfo::canMacroFuseCmp() const {
   return TTIImpl->canMacroFuseCmp();
 }
 
-bool TargetTransformInfo::canSaveCmp(Loop *L, BranchInst **BI,
+bool TargetTransformInfo::canSaveCmp(Loop *L, CondBrInst **BI,
                                      ScalarEvolution *SE, LoopInfo *LI,
                                      DominatorTree *DT, AssumptionCache *AC,
                                      TargetLibraryInfo *LibInfo) const {
@@ -815,6 +817,16 @@ const char *TargetTransformInfo::getRegisterClassName(unsigned ClassID) const {
   return TTIImpl->getRegisterClassName(ClassID);
 }
 
+InstructionCost TargetTransformInfo::getRegisterClassSpillCost(
+    unsigned ClassID, TTI::TargetCostKind CostKind) const {
+  return TTIImpl->getRegisterClassSpillCost(ClassID, CostKind);
+}
+
+InstructionCost TargetTransformInfo::getRegisterClassReloadCost(
+    unsigned ClassID, TTI::TargetCostKind CostKind) const {
+  return TTIImpl->getRegisterClassReloadCost(ClassID, CostKind);
+}
+
 TypeSize TargetTransformInfo::getRegisterBitWidth(
     TargetTransformInfo::RegisterKind K) const {
   return TTIImpl->getRegisterBitWidth(K);
@@ -830,10 +842,6 @@ std::optional<unsigned> TargetTransformInfo::getMaxVScale() const {
 
 std::optional<unsigned> TargetTransformInfo::getVScaleForTuning() const {
   return TTIImpl->getVScaleForTuning();
-}
-
-bool TargetTransformInfo::isVScaleKnownToBeAPowerOfTwo() const {
-  return TTIImpl->isVScaleKnownToBeAPowerOfTwo();
 }
 
 bool TargetTransformInfo::shouldMaximizeVectorBandwidth(
@@ -1454,8 +1462,9 @@ bool TargetTransformInfo::preferPredicatedReductionSelect() const {
   return TTIImpl->preferPredicatedReductionSelect();
 }
 
-bool TargetTransformInfo::preferEpilogueVectorization() const {
-  return TTIImpl->preferEpilogueVectorization();
+bool TargetTransformInfo::preferEpilogueVectorization(
+    ElementCount Iters) const {
+  return TTIImpl->preferEpilogueVectorization(Iters);
 }
 
 bool TargetTransformInfo::shouldConsiderVectorizationRegPressure() const {

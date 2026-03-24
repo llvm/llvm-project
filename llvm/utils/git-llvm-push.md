@@ -129,3 +129,4 @@ To simplify usage, the script attempts to auto-detect certain values if they are
 | `--dry-run`         | Print the commands that would be run without executing them.                         | (not set)          |
 | `-v`, `--verbose`   | Print all commands being run and other verbose output.                               | (not set)          |
 | `-q`, `--quiet`     | Print only essential output and errors, suppressing progress messages.               | (not set)          |
+| `--use-gh-cli-token`| Automatically acquires a token by calling `gh auth token`                            | (not set).         |

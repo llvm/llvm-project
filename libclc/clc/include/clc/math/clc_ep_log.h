@@ -9,7 +9,7 @@
 #ifndef __CLC_MATH_CLC_EP_LOG_H__
 #define __CLC_MATH_CLC_EP_LOG_H__
 
-#define __CLC_BODY <clc/math/clc_ep_log.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc/math/clc_ep_log_decl.inc"
+#include "clc/math/gentype.inc"
 
 #endif // __CLC_MATH_CLC_EP_LOG_H__

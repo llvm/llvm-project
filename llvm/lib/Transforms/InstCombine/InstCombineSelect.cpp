@@ -84,40 +84,60 @@ static Instruction *foldSelectBinOpIdentity(SelectInst &Sel,
   if (!match(Sel.getOperand(IsEq ? 1 : 2), m_BinOp(BO)))
     return nullptr;
 
-  // The compare constant must be the identity constant for that binop.
-  // If this a floating-point compare with 0.0, any zero constant will do.
-  Type *Ty = BO->getType();
-  Constant *IdC = ConstantExpr::getBinOpIdentity(BO->getOpcode(), Ty, true);
-  if (IdC != C) {
-    if (!IdC || !CmpInst::isFPPredicate(Pred))
-      return nullptr;
-    if (!match(IdC, m_AnyZeroFP()) || !match(C, m_AnyZeroFP()))
-      return nullptr;
-  }
+  // For absorbing values, we can fold to the compared value.
+  bool IsAbsorbingValue = false;
 
   // Last, match the compare variable operand with a binop operand.
   Value *Y;
   if (BO->isCommutative()) {
-    if (!match(BO, m_c_BinOp(m_Value(Y), m_Specific(X))))
+    // Recognized 0 as an absorbing value for fmul, but we need to be careful
+    // about the sign. This could be more aggressive, by handling arbitrary sign
+    // bit operations as long as we know the fmul sign matches (and handling
+    // arbitrary opcodes).
+    if (match(BO, m_c_FMul(m_FAbs(m_Specific(X)), m_Value(Y))) &&
+        match(C, m_AnyZeroFP()) &&
+        IC.fmulByZeroIsZero(Y, BO->getFastMathFlags(), &Sel))
+      IsAbsorbingValue = true;
+    else if (!match(BO, m_c_BinOp(m_Value(Y), m_Specific(X))))
       return nullptr;
   } else {
     if (!match(BO, m_BinOp(m_Value(Y), m_Specific(X))))
       return nullptr;
   }
 
-  // +0.0 compares equal to -0.0, and so it does not behave as required for this
-  // transform. Bail out if we can not exclude that possibility.
-  if (const auto *FPO = dyn_cast<FPMathOperator>(BO))
-    if (!FPO->hasNoSignedZeros() &&
-        !cannotBeNegativeZero(Y,
-                              IC.getSimplifyQuery().getWithInstruction(&Sel)))
-      return nullptr;
+  // The compare constant must be the identity constant for that binop.
+  // If this a floating-point compare with 0.0, any zero constant will do.
+  Type *Ty = BO->getType();
+
+  Value *FoldedVal;
+  if (IsAbsorbingValue) {
+    FoldedVal = C;
+  } else {
+    Constant *IdC = ConstantExpr::getBinOpIdentity(BO->getOpcode(), Ty, true);
+    if (IdC != C) {
+      if (!IdC || !CmpInst::isFPPredicate(Pred))
+        return nullptr;
+
+      if (!match(IdC, m_AnyZeroFP()) || !match(C, m_AnyZeroFP()))
+        return nullptr;
+    }
+
+    // +0.0 compares equal to -0.0, and so it does not behave as required for
+    // this transform. Bail out if we can not exclude that possibility.
+    if (const auto *FPO = dyn_cast<FPMathOperator>(BO))
+      if (!FPO->hasNoSignedZeros() &&
+          !cannotBeNegativeZero(Y,
+                                IC.getSimplifyQuery().getWithInstruction(&Sel)))
+        return nullptr;
+
+    FoldedVal = Y;
+  }
 
   // BO = binop Y, X
   // S = { select (cmp eq X, C), BO, ? } or { select (cmp ne X, C), ?, BO }
   // =>
   // S = { select (cmp eq X, C),  Y, ? } or { select (cmp ne X, C), ?,  Y }
-  return IC.replaceOperand(Sel, IsEq ? 1 : 2, Y);
+  return IC.replaceOperand(Sel, IsEq ? 1 : 2, FoldedVal);
 }
 
 /// This folds:
@@ -588,7 +608,8 @@ Instruction *InstCombinerImpl::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
     // have preserved the exact NaN bit-pattern.
     // Avoid the folding if the false value might be a NaN.
     if (isa<FPMathOperator>(&SI) &&
-        !computeKnownFPClass(FalseVal, FMF, fcNan, &SI).isKnownNeverNaN())
+        !computeKnownFPClass(FalseVal, FMF, fcNan, SQ.getWithInstruction(&SI))
+             .isKnownNeverNaN())
       return nullptr;
 
     Value *NewSel = Builder.CreateSelect(SI.getCondition(), Swapped ? C : OOp,
@@ -2765,12 +2786,34 @@ static Value *foldSelectCmpXchg(SelectInst &SI) {
   // to I. If such conditions are true, the helper returns the cmpxchg
   // instruction; otherwise, a nullptr is returned.
   auto isExtractFromCmpXchg = [](Value *V, unsigned I) -> AtomicCmpXchgInst * {
+    // When extracting the value loaded by a cmpxchg, allow peeking through a
+    // bitcast. These are inserted for floating-point cmpxchg, for example:
+    //   %bc = bitcast float %compare to i32
+    //   %cmpxchg = cmpxchg ptr %ptr, i32 %bc, i32 %new_value seq_cst seq_cst
+    //   %val = extractvalue { i32, i1 } %cmpxchg, 0
+    //   %success = extractvalue { i32, i1 } %cmpxchg, 1
+    //   %val.bc = bitcast i32 %val to float
+    //   %sel = select i1 %success, float %compare, float %val.bc
+    if (auto *BI = dyn_cast<BitCastInst>(V); BI && I == 0)
+      V = BI->getOperand(0);
     auto *Extract = dyn_cast<ExtractValueInst>(V);
     if (!Extract)
       return nullptr;
     if (Extract->getIndices()[0] != I)
       return nullptr;
     return dyn_cast<AtomicCmpXchgInst>(Extract->getAggregateOperand());
+  };
+
+  // Check if the compare value of a cmpxchg matches another value.
+  auto isCompareSameAsValue = [](Value *CmpVal, Value *SelVal) {
+    // The values match if they are the same or %CmpVal = bitcast %SelVal (see
+    // above).
+    if (CmpVal == SelVal || match(CmpVal, m_BitCast(m_Specific(SelVal))))
+      return true;
+    // For FP constants, the value may have been bitcast to Int directly.
+    auto *IntC = dyn_cast<ConstantInt>(CmpVal);
+    auto *FpC = dyn_cast<ConstantFP>(SelVal);
+    return IntC && FpC && IntC->getValue() == FpC->getValue().bitcastToAPInt();
   };
 
   // If the select has a single user, and this user is a select instruction that
@@ -2791,14 +2834,16 @@ static Value *foldSelectCmpXchg(SelectInst &SI) {
   // value of the same cmpxchg used by the condition, and the false value is the
   // cmpxchg instruction's compare operand.
   if (auto *X = isExtractFromCmpXchg(SI.getTrueValue(), 0))
-    if (X == CmpXchg && X->getCompareOperand() == SI.getFalseValue())
+    if (X == CmpXchg &&
+        isCompareSameAsValue(X->getCompareOperand(), SI.getFalseValue()))
       return SI.getFalseValue();
 
   // Check the false value case: The false value of the select is the returned
   // value of the same cmpxchg used by the condition, and the true value is the
   // cmpxchg instruction's compare operand.
   if (auto *X = isExtractFromCmpXchg(SI.getFalseValue(), 0))
-    if (X == CmpXchg && X->getCompareOperand() == SI.getTrueValue())
+    if (X == CmpXchg &&
+        isCompareSameAsValue(X->getCompareOperand(), SI.getTrueValue()))
       return SI.getFalseValue();
 
   return nullptr;
@@ -3550,11 +3595,11 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
     if (match(CondVal, m_OneUse(m_Select(m_Value(A), m_One(), m_Value(B)))) &&
         impliesPoisonOrCond(FalseVal, B, /*Expected=*/false)) {
       // (A || B) || C --> A || (B | C)
-      return replaceInstUsesWith(
-          SI, Builder.CreateLogicalOr(A, Builder.CreateOr(B, FalseVal), "",
-                                      ProfcheckDisableMetadataFixes
-                                          ? nullptr
-                                          : cast<SelectInst>(CondVal)));
+      Value *LOr = Builder.CreateLogicalOr(A, Builder.CreateOr(B, FalseVal));
+      if (auto *I = dyn_cast<Instruction>(LOr)) {
+        setExplicitlyUnknownBranchWeightsIfProfiled(*I, DEBUG_TYPE);
+      }
+      return replaceInstUsesWith(SI, LOr);
     }
 
     // (A && B) || (C && B) --> (A || C) && B
@@ -3566,11 +3611,12 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
       auto AndFactorization = [&](Value *Common, Value *InnerCond,
                                   Value *InnerVal,
                                   bool SelFirst = false) -> Instruction * {
-        Value *InnerSel = Builder.CreateSelect(InnerCond, One, InnerVal);
+        Value *InnerSel = Builder.CreateSelectWithUnknownProfile(
+            InnerCond, One, InnerVal, DEBUG_TYPE);
         if (SelFirst)
           std::swap(Common, InnerSel);
         if (FalseLogicAnd || (CondLogicAnd && Common == A))
-          return SelectInst::Create(Common, InnerSel, Zero);
+          return createSelectInstWithUnknownProfile(Common, InnerSel, Zero);
         else
           return BinaryOperator::CreateAnd(Common, InnerSel);
       };
@@ -3595,11 +3641,11 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
     if (match(CondVal, m_OneUse(m_Select(m_Value(A), m_Value(B), m_Zero()))) &&
         impliesPoisonOrCond(TrueVal, B, /*Expected=*/true)) {
       // (A && B) && C --> A && (B & C)
-      return replaceInstUsesWith(
-          SI, Builder.CreateLogicalAnd(A, Builder.CreateAnd(B, TrueVal), "",
-                                       ProfcheckDisableMetadataFixes
-                                           ? nullptr
-                                           : cast<SelectInst>(CondVal)));
+      Value *LAnd = Builder.CreateLogicalAnd(A, Builder.CreateAnd(B, TrueVal));
+      if (auto *I = dyn_cast<Instruction>(LAnd)) {
+        setExplicitlyUnknownBranchWeightsIfProfiled(*I, DEBUG_TYPE);
+      }
+      return replaceInstUsesWith(SI, LAnd);
     }
 
     // (A || B) && (C || B) --> (A && C) || B
@@ -3611,11 +3657,12 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
       auto OrFactorization = [&](Value *Common, Value *InnerCond,
                                  Value *InnerVal,
                                  bool SelFirst = false) -> Instruction * {
-        Value *InnerSel = Builder.CreateSelect(InnerCond, InnerVal, Zero);
+        Value *InnerSel = Builder.CreateSelectWithUnknownProfile(
+            InnerCond, InnerVal, Zero, DEBUG_TYPE);
         if (SelFirst)
           std::swap(Common, InnerSel);
         if (TrueLogicOr || (CondLogicOr && Common == A))
-          return SelectInst::Create(Common, One, InnerSel);
+          return createSelectInstWithUnknownProfile(Common, One, InnerSel);
         else
           return BinaryOperator::CreateOr(Common, InnerSel);
       };
@@ -3693,28 +3740,36 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   // select (~a | c), a, b -> select a, (select c, true, b), false
   if (match(CondVal,
             m_OneUse(m_c_Or(m_Not(m_Specific(TrueVal)), m_Value(C))))) {
-    Value *OrV = Builder.CreateSelect(C, One, FalseVal);
-    return SelectInst::Create(TrueVal, OrV, Zero);
+    // TODO(#183864): We could improve the profile if P(~a | c) < 0.5, which
+    // implies strong bounds on both operands (P(a) is high, P(c) is low).
+    Value *OrV =
+        Builder.CreateSelectWithUnknownProfile(C, One, FalseVal, DEBUG_TYPE);
+    return createSelectInstWithUnknownProfile(TrueVal, OrV, Zero);
   }
   // select (c & b), a, b -> select b, (select ~c, true, a), false
   if (match(CondVal, m_OneUse(m_c_And(m_Value(C), m_Specific(FalseVal))))) {
     if (Value *NotC = getFreelyInverted(C, C->hasOneUse(), &Builder)) {
-      Value *OrV = Builder.CreateSelect(NotC, One, TrueVal);
-      return SelectInst::Create(FalseVal, OrV, Zero);
+      Value *OrV = Builder.CreateSelectWithUnknownProfile(NotC, One, TrueVal,
+                                                          DEBUG_TYPE);
+      return createSelectInstWithUnknownProfile(FalseVal, OrV, Zero);
     }
   }
   // select (a | c), a, b -> select a, true, (select ~c, b, false)
   if (match(CondVal, m_OneUse(m_c_Or(m_Specific(TrueVal), m_Value(C))))) {
     if (Value *NotC = getFreelyInverted(C, C->hasOneUse(), &Builder)) {
-      Value *AndV = Builder.CreateSelect(NotC, FalseVal, Zero);
-      return SelectInst::Create(TrueVal, One, AndV);
+      // TODO(#183864): We could improve the profile if P(a | c) < 0.5, which
+      // implies strong bounds on both operands (both P(a) and P(c) are low).
+      Value *AndV = Builder.CreateSelectWithUnknownProfile(NotC, FalseVal, Zero,
+                                                           DEBUG_TYPE);
+      return createSelectInstWithUnknownProfile(TrueVal, One, AndV);
     }
   }
   // select (c & ~b), a, b -> select b, true, (select c, a, false)
   if (match(CondVal,
             m_OneUse(m_c_And(m_Value(C), m_Not(m_Specific(FalseVal)))))) {
-    Value *AndV = Builder.CreateSelect(C, TrueVal, Zero);
-    return SelectInst::Create(FalseVal, One, AndV);
+    Value *AndV =
+        Builder.CreateSelectWithUnknownProfile(C, TrueVal, Zero, DEBUG_TYPE);
+    return createSelectInstWithUnknownProfile(FalseVal, One, AndV);
   }
 
   if (match(FalseVal, m_Zero()) || match(TrueVal, m_One())) {
@@ -4070,7 +4125,8 @@ Instruction *InstCombinerImpl::foldSelectToCmp(SelectInst &SI) {
 
 bool InstCombinerImpl::fmulByZeroIsZero(Value *MulVal, FastMathFlags FMF,
                                         const Instruction *CtxI) const {
-  KnownFPClass Known = computeKnownFPClass(MulVal, FMF, fcNegative, CtxI);
+  KnownFPClass Known =
+      computeKnownFPClass(MulVal, FMF, fcNegative, SQ.getWithInstruction(CtxI));
 
   return Known.isKnownNeverNaN() && Known.isKnownNeverInfinity() &&
          (FMF.noSignedZeros() || Known.signBitIsZeroOrNaN());
@@ -4819,9 +4875,11 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     // Is (select B, T, F) a SPF?
     if (CondVal->hasOneUse() && SelType->isIntOrIntVectorTy()) {
       if (ICmpInst *Cmp = dyn_cast<ICmpInst>(B))
-        if (Value *V = canonicalizeSPF(*Cmp, TrueVal, FalseVal, *this))
-          return SelectInst::Create(A, IsAnd ? V : TrueVal,
-                                    IsAnd ? FalseVal : V);
+        if (Value *V = canonicalizeSPF(*Cmp, TrueVal, FalseVal, *this)) {
+          return SelectInst::Create(
+              A, IsAnd ? V : TrueVal, IsAnd ? FalseVal : V, "", nullptr,
+              ProfcheckDisableMetadataFixes ? nullptr : &SI);
+        }
     }
 
     return nullptr;

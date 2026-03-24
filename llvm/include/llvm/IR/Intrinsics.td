@@ -1833,12 +1833,12 @@ def int_coro_async_context_dealloc : Intrinsic<[],
     []>;
 def int_coro_async_resume : Intrinsic<[llvm_ptr_ty],
     [],
-    [IntrNoMerge]>;
+    [IntrNoMerge, IntrNoDuplicate]>;
 def int_coro_async_size_replace : Intrinsic<[], [llvm_ptr_ty, llvm_ptr_ty], []>;
 def int_coro_suspend_async
     : Intrinsic<[llvm_any_ty],
                 [llvm_i32_ty, llvm_ptr_ty, llvm_ptr_ty, llvm_vararg_ty],
-                [IntrNoMerge]>;
+                [IntrNoMerge, IntrNoDuplicate]>;
 def int_coro_prepare_async : Intrinsic<[llvm_ptr_ty], [llvm_ptr_ty],
                                        [IntrNoMem]>;
 def int_coro_begin : Intrinsic<[llvm_ptr_ty], [llvm_token_ty, llvm_ptr_ty],
@@ -2709,7 +2709,7 @@ def int_memset_element_unordered_atomic
 
 //===------------------------ Reduction Intrinsics ------------------------===//
 //
-let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
+let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison] in {
 
   def int_vector_reduce_fadd : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
                                          [LLVMVectorElementType<0>,

@@ -101,7 +101,7 @@ void L0KernelTy::decideKernelGroupArguments(L0DeviceTy &Device,
   bool MaxGroupSizeForced = false;
   bool MaxGroupCountForced = false;
   uint32_t MaxGroupSize = Device.getMaxGroupSize();
-  const auto &Option = LevelZeroPluginTy::getOptions();
+  const auto &Option = Device.getPlugin().getOptions();
   const auto OptSubscRate = Option.SubscriptionRate;
   auto &GroupCounts = KEnv.GroupCounts;
 
@@ -192,7 +192,7 @@ Error L0KernelTy::getGroupsShape(L0DeviceTy &Device, int32_t NumTeams,
 
   bool IsXeHPG = Device.isDeviceArch(DeviceArchTy::DeviceArch_XeHPG);
   KEnv.HalfNumThreads =
-      LevelZeroPluginTy::getOptions().ZeDebugEnabled && IsXeHPG;
+      Device.getPlugin().getOptions().ZeDebugEnabled && IsXeHPG;
   uint32_t KernelWidth = KernelPR.Width;
   uint32_t SIMDWidth = KernelPR.SIMDWidth;
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
@@ -413,9 +413,13 @@ Error L0KernelTy::setIndirectFlags(L0DeviceTy &l0Device,
 
 Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                              uint32_t NumThreads[3], uint32_t NumBlocks[3],
-                             KernelArgsTy &KernelArgs,
+                             uint32_t DynBlockMemSize, KernelArgsTy &KernelArgs,
                              KernelLaunchParamsTy LaunchParams,
                              AsyncInfoWrapperTy &AsyncInfoWrapper) const {
+  if (DynBlockMemSize > 0)
+    return Plugin::error(ErrorCode::UNSUPPORTED,
+                         "dynamic shared memory is unsupported in L0 plugin");
+
   auto &l0Device = L0DeviceTy::makeL0Device(GenericDevice);
   __tgt_async_info *AsyncInfo = AsyncInfoWrapper;
 
@@ -427,7 +431,7 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
 
   auto &Plugin = l0Device.getPlugin();
   auto *IdStr = l0Device.getZeIdCStr();
-  auto &Options = LevelZeroPluginTy::getOptions();
+  auto &Options = Plugin.getOptions();
   bool IsAsync = AsyncInfo && l0Device.asyncEnabled();
   if (IsAsync && !AsyncInfo->Queue) {
     AsyncInfo->Queue = reinterpret_cast<void *>(Plugin.getAsyncQueue());

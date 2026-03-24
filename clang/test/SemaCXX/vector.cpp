@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -flax-vector-conversions=all -triple x86_64-apple-darwin10 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -flax-vector-conversions=all -triple x86_64-apple-darwin10 -fsyntax-only -verify -fexperimental-new-constant-interpreter %s
 // RUN: %clang_cc1 -flax-vector-conversions=all -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=c++98 %s
 // RUN: %clang_cc1 -flax-vector-conversions=all -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=c++11 %s
 // RUN: %clang_cc1 -flax-vector-conversions=all -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=c++20 %s
@@ -531,6 +532,18 @@ void use() {
   S<int, 16> s;
 }
 } // namespace PR48540
+
+#if __cplusplus >= 201703L // C++17 or later
+namespace PR180563 {
+typedef int __attribute__((vector_size(8))) v_int;
+constexpr int f(v_int v) {
+  return v[~0UL]; // expected-note{{cannot refer to element 18446744073709551615 of array of 2 elements in a constant expression}}
+}
+
+static_assert(f(v_int{0})); // expected-error{{static assertion expression is not an integral constant expression}}
+// expected-note@-1{{in call to 'f({0, 0})'}}
+}
+#endif
 
 #if __cplusplus >= 202002L // C++20 or later
 // Don't crash due to missing integer ranks.

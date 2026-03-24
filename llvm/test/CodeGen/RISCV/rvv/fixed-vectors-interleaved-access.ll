@@ -2465,3 +2465,14 @@ define {<4 x i32>, <4 x i32>, <4 x i32>} @maskedload_factor5_skip_fields(ptr %pt
   ret {<4 x i32>, <4 x i32>, <4 x i32>} %res2
 }
 
+define <4 x i8> @maskedload_factor5_one_active(ptr %ptr) {
+; CHECK-LABEL: maskedload_factor5_one_active:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 5
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vlse8.v v8, (a0), a1
+; CHECK-NEXT:    ret
+ %interleaved.vec = tail call <20 x i8> @llvm.masked.load.v20i8.p0(ptr %ptr, <20 x i1> <i1 true, i1 false, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false>, <20 x i8> poison)
+  %v0 = shufflevector <20 x i8> %interleaved.vec, <20 x i8> poison, <4 x i32> <i32 0, i32 5, i32 10, i32 15>
+  ret <4 x i8> %v0
+}

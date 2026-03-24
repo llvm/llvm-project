@@ -774,6 +774,11 @@ static Type parseStructType(SPIRVDialect const &dialect,
     Type memberType;
     if (parser.parseType(memberType))
       return Type();
+    if (!isa<SPIRVType>(memberType)) {
+      parser.emitError(parser.getNameLoc(),
+                       "member type must be a valid SPIR-V type");
+      return Type();
+    }
     memberTypes.push_back(memberType);
 
     if (succeeded(parser.parseOptionalLSquare()))

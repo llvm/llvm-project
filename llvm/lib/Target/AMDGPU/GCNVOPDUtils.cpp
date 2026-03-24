@@ -142,9 +142,9 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
   if ((UniqueLiterals.size() + UniqueScalarRegs.size()) > 2)
     return false;
 
-  // On GFX12+ if both OpX and OpY are V_MOV_B32 then OPY uses SRC2
+  // On GFX1170+ if both OpX and OpY are V_MOV_B32 then OPY uses SRC2
   // source-cache.
-  bool SkipSrc = ST.getGeneration() >= AMDGPUSubtarget::GFX12 &&
+  bool SkipSrc = (ST.hasGFX11_7Insts() || ST.hasGFX12Insts()) &&
                  MIX.getOpcode() == AMDGPU::V_MOV_B32_e32 &&
                  MIY.getOpcode() == AMDGPU::V_MOV_B32_e32;
   bool AllowSameVGPR = ST.hasGFX1250Insts();
@@ -201,6 +201,7 @@ static bool shouldScheduleVOPDAdjacent(const TargetInstrInfo &TII,
           (FirstCanBeVOPD.Y && SecondCanBeVOPD.X)))
       return false;
 
+#ifdef EXPENSIVE_CHECKS
     assert([&]() -> bool {
       for (auto MII = MachineBasicBlock::const_iterator(FirstMI);
            MII != FirstMI->getParent()->instr_end(); ++MII) {
@@ -209,6 +210,7 @@ static bool shouldScheduleVOPDAdjacent(const TargetInstrInfo &TII,
       }
       return false;
     }() && "Expected FirstMI to precede SecondMI");
+#endif
 
     return checkVOPDRegConstraints(STII, *FirstMI, SecondMI, VOPD3);
   };

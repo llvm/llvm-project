@@ -29,7 +29,7 @@ struct foo test0(int expr) {
 // CIR:   %[[EXPR:.*]] = cir.load{{.*}} %[[EXPR_ADDR]]
 // CIR:   %[[IS_CONSTANT:.*]] = cir.is_constant %[[EXPR]] : !s32i -> !cir.bool
 
-// LLVM: define{{.*}} %struct.foo @test0(i32 %[[ARG0:.*]])
+// LLVM: define{{.*}} %struct.foo @test0(i32 {{.*}} %[[ARG0:.*]])
 // LLVM:   %[[EXPR_ADDR:.*]] = alloca i32
 // LLVM:   store i32 %[[ARG0]], ptr %[[EXPR_ADDR]]
 // LLVM:   %[[EXPR:.*]] = load i32, ptr %[[EXPR_ADDR]]
@@ -177,7 +177,7 @@ int test6(void) {
 // LLVM:   %[[TMP2:.*]] = call i1 @llvm.is.constant.i32(i32 %[[TMP1]])
 
 // OGCG: define {{.*}} i32 @test6()
-// OGCG:   %[[TMP1:.*]] = load i32, ptr getelementptr inbounds ([3 x i32], ptr @arr, i64 0, i64 2)
+// OGCG:   %[[TMP1:.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr, i64 8)
 // OGCG:   %[[TMP2:.*]] = call i1 @llvm.is.constant.i32(i32 %[[TMP1]])
 
 const int c_arr[] = { 1, 2, 3 };

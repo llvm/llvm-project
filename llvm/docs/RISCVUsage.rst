@@ -350,14 +350,17 @@ The primary goal of experimental support is to assist in the process of ratifica
 ``experimental-svukte``
   LLVM implements the `0.3 draft specification <https://github.com/riscv/riscv-isa-manual/pull/1564>`__.
 
-``experimental-zvqdotq``
-  LLVM implements the `0.0.1 draft specification <https://github.com/riscv/riscv-dot-product/releases/tag/v0.0.1>`__.
+``experimental-zvdot4a8i``
+  LLVM implements the `0.1 draft specification <https://github.com/riscv/riscv-isa-manual/pull/2576>`__.
 
 ``experimental-smpmpmt``
   LLVM implements the `0.6 draft specification <https://github.com/riscv/riscv-isa-manual/blob/smpmpmt/src/smpmpmt.adoc>`__.
 
 ``experimental-zvabd``
   LLVM implements the `0.7 draft specification <https://github.com/riscv/integer-vector-absolute-difference/releases/tag/v0.7>`__.
+
+``experimental-zvzip``
+  LLVM implements the `0.1 draft specification <https://github.com/ved-rivos/riscv-isa-manual/blob/zvzip/src/zvzip.adoc>`__.
 
 To use an experimental extension from `clang`, you must add `-menable-experimental-extensions` to the command line, and specify the exact version of the experimental extension you are using.  To use an experimental extension with LLVM's internal developer tools (e.g. `llc`, `llvm-objdump`, `llvm-mc`), you must prefix the extension name with `experimental-`.  Note that you don't need to specify the version with internal tools, and shouldn't include the `experimental-` prefix with `clang`.
 
@@ -454,13 +457,13 @@ The current vendor extensions supported are:
   LLVM implements `version 1.0.0 of the CORE-V immediate branching custom instructions specification <https://github.com/openhwgroup/cv32e40p/blob/cv32e40p_v1.3.2/docs/source/instruction_set_extensions.rst>`__ by OpenHW Group.  All instructions are prefixed with `cv.` as described in the specification. These instructions are only available for riscv32 at this time.
 
 ``XSiFivecdiscarddlone``
-  LLVM implements `the SiFive sf.cdiscard.d.l1 instruction specified in <https://sifive.cdn.prismic.io/sifive/767804da-53b2-4893-97d5-b7c030ae0a94_s76mc_core_complex_manual_21G3.pdf>`_ by SiFive.
+  LLVM implements `the SiFive sf.cdiscard.d.l1 instruction <https://sifive.cdn.prismic.io/sifive/767804da-53b2-4893-97d5-b7c030ae0a94_s76mc_core_complex_manual_21G3.pdf>`__ by SiFive.
 
 ``XSiFivecflushdlone``
-  LLVM implements `the SiFive sf.cflush.d.l1 instruction specified in <https://sifive.cdn.prismic.io/sifive/767804da-53b2-4893-97d5-b7c030ae0a94_s76mc_core_complex_manual_21G3.pdf>`_ by SiFive.
+  LLVM implements `the SiFive sf.cflush.d.l1 instruction <https://sifive.cdn.prismic.io/sifive/767804da-53b2-4893-97d5-b7c030ae0a94_s76mc_core_complex_manual_21G3.pdf>`__ by SiFive.
 
 ``XSfcease``
-  LLVM implements `the SiFive sf.cease instruction specified in <https://sifive.cdn.prismic.io/sifive/767804da-53b2-4893-97d5-b7c030ae0a94_s76mc_core_complex_manual_21G3.pdf>`_ by SiFive.
+  LLVM implements `the SiFive sf.cease instruction <https://sifive.cdn.prismic.io/sifive/767804da-53b2-4893-97d5-b7c030ae0a94_s76mc_core_complex_manual_21G3.pdf>`__ by SiFive.
 
 ``Xwchc``
   LLVM implements `the custom compressed opcodes present in some QingKe cores` by WCH / Nanjing Qinheng Microelectronics. The vendor refers to these opcodes by the name "XW".

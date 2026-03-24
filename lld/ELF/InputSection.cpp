@@ -780,9 +780,8 @@ static int64_t getTlsTpOffset(Ctx &ctx, const Symbol &s) {
     return s.getVA(ctx, 0) + (tls->p_vaddr & (tls->p_align - 1)) - 0x7000;
   case EM_LOONGARCH:
   case EM_RISCV:
-    // See the comment in handleTlsRelocation. For TLSDESC=>IE,
-    // R_RISCV_TLSDESC_{LOAD_LO12,ADD_LO12_I,CALL} also reach here. While
-    // `tls` may be null, the return value is ignored.
+    // For TLSDESC=>IE, R_RISCV_TLSDESC_{LOAD_LO12,ADD_LO12_I,CALL} reference
+    // a non-TLS label and reach here.
     if (s.type != STT_TLS)
       return 0;
     return s.getVA(ctx, 0) + (tls->p_vaddr & (tls->p_align - 1));
@@ -820,8 +819,6 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
   case RE_ARM_SBREL:
     return r.sym->getVA(ctx, a) - getARMStaticBase(*r.sym);
   case R_GOT:
-  case RE_AARCH64_AUTH_GOT:
-  case R_RELAX_TLS_GD_TO_IE_ABS:
     return r.sym->getGotVA(ctx) + a;
   case RE_LOONGARCH_GOT:
     // The LoongArch TLS GD relocs reuse the R_LARCH_GOT_PC_LO12 reloc r.type
@@ -847,13 +844,10 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
   case R_RELAX_TLS_GD_TO_IE_GOT_OFF:
     return r.sym->getGotOffset(ctx) + a;
   case RE_AARCH64_GOT_PAGE_PC:
-  case RE_AARCH64_AUTH_GOT_PAGE_PC:
-  case RE_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC:
     return getAArch64Page(r.sym->getGotVA(ctx) + a) - getAArch64Page(p);
   case RE_AARCH64_GOT_PAGE:
     return r.sym->getGotVA(ctx) + a - getAArch64Page(ctx.in.got->getVA());
   case R_GOT_PC:
-  case RE_AARCH64_AUTH_GOT_PC:
   case R_RELAX_TLS_GD_TO_IE:
     return r.sym->getGotVA(ctx) + a - p;
   case R_GOTPLT_GOTREL:
@@ -861,7 +855,6 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
   case R_GOTPLT_PC:
     return r.sym->getGotPltVA(ctx) + a - p;
   case RE_LOONGARCH_GOT_PAGE_PC:
-  case RE_LOONGARCH_RELAX_TLS_GD_TO_IE_PAGE_PC:
     if (r.sym->hasFlag(NEEDS_TLSGD))
       return getLoongArchPageDelta(ctx.in.got->getGlobalDynAddr(*r.sym) + a, p,
                                    r.type);
@@ -1012,14 +1005,12 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
   case R_SIZE:
     return r.sym->getSize() + a;
   case R_TLSDESC:
-  case RE_AARCH64_AUTH_TLSDESC:
     return ctx.in.got->getTlsDescAddr(*r.sym) + a;
   case R_TLSDESC_PC:
     return ctx.in.got->getTlsDescAddr(*r.sym) + a - p;
   case R_TLSDESC_GOTPLT:
     return ctx.in.got->getTlsDescAddr(*r.sym) + a - ctx.in.gotPlt->getVA();
   case RE_AARCH64_TLSDESC_PAGE:
-  case RE_AARCH64_AUTH_TLSDESC_PAGE:
     return getAArch64Page(ctx.in.got->getTlsDescAddr(*r.sym) + a) -
            getAArch64Page(p);
   case RE_LOONGARCH_TLSDESC_PAGE_PC:
@@ -1109,7 +1100,7 @@ void InputSection::relocateNonAlloc(Ctx &ctx, uint8_t *buf,
         continue;
       }
       Err(ctx) << getLocation(offset)
-               << ": R_RISCV_SET_ULEB128 not paired with R_RISCV_SUB_SET128";
+               << ": R_RISCV_SET_ULEB128 not paired with R_RISCV_SUB_ULEB128";
       return;
     }
 

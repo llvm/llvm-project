@@ -69,7 +69,7 @@ define void @pr45679(ptr %A) {
 ; VF2UF2:       vector.body:
 ; VF2UF2-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE7:%.*]] ]
 ; VF2UF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE7]] ]
-; VF2UF2-NEXT:    [[STEP_ADD:%.*]] = add <2 x i32> [[VEC_IND]], splat (i32 2)
+; VF2UF2-NEXT:    [[STEP_ADD:%.*]] = add nuw <2 x i32> [[VEC_IND]], splat (i32 2)
 ; VF2UF2-NEXT:    [[TMP0:%.*]] = icmp ule <2 x i32> [[VEC_IND]], splat (i32 13)
 ; VF2UF2-NEXT:    [[TMP1:%.*]] = icmp ule <2 x i32> [[STEP_ADD]], splat (i32 13)
 ; VF2UF2-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP0]], i32 0
@@ -238,7 +238,7 @@ define void @load_variant(ptr noalias %a, ptr noalias %b) {
 ; VF2UF2:       vector.body:
 ; VF2UF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE7:%.*]] ]
 ; VF2UF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE7]] ]
-; VF2UF2-NEXT:    [[STEP_ADD:%.*]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
+; VF2UF2-NEXT:    [[STEP_ADD:%.*]] = add nuw <2 x i64> [[VEC_IND]], splat (i64 2)
 ; VF2UF2-NEXT:    [[TMP0:%.*]] = icmp ule <2 x i64> [[VEC_IND]], splat (i64 13)
 ; VF2UF2-NEXT:    [[TMP1:%.*]] = icmp ule <2 x i64> [[STEP_ADD]], splat (i64 13)
 ; VF2UF2-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP0]], i32 0

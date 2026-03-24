@@ -838,7 +838,7 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
     //
     // OriginalBB is known to have a branch as terminator because
     // SplitBlockAndInsertIfThen will have inserted one.
-    BranchInst *Terminator = cast<BranchInst>(OriginalBB->getTerminator());
+    CondBrInst *Terminator = cast<CondBrInst>(OriginalBB->getTerminator());
     B.SetInsertPoint(ComputeEnd);
     Terminator->removeFromParent();
     B.Insert(Terminator);

@@ -946,10 +946,10 @@ X86TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   if (Glue.getNode())
     RetOps.push_back(Glue);
 
-  X86ISD::NodeType opcode = X86ISD::RET_GLUE;
+  unsigned RetOpcode = X86ISD::RET_GLUE;
   if (CallConv == CallingConv::X86_INTR)
-    opcode = X86ISD::IRET;
-  return DAG.getNode(opcode, dl, MVT::Other, RetOps);
+    RetOpcode = X86ISD::IRET;
+  return DAG.getNode(RetOpcode, dl, MVT::Other, RetOps);
 }
 
 bool X86TargetLowering::isUsedByReturnOnly(SDNode *N, SDValue &Chain) const {
@@ -1689,6 +1689,19 @@ SDValue X86TargetLowering::LowerFormalArguments(
   bool Is64Bit = Subtarget.is64Bit();
   bool IsWin64 = Subtarget.isCallingConvWin64(CallConv);
 
+  // On x86_64 with x87 disabled, x86_fp80 cannot be handled: the type would
+  // need to be returned/passed in x87 registers (FP0/FP1) which are
+  // unavailable. Emit a clear diagnostic instead of crashing later with
+  // "Cannot select: build_pair".
+  if (Is64Bit && !Subtarget.hasX87()) {
+    if (F.getReturnType()->isX86_FP80Ty() ||
+        any_of(F.args(), [](const Argument &Arg) {
+          return Arg.getType()->isX86_FP80Ty();
+        }))
+      reportFatalUsageError(
+          "cannot use x86_fp80 type with x87 disabled on x86_64 target");
+  }
+
   assert(
       !(IsVarArg && canGuaranteeTCO(CallConv)) &&
       "Var args not supported with calling conv' regcall, fastcc, ghc or hipe");
@@ -2078,8 +2091,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     report_fatal_error("X86 interrupts may not be called directly");
 
   // Set type id for call site info.
-  if (MF.getTarget().Options.EmitCallGraphSection && CB && CB->isIndirectCall())
-    CSInfo = MachineFunction::CallSiteInfo(*CB);
+  setTypeIdForCallsiteInfo(CB, MF, CSInfo);
 
   if (IsIndirectCall && !IsWin64 &&
       M->getModuleFlag("import-call-optimization"))
