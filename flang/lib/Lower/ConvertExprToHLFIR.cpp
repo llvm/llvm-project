@@ -1834,11 +1834,11 @@ private:
   void
   buildConditionalIfChain(const Fortran::evaluate::ConditionalExpr<T> &condExpr,
                           const Callback &assignValue) {
-    const mlir::Location loc = getLoc();
-    fir::FirOpBuilder &builder = getBuilder();
+    const mlir::Location loc{getLoc()};
+    fir::FirOpBuilder &builder{getBuilder()};
     getStmtCtx().pushScope();
-    const hlfir::EntityWithAttributes condEntity = gen(condExpr.condition());
-    mlir::Value condition = hlfir::loadTrivialScalar(loc, builder, condEntity);
+    const hlfir::EntityWithAttributes condEntity{gen(condExpr.condition())};
+    mlir::Value condition{hlfir::loadTrivialScalar(loc, builder, condEntity)};
     condition = builder.createConvert(loc, builder.getI1Type(), condition);
     builder.genIfOp(loc, {}, condition, /*withElseRegion=*/true)
         .genThen([&]() {
@@ -1869,18 +1869,18 @@ private:
       const Fortran::evaluate::ConditionalExpr<T> &condExpr,
       mlir::Type elementType,
       const llvm::SmallVector<mlir::Value, 1> &typeParams) {
-    const mlir::Location loc = getLoc();
-    fir::FirOpBuilder &builder = getBuilder();
-    const mlir::Value tempStorage = builder.createTemporary(
+    const mlir::Location loc{getLoc()};
+    fir::FirOpBuilder &builder{getBuilder()};
+    const mlir::Value tempStorage{builder.createTemporary(
         loc, elementType, ".cond.scalar",
-        /*shape=*/mlir::ValueRange{}, /*typeParams=*/typeParams);
-    const hlfir::DeclareOp tempDecl = hlfir::DeclareOp::create(
+        /*shape=*/mlir::ValueRange{}, /*typeParams=*/typeParams)};
+    const hlfir::DeclareOp tempDecl{hlfir::DeclareOp::create(
         builder, loc, tempStorage, ".cond.result",
-        /*shape=*/mlir::Value{}, /*typeParams=*/typeParams);
+        /*shape=*/mlir::Value{}, /*typeParams=*/typeParams)};
     const hlfir::Entity temp{tempDecl};
     buildConditionalIfChain(
         condExpr, [&](const Fortran::evaluate::Expr<T> &expr) {
-          hlfir::Entity entity = gen(expr);
+          hlfir::Entity entity{gen(expr)};
           auto [exv, cleanup] = hlfir::convertToValue(loc, builder, entity);
           hlfir::Entity value{fir::getBase(exv)};
           if (cleanup) {
@@ -1899,22 +1899,22 @@ private:
   hlfir::Entity genAllocatableConditionalLazy(
       const Fortran::evaluate::ConditionalExpr<T> &condExpr,
       mlir::Type resultType, llvm::StringRef debugName) {
-    const mlir::Location loc = getLoc();
-    fir::FirOpBuilder &builder = getBuilder();
-    const mlir::Type heapType = fir::HeapType::get(resultType);
-    const mlir::Type boxHeapType = fir::BoxType::get(heapType);
-    const mlir::Value tempStorage =
-        builder.createTemporary(loc, boxHeapType, debugName);
-    const mlir::Value unallocBox = fir::factory::createUnallocatedBox(
-        builder, loc, boxHeapType, /*nonDeferredParams=*/{});
+    const mlir::Location loc{getLoc()};
+    fir::FirOpBuilder &builder{getBuilder()};
+    const mlir::Type heapType{fir::HeapType::get(resultType)};
+    const mlir::Type boxHeapType{fir::BoxType::get(heapType)};
+    const mlir::Value tempStorage{
+        builder.createTemporary(loc, boxHeapType, debugName)};
+    const mlir::Value unallocBox{fir::factory::createUnallocatedBox(
+        builder, loc, boxHeapType, /*nonDeferredParams=*/{})};
     builder.createStoreWithConvert(loc, unallocBox, tempStorage);
-    const hlfir::DeclareOp tempDecl =
-        hlfir::DeclareOp::create(builder, loc, tempStorage, ".cond.result");
+    const hlfir::DeclareOp tempDecl{
+        hlfir::DeclareOp::create(builder, loc, tempStorage, ".cond.result")};
     const hlfir::Entity temp{tempDecl};
     // Lazy evaluation: only the selected branch is evaluated and assigned.
     buildConditionalIfChain(
         condExpr, [&](const Fortran::evaluate::Expr<T> &expr) {
-          const hlfir::Entity entity = gen(expr);
+          const hlfir::Entity entity{gen(expr)};
           hlfir::AssignOp::create(builder, loc, entity, temp,
                                   /*isWholeAllocatableAssignment=*/true,
                                   /*keepLhsLengthIfRealloc=*/false,
@@ -1939,8 +1939,8 @@ private:
   template <typename T>
   hlfir::Entity genArrayConditionalLazy(
       const Fortran::evaluate::ConditionalExpr<T> &condExpr) {
-    mlir::Type condResultType = Fortran::lower::translateSomeExprToFIRType(
-        converter, toEvExpr(condExpr));
+    mlir::Type condResultType{Fortran::lower::translateSomeExprToFIRType(
+        converter, toEvExpr(condExpr))};
     if (auto boxTy = mlir::dyn_cast<fir::BoxType>(condResultType)) {
       condResultType = fir::unwrapRefType(boxTy.getEleTy());
     }
@@ -1952,16 +1952,16 @@ private:
   template <typename T>
   std::optional<hlfir::EntityWithAttributes> genCharacterConditional(
       const Fortran::evaluate::ConditionalExpr<T> &condExpr) {
-    const mlir::Location loc = getLoc();
-    fir::FirOpBuilder &builder = getBuilder();
-    const mlir::Type resultType = Fortran::lower::translateSomeExprToFIRType(
-        converter, toEvExpr(condExpr));
-    const mlir::Type elementType = hlfir::getFortranElementType(resultType);
+    const mlir::Location loc{getLoc()};
+    fir::FirOpBuilder &builder{getBuilder()};
+    const mlir::Type resultType{Fortran::lower::translateSomeExprToFIRType(
+        converter, toEvExpr(condExpr))};
+    const mlir::Type elementType{hlfir::getFortranElementType(resultType)};
     if (auto charType = mlir::dyn_cast<fir::CharacterType>(elementType)) {
       if (charType.hasConstantLen()) {
         llvm::SmallVector<mlir::Value, 1> typeParams;
-        const mlir::Value len = builder.createIntegerConstant(
-            loc, builder.getCharacterLengthType(), charType.getLen());
+        const mlir::Value len{builder.createIntegerConstant(
+            loc, builder.getCharacterLengthType(), charType.getLen())};
         typeParams.push_back(len);
         return hlfir::EntityWithAttributes{
             genScalarConditionalLazy(condExpr, elementType, typeParams)};
@@ -1978,7 +1978,7 @@ private:
   template <typename T>
   hlfir::EntityWithAttributes
   gen(const Fortran::evaluate::ConditionalExpr<T> &condExpr) {
-    const int rank = condExpr.Rank();
+    const int rank{condExpr.Rank()};
 
     // Arrays: handle early to avoid unnecessary type checks.
     // Per F2023 10.1.4(7), the shape is determined by the chosen branch.
@@ -1993,19 +1993,19 @@ private:
     }
     // Derived type scalars require special handling for type parameters.
     if constexpr (T::category == Fortran::common::TypeCategory::Derived) {
-      const mlir::Type resultType = Fortran::lower::translateSomeExprToFIRType(
-          converter, toEvExpr(condExpr));
-      const mlir::Type elementType = hlfir::getFortranElementType(resultType);
+      const mlir::Type resultType{Fortran::lower::translateSomeExprToFIRType(
+          converter, toEvExpr(condExpr))};
+      const mlir::Type elementType{hlfir::getFortranElementType(resultType)};
       return hlfir::EntityWithAttributes{
           genScalarConditionalLazy(condExpr, elementType, {})};
     }
     // Other scalar types (INTEGER, REAL, COMPLEX, LOGICAL, UNSIGNED).
-    mlir::Type condResultType = Fortran::lower::translateSomeExprToFIRType(
-        converter, toEvExpr(condExpr));
+    mlir::Type condResultType{Fortran::lower::translateSomeExprToFIRType(
+        converter, toEvExpr(condExpr))};
     if (auto boxTy = mlir::dyn_cast<fir::BoxType>(condResultType)) {
       condResultType = fir::unwrapRefType(boxTy.getEleTy());
     }
-    const mlir::Type resultType = hlfir::getFortranElementType(condResultType);
+    const mlir::Type resultType{hlfir::getFortranElementType(condResultType)};
     return hlfir::EntityWithAttributes{
         genScalarConditionalLazy(condExpr, resultType, {})};
   }

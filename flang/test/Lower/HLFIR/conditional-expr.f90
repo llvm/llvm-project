@@ -98,14 +98,13 @@ subroutine test_char_constant_len(flag)
   str1 = "HELLO"
   str2 = "WORLD"
   result = (flag ? str1 : str2)
-  ! Per F2023, the length type parameter is that of the chosen branch, so
-  ! branches may have different lengths. The result length is therefore
-  ! always only known at runtime: use the allocatable (deferred) path.
-  ! CHECK: %[[BOX_ALLOC:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>> {bindc_name = ".cond.char"
+  ! Constant length: use scalar temp path.
+  ! CHECK: %[[TEMP:.*]] = fir.alloca !fir.char<1,5> {bindc_name = ".cond.scalar"
+  ! CHECK: %[[TEMP_DECL:.*]]:2 = hlfir.declare %[[TEMP]] typeparams {{.*}} {uniq_name = ".cond.result"}
   ! CHECK: fir.if
-  ! CHECK:   hlfir.assign {{.*}} to {{.*}} realloc temporary_lhs
+  ! CHECK:   hlfir.assign {{.*}} to %[[TEMP_DECL]]#0
   ! CHECK: } else {
-  ! CHECK:   hlfir.assign {{.*}} to {{.*}} realloc temporary_lhs
+  ! CHECK:   hlfir.assign {{.*}} to %[[TEMP_DECL]]#0
   ! CHECK: }
 end subroutine
 
