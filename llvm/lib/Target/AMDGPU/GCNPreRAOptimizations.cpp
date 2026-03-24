@@ -269,32 +269,39 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
       }
     }
 
-    auto addHints = [&](const SmallVectorImpl<Register> &RegsToShareHints) {
-      for (Register A : RegsToShareHints) {
+    auto CheckAllCompatibleRC =
+        [&](const EquivalenceClasses<llvm::Register>::ECValue *I) -> bool {
+      for (Register A : MFMAHints.members(*I)) {
         assert(A.isVirtual());
-        for (Register B : RegsToShareHints) {
+        for (Register B : MFMAHints.members(*I)) {
           assert(B.isVirtual());
           if (A == B)
             continue;
 
           const TargetRegisterClass *ARC = MRI->getRegClass(A);
           const TargetRegisterClass *BRC = MRI->getRegClass(B);
-
-          bool CompatibleRC = TRI->getCommonSubClass(ARC, BRC);
-          if (CompatibleRC)
-            MRI->addRegAllocationHint(A, B);
+          if (!TRI->getCommonSubClass(ARC, BRC))
+            return false;
         }
       }
+      return true;
     };
 
-    for (auto EC = MFMAHints.begin(); EC != MFMAHints.end(); ++EC) {
-      SmallVector<Register, 8> RegsToShareHints;
+    for (const EquivalenceClasses<llvm::Register>::ECValue *I : MFMAHints) {
+      if (!I->isLeader())
+        continue;
+      if (!CheckAllCompatibleRC(I))
+        continue;
 
-      for (auto MI = MFMAHints.member_begin(**EC); MI != MFMAHints.member_end();
-           ++MI) {
-        RegsToShareHints.push_back(*MI);
+      for (Register A : MFMAHints.members(*I)) {
+        assert(A.isVirtual());
+        for (Register B : MFMAHints.members(*I)) {
+          assert(B.isVirtual());
+          if (A == B)
+            continue;
+          MRI->addRegAllocationHint(A, B);
+        }
       }
-      addHints(RegsToShareHints);
     }
   }
 
