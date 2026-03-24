@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___REGEX_ECMA_PARSER_H
-#define _LIBCPP___REGEX_ECMA_PARSER_H
+#ifndef _LIBCPP___REGEX_PARSER_COMMON_H
+#define _LIBCPP___REGEX_PARSER_COMMON_H
 
 #include <__algorithm/search.h>
 #include <__config>
@@ -66,6 +66,115 @@ _CharT __parse_awk_escape(_ForwardIterator& __first, _ForwardIterator __last) {
       __val = 8 * __val + *__first++ - '0';
   }
   return _CharT(__val);
+}
+
+template <class _CharT, class _Traits, class _ForwardIterator>
+_CharT __parse_character_escape(
+    __interpreter<_CharT, _Traits>& __machine, _ForwardIterator& __first, _ForwardIterator __last) {
+  auto __get_next_converted = [&](bool __advance = true) {
+    if (__first == __last)
+      std::__throw_regex_error<regex_constants::error_escape>();
+    auto __converted = __machine.__get_traits().value(*__first, 16);
+    if (__advance)
+      ++__first;
+    if (__converted == -1)
+      std::__throw_regex_error<regex_constants::error_escape>();
+    return __converted;
+  };
+
+  size_t __sum = 0;
+  switch (*__first) {
+  case 'f':
+    ++__first;
+    return '\f';
+  case 'n':
+    ++__first;
+    return '\n';
+  case 'r':
+    ++__first;
+    return '\r';
+  case 't':
+    ++__first;
+    return '\t';
+  case 'v':
+    ++__first;
+    return '\v';
+  case '0':
+    ++__first;
+    return '\0';
+
+  case 'c': {
+    auto __next = std::next(__first);
+    if (__next == __last || !((*__next >= 'A' && *__next <= 'Z') || (*__next >= 'a' && *__next <= 'z')))
+      std::__throw_regex_error<regex_constants::error_escape>();
+    __first = std::next(__next);
+    return _CharT(*__next & ~0x20);
+  }
+
+  case 'u': {
+    ++__first;
+    __sum = __get_next_converted();
+    __sum = __sum * 16 + __get_next_converted(false);
+  }
+    [[__fallthrough__]];
+  case 'x': {
+    ++__first;
+    __sum = __sum * 16 + __get_next_converted();
+    __sum = __sum * 16 + __get_next_converted();
+    return __sum;
+  }
+  default: {
+    if (__machine.__get_traits().isctype(*__first, ctype_base::alnum))
+      std::__throw_regex_error<regex_constants::error_escape>();
+    return *__first++;
+  }
+  }
+}
+
+template <class _CharT, class _Traits, class _ForwardIterator>
+void __parse_class_escape(
+    __interpreter<_CharT, _Traits>& __machine,
+    _ForwardIterator& __first,
+    _ForwardIterator __last,
+    basic_string<_CharT>& __start_range,
+    __bracket_expr<_CharT, _Traits>& __buffer) {
+  switch (*__first) {
+  case '\0':
+    ++__first;
+    __start_range = '\0';
+    return;
+  case 'b':
+    ++__first;
+    __start_range = '\b';
+    return;
+  case 'd':
+    ++__first;
+    __buffer.__mask_ |= ctype_base::digit;
+    return;
+  case 'D':
+    ++__first;
+    __buffer.__neg_mask_ |= ctype_base::digit;
+    return;
+  case 's':
+    ++__first;
+    __buffer.__mask_ |= ctype_base::space;
+    return;
+  case 'S':
+    ++__first;
+    __buffer.__neg_mask_ |= ctype_base::space;
+    return;
+  case 'w':
+    ++__first;
+    __buffer.__mask_ |= ctype_base::alnum;
+    __buffer.__chars_.push_back('_');
+    return;
+  case 'W':
+    ++__first;
+    __buffer.__neg_mask_ |= ctype_base::alnum;
+    __buffer.__neg_chars_.push_back('_');
+    return;
+  }
+  __start_range = __regex::__parse_character_escape(__machine, __first, __last);
 }
 
 // bracket expression parsing
@@ -190,7 +299,18 @@ bool __parse_expression_term(
              __grammar == regex_constants::awk && *__first == '\\') {
     if (++__first == __last)
       return false;
-    __start_range = __parse_awk_escape<_CharT>(__first, __last);
+    __start_range = __regex::__parse_awk_escape<_CharT>(__first, __last);
+  } else if (__grammar == regex_constants::ECMAScript && *__first == '\\') {
+    if (++__first == __last)
+      return false;
+    __regex::__parse_class_escape<_CharT>(__machine, __first, __last, __start_range, __buffer);
+    if (__start_range.empty()) {
+      if (__first == __last)
+        return false;
+      if (*__first == '-')
+        std::__throw_regex_error<regex_constants::error_range>();
+      return true;
+    }
   } else {
     __start_range = *__first;
     ++__first;
@@ -236,9 +356,19 @@ bool __parse_expression_term(
     if (++__first == __last)
       return false;
     __start_range = __parse_awk_escape<_CharT>(__first, __last);
+  } else if (__grammar == regex_constants::ECMAScript && *__first == '\\') {
+    if (++__first == __last)
+      return false;
+    __regex::__parse_class_escape(__machine, __first, __last, __end_range, __buffer);
+    if (__end_range.empty())
+      std::__throw_regex_error<regex_constants::error_range>();
   } else {
     __end_range = *__first;
     ++__first;
+  }
+  if (__start_range.size() == 1 && __end_range.size() == 1) {
+    if (char_traits<_CharT>::lt(__end_range[0], __start_range[0]))
+      std::__throw_regex_error<regex_constants::error_range>();
   }
   __buffer.__ranges_.push_back(__start_range[0]);
   __buffer.__ranges_.push_back(__start_range.size() == 2 ? __start_range[1] : '\0');
@@ -327,6 +457,93 @@ __dup_count_result __parse_dup_count(_ForwardIterator& __first, _ForwardIterator
     __num += *__first - '0';
   }
   return __dup_count_result(__num, true);
+}
+
+// duplication symbol parsing
+
+template <class _CharT, class _Traits, class _ForwardIterator>
+bool __parse_dupl_symbol(
+    __interpreter<_CharT, _Traits>& __machine,
+    _ForwardIterator& __first,
+    _ForwardIterator __last,
+    size_t __expr_start,
+    bool __has_nongreedy = false) {
+  if (__first == __last)
+    return false;
+
+  auto __check_greediness = [&]() {
+    if (!__has_nongreedy)
+      return true;
+    if (__first == __last || *__first != '?')
+      return true;
+    ++__first;
+    return false;
+  };
+
+  switch (*__first) {
+  case '*': {
+    ++__first;
+    __machine.__push_n_to_m_matcher(__expr_start, 0, numeric_limits<size_t>::max(), __check_greediness());
+  } break;
+
+  case '+': {
+    ++__first;
+    __machine.__push_n_to_m_matcher(__expr_start, 1, numeric_limits<size_t>::max(), __check_greediness());
+  } break;
+
+  case '?': {
+    ++__first;
+    __machine.__push_n_to_m_matcher(__expr_start, 0, 1, __check_greediness());
+  } break;
+
+  case '{': {
+    ++__first;
+    size_t __min;
+    if (auto __res = __regex::__parse_dup_count(__first, __last)) {
+      __min = __res.__num_;
+    } else {
+      std::__throw_regex_error<regex_constants::error_badbrace>();
+    }
+    if (__first == __last)
+      std::__throw_regex_error<regex_constants::error_brace>();
+
+    switch (*__first) {
+    case '}': {
+      ++__first;
+      __machine.__push_n_to_m_matcher(__expr_start, __min, __min);
+      return true;
+    } break;
+
+    case ',': {
+      ++__first;
+      if (__first == __last)
+        std::__throw_regex_error<regex_constants::error_badbrace>();
+      if (*__first == '}') {
+        ++__first;
+        __machine.__push_n_to_m_matcher(__expr_start, __min, numeric_limits<size_t>::max());
+        return true;
+      }
+
+      size_t __max;
+      if (auto __res = __regex::__parse_dup_count(__first, __last)) {
+        __max = __res.__num_;
+      } else {
+        std::__throw_regex_error<regex_constants::error_brace>();
+      }
+      if (__first == __last || *__first != '}')
+        std::__throw_regex_error<regex_constants::error_brace>();
+      ++__first;
+      if (__max < __min)
+        std::__throw_regex_error<regex_constants::error_badbrace>();
+      __machine.__push_n_to_m_matcher(__expr_start, __min, __max);
+      return true;
+    } break;
+    default:
+      std::__throw_regex_error<regex_constants::error_badbrace>();
+    }
+  } break;
+  }
+  return false;
 }
 
 } // namespace __regex

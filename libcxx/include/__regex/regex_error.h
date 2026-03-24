@@ -98,7 +98,8 @@ enum match_flag_type {
   format_no_copy    = 1 << 9,
   format_first_only = 1 << 10,
   __no_update_pos   = 1 << 11,
-  __full_match      = 1 << 12
+  __full_match      = 1 << 12,
+  __at_first        = 1 << 13, // Only used behind an ABI firewall, so the value can be changed at any point.
 };
 
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR match_flag_type operator~(match_flag_type __x) {

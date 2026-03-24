@@ -108,75 +108,6 @@ class __parser {
     return __regex::__parse_bracket_expression(__machine_, __first_, __last_, __flags_);
   }
 
-  bool __parse_dupl_symbol(size_t __expr_start) {
-    if (__first_ == __last_)
-      return false;
-    switch (*__first_) {
-    case '*': {
-      ++__first_;
-      __machine_.__push_n_to_m_matcher(__expr_start, 0, numeric_limits<size_t>::max());
-    } break;
-
-    case '+': {
-      ++__first_;
-      __machine_.__push_n_to_m_matcher(__expr_start, 1, numeric_limits<size_t>::max());
-    } break;
-
-    case '?': {
-      ++__first_;
-      __machine_.__push_n_to_m_matcher(__expr_start, 0, 1);
-    } break;
-
-    case '{': {
-      ++__first_;
-      size_t __min;
-      if (auto __res = __regex::__parse_dup_count(__first_, __last_)) {
-        __min = __res.__num_;
-      } else {
-        std::__throw_regex_error<regex_constants::error_badbrace>();
-      }
-      if (__first_ == __last_)
-        std::__throw_regex_error<regex_constants::error_brace>();
-
-      switch (*__first_) {
-      case '}': {
-        ++__first_;
-        __machine_.__push_n_matcher(__expr_start, __min);
-        return true;
-      } break;
-
-      case ',': {
-        ++__first_;
-        if (__first_ == __last_)
-          std::__throw_regex_error<regex_constants::error_badbrace>();
-        if (*__first_ == '}') {
-          ++__first_;
-          __machine_.__push_n_to_m_matcher(__expr_start, __min, numeric_limits<size_t>::max());
-          return true;
-        }
-
-        size_t __max;
-        if (auto __res = __regex::__parse_dup_count(__first_, __last_)) {
-          __max = __res.__num_;
-        } else {
-          std::__throw_regex_error<regex_constants::error_brace>();
-        }
-        if (__first_ == __last_ || *__first_ != '}')
-          std::__throw_regex_error<regex_constants::error_brace>();
-        ++__first_;
-        if (__max < __min)
-          std::__throw_regex_error<regex_constants::error_badbrace>();
-        __machine_.__push_n_to_m_matcher(__expr_start, __min, __max);
-        return true;
-      } break;
-      default:
-        std::__throw_regex_error<regex_constants::error_badbrace>();
-      }
-    } break;
-    }
-    return false;
-  }
-
   bool __parse_expression() {
     if (__first_ == __last_)
       return false;
@@ -210,7 +141,7 @@ class __parser {
         return false;
       }
     }
-    __parse_dupl_symbol(__expr_start);
+    __regex::__parse_dupl_symbol(__machine_, __first_, __last_, __expr_start);
     return true;
   }
 

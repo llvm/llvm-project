@@ -173,7 +173,7 @@ class __parser {
 
     if (!__parse_escaped_character('}'))
       std::__throw_regex_error<regex_constants::error_brace>();
-    __machine_.__push_n_matcher(__expr_start, __min);
+    __machine_.__push_n_to_m_matcher(__expr_start, __min, __min);
     return true;
   }
 
@@ -220,8 +220,10 @@ class __parser {
   }
 
 public:
-  __parser(
-      _ForwardIterator __first, _ForwardIterator __last, _Traits __traits, regex_constants::syntax_option_type __flags)
+  __parser(_ForwardIterator __first,
+           _ForwardIterator __last,
+           const _Traits& __traits,
+           regex_constants::syntax_option_type __flags)
       : __machine_(__traits, true), __first_(__first), __last_(__last), __flags_(__flags) {}
 
   void __parse_basic() {

@@ -10,229 +10,295 @@
 #define _LIBCPP___REGEX_ECMA_PARSER_H
 
 #include <__config>
+#include <__regex/interpreter.h>
 #include <__regex/regex_error.h>
-#include <__regex/state_machine.h>
-
-#define _LIBCPP_PARSER_FUNCTION [[clang::preserve_none]]
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace __regex::__ecma {
-template <class _ForwardIterator>
-_LIBCPP_PARSER_FUNCTION bool
-__parse_disjunction(__state_machine& __machine, _ForwardIterator& __first, _ForwardIterator __last);
 
-template <class _ForwardIterator>
-_LIBCPP_PARSER_FUNCTION bool
-__parse_assertion(__state_machine& __machine, _ForwardIterator& __first, _ForwardIterator __last) {
-  if (__first == __last)
-    return false;
-  switch (*__first) {
-  case '^': {
-    __machine.push_back(__state::__start_anchor);
-    ++__first;
-    return true;
-  }
-  case '$': {
-    __machine.push_back(__state::__end_anchor);
-    ++__first;
-    return true;
-  }
-  case '\\': {
-    auto __next = std::next(__first);
-    if (__next == __last)
-      return false;
-    if (auto __char = *__next; __char == 'b' || __char == 'B') {
-      __machine.push_back(__char == 'b' ? __state::__match_word_boundary : __state::__match_no_word_boundary);
-      __first = ++__next;
+template <class _CharT, class _Traits, class _ForwardIterator>
+class __parser {
+  __interpreter<_CharT, _Traits> __machine_;
+  _ForwardIterator __first_;
+  _ForwardIterator __last_;
+  regex_constants::syntax_option_type __flags_ = {};
+  uint8_t __marked_count_                      = 0;
+  size_t __open_count_                         = 0;
+
+  bool __parse_assertion() {
+    switch (*__first_) {
+    case '^':
+      if (__flags_ & regex_constants::multiline)
+        __machine_.__push_multiline_start_anchor();
+      else
+        __machine_.__push_start_anchor();
+      ++__first_;
+      return true;
+
+    case '$':
+      if (__flags_ & regex_constants::multiline)
+        __machine_.__push_multiline_end_anchor();
+      else
+        __machine_.__push_end_anchor();
+      ++__first_;
+      return true;
+
+    case '\\': {
+      auto __next = std::next(__first_);
+      if (__next == __last_)
+        return false;
+      switch (*__next) {
+      case 'b':
+        __machine_.__push_word_boundary();
+        break;
+
+      case 'B':
+        __machine_.__push_no_word_boundary();
+        break;
+
+      default:
+        return false;
+      }
+      __first_ = ++__next;
       return true;
     }
-    return false;
-  }
-  case '(': {
-    auto __next = std::next(__first);
-    if (__next == __last || *++__next != '?' || __next == __last)
-      return false;
-    auto __char = *__next;
-    if (__char != '=' && __char != '!')
-      return false;
-    __machine.push_back(__char == '=' ? __state::__positive_lookahead_start : __state::__negative_lookahead_start);
-    if (!__ecma::__parse_disjunction(__machine, __first, __last))
-      return false;
-    __machine.push_back(__state::__lookahead_end);
-    if (__first == __last || *__first++ != ')')
-      std::__throw_regex_error<regex_constants::error_paren>();
-    return true;
-  }
-  }
-  return false;
-}
 
-template <class _ForwardIterator>
-_LIBCPP_PARSER_FUNCTION bool
-__parse_decimal_escape(__state_machine& __machine, _ForwardIterator& __first, _ForwardIterator __last) {
-  if (*__first == '0') {
-    __regex::__match_char(__machine, '\0');
-    ++__first;
-    return true;
+    case '(': {
+      auto __next = std::next(__first_);
+      if (__next == __last_ || *__next != '?' || ++__next == __last_)
+        return false;
+      switch (*__next) {
+      case '=':
+      case '!': {
+        bool __is_positive    = *__next == '=';
+        auto __lookahead_info = __machine_.__start_lookahead();
+        auto __marked_count   = std::exchange(__marked_count_, 0);
+        __first_              = ++__next;
+        __parse_exp();
+        if (__first_ == __last_ || *__first_ != ')')
+          std::__throw_regex_error<regex_constants::error_paren>();
+        ++__first_;
+        __machine_.__push_lookahead(__is_positive, __lookahead_info, __marked_count, __marked_count_);
+        __marked_count_ += __marked_count;
+        return true;
+      }
+
+      default:
+        return false;
+      }
+    }
+
+    default:
+      return false;
+    }
   }
 
-  if ('1' <= *__first && *__first <= '9') {
-    unsigned __value = *__first - '0';
-    for (++__first; __first != __last && '0' <= *__first && *__first <= '9'; ++__first) {
-      if (__value >= numeric_limits<unsigned>::max() / 10)
+  bool __parse_pattern_character() {
+    switch (*__first_) {
+    case '^':
+    case '$':
+    case '\\':
+    case '.':
+    case '*':
+    case '+':
+    case '?':
+    case '(':
+    case ')':
+    case '[':
+    case ']':
+    case '{':
+    case '}':
+    case '|':
+      return false;
+    default:
+      __machine_.__push_char_matcher(*__first_++);
+      return true;
+    }
+  }
+
+  bool __parse_decimal_escape() {
+    if (*__first_ == '0') {
+      __machine_.__push_char_matcher('\0');
+      ++__first_;
+      return true;
+    }
+
+    if (*__first_ < '1' || *__first_ > '9')
+      return false;
+
+    size_t __val = *__first_ - '0';
+
+    for (++__first_; __first_ != __last_ && *__first_ >= '0' && *__first_ <= '0'; ++__first_) {
+      if (__val >= numeric_limits<size_t>::max() / 10)
         std::__throw_regex_error<regex_constants::error_backref>();
-      __value = __value * 10 + *__first - '0';
+      __val = 10 * __val + *__first_ - '0';
     }
-    if (__value == 0)
+    if (__val == 0 || __val > __marked_count_)
       std::__throw_regex_error<regex_constants::error_backref>();
-    __machine.push_back(__state::__match_backref);
-    __regex::__write_uleb(__machine, __value);
+    __machine_.__push_backref_matcher(__val);
+    return true;
   }
-  return true;
-}
 
-template <class _ForwardIterator>
-_LIBCPP_PARSER_FUNCTION bool
-__parse_character_class_escape(__state_machine& __machine, _ForwardIterator& __first, _ForwardIterator __last) {
-  if (__first == __last)
-    return false;
-  switch (*__first) {
-  case 'd':
-    __machine.push_back(__state::__match_digits);
-    break;
-  case 'D':
-    __machine.push_back(__state::__match_no_digits);
-    break;
-  case 's':
-    __machine.push_back(__state::__match_whitespace);
-    break;
-  case 'S':
-    __machine.push_back(__state::__match_no_whitespace);
-    break;
-  case 'w':
-    __machine.push_back(__state::__match_word_character);
-    break;
-  case 'W':
-    __machine.push_back(__state::__match_no_word_character);
-    break;
-  default:
+  bool __parse_character_class_escape() {
+    __bracket_expr<_CharT, _Traits> __expr;
+    switch (*__first_) {
+    case 'd': {
+      ++__first_;
+      __expr.__mask_ = ctype_base::digit;
+      __machine_.__push_bracket_expr(false, __expr);
+      return true;
+    }
+
+    case 'D': {
+      ++__first_;
+      __expr.__mask_ = ctype_base::digit;
+      __machine_.__push_bracket_expr(true, __expr);
+      return true;
+    }
+
+    case 's': {
+      ++__first_;
+      __expr.__mask_ = ctype_base::space;
+      __machine_.__push_bracket_expr(false, __expr);
+      return true;
+    }
+
+    case 'S': {
+      ++__first_;
+      __expr.__mask_ = ctype_base::space;
+      __machine_.__push_bracket_expr(true, __expr);
+      return true;
+    }
+
+    case 'w': {
+      ++__first_;
+      __expr.__mask_ = ctype_base::alnum;
+      __machine_.__push_bracket_expr(false, __expr);
+      return true;
+    }
+
+    case 'W': {
+      ++__first_;
+      __expr.__mask_ = ctype_base::alnum;
+      __machine_.__push_bracket_expr(true, __expr);
+      return true;
+    }
+    }
     return false;
   }
-  ++__first;
-  return true;
-}
 
-template <class _ForwardIterator>
-_LIBCPP_PARSER_FUNCTION bool
-__parse_character_escape(__state_machine& __machine, _ForwardIterator& __first, _ForwardIterator __last) {
-  if (__first == __last)
-    return false;
-  switch (*__first) {
-  case 'f':
-    __regex::__match_char(__machine, '\f');
-    break;
-  case 'n':
-    __regex::__match_char(__machine, '\n');
-    break;
-  case 'r':
-    __regex::__match_char(__machine, '\r');
-    break;
-  case 't':
-    __regex::__match_char(__machine, '\t');
-    break;
-  case 'v':
-    __regex::__match_char(__machine, '\v');
-    break;
+  bool __parse_atom() {
+    switch (*__first_) {
+    case '.':
+      __machine_.__push_any_except_newline_matcher();
+      ++__first_;
+      return true;
 
-  case 'c': {
-    auto __next = std::next(__first);
-    if (__next == __last)
-      std::__throw_regex_error<regex_constants::error_escape>();
-    if (('A' <= *__next && *__next <= 'Z') || ('a' <= *__next && *__next <= 'z')) {
-      __regex::__match_char(__machine, *__next % 32);
-      __first += ++__next;
-    } else {
-      std::__throw_regex_error<regex_constants::error_escape>();
+    case '\\': {
+      ++__first_;
+      if (__first_ == __last_)
+        std::__throw_regex_error<regex_constants::error_escape>();
+
+      if (__parse_decimal_escape())
+        return true;
+
+      if (__parse_character_class_escape())
+        return true;
+
+      __machine_.__push_char_matcher(__regex::__parse_character_escape(__machine_, __first_, __last_));
+      return true;
+    }
+
+    case '[':
+      return __parse_bracket_expression(__machine_, __first_, __last_, __flags_);
+
+    case '(': {
+      ++__first_;
+      if (__first_ == __last_)
+        std::__throw_regex_error<regex_constants::error_paren>();
+      auto __next = std::next(__first_);
+
+      bool __explicit_unmarked = (__next != __last_ && *__first_ == '?' && *__next == ':');
+      bool __marked            = !(__flags_ & regex_constants::nosubs) && !__explicit_unmarked;
+      auto __subexpr_num       = __marked_count_;
+
+      if (__marked) {
+        ++__marked_count_;
+        __machine_.__push_subexpression_begin(__subexpr_num);
+      } else if (__explicit_unmarked) {
+        __first_ = ++__next;
+      }
+
+      ++__open_count_;
+      __parse_exp();
+      if (__first_ == __last_ || *__first_ != ')')
+        std::__throw_regex_error<regex_constants::error_paren>();
+      --__open_count_;
+      ++__first_;
+      if (__marked)
+        __machine_.__push_subexpression_end(__subexpr_num);
+      return true;
+    }
+
+    case '*':
+    case '+':
+    case '?':
+    case '{':
+      std::__throw_regex_error<regex_constants::error_badrepeat>();
+
+    default:
+      return __parse_pattern_character();
     }
   }
-  }
-  ++__first;
-  return true;
-}
 
-template <class _ForwardIterator>
-_LIBCPP_PARSER_FUNCTION bool
-__parse_atom_escape(__state_machine& __machine, _ForwardIterator& __first, _ForwardIterator __last) {
-  _LIBCPP_ASSERT_INTERNAL(*__first == '\\', "Parsing escape character without an escape start?");
-  auto __next = std::next(__first);
-  if (__next == __last)
-    std::__throw_regex_error<regex_constants::error_escape>();
+  bool __parse_term() {
+    if (__first_ == __last_)
+      return false;
 
-  if (__ecma::__parse_decimal_escape(__machine, __next, __last) ||
-      __ecma::__parse_character_class_escape(__machine, __next, __last)) {
-    __first = __next;
+    if (__parse_assertion())
+      return true;
+
+    size_t __expr_start = __machine_.size();
+
+    if (!__parse_atom())
+      return false;
+    __parse_dupl_symbol(__machine_, __first_, __last_, __expr_start, true);
     return true;
   }
-  return false;
-}
 
-template <class _ForwardIterator>
-_LIBCPP_PARSER_FUNCTION bool
-__parse_atom(__state_machine& __machine, _ForwardIterator& __first, _ForwardIterator __last) {
-  if (__first == __last)
-    return false;
-
-  switch (*__first) {
-  case '.': {
-    __machine.push_back(__state::__match_any);
-    ++__first;
-    return true;
-  }
-  case '\\':
-    return __ecma::__parse_atom_escape(__machine, __first, __last);
+  void __parse_alternative() {
+    while (__parse_term())
+      ;
   }
 
-  return false;
-}
+  void __parse_exp() {
+    auto __expr1_start = __machine_.size();
+    __parse_alternative();
 
-template <class _ForwardIterator>
-_LIBCPP_PARSER_FUNCTION bool
-__parse_term(__state_machine& __machine, _ForwardIterator& __first, _ForwardIterator __last) {
-  return __ecma::__parse_assertion(__machine, __first, __last) || __ecma::__parse_atom(__machine, __first, __last);
-}
-
-template <class _ForwardIterator>
-_LIBCPP_PARSER_FUNCTION void
-__parse_alternative(__state_machine& __machine, _ForwardIterator& __first, _ForwardIterator __last) {
-  while (true) {
-    __ecma::__parse_term(__machine, __first, __last);
+    while (__first_ != __last_ && *__first_ == '|') {
+      ++__first_;
+      auto __expr2_start = __machine_.size();
+      __parse_alternative();
+      __machine_.__push_alternative(__expr1_start, __expr2_start);
+    }
   }
-}
 
-template <class _ForwardIterator>
-_LIBCPP_PARSER_FUNCTION bool
-__parse_disjunction(__state_machine& __machine, _ForwardIterator& __first, _ForwardIterator __last) {
-  while (__first != __last) {
-    __ecma::__parse_alternative(__machine, __first, __last);
+public:
+  __parser(
+      _ForwardIterator __first, _ForwardIterator __last, _Traits __traits, regex_constants::syntax_option_type __flags)
+      : __machine_(__traits, false), __first_(__first), __last_(__last), __flags_(__flags) {}
+
+  void __parse_ecma() {
+    __parse_exp();
+    if (__first_ != __last_)
+      std::__throw_regex_error<regex_constants::__re_err_parse>();
+    __machine_.__push_end_state();
   }
-  return true;
-}
 
-template <class _ForwardIterator>
-_LIBCPP_PARSER_FUNCTION void
-__parse_pattern(__state_machine& __machine, _ForwardIterator& __first, _ForwardIterator __last) {
-  __ecma::__parse_disjunction(__machine, __first, __last);
-}
-
-template <class _ForwardIterator>
-__state_machine __parse(_ForwardIterator __first, _ForwardIterator __last) {
-  __state_machine __machine;
-
-  __ecma::__parse_pattern(__machine, __first, __last);
-
-  return __machine;
-}
+  __interpreter<_CharT, _Traits> __extract_interpreter() { return std::move(__machine_); }
+  size_t mark_count() const { return __marked_count_; }
+};
 } // namespace __regex::__ecma
 
 _LIBCPP_END_NAMESPACE_STD
