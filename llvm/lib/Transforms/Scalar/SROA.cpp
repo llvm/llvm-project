@@ -1861,9 +1861,9 @@ static void rewriteMemOpOfSelect(SelectInst &SI, T &I,
                               SI.getMetadata(LLVMContext::MD_prof), &DTU,
                               /*LI=*/nullptr, /*ThenBlock=*/nullptr);
     if (Spec.isSpeculatable(/*isTrueVal=*/true))
-      cast<BranchInst>(Head->getTerminator())->swapSuccessors();
+      cast<CondBrInst>(Head->getTerminator())->swapSuccessors();
   }
-  auto *HeadBI = cast<BranchInst>(Head->getTerminator());
+  auto *HeadBI = cast<CondBrInst>(Head->getTerminator());
   Spec = {}; // Do not use `Spec` beyond this point.
   BasicBlock *Tail = I.getParent();
   Tail->setName(Head->getName() + ".cont");

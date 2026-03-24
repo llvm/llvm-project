@@ -27,8 +27,9 @@ Using Clang as a Compiler
    CrossCompilation
    ClangStaticAnalyzer
    ThreadSafetyAnalysis
+   LifetimeSafety
    SafeBuffers
-   ScalableStaticAnalysisFramework/Framework
+   ScalableStaticAnalysisFramework/index
    DataFlowAnalysisIntro
    FunctionEffectAnalysis
    AddressSanitizer
@@ -127,6 +128,7 @@ Design Documents
    ConstantInterpreter
    LLVMExceptionHandlingCodeGen
    ClangIRCodeDuplication
+   ClangIRABILowering
    ClangIRCleanupAndEHDesign
 
 Indices and tables

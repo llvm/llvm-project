@@ -12,8 +12,10 @@ auto l = []() -> groupshared void {}; // #l
 auto l2 = []() -> groupshared {}; // #l2
 
 float groupshared [[]] i = 12;
+// expected-error@-1{{initializer of groupshared variable will be ignored}}
 
 float groupshared const i2 = 12;
+// expected-error@-1{{initializer of groupshared variable will be ignored}}
 
 void foo() {
     l();

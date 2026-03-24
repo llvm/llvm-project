@@ -1,0 +1,31 @@
+# REQUIRES: python, asserts, !system-windows
+#
+# Test that the last appended safe-auto-load path takes priority.
+
+# RUN: split-file %s %t
+# RUN: %clang_host %t/main.c -o %t/TestModule.out
+# RUN: mkdir -p %t/first-path/TestModule
+# RUN: mkdir -p %t/second-path/TestModule
+
+# RUN: cp %t/first.py %t/first-path/TestModule/TestModule.py
+# RUN: cp %t/second.py %t/second-path/TestModule/TestModule.py
+# RUN: %lldb -b \
+# RUN:   -o 'settings set target.load-script-from-symbol-file true' \
+# RUN:   -o 'settings append testing.safe-auto-load-paths %t/first-path' \
+# RUN:   -o 'settings append testing.safe-auto-load-paths %t/second-path' \
+# RUN:   -o 'target create %t/TestModule.out' 2>&1 | FileCheck %s --implicit-check-not=FIRST_PATH
+
+# CHECK: SECOND_PATH
+
+#--- main.c
+int main() { return 0; }
+
+#--- first.py
+import sys
+def __lldb_init_module(debugger, internal_dict):
+    print("FIRST_PATH", file=sys.stderr)
+
+#--- second.py
+import sys
+def __lldb_init_module(debugger, internal_dict):
+    print("SECOND_PATH", file=sys.stderr)

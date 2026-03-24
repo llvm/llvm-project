@@ -25,14 +25,6 @@ def G_ADD_LOW : AArch64GenericInstruction {
   let hasSideEffects = 0;
 }
 
-// Pseudo for a rev16 instruction. Produced post-legalization from
-// G_SHUFFLE_VECTORs with appropriate masks.
-def G_REV16 : AArch64GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src);
-  let hasSideEffects = 0;
-}
-
 // Pseudo for a rev32 instruction. Produced post-legalization from
 // G_SHUFFLE_VECTORs with appropriate masks.
 def G_REV32 : AArch64GenericInstruction {
@@ -296,7 +288,6 @@ def G_BSP : AArch64GenericInstruction {
   let hasSideEffects = 0;
 }
 
-def : GINodeEquiv<G_REV16, AArch64rev16>;
 def : GINodeEquiv<G_REV32, AArch64rev32>;
 def : GINodeEquiv<G_REV64, AArch64rev64>;
 def : GINodeEquiv<G_UZP1, AArch64uzp1>;

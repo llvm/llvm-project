@@ -29,6 +29,8 @@ CODEGENOPT(Name, Bits, Default, Compatibility)
 
 CODEGENOPT(DisableIntegratedAS, 1, 0, Benign) ///< -no-integrated-as
 CODEGENOPT(Crel, 1, 0, Benign) ///< -Wa,--crel
+ENUM_CODEGENOPT(RelocSectionSym, RelocSectionSymType, 2,
+                RelocSectionSymType::All, Benign) ///< -Wa,--reloc-section-sym=
 CODEGENOPT(ImplicitMapSyms, 1, 0, Benign) ///< -Wa,-mmapsyms=implicit
 CODEGENOPT(AsmVerbose        , 1, 0, Benign) ///< -dA, -fverbose-asm.
 CODEGENOPT(PreserveAsmComments, 1, 1, Benign) ///< -dA, -fno-preserve-as-comments.
@@ -214,6 +216,8 @@ CODEGENOPT(NoZeroInitializedInBSS , 1, 0, Benign) ///< -fno-zero-initialized-in-
 ENUM_CODEGENOPT(ObjCDispatchMethod, ObjCDispatchMethodKind, 2, Legacy, Benign)
 /// Replace certain message sends with calls to ObjC runtime entrypoints
 CODEGENOPT(ObjCConvertMessagesToRuntimeCalls , 1, 1, Benign)
+CODEGENOPT(ObjCMsgSendSelectorStubs , 1, 0, Benign) ///< Use per-selector linker stubs for objc_msgSend
+CODEGENOPT(ObjCMsgSendClassSelectorStubs, 1, 0, Benign) ///< Use per-class, per-selector linker stubs for objc_msgSend
 CODEGENOPT(ObjCAvoidHeapifyLocalBlocks, 1, 0, Benign)
 /// Generate direct method precondition thunks to expose symbols and optimize nil checks.
 CODEGENOPT(ObjCDirectPreconditionThunk, 1, 0, Benign)
@@ -304,6 +308,8 @@ CODEGENOPT(SanitizeCoverage8bitCounters, 1, 0, Benign) ///< Use 8-bit frequency 
                                                        ///< in sanitizer coverage.
 CODEGENOPT(SanitizeCoverageTracePC, 1, 0, Benign) ///< Enable PC tracing
                                                   ///< in sanitizer coverage.
+CODEGENOPT(SanitizeCoverageTracePCEntryExit, 1, 0, Benign) ///< Trace function entry/exit
+                                                           ///< in sanitizer coverage.
 CODEGENOPT(SanitizeCoverageTracePCGuard, 1, 0, Benign) ///< Enable PC tracing with guard
                                                        ///< in sanitizer coverage.
 CODEGENOPT(SanitizeCoverageInline8bitCounters, 1, 0, Benign) ///< Use inline 8bit counters.

@@ -310,6 +310,8 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
           // Already diagnosed.
           break;
         }
+        // libpthreads is required for -fopenmp.
+        CmdArgs.push_back("-lpthreads");
       }
 
       // Support POSIX threads if "-pthreads" or "-pthread" is present.

@@ -1354,7 +1354,28 @@ TEST(ValueTracking, canCreatePoisonOrUndef) {
       {{false, false},
        "call {i32, i1} @llvm.usub.with.overflow.i32(i32 %x, i32 %y)"},
       {{false, false},
-       "call {i32, i1} @llvm.umul.with.overflow.i32(i32 %x, i32 %y)"}};
+       "call {i32, i1} @llvm.umul.with.overflow.i32(i32 %x, i32 %y)"},
+      {{false, false}, "call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> %vx)"},
+      {{false, false}, "call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> %vx)"},
+      {{false, false}, "call i32 @llvm.vector.reduce.xor.v4i32(<4 x i32> %vx)"},
+      {{false, false}, "call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %vx)"},
+      {{false, false}, "call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> %vx)"},
+      {{false, false},
+       "call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> %vx)"},
+      {{false, false},
+       "call i32 @llvm.vector.reduce.smin.v4i32(<4 x i32> %vx)"},
+      {{false, false},
+       "call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> %vx)"},
+      {{false, false},
+       "call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> %vx)"},
+      {{false, false},
+       "call i32 @llvm.vector.reduce.fmax.v4i32(<4 x i32> %vx)"},
+      {{false, false},
+       "call i32 @llvm.vector.reduce.fmin.v4i32(<4 x i32> %vx)"},
+      {{false, false},
+       "call i32 @llvm.vector.reduce.fmaximum.v4i32(<4 x i32> %vx)"},
+      {{false, false},
+       "call i32 @llvm.vector.reduce.fmaximum.v4i32(<4 x i32> %vx)"}};
 
   std::string AssemblyStr = AsmHead;
   for (auto &Itm : Data)

@@ -163,6 +163,53 @@ let cppNamespace = "::cir" in {
     }];
   }
 
+  def CIR_BinaryOpInterface : OpInterface<"BinaryOpInterface"> {
+    let description = [{
+      Common interface for CIR binary arithmetic and logic operations.
+      Provides uniform access to the left-hand side operand, right-hand side
+      operand, and result of any binary operation in the CIR dialect.
+    }];
+
+    let methods = [
+      InterfaceMethod<"Return the left-hand side operand.",
+        "mlir::Value", "getLhs", (ins), [{}],
+        /*defaultImplementation=*/[{
+          return $_op.getLhs();
+        }]>,
+      InterfaceMethod<"Return the right-hand side operand.",
+        "mlir::Value", "getRhs", (ins), [{}],
+        /*defaultImplementation=*/[{
+          return $_op.getRhs();
+        }]>,
+      InterfaceMethod<"Return the result value.",
+        "mlir::Value", "getResult", (ins), [{}],
+        /*defaultImplementation=*/[{
+          return $_op.getResult();
+        }]>,
+    ];
+  }
+
+  def CIR_UnaryOpInterface : OpInterface<"UnaryOpInterface"> {
+    let description = [{
+      Common interface for CIR unary operations.
+      Provides uniform access to the input operand and result of any unary
+      operation in the CIR dialect.
+    }];
+
+    let methods = [
+      InterfaceMethod<"Return the input operand.",
+        "mlir::Value", "getInput", (ins), [{}],
+        /*defaultImplementation=*/[{
+          return $_op.getInput();
+        }]>,
+      InterfaceMethod<"Return the result value.",
+        "mlir::Value", "getResult", (ins), [{}],
+        /*defaultImplementation=*/[{
+          return $_op.getResult();
+        }]>,
+    ];
+  }
+
 } // namespace cir
 
 #endif // CLANG_CIR_INTERFACES_CIROPINTERFACES_TD

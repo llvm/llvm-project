@@ -4,14 +4,14 @@
 ; RUN: opt < %s -O0 -S | FileCheck %s
 
 
-; CHECK: %f.Frame = type { i32 }
+
+target datalayout = "e-m:e-p:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
 define { ptr, i32 } @f(ptr %buffer, i32 %n) {
 ; CHECK-LABEL: define { ptr, i32 } @f(
 ; CHECK-SAME: ptr [[BUFFER:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[N_VAL_SPILL_ADDR:%.*]] = getelementptr inbounds [[F_FRAME:%.*]], ptr [[BUFFER]], i32 0, i32 0
-; CHECK-NEXT:    store i32 [[N]], ptr [[N_VAL_SPILL_ADDR]], align 4
+; CHECK-NEXT:    store i32 [[N]], ptr [[BUFFER]], align 4
 ; CHECK-NEXT:    call void @print(i32 [[N]])
 ; CHECK-NEXT:    [[INC1:%.*]] = add i32 [[N]], 1
 ; CHECK-NEXT:    [[INC2:%.*]] = add i32 [[INC1]], 2

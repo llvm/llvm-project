@@ -113,7 +113,9 @@ public:
 
   bool shouldExpandReduction(const IntrinsicInst *II) const override;
   bool supportsScalableVectors() const override {
-    return ST->hasVInstructions();
+    // VLEN=32 support is incomplete.
+    return ST->hasVInstructions() &&
+           (ST->getRealMinVLen() >= RISCV::RVVBitsPerBlock);
   }
   bool enableOrderedReductions() const override { return true; }
   bool enableScalableVectorization() const override {
@@ -122,8 +124,7 @@ public:
   bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) const override {
     return ST->hasVInstructions();
   }
-  TailFoldingStyle
-  getPreferredTailFoldingStyle(bool IVUpdateMayOverflow) const override {
+  TailFoldingStyle getPreferredTailFoldingStyle() const override {
     return ST->hasVInstructions() ? TailFoldingStyle::DataWithEVL
                                   : TailFoldingStyle::None;
   }
@@ -358,10 +359,6 @@ public:
 
   bool isLegalMaskedCompressStore(Type *DataTy, Align Alignment) const override;
 
-  bool isVScaleKnownToBeAPowerOfTwo() const override {
-    return TLI->isVScaleKnownToBeAPowerOfTwo();
-  }
-
   /// \returns How the target needs this vector-predicated operation to be
   /// transformed.
   TargetTransformInfo::VPLegalization
@@ -511,6 +508,9 @@ public:
   bool
   shouldCopyAttributeWhenOutliningFrom(const Function *Caller,
                                        const Attribute &Attr) const override;
+
+  std::optional<Instruction *>
+  instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const override;
 };
 
 } // end namespace llvm

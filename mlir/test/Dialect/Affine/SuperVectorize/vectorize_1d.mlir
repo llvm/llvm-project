@@ -700,3 +700,25 @@ func.func @vec_non_scalar_type() {
 
 // CHECK-LABEL: @vec_non_scalar_type
 // CHECK-NOT: vector
+
+// -----
+
+// Regression test: an arith.constant of index type defined inside the loop
+// body must have a scalar replacement registered so that it can be used as
+// a scalar index in the vectorized memory transfer op. Without the fix,
+// affine-super-vectorize crashes with "operation destroyed but still has uses".
+
+// CHECK-LABEL: @index_const_inside_loop
+// CHECK:       affine.for %[[IV:.*]] = 0 to 8 step 128 {
+// CHECK-DAG:     %[[CST_VEC:.*]] = arith.constant dense<0> : vector<128xi32>
+// CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
+// CHECK:         vector.transfer_write %[[CST_VEC]], %{{.*}}[%[[C0]], %[[IV]]] : vector<128xi32>, memref<1x8xi32>
+// CHECK:       }
+func.func @index_const_inside_loop(%mem: memref<1x8xi32>) {
+  affine.for %arg0 = 0 to 8 {
+    %c0_i32 = arith.constant 0 : i32
+    %c0 = arith.constant 0 : index
+    affine.store %c0_i32, %mem[%c0, %arg0] : memref<1x8xi32>
+  }
+  return
+}
