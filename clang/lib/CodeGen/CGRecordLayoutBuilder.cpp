@@ -509,9 +509,8 @@ CGRecordLowering::accumulateBitFields(bool isNonVirtualBaseType,
   // Limit of useable tail padding at end of the record. Computed lazily and
   // cached here.
   CharUnits ScissorOffset = CharUnits::Zero();
-
-  auto getLimitOffset = [&]() -> CharUnits {
-    for (auto Probe = Field; Probe != FieldEnd; ++Probe)
+  auto getLimitOffset = [&](RecordDecl::field_iterator Probe) -> CharUnits {
+    for (; Probe != FieldEnd; ++Probe)
       if (!isEmptyFieldForLayout(Context, *Probe)) {
         // A member with storage sets the limit.
         assert((getFieldBitOffset(*Probe) % CharBits) == 0 &&
@@ -525,31 +524,6 @@ CGRecordLowering::accumulateBitFields(bool isNonVirtualBaseType,
       assert(!ScissorOffset.isZero() && "Tail clipping at zero");
     }
     return ScissorOffset;
-  };
-
-  auto emitAccessUnit = [this](CharUnits BeginOffset, CharUnits EndOffset,
-                               bool Clipped, RecordDecl::field_iterator First,
-                               RecordDecl::field_iterator Last) {
-    CharUnits AccessSize = EndOffset - BeginOffset;
-    if (AccessSize.isZero())
-      return;
-    // Add the storage member for the access unit to the record. The
-    // bitfields get the offset of their storage but come afterward and
-    // remain there after a stable sort.
-    llvm::Type *Type;
-    if (Clipped) {
-      assert(getSize(getIntNType(Context.toBits(AccessSize))) > AccessSize &&
-             "Clipped access need not be clipped");
-      Type = getByteArrayType(AccessSize);
-    } else {
-      Type = getIntNType(Context.toBits(AccessSize));
-      assert(getSize(Type) == AccessSize && "Unclipped access must be clipped");
-    }
-    Members.push_back(StorageInfo(BeginOffset, Type));
-    for (; First != Last; ++First)
-      if (!First->isZeroLengthBitField())
-        Members.push_back(
-            MemberInfo(BeginOffset, MemberInfo::Field, nullptr, *First));
   };
 
   // Data about the start of the span we're accumulating to create an access
@@ -569,6 +543,29 @@ CGRecordLowering::accumulateBitFields(bool isNonVirtualBaseType,
   RecordDecl::field_iterator BestEnd = Begin;
   CharUnits BestEndOffset;
   bool BestClipped; // Whether the representation must be in a byte array.
+
+  auto emitAccessUnit = [&] {
+    CharUnits AccessSize = BestEndOffset - BeginOffset;
+    if (AccessSize.isZero())
+      return;
+    // Add the storage member for the access unit to the record. The
+    // bitfields get the offset of their storage but come afterward and
+    // remain there after a stable sort.
+    llvm::Type *Type;
+    if (BestClipped) {
+      assert(getSize(getIntNType(Context.toBits(AccessSize))) > AccessSize &&
+             "Clipped access need not be clipped");
+      Type = getByteArrayType(AccessSize);
+    } else {
+      Type = getIntNType(Context.toBits(AccessSize));
+      assert(getSize(Type) == AccessSize && "Unclipped access must be clipped");
+    }
+    Members.push_back(StorageInfo(BeginOffset, Type));
+    for (auto F = Begin; F != BestEnd; ++F)
+      if (!F->isZeroLengthBitField())
+        Members.push_back(
+            MemberInfo(BeginOffset, MemberInfo::Field, nullptr, *F));
+  };
 
   for (;;) {
     // AtAlignedBoundary is true iff Field is the (potential) start of a new
@@ -674,7 +671,7 @@ CGRecordLowering::accumulateBitFields(bool isNonVirtualBaseType,
           // the current span is. That's either the offset of the next field
           // with storage (which might be Field itself) or the end of the
           // non-reusable tail padding.
-          CharUnits LimitOffset = getLimitOffset();
+          CharUnits LimitOffset = getLimitOffset(Field);
 
           CharUnits TypeSize = getSize(Type);
           if (BeginOffset + TypeSize <= LimitOffset) {
@@ -704,7 +701,7 @@ CGRecordLowering::accumulateBitFields(bool isNonVirtualBaseType,
       assert((Field == FieldEnd || !Field->isBitField() ||
               (getFieldBitOffset(*Field) % CharBits) == 0) &&
              "Installing but not at an aligned bitfield or limit");
-      emitAccessUnit(BeginOffset, BestEndOffset, BestClipped, Begin, BestEnd);
+      emitAccessUnit();
       // Reset to start a new span.
       Field = BestEnd;
       Begin = FieldEnd;
