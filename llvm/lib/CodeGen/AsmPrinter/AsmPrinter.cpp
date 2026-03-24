@@ -978,23 +978,27 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   }
 
   MCSymbol *EmittedInitSym = GVSym;
+  MCSymbol *SanitizedSym = nullptr;
 
   if (GV->hasAttribute(Attribute::SanitizedPaddedGlobal)) {
-    OutStreamer->switchSection(TheSection);
-    emitLinkage(GV, EmittedInitSym);
-    OutStreamer->emitLabel(EmittedInitSym);
-    if (MAI->hasDotTypeDotSizeDirective())
-      OutStreamer->emitELFSize(EmittedInitSym,
-                               MCConstantExpr::create(ActualSize, OutContext));
-    EmittedInitSym = OutContext.getOrCreateSymbol(
+    SanitizedSym = OutContext.getOrCreateSymbol(
         GVSym->getName() + Twine("__sanitized_padded_global"));
-    emitVisibility(EmittedInitSym, GV->getVisibility(), !GV->isDeclaration());
+    emitVisibility(SanitizedSym, GV->getVisibility(), !GV->isDeclaration());
   }
 
   OutStreamer->switchSection(TheSection);
 
   emitLinkage(GV, EmittedInitSym);
   emitAlignment(Alignment, GV);
+
+  // Emit both original and sanitized symbols after alignment
+  if (SanitizedSym) {
+    OutStreamer->emitLabel(EmittedInitSym);
+    if (MAI->hasDotTypeDotSizeDirective())
+      OutStreamer->emitELFSize(EmittedInitSym,
+                               MCConstantExpr::create(ActualSize, OutContext));
+    EmittedInitSym = SanitizedSym;
+  }
 
   OutStreamer->emitLabel(EmittedInitSym);
   MCSymbol *LocalAlias = getSymbolPreferLocal(*GV);
