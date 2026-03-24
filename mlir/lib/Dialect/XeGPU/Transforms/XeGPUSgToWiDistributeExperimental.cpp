@@ -689,7 +689,6 @@ struct SgToWiLoadMatrix : public OpConversionPattern<xegpu::LoadMatrixOp> {
 };
 
 /// Distributes a subgroup-level vector.transpose op to workitem-level.
-/// Only 2D transposes are supported.
 struct SgToWiVectorTranspose : public OpConversionPattern<vector::TransposeOp> {
   using OpConversionPattern<vector::TransposeOp>::OpConversionPattern;
 
@@ -704,19 +703,12 @@ struct SgToWiVectorTranspose : public OpConversionPattern<vector::TransposeOp> {
       return rewriter.notifyMatchFailure(
           op, "the source or result vector of the transpose op lacks layout "
               "attribute");
-    int64_t sourceRank = op.getSourceVectorType().getRank();
-    int64_t resultRank = op.getResultVectorType().getRank();
-    // Only 2D transposes are supported.
-    if (sourceRank != 2 || resultRank != 2)
-      return rewriter.notifyMatchFailure(
-          op, "the source or result vector of the transpose op "
-              "does not have 2D layout");
     ArrayRef<int64_t> perm = op.getPermutation();
     // Result layout must be a transpose of source layout.
     if (!resultLayout.isTransposeOf(sourceLayout, perm,
                                     xegpu::LayoutKind::Lane))
       return rewriter.notifyMatchFailure(
-          op, "the source or result vector layouts must be 2D transposes of "
+          op, "the source or result vector layouts must be transposes of "
               "each other");
     FailureOr<VectorType> distributedResultTypeOrFailure =
         getDistVecTypeBasedOnLaneLayout(resultLayout, op.getResultVectorType());
