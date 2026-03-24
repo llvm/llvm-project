@@ -208,7 +208,8 @@ define i16 @ne_and_with_dom_abs(i16 %x) nounwind {
   ret i16 %r
 }
 
-; X86-LABEL: eq_or_with_dom_abs_min_poison_non_po2:
+define i32 @eq_or_with_dom_abs_min_poison_non_pow2(i32 %x) nounwind {
+; X86-LABEL: eq_or_with_dom_abs_min_poison_non_pow2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl %edx, %ecx
@@ -229,7 +230,7 @@ define i16 @ne_and_with_dom_abs(i16 %x) nounwind {
 ; X86-NEXT:  .LBB4_2:
 ; X86-NEXT:    retl
 ;
-; X64-LABEL: eq_or_with_dom_abs_min_poison_non_po2:
+; X64-LABEL: eq_or_with_dom_abs_min_poison_non_pow2:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %ecx
 ; X64-NEXT:    negl %ecx
@@ -244,7 +245,6 @@ define i16 @ne_and_with_dom_abs(i16 %x) nounwind {
 ; X64-NEXT:    movzbl %dl, %eax
 ; X64-NEXT:    cmovael %ecx, %eax
 ; X64-NEXT:    retq
-define i32 @eq_or_with_dom_abs_min_poison_non_po2(i32 %x) nounwind {
   %absx = call i32 @llvm.abs.i32(i32 %x, i1 true)
   %foo = xor i32 %absx, 12312
   %bar = icmp ugt i32 %foo, 2344
