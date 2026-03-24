@@ -127,7 +127,7 @@ std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
           std::vector<std::string>>
 initVFSForByNameScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
                          ArrayRef<std::string> CommandLine,
-                         StringRef WorkingDirectory, StringRef ModuleName,
+                         StringRef WorkingDirectory,
                          std::shared_ptr<cas::ObjectStore> CAS);
 
 bool initializeScanCompilerInstance(
@@ -212,6 +212,15 @@ public:
   // The method below turns the return status from the above methods
   // into an llvm::Error using a default DiagnosticConsumer.
   llvm::Error handleReturnStatus(bool Success);
+
+  // scanning API (computeDependencies) can support after a
+  // CompilerInstanceWithContext is initialized. At the time of this commit, the
+  // estimated number of total unique importable names is around 3000 from
+  // Apple's SDKs. We usually import them in parallel, so it is unlikely that
+  // all names are all scanned by the same dependency scanning worker. Therefore
+  // the 64k (20x bigger than our estimate) size is sufficient to hold the
+  // unique source locations to report diagnostics per worker.
+  static const int32_t MaxNumOfQueries = 1 << 16;
 };
 } // namespace dependencies
 } // namespace tooling

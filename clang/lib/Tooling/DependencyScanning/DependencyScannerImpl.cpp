@@ -582,7 +582,7 @@ std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
           std::vector<std::string>>
 initVFSForByNameScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
                          ArrayRef<std::string> CommandLine,
-                         StringRef WorkingDirectory, StringRef ModuleName,
+                         StringRef WorkingDirectory,
                          std::shared_ptr<cas::ObjectStore> CAS) {
   // Reset what might have been modified in the previous worker invocation.
   BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
@@ -594,11 +594,14 @@ initVFSForByNameScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
       llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(BaseFS);
   auto InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   InMemoryFS->setCurrentWorkingDirectory(WorkingDirectory);
-  SmallString<128> FakeInputPath;
-  // TODO: We should retry the creation if the path already exists.
-  llvm::sys::fs::createUniquePath(ModuleName + "-%%%%%%%%.input", FakeInputPath,
-                                  /*MakeAbsolute=*/false);
-  InMemoryFS->addFile(FakeInputPath, 0, llvm::MemoryBuffer::getMemBuffer(""));
+  StringRef FakeInputPath("module-include.input");
+  // The fake input buffer is read-only, and it is used to produce
+  // unique source locations for the diagnostics. Therefore sharing
+  // this global buffer across threads is ok.
+  static const std::string FakeInput(
+      CompilerInstanceWithContext::MaxNumOfQueries, ' ');
+  InMemoryFS->addFile(FakeInputPath, 0,
+                      llvm::MemoryBuffer::getMemBuffer(FakeInput));
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> InMemoryOverlay = InMemoryFS;
 
   // If we are using a CAS, we need to provide the fake input file in a
@@ -935,8 +938,8 @@ bool CompilerInstanceWithContext::initialize(DiagnosticConsumer *DC) {
     DiagConsumer = &DiagPrinterWithOS->DiagPrinter;
   }
 
-  std::tie(OverlayFS, CommandLine) = initVFSForByNameScanning(
-      Worker.BaseFS, CommandLine, CWD, "ScanningByName", Worker.CAS);
+  std::tie(OverlayFS, CommandLine) =
+      initVFSForByNameScanning(Worker.BaseFS, CommandLine, CWD, Worker.CAS);
 
   DiagEngineWithCmdAndOpts = std::make_unique<DignosticsEngineWithDiagOpts>(
       CommandLine, OverlayFS, *DiagConsumer);
@@ -1005,6 +1008,9 @@ bool CompilerInstanceWithContext::initialize(DiagnosticConsumer *DC) {
 bool CompilerInstanceWithContext::computeDependencies(
     StringRef ModuleName, DependencyConsumer &Consumer,
     DependencyActionController &Controller) {
+  if (SrcLocOffset >= MaxNumOfQueries)
+    llvm::report_fatal_error("exceeded maximum by-name scans for worker");
+
   assert(CIPtr && "CIPtr must be initialized before calling this method");
   auto &CI = *CIPtr;
 
