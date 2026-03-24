@@ -672,6 +672,55 @@ template <typename SC, typename RetVal = void> struct SCEVVisitor {
   }
 };
 
+/// A visitor class for SCEVUse.
+template <typename SC, typename RetVal = void> struct SCEVUseVisitor {
+  RetVal visit(SCEVUse S) {
+    switch (S->getSCEVType()) {
+    case scConstant:
+      return ((SC *)this)->visitConstant(S);
+    case scVScale:
+      return ((SC *)this)->visitVScale(S);
+    case scPtrToAddr:
+      return ((SC *)this)->visitPtrToAddrExpr(S);
+    case scPtrToInt:
+      return ((SC *)this)->visitPtrToIntExpr(S);
+    case scTruncate:
+      return ((SC *)this)->visitTruncateExpr(S);
+    case scZeroExtend:
+      return ((SC *)this)->visitZeroExtendExpr(S);
+    case scSignExtend:
+      return ((SC *)this)->visitSignExtendExpr(S);
+    case scAddExpr:
+      return ((SC *)this)->visitAddExpr(S);
+    case scMulExpr:
+      return ((SC *)this)->visitMulExpr(S);
+    case scUDivExpr:
+      return ((SC *)this)->visitUDivExpr(S);
+    case scAddRecExpr:
+      return ((SC *)this)->visitAddRecExpr(S);
+    case scSMaxExpr:
+      return ((SC *)this)->visitSMaxExpr(S);
+    case scUMaxExpr:
+      return ((SC *)this)->visitUMaxExpr(S);
+    case scSMinExpr:
+      return ((SC *)this)->visitSMinExpr(S);
+    case scUMinExpr:
+      return ((SC *)this)->visitUMinExpr(S);
+    case scSequentialUMinExpr:
+      return ((SC *)this)->visitSequentialUMinExpr(S);
+    case scUnknown:
+      return ((SC *)this)->visitUnknown(S);
+    case scCouldNotCompute:
+      return ((SC *)this)->visitCouldNotCompute(S);
+    }
+    llvm_unreachable("Unknown SCEV kind!");
+  }
+
+  RetVal visitCouldNotCompute(SCEVUse S) {
+    llvm_unreachable("Invalid use of SCEVCouldNotCompute!");
+  }
+};
+
 /// Visit all nodes in the expression tree using worklist traversal.
 ///
 /// Visitor implements:

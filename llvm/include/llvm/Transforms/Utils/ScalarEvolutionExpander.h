@@ -61,7 +61,7 @@ struct PoisonFlags {
 /// Clients should create an instance of this class when rewriting is needed,
 /// and destroy it when finished to allow the release of the associated
 /// memory.
-class SCEVExpander : public SCEVVisitor<SCEVExpander, Value *> {
+class SCEVExpander : public SCEVUseVisitor<SCEVExpander, Value *> {
   friend class SCEVExpanderCleaner;
 
   ScalarEvolution &SE;
@@ -179,7 +179,7 @@ class SCEVExpander : public SCEVVisitor<SCEVExpander, Value *> {
   const char *DebugType;
 #endif
 
-  friend struct SCEVVisitor<SCEVExpander, Value *>;
+  friend struct SCEVUseVisitor<SCEVExpander, Value *>;
 
 public:
   /// Construct a SCEVExpander in "canonical" mode.
@@ -313,9 +313,8 @@ public:
 
   /// Insert code to directly compute the specified SCEV expression into the
   /// program.  The code is inserted into the specified block.
-  LLVM_ABI Value *expandCodeFor(const SCEV *SH, Type *Ty,
-                                BasicBlock::iterator I);
-  Value *expandCodeFor(const SCEV *SH, Type *Ty, Instruction *I) {
+  LLVM_ABI Value *expandCodeFor(SCEVUse SH, Type *Ty, BasicBlock::iterator I);
+  Value *expandCodeFor(SCEVUse SH, Type *Ty, Instruction *I) {
     return expandCodeFor(SH, Ty, I->getIterator());
   }
 
@@ -323,7 +322,7 @@ public:
   /// program.  The code is inserted into the SCEVExpander's current
   /// insertion point. If a type is specified, the result will be expanded to
   /// have that type, with a cast if necessary.
-  LLVM_ABI Value *expandCodeFor(const SCEV *SH, Type *Ty = nullptr);
+  LLVM_ABI Value *expandCodeFor(SCEVUse SH, Type *Ty = nullptr);
 
   /// Generates a code sequence that evaluates this predicate.  The inserted
   /// instructions will be at position \p Loc.  The result will be of type i1
@@ -478,12 +477,12 @@ private:
       const SCEV *S, const Instruction *InsertPt,
       SmallVectorImpl<Instruction *> &DropPoisonGeneratingInsts);
 
-  LLVM_ABI Value *expand(const SCEV *S);
-  Value *expand(const SCEV *S, BasicBlock::iterator I) {
+  LLVM_ABI Value *expand(SCEVUse S);
+  Value *expand(SCEVUse S, BasicBlock::iterator I) {
     setInsertPoint(I);
     return expand(S);
   }
-  Value *expand(const SCEV *S, Instruction *I) {
+  Value *expand(SCEVUse S, Instruction *I) {
     setInsertPoint(I);
     return expand(S);
   }
@@ -494,39 +493,39 @@ private:
   Value *expandMinMaxExpr(const SCEVNAryExpr *S, Intrinsic::ID IntrinID,
                           Twine Name, bool IsSequential = false);
 
-  Value *visitConstant(const SCEVConstant *S) { return S->getValue(); }
+  Value *visitConstant(SCEVUse S) { return cast<SCEVConstant>(S)->getValue(); }
 
-  Value *visitVScale(const SCEVVScale *S);
+  Value *visitVScale(SCEVUse S);
 
-  Value *visitPtrToAddrExpr(const SCEVPtrToAddrExpr *S);
+  Value *visitPtrToAddrExpr(SCEVUse S);
 
-  Value *visitPtrToIntExpr(const SCEVPtrToIntExpr *S);
+  Value *visitPtrToIntExpr(SCEVUse S);
 
-  Value *visitTruncateExpr(const SCEVTruncateExpr *S);
+  Value *visitTruncateExpr(SCEVUse S);
 
-  Value *visitZeroExtendExpr(const SCEVZeroExtendExpr *S);
+  Value *visitZeroExtendExpr(SCEVUse S);
 
-  Value *visitSignExtendExpr(const SCEVSignExtendExpr *S);
+  Value *visitSignExtendExpr(SCEVUse S);
 
-  Value *visitAddExpr(const SCEVAddExpr *S);
+  Value *visitAddExpr(SCEVUse S);
 
-  Value *visitMulExpr(const SCEVMulExpr *S);
+  Value *visitMulExpr(SCEVUse S);
 
-  Value *visitUDivExpr(const SCEVUDivExpr *S);
+  Value *visitUDivExpr(SCEVUse S);
 
-  Value *visitAddRecExpr(const SCEVAddRecExpr *S);
+  Value *visitAddRecExpr(SCEVUse S);
 
-  Value *visitSMaxExpr(const SCEVSMaxExpr *S);
+  Value *visitSMaxExpr(SCEVUse S);
 
-  Value *visitUMaxExpr(const SCEVUMaxExpr *S);
+  Value *visitUMaxExpr(SCEVUse S);
 
-  Value *visitSMinExpr(const SCEVSMinExpr *S);
+  Value *visitSMinExpr(SCEVUse S);
 
-  Value *visitUMinExpr(const SCEVUMinExpr *S);
+  Value *visitUMinExpr(SCEVUse S);
 
-  Value *visitSequentialUMinExpr(const SCEVSequentialUMinExpr *S);
+  Value *visitSequentialUMinExpr(SCEVUse S);
 
-  Value *visitUnknown(const SCEVUnknown *S) { return S->getValue(); }
+  Value *visitUnknown(SCEVUse S) { return cast<SCEVUnknown>(S)->getValue(); }
 
   LLVM_ABI void rememberInstruction(Value *I);
 
