@@ -12,8 +12,7 @@
 #include "internal_defs.h"
 
 #if SCUDO_CAN_USE_MTE
-#include <sys/auxv.h>
-#include <sys/prctl.h>
+#include "libc_pal.h"
 #endif
 
 namespace scudo {
@@ -66,7 +65,7 @@ inline bool systemSupportsMemoryTagging() {
 #ifndef HWCAP2_MTE
 #define HWCAP2_MTE (1 << 18)
 #endif
-  return getauxval(AT_HWCAP2) & HWCAP2_MTE;
+  return LibcPAL::getauxval(AT_HWCAP2) & HWCAP2_MTE;
 }
 
 inline bool systemDetectsMemoryTagFaultsTestOnly() {
@@ -94,16 +93,17 @@ inline bool systemDetectsMemoryTagFaultsTestOnly() {
 #ifndef PR_MTE_TCF_MASK
 #define PR_MTE_TCF_MASK (3UL << PR_MTE_TCF_SHIFT)
 #endif
-  int res = prctl(PR_GET_TAGGED_ADDR_CTRL, 0, 0, 0, 0);
+  int res = LibcPAL::prctl(PR_GET_TAGGED_ADDR_CTRL, 0, 0, 0, 0);
   if (res == -1)
     return false;
   return (static_cast<unsigned long>(res) & PR_MTE_TCF_MASK) != PR_MTE_TCF_NONE;
 }
 
 inline void enableSystemMemoryTaggingTestOnly() {
-  prctl(PR_SET_TAGGED_ADDR_CTRL,
-        PR_TAGGED_ADDR_ENABLE | PR_MTE_TCF_SYNC | (0xfffe << PR_MTE_TAG_SHIFT),
-        0, 0, 0);
+  LibcPAL::prctl(PR_SET_TAGGED_ADDR_CTRL,
+                 PR_TAGGED_ADDR_ENABLE | PR_MTE_TCF_SYNC |
+                     (0xfffe << PR_MTE_TAG_SHIFT),
+                 0, 0, 0);
 }
 
 #else // !SCUDO_CAN_USE_MTE

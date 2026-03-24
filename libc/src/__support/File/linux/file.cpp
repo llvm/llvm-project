@@ -171,7 +171,7 @@ ErrorOr<LinuxFile *> create_file_from_fd(int fd, const char *mode) {
   if (do_seek) {
     auto result = file->seek(0, SEEK_END);
     if (!result.has_value()) {
-      free(file);
+      delete file;
       return Error(result.error());
     }
   }

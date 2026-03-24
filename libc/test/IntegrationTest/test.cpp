@@ -9,6 +9,13 @@
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "src/string/strncmp.h"
+#include "src/string/strlen.h"
+#include "src/stdlib/aligned_alloc.h"
+#include "src/stdlib/calloc.h"
+#include "src/stdlib/free.h"
+#include "src/stdlib/malloc.h"
+#include "src/stdlib/realloc.h"
 #include <stddef.h>
 
 #ifdef LIBC_TARGET_ARCH_IS_AARCH64
@@ -29,6 +36,13 @@ void *memcpy(void *__restrict, const void *__restrict, size_t);
 void *memmove(void *dst, const void *src, size_t count);
 void *memset(void *ptr, int value, size_t count);
 int atexit(void (*func)(void));
+void *aligned_alloc(size_t alignment, size_t size);
+void *calloc(size_t num, size_t size);
+void free(void *ptr);
+void *malloc(size_t size);
+void *realloc(void *ptr, size_t size);
+int strncmp(const char *lhs, const char *rhs, size_t count);
+size_t strlen(const char *src);
 
 } // namespace LIBC_NAMESPACE_DECL
 
@@ -56,20 +70,40 @@ int atexit(void (*func)(void)) { return LIBC_NAMESPACE::atexit(func); }
 
 } // extern "C"
 
-// Integration tests cannot use the SCUDO standalone allocator as SCUDO pulls
-// various other parts of the libc. Since SCUDO development does not use
-// LLVM libc build rules, it is very hard to keep track or pull all that SCUDO
-// requires. Hence, as a work around for this problem, we use a simple allocator
-// which just hands out continuous blocks from a statically allocated chunk of
-// memory.
-
+// Integration tests use a simple local allocator unless they are explicitly
+// linked against the internal Scudo allocator.
+#ifndef LIBC_TESTS_USE_INTERNAL_SCUDO_ALLOCATOR
 static constexpr uint64_t ALIGNMENT = alignof(double);
 static constexpr uint64_t MEMORY_SIZE = 256 * 1024 /* 256 KiB */;
 alignas(ALIGNMENT) static uint8_t memory[MEMORY_SIZE];
 static size_t ptr = 0;
+#endif
 
 extern "C" {
 
+#ifdef LIBC_TESTS_USE_INTERNAL_SCUDO_ALLOCATOR
+void *aligned_alloc(size_t alignment, size_t size) {
+  return LIBC_NAMESPACE::aligned_alloc(alignment, size);
+}
+
+void *calloc(size_t num, size_t size) {
+  return LIBC_NAMESPACE::calloc(num, size);
+}
+
+void free(void *ptr) { LIBC_NAMESPACE::free(ptr); }
+
+void *malloc(size_t size) noexcept { return LIBC_NAMESPACE::malloc(size); }
+
+void *realloc(void *ptr, size_t size) {
+  return LIBC_NAMESPACE::realloc(ptr, size);
+}
+
+int strncmp(const char *lhs, const char *rhs, size_t count) {
+  return LIBC_NAMESPACE::strncmp(lhs, rhs, count);
+}
+
+size_t strlen(const char *src) { return LIBC_NAMESPACE::strlen(src); }
+#else
 void *malloc(size_t size) {
   LIBC_NAMESPACE::cpp::AtomicRef<size_t> ref(ptr);
   size = (size + ALIGNMENT - 1) & ~(ALIGNMENT - 1);
@@ -86,6 +120,7 @@ void *realloc(void *ptr, size_t s) {
   free(ptr);
   return malloc(s);
 }
+#endif
 
 // Integration tests are linked with -nostdlib. BFD linker expects
 // __dso_handle when -nostdlib is used.

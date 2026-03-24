@@ -16,6 +16,11 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/os.h"
 
+#ifdef LIBC_INTERNAL_USE_SCUDO_ALLOCATOR
+#include "src/stdlib/aligned_alloc.h"
+#include "src/stdlib/malloc.h"
+#endif
+
 namespace LIBC_NAMESPACE_DECL {
 
 class AllocChecker {
@@ -31,14 +36,25 @@ public:
 
   LIBC_INLINE operator bool() const { return success; }
 
+  LIBC_INLINE static void set_status(AllocChecker &ac, bool status) {
+    ac = status;
+  }
+
   LIBC_INLINE static void *alloc(size_t s, AllocChecker &ac) {
+#ifdef LIBC_INTERNAL_USE_SCUDO_ALLOCATOR
+    void *mem = LIBC_NAMESPACE::malloc(s);
+#else
     void *mem = ::malloc(s);
+#endif
     ac = (mem != nullptr);
     return mem;
   }
 
   LIBC_INLINE static void *aligned_alloc(size_t s, std::align_val_t align,
                                          AllocChecker &ac) {
+#ifdef LIBC_INTERNAL_USE_SCUDO_ALLOCATOR
+    void *mem = LIBC_NAMESPACE::aligned_alloc(static_cast<size_t>(align), s);
+#else
 #ifdef LIBC_TARGET_OS_IS_WINDOWS
     // std::aligned_alloc is not available on Windows because std::free on
     // Windows cannot deallocate any over-aligned memory. Microsoft provides an
@@ -47,6 +63,7 @@ public:
     void *mem = ::_aligned_malloc(static_cast<size_t>(align), s);
 #else
     void *mem = ::aligned_alloc(static_cast<size_t>(align), s);
+#endif
 #endif
     ac = (mem != nullptr);
     return mem;

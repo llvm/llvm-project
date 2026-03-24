@@ -60,7 +60,7 @@ public:
   typedef typename AllocatorConfig::template TSDRegistryT<ThisT> TSDRegistryT;
 
   void callPostInitCallback() {
-    pthread_once(&PostInitNonce, PostInitCallback);
+    LibcPAL::pthread_once(&PostInitNonce, PostInitCallback);
   }
 
   struct QuarantineCallback {
@@ -1109,7 +1109,7 @@ private:
   SecondaryT Secondary;
   QuarantineT Quarantine;
   TSDRegistryT TSDRegistry;
-  pthread_once_t PostInitNonce = PTHREAD_ONCE_INIT;
+  typename LibcPAL::PThreadOnceT PostInitNonce = LibcPAL::initPThreadOnce();
 
 #ifdef GWP_ASAN_HOOKS
   gwp_asan::GuardedPoolAllocator GuardedAlloc;

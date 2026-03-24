@@ -10,8 +10,7 @@
 #define SCUDO_CHECKS_H_
 
 #include "common.h"
-
-#include <errno.h>
+#include "libc_pal.h"
 
 #ifndef __has_builtin
 #define __has_builtin(X) 0
@@ -22,7 +21,7 @@ namespace scudo {
 // A common errno setting logic shared by almost all Scudo C wrappers.
 inline void *setErrnoOnNull(void *Ptr) {
   if (UNLIKELY(!Ptr))
-    errno = ENOMEM;
+    LibcPAL::seterrno(ENOMEM);
   return Ptr;
 }
 

@@ -14,24 +14,11 @@
 
 #include "common.h"
 #include "internal_defs.h"
+#include "libc_pal.h"
 #include "linux.h"
 #include "mutex.h"
 #include "report_linux.h"
 #include "string_utils.h"
-
-#include <errno.h>
-#include <fcntl.h>
-#include <linux/futex.h>
-#include <sched.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <sys/syscall.h>
-#include <sys/time.h>
-#include <time.h>
-#include <unistd.h>
 
 #if SCUDO_ANDROID
 // TODO(chiahungduan): Review if we still need the followings macros.
@@ -61,16 +48,17 @@ static void *mmapWrapper(uptr Addr, uptr Size, const char *Name, uptr Flags) {
 #endif
   if (Addr)
     MmapFlags |= MAP_FIXED;
-  void *P =
-      mmap(reinterpret_cast<void *>(Addr), Size, MmapProt, MmapFlags, -1, 0);
-  if (P == MAP_FAILED) {
-    if (!(Flags & MAP_ALLOWNOMEM) || errno != ENOMEM)
-      reportMapError(errno == ENOMEM ? Size : 0);
+  void *P = LibcPAL::mmap(reinterpret_cast<void *>(Addr), Size, MmapProt,
+                          MmapFlags, -1, 0);
+  if (reinterpret_cast<uptr>(P) == LibcPAL::kMmapFailed) {
+    if (!(Flags & MAP_ALLOWNOMEM) || LibcPAL::geterrno() != ENOMEM)
+      reportMapError(LibcPAL::geterrno() == ENOMEM ? Size : 0);
     return nullptr;
   }
 #if SCUDO_ANDROID
   if (Name)
-    prctl(ANDROID_PR_SET_VMA, ANDROID_PR_SET_VMA_ANON_NAME, P, Size, Name);
+    LibcPAL::prctl(ANDROID_PR_SET_VMA, ANDROID_PR_SET_VMA_ANON_NAME, P, Size,
+                   Name);
 #else
   (void)Name;
 #endif
@@ -101,7 +89,7 @@ void MemMapLinux::unmapImpl(uptr Addr, uptr Size) {
     MapCapacity -= Size;
   }
 
-  if (munmap(reinterpret_cast<void *>(Addr), Size) != 0)
+  if (LibcPAL::munmap(reinterpret_cast<void *>(Addr), Size) != 0)
     reportUnmapError(Addr, Size);
 }
 
@@ -115,7 +103,7 @@ bool MemMapLinux::remapImpl(uptr Addr, uptr Size, const char *Name,
 
 void MemMapLinux::setMemoryPermissionImpl(uptr Addr, uptr Size, uptr Flags) {
   int Prot = (Flags & MAP_NOACCESS) ? PROT_NONE : (PROT_READ | PROT_WRITE);
-  if (mprotect(reinterpret_cast<void *>(Addr), Size, Prot) != 0)
+  if (LibcPAL::mprotect(reinterpret_cast<void *>(Addr), Size, Prot) != 0)
     reportProtectError(Addr, Size, Prot);
 }
 
@@ -123,11 +111,12 @@ void MemMapLinux::releaseAndZeroPagesToOSImpl(uptr From, uptr Size) {
   void *Addr = reinterpret_cast<void *>(From);
 
   int rc;
-  while ((rc = madvise(Addr, Size, MADV_DONTNEED)) == -1 && errno == EAGAIN) {
+  while ((rc = LibcPAL::madvise(Addr, Size, MADV_DONTNEED)) == -1 &&
+         LibcPAL::geterrno() == EAGAIN) {
   }
   if (rc == -1) {
     // If we can't madvies the memory, then we still need to zero it.
-    memset(Addr, 0, Size);
+    LibcPAL::memset(Addr, 0, Size);
   }
 }
 
@@ -146,10 +135,11 @@ s64 MemMapLinux::getResidentPagesImpl(uptr From, uptr Size) {
     if ((Length >> PageSizeLog) > sizeof(PageData)) {
       Length = sizeof(PageData) << PageSizeLog;
     }
-    if (mincore(reinterpret_cast<void *>(CurrentAddress), Length, PageData) ==
-        -1) {
+    if (LibcPAL::mincore(reinterpret_cast<void *>(CurrentAddress), Length,
+                         PageData) == -1) {
       ScopedString Str;
-      Str.append("mincore failed: %s\n", strerror(errno));
+      Str.append("mincore failed: %s\n",
+                 LibcPAL::strerror(LibcPAL::geterrno()));
       Str.output();
       return -1;
     }
@@ -176,7 +166,7 @@ bool ReservedMemoryLinux::createImpl(uptr Addr, uptr Size, const char *Name,
 }
 
 void ReservedMemoryLinux::releaseImpl() {
-  if (munmap(reinterpret_cast<void *>(getBase()), getCapacity()) != 0)
+  if (LibcPAL::munmap(reinterpret_cast<void *>(getBase()), getCapacity()) != 0)
     reportUnmapError(getBase(), getCapacity());
 }
 

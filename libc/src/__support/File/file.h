@@ -224,7 +224,7 @@ public:
     // implementation. The platform close should not need to access the buffer
     // and we need to clean it up before the entire structure is removed.
     if (own_buf)
-      delete buf;
+      delete[] buf;
 
     // Platform close is expected to cleanup the file data structure which
     // includes the file mutex. Hence, we call platform_close after releasing

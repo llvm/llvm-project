@@ -428,7 +428,71 @@ add_entrypoint_object(
 )
 
 if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
-  if(LLVM_LIBC_INCLUDE_SCUDO)
+  if(LLVM_LIBC_INCLUDE_INTERNAL_SCUDO)
+    include(${LIBC_SOURCE_DIR}/../compiler-rt/cmake/Modules/AllSupportedArchDefs.cmake)
+
+    # scudo distinguishes riscv32 and riscv64, so we need to translate the architecture
+    if (LIBC_TARGET_OS_IS_DARWIN AND (LIBC_TARGET_ARCHITECTURE STREQUAL "arm"))
+      set(LIBC_TARGET_ARCHITECTURE_FOR_SCUDO arm64)
+    else()
+      set(LIBC_TARGET_ARCHITECTURE_FOR_SCUDO ${LIBC_TARGET_ARCHITECTURE})
+    endif()
+    if(LIBC_TARGET_ARCHITECTURE_IS_RISCV64)
+      set(LIBC_TARGET_ARCHITECTURE_FOR_SCUDO riscv64)
+    elseif(LIBC_TARGET_ARCHITECTURE_IS_RISCV32)
+      set(LIBC_TARGET_ARCHITECTURE_FOR_SCUDO riscv32)
+    endif()
+
+    if(NOT (LIBC_TARGET_ARCHITECTURE_FOR_SCUDO IN_LIST ALL_SCUDO_STANDALONE_SUPPORTED_ARCH))
+      message(FATAL_ERROR "Architecture ${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO} is not supported by internal SCUDO.
+        Either disable LLVM_LIBC_INCLUDE_INTERNAL_SCUDO or change your target architecture.")
+    endif()
+
+    add_subdirectory(scudo)
+
+    add_entrypoint_object(
+      malloc
+      ALIAS
+      DEPENDS
+        .scudo.malloc
+    )
+    add_entrypoint_object(
+      calloc
+      ALIAS
+      DEPENDS
+        .scudo.calloc
+    )
+    add_entrypoint_object(
+      realloc
+      ALIAS
+      DEPENDS
+        .scudo.realloc
+    )
+    add_entrypoint_object(
+      aligned_alloc
+      ALIAS
+      DEPENDS
+        .scudo.aligned_alloc
+    )
+    add_entrypoint_object(
+      free
+      ALIAS
+      DEPENDS
+        .scudo.free
+    )
+    add_entrypoint_object(
+      mallopt
+      ALIAS
+      DEPENDS
+        .scudo.mallopt
+    )
+    add_entrypoint_object(
+      posix_memalign
+      ALIAS
+      DEPENDS
+        .scudo.posix_memalign
+    )
+  elseif(LLVM_LIBC_INCLUDE_SCUDO)
     set(SCUDO_DEPS "")
 
     include(${LIBC_SOURCE_DIR}/../compiler-rt/cmake/Modules/AllSupportedArchDefs.cmake)

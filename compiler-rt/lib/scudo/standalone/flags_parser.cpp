@@ -8,12 +8,10 @@
 
 #include "flags_parser.h"
 #include "common.h"
+#include "libc_pal.h"
 #include "report.h"
 
-#include <errno.h>
 #include <limits.h>
-#include <stdlib.h>
-#include <string.h>
 
 namespace scudo {
 
@@ -111,13 +109,15 @@ void FlagParser::parseString(const char *S) {
 }
 
 inline bool parseBool(const char *Value, bool *b) {
-  if (strncmp(Value, "0", 1) == 0 || strncmp(Value, "no", 2) == 0 ||
-      strncmp(Value, "false", 5) == 0) {
+  if (LibcPAL::strncmp(Value, "0", 1) == 0 ||
+      LibcPAL::strncmp(Value, "no", 2) == 0 ||
+      LibcPAL::strncmp(Value, "false", 5) == 0) {
     *b = false;
     return true;
   }
-  if (strncmp(Value, "1", 1) == 0 || strncmp(Value, "yes", 3) == 0 ||
-      strncmp(Value, "true", 4) == 0) {
+  if (LibcPAL::strncmp(Value, "1", 1) == 0 ||
+      LibcPAL::strncmp(Value, "yes", 3) == 0 ||
+      LibcPAL::strncmp(Value, "true", 4) == 0) {
     *b = true;
     return true;
   }
@@ -132,8 +132,8 @@ void FlagParser::parseStringPair(const char *Name, const char *Value) {
 bool FlagParser::runHandler(const char *Name, const char *Value,
                             const char Sep) {
   for (u32 I = 0; I < NumberOfFlags; ++I) {
-    const uptr Len = strlen(Flags[I].Name);
-    if (strncmp(Name, Flags[I].Name, Len) != 0 || Name[Len] != Sep)
+    const uptr Len = LibcPAL::strlen(Flags[I].Name);
+    if (LibcPAL::strncmp(Name, Flags[I].Name, Len) != 0 || Name[Len] != Sep)
       continue;
     bool Ok = false;
     switch (Flags[I].Type) {
@@ -144,9 +144,9 @@ bool FlagParser::runHandler(const char *Name, const char *Value,
       break;
     case FlagType::FT_int:
       char *ValueEnd;
-      errno = 0;
-      long V = strtol(Value, &ValueEnd, 10);
-      if (errno != 0 ||                 // strtol failed (over or underflow)
+      LibcPAL::seterrno(0);
+      long V = LibcPAL::strtol(Value, &ValueEnd, 10);
+      if (LibcPAL::geterrno() != 0 ||   // strtol failed (over or underflow)
           V > INT_MAX || V < INT_MIN || // overflows integer
           // contains unexpected characters
           (*ValueEnd != '"' && *ValueEnd != '\'' &&

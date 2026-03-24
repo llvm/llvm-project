@@ -12,24 +12,11 @@
 
 #include "common.h"
 #include "internal_defs.h"
+#include "libc_pal.h"
 #include "linux.h"
 #include "mutex.h"
 #include "report_linux.h"
 #include "string_utils.h"
-
-#include <errno.h>
-#include <fcntl.h>
-#include <linux/futex.h>
-#include <sched.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <sys/syscall.h>
-#include <sys/time.h>
-#include <time.h>
-#include <unistd.h>
 
 #if SCUDO_ANDROID
 #include <sys/prctl.h>
@@ -42,10 +29,13 @@ namespace scudo {
 
 #if !defined(SCUDO_PAGE_SIZE)
 // This function is only used when page size is not hard-coded.
-uptr getPageSize() { return static_cast<uptr>(sysconf(_SC_PAGESIZE)); }
+uptr getPageSize() { return LibcPAL::getauxval(AT_PAGESZ); }
 #endif
 
-void NORETURN die() { abort(); }
+void NORETURN die() {
+  LibcPAL::abort();
+  __builtin_unreachable();
+}
 
 // TODO: Will be deprecated. Use the interfaces in MemMapLinux instead.
 void *map(void *Addr, uptr Size, UNUSED const char *Name, uptr Flags,
@@ -67,15 +57,16 @@ void *map(void *Addr, uptr Size, UNUSED const char *Name, uptr Flags,
 #endif
   if (Addr)
     MmapFlags |= MAP_FIXED;
-  void *P = mmap(Addr, Size, MmapProt, MmapFlags, -1, 0);
-  if (P == MAP_FAILED) {
-    if (!(Flags & MAP_ALLOWNOMEM) || errno != ENOMEM)
-      reportMapError(errno == ENOMEM ? Size : 0);
+  void *P = LibcPAL::mmap(Addr, Size, MmapProt, MmapFlags, -1, 0);
+  if (reinterpret_cast<uptr>(P) == LibcPAL::kMmapFailed) {
+    if (!(Flags & MAP_ALLOWNOMEM) || LibcPAL::geterrno() != ENOMEM)
+      reportMapError(LibcPAL::geterrno() == ENOMEM ? Size : 0);
     return nullptr;
   }
 #if SCUDO_ANDROID
   if (Name)
-    prctl(ANDROID_PR_SET_VMA, ANDROID_PR_SET_VMA_ANON_NAME, P, Size, Name);
+    LibcPAL::prctl(ANDROID_PR_SET_VMA, ANDROID_PR_SET_VMA_ANON_NAME, P, Size,
+                   Name);
 #endif
   return P;
 }
@@ -83,7 +74,7 @@ void *map(void *Addr, uptr Size, UNUSED const char *Name, uptr Flags,
 // TODO: Will be deprecated. Use the interfaces in MemMapLinux instead.
 void unmap(void *Addr, uptr Size, UNUSED uptr Flags,
            UNUSED MapPlatformData *Data) {
-  if (munmap(Addr, Size) != 0)
+  if (LibcPAL::munmap(Addr, Size) != 0)
     reportUnmapError(reinterpret_cast<uptr>(Addr), Size);
 }
 
@@ -91,7 +82,7 @@ void unmap(void *Addr, uptr Size, UNUSED uptr Flags,
 void setMemoryPermission(uptr Addr, uptr Size, uptr Flags,
                          UNUSED MapPlatformData *Data) {
   int Prot = (Flags & MAP_NOACCESS) ? PROT_NONE : (PROT_READ | PROT_WRITE);
-  if (mprotect(reinterpret_cast<void *>(Addr), Size, Prot) != 0)
+  if (LibcPAL::mprotect(reinterpret_cast<void *>(Addr), Size, Prot) != 0)
     reportProtectError(Addr, Size, Prot);
 }
 
@@ -100,12 +91,13 @@ void releasePagesToOS(uptr BaseAddress, uptr Offset, uptr Size,
                       UNUSED MapPlatformData *Data) {
   void *Addr = reinterpret_cast<void *>(BaseAddress + Offset);
 
-  while (madvise(Addr, Size, MADV_DONTNEED) == -1 && errno == EAGAIN) {
+  while (LibcPAL::madvise(Addr, Size, MADV_DONTNEED) == -1 &&
+         LibcPAL::geterrno() == EAGAIN) {
   }
 }
 
 // Calling getenv should be fine (c)(tm) at any time.
-const char *getEnv(const char *Name) { return getenv(Name); }
+const char *getEnv(const char *Name) { return LibcPAL::getenv(Name); }
 
 namespace {
 enum State : u32 { Unlocked = 0, Locked = 1, Sleeping = 2 };
@@ -125,8 +117,8 @@ void HybridMutex::lockSlow() {
   if (V != Sleeping)
     V = atomic_exchange(&M, Sleeping, memory_order_acquire);
   while (V != Unlocked) {
-    syscall(SYS_futex, reinterpret_cast<uptr>(&M), FUTEX_WAIT_PRIVATE, Sleeping,
-            nullptr, nullptr, 0);
+    LibcPAL::systemCall(SYS_futex, reinterpret_cast<uptr>(&M),
+                        FUTEX_WAIT_PRIVATE, Sleeping, nullptr, nullptr, 0);
     V = atomic_exchange(&M, Sleeping, memory_order_acquire);
   }
 }
@@ -134,8 +126,8 @@ void HybridMutex::lockSlow() {
 void HybridMutex::unlock() {
   if (atomic_fetch_sub(&M, 1U, memory_order_release) != Locked) {
     atomic_store(&M, Unlocked, memory_order_release);
-    syscall(SYS_futex, reinterpret_cast<uptr>(&M), FUTEX_WAKE_PRIVATE, 1,
-            nullptr, nullptr, 0);
+    LibcPAL::systemCall(SYS_futex, reinterpret_cast<uptr>(&M),
+                        FUTEX_WAKE_PRIVATE, 1, nullptr, nullptr, 0);
   }
 }
 
@@ -145,7 +137,7 @@ void HybridMutex::assertHeldImpl() {
 
 u64 getMonotonicTime() {
   timespec TS;
-  clock_gettime(CLOCK_MONOTONIC, &TS);
+  LibcPAL::clock_gettime(CLOCK_MONOTONIC, &TS);
   return static_cast<u64>(TS.tv_sec) * (1000ULL * 1000 * 1000) +
          static_cast<u64>(TS.tv_nsec);
 }
@@ -153,7 +145,7 @@ u64 getMonotonicTime() {
 u64 getMonotonicTimeFast() {
 #if defined(CLOCK_MONOTONIC_COARSE)
   timespec TS;
-  clock_gettime(CLOCK_MONOTONIC_COARSE, &TS);
+  LibcPAL::clock_gettime(CLOCK_MONOTONIC_COARSE, &TS);
   return static_cast<u64>(TS.tv_sec) * (1000ULL * 1000 * 1000) +
          static_cast<u64>(TS.tv_nsec);
 #else
@@ -165,16 +157,16 @@ u32 getNumberOfCPUs() {
   cpu_set_t CPUs;
   // sched_getaffinity can fail for a variety of legitimate reasons (lack of
   // CAP_SYS_NICE, syscall filtering, etc), in which case we shall return 0.
-  if (sched_getaffinity(0, sizeof(cpu_set_t), &CPUs) != 0)
+  if (LibcPAL::sched_getaffinity(0, sizeof(cpu_set_t), &CPUs) != 0)
     return 0;
-  return static_cast<u32>(CPU_COUNT(&CPUs));
+  return static_cast<u32>(LibcPAL::cpuCount(&CPUs));
 }
 
 u32 getThreadID() {
 #if SCUDO_ANDROID
-  return static_cast<u32>(gettid());
+  return static_cast<u32>(LibcPAL::gettid());
 #else
-  return static_cast<u32>(syscall(SYS_gettid));
+  return static_cast<u32>(LibcPAL::systemCall(SYS_gettid));
 #endif
 }
 
@@ -188,24 +180,24 @@ bool getRandom(void *Buffer, uptr Length, UNUSED bool Blocking) {
 #define GRND_NONBLOCK 1
 #endif
   // Up to 256 bytes, getrandom will not be interrupted.
-  ReadBytes =
-      syscall(SYS_getrandom, Buffer, Length, Blocking ? 0 : GRND_NONBLOCK);
+  ReadBytes = LibcPAL::systemCall(SYS_getrandom, Buffer, Length,
+                                  Blocking ? 0 : GRND_NONBLOCK);
   if (ReadBytes == static_cast<ssize_t>(Length))
     return true;
   // If this system call is not implemented in the kernel, then we will try
   // and use /dev/urandom. Otherwise, if the syscall fails, return false
   // assuming that trying to read /dev/urandom will cause a delay waiting for
   // the random data to be usable.
-  if (errno != ENOSYS)
+  if (LibcPAL::geterrno() != ENOSYS)
     return false;
 #endif // defined(SYS_getrandom)
   // Up to 256 bytes, a read off /dev/urandom will not be interrupted.
   // Blocking is moot here, O_NONBLOCK has no effect when opening /dev/urandom.
-  const int FileDesc = open("/dev/urandom", O_RDONLY);
+  const int FileDesc = LibcPAL::open("/dev/urandom", O_RDONLY);
   if (FileDesc == -1)
     return false;
-  ReadBytes = read(FileDesc, Buffer, Length);
-  close(FileDesc);
+  ReadBytes = LibcPAL::read(FileDesc, Buffer, Length);
+  LibcPAL::close(FileDesc);
   return (ReadBytes == static_cast<ssize_t>(Length));
 }
 
@@ -218,11 +210,11 @@ void outputRaw(const char *Buffer) {
     constexpr s32 AndroidLogInfo = 4;
     constexpr uptr MaxLength = 1024U;
     char LocalBuffer[MaxLength];
-    while (strlen(Buffer) > MaxLength) {
+    while (LibcPAL::strlen(Buffer) > MaxLength) {
       uptr P;
       for (P = MaxLength - 1; P > 0; P--) {
         if (Buffer[P] == '\n') {
-          memcpy(LocalBuffer, Buffer, P);
+          LibcPAL::memcpy(LocalBuffer, Buffer, P);
           LocalBuffer[P] = '\0';
           async_safe_write_log(AndroidLogInfo, "scudo", LocalBuffer);
           Buffer = &Buffer[P + 1];
@@ -235,7 +227,7 @@ void outputRaw(const char *Buffer) {
     }
     async_safe_write_log(AndroidLogInfo, "scudo", Buffer);
   } else {
-    (void)write(2, Buffer, strlen(Buffer));
+    (void)LibcPAL::write(2, Buffer, LibcPAL::strlen(Buffer));
   }
 }
 

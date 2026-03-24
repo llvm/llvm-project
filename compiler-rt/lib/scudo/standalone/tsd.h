@@ -11,11 +11,11 @@
 
 #include "atomic_helpers.h"
 #include "common.h"
+#include "libc_pal.h"
 #include "mutex.h"
 #include "thread_annotations.h"
 
 #include <limits.h> // for PTHREAD_DESTRUCTOR_ITERATIONS
-#include <pthread.h>
 
 // With some build setups, this might still not be defined.
 #ifndef PTHREAD_DESTRUCTOR_ITERATIONS

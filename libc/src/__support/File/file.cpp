@@ -408,7 +408,7 @@ int File::set_buffer(void *buffer, size_t size, int buffer_mode) {
     // TODO: Handle allocation failures.
   } else {
     if (own_buf)
-      delete buf;
+      delete[] buf;
     if (buffer_mode != _IONBF) {
       buf = static_cast<uint8_t *>(buffer);
       bufsize = size;

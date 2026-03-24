@@ -7,8 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/stdint_proxy.h"
+#include "hdr/func/malloc.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "src/string/strncmp.h"
+#include "src/string/strlen.h"
+#include "src/stdlib/aligned_alloc.h"
+#include "src/stdlib/calloc.h"
+#include "src/stdlib/free.h"
+#include "src/stdlib/malloc.h"
+#include "src/stdlib/realloc.h"
 #include <stddef.h>
 
 #ifdef LIBC_TARGET_ARCH_IS_AARCH64
@@ -24,6 +32,13 @@ void *memcpy(void *__restrict, const void *__restrict, size_t);
 void *memmove(void *dst, const void *src, size_t count);
 void *memset(void *ptr, int value, size_t count);
 int atexit(void (*func)(void));
+void *aligned_alloc(size_t alignment, size_t size);
+void *calloc(size_t num, size_t size);
+void free(void *ptr);
+void *malloc(size_t size);
+void *realloc(void *ptr, size_t size);
+int strncmp(const char *lhs, const char *rhs, size_t count);
+size_t strlen(const char *src);
 
 // TODO: It seems that some old test frameworks does not use
 // add_libc_hermetic_test properly. Such that they won't get correct linkage
@@ -35,19 +50,16 @@ int atexit(void (*func)(void));
 
 } // namespace LIBC_NAMESPACE_DECL
 
-constexpr uint64_t ALIGNMENT = alignof(uintptr_t);
-
 namespace {
 
-// Integration tests cannot use the SCUDO standalone allocator as SCUDO pulls
-// various other parts of the libc. Since SCUDO development does not use
-// LLVM libc build rules, it is very hard to keep track or pull all that SCUDO
-// requires. Hence, as a work around for this problem, we use a simple allocator
-// which just hands out continuous blocks from a statically allocated chunk of
-// memory.
+// Hermetic tests use a simple local allocator unless they are explicitly linked
+// against the internal Scudo allocator.
+#ifndef LIBC_TESTS_USE_INTERNAL_SCUDO_ALLOCATOR
+constexpr uint64_t ALIGNMENT = alignof(uintptr_t);
 static constexpr uint64_t MEMORY_SIZE = 65336;
 alignas(ALIGNMENT) static uint8_t memory[MEMORY_SIZE];
 static uint8_t *ptr = memory;
+#endif
 
 } // anonymous namespace
 
@@ -78,6 +90,29 @@ void *memset(void *ptr, int value, size_t count) {
 // This is needed if the test was compiled with '-fno-use-cxa-atexit'.
 int atexit(void (*func)(void)) { return LIBC_NAMESPACE::atexit(func); }
 
+#ifdef LIBC_TESTS_USE_INTERNAL_SCUDO_ALLOCATOR
+void *aligned_alloc(size_t alignment, size_t size) {
+  return LIBC_NAMESPACE::aligned_alloc(alignment, size);
+}
+
+void *calloc(size_t num, size_t size) {
+  return LIBC_NAMESPACE::calloc(num, size);
+}
+
+void free(void *ptr) { LIBC_NAMESPACE::free(ptr); }
+
+void *malloc(size_t size) noexcept { return LIBC_NAMESPACE::malloc(size); }
+
+void *realloc(void *ptr, size_t size) {
+  return LIBC_NAMESPACE::realloc(ptr, size);
+}
+
+int strncmp(const char *lhs, const char *rhs, size_t count) {
+  return LIBC_NAMESPACE::strncmp(lhs, rhs, count);
+}
+
+size_t strlen(const char *src) { return LIBC_NAMESPACE::strlen(src); }
+#else
 void *malloc(size_t s) {
   // Keep the bump pointer aligned on an eight byte boundary.
   s = ((s + ALIGNMENT - 1) / ALIGNMENT) * ALIGNMENT;
@@ -103,6 +138,7 @@ void *realloc(void *mem, size_t s) {
     newmem[i] = oldmem[i];
   return newmem;
 }
+#endif
 
 // The unit test framework uses pure virtual functions. Since hermetic tests
 // cannot depend C++ runtime libraries, implement dummy functions to support

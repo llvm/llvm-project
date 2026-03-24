@@ -10,7 +10,6 @@
 #include "common.h"
 
 #include <stdarg.h>
-#include <string.h>
 
 namespace scudo {
 

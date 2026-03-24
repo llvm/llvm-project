@@ -199,6 +199,18 @@ add_header_library(
     expected.h
 )
 
+set(cpp_new_deps
+  libc.hdr.func.free
+  libc.hdr.func.malloc
+  libc.hdr.func.aligned_alloc
+  libc.src.__support.common
+  libc.src.__support.macros.properties.compiler
+  libc.src.__support.macros.properties.os
+)
+if(LLVM_LIBC_INCLUDE_INTERNAL_SCUDO)
+  list(APPEND cpp_new_deps libc.src.stdlib.free)
+endif()
+
 add_object_library(
   new
   SRCS
@@ -206,12 +218,7 @@ add_object_library(
   HDRS
     new.h
   DEPENDS
-    libc.hdr.func.free
-    libc.hdr.func.malloc
-    libc.hdr.func.aligned_alloc
-    libc.src.__support.common
-    libc.src.__support.macros.properties.compiler
-    libc.src.__support.macros.properties.os
+    ${cpp_new_deps}
 )
 
 add_header_library(

@@ -59,7 +59,8 @@ template <class Allocator> struct TSDRegistryExT {
     if (UNLIKELY(atomic_load_relaxed(&Initialized) != 0))
       return;
     Instance->init();
-    CHECK_EQ(pthread_key_create(&PThreadKey, teardownThread<Allocator>), 0);
+    CHECK_EQ(LibcPAL::pthread_key_create(&PThreadKey, teardownThread<Allocator>),
+             0);
     FallbackTSD.init(Instance);
     atomic_store_relaxed(&Initialized, 1);
   }
@@ -72,13 +73,15 @@ template <class Allocator> struct TSDRegistryExT {
 
   void unmapTestOnly(Allocator *Instance) EXCLUDES(Mutex) {
     DCHECK(Instance);
-    if (reinterpret_cast<Allocator *>(pthread_getspecific(PThreadKey))) {
-      DCHECK_EQ(reinterpret_cast<Allocator *>(pthread_getspecific(PThreadKey)),
+    if (reinterpret_cast<Allocator *>(
+            LibcPAL::pthread_getspecific(PThreadKey))) {
+      DCHECK_EQ(reinterpret_cast<Allocator *>(
+                    LibcPAL::pthread_getspecific(PThreadKey)),
                 Instance);
       ThreadTSD.commitBack(Instance);
       ThreadTSD = {};
     }
-    CHECK_EQ(pthread_key_delete(PThreadKey), 0);
+    CHECK_EQ(LibcPAL::pthread_key_delete(PThreadKey), 0);
     PThreadKey = {};
     FallbackTSD.commitBack(Instance);
     FallbackTSD = {};
@@ -153,14 +156,15 @@ private:
     initOnceMaybe(Instance);
     if (UNLIKELY(MinimalInit))
       return;
-    CHECK_EQ(
-        pthread_setspecific(PThreadKey, reinterpret_cast<void *>(Instance)), 0);
+    CHECK_EQ(LibcPAL::pthread_setspecific(PThreadKey,
+                                          reinterpret_cast<void *>(Instance)),
+             0);
     ThreadTSD.init(Instance);
     State.InitState = ThreadState::Initialized;
     Instance->callPostInitCallback();
   }
 
-  pthread_key_t PThreadKey = {};
+  typename LibcPAL::PThreadKeyT PThreadKey = {};
   atomic_u8 Initialized = {};
   atomic_u8 Disabled = {};
   TSD<Allocator> FallbackTSD;
@@ -188,8 +192,8 @@ void teardownThread(void *Ptr) NO_THREAD_SAFETY_ANALYSIS {
   if (TSDRegistryT::ThreadTSD.DestructorIterations > 1) {
     TSDRegistryT::ThreadTSD.DestructorIterations--;
     // If pthread_setspecific fails, we will go ahead with the teardown.
-    if (LIKELY(pthread_setspecific(Instance->getTSDRegistry()->PThreadKey,
-                                   Ptr) == 0))
+    if (LIKELY(LibcPAL::pthread_setspecific(
+                   Instance->getTSDRegistry()->PThreadKey, Ptr) == 0))
       return;
   }
   TSDRegistryT::ThreadTSD.commitBack(Instance);

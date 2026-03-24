@@ -9,6 +9,7 @@
 #include "checksum.h"
 #include "atomic_helpers.h"
 #include "chunk.h"
+#include "libc_pal.h"
 
 #if defined(__x86_64__) || defined(__i386__)
 #include <cpuid.h>
@@ -74,7 +75,7 @@ bool hasHardwareCRC32() {
     return false;
   return !!(HWCap & ZX_ARM64_FEATURE_ISA_CRC32);
 #else
-  return !!(getauxval(AT_HWCAP) & HWCAP_CRC32);
+  return !!(LibcPAL::getauxval(AT_HWCAP) & HWCAP_CRC32);
 #endif // SCUDO_FUCHSIA
 }
 #elif defined(__loongarch__)
@@ -89,7 +90,7 @@ bool hasHardwareCRC32() {
 // Link:
 // https://github.com/loongson/la-softdev-convention/blob/v0.1/la-softdev-convention.adoc#kernel-development
 bool hasHardwareCRC32() {
-  return !!(getauxval(AT_HWCAP) & HWCAP_LOONGARCH_CRC32);
+  return !!(LibcPAL::getauxval(AT_HWCAP) & HWCAP_LOONGARCH_CRC32);
 }
 #else
 // No hardware CRC32 implemented in Scudo for other architectures.
