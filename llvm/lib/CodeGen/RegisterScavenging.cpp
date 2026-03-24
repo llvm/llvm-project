@@ -295,7 +295,7 @@ RegScavenger::spill(Register Reg, const TargetRegisterClass &RC, int SPAdj,
 Register RegScavenger::scavengeRegisterBackwards(const TargetRegisterClass &RC,
                                                  MachineBasicBlock::iterator To,
                                                  bool RestoreAfter, int SPAdj,
-                                                 bool AllowSpill) {
+                                                 bool AllowSpill, bool InspectNext) {
   const MachineBasicBlock &MBB = *To->getParent();
   const MachineFunction &MF = *MBB.getParent();
 
@@ -306,7 +306,7 @@ Register RegScavenger::scavengeRegisterBackwards(const TargetRegisterClass &RC,
   // First, determine if there are any such early-clobber def regs.
   SmallVector<MCPhysReg> FilteredAllocationOrder;
   SmallVector<MCPhysReg> ECDefs;
-  if ((MBBI != MBB.end()) && (MBBI != MBB.begin()))
+  if (InspectNext)
     for (const MachineOperand &Op : MBBI->operands())
       if (Op.isReg() && Op.isDef() && Op.isEarlyClobber())
         ECDefs.push_back(Op.getReg());
@@ -358,8 +358,11 @@ Register RegScavenger::scavengeRegisterBackwards(const TargetRegisterClass &RC,
 /// \p ReserveAfter controls whether the scavenged register needs to be reserved
 /// after the current instruction, otherwise it will only be reserved before the
 /// current instruction.
+/// \p InspectNext controls whether the instruction at MBBI needs to be checked
+/// by scavengeRegisterBackwards for an early-clobber def reg that might constrain
+/// the register allocation.
 static Register scavengeVReg(MachineRegisterInfo &MRI, RegScavenger &RS,
-                             Register VReg, bool ReserveAfter) {
+                             Register VReg, bool ReserveAfter, bool InspectNext) {
   const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
 #ifndef NDEBUG
   // Verify that all definitions and uses are in the same basic block.
@@ -401,8 +404,8 @@ static Register scavengeVReg(MachineRegisterInfo &MRI, RegScavenger &RS,
   // spill/reload if necessary.
   int SPAdj = 0;
   const TargetRegisterClass &RC = *MRI.getRegClass(VReg);
-  Register SReg = RS.scavengeRegisterBackwards(RC, DefMI.getIterator(),
-                                               ReserveAfter, SPAdj);
+  Register SReg = RS.scavengeRegisterBackwards(
+      RC, DefMI.getIterator(), ReserveAfter, SPAdj, true, InspectNext);
   MRI.replaceRegWith(VReg, SReg);
   ++NumScavengedRegs;
   return SReg;
@@ -440,7 +443,7 @@ static bool scavengeFrameVirtualRegsInBlock(MachineRegisterInfo &MRI,
         if (!MO.readsReg())
           continue;
 
-        Register SReg = scavengeVReg(MRI, RS, Reg, true);
+        Register SReg = scavengeVReg(MRI, RS, Reg, true, true);
         N->addRegisterKilled(SReg, &TRI, false);
         RS.setRegUsed(SReg);
       }
@@ -465,7 +468,7 @@ static bool scavengeFrameVirtualRegsInBlock(MachineRegisterInfo &MRI,
         NextInstructionReadsVReg = true;
       }
       if (MO.isDef()) {
-        Register SReg = scavengeVReg(MRI, RS, Reg, false);
+        Register SReg = scavengeVReg(MRI, RS, Reg, false, false);
         I->addRegisterDead(SReg, &TRI, false);
       }
     }

@@ -140,10 +140,14 @@ public:
   ///
   /// If \p AllowSpill is false, fail if a spill is required to make the
   /// register available, and return NoRegister.
+  /// If \p InspectNext is true, inspect the instruction at MBBI
+  /// for early-clobber def regs that need to be excluded from the set
+  /// of valid registers.
   Register scavengeRegisterBackwards(const TargetRegisterClass &RC,
                                      MachineBasicBlock::iterator To,
                                      bool RestoreAfter, int SPAdj,
-                                     bool AllowSpill = true);
+                                     bool AllowSpill = true,
+                                    bool InspectNext = false);
 
   /// Tell the scavenger a register is used.
   void setRegUsed(Register Reg, LaneBitmask LaneMask = LaneBitmask::getAll());
