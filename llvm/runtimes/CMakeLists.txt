@@ -584,6 +584,13 @@ if(build_runtimes)
     # With ROCm 6.3 the ROCr runtime and the thunk layer share a single repository.
     # No need to provide a separate path for ROCt.
     if (OFFLOAD_EXTERNAL_PROJECT_UNIFIED_ROCR)
+
+      set(rocr_extra_cmake_args "")
+      if(THEROCK_AMDGPU_TARGETS)
+        # Pass the list of AMDGPU targets to ROCr runtime
+        list(APPEND rocr_extra_cmake_args "-DTHEROCK_AMDGPU_TARGETS=${THEROCK_AMDGPU_TARGETS}")
+      endif()
+
       if(NOT DEFINED LIBOMPTARGET_EXTERNAL_PROJECT_HSA_PATH)
         message(SEND_ERROR "External ROCr requires setting LIBOMPTARGET_EXTERNAL_PROJECT_HSA_PATH")
       endif()
@@ -596,6 +603,7 @@ if(build_runtimes)
         CMAKE_ARGS -DBUILD_SHARED_LIBS=ON
                    -DIMAGE_SUPPORT=OFF
                    -DLLVM_RUNTIME_OPENMP=ON
+                   ${rocr_extra_cmake_args}
                    ${extra_cmake_args})
       set(HSA_DEP rocr-runtime)
     endif()
