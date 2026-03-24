@@ -59,12 +59,14 @@ endif()
 set(LOWFAT_SOURCES
   lf_rtl.cpp
   lf_interceptors.cpp
+  lf_stack.cpp
 )
 
 set(LOWFAT_HEADERS
   lf_allocator.h
   lf_config.h
   lf_interface.h
+  lf_stack.h
 )
 
 set(LOWFAT_CFLAGS ${SANITIZER_COMMON_CFLAGS})

@@ -17,6 +17,7 @@
 #include "lf_allocator.h"
 #include "lf_config.h"
 #include "lf_interface.h"
+#include "lf_stack.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_allocator_internal.h"
 #include "sanitizer_common/sanitizer_flag_parser.h"
@@ -290,13 +291,17 @@ static void PrintOobHeader(const char *level, uptr ptr, uptr base, uptr bound,
   Printf("\n");
 }
 
-static void PrintErrorAndDie(uptr ptr, uptr base, uptr bound, int is_write) {
+static void PrintErrorAndDie(uptr ptr, uptr base, uptr bound, int is_write,
+                             const StackTrace &stack) {
   PrintOobHeader("ERROR", ptr, base, bound, is_write);
+  stack.Print();
   Die();
 }
 
-static void PrintWarning(uptr ptr, uptr base, uptr bound, int is_write) {
+static void PrintWarning(uptr ptr, uptr base, uptr bound, int is_write,
+                         const StackTrace &stack) {
   PrintOobHeader("WARNING", ptr, base, bound, is_write);
+  stack.Print();
 }
 
 }  // namespace __lowfat
@@ -336,12 +341,14 @@ void __lf_init() {
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __lf_report_oob(uptr ptr, uptr base, uptr bound, int is_write) {
-  __lowfat::PrintErrorAndDie(ptr, base, bound, is_write);
+  GET_STACK_TRACE_FATAL_HERE;
+  __lowfat::PrintErrorAndDie(ptr, base, bound, is_write, stack);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __lf_warn_oob(uptr ptr, uptr base, uptr bound, int is_write) {
-  __lowfat::PrintWarning(ptr, base, bound, is_write);
+  GET_STACK_TRACE_FATAL_HERE;
+  __lowfat::PrintWarning(ptr, base, bound, is_write, stack);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
