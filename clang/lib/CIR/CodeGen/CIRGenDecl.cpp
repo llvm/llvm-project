@@ -1034,7 +1034,7 @@ void CIRGenFunction::emitArrayDestroy(mlir::Value begin,
       size = constIntAttr.getUInt();
   } else {
     cgm.errorNYI(begin.getDefiningOp()->getLoc(),
-                 "dynamic-length array expression");
+                 "emitArrayDestroy: dynamic-length array expression");
   }
 
   auto arrayTy = cir::ArrayType::get(cirElementType, size);

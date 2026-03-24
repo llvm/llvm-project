@@ -22,6 +22,7 @@ add_flangrt_unittest(RuntimeTests
   Format.cpp
   InputExtensions.cpp
   Inquiry.cpp
+  LeadingZeroTest.cpp
   ListInputTest.cpp
   LogicalFormatTest.cpp
   Matmul.cpp

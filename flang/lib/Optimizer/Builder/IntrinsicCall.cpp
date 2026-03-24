@@ -764,6 +764,13 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/false},
     {"sleep", &I::genSleep, {{{"seconds", asValue}}}, /*isElemental=*/false},
     {"spacing", &I::genSpacing},
+    {"split",
+     &I::genSplit,
+     {{{"string", asAddr},
+       {"set", asAddr},
+       {"pos", asAddr},
+       {"back", asValue, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"spread",
      &I::genSpread,
      {{{"source", asBox}, {"dim", asValue}, {"ncopies", asValue}}},
@@ -8536,6 +8543,39 @@ void IntrinsicLibrary::genSystemClock(llvm::ArrayRef<fir::ExtendedValue> args) {
 void IntrinsicLibrary::genSleep(llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 1 && "SLEEP has one compulsory argument");
   fir::runtime::genSleep(builder, loc, fir::getBase(args[0]));
+}
+
+// SPLIT
+void IntrinsicLibrary::genSplit(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 4);
+
+  mlir::Value stringBase = fir::getBase(args[0]);
+  mlir::Value stringLen = fir::getLen(args[0]);
+  mlir::Value setBase = fir::getBase(args[1]);
+  mlir::Value setLen = fir::getLen(args[1]);
+  mlir::Value posAddr = fir::getBase(args[2]);
+
+  fir::KindTy kind =
+      fir::factory::CharacterExprHelper{builder, loc}.getCharacterKind(
+          stringBase.getType());
+
+  // BACK is optional and defaults to .FALSE. when absent.
+  mlir::Value back =
+      isStaticallyAbsent(args[3])
+          ? builder.createIntegerConstant(loc, builder.getI1Type(), 0)
+          : fir::getBase(args[3]);
+
+  mlir::Type posRefTy = fir::dyn_cast_ptrEleTy(posAddr.getType());
+  mlir::Value posValue = fir::LoadOp::create(builder, loc, posRefTy, posAddr);
+  mlir::Type indexTy = builder.getIndexType();
+  mlir::Value posIndex = builder.createConvert(loc, indexTy, posValue);
+
+  mlir::Value newPos =
+      fir::runtime::genSplit(builder, loc, kind, stringBase, stringLen, setBase,
+                             setLen, posIndex, back);
+
+  mlir::Value newPosConverted = builder.createConvert(loc, posRefTy, newPos);
+  fir::StoreOp::create(builder, loc, newPosConverted, posAddr);
 }
 
 // TOKENIZE
