@@ -1196,9 +1196,8 @@ define i32 @add_to_sub2(i32 %A, i32 %M) {
 
 define i32 @add_not_add_m1(i32 %a, i32 %b) {
 ; CHECK-LABEL: @add_not_add_m1(
-; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[B:%.*]], -1
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[ADD]], [[NOT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[TMP1]], -2
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %not = xor i32 %b, -1
@@ -1209,9 +1208,8 @@ define i32 @add_not_add_m1(i32 %a, i32 %b) {
 
 define <2 x i32> @add_not_add_m1_vec(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: @add_not_add_m1_vec(
-; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i32> [[B:%.*]], splat (i32 -1)
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i32> [[A:%.*]], splat (i32 -1)
-; CHECK-NEXT:    [[R:%.*]] = add <2 x i32> [[ADD]], [[NOT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub <2 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i32> [[TMP1]], splat (i32 -2)
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %not = xor <2 x i32> %b, <i32 -1, i32 -1>
@@ -1222,9 +1220,8 @@ define <2 x i32> @add_not_add_m1_vec(<2 x i32> %a, <2 x i32> %b) {
 
 define i32 @add_not_add_m1_commuted(i32 %a, i32 %b) {
 ; CHECK-LABEL: @add_not_add_m1_commuted(
-; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[B:%.*]], -1
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[ADD]], [[NOT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[TMP1]], -2
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %not = xor i32 %b, -1
@@ -1235,9 +1232,8 @@ define i32 @add_not_add_m1_commuted(i32 %a, i32 %b) {
 
 define i32 @add_not_add_m1_assoc(i32 %a, i32 %b) {
 ; CHECK-LABEL: @add_not_add_m1_assoc(
-; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[B:%.*]], -1
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A:%.*]], [[NOT]]
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[ADD]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[TMP1]], -2
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %not = xor i32 %b, -1
