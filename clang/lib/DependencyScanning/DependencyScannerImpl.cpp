@@ -216,6 +216,11 @@ static bool visitPrebuiltModule(StringRef PrebuiltModuleFilename,
     return true;
 
   while (!Worklist.empty()) {
+    // FIXME: This is assuming the PCH only refers to explicitly-built modules,
+    // which technically is not guaranteed. To remove the assumption, we'd need
+    // to also rework how the module files are handled to the scan, specifically
+    // change the values of HeaderSearchOptions::PrebuiltModuleFiles from plain
+    // paths to ModuleFileName.
     Listener.visitModuleFile(ModuleFileName::makeExplicit(Worklist.back()),
                              serialization::MK_ExplicitModule);
     if (ASTReader::readASTFileControlBlock(
