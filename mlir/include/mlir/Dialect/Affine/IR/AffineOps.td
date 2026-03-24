@@ -32,6 +32,12 @@ def Affine_Dialect : Dialect {
 class Affine_Op<string mnemonic, list<Trait> traits = []> :
     Op<Affine_Dialect, mnemonic, traits>;
 
+// Type constraint for index-like types: index or vector of index.
+def Affine_IndexOrVectorOfIndex :
+    Type<Or<[Index.predicate,
+             VectorOfAnyRankOf<[Index]>.predicate]>,
+         "index or vector of index">;
+
 // Require regions to have affine.yield.
 def ImplicitAffineTerminator
     : SingleBlockImplicitTerminator<"AffineYieldOp">;
@@ -1118,16 +1124,12 @@ def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index", [Pure]> {
     - that is, the product of all basis elements is positive as an `index` as well.
   }];
 
-  let arguments = (ins Index:$linear_index,
+  let arguments = (ins Affine_IndexOrVectorOfIndex:$linear_index,
     Variadic<Index>:$dynamic_basis,
     DenseI64ArrayAttr:$static_basis);
-  let results = (outs Variadic<Index>:$multi_index);
+  let results = (outs Variadic<Affine_IndexOrVectorOfIndex>:$multi_index);
 
-  let assemblyFormat = [{
-    $linear_index `into`
-    custom<DynamicIndexList>($dynamic_basis, $static_basis, "{}", "::mlir::AsmParser::Delimiter::Paren")
-    attr-dict `:` type($multi_index)
-  }];
+  let hasCustomAssemblyFormat = 1;
 
   let builders = [
     OpBuilder<(ins "Value":$linear_index, "ValueRange":$dynamic_basis, "ArrayRef<int64_t>":$static_basis, CArg<"bool", "true">:$hasOuterBound)>,
@@ -1221,18 +1223,13 @@ def AffineLinearizeIndexOp : Affine_Op<"linearize_index",
     ```
   }];
 
-  let arguments = (ins Variadic<Index>:$multi_index,
+  let arguments = (ins Variadic<Affine_IndexOrVectorOfIndex>:$multi_index,
     Variadic<Index>:$dynamic_basis,
     DenseI64ArrayAttr:$static_basis,
     UnitProp:$disjoint);
-  let results = (outs Index:$linear_index);
+  let results = (outs Affine_IndexOrVectorOfIndex:$linear_index);
 
-  let assemblyFormat = [{
-    (`disjoint` $disjoint^)? ` `
-    `[` $multi_index `]` `by`
-    custom<DynamicIndexList>($dynamic_basis, $static_basis, "{}", "::mlir::AsmParser::Delimiter::Paren")
-    attr-dict `:` type($linear_index)
-  }];
+  let hasCustomAssemblyFormat = 1;
 
   let builders = [
     OpBuilder<(ins "ValueRange":$multi_index, "ValueRange":$basis, CArg<"bool", "false">:$disjoint)>,

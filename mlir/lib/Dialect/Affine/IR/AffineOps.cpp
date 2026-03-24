@@ -21,6 +21,7 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ShapedOpInterfaces.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
@@ -4855,6 +4856,58 @@ LogicalResult AffineVectorStoreOp::verify() {
 // DelinearizeIndexOp
 //===----------------------------------------------------------------------===//
 
+/// Parse format:
+///   affine.delinearize_index %idx into (%c4, %c8)
+///     : index, index         (scalar)
+///   affine.delinearize_index %vec into (%c4, %c8)
+///     : vector<16xindex>, vector<16xindex>  (vector)
+ParseResult AffineDelinearizeIndexOp::parse(OpAsmParser &parser,
+                                            OperationState &result) {
+  OpAsmParser::UnresolvedOperand linearIndex;
+  if (parser.parseOperand(linearIndex) || parser.parseKeyword("into"))
+    return failure();
+
+  SmallVector<OpAsmParser::UnresolvedOperand> dynamicBasis;
+  DenseI64ArrayAttr staticBasis;
+  if (parseDynamicIndexList(parser, dynamicBasis, staticBasis, nullptr,
+                            AsmParser::Delimiter::Paren))
+    return failure();
+
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+
+  if (parser.parseColon())
+    return failure();
+
+  SmallVector<Type> resultTypes;
+  if (parser.parseTypeList(resultTypes))
+    return failure();
+
+  // Infer the linear index type from the first result type. All types must
+  // match (enforced by the verifier).
+  Type indexType = resultTypes.empty() ? IndexType::get(parser.getContext())
+                                       : resultTypes.front();
+  if (parser.resolveOperand(linearIndex, indexType, result.operands))
+    return failure();
+  if (parser.resolveOperands(dynamicBasis, IndexType::get(parser.getContext()),
+                             result.operands))
+    return failure();
+
+  result.addTypes(resultTypes);
+  result.getOrAddProperties<AffineDelinearizeIndexOp::Properties>()
+      .static_basis = staticBasis;
+  return success();
+}
+
+void AffineDelinearizeIndexOp::print(OpAsmPrinter &p) {
+  p << ' ' << getLinearIndex() << " into ";
+  printDynamicIndexList(p, *this, getDynamicBasis(), getStaticBasisAttr(),
+                        /*scalableFlags=*/{}, AsmParser::Delimiter::Paren);
+  p.printOptionalAttrDict((*this)->getAttrs(), {getStaticBasisAttrName()});
+  p << " : ";
+  llvm::interleaveComma(getResultTypes(), p);
+}
+
 void AffineDelinearizeIndexOp::build(OpBuilder &odsBuilder,
                                      OperationState &odsState,
                                      Value linearIndex, ValueRange dynamicBasis,
@@ -4924,6 +4977,14 @@ LogicalResult AffineDelinearizeIndexOp::verify() {
         return v > 0 || ShapedType::isDynamic(v);
       }))
     return emitOpError("no basis element may be statically non-positive");
+
+  // All result types must match the input type.
+  Type inputType = getLinearIndex().getType();
+  for (Type resultType : getResultTypes()) {
+    if (resultType != inputType)
+      return emitOpError("result types must match the linear index type, got ")
+             << resultType << " vs " << inputType;
+  }
 
   return success();
 }
@@ -5036,9 +5097,17 @@ struct DropUnitExtentBasis
     SmallVector<Value> replacements(delinearizeOp->getNumResults(), nullptr);
     std::optional<Value> zero = std::nullopt;
     Location loc = delinearizeOp->getLoc();
+    Type indexType = delinearizeOp.getLinearIndex().getType();
     auto getZero = [&]() -> Value {
-      if (!zero)
-        zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
+      if (!zero) {
+        Value scalarZero = arith::ConstantIndexOp::create(rewriter, loc, 0);
+        if (auto vecTy = dyn_cast<VectorType>(indexType))
+          zero = arith::ConstantOp::create(
+              rewriter, loc,
+              DenseElementsAttr::get(vecTy, rewriter.getIndexAttr(0)));
+        else
+          zero = scalarZero;
+      }
       return zero.value();
     };
 
@@ -5204,9 +5273,9 @@ struct SplitDelinearizeSpanningLastLinearizeArg final
           "need at least two elements to form the basis product");
 
     Value linearizeWithoutBack = affine::AffineLinearizeIndexOp::create(
-        rewriter, linearizeOp.getLoc(), linearizeOp.getMultiIndex().drop_back(),
-        linearizeOp.getDynamicBasis(), linearizeOp.getStaticBasis().drop_back(),
-        linearizeOp.getDisjoint());
+        rewriter, linearizeOp.getLoc(), linearizeOp.getLinearIndex().getType(),
+        linearizeOp.getMultiIndex().drop_back(), linearizeOp.getDynamicBasis(),
+        linearizeOp.getStaticBasis().drop_back(), linearizeOp.getDisjoint());
     auto delinearizeWithoutSplitPart = affine::AffineDelinearizeIndexOp::create(
         rewriter, delinearizeOp.getLoc(), linearizeWithoutBack,
         delinearizeOp.getDynamicBasis(), basis.drop_back(elemsToSplit),
@@ -5236,6 +5305,69 @@ void affine::AffineDelinearizeIndexOp::getCanonicalizationPatterns(
 // LinearizeIndexOp
 //===----------------------------------------------------------------------===//
 
+/// Parse format:
+///   affine.linearize_index [%x, %y] by (%c4, %c8) : index
+///   affine.linearize_index disjoint [%v0, %v1] by (%c4, %c8)
+///     : vector<16xindex>
+ParseResult AffineLinearizeIndexOp::parse(OpAsmParser &parser,
+                                          OperationState &result) {
+  bool disjoint = succeeded(parser.parseOptionalKeyword("disjoint"));
+
+  SmallVector<OpAsmParser::UnresolvedOperand> multiIndex;
+  if (parser.parseOperandList(multiIndex, AsmParser::Delimiter::Square) ||
+      parser.parseKeyword("by"))
+    return failure();
+
+  SmallVector<OpAsmParser::UnresolvedOperand> dynamicBasis;
+  DenseI64ArrayAttr staticBasis;
+  if (parseDynamicIndexList(parser, dynamicBasis, staticBasis, nullptr,
+                            AsmParser::Delimiter::Paren))
+    return failure();
+
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+
+  Type resultType;
+  if (parser.parseColonType(resultType))
+    return failure();
+
+  if (parser.resolveOperands(multiIndex, resultType, result.operands))
+    return failure();
+  if (parser.resolveOperands(dynamicBasis, IndexType::get(parser.getContext()),
+                             result.operands))
+    return failure();
+
+  result.addTypes(resultType);
+  auto &props = result.getOrAddProperties<AffineLinearizeIndexOp::Properties>();
+  props.static_basis = staticBasis;
+  props.disjoint = disjoint;
+  props.operandSegmentSizes = {static_cast<int32_t>(multiIndex.size()),
+                               static_cast<int32_t>(dynamicBasis.size())};
+  return success();
+}
+
+void AffineLinearizeIndexOp::print(OpAsmPrinter &p) {
+  if (getDisjoint())
+    p << " disjoint";
+  p << " [";
+  llvm::interleaveComma(getMultiIndex(), p);
+  p << "] by ";
+  printDynamicIndexList(p, *this, getDynamicBasis(), getStaticBasisAttr(),
+                        /*scalableFlags=*/{}, AsmParser::Delimiter::Paren);
+  p.printOptionalAttrDict(
+      (*this)->getAttrs(),
+      {getStaticBasisAttrName(), getOperandSegmentSizesAttrName()});
+  p << " : " << getLinearIndex().getType();
+}
+
+/// Infer the index type from a set of multi-index values. Returns the common
+/// type (index or vector<...xindex>), or IndexType if the set is empty.
+static Type inferIndexType(MLIRContext *ctx, ValueRange multiIndex) {
+  if (multiIndex.empty())
+    return IndexType::get(ctx);
+  return multiIndex.front().getType();
+}
+
 void AffineLinearizeIndexOp::build(OpBuilder &odsBuilder,
                                    OperationState &odsState,
                                    ValueRange multiIndex, ValueRange basis,
@@ -5246,7 +5378,9 @@ void AffineLinearizeIndexOp::build(OpBuilder &odsBuilder,
   SmallVector<int64_t> staticBasis;
   dispatchIndexOpFoldResults(getAsOpFoldResult(basis), dynamicBasis,
                              staticBasis);
-  build(odsBuilder, odsState, multiIndex, dynamicBasis, staticBasis, disjoint);
+  Type resultType = inferIndexType(odsBuilder.getContext(), multiIndex);
+  build(odsBuilder, odsState, resultType, multiIndex, dynamicBasis, staticBasis,
+        disjoint);
 }
 
 void AffineLinearizeIndexOp::build(OpBuilder &odsBuilder,
@@ -5259,14 +5393,18 @@ void AffineLinearizeIndexOp::build(OpBuilder &odsBuilder,
   SmallVector<Value> dynamicBasis;
   SmallVector<int64_t> staticBasis;
   dispatchIndexOpFoldResults(basis, dynamicBasis, staticBasis);
-  build(odsBuilder, odsState, multiIndex, dynamicBasis, staticBasis, disjoint);
+  Type resultType = inferIndexType(odsBuilder.getContext(), multiIndex);
+  build(odsBuilder, odsState, resultType, multiIndex, dynamicBasis, staticBasis,
+        disjoint);
 }
 
 void AffineLinearizeIndexOp::build(OpBuilder &odsBuilder,
                                    OperationState &odsState,
                                    ValueRange multiIndex,
                                    ArrayRef<int64_t> basis, bool disjoint) {
-  build(odsBuilder, odsState, multiIndex, ValueRange{}, basis, disjoint);
+  Type resultType = inferIndexType(odsBuilder.getContext(), multiIndex);
+  build(odsBuilder, odsState, resultType, multiIndex, ValueRange{}, basis,
+        disjoint);
 }
 
 LogicalResult AffineLinearizeIndexOp::verify() {
@@ -5283,6 +5421,14 @@ LogicalResult AffineLinearizeIndexOp::verify() {
         "mismatch between dynamic and static basis (kDynamic marker but no "
         "corresponding dynamic basis entry) -- this can only happen due to an "
         "incorrect fold/rewrite");
+
+  // All multi_index types must match the result type.
+  Type resultType = getLinearIndex().getType();
+  for (Value idx : getMultiIndex()) {
+    if (idx.getType() != resultType)
+      return emitOpError("multi_index types must match the result type, got ")
+             << idx.getType() << " vs " << resultType;
+  }
 
   return success();
 }
@@ -5402,7 +5548,13 @@ struct DropLinearizeUnitComponentsIfDisjointOrZero final
                                          "no unit basis entries to replace");
 
     if (newIndices.empty()) {
-      rewriter.replaceOpWithNewOp<arith::ConstantIndexOp>(op, 0);
+      Type resultType = op.getLinearIndex().getType();
+      if (auto vecTy = dyn_cast<VectorType>(resultType)) {
+        rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+            op, DenseElementsAttr::get(vecTy, rewriter.getIndexAttr(0)));
+      } else {
+        rewriter.replaceOpWithNewOp<arith::ConstantIndexOp>(op, 0);
+      }
       return success();
     }
     rewriter.replaceOpWithNewOp<affine::AffineLinearizeIndexOp>(
