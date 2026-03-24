@@ -420,7 +420,8 @@ public:
   Printable printID(RegisterIdx RegIdx) const;
   Printable printRematReg(RegisterIdx RegIdx, bool SkipRegions = false) const;
   Printable printRegUsers(RegisterIdx RegIdx) const;
-  Printable printUser(const MachineInstr *MI) const;
+  Printable printUser(const MachineInstr *MI,
+                      std::optional<unsigned> UseRegion = std::nullopt) const;
 
 private:
   SmallVectorImpl<RegionBoundaries> &Regions;

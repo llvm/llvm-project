@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 #define DEBUG_TYPE "rematerializer"
 
@@ -783,24 +784,31 @@ Printable Rematerializer::printRematReg(RegisterIdx RegIdx,
 
 Printable Rematerializer::printRegUsers(RegisterIdx RegIdx) const {
   return Printable([&, RegIdx](raw_ostream &OS) {
-    for (const auto &[_, Users] : getReg(RegIdx).Uses) {
+    for (const auto &[UseRegion, Users] : getReg(RegIdx).Uses) {
       for (MachineInstr *MI : Users)
-        dbgs() << "  User " << printUser(MI) << '\n';
+        OS << "  User " << printUser(MI, UseRegion) << '\n';
     }
   });
 }
 
-Printable Rematerializer::printUser(const MachineInstr *MI) const {
-  return Printable([&, MI](raw_ostream &OS) {
+Printable Rematerializer::printUser(const MachineInstr *MI,
+                                    std::optional<unsigned> UseRegion) const {
+  return Printable([&, MI, UseRegion](raw_ostream &OS) {
     RegisterIdx RegIdx = getDefRegIdx(*MI);
-    if (RegIdx != NoReg)
+    if (RegIdx != NoReg) {
       OS << printID(RegIdx);
-    else
-      OS << "(-/-)[?]";
+    } else {
+      OS << "(-/-)[";
+      if (UseRegion)
+        OS << *UseRegion;
+      else
+        OS << '?';
+      OS << ']';
+    }
     OS << ' ';
     MI->print(OS, /*IsStandalone=*/true, /*SkipOpers=*/false,
               /*SkipDebugLoc=*/false, /*AddNewLine=*/false);
     OS << " @ ";
-    LIS.getInstructionIndex(*MI).print(dbgs());
+    LIS.getInstructionIndex(*MI).print(OS);
   });
 }
