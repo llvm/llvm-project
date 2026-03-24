@@ -543,7 +543,7 @@ Sections:
   {
     SCOPED_TRACE("unsupported version");
     DoCheck(UnsupportedVersionYamlString,
-            "unsupported SHT_LLVM_BB_ADDR_MAP version: 6");
+            "unsupported BB address map version: 6");
   }
 
   SmallString<128> ZeroBBRangesYamlString(CommonYamlString);
@@ -555,8 +555,7 @@ Sections:
   {
     SCOPED_TRACE("zero bb ranges");
     DoCheck(ZeroBBRangesYamlString,
-            "invalid zero number of BB ranges at offset 3 in "
-            "SHT_LLVM_BB_ADDR_MAP section with index 1");
+            "invalid zero number of BB ranges at offset 3");
   }
 
   SmallString<128> CommonVersionedYamlString(CommonYamlString);
@@ -686,7 +685,7 @@ Sections:
   {
     SCOPED_TRACE("unsupported version");
     DoCheck(UnsupportedLowVersionYamlString,
-            "version should be >= 3 for SHT_LLVM_BB_ADDR_MAP when callsite"
+            "version should be >= 3 for BB address map when callsite"
             " offsets feature is enabled: version = 2 feature = 32");
   }
 }
@@ -915,7 +914,7 @@ Sections:
   {
     SCOPED_TRACE("unsupported version");
     DoCheck(UnsupportedLowVersionYamlString,
-            "unsupported SHT_LLVM_BB_ADDR_MAP version: 1");
+            "unsupported BB address map version: 1");
   }
 
   // Check that we fail when function entry count is enabled but not provided.

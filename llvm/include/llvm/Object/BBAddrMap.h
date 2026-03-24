@@ -14,6 +14,8 @@
 #ifndef LLVM_OBJECT_BBADDRMAP_H
 #define LLVM_OBJECT_BBADDRMAP_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/BranchProbability.h"
@@ -250,6 +252,23 @@ struct PGOAnalysisMap {
            std::tie(Other.FuncEntryCount, Other.BBEntries, Other.FeatEnable);
   }
 };
+
+/// Decodes one BB address map section payload.
+///
+/// \p Content the raw bytes of the section payload.
+/// \p IsLittleEndian endianness of the payload.
+/// \p AddressSize the size of an address in bytes (4 or 8).
+/// \p ResolveAddress callback invoked for each range base address. It receives
+///   the offset of the address field in \p Content and the raw value read from
+///   the stream, and returns the resolved address.
+/// \p PGOAnalyses if non-null, receives the decoded PGO analysis data.
+Expected<std::vector<BBAddrMap>>
+decodeBBAddrMapPayload(ArrayRef<uint8_t> Content, bool IsLittleEndian,
+                       uint8_t AddressSize,
+                       function_ref<Expected<uint64_t>(uint64_t OffsetInSection,
+                                                       uint64_t RawValue)>
+                           ResolveAddress,
+                       std::vector<PGOAnalysisMap> *PGOAnalyses = nullptr);
 
 } // end namespace object.
 } // end namespace llvm.
