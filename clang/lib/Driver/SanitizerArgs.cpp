@@ -108,6 +108,7 @@ enum CoverageFeature {
   CoverageTraceLoads = 1 << 16,
   CoverageTraceStores = 1 << 17,
   CoverageControlFlow = 1 << 18,
+  CoverageTracePCEntryExit = 1 << 19,
 };
 
 enum BinaryMetadataFeature {
@@ -963,10 +964,10 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   }
 
   int InsertionPointTypes = CoverageFunc | CoverageBB | CoverageEdge;
-  int InstrumentationTypes = CoverageTracePC | CoverageTracePCGuard |
-                             CoverageInline8bitCounters | CoverageTraceLoads |
-                             CoverageTraceStores | CoverageInlineBoolFlag |
-                             CoverageControlFlow;
+  int InstrumentationTypes = CoverageTracePC | CoverageTracePCEntryExit |
+                             CoverageTracePCGuard | CoverageInline8bitCounters |
+                             CoverageTraceLoads | CoverageTraceStores |
+                             CoverageInlineBoolFlag | CoverageControlFlow;
   if ((CoverageFeatures & InsertionPointTypes) &&
       !(CoverageFeatures & InstrumentationTypes) && DiagnoseErrors) {
     D.Diag(clang::diag::warn_drv_deprecated_arg)
@@ -977,9 +978,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
 
   // trace-pc w/o func/bb/edge implies edge.
   if (!(CoverageFeatures & InsertionPointTypes)) {
-    if (CoverageFeatures &
-        (CoverageTracePC | CoverageTracePCGuard | CoverageInline8bitCounters |
-         CoverageInlineBoolFlag | CoverageControlFlow))
+    if (CoverageFeatures & (CoverageTracePC | CoverageTracePCEntryExit |
+                            CoverageTracePCGuard | CoverageInline8bitCounters |
+                            CoverageInlineBoolFlag | CoverageControlFlow))
       CoverageFeatures |= CoverageEdge;
 
     if (CoverageFeatures & CoverageStackDepth)
@@ -1327,6 +1328,8 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
       std::make_pair(CoverageTraceGep, "-fsanitize-coverage-trace-gep"),
       std::make_pair(Coverage8bitCounters, "-fsanitize-coverage-8bit-counters"),
       std::make_pair(CoverageTracePC, "-fsanitize-coverage-trace-pc"),
+      std::make_pair(CoverageTracePCEntryExit,
+                     "-fsanitize-coverage-trace-pc-entry-exit"),
       std::make_pair(CoverageTracePCGuard,
                      "-fsanitize-coverage-trace-pc-guard"),
       std::make_pair(CoverageInline8bitCounters,
@@ -1716,6 +1719,7 @@ int parseCoverageFeatures(const Driver &D, const llvm::opt::Arg *A,
                 .Case("trace-gep", CoverageTraceGep)
                 .Case("8bit-counters", Coverage8bitCounters)
                 .Case("trace-pc", CoverageTracePC)
+                .Case("trace-pc-entry-exit", CoverageTracePCEntryExit)
                 .Case("trace-pc-guard", CoverageTracePCGuard)
                 .Case("no-prune", CoverageNoPrune)
                 .Case("inline-8bit-counters", CoverageInline8bitCounters)

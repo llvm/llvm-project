@@ -42,21 +42,21 @@ FunctionPass *createAArch64AdvSIMDScalar();
 FunctionPass *createAArch64ISelDag(AArch64TargetMachine &TM,
                                    CodeGenOptLevel OptLevel);
 FunctionPass *createAArch64StorePairSuppressPass();
-FunctionPass *createAArch64ExpandPseudoPass();
+FunctionPass *createAArch64ExpandPseudoLegacyPass();
 FunctionPass *createAArch64SLSHardeningPass();
 FunctionPass *createAArch64SpeculationHardeningPass();
 FunctionPass *createAArch64LoadStoreOptLegacyPass();
 ModulePass *createAArch64LowerHomogeneousPrologEpilogPass();
 FunctionPass *createAArch64SIMDInstrOptPass();
 ModulePass *createAArch64PromoteConstantPass();
-FunctionPass *createAArch64ConditionOptimizerPass();
+FunctionPass *createAArch64ConditionOptimizerLegacyPass();
 FunctionPass *createAArch64A57FPLoadBalancing();
 FunctionPass *createAArch64A53Fix835769LegacyPass();
 FunctionPass *createFalkorHWPFFixPass();
 FunctionPass *createFalkorMarkStridedAccessesPass();
 FunctionPass *createAArch64PointerAuthPass();
 FunctionPass *createAArch64BranchTargetsPass();
-FunctionPass *createAArch64MIPeepholeOptPass();
+FunctionPass *createAArch64MIPeepholeOptLegacyPass();
 FunctionPass *createAArch64PostCoalescerPass();
 
 FunctionPass *createAArch64CleanupLocalDynamicTLSPass();
@@ -88,16 +88,16 @@ void initializeAArch64PointerAuthPass(PassRegistry&);
 void initializeAArch64BranchTargetsLegacyPass(PassRegistry &);
 void initializeAArch64CFIFixupPass(PassRegistry&);
 void initializeAArch64CollectLOHLegacyPass(PassRegistry &);
-void initializeAArch64CompressJumpTablesPass(PassRegistry&);
+void initializeAArch64CompressJumpTablesLegacyPass(PassRegistry &);
 void initializeAArch64CondBrTuningPass(PassRegistry &);
-void initializeAArch64ConditionOptimizerPass(PassRegistry&);
+void initializeAArch64ConditionOptimizerLegacyPass(PassRegistry &);
 void initializeAArch64ConditionalComparesPass(PassRegistry &);
 void initializeAArch64DAGToDAGISelLegacyPass(PassRegistry &);
-void initializeAArch64DeadRegisterDefinitionsPass(PassRegistry&);
-void initializeAArch64ExpandPseudoPass(PassRegistry &);
+void initializeAArch64DeadRegisterDefinitionsLegacyPass(PassRegistry &);
+void initializeAArch64ExpandPseudoLegacyPass(PassRegistry &);
 void initializeAArch64LoadStoreOptLegacyPass(PassRegistry &);
 void initializeAArch64LowerHomogeneousPrologEpilogPass(PassRegistry &);
-void initializeAArch64MIPeepholeOptPass(PassRegistry &);
+void initializeAArch64MIPeepholeOptLegacyPass(PassRegistry &);
 void initializeAArch64O0PreLegalizerCombinerPass(PassRegistry &);
 void initializeAArch64PostCoalescerPass(PassRegistry &);
 void initializeAArch64PostLegalizerCombinerPass(PassRegistry &);
@@ -150,6 +150,40 @@ public:
 };
 
 class AArch64CollectLOHPass : public PassInfoMixin<AArch64CollectLOHPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class AArch64CompressJumpTablesPass
+    : public PassInfoMixin<AArch64CompressJumpTablesPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class AArch64DeadRegisterDefinitionsPass
+    : public PassInfoMixin<AArch64DeadRegisterDefinitionsPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class AArch64ExpandPseudoPass : public PassInfoMixin<AArch64ExpandPseudoPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class AArch64MIPeepholeOptPass
+    : public PassInfoMixin<AArch64MIPeepholeOptPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class AArch64ConditionOptimizerPass
+    : public PassInfoMixin<AArch64ConditionOptimizerPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

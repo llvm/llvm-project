@@ -62,6 +62,7 @@ levels.  See :doc:`contributing` to learn how to help.
    :caption: Using LLVM-libc
 
    getting_started
+   build_concepts
    overlay_mode
    full_host_build
    full_cross_build

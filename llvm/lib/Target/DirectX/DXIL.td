@@ -324,6 +324,10 @@ defvar WaveBitOpKind_Xor = 2;
 defvar SignedOpKind_Signed = 0;
 defvar SignedOpKind_Unsigned = 1;
 
+defvar QuadOpKind_ReadAcrossX = 0;
+defvar QuadOpKind_ReadAcrossY = 1;
+defvar QuadOpKind_ReadAcrossDiagonal = 2;
+
 // Intrinsic arg selection
 class IntrinArgSelectType;
 def IntrinArgSelect_Index : IntrinArgSelectType;
@@ -1152,8 +1156,16 @@ def WaveActiveBit : DXILOp<120, waveActiveBit> {
   let intrinsics = [
     IntrinSelect<int_dx_wave_reduce_or,
                  [
-                   IntrinArgIndex<0>, IntrinArgI8<WaveBitOpKind_Or>,
+                   IntrinArgIndex<0>, IntrinArgI8<WaveBitOpKind_Or>,                   
                  ]>,
+    IntrinSelect<int_dx_wave_reduce_xor,
+                 [
+                   IntrinArgIndex<0>, IntrinArgI8<WaveBitOpKind_Xor>,
+                 ]>,
+    IntrinSelect<int_dx_wave_reduce_and,
+                 [
+                   IntrinArgIndex<0>, IntrinArgI8<WaveBitOpKind_And>,
+                 ]>
   ];
 
   let arguments = [OverloadTy, Int8Ty];
@@ -1191,6 +1203,24 @@ def WavePrefixOp : DXILOp<121, wavePrefixOp> {
   ];
 
   let arguments = [OverloadTy, Int8Ty, Int8Ty];
+  let result = OverloadTy;
+  let overloads = [
+    Overloads<DXIL1_0, [HalfTy, FloatTy, DoubleTy, Int16Ty, Int32Ty, Int64Ty]>
+  ];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, []>];
+}
+
+def QuadOp : DXILOp<123, quadOp> {
+  let Doc = "returns the value from another lane within the quad by swapping values in a direction";
+  let intrinsics = [
+    IntrinSelect<int_dx_quad_read_across_x,
+                 [
+                   IntrinArgIndex<0>, IntrinArgI8<QuadOpKind_ReadAcrossX>
+                 ]>,
+  ];
+
+  let arguments = [OverloadTy, Int8Ty];
   let result = OverloadTy;
   let overloads = [
     Overloads<DXIL1_0, [HalfTy, FloatTy, DoubleTy, Int16Ty, Int32Ty, Int64Ty]>

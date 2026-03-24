@@ -85,6 +85,7 @@ class TestCppGlobalOperators(TestBase):
         self.assertTrue(got_type.IsPointerType())
         self.assertEqual(got_type.GetPointeeType().GetName(), "Struct")
 
+    @skipIfMTE  # Expression evaluation of overridden operator new fails under MTE.
     def test_operator_new(self):
         frame = self.prepare_executable_and_get_frame()
 
