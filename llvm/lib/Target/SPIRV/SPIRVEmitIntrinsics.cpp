@@ -2441,7 +2441,8 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I,
           report_fatal_error("Unknown composite intrinsic type");
         TypeToAssign = It->second;
       }
-    }
+    } else if (auto It = AggrConstTypes.find(I); It != AggrConstTypes.end())
+      TypeToAssign = It->second;
     TypeToAssign = restoreMutatedType(GR, I, TypeToAssign);
     GR->buildAssignType(B, TypeToAssign, I);
   }
@@ -3182,6 +3183,14 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
 
   preprocessUndefs(B);
   preprocessCompositeConstants(B);
+
+  for (BasicBlock &BB : Func)
+    for (PHINode &Phi : BB.phis())
+      if (Phi.getType()->isAggregateType()) {
+        AggrConstTypes[&Phi] = Phi.getType();
+        Phi.mutateType(B.getInt32Ty());
+      }
+
   SmallVector<Instruction *> Worklist(
       llvm::make_pointer_range(instructions(Func)));
 
