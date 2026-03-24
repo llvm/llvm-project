@@ -5262,6 +5262,24 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
 
     DeducedType = getDecltypeForExpr(Init);
     assert(!DeducedType.isNull());
+  } else if (!InitList && !AT->isGNUAutoType() && !AT->isConstrained() &&
+             Context.hasSameType(Type.getType(), Context.AutoDeductTy) &&
+             !Init->getType()->isSpecificBuiltinType(BuiltinType::Overload) &&
+             Init->getType().isCanonical() &&
+             !Init->getType()->isObjCObjectPointerType()) {
+    // Fast-path a subset of plain unconstrained `auto` deduction for
+    // non-init-list cases with canonical initializer types. For these cases,
+    // the deduced type can be computed directly from the initializer type by
+    // removing references, applying array/function decay, and dropping
+    // top-level cv-qualifiers.
+    QualType Ty = Init->getType();
+    Ty = Ty.getNonReferenceType();
+
+    if (Ty->isArrayType() || Ty->isFunctionType())
+      Ty = Context.getDecayedType(Ty);
+
+    Ty = Ty.getLocalUnqualifiedType();
+    DeducedType = Ty;
   } else {
     LocalInstantiationScope InstScope(*this);
 
@@ -5325,7 +5343,6 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
           TDK != TemplateDeductionResult::Success)
         return TDK;
     }
-
     // Could be null if somehow 'auto' appears in a non-deduced context.
     if (Deduced[0].getKind() != TemplateArgument::Type)
       return TemplateDeductionResult::Incomplete;
