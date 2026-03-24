@@ -141,7 +141,7 @@ cmake_path(NORMAL_PATH FLANG_RT_INSTALL_RESOURCE_LIB_PATH)
 
 # TODO: Support tests for the GPU target.
 set(FLANG_RT_INCLUDE_TESTS_default ${LLVM_INCLUDE_TESTS})
-if ("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn|^nvptx")
+if ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx")
   set(FLANG_RT_INCLUDE_TESTS_default OFF)
 endif()
 option(FLANG_RT_INCLUDE_TESTS "Generate build targets for the flang-rt unit and regression-tests." "${FLANG_RT_INCLUDE_TESTS_default}")
@@ -263,7 +263,7 @@ find_package(Threads)
 # FIXME: The NVPTX target will erroneously report it has backtrace support. This
 #        is caused by using "-c -flto" in the required flags to suppress CUDA
 #        tools from being required for the CMake flag checks to succeed.
-if (NOT "${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx")
+if (NOT "${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^nvptx")
   find_package(Backtrace)
 endif()
 set(HAVE_BACKTRACE ${Backtrace_FOUND})
