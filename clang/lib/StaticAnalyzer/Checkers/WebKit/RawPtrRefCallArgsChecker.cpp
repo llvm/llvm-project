@@ -178,8 +178,8 @@ public:
     }
   }
 
-  void checkThisArg(const CXXMemberCallExpr* MemberCallExpr,
-                    const Decl* DeclWithIssue) const {
+  void checkThisArg(const CXXMemberCallExpr *MemberCallExpr,
+                    const Decl *DeclWithIssue) const {
     if (auto *MD = MemberCallExpr->getMethodDecl()) {
       auto name = safeGetName(MD);
       if (name == "ref" || name == "deref")
@@ -200,8 +200,8 @@ public:
     reportBugOnThis(MemberCallExpr, DeclWithIssue);
   }
 
-  void checkArg(const Expr* Arg, QualType ParamType, const ParmVarDecl *Param,
-                const Decl* DeclWithIssue) const {
+  void checkArg(const Expr *Arg, QualType ParamType, const ParmVarDecl *Param,
+                const Decl *DeclWithIssue) const {
     std::optional<bool> IsUncounted = isUnsafePtr(ParamType);
     if (!IsUncounted || !(*IsUncounted))
       return;
