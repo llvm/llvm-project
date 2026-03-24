@@ -49,12 +49,12 @@ bool SIMachineFunctionInfo::MFMAVGPRForm = false;
 
 SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
                                              const GCNSubtarget *STI)
-    : AMDGPUMachineFunction(F, *STI), Mode(F, *STI), GWSResourcePSV(getTM(STI)),
-      UserSGPRInfo(F, *STI), WorkGroupIDX(false), WorkGroupIDY(false),
-      WorkGroupIDZ(false), WorkGroupInfo(false), LDSKernelId(false),
-      PrivateSegmentWaveByteOffset(false), WorkItemIDX(false),
-      WorkItemIDY(false), WorkItemIDZ(false), ImplicitArgPtr(false),
-      GITPtrHigh(0xffffffff), HighBitsOf32BitAddress(0),
+    : AMDGPUMachineFunctionInfo(F, *STI), Mode(F, *STI),
+      GWSResourcePSV(getTM(STI)), UserSGPRInfo(F, *STI), WorkGroupIDX(false),
+      WorkGroupIDY(false), WorkGroupIDZ(false), WorkGroupInfo(false),
+      LDSKernelId(false), PrivateSegmentWaveByteOffset(false),
+      WorkItemIDX(false), WorkItemIDY(false), WorkItemIDZ(false),
+      ImplicitArgPtr(false), GITPtrHigh(0xffffffff), HighBitsOf32BitAddress(0),
       IsWholeWaveFunction(F.getCallingConv() ==
                           CallingConv::AMDGPU_Gfx_WholeWave) {
   const GCNSubtarget &ST = *STI;
@@ -93,23 +93,10 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     MinNumAGPRs = MinNumAGPRAttr;
   }
 
-  if (AMDGPU::isChainCC(CC)) {
-    // Chain functions don't receive an SP from their caller, but are free to
-    // set one up. For now, we can use s32 to match what amdgpu_gfx functions
-    // would use if called, but this can be revisited.
-    // FIXME: Only reserve this if we actually need it.
-    StackPtrOffsetReg = AMDGPU::SGPR32;
-
-    ScratchRSrcReg = AMDGPU::SGPR48_SGPR49_SGPR50_SGPR51;
-
-    ArgInfo.PrivateSegmentBuffer =
-        ArgDescriptor::createRegister(ScratchRSrcReg);
-
-    ImplicitArgPtr = false;
-  } else if (!isEntryFunction()) {
+  if (!isEntryFunction()) {
     if (CC != CallingConv::AMDGPU_Gfx &&
         CC != CallingConv::AMDGPU_Gfx_WholeWave)
-      ArgInfo = AMDGPUArgumentUsageInfo::FixedABIFunctionInfo;
+      ArgInfo = AMDGPUFunctionArgInfo::FixedABIFunctionInfo;
 
     FrameOffsetReg = AMDGPU::SGPR33;
     StackPtrOffsetReg = AMDGPU::SGPR32;
@@ -117,13 +104,16 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     if (!ST.hasFlatScratchEnabled()) {
       // Non-entry functions have no special inputs for now, other registers
       // required for scratch access.
-      ScratchRSrcReg = AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3;
+      ScratchRSrcReg = AMDGPU::isChainCC(CC)
+                           ? AMDGPU::SGPR48_SGPR49_SGPR50_SGPR51
+                           : ScratchRSrcReg = AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3;
 
       ArgInfo.PrivateSegmentBuffer =
         ArgDescriptor::createRegister(ScratchRSrcReg);
     }
 
-    if (!F.hasFnAttribute("amdgpu-no-implicitarg-ptr"))
+    if (!F.hasFnAttribute("amdgpu-no-implicitarg-ptr") &&
+        !AMDGPU::isChainCC(CC))
       ImplicitArgPtr = true;
   } else {
     ImplicitArgPtr = false;

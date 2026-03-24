@@ -714,20 +714,17 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
       stderr_file_spec = file_action->GetFileSpec();
   }
 
-  if (log) {
-    if (stdin_file_spec || stdout_file_spec || stderr_file_spec)
-      LLDB_LOGF(log,
-                "ProcessGDBRemote::%s provided with STDIO paths via "
-                "launch_info: stdin=%s, stdout=%s, stderr=%s",
-                __FUNCTION__,
-                stdin_file_spec ? stdin_file_spec.GetPath().c_str() : "<null>",
-                stdout_file_spec ? stdout_file_spec.GetPath().c_str() : "<null>",
-                stderr_file_spec ? stderr_file_spec.GetPath().c_str() : "<null>");
-    else
-      LLDB_LOGF(log,
-                "ProcessGDBRemote::%s no STDIO paths given via launch_info",
-                __FUNCTION__);
-  }
+  if (stdin_file_spec || stdout_file_spec || stderr_file_spec)
+    LLDB_LOGF(log,
+              "ProcessGDBRemote::%s provided with STDIO paths via "
+              "launch_info: stdin=%s, stdout=%s, stderr=%s",
+              __FUNCTION__,
+              stdin_file_spec ? stdin_file_spec.GetPath().c_str() : "<null>",
+              stdout_file_spec ? stdout_file_spec.GetPath().c_str() : "<null>",
+              stderr_file_spec ? stderr_file_spec.GetPath().c_str() : "<null>");
+  else
+    LLDB_LOGF(log, "ProcessGDBRemote::%s no STDIO paths given via launch_info",
+              __FUNCTION__);
 
   const bool disable_stdio = (launch_flags & eLaunchFlagDisableSTDIO) != 0;
   if (stdin_file_spec || disable_stdio) {
@@ -925,7 +922,7 @@ Status ProcessGDBRemote::ConnectToDebugserver(llvm::StringRef connect_url) {
   m_gdb_comm.GetThreadSuffixSupported();
   m_gdb_comm.GetListThreadsInStopReplySupported();
   m_gdb_comm.GetHostInfo();
-  m_gdb_comm.GetVContSupported('c');
+  m_gdb_comm.GetVContSupported("c");
   m_gdb_comm.GetVAttachOrWaitSupported();
   m_gdb_comm.EnableErrorStringInPacket();
 
@@ -1305,7 +1302,7 @@ Status ProcessGDBRemote::DoResume(RunDirection direction) {
         continue_packet.PutCString("vCont");
 
         if (!m_continue_c_tids.empty()) {
-          if (m_gdb_comm.GetVContSupported('c')) {
+          if (m_gdb_comm.GetVContSupported("c")) {
             for (tid_collection::const_iterator
                      t_pos = m_continue_c_tids.begin(),
                      t_end = m_continue_c_tids.end();
@@ -1316,7 +1313,7 @@ Status ProcessGDBRemote::DoResume(RunDirection direction) {
         }
 
         if (!continue_packet_error && !m_continue_C_tids.empty()) {
-          if (m_gdb_comm.GetVContSupported('C')) {
+          if (m_gdb_comm.GetVContSupported("C")) {
             for (tid_sig_collection::const_iterator
                      s_pos = m_continue_C_tids.begin(),
                      s_end = m_continue_C_tids.end();
@@ -1328,7 +1325,7 @@ Status ProcessGDBRemote::DoResume(RunDirection direction) {
         }
 
         if (!continue_packet_error && !m_continue_s_tids.empty()) {
-          if (m_gdb_comm.GetVContSupported('s')) {
+          if (m_gdb_comm.GetVContSupported("s")) {
             for (tid_collection::const_iterator
                      t_pos = m_continue_s_tids.begin(),
                      t_end = m_continue_s_tids.end();
@@ -1339,7 +1336,7 @@ Status ProcessGDBRemote::DoResume(RunDirection direction) {
         }
 
         if (!continue_packet_error && !m_continue_S_tids.empty()) {
-          if (m_gdb_comm.GetVContSupported('S')) {
+          if (m_gdb_comm.GetVContSupported("S")) {
             for (tid_sig_collection::const_iterator
                      s_pos = m_continue_S_tids.begin(),
                      s_end = m_continue_S_tids.end();
@@ -1639,7 +1636,7 @@ bool ProcessGDBRemote::DoUpdateThreadList(ThreadList &old_thread_list,
                                           ThreadList &new_thread_list) {
   // locker will keep a mutex locked until it goes out of scope
   Log *log = GetLog(GDBRLog::Thread);
-  LLDB_LOGV(log, "pid = {0}", GetID());
+  LLDB_LOG_VERBOSE(log, "pid = {0}", GetID());
 
   size_t num_thread_ids = m_thread_ids.size();
   // The "m_thread_ids" thread ID list should always be updated after each stop
@@ -1658,11 +1655,11 @@ bool ProcessGDBRemote::DoUpdateThreadList(ThreadList &old_thread_list,
           old_thread_list_copy.RemoveThreadByProtocolID(tid, false));
       if (!thread_sp) {
         thread_sp = CreateThread(tid);
-        LLDB_LOGV(log, "Making new thread: {0} for thread ID: {1:x}.",
-                  thread_sp.get(), thread_sp->GetID());
+        LLDB_LOG_VERBOSE(log, "Making new thread: {0} for thread ID: {1:x}.",
+                         thread_sp.get(), thread_sp->GetID());
       } else {
-        LLDB_LOGV(log, "Found old thread: {0} for thread ID: {1:x}.",
-                  thread_sp.get(), thread_sp->GetID());
+        LLDB_LOG_VERBOSE(log, "Found old thread: {0} for thread ID: {1:x}.",
+                         thread_sp.get(), thread_sp->GetID());
       }
 
       SetThreadPc(thread_sp, i);
@@ -3841,13 +3838,9 @@ void ProcessGDBRemote::KillDebugserverProcess() {
 }
 
 void ProcessGDBRemote::Initialize() {
-  static llvm::once_flag g_once_flag;
-
-  llvm::call_once(g_once_flag, []() {
-    PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                  GetPluginDescriptionStatic(), CreateInstance,
-                                  DebuggerInitialize);
-  });
+  PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                GetPluginDescriptionStatic(), CreateInstance,
+                                DebuggerInitialize);
 }
 
 void ProcessGDBRemote::DebuggerInitialize(Debugger &debugger) {
@@ -4135,8 +4128,7 @@ Status ProcessGDBRemote::UpdateAutomaticSignalFiltering() {
 bool ProcessGDBRemote::StartNoticingNewThreads() {
   Log *log = GetLog(LLDBLog::Step);
   if (m_thread_create_bp_sp) {
-    if (log && log->GetVerbose())
-      LLDB_LOGF(log, "Enabled noticing new thread breakpoint.");
+    LLDB_LOGF_VERBOSE(log, "Enabled noticing new thread breakpoint.");
     m_thread_create_bp_sp->SetEnabled(true);
   } else {
     PlatformSP platform_sp(GetTarget().GetPlatform());
@@ -4144,10 +4136,9 @@ bool ProcessGDBRemote::StartNoticingNewThreads() {
       m_thread_create_bp_sp =
           platform_sp->SetThreadCreationBreakpoint(GetTarget());
       if (m_thread_create_bp_sp) {
-        if (log && log->GetVerbose())
-          LLDB_LOGF(
-              log, "Successfully created new thread notification breakpoint %i",
-              m_thread_create_bp_sp->GetID());
+        LLDB_LOGF_VERBOSE(
+            log, "Successfully created new thread notification breakpoint %i",
+            m_thread_create_bp_sp->GetID());
         m_thread_create_bp_sp->SetCallback(
             ProcessGDBRemote::NewThreadNotifyBreakpointHit, this, true);
       } else {
@@ -4160,8 +4151,7 @@ bool ProcessGDBRemote::StartNoticingNewThreads() {
 
 bool ProcessGDBRemote::StopNoticingNewThreads() {
   Log *log = GetLog(LLDBLog::Step);
-  if (log && log->GetVerbose())
-    LLDB_LOGF(log, "Disabling new thread notification breakpoint.");
+  LLDB_LOGF_VERBOSE(log, "Disabling new thread notification breakpoint.");
 
   if (m_thread_create_bp_sp)
     m_thread_create_bp_sp->SetEnabled(false);
@@ -5353,9 +5343,8 @@ llvm::Expected<LoadedModuleInfoList> ProcessGDBRemote::GetLoadedModuleList() {
                        // node
         });
 
-    if (log)
-      LLDB_LOGF(log, "found %" PRId32 " modules in total",
-                (int)list.m_list.size());
+    LLDB_LOGF(log, "found %" PRId32 " modules in total",
+              (int)list.m_list.size());
     return list;
   } else if (comm.GetQXferLibrariesReadSupported()) {
     // request the loaded library list
@@ -5413,9 +5402,8 @@ llvm::Expected<LoadedModuleInfoList> ProcessGDBRemote::GetLoadedModuleList() {
                        // node
         });
 
-    if (log)
-      LLDB_LOGF(log, "found %" PRId32 " modules in total",
-                (int)list.m_list.size());
+    LLDB_LOGF(log, "found %" PRId32 " modules in total",
+              (int)list.m_list.size());
     return list;
   } else {
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -5742,15 +5730,13 @@ ParseStructuredDataPacket(llvm::StringRef packet) {
   Log *log = GetLog(GDBRLog::Process);
 
   if (!packet.consume_front(s_async_json_packet_prefix)) {
-    if (log) {
-      LLDB_LOGF(
-          log,
-          "GDBRemoteCommunicationClientBase::%s() received $J packet "
-          "but was not a StructuredData packet: packet starts with "
-          "%s",
-          __FUNCTION__,
-          packet.slice(0, strlen(s_async_json_packet_prefix)).str().c_str());
-    }
+    LLDB_LOGF(
+        log,
+        "GDBRemoteCommunicationClientBase::%s() received $J packet "
+        "but was not a StructuredData packet: packet starts with "
+        "%s",
+        __FUNCTION__,
+        packet.slice(0, strlen(s_async_json_packet_prefix)).str().c_str());
     return StructuredData::ObjectSP();
   }
 

@@ -167,6 +167,9 @@ func.func @ops(%arg0: i32, %arg1: f32,
 // CHECK: llvm.call @baz() {optsize} : () -> ()
   llvm.call @baz() {optsize} : () -> ()
 
+// CHECK: llvm.call @baz() {builtin} : () -> ()
+  llvm.call @baz() {builtin} : () -> ()
+
 // CHECK: llvm.call @baz() {nobuiltin} : () -> ()
   llvm.call @baz() {nobuiltin} : () -> ()
 
@@ -243,8 +246,12 @@ func.func @ops(%arg0: i32, %arg1: f32,
 //
 // CHECK: %[[PTR:.*]] = llvm.inttoptr %[[I32]] : i32 to !llvm.ptr
 // CHECK: %{{.*}} = llvm.ptrtoint %[[PTR]] : !llvm.ptr to i32
+// CHECK: %{{.*}} = llvm.ptrtoaddr %[[PTR]] : !llvm.ptr to i64
   %25 = llvm.inttoptr %arg0 : i32 to !llvm.ptr
   %26 = llvm.ptrtoint %25 : !llvm.ptr to i32
+  %a26 = llvm.ptrtoaddr %25 : !llvm.ptr to i64
+  %vp = llvm.mlir.poison : vector<3 x !llvm.ptr>
+  %va26 = llvm.ptrtoaddr %vp : vector<3 x !llvm.ptr> to vector<3 x i64>
 
 // Extended and Quad floating point
 //
@@ -829,6 +836,55 @@ llvm.func @experimental_noalias_scope_with_string_id() {
   llvm.return
 }
 
+// CHECK-LABEL: @experimental_constrained_fadd
+llvm.func @experimental_constrained_fadd(%a: f32, %b: f32) {
+  // CHECK: llvm.intr.experimental.constrained.fadd %{{.*}}, %{{.*}} towardzero ignore : f32
+  %0 = llvm.intr.experimental.constrained.fadd %a, %b towardzero ignore : f32
+  llvm.return
+}
+
+// CHECK-LABEL: @experimental_constrained_fsub
+llvm.func @experimental_constrained_fsub(%a: f32, %b: f32) {
+  // CHECK: llvm.intr.experimental.constrained.fsub %{{.*}}, %{{.*}} towardzero ignore : f32
+  %0 = llvm.intr.experimental.constrained.fsub %a, %b towardzero ignore : f32
+  llvm.return
+}
+
+// CHECK-LABEL: @experimental_constrained_fmul
+llvm.func @experimental_constrained_fmul(%a: f32, %b: f32) {
+  // CHECK: llvm.intr.experimental.constrained.fmul %{{.*}}, %{{.*}} towardzero ignore : f32
+  %0 = llvm.intr.experimental.constrained.fmul %a, %b towardzero ignore : f32
+  llvm.return
+}
+
+// CHECK-LABEL: @experimental_constrained_fdiv
+llvm.func @experimental_constrained_fdiv(%a: f32, %b: f32) {
+  // CHECK: llvm.intr.experimental.constrained.fdiv %{{.*}}, %{{.*}} towardzero ignore : f32
+  %0 = llvm.intr.experimental.constrained.fdiv %a, %b towardzero ignore : f32
+  llvm.return
+}
+
+// CHECK-LABEL: @experimental_constrained_frem
+llvm.func @experimental_constrained_frem(%a: f32, %b: f32) {
+  // CHECK: llvm.intr.experimental.constrained.frem %{{.*}}, %{{.*}} towardzero ignore : f32
+  %0 = llvm.intr.experimental.constrained.frem %a, %b towardzero ignore : f32
+  llvm.return
+}
+
+// CHECK-LABEL: @experimental_constrained_fma
+llvm.func @experimental_constrained_fma(%a: f32, %b: f32, %c: f32) {
+  // CHECK: llvm.intr.experimental.constrained.fma %{{.*}}, %{{.*}}, %{{.*}} towardzero ignore : f32
+  %0 = llvm.intr.experimental.constrained.fma %a, %b, %c towardzero ignore : f32
+  llvm.return
+}
+
+// CHECK-LABEL: @experimental_constrained_fmuladd
+llvm.func @experimental_constrained_fmuladd(%a: f32, %b: f32, %c: f32) {
+  // CHECK: llvm.intr.experimental.constrained.fmuladd %{{.*}}, %{{.*}}, %{{.*}} towardzero ignore : f32
+  %0 = llvm.intr.experimental.constrained.fmuladd %a, %b, %c towardzero ignore : f32
+  llvm.return
+}
+
 // CHECK-LABEL: @experimental_constrained_fptrunc
 llvm.func @experimental_constrained_fptrunc(%in: f64) {
   // CHECK: llvm.intr.experimental.constrained.fptrunc %{{.*}} towardzero ignore : f64 to f32
@@ -1110,3 +1166,39 @@ llvm.func @escapedtypename() {
   %1 = llvm.alloca %0 x !llvm.struct<"bucket<string, double, '\\b'>::Iterator", (ptr, i64, i64)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
   llvm.return
 }
+
+// Metadata attributes and llvm.named_metadata op.
+
+llvm.func @md_kernel() {
+  llvm.return
+}
+
+// CHECK: llvm.named_metadata "foo.version" [#llvm.md_node<#llvm.md_const<1 : i32>, #llvm.md_const<0 : i32>, #llvm.md_const<0 : i32>>]
+llvm.named_metadata "foo.version" [
+  #llvm.md_node<
+    #llvm.md_const<1 : i32>,
+    #llvm.md_const<0 : i32>,
+    #llvm.md_const<0 : i32>
+  >
+]
+
+// CHECK: llvm.named_metadata "foo.language" [#llvm.md_node<#llvm.md_string<"Bar">, #llvm.md_const<1 : i32>, #llvm.md_const<2 : i32>>]
+llvm.named_metadata "foo.language" [
+  #llvm.md_node<
+    #llvm.md_string<"Bar">,
+    #llvm.md_const<1 : i32>,
+    #llvm.md_const<2 : i32>
+  >
+]
+
+// CHECK: llvm.named_metadata "foo.kernel" [#llvm.md_node<#llvm.md_func<@md_kernel>, #llvm.md_node<>, #llvm.md_node<#llvm.md_const<0 : i32>, #llvm.md_string<"foo.buffer">>>]
+llvm.named_metadata "foo.kernel" [
+  #llvm.md_node<
+    #llvm.md_func<@md_kernel>,
+    #llvm.md_node<>,
+    #llvm.md_node<
+      #llvm.md_const<0 : i32>,
+      #llvm.md_string<"foo.buffer">
+    >
+  >
+]

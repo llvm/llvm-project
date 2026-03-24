@@ -128,10 +128,10 @@ define void @foo(i1 %cond) {
   auto &Tracker = Ctx.getTracker();
   Tracker.save();
   auto It = BB0->begin();
-  auto *Br = cast<sandboxir::BranchInst>(&*It++);
+  auto *Br = cast<sandboxir::CondBrInst>(&*It++);
 
   unsigned SuccIdx = 0;
-  SmallVector<sandboxir::BasicBlock *> ExpectedSuccs({BB2, BB1});
+  SmallVector<sandboxir::BasicBlock *> ExpectedSuccs({BB1, BB2});
   for (auto *Succ : Br->successors())
     EXPECT_EQ(Succ, ExpectedSuccs[SuccIdx++]);
 

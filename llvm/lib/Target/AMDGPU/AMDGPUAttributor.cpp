@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -362,11 +363,7 @@ struct AAUniformWorkGroupSizeFunction : public AAUniformWorkGroupSize {
     if (CC != CallingConv::AMDGPU_KERNEL)
       return;
 
-    bool InitialValue = false;
-    if (F->hasFnAttribute("uniform-work-group-size"))
-      InitialValue =
-          F->getFnAttribute("uniform-work-group-size").getValueAsString() ==
-          "true";
+    bool InitialValue = F->hasFnAttribute("uniform-work-group-size");
 
     if (InitialValue)
       indicateOptimisticFixpoint();
@@ -401,13 +398,13 @@ struct AAUniformWorkGroupSizeFunction : public AAUniformWorkGroupSize {
   }
 
   ChangeStatus manifest(Attributor &A) override {
-    SmallVector<Attribute, 8> AttrList;
-    LLVMContext &Ctx = getAssociatedFunction()->getContext();
+    if (!getAssumed())
+      return ChangeStatus::UNCHANGED;
 
-    AttrList.push_back(Attribute::get(Ctx, "uniform-work-group-size",
-                                      getAssumed() ? "true" : "false"));
-    return A.manifestAttrs(getIRPosition(), AttrList,
-                           /* ForceReplace */ true);
+    LLVMContext &Ctx = getAssociatedFunction()->getContext();
+    return A.manifestAttrs(getIRPosition(),
+                           {Attribute::get(Ctx, "uniform-work-group-size")},
+                           /*ForceReplace=*/true);
   }
 
   bool isValidState() const override {
@@ -1567,14 +1564,10 @@ AAAMDGPUClusterDims::createForPosition(const IRPosition &IRP, Attributor &A) {
   llvm_unreachable("AAAMDGPUClusterDims is only valid for function position");
 }
 
-static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
-                    AMDGPUAttributorOptions Options,
+static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass,
+                    bool DeleteFns, Module &M, AnalysisGetter &AG,
+                    TargetMachine &TM, AMDGPUAttributorOptions Options,
                     ThinOrFullLTOPhase LTOPhase) {
-  SetVector<Function *> Functions;
-  for (Function &F : M) {
-    if (!F.isIntrinsic())
-      Functions.insert(&F);
-  }
 
   CallGraphUpdater CGUpdater;
   BumpPtrAllocator Allocator;
@@ -1591,7 +1584,8 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
   AttributorConfig AC(CGUpdater);
   AC.IsClosedWorldModule = Options.IsClosedWorld;
   AC.Allowed = &Allowed;
-  AC.IsModulePass = true;
+  AC.IsModulePass = IsModulePass;
+  AC.DeleteFns = DeleteFns;
   AC.DefaultInitializeLiveInternals = false;
   AC.IndirectCalleeSpecializationCallback =
       [](Attributor &A, const AbstractAttribute &AA, CallBase &CB,
@@ -1663,7 +1657,41 @@ PreservedAnalyses llvm::AMDGPUAttributorPass::run(Module &M,
       AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   AnalysisGetter AG(FAM);
 
+  SetVector<Function *> Functions;
+  for (Function &F : M) {
+    if (!F.isIntrinsic())
+      Functions.insert(&F);
+  }
+
   // TODO: Probably preserves CFG
-  return runImpl(M, AG, TM, Options, LTOPhase) ? PreservedAnalyses::none()
-                                               : PreservedAnalyses::all();
+  return runImpl(Functions, /*IsModulePass=*/true, /*DeleteFns=*/true, M, AG,
+                 TM, Options, LTOPhase)
+             ? PreservedAnalyses::none()
+             : PreservedAnalyses::all();
+}
+
+PreservedAnalyses llvm::AMDGPUAttributorCGSCCPass::run(LazyCallGraph::SCC &C,
+                                                       CGSCCAnalysisManager &AM,
+                                                       LazyCallGraph &CG,
+                                                       CGSCCUpdateResult &UR) {
+
+  FunctionAnalysisManager &FAM =
+      AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
+  AnalysisGetter AG(FAM);
+
+  SetVector<Function *> Functions;
+  for (LazyCallGraph::Node &N : C) {
+    Function *F = &N.getFunction();
+    if (!F->isIntrinsic())
+      Functions.insert(F);
+  }
+
+  AMDGPUAttributorOptions Options;
+  Module *M = C.begin()->getFunction().getParent();
+  // In the CGSCC pipeline, avoid untracked call graph modifications by
+  // disabling function deletion, mirroring the generic AttributorCGSCCPass.
+  return runImpl(Functions, /*IsModulePass=*/false, /*DeleteFns=*/false, *M, AG,
+                 TM, Options, ThinOrFullLTOPhase::None)
+             ? PreservedAnalyses::none()
+             : PreservedAnalyses::all();
 }

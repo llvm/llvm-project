@@ -29,7 +29,7 @@ entry:
 define void @bar(<8 x i64> %arg, ptr addrspace(1) %add.ptr) {
 ; X86-LABEL: bar:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    vpbroadcastd {{.*#+}} zmm1 = [257,257,257,257,257,257,257,257,257,257,257,257,257,257,257,257]
+; X86-NEXT:    vpbroadcastq {{.*#+}} zmm1 = [257,0,257,0,257,0,257,0,257,0,257,0,257,0,257,0]
 ; X86-NEXT:    movb $2, %al
 ; X86-NEXT:    kmovd %eax, %k1
 ; X86-NEXT:    vmovdqa64 %zmm0, %zmm1 {%k1}

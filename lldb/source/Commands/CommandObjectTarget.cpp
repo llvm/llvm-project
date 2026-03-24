@@ -441,8 +441,8 @@ protected:
                                         core_file.GetPath());
         }
       } else {
-        result.AppendMessageWithFormat(
-            "Current executable set to '%s' (%s).\n",
+        result.AppendMessageWithFormatv(
+            "Current executable set to '{0}' ({1}).",
             file_spec.GetPath().c_str(),
             target_sp->GetArchitecture().GetArchitectureName());
         result.SetStatus(eReturnStatusSuccessFinishNoResult);
@@ -1047,13 +1047,10 @@ protected:
         const char *to = command.GetArgumentAtIndex(i + 1);
 
         if (from[0] && to[0]) {
-          Log *log = GetLog(LLDBLog::Host);
-          if (log) {
-            LLDB_LOGF(log,
-                      "target modules search path adding ImageSearchPath "
-                      "pair: '%s' -> '%s'",
-                      from, to);
-          }
+          LLDB_LOGF(GetLog(LLDBLog::Host),
+                    "target modules search path adding ImageSearchPath "
+                    "pair: '%s' -> '%s'",
+                    from, to);
           bool last_pair = ((argc - i) == 2);
           target.GetImageSearchPathList().Append(
               from, to, last_pair); // Notify if this is the last pair
@@ -3016,9 +3013,9 @@ protected:
                           if (target.SetSectionLoadAddress(section_sp,
                                                            load_addr))
                             changed = true;
-                          result.AppendMessageWithFormat(
-                              "section '%s' loaded at 0x%" PRIx64 "\n",
-                              sect_name, load_addr);
+                          result.AppendMessageWithFormatv(
+                              "section '{0}' loaded at {1:x}", sect_name,
+                              load_addr);
                         }
                       } else {
                         result.AppendErrorWithFormat("no section found that "
@@ -3120,7 +3117,7 @@ protected:
             if (matching_modules.GetModulePointerAtIndex(i)
                     ->GetFileSpec()
                     .GetPath(path, sizeof(path)))
-              result.AppendMessageWithFormat("%s\n", path);
+              result.AppendMessageWithFormatv("{0}", path);
           }
         } else {
           result.AppendErrorWithFormat(
@@ -4389,8 +4386,8 @@ protected:
         if (object_file && object_file->GetFileSpec() == symbol_fspec) {
           // Provide feedback that the symfile has been successfully added.
           const FileSpec &module_fs = module_sp->GetFileSpec();
-          result.AppendMessageWithFormat(
-              "symbol file '%s' has been added to '%s'\n", symfile_path,
+          result.AppendMessageWithFormatv(
+              "symbol file '{0}' has been added to '{1}'", symfile_path,
               module_fs.GetPath().c_str());
 
           // Let clients know something changed in the module if it is
@@ -4402,9 +4399,7 @@ protected:
           // Make sure we load any scripting resources that may be embedded
           // in the debug info files in case the platform supports that.
           Status error;
-          StreamString feedback_stream;
-          module_sp->LoadScriptingResourceInTarget(target, error,
-                                                   feedback_stream);
+          module_sp->LoadScriptingResourceInTarget(target, error);
           if (error.Fail() && error.AsCString())
             result.AppendWarningWithFormat(
                 "unable to load scripting data for module %s - error "
@@ -4413,8 +4408,6 @@ protected:
                     .GetFileNameStrippingExtension()
                     .GetCString(),
                 error.AsCString());
-          else if (feedback_stream.GetSize())
-            result.AppendWarning(feedback_stream.GetData());
 
           flush = true;
           result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -4691,133 +4684,6 @@ protected:
   OptionGroupBoolean m_current_stack_option;
 };
 
-#pragma mark CommandObjectTargetSymbolsScriptedRegister
-
-class CommandObjectTargetSymbolsScriptedRegister : public CommandObjectParsed {
-public:
-  CommandObjectTargetSymbolsScriptedRegister(CommandInterpreter &interpreter)
-      : CommandObjectParsed(
-            interpreter, "target symbols scripted register",
-            "Register a scripted symbol locator for the current target.",
-            "target symbols scripted register -C <script-class> "
-            "[-k <key> -v <value> ...]"),
-        m_python_class_options("scripted symbol locator", true, 'C', 'k', 'v',
-                               OptionGroupPythonClassWithDict::eScriptClass) {
-    m_all_options.Append(&m_python_class_options,
-                         LLDB_OPT_SET_1 | LLDB_OPT_SET_2, LLDB_OPT_SET_1);
-    m_all_options.Finalize();
-  }
-
-  ~CommandObjectTargetSymbolsScriptedRegister() override = default;
-
-  Options *GetOptions() override { return &m_all_options; }
-
-protected:
-  void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetTarget();
-
-    llvm::StringRef class_name = m_python_class_options.GetName();
-    if (class_name.empty()) {
-      result.AppendError("must specify a script class with -C");
-      return;
-    }
-
-    StructuredData::DictionarySP args_sp;
-    StructuredData::ObjectSP extra = m_python_class_options.GetStructuredData();
-    if (extra && extra->GetType() == lldb::eStructuredDataTypeDictionary)
-      args_sp = std::static_pointer_cast<StructuredData::Dictionary>(extra);
-
-    Status error = target.RegisterScriptedSymbolLocator(class_name, args_sp);
-    if (error.Fail()) {
-      result.AppendErrorWithFormat(
-          "failed to register scripted symbol locator: %s\n",
-          error.AsCString());
-      return;
-    }
-
-    result.AppendMessageWithFormat(
-        "Registered scripted symbol locator '%s' for target.\n",
-        class_name.str().c_str());
-    result.SetStatus(eReturnStatusSuccessFinishResult);
-  }
-
-  OptionGroupPythonClassWithDict m_python_class_options;
-  OptionGroupOptions m_all_options;
-};
-
-#pragma mark CommandObjectTargetSymbolsScriptedClear
-
-class CommandObjectTargetSymbolsScriptedClear : public CommandObjectParsed {
-public:
-  CommandObjectTargetSymbolsScriptedClear(CommandInterpreter &interpreter)
-      : CommandObjectParsed(
-            interpreter, "target symbols scripted clear",
-            "Clear the scripted symbol locator for the current target.",
-            "target symbols scripted clear") {}
-
-  ~CommandObjectTargetSymbolsScriptedClear() override = default;
-
-protected:
-  void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetTarget();
-    target.ClearScriptedSymbolLocator();
-    result.AppendMessageWithFormat(
-        "Cleared scripted symbol locator for target.\n");
-    result.SetStatus(eReturnStatusSuccessFinishResult);
-  }
-};
-
-#pragma mark CommandObjectTargetSymbolsScriptedInfo
-
-class CommandObjectTargetSymbolsScriptedInfo : public CommandObjectParsed {
-public:
-  CommandObjectTargetSymbolsScriptedInfo(CommandInterpreter &interpreter)
-      : CommandObjectParsed(
-            interpreter, "target symbols scripted info",
-            "Show the current scripted symbol locator for the target.",
-            "target symbols scripted info") {}
-
-  ~CommandObjectTargetSymbolsScriptedInfo() override = default;
-
-protected:
-  void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetTarget();
-    llvm::StringRef class_name = target.GetScriptedSymbolLocatorClassName();
-    if (class_name.empty()) {
-      result.AppendMessageWithFormat(
-          "No scripted symbol locator registered for this target.\n");
-    } else {
-      result.AppendMessageWithFormat("Scripted symbol locator: %s\n",
-                                     class_name.str().c_str());
-    }
-    result.SetStatus(eReturnStatusSuccessFinishResult);
-  }
-};
-
-#pragma mark CommandObjectTargetSymbolsScripted
-
-class CommandObjectTargetSymbolsScripted : public CommandObjectMultiword {
-public:
-  CommandObjectTargetSymbolsScripted(CommandInterpreter &interpreter)
-      : CommandObjectMultiword(
-            interpreter, "target symbols scripted",
-            "Commands for managing scripted symbol locators.",
-            "target symbols scripted <sub-command> ...") {
-    LoadSubCommand(
-        "register",
-        CommandObjectSP(
-            new CommandObjectTargetSymbolsScriptedRegister(interpreter)));
-    LoadSubCommand(
-        "clear", CommandObjectSP(
-                     new CommandObjectTargetSymbolsScriptedClear(interpreter)));
-    LoadSubCommand(
-        "info", CommandObjectSP(
-                    new CommandObjectTargetSymbolsScriptedInfo(interpreter)));
-  }
-
-  ~CommandObjectTargetSymbolsScripted() override = default;
-};
-
 #pragma mark CommandObjectTargetSymbols
 
 // CommandObjectTargetSymbols
@@ -4832,9 +4698,6 @@ public:
             "target symbols <sub-command> ...") {
     LoadSubCommand(
         "add", CommandObjectSP(new CommandObjectTargetSymbolsAdd(interpreter)));
-    LoadSubCommand(
-        "scripted",
-        CommandObjectSP(new CommandObjectTargetSymbolsScripted(interpreter)));
   }
 
   ~CommandObjectTargetSymbols() override = default;
@@ -5208,8 +5071,8 @@ protected:
       Target::StopHookCommandLine *hook_ptr =
           static_cast<Target::StopHookCommandLine *>(new_hook_sp.get());
       hook_ptr->SetActionFromStrings(m_options.m_one_liner);
-      result.AppendMessageWithFormat("Stop hook #%" PRIu64 " added.\n",
-                                     new_hook_sp->GetID());
+      result.AppendMessageWithFormatv("Stop hook #{0} added.",
+                                      new_hook_sp->GetID());
     } else if (!m_python_class_options.GetName().empty()) {
       // This is a scripted stop hook:
       Target::StopHookScripted *hook_ptr =
@@ -5218,8 +5081,8 @@ protected:
           m_python_class_options.GetName(),
           m_python_class_options.GetStructuredData());
       if (error.Success())
-        result.AppendMessageWithFormat("Stop hook #%" PRIu64 " added.\n",
-                                       new_hook_sp->GetID());
+        result.AppendMessageWithFormatv("Stop hook #{0} added.",
+                                        new_hook_sp->GetID());
       else {
         // FIXME: Set the stop hook ID counter back.
         result.AppendErrorWithFormat("Couldn't add stop hook: %s",
@@ -5587,8 +5450,8 @@ protected:
       return;
     }
 
-    result.AppendMessageWithFormat(
-        "successfully registered scripted frame provider '%s' for target\n",
+    result.AppendMessageWithFormatv(
+        "successfully registered scripted frame provider '{0}' for target",
         m_class_options.GetName().c_str());
   }
 
@@ -5693,8 +5556,8 @@ protected:
     }
 
     if (size_t num_removed_providers = removed_provider_ids.size()) {
-      result.AppendMessageWithFormat(
-          "Successfully removed %zu frame-providers.\n", num_removed_providers);
+      result.AppendMessageWithFormatv(
+          "Successfully removed {0} frame-providers.", num_removed_providers);
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     } else {
       result.AppendError("0 frame providers removed.\n");

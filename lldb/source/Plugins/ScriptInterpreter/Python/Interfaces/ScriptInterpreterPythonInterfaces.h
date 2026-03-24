@@ -10,10 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTINTERPRETERPYTHONINTERFACES_H
 
 #include "lldb/Core/PluginInterface.h"
-#include "lldb/Host/Config.h"
 #include "lldb/lldb-private.h"
-
-#if LLDB_ENABLE_PYTHON
 
 #include "OperatingSystemPythonInterface.h"
 #include "ScriptedBreakpointPythonInterface.h"
@@ -22,7 +19,6 @@
 #include "ScriptedPlatformPythonInterface.h"
 #include "ScriptedProcessPythonInterface.h"
 #include "ScriptedStopHookPythonInterface.h"
-#include "ScriptedSymbolLocatorPythonInterface.h"
 #include "ScriptedThreadPlanPythonInterface.h"
 
 namespace lldb_private {
@@ -37,5 +33,4 @@ public:
 };
 } // namespace lldb_private
 
-#endif // LLDB_ENABLE_PYTHON
 #endif // LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTINTERPRETERPYTHONINTERFACES_H

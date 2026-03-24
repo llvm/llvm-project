@@ -116,6 +116,9 @@ xegpu::getDistVecTypeBasedOnLaneLayout(xegpu::DistributeLayoutAttr layout,
              effectiveLaneLayout.size() &&
          "Rank of the original vector type should be greater or equal to the "
          "size of the lane layout to distribute the vector type.");
+  // TODO: replace the implementation with
+  //   auto distributedShape = layout.computeDistributedShape(
+  //       SmallVector<int64_t>(originalType.getShape()));
   SmallVector<int64_t> distributedShape(originalType.getShape());
   // Only distribute the last `laneLayout.size()` dimensions. The remaining
   // dimensions are not distributed.
@@ -671,12 +674,19 @@ Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
                                      vector::CombiningKind kind,
                                      int64_t reductionDim, Location loc,
                                      PatternRewriter &rewriter) {
-  // Expecting a 2D source vector.
-  assert(src.getType().getRank() == 2 && "expected a 2D source vector");
   VectorType sourceType = src.getType();
-  int64_t sourceH = sourceType.getShape()[0];
-  int64_t sourceW = sourceType.getShape()[1];
-  int nSlices = (reductionDim == 0) ? sourceW : sourceH;
+  int64_t sourceRank = sourceType.getRank();
+  // Expecting at least a 2D source vector. Leading dimensions (all except the
+  // last two) must be unit.
+  assert(sourceRank >= 2 && "expected at least a 2D source vector");
+  for (int64_t i = 0; i < sourceRank - 2; ++i)
+    assert(sourceType.getShape()[i] == 1 &&
+           "expected leading dimensions to be unit");
+  int64_t rowIdx = sourceRank - 2;
+  int64_t columnIdx = sourceRank - 1;
+  int64_t sourceH = sourceType.getShape()[rowIdx];
+  int64_t sourceW = sourceType.getShape()[columnIdx];
+  int nSlices = (reductionDim == rowIdx) ? sourceW : sourceH;
   // Create a constant vector to hold the result of the reduction.
   TypedAttr zeroAttr = rewriter.getZeroAttr(sourceType.getElementType());
   Value reductionResult = arith::ConstantOp::create(
@@ -688,19 +698,24 @@ Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
   xegpu::setTemporaryLayout(cast<OpResult>(reductionResult), accLayout);
   // For each slice of the source, extract the slice vector, do a reduction
   // and, insert the reduced value back to the result vector.
+  int64_t accRank = acc.getType().getRank();
   for (int i = 0; i < nSlices; ++i) {
-    SmallVector<int64_t, 2> sliceOffsets, sliceSizes;
-    if (reductionDim == 1) {
-      sliceOffsets = {i, 0};
-      sliceSizes = {1, sourceW};
+    // Build nD offsets, sizes, and strides. Leading unit dims get
+    // offset=0, size=1. The last two dims are set based on reductionDim.
+    SmallVector<int64_t> sliceOffsets(sourceRank, 0);
+    SmallVector<int64_t> sliceSizes(sourceRank, 1);
+    SmallVector<int64_t> strides(sourceRank, 1);
+    if (reductionDim == columnIdx) {
+      sliceOffsets[rowIdx] = i;
+      sliceSizes[columnIdx] = sourceW;
     } else {
-      sliceOffsets = {0, i};
-      sliceSizes = {sourceH, 1};
+      sliceOffsets[columnIdx] = i;
+      sliceSizes[rowIdx] = sourceH;
     }
 
     vector::ExtractStridedSliceOp extractOp =
         vector::ExtractStridedSliceOp::create(rewriter, loc, src, sliceOffsets,
-                                              sliceSizes, {1, 1});
+                                              sliceSizes, strides);
     // Extract strided slice has the same layout as src.
     xegpu::setTemporaryLayout(extractOp->getOpResult(0), srcLayout);
 
@@ -716,15 +731,150 @@ Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
     xegpu::setTemporaryLayout(slice->getOpOperand(0), srcLayout);
     xegpu::setTemporaryLayout(slice->getOpResult(0), accLayout);
     // Extract and reduction results in scalars, so no result layout is needed.
-    Value accExtract = vector::ExtractOp::create(rewriter, loc, acc, i);
+    // Build multi-dim index into acc (sourceRank-1 dims, i.e. source shape with
+    // the reduction dim removed). Leading unit dims get index 0.
+    SmallVector<int64_t> accIdx(accRank, 0);
+    accIdx[accRank - 1] = i;
+    Value accExtract = vector::ExtractOp::create(rewriter, loc, acc, accIdx);
     Value reduction = vector::ReductionOp::create(
         rewriter, loc, kind, slice.getResult(), accExtract);
-    reductionResult =
-        vector::InsertOp::create(rewriter, loc, reduction, reductionResult, i);
+    reductionResult = vector::InsertOp::create(rewriter, loc, reduction,
+                                               reductionResult, accIdx);
     // Insert op should have the same layout as the accumulator.
     xegpu::setTemporaryLayout(cast<OpResult>(reductionResult), accLayout);
   }
   return reductionResult;
+}
+
+Value xegpu::lowerCrossLaneReductionToShuffles(
+    TypedValue<VectorType> src, TypedValue<VectorType> acc,
+    vector::CombiningKind kind, int64_t reductionDim, int64_t reductionSize,
+    Location loc, PatternRewriter &rewriter) {
+  // Expecting a 2D source vector.
+  assert(src.getType().getRank() == 2 && "expected a 2D source vector");
+  VectorType sourceType = src.getType();
+  int64_t sourceH = sourceType.getShape()[0];
+  int64_t sourceW = sourceType.getShape()[1];
+
+  // Create a constant vector to hold the result of the reduction.
+  TypedAttr zeroAttr = rewriter.getZeroAttr(sourceType.getElementType());
+  Value reductionResult = arith::ConstantOp::create(
+      rewriter, loc, acc.getType(),
+      DenseElementsAttr::get(acc.getType(), zeroAttr));
+
+  // nSlices is the number of reduction operations needed to reduce the entire
+  // source vector. For example, if reductionDim is 0, we are reducing across
+  // rows, and each slice is a column of the source vector. So the number of
+  // slices is the number of columns, which is sourceW.
+  int nSlices = (reductionDim == 0) ? sourceW : sourceH;
+
+  // For each slice of the source, extract the slice vector, do a reduction
+  // and, insert the reduced value back to the result vector.
+  for (int i = 0; i < nSlices; ++i) {
+    SmallVector<int64_t, 2> sliceOffsets, sliceSizes;
+    if (reductionDim == 1) {
+      sliceOffsets = {i, 0};
+      sliceSizes = {1, sourceW};
+    } else {
+      sliceOffsets = {0, i};
+      sliceSizes = {sourceH, 1};
+    }
+
+    vector::ExtractStridedSliceOp extractOp =
+        vector::ExtractStridedSliceOp::create(rewriter, loc, src, sliceOffsets,
+                                              sliceSizes, {1, 1});
+    int64_t nSliceElements = extractOp.getResult().getType().getNumElements();
+    vector::ShapeCastOp slice = vector::ShapeCastOp::create(
+        rewriter, loc,
+        VectorType::get({nSliceElements}, sourceType.getElementType()),
+        extractOp.getResult());
+
+    Value accExtract = vector::ExtractOp::create(rewriter, loc, acc, i);
+    Value fullReduce =
+        xegpu::subgroupReduction(loc, rewriter, slice, kind, reductionSize);
+    fullReduce =
+        vector::makeArithReduction(rewriter, loc, kind, fullReduce, accExtract);
+    reductionResult =
+        vector::InsertOp::create(rewriter, loc, fullReduce, reductionResult, i);
+  }
+  return reductionResult;
+}
+
+Value xegpu::createReductionNeutralValue(OpBuilder &builder, Location loc,
+                                         VectorType type,
+                                         vector::CombiningKind kind) {
+  Type elemTy = type.getElementType();
+
+  switch (kind) {
+  case vector::CombiningKind::ADD:
+  case vector::CombiningKind::XOR:
+  case vector::CombiningKind::OR:
+    return arith::ConstantOp::create(
+        builder, loc, type,
+        DenseElementsAttr::get(type, builder.getZeroAttr(elemTy)));
+
+  case vector::CombiningKind::MUL:
+  case vector::CombiningKind::AND:
+    return arith::ConstantOp::create(
+        builder, loc, type,
+        DenseElementsAttr::get(type, builder.getOneAttr(elemTy)));
+
+  case vector::CombiningKind::MINSI:
+    // Use max signed int value for signed integer min
+    if (auto intTy = dyn_cast<IntegerType>(elemTy)) {
+      auto maxVal = APInt::getSignedMaxValue(intTy.getWidth());
+      return arith::ConstantOp::create(
+          builder, loc, type,
+          DenseElementsAttr::get(type, builder.getIntegerAttr(elemTy, maxVal)));
+    }
+    return nullptr;
+
+  case vector::CombiningKind::MINUI:
+    if (auto intTy = dyn_cast<IntegerType>(elemTy)) {
+      auto maxVal = APInt::getMaxValue(intTy.getWidth());
+      return arith::ConstantOp::create(
+          builder, loc, type,
+          DenseElementsAttr::get(type, builder.getIntegerAttr(elemTy, maxVal)));
+    }
+    return nullptr;
+
+  case vector::CombiningKind::MAXSI:
+    if (auto intTy = dyn_cast<IntegerType>(elemTy)) {
+      auto minVal = APInt::getSignedMinValue(intTy.getWidth());
+      return arith::ConstantOp::create(
+          builder, loc, type,
+          DenseElementsAttr::get(type, builder.getIntegerAttr(elemTy, minVal)));
+    }
+    return nullptr;
+
+  case vector::CombiningKind::MAXUI:
+    return arith::ConstantOp::create(
+        builder, loc, type,
+        DenseElementsAttr::get(type, builder.getZeroAttr(elemTy)));
+
+  case vector::CombiningKind::MINNUMF:
+  case vector::CombiningKind::MINIMUMF:
+    // Use +infinity for float min operations
+    if (auto floatTy = dyn_cast<FloatType>(elemTy)) {
+      auto posInf = APFloat::getInf(floatTy.getFloatSemantics());
+      return arith::ConstantOp::create(
+          builder, loc, type,
+          DenseElementsAttr::get(type, builder.getFloatAttr(elemTy, posInf)));
+    }
+    return nullptr;
+
+  case vector::CombiningKind::MAXNUMF:
+  case vector::CombiningKind::MAXIMUMF:
+    // Use -infinity for float max operations
+    if (auto floatTy = dyn_cast<FloatType>(elemTy)) {
+      auto negInf = APFloat::getInf(floatTy.getFloatSemantics(), true);
+      return arith::ConstantOp::create(
+          builder, loc, type,
+          DenseElementsAttr::get(type, builder.getFloatAttr(elemTy, negInf)));
+    }
+    return nullptr;
+  }
+  return nullptr;
 }
 
 /// Explicit instantiations

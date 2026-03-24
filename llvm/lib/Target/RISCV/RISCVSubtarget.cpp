@@ -17,6 +17,7 @@
 #include "RISCVFrameLowering.h"
 #include "RISCVSelectionDAGInfo.h"
 #include "RISCVTargetMachine.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -68,12 +69,6 @@ static cl::opt<bool> UseMIPSLoadStorePairsOpt(
 static cl::opt<bool> UseMIPSCCMovInsn("use-riscv-mips-ccmov",
                                       cl::desc("Use 'mips.ccmov' instruction"),
                                       cl::init(true), cl::Hidden);
-
-static cl::opt<bool> EnablePExtSIMDCodeGen(
-    "riscv-enable-p-ext-simd-codegen",
-    cl::desc("Turn on P Extension SIMD codegen(This is a temporary switch "
-             "where only partial codegen is currently supported)"),
-    cl::init(false), cl::Hidden);
 
 void RISCVSubtarget::anchor() {}
 
@@ -163,13 +158,9 @@ bool RISCVSubtarget::useConstantPoolForLargeInts() const {
   return !RISCVDisableUsingConstantPoolForLargeInts;
 }
 
-bool RISCVSubtarget::enablePExtSIMDCodeGen() const {
-  return HasStdExtP && EnablePExtSIMDCodeGen;
-}
-
 // Returns true if VT is a P extension packed SIMD type that fits in XLen.
 bool RISCVSubtarget::isPExtPackedType(MVT VT) const {
-  if (!enablePExtSIMDCodeGen())
+  if (!HasStdExtP)
     return false;
 
   if (is64Bit())
@@ -235,6 +226,16 @@ bool RISCVSubtarget::enableSubRegLiveness() const { return true; }
 
 bool RISCVSubtarget::enableMachinePipeliner() const {
   return getSchedModel().hasInstrSchedModel();
+}
+
+void RISCVSubtarget::mirFileLoaded(MachineFunction &MF) const {
+  // We usually compute max call frame size after ISel. Do the computation now
+  // if the .mir file didn't specify it. Note that this will probably give you
+  // bogus values after PEI has eliminated the callframe setup/destroy pseudo
+  // instructions, specify explicitly if you need it to be correct.
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  if (!MFI.isMaxCallFrameSizeComputed())
+    MFI.computeMaxCallFrameSize(MF);
 }
 
   /// Enable use of alias analysis during code generation (during MI

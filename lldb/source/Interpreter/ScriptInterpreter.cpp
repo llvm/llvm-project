@@ -172,25 +172,6 @@ ScriptInterpreter::GetOpaqueTypeFromSBValue(const lldb::SBValue &value) const {
   return locker.GetLockedSP(*value.m_opaque_sp);
 }
 
-std::optional<FileSpec> ScriptInterpreter::GetOpaqueTypeFromSBFileSpec(
-    const lldb::SBFileSpec &file_spec) const {
-  if (file_spec.m_opaque_up)
-    return *file_spec.m_opaque_up;
-  return {};
-}
-
-std::optional<ModuleSpec> ScriptInterpreter::GetOpaqueTypeFromSBModuleSpec(
-    const lldb::SBModuleSpec &module_spec) const {
-  if (module_spec.m_opaque_up)
-    return *module_spec.m_opaque_up;
-  return {};
-}
-
-lldb::ModuleSP ScriptInterpreter::GetOpaqueTypeFromSBModule(
-    const lldb::SBModule &module) const {
-  return module.m_opaque_sp;
-}
-
 lldb::ScriptLanguage
 ScriptInterpreter::StringToLanguage(const llvm::StringRef &language) {
   if (language.equals_insensitive(LanguageToString(eScriptLanguageNone)))
@@ -231,6 +212,31 @@ Status ScriptInterpreter::SetBreakpointCommandCallbackFunction(
 std::unique_ptr<ScriptInterpreterLocker>
 ScriptInterpreter::AcquireInterpreterLock() {
   return std::make_unique<ScriptInterpreterLocker>();
+}
+
+ScriptInterpreter::SanitizedScriptingModuleName
+ScriptInterpreter::GetSanitizedScriptingModuleName(llvm::StringRef name) {
+  std::string sanitized_name(name);
+  std::string conflicting_keyword;
+
+  // FIXME: for Python, don't allow certain characters in imported module
+  // filenames. Theoretically, different scripting languages may have
+  // different sets of forbidden tokens in filenames, and that should
+  // be dealt with by each ScriptInterpreter. For now, just replace dots
+  // with underscores. In order to support anything other than Python
+  // this will need to be reworked.
+  llvm::replace(sanitized_name, '.', '_');
+  llvm::replace(sanitized_name, ' ', '_');
+  llvm::replace(sanitized_name, '-', '_');
+  llvm::replace(sanitized_name, '+', 'x');
+
+  if (IsReservedWord(sanitized_name.c_str())) {
+    conflicting_keyword = sanitized_name;
+    sanitized_name.insert(sanitized_name.begin(), '_');
+  }
+
+  return ScriptInterpreter::SanitizedScriptingModuleName(
+      name.str(), std::move(sanitized_name), std::move(conflicting_keyword));
 }
 
 static void ReadThreadBytesReceived(void *baton, const void *src,

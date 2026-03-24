@@ -28,6 +28,7 @@
 #include "TypePromotionInMathFnCheck.h"
 #include "UnnecessaryCopyInitializationCheck.h"
 #include "UnnecessaryValueParamCheck.h"
+#include "UseStdMoveCheck.h"
 
 namespace clang::tidy {
 namespace performance {
@@ -73,6 +74,7 @@ public:
         "performance-unnecessary-copy-initialization");
     CheckFactories.registerCheck<UnnecessaryValueParamCheck>(
         "performance-unnecessary-value-param");
+    CheckFactories.registerCheck<UseStdMoveCheck>("performance-use-std-move");
   }
 };
 
