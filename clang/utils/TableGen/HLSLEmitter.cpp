@@ -198,7 +198,6 @@ static int getTypeSortPriority(const Record *ET) {
       .Case("bool", 3)
       .Case("int", 4)
       .Case("uint", 5)
-      .Case("uint32_t", 6)
       .Case("int64_t", 7)
       .Case("uint64_t", 8)
       .Case("float", 9)

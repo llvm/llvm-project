@@ -193,7 +193,7 @@ class HLSLBuiltin<string name, string builtin = ""> {
   // Examples:
   //   [Varying]                              -> func(T)
   //   [Varying, Varying, Varying]            -> func(T, T, T)
-  //   [Varying, UInt32Ty]                    -> func(T, uint32_t)
+  //   [Varying, UIntTy]                      -> func(T, uint)
   //   [UIntTy, UIntTy, IntTy]                -> func(uint, uint, int)
   //   []                                     -> func()
   list<HLSLArgType> Args = [];
