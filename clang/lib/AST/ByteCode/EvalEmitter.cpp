@@ -11,7 +11,6 @@
 #include "IntegralAP.h"
 #include "Interp.h"
 #include "clang/AST/DeclCXX.h"
-#include "llvm/ADT/ScopeExit.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -162,10 +161,6 @@ bool EvalEmitter::fallthrough(const LabelTy &Label) {
 bool EvalEmitter::speculate(const CallExpr *E, const LabelTy &EndLabel) {
   if (!isActive())
     return true;
-
-  PushIgnoreDiags(S, OpPC);
-  auto _ = llvm::scope_exit([&]() { PopIgnoreDiags(S, OpPC); });
-
   size_t StackSizeBefore = S.Stk.size();
   const Expr *Arg = E->getArg(0);
   if (!this->visit(Arg)) {
