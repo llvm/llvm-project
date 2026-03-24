@@ -28,17 +28,16 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Target/TargetMachine.h"
 
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/Config/Targets.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Path.h"
-#include "llvm/Support/Process.h"
-#include "llvm/Support/Program.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
+
+#if MLIR_XEVM_OCLOC_AVAILABLE
+#include <ocloc_api.h>
+#endif // MLIR_XEVM_OCLOC_AVAILABLE
 
 #include <cstdint>
 #include <cstdlib>
@@ -107,59 +106,28 @@ gpu::GPUModuleOp SerializeGPUModuleBase::getGPUModuleOp() {
 // There are 2 ways to access IGC: AOT (ocloc) and JIT (L0 runtime).
 // - L0 runtime consumes IL and is external to MLIR codebase (rt wrappers).
 // - `ocloc` tool can be "queried" from within MLIR.
-FailureOr<SmallVector<char, 0>> SerializeGPUModuleBase::compileToBinary(
-    StringRef asmStr, StringRef inputFormat = "-spirv_input") {
-  using TmpFile = std::pair<llvm::SmallString<128>, llvm::FileRemover>;
-  // Find the `ocloc` tool.
-  std::optional<std::string> oclocCompiler = findTool("ocloc");
-  if (!oclocCompiler)
-    return failure();
+#if MLIR_XEVM_OCLOC_AVAILABLE
+FailureOr<SmallVector<char, 0>>
+SerializeGPUModuleBase::compileToBinary(StringRef asmStr,
+                                        StringRef inputFormat) {
   Location loc = getGPUModuleOp().getLoc();
-  std::string basename = llvm::formatv(
-      "mlir-{0}-{1}-{2}", getGPUModuleOp().getNameAttr().getValue(),
+  std::string asmFname = llvm::formatv(
+      "mlir-{0}-{1}-{2}.asm", getGPUModuleOp().getNameAttr().getValue(),
       getTarget().getTriple(), getTarget().getChip());
-
-  auto createTemp = [&](StringRef name,
-                        StringRef suffix) -> FailureOr<TmpFile> {
-    llvm::SmallString<128> filePath;
-    if (auto ec = llvm::sys::fs::createTemporaryFile(name, suffix, filePath))
-      return getGPUModuleOp().emitError()
-             << "Couldn't create the temp file: `" << filePath
-             << "`, error message: " << ec.message();
-
-    return TmpFile(filePath, llvm::FileRemover(filePath.c_str()));
-  };
-  // Create temp file
-  FailureOr<TmpFile> asmFile = createTemp(basename, "asm");
-  FailureOr<TmpFile> binFile = createTemp(basename, "");
-  FailureOr<TmpFile> logFile = createTemp(basename, "log");
-  if (failed(logFile) || failed(asmFile) || failed(binFile))
-    return failure();
-  // Dump the assembly to a temp file
-  std::error_code ec;
-  {
-    llvm::raw_fd_ostream asmStream(asmFile->first, ec);
-    if (ec)
-      return emitError(loc) << "Couldn't open the file: `" << asmFile->first
-                            << "`, error message: " << ec.message();
-
-    asmStream << asmStr;
-    if (asmStream.has_error())
-      return emitError(loc)
-             << "An error occurred while writing the assembly to: `"
-             << asmFile->first << "`.";
-
-    asmStream.flush();
-  }
   // Set cmd options
   std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>> cmdOpts =
       targetOptions.tokenizeCmdOptions();
   // Example: --gpu-module-to-binary="opts='opt1 opt2'"
   const std::string cmdOptsStr = "\"" + llvm::join(cmdOpts.second, " ") + "\"";
-  SmallVector<StringRef, 12> oclocArgs(
-      {"ocloc", "compile", "-file", asmFile->first, inputFormat, "-device",
-       getTarget().getChip(), "-output", binFile->first, "-output_no_suffix",
-       "-options", cmdOptsStr});
+  std::vector<std::string> oclocArgs = {"ocloc",
+                                        "compile",
+                                        "-file",
+                                        asmFname,
+                                        inputFormat.str(),
+                                        "-device",
+                                        getTarget().getChip().str(),
+                                        "-options",
+                                        cmdOptsStr};
 
 // Dump tool invocation commands.
 #define DEBUG_TYPE "serialize-to-binary"
@@ -170,64 +138,66 @@ FailureOr<SmallVector<char, 0>> SerializeGPUModuleBase::compileToBinary(
     llvm::dbgs() << "\n";
   });
 #undef DEBUG_TYPE
-  // Helper function for printing tool error logs.
-  std::string message;
-  auto emitLogError =
-      [&](StringRef toolName) -> FailureOr<SmallVector<char, 0>> {
-    if (message.empty()) {
-      llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> toolStderr =
-          llvm::MemoryBuffer::getFile(logFile->first);
-      if (toolStderr)
-        return emitError(loc) << toolName << " invocation failed. Log:\n"
-                              << toolStderr->get()->getBuffer();
-      else
-        return emitError(loc) << toolName << " invocation failed.";
+
+  std::vector<const char *> argv;
+  for (const auto &str : oclocArgs)
+    argv.push_back(str.c_str());
+
+  uint32_t numSources = 1;
+  const uint8_t *dataSources[1] = {
+      reinterpret_cast<const uint8_t *>(asmStr.data())};
+  const uint64_t lenSources[1] = {asmStr.size()};
+  const char *nameSources[1] = {asmFname.c_str()};
+
+  uint32_t outputs_num = 0;
+  uint8_t **outputs = nullptr;
+  uint64_t *output_length = nullptr;
+  char **output_names = nullptr;
+  auto _ = llvm::scope_exit([&]() {
+    oclocFreeOutput(&outputs_num, &outputs, &output_length, &output_names);
+  });
+
+  int err = oclocInvoke(static_cast<uint32_t>(argv.size()), argv.data(),
+                        numSources, dataSources, lenSources, nameSources, 0,
+                        nullptr, nullptr, nullptr, &outputs_num, &outputs,
+                        &output_length, &output_names);
+
+  if (err != OCLOC_SUCCESS) {
+    emitError(loc) << "`oclocInvoke` failed or produced no output, error: "
+                   << err;
+    for (uint32_t i = 0; i < outputs_num; ++i) {
+      if (llvm::StringRef(output_names[i]).ends_with(".log")) {
+        emitError(loc) << "Compiler log:\n";
+        emitError(loc) << llvm::StringRef(reinterpret_cast<char *>(outputs[i]),
+                                          output_length[i])
+                       << "\n";
+      }
     }
-    return emitError(loc) << toolName
-                          << " invocation failed, error message: " << message;
-  };
-  std::optional<StringRef> redirects[] = {
-      std::nullopt,
-      logFile->first,
-      logFile->first,
-  };
-  // Invoke ocloc.
-  if (llvm::sys::ExecuteAndWait(oclocCompiler.value(), oclocArgs, std::nullopt,
-                                redirects, 0, 0, &message))
-    return emitLogError("`ocloc`");
-  binFile->first.append(".bin");
-  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> binaryBuffer =
-      llvm::MemoryBuffer::getFile(binFile->first);
-  if (!binaryBuffer)
-    return emitError(loc) << "Couldn't open the file: `" << binFile->first
-                          << "`, error message: "
-                          << binaryBuffer.getError().message();
-
-  StringRef bin = (*binaryBuffer)->getBuffer();
-  return SmallVector<char, 0>(bin.begin(), bin.end());
-}
-
-std::optional<std::string> SerializeGPUModuleBase::findTool(StringRef tool) {
-  // 1. Check the toolkit path given in the command line.
-  StringRef pathRef = targetOptions.getToolkitPath();
-  SmallVector<char, 256> path;
-  if (!pathRef.empty()) {
-    path.insert(path.begin(), pathRef.begin(), pathRef.end());
-    llvm::sys::path::append(path, "bin", tool);
-    if (llvm::sys::fs::can_execute(path))
-      return StringRef(path.data(), path.size()).str();
+    return failure();
   }
-  // 2. Check PATH.
-  if (std::optional<std::string> toolPath =
-          llvm::sys::Process::FindInEnvPath("PATH", tool))
-    return *toolPath;
 
-  getGPUModuleOp().emitError()
-      << "Couldn't find the `" << tool
-      << "` binary. Please specify the toolkit "
-         "path via GpuModuleToBinaryPass or add the compiler to $PATH`.";
-  return std::nullopt;
+  SmallVector<char, 0> binStr;
+  for (uint32_t i = 0; i < outputs_num; ++i) {
+    if (llvm::StringRef(output_names[i]).ends_with(".bin")) {
+      char *outBegin = reinterpret_cast<char *>(outputs[i]);
+      char *outEnd = outBegin + output_length[i];
+      binStr.assign(outBegin, outEnd);
+      break;
+    }
+  }
+  if (binStr.empty())
+    return emitError(loc) << "`oclocInvoke` did not produce `.bin` output";
+
+  return binStr;
 }
+#else  // MLIR_XEVM_OCLOC_AVAILABLE
+FailureOr<SmallVector<char, 0>>
+SerializeGPUModuleBase::compileToBinary(StringRef asmStr,
+                                        StringRef inputFormat) {
+  return getGPUModuleOp().emitError()
+         << "Native binary cannot be AOT compiled without ocloc.";
+}
+#endif // MLIR_XEVM_OCLOC_AVAILABLE
 
 namespace {
 class SPIRVSerializer : public SerializeGPUModuleBase {

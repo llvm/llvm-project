@@ -51,9 +51,6 @@ protected:
   /// a Resource blob pointing to the LLVM bitcode in-memory.
   SmallVector<Attribute> librariesToLink;
 
-  /// Returns the path to the tool used for serialization.
-  std::optional<std::string> findTool(StringRef tool);
-
   /// GPU compilation target options.
   gpu::TargetOptions targetOptions;
 };
