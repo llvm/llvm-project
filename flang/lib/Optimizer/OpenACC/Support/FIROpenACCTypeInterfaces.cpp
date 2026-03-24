@@ -741,8 +741,8 @@ template <typename Ty>
 mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
     mlir::Type type, mlir::OpBuilder &mlirBuilder, mlir::Location loc,
     mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
-    mlir::ValueRange bounds, mlir::Value initVal,
-    mlir::acc::VariableInfoAttr varInfo, bool &needsDestroy) const {
+    mlir::ValueRange bounds, mlir::Value initVal, mlir::acc::VariableInfoAttr,
+    bool &needsDestroy) const {
   mlir::ModuleOp mod = mlirBuilder.getInsertionBlock()
                            ->getParent()
                            ->getParentOfType<mlir::ModuleOp>();

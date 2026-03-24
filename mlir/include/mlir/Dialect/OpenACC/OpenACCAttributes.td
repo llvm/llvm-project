@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Defines OpenACC Attributes than can be extended by the dialects outside of
+// Defines OpenACC Attributes that can be extended by the dialects outside of
 // of OpenACC.
 //
 //===----------------------------------------------------------------------===//
