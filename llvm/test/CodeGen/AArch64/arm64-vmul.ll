@@ -1879,22 +1879,13 @@ define i64 @sqdmlal_lane_1d_v4i32(i64 %A, i32 %B, <4 x i32> %C) nounwind {
 }
 
 define i64 @sqdmlsl_lane_1d_v4i32(i64 %A, i32 %B, <4 x i32> %C) nounwind {
-; CHECK-SD-LABEL: sqdmlsl_lane_1d_v4i32:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fmov s1, w1
-; CHECK-SD-NEXT:    fmov d2, x0
-; CHECK-SD-NEXT:    sqdmlsl d2, s1, v0.s[1]
-; CHECK-SD-NEXT:    fmov x0, d2
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: sqdmlsl_lane_1d_v4i32:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov s0, v0.s[1]
-; CHECK-GI-NEXT:    fmov s1, w1
-; CHECK-GI-NEXT:    fmov d2, x0
-; CHECK-GI-NEXT:    sqdmlsl d2, s1, s0
-; CHECK-GI-NEXT:    fmov x0, d2
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: sqdmlsl_lane_1d_v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s1, w1
+; CHECK-NEXT:    fmov d2, x0
+; CHECK-NEXT:    sqdmlsl d2, s1, v0.s[1]
+; CHECK-NEXT:    fmov x0, d2
+; CHECK-NEXT:    ret
   %rhs = extractelement <4 x i32> %C, i32 1
   %prod = call i64 @llvm.aarch64.neon.sqdmulls.scalar(i32 %B, i32 %rhs)
   %res = call i64 @llvm.aarch64.neon.sqsub.i64(i64 %A, i64 %prod)
