@@ -162,12 +162,14 @@ TEST(EPCGenericJITLinkMemoryManagerTest, CreateFromSymbolNames) {
       {ES.intern("allocator_release"), {ReleaseAddr, JITSymbolFlags::Exported}},
   })));
 
-  auto Result = EPCGenericJITLinkMemoryManager::Create(
-      JD, {.AllocatorName = "allocator_instance",
-           .ReserveName = "allocator_reserve",
-           .InitializeName = "allocator_init",
-           .DeinitializeName = "allocator_deinit",
-           .ReleaseName = "allocator_release"});
+  EPCGenericJITLinkMemoryManager::SymbolNames SNs;
+  SNs.AllocatorName = "allocator_instance";
+  SNs.ReserveName = "allocator_reserve";
+  SNs.InitializeName = "allocator_init";
+  SNs.DeinitializeName = "allocator_deinit";
+  SNs.ReleaseName = "allocator_release";
+
+  auto Result = EPCGenericJITLinkMemoryManager::Create(JD, SNs);
   EXPECT_THAT_EXPECTED(Result, Succeeded());
 
   cantFail(ES.endSession());
@@ -187,12 +189,14 @@ TEST(EPCGenericJITLinkMemoryManagerTest, CreateFailsOnMissingSymbol) {
        {ExecutorAddr(1), JITSymbolFlags::Exported}},
   })));
 
-  auto Result = EPCGenericJITLinkMemoryManager::Create(
-      JD, {.AllocatorName = "allocator_instance",
-           .ReserveName = "allocator_reserve",     // missing
-           .InitializeName = "allocator_init",     // missing
-           .DeinitializeName = "allocator_deinit", // missing
-           .ReleaseName = "allocator_release"});   // missing
+  EPCGenericJITLinkMemoryManager::SymbolNames SNs;
+  SNs.AllocatorName = "allocator_instance";
+  SNs.ReserveName = "allocator_reserve";     // missing
+  SNs.InitializeName = "allocator_init";     // missing
+  SNs.DeinitializeName = "allocator_deinit"; // missing
+  SNs.ReleaseName = "allocator_release";     // missing
+
+  auto Result = EPCGenericJITLinkMemoryManager::Create(JD, SNs);
   EXPECT_THAT_EXPECTED(Result, Failed());
 
   cantFail(ES.endSession());
