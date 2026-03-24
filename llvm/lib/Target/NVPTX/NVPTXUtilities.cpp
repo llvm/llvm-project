@@ -14,6 +14,7 @@
 #include "NVPTX.h"
 #include "NVPTXTargetMachine.h"
 #include "NVVMProperties.h"
+#include "llvm/IR/Argument.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/Alignment.h"
@@ -76,6 +77,39 @@ Align getFunctionByValParamAlign(const Function *F, Type *ArgTy,
     ArgAlign = std::max(ArgAlign, Align(4));
 
   return ArgAlign;
+}
+
+Align getOptimalAlignForParam(const Function *F, const Argument &Arg, Type *Ty,
+                              const DataLayout &DL) {
+  if (MaybeAlign StackAlign =
+          getAlign(*F, Arg.getArgNo() + AttributeList::FirstArgIndex))
+    return StackAlign.value();
+
+  Align TypeAlign = getFunctionParamOptimizedAlign(F, Ty, DL);
+  MaybeAlign ParamAlign =
+      Arg.hasByValAttr() ? Arg.getParamAlign() : MaybeAlign();
+  return std::max(TypeAlign, ParamAlign.valueOrOne());
+}
+
+Align getArgumentAlignment(const CallBase *CB, Type *Ty, unsigned Idx,
+                           const DataLayout &DL) {
+  if (!CB)
+    return DL.getABITypeAlign(Ty);
+
+  const Function *DirectCallee = CB->getCalledFunction();
+
+  if (!DirectCallee) {
+    if (const auto *CI = dyn_cast<CallInst>(CB)) {
+      if (MaybeAlign StackAlign = getAlign(*CI, Idx))
+        return StackAlign.value();
+    }
+    DirectCallee = getMaybeBitcastedCallee(CB);
+  }
+
+  if (DirectCallee)
+    return getFunctionArgumentAlignment(DirectCallee, Ty, Idx, DL);
+
+  return DL.getABITypeAlign(Ty);
 }
 
 bool shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM) {

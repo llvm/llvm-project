@@ -47,6 +47,12 @@ Align getFunctionArgumentAlignment(const Function *F, Type *Ty, unsigned Idx,
 Align getFunctionByValParamAlign(const Function *F, Type *ArgTy,
                                  Align InitialAlign, const DataLayout &DL);
 
+Align getOptimalAlignForParam(const Function *F, const Argument &Arg, Type *Ty,
+                              const DataLayout &DL);
+
+Align getArgumentAlignment(const CallBase *CB, Type *Ty, unsigned Idx,
+                           const DataLayout &DL);
+
 // PTX ABI requires all scalar argument/return values to have
 // bit-size as a power of two of at least 32 bits.
 inline unsigned promoteScalarArgumentSize(unsigned size) {

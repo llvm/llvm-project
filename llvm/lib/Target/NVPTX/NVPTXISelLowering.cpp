@@ -1203,9 +1203,6 @@ SDValue NVPTXTargetLowering::getSqrtEstimate(SDValue Operand, SelectionDAG &DAG,
   }
 }
 
-static Align getArgumentAlignment(const CallBase *CB, Type *Ty, unsigned Idx,
-                                  const DataLayout &DL);
-
 std::string NVPTXTargetLowering::getPrototype(
     const DataLayout &DL, Type *RetTy, const ArgListTy &Args,
     const SmallVectorImpl<ISD::OutputArg> &Outs,
@@ -1310,36 +1307,6 @@ std::string NVPTXTargetLowering::getPrototype(
   return Prototype;
 }
 
-static Align getArgumentAlignment(const CallBase *CB, Type *Ty, unsigned Idx,
-                                  const DataLayout &DL) {
-  if (!CB) {
-    // CallSite is zero, fallback to ABI type alignment
-    return DL.getABITypeAlign(Ty);
-  }
-
-  const Function *DirectCallee = CB->getCalledFunction();
-
-  if (!DirectCallee) {
-    // We don't have a direct function symbol, but that may be because of
-    // constant cast instructions in the call.
-
-    // With bitcast'd call targets, the instruction will be the call
-    if (const auto *CI = dyn_cast<CallInst>(CB)) {
-      // Check if we have call alignment metadata
-      if (MaybeAlign StackAlign = getAlign(*CI, Idx))
-        return StackAlign.value();
-    }
-    DirectCallee = getMaybeBitcastedCallee(CB);
-  }
-
-  // Check for function alignment information if we found that the
-  // ultimate target is a Function
-  if (DirectCallee)
-    return getFunctionArgumentAlignment(DirectCallee, Ty, Idx, DL);
-
-  // Call is indirect, fall back to the ABI type alignment
-  return DL.getABITypeAlign(Ty);
-}
 
 static MachinePointerInfo refinePtrAS(SDValue &Ptr, SelectionDAG &DAG,
                                       const DataLayout &DL,
