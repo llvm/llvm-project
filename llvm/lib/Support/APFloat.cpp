@@ -124,16 +124,19 @@ constexpr fltSemantics APFloatBase::semPPCDoubleDoubleLegacy = {
 /* Hex float
    All three sizes share the same sign and exponent fields
    1 bit for sign
-   7 bits for unsigned CHARACTERISTIC, which is the exponent + a bias of 64.
+   7 bits for the unsigned biased exponent; this is called the "characteristic"
+   in the documentation.  The characteristic is the exponent + a bias of 64.
      Therefore the range of exponent is -64 .. +63.
      The exponent is for base 16.
      (Therefore, the minimum exponent for base 2 is 16^-64 == 2^-256
      The maximum exponent for base 2 is 16^63 == 2^252)
-   For Hex_FP32, the next 24 bits are the SIGNIFICAND.
-   For Hex_FP64, the next 56 bits are the SIGNIFICAND.
+   For Hex_FP32, the next 24 bits are the "significand", representing
+     six hexits..
+   For Hex_FP64, the next 56 bits are the "significand", representing
+     forteen hexits.
    For Hex_FP128, two 64-bit values are used.  The first is as Hex_FP64,
-   In the second, the lower 56 bits form the lower significant part
-   of the SIGNIFICAND.
+   In the second, the lower 56 bits form the lower forteen hexits
+   of the significand, giving 28 hexits of precision overall.
    Precision is given in terms of the radix, e.g., Hex_FP32 has
    6 hexits of precision.
 
@@ -5878,12 +5881,12 @@ APInt DoubleAPFloat::getNaNPayload() const { return Floats[0].getNaNPayload(); }
 
 // class HexFloatArith implements HFP arithmetic using the conventions
 // and approaches of the arith library used by the IBM XL compiler,
-// and matches the behaviour of the hardware.
+// and largely matches the behaviour of the hardware.
 class HexFloatArith {
 public:
   struct value_t {
     int sign; // -1 for negative, +1 for positive
-    int exponent;
+    APFloat::ExponentType  exponent;
     APInt fraction;
   };
   static void fetch(const HexFloat &in, value_t &out);
@@ -5953,18 +5956,20 @@ HexFloat::HexFloat(const fltSemantics &ourSemantics, integerPart intValue)
   mask.setBit(mask.getBitWidth() - 4); // lowest bit of top hexit
   // the corresponding constructor for IEEE seems to assume that the
   // value cannot be negative.
+  static_assert(std::is_unsigned<decltype(intValue)>::value);
   sign = 0;
   exponent = (sizeof(intValue) * 8) / 4;
   // normalize
-  while (mask.ugt(working_significand)) {
-    working_significand <<= 4;
-    exponent--;
-  }
+  // Each4 bits represents one hexit, hence the division by 4 below.
+  auto NumLeadingHexits = working_significand.countLeadingZeros() / 4;
+  working_significand <<= (4 * NumLeadingHexits);
+  exponent -= NumLeadingHexits;
+
   int delta_width =
       working_significand.getBitWidth() - significand.getBitWidth();
   if (delta_width > 0) {
     // HexFloat always rounds towards 0, so truncate is adequate
-    // APInt:trunc truncates on left
+
     working_significand = working_significand.lshr(delta_width);
     working_significand = working_significand.trunc(significand.getBitWidth());
   } else if (delta_width < 0) {
@@ -6018,14 +6023,6 @@ HexFloat::HexFloat(const fltSemantics &ourSemantics,
         EncodedHexFloat.getLoBits(NumPrecisionBits).trunc(NumPrecisionBits);
   }
   assert(significand.getBitWidth() == getNumPrecisionBits(semantics));
-}
-
-HexFloat::HexFloat(double d) {
-  llvm_unreachable("HexFloat constructor double: cannot create from double\n");
-}
-
-HexFloat::HexFloat(float f) {
-  llvm_unreachable("HexFloat constructor float: cannot create from float\n");
 }
 
 HexFloat::HexFloat(const HexFloat &rhs) {
@@ -6119,9 +6116,8 @@ void HexFloatArith::norm(value_t &v) {
     v.exponent = 0;
     return;
   }
-  APInt t(v.fraction.getBitWidth(), 0); // t will be used to hold
-                                        // a value that v will
-                                        // be compared with
+  // t will be used to hold a value that v will be compared with
+  APInt t(v.fraction.getBitWidth(), 0);
 
   // check for carry
   t.setBit(t.getBitWidth() - 4); // the low bit of the top hexit,
@@ -6151,12 +6147,12 @@ int HexFloatArith::putres(const value_t &v, HexFloat &result) {
     result.makeZero(v.sign < 0);
     return 0;
   } else if (v.exponent > 1024) {
-    /* This indicates division by zero (see HexFloatArith::divide).  */
-    /* In this case the arith putres takes the first input operand   */
-    /* as the result.  The first operand is result (see the control  */
-    /* flow in HexFloat::divide).  Thus there is  nothing to do      */
-    /* here, as input object to the HexFloat routine (i.e., the      */
-    /* HexFloat::divide's *this object) hasn't been modified.        */
+    // This indicates division by zero (see HexFloatArith::divide).
+    // In this case the arith putres takes the first input operand
+    // as the result.  The first operand is result (see the control
+    // flow in HexFloat::divide).  Thus there is  nothing to do
+    // here, as input object to the HexFloat routine (i.e., the
+    // HexFloat::divide's *this object) hasn't been modified.
     return ret_val;
   }
 
@@ -6326,6 +6322,8 @@ opStatus HexFloat::add(const HexFloat &RHS, roundingMode RM) {
   HexFloatArith::norm(left);
   HexFloatArith::putres(left, *this);
 
+// Note: we are not concerned about possible overflow.
+
   return opOK;
 }
 
@@ -6343,6 +6341,8 @@ opStatus HexFloat::subtract(const HexFloat &RHS, roundingMode RM) {
   }
   HexFloatArith::norm(left);
   HexFloatArith::putres(left, *this);
+
+  // Note: we are not concerned about rounding modes or underflow.
 
   return opOK;
 }

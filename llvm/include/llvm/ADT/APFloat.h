@@ -260,7 +260,10 @@ public:
     // TODO: Documentation is missing.
     S_x87DoubleExtended,
 
-    // HexFloat
+    // HexFloat floating point format.  Radix is 16, no NaNs or infinities.
+    // See the chapters 9 and 18 of the z/Architecture Principles of Operation,
+    // the 1999 IEEE paper by Schwartz et al (http://eece.cu.edu.eg/~hfahmy/arith_class/hex_bin_FP.pdf),
+    // or the wiki page for HexFloat.
     S_HexFP32,
     S_HexFP64,
     S_HexFP128,
@@ -1018,8 +1021,6 @@ public:
   HexFloat(const fltSemantics &, integerPart);
   HexFloat(const fltSemantics &, uninitializedTag);
   HexFloat(const fltSemantics &, const APInt &);
-  explicit HexFloat(double d);
-  explicit HexFloat(float f);
   HexFloat(const HexFloat &);
   HexFloat(HexFloat &&);
   ~HexFloat();
@@ -1194,8 +1195,8 @@ struct fltSemantics {
      matches the definition of IEEE 754.  */
   APFloatBase::ExponentType minExponent;
 
-  /* Number of bits in the significand.  This includes the integer
-     bit.  */
+  /* Number of places in the significand according to the radix.
+     This includes any integer digit. */
   unsigned int precision;
 
   /* Number of bits actually used in the semantics. */
