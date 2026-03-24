@@ -190,13 +190,15 @@ void namedBarrierInit() {
 
 void namedBarrier() {
   uint32_t NumThreads = omp_get_num_threads();
-  uint32_t load = atomic::add(&namedBarrierTracker, 1, atomic::seq_cst, atomic::workgroup);
+  uint32_t load =
+      atomic::add(&namedBarrierTracker, 1, atomic::seq_cst, atomic::workgroup);
 
   if (load >= NumThreads - 1) {
     atomic::store(&namedBarrierTracker, 0u, atomic::seq_cst, atomic::workgroup);
   } else {
     do {
-      load = atomic::load(&namedBarrierTracker, atomic::seq_cst, atomic::workgroup);
+      load = atomic::load(&namedBarrierTracker, atomic::seq_cst,
+                          atomic::workgroup);
     } while (load != 0);
   }
   __gpu_sync_threads();
@@ -212,7 +214,8 @@ void initLock(omp_lock_t *Lock) { unsetLock(Lock); }
 void destroyLock(omp_lock_t *Lock) { unsetLock(Lock); }
 void setLock(omp_lock_t *Lock) {
   int32_t *Lock_ptr = (int32_t *)Lock;
-  while (!atomic::cas(Lock_ptr, 0, 1, atomic::seq_cst, atomic::seq_cst)) {}
+  while (!atomic::cas(Lock_ptr, 0, 1, atomic::seq_cst, atomic::seq_cst)) {
+  }
 }
 
 void unsetCriticalLock(omp_lock_t *Lock) { unsetLock(Lock); }
