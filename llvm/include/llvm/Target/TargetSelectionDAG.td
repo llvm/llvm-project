@@ -586,6 +586,9 @@ def fminimumnum   : SDNode<"ISD::FMINIMUMNUM"   , SDTFPBinOp,
                         [SDNPCommutative, SDNPAssociative]>;
 def fmaximumnum   : SDNode<"ISD::FMAXIMUMNUM"   , SDTFPBinOp,
                         [SDNPCommutative, SDNPAssociative]>;
+// Pseudo fmin/fmax are neither commutative nor associative.
+def pseudo_fmin : SDNode<"ISD::PSEUDO_FMIN", SDTFPBinOp>;
+def pseudo_fmax : SDNode<"ISD::PSEUDO_FMAX", SDTFPBinOp>;
 def fgetsign   : SDNode<"ISD::FGETSIGN"   , SDTFPToIntOp>;
 def fcanonicalize : SDNode<"ISD::FCANONICALIZE", SDTFPUnaryOp>;
 def fneg       : SDNode<"ISD::FNEG"       , SDTFPUnaryOp>;
@@ -715,6 +718,10 @@ def strict_fminimum   : SDNode<"ISD::STRICT_FMINIMUM",
 def strict_fmaximum   : SDNode<"ISD::STRICT_FMAXIMUM",
                                SDTFPBinOp, [SDNPHasChain,
                                             SDNPCommutative, SDNPAssociative]>;
+def strict_pseudo_fmin : SDNode<"ISD::STRICT_PSEUDO_FMIN", SDTFPBinOp,
+                                [SDNPHasChain]>;
+def strict_pseudo_fmax : SDNode<"ISD::STRICT_PSEUDO_FMAX", SDTFPBinOp,
+                                [SDNPHasChain]>;
 def strict_fpround    : SDNode<"ISD::STRICT_FP_ROUND",
                                SDTFPRoundOp, [SDNPHasChain]>;
 def strict_fpextend   : SDNode<"ISD::STRICT_FP_EXTEND",
