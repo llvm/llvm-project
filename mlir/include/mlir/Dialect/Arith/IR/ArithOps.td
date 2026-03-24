@@ -678,7 +678,8 @@ def Arith_FloorDivSIOp : Arith_TotalIntBinaryOp<"floordivsi"> {
 // RemUIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_RemUIOp : Arith_TotalIntBinaryOp<"remui"> {
+def Arith_RemUIOp : Arith_IntBinaryOp<"remui",
+                                      [ConditionallySpeculatable]> {
   let summary = "unsigned integer division remainder operation";
   let description = [{
     Unsigned integer division remainder. Treats the leading bit as the most
@@ -701,6 +702,12 @@ def Arith_RemUIOp : Arith_TotalIntBinaryOp<"remui"> {
     %x = arith.remui %y, %z : tensor<4x?xi8>
     ```
   }];
+
+  let extraClassDeclaration = [{
+    /// Interface method for ConditionallySpeculatable.
+    Speculation::Speculatability getSpeculatability();
+  }];
+
   let hasFolder = 1;
 }
 
@@ -708,7 +715,8 @@ def Arith_RemUIOp : Arith_TotalIntBinaryOp<"remui"> {
 // RemSIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_RemSIOp : Arith_TotalIntBinaryOp<"remsi"> {
+def Arith_RemSIOp : Arith_IntBinaryOp<"remsi",
+                                      [ConditionallySpeculatable]> {
   let summary = "signed integer division remainder operation";
   let description = [{
     Signed integer division remainder. Treats the leading bit as sign, i.e. `6 %
@@ -731,6 +739,12 @@ def Arith_RemSIOp : Arith_TotalIntBinaryOp<"remsi"> {
     %x = arith.remsi %y, %z : tensor<4x?xi8>
     ```
   }];
+
+  let extraClassDeclaration = [{
+    /// Interface method for ConditionallySpeculatable.
+    Speculation::Speculatability getSpeculatability();
+  }];
+
   let hasFolder = 1;
 }
 
