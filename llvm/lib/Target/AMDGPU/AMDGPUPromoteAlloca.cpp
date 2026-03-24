@@ -124,42 +124,6 @@ struct AllocaAnalysis {
   explicit AllocaAnalysis(AllocaInst *Alloca) : Alloca(Alloca) {}
 };
 
-// ValueReplacer is used to postpone the value replacement and erase dead
-// instructions after all the alloca's being processed. The postpone is needed
-// to handle cross-alloca value references correctly.
-struct ValueReplacer {
-  // Keep record of the value replacement pair.
-  void postReplaceAllUsesWith(Instruction *Old, Value *New) {
-    ReplaceVec.emplace_back(Old, New);
-  }
-
-  // Do the actual value replacement and erase dead instructions.
-  static void replaceAndErase(ValueReplacer &&VR) {
-    for (auto &[Old, New] : VR.ReplaceVec)
-      Old->replaceAllUsesWith(New);
-
-    for (auto *I : VR.ErasableInstrs) {
-      I->dropDroppableUses();
-      assert(I->use_empty());
-      I->eraseFromParent();
-    }
-  }
-
-  // Mark an instruction as dead, and will be erased later. Note the order the
-  // instruction was inserted matters if there are possible cross references.
-  // The caller need to take care of this. The instructions will be deleted in
-  // the order they were added.
-  void postErase(Instruction *I) { ErasableInstrs.push_back(I); }
-
-  template <typename RangeTy> void postErase(const iterator_range<RangeTy> &R) {
-    append_range(ErasableInstrs, R);
-  }
-
-private:
-  SmallVector<std::pair<Instruction *, Value *>> ReplaceVec;
-  SmallVector<Instruction *> ErasableInstrs;
-};
-
 // Shared implementation which can do both promotion to vector and to LDS.
 class AMDGPUPromoteAllocaImpl {
 private:
@@ -196,7 +160,7 @@ private:
 
   FixedVectorType *getVectorTypeForAlloca(Type *AllocaTy) const;
   void analyzePromoteToVector(AllocaAnalysis &AA) const;
-  void promoteAllocaToVector(AllocaAnalysis &AA, ValueReplacer &VR);
+  void promoteAllocaToVector(AllocaAnalysis &AA);
   void analyzePromoteToLDS(AllocaAnalysis &AA) const;
   bool tryPromoteAllocaToLDS(AllocaAnalysis &AA, bool SufficientLDS,
                              SetVector<IntrinsicInst *> &DeferredIntrs);
@@ -456,8 +420,6 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
 
   bool Changed = false;
   SetVector<IntrinsicInst *> DeferredIntrs;
-  ValueReplacer VR;
-
   for (AllocaAnalysis &AA : Allocas) {
     if (AA.Vector.Ty) {
       std::optional<TypeSize> Size = AA.Alloca->getAllocationSize(*DL);
@@ -465,13 +427,7 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
       const unsigned AllocaCost = Size->getFixedValue() * 8;
       // First, check if we have enough budget to vectorize this alloca.
       if (AllocaCost <= VectorizationBudget) {
-        promoteAllocaToVector(AA, VR);
-
-        VR.postErase(iterator_range(AA.Vector.Worklist));
-        // Append in reverse order so that further users would be erased first.
-        VR.postErase(reverse(AA.Vector.UsersToRemove));
-        VR.postErase(AA.Alloca);
-
+        promoteAllocaToVector(AA);
         Changed = true;
         assert((VectorizationBudget - AllocaCost) < VectorizationBudget &&
                "Underflow!");
@@ -492,7 +448,10 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
   }
   finishDeferredAllocaToLDSPromotion(DeferredIntrs);
 
-  ValueReplacer::replaceAndErase(std::move(VR));
+  // NOTE: tryPromoteAllocaToVector removes the alloca, so Allocas contains
+  // dangling pointers. If we want to reuse it past this point, the loop above
+  // would need to be updated to remove successfully promoted allocas.
+
   return Changed;
 }
 
@@ -667,15 +626,16 @@ computeGEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
 /// \param VecStoreSize   Size of \p VectorTy in bytes.
 /// \param ElementSize    Size of \p VectorTy element type in bytes.
 /// \param CurVal         Current value of the vector (e.g. last stored value)
-/// \param VR             Keep record of postponed value replacement.
+/// \param[out]  DeferredLoads \p Inst is added to this vector if it can't
+///              be promoted now. This happens when promoting requires \p
+///              CurVal, but \p CurVal is nullptr.
 /// \return the stored value if \p Inst would have written to the alloca, or
 ///         nullptr otherwise.
 static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
                                         AllocaAnalysis &AA,
                                         unsigned VecStoreSize,
                                         unsigned ElementSize,
-                                        function_ref<Value *()> GetCurVal,
-                                        ValueReplacer &VR) {
+                                        function_ref<Value *()> GetCurVal) {
   // Note: we use InstSimplifyFolder because it can leverage the DataLayout
   // to do more folding, especially in the case of vector splats.
   IRBuilder<InstSimplifyFolder> Builder(Inst->getContext(),
@@ -695,8 +655,8 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
     TypeSize AccessSize = DL.getTypeStoreSize(AccessTy);
     if (Constant *CI = dyn_cast<Constant>(Index)) {
       if (CI->isNullValue() && AccessSize == VecStoreSize) {
-        VR.postReplaceAllUsesWith(
-            Inst, Builder.CreateBitPreservingCastChain(DL, CurVal, AccessTy));
+        Inst->replaceAllUsesWith(
+            Builder.CreateBitPreservingCastChain(DL, CurVal, AccessTy));
         return nullptr;
       }
     }
@@ -734,7 +694,7 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
             Index, ConstantInt::get(Index->getType(), LShrAmt));
         Value *ExtVal = Builder.CreateExtractElement(BCVal, NewIdx);
         Value *BCOut = Builder.CreateBitCast(ExtVal, AccessTy);
-        VR.postReplaceAllUsesWith(Inst, BCOut);
+        Inst->replaceAllUsesWith(BCOut);
         return nullptr;
       }
 
@@ -746,8 +706,8 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
             SubVec, Builder.CreateExtractElement(CurVal, CurIdx), K);
       }
 
-      VR.postReplaceAllUsesWith(
-          Inst, Builder.CreateBitPreservingCastChain(DL, SubVec, AccessTy));
+      Inst->replaceAllUsesWith(
+          Builder.CreateBitPreservingCastChain(DL, SubVec, AccessTy));
       return nullptr;
     }
 
@@ -755,7 +715,8 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
     Value *ExtractElement = Builder.CreateExtractElement(CurVal, Index);
     if (AccessTy != VecEltTy)
       ExtractElement = Builder.CreateBitOrPointerCast(ExtractElement, AccessTy);
-    VR.postReplaceAllUsesWith(Inst, ExtractElement);
+
+    Inst->replaceAllUsesWith(ExtractElement);
     return nullptr;
   }
   case Instruction::Store: {
@@ -845,9 +806,9 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
 
     if (auto *Intr = dyn_cast<IntrinsicInst>(Inst)) {
       if (Intr->getIntrinsicID() == Intrinsic::objectsize) {
-        VR.postReplaceAllUsesWith(
-            Intr, Builder.getIntN(Intr->getType()->getIntegerBitWidth(),
-                                  DL.getTypeAllocSize(AA.Vector.Ty)));
+        Intr->replaceAllUsesWith(
+            Builder.getIntN(Intr->getType()->getIntegerBitWidth(),
+                            DL.getTypeAllocSize(AA.Vector.Ty)));
         return nullptr;
       }
     }
@@ -1152,8 +1113,7 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
   }
 }
 
-void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA,
-                                                    ValueReplacer &VR) {
+void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA) {
   LLVM_DEBUG(dbgs() << "Promoting to vectors: " << *AA.Alloca << '\n');
   LLVM_DEBUG(dbgs() << "  type conversion: " << *AA.Alloca->getAllocatedType()
                     << " -> " << *AA.Vector.Ty << '\n');
@@ -1200,7 +1160,7 @@ void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA,
     };
 
     Value *Result = promoteAllocaUserToVector(I, *DL, AA, VecStoreSize,
-                                              ElementSize, GetCurVal, VR);
+                                              ElementSize, GetCurVal);
     if (Result)
       Updater.AddAvailableValue(BB, Result);
   });
@@ -1220,6 +1180,23 @@ void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA,
       Placeholder->replaceAllUsesWith(PlaceholderToNewVal[Index]);
     Placeholder->eraseFromParent();
   }
+
+  // Delete all instructions.
+  for (Instruction *I : AA.Vector.Worklist) {
+    assert(I->use_empty());
+    I->eraseFromParent();
+  }
+
+  // Delete all the users that are known to be removeable.
+  for (Instruction *I : reverse(AA.Vector.UsersToRemove)) {
+    I->dropDroppableUses();
+    assert(I->use_empty());
+    I->eraseFromParent();
+  }
+
+  // Alloca should now be dead too.
+  assert(AA.Alloca->use_empty());
+  AA.Alloca->eraseFromParent();
 }
 
 std::pair<Value *, Value *>
