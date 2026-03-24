@@ -10078,7 +10078,8 @@ SDValue TargetLowering::expandVectorFindLastActive(SDNode *N,
     VScaleRange = getVScaleRange(&DAG.getMachineFunction().getFunction(), 64);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   uint64_t EltWidth = TLI.getBitWidthForCttzElements(
-      EVT(getVectorIdxTy(DAG.getDataLayout())), MaskVT.getVectorElementCount(),
+      EVT(getVectorIdxTy(DAG.getDataLayout())).getTypeForEVT(*DAG.getContext()),
+      MaskVT.getVectorElementCount(),
       /*ZeroIsPoison=*/true, &VScaleRange);
   // If the step vector element type is smaller than the mask element type,
   // use the mask type directly to avoid widening issues.
@@ -12538,64 +12539,6 @@ SDValue TargetLowering::expandVECTOR_COMPRESS(SDNode *Node,
   }
 
   return DAG.getLoad(VecVT, DL, Chain, StackPtr, PtrInfo);
-}
-
-SDValue TargetLowering::expandCttzElts(SDNode *Node, SelectionDAG &DAG) const {
-  SDLoc DL(Node);
-  EVT VT = Node->getValueType(0);
-  SDValue Op = Node->getOperand(0);
-  EVT OpVT = Op.getValueType();
-
-  if (OpVT.getVectorElementType() != MVT::i1) {
-    // Compare the input vector elements to zero & use to count trailing zeros.
-    SDValue AllZero = DAG.getConstant(0, DL, OpVT);
-    EVT I1OpVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1,
-                                  OpVT.getVectorElementCount());
-    // If cttz_elts is legal for the i1 type, use it instead of expanding.
-    if (isOperationLegalOrCustom(Node->getOpcode(), I1OpVT)) {
-      Op = DAG.getSetCC(DL, I1OpVT, Op, AllZero, ISD::SETNE);
-      return DAG.getNode(Node->getOpcode(), DL, VT, Op);
-    }
-
-    Op = DAG.getSetCC(DL, OpVT, Op, AllZero, ISD::SETNE);
-  }
-
-  // If the zero-is-poison flag is set, we can assume the upper limit
-  // of the result is VF-1.
-  bool ZeroIsPoison = Node->getOpcode() == ISD::CTTZ_ELTS_ZERO_POISON;
-  ConstantRange VScaleRange(1, true); // Dummy value.
-  if (OpVT.isScalableVector())
-    VScaleRange = getVScaleRange(&DAG.getMachineFunction().getFunction(), 64);
-  unsigned EltWidth = getBitWidthForCttzElements(
-      VT, OpVT.getVectorElementCount(), ZeroIsPoison, &VScaleRange);
-
-  EVT NewEltVT = MVT::getIntegerVT(EltWidth);
-
-  // Create the new vector type & get the vector length
-  EVT NewVT = EVT::getVectorVT(*DAG.getContext(), NewEltVT,
-                               OpVT.getVectorElementCount());
-
-  // Promote types now to avoid redundant zexts.
-  if (getTypeAction(NewVT.getSimpleVT()) == TypePromoteInteger) {
-    NewVT = getTypeToTransformTo(*DAG.getContext(), NewVT);
-    NewEltVT = NewVT.getVectorElementType();
-  }
-  if (getTypeAction(NewEltVT.getSimpleVT()) == TypePromoteInteger)
-    NewEltVT = getTypeToTransformTo(*DAG.getContext(), NewEltVT);
-
-  SDValue VL = DAG.getElementCount(DL, NewEltVT, NewVT.getVectorElementCount());
-
-  SDValue StepVec = DAG.getStepVector(DL, NewVT);
-  SDValue SplatVL = DAG.getSplat(NewVT, DL, VL);
-  SDValue StepVL = DAG.getNode(ISD::SUB, DL, NewVT, SplatVL, StepVec);
-  SDValue Ext = DAG.getSExtOrTrunc(Op, DL, NewVT);
-  SDValue And = DAG.getNode(ISD::AND, DL, NewVT, StepVL, Ext);
-  SDValue Max =
-      DAG.getNode(ISD::VECREDUCE_UMAX, DL, NewVT.getVectorElementType(), And);
-  SDValue Sub = DAG.getNode(ISD::SUB, DL, NewEltVT, VL,
-                            DAG.getZExtOrTrunc(Max, DL, NewEltVT));
-
-  return DAG.getZExtOrTrunc(Sub, DL, VT);
 }
 
 SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,
