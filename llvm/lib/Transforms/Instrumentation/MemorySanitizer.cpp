@@ -299,6 +299,15 @@ static cl::opt<bool>
                       cl::desc("exact handling of relational integer ICmp"),
                       cl::Hidden, cl::init(true));
 
+static cl::opt<int> ClSwitchPrecision(
+    "msan-switch-precision",
+    cl::desc("Controls the number of cases considered by MSan for LLVM switch "
+             "instructions. 0 means no UUMs detected. Higher values lead to "
+             "fewer false negatives but may impact compiler and/or "
+             "application performance. N.B. LLVM switch instructions do not "
+             "correspond exactly to C++ switch statements."),
+    cl::Hidden, cl::init(99));
+
 static cl::opt<bool> ClHandleLifetimeIntrinsics(
     "msan-handle-lifetime-intrinsics",
     cl::desc(
@@ -1347,7 +1356,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // ZExt cannot convert between vector and scalar
     Value *ConvertedShadow = convertShadowToScalar(Shadow, IRB);
     if (auto *ConstantShadow = dyn_cast<Constant>(ConvertedShadow)) {
-      if (!ClCheckConstantShadow || ConstantShadow->isZeroValue()) {
+      if (!ClCheckConstantShadow || ConstantShadow->isNullValue()) {
         // Origin is not needed: value is initialized or const shadow is
         // ignored.
         return;
@@ -1510,7 +1519,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       Value *ConvertedShadow = ShadowData.Shadow;
 
       if (auto *ConstantShadow = dyn_cast<Constant>(ConvertedShadow)) {
-        if (!ClCheckConstantShadow || ConstantShadow->isZeroValue()) {
+        if (!ClCheckConstantShadow || ConstantShadow->isNullValue()) {
           // Skip, value is initialized or const shadow is ignored.
           continue;
         }
@@ -2460,6 +2469,64 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     return Si;
   }
 
+  // Instrument:
+  //     switch i32 %Val, label %else [ i32 0, label %A
+  //                                    i32 1, label %B
+  //                                    i32 2, label %C ]
+  //
+  // Typically, the switch input value (%Val) is fully initialized.
+  //
+  // Sometimes the compiler may convert (icmp + br) into a switch statement.
+  // MSan allows icmp eq/ne with partly initialized inputs to still result in a
+  // fully initialized output, if there exists a bit that is initialized in
+  // both inputs with a differing value. For compatibility, we support this in
+  // the switch instrumentation as well. Note that this edge case only applies
+  // if the switch input value does not match *any* of the cases (matching any
+  // of the cases requires an exact, fully initialized match).
+  //
+  //     ShadowCases =   0
+  //                   | propagateEqualityComparison(Val, 0)
+  //                   | propagateEqualityComparison(Val, 1)
+  //                   | propagateEqualityComparison(Val, 2))
+  void visitSwitchInst(SwitchInst &SI) {
+    IRBuilder<> IRB(&SI);
+
+    Value *Val = SI.getCondition();
+    Value *ShadowVal = getShadow(Val);
+    // TODO: add fast path - if the condition is fully initialized, we know
+    // there is no UUM, without needing to consider the case values below.
+
+    // Some code (e.g., AMDGPUGenMCCodeEmitter.inc) has tens of thousands of
+    // cases. This results in an extremely long chained expression for MSan's
+    // switch instrumentation, which can cause the JumpThreadingPass to have a
+    // stack overflow or excessive runtime. We limit the number of cases
+    // considered, with the tradeoff of niche false negatives.
+    // TODO: figure out a better solution.
+    int casesToConsider = ClSwitchPrecision;
+
+    Value *ShadowCases = nullptr;
+    for (auto Case : SI.cases()) {
+      if (casesToConsider <= 0)
+        break;
+
+      Value *Comparator = Case.getCaseValue();
+      // TODO: some simplification is possible when comparing multiple cases
+      // simultaneously.
+      Value *ComparisonShadow = propagateEqualityComparison(
+          IRB, Val, Comparator, ShadowVal, getShadow(Comparator));
+
+      if (ShadowCases)
+        ShadowCases = IRB.CreateOr(ShadowCases, ComparisonShadow);
+      else
+        ShadowCases = ComparisonShadow;
+
+      casesToConsider--;
+    }
+
+    if (ShadowCases)
+      insertCheckShadow(ShadowCases, getOrigin(Val), &SI);
+  }
+
   // Vector manipulation.
   void visitExtractElementInst(ExtractElementInst &I) {
     insertCheckShadowOf(I.getOperand(1), &I);
@@ -2553,14 +2620,21 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   //    S = (S1 & S2) | (V1 & S2) | (S1 & V2)
   Value *handleBitwiseAnd(IRBuilder<> &IRB, Value *V1, Value *V2, Value *S1,
                           Value *S2) {
+    // "The two arguments to the ‘and’ instruction must be integer or vector
+    //  of integer values. Both arguments must have identical types."
+    //
+    // We enforce this condition for all callers to handleBitwiseAnd(); callers
+    // with non-integer types should call CreateAppToShadowCast() themselves.
+    assert(V1->getType()->isIntOrIntVectorTy());
+    assert(V1->getType() == V2->getType());
+
+    // Conveniently, getShadowTy() of Int/IntVector returns the original type.
+    assert(V1->getType() == S1->getType());
+    assert(V2->getType() == S2->getType());
+
     Value *S1S2 = IRB.CreateAnd(S1, S2);
     Value *V1S2 = IRB.CreateAnd(V1, S2);
     Value *S1V2 = IRB.CreateAnd(S1, V2);
-
-    if (V1->getType() != S1->getType()) {
-      V1 = IRB.CreateIntCast(V1, S1->getType(), false);
-      V2 = IRB.CreateIntCast(V2, S2->getType(), false);
-    }
 
     return IRB.CreateOr({S1S2, V1S2, S1V2});
   }
@@ -2595,10 +2669,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *S2 = getShadow(&I, 1);
     Value *V1 = I.getOperand(0);
     Value *V2 = I.getOperand(1);
-    if (V1->getType() != S1->getType()) {
-      V1 = IRB.CreateIntCast(V1, S1->getType(), false);
-      V2 = IRB.CreateIntCast(V2, S2->getType(), false);
-    }
+
+    // "The two arguments to the ‘or’ instruction must be integer or vector
+    //  of integer values. Both arguments must have identical types."
+    assert(V1->getType()->isIntOrIntVectorTy());
+    assert(V1->getType() == V2->getType());
+
+    // Conveniently, getShadowTy() of Int/IntVector returns the original type.
+    assert(V1->getType() == S1->getType());
+    assert(V2->getType() == S2->getType());
 
     Value *NotV1 = IRB.CreateNot(V1);
     Value *NotV2 = IRB.CreateNot(V2);
@@ -3455,7 +3534,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     // If zero poison is requested, mix in with the shadow
     Constant *IsZeroPoison = cast<Constant>(I.getOperand(1));
-    if (!IsZeroPoison->isZeroValue()) {
+    if (!IsZeroPoison->isNullValue()) {
       Value *BoolZeroPoison = IRB.CreateIsNull(Src, "_mscz_bzp");
       OutputShadow = IRB.CreateOr(OutputShadow, BoolZeroPoison, "_mscz_bs");
     }
@@ -6818,6 +6897,68 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                                         /*WriteThruIndex=*/2,
                                         /*MaskIndex=*/3);
       break;
+
+    // AVX512 Vector Scale Float* Packed
+    //
+    //  < 8 x double> @llvm.x86.avx512.mask.scalef.pd.512
+    //                   (<8 x double>, <8 x double>, <8 x double>, i8, i32)
+    //                    A             B             WriteThru     Msk Round
+    //  < 4 x double> @llvm.x86.avx512.mask.scalef.pd.256
+    //                   (<4 x double>, <4 x double>, <4 x double>, i8)
+    //  < 2 x double> @llvm.x86.avx512.mask.scalef.pd.128
+    //                   (<2 x double>, <2 x double>, <2 x double>, i8)
+    //
+    //  <16 x float> @llvm.x86.avx512.mask.scalef.ps.512
+    //                    (<16 x float>, <16 x float>, <16 x float>, i16, i32)
+    //  < 8 x float> @llvm.x86.avx512.mask.scalef.ps.256
+    //                    (<8 x float>, <8 x float>, <8 x float>, i8)
+    //  < 4 x float> @llvm.x86.avx512.mask.scalef.ps.128
+    //                    (<4 x float>, <4 x float>, <4 x float>, i8)
+    //
+    //  <32 x half> @llvm.x86.avx512fp16.mask.scalef.ph.512
+    //                   (<32 x half>, <32 x half>, <32 x half>, i32, i32)
+    //  <16 x half> @llvm.x86.avx512fp16.mask.scalef.ph.256
+    //                   (<16 x half>, <16 x half>, <16 x half>, i16)
+    //  < 8 x half> @llvm.x86.avx512fp16.mask.scalef.ph.128
+    //                   (<8 x half>, <8 x half>, <8 x half>, i8)
+    //
+    // TODO: AVX10
+    //  <32 x bfloat> @llvm.x86.avx10.mask.scalef.bf16.512
+    //                     (<32 x bfloat>, <32 x bfloat>, <32 x bfloat>, i32)
+    //  <16 x bfloat> @llvm.x86.avx10.mask.scalef.bf16.256
+    //                     (<16 x bfloat>, <16 x bfloat>, <16 x bfloat>, i16)
+    //  < 8 x bfloat> @llvm.x86.avx10.mask.scalef.bf16.128
+    //                     (<8 x bfloat>, <8 x bfloat>, <8 x bfloat>, i8)
+    case Intrinsic::x86_avx512_mask_scalef_pd_512:
+    case Intrinsic::x86_avx512_mask_scalef_pd_256:
+    case Intrinsic::x86_avx512_mask_scalef_pd_128:
+    case Intrinsic::x86_avx512_mask_scalef_ps_512:
+    case Intrinsic::x86_avx512_mask_scalef_ps_256:
+    case Intrinsic::x86_avx512_mask_scalef_ps_128:
+    case Intrinsic::x86_avx512fp16_mask_scalef_ph_512:
+    case Intrinsic::x86_avx512fp16_mask_scalef_ph_256:
+    case Intrinsic::x86_avx512fp16_mask_scalef_ph_128:
+      // The AVX512 512-bit operand variants have an extra operand (the
+      // Rounding mode). The extra operand, if present, will be
+      // automatically checked by the handler.
+      handleAVX512VectorGenericMaskedFP(I, /*DataIndices=*/{0, 1},
+                                        /*WriteThruIndex=*/2,
+                                        /*MaskIndex=*/3);
+      break;
+
+    // TODO: AVX512 Vector Scale Float* Scalar
+    //
+    // This is different from the Packed variant, because some bits are copied,
+    // and some bits are zeroed.
+    //
+    //  < 4 x float> @llvm.x86.avx512.mask.scalef.ss
+    //                    (<4 x float>, <4 x float>, <4 x float>, i8, i32)
+    //
+    //  < 2 x double> @llvm.x86.avx512.mask.scalef.sd
+    //                    (<2 x double>, <2 x double>, <2 x double>, i8, i32)
+    //
+    //  < 8 x half> @llvm.x86.avx512fp16.mask.scalef.sh
+    //                   (<8 x half>, <8 x half>, <8 x half>, i8, i32)
 
     // AVX512 FP16 Arithmetic
     case Intrinsic::x86_avx512fp16_mask_add_sh_round:

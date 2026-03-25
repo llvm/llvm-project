@@ -13,3 +13,31 @@ entry:
   ret i64 %sub1
 }
 
+define i64 @sub_one_from_sub(i64 %a, i64 %b) {
+; GISEL-LABEL: sub_one_from_sub:
+; GISEL:       // %bb.0: // %entry
+; GISEL-NEXT:    mvn x8, x1
+; GISEL-NEXT:    add x0, x8, x0
+; GISEL-NEXT:    ret
+entry:
+; fold (A - B) - 1  ->  add (xor B, -1), A
+  %sub1 = sub i64 %a, %b
+  %sub2 = sub i64 %sub1, 1
+  ret i64 %sub2
+}
+
+; fold (A - B) - 1  ->  add (xor B, -1), A
+define i64 @sub_one_from_sub_one_use(i64 %a, i64 %b) {
+; GISEL-LABEL: sub_one_from_sub_one_use:
+; GISEL:       // %bb.0: // %entry
+; GISEL-NEXT:    sub x8, x0, x1
+; GISEL-NEXT:    sub x9, x8, #1
+; GISEL-NEXT:    mul x0, x8, x9
+; GISEL-NEXT:    ret
+entry:
+; fold (A - (0 - B)) to (A + B)
+  %sub1 = sub i64 %a, %b
+  %sub2 = sub i64 %sub1, 1
+  %mul = mul i64 %sub1, %sub2
+  ret i64 %mul
+}

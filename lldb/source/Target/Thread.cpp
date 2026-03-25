@@ -1084,14 +1084,15 @@ Vote Thread::ShouldReportRun(Event *event_ptr) {
   if (GetPlans().AnyCompletedPlans()) {
     // Pass skip_private = false to GetCompletedPlan, since we want to ask
     // the last plan, regardless of whether it is private or not.
+    ThreadPlanSP plan = GetPlans().GetCompletedPlan(/*skip_private=*/false);
+
     LLDB_LOGF(log,
               "Current Plan for thread %d(%p) (0x%4.4" PRIx64
               ", %s): %s being asked whether we should report run.",
               GetIndexID(), static_cast<void *>(this), GetID(),
-              StateAsCString(GetTemporaryResumeState()),
-              GetCompletedPlan()->GetName());
+              StateAsCString(GetTemporaryResumeState()), plan->GetName());
 
-    return GetPlans().GetCompletedPlan(false)->ShouldReportRun(event_ptr);
+    return plan->ShouldReportRun(event_ptr);
   } else {
     LLDB_LOGF(log,
               "Current Plan for thread %d(%p) (0x%4.4" PRIx64
@@ -1142,10 +1143,8 @@ void Thread::PushPlan(ThreadPlanSP thread_plan_sp) {
 void Thread::PopPlan() {
   Log *log = GetLog(LLDBLog::Step);
   ThreadPlanSP popped_plan_sp = GetPlans().PopPlan();
-  if (log) {
-    LLDB_LOGF(log, "Popping plan: \"%s\", tid = 0x%4.4" PRIx64 ".",
-              popped_plan_sp->GetName(), popped_plan_sp->GetThread().GetID());
-  }
+  LLDB_LOGF(log, "Popping plan: \"%s\", tid = 0x%4.4" PRIx64 ".",
+            popped_plan_sp->GetName(), popped_plan_sp->GetThread().GetID());
 }
 
 void Thread::DiscardPlan() {
@@ -1260,12 +1259,10 @@ void Thread::DiscardThreadPlansUpToPlan(ThreadPlan *up_to_plan_ptr) {
 
 void Thread::DiscardThreadPlans(bool force) {
   Log *log = GetLog(LLDBLog::Step);
-  if (log) {
-    LLDB_LOGF(log,
-              "Discarding thread plans for thread (tid = 0x%4.4" PRIx64
-              ", force %d)",
-              GetID(), force);
-  }
+  LLDB_LOGF(log,
+            "Discarding thread plans for thread (tid = 0x%4.4" PRIx64
+            ", force %d)",
+            GetID(), force);
 
   if (force) {
     GetPlans().DiscardAllPlans();
@@ -1961,9 +1958,9 @@ size_t Thread::GetStatus(Stream &strm, uint32_t start_frame,
                          uint32_t num_frames, uint32_t num_frames_with_source,
                          bool stop_format, bool show_hidden, bool only_stacks) {
 
+  ExecutionContext exe_ctx(shared_from_this());
+  Target *target = exe_ctx.GetTargetPtr();
   if (!only_stacks) {
-    ExecutionContext exe_ctx(shared_from_this());
-    Target *target = exe_ctx.GetTargetPtr();
     Process *process = exe_ctx.GetProcessPtr();
     strm.Indent();
     bool is_selected = false;
@@ -1997,16 +1994,19 @@ size_t Thread::GetStatus(Stream &strm, uint32_t start_frame,
 
     const bool show_frame_info = true;
     const bool show_frame_unique = only_stacks;
-    const char *selected_frame_marker = nullptr;
+    bool show_selected_frame = false;
     if (num_frames == 1 || only_stacks ||
         (GetID() != GetProcess()->GetThreadList().GetSelectedThread()->GetID()))
       strm.IndentMore();
     else
-      selected_frame_marker = "* ";
+      show_selected_frame = true;
 
+    bool show_hidden_marker =
+        target && target->GetDebugger().GetMarkHiddenFrames();
     num_frames_shown = GetStackFrameList()->GetStatus(
         strm, start_frame, num_frames, show_frame_info, num_frames_with_source,
-        show_frame_unique, show_hidden, selected_frame_marker);
+        show_frame_unique, show_hidden, show_hidden_marker,
+        show_selected_frame);
     if (num_frames == 1)
       strm.IndentLess();
     strm.IndentLess();
@@ -2106,9 +2106,13 @@ size_t Thread::GetStackFrameStatus(Stream &strm, uint32_t first_frame,
                                    uint32_t num_frames, bool show_frame_info,
                                    uint32_t num_frames_with_source,
                                    bool show_hidden) {
-  return GetStackFrameList()->GetStatus(strm, first_frame, num_frames,
-                                        show_frame_info, num_frames_with_source,
-                                        /*show_unique*/ false, show_hidden);
+  ExecutionContext exe_ctx(shared_from_this());
+  Target *target = exe_ctx.GetTargetPtr();
+  bool show_hidden_marker =
+      target && target->GetDebugger().GetMarkHiddenFrames();
+  return GetStackFrameList()->GetStatus(
+      strm, first_frame, num_frames, show_frame_info, num_frames_with_source,
+      /*show_unique*/ false, show_hidden, show_hidden_marker);
 }
 
 Unwind &Thread::GetUnwinder() {

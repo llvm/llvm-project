@@ -486,9 +486,26 @@ bool RISCVFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  return MF.getTarget().Options.DisableFramePointerElim(MF) ||
-         RegInfo->hasStackRealignment(MF) || MFI.hasVarSizedObjects() ||
-         MFI.isFrameAddressTaken();
+  if (MF.getTarget().Options.DisableFramePointerElim(MF) ||
+      RegInfo->hasStackRealignment(MF) || MFI.hasVarSizedObjects() ||
+      MFI.isFrameAddressTaken())
+    return true;
+
+  // With large callframes around we may need to use FP to access the scavenging
+  // emergency spillslot.
+  //
+  // We calculate the MaxCallFrameSize at the end of isel so this value should
+  // be stable for the whole post-isel MIR pipeline.
+  //
+  // NOTE: The idea of forcing a frame pointer is copied from AArch64, but they
+  // conservatively return true when the call frame size hasd not been
+  // computed yet. On RISC-V that caused MachineOutliner tests to fail the
+  // MachineVerifier due to outlined functions not computing max call frame
+  // size thus the frame pointer would always be reserved.
+  if (MFI.isMaxCallFrameSizeComputed() && MFI.getMaxCallFrameSize() > 2047)
+    return true;
+
+  return false;
 }
 
 bool RISCVFrameLowering::hasBP(const MachineFunction &MF) const {
@@ -1075,10 +1092,22 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
 
   // Iterate over list of callee-saved registers and emit .cfi_offset
   // directives.
-  if (NeedsDwarfCFI)
-    for (const CalleeSavedInfo &CS : getUnmanagedCSI(MF, CSI))
-      CFIBuilder.buildOffset(CS.getReg(),
-                             MFI.getObjectOffset(CS.getFrameIdx()));
+  if (NeedsDwarfCFI) {
+    for (const CalleeSavedInfo &CS : getUnmanagedCSI(MF, CSI)) {
+      MCRegister Reg = CS.getReg();
+      int64_t Offset = MFI.getObjectOffset(CS.getFrameIdx());
+      // Emit CFI for both sub-registers. The even register is at the base
+      // offset and odd at base+4.
+      if (RISCV::GPRPairRegClass.contains(Reg)) {
+        MCRegister EvenReg = RI->getSubReg(Reg, RISCV::sub_gpr_even);
+        MCRegister OddReg = RI->getSubReg(Reg, RISCV::sub_gpr_odd);
+        CFIBuilder.buildOffset(EvenReg, Offset);
+        CFIBuilder.buildOffset(OddReg, Offset + 4);
+      } else {
+        CFIBuilder.buildOffset(Reg, Offset);
+      }
+    }
+  }
 
   // Generate new FP.
   if (hasFP(MF)) {
@@ -1330,9 +1359,20 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   }
 
   // Recover callee-saved registers.
-  if (NeedsDwarfCFI)
-    for (const CalleeSavedInfo &CS : getUnmanagedCSI(MF, CSI))
-      CFIBuilder.buildRestore(CS.getReg());
+  if (NeedsDwarfCFI) {
+    for (const CalleeSavedInfo &CS : getUnmanagedCSI(MF, CSI)) {
+      MCRegister Reg = CS.getReg();
+      // Emit CFI for both sub-registers.
+      if (RISCV::GPRPairRegClass.contains(Reg)) {
+        MCRegister EvenReg = RI->getSubReg(Reg, RISCV::sub_gpr_even);
+        MCRegister OddReg = RI->getSubReg(Reg, RISCV::sub_gpr_odd);
+        CFIBuilder.buildRestore(EvenReg);
+        CFIBuilder.buildRestore(OddReg);
+      } else {
+        CFIBuilder.buildRestore(Reg);
+      }
+    }
+  }
 
   if (RVFI->isPushable(MF) && MBBI != MBB.end() && isPop(MBBI->getOpcode())) {
     // Use available stack adjustment in pop instruction to deallocate stack
@@ -1575,7 +1615,7 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // For example:
   // Original behavior: If v24 is marked, v24m2, v24m4, v24m8 are also marked.
   // Correct behavior: v24m2 is marked only if v24 and v25 are marked.
-  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
   const MCPhysReg *CSRegs = MRI.getCalleeSavedRegs();
   const RISCVRegisterInfo &TRI = *STI.getRegisterInfo();
   for (unsigned i = 0; CSRegs[i]; ++i) {
@@ -1594,11 +1634,6 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
         SavedRegs.set(Reg);
     }
 
-    // Combine to super register if all of its subregisters are marked.
-    if (!SubRegs.empty() && llvm::all_of(SubRegs, [&](unsigned Reg) {
-          return SavedRegs.test(Reg);
-        }))
-      SavedRegs.set(CSReg);
   }
 
   // Unconditionally spill RA and FP only if the function uses a frame
@@ -1615,6 +1650,59 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
   auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
   if (RVFI->isPushable(MF) && SavedRegs.test(RISCV::X26))
     SavedRegs.set(RISCV::X27);
+
+  // For Zilsd on RV32, append GPRPair registers to the CSR list. This prevents
+  // the need to create register sets for each abi which is a lot more complex.
+  // Don't use Zilsd for callee-saved coalescing if the required alignment
+  // exceeds the stack alignment.
+  bool UseZilsd = !STI.is64Bit() && STI.hasStdExtZilsd() &&
+                  STI.getZilsdAlign() <= getStackAlign();
+  if (UseZilsd) {
+    SmallVector<MCPhysReg, 32> NewCSRs;
+    SmallSet<MCPhysReg, 16> CSRSet;
+    for (unsigned i = 0; CSRegs[i]; ++i) {
+      NewCSRs.push_back(CSRegs[i]);
+      CSRSet.insert(CSRegs[i]);
+    }
+
+    // Append GPRPair registers for pairs where both sub-registers are in CSR
+    // list. Iterate through all GPRPairs and check if both sub-regs are CSRs.
+    for (MCPhysReg Pair : RISCV::GPRPairRegClass) {
+      MCPhysReg EvenReg = TRI.getSubReg(Pair, RISCV::sub_gpr_even);
+      MCPhysReg OddReg = TRI.getSubReg(Pair, RISCV::sub_gpr_odd);
+      if (CSRSet.contains(EvenReg) && CSRSet.contains(OddReg))
+        NewCSRs.push_back(Pair);
+    }
+
+    MRI.setCalleeSavedRegs(NewCSRs);
+    CSRegs = MRI.getCalleeSavedRegs();
+  }
+
+  // Check if all subregisters are marked for saving. If so, set the super
+  // register bit. For GPRPair, only check sub_gpr_even and sub_gpr_odd, not
+  // aliases like X8_W or X8_H which are not set in SavedRegs.
+  for (unsigned i = 0; CSRegs[i]; ++i) {
+    unsigned CSReg = CSRegs[i];
+    bool CombineToSuperReg;
+    if (RISCV::GPRPairRegClass.contains(CSReg)) {
+      MCPhysReg EvenReg = TRI.getSubReg(CSReg, RISCV::sub_gpr_even);
+      MCPhysReg OddReg = TRI.getSubReg(CSReg, RISCV::sub_gpr_odd);
+      CombineToSuperReg = SavedRegs.test(EvenReg) && SavedRegs.test(OddReg);
+      // If s0(x8) is used as FP we can't generate load/store pair because it
+      // breaks the frame chain.
+      if (hasFP(MF) && CSReg == RISCV::X8_X9)
+        CombineToSuperReg = false;
+    } else {
+      auto SubRegs = TRI.subregs(CSReg);
+      CombineToSuperReg =
+          !SubRegs.empty() && llvm::all_of(SubRegs, [&](unsigned Reg) {
+            return SavedRegs.test(Reg);
+          });
+    }
+
+    if (CombineToSuperReg)
+      SavedRegs.set(CSReg);
+  }
 
   // SiFive Preemptible Interrupt Handlers need additional frame entries
   createSiFivePreemptibleInterruptFrameEntries(MF, *RVFI);
@@ -2066,6 +2154,16 @@ bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
         CS.setFrameIdx(FrameIdx);
         continue;
       }
+    }
+
+    // For GPRPair registers, use 8-byte slots with required alignment by zilsd.
+    if (!STI.is64Bit() && STI.hasStdExtZilsd() &&
+        RISCV::GPRPairRegClass.contains(Reg)) {
+      Align PairAlign = STI.getZilsdAlign();
+      int FrameIdx = MFI.CreateStackObject(8, PairAlign, true);
+      MFI.setIsCalleeSavedObjectIndex(FrameIdx, true);
+      CS.setFrameIdx(FrameIdx);
+      continue;
     }
 
     // Not a fixed slot.

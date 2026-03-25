@@ -185,8 +185,7 @@ public:
   /// otherwise.
   virtual bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
                                        StringRef ModuleFilename,
-                                       StringRef SpecificModuleCachePath,
-                                       bool Complain) {
+                                       StringRef ContextHash, bool Complain) {
     return false;
   }
 
@@ -304,8 +303,7 @@ public:
                              bool Complain) override;
 
   bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
-                               StringRef ModuleFilename,
-                               StringRef SpecificModuleCachePath,
+                               StringRef ModuleFilename, StringRef ContextHash,
                                bool Complain) override;
   bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
                                StringRef ModuleFilename, bool ReadMacros,
@@ -349,8 +347,7 @@ public:
                                bool Complain,
                                std::string &SuggestedPredefines) override;
   bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
-                               StringRef ModuleFilename,
-                               StringRef SpecificModuleCachePath,
+                               StringRef ModuleFilename, StringRef ContextHash,
                                bool Complain) override;
   void ReadCounter(const serialization::ModuleFile &M, uint32_t Value) override;
 };
@@ -1541,7 +1538,6 @@ public:
   /// If we have any unloaded specialization for \p D
   bool haveUnloadedSpecializations(const Decl *D) const;
 
-private:
   struct ImportedModule {
     ModuleFile *Mod;
     ModuleFile *ImportedBy;
@@ -1553,12 +1549,14 @@ private:
         : Mod(Mod), ImportedBy(ImportedBy), ImportLoc(ImportLoc) {}
   };
 
-  ASTReadResult ReadASTCore(StringRef FileName, ModuleKind Type,
+  ASTReadResult ReadASTCore(ModuleFileName FileName, ModuleKind Type,
                             SourceLocation ImportLoc, ModuleFile *ImportedBy,
                             SmallVectorImpl<ImportedModule> &Loaded,
                             off_t ExpectedSize, time_t ExpectedModTime,
                             ASTFileSignature ExpectedSignature,
                             unsigned ClientLoadCapabilities);
+
+private:
   ASTReadResult ReadControlBlock(ModuleFile &F,
                                  SmallVectorImpl<ImportedModule> &Loaded,
                                  const ModuleFile *ImportedBy,
@@ -1589,6 +1587,21 @@ private:
   void ParseLineTable(ModuleFile &F, const RecordData &Record);
   llvm::Error ReadSourceManagerBlock(ModuleFile &F);
   SourceLocation getImportLocation(ModuleFile *F);
+
+  /// The first element is `std::nullopt` if relocation check should be skipped.
+  /// Otherwise, the optional holds a pointer to the discovered module.
+  /// The pointer can be `nullptr` if the discovery was unsuccessful.
+  /// The second element determines whether to emit related errors.
+  using RelocationResult = std::pair<std::optional<Module *>, bool>;
+
+  /// Determine whether a relocation check for a module should be performed
+  /// by attempting to resolve the same module via lookup.
+  /// If so, also determine whether to emit errors for the relocation.
+  /// A relocated module is defined as a module that is either no longer
+  /// resolvable from the modulemap or search path it originally compiled it's
+  /// definition from.
+  RelocationResult getModuleForRelocationChecks(ModuleFile &F,
+                                                bool DirectoryCheck = false);
   ASTReadResult ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
                                        const ModuleFile *ImportedBy,
                                        unsigned ClientLoadCapabilities);
@@ -1872,7 +1885,7 @@ public:
   /// NewLoadedModuleFile would refer to the address of the new loaded top level
   /// module. The state of NewLoadedModuleFile is unspecified if the AST file
   /// isn't loaded successfully.
-  ASTReadResult ReadAST(StringRef FileName, ModuleKind Type,
+  ASTReadResult ReadAST(ModuleFileName FileName, ModuleKind Type,
                         SourceLocation ImportLoc,
                         unsigned ClientLoadCapabilities,
                         ModuleFile **NewLoadedModuleFile = nullptr);

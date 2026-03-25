@@ -63,6 +63,7 @@ bnei s1, 11, -4096
 # CHECK-UNKNOWN: 80b4b063 <unknown>
 
 bnei s1, 12, undef+1
-# CHECK-OBJ:      bnei s1, 12, {{.*}}
-# CHECK-OBJ-NEXT: R_RISCV_BRANCH undef+0x1
+# CHECK-OBJ:      beqi s1, 12, {{.*}}
+# CHECK-OBJ-NEXT: j {{.*}}
+# CHECK-OBJ-NEXT: R_RISCV_JAL undef+0x1
 # CHECK-ASM:      bnei s1, 12, undef+1

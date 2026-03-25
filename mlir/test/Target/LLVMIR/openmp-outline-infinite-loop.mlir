@@ -13,7 +13,6 @@ llvm.func @parallel_infinite_loop() -> () {
 }
 
 // CHECK-LABEL: define void @parallel_infinite_loop() {
-// CHECK:         %[[VAL_2:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
 // CHECK:         br label %[[VAL_3:.*]]
 // CHECK:       omp_parallel:
 // CHECK:         call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @1, i32 0, ptr @parallel_infinite_loop..omp_par)

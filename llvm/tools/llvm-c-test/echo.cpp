@@ -89,6 +89,8 @@ struct TypeCloner {
         return LLVMPPCFP128TypeInContext(Ctx);
       case LLVMLabelTypeKind:
         return LLVMLabelTypeInContext(Ctx);
+      case LLVMByteTypeKind:
+        return LLVMByteTypeInContext(Ctx, LLVMGetByteTypeWidth(Src));
       case LLVMIntegerTypeKind:
         return LLVMIntTypeInContext(Ctx, LLVMGetIntTypeWidth(Src));
       case LLVMFunctionTypeKind: {
@@ -560,19 +562,18 @@ struct FunCloner {
           Dst = LLVMBuildRet(Builder, CloneValue(LLVMGetOperand(Src, 0)));
         break;
       }
-      case LLVMBr: {
-        if (!LLVMIsConditional(Src)) {
-          LLVMValueRef SrcOp = LLVMGetOperand(Src, 0);
-          LLVMBasicBlockRef SrcBB = LLVMValueAsBasicBlock(SrcOp);
-          Dst = LLVMBuildBr(Builder, DeclareBB(SrcBB));
-          break;
-        }
-
+      case LLVMUncondBr: {
+        LLVMValueRef SrcOp = LLVMGetOperand(Src, 0);
+        LLVMBasicBlockRef SrcBB = LLVMValueAsBasicBlock(SrcOp);
+        Dst = LLVMBuildBr(Builder, DeclareBB(SrcBB));
+        break;
+      }
+      case LLVMCondBr: {
         LLVMValueRef Cond = LLVMGetCondition(Src);
-        LLVMValueRef Else = LLVMGetOperand(Src, 1);
-        LLVMBasicBlockRef ElseBB = DeclareBB(LLVMValueAsBasicBlock(Else));
-        LLVMValueRef Then = LLVMGetOperand(Src, 2);
+        LLVMValueRef Then = LLVMGetOperand(Src, 1);
         LLVMBasicBlockRef ThenBB = DeclareBB(LLVMValueAsBasicBlock(Then));
+        LLVMValueRef Else = LLVMGetOperand(Src, 2);
+        LLVMBasicBlockRef ElseBB = DeclareBB(LLVMValueAsBasicBlock(Else));
         Dst = LLVMBuildCondBr(Builder, CloneValue(Cond), ThenBB, ElseBB);
         break;
       }

@@ -258,9 +258,9 @@ std::string ScriptedSyntheticChildren::GetDescription() {
 BytecodeSyntheticChildren::FrontEnd::FrontEnd(
     ValueObject &backend, SyntheticBytecodeImplementation &impl)
     : SyntheticChildrenFrontEnd(backend), m_impl(impl) {
-  FormatterBytecode::DataStack data(backend.GetSP());
+  FormatterBytecode::DataStack data = {backend.GetSP()};
   if (!m_impl.init) {
-    m_self = std::move(data);
+    m_init_results = std::move(data);
     return;
   }
 
@@ -274,15 +274,17 @@ BytecodeSyntheticChildren::FrontEnd::FrontEnd(
   }
 
   if (data.size() > 0)
-    m_self = std::move(data);
+    m_init_results = std::move(data);
 }
 
 lldb::ChildCacheState BytecodeSyntheticChildren::FrontEnd::Update() {
-  if (!m_impl.update)
-    return ChildCacheState::eRefetch;
+  if (!m_impl.update) {
+    m_self = m_init_results;
+    return ChildCacheState::eReuse;
+  }
 
   FormatterBytecode::ControlStack control = {m_impl.update->getBuffer()};
-  FormatterBytecode::DataStack data = m_self;
+  FormatterBytecode::DataStack data = m_init_results;
   llvm::Error error = FormatterBytecode::Interpret(
       control, data, FormatterBytecode::sig_update);
   if (error) {

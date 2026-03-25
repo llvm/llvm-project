@@ -167,7 +167,7 @@ TEST(CFGBackEdgesTest, WhileWithContinueLoop) {
   ASSERT_THAT(Cfg, NotNull());
 
   auto BackEdges = findCFGBackEdges(*Cfg);
-  EXPECT_THAT(BackEdges, SizeIs(testing::Gt(0)));
+  EXPECT_THAT(BackEdges, SizeIs(testing::Gt(0u)));
   for (const auto &[From, To] : BackEdges)
     EXPECT_THAT(From->getLoopTarget(), NotNull());
 }

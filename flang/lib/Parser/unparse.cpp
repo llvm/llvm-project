@@ -1514,9 +1514,7 @@ public:
       Walk(x.count);
       break;
     case format::ControlEditDesc::Kind::X:
-      if (x.count != 1) {
-        Walk(x.count);
-      }
+      Walk(x.count);
       Word("X");
       break;
     case format::ControlEditDesc::Kind::Slash:
@@ -1549,6 +1547,9 @@ public:
       FMT(RP);
       FMT(DC);
       FMT(DP);
+      FMT(LZ);
+      FMT(LZS);
+      FMT(LZP);
 #undef FMT
     case format::ControlEditDesc::Kind::Dollar:
       Put('$');

@@ -182,6 +182,6 @@ sw.bb7.i.i.i3.i.i:                                ; preds = %bb.3
 bb.4: ; preds = %sw.bb7.i.i.i3.i.i, %bb.3
   %phi.4 = phi <4 x i32> [ %phi.3, %bb.3 ], [ %insert.0, %sw.bb7.i.i.i3.i.i ]
   %extract = extractelement <4 x i32> %phi.4, i64 0
-  store i32 %extract, ptr addrspace(5) null, align 4
+  store i32 %extract, ptr addrspace(5) zeroinitializer, align 4
   ret void
 }

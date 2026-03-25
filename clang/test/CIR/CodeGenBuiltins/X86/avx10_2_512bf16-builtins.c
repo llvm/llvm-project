@@ -31,7 +31,7 @@ __mmask32 test_mm512_mask_fpclass_pbh_mask(__mmask32 __U, __m512bh __A) {
   // CIR-LABEL: _mm512_mask_fpclass_pbh_mask
   // CIR: %[[A:.*]] = cir.call_llvm_intrinsic "x86.avx10.fpclass.bf16.512"
   // CIR: %[[B:.*]] = cir.cast bitcast {{.*}} : !u32i -> !cir.vector<32 x !cir.int<s, 1>>
-  // CIR: %[[C:.*]] = cir.binop(and, %[[A]], %[[B]]) : !cir.vector<32 x !cir.int<s, 1>>
+  // CIR: %[[C:.*]] = cir.and %[[A]], %[[B]] : !cir.vector<32 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast %[[C]] : !cir.vector<32 x !cir.int<s, 1>> -> !u32i
 
   // LLVM-LABEL: test_mm512_mask_fpclass_pbh_mask

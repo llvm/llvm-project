@@ -159,7 +159,8 @@ public:
 
       // Some statements have custom mechanisms for dumping their children.
       if (isa<DeclStmt, GenericSelectionExpr, RequiresExpr,
-              OpenACCWaitConstruct, SYCLKernelCallStmt>(S))
+              OpenACCWaitConstruct, SYCLKernelCallStmt,
+              UnresolvedSYCLKernelCallStmt>(S))
         return;
 
       if (Traversal == TK_IgnoreUnlessSpelledInSource &&
@@ -446,6 +447,9 @@ public:
   }
   void VisitBTFTagAttributedType(const BTFTagAttributedType *T) {
     Visit(T->getWrappedType());
+  }
+  void VisitOverflowBehaviorType(const OverflowBehaviorType *T) {
+    Visit(T->getUnderlyingType());
   }
   void VisitHLSLAttributedResourceType(const HLSLAttributedResourceType *T) {
     QualType Contained = T->getContainedType();
@@ -836,8 +840,17 @@ public:
 
   void VisitSYCLKernelCallStmt(const SYCLKernelCallStmt *Node) {
     Visit(Node->getOriginalStmt());
-    if (Traversal != TK_IgnoreUnlessSpelledInSource)
+    if (Traversal != TK_IgnoreUnlessSpelledInSource) {
+      Visit(Node->getKernelLaunchStmt());
       Visit(Node->getOutlinedFunctionDecl());
+    }
+  }
+
+  void
+  VisitUnresolvedSYCLKernelCallStmt(const UnresolvedSYCLKernelCallStmt *Node) {
+    Visit(Node->getOriginalStmt());
+    if (Traversal != TK_IgnoreUnlessSpelledInSource)
+      Visit(Node->getKernelLaunchIdExpr());
   }
 
   void VisitOMPExecutableDirective(const OMPExecutableDirective *Node) {

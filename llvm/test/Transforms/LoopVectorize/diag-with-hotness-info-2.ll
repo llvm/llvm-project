@@ -33,7 +33,7 @@ source_filename = "/tmp/s.c"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Function Attrs: norecurse nounwind ssp uwtable
-define void @cold(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture %C, ptr nocapture readonly %D, ptr nocapture readonly %E, i32 %N) local_unnamed_addr #0 !dbg !7 !prof !56 {
+define void @cold(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture %C, ptr nocapture readonly %D, ptr nocapture readonly %E, i32 %N) #0 !dbg !7 !prof !56 {
 entry:
   %cmp28 = icmp sgt i32 %N, 0, !dbg !9
   br i1 %cmp28, label %ph, label %for.cond.cleanup, !dbg !10, !prof !58
@@ -67,7 +67,7 @@ for.cond.cleanup:
 }
 
 ; Function Attrs: norecurse nounwind ssp uwtable
-define void @hot(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture %C, ptr nocapture readonly %D, ptr nocapture readonly %E, i32 %N) local_unnamed_addr #0 !dbg !26 !prof !57 {
+define void @hot(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture %C, ptr nocapture readonly %D, ptr nocapture readonly %E, i32 %N) #0 !dbg !26 !prof !57 {
 entry:
   %cmp28 = icmp sgt i32 %N, 0, !dbg !27
   br i1 %cmp28, label %ph, label %for.cond.cleanup, !dbg !28, !prof !58
@@ -101,7 +101,7 @@ for.cond.cleanup:
 }
 
 ; Function Attrs: norecurse nounwind ssp uwtable
-define void @unknown(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture %C, ptr nocapture readonly %D, ptr nocapture readonly %E, i32 %N) local_unnamed_addr #0 !dbg !41 {
+define void @unknown(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture %C, ptr nocapture readonly %D, ptr nocapture readonly %E, i32 %N) #0 !dbg !41 {
 entry:
   %cmp28 = icmp sgt i32 %N, 0, !dbg !42
   br i1 %cmp28, label %ph, label %for.cond.cleanup, !dbg !43

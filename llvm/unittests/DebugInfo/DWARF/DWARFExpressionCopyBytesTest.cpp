@@ -49,6 +49,7 @@ public:
   Triple TheTriple;
 
   std::unique_ptr<MCRegisterInfo> MRI;
+  MCTargetOptions MCOptions;
   std::unique_ptr<MCAsmInfo> MAI;
   std::unique_ptr<const MCSubtargetInfo> STI;
   const Target *TheTarget;
@@ -64,7 +65,7 @@ public:
       return;
 
     MRI.reset(TheTarget->createMCRegInfo(TheTriple));
-    MAI.reset(TheTarget->createMCAsmInfo(*MRI, TheTriple, MCTargetOptions()));
+    MAI.reset(TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
     STI.reset(TheTarget->createMCSubtargetInfo(TheTriple, "", ""));
   }
 
@@ -131,7 +132,7 @@ SmallString<0> DWARFExpressionCopyBytesTest::emitObjFile(StringRef ExprBytes) {
   SmallString<0> Storage;
   raw_svector_ostream VecOS(Storage);
   StreamerContext C = createStreamer(VecOS);
-  C.Streamer->initSections(false, *STI);
+  C.Streamer->initSections(*STI);
   MCSection *Section = C.MOFI->getTextSection();
   Section->setHasInstructions(true);
   C.Streamer->switchSection(Section);
