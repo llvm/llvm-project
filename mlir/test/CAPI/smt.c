@@ -44,6 +44,7 @@ void testExportSMTLIB(MlirContext ctx) {
   result = mlirTranslateModuleToSMTLIB(module, dumpCallback, NULL, false, false,
                                        false);
   assert(mlirLogicalResultIsSuccess(result));
+  (void)result;
 
   // CHECK-NOT: (reset)
   mlirModuleDestroy(module);
