@@ -6,6 +6,7 @@ macros:
 types:
   - type_name: struct_timeval
   - type_name: clockid_t
+  - type_name: errno_t
   - type_name: struct_timespec
   - type_name: struct_tm
   - type_name: time_t

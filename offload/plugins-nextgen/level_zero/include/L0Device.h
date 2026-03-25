@@ -238,6 +238,10 @@ class L0DeviceTy final : public GenericDeviceTy {
   /// Get copy command queue group ordinal. Returns Ordinal-NumQueues pair.
   std::pair<uint32_t, uint32_t> findCopyOrdinal(bool LinkCopy = false);
 
+  /// Helper function to call global constructors or destructors.
+  Error callGlobalCtorDtorCommon(GenericPluginTy &Plugin, DeviceImageTy &Image,
+                                 bool IsCtor);
+
 public:
   L0DeviceTy(GenericPluginTy &Plugin, int32_t DeviceId, int32_t NumDevices,
              ze_device_handle_t zeDevice, L0ContextTy &DriverInfo,
@@ -639,6 +643,12 @@ public:
     return Plugin::success();
   }
   Expected<GenericKernelTy &> constructKernel(const char *Name) override;
+
+  Error callGlobalConstructors(GenericPluginTy &Plugin,
+                               DeviceImageTy &Image) override;
+
+  Error callGlobalDestructors(GenericPluginTy &Plugin,
+                              DeviceImageTy &Image) override;
 
   Error setDeviceStackSize(uint64_t V) override { return Plugin::success(); }
 
