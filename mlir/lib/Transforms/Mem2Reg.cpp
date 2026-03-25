@@ -19,7 +19,6 @@
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/GenericIteratedDominanceFrontier.h"
 
@@ -265,9 +264,9 @@ private:
   /// to a different region, the new region will be processed instead.
   void removeBlockingUses(Region *region);
 
-  /// Removes operations and merge point block arguments that ended up not being
-  /// necessary.
-  void removeUnusedItems();
+  /// Links merge point block arguments to the terminators targeting the merge
+  /// point or remove the argument if it is not used.
+  void linkMergePoints();
 
   /// Lazily-constructed default value representing the content of the slot when
   /// no store has been executed. This function may mutate IR.
@@ -295,7 +294,7 @@ private:
   /// the promotion.
   llvm::SmallVector<PromotableOpInterface> toVisitReplacedValues;
   /// Operations to be erased at the end of the promotion.
-  llvm::SmallSetVector<Operation *, 8> toErase;
+  llvm::SmallVector<Operation *> toErase;
 
   DominanceInfo &dominance;
   const DataLayout &dataLayout;
@@ -665,18 +664,6 @@ void MemorySlotPromoter::promoteInRegion(Region *region, Value reachingDef) {
 
     job.reachingDef = promoteInBlock(block, job.reachingDef);
 
-    if (auto terminator = dyn_cast<BranchOpInterface>(block->getTerminator())) {
-      for (BlockOperand &blockOperand : terminator->getBlockOperands()) {
-        if (info.mergePoints.contains(blockOperand.get())) {
-          if (!job.reachingDef)
-            job.reachingDef = getOrCreateDefaultValue();
-
-          terminator.getSuccessorOperands(blockOperand.getOperandNumber())
-              .append(job.reachingDef);
-        }
-      }
-    }
-
     for (auto *child : job.block->children())
       dfsStack.emplace_back<DfsJob>({child, job.reachingDef});
   }
@@ -766,7 +753,7 @@ void MemorySlotPromoter::removeBlockingUses(Region *region) {
       if (toPromoteMemOp.removeBlockingUses(slot, blockingUsesMap[toPromote],
                                             builder, reachingDef,
                                             dataLayout) == DeletionKind::Delete)
-        toErase.insert(toPromote);
+        toErase.push_back(toPromote);
       if (toPromoteMemOp.storesTo(slot))
         if (Value replacedValue = replacedValuesMap[toPromoteMemOp])
           replacedValues.push_back({toPromoteMemOp, replacedValue});
@@ -777,99 +764,46 @@ void MemorySlotPromoter::removeBlockingUses(Region *region) {
     builder.setInsertionPointAfter(toPromote);
     if (toPromoteBasic.removeBlockingUses(blockingUsesMap[toPromote],
                                           builder) == DeletionKind::Delete)
-      toErase.insert(toPromote);
+      toErase.push_back(toPromote);
     if (toPromoteBasic.requiresReplacedValues())
       toVisitReplacedValues.push_back(toPromoteBasic);
   }
 }
 
-void MemorySlotPromoter::removeUnusedItems() {
-  // We want to eliminate unused block arguments. Because block arguments can be
-  // used to populate other block arguments, there might be cycles of arguments
-  // that are only used to populate each-other. We therefore need a small
-  // dataflow analysis to identify which block arguments are truly used.
+void MemorySlotPromoter::linkMergePoints() {
+  // We want to eliminate unused block arguments. In case connecting a block
+  // argument to its predecessor would trigger the use of the predecessor's
+  // unused block argument, we need to process merge points in an expanding
+  // worklist, `mergePointArgsToProcess`.
 
   SmallPtrSet<BlockArgument, 8> mergePointArgsUnused;
-  SmallVector<BlockArgument> usedMergePointArgsToProcess;
-
-  // First, separate the block arguments that are not used or only used for the
-  // purpose of populating a merge point block argument from the others. These
-  // block arguments are potentially unused. Meanwhile, arguments that are
-  // definitely used will be the starting point of the propagation of the
-  // analysis.
-  auto isDefinitelyUsed = [&](BlockArgument arg) {
-    for (auto &use : arg.getUses()) {
-      if (llvm::is_contained(toErase, use.getOwner()))
-        continue;
-
-      // We now want to detect whether the use is to populate a merge point
-      // block argument. If it is not, the argument is definitely used.
-
-      auto branchOp = dyn_cast<BranchOpInterface>(use.getOwner());
-      if (!branchOp)
-        return true;
-
-      std::optional<BlockArgument> successorArgument =
-          branchOp.getSuccessorBlockArgument(use.getOperandNumber());
-      if (!successorArgument)
-        return true;
-
-      if (!info.mergePoints.contains(successorArgument->getOwner()))
-        return true;
-
-      // The last block argument of a merge point is its reaching definition
-      // argument. If the argument being populated is not the last one, it is a
-      // genuine use of the value.
-      bool isLastBlockArgument =
-          successorArgument->getArgNumber() ==
-          successorArgument->getOwner()->getNumArguments() - 1;
-      if (!isLastBlockArgument)
-        return true;
-    }
-    return false;
-  };
-
+  SmallVector<BlockArgument> mergePointArgsToProcess;
   for (Block *mergePoint : info.mergePoints) {
     BlockArgument arg = mergePoint->getArguments().back();
-    if (isDefinitelyUsed(arg))
-      usedMergePointArgsToProcess.push_back(arg);
-    else
+    if (arg.use_empty())
       mergePointArgsUnused.insert(arg);
+    else
+      mergePointArgsToProcess.push_back(arg);
   }
 
-  // We now refine mergePointArgsUnused from the information of which block
-  // arguments are definitely used.
-  while (!usedMergePointArgsToProcess.empty()) {
-    BlockArgument arg = usedMergePointArgsToProcess.pop_back_val();
+  while (!mergePointArgsToProcess.empty()) {
+    BlockArgument arg = mergePointArgsToProcess.pop_back_val();
     Block *mergePoint = arg.getOwner();
 
-    assert(arg.getArgNumber() == mergePoint->getNumArguments() - 1 &&
-           "merge point argument must be the last argument of the merge point");
-
     for (BlockOperand &use : mergePoint->getUses()) {
-      // If a value used to populate this used merge point argument is another
-      // merge point block argument that is currently considered unused, it must
-      // now be considered used and processed as such later.
+      Value reachingDef = reachingAtBlockEnd[use.getOwner()->getBlock()];
+      if (!reachingDef)
+        reachingDef = getOrCreateDefaultValue();
 
-      auto branch = cast<BranchOpInterface>(use.getOwner());
-      SuccessorOperands succOperands =
-          branch.getSuccessorOperands(use.getOperandNumber());
+      // If the reaching definition is a block argument of an unused merge
+      // point, mark it as used and process it as such later.
+      auto reachingDefArgument = dyn_cast<BlockArgument>(reachingDef);
+      if (reachingDefArgument &&
+          mergePointArgsUnused.erase(reachingDefArgument))
+        mergePointArgsToProcess.push_back(reachingDefArgument);
 
-      // The successor operand is either the last one or is not present if the
-      // user block is dead.
-      assert(succOperands.size() == mergePoint->getNumArguments() ||
-             succOperands.size() + 1 == mergePoint->getNumArguments());
-
-      // If the user block is dead, the default value acts as a placeholder
-      // dummy value.
-      if (succOperands.size() + 1 == mergePoint->getNumArguments())
-        succOperands.append(getOrCreateDefaultValue());
-
-      Value populatedValue = succOperands[arg.getArgNumber()];
-      auto populatedValueAsArg = dyn_cast<BlockArgument>(populatedValue);
-      if (populatedValueAsArg &&
-          mergePointArgsUnused.erase(populatedValueAsArg))
-        usedMergePointArgsToProcess.push_back(populatedValueAsArg);
+      BranchOpInterface user = cast<BranchOpInterface>(use.getOwner());
+      user.getSuccessorOperands(use.getOperandNumber()).append(reachingDef);
     }
 
     builder.setInsertionPointToStart(mergePoint);
@@ -878,17 +812,8 @@ void MemorySlotPromoter::removeUnusedItems() {
       (*statistics.newBlockArgumentAmount)++;
   }
 
-  for (Operation *toEraseOp : toErase)
-    toEraseOp->erase();
-
   for (BlockArgument arg : mergePointArgsUnused) {
     Block *mergePoint = arg.getOwner();
-    for (BlockOperand &use : mergePoint->getUses()) {
-      auto branch = cast<BranchOpInterface>(use.getOwner());
-      SuccessorOperands succOperands =
-          branch.getSuccessorOperands(use.getOperandNumber());
-      succOperands.erase(arg.getArgNumber());
-    }
     mergePoint->eraseArgument(mergePoint->getNumArguments() - 1);
   }
 }
@@ -915,8 +840,11 @@ MemorySlotPromoter::promoteSlot() {
     op.visitReplacedValues(replacedValues, builder);
   }
 
-  // Finally, remove unused operations and merge point block arguments.
-  removeUnusedItems();
+  // Finally, connect merge points to their predecessor's reaching definitions.
+  linkMergePoints();
+
+  for (Operation *toEraseOp : toErase)
+    toEraseOp->erase();
 
   assert(slot.ptr.use_empty() &&
          "after promotion, the slot pointer should not be used anymore");
