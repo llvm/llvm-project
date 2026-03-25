@@ -1530,10 +1530,10 @@ class Base(unittest.TestCase):
         dictionary=None,
         make_targets=None,
     ):
+        """Platform specific way to build binaries."""
         if debug_info or architecture or compiler or dictionary or make_targets:
             self.assertFalse(self.SHARED_BUILD_TESTCASE)
 
-        """Platform specific way to build binaries."""
         if not architecture and configuration.arch:
             architecture = configuration.arch
 
