@@ -1,4 +1,4 @@
-//===- MCAsmStreamer.h - Base Class for Asm Streamers -----------*- C++ -*-===//
+//===- MCAsmBaseStreamer.h - Base Class for Asm Streamers -------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file declares the MCAsmStreamer class, a base class for streamers
+// This file declares the MCAsmBaseStreamer class, a base class for streamers
 // which emits assembly text.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_MC_MCASMSTREAMER_H
-#define LLVM_MC_MCASMSTREAMER_H
+#ifndef LLVM_MC_MCASMBASESTREAMER_H
+#define LLVM_MC_MCASMBASESTREAMER_H
 
 #include "llvm/MC/MCStreamer.h"
 
@@ -20,11 +20,11 @@ namespace llvm {
 
 class MCContext;
 
-class MCAsmStreamer : public MCStreamer {
+class MCAsmBaseStreamer : public MCStreamer {
 protected:
-  MCAsmStreamer(MCContext &Context) : MCStreamer(Context) {}
+  MCAsmBaseStreamer(MCContext &Context) : MCStreamer(Context) {}
 };
 
 } // end namespace llvm
 
-#endif // LLVM_MC_MCASMSTREAMER_H
+#endif // LLVM_MC_MCASMBASESTREAMER_H
