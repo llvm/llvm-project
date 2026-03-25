@@ -22,6 +22,10 @@ namespace lldb_private {
 /// provided by an \a lldb_private::TraceCursor into a different format that can
 /// be digested by other tools, e.g. Chrome Trace Event Profiler.
 ///
+/// Trace exporters are supposed to operate on an architecture-agnostic fashion,
+/// as a TraceCursor, which feeds the data, hides the actual trace technology
+/// being used.
+///
 /// These plugins enable interoperability by exporting processor trace data
 /// collected by LLDB into formats that can be consumed by external analysis
 /// tools, visualization software, or other debugging systems.

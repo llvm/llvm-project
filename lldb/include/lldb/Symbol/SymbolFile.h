@@ -45,6 +45,13 @@ namespace lldb_private {
 /// Plugin interface for reading and parsing debug information from object
 /// files.
 ///
+/// Provides public interface for all SymbolFiles. Any protected
+/// virtual members should go into SymbolFileCommon; most SymbolFile
+/// implementations should inherit from SymbolFileCommon to override
+/// the behaviors except SymbolFileOnDemand which inherits
+/// public interfaces from SymbolFile and forward to underlying concrete
+/// SymbolFile implementation.
+///
 /// SymbolFile plugins are responsible for extracting debug information from
 /// executable files, shared libraries, and separate debug info files. They
 /// parse debug formats (such as DWARF, PDB, COFF, CTF, Breakpad) and provide
@@ -587,6 +594,9 @@ private:
 };
 
 /// Base implementation class for SymbolFile plugins with common functionality.
+///
+/// Containing protected virtual methods for child classes to override.
+/// Most actual SymbolFile implementations should inherit from this class.
 ///
 /// SymbolFileCommon provides standard implementations of many SymbolFile
 /// interface methods that are common across different debug formats. Most
