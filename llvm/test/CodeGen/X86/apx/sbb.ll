@@ -172,8 +172,7 @@ define i16 @sbb16ri8(i16 %a, i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: sbb16ri8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpw %si, %dx # encoding: [0x66,0x39,0xf2]
-; CHECK-NEXT:    sbbw $0, %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x83,0xdf,0x00]
-; CHECK-NEXT:    addw $-123, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x83,0xc0,0x85]
+; CHECK-NEXT:    sbbw $123, %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x83,0xdf,0x7b]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %s = sub i16 %a, 123
   %k = icmp ugt i16 %x, %y
@@ -186,8 +185,7 @@ define i32 @sbb32ri8(i32 %a, i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: sbb32ri8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpl %esi, %edx # encoding: [0x39,0xf2]
-; CHECK-NEXT:    sbbl $0, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x83,0xdf,0x00]
-; CHECK-NEXT:    addl $-123, %eax # EVEX TO LEGACY Compression encoding: [0x83,0xc0,0x85]
+; CHECK-NEXT:    sbbl $123, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x83,0xdf,0x7b]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %s = sub i32 %a, 123
   %k = icmp ugt i32 %x, %y
@@ -197,26 +195,11 @@ define i32 @sbb32ri8(i32 %a, i32 %x, i32 %y) nounwind {
 }
 
 define i64 @sbb64ri8(i64 %a, i64 %x, i64 %y) nounwind {
-; NDD-LABEL: sbb64ri8:
-; NDD:       # %bb.0:
-; NDD-NEXT:    cmpq %rsi, %rdx # encoding: [0x48,0x39,0xf2]
-; NDD-NEXT:    sbbq $0, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x83,0xdf,0x00]
-; NDD-NEXT:    addq $-123, %rax # encoding: [0x48,0x83,0xc0,0x85]
-; NDD-NEXT:    retq # encoding: [0xc3]
-;
-; IMM-LABEL: sbb64ri8:
-; IMM:       # %bb.0:
-; IMM-NEXT:    cmpq %rsi, %rdx # encoding: [0x48,0x39,0xf2]
-; IMM-NEXT:    sbbq $0, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x83,0xdf,0x00]
-; IMM-NEXT:    addq $-123, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x83,0xc0,0x85]
-; IMM-NEXT:    retq # encoding: [0xc3]
-;
-; MEMONLY-LABEL: sbb64ri8:
-; MEMONLY:       # %bb.0:
-; MEMONLY-NEXT:    cmpq %rsi, %rdx # encoding: [0x48,0x39,0xf2]
-; MEMONLY-NEXT:    sbbq $0, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x83,0xdf,0x00]
-; MEMONLY-NEXT:    addq $-123, %rax # encoding: [0x48,0x83,0xc0,0x85]
-; MEMONLY-NEXT:    retq # encoding: [0xc3]
+; CHECK-LABEL: sbb64ri8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cmpq %rsi, %rdx # encoding: [0x48,0x39,0xf2]
+; CHECK-NEXT:    sbbq $123, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x83,0xdf,0x7b]
+; CHECK-NEXT:    retq # encoding: [0xc3]
   %s = sub i64 %a, 123
   %k = icmp ugt i64 %x, %y
   %z = zext i1 %k to i64
@@ -228,8 +211,7 @@ define i8 @sbb8ri(i8 %a, i8 %x, i8 %y) nounwind {
 ; CHECK-LABEL: sbb8ri:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpb %sil, %dl # encoding: [0x40,0x38,0xf2]
-; CHECK-NEXT:    sbbb $0, %dil, %al # encoding: [0x62,0xf4,0x7c,0x18,0x80,0xdf,0x00]
-; CHECK-NEXT:    addb $-123, %al # EVEX TO LEGACY Compression encoding: [0x04,0x85]
+; CHECK-NEXT:    sbbb $123, %dil, %al # encoding: [0x62,0xf4,0x7c,0x18,0x80,0xdf,0x7b]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %s = sub i8 %a, 123
   %k = icmp ugt i8 %x, %y
@@ -242,9 +224,8 @@ define i16 @sbb16ri(i16 %a, i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: sbb16ri:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpw %si, %dx # encoding: [0x66,0x39,0xf2]
-; CHECK-NEXT:    sbbw $0, %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x83,0xdf,0x00]
-; CHECK-NEXT:    addw $-1234, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x05,0x2e,0xfb]
-; CHECK-NEXT:    # imm = 0xFB2E
+; CHECK-NEXT:    sbbw $1234, %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x81,0xdf,0xd2,0x04]
+; CHECK-NEXT:    # imm = 0x4D2
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %s = sub i16 %a, 1234
   %k = icmp ugt i16 %x, %y
@@ -257,9 +238,8 @@ define i32 @sbb32ri(i32 %a, i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: sbb32ri:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpl %esi, %edx # encoding: [0x39,0xf2]
-; CHECK-NEXT:    sbbl $0, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x83,0xdf,0x00]
-; CHECK-NEXT:    addl $-123456, %eax # EVEX TO LEGACY Compression encoding: [0x05,0xc0,0x1d,0xfe,0xff]
-; CHECK-NEXT:    # imm = 0xFFFE1DC0
+; CHECK-NEXT:    sbbl $123456, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x81,0xdf,0x40,0xe2,0x01,0x00]
+; CHECK-NEXT:    # imm = 0x1E240
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %s = sub i32 %a, 123456
   %k = icmp ugt i32 %x, %y
@@ -269,29 +249,12 @@ define i32 @sbb32ri(i32 %a, i32 %x, i32 %y) nounwind {
 }
 
 define i64 @sbb64ri(i64 %a, i64 %x, i64 %y) nounwind {
-; NDD-LABEL: sbb64ri:
-; NDD:       # %bb.0:
-; NDD-NEXT:    cmpq %rsi, %rdx # encoding: [0x48,0x39,0xf2]
-; NDD-NEXT:    sbbq $0, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x83,0xdf,0x00]
-; NDD-NEXT:    addq $-123456, %rax # encoding: [0x48,0x05,0xc0,0x1d,0xfe,0xff]
-; NDD-NEXT:    # imm = 0xFFFE1DC0
-; NDD-NEXT:    retq # encoding: [0xc3]
-;
-; IMM-LABEL: sbb64ri:
-; IMM:       # %bb.0:
-; IMM-NEXT:    cmpq %rsi, %rdx # encoding: [0x48,0x39,0xf2]
-; IMM-NEXT:    sbbq $0, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x83,0xdf,0x00]
-; IMM-NEXT:    addq $-123456, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x05,0xc0,0x1d,0xfe,0xff]
-; IMM-NEXT:    # imm = 0xFFFE1DC0
-; IMM-NEXT:    retq # encoding: [0xc3]
-;
-; MEMONLY-LABEL: sbb64ri:
-; MEMONLY:       # %bb.0:
-; MEMONLY-NEXT:    cmpq %rsi, %rdx # encoding: [0x48,0x39,0xf2]
-; MEMONLY-NEXT:    sbbq $0, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x83,0xdf,0x00]
-; MEMONLY-NEXT:    addq $-123456, %rax # encoding: [0x48,0x05,0xc0,0x1d,0xfe,0xff]
-; MEMONLY-NEXT:    # imm = 0xFFFE1DC0
-; MEMONLY-NEXT:    retq # encoding: [0xc3]
+; CHECK-LABEL: sbb64ri:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cmpq %rsi, %rdx # encoding: [0x48,0x39,0xf2]
+; CHECK-NEXT:    sbbq $123456, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x81,0xdf,0x40,0xe2,0x01,0x00]
+; CHECK-NEXT:    # imm = 0x1E240
+; CHECK-NEXT:    retq # encoding: [0xc3]
   %s = sub i64 %a, 123456
   %k = icmp ugt i64 %x, %y
   %z = zext i1 %k to i64
@@ -416,23 +379,20 @@ define i16 @sbb16mi8(ptr %ptr, i16 %x, i16 %y) nounwind {
 ; NDD:       # %bb.0:
 ; NDD-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
 ; NDD-NEXT:    cmpw %si, %dx # encoding: [0x66,0x39,0xf2]
-; NDD-NEXT:    sbbw $0, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x83,0xd8,0x00]
-; NDD-NEXT:    addw $-123, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x83,0xc0,0x85]
+; NDD-NEXT:    sbbw $123, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x83,0xd8,0x7b]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; IMMONLY-LABEL: sbb16mi8:
 ; IMMONLY:       # %bb.0:
 ; IMMONLY-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
 ; IMMONLY-NEXT:    cmpw %si, %dx # encoding: [0x66,0x39,0xf2]
-; IMMONLY-NEXT:    sbbw $0, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x83,0xd8,0x00]
-; IMMONLY-NEXT:    addw $-123, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x83,0xc0,0x85]
+; IMMONLY-NEXT:    sbbw $123, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x83,0xd8,0x7b]
 ; IMMONLY-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: sbb16mi8:
 ; MEM:       # %bb.0:
 ; MEM-NEXT:    cmpw %si, %dx # encoding: [0x66,0x39,0xf2]
-; MEM-NEXT:    sbbw $0, (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0x83,0x1f,0x00]
-; MEM-NEXT:    addw $-123, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x83,0xc0,0x85]
+; MEM-NEXT:    sbbw $123, (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0x83,0x1f,0x7b]
 ; MEM-NEXT:    retq # encoding: [0xc3]
   %a = load i16, ptr %ptr
   %s = sub i16 %a, 123
@@ -447,23 +407,20 @@ define i32 @sbb32mi8(ptr %ptr, i32 %x, i32 %y) nounwind {
 ; NDD:       # %bb.0:
 ; NDD-NEXT:    movl (%rdi), %eax # encoding: [0x8b,0x07]
 ; NDD-NEXT:    cmpl %esi, %edx # encoding: [0x39,0xf2]
-; NDD-NEXT:    sbbl $0, %eax # EVEX TO LEGACY Compression encoding: [0x83,0xd8,0x00]
-; NDD-NEXT:    addl $-123, %eax # EVEX TO LEGACY Compression encoding: [0x83,0xc0,0x85]
+; NDD-NEXT:    sbbl $123, %eax # EVEX TO LEGACY Compression encoding: [0x83,0xd8,0x7b]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; IMMONLY-LABEL: sbb32mi8:
 ; IMMONLY:       # %bb.0:
 ; IMMONLY-NEXT:    movl (%rdi), %eax # encoding: [0x8b,0x07]
 ; IMMONLY-NEXT:    cmpl %esi, %edx # encoding: [0x39,0xf2]
-; IMMONLY-NEXT:    sbbl $0, %eax # EVEX TO LEGACY Compression encoding: [0x83,0xd8,0x00]
-; IMMONLY-NEXT:    addl $-123, %eax # EVEX TO LEGACY Compression encoding: [0x83,0xc0,0x85]
+; IMMONLY-NEXT:    sbbl $123, %eax # EVEX TO LEGACY Compression encoding: [0x83,0xd8,0x7b]
 ; IMMONLY-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: sbb32mi8:
 ; MEM:       # %bb.0:
 ; MEM-NEXT:    cmpl %esi, %edx # encoding: [0x39,0xf2]
-; MEM-NEXT:    sbbl $0, (%rdi), %eax # encoding: [0x62,0xf4,0x7c,0x18,0x83,0x1f,0x00]
-; MEM-NEXT:    addl $-123, %eax # EVEX TO LEGACY Compression encoding: [0x83,0xc0,0x85]
+; MEM-NEXT:    sbbl $123, (%rdi), %eax # encoding: [0x62,0xf4,0x7c,0x18,0x83,0x1f,0x7b]
 ; MEM-NEXT:    retq # encoding: [0xc3]
   %a = load i32, ptr %ptr
   %s = sub i32 %a, 123
@@ -478,31 +435,21 @@ define i64 @sbb64mi8(ptr %ptr, i64 %x, i64 %y) nounwind {
 ; NDD:       # %bb.0:
 ; NDD-NEXT:    movq (%rdi), %rax # encoding: [0x48,0x8b,0x07]
 ; NDD-NEXT:    cmpq %rsi, %rdx # encoding: [0x48,0x39,0xf2]
-; NDD-NEXT:    sbbq $0, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x83,0xd8,0x00]
-; NDD-NEXT:    addq $-123, %rax # encoding: [0x48,0x83,0xc0,0x85]
+; NDD-NEXT:    sbbq $123, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x83,0xd8,0x7b]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; IMMONLY-LABEL: sbb64mi8:
 ; IMMONLY:       # %bb.0:
 ; IMMONLY-NEXT:    movq (%rdi), %rax # encoding: [0x48,0x8b,0x07]
 ; IMMONLY-NEXT:    cmpq %rsi, %rdx # encoding: [0x48,0x39,0xf2]
-; IMMONLY-NEXT:    sbbq $0, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x83,0xd8,0x00]
-; IMMONLY-NEXT:    addq $-123, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x83,0xc0,0x85]
+; IMMONLY-NEXT:    sbbq $123, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x83,0xd8,0x7b]
 ; IMMONLY-NEXT:    retq # encoding: [0xc3]
 ;
-; MEMONLY-LABEL: sbb64mi8:
-; MEMONLY:       # %bb.0:
-; MEMONLY-NEXT:    cmpq %rsi, %rdx # encoding: [0x48,0x39,0xf2]
-; MEMONLY-NEXT:    sbbq $0, (%rdi), %rax # encoding: [0x62,0xf4,0xfc,0x18,0x83,0x1f,0x00]
-; MEMONLY-NEXT:    addq $-123, %rax # encoding: [0x48,0x83,0xc0,0x85]
-; MEMONLY-NEXT:    retq # encoding: [0xc3]
-;
-; BOTH-LABEL: sbb64mi8:
-; BOTH:       # %bb.0:
-; BOTH-NEXT:    cmpq %rsi, %rdx # encoding: [0x48,0x39,0xf2]
-; BOTH-NEXT:    sbbq $0, (%rdi), %rax # encoding: [0x62,0xf4,0xfc,0x18,0x83,0x1f,0x00]
-; BOTH-NEXT:    addq $-123, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x83,0xc0,0x85]
-; BOTH-NEXT:    retq # encoding: [0xc3]
+; MEM-LABEL: sbb64mi8:
+; MEM:       # %bb.0:
+; MEM-NEXT:    cmpq %rsi, %rdx # encoding: [0x48,0x39,0xf2]
+; MEM-NEXT:    sbbq $123, (%rdi), %rax # encoding: [0x62,0xf4,0xfc,0x18,0x83,0x1f,0x7b]
+; MEM-NEXT:    retq # encoding: [0xc3]
   %a = load i64, ptr %ptr
   %s = sub i64 %a, 123
   %k = icmp ugt i64 %x, %y
@@ -516,23 +463,20 @@ define i8 @sbb8mi(ptr %ptr, i8 %x, i8 %y) nounwind {
 ; NDD:       # %bb.0:
 ; NDD-NEXT:    movzbl (%rdi), %eax # encoding: [0x0f,0xb6,0x07]
 ; NDD-NEXT:    cmpb %sil, %dl # encoding: [0x40,0x38,0xf2]
-; NDD-NEXT:    sbbb $0, %al # EVEX TO LEGACY Compression encoding: [0x1c,0x00]
-; NDD-NEXT:    addb $-123, %al # EVEX TO LEGACY Compression encoding: [0x04,0x85]
+; NDD-NEXT:    sbbb $123, %al # EVEX TO LEGACY Compression encoding: [0x1c,0x7b]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; IMMONLY-LABEL: sbb8mi:
 ; IMMONLY:       # %bb.0:
 ; IMMONLY-NEXT:    movzbl (%rdi), %eax # encoding: [0x0f,0xb6,0x07]
 ; IMMONLY-NEXT:    cmpb %sil, %dl # encoding: [0x40,0x38,0xf2]
-; IMMONLY-NEXT:    sbbb $0, %al # EVEX TO LEGACY Compression encoding: [0x1c,0x00]
-; IMMONLY-NEXT:    addb $-123, %al # EVEX TO LEGACY Compression encoding: [0x04,0x85]
+; IMMONLY-NEXT:    sbbb $123, %al # EVEX TO LEGACY Compression encoding: [0x1c,0x7b]
 ; IMMONLY-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: sbb8mi:
 ; MEM:       # %bb.0:
 ; MEM-NEXT:    cmpb %sil, %dl # encoding: [0x40,0x38,0xf2]
-; MEM-NEXT:    sbbb $0, (%rdi), %al # encoding: [0x62,0xf4,0x7c,0x18,0x80,0x1f,0x00]
-; MEM-NEXT:    addb $-123, %al # EVEX TO LEGACY Compression encoding: [0x04,0x85]
+; MEM-NEXT:    sbbb $123, (%rdi), %al # encoding: [0x62,0xf4,0x7c,0x18,0x80,0x1f,0x7b]
 ; MEM-NEXT:    retq # encoding: [0xc3]
   %a = load i8, ptr %ptr
   %s = sub i8 %a, 123
@@ -547,26 +491,23 @@ define i16 @sbb16mi(ptr %ptr, i16 %x, i16 %y) nounwind {
 ; NDD:       # %bb.0:
 ; NDD-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
 ; NDD-NEXT:    cmpw %si, %dx # encoding: [0x66,0x39,0xf2]
-; NDD-NEXT:    sbbw $0, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x83,0xd8,0x00]
-; NDD-NEXT:    addw $-1234, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x05,0x2e,0xfb]
-; NDD-NEXT:    # imm = 0xFB2E
+; NDD-NEXT:    sbbw $1234, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x1d,0xd2,0x04]
+; NDD-NEXT:    # imm = 0x4D2
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; IMMONLY-LABEL: sbb16mi:
 ; IMMONLY:       # %bb.0:
 ; IMMONLY-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
 ; IMMONLY-NEXT:    cmpw %si, %dx # encoding: [0x66,0x39,0xf2]
-; IMMONLY-NEXT:    sbbw $0, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x83,0xd8,0x00]
-; IMMONLY-NEXT:    addw $-1234, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x05,0x2e,0xfb]
-; IMMONLY-NEXT:    # imm = 0xFB2E
+; IMMONLY-NEXT:    sbbw $1234, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x1d,0xd2,0x04]
+; IMMONLY-NEXT:    # imm = 0x4D2
 ; IMMONLY-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: sbb16mi:
 ; MEM:       # %bb.0:
 ; MEM-NEXT:    cmpw %si, %dx # encoding: [0x66,0x39,0xf2]
-; MEM-NEXT:    sbbw $0, (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0x83,0x1f,0x00]
-; MEM-NEXT:    addw $-1234, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x05,0x2e,0xfb]
-; MEM-NEXT:    # imm = 0xFB2E
+; MEM-NEXT:    sbbw $1234, (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0x81,0x1f,0xd2,0x04]
+; MEM-NEXT:    # imm = 0x4D2
 ; MEM-NEXT:    retq # encoding: [0xc3]
   %a = load i16, ptr %ptr
   %s = sub i16 %a, 1234
@@ -581,26 +522,23 @@ define i32 @sbb32mi(ptr %ptr, i32 %x, i32 %y) nounwind {
 ; NDD:       # %bb.0:
 ; NDD-NEXT:    movl (%rdi), %eax # encoding: [0x8b,0x07]
 ; NDD-NEXT:    cmpl %esi, %edx # encoding: [0x39,0xf2]
-; NDD-NEXT:    sbbl $0, %eax # EVEX TO LEGACY Compression encoding: [0x83,0xd8,0x00]
-; NDD-NEXT:    addl $-123456, %eax # EVEX TO LEGACY Compression encoding: [0x05,0xc0,0x1d,0xfe,0xff]
-; NDD-NEXT:    # imm = 0xFFFE1DC0
+; NDD-NEXT:    sbbl $123456, %eax # EVEX TO LEGACY Compression encoding: [0x1d,0x40,0xe2,0x01,0x00]
+; NDD-NEXT:    # imm = 0x1E240
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; IMMONLY-LABEL: sbb32mi:
 ; IMMONLY:       # %bb.0:
 ; IMMONLY-NEXT:    movl (%rdi), %eax # encoding: [0x8b,0x07]
 ; IMMONLY-NEXT:    cmpl %esi, %edx # encoding: [0x39,0xf2]
-; IMMONLY-NEXT:    sbbl $0, %eax # EVEX TO LEGACY Compression encoding: [0x83,0xd8,0x00]
-; IMMONLY-NEXT:    addl $-123456, %eax # EVEX TO LEGACY Compression encoding: [0x05,0xc0,0x1d,0xfe,0xff]
-; IMMONLY-NEXT:    # imm = 0xFFFE1DC0
+; IMMONLY-NEXT:    sbbl $123456, %eax # EVEX TO LEGACY Compression encoding: [0x1d,0x40,0xe2,0x01,0x00]
+; IMMONLY-NEXT:    # imm = 0x1E240
 ; IMMONLY-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: sbb32mi:
 ; MEM:       # %bb.0:
 ; MEM-NEXT:    cmpl %esi, %edx # encoding: [0x39,0xf2]
-; MEM-NEXT:    sbbl $0, (%rdi), %eax # encoding: [0x62,0xf4,0x7c,0x18,0x83,0x1f,0x00]
-; MEM-NEXT:    addl $-123456, %eax # EVEX TO LEGACY Compression encoding: [0x05,0xc0,0x1d,0xfe,0xff]
-; MEM-NEXT:    # imm = 0xFFFE1DC0
+; MEM-NEXT:    sbbl $123456, (%rdi), %eax # encoding: [0x62,0xf4,0x7c,0x18,0x81,0x1f,0x40,0xe2,0x01,0x00]
+; MEM-NEXT:    # imm = 0x1E240
 ; MEM-NEXT:    retq # encoding: [0xc3]
   %a = load i32, ptr %ptr
   %s = sub i32 %a, 123456
@@ -615,35 +553,24 @@ define i64 @sbb64mi(ptr %ptr, i64 %x, i64 %y) nounwind {
 ; NDD:       # %bb.0:
 ; NDD-NEXT:    movq (%rdi), %rax # encoding: [0x48,0x8b,0x07]
 ; NDD-NEXT:    cmpq %rsi, %rdx # encoding: [0x48,0x39,0xf2]
-; NDD-NEXT:    sbbq $0, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x83,0xd8,0x00]
-; NDD-NEXT:    addq $-123456, %rax # encoding: [0x48,0x05,0xc0,0x1d,0xfe,0xff]
-; NDD-NEXT:    # imm = 0xFFFE1DC0
+; NDD-NEXT:    sbbq $123456, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x1d,0x40,0xe2,0x01,0x00]
+; NDD-NEXT:    # imm = 0x1E240
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; IMMONLY-LABEL: sbb64mi:
 ; IMMONLY:       # %bb.0:
 ; IMMONLY-NEXT:    movq (%rdi), %rax # encoding: [0x48,0x8b,0x07]
 ; IMMONLY-NEXT:    cmpq %rsi, %rdx # encoding: [0x48,0x39,0xf2]
-; IMMONLY-NEXT:    sbbq $0, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x83,0xd8,0x00]
-; IMMONLY-NEXT:    addq $-123456, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x05,0xc0,0x1d,0xfe,0xff]
-; IMMONLY-NEXT:    # imm = 0xFFFE1DC0
+; IMMONLY-NEXT:    sbbq $123456, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x1d,0x40,0xe2,0x01,0x00]
+; IMMONLY-NEXT:    # imm = 0x1E240
 ; IMMONLY-NEXT:    retq # encoding: [0xc3]
 ;
-; MEMONLY-LABEL: sbb64mi:
-; MEMONLY:       # %bb.0:
-; MEMONLY-NEXT:    cmpq %rsi, %rdx # encoding: [0x48,0x39,0xf2]
-; MEMONLY-NEXT:    sbbq $0, (%rdi), %rax # encoding: [0x62,0xf4,0xfc,0x18,0x83,0x1f,0x00]
-; MEMONLY-NEXT:    addq $-123456, %rax # encoding: [0x48,0x05,0xc0,0x1d,0xfe,0xff]
-; MEMONLY-NEXT:    # imm = 0xFFFE1DC0
-; MEMONLY-NEXT:    retq # encoding: [0xc3]
-;
-; BOTH-LABEL: sbb64mi:
-; BOTH:       # %bb.0:
-; BOTH-NEXT:    cmpq %rsi, %rdx # encoding: [0x48,0x39,0xf2]
-; BOTH-NEXT:    sbbq $0, (%rdi), %rax # encoding: [0x62,0xf4,0xfc,0x18,0x83,0x1f,0x00]
-; BOTH-NEXT:    addq $-123456, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x05,0xc0,0x1d,0xfe,0xff]
-; BOTH-NEXT:    # imm = 0xFFFE1DC0
-; BOTH-NEXT:    retq # encoding: [0xc3]
+; MEM-LABEL: sbb64mi:
+; MEM:       # %bb.0:
+; MEM-NEXT:    cmpq %rsi, %rdx # encoding: [0x48,0x39,0xf2]
+; MEM-NEXT:    sbbq $123456, (%rdi), %rax # encoding: [0x62,0xf4,0xfc,0x18,0x81,0x1f,0x40,0xe2,0x01,0x00]
+; MEM-NEXT:    # imm = 0x1E240
+; MEM-NEXT:    retq # encoding: [0xc3]
   %a = load i64, ptr %ptr
   %s = sub i64 %a, 123456
   %k = icmp ugt i64 %x, %y
@@ -711,3 +638,7 @@ define void @sbb64mr_legacy(i64 %a, ptr %ptr, i64 %x, i64 %y) nounwind {
   store i64 %r, ptr %ptr
   ret void
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; BOTH: {{.*}}
+; IMM: {{.*}}
+; MEMONLY: {{.*}}
