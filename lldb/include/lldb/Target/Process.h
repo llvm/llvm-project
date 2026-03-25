@@ -3381,6 +3381,8 @@ protected:
                             ///see them. This is usually the same as
   ///< m_thread_list_real, but might be different if there is an OS plug-in
   ///creating memory threads
+  bool m_always_update_thread_list = false; ///< Always run UpdateThreadList()
+                                            /// in UpdateThreadListIfNeeded()
   ThreadPlanStackMap m_thread_plans; ///< This is the list of thread plans for
                                      /// threads in m_thread_list, as well as
                                      /// threads we knew existed, but haven't

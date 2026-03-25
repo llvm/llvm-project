@@ -1102,7 +1102,7 @@ bool Process::UpdateThreadList(ThreadList &old_thread_list,
 
 void Process::UpdateThreadListIfNeeded() {
   const uint32_t stop_id = GetStopID();
-  if (m_thread_list.GetSize(false) == 0 ||
+  if (m_always_update_thread_list || m_thread_list.GetSize(false) == 0 ||
       stop_id != m_thread_list.GetStopID()) {
     bool clear_unused_threads = true;
     const StateType state = GetPrivateState();

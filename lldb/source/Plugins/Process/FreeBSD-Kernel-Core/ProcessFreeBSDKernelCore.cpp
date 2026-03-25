@@ -65,7 +65,9 @@ ProcessFreeBSDKernelCore::ProcessFreeBSDKernelCore(lldb::TargetSP target_sp,
                                                    kvm_t *kvm,
                                                    const FileSpec &core_file)
     : PostMortemProcess(target_sp, listener_sp, core_file), m_is_kvm(true),
-      m_kvm(kvm) {}
+      m_kvm(kvm) {
+  m_always_update_thread_list = true;
+}
 
 ProcessFreeBSDKernelCore::~ProcessFreeBSDKernelCore() {
   if (m_kvm)
