@@ -3717,8 +3717,7 @@ private:
               *builder, loc, mlir::arith::CmpIPredicate::eq, sel, idVal);
           mlir::Block *nextBlock =
               builder->getBlock()->splitBlock(builder->getBlock()->end());
-          mlir::cf::CondBranchOp::create(*builder, loc, cmp, target,
-                                         nextBlock);
+          mlir::cf::CondBranchOp::create(*builder, loc, cmp, target, nextBlock);
           builder->setInsertionPointToEnd(nextBlock);
         }
       }
