@@ -267,6 +267,10 @@ void Thread::DestroyThread() {
   m_frame_providers.clear();
   m_provider_chain_ids.clear();
   m_frame_lists_by_id.clear();
+  {
+    std::lock_guard<std::mutex> pguard(m_provider_frames_mutex);
+    m_active_frame_providers_by_thread.clear();
+  }
   m_prev_framezero_pc.reset();
 }
 
@@ -1452,8 +1456,69 @@ void Thread::CalculateExecutionContext(ExecutionContext &exe_ctx) {
   exe_ctx.SetContext(shared_from_this());
 }
 
+void Thread::PushProviderFrameList(StackFrameListSP frames) {
+  std::lock_guard<std::mutex> guard(m_provider_frames_mutex);
+  HostThread current(Host::GetCurrentThread());
+  auto &stack = m_active_frame_providers_by_thread[current];
+  LLDB_LOG(GetLog(LLDBLog::Thread),
+           "Thread::PushProviderFrameList: tid = 0x{0:x}, depth = {1} -> {2}",
+           GetID(), stack.size(), stack.size() + 1);
+  stack.push_back(std::move(frames));
+}
+
+void Thread::PopProviderFrameList() {
+  std::lock_guard<std::mutex> guard(m_provider_frames_mutex);
+  HostThread current(Host::GetCurrentThread());
+  auto it = m_active_frame_providers_by_thread.find(current);
+  size_t pre_pop_depth =
+      (it != m_active_frame_providers_by_thread.end()) ? it->second.size() : 0;
+  LLDB_LOG(GetLog(LLDBLog::Thread),
+           "Thread::PopProviderFrameList: tid = 0x{0:x}, depth = {1} -> {2}",
+           GetID(), pre_pop_depth, pre_pop_depth ? pre_pop_depth - 1 : 0);
+  assert(it != m_active_frame_providers_by_thread.end() && !it->second.empty());
+  if (it == m_active_frame_providers_by_thread.end() || it->second.empty())
+    return;
+  it->second.pop_back();
+  if (it->second.empty())
+    m_active_frame_providers_by_thread.erase(it);
+}
+
+bool Thread::IsAnyProviderActive() {
+  std::lock_guard<std::mutex> guard(m_provider_frames_mutex);
+  return !m_active_frame_providers_by_thread.empty();
+}
+
 StackFrameListSP Thread::GetStackFrameList() {
   std::lock_guard<std::recursive_mutex> guard(m_frame_mutex);
+
+  // If a provider is currently fetching frames, return the provider's input
+  // frames instead of m_curr_frames_sp. m_curr_frames_sp IS the
+  // SyntheticStackFrameList, and accessing it would trigger provider code on
+  // THIS thread too. That is dangerous because:
+  //  - On the provider's own host thread: circular dependency / deadlock.
+  //  - On the private state thread: the provider may call EvaluateExpression
+  //    which needs the private state thread to process events -> deadlock.
+  //  - On any other thread: would run the provider concurrently.
+  // Returning the input (parent) frames is always safe.
+  {
+    std::lock_guard<std::mutex> pguard(m_provider_frames_mutex);
+    if (!m_active_frame_providers_by_thread.empty()) {
+      // Check if the current host thread is inside a provider call.
+      HostThread current(Host::GetCurrentThread());
+      auto it = m_active_frame_providers_by_thread.find(current);
+      if (it != m_active_frame_providers_by_thread.end() && !it->second.empty())
+        return it->second.back();
+
+      // If the private state thread calls GetStackFrameList while a provider
+      // is active on another thread, return parent frames too. The provider
+      // may call EvaluateExpression which needs the private state thread to
+      // process events — touching m_curr_frames_sp (the synthetic list) would
+      // trigger the provider and deadlock.
+      ProcessSP process_sp = GetProcess();
+      if (process_sp && process_sp->CurrentThreadIsPrivateStateThread())
+        return m_active_frame_providers_by_thread.begin()->second.back();
+    }
+  }
 
   if (m_curr_frames_sp)
     return m_curr_frames_sp;
@@ -1622,6 +1687,15 @@ std::optional<addr_t> Thread::GetPreviousFrameZeroPC() {
 
 void Thread::ClearStackFrames() {
   std::lock_guard<std::recursive_mutex> guard(m_frame_mutex);
+
+  // If any host thread is inside a frame provider call (e.g. the provider
+  // called EvaluateExpression which resumes the process), don't tear down the
+  // frame state. The synthetic frame list is still being constructed and the
+  // thread will stop right back where it was after the expression finishes.
+  // This must be a global check (not per-host-thread) because the frame state
+  // is shared and clearing it would destroy in-progress provider work.
+  if (IsAnyProviderActive())
+    return;
 
   GetUnwinder().Clear();
   m_prev_framezero_pc.reset();
