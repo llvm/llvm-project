@@ -344,6 +344,11 @@ static bool isCompatibleReplacement(const Instruction *I, const Use &Operand,
       return false;
     return !Callee->hasParamAttribute(OperandNo, Attribute::ImmArg);
   }
+  case Instruction::CatchPad:
+    // Argument operand must be alloca or constant
+    if (!isa<Constant>(Replacement) && !isa<AllocaInst>(Replacement))
+      return false;
+    break;
   default:
     break;
   }
