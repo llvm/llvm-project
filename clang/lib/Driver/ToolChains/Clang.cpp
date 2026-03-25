@@ -9388,9 +9388,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
         (A->getOption().matches(OPT_fsanitize_EQ) ||
          A->getOption().matches(OPT_fno_sanitize_EQ) ||
          A->getOption().matches(OPT_fsanitize_minimal_runtime) ||
-         A->getOption().matches(OPT_fno_sanitize_minimal_runtime) ||
-         A->getOption().matches(OPT_fsanitize_trap_EQ) ||
-         A->getOption().matches(OPT_fno_sanitize_trap_EQ)))
+         A->getOption().matches(OPT_fno_sanitize_minimal_runtime)))
       return false;
     // Don't forward -mllvm to toolchains that don't support LLVM.
     return TC.HasNativeLLVMSupport() || A->getOption().getID() != OPT_mllvm;
