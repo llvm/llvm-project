@@ -60,11 +60,13 @@ jobs:
     steps:
       - name: Checkout LLVM
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
 
       - name: Prepare dependencies
         run: |
-          apt-get update -y
-          apt-get install -y cmake ninja-build clang lld qemu-user-static ${{ matrix.libc }} ${{ matrix.libcpp }}
+          sudo apt-get update -y
+          sudo apt-get install -y cmake ninja-build clang lld qemu-user-static ${{ matrix.libc }} ${{ matrix.libcpp }}
       
       - name: Configure CMake
         run: |
