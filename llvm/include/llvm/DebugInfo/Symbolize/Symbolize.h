@@ -134,14 +134,13 @@ public:
     BIDFetcher = std::move(Fetcher);
   }
 
-  /// For an XCOFF object at ModuleName, find the base address of the unique
-  /// section matching SectionTypeFlag. Returns an error if the object cannot
-  /// be opened, is not XCOFF, has no matching section, or has multiple matching
-  /// sections (which would make a section-relative address ambiguous).
-  /// SectionTypeName is the name (e.g. "TEXT") used in error
-  /// messages to identify which section type was not found or was ambiguous.
+  /// For the XCOFF object at ModulePath, find the base address of the
+  /// unique section matching SectionTypeFlag. Returns an error if the object
+  /// is not XCOFF, has no matching section, or has multiple matching sections
+  /// (which would make a section-relative address ambiguous). SectionTypeName
+  /// (e.g. "TEXT") is used in error messages to identify the section type.
   LLVM_ABI Expected<uint64_t>
-  getXCOFFSectionAddress(StringRef ModuleName,
+  getXCOFFSectionAddress(StringRef ModulePath,
                          XCOFF::SectionTypeFlags SectionTypeFlag,
                          StringRef SectionTypeName);
 
@@ -275,10 +274,9 @@ private:
 
   std::unique_ptr<BuildIDFetcher> BIDFetcher;
 
-  /// Cache for XCOFF section base addresses: (ModulePath, SectionTypeFlag) ->
+  /// Cache for XCOFF section base addresses: ModulePath -> SectionTypeFlag ->
   /// base VMA.
-  std::map<std::pair<std::string, XCOFF::SectionTypeFlags>, uint64_t>
-      XCOFFSectionBaseCache;
+  StringMap<DenseMap<XCOFF::SectionTypeFlags, uint64_t>> XCOFFSectionBaseCache;
 };
 
 // A binary intrusively linked into a LRU cache list. If the binary is empty,

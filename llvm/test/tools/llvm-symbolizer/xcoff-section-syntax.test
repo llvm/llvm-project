@@ -17,6 +17,10 @@
 # RUN: llvm-symbolizer --obj=%t.xcoff '(-)(+0x10)' 2>&1 | \
 # RUN:   FileCheck %s -DTYPE=- --check-prefix=INVALID-TYPE
 
+## Test empty section type.
+# RUN: llvm-symbolizer --obj=%t.xcoff '()(+0x10)' 2>&1 | \
+# RUN:   FileCheck %s -DTYPE= --check-prefix=INVALID-TYPE
+
 # INVALID-TYPE: error: '([[TYPE]])(+0x10)': unknown or unsupported section type "[[TYPE]]" in section-relative address
 
 ## Test missing '+' sign.
@@ -30,6 +34,24 @@
 # RUN:   FileCheck %s --check-prefix=EMPTY-OFFSET
 
 # EMPTY-OFFSET: error: '(TEXT)()': section-relative offset "" must start with '+'
+
+## Test negative offset.
+# RUN: llvm-symbolizer --obj=%t.xcoff '(TEXT)(-0x10)' 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=NEG-OFFSET
+
+# NEG-OFFSET: error: '(TEXT)(-0x10)': section-relative offset "-0x10" must start with '+'
+
+## Test negative decimal offset.
+# RUN: llvm-symbolizer --obj=%t.xcoff '(TEXT)(-10)' 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=NEG-OFFSET-DEC
+
+# NEG-OFFSET-DEC: error: '(TEXT)(-10)': section-relative offset "-10" must start with '+'
+
+## Test offset with '+' followed by '-'.
+# RUN: llvm-symbolizer --obj=%t.xcoff '(TEXT)(+-0x10)' 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=PLUS-NEG
+
+# PLUS-NEG: error: '(TEXT)(+-0x10)': invalid offset "+-0x10" in section-relative address
 
 ## Test invalid offset: decimal digits followed by non-decimal hex characters,
 ## e.g. 123abc. getAsInteger with base 0 requires the whole string to be valid,
@@ -64,12 +86,6 @@
 # RUN:   FileCheck %s --check-prefix=INVALID-OFFSET
 
 # INVALID-OFFSET: error: '(TEXT)(+xyz)': invalid offset "+xyz" in section-relative address
-
-## Test empty section type.
-# RUN: llvm-symbolizer --obj=%t.xcoff '()(+0x10)' 2>&1 | \
-# RUN:   FileCheck %s --check-prefix=EMPTY-SECTION
-
-# EMPTY-SECTION: error: '()(+0x10)': empty section type in section-relative address
 
 ## Test error: section type not found (DATA section doesn't exist).
 # RUN: yaml2obj %s --docnum=2 -o %t.nodata.xcoff
@@ -109,7 +125,6 @@ Sections:
     Flags:   [ STYP_DATA ]
     SectionData: "00000000"
   - Name:    .extra
-    Address: 0x300
     Flags:   [ [[SECT2_FLAGS=STYP_INFO]] ]
     SectionData: "00000000"
 Symbols:

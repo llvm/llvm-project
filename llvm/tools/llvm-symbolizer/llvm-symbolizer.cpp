@@ -50,11 +50,6 @@
 using namespace llvm;
 using namespace symbolize;
 
-// Cache for XCOFF section base addresses to avoid re-opening binaries.
-// Key: (ModulePath, SectionTypeFlag), Value: SectionBaseAddress
-static std::map<std::pair<std::string, XCOFF::SectionTypeFlags>, uint64_t>
-    XCOFFSectionBaseCache;
-
 namespace {
 enum ID {
   OPT_INVALID = 0, // This is not an option ID.
@@ -303,7 +298,8 @@ static Error parseCommand(StringRef BinaryName, bool IsAddr2Line,
 
         if (SectionType.empty())
           return makeStringError(
-              "empty section type in section-relative address");
+              "unknown or unsupported section type \"\" in section-relative "
+              "address");
 
         // Extract offset string from second parentheses.
         StringRef OffsetStr =

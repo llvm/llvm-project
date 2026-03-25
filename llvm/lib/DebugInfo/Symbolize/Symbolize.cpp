@@ -53,22 +53,21 @@ LLVMSymbolizer::LLVMSymbolizer(const Options &Opts)
 LLVMSymbolizer::~LLVMSymbolizer() = default;
 
 Expected<uint64_t>
-LLVMSymbolizer::getXCOFFSectionAddress(StringRef ModuleName,
+LLVMSymbolizer::getXCOFFSectionAddress(StringRef ModulePath,
                                        XCOFF::SectionTypeFlags SectionTypeFlag,
                                        StringRef SectionTypeName) {
   // Check the cache first.
-  auto CacheKey = std::make_pair(ModuleName.str(), SectionTypeFlag);
-  auto It = XCOFFSectionBaseCache.find(CacheKey);
-  if (It != XCOFFSectionBaseCache.end())
-    return It->second;
+  auto &FlagMap = XCOFFSectionBaseCache[ModulePath];
+  auto CachedIt = FlagMap.find(SectionTypeFlag);
+  if (CachedIt != FlagMap.end())
+    return CachedIt->second;
 
-  Expected<object::OwningBinary<object::Binary>> BinaryOrErr =
-      object::createBinary(ModuleName);
-  if (!BinaryOrErr)
-    return BinaryOrErr.takeError();
+  Expected<ObjectFile *> ObjOrErr =
+      getOrCreateObject(ModulePath.str(), Opts.DefaultArch);
+  if (!ObjOrErr)
+    return ObjOrErr.takeError();
 
-  const auto *XCOFFObj =
-      dyn_cast<object::XCOFFObjectFile>(BinaryOrErr->getBinary());
+  const auto *XCOFFObj = dyn_cast<object::XCOFFObjectFile>(*ObjOrErr);
   if (!XCOFFObj)
     return createStringError(
         "section type syntax is only supported for XCOFF objects");
@@ -77,7 +76,7 @@ LLVMSymbolizer::getXCOFFSectionAddress(StringRef ModuleName,
   for (const object::SectionRef &Section : XCOFFObj->sections()) {
     DataRefImpl SecRef = Section.getRawDataRefImpl();
     int32_t Flags = XCOFFObj->getSectionFlags(SecRef);
-    if ((Flags & 0xFFFF) != SectionTypeFlag)
+    if ((Flags & XCOFFSectionHeader32::SectionFlagsTypeMask) != SectionTypeFlag)
       continue;
     if (SectionBase)
       return createStringError("multiple '" + SectionTypeName +
@@ -89,7 +88,7 @@ LLVMSymbolizer::getXCOFFSectionAddress(StringRef ModuleName,
     return createStringError("no '" + SectionTypeName +
                              "' section found in XCOFF object");
 
-  XCOFFSectionBaseCache.emplace(CacheKey, *SectionBase);
+  FlagMap[SectionTypeFlag] = *SectionBase;
   return *SectionBase;
 }
 
