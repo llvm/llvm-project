@@ -3355,11 +3355,11 @@ protected:
                                                    // private state thread.
   lldb::ListenerSP m_private_state_listener_sp; // This is the listener for the
                                                 // private state thread.
-  ///< This is filled on construction with the "main" private state which will
-  ///< be exposed to clients of this process.  It won't have a running private
-  ///< state thread until you call StartupThread.  This needs to be a pointer
-  ///< so I can transparently swap it out for the modal one, but there will
-  ///< always be a private state thread in this slot.
+  /// This is filled on construction with the "main" private state which will
+  /// be exposed to clients of this process.  It won't have a running private
+  /// state thread until you call StartupThread.  This needs to be a pointer
+  /// so I can transparently swap it out for the modal one, but there will
+  /// always be a private state thread in this slot.
   std::shared_ptr<PrivateStateThread> m_current_private_state_thread;
 
   ProcessModID m_mod_id; ///< Tracks the state of the process over stops and

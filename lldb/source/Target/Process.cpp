@@ -440,7 +440,7 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
           nullptr, "lldb.process.internal_state_control_broadcaster"),
       m_private_state_listener_sp(
           Listener::MakeListener("lldb.process.internal_state_listener")),
-      m_current_private_state_thread(new PrivateStateThread(
+      m_current_private_state_thread(std::make_shared<PrivateStateThread>(
           *this, eStateUnloaded, eStateUnloaded, false, "rename-this-thread")),
       m_mod_id(), m_process_unique_id(0), m_thread_index_id(0),
       m_thread_id_to_index_id_map(), m_exit_status(-1),
