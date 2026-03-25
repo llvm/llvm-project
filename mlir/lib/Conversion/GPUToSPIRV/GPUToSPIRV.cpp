@@ -574,6 +574,8 @@ LogicalResult GPUSubgroupBroadcastConversion::matchAndRewrite(
     result = spirv::GroupNonUniformBroadcastFirstOp::create(
         rewriter, loc, scope, adaptor.getSrc());
     break;
+  default:
+    llvm_unreachable("unsupported gpu.subgroup_broadcast type");
   }
 
   rewriter.replaceOp(op, result);
