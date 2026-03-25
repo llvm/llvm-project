@@ -318,7 +318,6 @@ static ObjCMethodDecl *getNSNumberFactoryMethod(SemaObjC &S, SourceLocation Loc,
 
 static bool CheckObjCNumberExpressionIsConstant(Sema &S, Expr *Number) {
   const LangOptions &LangOpts = S.getLangOpts();
-  const ObjCRuntime &Runtime = LangOpts.ObjCRuntime;
 
   if (!LangOpts.ObjCConstantLiterals)
     return false;
@@ -339,7 +338,7 @@ static bool CheckObjCNumberExpressionIsConstant(Sema &S, Expr *Number) {
   // preferring explicit types over the typedefs.
   //
   // Also we can emit the constant singleton if supported by the target always.
-  assert(Runtime.hasConstantCFBooleans() &&
+  assert(LangOpts.ObjCRuntime.hasConstantCFBooleans() &&
          "The current ABI doesn't support the constant CFBooleanTrue "
          "singleton!");
   const bool IsBoolType =
