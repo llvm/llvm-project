@@ -6,10 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_MATH_CLC_EP_LOG_H__
-#define __CLC_MATH_CLC_EP_LOG_H__
+// ADDITIONAL_COMPILE_FLAGS: -Wno-deprecated
+#include <ext/hash_map>
 
-#define __CLC_BODY "clc/math/clc_ep_log_decl.inc"
-#include "clc/math/gentype.inc"
-
-#endif // __CLC_MATH_CLC_EP_LOG_H__
+int main(int, char**) {
+  __gnu_cxx::hash_multimap<const char*, std::string> m;
+  auto it = m.insert(std::make_pair("foo", "bar"));
+  return it->first == nullptr;
+}

@@ -241,7 +241,7 @@ struct CastInfo<To, PointerUnion<PTs...>>
   static To doCast(From &F) {
     assert(isPossible(F) && "cast to an incompatible type!");
     constexpr uintptr_t PtrMask =
-        ~((uintptr_t(1) << PointerLikeTypeTraits<To>::NumLowBitsAvailable) - 1);
+        ~((uintptr_t(1) << From::minLowBitsAvailable()) - 1);
     void *Ptr = reinterpret_cast<void *>(
         reinterpret_cast<uintptr_t>(F.getOpaqueValue()) & PtrMask);
     return PointerLikeTypeTraits<To>::getFromVoidPointer(Ptr);

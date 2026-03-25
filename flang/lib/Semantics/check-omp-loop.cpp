@@ -327,23 +327,25 @@ void OmpStructureChecker::CheckNestedConstruct(
   auto &[haveSema, havePerf]{sequence.depth()};
 
   if (dir != llvm::omp::Directive::OMPD_fuse) {
-    auto &haveDepth = needPerfect ? havePerf : haveSema;
+    auto haveDepth = needPerfect ? havePerf : haveSema;
     // If the present depth is 0, it's likely that the construct doesn't
     // have any loops in it, which would be diagnosed above.
-    if (needDepth && haveDepth > 0) {
-      if (*needDepth.value > *haveDepth) {
+    if (needDepth && haveDepth.value > 0) {
+      if (*needDepth.value > *haveDepth.value) {
         if (needPerfect) {
           auto &msg{context_.Say(beginSource,
               "This construct requires a perfect nest of depth %" PRId64
               ", but the associated nest is a perfect nest of depth %" PRId64
               ""_err_en_US,
-              *needDepth.value, *haveDepth)};
+              *needDepth.value, *haveDepth.value)};
+          haveDepth.reason.AttachTo(msg);
           needDepth.reason.AttachTo(msg);
         } else {
           auto &msg{context_.Say(beginSource,
               "This construct requires a nest of depth %" PRId64
               ", but the associated nest has a depth of %" PRId64 ""_err_en_US,
-              *needDepth.value, *haveDepth)};
+              *needDepth.value, *haveDepth.value)};
+          haveDepth.reason.AttachTo(msg);
           needDepth.reason.AttachTo(msg);
         }
       }
