@@ -1192,11 +1192,10 @@ UnreachableInst::UnreachableInst(LLVMContext &Context,
 // Suppress deprecation warnings from BranchInst.
 LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
 
-UncondBrInst::UncondBrInst(BasicBlock *IfTrue, InsertPosition InsertBefore)
-    : BranchInst(Type::getVoidTy(IfTrue->getContext()), Instruction::UncondBr,
+UncondBrInst::UncondBrInst(BasicBlock *Target, InsertPosition InsertBefore)
+    : BranchInst(Type::getVoidTy(Target->getContext()), Instruction::UncondBr,
                  AllocMarker, InsertBefore) {
-  assert(IfTrue && "Branch destination may not be null!");
-  Op<-1>() = IfTrue;
+  Op<-1>() = Target;
 }
 
 UncondBrInst::UncondBrInst(const UncondBrInst &BI)

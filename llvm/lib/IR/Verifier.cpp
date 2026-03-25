@@ -4976,6 +4976,13 @@ void Verifier::visitCatchPadInst(CatchPadInst &CPI) {
   Check(&*BB->getFirstNonPHIIt() == &CPI,
         "CatchPadInst not the first non-PHI instruction in the block.", &CPI);
 
+  Check(llvm::all_of(CPI.arg_operands(),
+                     [](Use &U) {
+                       auto *V = U.get();
+                       return isa<Constant>(V) || isa<AllocaInst>(V);
+                     }),
+        "Argument operand must be alloca or constant.", &CPI);
+
   visitEHPadPredecessors(CPI);
   visitFuncletPadInst(CPI);
 }

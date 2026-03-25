@@ -278,8 +278,10 @@ BytecodeSyntheticChildren::FrontEnd::FrontEnd(
 }
 
 lldb::ChildCacheState BytecodeSyntheticChildren::FrontEnd::Update() {
-  if (!m_impl.update)
+  if (!m_impl.update) {
+    m_self = m_init_results;
     return ChildCacheState::eReuse;
+  }
 
   FormatterBytecode::ControlStack control = {m_impl.update->getBuffer()};
   FormatterBytecode::DataStack data = m_init_results;

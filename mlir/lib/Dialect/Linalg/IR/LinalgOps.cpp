@@ -1883,6 +1883,23 @@ void ReduceOp::print(OpAsmPrinter &p) {
 LogicalResult ReduceOp::verify() {
   ArrayRef<int64_t> dimensionsRef = getDimensions();
 
+  // The ReduceOp uses `SameVariadicOperandSize`, which requires equal numbers
+  // of inputs and inits. Detect a mismatch early: when they differ, the
+  // ODS-generated getInputs()/getInits() accessors compute each group's size
+  // via floordiv of the total operand count, producing incorrect slices that
+  // would cause out-of-bounds accesses below.
+  if (getInputs().size() != static_cast<size_t>(getNumDpsInputs()))
+    return emitOpError()
+           << "expected equal number of inputs and outputs (required by "
+              "SameVariadicOperandSize), got "
+           << getNumDpsInputs() << " input(s) and " << getNumDpsInits()
+           << " output(s)";
+
+  if (getInputs().empty())
+    return emitOpError() << "expected at least one input";
+  if (getInits().empty())
+    return emitOpError() << "expected at least one output";
+
   for (int64_t i = 1; i < getNumDpsInputs(); ++i) {
     if (llvm::cast<ShapedType>(getInputs()[i].getType()).getShape() !=
         llvm::cast<ShapedType>(getInputs()[0].getType()).getShape()) {
@@ -5112,7 +5129,9 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
 
   // Return true if we have a zero-value tile.
   auto hasZeros = [&](ArrayRef<OpFoldResult> tiles) {
-    return llvm::any_of(tiles, isZeroInteger);
+    return llvm::any_of(tiles, [](OpFoldResult tile) {
+      return isa<Attribute>(tile) && isZeroInteger(tile);
+    });
   };
 
   // Verify that the source and destination are ranked types.
@@ -5496,13 +5515,15 @@ bool PackOp::requirePaddingValue(ArrayRef<int64_t> inputShape,
     if (ShapedType::isDynamic(inputShape[pos]))
       continue;
     std::optional<int64_t> constantTile = getConstantIntValue(tileSize);
-
     if (!constantTile) {
       if (ShapedType::isStatic(outputTileSizes[pos]) &&
           (inputShape[pos] % outputTileSizes[pos] != 0))
         return true;
-    } else if (inputShape[pos] % (*constantTile) != 0) {
-      return true;
+    } else {
+      assert(*constantTile != 0 && "static tile size can't be zero");
+      if (inputShape[pos] % (*constantTile) != 0) {
+        return true;
+      }
     }
   }
   return false;
@@ -5528,6 +5549,7 @@ bool PackOp::requirePaddingValueStrict(ArrayRef<int64_t> inputShape,
     std::optional<int64_t> constantTile = getConstantIntValue(tileSize);
     if (!constantTile)
       return true;
+    assert(*constantTile != 0 && "static tile size can't be zero");
     if (inputShape[pos] % (*constantTile) != 0)
       return true;
   }
@@ -5997,6 +6019,8 @@ struct FoldTensorCastPackOp : public OpRewritePattern<PackOp> {
     // Get the updated mixed-tile-sizes attribute.
     SmallVector<OpFoldResult> newMixedTileSizes =
         getNewMixedTileSizes(rewriter, newResultTypes[0], op.getMixedTiles());
+    if (llvm::any_of(newMixedTileSizes, isZeroInteger))
+      return failure();
 
     // Clone op.
     // TODO: Strictly speaking, discardable attributes should be _discarded_ at

@@ -472,8 +472,8 @@ for.exit:
 }
 
 ;; Test that we can handle more than one GEP index.
-@idx_array = dso_local local_unnamed_addr global [1048576 x i32] zeroinitializer, align 4
-@data_array = dso_local local_unnamed_addr global [1048576 x i32] zeroinitializer, align 4
+@idx_array = global [1048576 x i32] zeroinitializer, align 4
+@data_array = global [1048576 x i32] zeroinitializer, align 4
 
 define void @histogram_array_3op_gep(i64 noundef %N) #0 {
 ; CHECK-LABEL: define void @histogram_array_3op_gep(
