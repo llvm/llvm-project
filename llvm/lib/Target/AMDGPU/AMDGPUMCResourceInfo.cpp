@@ -326,15 +326,25 @@ void MCResourceInfo::gatherResourceInfo(
     Sym->setVariableValue(MCConstantExpr::create(LocalValue, OutContext));
   };
 
-  // When DynamicVGPR is enabled do not propagate VGPR counts from callees.
-  bool SkipVGPRPropagation =
-      MF.getInfo<SIMachineFunctionInfo>()->isDynamicVGPREnabled() &&
-      MF.getFunction().getCallingConv() == CallingConv::AMDGPU_CS_Chain;
-
   LLVM_DEBUG(dbgs() << "MCResUse: " << FnSym->getName() << '\n');
-  if (SkipVGPRPropagation) {
-    SetToLocal(FRI.NumVGPR, RIK_NumVGPR);
-    SetToLocal(FRI.NumAGPR, RIK_NumAGPR);
+
+  CallingConv::ID CC = MF.getFunction().getCallingConv();
+
+  // When DynamicVGPR is enabled, chain functions should not propagate VGPR
+  // counts from other chain callees since each chain function can have its own
+  // VGPR allocation, but should still propagate from non-chain callees.
+  if (MF.getInfo<SIMachineFunctionInfo>()->isDynamicVGPREnabled() &&
+      (CC == CallingConv::AMDGPU_CS_Chain || CC == CallingConv::AMDGPU_CS)) {
+    SmallVector<const Function *, 16> NonChainCallees;
+    for (const Function *Callee : FRI.Callees) {
+      if (!AMDGPU::isChainCC(Callee->getCallingConv()) &&
+          !Callee->isDeclaration())
+        NonChainCallees.push_back(Callee);
+    }
+    assignResourceInfoExpr(FRI.NumVGPR, RIK_NumVGPR, AMDGPUMCExpr::AGVK_Max, MF,
+                           NonChainCallees, OutContext);
+    assignResourceInfoExpr(FRI.NumAGPR, RIK_NumAGPR, AMDGPUMCExpr::AGVK_Max, MF,
+                           NonChainCallees, OutContext);
   } else {
     SetMaxReg(MaxVGPRSym, FRI.NumVGPR, RIK_NumVGPR);
     SetMaxReg(MaxAGPRSym, FRI.NumAGPR, RIK_NumAGPR);
