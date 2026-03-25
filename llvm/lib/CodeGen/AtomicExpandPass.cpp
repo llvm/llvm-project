@@ -88,8 +88,7 @@ private:
   bool bracketInstWithFences(Instruction *I, AtomicOrdering Order);
   bool tryInsertTrailingSeqCstFence(Instruction *AtomicI);
   template <typename AtomicInst>
-  bool tryInsertFencesForAtomic(AtomicInst *AtomicI,
-                                bool OrderingRequiresFence,
+  bool tryInsertFencesForAtomic(AtomicInst *AtomicI, bool OrderingRequiresFence,
                                 AtomicOrdering NewOrdering);
   IntegerType *getCorrespondingIntegerType(Type *T, const DataLayout &DL);
   LoadInst *convertAtomicLoadToIntegerType(LoadInst *LI);
@@ -280,9 +279,9 @@ bool AtomicExpandImpl::tryInsertTrailingSeqCstFence(Instruction *AtomicI) {
 }
 
 template <typename AtomicInst>
-bool AtomicExpandImpl::tryInsertFencesForAtomic(
-    AtomicInst *AtomicI, bool OrderingRequiresFence,
-    AtomicOrdering NewOrdering) {
+bool AtomicExpandImpl::tryInsertFencesForAtomic(AtomicInst *AtomicI,
+                                                bool OrderingRequiresFence,
+                                                AtomicOrdering NewOrdering) {
   bool ShouldInsertFences = TLI->shouldInsertFencesForAtomic(AtomicI);
   if (OrderingRequiresFence && ShouldInsertFences) {
     AtomicOrdering FenceOrdering = AtomicI->getOrdering();
@@ -312,8 +311,7 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
     }
 
     MadeChange |= tryInsertFencesForAtomic(
-        LI, isAcquireOrStronger(LI->getOrdering()),
-        AtomicOrdering::Monotonic);
+        LI, isAcquireOrStronger(LI->getOrdering()), AtomicOrdering::Monotonic);
 
     MadeChange |= tryExpandAtomicLoad(LI);
     return MadeChange;
@@ -336,8 +334,7 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
     }
 
     MadeChange |= tryInsertFencesForAtomic(
-        SI, isReleaseOrStronger(SI->getOrdering()),
-        AtomicOrdering::Monotonic);
+        SI, isReleaseOrStronger(SI->getOrdering()), AtomicOrdering::Monotonic);
 
     MadeChange |= tryExpandAtomicStore(SI);
     return MadeChange;
@@ -357,8 +354,9 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
     }
 
     MadeChange |= tryInsertFencesForAtomic(
-        RMWI, isReleaseOrStronger(RMWI->getOrdering()) ||
-                  isAcquireOrStronger(RMWI->getOrdering()),
+        RMWI,
+        isReleaseOrStronger(RMWI->getOrdering()) ||
+            isAcquireOrStronger(RMWI->getOrdering()),
         TLI->atomicOperationOrderAfterFenceSplit(RMWI));
 
     // There are two different ways of expanding RMW instructions:
