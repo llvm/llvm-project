@@ -21,7 +21,7 @@ def RequiresSMInterface: OpInterface<"RequiresSMInterface"> {
   let cppNamespace = "::mlir::NVVM";
   let methods = [
     InterfaceMethod<
-      "Get the SM version required by the op from the trait", 
+      "Get the SM version require by the op from the trait", 
       "mlir::NVVM::NVVMCheckSMVersion", "getRequiredMinSMVersion"
     >
   ];
@@ -30,19 +30,25 @@ def RequiresSMInterface: OpInterface<"RequiresSMInterface"> {
 // Op requires a specified minimum SM value or higher; 
 // it is not architecture-specific.
 class NVVMRequiresSM<int minVersion> :
-  ParamNativeOpTrait<"NVVMRequiresSM", !cast<string>(minVersion)>;
+  ParamNativeOpTrait<"NVVMRequiresSM", !cast<string>(minVersion) # "0">;
 
 // Op requires an exact SM match along with architecture acceleration.
-class NVVMRequiresSMAA<list<int> smVersions> :
-  ParamNativeOpTrait<"NVVMRequiresSMAA", !interleave(smVersions, ",")>;
+class NVVMRequiresSMa<list<int> smVersions> :
+  ParamNativeOpTrait<"NVVMRequiresSM",
+    !interleave(!foreach(smVersion, smVersions, 
+                  !add(!mul(smVersion, 10), 3)), ",")>;
 
 // Op requires an SM version belonging to the family.
-class NVVMRequiresSMFS<list<int> smVersions> :
-  ParamNativeOpTrait<"NVVMRequiresSMFS", !interleave(smVersions, ",")>;
+class NVVMRequiresSMf<list<int> smVersions> :
+  ParamNativeOpTrait<"NVVMRequiresSM", 
+    !interleave(!foreach(smVersion, smVersions, 
+                  !add(!mul(smVersion, 10), 2)), ",")>;
 
 // Op supported on some combination of architecture acceleration and family-specific SM versions.
-class NVVMRequiresSMAAOrFS<list<int> smVersionsAA, list<int> smVersionsFS> :
-  ParamNativeOpTrait<"NVVMRequiresSMAAOrFS",
-    "mlir::OpTrait::NVVMRequiresSMAA<" # !interleave(smVersionsAA, ",") # ">" # "," #
-    "mlir::OpTrait::NVVMRequiresSMFS<" # !interleave(smVersionsFS, ",") # ">">;
+class NVVMRequiresSMaOrf<list<int> smVersionsA, list<int> smVersionsF> :
+  ParamNativeOpTrait<"NVVMRequiresSM",
+    !interleave(!foreach(smVersion, smVersionsA, 
+                  !add(!mul(smVersion, 10), 3)), ",") # "," #
+    !interleave(!foreach(smVersion, smVersionsF, 
+                  !add(!mul(smVersion, 10), 2)), ",")>;
 #endif //NVVM_REQUIRES_SM_TRAITS
