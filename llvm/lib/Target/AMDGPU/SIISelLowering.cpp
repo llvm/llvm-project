@@ -17380,15 +17380,15 @@ static ISD::CondCode tryReduceF64CompareToHiHalf(const ISD::CondCode CC,
   const KnownBits LHSMan = LHSKnown.extractBits(52, 0);
   const KnownBits LHSExp = LHSKnown.extractBits(11, 52);
   const KnownBits LHSSgn = LHSKnown.extractBits(1, 63);
-  const bool LHSMaybeNaN =
-      LHSExp.getMaxValue().isAllOnes() && !LHSMan.getMaxValue().isZero();
+  const bool LHSMaybeNaN = LHSExp.getMaxValue().isAllOnes() &&
+                           !LHSMan.isZero() && !DAG.isKnownNeverNaN(LHS);
 
   const KnownBits RHSKnown = DAG.computeKnownBits(RHS);
   const KnownBits RHSMan = RHSKnown.extractBits(52, 0);
   const KnownBits RHSExp = RHSKnown.extractBits(11, 52);
   const KnownBits RHSSgn = RHSKnown.extractBits(1, 63);
-  const bool RHSMaybeNaN =
-      RHSExp.getMaxValue().isAllOnes() && !RHSMan.getMaxValue().isZero();
+  const bool RHSMaybeNaN = RHSExp.getMaxValue().isAllOnes() &&
+                           !RHSMan.isZero() && !DAG.isKnownNeverNaN(RHS);
 
   const KnownBits LHSKnownLo32 = LHSKnown.trunc(32);
   const KnownBits RHSKnownLo32 = RHSKnown.trunc(32);
