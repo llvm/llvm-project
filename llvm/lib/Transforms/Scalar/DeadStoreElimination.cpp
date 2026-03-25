@@ -2763,7 +2763,6 @@ PreservedAnalyses DSEPass::run(Function &F, FunctionAnalysisManager &AM) {
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
   PA.preserve<MemorySSAAnalysis>();
-  PA.preserve<CycleAnalysis>();
   return PA;
 }
 
