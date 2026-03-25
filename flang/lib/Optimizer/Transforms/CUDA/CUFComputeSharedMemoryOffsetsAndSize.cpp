@@ -28,6 +28,7 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringSet.h"
 
 namespace fir {
 #define GEN_PASS_DEF_CUFCOMPUTESHAREDMEMORYOFFSETSANDSIZE
@@ -105,11 +106,11 @@ struct CUFComputeSharedMemoryOffsetsAndSize
       unsigned short alignment = 0;
       mlir::Value crtDynOffset;
 
-      // Go over each shared memory operation and compute their start offset and
-      // the size and alignment of the global to be generated if all variables
-      // are static. If this is dynamic shared memory, then only the alignment
-      // is computed.
-      for (auto sharedOp : funcOp.getOps<cuf::SharedMemoryOp>()) {
+      // Walk all shared memory operations (including those nested inside
+      // scf.parallel loops from reduction lowering) and compute their start
+      // offset and the size and alignment of the global to be generated.
+      llvm::StringSet<> createdStaticGlobals;
+      funcOp.walk([&](cuf::SharedMemoryOp sharedOp) {
         mlir::Location loc = sharedOp.getLoc();
         builder.setInsertionPoint(sharedOp);
         if (fir::hasDynamicSize(sharedOp.getInType())) {
@@ -142,12 +143,18 @@ struct CUFComputeSharedMemoryOffsetsAndSize
           // Static shared memory.
           auto [size, align] = fir::getTypeSizeAndAlignmentOrCrash(
               loc, sharedOp.getInType(), *dl, kindMap);
-          createSharedMemoryGlobal(
-              builder, sharedOp.getLoc(), funcOp.getName(),
-              *sharedOp.getBindcName(), gpuMod,
-              fir::SequenceType::get(size, i8Ty), size,
-              sharedOp.getAlignment() ? *sharedOp.getAlignment() : align,
-              /*isDynamic=*/false);
+          std::string globalName =
+              (funcOp.getName() + cudaSharedMemSuffix +
+               *sharedOp.getBindcName())
+                  .str();
+          if (createdStaticGlobals.insert(globalName).second) {
+            createSharedMemoryGlobal(
+                builder, sharedOp.getLoc(), funcOp.getName(),
+                *sharedOp.getBindcName(), gpuMod,
+                fir::SequenceType::get(size, i8Ty), size,
+                sharedOp.getAlignment() ? *sharedOp.getAlignment() : align,
+                /*isDynamic=*/false);
+          }
           mlir::Value zero = builder.createIntegerConstant(loc, i32Ty, 0);
           sharedOp.getOffsetMutable().assign(zero);
           if (!sharedOp.getAlignment())
@@ -155,7 +162,7 @@ struct CUFComputeSharedMemoryOffsetsAndSize
           sharedOp.setIsStatic(true);
           ++nbStaticSharedVariables;
         }
-      }
+      });
 
       if (nbDynamicSharedVariables == 0 && nbStaticSharedVariables == 0)
         continue;
