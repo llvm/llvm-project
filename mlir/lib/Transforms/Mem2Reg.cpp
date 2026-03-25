@@ -397,6 +397,7 @@ LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
       if (!promotable.canUsesBeRemoved(blockingUses, newBlockingUses,
                                        dataLayout))
         return failure();
+      regionsWithDirectUse.insert(user->getParentRegion());
     } else if (auto promotable = dyn_cast<PromotableMemOpInterface>(user)) {
       if (!promotable.canUsesBeRemoved(slot, blockingUses, newBlockingUses,
                                        dataLayout))
@@ -607,6 +608,13 @@ Value MemorySlotPromoter::promoteInBlock(Block *block, Value reachingDef) {
             continue;
           promoteInRegion(region, reachingDef);
         }
+
+        // TODO: Currently we have to invalidate the dominance information of
+        // the regions of the operation because finalizePromotion may move their
+        // content. We might want to support moving dominance information
+        // accross regions as this can be detected.
+        for (Region &region : op->getRegions())
+          dominance.invalidate(&region);
 
         builder.setInsertionPointAfter(op);
         reachingDef = promotableRegionOp.finalizePromotion(
