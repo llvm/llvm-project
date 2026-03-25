@@ -1,7 +1,11 @@
-! GOTO exits through two nested ACC data regions. The branch crosses
+! GOTO exits through two nested ACC regions. The branch crosses
 ! two ACC region boundaries, requiring multi-level exit handling.
 
-! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %s -o - 2>&1 | FileCheck %s
+! RUN: split-file %s %t
+! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %t/nested_data.f90 -o - 2>&1 | FileCheck %s --check-prefix=DATA
+! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %t/nested_loop.f90 -o - 2>&1 | FileCheck %s --check-prefix=LOOP
+
+!--- nested_data.f90
 
 subroutine nested_data_exit(a, n)
   integer :: n, i, j
@@ -19,4 +23,22 @@ subroutine nested_data_exit(a, n)
 888 continue
 end subroutine
 
-! CHECK: not yet implemented: GOTO exiting OpenACC region
+! DATA: not yet implemented: GOTO exiting OpenACC region
+
+!--- nested_loop.f90
+
+subroutine nested_loop_exit(A, B, N)
+  implicit real*8 (a-h, o-z)
+  !$acc routine seq
+  dimension A(*), B(*)
+  !$acc loop seq
+  do 100 i = 1, N
+  !$acc loop seq
+    do 10 j = 1, N
+      if (A(j) .gt. B(j)) goto 200
+10  continue
+100 continue
+200 continue
+end subroutine
+
+! LOOP: not yet implemented: GOTO exiting OpenACC region

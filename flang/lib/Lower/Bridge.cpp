@@ -3710,21 +3710,17 @@ private:
       if (!exitInfo.exits.empty()) {
         mlir::Location loc = toLocation();
         mlir::Value sel = fir::LoadOp::create(*builder, loc, exitInfo.selector);
-        mlir::Block *continueBlock =
-            builder->getBlock()->splitBlock(builder->getBlock()->end());
         for (auto &[id, target] : exitInfo.exits) {
           mlir::Value idVal =
               builder->createIntegerConstant(loc, builder->getI32Type(), id);
           mlir::Value cmp = mlir::arith::CmpIOp::create(
               *builder, loc, mlir::arith::CmpIPredicate::eq, sel, idVal);
-          mlir::Block *nextCheck =
+          mlir::Block *nextBlock =
               builder->getBlock()->splitBlock(builder->getBlock()->end());
           mlir::cf::CondBranchOp::create(*builder, loc, cmp, target,
-                                         nextCheck);
-          builder->setInsertionPointToEnd(nextCheck);
+                                         nextBlock);
+          builder->setInsertionPointToEnd(nextBlock);
         }
-        mlir::cf::BranchOp::create(*builder, loc, continueBlock);
-        builder->setInsertionPointToEnd(continueBlock);
       }
     }
 
