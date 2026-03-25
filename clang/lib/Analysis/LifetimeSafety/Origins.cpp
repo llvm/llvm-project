@@ -54,8 +54,6 @@ private:
 class LifetimeboundOriginTypeCollector
     : public RecursiveASTVisitor<LifetimeboundOriginTypeCollector> {
 public:
-  LifetimeboundOriginTypeCollector(OriginManager &OM) : OM(OM) {}
-
   bool VisitCallExpr(const CallExpr *CE) {
     if (const auto *FD = CE->getDirectCallee())
       collect(FD, FD->getReturnType());
@@ -69,8 +67,12 @@ public:
 
   bool shouldVisitLambdaBody() const { return false; }
 
+  const llvm::SmallVector<QualType> &getCollectedTypes() const {
+    return CollectedTypes;
+  }
+
 private:
-  OriginManager &OM;
+  llvm::SmallVector<QualType> CollectedTypes;
 
   void collect(const FunctionDecl *FD, QualType RetType) {
     if (!FD)
@@ -80,13 +82,13 @@ private:
     if (const auto *MD = dyn_cast<CXXMethodDecl>(FD);
         MD && MD->isInstance() && !isa<CXXConstructorDecl>(MD) &&
         implicitObjectParamIsLifetimeBound(MD)) {
-      OM.registerLifetimeboundOriginType(RetType);
+      CollectedTypes.push_back(RetType);
       return;
     }
 
     for (const auto *Param : FD->parameters()) {
       if (Param->hasAttr<LifetimeBoundAttr>()) {
-        OM.registerLifetimeboundOriginType(RetType);
+        CollectedTypes.push_back(RetType);
         return;
       }
     }
@@ -149,7 +151,11 @@ bool doesDeclHaveStorage(const ValueDecl *D) {
   return !D->getType()->isReferenceType();
 }
 
-OriginManager::OriginManager(ASTContext &AST) : AST(AST) {}
+OriginManager::OriginManager(const AnalysisDeclContext &AC)
+    : AST(AC.getASTContext()) {
+  collectLifetimeboundOriginTypes(AC);
+  initializeThisOrigins(AC.getDecl());
+}
 
 void OriginManager::initializeThisOrigins(const Decl *D) {
   const auto *MD = llvm::dyn_cast_or_null<CXXMethodDecl>(D);
@@ -287,13 +293,16 @@ void OriginManager::collectMissingOrigins(Stmt &FunctionBody,
   Collector.TraverseStmt(const_cast<Stmt *>(&FunctionBody));
 }
 
-void OriginManager::collectLifetimeboundOriginTypes(AnalysisDeclContext &AC) {
-  LifetimeboundOriginTypeCollector Collector(*this);
+void OriginManager::collectLifetimeboundOriginTypes(
+    const AnalysisDeclContext &AC) {
+  LifetimeboundOriginTypeCollector Collector;
   if (Stmt *Body = AC.getBody())
     Collector.TraverseStmt(Body);
   if (const auto *CD = dyn_cast<CXXConstructorDecl>(AC.getDecl()))
     for (const auto *Init : CD->inits())
       Collector.TraverseStmt(Init->getInit());
+  for (QualType QT : Collector.getCollectedTypes())
+    registerLifetimeboundOriginType(QT);
 }
 
 void OriginManager::registerLifetimeboundOriginType(QualType QT) {

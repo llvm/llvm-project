@@ -124,11 +124,7 @@ bool doesDeclHaveStorage(const ValueDecl *D);
 /// variables and expressions.
 class OriginManager {
 public:
-  explicit OriginManager(ASTContext &AST);
-
-  /// Must be called after collectLifetimeboundOriginTypes() to ensure
-  /// ThisOrigins reflects the complete set of tracked types.
-  void initializeThisOrigins(const Decl *D);
+  explicit OriginManager(const AnalysisDeclContext &AC);
 
   /// Gets or creates the OriginList for a given ValueDecl.
   ///
@@ -166,12 +162,6 @@ public:
   /// Collects statistics about expressions that lack associated origins.
   void collectMissingOrigins(Stmt &FunctionBody, LifetimeSafetyStats &LSStats);
 
-  /// Pre-scans the function body (and constructor init lists) to discover
-  /// return types of [[clang::lifetimebound]] calls, registering them for
-  /// origin tracking.
-  void collectLifetimeboundOriginTypes(AnalysisDeclContext &AC);
-  void registerLifetimeboundOriginType(QualType QT);
-
 private:
   OriginID getNextOriginID() { return NextOriginID++; }
 
@@ -180,6 +170,14 @@ private:
 
   template <typename T>
   OriginList *buildListForType(QualType QT, const T *Node);
+
+  void initializeThisOrigins(const Decl *D);
+
+  /// Pre-scans the function body (and constructor init lists) to discover
+  /// return types of [[clang::lifetimebound]] calls, registering them for
+  /// origin tracking.
+  void collectLifetimeboundOriginTypes(const AnalysisDeclContext &AC);
+  void registerLifetimeboundOriginType(QualType QT);
 
   ASTContext &AST;
   OriginID NextOriginID{0};
