@@ -108,6 +108,8 @@ namespace llvm {
     explicit X86TargetLowering(const X86TargetMachine &TM,
                                const X86Subtarget &STI);
 
+    bool useTopologicalSorting() const override { return false; }
+
     unsigned getJumpTableEncoding() const override;
     bool useSoftFloat() const override;
 
