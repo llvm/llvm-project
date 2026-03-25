@@ -17,6 +17,9 @@
 #include "L0Program.h"
 #include "L0Trace.h"
 
+#include "GlobalHandler.h"
+#include "llvm/Object/ELF.h"
+
 namespace llvm::omp::target::plugin {
 
 L0DeviceTLSTy &L0DeviceTy::getTLS() {
@@ -1140,6 +1143,146 @@ Expected<bool> L0DeviceTy::isAccessiblePtrImpl(const void *Ptr, size_t Size) {
                          "Invalid input to %s (Ptr = %p, Size = %zu)", __func__,
                          Ptr, Size);
   return getMemAllocator(Ptr).contains(Ptr, Size);
+}
+
+Error L0DeviceTy::callGlobalConstructors(GenericPluginTy &Plugin,
+                                         DeviceImageTy &Image) {
+  return callGlobalCtorDtorCommon(Plugin, Image, /*IsCtor=*/true);
+}
+
+Error L0DeviceTy::callGlobalDestructors(GenericPluginTy &Plugin,
+                                        DeviceImageTy &Image) {
+  return callGlobalCtorDtorCommon(Plugin, Image, /*IsCtor=*/false);
+}
+
+Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
+                                           DeviceImageTy &Image, bool IsCtor) {
+  const char *KernelName = IsCtor ? "spirv$device$init" : "spirv$device$fini";
+
+  // Check if a kernel was generated to run constructor or destructors.
+  // It should be created by the 'spirv-lower-ctor-dtor' pass.
+  GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
+  if (!Handler.isSymbolInImage(*this, Image, KernelName))
+    return Plugin::success();
+
+  // Instead of returning errors directly, we capture them and provide
+  // more of context about this routine.
+  auto HandleErr = [&](Error Err) {
+    std::string Buffer;
+    llvm::raw_string_ostream(Buffer)
+        << "failed to call global " << (IsCtor ? "constructors" : "destructors")
+        << " in the image";
+    return Plugin::error(ErrorCode::INVALID_BINARY, std::move(Err),
+                         Buffer.c_str());
+  };
+
+  // The SPIR-V backend cannot handle creating the ctor / dtor array
+  // automatically so we must create it ourselves. The backend will emit
+  // several globals that contain function pointers we can call. These are
+  // prefixed with a __init_array_object_ or __fini_array_object_.
+  auto ELFObjOrErr = Handler.getELFObjectFile(Image);
+  if (!ELFObjOrErr)
+    return HandleErr(ELFObjOrErr.takeError());
+
+  using FuncNameAndPriority = std::pair<StringRef, uint16_t>;
+  SmallVector<FuncNameAndPriority> Funcs;
+  for (ELFSymbolRef Sym : (*ELFObjOrErr)->symbols()) {
+    auto NameOrErr = Sym.getName();
+    if (!NameOrErr)
+      return HandleErr(NameOrErr.takeError());
+
+    if (!NameOrErr->starts_with(IsCtor ? "__init_array_object_"
+                                       : "__fini_array_object_"))
+      continue;
+
+    uint16_t Priority;
+    if (NameOrErr->rsplit('_').second.getAsInteger(10, Priority))
+      return Plugin::error(
+          ErrorCode::INVALID_BINARY,
+          "failed to call global %s in the image: invalid priority",
+          IsCtor ? "constructors" : "destructors");
+
+    Funcs.emplace_back(*NameOrErr, Priority);
+  }
+
+  if (Funcs.empty()) {
+    ODBG(OLDT_Module) << KernelName << " found in the image but no "
+                      << (IsCtor ? "constructors" : "destructors")
+                      << " found in the image.";
+    return Plugin::success();
+  }
+
+  // Sort the created array to be in priority order.
+  llvm::sort(Funcs,
+             [](const auto &X, const auto &Y) { return X.second < Y.second; });
+
+  auto BufferOrErr = allocate(Funcs.size() * sizeof(void *),
+                              /*HostPtr=*/nullptr, TARGET_ALLOC_DEVICE);
+  if (!BufferOrErr)
+    return HandleErr(BufferOrErr.takeError());
+
+  void *Buffer = *BufferOrErr;
+  if (!Buffer)
+    return Plugin::error(
+        ErrorCode::OUT_OF_RESOURCES,
+        "failed to allocate memory for global buffer to run %s",
+        IsCtor ? "constructors" : "destructors");
+
+  auto CleanupBufferAndErr = [&](Error RetErr) {
+    if (auto Err = free(Buffer, TARGET_ALLOC_DEVICE)) {
+      return joinErrors(std::move(RetErr), std::move(Err));
+    }
+    return RetErr;
+  };
+
+  auto *GlobalPtrStart = reinterpret_cast<uintptr_t *>(Buffer);
+  auto *GlobalPtrStop = reinterpret_cast<uintptr_t *>(Buffer) + Funcs.size();
+
+  SmallVector<void *> FunctionPtrs(Funcs.size());
+  size_t Idx = 0;
+  for (auto [Name, Priority] : Funcs) {
+    GlobalTy FunctionAddr(Name.str(), sizeof(void *), &FunctionPtrs[Idx++]);
+    if (auto Err = Handler.readGlobalFromDevice(*this, Image, FunctionAddr))
+      return CleanupBufferAndErr(std::move(Err));
+  }
+
+  if (auto Err = dataSubmit(GlobalPtrStart, FunctionPtrs.data(),
+                            FunctionPtrs.size() * sizeof(void *),
+                            /*AsyncInfo=*/nullptr))
+    return CleanupBufferAndErr(std::move(Err));
+
+  GlobalTy StartGlobal(IsCtor ? "__init_array_start" : "__fini_array_start",
+                       sizeof(void *), &GlobalPtrStart);
+  if (auto Err = Handler.writeGlobalToDevice(*this, Image, StartGlobal))
+    return CleanupBufferAndErr(std::move(Err));
+
+  GlobalTy StopGlobal(IsCtor ? "__init_array_end" : "__fini_array_end",
+                      sizeof(void *), &GlobalPtrStop);
+  if (auto Err = Handler.writeGlobalToDevice(*this, Image, StopGlobal))
+    return CleanupBufferAndErr(std::move(Err));
+
+  // Call the generated kernel to execute the constructors or destructors.
+  auto KernelOrErr = constructKernel(KernelName);
+  if (!KernelOrErr)
+    return CleanupBufferAndErr(KernelOrErr.takeError());
+
+  GenericKernelTy &L0Kernel = *KernelOrErr;
+  if (auto Err = L0Kernel.init(*this, Image))
+    return CleanupBufferAndErr(std::move(Err));
+
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, /*AsyncInfoPtr=*/nullptr);
+
+  KernelArgsTy KernelArgs{};
+  uint32_t NumBlocksAndThreads[3] = {1u, 1u, 1u};
+  auto Err =
+      L0Kernel.launchImpl(*this, NumBlocksAndThreads, NumBlocksAndThreads, 0,
+                          KernelArgs, KernelLaunchParamsTy{}, AsyncInfoWrapper);
+
+  AsyncInfoWrapper.finalize(Err);
+  if (Err)
+    return CleanupBufferAndErr(std::move(Err));
+
+  return CleanupBufferAndErr(Plugin::success());
 }
 
 } // namespace llvm::omp::target::plugin
