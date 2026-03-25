@@ -250,9 +250,11 @@ struct Config {
   llvm::StringRef cmseInputLib;
   llvm::StringRef cmseOutputLib;
   ReportPolicy zBtiReport = ReportPolicy::None;
+  llvm::StringRef zBtiReportSource;
   ReportPolicy zCetReport = ReportPolicy::None;
   ReportPolicy zPauthReport = ReportPolicy::None;
   ReportPolicy zGcsReport = ReportPolicy::None;
+  llvm::StringRef zGcsReportSource;
   ReportPolicy zGcsReportDynamic = ReportPolicy::None;
   ReportPolicy zExecuteOnlyReport = ReportPolicy::None;
   ReportPolicy zZicfilpUnlabeledReport = ReportPolicy::None;

@@ -251,7 +251,7 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
   return file_list;
 }
 
-FileSpecList PlatformDarwin::LocateExecutableScriptingResources(
+FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesForPlatform(
     Target *target, Module &module, Stream &feedback_stream) {
   if (!target)
     return {};

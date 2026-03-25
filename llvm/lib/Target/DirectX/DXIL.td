@@ -1162,6 +1162,10 @@ def WaveActiveBit : DXILOp<120, waveActiveBit> {
                  [
                    IntrinArgIndex<0>, IntrinArgI8<WaveBitOpKind_Xor>,
                  ]>,
+    IntrinSelect<int_dx_wave_reduce_and,
+                 [
+                   IntrinArgIndex<0>, IntrinArgI8<WaveBitOpKind_And>,
+                 ]>
   ];
 
   let arguments = [OverloadTy, Int8Ty];

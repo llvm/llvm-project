@@ -78,10 +78,10 @@ ComputeRegionOp buildComputeRegion(Location loc, ValueRange launchArgs,
   assert(mapKeys.size() == inputArgs.size() &&
          "inputArgsToMap must have same size as inputArgs when provided");
 
-  auto parWidthType = ParWidthType::get(rewriter.getContext());
+  Type indexType = rewriter.getIndexType();
   Block *entryBlock = rewriter.createBlock(&computeRegion.getRegion());
   for (size_t i = 0; i < launchArgs.size(); ++i)
-    entryBlock->addArgument(parWidthType, loc);
+    entryBlock->addArgument(indexType, loc);
   for (Value input : inputArgs)
     entryBlock->addArgument(input.getType(), loc);
   for (size_t i = 0; i < inputArgs.size(); ++i)

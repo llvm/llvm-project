@@ -6590,7 +6590,7 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
 
   // Inherited constructors are created lazily; force their creation now so the
   // loop below can propagate the DLL attribute to them.
-  if (ClassExported) {
+  if (ClassExported && getLangOpts().DllExportInlines) {
     SmallVector<ConstructorUsingShadowDecl *, 4> Shadows;
     for (Decl *D : Class->decls())
       if (auto *S = dyn_cast<ConstructorUsingShadowDecl>(D))
@@ -6631,7 +6631,7 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
       if (MD->isDeleted())
         continue;
 
-      if (ClassExported) {
+      if (ClassExported && getLangOpts().DllExportInlines) {
         CXXConstructorDecl *CD = dyn_cast<CXXConstructorDecl>(MD);
         if (CD && CD->getInheritedConstructor()) {
           // Inherited constructors already had their base constructor's
@@ -6724,13 +6724,8 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
 
       // Do not export/import inline function when -fno-dllexport-inlines is
       // passed. But add attribute for later local static var check.
-      // Inherited constructors are marked inline but must still be exported
-      // to match MSVC behavior, so exclude them from this override.
-      bool IsInheritedCtor = false;
-      if (auto *CD = dyn_cast_or_null<CXXConstructorDecl>(MD))
-        IsInheritedCtor = (bool)CD->getInheritedConstructor();
       if (!getLangOpts().DllExportInlines && MD && MD->isInlined() &&
-          !IsInheritedCtor && TSK != TSK_ExplicitInstantiationDeclaration &&
+          TSK != TSK_ExplicitInstantiationDeclaration &&
           TSK != TSK_ExplicitInstantiationDefinition) {
         if (ClassExported) {
           NewAttr = ::new (getASTContext())
@@ -19481,9 +19476,9 @@ bool Sema::checkThisInStaticMemberFunctionAttributes(CXXMethodDecl *Method) {
     Expr *Arg = nullptr;
     ArrayRef<Expr *> Args;
     if (const auto *G = dyn_cast<GuardedByAttr>(A))
-      Arg = G->getArg();
+      Args = llvm::ArrayRef(G->args_begin(), G->args_size());
     else if (const auto *G = dyn_cast<PtGuardedByAttr>(A))
-      Arg = G->getArg();
+      Args = llvm::ArrayRef(G->args_begin(), G->args_size());
     else if (const auto *AA = dyn_cast<AcquiredAfterAttr>(A))
       Args = llvm::ArrayRef(AA->args_begin(), AA->args_size());
     else if (const auto *AB = dyn_cast<AcquiredBeforeAttr>(A))

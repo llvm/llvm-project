@@ -20,6 +20,7 @@
 #include "NVPTXTargetMachine.h"
 #include "NVPTXTargetObjectFile.h"
 #include "NVPTXUtilities.h"
+#include "NVVMProperties.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
