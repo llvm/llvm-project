@@ -25,18 +25,15 @@
 // AMDGCNSPIRV-LABEL: define spir_func void @foo(
 // AMDGCNSPIRV-SAME: ) addrspace(4) #[[ATTR0:[0-9]+]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = call addrspace(4) i1 @_Z20__spirv_SpecConstant(i32 -1, i1 false)
-// AMDGCNSPIRV-NEXT:    call addrspace(4) void @llvm.spv.assign.name.i1(i1 [[TMP0]], metadata [[META2:![0-9]+]])
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = call addrspace(4) i1 @llvm.spv.named.boolean.spec.constant(i32 -1, i1 false, metadata [[META2:![0-9]+]])
 // AMDGCNSPIRV-NEXT:    [[TOBOOL:%.*]] = icmp ne i1 [[TMP0]], false
 // AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL]], label %[[IF_THEN:.*]], label %[[LOR_LHS_FALSE:.*]]
 // AMDGCNSPIRV:       [[LOR_LHS_FALSE]]:
-// AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = call addrspace(4) i1 @_Z20__spirv_SpecConstant(i32 -1, i1 false)
-// AMDGCNSPIRV-NEXT:    call addrspace(4) void @llvm.spv.assign.name.i1(i1 [[TMP1]], metadata [[META3:![0-9]+]])
+// AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = call addrspace(4) i1 @llvm.spv.named.boolean.spec.constant(i32 -1, i1 false, metadata [[META3:![0-9]+]])
 // AMDGCNSPIRV-NEXT:    [[TOBOOL1:%.*]] = icmp ne i1 [[TMP1]], false
 // AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL1]], label %[[IF_THEN]], label %[[LOR_LHS_FALSE2:.*]]
 // AMDGCNSPIRV:       [[LOR_LHS_FALSE2]]:
-// AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = call addrspace(4) i1 @_Z20__spirv_SpecConstant(i32 -1, i1 false)
-// AMDGCNSPIRV-NEXT:    call addrspace(4) void @llvm.spv.assign.name.i1(i1 [[TMP2]], metadata [[META4:![0-9]+]])
+// AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = call addrspace(4) i1 @llvm.spv.named.boolean.spec.constant(i32 -1, i1 false, metadata [[META4:![0-9]+]])
 // AMDGCNSPIRV-NEXT:    [[TOBOOL3:%.*]] = icmp ne i1 [[TMP2]], false
 // AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL3]], label %[[IF_THEN]], label %[[IF_END:.*]]
 // AMDGCNSPIRV:       [[IF_THEN]]:
