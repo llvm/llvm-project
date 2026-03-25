@@ -45,8 +45,6 @@ public:
 private:
   _Iter __i_;
 
-  friend struct pointer_traits<__wrap_iter<_Iter> >;
-
 public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter() _NOEXCEPT : __i_() {}
   template <class _OtherIter,
