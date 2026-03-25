@@ -469,6 +469,7 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case Instruction::FCmp:
   case Instruction::ExtractElement:
   case Instruction::Store:
+  case VPInstruction::MemoryIVFinalStore:
   case VPInstruction::BranchOnCount:
   case VPInstruction::BranchOnTwoConds:
   case VPInstruction::FirstOrderRecurrenceSplice:
@@ -582,6 +583,11 @@ Value *VPInstruction::generate(VPTransformState &State) {
   }
   case Instruction::PHI: {
     llvm_unreachable("should be handled by VPPhi::execute");
+  }
+  case VPInstruction::MemoryIVFinalStore: {
+    Value *V = State.get(getOperand(0), true);
+    Value *P = State.get(getOperand(1), true);
+    return Builder.CreateStore(V, P);
   }
   case Instruction::Select: {
     bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
@@ -1284,6 +1290,7 @@ bool VPInstruction::isSingleScalar() const {
   switch (getOpcode()) {
   case Instruction::Load:
   case Instruction::PHI:
+  case VPInstruction::MemoryIVFinalStore:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::ResumeForEpilogue:
   case VPInstruction::VScale:
@@ -1385,6 +1392,7 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   case Instruction::ExtractElement:
     return Op == getOperand(1);
   case Instruction::PHI:
+  case VPInstruction::MemoryIVFinalStore:
     return true;
   case Instruction::FCmp:
   case Instruction::ICmp:
@@ -1436,6 +1444,8 @@ bool VPInstruction::usesFirstPartOnly(const VPValue *Op) const {
   case Instruction::ICmp:
   case Instruction::Select:
     return vputils::onlyFirstPartUsed(this);
+  case VPInstruction::MemoryIVFinalStore:
+  case Instruction::PHI:
   case VPInstruction::BranchOnCount:
   case VPInstruction::BranchOnCond:
   case VPInstruction::BranchOnTwoConds:
@@ -1508,6 +1518,9 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::MaskedCond:
     O << "masked-cond";
+    break;
+  case VPInstruction::MemoryIVFinalStore:
+    O << "memory-iv-final-store";
     break;
   case VPInstruction::ExtractLane:
     O << "extract-lane";

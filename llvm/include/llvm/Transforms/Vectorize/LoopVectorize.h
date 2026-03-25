@@ -73,6 +73,7 @@ class Instruction;
 class Loop;
 class LoopAccessInfoManager;
 class LoopInfo;
+class MemorySSA;
 class OptimizationRemarkEmitter;
 class ProfileSummaryInfo;
 class ScalarEvolution;
@@ -153,6 +154,7 @@ public:
   OptimizationRemarkEmitter *ORE;
   ProfileSummaryInfo *PSI;
   AAResults *AA;
+  MemorySSA *MSSA;
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
   LLVM_ABI void

@@ -35,6 +35,7 @@ class TargetLibraryInfo;
 class TargetTransformInfo;
 class VPBuilder;
 class VPRecipeBuilder;
+struct MemoryInductionInfo;
 struct VFRange;
 
 LLVM_ABI_FOR_TEST extern cl::opt<bool> VerifyEachVPlan;
@@ -326,6 +327,16 @@ struct VPlanTransforms {
                                           VPBasicBlock *LatchVPBB,
                                           VPBasicBlock *MiddleVPBB,
                                           UncountableExitStyle Style);
+
+  /// Promote memory induction variables (load/step/store to invariant
+  /// addresses) to scalar PHI + arithmetic in the VPlan. For each memory IV:
+  /// 1. Hoist the load to the preheader to get the initial value
+  /// 2. Create a scalar PHI for the IV
+  /// 3. Compute the update: PHI + Step * VFxUF
+  /// 4. Store the final value in the middle block
+  /// 5. Remove the original load/store recipes
+  static void promoteMemoryIVs(VPlan &Plan,
+                               ArrayRef<MemoryInductionInfo> MemIVs);
 
   /// Replaces the exit condition from
   ///   (branch-on-cond eq CanonicalIVInc, VectorTripCount)

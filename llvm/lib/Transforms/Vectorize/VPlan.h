@@ -1328,7 +1328,10 @@ public:
     /// backedge value). Has the wide induction recipe as operand.
     ExitingIVValue,
     MaskedCond,
-    OpsEnd = MaskedCond,
+    /// Store the final value of a memory induction variable. Operand 0 is the
+    /// value, operand 1 is the pointer. Always scalar.
+    MemoryIVFinalStore,
+    OpsEnd = MemoryIVFinalStore,
   };
 
   /// Returns true if this VPInstruction generates scalar values for all lanes.
@@ -1422,6 +1425,7 @@ public:
     case VPInstruction::BranchOnCond:
     case VPInstruction::BranchOnTwoConds:
     case VPInstruction::BranchOnCount:
+    case VPInstruction::MemoryIVFinalStore:
       return false;
     default:
       return true;

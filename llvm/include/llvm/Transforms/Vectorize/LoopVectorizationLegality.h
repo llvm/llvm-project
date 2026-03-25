@@ -40,10 +40,12 @@ class DominatorTree;
 class Function;
 class Loop;
 class LoopInfo;
+class MemorySSA;
 class Metadata;
 class OptimizationRemarkEmitter;
 class PredicatedScalarEvolution;
 class ProfileSummaryInfo;
+class SCEV;
 class TargetLibraryInfo;
 class TargetTransformInfo;
 class Type;
@@ -252,6 +254,14 @@ struct HistogramInfo {
 ///                that may require masking.
 enum class UncountableExitTrait { None, ReadOnly, ReadWrite };
 
+/// Describes a memory induction variable: a load/step/store pattern to a
+/// loop-invariant address that acts as a counter stored in memory.
+struct MemoryInductionInfo {
+  LoadInst *Load;
+  StoreInst *Store;
+  const SCEV *Step;
+};
+
 /// LoopVectorizationLegality checks if it is legal to vectorize a loop, and
 /// to what vectorization factor.
 /// This class does not look at the profitability of vectorization, only the
@@ -267,15 +277,18 @@ enum class UncountableExitTrait { None, ReadOnly, ReadWrite };
 /// induction variable and the different reduction variables.
 class LoopVectorizationLegality {
 public:
-  LoopVectorizationLegality(
-      Loop *L, PredicatedScalarEvolution &PSE, DominatorTree *DT,
-      TargetTransformInfo *TTI, TargetLibraryInfo *TLI, Function *F,
-      LoopAccessInfoManager &LAIs, LoopInfo *LI, OptimizationRemarkEmitter *ORE,
-      LoopVectorizationRequirements *R, LoopVectorizeHints *H, DemandedBits *DB,
-      AssumptionCache *AC, bool AllowRuntimeSCEVChecks, AAResults *AA)
+  LoopVectorizationLegality(Loop *L, PredicatedScalarEvolution &PSE,
+                            DominatorTree *DT, TargetTransformInfo *TTI,
+                            TargetLibraryInfo *TLI, Function *F,
+                            LoopAccessInfoManager &LAIs, LoopInfo *LI,
+                            OptimizationRemarkEmitter *ORE,
+                            LoopVectorizationRequirements *R,
+                            LoopVectorizeHints *H, DemandedBits *DB,
+                            AssumptionCache *AC, bool AllowRuntimeSCEVChecks,
+                            AAResults *AA, MemorySSA *MSSA = nullptr)
       : TheLoop(L), LI(LI), PSE(PSE), TTI(TTI), TLI(TLI), DT(DT), LAIs(LAIs),
         ORE(ORE), Requirements(R), Hints(H), DB(DB), AC(AC),
-        AllowRuntimeSCEVChecks(AllowRuntimeSCEVChecks), AA(AA) {}
+        AllowRuntimeSCEVChecks(AllowRuntimeSCEVChecks), AA(AA), MSSA(MSSA) {}
 
   /// ReductionList contains the reduction descriptors for all
   /// of the reductions that were found in the loop.
@@ -472,6 +485,11 @@ public:
 
   /// Returns a list of all known histogram operations in the loop.
   bool hasHistograms() const { return !Histograms.empty(); }
+
+  /// Returns the detected memory induction variables.
+  ArrayRef<MemoryInductionInfo> getMemoryInductions() const {
+    return MemoryInductions;
+  }
 
   PredicatedScalarEvolution *getPredicatedScalarEvolution() const {
     return &PSE;
@@ -734,6 +752,13 @@ private:
   // Alias Analysis results used to check for possible aliasing with loads
   // used in uncountable exit conditions.
   AAResults *AA;
+
+  /// MemorySSA for hoisting analysis of memory induction variables.
+  /// May be null if not available (obtained via getCachedResult).
+  MemorySSA *MSSA;
+
+  /// Detected memory induction variables (load/step/store to invariant addr).
+  SmallVector<MemoryInductionInfo, 2> MemoryInductions;
 
   /// If we discover function calls within the loop which have a valid
   /// vectorized variant, record that fact so that LoopVectorize can

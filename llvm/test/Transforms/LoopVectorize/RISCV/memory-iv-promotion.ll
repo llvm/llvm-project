@@ -11,18 +11,29 @@ define void @memory_iv_copy_and_count(ptr noalias %dst, ptr noalias %src, ptr %c
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.preheader:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[LOOP_PREHEADER]] ]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[COUNT_VAL:%.*]] = load i64, ptr [[COUNT:%.*]], align 8
-; CHECK-NEXT:    [[COUNT_NEXT:%.*]] = add i64 [[COUNT_VAL]], 1
-; CHECK-NEXT:    store i64 [[COUNT_NEXT]], ptr [[COUNT]], align 8
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[LOOP]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ [[N]], [[LOOP]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi i64 [ [[COUNT_VAL]], [[LOOP]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
 ; CHECK-NEXT:    [[SRC_PTR:%.*]] = getelementptr inbounds i64, ptr [[SRC:%.*]], i64 [[IV]]
-; CHECK-NEXT:    [[VAL:%.*]] = load i64, ptr [[SRC_PTR]], align 8
+; CHECK-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 8 [[SRC_PTR]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP4]])
 ; CHECK-NEXT:    [[DST_PTR:%.*]] = getelementptr inbounds i64, ptr [[DST:%.*]], i64 [[IV]]
-; CHECK-NEXT:    store i64 [[VAL]], ptr [[DST_PTR]], align 8
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[EXIT_LOOPEXIT:%.*]], label [[LOOP]]
+; CHECK-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[VP_OP_LOAD]], ptr align 8 [[DST_PTR]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP4]])
+; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[TMP4]] to i64
+; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP7]], [[IV]]
+; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP7]]
+; CHECK-NEXT:    [[TMP8]] = add i64 [[TMP3]], [[TMP1]]
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
+; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    store i64 [[TMP8]], ptr [[COUNT]], align 8
+; CHECK-NEXT:    br label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
@@ -56,19 +67,31 @@ define void @memory_iv_step3(ptr noalias %dst, ptr noalias %src, ptr %count, i64
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.preheader:
-; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[COUNT_VAL:%.*]] = load i64, ptr [[COUNT:%.*]], align 8
-; CHECK-NEXT:    [[COUNT_NEXT:%.*]] = add i64 [[COUNT_VAL]], 3
-; CHECK-NEXT:    store i64 [[COUNT_NEXT]], ptr [[COUNT]], align 8
-; CHECK-NEXT:    [[SRC_PTR:%.*]] = getelementptr inbounds i64, ptr [[SRC:%.*]], i64 [[IV]]
-; CHECK-NEXT:    [[VAL:%.*]] = load i64, ptr [[SRC_PTR]], align 8
-; CHECK-NEXT:    [[DST_PTR:%.*]] = getelementptr inbounds i64, ptr [[DST:%.*]], i64 [[IV]]
-; CHECK-NEXT:    store i64 [[VAL]], ptr [[DST_PTR]], align 8
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[EXIT_LOOPEXIT:%.*]], label [[LOOP]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[COUNT:%.*]], align 8
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[CURRENT_ITERATION_IV:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ [[N]], [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi i64 [ [[TMP2]], [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[SRC:%.*]], i64 [[CURRENT_ITERATION_IV]]
+; CHECK-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 8 [[TMP5]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[DST:%.*]], i64 [[CURRENT_ITERATION_IV]]
+; CHECK-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[VP_OP_LOAD]], ptr align 8 [[TMP6]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP4]])
+; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[TMP4]] to i64
+; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP7]], [[CURRENT_ITERATION_IV]]
+; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = mul i64 3, [[TMP1]]
+; CHECK-NEXT:    [[TMP9]] = add i64 [[TMP3]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
+; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    store i64 [[TMP9]], ptr [[COUNT]], align 8
+; CHECK-NEXT:    br label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:

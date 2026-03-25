@@ -89,6 +89,7 @@
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
+#include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -8127,6 +8128,13 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
         RUN_VPLAN_PASS(VPlanTransforms::optimizeEVLMasks, *Plan);
       }
 
+      // Promote memory induction variables after EVL handling to avoid
+      // conflicting with VFxUF user assertions in addExplicitVectorLength.
+      VPlanTransforms::promoteMemoryIVs(*Plan, Legal->getMemoryInductions());
+      // Clean up dead intermediate recipes (e.g., the add between load/store)
+      // left behind by promoteMemoryIVs, before the unroller sees them.
+      VPlanTransforms::removeDeadRecipes(*Plan);
+
       if (auto P = VPlanTransforms::narrowInterleaveGroups(*Plan, TTI))
         VPlans.push_back(std::move(P));
 
@@ -9434,9 +9442,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   // Check if it is legal to vectorize the loop.
   LoopVectorizationRequirements Requirements;
-  LoopVectorizationLegality LVL(L, PSE, DT, TTI, TLI, F, *LAIs, LI, ORE,
-                                &Requirements, &Hints, DB, AC,
-                                /*AllowRuntimeSCEVChecks=*/!OptForSize, AA);
+  LoopVectorizationLegality LVL(
+      L, PSE, DT, TTI, TLI, F, *LAIs, LI, ORE, &Requirements, &Hints, DB, AC,
+      /*AllowRuntimeSCEVChecks=*/!OptForSize, AA, MSSA);
   if (!LVL.canVectorize(EnableVPlanNativePath)) {
     LLVM_DEBUG(dbgs() << "LV: Not vectorizing: Cannot prove legality.\n");
     Hints.emitRemarkWithHints();
@@ -9879,6 +9887,7 @@ PreservedAnalyses LoopVectorizePass::run(Function &F,
   ORE = &AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   LAIs = &AM.getResult<LoopAccessAnalysis>(F);
   AA = &AM.getResult<AAManager>(F);
+  MSSA = &AM.getResult<MemorySSAAnalysis>(F).getMSSA();
 
   auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
   PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());

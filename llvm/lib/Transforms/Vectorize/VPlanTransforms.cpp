@@ -42,6 +42,7 @@
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
+#include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
 
 using namespace llvm;
 using namespace VPlanPatternMatch;
@@ -3474,6 +3475,103 @@ void VPlanTransforms::convertToVariableLengthStep(VPlan &Plan) {
   VPRecipeBase *CanonicalIVIncrement = Backedge->getDefiningRecipe();
   CanonicalIVIncrement->eraseFromParent();
   CanonicalIV->eraseFromParent();
+}
+
+void VPlanTransforms::promoteMemoryIVs(VPlan &Plan,
+                                       ArrayRef<MemoryInductionInfo> MemIVs) {
+  if (MemIVs.empty())
+    return;
+
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  if (!LoopRegion)
+    return;
+
+  VPBasicBlock *Preheader = Plan.getVectorPreheader();
+  VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
+  VPBasicBlock *Latch = LoopRegion->getExitingBasicBlock();
+  VPBasicBlock *MiddleBlock = Plan.getMiddleBlock();
+
+  // Build a map from IR instructions to VPlan recipes in the loop region.
+  // Check VPWidenMemoryRecipe first (via getIngredient()) because
+  // VPWidenStoreRecipe does not extend VPSingleDefRecipe (stores don't define
+  // values), so the second branch wouldn't find stores.
+  DenseMap<Instruction *, VPRecipeBase *> Inst2Recipe;
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(LoopRegion->getEntry()))) {
+    for (VPRecipeBase &R : *VPBB) {
+      Instruction *UI = nullptr;
+      if (auto *WMR = dyn_cast<VPWidenMemoryRecipe>(&R))
+        UI = &WMR->getIngredient();
+      else if (auto *SDR = dyn_cast<VPSingleDefRecipe>(&R))
+        UI = dyn_cast_or_null<Instruction>(SDR->getUnderlyingValue());
+      if (UI)
+        Inst2Recipe[UI] = &R;
+    }
+  }
+
+  VPTypeAnalysis TypeInfo(Plan);
+
+  for (const MemoryInductionInfo &MemIV : MemIVs) {
+    // Find the recipes for the original load and store.
+    VPRecipeBase *LoadRecipe = Inst2Recipe.lookup(MemIV.Load);
+    VPRecipeBase *StoreRecipe = Inst2Recipe.lookup(MemIV.Store);
+    // Recipes may not be found if this VPlan corresponds to a VF where the
+    // instructions were optimized away (e.g., scalar VF=1 plan).
+    if (!LoadRecipe || !StoreRecipe)
+      continue;
+
+    DebugLoc DL = MemIV.Load->getDebugLoc();
+
+    // 1. Hoist the load to the preheader (single scalar) to get initial value.
+    VPValue *PtrVPV = Plan.getOrAddLiveIn(MemIV.Load->getPointerOperand());
+    auto *HoistedLoad = new VPReplicateRecipe(MemIV.Load, {PtrVPV},
+                                              /*IsSingleScalar=*/true);
+    Preheader->appendRecipe(HoistedLoad);
+
+    // 2. Get the step value as a VPValue live-in. Detection only accepts
+    // SCEVConstant or SCEVUnknown, so one of these must match.
+    VPValue *StepVPV = nullptr;
+    if (auto *SC = dyn_cast<SCEVConstant>(MemIV.Step))
+      StepVPV = Plan.getOrAddLiveIn(SC->getValue());
+    else if (auto *SU = dyn_cast<SCEVUnknown>(MemIV.Step))
+      StepVPV = Plan.getOrAddLiveIn(SU->getValue());
+    assert(StepVPV && "Step must be SCEVConstant or SCEVUnknown");
+
+    // 3. Create a scalar PHI in the header with the hoisted load as start.
+    auto *Phi = VPBuilder(Header, Header->getFirstNonPhi())
+                    .createScalarPhi({HoistedLoad}, DL);
+
+    // 4. Compute the update in the latch: Mul = Step * VFxUF, Add = Phi + Mul.
+    VPBuilder LatchBuilder(Latch->getTerminator());
+    VPValue *VFxUF = &Plan.getVFxUF();
+    Type *IVTy = MemIV.Load->getType();
+    Type *VFxUFTy = TypeInfo.inferScalarType(VFxUF);
+    // Cast VFxUF to the memory IV type if they differ (e.g. i64 trip count
+    // with i32 memory IV).
+    VPValue *CastVFxUF =
+        LatchBuilder.createScalarZExtOrTrunc(VFxUF, IVTy, VFxUFTy, DL);
+    VPIRFlags NoWrapFlags(VPIRFlags::WrapFlagsTy(false, false));
+    auto *Mul = LatchBuilder.createNaryOp(
+        Instruction::Mul, {StepVPV, CastVFxUF}, NoWrapFlags, DL);
+    auto *Add = LatchBuilder.createNaryOp(Instruction::Add, {Phi, Mul},
+                                          NoWrapFlags, DL);
+
+    // Wire the backedge of the PHI.
+    Phi->addOperand(Add);
+
+    // 5. Store the final accumulated value in the middle block.
+    VPBuilder MiddleBuilder(MiddleBlock, MiddleBlock->begin());
+    MiddleBuilder.createNaryOp(VPInstruction::MemoryIVFinalStore, {Add, PtrVPV},
+                               DL);
+
+    // 6. Remove the original load and store recipes. Intermediate instructions
+    // (e.g., the add) become dead once the load's uses are replaced, and will
+    // be cleaned up by removeDeadRecipes later in the pipeline.
+    if (LoadRecipe->getNumDefinedValues() > 0)
+      LoadRecipe->getVPValue(0)->replaceAllUsesWith(Phi);
+    StoreRecipe->eraseFromParent();
+    LoadRecipe->eraseFromParent();
+  }
 }
 
 void VPlanTransforms::convertEVLExitCond(VPlan &Plan) {
