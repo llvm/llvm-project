@@ -3020,8 +3020,22 @@ static bool handleDiffFailure(const FileCheckString &CheckStr,
   if (CheckRegion.empty())
     return false;
 
+  if (!HeaderPrinted) {
+    StringRef CheckFile =
+        SM.getMemoryBuffer(SM.getMainFileID())->getBufferIdentifier();
+    unsigned InputBufID =
+        SM.FindBufferContainingLoc(SMLoc::getFromPointer(CheckRegion.data()));
+    StringRef InputFile = SM.getMemoryBuffer(InputBufID)->getBufferIdentifier();
+    OS.changeColor(raw_ostream::WHITE, true);
+    OS << "--- " << CheckFile << "\n";
+    OS << "+++ " << InputFile << "\n";
+    OS.resetColor();
+    HeaderPrinted = true;
+  }
+
   SMLoc CurrentLoc = SMLoc::getFromPointer(CheckRegion.data());
   unsigned CurrentLineNo = SM.getLineAndColumn(CurrentLoc).first;
+
   size_t EOL = CheckRegion.find('\n');
   StringRef MismatchLine =
       (EOL == StringRef::npos) ? CheckRegion : CheckRegion.substr(0, EOL);
@@ -3086,6 +3100,7 @@ bool FileCheck::checkInput(SourceMgr &SM, StringRef Buffer,
                            std::vector<FileCheckDiag> *Diags) {
   bool ChecksFailed = false;
   unsigned TotalMismatches = 0;
+  bool HeaderPrinted = false;
   auto &OS = llvm::errs();
 
   unsigned i = 0, j = 0, e = CheckStrings.size();
@@ -3119,7 +3134,6 @@ bool FileCheck::checkInput(SourceMgr &SM, StringRef Buffer,
     if (i != 0 && Req.EnableVarScope)
       PatternContext->clearLocalVars();
 
-    bool HeaderPrinted = false;
     for (; i != j; ++i) {
       const FileCheckString &CheckStr = CheckStrings[i];
 
