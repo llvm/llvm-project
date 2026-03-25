@@ -134,7 +134,7 @@ void *test_ReturnAddress(void) {
   return _ReturnAddress();
 }
 // CHECK-LABEL: define{{.*}}ptr @test_ReturnAddress()
-// CHECK: = tail call ptr @llvm.returnaddress(i32 0)
+// CHECK: = tail call ptr @llvm.returnaddress.p0(i32 0)
 // CHECK: ret ptr
 
 #if defined(__i386__) || defined(__x86_64__) || defined (__aarch64__)

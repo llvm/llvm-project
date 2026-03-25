@@ -23,6 +23,7 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
+#include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
@@ -901,6 +902,40 @@ class DpasToXeVMPattern : public OpConversionPattern<xegpu::DpasOp> {
     auto aTy = cast<VectorType>(op.getLhs().getType());
     auto bTy = cast<VectorType>(op.getRhs().getType());
     auto resultType = cast<VectorType>(op.getResultType());
+
+    // get the correct dpasInst by getting info from chip
+    auto chipStr = xegpu::getChipStr(op);
+    if (!chipStr)
+      return rewriter.notifyMatchFailure(op, "cannot determine target chip");
+
+    const auto *uArch = mlir::xegpu::uArch::getUArch(*chipStr);
+    if (!uArch)
+      return rewriter.notifyMatchFailure(op, "unsupported target uArch");
+
+    auto *dpasInst = const_cast<xegpu::uArch::SubgroupMatrixMultiplyAcc *>(
+        llvm::dyn_cast_or_null<xegpu::uArch::SubgroupMatrixMultiplyAcc>(
+            uArch->getInstruction(
+                xegpu::uArch::InstructionKind::SubgroupMatrixMultiplyAcc)));
+    if (!dpasInst)
+      return rewriter.notifyMatchFailure(op,
+                                         "DPAS not supported by target uArch");
+
+    auto checkSupportedTypes = [&](VectorType vecTy,
+                                   xegpu::uArch::MMAOpndKind kind) -> bool {
+      auto supported = dpasInst->getSupportedTypes(*ctxt, kind);
+      return llvm::find(supported, vecTy.getElementType()) != supported.end();
+    };
+
+    if (!checkSupportedTypes(aTy, xegpu::uArch::MMAOpndKind::MatrixA))
+      return rewriter.notifyMatchFailure(
+          op, "A-matrix element type not supported by target uArch");
+    if (!checkSupportedTypes(bTy, xegpu::uArch::MMAOpndKind::MatrixB))
+      return rewriter.notifyMatchFailure(
+          op, "B-matrix element type not supported by target uArch");
+    // NOTE: Supported types for MatrixC and MatrixD are identical
+    if (!checkSupportedTypes(resultType, xegpu::uArch::MMAOpndKind::MatrixD))
+      return rewriter.notifyMatchFailure(
+          op, "result/accumulator element type not supported by target uArch");
 
     auto encodePrecision = [&](Type type) -> xevm::ElemType {
       if (type == rewriter.getBF16Type())

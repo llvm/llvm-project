@@ -31,28 +31,27 @@ namespace llvm {
   /// This pass computes, caches, and vends lazy value constraint information.
   class LazyValueInfo {
     friend class LazyValueInfoWrapperPass;
+    Function *F = nullptr;
     AssumptionCache *AC = nullptr;
-    const DataLayout *DL = nullptr;
     LazyValueInfoImpl *PImpl = nullptr;
     LazyValueInfo(const LazyValueInfo &) = delete;
     void operator=(const LazyValueInfo &) = delete;
 
     LazyValueInfoImpl *getImpl();
-    LazyValueInfoImpl &getOrCreateImpl(const Module *M);
+    LazyValueInfoImpl &getOrCreateImpl();
 
   public:
     ~LazyValueInfo();
     LazyValueInfo() = default;
-    LazyValueInfo(AssumptionCache *AC_, const DataLayout *DL_)
-        : AC(AC_), DL(DL_) {}
+    LazyValueInfo(Function *F, AssumptionCache *AC) : F(F), AC(AC) {}
     LazyValueInfo(LazyValueInfo &&Arg)
-        : AC(Arg.AC), DL(Arg.DL), PImpl(Arg.PImpl) {
+        : F(Arg.F), AC(Arg.AC), PImpl(Arg.PImpl) {
       Arg.PImpl = nullptr;
     }
     LazyValueInfo &operator=(LazyValueInfo &&Arg) {
       releaseMemory();
+      F = Arg.F;
       AC = Arg.AC;
-      DL = Arg.DL;
       PImpl = Arg.PImpl;
       Arg.PImpl = nullptr;
       return *this;

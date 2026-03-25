@@ -8,6 +8,7 @@ subroutine do_imperfectly_nested_before
   !BECAUSE: COLLAPSE clause was specified with argument 2
   !$omp do collapse(2)
   do i = 1, 10
+    !BECAUSE: This code prevents perfect nesting
     print *, i
     do j = 1, 10
       print *, i, j
@@ -27,6 +28,7 @@ subroutine do_imperfectly_nested_behind
     do j = 1, 10
       print *, i, j
     end do
+    !BECAUSE: This code prevents perfect nesting
     print *, i
   end do
   !$omp end do

@@ -504,6 +504,13 @@ bool MachineSinking::PerformSinkAndFold(MachineInstr &MI,
         if (!RC->contains(DstReg))
           return false;
       } else if (UseInst.mayLoadOrStore()) {
+        // If the destination instruction contains more than one use of the
+        // register, we won't be able to remove the original instruction, so
+        // don't sink.
+        if (llvm::count_if(UseInst.operands(), [Reg](const MachineOperand &MO) {
+              return MO.isReg() && MO.getReg() == Reg;
+            }) > 1)
+          return false;
         ExtAddrMode AM;
         if (!TII->canFoldIntoAddrMode(UseInst, Reg, MI, AM))
           return false;

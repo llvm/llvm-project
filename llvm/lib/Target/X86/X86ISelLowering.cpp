@@ -34940,11 +34940,13 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     EVT VT = N->getValueType(0);
     assert(VT == MVT::v2f32 && "Unexpected type (!= v2f32) on FMIN/FMAX.");
     bool IsStrict = Opc == X86ISD::STRICT_FMIN || Opc == X86ISD::STRICT_FMAX;
-    SDValue UNDEF = DAG.getUNDEF(VT);
+    // For strict FP use a value that can not signal.
+    SDValue Filler =
+        IsStrict ? DAG.getConstantFP(0.0, dl, VT) : DAG.getUNDEF(VT);
     SDValue LHS = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4f32,
-                              N->getOperand(IsStrict ? 1 : 0), UNDEF);
+                              N->getOperand(IsStrict ? 1 : 0), Filler);
     SDValue RHS = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4f32,
-                              N->getOperand(IsStrict ? 2 : 1), UNDEF);
+                              N->getOperand(IsStrict ? 2 : 1), Filler);
     SDValue Res;
     if (IsStrict)
       Res = DAG.getNode(Opc, dl, {MVT::v4f32, MVT::Other},

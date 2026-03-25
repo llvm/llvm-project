@@ -6,7 +6,6 @@
 @A = external addrspace(3) global [8 x ptr]
 @B = external addrspace(3) global [0 x i32]
 
-;.
 ; @llvm.amdgcn.sw.lds.kernel_0 = internal addrspace(3) global ptr poison, no_sanitize_address, align 8, !absolute_symbol [[META0:![0-9]+]]
 ; @llvm.amdgcn.sw.lds.kernel_0.md = internal addrspace(1) global %llvm.amdgcn.sw.lds.kernel_0.md.type { %llvm.amdgcn.sw.lds.kernel_0.md.item { i32 0, i32 8, i32 32 }, %llvm.amdgcn.sw.lds.kernel_0.md.item { i32 32, i32 64, i32 96 } }, no_sanitize_address
 ; @llvm.amdgcn.sw.lds.kernel_2 = internal addrspace(3) global ptr poison, no_sanitize_address, align 8, !absolute_symbol [[META0]]
@@ -36,7 +35,7 @@ define amdgpu_kernel void @kernel_0() sanitize_address {
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_KERNEL_0_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.kernel_0.md, i32 0, i32 1, i32 2), align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[TMP6]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP8]] to i64
-; CHECK-NEXT:    [[TMP10:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:    [[TMP10:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:    [[TMP11:%.*]] = ptrtoint ptr [[TMP10]] to i64
 ; CHECK-NEXT:    [[TMP12:%.*]] = call i64 @__asan_malloc_impl(i64 [[TMP9]], i64 [[TMP11]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP12]] to ptr addrspace(1)
@@ -58,7 +57,7 @@ define amdgpu_kernel void @kernel_0() sanitize_address {
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
 ; CHECK-NEXT:    br i1 [[XYZCOND]], label %[[FREE:.*]], label %[[END:.*]]
 ; CHECK:       [[FREE]]:
-; CHECK-NEXT:    [[TMP20:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:    [[TMP20:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:    [[TMP21:%.*]] = ptrtoint ptr [[TMP20]] to i64
 ; CHECK-NEXT:    [[TMP22:%.*]] = ptrtoint ptr addrspace(1) [[TMP19]] to i64
 ; CHECK-NEXT:    call void @__asan_free_impl(i64 [[TMP22]], i64 [[TMP21]])
@@ -96,7 +95,7 @@ define amdgpu_kernel void @kernel_1() sanitize_address {
 ; CHECK-NEXT:    store i32 [[TMP14]], ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_KERNEL_1_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.kernel_1.md, i32 0, i32 1, i32 2), align 4
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i32 [[TMP8]], [[TMP14]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP15]] to i64
-; CHECK-NEXT:    [[TMP17:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:    [[TMP17:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:    [[TMP18:%.*]] = ptrtoint ptr [[TMP17]] to i64
 ; CHECK-NEXT:    [[TMP19:%.*]] = call i64 @__asan_malloc_impl(i64 [[TMP16]], i64 [[TMP18]])
 ; CHECK-NEXT:    [[TMP20:%.*]] = inttoptr i64 [[TMP19]] to ptr addrspace(1)
@@ -116,7 +115,7 @@ define amdgpu_kernel void @kernel_1() sanitize_address {
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
 ; CHECK-NEXT:    br i1 [[XYZCOND]], label %[[FREE:.*]], label %[[END:.*]]
 ; CHECK:       [[FREE]]:
-; CHECK-NEXT:    [[TMP25:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:    [[TMP25:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:    [[TMP26:%.*]] = ptrtoint ptr [[TMP25]] to i64
 ; CHECK-NEXT:    [[TMP27:%.*]] = ptrtoint ptr addrspace(1) [[TMP24]] to i64
 ; CHECK-NEXT:    call void @__asan_free_impl(i64 [[TMP27]], i64 [[TMP26]])
@@ -144,7 +143,7 @@ define amdgpu_kernel void @kernel_2() sanitize_address {
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_KERNEL_2_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.kernel_2.md, i32 0, i32 1, i32 2), align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[TMP6]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP8]] to i64
-; CHECK-NEXT:    [[TMP10:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:    [[TMP10:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:    [[TMP11:%.*]] = ptrtoint ptr [[TMP10]] to i64
 ; CHECK-NEXT:    [[TMP12:%.*]] = call i64 @__asan_malloc_impl(i64 [[TMP9]], i64 [[TMP11]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP12]] to ptr addrspace(1)
@@ -166,7 +165,7 @@ define amdgpu_kernel void @kernel_2() sanitize_address {
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
 ; CHECK-NEXT:    br i1 [[XYZCOND]], label %[[FREE:.*]], label %[[END:.*]]
 ; CHECK:       [[FREE]]:
-; CHECK-NEXT:    [[TMP20:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:    [[TMP20:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:    [[TMP21:%.*]] = ptrtoint ptr [[TMP20]] to i64
 ; CHECK-NEXT:    [[TMP22:%.*]] = ptrtoint ptr addrspace(1) [[TMP19]] to i64
 ; CHECK-NEXT:    call void @__asan_free_impl(i64 [[TMP22]], i64 [[TMP21]])
@@ -204,7 +203,7 @@ define amdgpu_kernel void @kernel_3() sanitize_address {
 ; CHECK-NEXT:    store i32 [[TMP14]], ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_KERNEL_3_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.kernel_3.md, i32 0, i32 1, i32 2), align 4
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i32 [[TMP8]], [[TMP14]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP15]] to i64
-; CHECK-NEXT:    [[TMP17:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:    [[TMP17:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:    [[TMP18:%.*]] = ptrtoint ptr [[TMP17]] to i64
 ; CHECK-NEXT:    [[TMP19:%.*]] = call i64 @__asan_malloc_impl(i64 [[TMP16]], i64 [[TMP18]])
 ; CHECK-NEXT:    [[TMP20:%.*]] = inttoptr i64 [[TMP19]] to ptr addrspace(1)
@@ -224,7 +223,7 @@ define amdgpu_kernel void @kernel_3() sanitize_address {
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
 ; CHECK-NEXT:    br i1 [[XYZCOND]], label %[[FREE:.*]], label %[[END:.*]]
 ; CHECK:       [[FREE]]:
-; CHECK-NEXT:    [[TMP25:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:    [[TMP25:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:    [[TMP26:%.*]] = ptrtoint ptr [[TMP25]] to i64
 ; CHECK-NEXT:    [[TMP27:%.*]] = ptrtoint ptr addrspace(1) [[TMP24]] to i64
 ; CHECK-NEXT:    call void @__asan_free_impl(i64 [[TMP27]], i64 [[TMP26]])

@@ -472,7 +472,9 @@ void mlir::populateMathToLLVMConversionPatterns(
 namespace {
 /// Implement the interface to convert Math to LLVM.
 struct MathToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
-  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
+  MathToLLVMDialectInterface(Dialect *dialect)
+      : ConvertToLLVMPatternInterface(dialect) {}
+
   void loadDependentDialects(MLIRContext *context) const final {
     context->loadDialect<LLVM::LLVMDialect>();
   }

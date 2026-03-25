@@ -111,30 +111,30 @@ ObjectFile *ObjectFilePDB::CreateMemoryInstance(const ModuleSP &module_sp,
   return nullptr;
 }
 
-size_t ObjectFilePDB::GetModuleSpecifications(
+ModuleSpecList ObjectFilePDB::GetModuleSpecifications(
     const FileSpec &file, DataExtractorSP &extractor_sp, offset_t data_offset,
-    offset_t file_offset, offset_t length, ModuleSpecList &specs) {
-  const size_t initial_count = specs.GetSize();
+    offset_t file_offset, offset_t length) {
   ModuleSpec module_spec(file);
   llvm::BumpPtrAllocator allocator;
   std::unique_ptr<PDBFile> pdb_file = loadPDBFile(file.GetPath(), allocator);
   if (!pdb_file)
-    return initial_count;
+    return {};
 
   auto info_stream = pdb_file->getPDBInfoStream();
   if (!info_stream) {
     llvm::consumeError(info_stream.takeError());
-    return initial_count;
+    return {};
   }
   auto dbi_stream = pdb_file->getPDBDbiStream();
   if (!dbi_stream) {
     llvm::consumeError(dbi_stream.takeError());
-    return initial_count;
+    return {};
   }
 
   lldb_private::UUID &uuid = module_spec.GetUUID();
   uuid = GetPDBUUID(*info_stream, *dbi_stream);
 
+  ModuleSpecList specs;
   ArchSpec &module_arch = module_spec.GetArchitecture();
   switch (dbi_stream->getMachineType()) {
   case PDB_Machine::Amd64:
@@ -157,7 +157,7 @@ size_t ObjectFilePDB::GetModuleSpecifications(
     break;
   }
 
-  return specs.GetSize() - initial_count;
+  return specs;
 }
 
 ObjectFilePDB::ObjectFilePDB(const ModuleSP &module_sp,

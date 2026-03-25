@@ -38,7 +38,7 @@ struct Location {
   uint64_t Offset;
 
   explicit Location(uint64_t Offset)
-      : IsSymbol(false), Name("[unknown]"), Offset(Offset) {}
+      : IsSymbol(false), Name(""), Offset(Offset) {}
 
   Location(bool IsSymbol, StringRef Name, uint64_t Offset)
       : IsSymbol(IsSymbol), Name(Name), Offset(Offset) {}

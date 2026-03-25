@@ -346,6 +346,10 @@ public:
         Opts["__opencl_c_device_enqueue"] = true;
         Opts["__opencl_c_pipes"] = true;
       }
+
+      if (getTriple().getEnvironment() == llvm::Triple::LLVM) {
+        Opts["cl_khr_subgroup_extended_types"] = true;
+      }
     }
   }
 

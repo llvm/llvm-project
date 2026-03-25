@@ -14012,8 +14012,9 @@ ensures that each ``catchpad`` has exactly one predecessor block, and it always
 terminates in a ``catchswitch``.
 
 The ``args`` correspond to whatever information the personality routine
-requires to determine if this is an appropriate handler for the exception. Control
-will transfer to the ``catchpad`` if this is the first appropriate handler for
+requires to determine if this is an appropriate handler for the exception.
+Each operand must be an alloca or a constant.
+Control will transfer to the ``catchpad`` if this is the first appropriate handler for
 the exception.
 
 The ``resultval`` has the type :ref:`token <t_token>` and is used to match the

@@ -81,7 +81,7 @@
 ; CHECK-SPIRV-DAG:	[[debug_info_none:%[0-9]+]] = OpExtInst {{%[0-9]+ %[0-9]+}} DebugInfoNone
 ; CHECK-SPIRV-DAG:	OpExtInst {{%[0-9]+ %[0-9]+}} DebugTypePointer [[debug_info_none]] [[i32_5]] [[i32_0]]
 
-; CHECK-OPTION-NOT: DebugTypePointer
+; CHECK-OPTION: DebugTypePointer
 
 @gi0 = dso_local addrspace(1) global ptr addrspace(4) null, align 4, !dbg !0
 @gv0 = dso_local addrspace(1) global ptr addrspace(4) null, align 4, !dbg !5

@@ -3467,6 +3467,15 @@ std::optional<AvailabilitySpec> Parser::ParseAvailabilitySpec() {
       return std::nullopt;
     }
 
+    // Validate anyAppleOS version; reject versions older than 26.0.
+    if (Platform == "anyappleos" &&
+        !AvailabilitySpec::validateAnyAppleOSVersion(Version)) {
+      Diag(VersionRange.getBegin(),
+           diag::err_avail_query_anyappleos_min_version)
+          << Version.getAsString();
+      return std::nullopt;
+    }
+
     return AvailabilitySpec(Version, Platform, PlatformIdentifier->getLoc(),
                             VersionRange.getEnd());
   }

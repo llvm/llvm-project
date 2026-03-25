@@ -2384,11 +2384,12 @@ emitTargetArchBuiltinExpr(CIRGenFunction *cgf, unsigned builtinID,
   case llvm::Triple::wasm32:
   case llvm::Triple::wasm64:
   case llvm::Triple::hexagon:
-  case llvm::Triple::riscv32:
-  case llvm::Triple::riscv64:
     // These are actually NYI, but that will be reported by emitBuiltinExpr.
     // At this point, we don't even know that the builtin is target-specific.
     return std::nullopt;
+  case llvm::Triple::riscv32:
+  case llvm::Triple::riscv64:
+    return cgf->emitRISCVBuiltinExpr(builtinID, e);
   default:
     return std::nullopt;
   }

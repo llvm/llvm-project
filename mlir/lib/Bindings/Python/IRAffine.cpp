@@ -733,7 +733,8 @@ void populateIRAffine(nb::module_ &m) {
            })
       .def_static(
           "compress_unused_symbols",
-          [](const nb::list &affineMaps, DefaultingPyMlirContext context) {
+          [](nb::typed<nb::list, PyAffineMap> affineMaps,
+             DefaultingPyMlirContext context) {
             std::vector<MlirAffineMap> maps;
             pyListToVector<PyAffineMap, MlirAffineMap>(
                 affineMaps, maps, "attempting to create an AffineMap");
@@ -760,7 +761,8 @@ void populateIRAffine(nb::module_ &m) {
           kDumpDocstring)
       .def_static(
           "get",
-          [](intptr_t dimCount, intptr_t symbolCount, const nb::list &exprs,
+          [](intptr_t dimCount, intptr_t symbolCount,
+             nb::typed<nb::list, PyAffineExpr> exprs,
              DefaultingPyMlirContext context) {
             std::vector<MlirAffineExpr> affineExprs;
             pyListToVector<PyAffineExpr, MlirAffineExpr>(
@@ -927,8 +929,9 @@ void populateIRAffine(nb::module_ &m) {
           kDumpDocstring)
       .def_static(
           "get",
-          [](intptr_t numDims, intptr_t numSymbols, const nb::list &exprs,
-             std::vector<bool> eqFlags, DefaultingPyMlirContext context) {
+          [](intptr_t numDims, intptr_t numSymbols,
+             nb::typed<nb::list, PyAffineExpr> exprs, std::vector<bool> eqFlags,
+             DefaultingPyMlirContext context) {
             if (exprs.size() != eqFlags.size())
               throw nb::value_error(
                   "Expected the number of constraints to match "
@@ -960,9 +963,9 @@ void populateIRAffine(nb::module_ &m) {
           nb::arg("context") = nb::none())
       .def(
           "get_replaced",
-          [](PyIntegerSet &self, const nb::list &dimExprs,
-             const nb::list &symbolExprs, intptr_t numResultDims,
-             intptr_t numResultSymbols) {
+          [](PyIntegerSet &self, nb::typed<nb::list, PyAffineExpr> dimExprs,
+             nb::typed<nb::list, PyAffineExpr> symbolExprs,
+             intptr_t numResultDims, intptr_t numResultSymbols) {
             if (static_cast<intptr_t>(dimExprs.size()) !=
                 mlirIntegerSetGetNumDims(self))
               throw nb::value_error(

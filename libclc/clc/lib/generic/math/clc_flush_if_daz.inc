@@ -25,7 +25,7 @@ _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __clc_flush_if_daz(__CLC_GENTYPE x) {
     return x;
 
   // Hack around canonicalize not working on spirv.
-#if defined(CLC_SPIRV) || defined(CLC_CLSPV)
+#if defined(CLC_SPIRV)
   __CLC_S_GENTYPE is_denorm_or_zero = __clc_fabs(x) < __CLC_GENTYPE_MIN;
   return __clc_select(x, __clc_copysign(__CLC_FP_LIT(0.0), x),
                       is_denorm_or_zero);

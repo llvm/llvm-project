@@ -317,6 +317,11 @@ private:
   class Implementation;
   std::unique_ptr<Implementation> Impl;
 };
+
+/// Constants used by LLDB for mangling.
+struct LLDBManglingABI {
+  static constexpr llvm::StringLiteral FunctionLabelPrefix = "$__lldb_func:";
+};
 } // namespace clang
 
 #endif

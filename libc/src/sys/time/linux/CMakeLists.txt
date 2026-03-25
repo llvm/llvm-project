@@ -5,14 +5,15 @@ add_entrypoint_object(
   HDRS
     ../utimes.h
   DEPENDS
+    libc.hdr.types.struct_timespec
     libc.hdr.types.struct_timeval
     libc.hdr.fcntl_macros
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.utimensat
     libc.include.sys_stat
     libc.include.sys_syscall
     libc.include.fcntl
-    libc.src.__support.OSUtil.osutil
-    libc.src.errno.errno
+    libc.src.__support.libc_errno
 )
 
 add_entrypoint_object(

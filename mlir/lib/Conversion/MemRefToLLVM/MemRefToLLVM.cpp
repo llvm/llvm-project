@@ -2117,7 +2117,9 @@ struct FinalizeMemRefToLLVMConversionPass
 
 /// Implement the interface to convert MemRef to LLVM.
 struct MemRefToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
-  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
+  MemRefToLLVMDialectInterface(Dialect *dialect)
+      : ConvertToLLVMPatternInterface(dialect) {}
+
   void loadDependentDialects(MLIRContext *context) const final {
     context->loadDialect<LLVM::LLVMDialect>();
   }

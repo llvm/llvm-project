@@ -72,3 +72,19 @@ entry:
   %div = udiv <8 x i64> %shuffle, splat (i64 3)
   ret <8 x i64> %div
 }
+
+define <64 x i8> @test_sdiv_i8(<64 x i8> %shuffle) {
+; CHECK-LABEL: test_sdiv_i8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvrepli.b $xr2, 86
+; CHECK-NEXT:    xvmuh.b $xr0, $xr0, $xr2
+; CHECK-NEXT:    xvsrli.b $xr3, $xr0, 7
+; CHECK-NEXT:    xvadd.b $xr0, $xr0, $xr3
+; CHECK-NEXT:    xvmuh.b $xr1, $xr1, $xr2
+; CHECK-NEXT:    xvsrli.b $xr2, $xr1, 7
+; CHECK-NEXT:    xvadd.b $xr1, $xr1, $xr2
+; CHECK-NEXT:    ret
+entry:
+  %div = sdiv <64 x i8> %shuffle, splat (i8 3)
+  ret <64 x i8> %div
+}

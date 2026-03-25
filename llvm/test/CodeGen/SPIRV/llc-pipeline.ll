@@ -34,6 +34,7 @@
 ; SPIRV-O0-NEXT:    Expand variadic functions
 ; SPIRV-O0-NEXT:    FunctionPass Manager
 ; SPIRV-O0-NEXT:      SPIR-V Regularizer
+; SPIRV-O0-NEXT:    SPIRV lower ctors and dtors
 ; SPIRV-O0-NEXT:    SPIRV prepare functions
 ; SPIRV-O0-NEXT:    SPIRV prepare global variables
 ; SPIRV-O0-NEXT:    FunctionPass Manager
@@ -77,6 +78,7 @@
 ; SPIRV-O0-NEXT:      Analyze Machine Code For Garbage Collection
 ; SPIRV-O0-NEXT:      Insert fentry calls
 ; SPIRV-O0-NEXT:      Insert XRay ops
+; SPIRV-O0-NEXT:      SPIRV NonSemantic.Shader.DebugInfo.100 emitter
 ; SPIRV-O0-NEXT:      Machine Sanitizer Binary Metadata
 ; SPIRV-O0-NEXT:      Lazy Machine Block Frequency Analysis
 ; SPIRV-O0-NEXT:      Machine Optimization Remark Emitter
@@ -140,6 +142,7 @@
 ; SPIRV-Opt-NEXT:    Expand variadic functions
 ; SPIRV-Opt-NEXT:    FunctionPass Manager
 ; SPIRV-Opt-NEXT:      SPIR-V Regularizer
+; SPIRV-Opt-NEXT:    SPIRV lower ctors and dtors
 ; SPIRV-Opt-NEXT:    SPIRV prepare functions
 ; SPIRV-Opt-NEXT:    SPIRV prepare global variables
 ; SPIRV-Opt-NEXT:    FunctionPass Manager
@@ -215,6 +218,7 @@
 ; SPIRV-Opt-NEXT:      Analyze Machine Code For Garbage Collection
 ; SPIRV-Opt-NEXT:      Insert fentry calls
 ; SPIRV-Opt-NEXT:      Insert XRay ops
+; SPIRV-Opt-NEXT:      SPIRV NonSemantic.Shader.DebugInfo.100 emitter
 ; SPIRV-Opt-NEXT:      Machine Sanitizer Binary Metadata
 ; SPIRV-Opt-NEXT:      Lazy Machine Block Frequency Analysis
 ; SPIRV-Opt-NEXT:      Machine Optimization Remark Emitter

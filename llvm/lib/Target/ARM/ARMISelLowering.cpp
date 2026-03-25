@@ -16193,25 +16193,27 @@ static SDValue CombineBaseUpdate(SDNode *N,
   if (findPointerConstIncrement(Addr.getNode(), &Base, &CInc)) {
     unsigned Offset =
         getPointerConstIncrement(Addr->getOpcode(), Base, CInc, DCI.DAG);
-    for (SDUse &Use : Base->uses()) {
+    if (Offset) {
+      for (SDUse &Use : Base->uses()) {
 
-      SDNode *User = Use.getUser();
-      if (Use.getResNo() != Base.getResNo() || User == Addr.getNode() ||
-          User->getNumOperands() != 2)
-        continue;
+        SDNode *User = Use.getUser();
+        if (Use.getResNo() != Base.getResNo() || User == Addr.getNode() ||
+            User->getNumOperands() != 2)
+          continue;
 
-      SDValue UserInc = User->getOperand(Use.getOperandNo() == 0 ? 1 : 0);
-      unsigned UserOffset =
-          getPointerConstIncrement(User->getOpcode(), Base, UserInc, DCI.DAG);
+        SDValue UserInc = User->getOperand(Use.getOperandNo() == 0 ? 1 : 0);
+        unsigned UserOffset =
+            getPointerConstIncrement(User->getOpcode(), Base, UserInc, DCI.DAG);
 
-      if (!UserOffset || UserOffset <= Offset)
-        continue;
+        if (!UserOffset || UserOffset <= Offset)
+          continue;
 
-      unsigned NewConstInc = UserOffset - Offset;
-      SDValue NewInc = DCI.DAG.getConstant(NewConstInc, SDLoc(N), MVT::i32);
-      BaseUpdates.push_back({User, NewInc, NewConstInc});
-      if (BaseUpdates.size() >= MaxBaseUpdates)
-        break;
+        unsigned NewConstInc = UserOffset - Offset;
+        SDValue NewInc = DCI.DAG.getConstant(NewConstInc, SDLoc(N), MVT::i32);
+        BaseUpdates.push_back({User, NewInc, NewConstInc});
+        if (BaseUpdates.size() >= MaxBaseUpdates)
+          break;
+      }
     }
   }
 

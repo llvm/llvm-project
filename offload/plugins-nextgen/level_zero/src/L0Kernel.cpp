@@ -282,9 +282,17 @@ static Error launchKernelWithImmCmdList(L0DeviceTy &l0Device,
   }
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
        "Kernel depends on %zu data copying events.\n", NumWaitEvents);
-  CALL_ZE_RET_ERROR(zeCommandListAppendLaunchKernel, CmdList, zeKernel,
-                    &KEnv.GroupCounts, Event, NumWaitEvents, WaitEvents);
-  KEnv.KernelPR.Mtx.unlock();
+  Error AllErrors = Error::success();
+
+  CALL_ZE_ACCUM_ERROR(AllErrors, zeCommandListAppendLaunchKernel, CmdList,
+                      zeKernel, &KEnv.GroupCounts, Event, NumWaitEvents,
+                      WaitEvents);
+  KEnv.Lock.unlock();
+  if (AllErrors) {
+    if (auto Err = l0Device.releaseEvent(Event))
+      AllErrors = joinErrors(std::move(AllErrors), std::move(Err));
+    return AllErrors;
+  }
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
        "Submitted kernel " DPxMOD " to device %s\n", DPxPTR(zeKernel), IdStr);
 
@@ -292,9 +300,12 @@ static Error launchKernelWithImmCmdList(L0DeviceTy &l0Device,
     AsyncQueue->WaitEvents.push_back(Event);
     AsyncQueue->KernelEvent = Event;
   } else {
-    CALL_ZE_RET_ERROR(zeEventHostSynchronize, Event, L0DefaultTimeout);
+    CALL_ZE_ACCUM_ERROR(AllErrors, zeEventHostSynchronize, Event,
+                        L0DefaultTimeout);
     if (auto Err = l0Device.releaseEvent(Event))
-      return Err;
+      AllErrors = joinErrors(std::move(AllErrors), std::move(Err));
+    if (AllErrors)
+      return AllErrors;
   }
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
        "Executed kernel entry " DPxMOD " on device %s\n", DPxPTR(zeKernel),
@@ -324,7 +335,7 @@ static Error launchKernelWithCmdQueue(L0DeviceTy &l0Device,
   ze_event_handle_t Event = nullptr;
   CALL_ZE_RET_ERROR(zeCommandListAppendLaunchKernel, CmdList, zeKernel,
                     &KEnv.GroupCounts, Event, 0, nullptr);
-  KEnv.KernelPR.Mtx.unlock();
+  KEnv.Lock.unlock();
   CALL_ZE_RET_ERROR(zeCommandListClose, CmdList);
   CALL_ZE_RET_ERROR_MTX(zeCommandQueueExecuteCommandLists, l0Device.getMutex(),
                         CmdQueue, 1, &CmdList, nullptr);
@@ -445,7 +456,7 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   L0LaunchEnvTy KEnv(IsAsync, AsyncQueue, KernelPR);
 
   // Protect from kernel preparation to submission as kernels are shared.
-  KernelPR.Mtx.lock();
+  KEnv.Lock.lock();
 
   if (auto Err = setKernelGroups(l0Device, KEnv, NumThreads, NumBlocks))
     return Err;

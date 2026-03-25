@@ -6,23 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if __CLC_FPSIZE == 16
-#define __CLC_EP_USE_FMA true
-#elif __CLC_FPSIZE == 32
-#if defined(FP_FAST_FMAF)
-#define __CLC_EP_USE_FMA true
-#else
-#define __CLC_EP_USE_FMA false
-#endif
-
-#elif __CLC_FPSIZE == 64
-#if defined(FP_FAST_FMA)
-#define __CLC_EP_USE_FMA true
-#else
-#define __CLC_EP_USE_FMA false
-#endif
-#endif
-
 #pragma OPENCL FP_CONTRACT OFF
 
 #if __CLC_FPSIZE == 16
@@ -132,7 +115,7 @@ _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_sub(__CLC_GENTYPE a,
 _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_mul(__CLC_GENTYPE a,
                                                              __CLC_GENTYPE b) {
   __CLC_GENTYPE p = a * b;
-  if (__CLC_EP_USE_FMA) {
+  if (__CLC_GENTYPE_FAST_FMA) {
     return __clc_ep_make_pair(p, __clc_fma(a, b, -p));
   }
 
@@ -145,7 +128,7 @@ _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_mul(__CLC_GENTYPE a,
 
 _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_sqr(__CLC_GENTYPE a) {
   __CLC_GENTYPE p = a * a;
-  if (__CLC_EP_USE_FMA)
+  if (__CLC_GENTYPE_FAST_FMA)
     return __clc_ep_make_pair(p, __clc_fma(a, a, -p));
 
   __CLC_GENTYPE ah = ep_high_fp_bits(a);
@@ -252,7 +235,7 @@ _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_ldexp(__CLC_EP_PAIR a,
 _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_mul(__CLC_EP_PAIR a,
                                                              __CLC_GENTYPE b) {
   __CLC_EP_PAIR p = __clc_ep_mul(a.hi, b);
-  if (__CLC_EP_USE_FMA) {
+  if (__CLC_GENTYPE_FAST_FMA) {
     p.lo = __clc_fma(a.lo, b, p.lo);
   } else {
     p.lo += a.lo * b;
@@ -263,7 +246,7 @@ _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_mul(__CLC_EP_PAIR a,
 _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR
 __clc_ep_mul_overflow(__CLC_EP_PAIR a, __CLC_GENTYPE b) {
   __CLC_EP_PAIR p = __clc_ep_mul(a.hi, b);
-  if (__CLC_EP_USE_FMA) {
+  if (__CLC_GENTYPE_FAST_FMA) {
     p.lo = __clc_fma(a.lo, b, p.lo);
   } else {
     p.lo += a.lo * b;
@@ -274,7 +257,7 @@ __clc_ep_mul_overflow(__CLC_EP_PAIR a, __CLC_GENTYPE b) {
 _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_mul(__CLC_GENTYPE a,
                                                              __CLC_EP_PAIR b) {
   __CLC_EP_PAIR p = __clc_ep_mul(a, b.hi);
-  if (__CLC_EP_USE_FMA) {
+  if (__CLC_GENTYPE_FAST_FMA) {
     p.lo = __clc_fma(a, b.lo, p.lo);
   } else {
     p.lo += a * b.lo;
@@ -285,7 +268,7 @@ _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_mul(__CLC_GENTYPE a,
 _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR
 __clc_ep_mul_overflow(__CLC_GENTYPE a, __CLC_EP_PAIR b) {
   __CLC_EP_PAIR p = __clc_ep_mul(a, b.hi);
-  if (__CLC_EP_USE_FMA) {
+  if (__CLC_GENTYPE_FAST_FMA) {
     p.lo = __clc_fma(a, b.lo, p.lo);
   } else {
     p.lo += a * b.lo;
@@ -296,7 +279,7 @@ __clc_ep_mul_overflow(__CLC_GENTYPE a, __CLC_EP_PAIR b) {
 _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_mul(__CLC_EP_PAIR a,
                                                              __CLC_EP_PAIR b) {
   __CLC_EP_PAIR p = __clc_ep_mul(a.hi, b.hi);
-  if (__CLC_EP_USE_FMA) {
+  if (__CLC_GENTYPE_FAST_FMA) {
     p.lo = __clc_fma(a.lo, b.hi, __clc_fma(a.hi, b.lo, p.lo));
   } else {
     p.lo += a.hi * b.lo + a.lo * b.hi;
@@ -307,7 +290,7 @@ _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_mul(__CLC_EP_PAIR a,
 _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR
 __clc_ep_mul_overflow(__CLC_EP_PAIR a, __CLC_EP_PAIR b) {
   __CLC_EP_PAIR p = __clc_ep_mul(a.hi, b.hi);
-  if (__CLC_EP_USE_FMA) {
+  if (__CLC_GENTYPE_FAST_FMA) {
     p.lo += __clc_fma(a.hi, b.lo, a.lo * b.hi);
   } else {
     p.lo += a.hi * b.lo + a.lo * b.hi;
@@ -406,7 +389,7 @@ __clc_ep_recip(__CLC_EP_PAIR b) {
 
 _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_sqr(__CLC_EP_PAIR a) {
   __CLC_EP_PAIR p = __clc_ep_sqr(a.hi);
-  if (__CLC_EP_USE_FMA) {
+  if (__CLC_GENTYPE_FAST_FMA) {
     p.lo = __clc_fma(a.hi, __CLC_FP_LIT(2.0) * a.lo, p.lo);
   } else {
     p.lo = p.lo + __CLC_FP_LIT(2.0) * a.lo * a.hi;
@@ -646,5 +629,3 @@ _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_DOUBLEN __clc_ep_ln_hi(__CLC_EP_PAIR a,
 }
 
 #endif
-
-#undef __CLC_EP_USE_FMA

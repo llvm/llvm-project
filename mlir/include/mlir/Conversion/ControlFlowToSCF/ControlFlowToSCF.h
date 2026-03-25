@@ -24,6 +24,10 @@ class Pass;
 /// operations to SCF Dialect operations.
 class ControlFlowToSCFTransformation : public CFGToSCFInterface {
 public:
+  /// Returns true only for `cf.cond_br` and `cf.switch`, the two multi-
+  /// successor ops this transformation knows how to convert.
+  bool canConvertMultiSuccessorBranchOp(Operation *op) override;
+
   /// Creates an `scf.if` op if `controlFlowCondOp` is a `cf.cond_br` op or
   /// an `scf.index_switch` if `controlFlowCondOp` is a `cf.switch`.
   /// Returns failure otherwise.

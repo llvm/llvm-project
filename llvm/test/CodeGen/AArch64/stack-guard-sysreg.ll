@@ -10,19 +10,19 @@
 ; RUN: cat %t/main.ll %t/i.ll > %t/i2.ll
 ; RUN: cat %t/main.ll %t/j.ll > %t/j2.ll
 ; RUN: llc %t/a2.ll -verify-machineinstrs -o - | \
-; RUN: FileCheck --check-prefix=CHECK --check-prefix=CHECK-NO-OFFSET %s
+; RUN: FileCheck --check-prefix=CHECK --check-prefix=CHECK-SP --check-prefix=CHECK-NO-OFFSET %s
 ; RUN: llc %t/b2.ll -verify-machineinstrs -o - | \
-; RUN: FileCheck --check-prefix=CHECK --check-prefix=CHECK-POSITIVE-OFFSET %s
+; RUN: FileCheck --check-prefix=CHECK --check-prefix=CHECK-TPIDRRO --check-prefix=CHECK-POSITIVE-OFFSET %s
 ; RUN: llc %t/c2.ll -verify-machineinstrs -o - | \
-; RUN: FileCheck --check-prefix=CHECK --check-prefix=CHECK-NEGATIVE-OFFSET %s
+; RUN: FileCheck --check-prefix=CHECK --check-prefix=CHECK-TPIDR0 --check-prefix=CHECK-NEGATIVE-OFFSET %s
 ; RUN: llc %t/d2.ll -verify-machineinstrs -o - | \
-; RUN: FileCheck --check-prefix=CHECK --check-prefix=CHECK-NPOT-OFFSET %s
+; RUN: FileCheck --check-prefix=CHECK --check-prefix=CHECK-TPIDR1 --check-prefix=CHECK-NPOT-OFFSET %s
 ; RUN: llc %t/e2.ll -verify-machineinstrs -o - | \
-; RUN: FileCheck --check-prefix=CHECK --check-prefix=CHECK-NPOT-NEG-OFFSET %s
+; RUN: FileCheck --check-prefix=CHECK --check-prefix=CHECK-TPIDR2 --check-prefix=CHECK-NPOT-NEG-OFFSET %s
 ; RUN: llc %t/f2.ll -verify-machineinstrs -o - | \
-; RUN: FileCheck --check-prefix=CHECK-ADD --check-prefix=CHECK-257-OFFSET %s
+; RUN: FileCheck --check-prefix=CHECK-ADD --check-prefix=CHECK-FAR1 --check-prefix=CHECK-257-OFFSET %s
 ; RUN: llc %t/g2.ll -verify-machineinstrs -o - | \
-; RUN: FileCheck --check-prefix=CHECK-ADD --check-prefix=CHECK-MINUS-257-OFFSET %s
+; RUN: FileCheck --check-prefix=CHECK-ADD --check-prefix=CHECK-FAR2 --check-prefix=CHECK-MINUS-257-OFFSET %s
 
 ; XFAIL
 ; RUN: not --crash llc %t/h2.ll -o - 2>&1 | \
@@ -50,7 +50,11 @@ define dso_local void @foo(i64 %t) local_unnamed_addr #0 {
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    .cfi_remember_state
 ; CHECK-NEXT:    sub     sp, sp, #16
-; CHECK-NEXT:    mrs     x8, SP_EL0
+; CHECK-SP:      mrs     x8, SP_EL0
+; CHECK-TPIDRRO: mrs     x8, TPIDRRO_EL0
+; CHECK-TPIDR0:  mrs     x8, TPIDR_EL0
+; CHECK-TPIDR1:  mrs     x8, TPIDR_EL1
+; CHECK-TPIDR2:  mrs     x8, TPIDR_EL2
 ; CHECK-NEXT:    lsl     x9, x0, #2
 ; CHECK-NO-OFFSET: ldr     x8, [x8]
 ; CHECK-POSITIVE-OFFSET: ldr x8, [x8, #8]
@@ -64,7 +68,11 @@ define dso_local void @foo(i64 %t) local_unnamed_addr #0 {
 ; CHECK-NEXT     sub     x0, x8, x9
 ; CHECK-NEXT     mov     sp, x0
 ; CHECK-NEXT     bl      baz
-; CHECK-NEXT     mrs     x8, SP_EL0
+; CHECK-SP:      mrs     x8, SP_EL0
+; CHECK-TPIDRRO: mrs     x8, TPIDRRO_EL0
+; CHECK-TPIDR0:  mrs     x8, TPIDR_EL0
+; CHECK-TPIDR1:  mrs     x8, TPIDR_EL1
+; CHECK-TPIDR2:  mrs     x8, TPIDR_EL2
 ; CHECK-NO-OFFSET:       ldr x8, [x8]
 ; CHECK-POSITIVE-OFFSET: ldr x8, [x8, #8]
 ; CHECK-NEGATIVE-OFFSET: ldur x8, [x8, #-8]
@@ -99,7 +107,8 @@ define dso_local void @foo(i64 %t) local_unnamed_addr #0 {
 ; CHECK-ADD-NEXT:        .cfi_offset w29, -16
 ; CHECK-ADD-NEXT:        .cfi_remember_state
 ; CHECK-ADD-NEXT:        sub     sp, sp, #16
-; CHECK-ADD-NEXT:        mrs     x8, SP_EL0
+; CHECK-FAR1:            mrs     x8, FAR_EL1
+; CHECK-FAR2:            mrs     x8, FAR_EL2
 ; CHECK-ADD-NEXT:        lsl     x9, x0, #2
 ; CHECK-MINUS-257-OFFSET: sub     x8, x8, #257
 ; CHECK-257-OFFSET:      add     x8, x8, #257
@@ -111,7 +120,8 @@ define dso_local void @foo(i64 %t) local_unnamed_addr #0 {
 ; CHECK-ADD-NEXT:        sub     x0, x8, x9
 ; CHECK-ADD-NEXT:        mov     sp, x0
 ; CHECK-ADD-NEXT:        bl      baz
-; CHECK-ADD-NEXT:        mrs     x8, SP_EL0
+; CHECK-FAR1:            mrs     x8, FAR_EL1
+; CHECK-FAR2:            mrs     x8, FAR_EL2
 ; CHECK-257-OFFSET:      add     x8, x8, #257
 ; CHECK-MINUS-257-OFFSET: sub     x8, x8, #257
 ; CHECK-ADD-NEXT:         ldr     x8, [x8]
@@ -148,25 +158,34 @@ attributes #0 = { sspstrong uwtable }
 !llvm.module.flags = !{!1, !2, !3}
 
 !1 = !{i32 2, !"stack-protector-guard", !"sysreg"}
-!2 = !{i32 2, !"stack-protector-guard-reg", !"sp_el0"}
 
 ;--- a.ll
+!2 = !{i32 2, !"stack-protector-guard-reg", !"sp_el0"}
 !3 = !{i32 2, !"stack-protector-guard-offset", i32 0}
 ;--- b.ll
+!2 = !{i32 2, !"stack-protector-guard-reg", !"tpidrro_el0"}
 !3 = !{i32 2, !"stack-protector-guard-offset", i32 8}
 ;--- c.ll
+!2 = !{i32 2, !"stack-protector-guard-reg", !"tpidr_el0"}
 !3 = !{i32 2, !"stack-protector-guard-offset", i32 -8}
 ;--- d.ll
+!2 = !{i32 2, !"stack-protector-guard-reg", !"tpidr_el1"}
 !3 = !{i32 2, !"stack-protector-guard-offset", i32 1}
 ;--- e.ll
+!2 = !{i32 2, !"stack-protector-guard-reg", !"tpidr_el2"}
 !3 = !{i32 2, !"stack-protector-guard-offset", i32 -1}
 ;--- f.ll
+!2 = !{i32 2, !"stack-protector-guard-reg", !"far_el1"}
 !3 = !{i32 2, !"stack-protector-guard-offset", i32 257}
 ;--- g.ll
+!2 = !{i32 2, !"stack-protector-guard-reg", !"far_el2"}
 !3 = !{i32 2, !"stack-protector-guard-offset", i32 -257}
 ;--- h.ll
+!2 = !{i32 2, !"stack-protector-guard-reg", !"sp_el0"}
 !3 = !{i32 2, !"stack-protector-guard-offset", i32 32761}
 ;--- i.ll
+!2 = !{i32 2, !"stack-protector-guard-reg", !"sp_el0"}
 !3 = !{i32 2, !"stack-protector-guard-offset", i32 -4096}
 ;--- j.ll
+!2 = !{i32 2, !"stack-protector-guard-reg", !"sp_el0"}
 !3 = !{i32 2, !"stack-protector-guard-offset", i32 4097}

@@ -227,19 +227,24 @@ size_t ObjectFile::GetModuleSpecifications(
     const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
     lldb::offset_t data_offset, lldb::offset_t file_offset,
     lldb::offset_t file_size, lldb_private::ModuleSpecList &specs) {
-  const size_t initial_count = specs.GetSize();
   // Try the ObjectFile plug-ins
   for (auto &cbs : PluginManager::GetObjectFileCallbacks()) {
-    if (cbs.get_module_specifications(file, extractor_sp, data_offset,
-                                      file_offset, file_size, specs) > 0)
-      return specs.GetSize() - initial_count;
+    ModuleSpecList cb_specs = cbs.get_module_specifications(
+        file, extractor_sp, data_offset, file_offset, file_size);
+    if (cb_specs.GetSize() > 0) {
+      specs.Append(cb_specs);
+      return cb_specs.GetSize();
+    }
   }
 
   // Try the ObjectContainer plug-ins
   for (auto &cbs : PluginManager::GetObjectContainerCallbacks()) {
-    if (cbs.get_module_specifications(file, extractor_sp, data_offset,
-                                      file_offset, file_size, specs) > 0)
-      return specs.GetSize() - initial_count;
+    ModuleSpecList cb_specs = cbs.get_module_specifications(
+        file, extractor_sp, data_offset, file_offset, file_size);
+    if (cb_specs.GetSize() > 0) {
+      specs.Append(cb_specs);
+      return cb_specs.GetSize();
+    }
   }
   return 0;
 }

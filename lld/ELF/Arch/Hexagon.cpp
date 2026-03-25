@@ -370,7 +370,10 @@ bool Hexagon::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
 bool Hexagon::needsThunk(RelExpr expr, RelType type, const InputFile *file,
                          uint64_t branchAddr, const Symbol &s,
                          int64_t a) const {
-  // Only check branch range for supported branch relocation types
+  // Undefined weak symbols without PLT entries resolve to address zero.
+  // Thunks are not needed since the branch target is fixed.
+  if (s.isUndefined() && !s.isInPlt(ctx))
+    return false;
   switch (type) {
   case R_HEX_B22_PCREL:
   case R_HEX_PLT_B22_PCREL:

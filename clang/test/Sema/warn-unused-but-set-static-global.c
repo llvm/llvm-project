@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -Wunused-but-set-variable -I %S/Inputs -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wunused-but-set-variable -Wno-unused-but-set-global -I %S/Inputs -verify=no-global %s
+// no-global-no-diagnostics
 
 // Test that header-defined static globals don't warn.
 #include "warn-unused-but-set-static-global-header.h"

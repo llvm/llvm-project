@@ -262,6 +262,48 @@ public:
     return Pack;
   }
 
+  /// Emits the necessary instruction sequence to extract element of type \p
+  /// ExtrTy at \p Lane from \p FromVec. Emits instructions before \p WhereIt.
+  /// Returns the extracted value.
+  /// Note: This handles both vectors and scalars. In the vector case it
+  /// extracts an N-wide element (with N dictated by \p ExtrTy).
+  static Value *unpack(Value *FromVec, Type *ExtrTy, unsigned Lane,
+                       BasicBlock::iterator WhereIt) {
+    assert(isa<FixedVectorType>(FromVec->getType()) && "Expected vector!");
+    auto &Ctx = FromVec->getContext();
+    if (!ExtrTy->isVectorTy()) {
+      // For scalar elements we emit a single ExtractElementInst.
+      assert(Lane <
+                 cast<FixedVectorType>(FromVec->getType())->getNumElements() &&
+             "Out of bounds!");
+      assert(ExtrTy ==
+                 cast<FixedVectorType>(FromVec->getType())->getElementType() &&
+             "Expected same element type!");
+      Constant *ExtractLaneC =
+          ConstantInt::getSigned(Type::getInt32Ty(Ctx), Lane);
+      // Note: This may be folded into a Constant if FromVec is a Constant.
+      return ExtractElementInst::create(FromVec, ExtractLaneC, WhereIt, Ctx,
+                                        "Unpack");
+    }
+    // For vector elements we emit a shuffle.
+    // For example, extracting lanes 2 and 3 of a <4 x i32> vector %vec:
+    //  shufflevector <4 x i32> %vec, <4 x i32> poison, <2 x i32> <i32 2, i32 3>
+    auto *VecTy = cast<FixedVectorType>(FromVec->getType());
+    auto *ExtrVecTy = cast<FixedVectorType>(ExtrTy);
+    assert(ExtrVecTy->getElementType() == VecTy->getElementType() &&
+           "Expected same element type!");
+    SmallVector<int, 4> Mask;
+    for (unsigned Idx = 0, E = ExtrVecTy->getNumElements(); Idx != E; ++Idx) {
+      int MaskLane = Lane + Idx;
+      assert((unsigned)MaskLane <
+                 cast<FixedVectorType>(FromVec->getType())->getNumElements() &&
+             "Out of bounds!");
+      Mask.push_back(MaskLane);
+    }
+    return ShuffleVectorInst::create(FromVec, PoisonValue::get(VecTy), Mask,
+                                     WhereIt, Ctx, "Unpack");
+  }
+
 #ifndef NDEBUG
   /// Helper dump function for debugging.
   LLVM_DUMP_METHOD static void dump(ArrayRef<Value *> Bndl);

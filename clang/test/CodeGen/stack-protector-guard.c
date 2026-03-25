@@ -8,7 +8,25 @@
 // RUN:   -mstack-protector-guard-offset=1024 -emit-llvm %s -o - | FileCheck %s
 // RUN: %clang_cc1 -mstack-protector-guard=sysreg -triple aarch64-linux-gnu \
 // RUN:   -mstack-protector-guard-offset=1024 -mstack-protector-guard-reg=sp_el0 \
-// RUN:   -emit-llvm %s -o - | FileCheck %s --check-prefix=AARCH64
+// RUN:   -emit-llvm %s -o - | FileCheck %s --check-prefix=AARCH64 --check-prefix=AARCH64-SP
+// RUN: %clang_cc1 -mstack-protector-guard=sysreg -triple aarch64-linux-gnu \
+// RUN:   -mstack-protector-guard-offset=1024 -mstack-protector-guard-reg=tpidrro_el0 \
+// RUN:   -emit-llvm %s -o - | FileCheck %s --check-prefix=AARCH64 --check-prefix=AARCH64-TPIDRRO
+// RUN: %clang_cc1 -mstack-protector-guard=sysreg -triple aarch64-linux-gnu \
+// RUN:   -mstack-protector-guard-offset=1024 -mstack-protector-guard-reg=tpidr_el0 \
+// RUN:   -emit-llvm %s -o - | FileCheck %s --check-prefix=AARCH64 --check-prefix=AARCH64-TPIDR-EL0
+// RUN: %clang_cc1 -mstack-protector-guard=sysreg -triple aarch64-linux-gnu \
+// RUN:   -mstack-protector-guard-offset=1024 -mstack-protector-guard-reg=tpidr_el1 \
+// RUN:   -emit-llvm %s -o - | FileCheck %s --check-prefix=AARCH64 --check-prefix=AARCH64-TPIDR-EL1
+// RUN: %clang_cc1 -mstack-protector-guard=sysreg -triple aarch64-linux-gnu \
+// RUN:   -mstack-protector-guard-offset=1024 -mstack-protector-guard-reg=tpidr_el2 \
+// RUN:   -emit-llvm %s -o - | FileCheck %s --check-prefix=AARCH64 --check-prefix=AARCH64-TPIDR-EL2
+// RUN: %clang_cc1 -mstack-protector-guard=sysreg -triple aarch64-linux-gnu \
+// RUN:   -mstack-protector-guard-offset=1024 -mstack-protector-guard-reg=far_el1 \
+// RUN:   -emit-llvm %s -o - | FileCheck %s --check-prefix=AARCH64 --check-prefix=AARCH64-FAR-EL1
+// RUN: %clang_cc1 -mstack-protector-guard=sysreg -triple aarch64-linux-gnu \
+// RUN:   -mstack-protector-guard-offset=1024 -mstack-protector-guard-reg=far_el2 \
+// RUN:   -emit-llvm %s -o - | FileCheck %s --check-prefix=AARCH64 --check-prefix=AARCH64-FAR-EL2
 // RUN: %clang_cc1 -mstack-protector-guard=tls -triple riscv64-unknown-elf \
 // RUN:   -mstack-protector-guard-offset=44 -mstack-protector-guard-reg=tp \
 // RUN:   -emit-llvm %s -o - | FileCheck %s --check-prefix=RISCV
@@ -30,7 +48,13 @@ void bar(int x) {
 
 // AARCH64: !llvm.module.flags = !{{{.*}}[[ATTR1:![0-9]+]], [[ATTR2:![0-9]+]], [[ATTR3:![0-9]+]]}
 // AARCH64: [[ATTR1]] = !{i32 1, !"stack-protector-guard", !"sysreg"}
-// AARCH64: [[ATTR2]] = !{i32 1, !"stack-protector-guard-reg", !"sp_el0"}
+// AARCH64-SP: [[ATTR2]] = !{i32 1, !"stack-protector-guard-reg", !"sp_el0"}
+// AARCH64-TPIDRRO: [[ATTR2]] = !{i32 1, !"stack-protector-guard-reg", !"tpidrro_el0"}
+// AARCH64-TPIDR-EL0: [[ATTR2]] = !{i32 1, !"stack-protector-guard-reg", !"tpidr_el0"}
+// AARCH64-TPIDR-EL1: [[ATTR2]] = !{i32 1, !"stack-protector-guard-reg", !"tpidr_el1"}
+// AARCH64-TPIDR-EL2: [[ATTR2]] = !{i32 1, !"stack-protector-guard-reg", !"tpidr_el2"}
+// AARCH64-FAR-EL1: [[ATTR2]] = !{i32 1, !"stack-protector-guard-reg", !"far_el1"}
+// AARCH64-FAR-EL2: [[ATTR2]] = !{i32 1, !"stack-protector-guard-reg", !"far_el2"}
 // AARCH64: [[ATTR3]] = !{i32 1, !"stack-protector-guard-offset", i32 1024}
 
 // RISCV: !llvm.module.flags = !{{{.*}}[[ATTR1:![0-9]+]], [[ATTR2:![0-9]+]], [[ATTR3:![0-9]+]], [[ATTR4:![0-9]+]]}

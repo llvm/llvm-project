@@ -1336,16 +1336,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     if (SrcTy.getSizeInBits() != DstTy.getSizeInBits())
       report("bitcast sizes must match", MI);
 
-    bool SameType = SrcTy.getKind() == DstTy.getKind();
-    if (SameType && SrcTy.isPointerOrPointerVector())
-      SameType &= SrcTy.getAddressSpace() == DstTy.getAddressSpace();
-
-    SameType &= SrcTy.getScalarSizeInBits() == DstTy.getScalarSizeInBits();
-
-    if (SameType && SrcTy.isVector())
-      SameType &= SrcTy.getElementCount() == DstTy.getElementCount();
-
-    if (SameType)
+    if (SrcTy == DstTy)
       report("bitcast must change the type", MI);
 
     break;

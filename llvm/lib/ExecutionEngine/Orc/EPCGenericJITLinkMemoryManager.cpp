@@ -9,6 +9,7 @@
 #include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManager.h"
 
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
+#include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 
 #include <limits>
@@ -17,6 +18,15 @@ using namespace llvm::jitlink;
 
 namespace llvm {
 namespace orc {
+
+const EPCGenericJITLinkMemoryManager::SymbolNames
+    EPCGenericJITLinkMemoryManager::orc_rt_SimpleNativeMemoryMapSPSSymbols = {
+        "orc_rt_SimpleNativeMemoryMap_Instance",
+        "orc_rt_SimpleNativeMemoryMap_reserve_sps_wrapper",
+        "orc_rt_SimpleNativeMemoryMap_initialize_sps_wrapper",
+        "orc_rt_SimpleNativeMemoryMap_deinitializeMultiple_sps_wrapper",
+        "orc_rt_SimpleNativeMemoryMap_releaseMultiple_sps_wrapper",
+};
 
 class EPCGenericJITLinkMemoryManager::InFlightAlloc
     : public jitlink::JITLinkMemoryManager::InFlightAlloc {
@@ -96,6 +106,29 @@ private:
   ExecutorAddr AllocAddr;
   SegInfoMap Segs;
 };
+
+Expected<std::unique_ptr<EPCGenericJITLinkMemoryManager>>
+EPCGenericJITLinkMemoryManager::Create(JITDylib &JD, SymbolNames SNs) {
+  auto &ES = JD.getExecutionSession();
+  SymbolAddrs SAs;
+  if (auto Err = lookupAndRecordAddrs(
+          ES, LookupKind::Static, makeJITDylibSearchOrder({&JD}),
+          {
+              {ES.intern(SNs.AllocatorName), &SAs.Allocator},
+              {ES.intern(SNs.ReserveName), &SAs.Reserve},
+              {ES.intern(SNs.InitializeName), &SAs.Initialize},
+              {ES.intern(SNs.DeinitializeName), &SAs.Deinitialize},
+              {ES.intern(SNs.ReleaseName), &SAs.Release},
+          }))
+    return Err;
+  return std::make_unique<EPCGenericJITLinkMemoryManager>(
+      ES.getExecutorProcessControl(), SAs);
+}
+
+Expected<std::unique_ptr<EPCGenericJITLinkMemoryManager>>
+EPCGenericJITLinkMemoryManager::Create(ExecutionSession &ES, SymbolNames SNs) {
+  return Create(ES.getBootstrapJITDylib(), std::move(SNs));
+}
 
 void EPCGenericJITLinkMemoryManager::allocate(const JITLinkDylib *JD,
                                               LinkGraph &G,

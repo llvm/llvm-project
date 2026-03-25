@@ -500,19 +500,21 @@ define i32 @extract_last_active_v3i32(<3 x i32> %a, <3 x i1> %c) {
 ; NEON-FIXED-NEXT:    movi v1.2d, #0000000000000000
 ; NEON-FIXED-NEXT:    adrp x8, .LCPI18_0
 ; NEON-FIXED-NEXT:    mov x11, sp
-; NEON-FIXED-NEXT:    ldr d2, [x8, :lo12:.LCPI18_0]
+; NEON-FIXED-NEXT:    ldr d3, [x8, :lo12:.LCPI18_0]
 ; NEON-FIXED-NEXT:    str q0, [sp]
 ; NEON-FIXED-NEXT:    mov v1.h[0], w0
 ; NEON-FIXED-NEXT:    mov v1.h[1], w1
 ; NEON-FIXED-NEXT:    mov v1.h[2], w2
-; NEON-FIXED-NEXT:    and v2.8b, v1.8b, v2.8b
+; NEON-FIXED-NEXT:    shl v2.4h, v1.4h, #15
 ; NEON-FIXED-NEXT:    fmov x8, d1
-; NEON-FIXED-NEXT:    umaxv h2, v2.4h
+; NEON-FIXED-NEXT:    cmlt v2.4h, v2.4h, #0
 ; NEON-FIXED-NEXT:    lsr x9, x8, #32
 ; NEON-FIXED-NEXT:    orr w9, w8, w9
+; NEON-FIXED-NEXT:    and v2.8b, v2.8b, v3.8b
 ; NEON-FIXED-NEXT:    orr w8, w9, w8, lsr #16
-; NEON-FIXED-NEXT:    fmov w10, s2
 ; NEON-FIXED-NEXT:    tst w8, #0x1
+; NEON-FIXED-NEXT:    umaxv h2, v2.4h
+; NEON-FIXED-NEXT:    fmov w10, s2
 ; NEON-FIXED-NEXT:    bfi x11, x10, #2, #2
 ; NEON-FIXED-NEXT:    ldr w9, [x11]
 ; NEON-FIXED-NEXT:    csinv w0, w9, wzr, ne
@@ -524,20 +526,22 @@ define i32 @extract_last_active_v3i32(<3 x i32> %a, <3 x i1> %c) {
 ; SVE-FIXED-NEXT:    sub sp, sp, #16
 ; SVE-FIXED-NEXT:    .cfi_def_cfa_offset 16
 ; SVE-FIXED-NEXT:    movi v1.2d, #0000000000000000
-; SVE-FIXED-NEXT:    index z2.h, #0, #1
+; SVE-FIXED-NEXT:    index z3.h, #0, #1
 ; SVE-FIXED-NEXT:    mov x11, sp
 ; SVE-FIXED-NEXT:    str q0, [sp]
 ; SVE-FIXED-NEXT:    mov v1.h[0], w0
 ; SVE-FIXED-NEXT:    mov v1.h[1], w1
 ; SVE-FIXED-NEXT:    mov v1.h[2], w2
-; SVE-FIXED-NEXT:    and v2.8b, v1.8b, v2.8b
+; SVE-FIXED-NEXT:    shl v2.4h, v1.4h, #15
 ; SVE-FIXED-NEXT:    fmov x8, d1
-; SVE-FIXED-NEXT:    umaxv h2, v2.4h
+; SVE-FIXED-NEXT:    cmlt v2.4h, v2.4h, #0
 ; SVE-FIXED-NEXT:    lsr x9, x8, #32
 ; SVE-FIXED-NEXT:    orr w9, w8, w9
+; SVE-FIXED-NEXT:    and v2.8b, v2.8b, v3.8b
 ; SVE-FIXED-NEXT:    orr w8, w9, w8, lsr #16
-; SVE-FIXED-NEXT:    fmov w10, s2
 ; SVE-FIXED-NEXT:    tst w8, #0x1
+; SVE-FIXED-NEXT:    umaxv h2, v2.4h
+; SVE-FIXED-NEXT:    fmov w10, s2
 ; SVE-FIXED-NEXT:    bfi x11, x10, #2, #2
 ; SVE-FIXED-NEXT:    ldr w9, [x11]
 ; SVE-FIXED-NEXT:    csinv w0, w9, wzr, ne

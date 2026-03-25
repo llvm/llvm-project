@@ -1610,7 +1610,7 @@ void Sema::ActOnEndOfTranslationUnit() {
     emitAndClearUnusedLocalTypedefWarnings();
   }
 
-  if (!Diags.isIgnored(diag::warn_unused_but_set_variable, SourceLocation())) {
+  if (!Diags.isIgnored(diag::warn_unused_but_set_global, SourceLocation())) {
     // Diagnose unused-but-set static globals in a deterministic order.
     // Not tracking shadowing info for static globals; there's nothing to
     // shadow.

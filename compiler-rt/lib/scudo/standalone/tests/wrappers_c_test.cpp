@@ -299,18 +299,6 @@ TEST_F(ScudoWrappersCTest, Memalign) {
   EXPECT_EQ(memalign(4096U, SIZE_MAX), nullptr);
   EXPECT_EQ(posix_memalign(&P, 15U, Size), EINVAL);
   EXPECT_EQ(posix_memalign(&P, 4096U, SIZE_MAX), ENOMEM);
-
-  // Android's memalign accepts non power-of-2 alignments, and 0.
-  if (SCUDO_ANDROID) {
-    for (size_t Alignment = 0U; Alignment <= 128U; Alignment++) {
-      P = memalign(Alignment, 1024U);
-      EXPECT_NE(P, nullptr);
-      verifyAllocHookPtr(P);
-      verifyAllocHookSize(Size);
-      free(P);
-      verifyDeallocHookPtr(P);
-    }
-  }
 }
 
 TEST_F(ScudoWrappersCTest, AlignedAlloc) {
@@ -397,23 +385,6 @@ TEST_F(ScudoWrappersCDeathTest, Realloc) {
   EXPECT_EQ(realloc(P, SIZE_MAX), nullptr);
   EXPECT_EQ(errno, ENOMEM);
   free(P);
-
-  // Android allows realloc of memalign pointers.
-  if (SCUDO_ANDROID) {
-    const size_t Alignment = 1024U;
-    P = memalign(Alignment, Size);
-    EXPECT_NE(P, nullptr);
-    EXPECT_LE(Size, malloc_usable_size(P));
-    EXPECT_EQ(reinterpret_cast<uintptr_t>(P) % Alignment, 0U);
-    memset(P, 0x42, Size);
-
-    P = realloc(P, Size * 2U);
-    EXPECT_NE(P, nullptr);
-    EXPECT_LE(Size * 2U, malloc_usable_size(P));
-    for (size_t I = 0; I < Size; I++)
-      EXPECT_EQ(0x42, (reinterpret_cast<uint8_t *>(P))[I]);
-    free(P);
-  }
 }
 
 TEST_F(ScudoWrappersCTest, Reallocarray) {

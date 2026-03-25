@@ -267,6 +267,13 @@ td_library(
 )
 
 td_library(
+    name = "BuiltinsAArch64BaseTdFiles",
+    srcs = ["include/clang/Basic/BuiltinsAArch64Base.td"],
+    includes = ["include"],
+    deps = [":BuiltinsBaseTdFiles"],
+)
+
+td_library(
     name = "BuiltinsAMDGPUDocsTdFiles",
     srcs = ["include/clang/Basic/BuiltinsAMDGPUDocs.td"],
     includes = ["include"],
@@ -300,6 +307,17 @@ td_library(
     name = "BuiltinsX86BaseTdFiles",
     srcs = ["include/clang/Basic/BuiltinsX86Base.td"],
     includes = ["include"],
+)
+
+gentbl_cc_library(
+    name = "basic_builtins_aarch64_gen",
+    tbl_outs = {"include/clang/Basic/BuiltinsAArch64.inc": ["-gen-clang-builtins"]},
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/BuiltinsAArch64.td",
+    deps = [
+        ":BuiltinsAArch64BaseTdFiles",
+        ":BuiltinsBaseTdFiles",
+    ],
 )
 
 gentbl_cc_library(
@@ -718,6 +736,7 @@ cc_library(
         ":basic_arm_sve_typeflags_gen",
         ":basic_attr_gen",
         ":basic_builtin_templates_gen",
+        ":basic_builtins_aarch64_gen",
         ":basic_builtins_amdgpu_gen",
         ":basic_builtins_bpf_gen",
         ":basic_builtins_directx_gen",

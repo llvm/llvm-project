@@ -4,7 +4,7 @@ declare ptr @llvm.returnaddress(i32)
 define void @return_address(i32 %var) {
   ; CHECK: immarg operand has non-immediate parameter
   ; CHECK-NEXT: i32 %var
-  ; CHECK-NEXT: %result = call ptr @llvm.returnaddress(i32 %var)
+  ; CHECK-NEXT: %result = call ptr @llvm.returnaddress.p0(i32 %var)
   %result = call ptr @llvm.returnaddress(i32 %var)
   ret void
 }

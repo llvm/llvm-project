@@ -340,6 +340,47 @@ void BottomUpVec::ActionsVector::print(raw_ostream &OS) const {
 void BottomUpVec::ActionsVector::dump() const { print(dbgs()); }
 #endif // NDEBUG
 
+void BottomUpVec::emitUnpacksForExternalUses(const ArrayRef<Value *> Bndl,
+                                             Value *Vec) {
+  // Find where we should emit the unpacks.
+  BasicBlock::iterator WhereIt;
+  if (auto *VecI = dyn_cast<Instruction>(Vec)) {
+    WhereIt = std::next(VecI->getIterator());
+  } else {
+    // If Vec is a constant then it should be safe to emit the unpacks at the
+    // top of the block.
+    // Note: Extracts from constants are usually folded to constants.
+    assert(isa<Constant>(Vec) && "Expected constant!");
+    assert(isa<Instruction>(Bndl[0]) &&
+           "A widened Bndl should contain instrs!");
+    BasicBlock *BB = cast<Instruction>(Bndl[0])->getParent();
+    WhereIt =
+        BB->empty()
+            ? BB->begin()
+            : std::next(
+                  VecUtils::getLastPHIOrSelf(&*BB->begin())->getIterator());
+  }
+  unsigned Lane = 0;
+  for (Value *Elm : Bndl) {
+    for (User *U : Elm->users()) {
+      // Skip users that we just vectorized.
+      if (IMaps->isVectorized(U))
+        continue;
+      auto *LastUnpackV = VecUtils::unpack(Vec, Elm->getType(), Lane, WhereIt);
+      Elm->replaceAllUsesWith(LastUnpackV);
+    }
+
+    // Increment Lane.
+    auto *ElmTy = Utils::getExpectedType(Elm);
+    if (auto *VecTy = dyn_cast<FixedVectorType>(ElmTy)) {
+      Lane += VecTy->getNumElements();
+    } else {
+      assert(!isa<VectorType>(ElmTy) && "Expected scalar type!");
+      Lane += 1;
+    }
+  }
+}
+
 Value *BottomUpVec::emitVectors() {
   Value *NewVec = nullptr;
   for (const auto &ActionPtr : Actions) {
@@ -377,6 +418,9 @@ Value *BottomUpVec::emitVectors() {
       // original scalars and pointer operands of loads/stores.
       if (NewVec != nullptr)
         collectPotentiallyDeadInstrs(Bndl);
+
+      // Emit unpacks for all external uses, if any.
+      emitUnpacksForExternalUses(ActionPtr->Bndl, NewVec);
       break;
     }
     case LegalityResultID::DiamondReuse: {

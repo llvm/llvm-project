@@ -15,7 +15,7 @@ write_cmake_config("builtins_mode_cfg") {
     "BUILTINS_LIT_SOURCE_DIR=" + rebase_path("."),
     "BUILTINS_TEST_TARGET_ARCH=$crt_current_target_arch",
     "SANITIZER_TEST_CXX_LIBNAME=libc++",
-    "COMPILER_RT_BUILD_CRT_PYBOOL=False",
+    "COMPILER_RT_TEST_CRT_PYBOOL=False",
     "MSVC_PYBOOL=False",
     "BUILTINS_IS_MSVC_PYBOOL=False",
 

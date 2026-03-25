@@ -27,130 +27,131 @@
 
 #if __CLC_FPSIZE == 32
 
-_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_asinpi(__CLC_GENTYPE x) {
-  const __CLC_GENTYPE pi = __CLC_FP_LIT(3.1415926535897933e+00);
-  // 0x33a22168
-  const __CLC_GENTYPE piby2_tail = __CLC_FP_LIT(7.5497894159e-08);
-  // 0x3f490fda
-  const __CLC_GENTYPE hpiby2_head = __CLC_FP_LIT(7.8539812565e-01);
+_CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_FLOATN __clc_asinpi(__CLC_FLOATN x) {
+  // Computes arcsin(x).
+  // The argument is first reduced by noting that arcsin(x)
+  // is invalid for abs(x) > 1 and arcsin(-x) = -arcsin(x).
+  // For denormal and small arguments arcsin(x) = x to machine
+  // accuracy. Remaining argument ranges are handled as follows.
+  // For abs(x) <= 0.5 use
+  // arcsin(x) = x + x^3*R(x^2)
+  // where R(x^2) is a polynomial minimax approximation to
+  // (arcsin(x) - x)/x^3.
+  // For abs(x) > 0.5 exploit the identity:
+  // arcsin(x) = pi/2 - 2*arcsin(sqrt(1-x)/2)
+  // together with the above polynomial approximation, and
+  // reconstruct the terms carefully.
 
-  __CLC_UINTN ux = __CLC_AS_UINTN(x);
-  __CLC_UINTN aux = ux & EXSIGNBIT_SP32;
-  __CLC_UINTN xs = ux ^ aux;
-  __CLC_GENTYPE shalf =
-      __CLC_AS_GENTYPE(xs | __CLC_AS_UINTN(__CLC_FP_LIT(0.5)));
+  const __CLC_FLOATN piinv = 0x1.45f306p-2f;
 
-  __CLC_INTN xexp = __CLC_AS_INTN(aux >> EXPSHIFTBITS_SP32) - EXPBIAS_SP32;
+  __CLC_FLOATN ax = __clc_fabs(x);
 
-  __CLC_GENTYPE y = __CLC_AS_GENTYPE(aux);
+  __CLC_FLOATN tx = __clc_mad(ax, -0.5f, 0.5f);
+  __CLC_FLOATN x2 = ax * ax;
+  __CLC_FLOATN r = ax >= 0.5f ? tx : x2;
 
-  // abs(x) >= 0.5
-  __CLC_INTN transform = xexp >= -1;
-
-  __CLC_GENTYPE y2 = y * y;
-  __CLC_GENTYPE rt = 0.5f * (1.0f - y);
-  __CLC_GENTYPE r = transform ? rt : y2;
-
-  // Use a rational approximation for [0.0, 0.5]
-  __CLC_GENTYPE a =
-      __clc_mad(r,
+  __CLC_FLOATN u = r * __clc_mad(r, __clc_mad(r, __clc_mad(r, __clc_mad(r,
                 __clc_mad(r,
-                          __clc_mad(r, -0.00396137437848476485201154797087F,
-                                    -0.0133819288943925804214011424456F),
-                          -0.0565298683201845211985026327361F),
-                0.184161606965100694821398249421F);
-  __CLC_GENTYPE b = __clc_mad(r, -0.836411276854206731913362287293F,
-                              1.10496961524520294485512696706F);
-  __CLC_GENTYPE u = r * MATH_DIVIDE(a, b);
+                    -0x1.3f1c6cp-8f, 0x1.2ac560p-6f), 0x1.80aab4p-8f), 0x1.e53378p-7f),
+                    0x1.86680ap-6f), 0x1.b29c5ap-5f);
 
-  __CLC_GENTYPE s = __clc_sqrt(r);
-  __CLC_GENTYPE s1 = __CLC_AS_GENTYPE(__CLC_AS_UINTN(s) & 0xffff0000);
-  __CLC_GENTYPE c = MATH_DIVIDE(__clc_mad(-s1, s1, r), s + s1);
-  __CLC_GENTYPE p = __clc_mad(2.0f * s, u, -__clc_mad(c, -2.0f, piby2_tail));
-  __CLC_GENTYPE q = __clc_mad(s1, -2.0f, hpiby2_head);
-  __CLC_GENTYPE vt = hpiby2_head - (p - q);
-  __CLC_GENTYPE v = __clc_mad(y, u, y);
-  v = transform ? vt : v;
-  v = MATH_DIVIDE(v, pi);
-  __CLC_GENTYPE xbypi = MATH_DIVIDE(x, pi);
+  __CLC_FLOATN s = __clc_sqrt_fast(r);
+  __CLC_FLOATN ret = __clc_mad(-2.0f, __clc_mad(s, u, piinv * s), 0.5f);
+  __CLC_FLOATN xux = __clc_mad(piinv, ax, ax * u);
+  ret = ax >= 0.5f ? ret : xux;
 
-  __CLC_GENTYPE ret = __CLC_AS_GENTYPE(xs | __CLC_AS_UINTN(v));
-  ret = aux > 0x3f800000U ? __CLC_GENTYPE_NAN : ret;
-  ret = aux == 0x3f800000U ? shalf : ret;
-  ret = xexp < -14 ? xbypi : ret;
-
-  return ret;
+  return __clc_copysign(ret, x);
 }
 
 #elif __CLC_FPSIZE == 64
 
-_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_asinpi(__CLC_GENTYPE x) {
-  const __CLC_GENTYPE pi = __CLC_FP_LIT(0x1.921fb54442d18p+1);
-  // 0x3c91a62633145c07
-  const __CLC_GENTYPE piby2_tail = __CLC_FP_LIT(6.1232339957367660e-17);
-  // 0x3fe921fb54442d18
-  const __CLC_GENTYPE hpiby2_head = __CLC_FP_LIT(7.8539816339744831e-01);
+#define piinv (__CLC_DOUBLEN)0x1.45f306dc9c883p-2
 
-  __CLC_GENTYPE y = __clc_fabs(x);
-  __CLC_LONGN xneg = x < __CLC_FP_LIT(0.0);
-  __CLC_INTN xexp = __CLC_CONVERT_INTN(
-      (__CLC_AS_ULONGN(y) >> EXPSHIFTBITS_DP64) - EXPBIAS_DP64);
-
-  // abs(x) >= 0.5
-  __CLC_LONGN transform = __CLC_CONVERT_LONGN(xexp >= -1);
-
-  __CLC_GENTYPE rt = 0.5 * (1.0 - y);
-  __CLC_GENTYPE y2 = y * y;
-  __CLC_GENTYPE r = transform ? rt : y2;
-
-  // Use a rational approximation for [0.0, 0.5]
-  __CLC_GENTYPE un = __clc_fma(
-      r,
-      __clc_fma(
-          r,
-          __clc_fma(r,
-                    __clc_fma(r,
-                              __clc_fma(r, 0.0000482901920344786991880522822991,
-                                        0.00109242697235074662306043804220),
-                              -0.0549989809235685841612020091328),
-                    0.275558175256937652532686256258),
-          -0.445017216867635649900123110649),
-      0.227485835556935010735943483075);
-
-  __CLC_GENTYPE ud = __clc_fma(
-      r,
-      __clc_fma(r,
-                __clc_fma(r,
-                          __clc_fma(r, 0.105869422087204370341222318533,
-                                    -0.943639137032492685763471240072),
-                          2.76568859157270989520376345954),
-                -3.28431505720958658909889444194),
-      1.36491501334161032038194214209);
-
-  __CLC_GENTYPE u = r * MATH_DIVIDE(un, ud);
-
-  // Reconstruct asin carefully in transformed region
-  __CLC_GENTYPE s = __clc_sqrt(r);
-  __CLC_GENTYPE sh =
-      __CLC_AS_GENTYPE(__CLC_AS_ULONGN(s) & 0xffffffff00000000UL);
-  __CLC_GENTYPE c = MATH_DIVIDE(__clc_fma(-sh, sh, r), s + sh);
-  __CLC_GENTYPE p = __clc_fma(2.0 * s, u, -__clc_fma(-2.0, c, piby2_tail));
-  __CLC_GENTYPE q = __clc_fma(-2.0, sh, hpiby2_head);
-  __CLC_GENTYPE vt = hpiby2_head - (p - q);
-  __CLC_GENTYPE v = __clc_fma(y, u, y);
-  v = transform ? vt : v;
-
-  v = __CLC_CONVERT_LONGN(xexp < -28) ? y : v;
-  v = MATH_DIVIDE(v, pi);
-  v = __CLC_CONVERT_LONGN(xexp >= 0) ? __CLC_GENTYPE_NAN : v;
-  v = y == 1.0 ? 0.5 : v;
-  return xneg ? -v : v;
+static _CLC_OVERLOAD _CLC_CONST __CLC_DOUBLEN __clc_asinpi_identity(
+    __CLC_DOUBLEN x, __CLC_DOUBLEN r, __CLC_DOUBLEN u, __CLC_DOUBLEN v) {
+  __CLC_DOUBLEN y = __clc_fabs(x);
+  __CLC_EP_PAIR s = __clc_ep_ldexp(__clc_ep_sqrt(r), 1);
+  __CLC_EP_PAIR ve = __clc_ep_fast_sub(
+      0.5, __clc_ep_fast_add(__clc_ep_mul(piinv, s), __clc_ep_mul(s, u)));
+  v = ve.hi;
+  return y == 1.0 ? 0.5 : v;
 }
+
+_CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_DOUBLEN __clc_asinpi(__CLC_DOUBLEN x) {
+  // Computes arcsin(x).
+  // The argument is first reduced by noting that arcsin(x)
+  // is invalid for abs(x) > 1 and arcsin(-x) = -arcsin(x).
+  // For denormal and small arguments arcsin(x) = x to machine
+  // accuracy. Remaining argument ranges are handled as follows.
+  // For abs(x) <= 0.5 use
+  // arcsin(x) = x + x^3*R(x^2)
+  // where R(x^2) is a rational minimax approximation to
+  // (arcsin(x) - x)/x^3.
+  // For abs(x) > 0.5 exploit the identity:
+  // arcsin(x) = pi/2 - 2*arcsin(sqrt(1-x)/2)
+  // together with the above rational approximation, and
+  // reconstruct the terms carefully.
+
+  __CLC_DOUBLEN y = __clc_fabs(x);
+  __CLC_LONGN transform = y >= 0.5;
+
+  __CLC_DOUBLEN rt = __clc_mad(y, -0.5, 0.5);
+  __CLC_DOUBLEN y2 = y * y;
+  __CLC_DOUBLEN r = transform ? rt : y2;
+
+  __CLC_DOUBLEN u = r * __clc_mad(r, __clc_mad(r, __clc_mad(r, __clc_mad(r,
+                 __clc_mad(r, __clc_mad(r, __clc_mad(r, __clc_mad(r,
+                 __clc_mad(r, __clc_mad(r, __clc_mad(r,
+                     0x1.547a51d41fb0bp-7, -0x1.6a3fb0718a8f7p-8), 0x1.a7b91f7177ee8p-8), 0x1.035d3435b8ad8p-9),
+                     0x1.ff0549b4e0449p-9), 0x1.21604ae288f96p-8), 0x1.6a2b36f9aec49p-8), 0x1.d2b076c914f04p-8),
+                     0x1.3ce53861f8f1fp-7), 0x1.d1a4529a30a69p-7), 0x1.8723a1d61d2e9p-6), 0x1.b2995e7b7af0fp-5);
+
+  __CLC_DOUBLEN v = __clc_mad(y, piinv, y * u);
+  v = transform ? __clc_asinpi_identity(x, r, u, v) : v;
+
+  return __clc_copysign(v, x);
+}
+
+#undef piinv
 
 #elif __CLC_FPSIZE == 16
 
-_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_asinpi(__CLC_GENTYPE x) {
-  return __CLC_CONVERT_GENTYPE(__clc_asinpi(__CLC_CONVERT_FLOATN(x)));
+static _CLC_OVERLOAD _CLC_CONST __CLC_HALFN __clc_asinpi_small(__CLC_HALFN x) {
+  __CLC_HALFN ax = __clc_fabs(x);
+  __CLC_HALFN s = x * x;
+  return ax * __clc_mad(s, __clc_mad(s, 0x1.0b8p-5h, 0x1.a7cp-5h), 0x1.46p-2h);
+}
+
+static _CLC_OVERLOAD _CLC_CONST __CLC_HALFN __clc_asinpi_large(__CLC_HALFN x) {
+  __CLC_HALFN ax = __clc_fabs(x);
+  __CLC_FLOATN s = __clc_mad(__CLC_CONVERT_FLOATN(ax), -0.5f, 0.5f);
+  __CLC_FLOATN t = __clc_sqrt_fast(s);
+  __CLC_FLOATN p =
+      __clc_mad(t,
+                __clc_mad(s, __clc_mad(s, -0x1.f4b736p-5f, -0x1.ad0826p-4f),
+                          -0x1.45f5a8p-1f),
+                0.5f);
+  return __CLC_CONVERT_HALFN(p);
+}
+
+_CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_HALFN __clc_asinpi(__CLC_HALFN x) {
+  // Computes arcsin(x).
+  // The argument is first reduced by noting that arcsin(x)
+  // is invalid for abs(x) > 1 and arcsin(-x) = -arcsin(x).
+  // For denormal and small arguments arcsin(x) = x to machine
+  // accuracy. Remaining argument ranges are handled as follows.
+  // For abs(x) <= 0.5 use
+  // arcsin(x) = x + x^3*R(x^2)
+  // where R(x^2) is a polynomial minimax approximation to
+  // (arcsin(x) - x)/x^3.
+  // For abs(x) > 0.5 exploit the identity:
+  // arcsin(x) = pi/2 - 2*arcsin(sqrt(1-x)/2)
+  // together with the above polynomial approximation, and
+  // reconstruct the terms carefully.
+
+  __CLC_HALFN ax = __clc_fabs(x);
+  __CLC_HALFN r = ax <= 0.5h ? __clc_asinpi_small(x) : __clc_asinpi_large(x);
+  return __clc_copysign(r, x);
 }
 
 #endif

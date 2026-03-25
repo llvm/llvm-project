@@ -377,6 +377,39 @@ func.func @experimental_constrained_fptrunc(%arg0 : f64) {
 
 // -----
 
+// CHECK-LABEL: @convertf_f16_to_bf16
+func.func @convertf_f16_to_bf16(%arg0 : f16) -> bf16 {
+// CHECK-NEXT: %[[EXT:.*]] = llvm.fpext %arg0 : f16 to f32
+// CHECK-NEXT: %[[TRUNC:.*]] = llvm.fptrunc %[[EXT]] : f32 to bf16
+  %0 = arith.convertf %arg0 : f16 to bf16
+// CHECK-NEXT: return %[[TRUNC]]
+  return %0 : bf16
+}
+
+// -----
+
+// CHECK-LABEL: @convertf_bf16_to_f16
+func.func @convertf_bf16_to_f16(%arg0 : bf16) -> f16 {
+// CHECK-NEXT: %[[EXT:.*]] = llvm.fpext %arg0 : bf16 to f32
+// CHECK-NEXT: %[[TRUNC:.*]] = llvm.fptrunc %[[EXT]] : f32 to f16
+  %0 = arith.convertf %arg0 : bf16 to f16
+// CHECK-NEXT: return %[[TRUNC]]
+  return %0 : f16
+}
+
+// -----
+
+// CHECK-LABEL: @convertf_vector
+func.func @convertf_vector(%arg0 : vector<2xf16>) -> vector<2xbf16> {
+// CHECK-NEXT: %[[EXT:.*]] = llvm.fpext %arg0 : vector<2xf16> to vector<2xf32>
+// CHECK-NEXT: %[[TRUNC:.*]] = llvm.fptrunc %[[EXT]] : vector<2xf32> to vector<2xbf16>
+  %0 = arith.convertf %arg0 : vector<2xf16> to vector<2xbf16>
+// CHECK-NEXT: return %[[TRUNC]]
+  return %0 : vector<2xbf16>
+}
+
+// -----
+
 // Check sign and zero extension and truncation of integers.
 // CHECK-LABEL: @integer_extension_and_truncation
 func.func @integer_extension_and_truncation(%arg0 : i3) {
@@ -838,3 +871,4 @@ func.func @supported_fp_type(%arg0: f32, %arg1: vector<4xf32>, %arg2: vector<4x8
   %3 = arith.cmpf oeq, %arg0, %arg3 : f32
   return
 }
+

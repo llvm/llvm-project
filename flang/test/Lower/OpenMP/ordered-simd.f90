@@ -7,7 +7,7 @@ subroutine ordered_simd(n)
   integer :: n, a(n), b(n), c(n), i
 
 ! CHECK-LABEL: func @_QPordered_simd
-! CHECK:         omp.simd linear({{.*}}) {
+! CHECK:         omp.simd linear({{.*}}) private({{.*}}) {
 ! CHECK:           omp.loop_nest (%{{.*}}) : i32 = (%{{.*}}) to (%{{.*}}) inclusive step (%{{.*}}) {
 ! CHECK:             omp.ordered.region par_level_simd {
 ! CHECK:               omp.terminator
@@ -34,7 +34,7 @@ subroutine ws_ordered_simd(n)
 
 ! CHECK-LABEL: func @_QPws_ordered_simd
 ! CHECK:         omp.wsloop ordered(0) {
-! CHECK:           omp.simd linear({{.*}}) {
+! CHECK:           omp.simd linear({{.*}}) private({{.*}}) {
 ! CHECK:             omp.loop_nest (%{{.*}}) : i32 = (%{{.*}}) to (%{{.*}}) inclusive step (%{{.*}}) {
 ! CHECK:               omp.ordered.region par_level_simd {
 ! CHECK:                 omp.terminator

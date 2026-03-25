@@ -1916,6 +1916,24 @@ TLI_DEFINE_VECFUNC("erfc", "amd_vrd8_erfc", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
 TLI_DEFINE_VECFUNC("erfcf", "amd_vrs4_erfcf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("erfcf", "amd_vrs8_erfcf", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
 TLI_DEFINE_VECFUNC("erfcf", "amd_vrs16_erfcf", FIXED(16), NOMASK, "_ZGV_LLVM_N16v")
+
+TLI_DEFINE_VECFUNC("cdfnorm", "amd_vrd2_cdfnorm", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("cdfnorm", "amd_vrd4_cdfnorm", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("cdfnorm", "amd_vrd8_cdfnorm", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("roundf", "amd_vrs16_roundf", FIXED(16), NOMASK, "_ZGV_LLVM_N16v")
+TLI_DEFINE_VECFUNC("roundf", "amd_vrs8_roundf", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("roundf", "amd_vrs4_roundf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("round", "amd_vrd8_round", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("round", "amd_vrd4_round", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("round", "amd_vrd2_round", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
+
+TLI_DEFINE_VECFUNC("llvm.round.f32", "amd_vrs16_roundf", FIXED(16), NOMASK, "_ZGV_LLVM_N16v")
+TLI_DEFINE_VECFUNC("llvm.round.f32", "amd_vrs8_roundf", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("llvm.round.f32", "amd_vrs4_roundf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.round.f64", "amd_vrd8_round", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("llvm.round.f64", "amd_vrd4_round", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.round.f64", "amd_vrd2_round", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
 #else
 #error "Must choose which vector library functions are to be defined."
 #endif

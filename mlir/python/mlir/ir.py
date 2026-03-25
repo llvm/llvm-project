@@ -9,6 +9,7 @@ from contextlib import contextmanager
 
 from ._mlir_libs._mlir.ir import *
 from ._mlir_libs._mlir.ir import _GlobalDebug
+from ._mlir_libs._mlir.ir import _OperationBase
 from ._mlir_libs._mlir import (
     register_type_caster,
     register_value_caster,

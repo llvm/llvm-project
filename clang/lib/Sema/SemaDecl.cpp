@@ -2245,8 +2245,13 @@ void Sema::DiagnoseUnusedButSetDecl(const VarDecl *VD,
       return;
   }
 
-  unsigned DiagID = isa<ParmVarDecl>(VD) ? diag::warn_unused_but_set_parameter
-                                         : diag::warn_unused_but_set_variable;
+  unsigned DiagID;
+  if (isa<ParmVarDecl>(VD))
+    DiagID = diag::warn_unused_but_set_parameter;
+  else if (VD->isFileVarDecl())
+    DiagID = diag::warn_unused_but_set_global;
+  else
+    DiagID = diag::warn_unused_but_set_variable;
   DiagReceiver(VD->getLocation(), PDiag(DiagID) << VD);
 }
 
@@ -2897,7 +2902,8 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
         D, *AA, AA->getPlatform(), AA->isImplicit(), AA->getIntroduced(),
         AA->getDeprecated(), AA->getObsoleted(), AA->getUnavailable(),
         AA->getMessage(), AA->getStrict(), AA->getReplacement(), AMK,
-        AA->getPriority(), AA->getEnvironment());
+        AA->getPriority(), AA->getEnvironment(),
+        AA->getOrigAnyAppleOSVersion());
   else if (const auto *VA = dyn_cast<VisibilityAttr>(Attr))
     NewAttr = S.mergeVisibilityAttr(D, *VA, VA->getVisibility());
   else if (const auto *VA = dyn_cast<TypeVisibilityAttr>(Attr))

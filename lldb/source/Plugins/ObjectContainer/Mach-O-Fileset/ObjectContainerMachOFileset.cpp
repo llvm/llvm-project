@@ -219,18 +219,18 @@ bool ObjectContainerMachOFileset::ParseHeader() {
   return ParseFileset(*m_extractor_sp, *header, m_entries, m_memory_addr);
 }
 
-size_t ObjectContainerMachOFileset::GetModuleSpecifications(
+ModuleSpecList ObjectContainerMachOFileset::GetModuleSpecifications(
     const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
     lldb::offset_t data_offset, lldb::offset_t file_offset,
-    lldb::offset_t file_size, lldb_private::ModuleSpecList &specs) {
-  const size_t initial_count = specs.GetSize();
+    lldb::offset_t file_size) {
   if (!extractor_sp)
-    return initial_count;
+    return {};
 
   DataExtractorSP data_extractor_sp =
       extractor_sp->GetSubsetExtractorSP(data_offset);
   if (!data_extractor_sp)
-    return initial_count;
+    return {};
+  ModuleSpecList specs;
   if (MagicBytesMatch(*data_extractor_sp)) {
     std::vector<Entry> entries;
     if (ParseHeader(*data_extractor_sp, file, file_offset, entries)) {
@@ -244,7 +244,7 @@ size_t ObjectContainerMachOFileset::GetModuleSpecifications(
       }
     }
   }
-  return specs.GetSize() - initial_count;
+  return specs;
 }
 
 bool ObjectContainerMachOFileset::MagicBytesMatch(DataBufferSP data_sp,

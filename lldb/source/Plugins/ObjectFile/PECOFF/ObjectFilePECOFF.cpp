@@ -254,14 +254,13 @@ ObjectFile *ObjectFilePECOFF::CreateMemoryInstance(
   return nullptr;
 }
 
-size_t ObjectFilePECOFF::GetModuleSpecifications(
+ModuleSpecList ObjectFilePECOFF::GetModuleSpecifications(
     const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
     lldb::offset_t data_offset, lldb::offset_t file_offset,
-    lldb::offset_t length, lldb_private::ModuleSpecList &specs) {
-  const size_t initial_count = specs.GetSize();
+    lldb::offset_t length) {
   if (!extractor_sp || !extractor_sp->HasData() ||
       !ObjectFilePECOFF::MagicBytesMatch(extractor_sp))
-    return initial_count;
+    return {};
 
   Log *log = GetLog(LLDBLog::Object);
 
@@ -275,12 +274,12 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
   if (!binary) {
     LLDB_LOG_ERROR(log, binary.takeError(),
                    "Failed to create binary for file ({1}): {0}", file);
-    return initial_count;
+    return {};
   }
 
   auto *COFFObj = llvm::dyn_cast<llvm::object::COFFObjectFile>(binary->get());
   if (!COFFObj)
-    return initial_count;
+    return {};
 
   ModuleSpec module_spec(file);
   ArchSpec &spec = module_spec.GetArchitecture();
@@ -334,6 +333,7 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
   if (env == llvm::Triple::UnknownEnvironment)
     env = default_env;
 
+  ModuleSpecList specs;
   switch (COFFObj->getMachine()) {
   case MachineAmd64:
     spec.SetTriple("x86_64-pc-windows");
@@ -360,7 +360,7 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
     break;
   }
 
-  return specs.GetSize() - initial_count;
+  return specs;
 }
 
 bool ObjectFilePECOFF::SaveCore(const lldb::ProcessSP &process_sp,

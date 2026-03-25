@@ -17,6 +17,7 @@
 #include "clc/math/clc_recip_fast.h"
 #include "clc/math/clc_rint.h"
 #include "clc/math/clc_sqrt_fast.h"
+#include "clc/math/math.h"
 #include "clc/relational/clc_isinf.h"
 #include "clc/relational/clc_signbit.h"
 

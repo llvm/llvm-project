@@ -181,6 +181,7 @@ Changes to the RISC-V Backend
 * Adds experimental assembler support for the 'Zvzip` (RISC-V Vector
   Reordering Structured Data) extension.
 * `-mcpu=sifive-x160` and `-mcpu=sifive-x180` were added.
+* Support for the experimental `XRivosVisni` vendor extension has been removed.
 
 Changes to the WebAssembly Backend
 ----------------------------------

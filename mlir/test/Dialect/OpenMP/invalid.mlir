@@ -3170,6 +3170,81 @@ func.func @omp_declare_simd_branch() -> () {
 
 // -----
 
+func.func @omp_wsloop_linear_ref(%lb : index, %ub : index, %step : index,
+                                  %data_var : memref<i32>, %linear_var : i32) {
+  // expected-error @+1 {{'omp.wsloop' op linear modifier 'ref' may only be specified on a declare simd directive}}
+  omp.wsloop linear(ref(%data_var : memref<i32> = %linear_var : i32)) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  } {linear_var_types = [i32]}
+  return
+}
+
+// -----
+
+func.func @omp_wsloop_linear_uval(%lb : index, %ub : index, %step : index,
+                                    %data_var : memref<i32>, %linear_var : i32) {
+  // expected-error @+1 {{'omp.wsloop' op linear modifier 'uval' may only be specified on a declare simd directive}}
+  omp.wsloop linear(uval(%data_var : memref<i32> = %linear_var : i32)) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  } {linear_var_types = [i32]}
+  return
+}
+
+// -----
+
+func.func @omp_simd_linear_ref(%lb : index, %ub : index, %step : index,
+                                %data_var : memref<i32>, %linear_var : i32) {
+  // expected-error @+1 {{'omp.simd' op linear modifier 'ref' may only be specified on a declare simd directive}}
+  omp.simd linear(ref(%data_var : memref<i32> = %linear_var : i32)) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  } {linear_var_types = [i32]}
+  return
+}
+
+// -----
+
+func.func @omp_wsloop_linear_modifiers_mismatch(%lb : index, %ub : index, %step : index,
+                                                 %data_var : memref<i32>, %linear_var : i32) {
+  // expected-error @below {{'omp.wsloop' op expected as many linear modifiers as linear variables}}
+  "omp.wsloop"(%data_var, %linear_var) ({
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }) {linear_modifiers = [#omp<linear_modifier(val)>, #omp<linear_modifier(val)>],
+      operandSegmentSizes = array<i32: 0, 0, 1, 1, 0, 0, 0>} : (memref<i32>, i32) -> ()
+  return
+}
+
+// -----
+
+func.func @omp_simd_linear_modifiers_mismatch(%lb : index, %ub : index, %step : index,
+                                               %data_var : memref<i32>, %linear_var : i32) {
+  // expected-error @below {{'omp.simd' op expected as many linear modifiers as linear variables}}
+  "omp.simd"(%data_var, %linear_var) ({
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }) {linear_modifiers = [#omp<linear_modifier(val)>, #omp<linear_modifier(val)>],
+      operandSegmentSizes = array<i32: 0, 0, 1, 1, 0, 0, 0>} : (memref<i32>, i32) -> ()
+  return
+}
+
+// -----
+
+func.func @omp_declare_simd_linear_modifiers_mismatch(%iv : i32, %step : i32) {
+  // expected-error @below {{'omp.declare_simd' op expected as many linear modifiers as linear variables}}
+  "omp.declare_simd"(%iv, %step) <{linear_modifiers = [#omp<linear_modifier(val)>, #omp<linear_modifier(ref)>], operandSegmentSizes = array<i32: 0, 1, 1, 0>}> : (i32, i32) -> ()
+  return
+}
+
+// -----
+
 func.func @iterator_bad_result_type(%lb : index, %ub : index, %st : index) {
   // expected-error@+1 {{result #0 must be OpenMP iterator-produced list handle, but got 'index'}}
   %0 = omp.iterator(%i: index) = (%lb to %ub step %st) {

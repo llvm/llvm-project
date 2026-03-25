@@ -59,6 +59,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/OpenACC/OpenACCUtilsLoop.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/IRMapping.h"
@@ -215,22 +216,28 @@ void ACCIfClauseLowering::lowerIfClauseForComputeConstruct(
     scf::YieldOp::create(rewriter, computeConstructOp.getLoc());
 
   // Host execution path (false branch)
-  if (!computeConstructOp.getRegion().hasOneBlock()) {
-    accSupport->emitNYI(computeConstructOp.getLoc(),
-                        "region with multiple blocks");
-    return;
+  Region &hostRegion = computeConstructOp.getRegion();
+  if (hostRegion.hasOneBlock()) {
+    // Don't need to clone original ops, just take them and legalize for host.
+    ifOp.getElseRegion().takeBody(hostRegion);
+
+    // Swap acc yield for scf yield.
+    Block &elseBlock = ifOp.getElseRegion().front();
+    elseBlock.getTerminator()->erase();
+    rewriter.setInsertionPointToEnd(&elseBlock);
+    scf::YieldOp::create(rewriter, computeConstructOp.getLoc());
+
+    convertHostRegion(computeConstructOp, ifOp.getElseRegion());
+  } else {
+    // scf.if regions must stay single-block. Wrap the original multi-block ACC
+    // body in scf.execute_region so it can be hosted in the else branch.
+    Block &elseBlock = ifOp.getElseRegion().front();
+    rewriter.setInsertionPoint(elseBlock.getTerminator());
+    IRMapping hostMapping;
+    auto hostExecuteRegion = wrapMultiBlockRegionWithSCFExecuteRegion(
+        hostRegion, hostMapping, computeConstructOp.getLoc(), rewriter);
+    convertHostRegion(computeConstructOp, hostExecuteRegion.getRegion());
   }
-
-  // Don't need to clone original ops, just take them and legalize for host
-  ifOp.getElseRegion().takeBody(computeConstructOp.getRegion());
-
-  // Swap acc yield for scf yield
-  Block &elseBlock = ifOp.getElseRegion().front();
-  elseBlock.getTerminator()->erase();
-  rewriter.setInsertionPointToEnd(&elseBlock);
-  scf::YieldOp::create(rewriter, computeConstructOp.getLoc());
-
-  convertHostRegion(computeConstructOp, ifOp.getElseRegion());
 
   // The original op is now empty and can be erased
   eraseOps.push_back(computeConstructOp);

@@ -612,7 +612,6 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
 
   if (src && src_len > 0) {
     if (log && log->GetVerbose()) {
-      StreamString s;
       LLDB_LOGF(log, "GDBRemoteCommunication::%s adding %u bytes: %.*s",
                 __FUNCTION__, (uint32_t)src_len, (uint32_t)src_len, src);
     }
