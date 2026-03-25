@@ -12695,7 +12695,11 @@ SDValue DAGCombiner::foldSelectToABD(SDValue LHS, SDValue RHS, SDValue True,
     if (sd_match(True, m_AnyOf(m_Sub(m_Specific(RHS), m_Specific(LHS)),
                                m_Add(m_Specific(RHS), m_SpecificNeg(LHS)))) &&
         sd_match(False, m_AnyOf(m_Sub(m_Specific(LHS), m_Specific(RHS)),
-                                m_Add(m_Specific(LHS), m_SpecificNeg(RHS)))))
+                                m_Add(m_Specific(LHS), m_SpecificNeg(RHS)))) &&
+        (VT.getScalarSizeInBits() <
+             TLI.getLegalTypeToTransformTo(*DAG.getContext(), VT)
+                 .getScalarSizeInBits() ||
+         hasOperation(ABDOpc, VT)))
       return DAG.getNegative(DAG.getNode(ABDOpc, DL, VT, LHS, RHS), DL, VT);
     break;
   case ISD::SETLT:
@@ -12710,7 +12714,11 @@ SDValue DAGCombiner::foldSelectToABD(SDValue LHS, SDValue RHS, SDValue True,
     if (sd_match(True, m_AnyOf(m_Sub(m_Specific(LHS), m_Specific(RHS)),
                                m_Add(m_Specific(LHS), m_SpecificNeg(RHS)))) &&
         sd_match(False, m_AnyOf(m_Sub(m_Specific(RHS), m_Specific(LHS)),
-                                m_Add(m_Specific(RHS), m_SpecificNeg(LHS)))))
+                                m_Add(m_Specific(RHS), m_SpecificNeg(LHS)))) &&
+        (VT.getScalarSizeInBits() <
+             TLI.getLegalTypeToTransformTo(*DAG.getContext(), VT)
+                 .getScalarSizeInBits() ||
+         hasOperation(ABDOpc, VT)))
       return DAG.getNegative(DAG.getNode(ABDOpc, DL, VT, LHS, RHS), DL, VT);
     break;
   default:
