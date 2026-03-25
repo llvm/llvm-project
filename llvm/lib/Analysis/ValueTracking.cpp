@@ -499,8 +499,9 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
   KnownOut = KnownBits::computeForAddSub(Add, NSW, NUW, Known2, KnownOut);
 
   if (!Add && NSW && !KnownOut.isNonNegative() &&
-      isImpliedByDomCondition(ICmpInst::ICMP_SLE, Op1, Op0, Q.CxtI, Q.DL)
-          .value_or(false))
+      (isImpliedByDomCondition(ICmpInst::ICMP_SLE, Op1, Op0, Q.CxtI, Q.DL)
+           .value_or(false) ||
+       match(Op1, m_c_SMin(m_Specific(Op0), m_Value()))))
     KnownOut.makeNonNegative();
 
   if (Add)

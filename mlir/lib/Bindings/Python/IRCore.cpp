@@ -154,9 +154,10 @@ PyAttrBuilderMap::dunderGetItemNamed(const std::string &attributeKind) {
 }
 
 void PyAttrBuilderMap::dunderSetItemNamed(const std::string &attributeKind,
-                                          nb::callable func, bool replace) {
+                                          nb::callable func, bool replace,
+                                          bool allow_existing) {
   PyGlobals::get().registerAttributeBuilder(attributeKind, std::move(func),
-                                            replace);
+                                            replace, allow_existing);
 }
 
 void PyAttrBuilderMap::bind(nb::module_ &m) {
@@ -171,6 +172,7 @@ void PyAttrBuilderMap::bind(nb::module_ &m) {
                   "attribute kind.")
       .def_static("insert", &PyAttrBuilderMap::dunderSetItemNamed,
                   "attribute_kind"_a, "attr_builder"_a, "replace"_a = false,
+                  "allow_existing"_a = false,
                   "Register an attribute builder for building MLIR "
                   "attributes from Python values.");
 }
@@ -1589,7 +1591,7 @@ static MlirValue getOpResultOrValue(nb::handle operand) {
   throw nb::value_error("is not a Value");
 }
 
-nb::object PyOpView::buildGeneric(
+nb::typed<nb::object, PyOperation> PyOpView::buildGeneric(
     std::string_view name, std::tuple<int, bool> opRegionSpec,
     nb::object operandSegmentSpecObj, nb::object resultSegmentSpecObj,
     std::optional<nb::list> resultTypeList, nb::list operandList,
@@ -4842,12 +4844,12 @@ void populateIRCore(nb::module_ &m) {
           "Returns the string form of value as an operand (i.e., the ValueID).")
       .def_prop_ro(
           "type",
-          [](PyValue &self) -> nb::typed<nb::object, PyType> {
+          [](PyValue &self) {
             return PyType(self.getParentOperation()->getContext(),
                           mlirValueGetType(self.get()))
                 .maybeDownCast();
           },
-          "Returns the type of the value.")
+          "Returns the type of the value.", nb::sig("def type(self) -> _T"))
       .def(
           "set_type",
           [](PyValue &self, const PyType &type) {

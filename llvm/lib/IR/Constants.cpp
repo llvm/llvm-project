@@ -46,7 +46,7 @@ static cl::opt<bool> UseConstantIntForScalableSplat(
     "use-constant-int-for-scalable-splat", cl::init(false), cl::Hidden,
     cl::desc("Use ConstantInt's native scalable vector splat support."));
 static cl::opt<bool> UseConstantFPForScalableSplat(
-    "use-constant-fp-for-scalable-splat", cl::init(false), cl::Hidden,
+    "use-constant-fp-for-scalable-splat", cl::init(true), cl::Hidden,
     cl::desc("Use ConstantFP's native scalable vector splat support."));
 
 //===----------------------------------------------------------------------===//

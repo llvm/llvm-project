@@ -38,6 +38,8 @@ TEST(LlvmLibcSharedMathTest, AllFloat16) {
   EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::exp2m1f16(0.0f16));
   EXPECT_FP_EQ(0x1p+0f16, LIBC_NAMESPACE::shared::expf16(0.0f16));
   EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::expm1f16(0.0f16));
+  EXPECT_FP_EQ(0x0p+0f16,
+               LIBC_NAMESPACE::shared::fmaf16(0.0f16, 0.0f16, 0.0f16));
   EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::hypotf16(0.0f16, 0.0f16));
   EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::logf16(1.0f16));
   EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::sinhf16(0.0f16));
@@ -169,6 +171,7 @@ TEST(LlvmLibcSharedMathTest, AllFloat) {
   EXPECT_FP_EQ(0x1p+0f, LIBC_NAMESPACE::shared::expf(0.0f));
   EXPECT_FP_EQ(0x1p+0f, LIBC_NAMESPACE::shared::exp2f(0.0f));
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::expm1f(0.0f));
+  EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::fmaf(0.0f, 0.0f, 0.0f));
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::hypotf(0.0f, 0.0f));
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::logf(1.0f));
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::sinhf(0.0f));
@@ -247,6 +250,7 @@ TEST(LlvmLibcSharedMathTest, AllDouble) {
   EXPECT_FP_EQ(0x1p+0, LIBC_NAMESPACE::shared::exp2(0.0));
   EXPECT_FP_EQ(0x1p+0, LIBC_NAMESPACE::shared::exp10(0.0));
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::expm1(0.0));
+  EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::fma(0.0, 0.0, 0.0));
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::ffma(0.0, 0.0, 0.0));
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::hypot(0.0, 0.0));
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::fsqrt(0.0));
@@ -312,6 +316,7 @@ TEST(LlvmLibcSharedMathTest, AllLongDouble) {
 
   EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::bf16mull(0.0L, 0.0L));
   EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::ceill(0.0L));
+  EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::daddl(0.0L, 0.0L));
   EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::faddl(0.0L, 0.0L));
   EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::fdiml(0.0L, 0.0L));
   EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::floorl(0.0L));
@@ -371,13 +376,18 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::canonicalizef128(&canonicalizef128_cx,
                                                         &canonicalizef128_x));
   EXPECT_FP_EQ(float128(0.0), canonicalizef128_cx);
+
   EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::bf16subf128(
                                   float128(0.0), float128(0.0)));
   EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::bf16fmaf128(
                                   float128(0.0), float128(0.0), float128(0.0)));
   EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::bf16mulf128(
                                   float128(0.0), float128(0.0)));
+  EXPECT_FP_EQ(bfloat16(2.0), LIBC_NAMESPACE::shared::bf16divf128(
+                                  float128(4.0), float128(2.0)));
   EXPECT_FP_EQ(float128(0.0), LIBC_NAMESPACE::shared::ceilf128(float128(0.0)));
+  EXPECT_FP_EQ(float128(0.0),
+               LIBC_NAMESPACE::shared::daddf128(float128(0.0), float128(0.0)));
   EXPECT_FP_EQ(float128(0.0),
                LIBC_NAMESPACE::shared::faddf128(float128(0.0), float128(0.0)));
   EXPECT_FP_EQ(float128(0.0), LIBC_NAMESPACE::shared::floorf128(float128(0.0)));
@@ -412,6 +422,7 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
 
 TEST(LlvmLibcSharedMathTest, AllBFloat16) {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<bfloat16>;
+  EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::atanbf16(bfloat16(0.0)));
   EXPECT_FP_EQ(bfloat16(5.0), LIBC_NAMESPACE::shared::bf16add(2.0, 3.0));
   EXPECT_FP_EQ(bfloat16(2.0f), LIBC_NAMESPACE::shared::bf16divf(4.0f, 2.0f));
   EXPECT_FP_EQ(bfloat16(2.0), LIBC_NAMESPACE::shared::bf16divl(6.0L, 3.0L));
@@ -468,4 +479,5 @@ TEST(LlvmLibcSharedMathTest, AllBFloat16) {
                LIBC_NAMESPACE::shared::nexttowardbf16(bfloat16(0.0), 0.0L));
   EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::nextafterbf16(
                                   bfloat16(0.0), bfloat16(0.0)));
+  EXPECT_FP_EQ(bfloat16(1.0), LIBC_NAMESPACE::shared::sqrtbf16(bfloat16(1.0)));
 }

@@ -658,12 +658,10 @@ ImplSP FormatManager::GetCached(FormattersMatchData &match_data) {
     LLDB_LOGF(log, "\n\n" FORMAT_LOG("Looking into cache for type %s"),
               match_data.GetTypeForCache().AsCString("<invalid>"));
     if (m_format_cache.Get(match_data.GetTypeForCache(), retval_sp)) {
-      if (log) {
-        LLDB_LOGF(log, FORMAT_LOG("Cache search success. Returning."));
-        LLDB_LOGV(log, "Cache hits: {0} - Cache Misses: {1}",
-                  m_format_cache.GetCacheHits(),
-                  m_format_cache.GetCacheMisses());
-      }
+      LLDB_LOGF(log, FORMAT_LOG("Cache search success. Returning."));
+      LLDB_LOG_VERBOSE(log, "Cache hits: {0} - Cache Misses: {1}",
+                       m_format_cache.GetCacheHits(),
+                       m_format_cache.GetCacheMisses());
       return retval_sp;
     }
     LLDB_LOGF(log, FORMAT_LOG("Cache search failed. Going normal route"));
@@ -676,8 +674,9 @@ ImplSP FormatManager::GetCached(FormattersMatchData &match_data) {
               match_data.GetTypeForCache().AsCString("<invalid>"));
     m_format_cache.Set(match_data.GetTypeForCache(), retval_sp);
   }
-  LLDB_LOGV(log, "Cache hits: {0} - Cache Misses: {1}",
-            m_format_cache.GetCacheHits(), m_format_cache.GetCacheMisses());
+  LLDB_LOG_VERBOSE(log, "Cache hits: {0} - Cache Misses: {1}",
+                   m_format_cache.GetCacheHits(),
+                   m_format_cache.GetCacheMisses());
   return retval_sp;
 }
 

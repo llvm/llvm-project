@@ -38,6 +38,8 @@ foreach i = {8-15} in
 foreach i = {16-31} in
     def FeatureReserveR#i : SubtargetFeature<"reserve-r"#i, "ReservedRReg[X86::R"#i#"]", "true",
                                              "Reserve R"#i#", making it unavailable as a GPR">;
+def FeatureReserveEDI : SubtargetFeature<"reserve-edi", "ReservedRReg[X86::EDI]", "true",
+                                         "Reserve EDI, making it unavailable as a GPR">;
 
 def FeatureX87     : SubtargetFeature<"x87","HasX87", "true",
                                       "Enable X87 float instructions">;
@@ -778,6 +780,14 @@ def TuningUseSLMArithCosts
 def TuningUseGLMDivSqrtCosts
     : SubtargetFeature<"use-glm-div-sqrt-costs", "UseGLMDivSqrtCosts", "true",
         "Use Goldmont specific floating point div/sqrt costs">;
+
+def TuningNDDImm
+    : SubtargetFeature<"prefer-ndd-imm", "HasNDDI",
+          "true", "Prefer NDD immediate variant">;
+
+def TuningNDDMem
+    : SubtargetFeature<"prefer-ndd-mem", "HasNDDM",
+          "true", "Prefer NDD memory addressing">;
 
 // Starting with Redwood Cove architecture, the branch has branch taken hint
 // (i.e., instruction prefix 3EH).

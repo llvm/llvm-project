@@ -287,7 +287,7 @@ static InstructionCost getOutliningBenefit(ArrayRef<BasicBlock *> Region,
   // with \ref getOutliningPenalty is needed to model the costs of terminators.
   InstructionCost Benefit = 0;
   for (BasicBlock *BB : Region)
-    for (Instruction &I : BB->instructionsWithoutDebug())
+    for (Instruction &I : *BB)
       if (&I != BB->getTerminator())
         Benefit +=
             TTI.getInstructionCost(&I, TargetTransformInfo::TCK_CodeSize);

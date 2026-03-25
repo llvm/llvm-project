@@ -81,7 +81,6 @@ struct MissingFeatures {
   static bool opFuncMultipleReturnVals() { return false; }
   static bool opFuncNakedAttr() { return false; }
   static bool opFuncNoDuplicateAttr() { return false; }
-  static bool opFuncNoUnwind() { return false; }
   static bool opFuncOpenCLKernelMetadata() { return false; }
   static bool opFuncOperandBundles() { return false; }
   static bool opFuncOptNoneAttr() { return false; }
