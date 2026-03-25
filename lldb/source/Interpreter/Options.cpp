@@ -23,6 +23,7 @@
 #include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/ErrorExtras.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -275,7 +276,8 @@ void Options::OutputFormattedUsageText(Stream &strm,
   actual_text.append(
       ansi::FormatAnsiTerminalCodes(option_def.usage_text, use_color));
 
-  ansi::OutputWordWrappedLines(strm, actual_text, output_max_columns);
+  ansi::OutputWordWrappedLines(strm, actual_text, output_max_columns,
+                               use_color);
 }
 
 bool Options::SupportsLongOption(const char *long_option) {
@@ -979,8 +981,8 @@ llvm::Expected<Args> Options::ParseAlias(const Args &args,
 
     // See if the option takes an argument, and see if one was supplied.
     if (long_options_index == -1) {
-      return llvm::createStringError(
-          llvm::formatv("Invalid option with value '{0}'.", char(val)).str());
+      return llvm::createStringErrorV("Invalid option with value '{0}'.",
+                                      char(val));
     }
 
     StreamString option_str;

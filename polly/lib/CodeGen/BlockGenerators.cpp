@@ -624,7 +624,7 @@ void BlockGenerator::generateConditionalExecution(
   DomTreeUpdater DTU(GenDT, DomTreeUpdater::UpdateStrategy::Eager);
   SplitBlockAndInsertIfThen(Cond, Builder.GetInsertPoint(), false, nullptr,
                             &DTU, GenLI);
-  BranchInst *Branch = cast<BranchInst>(HeadBlock->getTerminator());
+  CondBrInst *Branch = cast<CondBrInst>(HeadBlock->getTerminator());
   BasicBlock *ThenBlock = Branch->getSuccessor(0);
   BasicBlock *TailBlock = Branch->getSuccessor(1);
 
@@ -1319,12 +1319,12 @@ void RegionGenerator::generateScalarStores(
           Value *Address = getImplicitAddress(*MA, getLoopForStmt(Stmt), LTS,
                                               BBMap, NewAccesses);
           assert((!isa<Instruction>(NewVal) ||
-                  DT.dominates(cast<Instruction>(NewVal)->getParent(),
-                               Builder.GetInsertBlock())) &&
+                  GenDT->dominates(cast<Instruction>(NewVal)->getParent(),
+                                   Builder.GetInsertBlock())) &&
                  "Domination violation");
           assert((!isa<Instruction>(Address) ||
-                  DT.dominates(cast<Instruction>(Address)->getParent(),
-                               Builder.GetInsertBlock())) &&
+                  GenDT->dominates(cast<Instruction>(Address)->getParent(),
+                                   Builder.GetInsertBlock())) &&
                  "Domination violation");
           Builder.CreateStore(NewVal, Address);
         });

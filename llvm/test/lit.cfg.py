@@ -63,8 +63,8 @@ if config.enable_profcheck:
     config.excludes.append("llvm-objcopy")
     # (Issue #161235) Temporarily exclude LoopVectorize.
     config.excludes.append("LoopVectorize")
-    # exclude UpdateTestChecks - they fail because of inserted prof annotations
-    config.excludes.append("UpdateTestChecks")
+    # Exclude suites that fail due to inserted profile annotations.
+    config.excludes.extend(["UpdateTestChecks", "Bitcode"])
     # TODO(#166655): Reenable Instrumentation tests
     config.excludes.append("Instrumentation")
     # profiling doesn't work quite well on GPU, excluding
@@ -317,7 +317,6 @@ tools.extend(
         "obj2yaml",
         "yaml-bench",
         "verify-uselistorder",
-        "bugpoint",
         "llc",
         "llvm-symbolizer",
         "opt",
@@ -828,6 +827,8 @@ if config.have_ondisk_cas:
 if "MemoryWithOrigins" in config.llvm_use_sanitizer:
     config.available_features.add("use_msan_with_origins")
 
+if "Undefined" in config.llvm_use_sanitizer:
+    config.available_features.add("ubsan")
 
 # Restrict the size of the on-disk CAS for tests. This allows testing in
 # constrained environments (e.g. small TMPDIR). It also prevents leaving

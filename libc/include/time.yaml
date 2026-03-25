@@ -26,7 +26,7 @@ functions:
       - stdc
     return_type: char *
     arguments:
-      - type: struct tm *
+      - type: const struct tm *
       - type: char *
   - name: ctime
     standard:
@@ -93,13 +93,13 @@ functions:
       - stdc
     return_type: struct tm *
     arguments:
-      - type: time_t *
+      - type: const time_t *
   - name: gmtime_r
     standard:
       - stdc
     return_type: struct tm *
     arguments:
-      - type: time_t *
+      - type: const time_t *
       - type: struct tm *
   - name: mktime
     standard:

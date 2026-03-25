@@ -1,6 +1,0 @@
-libexecdir=@CMAKE_INSTALL_PREFIX@/@CMAKE_INSTALL_DATADIR@/clc
-
-Name: libclc
-Description: Library requirements of the OpenCL C programming language
-Version: @PROJECT_VERSION@
-Libs: -L${libexecdir}

@@ -2620,14 +2620,21 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   //    S = (S1 & S2) | (V1 & S2) | (S1 & V2)
   Value *handleBitwiseAnd(IRBuilder<> &IRB, Value *V1, Value *V2, Value *S1,
                           Value *S2) {
+    // "The two arguments to the ‘and’ instruction must be integer or vector
+    //  of integer values. Both arguments must have identical types."
+    //
+    // We enforce this condition for all callers to handleBitwiseAnd(); callers
+    // with non-integer types should call CreateAppToShadowCast() themselves.
+    assert(V1->getType()->isIntOrIntVectorTy());
+    assert(V1->getType() == V2->getType());
+
+    // Conveniently, getShadowTy() of Int/IntVector returns the original type.
+    assert(V1->getType() == S1->getType());
+    assert(V2->getType() == S2->getType());
+
     Value *S1S2 = IRB.CreateAnd(S1, S2);
     Value *V1S2 = IRB.CreateAnd(V1, S2);
     Value *S1V2 = IRB.CreateAnd(S1, V2);
-
-    if (V1->getType() != S1->getType()) {
-      V1 = IRB.CreateIntCast(V1, S1->getType(), false);
-      V2 = IRB.CreateIntCast(V2, S2->getType(), false);
-    }
 
     return IRB.CreateOr({S1S2, V1S2, S1V2});
   }
@@ -2662,10 +2669,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *S2 = getShadow(&I, 1);
     Value *V1 = I.getOperand(0);
     Value *V2 = I.getOperand(1);
-    if (V1->getType() != S1->getType()) {
-      V1 = IRB.CreateIntCast(V1, S1->getType(), false);
-      V2 = IRB.CreateIntCast(V2, S2->getType(), false);
-    }
+
+    // "The two arguments to the ‘or’ instruction must be integer or vector
+    //  of integer values. Both arguments must have identical types."
+    assert(V1->getType()->isIntOrIntVectorTy());
+    assert(V1->getType() == V2->getType());
+
+    // Conveniently, getShadowTy() of Int/IntVector returns the original type.
+    assert(V1->getType() == S1->getType());
+    assert(V2->getType() == S2->getType());
 
     Value *NotV1 = IRB.CreateNot(V1);
     Value *NotV2 = IRB.CreateNot(V2);
@@ -6885,6 +6897,68 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                                         /*WriteThruIndex=*/2,
                                         /*MaskIndex=*/3);
       break;
+
+    // AVX512 Vector Scale Float* Packed
+    //
+    //  < 8 x double> @llvm.x86.avx512.mask.scalef.pd.512
+    //                   (<8 x double>, <8 x double>, <8 x double>, i8, i32)
+    //                    A             B             WriteThru     Msk Round
+    //  < 4 x double> @llvm.x86.avx512.mask.scalef.pd.256
+    //                   (<4 x double>, <4 x double>, <4 x double>, i8)
+    //  < 2 x double> @llvm.x86.avx512.mask.scalef.pd.128
+    //                   (<2 x double>, <2 x double>, <2 x double>, i8)
+    //
+    //  <16 x float> @llvm.x86.avx512.mask.scalef.ps.512
+    //                    (<16 x float>, <16 x float>, <16 x float>, i16, i32)
+    //  < 8 x float> @llvm.x86.avx512.mask.scalef.ps.256
+    //                    (<8 x float>, <8 x float>, <8 x float>, i8)
+    //  < 4 x float> @llvm.x86.avx512.mask.scalef.ps.128
+    //                    (<4 x float>, <4 x float>, <4 x float>, i8)
+    //
+    //  <32 x half> @llvm.x86.avx512fp16.mask.scalef.ph.512
+    //                   (<32 x half>, <32 x half>, <32 x half>, i32, i32)
+    //  <16 x half> @llvm.x86.avx512fp16.mask.scalef.ph.256
+    //                   (<16 x half>, <16 x half>, <16 x half>, i16)
+    //  < 8 x half> @llvm.x86.avx512fp16.mask.scalef.ph.128
+    //                   (<8 x half>, <8 x half>, <8 x half>, i8)
+    //
+    // TODO: AVX10
+    //  <32 x bfloat> @llvm.x86.avx10.mask.scalef.bf16.512
+    //                     (<32 x bfloat>, <32 x bfloat>, <32 x bfloat>, i32)
+    //  <16 x bfloat> @llvm.x86.avx10.mask.scalef.bf16.256
+    //                     (<16 x bfloat>, <16 x bfloat>, <16 x bfloat>, i16)
+    //  < 8 x bfloat> @llvm.x86.avx10.mask.scalef.bf16.128
+    //                     (<8 x bfloat>, <8 x bfloat>, <8 x bfloat>, i8)
+    case Intrinsic::x86_avx512_mask_scalef_pd_512:
+    case Intrinsic::x86_avx512_mask_scalef_pd_256:
+    case Intrinsic::x86_avx512_mask_scalef_pd_128:
+    case Intrinsic::x86_avx512_mask_scalef_ps_512:
+    case Intrinsic::x86_avx512_mask_scalef_ps_256:
+    case Intrinsic::x86_avx512_mask_scalef_ps_128:
+    case Intrinsic::x86_avx512fp16_mask_scalef_ph_512:
+    case Intrinsic::x86_avx512fp16_mask_scalef_ph_256:
+    case Intrinsic::x86_avx512fp16_mask_scalef_ph_128:
+      // The AVX512 512-bit operand variants have an extra operand (the
+      // Rounding mode). The extra operand, if present, will be
+      // automatically checked by the handler.
+      handleAVX512VectorGenericMaskedFP(I, /*DataIndices=*/{0, 1},
+                                        /*WriteThruIndex=*/2,
+                                        /*MaskIndex=*/3);
+      break;
+
+    // TODO: AVX512 Vector Scale Float* Scalar
+    //
+    // This is different from the Packed variant, because some bits are copied,
+    // and some bits are zeroed.
+    //
+    //  < 4 x float> @llvm.x86.avx512.mask.scalef.ss
+    //                    (<4 x float>, <4 x float>, <4 x float>, i8, i32)
+    //
+    //  < 2 x double> @llvm.x86.avx512.mask.scalef.sd
+    //                    (<2 x double>, <2 x double>, <2 x double>, i8, i32)
+    //
+    //  < 8 x half> @llvm.x86.avx512fp16.mask.scalef.sh
+    //                   (<8 x half>, <8 x half>, <8 x half>, i8, i32)
 
     // AVX512 FP16 Arithmetic
     case Intrinsic::x86_avx512fp16_mask_add_sh_round:

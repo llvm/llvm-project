@@ -835,11 +835,19 @@ public:
       return failure();
     }
 
+    // Determine vector dimensions to collapse.
+    // Ignore a leading sequence of adjacent unit dimensions in the vector.
+    ArrayRef<int64_t> collapsedVectorShape =
+        vectorType.getShape().drop_while([](auto v) { return v == 1; });
+    size_t collapsedVecRank = collapsedVectorShape.size();
+    // Limit the collapse of multi-dimensional unit vectors (e.g. <1x1x1xf32>)
+    // to a 1D single-element vector.
+    if (collapsedVecRank == 0)
+      collapsedVecRank = 1;
+
     // Determine the first memref dimension to collapse - just enough so we can
     // read a flattened vector.
-    int64_t firstDimToCollapse =
-        sourceType.getRank() -
-        vectorType.getShape().drop_while([](auto v) { return v == 1; }).size();
+    int64_t firstDimToCollapse = sourceType.getRank() - collapsedVecRank;
     LDBG() << "  -> First dimension to collapse: " << firstDimToCollapse;
 
     // 1. Collapse the source memref
@@ -939,11 +947,19 @@ public:
     if (transferWriteOp.getMask())
       return failure();
 
+    // Determine vector dimensions to collapse.
+    // Ignore a leading sequence of adjacent unit dimensions in the vector.
+    ArrayRef<int64_t> collapsedVectorShape =
+        vectorType.getShape().drop_while([](auto v) { return v == 1; });
+    size_t collapsedVecRank = collapsedVectorShape.size();
+    // Limit the collapse of multi-dimensional unit vectors (e.g. <1x1x1xf32>)
+    // to a 1D single-element vector.
+    if (collapsedVecRank == 0)
+      collapsedVecRank = 1;
+
     // Determine the first memref dimension to collapse - just enough so we can
     // read a flattened vector.
-    int64_t firstDimToCollapse =
-        sourceType.getRank() -
-        vectorType.getShape().drop_while([](auto v) { return v == 1; }).size();
+    int64_t firstDimToCollapse = sourceType.getRank() - collapsedVecRank;
 
     // 1. Collapse the source memref
     Value collapsedSource =

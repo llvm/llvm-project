@@ -252,7 +252,7 @@ static KnownFPClass fadd_impl(const KnownFPClass &KnownLHS,
     // This can't underflow if one of the operands is known normal.
     if (KnownLHS.isKnownNever(fcZero | fcPosSubnormal) ||
         KnownRHS.isKnownNever(fcZero | fcPosSubnormal))
-      Known.knownNot(fcZero);
+      Known.knownNot(fcZero | fcPosSubnormal);
   }
 
   if (KnownLHS.cannotBeOrderedGreaterThanZero() &&
@@ -262,7 +262,7 @@ static KnownFPClass fadd_impl(const KnownFPClass &KnownLHS,
     // This can't underflow if one of the operands is known normal.
     if (KnownLHS.isKnownNever(fcZero | fcNegSubnormal) ||
         KnownRHS.isKnownNever(fcZero | fcNegSubnormal))
-      Known.knownNot(fcZero);
+      Known.knownNot(fcZero | fcNegSubnormal);
   }
 
   return Known;
@@ -348,6 +348,35 @@ KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
       (KnownLHS.isKnownNeverInfinity() ||
        KnownRHS.isKnownNeverLogicalZero(Mode)))
     Known.knownNot(fcNan);
+
+  return Known;
+}
+
+// TODO: This generalizes to known ranges
+KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
+                                const APFloat &CRHS, DenormalMode Mode) {
+  // Match denormal scaling pattern, similar to the case in ldexp. If the
+  // constant's exponent is sufficiently large, the result cannot be subnormal.
+
+  const fltSemantics &Flt = CRHS.getSemantics();
+  unsigned Precision = APFloat::semanticsPrecision(Flt);
+  const int MantissaBits = Precision - 1;
+
+  int MinKnownExponent = ilogb(CRHS);
+  bool CannotBeSubnormal = (MinKnownExponent >= MantissaBits);
+
+  KnownFPClass Known = KnownFPClass::fmul(KnownLHS, KnownFPClass(CRHS), Mode);
+  if (CannotBeSubnormal)
+    Known.knownNot(fcSubnormal);
+
+  // Multiply of values <= 1 cannot introduce overflow.
+  if (KnownLHS.isKnownNever(fcInf)) {
+    if (MinKnownExponent < 0)
+      Known.knownNot(fcInf);
+    else if (MinKnownExponent == 0 && CRHS.compareAbsoluteValue(APFloat::getOne(
+                                          Flt)) == APFloat::cmpEqual)
+      Known.knownNot(fcInf);
+  }
 
   return Known;
 }
@@ -668,9 +697,24 @@ KnownFPClass KnownFPClass::ldexp(const KnownFPClass &KnownSrc,
   return Known;
 }
 
+// TODO: Detect no-infinity cases
 KnownFPClass KnownFPClass::powi(const KnownFPClass &KnownSrc,
                                 const KnownBits &ExponentKnownBits) {
   KnownFPClass Known;
+  Known.propagateNaN(KnownSrc);
+
+  if (ExponentKnownBits.isZero()) {
+    // powi(QNaN, 0) returns 1.0, and powi(SNaN, 0) may non-deterministically
+    // return 1.0 or a NaN.
+    if (KnownSrc.isKnownNever(fcSNan)) {
+      Known.knownNot(~fcPosNormal);
+      return Known;
+    }
+
+    Known.knownNot(~(fcPosNormal | fcNan));
+    return Known;
+  }
+
   if (ExponentKnownBits.isEven()) {
     Known.knownNot(fcNegative);
     return Known;

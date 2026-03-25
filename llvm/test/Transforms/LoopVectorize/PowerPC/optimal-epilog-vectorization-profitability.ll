@@ -18,7 +18,7 @@ target triple = "powerpc64le-unknown-linux-gnu"
 ; CHECK-NOT: vec.epilog.middle.block
 ; CHECK: ret void
 
-define dso_local void @f1(ptr noalias %aa, ptr noalias %bb, ptr noalias %cc, i32 signext %N) #0 {
+define void @f1(ptr noalias %aa, ptr noalias %bb, ptr noalias %cc, i32 signext %N) #0 {
 entry:
   %cmp1 = icmp sgt i32 %N, 0
   br i1 %cmp1, label %for.body.preheader, label %for.end
@@ -56,7 +56,7 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; CHECK-NOT: vec.epilog.middle.block
 ; CHECK: ret void
 
-define dso_local void @f2(ptr noalias %aa, ptr noalias %bb, ptr noalias %cc, i32 signext %N) #1 {
+define void @f2(ptr noalias %aa, ptr noalias %bb, ptr noalias %cc, i32 signext %N) #1 {
 entry:
   %cmp1 = icmp sgt i32 %N, 0
   br i1 %cmp1, label %for.body.preheader, label %for.end
@@ -113,7 +113,7 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; CHECK: vec.epilog.middle.block
 ; CHECK: ret void
 
-define dso_local void @f3(ptr noalias %aa, ptr noalias %bb, ptr noalias %cc, i32 signext %N) {
+define void @f3(ptr noalias %aa, ptr noalias %bb, ptr noalias %cc, i32 signext %N) {
 entry:
   %cmp1 = icmp sgt i32 %N, 0
   br i1 %cmp1, label %for.body.preheader, label %for.end

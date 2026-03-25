@@ -19,9 +19,9 @@ define void @test1(i32 %d, ptr %p) nounwind uwtable ssp {
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%for.body> U: [0,64) S: [0,64) Exits: 63 LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %p.addr.02 = phi ptr [ %p, %entry ], [ %add.ptr1, %for.body ]
 ; CHECK-NEXT:    --> {%p,+,(8 * (%d /u 4))}<%for.body> U: full-set S: full-set Exits: ((504 * (%d /u 4)) + %p) LoopDispositions: { %for.body: Computable }
-; CHECK-NEXT:    %add.ptr = getelementptr inbounds nuw i32, ptr %p.addr.02, i32 %div1
+; CHECK-NEXT:    %add.ptr = getelementptr inbounds nuw [4 x i8], ptr %p.addr.02, i32 %div1
 ; CHECK-NEXT:    --> {((4 * (%d /u 4))<nuw><nsw> + %p)<nuw>,+,(8 * (%d /u 4))}<%for.body> U: full-set S: full-set Exits: ((508 * (%d /u 4)) + %p) LoopDispositions: { %for.body: Computable }
-; CHECK-NEXT:    %add.ptr1 = getelementptr inbounds nuw i32, ptr %add.ptr, i32 %div1
+; CHECK-NEXT:    %add.ptr1 = getelementptr inbounds nuw [4 x i8], ptr %add.ptr, i32 %div1
 ; CHECK-NEXT:    --> {((8 * (%d /u 4)) + %p),+,(8 * (%d /u 4))}<%for.body> U: full-set S: full-set Exits: ((512 * (%d /u 4)) + %p) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %inc = add nuw nsw i32 %i.03, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%for.body> U: [1,65) S: [1,65) Exits: 64 LoopDispositions: { %for.body: Computable }
@@ -66,9 +66,9 @@ define void @test1a(i32 %d, ptr %p) nounwind uwtable ssp {
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%for.body> U: [0,64) S: [0,64) Exits: 63 LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %p.addr.02 = phi ptr [ %p, %entry ], [ %add.ptr1, %for.body ]
 ; CHECK-NEXT:    --> {%p,+,(8 * (%d /u 2))}<%for.body> U: full-set S: full-set Exits: ((504 * (%d /u 2)) + %p) LoopDispositions: { %for.body: Computable }
-; CHECK-NEXT:    %add.ptr = getelementptr inbounds nuw i32, ptr %p.addr.02, i32 %div1
+; CHECK-NEXT:    %add.ptr = getelementptr inbounds nuw [4 x i8], ptr %p.addr.02, i32 %div1
 ; CHECK-NEXT:    --> {((4 * (%d /u 2))<nuw><nsw> + %p)<nuw>,+,(8 * (%d /u 2))}<%for.body> U: full-set S: full-set Exits: ((508 * (%d /u 2)) + %p) LoopDispositions: { %for.body: Computable }
-; CHECK-NEXT:    %add.ptr1 = getelementptr inbounds nuw i32, ptr %add.ptr, i32 %div1
+; CHECK-NEXT:    %add.ptr1 = getelementptr inbounds nuw [4 x i8], ptr %add.ptr, i32 %div1
 ; CHECK-NEXT:    --> {((8 * (%d /u 2)) + %p),+,(8 * (%d /u 2))}<%for.body> U: full-set S: full-set Exits: ((512 * (%d /u 2)) + %p) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %inc = add nuw nsw i32 %i.03, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%for.body> U: [1,65) S: [1,65) Exits: 64 LoopDispositions: { %for.body: Computable }
@@ -111,7 +111,7 @@ define void @test_range_ref1a(i32 %x) {
 ; CHECK-NEXT:  Classifying expressions for: @test_range_ref1a
 ; CHECK-NEXT:    %i.01.0 = phi i32 [ 100, %entry ], [ %tmp4, %bb ]
 ; CHECK-NEXT:    --> {100,+,-1}<nsw><%bb> U: [0,101) S: [0,101) Exits: 0 LoopDispositions: { %bb: Computable }
-; CHECK-NEXT:    %tmp1 = getelementptr i32, ptr @array, i32 %i.01.0
+; CHECK-NEXT:    %tmp1 = getelementptr [4 x i8], ptr @array, i32 %i.01.0
 ; CHECK-NEXT:    --> {(400 + @array)<nuw>,+,-4}<nw><%bb> U: [0,-3) S: [-2147483648,2147483645) Exits: @array LoopDispositions: { %bb: Computable }
 ; CHECK-NEXT:    %tmp4 = add nsw i32 %i.01.0, -1
 ; CHECK-NEXT:    --> {99,+,-1}<nsw><%bb> U: [-1,100) S: [-1,100) Exits: -1 LoopDispositions: { %bb: Computable }
@@ -143,11 +143,11 @@ define i32 @test_loop_idiom_recogize(i32 %x, i32 %y, ptr %lam, ptr %alp) nounwin
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%bb1> U: [0,256) S: [0,256) Exits: 255 LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:    %i.0.reg2mem.0 = sub nuw nsw i32 255, %indvar
 ; CHECK-NEXT:    --> {255,+,-1}<nsw><%bb1> U: [0,256) S: [0,256) Exits: 0 LoopDispositions: { %bb1: Computable }
-; CHECK-NEXT:    %0 = getelementptr i32, ptr %alp, i32 %i.0.reg2mem.0
+; CHECK-NEXT:    %0 = getelementptr [4 x i8], ptr %alp, i32 %i.0.reg2mem.0
 ; CHECK-NEXT:    --> {(1020 + %alp),+,-4}<nw><%bb1> U: full-set S: full-set Exits: %alp LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:    %1 = load i32, ptr %0, align 4
 ; CHECK-NEXT:    --> %1 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb1: Variant }
-; CHECK-NEXT:    %2 = getelementptr i32, ptr %lam, i32 %i.0.reg2mem.0
+; CHECK-NEXT:    %2 = getelementptr [4 x i8], ptr %lam, i32 %i.0.reg2mem.0
 ; CHECK-NEXT:    --> {(1020 + %lam),+,-4}<nw><%bb1> U: full-set S: full-set Exits: %lam LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:    %indvar.next = add nuw nsw i32 %indvar, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%bb1> U: [1,257) S: [1,257) Exits: 256 LoopDispositions: { %bb1: Computable }

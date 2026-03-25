@@ -3,7 +3,7 @@
 // The data type of arguments of operation are irrelevant in this test.
 //--------------------------------------------------------------------------------------------------
 
-// RUN: mlir-opt -mlir-disable-threading -test-tosa-op-availability %s | FileCheck %s
+// RUN: mlir-opt -test-tosa-op-availability %s | FileCheck %s
 
 // -----
 // CHECK-LABEL: argmax

@@ -2174,7 +2174,7 @@ void CodeGenFunction::EmitCXXAggrConstructorCall(
   // because of GCC extensions that permit zero-length arrays.  There
   // are probably legitimate places where we could assume that this
   // doesn't happen, but it's not clear that it's worth it.
-  llvm::BranchInst *zeroCheckBranch = nullptr;
+  llvm::CondBrInst *zeroCheckBranch = nullptr;
 
   // Optimize for a constant count.
   llvm::ConstantInt *constantCount = dyn_cast<llvm::ConstantInt>(numElements);

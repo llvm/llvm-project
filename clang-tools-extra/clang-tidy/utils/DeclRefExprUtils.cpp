@@ -181,7 +181,7 @@ AST_MATCHER_P(DeclRefExpr, doesNotMutateObject, int, Indirections) {
     int Indirections;
   };
 
-  llvm::SmallVector<StackEntry, 4> Stack;
+  SmallVector<StackEntry, 4> Stack;
   Stack.emplace_back(&Node, Indirections);
   ASTContext &Ctx = Finder->getASTContext();
 

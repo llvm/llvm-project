@@ -5469,15 +5469,7 @@ struct AANoFPClass
 
   /// See AbstractAttribute::isValidIRPositionForInit
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
-    Type *Ty = IRP.getAssociatedType();
-    do {
-      if (Ty->isFPOrFPVectorTy())
-        return IRAttribute::isValidIRPositionForInit(A, IRP);
-      if (!Ty->isArrayTy())
-        break;
-      Ty = Ty->getArrayElementType();
-    } while (true);
-    return false;
+    return AttributeFuncs::isNoFPClassCompatibleType(IRP.getAssociatedType());
   }
 
   /// Return the underlying assumed nofpclass.

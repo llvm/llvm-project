@@ -58,3 +58,13 @@ module @globals {
     return
   }
 }
+
+// -----
+
+// CHECK-LABEL: rank0_globals
+module @rank0_globals {
+  memref.global @extern_global : memref<f32>
+  // CHECK-NEXT: emitc.global extern @extern_global : f32
+  memref.global @uninitialized_global : memref<f32> = uninitialized
+  // CHECK-NEXT: emitc.global extern @uninitialized_global : f32
+}
