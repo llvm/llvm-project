@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -disable-llvm-passes -emit-llvm -Wripple -fenable-ripple -o - %s -DUSE_PRAGMA | FileCheck --implicit-check-not="warning:" %s
 // RUN: %clang_cc1 -disable-llvm-passes -emit-llvm -Wripple -fenable-ripple -o - %s -DUSE_CALL | FileCheck --implicit-check-not="warning:" %s
 
-#include <ripple.h>
+#include "../ripple_test.h"
 
 // CHECK: test1
 void test1(size_t n, float * C, float * A, float * B) {

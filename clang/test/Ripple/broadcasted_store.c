@@ -2,9 +2,7 @@
 // REQUIRES: asserts
 // RUN: %clang -ffreestanding -S -fenable-ripple -emit-llvm %s -o - 2>&1 | FileCheck %s --implicit-check-not="warning:" --implicit-check-not="error:"
 
-#include <stdint.h>
-#include <stddef.h>
-#include <ripple.h>
+#include "ripple_test.h"
 #define VEC 0
 
 void baz(uint32_t N, const float A[N][20], float B[20][16]) {

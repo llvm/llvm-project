@@ -4,8 +4,7 @@
 // RUN: %clang -ffreestanding -g -fenable-ripple -O0 -S -emit-llvm -ffast-math -o - %s | FileCheck --check-prefix=FASTMATHCHECK %s
 // RUN: %clang -ffreestanding -g -fenable-ripple -O2 -S -emit-llvm -o - %s
 
-#include <ripple.h>
-#include <stdint.h>
+#include "ripple_test.h"
 
 #if __test_run__
 #include <inttypes.h>

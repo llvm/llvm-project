@@ -12,6 +12,7 @@
 //==============================================================================
 //
 
+#include <cstddef>
 #include <hexagon_protos.h>
 #include <ripple_hvx.h>
 

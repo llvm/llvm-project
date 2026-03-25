@@ -2,7 +2,7 @@
 // XFAIL: target={{.*(iu|riscv).*}}
 // RUN: %clang -ffreestanding -g -S -O2 -emit-llvm %s
 
-#include <stdint.h>
+#include "../ripple_test.h"
 
 typedef _Float16 f16t64 __attribute__((__vector_size__(128)))
 __attribute__((aligned(128)));

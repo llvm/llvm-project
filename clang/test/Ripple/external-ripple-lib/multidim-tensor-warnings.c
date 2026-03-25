@@ -78,7 +78,7 @@ extern v16f32 ripple_ret_t8x4f32_arg1_t4x4f32_cc(v16f32 A, v16f32 B) { return A 
 
 #else
 
-#include <ripple.h>
+#include "../ripple_test.h"
 
 void test_valid_candidates(float *restrict f, float *restrict f2, float *restrict f3) {
   ripple_block_t BS = ripple_set_block_shape(0, 32, 32);

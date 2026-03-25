@@ -2,7 +2,7 @@
 // RUN: %clang -ffreestanding -S -fenable-ripple -O2 -emit-llvm %s
 // RUN: %clang -ffreestanding -x c++ -S -fenable-ripple -O2 -emit-llvm %s
 
-#include <ripple.h>
+#include "ripple_test.h"
 #define N 1024
 #define VECTOR_LANE 0
 

@@ -1,7 +1,7 @@
 // REQUIRES: target=hexagon{{.*}} || target-aarch64 || target-x86_64
 // RUN: %clang -S -fenable-ripple -O0 -emit-llvm %s -o - 2>&1 | FileCheck %s --implicit-check-not="warning:" --implicit-check-not="error:"
 
-#include <ripple.h>
+#include "ripple_test.h"
 #define N 1024
 #define VECTOR_LANE 0
 

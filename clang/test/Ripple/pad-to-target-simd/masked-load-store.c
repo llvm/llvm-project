@@ -2,7 +2,7 @@
 // REQUIRES: hexagon-registered-target
 // RUN: %clang -ffreestanding -S --target=hexagon-unknown-elf -mhvx -mv81 -mhvx-length=128B -O2 -fenable-ripple -fdisable-ripple-lib -mllvm -ripple-pad-to-target-simd -emit-llvm %s -o - | FileCheck %s
 
-#include <ripple.h>
+#include "../ripple_test.h"
 
 // CHECK-LABEL: define dso_local void @check_padded_masked_load_store(
 // CHECK-SAME: i32 noundef [[N:%.*]], ptr noundef readonly captures(none) [[A:%.*]], ptr noundef writeonly captures(none) [[APB:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {

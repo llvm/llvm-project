@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -disable-llvm-passes -emit-llvm -Wripple -fenable-ripple -o - %s -DUSE_PRAGMA 2>%t; FileCheck %s --input-file %t
 // RUN: %clang_cc1 -disable-llvm-passes -emit-llvm -Wripple -fenable-ripple -o - %s -DUSE_CALL 2>%t; FileCheck %s --input-file %t
 
-#include <ripple.h>
+#include "../ripple_test.h"
 
 // CHECK: label-in-loop-body.c:22:1: error: the Ripple parallel loop body cannot contain labels
 // CHECK-NEXT:  22 | illegal_label:

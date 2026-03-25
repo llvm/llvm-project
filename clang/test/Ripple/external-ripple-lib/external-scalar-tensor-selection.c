@@ -36,7 +36,7 @@ extern v16f32 ripple_pure_uniform_t4x4f32_scalar_tensor5(double d) {
 
 #else
 
-#include <ripple.h>
+#include "../ripple_test.h"
 
 extern float scalar_tensor1(ripple_block_t BS, int x);
 extern float scalar_tensor2(ripple_block_t BS, float a, int b);

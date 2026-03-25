@@ -1,7 +1,7 @@
 // REQUIRES: hexagon-registered-target || aarch64-registered-target || x86-registered-target
 // RUN: %clang -ffreestanding -S %s -O2 -fenable-ripple -emit-llvm -Rpass=ripple -Rpass-missed=ripple -o - 2>&1 | FileCheck %s
 
-#include<ripple.h>
+#include "ripple_test.h"
 
 void foo(int a[128][128], int b[128][128]) {
     ripple_block_t bs = ripple_set_block_shape(0, 128);

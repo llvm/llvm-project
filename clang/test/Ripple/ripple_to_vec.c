@@ -1,11 +1,9 @@
 // REQUIRES: target=aarch64{{.*}} || target=x86_64{{.*}}
 // RUN: %clang -ffreestanding %s -O2 -fenable-ripple -S -emit-llvm -o - | FileCheck %s
 
-#include <ripple.h>
-#include <stdint.h>
+#include "ripple_test.h"
 typedef int32_t __attribute__((vector_size(128))) Vector_t;
 typedef int32_t __attribute__((vector_size(256))) VectorPair_t;
-
 
 Vector_t two2one(VectorPair_t pair) {
 // CHECK: define dso_local{{.*}}@two2one

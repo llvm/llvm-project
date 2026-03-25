@@ -2,7 +2,7 @@
 // REQUIRES: target=hexagon{{.*}}
 // RUN: %clang -ffreestanding -S -Xclang -disable-llvm-passes -emit-llvm -fenable-ripple %s -o - | FileCheck %s
 
-#include <ripple/thread.h>
+#include "../ripple_test.h"
 
 // CHECK-COUNT-10: {{^\s*}}ripple.par.for.begin{{[0-9]*}}:
 

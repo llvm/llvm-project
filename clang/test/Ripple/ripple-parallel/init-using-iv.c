@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 %s -fenable-ripple -o - -emit-llvm
 // XFAIL: *
 
-#include <ripple.h>
+#include "../ripple_test.h"
 
 void bar(int n, float * C, float * A, float * B) {
   ripple_block_t BS = ripple_set_block_shape(0, 42);

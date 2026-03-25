@@ -2,7 +2,7 @@
 // REQUIRES: x86-registered-target
 // RUN: %clang -ffreestanding %s -O2 -fenable-ripple --target=x86_64-linux-gnu -mno-amx-bf16 -mno-avx512bf16 -S -emit-llvm -o - | FileCheck %s
 
-#include <ripple.h>
+#include "ripple_test.h"
 void add(__bf16 *c, __bf16 *a, __bf16 *b) {
     auto BS = ripple_set_block_shape(0, 64);
     size_t v = ripple_id(BS, 0);

@@ -52,16 +52,13 @@
 
 #else
 
-#include <stddef.h>
-#include <stdint.h>
-
 typedef struct ripple_thread_block *ripple_thd_block_t;
 
 extern ripple_thd_block_t ripple_thd_init(int, void *);
 extern void ripple_thd_exit(ripple_thd_block_t);
 extern ripple_thd_block_t ripple_thd_set_block_shape(void *, unsigned, ...);
-extern size_t ripple_thd_id(ripple_thd_block_t, int);
-extern size_t ripple_thd_get_block_size(ripple_thd_block_t, int);
+extern __SIZE_TYPE__ ripple_thd_id(ripple_thd_block_t, int);
+extern __SIZE_TYPE__ ripple_thd_get_block_size(ripple_thd_block_t, int);
 extern void ripple_thd_barrier(ripple_thd_block_t, unsigned);
 extern int ripple_thd_is_main(ripple_thd_block_t, unsigned);
 
@@ -69,8 +66,8 @@ typedef struct {
   long value;
   long has_value;
 } ripple_opt_it;
-extern void ripple_it_serv_init(ripple_thd_block_t, unsigned int, int32_t,
-                                int32_t, int32_t);
+extern void ripple_it_serv_init(ripple_thd_block_t, unsigned int,
+                                __INT32_TYPE__, __INT32_TYPE__, __INT32_TYPE__);
 extern void ripple_it_serv_exit(ripple_thd_block_t, unsigned int, int);
 extern ripple_opt_it ripple_it_serv_next(ripple_thd_block_t, unsigned int);
 

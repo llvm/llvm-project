@@ -16,7 +16,7 @@ extern v4f32 ripple_externf3(void) { v4f32 v = {10.f, 12.f}; return v; }
 
 #else
 
-#include <ripple.h>
+#include "../ripple_test.h"
 
 extern float externf1(ripple_block_t BS);
 extern float externf2(ripple_block_t BS);

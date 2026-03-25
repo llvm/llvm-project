@@ -26,7 +26,7 @@ extern float externf4(float, float);
 extern float externf5(float, float);
 extern float externf5_autopure(float, float);
 
-#include <ripple.h>
+#include "../ripple_test.h"
 
 // CHECK-LABEL: define dso_local void @test_valid_candidates
 // CHECK: call{{.*}}@ripple_uniform_t1x4f32_externf1

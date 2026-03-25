@@ -7,7 +7,7 @@
 // RUN: %clang -ffreestanding -g -S -fenable-ripple -Oz -emit-llvm %s -o %t
 // RUN: %clang -ffreestanding -g -S -fenable-ripple -O3 -emit-llvm %s -o %t
 
-#include <ripple.h>
+#include "ripple_test.h"
 
 // CHECK-LABEL: void @memory_to_memory_scatter
 // CHECK-SAME: ptr {{.*}} [[IN:%.*]], ptr {{.*}} [[OUT:%.*]])

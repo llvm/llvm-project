@@ -3,8 +3,7 @@
 // RUN: %clang -ffreestanding --target=hexagon-unknown-elf -c -O2 -fno-discard-value-names -fenable-ripple -fripple-lib=%t.rlib.bc -emit-llvm -S -o - -mllvm -ripple-disable-link %s | FileCheck %s
 
 #include "external_library.h"
-#include <stddef.h>
-#include <ripple.h>
+#include "../ripple_test.h"
 
 #define VEC 0
 

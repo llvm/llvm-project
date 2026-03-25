@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -O1 -disable-llvm-passes -emit-llvm %s -o - 2>&1 | FileCheck %s --implicit-check-not="warning:" --implicit-check-not="error:"
 
-#include <ripple.h>
+#include "ripple_test.h"
 
 // CHECK: @foo
 int foo(int a, int b) {

@@ -10,10 +10,12 @@
 //
 //==============================================================================
 
+#include "lib_func_attrib.h"
+#include <cstdint>
 #include <hexagon_protos.h>
 #include <ripple_hvx.h>
 
-#include "lib_func_attrib.h"
+extern "C" {
 
 #define _decl_rotate_impl(N, T, C_T, shft)                                     \
   RIPPLE_INTRIN_INLINE v##N##T ripple_pure_hvx_rotate_to_lower_##T(            \
@@ -41,3 +43,5 @@ _decl_rotate_impl(16, u64, uint64_t, 3);
 _decl_rotate_impl(16, f64, double, 3);
 
 #undef _decl_rotate
+
+} // extern "C"

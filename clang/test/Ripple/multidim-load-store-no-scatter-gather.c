@@ -5,8 +5,7 @@
 // RUN: %clang -ffreestanding -g -S -fenable-ripple -Os -emit-llvm %s -o - 2>&1 | FileCheck %s
 // RUN: %clang -ffreestanding -g -S -fenable-ripple -Oz -emit-llvm %s -o - 2>&1 | FileCheck %s
 
-#include <stddef.h>
-#include <ripple.h>
+#include "ripple_test.h"
 
 // CHECK-NOT: masked.gather
 // CHECK-NOT: masked.scatter

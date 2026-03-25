@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -disable-llvm-passes -emit-llvm -Wripple -fenable-ripple -o - %s -DUSE_PRAGMA 2>%t; FileCheck %s --input-file %t
 // RUN: %clang_cc1 -disable-llvm-passes -emit-llvm -Wripple -fenable-ripple -o - %s -DUSE_CALL 2>%t; FileCheck %s --input-file %t
 
-#include <ripple.h>
+#include "../ripple_test.h"
 
 extern void nodupfunc() __attribute__((noduplicate));
 

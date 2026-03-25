@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -disable-llvm-passes -emit-llvm -fenable-ripple %s -o - | FileCheck %s
 // Test case where a non-simple loop bound is used
 
-#include <ripple.h>
+#include "../ripple_test.h"
 #define HVX_LANE 0
 
 #define min(a, b) (a < b ? a : b)

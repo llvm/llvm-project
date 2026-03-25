@@ -1,7 +1,7 @@
 // REQUIRES: target-x86_64 || target-aarch64 || target=hexagon{{.*}}
 // RUN: %clang -ffreestanding -Xclang -disable-llvm-passes -S -emit-llvm -fenable-ripple %s -o - | FileCheck %s
 
-#include <ripple.h>
+#include "../ripple_test.h"
 
 // Here we're checking that the transformation happens for C++ files as well
 

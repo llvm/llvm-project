@@ -2,7 +2,7 @@
 // RUN: %clang -ffreestanding -Wall -Wpedantic -Wextra %s -O2 -fenable-ripple -S -emit-llvm -o - | FileCheck %s
 // RUN: %clang -ffreestanding -Wall -Wpedantic -Wextra -x c++ %s -O2 -fenable-ripple -S -emit-llvm -o - | FileCheck %s
 
-#include <ripple.h>
+#include "ripple_test.h"
 
 #ifdef __cplusplus
 extern "C" {

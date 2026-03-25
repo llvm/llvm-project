@@ -1,7 +1,7 @@
 // REQUIRES: hexagon-registered-target
 // RUN: %clang++ -ffreestanding --target=hexagon-unknown-elf -mv79 -mhvx %s -O2 -fenable-ripple -E -o - | FileCheck %s
 // RUN: %clang++ -ffreestanding --target=hexagon-unknown-elf -mv79 -mhvx -x c %s -O2 -fenable-ripple -E -o - -D__hexagon__=1 | FileCheck %s
-#include <ripple.h>
+#include "ripple_test.h"
 #include <ripple_hvx.h>
 
 // CHECK: static int32_t hvx_to_ripple_v32i32( ripple_block_t BS, v32i32 x) { int32_t tmp[32]; *((v32i32 *)tmp) = x; return tmp[__builtin_ripple_get_index((BS), (0))]; }

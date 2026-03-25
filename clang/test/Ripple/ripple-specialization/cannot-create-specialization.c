@@ -1,8 +1,8 @@
 // REQUIRES: target-x86_64 || target-aarch64 || target=hexagon{{.*}}
 // RUN: %clang -ffreestanding -g -Wall -Wextra -Wpedantic -fenable-ripple -S -O2 -emit-llvm %s 2>%t; FileCheck %s --input-file=%t
 
-#include <ripple.h>
-#include <stdint.h>
+#include "../ripple_test.h"
+
 
 __attribute__((noinline)) int toBeSpecialized(int32_t n, int32_t m) {
   return ripple_reduceadd(0b10, n * m) * 32;

@@ -2,7 +2,7 @@
 // REQUIRES: aarch64-registered-target || x86-registered-target
 // RUN: %clang -ffreestanding -S -O1 -emit-llvm -fenable-ripple %s 2> %t; FileCheck %s --input-file %t
 
-#include <ripple.h>
+#include "ripple_test.h"
 
 const size_t ThisIsAGlobalThatCanBeUsedForRippleIndexing = 42;
 

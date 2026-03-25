@@ -9,8 +9,7 @@
 // RUN: %clang -ffreestanding -S -g -O3 -emit-llvm -fenable-ripple %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-Other
 // RUN: %clang -ffreestanding -S -g -Os -emit-llvm -fenable-ripple %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-Other
 
-
-#include <ripple.h>
+#include "ripple_test.h"
 
 // CHECK-O0: error
 // CHECK-Other: @fun

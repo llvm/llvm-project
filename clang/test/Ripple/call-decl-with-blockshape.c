@@ -1,7 +1,7 @@
 // REQUIRES: target-x86_64 || target-aarch64 || target=hexagon{{.*}}
 // RUN: %clang -ffreestanding -g -S -fenable-ripple -O0 -emit-llvm %s 2>%t; FileCheck %s --input-file=%t
 
-#include <ripple.h>
+#include "ripple_test.h"
 
 extern float declWithBS(ripple_block_t BS, float *);
 

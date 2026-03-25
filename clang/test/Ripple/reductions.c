@@ -4,7 +4,7 @@
 // RUN: %clang -ffreestanding -fenable-ripple -Wpedantic -S -O1 -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECKALL,CHECKRIPPLEGEN --implicit-check-not="warning:" --implicit-check-not="error:"
 // RUN: %clang -ffreestanding -fenable-ripple -x c++ -Wpedantic -S -O1 -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECKALL,CHECKRIPPLEGEN --implicit-check-not="warning:" --implicit-check-not="error:"
 
-#include <ripple.h>
+#include "ripple_test.h"
 
 #ifdef __cpluplus
 extern "C" {

@@ -3,7 +3,7 @@
 // RUN: %clang -ffreestanding -x c++ -g -S -fenable-ripple -O2 -emit-llvm %s 2> %t; cat %t; FileCheck %s --input-file %t
 
 // Testing that calling an external function creates a warning
-#include <ripple.h>
+#include "ripple_test.h"
 
 extern size_t externalIndexingFun(size_t, size_t);
 

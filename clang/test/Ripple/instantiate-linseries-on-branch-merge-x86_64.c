@@ -2,8 +2,7 @@
 // REQUIRES: x86-registered-target
 // RUN: %clang -ffreestanding --target=x86_64-pc-linux-gnu -Wall -Wextra -fenable-ripple -O2 -S -emit-llvm -o - %s | FileCheck %s
 
-#include <ripple.h>
-#include <stdint.h>
+#include "ripple_test.h"
 
 // CHECK-LABEL: define dso_local void @test_branch(
 // CHECK-SAME: ptr noundef readonly captures(none) [[F1:%.*]], ptr noundef readonly captures(none) [[F2:%.*]], ptr noundef readonly captures(none) [[F3:%.*]], ptr noundef writeonly captures(none) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {

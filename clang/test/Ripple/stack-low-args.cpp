@@ -6,7 +6,7 @@
 // RUN: %clang -g -S -fenable-ripple -Os -emit-llvm %s -o - 2>&1
 // RUN: %clang -g -S -fenable-ripple -Oz -emit-llvm %s -o - 2>&1
 
-#include <ripple.h>
+#include "ripple_test.h"
 #define VEC_LANES 0
 
 template <typename T>

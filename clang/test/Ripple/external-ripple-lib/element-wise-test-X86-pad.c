@@ -2,7 +2,7 @@
 // RUN: %clang -ffreestanding --target=x86_64-linux-gnu -mavx2 -c -O2 -emit-llvm %S/external_library.c -o %t.rlib.bc
 // RUN: %clang -ffreestanding --target=x86_64-linux-gnu -mavx2 -c -O2 -fenable-ripple -fripple-lib=%t.rlib.bc -emit-llvm -S -o - -mllvm -ripple-pad-to-target-simd -mllvm -ripple-disable-link %s | FileCheck %s
 
-#include <ripple.h>
+#include "../ripple_test.h"
 
 extern float doublify(float);
 

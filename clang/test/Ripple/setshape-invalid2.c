@@ -2,7 +2,7 @@
 // REQUIRES: aarch64-registered-target || x86-registered-target
 // RUN: %clang -ffreestanding -O0 -fenable-ripple -g -S -emit-llvm %s 2>%t; FileCheck %s --input-file=%t
 
-#include <ripple.h>
+#include "ripple_test.h"
 
 size_t check() {
   ripple_block_t BS = ripple_set_block_shape(0, 32, 4);

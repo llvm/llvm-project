@@ -1,7 +1,7 @@
 // XFAIL: target={{.*(riscv).*}}
 // RUN: %clang -ffreestanding -fenable-ripple -O2 %s -S -emit-llvm
 
-#include <ripple.h>
+#include "../ripple_test.h"
 extern int printf(const char*, ...);
 
 void f() {

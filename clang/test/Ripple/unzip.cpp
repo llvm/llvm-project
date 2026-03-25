@@ -3,7 +3,7 @@
 
 // Tests for the zip.h header-only lib
 
-#include <ripple.h>
+#include "ripple_test.h"
 #include <ripple/zip.h>
 
 using namespace rzip;

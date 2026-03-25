@@ -2,7 +2,7 @@
 // RUN: %clang -ffreestanding -g -c -O2 -emit-llvm %S/external_library.c -o %t
 // RUN: %clang -ffreestanding -g -O2 -fenable-ripple -emit-llvm -S -o - -ffast-math -fripple-lib %t %s -mllvm -ripple-disable-link | FileCheck %s --implicit-check-not="warning:"
 
-#include <ripple.h>
+#include "../ripple_test.h"
 #include <ripple_math.h>
 
 #define gen_check_unary_mathfn(N, OP, LONGTYPE)                                \

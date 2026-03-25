@@ -1,7 +1,7 @@
 // REQUIRES: hexagon-registered-target
 // RUN: %clang -ffreestanding -S --target=hexagon -mhvx -mv81 -mhvx-length=128B -O2 -fenable-ripple -fdisable-ripple-lib -mllvm -ripple-pad-to-target-simd -emit-llvm %s -o - 2>&1 | FileCheck %s
 
-#include <ripple.h>
+#include "../ripple_test.h"
 
 void check_that_phis_are_padded(size_t N, int8_t a[N], int8_t b[N], int8_t apb[N]) {
   ripple_block_t BS = ripple_set_block_shape(0, 127);

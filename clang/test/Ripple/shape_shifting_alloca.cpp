@@ -3,7 +3,7 @@
 // RUN: %clang -ffreestanding -S -g -O0 -emit-llvm -fenable-ripple %s -o - | FileCheck %s
 // RUN: %clang -ffreestanding -S -g -O1 -emit-llvm -fenable-ripple %s -o -
 
-#include <ripple.h>
+#include "ripple_test.h"
 
 // CHECK: void @fun
 extern "C" void fun(size_t size, float A[size][size], float B[size][size]) {

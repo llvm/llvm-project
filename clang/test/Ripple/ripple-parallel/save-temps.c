@@ -6,7 +6,7 @@
 // CHECK: <4 x float>
 // CHECK-NOT: llvm.ripple
 
-#include <ripple.h>
+#include "../ripple_test.h"
 
 void check(unsigned size, float *a, float *b, float *c) {
   ripple_block_t bs = ripple_set_block_shape(0, 4);

@@ -7,7 +7,7 @@
 // RUN: %clang++ -ffreestanding -Os -Wall -Wextra -Wripple -S -emit-llvm -fenable-ripple %s -o - | FileCheck %s --implicit-check-not="warning:"
 // RUN: %clang++ -ffreestanding -Oz -Wall -Wextra -Wripple -S -emit-llvm -fenable-ripple %s -o - | FileCheck %s --implicit-check-not="warning:"
 
-#include <ripple.h>
+#include "../ripple_test.h"
 
 // Checking that the return attributes ZeroExtend and SignExtend are removed for vector types during specialization.
 

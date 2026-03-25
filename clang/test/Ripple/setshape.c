@@ -2,7 +2,7 @@
 // REQUIRES: target-x86_64 || target-aarch64 || target=hexagon{{.*}}
 // RUN: %clang -ffreestanding -fenable-ripple -S -emit-llvm %s -o - | FileCheck %s
 
-#include <ripple.h>
+#include "ripple_test.h"
 
 // CHECK-LABEL: define dso_local void @check(
 // CHECK-SAME: ptr noundef [[OUT:%.*]]) #[[ATTR0:[0-9]+]] {

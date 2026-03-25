@@ -1,7 +1,7 @@
 // REQUIRES: hexagon-registered-target
 // RUN: %clang_cc1 -triple hexagon-unknown-elf -fenable-ripple -emit-llvm %s -o - -O0 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-BUFFER
 
-#include <ripple.h>
+#include "ripple_test.h"
 
 // Test case: calling non-void function when number of the vector elements is equal to the blocksize
 extern "C" float inner_fn(float in, float m);

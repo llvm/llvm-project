@@ -10,6 +10,7 @@
 
 #include "lib_func_attrib.h"
 #include <cmath>
+#include <cstdint>
 #include <hexagon_protos.h>
 #include <hexagon_types.h>
 #include <limits>

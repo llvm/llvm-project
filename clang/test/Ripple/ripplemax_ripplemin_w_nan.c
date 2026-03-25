@@ -2,7 +2,7 @@
 // REQUIRES: target-x86_64 || target-aarch64 || target=hexagon{{.*}}
 // RUN: %clang -ffreestanding -Xclang -fexperimental-strict-floating-point -Wall -Wextra -Wpedantic -Wripple -fenable-ripple -O2 -S -emit-llvm %s -o - 2>&1 | FileCheck %s --implicit-check-not="warning:"
 
-#include <ripple.h>
+#include "ripple_test.h"
 
 // CHECK-LABEL: define dso_local void @test1(
 // CHECK-SAME: ptr{{.*}}[[MAX:%.*]], ptr{{.*}}[[MIN:%.*]], ptr{{.*}}[[REALMAX:%.*]], ptr{{.*}}[[REALMIN:%.*]]){{.*}}{

@@ -2,7 +2,7 @@
 // RUN: %clang -ffreestanding -c -O2 -emit-llvm %S/external_library.c -o %t
 // RUN: %clang -ffreestanding -Wall -Wextra -Wripple -Wpedantic -g -O2 -fenable-ripple -emit-llvm -S -ffast-math -fripple-lib %t -mllvm -ripple-disable-link %s -mllvm -ripple-disable-link -ferror-limit=500 2>%t.err; FileCheck %s --input-file=%t.err
 
-#include <ripple.h>
+#include "../ripple_test.h"
 
 // We need to allow ripple functions returning multiple values to support these
 #define sincosf16(x, y, z) __builtin_ripple_sincosf16((x), (y), (z))

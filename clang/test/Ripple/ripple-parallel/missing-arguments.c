@@ -1,7 +1,7 @@
 // REQUIRES: target-x86_64 || target-aarch64 || target=hexagon{{.*}}
 // RUN: %clang -ffreestanding -Xclang -disable-llvm-passes -S -emit-llvm -fenable-ripple %s 2>%t; FileCheck %s --input-file %t
 
-#include <ripple.h>
+#include "../ripple_test.h"
 
 #ifndef HVX_LANE
 #define HVX_LANE 0

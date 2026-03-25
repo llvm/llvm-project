@@ -1,6 +1,6 @@
 // RUN: %clang -ffreestanding -g -fenable-ripple -O2 %s -S -emit-llvm -o %t 2> %t.err; FileCheck %s --input-file=%t.err
 // This checks that we don't delete a PHI outside the if-conversion zone (we still track it's shape)
-#include <ripple.h>
+#include "ripple_test.h"
 
 
 // CHECK:      unsupported-loop.c:22:11: error: unsupported vectorization of vector branch when it applies to a non single-entry-single-exit (SESE) region or simple vector loops (one exit)

@@ -1,7 +1,7 @@
 // REQUIRES: target=hexagon-{{.*}}, has-ripple-hexagon-rtlib
 // RUN: %clang++ -ffreestanding -g -S -fenable-ripple -mhvx -mv79 -emit-llvm -mllvm -ripple-disable-link %s -o - 2>&1 | FileCheck %s
 
-#include <ripple.h>
+#include "ripple_test.h"
 #include <ripple/HVX_Narrow_Shift.h>
 
 #define HVX_32_i32 32

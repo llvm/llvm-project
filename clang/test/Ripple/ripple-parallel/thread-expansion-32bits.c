@@ -3,8 +3,7 @@
 // RUN: %clang -ffreestanding -S -Xclang -disable-llvm-passes -emit-llvm -fenable-ripple %s -o - | FileCheck %s
 // RUN: %clang -ffreestanding -S -Xclang -disable-llvm-passes -emit-llvm -fenable-ripple %s -o - -DUSING_PRAGMA=1 | FileCheck %s
 
-#include <stdint.h>
-#include <ripple/thread.h>
+#include "../ripple_test.h"
 
 #ifndef THREAD_PE
 #define THREAD_PE 32

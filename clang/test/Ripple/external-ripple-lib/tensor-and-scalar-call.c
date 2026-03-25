@@ -4,7 +4,7 @@
 
 #ifdef COMPILE_LIB
 
-#include <stdint.h>
+
 
 typedef float f32t32 __attribute__((__vector_size__(128)))
 __attribute__((aligned(128)));
@@ -15,8 +15,7 @@ extern inline f32t32 ripple_pure_ew_add(f32t32 A) {
 
 #else
 
-#include <stddef.h>
-#include <ripple.h>
+#include "../ripple_test.h"
 
 #define VEC 0
 

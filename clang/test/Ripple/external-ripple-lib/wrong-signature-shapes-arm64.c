@@ -14,7 +14,7 @@ extern v4f32 ripple_ret_t16x16f32_t1x16f32_t16f32_externf2(v4f32 A, v16f32 B, v4
 
 #else
 
-#include <ripple.h>
+#include "../ripple_test.h"
 
 #define TILE_SIZE 16
 

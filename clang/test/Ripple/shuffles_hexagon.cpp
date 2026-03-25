@@ -2,7 +2,7 @@
 // RUN: %clang -ffreestanding -Xclang -disable-llvm-passes --target=hexagon-unknown-elf -mcpu=hexagonv81 -S -emit-llvm %s -o - 2>&1 | FileCheck %s --implicit-check-not="warning:" --implicit-check-not="error:"
 // RUN: %clang -ffreestanding -x c -Xclang -disable-llvm-passes --target=hexagon-unknown-elf -mcpu=hexagonv81 -S -emit-llvm %s -o - 2>&1 | FileCheck %s --implicit-check-not="warning:" --implicit-check-not="error:"
 
-#include <ripple.h>
+#include "ripple_test.h"
 
 #ifdef __cplusplus
 extern "C"

@@ -1,8 +1,8 @@
 // REQUIRES: target-x86_64 || target-aarch64 || target=hexagon{{.*}}
 // RUN: %clang -ffreestanding -Wall -Wextra -Wpedantic -fenable-ripple -S -O2 -emit-llvm %s -o - | FileCheck --implicit-check-not="warning:" %s
 
-#include <ripple.h>
-#include <stdint.h>
+#include "../ripple_test.h"
+
 
 __attribute__((noinline)) int toBeSpecialized(int32_t n) {
   return n * 32;

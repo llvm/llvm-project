@@ -1,7 +1,7 @@
 // REQUIRES: target-x86_64 || target-aarch64 || target=hexagon{{.*}}
 // RUN: %clang -ffreestanding -g -S -O2 -emit-llvm -fenable-ripple %s -o %t 2> %t2; FileCheck %s --input-file %t2
 
-#include <ripple.h>
+#include "ripple_test.h"
 #define VEC_LANES 0
 
 // CHECK: ripple does not allow implicit broadcasting of a store address to the value address; the value has shape 'Tensor[32]' and the address has shape 'Scalar'. Hint: use ripple_id() for the address computation or use a reduction operation

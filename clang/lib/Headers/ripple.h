@@ -8,7 +8,4 @@
 
 #pragma once
 
-#include <stddef.h>
-#include <stdint.h>
-
-#include "__ripple_vec.h"
+#include <__ripple_vec.h>

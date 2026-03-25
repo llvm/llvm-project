@@ -18,7 +18,7 @@ extern v256f32 ripple_mask_externf2() { v256f32 v = {8.f, 1.f}; return v; }
 
 #else
 
-#include <ripple.h>
+#include "../ripple_test.h"
 
 #define TILE_SIZE 16
 

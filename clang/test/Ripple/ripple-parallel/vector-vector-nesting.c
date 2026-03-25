@@ -2,7 +2,7 @@
 // REQUIRES: target=hexagon{{.*}} || target-aarch64 || target-x86_64
 // RUN: %clang -ffreestanding -S -Xclang -disable-llvm-passes -emit-llvm -fenable-ripple %s -o - | FileCheck %s
 
-#include <ripple.h>
+#include "../ripple_test.h"
 
 // CHECK:         [[TMP6:%.*]] = call ptr @llvm.ripple.block.setshape.i{{32|64}}(i{{32|64}} 0, i{{32|64}} 32, i{{32|64}} 1, i{{32|64}} 1, i{{32|64}} 1, i{{32|64}} 1, i{{32|64}} 1, i{{32|64}} 1, i{{32|64}} 1, i{{32|64}} 1, i{{32|64}} 1)
 // CHECK-NEXT:    store ptr [[TMP6]], ptr [[BST:%.*]]

@@ -2,7 +2,7 @@
 // REQUIRES: target-x86_64 || target-aarch64 || target=hexagon{{.*}}
 // RUN: %clang -ffreestanding -S -O1 -emit-llvm -fenable-ripple %s -o - 2>&1 | FileCheck %s --implicit-check-not="warning:" --implicit-check-not="error:"
 
-#include <ripple.h>
+#include "ripple_test.h"
 
 void vecBranch(unsigned size, int a[32][size][size], int b[32]) {
   auto BS = ripple_set_block_shape(0, 4, 8);

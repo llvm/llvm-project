@@ -4,7 +4,7 @@
 
 // Test where a loop maps to 2 different PE dimensions (a thread, a vector)
 
-#include <ripple.h>
+#include "../ripple_test.h"
 
 #ifndef HVX_LANE
 #define HVX_LANE 0

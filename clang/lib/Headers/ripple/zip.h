@@ -51,18 +51,18 @@ namespace rzip {
 ///         among the unzipped packets.
 /// @param dst_id the destination vector lane
 /// @param n the block size
-template <size_t SET_SIZE, size_t CUR_BLOCK, size_t OFFSET>
-static size_t shuffle_unzip(size_t dst_id, size_t n) {
+template <__SIZE_TYPE__ SET_SIZE, __SIZE_TYPE__ CUR_BLOCK, __SIZE_TYPE__ OFFSET>
+static __SIZE_TYPE__ shuffle_unzip(__SIZE_TYPE__ dst_id, __SIZE_TYPE__ n) {
   // Position of the first occurrence of set CUR_SET in this block in the source
-  size_t pack_size = (n + SET_SIZE - 1) / SET_SIZE; // ceil(n, set_size)
-  size_t src_set = dst_id / pack_size;
-  size_t src_rank = dst_id % pack_size;
+  __SIZE_TYPE__ pack_size = (n + SET_SIZE - 1) / SET_SIZE; // ceil(n, set_size)
+  __SIZE_TYPE__ src_set = dst_id / pack_size;
+  __SIZE_TYPE__ src_rank = dst_id % pack_size;
 
   // Offset of the first element in the current set
-  size_t per_block_offset = pack_size * SET_SIZE - n;
-  size_t cur_block_offset = (per_block_offset * CUR_BLOCK) % SET_SIZE;
+  __SIZE_TYPE__ per_block_offset = pack_size * SET_SIZE - n;
+  __SIZE_TYPE__ cur_block_offset = (per_block_offset * CUR_BLOCK) % SET_SIZE;
   // We want the 1st element's offset in the current block to be OFFSET
-  size_t corrective_offset = OFFSET - cur_block_offset;
+  __SIZE_TYPE__ corrective_offset = OFFSET - cur_block_offset;
 
   // Shift the source function by CUR_SET
   return SET_SIZE * src_rank + (src_set + corrective_offset) % SET_SIZE;
@@ -73,7 +73,7 @@ static size_t shuffle_unzip(size_t dst_id, size_t n) {
 /// @param nv the ripple block size (along dimension 0, the only dimension)
 #define rzip_unzip_pairs(v, nv, zipped_pairs0, zipped_pairs1, evens, odds)     \
   {                                                                            \
-    size_t one_half = ((nv) + 1) / 2;                                          \
+    __SIZE_TYPE__ one_half = ((nv) + 1) / 2;                                   \
                                                                                \
     /* Note: This may be a lot of shuffles.                                    \
        sing shuffle_unzip<2, 0, 0> + rotate might be faster. */                \
@@ -95,12 +95,12 @@ static size_t shuffle_unzip(size_t dst_id, size_t n) {
 #define rzip_unzip_triples(v, nv, zipped_triples0, zipped_triples1,            \
                            zipped_triples2, unzipped0, unzipped1, unzipped2)   \
   {                                                                            \
-    size_t one_third = ((nv) + 2) / 3;                                         \
+    __SIZE_TYPE__ one_third = ((nv) + 2) / 3;                                  \
     /* The third packet may start in one of two places */                      \
-    size_t small_third = (nv) / 3;                                             \
-    size_t two_thirds = (one_third + 2 * small_third == (nv))                  \
-                            ? one_third + small_third                          \
-                            : 2 * one_third;                                   \
+    __SIZE_TYPE__ small_third = (nv) / 3;                                      \
+    __SIZE_TYPE__ two_thirds = (one_third + 2 * small_third == (nv))           \
+                                   ? one_third + small_third                   \
+                                   : 2 * one_third;                            \
                                                                                \
     /* The strategy here is to form abc, cab ('a' rotated to an offset of 1)   \
        and bca ('a' rotated to an offset of 2) and then mix the blocks */      \
@@ -119,23 +119,25 @@ static size_t shuffle_unzip(size_t dst_id, size_t n) {
                      ? bbc                                                     \
                      : cab; /* The first set of b's made it to the             \
                                second position, from abc. Correct it.*/        \
-    (unzipped1) = ripple_shuffle(bbb, [](size_t dst, size_t BS) {              \
-      size_t one_third = (BS + 2) / 3;                                         \
-      return dst < one_third ? BS - one_third + dst : dst - one_third;         \
-    });                                                                        \
+    (unzipped1) =                                                              \
+        ripple_shuffle(bbb, [](__SIZE_TYPE__ dst, __SIZE_TYPE__ BS) {          \
+          __SIZE_TYPE__ one_third = (BS + 2) / 3;                              \
+          return dst < one_third ? BS - one_third + dst : dst - one_third;     \
+        });                                                                    \
                                                                                \
     ElType ccc =                                                               \
         (v) < two_thirds ? cca : bbc; /* The first set of c's made it to the   \
                                        third position, from abc. Correct it.*/ \
-    (unzipped2) = ripple_shuffle(ccc, [](size_t dst, size_t BS) {              \
-      size_t one_third = (BS + 2) / 3;                                         \
-      /* The third packet may start in one of two places */                    \
-      size_t small_third = BS / 3;                                             \
-      size_t two_thirds = (one_third + 2 * small_third == BS)                  \
-                              ? one_third + small_third                        \
-                              : 2 * one_third;                                 \
-      return dst < two_thirds ? BS - two_thirds + dst : dst - two_thirds;      \
-    });                                                                        \
+    (unzipped2) =                                                              \
+        ripple_shuffle(ccc, [](__SIZE_TYPE__ dst, __SIZE_TYPE__ BS) {          \
+          __SIZE_TYPE__ one_third = (BS + 2) / 3;                              \
+          /* The third packet may start in one of two places */                \
+          __SIZE_TYPE__ small_third = BS / 3;                                  \
+          __SIZE_TYPE__ two_thirds = (one_third + 2 * small_third == BS)       \
+                                         ? one_third + small_third             \
+                                         : 2 * one_third;                      \
+          return dst < two_thirds ? BS - two_thirds + dst : dst - two_thirds;  \
+        });                                                                    \
   }
 
 /// @brief Portable vectorized load and unzip of a block of quads
@@ -146,10 +148,10 @@ static size_t shuffle_unzip(size_t dst_id, size_t n) {
                          zipped_quads3, unzipped0, unzipped1, unzipped2,       \
                          unzipped3)                                            \
   {                                                                            \
-    size_t one_quarter = ((nv) + 3) / 4;                                       \
-    size_t small_quarter = (nv) / 4;                                           \
-    size_t two_quarters;                                                       \
-    size_t three_quarters;                                                     \
+    __SIZE_TYPE__ one_quarter = ((nv) + 3) / 4;                                \
+    __SIZE_TYPE__ small_quarter = (nv) / 4;                                    \
+    __SIZE_TYPE__ two_quarters;                                                \
+    __SIZE_TYPE__ three_quarters;                                              \
     if (one_quarter + 3 * small_quarter == (nv)) {                             \
       two_quarters = one_quarter + small_quarter;                              \
       three_quarters = two_quarters + small_quarter;                           \
@@ -185,47 +187,51 @@ static size_t shuffle_unzip(size_t dst_id, size_t n) {
     ElType bbbb = (v) < three_quarters ? bbbc : aaab;                          \
     /* The first set of b' s made it to the second position,                   \
             from abcd.Correct it.*/                                            \
-    (unzipped1) = ripple_shuffle(bbbb, [](size_t dst, size_t BS) {             \
-      size_t one_quarter = (BS + 3) / 4;                                       \
-      return dst < one_quarter ? BS - one_quarter + dst : dst - one_quarter;   \
-    });                                                                        \
+    (unzipped1) =                                                              \
+        ripple_shuffle(bbbb, [](__SIZE_TYPE__ dst, __SIZE_TYPE__ BS) {         \
+          __SIZE_TYPE__ one_quarter = (BS + 3) / 4;                            \
+          return dst < one_quarter ? BS - one_quarter + dst                    \
+                                   : dst - one_quarter;                        \
+        });                                                                    \
     ElType cccc = (v) < three_quarters ? cccd : bbbc;                          \
     /* The first set of c's made it to the third position, from abcd. Correct  \
      * it.*/                                                                   \
-    (unzipped2) = ripple_shuffle(cccc, [](size_t dst, size_t BS) {             \
-      size_t one_quarter = (BS + 3) / 4;                                       \
-      size_t small_quarter = BS / 4;                                           \
-      size_t two_quarters;                                                     \
-      if (one_quarter + 3 * small_quarter == BS) {                             \
-        two_quarters = one_quarter + small_quarter;                            \
-      } else {                                                                 \
-        two_quarters = 2 * one_quarter;                                        \
-      }                                                                        \
-      return dst < two_quarters ? BS - two_quarters + dst                      \
-                                : dst - two_quarters;                          \
-    });                                                                        \
+    (unzipped2) =                                                              \
+        ripple_shuffle(cccc, [](__SIZE_TYPE__ dst, __SIZE_TYPE__ BS) {         \
+          __SIZE_TYPE__ one_quarter = (BS + 3) / 4;                            \
+          __SIZE_TYPE__ small_quarter = BS / 4;                                \
+          __SIZE_TYPE__ two_quarters;                                          \
+          if (one_quarter + 3 * small_quarter == BS) {                         \
+            two_quarters = one_quarter + small_quarter;                        \
+          } else {                                                             \
+            two_quarters = 2 * one_quarter;                                    \
+          }                                                                    \
+          return dst < two_quarters ? BS - two_quarters + dst                  \
+                                    : dst - two_quarters;                      \
+        });                                                                    \
     ElType dddd = (v) < three_quarters ? ddda : cccd;                          \
     /* The first set of d's made it to the 4th position, from abcd. Correct    \
      * it.*/                                                                   \
-    (unzipped3) = ripple_shuffle(dddd, [](size_t dst, size_t BS) {             \
-      size_t one_quarter = (BS + 3) / 4;                                       \
-      size_t small_quarter = BS / 4;                                           \
-      size_t two_quarters;                                                     \
-      size_t three_quarters;                                                   \
-      if (one_quarter + 3 * small_quarter == BS) {                             \
-        two_quarters = one_quarter + small_quarter;                            \
-        three_quarters = two_quarters + small_quarter;                         \
-      } else {                                                                 \
-        two_quarters = 2 * one_quarter;                                        \
-        if (two_quarters + 2 * small_quarter == BS) {                          \
-          three_quarters = two_quarters + small_quarter;                       \
-        } else {                                                               \
-          three_quarters = two_quarters + one_quarter;                         \
-        }                                                                      \
-      }                                                                        \
-      return dst < three_quarters ? BS - three_quarters + dst                  \
-                                  : dst - three_quarters;                      \
-    });                                                                        \
+    (unzipped3) =                                                              \
+        ripple_shuffle(dddd, [](__SIZE_TYPE__ dst, __SIZE_TYPE__ BS) {         \
+          __SIZE_TYPE__ one_quarter = (BS + 3) / 4;                            \
+          __SIZE_TYPE__ small_quarter = BS / 4;                                \
+          __SIZE_TYPE__ two_quarters;                                          \
+          __SIZE_TYPE__ three_quarters;                                        \
+          if (one_quarter + 3 * small_quarter == BS) {                         \
+            two_quarters = one_quarter + small_quarter;                        \
+            three_quarters = two_quarters + small_quarter;                     \
+          } else {                                                             \
+            two_quarters = 2 * one_quarter;                                    \
+            if (two_quarters + 2 * small_quarter == BS) {                      \
+              three_quarters = two_quarters + small_quarter;                   \
+            } else {                                                           \
+              three_quarters = two_quarters + one_quarter;                     \
+            }                                                                  \
+          }                                                                    \
+          return dst < three_quarters ? BS - three_quarters + dst              \
+                                      : dst - three_quarters;                  \
+        });                                                                    \
   }
 
 // _________________________ Load-and-unzip functions __________________________

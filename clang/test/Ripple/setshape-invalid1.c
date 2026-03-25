@@ -1,6 +1,6 @@
 // REQUIRES: aarch64-registered-target || x86-registered-target
 
-#include <ripple.h>
+#include "ripple_test.h"
 
 size_t check(int n) {
   ripple_block_t BS;

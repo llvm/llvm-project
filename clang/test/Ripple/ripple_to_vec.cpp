@@ -1,7 +1,7 @@
 // REQUIRES: target=aarch64{{.*}} || target=x86_64{{.*}}
 // RUN: %clang -ffreestanding %s -O2 -fenable-ripple -S -emit-llvm -o - | FileCheck %s
 
-#include <ripple.h>
+#include "ripple_test.h"
 #include <ripple/zip.h>
 
 typedef int32_t __attribute__((vector_size(128))) Vector_t;

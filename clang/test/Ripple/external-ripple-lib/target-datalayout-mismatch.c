@@ -3,8 +3,7 @@
 // RUN: %clang -ffreestanding --target=aarch64-linux-gnu -O2 -fenable-ripple -emit-llvm -S -o - -fripple-lib %t.rlib.bc %s 2> %t; FileCheck %s --input-file %t
 
 #include "external_library.h"
-#include <stddef.h>
-#include <ripple.h>
+#include "../ripple_test.h"
 
 #define VEC 0
 

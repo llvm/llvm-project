@@ -1,7 +1,7 @@
 // REQUIRES: target-x86_64 || target-aarch64 || target=hexagon{{.*}}
 // RUN: %clang -ffreestanding -fenable-ripple -g -S -O2 -emit-llvm %s
 
-#include <ripple.h>
+#include "ripple_test.h"
 
 typedef uint32_t u32t32 __attribute__((__vector_size__(128)))
 __attribute__((aligned(128)));

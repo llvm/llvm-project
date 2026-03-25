@@ -1,7 +1,7 @@
 // REQUIRES: target-x86_64 || target-aarch64 || target=hexagon{{.*}}
 // RUN: %clang -ffreestanding -g -Wall -Wextra -Wpedantic -fenable-ripple -S -O2 -emit-llvm %s 2> %t; FileCheck --implicit-check-not="warning:" %s --input-file=%t
 
-#include <ripple.h>
+#include "../ripple_test.h"
 
 __attribute__((noinline)) int toBeSpecialized(int n, int p) {
   if (p <= 0)

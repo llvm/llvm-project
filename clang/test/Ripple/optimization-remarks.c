@@ -4,7 +4,7 @@
 // RUN: %clang -ffreestanding -fenable-ripple -fripple-lib=%t.ll -S -emit-llvm -O2 -ffast-math %s -o %t -Rpass-missed=ripple -mllvm -ripple-disable-link 2> %t.err && FileCheck %s --input-file=%t.err --check-prefix=FAILURE
 #ifdef COMPILE_LIB
 
-#include <stdint.h>
+
 
 typedef float f32t4 __attribute__((__vector_size__(16)))
 __attribute__((aligned(16)));
@@ -16,7 +16,7 @@ extern inline f32t4 ripple_ew_pure_externf_ew(f32t4 A, f32t4 B) {
 
 #else
 
-#include <ripple.h>
+#include "ripple_test.h"
 
 float externf_ew(float, float);
 float externf_exact(float);

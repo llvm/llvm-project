@@ -2,10 +2,10 @@
 // REQUIRES: target=hexagon{{.*}}
 // RUN: %clang -ffreestanding -S -Xclang -disable-llvm-passes -emit-llvm -fenable-ripple %s -DUSING_PRAGMA=1 2> %t.pragma.err; FileCheck %s --check-prefixes=CHECK,PRAGMACHECK --input-file=%t.pragma.err
 // RUN: %clang -ffreestanding -S -Xclang -disable-llvm-passes -emit-llvm -fenable-ripple %s 2> %t.err; FileCheck %s --input-file %t.err
-
 #include <ripple.h>
+#define NULL ((void*)0)
 
-void check(int Chunk, int64_t N, int32_t start, int64_t end, float x[restrict N],
+void check(int Chunk, long N, int start, long end, float x[restrict N],
            float y[restrict N], float xpy[restrict N]) {
   ripple_thd_block_t ThreadBlockT = ripple_thd_init(0, NULL);
   ripple_block_t BSV = ripple_set_block_shape(0, 4);

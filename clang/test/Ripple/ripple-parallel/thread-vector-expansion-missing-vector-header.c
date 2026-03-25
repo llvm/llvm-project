@@ -5,7 +5,7 @@
 
 #include <ripple/thread.h>
 
-void check(int Chunk, int64_t N, int32_t start, int64_t end, float x[restrict N],
+void check(int Chunk, long N, int start, long end, float x[restrict N],
            float y[restrict N], float xpy[restrict N]) {
   ripple_thd_block_t ThreadBlockT = ripple_thd_init(0, NULL);
   ripple_block_t BSV = ripple_set_block_shape(0, 4);

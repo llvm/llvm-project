@@ -2,7 +2,7 @@
 // RUN: %clang -ffreestanding -g -S -fenable-ripple -O2 -emit-llvm %s 2> %t; FileCheck %s --input-file %t
 // RUN: %clang -ffreestanding -x c++ -g -S -fenable-ripple -O2 -emit-llvm %s 2> %t; FileCheck %s --input-file %t
 
-#include <ripple.h>
+#include "ripple_test.h"
 
 size_t indexingFun(size_t BlockIndex, size_t BlockSize) {
   return BlockIndex - BlockSize;

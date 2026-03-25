@@ -17,7 +17,7 @@ extern v16f32 ripple_pure_uniform_t4x4f32_externf5(void) { v16f32 v = {8.f, 1.f}
 
 #else
 
-#include <ripple.h>
+#include "../ripple_test.h"
 
 extern float externf1(ripple_block_t BS);
 extern float externf2(ripple_block_t BS);

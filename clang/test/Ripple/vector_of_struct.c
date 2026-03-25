@@ -6,7 +6,7 @@
 // RUN: %clang -ffreestanding -g -S -fenable-ripple -Os -emit-llvm %s
 // RUN: %clang -ffreestanding -g -S -fenable-ripple -Oz -emit-llvm %s
 
-#include <ripple.h>
+#include "ripple_test.h"
 
 struct Ure {
   int p;

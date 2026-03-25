@@ -3,8 +3,8 @@
 // RUN: %clang -ffreestanding -Wall -Wextra -Wpedantic -Wripple -g -O2 -fenable-ripple -emit-llvm -S -o - -mllvm -ripple-lib=%t.lib.bc %s 2> %t; FileCheck %s --input-file=%t
 
 #include "external_library.h"
-#include <stddef.h>
-#include <ripple.h>
+#include "../ripple_test.h"
+
 
 #define VEC 0
 

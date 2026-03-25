@@ -1,7 +1,7 @@
 // REQUIRES: target=hexagon{{.*}} || target-aarch64 || target-x86_64
 // RUN: %clang -ffreestanding -g %s -O2 -fenable-ripple -S -emit-llvm 2>%t; FileCheck %s --input-file=%t
 
-#include <ripple.h>
+#include "ripple_test.h"
 
 void check(float *A, float *B, float C[1][32]) {
   ripple_block_t BS = ripple_set_block_shape(0, 32);

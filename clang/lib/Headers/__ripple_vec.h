@@ -109,7 +109,7 @@ typedef struct ripple_block_shape *ripple_block_t;
 /// \brief Converts a <N_EL x T> vector to a 1-d Ripple block of T
 /// for processing element BS.
 /// Ripple block size assumed to be less than or equal to N_EL.
-template <size_t N_EL, typename T>
+template <__SIZE_TYPE__ N_EL, typename T>
 [[gnu::always_inline]] T __attribute__((vector_size(sizeof(T) * N_EL)))
 ripple_to_vec(ripple_block_t BS, T x) {
   __attribute__((aligned(__alignof__(
@@ -120,7 +120,7 @@ ripple_to_vec(ripple_block_t BS, T x) {
 
 /// \brief Converts a 1-d Ripple block of T to a <N_EL x T> vector.
 /// Ripple block size assumed to be less than or equal to N_EL.
-template <size_t N_EL, typename T>
+template <__SIZE_TYPE__ N_EL, typename T>
 [[gnu::always_inline]] T
 vec_to_ripple(ripple_block_t BS,
               T __attribute__((vector_size(sizeof(T) * N_EL))) x) {
@@ -132,7 +132,7 @@ vec_to_ripple(ripple_block_t BS,
 
 /// \brief Converts a <N_EL x T> vector to a 2-d Ripple block of T.
 /// Ripple block size assumed to be less than or equal to N_EL.
-template <size_t N_EL, typename T>
+template <__SIZE_TYPE__ N_EL, typename T>
 [[gnu::always_inline]] T __attribute__((vector_size(sizeof(T) * N_EL)))
 ripple_to_vec_2d(ripple_block_t BS, T x) {
   __attribute__((aligned(__alignof__(
@@ -143,7 +143,7 @@ ripple_to_vec_2d(ripple_block_t BS, T x) {
 
 /// \brief Converts a 2-d Ripple block of T to a <N_EL x T> vector.
 /// Ripple block size assumed to be less than or equal to N_EL.
-template <size_t N_EL, typename T>
+template <__SIZE_TYPE__ N_EL, typename T>
 [[gnu::always_inline]] T
 vec_to_ripple_2d(ripple_block_t BS,
                  T __attribute__((vector_size(sizeof(T) * N_EL))) x) {
@@ -156,7 +156,7 @@ vec_to_ripple_2d(ripple_block_t BS,
 
 /// \brief Converts a <N_EL x T> vector to a 3-d Ripple block of T.
 /// Ripple block size assumed to be less than or equal to N_EL.
-template <size_t N_EL, typename T>
+template <__SIZE_TYPE__ N_EL, typename T>
 [[gnu::always_inline]] T __attribute__((vector_size(sizeof(T) * N_EL)))
 ripple_to_vec_3d(ripple_block_t BS, T x) {
   __attribute__((aligned(__alignof__(
@@ -169,7 +169,7 @@ ripple_to_vec_3d(ripple_block_t BS, T x) {
 
 /// \brief Converts a 3-d Ripple block of T to a <N_EL x T> vector.
 /// Ripple block size assumed to be less than or equal to N_EL.
-template <size_t N_EL, typename T>
+template <__SIZE_TYPE__ N_EL, typename T>
 [[gnu::always_inline]] T
 vec_to_ripple_3d(ripple_block_t BS,
                  T __attribute__((vector_size(sizeof(T) * N_EL))) x) {
@@ -606,13 +606,13 @@ template <typename T> struct remove_reference<T &&> {
 }; // namespace __RippleTyTraits
 
 #define spec_reduce(op, CT, T)                                                 \
-  template <uint64_t msk>                                                      \
+  template <__UINT64_TYPE__ msk>                                               \
   __attribute__((always_inline)) static CT ripple_reduce##op(const CT Val) {   \
     return __builtin_ripple_reduce##op##_##T(msk, (Val));                      \
   }
 
 #define spec_reduce_int(op, CT, UI)                                            \
-  template <uint64_t msk>                                                      \
+  template <__UINT64_TYPE__ msk>                                               \
   __attribute__((always_inline)) static CT ripple_reduce##op(const CT Val) {   \
     switch (sizeof(Val)) {                                                     \
     case 1:                                                                    \
@@ -627,7 +627,7 @@ template <typename T> struct remove_reference<T &&> {
   }
 
 #define spec_reduce_char(op)                                                   \
-  template <uint64_t msk>                                                      \
+  template <__UINT64_TYPE__ msk>                                               \
   __attribute__((always_inline)) static char ripple_reduce##op(                \
       const char Val) {                                                        \
     return __ripple_char_is_signed                                             \
@@ -638,14 +638,14 @@ template <typename T> struct remove_reference<T &&> {
 #if __has_bf16__
 #if __has_soft_bf16__
 #define emulate_spec_reduce_bf16(op)                                           \
-  template <uint64_t msk>                                                      \
+  template <__UINT64_TYPE__ msk>                                               \
   __attribute__((always_inline)) static __bf16 ripple_reduce##op(              \
       const __bf16 Val) {                                                      \
     return (__bf16)__builtin_ripple_reduce##op##_f32(msk, (float)(Val));       \
   }
 #else // !__has_soft_bf16__
 #define emulate_spec_reduce_bf16(op)                                           \
-  template <uint64_t msk>                                                      \
+  template <__UINT64_TYPE__ msk>                                               \
   __attribute__((always_inline)) static __bf16 ripple_reduce##op(              \
       const __bf16 Val) {                                                      \
     return __builtin_ripple_reduce##op##_bf16(msk, (Val));                     \
@@ -824,12 +824,13 @@ spec_reduce_itypes(xor);
 
 #define __ripple_shuffle_impl_int_cpp(Type, UI)                                \
   static __attribute__((always_inline)) Type ripple_shuffle(                   \
-      Type x, size_t (*index_func)(size_t, size_t)) {                          \
+      Type x, __SIZE_TYPE__ (*index_func)(__SIZE_TYPE__, __SIZE_TYPE__)) {     \
     return __ripple_shuffle_impl_int(Type, UI, x, x, false, index_func);       \
   }
 
 static __attribute__((always_inline)) char
-ripple_shuffle(char x, size_t (*index_func)(size_t, size_t)) {
+ripple_shuffle(char x,
+               __SIZE_TYPE__ (*index_func)(__SIZE_TYPE__, __SIZE_TYPE__)) {
   return __ripple_char_is_signed
              ? __ripple_shuffle_impl_int(char, i, x, x, false, index_func)
              : __ripple_shuffle_impl_int(char, u, x, x, false, index_func);
@@ -837,7 +838,8 @@ ripple_shuffle(char x, size_t (*index_func)(size_t, size_t)) {
 
 template <typename T>
 static __attribute__((always_inline)) T *
-ripple_shuffle_p(T *x, size_t (*index_func)(size_t, size_t)) {
+ripple_shuffle_p(T *x,
+                 __SIZE_TYPE__ (*index_func)(__SIZE_TYPE__, __SIZE_TYPE__)) {
   return static_cast<T *>(__builtin_ripple_shuffle_p(x, x, false, index_func));
 }
 
@@ -856,41 +858,47 @@ __ripple_shuffle_impl_int_cpp(unsigned long long, u);
 
 #if __has_Float16__
 static __attribute__((always_inline)) _Float16
-ripple_shuffle(_Float16 x, size_t (*index_func)(size_t, size_t)) {
+ripple_shuffle(_Float16 x,
+               __SIZE_TYPE__ (*index_func)(__SIZE_TYPE__, __SIZE_TYPE__)) {
   return __builtin_ripple_shuffle_f16(x, x, false, index_func);
 }
 #endif
 #if __has_bf16__
 static __attribute__((always_inline)) __bf16
-ripple_shuffle(__bf16 x, size_t (*index_func)(size_t, size_t)) {
+ripple_shuffle(__bf16 x,
+               __SIZE_TYPE__ (*index_func)(__SIZE_TYPE__, __SIZE_TYPE__)) {
   return __emulate_shuffle_bf16(x, x, false, index_func);
 }
 #endif
 static __attribute__((always_inline)) float
-ripple_shuffle(float x, size_t (*index_func)(size_t, size_t)) {
+ripple_shuffle(float x,
+               __SIZE_TYPE__ (*index_func)(__SIZE_TYPE__, __SIZE_TYPE__)) {
   return __builtin_ripple_shuffle_f32(x, x, false, index_func);
 }
 static __attribute__((always_inline)) double
-ripple_shuffle(double x, size_t (*index_func)(size_t, size_t)) {
+ripple_shuffle(double x,
+               __SIZE_TYPE__ (*index_func)(__SIZE_TYPE__, __SIZE_TYPE__)) {
   return __builtin_ripple_shuffle_f64(x, x, false, index_func);
 }
 
 #define __ripple_shuffle_pair_impl_int_cpp(Type, UI)                           \
   static __attribute__((always_inline)) Type ripple_shuffle_pair(              \
-      Type x, Type y, size_t (*index_func)(size_t, size_t)) {                  \
+      Type x, Type y,                                                          \
+      __SIZE_TYPE__ (*index_func)(__SIZE_TYPE__, __SIZE_TYPE__)) {             \
     return __ripple_shuffle_impl_int(Type, UI, x, y, true, index_func);        \
   }
 
 static __attribute__((always_inline)) char
-ripple_shuffle_pair(char x, char y, size_t (*index_func)(size_t, size_t)) {
+ripple_shuffle_pair(char x, char y,
+                    __SIZE_TYPE__ (*index_func)(__SIZE_TYPE__, __SIZE_TYPE__)) {
   return __ripple_char_is_signed
              ? __ripple_shuffle_impl_int(char, i, x, y, true, index_func)
              : __ripple_shuffle_impl_int(char, u, x, y, true, index_func);
 }
 
 template <typename T>
-static __attribute__((always_inline)) T *
-ripple_shuffle_pair_p(T *x, T *y, size_t (*index_func)(size_t, size_t)) {
+static __attribute__((always_inline)) T *ripple_shuffle_pair_p(
+    T *x, T *y, __SIZE_TYPE__ (*index_func)(__SIZE_TYPE__, __SIZE_TYPE__)) {
   return static_cast<T *>(__builtin_ripple_shuffle_p(x, y, true, index_func));
 }
 
@@ -910,22 +918,25 @@ __ripple_shuffle_pair_impl_int_cpp(unsigned long long, u);
 #if __has_Float16__
 static __attribute__((always_inline)) _Float16
 ripple_shuffle_pair(_Float16 x, _Float16 y,
-                    size_t (*index_func)(size_t, size_t)) {
+                    __SIZE_TYPE__ (*index_func)(__SIZE_TYPE__, __SIZE_TYPE__)) {
   return __builtin_ripple_shuffle_f16(x, y, true, index_func);
 }
 #endif
 #if __has_bf16__
 static __attribute__((always_inline)) __bf16
-ripple_shuffle_pair(__bf16 x, __bf16 y, size_t (*index_func)(size_t, size_t)) {
+ripple_shuffle_pair(__bf16 x, __bf16 y,
+                    __SIZE_TYPE__ (*index_func)(__SIZE_TYPE__, __SIZE_TYPE__)) {
   return __emulate_shuffle_bf16(x, y, true, index_func);
 }
 #endif
 static __attribute__((always_inline)) float
-ripple_shuffle_pair(float x, float y, size_t (*index_func)(size_t, size_t)) {
+ripple_shuffle_pair(float x, float y,
+                    __SIZE_TYPE__ (*index_func)(__SIZE_TYPE__, __SIZE_TYPE__)) {
   return __builtin_ripple_shuffle_f32(x, y, true, index_func);
 }
 static __attribute__((always_inline)) double
-ripple_shuffle_pair(double x, double y, size_t (*index_func)(size_t, size_t)) {
+ripple_shuffle_pair(double x, double y,
+                    __SIZE_TYPE__ (*index_func)(__SIZE_TYPE__, __SIZE_TYPE__)) {
   return __builtin_ripple_shuffle_f64(x, y, true, index_func);
 }
 
@@ -1074,14 +1085,14 @@ ripple_shuffle_pair(double x, double y, size_t (*index_func)(size_t, size_t)) {
 #else // defined(__cplusplus)
 
 #define spec_bcast_int(CT, IU)                                                 \
-  template <uint64_t msk>                                                      \
+  template <__UINT64_TYPE__ msk>                                               \
   __attribute__((always_inline)) static CT ripple_broadcast(ripple_block_t BS, \
                                                             const CT Val) {    \
     return __ripple_broadcast_any_int(CT, IU, BS, msk, Val);                   \
   }
 
 #define spec_bcast(CT, T)                                                      \
-  template <uint64_t msk>                                                      \
+  template <__UINT64_TYPE__ msk>                                               \
   __attribute__((always_inline)) static CT ripple_broadcast(ripple_block_t BS, \
                                                             const CT Val) {    \
     return __builtin_ripple_broadcast_##T(BS, msk, Val);                       \
@@ -1090,14 +1101,14 @@ ripple_shuffle_pair(double x, double y, size_t (*index_func)(size_t, size_t)) {
 #if __has_bf16__
 #if __has_soft_bf16__
 #define emulate_spec_bcast_bf16()                                              \
-  template <uint64_t msk>                                                      \
+  template <__UINT64_TYPE__ msk>                                               \
   __attribute__((always_inline)) static __bf16 ripple_broadcast(               \
       ripple_block_t BS, const __bf16 Val) {                                   \
     return (__bf16)__builtin_ripple_broadcast_f32(BS, msk, (float)(Val));      \
   }
 #else
 #define emulate_spec_bcast_bf16()                                              \
-  template <uint64_t msk>                                                      \
+  template <__UINT64_TYPE__ msk>                                               \
   __attribute__((always_inline)) static __bf16 ripple_broadcast(               \
       ripple_block_t BS, const __bf16 Val) {                                   \
     return __builtin_ripple_broadcast_bf16(BS, msk, Val);                      \
@@ -1139,7 +1150,7 @@ ripple_shuffle_pair(double x, double y, size_t (*index_func)(size_t, size_t)) {
   spec_bcast_int(signed long long, i);                                         \
   spec_bcast_int(unsigned long long, u);
 
-template <uint64_t msk>
+template <__UINT64_TYPE__ msk>
 __attribute__((always_inline)) static char ripple_broadcast(ripple_block_t BS,
                                                             const char Val) {
   return __ripple_char_is_signed ? __builtin_ripple_broadcast_i8(BS, msk, Val)
@@ -1247,15 +1258,15 @@ spec_bcast_ftypes();
 #if __has_bf16__
 #if __has_soft_bf16__
 template <typename... VArgs>
-__attribute__((always_inline)) static __bf16 ripple_stack(
-    ripple_block_t BS, __bf16 Val, VArgs... vargs) {
+__attribute__((always_inline)) static __bf16
+ripple_stack(ripple_block_t BS, __bf16 Val, VArgs... vargs) {
   return __builtin_ripple_stack_f32((BS), (float)(Val),
                                     static_cast<float>(vargs)...);
 }
 #else
 template <typename... VArgs>
-__attribute__((always_inline)) static __bf16 ripple_stack(
-    ripple_block_t BS, __bf16 Val, VArgs... vargs) {
+__attribute__((always_inline)) static __bf16
+ripple_stack(ripple_block_t BS, __bf16 Val, VArgs... vargs) {
   return __builtin_ripple_stack_bf16((BS), (Val), vargs...);
 }
 #endif
@@ -1263,8 +1274,8 @@ __attribute__((always_inline)) static __bf16 ripple_stack(
 
 #if __has_Float16__
 template <typename... VArgs>
-__attribute__((always_inline)) static _Float16 ripple_stack(
-    ripple_block_t BS, _Float16 Val, VArgs... vargs) {
+__attribute__((always_inline)) static _Float16
+ripple_stack(ripple_block_t BS, _Float16 Val, VArgs... vargs) {
   return __builtin_ripple_stack_f16((BS), (Val), vargs...);
 }
 #endif

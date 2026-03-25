@@ -1,7 +1,7 @@
 // REQUIRES: target-x86_64 || target-aarch64
 // RUN: %clang -ffreestanding -fenable-ripple -S -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-REGISTER
 
-#include <ripple.h>
+#include "ripple_test.h"
 
 // Test case: calling non-void function when number of the vector elements is equal to the blocksize
 extern "C" float inner_fn(float in, float m);

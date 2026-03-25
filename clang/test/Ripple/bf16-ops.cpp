@@ -2,7 +2,7 @@
 // REQUIRES: hexagon-registered-target
 // RUN: %clang -ffreestanding %s -O2 -fenable-ripple -target hexagon -mv81 -mhvx=v81 -S -emit-llvm -o - | FileCheck %s
 
-#include <ripple.h>
+#include "ripple_test.h"
 // CHECK-LABEL: define dso_local void @_Z3addPDF16bS_S_(
 // CHECK-SAME: ptr noundef writeonly captures(none) [[C:%.*]], ptr noundef readonly captures(none) [[A:%.*]], ptr noundef readonly captures(none) [[B:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]

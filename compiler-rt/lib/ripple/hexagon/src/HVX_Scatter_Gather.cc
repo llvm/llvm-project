@@ -12,6 +12,8 @@
 //==============================================================================
 
 #include "lib_func_attrib.h"
+#include <cstddef>
+#include <cstdint>
 #include <hexagon_protos.h>
 #include <hexagon_types.h>
 #include <ripple/zip.h>

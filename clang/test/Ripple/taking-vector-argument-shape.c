@@ -1,6 +1,7 @@
 // REQUIRES: hexagon-registered-target
 // RUN: %clang -ffreestanding -O2 --target=hexagon-unknown-elf -fenable-ripple -fno-discard-value-names -emit-llvm -S -o - %s | FileCheck %s
 
+#include "ripple_test.h"
 #include <ripple_hvx.h>
 
 // CHECK: @test

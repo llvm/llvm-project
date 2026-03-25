@@ -7,7 +7,7 @@
 // RUN: %clang -ffreestanding -g -S -fenable-ripple -Os -emit-llvm %s -o %t 2>&1
 // RUN: %clang -ffreestanding -g -S -fenable-ripple -Oz -emit-llvm %s -o %t 2>&1
 
-#include <ripple.h>
+#include "ripple_test.h"
 
 // CHECK-LABEL: void @indirectStore
 // CHECK-SAME: ptr {{.*}} %[[IN:[a-zA-Z0-9]*]], ptr {{.*}} %[[OUT:[a-zA-Z0-9]*]]

@@ -2,7 +2,7 @@
 // RUN: %clang -ffreestanding --target=hexagon-unknown-elf -mv79 -mhvx=v79 %s -O2 -fenable-ripple -S -emit-llvm -o - | FileCheck %s
 // RUN: %clang -ffreestanding --target=hexagon-unknown-elf -mv79 -mhvx=v79 -x c %s -O2 -fenable-ripple -S -emit-llvm -o - -D__hexagon__=1 | FileCheck %s
 
-#include <ripple.h>
+#include "ripple_test.h"
 #include <ripple_hvx.h>
 
 #define values8 1, 2, 3, 4, 5, 6, 7, 8

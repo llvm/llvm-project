@@ -4,7 +4,7 @@
 
 #ifdef COMPILE_LIB
 
-#include <stdint.h>
+typedef __INT32_TYPE__ int32_t;
 
 typedef int32_t i32t32 __attribute__((__vector_size__(128)))
 __attribute__((aligned(128)));
@@ -19,8 +19,7 @@ extern inline void ripple_mask_f(int32_t *a, int32_t *b, i32t32 c, i32t32 d) {
 
 #else
 
-#include <ripple.h>
-#include <stddef.h>
+#include "../ripple_test.h"
 
 #define VEC 0
 

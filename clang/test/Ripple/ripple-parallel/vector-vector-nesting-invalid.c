@@ -3,7 +3,7 @@
 // RUN: %clang -ffreestanding -S -Xclang -disable-llvm-passes -emit-llvm -fenable-ripple %s -o %t.pragma.out -DUSING_PRAGMA=1 2> %t.pragma.err; FileCheck %s --input-file=%t.pragma.err --check-prefixes=CHECK-PRAGMA
 // RUN: %clang -ffreestanding -S -Xclang -disable-llvm-passes -emit-llvm -fenable-ripple %s -o %t.out 2> %t.err; FileCheck %s --input-file=%t.err
 
-#include <ripple.h>
+#include <../ripple_test.h>
 
 void check(int Chunk, int64_t N, int32_t start, int64_t end, float x[restrict N],
            float y[restrict N], float xpy[restrict N]) {

@@ -1,7 +1,7 @@
 // REQUIRES: hexagon-registered-target
 // RUN: %clang -ffreestanding -S -target hexagon -mhvx -mv81 -fenable-ripple -fdisable-ripple-lib -emit-llvm %s -o - 2>&1 | FileCheck %s
 
-#include <ripple.h>
+#include "ripple_test.h"
 #include <ripple_math.h>
 // These are simply defined to play well with "gen_check_unary_mathfn"
 

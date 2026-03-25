@@ -1,7 +1,7 @@
 // XFAIL: target={{.*(iu|riscv).*}}
 // RUN: %clang++ -ffreestanding -g -S -fenable-ripple -O2 -emit-llvm %s -o - 2>&1 | FileCheck %s --implicit-check-not="warning:" --implicit-check-not="error:"
 
-#include <ripple.h>
+#include "ripple_test.h"
 
 // CHECK: ripple_shuffle_cpp_lambda_without_capture
 void ripple_shuffle_cpp_lambda_without_capture(size_t ArraySize, float *Input,

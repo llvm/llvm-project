@@ -1,7 +1,7 @@
 // REQUIRES: target-x86_64 || target-aarch64 || target=hexagon{{.*}}
 // RUN: %clang -ffreestanding -Wall -Wextra -Wripple -S -emit-llvm -fenable-ripple %s -o - 2>&1 | FileCheck %s
 
-#include <ripple.h>
+#include "../ripple_test.h"
 
 // CHECK-NOT: warning: unused variable 'BS'
 

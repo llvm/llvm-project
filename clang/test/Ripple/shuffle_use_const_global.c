@@ -2,7 +2,7 @@
 // RUN: %clang -ffreestanding -g -S -fenable-ripple -O2 -emit-llvm %s -o - 2>&1 | FileCheck %s --implicit-check-not="warning:" --implicit-check-not="error:"
 // RUN: %clang -ffreestanding -x c++ -g -S -fenable-ripple -O2 -emit-llvm %s -o - 2>&1 | FileCheck %s --implicit-check-not="warning:" --implicit-check-not="error:"
 
-#include <ripple.h>
+#include "ripple_test.h"
 
 const size_t ThisIsAGlobalThatCanBeUsedForRippleIndexing = 42;
 

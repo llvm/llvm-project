@@ -1,7 +1,7 @@
 // REQUIRES: target-x86_64 || target-aarch64 || target=hexagon{{.*}}
 // RUN: %clang -ffreestanding -S -emit-llvm -fenable-ripple %s -o %t.out &>%t.err; FileCheck %s --input-file=%t.err
 
-#include <ripple.h>
+#include "../ripple_test.h"
 
 #ifndef THREAD_ID
 #define THREAD_ID 32

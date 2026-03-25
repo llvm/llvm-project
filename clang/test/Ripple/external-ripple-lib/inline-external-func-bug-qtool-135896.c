@@ -40,8 +40,7 @@ void ripple_t32x32f32_sme_readacc_w_clamp(
   }
 }
 #else
-#include <stddef.h>
-#include <stdint.h>
+#include "../ripple_test.h"
 
 void ripple_t32x32f32_sme_readacc_w_clamp(void *arg1, void *arg2, int64_t N, float ClampMin, float ClampMax);
 void ripple_ret_t32x32f32_t32x32f32_t1x32f32_t32f32_sme_outeracc(void *arg1, void *arg2, void *A_packed, void *B_packed);
