@@ -1114,7 +1114,7 @@ def HasStdExtSmctrOrSsctr : Predicate<"Subtarget->hasStdExtSmctrOrSsctr()">,
 
 // Packed SIMD Extensions
 def FeatureStdExtP
-    : RISCVExperimentalExtension<0, 19,
+    : RISCVExperimentalExtension<0, 20,
                                  "'Base P' (Packed SIMD)",
                                  [FeatureStdExtZmmul, FeatureStdExtZba,
                                   FeatureStdExtZbb, FeatureStdExtZicsr]>;
@@ -1669,13 +1669,6 @@ def FeatureVendorXqci
                       FeatureVendorXqcisls, FeatureVendorXqcisync]>;
 
 // Rivos Extension(s)
-
-def FeatureVendorXRivosVisni
-    :  RISCVExperimentalExtension<0, 1, "Rivos Vector Integer Small New">;
-def HasVendorXRivosVisni
-    : Predicate<"Subtarget->hasVendorXRivosVisni()">,
-      AssemblerPredicate<(all_of FeatureVendorXRivosVisni),
-                         "'XRivosVisni' (Rivos Vector Integer Small New)">;
 
 def FeatureVendorXRivosVizip
     :  RISCVExperimentalExtension<0, 1, "Rivos Vector Register Zips">;

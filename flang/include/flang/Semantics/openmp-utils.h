@@ -192,14 +192,14 @@ struct LoopSequence {
   struct Depth {
     // If this sequence is a nest, the depth of the Canonical Loop Nest rooted
     // at this sequence. Otherwise unspecified.
-    std::optional<int64_t> semantic;
+    WithReason<int64_t> semantic;
     // If this sequence is a nest, the depth of the perfect Canonical Loop Nest
     // rooted at this sequence. Otherwise unspecified.
-    std::optional<int64_t> perfect;
+    WithReason<int64_t> perfect;
   };
 
-  bool isNest() const { return length_ && *length_ == 1; }
-  std::optional<int64_t> length() const { return length_; }
+  bool isNest() const { return length_.value == 1; }
+  const WithReason<int64_t> &length() const { return length_; }
   const Depth &depth() const { return depth_; }
   const std::vector<LoopSequence> &children() const { return children_; }
 
@@ -224,8 +224,8 @@ private:
   /// Precalculate length and depth.
   void precalculate();
 
-  std::optional<int64_t> calculateLength() const;
-  std::optional<int64_t> getNestedLength() const;
+  WithReason<int64_t> calculateLength() const;
+  WithReason<int64_t> getNestedLength() const;
   Depth calculateDepths() const;
   Depth getNestedDepths() const;
 
@@ -242,7 +242,7 @@ private:
   /// the number of children because a child may result in a sequence, for
   /// example a fuse with a reduced loop range. The length of that sequence
   /// adds to the length of the owning LoopSequence.
-  std::optional<int64_t> length_;
+  WithReason<int64_t> length_;
   /// Precalculated depths. Only meaningful if the sequence is a nest.
   Depth depth_;
 
