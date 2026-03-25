@@ -344,8 +344,7 @@ class SPIRVEmitIntrinsics
 
 public:
   static char ID;
-  SPIRVEmitIntrinsics(const SPIRVTargetMachine &TM)
-      : ModulePass(ID), TM(TM) {}
+  SPIRVEmitIntrinsics(const SPIRVTargetMachine &TM) : ModulePass(ID), TM(TM) {}
   Instruction *visitInstruction(Instruction &I) { return &I; }
   Instruction *visitSwitchInst(SwitchInst &I);
   Instruction *visitGetElementPtrInst(GetElementPtrInst &I);
