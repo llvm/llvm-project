@@ -1,0 +1,156 @@
+// Tests for clang-ssaf-format --type wpa that require the example plugin.
+
+// REQUIRES: plugins
+
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+
+// ============================================================================
+// Read errors: results field
+// ============================================================================
+
+// 'results' field is absent.
+// RUN: not clang-ssaf-format --type wpa %S/Inputs/missing-results.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NO-RESULTS
+// NO-RESULTS:      clang-ssaf-format: error: reading WPASuite from file '{{.*}}missing-results.json'
+// NO-RESULTS-NEXT: failed to read WPA results from field 'results': expected JSON array
+
+// 'results' is an object, not an array.
+// RUN: not clang-ssaf-format --type wpa %S/Inputs/results-not-array.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=RESULTS-OBJ
+// RESULTS-OBJ:      clang-ssaf-format: error: reading WPASuite from file '{{.*}}results-not-array.json'
+// RESULTS-OBJ-NEXT: failed to read WPA results from field 'results': expected JSON array
+
+// A result entry is a string, not an object.
+// RUN: not clang-ssaf-format --type wpa %S/Inputs/result-entry-not-object.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=ENTRY-NOT-OBJ
+// ENTRY-NOT-OBJ:      clang-ssaf-format: error: reading WPASuite from file '{{.*}}result-entry-not-object.json'
+// ENTRY-NOT-OBJ-NEXT: reading WPA results from field 'results'
+// ENTRY-NOT-OBJ-NEXT: failed to read WPA result entry from index '0': expected JSON object
+
+// 'analysis_name' field is absent.
+// RUN: not clang-ssaf-format --type wpa \
+// RUN:   %S/Inputs/result-entry-missing-analysis-name.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NO-NAME
+// NO-NAME:      clang-ssaf-format: error: reading WPASuite from file '{{.*}}'
+// NO-NAME:      reading WPA result entry from index '0'
+// NO-NAME-NEXT: failed to read AnalysisName from field 'analysis_name': expected JSON string
+
+// 'analysis_name' is an integer, not a string.
+// RUN: not clang-ssaf-format --type wpa \
+// RUN:   %S/Inputs/result-entry-analysis-name-not-string.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NAME-NOT-STR
+// NAME-NOT-STR:      clang-ssaf-format: error: reading WPASuite from file '{{.*}}'
+// NAME-NOT-STR-NEXT: reading WPA results from field 'results'
+// NAME-NOT-STR-NEXT: reading WPA result entry from index '0'
+// NAME-NOT-STR-NEXT: failed to read AnalysisName from field 'analysis_name': expected JSON string
+
+// Analysis name is not registered (no plugin loaded).
+// RUN: not clang-ssaf-format --type wpa \
+// RUN:   %S/Inputs/result-entry-no-format-info.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NO-FORMAT-INFO
+// NO-FORMAT-INFO:      clang-ssaf-format: error: reading WPASuite from file '{{.*}}'
+// NO-FORMAT-INFO:      reading WPA result entry from index '0'
+// NO-FORMAT-INFO-NEXT: no support registered for analysis: AnalysisName(UnregisteredAnalysis)
+
+// ============================================================================
+// Write errors
+// ============================================================================
+
+// Output file already exists.
+// RUN: touch %t/existing.json
+// RUN: not clang-ssaf-format --type wpa %S/Inputs/rt-empty.json \
+// RUN:   -o %t/existing.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=OUT-EXISTS
+// OUT-EXISTS: clang-ssaf-format: error: failed to validate summary '{{.*}}existing.json'{{.*}}Output file already exists
+
+// Output parent directory does not exist.
+// RUN: not clang-ssaf-format --type wpa %S/Inputs/rt-empty.json \
+// RUN:   -o %t/nosuchdir/out.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NO-OUT-DIR
+// NO-OUT-DIR: clang-ssaf-format: error: failed to validate summary '{{.*}}out.json'{{.*}}
+
+// Output path has an unrecognised extension.
+// RUN: not clang-ssaf-format --type wpa %S/Inputs/rt-empty.json \
+// RUN:   -o %t/out.txt 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=BAD-OUT-EXT
+// BAD-OUT-EXT: clang-ssaf-format: error: failed to validate summary '{{.*}}out.txt'{{.*}}
+
+// ============================================================================
+// Read errors requiring a registered deserializer
+// ============================================================================
+
+// 'result' field is absent; the deserializer lookup succeeds but the field
+// check fires before the deserializer is called.
+// RUN: not clang-ssaf-format --type wpa --load %llvmshlibdir/SSAFExamplePlugin%pluginext %S/Inputs/result-entry-missing-result-field.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NO-RESULT-FIELD
+// NO-RESULT-FIELD:      clang-ssaf-format: error: reading WPASuite from file '{{.*}}'
+// NO-RESULT-FIELD-NEXT: reading WPA results from field 'results'
+// NO-RESULT-FIELD-NEXT: reading WPA result entry from index '0'
+// NO-RESULT-FIELD-NEXT: failed to read AnalysisResult from field 'result': expected JSON object
+
+// 'result' is a string, not an object.
+// RUN: not clang-ssaf-format --type wpa \
+// RUN:   --load %llvmshlibdir/SSAFExamplePlugin%pluginext \
+// RUN:   %S/Inputs/result-entry-result-not-object.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=RESULT-NOT-OBJ
+// RESULT-NOT-OBJ:      clang-ssaf-format: error: reading WPASuite from file '{{.*}}'
+// RESULT-NOT-OBJ-NEXT: reading WPA results from field 'results'
+// RESULT-NOT-OBJ-NEXT: reading WPA result entry from index '0'
+// RESULT-NOT-OBJ-NEXT: failed to read AnalysisResult from field 'result': expected JSON object
+
+// Deserializer returns an error.
+// RUN: not clang-ssaf-format --type wpa \
+// RUN:   --load %llvmshlibdir/SSAFExamplePlugin%pluginext \
+// RUN:   %S/Inputs/result-entry-deserializer-error.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=DESER-ERR
+// DESER-ERR:      clang-ssaf-format: error: reading WPASuite from file '{{.*}}'
+// DESER-ERR-NEXT: reading WPA results from field 'results'
+// DESER-ERR-NEXT: reading WPA result entry from index '0'
+// DESER-ERR-NEXT: intentional deserializer failure
+
+// Duplicate analysis name in results array.
+// RUN: not clang-ssaf-format --type wpa \
+// RUN:   --load %llvmshlibdir/SSAFExamplePlugin%pluginext \
+// RUN:   %S/Inputs/duplicate-analysis-name.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=DUPLICATE
+// DUPLICATE:      clang-ssaf-format: error: reading WPASuite from file '{{.*}}'
+// DUPLICATE-NEXT: reading WPA results from field 'results'
+// DUPLICATE-NEXT: failed to insert WPA result at index '1': encountered duplicate 'AnalysisName(TagsAnalysisResult)'
+
+// ============================================================================
+// Round-trip tests
+//
+// Input files are pre-normalized to match the tool's output format
+// (alphabetical keys, expanded formatting), so a plain diff suffices.
+// ============================================================================
+
+// RUN: clang-ssaf-format --type wpa \
+// RUN:   --load %llvmshlibdir/SSAFExamplePlugin%pluginext \
+// RUN:   %S/Inputs/rt-empty.json \
+// RUN:   -o %t/rt-empty.json
+// RUN: diff %S/Inputs/rt-empty.json %t/rt-empty.json
+
+// RUN: clang-ssaf-format --type wpa \
+// RUN:   --load %llvmshlibdir/SSAFExamplePlugin%pluginext \
+// RUN:   %S/Inputs/rt-single-tags.json \
+// RUN:   -o %t/rt-single-tags.json
+// RUN: diff %S/Inputs/rt-single-tags.json %t/rt-single-tags.json
+
+// RUN: clang-ssaf-format --type wpa \
+// RUN:   --load %llvmshlibdir/SSAFExamplePlugin%pluginext \
+// RUN:   %S/Inputs/rt-empty-payload.json \
+// RUN:   -o %t/rt-empty-payload.json
+// RUN: diff %S/Inputs/rt-empty-payload.json %t/rt-empty-payload.json
+
+// RUN: clang-ssaf-format --type wpa \
+// RUN:   --load %llvmshlibdir/SSAFExamplePlugin%pluginext \
+// RUN:   %S/Inputs/rt-counts-with-entities.json \
+// RUN:   -o %t/rt-counts-with-entities.json
+// RUN: diff %S/Inputs/rt-counts-with-entities.json %t/rt-counts-with-entities.json
+
+// RUN: clang-ssaf-format --type wpa \
+// RUN:   --load %llvmshlibdir/SSAFExamplePlugin%pluginext \
+// RUN:   %S/Inputs/rt-multiple-results.json \
+// RUN:   -o %t/rt-multiple-results.json
+// RUN: diff %S/Inputs/rt-multiple-results.json %t/rt-multiple-results.json

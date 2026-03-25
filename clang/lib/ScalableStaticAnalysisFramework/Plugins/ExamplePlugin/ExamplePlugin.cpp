@@ -77,8 +77,8 @@ deserializeTagsAnalysisResult(const json::Object &Obj,
 }
 
 JSONFormat::AnalysisResultRegistry::Add<TagsAnalysisResult>
-    RegisterTagsForJSON(serializeTagsAnalysisResult,
-                        deserializeTagsAnalysisResult);
+    RegisterJSONFormatSupportForTagAnalysisResult(
+        serializeTagsAnalysisResult, deserializeTagsAnalysisResult);
 
 //===----------------------------------------------------------------------===//
 // TagsAnalysis

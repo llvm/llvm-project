@@ -143,7 +143,8 @@ protected:
         }
         Registered = true;
         SA::Saved = TypedSerialize;
-        static SerializerFn SavedSerialize(&SA::wrap);
+        static auto *SerializeWrap = &SA::wrap;
+        static SerializerFn SavedSerialize(SerializeWrap);
         static DeserializerFn SavedDeserialize = Deserialize;
 
         struct ConcreteEntry : Entry {

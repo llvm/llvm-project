@@ -3,7 +3,9 @@
   "results": [
     {
       "analysis_name": "TagsAnalysisResult",
-      "result": {"tags": []}
+      "result": {
+        "tags": []
+      }
     }
   ]
 }

@@ -1,0 +1,15 @@
+{
+  "id_table": [],
+  "results": [
+    {
+      "analysis_name": "TagsAnalysisResult",
+      "result": {
+        "tags": [
+          "alpha",
+          "beta",
+          "gamma"
+        ]
+      }
+    }
+  ]
+}
