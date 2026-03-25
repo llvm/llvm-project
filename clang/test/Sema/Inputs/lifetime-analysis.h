@@ -191,6 +191,7 @@ template<typename T>
 struct unique_ptr {
   unique_ptr();
   unique_ptr(unique_ptr<T>&&);
+  unique_ptr& operator=(unique_ptr<T>&&);
   ~unique_ptr();
   T* release();
   T &operator*();
