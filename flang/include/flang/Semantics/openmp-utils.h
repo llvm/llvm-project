@@ -105,7 +105,7 @@ std::optional<bool> GetLogicalValue(const SomeExpr &expr);
 std::optional<bool> IsContiguous(
     SemanticsContext &semaCtx, const parser::OmpObject &object);
 
-std::vector<SomeExpr> GetAllDesignators(const SomeExpr &expr);
+std::vector<SomeExpr> GetTopLevelDesignators(const SomeExpr &expr);
 const SomeExpr *HasStorageOverlap(
     const SomeExpr &base, llvm::ArrayRef<SomeExpr> exprs);
 bool IsAssignment(const parser::ActionStmt *x);
@@ -202,6 +202,9 @@ struct LoopSequence {
   const WithReason<int64_t> &length() const { return length_; }
   const Depth &depth() const { return depth_; }
   const std::vector<LoopSequence> &children() const { return children_; }
+
+  WithReason<bool> isWellFormedSequence() const;
+  WithReason<bool> isWellFormedNest() const;
 
 private:
   using Construct = ExecutionPartIterator::Construct;

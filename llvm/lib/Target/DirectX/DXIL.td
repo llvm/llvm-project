@@ -1218,6 +1218,10 @@ def QuadOp : DXILOp<123, quadOp> {
                  [
                    IntrinArgIndex<0>, IntrinArgI8<QuadOpKind_ReadAcrossX>
                  ]>,
+    IntrinSelect<int_dx_quad_read_across_y,
+                 [
+                   IntrinArgIndex<0>, IntrinArgI8<QuadOpKind_ReadAcrossY>
+                 ]>,
   ];
 
   let arguments = [OverloadTy, Int8Ty];

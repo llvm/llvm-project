@@ -486,7 +486,8 @@ static bool isCTTZTable(Constant *Table, const APInt &Mul, const APInt &Shift,
                         unsigned InputBits, const APInt &GEPIdxFactor,
                         const DataLayout &DL) {
   for (unsigned Idx = 0; Idx < InputBits; Idx++) {
-    APInt Index = (APInt(InputBits, 1).shl(Idx) * Mul).lshr(Shift) & AndMask;
+    APInt Index =
+        (APInt::getOneBitSet(InputBits, Idx) * Mul).lshr(Shift) & AndMask;
     ConstantInt *C = dyn_cast_or_null<ConstantInt>(
         ConstantFoldLoadFromConst(Table, AccessTy, Index * GEPIdxFactor, DL));
     if (!C || C->getValue() != Idx)
