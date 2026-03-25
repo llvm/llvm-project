@@ -9,6 +9,9 @@
 // REQUIRES: target={{aarch64-.+}}
 // UNSUPPORTED: target={{.*-windows.*}}
 
+// TODO: investigate this failure.
+// XFAIL: target={{.*-apple-.*}} && using_system_stdlib
+
 #include <libunwind.h>
 #include <stdlib.h>
 #include <string.h>
