@@ -2489,7 +2489,7 @@ void PyOpAttributeMap::bind(nb::module_ &m) {
            "exist.")
       .def(
           "__iter__",
-          [](PyOpAttributeMap &self) {
+          [](PyOpAttributeMap &self) -> nb::typed<nb::iterator, nb::str> {
             nb::list keys;
             PyOpAttributeMap::forEachAttr(
                 self.operation->get(), [&](MlirStringRef name, MlirAttribute) {
@@ -2500,7 +2500,7 @@ void PyOpAttributeMap::bind(nb::module_ &m) {
           "Iterates over attribute names.")
       .def(
           "keys",
-          [](PyOpAttributeMap &self) {
+          [](PyOpAttributeMap &self) -> nb::typed<nb::list, nb::str> {
             nb::list out;
             PyOpAttributeMap::forEachAttr(
                 self.operation->get(), [&](MlirStringRef name, MlirAttribute) {
@@ -2511,7 +2511,7 @@ void PyOpAttributeMap::bind(nb::module_ &m) {
           "Returns a list of attribute names.")
       .def(
           "values",
-          [](PyOpAttributeMap &self) {
+          [](PyOpAttributeMap &self) -> nb::typed<nb::list, PyAttribute> {
             nb::list out;
             PyOpAttributeMap::forEachAttr(
                 self.operation->get(), [&](MlirStringRef, MlirAttribute attr) {
@@ -2523,7 +2523,9 @@ void PyOpAttributeMap::bind(nb::module_ &m) {
           "Returns a list of attribute values.")
       .def(
           "items",
-          [](PyOpAttributeMap &self) {
+          [](PyOpAttributeMap &self)
+              -> nb::typed<nb::list,
+                           nb::typed<nb::tuple, nb::str, PyAttribute>> {
             nb::list out;
             PyOpAttributeMap::forEachAttr(
                 self.operation->get(),
@@ -4139,6 +4141,9 @@ void populateIRCore(nb::module_ &m) {
       "cls"_a, "results"_a = nb::none(), "operands"_a = nb::none(),
       "attributes"_a = nb::none(), "successors"_a = nb::none(),
       "regions"_a = nb::none(), "loc"_a = nb::none(), "ip"_a = nb::none(),
+      // clang-format off
+      nb::sig("def build_generic(cls, results: Sequence[Type] | None = None, operands: Sequence[Value] | None = None, attributes: dict[str, Attribute] | None = None, successors: Sequence[Block] | None = None, regions: int | None = None, loc: Location | None = None, ip: InsertionPoint | None = None) -> typing.Self"),
+      // clang-format on
       "Builds a specific, generated OpView based on class level attributes.");
   opViewClass.attr("parse") = classmethod(
       [](const nb::object &cls, const std::string &sourceStr,
@@ -4164,6 +4169,9 @@ void populateIRCore(nb::module_ &m) {
       },
       "cls"_a, "source"_a, nb::kw_only(), "source_name"_a = "",
       "context"_a = nb::none(),
+      // clang-format off
+      nb::sig("def parse(cls, source: str, *, source_name: str = '', context: Context | None = None) -> typing.Self"),
+      // clang-format on
       "Parses a specific, generated OpView based on class level attributes.");
 
   PyOpAdaptor::bind(m);
@@ -4262,8 +4270,9 @@ void populateIRCore(nb::module_ &m) {
           "Returns a forward-optimized sequence of operations.")
       .def_static(
           "create_at_start",
-          [](PyRegion &parent, const nb::sequence &pyArgTypes,
-             const std::optional<nb::sequence> &pyArgLocs) {
+          [](PyRegion &parent, nb::typed<nb::sequence, PyType> pyArgTypes,
+             const std::optional<nb::typed<nb::sequence, PyLocation>>
+                 &pyArgLocs) {
             parent.checkValid();
             MlirBlock block = createBlock(pyArgTypes, pyArgLocs);
             mlirRegionInsertOwnedBlock(parent, 0, block);
@@ -4291,7 +4300,8 @@ void populateIRCore(nb::module_ &m) {
       .def(
           "create_before",
           [](PyBlock &self, const nb::args &pyArgTypes,
-             const std::optional<nb::sequence> &pyArgLocs) {
+             const std::optional<nb::typed<nb::sequence, PyLocation>>
+                 &pyArgLocs) {
             self.checkValid();
             MlirBlock block =
                 createBlock(nb::cast<nb::sequence>(pyArgTypes), pyArgLocs);
@@ -4305,7 +4315,8 @@ void populateIRCore(nb::module_ &m) {
       .def(
           "create_after",
           [](PyBlock &self, const nb::args &pyArgTypes,
-             const std::optional<nb::sequence> &pyArgLocs) {
+             const std::optional<nb::typed<nb::sequence, PyLocation>>
+                 &pyArgLocs) {
             self.checkValid();
             MlirBlock block =
                 createBlock(nb::cast<nb::sequence>(pyArgTypes), pyArgLocs);
