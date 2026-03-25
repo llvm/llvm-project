@@ -610,6 +610,13 @@ Value MemorySlotPromoter::promoteInBlock(Block *block, Value reachingDef) {
           promoteInRegion(region, reachingDef);
         }
 
+        // TODO: Currently we have to invalidate the dominance information of
+        // the regions of the operation because finalizePromotion may move their
+        // content. We might want to support moving dominance information
+        // accross regions as this can be detected.
+        for (Region &region : op->getRegions())
+          dominance.invalidate(&region);
+
         builder.setInsertionPointAfter(op);
         reachingDef = promotableRegionOp.finalizePromotion(
             slot, reachingDef, hasValueStores, reachingAtBlockEnd, builder);
