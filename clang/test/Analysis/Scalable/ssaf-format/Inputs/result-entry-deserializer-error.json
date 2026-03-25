@@ -1,1 +1,1 @@
-{"id_table": [], "results": [{"analysis_name": "FailingDeserializerAnalysisResult", "result": {}}]}
+{"id_table": [], "results": [{"analysis_name": "TagsAnalysisResult", "result": {"tags": "not-an-array"}}]}

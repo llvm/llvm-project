@@ -6,10 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// A loadable plugin that registers three analysis result types — Tags, Counts,
-// and FailingDeserializer — together with their JSON serializers/deserializers
-// and trivial DerivedAnalysis implementations. Used by lit tests for both
-// clang-ssaf-analyzer and clang-ssaf-format.
+// A loadable plugin that registers two analysis result types — Tags and
+// Counts — together with their JSON serializers/deserializers and trivial
+// DerivedAnalysis implementations. Used by lit tests for clang-ssaf-format.
 //
 //===----------------------------------------------------------------------===//
 
@@ -188,36 +187,5 @@ public:
 
 AnalysisRegistry::Add<CountsAnalysis> RegisterCountsAnalysis(
     "Produces an empty counts result for testing WPASuite serialization");
-
-//===----------------------------------------------------------------------===//
-// FailingDeserializerAnalysisResult
-//
-// An analysis result whose deserializer always returns an error. Used to
-// exercise error propagation in the WPASuite read path without needing a
-// malformed payload.
-//===----------------------------------------------------------------------===//
-
-struct FailingDeserializerAnalysisResult final : AnalysisResult {
-  static AnalysisName analysisName() {
-    return AnalysisName("FailingDeserializerAnalysisResult");
-  }
-};
-
-json::Object serializeFailingDeserializerAnalysisResult(
-    const FailingDeserializerAnalysisResult &, JSONFormat::EntityIdToJSONFn) {
-  return json::Object{};
-}
-
-Expected<std::unique_ptr<AnalysisResult>>
-deserializeFailingDeserializerAnalysisResult(const json::Object &,
-                                             JSONFormat::EntityIdFromJSONFn) {
-  return createStringError(inconvertibleErrorCode(),
-                           "intentional deserializer failure");
-}
-
-JSONFormat::AnalysisResultRegistry::Add<FailingDeserializerAnalysisResult>
-    RegisterFailingDeserializerForJSON(
-        serializeFailingDeserializerAnalysisResult,
-        deserializeFailingDeserializerAnalysisResult);
 
 } // namespace
