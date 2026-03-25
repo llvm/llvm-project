@@ -13,6 +13,15 @@ entry:
   ret i64 %sub1
 }
 
+define <8 x i16> @sub_minus_one_vec(<8 x i16> %x) {
+; GISEL-LABEL: sub_minus_one_vec:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    mvn v0.16b, v0.16b
+; GISEL-NEXT:    ret
+  %sub1 = sub <8 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>, %x
+  ret <8 x i16> %sub1
+}
+
 define i64 @sub_one_from_sub(i64 %a, i64 %b) {
 ; GISEL-LABEL: sub_one_from_sub:
 ; GISEL:       // %bb.0: // %entry
