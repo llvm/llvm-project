@@ -13,6 +13,7 @@
 #include "SPIRVTargetMachine.h"
 #include "SPIRV.h"
 #include "SPIRVCBufferAccess.h"
+#include "SPIRVEmitIntrinsics.h"
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVLegalizeZeroSizeArrays.h"
 #include "SPIRVLegalizerInfo.h"
@@ -229,7 +230,7 @@ void SPIRVPassConfig::addISelPrepare() {
   addPass(createSPIRVLegalizeZeroSizeArraysPass(TM));
   addPass(createSPIRVCBufferAccessLegacyPass());
   addPass(createSPIRVPushConstantAccessLegacyPass(&TM));
-  addPass(createSPIRVEmitIntrinsicsPass(&TM));
+  addPass(createSPIRVEmitIntrinsicsPass(TM));
   if (TM.getSubtargetImpl()->isLogicalSPIRV())
     addPass(createSPIRVLegalizePointerCastPass(&TM));
   TargetPassConfig::addISelPrepare();
