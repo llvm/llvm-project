@@ -72,7 +72,7 @@ jobs:
       
       - name: Configure CMake
         run: |
-          cmake -B build -S llvm -G Ninja \
+          cmake -B build -S runtimes -G Ninja \
             -DLLVM_ENABLE_RUNTIMES=libc \
             -DCMAKE_C_COMPILER=clang \
             -DCMAKE_CXX_COMPILER=clang++ \
