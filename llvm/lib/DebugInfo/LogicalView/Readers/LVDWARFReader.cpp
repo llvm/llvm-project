@@ -962,13 +962,11 @@ Error LVDWARFReader::loadTargetInfo(const ObjectFile &Obj) {
   Triple TT = Obj.makeTriple();
 
   // Features to be passed to target/subtarget
-  Expected<SubtargetFeatures> Features = Obj.getFeatures();
   SubtargetFeatures FeaturesValue;
-  if (!Features) {
+  if (Expected<SubtargetFeatures> Features = Obj.getFeatures())
+    FeaturesValue = std::move(*Features);
+  else
     consumeError(Features.takeError());
-    FeaturesValue = SubtargetFeatures();
-  }
-  FeaturesValue = *Features;
 
   StringRef CPU;
   if (auto OptCPU = Obj.tryGetCPUName())
