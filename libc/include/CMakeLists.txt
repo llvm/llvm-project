@@ -366,9 +366,9 @@ add_header_macro(
     .llvm-libc-macros.file_seek_macros
     .llvm-libc-macros.null_macro
     .llvm-libc-macros.stdio_macros
+    .llvm-libc-types.FILE
     .llvm-libc-types.cookie_io_functions_t
     .llvm-libc-types.errno_t
-    .llvm-libc-types.FILE
     .llvm-libc-types.off_t
     .llvm-libc-types.size_t
     .llvm-libc-types.ssize_t
