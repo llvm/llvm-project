@@ -62,18 +62,19 @@ jobs:
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
       - name: Prepare dependencies
-        with:
-          arch: x64
-          install: |
-            apt-get update -y
-            apt-get install -y cmake ninja-build clang lld qemu-user-static ${{ matrix.libc }} ${{ matrix.libcpp }}
-          run: |
-            # Using Clang inside the emulated Ubuntu container
-            cmake -B build -S llvm -G Ninja \
-              -DLLVM_ENABLE_RUNTIMES=libc \
-              -DCMAKE_C_COMPILER=clang \
-              -DCMAKE_CXX_COMPILER=clang++ \
-              -DCMAKE_BUILD_TYPE=Release \
-              -DLIBC_TARGET_TRIPLE=${{ target_triple }}
-              
-            cmake --build build --target libc-shared-tests
+        run: |
+          apt-get update -y
+          apt-get install -y cmake ninja-build clang lld qemu-user-static ${{ matrix.libc }} ${{ matrix.libcpp }}
+      
+      - name: Configure CMake
+        run: |
+          cmake -B build -S llvm -G Ninja \
+            -DLLVM_ENABLE_RUNTIMES=libc \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLIBC_TARGET_TRIPLE=${{ target_triple }}
+
+      - name: Build and Run              
+        run: |
+          cmake --build build --target libc-shared-tests
