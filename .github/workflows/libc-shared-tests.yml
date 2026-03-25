@@ -1,4 +1,4 @@
-name: libc Precommit CI - shared ßtests
+name: libc Precommit CI - shared tests
 permissions:
   contents: read
 on:
@@ -16,10 +16,10 @@ jobs:
     runs-on: windows-2022
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@v4
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
       - name: Setup MSVC Dev Environment
-        uses: ilammy/msvc-dev-cmd@v1
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
         with:
           arch: x64
 
@@ -47,14 +47,13 @@ jobs:
     
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@v4
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
       # Uses QEMU and Docker to seamlessly run commands in an emulated architecture
       - name: Build and Test in Emulated Container
-        uses: uraimo/run-on-arch-action@v2
+        uses: uraimo/run-on-arch-action@d94c13912ea685de38fccc1109385b83fd79427d # v3.0.1
         with:
           arch: ${{ matrix.arch }}
-          githubToken: ${{ github.token }}
           install: |
             apt-get update -y
             apt-get install -y cmake ninja-build clang lld
