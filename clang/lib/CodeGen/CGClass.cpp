@@ -1454,6 +1454,7 @@ getOrCreateMSVCGlobalDeleteWrapper(CodeGenModule &CGM,
       FnTy, llvm::GlobalValue::LinkOnceODRLinkage, EmptyGlobalDeleteName, &M);
   EmptyFn->setComdat(M.getOrInsertComdat(EmptyGlobalDeleteName));
   EmptyFn->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+  CGM.SetLLVMFunctionAttributesForDefinition(GlobOD, EmptyFn);
   auto *BB = llvm::BasicBlock::Create(LLVMCtx, "", EmptyFn);
   llvm::ReturnInst::Create(LLVMCtx, BB);
 
@@ -1750,6 +1751,8 @@ struct CallDtorDelete final : EHScopeStack::Cleanup {
 void EmitConditionalDtorDeleteCall(CodeGenFunction &CGF,
                                    llvm::Value *ShouldDeleteCondition,
                                    bool ReturnAfterDelete) {
+  assert(CGF.CGM.getTarget().getCXXABI().isMicrosoft() &&
+         "deleting destructor should only be emitted for MSVC ABI");
   const CXXDestructorDecl *Dtor = cast<CXXDestructorDecl>(CGF.CurCodeDecl);
   const CXXRecordDecl *ClassDecl = Dtor->getParent();
   const FunctionDecl *OD = Dtor->getOperatorDelete();
