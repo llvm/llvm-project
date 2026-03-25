@@ -16,6 +16,12 @@ void DerivedWithVirtual::func() {}
 struct alignas(8) Z {};
 struct Derived : public Z {};
 
+// Types for variable-width tag encoding test.
+// 3 x alignof(4) + 2 x alignof(8) requires escape-coded tags because
+// ceil(log2(5)) = 3 > min(NumLowBitsAvailable) = 2.
+template <int I> struct alignas(4) Align4 {};
+template <int I> struct alignas(8) Align8 {};
+
 int main() {
   int a = 5;
   float f = 4.0;
@@ -48,6 +54,18 @@ int main() {
   struct alignas(8) Local {};
   Local local;
   llvm::PointerUnion<Local *, float *> local_float(&local);
+
+  puts("Break here");
+
+  // Variable-width tag encoding: formatter should fall back to void*.
+  Align4<0> a4_0;
+  Align8<0> a8_0;
+  llvm::PointerUnion<Align4<0> *, Align4<1> *, Align4<2> *, Align8<0> *,
+                     Align8<1> *>
+      varwidth(&a4_0);
+  llvm::PointerUnion<Align4<0> *, Align4<1> *, Align4<2> *, Align8<0> *,
+                     Align8<1> *>
+      varwidth_tier1(&a8_0);
 
   puts("Break here");
 }
