@@ -65,9 +65,10 @@ typedef enum {
   LLVMDIFlagNonTrivial = 1 << 26,
   LLVMDIFlagBigEndian = 1 << 27,
   LLVMDIFlagLittleEndian = 1 << 28,
+  LLVMDIFlagAllCallsDescribed = 1 << 29,
   LLVMDIFlagIndirectVirtualBase = (1 << 2) | (1 << 5),
-  LLVMDIFlagAccessibility = LLVMDIFlagPrivate | LLVMDIFlagProtected |
-                            LLVMDIFlagPublic,
+  LLVMDIFlagAccessibility =
+      LLVMDIFlagPrivate | LLVMDIFlagProtected | LLVMDIFlagPublic,
   LLVMDIFlagPtrToMemberRep = LLVMDIFlagSingleInheritance |
                              LLVMDIFlagMultipleInheritance |
                              LLVMDIFlagVirtualInheritance
@@ -151,9 +152,9 @@ typedef enum {
  * The amount of debug information to emit.
  */
 typedef enum {
-    LLVMDWARFEmissionNone = 0,
-    LLVMDWARFEmissionFull,
-    LLVMDWARFEmissionLineTablesOnly
+  LLVMDWARFEmissionNone = 0,
+  LLVMDWARFEmissionFull,
+  LLVMDWARFEmissionLineTablesOnly
 } LLVMDWARFEmissionKind;
 
 /**
@@ -1252,7 +1253,8 @@ LLVM_C_ABI LLVMMetadataRef
 LLVMDIGlobalVariableExpressionGetVariable(LLVMMetadataRef GVE);
 
 /**
- * Retrieves the \c DIExpression associated with this global variable expression.
+ * Retrieves the \c DIExpression associated with this global variable
+ * expression.
  * \param GVE    The global variable expression.
  *
  * @see llvm::DIGlobalVariableExpression::getExpression()
