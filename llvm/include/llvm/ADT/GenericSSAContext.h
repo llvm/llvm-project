@@ -98,7 +98,7 @@ public:
   /// Whether \p V is always uniform and will not be added to UniformValues.
   /// For IR this identifies constants and globals; for MIR it returns false
   /// (all registers are tracked).
-  static bool isNeverDivergent(ConstValueRefT V);
+  static bool isAlwaysUniform(ConstValueRefT V);
 
   const BlockT *getDefBlock(ConstValueRefT value) const;
 

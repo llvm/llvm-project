@@ -400,7 +400,7 @@ public:
     // UniformValues (Instructions/Arguments for IR, Registers for MIR).
     // Other values (e.g. constants, globals) are always uniform but are
     // not added to UniformValues; this check avoids false divergence.
-    if (ContextT::isNeverDivergent(V))
+    if (ContextT::isAlwaysUniform(V))
       return false;
     return !UniformValues.contains(V);
   }
