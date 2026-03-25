@@ -3478,9 +3478,8 @@ bool AsmParser::parseDirectivePrefAlign() {
 
   // Parse end symbol: .prefalign N, sym
   SMLoc SymLoc = getLexer().getLoc();
-  if (!getLexer().is(AsmToken::Comma))
-    return Error(SymLoc, "expected ',' and end symbol");
-  Lex();
+  if (parseComma())
+    return true;
   StringRef Name;
   SymLoc = getLexer().getLoc();
   if (parseIdentifier(Name))
@@ -3489,25 +3488,23 @@ bool AsmParser::parseDirectivePrefAlign() {
 
   // Parse fill operand: integer byte [0, 255] or "nop".
   SMLoc FillLoc = getLexer().getLoc();
-  if (!getLexer().is(AsmToken::Comma))
-    return Error(FillLoc, "expected ',' followed by 'nops' or fill byte");
-  Lex();
+  if (parseComma())
+    return true;
 
   bool EmitNops = false;
   uint8_t Fill = 0;
   SMLoc FillLoc2 = getLexer().getLoc();
-  if (getLexer().is(AsmToken::Integer)) {
-    int64_t FillVal = getLexer().getTok().getIntVal();
-    Lex();
-    if (FillVal < 0 || FillVal > 255)
-      return Error(FillLoc2, "fill value must be in range [0, 255]");
-    Fill = static_cast<uint8_t>(FillVal);
-  } else if (getLexer().is(AsmToken::Identifier) &&
-             getLexer().getTok().getIdentifier() == "nop") {
+  if (getLexer().is(AsmToken::Identifier) &&
+      getLexer().getTok().getIdentifier() == "nop") {
     EmitNops = true;
     Lex();
   } else {
-    return Error(FillLoc2, "expected integer fill byte or 'nop'");
+    int64_t FillVal;
+    if (parseAbsoluteExpression(FillVal))
+      return true;
+    if (FillVal < 0 || FillVal > 255)
+      return Error(FillLoc2, "fill value must be in range [0, 255]");
+    Fill = static_cast<uint8_t>(FillVal);
   }
 
   if (parseEOL())

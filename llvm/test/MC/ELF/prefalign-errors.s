@@ -8,19 +8,22 @@
 # CHECK: [[#@LINE+1]]:12: error: log2 alignment must be in the range [0, 63]
 .prefalign 64
 
-# CHECK: [[#@LINE+1]]:13: error: expected ',' and end symbol
+# CHECK: [[#@LINE+1]]:13: error: expected comma
 .prefalign 4
 
 # CHECK: [[#@LINE+1]]:14: error: expected symbol name
 .prefalign 4,
 
-# CHECK: [[#@LINE+1]]:23: error: expected integer fill byte or 'nop'
+# CHECK: [[#@LINE+1]]:22: error: expected comma
+.prefalign 4,.text.f1
+
+# CHECK: [[#@LINE+1]]:23: error: expected absolute expression
 .prefalign 4,.text.f1,trap
 
 # CHECK: [[#@LINE+1]]:23: error: fill value must be in range [0, 255]
 .prefalign 4,.text.f1,256
 
-# CHECK: [[#@LINE+1]]:23: error: expected integer fill byte or 'nop'
+# CHECK: [[#@LINE+1]]:23: error: fill value must be in range [0, 255]
 .prefalign 4,.text.f1,-1
 
 ## Non-zero fill in a BSS section.
