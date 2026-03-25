@@ -294,26 +294,28 @@ void OmpStructureChecker::CheckNestedConstruct(
   // in it.
   auto needRange{GetAffectedLoopRangeWithReason(beginSpec, version)};
 
-  if (std::optional<int64_t> numLoops{sequence.length()}) {
-    if (*numLoops == 0) {
+  if (auto haveLength{sequence.length()}) {
+    if (*haveLength.value == 0) {
       context_.Say(beginSource,
           "This construct should contain a DO-loop or a loop-nest-generating OpenMP construct"_err_en_US);
     } else {
       auto assoc{llvm::omp::getDirectiveAssociation(dir)};
-      if (*numLoops > 1 && assoc == llvm::omp::Association::LoopNest) {
-        context_.Say(beginSource,
+      if (*haveLength.value > 1 && assoc == llvm::omp::Association::LoopNest) {
+        auto &msg{context_.Say(beginSource,
             "This construct applies to a loop nest, but has a loop sequence of "
             "length %" PRId64 ""_err_en_US,
-            *numLoops);
+            *haveLength.value)};
+        haveLength.reason.AttachTo(msg);
       }
       if (assoc == llvm::omp::Association::LoopSeq) {
         if (auto requiredCount{GetRequiredCount(needRange.value)}) {
-          if (*requiredCount > 0 && *numLoops < *requiredCount) {
+          if (*requiredCount > 0 && *haveLength.value < *requiredCount) {
             auto &msg{context_.Say(beginSource,
                 "This construct requires a sequence of %" PRId64
                 " loops, but the loop sequence has a length of %" PRId64
                 ""_err_en_US,
-                *requiredCount, *numLoops)};
+                *requiredCount, *haveLength.value)};
+            haveLength.reason.AttachTo(msg);
             needRange.reason.AttachTo(msg);
           }
         }
