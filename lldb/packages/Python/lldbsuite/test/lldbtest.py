@@ -1531,6 +1531,7 @@ class Base(unittest.TestCase):
 
     def build(
         self,
+        *,
         debug_info=None,
         architecture=None,
         compiler=None,
