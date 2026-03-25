@@ -15,6 +15,8 @@
 #include "L0Plugin.h"
 #include "L0Program.h"
 
+#include "llvm/ADT/ScopeExit.h"
+
 namespace llvm::omp::target::plugin {
 
 bool KernelPropertiesTy::reuseGroupParams(const int32_t NumTeamsIn,
@@ -337,12 +339,19 @@ static Error launchKernelWithCmdQueue(L0DeviceTy &l0Device,
                     &KEnv.GroupCounts, Event, 0, nullptr);
   KEnv.Lock.unlock();
   CALL_ZE_RET_ERROR(zeCommandListClose, CmdList);
+
+  // Ensure command list is reset even on errors after this point.
+  llvm::scope_exit ResetOnExit([&]() {
+    ze_result_t RC;
+    CALL_ZE(RC, zeCommandListReset, CmdList);
+    (void)RC;
+  });
+
   CALL_ZE_RET_ERROR_MTX(zeCommandQueueExecuteCommandLists, l0Device.getMutex(),
                         CmdQueue, 1, &CmdList, nullptr);
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
        "Submitted kernel " DPxMOD " to device %s\n", DPxPTR(zeKernel), IdStr);
   CALL_ZE_RET_ERROR(zeCommandQueueSynchronize, CmdQueue, L0DefaultTimeout);
-  CALL_ZE_RET_ERROR(zeCommandListReset, CmdList);
   if (Event) {
     if (auto Err = l0Device.releaseEvent(Event))
       return Err;
