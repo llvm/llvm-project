@@ -134,13 +134,29 @@ static ConstantRange simplifyCmpRange(const ConstantRange &CmpCR,
   std::optional<ConstantRange> ActCmpCR = CmpCR.exactIntersectWith(KnownCR);
   if (!ActCmpCR)
     return CmpCR;
+  // Proof of ActCmpCR cannot be ne:
+  // 1. ActCmpCR = ne ∧ ActCmpCR ⊆ KnownCR -> KnownCR = ActCmpCR/fullset
+  // 2. KnownCR = fullset contradicts KnownCR != fullset
+  // 3. KnownCR = ActCmpCR = KnownCR ∩ CmpCR -> KnownCR ⊆ CmpCR
+  // 4. KnownCR ⊆ CmpCR contradicts KnownCR ⊈ CmpCR
+  assert(/*ne*/ !ActCmpCR->inverse().isSingleElement() && "Unexpected ne");
+
+  // We prefer eq rather than ne.
+  if (/*eq*/ ActCmpCR->isSingleElement())
+    return *ActCmpCR;
+
+  // We prefer ne rather than lt/ge.
+  //    L--------R       : KnownCR       or    L------------R   : KnownCR
+  //     L-------R       : ActiveCmpCR         L-----------R    : ActiveCmpCR
+  // ---RL-------------- : RelaxedCmpCR     ---------------RL-- : RelaxedCmpCR
+  if (const ConstantRange FalseCR = KnownCR.intersectWith(ActCmpCR->inverse());
+      FalseCR.isSingleElement())
+    return FalseCR.inverse();
 
   const APInt &CmpLo = ActCmpCR->getLower(), &CmpHi = ActCmpCR->getUpper();
 
   // If the intersection happens to be the ONE-icmp check, just return it.
-  if (/*eq*/ ActCmpCR->isSingleElement() ||
-      /*ne*/ ActCmpCR->inverse().isSingleElement() ||
-      /*ult*/ CmpLo.isZero() ||
+  if (/*ult*/ CmpLo.isZero() ||
       /*slt*/ CmpLo.isMinSignedValue() ||
       /*uge*/ CmpHi.isZero() ||
       /*sge*/ CmpHi.isMinSignedValue())
@@ -152,14 +168,7 @@ static ConstantRange simplifyCmpRange(const ConstantRange &CmpCR,
   if (CmpLo == KnownCR.getLower()) {
     // Tie to lower:
 
-    // Try ne
-    //    L------------R   : KnownCR
-    //    L-----------R    : ActiveCmpCR
-    // ---------------RL-- : RelaxedCmpCR
-    if (CmpHi + 1 == KnownCR.getUpper())
-      return ConstantRange::getNonEmpty(KnownCR.getUpper(), CmpHi);
-
-    // Try ult
+    // Try ult.
     // 0
     // |  L------------R   : KnownCR
     // |  L---R            : ActiveCmpCR
@@ -167,7 +176,7 @@ static ConstantRange simplifyCmpRange(const ConstantRange &CmpCR,
     if (!KnownCR.isWrappedSet())
       return ConstantRange::getNonEmpty(Zero, CmpHi);
 
-    // Try slt
+    // Try slt.
     //       smin                                 smin
     // -----R  |  L------- : KnownCR        ----R   |  L------- : KnownCR
     //         |  L--R     : ActiveCmpCR    --R     |  L------- : ActiveCmpCR
@@ -178,15 +187,7 @@ static ConstantRange simplifyCmpRange(const ConstantRange &CmpCR,
   } else if (CmpHi == KnownCR.getUpper()) {
     // Tie to upper:
 
-    // Try ne
-    //
-    //    L--------R       : KnownCR
-    //     L-------R       : ActiveCmpCR
-    // ---RL-------------- : RelaxedCmpCR
-    if (KnownCR.getLower() + 1 == CmpLo)
-      return ConstantRange::getNonEmpty(CmpLo, KnownCR.getLower());
-
-    // Try uge
+    // Try uge.
     // 0
     // |  L--------R       : KnownCR
     // |       L---R       : ActiveCmpCR
@@ -194,7 +195,7 @@ static ConstantRange simplifyCmpRange(const ConstantRange &CmpCR,
     if (!KnownCR.isWrappedSet())
       return ConstantRange::getNonEmpty(CmpLo, Zero);
 
-    // Try sge
+    // Try sge.
     //       smin                                 smin
     // -----R  |  L------- : KnownCR        -----R  |  L------- : KnownCR
     //   L--R  |           : ActiveCmpCR    -----R  |      L--- : ActiveCmpCR
