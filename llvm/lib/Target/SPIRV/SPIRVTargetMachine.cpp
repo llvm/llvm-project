@@ -66,6 +66,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeSPIRVPrepareFunctionsPass(PR);
   initializeSPIRVPrepareGlobalsPass(PR);
   initializeSPIRVStripConvergentIntrinsicsPass(PR);
+  initializeSPIRVCtorDtorLoweringLegacyPass(PR);
 }
 
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
@@ -186,6 +187,7 @@ void SPIRVPassConfig::addIRPasses() {
   }
 
   addPass(createSPIRVRegularizerPass());
+  addPass(createSPIRVCtorDtorLoweringLegacyPass());
   addPass(createSPIRVPrepareFunctionsPass(TM));
   addPass(createSPIRVPrepareGlobalsPass());
 }
