@@ -8291,6 +8291,7 @@ cc_library(
         ":VectorToGPU",
         ":XeGPUDialect",
         ":XeGPUUtils",
+        ":XeGPUuArch",
         "//llvm:Support",
     ],
 )
@@ -14566,6 +14567,7 @@ cc_library(
         ":VectorDialect",
         ":XeGPUDialect",
         ":XeGPUUtils",
+        ":XeGPUuArch",
         ":XeVMDialect",
         "//llvm:Support",
     ],

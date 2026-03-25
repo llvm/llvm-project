@@ -5129,7 +5129,9 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
 
   // Return true if we have a zero-value tile.
   auto hasZeros = [&](ArrayRef<OpFoldResult> tiles) {
-    return llvm::any_of(tiles, isZeroInteger);
+    return llvm::any_of(tiles, [](OpFoldResult tile) {
+      return isa<Attribute>(tile) && isZeroInteger(tile);
+    });
   };
 
   // Verify that the source and destination are ranked types.
@@ -5513,13 +5515,15 @@ bool PackOp::requirePaddingValue(ArrayRef<int64_t> inputShape,
     if (ShapedType::isDynamic(inputShape[pos]))
       continue;
     std::optional<int64_t> constantTile = getConstantIntValue(tileSize);
-
     if (!constantTile) {
       if (ShapedType::isStatic(outputTileSizes[pos]) &&
           (inputShape[pos] % outputTileSizes[pos] != 0))
         return true;
-    } else if (inputShape[pos] % (*constantTile) != 0) {
-      return true;
+    } else {
+      assert(*constantTile != 0 && "static tile size can't be zero");
+      if (inputShape[pos] % (*constantTile) != 0) {
+        return true;
+      }
     }
   }
   return false;
@@ -5545,6 +5549,7 @@ bool PackOp::requirePaddingValueStrict(ArrayRef<int64_t> inputShape,
     std::optional<int64_t> constantTile = getConstantIntValue(tileSize);
     if (!constantTile)
       return true;
+    assert(*constantTile != 0 && "static tile size can't be zero");
     if (inputShape[pos] % (*constantTile) != 0)
       return true;
   }
@@ -6014,6 +6019,8 @@ struct FoldTensorCastPackOp : public OpRewritePattern<PackOp> {
     // Get the updated mixed-tile-sizes attribute.
     SmallVector<OpFoldResult> newMixedTileSizes =
         getNewMixedTileSizes(rewriter, newResultTypes[0], op.getMixedTiles());
+    if (llvm::any_of(newMixedTileSizes, isZeroInteger))
+      return failure();
 
     // Clone op.
     // TODO: Strictly speaking, discardable attributes should be _discarded_ at
