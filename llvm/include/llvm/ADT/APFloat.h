@@ -262,8 +262,9 @@ public:
 
     // HexFloat floating point format.  Radix is 16, no NaNs or infinities.
     // See the chapters 9 and 18 of the z/Architecture Principles of Operation,
-    // the 1999 IEEE paper by Schwartz et al (http://eece.cu.edu.eg/~hfahmy/arith_class/hex_bin_FP.pdf),
-    // or the wiki page for HexFloat.
+    // the 1999 IEEE paper by Schwartz et al
+    // (http://eece.cu.edu.eg/~hfahmy/arith_class/hex_bin_FP.pdf), or the wiki
+    // page for HexFloat.
     S_HexFP32,
     S_HexFP64,
     S_HexFP128,
