@@ -72,7 +72,7 @@ define b32 @constant32() {
   ; CHECK: <FUNCTION_BLOCK
   ; CHECK:      <CONSTANTS_BLOCK
   ; CHECK-NEXT:   <SETTYPE {{.*}} op0=10/>
-  ;; The value here is signed VBR, so the value is doubled
+  ;; The value here is signed variable-length encoded, so the value is doubled
   ; CHECK-NEXT:   <INTEGER {{.*}} op0=246/>
   ret b32 123
 }
@@ -81,7 +81,7 @@ define b128 @constant128() {
   ; CHECK: <FUNCTION_BLOCK
   ; CHECK:      <CONSTANTS_BLOCK
   ; CHECK-NEXT:   <SETTYPE {{.*}} op0=12/>
-  ;; The value here is signed VBR, so the value is doubled
+  ;; The value here is signed variable-length encoded, so the value is doubled
   ; CHECK-NEXT:   <WIDE_INTEGER op0=24682468/>
   ret b128 12341234
 }
