@@ -1966,7 +1966,7 @@ def AMDGPU_GlobalPrefetchOp :
     the source `memref` and an offset provided by the indices of the element
     containing the cache line. This provides temporal hints (e.g., regular
     or high-priority). Note that out-of-bounds access is allowed in
-    speculative mode. Ensure the source `memref` is in address space `1`.
+    speculative mode. The provided memref must be in the global address space (`#gpu.address_space<global>` or 1).
 
     This operation was introduced in gfx1250.
 
