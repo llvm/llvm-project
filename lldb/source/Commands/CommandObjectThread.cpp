@@ -857,7 +857,6 @@ public:
       return llvm::ArrayRef(g_thread_until_options);
     }
 
-    uint32_t m_step_thread_idx = LLDB_INVALID_THREAD_ID;
     bool m_stop_others = false;
     std::vector<lldb::addr_t> m_until_addrs;
 
