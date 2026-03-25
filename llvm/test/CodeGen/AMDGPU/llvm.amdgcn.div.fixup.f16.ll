@@ -284,3 +284,17 @@ entry:
   store half %r.val, ptr addrspace(1) %r
   ret void
 }
+
+define half @div_fixup_f16_vgpr(half %a, half %b, half %c) {
+; VI-SDAG-LABEL: div_fixup_f16_vgpr:
+; VI-SDAG:  ; %bb.0:
+; VI-SDAG:    v_div_fixup_f16 v0, v0, v1, v2
+; VI-SDAG:    s_setpc_b64 s[30:31]
+;
+; VI-GISEL-LABEL: div_fixup_f16_vgpr:
+; VI-GISEL:  ; %bb.0:
+; VI-GISEL:    v_div_fixup_f16 v0, v0, v1, v2
+; VI-GISEL:    s_setpc_b64 s[30:31]
+  %r = call half @llvm.amdgcn.div.fixup.f16(half %a, half %b, half %c)
+  ret half %r
+}

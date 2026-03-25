@@ -32,3 +32,17 @@ define amdgpu_kernel void @test_div_fixup_f64(ptr addrspace(1) %out, double %a, 
   store double %result, ptr addrspace(1) %out, align 8
   ret void
 }
+
+; GCN-LABEL: {{^}}test_div_fixup_f32_vgpr:
+; GCN: v_div_fixup_f32
+define float @test_div_fixup_f32_vgpr(float %a, float %b, float %c) {
+  %result = call float @llvm.amdgcn.div.fixup.f32(float %a, float %b, float %c)
+  ret float %result
+}
+
+; GCN-LABEL: {{^}}test_div_fixup_f64_vgpr:
+; GCN: v_div_fixup_f64
+define double @test_div_fixup_f64_vgpr(double %a, double %b, double %c) {
+  %result = call double @llvm.amdgcn.div.fixup.f64(double %a, double %b, double %c)
+  ret double %result
+}
