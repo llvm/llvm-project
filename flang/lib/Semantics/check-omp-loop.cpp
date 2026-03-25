@@ -61,16 +61,6 @@ public:
       constructNamesAndLevels_.emplace(
           constructName.value().ToString(), level_);
     }
-    if (level_ >= 0) {
-      if (dc.IsDoWhile()) {
-        context_.Say(doStmt.source,
-            "The associated loop of a loop-associated directive cannot be a DO WHILE."_err_en_US);
-      }
-      if (!dc.GetLoopControl()) {
-        context_.Say(doStmt.source,
-            "The associated loop of a loop-associated directive cannot be a DO without control."_err_en_US);
-      }
-    }
     return true;
   }
 
@@ -268,93 +258,84 @@ void OmpStructureChecker::CheckNestedConstruct(
 
   // Check constructs contained in the body of the loop construct.
   auto &body{std::get<parser::Block>(x.t)};
+
   for (auto &stmt : BlockRange(body, BlockRange::Step::Over)) {
     if (auto *d{parser::Unwrap<parser::CompilerDirective>(stmt)}) {
       context_.Say(d->source,
           "Compiler directives are not allowed inside OpenMP loop constructs"_warn_en_US);
-    } else if (auto *omp{parser::Unwrap<parser::OpenMPLoopConstruct>(stmt)}) {
-      if (!IsLoopTransforming(omp->BeginDir().DirId())) {
-        context_.Say(omp->source,
-            "Only loop-transforming OpenMP constructs are allowed inside OpenMP loop constructs"_err_en_US);
-      }
-      if (IsFullUnroll(*omp)) {
-        context_.Say(x.source,
-            "OpenMP loop construct cannot apply to a fully unrolled loop"_err_en_US);
-      }
-    } else if (!parser::Unwrap<parser::DoConstruct>(stmt)) {
-      parser::CharBlock source{parser::GetSource(stmt).value_or(x.source)};
-      context_.Say(source,
-          "OpenMP loop construct can only contain DO loops or loop-nest-generating OpenMP constructs"_err_en_US);
     }
   }
 
   LoopSequence sequence(body, version, true);
 
-  // Check if a loop-nest-associated construct has only one top-level loop
-  // in it.
+  auto assoc{llvm::omp::getDirectiveAssociation(dir)};
   auto needRange{GetAffectedLoopRangeWithReason(beginSpec, version)};
+  auto haveLength{sequence.length()};
 
-  if (auto haveLength{sequence.length()}) {
-    if (*haveLength.value == 0) {
-      context_.Say(beginSource,
-          "This construct should contain a DO-loop or a loop-nest-generating OpenMP construct"_err_en_US);
-    } else {
-      auto assoc{llvm::omp::getDirectiveAssociation(dir)};
-      if (*haveLength.value > 1 && assoc == llvm::omp::Association::LoopNest) {
-        auto &msg{context_.Say(beginSource,
-            "This construct applies to a loop nest, but has a loop sequence of "
-            "length %" PRId64 ""_err_en_US,
-            *haveLength.value)};
-        haveLength.reason.AttachTo(msg);
-      }
-      if (assoc == llvm::omp::Association::LoopSeq) {
-        if (auto requiredCount{GetRequiredCount(needRange.value)}) {
-          if (*requiredCount > 0 && *haveLength.value < *requiredCount) {
-            auto &msg{context_.Say(beginSource,
-                "This construct requires a sequence of %" PRId64
-                " loops, but the loop sequence has a length of %" PRId64
-                ""_err_en_US,
-                *requiredCount, *haveLength.value)};
-            haveLength.reason.AttachTo(msg);
-            needRange.reason.AttachTo(msg);
-          }
-        }
-      }
+  const auto MsgShouldContainDoOr{
+      "This construct should contain a DO-loop or a loop-%s-generating construct"_err_en_US};
+  const auto MsgRequiresCanonical{
+      "This construct requires a canonical loop %s"_err_en_US};
+
+  if (assoc == llvm::omp::Association::LoopNest) {
+    if (sequence.children().size() == 0) {
+      context_.Say(beginSource, MsgShouldContainDoOr, "nest");
+    } else if (haveLength.value > 1) {
+      auto &msg{context_.Say(beginSource,
+          "This construct applies to a loop nest, but has a loop sequence of "
+          "length %" PRId64 ""_err_en_US,
+          *haveLength.value)};
+      haveLength.reason.AttachTo(msg);
     }
-  }
+    auto [isWellFormed, whyNot]{sequence.isWellFormedNest()};
+    if (isWellFormed && !*isWellFormed) {
+      auto &msg{context_.Say(beginSource, MsgRequiresCanonical, "nest")};
+      whyNot.AttachTo(msg);
+    }
 
-  // Check requirements on nest depth.
-  auto [needDepth, needPerfect]{
-      GetAffectedNestDepthWithReason(beginSpec, version)};
-  auto &[haveSema, havePerf]{sequence.depth()};
+    // Check requirements on nest depth.
+    auto [needDepth, needPerfect]{
+        GetAffectedNestDepthWithReason(beginSpec, version)};
+    auto &[haveSema, havePerf]{sequence.depth()};
 
-  if (dir != llvm::omp::Directive::OMPD_fuse) {
-    auto haveDepth = needPerfect ? havePerf : haveSema;
+    auto haveDepth{needPerfect ? havePerf : haveSema};
+    std::string_view perfectTxt{needPerfect ? " perfect" : ""};
+
     // If the present depth is 0, it's likely that the construct doesn't
     // have any loops in it, which would be diagnosed above.
     if (needDepth && haveDepth.value > 0) {
       if (*needDepth.value > *haveDepth.value) {
-        if (needPerfect) {
+        auto &msg{context_.Say(beginSource,
+            "This construct requires a%s nest of depth %" PRId64
+            ", but the associated nest is a%s nest of depth %" PRId64
+            ""_err_en_US,
+            perfectTxt, *needDepth.value, perfectTxt, *haveDepth.value)};
+        haveDepth.reason.AttachTo(msg);
+        needDepth.reason.AttachTo(msg);
+      }
+    }
+
+  } else if (assoc == llvm::omp::Association::LoopSeq) {
+    if (haveLength.value == 0) {
+      context_.Say(beginSource, MsgShouldContainDoOr, "sequence");
+    } else {
+      auto [isWellFormed, whyNot]{sequence.isWellFormedSequence()};
+      if (isWellFormed && !*isWellFormed) {
+        auto &msg{context_.Say(beginSource, MsgRequiresCanonical, "sequence")};
+        whyNot.AttachTo(msg);
+      }
+      if (auto requiredCount{GetRequiredCount(needRange.value)}) {
+        if (*requiredCount > 0 && haveLength.value < *requiredCount) {
           auto &msg{context_.Say(beginSource,
-              "This construct requires a perfect nest of depth %" PRId64
-              ", but the associated nest is a perfect nest of depth %" PRId64
+              "This construct requires a sequence of %" PRId64
+              " loops, but the loop sequence has a length of %" PRId64
               ""_err_en_US,
-              *needDepth.value, *haveDepth.value)};
-          haveDepth.reason.AttachTo(msg);
-          needDepth.reason.AttachTo(msg);
-        } else {
-          auto &msg{context_.Say(beginSource,
-              "This construct requires a nest of depth %" PRId64
-              ", but the associated nest has a depth of %" PRId64 ""_err_en_US,
-              *needDepth.value, *haveDepth.value)};
-          haveDepth.reason.AttachTo(msg);
-          needDepth.reason.AttachTo(msg);
+              *requiredCount, *haveLength.value)};
+          haveLength.reason.AttachTo(msg);
+          needRange.reason.AttachTo(msg);
         }
       }
     }
-  } else {
-    // FUSE requires a sequence of perfect nests.
-    // TODO: Defer this check for now.
   }
 }
 

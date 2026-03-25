@@ -2395,11 +2395,6 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
               context_.Say(clause->source,
                   "DO CONCURRENT loops cannot be used with the COLLAPSE clause."_err_en_US);
             }
-          } else {
-            auto &stmt =
-                std::get<parser::Statement<parser::NonLabelDoStmt>>(loop->t);
-            context_.Say(stmt.source,
-                "DO CONCURRENT loops cannot form part of a loop nest."_err_en_US);
           }
         }
         // go through all the nested do-loops and resolve index variables
