@@ -413,9 +413,9 @@ public:
 
   void print(raw_ostream &out) const;
 
-  /// Print divergent arguments. IR specialization iterates F.args();
-  /// MIR has no arguments, so the default is a no-op.
-  void printDivergentArgs(raw_ostream &out) const;
+  /// Print divergent arguments and return true if any were found.
+  /// IR specialization iterates F.args(); default is a no-op.
+  bool printDivergentArgs(raw_ostream &out) const;
 
   SmallVector<TemporalDivergenceTuple, 8> TemporalDivergenceList;
 
@@ -439,10 +439,6 @@ protected:
   // which is only called when the target has branch divergence. When false,
   // isDivergent() returns false for all values.
   bool HasBranchDivergence = false;
-
-  // Whether any value was marked divergent during analysis. Used only
-  // by print() to decide the "ALL VALUES UNIFORM" message.
-  bool FoundDivergence = false;
 
   SmallPtrSet<const BlockT *, 32> DivergentTermBlocks;
 
@@ -847,7 +843,6 @@ template <typename ContextT>
 bool GenericUniformityAnalysisImpl<ContextT>::markDivergent(
     ConstValueRefT Val) {
   if (UniformValues.erase(Val)) {
-    FoundDivergence = true;
     LLVM_DEBUG(dbgs() << "marked divergent: " << Context.print(Val) << "\n");
     return true;
   }
@@ -1191,8 +1186,10 @@ bool GenericUniformityAnalysisImpl<ContextT>::isAlwaysUniform(
 }
 
 template <typename ContextT>
-void GenericUniformityAnalysisImpl<ContextT>::printDivergentArgs(
-    raw_ostream &) const {}
+bool GenericUniformityAnalysisImpl<ContextT>::printDivergentArgs(
+    raw_ostream &) const {
+  return false;
+}
 
 template <typename ContextT>
 GenericUniformityInfo<ContextT>::GenericUniformityInfo(
@@ -1209,15 +1206,12 @@ void GenericUniformityAnalysisImpl<ContextT>::print(raw_ostream &OS) const {
   constexpr bool IsMIR = std::is_same<InstructionT, MachineInstr>::value;
   std::string NewLine = IsMIR ? "" : "\n";
 
-  if (!FoundDivergence && DivergentTermBlocks.empty() &&
-      DivergentExitCycles.empty()) {
-    OS << "ALL VALUES UNIFORM\n";
-    return;
-  }
+  bool FoundDivergence = false;
 
-  printDivergentArgs(OS);
+  FoundDivergence |= printDivergentArgs(OS);
 
   if (!AssumedDivergent.empty()) {
+    FoundDivergence = true;
     OS << "CYCLES ASSUMED DIVERGENT:\n";
     for (const CycleT *cycle : AssumedDivergent) {
       OS << "  " << cycle->print(Context) << '\n';
@@ -1225,6 +1219,7 @@ void GenericUniformityAnalysisImpl<ContextT>::print(raw_ostream &OS) const {
   }
 
   if (!DivergentExitCycles.empty()) {
+    FoundDivergence = true;
     OS << "CYCLES WITH DIVERGENT EXIT:\n";
     for (const CycleT *cycle : DivergentExitCycles) {
       OS << "  " << cycle->print(Context) << '\n';
@@ -1232,6 +1227,7 @@ void GenericUniformityAnalysisImpl<ContextT>::print(raw_ostream &OS) const {
   }
 
   if (!TemporalDivergenceList.empty()) {
+    FoundDivergence = true;
     OS << "\nTEMPORAL DIVERGENCE LIST:\n";
 
     for (auto [Val, UseInst, Cycle] : TemporalDivergenceList) {
@@ -1248,10 +1244,12 @@ void GenericUniformityAnalysisImpl<ContextT>::print(raw_ostream &OS) const {
     SmallVector<ConstValueRefT, 16> defs;
     Context.appendBlockDefs(defs, block);
     for (auto value : defs) {
-      if (isDivergent(value))
+      if (isDivergent(value)) {
+        FoundDivergence = true;
         OS << "  DIVERGENT: ";
-      else
+      } else {
         OS << "             ";
+      }
       OS << Context.print(value) << NewLine;
     }
 
@@ -1259,6 +1257,8 @@ void GenericUniformityAnalysisImpl<ContextT>::print(raw_ostream &OS) const {
     SmallVector<const InstructionT *, 8> terms;
     Context.appendBlockTerms(terms, block);
     bool divergentTerminators = hasDivergentTerminator(block);
+    if (divergentTerminators)
+      FoundDivergence = true;
     for (auto *T : terms) {
       if (divergentTerminators)
         OS << "  DIVERGENT: ";
@@ -1269,6 +1269,9 @@ void GenericUniformityAnalysisImpl<ContextT>::print(raw_ostream &OS) const {
 
     OS << "END BLOCK\n";
   }
+
+  if (!FoundDivergence)
+    OS << "ALL VALUES UNIFORM\n";
 }
 
 template <typename ContextT>

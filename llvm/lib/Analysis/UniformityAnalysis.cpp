@@ -50,7 +50,7 @@ void llvm::GenericUniformityAnalysisImpl<SSAContext>::pushUsers(
 }
 
 template <>
-void llvm::GenericUniformityAnalysisImpl<SSAContext>::printDivergentArgs(
+bool llvm::GenericUniformityAnalysisImpl<SSAContext>::printDivergentArgs(
     raw_ostream &OS) const {
   bool haveDivergentArgs = false;
   for (const auto &Arg : F.args()) {
@@ -62,6 +62,7 @@ void llvm::GenericUniformityAnalysisImpl<SSAContext>::printDivergentArgs(
       OS << "  DIVERGENT: " << Context.print(&Arg) << '\n';
     }
   }
+  return haveDivergentArgs;
 }
 
 template <> void llvm::GenericUniformityAnalysisImpl<SSAContext>::initialize() {
