@@ -27,14 +27,14 @@ int main() {
         // CHECK: [[S:%.+]] = alloca %struct.Simple, align 4
         // CHECK: [[W:%.+]] = alloca %struct.WithCtor, align 4
         s.x = 42;
-        // CHECK: {{%.+}} = call ptr @__msan_memset(ptr [[S]], i32 poison, i64 4)
+        // CHECK: {{%.+}} = call ptr @__msan_memset(ptr [[S]], i32 undef, i64 4)
         new (&s) Simple;
         bool flag = s.x == 42; /// This is UB
     }
     {
         WithCtor w;
         w.x = 42;
-        // CHECK: {{%.+}} = call ptr @__msan_memset(ptr [[W]], i32 poison, i64 20)
+        // CHECK: {{%.+}} = call ptr @__msan_memset(ptr [[W]], i32 undef, i64 20)
         auto *ptr = new (&w) WithCtor; /// This is UB
         // CHECK: call void @_ZN8WithCtorC1Ev
     }

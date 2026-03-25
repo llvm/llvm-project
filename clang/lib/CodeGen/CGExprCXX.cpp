@@ -1558,22 +1558,21 @@ static void EnterNewDeleteCleanup(CodeGenFunction &CGF, const CXXNewExpr *E,
 }
 
 namespace {
-void PoisonTrivialField(CodeGenFunction &CGF, QualType const &Ty,
-                        Address Dest) {
+void UndefTrivialField(CodeGenFunction &CGF, QualType const &Ty, Address Dest) {
   CharUnits Size = CGF.getContext().getTypeSizeInChars(Ty);
   llvm::Value *SizeVal = CGF.CGM.getSize(Size);
-  llvm::Value *PoisonByte = llvm::PoisonValue::get(CGF.Builder.getInt8Ty());
-  CGF.Builder.CreateMemSet(Dest, PoisonByte, SizeVal, Ty.isVolatileQualified());
+  llvm::Value *UndefByte = llvm::UndefValue::get(CGF.Builder.getInt8Ty());
+  CGF.Builder.CreateMemSet(Dest, UndefByte, SizeVal, Ty.isVolatileQualified());
 }
 
-void PoisonArrayLValue(CodeGenFunction &CGF, QualType const &ElementQualTy,
-                       llvm::Type *ElementTy, LValue const &Dest,
-                       llvm::Value *numElements);
+void UndefArrayLValue(CodeGenFunction &CGF, QualType const &ElementQualTy,
+                      llvm::Type *ElementTy, LValue const &Dest,
+                      llvm::Value *numElements);
 
-void PoisonLValueRecursive(CodeGenFunction &CGF, QualType const &Ty,
-                           LValue const &Dest) {
+void UndefLValueRecursive(CodeGenFunction &CGF, QualType const &Ty,
+                          LValue const &Dest) {
   if (Ty.isTriviallyCopyableType(CGF.getContext()) || Ty->isReferenceType()) {
-    return PoisonTrivialField(CGF, Ty, Dest.getAddress());
+    return UndefTrivialField(CGF, Ty, Dest.getAddress());
   }
 
   auto *RD = Ty->castAsCXXRecordDecl();
@@ -1587,13 +1586,13 @@ void PoisonLValueRecursive(CodeGenFunction &CGF, QualType const &Ty,
     QualType FieldTy = FD->getType();
     LValue FieldLV = CGF.EmitLValueForField(Dest, FD);
     if (FieldTy->isRecordType()) {
-      return PoisonLValueRecursive(CGF, FieldTy, FieldLV);
+      return UndefLValueRecursive(CGF, FieldTy, FieldLV);
     }
     if (auto *AQualTy = dyn_cast<clang::ArrayType>(FieldTy)) {
       if (auto *ATy =
               dyn_cast<llvm::ArrayType>(CGF.ConvertTypeForMem(FieldTy))) {
         if (uint64_t NumArrayElements = ATy->getNumElements()) {
-          PoisonArrayLValue(
+          UndefArrayLValue(
               CGF, AQualTy->getElementType(), ATy->getElementType(), FieldLV,
               llvm::ConstantInt::get(CGF.SizeTy, NumArrayElements));
         }
@@ -1601,13 +1600,13 @@ void PoisonLValueRecursive(CodeGenFunction &CGF, QualType const &Ty,
       return;
     }
     // Every other case is trivial to poison.
-    PoisonTrivialField(CGF, FieldTy, FieldLV.getAddress());
+    UndefTrivialField(CGF, FieldTy, FieldLV.getAddress());
   }
 }
 
-void PoisonArrayLValue(CodeGenFunction &CGF, QualType const &ElementQualTy,
-                       llvm::Type *ElementTy, LValue const &Dest,
-                       llvm::Value *NumElements) {
+void UndefArrayLValue(CodeGenFunction &CGF, QualType const &ElementQualTy,
+                      llvm::Type *ElementTy, LValue const &Dest,
+                      llvm::Value *NumElements) {
   auto ElementAlign = Dest.getAlignment().alignmentOfArrayElement(
       CGF.getContext().getTypeSizeInChars(ElementQualTy));
 
@@ -1625,7 +1624,7 @@ void PoisonArrayLValue(CodeGenFunction &CGF, QualType const &ElementQualTy,
   CurElementPtr->addIncoming(BeginPtr, EntryBB);
   LValue ElementDest = CGF.MakeAddrLValue(
       Address(CurElementPtr, ElementTy, ElementAlign), ElementQualTy);
-  PoisonLValueRecursive(CGF, ElementQualTy, ElementDest);
+  UndefLValueRecursive(CGF, ElementQualTy, ElementDest);
   llvm::Value *NextElementPtr = Builder.CreateInBoundsGEP(
       ElementTy, CurElementPtr, One, "arraypoison.next");
   llvm::Value *Done =
@@ -1700,9 +1699,9 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
       auto *ElemTy = ConvertTypeForMem(allocType);
       auto Dest = MakeAddrLValue(allocation.withElementType(ElemTy), allocType);
       if (numElements) {
-        PoisonArrayLValue(*this, allocType, ElemTy, Dest, numElements);
+        UndefArrayLValue(*this, allocType, ElemTy, Dest, numElements);
       } else {
-        PoisonLValueRecursive(*this, allocType, Dest);
+        UndefLValueRecursive(*this, allocType, Dest);
       }
     }
   } else {
