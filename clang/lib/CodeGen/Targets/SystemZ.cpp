@@ -555,8 +555,7 @@ class ZOSXPLinkABIInfo : public ABIInfo {
   bool HasVector;
 
 public:
-  ZOSXPLinkABIInfo(CodeGenTypes &CGT, bool HV)
-      : ABIInfo(CGT), HasVector(HV) {}
+  ZOSXPLinkABIInfo(CodeGenTypes &CGT, bool HV) : ABIInfo(CGT), HasVector(HV) {}
 
   bool isPromotableIntegerType(QualType Ty) const;
   bool isCompoundType(QualType Ty) const;
@@ -682,9 +681,9 @@ QualType ZOSXPLinkABIInfo::getSingleElementType(QualType Ty) const {
         if (isEmptyRecord(getContext(), Base, true))
           continue;
 
-        // A candidate base type was already found; encountering another non‑empty
-        // base means the choice is no longer unique. Return the type from the
-        // first candidate.
+        // A candidate base type was already found; encountering another
+        // non-empty base means the choice is no longer unique. Return the type
+        // from the first candidate.
         if (!Found.isNull())
           return Ty;
         Found = getSingleElementType(Base);
@@ -714,7 +713,8 @@ unsigned ZOSXPLinkABIInfo::getMaxAlignFromTypeDefs(QualType Ty) const {
       unsigned CurrAlign = TyDecl->getMaxAlignment();
       MaxAlign = std::max(CurrAlign, MaxAlign);
     }
-    // Peel exactly one sugar layer (Typedef, Attributed, Paren, Elaborated, etc.).
+    // Peel exactly one sugar layer (Typedef, Attributed, Paren, Elaborated,
+    // etc.).
     clang::QualType Next = Cur.getSingleStepDesugaredType(getContext());
     if (Next == Cur) // no more sugar to peel
       break;
@@ -762,8 +762,7 @@ ZOSXPLinkABIInfo::getFPTypeOfComplexLikeType(QualType Ty) const {
       if (Count == 0) {
         if (MaxAlign > 2 * getContext().getTypeSize(FTSingleTy))
           return std::nullopt;
-      }
-      else if (Count == 1) {
+      } else if (Count == 1) {
         if (MaxAlign > getContext().getTypeSize(FTSingleTy))
           return std::nullopt;
       }
@@ -805,9 +804,8 @@ ZOSXPLinkABIInfo::getFPTypeOfComplexLikeType(QualType Ty) const {
   return std::nullopt;
 }
 
-ABIArgInfo
-ZOSXPLinkABIInfo::classifyReturnType(QualType RetTy,
-                                     unsigned CallConv) const {
+ABIArgInfo ZOSXPLinkABIInfo::classifyReturnType(QualType RetTy,
+                                                unsigned CallConv) const {
 
   // Ignore void types.
   if (RetTy->isVoidType())
@@ -852,7 +850,8 @@ ZOSXPLinkABIInfo::classifyReturnType(QualType RetTy,
       CoerceTy = llvm::ArrayType::get(CoerceTy, NumElements);
       return ABIArgInfo::getDirectInReg(CoerceTy);
     } else
-      return getNaturalAlignIndirect(RetTy, getDataLayout().getAllocaAddrSpace());
+      return getNaturalAlignIndirect(RetTy,
+                                     getDataLayout().getAllocaAddrSpace());
   }
 
   // Treat an enum type as its underlying type.
@@ -868,7 +867,8 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyArgumentType(QualType Ty, bool IsNamedArg,
 
   // Handle the generic C++ ABI.
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
-    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(), RAA == CGCXXABI::RAA_DirectInMemory);
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                   RAA == CGCXXABI::RAA_DirectInMemory);
 
   // Integers and enums are extended to full register width.
   if (isPromotableIntegerType(Ty))
@@ -907,7 +907,8 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyArgumentType(QualType Ty, bool IsNamedArg,
   // If place available, complex like types will have their members
   // placed in FPRs.
   if (Ty->getAs<RecordType>() || Ty->isAnyComplexType() || CompTy.has_value()) {
-    if (isAggregateTypeForABI(Ty) || Ty->isAnyComplexType() || CompTy.has_value()) {
+    if (isAggregateTypeForABI(Ty) || Ty->isAnyComplexType() ||
+        CompTy.has_value()) {
       // Since an aggregate may end up in registers, pass the aggregate as
       // array. This is usually beneficial since we avoid forcing the back-end
       // to store the argument to memory.
@@ -934,13 +935,14 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyArgumentType(QualType Ty, bool IsNamedArg,
 
   // Non-structure compounds are passed indirectly, i.e. arrays.
   if (isCompoundType(Ty))
-    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(), /*ByVal=*/false);
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                   /*ByVal=*/false);
 
   return ABIArgInfo::getDirect();
 }
 
 RValue ZOSXPLinkABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                                    QualType Ty, AggValueSlot Slot) const {
+                                   QualType Ty, AggValueSlot Slot) const {
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty, /*indirect*/ false,
                           CGF.getContext().getTypeInfoInChars(Ty),
                           CGF.getPointerSize(),
