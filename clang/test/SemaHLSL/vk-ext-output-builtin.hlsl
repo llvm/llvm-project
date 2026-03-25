@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple spirv-unkown-vulkan1.3-compute -x hlsl -hlsl-entry foo  -finclude-default-header -o - %s -verify
+// RUN: %clang_cc1 -triple spirv-unknown-vulkan1.3-compute -x hlsl -hlsl-entry foo  -finclude-default-header -o - %s -verify
 
 // expected-error@+1 {{'vk::ext_builtin_output' attribute only applies to static globals}}
 [[vk::ext_builtin_output(/* Position */ 0)]]
