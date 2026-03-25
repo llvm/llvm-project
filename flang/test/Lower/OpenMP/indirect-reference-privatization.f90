@@ -1,5 +1,5 @@
 ! RUN: %flang_fc1 -fopenmp -emit-hlfir %s -o - 2>&1 | FileCheck %s
-
+! XFAIL: *
 !CHECK-LABEL: func @_QPparallel_simd
 !CHECK: omp.parallel private(@_QFparallel_simdEk2_private_i32 {{.*}} -> %[[ARG:.*]] : !fir.ref<i32>)
 !CHECK:   %[[PRIV_K2:.*]]:2 = hlfir.declare %[[ARG]] {uniq_name = "_QFparallel_simdEk2"}

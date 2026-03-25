@@ -1842,6 +1842,14 @@ void SemaHLSL::handleVkExtBuiltinInputAttr(Decl *D, const ParsedAttr &AL) {
                  HLSLVkExtBuiltinInputAttr(getASTContext(), AL, ID));
 }
 
+void SemaHLSL::handleVkExtBuiltinOutputAttr(Decl *D, const ParsedAttr &AL) {
+  uint32_t ID;
+  if (!SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(0), ID))
+    return;
+  D->addAttr(::new (getASTContext())
+                 HLSLVkExtBuiltinOutputAttr(getASTContext(), AL, ID));
+}
+
 void SemaHLSL::handleVkPushConstantAttr(Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (getASTContext())
                  HLSLVkPushConstantAttr(getASTContext(), AL));
@@ -4299,7 +4307,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(ArgTyExpr);
     break;
   }
-  case Builtin::BI__builtin_hlsl_quad_read_across_x: {
+  case Builtin::BI__builtin_hlsl_quad_read_across_x:
+  case Builtin::BI__builtin_hlsl_quad_read_across_y: {
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;
 
@@ -4854,6 +4863,19 @@ void SemaHLSL::deduceAddressSpace(VarDecl *Decl) {
     LangAS ImplAS = LangAS::hlsl_input;
     Type = SemaRef.getASTContext().getAddrSpaceQualType(Type, ImplAS);
     Decl->setType(Type);
+    return;
+  }
+
+  if (Decl->hasAttr<HLSLVkExtBuiltinOutputAttr>()) {
+    LangAS ImplAS = LangAS::hlsl_output;
+    Type = SemaRef.getASTContext().getAddrSpaceQualType(Type, ImplAS);
+    Decl->setType(Type);
+
+    // HLSL uses `static` differently than C++. For BuiltIn output, the static
+    // does not imply private to the module scope.
+    // Marking it as external to reflect the semantic this attribute brings.
+    // See https://github.com/microsoft/hlsl-specs/issues/350
+    Decl->setStorageClass(SC_Extern);
     return;
   }
 
