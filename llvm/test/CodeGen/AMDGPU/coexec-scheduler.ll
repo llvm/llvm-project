@@ -623,34 +623,35 @@ define amdgpu_kernel void @ds_wmma_block_carried(ptr addrspace(3) %base, ptr add
 ; COEXEC-NEXT:    s_mov_b32 s14, s8
 ; COEXEC-NEXT:    s_mov_b32 s15, s8
 ; COEXEC-NEXT:    s_wait_kmcnt 0x0
-; COEXEC-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v6, s2
+; COEXEC-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v7, s2
 ; COEXEC-NEXT:    s_bitcmp1_b32 s0, 0
 ; COEXEC-NEXT:    v_mov_b32_e32 v4, v0
 ; COEXEC-NEXT:    s_cselect_b32 s3, -1, 0
-; COEXEC-NEXT:    ds_load_tr16_b128 v[8:11], v6
-; COEXEC-NEXT:    ds_load_tr16_b128 v[16:19], v6 offset:128
-; COEXEC-NEXT:    ds_load_tr16_b128 v[24:27], v6 offset:256
-; COEXEC-NEXT:    ds_load_tr16_b128 v[32:35], v6 offset:384
-; COEXEC-NEXT:    ds_load_tr16_b128 v[12:15], v6 offset:64
-; COEXEC-NEXT:    ds_load_tr16_b128 v[20:23], v6 offset:192
-; COEXEC-NEXT:    ds_load_tr16_b128 v[28:31], v6 offset:320
+; COEXEC-NEXT:    ds_load_tr16_b128 v[8:11], v7
+; COEXEC-NEXT:    ds_load_tr16_b128 v[16:19], v7 offset:128
+; COEXEC-NEXT:    ds_load_tr16_b128 v[24:27], v7 offset:256
 ; COEXEC-NEXT:    v_mov_b32_e32 v5, v0
-; COEXEC-NEXT:    ds_load_tr16_b128 v[36:39], v6 offset:448
+; COEXEC-NEXT:    ds_load_tr16_b128 v[32:35], v7 offset:384
+; COEXEC-NEXT:    ds_load_tr16_b128 v[12:15], v7 offset:64
+; COEXEC-NEXT:    ds_load_tr16_b128 v[20:23], v7 offset:192
+; COEXEC-NEXT:    ds_load_tr16_b128 v[28:31], v7 offset:320
+; COEXEC-NEXT:    v_mov_b32_e32 v6, v0
+; COEXEC-NEXT:    ds_load_tr16_b128 v[36:39], v7 offset:448
 ; COEXEC-NEXT:    s_add_co_i32 s0, s2, s1
 ; COEXEC-NEXT:    s_xor_b32 s2, s3, -1
-; COEXEC-NEXT:    v_dual_mov_b32 v6, v0 :: v_dual_mov_b32 v7, v0
-; COEXEC-NEXT:    v_dual_mov_b32 v40, v0 :: v_dual_mov_b32 v48, v0
-; COEXEC-NEXT:    v_dual_mov_b32 v56, v0 :: v_dual_mov_b32 v41, v0
-; COEXEC-NEXT:    v_dual_mov_b32 v49, v0 :: v_dual_mov_b32 v57, v0
-; COEXEC-NEXT:    v_dual_mov_b32 v42, v0 :: v_dual_mov_b32 v50, v0
-; COEXEC-NEXT:    v_dual_mov_b32 v58, v0 :: v_dual_mov_b32 v43, v0
-; COEXEC-NEXT:    v_dual_mov_b32 v51, v0 :: v_dual_mov_b32 v59, v0
-; COEXEC-NEXT:    v_dual_mov_b32 v44, v0 :: v_dual_mov_b32 v52, v0
-; COEXEC-NEXT:    v_dual_mov_b32 v60, v0 :: v_dual_mov_b32 v45, v0
-; COEXEC-NEXT:    v_dual_mov_b32 v53, v0 :: v_dual_mov_b32 v61, v0
-; COEXEC-NEXT:    v_dual_mov_b32 v46, v0 :: v_dual_mov_b32 v54, v0
-; COEXEC-NEXT:    v_dual_mov_b32 v62, v0 :: v_dual_mov_b32 v47, v0
-; COEXEC-NEXT:    v_dual_mov_b32 v55, v0 :: v_dual_mov_b32 v63, v0
+; COEXEC-NEXT:    v_dual_mov_b32 v7, v0 :: v_dual_mov_b32 v40, v0
+; COEXEC-NEXT:    v_dual_mov_b32 v48, v0 :: v_dual_mov_b32 v56, v0
+; COEXEC-NEXT:    v_dual_mov_b32 v41, v0 :: v_dual_mov_b32 v49, v0
+; COEXEC-NEXT:    v_dual_mov_b32 v57, v0 :: v_dual_mov_b32 v42, v0
+; COEXEC-NEXT:    v_dual_mov_b32 v50, v0 :: v_dual_mov_b32 v58, v0
+; COEXEC-NEXT:    v_dual_mov_b32 v43, v0 :: v_dual_mov_b32 v51, v0
+; COEXEC-NEXT:    v_dual_mov_b32 v59, v0 :: v_dual_mov_b32 v44, v0
+; COEXEC-NEXT:    v_dual_mov_b32 v52, v0 :: v_dual_mov_b32 v60, v0
+; COEXEC-NEXT:    v_dual_mov_b32 v45, v0 :: v_dual_mov_b32 v53, v0
+; COEXEC-NEXT:    v_dual_mov_b32 v61, v0 :: v_dual_mov_b32 v46, v0
+; COEXEC-NEXT:    v_dual_mov_b32 v54, v0 :: v_dual_mov_b32 v62, v0
+; COEXEC-NEXT:    v_dual_mov_b32 v47, v0 :: v_dual_mov_b32 v55, v0
+; COEXEC-NEXT:    v_mov_b32_e32 v63, v0
 ; COEXEC-NEXT:    s_wait_dscnt 0x0
 ; COEXEC-NEXT:  .LBB2_1: ; %loop
 ; COEXEC-NEXT:    ; =>This Inner Loop Header: Depth=1

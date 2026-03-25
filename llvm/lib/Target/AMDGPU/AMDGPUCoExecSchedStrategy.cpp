@@ -419,6 +419,25 @@ bool CandidateHeuristics::tryEffectiveStall(
     unsigned Latency = 0;
     unsigned Effective = 0;
     unsigned Carried = 0;
+    unsigned Buffer = 0;
+  };
+
+  auto getBufferFullStalls = [this, &Zone](SUnit *SU) -> unsigned {
+    InstructionFlavor Flavor = classifyFlavor(
+        *SU->getInstr(), *static_cast<const SIInstrInfo *>(DAG->TII));
+    HardwareUnitInfo *HWUI = getHWUIFromFlavor(Flavor);
+
+    if (HWUI->getBufferSize() <= 1)
+      return 0;
+
+    // getBufferAvailableCycle assumes top-down scheduling.
+    assert(Zone.isTop());
+    unsigned CurrCycle = Zone.getCurrCycle();
+    unsigned BufferReadyCycle = HWUI->getBufferAvailableCycle(CurrCycle);
+    if (BufferReadyCycle <= CurrCycle)
+      return 0;
+
+    return BufferReadyCycle - CurrCycle;
   };
 
   unsigned CurrCycle = Zone.getCurrCycle();
@@ -430,8 +449,10 @@ bool CandidateHeuristics::tryEffectiveStall(
     Costs.Latency = Zone.getLatencyStallCycles(SU);
     unsigned CarriedLatency = CarriedLatencies.lookup_or(SU->getInstr(), 0);
     Costs.Carried = CarriedLatency > CurrCycle ? CarriedLatency - CurrCycle : 0;
+    Costs.Buffer = getBufferFullStalls(SU);
 
-    Costs.Effective = std::max({Costs.Ready, Costs.Structural, Costs.Latency, Costs.Carried});
+    Costs.Effective = std::max({Costs.Ready, Costs.Structural, Costs.Latency,
+                                Costs.Carried, Costs.Buffer});
     return Costs;
   };
 
@@ -441,10 +462,12 @@ bool CandidateHeuristics::tryEffectiveStall(
   LLVM_DEBUG(if (TryCosts.Effective || CandCosts.Effective) {
     dbgs() << "Effective stalls: try=" << TryCosts.Effective
            << " (ready=" << TryCosts.Ready << ", struct=" << TryCosts.Structural
-           << ", lat=" << TryCosts.Latency << ", carried=" << TryCosts.Carried << ") cand=" << CandCosts.Effective
+           << ", lat=" << TryCosts.Latency << ", carried=" << TryCosts.Carried
+           << ", buffer=" << TryCosts.Buffer << ") cand=" << CandCosts.Effective
            << " (ready=" << CandCosts.Ready
-           << ", struct=" << CandCosts.Structural << ", carried=" << CandCosts.Carried
-           << ", lat=" << CandCosts.Latency << ")\n";
+           << ", struct=" << CandCosts.Structural
+           << ", lat=" << CandCosts.Latency << ", carried=" << CandCosts.Carried
+           << ", buffer=" << CandCosts.Buffer << ")\n";
   });
 
   return tryLess(TryCosts.Effective, CandCosts.Effective, TryCand, Cand, AMDGPUCoExecSchedStrategy::Stall);
