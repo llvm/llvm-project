@@ -10899,13 +10899,6 @@ getSmallestVTForIndex(MVT VecVT, unsigned MaxIdx, SDLoc DL, SelectionDAG &DAG,
   return SmallerVT;
 }
 
-static bool isValidVisniInsertExtractIndex(SDValue Idx) {
-  auto *IdxC = dyn_cast<ConstantSDNode>(Idx);
-  if (!IdxC || isNullConstant(Idx))
-    return false;
-  return isUInt<5>(IdxC->getZExtValue());
-}
-
 // Custom-legalize INSERT_VECTOR_ELT so that the value is inserted into the
 // first position of a vector, and that vector is slid up to the insert index.
 // By limiting the active vector length to index+1 and merging with the
@@ -11056,21 +11049,6 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
         Val = DAG.getNode(ISD::ANY_EXTEND, DL, XLenVT, Val);
       Vec = DAG.getNode(Opc, DL, ContainerVT, Vec, Val, VL);
 
-      if (AlignedIdx)
-        Vec = DAG.getInsertSubvector(DL, OrigVec, Vec, *AlignedIdx);
-      if (!VecVT.isFixedLengthVector())
-        return Vec;
-      return convertFromScalableVector(VecVT, Vec, DAG, Subtarget);
-    }
-
-    // Use ri.vinsert.v.x if available.
-    if (Subtarget.hasVendorXRivosVisni() && VecVT.isInteger() &&
-        isValidVisniInsertExtractIndex(Idx)) {
-      // Tail policy applies to elements past VLMAX (by assumption Idx < VLMAX)
-      SDValue PolicyOp =
-          DAG.getTargetConstant(RISCVVType::TAIL_AGNOSTIC, DL, XLenVT);
-      Vec = DAG.getNode(RISCVISD::RI_VINSERT_VL, DL, ContainerVT, Vec, Val, Idx,
-                        VL, PolicyOp);
       if (AlignedIdx)
         Vec = DAG.getInsertSubvector(DL, OrigVec, Vec, *AlignedIdx);
       if (!VecVT.isFixedLengthVector())
@@ -11281,14 +11259,6 @@ SDValue RISCVTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
       ContainerVT = *SmallerVT;
       Vec = DAG.getExtractSubvector(DL, ContainerVT, Vec, 0);
     }
-  }
-
-  // Use ri.vextract.x.v if available.
-  // TODO: Avoid index 0 and just use the vmv.x.s
-  if (Subtarget.hasVendorXRivosVisni() && EltVT.isInteger() &&
-      isValidVisniInsertExtractIndex(Idx)) {
-    SDValue Elt = DAG.getNode(RISCVISD::RI_VEXTRACT, DL, XLenVT, Vec, Idx);
-    return DAG.getNode(ISD::TRUNCATE, DL, EltVT, Elt);
   }
 
   // If after narrowing, the required slide is still greater than LMUL2,
@@ -23476,6 +23446,8 @@ bool RISCVTargetLowering::canCreateUndefOrPoisonForTargetNode(
 
   // TODO: Add more target nodes.
   switch (Op.getOpcode()) {
+  case RISCVISD::READ_VLENB:
+    return false;
   case RISCVISD::SLLW:
   case RISCVISD::SRAW:
   case RISCVISD::SRLW:

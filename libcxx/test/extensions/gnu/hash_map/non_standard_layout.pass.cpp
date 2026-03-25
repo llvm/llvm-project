@@ -6,18 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifdef cl_khr_fp64
+// ADDITIONAL_COMPILE_FLAGS: -Wno-deprecated
+#include <ext/hash_map>
 
-#include "clc/clc_convert.h"
-#include "clc/internal/clc.h"
-#include "clc/math/clc_ep_log.h"
-#include "clc/math/clc_fma.h"
-#include "clc/math/math.h"
-#include "clc/math/tables.h"
-
-#pragma OPENCL EXTENSION cl_khr_fp64 : enable
-
-#define __CLC_BODY "clc_ep_log.inc"
-#include "clc/math/gentype.inc"
-
-#endif
+int main(int, char**) {
+  __gnu_cxx::hash_map<const char*, std::string> m;
+  auto it = m.insert(std::make_pair("foo", "bar")).first;
+  return it->first == nullptr;
+}
