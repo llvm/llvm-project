@@ -1629,6 +1629,7 @@ namespace {
       if (auto *Cache = SemaRef.CurrentCachedTemplateArgs;
           TemplateArgsHashValue && Cache) {
         llvm::FoldingSetNodeID ID = *TemplateArgsHashValue;
+        ID.AddInteger(SemaRef.ArgPackSubstIndex.toInternalRepresentation());
         Input.getArgument().Profile(ID, SemaRef.Context);
         if (auto Iter = Cache->find(ID); Iter != Cache->end()) {
           Output = Iter->second;
