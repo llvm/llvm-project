@@ -535,9 +535,7 @@ void DataSharingProcessor::collectPrivatizedSymbols(
   };
 
   llvm::SetVector<const semantics::Scope *> clauseScopes;
-  [[maybe_unused]] const semantics::Scope *curScope =
-      collectScopes(semaCtx, eval, clauseScopes);
-  assert(curScope && "couldn't find current scope");
+  (void)collectScopes(semaCtx, eval, clauseScopes);
 
   for (const auto *sym : allSymbols) {
     if (semantics::omp::IsPrivatizable(*sym) &&
