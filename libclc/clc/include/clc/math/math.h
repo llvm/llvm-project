@@ -30,7 +30,9 @@
 #define __CLC_FAST_FMA_F16 0
 #endif
 
-#ifdef FP_FAST_FMAF
+// TODO: Stop forcing this for AMDGPU, and use a separate build for slow-fma
+// case.
+#if defined(FP_FAST_FMAF) || defined(__AMDGPU__)
 #define __CLC_FAST_FMA_F32 1
 #else
 #define __CLC_FAST_FMA_F32 0
