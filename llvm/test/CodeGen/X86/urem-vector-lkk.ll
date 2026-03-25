@@ -87,8 +87,8 @@ define <4 x i16> @fold_urem_vec_1(<4 x i16> %x) {
 ; SSE-NEXT:    subl %ecx, %eax
 ; SSE-NEXT:    pinsrw $2, %eax, %xmm1
 ; SSE-NEXT:    pextrw $3, %xmm0, %eax
-; SSE-NEXT:    imulq $66909, %rax, %rcx # imm = 0x1055D
-; SSE-NEXT:    shrq $26, %rcx
+; SSE-NEXT:    imulq $4282176, %rax, %rcx # imm = 0x415740
+; SSE-NEXT:    shrq $32, %rcx
 ; SSE-NEXT:    imull $1003, %ecx, %ecx # imm = 0x3EB
 ; SSE-NEXT:    subl %ecx, %eax
 ; SSE-NEXT:    pinsrw $3, %eax, %xmm1
@@ -198,8 +198,8 @@ define <4 x i16> @fold_urem_vec_1(<4 x i16> %x) {
 ; AVX-NEXT:    subl %ecx, %eax
 ; AVX-NEXT:    vpinsrw $2, %eax, %xmm1, %xmm1
 ; AVX-NEXT:    vpextrw $3, %xmm0, %eax
-; AVX-NEXT:    imulq $66909, %rax, %rcx # imm = 0x1055D
-; AVX-NEXT:    shrq $26, %rcx
+; AVX-NEXT:    imulq $4282176, %rax, %rcx # imm = 0x415740
+; AVX-NEXT:    shrq $32, %rcx
 ; AVX-NEXT:    imull $1003, %ecx, %ecx # imm = 0x3EB
 ; AVX-NEXT:    subl %ecx, %eax
 ; AVX-NEXT:    vpinsrw $3, %eax, %xmm1, %xmm0
@@ -391,8 +391,8 @@ define <4 x i16> @dont_fold_urem_one(<4 x i16> %x) {
 ; SSE-NEXT:    pxor %xmm1, %xmm1
 ; SSE-NEXT:    pinsrw $1, %eax, %xmm1
 ; SSE-NEXT:    pextrw $2, %xmm0, %eax
-; SSE-NEXT:    imulq $91181, %rax, %rcx # imm = 0x1642D
-; SSE-NEXT:    shrq $21, %rcx
+; SSE-NEXT:    imulq $186738688, %rax, %rcx # imm = 0xB216800
+; SSE-NEXT:    shrq $32, %rcx
 ; SSE-NEXT:    leal (%rcx,%rcx,2), %edx
 ; SSE-NEXT:    shll $3, %edx
 ; SSE-NEXT:    subl %edx, %ecx
@@ -505,8 +505,8 @@ define <4 x i16> @dont_fold_urem_one(<4 x i16> %x) {
 ; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vpinsrw $1, %eax, %xmm1, %xmm1
 ; AVX-NEXT:    vpextrw $2, %xmm0, %eax
-; AVX-NEXT:    imulq $91181, %rax, %rcx # imm = 0x1642D
-; AVX-NEXT:    shrq $21, %rcx
+; AVX-NEXT:    imulq $186738688, %rax, %rcx # imm = 0xB216800
+; AVX-NEXT:    shrq $32, %rcx
 ; AVX-NEXT:    leal (%rcx,%rcx,2), %edx
 ; AVX-NEXT:    shll $3, %edx
 ; AVX-NEXT:    subl %edx, %ecx

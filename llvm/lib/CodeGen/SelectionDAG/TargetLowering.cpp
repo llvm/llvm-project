@@ -6873,25 +6873,41 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
   }
   const unsigned SVTBits = SVT.getSizeInBits();
 
-  // Allow i32 to be widened to i64 for uncooperative divisors if i64 MULHU or
-  // UMUL_LOHI is supported.
-  const EVT WideSVT = MVT::i64;
+  // Allow scalar i16 to be widened to i32 for uncooperative divisors if i32
+  // MULHU or UMUL_LOHI is supported (shiftless MulHigh, prefer over i64 widen).
+  const bool HasWideI32MULHU =
+      VT == MVT::i16 &&
+      isOperationLegalOrCustom(ISD::MULHU, MVT::i32, IsAfterLegalization);
+  const bool HasWideI32UMUL_LOHI =
+      VT == MVT::i16 &&
+      isOperationLegalOrCustom(ISD::UMUL_LOHI, MVT::i32, IsAfterLegalization);
+  // Allow scalar i32 to be widened to i64 for uncooperative divisors if i64
+  // MULHU or UMUL_LOHI is supported (shiftless MulHigh).
   const bool HasWideMULHU =
-      VT == MVT::i32 &&
-      isOperationLegalOrCustom(ISD::MULHU, WideSVT, IsAfterLegalization);
+      HasWideI32MULHU ||
+      (VT == MVT::i32 &&
+       isOperationLegalOrCustom(ISD::MULHU, MVT::i64, IsAfterLegalization));
   const bool HasWideUMUL_LOHI =
-      VT == MVT::i32 &&
-      isOperationLegalOrCustom(ISD::UMUL_LOHI, WideSVT, IsAfterLegalization);
+      HasWideI32UMUL_LOHI ||
+      (VT == MVT::i32 &&
+       isOperationLegalOrCustom(ISD::UMUL_LOHI, MVT::i64, IsAfterLegalization));
   const bool AllowWiden = (HasWideMULHU || HasWideUMUL_LOHI);
+  // WideSVT: the doubled type for MulHigh multiplication.
+  // Use i32 for the i16->i32 case, i64 otherwise.
+  const EVT WideSVT =
+      (HasWideI32MULHU || HasWideI32UMUL_LOHI) ? MVT::i32 : MVT::i64;
   // For narrow scalars (i8, i16), a fixup-free 64-bit magic may exist when
   // i64 MUL is available: trunc(srl(mul(zext(x, 64), ceil(2^S/C)), S)).
+  // Skip this when i32 MulHigh is already preferred for i16.
   const bool HasLegalI64Mul =
-      isOperationLegalOrCustom(ISD::MUL, WideSVT, IsAfterLegalization);
-  const bool AllowNarrowWiden =
-      EltBits <= 16 && !VT.isVector() && HasLegalI64Mul;
-  const IntegerBitWidth MaxBitWidth = (AllowWiden || AllowNarrowWiden)
-                                          ? IntegerBitWidth::I64
-                                          : IntegerBitWidth::None;
+      isOperationLegalOrCustom(ISD::MUL, MVT::i64, IsAfterLegalization);
+  const bool AllowNarrowWiden = EltBits <= 16 && !VT.isVector() &&
+                                !(HasWideI32MULHU || HasWideI32UMUL_LOHI) &&
+                                HasLegalI64Mul;
+  const IntegerBitWidth MaxBitWidth =
+      (HasWideI32MULHU || HasWideI32UMUL_LOHI) ? IntegerBitWidth::I32
+      : (AllowWiden || AllowNarrowWiden)       ? IntegerBitWidth::I64
+                                               : IntegerBitWidth::None;
 
   bool UseNPQ = false, UsePreShift = false, UsePostShift = false;
   UnsignedDivisionByConstantWidening WideningKind =
@@ -7011,8 +7027,9 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
   case UnsignedDivisionByConstantWidening::MulHigh: {
     SDValue WideN0 = DAG.getNode(ISD::ZERO_EXTEND, dl, WideSVT, N0);
     Created.push_back(WideN0.getNode());
-    assert(VT == MVT::i32 && "MulHigh widening is only expected for i32");
-    // i32 -> i64: extract high 32 bits of the 64-bit multiply.
+    assert((VT == MVT::i32 || VT == MVT::i16) &&
+           "MulHigh widening is only expected for i32 or i16");
+    // Extract the high half of the widened multiply (i16->i32 or i32->i64).
     SDValue High;
     if (HasWideMULHU) {
       High = DAG.getNode(ISD::MULHU, dl, WideSVT, WideN0, MagicFactor);
