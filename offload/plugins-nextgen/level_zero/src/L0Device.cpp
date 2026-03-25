@@ -712,6 +712,7 @@ Expected<OmpInteropTy> L0DeviceTy::createInterop(int32_t InteropContext,
         delete static_cast<L0Interop::Property *>(Ret->rtl_property);
         Ret->rtl_property = nullptr;
       }
+      delete Ret;
     });
 
     auto L0 = static_cast<L0Interop::Property *>(Ret->rtl_property);
@@ -720,18 +721,14 @@ Expected<OmpInteropTy> L0DeviceTy::createInterop(int32_t InteropContext,
     Ret->attrs.inorder = InOrder;
     if (useImmForInterop()) {
       auto CmdListOrErr = createImmCmdList(InOrder);
-      if (!CmdListOrErr) {
-        delete Ret;
+      if (!CmdListOrErr)
         return CmdListOrErr.takeError();
-      }
       Ret->async_info->Queue = *CmdListOrErr;
       L0->ImmCmdList = *CmdListOrErr;
     } else {
       auto QueueOrErr = createCommandQueue(InOrder);
-      if (!QueueOrErr) {
-        delete Ret;
+      if (!QueueOrErr)
         return QueueOrErr.takeError();
-      }
       Ret->async_info->Queue = *QueueOrErr;
       L0->CommandQueue =
           static_cast<ze_command_queue_handle_t>(Ret->async_info->Queue);
