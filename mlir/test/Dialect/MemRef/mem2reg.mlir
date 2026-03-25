@@ -230,23 +230,23 @@ func.func @merge_point_used_by_erased_op(%cond: i1) -> i32 {
   // CHECK-DAG: %[[C1:.*]] = arith.constant 1 : i32
   %c1 = arith.constant 1 : i32
   %alloca = memref.alloca() : memref<i32>
-  // CHECK: cf.cond_br %[[COND]], ^[[MERGE:.*]], ^[[SKIP:.*]]
-  cf.cond_br %cond, ^merge, ^skip
+  // CHECK: cf.cond_br %[[COND]], ^[[PRED1:.*]], ^[[PRED2:.*]]
+  cf.cond_br %cond, ^pred1, ^pred2
+
+// CHECK: ^[[PRED1]]:
+^pred1:
+  memref.store %c0, %alloca[] : memref<i32>
+  // CHECK: cf.br ^[[FINAL:.*]]{{$}}
+  cf.br ^merge
+
+// CHECK: ^[[PRED2]]:
+^pred2:
+  memref.store %c1, %alloca[] : memref<i32>
+  // CHECK: cf.br ^[[FINAL]]{{$}}
+  cf.br ^merge
 
 // CHECK: ^[[MERGE]]:
 ^merge:
-  memref.store %c0, %alloca[] : memref<i32>
-  // CHECK: cf.br ^[[FINAL:.*]]{{$}}
-  cf.br ^final
-
-// CHECK: ^[[SKIP]]:
-^skip:
-  memref.store %c1, %alloca[] : memref<i32>
-  // CHECK: cf.br ^[[FINAL]]{{$}}
-  cf.br ^final
-
-// CHECK: ^[[FINAL]]:
-^final:
   %result = memref.load %alloca[] : memref<i32>
   memref.store %result, %alloca[] : memref<i32>
   // CHECK: return %[[C0]] : i32
