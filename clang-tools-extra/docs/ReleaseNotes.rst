@@ -313,6 +313,11 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-std-format>` check by fixing a crash
   when an argument is part of a macro expansion.
 
+- Improved :doc:`modernize-use-std-print
+  <clang-tidy/checks/modernize/use-std-print>` check by adding missing
+  ``#include`` insertion when the format function call appears as an
+  argument to a macro.
+
 - Improved :doc:`modernize-use-trailing-return-type
   <clang-tidy/checks/modernize/use-trailing-return-type>` check by fixing
   spurious ``missing '(' after '__has_feature'`` errors caused by builtin
