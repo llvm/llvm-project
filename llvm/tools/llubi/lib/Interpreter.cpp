@@ -118,6 +118,29 @@ static AnyValue mulNoWrap(const APInt &LHS, const APInt &RHS, bool HasNSW,
   return Res;
 }
 
+static APFloat handleDenormal(APFloat Val,
+                              DenormalMode::DenormalModeKind Mode) {
+  if (!Val.isDenormal())
+    return Val;
+  if (Mode == DenormalMode::PositiveZero)
+    return APFloat::getZero(Val.getSemantics(), false);
+  if (Mode == DenormalMode::PreserveSign)
+    return APFloat::getZero(Val.getSemantics(), Val.isNegative());
+  // Default case for IEEE, Dynamic, and Invalid
+  return Val;
+}
+
+static std::optional<APFloat> validateFMF(APFloat Val, FastMathFlags FMF) {
+  // The returned std::nullopt indicates that a poison value is produced.
+  if (FMF.noNaNs() && Val.isNaN())
+    return std::nullopt;
+  if (FMF.noInfs() && Val.isInfinity())
+    return std::nullopt;
+  // Since nsz (no signed zeros) is an optimization hint, so it doesn't requires
+  // runtime modification to maintain semantic correctness.
+  return Val;
+}
+
 /// Instruction executor using the visitor pattern.
 /// Unlike the Context class that manages the global state,
 /// InstExecutor only maintains the state for call frames.
@@ -130,6 +153,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
   bool Status;
   Frame *CurrentFrame = nullptr;
   AnyValue None;
+  APFloat::roundingMode CurrentRoundingMode;
 
   void reportImmediateUB(StringRef Msg) {
     // Check if we have already reported an immediate UB.
@@ -187,6 +211,33 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
     });
   }
 
+  void visitFPUnOp(Instruction &I,
+                   function_ref<AnyValue(const APFloat &)> ScalarFn) {
+    FastMathFlags FMF = cast<FPMathOperator>(I).getFastMathFlags();
+    DenormalMode DenormMode = CurrentFrame->Func.getDenormalMode(
+        I.getType()->getScalarType()->getFltSemantics());
+
+    visitUnOp(I, [&](const AnyValue &Operand) -> AnyValue {
+      if (Operand.isPoison())
+        return AnyValue::poison();
+
+      // Flush input denormals
+      APFloat FInput = handleDenormal(Operand.asFloat(), DenormMode.Input);
+
+      APFloat Result = ScalarFn(FInput).asFloat();
+
+      // Flush output denormals
+      APFloat FResult = handleDenormal(Result, DenormMode.Output);
+
+      if (auto ValidateRes = validateFMF(FResult, FMF)) {
+        return *ValidateRes;
+      }
+
+      // A poison value is produced when FMFs are violated
+      return AnyValue::poison();
+    });
+  }
+
   AnyValue computeBinOp(
       Type *Ty, const AnyValue &LHS, const AnyValue &RHS,
       function_ref<AnyValue(const AnyValue &, const AnyValue &)> ScalarFn) {
@@ -216,6 +267,42 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
       if (LHS.isPoison() || RHS.isPoison())
         return AnyValue::poison();
       return ScalarFn(LHS.asInteger(), RHS.asInteger());
+    });
+  }
+
+  void visitFPBinOp(
+      Instruction &I,
+      function_ref<AnyValue(const APFloat &, const APFloat &)> ScalarFn) {
+    FastMathFlags FMF = cast<FPMathOperator>(I).getFastMathFlags();
+    DenormalMode DenormMode = CurrentFrame->Func.getDenormalMode(
+        I.getType()->getScalarType()->getFltSemantics());
+
+    visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
+      if (LHS.isPoison() || RHS.isPoison())
+        return AnyValue::poison();
+
+      if (auto ValidateRes = validateFMF(LHS.asFloat(), FMF); !ValidateRes) {
+        return AnyValue::poison();
+      }
+      if (auto ValidateRes = validateFMF(RHS.asFloat(), FMF); !ValidateRes) {
+        return AnyValue::poison();
+      }
+
+      // Flush input denormals
+      APFloat FLHS = handleDenormal(LHS.asFloat(), DenormMode.Input);
+      APFloat FRHS = handleDenormal(RHS.asFloat(), DenormMode.Input);
+
+      APFloat Result = ScalarFn(FLHS, FRHS).asFloat();
+
+      // Flush output denormals
+      APFloat FResult = handleDenormal(Result, DenormMode.Output);
+
+      if (auto ValidateRes = validateFMF(FResult, FMF)) {
+        return *ValidateRes;
+      }
+
+      // A poison value is produced when FMFs are violated
+      return AnyValue::poison();
     });
   }
 
@@ -418,7 +505,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
 public:
   InstExecutor(Context &C, EventHandler &H, Function &F,
                ArrayRef<AnyValue> Args, AnyValue &RetVal)
-      : Ctx(C), DL(Ctx.getDataLayout()), Handler(H), Status(true) {
+      : Ctx(C), DL(Ctx.getDataLayout()), Handler(H), Status(true),
+        CurrentRoundingMode(APFloat::rmNearestTiesToEven) {
     CallStack.emplace_back(F, /*CallSite=*/nullptr, /*LastFrame=*/nullptr, Args,
                            RetVal, Ctx.getTLIImpl());
   }
@@ -767,6 +855,50 @@ public:
     });
   }
 
+  void visitFAdd(BinaryOperator &I) {
+    visitFPBinOp(I, [this](const APFloat &LHS, const APFloat &RHS) -> AnyValue {
+      APFloat Res = LHS;
+      Res.add(RHS, CurrentRoundingMode);
+      return Res;
+    });
+  }
+
+  void visitFSub(BinaryOperator &I) {
+    visitFPBinOp(I, [this](const APFloat &LHS, const APFloat &RHS) -> AnyValue {
+      APFloat Res = LHS;
+      Res.subtract(RHS, CurrentRoundingMode);
+      return Res;
+    });
+  }
+
+  void visitFMul(BinaryOperator &I) {
+    visitFPBinOp(I, [this](const APFloat &LHS, const APFloat &RHS) -> AnyValue {
+      APFloat Res = LHS;
+      Res.multiply(RHS, CurrentRoundingMode);
+      return Res;
+    });
+  }
+
+  void visitFDiv(BinaryOperator &I) {
+    visitFPBinOp(I, [this](const APFloat &LHS, const APFloat &RHS) -> AnyValue {
+      APFloat Res = LHS;
+      Res.divide(RHS, CurrentRoundingMode);
+      return Res;
+    });
+  }
+
+  void visitFRem(BinaryOperator &I) {
+    visitFPBinOp(I, [](const APFloat &LHS, const APFloat &RHS) -> AnyValue {
+      APFloat Res = LHS;
+      Res.mod(RHS);
+      return Res;
+    });
+  }
+
+  void visitFNeg(UnaryOperator &I) {
+    visitFPUnOp(I, [](const APFloat &Operand) -> AnyValue { return -Operand; });
+  }
+
   void visitTruncInst(TruncInst &Trunc) {
     visitIntUnOp(Trunc, [&](const APInt &Operand) -> AnyValue {
       unsigned DestBW = Trunc.getType()->getScalarSizeInBits();
@@ -791,6 +923,77 @@ public:
     visitIntUnOp(SExt, [&](const APInt &Operand) -> AnyValue {
       uint32_t DestBW = SExt.getDestTy()->getScalarSizeInBits();
       return Operand.sext(DestBW);
+    });
+  }
+
+  void visitFPExtInst(FPExtInst &FPExt) { visitFPConvInst(FPExt); }
+
+  void visitFPTruncInst(FPTruncInst &FPTrunc) { visitFPConvInst(FPTrunc); }
+
+  void visitFPConvInst(Instruction &I) {
+    const fltSemantics &DstSem =
+        I.getType()->getScalarType()->getFltSemantics();
+
+    visitUnOp(I, [&](const AnyValue &Operand) -> AnyValue {
+      if (Operand.isPoison())
+        return AnyValue::poison();
+
+      APFloat Res = Operand.asFloat();
+      bool LosesInfo;
+      Res.convert(DstSem, CurrentRoundingMode, &LosesInfo);
+      return AnyValue(Res);
+    });
+  }
+
+  void visitFPToSIInst(FPToSIInst &FPToSI) {
+    visitFPToIntInst(FPToSI, /*IsUnsigned=*/false);
+  }
+
+  void visitFPToUIInst(FPToUIInst &FPToUI) {
+    visitFPToIntInst(FPToUI, /*IsUnsigned=*/true);
+  }
+
+  void visitFPToIntInst(Instruction &I, bool IsUnsigned) {
+    // Note: We DO NOT use CurrentRoundingMode here.
+    // Language specs require truncation towards zero for FP-to-Int conversions.
+    visitUnOp(I, [&](const AnyValue &Operand) -> AnyValue {
+      if (Operand.isPoison())
+        return AnyValue::poison();
+
+      APSInt Res(I.getType()->getScalarSizeInBits(), /*isUnsigned=*/IsUnsigned);
+      bool IsExact;
+      APFloat::opStatus Status = Operand.asFloat().convertToInteger(
+          Res, APFloat::rmTowardZero, &IsExact);
+
+      if (Status == APFloat::opInvalidOp)
+        return AnyValue::poison();
+
+      return AnyValue(Res);
+    });
+  }
+
+  void visitSIToFPInst(SIToFPInst &SIToFP) {
+    visitIntToFPInst(SIToFP, /*IsSigned=*/true);
+  }
+
+  void visitUIToFPInst(UIToFPInst &UIToFP) {
+    visitIntToFPInst(UIToFP, /*IsSigned=*/false);
+  }
+
+  void visitIntToFPInst(Instruction &I, bool IsSigned) {
+    const fltSemantics &DstSem =
+        I.getType()->getScalarType()->getFltSemantics();
+
+    visitUnOp(I, [&](const AnyValue &Operand) -> AnyValue {
+      if (Operand.isPoison())
+        return AnyValue::poison();
+
+      APFloat Res(DstSem);
+
+      Res.convertFromAPInt(Operand.asInteger(), /*IsSigned=*/IsSigned,
+                           CurrentRoundingMode);
+
+      return AnyValue(Res);
     });
   }
 
@@ -857,6 +1060,97 @@ public:
         return AnyValue::poison();
       return AnyValue::boolean(
           ICmpInst::compare(LHSVal, RHSVal, I.getPredicate()));
+    });
+  }
+
+  void visitFCmpInst(FCmpInst &I) {
+    DenormalMode DenormMode = CurrentFrame->Func.getDenormalMode(
+        I.getOperand(0)->getType()->getScalarType()->getFltSemantics());
+    FastMathFlags FMF = I.getFastMathFlags();
+
+    visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
+      if (LHS.isPoison() || RHS.isPoison()) {
+        return AnyValue::poison();
+      }
+
+      if (auto ValidateRes = validateFMF(LHS.asFloat(), FMF); !ValidateRes) {
+        return AnyValue::poison();
+      }
+      if (auto ValidateRes = validateFMF(RHS.asFloat(), FMF); !ValidateRes) {
+        return AnyValue::poison();
+      }
+
+      APFloat FLHS = handleDenormal(LHS.asFloat(), DenormMode.Input);
+      APFloat FRHS = handleDenormal(RHS.asFloat(), DenormMode.Input);
+
+      APFloat::cmpResult CmpResult = FLHS.compare(FRHS);
+
+      bool Result = false;
+
+      switch (I.getPredicate()) {
+      case FCmpInst::FCMP_FALSE:
+        Result = false;
+        break;
+      case FCmpInst::FCMP_OEQ:
+        Result = (CmpResult == APFloat::cmpEqual);
+        break;
+      case FCmpInst::FCMP_OGT:
+        Result = (CmpResult == APFloat::cmpGreaterThan);
+        break;
+      case FCmpInst::FCMP_OGE:
+        Result = (CmpResult == APFloat::cmpEqual ||
+                  CmpResult == APFloat::cmpGreaterThan);
+        break;
+      case FCmpInst::FCMP_OLT:
+        Result = (CmpResult == APFloat::cmpLessThan);
+        break;
+      case FCmpInst::FCMP_OLE:
+        Result = (CmpResult == APFloat::cmpEqual ||
+                  CmpResult == APFloat::cmpLessThan);
+        break;
+      case FCmpInst::FCMP_ONE:
+        Result = (CmpResult == APFloat::cmpGreaterThan ||
+                  CmpResult == APFloat::cmpLessThan);
+        break;
+      case FCmpInst::FCMP_ORD:
+        Result = (CmpResult != APFloat::cmpUnordered);
+        break;
+      case FCmpInst::FCMP_UNO:
+        Result = (CmpResult == APFloat::cmpUnordered);
+        break;
+      case FCmpInst::FCMP_UEQ:
+        Result = (CmpResult == APFloat::cmpEqual ||
+                  CmpResult == APFloat::cmpUnordered);
+        break;
+      case FCmpInst::FCMP_UGT:
+        Result = (CmpResult == APFloat::cmpGreaterThan ||
+                  CmpResult == APFloat::cmpUnordered);
+        break;
+      case FCmpInst::FCMP_UGE:
+        Result = (CmpResult == APFloat::cmpEqual ||
+                  CmpResult == APFloat::cmpGreaterThan ||
+                  CmpResult == APFloat::cmpUnordered);
+        break;
+      case FCmpInst::FCMP_ULT:
+        Result = (CmpResult == APFloat::cmpLessThan ||
+                  CmpResult == APFloat::cmpUnordered);
+        break;
+      case FCmpInst::FCMP_ULE:
+        Result = (CmpResult == APFloatBase::cmpEqual ||
+                  CmpResult == APFloat::cmpLessThan ||
+                  CmpResult == APFloat::cmpUnordered);
+        break;
+      case FCmpInst::FCMP_UNE:
+        Result = (CmpResult != APFloatBase::cmpEqual);
+        break;
+      case FCmpInst::FCMP_TRUE:
+        Result = true;
+        break;
+      default:
+        llvm_unreachable("Invalid FCmp predicate");
+      }
+
+      return AnyValue::boolean(Result);
     });
   }
 
