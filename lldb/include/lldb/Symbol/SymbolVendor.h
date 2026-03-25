@@ -28,10 +28,10 @@ namespace lldb_private {
 /// instance that manages access to its debug symbols.
 ///
 /// The primary responsibility of a SymbolVendor is to locate debug information
-/// (which may be in the same file as the executable, in a separate .dSYM bundle,
-/// in a .dwp file, etc.) and create the appropriate SymbolFile object to parse
-/// that information. Platforms can subclass this to implement custom debug
-/// information discovery strategies.
+/// (which may be in the same file as the executable, in a separate .dSYM
+/// bundle, in a .dwp file, etc.) and create the appropriate SymbolFile object
+/// to parse that information. Platforms can subclass this to implement custom
+/// debug information discovery strategies.
 ///
 /// LLDB creates a SymbolVendor for each Module during module loading via
 /// SymbolVendor::FindPlugin(), which iterates through registered plugins.
@@ -40,10 +40,13 @@ namespace lldb_private {
 ///
 /// Implementation notes:
 /// - SymbolVendor can aggregate multiple SymbolFile sources if needed
-/// - The vendor should parse debug information lazily (on-demand) for performance
-/// - Thread-safety is important as symbol queries can come from multiple threads
+/// - The vendor should parse debug information lazily (on-demand) for
+/// performance
+/// - Thread-safety is important as symbol queries can come from multiple
+/// threads
 /// - The default implementation handles common cases (object file with embedded
-///   debug info, or separate symbol file specified via Module::GetSymbolFileFileSpec)
+///   debug info, or separate symbol file specified via
+///   Module::GetSymbolFileFileSpec)
 ///
 // The symbol vendor class is designed to abstract the process of searching for
 // debug information for a given module. Platforms can subclass this class and

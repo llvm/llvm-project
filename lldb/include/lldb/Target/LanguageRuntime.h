@@ -63,9 +63,10 @@ protected:
 ///
 /// Language runtime plugins provide runtime-specific functionality for dynamic
 /// languages and languages with complex runtime systems (e.g., Objective-C,
-/// C++, Swift, Go). These plugins interact with the language's runtime libraries
-/// in the debugged process to provide dynamic type resolution, exception
-/// handling, expression evaluation support, and runtime-specific unwinding.
+/// C++, Swift, Go). These plugins interact with the language's runtime
+/// libraries in the debugged process to provide dynamic type resolution,
+/// exception handling, expression evaluation support, and runtime-specific
+/// unwinding.
 ///
 /// Unlike Language plugins (which are global singletons), LanguageRuntime
 /// plugins are per-process instances that can maintain process-specific state
@@ -82,18 +83,23 @@ protected:
 /// - GetDynamicTypeAndAddress(): Resolve dynamic types for polymorphic objects
 /// - CouldHaveDynamicValue(): Fast check if a value might have dynamic type
 /// - FixUpDynamicType(): Adjust discovered dynamic types (e.g., add pointer)
-/// - GetObjectDescription(): Get runtime object description (e.g., -description)
-/// - CreateExceptionResolver(): Create breakpoint resolvers for exception throw/catch
-/// - GetStepThroughTrampolinePlan(): Handle stepping through runtime trampolines
+/// - GetObjectDescription(): Get runtime object description (e.g.,
+/// -description)
+/// - CreateExceptionResolver(): Create breakpoint resolvers for exception
+/// throw/catch
+/// - GetStepThroughTrampolinePlan(): Handle stepping through runtime
+/// trampolines
 /// - GetVTableInfo(): Extract vtable information for C++ and similar languages
 /// - GetExceptionObjectForThread(): Retrieve exception objects from runtime
-/// - GetRuntimeUnwindPlan(): Provide custom unwinding for async/coroutine frames
+/// - GetRuntimeUnwindPlan(): Provide custom unwinding for async/coroutine
+/// frames
 ///
 /// Important Notes:
 /// - Runtime instances are created per-process via create callbacks
 /// - They can cache process-specific runtime state (e.g., runtime class tables)
 /// - Must be prepared to handle invalid/stripped runtime state gracefully
-/// - Exception breakpoint support requires implementing CreateExceptionResolver()
+/// - Exception breakpoint support requires implementing
+/// CreateExceptionResolver()
 /// - Dynamic type resolution is performance-critical and called frequently
 class LanguageRuntime : public Runtime, public PluginInterface {
 public:

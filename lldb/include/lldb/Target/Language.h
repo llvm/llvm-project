@@ -62,13 +62,15 @@ public:
 /// - SymbolNameFitsToLanguage(): Validate symbol name mangling schemes
 /// - IsSourceFile(): Identify source files by extension
 /// - GetExceptionResolverDescription(): Customize exception breakpoint text
-/// - GetUserEntryPointName(): Return language-specific entry point (e.g., "main")
+/// - GetUserEntryPointName(): Return language-specific entry point (e.g.,
+/// "main")
 /// - GetDemangledFunctionNameWithoutArguments(): Parse demangled names
 ///
 /// Important Notes:
 /// - Language plugins are singleton instances cached for the LLDB session
 /// - They must be stateless or use thread-safe state management
-/// - The same instance may be used concurrently across multiple targets/processes
+/// - The same instance may be used concurrently across multiple
+/// targets/processes
 /// - Plugins are created via PluginManager::GetLanguageCreateCallbacks()
 class Language : public PluginInterface {
 public:

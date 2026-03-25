@@ -19,8 +19,8 @@ namespace lldb_private {
 ///
 /// UnwindAssembly plugins provide architecture-specific instruction analysis
 /// to generate stack unwinding information by examining function assembly code.
-/// This is essential when debug information (like DWARF .eh_frame or .debug_frame)
-/// is missing, incomplete, or doesn't cover all code paths.
+/// This is essential when debug information (like DWARF .eh_frame or
+/// .debug_frame) is missing, incomplete, or doesn't cover all code paths.
 ///
 /// These plugins perform several critical functions:
 /// - Analyzing function prologues/epilogues to determine how the stack frame
@@ -32,15 +32,19 @@ namespace lldb_private {
 ///
 /// LLDB instantiates UnwindAssembly plugins via UnwindAssembly::FindPlugin()
 /// when unwinding is needed. The selection is based on the target architecture
-/// (ArchSpec). Each architecture typically has one UnwindAssembly implementation
-/// that understands its specific calling conventions and instruction encodings.
+/// (ArchSpec). Each architecture typically has one UnwindAssembly
+/// implementation that understands its specific calling conventions and
+/// instruction encodings.
 ///
 /// Implementation notes:
 /// - Plugins must understand architecture-specific instruction encodings
-/// - Must handle various calling conventions (e.g., ARM's multiple frame pointer modes)
-/// - Should be conservative when uncertain (invalid unwind is worse than no unwind)
+/// - Must handle various calling conventions (e.g., ARM's multiple frame
+/// pointer modes)
+/// - Should be conservative when uncertain (invalid unwind is worse than no
+/// unwind)
 /// - Performance matters as this code runs during every stack walk
-/// - Used heavily for release builds without debug info and for system libraries
+/// - Used heavily for release builds without debug info and for system
+/// libraries
 class UnwindAssembly : public std::enable_shared_from_this<UnwindAssembly>,
                        public PluginInterface {
 public:

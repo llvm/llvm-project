@@ -32,11 +32,13 @@ namespace lldb_private {
 /// appropriate exporter in the PluginManager.
 ///
 /// Implementation notes:
-/// - Trace exporters are supposed to operate on an architecture-agnostic fashion,
+/// - Trace exporters are supposed to operate on an architecture-agnostic
+/// fashion,
 ///   as a TraceCursor, which feeds the data, hides the actual trace technology
 ///   being used
 /// - The exporter should handle streaming large trace datasets efficiently
-/// - Error handling is important as export operations can fail due to I/O issues
+/// - Error handling is important as export operations can fail due to I/O
+/// issues
 /// - Examples include exporters to Chrome's trace event format, CTF, or custom
 ///   analysis formats
 class TraceExporter : public PluginInterface {

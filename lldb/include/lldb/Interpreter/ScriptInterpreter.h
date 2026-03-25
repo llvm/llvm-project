@@ -169,23 +169,24 @@ private:
 /// - Handle type conversions between LLDB C++ types and script objects
 ///
 /// How LLDB Uses ScriptInterpreters:
-/// Each Debugger instance has an associated ScriptInterpreter for the configured
-/// scripting language (typically Python, but can be Lua or others). The interpreter
-/// is created on-demand when first accessed. LLDB invokes the script interpreter
-/// whenever:
+/// Each Debugger instance has an associated ScriptInterpreter for the
+/// configured scripting language (typically Python, but can be Lua or others).
+/// The interpreter is created on-demand when first accessed. LLDB invokes the
+/// script interpreter whenever:
 /// - Users run the "script" command to execute code interactively
 /// - Script-based commands, formatters, or callbacks need to be executed
 /// - Scripts are loaded via "command script import" or similar commands
 /// - Breakpoints with scripted conditions or callbacks are evaluated
 ///
 /// The ScriptInterpreter maintains the global script context and manages the
-/// lifetime of script objects that implement LLDB functionality. It also handles
-/// I/O redirection to ensure script output appears in the appropriate LLDB
-/// streams.
+/// lifetime of script objects that implement LLDB functionality. It also
+/// handles I/O redirection to ensure script output appears in the appropriate
+/// LLDB streams.
 ///
 /// Implementation Considerations:
 /// - Thread safety: Multiple threads may access the interpreter simultaneously;
-///   use AcquireInterpreterLock() to synchronize access to the interpreter state
+///   use AcquireInterpreterLock() to synchronize access to the interpreter
+///   state
 /// - Memory management: Ensure proper reference counting/garbage collection
 ///   between LLDB objects and script objects
 /// - Error handling: Script errors should be reported clearly without crashing

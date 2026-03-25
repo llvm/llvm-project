@@ -126,7 +126,8 @@ struct HighlightStyle {
 /// - options: A HighlightStyle containing color codes for different token types
 /// - line: The current line to highlight
 /// - cursor_pos: Optional cursor position for highlighting the current token
-/// - previous_lines: Context from earlier lines (useful for multi-line constructs)
+/// - previous_lines: Context from earlier lines (useful for multi-line
+/// constructs)
 /// - s: Output stream where highlighted text should be written
 ///
 /// Implementations should:
@@ -138,7 +139,8 @@ struct HighlightStyle {
 /// - Optionally highlight the token under the cursor differently
 /// - Write the highlighted output to the stream, wrapping tokens with ANSI
 ///   color codes
-/// - Be resilient to malformed or incomplete code (highlighting is often applied
+/// - Be resilient to malformed or incomplete code (highlighting is often
+/// applied
 ///   to code being actively edited or partial expressions)
 class Highlighter : public PluginInterface {
 public:

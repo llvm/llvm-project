@@ -42,7 +42,8 @@
 
 namespace lldb_private {
 
-/// Plugin interface for reading and parsing debug information from object files.
+/// Plugin interface for reading and parsing debug information from object
+/// files.
 ///
 /// SymbolFile plugins are responsible for extracting debug information from
 /// executable files, shared libraries, and separate debug info files. They
@@ -62,18 +63,19 @@ namespace lldb_private {
 /// How LLDB Uses SymbolFile Plugins:
 /// When a module (executable or shared library) is loaded, LLDB calls
 /// SymbolFile::FindPlugin() with the module's ObjectFile. This static method
-/// queries all registered SymbolFile plugins via their CreateInstance callbacks,
-/// asking each to report its "abilities" for that object file. The plugin
-/// reporting the highest abilities score is selected and instantiated.
+/// queries all registered SymbolFile plugins via their CreateInstance
+/// callbacks, asking each to report its "abilities" for that object file. The
+/// plugin reporting the highest abilities score is selected and instantiated.
 ///
 /// Abilities are determined by examining the object file for recognizable
 /// debug info sections and symbols. For example, a DWARF plugin checks for
-/// .debug_info sections, while a PDB plugin checks for CodeView debug directories.
+/// .debug_info sections, while a PDB plugin checks for CodeView debug
+/// directories.
 ///
 /// Once selected, the SymbolFile is attached to the Module and used throughout
 /// the module's lifetime to service debug info queries. The SymbolFile lazily
-/// parses debug information on-demand as LLDB needs it (when setting breakpoints,
-/// evaluating expressions, displaying stack frames, etc.).
+/// parses debug information on-demand as LLDB needs it (when setting
+/// breakpoints, evaluating expressions, displaying stack frames, etc.).
 ///
 /// Implementation Considerations:
 /// - Lazy parsing: Only parse debug info when needed to minimize memory usage
@@ -82,7 +84,8 @@ namespace lldb_private {
 ///   to synchronize access
 /// - Index building: Consider building indexes (name tables, type tables) for
 ///   fast lookups in large debug info
-/// - Memory management: Large debug info can consume significant memory; consider
+/// - Memory management: Large debug info can consume significant memory;
+/// consider
 ///   strategies like on-demand loading (see SymbolFileOnDemand)
 /// - External files: Handle separate debug info files gracefully, reporting
 ///   errors if files are missing or mismatched
@@ -91,10 +94,10 @@ namespace lldb_private {
 ///   modules
 ///
 /// Note on Class Hierarchy:
-/// This class provides the public interface. Most implementations should inherit
-/// from SymbolFileCommon instead, which provides common implementation scaffolding.
-/// SymbolFileOnDemand is a special wrapper that inherits directly from SymbolFile
-/// to intercept and delay debug info loading.
+/// This class provides the public interface. Most implementations should
+/// inherit from SymbolFileCommon instead, which provides common implementation
+/// scaffolding. SymbolFileOnDemand is a special wrapper that inherits directly
+/// from SymbolFile to intercept and delay debug info loading.
 class SymbolFile : public PluginInterface {
   /// LLVM RTTI support.
   static char ID;

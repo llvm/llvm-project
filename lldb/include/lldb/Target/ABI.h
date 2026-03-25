@@ -203,7 +203,8 @@ private:
 };
 
 /// \class RegInfoBasedABI ABI.h "lldb/Target/ABI.h"
-/// A concrete ABI base class that uses RegisterInfo arrays for register metadata.
+/// A concrete ABI base class that uses RegisterInfo arrays for register
+/// metadata.
 ///
 /// RegInfoBasedABI is designed for ABI implementations that define their
 /// register information using static RegisterInfo arrays, which is the
@@ -230,7 +231,8 @@ protected:
 };
 
 /// \class MCBasedABI ABI.h "lldb/Target/ABI.h"
-/// A concrete ABI base class that derives register metadata from LLVM's MCRegisterInfo.
+/// A concrete ABI base class that derives register metadata from LLVM's
+/// MCRegisterInfo.
 ///
 /// MCBasedABI is designed for ABI implementations that obtain register
 /// information from LLVM's Machine Code (MC) layer rather than maintaining

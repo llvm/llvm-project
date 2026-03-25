@@ -79,7 +79,8 @@ struct RegisterInfo;
 /// exists.
 ///
 /// Implementations should be careful about:
-/// - Lazy computation: Only calculate strings when needed (CalculateMnemonicOperandsAndCommentIfNeeded)
+/// - Lazy computation: Only calculate strings when needed
+/// (CalculateMnemonicOperandsAndCommentIfNeeded)
 /// - Thread safety: Multiple threads may access instruction data
 /// - Memory efficiency: Avoid storing redundant information
 /// - Accurate control flow analysis: Critical for stepping and breakpoints

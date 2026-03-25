@@ -54,7 +54,8 @@ namespace lldb_private {
 /// - Parse input to detect complete vs. incomplete code blocks
 /// - Handle errors gracefully and allow continued interaction after failures
 /// - Integrate with the target's execution context if one exists
-/// - Support language-specific features like imports, declarations, and meta-commands
+/// - Support language-specific features like imports, declarations, and
+/// meta-commands
 class REPL : public IOHandlerDelegate,
              public llvm::RTTIExtends<REPL, llvm::RTTIRoot> {
 public:

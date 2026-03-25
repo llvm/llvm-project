@@ -32,7 +32,8 @@ namespace lldb_private {
 /// RegisterTypeBuilder plugins are instantiated per-target and are selected
 /// based on the target's type system. For example, RegisterTypeBuilderClang
 /// is used for targets that use Clang as their primary type system. The plugin
-/// is created via the CreateInstance callback registered with the PluginManager.
+/// is created via the CreateInstance callback registered with the
+/// PluginManager.
 ///
 /// Implementation Considerations:
 /// - Implementations should cache created types when possible, as the same

@@ -42,11 +42,13 @@ typedef std::vector<lldb::ThreadSP> HistoryThreads;
 /// typically active per process, and it's created when first needed.
 ///
 /// Key Responsibilities:
-/// - GetHistoryThreads(): Return synthetic threads showing allocation/deallocation
+/// - GetHistoryThreads(): Return synthetic threads showing
+/// allocation/deallocation
 ///   history for a given memory address
 ///
 /// Important Notes:
-/// - Plugins depend on runtime instrumentation being enabled in the target process
+/// - Plugins depend on runtime instrumentation being enabled in the target
+/// process
 /// - Must handle cases where no history is available for an address gracefully
 /// - History threads are synthetic and don't represent actual execution threads
 /// - Performance considerations: history lookup may involve reading significant
