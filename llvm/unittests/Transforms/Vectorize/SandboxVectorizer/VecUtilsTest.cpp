@@ -632,7 +632,7 @@ bb0:
   auto &BB = getBasicBlockByName(F, "bb0");
   auto It = BB.begin();
   sandboxir::Value *Vec = F.getArg(0);
-  sandboxir::Value *Scalar = F.getArg(1);
+  [[maybe_unused]] sandboxir::Value *Scalar = F.getArg(1);
 
   auto *Int32Ty = sandboxir::Type::getInt32Ty(Ctx);
 
