@@ -1532,7 +1532,7 @@ class Base(unittest.TestCase):
     ):
         """Platform specific way to build binaries."""
         if debug_info or architecture or compiler or dictionary or make_targets:
-            self.assertFalse(self.SHARED_BUILD_TESTCASE)
+            self.assertFalse(self.SHARED_BUILD_TESTCASE, "shared build test cases reuse the same compilation artifacts for all test functions")
 
         if not architecture and configuration.arch:
             architecture = configuration.arch
