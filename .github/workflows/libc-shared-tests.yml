@@ -12,7 +12,7 @@ jobs:
   # Job 1: Windows Native (MSVC)
   # -------------------------------------------------------------
   windows-msvc-shared:
-    name: MSVC libc-shared-test
+    name: libc-shared-test with MSVC
     runs-on: windows-2022
     steps:
       - name: Checkout LLVM
@@ -38,24 +38,24 @@ jobs:
   # Job 2: Linux Emulated (ppc64le & s390x)
   # -------------------------------------------------------------
   linux-cross-arch-shared:
-    name: Clang libc-shared-test (${{ matrix.arch }})
+    name: libc-shared-tests on (${{ matrix.arch }})
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false # If one arch fails, let the other finish
       matrix:
-        includes:
-        - arch: aarch64
-          libc: libc6-dev-aarch64-cross
-          libcpp: libstdc++14-dev-aarch64-cross
-          target_triple: aarch64-linux-gnu
-        - arch: riscv64
-          libc: libc6-dev-riscv64-cross
-          libcpp: libstdc++14-dev-riscv64-cross
-          target_triple: riscv64-linux-gnu
-        - arch: ppc64le
-          libc: libc6-dev-ppc64el-cross
-          libcpp: libstdc++14-dev-ppc64el-cross
-          target_triple: ppc64le-linux-gnu
+        include:
+          - arch: aarch64
+            libc: libc6-dev-aarch64-cross
+            libcpp: libstdc++14-dev-aarch64-cross
+            target_triple: aarch64-linux-gnu
+          - arch: riscv64
+            libc: libc6-dev-riscv64-cross
+            libcpp: libstdc++14-dev-riscv64-cross
+            target_triple: riscv64-linux-gnu
+          - arch: ppc64le
+            libc: libc6-dev-ppc64el-cross
+            libcpp: libstdc++14-dev-ppc64el-cross
+            target_triple: ppc64le-linux-gnu
     
     steps:
       - name: Checkout LLVM
