@@ -1228,8 +1228,10 @@ GCNTargetMachine::getSubtargetImpl(const Function &F) const {
   bool TBufRelaxed = TBufOOB == OOBFlagValue::Relaxed;
   SmallString<128> SubtargetKey(GPU);
   SubtargetKey.append(FS);
-  SubtargetKey.append(BufRelaxed ? ",buf-oob=1" : ",buf-oob=0");
-  SubtargetKey.append(TBufRelaxed ? ",tbuf-oob=1" : ",tbuf-oob=0");
+  if (BufRelaxed)
+    SubtargetKey.append(",buf-oob=1");
+  if (TBufRelaxed)
+    SubtargetKey.append(",tbuf-oob=1");
 
   auto &I = SubtargetMap[SubtargetKey];
   if (!I) {
