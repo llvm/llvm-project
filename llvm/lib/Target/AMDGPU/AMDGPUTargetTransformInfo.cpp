@@ -19,6 +19,7 @@
 #include "AMDGPUTargetMachine.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIModeRegisterDefaults.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -1729,6 +1730,15 @@ unsigned GCNTTIImpl::getNumberOfParts(Type *Tp) const {
 
 InstructionUniformity
 GCNTTIImpl::getInstructionUniformity(const Value *V) const {
+  if (const IntrinsicInst *Intrinsic = dyn_cast<IntrinsicInst>(V)) {
+    switch (Intrinsic->getIntrinsicID()) {
+    case Intrinsic::amdgcn_wave_shuffle:
+      return InstructionUniformity::Custom;
+    default:
+      break;
+    }
+  }
+
   if (isAlwaysUniform(V))
     return InstructionUniformity::AlwaysUniform;
 
@@ -1783,4 +1793,17 @@ bool GCNTTIImpl::isNumRegsMajorCostOfLSR() const {
 bool GCNTTIImpl::shouldDropLSRSolutionIfLessProfitable() const {
   // Prefer the baseline when LSR cannot clearly reduce per-iteration work.
   return true;
+}
+
+bool GCNTTIImpl::isUniform(const Instruction *I,
+                           const SmallBitVector &UniformArgs) const {
+  const IntrinsicInst *Intrinsic = cast<IntrinsicInst>(I);
+  switch (Intrinsic->getIntrinsicID()) {
+  case Intrinsic::amdgcn_wave_shuffle:
+    // wave_shuffle(Value, Index): result is uniform when either Value or Index
+    // is uniform.
+    return UniformArgs[0] || UniformArgs[1];
+  default:
+    llvm_unreachable("unexpected intrinsic in isUniform");
+  }
 }
