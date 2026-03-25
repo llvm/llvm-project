@@ -633,7 +633,7 @@ int main(int argc, char **argv) {
 
     Triple T(TripleName);
     if (T.isLFI()) {
-      Str->initSections(NoExecStack, *STI);
+      Str->initSections(*STI);
       initializeLFIMCStreamer(*Str.get(), Ctx, T);
     }
   } else if (FileType == OFT_Null) {
