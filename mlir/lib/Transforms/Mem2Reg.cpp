@@ -19,6 +19,7 @@
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/GenericIteratedDominanceFrontier.h"
 
@@ -294,7 +295,7 @@ private:
   /// the promotion.
   llvm::SmallVector<PromotableOpInterface> toVisitReplacedValues;
   /// Operations to be erased at the end of the promotion.
-  llvm::SmallVector<Operation *> toErase;
+  llvm::SmallSetVector<Operation *, 8> toErase;
 
   DominanceInfo &dominance;
   const DataLayout &dataLayout;
@@ -757,7 +758,7 @@ void MemorySlotPromoter::removeBlockingUses(Region *region) {
       if (toPromoteMemOp.removeBlockingUses(slot, blockingUsesMap[toPromote],
                                             builder, reachingDef,
                                             dataLayout) == DeletionKind::Delete)
-        toErase.push_back(toPromote);
+        toErase.insert(toPromote);
       if (toPromoteMemOp.storesTo(slot))
         if (Value replacedValue = replacedValuesMap[toPromoteMemOp])
           replacedValues.push_back({toPromoteMemOp, replacedValue});
@@ -768,7 +769,7 @@ void MemorySlotPromoter::removeBlockingUses(Region *region) {
     builder.setInsertionPointAfter(toPromote);
     if (toPromoteBasic.removeBlockingUses(blockingUsesMap[toPromote],
                                           builder) == DeletionKind::Delete)
-      toErase.push_back(toPromote);
+      toErase.insert(toPromote);
     if (toPromoteBasic.requiresReplacedValues())
       toVisitReplacedValues.push_back(toPromoteBasic);
   }
