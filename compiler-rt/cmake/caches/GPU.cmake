@@ -1,7 +1,7 @@
 # This file sets up a CMakeCache for GPU builds of compiler-rt. This supports
 # amdgcn and nvptx builds targeting the builtins and profile libraries.
 
-set(COMPILER_RT_INCLUDE_TESTS OFF CACHE BOOL "")
+set(COMPILER_RT_INCLUDE_TESTS ON CACHE BOOL "")
 set(COMPILER_RT_HAS_SAFESTACK OFF CACHE BOOL "")
 set(COMPILER_RT_DEFAULT_TARGET_ONLY ON CACHE BOOL "")
 

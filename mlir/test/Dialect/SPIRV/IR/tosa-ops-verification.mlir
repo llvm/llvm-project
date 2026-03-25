@@ -1684,3 +1684,75 @@ spirv.ARM.Graph @reducesum_axis_value_not_in_input_rank_range(%arg0: !spirv.arm.
   %0 = spirv.Tosa.ReduceSum axis = 3, %arg0 : !spirv.arm.tensor<20x24x22xi32> -> !spirv.arm.tensor<20x24x22xi32>
   spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<20x24x22xi32>
 }
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Concat
+//===----------------------------------------------------------------------===//
+
+spirv.ARM.Graph @concat_must_have_at_least_one_input() -> (!spirv.arm.tensor<4x12xi8>) {
+  // expected-error @+1 {{op failed to verify that variadic input1 must has at least 1 elements}}
+  %0 = "spirv.Tosa.Concat"() <{axis = 0 : i32}> : () -> !spirv.arm.tensor<4x12xi8>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<4x12xi8>
+}
+
+spirv.ARM.Graph @concat_input_output_element_types_not_matching(%arg0: !spirv.arm.tensor<4x5xi8>, %arg1: !spirv.arm.tensor<4x7xi8>) -> (!spirv.arm.tensor<4x12xi16>) {
+  // expected-error @+1 {{op failed to verify that all elements of variadic input1 must have same element type}}
+  %0 = spirv.Tosa.Concat axis = 1, %arg0, %arg1 : !spirv.arm.tensor<4x5xi8>, !spirv.arm.tensor<4x7xi8> -> !spirv.arm.tensor<4x12xi16>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<4x12xi16>
+}
+
+spirv.ARM.Graph @concat_input_output_ranks_not_matching(%arg0: !spirv.arm.tensor<4x5xi8>, %arg1: !spirv.arm.tensor<4x7xi8>) -> (!spirv.arm.tensor<4x12x1xi8>) {
+  // expected-error @+1 {{op failed to verify that all elements of variadic input1 must have same element type}}
+  %0 = spirv.Tosa.Concat axis = 1, %arg0, %arg1 : !spirv.arm.tensor<4x5xi8>, !spirv.arm.tensor<4x7xi8> -> !spirv.arm.tensor<4x12x1xi8>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<4x12x1xi8>
+}
+
+spirv.ARM.Graph @concat_axis_value_not_in_output_rank_range(%arg0: !spirv.arm.tensor<4x5xi8>, %arg1: !spirv.arm.tensor<4x7xi8>) -> (!spirv.arm.tensor<4x12xi8>) {
+  // expected-error @+1 {{op failed to verify that axis attribute value should be lower than rank(output)}}
+  %0 = spirv.Tosa.Concat axis = 2, %arg0, %arg1 : !spirv.arm.tensor<4x5xi8>, !spirv.arm.tensor<4x7xi8> -> !spirv.arm.tensor<4x12xi8>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<4x12xi8>
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Pad
+//===----------------------------------------------------------------------===//
+
+spirv.ARM.Graph @pad_input_pad_const_output_element_types_not_matching(%arg0: !spirv.arm.tensor<4x7xi8>, %arg1: !spirv.arm.tensor<4xi32>, %arg2: !spirv.arm.tensor<1xi16>) -> (!spirv.arm.tensor<5x8xi8>) {
+  // expected-error @+1 {{op failed to verify that all of {input1, pad_const, output} have same element type}}
+  %0 = spirv.Tosa.Pad %arg0, %arg1, %arg2 : !spirv.arm.tensor<4x7xi8>, !spirv.arm.tensor<4xi32>, !spirv.arm.tensor<1xi16> -> !spirv.arm.tensor<5x8xi8>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<5x8xi8>
+}
+
+spirv.ARM.Graph @pad_input_output_ranks_not_matching(%arg0: !spirv.arm.tensor<4x7xi8>, %arg1: !spirv.arm.tensor<4xi32>, %arg2: !spirv.arm.tensor<1xi8>) -> (!spirv.arm.tensor<1x5x8xi8>) {
+  // expected-error @+1 {{op failed to verify that all of {input1, output} have same rank}}
+  %0 = spirv.Tosa.Pad %arg0, %arg1, %arg2 : !spirv.arm.tensor<4x7xi8>, !spirv.arm.tensor<4xi32>, !spirv.arm.tensor<1xi8> -> !spirv.arm.tensor<1x5x8xi8>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<1x5x8xi8>
+}
+
+spirv.ARM.Graph @pad_padding_element_count_not_twice_input_rank(%arg0: !spirv.arm.tensor<4x7xi8>, %arg1: !spirv.arm.tensor<6xi32>, %arg2: !spirv.arm.tensor<1xi8>) -> (!spirv.arm.tensor<5x8xi8>) {
+  // expected-error @+1 {{op failed to verify that the number of elements of padding must be rank(input1) * 2}}
+  %0 = spirv.Tosa.Pad %arg0, %arg1, %arg2 : !spirv.arm.tensor<4x7xi8>, !spirv.arm.tensor<6xi32>, !spirv.arm.tensor<1xi8> -> !spirv.arm.tensor<5x8xi8>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<5x8xi8>
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Reshape
+//===----------------------------------------------------------------------===//
+
+spirv.ARM.Graph @reshape_input_output_element_types_not_matching(%arg0: !spirv.arm.tensor<2x3x4xi8>, %arg1: !spirv.arm.tensor<2xi32>) -> (!spirv.arm.tensor<6x4xi16>) {
+  // expected-error @+1 {{op failed to verify that all of {input1, output} have same element type}}
+  %0 = spirv.Tosa.Reshape %arg0, %arg1 : !spirv.arm.tensor<2x3x4xi8>, !spirv.arm.tensor<2xi32> -> !spirv.arm.tensor<6x4xi16>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<6x4xi16>
+}
+
+spirv.ARM.Graph @reshape_input_output_element_counts_not_matching(%arg0: !spirv.arm.tensor<2x3x4xi8>, %arg1: !spirv.arm.tensor<2xi32>) -> (!spirv.arm.tensor<5x4xi8>) {
+  // expected-error @+1 {{op failed to verify that all of {input1, output} have same element count}}
+  %0 = spirv.Tosa.Reshape %arg0, %arg1 : !spirv.arm.tensor<2x3x4xi8>, !spirv.arm.tensor<2xi32> -> !spirv.arm.tensor<5x4xi8>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<5x4xi8>
+}
+
+spirv.ARM.Graph @reshape_shape_element_count_not_output_rank(%arg0: !spirv.arm.tensor<2x3x4xi8>, %arg1: !spirv.arm.tensor<4xi32>) -> (!spirv.arm.tensor<6x4xi8>) {
+  // expected-error @+1 {{op failed to verify that the number of elements of shape must be rank(output)}}
+  %0 = spirv.Tosa.Reshape %arg0, %arg1 : !spirv.arm.tensor<2x3x4xi8>, !spirv.arm.tensor<4xi32> -> !spirv.arm.tensor<6x4xi8>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<6x4xi8>
+}

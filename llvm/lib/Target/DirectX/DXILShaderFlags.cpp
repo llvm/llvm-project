@@ -92,6 +92,7 @@ static bool checkWaveOps(Intrinsic::ID IID) {
   // Wave Active Op Variants
   case Intrinsic::dx_wave_reduce_or:
   case Intrinsic::dx_wave_reduce_xor:
+  case Intrinsic::dx_wave_reduce_and:
   case Intrinsic::dx_wave_reduce_sum:
   case Intrinsic::dx_wave_reduce_usum:
   case Intrinsic::dx_wave_product:
