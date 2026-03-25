@@ -129,7 +129,7 @@ struct PrologEpilogTracker {
       PrologEpilogSet.insert(I.first);
       InstructionPointer IP(Binary, I.first);
       if (!IP.advance())
-        break;
+        continue;
       PrologEpilogSet.insert(IP.Address);
     }
   }
@@ -140,7 +140,7 @@ struct PrologEpilogTracker {
       PrologEpilogSet.insert(Addr);
       InstructionPointer IP(Binary, Addr);
       if (!IP.backward())
-        break;
+        continue;
       PrologEpilogSet.insert(IP.Address);
     }
   }
