@@ -1829,7 +1829,7 @@ TEST(ScudoCombinedDeathTest, AlignMismatch) {
   // Pointer is guaranteed to not be aligned to 2 * page size.
   void *AlignedPtr = getMinAlignedPointer<AllocatorT>(Allocator.get());
   if (AlignedPtr == nullptr) {
-    GTEST_SKIP() << "Cannot allocate aligned pointer for test.";
+    TEST_SKIP("Cannot allocate aligned pointer for test.");
   }
 
   scudo::uptr Alignment = 2 * scudo::getPageSizeCached();
