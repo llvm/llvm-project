@@ -291,7 +291,7 @@ testing::AssertionResult notMatchesWithOpenMP51(const Twine &Code,
 
 template <typename T>
 testing::AssertionResult matchesWithOpenMP60(const Twine &Code,
-                                               const T &AMatcher) {
+                                             const T &AMatcher) {
   return matchesConditionally(Code, AMatcher, true,
                               {"-fopenmp=libomp", "-fopenmp-version=60"});
 }
