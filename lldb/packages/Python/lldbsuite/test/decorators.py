@@ -1185,9 +1185,10 @@ def skipUnlessBoundsSafety(func):
 
     return skipTestIfFn(is_compiler_with_bounds_safety)(func)
 
+
 def skipUnlessCompilerSupports(flag):
     """Decorate the item to skip the test unless the compiler supports this flag."""
-    
+
     def does_compiler_support_flag():
         if not _compiler_supports(lldbplatformutil.getCompiler(), flag):
             return f"Compiler does not support flag {flag}"

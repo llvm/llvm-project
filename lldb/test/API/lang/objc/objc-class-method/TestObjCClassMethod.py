@@ -27,7 +27,7 @@ class TestObjCClassMethod(TestBase):
     @add_test_categories(["pyapi"])
     def test_using_class_stubs(self):
         self.do_test_with_python_api("-fobjc-msgsend-class-selector-stubs")
-    
+
     def do_test_with_python_api(self, compiler_flags):
         """Test calling functions in class methods."""
         d = {}
@@ -37,11 +37,9 @@ class TestObjCClassMethod(TestBase):
         self.build(dictionary=d)
 
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
-            self,
-            "Set a breakpoint here",
-            self.main_source
+            self, "Set a breakpoint here", self.main_source
         )
-        
+
         # Now make sure we can call a function in the class method we've
         # stopped in.
         frame = thread.GetFrameAtIndex(0)
@@ -61,4 +59,6 @@ class TestObjCClassMethod(TestBase):
         # Now check that we can step INTO class methods:
         thread.StepInto()
         frame = thread.GetFrameAtIndex(0)
-        self.assertEqual(frame.name, "+[Foo doSomethingWithString:]", "Stopped in class method") 
+        self.assertEqual(
+            frame.name, "+[Foo doSomethingWithString:]", "Stopped in class method"
+        )

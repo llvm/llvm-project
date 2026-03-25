@@ -249,8 +249,7 @@ AppleThreadPlanStepThroughDirectDispatch ::
                         ,
                         true /* Run to branch for inline step out */,
                         false /* Don't gather the return value */),
-      m_trampoline_handler(handler),
-      m_at_msg_send(false) {
+      m_trampoline_handler(handler), m_at_msg_send(false) {
   // Set breakpoints on the dispatch functions:
   auto bkpt_callback = [&] (lldb::addr_t addr, 
                             const AppleObjCTrampolineHandler
