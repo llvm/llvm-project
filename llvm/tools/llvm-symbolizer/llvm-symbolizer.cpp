@@ -195,9 +195,9 @@ resolveXCOFFSectionAddress(StringRef ModulePath, StringRef SectionType,
 // Returns true (with SectionType and Offset set) if the syntax matches and is
 // valid; returns false if AddrSpec does not start with this syntax;
 // returns an error if the syntax is recognized but invalid.
-static Expected<bool>
-tryParseSectionRelativeAddress(StringRef AddrSpec, StringRef &SectionType,
-                               uint64_t &Offset) {
+static Expected<bool> tryParseSectionRelativeAddress(StringRef AddrSpec,
+                                                     StringRef &SectionType,
+                                                     uint64_t &Offset) {
   if (!AddrSpec.starts_with("("))
     return false;
 
@@ -222,14 +222,14 @@ tryParseSectionRelativeAddress(StringRef AddrSpec, StringRef &SectionType,
       AddrSpec.substr(SecondOpen + 1, SecondClose - SecondOpen - 1);
   if (!OffsetStr.starts_with("+"))
     return createStringError("section-relative offset \"" + OffsetStr +
-                           "\" must start with '+'");
+                             "\" must start with '+'");
 
   StringRef OffsetValue = OffsetStr.drop_front(1);
   // Parse the offset value; auto-detect base (0x prefix = hex, 0 prefix =
   // octal, otherwise decimal).
   if (OffsetValue.getAsInteger(0, Offset))
     return createStringError("invalid offset \"" + OffsetStr +
-                           "\" in section-relative address");
+                             "\" in section-relative address");
 
   return true;
 }

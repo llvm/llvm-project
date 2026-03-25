@@ -818,15 +818,15 @@ XCOFFObjectFile::getSectionByType(XCOFF::SectionTypeFlags SectType) const {
     for (const auto &Sec : Sections) {
       if (Sec.getSectionType() == SectType) {
         if (Result.p != 0)
-          return createStringError(
-              "multiple XCOFF sections have type flag 0x" +
-              Twine::utohexstr(SectType));
+          return createStringError("multiple XCOFF sections have type flag 0x" +
+                                   Twine::utohexstr(SectType));
         Result.p = reinterpret_cast<uintptr_t>(&Sec);
       }
     }
     return Error::success();
   };
-  if (Error E = is64Bit() ? FindSection(sections64()) : FindSection(sections32()))
+  if (Error E =
+          is64Bit() ? FindSection(sections64()) : FindSection(sections32()))
     return std::move(E);
   return Result;
 }
