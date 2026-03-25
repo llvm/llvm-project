@@ -2,9 +2,10 @@
 ; Test NPM registration of emit-intrinsics for SPIR-V (SPIRVPassRegistry.def).
 ;
 ; RUN: opt -S -passes=emit-intrinsics %s -mtriple=spirv64-unknown-unknown -o - | FileCheck %s
+; RUN: opt -S -passes=emit-intrinsics %s -mtriple=spirv64-unknown-vulkan -o - | FileCheck %s
 
-define spir_kernel void @k() {
-; CHECK-LABEL: define spir_kernel void @k() {
+define void @k() {
+; CHECK-LABEL: define void @k() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[A:%.*]] = call ptr @llvm.spv.alloca.p0(i32 4)
 ; CHECK-NEXT:    call void @llvm.spv.assign.name.p0(ptr [[A]], metadata [[META0:![0-9]+]])
