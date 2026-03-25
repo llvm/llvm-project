@@ -8171,6 +8171,7 @@ gentbl_cc_library(
     tbl_outs = {
         "include/mlir/Conversion/ConvertToLLVM/ToLLVMAttrInterface.h.inc": ["--gen-attr-interface-decls"],
         "include/mlir/Conversion/ConvertToLLVM/ToLLVMAttrInterface.cpp.inc": ["--gen-attr-interface-defs"],
+        "include/mlir/Conversion/ConvertToLLVM/ToLLVMDialectInterface.h.inc": ["--gen-dialect-interface-decls"],
         "include/mlir/Conversion/ConvertToLLVM/ToLLVMOpInterface.h.inc": ["--gen-op-interface-decls"],
         "include/mlir/Conversion/ConvertToLLVM/ToLLVMOpInterface.cpp.inc": ["--gen-op-interface-defs"],
     },
