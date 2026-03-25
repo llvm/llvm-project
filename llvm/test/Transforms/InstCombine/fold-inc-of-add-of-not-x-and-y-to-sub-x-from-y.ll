@@ -21,6 +21,18 @@ define i32 @t0(i32 %x, i32 %y) {
   ret i32 %t2
 }
 
+define i32 @t12(i32 %x, i32 %y) {
+; CHECK-LABEL: @t12(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = add i32 [[TMP1]], 1
+; CHECK-NEXT:    ret i32 [[T2]]
+;
+  %t0 = xor i32 %x, -1
+  %t1 = add i32 %t0, %y
+  %t2 = add i32 %t1, 2
+  ret i32 %t2
+}
+
 define i32 @add_not_add_m1(i32 %a, i32 %b) {
 ; CHECK-LABEL: @add_not_add_m1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[A:%.*]], [[B:%.*]]
@@ -269,17 +281,5 @@ define i32 @n11(i32 %x, i32 %y) {
   %t0 = xor i32 %x, 2147483647 ; not -1
   %t1 = add i32 %t0, %y
   %t2 = add i32 %t1, 1
-  ret i32 %t2
-}
-
-define i32 @n12(i32 %x, i32 %y) {
-; CHECK-LABEL: @n12(
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = add i32 [[TMP1]], 1
-; CHECK-NEXT:    ret i32 [[T2]]
-;
-  %t0 = xor i32 %x, -1
-  %t1 = add i32 %t0, %y
-  %t2 = add i32 %t1, 2 ; not +1
   ret i32 %t2
 }
