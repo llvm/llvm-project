@@ -40,10 +40,9 @@
 using namespace llvm;
 #define DEBUG_TYPE "insert-code-prefetch"
 
-namespace llvm {
-SmallString<128> getPrefetchTargetSymbolName(StringRef FunctionName,
-                                             const UniqueBBID &BBID,
-                                             unsigned CallsiteIndex) {
+SmallString<128> llvm::getPrefetchTargetSymbolName(StringRef FunctionName,
+                                                   const UniqueBBID &BBID,
+                                                   unsigned CallsiteIndex) {
   SmallString<128> R("__llvm_prefetch_target_");
   R += FunctionName;
   R += "_";
@@ -52,7 +51,6 @@ SmallString<128> getPrefetchTargetSymbolName(StringRef FunctionName,
   R += utostr(CallsiteIndex);
   return R;
 }
-} // namespace llvm
 
 namespace {
 class InsertCodePrefetch : public MachineFunctionPass {
