@@ -59,7 +59,7 @@ public:
 
   constexpr NextUseDistance(unsigned V) : Value(V) {}
   constexpr NextUseDistance(int V) : Value(V) {}
-  constexpr NextUseDistance(const llvm::NextUseDistance &B) : Value(B.Value) {}
+  constexpr NextUseDistance(const NextUseDistance &B) : Value(B.Value) {}
 
   constexpr bool isUnreachable() const { return *this == unreachable(); }
   constexpr bool isReachable() const { return !isUnreachable(); }
@@ -99,14 +99,14 @@ public:
     return NextUseDistance(-Value);
   }
 
-  constexpr inline NextUseDistance applyLoopWeight(unsigned Depth) const {
+  constexpr NextUseDistance applyLoopWeight(unsigned Depth) const {
     NextUseDistance D = *this;
     if (Depth)
       D.Value *= fromLoopDepth(Depth).Value;
     return D;
   }
 
-  // Extend this distance by 'Size' and reset it's depth to 'Depth'.
+  // Extend this distance by 'Size' weighted by loop depth 'Depth'.
   constexpr NextUseDistance extend(unsigned Size, unsigned Depth) const {
     NextUseDistance D = *this;
     return D += NextUseDistance(Size).applyLoopWeight(Depth);
@@ -164,7 +164,7 @@ public:
     return OS.str();
   }
 
-  double getRawValue() const { return Value; }
+  int64_t getRawValue() const { return Value; }
 
 private:
   friend class AMDGPUNextUseAnalysisImpl;
@@ -182,7 +182,6 @@ constexpr inline NextUseDistance operator-(NextUseDistance A,
   return A -= B;
 }
 
-// Allow std::min/std::max with NextUseDistance
 constexpr inline NextUseDistance min(NextUseDistance A, NextUseDistance B) {
   return A < B ? A : B;
 }

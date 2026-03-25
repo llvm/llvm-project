@@ -68,8 +68,6 @@ cl::opt<AMDGPUNextUseAnalysis::CompatibilityMode> CompatModeOpt(
 namespace {
 using UseDistancePair = AMDGPUNextUseAnalysis::UseDistancePair;
 struct LiveRegUse : public UseDistancePair {
-  using Base = UseDistancePair;
-
   // 'nullptr' indicates an unset/invalid state.
   LiveRegUse() : UseDistancePair(nullptr, 0) {}
   LiveRegUse(const MachineOperand *Use, NextUseDistance Dist)
@@ -185,6 +183,18 @@ void printAttr(json::OStream &J, const Printable &P, ValueT V) {
 // AMDGPUNextUseAnalysisImpl
 //==============================================================================
 class llvm::AMDGPUNextUseAnalysisImpl {
+public:
+  using CacheableNextUseDistance = std::pair<NextUseDistance, bool>;
+
+private:
+  static CacheableNextUseDistance miDep(const NextUseDistance &D) {
+    return {D, true};
+  }
+  static CacheableNextUseDistance miIndep(const NextUseDistance &D) {
+    return {D, false};
+  }
+
+private:
   using CompatibilityMode = AMDGPUNextUseAnalysis::CompatibilityMode;
   const MachineFunction *MF = nullptr;
   const SIRegisterInfo *TRI = nullptr;
@@ -228,6 +238,8 @@ private:
     InstrIdTy Id = 0;
     for (auto &MI : BB->instrs()) {
       MutableInstrToId[&MI] = Id;
+      // In compute mode, PHIs do not contribute to distances/sizes since they
+      // generally don't result in the generation of a machine instruction.
       if (!computeMode() || !MI.isPHI())
         ++Id;
     }
@@ -1176,37 +1188,38 @@ private:
 
   // Return the distance from 'CurMI' through a backedge PHI Use
   // ('UseMI'). Handles various loop configurations.
-  std::pair<NextUseDistance, bool> calcBackedgeDistance(
-      const MachineInstr *CurMI, const MachineBasicBlock *CurMBB,
-      MachineLoop *CurLoop, const MachineInstr *UseMI,
-      const MachineBasicBlock *UseMBB, MachineLoop *UseLoop) const {
+  CacheableNextUseDistance calcBackedgeDistance(const MachineInstr *CurMI,
+                                                const MachineBasicBlock *CurMBB,
+                                                MachineLoop *CurLoop,
+                                                const MachineInstr *UseMI,
+                                                const MachineBasicBlock *UseMBB,
+                                                MachineLoop *UseLoop) const {
     assert(UseLoop && "There is no backedge.");
     InstrIdTy CurMITailLen = getTailLen(CurMI);
     InstrIdTy UseHeadLen = getHeadLen(UseMI);
 
     if (!CurLoop) {
-      return {CurMITailLen + getShortestPath(CurMBB, UseMBB) + UseHeadLen,
-              true};
+      return miDep(CurMITailLen + getShortestPath(CurMBB, UseMBB) + UseHeadLen);
     }
 
     if (CurLoop == UseLoop) {
       MBBDistPair LD = calcShortestDistanceToLatch(CurMBB, CurLoop);
       if (LD.MBB == CurMBB)
-        return {CurMITailLen + UseHeadLen, true};
-      return {UseHeadLen + CurMITailLen + LD.Distance + getSize(LD.MBB), true};
+        return miDep(CurMITailLen + UseHeadLen);
+      return miDep(UseHeadLen + CurMITailLen + LD.Distance + getSize(LD.MBB));
     }
 
     if (!CurLoop->contains(UseLoop) && !UseLoop->contains(CurLoop)) {
       MBBDistPair LD = calcShortestDistanceThroughLoop(CurMBB, CurLoop);
-      return {LD.Distance + getShortestPath(LD.MBB, UseMBB) + UseHeadLen,
-              false};
+      return miIndep(LD.Distance + getShortestPath(LD.MBB, UseMBB) +
+                     UseHeadLen);
     }
 
     if (!CurLoop->contains(UseLoop)) {
       MBBDistPair InnerLoopLD = calcDistanceThroughSubLoopUse(CurLoop, UseLoop);
       MBBDistPair LD = calcShortestDistanceToLatch(InnerLoopLD.MBB, UseLoop);
-      return {InnerLoopLD.Distance + LD.Distance + getSize(LD.MBB) + UseHeadLen,
-              false};
+      return miIndep(InnerLoopLD.Distance + LD.Distance + getSize(LD.MBB) +
+                     UseHeadLen);
     }
 
     llvm_unreachable("The backedge distance has not been calculated!");
@@ -1233,15 +1246,15 @@ private:
   // Return the distance from CurMI inside of a loop to UseMI outside of that
   // loop. 'LiveReg' and 'LiveLaneMask' are used to identify relevant backedges
   // if needed.
-  NextUseDistance calcInsideToOutsideLoopDistance(
+  CacheableNextUseDistance calcInsideToOutsideLoopDistance(
       Register LiveReg, LaneBitmask LiveLaneMask, const MachineInstr *CurMI,
       const MachineBasicBlock *CurMBB, MachineLoop *CurLoop,
       const MachineInstr *UseMI, const MachineBasicBlock *UseMBB,
       MachineLoop *UseLoop) const {
 
     if (isUseOutsideOfTheCurrentLoopNest(UseLoop, CurLoop)) {
-      return calcDistanceThroughLoopToOutsideLoopUseMI(CurMBB, CurLoop, UseMI,
-                                                       UseMBB, UseLoop);
+      return miIndep(calcDistanceThroughLoopToOutsideLoopUseMI(
+          CurMBB, CurLoop, UseMI, UseMBB, UseLoop));
     }
 
     if (isUseInParentLoop(UseLoop, CurLoop)) {
@@ -1251,11 +1264,10 @@ private:
              "these.");
       if (isIncomingValFromBackedge(LiveReg, LiveLaneMask, CurMI, UseMI))
         return calcBackedgeDistance(CurMI, CurMBB, CurLoop, UseMI, UseMBB,
-                                    UseLoop)
-            .first;
+                                    UseLoop);
 
-      return calcDistanceThroughSubLoopToUse(CurMBB, CurLoop, UseMI, UseMBB,
-                                             UseLoop);
+      return miIndep(calcDistanceThroughSubLoopToUse(CurMBB, CurLoop, UseMI,
+                                                     UseMBB, UseLoop));
     }
 
     llvm_unreachable("Unexpected loop configuration");
@@ -1319,7 +1331,7 @@ private:
 private:
   // Return the distance from 'CurMI' to a live [sub]register use ('UseMI') -
   // graphics edition
-  NextUseDistance calcDistanceToUseForGraphics(
+  CacheableNextUseDistance calcDistanceToUseForGraphics(
       Register LiveReg, LaneBitmask LiveLaneMask, const MachineInstr &CurMI,
       const MachineBasicBlock *CurMBB, MachineLoop *CurLoop,
       const MachineInstr *UseMI, const MachineBasicBlock *UseMBB,
@@ -1332,16 +1344,15 @@ private:
 
     if (isIncomingValFromBackedge(LiveReg, LiveLaneMask, &CurMI, UseMI)) {
       return calcBackedgeDistance(&CurMI, CurMBB, CurLoop, UseMI, UseMBB,
-                                  UseLoop)
-          .first;
+                                  UseLoop);
     }
 
-    return calcShortestDistance(&CurMI, UseMI);
+    return miDep(calcShortestDistance(&CurMI, UseMI));
   }
 
   // Return the distance from 'CurMI' to a live [sub]register use ('UseMI') -
   // compute edition
-  std::pair<NextUseDistance, bool> calcDistanceToUseForCompute(
+  CacheableNextUseDistance calcDistanceToUseForCompute(
       Register LiveReg, LaneBitmask LiveLaneMask, const MachineInstr &CurMI,
       const MachineBasicBlock *CurMBB, MachineLoop *CurLoop,
       const MachineInstr *UseMI, const MachineBasicBlock *UseMBB,
@@ -1356,11 +1367,12 @@ private:
     // No loops involved
     if (!CurLoop && !UseLoop) {
       if (CurMBB != UseMBB) {
-        // -1 for PHIs so that they appear closer than non-PHIs.
-        return {calcShortestUnweightedDistance(&CurMI, UseMI) - UseMI->isPHI(),
-                true};
+        // -1 for PHIs so that they appear closer than non-PHIs. This is a
+        // consequence of assigning all PHIs an Id of '0'.
+        return miDep(calcShortestUnweightedDistance(&CurMI, UseMI) -
+                     UseMI->isPHI());
       }
-      return {calcShortestDistance(&CurMI, UseMI), true};
+      return miDep(calcShortestDistance(&CurMI, UseMI));
     }
 
     // From non-loop to inside loop use
@@ -1368,34 +1380,32 @@ private:
       // Reset to UseLoop preheader position. This models: if spilled before
       // loop, reload at preheader
       const MachineBasicBlock *PreHdr = getOutermostPreheader(UseLoop);
-      return {calcShortestUnweightedDistance(&CurMI, &PreHdr->back()), true};
+      return miDep(calcShortestUnweightedDistance(&CurMI, &PreHdr->back()));
     }
 
     // From loop to non-loop use
     if (CurLoop && !UseLoop) {
-      return {calcDistanceThroughLoopToOutsideLoopUseMI(CurMBB, CurLoop, UseMI,
-                                                        UseMBB, UseLoop),
-              false};
+      return miIndep(calcDistanceThroughLoopToOutsideLoopUseMI(
+          CurMBB, CurLoop, UseMI, UseMBB, UseLoop));
     }
 
     // Both in loops
     if (CurLoop == UseLoop) {
       if (CurMBB == UseMBB && !instrsAreInOrder(&CurMI, UseMI))
-        return {calcBackedgeDistance(&CurMI, CurMBB, CurLoop, UseMI), true};
-      return {calcShortestDistance(&CurMI, UseMI), true};
+        return miDep(calcBackedgeDistance(&CurMI, CurMBB, CurLoop, UseMI));
+      return miDep(calcShortestDistance(&CurMI, UseMI));
     }
 
     if (CurLoop->contains(UseLoop)) {
       MachineLoop *ChildLoop = findChildLoop(CurLoop, UseLoop);
       if (const MachineBasicBlock *PreHdr = ChildLoop->getLoopPreheader())
-        return {calcShortestDistance(&CurMI, &PreHdr->back()), false};
-      return {calcShortestDistance(&CurMI, UseMI), true};
+        return miIndep(calcShortestDistance(&CurMI, &PreHdr->back()));
+      return miDep(calcShortestDistance(&CurMI, UseMI));
     }
 
     if (UseLoop->contains(CurLoop)) {
-      return {calcDistanceThroughSubLoopToUse(CurMBB, CurLoop, UseMI, UseMBB,
-                                              UseLoop),
-              false};
+      return miIndep(calcDistanceThroughSubLoopToUse(CurMBB, CurLoop, UseMI,
+                                                     UseMBB, UseLoop));
     }
 
     // Loops are unrelated
@@ -1404,17 +1414,16 @@ private:
       // loop, reload at preheader
       MBBDistPair LD = calcWeightedDistanceThroughLoop(CurMBB, CurLoop);
       const MachineBasicBlock *PreHdr = getOutermostPreheader(UseLoop);
-      return {appendDistanceToUse(LD, &PreHdr->back(), PreHdr), false};
+      return miIndep(appendDistanceToUse(LD, &PreHdr->back(), PreHdr));
     }
 
-    return {calcDistanceThroughLoopToOutsideLoopUseMI(CurMBB, CurLoop, UseMI,
-                                                      UseMBB, UseLoop),
-            false};
+    return miIndep(calcDistanceThroughLoopToOutsideLoopUseMI(
+        CurMBB, CurLoop, UseMI, UseMBB, UseLoop));
   }
 
   // Return the distance from 'CurMI' to a live [sub]register use
   // ('UseMI'). Redirected to the appropriate mode-based flavor.
-  std::pair<NextUseDistance, bool>
+  CacheableNextUseDistance
   calcDistanceToUse(Register LiveReg, LaneBitmask LiveLaneMask,
                     const MachineInstr &CurMI, const MachineInstr *UseMI,
                     const MachineBasicBlock *PhiUseEdge) const {
@@ -1425,10 +1434,9 @@ private:
     MachineLoop *UseLoop = MLI->getLoopFor(UseMBB);
 
     if (graphicsMode()) {
-      return {calcDistanceToUseForGraphics(LiveReg, LiveLaneMask, CurMI, CurMBB,
-                                           CurLoop, UseMI, UseMBB, UseLoop,
-                                           PhiUseEdge),
-              true};
+      return calcDistanceToUseForGraphics(LiveReg, LiveLaneMask, CurMI, CurMBB,
+                                          CurLoop, UseMI, UseMBB, UseLoop,
+                                          PhiUseEdge);
     }
 
     if (computeMode()) {
@@ -1442,7 +1450,7 @@ private:
 
   // Similar to 'calcDistanceToUse' above, but computes 'PhiUseEdge' based on
   // 'UseMO'.
-  std::pair<NextUseDistance, bool>
+  CacheableNextUseDistance
   calcDistanceToUse(Register LiveReg, LaneBitmask LiveLaneMask,
                     const MachineInstr &CurMI,
                     const MachineOperand *UseMO) const {
@@ -1597,8 +1605,6 @@ private:
 
   std::pair<const LaneBitmaskToUseMap *, const LiveRegToUseMapElem *>
   findCachedLiveRegUse(Register Reg, LaneBitmask LaneMask) {
-    if (graphicsMode())
-      return {nullptr, nullptr};
     auto I = LastDistances.find(Reg);
     if (I == LastDistances.end())
       return {nullptr, nullptr};
@@ -1616,7 +1622,7 @@ private:
 
   void cacheLiveRegUse(const MachineInstr &MI, Register Reg, LaneBitmask Mask,
                        LiveRegUse U, bool MIDependent, bool &OkToCache) {
-    if (!OkToCache || graphicsMode())
+    if (!OkToCache)
       return;
     auto I = NextDistances.try_emplace(Reg).first;
     LaneBitmaskToUseMap &RegSlot = I->second;
@@ -1629,8 +1635,6 @@ private:
   }
 
   void updateCachedLiveRegUses(const MachineInstr &MI) {
-    if (graphicsMode())
-      return;
     LastMI = &MI;
     LastDistances = std::move(NextDistances);
     NextDistances.clear();
@@ -1647,7 +1651,7 @@ private:
       SubRegIndexesForRegClass;
   void collectSubRegUsesByMask(
       const SmallVectorImpl<const MachineOperand *> &Uses,
-      const SmallVectorImpl<std::pair<NextUseDistance, bool>> &Distances,
+      const SmallVectorImpl<CacheableNextUseDistance> &Distances,
       LaneBitmask LiveRegLaneMask, LaneBitmaskToUseMap &UseByMask) {
 
     assert(Uses.size());
@@ -1754,7 +1758,7 @@ public:
     const SmallSet<unsigned, 4> MIDefs(collectDefinedRegisters(MI));
 
     SmallVector<const MachineOperand *> Uses;
-    SmallVector<std::pair<NextUseDistance, bool>> Distances;
+    SmallVector<CacheableNextUseDistance> Distances;
     LaneBitmaskToUseMap UseByMask;
 
     maybeClearCachedLiveRegUses(MI);
@@ -1772,7 +1776,7 @@ public:
 
       LiveRegUse U;
       bool MIDependent = false;
-      bool OkToCache = computeMode();
+      bool OkToCache = true;
       auto [CacheMap, CacheElem] = findCachedLiveRegUse(Reg, LaneMask);
       if (CacheMap && CacheElem) {
         MIDependent = CacheElem->MIDependent;
@@ -1881,7 +1885,7 @@ public:
   getNextUseDistance(Register LiveReg, LaneBitmask LaneMask,
                      const MachineInstr &FromMI,
                      const SmallVector<const MachineOperand *> &Uses,
-                     SmallVector<std::pair<NextUseDistance, bool>> *Distances,
+                     SmallVector<CacheableNextUseDistance> *Distances,
                      const MachineOperand **UseOut, bool *MIDependent);
 
   std::optional<NextUseDistance>
@@ -1925,7 +1929,7 @@ AMDGPUNextUseAnalysisImpl::AMDGPUNextUseAnalysisImpl(
 std::optional<NextUseDistance> AMDGPUNextUseAnalysisImpl::getNextUseDistance(
     Register LiveReg, LaneBitmask LaneMask, const MachineInstr &CurMI,
     const SmallVector<const MachineOperand *> &Uses,
-    SmallVector<std::pair<NextUseDistance, bool>> *Distances,
+    SmallVector<CacheableNextUseDistance> *Distances,
     const MachineOperand **UseOut, bool *CurMIDependentOut) {
 
   assert(!LiveReg.isPhysical() && !TRI->isAGPR(*MRI, LiveReg) &&
@@ -2016,7 +2020,8 @@ std::optional<NextUseDistance> AMDGPUNextUseAnalysis::getNextUseDistance(
     Register LiveReg, const MachineInstr &FromMI,
     const SmallVector<const MachineOperand *> &Uses,
     SmallVector<NextUseDistance> *DistancesOut, const MachineOperand **UseOut) {
-  SmallVector<std::pair<NextUseDistance, bool>> Distances;
+
+  SmallVector<AMDGPUNextUseAnalysisImpl::CacheableNextUseDistance> Distances;
   auto Dist = Impl->getNextUseDistance(
       LiveReg, LaneBitmask::getAll(), FromMI, Uses,
       DistancesOut ? &Distances : nullptr, UseOut, nullptr);
