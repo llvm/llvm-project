@@ -1412,8 +1412,7 @@ pruneUnusedStdlibModuleJobs(CompilationGraph &Graph,
         llvm::map_range(llvm::depth_first(cast<CGNode>(PrunableJobNodeRoot)),
                         llvm::CastTo<JobNode>);
     auto ReachableNonImageNodes = llvm::make_filter_range(
-        ReachableJobNodes, std::not_fn(llvm::IsaPred<ImageJobNode>));
-
+        ReachableJobNodes, [](auto *N) { return !llvm::isa<ImageJobNode>(N); });
     PrunableJobNodes.insert_range(ReachableNonImageNodes);
   }
 

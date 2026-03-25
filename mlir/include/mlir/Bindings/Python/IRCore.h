@@ -78,6 +78,18 @@ public:
   }
   PyObjectRef(const PyObjectRef &other)
       : referrent(other.referrent), object(other.object /* copies */) {}
+  PyObjectRef &operator=(const PyObjectRef &other) {
+    referrent = other.referrent;
+    object = other.object;
+    return *this;
+  }
+  PyObjectRef &operator=(PyObjectRef &&other) noexcept {
+    referrent = other.referrent;
+    object = std::move(other.object);
+    other.referrent = nullptr;
+    assert(!other.object);
+    return *this;
+  }
   ~PyObjectRef() = default;
 
   int getRefCount() {
@@ -739,7 +751,7 @@ public:
 
   nanobind::object getOperationObject() { return operationObject; }
 
-  static nanobind::object
+  static nanobind::typed<nanobind::object, PyOperation>
   buildGeneric(std::string_view name, std::tuple<int, bool> opRegionSpec,
                nanobind::object operandSegmentSpecObj,
                nanobind::object resultSegmentSpecObj,
@@ -1356,7 +1368,8 @@ struct MLIR_PYTHON_API_EXPORTED PyAttrBuilderMap {
   static nanobind::callable
   dunderGetItemNamed(const std::string &attributeKind);
   static void dunderSetItemNamed(const std::string &attributeKind,
-                                 nanobind::callable func, bool replace);
+                                 nanobind::callable func, bool replace,
+                                 bool allow_existing);
 
   static void bind(nanobind::module_ &m);
 };

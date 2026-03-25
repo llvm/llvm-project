@@ -27,5 +27,8 @@ static_library("Core") {
     "Support/ErrorBuilder.cpp",
     "TUSummary/ExtractorRegistry.cpp",
     "TUSummary/TUSummaryBuilder.cpp",
+    "WholeProgramAnalysis/AnalysisDriver.cpp",
+    "WholeProgramAnalysis/AnalysisName.cpp",
+    "WholeProgramAnalysis/AnalysisRegistry.cpp",
   ]
 }
