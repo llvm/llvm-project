@@ -12,19 +12,6 @@
 namespace hlsl {
 namespace __detail {
 
-constexpr int4 d3d_color_to_ubyte4_impl(float4 V) {
-  // Use the same scaling factor used by FXC, and DXC for DXIL
-  // (i.e., 255.001953)
-  // https://github.com/microsoft/DirectXShaderCompiler/blob/070d0d5a2beacef9eeb51037a9b04665716fd6f3/lib/HLSL/HLOperationLower.cpp#L666C1-L697C2
-  // The DXC implementation refers to a comment on the following stackoverflow
-  // discussion to justify the scaling factor: "Built-in rounding, necessary
-  // because of truncation. 0.001953 * 256 = 0.5"
-  // https://stackoverflow.com/questions/52103720/why-does-d3dcolortoubyte4-multiplies-components-by-255-001953f
-  return V.zyxw * 255.001953f;
-}
-
-template <typename T> constexpr T length_impl(T X) { return abs(X); }
-
 template <typename T, int N>
 constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value, T>
 length_vec_impl(vector<T, N> X) {
@@ -33,15 +20,6 @@ length_vec_impl(vector<T, N> X) {
 #else
   return sqrt(dot(X, X));
 #endif
-}
-
-template <typename T>
-constexpr vector<T, 4> dst_impl(vector<T, 4> Src0, vector<T, 4> Src1) {
-  return {1, Src0[1] * Src1[1], Src0[2], Src1[3]};
-}
-
-template <typename T> constexpr T distance_impl(T X, T Y) {
-  return length_impl(X - Y);
 }
 
 template <typename T, int N>
@@ -71,10 +49,6 @@ enable_if_t<is_same<double, T>::value, T> mul_vec_impl(vector<T, N> x,
   T sum = x[0] * y[0];
   [unroll] for (int i = 1; i < N; ++i) sum = mad(x[i], y[i], sum);
   return sum;
-}
-
-template <typename T> constexpr T reflect_impl(T I, T N) {
-  return I - 2 * N * I * N;
 }
 
 template <typename T, int L>
@@ -152,11 +126,7 @@ template <typename T> constexpr vector<T, 4> lit_impl(T NDotL, T NDotH, T M) {
 }
 
 template <typename T> constexpr T faceforward_impl(T N, T I, T Ng) {
-  return select(dot(I, Ng) < 0, N, -N);
-}
-
-template <typename T> constexpr T ldexp_impl(T X, T Exp) {
-  return exp2(Exp) * X;
+  return select<T>(dot(I, Ng) < 0, N, -N);
 }
 
 template <typename K, typename T, int BitWidth>

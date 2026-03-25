@@ -42,6 +42,78 @@ namespace hlsl {
 #include "hlsl_alias_intrinsics_gen.inc"
 
 //===----------------------------------------------------------------------===//
+// abs builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T abs(T Val)
+/// \brief Returns the absolute value of the input value, \a Val.
+/// \param Val The input value.
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
+int16_t abs(int16_t);
+_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
+int16_t2 abs(int16_t2);
+_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
+int16_t3 abs(int16_t3);
+_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
+int16_t4 abs(int16_t4);
+#endif
+
+_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
+half abs(half);
+_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
+half2 abs(half2);
+_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
+half3 abs(half3);
+_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
+half4 abs(half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
+int abs(int);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
+int2 abs(int2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
+int3 abs(int3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
+int4 abs(int4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
+float abs(float);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
+float2 abs(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
+float3 abs(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
+float4 abs(float4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
+int64_t abs(int64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
+int64_t2 abs(int64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
+int64_t3 abs(int64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
+int64_t4 abs(int64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
+double abs(double);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
+double2 abs(double2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
+double3 abs(double3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
+double4 abs(double4);
+
+//===----------------------------------------------------------------------===//
 // acos builtins
 //===----------------------------------------------------------------------===//
 
@@ -203,6 +275,60 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(double3);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(double4);
+
+//===----------------------------------------------------------------------===//
+// and builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn bool and(bool x, bool y)
+/// \brief Logically ands two boolean vectors or matrices elementwise and
+/// produces a bool vector or matrix output.
+
+// TODO: Clean up clang-format marker once we've resolved
+//       https://github.com/llvm/llvm-project/issues/127851
+//
+// clang-format off
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool and(bool x, bool y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool2 and(bool2 x, bool2 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool3 and(bool3 x, bool3 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool4 and(bool4 x, bool4 y);
+
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool1x2 and(bool1x2 x, bool1x2 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool1x3 and(bool1x3 x, bool1x3 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool1x4 and(bool1x4 x, bool1x4 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool2x1 and(bool2x1 x, bool2x1 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool2x2 and(bool2x2 x, bool2x2 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool2x3 and(bool2x3 x, bool2x3 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool2x4 and(bool2x4 x, bool2x4 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool3x1 and(bool3x1 x, bool3x1 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool3x2 and(bool3x2 x, bool3x2 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool3x3 and(bool3x3 x, bool3x3 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool3x4 and(bool3x4 x, bool3x4 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool4x1 and(bool4x1 x, bool4x1 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool4x2 and(bool4x2 x, bool4x2 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool4x3 and(bool4x3 x, bool4x3 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool4x4 and(bool4x4 x, bool4x4 y);
+// clang-format on
 
 //===----------------------------------------------------------------------===//
 // any builtins
@@ -768,6 +894,104 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_degrees)
 float4 degrees(float4);
 
 //===----------------------------------------------------------------------===//
+// dot product builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn K dot(T X, T Y)
+/// \brief Return the dot product (a scalar value) of \a X and \a Y.
+/// \param X The X input value.
+/// \param Y The Y input value.
+
+_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+half dot(half, half);
+_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+half dot(half2, half2);
+_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+half dot(half3, half3);
+_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+half dot(half4, half4);
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+int16_t dot(int16_t, int16_t);
+_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+int16_t dot(int16_t2, int16_t2);
+_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+int16_t dot(int16_t3, int16_t3);
+_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+int16_t dot(int16_t4, int16_t4);
+
+_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+uint16_t dot(uint16_t, uint16_t);
+_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+uint16_t dot(uint16_t2, uint16_t2);
+_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+uint16_t dot(uint16_t3, uint16_t3);
+_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+uint16_t dot(uint16_t4, uint16_t4);
+#endif
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+float dot(float, float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+float dot(float2, float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+float dot(float3, float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+float dot(float4, float4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+double dot(double, double);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+int dot(int, int);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+int dot(int2, int2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+int dot(int3, int3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+int dot(int4, int4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+uint dot(uint, uint);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+uint dot(uint2, uint2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+uint dot(uint3, uint3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+uint dot(uint4, uint4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+int64_t dot(int64_t, int64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+int64_t dot(int64_t2, int64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+int64_t dot(int64_t3, int64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+int64_t dot(int64_t4, int64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+uint64_t dot(uint64_t, uint64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+uint64_t dot(uint64_t2, uint64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+uint64_t dot(uint64_t3, uint64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+uint64_t dot(uint64_t4, uint64_t4);
+
+//===----------------------------------------------------------------------===//
 // dot4add builtins
 //===----------------------------------------------------------------------===//
 
@@ -1023,6 +1247,39 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_frac)
 float3 frac(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_frac)
 float4 frac(float4);
+
+//===----------------------------------------------------------------------===//
+// isinf builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T isinf(T x)
+/// \brief Determines if the specified value \a x  is infinite.
+/// \param x The specified input value.
+///
+/// Returns a value of the same size as the input, with a value set
+/// to True if the x parameter is +INF or -INF. Otherwise, False.
+
+_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isinf)
+bool isinf(half);
+_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isinf)
+bool2 isinf(half2);
+_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isinf)
+bool3 isinf(half3);
+_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isinf)
+bool4 isinf(half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isinf)
+bool isinf(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isinf)
+bool2 isinf(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isinf)
+bool3 isinf(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isinf)
+bool4 isinf(float4);
 
 //===----------------------------------------------------------------------===//
 // isnan builtins
@@ -1619,6 +1876,20 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_normalize)
 float4 normalize(float4);
 
 //===----------------------------------------------------------------------===//
+// NonUniformResourceIndex builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn uint NonUniformResourceIndex(uint I)
+/// \brief A compiler hint to indicate that a resource index varies across
+/// threads within a wave (i.e., it is non-uniform).
+/// \param I [in] Resource array index.
+///
+/// The return value is the \a I parameter.
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_resource_nonuniformindex)
+uint NonUniformResourceIndex(uint);
+
+//===----------------------------------------------------------------------===//
 // or builtins
 //===----------------------------------------------------------------------===//
 
@@ -1742,6 +2013,28 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
 uint64_t3 reversebits(uint64_t3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
 uint64_t4 reversebits(uint64_t4);
+
+//===----------------------------------------------------------------------===//
+// cross builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T cross(T x, T y)
+/// \brief Returns the cross product of two floating-point, 3D vectors.
+/// \param x [in] The first floating-point, 3D vector.
+/// \param y [in] The second floating-point, 3D vector.
+///
+/// Result is the cross product of x and y, i.e., the resulting
+/// components are, in order :
+/// x[1] * y[2] - y[1] * x[2]
+/// x[2] * y[0] - y[2] * x[0]
+/// x[0] * y[1] - y[0] * x[1]
+
+_HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT()
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_crossf16)
+half3 cross(half3, half3);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_crossf32)
+float3 cross(float3, float3);
 
 //===----------------------------------------------------------------------===//
 // rcp builtins
@@ -3474,6 +3767,18 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_radians)
 float3 radians(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_radians)
 float4 radians(float4);
+
+//===----------------------------------------------------------------------===//
+// GroupMemoryBarrierWithGroupSync builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn void GroupMemoryBarrierWithGroupSync(void)
+/// \brief Blocks execution of all threads in a group until all group shared
+/// accesses have been completed and all threads in the group have reached this
+/// call.
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_group_memory_barrier_with_group_sync)
+__attribute__((convergent)) void GroupMemoryBarrierWithGroupSync(void);
 
 //===----------------------------------------------------------------------===//
 // ddx_coarse builtin

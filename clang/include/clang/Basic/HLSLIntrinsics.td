@@ -313,19 +313,16 @@ class HLSLOneArgInlineBuiltin<string name> : HLSLBuiltin<name> {
 // Intrinsic definitions (sorted alphabetically by function name)
 //===----------------------------------------------------------------------===//
 
-// Returns the absolute value of the input value, Val.
-def hlsl_abs : HLSLOneArgBuiltin<"abs", "__builtin_elementwise_abs"> {
+// Unsigned abs is a constexpr identity — unsigned values are already non-negative.
+def hlsl_abs_unsigned : HLSLOneArgInlineBuiltin<"abs"> {
   let Doc = [{
 \fn T abs(T Val)
 \brief Returns the absolute value of the input value, \a Val.
 \param Val The input value.
-}];
-  let VaryingTypes = SignedTypes;
-  let VaryingMatDims = [];
-}
 
-// Unsigned abs is a constexpr identity — unsigned values are already non-negative.
-def hlsl_abs_unsigned : HLSLOneArgInlineBuiltin<"abs"> {
+Unsigned overload — unsigned values are already non-negative, so this
+function returns its input unchanged.
+}];
   let ParamNames = ["V"];
   let Body = "return V;";
   let IsConstexpr = 1;
@@ -333,60 +330,108 @@ def hlsl_abs_unsigned : HLSLOneArgInlineBuiltin<"abs"> {
   let VaryingMatDims = [];
 }
 
-// Returns the boolean AND of two bool values or vectors.
-def hlsl_and : HLSLTwoArgBuiltin<"and", "__builtin_hlsl_and"> {
+// Checks whether the value is fully mapped.
+def hlsl_check_access_fully_mapped : HLSLBuiltin<"CheckAccessFullyMapped"> {
   let Doc = [{
-\fn bool and(bool x, bool y)
-\brief Logically ands two boolean vectors or matrices elementwise and
-produces a bool vector or matrix output.
+\fn bool CheckAccessFullyMapped(uint Status)
+\brief Checks whether the value is fully mapped.
+\param Status The status value to check.
 }];
-  let VaryingTypes = [BoolTy];
+  let ParamNames = ["Status"];
+  let Body = "return static_cast<bool>(Status);";
+  let Args = [UIntTy];
+  let ReturnType = BoolTy;
 }
 
-// Returns the cross product of two floating-point, 3D vectors.
-// Two separate defs are needed because the float and half variants alias
-// different builtins (__builtin_hlsl_crossf32 vs __builtin_hlsl_crossf16).
-def hlsl_cross_float : HLSLBuiltin<"cross", "__builtin_hlsl_crossf32"> {
+// Converts a floating-point, 4D vector set by a D3DCOLOR to a UBYTE4.
+def hlsl_d3d_color_to_ubyte4 : HLSLBuiltin<"D3DCOLORtoUBYTE4"> {
   let Doc = [{
-\fn T cross(T x, T y)
-\brief Returns the cross product of two floating-point, 3D vectors.
-\param x [in] The first floating-point, 3D vector.
-\param y [in] The second floating-point, 3D vector.
+\fn int4 D3DCOLORtoUBYTE4(float4 x)
+\brief Converts a floating-point, 4D vector set by a D3DCOLOR to a UBYTE4.
+\param x [in] The floating-point vector4 to convert.
 
-Result is the cross product of x and y, i.e., the resulting
-components are, in order :
-x[1] * y[2] - y[1] * x[2]
-x[2] * y[0] - y[2] * x[0]
-x[0] * y[1] - y[0] * x[1]
+The return value is the UBYTE4 representation of the \a x parameter.
+
+This function swizzles and scales components of the \a x parameter. Use this
+function to compensate for the lack of UBYTE4 support in some hardware.
 }];
-  let Args = [VectorType<FloatTy, 3>, VectorType<FloatTy, 3>];
-  let ReturnType = VectorType<FloatTy, 3>;
+  // Use the same scaling factor used by FXC, and DXC for DXIL
+  // (i.e., 255.001953)
+  // https://github.com/microsoft/DirectXShaderCompiler/blob/070d0d5a2beacef9eeb51037a9b04665716fd6f3/lib/HLSL/HLOperationLower.cpp#L666C1-L697C2
+  // The DXC implementation refers to a comment on the following stackoverflow
+  // discussion to justify the scaling factor: "Built-in rounding, necessary
+  // because of truncation. 0.001953 * 256 = 0.5"
+  // https://stackoverflow.com/questions/52103720/why-does-d3dcolortoubyte4-multiplies-components-by-255-001953f
+  let Body = "return V.zyxw * 255.001953f;";
+  let ParamNames = ["V"];
+  let Args = [VectorType<FloatTy, 4>];
+  let ReturnType = VectorType<IntTy, 4>;
+  let IsConstexpr = 1;
 }
 
-def hlsl_cross_half : HLSLBuiltin<"cross", "__builtin_hlsl_crossf16"> {
-  let Args = [VectorType<HalfTy, 3>, VectorType<HalfTy, 3>];
-  let ReturnType = VectorType<HalfTy, 3>;
-}
-
-// Returns the dot product (a scalar value) of X and Y.
-def hlsl_dot : HLSLTwoArgBuiltin<"dot", "__builtin_hlsl_dot"> {
+// Computes the partial derivative with regard to the x screen space coordinate.
+def hlsl_ddx : HLSLBuiltin<"ddx"> {
   let Doc = [{
-\fn K dot(T X, T Y)
-\brief Return the dot product (a scalar value) of \a X and \a Y.
-\param X The X input value.
-\param Y The Y input value.
+\fn T ddx(T x)
+\brief Computes the partial derivative of the specified value with regard to
+the screen-space x-coordinate.
+\param x [in] The floating-point scalar or vector to process.
 }];
-  let ReturnType = VaryingElemType;
-  let VaryingTypes = NumericTypesNoDbl;
+  let DetailFunc = "ddx_impl";
+  let ParamNames = ["input"];
+  let Args = [Varying];
+  let ReturnType = Varying;
+  let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingScalar = 1;
+  let VaryingVecSizes = [2, 3, 4];
   let VaryingMatDims = [];
 }
 
-// double dot only has scalar overload (no vectors).
-def hlsl_dot_double : HLSLBuiltin<"dot", "__builtin_hlsl_dot"> {
+// Computes the partial derivative with regard to the y screen space coordinate.
+def hlsl_ddy : HLSLBuiltin<"ddy"> {
+  let Doc = [{
+\fn T ddy(T x)
+\brief Computes the partial derivative of the specified value with regard to
+the screen-space y-coordinate.
+\param x [in] The floating-point scalar or vector to process.
+}];
+  let DetailFunc = "ddy_impl";
+  let ParamNames = ["input"];
+  let Args = [Varying];
+  let ReturnType = Varying;
+  let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingScalar = 1;
+  let VaryingVecSizes = [2, 3, 4];
+  let VaryingMatDims = [];
+}
+
+// Returns a distance scalar between X and Y (scalar overloads).
+// Scalar distance is equivalent to abs(X - Y).
+def hlsl_distance : HLSLBuiltin<"distance"> {
+  let Doc = [{
+\fn K distance(T X, T Y)
+\brief Returns a distance scalar between \a X and \a Y.
+\param X The X input value.
+\param Y The Y input value.
+}];
+  let ParamNames = ["X", "Y"];
+  let Body = "return abs(X - Y);";
+  let Args = [Varying, Varying];
+  let ReturnType = Varying;
+  let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingScalar = 1;
+  let VaryingMatDims = [];
+}
+
+// Returns a distance scalar between X and Y (vector overloads).
+def hlsl_distance_vec : HLSLBuiltin<"distance"> {
+  let DetailFunc = "distance_vec_impl";
+  let ParamNames = ["X", "Y"];
   let Args = [Varying, Varying];
   let ReturnType = VaryingElemType;
-  let VaryingTypes = [DoubleTy];
-  let VaryingScalar = 1;
+  let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingVecSizes = [2, 3, 4];
+  let VaryingMatDims = [];
 }
 
 // Dot product of 2 half vectors plus a float scalar.
@@ -405,32 +450,214 @@ def hlsl_dot2add : HLSLBuiltin<"dot2add"> {
   let Availability = SM6_4;
 }
 
-// Blocks execution of all threads in a group until all group shared accesses
-// have been completed and all threads in the group have reached this call.
-def hlsl_group_memory_barrier_with_group_sync :
-    HLSLBuiltin<"GroupMemoryBarrierWithGroupSync",
-                "__builtin_hlsl_group_memory_barrier_with_group_sync"> {
+// Calculates a distance vector.
+def hlsl_dst : HLSLBuiltin<"dst"> {
   let Doc = [{
-\fn void GroupMemoryBarrierWithGroupSync(void)
-\brief Blocks execution of all threads in a group until all group shared
-accesses have been completed and all threads in the group have reached this
-call.
+\fn vector<T, 4> dst(vector<T, 4> Src0, vector<T, 4> Src1)
+\brief Calculates a distance vector.
+\param Src0 [in] Contains the squared distance.
+\param Src1 [in] Contains the reciprocal distance.
+
+Return the computed distance vector.
 }];
-  let IsConvergent = 1;
+  let ParamNames = ["Src0", "Src1"];
+  let Body = "return {1, Src0[1] * Src1[1], Src0[2], Src1[3]};";
+  let Args = [Varying, Varying];
+  let ReturnType = Varying;
+  let VaryingTypes = AllFloatTypes;
+  let VaryingVecSizes = [4];
+  let VaryingMatDims = [];
 }
 
-// Determines if the specified value x is infinite.
-def hlsl_isinf : HLSLOneArgBuiltin<"isinf", "__builtin_hlsl_elementwise_isinf"> {
+// Flips the surface-normal to face in a direction opposite to I.
+def hlsl_faceforward : HLSLBuiltin<"faceforward"> {
   let Doc = [{
-\fn T isinf(T x)
-\brief Determines if the specified value \a x is infinite.
-\param x The specified input value.
+\fn T faceforward(T N, T I, T Ng)
+\brief Flips the surface-normal (if needed) to face in a direction opposite
+to \a I. Returns the result in terms of \a N.
+\param N The resulting floating-point surface-normal vector.
+\param I A floating-point, incident vector that points from the view
+position to the shading position.
+\param Ng A floating-point surface-normal vector.
 
-Returns a value of the same size as the input, with a value set
-to True if the x parameter is +INF or -INF. Otherwise, False.
+Return a floating-point, surface normal vector that is facing the view
+direction.
 }];
-  let ReturnType = VaryingShape<BoolTy>;
+  let DetailFunc = "faceforward_impl";
+  let ParamNames = ["N", "I", "Ng"];
+  let Args = [Varying, Varying, Varying];
+  let ReturnType = Varying;
   let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingScalar = 1;
+  let VaryingVecSizes = [2, 3, 4];
+  let VaryingMatDims = [];
+}
+
+// Returns the floating-point remainder of x/y (scalar overloads).
+def hlsl_fmod : HLSLBuiltin<"fmod"> {
+  let Doc = [{
+\fn T fmod(T x, T y)
+\brief Returns the floating-point remainder of x/y.
+\param x [in] The dividend.
+\param y [in] The divisor.
+
+Return the floating-point remainder of the x parameter divided by the y
+parameter.
+}];
+  let DetailFunc = "fmod_impl";
+  let ParamNames = ["X", "Y"];
+  let Args = [Varying, Varying];
+  let ReturnType = Varying;
+  let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingScalar = 1;
+  let VaryingMatDims = [];
+}
+
+// Returns the floating-point remainder of x/y (vector overloads).
+def hlsl_fmod_vec : HLSLBuiltin<"fmod"> {
+  let DetailFunc = "fmod_vec_impl";
+  let ParamNames = ["X", "Y"];
+  let Args = [Varying, Varying];
+  let ReturnType = Varying;
+  let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingVecSizes = [2, 3, 4];
+  let VaryingMatDims = [];
+}
+
+// Computes the sum of the absolute values of the partial derivatives.
+def hlsl_fwidth : HLSLBuiltin<"fwidth"> {
+  let Doc = [{
+\fn T fwidth(T x)
+\brief Computes the sum of the absolute values of the partial derivatives
+with regard to the x and y screen space coordinates.
+\param x [in] The floating-point scalar or vector to process.
+}];
+  let DetailFunc = "fwidth_impl";
+  let ParamNames = ["input"];
+  let Args = [Varying];
+  let ReturnType = Varying;
+  let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingScalar = 1;
+  let VaryingVecSizes = [2, 3, 4];
+  let VaryingMatDims = [];
+}
+
+// Returns the result of multiplying the specified value by two raised
+// to the power of the specified exponent.
+def hlsl_ldexp : HLSLBuiltin<"ldexp"> {
+  let Doc = [{
+\fn T ldexp(T X, T Exp)
+\brief Returns the result of multiplying the specified value by two raised
+to the power of the specified exponent.
+\param X [in] The specified value.
+\param Exp [in] The specified exponent.
+
+This function uses the following formula: X * 2^Exp
+}];
+  // ldexp(X, Exp) = X * 2^Exp, implemented as exp2(Exp) * X.
+  let ParamNames = ["X", "Exp"];
+  let Body = "return exp2(Exp) * X;";
+  let Args = [Varying, Varying];
+  let ReturnType = Varying;
+  let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingScalar = 1;
+  let VaryingVecSizes = [2, 3, 4];
+  let VaryingMatDims = [];
+}
+
+// Returns the length of the specified floating-point vector (scalar overloads).
+// Scalar length is equivalent to abs(X).
+def hlsl_length : HLSLBuiltin<"length"> {
+  let Doc = [{
+\fn T length(T x)
+\brief Returns the length of the specified floating-point vector.
+\param x [in] The vector of floats, or a scalar float.
+
+Length is based on the following formula: sqrt(x[0]^2 + x[1]^2 + ...).
+}];
+  let ParamNames = ["X"];
+  let Body = "return abs(X);";
+  let Args = [Varying];
+  let ReturnType = Varying;
+  let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingScalar = 1;
+  let VaryingMatDims = [];
+}
+
+// Returns the length of the specified floating-point vector (vector overloads).
+def hlsl_length_vec : HLSLBuiltin<"length"> {
+  let DetailFunc = "length_vec_impl";
+  let ParamNames = ["X"];
+  let Args = [Varying];
+  let ReturnType = VaryingElemType;
+  let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingVecSizes = [2, 3, 4];
+  let VaryingMatDims = [];
+}
+
+// Returns a lighting coefficient vector.
+def hlsl_lit_half : HLSLBuiltin<"lit"> {
+  let Doc = [{
+\fn vector<T, 4> lit(T NDotL, T NDotH, T M)
+\brief Returns a lighting coefficient vector.
+\param NDotL The dot product of the normalized surface normal and the
+light vector.
+\param NDotH The dot product of the half-angle vector and the surface
+normal.
+\param M A specular exponent.
+
+This function returns a lighting coefficient vector (ambient, diffuse,
+specular, 1).
+}];
+  let DetailFunc = "lit_impl";
+  let ParamNames = ["NDotL", "NDotH", "M"];
+  let Args = [HalfTy, HalfTy, HalfTy];
+  let ReturnType = VectorType<HalfTy, 4>;
+}
+
+def hlsl_lit_float : HLSLBuiltin<"lit"> {
+  let DetailFunc = "lit_impl";
+  let ParamNames = ["NDotL", "NDotH", "M"];
+  let Args = [FloatTy, FloatTy, FloatTy];
+  let ReturnType = VectorType<FloatTy, 4>;
+}
+
+// Returns a reflection vector (scalar overloads).
+// Scalar reflect: V = I - 2 * N * I * N (dot product is just multiplication
+// for scalars).
+def hlsl_reflect : HLSLBuiltin<"reflect"> {
+  let Doc = [{
+\fn T reflect(T I, T N)
+\brief Returns a reflection using an incident ray, \a I, and a surface
+normal, \a N.
+\param I The incident ray.
+\param N The surface normal.
+
+The return value is a floating-point vector that represents the reflection
+of the incident ray, \a I, off a surface with the normal \a N.
+
+This function calculates the reflection vector using the following formula:
+V = I - 2 * N * dot(I N) .
+
+N must already be normalized in order to achieve the desired result.
+}];
+  let ParamNames = ["I", "N"];
+  let Body = "return I - 2 * N * I * N;";
+  let Args = [Varying, Varying];
+  let ReturnType = Varying;
+  let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingScalar = 1;
+  let VaryingMatDims = [];
+}
+
+// Returns a reflection vector (vector overloads).
+def hlsl_reflect_vec : HLSLBuiltin<"reflect"> {
+  let DetailFunc = "reflect_vec_impl";
+  let ParamNames = ["I", "N"];
+  let Args = [Varying, Varying];
+  let ReturnType = Varying;
+  let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingVecSizes = [2, 3, 4];
   let VaryingMatDims = [];
 }
 
@@ -473,3 +700,37 @@ Result type, the type of I, and the type of N must all be the same type.
   let VaryingMatDims = [];
 }
 
+
+// Returns a smooth Hermite interpolation between 0 and 1 (scalar overloads).
+def hlsl_smoothstep : HLSLBuiltin<"smoothstep"> {
+  let Doc = [{
+\fn T smoothstep(T Min, T Max, T X)
+\brief Returns a smooth Hermite interpolation between 0 and 1, if \a X is in
+the range [\a Min, \a Max].
+\param Min The minimum range of the x parameter.
+\param Max The maximum range of the x parameter.
+\param X The specified value to be interpolated.
+
+The return value is 0.0 if \a X <= \a Min and 1.0 if \a X >= \a Max. When \a
+Min < \a X < \a Max, the function performs smooth Hermite interpolation
+between 0 and 1.
+}];
+  let DetailFunc = "smoothstep_impl";
+  let ParamNames = ["Min", "Max", "X"];
+  let Args = [Varying, Varying, Varying];
+  let ReturnType = Varying;
+  let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingScalar = 1;
+  let VaryingMatDims = [];
+}
+
+// Returns a smooth Hermite interpolation between 0 and 1 (vector overloads).
+def hlsl_smoothstep_vec : HLSLBuiltin<"smoothstep"> {
+  let DetailFunc = "smoothstep_vec_impl";
+  let ParamNames = ["Min", "Max", "X"];
+  let Args = [Varying, Varying, Varying];
+  let ReturnType = Varying;
+  let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingVecSizes = [2, 3, 4];
+  let VaryingMatDims = [];
+}
