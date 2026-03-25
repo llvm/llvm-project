@@ -1091,9 +1091,10 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
   }
 
   // X * ldexp(1.0, Y) -> ldexp(X, Y)
-  if (I.hasAllowContract() &&
-      match(&I, m_c_FMul(m_Value(X), m_OneUse(m_Intrinsic<Intrinsic::ldexp>(
-                                         m_FPOne(), m_Value(Y))))))
+  if (match(&I, m_AllowContract(m_c_FMul(
+                    m_Value(X),
+                    m_AllowContract(m_OneUse(m_Intrinsic<Intrinsic::ldexp>(
+                        m_FPOne(), m_Value(Y))))))))
     return replaceInstUsesWith(
         I, Builder.CreateIntrinsic(Intrinsic::ldexp,
                                    {X->getType(), Y->getType()}, {X, Y}, &I));
