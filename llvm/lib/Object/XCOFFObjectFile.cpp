@@ -447,7 +447,10 @@ uint64_t XCOFFObjectFile::getSectionFileOffsetToRawData(DataRefImpl Sec) const {
 
 Expected<uintptr_t> XCOFFObjectFile::getSectionFileOffsetToRawData(
     XCOFF::SectionTypeFlags SectType) const {
-  DataRefImpl DRI = getSectionByType(SectType);
+  Expected<DataRefImpl> DRIOrErr = getSectionByType(SectType);
+  if (!DRIOrErr)
+    return DRIOrErr.takeError();
+  DataRefImpl DRI = *DRIOrErr;
 
   if (DRI.p == 0) // No section is not an error.
     return 0;
@@ -808,19 +811,25 @@ Expected<DataRefImpl> XCOFFObjectFile::getSectionByNum(int16_t Num) const {
 }
 
 DataRefImpl
+Expected<DataRefImpl>
 XCOFFObjectFile::getSectionByType(XCOFF::SectionTypeFlags SectType) const {
-  DataRefImpl DRI;
-  auto GetSectionAddr = [&](const auto &Sections) -> uintptr_t {
-    for (const auto &Sec : Sections)
-      if (Sec.getSectionType() == SectType)
-        return reinterpret_cast<uintptr_t>(&Sec);
-    return uintptr_t(0);
+  DataRefImpl Result;
+  Result.p = 0;
+  auto FindSection = [&](const auto &Sections) -> Error {
+    for (const auto &Sec : Sections) {
+      if (Sec.getSectionType() == SectType) {
+        if (Result.p != 0)
+          return createStringError(
+              "multiple XCOFF sections have type flag 0x" +
+              Twine::utohexstr(SectType));
+        Result.p = reinterpret_cast<uintptr_t>(&Sec);
+      }
+    }
+    return Error::success();
   };
-  if (is64Bit())
-    DRI.p = GetSectionAddr(sections64());
-  else
-    DRI.p = GetSectionAddr(sections32());
-  return DRI;
+  if (Error E = is64Bit() ? FindSection(sections64()) : FindSection(sections32()))
+    return std::move(E);
+  return Result;
 }
 
 Expected<StringRef>
@@ -1055,7 +1064,10 @@ Expected<ArrayRef<ExceptEnt>> XCOFFObjectFile::getExceptionEntries() const {
   if (!ExceptionSectOrErr)
     return ExceptionSectOrErr.takeError();
 
-  DataRefImpl DRI = getSectionByType(XCOFF::STYP_EXCEPT);
+  Expected<DataRefImpl> DRIOrErr = getSectionByType(XCOFF::STYP_EXCEPT);
+  if (!DRIOrErr)
+    return DRIOrErr.takeError();
+  DataRefImpl DRI = *DRIOrErr;
   if (DRI.p == 0)
     return ArrayRef<ExceptEnt>();
 

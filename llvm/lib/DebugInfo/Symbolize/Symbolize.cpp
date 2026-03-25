@@ -72,24 +72,20 @@ LLVMSymbolizer::getXCOFFSectionAddress(StringRef ModulePath,
     return createStringError(
         "section type syntax is only supported for XCOFF objects");
 
-  std::optional<uint64_t> SectionBase;
-  for (const object::SectionRef &Section : XCOFFObj->sections()) {
-    DataRefImpl SecRef = Section.getRawDataRefImpl();
-    int32_t Flags = XCOFFObj->getSectionFlags(SecRef);
-    if ((Flags & XCOFFSectionHeader32::SectionFlagsTypeMask) != SectionTypeFlag)
-      continue;
-    if (SectionBase)
-      return createStringError("multiple '" + SectionTypeName +
-                               "' sections found in XCOFF object");
-    SectionBase = Section.getAddress();
+  Expected<DataRefImpl> DRIOrErr = XCOFFObj->getSectionByType(SectionTypeFlag);
+  if (!DRIOrErr) {
+    consumeError(DRIOrErr.takeError());
+    return createStringError("multiple '" + SectionTypeName +
+                             "' sections found in XCOFF object");
   }
-
-  if (!SectionBase)
+  DataRefImpl DRI = *DRIOrErr;
+  if (DRI.p == 0)
     return createStringError("no '" + SectionTypeName +
                              "' section found in XCOFF object");
 
-  FlagMap[SectionTypeFlag] = *SectionBase;
-  return *SectionBase;
+  uint64_t SectionBase = SectionRef(DRI, XCOFFObj).getAddress();
+  FlagMap[SectionTypeFlag] = SectionBase;
+  return SectionBase;
 }
 
 template <typename T>

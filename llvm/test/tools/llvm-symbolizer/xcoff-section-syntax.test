@@ -73,13 +73,14 @@
 
 # INVALID-OFFSET-NONHEX: error: '(TEXT)(+0xdefg)': invalid offset "+0xdefg" in section-relative address
 
-## Test that a leading-zero value (0123) is treated as octal (decimal 83) by
-## getAsInteger(0,...), not as decimal 123. The resolved address TEXT_BASE +
-## 83 = 0x153 has no symbol, so the output shows "??".
-# RUN: llvm-symbolizer --obj=%t.xcoff '(TEXT)(+0123)' | \
+## Test that a leading-zero value is treated as octal by getAsInteger(0,...).
+## +010 is octal 8, so TEXT_BASE(0x100) + 8 = 0x108 = .bar.
+## If +010 were parsed as decimal 10 instead, the address would be 0x10a,
+## which has no symbol (output would be "??").
+# RUN: llvm-symbolizer --obj=%t.xcoff '(TEXT)(+010)' | \
 # RUN:   FileCheck %s --check-prefix=OCTAL
 
-# OCTAL: ??
+# OCTAL: .bar
 
 ## Test invalid offset value.
 # RUN: llvm-symbolizer --obj=%t.xcoff '(TEXT)(+xyz)' 2>&1 | \
@@ -119,7 +120,7 @@ Sections:
   - Name:    .text
     Address: 0x100
     Flags:   [ STYP_TEXT ]
-    SectionData: "4E800020"
+    SectionData: "4E8000204E8000200000002A"
   - Name:    .data
     Address: 0x200
     Flags:   [ STYP_DATA ]
@@ -130,6 +131,16 @@ Sections:
 Symbols:
   - Name:            .foo
     Value:           0x100
+    Section:         .text
+    StorageClass:    C_EXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:                 AUX_CSECT
+        SymbolType:           XTY_SD
+        StorageMappingClass:  XMC_PR
+        SectionOrLength:      4
+  - Name:            .bar
+    Value:           0x108
     Section:         .text
     StorageClass:    C_EXT
     NumberOfAuxEntries: 1

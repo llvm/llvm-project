@@ -556,7 +556,7 @@ private:
   uintptr_t getSectionHeaderTableAddress() const;
   uintptr_t getEndOfSymbolTableAddress() const;
 
-  DataRefImpl getSectionByType(XCOFF::SectionTypeFlags SectType) const;
+  Expected<DataRefImpl> getSectionByType(XCOFF::SectionTypeFlags SectType) const;
   uint64_t getSectionFileOffsetToRawData(DataRefImpl Sec) const;
 
   // This returns a pointer to the start of the storage for the name field of

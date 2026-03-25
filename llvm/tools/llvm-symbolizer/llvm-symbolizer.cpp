@@ -195,13 +195,55 @@ resolveXCOFFSectionAddress(StringRef ModulePath, StringRef SectionType,
   return *SectionBaseOrErr + Offset;
 }
 
+// Parses (SECTION_TYPE)(+offset) syntax from AddrSpec.
+// Returns true (with SectionType and Offset set) if the syntax matches and is
+// valid; returns false if AddrSpec does not start with this syntax;
+// returns an error if the syntax is recognized but invalid.
+static Expected<bool>
+tryParseSectionRelativeAddress(StringRef AddrSpec, StringRef &SectionType,
+                               uint64_t &Offset) {
+  if (!AddrSpec.starts_with("("))
+    return false;
+
+  size_t FirstOpen = 0;
+  size_t FirstClose = AddrSpec.find(')');
+  if (FirstClose == StringRef::npos || FirstClose + 1 >= AddrSpec.size() ||
+      AddrSpec[FirstClose + 1] != '(')
+    return false;
+
+  size_t SecondOpen = FirstClose + 1;
+  size_t SecondClose = AddrSpec.find(')', SecondOpen);
+  if (SecondClose == StringRef::npos)
+    return false;
+
+  // Matched (X)(Y) pattern — now validate the contents.
+  SectionType = AddrSpec.substr(FirstOpen + 1, FirstClose - FirstOpen - 1);
+  if (SectionType.empty())
+    return makeStringError(
+        "unknown or unsupported section type \"\" in section-relative address");
+
+  StringRef OffsetStr =
+      AddrSpec.substr(SecondOpen + 1, SecondClose - SecondOpen - 1);
+  if (!OffsetStr.starts_with("+"))
+    return makeStringError("section-relative offset \"" + OffsetStr +
+                           "\" must start with '+'");
+
+  StringRef OffsetValue = OffsetStr.drop_front(1);
+  // Parse the offset value; auto-detect base (0x prefix = hex, 0 prefix =
+  // octal, otherwise decimal).
+  if (OffsetValue.getAsInteger(0, Offset))
+    return makeStringError("invalid offset \"" + OffsetStr +
+                           "\" in section-relative address");
+
+  return true;
+}
+
 static Error parseCommand(StringRef BinaryName, bool IsAddr2Line,
                           StringRef InputString, Command &Cmd,
                           std::string &ModuleName, object::BuildID &BuildID,
                           StringRef &Symbol, uint64_t &Offset,
                           StringRef &SectionType) {
   ModuleName = BinaryName;
-  SectionType = StringRef();
   if (InputString.consume_front("CODE ")) {
     Cmd = Command::Code;
   } else if (InputString.consume_front("DATA ")) {
@@ -265,8 +307,9 @@ static Error parseCommand(StringRef BinaryName, bool IsAddr2Line,
       return makeStringError("no input filename has been specified");
   }
 
-  // Parse address specification, which can be an offset in module or a
-  // symbol with optional offset.
+  // Parse address specification, which may be a section-relative address of
+  // the form (SECTION_TYPE)(+offset), a numeric module offset, or a symbol
+  // name with an optional offset.
   InputString = InputString.trim();
   if (InputString.empty())
     return makeStringError("no module offset has been specified");
@@ -275,59 +318,33 @@ static Error parseCommand(StringRef BinaryName, bool IsAddr2Line,
   // is consistent with GNU addr2line.
   int AddrSpecLength = InputString.find_first_of(" \n\r");
   StringRef AddrSpec = InputString.substr(0, AddrSpecLength);
+
+  // Check for section-relative address syntax: (SECTION_TYPE)(+offset).
+  Expected<bool> IsSectionRelOrErr =
+      tryParseSectionRelativeAddress(AddrSpec, SectionType, Offset);
+  if (!IsSectionRelOrErr)
+    return IsSectionRelOrErr.takeError();
+  if (*IsSectionRelOrErr) {
+    Symbol = StringRef();
+    return Error::success();
+  }
+
   bool StartsWithDigit = std::isdigit(AddrSpec.front());
 
+  // FIXME: This assumes that what follows will exclusively be interpreted as a
+  // hexadecimal value, and therefore contributes to an existing bug where
+  // +0xfunc_01 is interpreted as symbol name func_01 by llvm-addr2line.
   // GNU addr2line assumes the address is hexadecimal and allows a redundant
-  // "0x", "0X" prefix or an optional `+` sign; do the same for
-  // compatibility.
+  // "0x", "0X" prefix or an optional `+` sign; do the same for compatibility.
   if (IsAddr2Line) {
     AddrSpec.consume_front_insensitive("0x") ||
         AddrSpec.consume_front_insensitive("+0x");
-  }
-
-  // Check for section-relative address syntax: (SECTION_TYPE)(+offset)
-  if (AddrSpec.starts_with("(")) {
-    size_t FirstClose = AddrSpec.find(')');
-    if (FirstClose != StringRef::npos && FirstClose + 1 < AddrSpec.size() &&
-        AddrSpec[FirstClose + 1] == '(') {
-      size_t SecondOpen = FirstClose + 1;
-      size_t SecondClose = AddrSpec.find(')', SecondOpen);
-      if (SecondClose != StringRef::npos) {
-        // Extract section type from first parentheses.
-        SectionType = AddrSpec.substr(1, FirstClose - 1);
-
-        if (SectionType.empty())
-          return makeStringError(
-              "unknown or unsupported section type \"\" in section-relative "
-              "address");
-
-        // Extract offset string from second parentheses.
-        StringRef OffsetStr =
-            AddrSpec.substr(SecondOpen + 1, SecondClose - SecondOpen - 1);
-
-        // The offset must start with '+'.
-        if (!OffsetStr.starts_with("+"))
-          return makeStringError("section-relative offset \"" + OffsetStr +
-                                 "\" must start with '+'");
-
-        StringRef OffsetValue = OffsetStr.drop_front(1);
-        // Parse the offset value; auto-detect base (0x prefix = hex,
-        // otherwise decimal).
-        if (OffsetValue.getAsInteger(0, Offset))
-          return makeStringError("invalid offset \"" + OffsetStr +
-                                 "\" in section-relative address");
-
-        Symbol = StringRef();
-        return Error::success();
-      }
-    }
   }
 
   // If address specification is a number, treat it as a module offset.
   if (!AddrSpec.getAsInteger(IsAddr2Line ? 16 : 0, Offset)) {
     // Module offset is an address.
     Symbol = StringRef();
-    SectionType = StringRef();
     return Error::success();
   }
 
@@ -339,7 +356,6 @@ static Error parseCommand(StringRef BinaryName, bool IsAddr2Line,
   // Otherwise it is a symbol name, potentially with an offset.
   Symbol = AddrSpec;
   Offset = 0;
-  SectionType = StringRef();
 
   // If the address specification contains '+', try treating it as
   // "symbol + offset".
