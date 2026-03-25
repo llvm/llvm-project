@@ -810,7 +810,6 @@ Expected<DataRefImpl> XCOFFObjectFile::getSectionByNum(int16_t Num) const {
   return DRI;
 }
 
-DataRefImpl
 Expected<DataRefImpl>
 XCOFFObjectFile::getSectionByType(XCOFF::SectionTypeFlags SectType) const {
   DataRefImpl Result;
