@@ -5048,12 +5048,13 @@ struct DropUnitExtentBasis
     auto getZero = [&]() -> Value {
       if (!zero) {
         Value scalarZero = arith::ConstantIndexOp::create(rewriter, loc, 0);
-        if (auto vecTy = dyn_cast<VectorType>(indexType))
+        if (auto vecTy = dyn_cast<VectorType>(indexType)) {
           zero = arith::ConstantOp::create(
               rewriter, loc,
               DenseElementsAttr::get(vecTy, rewriter.getIndexAttr(0)));
-        else
+        } else {
           zero = scalarZero;
+        }
       }
       return zero.value();
     };
