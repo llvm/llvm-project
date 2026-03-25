@@ -38,15 +38,15 @@ struct dnorm2 {
 };
 
 void __compiler_rt_dnorm2(struct dnorm2 *values) {
-  values->a &= ~0xFFF0000000000000;
-  values->b &= ~0xFFF0000000000000;
+  values->a &= ~0xFFF0000000000000ull;
+  values->b &= ~0xFFF0000000000000ull;
 
   if (values->expa == 0) {
     unsigned shift = __builtin_clzll(values->a) - 11;
     values->a <<= shift;
     values->expa = 1 - shift;
   } else {
-    values->a |= 0x0010000000000000;
+    values->a |= 0x0010000000000000ull;
   }
 
   if (values->expb == 0) {
@@ -54,6 +54,6 @@ void __compiler_rt_dnorm2(struct dnorm2 *values) {
     values->b <<= shift;
     values->expb = 1 - shift;
   } else {
-    values->b |= 0x0010000000000000;
+    values->b |= 0x0010000000000000ull;
   }
 }

@@ -25,7 +25,7 @@
 
 #include <stdint.h>
 
-#define SIGNBIT 0x8000000000000000
+#define SIGNBIT 0x8000000000000000ull
 #define MANTSIZE 52
 #define BIAS 0x600
 
@@ -50,7 +50,7 @@ uint64_t __compiler_rt_dunder(uint64_t x, uint32_t errsign) {
   }
 
   // Make the full mantissa (with leading bit) at the top of the word.
-  uint64_t mantissa = 0x8000000000000000 | (x << 11);
+  uint64_t mantissa = 0x8000000000000000ull | (x << 11);
   // Adjust by 1 depending on the sign of the error.
   mantissa -= errsign >> 31;
   mantissa += (-errsign) >> 31;
