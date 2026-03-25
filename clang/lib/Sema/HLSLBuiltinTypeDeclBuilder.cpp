@@ -251,7 +251,8 @@ public:
   setCounterHandleFieldOnResource(ResourceT ResourceRecord, ValueT HandleValue);
   template <typename T> BuiltinTypeMethodBuilder &returnValue(T ReturnValue);
   BuiltinTypeMethodBuilder &returnThis();
-  BuiltinTypeDeclBuilder &finalize();
+  BuiltinTypeDeclBuilder &
+  finalize(AccessSpecifier Access = AccessSpecifier::AS_public);
   Expr *getResourceHandleExpr();
   Expr *getResourceCounterHandleExpr();
 
@@ -898,7 +899,8 @@ BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::returnValue(T ReturnValue) {
   return *this;
 }
 
-BuiltinTypeDeclBuilder &BuiltinTypeMethodBuilder::finalize() {
+BuiltinTypeDeclBuilder &
+BuiltinTypeMethodBuilder::finalize(AccessSpecifier Access) {
   assert(!DeclBuilder.Record->isCompleteDefinition() &&
          "record is already complete");
 
@@ -925,7 +927,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeMethodBuilder::finalize() {
     Method->setBody(CompoundStmt::Create(AST, StmtsList, FPOptionsOverride(),
                                          SourceLocation(), SourceLocation()));
     Method->setLexicalDeclContext(DeclBuilder.Record);
-    Method->setAccess(AS_public);
+    Method->setAccess(Access);
     Method->setImplicitlyInline();
     Method->addAttr(AlwaysInlineAttr::CreateImplicit(
         AST, SourceRange(), AlwaysInlineAttr::CXX11_clang_always_inline));
@@ -1054,6 +1056,19 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addSamplerHandle() {
 }
 
 BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addFriend(CXXRecordDecl *Friend) {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+  ASTContext &AST = SemaRef.getASTContext();
+  QualType FriendTy = AST.getCanonicalTagType(Friend);
+  TypeSourceInfo *TSI = AST.getTrivialTypeSourceInfo(FriendTy);
+  FriendDecl *FD =
+      FriendDecl::Create(AST, Record, SourceLocation(), TSI, SourceLocation());
+  FD->setAccess(AS_public);
+  Record->addDecl(FD);
+  return *this;
+}
+
+BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addPrivateNestedRecord(StringRef Name,
                                                CXXRecordDecl *&NestedRecord) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
@@ -1119,7 +1134,8 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addResourceMember(
 
 // Adds default constructor to the resource class:
 // Resource::Resource()
-BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDefaultHandleConstructor() {
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addDefaultHandleConstructor(AccessSpecifier Access) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
 
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
@@ -1129,7 +1145,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDefaultHandleConstructor() {
       .callBuiltin("__builtin_hlsl_resource_uninitializedhandle", HandleType,
                    PH::Handle)
       .assign(PH::Handle, PH::LastStmt)
-      .finalize();
+      .finalize(Access);
 }
 
 BuiltinTypeDeclBuilder &
@@ -1316,7 +1332,8 @@ BuiltinTypeDeclBuilder::addCreateFromImplicitBindingWithImplicitCounter() {
       .finalize();
 }
 
-BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCopyConstructor() {
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addCopyConstructor(AccessSpecifier Access) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
 
   ASTContext &AST = SemaRef.getASTContext();
@@ -1335,10 +1352,11 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCopyConstructor() {
         .setFieldOnResource(PH::This, PH::LastStmt, Field);
   }
 
-  return MMB.finalize();
+  return MMB.finalize(Access);
 }
 
-BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCopyAssignmentOperator() {
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addCopyAssignmentOperator(AccessSpecifier Access) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
 
   ASTContext &AST = SemaRef.getASTContext();
@@ -1357,7 +1375,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCopyAssignmentOperator() {
         .setFieldOnResource(PH::This, PH::LastStmt, Field);
   }
 
-  return MMB.returnThis().finalize();
+  return MMB.returnThis().finalize(Access);
 }
 
 BuiltinTypeDeclBuilder &
@@ -1413,15 +1431,16 @@ CXXRecordDecl *BuiltinTypeDeclBuilder::addMipsSliceType(ResourceDimension Dim,
   CXXRecordDecl *MipSliceRecord = nullptr;
   addPrivateNestedRecord("mips_slice_type", MipSliceRecord);
   BuiltinTypeDeclBuilder MipSliceBuilder(SemaRef, MipSliceRecord);
+  MipSliceBuilder.addFriend(Record);
   MipSliceBuilder.addHandleMember(getResourceAttrs().ResourceClass, Dim,
                                   getResourceAttrs().IsROV, false, ReturnType,
                                   AccessSpecifier::AS_public);
   MipSliceBuilder.addMemberVariable("__level", IntTy, {},
                                     AccessSpecifier::AS_public);
 
-  MipSliceBuilder.addDefaultHandleConstructor()
-      .addCopyConstructor()
-      .addCopyAssignmentOperator();
+  MipSliceBuilder.addDefaultHandleConstructor(AccessSpecifier::AS_protected)
+      .addCopyConstructor(AccessSpecifier::AS_protected)
+      .addCopyAssignmentOperator(AccessSpecifier::AS_protected);
 
   FieldDecl *LevelField = MipSliceBuilder.Fields["__level"];
   assert(LevelField && "Could not find the level field.\n");
@@ -1458,17 +1477,16 @@ CXXRecordDecl *BuiltinTypeDeclBuilder::addMipsType(ResourceDimension Dim,
   CXXRecordDecl *MipRecord = nullptr;
   addPrivateNestedRecord("mips_type", MipRecord);
   BuiltinTypeDeclBuilder MipBuilder(SemaRef, MipRecord);
+  MipBuilder.addFriend(Record);
   MipBuilder.addHandleMember(getResourceAttrs().ResourceClass, Dim,
                              getResourceAttrs().IsROV, false, ReturnType,
                              AccessSpecifier::AS_public);
 
-  MipBuilder.addDefaultHandleConstructor()
-      .addCopyConstructor()
-      .addCopyAssignmentOperator();
+  MipBuilder.addDefaultHandleConstructor(AccessSpecifier::AS_protected)
+      .addCopyConstructor(AccessSpecifier::AS_protected)
+      .addCopyAssignmentOperator(AccessSpecifier::AS_protected);
 
-  QualType MipSliceTy = AST.getTagType(
-      ElaboratedTypeKeyword::None,
-      NestedNameSpecifierLoc().getNestedNameSpecifier(), MipSliceRecord, false);
+  QualType MipSliceTy = AST.getCanonicalTagType(MipSliceRecord);
 
   DeclarationName SubscriptName =
       AST.DeclarationNames.getCXXOperatorName(OO_Subscript);
@@ -1510,9 +1528,7 @@ BuiltinTypeDeclBuilder::addMipsMember(ResourceDimension Dim) {
   CXXRecordDecl *MipRecord = addMipsType(Dim, ReturnType);
 
   // Add the mips field to the texture
-  QualType MipTy = AST.getTagType(
-      ElaboratedTypeKeyword::None,
-      NestedNameSpecifierLoc().getNestedNameSpecifier(), MipRecord, false);
+  QualType MipTy = AST.getCanonicalTagType(MipRecord);
   addMemberVariable("mips", MipTy, {}, AccessSpecifier::AS_public);
 
   return *this;

@@ -87,9 +87,12 @@ public:
       ResourceDimension Dim = ResourceDimension::Unknown);
 
   // Builtin types constructors
-  BuiltinTypeDeclBuilder &addDefaultHandleConstructor();
-  BuiltinTypeDeclBuilder &addCopyConstructor();
-  BuiltinTypeDeclBuilder &addCopyAssignmentOperator();
+  BuiltinTypeDeclBuilder &addDefaultHandleConstructor(
+      AccessSpecifier Access = AccessSpecifier::AS_public);
+  BuiltinTypeDeclBuilder &
+  addCopyConstructor(AccessSpecifier Access = AccessSpecifier::AS_public);
+  BuiltinTypeDeclBuilder &addCopyAssignmentOperator(
+      AccessSpecifier Access = AccessSpecifier::AS_public);
 
   // Static create methods
   BuiltinTypeDeclBuilder &addStaticInitializationFunctions(bool HasCounter);
@@ -134,6 +137,7 @@ private:
                     ResourceDimension RD, bool IsROV, bool RawBuffer,
                     bool IsCounter, QualType ElementTy,
                     AccessSpecifier Access = AccessSpecifier::AS_private);
+  BuiltinTypeDeclBuilder &addFriend(CXXRecordDecl *Friend);
   BuiltinTypeDeclBuilder &addPrivateNestedRecord(StringRef Name,
                                                  CXXRecordDecl *&NestedRecord);
   CXXRecordDecl *addMipsSliceType(ResourceDimension Dim, QualType ReturnType);

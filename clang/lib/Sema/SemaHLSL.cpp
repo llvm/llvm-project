@@ -5132,45 +5132,7 @@ void SemaHLSL::handleGlobalStructOrArrayOfWithResources(VarDecl *VD) {
   }
 }
 
-bool SemaHLSL::CheckForMipsIntermediateType(QualType T, SourceLocation Loc) {
-  const auto *RT = T->getAs<RecordType>();
-  if (!RT)
-    return false;
-
-  const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(RT->getDecl());
-  if (!RD || !RD->isImplicit())
-    return false;
-
-  const DeclContext *DC = RD->getDeclContext();
-  const auto *ParentRD = dyn_cast<CXXRecordDecl>(DC);
-  if (!ParentRD)
-    return false;
-
-  const DeclContext *ParentDC = ParentRD->getDeclContext();
-  QualType ParentTy =
-      SemaRef.getASTContext().getTypeDeclType(cast<TypeDecl>(ParentRD));
-  if (!ParentTy->isHLSLResourceRecord()) {
-    return false;
-  }
-
-  if (!ParentDC->isNamespace() &&
-      cast<NamespaceDecl>(ParentDC)->getName() != "hlsl")
-    return false;
-
-  if (RD->getIdentifier() &&
-      (RD->getName() == "mips_type" || RD->getName() == "mips_slice_type")) {
-    SemaRef.Diag(Loc, diag::err_hlsl_intermediate_type_variable) << T;
-    return true;
-  }
-  return false;
-}
-
 void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
-  if (CheckForMipsIntermediateType(VD->getType(), VD->getLocation())) {
-    VD->setInvalidDecl();
-    return;
-  }
-
   if (VD->hasGlobalStorage()) {
     // make sure the declaration has a complete type
     if (SemaRef.RequireCompleteType(
@@ -6125,11 +6087,6 @@ bool SemaHLSL::handleInitialization(VarDecl *VDecl, Expr *&Init) {
   // If initializing a local resource, track the resource binding it is using
   if (VDecl->getType()->isHLSLResourceRecord() && !VDecl->hasGlobalStorage())
     trackLocalResource(VDecl, Init);
-
-  if (CheckForMipsIntermediateType(VDecl->getType(), VDecl->getLocation())) {
-    VDecl->setInvalidDecl();
-    return false;
-  }
 
   const HLSLVkConstantIdAttr *ConstIdAttr =
       VDecl->getAttr<HLSLVkConstantIdAttr>();

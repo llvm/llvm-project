@@ -219,7 +219,6 @@ public:
 
   bool transformInitList(const InitializedEntity &Entity, InitListExpr *Init);
   bool handleInitialization(VarDecl *VDecl, Expr *&Init);
-  bool CheckForMipsIntermediateType(QualType T, SourceLocation Loc);
   void deduceAddressSpace(VarDecl *Decl);
   QualType checkMatrixComponent(Sema &S, QualType baseType, ExprValueKind &VK,
                                 SourceLocation OpLoc,

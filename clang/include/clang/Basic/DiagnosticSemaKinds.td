@@ -13672,9 +13672,6 @@ def warn_hlsl_assigning_local_resource_is_not_unique
     : Warning<"assignment of %0 to local resource %1 is not to the same "
               "unique global resource">,
       InGroup<HLSLExplicitBinding>;
-def err_hlsl_intermediate_type_variable : Error<
-  "intermediate helper type %0 cannot be used as a variable">;
-
 def err_hlsl_push_constant_unique
     : Error<"cannot have more than one push constant block">;
 def err_hlsl_samplecmp_requires_float
