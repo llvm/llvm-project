@@ -2036,7 +2036,6 @@ static std::optional<clang::APValue> MakeAPValue(const clang::ASTContext &ast,
       "error: unsupported template value type in die {0:x16}, "
       "please file a bug",
       die.GetOffset());
-  lldbassert(false && "Unsupported type for non-type template parameter");
 
   return std::nullopt;
 }
