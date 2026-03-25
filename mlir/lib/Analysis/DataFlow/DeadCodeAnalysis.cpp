@@ -249,6 +249,7 @@ void DeadCodeAnalysis::initializeSymbolCallables(Operation *top) {
 static bool isRegionOrCallableReturn(Operation *op) {
   return op->getBlock() != nullptr && !op->getNumSuccessors() &&
          isa<RegionBranchOpInterface, CallableOpInterface>(op->getParentOp()) &&
+         op->getBlock()->mightHaveTerminator() &&
          op->getBlock()->getTerminator() == op;
 }
 
