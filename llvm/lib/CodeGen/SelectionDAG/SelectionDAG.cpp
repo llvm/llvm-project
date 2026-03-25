@@ -4711,8 +4711,7 @@ ConstantRange SelectionDAG::computeConstantRangeIncludingKnownBits(
   return CR1.intersectWith(CR2, RangeType);
 }
 
-bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val,
-                                          bool OrZero,
+bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val, bool OrZero,
                                           unsigned Depth) const {
   EVT VT = Val.getValueType();
 
