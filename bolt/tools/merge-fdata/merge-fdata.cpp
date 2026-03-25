@@ -316,8 +316,12 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
       Profile = &Profiles[tid];
     }
 
-    do {
-      StringRef Line(FdataLine);
+    std::string CurrentLine;
+    bool IsLastLine = false;
+    while (!IsLastLine) {
+      std::swap(CurrentLine, FdataLine);
+      IsLastLine = !std::getline(FdataFile, FdataLine);
+      StringRef Line(CurrentLine);
       Line = Line.rtrim();
       if (Line.empty())
         continue;
@@ -327,22 +331,26 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
         report_error(Filename, "Malformed / corrupted entry type");
       bool IsBranchEntry = Type < 3;
 
-      // Validate the number of fields in the line. Count only unescaped spaces
-      // as field separators, since function names may contain escaped spaces,
-      // like "foo\ bar".
-      size_t NumFields = 1;
-      for (size_t I = 0; I < Line.size(); ++I) {
-        if (Line[I] == '\\')
-          ++I;
-        else if (Line[I] == ' ')
-          ++NumFields;
-      }
-      size_t ExpectedFields =
-          IsBranchEntry ? (NoLBRCollection.value_or(false) ? 4 : 8) : 7;
-      if (NumFields != ExpectedFields) {
-        errs() << "WARNING: " << Filename << ": ignoring malformed entry with "
-               << NumFields << " fields (expected " << ExpectedFields << ")\n";
-        continue;
+      // Only validate the field count for the last line in the file,
+      // since truncation from unexpected exit only affects the file tail.
+      if (IsLastLine) {
+        // Count only unescaped spaces as field separators, since function
+        // names may contain escaped spaces, like "foo\ bar".
+        size_t NumFields = 1;
+        for (size_t I = 0; I < Line.size(); ++I) {
+          if (Line[I] == '\\')
+            ++I;
+          else if (Line[I] == ' ')
+            ++NumFields;
+        }
+        size_t ExpectedFields =
+            IsBranchEntry ? (NoLBRCollection.value_or(false) ? 4 : 8) : 7;
+        if (NumFields != ExpectedFields) {
+          errs() << "WARNING: " << Filename
+                 << ": ignoring malformed entry with " << NumFields
+                 << " fields (expected " << ExpectedFields << ")\n";
+          continue;
+        }
       }
 
       auto [Signature, ExecCount] = Line.rsplit(' ');
@@ -358,7 +366,7 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
 
       auto &ProfileMap = IsBranchEntry ? Profile->Branch : Profile->Memory;
       ProfileMap[Signature] += Count;
-    } while (std::getline(FdataFile, FdataLine));
+    }
   };
 
   // The final reduction has non-trivial cost, make sure each thread has at
