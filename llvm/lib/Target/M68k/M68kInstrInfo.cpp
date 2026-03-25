@@ -583,8 +583,7 @@ bool M68kInstrInfo::ExpandCCR(MachineInstrBuilder &MIB, bool IsToCCR) const {
   // Replace the pseudo instruction with the real one
   if (IsToCCR)
     MIB->setDesc(get(M68k::MOV16cd));
-  else if (MIB->getParent()
-               ->getParent()
+  else if (MIB->getMF()
                ->getSubtarget<M68kSubtarget>()
                .atLeastM68010())
     MIB->setDesc(get(M68k::MOV16dc));
