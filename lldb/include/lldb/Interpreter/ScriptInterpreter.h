@@ -146,6 +146,67 @@ private:
   bool m_disconnect;
 };
 
+/// Plugin interface for integrating scripting language interpreters into LLDB.
+///
+/// ScriptInterpreter plugins enable LLDB to be extended and automated using
+/// scripting languages such as Python and Lua. These plugins provide a bridge
+/// between LLDB's internal C++ API and external scripting languages, allowing
+/// users to write custom commands, data formatters, breakpoint callbacks, and
+/// more in their preferred scripting language.
+///
+/// What ScriptInterpreter Plugins Do:
+/// - Execute script code (single lines, multi-line blocks, or complete files)
+/// - Provide script-based implementations of LLDB extension points:
+///   * Custom commands (CommandObjectScript)
+///   * Type summaries and synthetic children (data formatters)
+///   * Breakpoint and watchpoint callbacks
+///   * Operating system plugins
+///   * Scripted processes, threads, and platforms
+///   * Frame recognizers
+///   * Thread plans
+/// - Expose LLDB's SB API to the scripting language
+/// - Support interactive interpreter loops for direct script execution
+/// - Handle type conversions between LLDB C++ types and script objects
+///
+/// How LLDB Uses ScriptInterpreters:
+/// Each Debugger instance has an associated ScriptInterpreter for the configured
+/// scripting language (typically Python, but can be Lua or others). The interpreter
+/// is created on-demand when first accessed. LLDB invokes the script interpreter
+/// whenever:
+/// - Users run the "script" command to execute code interactively
+/// - Script-based commands, formatters, or callbacks need to be executed
+/// - Scripts are loaded via "command script import" or similar commands
+/// - Breakpoints with scripted conditions or callbacks are evaluated
+///
+/// The ScriptInterpreter maintains the global script context and manages the
+/// lifetime of script objects that implement LLDB functionality. It also handles
+/// I/O redirection to ensure script output appears in the appropriate LLDB
+/// streams.
+///
+/// Key Methods Subclasses Must Implement:
+/// - ExecuteOneLine(): Execute a single line of script code
+/// - ExecuteInterpreterLoop(): Run an interactive interpreter session
+/// - ExecuteMultipleLines(): Execute a multi-line script block
+/// - LoadScriptingModule(): Load a script file or module
+/// - Generate*(): Methods to create script function wrappers for various
+///   extension points (breakpoint callbacks, type scripts, etc.)
+/// - Create*(): Factory methods for script-based objects (synthetic providers,
+///   commands, etc.)
+/// - Run*(): Methods to invoke script callbacks (formatted summaries, commands,
+///   etc.)
+///
+/// Implementation Considerations:
+/// - Thread safety: Multiple threads may access the interpreter simultaneously;
+///   use AcquireInterpreterLock() to synchronize access to the interpreter state
+/// - Memory management: Ensure proper reference counting/garbage collection
+///   between LLDB objects and script objects
+/// - Error handling: Script errors should be reported clearly without crashing
+///   the debugger
+/// - Performance: Minimize overhead when calling between C++ and script code
+/// - API exposure: Provide comprehensive access to LLDB functionality via the
+///   SB API layer
+/// - I/O redirection: Properly route script output through LLDB's stream
+///   infrastructure using ScriptInterpreterIORedirect
 class ScriptInterpreter : public PluginInterface {
 public:
   enum ScriptReturnType {

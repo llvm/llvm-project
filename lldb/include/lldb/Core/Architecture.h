@@ -16,6 +16,51 @@
 
 namespace lldb_private {
 
+/// \class Architecture Architecture.h "lldb/Core/Architecture.h"
+/// An abstract base class for architecture-specific behavior overrides.
+///
+/// Architecture plugins provide hooks to customize LLDB's behavior for
+/// specific CPU architectures in ways that go beyond the ABI. While ABI
+/// plugins handle calling conventions and register layouts, Architecture
+/// plugins handle architecture-specific quirks in:
+///
+/// - Instruction semantics (e.g., ARM IT blocks, delay slots)
+/// - Address manipulation (e.g., Thumb bit, pointer authentication)
+/// - Breakpoint placement (e.g., adjusting breakpoint addresses)
+/// - Function prologue handling (e.g., multiple entry points)
+/// - Stack unwinding customization
+/// - Memory tagging extensions (e.g., ARM MTE, SPARC ADI)
+/// - Dynamic register reconfiguration (e.g., SVE vector length changes)
+///
+/// Architecture plugins are typically selected based on the target's
+/// architecture and are instantiated as needed. Unlike ABI plugins which
+/// are tied to a process, Architecture plugins can be used in various
+/// contexts throughout LLDB.
+///
+/// The plugin is selected via PluginManager callbacks, typically when
+/// creating a Target or during execution context setup. Multiple architecture
+/// plugins may be registered, and the first one that supports the given
+/// ArchSpec will be used.
+///
+/// Key methods that subclasses must implement:
+/// - OverrideStopInfo: Adjust stop reasons for instructions that won't execute
+///   (e.g., ARM IT blocks where the condition is false)
+///
+/// Key methods that subclasses may optionally override:
+/// - GetBytesToSkip: Handle architectures with multiple function entry points
+/// - AdjustBreakpointAddress: Fix breakpoint addresses for special cases
+/// - GetCallableLoadAddress: Add address bits needed for function calls
+/// - GetOpcodeLoadAddress: Strip address bits to get instruction addresses
+/// - GetBreakableLoadAddress: Find better breakpoint locations (e.g., before delay slots)
+/// - GetMemoryTagManager: Provide memory tagging support (MTE, ADI, etc.)
+/// - RegisterWriteCausesReconfigure: Identify registers that change layout
+/// - ReconfigureRegisterInfo: Update register layout after special writes
+///
+/// Implementations should be careful about:
+/// - Not duplicating functionality that belongs in ABI plugins
+/// - Ensuring thread-safety as methods may be called concurrently
+/// - Minimizing performance overhead as these methods are in hot paths
+/// - Only overriding methods when truly necessary for the architecture
 class Architecture : public PluginInterface {
 public:
   /// This is currently intended to handle cases where a

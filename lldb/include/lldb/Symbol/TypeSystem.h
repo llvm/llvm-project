@@ -47,6 +47,43 @@ namespace npdb {
   class PdbAstBuilder;
 } // namespace npdb
 
+/// A plug-in interface definition class for type systems.
+///
+/// TypeSystem plugins provide language-specific type information and operations
+/// for LLDB. Each programming language (C, C++, Swift, Rust, etc.) has its own
+/// type system with unique rules for type layout, inheritance, templates/generics,
+/// and type semantics. TypeSystem plugins encapsulate these differences.
+///
+/// Type systems are central to many debugging operations including:
+/// - Evaluating expressions in the target language
+/// - Displaying variables with correct formatting
+/// - Understanding class hierarchies and polymorphism
+/// - Parsing DWARF/PDB debug information into language-specific types
+/// - Supporting language-specific data formatters
+///
+/// LLDB instantiates TypeSystem plugins on-demand via TypeSystem::CreateInstance()
+/// when debug information for a specific language is encountered. A TypeSystemMap
+/// maintains one TypeSystem instance per language per Module or Target. The
+/// selection is based on the language specified in debug info or inferred from
+/// source files.
+///
+/// Key methods that subclasses must implement:
+/// - Type creation and manipulation (GetBuiltinTypeForEncodingAndBitSize, etc.)
+/// - Type queries (IsIntegerType, IsPointerType, GetBitSize, etc.)
+/// - AST parsing from debug formats (GetDWARFParser, GetPDBParser)
+/// - Expression evaluation support (GetUserExpression, GetFunctionCaller)
+/// - Type hierarchy navigation (GetDirectBaseClassAtIndex, GetFieldAtIndex, etc.)
+///
+/// Implementation notes:
+/// - This interface extensively uses opaque pointers (lldb::opaque_compiler_type_t)
+///   to prevent generic LLDB code from depending on language-specific AST types
+/// - Opaque pointers from one TypeSystem instance should NEVER be passed to a
+///   different TypeSystem instance (even when both are for the same language)
+/// - Most functions should not be called directly but via CompilerType, CompilerDecl,
+///   or CompilerDeclContext wrapper classes
+/// - TypeSystems must be thread-safe as queries can come from multiple threads
+/// - Lazy type completion is critical for performance with large programs
+///
 /// Interface for representing a type system.
 ///
 /// Implemented by language plugins to define the type system for a given

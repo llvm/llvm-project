@@ -56,6 +56,47 @@ class SymbolContextList;
 class Target;
 struct RegisterInfo;
 
+/// \class Instruction Disassembler.h "lldb/Core/Disassembler.h"
+/// Represents a single disassembled machine instruction.
+///
+/// An Instruction object encapsulates all information about a single machine
+/// instruction at a specific address, including:
+///
+/// - The instruction's address and address class (code/data/Thumb)
+/// - The raw opcode bytes
+/// - Mnemonic, operands, and assembly comment strings
+/// - Control flow properties (branch, call, barrier, etc.)
+/// - Instruction emulation capabilities for expression evaluation
+///
+/// Instruction objects are created by Disassembler plugins during the
+/// disassembly process. Each Disassembler plugin provides its own Instruction
+/// subclass that knows how to decode and represent instructions for that
+/// architecture.
+///
+/// Instructions are typically accessed through InstructionList containers,
+/// which are owned by Disassembler instances. They are created during
+/// disassembly operations and remain valid as long as the parent Disassembler
+/// exists.
+///
+/// Key methods that subclasses must implement:
+/// - Decode: Parse instruction bytes and populate internal state
+/// - CalculateMnemonicOperandsAndComment: Generate assembly string representation
+/// - DoesBranch: Determine if this is a branch instruction
+/// - IsLoad: Determine if this is a memory load instruction
+/// - IsBarrier: Determine if this is a barrier/fence instruction
+/// - IsAuthenticated: Determine if this uses pointer authentication
+///
+/// Key methods that subclasses may optionally override:
+/// - GetControlFlowKind: Classify control flow behavior (call/return/jump/etc.)
+/// - ParseOperands: Extract structured operand information
+/// - IsCall: Determine if this is a function call
+/// - HasDelaySlot: Indicate if this instruction has a delay slot
+///
+/// Implementations should be careful about:
+/// - Lazy computation: Only calculate strings when needed (CalculateMnemonicOperandsAndCommentIfNeeded)
+/// - Thread safety: Multiple threads may access instruction data
+/// - Memory efficiency: Avoid storing redundant information
+/// - Accurate control flow analysis: Critical for stepping and breakpoints
 class Instruction {
 public:
   Instruction(const Address &address,
@@ -291,6 +332,27 @@ std::function<bool(const Instruction::Operand &)>
 MatchOpType(Instruction::Operand::Type type);
 } // namespace OperandMatchers
 
+/// \class InstructionList Disassembler.h "lldb/Core/Disassembler.h"
+/// A container for a sequence of disassembled instructions.
+///
+/// InstructionList holds an ordered collection of Instruction objects,
+/// typically representing a contiguous range of disassembled code. It provides
+/// indexed access, search capabilities, and iteration over the instructions.
+///
+/// InstructionList objects are created and owned by Disassembler instances.
+/// They are populated during disassembly operations (DisassembleRange,
+/// DisassembleBytes, etc.) and can be accessed via
+/// Disassembler::GetInstructionList().
+///
+/// The list supports:
+/// - Random access by index
+/// - Searching by address
+/// - Finding branch instructions
+/// - Calculating total byte size
+/// - Dumping formatted assembly output
+///
+/// This class does not require subclassing - it is used as-is by all
+/// Disassembler implementations.
 class InstructionList {
 public:
   InstructionList();
@@ -399,6 +461,48 @@ protected:
   const PseudoInstruction &operator=(const PseudoInstruction &) = delete;
 };
 
+/// \class Disassembler Disassembler.h "lldb/Core/Disassembler.h"
+/// An abstract base class for disassembler plugins.
+///
+/// Disassembler plugins convert machine code bytes into human-readable
+/// assembly language. They are essential for:
+///
+/// - Displaying assembly in the debugger UI
+/// - Mixed source/assembly views
+/// - Stepping through code at the instruction level
+/// - Understanding what code is executing at breakpoints
+/// - Analyzing crashes and examining arbitrary memory as code
+///
+/// LLDB uses disassemblers extensively during debugging. A Disassembler
+/// instance is created on-demand whenever assembly needs to be displayed,
+/// such as when using the 'disassemble' command, stepping by instruction,
+/// or viewing code in mixed mode.
+///
+/// Disassemblers are selected based on the target's architecture (ArchSpec)
+/// and optional flavor/CPU/features parameters using FindPlugin or
+/// FindPluginForTarget. The plugin manager iterates through all registered
+/// disassembler plugins until one returns a valid instance.
+///
+/// Each Disassembler instance owns an InstructionList containing the
+/// disassembled instructions. The typical workflow is:
+/// 1. Create a Disassembler via FindPlugin/FindPluginForTarget
+/// 2. Call ParseInstructions or AppendInstructions to disassemble code
+/// 3. Access results via GetInstructionList() or use PrintInstructions
+///
+/// Key methods that subclasses must implement:
+/// - DecodeInstructions: Decode machine code bytes into Instruction objects
+/// - FlavorValidForArchSpec: Validate flavor strings for this architecture
+///
+/// Most implementations also provide their own Instruction subclass that
+/// knows how to decode and represent instructions for that architecture.
+///
+/// Implementations should be careful about:
+/// - Handling invalid/data bytes gracefully (don't crash on bad input)
+/// - Supporting both live process memory and file-based disassembly
+/// - Respecting the flavor/CPU/features parameters when provided
+/// - Performance: Disassembly can be called frequently in hot paths
+/// - Thread safety: May be called from multiple threads
+/// - Memory efficiency: Don't store excessive data per instruction
 class Disassembler : public std::enable_shared_from_this<Disassembler>,
                      public PluginInterface {
 public:

@@ -14,6 +14,40 @@
 
 namespace lldb_private {
 
+/// Plugin interface for building structured types to represent CPU registers.
+///
+/// RegisterTypeBuilder plugins create CompilerType representations for CPU
+/// registers that have associated register fields (flags). These structured
+/// types allow debuggers to display register contents in a human-readable
+/// format, showing individual bit fields and their meanings rather than just
+/// raw hexadecimal values.
+///
+/// LLDB uses these plugins when displaying registers that have associated
+/// RegisterFlags metadata. When a register with flags needs to be displayed,
+/// LLDB queries the active RegisterTypeBuilder plugin (if any) to create a
+/// structured type that represents the register's bit fields. This type is
+/// then used by the type system to format and display the register value.
+///
+/// Plugin Selection and Instantiation:
+/// RegisterTypeBuilder plugins are instantiated per-target and are selected
+/// based on the target's type system. For example, RegisterTypeBuilderClang
+/// is used for targets that use Clang as their primary type system. The plugin
+/// is created via the CreateInstance callback registered with the PluginManager.
+///
+/// Key Methods to Implement:
+/// - GetRegisterType(): The core method that creates a CompilerType representing
+///   a register's structure. Given a register name, its flags definition, and
+///   byte size, implementations must construct an appropriate structured type
+///   (typically a struct or class) with fields corresponding to each register
+///   flag/bit field.
+///
+/// Implementation Considerations:
+/// - Implementations should cache created types when possible, as the same
+///   register type may be requested multiple times
+/// - The returned CompilerType must accurately reflect the register's bit
+///   layout, including field positions, sizes, and types
+/// - Field names should match the flag names defined in RegisterFlags metadata
+/// - Consider endianness when constructing the type representation
 class RegisterTypeBuilder : public PluginInterface {
 public:
   ~RegisterTypeBuilder() override = default;

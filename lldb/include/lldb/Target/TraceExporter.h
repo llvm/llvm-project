@@ -22,9 +22,27 @@ namespace lldb_private {
 /// provided by an \a lldb_private::TraceCursor into a different format that can
 /// be digested by other tools, e.g. Chrome Trace Event Profiler.
 ///
-/// Trace exporters are supposed to operate on an architecture-agnostic fashion,
-/// as a TraceCursor, which feeds the data, hides the actual trace technology
-/// being used.
+/// These plugins enable interoperability by exporting processor trace data
+/// collected by LLDB into formats that can be consumed by external analysis
+/// tools, visualization software, or other debugging systems.
+///
+/// LLDB instantiates TraceExporter plugins on-demand when a user requests
+/// trace export (e.g., via the "thread trace export" command). The plugin
+/// is selected by name via TraceExporter::FindPlugin(), which looks up the
+/// appropriate exporter in the PluginManager.
+///
+/// Key methods to implement:
+/// - Export functionality that reads from a TraceCursor and writes to the
+///   target format
+///
+/// Implementation notes:
+/// - Trace exporters are supposed to operate on an architecture-agnostic fashion,
+///   as a TraceCursor, which feeds the data, hides the actual trace technology
+///   being used
+/// - The exporter should handle streaming large trace datasets efficiently
+/// - Error handling is important as export operations can fail due to I/O issues
+/// - Examples include exporters to Chrome's trace event format, CTF, or custom
+///   analysis formats
 class TraceExporter : public PluginInterface {
 public:
   /// Create an instance of a trace exporter plugin given its name.

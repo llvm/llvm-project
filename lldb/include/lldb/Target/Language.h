@@ -36,6 +36,44 @@ public:
   bool GetEnableFilterForLineBreakpoints() const;
 };
 
+/// \class Language Language.h "lldb/Target/Language.h"
+/// A plug-in interface definition class for programming language support.
+///
+/// Language plugins provide language-specific functionality for debugging,
+/// including type formatting, expression parsing, name mangling/demangling,
+/// and method name parsing. Each plugin represents support for a specific
+/// programming language (e.g., C++, Objective-C, Swift, Rust).
+///
+/// LLDB queries language plugins to customize the debugging experience based
+/// on the source language of the code being debugged. Language plugins are
+/// created on-demand and cached globally - only one instance exists per
+/// language type for the entire LLDB session.
+///
+/// Plugin Selection:
+/// Language plugins are selected either by explicit language type (from debug
+/// info like DWARF DW_AT_language attributes) or by file extension. The
+/// FindPlugin() static method iterates through all registered language plugin
+/// callbacks until one matches the requested language or recognizes the file
+/// extension via IsSourceFile().
+///
+/// Key Responsibilities:
+/// - GetFormatters(): Provide language-specific data formatters for types
+/// - GetMethodNameVariants(): Generate alternative lookups for method names
+/// - SymbolNameFitsToLanguage(): Validate symbol name mangling schemes
+/// - IsSourceFile(): Identify source files by extension
+/// - GetExceptionResolverDescription(): Customize exception breakpoint text
+/// - GetUserEntryPointName(): Return language-specific entry point (e.g., "main")
+/// - GetDemangledFunctionNameWithoutArguments(): Parse demangled names
+///
+/// Subclasses must implement:
+/// - GetLanguageType(): Return the lldb::LanguageType this plugin handles
+/// - IsSourceFile(): Return true if the file path is a source file for this language
+///
+/// Important Notes:
+/// - Language plugins are singleton instances cached for the LLDB session
+/// - They must be stateless or use thread-safe state management
+/// - The same instance may be used concurrently across multiple targets/processes
+/// - Plugins are created via PluginManager::GetLanguageCreateCallbacks()
 class Language : public PluginInterface {
 public:
   class TypeScavenger {

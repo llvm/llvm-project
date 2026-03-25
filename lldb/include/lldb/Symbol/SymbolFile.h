@@ -42,12 +42,72 @@
 
 namespace lldb_private {
 
-/// Provides public interface for all SymbolFiles. Any protected
-/// virtual members should go into SymbolFileCommon; most SymbolFile
-/// implementations should inherit from SymbolFileCommon to override
-/// the behaviors except SymbolFileOnDemand which inherits
-/// public interfaces from SymbolFile and forward to underlying concrete
-/// SymbolFile implementation.
+/// Plugin interface for reading and parsing debug information from object files.
+///
+/// SymbolFile plugins are responsible for extracting debug information from
+/// executable files, shared libraries, and separate debug info files. They
+/// parse debug formats (such as DWARF, PDB, COFF, CTF, Breakpad) and provide
+/// LLDB with access to symbols, types, source line information, variables,
+/// and other debug metadata.
+///
+/// What SymbolFile Plugins Do:
+/// - Parse debug information formats (DWARF, PDB, COFF, CTF, etc.)
+/// - Provide access to compile units, functions, types, and variables
+/// - Resolve addresses to source file locations (line tables)
+/// - Look up symbols and types by name
+/// - Parse expression evaluation context (local variables, parameters)
+/// - Support type completion for forward-declared types
+/// - Handle separate debug info files (.dwo, .dwp, .dSYM, etc.)
+///
+/// How LLDB Uses SymbolFile Plugins:
+/// When a module (executable or shared library) is loaded, LLDB calls
+/// SymbolFile::FindPlugin() with the module's ObjectFile. This static method
+/// queries all registered SymbolFile plugins via their CreateInstance callbacks,
+/// asking each to report its "abilities" for that object file. The plugin
+/// reporting the highest abilities score is selected and instantiated.
+///
+/// Abilities are determined by examining the object file for recognizable
+/// debug info sections and symbols. For example, a DWARF plugin checks for
+/// .debug_info sections, while a PDB plugin checks for CodeView debug directories.
+///
+/// Once selected, the SymbolFile is attached to the Module and used throughout
+/// the module's lifetime to service debug info queries. The SymbolFile lazily
+/// parses debug information on-demand as LLDB needs it (when setting breakpoints,
+/// evaluating expressions, displaying stack frames, etc.).
+///
+/// Key Methods Subclasses Must Implement:
+/// - CalculateAbilities(): Examine the object file and return a bitmask of
+///   supported abilities (CompileUnits, LineTables, Functions, etc.)
+/// - InitializeObject(): Perform one-time initialization after selection
+/// - GetNumCompileUnits() / GetCompileUnitAtIndex(): Provide access to compilation
+///   units
+/// - ParseLanguage(), ParseFunctions(), ParseLineTable(), ParseTypes(): Parse
+///   specific kinds of debug information from compile units
+/// - ResolveSymbolContext(): Map addresses to source locations and symbols
+/// - FindGlobalVariables(), FindFunctions(), FindTypes(): Look up debug info by name
+/// - CompleteType(): Fully parse a forward-declared or incomplete type
+/// - GetTypeSystemForLanguage(): Get or create the TypeSystem for a language
+///
+/// Implementation Considerations:
+/// - Lazy parsing: Only parse debug info when needed to minimize memory usage
+///   and startup time
+/// - Thread safety: Multiple threads may query debug info; use GetModuleMutex()
+///   to synchronize access
+/// - Index building: Consider building indexes (name tables, type tables) for
+///   fast lookups in large debug info
+/// - Memory management: Large debug info can consume significant memory; consider
+///   strategies like on-demand loading (see SymbolFileOnDemand)
+/// - External files: Handle separate debug info files gracefully, reporting
+///   errors if files are missing or mismatched
+/// - Fission/split DWARF: Support debug info split across multiple files
+/// - Type uniquing: Coordinate with TypeSystem to ensure type uniqueness across
+///   modules
+///
+/// Note on Class Hierarchy:
+/// This class provides the public interface. Most implementations should inherit
+/// from SymbolFileCommon instead, which provides common implementation scaffolding.
+/// SymbolFileOnDemand is a special wrapper that inherits directly from SymbolFile
+/// to intercept and delay debug info loading.
 class SymbolFile : public PluginInterface {
   /// LLVM RTTI support.
   static char ID;
@@ -536,8 +596,44 @@ private:
   const SymbolFile &operator=(const SymbolFile &) = delete;
 };
 
-/// Containing protected virtual methods for child classes to override.
-/// Most actual SymbolFile implementations should inherit from this class.
+/// Base implementation class for SymbolFile plugins with common functionality.
+///
+/// SymbolFileCommon provides standard implementations of many SymbolFile
+/// interface methods that are common across different debug formats. Most
+/// concrete SymbolFile implementations (SymbolFileDWARF, SymbolFilePDB, etc.)
+/// should inherit from this class rather than directly from SymbolFile.
+///
+/// What SymbolFileCommon Provides:
+/// - Object file association and management
+/// - Compile unit caching and indexed access
+/// - Type list management for types created from debug info
+/// - Symbol table access with lazy creation
+/// - Standard implementations of GetAbilities(), GetTypeSystemForLanguage(),
+///   and other common operations
+/// - Debug info statistics tracking (index cache hits, parse times, etc.)
+/// - Type creation helpers (MakeType, CopyType) that automatically register
+///   types in the internal type list
+///
+/// Key Methods Subclasses Must Override:
+/// - CalculateAbilities(): Determine what debug info is available
+/// - CalculateNumCompileUnits(): Count compilation units in the debug info
+/// - ParseCompileUnitAtIndex(): Parse and return a specific compile unit
+/// - All the Parse*() methods from SymbolFile for parsing specific debug info
+///
+/// What This Class Handles For You:
+/// - Caching parsed compile units in m_compile_units
+/// - Managing the m_type_list for all types created from this symbol file
+/// - Implementing GetAbilities() with lazy calculation and caching
+/// - Providing access to the associated ObjectFile
+/// - Tracking statistics about debug info usage
+///
+/// Implementation Notes:
+/// This class maintains several important pieces of state:
+/// - m_objfile_sp: The ObjectFile containing the debug information
+/// - m_compile_units: Cached compilation units (lazily populated)
+/// - m_type_list: All types created/parsed from this symbol file
+/// - m_abilities: Cached abilities mask
+/// - Debug info statistics flags (index cache status, error flags)
 class SymbolFileCommon : public SymbolFile {
   /// LLVM RTTI support.
   static char ID;

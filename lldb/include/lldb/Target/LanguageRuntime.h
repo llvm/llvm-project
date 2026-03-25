@@ -58,6 +58,52 @@ protected:
   void UpdateModuleListIfNeeded();
 };
 
+/// \class LanguageRuntime LanguageRuntime.h "lldb/Target/LanguageRuntime.h"
+/// A plug-in interface definition class for language runtime support.
+///
+/// Language runtime plugins provide runtime-specific functionality for dynamic
+/// languages and languages with complex runtime systems (e.g., Objective-C,
+/// C++, Swift, Go). These plugins interact with the language's runtime libraries
+/// in the debugged process to provide dynamic type resolution, exception
+/// handling, expression evaluation support, and runtime-specific unwinding.
+///
+/// Unlike Language plugins (which are global singletons), LanguageRuntime
+/// plugins are per-process instances that can maintain process-specific state
+/// and interact with runtime data structures in the target process's memory.
+///
+/// Plugin Selection:
+/// LanguageRuntime plugins are instantiated when a process starts or attaches.
+/// The FindPlugin() static method is called with a Process and LanguageType,
+/// iterating through registered callbacks via PluginManager until one returns
+/// a valid instance. Multiple language runtimes can coexist in a single process
+/// (e.g., C++ and Objective-C in the same binary).
+///
+/// Key Responsibilities:
+/// - GetDynamicTypeAndAddress(): Resolve dynamic types for polymorphic objects
+/// - CouldHaveDynamicValue(): Fast check if a value might have dynamic type
+/// - FixUpDynamicType(): Adjust discovered dynamic types (e.g., add pointer)
+/// - GetObjectDescription(): Get runtime object description (e.g., -description)
+/// - CreateExceptionResolver(): Create breakpoint resolvers for exception throw/catch
+/// - GetStepThroughTrampolinePlan(): Handle stepping through runtime trampolines
+/// - GetVTableInfo(): Extract vtable information for C++ and similar languages
+/// - GetExceptionObjectForThread(): Retrieve exception objects from runtime
+/// - GetRuntimeUnwindPlan(): Provide custom unwinding for async/coroutine frames
+///
+/// Subclasses must implement:
+/// - GetLanguageType(): Return the language this runtime supports
+/// - GetDynamicTypeAndAddress(): Core dynamic type resolution logic
+/// - CouldHaveDynamicValue(): Quickly determine if dynamic type lookup makes sense
+/// - FixUpDynamicType(): Transform bare dynamic type to match static type form
+/// - GetObjectDescription(): Get string representation from runtime
+/// - CreateExceptionResolver(): Create exception breakpoint resolver
+/// - GetStepThroughTrampolinePlan(): Handle runtime-specific stepping
+///
+/// Important Notes:
+/// - Runtime instances are created per-process via create callbacks
+/// - They can cache process-specific runtime state (e.g., runtime class tables)
+/// - Must be prepared to handle invalid/stripped runtime state gracefully
+/// - Exception breakpoint support requires implementing CreateExceptionResolver()
+/// - Dynamic type resolution is performance-critical and called frequently
 class LanguageRuntime : public Runtime, public PluginInterface {
 public:
   static LanguageRuntime *FindPlugin(Process *process,

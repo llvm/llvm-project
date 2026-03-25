@@ -19,6 +19,55 @@
 
 namespace lldb_private {
 
+/// Read-Eval-Print-Loop (REPL) interface for interactive language evaluation.
+///
+/// REPL plugins provide interactive, line-by-line code evaluation environments
+/// for specific programming languages within LLDB. These plugins allow users to
+/// execute code incrementally, see immediate results, and maintain state across
+/// multiple evaluations - similar to interactive language shells like Python's
+/// REPL or the Swift REPL.
+///
+/// What REPL Plugins Do:
+/// - Parse and evaluate code snippets incrementally as the user types them
+/// - Maintain persistent state (variables, functions) across evaluations
+/// - Provide language-specific auto-completion and auto-indentation
+/// - Display evaluation results with appropriate formatting
+/// - Handle language-specific syntax for multi-line input
+/// - Support meta-commands (commands starting with ':') for REPL control
+///
+/// How LLDB Uses REPLs:
+/// REPL instances are created via the static REPL::Create() factory method,
+/// which iterates through registered REPL plugins to find one supporting the
+/// requested language. Users typically enter a REPL via the "repl" command
+/// in LLDB's command interpreter. REPLs can be created with or without an
+/// existing target/process - "top-level" REPLs can create their own execution
+/// context, while target-attached REPLs evaluate code in an existing process.
+///
+/// The REPL runs as an IOHandler, integrating with LLDB's input/output
+/// infrastructure to provide an interactive prompt. Each line or block of
+/// code is accumulated, parsed, evaluated, and results are displayed back
+/// to the user.
+///
+/// Key Methods Subclasses Must Implement:
+/// - DoInitialization(): Perform any language-specific setup when the REPL starts
+/// - GetSourceFileBasename(): Return the filename to use for REPL code (for
+///   debug info and error messages)
+/// - GetAutoIndentCharacters(): Return characters that trigger auto-indentation
+/// - SourceIsComplete(): Determine if the current input forms a complete
+///   statement/expression that can be evaluated
+/// - GetDesiredIndentation(): Calculate the proper indentation level for the
+///   current line based on language syntax
+/// - GetLanguage(): Return the language this REPL supports
+/// - PrintOneVariable(): Format and display a single variable's value
+/// - CompleteCode(): Provide code completion suggestions for the current input
+///
+/// Implementation Considerations:
+/// - REPLs must handle both single-line expressions and multi-line statements
+/// - Maintain compilation state to enable features like incremental compilation
+/// - Parse input to detect complete vs. incomplete code blocks
+/// - Handle errors gracefully and allow continued interaction after failures
+/// - Integrate with the target's execution context if one exists
+/// - Support language-specific features like imports, declarations, and meta-commands
 class REPL : public IOHandlerDelegate,
              public llvm::RTTIExtends<REPL, llvm::RTTIRoot> {
 public:

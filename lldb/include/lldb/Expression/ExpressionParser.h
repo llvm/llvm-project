@@ -23,6 +23,50 @@ class IRExecutionUnit;
 /// compiler that can parse expressions.
 ///
 /// ExpressionParser is the base class for llvm based Expression parsers.
+///
+/// ExpressionParser represents language-specific compilers that can parse and
+/// compile user-provided expressions for evaluation in the debugger. The most
+/// common implementation is ClangExpressionParser, which compiles C, C++, and
+/// Objective-C expressions.
+///
+/// These parsers are used whenever LLDB needs to evaluate user expressions,
+/// such as:
+/// - Interactive expression evaluation (expr command, p command, po command)
+/// - Conditional breakpoints with expression conditions
+/// - Watchpoint conditions
+/// - Variable formatters and summaries with custom code
+///
+/// LLDB instantiates expression parsers through language-specific
+/// UserExpression subclasses (e.g., ClangUserExpression). The UserExpression
+/// creates an ExpressionParser instance during its Parse() method, passing in
+/// the expression text and execution context. The parser is then responsible
+/// for:
+/// 1. Parsing the source code text into an abstract syntax tree (AST)
+/// 2. Performing semantic analysis and type checking
+/// 3. Generating LLVM IR (intermediate representation) from the AST
+/// 4. Optimizing the IR
+/// 5. Preparing the IR for execution (JIT compilation or interpretation)
+///
+/// Key methods that subclasses must implement:
+/// - Complete(): Provide code completion suggestions for partial expressions
+/// - DoPrepareForExecution(): Generate executable code from the parsed
+///   expression, including JIT compilation and setting up the execution
+///   environment
+///
+/// The parser works in conjunction with several other components:
+/// - Expression: The base class representing the expression being parsed
+/// - IRExecutionUnit: Manages the JIT-compiled code and execution
+/// - DiagnosticManager: Collects errors and warnings during parsing
+/// - ExpressionSourceCode: Wraps user expressions in necessary scaffolding
+///   code (e.g., wrapping a C++ expression in a function body)
+///
+/// Subclasses should be careful to:
+/// - Properly handle target-specific compilation flags and settings
+/// - Set up correct include paths for header files
+/// - Handle both interpreted and JIT-compiled execution paths
+/// - Manage memory and resources for the compiler instances
+/// - Provide accurate diagnostic information for parse errors
+/// - Support debug info generation when requested
 class ExpressionParser {
 public:
   /// Constructor

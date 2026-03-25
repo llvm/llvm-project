@@ -15,6 +15,41 @@
 
 namespace lldb_private {
 
+/// A plug-in interface definition class for assembly-based stack unwinding.
+///
+/// UnwindAssembly plugins provide architecture-specific instruction analysis
+/// to generate stack unwinding information by examining function assembly code.
+/// This is essential when debug information (like DWARF .eh_frame or .debug_frame)
+/// is missing, incomplete, or doesn't cover all code paths.
+///
+/// These plugins perform several critical functions:
+/// - Analyzing function prologues/epilogues to determine how the stack frame
+///   is set up and torn down
+/// - Creating UnwindPlans that describe how to restore registers at each
+///   instruction in a function
+/// - Identifying the first non-prologue instruction for breakpoint placement
+/// - Augmenting existing unwind plans with additional information from assembly
+///
+/// LLDB instantiates UnwindAssembly plugins via UnwindAssembly::FindPlugin()
+/// when unwinding is needed. The selection is based on the target architecture
+/// (ArchSpec). Each architecture typically has one UnwindAssembly implementation
+/// that understands its specific calling conventions and instruction encodings.
+///
+/// Key methods to implement:
+/// - GetNonCallSiteUnwindPlanFromAssembly(): Create a complete unwind plan by
+///   analyzing function assembly (used when no debug info is available)
+/// - AugmentUnwindPlanFromCallSite(): Enhance an existing unwind plan with
+///   information gleaned from assembly analysis
+/// - GetFastUnwindPlan(): Create a simplified unwind plan for performance-critical
+///   unwinding (e.g., during sampling)
+/// - FirstNonPrologueInsn(): Find where the function prologue ends
+///
+/// Implementation notes:
+/// - Plugins must understand architecture-specific instruction encodings
+/// - Must handle various calling conventions (e.g., ARM's multiple frame pointer modes)
+/// - Should be conservative when uncertain (invalid unwind is worse than no unwind)
+/// - Performance matters as this code runs during every stack walk
+/// - Used heavily for release builds without debug info and for system libraries
 class UnwindAssembly : public std::enable_shared_from_this<UnwindAssembly>,
                        public PluginInterface {
 public:

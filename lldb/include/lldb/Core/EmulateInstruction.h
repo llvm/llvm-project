@@ -124,6 +124,38 @@ protected:
 /// paths in a debugger (single step prediction, finding save restore
 /// locations of registers for unwinding stack frame variables) and emulating
 /// the instruction is just a bonus.
+///
+/// Plugin Selection and Instantiation:
+/// LLDB selects an EmulateInstruction plugin based on the target architecture
+/// using FindPlugin(). The function iterates through all registered plugins
+/// (e.g., EmulateInstructionARM, EmulateInstructionMIPS) and calls their
+/// CreateInstance callbacks with the ArchSpec and requested InstructionType.
+/// Each plugin's CreateInstance returns non-null only if it supports the
+/// architecture and instruction type. Plugins can optionally be selected by
+/// name to force a specific implementation.
+///
+/// Key Methods to Implement:
+/// - SupportsEmulatingInstructionsOfType(): Indicates which instruction types
+///   this plugin can emulate (e.g., eInstructionTypeAll,
+///   eInstructionTypePrologueEpilogue, eInstructionTypePCModifying)
+/// - SetTargetTriple(): Configures the emulator for the specific architecture
+/// - ReadInstruction(): Reads the instruction bytes from the current PC
+/// - EvaluateInstruction(): The core method that decodes and emulates the
+///   instruction, invoking callbacks to simulate register/memory changes
+/// - GetRegisterInfo(): Returns register metadata for the architecture
+/// - TestEmulation(): Validates the emulator against test data
+///
+/// Important Implementation Considerations:
+/// - Callbacks are the primary interface - implementations should use
+///   ReadRegister/WriteRegister/ReadMemory/WriteMemory methods which invoke
+///   the registered callbacks rather than directly accessing state
+/// - The Context parameter in callbacks is crucial for CFI generation - it
+///   must accurately describe what the instruction is doing semantically
+/// - Not all instructions need to be implemented - focus on prologue/epilogue
+///   for CFI, control flow for single-stepping, or all instructions for full
+///   emulation
+/// - Single-step prediction may require architecture-specific breakpoint
+///   location predictors (see GetSingleStepBreakpointLocationsPredictorCreator)
 
 class EmulateInstruction : public PluginInterface {
 public:

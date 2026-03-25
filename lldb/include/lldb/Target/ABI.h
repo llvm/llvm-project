@@ -25,6 +25,48 @@ class Type;
 
 namespace lldb_private {
 
+/// \class ABI ABI.h "lldb/Target/ABI.h"
+/// An abstract base class for ABI (Application Binary Interface) plugins.
+///
+/// ABI plugins encapsulate the calling conventions, register usage, data type
+/// layouts, and low-level details specific to a particular architecture and
+/// operating system combination. These plugins are essential for:
+///
+/// - Setting up function calls (PrepareTrivialCall)
+/// - Extracting function arguments and return values from registers/stack
+/// - Understanding register volatility and preserved registers across calls
+/// - Creating stack frame unwind plans for exception handling and backtraces
+/// - Fixing code/data addresses (e.g., ARM Thumb bit manipulation)
+/// - Validating code and stack addresses
+///
+/// LLDB creates an ABI instance for each process being debugged. The ABI is
+/// selected based on the process's architecture (ArchSpec) using the FindPlugin
+/// static method, which iterates through all registered ABI plugins until one
+/// returns a valid instance for the given architecture.
+///
+/// ABI plugins are typically instantiated early in the debugging session and
+/// remain active for the lifetime of the process. The selection happens via:
+/// ABI::FindPlugin(process_sp, arch) which queries all registered ABI
+/// implementations through the PluginManager.
+///
+/// Key methods that subclasses must implement:
+/// - PrepareTrivialCall: Set up registers/stack to call a function
+/// - GetArgumentValues: Extract function arguments from the current frame
+/// - GetReturnValueObjectImpl: Extract the return value after a function call
+/// - SetReturnValueObject: Modify the return value in a stack frame
+/// - CreateFunctionEntryUnwindPlan: Generate unwind rules at function entry
+/// - CreateDefaultUnwindPlan: Generate default unwind rules for assembly
+/// - RegisterIsVolatile: Determine if a register is caller-saved
+/// - CallFrameAddressIsValid: Validate stack pointer alignment/values
+/// - CodeAddressIsValid: Validate instruction pointer values
+/// - AugmentRegisterInfo: Add ABI-specific register metadata
+///
+/// Implementations should be careful about:
+/// - Thread safety: ABI methods may be called from multiple threads
+/// - Handling both user-space and kernel-space calling conventions
+/// - Properly masking address bits (e.g., ARM Thumb, AArch64 PAC/TBI)
+/// - Supporting multiple calling conventions on the same architecture
+/// - Correctly handling variadic functions and special argument types
 class ABI : public PluginInterface {
 public:
   struct CallArgument {
@@ -172,6 +214,24 @@ private:
   const ABI &operator=(const ABI &) = delete;
 };
 
+/// \class RegInfoBasedABI ABI.h "lldb/Target/ABI.h"
+/// A concrete ABI base class that uses RegisterInfo arrays for register metadata.
+///
+/// RegInfoBasedABI is designed for ABI implementations that define their
+/// register information using static RegisterInfo arrays, which is the
+/// traditional approach used by most LLDB ABI plugins. This class provides
+/// the AugmentRegisterInfo implementation that looks up register details
+/// (DWARF/eh_frame register numbers, generic register kinds) from the
+/// RegisterInfo array provided by GetRegisterInfoArray.
+///
+/// Subclasses must implement:
+/// - GetRegisterInfoArray: Return a pointer to a static array of RegisterInfo
+///   structures that describe all registers for this ABI
+///
+/// This approach is suitable for architectures where the register set is
+/// well-defined and doesn't vary at runtime. For architectures with dynamic
+/// register information (e.g., varying vector lengths), consider using
+/// MCBasedABI instead.
 class RegInfoBasedABI : public ABI {
 public:
   void AugmentRegisterInfo(
@@ -185,6 +245,32 @@ protected:
   virtual const RegisterInfo *GetRegisterInfoArray(uint32_t &count) = 0;
 };
 
+/// \class MCBasedABI ABI.h "lldb/Target/ABI.h"
+/// A concrete ABI base class that derives register metadata from LLVM's MCRegisterInfo.
+///
+/// MCBasedABI is designed for ABI implementations that obtain register
+/// information from LLVM's Machine Code (MC) layer rather than maintaining
+/// separate static RegisterInfo arrays. This leverages LLVM's existing
+/// register definitions and mappings (DWARF/eh_frame register numbers),
+/// reducing code duplication and maintenance burden.
+///
+/// This class provides the AugmentRegisterInfo implementation that queries
+/// the MCRegisterInfo object (passed to the ABI constructor) to populate
+/// register metadata like DWARF numbers and eh_frame numbers.
+///
+/// Subclasses must implement:
+/// - GetGenericNum: Map register names to LLDB generic register numbers
+///   (e.g., LLDB_REGNUM_GENERIC_PC, LLDB_REGNUM_GENERIC_SP)
+///
+/// Subclasses may optionally override:
+/// - GetMCName: Transform LLDB register names to MCRegisterInfo naming
+///   conventions (e.g., case transformations, prefix changes)
+/// - GetEHAndDWARFNums: Provide custom DWARF/eh_frame number mappings
+///
+/// This approach is particularly useful for:
+/// - New architectures where LLVM support already exists
+/// - Reducing code duplication between LLDB and LLVM
+/// - Architectures with complex register aliasing schemes
 class MCBasedABI : public ABI {
 public:
   void AugmentRegisterInfo(

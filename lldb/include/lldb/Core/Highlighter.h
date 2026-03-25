@@ -93,6 +93,58 @@ struct HighlightStyle {
 };
 
 /// Annotates source code with color attributes.
+///
+/// Highlighter plugins provide syntax highlighting for source code displayed
+/// in the debugger. These plugins apply ANSI color codes and formatting to
+/// source text based on the programming language, making code easier to read
+/// in the terminal or IDE.
+///
+/// LLDB uses highlighters in several contexts:
+/// - Source code listings (source list command, frame info with source)
+/// - Expression input in the REPL (interactive expression mode)
+/// - Disassembly with interleaved source code
+/// - Error messages showing problematic source lines
+///
+/// The HighlighterManager is responsible for selecting the appropriate
+/// highlighter for a given language and file. When LLDB needs to display
+/// source code, it calls HighlighterManager::getHighlighterFor() with the
+/// LanguageType and file path. The manager:
+/// 1. First attempts to determine the language from the Language plugin
+/// 2. Checks if a highlighter for this language is already cached
+/// 3. If not cached, queries all registered highlighter plugins via their
+///    CreateInstance callbacks, passing the LanguageType
+/// 4. Caches the result for future use
+/// 5. Falls back to DefaultHighlighter if no language-specific highlighter
+///    is available
+///
+/// Available highlighter implementations include:
+/// - ClangHighlighter: Uses Clang's lexer for C/C++/Objective-C
+/// - TreeSitterHighlighter: Uses tree-sitter parsers for multiple languages
+/// - DefaultHighlighter: No-op highlighter that returns unmodified text
+///
+/// Key methods that subclasses must implement:
+/// - GetName(): Returns a human-readable name for the highlighter
+/// - Highlight(): The main method that applies syntax highlighting to a line
+///   of code, considering the cursor position and previous lines for context
+///
+/// The Highlight() method receives:
+/// - options: A HighlightStyle containing color codes for different token types
+/// - line: The current line to highlight
+/// - cursor_pos: Optional cursor position for highlighting the current token
+/// - previous_lines: Context from earlier lines (useful for multi-line constructs)
+/// - s: Output stream where highlighted text should be written
+///
+/// Implementations should:
+/// - Parse the input text according to the language's syntax rules
+/// - Apply appropriate ColorStyle from the HighlightStyle for each token type
+///   (keywords, identifiers, literals, comments, operators, etc.)
+/// - Handle multi-line constructs like block comments or string literals by
+///   examining previous_lines
+/// - Optionally highlight the token under the cursor differently
+/// - Write the highlighted output to the stream, wrapping tokens with ANSI
+///   color codes
+/// - Be resilient to malformed or incomplete code (highlighting is often applied
+///   to code being actively edited or partial expressions)
 class Highlighter : public PluginInterface {
 public:
   Highlighter() = default;
@@ -128,6 +180,19 @@ public:
 };
 
 /// Manages the available highlighters.
+///
+/// HighlighterManager acts as a factory and cache for Highlighter plugins.
+/// It maintains a map of language types to highlighter instances and lazily
+/// instantiates highlighters on first use. This singleton-like manager ensures
+/// that only one highlighter instance exists per language type, avoiding the
+/// overhead of repeatedly creating highlighters for frequently displayed
+/// languages.
+///
+/// The manager is thread-safe and uses a mutex to protect concurrent access
+/// to the highlighter cache. When multiple threads request highlighters
+/// simultaneously, only the first request for a given language will create
+/// the highlighter instance, and subsequent requests will reuse the cached
+/// instance.
 class HighlighterManager {
 public:
   /// Queries all known highlighter for one that can highlight some source code.

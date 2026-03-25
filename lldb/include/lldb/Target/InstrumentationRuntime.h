@@ -24,6 +24,87 @@ typedef std::map<lldb::InstrumentationRuntimeType,
                  lldb::InstrumentationRuntimeSP>
     InstrumentationRuntimeCollection;
 
+/// \class InstrumentationRuntime InstrumentationRuntime.h
+/// "lldb/Target/InstrumentationRuntime.h"
+///
+/// InstrumentationRuntime plugins detect and interact with runtime
+/// instrumentation libraries that are injected into the debugged process.
+/// These libraries perform dynamic analysis such as detecting memory errors,
+/// race conditions, or other runtime issues.
+///
+/// This plugin type represents runtime sanitizers and checkers, including:
+/// - AddressSanitizer (ASan): Detects memory errors like buffer overflows,
+///   use-after-free, and memory leaks
+/// - ThreadSanitizer (TSan): Detects data races and threading issues
+/// - UndefinedBehaviorSanitizer (UBSan): Detects undefined behavior like
+///   integer overflow or null pointer dereference
+/// - BoundsSafety: Detects out-of-bounds accesses
+/// - MainThreadChecker: Detects violations of main thread requirements (macOS)
+///
+/// How LLDB Uses InstrumentationRuntime Plugins:
+///
+/// 1. Detection Phase (ModulesDidLoad):
+///    When new dynamic libraries are loaded into the process, LLDB calls
+///    InstrumentationRuntime::ModulesDidLoad() with the module list. This
+///    static method:
+///    - Queries the PluginManager for all registered InstrumentationRuntime
+///      plugins via their create_callback functions
+///    - Creates one instance of each plugin type for the process
+///    - Each instance checks if its corresponding runtime library is loaded
+///
+/// 2. Runtime Library Identification:
+///    Each plugin instance examines loaded modules to find its runtime library:
+///    - GetPatternForRuntimeLibrary() returns a regex matching the library name
+///      (e.g., "libclang_rt.asan.*" for ASan)
+///    - CheckIfRuntimeIsValid() performs additional validation on candidate
+///      modules (e.g., checking for required symbols)
+///    - MatchAllModules() returns true if all modules should be checked, not
+///      just those matching the regex pattern
+///
+/// 3. Activation Phase:
+///    Once the runtime library is identified and validated:
+///    - SetRuntimeModuleSP() caches the runtime module
+///    - Activate() is called to set up interaction with the runtime:
+///      * Typically sets breakpoints in the runtime library at reporting
+///        functions (e.g., __asan_report_error)
+///      * Stores the breakpoint ID in m_breakpoint_id
+///      * Marks the runtime as active via SetActive(true)
+///
+/// 4. Runtime Event Handling:
+///    When a breakpoint in the runtime library is hit:
+///    - The runtime typically stores diagnostic information (stack traces,
+///      error details) in memory structures
+///    - GetBacktracesFromExtendedStopInfo() can extract this information and
+///      create synthetic thread backtraces showing where the error occurred
+///    - This allows LLDB to display rich diagnostics like "heap-use-after-free
+///      on address 0x12345678, allocated by thread T0, freed by thread T1"
+///
+/// Key Methods to Implement:
+/// - GetPatternForRuntimeLibrary(): Returns a regex to match the runtime
+///   library filename (or return an empty pattern and use MatchAllModules)
+/// - CheckIfRuntimeIsValid(): Validates that a module is the actual runtime
+///   library (e.g., by checking for expected symbols or sections)
+/// - Activate(): Sets up breakpoints and any other runtime interaction after
+///   the library is loaded and validated
+/// - GetBacktracesFromExtendedStopInfo(): Optionally extracts extended
+///   diagnostic information from the runtime's internal data structures
+/// - MatchAllModules(): Return true to check all modules rather than just
+///   those matching the pattern (useful for executables or statically linked
+///   runtimes)
+///
+/// Important Implementation Considerations:
+/// - Plugins are instantiated once per process, not per runtime library
+/// - The IsActive() flag prevents duplicate activation
+/// - Breakpoints set in Activate() should be stored in m_breakpoint_id for
+///   later cleanup or management
+/// - Runtime libraries may be loaded late (after process launch) or early
+///   (before main), so ModulesDidLoad is called repeatedly as libraries load
+/// - Multiple instrumentation runtimes can be active simultaneously (e.g.,
+///   both ASan and UBSan)
+/// - Implementations should be careful with symbols that may not be present
+///   in all versions of the runtime library
+/// - Extended stop info is passed as StructuredData and must be parsed
+///   according to the runtime's specific format
 class InstrumentationRuntime
     : public std::enable_shared_from_this<InstrumentationRuntime>,
       public PluginInterface {
