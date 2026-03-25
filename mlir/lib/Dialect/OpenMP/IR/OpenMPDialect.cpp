@@ -3378,9 +3378,9 @@ LogicalResult TaskloopContextOp::verifyRegions() {
   auto count = llvm::count_if(
       region.front(), [](mlir::Operation &op) { return isa<TaskloopOp>(op); });
   if (count != 1)
-    return emitOpError()
-           << "expected exactly one TaskloopOp in the region, but " << count
-           << " were found";
+    return emitOpError() << "expected exactly 1 TaskloopOp directly nested in "
+                            "the region, but "
+                         << count << " were found";
 
   return success();
 }

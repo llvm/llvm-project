@@ -2970,7 +2970,7 @@ func.func @omp_distribute_invalid_composite(%lb: index, %ub: index, %step: index
 
 // -----
 func.func @omp_taskloop_missing_loop() -> () {
-  // expected-error @below {{'omp.taskloop.context' op expected exactly one TaskloopOp in the region, but 0 were found}}
+  // expected-error @below {{'omp.taskloop.context' op expected exactly 1 TaskloopOp directly nested in the region, but 0 were found}}
   omp.taskloop.context {
     omp.terminator
   }
@@ -2990,7 +2990,7 @@ func.func @omp_taskloop_missing_context(%lb: index, %ub: index, %step: index) ->
 
 // -----
 func.func @omp_taskloop_shared_context(%lb: index, %ub: index, %step: index) -> () {
-  // expected-error @below {{'omp.taskloop.context' op expected exactly one TaskloopOp in the region, but 2 were found}}
+  // expected-error @below {{'omp.taskloop.context' op expected exactly 1 TaskloopOp directly nested in the region, but 2 were found}}
   omp.taskloop.context {
     omp.taskloop {
       omp.loop_nest (%i) : index = (%lb) to (%ub) step (%step)  {
