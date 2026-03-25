@@ -192,10 +192,10 @@ struct LoopSequence {
   struct Depth {
     // If this sequence is a nest, the depth of the Canonical Loop Nest rooted
     // at this sequence. Otherwise unspecified.
-    std::optional<int64_t> semantic;
+    WithReason<int64_t> semantic;
     // If this sequence is a nest, the depth of the perfect Canonical Loop Nest
     // rooted at this sequence. Otherwise unspecified.
-    std::optional<int64_t> perfect;
+    WithReason<int64_t> perfect;
   };
 
   bool isNest() const { return length_ && *length_ == 1; }

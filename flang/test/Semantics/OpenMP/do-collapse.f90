@@ -29,6 +29,7 @@ program omp_doCollapse
   !BECAUSE: COLLAPSE clause was specified with argument 2
   !$omp parallel do collapse(2)
     do i = 1, 3
+      !BECAUSE: This is not a valid intervening code
       !ERROR: Loop control is not present in the DO LOOP
       !ERROR: The associated loop of a loop-associated directive cannot be a DO without control.
       do
