@@ -254,6 +254,7 @@ add_header_macro(
     .llvm_libc_common_h
     .llvm-libc-macros.null_macro
     .llvm-libc-types.errno_t
+    .llvm-libc-types.rsize_t
     .llvm-libc-types.size_t
 )
 
@@ -295,6 +296,7 @@ add_header_macro(
     .llvm-libc-types.struct_timespec
     .llvm-libc-types.struct_timeval
     .llvm-libc-types.clockid_t
+    .llvm-libc-types.rsize_t
 )
 
 add_header_macro(
@@ -370,6 +372,7 @@ add_header_macro(
     .llvm-libc-types.cookie_io_functions_t
     .llvm-libc-types.errno_t
     .llvm-libc-types.off_t
+    .llvm-libc-types.rsize_t
     .llvm-libc-types.size_t
     .llvm-libc-types.ssize_t
     .llvm_libc_common_h
@@ -392,6 +395,7 @@ add_header_macro(
     .llvm-libc-types.ldiv_t
     .llvm-libc-types.lldiv_t
     .llvm-libc-types.locale_t
+    .llvm-libc-types.rsize_t
     .llvm-libc-types.size_t
     .llvm_libc_common_h
 )
@@ -838,6 +842,7 @@ add_header_macro(
     .llvm-libc-macros.null_macro
     .llvm-libc-macros.wchar_macros
     .llvm-libc-types.mbstate_t
+    .llvm-libc-types.rsize_t
     .llvm-libc-types.size_t
     .llvm-libc-types.wint_t
     .llvm-libc-types.wchar_t
