@@ -367,9 +367,7 @@ public:
     return {(BaseSize.getKnownMinValue() + 7) / 8, BaseSize.isScalable()};
   }
 
-  LLT getScalarType() const {
-    return isVector() ? getElementType() : *this;
-  }
+  LLT getScalarType() const { return isVector() ? getElementType() : *this; }
 
   constexpr FpSemantics getFpSemantics() const {
     assert((isFloat() || isFloatVector()) &&
