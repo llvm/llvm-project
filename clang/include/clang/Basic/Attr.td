@@ -150,7 +150,7 @@ def HLSLOutputBuiltin
     : SubsetSubject<Var, [{S->hasGlobalStorage() &&
                            S->getStorageClass() == StorageClass::SC_Static &&
                            !S->getType().isConstQualified()}],
-                    "static globals">;
+                    "non-const static globals">;
 
 def GlobalVar : SubsetSubject<Var,
                              [{S->hasGlobalStorage()}], "global variables">;

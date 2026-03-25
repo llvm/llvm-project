@@ -4874,7 +4874,6 @@ void SemaHLSL::deduceAddressSpace(VarDecl *Decl) {
     // does not imply private to the module scope.
     // Marking it as external to reflect the semantic this attribute brings.
     // See https://github.com/microsoft/hlsl-specs/issues/350
-    VarDecl *VD = cast<VarDecl>(Decl);
     VD->setStorageClass(SC_Extern);
     return;
   }
