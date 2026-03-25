@@ -31,39 +31,6 @@
 #define SWIZZLE_BCASTX16_LANE7 SWIZZLE_PAIRWISE(0x00, 0x07, 0x10)
 #define SWIZZLE_BCASTX32_LANE15 SWIZZLE_PAIRWISE(0x00, 0x0f, 0x00)
 
-//------------------------------------------------------------------------------
-// Swizzle masks used in inclusive scan
-//------------------------------------------------------------------------------
-
-static _CLC_OVERLOAD uint __clc_amdgpu_ds_swizzle_bcastx2_lane0(uint x) {
-  return __builtin_amdgcn_ds_swizzle(x, SWIZZLE_BCASTX2_LANE0);
-}
-
-static _CLC_OVERLOAD uint __clc_amdgpu_ds_swizzle_bcastx4_lane1(uint x) {
-  return __builtin_amdgcn_ds_swizzle(x, SWIZZLE_BCASTX4_LANE1);
-}
-
-static _CLC_OVERLOAD uint __clc_amdgpu_ds_swizzle_bcastx8_lane3(uint x) {
-  return __builtin_amdgcn_ds_swizzle(x, SWIZZLE_BCASTX8_LANE3);
-}
-
-static _CLC_OVERLOAD uint __clc_amdgpu_ds_swizzle_bcastx16_lane7(uint x) {
-  return __builtin_amdgcn_ds_swizzle(x, SWIZZLE_BCASTX16_LANE7);
-}
-
-static _CLC_OVERLOAD uint __clc_amdgpu_ds_swizzle_bcastx32_lane15(uint x) {
-  return __builtin_amdgcn_ds_swizzle(x, SWIZZLE_BCASTX32_LANE15);
-}
-
-//------------------------------------------------------------------------------
-// Swizzle masks used in exclusive scan adjustment
-//------------------------------------------------------------------------------
-
-static _CLC_OVERLOAD uint
-__clc_amdgpu_ds_swizzle_quad_perm_shift_right1(uint x) {
-  return __builtin_amdgcn_ds_swizzle(x, SWIZZLE_QUAD_PERM(0, 0, 1, 2));
-}
-
 #define __CLC_BODY "clc_amdgpu_ds_swizzle.inc"
 #include "clc/integer/gentype.inc"
 
