@@ -115,6 +115,14 @@ class Arith_FloatBinaryOpWithRoundingMode<string mnemonic,
       build($_builder, $_state, lhs, rhs, fastmath,
             ::mlir::arith::RoundingModeAttr{});
     }]>,
+    OpBuilder<(ins "Type":$type, "Value":$lhs, "Value":$rhs,
+      CArg<"::mlir::arith::FastMathFlags",
+           "::mlir::arith::FastMathFlags::none">:$fastmath), [{
+      build($_builder, $_state, type, lhs, rhs,
+            ::mlir::arith::FastMathFlagsAttr::get(
+                $_builder.getContext(), fastmath),
+            ::mlir::arith::RoundingModeAttr{});
+    }]>,
   ];
   let assemblyFormat = [{ $lhs `,` $rhs ($roundingmode^)?
                           (`fastmath` `` $fastmath^)?
