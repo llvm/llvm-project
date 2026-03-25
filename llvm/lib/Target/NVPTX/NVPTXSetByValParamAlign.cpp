@@ -15,7 +15,9 @@
 // The alignment is chosen as follows:
 //   - Externally-visible functions: ABI type alignment (capped at 128).
 //   - Internal/private functions: max(16, ABI align) to enable 128-bit
-//     vectorized param loads.
+//     vectorized param loads. The compiler can _increase_ alignment beyond ABI
+//     in this case because it has control over all of the call sites and byval
+//     parameters are copies allocated by the caller in .param space.
 //
 // After updating the attribute, the pass propagates the improved alignment to
 // all loads from the byval pointer that use a known constant offset.
