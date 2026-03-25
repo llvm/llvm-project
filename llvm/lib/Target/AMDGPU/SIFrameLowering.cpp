@@ -12,6 +12,7 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
+#include "SISpillUtils.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
@@ -1524,23 +1525,10 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
         MBB.addLiveIn(Reg);
 
       MBB.sortUniqueLiveIns();
-
-      if (!SpillFIs.empty() && SeenDbgInstr) {
-        // FIXME: The dead frame indices are replaced with a null register from
-        // the debug value instructions. We should instead, update it with the
-        // correct register value. But not sure the register value alone is
-        for (MachineInstr &MI : MBB) {
-          if (MI.isDebugValue()) {
-            for (MachineOperand &Op : MI.debug_operands()) {
-              if (Op.isFI() && !MFI.isFixedObjectIndex(Op.getIndex()) &&
-                  SpillFIs[Op.getIndex()]) {
-                Op.ChangeToRegister(Register(), false /*isDef*/);
-              }
-            }
-          }
-        }
-      }
     }
+
+    if (!SpillFIs.empty() && SeenDbgInstr)
+      clearDebugInfoForSpillFIs(MF, SpillFIs);
   }
 
   // At this point we've already allocated all spilled SGPRs to VGPRs if we
