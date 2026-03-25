@@ -14,6 +14,7 @@ types:
   - type_name: off_t
   - type_name: cookie_io_functions_t
   - type_name: FILE
+  - type_name: errno_t
 enums: []
 objects:
   - object_name: stdin
