@@ -1,6 +1,6 @@
 // Test crash gives guidance on -D__SANITIZER_DISABLE_CONTAINER_OVERFLOW__ and
 // ASAN_OPTIONS=detect_container_overflow=0
-// RUN: %clangxx_asan -O %s -o %t
+// RUN: %clang_asan -O %s -o %t
 // RUN: not %run %t 2>&1 | FileCheck --check-prefix=CHECK-CRASH %s
 //
 // Test overflow checks can be disabled at runtime with
@@ -9,10 +9,8 @@
 //
 // Illustrate use of -D__SANITIZER_DISABLE_CONTAINER_OVERFLOW__ flag to suppress
 // overflow checks at compile time.
-// RUN: %clangxx_asan -D__SANITIZER_DISABLE_CONTAINER_OVERFLOW__ -O %s -o %t-no-overflow
+// RUN: %clang_asan -D__SANITIZER_DISABLE_CONTAINER_OVERFLOW__ -O %s -o %t-no-overflow
 // RUN: %run %t-no-overflow 2>&1 | FileCheck --check-prefix=CHECK-NOCRASH %s
-//
-// UNSUPPORTED: true
 
 #include <assert.h>
 #include <stdio.h>

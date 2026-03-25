@@ -556,7 +556,7 @@ bool AsmPrinter::doInitialization(Module &M) {
   // information (such as the embedded command line) to be associated
   // with all sections in the object file rather than a single section.
   if (!Target.isOSBinFormatXCOFF())
-    OutStreamer->initSections(false, *TM.getMCSubtargetInfo());
+    OutStreamer->initSections(*TM.getMCSubtargetInfo());
 
   // Emit the version-min deployment target directive if needed.
   //
