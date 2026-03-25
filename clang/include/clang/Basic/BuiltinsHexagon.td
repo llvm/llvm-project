@@ -996,6 +996,8 @@ def Y2_dccleaninva : HexagonBuiltin<"void(void *)">;
 def Y2_dcfetch : HexagonBuiltin<"void(void *)">;
 def Y2_dcinva : HexagonBuiltin<"void(void *)">;
 def Y2_dczeroa : HexagonBuiltin<"void(void *)">;
+def Y2_icinva : HexagonBuiltin<"void(void *)">;
+def Y2_isync : HexagonBuiltin<"void()">;
 def Y4_l2fetch : HexagonBuiltin<"void(void *, int)">;
 def Y5_l2fetch : HexagonBuiltin<"void(void *, long long int)">;
 

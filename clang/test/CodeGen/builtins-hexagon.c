@@ -1726,6 +1726,10 @@ void test() {
   __builtin_HEXAGON_Y2_dcinva(0);
   // CHECK: @llvm.hexagon.Y2.dczeroa
   __builtin_HEXAGON_Y2_dczeroa(0);
+  // CHECK: @llvm.hexagon.Y2.icinva
+  __builtin_HEXAGON_Y2_icinva(0);
+  // CHECK: @llvm.hexagon.Y2.isync
+  __builtin_HEXAGON_Y2_isync();
   // CHECK: @llvm.hexagon.Y4.l2fetch
   __builtin_HEXAGON_Y4_l2fetch(0, 0);
   // CHECK: @llvm.hexagon.Y5.l2fetch

@@ -7799,6 +7799,24 @@
 #define Q6_dczeroa_A __builtin_HEXAGON_Y2_dczeroa
 
 /* ==========================================================================
+   Assembly Syntax:       icinva(Rs32)
+   C Intrinsic Prototype: void Q6_icinva_A(Address Rs)
+   Instruction Type:      J
+   Execution Slots:       SLOT2
+   ========================================================================== */
+
+#define Q6_icinva_A __builtin_HEXAGON_Y2_icinva
+
+/* ==========================================================================
+   Assembly Syntax:       isync
+   C Intrinsic Prototype: void Q6_isync()
+   Instruction Type:      J
+   Execution Slots:       SLOT2
+   ========================================================================== */
+
+#define Q6_isync __builtin_HEXAGON_Y2_isync
+
+/* ==========================================================================
    Assembly Syntax:       l2fetch(Rs32,Rt32)
    C Intrinsic Prototype: void Q6_l2fetch_AR(Address Rs, Word32 Rt)
    Instruction Type:      ST
