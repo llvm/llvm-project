@@ -14,6 +14,7 @@
 #include "CIRGenFunction.h"
 #include "clang/Basic/AArch64CodeGenUtils.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 
 // TODO(cir): once all builtins are covered, decide whether we still
@@ -23,6 +24,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Value.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/Basic/Builtins.h"
@@ -125,8 +127,7 @@ static cir::VectorType getNeonType(CIRGenFunction *cgf, NeonTypeFlags typeFlags,
                                                        : cgf->sInt8Ty,
                                 v1Ty ? 1 : (8 << isQuad));
   case NeonTypeFlags::MFloat8:
-    cgf->getCIRGenModule().errorNYI(loc, std::string("NEON type: MFloat8"));
-    [[fallthrough]];
+    return cir::VectorType::get(cgf->uInt8Ty, v1Ty ? 1 : (8 << isQuad));
   case NeonTypeFlags::Int16:
   case NeonTypeFlags::Poly16:
     return cir::VectorType::get(typeFlags.isUnsigned() ? cgf->uInt16Ty
@@ -204,6 +205,19 @@ static mlir::Value emitCommonNeonShift(CIRGenBuilderTy &builder,
   return cir::ShiftOp::create(builder, loc, resTy,
                               builder.createBitcast(shifTgt, resTy), shiftAmt,
                               shiftLeft);
+}
+
+static cir::VectorType getIntVecFromVecTy(CIRGenBuilderTy &builder,
+                                          cir::VectorType vecTy) {
+  if (!cir::isAnyFloatingPointType(vecTy.getElementType()))
+    return vecTy;
+
+  if (mlir::isa<cir::SingleType>(vecTy.getElementType()))
+    return cir::VectorType::get(builder.getSInt32Ty(), vecTy.getSize());
+  if (mlir::isa<cir::DoubleType>(vecTy.getElementType()))
+    return cir::VectorType::get(builder.getSInt64Ty(), vecTy.getSize());
+  llvm_unreachable(
+      "Unsupported element type in getVecOfIntTypeWithSameEltWidth");
 }
 
 static mlir::Value emitCommonNeonBuiltinExpr(
@@ -2250,7 +2264,18 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   default:
     return std::nullopt;
   case NEON::BI__builtin_neon_vbsl_v:
-  case NEON::BI__builtin_neon_vbslq_v:
+  case NEON::BI__builtin_neon_vbslq_v: {
+
+    cir::VectorType bitTy = getIntVecFromVecTy(builder, ty);
+    ops[0] = builder.createBitcast(ops[0], bitTy);
+    ops[1] = builder.createBitcast(ops[1], bitTy);
+    ops[2] = builder.createBitcast(ops[2], bitTy);
+
+    ops[1] = builder.createAnd(loc, ops[0], ops[1]);
+    ops[2] = builder.createAnd(loc, builder.createNot(ops[0]), ops[2]);
+    ops[0] = builder.createOr(loc, ops[1], ops[2]);
+    return builder.createBitcast(ops[0], ty);
+  }
   case NEON::BI__builtin_neon_vfma_lane_v:
   case NEON::BI__builtin_neon_vfmaq_lane_v:
   case NEON::BI__builtin_neon_vfma_laneq_v:
