@@ -5974,7 +5974,7 @@ static SDValue convertMulToShlAdd(SDNode *N, SelectionDAG &DAG) {
   unsigned MathOp = ISD::DELETED_NODE;
   unsigned TZeros = SplatValue.countr_zero();
 
-  // Shift the splat value by all the zeros, this won't affect the parrity
+  // Shift the splat value by all the zeros, this won't affect the parity
   // this will help us find the first and second multiple to use.
   SplatValue.lshrInPlace(TZeros);
 
@@ -5999,11 +5999,10 @@ static SDValue convertMulToShlAdd(SDNode *N, SelectionDAG &DAG) {
     SDValue Shl =
         DAG.getNode(ISD::SHL, DL, VT, LHS, DAG.getConstant(ShiftAmt, DL, VT));
 
-    SDValue DoubleShl = DAG.getNode(
-        MathOp, DL, VT, Shl,
-        DAG.getNode(ISD::SHL, DL, VT, LHS, DAG.getConstant(TZeros, DL, VT)));
-    SDValue Combined =
-        TZeros ? DoubleShl : DAG.getNode(MathOp, DL, VT, Shl, LHS);
+    SDValue NewLHS = TZeros ? DAG.getNode(ISD::SHL, DL, VT, LHS,
+                                          DAG.getConstant(TZeros, DL, VT))
+                            : LHS;
+    SDValue Combined = DAG.getNode(MathOp, DL, VT, Shl, NewLHS);
     if (IsNegative)
       Combined = DAG.getNegative(Combined, DL, VT);
     return Combined;
