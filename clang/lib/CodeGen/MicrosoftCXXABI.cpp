@@ -1197,10 +1197,12 @@ bool MicrosoftCXXABI::classifyReturnType(CGFunctionInfo &FI) const {
 
   if (isIndirectReturn) {
     CharUnits Align = CGM.getContext().getTypeAlignInChars(FI.getReturnType());
-    unsigned DefaultAS =
-        CGM.getContext().getTargetAddressSpace(LangAS::Default);
-    FI.getReturnInfo() = ABIArgInfo::getIndirect(Align, /*AddrSpace=*/DefaultAS,
-                                                 /*ByVal=*/false);
+    LangAS SRetAS = !isTrivialForABI
+                        ? CGM.getTargetCodeGenInfo().getSRetAddrSpace(RD)
+                        : CGM.getTargetCodeGenInfo().getASTAllocaAddressSpace();
+    unsigned AS = CGM.getContext().getTargetAddressSpace(SRetAS);
+    FI.getReturnInfo() =
+        ABIArgInfo::getIndirect(Align, /*AddrSpace=*/AS, /*ByVal=*/false);
 
     // MSVC always passes `this` before the `sret` parameter.
     FI.getReturnInfo().setSRetAfterThis(FI.isInstanceMethod());

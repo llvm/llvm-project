@@ -288,11 +288,11 @@ void AggExprEmitter::withReturnValueSlot(
   // its lifetime before we have the chance to emit a proper destructor call.
   //
   // We also need a temporary if the destination is in a different address space
-  // from the alloca AS, to avoid an invalid addrspacecast on the sret pointer.
-  // Look through addrspacecasts to avoid unnecessary temps when the
-  // destination is already in the alloca AS.
-  unsigned SRetAS = CGF.getContext().getTargetAddressSpace(
-      CGF.CGM.getASTAllocaAddressSpace());
+  // from the sret AS. Use the target hook to get the actual sret AS for this
+  // return type.
+  const CXXRecordDecl *RD = RetTy->getAsCXXRecordDecl();
+  LangAS SRetLangAS = CGF.CGM.getTargetCodeGenInfo().getSRetAddrSpace(RD);
+  unsigned SRetAS = CGF.getContext().getTargetAddressSpace(SRetLangAS);
   bool DestASMismatch = !Dest.isIgnored() &&
                         RetTy.isTriviallyCopyableType(CGF.getContext()) &&
                         Dest.getAddress()
@@ -309,6 +309,13 @@ void AggExprEmitter::withReturnValueSlot(
   llvm::IntrinsicInst *LifetimeStartInst = nullptr;
   if (!UseTemp) {
     RetAddr = Dest.getAddress();
+    if (RetAddr.isValid() && RetAddr.getAddressSpace() != SRetAS) {
+      llvm::Type *SRetPtrTy =
+          llvm::PointerType::get(CGF.getLLVMContext(), SRetAS);
+      RetAddr = RetAddr.withPointer(
+          CGF.performAddrSpaceCast(RetAddr.getBasePointer(), SRetPtrTy),
+          RetAddr.isKnownNonNull());
+    }
   } else {
     RetAddr = CGF.CreateMemTempWithoutCast(RetTy, "tmp");
     if (CGF.EmitLifetimeStart(RetAddr.getBasePointer())) {
