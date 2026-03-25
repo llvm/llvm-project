@@ -122,8 +122,8 @@ cl::opt<bool> ReadPreAggregated(
     "pa", cl::desc("skip perf and read data from a pre-aggregated file format"),
     cl::cat(AggregatorCategory));
 
-cl::opt<bool> ReadPerfTextData(
-    "parse-perf-script",
+cl::opt<bool> ReadPerfTextProfile(
+    "perf-script",
     cl::desc("skip perf event collection by reading a "
              "pre-parsed perf-script output in a textual format"),
     cl::Hidden, cl::cat(AggregatorCategory));
@@ -211,7 +211,7 @@ void DataAggregator::start() {
 
   // Don't launch perf for pre-aggregated files or when perf input is specified
   // by the user.
-  if (opts::ReadPreAggregated || opts::ReadPerfTextData)
+  if (opts::ReadPreAggregated || opts::ReadPerfTextProfile)
     return;
 
   findPerfExecutable();
@@ -353,7 +353,7 @@ void DataAggregator::processFileBuildID(StringRef FileBuildID) {
 }
 
 bool DataAggregator::checkPerfDataMagic(StringRef FileName) {
-  if (opts::ReadPreAggregated || opts::ReadPerfTextData)
+  if (opts::ReadPreAggregated || opts::ReadPerfTextProfile)
     return true;
 
   Expected<sys::fs::file_t> FD = sys::fs::openNativeFileForRead(FileName);
@@ -602,7 +602,7 @@ void DataAggregator::filterBinaryMMapInfo() {
 
 int DataAggregator::prepareToParse(StringRef Name, PerfProcessInfo &Process,
                                    PerfProcessErrorCallbackTy Callback) {
-  if (opts::ReadPerfTextData) {
+  if (opts::ReadPerfTextProfile) {
     if (Process.Length == 0) {
       errs() << "PERF2BOLT-WARNING: your input profile was generated with "
              << "parsing " << Process.Type << " event enabled. "
@@ -807,7 +807,7 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
     exit(0);
   } else if (opts::ReadPreAggregated) {
     parsePreAggregated();
-  } else if (opts::ReadPerfTextData) {
+  } else if (opts::ReadPerfTextProfile) {
     parsePerfTextData(BC);
   } else {
     parsePerfData(BC);
