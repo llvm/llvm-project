@@ -1,0 +1,1 @@
+14:c:@F@external# ctu-invalid-ast-other.cpp.ast
