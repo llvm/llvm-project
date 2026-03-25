@@ -43,26 +43,37 @@ jobs:
     strategy:
       fail-fast: false # If one arch fails, let the other finish
       matrix:
-        arch: [ppc64le, s390x]
+        includes:
+        - arch: aarch64
+          libc: libc6-dev-aarch64-cross
+          libcpp: libstdc++14-dev-aarch64-cross
+          target_triple: aarch64-linux-gnu
+        - arch: riscv64
+          libc: libc6-dev-riscv64-cross
+          libcpp: libstdc++14-dev-riscv64-cross
+          target_triple: riscv64-linux-gnu
+        - arch: ppc64le
+          libc: libc6-dev-ppc64el-cross
+          libcpp: libstdc++14-dev-ppc64el-cross
+          target_triple: ppc64le-linux-gnu
     
     steps:
       - name: Checkout LLVM
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
-      # Uses QEMU and Docker to seamlessly run commands in an emulated architecture
-      - name: Build and Test in Emulated Container
-        uses: uraimo/run-on-arch-action@d94c13912ea685de38fccc1109385b83fd79427d # v3.0.1
+      - name: Prepare dependencies
         with:
-          arch: ${{ matrix.arch }}
+          arch: x64
           install: |
             apt-get update -y
-            apt-get install -y cmake ninja-build clang lld
+            apt-get install -y cmake ninja-build clang lld qemu-user-static ${{ matrix.libc }} ${{ matrix.libcpp }}
           run: |
             # Using Clang inside the emulated Ubuntu container
-            cmake -B build -S runtimes -G Ninja \
+            cmake -B build -S llvm -G Ninja \
               -DLLVM_ENABLE_RUNTIMES=libc \
               -DCMAKE_C_COMPILER=clang \
               -DCMAKE_CXX_COMPILER=clang++ \
-              -DCMAKE_BUILD_TYPE=Release
+              -DCMAKE_BUILD_TYPE=Release \
+              -DLIBC_TARGET_TRIPLE=${{ target_triple }}
               
             cmake --build build --target libc-shared-tests
