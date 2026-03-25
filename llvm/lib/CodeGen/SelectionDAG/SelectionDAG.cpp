@@ -6196,24 +6196,32 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, const APInt &DemandedElts,
     // Try to infer NaN from known bits, but only for detecting signaling or
     // nonsignaling NaNs
     if (!SNaN) {
-      EVT VT = Op.getValueType().getScalarType();
-      const unsigned Mantissa = VT == MVT::f16    ? 10
-                                : VT == MVT::f32  ? 23
-                                : VT == MVT::f64  ? 52
-                                : VT == MVT::f128 ? 112
-                                                  : 0;
-      const unsigned Exponent = VT == MVT::f16    ? 5
-                                : VT == MVT::f32  ? 8
-                                : VT == MVT::f64  ? 11
-                                : VT == MVT::f128 ? 15
-                                                  : 0;
+      const fltSemantics &FltSem = Op.getValueType().getFltSemantics();
+      const KnownBits Known = computeKnownBits(Op, DemandedElts);
+      const unsigned Mantissa = FltSem.precision - 1;
+      const unsigned Exponent = FltSem.sizeInBits - FltSem.precision;
+      const KnownBits KnownMan = Known.extractBits(Mantissa, 0);
+      const KnownBits KnownExp = Known.extractBits(Exponent, Mantissa);
 
-      if (Mantissa) {
-        KnownBits Known = computeKnownBits(Op, DemandedElts);
-        KnownBits KnownMan = Known.extractBits(Mantissa, 0);
-        KnownBits KnownExp = Known.extractBits(Exponent, Mantissa);
+      switch (FltSem.nanEncoding) {
+      default:
+        break;
+      case fltNanEncoding::IEEE: {
         if (!KnownExp.getMaxValue().isAllOnes() || KnownMan.isZero())
           return true;
+        break;
+      }
+      case fltNanEncoding::AllOnes: {
+        if (!KnownExp.getMaxValue().isAllOnes() ||
+            !KnownMan.getMaxValue().isAllOnes())
+          return true;
+        break;
+      }
+      case fltNanEncoding::NegativeZero:
+        if (Known.Zero.isSignBitSet() || !KnownExp.isZero() ||
+            !KnownMan.isZero())
+          return true;
+        break;
       }
     }
     return false;
