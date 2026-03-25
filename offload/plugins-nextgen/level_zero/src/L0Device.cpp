@@ -290,24 +290,21 @@ Error L0DeviceTy::synchronizeImpl(__tgt_async_info &AsyncInfo,
   AsyncQueueTy *AsyncQueue = reinterpret_cast<AsyncQueueTy *>(AsyncInfo.Queue);
 
   Error SyncErrors = Error::success();
-  auto addError = [&](Error Err) {
-    SyncErrors = joinErrors(std::move(SyncErrors), std::move(Err));
-  };
   if (!AsyncQueue->WaitEvents.empty()) {
     const auto &WaitEvents = AsyncQueue->WaitEvents;
     if (Plugin.getOptions().CommandMode == CommandModeTy::AsyncOrdered) {
       // Only need to wait for the last event.
-      CALL_ZE_HANDLE_ERROR(addError, zeEventHostSynchronize, WaitEvents.back(),
-                           L0DefaultTimeout);
+      CALL_ZE_ACCUM_ERROR(SyncErrors, zeEventHostSynchronize, WaitEvents.back(),
+                          L0DefaultTimeout);
       // Synchronize on kernel event to support printf().
       auto KE = AsyncQueue->KernelEvent;
       if (KE && KE != WaitEvents.back() && !SyncErrors) {
-        CALL_ZE_HANDLE_ERROR(addError, zeEventHostSynchronize, KE,
-                             L0DefaultTimeout);
+        CALL_ZE_ACCUM_ERROR(SyncErrors, zeEventHostSynchronize, KE,
+                            L0DefaultTimeout);
       }
       for (auto &Event : WaitEvents) {
         if (auto Err = releaseEvent(Event))
-          addError(std::move(Err));
+          SyncErrors = joinErrors(std::move(SyncErrors), std::move(Err));
       }
     } else {
       // Async case.
@@ -319,13 +316,13 @@ Error L0DeviceTy::synchronizeImpl(__tgt_async_info &AsyncInfo,
       bool WaitDone = false;
       for (auto Itr = WaitEvents.rbegin(); Itr != WaitEvents.rend(); Itr++) {
         if (!WaitDone) {
-          CALL_ZE_HANDLE_ERROR(addError, zeEventHostSynchronize, *Itr,
-                               L0DefaultTimeout);
+          CALL_ZE_ACCUM_ERROR(SyncErrors, zeEventHostSynchronize, *Itr,
+                              L0DefaultTimeout);
           if (*Itr == AsyncQueue->KernelEvent)
             WaitDone = true;
         }
         if (auto Err = releaseEvent(*Itr))
-          addError(std::move(Err));
+          SyncErrors = joinErrors(std::move(SyncErrors), std::move(Err));
       }
     }
     // In either case, all the events are now reset and released
@@ -809,6 +806,10 @@ Error L0DeviceTy::enqueueMemCopyAsync(void *Dst, const void *Src, size_t Size,
                                       bool CopyTo) {
   const bool Ordered =
       (getPlugin().getOptions().CommandMode == CommandModeTy::AsyncOrdered);
+  auto CmdListOrError = getImmCopyCmdList();
+  if (!CmdListOrError)
+    return CmdListOrError.takeError();
+  const auto CmdList = *CmdListOrError;
   auto EventOrErr = getEvent();
   if (!EventOrErr)
     return EventOrErr.takeError();
@@ -826,14 +827,19 @@ Error L0DeviceTy::enqueueMemCopyAsync(void *Dst, const void *Src, size_t Size,
     else
       NumWaitEvents = 0;
   }
-  auto CmdListOrError = getImmCopyCmdList();
-  if (!CmdListOrError)
-    return CmdListOrError.takeError();
-  const auto CmdList = *CmdListOrError;
-  CALL_ZE_RET_ERROR(zeCommandListAppendMemoryCopy, CmdList, Dst, Src, Size,
-                    SignalEvent, NumWaitEvents, WaitEvents);
-  AsyncQueue->WaitEvents.push_back(SignalEvent);
-  return Plugin::success();
+
+  Error AllErrors = Error::success();
+
+  CALL_ZE_ACCUM_ERROR(AllErrors, zeCommandListAppendMemoryCopy, CmdList, Dst,
+                      Src, Size, SignalEvent, NumWaitEvents, WaitEvents);
+  if (!AllErrors)
+    AsyncQueue->WaitEvents.push_back(SignalEvent);
+  else {
+    if (auto Err = releaseEvent(SignalEvent))
+      AllErrors = joinErrors(std::move(AllErrors), std::move(Err));
+  }
+
+  return AllErrors;
 }
 
 /// Enqueue memory fill.
@@ -847,10 +853,16 @@ Error L0DeviceTy::enqueueMemFill(void *Ptr, const void *Pattern,
     auto EventOrErr = getEvent();
     if (!EventOrErr)
       return EventOrErr.takeError();
+    Error AllErrors = Error::success();
     ze_event_handle_t Event = *EventOrErr;
-    CALL_ZE_RET_ERROR(zeCommandListAppendMemoryFill, CmdList, Ptr, Pattern,
-                      PatternSize, Size, Event, 0, nullptr);
-    CALL_ZE_RET_ERROR(zeEventHostSynchronize, Event, L0DefaultTimeout);
+    CALL_ZE_ACCUM_ERROR(AllErrors, zeCommandListAppendMemoryFill, CmdList, Ptr,
+                        Pattern, PatternSize, Size, Event, 0, nullptr);
+    if (!AllErrors)
+      CALL_ZE_ACCUM_ERROR(AllErrors, zeEventHostSynchronize, Event,
+                          L0DefaultTimeout);
+    if (auto Err = releaseEvent(Event))
+      AllErrors = joinErrors(std::move(AllErrors), std::move(Err));
+    return AllErrors;
   } else {
     auto CmdListOrErr = getCopyCmdList();
     if (!CmdListOrErr)
