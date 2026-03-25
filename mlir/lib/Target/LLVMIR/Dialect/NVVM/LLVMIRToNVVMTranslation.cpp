@@ -14,6 +14,7 @@
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Target/LLVMIR/ModuleImport.h"
 #include "llvm/IR/ConstantRange.h"
+#include "llvm/IR/Constants.h"
 
 using namespace mlir;
 using namespace mlir::NVVM;
@@ -30,10 +31,42 @@ static bool isConvertibleIntrinsic(llvm::Intrinsic::ID id) {
 /// Returns the list of LLVM IR intrinsic identifiers that are convertible to
 /// MLIR NVVM dialect intrinsics.
 static ArrayRef<unsigned> getSupportedIntrinsicsImpl() {
-  static const SmallVector<unsigned> convertibleIntrinsics = {
-#include "mlir/Dialect/LLVMIR/NVVMConvertibleLLVMIRIntrinsics.inc"
-  };
+  static const SmallVector<unsigned> convertibleIntrinsics = [] {
+    SmallVector<unsigned> ids = {
+#include "mlir/Dialect/LLVMIR/NVVMConvertibleLLVMIRIntrinsics.inc"      
+    };
+
+  ids.push_back(llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_all);
+  return ids;
+  }();
   return convertibleIntrinsics;
+}
+
+static LogicalResult convertBarrierAlignedAllIntrinsic(OpBuilder &builder,
+                                                      llvm::CallInst *inst,
+                                                      LLVM::ModuleImport &moduleImport) {
+  if (inst->arg_size() != 1) {
+    return failure();
+  }
+
+  Location loc = moduleImport.translateLoc(inst->getDebugLoc());
+  llvm::Value *idArg = inst->getArgOperand(0);
+
+  // Canonicalize all(i32 0) -> nvvm.barrier
+  if (auto *cst = llvm::dyn_cast<llvm::ConstantInt>(idArg);
+      cst && cst->isZero()) {
+    auto op = builder.create<NVVM::BarrierOp>(loc /* no barrier id */);
+    moduleImport.mapNoResultOp(inst, op);
+    return success();
+  }
+
+  FailureOr<Value> barrierId = moduleImport.convertValue(idArg);
+  if (failed(barrierId))
+    return failure();
+
+  auto op = builder.create<NVVM::BarrierOp>(loc, *barrierId);
+  moduleImport.mapNoResultOp(inst, op);
+  return success();
 }
 
 /// Converts the LLVM intrinsic to an MLIR NVVM dialect operation if a
@@ -43,6 +76,12 @@ static LogicalResult convertIntrinsicImpl(OpBuilder &odsBuilder,
                                           LLVM::ModuleImport &moduleImport) {
   llvm::Intrinsic::ID intrinsicID = inst->getIntrinsicID();
 
+  switch (intrinsicID) {
+  case llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_all:
+    return convertBarrierAlignedAllIntrinsic(odsBuilder, inst, moduleImport);
+  default:
+    break;
+  }
   // Check if the intrinsic is convertible to an MLIR dialect counterpart and
   // copy the arguments to an an LLVM operands array reference for conversion.
   if (isConvertibleIntrinsic(intrinsicID)) {

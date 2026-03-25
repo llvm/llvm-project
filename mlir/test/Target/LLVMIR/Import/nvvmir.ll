@@ -73,8 +73,17 @@ define float @nvvm_rcp(float %0) {
 
 ; CHECK-LABEL: @llvm_nvvm_barrier0()
 define void @llvm_nvvm_barrier0() {
-  ; CHECK: llvm.nvvm.barrier.cta.sync.aligned.all
+  ; CHECK: nvvm.barrier{{$}}
   call void @llvm.nvvm.barrier0()
+  ret void
+}
+
+; CHECK-LABEL: @llvm_nvvm_barrier_cta_sync_aligned_all
+define void @llvm_nvvm_barrier_cta_sync_aligned_all(i32 %id) {
+  ; CHECK: nvvm.barrier{{$}}
+  call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 0)
+  ; CHECK: nvvm.barrier id = %{{.*}}
+  call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 %id)
   ret void
 }
 
@@ -268,6 +277,8 @@ declare noundef i32 @llvm.nvvm.read.ptx.sreg.cluster.nctarank()
 declare float @llvm.nvvm.rcp.approx.ftz.f(float)
 
 declare void @llvm.nvvm.barrier0()
+
+declare void @llvm.nvvm.barrier.cta.sync.aligned.all(i32)
 
 declare i32 @llvm.nvvm.shfl.sync.bfly.i32(i32, i32, i32, i32)
 
