@@ -12,6 +12,7 @@
 
 #include "SystemValueTypes.h"
 
+#include "lldb/Target/Target.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/ValueObject/ValueObject.h"
 
@@ -63,8 +64,12 @@ static bool ExtractSystemChars(ValueObjectSP storage_sp,
     }
   }
 
-  // Guard against overly long paths.
-  const uint32_t max_length = 4096;
+  // Use the target's max-children-count, or 4096 (~PATH_MAX) by default
+  uint32_t max_length = 4096;
+  if (auto target_sp = storage_sp->GetTargetSP())
+    max_length = target_sp->GetMaximumNumberOfChildrenToDisplay();
+  if (max_length == 0)
+    max_length = 4096;
   uint32_t length = std::min(num_children, max_length);
 
   values.clear();
