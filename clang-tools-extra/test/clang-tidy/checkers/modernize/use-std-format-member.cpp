@@ -4,9 +4,7 @@
 // RUN:               modernize-use-std-format.StrFormatLikeFunctions: 'MyClass::StrFormat', \
 // RUN:               modernize-use-std-format.ReplacementFormatFunction: 'format', \
 // RUN:             } \
-// RUN:            }" \
-// RUN:   -- -isystem %clang_tidy_headers
-
+// RUN:            }"
 #include <cstdio>
 #include <string.h>
 #include <string>

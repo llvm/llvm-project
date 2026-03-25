@@ -197,8 +197,6 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
-
 private:
   llvm::Expected<uint32_t>
   CalculateNumChildrenForOldCompressedPairLayout(ValueObject &pair);
@@ -388,16 +386,6 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::Update() {
       m_tree->GetCompilerType().GetDirectNestedTypeWithName("__node_pointer");
 
   return lldb::ChildCacheState::eRefetch;
-}
-
-llvm::Expected<size_t> lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
-    GetIndexOfChildWithName(ConstString name) {
-  auto optional_idx = formatters::ExtractIndexFromString(name.GetCString());
-  if (!optional_idx) {
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
-  }
-  return *optional_idx;
 }
 
 SyntheticChildrenFrontEnd *

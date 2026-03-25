@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs -stop-after=kcfi < %s | FileCheck %s --check-prefixes=MIR,KCFI
 
 ; ASM:       .p2align 2
-; ASM:       .prefalign 16
+; ASM:       .prefalign 4
 ; ASM:       .type __cfi_f1,@function
 ; ASM-LABEL: __cfi_f1:
 ; ASM-NEXT:    nop

@@ -5,11 +5,11 @@
 target triple = "wasm32-unknown-unknown"
 
 ; EH: .functype  invoke_vi (i32, i32) -> ()
-; EH: .import_module  invoke_vi, env
-; EH: .import_name  invoke_vi, invoke_vi
+; EH: .import_module  invoke_vi, "env"
+; EH: .import_name  invoke_vi, "invoke_vi"
 ; EH-NOT: .functype  __invoke_void_i32
-; EH-NOT: .import_module  __invoke_void_i32
-; EH-NOT: .import_name  __invoke_void_i32
+; EH-NOT: .import_module  "__invoke_void_i32"
+; EH-NOT: .import_name  "__invoke_void_i32"
 
 ; SJLJ: .functype  emscripten_longjmp (i32, i32) -> ()
 ; SJLJ-NOT: .functype  emscripten_longjmp_jmpbuf

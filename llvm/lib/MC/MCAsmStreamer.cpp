@@ -1566,7 +1566,7 @@ void MCAsmStreamer::emitCodeAlignment(Align Alignment,
 void MCAsmStreamer::emitPrefAlign(Align Alignment, const MCSymbol &End,
                                   bool EmitNops, uint8_t Fill,
                                   const MCSubtargetInfo &) {
-  OS << "\t.prefalign\t" << Alignment.value() << ", ";
+  OS << "\t.prefalign\t" << Log2(Alignment) << ", ";
   End.print(OS, MAI);
   if (EmitNops)
     OS << ", nop";

@@ -1545,9 +1545,7 @@ Module *Target::GetExecutableModulePointer() {
 static void LoadScriptingResourceForModule(const ModuleSP &module_sp,
                                            Target *target) {
   Status error;
-  StreamString feedback_stream;
-  if (module_sp && !module_sp->LoadScriptingResourceInTarget(target, error,
-                                                             feedback_stream)) {
+  if (module_sp && !module_sp->LoadScriptingResourceInTarget(target, error)) {
     if (error.AsCString())
       target->GetDebugger().GetAsyncErrorStream()->Printf(
           "unable to load scripting data for module %s - error reported was "
@@ -1555,9 +1553,6 @@ static void LoadScriptingResourceForModule(const ModuleSP &module_sp,
           module_sp->GetFileSpec().GetFileNameStrippingExtension().GetCString(),
           error.AsCString());
   }
-  if (feedback_stream.GetSize())
-    target->GetDebugger().GetAsyncErrorStream()->Printf(
-        "%s\n", feedback_stream.GetData());
 }
 
 void Target::ClearModules(bool delete_locations) {
@@ -2823,11 +2818,8 @@ llvm::Error Target::SetLabel(llvm::StringRef label) {
   for (size_t i = 0; i < targets.GetNumTargets(); i++) {
     TargetSP target_sp = targets.GetTargetAtIndex(i);
     if (target_sp && target_sp->GetLabel() == label) {
-        return llvm::make_error<llvm::StringError>(
-            llvm::formatv(
-                "Cannot use label '{0}' since it's set in target #{1}.", label,
-                i),
-            llvm::inconvertibleErrorCode());
+      return llvm::createStringErrorV(
+          "Cannot use label '{0}' since it's set in target #{1}.", label, i);
     }
   }
 

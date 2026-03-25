@@ -710,7 +710,8 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
         return false;
       if (Tok->is(TT_TemplateCloser)) {
         Tok = Tok->MatchingParen;
-        assert(Tok);
+        if (!Tok)
+          return false;
       }
       if (Tok->FirstAfterPPLine)
         return false;
@@ -2500,7 +2501,7 @@ unsigned ContinuationIndenter::handleEndOfLine(const FormatToken &Current,
       Strict = StrictPenalty <= Penalty;
       if (Strict) {
         Penalty = StrictPenalty;
-        State = StrictState;
+        State = std::move(StrictState);
       }
     }
     if (!DryRun) {

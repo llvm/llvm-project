@@ -234,7 +234,6 @@ define void @test_load_gep_widen_induction(ptr noalias %dst, ptr noalias %dst2) 
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP19:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP20:%.*]] = add i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP21:%.*]] = add i64 [[INDEX]], 3
@@ -242,7 +241,7 @@ define void @test_load_gep_widen_induction(ptr noalias %dst, ptr noalias %dst2) 
 ; CHECK-NEXT:    [[TMP23:%.*]] = add i64 [[INDEX]], 5
 ; CHECK-NEXT:    [[TMP24:%.*]] = add i64 [[INDEX]], 6
 ; CHECK-NEXT:    [[TMP25:%.*]] = add i64 [[INDEX]], 7
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i128, ptr [[DST]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i128, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i128, ptr [[DST]], i64 [[TMP19]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP5]], i32 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x ptr> [[TMP26]], ptr [[TMP6]], i32 1
@@ -266,7 +265,7 @@ define void @test_load_gep_widen_induction(ptr noalias %dst, ptr noalias %dst2) 
 ; CHECK-NEXT:    store ptr null, ptr [[TMP10]], align 8
 ; CHECK-NEXT:    store ptr null, ptr [[TMP11]], align 8
 ; CHECK-NEXT:    store ptr null, ptr [[TMP17]], align 8
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr ptr, ptr [[DST2]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr ptr, ptr [[DST2]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr ptr, ptr [[TMP12]], i64 2
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr ptr, ptr [[TMP12]], i64 4
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr ptr, ptr [[TMP12]], i64 6
@@ -590,9 +589,8 @@ define double @test_scalarization_cost_for_load_of_address(ptr %src.0, ptr %src.
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi double [ 3.000000e+00, %[[VECTOR_PH]] ], [ [[TMP21:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[IV:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[GEP_0:%.*]] = getelementptr [[T:%.*]], ptr [[SRC_0]], i64 [[IV]]
+; CHECK-NEXT:    [[GEP_0:%.*]] = getelementptr [[T:%.*]], ptr [[SRC_0]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <6 x double>, ptr [[GEP_0]], align 8
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <6 x double> [[WIDE_VEC]], <6 x double> poison, <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <6 x double> [[WIDE_VEC]], <6 x double> poison, <2 x i32> <i32 1, i32 4>
@@ -602,10 +600,10 @@ define double @test_scalarization_cost_for_load_of_address(ptr %src.0, ptr %src.
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[STRIDED_VEC2]], splat (double 3.000000e+00)
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <2 x double> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[TMP6]], [[TMP5]]
-; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr double, ptr [[SRC_1]], i64 [[IV]]
+; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr double, ptr [[SRC_1]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[GEP_SRC]], align 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = fmul <2 x double> [[TMP7]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[GEP_SRC_2:%.*]] = getelementptr [[T_2:%.*]], ptr [[SRC_2]], i64 [[IV]]
+; CHECK-NEXT:    [[GEP_SRC_2:%.*]] = getelementptr [[T_2:%.*]], ptr [[SRC_2]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr [[T_2]], ptr [[SRC_2]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[GEP_72:%.*]] = getelementptr i8, ptr [[GEP_SRC_2]], i64 72
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP11]], i64 72
@@ -710,7 +708,6 @@ define i32 @test_or_reduction_with_stride_2(i32 %scale, ptr %src) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <16 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP66:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], 6
@@ -726,7 +723,7 @@ define i32 @test_or_reduction_with_stride_2(i32 %scale, ptr %src) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[OFFSET_IDX]], 26
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[OFFSET_IDX]], 28
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[OFFSET_IDX]], 30
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr [32 x i8], ptr [[SRC]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr [32 x i8], ptr [[SRC]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr [32 x i8], ptr [[SRC]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr [32 x i8], ptr [[SRC]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr [32 x i8], ptr [[SRC]], i64 [[TMP3]]

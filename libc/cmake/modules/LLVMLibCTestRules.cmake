@@ -641,6 +641,25 @@ function(add_integration_test test_name)
       ${CMAKE_CROSSCOMPILING_EMULATOR}
       ${INTEGRATION_TEST_LOADER_ARGS}
       $<TARGET_FILE:${fq_build_target_name}> ${INTEGRATION_TEST_ARGS})
+  # Generate a sidecar .params file alongside the executable for any test that
+  # requires specific command-line arguments or environment variables.  The
+  # LibcTest lit format reads this file at test time.  Format: one arg per line,
+  # a "---" separator, then one KEY=VALUE env entry per line.
+  if(INTEGRATION_TEST_ARGS OR INTEGRATION_TEST_ENV)
+    set(_params_content "")
+    foreach(_arg IN LISTS INTEGRATION_TEST_ARGS)
+      string(APPEND _params_content "${_arg}\n")
+    endforeach()
+    string(APPEND _params_content "---\n")
+    foreach(_env_entry IN LISTS INTEGRATION_TEST_ENV)
+      string(APPEND _params_content "${_env_entry}\n")
+    endforeach()
+    file(GENERATE
+      OUTPUT  "${CMAKE_CURRENT_BINARY_DIR}/${fq_build_target_name}.params"
+      CONTENT "${_params_content}"
+    )
+  endif()
+
   add_custom_target(
     ${fq_target_name}
     COMMAND ${test_cmd}

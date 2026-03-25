@@ -46,6 +46,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
@@ -460,6 +461,7 @@ public:
                             std::optional<unsigned> &TiedDefIdx,
                             bool IsDef = false);
   bool parseImmediateOperand(MachineOperand &Dest);
+  bool parseSymbolicInlineAsmOperand(unsigned OpIdx, MachineOperand &Dest);
   bool parseIRConstant(StringRef::iterator Loc, StringRef StringValue,
                        const Constant *&C);
   bool parseIRConstant(StringRef::iterator Loc, const Constant *&C);
@@ -512,6 +514,7 @@ public:
   bool parseSectionID(std::optional<MBBSectionID> &SID);
   bool parseBBID(std::optional<UniqueBBID> &BBID);
   bool parseCallFrameSize(unsigned &CallFrameSize);
+  bool parsePrefetchTarget(CallsiteID &Target);
   bool parseOperandsOffset(MachineOperand &Op);
   bool parseIRValue(const Value *&V);
   bool parseMemoryOperandFlag(MachineMemOperand::Flags &Flags);
@@ -678,17 +681,32 @@ bool MIParser::parseSectionID(std::optional<MBBSectionID> &SID) {
 
 // Parse Machine Basic Block ID.
 bool MIParser::parseBBID(std::optional<UniqueBBID> &BBID) {
-  assert(Token.is(MIToken::kw_bb_id));
+  if (Token.isNot(MIToken::kw_bb_id))
+    return error("expected 'bb_id'");
   lex();
   unsigned BaseID = 0;
   unsigned CloneID = 0;
-  if (getUnsigned(BaseID))
-    return error("Unknown BB ID");
-  lex();
-  if (Token.is(MIToken::IntegerLiteral)) {
-    if (getUnsigned(CloneID))
-      return error("Unknown Clone ID");
+  if (Token.is(MIToken::FloatingPointLiteral)) {
+    StringRef S = Token.range();
+    auto Parts = S.split('.');
+    if (Parts.first.getAsInteger(10, BaseID) ||
+        Parts.second.getAsInteger(10, CloneID))
+      return error("Unknown BB ID");
     lex();
+  } else {
+    if (getUnsigned(BaseID))
+      return error("Unknown BB ID");
+    lex();
+    if (Token.is(MIToken::comma) || Token.is(MIToken::dot)) {
+      lex();
+      if (getUnsigned(CloneID))
+        return error("Unknown Clone ID");
+      lex();
+    } else if (Token.is(MIToken::IntegerLiteral)) {
+      if (getUnsigned(CloneID))
+        return error("Unknown Clone ID");
+      lex();
+    }
   }
   BBID = {BaseID, CloneID};
   return false;
@@ -704,6 +722,17 @@ bool MIParser::parseCallFrameSize(unsigned &CallFrameSize) {
   CallFrameSize = Value;
   lex();
   return false;
+}
+
+bool MIParser::parsePrefetchTarget(CallsiteID &Target) {
+  lex();
+  std::optional<UniqueBBID> BBID;
+  if (parseBBID(BBID))
+    return true;
+  Target.BBID = *BBID;
+  if (expectAndConsume(MIToken::comma))
+    return true;
+  return getUnsigned(Target.CallsiteIndex);
 }
 
 bool MIParser::parseBasicBlockDefinition(
@@ -1874,6 +1903,142 @@ bool MIParser::parseImmediateOperand(MachineOperand &Dest) {
   return false;
 }
 
+bool MIParser::parseSymbolicInlineAsmOperand(unsigned OpIdx,
+                                             MachineOperand &Dest) {
+  assert(OpIdx >= InlineAsm::MIOp_ExtraInfo);
+  assert(Token.is(MIToken::Identifier) &&
+         "expected symbolic inline asm operand");
+
+  // Parse ExtraInfo flags.
+  if (OpIdx == InlineAsm::MIOp_ExtraInfo) {
+    unsigned ExtraInfo = 0;
+    for (;;) {
+      if (Token.isNot(MIToken::Identifier))
+        break;
+
+      StringRef FlagName = Token.stringValue();
+      unsigned Flag = StringSwitch<unsigned>(FlagName)
+                          .Case("sideeffect", InlineAsm::Extra_HasSideEffects)
+                          .Case("mayload", InlineAsm::Extra_MayLoad)
+                          .Case("maystore", InlineAsm::Extra_MayStore)
+                          .Case("isconvergent", InlineAsm::Extra_IsConvergent)
+                          .Case("alignstack", InlineAsm::Extra_IsAlignStack)
+                          .Case("unwind", InlineAsm::Extra_MayUnwind)
+                          .Case("attdialect", 0)
+                          .Case("inteldialect", InlineAsm::Extra_AsmDialect)
+                          .Default(~0u);
+      if (Flag == ~0u)
+        return error("unknown inline asm extra info flag '" + FlagName + "'");
+
+      ExtraInfo |= Flag;
+      lex();
+    }
+
+    Dest = MachineOperand::CreateImm(ExtraInfo);
+    return false;
+  }
+
+  // Parse symbolic form: kind[:constraint].
+  StringRef KindStr = Token.stringValue();
+  constexpr auto InvalidKind = static_cast<InlineAsm::Kind>(0);
+  InlineAsm::Kind K =
+      StringSwitch<InlineAsm::Kind>(KindStr)
+          .Case("regdef", InlineAsm::Kind::RegDef)
+          .Case("reguse", InlineAsm::Kind::RegUse)
+          .Case("regdef-ec", InlineAsm::Kind::RegDefEarlyClobber)
+          .Case("clobber", InlineAsm::Kind::Clobber)
+          .Case("imm", InlineAsm::Kind::Imm)
+          .Case("mem", InlineAsm::Kind::Mem)
+          .Default(InvalidKind);
+  if (K == InvalidKind)
+    return error("unknown inline asm operand kind '" + KindStr + "'");
+
+  lex();
+
+  // Create the flag with default of 1 operand.
+  InlineAsm::Flag F(K, 1);
+
+  // Parse optional tiedto constraint: tiedto:$N.
+  if (Token.is(MIToken::Identifier) && Token.stringValue() == "tiedto") {
+    lex();
+    if (Token.isNot(MIToken::colon))
+      return error("expected ':' after 'tiedto'");
+    lex();
+    if (Token.isNot(MIToken::NamedRegister))
+      return error("expected '$N' operand number after 'tiedto:'");
+    unsigned OperandNo;
+    if (Token.stringValue().getAsInteger(10, OperandNo))
+      return error("invalid operand number in tiedto constraint");
+    lex();
+
+    F.setMatchingOp(OperandNo);
+
+    Dest = MachineOperand::CreateImm(F);
+    return false;
+  }
+
+  // Parse optional constraint after ':'.
+  if (Token.isNot(MIToken::colon)) {
+    Dest = MachineOperand::CreateImm(F);
+    return false;
+  }
+
+  lex();
+
+  if (Token.isNot(MIToken::Identifier))
+    return error("expected register class or memory constraint name after ':'");
+
+  StringRef ConstraintStr = Token.stringValue();
+  if (K == InlineAsm::Kind::Mem) {
+    InlineAsm::ConstraintCode CC =
+        StringSwitch<InlineAsm::ConstraintCode>(ConstraintStr)
+            .Case("es", InlineAsm::ConstraintCode::es)
+            .Case("i", InlineAsm::ConstraintCode::i)
+            .Case("k", InlineAsm::ConstraintCode::k)
+            .Case("m", InlineAsm::ConstraintCode::m)
+            .Case("o", InlineAsm::ConstraintCode::o)
+            .Case("v", InlineAsm::ConstraintCode::v)
+            .Case("A", InlineAsm::ConstraintCode::A)
+            .Case("Q", InlineAsm::ConstraintCode::Q)
+            .Case("R", InlineAsm::ConstraintCode::R)
+            .Case("S", InlineAsm::ConstraintCode::S)
+            .Case("T", InlineAsm::ConstraintCode::T)
+            .Case("Um", InlineAsm::ConstraintCode::Um)
+            .Case("Un", InlineAsm::ConstraintCode::Un)
+            .Case("Uq", InlineAsm::ConstraintCode::Uq)
+            .Case("Us", InlineAsm::ConstraintCode::Us)
+            .Case("Ut", InlineAsm::ConstraintCode::Ut)
+            .Case("Uv", InlineAsm::ConstraintCode::Uv)
+            .Case("Uy", InlineAsm::ConstraintCode::Uy)
+            .Case("X", InlineAsm::ConstraintCode::X)
+            .Case("Z", InlineAsm::ConstraintCode::Z)
+            .Case("ZB", InlineAsm::ConstraintCode::ZB)
+            .Case("ZC", InlineAsm::ConstraintCode::ZC)
+            .Case("Zy", InlineAsm::ConstraintCode::Zy)
+            .Case("p", InlineAsm::ConstraintCode::p)
+            .Case("ZQ", InlineAsm::ConstraintCode::ZQ)
+            .Case("ZR", InlineAsm::ConstraintCode::ZR)
+            .Case("ZS", InlineAsm::ConstraintCode::ZS)
+            .Case("ZT", InlineAsm::ConstraintCode::ZT)
+            .Default(InlineAsm::ConstraintCode::Unknown);
+    if (CC == InlineAsm::ConstraintCode::Unknown)
+      return error("unknown memory constraint '" + ConstraintStr + "'");
+    F.setMemConstraint(CC);
+  } else if (K == InlineAsm::Kind::RegDef || K == InlineAsm::Kind::RegUse ||
+             K == InlineAsm::Kind::RegDefEarlyClobber) {
+    const TargetRegisterClass *RC =
+        PFS.Target.getRegClass(ConstraintStr.lower());
+    if (!RC)
+      return error("unknown register class '" + ConstraintStr + "'");
+    F.setRegClass(RC->getID());
+  }
+
+  lex();
+
+  Dest = MachineOperand::CreateImm(F);
+  return false;
+}
+
 bool MIParser::parseTargetImmMnemonic(const unsigned OpCode,
                                       const unsigned OpIdx,
                                       MachineOperand &Dest,
@@ -2970,6 +3135,8 @@ bool MIParser::parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
   case MIToken::NamedVirtualRegister:
     return parseRegisterOperand(Dest, TiedDefIdx);
   case MIToken::IntegerLiteral:
+    // TODO: Forbid numeric operands for INLINEASM once the transition to the
+    // symbolic form is over.
     return parseImmediateOperand(Dest);
   case MIToken::kw_half:
   case MIToken::kw_bfloat:
@@ -3038,16 +3205,23 @@ bool MIParser::parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
     return parseDbgInstrRefOperand(Dest);
   case MIToken::Error:
     return true;
-  case MIToken::Identifier:
-    if (const auto *RegMask = PFS.Target.getRegMask(Token.stringValue())) {
+  case MIToken::Identifier: {
+    bool IsInlineAsm = OpCode == TargetOpcode::INLINEASM ||
+                       OpCode == TargetOpcode::INLINEASM_BR;
+    if (IsInlineAsm)
+      return parseSymbolicInlineAsmOperand(OpIdx, Dest);
+
+    StringRef Id = Token.stringValue();
+    if (const auto *RegMask = PFS.Target.getRegMask(Id)) {
       Dest = MachineOperand::CreateRegMask(RegMask);
       lex();
       break;
-    } else if (Token.stringValue() == "CustomRegMask") {
+    } else if (Id == "CustomRegMask") {
       return parseCustomRegisterMaskOperand(Dest);
     } else {
       return parseTypedImmediateOperand(Dest);
     }
+  }
   case MIToken::dot: {
     const auto *TII = MF.getSubtarget().getInstrInfo();
     if (const auto *Formatter = TII->getMIRFormatter()) {
@@ -3720,14 +3894,18 @@ bool llvm::parseVirtualRegisterReference(PerFunctionMIParsingState &PFS,
   return MIParser(PFS, Error, Src).parseStandaloneVirtualRegister(Info);
 }
 
-bool llvm::parseStackObjectReference(PerFunctionMIParsingState &PFS,
-                                     int &FI, StringRef Src,
-                                     SMDiagnostic &Error) {
+bool llvm::parseStackObjectReference(PerFunctionMIParsingState &PFS, int &FI,
+                                     StringRef Src, SMDiagnostic &Error) {
   return MIParser(PFS, Error, Src).parseStandaloneStackObject(FI);
 }
 
-bool llvm::parseMDNode(PerFunctionMIParsingState &PFS,
-                       MDNode *&Node, StringRef Src, SMDiagnostic &Error) {
+bool llvm::parsePrefetchTarget(PerFunctionMIParsingState &PFS,
+                               CallsiteID &Target, StringRef Src,
+                               SMDiagnostic &Error) {
+  return MIParser(PFS, Error, Src).parsePrefetchTarget(Target);
+}
+bool llvm::parseMDNode(PerFunctionMIParsingState &PFS, MDNode *&Node,
+                       StringRef Src, SMDiagnostic &Error) {
   return MIParser(PFS, Error, Src).parseStandaloneMDNode(Node);
 }
 

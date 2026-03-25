@@ -31,7 +31,7 @@ void f() {
 // CIR:   %[[GUARD_BYTE_PTR:.*]] = cir.cast bitcast %[[GUARD]] : !cir.ptr<!s64i> -> !cir.ptr<!s8i>
 // CIR:   %[[GUARD_LOAD:.*]] = cir.load{{.*}}%[[GUARD_BYTE_PTR]]
 // CIR:   %[[ZERO:.*]] = cir.const #cir.int<0>
-// CIR:   %[[IS_UNINIT:.*]] = cir.cmp(eq, %[[GUARD_LOAD]], %[[ZERO]])
+// CIR:   %[[IS_UNINIT:.*]] = cir.cmp eq %[[GUARD_LOAD]], %[[ZERO]]
 // CIR:   cir.if %[[IS_UNINIT]]
 // CIR:     cir.call @__cxa_guard_acquire
 // CIR:     cir.if

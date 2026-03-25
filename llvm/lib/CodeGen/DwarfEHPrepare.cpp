@@ -278,7 +278,7 @@ bool DwarfEHPrepare::InsertUnwindResumeCalls() {
   // that feeds the _Unwind_Resume call.
   for (ResumeInst *RI : Resumes) {
     BasicBlock *Parent = RI->getParent();
-    BranchInst::Create(UnwindBB, Parent);
+    UncondBrInst::Create(UnwindBB, Parent);
     Updates.push_back({DominatorTree::Insert, Parent, UnwindBB});
 
     Value *ExnObj = GetExceptionObject(RI);

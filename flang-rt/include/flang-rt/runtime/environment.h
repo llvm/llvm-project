@@ -40,11 +40,7 @@ struct ExecutionEnvironment {
   typedef void (*ConfigEnvCallbackPtr)(
       int, const char *[], const char *[], const EnvironmentDefaultList *);
 
-#if !defined(_OPENMP)
-  // FIXME: https://github.com/llvm/llvm-project/issues/84942
-  constexpr
-#endif
-      ExecutionEnvironment(){};
+  constexpr ExecutionEnvironment() {};
   void Configure(int argc, const char *argv[], const char *envp[],
       const EnvironmentDefaultList *envDefaults);
 

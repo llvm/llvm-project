@@ -116,7 +116,8 @@ static Address checkAtomicAlignment(CIRGenFunction &cgf, const CallExpr *e) {
 /// and the expression node.
 static mlir::Value makeBinaryAtomicValue(
     CIRGenFunction &cgf, cir::AtomicFetchKind kind, const CallExpr *expr,
-    mlir::Type *originalArgType, mlir::Value *emittedArgValue = nullptr,
+    mlir::Type *originalArgType = nullptr,
+    mlir::Value *emittedArgValue = nullptr,
     cir::MemOrder ordering = cir::MemOrder::SequentiallyConsistent) {
 
   QualType type = expr->getType();
@@ -159,6 +160,8 @@ static mlir::Value makeBinaryAtomicValue(
   // memory location and returns the old value.
   if (emittedArgValue) {
     *emittedArgValue = val;
+    assert(originalArgType != nullptr &&
+           "originalArgType must be provided when emittedArgValue is set");
     *originalArgType = valueType;
   }
 
@@ -167,6 +170,12 @@ static mlir::Value makeBinaryAtomicValue(
       ordering, cir::SyncScopeKind::System, false, /* is volatile */
       true);                                       /* fetch first */
   return rmwi->getResult(0);
+}
+
+static RValue emitBinaryAtomic(CIRGenFunction &cgf,
+                               cir::AtomicFetchKind atomicOpkind,
+                               const CallExpr *e) {
+  return RValue::get(makeBinaryAtomicValue(cgf, atomicOpkind, e));
 }
 
 template <typename BinOp>
@@ -182,8 +191,7 @@ static RValue emitBinaryAtomicPost(CIRGenFunction &cgf,
   result = BinOp::create(builder, result.getLoc(), result, emittedArgValue);
 
   if (invert)
-    result = cir::UnaryOp::create(builder, result.getLoc(),
-                                  cir::UnaryOpKind::Not, result);
+    result = builder.createNot(result);
 
   result = emitFromInt(cgf, result, typ, originalArgType);
   return RValue::get(result);
@@ -221,6 +229,16 @@ getIntegerWidthAndSignedness(const clang::ASTContext &astContext,
                                           : astContext.getTypeInfo(type).Width;
   bool isSigned = type->isSignedIntegerType();
   return {width, isSigned};
+}
+
+/// Create a checked overflow arithmetic op and return its result and overflow
+/// flag.
+template <typename OpTy>
+static std::pair<mlir::Value, mlir::Value>
+emitOverflowOp(CIRGenBuilderTy &builder, mlir::Location loc,
+               cir::IntType resultTy, mlir::Value lhs, mlir::Value rhs) {
+  auto op = OpTy::create(builder, loc, resultTy, lhs, rhs);
+  return {op.getResult(), op.getOverflow()};
 }
 
 // Given one or more integer types, this function produces an integer type that
@@ -972,8 +990,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     mlir::Value vaList = builtinID == Builtin::BI__va_start
                              ? emitScalarExpr(e->getArg(0))
                              : emitVAListRef(e->getArg(0)).getPointer();
-    mlir::Value count = emitScalarExpr(e->getArg(1));
-    emitVAStart(vaList, count);
+    emitVAStart(vaList);
     return {};
   }
 
@@ -1086,8 +1103,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BIconjf:
   case Builtin::BIconjl: {
     mlir::Value complex = emitComplexExpr(e->getArg(0));
-    mlir::Value conj = builder.createUnaryOp(getLoc(e->getExprLoc()),
-                                             cir::UnaryOpKind::Not, complex);
+    mlir::Value conj = builder.createNot(complex);
     return RValue::getComplex(conj);
   }
 
@@ -1576,11 +1592,32 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_alloca_with_align_uninitialized:
   case Builtin::BI__builtin_alloca_with_align:
   case Builtin::BI__builtin_infer_alloc_token:
-  case Builtin::BIbzero:
-  case Builtin::BI__builtin_bzero:
-  case Builtin::BIbcopy:
-  case Builtin::BI__builtin_bcopy:
     return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BIbzero:
+  case Builtin::BI__builtin_bzero: {
+    mlir::Location loc = getLoc(e->getSourceRange());
+    Address destPtr = emitPointerWithAlignment(e->getArg(0));
+    Address destPtrCast = destPtr.withElementType(builder, cgm.voidTy);
+    mlir::Value size = emitScalarExpr(e->getArg(1));
+    mlir::Value zero = builder.getNullValue(builder.getUInt8Ty(), loc);
+    assert(!cir::MissingFeatures::sanitizers());
+    builder.createMemSet(loc, destPtrCast, zero, size);
+    assert(!cir::MissingFeatures::generateDebugInfo());
+    return RValue::getIgnored();
+  }
+  case Builtin::BIbcopy:
+  case Builtin::BI__builtin_bcopy: {
+    Address src = emitPointerWithAlignment(e->getArg(0));
+    Address dest = emitPointerWithAlignment(e->getArg(1));
+    mlir::Value sizeVal = emitScalarExpr(e->getArg(2));
+    emitNonNullArgCheck(RValue::get(src.getPointer()), e->getArg(0)->getType(),
+                        e->getArg(0)->getExprLoc(), fd, 0);
+    emitNonNullArgCheck(RValue::get(dest.getPointer()), e->getArg(1)->getType(),
+                        e->getArg(1)->getExprLoc(), fd, 0);
+    builder.createMemMove(getLoc(e->getSourceRange()), dest.getPointer(),
+                          src.getPointer(), sizeVal);
+    return RValue::get(nullptr);
+  }
   case Builtin::BI__builtin_char_memchr:
   case Builtin::BI__builtin_memchr: {
     Address srcPtr = emitPointerWithAlignment(e->getArg(0));
@@ -1700,36 +1737,43 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__sync_lock_test_and_set:
   case Builtin::BI__sync_lock_release:
   case Builtin::BI__sync_swap:
+    return errorBuiltinNYI(*this, e, builtinID);
   case Builtin::BI__sync_fetch_and_add_1:
   case Builtin::BI__sync_fetch_and_add_2:
   case Builtin::BI__sync_fetch_and_add_4:
   case Builtin::BI__sync_fetch_and_add_8:
   case Builtin::BI__sync_fetch_and_add_16:
+    return emitBinaryAtomic(*this, cir::AtomicFetchKind::Add, e);
   case Builtin::BI__sync_fetch_and_sub_1:
   case Builtin::BI__sync_fetch_and_sub_2:
   case Builtin::BI__sync_fetch_and_sub_4:
   case Builtin::BI__sync_fetch_and_sub_8:
   case Builtin::BI__sync_fetch_and_sub_16:
+    return emitBinaryAtomic(*this, cir::AtomicFetchKind::Sub, e);
   case Builtin::BI__sync_fetch_and_or_1:
   case Builtin::BI__sync_fetch_and_or_2:
   case Builtin::BI__sync_fetch_and_or_4:
   case Builtin::BI__sync_fetch_and_or_8:
   case Builtin::BI__sync_fetch_and_or_16:
+    return emitBinaryAtomic(*this, cir::AtomicFetchKind::Or, e);
   case Builtin::BI__sync_fetch_and_and_1:
   case Builtin::BI__sync_fetch_and_and_2:
   case Builtin::BI__sync_fetch_and_and_4:
   case Builtin::BI__sync_fetch_and_and_8:
   case Builtin::BI__sync_fetch_and_and_16:
+    return emitBinaryAtomic(*this, cir::AtomicFetchKind::And, e);
   case Builtin::BI__sync_fetch_and_xor_1:
   case Builtin::BI__sync_fetch_and_xor_2:
   case Builtin::BI__sync_fetch_and_xor_4:
   case Builtin::BI__sync_fetch_and_xor_8:
   case Builtin::BI__sync_fetch_and_xor_16:
+    return emitBinaryAtomic(*this, cir::AtomicFetchKind::Xor, e);
   case Builtin::BI__sync_fetch_and_nand_1:
   case Builtin::BI__sync_fetch_and_nand_2:
   case Builtin::BI__sync_fetch_and_nand_4:
   case Builtin::BI__sync_fetch_and_nand_8:
   case Builtin::BI__sync_fetch_and_nand_16:
+    return emitBinaryAtomic(*this, cir::AtomicFetchKind::Nand, e);
   case Builtin::BI__sync_fetch_and_min:
   case Builtin::BI__sync_fetch_and_max:
   case Builtin::BI__sync_fetch_and_umin:
@@ -1866,37 +1910,35 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
         &getMLIRContext(), encompassingInfo.width, encompassingInfo.isSigned);
     auto resultCIRTy = mlir::cast<cir::IntType>(cgm.convertType(resultQTy));
 
-    mlir::Value left = emitScalarExpr(leftArg);
-    mlir::Value right = emitScalarExpr(rightArg);
+    mlir::Value x = emitScalarExpr(leftArg);
+    mlir::Value y = emitScalarExpr(rightArg);
     Address resultPtr = emitPointerWithAlignment(resultArg);
 
     // Extend each operand to the encompassing type, if necessary.
-    if (left.getType() != encompassingCIRTy)
-      left =
-          builder.createCast(cir::CastKind::integral, left, encompassingCIRTy);
-    if (right.getType() != encompassingCIRTy)
-      right =
-          builder.createCast(cir::CastKind::integral, right, encompassingCIRTy);
+    if (x.getType() != encompassingCIRTy)
+      x = builder.createCast(cir::CastKind::integral, x, encompassingCIRTy);
+    if (y.getType() != encompassingCIRTy)
+      y = builder.createCast(cir::CastKind::integral, y, encompassingCIRTy);
 
     // Perform the operation on the extended values.
-    cir::BinOpOverflowKind opKind;
+    mlir::Location loc = getLoc(e->getSourceRange());
+    mlir::Value result, overflow;
     switch (builtinID) {
     default:
       llvm_unreachable("Unknown overflow builtin id.");
     case Builtin::BI__builtin_add_overflow:
-      opKind = cir::BinOpOverflowKind::Add;
+      std::tie(result, overflow) =
+          emitOverflowOp<cir::AddOverflowOp>(builder, loc, resultCIRTy, x, y);
       break;
     case Builtin::BI__builtin_sub_overflow:
-      opKind = cir::BinOpOverflowKind::Sub;
+      std::tie(result, overflow) =
+          emitOverflowOp<cir::SubOverflowOp>(builder, loc, resultCIRTy, x, y);
       break;
     case Builtin::BI__builtin_mul_overflow:
-      opKind = cir::BinOpOverflowKind::Mul;
+      std::tie(result, overflow) =
+          emitOverflowOp<cir::MulOverflowOp>(builder, loc, resultCIRTy, x, y);
       break;
     }
-
-    mlir::Location loc = getLoc(e->getSourceRange());
-    auto arithOp = cir::BinOpOverflowOp::create(builder, loc, resultCIRTy,
-                                                opKind, left, right);
 
     // Here is a slight difference from the original clang CodeGen:
     //   - In the original clang CodeGen, the checked arithmetic result is
@@ -1910,9 +1952,9 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     // Finally, store the result using the pointer.
     bool isVolatile =
         resultArg->getType()->getPointeeType().isVolatileQualified();
-    builder.createStore(loc, arithOp.getResult(), resultPtr, isVolatile);
+    builder.createStore(loc, result, resultPtr, isVolatile);
 
-    return RValue::get(arithOp.getOverflow());
+    return RValue::get(overflow);
   }
 
   case Builtin::BI__builtin_uadd_overflow:
@@ -1940,8 +1982,13 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     const clang::Expr *resultArg = e->getArg(2);
     Address resultPtr = emitPointerWithAlignment(resultArg);
 
-    // Decide which of the arithmetic operation we are lowering to:
-    cir::BinOpOverflowKind arithKind;
+    clang::QualType resultQTy =
+        resultArg->getType()->castAs<clang::PointerType>()->getPointeeType();
+    auto resultCIRTy = mlir::cast<cir::IntType>(cgm.convertType(resultQTy));
+
+    // Create the appropriate overflow-checked arithmetic operation.
+    mlir::Location loc = getLoc(e->getSourceRange());
+    mlir::Value result, overflow;
     switch (builtinID) {
     default:
       llvm_unreachable("Unknown overflow builtin id.");
@@ -1951,7 +1998,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     case Builtin::BI__builtin_sadd_overflow:
     case Builtin::BI__builtin_saddl_overflow:
     case Builtin::BI__builtin_saddll_overflow:
-      arithKind = cir::BinOpOverflowKind::Add;
+      std::tie(result, overflow) =
+          emitOverflowOp<cir::AddOverflowOp>(builder, loc, resultCIRTy, x, y);
       break;
     case Builtin::BI__builtin_usub_overflow:
     case Builtin::BI__builtin_usubl_overflow:
@@ -1959,7 +2007,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     case Builtin::BI__builtin_ssub_overflow:
     case Builtin::BI__builtin_ssubl_overflow:
     case Builtin::BI__builtin_ssubll_overflow:
-      arithKind = cir::BinOpOverflowKind::Sub;
+      std::tie(result, overflow) =
+          emitOverflowOp<cir::SubOverflowOp>(builder, loc, resultCIRTy, x, y);
       break;
     case Builtin::BI__builtin_umul_overflow:
     case Builtin::BI__builtin_umull_overflow:
@@ -1967,24 +2016,17 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     case Builtin::BI__builtin_smul_overflow:
     case Builtin::BI__builtin_smull_overflow:
     case Builtin::BI__builtin_smulll_overflow:
-      arithKind = cir::BinOpOverflowKind::Mul;
+      std::tie(result, overflow) =
+          emitOverflowOp<cir::MulOverflowOp>(builder, loc, resultCIRTy, x, y);
       break;
     }
 
-    clang::QualType resultQTy =
-        resultArg->getType()->castAs<clang::PointerType>()->getPointeeType();
-    auto resultCIRTy = mlir::cast<cir::IntType>(cgm.convertType(resultQTy));
-
-    mlir::Location loc = getLoc(e->getSourceRange());
-    cir::BinOpOverflowOp arithOp = cir::BinOpOverflowOp::create(
-        builder, loc, resultCIRTy, arithKind, x, y);
-
     bool isVolatile =
         resultArg->getType()->getPointeeType().isVolatileQualified();
-    builder.createStore(loc, emitToMemory(arithOp.getResult(), resultQTy),
-                        resultPtr, isVolatile);
+    builder.createStore(loc, emitToMemory(result, resultQTy), resultPtr,
+                        isVolatile);
 
-    return RValue::get(arithOp.getOverflow());
+    return RValue::get(overflow);
   }
 
   case Builtin::BIaddressof:
@@ -2412,10 +2454,10 @@ mlir::Value CIRGenFunction::emitCheckedArgForAssume(const Expr *e) {
   return {};
 }
 
-void CIRGenFunction::emitVAStart(mlir::Value vaList, mlir::Value count) {
+void CIRGenFunction::emitVAStart(mlir::Value vaList) {
   // LLVM codegen casts to *i8, no real gain on doing this for CIRGen this
   // early, defer to LLVM lowering.
-  cir::VAStartOp::create(builder, vaList.getLoc(), vaList, count);
+  cir::VAStartOp::create(builder, vaList.getLoc(), vaList);
 }
 
 void CIRGenFunction::emitVAEnd(mlir::Value vaList) {

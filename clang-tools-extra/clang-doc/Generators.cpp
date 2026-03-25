@@ -53,7 +53,7 @@ Error createFileOpenError(StringRef FileName, std::error_code EC) {
 }
 
 Error MustacheGenerator::setupTemplate(
-    std::unique_ptr<MustacheTemplateFile> &Template, StringRef TemplatePath,
+    OwnedPtr<MustacheTemplateFile> &Template, StringRef TemplatePath,
     std::vector<std::pair<StringRef, StringRef>> Partials) {
   auto T = MustacheTemplateFile::createMustacheFile(TemplatePath);
   if (Error Err = T.takeError())
@@ -66,7 +66,7 @@ Error MustacheGenerator::setupTemplate(
 }
 
 Error MustacheGenerator::generateDocumentation(
-    StringRef RootDir, StringMap<std::unique_ptr<doc::Info>> Infos,
+    StringRef RootDir, StringMap<doc::OwnedPtr<doc::Info>> Infos,
     const clang::doc::ClangDocContext &CDCtx, std::string DirName) {
   {
     llvm::TimeTraceScope TS("Setup Templates");
@@ -164,9 +164,11 @@ Error MustacheGenerator::generateDocumentation(
 
 Expected<std::string> MustacheGenerator::getInfoTypeStr(Object *Info,
                                                         StringRef Filename) {
-  // Checking for a USR ensures that only the special top-level index file is
-  // caught here, since it is not an Info.
-  if (Filename == "index" && !Info->get("USR"))
+  if (Filename == "all_files")
+    return "all_files";
+  // Checking for an InfoType ensures that only the special top-level index file
+  // is caught here, since it is not an Info.
+  if (Filename == "index" && !Info->get("InfoType"))
     return "index";
   auto StrValue = (*Info)["InfoType"];
   if (StrValue.kind() != json::Value::Kind::String)
@@ -250,5 +252,7 @@ void Generator::addInfoToIndex(Index &Idx, const doc::Info *Info) {
 [[maybe_unused]] static int MDGeneratorAnchorDest = MDGeneratorAnchorSource;
 [[maybe_unused]] static int HTMLGeneratorAnchorDest = HTMLGeneratorAnchorSource;
 [[maybe_unused]] static int JSONGeneratorAnchorDest = JSONGeneratorAnchorSource;
+[[maybe_unused]] static int MDMustacheGeneratorAnchorDest =
+    MDMustacheGeneratorAnchorSource;
 } // namespace doc
 } // namespace clang

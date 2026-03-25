@@ -17,12 +17,12 @@
 # DIS-NEXT: 10: add a0, a0, a1
 .section .text.f1,"ax",@progbits
 .p2align 2
-.prefalign 16, .Lf1_end, nop
+.prefalign 4, .Lf1_end, nop
 addi a0, zero, 1
 addi a0, zero, 2
 add a0, a0, a1
 .Lf1_end:
-.prefalign 16, .Lf2_end, nop
+.prefalign 4, .Lf2_end, nop
 .rept 8
 add a0, a0, a1
 .endr

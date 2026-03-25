@@ -10,9 +10,9 @@
 ; ALIGN-16: .p2align 1
 ; ALIGN-32A: .p2align 2
 ; ALIGN-32T: .p2align 1
-; ALIGN-32T-NEXT: .prefalign 4
+; ALIGN-32T-NEXT: .prefalign 2
 ; ALIGN-64: .p2align 1
-; ALIGN-64-NEXT: .prefalign 8
+; ALIGN-64-NEXT: .prefalign 3
 
 define void @test() {
   ret void

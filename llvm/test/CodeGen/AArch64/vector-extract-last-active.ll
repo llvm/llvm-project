@@ -577,4 +577,59 @@ define i8 @extract_last_active_split(<vscale x 32 x i8> %data, <vscale x 32 x i1
   ret i8 %res
 }
 
+define half @extract_last_active_unpacked_fp_nxv4f16(<vscale x 4 x half> %0, <vscale x 4 x i1> %mask, half %passthru) #0 {
+; CHECK-LABEL: extract_last_active_unpacked_fp_nxv4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h1 killed $h1 def $s1
+; CHECK-NEXT:    clastb s1, p0, s1, z0.s
+; CHECK-NEXT:    fmov s0, s1
+; CHECK-NEXT:    ret
+  %res = call half @llvm.experimental.vector.extract.last.active.nxv4f16(<vscale x 4 x half> %0, <vscale x 4 x i1> %mask, half %passthru)
+  ret half %res
+}
+
+define half @extract_last_active_unpacked_fp_nxv2f16(<vscale x 2 x half> %0, <vscale x 2 x i1> %mask, half %passthru) #0 {
+; CHECK-LABEL: extract_last_active_unpacked_fp_nxv2f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-NEXT:    clastb d1, p0, d1, z0.d
+; CHECK-NEXT:    fmov s0, s1
+; CHECK-NEXT:    ret
+  %res = call half @llvm.experimental.vector.extract.last.active.nxv2f16(<vscale x 2 x half> %0, <vscale x 2 x i1> %mask, half %passthru)
+  ret half %res
+}
+
+define bfloat @extract_last_active_unpacked_fp_nxv4bf16(<vscale x 4 x bfloat> %0, <vscale x 4 x i1> %mask, bfloat %passthru) #0 {
+; CHECK-LABEL: extract_last_active_unpacked_fp_nxv4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h1 killed $h1 def $s1
+; CHECK-NEXT:    clastb s1, p0, s1, z0.s
+; CHECK-NEXT:    fmov s0, s1
+; CHECK-NEXT:    ret
+  %res = call bfloat @llvm.experimental.vector.extract.last.active.nxv4bf16(<vscale x 4 x bfloat> %0, <vscale x 4 x i1> %mask, bfloat %passthru)
+  ret bfloat %res
+}
+
+define bfloat @extract_last_active_unpacked_fp_nxv2bf16(<vscale x 2 x bfloat> %0, <vscale x 2 x i1> %mask, bfloat %passthru) #0 {
+; CHECK-LABEL: extract_last_active_unpacked_fp_nxv2bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-NEXT:    clastb d1, p0, d1, z0.d
+; CHECK-NEXT:    fmov s0, s1
+; CHECK-NEXT:    ret
+  %res = call bfloat @llvm.experimental.vector.extract.last.active.nxv2bf16(<vscale x 2 x bfloat> %0, <vscale x 2 x i1> %mask, bfloat %passthru)
+  ret bfloat %res
+}
+
+define float @extract_last_active_unpacked_fp_nxv2f32(<vscale x 2 x float> %0, <vscale x 2 x i1> %mask, float %passthru) #0 {
+; CHECK-LABEL: extract_last_active_unpacked_fp_nxv2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $s1 killed $s1 def $d1
+; CHECK-NEXT:    clastb d1, p0, d1, z0.d
+; CHECK-NEXT:    fmov s0, s1
+; CHECK-NEXT:    ret
+  %res = call float @llvm.experimental.vector.extract.last.active.nxv2f32(<vscale x 2 x float> %0, <vscale x 2 x i1> %mask, float %passthru)
+  ret float %res
+}
+
 attributes #0 = { nounwind "target-features"="+sve" vscale_range(1, 16) }

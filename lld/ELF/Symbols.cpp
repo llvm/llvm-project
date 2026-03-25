@@ -501,6 +501,12 @@ void Symbol::resolve(Ctx &ctx, const Undefined &other) {
     // reference is weak.
     if (other.binding != STB_WEAK || !referenced)
       binding = other.binding;
+    // -u creates a placeholder Undefined (internalFile, STT_NOTYPE).
+    // Adopt the real file and type from the object file's undefined.
+    if (file == ctx.internalFile) {
+      file = other.file;
+      type = other.type;
+    }
   }
 }
 

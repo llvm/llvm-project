@@ -1673,7 +1673,7 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFScratchOffen(SDNode *Parent,
   if (ConstantSDNode *CAddr = dyn_cast<ConstantSDNode>(Addr)) {
     int64_t Imm = CAddr->getSExtValue();
     const int64_t NullPtr =
-        AMDGPUTargetMachine::getNullPointerValue(AMDGPUAS::PRIVATE_ADDRESS);
+        AMDGPU::getNullPointerValue(AMDGPUAS::PRIVATE_ADDRESS);
     // Don't fold null pointer.
     if (Imm != NullPtr) {
       const uint32_t MaxOffset = SIInstrInfo::getMaxMUBUFImmOffset(*Subtarget);
@@ -3689,6 +3689,37 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMods(SDValue In, SDValue &Src,
 bool AMDGPUDAGToDAGISel::SelectVOP3PModsDOT(SDValue In, SDValue &Src,
                                             SDValue &SrcMods) const {
   return SelectVOP3PMods(In, Src, SrcMods, true);
+}
+
+bool AMDGPUDAGToDAGISel::SelectVOP3PNoModsDOT(SDValue In, SDValue &Src) const {
+  SDValue SrcTmp, SrcModsTmp;
+  SelectVOP3PMods(In, SrcTmp, SrcModsTmp, true);
+  if (cast<ConstantSDNode>(SrcModsTmp)->getZExtValue() == SISrcMods::OP_SEL_1) {
+    Src = SrcTmp;
+    return true;
+  }
+
+  return false;
+}
+
+bool AMDGPUDAGToDAGISel::SelectVOP3PModsF32(SDValue In, SDValue &Src,
+                                            SDValue &SrcMods) const {
+  SelectVOP3Mods(In, Src, SrcMods);
+  unsigned Mods = SISrcMods::OP_SEL_1;
+  Mods |= cast<ConstantSDNode>(SrcMods)->getZExtValue();
+  SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
+  return true;
+}
+
+bool AMDGPUDAGToDAGISel::SelectVOP3PNoModsF32(SDValue In, SDValue &Src) const {
+  SDValue SrcTmp, SrcModsTmp;
+  SelectVOP3PModsF32(In, SrcTmp, SrcModsTmp);
+  if (cast<ConstantSDNode>(SrcModsTmp)->getZExtValue() == SISrcMods::OP_SEL_1) {
+    Src = SrcTmp;
+    return true;
+  }
+
+  return false;
 }
 
 bool AMDGPUDAGToDAGISel::SelectWMMAOpSelVOP3PMods(SDValue In,

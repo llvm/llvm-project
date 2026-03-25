@@ -1070,8 +1070,6 @@ void MCAssembler::layoutSection(MCSection &Sec) {
     F.Offset = Offset;
     if (F.getKind() == MCFragment::FT_Align)
       relaxAlign(F);
-    else if (F.getKind() == MCFragment::FT_PrefAlign)
-      relaxPrefAlign(F);
     Offset += computeFragmentSize(F);
   }
 }

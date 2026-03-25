@@ -298,7 +298,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
     ISD::LoadExtType ExtType = LD->getExtensionType();
     EVT LoadedVT = LD->getMemoryVT();
     if (LoadedVT.isVector() && ExtType != ISD::NON_EXTLOAD)
-      Action = TLI.getLoadExtAction(ExtType, LD->getValueType(0), LoadedVT);
+      Action = TLI.getLoadAction(LD->getValueType(0), LoadedVT, LD->getAlign(),
+                                 LD->getAddressSpace(), ExtType, false);
     break;
   }
   case ISD::STORE: {
@@ -460,6 +461,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::USUBO:
   case ISD::SMULO:
   case ISD::UMULO:
+  case ISD::CONVERT_FROM_ARBITRARY_FP:
   case ISD::FCANONICALIZE:
   case ISD::FFREXP:
   case ISD::FMODF:

@@ -1376,7 +1376,7 @@ void ELFObjectWriter::recordRelocation(const MCFragment &F,
     UseSectionSym = RSS == RelocSectionSymType::All ||
                     (RSS == RelocSectionSymType::Internal &&
                      SymA->getName().starts_with(
-                         Ctx.getAsmInfo()->getPrivateGlobalPrefix()));
+                         Ctx.getAsmInfo()->getInternalSymbolPrefix()));
   }
   if (UseSectionSym && useSectionSymbol(Target, SymA, Addend, Type)) {
     Addend += Asm->getSymbolOffset(*SymA);

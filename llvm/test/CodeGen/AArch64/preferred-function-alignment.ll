@@ -31,9 +31,9 @@ define void @test() {
 ; CHECK-LABEL: test
 ; CHECK: .p2align 2
 ; ALIGN2-NOT: .prefalign
-; ALIGN3-NEXT: .prefalign 8
-; ALIGN4-NEXT: .prefalign 16
-; ALIGN5-NEXT: .prefalign 32
+; ALIGN3-NEXT: .prefalign 3
+; ALIGN4-NEXT: .prefalign 4
+; ALIGN5-NEXT: .prefalign 5
 
 define void @test_optsize() optsize {
   ret void

@@ -123,8 +123,8 @@ void foo() {
 // CIR-AFTER-FULL: %[[C_REAL:.*]] = cir.sub %[[MUL_AR_BR]], %[[MUL_AI_BI]] : !cir.float
 // CIR-AFTER-FULL: %[[C_IMAG:.*]] = cir.add %[[MUL_AR_BI]], %[[MUL_AI_BR]] : !cir.float
 // CIR-AFTER-FULL: %[[COMPLEX:.*]] = cir.complex.create %[[C_REAL]], %[[C_IMAG]] : !cir.float -> !cir.complex<!cir.float>
-// CIR-AFTER-FULL: %[[IS_C_REAL_NAN:.*]] = cir.cmp(ne, %[[C_REAL]], %[[C_REAL]]) : !cir.float, !cir.bool
-// CIR-AFTER-FULL: %[[IS_C_IMAG_NAN:.*]] = cir.cmp(ne, %[[C_IMAG]], %[[C_IMAG]]) : !cir.float, !cir.bool
+// CIR-AFTER-FULL: %[[IS_C_REAL_NAN:.*]] = cir.cmp ne %[[C_REAL]], %[[C_REAL]] : !cir.float
+// CIR-AFTER-FULL: %[[IS_C_IMAG_NAN:.*]] = cir.cmp ne %[[C_IMAG]], %[[C_IMAG]] : !cir.float
 // CIR-AFTER-FULL: %[[CONST_FALSE:.*]] = cir.const #false
 // CIR-AFTER-FULL: %[[SELECT_CONDITION:.*]] = cir.select if %[[IS_C_REAL_NAN]] then %[[IS_C_IMAG_NAN]] else %[[CONST_FALSE]] : (!cir.bool, !cir.bool, !cir.bool) -> !cir.bool
 // CIR-AFTER-FULL: %[[RESULT:.*]] = cir.ternary(%[[SELECT_CONDITION]], true {
@@ -186,10 +186,10 @@ void foo() {
 // OGCG-FULL: %[[C_REAL:.*]] = fsub float %[[MUL_AR_BR]], %[[MUL_AI_BI]]
 // OGCG-FULL: %[[C_IMAG:.*]] = fadd float %[[MUL_AR_BI]], %[[MUL_AI_BR]]
 // OGCG-FULL: %[[IS_C_REAL_NAN:.*]] = fcmp uno float %[[C_REAL]], %[[C_REAL]]
-// OGCG-FULL: br i1 %[[IS_C_REAL_NAN]], label %[[COMPLEX_IS_IMAG_NAN:.*]], label %[[END_LABEL:.*]], !prof !2
+// OGCG-FULL: br i1 %[[IS_C_REAL_NAN]], label %[[COMPLEX_IS_IMAG_NAN:.*]], label %[[END_LABEL:[^,]*]]
 // OGCG-FULL: [[COMPLEX_IS_IMAG_NAN]]:
 // OGCG-FULL:  %[[IS_C_IMAG_NAN:.*]] = fcmp uno float %[[C_IMAG]], %[[C_IMAG]]
-// OGCG-FULL:  br i1 %[[IS_C_IMAG_NAN]], label %[[COMPLEX_LIB_CALL:.*]], label %[[END_LABEL]], !prof !2
+// OGCG-FULL:  br i1 %[[IS_C_IMAG_NAN]], label %[[COMPLEX_LIB_CALL:.*]], label %[[END_LABEL]]
 // OGCG-FULL: [[COMPLEX_LIB_CALL]]:
 // OGCG-FULL:  %[[CALL_RESULT:.*]] = call noundef <2 x float> @__mulsc3(float noundef %[[A_REAL]], float noundef %[[A_IMAG]], float noundef %[[B_REAL]], float noundef %[[B_IMAG]])
 // OGCG-FULL:  store <2 x float> %[[CALL_RESULT]], ptr %[[COMPLEX_CALL_ADDR]], align 4
@@ -420,7 +420,7 @@ void foo3() {
 // CIR-AFTER-IMPROVED: %[[B_IMAG:.*]] = cir.complex.imag %[[TMP_B]] : !cir.complex<!cir.float> -> !cir.float
 // CIR-AFTER-IMPROVED: %[[ABS_B_REAL:.*]] = cir.fabs %[[B_REAL]] : !cir.float
 // CIR-AFTER-IMPROVED: %[[ABS_B_IMAG:.*]] = cir.fabs %[[B_IMAG]] : !cir.float
-// CIR-AFTER-IMPROVED: %[[ABS_B_CMP:.*]] = cir.cmp(ge, %[[ABS_B_REAL]], %[[ABS_B_IMAG]]) : !cir.float, !cir.bool
+// CIR-AFTER-IMPROVED: %[[ABS_B_CMP:.*]] = cir.cmp ge %[[ABS_B_REAL]], %[[ABS_B_IMAG]] : !cir.float
 // CIR-AFTER-IMPROVED: %[[RESULT:.*]] = cir.ternary(%[[ABS_B_CMP]], true {
 // CIR-AFTER-IMPROVED:   %[[DIV_BI_BR:.*]] = cir.div %[[B_IMAG]], %[[B_REAL]] : !cir.float
 // CIR-AFTER-IMPROVED:   %[[MUL_DIV_BIBR_BI:.*]] = cir.mul %[[DIV_BI_BR]], %[[B_IMAG]] : !cir.float
@@ -916,7 +916,7 @@ void foo6() {
 // CIR-AFTER-IMPROVED: %[[B_IMAG:.*]] = cir.complex.imag %[[TMP_B]] : !cir.complex<!cir.float> -> !cir.float
 // CIR-AFTER-IMPROVED: %[[ABS_B_REAL:.*]] = cir.fabs %[[B_REAL]] : !cir.float
 // CIR-AFTER-IMPROVED: %[[ABS_B_IMAG:.*]] = cir.fabs %[[B_IMAG]] : !cir.float
-// CIR-AFTER-IMPROVED: %[[ABS_B_CMP:.*]] = cir.cmp(ge, %[[ABS_B_REAL]], %[[ABS_B_IMAG]]) : !cir.float, !cir.bool
+// CIR-AFTER-IMPROVED: %[[ABS_B_CMP:.*]] = cir.cmp ge %[[ABS_B_REAL]], %[[ABS_B_IMAG]] : !cir.float
 // CIR-AFTER-IMPROVED: %[[RESULT:.*]] = cir.ternary(%[[ABS_B_CMP]], true {
 // CIR-AFTER-IMPROVED:   %[[DIV_BI_BR:.*]] = cir.div %[[B_IMAG]], %[[B_REAL]] : !cir.float
 // CIR-AFTER-IMPROVED:   %[[MUL_DIV_BIBR_BI:.*]] = cir.mul %[[DIV_BI_BR]], %[[B_IMAG]] : !cir.float

@@ -510,8 +510,7 @@ protected:
   /// Print a dense elements attribute in the literal-first syntax. If
   /// 'allowHex' is true, a hex string is used instead of individual elements
   /// when the elements attr is large.
-  void printDenseIntOrFPElementsAttr(DenseIntOrFPElementsAttr attr,
-                                     bool allowHex);
+  void printDenseTypedElementsAttr(DenseTypedElementsAttr attr, bool allowHex);
 
   /// Print a dense elements attribute using the type-first syntax and the
   /// DenseElementTypeInterface, which provides the attribute printer for each
@@ -2509,7 +2508,7 @@ void AsmPrinter::Impl::printAttributeImpl(Attribute attr,
     }
 
   } else if (auto intOrFpEltAttr =
-                 llvm::dyn_cast<DenseIntOrFPElementsAttr>(attr)) {
+                 llvm::dyn_cast<DenseTypedElementsAttr>(attr)) {
     if (printerFlags.shouldElideElementsAttr(intOrFpEltAttr)) {
       printElidedElementsAttr(os);
     } else {
@@ -2519,7 +2518,7 @@ void AsmPrinter::Impl::printAttributeImpl(Attribute attr,
       // the existing printing format for backwards compatibility.
       Type eltType = intOrFpEltAttr.getElementType();
       if (isa<FloatType, IntegerType, IndexType, ComplexType>(eltType)) {
-        printDenseIntOrFPElementsAttr(intOrFpEltAttr, /*allowHex=*/true);
+        printDenseTypedElementsAttr(intOrFpEltAttr, /*allowHex=*/true);
       } else {
         printTypeFirstDenseElementsAttr(intOrFpEltAttr,
                                         cast<DenseElementType>(eltType));
@@ -2545,7 +2544,7 @@ void AsmPrinter::Impl::printAttributeImpl(Attribute attr,
       os << "sparse<";
       DenseIntElementsAttr indices = sparseEltAttr.getIndices();
       if (indices.getNumElements() != 0) {
-        printDenseIntOrFPElementsAttr(indices, /*allowHex=*/false);
+        printDenseTypedElementsAttr(indices, /*allowHex=*/false);
         os << ", ";
         printDenseElementsAttr(sparseEltAttr.getValues(), /*allowHex=*/true);
       }
@@ -2648,12 +2647,12 @@ void AsmPrinter::Impl::printDenseElementsAttr(DenseElementsAttr attr,
   if (auto stringAttr = llvm::dyn_cast<DenseStringElementsAttr>(attr))
     return printDenseStringElementsAttr(stringAttr);
 
-  printDenseIntOrFPElementsAttr(llvm::cast<DenseIntOrFPElementsAttr>(attr),
-                                allowHex);
+  printDenseTypedElementsAttr(llvm::cast<DenseTypedElementsAttr>(attr),
+                              allowHex);
 }
 
-void AsmPrinter::Impl::printDenseIntOrFPElementsAttr(
-    DenseIntOrFPElementsAttr attr, bool allowHex) {
+void AsmPrinter::Impl::printDenseTypedElementsAttr(DenseTypedElementsAttr attr,
+                                                   bool allowHex) {
   auto type = attr.getType();
   auto elementType = type.getElementType();
 
@@ -2665,7 +2664,7 @@ void AsmPrinter::Impl::printDenseIntOrFPElementsAttr(
       // machines. It is converted here to print in LE format.
       SmallVector<char, 64> outDataVec(rawData.size());
       MutableArrayRef<char> convRawData(outDataVec);
-      DenseIntOrFPElementsAttr::convertEndianOfArrayRefForBEmachine(
+      DenseTypedElementsAttr::convertEndianOfArrayRefForBEmachine(
           rawData, convRawData, type);
       printHexString(convRawData);
     } else {
@@ -4142,8 +4141,13 @@ void Value::print(raw_ostream &os, AsmState &state) const {
      << "' at index: " << arg.getArgNumber();
 }
 
+raw_ostream &mlir::operator<<(raw_ostream &os, Value value) {
+  value.print(os, OpPrintingFlags().useLocalScope());
+  return os;
+}
+
 void Value::dump() const {
-  print(llvm::errs());
+  print(llvm::errs(), OpPrintingFlags().useLocalScope());
   llvm::errs() << "\n";
 }
 

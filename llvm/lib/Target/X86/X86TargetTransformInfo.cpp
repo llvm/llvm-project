@@ -5479,7 +5479,7 @@ X86TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
     InstructionCost ScalarCompareCost = getCmpSelInstrCost(
         Instruction::ICmp, Type::getInt8Ty(SrcVTy->getContext()), nullptr,
         CmpInst::BAD_ICMP_PREDICATE, CostKind);
-    InstructionCost BranchCost = getCFInstrCost(Instruction::Br, CostKind);
+    InstructionCost BranchCost = getCFInstrCost(Instruction::CondBr, CostKind);
     InstructionCost MaskCmpCost = NumElem * (BranchCost + ScalarCompareCost);
     InstructionCost ValueSplitCost = getScalarizationOverhead(
         SrcVTy, DemandedElts, IsLoad, IsStore, CostKind);
@@ -7236,6 +7236,28 @@ unsigned X86TTIImpl::getStoreMinimumVF(unsigned VF, Type *ScalarMemTy,
 bool X86TTIImpl::isProfitableToSinkOperands(Instruction *I,
                                             SmallVectorImpl<Use *> &Ops) const {
   using namespace llvm::PatternMatch;
+
+  if (I->getOpcode() == Instruction::And &&
+      (ST->hasBMI() || (I->getType()->isVectorTy() && ST->hasSSE2()))) {
+    for (auto &Op : I->operands()) {
+      // (and X, (not Y)) -> (andn X, Y)
+      if (match(Op.get(), m_Not(m_Value())) && !I->getType()->isIntegerTy(8)) {
+        Ops.push_back(&Op);
+        return true;
+      }
+      // (and X, (splat (not Y))) -> (andn X, (splat Y))
+      if (match(Op.get(),
+                m_Shuffle(m_InsertElt(m_Value(), m_Not(m_Value()), m_ZeroInt()),
+                          m_Value(), m_ZeroMask()))) {
+        Use &InsertElt = cast<Instruction>(Op)->getOperandUse(0);
+        Use &Not = cast<Instruction>(InsertElt)->getOperandUse(1);
+        Ops.push_back(&Not);
+        Ops.push_back(&InsertElt);
+        Ops.push_back(&Op);
+        return true;
+      }
+    }
+  }
 
   FixedVectorType *VTy = dyn_cast<FixedVectorType>(I->getType());
   if (!VTy)

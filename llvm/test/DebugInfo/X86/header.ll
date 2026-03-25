@@ -5,7 +5,7 @@
 ; CHECK:      .file	"<stdin>"
 ; CHECK-NEXT:  .text
 ; CHECK-NEXT: .globl	f
-; CHECK-NEXT: .prefalign	16, .Lfunc_end0, nop
+; CHECK-NEXT: .prefalign	4, .Lfunc_end0, nop
 ; CHECK-NEXT: .type	f,@function
 ; CHECK-NEXT: f:                                      # @f
 

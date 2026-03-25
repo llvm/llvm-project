@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs < %s | FileCheck %s
 
-; CHECK:          .prefalign 16
+; CHECK:          .prefalign 4
 ; CHECK-LABEL:    __cfi_f1:
 ; CHECK-COUNT-11:   nop
 ; CHECK-NEXT:       movl $12345678, %eax
@@ -13,7 +13,7 @@ define void @f1(ptr noundef %x) !kcfi_type !1 {
   ret void
 }
 
-; CHECK:          .prefalign 16
+; CHECK:          .prefalign 4
 ; CHECK-NOT:      __cfi_f2:
 ; CHECK-NOT:        {{^[[:space:]]+}}nop
 ; CHECK-LABEL:    f2:
@@ -23,7 +23,7 @@ define void @f2(ptr noundef %x) {
   ret void
 }
 
-; CHECK:          .prefalign 16
+; CHECK:          .prefalign 4
 ; CHECK-LABEL:    __cfi_f3:
 ; CHECK-NOT:        {{^[[:space:]]+}}nop
 ; CHECK-NEXT:       movl $12345678, %eax
@@ -35,7 +35,7 @@ define void @f3(ptr noundef %x) #0 !kcfi_type !1 {
   ret void
 }
 
-; CHECK:          .prefalign 16
+; CHECK:          .prefalign 4
 ; CHECK-NOT:      __cfi_f4:
 ; CHECK-COUNT-16:   {{^[[:space:]]+}}nop
 ; CHECK-LABEL:    f4:

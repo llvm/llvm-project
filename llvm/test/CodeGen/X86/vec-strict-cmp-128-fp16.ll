@@ -712,17 +712,15 @@ define <2 x i16> @test_v2f16_oeq_q(<2 x i16> %a, <2 x i16> %b, <2 x half> %f1, <
 ; X86-NEXT:    vucomish 8(%ebp), %xmm2
 ; X86-NEXT:    setnp %al
 ; X86-NEXT:    sete %cl
-; X86-NEXT:    testb %al, %cl
-; X86-NEXT:    setne %al
-; X86-NEXT:    andl $1, %eax
-; X86-NEXT:    kmovw %eax, %k0
+; X86-NEXT:    andb %al, %cl
+; X86-NEXT:    andl $1, %ecx
+; X86-NEXT:    kmovw %ecx, %k0
 ; X86-NEXT:    vpsrld $16, %xmm2, %xmm2
 ; X86-NEXT:    vucomish 10(%ebp), %xmm2
 ; X86-NEXT:    setnp %al
 ; X86-NEXT:    sete %cl
-; X86-NEXT:    testb %al, %cl
-; X86-NEXT:    setne %al
-; X86-NEXT:    kmovd %eax, %k1
+; X86-NEXT:    andb %al, %cl
+; X86-NEXT:    kmovd %ecx, %k1
 ; X86-NEXT:    kshiftlw $15, %k1, %k1
 ; X86-NEXT:    kshiftrw $14, %k1, %k1
 ; X86-NEXT:    korw %k1, %k0, %k1
@@ -736,18 +734,16 @@ define <2 x i16> @test_v2f16_oeq_q(<2 x i16> %a, <2 x i16> %b, <2 x half> %f1, <
 ; X64-NEXT:    vucomish %xmm3, %xmm2
 ; X64-NEXT:    setnp %al
 ; X64-NEXT:    sete %cl
-; X64-NEXT:    testb %al, %cl
-; X64-NEXT:    setne %al
-; X64-NEXT:    andl $1, %eax
-; X64-NEXT:    kmovw %eax, %k0
+; X64-NEXT:    andb %al, %cl
+; X64-NEXT:    andl $1, %ecx
+; X64-NEXT:    kmovw %ecx, %k0
 ; X64-NEXT:    vpsrld $16, %xmm3, %xmm3
 ; X64-NEXT:    vpsrld $16, %xmm2, %xmm2
 ; X64-NEXT:    vucomish %xmm3, %xmm2
 ; X64-NEXT:    setnp %al
 ; X64-NEXT:    sete %cl
-; X64-NEXT:    testb %al, %cl
-; X64-NEXT:    setne %al
-; X64-NEXT:    kmovd %eax, %k1
+; X64-NEXT:    andb %al, %cl
+; X64-NEXT:    kmovd %ecx, %k1
 ; X64-NEXT:    kshiftlw $15, %k1, %k1
 ; X64-NEXT:    kshiftrw $14, %k1, %k1
 ; X64-NEXT:    korw %k1, %k0, %k1

@@ -62,7 +62,7 @@ def LinkOption : OptionFlag;
 // target will lead to an err_drv_unsupported_opt_for_target error.
 def TargetSpecific : OptionFlag;
 
-// Indicates that this warning is ignored, but accepted with a warning for
+// Indicates that this option is ignored, but accepted with a warning for
 // GCC compatibility.
 class IgnoredGCCCompat : Flags<[HelpHidden]> {}
 
@@ -273,6 +273,10 @@ def g_flags_Group : OptionGroup<"<g flags group>">, Group<DebugInfo_Group>,
 def StaticAnalyzer_Group : OptionGroup<"<Static analyzer group>">,
                            DocName<"Static analyzer options">, DocBrief<[{
 Flags controlling the behavior of the Clang Static Analyzer.}]>;
+
+def SSAF_Group : OptionGroup<"<ssaf options>">,
+                 DocName<"SSAF options">, DocBrief<[{
+Flags controlling the behavior of the Scalable Static Analysis Framework (SSAF).}]>;
 
 // gfortran options that we recognize in the driver and pass along when
 // invoking GCC to compile Fortran code.
@@ -784,7 +788,7 @@ def fshow_skipped_includes : Flag<["-"], "fshow-skipped-includes">,
              or #pragma once. This flag makes -H show also such includes.}]>,
   MarshallingInfoFlag<DependencyOutputOpts<"ShowSkippedHeaderIncludes">>;
 
-def I_ : Flag<["-"], "I-">, Group<I_Group>,
+def I_ : Flag<["-"], "I-">, Group<I_Group>, IgnoredGCCCompat,
     HelpText<"Restrict all prior -I flags to double-quoted inclusion and "
              "remove current directory from include path">;
 def I : JoinedOrSeparate<["-"], "I">, Group<I_Group>,
@@ -941,6 +945,34 @@ def W_Joined : Joined<["-"], "W">, Group<W_Group>,
 def Xanalyzer : Separate<["-"], "Xanalyzer">,
   HelpText<"Pass <arg> to the static analyzer">, MetaVarName<"<arg>">,
   Group<StaticAnalyzer_Group>;
+def _ssaf_extract_summaries :
+  CommaJoined<["--"], "ssaf-extract-summaries=">,
+  MetaVarName<"<summary-names>">,
+  Group<SSAF_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Comma-separated list of summary names to extract">,
+  MarshallingInfoStringVector<FrontendOpts<"SSAFExtractSummaries">>;
+def _ssaf_tu_summary_file :
+  Joined<["--"], "ssaf-tu-summary-file=">,
+  MetaVarName<"<path>.<format>">,
+  Group<SSAF_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<
+    "The output file for the extracted summaries. "
+    "The extension selects which file format to use.">,
+  MarshallingInfoString<FrontendOpts<"SSAFTUSummaryFile">>;
+def _ssaf_list_extractors :
+  Flag<["--"], "ssaf-list-extractors">,
+  Group<SSAF_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Display the list of available SSAF summary extractors">,
+  MarshallingInfoFlag<FrontendOpts<"SSAFShowExtractors">>;
+def _ssaf_list_formats :
+  Flag<["--"], "ssaf-list-formats">,
+  Group<SSAF_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Display the list of available SSAF serialization formats">,
+  MarshallingInfoFlag<FrontendOpts<"SSAFShowFormats">>;
 def Xarch__
     : JoinedAndSeparate<["-"], "Xarch_">,
       Flags<[NoXarchOption]>,
@@ -1035,7 +1067,7 @@ def b : JoinedOrSeparate<["-"], "b">, Flags<[LinkerInput]>,
   Group<Link_Group>;
 
 defm offload_uniform_block : BoolFOption<"offload-uniform-block",
-  LangOpts<"OffloadUniformBlock">, Default<"LangOpts->CUDA">,
+  LangOpts<"OffloadUniformBlock">, Default<"LangOpts->CUDA || (LangOpts->OpenCL && LangOpts->OpenCLVersion <= 120)">,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Assume">,
   NegFlag<SetFalse, [], [ClangOption, CC1Option], "Don't assume">,
   BothFlags<[], [ClangOption], " that kernels are launched with uniform block sizes (default true for CUDA/HIP and false otherwise)">>;
@@ -2485,7 +2517,7 @@ def fno_sanitize_coverage : CommaJoined<["-"], "fno-sanitize-coverage=">,
   Group<fsan_cov_Group>, Visibility<[ClangOption, CLOption]>,
   HelpText<"Disable features of coverage instrumentation for Sanitizers">,
   Values<"func,bb,edge,indirect-calls,trace-bb,trace-cmp,trace-div,trace-gep,"
-         "8bit-counters,trace-pc,trace-pc-guard,no-prune,inline-8bit-counters,"
+         "8bit-counters,trace-pc,trace-pc-entry-exit,trace-pc-guard,no-prune,inline-8bit-counters,"
          "inline-bool-flag">;
 def fsanitize_coverage_allowlist : Joined<["-"], "fsanitize-coverage-allowlist=">,
     Group<fsan_cov_Group>, Visibility<[ClangOption, CLOption]>,
@@ -3850,6 +3882,13 @@ defm objc_convert_messages_to_runtime_calls : BoolFOption<"objc-convert-messages
   CodeGenOpts<"ObjCConvertMessagesToRuntimeCalls">, DefaultTrue,
   NegFlag<SetFalse, [], [ClangOption, CC1Option]>,
   PosFlag<SetTrue>>;
+defm objc_msgsend_selector_stubs : BoolFOption<"objc-msgsend-selector-stubs",
+  CodeGenOpts<"ObjCMsgSendSelectorStubs">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option]>, NegFlag<SetFalse>>;
+defm objc_msgsend_class_selector_stubs : BoolFOption<"objc-msgsend-class-selector-stubs",
+  CodeGenOpts<"ObjCMsgSendClassSelectorStubs">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option]>,
+  NegFlag<SetFalse>>;
 defm objc_arc_exceptions : BoolFOption<"objc-arc-exceptions",
   CodeGenOpts<"ObjCAutoRefCountExceptions">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
@@ -5688,6 +5727,8 @@ def mnontrapping_fptoint : Flag<["-"], "mnontrapping-fptoint">, Group<m_wasm_Fea
 def mno_nontrapping_fptoint : Flag<["-"], "mno-nontrapping-fptoint">, Group<m_wasm_Features_Group>;
 def mreference_types : Flag<["-"], "mreference-types">, Group<m_wasm_Features_Group>;
 def mno_reference_types : Flag<["-"], "mno-reference-types">, Group<m_wasm_Features_Group>;
+def mrelaxed_atomics : Flag<["-"], "mrelaxed-atomics">, Group<m_wasm_Features_Group>;
+def mno_relaxed_atomics : Flag<["-"], "mno-relaxed-atomics">, Group<m_wasm_Features_Group>;
 def mrelaxed_simd : Flag<["-"], "mrelaxed-simd">, Group<m_wasm_Features_Group>;
 def mno_relaxed_simd : Flag<["-"], "mno-relaxed-simd">, Group<m_wasm_Features_Group>;
 def msign_ext : Flag<["-"], "msign-ext">, Group<m_wasm_Features_Group>;
@@ -6483,6 +6524,10 @@ def std_EQ : Joined<["-", "--"], "std=">,
 def stdlib_EQ : Joined<["-", "--"], "stdlib=">,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"C++ standard library to use">, Values<"libc++,libstdc++,platform">;
+def cstdlib_EQ : Joined<["--"], "cstdlib=">,
+  Visibility<[ClangOption]>,
+  HelpText<"C standard library to use">,
+  Values<"newlib,picolibc,llvm-libc,system">;
 def stdlibxx_isystem : JoinedOrSeparate<["-"], "stdlib++-isystem">,
   Group<clang_i_Group>,
   HelpText<"Use directory as the C++ standard library include path">,
@@ -6735,6 +6780,7 @@ def _version : Flag<["--"], "version">,
 def _signed_char : Flag<["--"], "signed-char">, Alias<fsigned_char>;
 def _std : Separate<["--"], "std">, Alias<std_EQ>;
 def _stdlib : Separate<["--"], "stdlib">, Alias<stdlib_EQ>;
+def _cstdlib : Separate<["--"], "cstdlib">, Alias<cstdlib_EQ>;
 def _target_help : Flag<["--"], "target-help">;
 def _trace_includes : Flag<["--"], "trace-includes">, Alias<H>;
 def _undefine_macro_EQ : Joined<["--"], "undefine-macro=">, Alias<U>;
@@ -6752,6 +6798,8 @@ def _help_hidden : Flag<["--"], "help-hidden">,
   HelpText<"Display help for hidden options">;
 def _sysroot_EQ : Joined<["--"], "sysroot=">, Visibility<[ClangOption, FlangOption]>;
 def _sysroot : Separate<["--"], "sysroot">, Alias<_sysroot_EQ>;
+def no_xcselect : Flag<["--"], "no-xcselect">,
+  HelpText<"Disable xcselect SDK injection on macOS">;
 
 //===----------------------------------------------------------------------===//
 // pie/pic options (clang + flang)
@@ -7161,13 +7209,15 @@ def mno_gather : Flag<["-"], "mno-gather">, Group<m_Group>,
 def mno_scatter : Flag<["-"], "mno-scatter">, Group<m_Group>,
                   HelpText<"Disable generation of scatter instructions in auto-vectorization(x86 only)">;
 def mapx_features_EQ : CommaJoined<["-"], "mapx-features=">, Group<m_x86_Features_Group>,
-    HelpText<"Enable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu">,  Visibility<[ClangOption, CLOption, FlangOption]>;
+    HelpText<"Enable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu,jmpabs">,  Visibility<[ClangOption, CLOption, FlangOption]>;
 def mno_apx_features_EQ : CommaJoined<["-"], "mno-apx-features=">, Group<m_x86_Features_Group>,
-    HelpText<"Disable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu">, Visibility<[ClangOption, CLOption, FlangOption]>;
+    HelpText<"Disable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu,jmpabs">, Visibility<[ClangOption, CLOption, FlangOption]>;
 def mapxf : Flag<["-"], "mapxf">, Group<m_x86_Features_Group>;
 def mno_apxf : Flag<["-"], "mno-apxf">, Group<m_x86_Features_Group>;
 def mapx_inline_asm_use_gpr32 : Flag<["-"], "mapx-inline-asm-use-gpr32">, Group<m_Group>,
                                 HelpText<"Enable use of GPR32 in inline assembly for APX">;
+def ffixed_edi : Flag<["-"], "ffixed-edi">, Group<m_Group>,
+                 HelpText<"Reserve the edi register (x86 only)">;
 foreach i = {8, 10-15} in
     def ffixed_r#i : Flag<["-"], "ffixed-r"#i>, Group<m_Group>,
     HelpText<"Reserve the r"#i#" register (x86_64 only)">;
@@ -7603,6 +7653,11 @@ defm stack_arrays : BoolOptionWithoutMarshalling<"f", "stack-arrays",
   PosFlag<SetTrue, [], [ClangOption], "Attempt to allocate array temporaries on the stack, no matter their size">,
   NegFlag<SetFalse, [], [ClangOption], "Allocate array temporaries on the heap (default)">>;
 
+defm safe_trampoline : BoolOptionWithoutMarshalling<"f",
+  "safe-trampoline",
+  PosFlag<SetTrue, [], [FlangOption], "Use W^X compliant runtime trampoline pool for internal procedures">,
+  NegFlag<SetFalse, [], [FlangOption], "Use stack-based trampolines for internal procedures (default, may require executable stack)">>;
+
 defm loop_versioning : BoolOptionWithoutMarshalling<"f", "version-loops-for-stride",
   PosFlag<SetTrue, [], [ClangOption], "Create unit-strided versions of loops">,
    NegFlag<SetFalse, [], [ClangOption], "Do not create unit-strided loops (default)">>;
@@ -7645,6 +7700,17 @@ def J : JoinedOrSeparate<["-"], "J">,
 //===----------------------------------------------------------------------===//
 
 let Visibility = [FC1Option] in {
+
+def ffp_maxmin_behavior_EQ
+    : Joined<["-"], "ffp-maxmin-behavior=">,
+      Flags<[HelpHidden]>,
+      Group<f_Group>,
+      Values<"legacy,portable,extremum,extremenum">,
+      HelpText<"Control max/min and [max|min][loc|val] behavior: "
+               "legacy (cmp+select), portable (same as legacy, "
+               " but may use max/minNum when -fno-signed-zeros "
+               "-fno-honor-nans), extremum (IEEE-754-2019 maximum/minimum), "
+               "extremenum (IEEE-754-2008 max/minNum)">;
 
 def fget_definition : MultiArg<["-"], "fget-definition", 3>,
   HelpText<"Get the symbol definition from <line> <start-column> <end-column>">,
@@ -8237,6 +8303,11 @@ def fsanitize_coverage_trace_pc
       Group<fsan_cov_Group>,
       HelpText<"Enable PC tracing in sanitizer coverage">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageTracePC">>;
+def fsanitize_coverage_trace_pc_entry_exit
+    : Flag<["-"], "fsanitize-coverage-trace-pc-entry-exit">,
+      Group<fsan_cov_Group>,
+      HelpText<"Enable function entry/exit tracing in sanitizer coverage">,
+      MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageTracePCEntryExit">>;
 def fsanitize_coverage_trace_pc_guard
     : Flag<["-"], "fsanitize-coverage-trace-pc-guard">,
       Group<fsan_cov_Group>,
@@ -8446,6 +8517,9 @@ def verify_ignore_unexpected : Flag<["-"], "verify-ignore-unexpected">,
   HelpText<"Ignore unexpected diagnostic messages">;
 def verify_ignore_unexpected_EQ : CommaJoined<["-"], "verify-ignore-unexpected=">,
   HelpText<"Ignore unexpected diagnostic messages">;
+def verify_directives
+    : Flag<["-"], "verify-directives">,
+      HelpText<"Enable additional checks on 'expected' directives themselves">;
 def Wno_rewrite_macros : Flag<["-"], "Wno-rewrite-macros">,
   HelpText<"Silence ObjC rewriting warnings">,
   MarshallingInfoFlag<DiagnosticOpts<"NoRewriteMacros">>;
@@ -9819,6 +9893,8 @@ def dxc_no_stdinc : DXCFlag<"hlsl-no-stdinc">,
   HelpText<"HLSL only. Disables all standard includes containing non-native compiler types and functions.">;
 def dxc_Fo : DXCJoinedOrSeparate<"Fo">,
   HelpText<"Output object file">;
+def dxc_Fre : DXCJoinedOrSeparate<"Fre">,
+              HelpText<"Set output file name for reflection files">;
 def dxc_Fc : DXCJoinedOrSeparate<"Fc">,
   HelpText<"Output assembly listing file">;
 def dxc_Frs : DXCJoinedOrSeparate<"Frs">,

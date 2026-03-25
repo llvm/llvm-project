@@ -5,7 +5,7 @@
 # RUN: llvm-mc -filetype=obj -triple x86_64 --stats %s -o %t 2>&1 | FileCheck %s --check-prefix=STATS
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
-# STATS: 1 assembler - Number of assembler layout and relaxation steps
+# STATS: 2 assembler - Number of assembler layout and relaxation steps
 
 # CHECK:       8: int3
 # CHECK-NEXT:  9: int3
@@ -39,7 +39,7 @@
 .byte 0
 
 .rept 10
-.prefalign 16, .Lend\+, nop
+.prefalign 4, .Lend\+, nop
 .rept 5
 int3
 .endr

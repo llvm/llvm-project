@@ -147,12 +147,12 @@ end
 ! CHECK-LABEL: print_nothing
 subroutine print_nothing(k1, k2)
   if (k1 > 0) then
-    ! CHECK: scf.while : () -> () {
-    ! CHECK: scf.condition
+    ! CHECK: br [[header:\^bb[0-9]+]]
+    ! CHECK: [[header]]
     do while (k1 > k2)
       print*, k1, k2 ! no output
       k2 = k2 + 1
-      ! CHECK: scf.yield
+      ! CHECK: br [[header]]
     end do
   end if
 end

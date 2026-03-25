@@ -5,8 +5,8 @@
 
 #--- a.s
 .section .text.f1,"ax",@progbits
-# CHECK: [[#@LINE+1]]:12: error: alignment must be a power of 2
-.prefalign 3
+# CHECK: [[#@LINE+1]]:12: error: log2 alignment must be in the range [0, 63]
+.prefalign 64
 
 # CHECK: [[#@LINE+1]]:13: error: expected ',' and end symbol
 .prefalign 4

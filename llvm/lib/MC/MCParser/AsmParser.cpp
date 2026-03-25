@@ -942,7 +942,7 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
 
   // Create the initial section, if requested.
   if (!NoInitialTextSection)
-    Out.initSections(false, getTargetParser().getSTI());
+    Out.initSections(getTargetParser().getSTI());
 
   // Prime the lexer.
   Lex();
@@ -1056,7 +1056,7 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
 
 bool AsmParser::checkForValidSection() {
   if (!ParsingMSInlineAsm && !getStreamer().getCurrentFragment()) {
-    Out.initSections(false, getTargetParser().getSTI());
+    Out.initSections(getTargetParser().getSTI());
     return Error(getTok().getLoc(),
                  "expected section directive before assembly directive");
   }
@@ -3469,12 +3469,12 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, uint8_t ValueSize) {
 
 bool AsmParser::parseDirectivePrefAlign() {
   SMLoc AlignmentLoc = getLexer().getLoc();
-  int64_t Alignment;
-  if (checkForValidSection() || parseAbsoluteExpression(Alignment))
+  int64_t Log2Alignment;
+  if (checkForValidSection() || parseAbsoluteExpression(Log2Alignment))
     return true;
 
-  if (!isPowerOf2_64(Alignment))
-    return Error(AlignmentLoc, "alignment must be a power of 2");
+  if (Log2Alignment < 0 || Log2Alignment > 63)
+    return Error(AlignmentLoc, "log2 alignment must be in the range [0, 63]");
 
   // Parse end symbol: .prefalign N, sym
   SMLoc SymLoc = getLexer().getLoc();
@@ -3518,8 +3518,8 @@ bool AsmParser::parseDirectivePrefAlign() {
                               getStreamer().getCurrentSectionOnly()->getName() +
                               "'");
 
-  getStreamer().emitPrefAlign(Align(Alignment), *End, EmitNops, Fill,
-                              getTargetParser().getSTI());
+  getStreamer().emitPrefAlign(Align(1ULL << Log2Alignment), *End, EmitNops,
+                              Fill, getTargetParser().getSTI());
   return false;
 }
 

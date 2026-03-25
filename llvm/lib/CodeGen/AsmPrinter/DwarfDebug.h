@@ -52,6 +52,7 @@ class DwarfCompileUnit;
 class DwarfExpression;
 class DwarfTypeUnit;
 class DwarfUnit;
+class GlobalVariable;
 class LexicalScope;
 class MachineFunction;
 class MCSection;
@@ -666,6 +667,7 @@ private:
   /// emit it here if we don't have a skeleton CU for split dwarf.
   void addGnuPubAttributes(DwarfCompileUnit &U, DIE &D) const;
 
+  DwarfCompileUnit *getDwarfCompileUnit(const DICompileUnit *DIUnit);
   /// Create new DwarfCompileUnit for the given metadata node with tag
   /// DW_TAG_compile_unit.
   DwarfCompileUnit &getOrCreateDwarfCompileUnit(const DICompileUnit *DIUnit);
@@ -718,8 +720,16 @@ protected:
   void skippedNonDebugFunction() override;
 
   /// Target-specific debug info initialization at function start.
-  /// Default implementation is empty, overridden by NVPTX target.
   virtual void initializeTargetDebugInfo(const MachineFunction &MF) {}
+
+  /// Setters for target-specific DWARF configuration overrides.
+  /// Called from target DwarfDebug subclass constructors.
+  void setUseInlineStrings(bool V) { UseInlineStrings = V; }
+  void setUseRangesSection(bool V) { UseRangesSection = V; }
+  void setUseSectionsAsReferences(bool V) { UseSectionsAsReferences = V; }
+
+  /// Whether to attach ranges/low_pc to the compile unit DIE in endModule.
+  virtual bool shouldAttachCompileUnitRanges() const { return true; }
 
   /// Target-specific source line recording.
   virtual void recordTargetSourceLine(const DebugLoc &DL, unsigned Flags);
@@ -729,6 +739,35 @@ protected:
   }
 
 public:
+  //===--------------------------------------------------------------------===//
+  // Target hooks for debug info customization.
+  //
+
+  /// Whether the target requires resetting the base address in range/loc lists.
+  virtual bool shouldResetBaseAddress(const MCSection &Section) const {
+    return false;
+  }
+
+  /// Describes the storage kind of a debug variable for target hooks.
+  enum class VariableLocationKind { Global, Register, FrameIndex };
+
+  /// Extract target-specific address space information from a DIExpression.
+  /// Targets may strip address-space-encoding ops from the expression and
+  /// return the address space via \p TargetAddrSpace.
+  virtual const DIExpression *
+  adjustExpressionForTarget(const DIExpression *Expr,
+                            std::optional<unsigned> &TargetAddrSpace) const {
+    return Expr;
+  }
+
+  /// Add target-specific attributes to a variable DIE (e.g.
+  /// DW_AT_address_class).
+  virtual void
+  addTargetVariableAttributes(DwarfCompileUnit &CU, DIE &Die,
+                              std::optional<unsigned> TargetAddrSpace,
+                              VariableLocationKind VarLocKind,
+                              const GlobalVariable *GV = nullptr) const {}
+
   //===--------------------------------------------------------------------===//
   // Main entry points.
   //

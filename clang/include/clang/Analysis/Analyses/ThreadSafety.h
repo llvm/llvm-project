@@ -19,6 +19,7 @@
 #define LLVM_CLANG_ANALYSIS_ANALYSES_THREADSAFETY_H
 
 #include "clang/Basic/SourceLocation.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace clang {
@@ -192,6 +193,17 @@ public:
   /// \param Loc -- The location of the protected operation.
   virtual void handleNoMutexHeld(const NamedDecl *D, ProtectedOperationKind POK,
                                  AccessKind AK, SourceLocation Loc) {}
+
+  /// Warn when a read of a multi-capability guarded_by variable occurs while
+  /// none of the listed capabilities are held.
+  /// \param D -- The decl for the protected variable
+  /// \param POK -- The kind of protected operation (e.g. variable access)
+  /// \param LockNames -- Names of the capabilities that were not held
+  /// \param Loc -- The location of the read
+  virtual void handleGuardedByAnyReadNotHeld(const NamedDecl *D,
+                                             ProtectedOperationKind POK,
+                                             ArrayRef<StringRef> LockNames,
+                                             SourceLocation Loc) {}
 
   /// Warn when a protected operation occurs while the specific mutex protecting
   /// the operation is not locked.
