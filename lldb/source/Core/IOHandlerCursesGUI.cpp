@@ -327,6 +327,8 @@ public:
   virtual const char *WindowDelegateGetHelpText() { return nullptr; }
 
   virtual KeyHelp *WindowDelegateGetKeyHelp() { return nullptr; }
+
+  virtual void WindowDelegateProcessEvent(const lldb::EventSP &event_sp) {}
 };
 
 class HelpDialogDelegate : public WindowDelegate {
@@ -797,6 +799,13 @@ public:
 
     for (auto &subwindow_sp : m_subwindows)
       subwindow_sp->Draw(force);
+  }
+
+  void HandleProcessEvent(const lldb::EventSP &event_sp) {
+    if (m_delegate_sp)
+      m_delegate_sp->WindowDelegateProcessEvent(event_sp);
+    for (auto &subwindow_sp : m_subwindows)
+      subwindow_sp->HandleProcessEvent(event_sp);
   }
 
   bool CreateHelpSubwindow() {
@@ -4385,6 +4394,11 @@ public:
                 ConstString broadcaster_class(
                     broadcaster->GetBroadcasterClass());
                 if (broadcaster_class == broadcaster_class_process) {
+                  uint32_t event_type = event_sp->GetType();
+                  if (event_type & (Process::eBroadcastBitSTDOUT |
+                                    Process::eBroadcastBitSTDERR)) {
+                    m_window_sp->HandleProcessEvent(event_sp);
+                  }
                   m_update_screen = true;
                   continue; // Don't get any key, just update our view
                 }
@@ -6323,30 +6337,25 @@ private:
     char buffer[1024];
     Status error;
 
-    // Read process's stdout.
-    size_t stdout_bytes = process->GetSTDOUT(buffer, sizeof(buffer) - 1, error);
-    if (stdout_bytes > 0) {
-      buffer[stdout_bytes] = '\0';
-      AppendOutput(buffer, false);
-    }
+    // Read all available stdout.
+    size_t bytes;
+    while ((bytes = process->GetSTDOUT(buffer, sizeof(buffer), error)) > 0)
+      AppendOutput(buffer, bytes, false);
 
-    // Read process's stderr.
-    size_t stderr_bytes = process->GetSTDERR(buffer, sizeof(buffer) - 1, error);
-    if (stderr_bytes > 0) {
-      buffer[stderr_bytes] = '\0';
-      AppendOutput(buffer, true);
-    }
+    // Read all available stderr.
+    while ((bytes = process->GetSTDERR(buffer, sizeof(buffer), error)) > 0)
+      AppendOutput(buffer, bytes, true);
   }
 
-  void AppendOutput(const char *text, bool is_stderr) {
-    if (!text || text[0] == '\0')
+  void AppendOutput(const char *text, size_t len, bool is_stderr) {
+    if (!text || len == 0)
       return;
 
     std::lock_guard<std::mutex> lock(m_output_mutex);
 
     // Split text into lines and add to buffer.
     std::string remaining = m_partial_line;
-    remaining += text;
+    remaining.append(text, len);
 
     size_t start = 0, pos = 0;
     while ((pos = remaining.find('\n', start)) != std::string::npos) {
@@ -6356,7 +6365,8 @@ private:
       m_output_lines.push_back(line);
 
       // Keep buffer size under limit.
-      while (m_output_lines.size() > m_max_lines) {
+      size_t max_lines = m_debugger.GetGuiMaxConsoleLines();
+      while (m_output_lines.size() > max_lines) {
         m_output_lines.pop_front();
         if (m_first_visible_line > 0)
           --m_first_visible_line;
@@ -6377,15 +6387,17 @@ private:
 
 public:
   ConsoleOutputWindowDelegate(Debugger &debugger)
-      : m_debugger(debugger), m_first_visible_line(0), m_auto_scroll(true),
-        m_max_lines(10000) {}
+      : m_debugger(debugger), m_first_visible_line(0), m_auto_scroll(true) {}
 
   ~ConsoleOutputWindowDelegate() override = default;
 
-  bool WindowDelegateDraw(Window &window, bool force) override {
-    // Poll for new output.
-    PollProcessOutput();
+  void WindowDelegateProcessEvent(const lldb::EventSP &event_sp) override {
+    if (event_sp->GetType() &
+        (Process::eBroadcastBitSTDOUT | Process::eBroadcastBitSTDERR))
+      PollProcessOutput();
+  }
 
+  bool WindowDelegateDraw(Window &window, bool force) override {
     std::lock_guard<std::mutex> lock(m_output_mutex);
 
     window.Erase();
@@ -6535,7 +6547,6 @@ protected:
   std::string m_partial_line;
   size_t m_first_visible_line = 0;
   bool m_auto_scroll = true;
-  size_t m_max_lines = 10000;
   std::mutex m_output_mutex;
 };
 

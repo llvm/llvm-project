@@ -9,6 +9,14 @@ void generate_output() {
   }
 }
 
+void generate_large_output() {
+  for (unsigned i = 0; i < 100; ++i) {
+    std::cout << "Large output line " << i
+              << " to test buffer draining logic in the GUI console."
+              << std::endl;
+  }
+}
+
 int main(int argc, char *argv[]) {
   int test_var = 42;
 
@@ -17,6 +25,7 @@ int main(int argc, char *argv[]) {
 
   // Generate stdout/stderr output.
   generate_output();
+  generate_large_output();
 
   // Wait to capture output.
   std::this_thread::sleep_for(std::chrono::milliseconds(100));

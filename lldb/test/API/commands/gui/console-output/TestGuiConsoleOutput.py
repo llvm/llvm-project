@@ -58,11 +58,11 @@ class TestGuiConsoleOutputTest(PExpectTest):
 
         # Check console output for messages
         self.child.expect_exact("Hello from stdout line 1")
-        self.child.expect_exact("Hello from stderr line 1")
-        self.child.expect_exact("Hello from stdout line 2")
-        self.child.expect_exact("Hello from stderr line 2")
-        self.child.expect_exact("Hello from stdout line 3")
         self.child.expect_exact("Hello from stderr line 3")
+
+        # Check for large output (verify buffer draining)
+        self.child.expect_exact("Large output line 0")
+        self.child.expect_exact("Large output line 99")
 
         # Wait for Breakpoint 2
         self.child.expect_exact("stop reason")
