@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -verify %s -DTEST=1
 // RUN: %clang_cc1 -verify %s -DTEST=2
 // RUN: %clang_cc1 -verify %s -DTEST=3
+// RUN: %clang_cc1 -verify %s -DTEST=4 -std=c++20
 // REQUIRES: thread_support
 
 // FIXME: Detection of, or recovery from, stack exhaustion does not work on
@@ -58,6 +59,31 @@ namespace template_parameter_type_recursion {
   }
 
   void printFunctionalType(ostream &os, mlir::Value &v) { os << v; }
+}
+
+#elif TEST == 4
+
+// Test for recursive lambdas in templates (GitHub issue #180319)
+// This should not crash with a stack overflow.
+namespace recursive_lambda_template {
+  struct foo_tag {};
+  template<class T> struct foo {
+    using tag = foo_tag;
+    T run;
+  };
+  template<class T> concept isFoo = requires(T a) { a.run(); };
+
+  template<int i, class T> auto complexify(T a) requires isFoo<T> {
+    if constexpr (i > 0) {
+      return complexify<i-1>(foo{ [a]{
+        return 1+a.run();
+      }});
+    } else return a;
+  }
+
+  // Use a moderate depth that would previously cause stack exhaustion
+  // but should now be handled gracefully.
+  auto result = complexify<200>(foo{[]{ return 1; }});
 }
 
 #else
