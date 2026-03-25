@@ -4,7 +4,7 @@
 ; Test that non-widenable intrinsics in the outer loop are emitted as replicate
 ; recipe and do not crash the VPlan native path.
 
-; Check that llvm.asume is replicated per lane for the assumption.
+; Check that llvm.assume is replicated per lane for the assumption.
 define void @test_assume(ptr %arr, i64 %n) {
 ; CHECK-LABEL: define void @test_assume(
 ; CHECK-SAME: ptr [[ARR:%.*]], i64 [[N:%.*]]) {

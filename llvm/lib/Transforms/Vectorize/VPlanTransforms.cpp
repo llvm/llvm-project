@@ -99,7 +99,7 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
           // is valid for a single iteration. Emitting it as a single-scalar
           // replicate would incorrectly extend the scope across multiple
           // original iterations packed into one vector iteration.
-          // FIXME: If we want to vectorize this this loop, then we have to drop
+          // FIXME: If we want to vectorize this loop, then we have to drop
           // all the associated !alias.scope and !noalias.
           if (VectorID == Intrinsic::experimental_noalias_scope_decl)
             return false;
@@ -112,7 +112,7 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
               VectorID == Intrinsic::sideeffect ||
               VectorID == Intrinsic::pseudoprobe) {
             // If the operand of llvm.assume holds before vectorization, it will
-            // also holds per lane.
+            // also hold per lane.
             // llvm.pseudoprobe requires to be duplicated per lane for accurate
             // sample count.
             const bool IsSingleScalar = VectorID != Intrinsic::assume &&
