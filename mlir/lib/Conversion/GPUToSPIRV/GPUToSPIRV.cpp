@@ -20,6 +20,7 @@
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <optional>
 
 using namespace mlir;
