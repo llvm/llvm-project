@@ -31,7 +31,7 @@ clc
 .section .text.f2,"ax",@progbits
 .p2align 2
 .prefalign 3, .Lf2_end, 0
-.prefalign 4, .Lf2_end, 0
+.prefalign 4, .Lf2_end, 1-1
 .prefalign 3, .Lf2_end, 0
 .rept 9
 clc
@@ -76,7 +76,7 @@ clc
 ## No-op prefalign
 .prefalign 4, .Lf3d_end, 0xcc
 .Lf3d_end:
-.prefalign 4, .Lf3a_end, 0xcc
+.prefalign 4, .Lf3a_end, 0xcb+1
 
 ## Two functions in one section where the second function's padding depends on
 ## the first function's size.
