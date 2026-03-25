@@ -16,10 +16,10 @@ namespace llvm {
 class SPIRVTargetMachine;
 
 class SPIRVEmitIntrinsicsPass : public PassInfoMixin<SPIRVEmitIntrinsicsPass> {
-  SPIRVTargetMachine *TM;
+  const SPIRVTargetMachine &TM;
 
 public:
-  SPIRVEmitIntrinsicsPass(SPIRVTargetMachine *TM) : TM(TM) {}
+  SPIRVEmitIntrinsicsPass(const SPIRVTargetMachine &TM) : TM(TM) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
