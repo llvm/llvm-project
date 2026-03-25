@@ -5,9 +5,22 @@ target triple = "dxil-unknown-shadermodel6.7-library"
 @a = common global [32 x b8] zeroinitializer, align 1
 
 define void @bytes(b1 %a, b3 %b, b5 %c, b8 %d, b16 %e, b32 %f, b64 %g, b128 %h, <8 x b5> %i, <2 x b64> %j) {
-; CHECK-LABEL: define void @bytes(
-; CHECK-SAME: i1 [[A:%.*]], i3 [[B:%.*]], i5 [[C:%.*]], i8 [[D:%.*]], i16 [[E:%.*]], i32 [[F:%.*]], i64 [[G:%.*]], i128 [[H:%.*]], <8 x i5> [[I:%.*]], <2 x i64> [[J:%.*]]) {
-; CHECK-NEXT:    ret void
-;
+  ; Check that we generally convert byte types into int types
+  ; CHECK-LABEL: define void @bytes(i1 %a, i3 %b, i5 %c, i8 %d, i16 %e, i32 %f, i64 %g, i128 %h, <8 x i5> %i, <2 x i64> %j
+  ; CHECK-NEXT:    ret void
   ret void
+}
+
+define b32 @constant32() {
+  ; Check that we write constant byte types as constant ints
+  ; CHECK-LABEL: define i32 @constant32()
+  ; CHECK:         ret i32 255
+  ret b32 255
+}
+
+define b128 @constant128() {
+  ; Check that we write large constant byte types as constant ints
+  ; CHECK-LABEL: define i128 @constant128()
+  ; CHECK:         ret i128 {{[0-9]+}}
+  ret b128 18446744073709551615
 }
