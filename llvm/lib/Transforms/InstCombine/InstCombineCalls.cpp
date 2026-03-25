@@ -239,11 +239,13 @@ Instruction *InstCombinerImpl::SimplifyAnyMemSet(AnyMemSetInst *MI) {
   // Remove memset with an undef value.
   // FIXME: This is technically incorrect because it might overwrite a poison
   // value. Change to PoisonValue once #52930 is resolved.
-  if (isa<UndefValue>(MI->getValue())) {
-    // Set the size of the copy to 0, it will be deleted on the next iteration.
-    MI->setLength((uint64_t)0);
-    return MI;
-  }
+  // Postponed to SelectionDAG lowering phase.
+  // if (isa<UndefValue>(MI->getValue())) {
+  //   // Set the size of the copy to 0, it will be deleted on the next iteration.
+  //   MI->setLength((uint64_t)0);
+  //   return MI;
+  // }
+
 
   // Extract the length and alignment and fill if they are constant.
   ConstantInt *LenC = dyn_cast<ConstantInt>(MI->getLength());
