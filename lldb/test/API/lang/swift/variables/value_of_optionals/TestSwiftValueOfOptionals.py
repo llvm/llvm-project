@@ -20,6 +20,8 @@ import os
 
 
 class TestSwiftValueOfOptionalType(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     @swiftTest
     def test_swift_value_optional_type(self):
         """Check that trying to read an optional's numeric value doesn't crash LLDB"""

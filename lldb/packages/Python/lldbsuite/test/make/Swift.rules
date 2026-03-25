@@ -24,13 +24,23 @@ else
 	SWIFTSDKROOT = $(SDKROOT)
 endif
 
-ifeq "$(OS)" "Windows_NT"
+ifeq "$(MAKE_PDB)" "YES"
+	SWIFT_DEBUG_INFO_FLAG ?= -g -debug-info-format=codeview
+else ifeq "$(OS)" "Windows_NT"
 	SWIFT_DEBUG_INFO_FLAG ?= -g
 else
 	SWIFT_DEBUG_INFO_FLAG ?= $(DEBUG_INFO_FLAG)
 endif
 
 SWIFTFLAGS ?= $(SWIFT_DEBUG_INFO_FLAG) -Onone -Xfrontend -serialize-debugging-options
+
+ifeq "$(MAKE_PDB)" "YES"
+SWIFT_LINK_FLAGS = $(SWIFTFLAGS) -Xlinker /debug
+else
+# On Darwin, `-g` automatically runs `dsymutil`. Removed so it can be enabled explicitly
+# as neeeded.
+SWIFT_LINK_FLAGS = $(patsubst -g,,$(SWIFTFLAGS))
+endif
 
 SWIFTFLAGS += $(SWIFTFLAGS_EXTRAS)
 SWIFTFLAGS += $(FRAMEWORK_INCLUDES)
@@ -256,7 +266,7 @@ LD_SWIFTFLAGS =
 endif
 $(EXE): $(OBJECTS)
 	@echo "### Linking" $(EXE)
-	$(SWIFTC) $(LD_EXTRAS) $(LD_SWIFTFLAGS) $(OBJECTS) $(patsubst -g,,$(SWIFTFLAGS)) -o "$(EXE)"
+	$(SWIFTC) $(LD_EXTRAS) $(LD_SWIFTFLAGS) $(OBJECTS) $(SWIFT_LINK_FLAGS) -o "$(EXE)"
 ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -s - "$(EXE)"
 endif
@@ -270,7 +280,7 @@ endif
 
 $(EXE): $(OBJECTS)
 	@echo "### Linking" $(EXE)
-	$(SWIFTC) $(LD_EXTRAS) $(LD_SWIFTFLAGS) $(WRAPPED_SWIFTMODULE) $^ $(patsubst -g,,$(SWIFTFLAGS)) -o "$(EXE)"
+	$(SWIFTC) $(LD_EXTRAS) $(LD_SWIFTFLAGS) $(WRAPPED_SWIFTMODULE) $^ $(SWIFT_LINK_FLAGS) -o "$(EXE)"
 ifneq "$(HIDE_SWIFTMODULE)" ""
 	rm -f $(MODULENAME).swiftmodule
 endif
@@ -312,7 +322,7 @@ endif
 	cd $(FRAMEWORK).framework && $(call LN_SF,Versions/A/Resources,Resources)
 	cd $(FRAMEWORK).framework && $(call LN_SF,Versions/A/$(FRAMEWORK),$(FRAMEWORK))
 endif
-	$(SWIFTC) $(patsubst -g,,$(SWIFTFLAGS)) \
+	$(SWIFTC) $(SWIFT_LINK_FLAGS) \
             -emit-library $(DYLIB_SWIFT_FLAGS) -o $@ $(DYLIB_OBJECTS)
 ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -s - "$(DYLIB_FILENAME)"
