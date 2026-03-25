@@ -10,7 +10,7 @@
 .globl _start
 .type _start, @function
 _start:
-  ## Simple call — single-word packet.
+  ## Simple call -- single-word packet.
   call undefined_weak
 
   ## Call in a two-word packet with an ALU op.
@@ -20,9 +20,9 @@ _start:
   jumpr r31
 
 ## All branches target address zero.
-# CHECK:      <_start>:
-# CHECK-NEXT: 200b4: { call 0x0 <undefined_weak> }
-# CHECK-NEXT: 200b8: { call 0x0 <undefined_weak>
-# CHECK-NEXT: 200bc:   r0 = #0x0 }
-# CHECK-NEXT:        { jumpr r31 }
-# CHECK-NOT: __hexagon_thunk
+# CHECK:       <_start>:
+# CHECK-NEXT:  { call 0x0 <undefined_weak> }
+# CHECK-NEXT:  { call 0x0 <undefined_weak>
+# CHECK-NEXT:    r0 = #0x0 }
+# CHECK-NEXT:  { jumpr r31 }
+# CHECK-NOT:   __hexagon_thunk
