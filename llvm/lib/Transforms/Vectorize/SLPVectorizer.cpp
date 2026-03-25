@@ -26351,8 +26351,8 @@ public:
             (R.isAnalyzedReductionRoot(EdgeInst) &&
              all_of(EdgeInst->operands(), IsaPred<Constant>))) {
           PossibleReducedVals.push_back(EdgeVal);
-          if (auto *I = dyn_cast<Instruction>(EdgeVal); I && !isCmpSelMinMax(I))
-            Operands.insert_range(I->operands());
+          if (EdgeInst && !isCmpSelMinMax(EdgeInst))
+            Operands.insert_range(EdgeInst->operands());
           continue;
         }
         if (CurrentRK == ReductionOrdering::Ordered)
