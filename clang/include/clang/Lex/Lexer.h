@@ -19,9 +19,9 @@
 #include "clang/Lex/DependencyDirectivesScanner.h"
 #include "clang/Lex/PreprocessorLexer.h"
 #include "clang/Lex/Token.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "clang/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
 #include <optional>
@@ -496,9 +496,9 @@ public:
 
   /// Returns a string for the source that the range encompasses.
   CLANG_ABI static StringRef getSourceText(CharSourceRange Range,
-                                 const SourceManager &SM,
-                                 const LangOptions &LangOpts,
-                                 bool *Invalid = nullptr);
+                                           const SourceManager &SM,
+                                           const LangOptions &LangOpts,
+                                           bool *Invalid = nullptr);
 
   /// Retrieve the name of the immediate macro expansion.
   ///

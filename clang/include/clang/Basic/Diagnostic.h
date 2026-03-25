@@ -19,6 +19,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/UnsignedOrNone.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FunctionExtras.h"
@@ -27,7 +28,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/iterator_range.h"
-#include "clang/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
 #include <limits>
@@ -1792,7 +1792,7 @@ public:
   /// The default implementation just keeps track of the total number of
   /// warnings and errors.
   CLANG_ABI virtual void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
-                                const Diagnostic &Info);
+                                          const Diagnostic &Info);
 };
 
 /// A diagnostic client that ignores all diagnostics.

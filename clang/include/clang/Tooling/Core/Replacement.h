@@ -20,8 +20,8 @@
 
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
-#include "llvm/ADT/StringRef.h"
 #include "clang/Support/Compiler.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 #include <map>
@@ -328,8 +328,8 @@ bool applyAllReplacements(const Replacements &Replaces, Rewriter &Rewrite);
 /// replacements applied; otherwise, an llvm::Error carrying llvm::StringError
 /// is returned (the Error message can be converted to string using
 /// `llvm::toString()` and 'std::error_code` in the `Error` should be ignored).
-CLANG_ABI llvm::Expected<std::string> applyAllReplacements(StringRef Code,
-                                                 const Replacements &Replaces);
+CLANG_ABI llvm::Expected<std::string>
+applyAllReplacements(StringRef Code, const Replacements &Replaces);
 
 /// Collection of Replacements generated from a single translation unit.
 struct TranslationUnitReplacements {

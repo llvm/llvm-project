@@ -57,7 +57,7 @@ public:
   AllDiagList::const_iterator all_end() const { return All.end(); }
 
   CLANG_ABI void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
-                        const Diagnostic &Info) override;
+                                  const Diagnostic &Info) override;
 
   /// FlushDiagnostics - Flush the buffered diagnostics to an given
   /// diagnostic engine.

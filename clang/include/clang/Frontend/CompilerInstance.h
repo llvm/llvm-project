@@ -20,12 +20,12 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/ModuleLoader.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/BuryPointer.h"
-#include "clang/Support/Compiler.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/VirtualOutputBackend.h"
@@ -437,9 +437,10 @@ public:
   ///           configuring the file system emits diagnostics. Note that the
   ///           DiagnosticsEngine using the consumer won't obey the
   ///           --warning-suppression-mappings= flag.
-  CLANG_ABI void createVirtualFileSystem(IntrusiveRefCntPtr<llvm::vfs::FileSystem>
-                                   BaseFS = llvm::vfs::getRealFileSystem(),
-                               DiagnosticConsumer *DC = nullptr);
+  CLANG_ABI void
+  createVirtualFileSystem(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS =
+                              llvm::vfs::getRealFileSystem(),
+                          DiagnosticConsumer *DC = nullptr);
 
   /// Use the given file system.
   void setVirtualFileSystem(IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS) {
@@ -704,7 +705,7 @@ public:
   /// \param ShouldOwnClient If Client is non-NULL, specifies whether
   /// the diagnostic object should take ownership of the client.
   CLANG_ABI void createDiagnostics(DiagnosticConsumer *Client = nullptr,
-                         bool ShouldOwnClient = true);
+                                   bool ShouldOwnClient = true);
 
   /// Create a DiagnosticsEngine object.
   ///

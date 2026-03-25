@@ -19,8 +19,8 @@
 #ifndef LLVM_CLANG_TOOLING_ASTDIFF_ASTDIFF_H
 #define LLVM_CLANG_TOOLING_ASTDIFF_ASTDIFF_H
 
-#include "clang/Tooling/ASTDiff/ASTDiffInternal.h"
 #include "clang/Support/Compiler.h"
+#include "clang/Tooling/ASTDiff/ASTDiffInternal.h"
 #include <optional>
 
 namespace clang {
@@ -76,7 +76,8 @@ public:
   CLANG_ABI int findPositionInParent(NodeId Id) const;
 
   // Returns the starting and ending offset of the node in its source file.
-  CLANG_ABI std::pair<unsigned, unsigned> getSourceRangeOffsets(const Node &N) const;
+  CLANG_ABI std::pair<unsigned, unsigned>
+  getSourceRangeOffsets(const Node &N) const;
 
   /// Serialize the node attributes to a string representation. This should
   /// uniquely distinguish nodes of the same kind. Note that this function just
@@ -110,7 +111,8 @@ struct ComparisonOptions {
 
 class ASTDiff {
 public:
-  CLANG_ABI ASTDiff(SyntaxTree &Src, SyntaxTree &Dst, const ComparisonOptions &Options);
+  CLANG_ABI ASTDiff(SyntaxTree &Src, SyntaxTree &Dst,
+                    const ComparisonOptions &Options);
   CLANG_ABI ~ASTDiff();
 
   // Returns the ID of the node that is mapped to the given node in SourceTree.

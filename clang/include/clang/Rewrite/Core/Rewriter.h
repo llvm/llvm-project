@@ -16,9 +16,9 @@
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/RewriteBuffer.h"
 #include "llvm/ADT/StringRef.h"
-#include "clang/Support/Compiler.h"
 #include <map>
 #include <string>
 

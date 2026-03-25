@@ -114,7 +114,7 @@ private:
 
 public:
   CLANG_ABI ExternalASTMerger(const ImporterTarget &Target,
-                    ArrayRef<ImporterSource> Sources);
+                              ArrayRef<ImporterSource> Sources);
 
   /// Asks all connected ASTImporters if any of them imported the given
   /// declaration. If any ASTImporter did import the given declaration,

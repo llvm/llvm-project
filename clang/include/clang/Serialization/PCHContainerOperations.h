@@ -10,9 +10,9 @@
 #define LLVM_CLANG_SERIALIZATION_PCHCONTAINEROPERATIONS_H
 
 #include "clang/Basic/Module.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
-#include "clang/Support/Compiler.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include <memory>
 

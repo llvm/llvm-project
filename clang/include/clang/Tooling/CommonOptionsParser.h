@@ -26,10 +26,10 @@
 #ifndef LLVM_CLANG_TOOLING_COMMONOPTIONSPARSER_H
 #define LLVM_CLANG_TOOLING_COMMONOPTIONSPARSER_H
 
+#include "clang/Support/Compiler.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/Support/CommandLine.h"
-#include "clang/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace clang {

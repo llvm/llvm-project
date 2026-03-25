@@ -38,6 +38,7 @@
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
@@ -48,7 +49,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
-#include "clang/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <cassert>
 #include <cstddef>
@@ -916,10 +916,11 @@ public:
 
   /// Create a new FileID that represents the specified file
   /// being \#included from the specified IncludePosition.
-  CLANG_ABI FileID createFileID(FileEntryRef SourceFile, SourceLocation IncludePos,
-                      SrcMgr::CharacteristicKind FileCharacter,
-                      int LoadedID = 0,
-                      SourceLocation::UIntTy LoadedOffset = 0);
+  CLANG_ABI FileID createFileID(FileEntryRef SourceFile,
+                                SourceLocation IncludePos,
+                                SrcMgr::CharacteristicKind FileCharacter,
+                                int LoadedID = 0,
+                                SourceLocation::UIntTy LoadedOffset = 0);
 
   /// Create a new FileID that represents the specified memory buffer.
   ///
@@ -1399,7 +1400,7 @@ public:
   ///
   /// \param Invalid If non-NULL, will be set \c true if an error occurs.
   CLANG_ABI const char *getCharacterData(SourceLocation SL,
-                               bool *Invalid = nullptr) const;
+                                         bool *Invalid = nullptr) const;
 
   /// Return the column # for the specified file position.
   ///
@@ -1409,7 +1410,8 @@ public:
   /// before calling this method.
   unsigned getColumnNumber(FileID FID, unsigned FilePos,
                            bool *Invalid = nullptr) const;
-  CLANG_ABI unsigned getColumnNumber(SourceLocation Loc, bool *Invalid = nullptr) const;
+  CLANG_ABI unsigned getColumnNumber(SourceLocation Loc,
+                                     bool *Invalid = nullptr) const;
   unsigned getSpellingColumnNumber(SourceLocation Loc,
                                    bool *Invalid = nullptr) const {
     return getColumnNumber(getSpellingLoc(Loc), Invalid);

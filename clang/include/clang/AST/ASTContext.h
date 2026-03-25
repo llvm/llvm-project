@@ -30,6 +30,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
@@ -44,7 +45,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TinyPtrVector.h"
-#include "clang/Support/Compiler.h"
 #include "llvm/Support/TypeSize.h"
 #include <optional>
 
@@ -1390,9 +1390,9 @@ public:
   /// are stored here.
   llvm::DenseMap<const CXXMethodDecl *, CXXCastPath> LambdaCastPaths;
 
-  CLANG_ABI ASTContext(LangOptions &LOpts, SourceManager &SM, IdentifierTable &idents,
-             SelectorTable &sels, Builtin::Context &builtins,
-             TranslationUnitKind TUKind);
+  CLANG_ABI ASTContext(LangOptions &LOpts, SourceManager &SM,
+                       IdentifierTable &idents, SelectorTable &sels,
+                       Builtin::Context &builtins, TranslationUnitKind TUKind);
   ASTContext(const ASTContext &) = delete;
   ASTContext &operator=(const ASTContext &) = delete;
   CLANG_ABI ~ASTContext();
@@ -1402,7 +1402,8 @@ public:
   /// The external AST source provides the ability to load parts of
   /// the abstract syntax tree as needed from some external storage,
   /// e.g., a precompiled header.
-  CLANG_ABI void setExternalSource(IntrusiveRefCntPtr<ExternalASTSource> Source);
+  CLANG_ABI void
+  setExternalSource(IntrusiveRefCntPtr<ExternalASTSource> Source);
 
   /// Retrieve a pointer to the external AST source associated
   /// with this AST context, if any.
@@ -3674,7 +3675,7 @@ public:
   ///
   /// \param Target The target
   CLANG_ABI void InitBuiltinTypes(const TargetInfo &Target,
-                        const TargetInfo *AuxTarget = nullptr);
+                                  const TargetInfo *AuxTarget = nullptr);
 
 private:
   void InitBuiltinType(CanQualType &R, BuiltinType::Kind K);

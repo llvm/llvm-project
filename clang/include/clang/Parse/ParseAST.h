@@ -36,11 +36,11 @@ namespace clang {
   /// \param SkipFunctionBodies Whether to skip parsing of function bodies.
   /// This option can be used, for example, to speed up searches for
   /// declarations/definitions when indexing.
-  CLANG_ABI void ParseAST(Preprocessor &pp, ASTConsumer *C,
-                ASTContext &Ctx, bool PrintStats = false,
-                TranslationUnitKind TUKind = TU_Complete,
-                CodeCompleteConsumer *CompletionConsumer = nullptr,
-                bool SkipFunctionBodies = false);
+  CLANG_ABI void ParseAST(Preprocessor &pp, ASTConsumer *C, ASTContext &Ctx,
+                          bool PrintStats = false,
+                          TranslationUnitKind TUKind = TU_Complete,
+                          CodeCompleteConsumer *CompletionConsumer = nullptr,
+                          bool SkipFunctionBodies = false);
 
   /// Parse the main file known to the preprocessor, producing an
   /// abstract syntax tree.

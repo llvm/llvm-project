@@ -10,9 +10,9 @@
 #define LLVM_CLANG_DRIVER_TYPES_H
 
 #include "clang/Driver/Phases.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Option/ArgList.h"
-#include "clang/Support/Compiler.h"
 
 namespace llvm {
 class StringRef;

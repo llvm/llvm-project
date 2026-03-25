@@ -35,6 +35,7 @@
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/PCHContainerOperations.h"
+#include "clang/Support/Compiler.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -43,7 +44,6 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Option/Option.h"
-#include "clang/Support/Compiler.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <memory>
 #include <string>
@@ -332,12 +332,12 @@ public:
   /// \param Files The file manager to use for underlying file operations when
   /// running the tool.
   CLANG_ABI ClangTool(const CompilationDatabase &Compilations,
-            ArrayRef<std::string> SourcePaths,
-            std::shared_ptr<PCHContainerOperations> PCHContainerOps =
-                std::make_shared<PCHContainerOperations>(),
-            IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS =
-                llvm::vfs::getRealFileSystem(),
-            IntrusiveRefCntPtr<FileManager> Files = nullptr);
+                      ArrayRef<std::string> SourcePaths,
+                      std::shared_ptr<PCHContainerOperations> PCHContainerOps =
+                          std::make_shared<PCHContainerOperations>(),
+                      IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS =
+                          llvm::vfs::getRealFileSystem(),
+                      IntrusiveRefCntPtr<FileManager> Files = nullptr);
 
   CLANG_ABI ~ClangTool();
 

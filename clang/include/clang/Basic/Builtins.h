@@ -15,11 +15,11 @@
 #ifndef LLVM_CLANG_BASIC_BUILTINS_H
 #define LLVM_CLANG_BASIC_BUILTINS_H
 
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringTable.h"
-#include "clang/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstring>
 

@@ -28,10 +28,10 @@
 #define LLVM_CLANG_TOOLING_COMPILATIONDATABASE_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "clang/Support/Compiler.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <memory>
 #include <string>
@@ -127,8 +127,8 @@ public:
   /// $ clang++ -o production a.cc b.cc -DPRODUCTION
   /// A compilation database representing the project would return both command
   /// lines for a.cc and b.cc and only the first command line for t.cc.
-  CLANG_ABI virtual std::vector<CompileCommand> getCompileCommands(
-      StringRef FilePath) const = 0;
+  CLANG_ABI virtual std::vector<CompileCommand>
+  getCompileCommands(StringRef FilePath) const = 0;
 
   /// Returns the list of all files available in the compilation database.
   ///
@@ -152,7 +152,7 @@ public:
 ///
 /// Useful when we want a tool to behave more like a compiler invocation.
 /// This compilation database is not enumerable: getAllFiles() returns {}.
-   class FixedCompilationDatabase : public CompilationDatabase {
+class FixedCompilationDatabase : public CompilationDatabase {
 public:
   /// Creates a FixedCompilationDatabase from the arguments after "--".
   ///
@@ -198,7 +198,7 @@ public:
   /// Constructs a compilation data base from a specified directory
   /// and command line.
   CLANG_ABI FixedCompilationDatabase(const Twine &Directory,
-                           ArrayRef<std::string> CommandLine);
+                                     ArrayRef<std::string> CommandLine);
 
   /// Returns the given compile command.
   ///
@@ -206,7 +206,7 @@ public:
   /// and command line specified at construction with "clang-tool" as argv[0]
   /// and 'FilePath' as positional argument.
   std::vector<CompileCommand>
-  CLANG_ABI getCompileCommands(StringRef FilePath) const override;
+      CLANG_ABI getCompileCommands(StringRef FilePath) const override;
 
 private:
   /// This is built up to contain a single entry vector to be returned from

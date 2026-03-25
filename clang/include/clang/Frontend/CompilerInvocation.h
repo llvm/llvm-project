@@ -21,9 +21,9 @@
 #include "clang/Frontend/MigratorOptions.h"
 #include "clang/Frontend/PreprocessorOutputOptions.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
-#include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "clang/Support/Compiler.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include <memory>
 #include <string>
 
@@ -296,9 +296,9 @@ public:
   /// \param [in] CommandLineArgs - Array of argument strings, this must not
   /// contain "-cc1".
   CLANG_ABI static bool CreateFromArgs(CompilerInvocation &Res,
-                             ArrayRef<const char *> CommandLineArgs,
-                             DiagnosticsEngine &Diags,
-                             const char *Argv0 = nullptr);
+                                       ArrayRef<const char *> CommandLineArgs,
+                                       DiagnosticsEngine &Diags,
+                                       const char *Argv0 = nullptr);
 
   /// Populate \p Opts with the default set of pointer authentication-related
   /// options given \p LangOpts and \p Triple.

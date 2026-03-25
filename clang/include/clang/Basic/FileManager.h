@@ -18,6 +18,7 @@
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/FileSystemOptions.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -25,7 +26,6 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
-#include "clang/Support/Compiler.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -193,9 +193,9 @@ public:
   /// \param CacheFailure If true and the file does not exist, we'll cache
   /// the failure to find this file.
   CLANG_ABI llvm::Expected<FileEntryRef> getFileRef(StringRef Filename,
-                                          bool OpenFile = false,
-                                          bool CacheFailure = true,
-                                          bool IsText = true);
+                                                    bool OpenFile = false,
+                                                    bool CacheFailure = true,
+                                                    bool IsText = true);
 
   /// Get the FileEntryRef for stdin, returning an error if stdin cannot be
   /// read.
