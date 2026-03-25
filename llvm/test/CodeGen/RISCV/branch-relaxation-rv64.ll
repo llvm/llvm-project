@@ -7,7 +7,9 @@
 ; RUN:   | FileCheck %s
 ; RUN: llc -mtriple=riscv64 -relocation-model=pic -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s
-; RUN: sed 's/^;CFBRANCH: //' %s \
+;; The following RUN line uses sed to uncomment the module flags at the end of
+;; the file, enabling cf-protection-branch to test landing pad generation.
+; RUN: sed 's/^;; CFBRANCH: //' %s \
 ; RUN:   | llc -mtriple=riscv64 -verify-machineinstrs \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-CF
 
@@ -1846,5 +1848,5 @@ tail:
   ret void
 }
 
-;CFBRANCH: !llvm.module.flags = !{!0}
-;CFBRANCH: !0 = !{i32 8, !"cf-protection-branch", i32 1}
+;; CFBRANCH: !llvm.module.flags = !{!0}
+;; CFBRANCH: !0 = !{i32 8, !"cf-protection-branch", i32 1}
