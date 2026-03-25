@@ -3299,14 +3299,14 @@ static mlir::omp::TaskloopContextOp genStandaloneTaskloop(
   firOpBuilder.setInsertionPointToStart(&taskLoopContextOp.getRegion().front());
   mlir::omp::TaskloopWrapperOperands wrapperClauseOps;
   EntryBlockArgs wrapperEntryBlockArgs;
-  auto taskLoopOp = genWrapperOp<mlir::omp::TaskloopWrapperOp>(
+  auto taskLoopWrapperOp = genWrapperOp<mlir::omp::TaskloopWrapperOp>(
       converter, loc, wrapperClauseOps, wrapperEntryBlockArgs);
 
   genLoopNestOp(converter, symTable, semaCtx, eval, loc, queue, item,
                 loopNestClauseOps, iv, {{taskLoopContextOp, taskloopArgs}},
                 llvm::omp::Directive::OMPD_taskloop, dsp);
 
-  firOpBuilder.setInsertionPointAfter(taskLoopOp);
+  firOpBuilder.setInsertionPointAfter(taskLoopWrapperOp);
   mlir::omp::TerminatorOp::create(firOpBuilder, loc);
   return taskLoopContextOp;
 }
