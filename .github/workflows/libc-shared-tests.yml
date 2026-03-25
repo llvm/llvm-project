@@ -32,7 +32,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release
 
       - name: Build and Test
-        run: cmake --build build --target libc-shared-test
+        run: cmake --build build --target libc-shared-tests
 
   # -------------------------------------------------------------
   # Job 2: Linux Emulated (ppc64le & s390x)
@@ -65,4 +65,4 @@ jobs:
               -DCMAKE_CXX_COMPILER=clang++ \
               -DCMAKE_BUILD_TYPE=Release
               
-            cmake --build build --target libc-shared-test
+            cmake --build build --target libc-shared-tests
