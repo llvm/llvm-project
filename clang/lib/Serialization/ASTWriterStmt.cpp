@@ -1464,15 +1464,20 @@ void ASTStmtWriter::VisitAtomicExpr(AtomicExpr *E) {
 // Objective-C Expressions and Statements.
 //===----------------------------------------------------------------------===//
 
-void ASTStmtWriter::VisitObjCStringLiteral(ObjCStringLiteral *E) {
+void ASTStmtWriter::VisitObjCObjectLiteral(ObjCObjectLiteral *E) {
   VisitExpr(E);
+  Record.push_back(E->isExpressibleAsConstantInitializer());
+}
+
+void ASTStmtWriter::VisitObjCStringLiteral(ObjCStringLiteral *E) {
+  VisitObjCObjectLiteral(E);
   Record.AddStmt(E->getString());
   Record.AddSourceLocation(E->getAtLoc());
   Code = serialization::EXPR_OBJC_STRING_LITERAL;
 }
 
 void ASTStmtWriter::VisitObjCBoxedExpr(ObjCBoxedExpr *E) {
-  VisitExpr(E);
+  VisitObjCObjectLiteral(E);
   Record.AddStmt(E->getSubExpr());
   Record.AddDeclRef(E->getBoxingMethod());
   Record.AddSourceRange(E->getSourceRange());
@@ -1480,7 +1485,7 @@ void ASTStmtWriter::VisitObjCBoxedExpr(ObjCBoxedExpr *E) {
 }
 
 void ASTStmtWriter::VisitObjCArrayLiteral(ObjCArrayLiteral *E) {
-  VisitExpr(E);
+  VisitObjCObjectLiteral(E);
   Record.push_back(E->getNumElements());
   for (unsigned i = 0; i < E->getNumElements(); i++)
     Record.AddStmt(E->getElement(i));
@@ -1490,7 +1495,7 @@ void ASTStmtWriter::VisitObjCArrayLiteral(ObjCArrayLiteral *E) {
 }
 
 void ASTStmtWriter::VisitObjCDictionaryLiteral(ObjCDictionaryLiteral *E) {
-  VisitExpr(E);
+  VisitObjCObjectLiteral(E);
   Record.push_back(E->getNumElements());
   Record.push_back(E->HasPackExpansions);
   for (unsigned i = 0; i < E->getNumElements(); i++) {
