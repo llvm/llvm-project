@@ -105,15 +105,20 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
             return false;
 
           // These intrinsics are recognized by getVectorIntrinsicIDForCall
-          // but are not widenable. Emit them as single-scalar replicate
-          // instead of widening.
+          // but are not widenable. Emit them as replicate instead of widening.
           if (VectorID == Intrinsic::assume ||
               VectorID == Intrinsic::lifetime_end ||
               VectorID == Intrinsic::lifetime_start ||
               VectorID == Intrinsic::sideeffect ||
               VectorID == Intrinsic::pseudoprobe) {
+            // If the operand of llvm.assume holds before vectorization, it will
+            // also holds per lane.
+            // llvm.pseudoprobe requires to be duplicated per lane for accurate
+            // sample count.
+            const bool IsSingleScalar = VectorID != Intrinsic::assume &&
+                                        VectorID != Intrinsic::pseudoprobe;
             NewRecipe = new VPReplicateRecipe(CI, Ingredient.operands(),
-                                              /*IsSingleScalar=*/true,
+                                              /*IsSingleScalar=*/IsSingleScalar,
                                               /*Mask=*/nullptr, *VPI, *VPI,
                                               Ingredient.getDebugLoc());
           } else {
