@@ -413,6 +413,10 @@ public:
 
   void print(raw_ostream &out) const;
 
+  /// Print divergent arguments. IR specialization iterates F.args();
+  /// MIR has no arguments, so the default is a no-op.
+  void printDivergentArgs(raw_ostream &out) const;
+
   SmallVector<TemporalDivergenceTuple, 8> TemporalDivergenceList;
 
   void recordTemporalDivergence(ConstValueRefT, const InstructionT *,
@@ -435,6 +439,10 @@ protected:
   // which is only called when the target has branch divergence. When false,
   // isDivergent() returns false for all values.
   bool HasBranchDivergence = false;
+
+  // Whether any value was marked divergent during analysis. Used only
+  // by print() to decide the "ALL VALUES UNIFORM" message.
+  bool FoundDivergence = false;
 
   SmallPtrSet<const BlockT *, 32> DivergentTermBlocks;
 
@@ -839,6 +847,7 @@ template <typename ContextT>
 bool GenericUniformityAnalysisImpl<ContextT>::markDivergent(
     ConstValueRefT Val) {
   if (UniformValues.erase(Val)) {
+    FoundDivergence = true;
     LLVM_DEBUG(dbgs() << "marked divergent: " << Context.print(Val) << "\n");
     return true;
   }
@@ -1182,6 +1191,10 @@ bool GenericUniformityAnalysisImpl<ContextT>::isAlwaysUniform(
 }
 
 template <typename ContextT>
+void GenericUniformityAnalysisImpl<ContextT>::printDivergentArgs(
+    raw_ostream &) const {}
+
+template <typename ContextT>
 GenericUniformityInfo<ContextT>::GenericUniformityInfo(
     const DominatorTreeT &DT, const CycleInfoT &CI,
     const TargetTransformInfo *TTI) {
@@ -1190,55 +1203,19 @@ GenericUniformityInfo<ContextT>::GenericUniformityInfo(
 
 template <typename ContextT>
 void GenericUniformityAnalysisImpl<ContextT>::print(raw_ostream &OS) const {
-  bool haveDivergentArgs = false;
-
   // When we print Value, LLVM IR instruction, we want to print extra new line.
   // In LLVM IR print function for Value does not print new line at the end.
   // In MIR print for MachineInstr prints new line at the end.
   constexpr bool IsMIR = std::is_same<InstructionT, MachineInstr>::value;
   std::string NewLine = IsMIR ? "" : "\n";
 
-  // When the target has no branch divergence, compute() was never called
-  // and isDivergent() returns false for all values.
-  if (!HasBranchDivergence) {
+  if (!FoundDivergence && DivergentTermBlocks.empty() &&
+      DivergentExitCycles.empty()) {
     OS << "ALL VALUES UNIFORM\n";
     return;
   }
 
-  // Check whether any divergence exists (value or control-flow).
-  bool hasAnyDivergence =
-      !DivergentTermBlocks.empty() || !DivergentExitCycles.empty() || [&]() {
-        if constexpr (!IsMIR) {
-          for (const auto &Arg : F.args())
-            if (isDivergent(&Arg))
-              return true;
-        }
-        for (auto &block : F) {
-          SmallVector<ConstValueRefT, 16> defs;
-          Context.appendBlockDefs(defs, block);
-          for (auto value : defs)
-            if (isDivergent(value))
-              return true;
-        }
-        return false;
-      }();
-
-  if (!hasAnyDivergence) {
-    OS << "ALL VALUES UNIFORM\n";
-    return;
-  }
-
-  if constexpr (!IsMIR) {
-    for (const auto &Arg : F.args()) {
-      if (isDivergent(&Arg)) {
-        if (!haveDivergentArgs) {
-          OS << "DIVERGENT ARGUMENTS:\n";
-          haveDivergentArgs = true;
-        }
-        OS << "  DIVERGENT: " << Context.print(&Arg) << '\n';
-      }
-    }
-  }
+  printDivergentArgs(OS);
 
   if (!AssumedDivergent.empty()) {
     OS << "CYCLES ASSUMED DIVERGENT:\n";

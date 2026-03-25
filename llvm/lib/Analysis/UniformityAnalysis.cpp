@@ -49,6 +49,21 @@ void llvm::GenericUniformityAnalysisImpl<SSAContext>::pushUsers(
   pushUsers(cast<Value>(&Instr));
 }
 
+template <>
+void llvm::GenericUniformityAnalysisImpl<SSAContext>::printDivergentArgs(
+    raw_ostream &OS) const {
+  bool haveDivergentArgs = false;
+  for (const auto &Arg : F.args()) {
+    if (isDivergent(&Arg)) {
+      if (!haveDivergentArgs) {
+        OS << "DIVERGENT ARGUMENTS:\n";
+        haveDivergentArgs = true;
+      }
+      OS << "  DIVERGENT: " << Context.print(&Arg) << '\n';
+    }
+  }
+}
+
 template <> void llvm::GenericUniformityAnalysisImpl<SSAContext>::initialize() {
   // Pre-populate UniformValues with all values, then seed divergence.
   // Values are removed from UniformValues as divergence is propagated.
