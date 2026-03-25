@@ -23,43 +23,6 @@ SimpleRemoteEPC::~SimpleRemoteEPC() {
 #endif // NDEBUG
 }
 
-Expected<tpctypes::DylibHandle>
-SimpleRemoteEPC::loadDylib(const char *DylibPath) {
-  return EPCDylibMgr->open(DylibPath, 0);
-}
-
-/// Async helper to chain together calls to DylibMgr::lookupAsync to fulfill all
-/// all the requests.
-/// FIXME: The dylib manager should support multiple LookupRequests natively.
-static void
-lookupSymbolsAsyncHelper(EPCGenericDylibManager &DylibMgr,
-                         ArrayRef<DylibManager::LookupRequest> Request,
-                         std::vector<tpctypes::LookupResult> Result,
-                         DylibManager::SymbolLookupCompleteFn Complete) {
-  if (Request.empty())
-    return Complete(std::move(Result));
-
-  auto &Element = Request.front();
-  DylibMgr.lookupAsync(Element.Handle, Element.Symbols,
-                       [&DylibMgr, Request, Complete = std::move(Complete),
-                        Result = std::move(Result)](auto R) mutable {
-                         if (!R)
-                           return Complete(R.takeError());
-                         Result.push_back({});
-                         Result.back().reserve(R->size());
-                         llvm::append_range(Result.back(), *R);
-
-                         lookupSymbolsAsyncHelper(
-                             DylibMgr, Request.drop_front(), std::move(Result),
-                             std::move(Complete));
-                       });
-}
-
-void SimpleRemoteEPC::lookupSymbolsAsync(ArrayRef<LookupRequest> Request,
-                                         SymbolLookupCompleteFn Complete) {
-  lookupSymbolsAsyncHelper(*EPCDylibMgr, Request, {}, std::move(Complete));
-}
-
 Expected<int32_t> SimpleRemoteEPC::runAsMain(ExecutorAddr MainFnAddr,
                                              ArrayRef<std::string> Args) {
   int64_t Result = 0;
@@ -374,6 +337,8 @@ Error SimpleRemoteEPC::setup(Setup S) {
     EPCDylibMgr = std::make_unique<EPCGenericDylibManager>(std::move(*DM));
   else
     return DM.takeError();
+
+  this->DylibMgr = EPCDylibMgr.get();
 
   // Set a default CreateMemoryManager if none is specified.
   if (!S.CreateMemoryManager)

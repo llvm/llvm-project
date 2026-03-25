@@ -272,12 +272,14 @@ private:
   unsigned HwMode;
 
 protected:
-  TargetRegisterInfo(const TargetRegisterInfoDesc *ID, regclass_iterator RCB,
-                     regclass_iterator RCE, const char *SRIStrings,
-                     ArrayRef<uint32_t> SRINameOffsets,
-                     const SubRegCoveredBits *SubIdxRanges,
-                     const LaneBitmask *SRILaneMasks, LaneBitmask CoveringLanes,
-                     const RegClassInfo *const RCIs,
+  TargetRegisterInfo(const TargetRegisterInfoDesc *ID,
+                     ArrayRef<const TargetRegisterClass *> RegisterClasses,
+                     const char *SubRegIndexStrings,
+                     ArrayRef<uint32_t> SubRegIndexNameOffsets,
+                     const SubRegCoveredBits *SubRegIdxRanges,
+                     const LaneBitmask *SubRegIndexLaneMasks,
+                     LaneBitmask CoveringLanes,
+                     const RegClassInfo *const RCInfos,
                      const MVT::SimpleValueType *const RCVTLists,
                      unsigned Mode = 0);
 

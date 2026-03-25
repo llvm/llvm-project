@@ -193,7 +193,7 @@ public:
     });
     c.def("__iter__",
           [](const DerivedT &arr) { return PyDenseArrayIterator(arr); });
-    c.def("__add__", [](DerivedT &arr, const nanobind::list &extras) {
+    c.def("__add__", [](DerivedT &arr, const nanobind::sequence &extras) {
       std::vector<EltTy> values;
       intptr_t numOldElements = mlirDenseArrayGetNumElements(arr);
       values.reserve(numOldElements + nanobind::len(extras));
@@ -342,7 +342,7 @@ public:
   static void bindDerived(ClassTy &c);
 
 private:
-  static nanobind::object toPyInt(PyIntegerAttribute &self);
+  static nanobind::int_ toPyInt(PyIntegerAttribute &self);
 };
 
 /// Bool Attribute subclass - BoolAttr.
@@ -402,10 +402,10 @@ public:
   static constexpr const char *pyClassName = "DenseElementsAttr";
   using PyConcreteAttribute::PyConcreteAttribute;
 
-  static PyDenseElementsAttribute
-  getFromList(const nanobind::list &attributes,
-              std::optional<PyType> explicitType,
-              DefaultingPyMlirContext contextWrapper);
+  static PyDenseElementsAttribute getFromList(
+      const nanobind::typed<nanobind::sequence, PyAttribute> &attributes,
+      std::optional<PyType> explicitType,
+      DefaultingPyMlirContext contextWrapper);
 
   static PyDenseElementsAttribute
   getFromBuffer(const nb_buffer &array, bool signless,
@@ -423,6 +423,13 @@ public:
   static void bindDerived(ClassTy &c);
 
   static PyType_Slot slots[];
+
+protected:
+  /// Registers get/get_splat factory methods with the concrete return
+  /// type in the nb::sig. Subclasses call this from their bindDerived
+  /// to override the return type in generated stubs.
+  template <typename ClassT>
+  static void bindFactoryMethods(ClassT &c, const char *pyClassName);
 
 private:
   static int bf_getbuffer(PyObject *exporter, Py_buffer *view, int flags);
@@ -594,8 +601,6 @@ public:
   static constexpr IsAFunctionTy isaFunction = mlirAttributeIsADynamicAttr;
   static constexpr const char *pyClassName = "DynamicAttr";
   using PyConcreteAttribute::PyConcreteAttribute;
-  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
-      mlirDynamicAttrGetTypeID;
 
   static void bindDerived(ClassTy &c);
 };

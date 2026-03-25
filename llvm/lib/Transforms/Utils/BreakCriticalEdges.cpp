@@ -173,7 +173,7 @@ llvm::SplitKnownCriticalEdge(Instruction *TI, unsigned SuccNum,
                                                      DestBB->getName() +
                                                      "_crit_edge");
   // Create our unconditional branch.
-  BranchInst *NewBI = BranchInst::Create(DestBB, NewBB);
+  UncondBrInst *NewBI = UncondBrInst::Create(DestBB, NewBB);
   NewBI->setDebugLoc(TI->getDebugLoc());
   if (auto *LoopMD = TI->getMetadata(LLVMContext::MD_loop))
     NewBI->setMetadata(LLVMContext::MD_loop, LoopMD);
@@ -334,7 +334,8 @@ findIBRPredecessor(BasicBlock *BB, SmallVectorImpl<BasicBlock *> &OtherPreds) {
         return nullptr;
       IBB = PredBB;
       break;
-    case Instruction::Br:
+    case Instruction::UncondBr:
+    case Instruction::CondBr:
     case Instruction::Switch:
       OtherPreds.push_back(PredBB);
       continue;

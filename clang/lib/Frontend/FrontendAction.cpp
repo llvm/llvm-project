@@ -706,8 +706,9 @@ static bool loadModuleMapForModuleBuild(CompilerInstance &CI, bool IsSystem,
   }
 
   // Load the module map file.
-  if (HS.parseAndLoadModuleMapFile(*ModuleMap, IsSystem, ModuleMapID, &Offset,
-                                   PresumedModuleMapFile))
+  if (HS.parseAndLoadModuleMapFile(*ModuleMap, IsSystem,
+                                   /*ImplicitlyDiscovered=*/false, ModuleMapID,
+                                   &Offset, PresumedModuleMapFile))
     return true;
 
   if (SrcMgr.getBufferOrFake(ModuleMapID).getBufferSize() == Offset)
@@ -891,7 +892,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
       for (serialization::ModuleFile &MF : MM)
         if (&MF != &PrimaryModule)
-          CI.getFrontendOpts().ModuleFiles.push_back(MF.FileName);
+          CI.getFrontendOpts().ModuleFiles.emplace_back(MF.FileName.str());
 
       ASTReader->visitTopLevelModuleMaps(PrimaryModule, [&](FileEntryRef FE) {
         CI.getFrontendOpts().ModuleMapFiles.push_back(
@@ -1039,7 +1040,10 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
       llvm::sys::path::native(PCHDir->getName(), DirNative);
       bool Found = false;
       llvm::vfs::FileSystem &FS = FileMgr.getVirtualFileSystem();
-      std::string SpecificModuleCachePath = CI.getSpecificModuleCachePath();
+      std::string SpecificModuleCachePath = createSpecificModuleCachePath(
+          CI.getFileManager(), CI.getHeaderSearchOpts().ModuleCachePath,
+          CI.getHeaderSearchOpts().DisableModuleHash,
+          CI.getInvocation().computeContextHash());
       for (llvm::vfs::directory_iterator Dir = FS.dir_begin(DirNative, EC),
                                          DirEnd;
            Dir != DirEnd && !EC; Dir.increment(EC)) {
@@ -1176,7 +1180,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   for (const auto &Filename : CI.getFrontendOpts().ModuleMapFiles) {
     if (auto File = CI.getFileManager().getOptionalFileRef(Filename))
       CI.getPreprocessor().getHeaderSearchInfo().parseAndLoadModuleMapFile(
-          *File, /*IsSystem*/ false);
+          *File, /*IsSystem*/ false, /*ImplicitlyDiscovered=*/false);
     else
       CI.getDiagnostics().Report(diag::err_module_map_not_found) << Filename;
   }
@@ -1284,7 +1288,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   // If we were asked to load any module files, do so now.
   for (const auto &ModuleFile : CI.getFrontendOpts().ModuleFiles) {
     serialization::ModuleFile *Loaded = nullptr;
-    if (!CI.loadModuleFile(ModuleFile, Loaded))
+    if (!CI.loadModuleFile(ModuleFileName::makeExplicit(ModuleFile), Loaded))
       return false;
 
     if (Loaded && Loaded->StandardCXXModule)

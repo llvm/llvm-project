@@ -16,7 +16,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 // RISC-V may be 32-bit or 64-bit. ElfW(Rela) handles the struct type,
 // but we need the correct R_TYPE extraction macro.
-static LIBC_INLINE constexpr unsigned get_r_type(uintptr_t info) {
+static constexpr unsigned get_r_type(uintptr_t info) {
 #ifdef __LP64__
   return ELF64_R_TYPE(info);
 #else
