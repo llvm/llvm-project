@@ -3601,6 +3601,24 @@ func.func @omp_iterator_2d(%s2 : !llvm.struct<(ptr, i64)>) -> () {
   return
 }
 
+// CHECK-LABEL: func.func @omp_iterator_negative_step
+func.func @omp_iterator_negative_step(%s2 : !llvm.struct<(ptr, i64)>) -> () {
+  // CHECK: %[[LB:.*]] = arith.constant 4 : index
+  // CHECK: %[[UB:.*]] = arith.constant 1 : index
+  // CHECK: %[[ST:.*]] = arith.constant -1 : index
+  // CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: index) = (%[[LB]] to %[[UB]] step %[[ST]]) {
+  // CHECK:   omp.yield(%{{.*}} : !llvm.struct<(ptr, i64)>)
+  // CHECK: } -> !omp.iterated<!llvm.struct<(ptr, i64)>>
+  %lb = arith.constant 4 : index
+  %ub = arith.constant 1 : index
+  %st = arith.constant -1 : index
+
+  %0 = omp.iterator(%iv: index) = (%lb to %ub step %st) {
+    omp.yield(%s2 : !llvm.struct<(ptr, i64)>)
+  } -> !omp.iterated<!llvm.struct<(ptr, i64)>>
+  return
+}
+
 // CHECK-LABEL: func.func @omp_task_affinity_iterator_1d
 func.func @omp_task_affinity_iterator_1d(%lb : index, %ub : index, %step : index,
                                        %addr : !llvm.ptr, %len : i64) -> () {

@@ -207,7 +207,7 @@ __gpu_shuffle_idx_f64(uint64_t __lane_mask, uint32_t __idx, double __x,
 // unprocessed lanes, above or below the current lane in the case of a suffix or
 // prefix scan. Each iteration we shuffle in the unprocessed neighbors and then
 // clear the bits that this operation handled.
-#define __DO_LANE_OP(__type, __op, __identity, __prefix, __suffix)             \
+#define __DO_LANE_OPS(__type, __op, __identity, __prefix, __suffix)            \
   _DEFAULT_FN_ATTRS static __inline__ __type                                   \
   __gpu_suffix_scan_##__prefix##_##__suffix(uint64_t __lane_mask,              \
                                             __type __x) {                      \
@@ -216,7 +216,7 @@ __gpu_shuffle_idx_f64(uint64_t __lane_mask, uint32_t __idx, double __x,
       uint32_t __src = __above ? __builtin_ctzg(__above) : __gpu_lane_id();    \
       __type __result = __gpu_shuffle_idx_##__suffix(__lane_mask, __src, __x,  \
                                                      __gpu_num_lanes());       \
-      __x = __x __op(__above ? __result : (__type)__identity);                 \
+      __x = __op(__x, __above ? __result : (__type)__identity);                \
       for (uint32_t __i = 0; __i < __step; ++__i)                              \
         __above &= __above - 1;                                                \
     }                                                                          \
@@ -232,7 +232,7 @@ __gpu_shuffle_idx_f64(uint64_t __lane_mask, uint32_t __idx, double __x,
           __below ? (63 - __builtin_clzg(__below)) : __gpu_lane_id();          \
       __type __result = __gpu_shuffle_idx_##__suffix(__lane_mask, __src, __x,  \
                                                      __gpu_num_lanes());       \
-      __x = __x __op(__below ? __result : (__type)__identity);                 \
+      __x = __op(__x, __below ? __result : (__type)__identity);                \
       for (uint32_t __i = 0; __i < __step; ++__i)                              \
         __below ^= (1ull << (63 - __builtin_clzg(__below, 0))) & __below;      \
     }                                                                          \
@@ -245,11 +245,50 @@ __gpu_shuffle_idx_f64(uint64_t __lane_mask, uint32_t __idx, double __x,
         __lane_mask,                                                           \
         __gpu_suffix_scan_##__prefix##_##__suffix(__lane_mask, __x));          \
   }
-__DO_LANE_OP(uint32_t, +, 0, sum, u32);
-__DO_LANE_OP(uint64_t, +, 0, sum, u64);
-__DO_LANE_OP(float, +, 0, sum, f32);
-__DO_LANE_OP(double, +, 0, sum, f64);
-#undef __DO_LANE_OP
+
+#define __GPU_OP(__x, __y) ((__x) + (__y))
+__DO_LANE_OPS(uint32_t, __GPU_OP, 0, sum, u32);
+__DO_LANE_OPS(uint64_t, __GPU_OP, 0, sum, u64);
+__DO_LANE_OPS(float, __GPU_OP, 0, sum, f32);
+__DO_LANE_OPS(double, __GPU_OP, 0, sum, f64);
+#undef __GPU_OP
+
+#define __GPU_OP(__x, __y) ((__x) & (__y))
+__DO_LANE_OPS(uint32_t, __GPU_OP, UINT32_MAX, and, u32);
+__DO_LANE_OPS(uint64_t, __GPU_OP, UINT64_MAX, and, u64);
+#undef __GPU_OP
+
+#define __GPU_OP(__x, __y) ((__x) | (__y))
+__DO_LANE_OPS(uint32_t, __GPU_OP, 0, or, u32);
+__DO_LANE_OPS(uint64_t, __GPU_OP, 0, or, u64);
+#undef __GPU_OP
+
+#define __GPU_OP(__x, __y) ((__x) ^ (__y))
+__DO_LANE_OPS(uint32_t, __GPU_OP, 0, xor, u32);
+__DO_LANE_OPS(uint64_t, __GPU_OP, 0, xor, u64);
+#undef __GPU_OP
+
+#define __GPU_OP(__x, __y) ((__x) < (__y) ? (__x) : (__y))
+__DO_LANE_OPS(uint32_t, __GPU_OP, UINT32_MAX, min, u32);
+__DO_LANE_OPS(uint64_t, __GPU_OP, UINT64_MAX, min, u64);
+#undef __GPU_OP
+
+#define __GPU_OP(__x, __y) ((__x) > (__y) ? (__x) : (__y))
+__DO_LANE_OPS(uint32_t, __GPU_OP, 0, max, u32);
+__DO_LANE_OPS(uint64_t, __GPU_OP, 0, max, u64);
+#undef __GPU_OP
+
+#define __GPU_OP(__x, __y) __builtin_elementwise_minnum((__x), (__y))
+__DO_LANE_OPS(float, __GPU_OP, __builtin_inff(), minnum, f32);
+__DO_LANE_OPS(double, __GPU_OP, __builtin_inf(), minnum, f64);
+#undef __GPU_OP
+
+#define __GPU_OP(__x, __y) __builtin_elementwise_maxnum((__x), (__y))
+__DO_LANE_OPS(float, __GPU_OP, -__builtin_inff(), maxnum, f32);
+__DO_LANE_OPS(double, __GPU_OP, -__builtin_inf(), maxnum, f64);
+#undef __GPU_OP
+
+#undef __DO_LANE_OPS
 
 // Returns a bitmask marking all lanes that have the same value of __x.
 _DEFAULT_FN_ATTRS static __inline__ uint64_t

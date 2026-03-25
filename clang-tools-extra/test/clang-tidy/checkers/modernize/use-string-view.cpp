@@ -1,13 +1,7 @@
 // RUN: %check_clang_tidy \
 // RUN: -std=c++17-or-later %s modernize-use-string-view %t
 #include <string>
-
-namespace std {
-template <class T, class U> struct is_same { static constexpr bool value = false; };
-template <class T> struct is_same<T, T> { static constexpr bool value = true; };
-template <class T, class U> constexpr bool is_same_v = is_same<T, U>::value;
-} // namespace std
-
+#include <utility>
 
 // ==========================================================
 // Positive tests

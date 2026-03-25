@@ -43,7 +43,7 @@ void call_virtual_fn_in_cleanup_scope() {
 // CIR-FLAT:   %[[VPTR:.*]] = cir.load{{.*}} %[[VPTR_ADDR]]
 // CIR-FLAT:   %[[FN_PTR_ADDR:.*]] = cir.vtable.get_virtual_fn_addr %[[VPTR]][0] : !cir.vptr -> !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_B>, !s8i)>>>
 // CIR-FLAT:   %[[FN_PTR:.*]] = cir.load{{.*}} %[[FN_PTR_ADDR:.*]] : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_B>, !s8i)>>>, !cir.ptr<!cir.func<(!cir.ptr<!rec_B>, !s8i)>>
-// CIR-FLAT:   cir.try_call %[[FN_PTR]](%[[B]], %[[C_LITERAL]]) ^[[NORMAL:bb[0-9]+]], ^[[UNWIND:bb[0-9]+]] : (!cir.ptr<!cir.func<(!cir.ptr<!rec_B>, !s8i)>>, !cir.ptr<!rec_B>, !s8i) -> ()
+// CIR-FLAT:   cir.try_call %[[FN_PTR]](%[[B]], %[[C_LITERAL]]) ^[[NORMAL:bb[0-9]+]], ^[[UNWIND:bb[0-9]+]] : (!cir.ptr<!cir.func<(!cir.ptr<!rec_B>, !s8i)>>, !cir.ptr<!rec_B> {{.*}}, !s8i {{.*}}) -> ()
 // CIR-FLAT: ^[[NORMAL]]:  // pred: ^bb1
 // CIR-FLAT:   cir.br ^[[NORMAL_CLEANUP:bb[0-9]+]]
 // CIR-FLAT: ^[[NORMAL_CLEANUP]]:
@@ -70,7 +70,7 @@ void call_virtual_fn_in_cleanup_scope() {
 // LLVM:   %[[B_VPTR:.*]] = load ptr, ptr %[[B]]
 // LLVM:   %[[FN_PTR_ADDR:.*]] = getelementptr inbounds ptr, ptr %[[B_VPTR]], i32 0
 // LLVM:   %[[FN_PTR:.*]] = load ptr, ptr %[[FN_PTR_ADDR]]
-// LLVM:   invoke void %[[FN_PTR]](ptr %[[B]], i8 99)
+// LLVM:   invoke void %[[FN_PTR]](ptr {{.*}} %[[B]], i8 {{.*}} 99)
 // LLVM:           to label %[[NORMAL_CONTINUE:.*]] unwind label %[[UNWIND:.*]]
 // LLVM: [[NORMAL_CONTINUE]]
 // LLVM:   br label %[[NORMAL_CLEANUP:.*]]

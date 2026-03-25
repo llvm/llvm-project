@@ -116,6 +116,23 @@ public:
   }
 };
 
+/// Endianness aware accessor for bytes.
+template <typename ArrayRefT> class BytesView {
+  ArrayRefT Bytes;
+  bool IsLittleEndian;
+
+public:
+  explicit BytesView(ArrayRefT Ref, const DataLayout &DL)
+      : Bytes(Ref), IsLittleEndian(DL.isLittleEndian()) {}
+
+  auto &operator[](uint32_t Index) {
+    return Bytes[IsLittleEndian ? Index : Bytes.size() - 1 - Index];
+  }
+};
+
+using ConstBytesView = BytesView<ArrayRef<Byte>>;
+using MutableBytesView = BytesView<MutableArrayRef<Byte>>;
+
 /// The global context for the interpreter.
 /// It tracks global state such as heap memory objects and floating point
 /// environment.
@@ -149,10 +166,10 @@ class Context {
   // precisely after we make ptrtoint have the implicit side-effect of exposing
   // the provenance.
   std::map<uint64_t, IntrusiveRefCntPtr<MemoryObject>> MemoryObjects;
-  AnyValue fromBytes(ArrayRef<Byte> Bytes, Type *Ty, uint32_t &OffsetInBits,
+  AnyValue fromBytes(ConstBytesView Bytes, Type *Ty, uint32_t OffsetInBits,
                      bool CheckPaddingBits);
-  void toBytes(const AnyValue &Val, Type *Ty, uint32_t &OffsetInBits,
-               MutableArrayRef<Byte> Bytes, bool PaddingBits);
+  void toBytes(const AnyValue &Val, Type *Ty, uint32_t OffsetInBits,
+               MutableBytesView Bytes, bool PaddingBits);
 
   // Constants
   // Use std::map to avoid iterator/reference invalidation.
@@ -227,6 +244,9 @@ public:
              Type *ValTy);
   void storeRawBytes(MemoryObject &MO, uint64_t Offset, const void *Data,
                      uint64_t Size);
+
+  /// Freeze the value in-place.
+  void freeze(AnyValue &Val, Type *Ty);
 
   Function *getTargetFunction(const Pointer &Ptr);
   BasicBlock *getTargetBlock(const Pointer &Ptr);

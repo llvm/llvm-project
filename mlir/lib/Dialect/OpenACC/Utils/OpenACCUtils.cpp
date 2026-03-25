@@ -21,7 +21,8 @@
 #include "llvm/Support/Casting.h"
 
 mlir::Operation *mlir::acc::getEnclosingComputeOp(mlir::Region &region) {
-  return region.getParentOfType<ACC_COMPUTE_CONSTRUCT_OPS>();
+  return region
+      .getParentOfType<ACC_COMPUTE_CONSTRUCT_OPS, mlir::acc::ComputeRegionOp>();
 }
 
 template <typename OpTy>

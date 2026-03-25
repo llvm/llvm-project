@@ -708,8 +708,8 @@ countToEliminateCompares(Loop &L, unsigned MaxPeelCount, ScalarEvolution &SE,
         ComputePeelCountMinMax(MinMax);
     }
 
-    auto *BI = dyn_cast<BranchInst>(BB->getTerminator());
-    if (!BI || BI->isUnconditional())
+    auto *BI = dyn_cast<CondBrInst>(BB->getTerminator());
+    if (!BI)
       continue;
 
     // Ignore loop exit condition.
@@ -731,8 +731,8 @@ static bool violatesLegacyMultiExitLoopCheck(Loop *L) {
   if (!Latch)
     return true;
 
-  BranchInst *LatchBR = dyn_cast<BranchInst>(Latch->getTerminator());
-  if (!LatchBR || LatchBR->getNumSuccessors() != 2 || !L->isLoopExiting(Latch))
+  CondBrInst *LatchBR = dyn_cast<CondBrInst>(Latch->getTerminator());
+  if (!LatchBR || !L->isLoopExiting(Latch))
     return true;
 
   assert((LatchBR->getSuccessor(0) == L->getHeader() ||
@@ -972,7 +972,7 @@ static void cloneLoopBlocks(
     // This is the last iteration and we definitely will go to the exit. Just
     // set both successors to InsertBot and let the branch be simplified later.
     assert(IterNumber == 0 && "Only peeling a single iteration implemented.");
-    auto *LatchTerm = cast<BranchInst>(NewLatch->getTerminator());
+    auto *LatchTerm = cast<CondBrInst>(NewLatch->getTerminator());
     LatchTerm->setSuccessor(0, InsertBot);
     LatchTerm->setSuccessor(1, InsertBot);
   } else {
@@ -1217,7 +1217,7 @@ void llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
       NewPreHeader = SplitEdge(PreHeader, Header, &DT, LI);
       SCEVExpander Expander(*SE, "loop-peel");
 
-      BranchInst *PreHeaderBR = cast<BranchInst>(PreHeader->getTerminator());
+      Instruction *PreHeaderBR = PreHeader->getTerminator();
       Value *BTCValue =
           Expander.expandCodeFor(BTC, BTC->getType(), PreHeaderBR);
       IRBuilder<> B(PreHeaderBR);

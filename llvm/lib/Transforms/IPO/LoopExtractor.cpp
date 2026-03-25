@@ -187,10 +187,8 @@ bool LoopExtractor::runOnFunction(Function &F) {
     bool ShouldExtractLoop = false;
 
     // Extract the loop if the entry block doesn't branch to the loop header.
-    Instruction *EntryTI = F.getEntryBlock().getTerminator();
-    if (!isa<BranchInst>(EntryTI) ||
-        !cast<BranchInst>(EntryTI)->isUnconditional() ||
-        EntryTI->getSuccessor(0) != TLL->getHeader()) {
+    auto *EntryTI = dyn_cast<UncondBrInst>(F.getEntryBlock().getTerminator());
+    if (EntryTI && EntryTI->getSuccessor() != TLL->getHeader()) {
       ShouldExtractLoop = true;
     } else {
       // Check to see if any exits from the loop are more than just return
@@ -240,8 +238,11 @@ bool LoopExtractor::extractLoop(Loop *L, LoopInfo &LI, DominatorTree &DT) {
   AssumptionCache *AC = LookupAssumptionCache(Func);
   CodeExtractorAnalysisCache CEAC(Func);
   CodeExtractor Extractor(L->getBlocks(), &DT, false, nullptr, nullptr, AC);
-  if (Extractor.extractCodeRegion(CEAC)) {
+  if (Extractor.isEligible()) {
+    // Remove loop while blocks are still in the current function
     LI.erase(L);
+    [[maybe_unused]] Function *ExtrF = Extractor.extractCodeRegion(CEAC);
+    assert(ExtrF && "CodeExtractor didn't extact eligible loop");
     --NumLoops;
     ++NumExtracted;
     return true;

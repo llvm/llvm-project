@@ -207,10 +207,10 @@ let IsDPMACCInstruction = 1 in
 defm V_MUL_F64 : VOP3Inst <"v_mul_f64", VOP3_Profile<VOP_F64_F64_F64>, any_fmul>;
 } // End SubtargetPredicate = isNotGFX12Plus
 } // End FPDPRounding = 1
-let SubtargetPredicate = isNotGFX1170Plus in {
+let SubtargetPredicate = NotHasIEEEMinimumMaximumInsts in {
 defm V_MIN_F64 : VOP3Inst <"v_min_f64", VOP3_Profile<VOP_F64_F64_F64>, fminnum_like>;
 defm V_MAX_F64 : VOP3Inst <"v_max_f64", VOP3_Profile<VOP_F64_F64_F64>, fmaxnum_like>;
-} // End SubtargetPredicate = isNotGFX1170Plus
+} // End SubtargetPredicate = NotHasIEEEMinimumMaximumInsts
 } // End SchedRW = [WriteDoubleAdd]
 
 let SchedRW = [WriteIntMul] in {

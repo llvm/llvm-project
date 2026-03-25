@@ -766,6 +766,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     DefinabilityFlags flags{DefinabilityFlag::PolymorphicOkInPure};
     if (dummy.intent == common::Intent::InOut) {
       flags.set(DefinabilityFlag::AllowEventLockOrNotifyType);
+      flags.set(DefinabilityFlag::OnlyWarnOnImpureFinalInPureContext);
       undefinableMessage =
           "Actual argument associated with INTENT(IN OUT) %s is not definable"_err_en_US;
     } else if (dummy.intent == common::Intent::Out) {

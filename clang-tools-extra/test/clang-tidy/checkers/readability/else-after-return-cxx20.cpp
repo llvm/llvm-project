@@ -38,4 +38,26 @@ void f() {
     // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: do not use 'else' after 'return'
     // CHECK-FIXES: {{^}}  {{[[][[]}}unlikely{{[]][]]}} // comment-4
     g();
+
+  if (false)
+    [[clang::musttail]] return f();
+  else // comment-5
+    // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: do not use 'else' after 'return'
+    // CHECK-FIXES: {{^}}  // comment-5
+    g();
+
+  if (false) [[likely]]
+    [[clang::musttail]] return f();
+  else // comment-6
+    // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: do not use 'else' after 'return'
+    // CHECK-FIXES: {{^}}  // comment-6
+    g();
+
+  if (false) [[likely]] {
+    [[clang::musttail]] return f();
+  } else { // comment-7
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
+    // CHECK-FIXES: {{^}}  } // comment-7
+    g();
+  }
 }

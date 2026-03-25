@@ -109,20 +109,19 @@ define i64 @ctz_nxv8i1_no_range(<vscale x 8 x i16> %a) {
 ;
 ; RV64-LABEL: ctz_nxv8i1_no_range:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    csrr a0, vlenb
-; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
+; RV64-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; RV64-NEXT:    vid.v v16
-; RV64-NEXT:    li a1, -1
+; RV64-NEXT:    li a0, -1
+; RV64-NEXT:    csrr a1, vlenb
 ; RV64-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; RV64-NEXT:    vmsne.vi v0, v8, 0
-; RV64-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
-; RV64-NEXT:    vmv.v.x v8, a0
-; RV64-NEXT:    vmadd.vx v16, a1, v8
-; RV64-NEXT:    vmv.v.i v8, 0
-; RV64-NEXT:    vmerge.vvm v8, v8, v16, v0
-; RV64-NEXT:    vredmaxu.vs v8, v8, v8
-; RV64-NEXT:    vmv.x.s a1, v8
-; RV64-NEXT:    sub a0, a0, a1
+; RV64-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
+; RV64-NEXT:    vmul.vx v8, v16, a0
+; RV64-NEXT:    vmv.v.i v16, 0
+; RV64-NEXT:    vadd.vx v16, v8, a1, v0.t
+; RV64-NEXT:    vredmaxu.vs v8, v16, v16
+; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:    sub a0, a1, a0
 ; RV64-NEXT:    ret
   %res = call i64 @llvm.experimental.cttz.elts.i64.nxv8i16(<vscale x 8 x i16> %a, i1 0)
   ret i64 %res
@@ -171,6 +170,23 @@ define i64 @i64_ctz_nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a) {
   ret i64 %res
 }
 
+define i64 @i64_ctz_nxv16i1_range(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a) vscale_range(2, 1024) {
+; RV32-LABEL: i64_ctz_nxv16i1_range:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
+; RV32-NEXT:    vfirst.m a0, v8
+; RV32-NEXT:    li a1, 0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: i64_ctz_nxv16i1_range:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
+; RV64-NEXT:    vfirst.m a0, v8
+; RV64-NEXT:    ret
+  %res = call i64 @llvm.experimental.cttz.elts.i64.nxv16i1(<vscale x 16 x i1> %a, i1 1)
+  ret i64 %res
+}
+
 define i32 @ctz_nxv16i1_poison(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a) {
 ; RV32-LABEL: ctz_nxv16i1_poison:
 ; RV32:       # %bb.0:
@@ -192,20 +208,20 @@ define i32 @ctz_v16i1(<16 x i1> %pg, <16 x i1> %a) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; RV32-NEXT:    vfirst.m a0, v8
-; RV32-NEXT:    bgez a0, .LBB5_2
+; RV32-NEXT:    bgez a0, .LBB6_2
 ; RV32-NEXT:  # %bb.1:
 ; RV32-NEXT:    li a0, 16
-; RV32-NEXT:  .LBB5_2:
+; RV32-NEXT:  .LBB6_2:
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: ctz_v16i1:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; RV64-NEXT:    vfirst.m a0, v8
-; RV64-NEXT:    bgez a0, .LBB5_2
+; RV64-NEXT:    bgez a0, .LBB6_2
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    li a0, 16
-; RV64-NEXT:  .LBB5_2:
+; RV64-NEXT:  .LBB6_2:
 ; RV64-NEXT:    ret
   %res = call i32 @llvm.experimental.cttz.elts.i32.v16i1(<16 x i1> %a, i1 0)
   ret i32 %res
@@ -232,20 +248,20 @@ define i16 @ctz_v8i1_i16_ret(<8 x i1> %a) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; RV32-NEXT:    vfirst.m a0, v0
-; RV32-NEXT:    bgez a0, .LBB7_2
+; RV32-NEXT:    bgez a0, .LBB8_2
 ; RV32-NEXT:  # %bb.1:
 ; RV32-NEXT:    li a0, 8
-; RV32-NEXT:  .LBB7_2:
+; RV32-NEXT:  .LBB8_2:
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: ctz_v8i1_i16_ret:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; RV64-NEXT:    vfirst.m a0, v0
-; RV64-NEXT:    bgez a0, .LBB7_2
+; RV64-NEXT:    bgez a0, .LBB8_2
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    li a0, 8
-; RV64-NEXT:  .LBB7_2:
+; RV64-NEXT:  .LBB8_2:
 ; RV64-NEXT:    ret
   %res = call i16 @llvm.experimental.cttz.elts.i16.v8i1(<8 x i1> %a, i1 0)
   ret i16 %res
