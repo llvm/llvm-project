@@ -13,7 +13,6 @@ add_entrypoint_object(
     libc.include.sys_stat
     libc.include.sys_syscall
     libc.include.fcntl
-    libc.src.errno.errno
     libc.src.__support.libc_errno
 )
 
