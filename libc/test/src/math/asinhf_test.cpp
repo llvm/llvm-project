@@ -50,9 +50,9 @@ TEST_F(LlvmLibcAsinhfTest, InFloatRange) {
     if (FPBits(v).is_nan() || FPBits(v).is_inf())
       continue;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Asinh, x,
-                                   LIBC_NAMESPACE::asinhf(x), 0.5);
+                                   LIBC_NAMESPACE::asinhf(x), TOLERANCE + 0.5);
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Asinh, -x,
-                                   LIBC_NAMESPACE::asinhf(-x), 0.5);
+                                   LIBC_NAMESPACE::asinhf(-x), TOLERANCE + 0.5);
   }
 }
 

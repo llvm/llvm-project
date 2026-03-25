@@ -74,6 +74,7 @@ set(PROFILE_SOURCES
   InstrProfilingPlatformLinux.c
   InstrProfilingPlatformOther.c
   InstrProfilingPlatformWindows.c
+  InstrProfilingPlatformGPU.c
   )
 
 if (NOT COMPILER_RT_PROFILE_BAREMETAL)

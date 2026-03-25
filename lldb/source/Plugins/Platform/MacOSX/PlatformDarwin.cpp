@@ -80,60 +80,6 @@ static Status ExceptionMaskValidator(const char *string, void *unused) {
   return {};
 }
 
-namespace {
-/// Holds an lldb_private::Module name and a "sanitized" version
-/// of it for the purposes of loading a script of that name by
-/// the relevant ScriptInterpreter.
-///
-/// E.g., for Python the sanitized name can't include:
-/// * Special characters: '-', ' ', '.'
-/// * Python keywords
-class SanitizedScriptingModuleName {
-public:
-  SanitizedScriptingModuleName(llvm::StringRef name,
-                               ScriptInterpreter *script_interpreter)
-      : m_original_name(name), m_sanitized_name(name.str()) {
-    // FIXME: for Python, don't allow certain characters in imported module
-    // filenames. Theoretically, different scripting languages may have
-    // different sets of forbidden tokens in filenames, and that should
-    // be dealt with by each ScriptInterpreter. For now, just replace dots
-    // with underscores. In order to support anything other than Python
-    // this will need to be reworked.
-    llvm::replace(m_sanitized_name, '.', '_');
-    llvm::replace(m_sanitized_name, ' ', '_');
-    llvm::replace(m_sanitized_name, '-', '_');
-    llvm::replace(m_sanitized_name, '+', 'x');
-
-    if (script_interpreter &&
-        script_interpreter->IsReservedWord(m_sanitized_name.c_str())) {
-      m_sanitized_name.insert(m_sanitized_name.begin(), '_');
-      m_name_is_keyword = true;
-    }
-  }
-
-  /// Returns \c true if this name is a keyword in the associated scripting
-  /// language.
-  bool IsKeyword() const { return m_name_is_keyword; }
-
-  /// Returns \c true if the original name has been sanitized (i.e., required
-  /// changes).
-  bool RequiredSanitization() const {
-    return m_sanitized_name != m_original_name;
-  }
-
-  llvm::StringRef GetSanitizedName() const { return m_sanitized_name; }
-  llvm::StringRef GetOriginalName() const { return m_original_name; }
-
-private:
-  llvm::StringRef m_original_name;
-  std::string m_sanitized_name;
-
-  /// \c true if m_sanitized_name is a keyword for the ScriptInterpreter
-  /// language associated with this SanitizedScriptingModuleName.
-  bool m_name_is_keyword = false;
-};
-} // namespace
-
 /// Destructor.
 ///
 /// The destructor is virtual since this class is designed to be
@@ -253,11 +199,18 @@ PlatformDarwin::PutFile(const lldb_private::FileSpec &source,
 FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
     Stream &feedback_stream, FileSpec module_spec, const Target &target,
     const FileSpec &symfile_spec) {
+
+  assert(target.GetDebugger().GetScriptInterpreter() &&
+         "Trying to locate scripting resources but no ScriptInterpreter is "
+         "available.");
+
   FileSpecList file_list;
   while (module_spec.GetFilename()) {
-    SanitizedScriptingModuleName sanitized_name(
-        module_spec.GetFilename().GetStringRef(),
-        target.GetDebugger().GetScriptInterpreter());
+    ScriptInterpreter::SanitizedScriptingModuleName sanitized_name =
+        target.GetDebugger()
+            .GetScriptInterpreter()
+            ->GetSanitizedScriptingModuleName(
+                module_spec.GetFilename().GetStringRef());
 
     StreamString path_string;
     StreamString original_path_string;
@@ -277,34 +230,8 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
     FileSpec orig_script_fspec(original_path_string.GetString());
     FileSystem::Instance().Resolve(orig_script_fspec);
 
-    // if we did some replacements of reserved characters, and a
-    // file with the untampered name exists, then warn the user
-    // that the file as-is shall not be loaded
-    if (sanitized_name.RequiredSanitization() &&
-        FileSystem::Instance().Exists(orig_script_fspec)) {
-      const char *reason_for_complaint = sanitized_name.IsKeyword()
-                                             ? "conflicts with a keyword"
-                                             : "contains reserved characters";
-      if (FileSystem::Instance().Exists(script_fspec))
-        feedback_stream.Format(
-            "the symbol file '{0}' contains a debug "
-            "script. However, its name"
-            " '{1}' {2} and as such cannot be loaded. LLDB will"
-            " load '{3}' instead. Consider removing the file with "
-            "the malformed name to"
-            " eliminate this warning.\n",
-            symfile_spec.GetPath(), original_path_string.GetString(),
-            reason_for_complaint, path_string.GetString());
-      else
-        feedback_stream.Format(
-            "the symbol file '{0}' contains a debug "
-            "script. However, its name"
-            " {1} and as such cannot be loaded. If you intend"
-            " to have this script loaded, please rename '{2}' to "
-            "'{3}' and retry.\n",
-            symfile_spec.GetPath(), reason_for_complaint,
-            original_path_string.GetString(), path_string.GetString());
-    }
+    WarnIfInvalidUnsanitizedScriptExists(feedback_stream, sanitized_name,
+                                         orig_script_fspec, script_fspec);
 
     if (FileSystem::Instance().Exists(script_fspec)) {
       file_list.Append(script_fspec);
@@ -324,7 +251,7 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
   return file_list;
 }
 
-FileSpecList PlatformDarwin::LocateExecutableScriptingResources(
+FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesForPlatform(
     Target *target, Module &module, Stream &feedback_stream) {
   if (!target)
     return {};
@@ -469,8 +396,9 @@ Status PlatformDarwin::GetModuleFromSharedCaches(
     UUID sc_uuid;
     LazyBool using_sc, private_sc;
     FileSpec sc_path;
+    std::optional<uint64_t> size;
     if (process->GetDynamicLoader()->GetSharedCacheInformation(
-            sc_base_addr, sc_uuid, using_sc, private_sc, sc_path)) {
+            sc_base_addr, sc_uuid, using_sc, private_sc, sc_path, size)) {
       if (module_spec.GetUUID())
         image_info = HostInfo::GetSharedCacheImageInfo(module_spec.GetUUID(),
                                                        sc_uuid, sc_mode);

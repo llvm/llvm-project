@@ -55,26 +55,6 @@ def uimm5gt3 : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
 
 def tuimm5gt3 : TImmLeaf<XLenVT, [{return (Imm > 3) && isUInt<5>(Imm);}]>;
 
-def UImm5Plus1AsmOperand : AsmOperandClass {
-  let Name = "UImm5Plus1";
-  let RenderMethod = "addImmOperands";
-  let DiagnosticType = "InvalidUImm5Plus1";
-}
-
-def uimm5_plus1 : RISCVOp, ImmLeaf<XLenVT,
-  [{return Imm >= 1 && Imm <= 32;}]> {
-  let ParserMatchClass = UImm5Plus1AsmOperand;
-  let EncoderMethod = "getImmOpValueMinus1";
-  let DecoderMethod = "decodeUImmPlus1Operand<5>";
-  let OperandType = "OPERAND_UIMM5_PLUS1";
-  let MCOperandPredicate = [{
-    int64_t Imm;
-    if (!MCOp.evaluateAsConstantImm(Imm))
-      return false;
-    return Imm >= 1 && Imm <= 32;
-  }];
-}
-
 def uimm5ge6_plus1 : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
   [{return Imm >= 6 && Imm <= 32;}]> {
   let ParserMatchClass = UImmAsmOperand<5, "GE6Plus1">;
@@ -1332,19 +1312,6 @@ let EmitPriority = 1 in {
 // Pseudo-instructions
 //===----------------------------------------------------------------------===//
 
-class LongBcciPseudo<DAGOperand InTyImm, int size>
-    : Pseudo<(outs), (ins GPR:$rs1, InTyImm:$imm, simm21_lsb0_jal:$imm20), []>
-{
-  let Size = size;
-  let isBarrier = 1;
-  let isBranch = 1;
-  let hasSideEffects = 0;
-  let mayStore = 0;
-  let mayLoad = 0;
-  let isAsmParserOnly = 1;
-  let hasNoSchedulingInfo = 1;
-}
-
 // This will be expanded into either:
 // QC.BXXX(4 bytes) + JAL(4 bytes)
 // or
@@ -1509,7 +1476,7 @@ class SelectQCbiSFB<CondCode Cond, DAGOperand InTyImm, SDNodeXForm xform>
 let Predicates = [HasVendorXqciac, IsRV32] in {
 def : Pat<(i32 (add GPRNoX0:$rd, (mul GPRNoX0:$rs1, simm12_lo:$imm12))),
           (QC_MULIADD GPRNoX0:$rd, GPRNoX0:$rs1, simm12_lo:$imm12)>;
-def : Pat<(i32 (add_like_non_imm12 (shl GPRNoX0:$rs1, (i32 uimm5gt3:$imm)), GPRNoX0:$rs2)),
+def : Pat<(i32 (riscv_add_like_non_imm12 (shl GPRNoX0:$rs1, (i32 uimm5gt3:$imm)), GPRNoX0:$rs2)),
           (QC_SHLADD GPRNoX0:$rs1, GPRNoX0:$rs2, uimm5gt3:$imm)>;
 def : Pat<(i32 (riscv_shl_add GPRNoX0:$rs1, (i32 tuimm5gt3:$imm), GPRNoX0:$rs2)),
           (QC_SHLADD GPRNoX0:$rs1, GPRNoX0:$rs2, tuimm5gt3:$imm)>;

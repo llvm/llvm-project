@@ -14,6 +14,7 @@
 #include "bolt/Passes/HFSort.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/CodeLayout.h"
 #include <fstream>
@@ -69,7 +70,7 @@ static cl::opt<bool> ReorderFunctionsUseHotSize(
 static cl::opt<std::string> FunctionOrderFile(
     "function-order",
     cl::desc("file containing an ordered list of functions to use for function "
-             "reordering"),
+             "reordering; can be combined with --reorder-functions algorithms"),
     cl::cat(BoltOptCategory));
 
 static cl::opt<std::string> GenerateFunctionOrderFile(
@@ -117,10 +118,11 @@ using Node = CallGraph::Node;
 
 void ReorderFunctions::reorder(BinaryContext &BC,
                                std::vector<Cluster> &&Clusters,
-                               std::map<uint64_t, BinaryFunction> &BFs) {
+                               std::map<uint64_t, BinaryFunction> &BFs,
+                               uint32_t StartIndex) {
   std::vector<uint64_t> FuncAddr(Cg.numNodes()); // Just for computing stats
   uint64_t TotalSize = 0;
-  uint32_t Index = 0;
+  uint32_t Index = StartIndex;
 
   // Set order of hot functions based on clusters.
   for (const Cluster &Cluster : Clusters) {
@@ -269,17 +271,158 @@ Error ReorderFunctions::readFunctionOrderFile(
   return Error::success();
 }
 
+Expected<uint32_t> ReorderFunctions::assignFunctionOrder(
+    BinaryContext &BC, std::map<uint64_t, BinaryFunction> &BFs,
+    uint32_t StartIndex, DenseSet<const BinaryFunction *> *OrderedFuncs) {
+  // Build LTOCommonNameMap for name resolution.
+  StringMap<std::vector<uint64_t>> LTOCommonNameMap;
+  for (const BinaryFunction &BF : llvm::make_second_range(BFs))
+    for (StringRef Name : BF.getNames())
+      if (std::optional<StringRef> LTOCommonName = getLTOCommonName(Name))
+        LTOCommonNameMap[*LTOCommonName].push_back(BF.getAddress());
+
+  uint32_t Index = StartIndex;
+  uint32_t InvalidEntries = 0;
+  std::vector<std::string> FunctionNames;
+  if (Error E = readFunctionOrderFile(FunctionNames))
+    return std::move(E);
+
+  for (const std::string &Function : FunctionNames) {
+    std::vector<uint64_t> FuncAddrs;
+
+    BinaryData *BD = BC.getBinaryDataByName(Function);
+    if (!BD) {
+      // If we can't find the main symbol name, look for alternates.
+      uint32_t LocalID = 1;
+      while (true) {
+        const std::string FuncName = Function + "/" + std::to_string(LocalID);
+        BD = BC.getBinaryDataByName(FuncName);
+        if (BD)
+          FuncAddrs.push_back(BD->getAddress());
+        else
+          break;
+        LocalID++;
+      }
+      // Strip LTO suffixes.
+      if (std::optional<StringRef> CommonName = getLTOCommonName(Function))
+        if (LTOCommonNameMap.contains(*CommonName))
+          llvm::append_range(FuncAddrs, LTOCommonNameMap[*CommonName]);
+    } else {
+      FuncAddrs.push_back(BD->getAddress());
+    }
+
+    if (FuncAddrs.empty()) {
+      if (opts::Verbosity >= 1)
+        BC.errs() << "BOLT-WARNING: Reorder functions: can't find function "
+                  << "for " << Function << "\n";
+      ++InvalidEntries;
+      continue;
+    }
+
+    for (const uint64_t FuncAddr : FuncAddrs) {
+      const BinaryData *FuncBD = BC.getBinaryDataAtAddress(FuncAddr);
+      assert(FuncBD);
+
+      BinaryFunction *BF = BC.getFunctionForSymbol(FuncBD->getSymbol());
+      if (!BF) {
+        if (opts::Verbosity >= 1)
+          BC.errs() << "BOLT-WARNING: Reorder functions: can't find function "
+                    << "for " << Function << "\n";
+        ++InvalidEntries;
+        break;
+      }
+      if (!BF->hasValidIndex()) {
+        BF->setIndex(Index++);
+        if (OrderedFuncs)
+          OrderedFuncs->insert(BF);
+      } else if (opts::Verbosity > 0) {
+        BC.errs() << "BOLT-WARNING: Duplicate reorder entry for " << Function
+                  << "\n";
+      }
+    }
+  }
+  if (InvalidEntries)
+    BC.errs() << "BOLT-WARNING: Reorder functions: can't find functions for "
+              << InvalidEntries << " entries in -function-order list\n";
+
+  return Index;
+}
+
 Error ReorderFunctions::runOnFunctions(BinaryContext &BC) {
   auto &BFs = BC.getBinaryFunctions();
+
+  // If a function order file is provided but no reorder algorithm was
+  // explicitly specified, default to RT_USER.
+  if (!opts::FunctionOrderFile.empty()) {
+    if (opts::ReorderFunctions.getNumOccurrences() == 0) {
+      opts::ReorderFunctions = RT_USER;
+      BC.outs()
+          << "BOLT-INFO: --function-order specified without "
+          << "--reorder-functions, defaulting to --reorder-functions=user\n";
+    } else if (opts::ReorderFunctions == RT_NONE) {
+      BC.errs() << "BOLT-WARNING: --reorder-functions=none is incompatible "
+                << "with --function-order, resetting to "
+                << "--reorder-functions=user\n";
+      opts::ReorderFunctions = RT_USER;
+    } else if (opts::ReorderFunctions != RT_USER) {
+      StringRef AlgName;
+      switch (opts::ReorderFunctions) {
+      case RT_EXEC_COUNT:
+        AlgName = "exec-count";
+        break;
+      case RT_HFSORT:
+        AlgName = "hfsort";
+        break;
+      case RT_CDSORT:
+        AlgName = "cdsort";
+        break;
+      case RT_PETTIS_HANSEN:
+        AlgName = "pettis-hansen";
+        break;
+      case RT_RANDOM:
+        AlgName = "random";
+        break;
+      default:
+        llvm_unreachable("unexpected reorder type in hybrid mode");
+      }
+      BC.outs() << "BOLT-INFO: hybrid mode: functions from order file will be "
+                << "pinned first, remaining functions ordered by " << AlgName
+                << "\n";
+    }
+  }
+
+  // Process order file if provided. Assign indices 0..N-1 to listed functions.
+  // For algorithmic modes, the algorithm orders remaining functions starting
+  // at index N. For RT_USER, remaining functions keep original order.
+  // UserFileEndIndex tracks the number of functions pinned by the order file.
+  uint32_t UserFileEndIndex = 0;
+  DenseSet<const BinaryFunction *> UserOrderedFuncs;
+
+  if (!opts::FunctionOrderFile.empty()) {
+    Expected<uint32_t> NextIndexOrErr =
+        assignFunctionOrder(BC, BFs, 0, &UserOrderedFuncs);
+    if (!NextIndexOrErr)
+      return NextIndexOrErr.takeError();
+    UserFileEndIndex = *NextIndexOrErr;
+
+    BC.outs() << "BOLT-INFO: " << UserFileEndIndex
+              << " functions pinned by order file, remaining functions will be "
+              << "ordered by algorithm\n";
+  }
+
+  // Build call graph (needed for clustering algorithms).
+  // Exclude functions already ordered by the user order file.
   if (opts::ReorderFunctions != RT_NONE &&
       opts::ReorderFunctions != RT_EXEC_COUNT &&
       opts::ReorderFunctions != RT_USER) {
     Cg = buildCallGraph(
         BC,
-        [](const BinaryFunction &BF) {
+        [&UserOrderedFuncs](const BinaryFunction &BF) {
           if (!BF.hasProfile())
             return true;
           if (BF.getState() != BinaryFunction::State::CFG)
+            return true;
+          if (UserOrderedFuncs.contains(&BF))
             return true;
           return false;
         },
@@ -290,6 +433,7 @@ Error ReorderFunctions::runOnFunctions(BinaryContext &BC) {
     Cg.normalizeArcWeights();
   }
 
+  // Run selected algorithm on remaining functions.
   std::vector<Cluster> Clusters;
 
   switch (opts::ReorderFunctions) {
@@ -299,31 +443,31 @@ Error ReorderFunctions::runOnFunctions(BinaryContext &BC) {
     BinaryFunctionListType SortedFunctions(BFs.size());
     llvm::transform(llvm::make_second_range(BFs), SortedFunctions.begin(),
                     [](BinaryFunction &BF) { return &BF; });
-    llvm::stable_sort(SortedFunctions,
-                      [&](const BinaryFunction *A, const BinaryFunction *B) {
-                        if (A->isIgnored())
-                          return false;
-                        if (B->isIgnored())
-                          return true;
-                        const size_t PadA = opts::padFunctionBefore(*A) +
-                                            opts::padFunctionAfter(*A);
-                        const size_t PadB = opts::padFunctionBefore(*B) +
-                                            opts::padFunctionAfter(*B);
-                        if (!PadA || !PadB) {
-                          if (PadA)
-                            return true;
-                          if (PadB)
-                            return false;
-                        }
-                        if (!A->hasProfile())
-                          return false;
-                        if (!B->hasProfile())
-                          return true;
-                        return A->getExecutionCount() > B->getExecutionCount();
-                      });
-    uint32_t Index = 0;
+    llvm::stable_sort(
+        SortedFunctions, [&](const BinaryFunction *A, const BinaryFunction *B) {
+          if (A->isIgnored())
+            return false;
+          if (B->isIgnored())
+            return true;
+          const size_t PadA =
+              opts::padFunctionBefore(*A) + opts::padFunctionAfter(*A);
+          const size_t PadB =
+              opts::padFunctionBefore(*B) + opts::padFunctionAfter(*B);
+          if (!PadA || !PadB) {
+            if (PadA)
+              return true;
+            if (PadB)
+              return false;
+          }
+          if (!A->hasProfile())
+            return false;
+          if (!B->hasProfile())
+            return true;
+          return A->getExecutionCount() > B->getExecutionCount();
+        });
+    uint32_t Index = UserFileEndIndex;
     for (BinaryFunction *BF : SortedFunctions)
-      if (BF->hasProfile()) {
+      if (BF->hasProfile() && !BF->hasValidIndex()) {
         BF->setIndex(Index++);
         LLVM_DEBUG(if (opts::Verbosity > 1) {
           dbgs() << "BOLT-INFO: hot func " << BF->getPrintName() << " ("
@@ -370,81 +514,14 @@ Error ReorderFunctions::runOnFunctions(BinaryContext &BC) {
     std::srand(opts::RandomSeed);
     Clusters = randomClusters(Cg);
     break;
-  case RT_USER: {
-    // Build LTOCommonNameMap
-    StringMap<std::vector<uint64_t>> LTOCommonNameMap;
-    for (const BinaryFunction &BF : llvm::make_second_range(BFs))
-      for (StringRef Name : BF.getNames())
-        if (std::optional<StringRef> LTOCommonName = getLTOCommonName(Name))
-          LTOCommonNameMap[*LTOCommonName].push_back(BF.getAddress());
-
-    uint32_t Index = 0;
-    uint32_t InvalidEntries = 0;
-    std::vector<std::string> FunctionNames;
-    if (Error E = readFunctionOrderFile(FunctionNames))
-      return Error(std::move(E));
-
-    for (const std::string &Function : FunctionNames) {
-      std::vector<uint64_t> FuncAddrs;
-
-      BinaryData *BD = BC.getBinaryDataByName(Function);
-      if (!BD) {
-        // If we can't find the main symbol name, look for alternates.
-        uint32_t LocalID = 1;
-        while (true) {
-          const std::string FuncName = Function + "/" + std::to_string(LocalID);
-          BD = BC.getBinaryDataByName(FuncName);
-          if (BD)
-            FuncAddrs.push_back(BD->getAddress());
-          else
-            break;
-          LocalID++;
-        }
-        // Strip LTO suffixes
-        if (std::optional<StringRef> CommonName = getLTOCommonName(Function))
-          if (LTOCommonNameMap.contains(*CommonName))
-            llvm::append_range(FuncAddrs, LTOCommonNameMap[*CommonName]);
-      } else {
-        FuncAddrs.push_back(BD->getAddress());
-      }
-
-      if (FuncAddrs.empty()) {
-        if (opts::Verbosity >= 1)
-          BC.errs() << "BOLT-WARNING: Reorder functions: can't find function "
-                    << "for " << Function << "\n";
-        ++InvalidEntries;
-        continue;
-      }
-
-      for (const uint64_t FuncAddr : FuncAddrs) {
-        const BinaryData *FuncBD = BC.getBinaryDataAtAddress(FuncAddr);
-        assert(FuncBD);
-
-        BinaryFunction *BF = BC.getFunctionForSymbol(FuncBD->getSymbol());
-        if (!BF) {
-          if (opts::Verbosity >= 1)
-            BC.errs() << "BOLT-WARNING: Reorder functions: can't find function "
-                      << "for " << Function << "\n";
-          ++InvalidEntries;
-          break;
-        }
-        if (!BF->hasValidIndex())
-          BF->setIndex(Index++);
-        else if (opts::Verbosity > 0)
-          BC.errs() << "BOLT-WARNING: Duplicate reorder entry for " << Function
-                    << "\n";
-      }
-    }
-    if (InvalidEntries)
-      BC.errs() << "BOLT-WARNING: Reorder functions: can't find functions for "
-                << InvalidEntries << " entries in -function-order list\n";
-  } break;
-
+  case RT_USER:
+    // Order file already processed above; nothing more to do.
+    break;
   default:
     llvm_unreachable("unexpected layout type");
   }
 
-  reorder(BC, std::move(Clusters), BFs);
+  reorder(BC, std::move(Clusters), BFs, UserFileEndIndex);
 
   BC.HasFinalizedFunctionOrder = true;
 

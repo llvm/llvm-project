@@ -330,6 +330,7 @@ void FIRToMemRef::rewriteAlloca(fir::AllocaOp firAlloca,
   copyAttribute(firAlloca, alloca, firAlloca.getBindcNameAttrName());
   copyAttribute(firAlloca, alloca, firAlloca.getUniqNameAttrName());
   copyAttribute(firAlloca, alloca, cuf::getDataAttrName());
+  copyAttribute(firAlloca, alloca, acc::getVarNameAttrName());
 
   auto convert = fir::ConvertOp::create(rewriter, loc, type, alloca);
 
@@ -443,8 +444,16 @@ FIRToMemRef::getMemrefIndices(fir::ArrayCoorOp arrayCoorOp, Operation *memref,
     Value stride = isSliced ? sliceStrides[i] : one;
     Value sliceLb = isSliced ? sliceLbs[i] : shift;
 
-    Value oneIdx = arith::ConstantIndexOp::create(rewriter, loc, 1);
-    Value indexAdjustment = isSliced ? oneIdx : sliceLb;
+    // When the array_coor has an explicit slice with a shape_shift (i.e.
+    // non-default lower bounds), the indices are Fortran indices; subtract
+    // the slice lower bound to get 0-based memref indices. Otherwise (the
+    // slice comes from an embox, or the shape has no shift), the indices
+    // are 1-based section indices; subtract 1.
+    bool indicesAreFortran = isShifted && arrayCoorOp.getSlice() != nullptr;
+    Value indexAdjustment =
+        (isSliced && !indicesAreFortran)
+            ? arith::ConstantIndexOp::create(rewriter, loc, 1)
+            : sliceLb;
     Value delta = arith::SubIOp::create(rewriter, loc, index, indexAdjustment);
 
     Value scaled = arith::MulIOp::create(rewriter, loc, delta, stride);

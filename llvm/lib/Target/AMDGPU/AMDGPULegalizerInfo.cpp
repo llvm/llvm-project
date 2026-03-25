@@ -1203,6 +1203,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   auto &FPToISat = getActionDefinitionsBuilder({G_FPTOSI_SAT, G_FPTOUI_SAT})
     .legalFor({{S32, S32}, {S32, S64}})
     .narrowScalarFor({{S64, S16}}, changeTo(0, S32));
+  if (ST.has16BitInsts())
+    FPToISat.legalFor({{S16, S16}});
+
   FPToISat.minScalar(1, S32);
   FPToISat.minScalar(0, S32)
        .widenScalarToNextPow2(0, 32)
@@ -2424,7 +2427,7 @@ static bool isKnownNonNull(Register Val, MachineRegisterInfo &MRI,
     return true;
   case AMDGPU::G_CONSTANT: {
     const ConstantInt *CI = Def->getOperand(1).getCImm();
-    return CI->getSExtValue() != TM.getNullPointerValue(AddrSpace);
+    return CI->getSExtValue() != AMDGPU::getNullPointerValue(AddrSpace);
   }
   default:
     return false;
@@ -2496,7 +2499,7 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
       return true;
     }
 
-    unsigned NullVal = TM.getNullPointerValue(DestAS);
+    unsigned NullVal = AMDGPU::getNullPointerValue(DestAS);
 
     auto SegmentNull = B.buildConstant(DstTy, NullVal);
     auto FlatNull = B.buildConstant(SrcTy, 0);
@@ -2570,8 +2573,9 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
 
     Register BuildPtr = castLocalOrPrivateToFlat(DstTy);
 
-    auto SegmentNull = B.buildConstant(SrcTy, TM.getNullPointerValue(SrcAS));
-    auto FlatNull = B.buildConstant(DstTy, TM.getNullPointerValue(DestAS));
+    auto SegmentNull =
+        B.buildConstant(SrcTy, AMDGPU::getNullPointerValue(SrcAS));
+    auto FlatNull = B.buildConstant(DstTy, AMDGPU::getNullPointerValue(DestAS));
 
     auto CmpRes = B.buildICmp(CmpInst::ICMP_NE, LLT::scalar(1), Src,
                               SegmentNull.getReg(0));
@@ -6299,7 +6303,7 @@ bool AMDGPULegalizerInfo::getLDSKernelId(Register DstReg,
                                          MachineIRBuilder &B) const {
   Function &F = B.getMF().getFunction();
   std::optional<uint32_t> KnownSize =
-      AMDGPUMachineFunction::getLDSKernelIdMetadata(F);
+      AMDGPUMachineFunctionInfo::getLDSKernelIdMetadata(F);
   if (KnownSize.has_value())
     B.buildConstant(DstReg, *KnownSize);
   return false;
