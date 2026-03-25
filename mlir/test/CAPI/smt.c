@@ -36,6 +36,7 @@ void testExportSMTLIB(MlirContext ctx) {
 
   MlirLogicalResult result = mlirTranslateModuleToSMTLIB(
       module, dumpCallback, NULL, false, false, true);
+  (void)result;
   assert(mlirLogicalResultIsSuccess(result));
 
   // CHECK: ; solver scope 0

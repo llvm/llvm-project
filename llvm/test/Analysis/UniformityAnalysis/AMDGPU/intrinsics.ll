@@ -35,6 +35,13 @@ define amdgpu_kernel void @v_permlanex16_var_b32(ptr addrspace(1) %out, i32 %src
   ret void
 }
 
+; CHECK: DIVERGENT: %v = call i32 @llvm.amdgcn.permlane64.i32(i32 %src0)
+define amdgpu_kernel void @v_permlane64_b32(ptr addrspace(1) %out, i32 %src0) #0 {
+  %v = call i32 @llvm.amdgcn.permlane64.i32(i32 %src0)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
 ; CHECK: DIVERGENT: %tmp0 = call i32 @llvm.amdgcn.update.dpp.i32(i32 %in1, i32 %in2, i32 1, i32 1, i32 1, i1 false) #0
 define amdgpu_kernel void @update_dpp(ptr addrspace(1) %out, i32 %in1, i32 %in2) #0 {
   %tmp0 = call i32 @llvm.amdgcn.update.dpp.i32(i32 %in1, i32 %in2, i32 1, i32 1, i32 1, i1 false) #0
