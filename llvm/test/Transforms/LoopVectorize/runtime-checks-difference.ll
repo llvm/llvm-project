@@ -619,5 +619,37 @@ exit:
   ret void
 }
 
+define void @constant_strided(ptr %p, ptr %p.out) {
+; CHECK-LABEL: define void @constant_strided(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[P_OUT:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
+; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P_OUT]], i64 2040
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[P]], i64 2040
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[P_OUT]], [[SCEVGEP1]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[P]], [[SCEVGEP]]
+; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], [[SCALAR_PH:label %.*]], [[VECTOR_PH:label %.*]]
+;
+entry:
+  br label %header
+
+header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %header ]
+  %iv.next = add nsw i64 %iv, 1
+  %idx = mul nuw nsw i64 %iv, 2
+  %gep.ld = getelementptr inbounds i64, ptr %p, i64 %idx
+  %gep.st = getelementptr inbounds i64, ptr %p.out, i64 %idx
+  %ld = load i64, ptr %gep.ld, align 4
+  %add = add i64 %ld, 1
+  store i64 %add, ptr %gep.st, align 4
+  %exitcond = icmp slt i64 %iv.next, 128
+  br i1 %exitcond, label %header, label %exit
+
+exit:
+  ret void
+}
+
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.mustprogress"}
