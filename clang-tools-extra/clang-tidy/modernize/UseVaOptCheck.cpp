@@ -29,9 +29,9 @@ public:
 
     std::optional<Token> PrevComma;
     bool PrevHashHash = false;
-    ;
-    for (Token Tok : MI->tokens()) {
+    for (const Token Tok : MI->tokens()) {
       if (PrevHashHash) {
+        assert(PrevComma);
         if (const auto *II = Tok.getIdentifierInfo();
             II && II->getName() == "__VA_ARGS__") {
           // FIXME: The replacement really should be " __VA_OPT__(,)
@@ -46,11 +46,13 @@ public:
         PrevComma = std::nullopt;
         PrevHashHash = false;
       } else if (PrevComma) {
+        assert(!PrevHashHash);
         if (Tok.is(tok::hashhash))
           PrevHashHash = true;
         else
           PrevComma = std::nullopt;
       } else if (Tok.is(tok::comma)) {
+        assert(!PrevHashHash);
         PrevComma = Tok;
       }
     }
