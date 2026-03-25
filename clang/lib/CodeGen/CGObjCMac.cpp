@@ -3935,8 +3935,8 @@ CGObjCCommonMac::GenerateDirectMethod(const ObjCMethodDecl *OMD,
   CodeGenTypes &Types = CGM.getTypes();
   llvm::FunctionType *MethodTy =
       Types.GetFunctionType(Types.arrangeObjCMethodDeclaration(OMD));
-  std::string Name = getSymbolNameForMethod(
-      OMD, /*includeCategoryName*/ false, CGM.isPreconditionThunkOptEnabled());
+  std::string Name = getSymbolNameForMethod(OMD, /*includeCategoryName*/ false,
+                                            CGM.isPreconditionThunkEnabled());
   std::string ThunkName = Name + "_thunk";
 
   // Replace OldFn with NewFn: transfer name, replace all uses, and erase.
@@ -3959,7 +3959,7 @@ CGObjCCommonMac::GenerateDirectMethod(const ObjCMethodDecl *OMD,
   }
 
   // Function exists with matching type.
-  // Swift probably created this funciton for us.
+  // Other frontends operating on the same module may have created the function.
   if (Fn->getFunctionType() == MethodTy) {
     // Reinforce linkage in case Swift created it with different linkage.
     Fn->setLinkage(llvm::GlobalValue::ExternalLinkage);
@@ -4139,9 +4139,9 @@ llvm::Function *CGObjCCommonMac::GetDirectMethodCallee(
     bool ReceiverCanBeNull, bool ClassObjectCanBeUnrealized) {
 
   // Get from cache or populate the function declaration.
-  // Info will also maintain the corresponding thunk function to make sure the
-  // info is valid.
-  DirectMethodInfo &Info = GenerateDirectMethod(OMD, CD);
+  // Copy by value to avoid holding a reference into DirectMethodDefinitions
+  // DenseMap, which could be invalidated by future insertions.
+  DirectMethodInfo Info = GenerateDirectMethod(OMD, CD);
 
   // If thunk optimization not enabled (or variadic method which can't use
   // thunks), use implementation directly. Variadic methods and methods without
@@ -4152,8 +4152,11 @@ llvm::Function *CGObjCCommonMac::GetDirectMethodCallee(
 
   // Thunk is lazily generated.
   auto getOrCreateThunk = [&]() {
-    if (!Info.Thunk)
+    if (!Info.Thunk) {
       Info.Thunk = GenerateObjCDirectThunk(OMD, CD, Info.Implementation);
+      // Write back the lazily created thunk to the map.
+      DirectMethodDefinitions.insert_or_assign(OMD->getCanonicalDecl(), Info);
+    }
     return Info.Thunk;
   };
 
@@ -4266,7 +4269,7 @@ void CGObjCCommonMac::GenerateDirectMethodPrologue(
     CodeGenFunction &CGF, llvm::Function *Fn, const ObjCMethodDecl *OMD,
     const ObjCContainerDecl *CD) {
   // Generate precondition checks (class realization + nil check) if needed
-  if (!CGM.isPreconditionThunkOptEnabled())
+  if (!CGM.isPreconditionThunkEnabled())
     GenerateDirectMethodsPreconditionCheck(CGF, Fn, OMD, CD);
 
   auto &Builder = CGF.Builder;

@@ -723,7 +723,7 @@ public:
   ///
   /// TODO: Add support for GNUStep as well, currently only supports NeXT
   /// family.
-  bool isPreconditionThunkOptEnabled() const {
+  bool isPreconditionThunkEnabled() const {
     return getLangOpts().ObjCRuntime.allowsDirectDispatch() &&
            getLangOpts().ObjCRuntime.isNeXTFamily() &&
            getCodeGenOpts().ObjCDirectPreconditionThunk;
@@ -736,7 +736,7 @@ public:
   /// musttail complexity across different architectures.
   bool shouldHavePreconditionThunk(const ObjCMethodDecl *OMD) const {
     return OMD && OMD->isDirectMethod() && !OMD->isVariadic() &&
-           isPreconditionThunkOptEnabled();
+           isPreconditionThunkEnabled();
   }
 
   /// Check if a direct method should have inline precondition checks at call
@@ -747,7 +747,7 @@ public:
   /// to avoid musttail complexity across different architectures.
   bool shouldHavePreconditionInline(const ObjCMethodDecl *OMD) const {
     return OMD && OMD->isDirectMethod() && OMD->isVariadic() &&
-           isPreconditionThunkOptEnabled();
+           isPreconditionThunkEnabled();
   }
 
   const std::string &getModuleNameHash() const { return ModuleNameHash; }
