@@ -17,6 +17,8 @@ jobs:
     steps:
       - name: Checkout LLVM
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
 
       - name: Setup MSVC Dev Environment
         uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
@@ -45,16 +47,16 @@ jobs:
       matrix:
         include:
           - arch: aarch64
-            libc: libc6-dev-aarch64-cross
-            libcpp: libstdc++6-dev-aarch64-cross
+            libc: libc6-dev-arm64-cross
+            libcpp: libstdc++6-arm64-cross
             target_triple: aarch64-linux-gnu
           - arch: riscv64
             libc: libc6-dev-riscv64-cross
-            libcpp: libstdc++6-dev-riscv64-cross
+            libcpp: libstdc++6-riscv64-cross
             target_triple: riscv64-linux-gnu
           - arch: ppc64le
             libc: libc6-dev-ppc64el-cross
-            libcpp: libstdc++6-dev-ppc64el-cross
+            libcpp: libstdc++6-ppc64el-cross
             target_triple: ppc64le-linux-gnu
     
     steps:
