@@ -766,11 +766,13 @@ gpu.func @vector_step_slice_unit() {
 gpu.module @xevm_module {
 // CHECK-LABEL: gpu.func @vector_step_slice_multi_dist
 // CHECK:         %[[LANE_ID:.*]] = gpu.lane_id
-// CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
-// CHECK-DAG:     %[[C8:.*]] = arith.constant 8 : index
-// CHECK-DAG:     %[[C16:.*]] = arith.constant 16 : index
-// CHECK-DAG:     %[[C2:.*]] = arith.constant 2 : index
-// CHECK:         %[[VEC:.*]] = vector.from_elements %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : vector<4xindex>
+// CHECK:         %[[MULI:.*]] = arith.muli %{{.*}}, %{{.*}} : index
+// CHECK:         %[[V0:.*]] = arith.remui %[[MULI]], %{{.*}} : index
+// CHECK:         %[[SUM1:.*]] = arith.addi %[[MULI]], %{{.*}} : index
+// CHECK:         %[[V2:.*]] = arith.remui %[[SUM1]], %{{.*}} : index
+// CHECK:         %[[V1:.*]] = arith.addi %[[V0]], %{{.*}} : index
+// CHECK:         %[[V3:.*]] = arith.addi %[[V2]], %{{.*}} : index
+// CHECK:         %[[VEC:.*]] = vector.from_elements %[[V0]], %[[V1]], %[[V2]], %[[V3]] : vector<4xindex>
 gpu.func @vector_step_slice_multi_dist() {
   %0 = vector.step {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [2, 4, 2], lane_data = [1, 2, 1]>, dims = [0, 2]>} : vector<16xindex>
   gpu.return

@@ -842,8 +842,8 @@ struct SgToWiStoreScatter : public OpConversionPattern<xegpu::StoreScatterOp> {
   }
 };
 
-/// Distribute a vector::StepOp with a sliced result layout.
-/// The sliced layout must have exactly 1 effective lane dimension.
+/// Distribute a vector::StepOp to workitem-level.
+/// The layout must have exactly 1 effective lane dimension.
 /// We completely resolve the vector::StepOp by computing the lane_data-sized
 /// subranges.
 struct SgToWiVectorStep : public OpConversionPattern<vector::StepOp> {
@@ -857,13 +857,6 @@ struct SgToWiVectorStep : public OpConversionPattern<vector::StepOp> {
     if (!resultLayout || !resultLayout.isForSubgroup())
       return rewriter.notifyMatchFailure(
           op, "the result vector of the step op lacks subgroup layout");
-    auto sliceLayout = dyn_cast<xegpu::SliceAttr>(resultLayout);
-    if (!sliceLayout)
-      return rewriter.notifyMatchFailure(
-          op, "the result layout must be a slice layout");
-    if (sliceLayout.getEffectiveLaneLayoutAsInt().size() != 1)
-      return rewriter.notifyMatchFailure(
-          op, "expecting 1 dim in the effective result layout");
 
     auto loc = op.getLoc();
     auto stepResultVecTy = op.getResult().getType();
@@ -888,7 +881,12 @@ struct SgToWiVectorStep : public OpConversionPattern<vector::StepOp> {
            newVecTy.getNumElements() / laneDataBlockLength);
     SmallVector<Value> stepVals;
     // For each lane_data block, reconstruct its sub-range
-    // from the range of SG-level vector.step.
+    // from the range of SG-level vector.step.Example: vector.step
+    // {slice<layout<lane_layout=[2,4,2], lane_data=[1,2,1]>, dims=[0,2]>} :
+    // vector<16xindex>
+    // Each logical lane holds 4 elements as 2 blocks of 2 elements each.
+    // The blocks are round-robin distributed, so logical lane id 0
+    // holds values [0,1, 8,9].
     for (auto &laneDataBlockCoords : laneDataBlockCoordsVec) {
       auto laneDataBlockStartCoord = laneDataBlockCoords[0];
       stepVals.push_back(laneDataBlockStartCoord);
@@ -1145,14 +1143,12 @@ struct SgToWiBroadcast : public OpConversionPattern<vector::BroadcastOp> {
               "broadcast source layout must be a slice of result layout");
       } else if (rankDiff == 0) {
         // Case 2: Same-rank broadcast.
-        if (!sourceLayout || !sourceLayout.isEqualTo(resultLayout))
-          return rewriter.notifyMatchFailure(
-              op, "for same-rank broadcast, source layout must be equal to "
-                  "result layout");
         auto broadcastUnitDimsSet = op.computeBroadcastedUnitDims();
         SmallVector<int64_t> broadcastUnitDims(broadcastUnitDimsSet.begin(),
                                                broadcastUnitDimsSet.end());
-        resultLayout = resultLayout.setUnitDimData(broadcastUnitDims);
+        assert(sourceLayout.isEqualTo(
+                   sourceLayout.setUnitDimData(broadcastUnitDims)) &&
+               "The sg_data for unit dimensions should be set as 1");
         sourceLayout = sourceLayout.setUnitDimLayout(broadcastUnitDims);
       }
     } else {
