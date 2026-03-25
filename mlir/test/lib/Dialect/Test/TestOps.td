@@ -3130,7 +3130,7 @@ def TestNVVMRequiresSMFamilyCondMultiOp :
 }
 
 def TestNVVMRequiresSMArchOrFamilyCondOp :
-    TEST_Op<"nvvm_requires_sm_90a_or_sm_100f", [NVVMRequiresSMaOrf<[90], [100]>]> {
+    TEST_Op<"nvvm_requires_sm_90a_or_sm_100f", [NVVMRequiresSMaOrSMf<[90], [100]>]> {
   let arguments = (ins );
   let assemblyFormat = "attr-dict";
 }

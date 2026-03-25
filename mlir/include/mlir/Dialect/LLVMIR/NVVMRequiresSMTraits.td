@@ -45,7 +45,7 @@ class NVVMRequiresSMf<list<int> smVersions> :
                   !add(!mul(smVersion, 10), 2)), ",")>;
 
 // Op supported on some combination of architecture acceleration and family-specific SM versions.
-class NVVMRequiresSMaOrf<list<int> smVersionsA, list<int> smVersionsF> :
+class NVVMRequiresSMaOrSMf<list<int> smVersionsA, list<int> smVersionsF> :
   ParamNativeOpTrait<"NVVMRequiresSM",
     !interleave(!foreach(smVersion, smVersionsA, 
                   !add(!mul(smVersion, 10), 3)), ",") # "," #
