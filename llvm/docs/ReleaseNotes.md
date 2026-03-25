@@ -105,7 +105,8 @@ Changes to LLVM infrastructure
   (libcalls) without causing incorrect API manipulation or undefined references
   ([#177046](https://github.com/llvm/llvm-project/pull/125687)). Note that
   there are still issues with invalid compiler reasoning about some functions
-  in bitcode, e.g. `malloc`. Not yet supported on MachO or when using DTLTO. 
+  in bitcode, e.g. `malloc`. Not yet supported on MachO or when using
+  distributed ThinLTO. 
 
 Changes to building LLVM
 ------------------------

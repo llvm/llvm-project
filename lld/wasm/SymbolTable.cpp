@@ -82,13 +82,17 @@ void SymbolTable::compileBitcodeFiles() {
   // Prevent further LTO objects being included
   BitcodeFile::doneLTO = true;
 
-  llvm::Triple tt;
+  // Collect the bitcode library functions that are not safe to call because
+  // they were not yet brought in the link. (Such symbols are lazy.)
   llvm::BumpPtrAllocator alloc;
   llvm::StringSaver saver(alloc);
   SmallVector<StringRef> bitcodeLibFuncs;
-
   if (!ctx.bitcodeFiles.empty()) {
-    tt = llvm::Triple(ctx.bitcodeFiles.front()->obj->getTargetTriple());
+    // Triple must be captured before the bitcode is moved into the compiler.
+    // Note that the below assumes that the set of possible libfuncs is
+    // equivalent for all bitcode translation units.
+    llvm::Triple tt =
+        llvm::Triple(ctx.bitcodeFiles.front()->obj->getTargetTriple());
     for (StringRef libFunc : llvm::lto::LTO::getLibFuncSymbols(tt, saver)) {
       if (Symbol *sym = find(libFunc)) {
         if (auto *lazy = dyn_cast<LazySymbol>(sym)) {
@@ -101,8 +105,7 @@ void SymbolTable::compileBitcodeFiles() {
 
   // Compile bitcode files and replace bitcode symbols.
   lto.reset(new BitcodeCompiler);
-  if (!ctx.bitcodeFiles.empty())
-    lto->setBitcodeLibFuncs(bitcodeLibFuncs);
+  lto->setBitcodeLibFuncs(bitcodeLibFuncs);
 
   for (BitcodeFile *f : ctx.bitcodeFiles)
     lto->add(*f);

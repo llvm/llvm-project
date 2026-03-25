@@ -851,7 +851,8 @@ Error LTO::add(std::unique_ptr<InputFile> InputPtr,
 }
 
 void LTO::setBitcodeLibFuncs(ArrayRef<StringRef> BitcodeLibFuncs) {
-  this->BitcodeLibFuncs.clear();
+  assert(this->BitcodeLibFuncs.empty() &&
+         "bitcode libfuncs were set twice; maybe accidentally clobbered?");
   this->BitcodeLibFuncs.append(BitcodeLibFuncs.begin(), BitcodeLibFuncs.end());
 }
 

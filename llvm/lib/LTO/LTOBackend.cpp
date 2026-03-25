@@ -307,7 +307,7 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   // that might have been present in the current LTO unit, but are not, have
   // lost their only opportunity to be defined, and calls must not be emitted to
   // them.
-  // FIXME: BitcodeLibFuncs isn't yet set for DTLTO.
+  // FIXME: BitcodeLibFuncs isn't yet set for distributed ThinLTO.
   TargetLibraryInfo TLI(*TLII);
   for (unsigned I = 0, E = static_cast<unsigned>(LibFunc::NumLibFuncs); I != E;
        ++I) {
