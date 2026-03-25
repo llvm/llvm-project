@@ -3527,6 +3527,68 @@ static SDValue TryMatchTrue(SDNode *N, EVT VecVT, SelectionDAG &DAG) {
   return DAG.getZExtOrTrunc(Ret, DL, N->getValueType(0));
 }
 
+enum class MaskReduceKind {
+  AnyTrue,
+  AllTrue,
+};
+
+struct MaskReduceInfo {
+  MaskReduceKind Kind;
+  bool Invert;
+};
+
+static std::optional<MaskReduceInfo> classifyMaskReduction(SDNode *N) {
+  auto *C = dyn_cast<ConstantSDNode>(N->getOperand(1));
+  if (!C)
+    return std::nullopt;
+
+  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+
+  // setcc (bitcast mask), 0, ne  -> any_true(mask)
+  if (C->isZero() && CC == ISD::SETNE)
+    return MaskReduceInfo{MaskReduceKind::AnyTrue, false};
+
+  // setcc (bitcast mask), 0, eq  -> !any_true(mask)
+  if (C->isZero() && CC == ISD::SETEQ)
+    return MaskReduceInfo{MaskReduceKind::AnyTrue, true};
+
+  // setcc (bitcast mask), -1, eq -> all_true(mask)
+  if (C->isAllOnes() && CC == ISD::SETEQ)
+    return MaskReduceInfo{MaskReduceKind::AllTrue, false};
+
+  // setcc (bitcast mask), -1, ne -> !all_true(mask)
+  if (C->isAllOnes() && CC == ISD::SETNE)
+    return MaskReduceInfo{MaskReduceKind::AllTrue, true};
+
+  return std::nullopt;
+}
+
+static SDValue combineMaskReduction(SDNode *N, EVT FromVT,
+                                         unsigned NumElts,
+                                         const MaskReduceInfo &Info,
+                                         SelectionDAG &DAG) {
+  EVT VecVT = FromVT.changeVectorElementType(
+      *DAG.getContext(), MVT::getIntegerVT(128 / NumElts));
+
+  switch (Info.Kind) {
+  case MaskReduceKind::AnyTrue:
+    if (!Info.Invert)
+      return TryMatchTrue<0, ISD::SETNE, false, Intrinsic::wasm_anytrue>(
+          N, VecVT, DAG);
+    return TryMatchTrue<0, ISD::SETEQ, true, Intrinsic::wasm_anytrue>(
+        N, VecVT, DAG);
+
+  case MaskReduceKind::AllTrue:
+    if (!Info.Invert)
+      return TryMatchTrue<-1, ISD::SETEQ, false, Intrinsic::wasm_alltrue>(
+          N, VecVT, DAG);
+    return TryMatchTrue<-1, ISD::SETNE, true, Intrinsic::wasm_alltrue>(
+        N, VecVT, DAG);
+  }
+
+  llvm_unreachable("unexpected mask reduction kind");
+}
+
 /// Try to convert a i128 comparison to a v16i8 comparison before type
 /// legalization splits it up into chunks
 static SDValue
@@ -3596,39 +3658,14 @@ static SDValue performSETCCCombine(SDNode *N,
     return SDValue();
 
   unsigned NumElts = FromVT.getVectorNumElements();
-  if (NumElts != 2 && NumElts != 4 && NumElts != 8 && NumElts != 16)
-    return SDValue();
-
-  if (!cast<ConstantSDNode>(N->getOperand(1)))
+  auto Info = classifyMaskReduction(N);
+  if (!Info)
     return SDValue();
 
   auto &DAG = DCI.DAG;
-  EVT VecVT = FromVT.changeVectorElementType(*DAG.getContext(),
-                                             MVT::getIntegerVT(128 / NumElts));
-  // setcc (iN (bitcast (vNi1 X))), 0, ne
-  //   ==> any_true (vNi1 X)
-  if (auto Match = TryMatchTrue<0, ISD::SETNE, false, Intrinsic::wasm_anytrue>(
-          N, VecVT, DAG)) {
-    return Match;
-  }
-  // setcc (iN (bitcast (vNi1 X))), 0, eq
-  //   ==> xor (any_true (vNi1 X)), -1
-  if (auto Match = TryMatchTrue<0, ISD::SETEQ, true, Intrinsic::wasm_anytrue>(
-          N, VecVT, DAG)) {
-    return Match;
-  }
-  // setcc (iN (bitcast (vNi1 X))), -1, eq
-  //   ==> all_true (vNi1 X)
-  if (auto Match = TryMatchTrue<-1, ISD::SETEQ, false, Intrinsic::wasm_alltrue>(
-          N, VecVT, DAG)) {
-    return Match;
-  }
-  // setcc (iN (bitcast (vNi1 X))), -1, ne
-  //   ==> xor (all_true (vNi1 X)), -1
-  if (auto Match = TryMatchTrue<-1, ISD::SETNE, true, Intrinsic::wasm_alltrue>(
-          N, VecVT, DAG)) {
-    return Match;
-  }
+  if (NumElts == 2 || NumElts == 4 || NumElts == 8 || NumElts == 16)
+    return combineMaskReduction(N, FromVT, NumElts, *Info, DAG);
+
   return SDValue();
 }
 
