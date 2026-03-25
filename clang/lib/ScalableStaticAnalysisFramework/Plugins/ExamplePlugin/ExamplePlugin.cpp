@@ -80,26 +80,6 @@ JSONFormat::AnalysisResultRegistry::Add<TagsAnalysisResult>
         serializeTagsAnalysisResult, deserializeTagsAnalysisResult);
 
 //===----------------------------------------------------------------------===//
-// TagsAnalysis
-//
-// A trivial DerivedAnalysis that produces a fixed set of tags, independent
-// of the input LUSummary. Used so that lit tests have predictable output.
-//===----------------------------------------------------------------------===//
-
-class TagsAnalysis final : public DerivedAnalysis<TagsAnalysisResult> {
-public:
-  llvm::Error initialize() override { return llvm::Error::success(); }
-
-  llvm::Expected<bool> step() override {
-    result().Tags = {"alpha", "beta", "gamma"};
-    return false; // converged after one step
-  }
-};
-
-AnalysisRegistry::Add<TagsAnalysis> RegisterTagsAnalysis(
-    "Produces a fixed list of string tags for testing WPASuite serialization");
-
-//===----------------------------------------------------------------------===//
 // CountsAnalysisResult
 //
 // Holds a list of (EntityId, int) count pairs. Serialized as:
@@ -167,25 +147,5 @@ deserializeCountsAnalysisResult(const json::Object &Obj,
 JSONFormat::AnalysisResultRegistry::Add<CountsAnalysisResult>
     RegisterCountsForJSON(serializeCountsAnalysisResult,
                           deserializeCountsAnalysisResult);
-
-//===----------------------------------------------------------------------===//
-// CountsAnalysis
-//
-// A trivial DerivedAnalysis that produces an empty counts result. Entity ID
-// serialization is exercised by round-trip tests that supply pre-built JSON.
-//===----------------------------------------------------------------------===//
-
-class CountsAnalysis final : public DerivedAnalysis<CountsAnalysisResult> {
-public:
-  llvm::Error initialize() override { return llvm::Error::success(); }
-
-  llvm::Expected<bool> step() override {
-    // Produces no counts; entity-ID round-trip is covered by direct JSON tests.
-    return false;
-  }
-};
-
-AnalysisRegistry::Add<CountsAnalysis> RegisterCountsAnalysis(
-    "Produces an empty counts result for testing WPASuite serialization");
 
 } // namespace
