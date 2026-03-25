@@ -97,12 +97,15 @@ jobs:
       - name: Configure compiler-rt
         run: |
           cmake -G Ninja -S compiler-rt -B build-compiler-rt \
+            -DLLVM_CMAKE_DIR=${{ github.workspace }}/build \
+            -DCMAKE_SYSTEM_NAME=Linux \
             -DCMAKE_BUILD_TYPE=Release \
             -DLLVM_ENABLE_ASSERTIONS=ON \
             -DCMAKE_C_COMPILER=${{ github.workspace }}/build/bin/clang \
             -DCMAKE_CXX_COMPILER=${{ github.workspace }}/build/bin/clang++ \
             -DCOMPILER_RT_OS_DIR= \
             -DCOMPILER_RT_BUILD_BUILTINS=OFF \
+            -DCOMPILER_RT_BUILD_RIPPLE=ON \
             -DCOMPILER_RT_BUILD_CRT=OFF \
             -DCOMPILER_RT_BUILD_CTX_PROFILE=OFF \
             -DCOMPILER_RT_BUILD_GWP_ASAN=OFF \
@@ -113,6 +116,7 @@ jobs:
             -DCOMPILER_RT_BUILD_SANITIZERS=OFF \
             -DCOMPILER_RT_BUILD_XRAY=OFF \
             -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON \
+            -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY \
             -DCMAKE_C_COMPILER_TARGET=${{ matrix.targets.triple }} \
             -DCMAKE_CXX_COMPILER_TARGET=${{ matrix.targets.triple }} \
             -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld" \
