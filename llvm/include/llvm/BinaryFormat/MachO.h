@@ -1192,6 +1192,18 @@ struct dyld_chained_ptr_64_rebase {
   uint64_t bind : 1; // set to 0
 };
 
+// ARM64_RELOC_AUTHENTICATED_POINTER: in-object representation of an
+// authenticated pointer. The low 32 bits are the addend; the upper bits
+// carry ptrauth metadata.
+struct arm64e_auth_embedded_pointer {
+  uint64_t addend : 32;
+  uint64_t diversity : 16;
+  uint64_t addrDiv : 1;
+  uint64_t key : 2;
+  uint64_t reserved : 12;
+  uint64_t auth : 1; // == 1 for authenticated
+};
+
 // DYLD_CHAINED_PTR_ARM64E / DYLD_CHAINED_PTR_ARM64E_USERLAND
 struct dyld_chained_ptr_arm64e_rebase {
   uint64_t target : 43;

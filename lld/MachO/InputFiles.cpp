@@ -591,19 +591,18 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
     r.offset = relInfo.r_address;
 
     // For ARM64e authenticated pointer relocations, extract the auth info
-    // (diversity, key, addrDiv) from the upper bits of the raw pointer value
-    // and store them in the union's authData member.
+    // from the in-object bitfields and store in the union's authData member.
     if (target->hasAttr(relInfo.r_type, RelocAttrBits::AUTH)) {
       const uint8_t *loc = buf + sec.offset + relInfo.r_address;
-      uint64_t raw = read64le(loc);
-      // The auth bit (bit 63) should be set for authenticated pointers
-      if ((raw >> 63) & 1) {
+      auto authPtr =
+          *reinterpret_cast<const arm64e_auth_embedded_pointer *>(loc);
+      if (authPtr.auth) {
         r.hasAuth = true;
         r.authData.addend =
             isSubtrahend ? 0 : static_cast<int32_t>(totalAddend);
-        r.authData.info.diversity = (raw >> 32) & 0xFFFF;
-        r.authData.info.addrDiv = (raw >> 48) & 0x1;
-        r.authData.info.key = (raw >> 49) & 0x3;
+        r.authData.info.diversity = authPtr.diversity;
+        r.authData.info.addrDiv = authPtr.addrDiv;
+        r.authData.info.key = authPtr.key;
       }
     }
 
