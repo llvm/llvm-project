@@ -5465,54 +5465,6 @@ float64x2_t test_vmaxnmq_f64(float64x2_t a, float64x2_t b) {
   return vmaxnmq_f64(a, b);
 }
 
-// CHECK-LABEL: define dso_local <2 x float> @test_vminnm_f32(
-// CHECK-SAME: <2 x float> noundef [[A:%.*]], <2 x float> noundef [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x float> [[A]] to <2 x i32>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x float> [[B]] to <2 x i32>
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[TMP0]] to <8 x i8>
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i32> [[TMP1]] to <8 x i8>
-// CHECK-NEXT:    [[VMINNM_I:%.*]] = bitcast <8 x i8> [[TMP2]] to <2 x float>
-// CHECK-NEXT:    [[VMINNM1_I:%.*]] = bitcast <8 x i8> [[TMP3]] to <2 x float>
-// CHECK-NEXT:    [[VMINNM2_I:%.*]] = call <2 x float> @llvm.aarch64.neon.fminnm.v2f32(<2 x float> [[VMINNM_I]], <2 x float> [[VMINNM1_I]])
-// CHECK-NEXT:    ret <2 x float> [[VMINNM2_I]]
-//
-float32x2_t test_vminnm_f32(float32x2_t a, float32x2_t b) {
-  return vminnm_f32(a, b);
-}
-
-// CHECK-LABEL: define dso_local <4 x float> @test_vminnmq_f32(
-// CHECK-SAME: <4 x float> noundef [[A:%.*]], <4 x float> noundef [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[A]] to <4 x i32>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x float> [[B]] to <4 x i32>
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[TMP0]] to <16 x i8>
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[TMP1]] to <16 x i8>
-// CHECK-NEXT:    [[VMINNM_I:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x float>
-// CHECK-NEXT:    [[VMINNM1_I:%.*]] = bitcast <16 x i8> [[TMP3]] to <4 x float>
-// CHECK-NEXT:    [[VMINNM2_I:%.*]] = call <4 x float> @llvm.aarch64.neon.fminnm.v4f32(<4 x float> [[VMINNM_I]], <4 x float> [[VMINNM1_I]])
-// CHECK-NEXT:    ret <4 x float> [[VMINNM2_I]]
-//
-float32x4_t test_vminnmq_f32(float32x4_t a, float32x4_t b) {
-  return vminnmq_f32(a, b);
-}
-
-// CHECK-LABEL: define dso_local <2 x double> @test_vminnmq_f64(
-// CHECK-SAME: <2 x double> noundef [[A:%.*]], <2 x double> noundef [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x double> [[A]] to <2 x i64>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x double> [[B]] to <2 x i64>
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP0]] to <16 x i8>
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i64> [[TMP1]] to <16 x i8>
-// CHECK-NEXT:    [[VMINNM_I:%.*]] = bitcast <16 x i8> [[TMP2]] to <2 x double>
-// CHECK-NEXT:    [[VMINNM1_I:%.*]] = bitcast <16 x i8> [[TMP3]] to <2 x double>
-// CHECK-NEXT:    [[VMINNM2_I:%.*]] = call <2 x double> @llvm.aarch64.neon.fminnm.v2f64(<2 x double> [[VMINNM_I]], <2 x double> [[VMINNM1_I]])
-// CHECK-NEXT:    ret <2 x double> [[VMINNM2_I]]
-//
-float64x2_t test_vminnmq_f64(float64x2_t a, float64x2_t b) {
-  return vminnmq_f64(a, b);
-}
-
 // CHECK-LABEL: define dso_local <8 x i8> @test_vpmax_s8(
 // CHECK-SAME: <8 x i8> noundef [[A:%.*]], <8 x i8> noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -22753,24 +22705,6 @@ float64x1_t test_vmin_f64(float64x1_t a, float64x1_t b) {
 //
 float64x1_t test_vmaxnm_f64(float64x1_t a, float64x1_t b) {
   return vmaxnm_f64(a, b);
-}
-
-// CHECK-LABEL: define dso_local <1 x double> @test_vminnm_f64(
-// CHECK-SAME: <1 x double> noundef [[A:%.*]], <1 x double> noundef [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
-// CHECK-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x double> [[B]] to i64
-// CHECK-NEXT:    [[__P1_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP1]], i32 0
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast <1 x i64> [[__P1_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
-// CHECK-NEXT:    [[VMINNM_I:%.*]] = bitcast <8 x i8> [[TMP2]] to <1 x double>
-// CHECK-NEXT:    [[VMINNM1_I:%.*]] = bitcast <8 x i8> [[TMP3]] to <1 x double>
-// CHECK-NEXT:    [[VMINNM2_I:%.*]] = call <1 x double> @llvm.aarch64.neon.fminnm.v1f64(<1 x double> [[VMINNM_I]], <1 x double> [[VMINNM1_I]])
-// CHECK-NEXT:    ret <1 x double> [[VMINNM2_I]]
-//
-float64x1_t test_vminnm_f64(float64x1_t a, float64x1_t b) {
-  return vminnm_f64(a, b);
 }
 
 // CHECK-LABEL: define dso_local <1 x double> @test_vabs_f64(
