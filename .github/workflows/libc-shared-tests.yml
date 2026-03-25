@@ -1,0 +1,69 @@
+name: libc Precommit CI - shared ßtests
+permissions:
+  contents: read
+on:
+  pull_request:
+    paths:
+      - 'libc/**'
+      - '.github/workflows/libc-shared-tests.yml'
+
+jobs:
+  # -------------------------------------------------------------
+  # Job 1: Windows Native (MSVC)
+  # -------------------------------------------------------------
+  windows-msvc-shared:
+    name: MSVC libc-shared-test
+    runs-on: windows-2022
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@v4
+
+      - name: Setup MSVC Dev Environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Configure CMake
+        run: |
+          cmake -B build -S runtimes -G Ninja `
+            -DLLVM_ENABLE_RUNTIMES=libc `
+            -DCMAKE_C_COMPILER=cl `
+            -DCMAKE_CXX_COMPILER=cl `
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build and Test
+        run: cmake --build build --target libc-shared-test
+
+  # -------------------------------------------------------------
+  # Job 2: Linux Emulated (ppc64le & s390x)
+  # -------------------------------------------------------------
+  linux-cross-arch-shared:
+    name: Clang libc-shared-test (${{ matrix.arch }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false # If one arch fails, let the other finish
+      matrix:
+        arch: [ppc64le, s390x]
+    
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@v4
+
+      # Uses QEMU and Docker to seamlessly run commands in an emulated architecture
+      - name: Build and Test in Emulated Container
+        uses: uraimo/run-on-arch-action@v2
+        with:
+          arch: ${{ matrix.arch }}
+          githubToken: ${{ github.token }}
+          install: |
+            apt-get update -y
+            apt-get install -y cmake ninja-build clang lld
+          run: |
+            # Using Clang inside the emulated Ubuntu container
+            cmake -B build -S runtimes -G Ninja \
+              -DLLVM_ENABLE_RUNTIMES=libc \
+              -DCMAKE_C_COMPILER=clang \
+              -DCMAKE_CXX_COMPILER=clang++ \
+              -DCMAKE_BUILD_TYPE=Release
+              
+            cmake --build build --target libc-shared-test
