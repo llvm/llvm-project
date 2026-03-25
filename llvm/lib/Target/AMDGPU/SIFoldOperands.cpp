@@ -257,6 +257,8 @@ public:
   std::pair<const MachineOperand *, int> isOMod(const MachineInstr &MI) const;
   bool tryFoldOMod(MachineInstr &MI);
   bool tryFoldRegSequence(MachineInstr &MI);
+  bool tryFoldRegSequenceSubRegUses(MachineInstr &MI,
+                                    MachineOperand *&CurrentKnownM0Val);
   bool tryFoldPhiAGPR(MachineInstr &MI);
   bool tryFoldLoad(MachineInstr &MI);
 
@@ -2359,6 +2361,92 @@ bool SIFoldOperandsImpl::tryFoldOMod(MachineInstr &MI) {
   return true;
 }
 
+/// This function tries to replace uses of REG_SEQUENCE subregisters
+/// by uses of copies of the corresponding REG_SEQUENCE inputs.  It
+/// tries to fold the copies into their users and removes the
+/// REG_SEQUENCE if no users are left.  This helps later optimizations
+/// which might not support REG_SEQUENCE instructions,
+/// e.g. si-peephole-sdwa.
+bool SIFoldOperandsImpl::tryFoldRegSequenceSubRegUses(
+    MachineInstr &MI, MachineOperand *&CurrentKnownM0Val) {
+  assert(MI.isRegSequence());
+
+  Register Reg = MI.getOperand(0).getReg();
+
+  LLVM_DEBUG(dbgs() << "\nMI: " << MI);
+  using DefPair = std::pair<MachineOperand *, unsigned>;
+  SmallVector<DefPair, 16> Defs;
+
+  const TargetRegisterClass *InputRC = getRegSeqInit(Defs, Reg);
+  if (!InputRC) {
+    LLVM_DEBUG(
+        dbgs() << "Failed to infer uniform register class for REG_SEQUENCE.\n");
+    return false;
+  }
+  assert(Defs.size() == (MI.getNumExplicitOperands() - 1) / 2 &&
+         "Must contain def for each REG_SEQUENCE input operand.");
+
+  bool Changed = false;
+  for (auto UseIt = MRI->use_nodbg_begin(Reg), End = MRI->use_nodbg_end();
+       UseIt != End;) {
+    MachineOperand &Use = *UseIt++;
+    MachineInstr *UseMI = Use.getParent();
+    if (UseMI->isCopyLike() || UseMI->isRegSequence())
+      continue;
+
+    unsigned UseSubReg = Use.getSubReg();
+    if (UseSubReg == 0)
+      continue;
+
+    LLVM_DEBUG(dbgs() << "Use: " << Use << '\n');
+    LLVM_DEBUG(dbgs() << "User: " << *UseMI);
+
+    // V_MOVRELS_B32_e32 requires its first source operand to be a
+    // subreg of a vector provided as an implicit operand.  Without
+    // further ado, the transformation would violate this.
+    Register UseReg = Use.getReg();
+    if (UseMI->hasRegisterImplicitUseOperand(UseReg))
+      continue;
+
+    // The lookup can fail, for instance, if the use refers to a
+    // subregister of a subregister.
+    // TODO Handle subregister composition. See also getRegSeqInits.
+    auto *It =
+        find_if(Defs, [=](const DefPair &P) { return P.second == UseSubReg; });
+    if (It == Defs.end() || !It->first) {
+      LLVM_DEBUG(dbgs() << "Could not resolve subregister definition.\n");
+      continue;
+    }
+
+    MachineOperand *DefOp = It->first;
+    LLVM_DEBUG(dbgs() << "Resolved definition to: " << *DefOp << '\n');
+    if (DefOp->isImm() || MRI->getVRegDef(DefOp->getReg())->isCopy())
+      continue;
+
+    Register CopyDst = MRI->createVirtualRegister(InputRC);
+    const MCInstrDesc &CopyDesc = TII->get(AMDGPU::COPY);
+    MachineInstr *CopyMI = BuildMI(*UseMI->getParent(), UseMI,
+                                   UseMI->getDebugLoc(), CopyDesc, CopyDst)
+                               .add(*DefOp);
+    CopyMI->getOperand(1).setIsKill(false);
+
+    LLVM_DEBUG(dbgs() << "Created Copy: " << *CopyMI);
+    Use.ChangeToRegister(CopyDst, false);
+    Use.setSubReg(0);
+    LLVM_DEBUG(dbgs() << "Modified Use: " << *UseMI);
+    Changed = true;
+
+    tryFoldFoldableCopy(*CopyMI, CurrentKnownM0Val);
+  }
+
+  if (MRI->hasAtMostUserInstrs(Reg, 0)) {
+    LLVM_DEBUG(dbgs() << "Removing REG_SEQUENCE which is dead after fold.\n");
+    MI.removeFromParent();
+  }
+
+  return Changed;
+}
+
 // Try to fold a reg_sequence with vgpr output and agpr inputs into an
 // instruction which can take an agpr. So far that means a store.
 bool SIFoldOperandsImpl::tryFoldRegSequence(MachineInstr &MI) {
@@ -2787,7 +2875,9 @@ bool SIFoldOperandsImpl::run(MachineFunction &MF) {
         continue;
       }
 
-      if (MI.isRegSequence() && tryFoldRegSequence(MI)) {
+      if (MI.isRegSequence() &&
+          (tryFoldRegSequence(MI) ||
+           tryFoldRegSequenceSubRegUses(MI, CurrentKnownM0Val))) {
         Changed = true;
         continue;
       }

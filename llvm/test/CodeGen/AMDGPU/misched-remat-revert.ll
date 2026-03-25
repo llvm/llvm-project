@@ -22,7 +22,7 @@ define amdgpu_kernel void @test_revert_schedule(i32 %arg0, i32 %arg1, ptr addrsp
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]](p4), 64, 0 :: (dereferenceable invariant load (s32) from %ir.loopcond.kernarg.offset.align.down, align 16, addrspace 4)
   ; CHECK-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 0, 0 :: (dereferenceable invariant load (s128) from %ir.arg0.kernarg.offset1, addrspace 4)
-  ; CHECK-NEXT:   [[S_LOAD_DWORD_IMM1:%[0-9]+]]:sgpr_32 = S_LOAD_DWORD_IMM [[COPY]](p4), 16, 0 :: (dereferenceable invariant load (s32) from %ir.arg0.kernarg.offset1 + 16, align 16, addrspace 4)
+  ; CHECK-NEXT:   [[S_LOAD_DWORD_IMM1:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]](p4), 16, 0 :: (dereferenceable invariant load (s32) from %ir.arg0.kernarg.offset1 + 16, align 16, addrspace 4)
   ; CHECK-NEXT:   [[S_LOAD_DWORD_IMM2:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]](p4), 32, 0 :: (dereferenceable invariant load (s32) from %ir.arg4.kernarg.offset, align 16, addrspace 4)
   ; CHECK-NEXT:   S_BITCMP1_B32 [[S_LOAD_DWORD_IMM]], 0, implicit-def $scc
   ; CHECK-NEXT:   [[S_CSELECT_B64_:%[0-9]+]]:sreg_64_xexec = S_CSELECT_B64 -1, 0, implicit $scc

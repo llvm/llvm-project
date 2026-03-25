@@ -9623,7 +9623,7 @@ define void @memmove_p0_p4_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(4
 ; UNROLL3-NEXT:    s_clause 0x1
 ; UNROLL3-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off offset:2016
 ; UNROLL3-NEXT:    global_load_dwordx4 v[8:11], v[2:3], off offset:2032
-; UNROLL3-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; UNROLL3-NEXT:    ; implicit-def: $vgpr2
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(1)
 ; UNROLL3-NEXT:    flat_store_dwordx4 v[0:1], v[4:7] offset:2016
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(0)
