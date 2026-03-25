@@ -34,6 +34,10 @@
 using namespace mlir;
 using namespace mlir::arith;
 
+/// Default rounding mode according to IEEE-754.
+static constexpr llvm::RoundingMode kDefaultRoundingMode =
+    llvm::RoundingMode::NearestTiesToEven;
+
 //===----------------------------------------------------------------------===//
 // Pattern helpers
 //===----------------------------------------------------------------------===//
@@ -1112,7 +1116,7 @@ OpFoldResult arith::AddFOp::fold(FoldAdaptor adaptor) {
       adaptor.getOperands(), [rm](const APFloat &a, const APFloat &b) {
         APFloat result(a);
         result.add(b, rm ? convertArithRoundingModeToLLVMIR(rm.getValue())
-                         : llvm::RoundingMode::NearestTiesToEven);
+                         : kDefaultRoundingMode);
         return result;
       });
 }
@@ -1131,7 +1135,7 @@ OpFoldResult arith::SubFOp::fold(FoldAdaptor adaptor) {
       adaptor.getOperands(), [rm](const APFloat &a, const APFloat &b) {
         APFloat result(a);
         result.subtract(b, rm ? convertArithRoundingModeToLLVMIR(rm.getValue())
-                              : llvm::RoundingMode::NearestTiesToEven);
+                              : kDefaultRoundingMode);
         return result;
       });
 }
@@ -1327,7 +1331,7 @@ OpFoldResult arith::MulFOp::fold(FoldAdaptor adaptor) {
       adaptor.getOperands(), [rm](const APFloat &a, const APFloat &b) {
         APFloat result(a);
         result.multiply(b, rm ? convertArithRoundingModeToLLVMIR(rm.getValue())
-                              : llvm::RoundingMode::NearestTiesToEven);
+                              : kDefaultRoundingMode);
         return result;
       });
 }
@@ -1351,7 +1355,7 @@ OpFoldResult arith::DivFOp::fold(FoldAdaptor adaptor) {
       adaptor.getOperands(), [rm](const APFloat &a, const APFloat &b) {
         APFloat result(a);
         result.divide(b, rm ? convertArithRoundingModeToLLVMIR(rm.getValue())
-                            : llvm::RoundingMode::NearestTiesToEven);
+                            : kDefaultRoundingMode);
         return result;
       });
 }
@@ -1481,9 +1485,10 @@ static bool checkWidthChangeCast(TypeRange inputs, TypeRange outputs) {
 
 /// Attempts to convert `sourceValue` to an APFloat value with
 /// `targetSemantics` and `roundingMode`, without any information loss.
-static FailureOr<APFloat> convertFloatValue(
-    APFloat sourceValue, const llvm::fltSemantics &targetSemantics,
-    llvm::RoundingMode roundingMode = llvm::RoundingMode::NearestTiesToEven) {
+static FailureOr<APFloat>
+convertFloatValue(APFloat sourceValue,
+                  const llvm::fltSemantics &targetSemantics,
+                  llvm::RoundingMode roundingMode = kDefaultRoundingMode) {
   // Reject special values that are not representable in the target type before
   // calling APFloat::convert, which would llvm_unreachable on them.
   using fltNonfiniteBehavior = llvm::fltNonfiniteBehavior;
