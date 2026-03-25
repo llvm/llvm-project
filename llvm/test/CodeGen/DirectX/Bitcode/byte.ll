@@ -8,6 +8,8 @@ target triple = "dxil--shadermodel6.5-library"
 ;; their indices, we unfortunately need to hardcode the entire type block here,
 ;; which means this test may be brittle.
 
+;; See https://llvm.org/docs/BitCodeFormat.html for help interpreting below.
+;
 ; CHECK:      <TYPE_BLOCK_ID
 ; CHECK-NEXT:   <NUMENTRY op0=24/>
 ; CHECK-NEXT:   <INTEGER op0=8/>

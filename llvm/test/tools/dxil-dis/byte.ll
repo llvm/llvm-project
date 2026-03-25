@@ -21,6 +21,6 @@ define b32 @constant32() {
 define b128 @constant128() {
   ; Check that we write large constant byte types as constant ints
   ; CHECK-LABEL: define i128 @constant128()
-  ; CHECK:         ret i128 {{[0-9]+}}
+  ; CHECK:         ret i128 18446744073709551615
   ret b128 18446744073709551615
 }
