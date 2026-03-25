@@ -4311,8 +4311,8 @@ std::optional<InstructionCost> AArch64TTIImpl::getFP16BF16PromoteCost(
     return std::nullopt;
   if (Ty->getScalarType()->isHalfTy() && ST->hasFullFP16())
     return std::nullopt;
-  if (CanUseSVE && Ty->isScalableTy() && ST->hasSVEB16B16() &&
-      ST->isNonStreamingSVEorSME2Available())
+  // If we have +sve-b16b16 the operation can be promoted to SVE.
+  if (CanUseSVE && ST->hasSVEB16B16() && ST->isNonStreamingSVEorSME2Available())
     return std::nullopt;
 
   Type *PromotedTy = Ty->getWithNewType(Type::getFloatTy(Ty->getContext()));
@@ -6490,7 +6490,7 @@ bool AArch64TTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) const {
   // with an unpredicated loop.
   unsigned NumInsns = 0;
   for (BasicBlock *BB : TFI->LVL->getLoop()->blocks()) {
-    NumInsns += BB->sizeWithoutDebug();
+    NumInsns += BB->size();
   }
 
   // We expect 4 of these to be a IV PHI, IV add, IV compare and branch.

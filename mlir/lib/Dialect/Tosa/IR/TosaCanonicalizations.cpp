@@ -1835,8 +1835,8 @@ OpFoldResult SliceOp::fold(FoldAdaptor adaptor) {
       outputTy.getNumElements() == 1) {
     llvm::SmallVector<uint64_t> indices =
         llvm::to_vector(startElems.getValues<uint64_t>());
-    auto value = operand.getValues<Attribute>()[indices];
-    return SplatElementsAttr::get(outputTy, value);
+    if (auto values = operand.tryGetValues<Attribute>())
+      return SplatElementsAttr::get(outputTy, (*values)[indices]);
   }
 
   return {};

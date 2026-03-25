@@ -2484,6 +2484,12 @@ std::optional<DarwinSDKInfo> parseSDKSettings(llvm::vfs::FileSystem &VFS,
 
 void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
   const OptTable &Opts = getDriver().getOpts();
+  // TryXcselect keeps track of whether we use xcselect to find the SDK
+  // when CLANG_USE_XCSELECT is enabled. Currently, we do this when we
+  // do not have a sysroot from -isysroot, --sysroot, or SDKROOT, and
+  // we do not have --no-xcselect.
+  bool TryXcselect = false;
+  (void)TryXcselect;
 
   // Support allowing the SDKROOT environment variable used by xcrun and other
   // Xcode tools to define the default sysroot, by making it the default for
@@ -2500,19 +2506,10 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
       Args.append(Args.MakeSeparateArg(
           nullptr, Opts.getOption(options::OPT_isysroot), env));
     }
+  } else {
+    TryXcselect = !Args.hasArg(options::OPT__sysroot_EQ) &&
+                  !Args.hasArg(options::OPT_no_xcselect);
   }
-#ifdef CLANG_USE_XCSELECT
-  // FIXME: This should check for `getTriple().isMacOSX()`, but this breaks
-  // many tests. See https://github.com/llvm/llvm-project/pull/119670.
-  else if (getTriple().getOS() == llvm::Triple::MacOSX) {
-    char *p;
-    if (!::xcselect_host_sdk_path(CLANG_XCSELECT_HOST_SDK_POLICY, &p)) {
-      Args.append(Args.MakeSeparateArg(
-          nullptr, Opts.getOption(options::OPT_isysroot), p));
-      ::free(p);
-    }
-  }
-#endif
 
   // Read the SDKSettings.json file for more information, like the SDK version
   // that we can pass down to the compiler.
@@ -2651,6 +2648,18 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
   const std::string OSVersionStr = OSVersion.getAsString();
   // Set the tool chain target information.
   if (Platform == MacOS) {
+#ifdef CLANG_USE_XCSELECT
+    if (TryXcselect) {
+      char *p;
+      if (!::xcselect_host_sdk_path(CLANG_XCSELECT_HOST_SDK_POLICY, &p)) {
+        Args.append(Args.MakeSeparateArg(
+            nullptr, Opts.getOption(options::OPT_isysroot), p));
+        ::free(p);
+        if (!SDKInfo)
+          SDKInfo = parseSDKSettings(getVFS(), Args, getDriver());
+      }
+    }
+#endif
     if (!Driver::GetReleaseVersion(OSVersionStr, Major, Minor, Micro,
                                    HadExtra) ||
         HadExtra || Major < 10 || Major >= MajorVersionLimit || Minor >= 100 ||

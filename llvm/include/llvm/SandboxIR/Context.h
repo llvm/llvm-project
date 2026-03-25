@@ -178,8 +178,10 @@ protected:
   friend ExtractValueInst; // For createExtractValueInst()
   LLVM_ABI InsertValueInst *createInsertValueInst(llvm::InsertValueInst *IVI);
   friend InsertValueInst; // For createInsertValueInst()
-  LLVM_ABI BranchInst *createBranchInst(llvm::BranchInst *I);
-  friend BranchInst; // For createBranchInst()
+  LLVM_ABI UncondBrInst *createUncondBrInst(llvm::UncondBrInst *UBI);
+  friend UncondBrInst; // For createUncondBrInst()
+  LLVM_ABI CondBrInst *createCondBrInst(llvm::CondBrInst *CBI);
+  friend CondBrInst; // For createCondBrInst()
   LLVM_ABI LoadInst *createLoadInst(llvm::LoadInst *LI);
   friend LoadInst; // For createLoadInst()
   LLVM_ABI StoreInst *createStoreInst(llvm::StoreInst *SI);

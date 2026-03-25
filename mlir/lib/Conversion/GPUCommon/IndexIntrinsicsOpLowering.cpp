@@ -22,53 +22,17 @@ LLVM::ConstantRangeAttr mlir::gpu::index_lowering::getIndexOpRange(
   // 2. Inherent attributes on a surrounding gpu.func
   // 3. Discardable attributes on a surrounding function of any kind
   // The below code handles these in reverse order so that more important
-  // sources overwrite less important ones.
-  DenseI32ArrayAttr funcBounds = nullptr;
-  if (auto funcOp = op->getParentOfType<FunctionOpInterface>()) {
-    switch (indexKind) {
-    case IndexKind::Block: {
-      auto blockHelper =
-          gpu::GPUDialect::KnownBlockSizeAttrHelper(op->getContext());
-      if (blockHelper.isAttrPresent(funcOp))
-        funcBounds = blockHelper.getAttr(funcOp);
-      break;
-    }
-    case IndexKind::Grid: {
-      auto gridHelper =
-          gpu::GPUDialect::KnownGridSizeAttrHelper(op->getContext());
-      if (gridHelper.isAttrPresent(funcOp))
-        funcBounds = gridHelper.getAttr(funcOp);
-      break;
-    }
-    case IndexKind::Cluster: {
-      auto clusterHelper =
-          gpu::GPUDialect::KnownClusterSizeAttrHelper(op->getContext());
-      if (clusterHelper.isAttrPresent(funcOp))
-        funcBounds = clusterHelper.getAttr(funcOp);
-      break;
-    }
-    case IndexKind::Other:
-      break;
-    }
-  }
-  if (auto gpuFunc = op->getParentOfType<gpu::GPUFuncOp>()) {
-    switch (indexKind) {
-    case IndexKind::Block:
-      funcBounds = gpuFunc.getKnownBlockSizeAttr();
-      break;
-    case IndexKind::Grid:
-      funcBounds = gpuFunc.getKnownGridSizeAttr();
-      break;
-    case IndexKind::Cluster:
-      funcBounds = gpuFunc.getKnownClusterSizeAttr();
-      break;
-    case IndexKind::Other:
-      break;
-    }
-  }
-  std::optional<uint32_t> upperBound;
-  if (funcBounds)
-    upperBound = funcBounds.asArrayRef()[static_cast<uint32_t>(dim)];
+  // sources overwrite less important ones. As an exception, dimension-size
+  // getters will return exact bounds if known.
+  std::optional<uint32_t> upperBound =
+      getKnownDimensionSizeAround(op, indexKind, dim);
+  // If our upper bound is the maximum possible value, we can't easily construct
+  // the constant range for it.
+  if (upperBound && intrType == IntrType::Dim &&
+      *upperBound < std::numeric_limits<uint32_t>::max())
+    return LLVM::ConstantRangeAttr::get(op->getContext(), bitWidth, *upperBound,
+                                        *upperBound + 1);
+
   if (opUpperBound)
     upperBound = *opUpperBound;
 

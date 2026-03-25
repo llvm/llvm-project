@@ -15,18 +15,17 @@
 #include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/TUSummaryEncoding.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Serialization/JSONFormat.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Serialization/SerializationFormatRegistry.h"
+#include "clang/ScalableStaticAnalysisFramework/SSAFForceLinker.h" // IWYU pragma: keep
+#include "clang/ScalableStaticAnalysisFramework/Tool/Utils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/Process.h"
-#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
 #include <optional>
@@ -83,90 +82,18 @@ cl::opt<bool> ListFormats("list",
                                    "analyses, then exit"),
                           cl::init(false), cl::cat(SsafFormatCategory));
 
-llvm::StringRef ToolName;
-
-void printVersion(llvm::raw_ostream &OS) { OS << ToolName << " 0.1\n"; }
-
 //===----------------------------------------------------------------------===//
 // Error Messages
 //===----------------------------------------------------------------------===//
 
-namespace ErrorMessages {
-
-constexpr const char *FailedToLoadPlugin = "failed to load plugin '{0}': {1}";
-
-constexpr const char *CannotValidateSummary =
-    "failed to validate summary '{0}': {1}";
-
-constexpr const char *ExtensionNotSupplied = "Extension not supplied";
-
-constexpr const char *NoFormatForExtension =
-    "Format not registered for extension '{0}'";
-
-constexpr const char *OutputDirectoryMissing =
-    "Parent directory does not exist";
+namespace LocalErrorMessages {
 
 constexpr const char *OutputFileAlreadyExists = "Output file already exists";
 
 constexpr const char *InputOutputSamePath =
     "Input and Output resolve to the same path";
 
-} // namespace ErrorMessages
-
-//===----------------------------------------------------------------------===//
-// Diagnostic Utilities
-//===----------------------------------------------------------------------===//
-
-[[noreturn]] void fail(const char *Msg) {
-  llvm::WithColor::error(llvm::errs(), ToolName) << Msg << "\n";
-  llvm::sys::Process::Exit(1);
-}
-
-template <typename... Ts>
-[[noreturn]] void fail(const char *Fmt, Ts &&...Args) {
-  std::string Message = llvm::formatv(Fmt, std::forward<Ts>(Args)...);
-  fail(Message.data());
-}
-
-[[noreturn]] void fail(llvm::Error Err) {
-  fail(toString(std::move(Err)).data());
-}
-
-//===----------------------------------------------------------------------===//
-// Format Registry
-//===----------------------------------------------------------------------===//
-
-// FIXME: This will be revisited after we add support for registering formats
-// with extensions.
-SerializationFormat *getFormatForExtension(llvm::StringRef Extension) {
-  static llvm::SmallVector<
-      std::pair<std::string, std::unique_ptr<SerializationFormat>>, 4>
-      ExtensionFormatList;
-
-  // Most recently used format is most likely to be reused again.
-  auto ReversedList = llvm::reverse(ExtensionFormatList);
-  auto It = llvm::find_if(ReversedList, [&](const auto &Entry) {
-    return Entry.first == Extension;
-  });
-  if (It != ReversedList.end()) {
-    return It->second.get();
-  }
-
-  // SerializationFormats are uppercase while file extensions are lowercase.
-  std::string CapitalizedExtension = Extension.upper();
-
-  if (!isFormatRegistered(CapitalizedExtension)) {
-    return nullptr;
-  }
-
-  auto Format = makeFormat(CapitalizedExtension);
-  SerializationFormat *Result = Format.get();
-  assert(Result);
-
-  ExtensionFormatList.emplace_back(Extension, std::move(Format));
-
-  return Result;
-}
+} // namespace LocalErrorMessages
 
 //===----------------------------------------------------------------------===//
 // Format Listing
@@ -217,7 +144,7 @@ void printAnalysis(const AnalysisData &AD, size_t AnalysisIndex,
                             std::to_string(AnalysisIndex + 1) + ".";
   llvm::outs().indent(Layout.AnalysisCol)
       << llvm::right_justify(AnalysisNum, Layout.AnalysisNumWidth) << " "
-      << llvm::left_justify(AD.Name, Layout.MaxAnalysisNameWidth) << "  "
+      << llvm::left_justify(AD.Name, Layout.MaxAnalysisNameWidth) << " - "
       << AD.Desc << "\n";
 }
 
@@ -244,7 +171,7 @@ void printFormat(const FormatData &FD, size_t FormatIndex,
   std::string FormatNum = std::to_string(FormatIndex + 1) + ".";
   llvm::outs().indent(FormatIndent)
       << llvm::right_justify(FormatNum, Layout.FormatNumWidth) << " "
-      << llvm::left_justify(FD.Name, Layout.MaxFormatNameWidth) << "  "
+      << llvm::left_justify(FD.Name, Layout.MaxFormatNameWidth) << " - "
       << FD.Desc << "\n";
 
   printAnalyses(FD.Analyses, FormatIndex, Layout);
@@ -298,45 +225,8 @@ void listFormats() {
 }
 
 //===----------------------------------------------------------------------===//
-// Plugin Loading
-//===----------------------------------------------------------------------===//
-
-void loadPlugins() {
-  for (const auto &PluginPath : LoadPlugins) {
-    std::string ErrMsg;
-    if (llvm::sys::DynamicLibrary::LoadLibraryPermanently(PluginPath.c_str(),
-                                                          &ErrMsg)) {
-      fail(ErrorMessages::FailedToLoadPlugin, PluginPath, ErrMsg);
-    }
-  }
-}
-
-//===----------------------------------------------------------------------===//
 // Input Validation
 //===----------------------------------------------------------------------===//
-
-struct SummaryFile {
-  std::string Path;
-  SerializationFormat *Format = nullptr;
-
-  static SummaryFile fromPath(llvm::StringRef Path) {
-    llvm::StringRef Extension = path::extension(Path);
-    if (Extension.empty()) {
-      fail(ErrorMessages::CannotValidateSummary, Path,
-           ErrorMessages::ExtensionNotSupplied);
-    }
-
-    Extension = Extension.drop_front();
-    SerializationFormat *Format = getFormatForExtension(Extension);
-    if (!Format) {
-      std::string Msg =
-          llvm::formatv(ErrorMessages::NoFormatForExtension, Extension);
-      fail(ErrorMessages::CannotValidateSummary, Path, Msg);
-    }
-
-    return {Path.str(), Format};
-  }
-};
 
 struct FormatInput {
   SummaryFile InputFile;
@@ -393,12 +283,12 @@ FormatInput validateInput() {
 
     if (RealOutputPath == FI.InputFile.Path) {
       fail(ErrorMessages::CannotValidateSummary, OutputPath,
-           ErrorMessages::InputOutputSamePath);
+           LocalErrorMessages::InputOutputSamePath);
     }
 
     if (fs::exists(RealOutputPath)) {
       fail(ErrorMessages::CannotValidateSummary, OutputPath,
-           ErrorMessages::OutputFileAlreadyExists);
+           LocalErrorMessages::OutputFileAlreadyExists);
     }
 
     FI.OutputFile = SummaryFile::fromPath(RealOutputPath);
@@ -460,17 +350,12 @@ void convert(const FormatInput &FI) {
 //===----------------------------------------------------------------------===//
 
 int main(int argc, const char **argv) {
+  llvm::StringRef ToolHeading = "SSAF Format";
+
   InitLLVM X(argc, argv);
-  // path::stem strips the .exe extension on Windows so ToolName is consistent.
-  ToolName = path::stem(argv[0]);
+  initTool(argc, argv, "0.1", SsafFormatCategory, ToolHeading);
 
-  cl::HideUnrelatedOptions(SsafFormatCategory);
-  cl::SetVersionPrinter(printVersion);
-  cl::ParseCommandLineOptions(argc, argv, "SSAF Format\n");
-
-  loadPlugins();
-
-  initializeJSONFormat();
+  loadPlugins(LoadPlugins);
 
   if (ListFormats) {
     listFormats();

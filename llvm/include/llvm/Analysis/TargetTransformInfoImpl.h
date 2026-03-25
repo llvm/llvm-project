@@ -632,6 +632,18 @@ public:
     }
   }
 
+  virtual InstructionCost
+  getRegisterClassSpillCost(unsigned ClassID,
+                            TTI::TargetCostKind CostKind) const {
+    return TTI::TCC_Basic;
+  }
+
+  virtual InstructionCost
+  getRegisterClassReloadCost(unsigned ClassID,
+                             TTI::TargetCostKind CostKind) const {
+    return TTI::TCC_Basic;
+  }
+
   virtual TypeSize
   getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
     return TypeSize::get(32, K == TargetTransformInfo::RGK_ScalableVector);
@@ -1215,6 +1227,11 @@ public:
       SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {}
 
   virtual bool allowVectorElementIndexingUsingGEP() const { return true; }
+
+  virtual bool isUniform(const Instruction *I,
+                         const SmallBitVector &UniformArgs) const {
+    llvm_unreachable("target must implement isUniform for Custom uniformity");
+  }
 
 protected:
   // Obtain the minimum required size to hold the value (without the sign)

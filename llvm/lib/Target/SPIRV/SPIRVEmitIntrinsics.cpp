@@ -255,6 +255,7 @@ class SPIRVEmitIntrinsics
   bool shouldTryToAddMemAliasingDecoration(Instruction *Inst);
   void insertSpirvDecorations(Instruction *I, IRBuilder<> &B);
   void insertConstantsForFPFastMathDefault(Module &M);
+  Value *buildSpvUndefComposite(Type *AggrTy, IRBuilder<> &B);
   void processGlobalValue(GlobalVariable &GV, IRBuilder<> &B);
   void processParamTypes(Function *F, IRBuilder<> &B);
   void processParamTypesByFunHeader(Function *F, IRBuilder<> &B);
@@ -301,6 +302,7 @@ class SPIRVEmitIntrinsics
   void useRoundingMode(ConstrainedFPIntrinsic *FPI, IRBuilder<> &B);
   bool processMaskedMemIntrinsic(IntrinsicInst &I);
   bool convertMaskedMemIntrinsics(Module &M);
+  void preprocessBoolVectorBitcasts(Function &F);
 
   void emitUnstructuredLoopControls(Function &F, IRBuilder<> &B);
 
@@ -422,9 +424,11 @@ static bool isMemInstrToReplace(Instruction *I) {
 }
 
 static bool isAggrConstForceInt32(const Value *V) {
+  bool IsAggrZero =
+      isa<ConstantAggregateZero>(V) && !V->getType()->isVectorTy();
+  bool IsUndefAggregate = isa<UndefValue>(V) && V->getType()->isAggregateType();
   return isa<ConstantArray>(V) || isa<ConstantStruct>(V) ||
-         isa<ConstantDataArray>(V) ||
-         (isa<ConstantAggregateZero>(V) && !V->getType()->isVectorTy());
+         isa<ConstantDataArray>(V) || IsAggrZero || IsUndefAggregate;
 }
 
 static void setInsertPointSkippingPhis(IRBuilder<> &B, Instruction *I) {
@@ -2269,6 +2273,36 @@ shouldEmitIntrinsicsForGlobalValue(const GlobalVariableUsers &GVUsers,
   return F == &FirstDefinition;
 }
 
+Value *SPIRVEmitIntrinsics::buildSpvUndefComposite(Type *AggrTy,
+                                                   IRBuilder<> &B) {
+  SmallVector<Value *, 4> Elems;
+  if (auto *ArrTy = dyn_cast<ArrayType>(AggrTy)) {
+    Type *ElemTy = ArrTy->getElementType();
+    auto *UI = B.CreateIntrinsic(Intrinsic::spv_undef, {});
+    AggrConsts[UI] = PoisonValue::get(ElemTy);
+    AggrConstTypes[UI] = ElemTy;
+    Elems.assign(ArrTy->getNumElements(), UI);
+  } else {
+    auto *StructTy = cast<StructType>(AggrTy);
+    DenseMap<Type *, Instruction *> UndefByType;
+    for (unsigned I = 0; I < StructTy->getNumElements(); ++I) {
+      Type *ElemTy = StructTy->getContainedType(I);
+      auto &Entry = UndefByType[ElemTy];
+      if (!Entry) {
+        Entry = B.CreateIntrinsic(Intrinsic::spv_undef, {});
+        AggrConsts[Entry] = PoisonValue::get(ElemTy);
+        AggrConstTypes[Entry] = ElemTy;
+      }
+      Elems.push_back(Entry);
+    }
+  }
+  auto *Composite = B.CreateIntrinsic(Intrinsic::spv_const_composite,
+                                      {B.getInt32Ty()}, Elems);
+  AggrConsts[Composite] = PoisonValue::get(AggrTy);
+  AggrConstTypes[Composite] = AggrTy;
+  return Composite;
+}
+
 void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
                                              IRBuilder<> &B) {
 
@@ -2282,11 +2316,14 @@ void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
     // by llvm IR general logic.
     deduceElementTypeHelper(&GV, false);
     Init = GV.getInitializer();
+    Value *InitOp = Init;
+    if (isa<UndefValue>(Init) && Init->getType()->isAggregateType())
+      InitOp = buildSpvUndefComposite(Init->getType(), B);
     Type *Ty = isAggrConstForceInt32(Init) ? B.getInt32Ty() : Init->getType();
     Constant *Const = isAggrConstForceInt32(Init) ? B.getInt32(1) : Init;
     auto *InitInst = B.CreateIntrinsic(Intrinsic::spv_init_global,
                                        {GV.getType(), Ty}, {&GV, Const});
-    InitInst->setArgOperand(1, Init);
+    InitInst->setArgOperand(1, InitOp);
   }
   if (!Init && GV.use_empty())
     B.CreateIntrinsic(Intrinsic::spv_unref_global, GV.getType(), &GV);
@@ -3121,6 +3158,7 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
 
   preprocessUndefs(B);
   preprocessCompositeConstants(B);
+  preprocessBoolVectorBitcasts(Func);
   SmallVector<Instruction *> Worklist(
       llvm::make_pointer_range(instructions(Func)));
 
@@ -3306,7 +3344,7 @@ bool SPIRVEmitIntrinsics::processMaskedMemIntrinsic(IntrinsicInst &I) {
     Value *Mask = I.getArgOperand(1);
     Value *Passthru = I.getArgOperand(2);
 
-    // Alignment is stored as a parameter attribute, not as a regular parameter
+    // Alignment is stored as a parameter attribute, not as a regular parameter.
     uint32_t Alignment = I.getParamAlign(0).valueOrOne().value();
 
     SmallVector<Value *, 4> Args = {Ptrs, B.getInt32(Alignment), Mask,
@@ -3338,7 +3376,7 @@ bool SPIRVEmitIntrinsics::processMaskedMemIntrinsic(IntrinsicInst &I) {
     Value *Mask = I.getArgOperand(2);
 
     // Alignment is stored as a parameter attribute on the ptrs parameter (arg
-    // 1)
+    // 1).
     uint32_t Alignment = I.getParamAlign(1).valueOrOne().value();
 
     SmallVector<Value *, 4> Args = {Values, Ptrs, B.getInt32(Alignment), Mask};
@@ -3351,6 +3389,84 @@ bool SPIRVEmitIntrinsics::processMaskedMemIntrinsic(IntrinsicInst &I) {
   }
 
   return false;
+}
+
+// SPIR-V doesn't support bitcasts involving vector boolean type. Decompose such
+// bitcasts into element-wise operations before building instructions
+// worklist, so new instructions are properly visited and converted to
+// SPIR-V intrinsics.
+void SPIRVEmitIntrinsics::preprocessBoolVectorBitcasts(Function &F) {
+  struct BoolVecBitcast {
+    BitCastInst *BC;
+    FixedVectorType *BoolVecTy;
+    bool SrcIsBoolVec;
+  };
+
+  auto getAsBoolVec = [](Type *Ty) -> FixedVectorType * {
+    auto *VTy = dyn_cast<FixedVectorType>(Ty);
+    return (VTy && VTy->getElementType()->isIntegerTy(1)) ? VTy : nullptr;
+  };
+
+  SmallVector<BoolVecBitcast, 4> ToReplace;
+  for (auto &I : instructions(F)) {
+    auto *BC = dyn_cast<BitCastInst>(&I);
+    if (!BC)
+      continue;
+    if (auto *BVTy = getAsBoolVec(BC->getSrcTy()))
+      ToReplace.push_back({BC, BVTy, true});
+    else if (auto *BVTy = getAsBoolVec(BC->getDestTy()))
+      ToReplace.push_back({BC, BVTy, false});
+  }
+
+  for (auto &[BC, BoolVecTy, SrcIsBoolVec] : ToReplace) {
+    IRBuilder<> B(BC);
+    Value *Src = BC->getOperand(0);
+    unsigned BoolVecN = BoolVecTy->getNumElements();
+    // Use iN as the scalar intermediate type for the bool vector side.
+    Type *IntTy = B.getIntNTy(BoolVecN);
+
+    // Convert source to scalar integer.
+    Value *IntVal;
+    if (SrcIsBoolVec) {
+      // Extract each bool, zext, shift, and OR.
+      IntVal = ConstantInt::get(IntTy, 0);
+      for (unsigned I = 0; I < BoolVecN; ++I) {
+        Value *Elem = B.CreateExtractElement(Src, B.getInt32(I));
+        Value *Ext = B.CreateZExt(Elem, IntTy);
+        if (I > 0)
+          Ext = B.CreateShl(Ext, ConstantInt::get(IntTy, I));
+        IntVal = B.CreateOr(IntVal, Ext);
+      }
+    } else {
+      // Source is a non-bool type. If it's already a scalar integer, use it
+      // directly, otherwise bitcast to iN first.
+      IntVal = Src;
+      if (!Src->getType()->isIntegerTy())
+        IntVal = B.CreateBitCast(Src, IntTy);
+    }
+
+    // Convert scalar integer to destination type.
+    Value *Result;
+    if (!SrcIsBoolVec) {
+      // Test each bit with AND + icmp.
+      Result = PoisonValue::get(BoolVecTy);
+      for (unsigned I = 0; I < BoolVecN; ++I) {
+        Value *Mask = ConstantInt::get(IntTy, APInt::getOneBitSet(BoolVecN, I));
+        Value *And = B.CreateAnd(IntVal, Mask);
+        Value *Cmp = B.CreateICmpNE(And, ConstantInt::get(IntTy, 0));
+        Result = B.CreateInsertElement(Result, Cmp, B.getInt32(I));
+      }
+    } else {
+      // Destination is a non-bool type. If it's a scalar integer, use IntVal
+      // directly, otherwise bitcast from iN.
+      Result = IntVal;
+      if (!BC->getDestTy()->isIntegerTy())
+        Result = B.CreateBitCast(IntVal, BC->getDestTy());
+    }
+
+    BC->replaceAllUsesWith(Result);
+    BC->eraseFromParent();
+  }
 }
 
 bool SPIRVEmitIntrinsics::convertMaskedMemIntrinsics(Module &M) {
