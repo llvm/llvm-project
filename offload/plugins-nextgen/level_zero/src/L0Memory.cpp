@@ -712,7 +712,7 @@ Expected<ze_event_handle_t> EventPoolTy::getEvent() {
     ze_event_desc_t EventDesc{ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr, 0, 0, 0};
     EventDesc.wait = 0;
     EventDesc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
-    uint32_t createdEvents = 0;
+    uint32_t CreatedEvents = 0;
     for (uint32_t I = 0; I < PoolSize; I++) {
       EventDesc.index = I;
       ze_event_handle_t Event;
@@ -725,9 +725,9 @@ Expected<ze_event_handle_t> EventPoolTy::getEvent() {
         continue;
       }
       Events.push_back(Event);
-      createdEvents++;
+      CreatedEvents++;
     }
-    PoolSize = createdEvents;
+    PoolSize = CreatedEvents;
     ODBG(OLDT_Init) << "Created a new event pool " << Pool << " with "
                     << PoolSize << " events";
   }

@@ -704,14 +704,10 @@ Expected<OmpInteropTy> L0DeviceTy::createInterop(int32_t InteropContext,
 
     // Ensure cleanup on error
     llvm::scope_exit CleanupOnError([&]() {
-      if (Ret->async_info) {
+      if (Ret->async_info)
         delete Ret->async_info;
-        Ret->async_info = nullptr;
-      }
-      if (Ret->rtl_property) {
+      if (Ret->rtl_property)
         delete static_cast<L0Interop::Property *>(Ret->rtl_property);
-        Ret->rtl_property = nullptr;
-      }
       delete Ret;
     });
 
