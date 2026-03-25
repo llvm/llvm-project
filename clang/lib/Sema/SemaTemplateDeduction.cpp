@@ -5249,8 +5249,12 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
   // Deduce type of TemplParam in Func(Init)
   SmallVector<DeducedTemplateArgument, 1> Deduced;
   Deduced.resize(1);
-
   SmallVector<OriginalCallArg, 4> OriginalCallArgs;
+
+  bool CanTryFastPath =
+      !InitList &&
+      !Init->getType()->isSpecificBuiltinType(BuiltinType::Overload) &&
+      !getLangOpts().ObjC && !getLangOpts().OpenCL;
 
   QualType DeducedType;
   // If this is a 'decltype(auto)' specifier, do the decltype dance.
@@ -5262,25 +5266,41 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
 
     DeducedType = getDecltypeForExpr(Init);
     assert(!DeducedType.isNull());
-  } else if (!InitList && !AT->isGNUAutoType() && !AT->isConstrained() &&
-             Context.hasSameType(Type.getType(), Context.AutoDeductTy) &&
-             !Init->getType()->isSpecificBuiltinType(BuiltinType::Overload) &&
-             Init->getType().isCanonical() &&
-             !Init->getType()->isObjCObjectPointerType()) {
-    // Fast-path a subset of plain unconstrained `auto` deduction for
-    // non-init-list cases with canonical initializer types. For these cases,
-    // the deduced type can be computed directly from the initializer type by
-    // removing references, applying array/function decay, and dropping
-    // top-level cv-qualifiers.
-    QualType Ty = Init->getType();
-    Ty = Ty.getNonReferenceType();
+  } else if (CanTryFastPath) {
+    // Fast-path a subset of `auto` deduction for non-init-list cases in
+    // non-ObjC and non-OpenCL language modes. For these cases, the deduced
+    // type can be computed directly from the initializer type by removing
+    // references, applying array/function decay, and dropping top-level
+    // cv-qualifiers. For single-level `auto*` declarators, the deduced type
+    // is the pointee type of the processed initializer type.
 
-    if (Ty->isArrayType() || Ty->isFunctionType())
-      Ty = Context.getDecayedType(Ty);
+    QualType TypeTy = Type.getType();
+    bool IsPlainOrTopLevelCvAuto = Context.hasSameType(
+        TypeTy.getLocalUnqualifiedType(), Context.getAutoDeductType());
+    bool IsSimpleAutoStar =
+        TypeTy->isPointerType() &&
+        Context.hasSameType(TypeTy->getPointeeType().getLocalUnqualifiedType(),
+                            Context.getAutoDeductType());
 
-    Ty = Ty.getLocalUnqualifiedType();
-    DeducedType = Ty;
-  } else {
+    QualType ProcessedInitTy = Init->getType().getNonReferenceType();
+    if (ProcessedInitTy->isArrayType() || ProcessedInitTy->isFunctionType())
+      ProcessedInitTy = Context.getDecayedType(ProcessedInitTy);
+
+    ProcessedInitTy = ProcessedInitTy.getUnqualifiedType();
+    bool CanUsePointerFastPath =
+        IsSimpleAutoStar && ProcessedInitTy->isPointerType();
+
+    if (IsPlainOrTopLevelCvAuto) {
+      DeducedType = ProcessedInitTy;
+      assert(!DeducedType.isNull());
+    } else if (CanUsePointerFastPath) {
+      DeducedType = ProcessedInitTy->getPointeeType();
+      assert(!DeducedType.isNull());
+    }
+  }
+
+  // Auto deduction with template
+  if (DeducedType.isNull()) {
     LocalInstantiationScope InstScope(*this);
 
     // Build template<class TemplParam> void Func(FuncParam);
@@ -5342,6 +5362,7 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
               /*Decomposed=*/false, /*ArgIdx=*/0, /*TDF=*/0, FailedTSC);
           TDK != TemplateDeductionResult::Success)
         return TDK;
+          
     }
     // Could be null if somehow 'auto' appears in a non-deduced context.
     if (Deduced[0].getKind() != TemplateArgument::Type)
@@ -5363,6 +5384,7 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
     }
     DeducedType = Context.getCommonSugaredType(Result, DeducedType);
   }
+  
 
   if (AT->isConstrained() && !IgnoreConstraints &&
       CheckDeducedPlaceholderConstraints(
