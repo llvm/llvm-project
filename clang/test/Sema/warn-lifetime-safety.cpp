@@ -2299,6 +2299,14 @@ void user_defined_assignment_should_not_assume_origin_propagation() {
   use(dst);
 }
 
+const S &getRef(const std::string &s [[clang::lifetimebound]]);
+
+S from_ref() {
+  std::string str{"abc"};
+  S s = getRef(str);
+  return s;
+}
+
 struct SWithOriginPropagatingCopy {
   SWithOriginPropagatingCopy();
   SWithOriginPropagatingCopy(const std::string &s [[clang::lifetimebound]]) : data(s) {}
@@ -2345,16 +2353,6 @@ void dangling_view_from_non_pointer_param() {
     sv = getSV(s);
   }
   use(sv); // Should warn.
-}
-
-const S &getRef(const std::string &s [[clang::lifetimebound]]);
-
-// FIXME: False negative. The analysis tracks the returned reference,
-// but loses that information when it is copied into a new `S` object.
-S from_ref() {
-  std::string str{"abc"};
-  S s = getRef(str);
-  return s; // Should warn.
 }
 
 MyObj getMyObj(const MyObj &obj [[clang::lifetimebound]]);
