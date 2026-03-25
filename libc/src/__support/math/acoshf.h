@@ -67,7 +67,7 @@ LIBC_INLINE constexpr float acoshf(float x) {
     // > dirtyinfnorm((acosh(x) - g)/acosh(x), [2^12, 2^20]);
     // 0x1.54eb81b0c0df3c9bf68c149748e507fa136e2294fp-55
     //
-    // For x >= 2^25, 1/(2x)^2 <= 2^-54. So we just need log(2x).
+    // For x >= 2^26, 1/(2x)^2 <= 2^-54. So we just need log(2x).
 
     double y = 2.0 * x_d;
 
@@ -78,7 +78,8 @@ LIBC_INLINE constexpr float acoshf(float x) {
         return fputil::round_result_slightly_up(0x1.31bcb6p3f);
 #endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
       double y_inv = 0.5 / x_d;
-      fputil::multiply_add(y_inv, -y_inv, log_eval(y));
+      return static_cast<float>(
+          fputil::multiply_add(y_inv, -y_inv, log_eval(y)));
 
     } else {
 // x > 2^26
@@ -106,9 +107,8 @@ LIBC_INLINE constexpr float acoshf(float x) {
 #endif // !LIBC_TARGET_CPU_HAS_FMA_DOUBLE
       }
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+      return static_cast<float>(log_eval(y));
     }
-
-    return static_cast<float>(log_eval(y));
   }
 
   // For 1 < x < 2^12, we use the formula:
