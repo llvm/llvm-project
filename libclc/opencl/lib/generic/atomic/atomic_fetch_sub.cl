@@ -22,20 +22,20 @@
 
 #ifdef __opencl_c_atomic_order_seq_cst
 
-_CLC_OVERLOAD _CLC_DEF uintptr_t
+_CLC_DEF _CLC_OVERLOAD uintptr_t
 atomic_fetch_sub(volatile __local atomic_uintptr_t *p, ptrdiff_t v) {
   return __scoped_atomic_fetch_sub((volatile __local uintptr_t *)p, v,
                                    __ATOMIC_SEQ_CST, __MEMORY_SCOPE_DEVICE);
 }
 
-_CLC_OVERLOAD _CLC_DEF uintptr_t
+_CLC_DEF _CLC_OVERLOAD uintptr_t
 atomic_fetch_sub(volatile __global atomic_uintptr_t *p, ptrdiff_t v) {
   return __scoped_atomic_fetch_sub((volatile __global uintptr_t *)p, v,
                                    __ATOMIC_SEQ_CST, __MEMORY_SCOPE_DEVICE);
 }
 
 #if _CLC_GENERIC_AS_SUPPORTED
-_CLC_OVERLOAD _CLC_DEF uintptr_t atomic_fetch_sub(volatile atomic_uintptr_t *p,
+_CLC_DEF _CLC_OVERLOAD uintptr_t atomic_fetch_sub(volatile atomic_uintptr_t *p,
                                                   ptrdiff_t v) {
   return __scoped_atomic_fetch_sub((volatile uintptr_t *)p, v, __ATOMIC_SEQ_CST,
                                    __MEMORY_SCOPE_DEVICE);
@@ -43,26 +43,26 @@ _CLC_OVERLOAD _CLC_DEF uintptr_t atomic_fetch_sub(volatile atomic_uintptr_t *p,
 #endif // _CLC_GENERIC_AS_SUPPORTED
 #endif // __opencl_c_atomic_order_seq_cst
 
-_CLC_OVERLOAD _CLC_DEF uintptr_t atomic_fetch_sub(
+_CLC_DEF _CLC_OVERLOAD uintptr_t atomic_fetch_sub(
     volatile __local atomic_uintptr_t *p, ptrdiff_t v, memory_order order) {
   return __scoped_atomic_fetch_sub((volatile __local uintptr_t *)p, v, order,
                                    __MEMORY_SCOPE_DEVICE);
 }
 
-_CLC_OVERLOAD _CLC_DEF uintptr_t
+_CLC_DEF _CLC_OVERLOAD uintptr_t
 atomic_fetch_sub(volatile __local atomic_uintptr_t *p, ptrdiff_t v,
                  memory_order order, memory_scope scope) {
   return __scoped_atomic_fetch_sub((volatile __local uintptr_t *)p, v, order,
                                    __opencl_get_clang_memory_scope(scope));
 }
 
-_CLC_OVERLOAD _CLC_DEF uintptr_t atomic_fetch_sub(
+_CLC_DEF _CLC_OVERLOAD uintptr_t atomic_fetch_sub(
     volatile __global atomic_uintptr_t *p, ptrdiff_t v, memory_order order) {
   return __scoped_atomic_fetch_sub((volatile __global uintptr_t *)p, v, order,
                                    __MEMORY_SCOPE_DEVICE);
 }
 
-_CLC_OVERLOAD _CLC_DEF uintptr_t
+_CLC_DEF _CLC_OVERLOAD uintptr_t
 atomic_fetch_sub(volatile __global atomic_uintptr_t *p, ptrdiff_t v,
                  memory_order order, memory_scope scope) {
   return __scoped_atomic_fetch_sub((volatile __global uintptr_t *)p, v, order,
@@ -70,14 +70,14 @@ atomic_fetch_sub(volatile __global atomic_uintptr_t *p, ptrdiff_t v,
 }
 
 #if _CLC_GENERIC_AS_SUPPORTED
-_CLC_OVERLOAD _CLC_DEF uintptr_t atomic_fetch_sub(volatile atomic_uintptr_t *p,
+_CLC_DEF _CLC_OVERLOAD uintptr_t atomic_fetch_sub(volatile atomic_uintptr_t *p,
                                                   ptrdiff_t v,
                                                   memory_order order) {
   return __scoped_atomic_fetch_sub((volatile uintptr_t *)p, v, order,
                                    __MEMORY_SCOPE_DEVICE);
 }
 
-_CLC_OVERLOAD _CLC_DEF uintptr_t atomic_fetch_sub(volatile atomic_uintptr_t *p,
+_CLC_DEF _CLC_OVERLOAD uintptr_t atomic_fetch_sub(volatile atomic_uintptr_t *p,
                                                   ptrdiff_t v,
                                                   memory_order order,
                                                   memory_scope scope) {
