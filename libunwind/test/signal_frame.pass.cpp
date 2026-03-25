@@ -10,8 +10,8 @@
 // Ensure that functions marked as signal frames are reported as such.
 
 // Older clang versions had a bug: .cfi_signal_frame can't be encoded in compact
-// unwind. Work around that by forcing DWARF unwind.
-// ADDITIONAL_COMPILE_FLAGS(apple-clang-17): -femit-dwarf-unwind=always
+// unwind.
+// XFAIL: apple-clang-17
 
 // TODO: Figure out why this fails with Memory Sanitizer.
 // XFAIL: msan
