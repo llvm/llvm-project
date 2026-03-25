@@ -55,26 +55,6 @@ def uimm5gt3 : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
 
 def tuimm5gt3 : TImmLeaf<XLenVT, [{return (Imm > 3) && isUInt<5>(Imm);}]>;
 
-def UImm5Plus1AsmOperand : AsmOperandClass {
-  let Name = "UImm5Plus1";
-  let RenderMethod = "addImmOperands";
-  let DiagnosticType = "InvalidUImm5Plus1";
-}
-
-def uimm5_plus1 : RISCVOp, ImmLeaf<XLenVT,
-  [{return Imm >= 1 && Imm <= 32;}]> {
-  let ParserMatchClass = UImm5Plus1AsmOperand;
-  let EncoderMethod = "getImmOpValueMinus1";
-  let DecoderMethod = "decodeUImmPlus1Operand<5>";
-  let OperandType = "OPERAND_UIMM5_PLUS1";
-  let MCOperandPredicate = [{
-    int64_t Imm;
-    if (!MCOp.evaluateAsConstantImm(Imm))
-      return false;
-    return Imm >= 1 && Imm <= 32;
-  }];
-}
-
 def uimm5ge6_plus1 : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
   [{return Imm >= 6 && Imm <= 32;}]> {
   let ParserMatchClass = UImmAsmOperand<5, "GE6Plus1">;
