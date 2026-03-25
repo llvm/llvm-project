@@ -62,45 +62,6 @@ bool mayUseThreadStates();
 /// parallelism, or if it was explicitly disabled by the user.
 bool mayUseNestedParallelism();
 
-/// Returns true if the current thread should enter the generic state machine.
-/// On some architectures, some threads should not enter the state machine to
-/// avoid warp-level barrier forwarding issues during initialization.
-/// On other architectures, all threads must enter the state machine to satisfy
-/// the requirements of workgroup synchronization.
-static inline bool shouldEnterStateMachine(bool IsSPMD);
-
-} // namespace config
-} // namespace ompx
-
-#include "Mapping.h"
-
-namespace ompx {
-namespace config {
-
-static inline bool shouldEnterStateMachine(bool IsSPMD) {
-#if defined(__NVPTX__) || defined(__AMDGPU__)
-  // This check is important for NVIDIA Pascal (but not Volta) and AMD
-  // GPU. In those cases, a single thread can apparently satisfy a barrier on
-  // behalf of all threads in the same warp. Thus, it would not be safe for
-  // other threads in the main thread's warp to reach the first
-  // synchronize::threads call in genericStateMachine before the main thread
-  // reaches its corresponding synchronize::threads call: that would permit all
-  // active worker threads to proceed before the main thread has actually set
-  // state::ParallelRegionFn, and then they would immediately quit without
-  // doing any work.  mapping::getMaxTeamThreads() does not include any of the
-  // main thread's warp, so none of its threads can ever be active worker
-  // threads.
-  return mapping::getThreadIdInBlock() < mapping::getMaxTeamThreads(IsSPMD);
-#else
-  // On other architectures (e.g., Intel GPUs) all threads must enter the state
-  // machine to satisfy the requirements of workgroup of synchronize::threads
-  // call in genericStateMachine. Otherwise, the workers will wait on the
-  // call to synchronize::threads forever and never proceed.
-  (void)IsSPMD;
-  return true;
-#endif
-}
-
 } // namespace config
 } // namespace ompx
 
