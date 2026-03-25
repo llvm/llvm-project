@@ -73,7 +73,7 @@ jobs:
             -DCMAKE_C_COMPILER=clang \
             -DCMAKE_CXX_COMPILER=clang++ \
             -DCMAKE_BUILD_TYPE=Release \
-            -DLIBC_TARGET_TRIPLE=${{ target_triple }}
+            -DLIBC_TARGET_TRIPLE=${{ matrix.target_triple }}
 
       - name: Build and Run              
         run: |
