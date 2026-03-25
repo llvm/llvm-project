@@ -1179,20 +1179,6 @@ std::optional<int64_t> LoopSequence::getNestedLength() const {
 }
 
 LoopSequence::Depth LoopSequence::calculateDepths() const {
-  auto plus{[](std::optional<int64_t> a,
-                std::optional<int64_t> b) -> std::optional<int64_t> {
-    if (a && b) {
-      return *a + *b;
-    }
-    return std::nullopt;
-  }};
-
-  // The sequence length is calculated first, so we already know if this
-  // sequence is a nest or not.
-  if (!isNest()) {
-    return Depth{0, 0};
-  }
-
   // Get the length of the nested sequence. The invalidIC_ and opaqueIC_
   // members do not count canonical loop nests, but there can only be one
   // for depth to make sense.
@@ -1200,24 +1186,61 @@ LoopSequence::Depth LoopSequence::calculateDepths() const {
   // Get the depths of the code nested in this sequence (e.g. contained in
   // entry_), and use it as the basis for the depths of entry_->owner.
   auto [semaDepth, perfDepth]{getNestedDepths()};
-  if (invalidIC_ || length.value_or(0) != 1) {
-    semaDepth = perfDepth = 0;
-  } else if (opaqueIC_ || length.value_or(0) != 1) {
-    perfDepth = 0;
+  if (invalidIC_) {
+    parser::CharBlock source{*parser::GetSource(*invalidIC_)};
+    if (semaDepth.value > 0) {
+      semaDepth.value = 0;
+      semaDepth.reason.Say(
+          source, "This is not a valid intervening code"_because_en_US);
+    }
+    if (perfDepth.value > 0) {
+      perfDepth.value = 0;
+      perfDepth.reason.Say(
+          source, "This is not a valid intervening code"_because_en_US);
+    }
+  } else if (opaqueIC_) {
+    parser::CharBlock source{*parser::GetSource(*opaqueIC_)};
+    if (perfDepth.value > 0) {
+      perfDepth.value = 0;
+      perfDepth.reason.Say(
+          source, "This code prevents perfect nesting"_because_en_US);
+    }
+  }
+  if (length.value_or(0) != 1) {
+    // This may simply be the bottom of the loop nest. Only emit messages
+    // if the depths are reset back to 0.
+    if (entry_->owner) {
+      parser::CharBlock source{*parser::GetSource(*entry_->owner)};
+      if (semaDepth.value > 0) {
+        semaDepth.reason.Say(source,
+            "This construct does not contain a loop nest"_because_en_US);
+      }
+      if (perfDepth.value > 0) {
+        perfDepth.reason.Say(source,
+            "This construct does not contain a loop nest"_because_en_US);
+      }
+    }
+    semaDepth.value = perfDepth.value = 0;
   }
 
   if (!entry_->owner) {
     return Depth{semaDepth, perfDepth};
   }
   if (parser::Unwrap<parser::DoConstruct>(entry_->owner)) {
-    return Depth{plus(1, semaDepth), plus(1, perfDepth)};
+    return Depth{int64_t(1) + semaDepth, int64_t(1) + perfDepth};
   }
 
   auto &omp{DEREF(parser::Unwrap<parser::OpenMPLoopConstruct>(*entry_->owner))};
   const parser::OmpDirectiveSpecification &beginSpec{omp.BeginDir()};
   llvm::omp::Directive dir{beginSpec.DirId()};
-  if (!IsTransformableLoop(omp)) {
-    return Depth{0, 0};
+  bool isFullUnroll{IsFullUnroll(omp)};
+
+  // Check full unroll separately.
+  if (!isFullUnroll && !IsTransformableLoop(omp)) {
+    Reason reason;
+    reason.Say(beginSpec.DirName().source,
+        "This construct is not a DO-loop or a loop-nest-generating construct"_because_en_US);
+    return Depth{{0, reason}, {0, reason}};
   }
 
   switch (dir) {
@@ -1237,13 +1260,17 @@ LoopSequence::Depth LoopSequence::calculateDepths() const {
           if (*required == -1 || *required == *nestedLength) {
             return Depth{value, value};
           }
-          return Depth{1, 1};
+          Reason reason(std::move(range.reason));
+          reason.Say(beginSpec.DirName().source,
+              "%s construct results in a proper loop-sequence"_because_en_US,
+              GetUpperName(llvm::omp::Directive::OMPD_fuse, version_));
+          return Depth{{1, reason}, {1, reason}};
         }
       }
-      return Depth{std::nullopt, std::nullopt};
+      return Depth{};
     }
     // FUSE cannot create a nest of depth > 1 without DEPTH clause.
-    return Depth{1, 1};
+    return Depth{WithReason<int64_t>(1), WithReason<int64_t>(1)};
   case llvm::omp::Directive::OMPD_interchange:
   case llvm::omp::Directive::OMPD_nothing:
   case llvm::omp::Directive::OMPD_reverse:
@@ -1256,13 +1283,18 @@ LoopSequence::Depth LoopSequence::calculateDepths() const {
       // Return the number of arguments in the SIZES clause
       size_t num{
           parser::UnwrapRef<parser::OmpClause::Sizes>(clause->u).v.size()};
-      return Depth{plus(num, semaDepth), plus(num, perfDepth)};
+      return Depth{//
+          static_cast<int64_t>(num) + semaDepth,
+          static_cast<int64_t>(num) + perfDepth};
     }
     // The SIZES clause is mandatory, if it's missing the result is unknown.
     return {};
   case llvm::omp::Directive::OMPD_unroll:
-    if (IsFullUnroll(omp)) {
-      return Depth{0, 0};
+    if (isFullUnroll) {
+      Reason reason;
+      reason.Say(beginSpec.DirName().source,
+          "Fully unrolled loop does not result in a loop nest"_because_en_US);
+      return Depth{{0, reason}, {0, reason}};
     }
     // If this is not a full unroll then look for a PARTIAL clause.
     if (auto *clause{parser::omp::FindClause(
@@ -1280,9 +1312,12 @@ LoopSequence::Depth LoopSequence::calculateDepths() const {
       // have either depth greater than 1: if it had a loop nested in it,
       // then after unroll it will have at least two copies it it, making
       // it a final loop.
-      return {1, 1};
+      Reason reason;
+      reason.Say(beginSpec.DirName().source,
+          "Partially unrolled loop cannot form a nest of depth > 1"_because_en_US);
+      return {{1, reason}, {1, reason}};
     }
-    return Depth{std::nullopt, std::nullopt};
+    return Depth{};
   default:
     llvm_unreachable("Expecting loop-transforming construct");
   }
@@ -1290,13 +1325,15 @@ LoopSequence::Depth LoopSequence::calculateDepths() const {
 
 LoopSequence::Depth LoopSequence::getNestedDepths() const {
   if (!isNest()) {
-    return {std::nullopt, std::nullopt};
+    // If the current sequence is not a nest, it can still be a part of
+    // an enclosing nest.
+    return Depth{WithReason<int64_t>(0), WithReason<int64_t>(0)};
   } else if (children_.empty()) {
     // No children, but length == 1.
     assert(entry_->owner &&
         parser::Unwrap<parser::DoConstruct>(entry_->owner) &&
         "Expecting DO construct");
-    return Depth{0, 0};
+    return Depth{WithReason<int64_t>(0), WithReason<int64_t>(0)};
   }
   return children_.front().depth_;
 }
