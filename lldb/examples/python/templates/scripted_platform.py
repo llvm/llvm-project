@@ -8,7 +8,7 @@ class ScriptedPlatform(metaclass=ABCMeta):
     """
     The base class for a scripted platform.
 
-    Most of the base class methods are `@abstractmethod` that need to be
+    Most of the base class methods are ``@abstractmethod`` that need to be
     overwritten by the inheriting class.
     """
 

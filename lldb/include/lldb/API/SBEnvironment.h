@@ -60,16 +60,20 @@ public:
   ///     pointer to an empty string will be returned.
   const char *GetValueAtIndex(size_t index);
 
-  /// Return all environment variables contained in this object. Each variable
-  /// is returned as a string with the following format
+  /// Return all environment variables contained in this object.
+  ///
+  /// Each variable is returned as a string with the following format
+  ///
   ///     name=value
   ///
   /// \return
   ///     Return an lldb::SBStringList object with the environment variables.
   SBStringList GetEntries();
 
-  /// Add or replace an existing environment variable. The input must be a
-  /// string with the format
+  /// Add or replace an existing environment variable.
+  ///
+  /// The input must be a string with the format
+  ///
   ///     name=value
   ///
   /// \param [in] name_and_value

@@ -8,7 +8,7 @@ class ScriptedProcess(metaclass=ABCMeta):
     """
     The base class for a scripted process.
 
-    Most of the base class methods are `@abstractmethod` that need to be
+    Most of the base class methods are ``@abstractmethod`` that need to be
     overwritten by the inheriting class.
     """
 
@@ -90,7 +90,7 @@ class ScriptedProcess(metaclass=ABCMeta):
             error (lldb.SBError): Error object.
 
         Returns:
-            lldb.SBData: An `lldb.SBData` buffer with the target byte size and
+            lldb.SBData: An :py:class:`lldb.SBData` buffer with the target byte size and
                 byte order storing the memory read.
         """
         pass
@@ -100,7 +100,7 @@ class ScriptedProcess(metaclass=ABCMeta):
 
         Args:
             addr (int): Address from which we should start reading.
-            data (lldb.SBData): An `lldb.SBData` buffer to write to the process
+            data (lldb.SBData): An :py:class:`lldb.SBData` buffer to write to the process
             memory.
             error (lldb.SBError): Error object.
 
@@ -124,7 +124,7 @@ class ScriptedProcess(metaclass=ABCMeta):
             }
 
         Returns:
-            List[scripted_image]: A list of `scripted_image` dictionaries
+            List[scripted_image]: A list of ``scripted_image`` dictionaries
                 containing for each entry the library UUID or its file path
                 and its load address.
                 None if the list is empty.
@@ -143,7 +143,7 @@ class ScriptedProcess(metaclass=ABCMeta):
         """Simulate the scripted process launch.
 
         Returns:
-            lldb.SBError: An `lldb.SBError` with error code 0.
+            lldb.SBError: An :py:class:`lldb.SBError` with error code 0.
         """
         return lldb.SBError()
 
@@ -155,7 +155,7 @@ class ScriptedProcess(metaclass=ABCMeta):
             process we're attaching to.
 
         Returns:
-            lldb.SBError: An `lldb.SBError` with error code 0.
+            lldb.SBError: An :py:class:`lldb.SBError` with error code 0.
         """
         return lldb.SBError()
 
@@ -167,7 +167,7 @@ class ScriptedProcess(metaclass=ABCMeta):
             state to stopped after running it.
 
         Returns:
-            lldb.SBError: An `lldb.SBError` with error code 0.
+            lldb.SBError: An :py:class:`lldb.SBError` with error code 0.
         """
         process = self.target.GetProcess()
         if not process:
@@ -229,7 +229,7 @@ class ScriptedThread(metaclass=ABCMeta):
     """
     The base class for a scripted thread.
 
-    Most of the base class methods are `@abstractmethod` that need to be
+    Most of the base class methods are ``@abstractmethod`` that need to be
     overwritten by the inheriting class.
     """
 
@@ -344,7 +344,7 @@ class ScriptedThread(metaclass=ABCMeta):
             }
 
         Returns:
-            List[scripted_frame]: A list of `scripted_frame` dictionaries
+            List[scripted_frame]: A list of ``scripted_frame`` dictionaries
                 containing at least for each entry, the frame index and
                 the program counter value for that frame.
                 The list can be empty.
@@ -398,7 +398,7 @@ class ScriptedFrame(metaclass=ABCMeta):
     """
     The base class for a scripted frame.
 
-    Most of the base class methods are `@abstractmethod` that need to be
+    Most of the base class methods are ``@abstractmethod`` that need to be
     overwritten by the inheriting class.
     """
 
