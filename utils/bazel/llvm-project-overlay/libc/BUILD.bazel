@@ -2697,6 +2697,8 @@ libc_support_library(
         ":__support_fputil_fp_bits",
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
+        ":__support_macros_attributes",
+        ":__support_macros_optimization",
         ":__support_math_acosh_float_constants",
     ],
 )
@@ -3093,6 +3095,21 @@ libc_support_library(
         ":__support_macros_optimization",
         ":__support_math_inv_trigf_utils",
         ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_atanbf16",
+    hdrs = ["src/__support/math/atanbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_cast",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_sqrt",
+        ":__support_macros_optimization",
     ],
 )
 
@@ -5746,6 +5763,17 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_sqrtbf16",
+    hdrs = ["src/__support/math/sqrtbf16.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_sqrt",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_sqrtf",
     hdrs = ["src/__support/math/sqrtf.h"],
     deps = [
@@ -6326,6 +6354,11 @@ libc_math_function(
     additional_deps = [
         ":__support_math_asinpif",
     ],
+)
+
+libc_math_function(
+    name = "atanbf16",
+    additional_deps = [":__support_math_atanbf16"],
 )
 
 libc_math_function(
@@ -8329,6 +8362,11 @@ libc_math_function(
 libc_math_function(
     name = "sqrt",
     additional_deps = [":__support_math_sqrt"],
+)
+
+libc_math_function(
+    name = "sqrtbf16",
+    additional_deps = [":__support_math_sqrtbf16"],
 )
 
 libc_math_function(

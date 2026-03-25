@@ -5298,12 +5298,12 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       break;
     }
     case AMDGPU::OPERAND_INLINE_SPLIT_BARRIER_INT32:
+    case AMDGPU::OPERAND_INPUT_MODS:
       if (!MI.getOperand(i).isImm() || !isInlineConstant(MI, i)) {
         ErrInfo = "Expected inline constant for operand.";
         return false;
       }
       break;
-    case AMDGPU::OPERAND_INPUT_MODS:
     case AMDGPU::OPERAND_SDWA_VOPC_DST:
     case AMDGPU::OPERAND_KIMM16:
       break;
@@ -9748,8 +9748,8 @@ bool SIInstrInfo::isHighLatencyDef(int Opc) const {
          (isMUBUF(Opc) || isMTBUF(Opc) || isMIMG(Opc) || isFLAT(Opc));
 }
 
-Register SIInstrInfo::isStackAccess(const MachineInstr &MI,
-                                    int &FrameIndex) const {
+Register SIInstrInfo::isStackAccess(const MachineInstr &MI, int &FrameIndex,
+                                    TypeSize &MemBytes) const {
   const MachineOperand *Addr = getNamedOperand(MI, AMDGPU::OpName::vaddr);
   if (!Addr || !Addr->isFI())
     return Register();
@@ -9758,41 +9758,51 @@ Register SIInstrInfo::isStackAccess(const MachineInstr &MI,
          (*MI.memoperands_begin())->getAddrSpace() == AMDGPUAS::PRIVATE_ADDRESS);
 
   FrameIndex = Addr->getIndex();
-  return getNamedOperand(MI, AMDGPU::OpName::vdata)->getReg();
+
+  int VDataIdx =
+      AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::vdata);
+  MemBytes = TypeSize::getFixed(getOpSize(MI.getOpcode(), VDataIdx));
+  return MI.getOperand(VDataIdx).getReg();
 }
 
-Register SIInstrInfo::isSGPRStackAccess(const MachineInstr &MI,
-                                        int &FrameIndex) const {
+Register SIInstrInfo::isSGPRStackAccess(const MachineInstr &MI, int &FrameIndex,
+                                        TypeSize &MemBytes) const {
   const MachineOperand *Addr = getNamedOperand(MI, AMDGPU::OpName::addr);
   assert(Addr && Addr->isFI());
   FrameIndex = Addr->getIndex();
-  return getNamedOperand(MI, AMDGPU::OpName::data)->getReg();
+
+  int DataIdx =
+      AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::data);
+  MemBytes = TypeSize::getFixed(getOpSize(MI.getOpcode(), DataIdx));
+  return MI.getOperand(DataIdx).getReg();
 }
 
 Register SIInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
-                                          int &FrameIndex) const {
+                                          int &FrameIndex,
+                                          TypeSize &MemBytes) const {
   if (!MI.mayLoad())
     return Register();
 
   if (isMUBUF(MI) || isVGPRSpill(MI))
-    return isStackAccess(MI, FrameIndex);
+    return isStackAccess(MI, FrameIndex, MemBytes);
 
   if (isSGPRSpill(MI))
-    return isSGPRStackAccess(MI, FrameIndex);
+    return isSGPRStackAccess(MI, FrameIndex, MemBytes);
 
   return Register();
 }
 
 Register SIInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
-                                         int &FrameIndex) const {
+                                         int &FrameIndex,
+                                         TypeSize &MemBytes) const {
   if (!MI.mayStore())
     return Register();
 
   if (isMUBUF(MI) || isVGPRSpill(MI))
-    return isStackAccess(MI, FrameIndex);
+    return isStackAccess(MI, FrameIndex, MemBytes);
 
   if (isSGPRSpill(MI))
-    return isSGPRStackAccess(MI, FrameIndex);
+    return isSGPRStackAccess(MI, FrameIndex, MemBytes);
 
   return Register();
 }
