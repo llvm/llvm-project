@@ -6642,6 +6642,15 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
       Ops.push_back(Sub);
       return true;
     }
+    // Handle INSERT_SUBVECTOR(UNDEF, SUB, IDX) iff IDX != 0
+    if (InsertIdx != 0 && Src.isUndef() &&
+        peekThroughBitcasts(Sub).getOpcode() != ISD::EXTRACT_SUBVECTOR) {
+      Mask.assign(NumElts, SM_SentinelUndef);
+      std::iota(Mask.begin() + InsertIdx, Mask.begin() + InsertIdx + NumSubElts,
+                0);
+      Ops.push_back(Sub);
+      return true;
+    }
     if (!N->isOnlyUserOf(Sub.getNode()))
       return false;
 
@@ -34931,11 +34940,13 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     EVT VT = N->getValueType(0);
     assert(VT == MVT::v2f32 && "Unexpected type (!= v2f32) on FMIN/FMAX.");
     bool IsStrict = Opc == X86ISD::STRICT_FMIN || Opc == X86ISD::STRICT_FMAX;
-    SDValue UNDEF = DAG.getUNDEF(VT);
+    // For strict FP use a value that can not signal.
+    SDValue Filler =
+        IsStrict ? DAG.getConstantFP(0.0, dl, VT) : DAG.getUNDEF(VT);
     SDValue LHS = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4f32,
-                              N->getOperand(IsStrict ? 1 : 0), UNDEF);
+                              N->getOperand(IsStrict ? 1 : 0), Filler);
     SDValue RHS = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4f32,
-                              N->getOperand(IsStrict ? 2 : 1), UNDEF);
+                              N->getOperand(IsStrict ? 2 : 1), Filler);
     SDValue Res;
     if (IsStrict)
       Res = DAG.getNode(Opc, dl, {MVT::v4f32, MVT::Other},
@@ -41785,17 +41796,6 @@ static SDValue combineX86ShufflesRecursively(
     OpInputs.assign({SrcVec});
     OpMask.assign(NumElts, SM_SentinelUndef);
     std::iota(OpMask.begin(), OpMask.end(), ExtractIdx);
-    OpZero = OpUndef = APInt::getZero(NumElts);
-  } else if (Op.getOpcode() == ISD::INSERT_SUBVECTOR &&
-             Op.getOperand(0).isUndef() && !isNullConstant(Op.getOperand(2))) {
-    SDValue SubVec = Op.getOperand(1);
-    int InsertIdx = Op.getConstantOperandVal(2);
-    unsigned NumElts = VT.getVectorNumElements();
-    unsigned NumSubElts = SubVec.getValueType().getVectorNumElements();
-    OpInputs.assign({SubVec});
-    OpMask.assign(NumElts, SM_SentinelUndef);
-    std::iota(OpMask.begin() + InsertIdx,
-              OpMask.begin() + InsertIdx + NumSubElts, 0);
     OpZero = OpUndef = APInt::getZero(NumElts);
   } else {
     return SDValue();

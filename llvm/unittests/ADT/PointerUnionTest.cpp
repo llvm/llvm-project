@@ -289,4 +289,98 @@ TEST_F(PointerUnionTest, NewCastInfra) {
                 "type mismatch for cast with PointerUnion");
 }
 
+// Regression test: doCast must mask with minLowBitsAvailable(), not
+// To::NumLowBitsAvailable, to avoid clearing inner PointerUnion tag bits.
+// This reproduces the 32-bit crash from PR #187950 on any platform by
+// using types whose alignment mimics the 32-bit DeclLink layout:
+//   OuterPU<InnerPU, OverClaimWrapper>
+// where OverClaimWrapper's PLTT claims more low bits than its inner
+// PointerUnion actually has spare.
+
+struct alignas(8) HighAlign {
+  int x;
+};
+struct alignas(4) LowAlign {
+  int x;
+};
+
+// Wrapper around a PointerUnion that over-claims NumLowBitsAvailable,
+// mimicking LazyGenerationalUpdatePtr's PLTT on 32-bit.
+struct OverClaimWrapper {
+  PointerUnion<HighAlign *, LowAlign *> Value;
+
+  OverClaimWrapper() = default;
+  explicit OverClaimWrapper(decltype(Value) V) : Value(V) {}
+
+  void *getOpaqueValue() { return Value.getOpaqueValue(); }
+  static OverClaimWrapper getFromOpaqueValue(void *P) {
+    return OverClaimWrapper(decltype(Value)::getFromOpaqueValue(P));
+  }
+};
+
+} // end anonymous namespace
+
+namespace llvm {
+template <> struct PointerLikeTypeTraits<OverClaimWrapper> {
+  static void *getAsVoidPointer(OverClaimWrapper W) {
+    return W.getOpaqueValue();
+  }
+  static OverClaimWrapper getFromVoidPointer(void *P) {
+    return OverClaimWrapper::getFromOpaqueValue(P);
+  }
+  // Inner PU<HighAlign*(3 bits), LowAlign*(2 bits)> has tagShift=1, so only
+  // 1 spare bit. Claiming 2 bits mimics the LGUP over-claim on 32-bit.
+  static constexpr int NumLowBitsAvailable = 2;
+};
+} // namespace llvm
+
+namespace {
+
+TEST(PointerUnionNestedTest, NestedTagPreservation) {
+  // Inner PU: PointerUnion<HighAlign*, LowAlign*>
+  //   minLowBits = min(3, 2) = 2, tagBits = 1, tagShift = 1
+  //   Tag for LowAlign* (index 1) is in bit 1.
+  //   NumLowBitsAvailable = 1
+
+  // Outer PU: PointerUnion<InnerPU, OverClaimWrapper>
+  //   InnerPU NumLowBitsAvailable = 1
+  //   OverClaimWrapper NumLowBitsAvailable = 2 (over-claimed)
+  //   minLowBits = 1, tagBits = 1, tagShift = 0
+
+  using InnerPU = PointerUnion<HighAlign *, LowAlign *>;
+  using OuterPU = PointerUnion<InnerPU, OverClaimWrapper>;
+
+  LowAlign low;
+
+  // Store LowAlign* in the inner PU (tag = 1, in bit 1).
+  InnerPU inner(&low);
+  ASSERT_TRUE(isa<LowAlign *>(inner));
+  ASSERT_EQ(cast<LowAlign *>(inner), &low);
+
+  // Wrap it and store in the outer PU.
+  OverClaimWrapper wrapper(inner);
+  OuterPU outer(wrapper);
+  ASSERT_TRUE(isa<OverClaimWrapper>(outer));
+
+  // Extract the wrapper back. Before the fix, doCast would clear bit 1
+  // (the inner PU's tag), corrupting the type discriminator.
+  OverClaimWrapper extracted = cast<OverClaimWrapper>(outer);
+  InnerPU extractedInner = extracted.Value;
+
+  EXPECT_TRUE(isa<LowAlign *>(extractedInner))
+      << "Inner PointerUnion tag corrupted during doCast: expected LowAlign*, "
+         "got HighAlign*. doCast must not clear bits beyond "
+         "minLowBitsAvailable().";
+  EXPECT_EQ(cast<LowAlign *>(extractedInner), &low);
+
+  // Also verify the HighAlign* path (tag = 0) works.
+  HighAlign high;
+  InnerPU inner2(&high);
+  OverClaimWrapper wrapper2(inner2);
+  OuterPU outer2(wrapper2);
+  OverClaimWrapper extracted2 = cast<OverClaimWrapper>(outer2);
+  EXPECT_TRUE(isa<HighAlign *>(extracted2.Value));
+  EXPECT_EQ(cast<HighAlign *>(extracted2.Value), &high);
+}
+
 } // end anonymous namespace
