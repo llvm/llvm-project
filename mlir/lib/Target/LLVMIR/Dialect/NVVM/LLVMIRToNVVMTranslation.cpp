@@ -33,18 +33,18 @@ static bool isConvertibleIntrinsic(llvm::Intrinsic::ID id) {
 static ArrayRef<unsigned> getSupportedIntrinsicsImpl() {
   static const SmallVector<unsigned> convertibleIntrinsics = [] {
     SmallVector<unsigned> ids = {
-#include "mlir/Dialect/LLVMIR/NVVMConvertibleLLVMIRIntrinsics.inc"      
+#include "mlir/Dialect/LLVMIR/NVVMConvertibleLLVMIRIntrinsics.inc"
     };
 
-  ids.push_back(llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_all);
-  return ids;
+    ids.push_back(llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_all);
+    return ids;
   }();
   return convertibleIntrinsics;
 }
 
-static LogicalResult convertBarrierAlignedAllIntrinsic(OpBuilder &builder,
-                                                      llvm::CallInst *inst,
-                                                      LLVM::ModuleImport &moduleImport) {
+static LogicalResult
+convertBarrierAlignedAllIntrinsic(OpBuilder &builder, llvm::CallInst *inst,
+                                  LLVM::ModuleImport &moduleImport) {
   if (inst->arg_size() != 1) {
     return failure();
   }
