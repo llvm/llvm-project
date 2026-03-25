@@ -59,10 +59,10 @@ bool hasBlocksAreClusters(const Function &);
 
 bool isParamGridConstant(const Argument &);
 
-inline MaybeAlign getAlign(const Function &F, unsigned Index) {
+inline MaybeAlign getStackAlign(const Function &F, unsigned Index) {
   return F.getAttributes().getAttributes(Index).getStackAlignment();
 }
-MaybeAlign getAlign(const CallInst &, unsigned);
+MaybeAlign getStackAlign(const CallBase &, unsigned);
 
 } // namespace llvm
 

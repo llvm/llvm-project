@@ -1219,7 +1219,8 @@ std::string NVPTXTargetLowering::getPrototype(
   } else {
     O << "(";
     if (shouldPassAsArray(RetTy)) {
-      const Align RetAlign = getArgumentAlignment(&CB, RetTy, 0, DL);
+      const Align RetAlign =
+          getParamAlign(&CB, RetTy, AttributeList::ReturnIndex, DL);
       O << ".param .align " << RetAlign.value() << " .b8 _["
         << DL.getTypeAllocSize(RetTy) << "]";
     } else if (RetTy->isFloatingPointTy() || RetTy->isIntegerTy()) {
@@ -1267,14 +1268,14 @@ std::string NVPTXTargetLowering::getPrototype(
       Type *ETy = Args[I].IndirectType;
       Align InitialAlign = ArgOuts[0].Flags.getNonZeroByValAlign();
       Align ParamByValAlign =
-          getFunctionByValParamAlign(/*F=*/nullptr, ETy, InitialAlign, DL);
+          getDeviceByValParamAlign(/*F=*/nullptr, ETy, InitialAlign, DL);
 
       O << ".param .align " << ParamByValAlign.value() << " .b8 _["
         << ArgOuts[0].Flags.getByValSize() << "]";
     } else {
       if (shouldPassAsArray(Ty)) {
         Align ParamAlign =
-            getArgumentAlignment(&CB, Ty, I + AttributeList::FirstArgIndex, DL);
+            getParamAlign(&CB, Ty, I + AttributeList::FirstArgIndex, DL);
         O << ".param .align " << ParamAlign.value() << " .b8 _["
           << DL.getTypeAllocSize(Ty) << "]";
         continue;
@@ -1474,10 +1475,10 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         // so we don't need to worry whether it's naturally aligned or not.
         // See TargetLowering::LowerCallTo().
         const Align InitialAlign = ArgOuts[0].Flags.getNonZeroByValAlign();
-        return getFunctionByValParamAlign(CB->getCalledFunction(), ETy,
-                                          InitialAlign, DL);
+        return getDeviceByValParamAlign(CB->getCalledFunction(), ETy,
+                                        InitialAlign, DL);
       }
-      return getArgumentAlignment(CB, Arg.Ty, ArgI + 1, DL);
+      return getParamAlign(CB, Arg.Ty, ArgI + AttributeList::FirstArgIndex, DL);
     }();
 
     const unsigned TySize = DL.getTypeAllocSize(ETy);
@@ -1611,7 +1612,8 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     const SDValue RetSymbol = DAG.getExternalSymbol("retval0", MVT::i32);
     const unsigned ResultSize = DL.getTypeAllocSize(RetTy);
     if (shouldPassAsArray(RetTy)) {
-      const Align RetAlign = getArgumentAlignment(CB, RetTy, 0, DL);
+      const Align RetAlign =
+          getParamAlign(CB, RetTy, AttributeList::ReturnIndex, DL);
       MakeDeclareArrayParam(RetSymbol, RetAlign, ResultSize);
     } else {
       MakeDeclareScalarParam(RetSymbol, ResultSize);
@@ -1704,7 +1706,8 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     ComputePTXValueVTs(*this, DL, Ctx, CLI.CallConv, RetTy, VTs, Offsets);
     assert(VTs.size() == Ins.size() && "Bad value decomposition");
 
-    const Align RetAlign = getArgumentAlignment(CB, RetTy, 0, DL);
+    const Align RetAlign =
+        getParamAlign(CB, RetTy, AttributeList::ReturnIndex, DL);
     const SDValue RetSymbol = DAG.getExternalSymbol("retval0", MVT::i32);
 
     // PTX Interoperability Guide 3.3(A): [Integer] Values shorter than
@@ -4135,7 +4138,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
       assert(VTs.size() == ArgIns.size() && "Size mismatch");
       assert(VTs.size() == Offsets.size() && "Size mismatch");
 
-      const Align ArgAlign = getFunctionArgumentAlignment(
+      const Align ArgAlign = getParamAlign(
           &F, Ty, Arg.getArgNo() + AttributeList::FirstArgIndex, DL);
 
       unsigned I = 0;
@@ -4193,7 +4196,7 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
   const SDValue RetSymbol = DAG.getExternalSymbol("func_retval0", MVT::i32);
   const auto RetAlign =
-      getFunctionArgumentAlignment(&F, RetTy, AttributeList::ReturnIndex, DL);
+      getParamAlign(&F, RetTy, AttributeList::ReturnIndex, DL);
 
   // PTX Interoperability Guide 3.3(A): [Integer] Values shorter than
   // 32-bits are sign extended or zero extended, depending on whether

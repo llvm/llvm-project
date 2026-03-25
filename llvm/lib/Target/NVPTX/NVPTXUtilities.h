@@ -38,20 +38,26 @@ Function *getMaybeBitcastedCallee(const CallBase *CB);
 /// function has internal or private linkage as for other linkage types callers
 /// may already rely on default alignment. To allow using 128-bit vectorized
 /// loads/stores, this function ensures that alignment is 16 or greater.
-Align getFunctionParamOptimizedAlign(const Function *F, Type *ArgTy,
-                                     const DataLayout &DL);
+Align getPromotedParamTypeAlign(const Function *F, Type *ArgTy,
+                                const DataLayout &DL);
 
-Align getFunctionArgumentAlignment(const Function *F, Type *Ty, unsigned Idx,
-                                   const DataLayout &DL);
+Align getDeviceByValParamAlign(const Function *F, Type *ArgTy,
+                               Align InitialAlign, const DataLayout &DL);
 
-Align getFunctionByValParamAlign(const Function *F, Type *ArgTy,
-                                 Align InitialAlign, const DataLayout &DL);
+/// Get the alignment for a function parameter or return value.
+/// \p AttrIdx is the AttributeList index (e.g. FirstArgIndex + argNo, or
+/// ReturnIndex for return values). Checks for an explicit alignment attribute,
+/// then falls back to getPromotedParamTypeAlign, incorporating byval param
+/// alignment when applicable.
+Align getParamAlign(const Function *F, Type *Ty, unsigned AttrIdx,
+                    const DataLayout &DL);
 
-Align getOptimalAlignForParam(const Function *F, const Argument &Arg, Type *Ty,
-                              const DataLayout &DL);
-
-Align getArgumentAlignment(const CallBase *CB, Type *Ty, unsigned Idx,
-                           const DataLayout &DL);
+/// Get the alignment for a call-site argument or return value. Resolves the
+/// callee and delegates to the Function overload of getParamAlign. For
+/// indirect calls with no resolvable callee, falls back to
+/// getPromotedParamTypeAlign.
+Align getParamAlign(const CallBase *CB, Type *Ty, unsigned AttrIdx,
+                    const DataLayout &DL);
 
 // PTX ABI requires all scalar argument/return values to have
 // bit-size as a power of two of at least 32 bits.
