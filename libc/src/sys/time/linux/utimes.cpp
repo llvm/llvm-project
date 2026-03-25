@@ -22,11 +22,9 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, utimes,
                    (const char *path, const struct timeval times[2])) {
-  int ret;
-
 #ifdef SYS_utimes
   // No need to define a timespec struct, use the syscall directly.
-  ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_utimes, path, times);
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_utimes, path, times);
 
   if (ret < 0) {
     libc_errno = -ret;
