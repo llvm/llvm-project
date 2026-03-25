@@ -3,7 +3,9 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=bonaire < %s | FileCheck %s -check-prefix=SI
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=fiji < %s | FileCheck %s -check-prefix=VI
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck %s -check-prefixes=GFX9,GFX9-SDAG
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck %s -check-prefixes=GFX9,GFX9-GISEL
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck %s -check-prefixes=GFX9,GFX9-GISEL
+
+; TODO: fneg/fabs folding for GlobalISel
 
 define amdgpu_kernel void @s_cvt_pknorm_i16_f32(ptr addrspace(1) %out, float %x, float %y) #0 {
 ; SI-LABEL: s_cvt_pknorm_i16_f32:
