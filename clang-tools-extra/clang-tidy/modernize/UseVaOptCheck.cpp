@@ -30,7 +30,9 @@ public:
     bool PrevHashHash = false;
     for (const Token Tok : MI->tokens()) {
       if (PrevHashHash) {
-        assert(PrevComma);
+        // FIXME: An assert should be enough, this is just to please the linter.
+        if (!PrevComma)
+          llvm_unreachable("PrevComma cannot be unset if PrevHashHash is set");
         if (const auto *II = Tok.getIdentifierInfo();
             II && II->getName() == "__VA_ARGS__") {
           Check.diag(Tok.getLocation(),
