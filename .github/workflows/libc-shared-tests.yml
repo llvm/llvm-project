@@ -46,15 +46,15 @@ jobs:
         include:
           - arch: aarch64
             libc: libc6-dev-aarch64-cross
-            libcpp: libstdc++14-dev-aarch64-cross
+            libcpp: libstdc++6-dev-aarch64-cross
             target_triple: aarch64-linux-gnu
           - arch: riscv64
             libc: libc6-dev-riscv64-cross
-            libcpp: libstdc++14-dev-riscv64-cross
+            libcpp: libstdc++6-dev-riscv64-cross
             target_triple: riscv64-linux-gnu
           - arch: ppc64le
             libc: libc6-dev-ppc64el-cross
-            libcpp: libstdc++14-dev-ppc64el-cross
+            libcpp: libstdc++6-dev-ppc64el-cross
             target_triple: ppc64le-linux-gnu
     
     steps:
