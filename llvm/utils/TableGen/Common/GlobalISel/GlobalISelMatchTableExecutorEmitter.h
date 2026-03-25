@@ -188,7 +188,7 @@ protected:
                                Comment);
   }
 
-  GlobalISelMatchTableExecutorEmitter();
+  GlobalISelMatchTableExecutorEmitter() = default;
 
 public:
   virtual ~GlobalISelMatchTableExecutorEmitter() = default;
