@@ -831,12 +831,8 @@ define i128 @test_bitreverse_i128(i128 %a) nounwind {
 ; X86XOP-NEXT:    andl $-16, %esp
 ; X86XOP-NEXT:    subl $16, %esp
 ; X86XOP-NEXT:    movl 8(%ebp), %eax
-; X86XOP-NEXT:    vmovdqa {{.*#+}} xmm0 = [87,86,85,84,83,82,81,80,95,94,93,92,91,90,89,88]
-; X86XOP-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X86XOP-NEXT:    vpperm %xmm0, %xmm1, %xmm0, %xmm1
-; X86XOP-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
-; X86XOP-NEXT:    vpperm %xmm0, %xmm2, %xmm0, %xmm0
-; X86XOP-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X86XOP-NEXT:    vpshufd {{.*#+}} xmm0 = mem[2,3,0,1]
+; X86XOP-NEXT:    vpperm {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0, %xmm0
 ; X86XOP-NEXT:    vmovdqa %xmm0, (%eax)
 ; X86XOP-NEXT:    movl %ebp, %esp
 ; X86XOP-NEXT:    popl %ebp
@@ -846,44 +842,26 @@ define i128 @test_bitreverse_i128(i128 %a) nounwind {
 ; X86GFNI:       # %bb.0:
 ; X86GFNI-NEXT:    pushl %ebp
 ; X86GFNI-NEXT:    movl %esp, %ebp
-; X86GFNI-NEXT:    pushl %edi
-; X86GFNI-NEXT:    pushl %esi
 ; X86GFNI-NEXT:    andl $-16, %esp
+; X86GFNI-NEXT:    subl $16, %esp
 ; X86GFNI-NEXT:    movl 8(%ebp), %eax
-; X86GFNI-NEXT:    vpbroadcastq {{.*#+}} xmm0 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
-; X86GFNI-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X86GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
-; X86GFNI-NEXT:    vpextrd $1, %xmm1, %ecx
-; X86GFNI-NEXT:    bswapl %ecx
-; X86GFNI-NEXT:    vmovd %xmm1, %edx
-; X86GFNI-NEXT:    bswapl %edx
-; X86GFNI-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X86GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm0
-; X86GFNI-NEXT:    vpextrd $1, %xmm0, %esi
-; X86GFNI-NEXT:    bswapl %esi
-; X86GFNI-NEXT:    vmovd %xmm0, %edi
-; X86GFNI-NEXT:    bswapl %edi
-; X86GFNI-NEXT:    movl %edi, 12(%eax)
-; X86GFNI-NEXT:    movl %esi, 8(%eax)
-; X86GFNI-NEXT:    movl %edx, 4(%eax)
-; X86GFNI-NEXT:    movl %ecx, (%eax)
-; X86GFNI-NEXT:    leal -8(%ebp), %esp
-; X86GFNI-NEXT:    popl %esi
-; X86GFNI-NEXT:    popl %edi
+; X86GFNI-NEXT:    vmovdqu 24(%ebp), %xmm0
+; X86GFNI-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; X86GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}{1to2}, %xmm0, %xmm0
+; X86GFNI-NEXT:    vmovdqa %xmm0, (%eax)
+; X86GFNI-NEXT:    movl %ebp, %esp
 ; X86GFNI-NEXT:    popl %ebp
 ; X86GFNI-NEXT:    retl $4
 ;
 ; X64GFNI-LABEL: test_bitreverse_i128:
 ; X64GFNI:       # %bb.0:
-; X64GFNI-NEXT:    vmovq %rsi, %xmm0
-; X64GFNI-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
-; X64GFNI-NEXT:    vgf2p8affineqb $0, %xmm1, %xmm0, %xmm0
-; X64GFNI-NEXT:    vmovq %xmm0, %rax
-; X64GFNI-NEXT:    bswapq %rax
 ; X64GFNI-NEXT:    vmovq %rdi, %xmm0
-; X64GFNI-NEXT:    vgf2p8affineqb $0, %xmm1, %xmm0, %xmm0
-; X64GFNI-NEXT:    vmovq %xmm0, %rdx
-; X64GFNI-NEXT:    bswapq %rdx
+; X64GFNI-NEXT:    vmovq %rsi, %xmm1
+; X64GFNI-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; X64GFNI-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8]
+; X64GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; X64GFNI-NEXT:    vmovq %xmm0, %rax
+; X64GFNI-NEXT:    vpextrq $1, %xmm0, %rdx
 ; X64GFNI-NEXT:    retq
   %b = call i128 @llvm.bitreverse.i128(i128 %a)
   ret i128 %b
@@ -1144,84 +1122,41 @@ define i256 @test_bitreverse_i256(i256 %a) nounwind {
 ; X86XOP-LABEL: test_bitreverse_i256:
 ; X86XOP:       # %bb.0:
 ; X86XOP-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86XOP-NEXT:    vmovdqa {{.*#+}} xmm0 = [87,86,85,84,83,82,81,80,95,94,93,92,91,90,89,88]
-; X86XOP-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X86XOP-NEXT:    vpperm %xmm0, %xmm1, %xmm0, %xmm1
-; X86XOP-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
-; X86XOP-NEXT:    vpperm %xmm0, %xmm2, %xmm0, %xmm2
-; X86XOP-NEXT:    vmovq {{.*#+}} xmm3 = mem[0],zero
-; X86XOP-NEXT:    vpperm %xmm0, %xmm3, %xmm0, %xmm3
-; X86XOP-NEXT:    vmovq {{.*#+}} xmm4 = mem[0],zero
-; X86XOP-NEXT:    vpperm %xmm0, %xmm4, %xmm0, %xmm0
-; X86XOP-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
-; X86XOP-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
-; X86XOP-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm1[0],ymm0[0],ymm1[2],ymm0[2]
-; X86XOP-NEXT:    vmovups %ymm0, (%eax)
+; X86XOP-NEXT:    vperm2f128 {{.*#+}} ymm0 = mem[2,3,0,1]
+; X86XOP-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1,0,3,2]
+; X86XOP-NEXT:    vmovdqa {{.*#+}} xmm1 = [87,86,85,84,83,82,81,80,95,94,93,92,91,90,89,88]
+; X86XOP-NEXT:    vpperm %xmm1, %xmm0, %xmm0, %xmm2
+; X86XOP-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; X86XOP-NEXT:    vpperm %xmm1, %xmm0, %xmm0, %xmm0
+; X86XOP-NEXT:    vmovdqa %xmm0, 16(%eax)
+; X86XOP-NEXT:    vmovdqa %xmm2, (%eax)
 ; X86XOP-NEXT:    vzeroupper
 ; X86XOP-NEXT:    retl $4
 ;
 ; X86GFNI-LABEL: test_bitreverse_i256:
 ; X86GFNI:       # %bb.0:
 ; X86GFNI-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86GFNI-NEXT:    vpbroadcastq {{.*#+}} xmm0 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
-; X86GFNI-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X86GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
-; X86GFNI-NEXT:    vmovd %xmm1, %ecx
-; X86GFNI-NEXT:    bswapl %ecx
-; X86GFNI-NEXT:    movl %ecx, 28(%eax)
-; X86GFNI-NEXT:    vpextrd $1, %xmm1, %ecx
-; X86GFNI-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X86GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
-; X86GFNI-NEXT:    bswapl %ecx
-; X86GFNI-NEXT:    movl %ecx, 24(%eax)
-; X86GFNI-NEXT:    vmovd %xmm1, %ecx
-; X86GFNI-NEXT:    bswapl %ecx
-; X86GFNI-NEXT:    movl %ecx, 20(%eax)
-; X86GFNI-NEXT:    vpextrd $1, %xmm1, %ecx
-; X86GFNI-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X86GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
-; X86GFNI-NEXT:    bswapl %ecx
-; X86GFNI-NEXT:    movl %ecx, 16(%eax)
-; X86GFNI-NEXT:    vmovd %xmm1, %ecx
-; X86GFNI-NEXT:    bswapl %ecx
-; X86GFNI-NEXT:    movl %ecx, 12(%eax)
-; X86GFNI-NEXT:    vpextrd $1, %xmm1, %ecx
-; X86GFNI-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X86GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm0
-; X86GFNI-NEXT:    bswapl %ecx
-; X86GFNI-NEXT:    movl %ecx, 8(%eax)
-; X86GFNI-NEXT:    vmovd %xmm0, %ecx
-; X86GFNI-NEXT:    bswapl %ecx
-; X86GFNI-NEXT:    movl %ecx, 4(%eax)
-; X86GFNI-NEXT:    vpextrd $1, %xmm0, %ecx
-; X86GFNI-NEXT:    bswapl %ecx
-; X86GFNI-NEXT:    movl %ecx, (%eax)
+; X86GFNI-NEXT:    vpermq {{.*#+}} ymm0 = mem[3,2,1,0]
+; X86GFNI-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,23,22,21,20,19,18,17,16,31,30,29,28,27,26,25,24]
+; X86GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}{1to4}, %ymm0, %ymm0
+; X86GFNI-NEXT:    vmovdqu %ymm0, (%eax)
+; X86GFNI-NEXT:    vzeroupper
 ; X86GFNI-NEXT:    retl $4
 ;
 ; X64GFNI-LABEL: test_bitreverse_i256:
 ; X64GFNI:       # %bb.0:
 ; X64GFNI-NEXT:    movq %rdi, %rax
-; X64GFNI-NEXT:    vmovq %r8, %xmm0
-; X64GFNI-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
-; X64GFNI-NEXT:    vgf2p8affineqb $0, %xmm1, %xmm0, %xmm0
-; X64GFNI-NEXT:    vmovq %xmm0, %rdi
-; X64GFNI-NEXT:    bswapq %rdi
-; X64GFNI-NEXT:    vmovq %rcx, %xmm0
-; X64GFNI-NEXT:    vgf2p8affineqb $0, %xmm1, %xmm0, %xmm0
-; X64GFNI-NEXT:    vmovq %xmm0, %rcx
-; X64GFNI-NEXT:    bswapq %rcx
-; X64GFNI-NEXT:    vmovq %rdx, %xmm0
-; X64GFNI-NEXT:    vgf2p8affineqb $0, %xmm1, %xmm0, %xmm0
-; X64GFNI-NEXT:    vmovq %xmm0, %rdx
-; X64GFNI-NEXT:    bswapq %rdx
 ; X64GFNI-NEXT:    vmovq %rsi, %xmm0
-; X64GFNI-NEXT:    vgf2p8affineqb $0, %xmm1, %xmm0, %xmm0
-; X64GFNI-NEXT:    vmovq %xmm0, %rsi
-; X64GFNI-NEXT:    bswapq %rsi
-; X64GFNI-NEXT:    movq %rsi, 24(%rax)
-; X64GFNI-NEXT:    movq %rdx, 16(%rax)
-; X64GFNI-NEXT:    movq %rcx, 8(%rax)
-; X64GFNI-NEXT:    movq %rdi, (%rax)
+; X64GFNI-NEXT:    vmovq %rdx, %xmm1
+; X64GFNI-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; X64GFNI-NEXT:    vmovq %rcx, %xmm1
+; X64GFNI-NEXT:    vmovq %r8, %xmm2
+; X64GFNI-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; X64GFNI-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; X64GFNI-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,23,22,21,20,19,18,17,16,31,30,29,28,27,26,25,24]
+; X64GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
+; X64GFNI-NEXT:    vmovdqu %ymm0, (%rdi)
+; X64GFNI-NEXT:    vzeroupper
 ; X64GFNI-NEXT:    retq
   %b = call i256 @llvm.bitreverse.i256(i256 %a)
   ret i256 %b
@@ -1732,152 +1667,56 @@ define i512 @test_bitreverse_i512(i512 %a) nounwind {
 ;
 ; X86XOP-LABEL: test_bitreverse_i512:
 ; X86XOP:       # %bb.0:
-; X86XOP-NEXT:    subl $16, %esp
-; X86XOP-NEXT:    vmovdqa {{.*#+}} xmm4 = [87,86,85,84,83,82,81,80,95,94,93,92,91,90,89,88]
-; X86XOP-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; X86XOP-NEXT:    vpperm %xmm4, %xmm0, %xmm0, %xmm0
-; X86XOP-NEXT:    vmovdqu %xmm0, (%esp) # 16-byte Spill
-; X86XOP-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X86XOP-NEXT:    vpperm %xmm4, %xmm1, %xmm0, %xmm1
-; X86XOP-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
-; X86XOP-NEXT:    vpperm %xmm4, %xmm2, %xmm0, %xmm2
-; X86XOP-NEXT:    vmovq {{.*#+}} xmm3 = mem[0],zero
-; X86XOP-NEXT:    vpperm %xmm4, %xmm3, %xmm0, %xmm3
-; X86XOP-NEXT:    vmovq {{.*#+}} xmm5 = mem[0],zero
-; X86XOP-NEXT:    vpperm %xmm4, %xmm5, %xmm0, %xmm5
-; X86XOP-NEXT:    vmovq {{.*#+}} xmm6 = mem[0],zero
-; X86XOP-NEXT:    vpperm %xmm4, %xmm6, %xmm0, %xmm6
-; X86XOP-NEXT:    vmovq {{.*#+}} xmm7 = mem[0],zero
-; X86XOP-NEXT:    vpperm %xmm4, %xmm7, %xmm0, %xmm7
-; X86XOP-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; X86XOP-NEXT:    vpperm %xmm4, %xmm0, %xmm0, %xmm0
-; X86XOP-NEXT:    vinsertf128 $1, %xmm7, %ymm0, %ymm0
-; X86XOP-NEXT:    vinsertf128 $1, %xmm5, %ymm6, %ymm4
-; X86XOP-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm4[0],ymm0[0],ymm4[2],ymm0[2]
 ; X86XOP-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86XOP-NEXT:    vmovups %ymm0, 32(%eax)
-; X86XOP-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm0
-; X86XOP-NEXT:    vinsertf128 $1, (%esp), %ymm1, %ymm1 # 16-byte Folded Reload
-; X86XOP-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm1[0],ymm0[0],ymm1[2],ymm0[2]
-; X86XOP-NEXT:    vmovups %ymm0, (%eax)
-; X86XOP-NEXT:    addl $16, %esp
+; X86XOP-NEXT:    vperm2f128 {{.*#+}} ymm0 = mem[2,3,0,1]
+; X86XOP-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1,0,3,2]
+; X86XOP-NEXT:    vmovdqa {{.*#+}} xmm1 = [87,86,85,84,83,82,81,80,95,94,93,92,91,90,89,88]
+; X86XOP-NEXT:    vpperm %xmm1, %xmm0, %xmm0, %xmm2
+; X86XOP-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; X86XOP-NEXT:    vpperm %xmm1, %xmm0, %xmm0, %xmm0
+; X86XOP-NEXT:    vperm2f128 {{.*#+}} ymm3 = mem[2,3,0,1]
+; X86XOP-NEXT:    vshufpd {{.*#+}} ymm3 = ymm3[1,0,3,2]
+; X86XOP-NEXT:    vpperm %xmm1, %xmm3, %xmm0, %xmm4
+; X86XOP-NEXT:    vextractf128 $1, %ymm3, %xmm3
+; X86XOP-NEXT:    vpperm %xmm1, %xmm3, %xmm0, %xmm1
+; X86XOP-NEXT:    vmovdqa %xmm1, 48(%eax)
+; X86XOP-NEXT:    vmovdqa %xmm4, 32(%eax)
+; X86XOP-NEXT:    vmovdqa %xmm0, 16(%eax)
+; X86XOP-NEXT:    vmovdqa %xmm2, (%eax)
 ; X86XOP-NEXT:    vzeroupper
 ; X86XOP-NEXT:    retl $4
 ;
 ; X86GFNI-LABEL: test_bitreverse_i512:
 ; X86GFNI:       # %bb.0:
 ; X86GFNI-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86GFNI-NEXT:    vpbroadcastq {{.*#+}} xmm0 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
-; X86GFNI-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X86GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
-; X86GFNI-NEXT:    vmovd %xmm1, %ecx
-; X86GFNI-NEXT:    bswapl %ecx
-; X86GFNI-NEXT:    movl %ecx, 60(%eax)
-; X86GFNI-NEXT:    vpextrd $1, %xmm1, %ecx
-; X86GFNI-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X86GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
-; X86GFNI-NEXT:    bswapl %ecx
-; X86GFNI-NEXT:    movl %ecx, 56(%eax)
-; X86GFNI-NEXT:    vmovd %xmm1, %ecx
-; X86GFNI-NEXT:    bswapl %ecx
-; X86GFNI-NEXT:    movl %ecx, 52(%eax)
-; X86GFNI-NEXT:    vpextrd $1, %xmm1, %ecx
-; X86GFNI-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X86GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
-; X86GFNI-NEXT:    bswapl %ecx
-; X86GFNI-NEXT:    movl %ecx, 48(%eax)
-; X86GFNI-NEXT:    vmovd %xmm1, %ecx
-; X86GFNI-NEXT:    bswapl %ecx
-; X86GFNI-NEXT:    movl %ecx, 44(%eax)
-; X86GFNI-NEXT:    vpextrd $1, %xmm1, %ecx
-; X86GFNI-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X86GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
-; X86GFNI-NEXT:    bswapl %ecx
-; X86GFNI-NEXT:    movl %ecx, 40(%eax)
-; X86GFNI-NEXT:    vmovd %xmm1, %ecx
-; X86GFNI-NEXT:    bswapl %ecx
-; X86GFNI-NEXT:    movl %ecx, 36(%eax)
-; X86GFNI-NEXT:    vpextrd $1, %xmm1, %ecx
-; X86GFNI-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X86GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
-; X86GFNI-NEXT:    bswapl %ecx
-; X86GFNI-NEXT:    movl %ecx, 32(%eax)
-; X86GFNI-NEXT:    vmovd %xmm1, %ecx
-; X86GFNI-NEXT:    bswapl %ecx
-; X86GFNI-NEXT:    movl %ecx, 28(%eax)
-; X86GFNI-NEXT:    vpextrd $1, %xmm1, %ecx
-; X86GFNI-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X86GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
-; X86GFNI-NEXT:    bswapl %ecx
-; X86GFNI-NEXT:    movl %ecx, 24(%eax)
-; X86GFNI-NEXT:    vmovd %xmm1, %ecx
-; X86GFNI-NEXT:    bswapl %ecx
-; X86GFNI-NEXT:    movl %ecx, 20(%eax)
-; X86GFNI-NEXT:    vpextrd $1, %xmm1, %ecx
-; X86GFNI-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X86GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
-; X86GFNI-NEXT:    bswapl %ecx
-; X86GFNI-NEXT:    movl %ecx, 16(%eax)
-; X86GFNI-NEXT:    vmovd %xmm1, %ecx
-; X86GFNI-NEXT:    bswapl %ecx
-; X86GFNI-NEXT:    movl %ecx, 12(%eax)
-; X86GFNI-NEXT:    vpextrd $1, %xmm1, %ecx
-; X86GFNI-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X86GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm0
-; X86GFNI-NEXT:    bswapl %ecx
-; X86GFNI-NEXT:    movl %ecx, 8(%eax)
-; X86GFNI-NEXT:    vmovd %xmm0, %ecx
-; X86GFNI-NEXT:    bswapl %ecx
-; X86GFNI-NEXT:    movl %ecx, 4(%eax)
-; X86GFNI-NEXT:    vpextrd $1, %xmm0, %ecx
-; X86GFNI-NEXT:    bswapl %ecx
-; X86GFNI-NEXT:    movl %ecx, (%eax)
+; X86GFNI-NEXT:    vpmovsxbq {{.*#+}} zmm0 = [7,6,5,4,3,2,1,0]
+; X86GFNI-NEXT:    vpermq {{[0-9]+}}(%esp), %zmm0, %zmm0
+; X86GFNI-NEXT:    vpshufb {{.*#+}} zmm0 = zmm0[7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,23,22,21,20,19,18,17,16,31,30,29,28,27,26,25,24,39,38,37,36,35,34,33,32,47,46,45,44,43,42,41,40,55,54,53,52,51,50,49,48,63,62,61,60,59,58,57,56]
+; X86GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}{1to8}, %zmm0, %zmm0
+; X86GFNI-NEXT:    vmovdqu64 %zmm0, (%eax)
+; X86GFNI-NEXT:    vzeroupper
 ; X86GFNI-NEXT:    retl $4
 ;
 ; X64GFNI-LABEL: test_bitreverse_i512:
 ; X64GFNI:       # %bb.0:
 ; X64GFNI-NEXT:    movq %rdi, %rax
-; X64GFNI-NEXT:    vmovq %r9, %xmm0
-; X64GFNI-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
-; X64GFNI-NEXT:    vgf2p8affineqb $0, %xmm1, %xmm0, %xmm0
-; X64GFNI-NEXT:    vmovq %xmm0, %rdi
-; X64GFNI-NEXT:    bswapq %rdi
-; X64GFNI-NEXT:    vmovq %r8, %xmm0
-; X64GFNI-NEXT:    vgf2p8affineqb $0, %xmm1, %xmm0, %xmm0
-; X64GFNI-NEXT:    vmovq %xmm0, %r8
-; X64GFNI-NEXT:    bswapq %r8
-; X64GFNI-NEXT:    vmovq %rcx, %xmm0
-; X64GFNI-NEXT:    vgf2p8affineqb $0, %xmm1, %xmm0, %xmm0
-; X64GFNI-NEXT:    vmovq %xmm0, %rcx
-; X64GFNI-NEXT:    bswapq %rcx
-; X64GFNI-NEXT:    vmovq %rdx, %xmm0
-; X64GFNI-NEXT:    vgf2p8affineqb $0, %xmm1, %xmm0, %xmm0
-; X64GFNI-NEXT:    vmovq %xmm0, %rdx
-; X64GFNI-NEXT:    bswapq %rdx
 ; X64GFNI-NEXT:    vmovq %rsi, %xmm0
-; X64GFNI-NEXT:    vgf2p8affineqb $0, %xmm1, %xmm0, %xmm0
-; X64GFNI-NEXT:    vmovq %xmm0, %rsi
-; X64GFNI-NEXT:    bswapq %rsi
-; X64GFNI-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; X64GFNI-NEXT:    vgf2p8affineqb $0, %xmm1, %xmm0, %xmm0
-; X64GFNI-NEXT:    vmovq %xmm0, %r9
-; X64GFNI-NEXT:    bswapq %r9
-; X64GFNI-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; X64GFNI-NEXT:    vgf2p8affineqb $0, %xmm1, %xmm0, %xmm0
-; X64GFNI-NEXT:    vmovq %xmm0, %r10
-; X64GFNI-NEXT:    bswapq %r10
-; X64GFNI-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; X64GFNI-NEXT:    vgf2p8affineqb $0, %xmm1, %xmm0, %xmm0
-; X64GFNI-NEXT:    vmovq %xmm0, %r11
-; X64GFNI-NEXT:    bswapq %r11
-; X64GFNI-NEXT:    movq %r11, 16(%rax)
-; X64GFNI-NEXT:    movq %r10, 8(%rax)
-; X64GFNI-NEXT:    movq %r9, (%rax)
-; X64GFNI-NEXT:    movq %rsi, 56(%rax)
-; X64GFNI-NEXT:    movq %rdx, 48(%rax)
-; X64GFNI-NEXT:    movq %rcx, 40(%rax)
-; X64GFNI-NEXT:    movq %r8, 32(%rax)
-; X64GFNI-NEXT:    movq %rdi, 24(%rax)
+; X64GFNI-NEXT:    vmovq %rdx, %xmm1
+; X64GFNI-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; X64GFNI-NEXT:    vmovq %rcx, %xmm1
+; X64GFNI-NEXT:    vmovq %r8, %xmm2
+; X64GFNI-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; X64GFNI-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; X64GFNI-NEXT:    vpshufd {{.*#+}} xmm1 = mem[2,3,0,1]
+; X64GFNI-NEXT:    vmovq %r9, %xmm2
+; X64GFNI-NEXT:    vmovq {{.*#+}} xmm3 = mem[0],zero
+; X64GFNI-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
+; X64GFNI-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; X64GFNI-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
+; X64GFNI-NEXT:    vpshufb {{.*#+}} zmm0 = zmm0[7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,23,22,21,20,19,18,17,16,31,30,29,28,27,26,25,24,39,38,37,36,35,34,33,32,47,46,45,44,43,42,41,40,55,54,53,52,51,50,49,48,63,62,61,60,59,58,57,56]
+; X64GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; X64GFNI-NEXT:    vmovdqu64 %zmm0, (%rdi)
+; X64GFNI-NEXT:    vzeroupper
 ; X64GFNI-NEXT:    retq
   %b = call i512 @llvm.bitreverse.i512(i512 %a)
   ret i512 %b
@@ -2494,10 +2333,25 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; X86XOP-NEXT:    pushl %esi
 ; X86XOP-NEXT:    subl $44, %esp
 ; X86XOP-NEXT:    vmovdqa {{.*#+}} xmm0 = [87,86,85,84,83,82,81,80,95,94,93,92,91,90,89,88]
-; X86XOP-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86XOP-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %xmm1
 ; X86XOP-NEXT:    vpperm %xmm0, %xmm1, %xmm0, %xmm1
-; X86XOP-NEXT:    vpextrd $1, %xmm1, %eax
-; X86XOP-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; X86XOP-NEXT:    vpextrd $3, %xmm1, %eax
+; X86XOP-NEXT:    vperm2f128 {{.*#+}} ymm1 = mem[2,3,0,1]
+; X86XOP-NEXT:    vshufpd {{.*#+}} ymm1 = ymm1[1,0,3,2]
+; X86XOP-NEXT:    vpperm %xmm0, %xmm1, %xmm0, %xmm2
+; X86XOP-NEXT:    vmovd %xmm2, %ecx
+; X86XOP-NEXT:    shrdl $16, %ecx, %eax
+; X86XOP-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86XOP-NEXT:    vpextrd $1, %xmm2, %eax
+; X86XOP-NEXT:    shrdl $16, %eax, %ecx
+; X86XOP-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86XOP-NEXT:    vpextrd $2, %xmm2, %ecx
+; X86XOP-NEXT:    shrdl $16, %ecx, %eax
+; X86XOP-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86XOP-NEXT:    vpextrd $3, %xmm2, %eax
+; X86XOP-NEXT:    shrdl $16, %eax, %ecx
+; X86XOP-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86XOP-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; X86XOP-NEXT:    vpperm %xmm0, %xmm1, %xmm0, %xmm1
 ; X86XOP-NEXT:    vmovd %xmm1, %ecx
 ; X86XOP-NEXT:    shrdl $16, %ecx, %eax
@@ -2505,62 +2359,41 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; X86XOP-NEXT:    vpextrd $1, %xmm1, %eax
 ; X86XOP-NEXT:    shrdl $16, %eax, %ecx
 ; X86XOP-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86XOP-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X86XOP-NEXT:    vpperm %xmm0, %xmm1, %xmm0, %xmm1
-; X86XOP-NEXT:    vmovd %xmm1, %ecx
+; X86XOP-NEXT:    vpextrd $2, %xmm1, %ecx
 ; X86XOP-NEXT:    shrdl $16, %ecx, %eax
 ; X86XOP-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86XOP-NEXT:    vpextrd $1, %xmm1, %eax
+; X86XOP-NEXT:    vpextrd $3, %xmm1, %eax
 ; X86XOP-NEXT:    shrdl $16, %eax, %ecx
 ; X86XOP-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86XOP-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X86XOP-NEXT:    vpperm %xmm0, %xmm1, %xmm0, %xmm1
-; X86XOP-NEXT:    vmovd %xmm1, %ecx
+; X86XOP-NEXT:    vperm2f128 {{.*#+}} ymm1 = mem[2,3,0,1]
+; X86XOP-NEXT:    vshufpd {{.*#+}} ymm1 = ymm1[1,0,3,2]
+; X86XOP-NEXT:    vpperm %xmm0, %xmm1, %xmm0, %xmm2
+; X86XOP-NEXT:    vmovd %xmm2, %ecx
 ; X86XOP-NEXT:    shrdl $16, %ecx, %eax
 ; X86XOP-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86XOP-NEXT:    vpextrd $1, %xmm1, %eax
+; X86XOP-NEXT:    vpextrd $1, %xmm2, %eax
 ; X86XOP-NEXT:    shrdl $16, %eax, %ecx
 ; X86XOP-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86XOP-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X86XOP-NEXT:    vpperm %xmm0, %xmm1, %xmm0, %xmm1
-; X86XOP-NEXT:    vmovd %xmm1, %ecx
-; X86XOP-NEXT:    shrdl $16, %ecx, %eax
-; X86XOP-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86XOP-NEXT:    vpextrd $1, %xmm1, %eax
-; X86XOP-NEXT:    shrdl $16, %eax, %ecx
-; X86XOP-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86XOP-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X86XOP-NEXT:    vpperm %xmm0, %xmm1, %xmm0, %xmm1
-; X86XOP-NEXT:    vmovd %xmm1, %ecx
-; X86XOP-NEXT:    shrdl $16, %ecx, %eax
-; X86XOP-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86XOP-NEXT:    vpextrd $1, %xmm1, %eax
-; X86XOP-NEXT:    shrdl $16, %eax, %ecx
-; X86XOP-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86XOP-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X86XOP-NEXT:    vpperm %xmm0, %xmm1, %xmm0, %xmm1
-; X86XOP-NEXT:    vmovd %xmm1, %ebp
+; X86XOP-NEXT:    vpextrd $2, %xmm2, %ebp
 ; X86XOP-NEXT:    shrdl $16, %ebp, %eax
 ; X86XOP-NEXT:    movl %eax, (%esp) # 4-byte Spill
-; X86XOP-NEXT:    vpextrd $1, %xmm1, %ebx
-; X86XOP-NEXT:    shrdl $16, %ebx, %ebp
-; X86XOP-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X86XOP-NEXT:    vpperm %xmm0, %xmm1, %xmm0, %xmm1
-; X86XOP-NEXT:    vmovd %xmm1, %esi
-; X86XOP-NEXT:    shrdl $16, %esi, %ebx
-; X86XOP-NEXT:    vpextrd $1, %xmm1, %edx
-; X86XOP-NEXT:    shrdl $16, %edx, %esi
-; X86XOP-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; X86XOP-NEXT:    vpextrd $3, %xmm2, %edi
+; X86XOP-NEXT:    shrdl $16, %edi, %ebp
+; X86XOP-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; X86XOP-NEXT:    vpperm %xmm0, %xmm1, %xmm0, %xmm0
-; X86XOP-NEXT:    vmovd %xmm0, %ecx
+; X86XOP-NEXT:    vmovd %xmm0, %esi
+; X86XOP-NEXT:    shrdl $16, %esi, %edi
+; X86XOP-NEXT:    vpextrd $1, %xmm0, %edx
+; X86XOP-NEXT:    shrdl $16, %edx, %esi
+; X86XOP-NEXT:    vpextrd $2, %xmm0, %ecx
 ; X86XOP-NEXT:    shrdl $16, %ecx, %edx
-; X86XOP-NEXT:    vpextrd $1, %xmm0, %edi
-; X86XOP-NEXT:    shrdl $16, %edi, %ecx
+; X86XOP-NEXT:    vpextrd $3, %xmm0, %ebx
+; X86XOP-NEXT:    shrdl $16, %ebx, %ecx
 ; X86XOP-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86XOP-NEXT:    movl %ecx, 60(%eax)
 ; X86XOP-NEXT:    movl %edx, 56(%eax)
 ; X86XOP-NEXT:    movl %esi, 52(%eax)
-; X86XOP-NEXT:    movl %ebx, 48(%eax)
+; X86XOP-NEXT:    movl %edi, 48(%eax)
 ; X86XOP-NEXT:    movl %ebp, 44(%eax)
 ; X86XOP-NEXT:    movl (%esp), %ecx # 4-byte Reload
 ; X86XOP-NEXT:    movl %ecx, 40(%eax)
@@ -2584,202 +2417,145 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; X86XOP-NEXT:    movl %ecx, 4(%eax)
 ; X86XOP-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; X86XOP-NEXT:    movl %ecx, (%eax)
-; X86XOP-NEXT:    shrl $16, %edi
-; X86XOP-NEXT:    movw %di, 64(%eax)
+; X86XOP-NEXT:    shrl $16, %ebx
+; X86XOP-NEXT:    movw %bx, 64(%eax)
 ; X86XOP-NEXT:    addl $44, %esp
 ; X86XOP-NEXT:    popl %esi
 ; X86XOP-NEXT:    popl %edi
 ; X86XOP-NEXT:    popl %ebx
 ; X86XOP-NEXT:    popl %ebp
+; X86XOP-NEXT:    vzeroupper
 ; X86XOP-NEXT:    retl $4
 ;
 ; X86GFNI-LABEL: large_promotion:
 ; X86GFNI:       # %bb.0:
-; X86GFNI-NEXT:    pushl %ebp
 ; X86GFNI-NEXT:    pushl %ebx
 ; X86GFNI-NEXT:    pushl %edi
 ; X86GFNI-NEXT:    pushl %esi
-; X86GFNI-NEXT:    subl $44, %esp
-; X86GFNI-NEXT:    vpbroadcastq {{.*#+}} xmm0 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
-; X86GFNI-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
-; X86GFNI-NEXT:    vmovd %xmm1, %eax
-; X86GFNI-NEXT:    bswapl %eax
-; X86GFNI-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X86GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
-; X86GFNI-NEXT:    vpextrd $1, %xmm1, %ecx
-; X86GFNI-NEXT:    bswapl %ecx
-; X86GFNI-NEXT:    shrdl $16, %ecx, %eax
-; X86GFNI-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86GFNI-NEXT:    vmovd %xmm1, %eax
-; X86GFNI-NEXT:    bswapl %eax
-; X86GFNI-NEXT:    shrdl $16, %eax, %ecx
-; X86GFNI-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86GFNI-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X86GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
-; X86GFNI-NEXT:    vpextrd $1, %xmm1, %ecx
-; X86GFNI-NEXT:    bswapl %ecx
-; X86GFNI-NEXT:    shrdl $16, %ecx, %eax
-; X86GFNI-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86GFNI-NEXT:    vmovd %xmm1, %eax
-; X86GFNI-NEXT:    bswapl %eax
-; X86GFNI-NEXT:    shrdl $16, %eax, %ecx
-; X86GFNI-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86GFNI-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X86GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
-; X86GFNI-NEXT:    vpextrd $1, %xmm1, %ecx
-; X86GFNI-NEXT:    bswapl %ecx
-; X86GFNI-NEXT:    shrdl $16, %ecx, %eax
-; X86GFNI-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86GFNI-NEXT:    vmovd %xmm1, %eax
-; X86GFNI-NEXT:    bswapl %eax
-; X86GFNI-NEXT:    shrdl $16, %eax, %ecx
-; X86GFNI-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86GFNI-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X86GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
-; X86GFNI-NEXT:    vpextrd $1, %xmm1, %ecx
-; X86GFNI-NEXT:    bswapl %ecx
-; X86GFNI-NEXT:    shrdl $16, %ecx, %eax
-; X86GFNI-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86GFNI-NEXT:    vmovd %xmm1, %eax
-; X86GFNI-NEXT:    bswapl %eax
-; X86GFNI-NEXT:    shrdl $16, %eax, %ecx
-; X86GFNI-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86GFNI-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X86GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
-; X86GFNI-NEXT:    vpextrd $1, %xmm1, %ecx
-; X86GFNI-NEXT:    bswapl %ecx
-; X86GFNI-NEXT:    shrdl $16, %ecx, %eax
-; X86GFNI-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86GFNI-NEXT:    vmovd %xmm1, %eax
-; X86GFNI-NEXT:    bswapl %eax
-; X86GFNI-NEXT:    shrdl $16, %eax, %ecx
-; X86GFNI-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86GFNI-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X86GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
-; X86GFNI-NEXT:    vpextrd $1, %xmm1, %ebp
-; X86GFNI-NEXT:    bswapl %ebp
-; X86GFNI-NEXT:    shrdl $16, %ebp, %eax
-; X86GFNI-NEXT:    movl %eax, (%esp) # 4-byte Spill
-; X86GFNI-NEXT:    vmovd %xmm1, %ebx
-; X86GFNI-NEXT:    bswapl %ebx
-; X86GFNI-NEXT:    shrdl $16, %ebx, %ebp
-; X86GFNI-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X86GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
-; X86GFNI-NEXT:    vpextrd $1, %xmm1, %edi
-; X86GFNI-NEXT:    bswapl %edi
-; X86GFNI-NEXT:    shrdl $16, %edi, %ebx
-; X86GFNI-NEXT:    vmovd %xmm1, %edx
-; X86GFNI-NEXT:    bswapl %edx
-; X86GFNI-NEXT:    shrdl $16, %edx, %edi
-; X86GFNI-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X86GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm0
-; X86GFNI-NEXT:    vpextrd $1, %xmm0, %ecx
-; X86GFNI-NEXT:    bswapl %ecx
-; X86GFNI-NEXT:    shrdl $16, %ecx, %edx
-; X86GFNI-NEXT:    vmovd %xmm0, %esi
-; X86GFNI-NEXT:    bswapl %esi
-; X86GFNI-NEXT:    shrdl $16, %esi, %ecx
 ; X86GFNI-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86GFNI-NEXT:    movl %ecx, 60(%eax)
-; X86GFNI-NEXT:    movl %edx, 56(%eax)
-; X86GFNI-NEXT:    movl %edi, 52(%eax)
-; X86GFNI-NEXT:    movl %ebx, 48(%eax)
-; X86GFNI-NEXT:    movl %ebp, 44(%eax)
-; X86GFNI-NEXT:    movl (%esp), %ecx # 4-byte Reload
-; X86GFNI-NEXT:    movl %ecx, 40(%eax)
-; X86GFNI-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86GFNI-NEXT:    movl %ecx, 36(%eax)
-; X86GFNI-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86GFNI-NEXT:    movl %ecx, 32(%eax)
-; X86GFNI-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86GFNI-NEXT:    movl %ecx, 28(%eax)
-; X86GFNI-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86GFNI-NEXT:    movl %ecx, 24(%eax)
-; X86GFNI-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86GFNI-NEXT:    movl %ecx, 20(%eax)
-; X86GFNI-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86GFNI-NEXT:    movl %ecx, 16(%eax)
-; X86GFNI-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86GFNI-NEXT:    movl %ecx, 12(%eax)
-; X86GFNI-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86GFNI-NEXT:    movl %ecx, 8(%eax)
-; X86GFNI-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86GFNI-NEXT:    movl %ecx, 4(%eax)
-; X86GFNI-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86GFNI-NEXT:    movl %ecx, (%eax)
-; X86GFNI-NEXT:    shrl $16, %esi
-; X86GFNI-NEXT:    movw %si, 64(%eax)
-; X86GFNI-NEXT:    addl $44, %esp
+; X86GFNI-NEXT:    vpmovsxbq {{.*#+}} zmm0 = [7,6,5,4,3,2,1,0]
+; X86GFNI-NEXT:    vpermq {{[0-9]+}}(%esp), %zmm0, %zmm1
+; X86GFNI-NEXT:    vbroadcasti32x4 {{.*#+}} zmm0 = [7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8]
+; X86GFNI-NEXT:    # zmm0 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
+; X86GFNI-NEXT:    vpshufb %zmm0, %zmm1, %zmm2
+; X86GFNI-NEXT:    vpbroadcastq {{.*#+}} zmm1 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; X86GFNI-NEXT:    vgf2p8affineqb $0, %zmm1, %zmm2, %zmm2
+; X86GFNI-NEXT:    vextracti32x4 $3, %zmm2, %xmm3
+; X86GFNI-NEXT:    vmovd %xmm3, %ecx
+; X86GFNI-NEXT:    vpextrd $1, %xmm3, %edx
+; X86GFNI-NEXT:    shrdl $16, %edx, %ecx
+; X86GFNI-NEXT:    vpmovsxbw {{.*#+}} xmm4 = [23,24,23,26,23,28,23,30]
+; X86GFNI-NEXT:    vpermw %zmm2, %zmm4, %zmm4
+; X86GFNI-NEXT:    vpinsrd $1, %ecx, %xmm4, %xmm4
+; X86GFNI-NEXT:    vpextrd $2, %xmm3, %esi
+; X86GFNI-NEXT:    shrdl $16, %esi, %edx
+; X86GFNI-NEXT:    vpinsrd $2, %edx, %xmm4, %xmm4
+; X86GFNI-NEXT:    vpextrd $3, %xmm3, %ecx
+; X86GFNI-NEXT:    shrdl $16, %ecx, %esi
+; X86GFNI-NEXT:    vpinsrd $3, %esi, %xmm4, %xmm3
+; X86GFNI-NEXT:    vextracti32x4 $2, %zmm2, %xmm4
+; X86GFNI-NEXT:    vmovd %xmm4, %edx
+; X86GFNI-NEXT:    vpextrd $1, %xmm4, %esi
+; X86GFNI-NEXT:    shrdl $16, %esi, %edx
+; X86GFNI-NEXT:    vpmovsxbw {{.*#+}} xmm5 = [15,16,15,18,15,20,15,22]
+; X86GFNI-NEXT:    vpermw %zmm2, %zmm5, %zmm5
+; X86GFNI-NEXT:    vpinsrd $1, %edx, %xmm5, %xmm5
+; X86GFNI-NEXT:    vpextrd $2, %xmm4, %edx
+; X86GFNI-NEXT:    shrdl $16, %edx, %esi
+; X86GFNI-NEXT:    vpinsrd $2, %esi, %xmm5, %xmm5
+; X86GFNI-NEXT:    vpextrd $3, %xmm4, %esi
+; X86GFNI-NEXT:    shldl $16, %edx, %esi
+; X86GFNI-NEXT:    vpinsrd $3, %esi, %xmm5, %xmm4
+; X86GFNI-NEXT:    vinserti128 $1, %xmm3, %ymm4, %ymm3
+; X86GFNI-NEXT:    vextracti128 $1, %ymm2, %xmm4
+; X86GFNI-NEXT:    vmovd %xmm4, %edx
+; X86GFNI-NEXT:    vpextrd $1, %xmm4, %esi
+; X86GFNI-NEXT:    shrdl $16, %esi, %edx
+; X86GFNI-NEXT:    vpmovsxbw {{.*#+}} xmm5 = [7,8,7,10,7,12,7,14]
+; X86GFNI-NEXT:    vpermw %ymm2, %ymm5, %ymm5
+; X86GFNI-NEXT:    vpinsrd $1, %edx, %xmm5, %xmm5
+; X86GFNI-NEXT:    vpextrd $2, %xmm4, %edx
+; X86GFNI-NEXT:    shrdl $16, %edx, %esi
+; X86GFNI-NEXT:    vpinsrd $2, %esi, %xmm5, %xmm5
+; X86GFNI-NEXT:    vpextrd $3, %xmm4, %esi
+; X86GFNI-NEXT:    shldl $16, %edx, %esi
+; X86GFNI-NEXT:    vpinsrd $3, %esi, %xmm5, %xmm4
+; X86GFNI-NEXT:    vpextrd $1, %xmm2, %edx
+; X86GFNI-NEXT:    vpextrd $2, %xmm2, %esi
+; X86GFNI-NEXT:    vpextrd $3, %xmm2, %edi
+; X86GFNI-NEXT:    shldl $16, %esi, %edi
+; X86GFNI-NEXT:    shldl $16, %edx, %esi
+; X86GFNI-NEXT:    vmovd %xmm2, %ebx
+; X86GFNI-NEXT:    shrdl $16, %edx, %ebx
+; X86GFNI-NEXT:    vpslld $16, %xmm2, %xmm2
+; X86GFNI-NEXT:    vpinsrd $1, %ebx, %xmm2, %xmm2
+; X86GFNI-NEXT:    vpinsrd $2, %esi, %xmm2, %xmm2
+; X86GFNI-NEXT:    vpinsrd $3, %edi, %xmm2, %xmm2
+; X86GFNI-NEXT:    vinserti128 $1, %xmm4, %ymm2, %ymm2
+; X86GFNI-NEXT:    vinserti64x4 $1, %ymm3, %zmm2, %zmm2
+; X86GFNI-NEXT:    vmovd {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; X86GFNI-NEXT:    vpbroadcastq %xmm3, %zmm3
+; X86GFNI-NEXT:    vpshufb %zmm0, %zmm3, %zmm0
+; X86GFNI-NEXT:    vgf2p8affineqb $0, %zmm1, %zmm0, %zmm0
+; X86GFNI-NEXT:    vextracti32x4 $3, %zmm0, %xmm0
+; X86GFNI-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; X86GFNI-NEXT:    vpord %zmm2, %zmm0, %zmm0
+; X86GFNI-NEXT:    shrl $16, %ecx
+; X86GFNI-NEXT:    movw %cx, 64(%eax)
+; X86GFNI-NEXT:    vmovdqu64 %zmm0, (%eax)
 ; X86GFNI-NEXT:    popl %esi
 ; X86GFNI-NEXT:    popl %edi
 ; X86GFNI-NEXT:    popl %ebx
-; X86GFNI-NEXT:    popl %ebp
+; X86GFNI-NEXT:    vzeroupper
 ; X86GFNI-NEXT:    retl $4
 ;
 ; X64GFNI-LABEL: large_promotion:
 ; X64GFNI:       # %bb.0:
-; X64GFNI-NEXT:    pushq %r14
-; X64GFNI-NEXT:    pushq %rbx
 ; X64GFNI-NEXT:    movq %rdi, %rax
-; X64GFNI-NEXT:    vpbroadcastq {{.*#+}} xmm0 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
-; X64GFNI-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X64GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
-; X64GFNI-NEXT:    vmovq %xmm1, %r10
-; X64GFNI-NEXT:    bswapq %r10
-; X64GFNI-NEXT:    vmovq %r9, %xmm1
-; X64GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
-; X64GFNI-NEXT:    vmovq %xmm1, %rdi
-; X64GFNI-NEXT:    bswapq %rdi
-; X64GFNI-NEXT:    vmovq %r8, %xmm1
-; X64GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
-; X64GFNI-NEXT:    vmovq %xmm1, %r8
-; X64GFNI-NEXT:    bswapq %r8
-; X64GFNI-NEXT:    movq %r8, %r9
-; X64GFNI-NEXT:    shldq $16, %rdi, %r9
-; X64GFNI-NEXT:    shldq $16, %r10, %rdi
-; X64GFNI-NEXT:    vmovq %rcx, %xmm1
-; X64GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
-; X64GFNI-NEXT:    vmovq %xmm1, %rcx
-; X64GFNI-NEXT:    bswapq %rcx
-; X64GFNI-NEXT:    shrdq $48, %rcx, %r8
+; X64GFNI-NEXT:    vmovq %rsi, %xmm0
 ; X64GFNI-NEXT:    vmovq %rdx, %xmm1
-; X64GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
-; X64GFNI-NEXT:    vmovq %xmm1, %rdx
-; X64GFNI-NEXT:    bswapq %rdx
-; X64GFNI-NEXT:    shrdq $48, %rdx, %rcx
-; X64GFNI-NEXT:    vmovq %rsi, %xmm1
-; X64GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
-; X64GFNI-NEXT:    vmovq %xmm1, %rsi
-; X64GFNI-NEXT:    bswapq %rsi
-; X64GFNI-NEXT:    shrdq $48, %rsi, %rdx
-; X64GFNI-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X64GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
-; X64GFNI-NEXT:    vmovq %xmm1, %r11
-; X64GFNI-NEXT:    bswapq %r11
-; X64GFNI-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X64GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
-; X64GFNI-NEXT:    vmovq %xmm1, %rbx
-; X64GFNI-NEXT:    bswapq %rbx
-; X64GFNI-NEXT:    shrdq $48, %rbx, %r11
-; X64GFNI-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X64GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm0
-; X64GFNI-NEXT:    vmovq %xmm0, %r14
-; X64GFNI-NEXT:    bswapq %r14
-; X64GFNI-NEXT:    shrdq $48, %r14, %rbx
-; X64GFNI-NEXT:    shrdq $48, %r10, %r14
-; X64GFNI-NEXT:    shrq $48, %rsi
-; X64GFNI-NEXT:    movq %r14, 16(%rax)
-; X64GFNI-NEXT:    movq %rbx, 8(%rax)
-; X64GFNI-NEXT:    movq %r11, (%rax)
-; X64GFNI-NEXT:    movq %rdx, 56(%rax)
-; X64GFNI-NEXT:    movq %rcx, 48(%rax)
-; X64GFNI-NEXT:    movq %r8, 40(%rax)
-; X64GFNI-NEXT:    movq %r9, 32(%rax)
-; X64GFNI-NEXT:    movq %rdi, 24(%rax)
-; X64GFNI-NEXT:    movw %si, 64(%rax)
-; X64GFNI-NEXT:    popq %rbx
-; X64GFNI-NEXT:    popq %r14
+; X64GFNI-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; X64GFNI-NEXT:    vmovq %rcx, %xmm1
+; X64GFNI-NEXT:    vmovq %r8, %xmm2
+; X64GFNI-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; X64GFNI-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; X64GFNI-NEXT:    vpshufd {{.*#+}} xmm1 = mem[2,3,0,1]
+; X64GFNI-NEXT:    vmovq %r9, %xmm2
+; X64GFNI-NEXT:    vmovq {{.*#+}} xmm3 = mem[0],zero
+; X64GFNI-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
+; X64GFNI-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; X64GFNI-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
+; X64GFNI-NEXT:    vpshufb {{.*#+}} zmm0 = zmm0[7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,23,22,21,20,19,18,17,16,31,30,29,28,27,26,25,24,39,38,37,36,35,34,33,32,47,46,45,44,43,42,41,40,55,54,53,52,51,50,49,48,63,62,61,60,59,58,57,56]
+; X64GFNI-NEXT:    vpbroadcastq {{.*#+}} zmm1 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; X64GFNI-NEXT:    vgf2p8affineqb $0, %zmm1, %zmm0, %zmm0
+; X64GFNI-NEXT:    vpmovsxbw {{.*#+}} xmm2 = [23,24,25,26,23,28,29,30]
+; X64GFNI-NEXT:    vpermw %zmm0, %zmm2, %zmm2
+; X64GFNI-NEXT:    vpmovsxbw {{.*#+}} xmm3 = [15,16,17,18,15,20,21,22]
+; X64GFNI-NEXT:    vpermw %zmm0, %zmm3, %zmm3
+; X64GFNI-NEXT:    vinserti128 $1, %xmm2, %ymm3, %ymm2
+; X64GFNI-NEXT:    vextracti32x4 $2, %zmm0, %xmm3
+; X64GFNI-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm3[6,7,8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zero
+; X64GFNI-NEXT:    vextracti32x4 $3, %zmm0, %xmm4
+; X64GFNI-NEXT:    vpsrldq {{.*#+}} xmm5 = xmm4[6,7,8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zero
+; X64GFNI-NEXT:    vinsertf128 $1, %xmm5, %ymm3, %ymm3
+; X64GFNI-NEXT:    vpunpcklqdq {{.*#+}} ymm2 = ymm2[0],ymm3[0],ymm2[2],ymm3[2]
+; X64GFNI-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; X64GFNI-NEXT:    vpmovsxbw {{.*#+}} ymm5 = [16,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]
+; X64GFNI-NEXT:    vpermi2w %ymm3, %ymm0, %ymm5
+; X64GFNI-NEXT:    vinserti64x4 $1, %ymm2, %zmm5, %zmm0
+; X64GFNI-NEXT:    vpbroadcastq {{[0-9]+}}(%rsp), %zmm2
+; X64GFNI-NEXT:    vpshufb {{.*#+}} zmm2 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm2[63,62,61,60,59,58,57,56]
+; X64GFNI-NEXT:    vgf2p8affineqb $0, %zmm1, %zmm2, %zmm1
+; X64GFNI-NEXT:    vextracti32x4 $3, %zmm1, %xmm1
+; X64GFNI-NEXT:    vpextrq $1, %xmm1, %rcx
+; X64GFNI-NEXT:    shrq $48, %rcx
+; X64GFNI-NEXT:    vmovd %ecx, %xmm1
+; X64GFNI-NEXT:    vporq %zmm0, %zmm1, %zmm0
+; X64GFNI-NEXT:    vpextrq $1, %xmm4, %rcx
+; X64GFNI-NEXT:    shrq $48, %rcx
+; X64GFNI-NEXT:    movw %cx, 64(%rdi)
+; X64GFNI-NEXT:    vmovdqu64 %zmm0, (%rdi)
+; X64GFNI-NEXT:    vzeroupper
 ; X64GFNI-NEXT:    retq
   %Z = call i528 @llvm.bitreverse.i528(i528 %A)
   ret i528 %Z

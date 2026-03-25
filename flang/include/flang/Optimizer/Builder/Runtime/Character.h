@@ -142,6 +142,15 @@ mlir::Value genVerify(fir::FirOpBuilder &builder, mlir::Location loc, int kind,
                       mlir::Value setBase, mlir::Value setLen,
                       mlir::Value back);
 
+/// Generate call to the SPLIT runtime routine that is specialized on
+/// \param kind.
+/// The \param kind represents the kind of the elements in the strings.
+/// Updates \p pos to the next separator position.
+mlir::Value genSplit(fir::FirOpBuilder &builder, mlir::Location loc, int kind,
+                     mlir::Value stringBase, mlir::Value stringLen,
+                     mlir::Value setBase, mlir::Value setLen, mlir::Value pos,
+                     mlir::Value back);
+
 /// Generate call to TOKENIZE runtime (Form 1).
 /// Splits \p stringBox into tokens based on separator characters in \p setBox.
 /// \p tokensBox must be an unallocated allocatable array that receives the

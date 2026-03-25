@@ -63,6 +63,13 @@ class ConfigurableService : public Service {
 public:
   ConfigurableService(int ConstructorOption) {}
 
+  /// Fallible named constructor for testing tryCreateService.
+  static Expected<std::unique_ptr<ConfigurableService>> Create(bool Fail) {
+    if (Fail)
+      return make_error<StringError>("failed to create service");
+    return std::make_unique<ConfigurableService>(42);
+  }
+
   void onDetach(OnCompleteFn OnComplete, bool ShutdownRequested) override {
     OnComplete();
   }
@@ -397,6 +404,26 @@ TEST(SessionTest, CreateServiceAndUseRef) {
             noErrors);
   auto &CS = S.createService<ConfigurableService>(42);
   CS.doMoreConfig(1);
+}
+
+TEST(SessionTest, TryCreateServiceSuccess) {
+  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
+            noErrors);
+  auto CS = S.tryCreateService<ConfigurableService>(false);
+  if (auto Err = CS.takeError()) {
+    ADD_FAILURE() << "expected service creation to succeed";
+    consumeError(std::move(Err));
+  }
+}
+
+TEST(SessionTest, TryCreateServiceFailure) {
+  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
+            noErrors);
+  auto CS = S.tryCreateService<ConfigurableService>(true);
+  if (auto Err = CS.takeError())
+    consumeError(std::move(Err));
+  else
+    ADD_FAILURE() << "expected service creation to fail";
 }
 
 TEST(ControllerAccessTest, Basics) {

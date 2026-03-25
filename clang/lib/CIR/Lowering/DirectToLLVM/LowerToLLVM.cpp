@@ -46,6 +46,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace cir;
 using namespace llvm;
@@ -2568,8 +2569,10 @@ void CIRToLLVMGlobalOpLowering::setupRegionInitializedLLVMGlobalOp(
   //        in CIRToLLVMGlobalOpLowering::matchAndRewrite() but that will go
   //        away when the placeholders are no longer needed.
   const bool isConst = op.getConstant();
-  assert(!cir::MissingFeatures::addressSpace());
-  const unsigned addrSpace = 0;
+  unsigned addrSpace = 0;
+  if (auto targetAS = mlir::dyn_cast_if_present<cir::TargetAddressSpaceAttr>(
+          op.getAddrSpaceAttr()))
+    addrSpace = targetAS.getValue();
   const bool isDsoLocal = op.getDsoLocal();
   const bool isThreadLocal = (bool)op.getTlsModelAttr();
   const uint64_t alignment = op.getAlignment().value_or(0);
@@ -2625,11 +2628,14 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   // This is the LLVM dialect type.
   const mlir::Type llvmType =
       convertTypeForMemory(*getTypeConverter(), dataLayout, cirSymType);
+
   // FIXME: These default values are placeholders until the the equivalent
   //        attributes are available on cir.global ops.
   const bool isConst = op.getConstant();
-  assert(!cir::MissingFeatures::addressSpace());
-  const unsigned addrSpace = 0;
+  unsigned addrSpace = 0;
+  if (auto targetAS = mlir::dyn_cast_if_present<cir::TargetAddressSpaceAttr>(
+          op.getAddrSpaceAttr()))
+    addrSpace = targetAS.getValue();
   const bool isDsoLocal = op.getDsoLocal();
   const bool isThreadLocal = (bool)op.getTlsModelAttr();
   const uint64_t alignment = op.getAlignment().value_or(0);
@@ -4925,7 +4931,8 @@ void populateCIRToLLVMPasses(mlir::OpPassManager &pm) {
 }
 
 std::unique_ptr<llvm::Module>
-lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp mlirModule, LLVMContext &llvmCtx) {
+lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp mlirModule, LLVMContext &llvmCtx,
+                             StringRef mlirSaveTempsOutFile) {
   llvm::TimeTraceScope scope("lower from CIR to LLVM directly");
 
   mlir::MLIRContext *mlirCtx = mlirModule.getContext();
@@ -4939,6 +4946,13 @@ lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp mlirModule, LLVMContext &llvmCtx) {
     // FIXME: Handle any errors where they occurs and return a nullptr here.
     report_fatal_error(
         "The pass manager failed to lower CIR to LLVMIR dialect!");
+  }
+
+  if (!mlirSaveTempsOutFile.empty()) {
+    std::error_code ec;
+    llvm::raw_fd_ostream out(mlirSaveTempsOutFile, ec);
+    if (!ec)
+      mlirModule->print(out);
   }
 
   mlir::registerBuiltinDialectTranslation(*mlirCtx);

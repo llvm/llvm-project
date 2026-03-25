@@ -2614,27 +2614,6 @@ void OmpAttributeVisitor::Post(const parser::OpenMPAllocatorsConstruct &x) {
   PopContext();
 }
 
-static bool IsPrivatizable(const Symbol *sym) {
-  auto *misc{sym->detailsIf<MiscDetails>()};
-  return IsVariableName(*sym) && !IsProcedure(*sym) && !IsNamedConstant(*sym) &&
-      ( // OpenMP 5.2, 5.1.1: Assumed-size arrays are shared
-          !semantics::IsAssumedSizeArray(*sym) ||
-          // If CrayPointer is among the DSA list then the
-          // CrayPointee is Privatizable
-          sym->test(Symbol::Flag::CrayPointee)) &&
-      !sym->owner().IsDerivedType() &&
-      sym->owner().kind() != Scope::Kind::ImpliedDos &&
-      sym->owner().kind() != Scope::Kind::Forall &&
-      !sym->detailsIf<semantics::AssocEntityDetails>() &&
-      !sym->detailsIf<semantics::NamelistDetails>() &&
-      (!misc ||
-          (misc->kind() != MiscDetails::Kind::ComplexPartRe &&
-              misc->kind() != MiscDetails::Kind::ComplexPartIm &&
-              misc->kind() != MiscDetails::Kind::KindParamInquiry &&
-              misc->kind() != MiscDetails::Kind::LenParamInquiry &&
-              misc->kind() != MiscDetails::Kind::ConstructName));
-}
-
 static bool IsTargetCaptureImplicitlyFirstprivatizeable(const Symbol &symbol,
     const Symbol::Flags &dsa, const Symbol::Flags &dataSharingAttributeFlags,
     const Symbol::Flags &dataMappingAttributeFlags,
@@ -2702,7 +2681,7 @@ static bool IsTargetCaptureImplicitlyFirstprivatizeable(const Symbol &symbol,
 
 void OmpAttributeVisitor::CreateImplicitSymbols(
     const parser::Name &name, const Symbol *symbol) {
-  if (!IsPrivatizable(symbol)) {
+  if (!omp::IsPrivatizable(*symbol)) {
     return;
   }
 
@@ -2978,7 +2957,7 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
   auto *symbol{name.symbol};
 
   if (symbol && WithinConstruct()) {
-    if (IsPrivatizable(symbol) && !IsObjectWithDSA(*symbol) &&
+    if (omp::IsPrivatizable(*symbol) && !IsObjectWithDSA(*symbol) &&
         !IsLocalInsideScope(*symbol, currScope())) {
       // TODO: create a separate function to go through the rules for
       //       predetermined, explicitly determined, and implicitly
