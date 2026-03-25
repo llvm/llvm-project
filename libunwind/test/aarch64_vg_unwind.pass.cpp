@@ -10,7 +10,7 @@
 // UNSUPPORTED: target={{.*-windows.*}}
 
 // TODO: investigate this failure.
-// XFAIL: target={{.*-apple-.*}} && using_system_stdlib
+// XFAIL: target={{.*-apple-.*}} && stdlib=system
 
 #include <libunwind.h>
 #include <stdlib.h>
