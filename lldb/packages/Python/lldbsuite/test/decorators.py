@@ -1061,6 +1061,22 @@ def skipUnlessCompilerIsClang(func):
     return skipTestIfFn(is_compiler_clang)(func)
 
 
+def skipUnlessMSVC(func):
+    """Decorate the item to skip test unless msvc is available."""
+
+    def is_msvc_in_path():
+        result = subprocess.run(
+            ["cl.exe"],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            return f"Test requires MSVC to be in the Path."
+        return None
+
+    return skipTestIfFn(is_msvc_in_path)(func)
+
+
 def skipUnlessThreadSanitizer(func):
     """Decorate the item to skip test unless Clang -fsanitize=thread is supported."""
 
@@ -1127,6 +1143,17 @@ def is_running_under_asan():
     if "ASAN_OPTIONS" in os.environ:
         return "ASAN unsupported"
     return None
+
+
+def is_running_under_mte():
+    if configuration.mte_enabled:
+        return "MTE unsupported"
+    return None
+
+
+def skipIfMTE(func):
+    """Skip this test when running with MTE (Memory Tagging Extension) enabled."""
+    return skipTestIfFn(is_running_under_mte)(func)
 
 
 def skipUnlessAddressSanitizer(func):
@@ -1277,3 +1304,37 @@ def skipIfBuildType(types: list[str]):
         and configuration.cmake_build_type.lower() in types,
         "skip on {} build type(s)".format(", ".join(types)),
     )
+
+
+def skipUnlessArm64eSupported(func):
+    """Decorate the item to skip test unless Clang can target arm64e."""
+
+    def can_build_and_run_arm64e():
+        arch = lldbplatformutil.getArchitecture()
+
+        # We need to be running the test suite for arm64 or arm64e. If we're
+        # running the whole test suite as arm64e, we don't need any additional
+        # checks.
+        if arch == "arm64e":
+            return None
+        elif arch != "arm64":
+            return "Not targeting arm64"
+
+        # Need at least macOS Tahoe (26) to run arm64e binaries.
+        if platform.mac_ver()[0] == "" or _check_expected_version(
+            "<", "26.0", platform.mac_ver()[0]
+        ):
+            return "Host cannot run arm64e binaries"
+
+        # Need a compiler that can target arm64e.
+        compiler_path = lldbplatformutil.getCompiler()
+        if not _compiler_supports(compiler_path, "-arch arm64e"):
+            return "Compiler cannot target arm64e"
+
+        # Need debugserver built with arm64e support.
+        if not configuration.arm64e_debugserver:
+            return "debugserver not built with arm64e support"
+
+        return None
+
+    return skipTestIfFn(can_build_and_run_arm64e)(func)

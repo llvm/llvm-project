@@ -66,21 +66,21 @@ Header hierarchy
   SSAFForceLinker.h                   (umbrella — include this in binaries)
   └── SSAFBuiltinForceLinker.h        (upstream built-in anchors only)
 
-- ``clang/include/clang/Analysis/Scalable/SSAFBuiltinForceLinker.h`` — anchors for
+- ``clang/include/clang/ScalableStaticAnalysisFramework/SSAFBuiltinForceLinker.h`` — anchors for
   upstream-provided (built-in) extractors and formats (e.g. ``JSONFormat``).
-- ``clang/include/clang/Analysis/Scalable/SSAFForceLinker.h`` — umbrella header
+- ``clang/include/clang/ScalableStaticAnalysisFramework/SSAFForceLinker.h`` — umbrella header
   that includes ``SSAFBuiltinForceLinker.h``.  This is the header that
   downstream projects should modify to add their own force-linker includes
   (see :doc:`HowToExtend`).
 
 Include the umbrella header with ``// IWYU pragma: keep`` in any translation
 unit that must guarantee all registrations are active — typically the entry
-point of a binary that uses ``clangAnalysisScalable``:
+point of a binary that uses ``clangScalableStaticAnalysisFrameworkCore``:
 
 .. code-block:: c++
 
   // In ExecuteCompilerInvocation.cpp
-  #include "clang/Analysis/Scalable/SSAFForceLinker.h" // IWYU pragma: keep
+  #include "clang/ScalableStaticAnalysisFramework/SSAFForceLinker.h" // IWYU pragma: keep
 
 Naming convention
 =================
@@ -103,10 +103,10 @@ library, regardless of whether any symbols are referenced:
 .. code-block:: bash
 
   # GNU ld / lld (Linux, BSD)
-  -Wl,--whole-archive -lclangAnalysisScalable -Wl,--no-whole-archive
+  -Wl,--whole-archive -lclangScalableStaticAnalysisFrameworkCore -Wl,--no-whole-archive
 
   # Apple ld
-  -Wl,-force_load,libclangAnalysisScalable.a
+  -Wl,-force_load,libclangScalableStaticAnalysisFrameworkCore.a
 
 Since CMake 3.24, the ``$<LINK_LIBRARY:WHOLE_ARCHIVE,...>`` generator expression
 provides a portable way to do the same:
@@ -114,7 +114,7 @@ provides a portable way to do the same:
 .. code-block:: cmake
 
   target_link_libraries(clang PRIVATE
-    "$<LINK_LIBRARY:WHOLE_ARCHIVE,clangAnalysisScalable>")
+    "$<LINK_LIBRARY:WHOLE_ARCHIVE,clangScalableStaticAnalysisFrameworkCore>")
 
 **Why we did not choose this approach**:
 

@@ -262,8 +262,9 @@ Value *InstCombinerImpl::EmitGEPOffsets(ArrayRef<GEPOperator *> GEPs,
         Offset = Add(OneUseSum, Offset);
 
       // Rewrite the GEP to reuse the computed offset. This also includes
-      // offsets from preceding one-use GEPs.
+      // offsets from preceding one-use GEPs of matched type.
       if (RewriteGEPs && Inst &&
+          Offset->getType()->isVectorTy() == GEP->getType()->isVectorTy() &&
           !(GEP->getSourceElementType()->isIntegerTy(8) &&
             GEP->getOperand(1) == Offset)) {
         replaceInstUsesWith(
@@ -1446,7 +1447,7 @@ void InstCombinerImpl::freelyInvertAllUsersOf(Value *I, Value *IgnoredUser) {
       break;
     }
     case Instruction::CondBr: {
-      BranchInst *BI = cast<BranchInst>(U);
+      CondBrInst *BI = cast<CondBrInst>(U);
       BI->swapSuccessors(); // swaps prof metadata too
       if (BPI)
         BPI->swapSuccEdgesProbabilities(BI->getParent());
@@ -1694,13 +1695,11 @@ Instruction *InstCombinerImpl::foldFBinOpOfIntCasts(BinaryOperator &BO) {
   // Check for:
   //    1) (binop ({s|u}itofp x), ({s|u}itofp y))
   //    2) (binop ({s|u}itofp x), FpC)
-  if (!match(BO.getOperand(0), m_SIToFP(m_Value(IntOps[0]))) &&
-      !match(BO.getOperand(0), m_UIToFP(m_Value(IntOps[0]))))
+  if (!match(BO.getOperand(0), m_IToFP(m_Value(IntOps[0]))))
     return nullptr;
 
   if (!match(BO.getOperand(1), m_Constant(Op1FpC)) &&
-      !match(BO.getOperand(1), m_SIToFP(m_Value(IntOps[1]))) &&
-      !match(BO.getOperand(1), m_UIToFP(m_Value(IntOps[1]))))
+      !match(BO.getOperand(1), m_IToFP(m_Value(IntOps[1]))))
     return nullptr;
 
   // Cache KnownBits a bit to potentially save some analysis.
@@ -1855,9 +1854,9 @@ static Value *simplifyInstructionWithPHI(Instruction &I, PHINode *PN,
 
   // Check if incoming PHI value can be replaced with constant
   // based on implied condition.
-  BranchInst *TerminatorBI = dyn_cast<BranchInst>(InBB->getTerminator());
+  CondBrInst *TerminatorBI = dyn_cast<CondBrInst>(InBB->getTerminator());
   const ICmpInst *ICmp = dyn_cast<ICmpInst>(&I);
-  if (TerminatorBI && TerminatorBI->isConditional() &&
+  if (TerminatorBI &&
       TerminatorBI->getSuccessor(0) != TerminatorBI->getSuccessor(1) && ICmp) {
     bool LHSIsTrue = TerminatorBI->getSuccessor(0) == PN->getParent();
     std::optional<bool> ImpliedCond = isImpliedCondition(
@@ -2015,8 +2014,8 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN,
     // be inserting the computation on some other paths (e.g. inside a loop).
     // Only do this if the pred block is unconditionally branching into the phi
     // block. Also, make sure that the pred block is not dead code.
-    BranchInst *BI = dyn_cast<BranchInst>(InBB->getTerminator());
-    if (!BI || !BI->isUnconditional() || !DT.isReachableFromEntry(InBB))
+    UncondBrInst *BI = dyn_cast<UncondBrInst>(InBB->getTerminator());
+    if (!BI || !DT.isReachableFromEntry(InBB))
       return nullptr;
 
     NewPhiValues.push_back(nullptr);
@@ -2270,9 +2269,8 @@ Instruction *InstCombinerImpl::foldBinopWithPhiOperands(BinaryOperator &BO) {
   // The block that we are hoisting to must reach here unconditionally.
   // Otherwise, we could be speculatively executing an expensive or
   // non-speculative op.
-  auto *PredBlockBranch = dyn_cast<BranchInst>(OtherBB->getTerminator());
-  if (!PredBlockBranch || PredBlockBranch->isConditional() ||
-      !DT.isReachableFromEntry(OtherBB))
+  auto *PredBlockBranch = dyn_cast<UncondBrInst>(OtherBB->getTerminator());
+  if (!PredBlockBranch || !DT.isReachableFromEntry(OtherBB))
     return nullptr;
 
   // TODO: This check could be tightened to only apply to binops (div/rem) that
@@ -4072,8 +4070,9 @@ static Instruction *tryToMoveFreeBeforeNullTest(CallInst &FI,
   // If there are more than 2 instructions, check that they are noops
   // i.e., they won't hurt the performance of the generated code.
   if (FreeInstrBB->size() != 2) {
-    for (const Instruction &Inst : FreeInstrBB->instructionsWithoutDebug()) {
-      if (&Inst == &FI || &Inst == FreeInstrBBTerminator)
+    for (const Instruction &Inst : *FreeInstrBB) {
+      if (&Inst == &FI || &Inst == FreeInstrBBTerminator ||
+          isa<PseudoProbeInst>(Inst))
         continue;
       auto *Cast = dyn_cast<CastInst>(&Inst);
       if (!Cast || !Cast->isNoopCast(DL))
@@ -4237,9 +4236,7 @@ Instruction *InstCombinerImpl::visitUnreachableInst(UnreachableInst &I) {
   return nullptr;
 }
 
-Instruction *InstCombinerImpl::visitUnconditionalBranchInst(BranchInst &BI) {
-  assert(BI.isUnconditional() && "Only for unconditional branches.");
-
+Instruction *InstCombinerImpl::visitUncondBrInst(UncondBrInst &BI) {
   // If this store is the second-to-last instruction in the basic block
   // (excluding debug info) and if the block ends with
   // an unconditional branch, try to move the store to the successor block.
@@ -4337,10 +4334,7 @@ void InstCombinerImpl::handlePotentiallyDeadSuccessors(BasicBlock *BB,
   handlePotentiallyDeadBlocks(Worklist);
 }
 
-Instruction *InstCombinerImpl::visitBranchInst(BranchInst &BI) {
-  if (BI.isUnconditional())
-    return visitUnconditionalBranchInst(BI);
-
+Instruction *InstCombinerImpl::visitCondBrInst(CondBrInst &BI) {
   // Change br (not X), label True, label False to: br X, label False, True
   Value *Cond = BI.getCondition();
   Value *X;
@@ -6085,7 +6079,7 @@ bool InstCombinerImpl::prepareWorklist(Function &F) {
     // If this is a branch or switch on a constant, mark only the single
     // live successor. Otherwise assume all successors are live.
     Instruction *TI = BB->getTerminator();
-    if (BranchInst *BI = dyn_cast<BranchInst>(TI); BI && BI->isConditional()) {
+    if (CondBrInst *BI = dyn_cast<CondBrInst>(TI)) {
       if (isa<UndefValue>(BI->getCondition())) {
         // Branch on undef is UB.
         HandleOnlyLiveSuccessor(BB, nullptr);
@@ -6151,11 +6145,11 @@ bool InstCombinerImpl::prepareWorklist(Function &F) {
 
 void InstCombiner::computeBackEdges() {
   // Collect backedges.
-  SmallPtrSet<BasicBlock *, 16> Visited;
+  SmallVector<bool> Visited(F.getMaxBlockNumber());
   for (BasicBlock *BB : RPOT) {
-    Visited.insert(BB);
+    Visited[BB->getNumber()] = true;
     for (BasicBlock *Succ : successors(BB))
-      if (Visited.contains(Succ))
+      if (Visited[Succ->getNumber()])
         BackEdges.insert({BB, Succ});
   }
   ComputedBackEdges = true;

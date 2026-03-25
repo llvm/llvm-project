@@ -340,10 +340,10 @@ to an entity of type ``bits<4>``.
 .. productionlist::
    Value: `SimpleValue` `ValueSuffix`*
         :| `Value` "#" [`Value`]
-   ValueSuffix: "{" `RangeList` "}"
+   ValueSuffix: `RangeList`
               :| "[" `SliceElements` "]"
               :| "." `TokIdentifier`
-   RangeList: `RangePiece` ("," `RangePiece`)*
+   RangeList: "{" `RangePiece` ("," `RangePiece`)* "}"
    RangePiece: `TokInteger`
              :| `TokInteger` "..." `TokInteger`
              :| `TokInteger` "-" `TokInteger`
@@ -686,7 +686,7 @@ arguments.
 .. productionlist::
    Body: ";" | "{" `BodyItem`* "}"
    BodyItem: `Type` `TokIdentifier` ["=" `Value`] ";"
-           :| "let" [`LetMode`] `TokIdentifier` ["{" `RangeList` "}"] "=" `Value` ";"
+           :| "let" [`LetMode`] `TokIdentifier` [`RangeList`] "=" `Value` ";"
            :| "defvar" `TokIdentifier` "=" `Value` ";"
            :| `Assert`
    LetMode: "append" | "prepend"
@@ -923,7 +923,7 @@ statements within the scope of the ``let``.
    Let:  "let" `LetList` "in" "{" `Statement`* "}"
       :| "let" `LetList` "in" `Statement`
    LetList: `LetItem` ("," `LetItem`)*
-   LetItem: [`LetMode`] `TokIdentifier` ["<" `RangeList` ">"] "=" `Value`
+   LetItem: [`LetMode`] `TokIdentifier` [`RangeList`] "=" `Value`
 
 The ``let`` statement establishes a scope, which is a sequence of statements
 in braces or a single statement with no braces. The bindings in the
@@ -1321,7 +1321,7 @@ variable over a sequence of values.
 .. productionlist::
    Foreach: "foreach" `ForeachIterator` "in" "{" `Statement`* "}"
           :| "foreach" `ForeachIterator` "in" `Statement`
-   ForeachIterator: `TokIdentifier` "=" ("{" `RangeList` "}" | `RangePiece` | `Value`)
+   ForeachIterator: `TokIdentifier` "=" (`RangeList` | `RangePiece` | `Value`)
 
 The body of the ``foreach`` is a series of statements in braces or a
 single statement with no braces. The statements are re-evaluated once for

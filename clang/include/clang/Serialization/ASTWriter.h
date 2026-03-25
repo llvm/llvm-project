@@ -428,10 +428,15 @@ private:
   /// record containing modifications to them.
   DeclUpdateMap DeclUpdates;
 
-  /// DeclUpdates added during parsing the GMF. We split these from
-  /// DeclUpdates since we want to add these updates in GMF on need.
+  /// DeclUpdates added during parsing the module unit. We split
+  /// these from DeclUpdates since we want to add these updates on need.
   /// Only meaningful for reduced BMI.
-  DeclUpdateMap DeclUpdatesFromGMF;
+  DeclUpdateMap DeclUpdatesLazy;
+
+  /// Convert non-lazy updates into lazy updates if we're in reduced BMI.
+  void prepareLazyUpdates();
+  /// Apply lazy update if the update is touched during the writing process.
+  void getLazyUpdates(const Decl *D);
 
   /// Mapping from decl templates and its new specialization in the
   /// current TU.
@@ -468,6 +473,11 @@ private:
   /// primary to this set, so that we can write out lexical content updates for
   /// it.
   llvm::SmallSetVector<const DeclContext *, 16> UpdatedDeclContexts;
+
+  /// Same as UpdatedDeclContexts except that we only apply these updates
+  /// lazily. e.g., if these decl context are touched during the writing
+  /// process. Only meaningful in reduced BMI.
+  llvm::SmallSetVector<const DeclContext *, 16> UpdatedDeclContextsLazy;
 
   /// Keeps track of declarations that we must emit, even though we're
   /// not guaranteed to be able to find them by walking the AST starting at the
@@ -928,6 +938,8 @@ public:
 
   void handleVTable(CXXRecordDecl *RD);
 
+  void addTouchedModuleFile(serialization::ModuleFile *);
+
 private:
   // ASTDeserializationListener implementation
   void ReaderInitialized(ASTReader *Reader) override;
@@ -980,7 +992,6 @@ private:
   void RedefinedHiddenDefinition(const NamedDecl *D, Module *M) override;
   void AddedAttributeToRecord(const Attr *Attr,
                               const RecordDecl *Record) override;
-  void EnteringModulePurview() override;
   void AddedManglingNumber(const Decl *D, unsigned) override;
   void AddedStaticLocalNumbers(const Decl *D, unsigned) override;
   void AddedAnonymousNamespace(const TranslationUnitDecl *,

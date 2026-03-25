@@ -420,7 +420,8 @@ RT_API_ATTRS bool RealOutputEditing<KIND>::EditEorDOutput(
       return EmitRepeated(io_, '*', width);
     }
     if (totalLength < width && digitsBeforePoint == 0 &&
-        zeroesBeforePoint == 0) {
+        zeroesBeforePoint == 0 &&
+        !(edit.modes.editingFlags & leadingZeroSuppress)) {
       zeroesBeforePoint = 1;
       ++totalLength;
     }
@@ -552,7 +553,7 @@ RT_API_ATTRS bool RealOutputEditing<KIND>::EditFOutput(const DataEdit &edit) {
     if (digitsBeforePoint + zeroesBeforePoint + zeroesAfterPoint +
             digitsAfterPoint + trailingZeroes ==
         0) {
-      zeroesBeforePoint = 1; // "." -> "0."
+      zeroesBeforePoint = 1; // "." -> "0." (avoid bare decimal point)
     }
     int totalLength{signLength + digitsBeforePoint + zeroesBeforePoint +
         1 /*'.'*/ + zeroesAfterPoint + digitsAfterPoint + trailingZeroes +
@@ -561,7 +562,8 @@ RT_API_ATTRS bool RealOutputEditing<KIND>::EditFOutput(const DataEdit &edit) {
     if (totalLength > width) {
       return EmitRepeated(io_, '*', width);
     }
-    if (totalLength < width && digitsBeforePoint + zeroesBeforePoint == 0) {
+    if (totalLength < width && digitsBeforePoint + zeroesBeforePoint == 0 &&
+        !(edit.modes.editingFlags & leadingZeroSuppress)) {
       zeroesBeforePoint = 1;
       ++totalLength;
     }

@@ -1158,7 +1158,9 @@ def UnusedValue : DiagGroup<"unused-value", [UnusedComparison, UnusedResult,
 def UnusedConstVariable : DiagGroup<"unused-const-variable">;
 def UnusedVariable : DiagGroup<"unused-variable",
                                [UnusedConstVariable]>;
-def UnusedButSetVariable : DiagGroup<"unused-but-set-variable">;
+def UnusedButSetGlobal : DiagGroup<"unused-but-set-global">;
+def UnusedButSetVariable
+    : DiagGroup<"unused-but-set-variable", [UnusedButSetGlobal]>;
 def UnusedLocalTypedef : DiagGroup<"unused-local-typedef">;
 def UnusedPropertyIvar :  DiagGroup<"unused-property-ivar">;
 def UnusedGetterReturnValue : DiagGroup<"unused-getter-return-value">;
@@ -1906,6 +1908,9 @@ def BitIntExtension : DiagGroup<"bit-int-extension">;
 
 // Warnings about misuse of ExtractAPI options.
 def ExtractAPIMisuse : DiagGroup<"extractapi-misuse">;
+
+// Warnings related to the "Scalable Static Analysis Framework" - SSAF.
+def ScalableStaticAnalysisFramework : DiagGroup<"scalable-static-analysis-framework">;
 
 // Warnings about using the non-standard extension having an explicit specialization
 // with a storage class specifier.

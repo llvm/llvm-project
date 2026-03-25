@@ -77,7 +77,7 @@ NonTrivial test_nrvo() {
 // CIR:     cir.return %[[RET]]
 // CIR:   } cleanup  normal {
 // CIR:     %[[NRVO_FLAG_VAL:.*]] = cir.load{{.*}} %[[NRVO_FLAG]]
-// CIR:     %[[NOT_NRVO_VAL:.*]] = cir.unary(not, %[[NRVO_FLAG_VAL]])
+// CIR:     %[[NOT_NRVO_VAL:.*]] = cir.not %[[NRVO_FLAG_VAL]]
 // CIR:     cir.if %[[NOT_NRVO_VAL]] {
 // CIR:       cir.call @_ZN10NonTrivialD1Ev(%[[RESULT]])
 // CIR:     }

@@ -12,10 +12,10 @@
 #include "clang/DependencyScanning/DependencyScanningFilesystem.h"
 #include "clang/DependencyScanning/DependencyScanningService.h"
 #include "clang/DependencyScanning/DependencyScanningWorker.h"
-#include "clang/Driver/Driver.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Option/Option.h"
 #include "llvm/Support/AdvisoryLock.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -150,8 +150,7 @@ public:
   /// Check the header search options for a given module when considering
   /// if the module comes from stable directories.
   bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
-                               StringRef ModuleFilename,
-                               StringRef SpecificModuleCachePath,
+                               StringRef ModuleFilename, StringRef ContextHash,
                                bool Complain) override {
 
     auto PrebuiltMapEntry = PrebuiltModulesASTMap.try_emplace(CurrentFile);
@@ -413,6 +412,8 @@ void dependencies::initializeScanCompilerInstance(
   ScanInstance.setBuildingModule(false);
   ScanInstance.createVirtualFileSystem(FS, DiagConsumer);
   ScanInstance.createDiagnostics(DiagConsumer, /*ShouldOwnClient=*/false);
+  if (Service.getOpts().Format == ScanningOutputFormat::P1689)
+    ScanInstance.getDiagnostics().setIgnoreAllWarnings(true);
   ScanInstance.createFileManager();
   ScanInstance.createSourceManager();
 
@@ -615,7 +616,7 @@ struct AsyncModuleCompile : PPCallbacks {
 
     HeaderSearch &HS = CI.getPreprocessor().getHeaderSearchInfo();
     ModuleCache &ModCache = CI.getModuleCache();
-    std::string ModuleFileName = HS.getCachedModuleFileName(M);
+    ModuleFileName ModuleFileName = HS.getCachedModuleFileName(M);
 
     uint64_t Timestamp = ModCache.getModuleTimestamp(ModuleFileName);
     // Someone else already built/validated the PCM.

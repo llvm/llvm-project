@@ -1047,13 +1047,10 @@ protected:
         const char *to = command.GetArgumentAtIndex(i + 1);
 
         if (from[0] && to[0]) {
-          Log *log = GetLog(LLDBLog::Host);
-          if (log) {
-            LLDB_LOGF(log,
-                      "target modules search path adding ImageSearchPath "
-                      "pair: '%s' -> '%s'",
-                      from, to);
-          }
+          LLDB_LOGF(GetLog(LLDBLog::Host),
+                    "target modules search path adding ImageSearchPath "
+                    "pair: '%s' -> '%s'",
+                    from, to);
           bool last_pair = ((argc - i) == 2);
           target.GetImageSearchPathList().Append(
               from, to, last_pair); // Notify if this is the last pair
@@ -4402,9 +4399,7 @@ protected:
           // Make sure we load any scripting resources that may be embedded
           // in the debug info files in case the platform supports that.
           Status error;
-          StreamString feedback_stream;
-          module_sp->LoadScriptingResourceInTarget(target, error,
-                                                   feedback_stream);
+          module_sp->LoadScriptingResourceInTarget(target, error);
           if (error.Fail() && error.AsCString())
             result.AppendWarningWithFormat(
                 "unable to load scripting data for module %s - error "
@@ -4413,8 +4408,6 @@ protected:
                     .GetFileNameStrippingExtension()
                     .GetCString(),
                 error.AsCString());
-          else if (feedback_stream.GetSize())
-            result.AppendWarning(feedback_stream.GetData());
 
           flush = true;
           result.SetStatus(eReturnStatusSuccessFinishResult);
