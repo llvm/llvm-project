@@ -21,6 +21,9 @@ namespace detail {
 
 class ContextImpl;
 class DeviceImpl;
+class EventImpl;
+
+using EventImplPtr = std::shared_ptr<EventImpl>;
 
 class QueueImpl : public std::enable_shared_from_this<QueueImpl> {
   struct PrivateTag {
@@ -28,7 +31,7 @@ class QueueImpl : public std::enable_shared_from_this<QueueImpl> {
   };
 
 public:
-  ~QueueImpl() = default;
+  ~QueueImpl();
 
   /// Constructs a SYCL queue from a device using an asyncHandler and
   /// a propList.
@@ -59,7 +62,11 @@ public:
   /// \return true if and only if the queue is in order.
   bool isInOrder() const { return MIsInorder; }
 
+  /// Waits for completion of all kernels submitted to this queue.
+  void wait();
+
 private:
+  ol_queue_handle_t MOffloadQueue = {};
   const bool MIsInorder;
   const async_handler MAsyncHandler;
   const property_list MPropList;
