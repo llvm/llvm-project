@@ -3707,7 +3707,12 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     return Plugin::success();
   }
 
-  Error deinitRPCDoorbell() override { return RPCSignal.deinit(); }
+  Error deinitRPCDoorbell() override {
+    const std::lock_guard<std::mutex> Lock(RPCSignalMutex);
+    if (RPCSignal.get().handle)
+      return RPCSignal.deinit();
+    return Plugin::success();
+  }
 
 private:
   /// Event handler that will be called by ROCr if an event is detected.
