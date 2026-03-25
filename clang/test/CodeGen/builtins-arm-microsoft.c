@@ -4,8 +4,6 @@
 // RUN:     | FileCheck %s -check-prefix CHECK-EABI
 // REQUIRES: arm-registered-target
 
-#include <arm_acle.h>
-
 void test_yield_intrinsic() {
   __yield();
 }
