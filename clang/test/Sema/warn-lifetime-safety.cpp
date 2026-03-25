@@ -2135,6 +2135,7 @@ struct S {
   S(const std::string &s [[clang::lifetimebound]]);
 
   S return_self_after_registration() const;
+  std::string_view getData() const [[clang::lifetimebound]];
 };
 
 S getS(const std::string &s [[clang::lifetimebound]]);
@@ -2147,8 +2148,8 @@ void from_free_function() {
 
 void from_constructor() {
   S s(std::string("temp")); // expected-warning {{object whose reference is captured does not live long enough}} \
-                              // expected-note {{destroyed here}}
-  use(s); // expected-note {{later used here}}
+                            // expected-note {{destroyed here}}
+  use(s);                   // expected-note {{later used here}}
 }
 
 struct Factory {
@@ -2175,8 +2176,8 @@ void from_lifetimebound_this_method() {
   {
     Factory f;
     value = f.makeThis(); // expected-warning {{object whose reference is captured does not live long enough}}
-  } // expected-note {{destroyed here}}
-  use(value); // expected-note {{later used here}}
+  }                       // expected-note {{destroyed here}}
+  use(value);             // expected-note {{later used here}}
 }
 
 void across_scope() {
@@ -2185,7 +2186,7 @@ void across_scope() {
     std::string str{"abc"};
     s = getS(str); // expected-warning {{object whose reference is captured does not live long enough}}
   }                // expected-note {{destroyed here}}
-  use(s); // expected-note {{later used here}}
+  use(s);          // expected-note {{later used here}}
 }
 
 void same_scope() {
@@ -2239,6 +2240,8 @@ S multiple_lifetimebound_params() {
 
 int getInt(const std::string &s [[clang::lifetimebound]]);
 
+// TODO: Diagnose [[clang::lifetimebound]] on functions whose return value
+// cannot refer to any object (e.g., returning int or enum).
 void primitive_return() {
   int i = getInt(std::string("temp"));
   use(i);
@@ -2362,6 +2365,25 @@ void gsl_owner_return_does_not_crash() {
   View v = obj;
   getMyObj(obj);
   use(v);
+}
+
+std::unique_ptr<S> getUniqueS(const std::string &s [[clang::lifetimebound]]);
+
+// FIXME: GSL Owner return types of lifetimebound calls are not yet tracked.
+void owner_return_unique_ptr_s() {
+  auto ptr = getUniqueS(std::string("temp"));
+  (void)ptr; // Should warn.
+}
+
+// FIXME: The warning here is from the local unique_ptr being destroyed on
+// return, not from lifetimebound origin tracking. GSL Owner return types are
+// not yet tracked.
+std::string_view return_dangling_view_through_owner() {
+  std::string local;
+  auto ups = getUniqueS(local);
+  S* s = ups.get(); // expected-warning {{address of stack memory is returned later}}
+  std::string_view sv = s->getData();
+  return sv; // expected-note {{returned here}}
 }
 
 } // namespace track_origins_for_lifetimebound_record_type
