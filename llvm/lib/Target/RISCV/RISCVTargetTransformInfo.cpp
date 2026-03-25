@@ -1288,7 +1288,6 @@ RISCVTTIImpl::getStridedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
       getMemoryOpCost(Opcode, VTy.getElementType(), Alignment, 0, CostKind,
                       {TTI::OK_AnyValue, TTI::OP_None}, I);
   unsigned NumLoads = getEstimatedVLFor(&VTy);
-  // Performant implementations of the vector extension will attempt to re-use
   // Performant implementations of the vector extension will coalesce
   // elements if they fall on the same cache line
   uint64_t CacheLineBytes = ST->getCacheLineSize();
