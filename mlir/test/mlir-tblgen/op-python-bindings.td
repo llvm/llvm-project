@@ -646,6 +646,21 @@ def SimpleOp : TestOp<"simple"> {
 // CHECK: def simple(i64, f64, i32, f32, *, loc=None, ip=None) -> _ods_ir.OpResultList:
 // CHECK:   return SimpleOp(i64=i64, f64=f64, i32=i32, f32=f32, loc=loc, ip=ip).results
 
+// CHECK: @_ods_cext.register_operation(_Dialect)
+// CHECK-LABEL: class SingleTypedResultOp(_ods_ir.OpView):
+// CHECK: OPERATION_NAME = "test.single_typed_result"
+def SingleTypedResultOp : TestOp<"single_typed_result"> {
+  // CHECK: @builtins.property
+  // CHECK: def i64(self) -> _ods_ir.OpResult[_ods_ir.IntegerType]:
+  // CHECK:   return self.operation.results[0]
+  let arguments = (ins AnyType:$in);
+  let results = (outs I64:$i64);
+}
+
+// CHECK: def single_typed_result(in_, *, results=None, loc=None, ip=None) ->
+// _ods_ir.OpResult[_ods_ir.IntegerType]: CHECK:   return
+// SingleTypedResultOp(in_=in_, results=results, loc=loc, ip=ip).result
+
 // CHECK-LABEL: class VariadicAndNormalRegionOp(_ods_ir.OpView):
 // CHECK: OPERATION_NAME = "test.variadic_and_normal_region"
 def VariadicAndNormalRegionOp : TestOp<"variadic_and_normal_region"> {

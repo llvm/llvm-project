@@ -280,7 +280,8 @@ MlirAttribute PyArrayAttribute::getItem(intptr_t i) const {
 void PyArrayAttribute::bindDerived(ClassTy &c) {
   c.def_static(
       "get",
-      [](const nb::list &attributes, DefaultingPyMlirContext context) {
+      [](nb::typed<nb::list, PyAttribute> attributes,
+         DefaultingPyMlirContext context) {
         std::vector<MlirAttribute> mlirAttributes;
         mlirAttributes.reserve(nb::len(attributes));
         for (auto attribute : attributes) {
@@ -306,7 +307,8 @@ void PyArrayAttribute::bindDerived(ClassTy &c) {
       .def("__iter__", [](const PyArrayAttribute &arr) {
         return PyArrayAttributeIterator(arr);
       });
-  c.def("__add__", [](PyArrayAttribute arr, const nb::list &extras) {
+  c.def("__add__", [](PyArrayAttribute arr,
+                      nb::typed<nb::list, PyAttribute> extras) {
     std::vector<MlirAttribute> attributes;
     intptr_t numOldElements = mlirArrayAttrGetNumElements(arr);
     attributes.reserve(numOldElements + nb::len(extras));

@@ -790,7 +790,7 @@ void PyFunctionType::bindDerived(ClassTy &c) {
       "Gets a FunctionType from a list of input and result types");
   c.def_prop_ro(
       "inputs",
-      [](PyFunctionType &self) {
+      [](PyFunctionType &self) -> nb::typed<nb::list, PyType> {
         MlirType t = self;
         nb::list types;
         for (intptr_t i = 0, e = mlirFunctionTypeGetNumInputs(self); i < e;
@@ -802,7 +802,7 @@ void PyFunctionType::bindDerived(ClassTy &c) {
       "Returns the list of input types in the FunctionType.");
   c.def_prop_ro(
       "results",
-      [](PyFunctionType &self) {
+      [](PyFunctionType &self) -> nb::typed<nb::list, PyType> {
         nb::list types;
         for (intptr_t i = 0, e = mlirFunctionTypeGetNumResults(self); i < e;
              ++i) {
