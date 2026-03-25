@@ -153,7 +153,7 @@ cir.func @test_typed_catch_with_unwind() {
 // Comparison: typeid comparison + brcond.
 // CHECK:       ^[[CMP_BLOCK]](%[[D_EXN:.*]]: !cir.ptr<!void>, %[[D_TID:.*]]: !u32i):
 // CHECK:         %[[TYPE_ID:.*]] = cir.eh.typeid @_ZTISt9exception
-// CHECK:         %[[CMP:.*]] = cir.cmp(eq, %[[D_TID]], %[[TYPE_ID]])
+// CHECK:         %[[CMP:.*]] = cir.cmp eq %[[D_TID]], %[[TYPE_ID]]
 // CHECK:         cir.brcond %[[CMP]] ^[[CATCH:bb[0-9]+]](%[[D_EXN]], %[[D_TID]] : !cir.ptr<!void>, !u32i), ^[[UNWIND_HANDLER:bb[0-9]+]](%[[D_EXN]], %[[D_TID]] : !cir.ptr<!void>, !u32i)
 //
 // Typed catch handler.
@@ -219,13 +219,13 @@ cir.func @test_multiple_typed_and_catch_all() {
 // First type comparison (exception type).
 // CHECK:       ^[[CMP1]](%[[C1_EXN:.*]]: !cir.ptr<!void>, %[[C1_TID:.*]]: !u32i):
 // CHECK:         %[[TID1:.*]] = cir.eh.typeid @_ZTISt9exception
-// CHECK:         %[[CMP1V:.*]] = cir.cmp(eq, %[[C1_TID]], %[[TID1]])
+// CHECK:         %[[CMP1V:.*]] = cir.cmp eq %[[C1_TID]], %[[TID1]]
 // CHECK:         cir.brcond %[[CMP1V]] ^[[CATCH_EXN:bb[0-9]+]](%[[C1_EXN]], %[[C1_TID]] : !cir.ptr<!void>, !u32i), ^[[CMP2_BLOCK:bb[0-9]+]](%[[C1_EXN]], %[[C1_TID]] : !cir.ptr<!void>, !u32i)
 //
 // Second type comparison (int type).
 // CHECK:       ^[[CMP2_BLOCK]](%[[C2_EXN:.*]]: !cir.ptr<!void>, %[[C2_TID:.*]]: !u32i):
 // CHECK:         %[[TID2:.*]] = cir.eh.typeid @_ZTIi
-// CHECK:         %[[CMP2:.*]] = cir.cmp(eq, %[[C2_TID]], %[[TID2]])
+// CHECK:         %[[CMP2:.*]] = cir.cmp eq %[[C2_TID]], %[[TID2]]
 // CHECK:         cir.brcond %[[CMP2]] ^[[CATCH_INT:bb[0-9]+]](%[[C2_EXN]], %[[C2_TID]] : !cir.ptr<!void>, !u32i), ^[[CATCH_ALL:bb[0-9]+]](%[[C2_EXN]], %[[C2_TID]] : !cir.ptr<!void>, !u32i)
 //
 // Exception catch handler.
@@ -405,7 +405,7 @@ cir.func @test_typed_catch_with_cleanup() {
 // Comparison: typeid comparison for std::exception, with unwind fallthrough.
 // CHECK:       ^[[CMP_BLOCK]](%[[D_EXN:.*]]: !cir.ptr<!void>, %[[D_TID:.*]]: !u32i):
 // CHECK:         %[[TYPE_ID:.*]] = cir.eh.typeid @_ZTISt9exception
-// CHECK:         %[[CMP:.*]] = cir.cmp(eq, %[[D_TID]], %[[TYPE_ID]])
+// CHECK:         %[[CMP:.*]] = cir.cmp eq %[[D_TID]], %[[TYPE_ID]]
 // CHECK:         cir.brcond %[[CMP]] ^[[CATCH:bb[0-9]+]](%[[D_EXN]], %[[D_TID]] : !cir.ptr<!void>, !u32i), ^[[UNWIND_HANDLER:bb[0-9]+]](%[[D_EXN]], %[[D_TID]] : !cir.ptr<!void>, !u32i)
 //
 // Typed catch handler.
@@ -486,7 +486,7 @@ cir.func no_inline dso_local @test_catch_with_cleanup_no_ctor() personality(@__g
 // Comparison: typeid comparison for std::exception, with catch-all fallthrough.
 // CHECK:       ^[[CMP_BLOCK]](%[[D_EXN:.*]]: !cir.ptr<!void>, %[[D_TID:.*]]: !u32i):
 // CHECK:         %[[TYPE_ID:.*]] = cir.eh.typeid @_ZTISt9exception
-// CHECK:         %[[CMP:.*]] = cir.cmp(eq, %[[D_TID]], %[[TYPE_ID]])
+// CHECK:         %[[CMP:.*]] = cir.cmp eq %[[D_TID]], %[[TYPE_ID]]
 // CHECK:         cir.brcond %[[CMP]] ^[[TYPED:bb[0-9]+]](%[[D_EXN]], %[[D_TID]] : !cir.ptr<!void>, !u32i), ^[[CATCH_ALL:bb[0-9]+]](%[[D_EXN]], %[[D_TID]] : !cir.ptr<!void>, !u32i)
 //
 // Typed catch for std::exception (^bb7 in source).

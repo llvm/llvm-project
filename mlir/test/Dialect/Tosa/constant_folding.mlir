@@ -820,6 +820,26 @@ func.func @slice_singleton() -> tensor<1x1xi32> {
 
 // -----
 
+// CHECK-LABEL: @test_slice_resource_no_fold
+func.func @test_slice_resource_no_fold() -> tensor<1x1xi32> {
+  %input = "tosa.const"() {values = dense_resource<slice_resource> : tensor<3x4xi32>} : () -> tensor<3x4xi32>
+  %start = tosa.const_shape {values = dense<[1, 2]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %size = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  // CHECK: tosa.slice
+  %slice= tosa.slice %input, %start, %size : (tensor<3x4xi32>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x1xi32>
+  return %slice : tensor<1x1xi32>
+}
+
+{-#
+  dialect_resources: {
+    builtin: {
+      slice_resource: "0x040000000700000000000000000000000000000000000000000000000900000000000000000000000000000000000000"
+    }
+  }
+#-}
+
+// -----
+
 // CHECK: func.func @cast_float_to_float
 func.func @cast_float_to_float() -> tensor<f16> {
   %splat = "tosa.const"() {values = dense<42.0> : tensor<f32>} : () -> tensor<f32>
@@ -1371,3 +1391,102 @@ func.func @test_log2_floor_shape_neg() -> !tosa.shape<6> {
   %c = tosa.log2_floor_shape %a : (!tosa.shape<6>) -> !tosa.shape<6>
   return %c : !tosa.shape<6>
 }
+
+// -----
+
+// CHECK-LABEL: @test_concat_shape
+// CHECK: tosa.const_shape  {values = dense<[4, 9, 5, 19]> : tensor<4xindex>} : () -> !tosa.shape<4>
+func.func @test_concat_shape() -> !tosa.shape<4> {
+  %a = tosa.const_shape {values = dense<[4, 9]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %b = tosa.const_shape {values = dense<[5, 19]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %c = tosa.concat_shape %a, %b : (!tosa.shape<2>, !tosa.shape<2>) -> !tosa.shape<4>
+  return %c : !tosa.shape<4>
+}
+
+// -----
+
+// CHECK-LABEL: @test_concat_shape_rank6
+// CHECK: tosa.const_shape  {values = dense<[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]> : tensor<12xindex>} : () -> !tosa.shape<12>
+func.func @test_concat_shape_rank6() -> !tosa.shape<12> {
+  %a = tosa.const_shape {values = dense<[1, 2, 3, 4, 5, 6]> : tensor<6xindex>} : () -> !tosa.shape<6>
+  %b = tosa.const_shape {values = dense<[7, 8, 9, 10, 11, 12]> : tensor<6xindex>} : () -> !tosa.shape<6>
+  %c = tosa.concat_shape %a, %b : (!tosa.shape<6>, !tosa.shape<6>) -> !tosa.shape<12>
+  return %c : !tosa.shape<12>
+}
+
+// -----
+
+// CHECK-LABEL: @test_concat_shape_total_rank12_5inputs
+// CHECK-DAG: %[[C:.*]] = tosa.const_shape {values = dense<[6, 7, 8, 9]> : tensor<4xindex>} : () -> !tosa.shape<4>
+// CHECK-DAG: %[[D:.*]] = tosa.const_shape {values = dense<10> : tensor<1xindex>} : () -> !tosa.shape<1>
+// CHECK-DAG: %[[E:.*]] = tosa.const_shape {values = dense<[11, 12]> : tensor<2xindex>} : () -> !tosa.shape<2>
+// CHECK-DAG: %[[AB:.*]] = tosa.const_shape {values = dense<[1, 2, 3, 4, 5]> : tensor<5xindex>} : () -> !tosa.shape<5>
+// CHECK: %[[ABC:.*]] = tosa.concat_shape %[[AB]], %[[C]] : (!tosa.shape<5>, !tosa.shape<4>) -> !tosa.shape<9>
+// CHECK: %[[ABCD:.*]] = tosa.concat_shape %[[ABC]], %[[D]] : (!tosa.shape<9>, !tosa.shape<1>) -> !tosa.shape<10>
+// CHECK: %[[ABCDE:.*]] = tosa.concat_shape %[[ABCD]], %[[E]] : (!tosa.shape<10>, !tosa.shape<2>) -> !tosa.shape<12>
+// CHECK: return %[[ABCDE]] : !tosa.shape<12>
+func.func @test_concat_shape_total_rank12_5inputs() -> !tosa.shape<12> {
+  // Ranks: 3 + 2 + 4 + 1 + 2 = 12
+  %a = tosa.const_shape {values = dense<[1, 2, 3]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  %b = tosa.const_shape {values = dense<[4, 5]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %c = tosa.const_shape {values = dense<[6, 7, 8, 9]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  %d = tosa.const_shape {values = dense<[10]> : tensor<1xindex>} : () -> !tosa.shape<1>
+  %e = tosa.const_shape {values = dense<[11, 12]> : tensor<2xindex>} : () -> !tosa.shape<2>
+
+  %ab = tosa.concat_shape %a, %b : (!tosa.shape<3>, !tosa.shape<2>) -> !tosa.shape<5>
+  %abc = tosa.concat_shape %ab, %c : (!tosa.shape<5>, !tosa.shape<4>) -> !tosa.shape<9>
+  %abcd = tosa.concat_shape %abc, %d : (!tosa.shape<9>, !tosa.shape<1>) -> !tosa.shape<10>
+  %abcde = tosa.concat_shape %abcd, %e : (!tosa.shape<10>, !tosa.shape<2>) -> !tosa.shape<12>
+
+  return %abcde : !tosa.shape<12>
+}
+
+// -----
+
+// CHECK-LABEL: @test_concat_shape_rank6_4inputs
+// CHECK: tosa.concat_shape
+func.func @test_concat_shape_rank6_4inputs() -> !tosa.shape<24> {
+  %a = tosa.const_shape {values = dense<[1, 2, 3, 4, 5, 6]> : tensor<6xindex>} : () -> !tosa.shape<6>
+  %b = tosa.const_shape {values = dense<[7, 8, 9, 10, 11, 12]> : tensor<6xindex>} : () -> !tosa.shape<6>
+  %c = tosa.const_shape {values = dense<[13, 14, 15, 16, 17, 18]> : tensor<6xindex>} : () -> !tosa.shape<6>
+  %d = tosa.const_shape {values = dense<[19, 20, 21, 22, 23, 24]> : tensor<6xindex>} : () -> !tosa.shape<6>
+  %ab = tosa.concat_shape %a, %b : (!tosa.shape<6>, !tosa.shape<6>) -> !tosa.shape<12>
+  %cd = tosa.concat_shape %c, %d : (!tosa.shape<6>, !tosa.shape<6>) -> !tosa.shape<12>
+  %abcd = tosa.concat_shape %ab, %cd : (!tosa.shape<12>, !tosa.shape<12>) -> !tosa.shape<24>
+  return %abcd : !tosa.shape<24>
+}
+
+// -----
+
+// CHECK-LABEL: @test_concat_shape_total_rank13_5inputs
+// CHECK: tosa.concat_shape
+func.func @test_concat_shape_total_rank13_5inputs() -> !tosa.shape<13> {
+  // Ranks: 3 + 2 + 4 + 1 + 3 = 13
+  %a = tosa.const_shape {values = dense<[1, 2, 3]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  %b = tosa.const_shape {values = dense<[4, 5]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %c = tosa.const_shape {values = dense<[6, 7, 8, 9]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  %d = tosa.const_shape {values = dense<[10]> : tensor<1xindex>} : () -> !tosa.shape<1>
+  %e = tosa.const_shape {values = dense<[11, 12, 13]> : tensor<3xindex>} : () -> !tosa.shape<3>
+
+  %ab = tosa.concat_shape %a, %b : (!tosa.shape<3>, !tosa.shape<2>) -> !tosa.shape<5>
+  %abc = tosa.concat_shape %ab, %c : (!tosa.shape<5>, !tosa.shape<4>) -> !tosa.shape<9>
+  %abcd = tosa.concat_shape %abc, %d : (!tosa.shape<9>, !tosa.shape<1>) -> !tosa.shape<10>
+  %abcde = tosa.concat_shape %abcd, %e : (!tosa.shape<10>, !tosa.shape<3>) -> !tosa.shape<13>
+
+  return %abcde : !tosa.shape<13>
+}
+// -----
+
+// CHECK-LABEL: @test_concat_shape_total_rank9_shapes
+// CHECK: tosa.const_shape
+func.func @test_concat_shape_total_rank9_shapes() -> !tosa.shape<9> {
+  // Ranks: 3 + 2 + 4 = 9
+  %a = tosa.const_shape {values = dense<[1, 2, 3]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  %b = tosa.const_shape {values = dense<[4, 5]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %c = tosa.const_shape {values = dense<[6, 7, 8, 9]> : tensor<4xindex>} : () -> !tosa.shape<4>
+
+  %abc = tosa.concat_shape %a, %b, %c : (!tosa.shape<3>, !tosa.shape<2>, !tosa.shape<4>) -> !tosa.shape<9>
+
+  return %abc : !tosa.shape<9>
+}
+// -----

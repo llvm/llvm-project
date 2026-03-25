@@ -52,21 +52,13 @@ getSgShapeAndCount(ArrayRef<int64_t> shape,
                    xegpu::DistributeLayoutAttr layout) {
   int count = 1;
   SmallVector<int64_t> sgShape(shape);
-  if (layout && layout.isForWorkgroup()) {
-    SmallVector<int64_t> sgLayout = layout.getEffectiveSgLayoutAsInt();
-    if (!layout.getEffectiveSgDataAsInt().empty())
-      sgShape = layout.getEffectiveSgDataAsInt();
-    else if (auto maybeDerivedSgData = computeShapeRatio(shape, sgLayout))
-      sgShape = *maybeDerivedSgData;
-    SmallVector<int64_t> distUnit = computeElementwiseMul(sgLayout, sgShape);
-    // Clamp distUnit to the original shape to handle cases where data is
-    // shared among subgroups, which may cause distUnit to exceed the original
-    // shape.
-    for (size_t i = 0; i < distUnit.size(); ++i)
-      distUnit[i] = std::min(shape[i], distUnit[i]);
-    count = computeProduct(shape) / computeProduct(distUnit);
-  }
-  return std::make_pair(sgShape, count);
+  auto distributedShape = layout.computeDistributedShape(
+      SmallVector<int64_t>(shape.begin(), shape.end()));
+  if (failed(distributedShape))
+    return std::make_pair(sgShape, count);
+  auto sgData = layout.getEffectiveSgDataAsInt();
+  count = computeProduct(distributedShape.value()) / computeProduct(sgData);
+  return std::make_pair(sgData, count);
 }
 
 /// Utility helper for deriving a list of offsets for each sub-TensorDescs
@@ -626,7 +618,8 @@ struct WgToSgConvertLayoutOp
     SmallVector<int64_t> targetSgData = targetLayout.getEffectiveSgDataAsInt();
 
     // Fast path: if sg_layout and sg_data are identical, no SLM needed
-    if (inputLayout.isCompatibleWith(targetLayout,
+    SmallVector<int64_t> wgShapeVec(wgShape.begin(), wgShape.end());
+    if (inputLayout.isCompatibleWith(targetLayout, wgShapeVec,
                                      xegpu::LayoutKind::Subgroup)) {
       inputLayout = inputLayout.dropSgLayoutAndData();
       targetLayout = targetLayout.dropSgLayoutAndData();
@@ -1173,11 +1166,12 @@ struct WgToSgVectorShapeCastOp
 
       if (!sourceLayout.isSliceOf(layout))
         return rewriter.notifyMatchFailure(
-            op, "The ShapeCast op only expands dimensions, the result layout "
-                "must be a slice of the input layout, or vice versa.");
-      layoutToDistribute = layoutToDistribute.setUnitDimData(expandedUnitDims);
-      layoutToDistribute =
-          layoutToDistribute.setUnitDimLayout(expandedUnitDims);
+            op, "The ShapeCast op only expands dimensions, the input layout "
+                "must be a slice of the result layout.");
+
+      assert(layoutToDistribute.isEqualTo(
+                 layoutToDistribute.setUnitDimData(expandedUnitDims)) &&
+             "The sg_data for unit dimensions should be set as 1");
     }
 
     SmallVector<int64_t> sgShape =
@@ -1196,86 +1190,6 @@ struct WgToSgVectorShapeCastOp
     return success();
   }
 };
-
-static Value createAccumulator(ConversionPatternRewriter &rewriter,
-                               Location loc, VectorType type,
-                               vector::CombiningKind kind) {
-  Type elemTy = type.getElementType();
-
-  switch (kind) {
-  case vector::CombiningKind::ADD:
-  case vector::CombiningKind::XOR:
-  case vector::CombiningKind::OR:
-    return arith::ConstantOp::create(
-        rewriter, loc, type,
-        DenseElementsAttr::get(type, rewriter.getZeroAttr(elemTy)));
-
-  case vector::CombiningKind::MUL:
-  case vector::CombiningKind::AND:
-    return arith::ConstantOp::create(
-        rewriter, loc, type,
-        DenseElementsAttr::get(type, rewriter.getOneAttr(elemTy)));
-
-  case vector::CombiningKind::MINSI:
-    // Use max signed int value for signed integer min
-    if (auto intTy = dyn_cast<IntegerType>(elemTy)) {
-      auto maxVal = APInt::getSignedMaxValue(intTy.getWidth());
-      return arith::ConstantOp::create(
-          rewriter, loc, type,
-          DenseElementsAttr::get(type,
-                                 rewriter.getIntegerAttr(elemTy, maxVal)));
-    }
-    return nullptr;
-
-  case vector::CombiningKind::MINUI:
-    if (auto intTy = dyn_cast<IntegerType>(elemTy)) {
-      auto maxVal = APInt::getMaxValue(intTy.getWidth());
-      return arith::ConstantOp::create(
-          rewriter, loc, type,
-          DenseElementsAttr::get(type,
-                                 rewriter.getIntegerAttr(elemTy, maxVal)));
-    }
-    return nullptr;
-
-  case vector::CombiningKind::MAXSI:
-    if (auto intTy = dyn_cast<IntegerType>(elemTy)) {
-      auto minVal = APInt::getSignedMinValue(intTy.getWidth());
-      return arith::ConstantOp::create(
-          rewriter, loc, type,
-          DenseElementsAttr::get(type,
-                                 rewriter.getIntegerAttr(elemTy, minVal)));
-    }
-    return nullptr;
-
-  case vector::CombiningKind::MAXUI:
-    return arith::ConstantOp::create(
-        rewriter, loc, type,
-        DenseElementsAttr::get(type, rewriter.getZeroAttr(elemTy)));
-
-  case vector::CombiningKind::MINNUMF:
-  case vector::CombiningKind::MINIMUMF:
-    // Use +infinity for float min operations
-    if (auto floatTy = dyn_cast<FloatType>(elemTy)) {
-      auto posInf = APFloat::getInf(floatTy.getFloatSemantics());
-      return arith::ConstantOp::create(
-          rewriter, loc, type,
-          DenseElementsAttr::get(type, rewriter.getFloatAttr(elemTy, posInf)));
-    }
-    return nullptr;
-
-  case vector::CombiningKind::MAXNUMF:
-  case vector::CombiningKind::MAXIMUMF:
-    // Use -infinity for float max operations
-    if (auto floatTy = dyn_cast<FloatType>(elemTy)) {
-      auto negInf = APFloat::getInf(floatTy.getFloatSemantics(), true);
-      return arith::ConstantOp::create(
-          rewriter, loc, type,
-          DenseElementsAttr::get(type, rewriter.getFloatAttr(elemTy, negInf)));
-    }
-    return nullptr;
-  }
-  return nullptr;
-}
 
 /// This pattern transforms vector.multi_dim_reduction operations from
 /// workgroup-level to subgroup-level execution with support for multiple
@@ -1358,8 +1272,8 @@ struct WgToSgMultiDimReductionOp
     VectorType newDstType = VectorType::get(sgDstShape, elemTy);
     for (auto sgSrc : sgSrcs) {
       // Create ZERO accumulator for local reduction
-      auto neutralLocalAcc =
-          createAccumulator(rewriter, loc, newDstType, op.getKind());
+      auto neutralLocalAcc = xegpu::createReductionNeutralValue(
+          rewriter, loc, newDstType, op.getKind());
       // Local reduction with ZERO accumulator
       auto localReduce = vector::MultiDimReductionOp::create(
           rewriter, loc, newDstType, op.getKind(), sgSrc, neutralLocalAcc,
@@ -1480,8 +1394,8 @@ struct WgToSgMultiDimReductionOp
         /*layout=*/nullptr);
 
     // Step 6: Perform final reduction with ZERO accumulator
-    auto neutralFinalAcc =
-        createAccumulator(rewriter, loc, newDstType, op.getKind());
+    auto neutralFinalAcc = xegpu::createReductionNeutralValue(
+        rewriter, loc, newDstType, op.getKind());
 
     auto finalReduce = vector::MultiDimReductionOp::create(
         rewriter, loc, newDstType, op.getKind(), slmLoadOp.getResult(),
@@ -1680,8 +1594,8 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
           // Only convert RankedTensorTypes that carry an XeGPU layout encoding.
           // Plain tensors (e.g. tensor<?xi32>) have no XeGPU encoding and must
           // not be converted: VectorType does not support dynamic dimensions.
-          auto encoding =
-              dyn_cast_if_present<xegpu::LayoutAttr>(type.getEncoding());
+          auto encoding = dyn_cast_if_present<xegpu::DistributeLayoutAttr>(
+              type.getEncoding());
           if (!encoding)
             return std::nullopt;
 
@@ -1711,16 +1625,20 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
   converter.addConversion(
       [&](xegpu::TensorDescType type,
           SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
+        xegpu::LayoutAttr layout = type.getLayoutAttr();
+        // Only convert WG-level tensor descs. SG-level or layout-less types
+        // are already legal and should pass through unchanged.
+        if (!layout || !layout.isForWorkgroup())
+          return std::nullopt;
+
         Type elemTy = type.getElementType();
         ArrayRef<int64_t> shape = type.getShape();
 
         int count;
         SmallVector<int64_t> subShape;
-        xegpu::LayoutAttr layout = type.getLayoutAttr();
         std::tie(subShape, count) = getSgShapeAndCount(shape, layout);
 
-        if (layout)
-          layout = layout.dropSgLayoutAndData();
+        layout = layout.dropSgLayoutAndData();
 
         auto newTy = xegpu::TensorDescType::get(
             type.getContext(), subShape, elemTy, type.getEncoding(), layout);

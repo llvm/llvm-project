@@ -70,6 +70,31 @@ void [[clang::annotate_type("webkit.nodelete")]] callsUnsafe() {
   someFunction(); // expected-warning{{A function 'callsUnsafe' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
 }
 
+int* [[clang::annotate_type("webkit.nodelete")]] createsInt() {
+  return new int;
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] destroysInt(int* number) {
+  delete number; // expected-warning{{A function 'destroysInt' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+}
+
+struct IntPoint {
+  int x { 0 };
+  int y { 0 };
+};
+
+IntPoint* [[clang::annotate_type("webkit.nodelete")]] createsIntPoint() {
+  return new IntPoint[2];
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] destroysIntPoint(IntPoint* point) {
+  delete[] point; // expected-warning{{A function 'destroysIntPoint' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] callOperatorDelete(int* number) {
+  ::operator delete(number); // expected-warning{{A function 'callOperatorDelete' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+}
+
 void [[clang::annotate_type("webkit.nodelete")]] callsUnsafeWithSuppress();
 
 [[clang::suppress]] void callsUnsafeWithSuppress() {
@@ -336,6 +361,7 @@ private:
 
 void [[clang::annotate_type("webkit.nodelete")]] makeData() {
   RefPtr<Data> constantData[2] = { Data::create() };
+  // expected-warning@-1{{A function 'makeData' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
   RefPtr<Data> data[] = { Data::create() };
 }
 

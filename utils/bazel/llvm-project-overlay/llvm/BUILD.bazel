@@ -287,6 +287,7 @@ cc_library(
         "lib/Support/*.h",
         "lib/Support/*.inc",
         "lib/Support/LSP/*.cpp",
+        "lib/Support/HTTP/*.cpp",
         # To avoid a dependency cycle.
         "include/llvm/Option/*.h",
     ]) + select({
@@ -1317,6 +1318,20 @@ cc_library(
         ":ProfileData",
         ":Support",
         ":TargetParser",
+    ],
+)
+
+cc_library(
+    name = "ABI",
+    srcs = glob(
+        ["lib/ABI/*.cpp"],
+    ),
+    hdrs = glob(
+        ["include/llvm/ABI/*.h"],
+    ),
+    copts = llvm_copts,
+    deps = [
+        ":Support",
     ],
 )
 
@@ -3434,6 +3449,10 @@ llvm_target_lib_list = [lib for lib in [
             (
                 ["-gen-callingconv"],
                 "lib/Target/X86/X86GenCallingConv.inc",
+            ),
+            (
+                ["-gen-sd-node-info"],
+                "lib/Target/X86/X86GenSDNodeInfo.inc",
             ),
             (
                 ["-gen-subtarget"],

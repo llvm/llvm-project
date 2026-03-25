@@ -264,8 +264,9 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
     FullFS = (Twine(FullFS) + "," + FS).str();
 
   // Disable 64-bit only features in non-64-bit mode.
-  StringRef FeaturesIn64BitOnly[] = {
-      "egpr", "push2pop2", "ppx", "ndd", "ccmp", "nf", "cf", "zu", "uintr"};
+  StringRef FeaturesIn64BitOnly[] = {"egpr",   "push2pop2", "ppx", "ndd",
+                                     "ccmp",   "nf",        "cf",  "zu",
+                                     "jmpabs", "uintr"};
   if (FullFS.find("-64bit-mode") != std::string::npos)
     for (StringRef F : FeaturesIn64BitOnly)
       FullFS += ",-" + F.str();
@@ -302,6 +303,8 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
     PreferVectorWidth = 128;
   else if (Prefer256Bit)
     PreferVectorWidth = 256;
+
+  HasUserReservedRegisters = ReservedRReg.any();
 }
 
 X86Subtarget &X86Subtarget::initializeSubtargetDependencies(StringRef CPU,
@@ -317,8 +320,7 @@ X86Subtarget::X86Subtarget(const Triple &TT, StringRef CPU, StringRef TuneCPU,
                            unsigned PreferVectorWidthOverride,
                            unsigned RequiredVectorWidth)
     : X86GenSubtargetInfo(TT, CPU, TuneCPU, FS),
-      PICStyle(PICStyles::Style::None), TM(TM),
-      ReservedRReg(X86::NUM_TARGET_REGS), TargetTriple(TT),
+      PICStyle(PICStyles::Style::None), TM(TM), TargetTriple(TT),
       StackAlignOverride(StackAlignOverride),
       PreferVectorWidthOverride(PreferVectorWidthOverride),
       RequiredVectorWidth(RequiredVectorWidth),

@@ -671,6 +671,77 @@ LogicalResult SparseMFMAOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// SparseWMMAOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult SparseWMMAOp::verify() {
+  auto sparseType = cast<VectorType>(getSourceA().getType());
+  auto denseType = cast<VectorType>(getSourceB().getType());
+  auto destType = cast<VectorType>(getDestC().getType());
+
+  Type sparseElem = sparseType.getElementType();
+  Type denseElem = denseType.getElementType();
+  Type destElem = destType.getElementType();
+  int64_t sparseLen = sparseType.getNumElements();
+  int64_t denseLen = denseType.getNumElements();
+  int64_t destLen = destType.getNumElements();
+
+  uint32_t m = getM(), n = getN(), k = getK();
+  if ((m != 16) || (n != 16))
+    return emitOpError("expected MxN to be exactly 16x16");
+
+  const bool isWavesize64 = getWave64();
+  const bool isInt4Input = sparseElem.isInteger(4) && denseElem.isInteger(4);
+  const bool isEqualLengthAllowed = isWavesize64 && isInt4Input && k == 32;
+
+  if ((denseLen != 2 * sparseLen) && !isEqualLengthAllowed)
+    return emitOpError("expected dense source operand to have exactly double "
+                       "the number of elements of the sparse source operand");
+
+  if (isEqualLengthAllowed && (denseLen != sparseLen))
+    return emitOpError("expected dense source operand to have exactly the "
+                       "same the number of elements");
+
+  if (destElem.isInteger()) {
+    if (!(sparseElem.isInteger() && denseElem.isInteger())) {
+      return emitOpError("source operand and destination operands must all be "
+                         "either integer or float types");
+    }
+  }
+
+  if (destElem.isFloat()) {
+    if (!(sparseElem.isFloat() && denseElem.isFloat())) {
+      return emitOpError("source operand and destination operands must all be "
+                         "either integer or float types");
+    }
+  }
+
+  // Check that source element types are compatible.
+  // For fp8/bf8 mixed operations, element types can differ (e.g., fp8 * bf8).
+  // For other types, element types must match exactly.
+  bool bothFloat8 = sparseElem.isFloat(8) && denseElem.isFloat(8);
+  if (!bothFloat8 && sparseElem != denseElem)
+    return emitOpError(
+        "expected source operands to have the same element type");
+
+  const int64_t waveSize = isWavesize64 ? 64 : 32;
+
+  int64_t expectedSourceElems = (getM() * getK()) / waveSize;
+  if (denseLen != expectedSourceElems)
+    return emitOpError("expected " + Twine(expectedSourceElems) +
+                       " source values for this operation but got " +
+                       Twine(denseLen));
+
+  int64_t expectedDestElems = (getM() * getN()) / waveSize;
+  if (destLen != expectedDestElems)
+    return emitOpError("expected " + Twine(expectedDestElems) +
+                       " result values for this operation but got " +
+                       Twine(destLen));
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // DPPOp
 //===----------------------------------------------------------------------===//
 LogicalResult DPPOp::verify() {

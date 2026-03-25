@@ -827,14 +827,14 @@ ObjectFile *ObjectFileMachO::CreateMemoryInstance(
   return nullptr;
 }
 
-size_t ObjectFileMachO::GetModuleSpecifications(
+ModuleSpecList ObjectFileMachO::GetModuleSpecifications(
     const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
     lldb::offset_t data_offset, lldb::offset_t file_offset,
-    lldb::offset_t length, lldb_private::ModuleSpecList &specs) {
-  const size_t initial_count = specs.GetSize();
+    lldb::offset_t length) {
   if (!extractor_sp || !extractor_sp->HasData())
-    return initial_count;
+    return {};
 
+  ModuleSpecList specs;
   if (ObjectFileMachO::MagicBytesMatch(extractor_sp, 0,
                                        extractor_sp->GetByteSize())) {
     llvm::MachO::mach_header header;
@@ -857,7 +857,7 @@ size_t ObjectFileMachO::GetModuleSpecifications(
       }
     }
   }
-  return specs.GetSize() - initial_count;
+  return specs;
 }
 
 ConstString ObjectFileMachO::GetSegmentNameTEXT() {
@@ -5738,8 +5738,9 @@ void ObjectFileMachO::GetProcessSharedCacheUUID(Process *process,
     LazyBool using_shared_cache;
     LazyBool private_shared_cache;
     FileSpec sc_filepath;
+    std::optional<uint64_t> size;
     dl->GetSharedCacheInformation(base_addr, uuid, using_shared_cache,
-                                  private_shared_cache, sc_filepath);
+                                  private_shared_cache, sc_filepath, size);
   }
   Log *log(GetLog(LLDBLog::Symbols | LLDBLog::Process));
   LLDB_LOGF(

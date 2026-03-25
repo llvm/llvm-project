@@ -431,9 +431,23 @@ contains
     integer :: stat
     allocate(x(10), y(10), stat=stat)
   end subroutine
+
+  subroutine init_in_data(e)
+    use iso_c_binding, only: c_ptr
+    type(c_ptr), intent(in) :: e
+    integer :: stat
+    !$acc data deviceptr(e)
+      allocate(x(10), stat=stat)
+      deallocate(x, stat=stat)
+    !$acc end data
+  end subroutine
 end module
 
 ! CHECK-LABEL: func.func @_QMacc_declare_post_action_statPinit()
 ! CHECK: fir.call @_FortranAAllocatableAllocate({{.*}}) fastmath<contract> {acc.declare_action = #acc.declare_action<postAlloc = @_QMacc_declare_post_action_statEx_acc_declare_post_alloc>} : (!fir.ref<!fir.box<none>>, !fir.ref<i64>, i1, !fir.box<none>, !fir.ref<i8>, i32, {{.*}}) -> i32
 ! CHECK: fir.if
 ! CHECK: fir.call @_FortranAAllocatableAllocate({{.*}}) fastmath<contract> {acc.declare_action = #acc.declare_action<postAlloc = @_QMacc_declare_post_action_statEy_acc_declare_post_alloc>} : (!fir.ref<!fir.box<none>>, !fir.ref<i64>, i1, !fir.box<none>, !fir.ref<i8>, i32, {{.*}}) -> i32
+! CHECK-LABEL: func.func @_QMacc_declare_post_action_statPinit_in_data(
+! CHECK: fir.call @_FortranAAllocatableAllocate({{.*}}) fastmath<contract> {acc.declare_action = #acc.declare_action<postAlloc = @_QMacc_declare_post_action_statEx_acc_declare_post_alloc>}
+! CHECK: fir.call @_FortranAAllocatableDeallocate({{.*}}) fastmath<contract> {acc.declare_action = #acc.declare_action<preDealloc = @_QMacc_declare_post_action_statEx_acc_declare_pre_dealloc, postDealloc = @_QMacc_declare_post_action_statEx_acc_declare_post_dealloc>}
+! CHECK-NOT: acc.terminator {acc.declare_action =

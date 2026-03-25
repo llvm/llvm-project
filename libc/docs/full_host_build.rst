@@ -4,10 +4,6 @@
 Full Host Build
 ===============
 
-.. contents:: Table of Contents
-   :depth: 1
-   :local:
-
 .. note::
    Fullbuild requires running headergen, which is a python program that depends on
    pyyaml. The minimum versions are listed on the :ref:`header_generation`
@@ -27,7 +23,8 @@ Standard Building and Testing
 
 For basic development, such as adding new functions or fixing bugs, you can build
 and test the libc directly without setting up a full sysroot. This approach
-is faster and sufficient for most contributors.
+is using the **runtimes build** (see :ref:`build_concepts` for more information)
+and is faster and sufficient for most contributors.
 
 To configure the build, create a build directory and run ``cmake``:
 
@@ -44,8 +41,8 @@ To configure the build, create a build directory and run ``cmake``:
       -DCMAKE_BUILD_TYPE=Debug \
       -DLLVM_LIBC_INCLUDE_SCUDO=ON \
       -DCOMPILER_RT_BUILD_SCUDO_STANDALONE_WITH_LLVM_LIBC=ON \
-      -DCOMPILER_RT_BUILD_GWP_ASAN=OFF                       \
-      -DCOMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED=OFF        \
+      -DCOMPILER_RT_BUILD_GWP_ASAN=OFF \
+      -DCOMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED=OFF \
       -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
       -DLLVM_ENABLE_SPHINX=ON -DLIBC_INCLUDE_DOCS=ON \
       -DLIBC_CMAKE_VERBOSE_LOGGING=ON
@@ -144,9 +141,10 @@ headers.
 Step 3: Build and Install Runtimes
 ----------------------------------
 
-Now, configure the build for LLVM libc and compiler-rt. We're building with
-llvm instead of runtimes because we need to install the
-``clang-resource-headers`` that provide ``stdarg.h``, ``stddef.h`` and others.
+Now, configure the build for LLVM libc and compiler-rt. We're using the
+**bootstrap build** (see :ref:`build_concepts`) because we need to build the
+full ``clang`` and then install the ``clang-resource-headers`` that provide
+``stdarg.h``, ``stddef.h`` and others.
 
 .. code-block:: sh
 
@@ -166,8 +164,7 @@ llvm instead of runtimes because we need to install the
       -DCOMPILER_RT_BUILD_GWP_ASAN=OFF                       \
       -DCOMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED=OFF        \
       -DCOMPILER_RT_BUILD_BUILTINS:BOOL=TRUE \
-      -DCOMPILER_RT_BUILD_CRT:BOOL=TRUE \
-      -DCOMPILER_RT_BUILD_GWP_ASAN:BOOL=FALSE
+      -DCOMPILER_RT_BUILD_CRT:BOOL=TRUE
 
 After configuring, build and install the necessary components:
 

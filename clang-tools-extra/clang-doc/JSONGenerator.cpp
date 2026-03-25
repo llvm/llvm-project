@@ -1,5 +1,6 @@
 #include "Generators.h"
 #include "clang/Basic/Specifiers.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/JSON.h"
 
 using namespace llvm;
@@ -66,7 +67,7 @@ public:
   bool Markdown;
 
   Error generateDocumentation(StringRef RootDir,
-                              llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
+                              llvm::StringMap<OwnedPtr<doc::Info>> Infos,
                               const ClangDocContext &CDCtx,
                               std::string DirName) override;
   Error createResources(ClangDocContext &CDCtx) override;
@@ -375,6 +376,32 @@ void JSONGenerator::generateContext(const Info &I, Object &Obj) {
   Obj["HasContexts"] = true;
 }
 
+static void serializeDescription(llvm::ArrayRef<CommentInfo> Description,
+                                 json::Object &Obj, StringRef Key = "") {
+  if (Description.empty())
+    return;
+
+  // Skip straight to the FullComment's children
+  auto &Comments = Description.front().Children;
+  Object DescriptionObj = Object();
+  for (const auto &CommentInfo : Comments) {
+    json::Value Comment = serializeComment(*CommentInfo, DescriptionObj);
+    // if a ParagraphComment is returned, then it is a top-level comment that
+    // needs to be inserted manually.
+    if (auto *ParagraphComment = Comment.getAsObject();
+        ParagraphComment->get("ParagraphComment")) {
+      auto TextCommentsArray = extractTextComments(ParagraphComment);
+      if (TextCommentsArray.kind() == json::Value::Null ||
+          TextCommentsArray.getAsArray()->empty())
+        continue;
+      insertComment(DescriptionObj, TextCommentsArray, "ParagraphComments");
+    }
+  }
+  Obj["Description"] = std::move(DescriptionObj);
+  if (!Key.empty())
+    Obj[Key] = true;
+}
+
 void JSONGenerator::serializeCommonAttributes(const Info &I,
                                               json::Object &Obj) {
   insertNonEmpty("Name", I.Name, Obj);
@@ -393,25 +420,7 @@ void JSONGenerator::serializeCommonAttributes(const Info &I,
       Obj["Namespace"].getAsArray()->push_back(NS.Name);
   }
 
-  if (!I.Description.empty()) {
-    Object Description = Object();
-    // Skip straight to the FullComment's children
-    auto &Comments = I.Description.at(0).Children;
-    for (const auto &CommentInfo : Comments) {
-      json::Value Comment = serializeComment(*CommentInfo, Description);
-      // if a ParagraphComment is returned, then it is a top-level comment that
-      // needs to be inserted manually.
-      if (auto *ParagraphComment = Comment.getAsObject();
-          ParagraphComment->get("ParagraphComment")) {
-        auto TextCommentsArray = extractTextComments(ParagraphComment);
-        if (TextCommentsArray.kind() == json::Value::Null ||
-            TextCommentsArray.getAsArray()->empty())
-          continue;
-        insertComment(Description, TextCommentsArray, "ParagraphComments");
-      }
-    }
-    Obj["Description"] = std::move(Description);
-  }
+  serializeDescription(I.Description, Obj);
 
   // Namespaces aren't SymbolInfos, so they dont have a DefLoc
   if (I.IT != InfoType::IT_namespace) {
@@ -518,7 +527,7 @@ void JSONGenerator::serializeInfo(const TemplateInfo &Template, Object &Obj) {
       bool VerticalDisplay =
           Template.Specialization->Params.size() > getMaxParamWrapLimit();
       serializeArray(Template.Specialization->Params, TemplateSpecializationObj,
-                     "Parameters", SerializeTemplateParam, "End",
+                     "Parameters", SerializeTemplateParam, "SpecParamEnd",
                      [VerticalDisplay](Object &JsonObj) {
                        JsonObj["VerticalDisplay"] = VerticalDisplay;
                      });
@@ -592,6 +601,8 @@ void JSONGenerator::serializeInfo(const EnumValueInfo &I, Object &Obj) {
     Obj["ValueExpr"] = I.ValueExpr;
   else
     Obj["Value"] = I.Value;
+
+  serializeDescription(I.Description, Obj, "HasEnumMemberComments");
 }
 
 void JSONGenerator::serializeInfo(const EnumInfo &I, json::Object &Obj) {
@@ -607,8 +618,15 @@ void JSONGenerator::serializeInfo(const EnumInfo &I, json::Object &Obj) {
     Obj["BaseType"] = BaseTypeVal;
   }
 
-  if (!I.Members.empty())
+  if (!I.Members.empty()) {
+    for (const auto &Member : I.Members) {
+      if (!Member.Description.empty()) {
+        Obj["HasComments"] = true;
+        break;
+      }
+    }
     serializeArray(I.Members, Obj, "Members", serializeInfoLambda());
+  }
 }
 
 void JSONGenerator::serializeInfo(const TypedefInfo &I, json::Object &Obj) {
@@ -813,9 +831,9 @@ SmallString<16> JSONGenerator::determineFileName(Info *I,
 
 /// \param CDCtxIndex Passed by copy since clang-doc's context is passed to the
 /// generator as `const`
-static std::vector<Index> preprocessCDCtxIndex(Index CDCtxIndex) {
+static OwningVec<Index> preprocessCDCtxIndex(Index CDCtxIndex) {
   CDCtxIndex.sort();
-  std::vector<Index> Processed;
+  OwningVec<Index> Processed;
   Processed.reserve(CDCtxIndex.Children.size());
   for (const auto *Idx : CDCtxIndex.getSortedChildren()) {
     Index NewIdx = *Idx;
@@ -835,7 +853,7 @@ Error JSONGenerator::serializeAllFiles(const ClangDocContext &CDCtx,
                                        StringRef RootDir) {
   json::Value ObjVal = Object();
   Object &Obj = *ObjVal.getAsObject();
-  std::vector<Index> IndexCopy = preprocessCDCtxIndex(CDCtx.Idx);
+  OwningVec<Index> IndexCopy = preprocessCDCtxIndex(CDCtx.Idx);
   serializeArray(IndexCopy, Obj, "Index", serializeReferenceLambda());
   SmallString<128> Path;
   sys::path::append(Path, RootDir, "json", "all_files.json");
@@ -898,8 +916,7 @@ Error JSONGenerator::serializeIndex(StringRef RootDir) {
   return Error::success();
 }
 
-static void serializeContexts(Info *I,
-                              StringMap<std::unique_ptr<Info>> &Infos) {
+static void serializeContexts(Info *I, StringMap<OwnedPtr<Info>> &Infos) {
   if (I->USR == GlobalNamespaceID)
     return;
   auto ParentUSR = I->ParentUSR;
@@ -922,13 +939,13 @@ static void serializeContexts(Info *I,
 }
 
 Error JSONGenerator::generateDocumentation(
-    StringRef RootDir, llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
+    StringRef RootDir, llvm::StringMap<doc::OwnedPtr<doc::Info>> Infos,
     const ClangDocContext &CDCtx, std::string DirName) {
   this->CDCtx = &CDCtx;
   StringSet<> CreatedDirs;
   StringMap<std::vector<doc::Info *>> FileToInfos;
   for (const auto &Group : Infos) {
-    Info *Info = Group.getValue().get();
+    Info *Info = getPtr(Group.getValue());
 
     SmallString<128> Path;
     auto RootDirStr = RootDir.str() + "/json";

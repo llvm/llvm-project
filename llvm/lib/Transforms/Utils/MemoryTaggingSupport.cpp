@@ -29,14 +29,14 @@
 namespace llvm {
 namespace memtag {
 
-bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
+void forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
                           const LoopInfo &LI, const AllocaInfo &AInfo,
                           const SmallVectorImpl<Instruction *> &RetVec,
                           llvm::function_ref<void(Instruction *)> Callback) {
   if (AInfo.LifetimeEnd.size() == 1 && AInfo.LifetimeStart.size() == 1 &&
       PDT.dominates(AInfo.LifetimeEnd[0], AInfo.LifetimeStart[0])) {
     Callback(AInfo.LifetimeEnd[0]);
-    return true;
+    return;
   }
   SmallPtrSet<BasicBlock *, 2> EndBlocks;
   SmallVector<BasicBlock *, 2> StartBlocks;
@@ -46,7 +46,6 @@ bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
     else
       StartBlocks.push_back(BB);
   }
-  bool UncoveredRets = false;
 
   if (!StartBlocks.empty()) {
     for (auto *RI : RetVec) {
@@ -59,14 +58,10 @@ bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
           isPotentiallyReachableFromMany(WL, RI->getParent(), &EndBlocks, &DT,
                                          &LI)) {
         Callback(RI);
-        UncoveredRets = true;
       }
     }
   }
   for_each(AInfo.LifetimeEnd, Callback);
-  // We may have inserted untag outside of the lifetime interval.
-  // Signal the caller to remove the lifetime end call for this alloca.
-  return !UncoveredRets;
 }
 
 bool isSupportedLifetime(const AllocaInfo &AInfo, const DominatorTree *DT,

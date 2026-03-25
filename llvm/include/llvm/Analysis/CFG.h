@@ -22,6 +22,7 @@
 namespace llvm {
 
 class BasicBlock;
+class CycleInfo;
 class DominatorTree;
 class Function;
 class Instruction;
@@ -70,7 +71,8 @@ LLVM_ABI bool isCriticalEdge(const Instruction *TI, const BasicBlock *Succ,
 LLVM_ABI bool isPotentiallyReachable(
     const Instruction *From, const Instruction *To,
     const SmallPtrSetImpl<BasicBlock *> *ExclusionSet = nullptr,
-    const DominatorTree *DT = nullptr, const LoopInfo *LI = nullptr);
+    const DominatorTree *DT = nullptr, const LoopInfo *LI = nullptr,
+    const CycleInfo *CI = nullptr);
 
 /// Determine whether block 'To' is reachable from 'From', returning
 /// true if uncertain.
@@ -81,7 +83,8 @@ LLVM_ABI bool isPotentiallyReachable(
 LLVM_ABI bool isPotentiallyReachable(
     const BasicBlock *From, const BasicBlock *To,
     const SmallPtrSetImpl<BasicBlock *> *ExclusionSet = nullptr,
-    const DominatorTree *DT = nullptr, const LoopInfo *LI = nullptr);
+    const DominatorTree *DT = nullptr, const LoopInfo *LI = nullptr,
+    const CycleInfo *CI = nullptr);
 
 /// Determine whether there is at least one path from a block in
 /// 'Worklist' to 'StopBB' without passing through any blocks in
@@ -95,7 +98,8 @@ LLVM_ABI bool isPotentiallyReachable(
 LLVM_ABI bool isPotentiallyReachableFromMany(
     SmallVectorImpl<BasicBlock *> &Worklist, const BasicBlock *StopBB,
     const SmallPtrSetImpl<BasicBlock *> *ExclusionSet,
-    const DominatorTree *DT = nullptr, const LoopInfo *LI = nullptr);
+    const DominatorTree *DT = nullptr, const LoopInfo *LI = nullptr,
+    const CycleInfo *CI = nullptr);
 
 /// Determine whether there is a potentially a path from at least one block in
 /// 'Worklist' to at least one block in 'StopSet' within a single function
@@ -107,7 +111,8 @@ LLVM_ABI bool isManyPotentiallyReachableFromMany(
     SmallVectorImpl<BasicBlock *> &Worklist,
     const SmallPtrSetImpl<const BasicBlock *> &StopSet,
     const SmallPtrSetImpl<BasicBlock *> *ExclusionSet,
-    const DominatorTree *DT = nullptr, const LoopInfo *LI = nullptr);
+    const DominatorTree *DT = nullptr, const LoopInfo *LI = nullptr,
+    const CycleInfo *CI = nullptr);
 
 /// Return true if the control flow in \p RPOTraversal is irreducible.
 ///
