@@ -1430,11 +1430,23 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
   if (const SCEV *UpperBound =
           collectUpperBound(CurSrcLoop, Delta->getType())) {
     LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound << "\n");
-    const SCEV *ConstantTwo = SE->getConstant(UpperBound->getType(), 2);
-    const SCEV *ML =
-        SE->getMulExpr(SE->getMulExpr(ConstCoeff, UpperBound), ConstantTwo);
-    LLVM_DEBUG(dbgs() << "\t    ML = " << *ML << "\n");
-    if (SE->isKnownPredicate(CmpInst::ICMP_EQ, Delta, ML)) {
+    ConstantRange UBRange = SE->getSignedRange(UpperBound);
+    ConstantRange MLRange =
+        UBRange.smul_fast(ConstCoeff->getAPInt())
+            .smul_fast(APInt(Distance.getBitWidth(), 2, true));
+    ConstantRange DeltaRange(ConstDelta->getAPInt());
+    LLVM_DEBUG(dbgs() << "\t    UBRange = " << UBRange << "\n");
+    LLVM_DEBUG(dbgs() << "\t    MLRange = " << MLRange << "\n");
+    LLVM_DEBUG(dbgs() << "\t    DeltaRange = " << DeltaRange << "\n");
+
+    if (DeltaRange.intersectWith(MLRange).isEmptySet() &&
+        DeltaRange.getSignedMin().sgt(MLRange.getSignedMax())) {
+      // Delta too big, no dependence
+      ++WeakCrossingSIVindependence;
+      ++WeakCrossingSIVsuccesses;
+      return true;
+    }
+    if (DeltaRange.getSignedMin().eq(MLRange.getSignedMax())) {
       // i = i' = UB
       Result.DV[Level].Direction &= ~Dependence::DVEntry::LT;
       Result.DV[Level].Direction &= ~Dependence::DVEntry::GT;
