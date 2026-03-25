@@ -353,6 +353,8 @@ Bug Fixes in This Version
 - Fixed a crash when normalizing constraints involving concept template parameters whose index coincided with non-concept template parameters in the same parameter mapping.
 - Fixed a crash caused by accessing dependent diagnostics of a non-dependent context.
 - Fixed a crash when substituting into a non-type template parameter that has a type containing an undeduced placeholder type.
+- Correctly diagnosing and no longer crashing when ``export module foo``
+  (without a semicolon) are the final tokens in a module file. (#GH187771)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
