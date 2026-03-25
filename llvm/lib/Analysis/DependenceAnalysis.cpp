@@ -1383,13 +1383,13 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
   const SCEV *SrcConst = Src->getStart();
   const SCEV *DstConst = Dst->getStart();
 
-  if (!SE->isKnownPredicate(ICmpInst::ICMP_NE, Coeff, 
+  if (!SE->isKnownPredicate(ICmpInst::ICMP_NE, Coeff,
                             SE->getNegativeSCEV(Coeff)))
     return false;
   // Coeff is equal to its negative value for two possible values: zero and
   // minimum signed value. The assertion below, requires Coeff to be provably
   // not equal to any of these two values.
-  assert(SE->isKnownPredicate(ICmpInst::ICMP_NE, Coeff, 
+  assert(SE->isKnownPredicate(ICmpInst::ICMP_NE, Coeff,
                               SE->getNegativeSCEV(Coeff)));
 
   LLVM_DEBUG(dbgs() << "\tWeak-Crossing SIV test\n");
@@ -2232,7 +2232,7 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
       disproven = strongSIVtest(SrcAddRec, DstAddRec, Level, Result,
                                 UnderRuntimeAssumptions);
     else if (SE->isKnownPredicate(ICmpInst::ICMP_EQ, SrcCoeff,
-                                   SE->getNegativeSCEV(DstCoeff)) &&
+                                  SE->getNegativeSCEV(DstCoeff)) &&
              SE->isKnownPredicate(ICmpInst::ICMP_NE, SrcCoeff, DstCoeff))
       disproven = weakCrossingSIVtest(SrcAddRec, DstAddRec, Level, Result);
     else
