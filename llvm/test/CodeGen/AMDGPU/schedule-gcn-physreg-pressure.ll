@@ -269,6 +269,77 @@ entry:
   ret void
 }
 
+; Test early-clobber constraint with a tuple (64-bit) register.
+; The input s12 and early-clobber output s[10:11] have distinct live ranges.
+
+; GCN-DEBUG-LABEL: test_early_clobber_tuple
+; GCN-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 9, LVGPR WT: 0, LSGPR WT: 8
+; GCN-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 9, LVGPR WT: 0, LSGPR WT: 8
+
+; GENERIC-DEBUG-LABEL: test_early_clobber_tuple
+; GENERIC-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
+; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
+
+; GCN-NOPHYS-DEBUG-LABEL: test_early_clobber_tuple
+; GCN-NOPHYS-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
+; GCN-NOPHYS-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
+
+define amdgpu_kernel void @test_early_clobber_tuple(ptr addrspace(1) %out) {
+; GCN-LABEL: test_early_clobber_tuple:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; GCN-NEXT:    s_mov_b32 s3, 0xf000
+; GCN-NEXT:    s_mov_b32 s2, -1
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    s_mov_b32 s12, 42
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    s_mov_b64 s[10:11], s12
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    v_mov_b32_e32 v0, s10
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; GCN-NEXT:    s_endpgm
+;
+; NO-GCN-LABEL: test_early_clobber_tuple:
+; NO-GCN:       ; %bb.0: ; %entry
+; NO-GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; NO-GCN-NEXT:    s_mov_b32 s3, 0xf000
+; NO-GCN-NEXT:    s_mov_b32 s2, -1
+; NO-GCN-NEXT:    ;;#ASMSTART
+; NO-GCN-NEXT:    s_mov_b32 s12, 42
+; NO-GCN-NEXT:    ;;#ASMEND
+; NO-GCN-NEXT:    ;;#ASMSTART
+; NO-GCN-NEXT:    s_mov_b64 s[10:11], s12
+; NO-GCN-NEXT:    ;;#ASMEND
+; NO-GCN-NEXT:    v_mov_b32_e32 v0, s10
+; NO-GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; NO-GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; NO-GCN-NEXT:    s_endpgm
+;
+; GCN-NOPHYS-LABEL: test_early_clobber_tuple:
+; GCN-NOPHYS:       ; %bb.0: ; %entry
+; GCN-NOPHYS-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; GCN-NOPHYS-NEXT:    s_mov_b32 s3, 0xf000
+; GCN-NOPHYS-NEXT:    s_mov_b32 s2, -1
+; GCN-NOPHYS-NEXT:    ;;#ASMSTART
+; GCN-NOPHYS-NEXT:    s_mov_b32 s12, 42
+; GCN-NOPHYS-NEXT:    ;;#ASMEND
+; GCN-NOPHYS-NEXT:    ;;#ASMSTART
+; GCN-NOPHYS-NEXT:    s_mov_b64 s[10:11], s12
+; GCN-NOPHYS-NEXT:    ;;#ASMEND
+; GCN-NOPHYS-NEXT:    v_mov_b32_e32 v0, s10
+; GCN-NOPHYS-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NOPHYS-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; GCN-NOPHYS-NEXT:    s_endpgm
+entry:
+  %in = call i32 asm sideeffect "s_mov_b32 $0, 42", "={s12}"()
+  %val = call i64 asm sideeffect "s_mov_b64 $0, $1", "=&{s[10:11]},{s12}"(i32 %in)
+  %lo = trunc i64 %val to i32
+  store i32 %lo, ptr addrspace(1) %out
+  ret void
+}
+
 ; Test physical register input
 
 ; GCN-DEBUG-LABEL: test_physreg_input
