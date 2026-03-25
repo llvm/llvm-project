@@ -171,8 +171,84 @@ func.func @unused_alloca_store_loop() {
   // CHECK-NOT: memref.alloca
   %cst = arith.constant 1 : i32
   %alloca = memref.alloca() : memref<i32>
+  // CHECK: cf.br ^[[BB1:.*]]
   cf.br ^bb1
+
+// CHECK: ^[[BB1]]:
 ^bb1:
+  // CHECK-NOT: memref.store
   memref.store %cst, %alloca[] : memref<i32>
+  // CHECK: cf.br ^[[BB1]]
   cf.br ^bb1
+}
+
+// -----
+
+// CHECK-LABEL: func.func @store_back_to_alloca
+// CHECK-SAME: (%[[COND:.*]]: i1)
+func.func @store_back_to_alloca(%cond: i1) -> i32 {
+  // CHECK-NOT: memref.alloca
+  // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : i32
+  %c0 = arith.constant 0 : i32
+  // CHECK-DAG: %[[C1:.*]] = arith.constant 1 : i32
+  %c1 = arith.constant 1 : i32
+  %alloca = memref.alloca() : memref<i32>
+  memref.store %c0, %alloca[] : memref<i32>
+  %loaded = memref.load %alloca[] : memref<i32>
+  // CHECK: cf.cond_br %[[COND]], ^[[STORE_BACK:.*]], ^[[SKIP:.*]]
+  cf.cond_br %cond, ^store_back, ^skip
+
+// CHECK: ^[[STORE_BACK]]:
+^store_back:
+  memref.store %loaded, %alloca[] : memref<i32>
+  // CHECK: cf.br ^[[MERGE:.*]](%[[C0]] : i32)
+  cf.br ^merge
+
+// CHECK: ^[[SKIP]]:
+^skip:
+  memref.store %c1, %alloca[] : memref<i32>
+  // CHECK: cf.br ^[[MERGE]](%[[C1]] : i32)
+  cf.br ^merge
+
+// CHECK: ^[[MERGE]](%[[RESULT:.*]]: i32):
+^merge:
+  %result = memref.load %alloca[] : memref<i32>
+  // CHECK: return %[[RESULT]] : i32
+  return %result : i32
+}
+
+// -----
+
+// Ensure that a merge point used by an erased operation is not considered used.
+
+// CHECK-LABEL: func.func @merge_point_used_by_erased_op
+// CHECK-SAME: (%[[COND:.*]]: i1)
+func.func @merge_point_used_by_erased_op(%cond: i1) -> i32 {
+  // CHECK-NOT: memref.alloca
+  // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : i32
+  %c0 = arith.constant 0 : i32
+  // CHECK-DAG: %[[C1:.*]] = arith.constant 1 : i32
+  %c1 = arith.constant 1 : i32
+  %alloca = memref.alloca() : memref<i32>
+  // CHECK: cf.cond_br %[[COND]], ^[[MERGE:.*]], ^[[SKIP:.*]]
+  cf.cond_br %cond, ^merge, ^skip
+
+// CHECK: ^[[MERGE]]:
+^merge:
+  memref.store %c0, %alloca[] : memref<i32>
+  // CHECK: cf.br ^[[FINAL:.*]]{{$}}
+  cf.br ^final
+
+// CHECK: ^[[SKIP]]:
+^skip:
+  memref.store %c1, %alloca[] : memref<i32>
+  // CHECK: cf.br ^[[FINAL]]{{$}}
+  cf.br ^final
+
+// CHECK: ^[[FINAL]]:
+^final:
+  %result = memref.load %alloca[] : memref<i32>
+  memref.store %result, %alloca[] : memref<i32>
+  // CHECK: return %[[C0]] : i32
+  return %c0 : i32
 }
