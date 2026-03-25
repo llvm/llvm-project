@@ -232,6 +232,8 @@ def: T_R_pat<Y2_dccleana,    int_hexagon_Y2_dccleana>;
 def: T_R_pat<Y2_dccleaninva, int_hexagon_Y2_dccleaninva>;
 def: T_R_pat<Y2_dcinva,      int_hexagon_Y2_dcinva>;
 def: T_R_pat<Y2_dczeroa,     int_hexagon_Y2_dczeroa>;
+def: T_R_pat<Y2_icinva,      int_hexagon_Y2_icinva>;
+def: Pat<(int_hexagon_Y2_isync), (Y2_isync)>;
 
 def: T_RR_pat<Y4_l2fetch,    int_hexagon_Y4_l2fetch>;
 def: T_RP_pat<Y5_l2fetch,    int_hexagon_Y5_l2fetch>;

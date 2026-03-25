@@ -41328,6 +41328,7 @@ tc_0ba0d5da, TypeJ>, Enc_ecbcc8 {
 let Inst{13-0} = 0b00000000000000;
 let Inst{31-21} = 0b01010110110;
 let isSolo = 1;
+let hasSideEffects = 1;
 }
 def Y2_icinvidx : HInst<
 (outs),
@@ -41376,6 +41377,7 @@ tc_9b34f5e0, TypeJ>, Enc_e3b0c4 {
 let Inst{13-0} = 0b00000000000010;
 let Inst{31-16} = 0b0101011111000000;
 let isSolo = 1;
+let hasSideEffects = 1;
 }
 def Y2_k0lock : HInst<
 (outs),

@@ -3589,6 +3589,12 @@ Hexagon__ptr_Intrinsic<"HEXAGON_Y2_dcinva", []>;
 def int_hexagon_Y2_dczeroa :
 Hexagon__ptr_Intrinsic<"HEXAGON_Y2_dczeroa", []>;
 
+def int_hexagon_Y2_icinva :
+Hexagon__ptr_Intrinsic<"HEXAGON_Y2_icinva", []>;
+
+def int_hexagon_Y2_isync :
+Hexagon_Intrinsic<"HEXAGON_Y2_isync", [], [], []>;
+
 def int_hexagon_Y4_l2fetch :
 Hexagon__ptri32_Intrinsic<"HEXAGON_Y4_l2fetch", []>;
 

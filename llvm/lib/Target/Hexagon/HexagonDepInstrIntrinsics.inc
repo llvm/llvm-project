@@ -931,6 +931,8 @@
 {Hexagon::Y2_dcfetch, Intrinsic::hexagon_Y2_dcfetch},
 {Hexagon::Y2_dcinva, Intrinsic::hexagon_Y2_dcinva},
 {Hexagon::Y2_dczeroa, Intrinsic::hexagon_Y2_dczeroa},
+{Hexagon::Y2_icinva, Intrinsic::hexagon_Y2_icinva},
+{Hexagon::Y2_isync, Intrinsic::hexagon_Y2_isync},
 {Hexagon::Y4_l2fetch, Intrinsic::hexagon_Y4_l2fetch},
 {Hexagon::Y5_l2fetch, Intrinsic::hexagon_Y5_l2fetch},
 {Hexagon::Y6_dmlink, Intrinsic::hexagon_Y6_dmlink},

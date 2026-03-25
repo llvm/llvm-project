@@ -57,11 +57,29 @@ entry:
   ret void
 }
 
+; CHECK-LABEL: ic00:
+; CHECK: icinva(r{{[0-9]+}})
+define void @ic00(ptr nocapture readonly %p) local_unnamed_addr #0 {
+entry:
+  tail call void @llvm.hexagon.Y2.icinva(ptr %p)
+  ret void
+}
+
+; CHECK-LABEL: ic01:
+; CHECK: isync
+define void @ic01() local_unnamed_addr #0 {
+entry:
+  tail call void @llvm.hexagon.Y2.isync()
+  ret void
+}
+
 declare void @llvm.hexagon.prefetch(ptr nocapture) #1
 declare void @llvm.hexagon.Y2.dccleana(ptr nocapture readonly) #2
 declare void @llvm.hexagon.Y2.dccleaninva(ptr nocapture readonly) #2
 declare void @llvm.hexagon.Y2.dcinva(ptr nocapture readonly) #2
 declare void @llvm.hexagon.Y2.dczeroa(ptr nocapture) #3
+declare void @llvm.hexagon.Y2.icinva(ptr nocapture readonly) #2
+declare void @llvm.hexagon.Y2.isync() #2
 declare void @llvm.hexagon.Y4.l2fetch(ptr nocapture readonly, i32) #2
 declare void @llvm.hexagon.Y5.l2fetch(ptr nocapture readonly, i64) #2
 
