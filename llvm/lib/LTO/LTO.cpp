@@ -2801,8 +2801,7 @@ ThinBackend lto::createOutOfProcessThinBackend(
   auto Func =
       [=](const Config &Conf, ModuleSummaryIndex &CombinedIndex,
           const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
-           AddStreamFn, FileCache Cache,
-           ArrayRef<StringRef> BitcodeLibFuncs) {
+          AddStreamFn, FileCache Cache, ArrayRef<StringRef> BitcodeLibFuncs) {
         return std::make_unique<OutOfProcessThinBackend>(
             Conf, CombinedIndex, Parallelism, ModuleToDefinedGVSummaries, Cache,
             OnWrite, ShouldEmitIndexFiles, ShouldEmitImportsFiles,

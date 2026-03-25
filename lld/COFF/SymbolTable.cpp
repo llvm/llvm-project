@@ -1442,9 +1442,9 @@ void SymbolTable::compileBitcodeFiles() {
   llvm::BumpPtrAllocator alloc;
   llvm::StringSaver saver(alloc);
   SmallVector<StringRef> bitcodeLibFuncs;
-    // Triple must be captured before the bitcode is moved into the compiler.
-    // Note that the below assumes that the set of possible libfuncs is roughly
-    // equivalent for all bitcode translation units.
+  // Triple must be captured before the bitcode is moved into the compiler.
+  // Note that the below assumes that the set of possible libfuncs is roughly
+  // equivalent for all bitcode translation units.
   llvm::Triple tt =
       llvm::Triple(bitcodeFileInstances.front()->obj->getTargetTriple());
   for (StringRef libFunc : lto::LTO::getLibFuncSymbols(tt, saver)) {
@@ -1467,7 +1467,6 @@ void SymbolTable::compileBitcodeFiles() {
     for (BitcodeFile *f : bitcodeFileInstances)
       lto->add(*f);
   }
-
 
   for (InputFile *newObj : lto->compile()) {
     ObjFile *obj = cast<ObjFile>(newObj);
