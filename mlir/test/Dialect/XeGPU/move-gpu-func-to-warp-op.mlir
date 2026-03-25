@@ -70,3 +70,26 @@ gpu.module @test {
 // Regression test for MoveFuncBodyToWarpOp on malformed generic gpu.func.
 // CHECK-LABEL: gpu.func @missing_return_terminator
 // CHECK-NEXT:    "test.unknown"() : () -> ()
+
+// -----
+
+gpu.module @test {
+  gpu.func @multiple_blocks(%cond: i1) {
+    cf.cond_br %cond, ^bb1, ^bb2
+  ^bb1:  // pred: ^bb0
+    "test.unknown"() : () -> ()
+    cf.br ^bb2
+  ^bb2:  // 2 preds: ^bb0, ^bb1
+    gpu.return
+  }
+}
+
+// CHECK-LABEL:  gpu.func @multiple_blocks(
+// CHECK-SAME:                             %[[VAL_0:.*]]: i1) {
+// CHECK:          cf.cond_br %[[VAL_0]], ^bb1, ^bb2
+// CHECK:        ^bb1:
+// CHECK:          "test.unknown"() : () -> ()
+// CHECK:          cf.br ^bb2
+// CHECK:        ^bb2:
+// CHECK:          gpu.return
+// CHECK:        }
