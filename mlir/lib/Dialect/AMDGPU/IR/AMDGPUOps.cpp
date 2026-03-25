@@ -1323,11 +1323,12 @@ LogicalResult GlobalPrefetchOp::verify() {
   const bool isSpeculative = getSpeculative();
   if (temporalHint == TemporalHint::NT)
     return this->emitOpError("does not support NT mode");
-  if ((temporalHint == TemporalHint::NT_RT) ||
-      (temporalHint == TemporalHint::RT_NT) ||
-      (temporalHint == TemporalHint::NT_HT)) {
-    if (!isSpeculative)
-      return this->emitOpError("operates only in the speculative mode");
+
+  if (llvm::is_contained(
+          {TemporalHint::NT_RT, TemporalHint::RT_NT, TemporalHint::NT_HT},
+          temporalHint) &&
+      !isSpeculative) {
+    return this->emitOpError("operates only in the speculative mode");
   }
   return success();
 }

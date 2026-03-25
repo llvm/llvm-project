@@ -3965,7 +3965,7 @@ struct GlobalPrefetchOpLowering
     const bool isSpeculative = op.getSpeculative();
 
     int32_t llvmScopeValue = static_cast<int32_t>(hint);
-    if ((hint == TemporalHint::RT) || (hint == TemporalHint::HT))
+    if (hint == TemporalHint::RT || hint == TemporalHint::HT)
       llvmScopeValue = isSpeculative ? llvmScopeValue : llvmScopeValue | 1;
 
     IntegerAttr scopeAttr = rewriter.getI32IntegerAttr(llvmScopeValue);
@@ -3976,10 +3976,10 @@ struct GlobalPrefetchOpLowering
     Location loc = op->getLoc();
     Value offset =
         LLVM::ConstantOp::create(rewriter, loc, rewriter.getI64Type(), 0);
-    for (size_t i = 0; i < indices.size(); ++i) {
+    for (auto [i, index] : llvm::enumerate(indices)) {
       Value stride = descriptor.stride(rewriter, loc, i);
       Value mulOp = LLVM::MulOp::create(rewriter, loc, rewriter.getI64Type(),
-                                        stride, indices[i]);
+                                        stride, index);
       offset = LLVM::AddOp::create(rewriter, loc, rewriter.getI64Type(), offset,
                                    mulOp);
     }
