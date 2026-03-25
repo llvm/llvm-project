@@ -1070,6 +1070,17 @@ bool IsAssumedType(const Symbol &symbol) {
   return false;
 }
 
+bool IsEnumerationType(const Symbol &symbol) {
+  if (const auto *details{symbol.detailsIf<DerivedTypeDetails>()}) {
+    return details->isEnumerationType();
+  }
+  return false;
+}
+
+bool IsEnumerationType(const DerivedTypeSpec &derived) {
+  return derived.IsEnumerationType();
+}
+
 bool IsPolymorphic(const Symbol &symbol) {
   if (const DeclTypeSpec * type{symbol.GetType()}) {
     return type->IsPolymorphic();

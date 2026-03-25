@@ -197,6 +197,8 @@ bool IsExternal(const Symbol &);
 bool IsModuleProcedure(const Symbol &);
 bool HasCoarray(const parser::Expr &);
 bool IsAssumedType(const Symbol &);
+bool IsEnumerationType(const Symbol &);
+bool IsEnumerationType(const DerivedTypeSpec &);
 bool IsPolymorphic(const Symbol &);
 bool IsUnlimitedPolymorphic(const Symbol &);
 bool IsPolymorphicAllocatable(const Symbol &);

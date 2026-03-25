@@ -738,6 +738,8 @@ std::string DerivedTypeSpec::VectorTypeAsFortran() const {
     break;
   case (Fortran::semantics::DerivedTypeSpec::Category::DerivedType):
     Fortran::common::die("Vector element type not implemented");
+  case (Fortran::semantics::DerivedTypeSpec::Category::EnumerationType):
+    Fortran::common::die("Vector element type not implemented for enumeration");
   }
   return buf;
 }
@@ -745,6 +747,10 @@ std::string DerivedTypeSpec::VectorTypeAsFortran() const {
 std::string DerivedTypeSpec::AsFortran() const {
   std::string buf;
   llvm::raw_string_ostream ss{buf};
+  if (IsEnumerationType()) {
+    ss << "ENUMERATION TYPE :: " << originalTypeSymbol_.name();
+    return buf;
+  }
   ss << originalTypeSymbol_.name();
   if (!rawParameters_.empty()) {
     CHECK(parameters_.empty());

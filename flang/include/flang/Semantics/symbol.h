@@ -497,6 +497,10 @@ public:
   const SymbolVector &paramDeclOrder() const { return paramDeclOrder_; }
   bool sequence() const { return sequence_; }
   bool isDECStructure() const { return isDECStructure_; }
+  bool isEnumerationType() const { return isEnumerationType_; }
+  void set_isEnumerationType(bool x = true) { isEnumerationType_ = x; }
+  int enumeratorCount() const { return enumeratorCount_; }
+  void set_enumeratorCount(int n) { enumeratorCount_ = n; }
   std::map<SourceName, SymbolRef> &finals() { return finals_; }
   const std::map<SourceName, SymbolRef> &finals() const { return finals_; }
   bool isForwardReferenced() const { return isForwardReferenced_; }
@@ -547,6 +551,10 @@ private:
   bool isDECStructure_{false};
   bool isForwardReferenced_{false};
   std::map<SourceName, const parser::Expr *> originalKindParameterMap_;
+
+  // These fields are only used if the derived type is an enumeration type.
+  bool isEnumerationType_{false};
+  int enumeratorCount_{0};
 
   friend llvm::raw_ostream &operator<<(
       llvm::raw_ostream &, const DerivedTypeDetails &);

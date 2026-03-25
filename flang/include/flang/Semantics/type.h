@@ -263,7 +263,13 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, const ArraySpec &);
 // The name may not match the symbol's name in case of a USE rename.
 class DerivedTypeSpec {
 public:
-  enum class Category { DerivedType, IntrinsicVector, PairVector, QuadVector };
+  enum class Category {
+    DerivedType,
+    IntrinsicVector,
+    PairVector,
+    QuadVector,
+    EnumerationType
+  };
 
   using RawParameter = std::pair<const parser::Keyword *, ParamValue>;
   using RawParameters = std::vector<RawParameter>;
@@ -334,6 +340,9 @@ public:
   bool IsVectorType() const {
     return category_ == Category::IntrinsicVector ||
         category_ == Category::PairVector || category_ == Category::QuadVector;
+  }
+  bool IsEnumerationType() const {
+    return category_ == Category::EnumerationType;
   }
 
 private:

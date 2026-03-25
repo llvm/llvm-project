@@ -170,6 +170,8 @@ std::size_t DynamicType::GetAlignment(
       } else {
         common::die("Missing scope for Vector type.");
       }
+    case semantics::DerivedTypeSpec::Category::EnumerationType:
+      break; // treat like DerivedType for alignment purposes
     }
   } else {
     return targetCharacteristics.GetAlignment(category_, kind());
