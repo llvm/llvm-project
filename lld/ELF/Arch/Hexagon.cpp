@@ -692,7 +692,7 @@ void Hexagon::finalizeRelocScan() {
         if (!tga) {
           tga = ctx.symtab->addSymbol(Undefined{ctx.internalFile,
                                                 "__tls_get_addr", STB_GLOBAL,
-                                                STV_DEFAULT, STT_NOTYPE});
+                                                STV_DEFAULT, STT_FUNC});
           tga->isUsedInRegularObj = true;
           tga->used = true;
           tga->isPreemptible = true;
