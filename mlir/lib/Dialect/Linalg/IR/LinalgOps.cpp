@@ -5026,8 +5026,8 @@ getNewMixedTileSizes(PatternRewriter &rewriter, Type newPackedTy,
                                .getShape()
                                .take_back(mixedTiles.size()),
                            mixedTiles)) {
-    int64_t shape = std::get<0>(it);
-    if (shape == ShapedType::kDynamic) {
+    int64_t dimSize = std::get<0>(it);
+    if (dimSize == ShapedType::kDynamic) {
       newMixedTileSizes.push_back(std::get<1>(it));
       continue;
     }
@@ -5039,10 +5039,10 @@ getNewMixedTileSizes(PatternRewriter &rewriter, Type newPackedTy,
       // Already a constant
       newMixedTileSizes.push_back(tile);
     } else {
-      assert(getConstantIntValue(tile).value() == shape &&
+      assert(getConstantIntValue(tile).value() == dimSize &&
              "tile size and dim size don't match!");
       newMixedTileSizes.push_back(
-          (rewriter.getIntegerAttr(rewriter.getIndexType(), shape)));
+          (rewriter.getIntegerAttr(rewriter.getIndexType(), dimSize)));
     }
   }
 
@@ -5197,21 +5197,23 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
   SmallVector<int64_t> expectedPackedShape = PackOp::inferPackedShape(
       unpackedType.getShape(), packOrUnPack.getStaticTiles(),
       packOrUnPack.getInnerDimsPos(), packOrUnPack.getOuterDimsPerm());
-  if (!llvm::all_of(
-          llvm::zip(packedType.getShape().take_back(mixedTiles.size()),
-                    mixedTiles),
-          [](std::tuple<int64_t, OpFoldResult> it) {
-            int64_t shape = std::get<0>(it);
-            if (Attribute attr =
-                    llvm::dyn_cast_if_present<Attribute>(std::get<1>(it))) {
-              IntegerAttr intAttr = dyn_cast_or_null<IntegerAttr>(attr);
-              int64_t staticTileSize = intAttr.getValue().getSExtValue();
-              return shape == staticTileSize;
-            }
-            return ShapedType::isDynamic(shape);
-          })) {
-    return op->emitError("mismatch in inner tile sizes specified and shaped of "
-                         "tiled dimension in the packed type");
+  for (auto it : llvm::enumerate(llvm::zip(
+           packedType.getShape().take_back(mixedTiles.size()), mixedTiles))) {
+    int64_t dimSize = std::get<0>(it.value());
+    if (Attribute attr =
+            llvm::dyn_cast_if_present<Attribute>(std::get<1>(it.value()))) {
+      IntegerAttr intAttr = dyn_cast_or_null<IntegerAttr>(attr);
+      int64_t staticTileSize = intAttr.getValue().getSExtValue();
+      if (dimSize != staticTileSize)
+        return op->emitError(
+                   "mismatch in inner tile sizes specified and shaped of "
+                   "tiled dimension in the packed type at index ")
+               << it.index() << ": got " << dimSize << " != " << staticTileSize;
+    } else if (!ShapedType::isDynamic(dimSize)) {
+      return op->emitError("mismatch in inner tile sizes specified at index ")
+             << it.index() << ": got static shape " << dimSize
+             << " but dynamic tile size";
+    }
   }
   if (failed(
           verifyCompatibleShape(expectedPackedShape, packedType.getShape()))) {
