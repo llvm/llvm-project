@@ -2410,7 +2410,7 @@ bool SIFoldOperandsImpl::tryFoldRegSequenceSubRegUses(
 
     // The lookup can fail, for instance, if the use refers to a
     // subregister of a subregister.
-    // TODO Handle subregister composition. See also getRegSeqInits.
+    // TODO Handle subregister composition. See also getRegSeqInit.
     auto *It =
         find_if(Defs, [=](const DefPair &P) { return P.second == UseSubReg; });
     if (It == Defs.end() || !It->first) {
@@ -2420,15 +2420,19 @@ bool SIFoldOperandsImpl::tryFoldRegSequenceSubRegUses(
 
     MachineOperand *DefOp = It->first;
     LLVM_DEBUG(dbgs() << "Resolved definition to: " << *DefOp << '\n');
-    if (DefOp->isImm() || MRI->getVRegDef(DefOp->getReg())->isCopy())
+    if (!DefOp->isReg())
+      continue;
+
+    MachineInstr *DefMI = MRI->getVRegDef(DefOp->getReg());
+    if (!DefMI || DefMI->isCopy())
       continue;
 
     Register CopyDst = MRI->createVirtualRegister(InputRC);
     const MCInstrDesc &CopyDesc = TII->get(AMDGPU::COPY);
+    MRI->clearKillFlags(DefOp->getReg());
     MachineInstr *CopyMI = BuildMI(*UseMI->getParent(), UseMI,
                                    UseMI->getDebugLoc(), CopyDesc, CopyDst)
                                .add(*DefOp);
-    CopyMI->getOperand(1).setIsKill(false);
 
     LLVM_DEBUG(dbgs() << "Created Copy: " << *CopyMI);
     Use.ChangeToRegister(CopyDst, false);
@@ -2441,7 +2445,7 @@ bool SIFoldOperandsImpl::tryFoldRegSequenceSubRegUses(
 
   if (MRI->hasAtMostUserInstrs(Reg, 0)) {
     LLVM_DEBUG(dbgs() << "Removing REG_SEQUENCE which is dead after fold.\n");
-    MI.removeFromParent();
+    MI.eraseFromParent();
   }
 
   return Changed;
