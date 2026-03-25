@@ -1963,7 +1963,7 @@ LazyValueInfo LazyValueAnalysis::run(Function &F,
                                      FunctionAnalysisManager &FAM) {
   auto &AC = FAM.getResult<AssumptionAnalysis>(F);
 
-  return LazyValueInfo(&AC, &F.getDataLayout());
+  return LazyValueInfo(&AC);
 }
 
 /// Returns true if we can statically tell that this value will never be a

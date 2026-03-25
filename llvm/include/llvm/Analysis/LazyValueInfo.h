@@ -32,7 +32,6 @@ namespace llvm {
   class LazyValueInfo {
     friend class LazyValueInfoWrapperPass;
     AssumptionCache *AC = nullptr;
-    const DataLayout *DL = nullptr;
     LazyValueInfoImpl *PImpl = nullptr;
     LazyValueInfo(const LazyValueInfo &) = delete;
     void operator=(const LazyValueInfo &) = delete;
@@ -43,16 +42,15 @@ namespace llvm {
   public:
     ~LazyValueInfo();
     LazyValueInfo() = default;
-    LazyValueInfo(AssumptionCache *AC_, const DataLayout *DL_)
-        : AC(AC_), DL(DL_) {}
+    LazyValueInfo(AssumptionCache *AC_)
+        : AC(AC_) {}
     LazyValueInfo(LazyValueInfo &&Arg)
-        : AC(Arg.AC), DL(Arg.DL), PImpl(Arg.PImpl) {
+        : AC(Arg.AC), PImpl(Arg.PImpl) {
       Arg.PImpl = nullptr;
     }
     LazyValueInfo &operator=(LazyValueInfo &&Arg) {
       releaseMemory();
       AC = Arg.AC;
-      DL = Arg.DL;
       PImpl = Arg.PImpl;
       Arg.PImpl = nullptr;
       return *this;
