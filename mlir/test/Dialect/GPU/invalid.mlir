@@ -1119,3 +1119,13 @@ func.func @warp_execute_wrong_terminator() {
   }
   return
 }
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/186642:
+// gpu.barrier outside a gpu.func or gpu.launch used to crash during LLVM IR
+// translation. The verifier should now emit a proper error instead.
+gpu.module @kernels {
+  // expected-error@+1 {{'gpu.barrier' op expected to be nested inside a gpu.func or gpu.launch region}}
+  gpu.barrier
+}

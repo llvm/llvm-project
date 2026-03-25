@@ -1467,6 +1467,7 @@ def GPU_BarrierOp : GPU_Op<"barrier">,
   }];
   let assemblyFormat = "(`memfence` $address_spaces^)? attr-dict";
   let hasCanonicalizer = 1;
+  let hasVerifier = 1;
   let builders = [OpBuilder<(
                       ins CArg<"std::optional<::mlir::gpu::AddressSpace>",
                                "std::nullopt">:$addressSpace)>,

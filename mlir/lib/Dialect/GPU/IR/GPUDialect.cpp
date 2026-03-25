@@ -1529,6 +1529,17 @@ void BarrierOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add(eraseRedundantGpuBarrierOps);
 }
 
+LogicalResult BarrierOp::verify() {
+  // gpu.barrier is only meaningful inside a GPU kernel body. Require that it
+  // be nested (directly or indirectly) inside either a gpu.func or a
+  // gpu.launch, both of which establish a kernel execution context.
+  Operation *op = getOperation();
+  if (!op->getParentOfType<GPUFuncOp>() && !op->getParentOfType<LaunchOp>())
+    return emitOpError(
+        "expected to be nested inside a gpu.func or gpu.launch region");
+  return success();
+}
+
 void BarrierOp::build(mlir::OpBuilder &odsBuilder,
                       mlir::OperationState &odsState,
                       std::optional<AddressSpace> addressSpace) {
