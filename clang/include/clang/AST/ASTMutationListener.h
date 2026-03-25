@@ -184,9 +184,6 @@ public:
                                    const Decl *D) {}
   /* TO_UPSTREAM(BoundsSafety) OFF*/
 
-  /// The parser find the named module declaration.
-  virtual void EnteringModulePurview() {}
-
   /// An mangling number was added to a Decl
   ///
   /// \param D The decl that got a mangling number

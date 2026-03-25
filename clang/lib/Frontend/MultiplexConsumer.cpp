@@ -130,7 +130,6 @@ public:
   void LazyAttributeToDecl(const Attr *Attr,
                            const Decl *D) override;
   /* TO_UPSTREAM(BoundsSafety) OFF*/
-  void EnteringModulePurview() override;
   void AddedManglingNumber(const Decl *D, unsigned) override;
   void AddedStaticLocalNumbers(const Decl *D, unsigned) override;
   void AddedAnonymousNamespace(const TranslationUnitDecl *,
@@ -275,11 +274,6 @@ void MultiplexASTMutationListener::LazyAttributeToDecl(const Attr *Attr,
     L->LazyAttributeToDecl(Attr, D);
 }
 /* TO_UPSTREAM(BoundsSafety) OFF*/
-
-void MultiplexASTMutationListener::EnteringModulePurview() {
-  for (auto *L : Listeners)
-    L->EnteringModulePurview();
-}
 
 void MultiplexASTMutationListener::AddedManglingNumber(const Decl *D,
                                                        unsigned Number) {

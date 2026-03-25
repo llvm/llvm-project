@@ -997,7 +997,6 @@ private:
   void LazyAttributeToDecl(const Attr *Attr,
                            const Decl *D) override;
   /* TO_UPSTREAM(BoundsSafety) OFF*/
-  void EnteringModulePurview() override;
   void AddedManglingNumber(const Decl *D, unsigned) override;
   void AddedStaticLocalNumbers(const Decl *D, unsigned) override;
   void AddedAnonymousNamespace(const TranslationUnitDecl *,
