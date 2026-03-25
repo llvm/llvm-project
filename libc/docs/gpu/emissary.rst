@@ -101,7 +101,7 @@ It is worth noting that without Emissary API for MPI, the device link
 step for the above code would fail with unresolved references to 
 MPI_Send and MPI_Recv. The include of EmissaryMPI.h resolves this. 
 
-.. code-block:: h
+.. code-block:: c++
 
   //===--------------------------------------------------------------------===//
   // 
@@ -141,7 +141,7 @@ MPI_Send and MPI_Recv. The include of EmissaryMPI.h resolves this.
 The above is a minimal Emissary API implementation to provide MPI_Send and MPI_Recv
 functionality for demonstration.  The host service side to support this is the following:
 
-.. code-block:: cpp
+.. code-block:: c++
 
   //===--------------------------------------------------------------------===//
   //
@@ -153,52 +153,33 @@ functionality for demonstration.  The host service side to support this is the f
   #include "EmissaryMPI.h"
   #include <EmissaryIds.h>
   #include <mpi.h>
-  static int V_MPI_Send(void *fnptr, ...) {
-    va_list args;
-    va_start(args, fnptr);
-    void *v0 = va_arg(args, void *);
-    int v1 = va_arg(args, int);
-    MPI_Datatype v2 = va_arg(args, MPI_Datatype);
-    int v3 = va_arg(args, int);
-    int v4 = va_arg(args, int);
-    MPI_Comm v5 = va_arg(args, MPI_Comm);
-    va_end(args);
-    int rval = MPI_Send(v0, v1, v2, v3, v4, v5);
-    return rval;
-  }
-  static int V_MPI_Recv(void *fnptr, ...) {
-    va_list args;
-    va_start(args, fnptr);
-    void *v0 = va_arg(args, void *);
-    int v1 = va_arg(args, int);
-    MPI_Datatype v2 = va_arg(args, MPI_Datatype);
-    int v3 = va_arg(args, int);
-    int v4 = va_arg(args, int);
-    MPI_Comm v5 = va_arg(args, MPI_Comm);
-    MPI_Status *v6 = va_arg(args, MPI_Status *);
-    va_end(args);
-    int rval = MPI_Recv(v0, v1, v2, v3, v4, v5, v6);
-    return rval;
-  }
   namespace EmissaryExternal {
-  // The EmissaryMPI master function selector
+  // EmissaryMPI function selector
   extern "C" EmissaryReturn_t EmissaryMPI(char *data, emisArgBuf_t *ab,
-                                          emis_argptr_t *a[]) {
+                                        emis_argptr_t *a[]) {
     switch (ab->emisfnid) {
     case _MPI_Send_idx: {
-      void *fnptr = (void *)V_MPI_Send;
-      int return_value_int =
-          V_MPI_Send(fnptr, a[0], a[1], a[2], a[3], a[4], a[5]);
-      return (EmissaryReturn_t)return_value_int;
+      return (EmissaryReturn_t) MPI_Send(
+        (const void*)  ((unsigned long long int) a[0]),
+        (int)          ((unsigned long long int) a[1]),
+        (MPI_Datatype) ((unsigned long long int) a[2]),
+        (int)          ((unsigned long long int) a[3]),
+        (int)          ((unsigned long long int) a[4]),
+        (MPI_Comm)     ((unsigned long long int) a[5]));
     }
     case _MPI_Recv_idx: {
-      void *fnptr = (void *)V_MPI_Recv;
-      int return_value_int =
-          V_MPI_Recv(fnptr, a[0], a[1], a[2], a[3], a[4], a[5], a[6]);
-      return (EmissaryReturn_t)return_value_int;
+    return (EmissaryReturn_t) MPI_Recv(
+      (void*)        ((unsigned long long int) a[0]),
+      (int)          ((unsigned long long int) a[1]),
+      (MPI_Datatype) ((unsigned long long int) a[2]),
+      (int)          ((unsigned long long int) a[3]),
+      (int)          ((unsigned long long int) a[4]),
+      (MPI_Comm)     ((unsigned long long int) a[5]),
+      (MPI_Status *) ((unsigned long long int) a[6]));
+    }
     }
     return (EmissaryReturn_t)0;
-    }
+  }
   }
 
 The above OpenMP user source code can be compiled and executed with
