@@ -27,6 +27,10 @@ namespace llvm {
 // AMDGPU Target Machine (R600+)
 //===----------------------------------------------------------------------===//
 
+namespace AMDGPU {
+StringRef getSchedStrategy(const Function &F);
+}
+
 class AMDGPUTargetMachine : public CodeGenTargetMachineImpl {
 protected:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;

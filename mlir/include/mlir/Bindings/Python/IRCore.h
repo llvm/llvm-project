@@ -78,6 +78,18 @@ public:
   }
   PyObjectRef(const PyObjectRef &other)
       : referrent(other.referrent), object(other.object /* copies */) {}
+  PyObjectRef &operator=(const PyObjectRef &other) {
+    referrent = other.referrent;
+    object = other.object;
+    return *this;
+  }
+  PyObjectRef &operator=(PyObjectRef &&other) noexcept {
+    referrent = other.referrent;
+    object = std::move(other.object);
+    other.referrent = nullptr;
+    assert(!other.object);
+    return *this;
+  }
   ~PyObjectRef() = default;
 
   int getRefCount() {
@@ -739,7 +751,7 @@ public:
 
   nanobind::object getOperationObject() { return operationObject; }
 
-  static nanobind::object
+  static nanobind::typed<nanobind::object, PyOperation>
   buildGeneric(std::string_view name, std::tuple<int, bool> opRegionSpec,
                nanobind::object operandSegmentSpecObj,
                nanobind::object resultSegmentSpecObj,
@@ -1356,7 +1368,8 @@ struct MLIR_PYTHON_API_EXPORTED PyAttrBuilderMap {
   static nanobind::callable
   dunderGetItemNamed(const std::string &attributeKind);
   static void dunderSetItemNamed(const std::string &attributeKind,
-                                 nanobind::callable func, bool replace);
+                                 nanobind::callable func, bool replace,
+                                 bool allow_existing);
 
   static void bind(nanobind::module_ &m);
 };
@@ -1364,22 +1377,6 @@ struct MLIR_PYTHON_API_EXPORTED PyAttrBuilderMap {
 //------------------------------------------------------------------------------
 // Collections.
 //------------------------------------------------------------------------------
-
-class MLIR_PYTHON_API_EXPORTED PyRegionIterator {
-public:
-  PyRegionIterator(PyOperationRef operation, int nextIndex)
-      : operation(std::move(operation)), nextIndex(nextIndex) {}
-
-  PyRegionIterator &dunderIter() { return *this; }
-
-  nanobind::typed<nanobind::object, PyRegion> dunderNext();
-
-  static void bind(nanobind::module_ &m);
-
-private:
-  PyOperationRef operation;
-  intptr_t nextIndex = 0;
-};
 
 /// Regions of an op are fixed length and indexed numerically so are represented
 /// with a sequence-like container.
@@ -1390,10 +1387,6 @@ public:
 
   PyRegionList(PyOperationRef operation, intptr_t startIndex = 0,
                intptr_t length = -1, intptr_t step = 1);
-
-  PyRegionIterator dunderIter();
-
-  static void bindDerived(ClassTy &c);
 
 private:
   /// Give the parent CRTP class access to hook implementations below.

@@ -12,6 +12,7 @@
 #ifdef LIBC_FULL_BUILD
 
 #include "llvm-libc-macros/CONST_FUNC_A.h"
+#include "llvm-libc-macros/MACRO_ATTR.h"
 #include "llvm-libc-macros/test_more-macros.h"
 #include "llvm-libc-macros/test_small-macros.h"
 #include "llvm-libc-types/float128.h"

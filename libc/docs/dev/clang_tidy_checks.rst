@@ -43,10 +43,9 @@ implementation-in-namespace
 ---------------------------
 Check name: ``llvmlibc-implementation-in-namespace``.
 
-It is part of our implementation standards that all implementation pieces live
-under the ``LIBC_NAMESPACE_DECL`` namespace. This prevents pollution of the
-global namespace. Without a formal check to ensure this, an implementation
-might compile and pass unit tests, but not produce a usable libc function.
+All LLVM-libc implementation constructs must be enclosed in the
+``LIBC_NAMESPACE_DECL`` namespace. See :ref:`code_style` for the full technical
+rationale and macro definitions.
 
 This check ensures that top-level declarations in a translation unit are
 enclosed within the ``LIBC_NAMESPACE_DECL`` namespace.

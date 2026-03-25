@@ -672,7 +672,7 @@ SDValue R600TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
   return vectorToVerticalVector(DAG, Insert);
 }
 
-SDValue R600TargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
+SDValue R600TargetLowering::LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI,
                                                SDValue Op,
                                                SelectionDAG &DAG) const {
   GlobalAddressSDNode *GSD = cast<GlobalAddressSDNode>(Op);

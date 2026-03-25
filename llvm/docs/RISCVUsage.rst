@@ -336,7 +336,7 @@ LLVM supports (to various degrees) a number of experimental extensions.  All exp
 The primary goal of experimental support is to assist in the process of ratification by providing an existence proof of an implementation, and simplifying efforts to validate the value of a proposed extension against large code bases.  Experimental extensions are expected to either transition to ratified status, or be eventually removed.  The decision on whether to accept an experimental extension is currently done on an entirely case by case basis; if you want to propose one, attending the bi-weekly RISC-V sync-up call is strongly advised.
 
 ``experimental-p``
-  LLVM implements the `019 draft specification <https://www.jhauser.us/RISCV/ext-P/>`__.
+  LLVM implements the `0.20 draft specification <https://github.com/riscv/riscv-p-spec/blob/master/P-ext-proposal.adoc>`__.
 
 ``experimental-zibi``
   LLVM implements the `0.1 release specification <https://github.com/riscv/zibi/releases/tag/v0.1.0>`__.
@@ -457,13 +457,13 @@ The current vendor extensions supported are:
   LLVM implements `version 1.0.0 of the CORE-V immediate branching custom instructions specification <https://github.com/openhwgroup/cv32e40p/blob/cv32e40p_v1.3.2/docs/source/instruction_set_extensions.rst>`__ by OpenHW Group.  All instructions are prefixed with `cv.` as described in the specification. These instructions are only available for riscv32 at this time.
 
 ``XSiFivecdiscarddlone``
-  LLVM implements `the SiFive sf.cdiscard.d.l1 instruction specified in <https://sifive.cdn.prismic.io/sifive/767804da-53b2-4893-97d5-b7c030ae0a94_s76mc_core_complex_manual_21G3.pdf>`_ by SiFive.
+  LLVM implements `the SiFive sf.cdiscard.d.l1 instruction <https://sifive.cdn.prismic.io/sifive/767804da-53b2-4893-97d5-b7c030ae0a94_s76mc_core_complex_manual_21G3.pdf>`__ by SiFive.
 
 ``XSiFivecflushdlone``
-  LLVM implements `the SiFive sf.cflush.d.l1 instruction specified in <https://sifive.cdn.prismic.io/sifive/767804da-53b2-4893-97d5-b7c030ae0a94_s76mc_core_complex_manual_21G3.pdf>`_ by SiFive.
+  LLVM implements `the SiFive sf.cflush.d.l1 instruction <https://sifive.cdn.prismic.io/sifive/767804da-53b2-4893-97d5-b7c030ae0a94_s76mc_core_complex_manual_21G3.pdf>`__ by SiFive.
 
 ``XSfcease``
-  LLVM implements `the SiFive sf.cease instruction specified in <https://sifive.cdn.prismic.io/sifive/767804da-53b2-4893-97d5-b7c030ae0a94_s76mc_core_complex_manual_21G3.pdf>`_ by SiFive.
+  LLVM implements `the SiFive sf.cease instruction <https://sifive.cdn.prismic.io/sifive/767804da-53b2-4893-97d5-b7c030ae0a94_s76mc_core_complex_manual_21G3.pdf>`__ by SiFive.
 
 ``Xwchc``
   LLVM implements `the custom compressed opcodes present in some QingKe cores` by WCH / Nanjing Qinheng Microelectronics. The vendor refers to these opcodes by the name "XW".
@@ -536,9 +536,6 @@ The current vendor extensions supported are:
 
 ``Xmipslsp``
   LLVM implements load/store pair instructions for the `p8700 processor <https://mips.com/products/hardware/p8700/>`__ by MIPS.
-
-``experimental-XRivosVisni``
-  LLVM implements `version 0.1 of the Rivos Vector Integer Small New Instructions extension specification <https://github.com/rivosinc/rivos-custom-extensions>`__.
 
 ``experimental-XRivosVizip``
   LLVM implements `version 0.1 of the Rivos Vector Register Zips extension specification <https://github.com/rivosinc/rivos-custom-extensions>`__.
