@@ -30,13 +30,13 @@ int main(int, char**) {
     constexpr std::text_encoding::id expected_id = std::text_encoding::UTF8;
 #elif defined(__linux__) || defined(__FreeBSD__) || defined(__APPLE__)
     constexpr std::text_encoding::id expected_id = std::text_encoding::ASCII;
-#  elif defined(_WIN32)
+#elif defined(_WIN32)
     constexpr std::text_encoding::id expected_id = std::text_encoding::windows1252;
-#  elif defined(_AIX)
+#elif defined(_AIX)
     constexpr std::text_encoding::id expected_id = std::text_encoding::ISOLatin1;
-#  else
+#else
     constexpr std::text_encoding::id expected_id = std::text_encoding::unknown;
-#  endif
+#endif
 
     std::text_encoding te = std::text_encoding::environment();
     bool fail             = false;
@@ -59,12 +59,11 @@ int main(int, char**) {
   }
 
   std::text_encoding te = std::text_encoding::environment();
-  // 2. text_encoding::environment() still returns the default locale encoding when the locale is set to "en_US.UTF-8".
+  // 2. text_encoding::environment()'s return value isn't altered by changes to locale.
   {
     std::setlocale(LC_ALL, LOCALE_en_US_UTF_8);
 
     std::text_encoding te2 = std::text_encoding::environment();
-    assert(te2 != std::text_encoding::UTF8);
     assert(te == te2);
   }
 
@@ -72,7 +71,6 @@ int main(int, char**) {
     std::setlocale(LC_CTYPE, LOCALE_en_US_UTF_8);
 
     std::text_encoding te2 = std::text_encoding::environment();
-    assert(te2 != std::text_encoding::UTF8);
     assert(te == te2);
   }
   return 0;

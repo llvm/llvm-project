@@ -218,15 +218,16 @@ _LIBCPP_HIDDEN __te_impl __get_win32_acp(unsigned int __codepage) {
   }
 }
 
-[[maybe_unused]] _LIBCPP_HIDDEN __te_impl __get_locale_encoding(string_view __name) {
+[[maybe_unused]] _LIBCPP_HIDDEN __te_impl __get_locale_encoding(const char* __name) {
   wchar_t __locale_wbuffer[LOCALE_NAME_MAX_LENGTH + 1]{};
   wchar_t __number_buffer[11]{};
 
   bool __is_ansi  = ::AreFileApisANSI();
   auto __codepage = __is_ansi ? CP_ACP : CP_OEMCP;
 
+  string_view __sv(__name);
   int __ret = ::MultiByteToWideChar(
-      __codepage, MB_ERR_INVALID_CHARS, __name.data(), __name.size(), __locale_wbuffer, LOCALE_NAME_MAX_LENGTH);
+      __codepage, MB_ERR_INVALID_CHARS, __name, __sv.size(), __locale_wbuffer, LOCALE_NAME_MAX_LENGTH);
 
   if (__ret <= 0)
     return __te_impl();
@@ -246,11 +247,10 @@ _LIBCPP_HIDDEN __te_impl __get_win32_acp(unsigned int __codepage) {
 _LIBCPP_HIDDEN __te_impl __get_env_encoding() { return __get_win32_acp(::GetACP()); }
 
 #elif !defined(__ANDROID__) // POSIX
-_LIBCPP_HIDDEN __te_impl __get_locale_encoding(string_view __name) {
+_LIBCPP_HIDDEN __te_impl __get_locale_encoding(const char* __name) {
   __te_impl __e;
 
-  __locale::__locale_t __l =
-      __locale::__newlocale(_LIBCPP_CTYPE_MASK, __name.data(), static_cast<__locale::__locale_t>(0));
+  __locale::__locale_t __l = __locale::__newlocale(_LIBCPP_CTYPE_MASK, __name, static_cast<__locale::__locale_t>(0));
 
   if (!__l) {
     return __e;
@@ -277,24 +277,28 @@ _LIBCPP_HIDDEN __te_impl __get_locale_encoding(string_view __name) {
 _LIBCPP_HIDDEN __te_impl __get_env_encoding() { return __get_locale_encoding(""); }
 #else
 #  if defined(__ANDROID__)
-// Android is pretty much assumed to always be UTF-8.
-// Problematic for locale::encoding because nl_langinfo_l on Android essentially returns "ASCII" or "UTF-8"
-_LIBCPP_HIDDEN __te_impl __get_locale_encoding([[maybe_unused]] string_view) {
-  return __te_impl(__te_impl::__id::UTF8);
+// Android has minimal libc suppport for locale, and doesn't support any other locale
+// than the ones checked for below.
+_LIBCPP_HIDDEN __te_impl __get_locale_encoding(const char* __name) {
+  string_view __sv(__name);
+  if (!__name[0] || __name[0] == '*' || (__name[0] == 'C' && __sv.size() == 1) || __sv == "POSIX" ||
+      __sv.contains("UTF-8")) {
+    return __te_impl(__te_impl::__id::UTF8);
+  }
+
+  return __te_impl();
 }
-_LIBCPP_HIDDEN __te_impl __get_env_encoding() { return __get_locale_encoding(""); }
+
+// Android is pretty much assumed to always be UTF-8.
+_LIBCPP_HIDDEN __te_impl __get_env_encoding() { return __te_impl(__te_impl::__id::UTF8); }
 #  else
-_LIBCPP_HIDDEN __te_impl __get_locale_encoding([[maybe_unused]] string_view) { return __te_impl(); }
+_LIBCPP_HIDDEN __te_impl __get_locale_encoding([[maybe_unused]] const char*) { return __te_impl(); }
 _LIBCPP_HIDDEN __te_impl __get_env_encoding() { return __get_locale_encoding(""); }
 #  endif
 #endif // _LIBCPP_WIN32API
 
 _LIBCPP_AVAILABILITY_TE_ENVIRONMENT _LIBCPP_EXPORTED_FROM_ABI __te_impl __te_impl::__environment() {
-#if defined(__ANDROID__)
-  return __te_impl(__te_impl::__id::UTF8);
-#else
   return __get_env_encoding();
-#endif
 }
 
 _LIBCPP_END_NAMESPACE_STD
