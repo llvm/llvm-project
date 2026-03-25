@@ -1,4 +1,4 @@
-//===- SSAFWPASuiteTestPlugin.cpp - WPASuite serialization test plugin ----===//
+//===- ExamplePlugin.cpp - WPASuite serialization test plugin -------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,7 +13,7 @@
 // without depending on any real analysis logic.
 //
 // Usage:
-//   clang-ssaf-analyzer --load <path/to/SSAFWPASuiteTestPlugin.so> \
+//   clang-ssaf-analyzer --load <path/to/SSAFExamplePlugin.so> \
 //     --analysis TagsAnalysisResult \
 //     --analysis CountsAnalysisResult \
 //     -o output.json input.json

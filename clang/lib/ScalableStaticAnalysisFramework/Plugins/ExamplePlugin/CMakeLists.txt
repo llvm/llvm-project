@@ -10,12 +10,12 @@
 # dynamic loader resolve every SSAF and LLVM symbol from the tool's address
 # space at load time.
 
-add_llvm_library(SSAFWPASuiteTestPlugin MODULE BUILDTREE_ONLY
-  SSAFWPASuiteTestPlugin.cpp
+add_llvm_library(SSAFExamplePlugin MODULE BUILDTREE_ONLY
+  ExamplePlugin.cpp
   PLUGIN_TOOL clang-ssaf-analyzer
   )
 
 # Pull in SSAF and LLVM include paths without any static link dependency.
-target_include_directories(SSAFWPASuiteTestPlugin PRIVATE
+target_include_directories(SSAFExamplePlugin PRIVATE
   $<TARGET_PROPERTY:clangScalableStaticAnalysisFrameworkCore,INTERFACE_INCLUDE_DIRECTORIES>
   )

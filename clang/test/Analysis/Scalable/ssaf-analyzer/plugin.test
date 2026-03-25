@@ -1,5 +1,5 @@
-// Tests for clang-ssaf-analyzer WPASuite serialization via the test plugin.
-// The SSAFWPASuiteTestPlugin registers TagsAnalysisResult and
+// Tests for clang-ssaf-analyzer WPASuite serialization via the example plugin.
+// The SSAFExamplePlugin registers TagsAnalysisResult and
 // CountsAnalysisResult together with their JSON serializers so that the
 // round-trip through clang-ssaf-analyzer can be verified end-to-end.
 
@@ -13,7 +13,7 @@
 // ============================================================================
 
 // RUN: clang-ssaf-analyzer \
-// RUN:   --load %llvmshlibdir/SSAFWPASuiteTestPlugin%pluginext \
+// RUN:   --load %llvmshlibdir/SSAFExamplePlugin%pluginext \
 // RUN:   --analysis TagsAnalysisResult \
 // RUN:   -o %t/tags.json \
 // RUN:   %S/Inputs/lu-empty.json
@@ -30,7 +30,7 @@
 // ============================================================================
 
 // RUN: clang-ssaf-analyzer \
-// RUN:   --load %llvmshlibdir/SSAFWPASuiteTestPlugin%pluginext \
+// RUN:   --load %llvmshlibdir/SSAFExamplePlugin%pluginext \
 // RUN:   --analysis CountsAnalysisResult \
 // RUN:   -o %t/counts.json \
 // RUN:   %S/Inputs/lu-empty.json
@@ -44,7 +44,7 @@
 // ============================================================================
 
 // RUN: clang-ssaf-analyzer \
-// RUN:   --load %llvmshlibdir/SSAFWPASuiteTestPlugin%pluginext \
+// RUN:   --load %llvmshlibdir/SSAFExamplePlugin%pluginext \
 // RUN:   --analysis TagsAnalysisResult \
 // RUN:   --analysis CountsAnalysisResult \
 // RUN:   -o %t/both.json \
@@ -59,7 +59,7 @@
 // ============================================================================
 
 // RUN: clang-ssaf-analyzer \
-// RUN:   --load %llvmshlibdir/SSAFWPASuiteTestPlugin%pluginext \
+// RUN:   --load %llvmshlibdir/SSAFExamplePlugin%pluginext \
 // RUN:   -o %t/all.json \
 // RUN:   %S/Inputs/lu-empty.json
 // RUN: FileCheck %s --input-file %t/all.json --check-prefix=ALL-OUT
@@ -72,7 +72,7 @@
 // ============================================================================
 
 // RUN: not clang-ssaf-analyzer \
-// RUN:   --load %llvmshlibdir/SSAFWPASuiteTestPlugin%pluginext \
+// RUN:   --load %llvmshlibdir/SSAFExamplePlugin%pluginext \
 // RUN:   --analysis UnknownAnalysis \
 // RUN:   -o %t/unknown.json \
 // RUN:   %S/Inputs/lu-empty.json 2>&1 \

@@ -8,5 +8,5 @@ if(LLVM_ENABLE_PLUGINS)
   # tool that will load it, and pull only include paths (not link deps) from
   # the libraries whose headers are needed. All symbols are resolved from the
   # tool's address space when the plugin is loaded via --load.
-  add_subdirectory(ssaf-wpa-suite-test-plugin)
+  add_subdirectory(ExamplePlugin)
 endif()
