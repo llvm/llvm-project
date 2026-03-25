@@ -49,9 +49,7 @@ define <4 x i32> @t2_vec_poison0(<4 x i32> %x, <4 x i32> %y) {
 
 define <4 x i32> @t3_vec_poison1(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @t3_vec_poison1(
-; CHECK-NEXT:    [[T0:%.*]] = xor <4 x i32> [[X:%.*]], splat (i32 -1)
-; CHECK-NEXT:    [[T1:%.*]] = add <4 x i32> [[Y:%.*]], [[T0]]
-; CHECK-NEXT:    [[T2:%.*]] = add <4 x i32> [[T1]], <i32 1, i32 1, i32 poison, i32 1>
+; CHECK-NEXT:    [[T2:%.*]] = sub <4 x i32> [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[T2]]
 ;
   %t0 = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
@@ -62,9 +60,7 @@ define <4 x i32> @t3_vec_poison1(<4 x i32> %x, <4 x i32> %y) {
 
 define <4 x i32> @t4_vec_poison2(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @t4_vec_poison2(
-; CHECK-NEXT:    [[T0:%.*]] = xor <4 x i32> [[X:%.*]], <i32 -1, i32 -1, i32 poison, i32 -1>
-; CHECK-NEXT:    [[T1:%.*]] = add <4 x i32> [[Y:%.*]], [[T0]]
-; CHECK-NEXT:    [[T2:%.*]] = add <4 x i32> [[T1]], <i32 1, i32 1, i32 poison, i32 1>
+; CHECK-NEXT:    [[T2:%.*]] = sub <4 x i32> [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[T2]]
 ;
   %t0 = xor <4 x i32> %x, <i32 -1, i32 -1, i32 poison, i32 -1>
