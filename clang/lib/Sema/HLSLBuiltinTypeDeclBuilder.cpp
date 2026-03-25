@@ -625,6 +625,7 @@ BuiltinTypeMethodBuilder::declareLocalVar(LocalVar &Var) {
 template <typename V, typename S>
 BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::concat(V Vec, S Scalar,
                                                            QualType ResultTy) {
+  assert(ResultTy->isVectorType() && "The result type must be a vector type.");
   ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
   Expr *VecExpr = convertPlaceholder(Vec);
   auto *VecTy = VecExpr->getType()->castAs<VectorType>();
