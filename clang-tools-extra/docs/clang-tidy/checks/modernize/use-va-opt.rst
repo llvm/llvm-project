@@ -3,8 +3,8 @@
 modernize-use-va-opt
 ====================
 
-Suggest using ``__VA_OPT__(,)`` instead of ``, ##__VA_ARGS__`` when implementing
-variadic macro. ``, ##__VA_ARGS__`` is a GNU extension.
+Suggest using ``__VA_OPT__(,)`` instead of ``, ##__VA_ARGS__`` when
+implementing variadic macro. ``, ##__VA_ARGS__`` is a GNU extension.
 
 .. code:: c++
 
