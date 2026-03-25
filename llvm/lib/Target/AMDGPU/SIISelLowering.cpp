@@ -17380,15 +17380,13 @@ static ISD::CondCode tryReduceF64CompareToHiHalf(const ISD::CondCode CC,
   const KnownBits LHSMan = LHSKnown.extractBits(52, 0);
   const KnownBits LHSExp = LHSKnown.extractBits(11, 52);
   const KnownBits LHSSgn = LHSKnown.extractBits(1, 63);
-  const bool LHSMaybeNaN = LHSExp.getMaxValue().isAllOnes() &&
-                           !LHSMan.isZero() && !DAG.isKnownNeverNaN(LHS);
+  const bool LHSMaybeNaN = !DAG.isKnownNeverNaN(LHS);
 
   const KnownBits RHSKnown = DAG.computeKnownBits(RHS);
   const KnownBits RHSMan = RHSKnown.extractBits(52, 0);
   const KnownBits RHSExp = RHSKnown.extractBits(11, 52);
   const KnownBits RHSSgn = RHSKnown.extractBits(1, 63);
-  const bool RHSMaybeNaN = RHSExp.getMaxValue().isAllOnes() &&
-                           !RHSMan.isZero() && !DAG.isKnownNeverNaN(RHS);
+  const bool RHSMaybeNaN = !DAG.isKnownNeverNaN(RHS);
 
   const KnownBits LHSKnownLo32 = LHSKnown.trunc(32);
   const KnownBits RHSKnownLo32 = RHSKnown.trunc(32);
@@ -17396,6 +17394,7 @@ static ISD::CondCode tryReduceF64CompareToHiHalf(const ISD::CondCode CC,
   switch (CC) {
   default:
     break;
+  case ISD::SETEQ:
   case ISD::SETOEQ:
   case ISD::SETUEQ:
   case ISD::SETONE:
@@ -17434,13 +17433,18 @@ static ISD::CondCode tryReduceF64CompareToHiHalf(const ISD::CondCode CC,
       break;
 
     if (*KnownEq)
-      return (CC == ISD::SETOEQ || CC == ISD::SETUEQ) ? ISD::SETEQ : ISD::SETNE;
+      return (CC == ISD::SETEQ || CC == ISD::SETOEQ || CC == ISD::SETUEQ)
+                 ? ISD::SETEQ
+                 : ISD::SETNE;
 
-    return (CC == ISD::SETOEQ || CC == ISD::SETUEQ) ? ISD::SETFALSE
-                                                    : ISD::SETTRUE;
+    return (CC == ISD::SETEQ || CC == ISD::SETOEQ || CC == ISD::SETUEQ)
+               ? ISD::SETFALSE
+               : ISD::SETTRUE;
   }
+  case ISD::SETLT:
   case ISD::SETOLT:
   case ISD::SETULT:
+  case ISD::SETGE:
   case ISD::SETOGE:
   case ISD::SETUGE: {
     // Comparison may only be reduced to upper 32 bits if both operands are
@@ -17478,13 +17482,19 @@ static ISD::CondCode tryReduceF64CompareToHiHalf(const ISD::CondCode CC,
 
     if (*KnownUge) {
       // LHS.lo32 uge RHS.lo32, so LHS >= RHS iff LHS.hi32 >= RHS.hi32
-      return (CC == ISD::SETOLT || CC == ISD::SETULT) ? ISD::SETLT : ISD::SETGE;
+      return (CC == ISD::SETLT || CC == ISD::SETOLT || CC == ISD::SETULT)
+                 ? ISD::SETLT
+                 : ISD::SETGE;
     }
     // LHS.lo32 ult RHS.lo32, so LHS >= RHS iff LHS.hi32 > RHS.hi32
-    return (CC == ISD::SETOLT || CC == ISD::SETULT) ? ISD::SETLE : ISD::SETGT;
+    return (CC == ISD::SETLT || CC == ISD::SETOLT || CC == ISD::SETULT)
+               ? ISD::SETLE
+               : ISD::SETGT;
   }
+  case ISD::SETLE:
   case ISD::SETOLE:
   case ISD::SETULE:
+  case ISD::SETGT:
   case ISD::SETOGT:
   case ISD::SETUGT: {
     // Comparison may only be reduced to upper 32 bits if both operands are
@@ -17521,10 +17531,14 @@ static ISD::CondCode tryReduceF64CompareToHiHalf(const ISD::CondCode CC,
 
     if (*KnownUle) {
       // LHS.lo32 ule RHS.lo32, so LHS <= RHS iff LHS.hi32 <= RHS.hi32
-      return (CC == ISD::SETOLE || CC == ISD::SETULE) ? ISD::SETLE : ISD::SETGT;
+      return (CC == ISD::SETLE || CC == ISD::SETOLE || CC == ISD::SETULE)
+                 ? ISD::SETLE
+                 : ISD::SETGT;
     }
     // LHS.lo32 ugt RHS.lo32, so LHS <= RHS iff LHS.hi32 < RHS.hi32
-    return (CC == ISD::SETOLE || CC == ISD::SETULE) ? ISD::SETLT : ISD::SETGE;
+    return (CC == ISD::SETLE || CC == ISD::SETOLE || CC == ISD::SETULE)
+               ? ISD::SETLT
+               : ISD::SETGE;
   }
   }
 
