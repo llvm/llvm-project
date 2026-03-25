@@ -192,6 +192,7 @@ func.func @store_back_to_alloca(%cond: i1) -> i32 {
   %c0 = arith.constant 0 : i32
   // CHECK-DAG: %[[C1:.*]] = arith.constant 1 : i32
   %c1 = arith.constant 1 : i32
+  // CHECK-NOT: memref.alloca
   %alloca = memref.alloca() : memref<i32>
   memref.store %c0, %alloca[] : memref<i32>
   %loaded = memref.load %alloca[] : memref<i32>
@@ -229,6 +230,7 @@ func.func @merge_point_used_by_erased_op(%cond: i1) -> i32 {
   %c0 = arith.constant 0 : i32
   // CHECK-DAG: %[[C1:.*]] = arith.constant 1 : i32
   %c1 = arith.constant 1 : i32
+  // CHECK-NOT: memref.alloca
   %alloca = memref.alloca() : memref<i32>
   // CHECK: cf.cond_br %[[COND]], ^[[PRED1:.*]], ^[[PRED2:.*]]
   cf.cond_br %cond, ^pred1, ^pred2
@@ -251,4 +253,59 @@ func.func @merge_point_used_by_erased_op(%cond: i1) -> i32 {
   memref.store %result, %alloca[] : memref<i32>
   // CHECK: return %[[C0]] : i32
   return %c0 : i32
+}
+
+// -----
+
+// Two consecutive merge points: pred1 and pred2 merge at merge1, then merge1
+// and pred3 merge at merge2.
+
+// CHECK-LABEL: func.func @two_consecutive_merge_points
+// CHECK-SAME: (%[[COND1:.*]]: i1, %[[COND2:.*]]: i1)
+func.func @two_consecutive_merge_points(%cond1: i1, %cond2: i1) -> i32 {
+  // CHECK-NOT: memref.alloca
+  // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : i32
+  // CHECK-DAG: %[[C1:.*]] = arith.constant 1 : i32
+  // CHECK-DAG: %[[C2:.*]] = arith.constant 2 : i32
+  // CHECK-NOT: memref.alloca
+  %c0 = arith.constant 0 : i32
+  %c1 = arith.constant 1 : i32
+  %c2 = arith.constant 2 : i32
+  %alloca = memref.alloca() : memref<i32>
+  // CHECK: cf.cond_br %[[COND1]], ^[[PRED1:.*]], ^[[MID:.*]]
+  cf.cond_br %cond1, ^pred1, ^mid
+
+// CHECK: ^[[MID]]:
+^mid:
+  // CHECK: cf.cond_br %[[COND2]], ^[[PRED2:.*]], ^[[PRED3:.*]]
+  cf.cond_br %cond2, ^pred2, ^pred3
+
+// CHECK: ^[[PRED1]]:
+^pred1:
+  memref.store %c0, %alloca[] : memref<i32>
+  // CHECK: cf.br ^[[MERGE1:.*]](%[[C0]] : i32)
+  cf.br ^merge1
+
+// CHECK: ^[[PRED2]]:
+^pred2:
+  memref.store %c1, %alloca[] : memref<i32>
+  // CHECK: cf.br ^[[MERGE1]](%[[C1]] : i32)
+  cf.br ^merge1
+
+// CHECK: ^[[MERGE1]](%[[MARG:.*]]: i32):
+^merge1:
+  // CHECK: cf.br ^[[MERGE2:.*]](%[[MARG]] : i32)
+  cf.br ^merge2
+
+// CHECK: ^[[PRED3]]:
+^pred3:
+  memref.store %c2, %alloca[] : memref<i32>
+  // CHECK: cf.br ^[[MERGE2]](%[[C2]] : i32)
+  cf.br ^merge2
+
+// CHECK: ^[[MERGE2]](%[[RESULT:.*]]: i32):
+^merge2:
+  %result = memref.load %alloca[] : memref<i32>
+  // CHECK: return %[[RESULT]] : i32
+  return %result : i32
 }
