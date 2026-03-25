@@ -106,13 +106,12 @@ public:
                              const MCExpr *ReserveFlatScr) {}
 
   /// Emit a per-function resource usage entry into the
-  /// .AMDGPU.resource_info section, along with callee relocations.
+  /// .AMDGPU.resource_usage section.
   virtual void emitResourceUsageEntry(MCSymbol *FnSym, uint32_t NumVGPR,
                                       uint32_t NumAGPR, uint32_t NumSGPR,
                                       uint32_t NumNamedBarrier,
                                       uint32_t PrivateSegmentSize,
-                                      uint32_t Flags,
-                                      ArrayRef<MCSymbol *> Callees = {}) {}
+                                      uint32_t Flags) {}
 
   static StringRef getArchNameFromElfMach(unsigned ElfMach);
   static unsigned getElfMach(StringRef GPU);
@@ -182,8 +181,8 @@ public:
   void emitResourceUsageEntry(MCSymbol *FnSym, uint32_t NumVGPR,
                               uint32_t NumAGPR, uint32_t NumSGPR,
                               uint32_t NumNamedBarrier,
-                              uint32_t PrivateSegmentSize, uint32_t Flags,
-                              ArrayRef<MCSymbol *> Callees = {}) override;
+                              uint32_t PrivateSegmentSize,
+                              uint32_t Flags) override;
 };
 
 class AMDGPUTargetELFStreamer final : public AMDGPUTargetStreamer {
@@ -244,8 +243,8 @@ public:
   void emitResourceUsageEntry(MCSymbol *FnSym, uint32_t NumVGPR,
                               uint32_t NumAGPR, uint32_t NumSGPR,
                               uint32_t NumNamedBarrier,
-                              uint32_t PrivateSegmentSize, uint32_t Flags,
-                              ArrayRef<MCSymbol *> Callees = {}) override;
+                              uint32_t PrivateSegmentSize,
+                              uint32_t Flags) override;
 };
 }
 #endif

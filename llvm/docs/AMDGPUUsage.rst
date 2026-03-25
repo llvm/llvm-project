@@ -2408,12 +2408,10 @@ Function Resource Usage Asm Directives
 
 A function's resource usage depends on each of its callees' resource usage.
 Accomodating this are the AMDGPU resource usage assembler directives and ELF
-section. The assembler directives emit a pre- and post-marked sequence of
-assembler directives after every function that state a function's resource
-usage and callees. The resource usage this emit is **only for this function's
-usage** and does not yet consider the callees' resource usage. For the
-propagated resource usage, any user of the section or resource info will have
-to walk the callgraph and compute the total use.
+section. The assembler directives emit a pre- and post-marked sequence after
+every function that state a function's resource usage. The resource usage
+emitted is **only for this function's usage** and does not yet consider the
+callees' resource usage.
 
   .. table:: Function Resource Usage Asm Directives:
      :name: function-usage-directive-table
@@ -2431,25 +2429,20 @@ to walk the callgraph and compute the total use.
      .uses_vcc <i1>                         yes       1                        Boolean denoting whether vcc is used in the function
      .uses_flat_scratch <i1>                yes       1                        Boolean denoting whether flat scratch is used in the function
      .has_dyn_sized_stack <i1>              yes       1                        Boolean denoting whether stack in the function is dynamically sized
-     .has_recursion <i1>                    yes       1                        Boolean denoting whether recursion is used in the function
-     .has_indirect_call <i1>                yes       1                        Boolean denoting whether the function has an indirect call
-     .callee <function name>                no        0 or more                Callee functions called by the function, each unique callee getting its own .callee directive
      ====================================== ========= ======================== ===================================================================================================
 
 Function Resource Usage ELF Section
 -----------------------------------
 
 The resource usage section contains binary structs representing each resource
-usage entry for a function. The resource usage section is named
-.AMDGPU.resource_usage and has an additional relocation section (e.g.,
-.rela.AMDGPU.resource_usage) which holds information on which offset of the
-.AMDGPU.resource_usage section denotes which function in addition to tracking
-callers and callees.
+usage entry for a function. This section is named .AMDGPU.resource_usage and
+has an additional relocation section (e.g., .rela.AMDGPU.resource_usage) that
+maps the offsets within the .AMDGPU.resource_usage section to each function.
 
 Resource usage is a binary struct of its required resource information. The
-booleans are packed into a flag of type i32. The total size of each resource
-usage struct is, therefore, 24-bytes (i.e., sizeof(num_vgpr) + sizeof(num_agpr)
-+ sizeof(num_sgpr) + sizeof(named_barrier) + sizeof(private_seg_size) +
+booleans elements are packed into a flag of type i32. The total size of each
+resource usage struct is 24-bytes (i.e., sizeof(num_vgpr) + sizeof(num_agpr) +
+sizeof(num_sgpr) + sizeof(named_barrier) + sizeof(private_seg_size) +
 sizeof(flags)). The flags are packed as follows:
 
   .. table:: Function Resource Usage Flags:
@@ -2461,17 +2454,7 @@ sizeof(flags)). The flags are packed as follows:
      uses_vcc                       0
      uses_flat_scratch              1
      has_dyn_sized_stack            2
-     has_recursion                  3
-     has_indirect_call              4
      ===========================    =======
-
-Resource usage relocation section contains the the offset into the resource
-usage section for each function in a translation unit. In addition to this
-function to resource usage entry mapping, it embeds the callees of each caller
-by having the first relocation to an offset denote the function the entry is
-mapped to and any subsequent relocations for that same offset denote a callee
-of the function mapped to that entry (similar to how CGProfile specifies the
-caller and callee relation.
 
 .. _amdgpu-elf-code-object:
 

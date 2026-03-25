@@ -4,22 +4,6 @@
 	.amdgpu_resource_usage
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected symbol name after .amdgpu_resource_usage
 
-// Missing symbol name after .callee.
-	.amdgpu_resource_usage fn1
-		.num_vgpr 0
-		.num_agpr 0
-		.num_sgpr 0
-		.named_barrier 0
-		.private_seg_size 0
-		.uses_vcc 0
-		.uses_flat_scratch 0
-		.has_dyn_sized_stack 0
-		.has_recursion 0
-		.has_indirect_call 0
-		.callee
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected symbol name after .callee
-	.end_amdgpu_resource_usage
-
 // Duplicate field directive.
 	.amdgpu_resource_usage fn2
 		.num_vgpr 0
@@ -43,8 +27,6 @@
 		.uses_vcc 0
 		.uses_flat_scratch 0
 		.has_dyn_sized_stack 0
-		.has_recursion 0
-		.has_indirect_call 0
 		.bogus_field 42
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: unknown field '.bogus_field' in .amdgpu_resource_usage
 	.end_amdgpu_resource_usage
@@ -58,7 +40,5 @@
 		.uses_vcc 0
 		.uses_flat_scratch 0
 		.has_dyn_sized_stack 0
-		.has_recursion 0
-		.has_indirect_call 0
 	.end_amdgpu_resource_usage
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: requires .num_sgpr directive in .amdgpu_resource_usage
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: missing required .num_sgpr directive in .amdgpu_resource_usage

@@ -10,7 +10,7 @@
 ; RUN: llvm-readobj -r %t.o | FileCheck --check-prefix=OBJ %s
 
 ; OBJ:       Relocations [
-; OBJ-NEXT:   Section (5) .rel.AMDGPU.resource_info {
+; OBJ-NEXT:   Section (5) .rel.AMDGPU.resource_usage {
 ; OBJ-NEXT:     0x0 R_AMDGPU_NONE uniform_conditional_max_short_forward_branch
 ; OBJ-NEXT:     0x18 R_AMDGPU_NONE uniform_conditional_min_long_forward_branch
 ; OBJ-NEXT:     0x30 R_AMDGPU_NONE uniform_conditional_min_long_forward_vcnd_branch

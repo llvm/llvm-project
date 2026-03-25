@@ -6752,9 +6752,6 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGPULDS() {
 ///         .uses_vcc <int>
 ///         .uses_flat_scratch <int>
 ///         .has_dyn_sized_stack <int>
-///         .has_recursion <int>
-///         .has_indirect_call <int>
-///         .callee <symbol>  (zero or more)
 ///       .end_amdgpu_resource_usage
 bool AMDGPUAsmParser::ParseDirectiveAMDGPUResourceUsage() {
   StringRef SymName;
@@ -6767,8 +6764,6 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGPUResourceUsage() {
   uint32_t NumVGPR = 0, NumAGPR = 0, NumSGPR = 0;
   uint32_t NumNamedBarrier = 0, PrivateSegmentSize = 0;
   uint32_t UsesVCC = 0, UsesFlatScratch = 0, HasDynSizedStack = 0;
-  uint32_t HasRecursion = 0, HasIndirectCall = 0;
-  SmallVector<MCSymbol *, 4> Callees;
 
   while (true) {
     while (trySkipToken(AsmToken::EndOfStatement))
@@ -6780,14 +6775,6 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGPUResourceUsage() {
 
     if (ID == ".end_amdgpu_resource_usage")
       break;
-
-    if (ID == ".callee") {
-      StringRef CalleeName;
-      if (getParser().parseIdentifier(CalleeName))
-        return TokError("expected symbol name after .callee");
-      Callees.push_back(getContext().getOrCreateSymbol(CalleeName));
-      continue;
-    }
 
     if (!Seen.insert(ID).second)
       return TokError("resource usage directives already declared");
@@ -6814,20 +6801,15 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGPUResourceUsage() {
       UsesFlatScratch = Val;
     else if (ID == ".has_dyn_sized_stack")
       HasDynSizedStack = Val;
-    else if (ID == ".has_recursion")
-      HasRecursion = Val;
-    else if (ID == ".has_indirect_call")
-      HasIndirectCall = Val;
     else
       return TokError("unknown field '" + ID + "' in .amdgpu_resource_usage");
   }
 
-  for (StringRef StrRef :
-       {".num_vgpr", ".num_agpr", ".num_sgpr", ".named_barrier",
-        ".private_seg_size", ".uses_vcc", ".uses_flat_scratch",
-        ".has_dyn_sized_stack", ".has_recursion", ".has_indirect_call"}) {
+  for (StringRef StrRef : {".num_vgpr", ".num_agpr", ".num_sgpr",
+                           ".named_barrier", ".private_seg_size", ".uses_vcc",
+                           ".uses_flat_scratch", ".has_dyn_sized_stack"}) {
     if (!Seen.contains(StrRef))
-      return TokError("requires " + StrRef +
+      return TokError("missing required " + StrRef +
                       " directive in .amdgpu_resource_usage");
   }
 
@@ -6835,12 +6817,10 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGPUResourceUsage() {
   Flags |= (UsesVCC ? 1u : 0u) << 0;
   Flags |= (UsesFlatScratch ? 1u : 0u) << 1;
   Flags |= (HasDynSizedStack ? 1u : 0u) << 2;
-  Flags |= (HasRecursion ? 1u : 0u) << 3;
-  Flags |= (HasIndirectCall ? 1u : 0u) << 4;
 
-  getTargetStreamer().emitResourceUsageEntry(
-      FnSym, NumVGPR, NumAGPR, NumSGPR, NumNamedBarrier, PrivateSegmentSize,
-      Flags, Callees);
+  getTargetStreamer().emitResourceUsageEntry(FnSym, NumVGPR, NumAGPR, NumSGPR,
+                                             NumNamedBarrier,
+                                             PrivateSegmentSize, Flags);
   return false;
 }
 

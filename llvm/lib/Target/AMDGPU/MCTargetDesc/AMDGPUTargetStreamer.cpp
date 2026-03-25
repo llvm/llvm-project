@@ -662,8 +662,7 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
 
 void AMDGPUTargetAsmStreamer::emitResourceUsageEntry(
     MCSymbol *FnSym, uint32_t NumVGPR, uint32_t NumAGPR, uint32_t NumSGPR,
-    uint32_t NumNamedBarrier, uint32_t PrivateSegmentSize, uint32_t Flags,
-    ArrayRef<MCSymbol *> Callees) {
+    uint32_t NumNamedBarrier, uint32_t PrivateSegmentSize, uint32_t Flags) {
   OS << "\t.amdgpu_resource_usage " << FnSym->getName() << '\n';
   OS << "\t\t.num_vgpr " << NumVGPR << '\n';
   OS << "\t\t.num_agpr " << NumAGPR << '\n';
@@ -673,10 +672,6 @@ void AMDGPUTargetAsmStreamer::emitResourceUsageEntry(
   OS << "\t\t.uses_vcc " << ((Flags >> 0) & 1) << '\n';
   OS << "\t\t.uses_flat_scratch " << ((Flags >> 1) & 1) << '\n';
   OS << "\t\t.has_dyn_sized_stack " << ((Flags >> 2) & 1) << '\n';
-  OS << "\t\t.has_recursion " << ((Flags >> 3) & 1) << '\n';
-  OS << "\t\t.has_indirect_call " << ((Flags >> 4) & 1) << '\n';
-  for (MCSymbol *Callee : Callees)
-    OS << "\t\t.callee " << Callee->getName() << '\n';
   OS << "\t.end_amdgpu_resource_usage\n";
 }
 
@@ -1084,15 +1079,14 @@ void AMDGPUTargetELFStreamer::EmitAmdhsaKernelDescriptor(
 
 void AMDGPUTargetELFStreamer::emitResourceUsageEntry(
     MCSymbol *FnSym, uint32_t NumVGPR, uint32_t NumAGPR, uint32_t NumSGPR,
-    uint32_t NumNamedBarrier, uint32_t PrivateSegmentSize, uint32_t Flags,
-    ArrayRef<MCSymbol *> Callees) {
+    uint32_t NumNamedBarrier, uint32_t PrivateSegmentSize, uint32_t Flags) {
   auto &S = getStreamer();
   auto &Context = S.getContext();
   const unsigned ResourceInfoEntrySize = 24;
 
   // TODO: Custom elf section type for support in linker.
   MCSection *Sec =
-      Context.getELFSection(".AMDGPU.resource_info", ELF::SHT_PROGBITS,
+      Context.getELFSection(".AMDGPU.resource_usage", ELF::SHT_PROGBITS,
                             ELF::SHF_EXCLUDE, ResourceInfoEntrySize);
   S.pushSection();
   S.switchSection(Sec);
@@ -1107,11 +1101,6 @@ void AMDGPUTargetELFStreamer::emitResourceUsageEntry(
       Context);
   S.emitRelocDirective(*Offset, "R_AMDGPU_NONE",
                        MCSymbolRefExpr::create(FnSym, Context));
-
-  // Emit callee relocations at the same offset as the function identity.
-  for (MCSymbol *Callee : Callees)
-    S.emitRelocDirective(*Offset, "R_AMDGPU_NONE",
-                         MCSymbolRefExpr::create(Callee, Context));
 
   ++ResourceInfoEntryCount;
 
