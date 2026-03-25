@@ -6,7 +6,7 @@ define i1 @mul_preimage_only_in_late_sccp(i8 range(i8 0, 5) %x) {
 ; SCCP-LABEL: define i1 @mul_preimage_only_in_late_sccp(
 ; SCCP-SAME: i8 range(i8 0, 5) [[X:%.*]]) {
 ; SCCP-NEXT:    [[M:%.*]] = mul nuw nsw i8 [[X]], 17
-; SCCP-NEXT:    [[CMP:%.*]] = icmp slt i8 [[M]], 17
+; SCCP-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X]], 0
 ; SCCP-NEXT:    ret i1 [[CMP]]
 ;
 ; IPSCCP-LABEL: define i1 @mul_preimage_only_in_late_sccp(

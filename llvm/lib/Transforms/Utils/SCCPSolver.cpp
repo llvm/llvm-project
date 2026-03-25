@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/SCCPSolver.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -29,9 +30,9 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -103,6 +104,313 @@ static ConstantRange getRange(Value *Op, SCCPSolver &Solver,
   }
   return Solver.getLatticeValueFor(Op).asConstantRange(Op->getType(),
                                                        /*UndefAllowed=*/false);
+}
+
+namespace {
+
+// Sibling of ConstantRange::getNonEmptyRange
+ConstantRange getMightEmptyRange(const APInt &L, const APInt &R) {
+  return L == R ? ConstantRange::getEmpty(L.getBitWidth())
+                : ConstantRange(L, R);
+}
+
+/// Represents periodic mapping f(x) = Cx mod M
+class ModularMulMapping {
+public:
+  ModularMulMapping(const APInt &C, const APInt &M)
+      : MulC(C), Modulus(M), IsFullMod(M.isZero()), IsURem(C.isOne()),
+        WideBits(C.getBitWidth() * 2), WideMulC(C.zext(WideBits)),
+        WideModulus(M.zext(WideBits)) {
+    assert((C.isStrictlyPositive() || C.isMinSignedValue()) &&
+           "Expected a positive multiplier C");
+    assert(!IsURem || !M.isZero() && "Expected a valid modulus M if C = 1");
+  }
+
+  // Mapping: f(x) = Cx mod M = ((C mod M) * (x mod M)) mod M
+  APInt operator()(const APInt &x) const {
+    assert(x.getBitWidth() == MulC.getBitWidth() &&
+           "The bit width of x and C should be equal for f(x) = Cx");
+    // Fast path for f(x) = Cx
+    if (IsFullMod)
+      return MulC * x;
+    // Fast path for f(x) = x mod M
+    if (IsURem)
+      return x.urem(Modulus);
+    return (WideMulC * x.zext(WideBits))
+        .urem(WideModulus)
+        .trunc(MulC.getBitWidth());
+  }
+
+  ConstantRange getInvertibleImage(const ConstantRange &SrcCR,
+                                   bool &IsDomainReturned) const {
+    assert(!SrcCR.isEmptySet() && "Expected non-empty SrcCR");
+    return SrcCR.isWrappedSet()
+               ? getInvertibleImageOnWrappedX(SrcCR, IsDomainReturned)
+               : getInvertibleImageOnUnwrappedX(SrcCR, IsDomainReturned);
+  }
+
+private:
+  ConstantRange getInvertibleImageOnUnwrappedX(const ConstantRange &SrcCR,
+                                               bool &IsDomainReturned) const {
+    assert(!SrcCR.isWrappedSet() && "Expected nuw SrcCR");
+    const unsigned BW = MulC.getBitWidth();
+
+    const APInt &XLo =
+                    SrcCR.isFullSet() ? APInt::getZero(BW) : SrcCR.getLower(),
+                &XHi =
+                    SrcCR.isFullSet() ? APInt::getZero(BW) : SrcCR.getUpper();
+    // [Lo, Hi) = [Lo, Hi-1]
+    const APInt RangeSize = XHi - XLo - 1;
+
+    // Periods k = floor(|Range| / T)
+    //           = floor((SrcCR.size() - 1) / (M / C))
+    //           = floor((SrcCR.size() - 1) * C / M)
+    const APInt SizeMulC = RangeSize.zext(WideBits) * WideMulC;
+    const APInt Periods =
+        IsFullMod ? SizeMulC.lshr(BW) : SizeMulC.udiv(WideModulus);
+
+    if (Periods.isZero()) {
+      // k = 0: the walk never wraps, so the mapping is invertible over the full
+      // result space. Here we return the reachable image/domain
+      //           Y = f(CR) = [f(Lo), f(Hi)).
+      // Consider discreteness, Y = [ f(Lo) , f(Hi - 1) + 1 )
+      // f(x) = Cx:    Y |   /
+      //               Y |  /
+      //                 |
+      //               Y |    /
+      //                 └-----------
+      //                    XXX
+      IsDomainReturned = true;
+      // SrcCR is not emptyset -> Y cannot be emptyset but might be fullset.
+      return ConstantRange::getNonEmpty((*this)(XLo),
+                                        modularAdd((*this)(XHi - 1), 1));
+    }
+
+    if (Periods.isOne()) {
+      // k = 1: only the unique part invertible.
+      // As f(x) walks along f(Lo) --> ⊤ --> ⊥ --> f(Hi),
+      // the repeated part is [f(Lo), f(Hi)) and the invertiable part
+      //           Y = [ f(Hi), f(Lo) )
+      // Consider discreteness, Y = [ f(Hi - 1) + 1 , f(Lo) )
+      // f(x) = Cx:    Y |   /
+      //               Y |  /
+      //                 | /   /
+      //               Y |    /
+      //                 └-----------
+      //                   ~XXX~
+      IsDomainReturned = false;
+      // [f(Lo), f(Hi)) repeated -> Y cannot be fullset but might be emptyset.
+      return getMightEmptyRange(modularAdd((*this)(XHi - 1), 1), (*this)(XLo));
+    }
+    // k >= 2: the walk overlaps itself too much to have a unique inverse.
+    // f(x) = Cx:        |   /   /
+    //                   |  /   /
+    // Y does not exist. | /   /   /
+    //                   |    /   /
+    //                   └-------------
+    return ConstantRange::getEmpty(BW);
+  }
+  /// If the range of x is wrapped, the linearity of `f(x) = Cx mod M` breaks on
+  /// the end. E.g., as follows, the invertibe image Y is continuos, but the
+  /// related pre-image X is not.
+  /// f(x) = Cx:       Y|   /
+  ///                   |  /      /
+  ///                   | /      /
+  ///                  Y|/
+  ///                   └----------
+  ///                    X~~X    ~~
+  ConstantRange getInvertibleImageOnWrappedX(const ConstantRange &SrcCR,
+                                             bool &IsDomainReturned) const {
+    assert(SrcCR.isWrappedSet() && "Expected wrapped SrcCR");
+    // FIXME: support wrapped SrcCR.
+    return ConstantRange::getEmpty(MulC.getBitWidth());
+  }
+  APInt modularAdd(const APInt &LHS, int RHS) const {
+    return Modulus.isZero() ? LHS + RHS : (RHS + LHS).urem(Modulus);
+  };
+
+  const APInt &MulC;
+  const APInt &Modulus;
+  const bool IsFullMod;
+  const bool IsURem;
+  const unsigned WideBits;
+  const APInt WideMulC;
+  const APInt WideModulus;
+};
+} // namespace
+
+/// Refer to https://github.com/llvm/llvm-project/pull/186347 for the
+/// underlying math model.
+///
+/// Given a result constraint CR on y = f(x) = Step * x mod Modulus and a
+/// source domain X = SrcCR, try to compute a single interval CR' = f^{-1}(CR)
+/// on x.
+///
+/// We first compute the invertible result interval Y for x \in SrcCR, then try
+/// to apply f^{-1} on CR or CR.inverse(). This is valid iff CR ⊆ Y, or iff CR
+/// intersects the reachable image when Y itself is the domain. Modulus == 0
+/// denotes the full iBW ring, i.e. mod 2^BW.
+static std::optional<ConstantRange>
+getPreImageOfModularMul(const ConstantRange &CmpCR, const ConstantRange &SrcCR,
+                        const APInt &C, const APInt &Modulus) {
+  assert(!C.isZero() && "Expected a non-zero periodic coefficient");
+  assert(!CmpCR.isEmptySet() && "Unexpected empty constraint set");
+  assert(!CmpCR.isFullSet() && "Unexpected full constraint set");
+  assert(!SrcCR.isEmptySet() && "Unexpected empty input set");
+
+  const unsigned BW = C.getBitWidth();
+
+  ConstantRange Domain =
+      ConstantRange::getNonEmpty(APInt::getZero(BW), Modulus);
+
+  const bool IsNegMulC = C.isMinSignedValue()
+                             ? /* Treat smin as positive */ false
+                             : C.isNegative();
+  auto NegateRange = [](const ConstantRange &CR) -> ConstantRange {
+    // negate([L,R)) = - [L, R) = [1 - R, 1 - L)
+    return ConstantRange::getNonEmpty(1 - CR.getUpper(), 1 - CR.getLower());
+  };
+  // y = Cx \in CR --> -y = -Cx \in negate(CR)
+  const ConstantRange &ActiveCmpCR = IsNegMulC ? NegateRange(CmpCR) : CmpCR;
+  const APInt &Step = IsNegMulC ? -C : C;
+
+  const ModularMulMapping Mapping{Step, Modulus};
+
+  // ==================================================================== //
+  // 1. Calculate the invertible interval Y for f(x) = Cx mod M.
+  // ==================================================================== //
+
+  bool IsDomainReturned = false;
+  const ConstantRange Y = Mapping.getInvertibleImage(SrcCR, IsDomainReturned);
+
+  if (Y.isEmptySet())
+    return std::nullopt;
+
+  if (IsDomainReturned)
+    Domain = Y;
+
+  // ==================================================================== //
+  // 2. Calculate the equivalent range X via f^{-1} on CmpCR.
+  // ==================================================================== //
+  auto ModularSub = [&Modulus](const APInt &LHS, const APInt &RHS) {
+    return (Modulus.isZero() || LHS.uge(RHS)) ? LHS - RHS : Modulus - RHS + LHS;
+  };
+  // Try to map CmpRange to its pre-image, i.e., f^{-1}(CR).
+  auto TryGetPreImage =
+      [&](const ConstantRange &CR) -> std::optional<ConstantRange> {
+    if (CR.contains(Domain))
+      return /* Domain ⊆ CR*/ ConstantRange::getFull(BW);
+    if (CR.inverse().contains(Domain))
+      return /* Domain ∩ CR = ∅ */ ConstantRange::getEmpty(BW);
+
+    // ActiveCR is the reachable part of CR.
+    // ActiveCmpY = null if
+    //        L-------U    : Domain   or    --U   L----- : Domain
+    //        --U   L----- : CR             L-------U    : CR
+    std::optional<ConstantRange> ActiveCR = Domain.exactIntersectWith(CR);
+    // If ActiveCmpY = null or ActiveCR ⊈ the invertible image Y,
+    // there are >1 separate intervals of x, making Cx ∈ CR.
+    // I.e., we cannot derive a single X.
+    if (!ActiveCR || !Y.contains(*ActiveCR))
+      return std::nullopt;
+
+    // ActiveCR.Hi is not belong to Y, thus we use Y1 = ActiveCR.Hi - 1
+    const APInt &Y0 = ActiveCR->getLower(),
+                &Y1 = ModularSub(ActiveCR->getUpper(), APInt(BW, 1));
+    // Fast path for Lo = 0: X = [ y0 / C , y1 / C )
+    if (SrcCR.getLower().isZero()) {
+      // f(x) = Cx:    Y |   /        X must be Y / C without mod directly.
+      //               Y |  /
+      //                 | /   /
+      //                 |/   /
+      //                 └---------
+      //                  ~~XX~~
+      const APInt X0 = APIntOps::RoundingUDiv(Y0, Step, APInt::Rounding::UP),
+                  X1 = APIntOps::RoundingUDiv(Y1, Step, APInt::Rounding::DOWN) +
+                       1;
+      return getMightEmptyRange(X0, X1);
+    }
+
+    // Given SrcCR = [Lo, Hi) and invertible interval CR = [y0, y1],
+    // we need to find X = [x0, x1] ⊆ SrcCR, s.t., f(X) = CR.
+    // I.e., y0 = f(x0)
+    //       DeltaY = y0 - f(Lo) = f(x0) - f(Lo) = f(x0 - Lo) = C * DeltaX
+    //       DeltaX     = DeltaY / C = (y0 - f(Lo)) / C
+    //       x0         = Lo + DeltaX
+    // As y0, f(Lo) ∈ [0, M), we do need to consider modulus.
+    // x1 shares the same derivation.
+    // Considering discreteness, we need to adjust X = [A,B) properly as
+    // follows.
+    //    X = [ceil(x0), ceil(x1))
+    const APInt LoY = Mapping(SrcCR.getLower());
+    const APInt DeltaY0 = ModularSub(Y0, LoY), DeltaY1 = ModularSub(Y1, LoY);
+    const APInt DeltaX0 =
+        APIntOps::RoundingUDiv(DeltaY0, Step, APInt::Rounding::UP);
+    const APInt DeltaX1 =
+        APIntOps::RoundingUDiv(DeltaY1, Step, APInt::Rounding::DOWN);
+    const APInt X0 = SrcCR.getLower() + DeltaX0,
+                X1 = SrcCR.getLower() + DeltaX1 + 1;
+    const ConstantRange X = getMightEmptyRange(X0, X1);
+    assert(SrcCR.contains(X) && "X should be subset of SrcCR");
+    return X;
+  };
+
+  // Try to get single X = f^{-1}(CmpCR) to make Cx ∈ CmpCR.
+  if (auto X = TryGetPreImage(ActiveCmpCR))
+    return *X;
+
+  // Try to get single X = f^{-1}(CmpCR.inverse()).inverse() to make Cx ∈ CmpCR.
+  if (auto X = TryGetPreImage(ActiveCmpCR.inverse()))
+    return X->inverse();
+
+  return std::nullopt;
+}
+
+/// Given CmpCR constraining y = f(x) and SCCP's known range SrcCR for x, try to
+/// rewrite the constraint as a single ConstantRange on x.
+///
+/// This only handles mappings that the current solver models via
+/// getPreImageOfModularMul():
+///   - mul  x, C  : y = C * x mod 2^BW
+///   - shl  x, C  : y = (2^C) * x mod 2^BW
+///   - urem x, C  : y = x mod C
+///   - and  x, C  : y = x mod C+1 if C is low-bit mask
+///
+/// Returns nullopt if the reachable image from SrcCR does not admit one
+/// invertible interval, or if the preimage of CmpCR cannot be expressed as one
+/// ConstantRange.
+static std::optional<ConstantRange> getPreImageOfInvertiblePeriodicMapping(
+    unsigned Opcode, Value *X, const APInt &C, const ConstantRange &SrcCR,
+    const ConstantRange &CmpCR) {
+  // We support interger vector/scalar.
+  // For vector, the mapping must be fixed, i.e., splat C.
+  assert(X->getType()->getScalarType()->isIntegerTy() &&
+         "Only support integer mapping");
+
+  // TODO: Support srem and other more complex periodic mappings.
+  std::optional<ConstantRange> SrcCmpCR;
+  switch (Opcode) {
+  case Instruction::Mul:
+    // y = C*x = C*x mod (MAX + 1)
+    return getPreImageOfModularMul(CmpCR, SrcCR, C, APInt(C.getBitWidth(), 0));
+  case Instruction::Shl:
+    // y = x << C = 2^C * x mod (MAX + 1)
+    return getPreImageOfModularMul(
+        CmpCR, SrcCR, APInt::getOneBitSet(C.getBitWidth(), C.getZExtValue()),
+        APInt(C.getBitWidth(), 0));
+  case Instruction::And:
+    assert(C.isMask() && "Expected a low-bit mask C");
+    // y = x & C = 1 * x mod C + 1
+    return getPreImageOfModularMul(CmpCR, SrcCR, APInt(C.getBitWidth(), 1),
+                                   C + 1);
+  case Instruction::URem:
+    // y = x % C = 1 * x mod C
+    return getPreImageOfModularMul(CmpCR, SrcCR, APInt(C.getBitWidth(), 1), C);
+  default:
+    assert(false && "Unsupported invertible periodic linear mapping opcode");
+  }
+
+  return std::nullopt;
 }
 
 /// SCCP already proves x \in KnownCR, so only ActiveCmpCR = CmpCR ∩ KnownCR
@@ -343,7 +651,7 @@ static bool replaceSignedInst(SCCPSolver &Solver,
 /// Try to use \p Inst's value range from \p Solver to simplify it.
 static Value *simplifyInstruction(SCCPSolver &Solver,
                                   SmallPtrSetImpl<Value *> &InsertedValues,
-                                  Instruction &Inst) {
+                                  Instruction &Inst, bool Eager) {
   auto GetRange = [&Solver, &InsertedValues](Value *Op) {
     return getRange(Op, Solver, InsertedValues);
   };
@@ -389,42 +697,97 @@ static Value *simplifyInstruction(SCCPSolver &Solver,
     return Sub;
   }
 
-  // Relax range checks.
+  // Check if we can relax icmp Pred, Y, ... to a simpler form.
   if (auto *ICmp = dyn_cast<ICmpInst>(&Inst)) {
-    Value *X;
-    auto MatchTwoInstructionExactRangeCheck =
-        [&]() -> std::optional<ConstantRange> {
+    Value *Y;
+    bool IsOneUse = false, IsTwoInstRangeCheck = true;
+    auto MatchExactRangeCheck = [&]() -> std::optional<ConstantRange> {
       const APInt *RHSC;
+      // Match icmp Pred LHS, C
       if (!match(ICmp->getOperand(1), m_APInt(RHSC)))
         return std::nullopt;
 
       Value *LHS = ICmp->getOperand(0);
       ICmpInst::Predicate Pred = ICmp->getPredicate();
       const APInt *Offset;
-      if (match(LHS, m_OneUse(m_AddLike(m_Value(X), m_APInt(Offset)))))
-        return ConstantRange::makeExactICmpRegion(Pred, *RHSC).sub(*Offset);
-      // Match icmp eq/ne X & NegPow2, C
+      IsOneUse = LHS->hasOneUse();
+      if (!IsOneUse)
+        return std::nullopt;
+      const ConstantRange ExactCmpCR =
+          ConstantRange::makeExactICmpRegion(Pred, *RHSC);
+      // Match icmp Pred Y + C1, C2
+      if (match(LHS, m_AddLike(m_Value(Y), m_APInt(Offset))))
+        return ExactCmpCR.sub(*Offset);
+      // Match icmp Pred Y - C1, C2
+      if (match(LHS, m_Sub(m_Value(Y), m_APInt(Offset))))
+        return ExactCmpCR.add(*Offset);
+      // Match icmp eq/ne Y & NegPow2, C
       if (ICmp->isEquality()) {
         const APInt *Mask;
-        if (match(LHS, m_OneUse(m_And(m_Value(X), m_NegatedPower2(Mask)))) &&
+        if (match(LHS, m_And(m_Value(Y), m_NegatedPower2(Mask))) &&
             RHSC->countr_zero() >= Mask->countr_zero()) {
           ConstantRange CR(*RHSC, *RHSC - *Mask);
           return Pred == ICmpInst::ICMP_EQ ? CR : CR.inverse();
         }
       }
-      return std::nullopt;
+      IsTwoInstRangeCheck = false;
+      Y = LHS;
+      return ExactCmpCR;
     };
 
-    if (auto CR = MatchTwoInstructionExactRangeCheck()) {
-      ConstantRange LRange = GetRange(X);
-      // Early exit if we know nothing about X.
-      if (LRange.isFullSet())
+    // Match icmp Pred, (op Y, C1), C2 as Y ∈ CmpCR.
+    if (auto CmpCR = MatchExactRangeCheck()) {
+
+      // TODO: support more mappings f
+      // FIXME: should we treat trunc as x % 2^N?
+      // In eager mode, try to simplify Y = f(X) ∈ CR into X ∈ CR'. This is a
+      // more aggressive rewrite that can expose additional SCCP opportunities,
+      // but may also hide canonical forms expected by earlier passes.
+      if (const APInt *C;
+          Eager && /* the sole use of y = f(x) is icmp */ Y->hasOneUse() &&
+          (match(Y, m_c_Mul(m_Value(X), m_APInt(C))) ||
+           match(Y, m_Shl(m_Value(X), m_APInt(C))) ||
+           match(Y, m_URem(m_Value(X), m_APInt(C))) ||
+           match(Y, m_And(m_Value(X), m_LowBitMask(C))))) {
+        ConstantRange XRange = GetRange(X);
+        if (auto XCmpCR = getPreImageOfInvertiblePeriodicMapping(
+                cast<Instruction>(Y)->getOpcode(), X, *C, XRange, *CmpCR)) {
+          // Use XRange to implify XCmpCR. E.g.:
+          // XCmpCR = [5, 10), *XCmpCR = [5, 0) --> NewCmpCR = [0, 10) -> ult
+          *XCmpCR = simplifyCmpRange(*XCmpCR, XRange);
+
+          // Emit XCmpCR as icmp Pred (X + C1), C2
+          ICmpInst::Predicate Pred;
+          APInt RHS, Offset;
+          XCmpCR->getEquivalentICmp(Pred, RHS, Offset);
+
+          IRBuilder<NoFolder> Builder(&Inst);
+          if (!Offset.isZero()) {
+            X = Builder.CreateAdd(X, ConstantInt::get(X->getType(), Offset));
+            InsertedValues.insert(X);
+          }
+
+          Value *NewICmp =
+              Builder.CreateICmp(Pred, X, ConstantInt::get(X->getType(), RHS));
+          InsertedValues.insert(NewICmp);
+          return NewICmp;
+        }
+      }
+
+      // Given Y ∈ YRange, try to simplify: Y ∈ CR --> Y ∈ CR'
+      ConstantRange YRange = GetRange(Y);
+
+      // Early exit if
+      //  1. we know nothing about Y or
+      //  2. LHS has >1 uses (tuned by llvm-opt-bench) or
+      //  3. this ICMP is not two-inst range check.
+      if (YRange.isFullSet() || !IsOneUse || !IsTwoInstRangeCheck)
         return nullptr;
       // We are allowed to refine the comparison to either true or false for out
       // of range inputs. Based on this, try to simplify CmpCR as a single
       // ult/uge/slt/sge/eq/ne.
-      // E.g., CmpCR = [3, 10), LRange = [5, 0) --> NewCmpCR = [0, 10) -> ult
-      ConstantRange NewCmpCR = simplifyCmpRange(*CR, LRange);
+      // E.g., CmpCR = [3, 10), YRange = [5, 0) --> NewCmpCR = [0, 10) -> ult
+      ConstantRange NewCmpCR = simplifyCmpRange(*CmpCR, YRange);
 
       ICmpInst::Predicate Pred;
       APInt RHS;
@@ -432,7 +795,7 @@ static Value *simplifyInstruction(SCCPSolver &Solver,
       if (NewCmpCR.getEquivalentICmp(Pred, RHS)) {
         IRBuilder<NoFolder> Builder(&Inst);
         Value *NewICmp =
-            Builder.CreateICmp(Pred, X, ConstantInt::get(X->getType(), RHS));
+            Builder.CreateICmp(Pred, Y, ConstantInt::get(Y->getType(), RHS));
         InsertedValues.insert(NewICmp);
         return NewICmp;
       }
@@ -445,7 +808,7 @@ static Value *simplifyInstruction(SCCPSolver &Solver,
 bool SCCPSolver::simplifyInstsInBlock(BasicBlock &BB,
                                       SmallPtrSetImpl<Value *> &InsertedValues,
                                       Statistic &InstRemovedStat,
-                                      Statistic &InstReplacedStat) {
+                                      Statistic &InstReplacedStat, bool Eager) {
   bool MadeChanges = false;
   for (Instruction &Inst : make_early_inc_range(BB)) {
     if (Inst.getType()->isVoidTy())
@@ -461,7 +824,8 @@ bool SCCPSolver::simplifyInstsInBlock(BasicBlock &BB,
       ++InstReplacedStat;
     } else if (refineInstruction(*this, InsertedValues, Inst)) {
       MadeChanges = true;
-    } else if (auto *V = simplifyInstruction(*this, InsertedValues, Inst)) {
+    } else if (auto *V =
+                   simplifyInstruction(*this, InsertedValues, Inst, Eager)) {
       Inst.replaceAllUsesWith(V);
       Inst.eraseFromParent();
       ++InstRemovedStat;

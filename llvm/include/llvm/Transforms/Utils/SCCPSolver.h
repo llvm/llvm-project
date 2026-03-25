@@ -194,10 +194,16 @@ public:
   LLVM_ABI void visit(Instruction *I);
   LLVM_ABI void visitCall(CallInst &I);
 
+  /// Simplify instructions in \p BB using the solver's lattice information.
+  /// When \p Eager is true, also apply more aggressive folds that may rewrite
+  /// IR into forms less friendly to earlier canonicalization passes. Keep eager
+  /// mode for later optimization points where exposing extra range-based folds
+  /// outweighs the risk of hiding canonical patterns.
   LLVM_ABI bool simplifyInstsInBlock(BasicBlock &BB,
                                      SmallPtrSetImpl<Value *> &InsertedValues,
                                      Statistic &InstRemovedStat,
-                                     Statistic &InstReplacedStat);
+                                     Statistic &InstReplacedStat,
+                                     bool Eager = false);
 
   LLVM_ABI bool removeNonFeasibleEdges(BasicBlock *BB, DomTreeUpdater &DTU,
                                        BasicBlock *&NewUnreachableBB) const;

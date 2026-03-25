@@ -17,8 +17,8 @@ define i1 @slt_invertible_zext_mul_full_image(<2 x i9> %v) {
 ; CHECK-SAME: <2 x i9> [[V:%.*]]) {
 ; CHECK-NEXT:    [[E:%.*]] = extractelement <2 x i9> [[V]], i64 0
 ; CHECK-NEXT:    [[Z:%.*]] = zext i9 [[E]] to i27
-; CHECK-NEXT:    [[M:%.*]] = mul nuw i27 [[Z]], 262657
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i27 [[M]], 262657
+; CHECK-NEXT:    [[TMP1:%.*]] = add i27 [[Z]], -256
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i27 [[TMP1]], -255
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %e = extractelement <2 x i9> %v, i64 0
@@ -37,8 +37,8 @@ define i1 @slt_invertible_zext_mul_full_image_i16(i8 %v) {
 ; CHECK-LABEL: define i1 @slt_invertible_zext_mul_full_image_i16(
 ; CHECK-SAME: i8 [[V:%.*]]) {
 ; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[V]] to i16
-; CHECK-NEXT:    [[M:%.*]] = mul nuw i16 [[Z]], 257
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i16 [[M]], 257
+; CHECK-NEXT:    [[TMP1:%.*]] = add i16 [[Z]], -128
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i16 [[TMP1]], -127
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %z = zext i8 %v to i16
@@ -56,8 +56,8 @@ define i1 @slt_invertible_zext_mul_full_image_i8(i4 %v) {
 ; CHECK-LABEL: define i1 @slt_invertible_zext_mul_full_image_i8(
 ; CHECK-SAME: i4 [[V:%.*]]) {
 ; CHECK-NEXT:    [[Z:%.*]] = zext i4 [[V]] to i8
-; CHECK-NEXT:    [[M:%.*]] = mul nuw i8 [[Z]], 17
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i8 [[M]], 17
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Z]], -8
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i8 [[TMP1]], -7
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %z = zext i4 %v to i8
@@ -75,8 +75,7 @@ define i1 @ult_invertible_zext_mul_partial_image(i4 %x) {
 ; CHECK-LABEL: define i1 @ult_invertible_zext_mul_partial_image(
 ; CHECK-SAME: i4 [[X:%.*]]) {
 ; CHECK-NEXT:    [[Z:%.*]] = zext i4 [[X]] to i8
-; CHECK-NEXT:    [[M:%.*]] = mul nuw i8 [[Z]], 10
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i8 [[M]], 50
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i8 [[Z]], 5
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %z = zext i4 %x to i8
@@ -126,8 +125,8 @@ define i1 @sge_invertible_tail_of_zext_mul(i4 %x) {
 ; CHECK-LABEL: define i1 @sge_invertible_tail_of_zext_mul(
 ; CHECK-SAME: i4 [[X:%.*]]) {
 ; CHECK-NEXT:    [[Z:%.*]] = zext i4 [[X]] to i8
-; CHECK-NEXT:    [[M:%.*]] = mul i8 [[Z]], 20
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sge i8 [[M]], 60
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Z]], -3
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i8 [[TMP1]], 4
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %z = zext i4 %x to i8
@@ -145,8 +144,8 @@ define i1 @uge_invertible_tail_of_zext_mul(i4 %x) {
 ; CHECK-LABEL: define i1 @uge_invertible_tail_of_zext_mul(
 ; CHECK-SAME: i4 [[X:%.*]]) {
 ; CHECK-NEXT:    [[Z:%.*]] = zext i4 [[X]] to i8
-; CHECK-NEXT:    [[M:%.*]] = mul i8 [[Z]], 20
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp uge i8 [[M]], 60
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Z]], -3
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i8 [[TMP1]], 10
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %z = zext i4 %x to i8
@@ -164,8 +163,8 @@ define i1 @slt_noninvertible_signed_range_before_tail(i4 %v) {
 ; CHECK-LABEL: define i1 @slt_noninvertible_signed_range_before_tail(
 ; CHECK-SAME: i4 [[V:%.*]]) {
 ; CHECK-NEXT:    [[Z:%.*]] = zext i4 [[V]] to i8
-; CHECK-NEXT:    [[CAST:%.*]] = mul nuw i8 [[Z]], 18
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[CAST]], 16
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Z]], -8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[TMP1]], -7
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %z = zext i4 %v to i8
@@ -183,8 +182,8 @@ define i1 @ult_noninvertible_zext_mul_range(i4 %x) {
 ; CHECK-LABEL: define i1 @ult_noninvertible_zext_mul_range(
 ; CHECK-SAME: i4 [[X:%.*]]) {
 ; CHECK-NEXT:    [[Z:%.*]] = zext i4 [[X]] to i8
-; CHECK-NEXT:    [[M:%.*]] = mul i8 [[Z]], 20
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[M]], 45
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Z]], -13
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[TMP1]], -10
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %z = zext i4 %x to i8
@@ -202,8 +201,8 @@ define i1 @ult_noninvertible_zext_mul_before_tail(i4 %v) {
 ; CHECK-LABEL: define i1 @ult_noninvertible_zext_mul_before_tail(
 ; CHECK-SAME: i4 [[V:%.*]]) {
 ; CHECK-NEXT:    [[Z:%.*]] = zext i4 [[V]] to i8
-; CHECK-NEXT:    [[CAST:%.*]] = mul i8 [[Z]], 18
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[CAST]], 16
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Z]], -15
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[TMP1]], -14
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %z = zext i4 %v to i8
@@ -221,8 +220,8 @@ define i1 @slt_noninvertible_crosses_wrap(i4 %v) {
 ; CHECK-LABEL: define i1 @slt_noninvertible_crosses_wrap(
 ; CHECK-SAME: i4 [[V:%.*]]) {
 ; CHECK-NEXT:    [[Z:%.*]] = zext i4 [[V]] to i8
-; CHECK-NEXT:    [[CAST:%.*]] = mul i8 [[Z]], 20
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[CAST]], 60
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Z]], -7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[TMP1]], -4
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %z = zext i4 %v to i8
@@ -262,9 +261,8 @@ define i1 @sge_invertible_tail_of_zext_mul_plus_offset(i4 %x) {
 ; CHECK-LABEL: define i1 @sge_invertible_tail_of_zext_mul_plus_offset(
 ; CHECK-SAME: i4 [[X:%.*]]) {
 ; CHECK-NEXT:    [[Z:%.*]] = zext i4 [[X]] to i8
-; CHECK-NEXT:    [[M:%.*]] = mul i8 [[Z]], 20
-; CHECK-NEXT:    [[A:%.*]] = sub i8 [[M]], 100
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i8 [[A]], 10
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Z]], -6
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[TMP1]], 6
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %z = zext i4 %x to i8
@@ -283,9 +281,8 @@ define i1 @ult_invertible_zext_mul_plus_offset(i4 %x) {
 ; CHECK-LABEL: define i1 @ult_invertible_zext_mul_plus_offset(
 ; CHECK-SAME: i4 [[X:%.*]]) {
 ; CHECK-NEXT:    [[Z:%.*]] = zext i4 [[X]] to i8
-; CHECK-NEXT:    [[M:%.*]] = mul i8 [[Z]], 20
-; CHECK-NEXT:    [[A:%.*]] = add i8 [[M]], -100
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i8 [[A]], 100
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Z]], -5
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i8 [[TMP1]], 5
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %z = zext i4 %x to i8
@@ -304,9 +301,8 @@ define i1 @slt_inverse_invertible_zext_mul_plus_offset(i4 %x) {
 ; CHECK-LABEL: define i1 @slt_inverse_invertible_zext_mul_plus_offset(
 ; CHECK-SAME: i4 [[X:%.*]]) {
 ; CHECK-NEXT:    [[Z:%.*]] = zext i4 [[X]] to i8
-; CHECK-NEXT:    [[M:%.*]] = mul i8 [[Z]], 20
-; CHECK-NEXT:    [[A:%.*]] = add i8 [[M]], 6
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[A]], 66
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Z]], -7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[TMP1]], -4
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %z = zext i4 %x to i8
@@ -357,8 +353,8 @@ define i1 @sccp_sext_mul_shrinks_to_negative_suffix(i4 %x) {
 define i1 @sccp_mul_wraps_once_shrinks_to_middle_window(i8 range(i8 0, 18) %x) {
 ; CHECK-LABEL: define i1 @sccp_mul_wraps_once_shrinks_to_middle_window(
 ; CHECK-SAME: i8 range(i8 0, 18) [[X:%.*]]) {
-; CHECK-NEXT:    [[M:%.*]] = mul i8 [[X]], 20
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp uge i8 [[M]], 100
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X]], -5
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i8 [[TMP1]], 8
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %m = mul i8 %x, 20
@@ -369,7 +365,7 @@ define i1 @sccp_mul_wraps_once_shrinks_to_middle_window(i8 range(i8 0, 18) %x) {
 define i1 @sccp_urem_wraps_once_shrinks_to_middle_window(i8 range(i8 8, 19) %x) {
 ; CHECK-LABEL: define i1 @sccp_urem_wraps_once_shrinks_to_middle_window(
 ; CHECK-SAME: i8 range(i8 8, 19) [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = urem i8 [[X]], 10
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X]], -10
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i8 [[TMP1]], 3
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
@@ -381,8 +377,8 @@ define i1 @sccp_urem_wraps_once_shrinks_to_middle_window(i8 range(i8 8, 19) %x) 
 define i1 @sccp_negative_mul_wraps_once_shrinks_to_middle_window(i8 range(i8 3, 17) %x) {
 ; CHECK-LABEL: define i1 @sccp_negative_mul_wraps_once_shrinks_to_middle_window(
 ; CHECK-SAME: i8 range(i8 3, 17) [[X:%.*]]) {
-; CHECK-NEXT:    [[M:%.*]] = mul i8 [[X]], -20
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i8 [[M]], 60
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X]], -10
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i8 [[TMP1]], 3
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %m = mul i8 %x, -20
@@ -393,8 +389,8 @@ define i1 @sccp_negative_mul_wraps_once_shrinks_to_middle_window(i8 range(i8 3, 
 define i1 @sccp_shl_wraps_once_shrinks_to_upper_window(i8 range(i8 5, 23) %x) {
 ; CHECK-LABEL: define i1 @sccp_shl_wraps_once_shrinks_to_upper_window(
 ; CHECK-SAME: i8 range(i8 5, 23) [[X:%.*]]) {
-; CHECK-NEXT:    [[Y:%.*]] = shl i8 [[X]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp uge i8 [[Y]], -96
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X]], -10
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i8 [[TMP1]], 6
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %y = shl i8 %x, 4
@@ -405,9 +401,8 @@ define i1 @sccp_shl_wraps_once_shrinks_to_upper_window(i8 range(i8 5, 23) %x) {
 define i1 @sccp_mul_wraps_once_shrinks_to_two_value_window1(i8 range(i8 2, 6) %x) {
 ; CHECK-LABEL: define i1 @sccp_mul_wraps_once_shrinks_to_two_value_window1(
 ; CHECK-SAME: i8 range(i8 2, 6) [[X:%.*]]) {
-; CHECK-NEXT:    [[M:%.*]] = mul i8 [[X]], 100
-; CHECK-NEXT:    [[A:%.*]] = add i8 [[M]], 56
-; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[A]], 100
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X]], -3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[TMP1]], 2
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %m = mul i8 %x, 100
@@ -434,8 +429,7 @@ define i1 @sccp_mul_wraps_once_shrinks_to_two_value_window2(i8 range(i8 -2, 2) %
 define i1 @sccp_mul_wraps_once_shrinks_to_singleton(i8 range(i8 0, 18) %x) {
 ; CHECK-LABEL: define i1 @sccp_mul_wraps_once_shrinks_to_singleton(
 ; CHECK-SAME: i8 range(i8 0, 18) [[X:%.*]]) {
-; CHECK-NEXT:    [[M:%.*]] = mul i8 [[X]], 20
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[M]], -116
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[X]], 7
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %m = mul i8 %x, 20
@@ -525,8 +519,8 @@ define i1 @sccp_mul_wraps_once_shrinks_to_wrapped_domain_singleton(i8 range(i8 2
 define <4 x i1> @vec_splat_and(<4 x i32> range(i32 100, 456) %x) {
 ; CHECK-LABEL: define <4 x i1> @vec_splat_and(
 ; CHECK-SAME: <4 x i32> range(i32 100, 456) [[X:%.*]]) {
-; CHECK-NEXT:    [[M:%.*]] = and <4 x i32> [[X]], splat (i32 255)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp uge <4 x i32> [[M]], splat (i32 230)
+; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[X]], splat (i32 -230)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <4 x i32> [[TMP1]], splat (i32 26)
 ; CHECK-NEXT:    ret <4 x i1> [[CMP]]
 ;
   %m = and <4 x i32> %x, splat (i32 255)
@@ -537,9 +531,8 @@ define <4 x i1> @vec_splat_and(<4 x i32> range(i32 100, 456) %x) {
 define <4 x i1> @vec_splat_mul(<4 x i8> range(i8 10, 17) %x) {
 ; CHECK-LABEL: define <4 x i1> @vec_splat_mul(
 ; CHECK-SAME: <4 x i8> range(i8 10, 17) [[X:%.*]]) {
-; CHECK-NEXT:    [[M:%.*]] = mul <4 x i8> [[X]], splat (i8 50)
-; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i8> [[M]], splat (i8 -40)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <4 x i8> [[ADD]], splat (i8 110)
+; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i8> [[X]], splat (i8 -12)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <4 x i8> [[TMP1]], splat (i8 2)
 ; CHECK-NEXT:    ret <4 x i1> [[CMP]]
 ;
   %m = mul <4 x i8> %x, splat (i8 50)
@@ -551,8 +544,8 @@ define <4 x i1> @vec_splat_mul(<4 x i8> range(i8 10, 17) %x) {
 define <4 x i1> @vec_splat_urem(<4 x i32> range(i32 1, 10) %x) {
 ; CHECK-LABEL: define <4 x i1> @vec_splat_urem(
 ; CHECK-SAME: <4 x i32> range(i32 1, 10) [[X:%.*]]) {
-; CHECK-NEXT:    [[M:%.*]] = urem <4 x i32> [[X]], splat (i32 8)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp uge <4 x i32> [[M]], splat (i32 2)
+; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[X]], splat (i32 -2)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <4 x i32> [[TMP1]], splat (i32 6)
 ; CHECK-NEXT:    ret <4 x i1> [[CMP]]
 ;
   %m = urem <4 x i32> %x, splat (i32 8)
@@ -563,8 +556,7 @@ define <4 x i1> @vec_splat_urem(<4 x i32> range(i32 1, 10) %x) {
 define <4 x i1> @vec_splat_shl(<4 x i8> range(i8 1, 4) %x) {
 ; CHECK-LABEL: define <4 x i1> @vec_splat_shl(
 ; CHECK-SAME: <4 x i8> range(i8 1, 4) [[X:%.*]]) {
-; CHECK-NEXT:    [[M:%.*]] = shl <4 x i8> [[X]], splat (i8 7)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp uge <4 x i8> [[M]], splat (i8 100)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <4 x i8> [[X]], splat (i8 2)
 ; CHECK-NEXT:    ret <4 x i1> [[CMP]]
 ;
   %m = shl <4 x i8> %x, splat (i8 7)
