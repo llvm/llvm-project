@@ -41,9 +41,17 @@ class CIR_Attr<string name, string attrMnemonic, list<Trait> traits = []>
   bit hasAttrToValueLowering = 0;
 }
 
-class CIR_TypedAttr<string name, string attrMnemonic, list<Trait> traits = []>
+class CIR_ValueLikeAttr<string name, string attrMnemonic,
+                        list<Trait> traits = []>
     : CIR_Attr<name, attrMnemonic, !listconcat(traits, [TypedAttrInterface])> {
+  // Most CIR attributes that can be lowered to an LLVM constant will be lowered
+  // to that constant during the LowerToLLVM pass. Those that don't should
+  // override this setting.
+  let hasAttrToValueLowering = 1;
+}
 
+class CIR_TypedAttr<string name, string attrMnemonic, list<Trait> traits = []>
+    : CIR_ValueLikeAttr<name, attrMnemonic, traits> {
   let parameters = (ins AttributeSelfTypeParameter<"">:$type);
 
   let builders = [
@@ -155,8 +163,7 @@ def CIR_OptInfoAttr : CIR_Attr<"OptInfo", "opt_info"> {
 // BoolAttr
 //===----------------------------------------------------------------------===//
 
-def CIR_BoolAttr : CIR_Attr<"Bool", "bool", [TypedAttrInterface]> {
-  let hasAttrToValueLowering = 1;
+def CIR_BoolAttr : CIR_ValueLikeAttr<"Bool", "bool", [TypedAttrInterface]> {
   let summary = "Represent true/false for !cir.bool types";
   let description = [{
     The BoolAttr represents a 'true' or 'false' value.
@@ -183,7 +190,6 @@ def CIR_BoolAttr : CIR_Attr<"Bool", "bool", [TypedAttrInterface]> {
 //===----------------------------------------------------------------------===//
 
 def CIR_ZeroAttr : CIR_TypedAttr<"Zero", "zero"> {
-  let hasAttrToValueLowering = 1;
   let summary = "Attribute to represent zero initialization";
   let description = [{
     The ZeroAttr is used to indicate zero initialization on structs.
@@ -195,7 +201,6 @@ def CIR_ZeroAttr : CIR_TypedAttr<"Zero", "zero"> {
 //===----------------------------------------------------------------------===//
 
 def CIR_UndefAttr : CIR_TypedAttr<"Undef", "undef"> {
-  let hasAttrToValueLowering = 1;
   let summary = "Represent an undef constant";
   let description = [{
     The UndefAttr represents an undef constant, corresponding to LLVM's notion
@@ -219,8 +224,7 @@ def CIR_PoisonAttr : CIR_TypedAttr<"Poison", "poison"> {
 // IntegerAttr
 //===----------------------------------------------------------------------===//
 
-def CIR_IntAttr : CIR_Attr<"Int", "int", [TypedAttrInterface]> {
-  let hasAttrToValueLowering = 1;
+def CIR_IntAttr : CIR_ValueLikeAttr<"Int", "int"> {
   let summary = "An attribute containing an integer value";
   let description = [{
     An integer attribute is a literal attribute that represents an integral
@@ -288,8 +292,7 @@ def CIR_IntAttr : CIR_Attr<"Int", "int", [TypedAttrInterface]> {
 // FPAttr
 //===----------------------------------------------------------------------===//
 
-def CIR_FPAttr : CIR_Attr<"FP", "fp", [TypedAttrInterface]> {
-  let hasAttrToValueLowering = 1;
+def CIR_FPAttr : CIR_ValueLikeAttr<"FP", "fp"> {
   let summary = "An attribute containing a floating-point value";
   let description = [{
     An fp attribute is a literal attribute that represents a floating-point
@@ -325,10 +328,7 @@ def CIR_FPAttr : CIR_Attr<"FP", "fp", [TypedAttrInterface]> {
 // ConstArrayAttr
 //===----------------------------------------------------------------------===//
 
-def CIR_ConstArrayAttr : CIR_Attr<"ConstArray", "const_array", [
-  TypedAttrInterface
-]> {
-  let hasAttrToValueLowering = 1;
+def CIR_ConstArrayAttr : CIR_ValueLikeAttr<"ConstArray", "const_array"> {
   let summary = "A constant array from ArrayAttr or StringRefAttr";
   let description = [{
     An CIR array attribute is an array of literals of the specified attr types.
@@ -374,10 +374,7 @@ def CIR_ConstArrayAttr : CIR_Attr<"ConstArray", "const_array", [
 // ConstVectorAttr
 //===----------------------------------------------------------------------===//
 
-def CIR_ConstVectorAttr : CIR_Attr<"ConstVector", "const_vector", [
-  TypedAttrInterface
-]> {
-  let hasAttrToValueLowering = 1;
+def CIR_ConstVectorAttr : CIR_ValueLikeAttr<"ConstVector", "const_vector"> {
   let summary = "A constant vector from ArrayAttr";
   let description = [{
     A CIR vector attribute is an array of literals of the specified attribute
@@ -409,10 +406,7 @@ def CIR_ConstVectorAttr : CIR_Attr<"ConstVector", "const_vector", [
 // ConstRecordAttr
 //===----------------------------------------------------------------------===//
 
-def CIR_ConstRecordAttr : CIR_Attr<"ConstRecord", "const_record", [
-  TypedAttrInterface
-]> {
-  let hasAttrToValueLowering = 1;
+def CIR_ConstRecordAttr : CIR_ValueLikeAttr<"ConstRecord", "const_record"> {
   let summary = "Represents a constant record";
   let description = [{
     Effectively supports "struct-like" constants. It's must be built from
@@ -448,8 +442,7 @@ def CIR_ConstRecordAttr : CIR_Attr<"ConstRecord", "const_record", [
 // ConstPtrAttr
 //===----------------------------------------------------------------------===//
 
-def CIR_ConstPtrAttr : CIR_Attr<"ConstPtr", "ptr", [TypedAttrInterface]> {
-  let hasAttrToValueLowering = 1;
+def CIR_ConstPtrAttr : CIR_ValueLikeAttr<"ConstPtr", "ptr"> {
   let summary = "Holds a constant pointer value";
   let parameters = (ins
     AttributeSelfTypeParameter<"", "::cir::PointerType">:$type,
@@ -478,9 +471,7 @@ def CIR_ConstPtrAttr : CIR_Attr<"ConstPtr", "ptr", [TypedAttrInterface]> {
 // DataMemberAttr
 //===----------------------------------------------------------------------===//
 
-def CIR_DataMemberAttr : CIR_Attr<"DataMember", "data_member", [
-  TypedAttrInterface
-]> {
+def CIR_DataMemberAttr : CIR_ValueLikeAttr<"DataMember", "data_member"> {
   let summary = "Holds a constant data member pointer value";
   let parameters = (ins AttributeSelfTypeParameter<
                             "", "cir::DataMemberType">:$type,
@@ -512,6 +503,9 @@ def CIR_DataMemberAttr : CIR_Attr<"DataMember", "data_member", [
     }]>,
   ];
 
+  // This attribute gets lowered during CXXABILowering
+  let hasAttrToValueLowering = 0;
+
   let genVerifyDecl = 1;
 
   let assemblyFormat = [{
@@ -529,7 +523,7 @@ def CIR_DataMemberAttr : CIR_Attr<"DataMember", "data_member", [
 // MethodAttr
 //===----------------------------------------------------------------------===//
 
-def CIR_MethodAttr : CIR_Attr<"Method", "method", [TypedAttrInterface]> {
+def CIR_MethodAttr : CIR_ValueLikeAttr<"Method", "method"> {
   let summary = "Holds a constant pointer-to-member-function value";
   let description = [{
     A method attribute is a literal attribute that represents a constant
@@ -581,6 +575,9 @@ def CIR_MethodAttr : CIR_Attr<"Method", "method", [TypedAttrInterface]> {
       return $_get(type.getContext(), type, std::nullopt, vtable_offset);
     }]>,
   ];
+
+  // This attribute gets lowered during CXXABILowering
+  let hasAttrToValueLowering = 0;
 
   let hasCustomAssemblyFormat = 1;
 
@@ -685,10 +682,7 @@ def CIR_CmpThreeWayInfoAttr : CIR_Attr<"CmpThreeWayInfo", "cmp3way_info"> {
 // GlobalViewAttr
 //===----------------------------------------------------------------------===//
 
-def CIR_GlobalViewAttr : CIR_Attr<"GlobalView", "global_view", [
-  TypedAttrInterface
-]> {
-  let hasAttrToValueLowering = 1;
+def CIR_GlobalViewAttr : CIR_ValueLikeAttr<"GlobalView", "global_view"> {
   let summary = "Provides constant access to a global address";
   let description = [{
     Get constant address of global `symbol` and optionally apply offsets to
@@ -774,8 +768,7 @@ def CIR_GlobalViewAttr : CIR_Attr<"GlobalView", "global_view", [
 // VTableAttr
 //===----------------------------------------------------------------------===//
 
-def CIR_VTableAttr : CIR_Attr<"VTable", "vtable", [TypedAttrInterface]> {
-  let hasAttrToValueLowering = 1;
+def CIR_VTableAttr : CIR_ValueLikeAttr<"VTable", "vtable"> {
   let summary = "Represents a C++ vtable";
   let description = [{
     Wraps a #cir.const_record containing one or more vtable arrays.
@@ -974,10 +967,7 @@ def CIR_TargetAddressSpaceAttr : CIR_Attr< "TargetAddressSpace",
 // ConstComplexAttr
 //===----------------------------------------------------------------------===//
 
-def CIR_ConstComplexAttr : CIR_Attr<"ConstComplex", "const_complex", [
-  TypedAttrInterface
-]> {
-  let hasAttrToValueLowering = 1;
+def CIR_ConstComplexAttr : CIR_ValueLikeAttr<"ConstComplex", "const_complex"> {
   let summary = "An attribute that contains a constant complex value";
   let description = [{
     The `#cir.const_complex` attribute contains a constant value of complex
@@ -1323,8 +1313,7 @@ def CIR_AddressPointAttr : CIR_Attr<"AddressPoint", "address_point"> {
 // TypeInfoAttr
 //===----------------------------------------------------------------------===//
 
-def CIR_TypeInfoAttr : CIR_Attr<"TypeInfo", "typeinfo", [TypedAttrInterface]> {
-  let hasAttrToValueLowering = 1;
+def CIR_TypeInfoAttr : CIR_ValueLikeAttr<"TypeInfo", "typeinfo"> {
   let summary = "Represents a typeinfo used for RTTI";
   let description = [{
     The typeinfo data for a given class is stored into an ArrayAttr. The
