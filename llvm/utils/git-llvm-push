@@ -28,6 +28,8 @@ LLVM_GITHUB_TOKEN_VAR = "LLVM_GITHUB_TOKEN"
 LLVM_REPO = "llvm/llvm-project"
 GITHUB_API = "https://api.github.com"
 
+GIT_CONFIG_PREFIX = "git-llvm-push."
+
 MERGE_MAX_RETRIES = 10
 MERGE_RETRY_DELAY = 5  # seconds
 REQUEST_TIMEOUT = 30  # seconds
@@ -613,9 +615,13 @@ def get_git_config_options() -> argparse.Namespace:
         )
         args = argparse.Namespace()
         for line in process.stdout.decode("utf-8").split("\n"):
-            if line.startswith("git-llvm-push."):
+            if line.startswith(GIT_CONFIG_PREFIX):
                 line_parts = line.split("=")
-                setattr(args, line_parts[0][14:].replace("-", "_"), line_parts[1])
+                setattr(
+                    args,
+                    line_parts[0][len(GIT_CONFIG_PREFIX) :].replace("-", "_"),
+                    line_parts[1],
+                )
         return args
     except:
         return argparse.Namespace()
