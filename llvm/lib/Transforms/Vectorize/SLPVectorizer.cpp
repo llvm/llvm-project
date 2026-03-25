@@ -16010,8 +16010,12 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
 
       InstructionCost ScalarCost = TTI->getCmpSelInstrCost(
           E->getOpcode(), OrigScalarTy, Builder.getInt1Ty(), CurrentPred,
-          CostKind, getOperandInfo(VI->getOperand(0)),
-          getOperandInfo(VI->getOperand(1)), VI);
+          CostKind,
+          getOperandInfo(
+              VI->getOperand(ShuffleOrOp == Instruction::Select ? 1 : 0)),
+          getOperandInfo(
+              VI->getOperand(ShuffleOrOp == Instruction::Select ? 2 : 1)),
+          VI);
       InstructionCost IntrinsicCost = GetMinMaxCost(OrigScalarTy, VI);
       if (IntrinsicCost.isValid())
         ScalarCost = IntrinsicCost;
@@ -16021,10 +16025,13 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     auto GetVectorCost = [&](InstructionCost CommonCost) {
       auto *MaskTy = getWidenedType(Builder.getInt1Ty(), VL.size());
 
-      InstructionCost VecCost =
-          TTI->getCmpSelInstrCost(E->getOpcode(), VecTy, MaskTy, VecPred,
-                                  CostKind, getOperandInfo(E->getOperand(0)),
-                                  getOperandInfo(E->getOperand(1)), VL0);
+      InstructionCost VecCost = TTI->getCmpSelInstrCost(
+          E->getOpcode(), VecTy, MaskTy, VecPred, CostKind,
+          getOperandInfo(
+              E->getOperand(ShuffleOrOp == Instruction::Select ? 1 : 0)),
+          getOperandInfo(
+              E->getOperand(ShuffleOrOp == Instruction::Select ? 2 : 1)),
+          VL0);
       if (auto *SI = dyn_cast<SelectInst>(VL0)) {
         auto *CondType =
             getWidenedType(SI->getCondition()->getType(), VL.size());
