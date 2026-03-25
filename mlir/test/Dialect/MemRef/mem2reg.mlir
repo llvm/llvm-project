@@ -238,13 +238,13 @@ func.func @merge_point_used_by_erased_op(%cond: i1) -> i32 {
 // CHECK: ^[[PRED1]]:
 ^pred1:
   memref.store %c0, %alloca[] : memref<i32>
-  // CHECK: cf.br ^[[FINAL:.*]]{{$}}
+  // CHECK: cf.br ^[[MERGE:.*]]{{$}}
   cf.br ^merge
 
 // CHECK: ^[[PRED2]]:
 ^pred2:
   memref.store %c1, %alloca[] : memref<i32>
-  // CHECK: cf.br ^[[FINAL]]{{$}}
+  // CHECK: cf.br ^[[MERGE]]{{$}}
   cf.br ^merge
 
 // CHECK: ^[[MERGE]]:
