@@ -1,6 +1,6 @@
 ! Test to check the option "-fdebug-info-for-profiling".
 
-! RUN: %flang -S -emit-llvm -fdebug-info-for-profiling -g -o - %s | FileCheck %s
+! RUN: %flang_fc1 -emit-llvm -debug-info-kind=standalone -fdebug-info-for-profiling -o - %s | FileCheck %s
 
 ! CHECK: !DICompileUnit({{.*}}debugInfoForProfiling: true{{.*}})
 ! CHECK: !DILexicalBlockFile(
