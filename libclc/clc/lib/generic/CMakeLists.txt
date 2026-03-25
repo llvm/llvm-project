@@ -62,6 +62,7 @@ libclc_configure_source_list(CLC_GENERIC_SOURCES
   math/clc_asinh.cl
   math/clc_asinpi.cl
   math/clc_atan.cl
+  math/clc_atan_helpers.cl
   math/clc_atan2.cl
   math/clc_atan2pi.cl
   math/clc_atanh.cl
@@ -76,7 +77,6 @@ libclc_configure_source_list(CLC_GENERIC_SOURCES
   math/clc_div_cr.cl
   math/clc_div_fast.cl
   math/clc_ep.cl
-  math/clc_ep_log.cl
   math/clc_erf.cl
   math/clc_erfc.cl
   math/clc_exp.cl
@@ -156,6 +156,7 @@ libclc_configure_source_list(CLC_GENERIC_SOURCES
   math/clc_rsqrt.cl
   math/clc_sin.cl
   math/clc_sincos.cl
+  math/clc_sincospi.cl
   math/clc_sincos_helpers.cl
   math/clc_sinh.cl
   math/clc_sinpi.cl
@@ -167,6 +168,7 @@ libclc_configure_source_list(CLC_GENERIC_SOURCES
   math/clc_tanh.cl
   math/clc_tanpi.cl
   math/clc_tgamma.cl
+  math/clc_trigpi_helpers.cl
   math/clc_trunc.cl
   mem_fence/clc_mem_fence.cl
   misc/clc_shuffle.cl

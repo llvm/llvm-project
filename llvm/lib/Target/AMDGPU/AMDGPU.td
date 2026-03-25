@@ -999,6 +999,11 @@ defm Vscnt : AMDGPUSubtargetFeature<"vscnt",
   /*GenPredicate=*/0
 >;
 
+defm Asynccnt : AMDGPUSubtargetFeature<"asynccnt",
+  "Has separate asynccnt counter",
+  /*GenPredicate=*/0
+>;
+
 defm GetWaveIdInst : AMDGPUSubtargetFeature<"get-wave-id-inst",
   "Has s_get_waveid_in_workgroup instruction"
 >;
@@ -1058,6 +1063,11 @@ defm SALUFloatInsts : AMDGPUSubtargetFeature<"salu-float",
 
 defm PseudoScalarTrans : AMDGPUSubtargetFeature<"pseudo-scalar-trans",
   "Has Pseudo Scalar Transcendental instructions"
+>;
+
+defm NoF16PseudoScalarTransInlineConstants : AMDGPUSubtargetFeature<"no-f16-pseudo-scalar-trans-inline-constants",
+  "Inline constants are not supported for F16 pseudo scalar transcendentals",
+  /*GenPredicate=*/0
 >;
 
 defm RestrictedSOffset : AMDGPUSubtargetFeature<"restricted-soffset",
@@ -1961,7 +1971,8 @@ def FeatureISAVersion11_7_0 : FeatureSet<
      FeatureSWMMACGfx1200Insts,
      FeatureIEEEMinimumMaximumInsts,
      FeatureMinimum3Maximum3F32,
-     FeatureMinimum3Maximum3F16])>;
+     FeatureMinimum3Maximum3F16,
+     FeatureNoF16PseudoScalarTransInlineConstants])>;
 
 def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,
@@ -2013,7 +2024,9 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureQsadInsts,
    FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts,
-   FeatureCvtPkNormVOP3Insts
+   FeatureCvtPkNormVOP3Insts,
+   FeatureNoF16PseudoScalarTransInlineConstants,
+   FeatureRealTrue16Insts,
    ]>;
 
 def FeatureISAVersion12_50_Common : FeatureSet<
@@ -2069,6 +2082,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureSupportsSRAMECC,
    FeatureMaxHardClauseLength63,
    FeatureWaitXcnt,
+   FeatureAsynccnt,
    FeatureAtomicFMinFMaxF64GlobalInsts,
    FeatureAtomicFMinFMaxF64FlatInsts,
    FeatureFlatBufferGlobalAtomicFaddF64Inst,
@@ -2091,6 +2105,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureClusters,
    FeatureD16Writes32BitVgpr,
    FeatureMcastLoadInsts,
+   FeatureNoF16PseudoScalarTransInlineConstants,
 ]>;
 
 def FeatureISAVersion12_50 : FeatureSet<

@@ -5192,6 +5192,12 @@ def HLSLWaveActiveBitXor : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void (...)";
 }
 
+def HLSLWaveActiveBitAnd : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_active_bit_and"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void (...)";
+}
+
 def HLSLWaveActiveBallot : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_active_ballot"];
   let Attributes = [NoThrow, Const];
@@ -5272,6 +5278,12 @@ def HLSLWavePrefixProduct : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLQuadReadAcrossX : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_quad_read_across_x"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLQuadReadAcrossY : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_quad_read_across_y"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }

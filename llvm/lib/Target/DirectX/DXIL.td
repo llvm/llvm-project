@@ -1162,6 +1162,10 @@ def WaveActiveBit : DXILOp<120, waveActiveBit> {
                  [
                    IntrinArgIndex<0>, IntrinArgI8<WaveBitOpKind_Xor>,
                  ]>,
+    IntrinSelect<int_dx_wave_reduce_and,
+                 [
+                   IntrinArgIndex<0>, IntrinArgI8<WaveBitOpKind_And>,
+                 ]>
   ];
 
   let arguments = [OverloadTy, Int8Ty];
@@ -1213,6 +1217,10 @@ def QuadOp : DXILOp<123, quadOp> {
     IntrinSelect<int_dx_quad_read_across_x,
                  [
                    IntrinArgIndex<0>, IntrinArgI8<QuadOpKind_ReadAcrossX>
+                 ]>,
+    IntrinSelect<int_dx_quad_read_across_y,
+                 [
+                   IntrinArgIndex<0>, IntrinArgI8<QuadOpKind_ReadAcrossY>
                  ]>,
   ];
 

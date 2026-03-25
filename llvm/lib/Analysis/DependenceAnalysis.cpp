@@ -623,12 +623,7 @@ bool FullDependence::isDirectionNegative() const {
   return false;
 }
 
-bool FullDependence::normalize(ScalarEvolution *SE) {
-  if (!isDirectionNegative())
-    return false;
-
-  LLVM_DEBUG(dbgs() << "Before normalizing negative direction vectors:\n";
-             dump(dbgs()););
+void FullDependence::negate(ScalarEvolution &SE) {
   std::swap(Src, Dst);
   for (unsigned Level = 1; Level <= Levels; ++Level) {
     unsigned char Direction = DV[Level - 1].Direction;
@@ -642,9 +637,17 @@ bool FullDependence::normalize(ScalarEvolution *SE) {
     DV[Level - 1].Direction = RevDirection;
     // Reverse the dependence distance as well.
     if (DV[Level - 1].Distance != nullptr)
-      DV[Level - 1].Distance = SE->getNegativeSCEV(DV[Level - 1].Distance);
+      DV[Level - 1].Distance = SE.getNegativeSCEV(DV[Level - 1].Distance);
   }
+}
 
+bool FullDependence::normalize(ScalarEvolution *SE) {
+  if (!isDirectionNegative())
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Before normalizing negative direction vectors:\n";
+             dump(dbgs()););
+  negate(*SE);
   LLVM_DEBUG(dbgs() << "After normalizing negative direction vectors:\n";
              dump(dbgs()););
   return true;
@@ -892,20 +895,17 @@ bool DependenceInfo::haveSameSD(const Loop *SrcLoop,
       !DstLoop->getLoopLatch())
     return false;
 
-  const SCEV *SrcUB = nullptr, *DstUP = nullptr;
-  if (SE->hasLoopInvariantBackedgeTakenCount(SrcLoop))
-    SrcUB = SE->getBackedgeTakenCount(SrcLoop);
-  if (SE->hasLoopInvariantBackedgeTakenCount(DstLoop))
-    DstUP = SE->getBackedgeTakenCount(DstLoop);
+  const SCEV *SrcUB = SE->getBackedgeTakenCount(SrcLoop);
+  const SCEV *DstUB = SE->getBackedgeTakenCount(DstLoop);
+  if (isa<SCEVCouldNotCompute>(SrcUB) || isa<SCEVCouldNotCompute>(DstUB))
+    return false;
 
-  if (SrcUB != nullptr && DstUP != nullptr) {
-    Type *WiderType = SE->getWiderType(SrcUB->getType(), DstUP->getType());
-    SrcUB = SE->getNoopOrZeroExtend(SrcUB, WiderType);
-    DstUP = SE->getNoopOrZeroExtend(DstUP, WiderType);
+  Type *WiderType = SE->getWiderType(SrcUB->getType(), DstUB->getType());
+  SrcUB = SE->getNoopOrZeroExtend(SrcUB, WiderType);
+  DstUB = SE->getNoopOrZeroExtend(DstUB, WiderType);
 
-    if (SE->isKnownPredicate(ICmpInst::ICMP_EQ, SrcUB, DstUP))
-      return true;
-  }
+  if (SrcUB == DstUB)
+    return true;
 
   return false;
 }
@@ -962,10 +962,12 @@ bool DependenceInfo::haveSameSD(const Loop *SrcLoop,
 //     g - 7 = MaxLevels
 // SameSDLevels counts the number of levels after common levels that are
 // not common but have the same iteration space and depth. Internally this
-// is checked using haveSameSD. Assume that in this code fragment, levels c and
-// e have the same iteration space and depth, but levels d and f does not. Then
-// SameSDLevels is set to 1. In that case the level numbers for the previous
-// code look like
+// is checked using haveSameSD. Currently we only need to check for SameSD
+// levels up to one level after the common levels, and therefore SameSDLevels
+// will be either 0 or 1.
+// 1. Assume that in this code fragment, levels c and e have the same iteration
+// space and depth, but levels d and f does not. Then SameSDLevels is set to 1.
+// In that case the level numbers for the previous code look like
 //     a   - 1
 //     b   - 2
 //     c,e - 3 = CommonLevels
@@ -992,15 +994,19 @@ void DependenceInfo::establishNestingLevels(const Instruction *Src,
     DstLevel--;
   }
 
-  // find the first common level and count the SameSD levels leading to it
+  const Loop *SrcUncommonFrontier = nullptr, *DstUncommonFrontier = nullptr;
+  // Find the first uncommon level pair and check if the associated levels have
+  // the SameSD.
   while (SrcLoop != DstLoop) {
-    SameSDLevels++;
-    if (!haveSameSD(SrcLoop, DstLoop))
-      SameSDLevels = 0;
+    SrcUncommonFrontier = SrcLoop;
+    DstUncommonFrontier = DstLoop;
     SrcLoop = SrcLoop->getParentLoop();
     DstLoop = DstLoop->getParentLoop();
     SrcLevel--;
   }
+  if (SrcUncommonFrontier && DstUncommonFrontier &&
+      haveSameSD(SrcUncommonFrontier, DstUncommonFrontier))
+    SameSDLevels = 1;
   CommonLevels = SrcLevel;
   MaxLevels -= CommonLevels;
 }
@@ -1384,7 +1390,7 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEV *Coeff,
   Level--;
   const SCEV *Delta = SE->getMinusSCEV(DstConst, SrcConst);
   LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
-  if (Delta->isZero()) {
+  if (Delta->isZero() && SE->isKnownNonZero(Coeff)) {
     Result.DV[Level].Direction &= ~Dependence::DVEntry::LT;
     Result.DV[Level].Direction &= ~Dependence::DVEntry::GT;
     ++WeakCrossingSIVsuccesses;
@@ -1467,10 +1473,7 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEV *Coeff,
   LLVM_DEBUG(dbgs() << "\t    Distance = " << Distance << "\n");
 
   // if 2*Coeff doesn't divide Delta, then the equal direction isn't possible
-  APInt Two = APInt(Distance.getBitWidth(), 2, true);
-  Remainder = Distance.srem(Two);
-  LLVM_DEBUG(dbgs() << "\t    Remainder = " << Remainder << "\n");
-  if (Remainder != 0) {
+  if (Distance[0]) {
     // Equal direction isn't possible
     Result.DV[Level].Direction &= ~Dependence::DVEntry::EQ;
     ++WeakCrossingSIVsuccesses;

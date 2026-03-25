@@ -6324,13 +6324,9 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
   }
 
   // If we know the range of vscale, see if we can fold it given a constant.
-  // TODO: Generalize this to other nodes by adding computeConstantRange
   if (N0.getOpcode() == ISD::VSCALE) {
     if (auto *C1 = dyn_cast<ConstantSDNode>(N1)) {
-      const Function &F = DAG.getMachineFunction().getFunction();
-      ConstantRange Range =
-          getVScaleRange(&F, VT.getScalarSizeInBits())
-              .multiply(ConstantRange(N0.getConstantOperandAPInt(0)));
+      ConstantRange Range = DAG.computeConstantRange(N0, 0);
 
       const APInt &C1V = C1->getAPIntValue();
       if ((Opcode == ISD::UMAX && Range.getUnsignedMax().ule(C1V)) ||
@@ -12442,7 +12438,6 @@ SDValue DAGCombiner::foldSelectOfConstants(SDNode *N) {
     return SDValue();
 
   if (CondVT != MVT::i1 || LegalOperations) {
-    // fold (select Cond, 0, 1) -> (xor Cond, 1)
     // We can't do this reliably if integer based booleans have different contents
     // to floating point based booleans. This is because we can't tell whether we
     // have an integer-based boolean or a floating-point-based boolean unless we
@@ -12455,13 +12450,19 @@ SDValue DAGCombiner::foldSelectOfConstants(SDNode *N) {
         TLI.getBooleanContents(/*isVec*/false, /*isFloat*/true) ==
             TargetLowering::ZeroOrOneBooleanContent &&
         TLI.getBooleanContents(/*isVec*/false, /*isFloat*/false) ==
-            TargetLowering::ZeroOrOneBooleanContent &&
-        C1->isZero() && C2->isOne()) {
-      SDValue NotCond =
-          DAG.getNode(ISD::XOR, DL, CondVT, Cond, DAG.getConstant(1, DL, CondVT));
-      if (VT.bitsEq(CondVT))
-        return NotCond;
-      return DAG.getZExtOrTrunc(NotCond, DL, VT);
+            TargetLowering::ZeroOrOneBooleanContent) {
+      // fold (select Cond, 0, 1) -> (xor Cond, 1)
+      if (C1->isZero() && C2->isOne()) {
+        SDValue NotCond = DAG.getNode(ISD::XOR, DL, CondVT, Cond,
+                                      DAG.getConstant(1, DL, CondVT));
+        if (VT.bitsEq(CondVT))
+          return NotCond;
+        return DAG.getZExtOrTrunc(NotCond, DL, VT);
+      }
+
+      // fold (select Cond, 1, 0) -> Cond
+      if (C1->isOne() && C2->isZero() && CondVT == VT)
+        return Cond;
     }
 
     return SDValue();

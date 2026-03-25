@@ -69,7 +69,6 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fp_bits
 )
 
-
 add_fp_unittest(
   cospif16_test
   NEED_MPFR
@@ -2614,6 +2613,19 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.atan
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  atanbf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    atanbf16_test.cpp
+  DEPENDS
+    libc.src.math.atanbf16
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.bfloat16
 )
 
 add_fp_unittest(

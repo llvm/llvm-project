@@ -135,6 +135,11 @@ unsigned getXcntBitWidth(unsigned VersionMajor, unsigned VersionMinor) {
   return VersionMajor == 12 && VersionMinor == 5 ? 6 : 0;
 }
 
+/// \returns Asynccnt bit width.
+unsigned getAsynccntBitWidth(unsigned VersionMajor, unsigned VersionMinor) {
+  return VersionMajor == 12 && VersionMinor == 5 ? 6 : 0;
+}
+
 /// \returns shift for Loadcnt/Storecnt in combined S_WAIT instructions.
 unsigned getLoadcntStorecntBitShift(unsigned VersionMajor) {
   return VersionMajor >= 12 ? 8 : 0;
@@ -923,6 +928,12 @@ ComponentProps::ComponentProps(const MCInstrDesc &OpDesc, bool VOP3Layout) {
     NumVOPD3Mods = 2;
     if (IsVOP3)
       SrcOperandsNum = 3;
+  } else if (Opcode == AMDGPU::V_DOT2_F32_F16 ||
+             Opcode == AMDGPU::V_DOT2_F32_BF16) {
+    // VOP3P opcodes that have VOPD but don't have VOP2 version. Using VOPD3
+    // path in getIndexOfSrcInMCOperands to get correct src operand indexes,
+    // but generating VOPD, not VOPD3.
+    NumVOPD3Mods = SrcOperandsNum;
   } else if (isSISrcFPOperand(OpDesc,
                               getNamedOperandIdx(Opcode, OpName::src0))) {
     // All FP VOPD instructions have Neg modifiers for all operands except
@@ -1824,6 +1835,10 @@ unsigned getXcntBitMask(const IsaVersion &Version) {
   return (1 << getXcntBitWidth(Version.Major, Version.Minor)) - 1;
 }
 
+unsigned getAsynccntBitMask(const IsaVersion &Version) {
+  return (1 << getAsynccntBitWidth(Version.Major, Version.Minor)) - 1;
+}
+
 unsigned getStorecntBitMask(const IsaVersion &Version) {
   return (1 << getStorecntBitWidth(Version.Major)) - 1;
 }
@@ -1843,6 +1858,7 @@ HardwareLimits::HardwareLimits(const IsaVersion &IV) {
   BvhcntMax = getBvhcntBitMask(IV);
   KmcntMax = getKmcntBitMask(IV);
   XcntMax = getXcntBitMask(IV);
+  AsyncMax = getAsynccntBitMask(IV);
   VaVdstMax = DepCtr::getVaVdstBitMask();
   VmVsrcMax = DepCtr::getVmVsrcBitMask();
 }
@@ -3618,9 +3634,12 @@ convertSetRegImmToVgprMSBs(unsigned Imm, unsigned Simm16,
 
   auto [HwRegId, Offset, Size] = Hwreg::HwregEncoding::decode(Simm16);
   if (HwRegId != Hwreg::ID_MODE ||
-      (!HasSetregVGPRMSBFixup && (Offset + Size) <= VGPRMSBShift))
+      (!HasSetregVGPRMSBFixup && (Offset + Size) < VGPRMSBShift))
     return {};
-  Imm = ((Imm >> Offset) & Hwreg::VGPR_MSB_MASK) >> VGPRMSBShift;
+  // If there is SetregVGPRMSBFixup then Offset is ignored.
+  if (!HasSetregVGPRMSBFixup)
+    Imm <<= Offset;
+  Imm = (Imm & Hwreg::VGPR_MSB_MASK) >> VGPRMSBShift;
   if (!HasSetregVGPRMSBFixup)
     Imm &= llvm::maskTrailingOnes<unsigned>(Size);
   return llvm::rotr<uint8_t>(static_cast<uint8_t>(Imm), /*R=*/2);
