@@ -130,12 +130,24 @@ static APFloat handleDenormal(APFloat Val,
   return Val;
 }
 
-static std::optional<APFloat> validateFMF(APFloat Val, FastMathFlags FMF) {
-  // The returned std::nullopt indicates that a poison value is produced.
-  if (FMF.noNaNs() && Val.isNaN())
-    return std::nullopt;
-  if (FMF.noInfs() && Val.isInfinity())
-    return std::nullopt;
+static AnyValue handleFMFFlags(AnyValue Val, FastMathFlags FMF) {
+  if (Val.isPoison() || Val.isNone())
+    return AnyValue::poison();
+
+  if (Val.isAggregate()) {
+    std::vector<AnyValue> ResVec;
+    ResVec.reserve(Val.asAggregate().size());
+    for (const auto &A : Val.asAggregate()) {
+      ResVec.push_back(handleFMFFlags(A, FMF));
+    }
+    return AnyValue(ResVec);
+  }
+
+  const APFloat &APVal = Val.asFloat();
+  if (FMF.noNaNs() && APVal.isNaN())
+    return AnyValue::poison();
+  if (FMF.noInfs() && APVal.isInfinity())
+    return AnyValue::poison();
   // Since nsz (no signed zeros) is an optimization hint, so it doesn't requires
   // runtime modification to maintain semantic correctness.
   return Val;
@@ -229,12 +241,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
       // Flush output denormals
       APFloat FResult = handleDenormal(Result, DenormMode.Output);
 
-      if (auto ValidateRes = validateFMF(FResult, FMF)) {
-        return *ValidateRes;
-      }
-
-      // A poison value is produced when FMFs are violated
-      return AnyValue::poison();
+      return handleFMFFlags(FResult, FMF);
     });
   }
 
@@ -281,11 +288,11 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
       if (LHS.isPoison() || RHS.isPoison())
         return AnyValue::poison();
 
-      if (auto ValidateRes = validateFMF(LHS.asFloat(), FMF); !ValidateRes) {
-        return AnyValue::poison();
+      if (auto ValidateRes = handleFMFFlags(LHS, FMF); ValidateRes.isPoison()) {
+        return ValidateRes;
       }
-      if (auto ValidateRes = validateFMF(RHS.asFloat(), FMF); !ValidateRes) {
-        return AnyValue::poison();
+      if (auto ValidateRes = handleFMFFlags(RHS, FMF); ValidateRes.isPoison()) {
+        return ValidateRes;
       }
 
       // Flush input denormals
@@ -297,12 +304,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
       // Flush output denormals
       APFloat FResult = handleDenormal(Result, DenormMode.Output);
 
-      if (auto ValidateRes = validateFMF(FResult, FMF)) {
-        return *ValidateRes;
-      }
-
-      // A poison value is produced when FMFs are violated
-      return AnyValue::poison();
+      return handleFMFFlags(FResult, FMF);
     });
   }
 
@@ -321,9 +323,16 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
     SmallVector<std::pair<PHINode *, AnyValue>> IncomingValues;
     PHINode *PHI = nullptr;
     while ((PHI = dyn_cast<PHINode>(CurrentFrame->PC))) {
-      Value *Incoming = PHI->getIncomingValueForBlock(From);
-      // TODO: handle fast-math flags.
-      IncomingValues.emplace_back(PHI, getValue(Incoming));
+      AnyValue IncomingVal = getValue(PHI->getIncomingValueForBlock(From));
+
+      // Fast-math flags validation
+      if (isa<FPMathOperator>(PHI)) {
+        FastMathFlags FMF = PHI->getFastMathFlags();
+        if (FMF.any())
+          IncomingVal = handleFMFFlags(std::move(IncomingVal), FMF);
+      }
+
+      IncomingValues.emplace_back(PHI, IncomingVal);
       ++CurrentFrame->PC;
     }
     for (auto &[K, V] : IncomingValues)
@@ -1073,11 +1082,11 @@ public:
         return AnyValue::poison();
       }
 
-      if (auto ValidateRes = validateFMF(LHS.asFloat(), FMF); !ValidateRes) {
-        return AnyValue::poison();
+      if (auto ValidateRes = handleFMFFlags(LHS, FMF); ValidateRes.isPoison()) {
+        return ValidateRes;
       }
-      if (auto ValidateRes = validateFMF(RHS.asFloat(), FMF); !ValidateRes) {
-        return AnyValue::poison();
+      if (auto ValidateRes = handleFMFFlags(RHS, FMF); ValidateRes.isPoison()) {
+        return ValidateRes;
       }
 
       APFloat FLHS = handleDenormal(LHS.asFloat(), DenormMode.Input);
@@ -1155,40 +1164,49 @@ public:
   }
 
   void visitSelect(SelectInst &SI) {
-    // TODO: handle fast-math flags.
+    AnyValue Res;
+
     if (SI.getCondition()->getType()->isIntegerTy(1)) {
       switch (getValue(SI.getCondition()).asBoolean()) {
       case BooleanKind::True:
-        setResult(SI, getValue(SI.getTrueValue()));
-        return;
+        Res = getValue(SI.getTrueValue());
+        break;
       case BooleanKind::False:
-        setResult(SI, getValue(SI.getFalseValue()));
-        return;
+        Res = getValue(SI.getFalseValue());
+        break;
       case BooleanKind::Poison:
-        setResult(SI, AnyValue::getPoisonValue(Ctx, SI.getType()));
-        return;
+        Res = AnyValue::getPoisonValue(Ctx, SI.getType());
+        break;
       }
+    } else {
+      auto &Cond = getValue(SI.getCondition()).asAggregate();
+      auto &TV = getValue(SI.getTrueValue()).asAggregate();
+      auto &FV = getValue(SI.getFalseValue()).asAggregate();
+      std::vector<AnyValue> ResVec;
+      size_t Len = Cond.size();
+      ResVec.reserve(Len);
+      for (uint32_t I = 0; I != Len; ++I) {
+        switch (Cond[I].asBoolean()) {
+        case BooleanKind::True:
+          ResVec.push_back(TV[I]);
+          break;
+        case BooleanKind::False:
+          ResVec.push_back(FV[I]);
+          break;
+        case BooleanKind::Poison:
+          ResVec.push_back(AnyValue::poison());
+          break;
+        }
+      }
+      Res = AnyValue(std::move(ResVec));
     }
 
-    auto &Cond = getValue(SI.getCondition()).asAggregate();
-    auto &TV = getValue(SI.getTrueValue()).asAggregate();
-    auto &FV = getValue(SI.getFalseValue()).asAggregate();
-    std::vector<AnyValue> Res;
-    size_t Len = Cond.size();
-    Res.reserve(Len);
-    for (uint32_t I = 0; I != Len; ++I) {
-      switch (Cond[I].asBoolean()) {
-      case BooleanKind::True:
-        Res.push_back(TV[I]);
-        break;
-      case BooleanKind::False:
-        Res.push_back(FV[I]);
-        break;
-      case BooleanKind::Poison:
-        Res.push_back(AnyValue::poison());
-        break;
-      }
+    // Handle fast-math flags
+    if (auto *FPMO = dyn_cast<FPMathOperator>(&SI)) {
+      if (FastMathFlags FMF = FPMO->getFastMathFlags(); FMF.any())
+        Res = handleFMFFlags(std::move(Res), FMF);
     }
+
     setResult(SI, std::move(Res));
   }
 
