@@ -1299,13 +1299,14 @@ void Writer::buildFixupChains() {
             " is not a multiple of the stride). Re-link with -no_fixup_chains");
 
       // The "next" field is in the same location for bind and rebase entries.
+      uint8_t *prev = buf + loc[i - 1].offset;
       if (config->arch() == AK_arm64e) {
-        reinterpret_cast<dyld_chained_ptr_arm64e_auth_bind *>(buf +
-                                                              loc[i - 1].offset)
-            ->next = offset / 8;
+        auto *entry =
+            reinterpret_cast<dyld_chained_ptr_arm64e_auth_bind *>(prev);
+        entry->next = offset / 8;
       } else {
-        reinterpret_cast<dyld_chained_ptr_64_bind *>(buf + loc[i - 1].offset)
-            ->next = offset / stride;
+        auto *entry = reinterpret_cast<dyld_chained_ptr_64_bind *>(prev);
+        entry->next = offset / stride;
       }
       ++i;
     }
