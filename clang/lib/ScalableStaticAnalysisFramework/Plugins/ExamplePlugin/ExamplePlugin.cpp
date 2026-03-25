@@ -1,4 +1,4 @@
-//===- ExamplePlugin.cpp - WPASuite serialization test plugin -------------===//
+//===- ExamplePlugin.cpp - Example SSAF plugin ----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,17 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// A loadable plugin for clang-ssaf-analyzer lit tests that exercises WPASuite
-// JSON serialization. It registers two analysis result types — Tags and Counts
-// — together with their JSON serializers/deserializers and trivial analysis
-// implementations, enabling end-to-end lit tests for the WPASuite round-trip
-// without depending on any real analysis logic.
-//
-// Usage:
-//   clang-ssaf-analyzer --load <path/to/SSAFExamplePlugin.so> \
-//     --analysis TagsAnalysisResult \
-//     --analysis CountsAnalysisResult \
-//     -o output.json input.json
+// A loadable plugin that registers three analysis result types — Tags, Counts,
+// and FailingDeserializer — together with their JSON serializers/deserializers
+// and trivial DerivedAnalysis implementations. Used by lit tests for both
+// clang-ssaf-analyzer and clang-ssaf-format.
 //
 //===----------------------------------------------------------------------===//
 
@@ -52,12 +45,12 @@ struct TagsAnalysisResult final : AnalysisResult {
   std::vector<std::string> Tags;
 };
 
-json::Object serializeTagsAnalysisResult(const AnalysisResult &Result,
+json::Object serializeTagsAnalysisResult(const TagsAnalysisResult &R,
                                          JSONFormat::EntityIdToJSONFn) {
-  const auto &R = static_cast<const TagsAnalysisResult &>(Result);
   json::Array TagsArray;
-  for (const auto &Tag : R.Tags)
+  for (const auto &Tag : R.Tags) {
     TagsArray.push_back(Tag);
+  }
   return json::Object{{"tags", std::move(TagsArray)}};
 }
 
@@ -65,17 +58,19 @@ Expected<std::unique_ptr<AnalysisResult>>
 deserializeTagsAnalysisResult(const json::Object &Obj,
                               JSONFormat::EntityIdFromJSONFn) {
   const json::Array *TagsArray = Obj.getArray("tags");
-  if (!TagsArray)
+  if (!TagsArray) {
     return createStringError(inconvertibleErrorCode(),
                              "missing or invalid field 'tags'");
+  }
 
   auto R = std::make_unique<TagsAnalysisResult>();
   for (const auto &[Index, Val] : llvm::enumerate(*TagsArray)) {
     auto S = Val.getAsString();
-    if (!S)
+    if (!S) {
       return createStringError(inconvertibleErrorCode(),
                                "tags element at index %zu is not a string",
                                Index);
+    }
     R->Tags.push_back(S->str());
   }
   return std::move(R);
@@ -121,9 +116,8 @@ struct CountsAnalysisResult final : AnalysisResult {
 };
 
 json::Object
-serializeCountsAnalysisResult(const AnalysisResult &Result,
+serializeCountsAnalysisResult(const CountsAnalysisResult &R,
                               JSONFormat::EntityIdToJSONFn ToJSON) {
-  const auto &R = static_cast<const CountsAnalysisResult &>(Result);
   json::Array CountsArray;
   for (const auto &[EI, Count] : R.Counts) {
     CountsArray.push_back(
@@ -136,31 +130,36 @@ Expected<std::unique_ptr<AnalysisResult>>
 deserializeCountsAnalysisResult(const json::Object &Obj,
                                 JSONFormat::EntityIdFromJSONFn FromJSON) {
   const json::Array *CountsArray = Obj.getArray("counts");
-  if (!CountsArray)
+  if (!CountsArray) {
     return createStringError(inconvertibleErrorCode(),
                              "missing or invalid field 'counts'");
+  }
 
   auto R = std::make_unique<CountsAnalysisResult>();
   for (const auto &[Index, Val] : llvm::enumerate(*CountsArray)) {
     const json::Object *Entry = Val.getAsObject();
-    if (!Entry)
+    if (!Entry) {
       return createStringError(inconvertibleErrorCode(),
                                "counts element at index %zu is not an object",
                                Index);
+    }
     const json::Object *EIObj = Entry->getObject("entity_id");
-    if (!EIObj)
+    if (!EIObj) {
       return createStringError(
           inconvertibleErrorCode(),
           "missing or invalid 'entity_id' field at index %zu", Index);
+    }
     auto ExpectedEI = FromJSON(*EIObj);
-    if (!ExpectedEI)
+    if (!ExpectedEI) {
       return ExpectedEI.takeError();
+    }
 
     auto CountVal = Entry->getInteger("count");
-    if (!CountVal)
+    if (!CountVal) {
       return createStringError(inconvertibleErrorCode(),
                                "missing or invalid 'count' field at index %zu",
                                Index);
+    }
     R->Counts.emplace_back(*ExpectedEI, static_cast<int>(*CountVal));
   }
   return std::move(R);
@@ -204,9 +203,8 @@ struct FailingDeserializerAnalysisResult final : AnalysisResult {
   }
 };
 
-json::Object
-serializeFailingDeserializerAnalysisResult(const AnalysisResult &,
-                                           JSONFormat::EntityIdToJSONFn) {
+json::Object serializeFailingDeserializerAnalysisResult(
+    const FailingDeserializerAnalysisResult &, JSONFormat::EntityIdToJSONFn) {
   return json::Object{};
 }
 

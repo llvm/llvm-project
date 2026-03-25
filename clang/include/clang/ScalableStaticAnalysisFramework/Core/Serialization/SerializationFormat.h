@@ -92,6 +92,9 @@ protected:
   ///   static MyFormat::AnalysisResultRegistry::Add<MyAnalysisResult>
   ///       Reg(serializeFn, deserializeFn);
   ///
+  /// The serializer receives \c const MyAnalysisResult & directly — the
+  /// \c Add wrapper handles the downcast from \c AnalysisResult internally.
+  ///
   /// \p FormatT is otherwise unused — it exists because \c llvm::Registry
   /// is keyed on the \c Entry type, so two formats that happen to share the
   /// same serializer/deserializer signatures would collide without a
@@ -116,14 +119,31 @@ protected:
     using RegistryT = llvm::Registry<Entry>;
 
     template <class AnalysisResultT> struct Add {
-      Add(SerializerFn Serialize, DeserializerFn Deserialize) {
+      /// Extracts the typed serializer signature from \c SerializerFn.
+      /// Given \c function_ref<R(const AnalysisResult &, Args...)>, produces
+      /// a function-pointer type \c R(*)(const AnalysisResultT &, Args...) and
+      /// a static \c wrap() that downcasts and forwards.
+      template <class> struct SerializerAdapter;
+      template <class R, class... Args>
+      struct SerializerAdapter<
+          llvm::function_ref<R(const AnalysisResult &, Args...)>> {
+        using TypedFnPtr = R (*)(const AnalysisResultT &, Args...);
+        static inline TypedFnPtr Saved = nullptr;
+        static R wrap(const AnalysisResult &Base, Args... args) {
+          return Saved(static_cast<const AnalysisResultT &>(Base), args...);
+        }
+      };
+      using SA = SerializerAdapter<SerializerFn>;
+
+      Add(typename SA::TypedFnPtr TypedSerialize, DeserializerFn Deserialize) {
         static bool Registered = false;
         if (Registered) {
           ErrorBuilder::fatal("support is already registered for analysis: {0}",
                               AnalysisResultT::analysisName());
         }
         Registered = true;
-        static SerializerFn SavedSerialize = Serialize;
+        SA::Saved = TypedSerialize;
+        static SerializerFn SavedSerialize(&SA::wrap);
         static DeserializerFn SavedDeserialize = Deserialize;
 
         struct ConcreteEntry : Entry {

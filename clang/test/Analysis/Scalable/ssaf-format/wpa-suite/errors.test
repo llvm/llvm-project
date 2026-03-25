@@ -11,7 +11,7 @@
 // Nonexistent file.
 // RUN: not clang-ssaf-format --type wpa %t/nonexistent.json 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=NO-FILE
-// NO-FILE: clang-ssaf-format{{(\.exe)?}}: error: cannot validate summary '{{.*}}nonexistent.json'{{.*}}
+// NO-FILE: clang-ssaf-format{{(\.exe)?}}: error: failed to validate summary '{{.*}}nonexistent.json'{{.*}}
 
 // Input path is a directory.
 // RUN: mkdir %t/test_directory.json
@@ -23,7 +23,7 @@
 // RUN: cp %S/Inputs/rt-empty.json %t/test.txt
 // RUN: not clang-ssaf-format --type wpa %t/test.txt 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=BAD-EXT
-// BAD-EXT: clang-ssaf-format{{(\.exe)?}}: error: cannot validate summary '{{.*}}test.txt'{{.*}}
+// BAD-EXT: clang-ssaf-format{{(\.exe)?}}: error: failed to validate summary '{{.*}}test.txt'{{.*}}
 
 // ============================================================================
 // Read errors: JSON structure
@@ -114,16 +114,16 @@
 // RUN: not clang-ssaf-format --type wpa %S/Inputs/rt-empty.json \
 // RUN:   -o %t/existing.json 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=OUT-EXISTS
-// OUT-EXISTS: clang-ssaf-format{{(\.exe)?}}: error: cannot validate summary '{{.*}}existing.json'{{.*}}Output file already exists
+// OUT-EXISTS: clang-ssaf-format{{(\.exe)?}}: error: failed to validate summary '{{.*}}existing.json'{{.*}}Output file already exists
 
 // Output parent directory does not exist.
 // RUN: not clang-ssaf-format --type wpa %S/Inputs/rt-empty.json \
 // RUN:   -o %t/nosuchdir/out.json 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=NO-OUT-DIR
-// NO-OUT-DIR: clang-ssaf-format{{(\.exe)?}}: error: cannot validate summary '{{.*}}out.json'{{.*}}
+// NO-OUT-DIR: clang-ssaf-format{{(\.exe)?}}: error: failed to validate summary '{{.*}}out.json'{{.*}}
 
 // Output path has an unrecognised extension.
 // RUN: not clang-ssaf-format --type wpa %S/Inputs/rt-empty.json \
 // RUN:   -o %t/out.txt 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=BAD-OUT-EXT
-// BAD-OUT-EXT: clang-ssaf-format{{(\.exe)?}}: error: cannot validate summary '{{.*}}out.txt'{{.*}}
+// BAD-OUT-EXT: clang-ssaf-format{{(\.exe)?}}: error: failed to validate summary '{{.*}}out.txt'{{.*}}
