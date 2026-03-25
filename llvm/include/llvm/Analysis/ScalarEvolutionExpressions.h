@@ -1046,6 +1046,20 @@ private:
   LoopToScevMapT &Map;
 };
 
+template <typename SCEVPtrT>
+inline SCEVWrap::NoWrapFlags
+SCEVUseT<SCEVPtrT>::getNoWrapFlags(SCEVWrap::NoWrapFlags Mask) const {
+  unsigned Flags = SCEV::FlagAnyWrap;
+  if (auto *NAry = dyn_cast<SCEVNAryExpr>(Base::getPointer()))
+    Flags = NAry->getNoWrapFlags();
+  // Use-flags only encode NUW/NSW in 2 bits; shift to align with NoWrapFlags.
+  unsigned UseFlags = Base::getInt() << 1;
+  // NUW or NSW implies NW.
+  if (UseFlags & (SCEVWrap::FlagNUW | SCEVWrap::FlagNSW))
+    UseFlags |= SCEVWrap::FlagNW;
+  return SCEVWrap::NoWrapFlags((Flags | UseFlags) & Mask);
+}
+
 } // end namespace llvm
 
 #endif // LLVM_ANALYSIS_SCALAREVOLUTIONEXPRESSIONS_H

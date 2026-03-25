@@ -66,6 +66,52 @@ enum SCEVTypes : unsigned short;
 
 LLVM_ABI extern bool VerifySCEV;
 
+/// NoWrapFlags are bitfield indices into SCEV's SubclassData.
+///
+/// Add and Mul expressions may have no-unsigned-wrap <NUW> or
+/// no-signed-wrap <NSW> properties, which are derived from the IR
+/// operator. NSW is a misnomer that we use to mean no signed overflow or
+/// underflow.
+///
+/// AddRec expressions may have a no-self-wraparound <NW> property if, in
+/// the integer domain, abs(step) * max-iteration(loop) <=
+/// unsigned-max(bitwidth).  This means that the recurrence will never reach
+/// its start value if the step is non-zero.  Computing the same value on
+/// each iteration is not considered wrapping, and recurrences with step = 0
+/// are trivially <NW>.  <NW> is independent of the sign of step and the
+/// value the add recurrence starts with.
+///
+/// Note that NUW and NSW are also valid properties of a recurrence, and
+/// either implies NW. For convenience, NW will be set for a recurrence
+/// whenever either NUW or NSW are set.
+///
+/// We require that the flag on a SCEV apply to the entire scope in which
+/// that SCEV is defined.  A SCEV's scope is set of locations dominated by
+/// a defining location, which is in turn described by the following rules:
+/// * A SCEVUnknown is at the point of definition of the Value.
+/// * A SCEVConstant is defined at all points.
+/// * A SCEVAddRec is defined starting with the header of the associated
+///   loop.
+/// * All other SCEVs are defined at the earlest point all operands are
+///   defined.
+///
+/// The above rules describe a maximally hoisted form (without regards to
+/// potential control dependence).  A SCEV is defined anywhere a
+/// corresponding instruction could be defined in said maximally hoisted
+/// form.  Note that SCEVUDivExpr (currently the only expression type which
+/// can trap) can be defined per these rules in regions where it would trap
+/// at runtime.  A SCEV being defined does not require the existence of any
+/// instruction within the defined scope.
+namespace SCEVWrap {
+enum NoWrapFlags {
+  FlagAnyWrap = 0,    // No guarantee.
+  FlagNW = (1 << 0),  // No self-wrap.
+  FlagNUW = (1 << 1), // No unsigned wrap.
+  FlagNSW = (1 << 2), // No signed wrap.
+  NoWrapMask = (1 << 3) - 1
+};
+} // namespace SCEVWrap
+
 class SCEV;
 
 template <typename SCEVPtrT = const SCEV *>
@@ -73,12 +119,13 @@ struct SCEVUseT : PointerIntPair<SCEVPtrT, 2> {
   using Base = PointerIntPair<SCEVPtrT, 2>;
 
   SCEVUseT() : Base() { Base::setFromOpaqueValue(nullptr); }
-  SCEVUseT(SCEVPtrT S) : SCEVUseT(S, 0) {}
-  SCEVUseT(SCEVPtrT S, unsigned Flags) : Base(S, Flags) {}
+  SCEVUseT(SCEVPtrT S) : Base(S, 0) {}
+  /// Construct with NoWrapFlags; only NUW/NSW are encoded, NW is dropped.
+  SCEVUseT(SCEVPtrT S, SCEVWrap::NoWrapFlags Flags) : Base(S, Flags >> 1) {}
   template <typename OtherPtrT, typename = std::enable_if_t<
                                     std::is_convertible_v<OtherPtrT, SCEVPtrT>>>
   SCEVUseT(const SCEVUseT<OtherPtrT> &Other)
-      : Base(Other.getPointer(), Other.getInt()) {}
+      : SCEVUseT(Other.getPointer(), Other.getUseNoWrapFlags()) {}
 
   operator SCEVPtrT() const { return Base::getPointer(); }
   SCEVPtrT operator->() const { return Base::getPointer(); }
@@ -92,7 +139,19 @@ struct SCEVUseT : PointerIntPair<SCEVPtrT, 2> {
   /// Return the canonical SCEV for this SCEVUse.
   const SCEV *getCanonical() const;
 
-  unsigned getFlags() const { return Base::getInt(); }
+  /// Return the no-wrap flags for this SCEVUse, which is the union of the
+  /// use-specific flags and the underlying SCEV's flags, masked by \p Mask.
+  inline SCEVWrap::NoWrapFlags
+  getNoWrapFlags(SCEVWrap::NoWrapFlags Mask = SCEVWrap::NoWrapMask) const;
+
+  /// Return only the use-specific no-wrap flags (NUW/NSW) without the
+  /// underlying SCEV's flags.
+  SCEVWrap::NoWrapFlags getUseNoWrapFlags() const {
+    unsigned UseFlags = Base::getInt() << 1;
+    if (UseFlags & (SCEVWrap::FlagNUW | SCEVWrap::FlagNSW))
+      UseFlags |= SCEVWrap::FlagNW;
+    return SCEVWrap::NoWrapFlags(UseFlags);
+  }
 
   bool operator==(const SCEVUseT &RHS) const {
     return getRawPointer() == RHS.getRawPointer();
@@ -106,6 +165,11 @@ struct SCEVUseT : PointerIntPair<SCEVPtrT, 2> {
 
   /// This method is used for debugging.
   void dump() const;
+
+private:
+  using Base::getInt;
+  using Base::setInt;
+  using Base::setPointer;
 };
 
 /// Deduction guide for various SCEV subclass pointers.
@@ -165,7 +229,7 @@ struct CastInfo<SCEVUseT<ToSCEVPtrT>, SCEVUse,
 
   static bool isPossible(const SCEVUse &U) { return isa<To>(U.getPointer()); }
   static CastReturnType doCast(const SCEVUse &U) {
-    return {cast<To>(U.getPointer()), U.getFlags()};
+    return CastReturnType(cast<To>(U.getPointer()), U.getUseNoWrapFlags());
   }
   static CastReturnType castFailed() { return CastReturnType(nullptr); }
   static CastReturnType doCastIfPossible(const SCEVUse &U) {
@@ -206,49 +270,13 @@ protected:
   const SCEV *CanonicalSCEV = nullptr;
 
 public:
-  /// NoWrapFlags are bitfield indices into SubclassData.
-  ///
-  /// Add and Mul expressions may have no-unsigned-wrap <NUW> or
-  /// no-signed-wrap <NSW> properties, which are derived from the IR
-  /// operator. NSW is a misnomer that we use to mean no signed overflow or
-  /// underflow.
-  ///
-  /// AddRec expressions may have a no-self-wraparound <NW> property if, in
-  /// the integer domain, abs(step) * max-iteration(loop) <=
-  /// unsigned-max(bitwidth).  This means that the recurrence will never reach
-  /// its start value if the step is non-zero.  Computing the same value on
-  /// each iteration is not considered wrapping, and recurrences with step = 0
-  /// are trivially <NW>.  <NW> is independent of the sign of step and the
-  /// value the add recurrence starts with.
-  ///
-  /// Note that NUW and NSW are also valid properties of a recurrence, and
-  /// either implies NW. For convenience, NW will be set for a recurrence
-  /// whenever either NUW or NSW are set.
-  ///
-  /// We require that the flag on a SCEV apply to the entire scope in which
-  /// that SCEV is defined.  A SCEV's scope is set of locations dominated by
-  /// a defining location, which is in turn described by the following rules:
-  /// * A SCEVUnknown is at the point of definition of the Value.
-  /// * A SCEVConstant is defined at all points.
-  /// * A SCEVAddRec is defined starting with the header of the associated
-  ///   loop.
-  /// * All other SCEVs are defined at the earlest point all operands are
-  ///   defined.
-  ///
-  /// The above rules describe a maximally hoisted form (without regards to
-  /// potential control dependence).  A SCEV is defined anywhere a
-  /// corresponding instruction could be defined in said maximally hoisted
-  /// form.  Note that SCEVUDivExpr (currently the only expression type which
-  /// can trap) can be defined per these rules in regions where it would trap
-  /// at runtime.  A SCEV being defined does not require the existence of any
-  /// instruction within the defined scope.
-  enum NoWrapFlags {
-    FlagAnyWrap = 0,    // No guarantee.
-    FlagNW = (1 << 0),  // No self-wrap.
-    FlagNUW = (1 << 1), // No unsigned wrap.
-    FlagNSW = (1 << 2), // No signed wrap.
-    NoWrapMask = (1 << 3) - 1
-  };
+  /// Expose SCEVWrap::NoWrapFlags as SCEV::NoWrapFlags.
+  using NoWrapFlags = SCEVWrap::NoWrapFlags;
+  static constexpr auto FlagAnyWrap = SCEVWrap::FlagAnyWrap;
+  static constexpr auto FlagNW = SCEVWrap::FlagNW;
+  static constexpr auto FlagNUW = SCEVWrap::FlagNUW;
+  static constexpr auto FlagNSW = SCEVWrap::FlagNSW;
+  static constexpr auto NoWrapMask = SCEVWrap::NoWrapMask;
 
   explicit SCEV(const FoldingSetNodeIDRef ID, SCEVTypes SCEVTy,
                 unsigned short ExpressionSize)
