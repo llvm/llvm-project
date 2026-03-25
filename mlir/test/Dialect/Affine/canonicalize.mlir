@@ -2429,3 +2429,56 @@ func.func @linearize_dont_fold_poison_index(%arg0: index) -> index {
   %ret = affine.linearize_index [%poison, %arg0] by (%c4) : index
   return %ret : index
 }
+
+// -----
+
+// CHECK-LABEL: @cancel_linearize_delinearize_vector
+// CHECK-SAME:    (%[[V0:.+]]: vector<16xindex>, %[[V1:.+]]: vector<16xindex>)
+// CHECK:         return %[[V0]], %[[V1]]
+func.func @cancel_linearize_delinearize_vector(%v0: vector<16xindex>, %v1: vector<16xindex>) -> (vector<16xindex>, vector<16xindex>) {
+  %0 = affine.linearize_index disjoint [%v0, %v1] by (4, 8) : vector<16xindex>
+  %1:2 = affine.delinearize_index %0 into (4, 8) : vector<16xindex>, vector<16xindex>
+  return %1#0, %1#1 : vector<16xindex>, vector<16xindex>
+}
+
+// -----
+
+// CHECK-LABEL: @drop_unit_extent_vector
+// CHECK-SAME:    (%[[VEC:.+]]: vector<16xindex>)
+// CHECK-DAG:     %[[ZERO:.+]] = arith.constant dense<0> : vector<16xindex>
+// CHECK:         %[[R:.+]]:2 = affine.delinearize_index %[[VEC]] into (4, 8) : vector<16xindex>, vector<16xindex>
+// CHECK:         return %[[R]]#0, %[[ZERO]], %[[R]]#1
+func.func @drop_unit_extent_vector(%vec: vector<16xindex>) -> (vector<16xindex>, vector<16xindex>, vector<16xindex>) {
+  %0:3 = affine.delinearize_index %vec into (4, 1, 8) : vector<16xindex>, vector<16xindex>, vector<16xindex>
+  return %0#0, %0#1, %0#2 : vector<16xindex>, vector<16xindex>, vector<16xindex>
+}
+
+// -----
+
+// CHECK-LABEL: @drop_unit_linearize_vector
+// CHECK-SAME:    (%[[V0:.+]]: vector<8xindex>, %[[V1:.+]]: vector<8xindex>)
+// CHECK:         return %[[V0]]
+func.func @drop_unit_linearize_vector(%v0: vector<8xindex>, %v1: vector<8xindex>) -> vector<8xindex> {
+  %0 = affine.linearize_index disjoint [%v0, %v1] by (4, 1) : vector<8xindex>
+  return %0 : vector<8xindex>
+}
+
+// -----
+
+// CHECK-LABEL: @fold_single_result_vector
+// CHECK-SAME:    (%[[VEC:.+]]: vector<4xindex>)
+// CHECK:         return %[[VEC]]
+func.func @fold_single_result_vector(%vec: vector<4xindex>) -> vector<4xindex> {
+  %0:1 = affine.delinearize_index %vec into () : vector<4xindex>
+  return %0#0 : vector<4xindex>
+}
+
+// -----
+
+// CHECK-LABEL: @fold_single_index_vector
+// CHECK-SAME:    (%[[VEC:.+]]: vector<4xindex>)
+// CHECK:         return %[[VEC]]
+func.func @fold_single_index_vector(%vec: vector<4xindex>) -> vector<4xindex> {
+  %0 = affine.linearize_index [%vec] by () : vector<4xindex>
+  return %0 : vector<4xindex>
+}
