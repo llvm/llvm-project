@@ -294,26 +294,28 @@ void OmpStructureChecker::CheckNestedConstruct(
   // in it.
   auto needRange{GetAffectedLoopRangeWithReason(beginSpec, version)};
 
-  if (std::optional<int64_t> numLoops{sequence.length()}) {
-    if (*numLoops == 0) {
+  if (auto haveLength{sequence.length()}) {
+    if (*haveLength.value == 0) {
       context_.Say(beginSource,
           "This construct should contain a DO-loop or a loop-nest-generating OpenMP construct"_err_en_US);
     } else {
       auto assoc{llvm::omp::getDirectiveAssociation(dir)};
-      if (*numLoops > 1 && assoc == llvm::omp::Association::LoopNest) {
-        context_.Say(beginSource,
+      if (*haveLength.value > 1 && assoc == llvm::omp::Association::LoopNest) {
+        auto &msg{context_.Say(beginSource,
             "This construct applies to a loop nest, but has a loop sequence of "
             "length %" PRId64 ""_err_en_US,
-            *numLoops);
+            *haveLength.value)};
+        haveLength.reason.AttachTo(msg);
       }
       if (assoc == llvm::omp::Association::LoopSeq) {
         if (auto requiredCount{GetRequiredCount(needRange.value)}) {
-          if (*requiredCount > 0 && *numLoops < *requiredCount) {
+          if (*requiredCount > 0 && *haveLength.value < *requiredCount) {
             auto &msg{context_.Say(beginSource,
                 "This construct requires a sequence of %" PRId64
                 " loops, but the loop sequence has a length of %" PRId64
                 ""_err_en_US,
-                *requiredCount, *numLoops)};
+                *requiredCount, *haveLength.value)};
+            haveLength.reason.AttachTo(msg);
             needRange.reason.AttachTo(msg);
           }
         }
@@ -327,23 +329,25 @@ void OmpStructureChecker::CheckNestedConstruct(
   auto &[haveSema, havePerf]{sequence.depth()};
 
   if (dir != llvm::omp::Directive::OMPD_fuse) {
-    auto &haveDepth = needPerfect ? havePerf : haveSema;
+    auto haveDepth = needPerfect ? havePerf : haveSema;
     // If the present depth is 0, it's likely that the construct doesn't
     // have any loops in it, which would be diagnosed above.
-    if (needDepth && haveDepth > 0) {
-      if (*needDepth.value > *haveDepth) {
+    if (needDepth && haveDepth.value > 0) {
+      if (*needDepth.value > *haveDepth.value) {
         if (needPerfect) {
           auto &msg{context_.Say(beginSource,
               "This construct requires a perfect nest of depth %" PRId64
               ", but the associated nest is a perfect nest of depth %" PRId64
               ""_err_en_US,
-              *needDepth.value, *haveDepth)};
+              *needDepth.value, *haveDepth.value)};
+          haveDepth.reason.AttachTo(msg);
           needDepth.reason.AttachTo(msg);
         } else {
           auto &msg{context_.Say(beginSource,
               "This construct requires a nest of depth %" PRId64
               ", but the associated nest has a depth of %" PRId64 ""_err_en_US,
-              *needDepth.value, *haveDepth)};
+              *needDepth.value, *haveDepth.value)};
+          haveDepth.reason.AttachTo(msg);
           needDepth.reason.AttachTo(msg);
         }
       }

@@ -133,31 +133,35 @@ class LazyValueInfoCache {
     std::optional<PredecessorValueLatticeMap> PredecessorLatticeElements;
   };
 
-  /// Cached information per basic block.
-  DenseMap<PoisoningVH<BasicBlock>, std::unique_ptr<BlockCacheEntry>>
-      BlockCache;
+  /// Cached information per basic block, indexed by block number.
+  SmallVector<std::unique_ptr<BlockCacheEntry>> BlockCache;
   /// Set of value handles used to erase values from the cache on deletion.
   DenseSet<LVIValueHandle, DenseMapInfo<Value *>> ValueHandles;
+  /// Block number epoch on construction.
+  unsigned BlockNumberEpoch;
 
   const BlockCacheEntry *getBlockEntry(BasicBlock *BB) const {
-    auto It = BlockCache.find_as(BB);
-    if (It == BlockCache.end())
-      return nullptr;
-    return It->second.get();
+    assert(BlockNumberEpoch == BB->getParent()->getBlockNumberEpoch());
+    if (BB->getNumber() < BlockCache.size())
+      return BlockCache[BB->getNumber()].get();
+    return nullptr;
   }
 
   BlockCacheEntry *getOrCreateBlockEntry(BasicBlock *BB) {
-    auto It = BlockCache.find_as(BB);
-    if (It == BlockCache.end()) {
-      std::unique_ptr<BlockCacheEntry> BCE =
-          std::make_unique<BlockCacheEntry>();
-      if (PerPredRanges)
-        BCE->PredecessorLatticeElements =
-            std::make_optional<PredecessorValueLatticeMap>();
-      It = BlockCache.insert({BB, std::move(BCE)}).first;
-    }
+    assert(BlockNumberEpoch == BB->getParent()->getBlockNumberEpoch());
+    unsigned Number = BB->getNumber();
+    if (Number >= BlockCache.size())
+      BlockCache.resize(BB->getParent()->getMaxBlockNumber());
 
-    return It->second.get();
+    if (BlockCacheEntry *Entry = BlockCache[Number].get())
+      return Entry;
+
+    BlockCache[Number] = std::make_unique<BlockCacheEntry>();
+    if (PerPredRanges)
+      BlockCache[Number]->PredecessorLatticeElements =
+          std::make_optional<PredecessorValueLatticeMap>();
+
+    return BlockCache[Number].get();
   }
 
   void addValueHandle(Value *Val) {
@@ -167,6 +171,9 @@ class LazyValueInfoCache {
   }
 
 public:
+  LazyValueInfoCache(const Function *F)
+      : BlockNumberEpoch(F->getBlockNumberEpoch()) {}
+
   void insertResult(Value *Val, BasicBlock *BB,
                     const ValueLatticeElement &Result) {
     BlockCacheEntry *Entry = getOrCreateBlockEntry(BB);
@@ -253,13 +260,16 @@ public:
 } // namespace
 
 void LazyValueInfoCache::eraseValue(Value *V) {
-  for (auto &Pair : BlockCache) {
-    Pair.second->LatticeElements.erase(V);
-    Pair.second->OverDefined.erase(V);
-    if (Pair.second->NonNullPointers)
-      Pair.second->NonNullPointers->erase(V);
+  for (auto &Elem : BlockCache) {
+    if (!Elem)
+      continue;
+
+    Elem->LatticeElements.erase(V);
+    Elem->OverDefined.erase(V);
+    if (Elem->NonNullPointers)
+      Elem->NonNullPointers->erase(V);
     if (PerPredRanges)
-      Pair.second->PredecessorLatticeElements->erase(V);
+      Elem->PredecessorLatticeElements->erase(V);
   }
 
   auto HandleIt = ValueHandles.find_as(V);
@@ -274,11 +284,14 @@ void LVIValueHandle::deleted() {
 }
 
 void LazyValueInfoCache::eraseBlock(BasicBlock *BB) {
+  assert(BlockNumberEpoch == BB->getParent()->getBlockNumberEpoch());
   // Clear all when a BB is removed.
   if (PerPredRanges)
-    for (auto &Pair : BlockCache)
-      Pair.second->PredecessorLatticeElements->clear();
-  BlockCache.erase(BB);
+    for (auto &Elem : BlockCache)
+      if (Elem)
+        Elem->PredecessorLatticeElements->clear();
+  if (BB->getNumber() < BlockCache.size())
+    BlockCache[BB->getNumber()].reset();
 }
 
 void LazyValueInfoCache::threadEdgeImpl(BasicBlock *OldSucc,
@@ -314,10 +327,13 @@ void LazyValueInfoCache::threadEdgeImpl(BasicBlock *OldSucc,
     if (ToUpdate == NewSucc) continue;
 
     // If a value was marked overdefined in OldSucc, and is here too...
-    auto OI = BlockCache.find_as(ToUpdate);
-    if (OI == BlockCache.end() || OI->second->OverDefined.empty())
+    BlockCacheEntry *WorklistEntry =
+        ToUpdate->getNumber() < BlockCache.size()
+            ? BlockCache[ToUpdate->getNumber()].get()
+            : nullptr;
+    if (!WorklistEntry || WorklistEntry->OverDefined.empty())
       continue;
-    auto &ValueSet = OI->second->OverDefined;
+    auto &ValueSet = WorklistEntry->OverDefined;
 
     bool changed = false;
     for (Value *V : ValsToClear) {
@@ -502,9 +518,9 @@ public:
   /// PredBB to OldSucc has been threaded to be from PredBB to NewSucc.
   void threadEdge(BasicBlock *PredBB,BasicBlock *OldSucc,BasicBlock *NewSucc);
 
-  LazyValueInfoImpl(AssumptionCache *AC, const DataLayout &DL,
+  LazyValueInfoImpl(Function *F, AssumptionCache *AC, const DataLayout &DL,
                     Function *GuardDecl)
-      : AC(AC), DL(DL), GuardDecl(GuardDecl) {}
+      : TheCache(F), AC(AC), DL(DL), GuardDecl(GuardDecl) {}
 };
 } // namespace llvm
 
@@ -1929,7 +1945,7 @@ LazyValueInfoImpl &LazyValueInfo::getOrCreateImpl() {
     const DataLayout &DL = F->getDataLayout();
     Function *GuardDecl = Intrinsic::getDeclarationIfExists(
         F->getParent(), Intrinsic::experimental_guard);
-    PImpl = new LazyValueInfoImpl(AC, DL, GuardDecl);
+    PImpl = new LazyValueInfoImpl(F, AC, DL, GuardDecl);
   }
   return *PImpl;
 }
