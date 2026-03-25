@@ -239,7 +239,7 @@ public:
                                   const MCInstrInfo &MCII);
 
   using MCLFIRewriterCtorTy =
-      MCLFIRewriter *(*)(MCContext &Ctx,
+      MCLFIRewriter *(*)(MCContext & Ctx,
                          std::unique_ptr<MCRegisterInfo> &&RegInfo,
                          std::unique_ptr<MCInstrInfo> &&InstInfo);
 
