@@ -105,7 +105,7 @@ std::optional<bool> GetLogicalValue(const SomeExpr &expr);
 std::optional<bool> IsContiguous(
     SemanticsContext &semaCtx, const parser::OmpObject &object);
 
-std::vector<SomeExpr> GetAllDesignators(const SomeExpr &expr);
+std::vector<SomeExpr> GetTopLevelDesignators(const SomeExpr &expr);
 const SomeExpr *HasStorageOverlap(
     const SomeExpr &base, llvm::ArrayRef<SomeExpr> exprs);
 bool IsAssignment(const parser::ActionStmt *x);
