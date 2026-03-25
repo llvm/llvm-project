@@ -341,9 +341,8 @@ static Error launchKernelWithCmdQueue(L0DeviceTy &l0Device,
   CALL_ZE_RET_ERROR(zeCommandListClose, CmdList);
 
   // Ensure command list is reset even on errors after this point.
-  llvm::scope_exit ResetOnExit([&]() {
-    CALL_ZE_SILENT(zeCommandListReset, CmdList);
-  });
+  llvm::scope_exit ResetOnExit(
+      [&]() { CALL_ZE_SILENT(zeCommandListReset, CmdList); });
 
   CALL_ZE_RET_ERROR_MTX(zeCommandQueueExecuteCommandLists, l0Device.getMutex(),
                         CmdQueue, 1, &CmdList, nullptr);

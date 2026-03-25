@@ -802,9 +802,8 @@ Error L0DeviceTy::enqueueMemCopy(void *Dst, const void *Src, size_t Size,
     CALL_ZE_RET_ERROR(zeCommandListAppendMemoryCopy, CmdList, Dst, Src, Size,
                       nullptr, 0, nullptr);
     CALL_ZE_RET_ERROR(zeCommandListClose, CmdList);
-    llvm::scope_exit ResetOnExit([&]() {
-      CALL_ZE_SILENT(zeCommandListReset, CmdList);
-    });
+    llvm::scope_exit ResetOnExit(
+        [&]() { CALL_ZE_SILENT(zeCommandListReset, CmdList); });
     CALL_ZE_RET_ERROR_MTX(zeCommandQueueExecuteCommandLists, getMutex(),
                           CmdQueue, 1, &CmdList, nullptr);
     CALL_ZE_RET_ERROR(zeCommandQueueSynchronize, CmdQueue, L0DefaultTimeout);
@@ -1156,9 +1155,8 @@ Error L0DeviceTy::dataFence(__tgt_async_info *Async) {
     CmdQueue = *CmdQueueOrerr;
     CALL_ZE_RET_ERROR(zeCommandListAppendBarrier, CmdList, nullptr, 0, nullptr);
     CALL_ZE_RET_ERROR(zeCommandListClose, CmdList);
-    llvm::scope_exit ResetOnExit([&]() {
-      CALL_ZE_SILENT(zeCommandListReset, CmdList);
-    });
+    llvm::scope_exit ResetOnExit(
+        [&]() { CALL_ZE_SILENT(zeCommandListReset, CmdList); });
     CALL_ZE_RET_ERROR(zeCommandQueueExecuteCommandLists, CmdQueue, 1, &CmdList,
                       nullptr);
     CALL_ZE_RET_ERROR(zeCommandQueueSynchronize, CmdQueue, L0DefaultTimeout);
