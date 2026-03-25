@@ -2271,4 +2271,195 @@ def SPIRV_TosaReshapeOp : SPIRV_TosaOpWithResult<"Reshape", 56, [Pure,
 }
 
 
+def SPIRV_TosaReverseOp : SPIRV_TosaOpWithResult<"Reverse", 57, [Pure,
+  AllTypesMatch<["input1", "output"]>,
+  AxisValueLessThanRankOf<"input1">]> {
+  let summary = "Reverse operator.";
+
+  let description = [{
+    Returns a tensor with the same type/values as the input, with the data
+    reversed along the given axis. No data conversion happens during a reverse
+    operation.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_reverse
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_reverse
+
+    #### Example:
+    ```mlir
+    %1 = spirv.Tosa.Reverse axis = 2, %arg0 : !spirv.arm.tensor<20x5x28x31xi32> -> !spirv.arm.tensor<20x5x28x31xi32>
+    %1 = spirv.Tosa.Reverse axis = 1, %arg0 : !spirv.arm.tensor<21x34x47xf32> -> !spirv.arm.tensor<21x34x47xf32>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_TensorArmAxisAttr: $axis,
+    SPIRV_TosaAny_TensorArm: $input1
+  );
+
+  let results = (outs
+    SPIRV_TosaAny_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    `axis` `=` $axis `,`
+    $input1
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+
+  let extraClassDeclaration = extraBaseClassDeclaration#[{
+    ::mlir::spirv::TensorArmType getInput1Type() {
+      return cast<::mlir::spirv::TensorArmType>(getInput1().getType());
+    }
+  }];
+}
+
+
+def SPIRV_TosaSliceOp : SPIRV_TosaOpWithResult<"Slice", 58, [Pure,
+  AllElementTypesMatch<["input1", "output"]>,
+  ShapeConstraintFromInputRank<"input1", "start">,
+  ShapeConstraintFromInputRank<"input1", "size">]> {
+  let summary = "Slice operator.";
+
+  let description = [{
+    Extracts a slice of input1, beginning at the start coordinates,
+    and extending for size elements in each direction.
+    No data conversion happens during a slice operation.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_slice
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_slice
+
+    #### Example:
+    ```mlir
+    %2 = spirv.Tosa.Slice %arg0, %start, %size : !spirv.arm.tensor<32x19x41xi8>, !spirv.arm.tensor<3xi32>, !spirv.arm.tensor<3xi32> -> !spirv.arm.tensor<21x5x2xi8>
+    %2 = spirv.Tosa.Slice %arg0, %start, %size : !spirv.arm.tensor<30x45x29xf32>, !spirv.arm.tensor<3xi32>, !spirv.arm.tensor<3xi32> -> !spirv.arm.tensor<5x12x11xf32>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_TosaAny_TensorArm: $input1,
+    SPIRV_Int32_1DTensorArmOfLength1To6: $start,
+    SPIRV_Int32_1DTensorArmOfLength1To6: $size
+  );
+
+  let results = (outs
+    SPIRV_TosaAny_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    $input1 `,`
+    $start `,`
+    $size
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+
+  let extraClassDeclaration = extraBaseClassDeclaration#[{
+    ::mlir::spirv::TensorArmType getInput1Type() {
+      return cast<::mlir::spirv::TensorArmType>(getInput1().getType());
+    }
+    ::mlir::spirv::TensorArmType getStartType() {
+      return cast<::mlir::spirv::TensorArmType>(getStart().getType());
+    }
+    ::mlir::spirv::TensorArmType getSizeType() {
+      return cast<::mlir::spirv::TensorArmType>(getSize().getType());
+    }
+  }];
+}
+
+
+def SPIRV_TosaTileOp : SPIRV_TosaOpWithResult<"Tile", 59, [Pure,
+  AllElementTypesMatch<["input1", "output"]>,
+  AllRanksMatch<["input1", "output"]>,
+  ShapeConstraintFromInputRank<"input1", "multiples">]> {
+  let summary = "Tile operator.";
+
+  let description = [{
+    Replicates input1 multiples times along each dimension.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_tile
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_tile
+
+    #### Example:
+    ```mlir
+    %1 = spirv.Tosa.Tile %arg0, %multiples : !spirv.arm.tensor<10x28x21xi16>, !spirv.arm.tensor<3xi32> -> !spirv.arm.tensor<10x28x63xi16>
+    %1 = spirv.Tosa.Tile %arg0, %multiples : !spirv.arm.tensor<31x19x5xf16>, !spirv.arm.tensor<3xi32> -> !spirv.arm.tensor<62x57x10xf16>
+    ```
+
+    For %multiples = [1, 1, 3], the first two dimesions will be tiled just once, whilst the third will be tiled 3 times.
+  }];
+
+  let arguments = (ins
+    SPIRV_TosaAny_TensorArm: $input1,
+    SPIRV_Int32_1DTensorArmOfLength1To6: $multiples
+  );
+
+  let results = (outs
+    SPIRV_TosaAny_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    $input1 `,`
+    $multiples
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+
+  let extraClassDeclaration = extraBaseClassDeclaration#[{
+    ::mlir::spirv::TensorArmType getInput1Type() {
+      return cast<::mlir::spirv::TensorArmType>(getInput1().getType());
+    }
+    ::mlir::spirv::TensorArmType getMultiplesType() {
+      return cast<::mlir::spirv::TensorArmType>(getMultiples().getType());
+    }
+  }];
+}
+
+
+def SPIRV_TosaTransposeOp : SPIRV_TosaOpWithResult<"Transpose", 60, [Pure,
+  AllElementTypesMatch<["input1", "output"]>,
+  AllRanksMatch<["input1", "output"]>,
+  AllElementCountsMatch<["input1", "output"]>,
+  ShapeConstraintFromInputRank<"input1", "perms">]> {
+  let summary = "Transpose operator.";
+
+  let description = [{
+    Permutes the dimensions of the input tensor input1 based on the perms
+    argument. Each value in the perms list must be a valid dimension of the
+    input tensor and may not be repeated.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_transpose
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_transpose
+
+    #### Example:
+    ```mlir
+    %1 = spirv.Tosa.Transpose perms = [2, 0, 1, 3], %arg0 : !spirv.arm.tensor<14x28x1x61xi16> -> !spirv.arm.tensor<1x14x28x61xi16>
+    %1 = spirv.Tosa.Transpose perms = [2, 0, 1], %arg0 : !spirv.arm.tensor<42x22x49xi1> -> !spirv.arm.tensor<49x42x22xi1>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_Int32_1DTensorArmOfLength1To6Attr: $perms,
+    SPIRV_TosaAny_TensorArm: $input1
+  );
+
+  let results = (outs
+    SPIRV_TosaAny_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    `perms` `=` custom<SPIRV_I32_1DArmTensor>($perms) `,`
+    $input1
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+
+  let extraClassDeclaration = extraBaseClassDeclaration#[{
+    ::mlir::spirv::TensorArmType getInput1Type() {
+      return cast<::mlir::spirv::TensorArmType>(getInput1().getType());
+    }
+  }];
+}
+
+
 #endif // MLIR_DIALECT_SPIRV_IR_TOSA_OPS
