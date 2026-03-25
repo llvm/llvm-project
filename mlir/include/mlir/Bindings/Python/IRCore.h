@@ -373,7 +373,7 @@ public:
   PyDiagnosticSeverity getSeverity();
   PyLocation getLocation();
   nanobind::str getMessage();
-  nanobind::tuple getNotes();
+  nanobind::typed<nanobind::tuple, PyDiagnostic> getNotes();
 
   /// Materialized diagnostic information. This is safe to access outside the
   /// diagnostic callback.
@@ -755,8 +755,8 @@ public:
   buildGeneric(std::string_view name, std::tuple<int, bool> opRegionSpec,
                nanobind::object operandSegmentSpecObj,
                nanobind::object resultSegmentSpecObj,
-               std::optional<nanobind::list> resultTypeList,
-               nanobind::list operandList,
+               std::optional<nanobind::sequence> resultTypeList,
+               nanobind::sequence operandList,
                std::optional<nanobind::dict> attributes,
                std::optional<std::vector<PyBlock *>> successors,
                std::optional<int> regions, PyLocation &location,
@@ -1360,8 +1360,9 @@ inline MlirStringRef toMlirStringRef(const nanobind::bytes &s) {
 /// Create a block, using the current location context if no locations are
 /// specified.
 MlirBlock MLIR_PYTHON_API_EXPORTED
-createBlock(const nanobind::sequence &pyArgTypes,
-            const std::optional<nanobind::sequence> &pyArgLocs);
+createBlock(const nanobind::typed<nanobind::sequence, PyType> &pyArgTypes,
+            const std::optional<nanobind::typed<nanobind::sequence, PyLocation>>
+                &pyArgLocs);
 
 struct MLIR_PYTHON_API_EXPORTED PyAttrBuilderMap {
   static bool dunderContains(const std::string &attributeKind);

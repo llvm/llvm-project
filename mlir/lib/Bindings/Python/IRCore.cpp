@@ -76,8 +76,9 @@ namespace mlir {
 namespace python {
 namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 
-MlirBlock createBlock(const nb::sequence &pyArgTypes,
-                      const std::optional<nb::sequence> &pyArgLocs) {
+MlirBlock createBlock(
+    const nb::typed<nb::sequence, PyType> &pyArgTypes,
+    const std::optional<nb::typed<nb::sequence, PyLocation>> &pyArgLocs) {
   std::vector<MlirType> argTypes;
   argTypes.reserve(nb::len(pyArgTypes));
   for (nb::handle pyType : pyArgTypes)
@@ -767,7 +768,7 @@ nb::str PyDiagnostic::getMessage() {
   return nb::cast<nb::str>(fileObject.attr("getvalue")());
 }
 
-nb::tuple PyDiagnostic::getNotes() {
+nb::typed<nb::tuple, PyDiagnostic> PyDiagnostic::getNotes() {
   checkValid();
   if (materializedNotes)
     return *materializedNotes;
@@ -1442,11 +1443,12 @@ PyOpResultList PyOpResultList::slice(intptr_t startIndex, intptr_t length,
 // PyOpView
 //------------------------------------------------------------------------------
 
-static void populateResultTypes(std::string_view name, nb::list resultTypeList,
+static void populateResultTypes(std::string_view name,
+                                nb::sequence resultTypeList,
                                 const nb::object &resultSegmentSpecObj,
                                 std::vector<int32_t> &resultSegmentLengths,
                                 std::vector<PyType *> &resultTypes) {
-  resultTypes.reserve(resultTypeList.size());
+  resultTypes.reserve(nb::len(resultTypeList));
   if (resultSegmentSpecObj.is_none()) {
     // Non-variadic result unpacking.
     size_t index = 0;
@@ -1465,13 +1467,13 @@ static void populateResultTypes(std::string_view name, nb::list resultTypeList,
   } else {
     // Sized result unpacking.
     auto resultSegmentSpec = nb::cast<std::vector<int>>(resultSegmentSpecObj);
-    if (resultSegmentSpec.size() != resultTypeList.size()) {
+    if (resultSegmentSpec.size() != nb::len(resultTypeList)) {
       throw nb::value_error(
           join("Operation \"", name, "\" requires ", resultSegmentSpec.size(),
-               " result segments but was provided ", resultTypeList.size())
+               " result segments but was provided ", nb::len(resultTypeList))
               .c_str());
     }
-    resultSegmentLengths.reserve(resultTypeList.size());
+    resultSegmentLengths.reserve(nb::len(resultTypeList));
     for (size_t i = 0, e = resultSegmentSpec.size(); i < e; ++i) {
       int segmentSpec = resultSegmentSpec[i];
       if (segmentSpec == 1 || segmentSpec == 0) {
@@ -1565,7 +1567,7 @@ static MlirValue getOpResultOrValue(nb::handle operand) {
 nb::typed<nb::object, PyOperation> PyOpView::buildGeneric(
     std::string_view name, std::tuple<int, bool> opRegionSpec,
     nb::object operandSegmentSpecObj, nb::object resultSegmentSpecObj,
-    std::optional<nb::list> resultTypeList, nb::list operandList,
+    std::optional<nb::sequence> resultTypeList, nb::sequence operandList,
     std::optional<nb::dict> attributes,
     std::optional<std::vector<PyBlock *>> successors,
     std::optional<int> regions, PyLocation &location,
@@ -1626,13 +1628,13 @@ nb::typed<nb::object, PyOperation> PyOpView::buildGeneric(
   } else {
     // Sized operand unpacking.
     auto operandSegmentSpec = nb::cast<std::vector<int>>(operandSegmentSpecObj);
-    if (operandSegmentSpec.size() != operandList.size()) {
+    if (operandSegmentSpec.size() != nb::len(operandList)) {
       throw nb::value_error(
           join("Operation \"", name, "\" requires ", operandSegmentSpec.size(),
-               "operand segments but was provided ", operandList.size())
+               "operand segments but was provided ", nb::len(operandList))
               .c_str());
     }
-    operandSegmentLengths.reserve(operandList.size());
+    operandSegmentLengths.reserve(nb::len(operandList));
     for (size_t i = 0, e = operandSegmentSpec.size(); i < e; ++i) {
       int segmentSpec = operandSegmentSpec[i];
       if (segmentSpec == 1 || segmentSpec == 0) {
@@ -2513,10 +2515,10 @@ void PyOpAttributeMap::bind(nb::module_ &m) {
 
 void PyOpAdaptor::bind(nb::module_ &m) {
   nb::class_<PyOpAdaptor>(m, "OpAdaptor")
-      .def(nb::init<nb::list, PyOpAttributeMap>(),
+      .def(nb::init<nb::typed<nb::list, PyValue>, PyOpAttributeMap>(),
            "Creates an OpAdaptor with the given operands and attributes.",
            "operands"_a, "attributes"_a)
-      .def(nb::init<nb::list, PyOpView &>(),
+      .def(nb::init<nb::typed<nb::list, PyValue>, PyOpView &>(),
            "Creates an OpAdaptor with the given operands and operation view.",
            "operands"_a, "opview"_a)
       .def_prop_ro(
@@ -3944,7 +3946,8 @@ void populateIRCore(nb::module_ &m) {
           [](std::string_view name,
              std::optional<std::vector<PyType *>> results,
              std::optional<std::vector<PyValue *>> operands,
-             std::optional<nb::dict> attributes,
+             std::optional<nb::typed<nb::dict, nb::str, PyAttribute>>
+                 attributes,
              std::optional<std::vector<PyBlock *>> successors, int regions,
              const std::optional<PyLocation> &location,
              const nb::object &maybeIp,
@@ -4046,8 +4049,10 @@ void populateIRCore(nb::module_ &m) {
                  std::tuple<int, bool> opRegionSpec,
                  nb::object operandSegmentSpecObj,
                  nb::object resultSegmentSpecObj,
-                 std::optional<nb::list> resultTypeList, nb::list operandList,
-                 std::optional<nb::dict> attributes,
+                 std::optional<nb::sequence> resultTypeList,
+                 nb::sequence operandList,
+                 std::optional<nb::typed<nb::dict, nb::str, PyAttribute>>
+                     attributes,
                  std::optional<std::vector<PyBlock *>> successors,
                  std::optional<int> regions,
                  const std::optional<PyLocation> &location,
@@ -4093,8 +4098,9 @@ void populateIRCore(nb::module_ &m) {
   // ods_operand_segments/ods_result_segments as arguments to the constructor,
   // rather than to access them as attributes.
   opViewClass.attr("build_generic") = classmethod(
-      [](nb::handle cls, std::optional<nb::list> resultTypeList,
-         nb::list operandList, std::optional<nb::dict> attributes,
+      [](nb::handle cls, std::optional<nb::sequence> resultTypeList,
+         nb::sequence operandList,
+         std::optional<nb::typed<nb::dict, nb::str, PyAttribute>> attributes,
          std::optional<std::vector<PyBlock *>> successors,
          std::optional<int> regions, std::optional<PyLocation> location,
          const nb::object &maybeIp) {
