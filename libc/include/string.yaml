@@ -7,6 +7,7 @@ macros:
 types:
   - type_name: errno_t
   - type_name: locale_t
+  - type_name: rsize_t
   - type_name: size_t
 enums: []
 objects: []
