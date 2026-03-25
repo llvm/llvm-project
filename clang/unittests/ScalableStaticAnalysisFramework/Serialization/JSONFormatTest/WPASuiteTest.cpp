@@ -74,8 +74,7 @@ deserializeTagsAnalysisResult(const json::Object &Obj,
   return std::move(R);
 }
 
-JSONFormat::AnalysisResultRegistryGenerator::Add<
-    TagsAnalysisResultForJSONFormatTest>
+JSONFormat::AnalysisResultRegistry::Add<TagsAnalysisResultForJSONFormatTest>
     RegisterTagsAnalysisFormatInfo(serializeTagsAnalysisResult,
                                    deserializeTagsAnalysisResult);
 
@@ -138,8 +137,7 @@ deserializeCountsAnalysisResult(const json::Object &Obj,
   return std::move(R);
 }
 
-JSONFormat::AnalysisResultRegistryGenerator::Add<
-    CountsAnalysisResultForJSONFormatTest>
+JSONFormat::AnalysisResultRegistry::Add<CountsAnalysisResultForJSONFormatTest>
     RegisterCountsAnalysisFormatInfo(serializeCountsAnalysisResult,
                                      deserializeCountsAnalysisResult);
 
@@ -167,7 +165,7 @@ deserializeFailingDeserializerAnalysisResult(const json::Object &,
                            "intentional deserializer failure");
 }
 
-JSONFormat::AnalysisResultRegistryGenerator::Add<
+JSONFormat::AnalysisResultRegistry::Add<
     FailingDeserializerAnalysisResultForJSONFormatTest>
     RegisterFailingDeserializerAnalysisFormatInfo(
         serializeFailingDeserializerAnalysisResult,

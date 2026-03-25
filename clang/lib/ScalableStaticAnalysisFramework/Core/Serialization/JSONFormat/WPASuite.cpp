@@ -28,7 +28,7 @@ JSONFormat::analysisResultMapEntryFromJSON(const Object &Entry) const {
 
   AnalysisName Name = analysisNameFromJSON(*OptName);
 
-  auto ExpectedFns = AnalysisResultRegistryGenerator::lookup(Name);
+  auto ExpectedFns = AnalysisResultRegistry::lookup(Name);
   if (!ExpectedFns) {
     return ExpectedFns.takeError();
   }
@@ -53,7 +53,7 @@ JSONFormat::analysisResultMapEntryFromJSON(const Object &Entry) const {
 llvm::Expected<Object> JSONFormat::analysisResultMapEntryToJSON(
     const AnalysisName &Name,
     const std::unique_ptr<AnalysisResult> &Result) const {
-  auto ExpectedFns = AnalysisResultRegistryGenerator::lookup(Name);
+  auto ExpectedFns = AnalysisResultRegistry::lookup(Name);
   if (!ExpectedFns) {
     return ExpectedFns.takeError();
   }
