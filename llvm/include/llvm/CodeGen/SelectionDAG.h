@@ -2183,7 +2183,7 @@ public:
                                       unsigned Depth = 0) const;
 
   /// Determine the possible constant range of an integer or vector of integers.
-  LLVM_ABI ConstantRange computeConstantRange(SDValue Op,
+  LLVM_ABI ConstantRange computeConstantRange(SDValue Op, bool ForSigned,
                                               unsigned Depth = 0) const;
 
   /// Determine the possible constant range of an integer or vector of integers.
@@ -2191,6 +2191,7 @@ public:
   /// are shared by the requested vector elements.
   LLVM_ABI ConstantRange computeConstantRange(SDValue Op,
                                               const APInt &DemandedElts,
+                                              bool ForSigned,
                                               unsigned Depth = 0) const;
 
   /// Combine constant ranges from computeConstantRange() and

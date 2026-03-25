@@ -4652,17 +4652,18 @@ SelectionDAG::computeOverflowForSignedMul(SDValue N0, SDValue N1) const {
   return OFK_Sometime;
 }
 
-ConstantRange SelectionDAG::computeConstantRange(SDValue Op,
+ConstantRange SelectionDAG::computeConstantRange(SDValue Op, bool ForSigned,
                                                  unsigned Depth) const {
   EVT VT = Op.getValueType();
   APInt DemandedElts = VT.isFixedLengthVector()
                            ? APInt::getAllOnes(VT.getVectorNumElements())
                            : APInt(1, 1);
-  return computeConstantRange(Op, DemandedElts, Depth);
+  return computeConstantRange(Op, DemandedElts, ForSigned, Depth);
 }
 
 ConstantRange SelectionDAG::computeConstantRange(SDValue Op,
                                                  const APInt &DemandedElts,
+                                                 bool ForSigned,
                                                  unsigned Depth) const {
   EVT VT = Op.getValueType();
   unsigned BitWidth = VT.getScalarSizeInBits();
