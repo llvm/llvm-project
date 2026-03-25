@@ -10,20 +10,10 @@ define void @add_2xi32(ptr %a, ptr %b, ptr %out) {
 ; CHECK-LABEL: add_2xi32:
 ; CHECK:         .functype add_2xi32 (i32, i32, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const $push0=, 4
-; CHECK-NEXT:    i32.add $push1=, $1, $pop0
-; CHECK-NEXT:    i32.load $3=, 0($pop1)
-; CHECK-NEXT:    i32.const $push9=, 4
-; CHECK-NEXT:    i32.add $push2=, $0, $pop9
-; CHECK-NEXT:    i32.load $4=, 0($pop2)
-; CHECK-NEXT:    i32.load $push4=, 0($0)
-; CHECK-NEXT:    i32.load $push3=, 0($1)
-; CHECK-NEXT:    i32.add $push5=, $pop4, $pop3
-; CHECK-NEXT:    i32.store 0($2), $pop5
-; CHECK-NEXT:    i32.const $push8=, 4
-; CHECK-NEXT:    i32.add $push7=, $2, $pop8
-; CHECK-NEXT:    i32.add $push6=, $4, $3
-; CHECK-NEXT:    i32.store 0($pop7), $pop6
+; CHECK-NEXT:    v128.load64_zero $push1=, 0($0):p2align=2
+; CHECK-NEXT:    v128.load64_zero $push0=, 0($1):p2align=2
+; CHECK-NEXT:    i32x4.add $push2=, $pop1, $pop0
+; CHECK-NEXT:    v128.store64_lane 0($2):p2align=2, $pop2, 0
 ; CHECK-NEXT:    # fallthrough-return
   %a0 = load i32, ptr %a
   %a1p = getelementptr i32, ptr %a, i32 1
@@ -43,40 +33,10 @@ define void @add_4xi16(ptr %a, ptr %b, ptr %out) {
 ; CHECK-LABEL: add_4xi16:
 ; CHECK:         .functype add_4xi16 (i32, i32, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const $push0=, 2
-; CHECK-NEXT:    i32.add $push1=, $1, $pop0
-; CHECK-NEXT:    i32.load16_u $3=, 0($pop1)
-; CHECK-NEXT:    i32.const $push23=, 2
-; CHECK-NEXT:    i32.add $push2=, $0, $pop23
-; CHECK-NEXT:    i32.load16_u $4=, 0($pop2)
-; CHECK-NEXT:    i32.const $push3=, 4
-; CHECK-NEXT:    i32.add $push4=, $1, $pop3
-; CHECK-NEXT:    i32.load16_u $5=, 0($pop4)
-; CHECK-NEXT:    i32.const $push22=, 4
-; CHECK-NEXT:    i32.add $push5=, $0, $pop22
-; CHECK-NEXT:    i32.load16_u $6=, 0($pop5)
-; CHECK-NEXT:    i32.const $push6=, 6
-; CHECK-NEXT:    i32.add $push7=, $1, $pop6
-; CHECK-NEXT:    i32.load16_u $7=, 0($pop7)
-; CHECK-NEXT:    i32.const $push21=, 6
-; CHECK-NEXT:    i32.add $push8=, $0, $pop21
-; CHECK-NEXT:    i32.load16_u $8=, 0($pop8)
-; CHECK-NEXT:    i32.load16_u $push10=, 0($0)
-; CHECK-NEXT:    i32.load16_u $push9=, 0($1)
-; CHECK-NEXT:    i32.add $push11=, $pop10, $pop9
-; CHECK-NEXT:    i32.store16 0($2), $pop11
-; CHECK-NEXT:    i32.const $push20=, 6
-; CHECK-NEXT:    i32.add $push13=, $2, $pop20
-; CHECK-NEXT:    i32.add $push12=, $8, $7
-; CHECK-NEXT:    i32.store16 0($pop13), $pop12
-; CHECK-NEXT:    i32.const $push19=, 4
-; CHECK-NEXT:    i32.add $push15=, $2, $pop19
-; CHECK-NEXT:    i32.add $push14=, $6, $5
-; CHECK-NEXT:    i32.store16 0($pop15), $pop14
-; CHECK-NEXT:    i32.const $push18=, 2
-; CHECK-NEXT:    i32.add $push17=, $2, $pop18
-; CHECK-NEXT:    i32.add $push16=, $4, $3
-; CHECK-NEXT:    i32.store16 0($pop17), $pop16
+; CHECK-NEXT:    v128.load64_zero $push1=, 0($0):p2align=1
+; CHECK-NEXT:    v128.load64_zero $push0=, 0($1):p2align=1
+; CHECK-NEXT:    i16x8.add $push2=, $pop1, $pop0
+; CHECK-NEXT:    v128.store64_lane 0($2):p2align=1, $pop2, 0
 ; CHECK-NEXT:    # fallthrough-return
   %a0 = load i16, ptr %a
   %a1p = getelementptr i16, ptr %a, i32 1
@@ -110,80 +70,10 @@ define void @add_8xi8(ptr %a, ptr %b, ptr %out) {
 ; CHECK-LABEL: add_8xi8:
 ; CHECK:         .functype add_8xi8 (i32, i32, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const $push0=, 1
-; CHECK-NEXT:    i32.add $push1=, $1, $pop0
-; CHECK-NEXT:    i32.load8_u $3=, 0($pop1)
-; CHECK-NEXT:    i32.const $push51=, 1
-; CHECK-NEXT:    i32.add $push2=, $0, $pop51
-; CHECK-NEXT:    i32.load8_u $4=, 0($pop2)
-; CHECK-NEXT:    i32.const $push3=, 2
-; CHECK-NEXT:    i32.add $push4=, $1, $pop3
-; CHECK-NEXT:    i32.load8_u $5=, 0($pop4)
-; CHECK-NEXT:    i32.const $push50=, 2
-; CHECK-NEXT:    i32.add $push5=, $0, $pop50
-; CHECK-NEXT:    i32.load8_u $6=, 0($pop5)
-; CHECK-NEXT:    i32.const $push6=, 3
-; CHECK-NEXT:    i32.add $push7=, $1, $pop6
-; CHECK-NEXT:    i32.load8_u $7=, 0($pop7)
-; CHECK-NEXT:    i32.const $push49=, 3
-; CHECK-NEXT:    i32.add $push8=, $0, $pop49
-; CHECK-NEXT:    i32.load8_u $8=, 0($pop8)
-; CHECK-NEXT:    i32.const $push9=, 4
-; CHECK-NEXT:    i32.add $push10=, $1, $pop9
-; CHECK-NEXT:    i32.load8_u $9=, 0($pop10)
-; CHECK-NEXT:    i32.const $push48=, 4
-; CHECK-NEXT:    i32.add $push11=, $0, $pop48
-; CHECK-NEXT:    i32.load8_u $10=, 0($pop11)
-; CHECK-NEXT:    i32.const $push12=, 5
-; CHECK-NEXT:    i32.add $push13=, $1, $pop12
-; CHECK-NEXT:    i32.load8_u $11=, 0($pop13)
-; CHECK-NEXT:    i32.const $push47=, 5
-; CHECK-NEXT:    i32.add $push14=, $0, $pop47
-; CHECK-NEXT:    i32.load8_u $12=, 0($pop14)
-; CHECK-NEXT:    i32.const $push15=, 6
-; CHECK-NEXT:    i32.add $push16=, $1, $pop15
-; CHECK-NEXT:    i32.load8_u $13=, 0($pop16)
-; CHECK-NEXT:    i32.const $push46=, 6
-; CHECK-NEXT:    i32.add $push17=, $0, $pop46
-; CHECK-NEXT:    i32.load8_u $14=, 0($pop17)
-; CHECK-NEXT:    i32.const $push18=, 7
-; CHECK-NEXT:    i32.add $push19=, $1, $pop18
-; CHECK-NEXT:    i32.load8_u $15=, 0($pop19)
-; CHECK-NEXT:    i32.const $push45=, 7
-; CHECK-NEXT:    i32.add $push20=, $0, $pop45
-; CHECK-NEXT:    i32.load8_u $16=, 0($pop20)
-; CHECK-NEXT:    i32.load8_u $push22=, 0($0)
-; CHECK-NEXT:    i32.load8_u $push21=, 0($1)
-; CHECK-NEXT:    i32.add $push23=, $pop22, $pop21
-; CHECK-NEXT:    i32.store8 0($2), $pop23
-; CHECK-NEXT:    i32.const $push44=, 7
-; CHECK-NEXT:    i32.add $push25=, $2, $pop44
-; CHECK-NEXT:    i32.add $push24=, $16, $15
-; CHECK-NEXT:    i32.store8 0($pop25), $pop24
-; CHECK-NEXT:    i32.const $push43=, 6
-; CHECK-NEXT:    i32.add $push27=, $2, $pop43
-; CHECK-NEXT:    i32.add $push26=, $14, $13
-; CHECK-NEXT:    i32.store8 0($pop27), $pop26
-; CHECK-NEXT:    i32.const $push42=, 5
-; CHECK-NEXT:    i32.add $push29=, $2, $pop42
-; CHECK-NEXT:    i32.add $push28=, $12, $11
-; CHECK-NEXT:    i32.store8 0($pop29), $pop28
-; CHECK-NEXT:    i32.const $push41=, 4
-; CHECK-NEXT:    i32.add $push31=, $2, $pop41
-; CHECK-NEXT:    i32.add $push30=, $10, $9
-; CHECK-NEXT:    i32.store8 0($pop31), $pop30
-; CHECK-NEXT:    i32.const $push40=, 3
-; CHECK-NEXT:    i32.add $push33=, $2, $pop40
-; CHECK-NEXT:    i32.add $push32=, $8, $7
-; CHECK-NEXT:    i32.store8 0($pop33), $pop32
-; CHECK-NEXT:    i32.const $push39=, 2
-; CHECK-NEXT:    i32.add $push35=, $2, $pop39
-; CHECK-NEXT:    i32.add $push34=, $6, $5
-; CHECK-NEXT:    i32.store8 0($pop35), $pop34
-; CHECK-NEXT:    i32.const $push38=, 1
-; CHECK-NEXT:    i32.add $push37=, $2, $pop38
-; CHECK-NEXT:    i32.add $push36=, $4, $3
-; CHECK-NEXT:    i32.store8 0($pop37), $pop36
+; CHECK-NEXT:    v128.load64_zero $push1=, 0($0):p2align=0
+; CHECK-NEXT:    v128.load64_zero $push0=, 0($1):p2align=0
+; CHECK-NEXT:    i8x16.add $push2=, $pop1, $pop0
+; CHECK-NEXT:    v128.store64_lane 0($2):p2align=0, $pop2, 0
 ; CHECK-NEXT:    # fallthrough-return
   %a0 = load i8, ptr %a
   %a1p = getelementptr i8, ptr %a, i32 1
@@ -245,20 +135,10 @@ define void @add_2xf32(ptr %a, ptr %b, ptr %out) {
 ; CHECK-LABEL: add_2xf32:
 ; CHECK:         .functype add_2xf32 (i32, i32, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const $push0=, 4
-; CHECK-NEXT:    i32.add $push1=, $1, $pop0
-; CHECK-NEXT:    f32.load $3=, 0($pop1)
-; CHECK-NEXT:    i32.const $push9=, 4
-; CHECK-NEXT:    i32.add $push2=, $0, $pop9
-; CHECK-NEXT:    f32.load $4=, 0($pop2)
-; CHECK-NEXT:    f32.load $push4=, 0($0)
-; CHECK-NEXT:    f32.load $push3=, 0($1)
-; CHECK-NEXT:    f32.add $push5=, $pop4, $pop3
-; CHECK-NEXT:    f32.store 0($2), $pop5
-; CHECK-NEXT:    i32.const $push8=, 4
-; CHECK-NEXT:    i32.add $push7=, $2, $pop8
-; CHECK-NEXT:    f32.add $push6=, $4, $3
-; CHECK-NEXT:    f32.store 0($pop7), $pop6
+; CHECK-NEXT:    v128.load64_zero $push1=, 0($0):p2align=2
+; CHECK-NEXT:    v128.load64_zero $push0=, 0($1):p2align=2
+; CHECK-NEXT:    f32x4.add $push2=, $pop1, $pop0
+; CHECK-NEXT:    v128.store64_lane 0($2):p2align=2, $pop2, 0
 ; CHECK-NEXT:    # fallthrough-return
   %a0 = load float, ptr %a
   %a1p = getelementptr float, ptr %a, i32 1
@@ -278,20 +158,10 @@ define void @add_2xi16(ptr %a, ptr %b, ptr %out) {
 ; CHECK-LABEL: add_2xi16:
 ; CHECK:         .functype add_2xi16 (i32, i32, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const $push0=, 2
-; CHECK-NEXT:    i32.add $push1=, $1, $pop0
-; CHECK-NEXT:    i32.load16_u $3=, 0($pop1)
-; CHECK-NEXT:    i32.const $push9=, 2
-; CHECK-NEXT:    i32.add $push2=, $0, $pop9
-; CHECK-NEXT:    i32.load16_u $4=, 0($pop2)
-; CHECK-NEXT:    i32.load16_u $push4=, 0($0)
-; CHECK-NEXT:    i32.load16_u $push3=, 0($1)
-; CHECK-NEXT:    i32.add $push5=, $pop4, $pop3
-; CHECK-NEXT:    i32.store16 0($2), $pop5
-; CHECK-NEXT:    i32.const $push8=, 2
-; CHECK-NEXT:    i32.add $push7=, $2, $pop8
-; CHECK-NEXT:    i32.add $push6=, $4, $3
-; CHECK-NEXT:    i32.store16 0($pop7), $pop6
+; CHECK-NEXT:    v128.load32_zero $push1=, 0($0):p2align=1
+; CHECK-NEXT:    v128.load32_zero $push0=, 0($1):p2align=1
+; CHECK-NEXT:    i16x8.add $push2=, $pop1, $pop0
+; CHECK-NEXT:    v128.store32_lane 0($2):p2align=1, $pop2, 0
 ; CHECK-NEXT:    # fallthrough-return
   %a0 = load i16, ptr %a
   %a1p = getelementptr i16, ptr %a, i32 1
@@ -311,40 +181,10 @@ define void @add_4xi8(ptr %a, ptr %b, ptr %out) {
 ; CHECK-LABEL: add_4xi8:
 ; CHECK:         .functype add_4xi8 (i32, i32, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const $push0=, 1
-; CHECK-NEXT:    i32.add $push1=, $1, $pop0
-; CHECK-NEXT:    i32.load8_u $3=, 0($pop1)
-; CHECK-NEXT:    i32.const $push23=, 1
-; CHECK-NEXT:    i32.add $push2=, $0, $pop23
-; CHECK-NEXT:    i32.load8_u $4=, 0($pop2)
-; CHECK-NEXT:    i32.const $push3=, 2
-; CHECK-NEXT:    i32.add $push4=, $1, $pop3
-; CHECK-NEXT:    i32.load8_u $5=, 0($pop4)
-; CHECK-NEXT:    i32.const $push22=, 2
-; CHECK-NEXT:    i32.add $push5=, $0, $pop22
-; CHECK-NEXT:    i32.load8_u $6=, 0($pop5)
-; CHECK-NEXT:    i32.const $push6=, 3
-; CHECK-NEXT:    i32.add $push7=, $1, $pop6
-; CHECK-NEXT:    i32.load8_u $7=, 0($pop7)
-; CHECK-NEXT:    i32.const $push21=, 3
-; CHECK-NEXT:    i32.add $push8=, $0, $pop21
-; CHECK-NEXT:    i32.load8_u $8=, 0($pop8)
-; CHECK-NEXT:    i32.load8_u $push10=, 0($0)
-; CHECK-NEXT:    i32.load8_u $push9=, 0($1)
-; CHECK-NEXT:    i32.add $push11=, $pop10, $pop9
-; CHECK-NEXT:    i32.store8 0($2), $pop11
-; CHECK-NEXT:    i32.const $push20=, 3
-; CHECK-NEXT:    i32.add $push13=, $2, $pop20
-; CHECK-NEXT:    i32.add $push12=, $8, $7
-; CHECK-NEXT:    i32.store8 0($pop13), $pop12
-; CHECK-NEXT:    i32.const $push19=, 2
-; CHECK-NEXT:    i32.add $push15=, $2, $pop19
-; CHECK-NEXT:    i32.add $push14=, $6, $5
-; CHECK-NEXT:    i32.store8 0($pop15), $pop14
-; CHECK-NEXT:    i32.const $push18=, 1
-; CHECK-NEXT:    i32.add $push17=, $2, $pop18
-; CHECK-NEXT:    i32.add $push16=, $4, $3
-; CHECK-NEXT:    i32.store8 0($pop17), $pop16
+; CHECK-NEXT:    v128.load32_zero $push1=, 0($0):p2align=0
+; CHECK-NEXT:    v128.load32_zero $push0=, 0($1):p2align=0
+; CHECK-NEXT:    i8x16.add $push2=, $pop1, $pop0
+; CHECK-NEXT:    v128.store32_lane 0($2):p2align=0, $pop2, 0
 ; CHECK-NEXT:    # fallthrough-return
   %a0 = load i8, ptr %a
   %a1p = getelementptr i8, ptr %a, i32 1
@@ -378,20 +218,12 @@ define void @sext_add_2xi16_to_i32(ptr %a, ptr %b, ptr %out) {
 ; CHECK-LABEL: sext_add_2xi16_to_i32:
 ; CHECK:         .functype sext_add_2xi16_to_i32 (i32, i32, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const $push0=, 2
-; CHECK-NEXT:    i32.add $push1=, $1, $pop0
-; CHECK-NEXT:    i32.load16_s $3=, 0($pop1)
-; CHECK-NEXT:    i32.const $push9=, 2
-; CHECK-NEXT:    i32.add $push2=, $0, $pop9
-; CHECK-NEXT:    i32.load16_s $4=, 0($pop2)
-; CHECK-NEXT:    i32.load16_s $push4=, 0($0)
-; CHECK-NEXT:    i32.load16_s $push3=, 0($1)
-; CHECK-NEXT:    i32.add $push5=, $pop4, $pop3
-; CHECK-NEXT:    i32.store 0($2), $pop5
-; CHECK-NEXT:    i32.const $push7=, 4
-; CHECK-NEXT:    i32.add $push8=, $2, $pop7
-; CHECK-NEXT:    i32.add $push6=, $4, $3
-; CHECK-NEXT:    i32.store 0($pop8), $pop6
+; CHECK-NEXT:    v128.load32_zero $push2=, 0($0):p2align=1
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push3=, $pop2
+; CHECK-NEXT:    v128.load32_zero $push0=, 0($1):p2align=1
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push1=, $pop0
+; CHECK-NEXT:    i32x4.add $push4=, $pop3, $pop1
+; CHECK-NEXT:    v128.store64_lane 0($2):p2align=2, $pop4, 0
 ; CHECK-NEXT:    # fallthrough-return
   %a0 = load i16, ptr %a
   %a1p = getelementptr i16, ptr %a, i32 1
@@ -415,20 +247,10 @@ define void @and_2xi32(ptr %a, ptr %b, ptr %out) {
 ; CHECK-LABEL: and_2xi32:
 ; CHECK:         .functype and_2xi32 (i32, i32, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const $push0=, 4
-; CHECK-NEXT:    i32.add $push1=, $1, $pop0
-; CHECK-NEXT:    i32.load $3=, 0($pop1)
-; CHECK-NEXT:    i32.const $push9=, 4
-; CHECK-NEXT:    i32.add $push2=, $0, $pop9
-; CHECK-NEXT:    i32.load $4=, 0($pop2)
-; CHECK-NEXT:    i32.load $push4=, 0($0)
-; CHECK-NEXT:    i32.load $push3=, 0($1)
-; CHECK-NEXT:    i32.and $push5=, $pop4, $pop3
-; CHECK-NEXT:    i32.store 0($2), $pop5
-; CHECK-NEXT:    i32.const $push8=, 4
-; CHECK-NEXT:    i32.add $push7=, $2, $pop8
-; CHECK-NEXT:    i32.and $push6=, $4, $3
-; CHECK-NEXT:    i32.store 0($pop7), $pop6
+; CHECK-NEXT:    i64.load $push1=, 0($0):p2align=2
+; CHECK-NEXT:    i64.load $push0=, 0($1):p2align=2
+; CHECK-NEXT:    i64.and $push2=, $pop1, $pop0
+; CHECK-NEXT:    i64.store 0($2):p2align=2, $pop2
 ; CHECK-NEXT:    # fallthrough-return
   %a0 = load i32, ptr %a
   %a1p = getelementptr i32, ptr %a, i32 1
@@ -448,26 +270,10 @@ define void @eq_2xi32(ptr %a, ptr %b, ptr %out) {
 ; CHECK-LABEL: eq_2xi32:
 ; CHECK:         .functype eq_2xi32 (i32, i32, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const $push0=, 4
-; CHECK-NEXT:    i32.add $push1=, $1, $pop0
-; CHECK-NEXT:    i32.load $3=, 0($pop1)
-; CHECK-NEXT:    i32.const $push15=, 4
-; CHECK-NEXT:    i32.add $push2=, $0, $pop15
-; CHECK-NEXT:    i32.load $4=, 0($pop2)
-; CHECK-NEXT:    i32.const $push7=, -1
-; CHECK-NEXT:    i32.const $push6=, 0
-; CHECK-NEXT:    i32.load $push4=, 0($0)
-; CHECK-NEXT:    i32.load $push3=, 0($1)
-; CHECK-NEXT:    i32.eq $push5=, $pop4, $pop3
-; CHECK-NEXT:    i32.select $push8=, $pop7, $pop6, $pop5
-; CHECK-NEXT:    i32.store 0($2), $pop8
-; CHECK-NEXT:    i32.const $push14=, 4
-; CHECK-NEXT:    i32.add $push11=, $2, $pop14
-; CHECK-NEXT:    i32.const $push13=, -1
-; CHECK-NEXT:    i32.const $push12=, 0
-; CHECK-NEXT:    i32.eq $push9=, $4, $3
-; CHECK-NEXT:    i32.select $push10=, $pop13, $pop12, $pop9
-; CHECK-NEXT:    i32.store 0($pop11), $pop10
+; CHECK-NEXT:    v128.load64_zero $push1=, 0($0):p2align=2
+; CHECK-NEXT:    v128.load64_zero $push0=, 0($1):p2align=2
+; CHECK-NEXT:    i32x4.eq $push2=, $pop1, $pop0
+; CHECK-NEXT:    v128.store64_lane 0($2):p2align=2, $pop2, 0
 ; CHECK-NEXT:    # fallthrough-return
   %a0 = load i32, ptr %a
   %a1p = getelementptr i32, ptr %a, i32 1
@@ -489,16 +295,9 @@ define void @neg_2xf32(ptr %a, ptr %out) {
 ; CHECK-LABEL: neg_2xf32:
 ; CHECK:         .functype neg_2xf32 (i32, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const $push0=, 4
-; CHECK-NEXT:    i32.add $push1=, $0, $pop0
-; CHECK-NEXT:    f32.load $2=, 0($pop1)
-; CHECK-NEXT:    f32.load $push2=, 0($0)
-; CHECK-NEXT:    f32.neg $push3=, $pop2
-; CHECK-NEXT:    f32.store 0($1), $pop3
-; CHECK-NEXT:    i32.const $push6=, 4
-; CHECK-NEXT:    i32.add $push4=, $1, $pop6
-; CHECK-NEXT:    f32.neg $push5=, $2
-; CHECK-NEXT:    f32.store 0($pop4), $pop5
+; CHECK-NEXT:    v128.load64_zero $push0=, 0($0):p2align=2
+; CHECK-NEXT:    f32x4.neg $push1=, $pop0
+; CHECK-NEXT:    v128.store64_lane 0($1):p2align=2, $pop1, 0
 ; CHECK-NEXT:    # fallthrough-return
   %a0 = load float, ptr %a
   %a1p = getelementptr float, ptr %a, i32 1
@@ -515,24 +314,10 @@ define void @min_2xf32(ptr %a, ptr %b, ptr %out) {
 ; CHECK-LABEL: min_2xf32:
 ; CHECK:         .functype min_2xf32 (i32, i32, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const $push0=, 4
-; CHECK-NEXT:    i32.add $push1=, $1, $pop0
-; CHECK-NEXT:    f32.load $3=, 0($pop1)
-; CHECK-NEXT:    i32.const $push13=, 4
-; CHECK-NEXT:    i32.add $push2=, $0, $pop13
-; CHECK-NEXT:    f32.load $4=, 0($pop2)
-; CHECK-NEXT:    f32.load $push12=, 0($0)
-; CHECK-NEXT:    local.tee $push11=, $6=, $pop12
-; CHECK-NEXT:    f32.load $push10=, 0($1)
-; CHECK-NEXT:    local.tee $push9=, $5=, $pop10
-; CHECK-NEXT:    f32.lt $push3=, $6, $5
-; CHECK-NEXT:    f32.select $push4=, $pop11, $pop9, $pop3
-; CHECK-NEXT:    f32.store 0($2), $pop4
-; CHECK-NEXT:    i32.const $push8=, 4
-; CHECK-NEXT:    i32.add $push7=, $2, $pop8
-; CHECK-NEXT:    f32.lt $push5=, $4, $3
-; CHECK-NEXT:    f32.select $push6=, $4, $3, $pop5
-; CHECK-NEXT:    f32.store 0($pop7), $pop6
+; CHECK-NEXT:    v128.load64_zero $push1=, 0($1):p2align=2
+; CHECK-NEXT:    v128.load64_zero $push0=, 0($0):p2align=2
+; CHECK-NEXT:    f32x4.pmin $push2=, $pop1, $pop0
+; CHECK-NEXT:    v128.store64_lane 0($2):p2align=2, $pop2, 0
 ; CHECK-NEXT:    # fallthrough-return
   %a0 = load float, ptr %a
   %a1p = getelementptr float, ptr %a, i32 1
@@ -555,20 +340,10 @@ define void @extmul_2xi16_to_i32(ptr %a, ptr %b, ptr %out) {
 ; CHECK-LABEL: extmul_2xi16_to_i32:
 ; CHECK:         .functype extmul_2xi16_to_i32 (i32, i32, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const $push0=, 2
-; CHECK-NEXT:    i32.add $push1=, $1, $pop0
-; CHECK-NEXT:    i32.load16_s $3=, 0($pop1)
-; CHECK-NEXT:    i32.const $push9=, 2
-; CHECK-NEXT:    i32.add $push2=, $0, $pop9
-; CHECK-NEXT:    i32.load16_s $4=, 0($pop2)
-; CHECK-NEXT:    i32.load16_s $push4=, 0($0)
-; CHECK-NEXT:    i32.load16_s $push3=, 0($1)
-; CHECK-NEXT:    i32.mul $push5=, $pop4, $pop3
-; CHECK-NEXT:    i32.store 0($2), $pop5
-; CHECK-NEXT:    i32.const $push7=, 4
-; CHECK-NEXT:    i32.add $push8=, $2, $pop7
-; CHECK-NEXT:    i32.mul $push6=, $4, $3
-; CHECK-NEXT:    i32.store 0($pop8), $pop6
+; CHECK-NEXT:    v128.load32_zero $push1=, 0($0):p2align=1
+; CHECK-NEXT:    v128.load32_zero $push0=, 0($1):p2align=1
+; CHECK-NEXT:    i32x4.extmul_low_i16x8_s $push2=, $pop1, $pop0
+; CHECK-NEXT:    v128.store64_lane 0($2):p2align=2, $pop2, 0
 ; CHECK-NEXT:    # fallthrough-return
   %a0 = load i16, ptr %a
   %a1p = getelementptr i16, ptr %a, i32 1
@@ -592,20 +367,10 @@ define void @sub_2xi16(ptr %a, ptr %b, ptr %out) {
 ; CHECK-LABEL: sub_2xi16:
 ; CHECK:         .functype sub_2xi16 (i32, i32, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const $push0=, 2
-; CHECK-NEXT:    i32.add $push1=, $1, $pop0
-; CHECK-NEXT:    i32.load16_u $3=, 0($pop1)
-; CHECK-NEXT:    i32.const $push9=, 2
-; CHECK-NEXT:    i32.add $push2=, $0, $pop9
-; CHECK-NEXT:    i32.load16_u $4=, 0($pop2)
-; CHECK-NEXT:    i32.load16_u $push4=, 0($0)
-; CHECK-NEXT:    i32.load16_u $push3=, 0($1)
-; CHECK-NEXT:    i32.sub $push5=, $pop4, $pop3
-; CHECK-NEXT:    i32.store16 0($2), $pop5
-; CHECK-NEXT:    i32.const $push8=, 2
-; CHECK-NEXT:    i32.add $push7=, $2, $pop8
-; CHECK-NEXT:    i32.sub $push6=, $4, $3
-; CHECK-NEXT:    i32.store16 0($pop7), $pop6
+; CHECK-NEXT:    v128.load32_zero $push1=, 0($0):p2align=1
+; CHECK-NEXT:    v128.load32_zero $push0=, 0($1):p2align=1
+; CHECK-NEXT:    i16x8.sub $push2=, $pop1, $pop0
+; CHECK-NEXT:    v128.store32_lane 0($2):p2align=1, $pop2, 0
 ; CHECK-NEXT:    # fallthrough-return
   %a0 = load i16, ptr %a
   %a1p = getelementptr i16, ptr %a, i32 1
@@ -625,20 +390,10 @@ define void @and_2xi16(ptr %a, ptr %b, ptr %out) {
 ; CHECK-LABEL: and_2xi16:
 ; CHECK:         .functype and_2xi16 (i32, i32, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const $push0=, 2
-; CHECK-NEXT:    i32.add $push1=, $1, $pop0
-; CHECK-NEXT:    i32.load16_u $3=, 0($pop1)
-; CHECK-NEXT:    i32.const $push9=, 2
-; CHECK-NEXT:    i32.add $push2=, $0, $pop9
-; CHECK-NEXT:    i32.load16_u $4=, 0($pop2)
-; CHECK-NEXT:    i32.load16_u $push4=, 0($0)
-; CHECK-NEXT:    i32.load16_u $push3=, 0($1)
-; CHECK-NEXT:    i32.and $push5=, $pop4, $pop3
-; CHECK-NEXT:    i32.store16 0($2), $pop5
-; CHECK-NEXT:    i32.const $push8=, 2
-; CHECK-NEXT:    i32.add $push7=, $2, $pop8
-; CHECK-NEXT:    i32.and $push6=, $4, $3
-; CHECK-NEXT:    i32.store16 0($pop7), $pop6
+; CHECK-NEXT:    i32.load $push1=, 0($0):p2align=1
+; CHECK-NEXT:    i32.load $push0=, 0($1):p2align=1
+; CHECK-NEXT:    i32.and $push2=, $pop1, $pop0
+; CHECK-NEXT:    i32.store 0($2):p2align=1, $pop2
 ; CHECK-NEXT:    # fallthrough-return
   %a0 = load i16, ptr %a
   %a1p = getelementptr i16, ptr %a, i32 1
@@ -658,40 +413,10 @@ define void @or_4xi8(ptr %a, ptr %b, ptr %out) {
 ; CHECK-LABEL: or_4xi8:
 ; CHECK:         .functype or_4xi8 (i32, i32, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const $push0=, 1
-; CHECK-NEXT:    i32.add $push1=, $1, $pop0
-; CHECK-NEXT:    i32.load8_u $3=, 0($pop1)
-; CHECK-NEXT:    i32.const $push23=, 1
-; CHECK-NEXT:    i32.add $push2=, $0, $pop23
-; CHECK-NEXT:    i32.load8_u $4=, 0($pop2)
-; CHECK-NEXT:    i32.const $push3=, 2
-; CHECK-NEXT:    i32.add $push4=, $1, $pop3
-; CHECK-NEXT:    i32.load8_u $5=, 0($pop4)
-; CHECK-NEXT:    i32.const $push22=, 2
-; CHECK-NEXT:    i32.add $push5=, $0, $pop22
-; CHECK-NEXT:    i32.load8_u $6=, 0($pop5)
-; CHECK-NEXT:    i32.const $push6=, 3
-; CHECK-NEXT:    i32.add $push7=, $1, $pop6
-; CHECK-NEXT:    i32.load8_u $7=, 0($pop7)
-; CHECK-NEXT:    i32.const $push21=, 3
-; CHECK-NEXT:    i32.add $push8=, $0, $pop21
-; CHECK-NEXT:    i32.load8_u $8=, 0($pop8)
-; CHECK-NEXT:    i32.load8_u $push10=, 0($0)
-; CHECK-NEXT:    i32.load8_u $push9=, 0($1)
-; CHECK-NEXT:    i32.or $push11=, $pop10, $pop9
-; CHECK-NEXT:    i32.store8 0($2), $pop11
-; CHECK-NEXT:    i32.const $push20=, 3
-; CHECK-NEXT:    i32.add $push13=, $2, $pop20
-; CHECK-NEXT:    i32.or $push12=, $8, $7
-; CHECK-NEXT:    i32.store8 0($pop13), $pop12
-; CHECK-NEXT:    i32.const $push19=, 2
-; CHECK-NEXT:    i32.add $push15=, $2, $pop19
-; CHECK-NEXT:    i32.or $push14=, $6, $5
-; CHECK-NEXT:    i32.store8 0($pop15), $pop14
-; CHECK-NEXT:    i32.const $push18=, 1
-; CHECK-NEXT:    i32.add $push17=, $2, $pop18
-; CHECK-NEXT:    i32.or $push16=, $4, $3
-; CHECK-NEXT:    i32.store8 0($pop17), $pop16
+; CHECK-NEXT:    i32.load $push1=, 0($0):p2align=0
+; CHECK-NEXT:    i32.load $push0=, 0($1):p2align=0
+; CHECK-NEXT:    i32.or $push2=, $pop1, $pop0
+; CHECK-NEXT:    i32.store 0($2):p2align=0, $pop2
 ; CHECK-NEXT:    # fallthrough-return
   %a0 = load i8, ptr %a
   %a1p = getelementptr i8, ptr %a, i32 1
@@ -725,40 +450,10 @@ define void @sub_4xi8(ptr %a, ptr %b, ptr %out) {
 ; CHECK-LABEL: sub_4xi8:
 ; CHECK:         .functype sub_4xi8 (i32, i32, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const $push0=, 1
-; CHECK-NEXT:    i32.add $push1=, $1, $pop0
-; CHECK-NEXT:    i32.load8_u $3=, 0($pop1)
-; CHECK-NEXT:    i32.const $push23=, 1
-; CHECK-NEXT:    i32.add $push2=, $0, $pop23
-; CHECK-NEXT:    i32.load8_u $4=, 0($pop2)
-; CHECK-NEXT:    i32.const $push3=, 2
-; CHECK-NEXT:    i32.add $push4=, $1, $pop3
-; CHECK-NEXT:    i32.load8_u $5=, 0($pop4)
-; CHECK-NEXT:    i32.const $push22=, 2
-; CHECK-NEXT:    i32.add $push5=, $0, $pop22
-; CHECK-NEXT:    i32.load8_u $6=, 0($pop5)
-; CHECK-NEXT:    i32.const $push6=, 3
-; CHECK-NEXT:    i32.add $push7=, $1, $pop6
-; CHECK-NEXT:    i32.load8_u $7=, 0($pop7)
-; CHECK-NEXT:    i32.const $push21=, 3
-; CHECK-NEXT:    i32.add $push8=, $0, $pop21
-; CHECK-NEXT:    i32.load8_u $8=, 0($pop8)
-; CHECK-NEXT:    i32.load8_u $push10=, 0($0)
-; CHECK-NEXT:    i32.load8_u $push9=, 0($1)
-; CHECK-NEXT:    i32.sub $push11=, $pop10, $pop9
-; CHECK-NEXT:    i32.store8 0($2), $pop11
-; CHECK-NEXT:    i32.const $push20=, 3
-; CHECK-NEXT:    i32.add $push13=, $2, $pop20
-; CHECK-NEXT:    i32.sub $push12=, $8, $7
-; CHECK-NEXT:    i32.store8 0($pop13), $pop12
-; CHECK-NEXT:    i32.const $push19=, 2
-; CHECK-NEXT:    i32.add $push15=, $2, $pop19
-; CHECK-NEXT:    i32.sub $push14=, $6, $5
-; CHECK-NEXT:    i32.store8 0($pop15), $pop14
-; CHECK-NEXT:    i32.const $push18=, 1
-; CHECK-NEXT:    i32.add $push17=, $2, $pop18
-; CHECK-NEXT:    i32.sub $push16=, $4, $3
-; CHECK-NEXT:    i32.store8 0($pop17), $pop16
+; CHECK-NEXT:    v128.load32_zero $push1=, 0($0):p2align=0
+; CHECK-NEXT:    v128.load32_zero $push0=, 0($1):p2align=0
+; CHECK-NEXT:    i8x16.sub $push2=, $pop1, $pop0
+; CHECK-NEXT:    v128.store32_lane 0($2):p2align=0, $pop2, 0
 ; CHECK-NEXT:    # fallthrough-return
   %a0 = load i8, ptr %a
   %a1p = getelementptr i8, ptr %a, i32 1
@@ -792,26 +487,10 @@ define void @eq_2xi16(ptr %a, ptr %b, ptr %out) {
 ; CHECK-LABEL: eq_2xi16:
 ; CHECK:         .functype eq_2xi16 (i32, i32, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const $push0=, 2
-; CHECK-NEXT:    i32.add $push1=, $1, $pop0
-; CHECK-NEXT:    i32.load16_u $3=, 0($pop1)
-; CHECK-NEXT:    i32.const $push15=, 2
-; CHECK-NEXT:    i32.add $push2=, $0, $pop15
-; CHECK-NEXT:    i32.load16_u $4=, 0($pop2)
-; CHECK-NEXT:    i32.const $push7=, -1
-; CHECK-NEXT:    i32.const $push6=, 0
-; CHECK-NEXT:    i32.load16_u $push4=, 0($0)
-; CHECK-NEXT:    i32.load16_u $push3=, 0($1)
-; CHECK-NEXT:    i32.eq $push5=, $pop4, $pop3
-; CHECK-NEXT:    i32.select $push8=, $pop7, $pop6, $pop5
-; CHECK-NEXT:    i32.store16 0($2), $pop8
-; CHECK-NEXT:    i32.const $push14=, 2
-; CHECK-NEXT:    i32.add $push11=, $2, $pop14
-; CHECK-NEXT:    i32.const $push13=, -1
-; CHECK-NEXT:    i32.const $push12=, 0
-; CHECK-NEXT:    i32.eq $push9=, $4, $3
-; CHECK-NEXT:    i32.select $push10=, $pop13, $pop12, $pop9
-; CHECK-NEXT:    i32.store16 0($pop11), $pop10
+; CHECK-NEXT:    v128.load32_zero $push1=, 0($0):p2align=1
+; CHECK-NEXT:    v128.load32_zero $push0=, 0($1):p2align=1
+; CHECK-NEXT:    i16x8.eq $push2=, $pop1, $pop0
+; CHECK-NEXT:    v128.store32_lane 0($2):p2align=1, $pop2, 0
 ; CHECK-NEXT:    # fallthrough-return
   %a0 = load i16, ptr %a
   %a1p = getelementptr i16, ptr %a, i32 1
