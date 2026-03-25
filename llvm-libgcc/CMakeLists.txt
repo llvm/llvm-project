@@ -109,6 +109,13 @@ add_custom_target(gcc_s.ver
 add_dependencies(unwind_shared gcc_s.ver)
 
 construct_compiler_rt_default_triple()
+# See compiler-rt/CMakeLists.txt
+if ("${COMPILER_RT_DEFAULT_TARGET_TRIPLE}" MATCHES ".*hf$")
+  if (${COMPILER_RT_DEFAULT_TARGET_ARCH} MATCHES "^arm")
+    set(COMPILER_RT_DEFAULT_TARGET_ARCH "armhf")
+    CHECK_SYMBOL_EXISTS (__thumb__ "" COMPILER_RT_ARM_THUMB)
+  endif()
+endif()
 
 target_link_options(unwind_shared PUBLIC
   -Wl,--version-script,${CMAKE_CURRENT_BINARY_DIR}/gcc_s.ver
