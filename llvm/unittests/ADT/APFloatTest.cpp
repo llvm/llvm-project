@@ -5385,8 +5385,9 @@ TEST(APFloatTest, absHexFloat) {
     APFloat MSmallestNormalized = APFloat::getSmallestNormalized(*S, true);
 
     auto test_it = [&](APFloat &Expected, APFloat &F) {
-      EXPECT_TRUE(Expected.bitwiseIsEqual(abs(F))) << "Semantics: "
-          << SemanticsName << ", Expected: " << Expected << ", Value: " << F;
+      EXPECT_TRUE(Expected.bitwiseIsEqual(abs(F)))
+          << "Semantics: " << SemanticsName << ", Expected: " << Expected
+          << ", Value: " << F;
     };
 
     test_it(PZero, PZero);
@@ -5399,18 +5400,6 @@ TEST(APFloatTest, absHexFloat) {
     test_it(PSmallestValue, MSmallestValue);
     test_it(PSmallestNormalized, PSmallestNormalized);
     test_it(PSmallestNormalized, MSmallestNormalized);
-
-
-    EXPECT_TRUE(PZero.bitwiseIsEqual(abs(PZero)));
-    EXPECT_TRUE(PZero.bitwiseIsEqual(abs(MZero)));
-    EXPECT_TRUE(PNormalValue.bitwiseIsEqual(abs(PNormalValue)));
-    EXPECT_TRUE(PNormalValue.bitwiseIsEqual(abs(MNormalValue)));
-    EXPECT_TRUE(PLargestValue.bitwiseIsEqual(abs(PLargestValue)));
-    EXPECT_TRUE(PLargestValue.bitwiseIsEqual(abs(MLargestValue)));
-    EXPECT_TRUE(PSmallestValue.bitwiseIsEqual(abs(PSmallestValue)));
-    EXPECT_TRUE(PSmallestValue.bitwiseIsEqual(abs(MSmallestValue)));
-    EXPECT_TRUE(PSmallestNormalized.bitwiseIsEqual(abs(PSmallestNormalized)));
-    EXPECT_TRUE(PSmallestNormalized.bitwiseIsEqual(abs(MSmallestNormalized)));
   }
 }
 
@@ -5726,9 +5715,8 @@ TEST(APFloatTest, scalbnHexFloat) {
     auto SemanticsName = APFloat::semanticsName(Expected.getSemantics());
     APFloat Actual(scalbn(N, E, RM));
     EXPECT_TRUE(Expected.bitwiseIsEqual(Actual))
-      << "Semantics: " << SemanticsName << ", Expected: " << Expected
-      << ", N: " << N << ", " << ", E: " << E
-      << ", Actual: " << Actual;
+        << "Semantics: " << SemanticsName << ", Expected: " << Expected
+        << ", N: " << N << ", " << ", E: " << E << ", Actual: " << Actual;
   };
 
   for (const auto *S : HexFloatSemantics) {

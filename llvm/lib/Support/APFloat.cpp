@@ -6022,7 +6022,7 @@ class HexFloatArith {
 public:
   struct value_t {
     int sign; // -1 for negative, +1 for positive
-    APFloat::ExponentType  exponent;
+    APFloat::ExponentType exponent;
     APInt fraction;
   };
   static void fetch(const HexFloat &in, value_t &out);
@@ -6458,7 +6458,7 @@ opStatus HexFloat::add(const HexFloat &RHS, roundingMode RM) {
   HexFloatArith::norm(left);
   HexFloatArith::putres(left, *this);
 
-// Note: we are not concerned about possible overflow.
+  // Note: we are not concerned about possible overflow.
 
   return opOK;
 }
@@ -6947,7 +6947,10 @@ opStatus HexFloat::next(bool nextDown) {
   return opOK;
 }
 
-void HexFloat::changeSign() { sign = !sign; low_sign = !low_sign;}
+void HexFloat::changeSign() {
+  sign = !sign;
+  low_sign = !low_sign;
+}
 
 opStatus HexFloat::convert(const fltSemantics &toSemantics,
                            roundingMode rounding_mode, bool *losesInfo) {
@@ -6985,7 +6988,7 @@ opStatus HexFloat::convert(const fltSemantics &toSemantics,
       OnExit.LostInfo = false;
       if (&toSemantics == &APFloatBase::HexFP128()) {
         low_sign = sign;
-        low_exponent = exponent -14;
+        low_exponent = exponent - 14;
       }
     } else {
       // from_bits_precision > to_bits_precision i.e., narrowing
