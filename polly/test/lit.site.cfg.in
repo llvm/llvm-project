@@ -10,6 +10,7 @@ config.target_triple = "@LLVM_TARGET_TRIPLE@"
 config.llvm_polly_link_into_tools = "@LLVM_POLLY_LINK_INTO_TOOLS@"
 config.targets_to_build = "@TARGETS_TO_BUILD@"
 config.extra_paths = "@POLLY_TEST_EXTRA_PATHS@".split(";")
+config.polly_test_c_compiler = "@POLLY_TEST_C_COMPILER@"
 
 ## Check the current platform with regex
 import re

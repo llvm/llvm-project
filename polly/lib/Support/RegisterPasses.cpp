@@ -49,6 +49,7 @@
 #include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Transforms/IPO.h"
 
@@ -460,6 +461,7 @@ parsePollyCustomOptions(StringRef Params) {
 static void buildCommonPollyPipeline(FunctionPassManager &PM,
                                      OptimizationLevel Level,
                                      bool EnableForOpt) {
+  auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
   PassBuilder PB;
 
   ExitOnError Err("Inconsistent Polly configuration: ");

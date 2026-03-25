@@ -3,6 +3,7 @@ set(LLVM_SHLIBEXT "${CMAKE_SHARED_MODULE_SUFFIX}")
 add_custom_target(check-polly)
 set_target_properties(check-polly PROPERTIES FOLDER "Polly/Meta")
 
+set(POLLY_TEST_C_COMPILER "")
 if(NOT LLVM_MAIN_SRC_DIR)
   find_program(LLVM_OPT NAMES opt HINTS ${LLVM_TOOLS_BINARY_DIR})
   find_program(LLVM_FILECHECK NAMES FileCheck HINTS ${LLVM_TOOLS_BINARY_DIR})
@@ -35,6 +36,10 @@ else ()
   set(LLVM_NOT "${LLVM_TOOLS_BINARY_DIR}/not")
   set(POLLY_TEST_EXTRA_PATHS "")
   set(POLLY_TEST_DEPS llvm-config opt LLVMPolly FileCheck not count)
+
+  if (LLVM_POLLY_LINK_INTO_TOOLS AND TARGET clang)
+    set(POLLY_TEST_C_COMPILER "${LLVM_TOOLS_BINARY_DIR}/clang${CMAKE_EXECUTABLE_SUFFIX}")
+  endif ()
 endif()
 
 if (POLLY_BUNDLED_ISL)
