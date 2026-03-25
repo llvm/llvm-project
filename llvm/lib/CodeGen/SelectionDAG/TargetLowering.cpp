@@ -7439,7 +7439,7 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
 
       // x ?% 1 == 0  <-->  true  <-->  x u<= -1
       Q.setAllBits();
-    } else{
+    } else {
       KAmts.push_back(DAG.getConstant(K, DL, ShSVT));
     }
 
