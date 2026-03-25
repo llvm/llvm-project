@@ -218,10 +218,10 @@ void __clear_cache(void *start, void *end) {
 
   // Invalidate instruction cache so it re-fetches from memory.
   for (uintptr_t addr = start_line; addr < end_addr; addr += line_size)
-    __builtin_HEXAGON_Y2_icinva((void *)addr);
+    __asm__ volatile("icinva(%[a])" : : [a] "r"((void *)addr));
 
   // Instruction sync barrier ensures subsequent fetches see the new code.
-  __builtin_HEXAGON_Y2_isync();
+  __asm__ volatile("isync");
 #else
 #if __APPLE__
   // On Darwin, sys_icache_invalidate() provides this functionality
