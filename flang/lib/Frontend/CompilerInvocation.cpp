@@ -1051,13 +1051,12 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
       } else {
         if (auto canonical{features.GetCanonicalSpelling(wArg)}) {
           std::string suggestion{*canonical};
-          if (wArg.size() > 3 &&
-              wArg.substr(0, 3) == "no-") {
+          if (wArg.size() > 3 && wArg.substr(0, 3) == "no-") {
             suggestion = "no-" + suggestion;
           }
-          const unsigned diagID = diags.getCustomDiagID(
-              clang::DiagnosticsEngine::Warning,
-              "-W%0 is deprecated; use -W%1 instead");
+          const unsigned diagID =
+              diags.getCustomDiagID(clang::DiagnosticsEngine::Warning,
+                                    "-W%0 is deprecated; use -W%1 instead");
           diags.Report(diagID) << wArg << suggestion;
         }
       }

@@ -11,7 +11,6 @@
 #include "flang/Parser/characters.h"
 #include "flang/Support/Fortran.h"
 #include <string>
-#include <cstring>
 #include <string_view>
 
 namespace Fortran::common {
@@ -102,8 +101,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
     bool replaced{false};
     for (auto [deprecatedForm, canonicalForm] : compoundNameFixups) {
       // Reverse direction: canonical -> deprecated.
-      for (auto pos{deprecated.find(canonicalForm)};
-          pos != std::string::npos;
+      for (auto pos{deprecated.find(canonicalForm)}; pos != std::string::npos;
           pos = deprecated.find(canonicalForm, pos + deprecatedForm.size())) {
         deprecated.replace(pos, canonicalForm.size(), deprecatedForm);
         replaced = true;
