@@ -134,6 +134,8 @@ private:
   const SIInstrInfo *TII;
   const SIRegisterInfo *TRI;
 
+  bool Changed = false;
+
   // Current basic block.
   MachineBasicBlock *MBB;
 
@@ -160,8 +162,8 @@ private:
   /// must be preceded by S_NOP to avoid the hazard.
   bool NeedNopBeforeSetVGPRMSB;
 
-  /// Insert mode change before \p I. \returns true if mode was changed.
-  bool setMode(ModeTy NewMode, MachineBasicBlock::instr_iterator I);
+  /// Insert mode change before \p I.
+  void setMode(ModeTy NewMode, MachineBasicBlock::instr_iterator I);
 
   /// Reset mode to default.
   void resetMode(MachineBasicBlock::instr_iterator I) {
@@ -174,8 +176,8 @@ private:
   /// If \p MO references VGPRs, return the MSBs. Otherwise, return nullopt.
   std::optional<unsigned> getMSBs(const MachineOperand &MO) const;
 
-  /// Handle single \p MI. \return true if changed.
-  bool runOnMachineInstr(MachineInstr &MI);
+  /// Handle single \p MI.
+  void runOnMachineInstr(MachineInstr &MI);
 
   /// Compute the mode for a single \p MI given \p Ops operands
   /// bit mapping. Optionally takes second array \p Ops2 for VOPD.
@@ -199,16 +201,15 @@ private:
 
   /// Handle S_SETREG_IMM32_B32 targeting MODE register. On certain hardware,
   /// this instruction clobbers VGPR MSB bits[12:19], so we need to restore
-  /// the current mode. \returns true if the instruction was modified or a
-  /// new one was inserted.
-  bool handleSetregMode(MachineInstr &MI);
+  /// the current mode.
+  void handleSetregMode(MachineInstr &MI);
 
   /// Update bits[12:19] of the imm operand in S_SETREG_IMM32_B32 to contain
-  /// the VGPR MSB mode value. \returns true if the immediate was changed.
-  bool updateSetregModeImm(MachineInstr &MI, int64_t ModeValue);
+  /// the VGPR MSB mode value.
+  void updateSetregModeImm(MachineInstr &MI, int64_t ModeValue);
 };
 
-bool AMDGPULowerVGPREncoding::setMode(ModeTy NewMode,
+void AMDGPULowerVGPREncoding::setMode(ModeTy NewMode,
                                       MachineBasicBlock::instr_iterator I) {
   LLVM_DEBUG({
     dbgs() << "  setMode: NewMode=";
@@ -228,7 +229,7 @@ bool AMDGPULowerVGPREncoding::setMode(ModeTy NewMode,
   bool Rewritten = false;
   if (!CurrentMode.update(NewMode, Rewritten)) {
     LLVM_DEBUG(dbgs() << "    -> no change needed\n");
-    return false;
+    return;
   }
 
   LLVM_DEBUG(dbgs() << "    Rewritten=" << Rewritten << " after update\n");
@@ -241,6 +242,7 @@ bool AMDGPULowerVGPREncoding::setMode(ModeTy NewMode,
       // Carry old mode bits from the existing instruction.
       int64_t OldModeBits = Op.getImm() & (ModeMask << ModeWidth);
       Op.setImm(CurrentMode.encode() | OldModeBits);
+      Changed = true;
       LLVM_DEBUG(dbgs() << "    -> piggybacked onto S_SET_VGPR_MSB: "
                         << *MostRecentModeSet);
     } else {
@@ -251,7 +253,7 @@ bool AMDGPULowerVGPREncoding::setMode(ModeTy NewMode,
                         << *MostRecentModeSet);
     }
 
-    return true;
+    return;
   }
 
   I = handleClause(I);
@@ -266,11 +268,11 @@ bool AMDGPULowerVGPREncoding::setMode(ModeTy NewMode,
   }
   MostRecentModeSet = BuildMI(*MBB, I, {}, TII->get(AMDGPU::S_SET_VGPR_MSB))
                           .addImm(NewMode.encode() | OldModeBits);
+  Changed = true;
   LLVM_DEBUG(dbgs() << "    -> inserted new S_SET_VGPR_MSB: "
                     << *MostRecentModeSet);
 
   CurrentMode = NewMode;
-  return true;
 }
 
 std::optional<unsigned>
@@ -334,7 +336,7 @@ void AMDGPULowerVGPREncoding::computeMode(ModeTy &NewMode,
   }
 }
 
-bool AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI) {
+void AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI) {
   auto Ops = AMDGPU::getVGPRLoweringOperandTables(MI.getDesc());
   if (Ops.first) {
     ModeTy NewMode;
@@ -363,17 +365,17 @@ bool AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI) {
         bool Unused = false;
         CurrentMode.update(NewModeCommuted, Unused);
         // MI was modified by the commute above.
-        return true;
+        Changed = true;
+        return;
       }
       // Commute back.
       if (!TII->commuteInstruction(MI))
         llvm_unreachable("Failed to restore commuted instruction.");
     }
-    return setMode(NewMode, MI.getIterator());
+    setMode(NewMode, MI.getIterator());
+    return;
   }
   assert(!TII->hasVGPRUses(MI) || MI.isMetaInstruction() || MI.isPseudo());
-
-  return false;
 }
 
 MachineBasicBlock::instr_iterator
@@ -401,8 +403,10 @@ AMDGPULowerVGPREncoding::handleClause(MachineBasicBlock::instr_iterator I) {
   // If it does not clause will just become shorter. Since the length
   // recorded in the clause is one less, increment the length after the
   // update. Note that SIMM16[5:0] must be 1-62, not 0 or 63.
-  if (ClauseLen < 63)
+  if (ClauseLen < 63) {
     Clause->getOperand(0).setImm(ClauseLen | (ClauseBreaks << 8));
+    Changed = true;
+  }
 
   ++ClauseLen;
 
@@ -439,7 +443,7 @@ static int64_t convertModeToSetregFormat(int64_t Mode) {
   return llvm::rotl<uint8_t>(static_cast<uint8_t>(Mode), /*R=*/2);
 }
 
-bool AMDGPULowerVGPREncoding::updateSetregModeImm(MachineInstr &MI,
+void AMDGPULowerVGPREncoding::updateSetregModeImm(MachineInstr &MI,
                                                   int64_t ModeValue) {
   assert(MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32);
 
@@ -450,11 +454,13 @@ bool AMDGPULowerVGPREncoding::updateSetregModeImm(MachineInstr &MI,
   int64_t OldImm = ImmOp->getImm();
   int64_t NewImm =
       (OldImm & ~AMDGPU::Hwreg::VGPR_MSB_MASK) | (SetregMode << VGPRMSBShift);
+  if (NewImm == OldImm)
+    return;
   ImmOp->setImm(NewImm);
-  return NewImm != OldImm;
+  Changed = true;
 }
 
-bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
+void AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
   using namespace AMDGPU::Hwreg;
 
   assert(MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32 &&
@@ -471,7 +477,7 @@ bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
                     << " Size=" << Size << '\n');
   if (HwRegId != ID_MODE) {
     LLVM_DEBUG(dbgs() << "    -> not ID_MODE, skipping\n");
-    return false;
+    return;
   }
 
   int64_t ModeValue = CurrentMode.encode();
@@ -494,10 +500,10 @@ bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
     // the required mode into bits[12:19] without triggering Rewritten.
     MostRecentModeSet = &MI;
     CurrentMode = {};
-    bool Changed = updateSetregModeImm(MI, 0);
+    updateSetregModeImm(MI, 0);
     LLVM_DEBUG(dbgs() << "    -> reset CurrentMode, cleared bits[12:19]: "
                       << MI);
-    return Changed;
+    return;
   }
 
   // Case 2: Size > 12 - the original instruction uses bits beyond 11, so we
@@ -521,7 +527,7 @@ bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
     NeedNopBeforeSetVGPRMSB = true;
     LLVM_DEBUG(dbgs() << "    -> bits[12:19] already correct, "
                          "invalidated MostRecentModeSet\n");
-    return false;
+    return;
   }
 
   // imm32[12:19] doesn't match VGPR MSBs - insert s_set_vgpr_msb after
@@ -533,9 +539,9 @@ bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
   MostRecentModeSet = BuildMI(*MBB, InsertPt, MI.getDebugLoc(),
                               TII->get(AMDGPU::S_SET_VGPR_MSB))
                           .addImm(ModeValue);
+  Changed = true;
   LLVM_DEBUG(dbgs() << "    -> inserted S_SET_VGPR_MSB after setreg: "
                     << *MostRecentModeSet);
-  return true;
 }
 
 bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
@@ -549,7 +555,6 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "*** AMDGPULowerVGPREncoding on " << MF.getName()
                     << " ***\n");
 
-  bool Changed = false;
   ClauseLen = ClauseRemaining = 0;
   CurrentMode = {};
   for (auto &MBB : MF) {
@@ -596,11 +601,11 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
 
       if (MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32 &&
           ST.hasSetregVGPRMSBFixup()) {
-        Changed |= handleSetregMode(MI);
+        handleSetregMode(MI);
         continue;
       }
 
-      Changed |= runOnMachineInstr(MI);
+      runOnMachineInstr(MI);
       NeedNopBeforeSetVGPRMSB = false;
 
       if (ClauseRemaining)
