@@ -1,7 +1,5 @@
 // RUN: mlir-opt -affine-simplify-with-bounds %s | FileCheck %s
 
-// -----
-
 // CHECK-LABEL: func @many_to_one_static_tail
 // CHECK-SAME:    %[[A:.*]]: index, %[[B:.*]]: index, %[[C:.*]]: index
 // CHECK-DAG:     %[[LIN:.*]] = affine.linearize_index disjoint [%[[B]], %[[C]]] by (8, 8)
@@ -118,6 +116,19 @@ func.func @many_to_one_no_outer_bound(%a: index, %b: index, %c: index) -> (index
 func.func @one_to_many_no_outer_bound(%a: index, %b: index) -> (index, index, index) {
   %0 = affine.linearize_index disjoint [%a, %b] by (64) : index
   %1:3 = affine.delinearize_index %0 into (8, 8) : index, index, index
+  return %1#0, %1#1, %1#2 : index, index, index
+}
+
+// -----
+
+// Partial match with empty residual linearize.
+// CHECK-LABEL: func @partial_match_empty_residual_lin
+// CHECK-SAME:    %[[A:.*]]: index, %[[B:.*]]: index
+// CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
+// CHECK:         return %[[C0]], %[[A]], %[[B]]
+func.func @partial_match_empty_residual_lin(%a: index, %b: index) -> (index, index, index) {
+  %0 = affine.linearize_index disjoint [%a, %b] by (4, 8) : index
+  %1:3 = affine.delinearize_index %0 into (10, 4, 8) : index, index, index
   return %1#0, %1#1, %1#2 : index, index, index
 }
 

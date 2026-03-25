@@ -1,4 +1,4 @@
-//===- SimplifyAffineIndexOps.cpp - Simplify affine index ops -------------===//
+//===- SimplifyAffineWithBounds.cpp ---------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -45,14 +45,38 @@ buildProductVariable(ArrayRef<OpFoldResult> bases, MLIRContext *ctx) {
   return ValueBoundsConstraintSet::Variable(productMap, operands);
 }
 
-/// Check if two groups of basis elements have equal products using value bounds
-/// analysis.
-static bool areProductsEqual(ArrayRef<OpFoldResult> lhs,
-                             ArrayRef<OpFoldResult> rhs, MLIRContext *ctx) {
-  auto lhsVar = buildProductVariable(lhs, ctx);
-  auto rhsVar = buildProductVariable(rhs, ctx);
-  FailureOr<bool> result = ValueBoundsConstraintSet::areEqual(lhsVar, rhsVar);
-  return succeeded(result) && *result;
+/// Try to find k consecutive elements from `lhs` (starting from tail offset)
+/// whose product equals the single next element from `rhs`.
+/// The product is accumulated incrementally to avoid redundant computation.
+/// Returns the number of matched elements k, or std::nullopt if no match.
+static std::optional<size_t> tryMatchProduct(ArrayRef<OpFoldResult> lhs,
+                                             size_t lhsTailConsumed,
+                                             ArrayRef<OpFoldResult> rhs,
+                                             size_t rhsTailConsumed,
+                                             MLIRContext *ctx) {
+  auto rhsVar =
+      buildProductVariable(rhs.slice(rhs.size() - rhsTailConsumed - 1, 1), ctx);
+
+  AffineExpr productExpr = getAffineConstantExpr(1, ctx);
+  SmallVector<Value> operands;
+
+  for (size_t k = 1; k + lhsTailConsumed <= lhs.size(); ++k) {
+    OpFoldResult basis = lhs[lhs.size() - lhsTailConsumed - k];
+    if (auto attr = dyn_cast<Attribute>(basis)) {
+      int64_t val = cast<IntegerAttr>(attr).getInt();
+      productExpr = productExpr * getAffineConstantExpr(val, ctx);
+    } else {
+      operands.push_back(cast<Value>(basis));
+      productExpr = productExpr * getAffineSymbolExpr(operands.size() - 1, ctx);
+    }
+
+    AffineMap productMap = AffineMap::get(0, operands.size(), productExpr, ctx);
+    ValueBoundsConstraintSet::Variable lhsVar(productMap, operands);
+    FailureOr<bool> result = ValueBoundsConstraintSet::areEqual(lhsVar, rhsVar);
+    if (succeeded(result) && *result)
+      return k;
+  }
+  return std::nullopt;
 }
 
 namespace {
@@ -79,7 +103,7 @@ namespace {
 ///   %result = [%prefix#0, %prefix#1, %tail]
 struct SimplifyDelinearizeOfLinearizeDisjointManyToOneTail final
     : OpRewritePattern<AffineDelinearizeIndexOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(AffineDelinearizeIndexOp delinearizeOp,
                                 PatternRewriter &rewriter) const override {
@@ -108,26 +132,13 @@ struct SimplifyDelinearizeOfLinearizeDisjointManyToOneTail final
     while (linTailConsumed < linBasis.size() &&
            delinTailConsumed < delinBasis.size()) {
       // Try matching k linearize dimensions to one delinearize dimension.
-      bool found = false;
-      for (size_t k = 1; k + linTailConsumed <= linBasis.size(); ++k) {
-        // Get the next k linearize dimensions from the tail.
-        ArrayRef<OpFoldResult> linSlice =
-            ArrayRef(linBasis).slice(linBasis.size() - linTailConsumed - k, k);
-        // Get the next one delinearize dimension from the tail.
-        ArrayRef<OpFoldResult> delinSlice =
-            ArrayRef(delinBasis)
-                .slice(delinBasis.size() - delinTailConsumed - 1, 1);
-
-        if (areProductsEqual(linSlice, delinSlice, ctx)) {
-          groupLinCounts.push_back(k);
-          linTailConsumed += k;
-          delinTailConsumed += 1;
-          found = true;
-          break;
-        }
-      }
-      if (!found)
+      std::optional<size_t> k = tryMatchProduct(
+          linBasis, linTailConsumed, delinBasis, delinTailConsumed, ctx);
+      if (!k)
         break;
+      groupLinCounts.push_back(*k);
+      linTailConsumed += *k;
+      delinTailConsumed += 1;
     }
 
     if (delinTailConsumed == 0)
@@ -172,17 +183,17 @@ struct SimplifyDelinearizeOfLinearizeDisjointManyToOneTail final
     // Produce one result per matched group. If the group size is 1,
     // the input passes through directly. Otherwise, a smaller linearize is
     // created over just that group's basis elements.
-    ValueRange matchedInputs = linInputs.take_back(linTailConsumed);
-    ArrayRef<OpFoldResult> matchedBasis =
-        ArrayRef(linBasis).take_back(linTailConsumed);
+    size_t inputMatchStart = linInputs.size() - linTailConsumed;
+    size_t basisMatchStart = linBasis.size() - linTailConsumed;
     size_t offset = 0;
     for (size_t count : llvm::reverse(groupLinCounts)) {
       if (count == 1) {
-        results.push_back(matchedInputs[offset]);
+        results.push_back(linInputs[inputMatchStart + offset]);
       } else {
         Value newLin = AffineLinearizeIndexOp::create(
-            rewriter, linearizeOp.getLoc(), matchedInputs.slice(offset, count),
-            matchedBasis.slice(offset, count),
+            rewriter, linearizeOp.getLoc(),
+            linInputs.slice(inputMatchStart + offset, count),
+            ArrayRef(linBasis).slice(basisMatchStart + offset, count),
             /*disjoint=*/true);
         results.push_back(newLin);
       }
@@ -215,7 +226,7 @@ struct SimplifyDelinearizeOfLinearizeDisjointManyToOneTail final
 ///   %result = [%prefix#0, %prefix#1, %prefix#2, %tail#0, %tail#1]
 struct SimplifyDelinearizeOfLinearizeDisjointOneToManyTail final
     : OpRewritePattern<AffineDelinearizeIndexOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(AffineDelinearizeIndexOp delinearizeOp,
                                 PatternRewriter &rewriter) const override {
@@ -244,26 +255,13 @@ struct SimplifyDelinearizeOfLinearizeDisjointOneToManyTail final
     while (linTailConsumed < linBasis.size() &&
            delinTailConsumed < delinBasis.size()) {
       // Try matching k delinearize dimensions to one linearize dimension.
-      bool found = false;
-      for (size_t k = 1; k + delinTailConsumed <= delinBasis.size(); ++k) {
-        // Get the next one linearize dimension from the tail.
-        ArrayRef<OpFoldResult> linSlice =
-            ArrayRef(linBasis).slice(linBasis.size() - linTailConsumed - 1, 1);
-        // Get the next k delinearize dimensions from the tail.
-        ArrayRef<OpFoldResult> delinSlice =
-            ArrayRef(delinBasis)
-                .slice(delinBasis.size() - delinTailConsumed - k, k);
-
-        if (areProductsEqual(linSlice, delinSlice, ctx)) {
-          groupDelinCounts.push_back(k);
-          linTailConsumed += 1;
-          delinTailConsumed += k;
-          found = true;
-          break;
-        }
-      }
-      if (!found)
+      std::optional<size_t> k = tryMatchProduct(delinBasis, delinTailConsumed,
+                                                linBasis, linTailConsumed, ctx);
+      if (!k)
         break;
+      groupDelinCounts.push_back(*k);
+      delinTailConsumed += *k;
+      linTailConsumed += 1;
     }
 
     if (linTailConsumed == 0)
@@ -309,18 +307,18 @@ struct SimplifyDelinearizeOfLinearizeDisjointOneToManyTail final
     // Produce results for each matched group. If the group size is 1, the
     // input passes through directly. Otherwise, a smaller delinearize is
     // created over just that group's basis elements.
-    ValueRange matchedInputs = linInputs.take_back(linTailConsumed);
-    ArrayRef<OpFoldResult> matchedDelinBasis =
-        ArrayRef(delinBasis).take_back(delinTailConsumed);
+    size_t linMatchStart = linInputs.size() - linTailConsumed;
+    size_t delinMatchStart = delinBasis.size() - delinTailConsumed;
     size_t inputOffset = 0;
     size_t delinOffset = 0;
     for (size_t count : llvm::reverse(groupDelinCounts)) {
       if (count == 1) {
-        results.push_back(matchedInputs[inputOffset]);
+        results.push_back(linInputs[linMatchStart + inputOffset]);
       } else {
         auto newDelin = AffineDelinearizeIndexOp::create(
-            rewriter, delinearizeOp.getLoc(), matchedInputs[inputOffset],
-            matchedDelinBasis.slice(delinOffset, count),
+            rewriter, delinearizeOp.getLoc(),
+            linInputs[linMatchStart + inputOffset],
+            ArrayRef(delinBasis).slice(delinMatchStart + delinOffset, count),
             /*hasOuterBound=*/true);
         results.append(newDelin.getResults().begin(),
                        newDelin.getResults().end());
