@@ -194,7 +194,7 @@ let Attributes = [NoThrow, RequireDeclaration], Languages = "ALL_MS_LANGUAGES", 
 	def _InterlockedAdd64         : AArch64NoPrefixTargetLibBuiltin<"long long int (long long int volatile *, long long int)">;
 	def _InterlockedAnd64         : AArch64NoPrefixTargetLibBuiltin<"long long int (long long int volatile *, long long int)">;
 	def _InterlockedDecrement64   : AArch64NoPrefixTargetLibBuiltin<"long long int (long long int volatile *)">;
-	def _InterlockedExchange64    : AArch6  4NoPrefixTargetLibBuiltin<"long long int (long long int volatile *, long long int)">;
+	def _InterlockedExchange64    : AArch64NoPrefixTargetLibBuiltin<"long long int (long long int volatile *, long long int)">;
 	def _InterlockedExchangeAdd64 : AArch64NoPrefixTargetLibBuiltin<"long long int (long long int volatile *, long long int)">;
 	def _InterlockedExchangeSub64 : AArch64NoPrefixTargetLibBuiltin<"long long int (long long int volatile *, long long int)">;
 	def _InterlockedIncrement64   : AArch64NoPrefixTargetLibBuiltin<"long long int (long long int volatile *)">;
@@ -215,12 +215,12 @@ let Attributes = [NoThrow, RequireDeclaration], Languages = "ALL_MS_LANGUAGES", 
 	def _InterlockedExchangeAdd_acq   : AArch64NoPrefixTargetLibBuiltin<"msint32_t (msint32_t volatile *, msint32_t)">;
 	def _InterlockedExchangeAdd_rel   : AArch64NoPrefixTargetLibBuiltin<"msint32_t (msint32_t volatile *, msint32_t)">;
 	def _InterlockedExchangeAdd_nf    : AArch64NoPrefixTargetLibBuiltin<"msint32_t (msint32_t volatile *, msint32_t)">;
-	def _InterlockedExchangeAdd8_acq  : AArch64NoPrefi        xTargetLibBuiltin<"char (char volatile *, char)">;
+	def _InterlockedExchangeAdd8_acq  : AArch64NoPrefixTargetLibBuiltin<"char (char volatile *, char)">;
 	def _InterlockedExchangeAdd8_rel  : AArch64NoPrefixTargetLibBuiltin<"char (char volatile *, char)">;
 	def _InterlockedExchangeAdd8_nf   : AArch64NoPrefixTargetLibBuiltin<"char (char volatile *, char)">;
 	def _InterlockedExchangeAdd16_acq : AArch64NoPrefixTargetLibBuiltin<"short (short volatile *, short)">;
 	def _InterlockedExchangeAdd16_rel : AArch64NoPrefixTargetLibBuiltin<"short (short volatile *, short)">;
-	def _InterlockedExchangeAdd16_nf  : AArch64NoPrefixT  argetLibBuiltin<"short (short volatile *, short)">;
+	def _InterlockedExchangeAdd16_nf  : AArch64NoPrefixTargetLibBuiltin<"short (short volatile *, short)">;
 	def _InterlockedExchangeAdd64_acq : AArch64NoPrefixTargetLibBuiltin<"long long int (long long int volatile *, long long int)">;
 	def _InterlockedExchangeAdd64_rel : AArch64NoPrefixTargetLibBuiltin<"long long int (long long int volatile *, long long int)">;
 	def _InterlockedExchangeAdd64_nf  : AArch64NoPrefixTargetLibBuiltin<"long long int (long long int volatile *, long long int)">;
