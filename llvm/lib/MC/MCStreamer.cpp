@@ -386,7 +386,7 @@ void MCStreamer::emitEHSymAttributes(const MCSymbol *Symbol,
                                      MCSymbol *EHSymbol) {
 }
 
-void MCStreamer::initSections(bool NoExecStack, const MCSubtargetInfo &STI) {
+void MCStreamer::initSections(const MCSubtargetInfo &STI) {
   switchSectionNoPrint(getContext().getObjectFileInfo()->getTextSection());
 }
 

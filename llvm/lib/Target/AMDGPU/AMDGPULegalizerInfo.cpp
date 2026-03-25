@@ -1203,6 +1203,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   auto &FPToISat = getActionDefinitionsBuilder({G_FPTOSI_SAT, G_FPTOUI_SAT})
     .legalFor({{S32, S32}, {S32, S64}})
     .narrowScalarFor({{S64, S16}}, changeTo(0, S32));
+  if (ST.has16BitInsts())
+    FPToISat.legalFor({{S16, S16}});
+
   FPToISat.minScalar(1, S32);
   FPToISat.minScalar(0, S32)
        .widenScalarToNextPow2(0, 32)
@@ -6300,7 +6303,7 @@ bool AMDGPULegalizerInfo::getLDSKernelId(Register DstReg,
                                          MachineIRBuilder &B) const {
   Function &F = B.getMF().getFunction();
   std::optional<uint32_t> KnownSize =
-      AMDGPUMachineFunction::getLDSKernelIdMetadata(F);
+      AMDGPUMachineFunctionInfo::getLDSKernelIdMetadata(F);
   if (KnownSize.has_value())
     B.buildConstant(DstReg, *KnownSize);
   return false;

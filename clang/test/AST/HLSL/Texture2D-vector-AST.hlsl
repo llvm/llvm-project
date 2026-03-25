@@ -57,6 +57,23 @@
 // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<int, 2>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, 2>'
 // CHECK-NEXT: AlwaysInlineAttr
 
+// CHECK: CXXMethodDecl {{.*}} operator[] 'vector<element_type, element_count> const hlsl_device &(vector<unsigned int, 2>) const' inline
+// CHECK-NEXT: ParmVarDecl {{.*}} Index 'vector<unsigned int, 2>'
+// CHECK-NEXT: CompoundStmt
+// CHECK-NEXT: ReturnStmt
+// CHECK-NEXT: UnaryOperator {{.*}} 'vector<element_type, element_count> hlsl_device' lvalue prefix '*' cannot overflow
+// CHECK-NEXT: CStyleCastExpr {{.*}} 'vector<element_type, element_count> hlsl_device *' <Dependent>
+// CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
+// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
+// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-SAME{LITERAL}: [[hlsl::contained_type(vector<element_type, element_count>)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME: ' lvalue .__handle
+// CHECK-NEXT: CXXThisExpr {{.*}} 'const hlsl::Texture2D<vector<element_type, element_count>>' lvalue implicit this
+// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<unsigned int, 2>' lvalue ParmVar {{.*}} 'Index' 'vector<unsigned int, 2>'
+// CHECK-NEXT: AlwaysInlineAttr
+
 // CHECK: CXXMethodDecl {{.*}} Sample 'vector<element_type, element_count> (hlsl::SamplerState, vector<float, 2>)'
 // CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
 // CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'

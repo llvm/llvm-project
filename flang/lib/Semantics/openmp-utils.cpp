@@ -205,6 +205,28 @@ bool IsStructureComponent(const Symbol &sym) {
   return sym.owner().kind() == Scope::Kind::DerivedType;
 }
 
+bool IsPrivatizable(const Symbol &sym) {
+  auto *misc{sym.detailsIf<MiscDetails>()};
+  return IsVariableName(sym) && !IsProcedure(sym) && !IsStmtFunction(sym) &&
+      !IsNamedConstant(sym) &&
+      ( // OpenMP 5.2, 5.1.1: Assumed-size arrays are shared
+          !semantics::IsAssumedSizeArray(sym) ||
+          // If CrayPointer is among the DSA list then the
+          // CrayPointee is Privatizable
+          sym.test(Symbol::Flag::CrayPointee)) &&
+      !sym.owner().IsDerivedType() &&
+      sym.owner().kind() != Scope::Kind::ImpliedDos &&
+      sym.owner().kind() != Scope::Kind::Forall &&
+      !sym.detailsIf<semantics::AssocEntityDetails>() &&
+      !sym.detailsIf<semantics::NamelistDetails>() &&
+      (!misc ||
+          (misc->kind() != MiscDetails::Kind::ComplexPartRe &&
+              misc->kind() != MiscDetails::Kind::ComplexPartIm &&
+              misc->kind() != MiscDetails::Kind::KindParamInquiry &&
+              misc->kind() != MiscDetails::Kind::LenParamInquiry &&
+              misc->kind() != MiscDetails::Kind::ConstructName));
+}
+
 bool IsVarOrFunctionRef(const MaybeExpr &expr) {
   if (expr) {
     return evaluate::UnwrapProcedureRef(*expr) != nullptr ||
@@ -396,7 +418,7 @@ struct DesignatorCollector : public evaluate::Traverse<DesignatorCollector,
   }
 };
 
-std::vector<SomeExpr> GetAllDesignators(const SomeExpr &expr) {
+std::vector<SomeExpr> GetTopLevelDesignators(const SomeExpr &expr) {
   return DesignatorCollector{}(expr);
 }
 
@@ -458,7 +480,7 @@ static bool HasCommonTopLevelDesignators(
   // Compare designators directly as expressions. This will ensure
   // that x(y) and x(y+1) are not flagged as overlapping, whereas
   // the symbol vectors for both of these would be identical.
-  std::vector<SomeExpr> otherDsgs{GetAllDesignators(other)};
+  std::vector<SomeExpr> otherDsgs{GetTopLevelDesignators(other)};
 
   for (auto &s : baseDsgs) {
     if (llvm::any_of(otherDsgs, [&](auto &&t) { return s == t; })) {
@@ -471,7 +493,7 @@ static bool HasCommonTopLevelDesignators(
 const SomeExpr *HasStorageOverlap(
     const SomeExpr &base, llvm::ArrayRef<SomeExpr> exprs) {
   evaluate::SymbolVector baseSyms{evaluate::GetSymbolVector(base)};
-  std::vector<SomeExpr> baseDsgs{GetAllDesignators(base)};
+  std::vector<SomeExpr> baseDsgs{GetTopLevelDesignators(base)};
 
   for (const SomeExpr &expr : exprs) {
     if (!HasCommonDesignatorSymbols(baseSyms, expr)) {
@@ -532,12 +554,37 @@ MaybeExpr MakeEvaluateExpr(const parser::OmpStylizedInstance &inp) {
       instance.u);
 }
 
+static const auto MsgNotValidAffectedLoop{
+    "%s is not a valid affected loop"_because_en_US};
+static const auto MsgClauseAbsentAssume{
+    "%s clause was not specified, %s is assumed"_because_en_US};
+static const auto MsgConstructDoesNotResult{
+    "%s does not result in %s"_because_en_US};
+
+Reason::Reason(const Reason &other) { //
+  CopyFrom(other);
+}
+
+Reason &Reason::operator=(const Reason &other) {
+  if (this != &other) {
+    msgs.clear();
+    CopyFrom(other);
+  }
+  return *this;
+}
+
+void Reason::CopyFrom(const Reason &other) {
+  for (auto &msg : other.msgs.messages()) {
+    msgs.Say(parser::Message(msg));
+  }
+}
+
 parser::Message &Reason::AttachTo(parser::Message &msg) {
   msgs.AttachTo(msg);
   return msg;
 }
 
-std::pair<std::optional<int64_t>, Reason> GetArgumentValueWithReason(
+WithReason<int64_t> GetArgumentValueWithReason(
     const parser::OmpDirectiveSpecification &spec, llvm::omp::Clause clauseId,
     unsigned version) {
   if (auto *clause{parser::omp::FindClause(spec, clauseId)}) {
@@ -547,30 +594,29 @@ std::pair<std::optional<int64_t>, Reason> GetArgumentValueWithReason(
         Reason reason;
         reason.Say(clause->source,
             "%s clause was specified with argument %" PRId64 ""_because_en_US,
-            name.c_str(), *value);
+            name, *value);
         return {*value, std::move(reason)};
       }
     }
   }
-  return {std::nullopt, Reason()};
+  return {};
 }
 
 template <typename T>
-static std::pair<std::optional<int64_t>, Reason>
-GetNumArgumentsWithReasonForType(
+static WithReason<int64_t> GetNumArgumentsWithReasonForType(
     const parser::OmpClause &clause, const std::string &name) {
   if (auto *args{parser::Unwrap<std::list<T>>(clause.u)}) {
     auto num{static_cast<int64_t>(args->size())};
     Reason reason;
     reason.Say(clause.source,
         "%s clause was specified with %" PRId64 " arguments"_because_en_US,
-        name.c_str(), num);
+        name, num);
     return {num, std::move(reason)};
   }
-  return {std::nullopt, Reason()};
+  return {};
 }
 
-std::pair<std::optional<int64_t>, Reason> GetNumArgumentsWithReason(
+WithReason<int64_t> GetNumArgumentsWithReason(
     const parser::OmpDirectiveSpecification &spec, llvm::omp::Clause clauseId,
     unsigned version) {
   if (auto *clause{parser::omp::FindClause(spec, clauseId)}) {
@@ -578,22 +624,18 @@ std::pair<std::optional<int64_t>, Reason> GetNumArgumentsWithReason(
     // Try the types used for list items.
     {
       using Ty = parser::ScalarIntExpr;
-      if (auto [num, reason]{
-              GetNumArgumentsWithReasonForType<Ty>(*clause, name)};
-          num) {
-        return {num, std::move(reason)};
+      if (auto n{GetNumArgumentsWithReasonForType<Ty>(*clause, name)}) {
+        return n;
       }
     }
     {
       using Ty = parser::ScalarIntConstantExpr;
-      if (auto [num, reason]{
-              GetNumArgumentsWithReasonForType<Ty>(*clause, name)};
-          num) {
-        return {num, std::move(reason)};
+      if (auto n{GetNumArgumentsWithReasonForType<Ty>(*clause, name)}) {
+        return n;
       }
     }
   }
-  return {std::nullopt, Reason()};
+  return {};
 }
 
 bool IsLoopTransforming(llvm::omp::Directive dir) {
@@ -775,6 +817,9 @@ bool IsTransformableLoop(const parser::DoConstruct &loop) {
 }
 
 bool IsTransformableLoop(const parser::OpenMPLoopConstruct &omp) {
+  if (IsFullUnroll(omp)) {
+    return false;
+  }
   return IsLoopTransforming(omp.BeginDir().DirId());
 }
 
@@ -788,12 +833,27 @@ bool IsTransformableLoop(const parser::ExecutionPartConstruct &epc) {
   return false;
 }
 
+template <typename T,
+    typename = std::enable_if_t<std::is_arithmetic_v<llvm::remove_cvref_t<T>>>>
+WithReason<T> operator+(const WithReason<T> &a, const WithReason<T> &b) {
+  if (a.value && b.value) {
+    return WithReason<T>{
+        *a.value + *b.value, Reason().Append(a.reason).Append(b.reason)};
+  }
+  return WithReason<T>();
+}
+
+template <typename T,
+    typename = std::enable_if_t<std::is_arithmetic_v<llvm::remove_cvref_t<T>>>>
+WithReason<T> operator+(T a, const WithReason<T> &b) {
+  return WithReason<T>{a, Reason()} + b;
+}
+
 // Return the depth of the affected nests:
 //   {affected-depth, must-be-perfect-nest}.
-std::tuple<std::optional<int64_t>, bool, Reason> GetAffectedNestDepthWithReason(
-    const parser::OpenMPLoopConstruct &x, unsigned version) {
-  const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
-  llvm::omp::Directive dir{beginSpec.DirId()};
+std::pair<WithReason<int64_t>, bool> GetAffectedNestDepthWithReason(
+    const parser::OmpDirectiveSpecification &spec, unsigned version) {
+  llvm::omp::Directive dir{spec.DirId()};
   bool allowsCollapse{llvm::omp::isAllowedClauseForDirective(
       dir, llvm::omp::Clause::OMPC_collapse, version)};
   bool allowsOrdered{llvm::omp::isAllowedClauseForDirective(
@@ -801,62 +861,58 @@ std::tuple<std::optional<int64_t>, bool, Reason> GetAffectedNestDepthWithReason(
 
   if (allowsCollapse || allowsOrdered) {
     auto [count, reason]{GetArgumentValueWithReason(
-        beginSpec, llvm::omp::Clause::OMPC_collapse, version)};
+        spec, llvm::omp::Clause::OMPC_collapse, version)};
     auto [vo, ro]{GetArgumentValueWithReason(
-        beginSpec, llvm::omp::Clause::OMPC_ordered, version)};
+        spec, llvm::omp::Clause::OMPC_ordered, version)};
     if (vo) {
       if (!count || *count < *vo) {
         count = vo;
         reason = std::move(ro);
       }
     }
-    return {count, true, std::move(reason)};
+    return {{count, std::move(reason)}, true};
   }
 
   if (IsLoopTransforming(dir)) {
     switch (dir) {
     case llvm::omp::Directive::OMPD_interchange: {
       // Get the length of the argument list to PERMUTATION.
-      if (parser::omp::FindClause(
-              beginSpec, llvm::omp::Clause::OMPC_permutation)) {
+      if (parser::omp::FindClause(spec, llvm::omp::Clause::OMPC_permutation)) {
         auto [num, reason]{GetNumArgumentsWithReason(
-            beginSpec, llvm::omp::Clause::OMPC_permutation, version)};
-        return {num, true, std::move(reason)};
+            spec, llvm::omp::Clause::OMPC_permutation, version)};
+        return {{num, std::move(reason)}, true};
       }
       // PERMUTATION not specified, assume PERMUTATION(2, 1).
       std::string name{parser::omp::GetUpperName(
           llvm::omp::Clause::OMPC_permutation, version)};
       Reason reason;
-      reason.Say(beginSpec.source,
-          "%s clause was not specified, %s(2, 1) was assumed"_because_en_US,
-          name.c_str(), name.c_str());
-      return {2, true, std::move(reason)};
+      reason.Say(
+          spec.source, MsgClauseAbsentAssume, name, "a permutation (2, 1)");
+      return {{2, std::move(reason)}, true};
     }
     case llvm::omp::Directive::OMPD_stripe:
     case llvm::omp::Directive::OMPD_tile: {
       // Get the length of the argument list to SIZES.
       auto [num, reason]{GetNumArgumentsWithReason(
-          beginSpec, llvm::omp::Clause::OMPC_sizes, version)};
-      return {num, true, std::move(reason)};
+          spec, llvm::omp::Clause::OMPC_sizes, version)};
+      return {{num, std::move(reason)}, true};
     }
     case llvm::omp::Directive::OMPD_fuse: {
       // Get the value from the argument to DEPTH.
-      if (parser::omp::FindClause(beginSpec, llvm::omp::Clause::OMPC_depth)) {
+      if (parser::omp::FindClause(spec, llvm::omp::Clause::OMPC_depth)) {
         auto [count, reason]{GetArgumentValueWithReason(
-            beginSpec, llvm::omp::Clause::OMPC_depth, version)};
-        return {count, true, std::move(reason)};
+            spec, llvm::omp::Clause::OMPC_depth, version)};
+        return {{count, std::move(reason)}, true};
       }
       std::string name{
           parser::omp::GetUpperName(llvm::omp::Clause::OMPC_depth, version)};
       Reason reason;
-      reason.Say(beginSpec.source,
-          "%s clause was not specified, a value of 1 was assumed"_because_en_US,
-          name.c_str());
-      return {1, true, std::move(reason)};
+      reason.Say(spec.source, MsgClauseAbsentAssume, name, "a value of 1");
+      return {{1, std::move(reason)}, true};
     }
     case llvm::omp::Directive::OMPD_reverse:
     case llvm::omp::Directive::OMPD_unroll:
-      return {1, false, Reason()};
+      return {WithReason<int64_t>(1), false};
     // TODO: case llvm::omp::Directive::OMPD_flatten:
     // TODO: case llvm::omp::Directive::OMPD_split:
     default:
@@ -864,26 +920,24 @@ std::tuple<std::optional<int64_t>, bool, Reason> GetAffectedNestDepthWithReason(
     }
   }
 
-  return {std::nullopt, false, Reason()};
+  return {{}, false};
 }
 
 // Return the range of the affected nests in the sequence:
 //   {first, count, std::move(reason)}.
-std::tuple<std::optional<int64_t>, std::optional<int64_t>, Reason>
-GetAffectedLoopRangeWithReason(
-    const parser::OpenMPLoopConstruct &x, unsigned version) {
-  const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
-  llvm::omp::Directive dir{beginSpec.DirId()};
+WithReason<std::pair<int64_t, int64_t>> GetAffectedLoopRangeWithReason(
+    const parser::OmpDirectiveSpecification &spec, unsigned version) {
+  llvm::omp::Directive dir{spec.DirId()};
 
   if (dir == llvm::omp::Directive::OMPD_fuse) {
     std::string name{GetUpperName(llvm::omp::Clause::OMPC_looprange, version)};
-    if (auto *clause{parser::omp::FindClause(
-            beginSpec, llvm::omp::Clause::OMPC_looprange)}) {
+    if (auto *clause{
+            parser::omp::FindClause(spec, llvm::omp::Clause::OMPC_looprange)}) {
       auto &range{DEREF(parser::Unwrap<parser::OmpLooprangeClause>(clause->u))};
       std::optional<int64_t> first{GetIntValue(std::get<0>(range.t))};
       std::optional<int64_t> count{GetIntValue(std::get<1>(range.t))};
       if (!first || !count || *first <= 0 || *count <= 0) {
-        return {std::nullopt, std::nullopt, Reason()};
+        return {};
       }
       std::string name{parser::omp::GetUpperName(
           llvm::omp::Clause::OMPC_looprange, version)};
@@ -891,23 +945,22 @@ GetAffectedLoopRangeWithReason(
       reason.Say(clause->source,
           "%s clause was specified with a count of %" PRId64
           " starting at loop %" PRId64 ""_because_en_US,
-          name.c_str(), *count, *first);
-      return {*first, *count, std::move(reason)};
+          name, *count, *first);
+      return {std::make_pair(*first, *count), std::move(reason)};
     }
     // If LOOPRANGE was not found, return {1, -1}, where -1 means "the whole
     // associated sequence".
     Reason reason;
-    reason.Say(x.source,
-        "%s clause was not specified, a value of 1 was assumed"_because_en_US,
-        name.c_str());
-    return {1, -1, std::move(reason)};
+    reason.Say(
+        spec.source, MsgClauseAbsentAssume, name, "the entire loop sequence");
+    return {std::make_pair(1, -1), std::move(reason)};
   }
 
   assert(llvm::omp::getDirectiveAssociation(dir) ==
           llvm::omp::Association::LoopNest &&
       "Expecting loop-nest-associated construct");
   // For loop-nest constructs, a single loop-nest is affected.
-  return {1, 1, Reason()};
+  return {std::make_pair(1, 1), Reason()};
 }
 
 std::optional<int64_t> GetRequiredCount(
@@ -921,6 +974,68 @@ std::optional<int64_t> GetRequiredCount(
   }
   return std::nullopt;
 }
+
+std::optional<int64_t> GetRequiredCount(
+    std::optional<std::pair<int64_t, int64_t>> range) {
+  if (range) {
+    return GetRequiredCount(range->first, range->second);
+  }
+  return GetRequiredCount(std::nullopt, std::nullopt);
+}
+
+#ifdef EXPENSIVE_CHECKS
+namespace {
+/// Check that for every value x of type T, there will be a "source" member
+/// somewhere in x. This is to specifically make sure that parser::GetSource
+/// will return something for any parser::ExecutionPartConstruct.
+
+template <typename...> struct HasSourceT {
+  static constexpr bool value{false};
+};
+
+template <typename T> struct HasSourceT<T> {
+private:
+  using U = llvm::remove_cvref_t<T>;
+
+  static constexpr bool check() {
+    if constexpr (parser::HasSource<U>::value) {
+      return true;
+    } else if constexpr (ConstraintTrait<U>) {
+      return HasSourceT<decltype(U::thing)>::value;
+    } else if constexpr (WrapperTrait<U>) {
+      return HasSourceT<decltype(U::v)>::value;
+    } else if constexpr (TupleTrait<U>) {
+      return HasSourceT<decltype(U::t)>::value;
+    } else if constexpr (UnionTrait<U>) {
+      return HasSourceT<decltype(U::u)>::value;
+    } else {
+      return false;
+    }
+  }
+
+public:
+  static constexpr bool value{check()};
+};
+
+template <> struct HasSourceT<parser::ErrorRecovery> {
+  static constexpr bool value{true};
+};
+
+template <typename T> struct HasSourceT<common::Indirection<T>> {
+  static constexpr bool value{HasSourceT<T>::value};
+};
+
+template <typename... Ts> struct HasSourceT<std::tuple<Ts...>> {
+  static constexpr bool value{(HasSourceT<Ts>::value || ...)};
+};
+
+template <typename... Ts> struct HasSourceT<std::variant<Ts...>> {
+  static constexpr bool value{(HasSourceT<Ts>::value && ...)};
+};
+
+static_assert(HasSourceT<parser::ExecutionPartConstruct>::value);
+} // namespace
+#endif // EXPENSIVE_CHECKS
 
 LoopSequence::LoopSequence(const parser::ExecutionPartConstruct &root,
     unsigned version, bool allowAllLoops)
@@ -948,10 +1063,11 @@ std::unique_ptr<LoopSequence::Construct> LoopSequence::createConstructEntry(
       return std::make_unique<Construct>(body, &code);
     }
   } else if (auto *omp{parser::Unwrap<parser::OpenMPLoopConstruct>(code)}) {
-    if (IsTransformableLoop(*omp)) {
-      auto &body{std::get<parser::Block>(omp->t)};
-      return std::make_unique<Construct>(body, &code);
-    }
+    // Allow all loop constructs. This helps with better diagnostics, e.g.
+    // "this is not a loop-transforming construct", insted of just "this is
+    // not a valid intervening code".
+    auto &body{std::get<parser::Block>(omp->t)};
+    return std::make_unique<Construct>(body, &code);
   }
 
   return nullptr;
@@ -960,6 +1076,7 @@ std::unique_ptr<LoopSequence::Construct> LoopSequence::createConstructEntry(
 void LoopSequence::createChildrenFromRange(
     ExecutionPartIterator::IteratorType begin,
     ExecutionPartIterator::IteratorType end) {
+  bool invalidWithEntry{false};
   // Create children. If there is zero or one, this LoopSequence could be
   // a nest. If there are more, it could be a proper sequence. In the latter
   // case any code between consecutive children must be "transparent".
@@ -967,13 +1084,20 @@ void LoopSequence::createChildrenFromRange(
     if (auto entry{createConstructEntry(code)}) {
       children_.push_back(
           LoopSequence(std::move(entry), version_, allowAllLoops_));
-      if (!IsTransformableLoop(code)) {
-        hasInvalidIC_ = true;
-        hasOpaqueIC_ = true;
+      // Even when DO WHILE et al are allowed to have entries, still treat
+      // them as invalid intervening code.
+      // Give it priority over other kinds of invalid interveninig code.
+      if (!invalidWithEntry && !IsTransformableLoop(code)) {
+        invalidIC_ = &code;
+        invalidWithEntry = true;
       }
     } else {
-      hasInvalidIC_ = hasInvalidIC_ || !IsValidInterveningCode(code);
-      hasOpaqueIC_ = hasOpaqueIC_ || !IsTransparentInterveningCode(code);
+      if (!invalidIC_ && !IsValidInterveningCode(code)) {
+        invalidIC_ = &code;
+      }
+      if (!opaqueIC_ && !IsTransparentInterveningCode(code)) {
+        opaqueIC_ = &code;
+      }
     }
   }
 }
@@ -984,24 +1108,27 @@ void LoopSequence::precalculate() {
   depth_ = calculateDepths();
 }
 
-std::optional<int64_t> LoopSequence::calculateLength() const {
+WithReason<int64_t> LoopSequence::calculateLength() const {
   if (!entry_->owner) {
     return getNestedLength();
   }
   if (parser::Unwrap<parser::DoConstruct>(entry_->owner)) {
-    return 1;
+    return WithReason<int64_t>(1);
   }
 
   auto &omp{DEREF(parser::Unwrap<parser::OpenMPLoopConstruct>(*entry_->owner))};
   const parser::OmpDirectiveSpecification &beginSpec{omp.BeginDir()};
   llvm::omp::Directive dir{beginSpec.DirId()};
   if (!IsLoopTransforming(dir)) {
-    return 0;
+    Reason reason;
+    reason.Say(beginSpec.DirName().source, MsgConstructDoesNotResult,
+        GetUpperName(dir, version_), "a loop nest or a loop sequence");
+    return {0, std::move(reason)};
   }
 
   // TODO: Handle split, apply.
   if (IsFullUnroll(omp)) {
-    return std::nullopt;
+    return {};
   }
 
   auto nestedLength{getNestedLength()};
@@ -1017,24 +1144,33 @@ std::optional<int64_t> LoopSequence::calculateLength() const {
     //   !$omp do         ! error: this should contain a loop (superfluous)
     //   !$omp fuse       ! error: this should contain a loop
     //   !$omp end fuse
-    if (!nestedLength || *nestedLength == 0) {
-      return std::nullopt;
+    if (!nestedLength.value || *nestedLength.value == 0) {
+      return {};
     }
     auto *clause{
         parser::omp::FindClause(beginSpec, llvm::omp::Clause::OMPC_looprange)};
     if (!clause) {
-      return 1;
+      Reason reason;
+      reason.Say(beginSpec.DirName().source, MsgClauseAbsentAssume,
+          GetUpperName(llvm::omp::Clause::OMPC_looprange, version_),
+          "the entire loop sequence");
+      return {1, std::move(reason)};
     }
 
     auto *loopRange{parser::Unwrap<parser::OmpLooprangeClause>(*clause)};
     std::optional<int64_t> count{GetIntValue(std::get<1>(loopRange->t))};
     if (!count || *count <= 0) {
-      return std::nullopt;
+      return {};
     }
-    if (*count <= *nestedLength) {
-      return 1 + *nestedLength - *count;
+    if (*count <= *nestedLength.value) {
+      int64_t result{1 + *nestedLength.value - *count};
+      Reason reason;
+      reason.Say(beginSpec.DirName().source,
+          "Out of %" PRId64 " loops, %" PRId64 " are fused"_because_en_US,
+          *nestedLength.value, *count);
+      return {result, std::move(reason)};
     }
-    return std::nullopt;
+    return {};
   }
 
   if (dir == llvm::omp::Directive::OMPD_nothing) {
@@ -1042,61 +1178,87 @@ std::optional<int64_t> LoopSequence::calculateLength() const {
   }
 
   // For every other loop construct return 1.
-  return 1;
+  return {1, Reason()};
 }
 
-std::optional<int64_t> LoopSequence::getNestedLength() const {
-  int64_t sum{0};
+WithReason<int64_t> LoopSequence::getNestedLength() const {
+  WithReason<int64_t> sum(0);
   for (auto &seq : children_) {
-    if (auto len{seq.length()}) {
-      sum += *len;
+    if (const auto &len{seq.length()}) {
+      sum = sum + len;
     } else {
-      return std::nullopt;
+      return {};
     }
   }
   return sum;
 }
 
-LoopSequence::Depth LoopSequence::calculateDepths() const {
-  auto plus{[](std::optional<int64_t> a,
-                std::optional<int64_t> b) -> std::optional<int64_t> {
-    if (a && b) {
-      return *a + *b;
-    }
-    return std::nullopt;
-  }};
-
-  // The sequence length is calculated first, so we already know if this
-  // sequence is a nest or not.
-  if (!isNest()) {
-    return Depth{0, 0};
+static void ResetIfPositiveWithReason(
+    WithReason<int64_t> &quantity, const Reason &reason) {
+  if (quantity.value > 0) {
+    quantity.value = 0;
+    quantity.reason.Append(reason);
   }
+}
 
-  // Get the length of the nested sequence. The hasInvalidIC_ and hasOpaqueIC_
-  // flags do not count canonical loop nests, but there can only be one for
-  // depth to make sense.
-  std::optional<int64_t> length{getNestedLength()};
+static void ResetIfPositiveWithReason(WithReason<int64_t> &quantity,
+    parser::CharBlock source, parser::MessageFixedText msg) {
+  if (quantity.value > 0) {
+    quantity.value = 0;
+    quantity.reason.Say(source, msg);
+  }
+}
+
+static Reason WhyNotWellFormed(
+    const parser::ExecutionPartConstruct &badCode, bool isSequence);
+
+LoopSequence::Depth LoopSequence::calculateDepths() const {
+  // Get the length of the nested sequence. The invalidIC_ and opaqueIC_
+  // members do not count canonical loop nests, but there can only be one
+  // for depth to make sense.
+  WithReason<int64_t> nestedLength{getNestedLength()};
   // Get the depths of the code nested in this sequence (e.g. contained in
   // entry_), and use it as the basis for the depths of entry_->owner.
   auto [semaDepth, perfDepth]{getNestedDepths()};
-  if (hasInvalidIC_ || length.value_or(0) != 1) {
-    semaDepth = perfDepth = 0;
-  } else if (hasOpaqueIC_ || length.value_or(0) != 1) {
-    perfDepth = 0;
+  if (invalidIC_) {
+    auto whyNot{WhyNotWellFormed(*invalidIC_, false)};
+    ResetIfPositiveWithReason(semaDepth, whyNot);
+    ResetIfPositiveWithReason(perfDepth, whyNot);
+  } else if (opaqueIC_) {
+    auto message{"This code prevents perfect nesting"_because_en_US};
+    parser::CharBlock source{*parser::GetSource(*opaqueIC_)};
+    ResetIfPositiveWithReason(perfDepth, source, message);
+  }
+  if (nestedLength.value.value_or(0) != 1) {
+    // This may simply be the bottom of the loop nest. Only emit messages
+    // if the depths are reset back to 0.
+    if (entry_->owner) {
+      auto message{"This construct does not contain a loop nest"_because_en_US};
+      parser::CharBlock source{*parser::GetSource(*entry_->owner)};
+      ResetIfPositiveWithReason(semaDepth, source, message);
+      ResetIfPositiveWithReason(perfDepth, source, message);
+    }
+    semaDepth.value = perfDepth.value = 0;
   }
 
   if (!entry_->owner) {
     return Depth{semaDepth, perfDepth};
   }
   if (parser::Unwrap<parser::DoConstruct>(entry_->owner)) {
-    return Depth{plus(1, semaDepth), plus(1, perfDepth)};
+    return Depth{int64_t(1) + semaDepth, int64_t(1) + perfDepth};
   }
 
   auto &omp{DEREF(parser::Unwrap<parser::OpenMPLoopConstruct>(*entry_->owner))};
   const parser::OmpDirectiveSpecification &beginSpec{omp.BeginDir()};
   llvm::omp::Directive dir{beginSpec.DirId()};
-  if (!IsTransformableLoop(omp)) {
-    return Depth{0, 0};
+  bool isFullUnroll{IsFullUnroll(omp)};
+
+  // Check full unroll separately.
+  if (!isFullUnroll && !IsTransformableLoop(omp)) {
+    Reason reason;
+    reason.Say(beginSpec.DirName().source,
+        "This construct is not a DO-loop or a loop-nest-generating construct"_because_en_US);
+    return Depth{{0, reason}, {0, reason}};
   }
 
   switch (dir) {
@@ -1107,21 +1269,27 @@ LoopSequence::Depth LoopSequence::calculateDepths() const {
             beginSpec, llvm::omp::Clause::OMPC_depth)}) {
       auto &expr{parser::UnwrapRef<parser::Expr>(clause->u)};
       auto value{GetIntValue(expr)};
-      auto nestedLength{getNestedLength()};
       // The result is a perfect nest only if all loop in the sequence
       // are fused.
-      if (value && nestedLength) {
-        auto [first, count, _]{GetAffectedLoopRangeWithReason(omp, version_)};
-        if (auto required{GetRequiredCount(first, count)}) {
-          if (*required == -1 || *required == *nestedLength) {
+      if (value && nestedLength.value) {
+        auto range{GetAffectedLoopRangeWithReason(beginSpec, version_)};
+        if (auto required{GetRequiredCount(range.value)}) {
+          if (*required == -1 || *required == *nestedLength.value) {
             return Depth{value, value};
           }
-          return Depth{1, 1};
+          std::string name{
+              GetUpperName(llvm::omp::Directive::OMPD_fuse, version_)};
+          Reason reason(std::move(range.reason));
+          reason.Say(beginSpec.DirName().source, MsgConstructDoesNotResult,
+              "This " + name + " construct",
+              "a loop nest, but a proper loop sequence");
+          return Depth{{1, reason}, {1, reason}};
         }
       }
-      return Depth{std::nullopt, std::nullopt};
+      return Depth{};
     }
-    return Depth{1, 1};
+    // FUSE cannot create a nest of depth > 1 without DEPTH clause.
+    return Depth{WithReason<int64_t>(1), WithReason<int64_t>(1)};
   case llvm::omp::Directive::OMPD_interchange:
   case llvm::omp::Directive::OMPD_nothing:
   case llvm::omp::Directive::OMPD_reverse:
@@ -1134,13 +1302,18 @@ LoopSequence::Depth LoopSequence::calculateDepths() const {
       // Return the number of arguments in the SIZES clause
       size_t num{
           parser::UnwrapRef<parser::OmpClause::Sizes>(clause->u).v.size()};
-      return Depth{plus(num, semaDepth), plus(num, perfDepth)};
+      return Depth{//
+          static_cast<int64_t>(num) + semaDepth,
+          static_cast<int64_t>(num) + perfDepth};
     }
     // The SIZES clause is mandatory, if it's missing the result is unknown.
-    return {std::nullopt, std::nullopt};
+    return {};
   case llvm::omp::Directive::OMPD_unroll:
-    if (IsFullUnroll(omp)) {
-      return Depth{0, 0};
+    if (isFullUnroll) {
+      Reason reason;
+      reason.Say(beginSpec.DirName().source, MsgConstructDoesNotResult,
+          "Fully unrolled loop", "a loop nest");
+      return Depth{{0, reason}, {0, reason}};
     }
     // If this is not a full unroll then look for a PARTIAL clause.
     if (auto *clause{parser::omp::FindClause(
@@ -1158,23 +1331,89 @@ LoopSequence::Depth LoopSequence::calculateDepths() const {
       // have either depth greater than 1: if it had a loop nested in it,
       // then after unroll it will have at least two copies it it, making
       // it a final loop.
-      return {1, 1};
+      Reason reason;
+      reason.Say(beginSpec.DirName().source,
+          "Partially unrolled loop cannot form a nest of depth > 1"_because_en_US);
+      return {{1, reason}, {1, reason}};
     }
-    return Depth{std::nullopt, std::nullopt};
+    return Depth{};
   default:
     llvm_unreachable("Expecting loop-transforming construct");
   }
 }
 
 LoopSequence::Depth LoopSequence::getNestedDepths() const {
-  if (length() != 1) {
-    return Depth{0, 0};
+  if (!isNest()) {
+    // If the current sequence is not a nest, it can still be a part of
+    // an enclosing nest.
+    return Depth{WithReason<int64_t>(0), WithReason<int64_t>(0)};
   } else if (children_.empty()) {
+    // No children, but length == 1.
     assert(entry_->owner &&
         parser::Unwrap<parser::DoConstruct>(entry_->owner) &&
         "Expecting DO construct");
-    return Depth{0, 0};
+    return Depth{WithReason<int64_t>(0), WithReason<int64_t>(0)};
   }
   return children_.front().depth_;
+}
+
+static bool IsDoConcurrent(const parser::ExecutionPartConstruct &x) {
+  if (auto *loop{parser::Unwrap<parser::DoConstruct>(x)}) {
+    return loop->IsDoConcurrent();
+  }
+  return false;
+}
+
+static Reason WhyNotWellFormed(
+    const parser::ExecutionPartConstruct &badCode, bool isSequence) {
+  Reason reason;
+  parser::CharBlock source{*parser::GetSource(badCode)};
+  if (auto *omp{parser::Unwrap<parser::OpenMPLoopConstruct>(badCode)}) {
+    if (IsFullUnroll(*omp)) {
+      reason.Say(source, MsgConstructDoesNotResult, "Fully unrolled loop",
+          isSequence ? "a loop nest or a loop sequence" : "a loop nest");
+    } else if (!IsLoopTransforming(omp->BeginDir().DirId())) {
+      reason.Say(source,
+          "Only loop-transforming constructs are allowed inside loop constructs"_because_en_US);
+    }
+    return reason;
+  }
+
+  if (auto *loop{parser::Unwrap<parser::DoConstruct>(badCode)}) {
+    if (loop->IsDoWhile()) {
+      reason.Say(source, MsgNotValidAffectedLoop, "DO WHILE loop");
+    } else if (loop->IsDoConcurrent()) {
+      reason.Say(source, MsgNotValidAffectedLoop, "DO CONCURRENT loop");
+    } else if (!loop->GetLoopControl()) {
+      reason.Say(
+          source, MsgNotValidAffectedLoop, "DO loop without loop control");
+    }
+    if (reason) {
+      return reason;
+    }
+  }
+  reason.Say(source,
+      "The %s contains code that prevents it from being canonical at this nesting level"_because_en_US,
+      isSequence ? "sequence" : "nest");
+  return reason;
+}
+
+WithReason<bool> LoopSequence::isWellFormedSequence() const {
+  const parser::ExecutionPartConstruct *badCode{
+      invalidIC_ ? invalidIC_ : opaqueIC_};
+  if (badCode) {
+    return {false, WhyNotWellFormed(*badCode, true)};
+  }
+  return {true, Reason()};
+}
+
+WithReason<bool> LoopSequence::isWellFormedNest() const {
+  // DO CONCURRENT is allowed at the top level in OpenMP 6.0+.
+  if (invalidIC_) {
+    if (version_ < 60 || !IsDoConcurrent(*invalidIC_)) {
+      return {false, WhyNotWellFormed(*invalidIC_, false)};
+    }
+  }
+  return {true, Reason()};
 }
 } // namespace Fortran::semantics::omp

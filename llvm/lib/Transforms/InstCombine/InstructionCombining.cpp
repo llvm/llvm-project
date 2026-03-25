@@ -262,8 +262,9 @@ Value *InstCombinerImpl::EmitGEPOffsets(ArrayRef<GEPOperator *> GEPs,
         Offset = Add(OneUseSum, Offset);
 
       // Rewrite the GEP to reuse the computed offset. This also includes
-      // offsets from preceding one-use GEPs.
+      // offsets from preceding one-use GEPs of matched type.
       if (RewriteGEPs && Inst &&
+          Offset->getType()->isVectorTy() == GEP->getType()->isVectorTy() &&
           !(GEP->getSourceElementType()->isIntegerTy(8) &&
             GEP->getOperand(1) == Offset)) {
         replaceInstUsesWith(
@@ -1694,13 +1695,11 @@ Instruction *InstCombinerImpl::foldFBinOpOfIntCasts(BinaryOperator &BO) {
   // Check for:
   //    1) (binop ({s|u}itofp x), ({s|u}itofp y))
   //    2) (binop ({s|u}itofp x), FpC)
-  if (!match(BO.getOperand(0), m_SIToFP(m_Value(IntOps[0]))) &&
-      !match(BO.getOperand(0), m_UIToFP(m_Value(IntOps[0]))))
+  if (!match(BO.getOperand(0), m_IToFP(m_Value(IntOps[0]))))
     return nullptr;
 
   if (!match(BO.getOperand(1), m_Constant(Op1FpC)) &&
-      !match(BO.getOperand(1), m_SIToFP(m_Value(IntOps[1]))) &&
-      !match(BO.getOperand(1), m_UIToFP(m_Value(IntOps[1]))))
+      !match(BO.getOperand(1), m_IToFP(m_Value(IntOps[1]))))
     return nullptr;
 
   // Cache KnownBits a bit to potentially save some analysis.
@@ -4071,8 +4070,9 @@ static Instruction *tryToMoveFreeBeforeNullTest(CallInst &FI,
   // If there are more than 2 instructions, check that they are noops
   // i.e., they won't hurt the performance of the generated code.
   if (FreeInstrBB->size() != 2) {
-    for (const Instruction &Inst : FreeInstrBB->instructionsWithoutDebug()) {
-      if (&Inst == &FI || &Inst == FreeInstrBBTerminator)
+    for (const Instruction &Inst : *FreeInstrBB) {
+      if (&Inst == &FI || &Inst == FreeInstrBBTerminator ||
+          isa<PseudoProbeInst>(Inst))
         continue;
       auto *Cast = dyn_cast<CastInst>(&Inst);
       if (!Cast || !Cast->isNoopCast(DL))

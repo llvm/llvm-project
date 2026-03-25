@@ -1549,7 +1549,7 @@ public:
         : Mod(Mod), ImportedBy(ImportedBy), ImportLoc(ImportLoc) {}
   };
 
-  ASTReadResult ReadASTCore(StringRef FileName, ModuleKind Type,
+  ASTReadResult ReadASTCore(ModuleFileName FileName, ModuleKind Type,
                             SourceLocation ImportLoc, ModuleFile *ImportedBy,
                             SmallVectorImpl<ImportedModule> &Loaded,
                             off_t ExpectedSize, time_t ExpectedModTime,
@@ -1885,7 +1885,7 @@ public:
   /// NewLoadedModuleFile would refer to the address of the new loaded top level
   /// module. The state of NewLoadedModuleFile is unspecified if the AST file
   /// isn't loaded successfully.
-  ASTReadResult ReadAST(StringRef FileName, ModuleKind Type,
+  ASTReadResult ReadAST(ModuleFileName FileName, ModuleKind Type,
                         SourceLocation ImportLoc,
                         unsigned ClientLoadCapabilities,
                         ModuleFile **NewLoadedModuleFile = nullptr);

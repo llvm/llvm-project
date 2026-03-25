@@ -3588,8 +3588,15 @@ static void RenderSSPOptions(const Driver &D, const ToolChain &TC,
           << A->getOption().getName() << Value << "fs gs";
       return;
     }
-    if (EffectiveTriple.isAArch64() && Value != "sp_el0") {
-      D.Diag(diag::err_drv_invalid_value) << A->getOption().getName() << Value;
+    if (EffectiveTriple.isAArch64() &&
+        llvm::StringSwitch<bool>(Value)
+            .Cases({"sp_el0", "tpidrro_el0", "tpidr_el0", "tpidr_el1",
+                    "tpidr_el2", "far_el1", "far_el2"},
+                   false)
+            .Default(true)) {
+      D.Diag(diag::err_drv_invalid_value_with_suggestion)
+          << A->getOption().getName() << Value
+          << "{sp_el0, tpidrro_el0, tpidr_el[012], far_el[12]}";
       return;
     }
     if (EffectiveTriple.isRISCV() && Value != "tp") {
@@ -9357,9 +9364,23 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_flto_partitions_EQ,
       OPT_flto_EQ,
       OPT_hipspv_pass_plugin_EQ,
-      OPT_use_spirv_backend};
+      OPT_use_spirv_backend,
+      OPT_fprofile_generate,
+      OPT_fprofile_generate_EQ,
+      OPT_fprofile_instr_generate,
+      OPT_fprofile_instr_generate_EQ};
   const llvm::DenseSet<unsigned> LinkerOptions{OPT_mllvm, OPT_Zlinker_input};
   auto ShouldForwardForToolChain = [&](Arg *A, const ToolChain &TC) {
+    auto HasProfileRT = TC.getVFS().exists(
+        TC.getCompilerRT(Args, "profile", ToolChain::FT_Static));
+    // Don't forward profiling arguments if the toolchain doesn't support it.
+    // Without this check using it on the host would result in linker errors.
+    if (!HasProfileRT &&
+        (A->getOption().matches(OPT_fprofile_generate) ||
+         A->getOption().matches(OPT_fprofile_generate_EQ) ||
+         A->getOption().matches(OPT_fprofile_instr_generate) ||
+         A->getOption().matches(OPT_fprofile_instr_generate_EQ)))
+      return false;
     // Don't forward -mllvm to toolchains that don't support LLVM.
     return TC.HasNativeLLVMSupport() || A->getOption().getID() != OPT_mllvm;
   };

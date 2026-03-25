@@ -2562,8 +2562,8 @@ static bool canTailPredicateLoop(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
   int ICmpCount = 0;
 
   for (BasicBlock *BB : L->blocks()) {
-    for (Instruction &I : BB->instructionsWithoutDebug()) {
-      if (isa<PHINode>(&I))
+    for (Instruction &I : *BB) {
+      if (isa<PHINode>(I) || isa<PseudoProbeInst>(I))
         continue;
       if (!canTailPredicateInstruction(I, ICmpCount)) {
         LLVM_DEBUG(dbgs() << "Instruction not allowed: "; I.dump());
@@ -2850,6 +2850,13 @@ InstructionCost ARMTTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
     return 0;
   }
   return InstructionCost::getInvalid();
+}
+
+bool ARMTTIImpl::shouldConsiderVectorizationRegPressure() const {
+  // MVE only has 8 vector registers, so we should consider register pressure to
+  // avoid vectorizing when the cost of spills exceeds the gains from
+  // vectorization.
+  return ST->hasMVEIntegerOps();
 }
 
 bool ARMTTIImpl::hasArmWideBranch(bool Thumb) const {

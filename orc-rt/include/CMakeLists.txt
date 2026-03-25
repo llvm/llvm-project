@@ -6,8 +6,9 @@ set(ORC_RT_HEADERS
     orc-rt-c/orc-rt.h
     orc-rt/AllocAction.h
     orc-rt/BitmaskEnum.h
+    orc-rt/BootstrapInfo.h
     orc-rt/Compiler.h
-    orc-rt/ControllerInterface.h
+    orc-rt/SimpleSymbolTable.h
     orc-rt/Error.h
     orc-rt/ExecutorAddress.h
     orc-rt/IntervalMap.h
@@ -28,6 +29,7 @@ set(ORC_RT_HEADERS
     orc-rt/SPSMemoryFlags.h
     orc-rt/SPSWrapperFunction.h
     orc-rt/SPSWrapperFunctionBuffer.h
+    orc-rt/TaskGroup.h
     orc-rt/TaskDispatcher.h
     orc-rt/ThreadPoolTaskDispatcher.h
     orc-rt/WrapperFunction.h

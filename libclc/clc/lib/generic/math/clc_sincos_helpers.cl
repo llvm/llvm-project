@@ -6,41 +6,47 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clc/clc_convert.h"
+#include "clc/integer/clc_clz.h"
+#include "clc/internal/clc.h"
+#include "clc/math/clc_floor.h"
+#include "clc/math/clc_fma.h"
 #include "clc/math/clc_frexp.h"
 #include "clc/math/clc_ldexp.h"
-#include <clc/clc_convert.h>
-#include <clc/integer/clc_clz.h>
-#include <clc/integer/clc_mul_hi.h>
-#include <clc/internal/clc.h>
-#include <clc/math/clc_fma.h>
-#include <clc/math/clc_mad.h>
-#include <clc/math/clc_native_divide.h>
-#include <clc/math/clc_trunc.h>
-#include <clc/math/math.h>
+#include "clc/math/clc_mad.h"
+#include "clc/math/clc_native_divide.h"
+#include "clc/math/clc_rint.h"
+#include "clc/math/clc_sincos_helpers.h"
+#include "clc/math/clc_trunc.h"
+#include "clc/math/math.h"
+#include "clc/relational/clc_isinf.h"
+#include "clc/relational/clc_isnan.h"
 
 #define bitalign(hi, lo, shift) __builtin_elementwise_fshr(hi, lo, shift)
 
 #define __CLC_FLOAT_ONLY
-#define __CLC_BODY <clc_sincos_helpers.inc>
+#define __CLC_BODY "clc_sincos_helpers.inc"
 
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"
 
 #ifdef cl_khr_fp64
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
-#include <clc/math/clc_fract.h>
-#include <clc/math/tables.h>
-#include <clc/shared/clc_max.h>
-
-#define bytealign(src0, src1, src2)                                            \
-  (__CLC_CONVERT_UINTN(                                                        \
-      ((__CLC_CONVERT_LONGN((src0)) << 32) | __CLC_CONVERT_LONGN((src1))) >>   \
-      (((src2) & 3) * 8)))
+#include "clc/math/clc_ep.h"
+#include "clc/math/clc_fract.h"
+#include "clc/math/clc_get_twobypi_bits.h"
+#include "clc/math/tables.h"
 
 #define __CLC_DOUBLE_ONLY
-#define __CLC_BODY <clc_sincos_helpers_fp64.inc>
+#define __CLC_BODY "clc_sincos_helpers_fp64.inc"
 
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"
 
+#endif
+
+#ifdef cl_khr_fp16
+#define __CLC_HALF_ONLY
+#define __CLC_BODY "clc_sincos_helpers_fp16.inc"
+#include "clc/math/gentype.inc"
 #endif

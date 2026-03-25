@@ -1084,7 +1084,7 @@ class BinOpRI_RF<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node, For
              (node t.RegClass:$src1, t.ImmOperator:$src2))]>, DefEFLAGS, NDD<ndd>;
 // BinOpRIF_RF - Instructions that read "reg, imm", write "reg" and read/write
 // EFLAGS.
-class BinOpRIF_RF<bits<8> o, string m, X86TypeInfo t, SDNode node, Format f, bit ndd = 0>
+class BinOpRIF_RF<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node, Format f, bit ndd = 0>
   : BinOpRI<o, m, !if(!eq(ndd, 0), binop_args, binop_ndd_args), t, f, (outs t.RegClass:$dst),
             [(set t.RegClass:$dst, EFLAGS,
              (node t.RegClass:$src1, t.ImmOperator:$src2,
@@ -1221,7 +1221,7 @@ class BinOpMIF_RF<bits<8> o, string m, X86TypeInfo t, SDNode node, Format f>
     Sched<[WriteADC.Folded, WriteADC.ReadAfterFold]>, DefEFLAGS, UseEFLAGS, NDD<1>;
 // BinOpMIF_MF - Instructions that read "[mem], imm", write "[mem]" and
 // read/write EFLAGS.
-class BinOpMIF_MF<bits<8> o, string m, X86TypeInfo t, SDNode node, Format f>
+class BinOpMIF_MF<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node, Format f>
   : BinOpMI<o, m, binop_args, t, f, (outs),
             [(store (node (t.VT (load addr:$src1)),
              t.ImmOperator:$src2, EFLAGS), addr:$src1)]>,

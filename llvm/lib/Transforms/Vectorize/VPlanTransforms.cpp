@@ -728,17 +728,17 @@ void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
       }
 
       // Check if R is a dead VPPhi <-> update cycle and remove it.
-      auto *PhiR = dyn_cast<VPPhi>(&R);
-      if (!PhiR || PhiR->getNumOperands() != 2)
+      VPValue *Start, *Incoming;
+      if (!match(&R, m_VPPhi(m_VPValue(Start), m_VPValue(Incoming))))
         continue;
+      auto *PhiR = cast<VPPhi>(&R);
       VPUser *PhiUser = PhiR->getSingleUser();
       if (!PhiUser)
         continue;
-      VPValue *Incoming = PhiR->getOperand(1);
       if (PhiUser != Incoming->getDefiningRecipe() ||
           Incoming->getNumUsers() != 1)
         continue;
-      PhiR->replaceAllUsesWith(PhiR->getOperand(0));
+      PhiR->replaceAllUsesWith(Start);
       PhiR->eraseFromParent();
       Incoming->getDefiningRecipe()->eraseFromParent();
     }
@@ -1450,6 +1450,15 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
   if (match(Def, m_c_Mul(m_VPValue(A), m_ZeroInt())))
     return Def->replaceAllUsesWith(
         Plan->getZero(TypeInfo.inferScalarType(Def)));
+
+  if (CanCreateNewRecipe && match(Def, m_c_Mul(m_VPValue(A), m_AllOnes()))) {
+    // Preserve nsw from the Mul on the new Sub.
+    VPIRFlags::WrapFlagsTy NW = {
+        false, cast<VPRecipeWithIRFlags>(Def)->hasNoSignedWrap()};
+    return Def->replaceAllUsesWith(
+        Builder.createSub(Plan->getZero(TypeInfo.inferScalarType(A)), A,
+                          Def->getDebugLoc(), "", NW));
+  }
 
   const APInt *APC;
   if (CanCreateNewRecipe && match(Def, m_c_Mul(m_VPValue(A), m_APInt(APC))) &&
@@ -2487,6 +2496,7 @@ static bool hoistPreviousBeforeFORUsers(VPFirstOrderRecurrencePHIRecipe *FOR,
 bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
                                                   VPBuilder &LoopBuilder) {
   VPDominatorTree VPDT(Plan);
+  VPTypeAnalysis TypeInfo(Plan);
 
   SmallVector<VPFirstOrderRecurrencePHIRecipe *> RecurrencePhis;
   for (VPRecipeBase &R :
@@ -2540,8 +2550,9 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
 
       VPBuilder B(cast<VPInstruction>(U));
       VPValue *LastActiveLane = cast<VPInstruction>(U)->getOperand(0);
-      VPValue *Zero = Plan.getConstantInt(64, 0);
-      VPValue *One = Plan.getConstantInt(64, 1);
+      Type *Ty = TypeInfo.inferScalarType(LastActiveLane);
+      VPValue *Zero = Plan.getConstantInt(Ty, 0);
+      VPValue *One = Plan.getConstantInt(Ty, 1);
       VPValue *PenultimateIndex = B.createSub(LastActiveLane, One);
       VPValue *PenultimateLastIter =
           B.createNaryOp(VPInstruction::ExtractLane,
@@ -3152,8 +3163,9 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
 
   if (match(&CurRecipe, m_LastActiveLane(m_Specific(HeaderMask)))) {
     Type *Ty = TypeInfo.inferScalarType(CurRecipe.getVPSingleValue());
-    VPValue *ZExt =
-        VPBuilder(&CurRecipe).createScalarCast(Instruction::ZExt, &EVL, Ty, DL);
+    VPValue *ZExt = VPBuilder(&CurRecipe)
+                        .createScalarZExtOrTrunc(
+                            &EVL, Ty, TypeInfo.inferScalarType(&EVL), DL);
     return new VPInstruction(
         Instruction::Sub, {ZExt, Plan->getConstantInt(Ty, 1)},
         VPIRFlags::getDefaultFlags(Instruction::Sub), {}, DL);
@@ -3190,6 +3202,22 @@ void VPlanTransforms::optimizeEVLMasks(VPlan &Plan) {
       OldRecipes.push_back(R);
     }
   }
+
+  // Replace remaining (HeaderMask && Mask) with vp.merge (True, Mask,
+  // False, EVL)
+  for (VPUser *U : collectUsersRecursively(HeaderMask)) {
+    VPValue *Mask;
+    if (match(U, m_LogicalAnd(m_Specific(HeaderMask), m_VPValue(Mask)))) {
+      auto *LogicalAnd = cast<VPInstruction>(U);
+      auto *Merge = new VPWidenIntrinsicRecipe(
+          Intrinsic::vp_merge, {Plan.getTrue(), Mask, Plan.getFalse(), EVL},
+          TypeInfo.inferScalarType(Mask), {}, {}, LogicalAnd->getDebugLoc());
+      Merge->insertBefore(LogicalAnd);
+      LogicalAnd->replaceAllUsesWith(Merge);
+      OldRecipes.push_back(LogicalAnd);
+    }
+  }
+
   // Erase old recipes at the end so we don't invalidate TypeInfo.
   for (VPRecipeBase *R : reverse(OldRecipes)) {
     SmallVector<VPValue *> PossiblyDead(R->operands());
@@ -3470,9 +3498,12 @@ void VPlanTransforms::convertEVLExitCond(VPlan &Plan) {
     return;
 
   // The AVL may be capped to a safe distance.
-  VPValue *SafeAVL;
-  if (match(AVL, m_Select(m_VPValue(), m_VPValue(SafeAVL), m_VPValue())))
-    AVL = SafeAVL;
+  VPValue *SafeAVL, *UnsafeAVL;
+  if (match(AVL,
+            m_Select(m_SpecificICmp(CmpInst::ICMP_ULT, m_VPValue(UnsafeAVL),
+                                    m_VPValue(SafeAVL)),
+                     m_Deferred(UnsafeAVL), m_Deferred(SafeAVL))))
+    AVL = UnsafeAVL;
 
   VPValue *AVLNext;
   [[maybe_unused]] bool FoundAVLNext =
@@ -4063,7 +4094,8 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
             LastActiveL->getDebugLoc(), "first.inactive.lane");
 
         // Subtract 1 to get the last active lane.
-        VPValue *One = Plan.getConstantInt(64, 1);
+        VPValue *One =
+            Plan.getConstantInt(TypeInfo.inferScalarType(FirstInactiveLane), 1);
         VPValue *LastLane =
             Builder.createSub(FirstInactiveLane, One,
                               LastActiveL->getDebugLoc(), "last.active.lane");
@@ -4079,7 +4111,7 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
         assert(VPI->isMasked() &&
                "Unmasked MaskedCond should be simplified earlier");
         VPI->replaceAllUsesWith(Builder.createNaryOp(
-            VPInstruction::LogicalAnd, {VPI->getOperand(0), VPI->getMask()}));
+            VPInstruction::LogicalAnd, {VPI->getMask(), VPI->getOperand(0)}));
         ToRemove.push_back(VPI);
         continue;
       }
@@ -4142,7 +4174,8 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
 void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
                                                   VPBasicBlock *HeaderVPBB,
                                                   VPBasicBlock *LatchVPBB,
-                                                  VPBasicBlock *MiddleVPBB) {
+                                                  VPBasicBlock *MiddleVPBB,
+                                                  UncountableExitStyle Style) {
   struct EarlyExitInfo {
     VPBasicBlock *EarlyExitingVPBB;
     VPIRBasicBlock *EarlyExitVPBB;
@@ -4219,6 +4252,9 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
 
   VPValue *IsAnyExitTaken =
       Builder.createNaryOp(VPInstruction::AnyOf, {Combined});
+
+  assert(Style == UncountableExitStyle::ReadOnly &&
+         "Early exit store masking not implemented");
 
   // Create the vector.early.exit blocks.
   SmallVector<VPBasicBlock *> VectorEarlyExitVPBBs(Exits.size());
@@ -5909,6 +5945,7 @@ optimizeExtendsForPartialReduction(VPSingleDefRecipe *BinOp,
 
   // reduce.add(ext(mul(ext(A), ext(B))))
   // -> reduce.add(mul(wider_ext(A), wider_ext(B)))
+  // TODO: Support this optimization for float types.
   if (match(BinOp, m_ZExtOrSExt(m_Mul(m_ZExtOrSExt(m_VPValue()),
                                       m_ZExtOrSExt(m_VPValue()))))) {
     auto *Ext = cast<VPWidenCastRecipe>(BinOp);
@@ -6103,6 +6140,11 @@ static bool isValidPartialReduction(const VPPartialReductionChain &Chain,
       Range);
 }
 
+static TTI::PartialReductionExtendKind
+getPartialReductionExtendKind(VPWidenCastRecipe *Cast) {
+  return TTI::getPartialReductionExtendKind(Cast->getOpcode());
+}
+
 /// Checks if \p Op (which is an operand of \p UpdateR) is an extended reduction
 /// operand. This is an operand where the source of the value (e.g. a load) has
 /// been extended (sext, zext, or fpext) before it is used in the reduction.
@@ -6122,85 +6164,67 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op) {
   assert(is_contained(UpdateR->operands(), Op) &&
          "Op should be operand of UpdateR");
 
-  // If Op is an extend, then it's still a valid partial reduction if the
-  // extended mul fulfills the other requirements.
-  // For example, reduce.add(ext(mul(ext(A), ext(B)))) is still a valid partial
-  // reduction since the inner extends will be widened. We already have oneUse
-  // checks on the inner extends so widening them is safe.
   std::optional<TTI::PartialReductionExtendKind> OuterExtKind;
-  if (match(Op, m_ZExtOrSExt(m_Mul(m_VPValue(), m_VPValue()))) ||
-      match(Op, m_FPExt(m_FMul(m_VPValue(), m_VPValue())))) {
-    auto *CastRecipe = dyn_cast<VPWidenCastRecipe>(Op);
-    if (!CastRecipe)
-      return std::nullopt;
-    auto CastOp = static_cast<Instruction::CastOps>(CastRecipe->getOpcode());
-    OuterExtKind = TTI::getPartialReductionExtendKind(CastOp);
-    Op = CastRecipe->getOperand(0);
-  }
-
-  // If the update is a binary op, check both of its operands to see if
-  // they are extends. Otherwise, see if the update comes directly from an
-  // extend.
-  std::array<VPWidenCastRecipe *, 2> CastRecipes = {};
-
-  // Match extends and populate CastRecipes. Returns false if matching fails.
-  auto MatchExtends = [OuterExtKind,
-                       &CastRecipes](ArrayRef<VPValue *> Operands) {
-    assert(Operands.size() <= 2 && "expected at most 2 operands");
-
-    for (const auto &[I, OpVal] : enumerate(Operands)) {
-      // Allow constant as second operand - validation happens in
-      // isValidPartialReduction.
-      const APInt *Unused;
-      if (I > 0 && CastRecipes[0] && match(OpVal, m_APInt(Unused)))
-        continue;
-
-      VPValue *ExtInput;
-      if (!match(OpVal, m_ZExtOrSExt(m_VPValue(ExtInput))) &&
-          !match(OpVal, m_FPExt(m_VPValue(ExtInput))))
-        return false;
-
-      CastRecipes[I] = dyn_cast<VPWidenCastRecipe>(OpVal);
-      if (!CastRecipes[I])
-        return false;
-
-      // The outer extend kind must match the inner extends for folding.
-      if (OuterExtKind) {
-        auto CastOp =
-            static_cast<Instruction::CastOps>(CastRecipes[I]->getOpcode());
-        if (*OuterExtKind != TTI::getPartialReductionExtendKind(CastOp))
-          return false;
-      }
+  if (match(Op, m_WidenAnyExtend(m_VPValue()))) {
+    auto *CastRecipe = cast<VPWidenCastRecipe>(Op);
+    VPValue *CastSource = CastRecipe->getOperand(0);
+    if (match(CastSource, m_Mul(m_VPValue(), m_VPValue())) ||
+        match(CastSource, m_FMul(m_VPValue(), m_VPValue()))) {
+      // Match: ext(mul(...))
+      // Record the outer extend kind and set `Op` to the mul. We can then match
+      // this as a binary operation. Note: We can optimize out the outer extend
+      // by widening the inner extends to match it. See
+      // optimizeExtendsForPartialReduction.
+      Op = CastSource;
+      OuterExtKind = getPartialReductionExtendKind(CastRecipe);
+    } else if (UpdateR->getOpcode() == Instruction::Add ||
+               UpdateR->getOpcode() == Instruction::FAdd) {
+      // Match: UpdateR(PrevValue, ext(...))
+      // TODO: Remove the add/fadd restriction (we should be able to handle this
+      // case for sub reductions too).
+      return ExtendedReductionOperand{UpdateR, {CastRecipe, nullptr}};
     }
-    return CastRecipes[0] != nullptr;
-  };
-
-  // If Op is a binary operator, check both of its operands to see if they are
-  // extends. Otherwise, see if the update comes directly from an extend.
-  auto *BinOp = dyn_cast<VPWidenRecipe>(Op);
-  if (BinOp && Instruction::isBinaryOp(BinOp->getOpcode())) {
-    if (!BinOp->hasOneUse())
-      return std::nullopt;
-
-    // Handle neg(binop(ext, ext)) pattern.
-    VPValue *OtherOp = nullptr;
-    if (match(BinOp, m_Sub(m_ZeroInt(), m_VPValue(OtherOp))))
-      BinOp = dyn_cast<VPWidenRecipe>(OtherOp);
-
-    if (!BinOp || !Instruction::isBinaryOp(BinOp->getOpcode()) ||
-        !MatchExtends(BinOp->operands()))
-      return std::nullopt;
-  } else if (match(UpdateR, m_Add(m_VPValue(), m_VPValue())) ||
-             match(UpdateR, m_FAdd(m_VPValue(), m_VPValue()))) {
-    // We already know Op is an operand of UpdateR.
-    if (!MatchExtends({Op}))
-      return std::nullopt;
-    BinOp = UpdateR;
-  } else {
-    return std::nullopt;
   }
 
-  return ExtendedReductionOperand{BinOp, CastRecipes};
+  if (!Op->hasOneUse())
+    return std::nullopt;
+
+  // Handle neg(...) pattern (aka sub(0, ...)).
+  VPValue *NegatedOp = nullptr;
+  if (match(Op, m_Sub(m_ZeroInt(), m_VPValue(NegatedOp))))
+    Op = NegatedOp;
+
+  VPWidenRecipe *BinOp = dyn_cast<VPWidenRecipe>(Op);
+  if (!BinOp || !Instruction::isBinaryOp(BinOp->getOpcode()))
+    return std::nullopt;
+
+  // The rest of the matching assumes `Op` is a (possibly extended/negated)
+  // binary operation.
+
+  VPValue *LHS = BinOp->getOperand(0);
+  VPValue *RHS = BinOp->getOperand(1);
+
+  // The LHS of the operation must always be an extend.
+  if (!match(LHS, m_WidenAnyExtend(m_VPValue())))
+    return std::nullopt;
+
+  auto *LHSCast = cast<VPWidenCastRecipe>(LHS);
+
+  // The RHS of the operation can be an extend or a constant integer.
+  // The constant will be validated in isValidPartialReduction.
+  VPWidenCastRecipe *RHSCast = nullptr;
+  if (match(RHS, m_WidenAnyExtend(m_VPValue())))
+    RHSCast = cast<VPWidenCastRecipe>(RHS);
+  else if (!isa<VPConstantInt>(RHS))
+    return std::nullopt;
+
+  // The outer extend kind must match the inner extends for folding.
+  for (VPWidenCastRecipe *Cast : {LHSCast, RHSCast})
+    if (Cast && OuterExtKind &&
+        getPartialReductionExtendKind(Cast) != OuterExtKind)
+      return std::nullopt;
+
+  return ExtendedReductionOperand{BinOp, {LHSCast, RHSCast}};
 }
 
 /// Examines each operation in the reduction chain corresponding to \p RedPhiR,

@@ -4287,7 +4287,7 @@ void CodeGenFunction::EmitCfiSlowPathCheck(
   llvm::BasicBlock *Cont = createBasicBlock("cfi.cont");
 
   llvm::BasicBlock *CheckBB = createBasicBlock("cfi.slowpath");
-  llvm::BranchInst *BI = Builder.CreateCondBr(Cond, Cont, CheckBB);
+  llvm::CondBrInst *BI = Builder.CreateCondBr(Cond, Cont, CheckBB);
 
   llvm::MDBuilder MDHelper(getLLVMContext());
   llvm::MDNode *Node = MDHelper.createLikelyBranchWeights();

@@ -2083,9 +2083,14 @@ public:
   /// function mirrors \c llvm::salvageDebugInfo.
   LLVM_ABI void salvageDebugInfo(SDNode &N);
 
+  /// Dump the textual format of this DAG. Nodes are not sorted.
+  /// Note that we overload it instead of using default value so that it is
+  /// convenient to be called from debuggers.
+  LLVM_ABI void dump() const;
+
   /// Dump the textual format of this DAG. Print nodes in sorted orders if \p
   /// Sorted is true.
-  LLVM_ABI void dump(bool Sorted = false) const;
+  LLVM_ABI void dump(bool Sorted) const;
 
   /// In most cases this function returns the ABI alignment for a given type,
   /// except for illegal vector types where the alignment exceeds that of the

@@ -1832,9 +1832,6 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
           "EarlyExitLoopWithStridedFaultOnlyFirstLoad", ORE, TheLoop);
       return false;
     }
-    PotentiallyFaultingLoads.insert(LI);
-    LLVM_DEBUG(dbgs() << "LV: Found potentially faulting load: " << *LI
-                      << "\n");
   }
 
   [[maybe_unused]] const SCEV *SymbolicMaxBTC =
@@ -1846,8 +1843,8 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   LLVM_DEBUG(dbgs() << "LV: Found an early exit loop with symbolic max "
                        "backedge taken count: "
                     << *SymbolicMaxBTC << '\n');
-  HasUncountableEarlyExit = true;
-  UncountableExitWithSideEffects = HasSideEffects;
+  UncountableExitType = HasSideEffects ? UncountableExitTrait::ReadWrite
+                                       : UncountableExitTrait::ReadOnly;
   return true;
 }
 
@@ -1894,20 +1891,9 @@ bool LoopVectorizationLegality::canUncountableExitConditionLoadBeMoved(
     return false;
   }
 
-  // FIXME: Support gathers after first-faulting load support lands.
-  SmallVector<const SCEVPredicate *, 4> Predicates;
-  LoadInst *Load = cast<LoadInst>(L);
-  if (!isDereferenceableAndAlignedInLoop(Load, TheLoop, *PSE.getSE(), *DT, AC,
-                                         &Predicates)) {
-    reportVectorizationFailure(
-        "Loop may fault",
-        "Cannot vectorize potentially faulting early exit loop",
-        "PotentiallyFaultingEarlyExitLoop", ORE, TheLoop);
-    return false;
-  }
-
   ICFLoopSafetyInfo SafetyInfo;
   SafetyInfo.computeLoopSafetyInfo(TheLoop);
+  LoadInst *Load = cast<LoadInst>(L);
   // We need to know that load will be executed before we can hoist a
   // copy out to run just before the first iteration.
   if (!SafetyInfo.isGuaranteedToExecute(*Load, DT, TheLoop)) {
@@ -2012,8 +1998,7 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
         return false;
     } else {
       if (!isVectorizableEarlyExitLoop()) {
-        assert(!hasUncountableEarlyExit() &&
-               !hasUncountableExitWithSideEffects() &&
+        assert(UncountableExitType == UncountableExitTrait::None &&
                "Must be false without vectorizable early-exit loop");
         if (DoExtraAnalysis)
           Result = false;
@@ -2032,8 +2017,8 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
       return false;
   }
 
-  // Bail out for state-changing loops with uncountable exits for now.
-  if (UncountableExitWithSideEffects) {
+  // Bail out for ReadWrite loops with uncountable exits for now.
+  if (UncountableExitType == UncountableExitTrait::ReadWrite) {
     reportVectorizationFailure(
         "Writes to memory unsupported in early exit loops",
         "Cannot vectorize early exit loop with writes to memory",
