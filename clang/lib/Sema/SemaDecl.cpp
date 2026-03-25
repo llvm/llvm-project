@@ -553,6 +553,17 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
     }
     return CreateParsedType(T, TLB.getTypeSourceInfo(Context, T));
   }
+
+  if (getLangOpts().HLSL) {
+    if (auto *TD = dyn_cast_or_null<TemplateDecl>(
+            getAsTemplateNameDecl(IIDecl, /*AllowFunctionTemplates=*/false,
+                                  /*AllowDependent=*/false))) {
+      QualType ShorthandTy = HLSL().ActOnTemplateShorthand(TD, NameLoc);
+      if (!ShorthandTy.isNull())
+        return ParsedType::make(ShorthandTy);
+    }
+  }
+
   if (ObjCInterfaceDecl *IDecl = dyn_cast<ObjCInterfaceDecl>(IIDecl)) {
     (void)DiagnoseUseOfDecl(IDecl, NameLoc);
     if (!HasTrailingDot) {
@@ -578,7 +589,8 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
           SS ? SS->getScopeRep() : std::nullopt, /*TemplateKeyword=*/false,
           FoundUsingShadow ? TemplateName(FoundUsingShadow) : TemplateName(TD));
       QualType T = Context.getDeducedTemplateSpecializationType(
-          ElaboratedTypeKeyword::None, Template, QualType(), false);
+          DeducedKind::Undeduced, QualType(), ElaboratedTypeKeyword::None,
+          Template);
       auto TL = TLB.push<DeducedTemplateSpecializationTypeLoc>(T);
       TL.setElaboratedKeywordLoc(SourceLocation());
       TL.setNameLoc(NameLoc);
@@ -1900,14 +1912,6 @@ bool Sema::mightHaveNonExternalLinkage(const DeclaratorDecl *D) {
   return !D->isExternallyVisible();
 }
 
-// FIXME: This needs to be refactored; some other isInMainFile users want
-// these semantics.
-static bool isMainFileLoc(const Sema &S, SourceLocation Loc) {
-  if (S.TUKind != TU_Complete || S.getLangOpts().IsHeaderFile)
-    return false;
-  return S.SourceMgr.isInMainFile(Loc);
-}
-
 bool Sema::ShouldWarnIfUnusedFileScopedDecl(const DeclaratorDecl *D) const {
   assert(D);
 
@@ -1934,7 +1938,7 @@ bool Sema::ShouldWarnIfUnusedFileScopedDecl(const DeclaratorDecl *D) const {
         return false;
     } else {
       // 'static inline' functions are defined in headers; don't warn.
-      if (FD->isInlined() && !isMainFileLoc(*this, FD->getLocation()))
+      if (FD->isInlined() && !isMainFileLoc(FD->getLocation()))
         return false;
     }
 
@@ -1945,7 +1949,7 @@ bool Sema::ShouldWarnIfUnusedFileScopedDecl(const DeclaratorDecl *D) const {
     // Constants and utility variables are defined in headers with internal
     // linkage; don't warn.  (Unlike functions, there isn't a convenient marker
     // like "inline".)
-    if (!isMainFileLoc(*this, VD->getLocation()))
+    if (!isMainFileLoc(VD->getLocation()))
       return false;
 
     if (Context.DeclMustBeEmitted(VD))
@@ -1959,7 +1963,7 @@ bool Sema::ShouldWarnIfUnusedFileScopedDecl(const DeclaratorDecl *D) const {
         VD->getMemberSpecializationInfo() && !VD->isOutOfLine())
       return false;
 
-    if (VD->isInline() && !isMainFileLoc(*this, VD->getLocation()))
+    if (VD->isInline() && !isMainFileLoc(VD->getLocation()))
       return false;
   } else {
     return false;
@@ -2203,6 +2207,11 @@ void Sema::DiagnoseUnusedButSetDecl(const VarDecl *VD,
       return;
   }
 
+  // Don't warn on volatile file-scope variables. They are visible beyond their
+  // declaring function and writes to them could be observable side effects.
+  if (VD->getType().isVolatileQualified() && VD->isFileVarDecl())
+    return;
+
   // Don't warn about __block Objective-C pointer variables, as they might
   // be assigned in the block but not used elsewhere for the purpose of lifetime
   // extension.
@@ -2215,7 +2224,7 @@ void Sema::DiagnoseUnusedButSetDecl(const VarDecl *VD,
   if (VD->hasAttr<ObjCPreciseLifetimeAttr>() && Ty->isObjCObjectPointerType())
     return;
 
-  auto iter = RefsMinusAssignments.find(VD);
+  auto iter = RefsMinusAssignments.find(VD->getCanonicalDecl());
   if (iter == RefsMinusAssignments.end())
     return;
 
@@ -2293,9 +2302,11 @@ void Sema::ActOnPopScope(SourceLocation Loc, Scope *S) {
       DiagnoseUnusedDecl(D, addDiag);
       if (const auto *RD = dyn_cast<RecordDecl>(D))
         DiagnoseUnusedNestedTypedefs(RD, addDiag);
-      if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
+      // Wait until end of TU to diagnose internal linkage file vars.
+      if (auto *VD = dyn_cast<VarDecl>(D);
+          VD && !VD->isInternalLinkageFileVar()) {
         DiagnoseUnusedButSetDecl(VD, addDiag);
-        RefsMinusAssignments.erase(VD);
+        RefsMinusAssignments.erase(VD->getCanonicalDecl());
       }
     }
 
@@ -2970,6 +2981,8 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
     NewAttr = S.OpenACC().mergeRoutineDeclAttr(*RD);
   else if (Attr->shouldInheritEvenIfAlreadyPresent() || !DeclHasAttr(D, Attr))
     NewAttr = cast<InheritableAttr>(Attr->clone(S.Context));
+  else if (const auto *PA = dyn_cast<PersonalityAttr>(Attr))
+    NewAttr = S.mergePersonalityAttr(D, PA->getRoutine(), *PA);
 
   if (NewAttr) {
     NewAttr->setInherited(true);
@@ -7929,7 +7942,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
 
     if (CurContext->isRecord()) {
       if (SC == SC_Static) {
-        if (const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(DC)) {
+        if (CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(DC)) {
           // Walk up the enclosing DeclContexts to check for any that are
           // incompatible with static data members.
           const DeclContext *FunctionOrMethod = nullptr;
@@ -7951,6 +7964,8 @@ NamedDecl *Sema::ActOnVariableDeclarator(
             Diag(D.getIdentifierLoc(),
                  diag::err_static_data_member_not_allowed_in_local_class)
                 << Name << RD->getDeclName() << RD->getTagKind();
+            Invalid = true;
+            RD->setInvalidDecl();
           } else if (AnonStruct) {
             // C++ [class.static.data]p4: Unnamed classes and classes contained
             // directly or indirectly within unnamed classes shall not contain
@@ -15125,7 +15140,10 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
 
   // If this variable must be emitted, add it as an initializer for the current
   // module.
-  if (Context.DeclMustBeEmitted(var) && !ModuleScopes.empty())
+  if (Context.DeclMustBeEmitted(var) && !ModuleScopes.empty() &&
+      (ModuleScopes.back().Module->isHeaderLikeModule() ||
+       // For named modules, we may only emit non discardable variables.
+       !isDiscardableGVALinkage(Context.GetGVALinkageForVariable(var))))
     Context.addModuleInitializer(ModuleScopes.back().Module, var);
 
   // Build the bindings if this is a structured binding declaration.
@@ -15851,7 +15869,11 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
       // WebAssembly allows reference types as parameters. Funcref in particular
       // lives in a different address space.
       !(T->isFunctionPointerType() &&
-        T.getAddressSpace() == LangAS::wasm_funcref)) {
+        T.getAddressSpace() == LangAS::wasm_funcref) &&
+      // HLSL allows function arguments to be qualified with an address space
+      // if the groupshared annotation is used.
+      !(getLangOpts().HLSL &&
+        T.getAddressSpace() == LangAS::hlsl_groupshared)) {
     Diag(NameLoc, diag::err_arg_with_address_space);
     New->setInvalidDecl();
   }
@@ -21086,16 +21108,14 @@ Sema::FunctionEmissionStatus Sema::getEmissionStatus(const FunctionDecl *FD,
                                                      bool Final) {
   assert(FD && "Expected non-null FunctionDecl");
 
-  // SYCL functions can be template, so we check if they have appropriate
-  // attribute prior to checking if it is a template.
+  // Templates are emitted when they're instantiated.
+  if (FD->isDependentContext())
+    return FunctionEmissionStatus::TemplateDiscarded;
+
   if (LangOpts.SYCLIsDevice && (FD->hasAttr<SYCLKernelAttr>() ||
                                 FD->hasAttr<SYCLKernelEntryPointAttr>() ||
                                 FD->hasAttr<SYCLExternalAttr>()))
     return FunctionEmissionStatus::Emitted;
-
-  // Templates are emitted when they're instantiated.
-  if (FD->isDependentContext())
-    return FunctionEmissionStatus::TemplateDiscarded;
 
   // Check whether this function is an externally visible definition.
   auto IsEmittedForExternalSymbol = [this, FD]() {
@@ -21196,9 +21216,14 @@ bool Sema::shouldIgnoreInHostDeviceCheck(FunctionDecl *Callee) {
 bool Sema::isRedefinitionAllowedFor(NamedDecl *D, NamedDecl **Suggested,
                                     bool &Visible) {
   Visible = hasVisibleDefinition(D, Suggested);
+  // Accoding to [basic.def.odr]p16, it is not allowed to have duplicated definition
+  // for declaratins which is attached to named modules.
+  // We only did this if the current module is named module as we have better
+  // diagnostics for declarations in global module and named modules.
+  if (getCurrentModule() && getCurrentModule()->isNamedModule() &&
+      D->isInNamedModule())
+    return false;
   // The redefinition of D in the **current** TU is allowed if D is invisible or
-  // D is defined in the global module of other module units. We didn't check if
-  // it is in global module as, we'll check the redefinition in named module
-  // later with better diagnostic message.
+  // D is defined in the global module of other module units.
   return D->isInAnotherModuleUnit() || !Visible;
 }

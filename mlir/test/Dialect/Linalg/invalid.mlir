@@ -2172,3 +2172,25 @@ func.func @matmul_invalid_mixed_types(%t: tensor<?xf16>, %f: vector<4xf16>)
                                 outs(%f : vector<4xf16>) -> tensor<?xf16>
   func.return %0, %f : tensor<?xf16>, vector<4xf16>
 }
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/93973.
+// Having more inputs than inits must not crash but produce a clear error.
+
+func.func @reduce_unequal_input_output_count(
+    %arg0: tensor<32xi32>, %arg1: tensor<32xi32>) -> i32 {
+  %c0 = arith.constant 0 : i32
+  %init = tensor.from_elements %c0 : tensor<i32>
+  // expected-error @+1 {{'linalg.reduce' op expected equal number of inputs and outputs}}
+  %reduced = linalg.reduce
+      ins(%arg0, %arg1 : tensor<32xi32>, tensor<32xi32>)
+      outs(%init : tensor<i32>)
+      dimensions = [0]
+      (%in0: i32, %in1: i32, %acc: i32) {
+        %v = arith.addi %in0, %acc : i32
+        linalg.yield %v : i32
+      }
+  %ext = tensor.extract %reduced[] : tensor<i32>
+  return %ext : i32
+}

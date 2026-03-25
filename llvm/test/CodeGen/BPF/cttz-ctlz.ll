@@ -31,7 +31,7 @@ define i32 @cttz_i32(i32 %a) {
 ; CHECK-NEXT:    r2 = r1
 ; CHECK-NEXT:    r2 <<= 32
 ; CHECK-NEXT:    r2 >>= 32
-; CHECK-NEXT:    if r2 == 0 goto LBB1_2
+; CHECK-NEXT:    if r2 == 0 goto .LBB1_2
 ; CHECK-NEXT:  # %bb.1: # %cond.false
 ; CHECK-NEXT:    r2 = r1
 ; CHECK-NEXT:    r2 = -r2
@@ -43,7 +43,7 @@ define i32 @cttz_i32(i32 %a) {
 ; CHECK-NEXT:    r2 = {{\.?LCPI[0-9]+_[0-9]+}} ll
 ; CHECK-NEXT:    r2 += r1
 ; CHECK-NEXT:    r0 = *(u8 *)(r2 + 0)
-; CHECK-NEXT:  LBB1_2: # %cond.end
+; CHECK-NEXT:  .LBB1_2: # %cond.end
 ; CHECK-NEXT:    exit
     %ret = call i32 @llvm.cttz.i32(i32 %a, i1 0)
     ret i32 %ret
@@ -73,7 +73,7 @@ define i64 @cttz_i64(i64 %a) {
 ; CHECK-LABEL: cttz_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    r0 = 64
-; CHECK-NEXT:    if r1 == 0 goto LBB3_2
+; CHECK-NEXT:    if r1 == 0 goto .LBB3_2
 ; CHECK-NEXT:  # %bb.1: # %cond.false
 ; CHECK-NEXT:    r2 = r1
 ; CHECK-NEXT:    r2 = -r2
@@ -84,7 +84,7 @@ define i64 @cttz_i64(i64 %a) {
 ; CHECK-NEXT:    r2 = {{\.?LCPI[0-9]+_[0-9]+}} ll
 ; CHECK-NEXT:    r2 += r1
 ; CHECK-NEXT:    r0 = *(u8 *)(r2 + 0)
-; CHECK-NEXT:  LBB3_2: # %cond.end
+; CHECK-NEXT:  .LBB3_2: # %cond.end
 ; CHECK-NEXT:    exit
     %ret = call i64 @llvm.cttz.i64(i64 %a, i1 0)
     ret i64 %ret
@@ -152,7 +152,7 @@ define i32 @ctlz_i32(i32 %a) {
 ; CHECK-NEXT:    r2 = r1
 ; CHECK-NEXT:    r2 <<= 32
 ; CHECK-NEXT:    r2 >>= 32
-; CHECK-NEXT:    if r2 == 0 goto LBB5_2
+; CHECK-NEXT:    if r2 == 0 goto .LBB5_2
 ; CHECK-NEXT:  # %bb.1: # %cond.false
 ; CHECK-NEXT:    r2 = 4294967294 ll
 ; CHECK-NEXT:    r3 = r1
@@ -197,7 +197,7 @@ define i32 @ctlz_i32(i32 %a) {
 ; CHECK-NEXT:    r1 = 4278190080 ll
 ; CHECK-NEXT:    r0 &= r1
 ; CHECK-NEXT:    r0 >>= 24
-; CHECK-NEXT:  LBB5_2: # %cond.end
+; CHECK-NEXT:  .LBB5_2: # %cond.end
 ; CHECK-NEXT:    exit
     %ret = call i32 @llvm.ctlz.i32(i32 %a, i1 0)
     ret i32 %ret
@@ -256,7 +256,7 @@ define i64 @ctlz_i64(i64 %a) {
 ; CHECK-LABEL: ctlz_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    r0 = 64
-; CHECK-NEXT:    if r1 == 0 goto LBB7_2
+; CHECK-NEXT:    if r1 == 0 goto .LBB7_2
 ; CHECK-NEXT:  # %bb.1: # %cond.false
 ; CHECK-NEXT:    r2 = r1
 ; CHECK-NEXT:    r2 >>= 1
@@ -296,7 +296,7 @@ define i64 @ctlz_i64(i64 %a) {
 ; CHECK-NEXT:    r1 = 72340172838076673 ll
 ; CHECK-NEXT:    r0 *= r1
 ; CHECK-NEXT:    r0 >>= 56
-; CHECK-NEXT:  LBB7_2: # %cond.end
+; CHECK-NEXT:  .LBB7_2: # %cond.end
 ; CHECK-NEXT:    exit
     %ret = call i64 @llvm.ctlz.i64(i64 %a, i1 0)
     ret i64 %ret

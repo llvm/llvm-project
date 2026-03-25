@@ -597,6 +597,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #  include <__algorithm/remove_if.h>
 #  include <__assert>
 #  include <__config>
+#  include <__cstddef/size_t.h>
 #  include <__debug_utils/sanitizers.h>
 #  include <__format/enable_insertable.h>
 #  include <__functional/hash.h>
@@ -625,9 +626,11 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #  include <__string/char_traits.h>
 #  include <__string/extern_template_lists.h>
 #  include <__type_traits/conditional.h>
+#  include <__type_traits/desugars_to.h>
 #  include <__type_traits/enable_if.h>
 #  include <__type_traits/is_allocator.h>
 #  include <__type_traits/is_array.h>
+#  include <__type_traits/is_constant_evaluated.h>
 #  include <__type_traits/is_convertible.h>
 #  include <__type_traits/is_generic_transparent_comparator.h>
 #  include <__type_traits/is_nothrow_assignable.h>
@@ -637,6 +640,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #  include <__type_traits/is_trivially_constructible.h>
 #  include <__type_traits/is_trivially_copyable.h>
 #  include <__type_traits/is_trivially_relocatable.h>
+#  include <__type_traits/remove_cv.h>
 #  include <__type_traits/remove_cvref.h>
 #  include <__utility/default_three_way_comparator.h>
 #  include <__utility/exception_guard.h>
@@ -785,8 +789,8 @@ public:
   // Users might provide custom allocators, and prior to C++20 we have no existing way to detect whether the allocator's
   // pointer type is contiguous (though it has to be by the Standard). Using the wrapper type ensures the iterator is
   // considered contiguous.
-  using iterator       = __bounded_iter<__wrap_iter<pointer> >;
-  using const_iterator = __bounded_iter<__wrap_iter<const_pointer> >;
+  using iterator       = __bounded_iter<pointer>;
+  using const_iterator = __bounded_iter<const_pointer>;
 #  else
   using iterator       = __wrap_iter<pointer>;
   using const_iterator = __wrap_iter<const_pointer>;
@@ -931,10 +935,7 @@ private:
     // regardless of whether reallocation occurs. This allows us to check for out-of-bounds accesses using logical size,
     // a stricter check, since correct code can never rely on being able to access newly-added elements via an existing
     // iterator.
-    return std::__make_bounded_iter(
-        std::__wrap_iter<pointer>(__p),
-        std::__wrap_iter<pointer>(__get_pointer()),
-        std::__wrap_iter<pointer>(__get_pointer() + size()));
+    return std::__make_bounded_iter(__p, __get_pointer(), __get_pointer() + size());
 #  else
     return iterator(__p);
 #  endif // _LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING
@@ -943,10 +944,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_iterator __make_const_iterator(const_pointer __p) const {
 #  ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING
     // Bound the iterator according to the size (and not the capacity, unlike vector).
-    return std::__make_bounded_iter(
-        std::__wrap_iter<const_pointer>(__p),
-        std::__wrap_iter<const_pointer>(__get_pointer()),
-        std::__wrap_iter<const_pointer>(__get_pointer() + size()));
+    return std::__make_bounded_iter(__p, __get_pointer(), __get_pointer() + size());
 #  else
     return const_iterator(__p);
 #  endif                    // _LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING
@@ -2608,19 +2606,29 @@ struct __default_three_way_comparator<basic_string<_CharT, _Traits, _Alloc>, bas
 };
 #  endif
 
-template <class _Comparator, class _CharT, class _Traits, class _Alloc>
-inline const bool __is_transparently_comparable_v<_Comparator,
-                                                  basic_string<_CharT, _Traits, _Alloc>,
-                                                  const _CharT*,
-                                                  __enable_if_t<__is_generic_transparent_comparator_v<_Comparator> > > =
-    true;
+template <class _Comparator, class _CharT2, class _CharT, class _Traits, class _Alloc>
+inline const bool __is_transparently_comparable_v<_Comparator, basic_string<_CharT, _Traits, _Alloc>, _CharT2*> =
+    is_same<_CharT, __remove_cv_t<_CharT2> >::value &&
+    (__desugars_to_v<__less_tag,
+                     _Comparator,
+                     basic_string<_CharT, _Traits, _Alloc>,
+                     basic_string<_CharT, _Traits, _Alloc> > ||
+     __desugars_to_v<__greater_tag,
+                     _Comparator,
+                     basic_string<_CharT, _Traits, _Alloc>,
+                     basic_string<_CharT, _Traits, _Alloc> >);
+
+template <class _Comparator, class _CharT2, class _CharT, class _Traits, class _Alloc>
+inline const bool __is_transparently_comparable_v<_Comparator, _CharT2*, basic_string<_CharT, _Traits, _Alloc> > =
+    __is_transparently_comparable_v<_Comparator, basic_string<_CharT, _Traits, _Alloc>, _CharT2*>;
 
 template <class _Comparator, class _CharT, class _Traits, class _Alloc, size_t _Np>
-inline const bool __is_transparently_comparable_v<_Comparator,
-                                                  basic_string<_CharT, _Traits, _Alloc>,
-                                                  _CharT[_Np],
-                                                  __enable_if_t<__is_generic_transparent_comparator_v<_Comparator> > > =
-    true;
+inline const bool __is_transparently_comparable_v<_Comparator, basic_string<_CharT, _Traits, _Alloc>, _CharT[_Np]> =
+    __is_transparently_comparable_v<_Comparator, basic_string<_CharT, _Traits, _Alloc>, const _CharT*>;
+
+template <class _Comparator, class _CharT, class _Traits, class _Alloc, size_t _Np>
+inline const bool __is_transparently_comparable_v<_Comparator, _CharT[_Np], basic_string<_CharT, _Traits, _Alloc> > =
+    __is_transparently_comparable_v<_Comparator, basic_string<_CharT, _Traits, _Alloc>, const _CharT*>;
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _InputIterator,

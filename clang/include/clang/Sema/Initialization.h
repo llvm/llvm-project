@@ -160,6 +160,10 @@ private:
     /// Whether the entity being initialized may end up using the
     /// named return value optimization (NRVO).
     bool NRVO;
+
+    /// When Kind == EK_New, whether this is initializing an array of runtime
+    /// size (which needs an array filler).
+    bool VariableLengthArrayNew;
   };
 
   struct VD {
@@ -227,11 +231,12 @@ private:
   /// function, throwing an object, performing an explicit cast, or
   /// initializing a parameter for which there is no declaration.
   InitializedEntity(EntityKind Kind, SourceLocation Loc, QualType Type,
-                    bool NRVO = false)
+                    bool NRVO = false, bool VariableLengthArrayNew = false)
       : Kind(Kind), Type(Type) {
     new (&LocAndNRVO) LN;
     LocAndNRVO.Location = Loc;
     LocAndNRVO.NRVO = NRVO;
+    LocAndNRVO.VariableLengthArrayNew = VariableLengthArrayNew;
   }
 
   /// Create the initialization entity for a member subobject.
@@ -335,8 +340,10 @@ public:
   }
 
   /// Create the initialization entity for an object allocated via new.
-  static InitializedEntity InitializeNew(SourceLocation NewLoc, QualType Type) {
-    return InitializedEntity(EK_New, NewLoc, Type);
+  static InitializedEntity InitializeNew(SourceLocation NewLoc, QualType Type,
+                                         bool VariableLengthArrayNew) {
+    return InitializedEntity(EK_New, NewLoc, Type, /*NRVO=*/false,
+                             VariableLengthArrayNew);
   }
 
   /// Create the initialization entity for a temporary.
@@ -506,8 +513,7 @@ public:
 
   /// Determine whether this is an array new with an unknown bound.
   bool isVariableLengthArrayNew() const {
-    return getKind() == EK_New && isa_and_nonnull<IncompleteArrayType>(
-                                      getType()->getAsArrayTypeUnsafe());
+    return getKind() == EK_New && LocAndNRVO.VariableLengthArrayNew;
   }
 
   /// Is this the implicit initialization of a member of a class from

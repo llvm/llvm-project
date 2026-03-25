@@ -597,7 +597,7 @@ public:
         typename Emitter::LabelTy EndLabel = this->Ctx->getLabel();
         if (!this->Ctx->emitGetLocalEnabled(Local.Offset, E))
           return false;
-        if (!this->Ctx->jumpFalse(EndLabel))
+        if (!this->Ctx->jumpFalse(EndLabel, E))
           return false;
 
         if (!this->Ctx->emitGetPtrLocal(Local.Offset, E))

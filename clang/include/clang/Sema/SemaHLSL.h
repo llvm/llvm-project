@@ -203,6 +203,9 @@ public:
 
   bool CheckCompatibleParameterABI(FunctionDecl *New, FunctionDecl *Old);
 
+  QualType ActOnTemplateShorthand(TemplateDecl *Template,
+                                  SourceLocation NameLoc);
+
   // Diagnose whether the input ID is uint/unit2/uint3 type.
   bool diagnoseInputIDType(QualType T, const ParsedAttr &AL);
   bool diagnosePositionType(QualType T, const ParsedAttr &AL);
@@ -221,6 +224,13 @@ public:
                                 SourceLocation OpLoc,
                                 const IdentifierInfo *CompName,
                                 SourceLocation CompLoc);
+
+  uint32_t getNextImplicitBindingOrderID() {
+    return ImplicitBindingNextOrderID++;
+  }
+
+  bool initGlobalResourceDecl(VarDecl *VD);
+  bool initGlobalResourceArrayDecl(VarDecl *VD);
 
 private:
   // HLSL resource type attributes need to be processed all at once.
@@ -315,12 +325,7 @@ private:
       const Attr *A, llvm::Triple::EnvironmentType Stage, IOType CurrentIOType,
       std::initializer_list<SemanticStageInfo> AllowedStages);
 
-  uint32_t getNextImplicitBindingOrderID() {
-    return ImplicitBindingNextOrderID++;
-  }
-
-  bool initGlobalResourceDecl(VarDecl *VD);
-  bool initGlobalResourceArrayDecl(VarDecl *VD);
+  void handleGlobalStructOrArrayOfWithResources(VarDecl *VD);
 
   // Infer a common global binding info for an Expr
   //

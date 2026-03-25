@@ -324,6 +324,10 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
     Copy->insertBefore(VPBB, InsertPt);
     addRecipeForPart(&R, Copy, Part);
 
+    // Phi operands are updated once all other recipes have been unrolled.
+    if (isa<VPWidenPHIRecipe>(Copy))
+      continue;
+
     VPValue *Op;
     if (match(&R, m_VPInstruction<VPInstruction::FirstOrderRecurrenceSplice>(
                       m_VPValue(), m_VPValue(Op)))) {
@@ -333,8 +337,7 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
     }
     if (auto *VPR = dyn_cast<VPVectorPointerRecipe>(&R)) {
       VPBuilder Builder(VPR);
-      const DataLayout &DL =
-          Plan.getScalarHeader()->getIRBasicBlock()->getDataLayout();
+      const DataLayout &DL = Plan.getDataLayout();
       Type *IndexTy = DL.getIndexType(TypeInfo.inferScalarType(VPR));
       Type *VFTy = TypeInfo.inferScalarType(&Plan.getVF());
       VPValue *VF = Builder.createScalarZExtOrTrunc(
@@ -432,6 +435,17 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
       addUniformForAllParts(cast<VPInstruction>(&R));
       for (unsigned Part = 1; Part != UF; ++Part)
         R.addOperand(getValueForPart(Op1, Part));
+      continue;
+    }
+
+    VPValue *Op2;
+    if (match(&R, m_ExtractLastActive(m_VPValue(), m_VPValue(Op1),
+                                      m_VPValue(Op2)))) {
+      addUniformForAllParts(cast<VPInstruction>(&R));
+      for (unsigned Part = 1; Part != UF; ++Part) {
+        R.addOperand(getValueForPart(Op1, Part));
+        R.addOperand(getValueForPart(Op2, Part));
+      }
       continue;
     }
 

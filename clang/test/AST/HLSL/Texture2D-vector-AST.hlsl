@@ -23,7 +23,58 @@
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(vector<element_type, element_count>)]]
 // CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
 
-// CHECK: CXXMethodDecl {{.*}} Sample 'vector<element_type (hlsl::SamplerState, vector<float, 2>), element_count>'
+// CHECK: CXXMethodDecl {{.*}} Load 'vector<element_type, element_count> (vector<int, 3>)'
+// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<int, 3>'
+// CHECK-NEXT: CompoundStmt
+// CHECK-NEXT: ReturnStmt
+// CHECK-NEXT: CStyleCastExpr {{.*}} 'vector<element_type, element_count>' <Dependent>
+// CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
+// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_load_level' 'void (...) noexcept'
+// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-SAME{LITERAL}: [[hlsl::contained_type(vector<element_type, element_count>)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME: ' lvalue .__handle
+// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::Texture2D<vector<element_type, element_count>>' lvalue implicit this
+// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<int, 3>' lvalue ParmVar {{.*}} 'Location' 'vector<int, 3>'
+// CHECK-NEXT: AlwaysInlineAttr
+
+// CHECK: CXXMethodDecl {{.*}} Load 'vector<element_type, element_count> (vector<int, 3>, vector<int, 2>)'
+// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<int, 3>'
+// CHECK-NEXT: ParmVarDecl {{.*}} Offset 'vector<int, 2>'
+// CHECK-NEXT: CompoundStmt
+// CHECK-NEXT: ReturnStmt
+// CHECK-NEXT: CStyleCastExpr {{.*}} 'vector<element_type, element_count>' <Dependent>
+// CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
+// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_load_level' 'void (...) noexcept'
+// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-SAME{LITERAL}: [[hlsl::contained_type(vector<element_type, element_count>)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME: ' lvalue .__handle
+// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::Texture2D<vector<element_type, element_count>>' lvalue implicit this
+// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<int, 3>' lvalue ParmVar {{.*}} 'Location' 'vector<int, 3>'
+// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<int, 2>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, 2>'
+// CHECK-NEXT: AlwaysInlineAttr
+
+// CHECK: CXXMethodDecl {{.*}} operator[] 'vector<element_type, element_count> const hlsl_device &(vector<unsigned int, 2>) const' inline
+// CHECK-NEXT: ParmVarDecl {{.*}} Index 'vector<unsigned int, 2>'
+// CHECK-NEXT: CompoundStmt
+// CHECK-NEXT: ReturnStmt
+// CHECK-NEXT: UnaryOperator {{.*}} 'vector<element_type, element_count> hlsl_device' lvalue prefix '*' cannot overflow
+// CHECK-NEXT: CStyleCastExpr {{.*}} 'vector<element_type, element_count> hlsl_device *' <Dependent>
+// CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
+// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
+// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-SAME{LITERAL}: [[hlsl::contained_type(vector<element_type, element_count>)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME: ' lvalue .__handle
+// CHECK-NEXT: CXXThisExpr {{.*}} 'const hlsl::Texture2D<vector<element_type, element_count>>' lvalue implicit this
+// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<unsigned int, 2>' lvalue ParmVar {{.*}} 'Index' 'vector<unsigned int, 2>'
+// CHECK-NEXT: AlwaysInlineAttr
+
+// CHECK: CXXMethodDecl {{.*}} Sample 'vector<element_type, element_count> (hlsl::SamplerState, vector<float, 2>)'
 // CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
 // CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
 // CHECK-NEXT: CompoundStmt
@@ -44,7 +95,7 @@
 // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, 2>' lvalue ParmVar {{.*}} 'Location' 'vector<float, 2>'
 // CHECK-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} Sample 'vector<element_type (hlsl::SamplerState, vector<float, 2>, vector<int, 2>), element_count>'
+// CHECK: CXXMethodDecl {{.*}} Sample 'vector<element_type, element_count> (hlsl::SamplerState, vector<float, 2>, vector<int, 2>)'
 // CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
 // CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
 // CHECK-NEXT: ParmVarDecl {{.*}} Offset 'vector<int, 2>'
@@ -67,7 +118,7 @@
 // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<int, 2>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, 2>'
 // CHECK-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} Sample 'vector<element_type (hlsl::SamplerState, vector<float, 2>, vector<int, 2>, float), element_count>'
+// CHECK: CXXMethodDecl {{.*}} Sample 'vector<element_type, element_count> (hlsl::SamplerState, vector<float, 2>, vector<int, 2>, float)'
 // CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
 // CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
 // CHECK-NEXT: ParmVarDecl {{.*}} Offset 'vector<int, 2>'
@@ -92,7 +143,7 @@
 // CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'Clamp' 'float'
 // CHECK-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} SampleBias 'vector<element_type (hlsl::SamplerState, vector<float, 2>, float), element_count>'
+// CHECK: CXXMethodDecl {{.*}} SampleBias 'vector<element_type, element_count> (hlsl::SamplerState, vector<float, 2>, float)'
 // CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
 // CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
 // CHECK-NEXT: ParmVarDecl {{.*}} Bias 'float'
@@ -115,7 +166,7 @@
 // CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'Bias' 'float'
 // CHECK-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} SampleBias 'vector<element_type (hlsl::SamplerState, vector<float, 2>, float, vector<int, 2>), element_count>'
+// CHECK: CXXMethodDecl {{.*}} SampleBias 'vector<element_type, element_count> (hlsl::SamplerState, vector<float, 2>, float, vector<int, 2>)'
 // CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
 // CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
 // CHECK-NEXT: ParmVarDecl {{.*}} Bias 'float'
@@ -140,7 +191,7 @@
 // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<int, 2>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, 2>'
 // CHECK-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} SampleBias 'vector<element_type (hlsl::SamplerState, vector<float, 2>, float, vector<int, 2>, float), element_count>'
+// CHECK: CXXMethodDecl {{.*}} SampleBias 'vector<element_type, element_count> (hlsl::SamplerState, vector<float, 2>, float, vector<int, 2>, float)'
 // CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
 // CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
 // CHECK-NEXT: ParmVarDecl {{.*}} Bias 'float'
@@ -167,7 +218,7 @@
 // CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'Clamp' 'float'
 // CHECK-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} SampleGrad 'vector<element_type (hlsl::SamplerState, vector<float, 2>, vector<float, 2>, vector<float, 2>), element_count>'
+// CHECK: CXXMethodDecl {{.*}} SampleGrad 'vector<element_type, element_count> (hlsl::SamplerState, vector<float, 2>, vector<float, 2>, vector<float, 2>)'
 // CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
 // CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
 // CHECK-NEXT: ParmVarDecl {{.*}} DDX 'vector<float, 2>'
@@ -192,7 +243,7 @@
 // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, 2>' lvalue ParmVar {{.*}} 'DDY' 'vector<float, 2>'
 // CHECK-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} SampleGrad 'vector<element_type (hlsl::SamplerState, vector<float, 2>, vector<float, 2>, vector<float, 2>, vector<int, 2>), element_count>'
+// CHECK: CXXMethodDecl {{.*}} SampleGrad 'vector<element_type, element_count> (hlsl::SamplerState, vector<float, 2>, vector<float, 2>, vector<float, 2>, vector<int, 2>)'
 // CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
 // CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
 // CHECK-NEXT: ParmVarDecl {{.*}} DDX 'vector<float, 2>'
@@ -219,7 +270,7 @@
 // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<int, 2>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, 2>'
 // CHECK-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} SampleGrad 'vector<element_type (hlsl::SamplerState, vector<float, 2>, vector<float, 2>, vector<float, 2>, vector<int, 2>, float), element_count>'
+// CHECK: CXXMethodDecl {{.*}} SampleGrad 'vector<element_type, element_count> (hlsl::SamplerState, vector<float, 2>, vector<float, 2>, vector<float, 2>, vector<int, 2>, float)'
 // CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
 // CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
 // CHECK-NEXT: ParmVarDecl {{.*}} DDX 'vector<float, 2>'
@@ -248,7 +299,7 @@
 // CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'Clamp' 'float'
 // CHECK-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} SampleLevel 'vector<element_type (hlsl::SamplerState, vector<float, 2>, float), element_count>'
+// CHECK: CXXMethodDecl {{.*}} SampleLevel 'vector<element_type, element_count> (hlsl::SamplerState, vector<float, 2>, float)'
 // CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
 // CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
 // CHECK-NEXT: ParmVarDecl {{.*}} LOD 'float'
@@ -271,7 +322,7 @@
 // CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'LOD' 'float'
 // CHECK-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} SampleLevel 'vector<element_type (hlsl::SamplerState, vector<float, 2>, float, vector<int, 2>), element_count>'
+// CHECK: CXXMethodDecl {{.*}} SampleLevel 'vector<element_type, element_count> (hlsl::SamplerState, vector<float, 2>, float, vector<int, 2>)'
 // CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
 // CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
 // CHECK-NEXT: ParmVarDecl {{.*}} LOD 'float'
@@ -419,7 +470,7 @@
 // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<int, 2>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, 2>'
 // CHECK-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} Gather 'vector<element_type (hlsl::SamplerState, vector<float, 2>), 4>' inline
+// CHECK: CXXMethodDecl {{.*}} Gather 'vector<element_type, 4> (hlsl::SamplerState, vector<float, 2>)' inline
 // CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
 // CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
 // CHECK-NEXT: CompoundStmt
@@ -435,41 +486,7 @@
 // CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned int' 0
 // CHECK-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} Gather 'vector<element_type (hlsl::SamplerState, vector<float, 2>, vector<int, 2>), 4>' inline
-// CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
-// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
-// CHECK-NEXT: ParmVarDecl {{.*}} Offset 'vector<int, 2>'
-// CHECK-NEXT: CompoundStmt
-// CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: CStyleCastExpr {{.*}} 'vector<element_type, 4>' <Dependent>
-// CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_gather' 'void (...) noexcept'
-// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::Texture2D<{{.*}}>' lvalue implicit this
-// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, 2>' lvalue ParmVar {{.*}} 'Location' 'vector<float, 2>'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned int' 0
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<int, 2>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, 2>'
-// CHECK-NEXT: AlwaysInlineAttr
-
-// CHECK: CXXMethodDecl {{.*}} GatherRed 'vector<element_type (hlsl::SamplerState, vector<float, 2>), 4>' inline
-// CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
-// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
-// CHECK-NEXT: CompoundStmt
-// CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: CStyleCastExpr {{.*}} 'vector<element_type, 4>' <Dependent>
-// CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_gather' 'void (...) noexcept'
-// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::Texture2D<{{.*}}>' lvalue implicit this
-// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, 2>' lvalue ParmVar {{.*}} 'Location' 'vector<float, 2>'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned int' 0
-// CHECK-NEXT: AlwaysInlineAttr
-
-// CHECK: CXXMethodDecl {{.*}} GatherRed 'vector<element_type (hlsl::SamplerState, vector<float, 2>, vector<int, 2>), 4>' inline
+// CHECK: CXXMethodDecl {{.*}} Gather 'vector<element_type, 4> (hlsl::SamplerState, vector<float, 2>, vector<int, 2>)' inline
 // CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
 // CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
 // CHECK-NEXT: ParmVarDecl {{.*}} Offset 'vector<int, 2>'
@@ -487,7 +504,41 @@
 // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<int, 2>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, 2>'
 // CHECK-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} GatherGreen 'vector<element_type (hlsl::SamplerState, vector<float, 2>), 4>' inline
+// CHECK: CXXMethodDecl {{.*}} GatherRed 'vector<element_type, 4> (hlsl::SamplerState, vector<float, 2>)' inline
+// CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
+// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
+// CHECK-NEXT: CompoundStmt
+// CHECK-NEXT: ReturnStmt
+// CHECK-NEXT: CStyleCastExpr {{.*}} 'vector<element_type, 4>' <Dependent>
+// CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
+// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_gather' 'void (...) noexcept'
+// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
+// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::Texture2D<{{.*}}>' lvalue implicit this
+// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
+// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
+// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, 2>' lvalue ParmVar {{.*}} 'Location' 'vector<float, 2>'
+// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned int' 0
+// CHECK-NEXT: AlwaysInlineAttr
+
+// CHECK: CXXMethodDecl {{.*}} GatherRed 'vector<element_type, 4> (hlsl::SamplerState, vector<float, 2>, vector<int, 2>)' inline
+// CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
+// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
+// CHECK-NEXT: ParmVarDecl {{.*}} Offset 'vector<int, 2>'
+// CHECK-NEXT: CompoundStmt
+// CHECK-NEXT: ReturnStmt
+// CHECK-NEXT: CStyleCastExpr {{.*}} 'vector<element_type, 4>' <Dependent>
+// CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
+// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_gather' 'void (...) noexcept'
+// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
+// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::Texture2D<{{.*}}>' lvalue implicit this
+// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
+// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
+// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, 2>' lvalue ParmVar {{.*}} 'Location' 'vector<float, 2>'
+// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned int' 0
+// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<int, 2>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, 2>'
+// CHECK-NEXT: AlwaysInlineAttr
+
+// CHECK: CXXMethodDecl {{.*}} GatherGreen 'vector<element_type, 4> (hlsl::SamplerState, vector<float, 2>)' inline
 // CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
 // CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
 // CHECK-NEXT: CompoundStmt
@@ -503,7 +554,7 @@
 // CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned int' 1
 // CHECK-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} GatherGreen 'vector<element_type (hlsl::SamplerState, vector<float, 2>, vector<int, 2>), 4>' inline
+// CHECK: CXXMethodDecl {{.*}} GatherGreen 'vector<element_type, 4> (hlsl::SamplerState, vector<float, 2>, vector<int, 2>)' inline
 // CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
 // CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
 // CHECK-NEXT: ParmVarDecl {{.*}} Offset 'vector<int, 2>'
@@ -521,7 +572,7 @@
 // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<int, 2>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, 2>'
 // CHECK-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} GatherBlue 'vector<element_type (hlsl::SamplerState, vector<float, 2>), 4>' inline
+// CHECK: CXXMethodDecl {{.*}} GatherBlue 'vector<element_type, 4> (hlsl::SamplerState, vector<float, 2>)' inline
 // CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
 // CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
 // CHECK-NEXT: CompoundStmt
@@ -537,7 +588,7 @@
 // CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned int' 2
 // CHECK-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} GatherBlue 'vector<element_type (hlsl::SamplerState, vector<float, 2>, vector<int, 2>), 4>' inline
+// CHECK: CXXMethodDecl {{.*}} GatherBlue 'vector<element_type, 4> (hlsl::SamplerState, vector<float, 2>, vector<int, 2>)' inline
 // CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
 // CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
 // CHECK-NEXT: ParmVarDecl {{.*}} Offset 'vector<int, 2>'
@@ -555,7 +606,7 @@
 // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<int, 2>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, 2>'
 // CHECK-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} GatherAlpha 'vector<element_type (hlsl::SamplerState, vector<float, 2>), 4>' inline
+// CHECK: CXXMethodDecl {{.*}} GatherAlpha 'vector<element_type, 4> (hlsl::SamplerState, vector<float, 2>)' inline
 // CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
 // CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
 // CHECK-NEXT: CompoundStmt
@@ -571,7 +622,7 @@
 // CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned int' 3
 // CHECK-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} GatherAlpha 'vector<element_type (hlsl::SamplerState, vector<float, 2>, vector<int, 2>), 4>' inline
+// CHECK: CXXMethodDecl {{.*}} GatherAlpha 'vector<element_type, 4> (hlsl::SamplerState, vector<float, 2>, vector<int, 2>)' inline
 // CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
 // CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
 // CHECK-NEXT: ParmVarDecl {{.*}} Offset 'vector<int, 2>'
@@ -589,7 +640,7 @@
 // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<int, 2>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, 2>'
 // CHECK-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} GatherCmp 'vector<float (hlsl::SamplerComparisonState, vector<float, 2>, float), 4>' inline
+// CHECK: CXXMethodDecl {{.*}} GatherCmp 'vector<float, 4> (hlsl::SamplerComparisonState, vector<float, 2>, float)' inline
 // CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerComparisonState'
 // CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
 // CHECK-NEXT: ParmVarDecl {{.*}} CompareValue 'float'
@@ -607,7 +658,7 @@
 // CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned int' 0
 // CHECK-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} GatherCmp 'vector<float (hlsl::SamplerComparisonState, vector<float, 2>, float, vector<int, 2>), 4>' inline
+// CHECK: CXXMethodDecl {{.*}} GatherCmp 'vector<float, 4> (hlsl::SamplerComparisonState, vector<float, 2>, float, vector<int, 2>)' inline
 // CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerComparisonState'
 // CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
 // CHECK-NEXT: ParmVarDecl {{.*}} CompareValue 'float'
@@ -627,7 +678,7 @@
 // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<int, 2>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, 2>'
 // CHECK-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} GatherCmpRed 'vector<float (hlsl::SamplerComparisonState, vector<float, 2>, float), 4>' inline
+// CHECK: CXXMethodDecl {{.*}} GatherCmpRed 'vector<float, 4> (hlsl::SamplerComparisonState, vector<float, 2>, float)' inline
 // CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerComparisonState'
 // CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
 // CHECK-NEXT: ParmVarDecl {{.*}} CompareValue 'float'
@@ -645,7 +696,7 @@
 // CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned int' 0
 // CHECK-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} GatherCmpGreen 'vector<float (hlsl::SamplerComparisonState, vector<float, 2>, float), 4>' inline
+// CHECK: CXXMethodDecl {{.*}} GatherCmpGreen 'vector<float, 4> (hlsl::SamplerComparisonState, vector<float, 2>, float)' inline
 // CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerComparisonState'
 // CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
 // CHECK-NEXT: ParmVarDecl {{.*}} CompareValue 'float'
@@ -663,7 +714,7 @@
 // CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned int' 1
 // CHECK-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} GatherCmpBlue 'vector<float (hlsl::SamplerComparisonState, vector<float, 2>, float), 4>' inline
+// CHECK: CXXMethodDecl {{.*}} GatherCmpBlue 'vector<float, 4> (hlsl::SamplerComparisonState, vector<float, 2>, float)' inline
 // CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerComparisonState'
 // CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
 // CHECK-NEXT: ParmVarDecl {{.*}} CompareValue 'float'
@@ -681,7 +732,7 @@
 // CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned int' 2
 // CHECK-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} GatherCmpAlpha 'vector<float (hlsl::SamplerComparisonState, vector<float, 2>, float, vector<int, 2>), 4>' inline
+// CHECK: CXXMethodDecl {{.*}} GatherCmpAlpha 'vector<float, 4> (hlsl::SamplerComparisonState, vector<float, 2>, float, vector<int, 2>)' inline
 // CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerComparisonState'
 // CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
 // CHECK-NEXT: ParmVarDecl {{.*}} CompareValue 'float'

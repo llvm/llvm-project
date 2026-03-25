@@ -1231,14 +1231,26 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCopyAssignmentOperator() {
   return MMB.returnThis().finalize();
 }
 
-BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addArraySubscriptOperators() {
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addArraySubscriptOperators(ResourceDimension Dim) {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = Record->getASTContext();
+
+  uint32_t VecSize = 1;
+  if (Dim != ResourceDimension::Unknown)
+    VecSize = getResourceDimensions(Dim);
+
+  QualType IndexTy = VecSize > 1
+                         ? AST.getExtVectorType(AST.UnsignedIntTy, VecSize)
+                         : AST.UnsignedIntTy;
+
   DeclarationName Subscript =
       AST.DeclarationNames.getCXXOperatorName(OO_Subscript);
 
-  addHandleAccessFunction(Subscript, /*IsConst=*/true, /*IsRef=*/true);
+  addHandleAccessFunction(Subscript, /*IsConst=*/true, /*IsRef=*/true, IndexTy);
   if (getResourceAttrs().ResourceClass == llvm::dxil::ResourceClass::UAV)
-    addHandleAccessFunction(Subscript, /*IsConst=*/false, /*IsRef=*/true);
+    addHandleAccessFunction(Subscript, /*IsConst=*/false, /*IsRef=*/true,
+                            IndexTy);
 
   return *this;
 }
@@ -1250,10 +1262,39 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addLoadMethods() {
   IdentifierInfo &II = AST.Idents.get("Load", tok::TokenKind::identifier);
   DeclarationName Load(&II);
   // TODO: We also need versions with status for CheckAccessFullyMapped.
-  addHandleAccessFunction(Load, /*IsConst=*/false, /*IsRef=*/false);
+  addHandleAccessFunction(Load, /*IsConst=*/false, /*IsRef=*/false,
+                          AST.UnsignedIntTy);
   addLoadWithStatusFunction(Load, /*IsConst=*/false);
 
   return *this;
+}
+
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addTextureLoadMethods(ResourceDimension Dim) {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+  ASTContext &AST = Record->getASTContext();
+  uint32_t VecSize = getResourceDimensions(Dim);
+  QualType IntTy = AST.IntTy;
+  QualType OffsetTy = AST.getExtVectorType(IntTy, VecSize);
+  QualType LocationTy = AST.getExtVectorType(IntTy, VecSize + 1);
+  QualType ReturnType = getHandleElementType();
+
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+
+  // T Load(int3 location)
+  BuiltinTypeMethodBuilder(*this, "Load", ReturnType)
+      .addParam("Location", LocationTy)
+      .callBuiltin("__builtin_hlsl_resource_load_level", ReturnType, PH::Handle,
+                   PH::_0)
+      .finalize();
+
+  // T Load(int3 location, int2 offset)
+  return BuiltinTypeMethodBuilder(*this, "Load", ReturnType)
+      .addParam("Location", LocationTy)
+      .addParam("Offset", OffsetTy)
+      .callBuiltin("__builtin_hlsl_resource_load_level", ReturnType, PH::Handle,
+                   PH::_0, PH::_1)
+      .finalize();
 }
 
 BuiltinTypeDeclBuilder &
@@ -1267,7 +1308,7 @@ BuiltinTypeDeclBuilder::addByteAddressBufferLoadMethods() {
     DeclarationName Load(&II);
 
     addHandleAccessFunction(Load, /*IsConst=*/false, /*IsRef=*/false,
-                            ReturnType);
+                            AST.UnsignedIntTy, ReturnType);
     addLoadWithStatusFunction(Load, /*IsConst=*/false, ReturnType);
   };
 
@@ -1741,9 +1782,8 @@ QualType BuiltinTypeDeclBuilder::getHandleElementType() {
   if (Template)
     return getFirstTemplateTypeParam();
 
-  if (auto *PartialSpec =
-          dyn_cast<ClassTemplatePartialSpecializationDecl>(Record)) {
-    const auto &Args = PartialSpec->getTemplateArgs();
+  if (auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(Record)) {
+    const auto &Args = Spec->getTemplateArgs();
     if (Args.size() > 0 && Args[0].getKind() == TemplateArgument::Type)
       return Args[0].getAsType();
   }
@@ -1784,6 +1824,13 @@ Expr *BuiltinTypeDeclBuilder::getConstantUnsignedIntExpr(unsigned value) {
 BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addSimpleTemplateParams(ArrayRef<StringRef> Names,
                                                 ConceptDecl *CD = nullptr) {
+  return addSimpleTemplateParams(Names, {}, CD);
+}
+
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addSimpleTemplateParams(ArrayRef<StringRef> Names,
+                                                ArrayRef<QualType> DefaultTypes,
+                                                ConceptDecl *CD) {
   if (Record->isCompleteDefinition()) {
     assert(Template && "existing record it not a template");
     assert(Template->getTemplateParameters()->size() == Names.size() &&
@@ -1791,9 +1838,14 @@ BuiltinTypeDeclBuilder::addSimpleTemplateParams(ArrayRef<StringRef> Names,
     return *this;
   }
 
+  assert((DefaultTypes.empty() || DefaultTypes.size() == Names.size()) &&
+         "template default argument count mismatch");
+
   TemplateParameterListBuilder Builder = TemplateParameterListBuilder(*this);
-  for (StringRef Name : Names)
-    Builder.addTypeParameter(Name);
+  for (unsigned i = 0; i < Names.size(); ++i) {
+    QualType DefaultTy = DefaultTypes.empty() ? QualType() : DefaultTypes[i];
+    Builder.addTypeParameter(Names[i], DefaultTy);
+  }
   return Builder.finalizeTemplateArgs(CD);
 }
 
@@ -1846,7 +1898,8 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addLoadWithStatusFunction(
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleAccessFunction(
-    DeclarationName &Name, bool IsConst, bool IsRef, QualType ElemTy) {
+    DeclarationName &Name, bool IsConst, bool IsRef, QualType IndexTy,
+    QualType ElemTy) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = SemaRef.getASTContext();
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
@@ -1876,7 +1929,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleAccessFunction(
   }
   MMB.ReturnTy = ReturnTy;
 
-  MMB.addParam("Index", AST.UnsignedIntTy);
+  MMB.addParam("Index", IndexTy);
 
   if (NeedsTypedBuiltin)
     MMB.callBuiltin("__builtin_hlsl_resource_getpointer_typed", ElemPtrTy,
