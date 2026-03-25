@@ -64,7 +64,8 @@ ProcessFreeBSDKernelCore::ProcessFreeBSDKernelCore(lldb::TargetSP target_sp,
                                                    ListenerSP listener_sp,
                                                    kvm_t *kvm,
                                                    const FileSpec &core_file)
-    : PostMortemProcess(target_sp, listener_sp, core_file), m_kvm(kvm) {}
+    : PostMortemProcess(target_sp, listener_sp, core_file), m_is_kvm(true),
+      m_kvm(kvm) {}
 
 ProcessFreeBSDKernelCore::~ProcessFreeBSDKernelCore() {
   if (m_kvm)
@@ -157,9 +158,10 @@ size_t ProcessFreeBSDKernelCore::DoWriteMemory(lldb::addr_t addr,
 
 bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
                                                   ThreadList &new_thread_list) {
-  if (old_thread_list.GetSize(false) == 0) {
+  if (m_is_kvm || old_thread_list.GetSize(false) == 0) {
     // Make up the thread the first time this is called so we can set our one
-    // and only core thread state up.
+    // and only core thread state up. Since target type (crash dump or live
+    // memory) isn't identifable in kvm, always reconstruct thread list for kvm.
 
     // We cannot construct a thread without a register context as that crashes
     // LLDB but we can construct a process without threads to provide minimal

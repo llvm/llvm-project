@@ -70,9 +70,11 @@ private:
 
   const char *GetError();
 
-  bool m_printed_unread_message = false;
+  const bool m_is_kvm;
 
   kvm_t *m_kvm;
+
+  bool m_printed_unread_message = false;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_PROCESSFREEBSDKERNELCORE_H
