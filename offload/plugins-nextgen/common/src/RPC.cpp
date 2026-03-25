@@ -136,16 +136,15 @@ void RPCServerTy::ServerThread::shutDown() {
     std::lock_guard<decltype(Mutex)> Lock(Mutex);
     CV.notify_all();
   }
+  if (WakeFunction)
+    WakeFunction();
   if (Worker.joinable())
     Worker.join();
 }
 
 void RPCServerTy::ServerThread::run() {
-  static constexpr auto IdleTime = std::chrono::microseconds(25);
-  static constexpr auto IdleSleep = std::chrono::microseconds(250);
   std::unique_lock<decltype(Mutex)> Lock(Mutex);
 
-  auto LastUse = std::chrono::steady_clock::now();
   for (;;) {
     CV.wait(Lock, [&]() {
       return NumUsers.load(std::memory_order_acquire) > 0 ||
@@ -160,12 +159,8 @@ void RPCServerTy::ServerThread::run() {
     while (NumUsers.load(std::memory_order_relaxed) > 0 &&
            Running.load(std::memory_order_relaxed)) {
 
-      // Suspend this thread briefly if there is no current work.
-      auto Now = std::chrono::steady_clock::now();
-      if (!ClientInUse && Now - LastUse >= IdleTime)
-        std::this_thread::sleep_for(IdleSleep);
-      else if (ClientInUse)
-        LastUse = Now;
+      if (!ClientInUse)
+        SleepFunction();
 
       ClientInUse = false;
       std::lock_guard<decltype(Mutex)> Lock(BufferMutex);
@@ -196,9 +191,9 @@ llvm::Error RPCServerTy::startThread() {
   return Error::success();
 }
 
-llvm::Error RPCServerTy::shutDown() {
+llvm::Error RPCServerTy::shutDown(plugin::GenericPluginTy &Plugin) {
   Thread->shutDown();
-  return Error::success();
+  return Plugin.deinitRPCDoorbell();
 }
 
 llvm::Expected<bool>
@@ -224,6 +219,17 @@ Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
     return plugin::Plugin::error(
         error::ErrorCode::UNKNOWN,
         "failed to initialize RPC server for device %d", Device.getDeviceId());
+
+  // The doorbell is used by AMDGPU targets to let the server thread be
+  // descheduled. It is optional and will be ignored if the fields are null.
+  rpc::Doorbell Doorbell{};
+  if (auto Err = Device.Plugin.initRPCDoorbell(Doorbell.value, Doorbell.mailbox,
+                                               Doorbell.event_id))
+    return Err;
+
+  auto *DoorbellPtr = reinterpret_cast<rpc::Doorbell *>(
+      static_cast<uint8_t *>(RPCBuffer) + rpc::Server::doorbell_offset());
+  std::memcpy(DoorbellPtr, &Doorbell, sizeof(rpc::Doorbell));
 
   // Get the address of the RPC client from the device.
   plugin::GlobalTy ClientGlobal("__llvm_rpc_client", sizeof(rpc::Client));
@@ -254,4 +260,11 @@ Error RPCServerTy::deinitDevice(plugin::GenericDeviceTy &Device) {
 void RPCServerTy::registerCallback(RPCServerCallbackTy FnPtr) {
   std::lock_guard<decltype(BufferMutex)> Lock(BufferMutex);
   Callbacks.insert(FnPtr);
+}
+
+void RPCServerTy::setSleepFunction(std::function<void()> Sleep,
+                                   std::function<void()> Wake) {
+  std::lock_guard<decltype(BufferMutex)> Lock(BufferMutex);
+  Thread->SleepFunction = std::move(Sleep);
+  Thread->WakeFunction = std::move(Wake);
 }

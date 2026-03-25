@@ -205,6 +205,28 @@ bool IsStructureComponent(const Symbol &sym) {
   return sym.owner().kind() == Scope::Kind::DerivedType;
 }
 
+bool IsPrivatizable(const Symbol &sym) {
+  auto *misc{sym.detailsIf<MiscDetails>()};
+  return IsVariableName(sym) && !IsProcedure(sym) && !IsStmtFunction(sym) &&
+      !IsNamedConstant(sym) &&
+      ( // OpenMP 5.2, 5.1.1: Assumed-size arrays are shared
+          !semantics::IsAssumedSizeArray(sym) ||
+          // If CrayPointer is among the DSA list then the
+          // CrayPointee is Privatizable
+          sym.test(Symbol::Flag::CrayPointee)) &&
+      !sym.owner().IsDerivedType() &&
+      sym.owner().kind() != Scope::Kind::ImpliedDos &&
+      sym.owner().kind() != Scope::Kind::Forall &&
+      !sym.detailsIf<semantics::AssocEntityDetails>() &&
+      !sym.detailsIf<semantics::NamelistDetails>() &&
+      (!misc ||
+          (misc->kind() != MiscDetails::Kind::ComplexPartRe &&
+              misc->kind() != MiscDetails::Kind::ComplexPartIm &&
+              misc->kind() != MiscDetails::Kind::KindParamInquiry &&
+              misc->kind() != MiscDetails::Kind::LenParamInquiry &&
+              misc->kind() != MiscDetails::Kind::ConstructName));
+}
+
 bool IsVarOrFunctionRef(const MaybeExpr &expr) {
   if (expr) {
     return evaluate::UnwrapProcedureRef(*expr) != nullptr ||
@@ -1178,7 +1200,7 @@ LoopSequence::Depth LoopSequence::calculateDepths() const {
   auto [semaDepth, perfDepth]{getNestedDepths()};
   if (invalidIC_) {
     parser::CharBlock source{*parser::GetSource(*invalidIC_)};
-    if (semaDepth.value > 9) {
+    if (semaDepth.value > 0) {
       semaDepth.value = 0;
       semaDepth.reason.Say(
           source, "This is not a valid intervening code"_because_en_US);
@@ -1205,7 +1227,7 @@ LoopSequence::Depth LoopSequence::calculateDepths() const {
         semaDepth.reason.Say(source,
             "This construct does not contain a loop nest"_because_en_US);
       }
-      if (perfDepth.value > 9) {
+      if (perfDepth.value > 0) {
         perfDepth.reason.Say(source,
             "This construct does not contain a loop nest"_because_en_US);
       }

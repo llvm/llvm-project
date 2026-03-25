@@ -84,6 +84,7 @@ bool IsExtendedListItem(const Symbol &sym);
 bool IsVariableListItem(const Symbol &sym);
 bool IsTypeParamInquiry(const Symbol &sym);
 bool IsStructureComponent(const Symbol &sym);
+bool IsPrivatizable(const Symbol &sym);
 bool IsVarOrFunctionRef(const MaybeExpr &expr);
 
 bool IsWholeAssumedSizeArray(const parser::OmpObject &object);

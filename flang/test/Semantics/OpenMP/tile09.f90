@@ -45,6 +45,7 @@ subroutine f03
   !ERROR: This construct requires a perfect nest of depth 3, but the associated nest is a perfect nest of depth 1
   !BECAUSE: SIZES clause was specified with 3 arguments
   !$omp tile sizes(2, 2, 2)
+  !BECAUSE: This construct does not contain a loop nest
   do i = 1, 10
     !BECAUSE: LOOPRANGE clause was specified with a count of 1 starting at loop 1
     !BECAUSE: FUSE construct results in a proper loop-sequence
