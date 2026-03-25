@@ -86,9 +86,10 @@ LIBC_INLINE static float log1pf(float x) {
 
   // Use log1p(x) = log(1 + x) for |x| > 2^-6;
 
+  // Check for exceptional cases.
   if (x_a >= 0x3f80'0000) {
     // |x| >= 1.
-    if (LIBC_UNLIKELY(x_a >= 0x7f80'0000)) {
+    if (LIBC_UNLIKELY(x_u >= 0x7f80'0000)) {
       // x is inf, nan, or x <= -1.
       if (x == -1.0f) {
         // x = -1
