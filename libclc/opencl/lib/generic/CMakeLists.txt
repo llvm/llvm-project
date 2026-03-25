@@ -46,6 +46,7 @@ libclc_configure_source_list(OPENCL_GENERIC_SOURCES
   collective/work_group_any_all.cl
   collective/work_group_broadcast.cl
   collective/work_group_reduce.cl
+  collective/work_group_scan.cl
   common/degrees.cl
   common/mix.cl
   common/radians.cl
