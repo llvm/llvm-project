@@ -95,9 +95,7 @@ struct [[nodiscard]] alignas(std::max(size_t{16}, alignof(T))) Repeated {
   using size_type = size_t;
 
   iterator begin() const { return {&storage, 0}; }
-  iterator end() const {
-    return {&storage, static_cast<ptrdiff_t>(count)};
-  }
+  iterator end() const { return {&storage, static_cast<ptrdiff_t>(count)}; }
   reverse_iterator rbegin() const { return reverse_iterator(end()); }
   reverse_iterator rend() const { return reverse_iterator(begin()); }
 

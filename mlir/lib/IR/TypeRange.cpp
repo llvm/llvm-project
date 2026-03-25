@@ -32,8 +32,7 @@ TypeRange::TypeRange(ValueRange values) : TypeRange(OwnerT(), values.size()) {
   else if (auto *operand = llvm::dyn_cast_if_present<OpOperand *>(owner))
     this->base = operand;
   else if (auto *repeated =
-               llvm::dyn_cast_if_present<const Repeated<Value> *>(
-                   owner))
+               llvm::dyn_cast_if_present<const Repeated<Value> *>(owner))
     this->base = repeated;
   else
     this->base = cast<const Value *>(owner);
@@ -48,8 +47,7 @@ TypeRange::OwnerT TypeRange::offset_base(OwnerT object, ptrdiff_t index) {
   if (auto *result = llvm::dyn_cast_if_present<detail::OpResultImpl *>(object))
     return {result->getNextResultAtOffset(index)};
   // All elements are identical; the owner pointer never advances.
-  if (llvm::isa<const Repeated<Type> *,
-                const Repeated<Value> *>(object))
+  if (llvm::isa<const Repeated<Type> *, const Repeated<Value> *>(object))
     return object;
   return {llvm::dyn_cast_if_present<const Type *>(object) + index};
 }

@@ -390,9 +390,8 @@ class ValueRange final
 public:
   /// The type representing the owner of a ValueRange. This is either a list of
   /// values, operands, results, or a repeated single value.
-  using OwnerT =
-      PointerUnion<const Value *, OpOperand *, detail::OpResultImpl *,
-                   const Repeated<Value> *>;
+  using OwnerT = PointerUnion<const Value *, OpOperand *,
+                              detail::OpResultImpl *, const Repeated<Value> *>;
 
   using RangeBaseT::RangeBaseT;
 

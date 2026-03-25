@@ -31,13 +31,13 @@ namespace mlir {
 /// a SmallVector/std::vector. This class should be used in places that are not
 /// suitable for a more derived type (e.g. ArrayRef) or a template range
 /// parameter.
-class TypeRange : public llvm::detail::indexed_accessor_range_base<
-                      TypeRange,
-                      llvm::PointerUnion<const Value *, const Type *,
-                                         OpOperand *, detail::OpResultImpl *,
-                                         const Repeated<Type> *,
-                                         const Repeated<Value> *>,
-                      Type, Type, Type> {
+class TypeRange
+    : public llvm::detail::indexed_accessor_range_base<
+          TypeRange,
+          llvm::PointerUnion<const Value *, const Type *, OpOperand *,
+                             detail::OpResultImpl *, const Repeated<Type> *,
+                             const Repeated<Value> *>,
+          Type, Type, Type> {
 public:
   using RangeBaseT::RangeBaseT;
   TypeRange(ArrayRef<Type> types = {});
@@ -68,9 +68,10 @@ private:
   /// * A pointer to a Repeated<Type> (single type repeated N times).
   /// * A pointer to a Repeated<Value> (single value repeated N times,
   ///   dereferenced via getType()).
-  using OwnerT = llvm::PointerUnion<
-      const Value *, const Type *, OpOperand *, detail::OpResultImpl *,
-      const Repeated<Type> *, const Repeated<Value> *>;
+  using OwnerT =
+      llvm::PointerUnion<const Value *, const Type *, OpOperand *,
+                         detail::OpResultImpl *, const Repeated<Type> *,
+                         const Repeated<Value> *>;
 
   /// See `llvm::detail::indexed_accessor_range_base` for details.
   static OwnerT offset_base(OwnerT object, ptrdiff_t index);
