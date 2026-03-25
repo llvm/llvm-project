@@ -1,12 +1,12 @@
 ! Test to check the option "-fdebug-info-for-profiling".
 
-!RUN: %flang -### -fdebug-info-for-profiling %s 2>&1 | FileCheck %s --check-prefix=CHECK-DEBUG-INFO
-!RUN: %flang -### -fdebug-info-for-profiling -fno-debug-info-for-profiling -fdebug-info-for-profiling %s 2>&1 | FileCheck %s --check-prefix=CHECK-DEBUG-INFO
-!RUN: %flang -### %s 2>&1 | FileCheck %s
-!RUN: %flang -### -fdebug-info-for-profiling -fno-debug-info-for-profiling %s 2>&1 | FileCheck %s
+!RUN: %flang -### -fdebug-info-for-profiling %s 2>&1 | FileCheck %s --check-prefix=DEBUG-INFO
+!RUN: %flang -### -fdebug-info-for-profiling -fno-debug-info-for-profiling -fdebug-info-for-profiling %s 2>&1 | FileCheck %s --check-prefix=DEBUG-INFO
+!RUN: %flang -### %s 2>&1 | FileCheck %s --check-prefix=NO-DEBUG-INFO
+!RUN: %flang -### -fdebug-info-for-profiling -fno-debug-info-for-profiling %s 2>&1 | FileCheck %s --check-prefix=NO-DEBUG-INFO
 
-! CHECK-DEBUG-INFO: "-fdebug-info-for-profiling"
-! CHECK-NOT: "-fdebug-info-for-profiling"
+! DEBUG-INFO: "-fdebug-info-for-profiling"
+! NO-DEBUG-INFO-NOT: "-fdebug-info-for-profiling"
 
 program test
    implicit none
