@@ -189,8 +189,8 @@ private:
   llvm::DenseMap<const clang::Expr *, OriginList *> ExprToList;
   std::optional<OriginList *> ThisOrigins;
   /// Types that are not inherently pointer-like but require origin tracking
-  /// because they are returned from functions with [[clang::lifetimebound]]
-  /// parameters.
+  /// because of lifetime annotations (e.g., [[clang::lifetimebound]]) on
+  /// functions that return them.
   llvm::DenseSet<const Type *> LifetimeboundOriginTypes;
 };
 } // namespace clang::lifetimes::internal
