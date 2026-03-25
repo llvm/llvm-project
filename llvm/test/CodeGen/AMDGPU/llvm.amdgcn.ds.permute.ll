@@ -64,4 +64,32 @@ define amdgpu_kernel void @ds_permute_imm_offset(ptr addrspace(1) %out, i32 %bas
   ret void
 }
 
+define void @ds_permute_vv(ptr addrspace(1) %out, i32 %base_index, i32 %src) nounwind {
+; CHECK-SDAG-LABEL: ds_permute_vv:
+; CHECK-SDAG:       ; %bb.0:
+; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 2, v2
+; CHECK-SDAG-NEXT:    ds_permute_b32 v2, v2, v3 offset:4
+; CHECK-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-SDAG-NEXT:    flat_store_dword v[0:1], v2
+; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-GISEL-LABEL: ds_permute_vv:
+; CHECK-GISEL:       ; %bb.0:
+; CHECK-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 2, v2
+; CHECK-GISEL-NEXT:    v_add_u32_e32 v2, vcc, 4, v2
+; CHECK-GISEL-NEXT:    ds_permute_b32 v2, v2, v3
+; CHECK-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-GISEL-NEXT:    flat_store_dword v[0:1], v2
+; CHECK-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %index = add i32 %base_index, 1
+  %byte_index = shl i32 %index, 2
+  %permute = call i32 @llvm.amdgcn.ds.permute(i32 %byte_index, i32 %src) #0
+  store i32 %permute, ptr addrspace(1) %out, align 4
+  ret void
+}
+
 attributes #0 = { nounwind readnone convergent }
