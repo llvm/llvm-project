@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -44,6 +45,7 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include <ctime>
 #include <optional>
 
@@ -285,6 +287,13 @@ int llvm_ml_main(int Argc, char **Argv, const llvm::ToolContext &) {
     SafeSEH = false;
   }
 
+  bool UnwindV3 = InputArgs.hasArg(OPT_unwindv3);
+  if (UnwindV3 && !TheTriple.isArch64Bit()) {
+    WithColor::warning()
+        << "/unwindv3 applies only to 64-bit X86 platforms; ignoring.\n";
+    UnwindV3 = false;
+  }
+
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferPtr =
       MemoryBuffer::getFileOrSTDIN(InputFilename);
   if (std::error_code EC = BufferPtr.getError()) {
@@ -325,8 +334,17 @@ int llvm_ml_main(int Argc, char **Argv, const llvm::ToolContext &) {
 
   MAI->setPreserveAsmComments(InputArgs.hasArg(OPT_preserve_comments));
 
-  std::unique_ptr<MCSubtargetInfo> STI(
-      TheTarget->createMCSubtargetInfo(TheTriple, /*CPU=*/"", /*Features=*/""));
+  std::string FeaturesStr;
+  if (InputArgs.hasArg(OPT_mattr)) {
+    SubtargetFeatures Features;
+    for (auto *A : InputArgs.filtered(OPT_mattr))
+      for (StringRef F : llvm::split(A->getValue(), ','))
+        Features.AddFeature(F);
+    FeaturesStr = Features.getString();
+  }
+
+  std::unique_ptr<MCSubtargetInfo> STI(TheTarget->createMCSubtargetInfo(
+      TheTriple, /*CPU=*/"", /*Features=*/FeaturesStr));
   if (!STI) {
     WithColor::error(errs(), ProgName) << "unable to create subtarget info\n";
     exit(1);
@@ -429,6 +447,9 @@ int llvm_ml_main(int Argc, char **Argv, const llvm::ToolContext &) {
     Str->emitSymbolAttribute(Feat00Sym, MCSA_Global);
     Str->emitAssignment(Feat00Sym, MCConstantExpr::create(Feat00Flags, Ctx));
   }
+
+  if (UnwindV3)
+    Str->setDefaultWinCFIUnwindVersion(3);
 
   int Res = 1;
   if (InputArgs.hasArg(OPT_as_lex)) {

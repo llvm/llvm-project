@@ -41,6 +41,8 @@ def fatal_warnings : LLVMFlag<"fatal-warnings">,
                      HelpText<"Treat warnings as errors">;
 def filetype : LLVMJoined<"filetype=">, Values<"obj,s,null">,
                HelpText<"Emit a file with the given type">;
+def mattr : LLVMCommaJoined<"mattr=">,
+            HelpText<"Target specific attributes (--mattr=help for details)">;
 def output_att_asm : LLVMFlag<"output-att-asm">,
                      HelpText<"Use ATT syntax for output assembly">;
 def show_encoding : LLVMFlag<"show-encoding">,
@@ -81,6 +83,9 @@ def safeseh : MLFlag<"safeseh">,
                        "exception handlers or containing exception handlers "
                        "that are all declared with .SAFESEH. Only available in "
                        "32-bit.">;
+def unwindv3 : MLFlag<"unwindv3">,
+               HelpText<"Use V3 unwind information format for x64 exception "
+                        "handling.">;
 def assembly_file : MLJoinedOrSeparate<"Ta">,
                     HelpText<"Assemble source file with the given name. Used "
                              "if the filename begins with a forward slash.">;
