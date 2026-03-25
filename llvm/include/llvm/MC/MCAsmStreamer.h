@@ -14,6 +14,9 @@
 #ifndef LLVM_MC_MCASMSTREAMER_H
 #define LLVM_MC_MCASMSTREAMER_H
 
+#include "llvm/MC/MCAsmBackend.h"
+#include "llvm/MC/MCAssembler.h"
+#include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
