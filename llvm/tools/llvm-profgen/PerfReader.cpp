@@ -1383,7 +1383,7 @@ void PerfScriptReader::warnIfBranchTargetMismatch() {
       WithColor::warning()
           << format("%.2f", MismatchPct) << "% of sampled " << Kind
           << " addresses (" << Mismatched << "/" << SampleAddrs.size()
-          << ") do not match the binary, likely due to problematic raw samples or mismatch in binary.\n"
+          << ") do not match the binary, likely due to problematic raw samples or mismatch in binary.\n";
     }
   };
 
