@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_SPIRV_SPIRVEMITINTRINSICS_H_
-#define LLVM_LIB_TARGET_SPIRV_SPIRVEMITINTRINSICS_H_
+#ifndef LLVM_LIB_TARGET_SPIRV_SPIRVEMITINTRINSICS_H
+#define LLVM_LIB_TARGET_SPIRV_SPIRVEMITINTRINSICS_H
 
 #include "llvm/IR/PassManager.h"
 
@@ -25,4 +25,4 @@ public:
 
 } // namespace llvm
 
-#endif // LLVM_LIB_TARGET_SPIRV_SPIRVEMITINTRINSICS_H_
+#endif // LLVM_LIB_TARGET_SPIRV_SPIRVEMITINTRINSICS_H
