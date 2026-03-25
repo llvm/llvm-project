@@ -801,14 +801,17 @@ void MemorySlotPromoter::removeUnusedItems() {
       if (!branchOp)
         return true;
 
-      auto successorArgument =
+      std::optional<BlockArgument> successorArgument =
           branchOp.getSuccessorBlockArgument(use.getOperandNumber());
-      if (!successorArgument.has_value())
+      if (!successorArgument)
         return true;
 
       if (!info.mergePoints.contains(successorArgument->getOwner()))
         return true;
 
+      // The last block argument of a merge point is its reaching definition
+      // argument. If the argument being populated is not the last one, it is a
+      // genuine use of the value.
       bool isLastBlockArgument =
           successorArgument->getArgNumber() ==
           successorArgument->getOwner()->getNumArguments() - 1;
