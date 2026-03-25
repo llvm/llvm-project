@@ -410,7 +410,7 @@ Value *getPointerRoot(Value *I) {
 
 char SPIRVEmitIntrinsics::ID = 0;
 
-INITIALIZE_PASS(SPIRVEmitIntrinsics, "emit-intrinsics", "SPIRV emit intrinsics",
+INITIALIZE_PASS(SPIRVEmitIntrinsics, "spirv-emit-intrinsics", "SPIRV emit intrinsics",
                 false, false)
 
 static inline bool isAssignTypeInstr(const Instruction *I) {
