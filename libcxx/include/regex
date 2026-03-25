@@ -2615,13 +2615,16 @@ private:
                 regex_constants::match_flag_type __flags) const;
 
   template <class _Allocator>
-  bool __match_at_start(const _CharT* __first,
-                        const _CharT* __last,
-                        match_results<const _CharT*, _Allocator>& __m,
-                        regex_constants::match_flag_type __flags,
-                        bool) const;
+  bool __match_at_start(
+      vector<__state>& __states,
+      const _CharT* __first,
+      const _CharT* __last,
+      match_results<const _CharT*, _Allocator>& __m,
+      regex_constants::match_flag_type __flags,
+      bool) const;
   template <class _Allocator>
   bool __match_at_start_ecma(
+      vector<__state>& __states,
       const _CharT* __first,
       const _CharT* __last,
       match_results<const _CharT*, _Allocator>& __m,
@@ -2636,6 +2639,7 @@ private:
       bool) const;
   template <class _Allocator>
   bool __match_at_start_posix_subs(
+      vector<__state>& __states,
       const _CharT* __first,
       const _CharT* __last,
       match_results<const _CharT*, _Allocator>& __m,
@@ -2758,7 +2762,9 @@ template <class _CharT, class _Traits>
 void __lookahead<_CharT, _Traits>::__exec(__state& __s) const {
   match_results<const _CharT*> __m;
   __m.__init(1 + __exp_.mark_count(), __s.__current_, __s.__last_);
+  vector<__state> __states_buffer;
   bool __matched = __exp_.__match_at_start_ecma(
+      __states_buffer,
       __s.__current_,
       __s.__last_,
       __m,
@@ -4880,12 +4886,13 @@ swap(match_results<_BidirectionalIterator, _Allocator>& __x, match_results<_Bidi
 template <class _CharT, class _Traits>
 template <class _Allocator>
 bool basic_regex<_CharT, _Traits>::__match_at_start_ecma(
+    vector<__state>& __states,
     const _CharT* __first,
     const _CharT* __last,
     match_results<const _CharT*, _Allocator>& __m,
     regex_constants::match_flag_type __flags,
     bool __at_first) const {
-  vector<__state> __states;
+  __states.clear();
   __node* __st = __start_.get();
   if (__st) {
     sub_match<const _CharT*> __unmatched;
@@ -5036,12 +5043,12 @@ bool basic_regex<_CharT, _Traits>::__match_at_start_posix_nosubs(
 template <class _CharT, class _Traits>
 template <class _Allocator>
 bool basic_regex<_CharT, _Traits>::__match_at_start_posix_subs(
+    vector<__state>& __states,
     const _CharT* __first,
     const _CharT* __last,
     match_results<const _CharT*, _Allocator>& __m,
     regex_constants::match_flag_type __flags,
     bool __at_first) const {
-  vector<__state> __states;
   __state __best_state;
   ptrdiff_t __highest_j = 0;
   ptrdiff_t __np        = std::distance(__first, __last);
@@ -5125,16 +5132,17 @@ bool basic_regex<_CharT, _Traits>::__match_at_start_posix_subs(
 template <class _CharT, class _Traits>
 template <class _Allocator>
 bool basic_regex<_CharT, _Traits>::__match_at_start(
+    vector<__state>& __states,
     const _CharT* __first,
     const _CharT* __last,
     match_results<const _CharT*, _Allocator>& __m,
     regex_constants::match_flag_type __flags,
     bool __at_first) const {
   if (__get_grammar(__flags_) == ECMAScript)
-    return __match_at_start_ecma(__first, __last, __m, __flags, __at_first);
+    return __match_at_start_ecma(__states, __first, __last, __m, __flags, __at_first);
   if (mark_count() == 0)
     return __match_at_start_posix_nosubs(__first, __last, __m, __flags, __at_first);
-  return __match_at_start_posix_subs(__first, __last, __m, __flags, __at_first);
+  return __match_at_start_posix_subs(__states, __first, __last, __m, __flags, __at_first);
 }
 
 template <class _CharT, class _Traits>
@@ -5147,8 +5155,9 @@ bool basic_regex<_CharT, _Traits>::__search(
   if (__flags & regex_constants::match_prev_avail)
     __flags &= ~(regex_constants::match_not_bol | regex_constants::match_not_bow);
 
+  vector<__state> __states_buffer;
   __m.__init(1 + mark_count(), __first, __last, __flags & regex_constants::__no_update_pos);
-  if (__match_at_start(__first, __last, __m, __flags, !(__flags & regex_constants::__no_update_pos))) {
+  if (__match_at_start(__states_buffer, __first, __last, __m, __flags, !(__flags & regex_constants::__no_update_pos))) {
     __m.__prefix_.second  = __m[0].first;
     __m.__prefix_.matched = __m.__prefix_.first != __m.__prefix_.second;
     __m.__suffix_.first   = __m[0].second;
@@ -5159,7 +5168,7 @@ bool basic_regex<_CharT, _Traits>::__search(
     __flags |= regex_constants::match_prev_avail;
     for (++__first; __first != __last; ++__first) {
       __m.__matches_.assign(__m.size(), __m.__unmatched_);
-      if (__match_at_start(__first, __last, __m, __flags, false)) {
+      if (__match_at_start(__states_buffer, __first, __last, __m, __flags, false)) {
         __m.__prefix_.second  = __m[0].first;
         __m.__prefix_.matched = __m.__prefix_.first != __m.__prefix_.second;
         __m.__suffix_.first   = __m[0].second;
@@ -5169,7 +5178,7 @@ bool basic_regex<_CharT, _Traits>::__search(
       __m.__matches_.assign(__m.size(), __m.__unmatched_);
     }
     __m.__matches_.assign(__m.size(), __m.__unmatched_);
-    if (__match_at_start(__first, __last, __m, __flags, false)) {
+    if (__match_at_start(__states_buffer, __first, __last, __m, __flags, false)) {
       __m.__prefix_.second  = __m[0].first;
       __m.__prefix_.matched = __m.__prefix_.first != __m.__prefix_.second;
       __m.__suffix_.first   = __m[0].second;
