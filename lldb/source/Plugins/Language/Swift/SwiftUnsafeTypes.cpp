@@ -79,11 +79,21 @@ lldb::addr_t SwiftUnsafeType::GetAddress(llvm::StringRef child_name) {
     return false;
   ValueObjectSP synth_optional_sp = frontend->GetSyntheticValue();
 
-  if (!synth_optional_sp || !synth_optional_sp->GetNumChildren()) {
+  if (!synth_optional_sp) {
     LLDB_LOG(GetLog(LLDBLog::DataFormatters),
              "{0}: Couldn't unwrap the 'Swift.UnsafePointer' ValueObject child "
              "named 'some'.",
              __FUNCTION__);
+    return false;
+  }
+
+  auto num_children_or_err = synth_optional_sp->GetNumChildren();
+  if (!num_children_or_err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters),
+                   num_children_or_err.takeError(),
+                   "{0}: Couldn't get children of 'Swift.UnsafePointer' "
+                   "ValueObject child named 'some'. Error: {1}",
+                   __FUNCTION__);
     return false;
   }
 
@@ -201,8 +211,11 @@ SwiftUnsafeBufferPointer::SwiftUnsafeBufferPointer(ValueObject &valobj)
     : SwiftUnsafeType(valobj, UnsafePointerKind::eSwiftUnsafeBufferPointer) {}
 
 lldb::ChildCacheState SwiftUnsafeBufferPointer::Update() {
-  if (!m_valobj.GetNumChildren())
+  auto num_or_error = m_valobj.GetNumChildren();
+  if (!num_or_error) {
+    llvm::consumeError(num_or_error.takeError());
     return ChildCacheState::eRefetch;
+  }
 
   // Here is the layout of Swift's Unsafe[Mutable]BufferPointer.
   //
@@ -346,8 +359,11 @@ SwiftUnsafePointer::SwiftUnsafePointer(ValueObject &valobj,
     : SwiftUnsafeType(valobj, kind) {}
 
 lldb::ChildCacheState SwiftUnsafePointer::Update() {
-  if (!m_valobj.GetNumChildren())
+  auto num_or_error = m_valobj.GetNumChildren();
+  if (!num_or_error) {
+    llvm::consumeError(num_or_error.takeError());
     return ChildCacheState::eRefetch;
+  }
 
   // Here is the layout of Swift's Unsafe[Mutable]Pointer.
   //
