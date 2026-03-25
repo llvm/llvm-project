@@ -137,14 +137,18 @@ class LazyValueInfoCache {
   SmallVector<std::unique_ptr<BlockCacheEntry>> BlockCache;
   /// Set of value handles used to erase values from the cache on deletion.
   DenseSet<LVIValueHandle, DenseMapInfo<Value *>> ValueHandles;
+  /// Block number epoch on construction.
+  unsigned BlockNumberEpoch;
 
   const BlockCacheEntry *getBlockEntry(BasicBlock *BB) const {
+    assert(BlockNumberEpoch == BB->getParent()->getBlockNumberEpoch());
     if (BB->getNumber() < BlockCache.size())
       return BlockCache[BB->getNumber()].get();
     return nullptr;
   }
 
   BlockCacheEntry *getOrCreateBlockEntry(BasicBlock *BB) {
+    assert(BlockNumberEpoch == BB->getParent()->getBlockNumberEpoch());
     unsigned Number = BB->getNumber();
     if (Number >= BlockCache.size())
       BlockCache.resize(BB->getParent()->getMaxBlockNumber());
@@ -167,6 +171,9 @@ class LazyValueInfoCache {
   }
 
 public:
+  LazyValueInfoCache(const Function *F)
+      : BlockNumberEpoch(F->getBlockNumberEpoch()) {}
+
   void insertResult(Value *Val, BasicBlock *BB,
                     const ValueLatticeElement &Result) {
     BlockCacheEntry *Entry = getOrCreateBlockEntry(BB);
@@ -277,6 +284,7 @@ void LVIValueHandle::deleted() {
 }
 
 void LazyValueInfoCache::eraseBlock(BasicBlock *BB) {
+  assert(BlockNumberEpoch == BB->getParent()->getBlockNumberEpoch());
   // Clear all when a BB is removed.
   if (PerPredRanges)
     for (auto &Elem : BlockCache)
@@ -510,9 +518,9 @@ public:
   /// PredBB to OldSucc has been threaded to be from PredBB to NewSucc.
   void threadEdge(BasicBlock *PredBB,BasicBlock *OldSucc,BasicBlock *NewSucc);
 
-  LazyValueInfoImpl(AssumptionCache *AC, const DataLayout &DL,
+  LazyValueInfoImpl(Function *F, AssumptionCache *AC, const DataLayout &DL,
                     Function *GuardDecl)
-      : AC(AC), DL(DL), GuardDecl(GuardDecl) {}
+      : TheCache(F), AC(AC), DL(DL), GuardDecl(GuardDecl) {}
 };
 } // namespace llvm
 
@@ -1937,7 +1945,7 @@ LazyValueInfoImpl &LazyValueInfo::getOrCreateImpl() {
     const DataLayout &DL = F->getDataLayout();
     Function *GuardDecl = Intrinsic::getDeclarationIfExists(
         F->getParent(), Intrinsic::experimental_guard);
-    PImpl = new LazyValueInfoImpl(AC, DL, GuardDecl);
+    PImpl = new LazyValueInfoImpl(F, AC, DL, GuardDecl);
   }
   return *PImpl;
 }
