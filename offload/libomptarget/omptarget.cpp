@@ -1589,6 +1589,7 @@ int targetDataUpdate(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
           NonContig[DimSize - MergedDim - 1];
       uint64_t Size = FirstMergedDim.Count * FirstMergedDim.Stride;
       ODBG(ODT_DataTransfer) << "Transfer size " << Size;
+      ODBG(ODT_DataTransfer) << "Base Ptr " << ArgsBase[I];
       Ret = targetDataNonContiguous(
           Loc, Device, ArgsBase[I], NonContig, Size, ArgTypes[I],
           /*current_dim=*/0, DimSize - MergedDim, /*offset=*/0, AsyncInfo);
