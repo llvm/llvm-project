@@ -171,11 +171,15 @@ endif ()
 set(FLANG_RT_INCLUDE_TESTS_default ${LLVM_INCLUDE_TESTS})
 if ("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn|^nvptx")
   set(FLANG_RT_INCLUDE_TESTS_default OFF)
+elseif (NOT FLANG_RT_ENABLE_STATIC AND NOT FLANG_RT_ENABLE_SHARED)
+  set(FLANG_RT_INCLUDE_TESTS_default OFF)
 endif()
-if (FLANG_RT_ENABLE_STATIC OR FLANG_RT_ENABLE_SHARED)
-  option(FLANG_RT_INCLUDE_TESTS "Generate build targets for the flang-rt unit and regression-tests." "${FLANG_RT_INCLUDE_TESTS_default}")
-else ()
-  # Tests require at least one of the libraries
+option(FLANG_RT_INCLUDE_TESTS "Generate build targets for the flang-rt unit and regression-tests." "${FLANG_RT_INCLUDE_TESTS_default}")
+if (FLANG_RT_INCLUDE_TESTS AND NOT FLANG_RT_ENABLE_STATIC AND NOT FLANG_RT_ENABLE_SHARED)
+  message(WARNING "FLANG_RT_INCLUDE_TESTS=${FLANG_RT_INCLUDE_TESTS} requires a "
+                  "library to be built (FLANG_RT_ENABLE_STATIC=ON or "
+                  "FLANG_RT_ENABLE_SHARED=ON).\n"
+                  "Tests are disabled: check-flang-rt does nothing")
   set(FLANG_RT_INCLUDE_TESTS OFF)
 endif ()
 
