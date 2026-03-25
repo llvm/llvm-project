@@ -953,19 +953,14 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
   case Instruction::And:
   case Instruction::Or:
   case Instruction::Xor: {
-    TargetTransformInfo::OperandValueInfo RHSInfo = {
-        TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None};
+    // Certain instructions can be cheaper if they have a constant second
+    // operand. One example of this are shifts on x86.
+    VPValue *RHS = getOperand(1);
+    TargetTransformInfo::OperandValueInfo RHSInfo = Ctx.getOperandInfo(RHS);
 
-    if (VF.isVector()) {
-      // Certain instructions can be cheaper to vectorize if they have a
-      // constant second vector operand. One example of this are shifts on x86.
-      VPValue *RHS = getOperand(1);
-      RHSInfo = Ctx.getOperandInfo(RHS);
-
-      if (RHSInfo.Kind == TargetTransformInfo::OK_AnyValue &&
-          getOperand(1)->isDefinedOutsideLoopRegions())
-        RHSInfo.Kind = TargetTransformInfo::OK_UniformValue;
-    }
+    if (RHSInfo.Kind == TargetTransformInfo::OK_AnyValue &&
+        getOperand(1)->isDefinedOutsideLoopRegions())
+      RHSInfo.Kind = TargetTransformInfo::OK_UniformValue;
 
     Instruction *CtxI = dyn_cast_or_null<Instruction>(getUnderlyingValue());
     SmallVector<const Value *, 4> Operands;
@@ -1322,6 +1317,12 @@ void VPInstruction::execute(VPTransformState &State) {
          "scalar value but not only first lane defined");
   State.set(this, GeneratedValue,
             /*IsScalar*/ GeneratesPerFirstLaneOnly);
+  if (getOpcode() == VPInstruction::ResumeForEpilogue) {
+    // FIXME: This is a workaround to enable reliable updates of the scalar loop
+    // resume phis, when vectorizing the epilogue. Must be removed once epilogue
+    // vectorization explicitly connects VPlans.
+    setUnderlyingValue(GeneratedValue);
+  }
 }
 
 bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {

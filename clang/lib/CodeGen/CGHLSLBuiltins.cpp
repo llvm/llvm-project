@@ -1143,8 +1143,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
       auto *MatTy = QTy0->castAs<ConstantMatrixType>();
       unsigned Rows = MatTy->getNumRows();
       unsigned Cols = MatTy->getNumColumns();
-      unsigned N = QTy1->castAs<VectorType>()->getNumElements();
-      assert(N == Cols && "vector length must match matrix column count");
+      assert(QTy1->castAs<VectorType>()->getNumElements() == Cols &&
+             "vector length must match matrix column count");
       if (IsRowMajor)
         Op0 = MB.CreateRowMajorToColumnMajorTransform(Op0, Rows, Cols);
       return MB.CreateMatrixMultiply(Op0, Op1, Rows, Cols, 1, "hlsl.mul");
@@ -1313,6 +1313,17 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
                                &CGM.getModule(), ID, {Op->getType()}),
                            ArrayRef{Op}, "hlsl.wave.active.bit.xor");
+  }
+  case Builtin::BI__builtin_hlsl_wave_active_bit_and: {
+    Value *Op = EmitScalarExpr(E->getArg(0));
+    assert(E->getArg(0)->getType()->hasUnsignedIntegerRepresentation() &&
+           "Intrinsic WaveActiveBitAnd operand must have an unsigned integer "
+           "representation");
+
+    Intrinsic::ID ID = CGM.getHLSLRuntime().getWaveActiveBitAndIntrinsic();
+    return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
+                               &CGM.getModule(), ID, {Op->getType()}),
+                           ArrayRef{Op}, "hlsl.wave.active.bit.and");
   }
   case Builtin::BI__builtin_hlsl_wave_active_ballot: {
     [[maybe_unused]] Value *Op = EmitScalarExpr(E->getArg(0));

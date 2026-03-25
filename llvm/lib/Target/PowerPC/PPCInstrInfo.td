@@ -2551,7 +2551,7 @@ def : Pat<(int_ppc_iospace_eieio),  (PseudoEIEIO)>;
 let PPC970_Unit = 1 in {  // FXU Operations.
 def ADDI   : DForm_2<14, (outs gprc:$RST), (ins gprc_nor0:$RA, s16imm:$D),
                      "addi $RST, $RA, $D", IIC_IntSimple,
-                     [(set i32:$RST, (add i32:$RA, imm32SExt16:$D))]>;
+                     [(set i32:$RST, (add_like i32:$RA, imm32SExt16:$D))]>;
 let BaseName = "addic" in {
 let Defs = [CARRY] in
 def ADDIC  : DForm_2<12, (outs gprc:$RST), (ins gprc:$RA, s16imm:$D),
@@ -2565,7 +2565,7 @@ def ADDIC_rec : DForm_2<13, (outs gprc:$RST), (ins gprc:$RA, s16imm:$D),
 }
 def ADDIS  : DForm_2<15, (outs gprc:$RST), (ins gprc_nor0:$RA, s17imm:$D),
                      "addis $RST, $RA, $D", IIC_IntSimple,
-                     [(set i32:$RST, (add i32:$RA, imm16ShiftedSExt:$D))]>;
+                     [(set i32:$RST, (add_like i32:$RA, imm16ShiftedSExt:$D))]>;
 let isCodeGenOnly = 1 in
 def LA     : DForm_2<14, (outs gprc:$RST), (ins gprc_nor0:$RA, s16imm:$D),
                      "la $RST, $D($RA)", IIC_IntGeneral,
@@ -3400,7 +3400,7 @@ def        : Pat<(not i32:$in),
                  (i32not $in)>;
 
 // ADD an arbitrary immediate.
-def : Pat<(add i32:$in, imm:$imm),
+def : Pat<(add_like i32:$in, imm:$imm),
           (ADDIS (ADDI $in, (LO16 imm:$imm)), (HA16 imm:$imm))>;
 // OR an arbitrary immediate.
 def : Pat<(or i32:$in, imm:$imm),
