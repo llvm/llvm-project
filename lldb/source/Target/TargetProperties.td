@@ -61,6 +61,12 @@ let Definition = "target", Path = "target" in {
   def DebugFileSearchPaths: Property<"debug-file-search-paths", "FileSpecList">,
     DefaultStringValue<"">,
     Desc<"List of directories to be searched when locating debug symbol files. See also symbols.enable-external-lookup.">;
+  def SourceFileDirectory
+      : Property<"source-file-directory", "FileSpec">,
+        DefaultStringValue<"">,
+        Desc<"A directory to search for source files using suffix matching "
+             "when they cannot be found after applying source mappings. If a "
+             "file is found, a source mapping is automatically created.">;
   def ClangModuleSearchPaths: Property<"clang-module-search-paths", "FileSpecList">,
     DefaultStringValue<"">,
     Desc<"List of directories to be searched when locating modules for Clang.">;

@@ -183,6 +183,8 @@ public:
 
   FileSpec GetSaveJITObjectsDir() const;
 
+  FileSpec GetSourceFileDirectory() const;
+
   bool GetEnableSyntheticValue() const;
 
   bool ShowHexVariableValuesWithLeadingZeroes() const;
@@ -639,6 +641,9 @@ public:
   static ArchSpec GetDefaultArchitecture();
 
   static void SetDefaultArchitecture(const ArchSpec &arch);
+
+  std::optional<FileSpec>
+  FindFileInSourceDirectory(const FileSpec &original_file);
 
   bool IsDummyTarget() const { return m_is_dummy_target; }
 

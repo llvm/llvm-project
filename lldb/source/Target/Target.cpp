@@ -71,6 +71,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Support/ErrorExtras.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/ThreadPool.h"
 
 #include <memory>
@@ -4923,6 +4924,63 @@ bool TargetProperties::GetEnableNotifyAboutFixIts() const {
 FileSpec TargetProperties::GetSaveJITObjectsDir() const {
   const uint32_t idx = ePropertySaveObjectsDir;
   return GetPropertyAtIndexAs<FileSpec>(idx, {});
+}
+
+FileSpec TargetProperties::GetSourceFileDirectory() const {
+  const uint32_t idx = ePropertySourceFileDirectory;
+  return GetPropertyAtIndexAs<FileSpec>(idx, {});
+}
+
+std::optional<FileSpec>
+Target::FindFileInSourceDirectory(const FileSpec &original_file) {
+  FileSpec source_dir = GetSourceFileDirectory();
+  if (!source_dir)
+    return std::nullopt;
+
+  std::string original_path = original_file.GetPath();
+  if (original_path.empty())
+    return std::nullopt;
+
+  llvm::StringRef remaining(original_path);
+  // Strip the root (e.g. leading '/') for absolute paths.
+  llvm::StringRef root = llvm::sys::path::root_path(remaining);
+  if (!root.empty())
+    remaining = remaining.drop_front(root.size());
+
+  while (!remaining.empty()) {
+    FileSpec candidate(source_dir);
+    candidate.AppendPathComponent(remaining);
+
+    if (FileSystem::Instance().Exists(candidate)) {
+      // Compute the prefix that was stripped: original_path minus remaining.
+      // remaining is a StringRef into original_path, so pointer arithmetic
+      // gives us the prefix length.
+      size_t prefix_len = remaining.data() - original_path.data();
+      llvm::StringRef prefix(original_path.data(), prefix_len);
+      // Remove trailing separator from prefix.
+      while (!prefix.empty() && llvm::sys::path::is_separator(prefix.back()))
+        prefix = prefix.drop_back();
+
+      if (!prefix.empty()) {
+        GetSourcePathMap().AppendUnique(prefix, source_dir.GetPath(),
+                                        /*notify=*/true);
+      }
+      return candidate;
+    }
+
+    // Strip the first path component from remaining.
+    auto it = llvm::sys::path::begin(remaining);
+    auto end = llvm::sys::path::end(remaining);
+    if (it == end)
+      break;
+    llvm::StringRef first_component = *it;
+    remaining = remaining.drop_front(first_component.size());
+    // Also skip the separator after the component.
+    while (!remaining.empty() && llvm::sys::path::is_separator(remaining[0]))
+      remaining = remaining.drop_front(1);
+  }
+
+  return std::nullopt;
 }
 
 void TargetProperties::CheckJITObjectsDir() {
