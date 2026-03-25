@@ -5917,7 +5917,7 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
     return false;
   case ISD::ABS_MIN_POISON:
     // ABS_MIN_POISON may produce poison if the input is INT_MIN.
-    return true;
+    return ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1) <= 1;
 
   case ISD::ADDC:
   case ISD::SUBC:
