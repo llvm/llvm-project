@@ -11,4 +11,3 @@
 ; DIFF-NEXT: -call void @work_test()
 ; DIFF-NEXT: +call void @work_task()
 ; DIFF-NEXT:  }
-

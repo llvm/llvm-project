@@ -3175,6 +3175,12 @@ bool FileCheck::checkInput(SourceMgr &SM, StringRef Buffer,
       break;
   }
 
+  if (Req.DiffMode != DiffFormatType::Standard && TotalMismatches > 0) {
+    OS.changeColor(llvm::raw_ostream::YELLOW, true);
+    OS << "FileCheck: Found " << TotalMismatches << " unique textual mismatch"
+       << (TotalMismatches > 1 ? "es." : ".") << "\n";
+    OS.resetColor();
+  }
   // Success if no checks failed.
   return !ChecksFailed;
 }
