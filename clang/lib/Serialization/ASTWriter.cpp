@@ -6102,7 +6102,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema *SemaPtr, StringRef isysroot,
   // always write the entire table, since later PCH files in a PCH chain are
   // only interested in the results at the end of the chain.
   RecordData ExtnameUndeclaredIdentifiers;
-  if (SemaPtr && !(isModule && !WritingModule->isHeaderUnit())) {
+  if (SemaPtr && !isWritingStdCXXNamedModules()) {
     ASTContext &Context = SemaPtr->Context;
     ASTRecordWriter ExtnameUndeclaredIdentifiersWriter(
         Context, *this, ExtnameUndeclaredIdentifiers);
