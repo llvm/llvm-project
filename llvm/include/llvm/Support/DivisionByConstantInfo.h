@@ -18,6 +18,26 @@
 
 namespace llvm {
 
+/// Standard integer bitwidths that division strength-reduction may widen to.
+/// The numeric value is the actual bit count, so arithmetic on it is valid.
+enum class IntegerBitWidth : unsigned {
+  None = 0,
+  I8 = 8,
+  I16 = 16,
+  I32 = 32,
+  I64 = 64,
+  I128 = 128,
+};
+
+/// Widening strategies for unsigned division by a constant.
+enum class UnsignedDivisionByConstantWidening {
+  None,
+  /// Use a widened high-half multiply and truncate the result.
+  MulHigh,
+  /// Use a widened full multiply followed by an explicit right shift.
+  FullMultiply,
+};
+
 /// Magic data for optimising signed division by a constant.
 struct SignedDivisionByConstantInfo {
   LLVM_ABI static SignedDivisionByConstantInfo get(const APInt &D);
@@ -30,12 +50,12 @@ struct UnsignedDivisionByConstantInfo {
   LLVM_ABI static UnsignedDivisionByConstantInfo
   get(const APInt &D, unsigned LeadingZeros = 0,
       bool AllowEvenDivisorOptimization = true,
-      bool AllowWidenOptimization = false);
+      IntegerBitWidth MaxBitWidth = IntegerBitWidth::None);
   APInt Magic;          ///< magic number
   bool IsAdd;           ///< add indicator
   unsigned PostShift;   ///< post-shift amount
   unsigned PreShift;    ///< pre-shift amount
-  bool Widen;           ///< use widen optimization
+  UnsignedDivisionByConstantWidening Widening;
 };
 
 } // namespace llvm

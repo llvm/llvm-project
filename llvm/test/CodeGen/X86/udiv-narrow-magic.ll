@@ -136,6 +136,46 @@ define i16 @udiv_i16_by100(i16 %x) nounwind {
   ret i16 %d
 }
 
+; Vector narrow udiv - should NOT use the scalar narrow-magic widening path.
+define <16 x i8> @udiv_v16i8_by7(<16 x i8> %x) nounwind {
+; CHECK-LABEL: udiv_v16i8_by7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pxor %xmm1, %xmm1
+; CHECK-NEXT:    movdqa %xmm0, %xmm2
+; CHECK-NEXT:    punpckhbw {{.*#+}} xmm2 = xmm2[8],xmm1[8],xmm2[9],xmm1[9],xmm2[10],xmm1[10],xmm2[11],xmm1[11],xmm2[12],xmm1[12],xmm2[13],xmm1[13],xmm2[14],xmm1[14],xmm2[15],xmm1[15]
+; CHECK-NEXT:    movdqa {{.*#+}} xmm3 = [37,0,37,0,37,0,37,0,37,0,37,0,37,0,37,0]
+; CHECK-NEXT:    pmullw %xmm3, %xmm2
+; CHECK-NEXT:    psrlw $8, %xmm2
+; CHECK-NEXT:    movdqa %xmm0, %xmm4
+; CHECK-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0],xmm1[0],xmm4[1],xmm1[1],xmm4[2],xmm1[2],xmm4[3],xmm1[3],xmm4[4],xmm1[4],xmm4[5],xmm1[5],xmm4[6],xmm1[6],xmm4[7],xmm1[7]
+; CHECK-NEXT:    pmullw %xmm3, %xmm4
+; CHECK-NEXT:    psrlw $8, %xmm4
+; CHECK-NEXT:    packuswb %xmm2, %xmm4
+; CHECK-NEXT:    psubb %xmm4, %xmm0
+; CHECK-NEXT:    psrlw $1, %xmm0
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    paddb %xmm4, %xmm0
+; CHECK-NEXT:    psrlw $2, %xmm0
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    retq
+  %d = udiv <16 x i8> %x, splat (i8 7)
+  ret <16 x i8> %d
+}
+
+define <8 x i16> @udiv_v8i16_by7(<8 x i16> %x) nounwind {
+; CHECK-LABEL: udiv_v8i16_by7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [9363,9363,9363,9363,9363,9363,9363,9363]
+; CHECK-NEXT:    pmulhuw %xmm0, %xmm1
+; CHECK-NEXT:    psubw %xmm1, %xmm0
+; CHECK-NEXT:    psrlw $1, %xmm0
+; CHECK-NEXT:    paddw %xmm1, %xmm0
+; CHECK-NEXT:    psrlw $2, %xmm0
+; CHECK-NEXT:    retq
+  %d = udiv <8 x i16> %x, splat (i16 7)
+  ret <8 x i16> %d
+}
+
 ; zext(udiv i16) - should also improve.
 define i32 @zext_udiv_i16_by7(i16 %x) nounwind {
 ; CHECK-LABEL: zext_udiv_i16_by7:
