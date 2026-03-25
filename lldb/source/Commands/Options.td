@@ -2268,7 +2268,7 @@ let Command = "type synth add" in {
                                Arg<"Boolean">,
                                Desc<"If true, cascade through typedef chains.">;
   def type_synth_add_wants_deref
-      : Option<"wants-dereference", "D">,
+      : Option<"requires-dereference", "D">,
         Arg<"Boolean">,
         Desc<"If true, when this synthetic provider matches a pointer or "
              "reference type, it will receive the dereferenced value object "
