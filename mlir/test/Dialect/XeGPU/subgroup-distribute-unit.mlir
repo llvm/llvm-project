@@ -1275,11 +1275,11 @@ gpu.func
         <{input_layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
         target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>}> 
         : vector<16xf32>
-      %3 = xegpu.convert_layout %2 
+      %3 = xegpu.convert_layout %2
         <{input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>, 
-        target_layout = #xegpu.layout<lane_layout = [1], lane_data = [1]>}> 
+        target_layout = #xegpu.layout<lane_layout = [1], lane_data = [1]>}>
         : vector<1xf32>
-      %4 = xegpu.convert_layout %3 
+      %4 = xegpu.convert_layout %3
         <{input_layout = #xegpu.layout<lane_layout = [1], lane_data = [1]>,
         target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>, dims = [0, 1]>}> 
         : vector<1xf32>
