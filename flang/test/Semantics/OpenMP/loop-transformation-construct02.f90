@@ -82,6 +82,7 @@ subroutine loop_transformation_construct6
 
   !ERROR: This construct applies to a loop nest, but has a loop sequence of length 2
   !$omp do
+  !BECAUSE: Out of 2 loops, 1 were fused
   !$omp fuse looprange(1,1)
   !$omp unroll partial(2)
   do x = 1, i

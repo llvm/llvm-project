@@ -48,6 +48,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
+#include "llvm/Support/NVVMAttributes.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/TargetParser/Triple.h"
@@ -5875,33 +5876,33 @@ bool static upgradeSingleNVVMAnnotation(GlobalValue *GV, StringRef K,
   }
   if (K == "maxclusterrank" || K == "cluster_max_blocks") {
     const auto CV = mdconst::extract<ConstantInt>(V)->getZExtValue();
-    cast<Function>(GV)->addFnAttr("nvvm.maxclusterrank", llvm::utostr(CV));
+    cast<Function>(GV)->addFnAttr(NVVMAttr::MaxClusterRank, llvm::utostr(CV));
     return true;
   }
   if (K == "minctasm") {
     const auto CV = mdconst::extract<ConstantInt>(V)->getZExtValue();
-    cast<Function>(GV)->addFnAttr("nvvm.minctasm", llvm::utostr(CV));
+    cast<Function>(GV)->addFnAttr(NVVMAttr::MinCTASm, llvm::utostr(CV));
     return true;
   }
   if (K == "maxnreg") {
     const auto CV = mdconst::extract<ConstantInt>(V)->getZExtValue();
-    cast<Function>(GV)->addFnAttr("nvvm.maxnreg", llvm::utostr(CV));
+    cast<Function>(GV)->addFnAttr(NVVMAttr::MaxNReg, llvm::utostr(CV));
     return true;
   }
   if (K.consume_front("maxntid") && isXYZ(K)) {
-    upgradeNVVMFnVectorAttr("nvvm.maxntid", K[0], GV, V);
+    upgradeNVVMFnVectorAttr(NVVMAttr::MaxNTID, K[0], GV, V);
     return true;
   }
   if (K.consume_front("reqntid") && isXYZ(K)) {
-    upgradeNVVMFnVectorAttr("nvvm.reqntid", K[0], GV, V);
+    upgradeNVVMFnVectorAttr(NVVMAttr::ReqNTID, K[0], GV, V);
     return true;
   }
   if (K.consume_front("cluster_dim_") && isXYZ(K)) {
-    upgradeNVVMFnVectorAttr("nvvm.cluster_dim", K[0], GV, V);
+    upgradeNVVMFnVectorAttr(NVVMAttr::ClusterDim, K[0], GV, V);
     return true;
   }
   if (K == "grid_constant") {
-    const auto Attr = Attribute::get(GV->getContext(), "nvvm.grid_constant");
+    const auto Attr = Attribute::get(GV->getContext(), NVVMAttr::GridConstant);
     for (const auto &Op : cast<MDNode>(V)->operands()) {
       // For some reason, the index is 1-based in the metadata. Good thing we're
       // able to auto-upgrade it!

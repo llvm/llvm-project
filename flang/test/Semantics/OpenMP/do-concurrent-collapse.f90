@@ -6,6 +6,7 @@ integer :: i, j
 ! ERROR: DO CONCURRENT loops cannot be used with the COLLAPSE clause.
 !$omp parallel do collapse(2)
 do i = 1, 1
+  ! BECAUSE: This is not a valid intervening code
   ! ERROR: DO CONCURRENT loops cannot form part of a loop nest.
   do concurrent (j = 1:2)
     print *, j
@@ -37,6 +38,7 @@ end do
 ! ERROR: DO CONCURRENT loops cannot be used with the COLLAPSE clause.
 !$omp loop collapse(2)
 do i = 1, 1
+  ! BECAUSE: This is not a valid intervening code
   do concurrent (j = 1:2)
     print *, j
   end do
