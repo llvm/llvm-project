@@ -1979,15 +1979,9 @@ define <2 x i64> @test_urem_even_one_i64(<2 x i64> %X) nounwind {
 ; CHECK-SSE2-NEXT:    paddq %xmm2, %xmm0
 ; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; CHECK-SSE2-NEXT:    psllq $63, %xmm1
-; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm2
-; CHECK-SSE2-NEXT:    paddq %xmm2, %xmm2
-; CHECK-SSE2-NEXT:    movsd {{.*#+}} xmm2 = xmm1[0],xmm2[1]
-; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm1
-; CHECK-SSE2-NEXT:    psrlq $1, %xmm1
-; CHECK-SSE2-NEXT:    psrlq $63, %xmm0
-; CHECK-SSE2-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
-; CHECK-SSE2-NEXT:    orpd %xmm2, %xmm0
-; CHECK-SSE2-NEXT:    xorpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE2-NEXT:    psrlq $1, %xmm0
+; CHECK-SSE2-NEXT:    por %xmm1, %xmm0
+; CHECK-SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; CHECK-SSE2-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,0,2,2]
@@ -2011,15 +2005,9 @@ define <2 x i64> @test_urem_even_one_i64(<2 x i64> %X) nounwind {
 ; CHECK-SSE41-NEXT:    psllq $32, %xmm0
 ; CHECK-SSE41-NEXT:    paddq %xmm2, %xmm0
 ; CHECK-SSE41-NEXT:    movdqa %xmm0, %xmm1
-; CHECK-SSE41-NEXT:    paddq %xmm1, %xmm1
-; CHECK-SSE41-NEXT:    movdqa %xmm0, %xmm2
-; CHECK-SSE41-NEXT:    psllq $63, %xmm2
-; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],xmm1[4,5,6,7]
-; CHECK-SSE41-NEXT:    movdqa %xmm0, %xmm1
-; CHECK-SSE41-NEXT:    psrlq $63, %xmm1
+; CHECK-SSE41-NEXT:    psllq $63, %xmm1
 ; CHECK-SSE41-NEXT:    psrlq $1, %xmm0
-; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5,6,7]
-; CHECK-SSE41-NEXT:    por %xmm2, %xmm0
+; CHECK-SSE41-NEXT:    por %xmm1, %xmm0
 ; CHECK-SSE41-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; CHECK-SSE41-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
@@ -2042,12 +2030,8 @@ define <2 x i64> @test_urem_even_one_i64(<2 x i64> %X) nounwind {
 ; CHECK-AVX1-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    vpsllq $32, %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
-; CHECK-AVX1-NEXT:    vpaddq %xmm0, %xmm0, %xmm1
-; CHECK-AVX1-NEXT:    vpsllq $63, %xmm0, %xmm2
-; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1,2,3],xmm1[4,5,6,7]
-; CHECK-AVX1-NEXT:    vpsrlq $63, %xmm0, %xmm2
+; CHECK-AVX1-NEXT:    vpsllq $63, %xmm0, %xmm1
 ; CHECK-AVX1-NEXT:    vpsrlq $1, %xmm0, %xmm0
-; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm2[4,5,6,7]
 ; CHECK-AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
@@ -2064,8 +2048,8 @@ define <2 x i64> @test_urem_even_one_i64(<2 x i64> %X) nounwind {
 ; CHECK-AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; CHECK-AVX2-NEXT:    vpsllq $32, %xmm0, %xmm0
 ; CHECK-AVX2-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
-; CHECK-AVX2-NEXT:    vpsllvq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
-; CHECK-AVX2-NEXT:    vpsrlvq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX2-NEXT:    vpsllq $63, %xmm0, %xmm1
+; CHECK-AVX2-NEXT:    vpsrlq $1, %xmm0, %xmm0
 ; CHECK-AVX2-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; CHECK-AVX2-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-AVX2-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
@@ -2082,7 +2066,7 @@ define <2 x i64> @test_urem_even_one_i64(<2 x i64> %X) nounwind {
 ; CHECK-AVX512VL-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; CHECK-AVX512VL-NEXT:    vpsllq $32, %xmm0, %xmm0
 ; CHECK-AVX512VL-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
-; CHECK-AVX512VL-NEXT:    vprorvq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX512VL-NEXT:    vprorq $1, %xmm0, %xmm0
 ; CHECK-AVX512VL-NEXT:    vpminuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
 ; CHECK-AVX512VL-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
 ; CHECK-AVX512VL-NEXT:    vpsrlq $63, %xmm0, %xmm0
