@@ -5165,6 +5165,17 @@ ExprResult SemaObjC::ActOnObjCAvailabilityCheckExpr(
         return Spec.getPlatform() == "ios";
       });
     }
+    // Use "anyappleos" spec if no platform-specific spec is found and the
+    // target is an Apple OS.
+    if (Spec == AvailSpecs.end()) {
+      // Check if this OS is a Darwin/Apple OS.
+      const llvm::Triple &Triple = Context.getTargetInfo().getTriple();
+      if (Triple.isOSDarwin()) {
+        Spec = llvm::find_if(AvailSpecs, [&](const AvailabilitySpec &Spec) {
+          return Spec.getPlatform() == "anyappleos";
+        });
+      }
+    }
     if (Spec == AvailSpecs.end())
       return std::nullopt;
 

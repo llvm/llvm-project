@@ -284,7 +284,8 @@ class VariadicParamOrParamIdxArgument<string name> : Argument<name, 1>;
 class ParamIdxArgument<string name, bit opt = 0> : Argument<name, opt>;
 
 // A version of the form major.minor[.subminor].
-class VersionArgument<string name, bit opt = 0> : Argument<name, opt>;
+class VersionArgument<string name, bit opt = 0, bit fake = 0>
+    : Argument<name, opt, fake>;
 
 // This one's a doozy, so it gets its own special type
 // It can be an unsigned integer, or a type. Either can
@@ -1100,7 +1101,8 @@ def Availability : InheritableAttr {
               VersionArgument<"deprecated">, VersionArgument<"obsoleted">,
               BoolArgument<"unavailable">, StringArgument<"message">,
               BoolArgument<"strict">, StringArgument<"replacement">,
-              IntArgument<"priority">, IdentifierArgument<"environment">];
+              IntArgument<"priority">, IdentifierArgument<"environment">,
+              VersionArgument<"origAnyAppleOSVersion", 0, 1>];
   let AdditionalMembers =
 [{static llvm::StringRef getPrettyPlatformName(llvm::StringRef Platform) {
     return llvm::StringSwitch<llvm::StringRef>(Platform)
@@ -1119,6 +1121,7 @@ def Availability : InheritableAttr {
              .Case("maccatalyst_app_extension", "macCatalyst (App Extension)")
              .Case("xros", "visionOS")
              .Case("xros_app_extension", "visionOS (App Extension)")
+             .Case("anyappleos", "any Apple OS")
              .Case("swift", "Swift")
              .Case("shadermodel", "Shader Model")
              .Case("ohos", "OpenHarmony OS")
@@ -1138,6 +1141,7 @@ static llvm::StringRef getPlatformNameSourceSpelling(llvm::StringRef Platform) {
              .Case("maccatalyst_app_extension", "macCatalystApplicationExtension")
              .Case("xros", "visionOS")
              .Case("xros_app_extension", "visionOSApplicationExtension")
+             .Case("anyappleos", "anyAppleOS")
              .Case("zos", "z/OS")
              .Case("shadermodel", "ShaderModel")
              .Default(Platform);
@@ -1160,6 +1164,7 @@ static llvm::StringRef canonicalizePlatformName(llvm::StringRef Platform) {
              .Case("visionOSApplicationExtension", "xros_app_extension")
              .Case("visionos", "xros")
              .Case("visionos_app_extension", "xros_app_extension")
+             .Case("anyAppleOS", "anyappleos")
              .Case("ShaderModel", "shadermodel")
              .Default(Platform);
 }
@@ -1191,6 +1196,8 @@ static std::vector<llvm::StringRef> equivalentPlatformNames(llvm::StringRef Plat
              .Case("xros_app_extension", {"visionOSApplicationExtension", "visionos_app_extension", "xros_app_extension"})
              .Case("visionOSApplicationExtension", {"visionOSApplicationExtension", "visionos_app_extension", "xros_app_extension"})
              .Case("visionos_app_extension", {"visionOSApplicationExtension", "visionos_app_extension", "xros_app_extension"})
+             .Case("anyappleos", {"anyappleos", "anyAppleOS"})
+             .Case("anyAppleOS", {"anyappleos", "anyAppleOS"})
              .Default({Platform});
 }
 static llvm::Triple::EnvironmentType getEnvironmentType(llvm::StringRef Environment) {
