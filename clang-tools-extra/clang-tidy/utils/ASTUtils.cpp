@@ -100,8 +100,8 @@ bool areStatementsIdentical(const Stmt *FirstStmt, const Stmt *SecondStmt,
   if (isa<Expr>(FirstStmt) && isa<Expr>(SecondStmt)) {
     // If we have errors in expressions, we will be unable
     // to accurately profile and compute hashes for each statements.
-    if (llvm::cast<Expr>(FirstStmt)->containsErrors() ||
-        llvm::cast<Expr>(SecondStmt)->containsErrors())
+    if (cast<Expr>(FirstStmt)->containsErrors() ||
+        cast<Expr>(SecondStmt)->containsErrors())
       return false;
   }
 

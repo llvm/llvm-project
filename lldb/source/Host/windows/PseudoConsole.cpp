@@ -101,6 +101,11 @@ llvm::Error PseudoConsole::OpenPseudoConsole() {
         std::error_code(GetLastError(), std::system_category()));
 
   COORD consoleSize{80, 25};
+  CONSOLE_SCREEN_BUFFER_INFO csbi;
+  if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi))
+    consoleSize = {
+        static_cast<SHORT>(csbi.srWindow.Right - csbi.srWindow.Left + 1),
+        static_cast<SHORT>(csbi.srWindow.Bottom - csbi.srWindow.Top + 1)};
   HPCON hPC = INVALID_HANDLE_VALUE;
   hr = kernel32.CreatePseudoConsole(consoleSize, hInputRead, hOutputWrite, 0,
                                     &hPC);

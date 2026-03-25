@@ -70,7 +70,7 @@ public:
   /// This callback may be invoked if getHazardType returns NoHazard. If, even
   /// though there is no hazard, it would be better to schedule another
   /// available instruction, this callback should return true.
-  bool ShouldPreferAnother(SUnit *) override;
+  bool ShouldPreferAnother(SUnit *) const override;
 
   /// This callback is invoked whenever the next top-down instruction to be
   /// scheduled cannot issue in the current cycle, either because of latency

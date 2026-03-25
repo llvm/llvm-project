@@ -707,7 +707,7 @@ shard.grid @grid0(shape = 3)
 func.func @reduce_scatter_duplicate_grid_axis(
     %arg0 : tensor<?xf32>) -> tensor<?xf64> {
   // expected-error@+1 {{Grid axes contains duplicate elements.}}
-  %0 = shard.reduce_scatter %arg0 on @grid0 grid_axes = [0, 0] scatter_axis = 0
+  %0 = shard.reduce_scatter %arg0 on @grid0 grid_axes = [0, 0] scatter_dim = 0
     : tensor<?xf32> -> tensor<?xf64>
   return %0 : tensor<?xf64>
 }
@@ -719,7 +719,7 @@ shard.grid @grid0(shape = 3)
 func.func @reduce_scatter_invalid_dynamic_dimension(
     %arg0 : tensor<?xf32>) -> tensor<2xf64> {
   // expected-error@+1 {{Dimension size mismatch for result axis 0. Expected dynamic, but got 2.}}
-  %0 = shard.reduce_scatter %arg0 on @grid0 scatter_axis = 0
+  %0 = shard.reduce_scatter %arg0 on @grid0 scatter_dim = 0
     : tensor<?xf32> -> tensor<2xf64>
   return %0 : tensor<2xf64>
 }
@@ -731,7 +731,7 @@ shard.grid @grid0(shape = 3)
 func.func @reduce_scatter_invalid_static_dimension_size(
     %arg0 : tensor<3xf32>) -> tensor<2xf64> {
   // expected-error@+1 {{Dimension size mismatch for result axis 0. Expected 1, but got 2.}}
-  %0 = shard.reduce_scatter %arg0 on @grid0 grid_axes = [0] scatter_axis = 0
+  %0 = shard.reduce_scatter %arg0 on @grid0 grid_axes = [0] scatter_dim = 0
     : tensor<3xf32> -> tensor<2xf64>
   return %0 : tensor<2xf64>
 }
@@ -743,7 +743,7 @@ shard.grid @grid0(shape = 3)
 func.func @reduce_scatter_invalid_operand_static_dimension_size(
     %arg0 : tensor<4xf32>) -> tensor<?xf64> {
   // expected-error@+1 {{Operand dimension size 4 is not divisible by collective device group size 3 for tensor axis 0.}}
-  %0 = shard.reduce_scatter %arg0 on @grid0 grid_axes = [0] scatter_axis = 0
+  %0 = shard.reduce_scatter %arg0 on @grid0 grid_axes = [0] scatter_dim = 0
     : tensor<4xf32> -> tensor<?xf64>
   return %0 : tensor<?xf64>
 }
@@ -756,7 +756,7 @@ func.func @scatter_duplicate_grid_axis(
     %arg0 : tensor<?xf32>) -> tensor<?xf32> {
   // expected-error@+1 {{Grid axes contains duplicate elements.}}
   %0 = shard.scatter %arg0 on @grid0 grid_axes = [0, 0]
-    scatter_axis = 0 root = [0, 0]
+    scatter_dim = 0 root = [0, 0]
     : (tensor<?xf32>) -> tensor<?xf32>
   return %0 : tensor<?xf32>
 }
@@ -769,7 +769,7 @@ func.func @scatter_invalid_dynamic_dimension(
     %arg0 : tensor<?xf32>) -> tensor<2xf32> {
   // expected-error@+1 {{Dimension size mismatch for result axis 0. Expected dynamic, but got 2.}}
   %0 = shard.scatter %arg0 on @grid0
-    scatter_axis = 0 root = []
+    scatter_dim = 0 root = []
     : (tensor<?xf32>) -> tensor<2xf32>
   return %0 : tensor<2xf32>
 }
@@ -782,7 +782,7 @@ func.func @scatter_invalid_static_dimension_size(
     %arg0 : tensor<3xf32>) -> tensor<2xf32> {
   // expected-error@+1 {{Dimension size mismatch for result axis 0. Expected 1, but got 2.}}
   %0 = shard.scatter %arg0 on @grid0 grid_axes = [0]
-    scatter_axis = 0 root = [1]
+    scatter_dim = 0 root = [1]
     : (tensor<3xf32>) -> tensor<2xf32>
   return %0 : tensor<2xf32>
 }
@@ -795,7 +795,7 @@ func.func @scatter_invalid_operand_static_dimension_size(
     %arg0 : tensor<4xf32>) -> tensor<?xf32> {
   // expected-error@+1 {{Operand dimension size 4 is not divisible by collective device group size 3 for tensor axis 0.}}
   %0 = shard.scatter %arg0 on @grid0 grid_axes = [0]
-    scatter_axis = 0 root = [1]
+    scatter_dim = 0 root = [1]
     : (tensor<4xf32>) -> tensor<?xf32>
   return %0 : tensor<?xf32>
 }
@@ -808,7 +808,7 @@ func.func @scatter_root_dimension_out_of_bounds(
     %arg0 : tensor<3xi8>) -> tensor<1xi8> {
   // expected-error@+1 {{Out of bounds coordinate 0 for in-group device "root". Got 3, but expected value in the range [0, 2].}}
   %0 = shard.scatter %arg0 on @grid0 grid_axes = [0]
-    scatter_axis = 0 root = [3]
+    scatter_dim = 0 root = [3]
     : (tensor<3xi8>) -> tensor<1xi8>
   return %0 : tensor<1xi8>
 }
@@ -821,7 +821,7 @@ func.func @scatter_root_wrong_number_dimensions(
     %arg0 : tensor<3xi8>) -> tensor<1xi8> {
   // expected-error@+1 {{In-group device "root" has unexpected multi-index size 2. Expected 1.}}
   %0 = shard.scatter %arg0 on @grid0 grid_axes = [0]
-    scatter_axis = 0 root = [2, 2]
+    scatter_dim = 0 root = [2, 2]
     : (tensor<3xi8>) -> tensor<1xi8>
   return %0 : tensor<1xi8>
 }

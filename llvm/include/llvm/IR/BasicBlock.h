@@ -363,27 +363,6 @@ public:
         static_cast<const BasicBlock *>(this)->getFirstMayFaultInst());
   }
 
-  /// Return a const iterator range over the instructions in the block, skipping
-  /// any debug instructions. Skip any pseudo operations as well if \c
-  /// SkipPseudoOp is true.
-  LLVM_ABI
-  iterator_range<filter_iterator<BasicBlock::const_iterator,
-                                 std::function<bool(const Instruction &)>>>
-  instructionsWithoutDebug(bool SkipPseudoOp = true) const;
-
-  /// Return an iterator range over the instructions in the block, skipping any
-  /// debug instructions. Skip and any pseudo operations as well if \c
-  /// SkipPseudoOp is true.
-  LLVM_ABI iterator_range<
-      filter_iterator<BasicBlock::iterator, std::function<bool(Instruction &)>>>
-  instructionsWithoutDebug(bool SkipPseudoOp = true);
-
-  /// Return the size of the basic block ignoring debug instructions
-  LLVM_ABI
-  filter_iterator<BasicBlock::const_iterator,
-                  std::function<bool(const Instruction &)>>::difference_type
-  sizeWithoutDebug() const;
-
   /// Unlink 'this' from the containing function, but do not delete it.
   LLVM_ABI void removeFromParent();
 

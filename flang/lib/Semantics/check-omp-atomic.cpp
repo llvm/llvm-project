@@ -586,7 +586,7 @@ void OmpStructureChecker::CheckAtomicVariable(
         atom.AsFortran());
   }
 
-  std::vector<SomeExpr> dsgs{GetAllDesignators(atom)};
+  std::vector<SomeExpr> dsgs{GetTopLevelDesignators(atom)};
 
   // Procedure references are valid if they return a pointer to a scalar.
   // Just return if we don't have exactly one designator - other checks will

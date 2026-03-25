@@ -65,7 +65,7 @@ static void dump(const StructuredData::Dictionary &config, Stream &s) {
 }
 
 void CommandObjectVersion::DoExecute(Args &args, CommandReturnObject &result) {
-  result.AppendMessageWithFormat("%s\n", lldb_private::GetVersion());
+  result.AppendMessageWithFormatv("{0}", lldb_private::GetVersion());
 
   if (m_options.verbose)
     dump(*Debugger::GetBuildConfiguration(), result.GetOutputStream());

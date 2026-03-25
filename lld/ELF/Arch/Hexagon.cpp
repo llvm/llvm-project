@@ -293,6 +293,8 @@ static uint32_t findMaskR6(Ctx &ctx, uint32_t insn) {
 }
 
 static uint32_t findMaskR8(uint32_t insn) {
+  if (isDuplex(insn))
+    return 0x03f00000;
   if ((0xff000000 & insn) == 0xde000000)
     return 0x00e020e8;
   if ((0xff000000 & insn) == 0x3c000000)
@@ -368,7 +370,10 @@ bool Hexagon::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
 bool Hexagon::needsThunk(RelExpr expr, RelType type, const InputFile *file,
                          uint64_t branchAddr, const Symbol &s,
                          int64_t a) const {
-  // Only check branch range for supported branch relocation types
+  // Undefined weak symbols without PLT entries resolve to address zero.
+  // Thunks are not needed since the branch target is fixed.
+  if (s.isUndefined() && !s.isInPlt(ctx))
+    return false;
   switch (type) {
   case R_HEX_B22_PCREL:
   case R_HEX_PLT_B22_PCREL:

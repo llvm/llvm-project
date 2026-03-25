@@ -47,7 +47,7 @@ struct ZeroInit {
 // CIR:     cir.yield
 // CIR:   } while {
 // CIR:     %[[CUR:.*]] = cir.load{{.*}} %[[ITER]]
-// CIR:     %[[CMP:.*]] = cir.cmp(ne, %[[CUR]], %[[END]])
+// CIR:     %[[CMP:.*]] = cir.cmp ne %[[CUR]], %[[END]]
 // CIR:     cir.condition(%[[CMP]])
 // CIR:   }
 // CIR:   %[[C:.*]] = cir.get_member %[[THIS]][3] {name = "c"}
@@ -161,7 +161,7 @@ struct ValueInit {
 // CIR:     cir.yield
 // CIR:   } while {
 // CIR:     %[[CUR:.*]] = cir.load{{.*}} %[[ITER]]
-// CIR:     %[[CMP:.*]] = cir.cmp(ne, %[[CUR]], %[[END]])
+// CIR:     %[[CMP:.*]] = cir.cmp ne %[[CUR]], %[[END]]
 // CIR:     cir.condition(%[[CMP]])
 // CIR:   }
 // CIR:   %[[C:.*]] = cir.get_member %[[THIS]][3] {name = "c"}

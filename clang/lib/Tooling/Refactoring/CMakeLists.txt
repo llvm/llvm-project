@@ -19,10 +19,10 @@ add_clang_library(clangToolingRefactoring
   clangASTMatchers
   clangBasic
   clangFormat
-  clangIndex
   clangLex
   clangRewrite
   clangToolingCore
+  clangUnifiedSymbolResolution
 
   DEPENDS
   omp_gen

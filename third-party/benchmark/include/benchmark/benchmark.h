@@ -250,10 +250,6 @@ BENCHMARK(BM_test)->Unit(benchmark::kMillisecond);
   _Pragma("GCC diagnostic push")             \
   _Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
 #define BENCHMARK_RESTORE_DEPRECATED_WARNING _Pragma("GCC diagnostic pop")
-#define BENCHMARK_DISABLE_PEDANTIC_WARNING \
-  _Pragma("GCC diagnostic push")             \
-  _Pragma("GCC diagnostic ignored \"-Wpedantic\"")
-#define BENCHMARK_RESTORE_PEDANTIC_WARNING _Pragma("GCC diagnostic pop")
 #elif defined(__NVCOMPILER)
 #define BENCHMARK_BUILTIN_EXPECT(x, y) __builtin_expect(x, y)
 #define BENCHMARK_DEPRECATED_MSG(msg) __attribute__((deprecated(msg)))
@@ -261,8 +257,6 @@ BENCHMARK(BM_test)->Unit(benchmark::kMillisecond);
   _Pragma("diagnostic push") \
   _Pragma("diag_suppress deprecated_entity_with_custom_message")
 #define BENCHMARK_RESTORE_DEPRECATED_WARNING _Pragma("diagnostic pop")
-#define BENCHMARK_DISABLE_PEDANTIC_WARNING
-#define BENCHMARK_RESTORE_PEDANTIC_WARNING
 #else
 #define BENCHMARK_BUILTIN_EXPECT(x, y) x
 #define BENCHMARK_DEPRECATED_MSG(msg)
@@ -271,8 +265,6 @@ BENCHMARK(BM_test)->Unit(benchmark::kMillisecond);
       __LINE__) ") : warning note: " msg))
 #define BENCHMARK_DISABLE_DEPRECATED_WARNING
 #define BENCHMARK_RESTORE_DEPRECATED_WARNING
-#define BENCHMARK_DISABLE_PEDANTIC_WARNING
-#define BENCHMARK_RESTORE_PEDANTIC_WARNING
 #endif
 // clang-format on
 
@@ -1467,16 +1459,29 @@ class Fixture : public internal::Benchmark {
 // ------------------------------------------------------
 // Macro to register benchmarks
 
+// clang-format off
+#if defined(__clang__)
+#define BENCHMARK_DISABLE_COUNTER_WARNING                        \
+  _Pragma("GCC diagnostic push")                                 \
+  _Pragma("GCC diagnostic ignored \"-Wunknown-warning-option\"") \
+  _Pragma("GCC diagnostic ignored \"-Wc2y-extensions\"")
+#define BENCHMARK_RESTORE_COUNTER_WARNING _Pragma("GCC diagnostic pop")
+#else
+#define BENCHMARK_DISABLE_COUNTER_WARNING
+#define BENCHMARK_RESTORE_COUNTER_WARNING
+#endif
+// clang-format on
+
 // Check that __COUNTER__ is defined and that __COUNTER__ increases by 1
 // every time it is expanded. X + 1 == X + 0 is used in case X is defined to be
 // empty. If X is empty the expression becomes (+1 == +0).
-BENCHMARK_DISABLE_PEDANTIC_WARNING
+BENCHMARK_DISABLE_COUNTER_WARNING
 #if defined(__COUNTER__) && (__COUNTER__ + 1 == __COUNTER__ + 0)
 #define BENCHMARK_PRIVATE_UNIQUE_ID __COUNTER__
 #else
 #define BENCHMARK_PRIVATE_UNIQUE_ID __LINE__
 #endif
-BENCHMARK_RESTORE_PEDANTIC_WARNING
+BENCHMARK_RESTORE_COUNTER_WARNING
 
 // Helpers for generating unique variable names
 #ifdef BENCHMARK_HAS_CXX11
@@ -1495,8 +1500,9 @@ BENCHMARK_RESTORE_PEDANTIC_WARNING
   BaseClass##_##Method##_Benchmark
 
 #define BENCHMARK_PRIVATE_DECLARE(n)                                 \
+  BENCHMARK_DISABLE_COUNTER_WARNING                                  \
   static ::benchmark::internal::Benchmark* BENCHMARK_PRIVATE_NAME(n) \
-      BENCHMARK_UNUSED
+      BENCHMARK_RESTORE_COUNTER_WARNING BENCHMARK_UNUSED
 
 #ifdef BENCHMARK_HAS_CXX11
 #define BENCHMARK(...)                                               \

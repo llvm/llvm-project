@@ -124,10 +124,21 @@ void DeallocationState::dropMemrefToDeallocate(Value memref, Block *block) {
   llvm::erase(memrefsToDeallocatePerBlock[block], memref);
 }
 
+void DeallocationState::mapValue(Value oldValue, Value newValue) {
+  valueMapping[oldValue] = newValue;
+}
+
 void DeallocationState::getLiveMemrefsIn(Block *block,
                                          SmallVectorImpl<Value> &memrefs) {
-  SmallVector<Value> liveMemrefs(
-      llvm::make_filter_range(liveness.getLiveIn(block), isMemref));
+  SmallVector<Value> liveMemrefs;
+  for (Value val : liveness.getLiveIn(block)) {
+    // Translate any value that was replaced (e.g., by appendOpResults) to its
+    // current equivalent before checking whether it is a MemRef.
+    if (Value mapped = valueMapping.lookup(val))
+      val = mapped;
+    if (isMemref(val))
+      liveMemrefs.push_back(val);
+  }
   llvm::sort(liveMemrefs, ValueComparator());
   memrefs.append(liveMemrefs);
 }
@@ -167,13 +178,32 @@ void DeallocationState::getMemrefsToRetain(
     toRetain.push_back(operand);
   }
 
+  // Translate any value replaced during the transformation (e.g., when an op
+  // was cloned with extra results via appendOpResults) before checking whether
+  // it is a MemRef. The liveness analysis is computed once and may contain
+  // stale values after IR modifications.
+  auto translateValue = [&](Value val) -> Value {
+    if (Value mapped = valueMapping.lookup(val))
+      return mapped;
+    return val;
+  };
+
   SmallPtrSet<Value, 16> liveOut;
-  for (auto val : liveness.getLiveOut(fromBlock))
+  for (auto val : liveness.getLiveOut(fromBlock)) {
+    val = translateValue(val);
     if (isMemref(val))
       liveOut.insert(val);
+  }
 
-  if (toBlock)
-    llvm::set_intersect(liveOut, liveness.getLiveIn(toBlock));
+  if (toBlock) {
+    SmallPtrSet<Value, 16> liveIn;
+    for (auto val : liveness.getLiveIn(toBlock)) {
+      val = translateValue(val);
+      if (isMemref(val))
+        liveIn.insert(val);
+    }
+    llvm::set_intersect(liveOut, liveIn);
+  }
 
   // liveOut has non-deterministic order because it was constructed by iterating
   // over a hash-set.
