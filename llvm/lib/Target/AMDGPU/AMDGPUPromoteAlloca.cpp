@@ -1173,7 +1173,7 @@ void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA) {
   });
 
   // Now fixup the placeholders.
-  for (auto *Placeholder : Placeholders) {
+  for (Instruction *Placeholder : Placeholders) {
     Placeholder->replaceAllUsesWith(
         Updater.GetValueInMiddleOfBlock(Placeholder->getParent()));
     Placeholder->eraseFromParent();
