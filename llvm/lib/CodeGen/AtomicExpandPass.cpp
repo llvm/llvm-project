@@ -15,9 +15,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/AtomicExpand.h"
@@ -133,8 +133,7 @@ private:
   void expandAtomicLoadToLibcall(LoadInst *LI, StringRef FailureReason);
   void expandAtomicStoreToLibcall(StoreInst *LI, StringRef FailureReason);
   void expandAtomicRMWToLibcall(AtomicRMWInst *I, StringRef FailureReason);
-  void expandAtomicCASToLibcall(AtomicCmpXchgInst *I,
-                                StringRef AtomicOpName,
+  void expandAtomicCASToLibcall(AtomicCmpXchgInst *I, StringRef AtomicOpName,
                                 Instruction *DiagnosticInst,
                                 StringRef FailureReason);
 
@@ -335,8 +334,7 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
   } else if (CASI) {
     SmallString<128> FailureReason;
     if (!atomicSizeSupported(TLI, CASI, FailureReason)) {
-      expandAtomicCASToLibcall(CASI, "cmpxchg", nullptr,
-                               FailureReason.str());
+      expandAtomicCASToLibcall(CASI, "cmpxchg", nullptr, FailureReason.str());
       return true;
     }
 
@@ -1861,8 +1859,7 @@ void AtomicExpandImpl::expandAtomicCASToLibcall(AtomicCmpXchgInst *I,
       Libcalls);
   if (!Expanded)
     handleFailure(*I,
-                  Twine("unsupported ") + AtomicOpName + ": " +
-                      FailureReason,
+                  Twine("unsupported ") + AtomicOpName + ": " + FailureReason,
                   DiagnosticInst);
 }
 
@@ -1940,7 +1937,8 @@ void AtomicExpandImpl::expandAtomicRMWToLibcall(AtomicRMWInst *I,
   ArrayRef<RTLIB::Libcall> Libcalls = GetRMWLibcall(I->getOperation());
 
   unsigned Size = getAtomicOpSize(I);
-  auto AtomicOpName = (Twine("atomicrmw ") + I->getOperationName(I->getOperation())).str();
+  auto AtomicOpName =
+      (Twine("atomicrmw ") + I->getOperationName(I->getOperation())).str();
 
   bool Success = false;
   if (!Libcalls.empty())
@@ -1954,11 +1952,11 @@ void AtomicExpandImpl::expandAtomicRMWToLibcall(AtomicRMWInst *I,
   // CAS libcall, via a CAS loop, instead.
   if (!Success) {
     expandAtomicRMWToCmpXchg(
-        I, [this, AtomicOpName, FailureReason](
-               IRBuilderBase &Builder, Value *Addr, Value *Loaded,
-               Value *NewVal, Align Alignment, AtomicOrdering MemOpOrder,
-               SyncScope::ID SSID, Value *&Success, Value *&NewLoaded,
-               Instruction *MetadataSrc) {
+        I,
+        [this, AtomicOpName, FailureReason](
+            IRBuilderBase &Builder, Value *Addr, Value *Loaded, Value *NewVal,
+            Align Alignment, AtomicOrdering MemOpOrder, SyncScope::ID SSID,
+            Value *&Success, Value *&NewLoaded, Instruction *MetadataSrc) {
           // Create the CAS instruction normally...
           AtomicCmpXchgInst *Pair = Builder.CreateAtomicCmpXchg(
               Addr, Loaded, NewVal, Alignment, MemOpOrder,
