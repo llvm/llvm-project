@@ -315,8 +315,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FP_TO_UINT_SAT, VT, Custom);
       setOperationAction(ISD::FP_TO_SINT_SAT, VT, Custom);
     }
-    setOperationAction(ISD::FCANONICALIZE, MVT::f32, Expand);
-    setOperationAction(ISD::FCANONICALIZE, MVT::f64, Expand);
     if (Subtarget.is64Bit()) {
       setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i64, Custom);
       setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i64, Custom);
@@ -345,9 +343,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   // TODO: when we have SSE, these could be more efficient, by using movd/movq.
   if (!Subtarget.hasSSE2()) {
     setOperationAction(ISD::BITCAST        , MVT::f32  , Expand);
-    setOperationAction(ISD::BITCAST        , MVT::i32  , Expand);
-    setOperationAction(ISD::FCANONICALIZE, MVT::f32, Expand);
-    setOperationAction(ISD::FCANONICALIZE, MVT::f64, Expand);
+    setOperationAction(ISD::BITCAST, MVT::i32, Expand);
     if (Subtarget.is64Bit()) {
       setOperationAction(ISD::BITCAST      , MVT::f64  , Expand);
       // Without SSE, i64->f64 goes through memory.
@@ -716,7 +712,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FROUNDEVEN, MVT::f16, Promote);
     setOperationAction(ISD::STRICT_FTRUNC, MVT::f16, Promote);
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, Custom);
-    setOperationAction(ISD::FCANONICALIZE, MVT::f16, Expand);
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f32, Custom);
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f64, Custom);
 
