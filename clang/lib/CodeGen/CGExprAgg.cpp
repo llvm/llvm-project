@@ -293,8 +293,13 @@ void AggExprEmitter::withReturnValueSlot(
   const CXXRecordDecl *RD = RetTy->getAsCXXRecordDecl();
   LangAS SRetLangAS = CGF.CGM.getTargetCodeGenInfo().getSRetAddrSpace(RD);
   unsigned SRetAS = CGF.getContext().getTargetAddressSpace(SRetLangAS);
-  bool DestASMismatch = !Dest.isIgnored() &&
-                        RetTy.isTriviallyCopyableType(CGF.getContext()) &&
+  bool CanAggregateCopy =
+      RD ? (RD->hasTrivialCopyConstructor() ||
+            RD->hasTrivialMoveConstructor() || RD->hasTrivialCopyAssignment() ||
+            RD->hasTrivialMoveAssignment() || RD->hasAttr<TrivialABIAttr>() ||
+            RD->isUnion())
+         : RetTy.isTriviallyCopyableType(CGF.getContext());
+  bool DestASMismatch = !Dest.isIgnored() && CanAggregateCopy &&
                         Dest.getAddress()
                                 .getBasePointer()
                                 ->stripPointerCasts()
