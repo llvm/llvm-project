@@ -14,15 +14,46 @@
 #ifndef LLVM_MC_MCASMSTREAMER_H
 #define LLVM_MC_MCASMSTREAMER_H
 
+#include "llvm/MC/MCAsmBackend.h"
+#include "llvm/MC/MCAssembler.h"
+#include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/Support/raw_ostream.h"
+#include <memory>
 
 namespace llvm {
 
+class MCAsmInfo;
 class MCContext;
+class MCInst;
+class MCSubtargetInfo;
 
 class MCAsmBaseStreamer : public MCStreamer {
 protected:
-  MCAsmBaseStreamer(MCContext &Context) : MCStreamer(Context) {}
+  std::unique_ptr<MCAssembler> Assembler;
+  SmallString<128> CommentToEmit;
+  raw_svector_ostream CommentStream;
+  raw_null_ostream NullStream;
+
+  MCAsmBaseStreamer(MCContext &Context, std::unique_ptr<MCCodeEmitter> Emitter,
+                std::unique_ptr<MCAsmBackend> AsmBackend);
+
+public:
+  /// Return a raw_ostream that comments can be written to.
+  /// Unlike AddComment, you are required to terminate comments with \n if you
+  /// use this method.
+  raw_ostream &getCommentOS() override {
+    if (!isVerboseAsm())
+      return nulls(); // Discard comments unless in verbose asm mode.
+    return CommentStream;
+  }
+
+  /// Add a comment showing the encoding of an instruction.
+  /// \param Inst - The instruction to encode.
+  /// \param STI - Subtarget information.
+  void addEncodingComment(const MCInst &Inst, const MCSubtargetInfo &STI);
+
+  MCAssembler &getAssembler() { return *Assembler; }
 };
 
 } // end namespace llvm
