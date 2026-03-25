@@ -1419,6 +1419,8 @@ static bool CanSkipVTablePointerInitialization(CodeGenFunction &CGF,
 static llvm::Constant *
 getOrCreateMSVCGlobalDeleteWrapper(CodeGenModule &CGM,
                                    const FunctionDecl *GlobOD) {
+  assert(CGM.getTarget().getCXXABI().isMicrosoft() &&
+         "__global_delete wrapper is only used with the Microsoft ABI");
   llvm::Module &M = CGM.getModule();
   llvm::LLVMContext &LLVMCtx = M.getContext();
 
@@ -1751,8 +1753,6 @@ struct CallDtorDelete final : EHScopeStack::Cleanup {
 void EmitConditionalDtorDeleteCall(CodeGenFunction &CGF,
                                    llvm::Value *ShouldDeleteCondition,
                                    bool ReturnAfterDelete) {
-  assert(CGF.CGM.getTarget().getCXXABI().isMicrosoft() &&
-         "deleting destructor should only be emitted for MSVC ABI");
   const CXXDestructorDecl *Dtor = cast<CXXDestructorDecl>(CGF.CurCodeDecl);
   const CXXRecordDecl *ClassDecl = Dtor->getParent();
   const FunctionDecl *OD = Dtor->getOperatorDelete();
