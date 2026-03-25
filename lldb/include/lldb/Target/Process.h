@@ -3360,7 +3360,7 @@ protected:
   ///< state thread until you call StartupThread.  This needs to be a pointer
   ///< so I can transparently swap it out for the modal one, but there will
   ///< always be a private state thread in this slot.
-  PrivateStateThread *m_current_private_state_thread;
+  std::shared_ptr<PrivateStateThread> m_current_private_state_thread;
 
   ProcessModID m_mod_id; ///< Tracks the state of the process over stops and
                          ///other alterations.

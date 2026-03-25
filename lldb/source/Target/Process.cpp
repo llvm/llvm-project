@@ -522,8 +522,6 @@ Process::~Process() {
   // explicitly clear the thread list here to ensure that the mutex is not
   // destroyed before the thread list.
   m_thread_list.Clear();
-  delete m_current_private_state_thread;
-  m_current_private_state_thread = nullptr;
 }
 
 ProcessProperties &Process::GetGlobalProperties() {
@@ -3934,12 +3932,11 @@ bool Process::StartPrivateStateThread(lldb::StateType state,
   }
 
   if (is_secondary_thread) {
-    PrivateStateThread *new_private_state_thread =
-        new PrivateStateThread(*this, GetPublicState(), GetPrivateState(),
-                               is_secondary_thread, thread_name);
     // StartupThread expects the m_current_private_state_thread to be in place
     // already, so do that first:
-    m_current_private_state_thread = new_private_state_thread;
+    m_current_private_state_thread.reset(
+        new PrivateStateThread(*this, GetPublicState(), GetPrivateState(),
+                               is_secondary_thread, thread_name));
   } else
     m_current_private_state_thread->SetThreadName(thread_name);
 
@@ -5205,7 +5202,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
     selected_tid = LLDB_INVALID_THREAD_ID;
   }
 
-  PrivateStateThread *backup_private_state_thread = nullptr;
+  std::shared_ptr<PrivateStateThread> backup_private_state_thread;
   lldb::StateType old_state = eStateInvalid;
   lldb::ThreadPlanSP stopper_base_plan_sp;
 
