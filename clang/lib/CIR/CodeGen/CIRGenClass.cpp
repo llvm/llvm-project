@@ -756,10 +756,6 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
   CharUnits eltAlignment = arrayBase.getAlignment().alignmentOfArrayElement(
       getContext().getTypeSizeInChars(type));
 
-  // Zero initialize the storage, if requested.
-  if (zeroInitialize)
-    emitNullInitialization(*currSrcLoc, arrayBase, type);
-
   // C++ [class.temporary]p4:
   // There are two contexts in which temporaries are destroyed at a different
   // point than the end of the full-expression. The first context is when a
@@ -787,6 +783,11 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
               b.getInsertionBlock()->addArgument(ptrToElmType, loc);
           Address curAddr = Address(arg, elementType, eltAlignment);
           assert(!cir::MissingFeatures::sanitizers());
+          // Zero-initialize each element before invoking its constructor,
+          // matching CGClass::EmitCXXAggrConstructorCall which does per-element
+          // zero-init inside the array ctor loop.
+          if (zeroInitialize)
+            emitNullInitialization(loc, curAddr, type);
           auto currAVS = AggValueSlot::forAddr(
               curAddr, type.getQualifiers(), AggValueSlot::IsDestructed,
               AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap,
@@ -794,7 +795,7 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
           emitCXXConstructorCall(ctor, Ctor_Complete,
                                  /*ForVirtualBase=*/false,
                                  /*Delegating=*/false, currAVS, e);
-          cir::YieldOp::create(builder, loc);
+          cir::YieldOp::create(b, loc);
         });
   }
 }
