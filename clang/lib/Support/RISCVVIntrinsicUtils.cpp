@@ -1086,10 +1086,9 @@ llvm::SmallVector<PrototypeDescriptor> RVVIntrinsic::computeBuiltinTypes(
       } else if (NF > 1) {
         if (IsTuple) {
           PrototypeDescriptor BasePtrOperand = Prototype[1];
-          PrototypeDescriptor MaskoffType = PrototypeDescriptor(
-              BaseTypeModifier::Vector, getTupleVTM(NF),
-              static_cast<TypeModifier>(BasePtrOperand.TM &
-                                        ~TypeModifier::Pointer));
+          PrototypeDescriptor MaskoffType =
+              PrototypeDescriptor(BaseTypeModifier::Vector, getTupleVTM(NF),
+                                  BasePtrOperand.TM & ~TypeModifier::Pointer);
           NewPrototype.insert(NewPrototype.begin() + 1, MaskoffType);
         } else {
           // Convert
@@ -1125,10 +1124,9 @@ llvm::SmallVector<PrototypeDescriptor> RVVIntrinsic::computeBuiltinTypes(
     } else if (PolicyAttrs.isTUPolicy() && HasPassthruOp) {
       if (IsTuple) {
         PrototypeDescriptor BasePtrOperand = Prototype[0];
-        PrototypeDescriptor MaskoffType = PrototypeDescriptor(
-            BaseTypeModifier::Vector, getTupleVTM(NF),
-            static_cast<TypeModifier>(BasePtrOperand.TM &
-                                      ~TypeModifier::Pointer));
+        PrototypeDescriptor MaskoffType =
+            PrototypeDescriptor(BaseTypeModifier::Vector, getTupleVTM(NF),
+                                BasePtrOperand.TM & ~TypeModifier::Pointer);
         NewPrototype.insert(NewPrototype.begin(), MaskoffType);
       } else {
         // NF > 1 cases for segment load operations.
