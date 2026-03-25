@@ -107,13 +107,36 @@ std::pair<ConstantRange, ConstantRange> ConstantRange::splitPosNeg() const {
   return {intersectWith(PosFilter), intersectWith(NegFilter)};
 }
 
+static ConstantRange makeAllowedSignedLT(const ConstantRange &CR, uint32_t W) {
+  APInt SMax(CR.getSignedMax());
+  if (SMax.isMinSignedValue())
+    return ConstantRange::getEmpty(W);
+  return ConstantRange(APInt::getSignedMinValue(W), std::move(SMax));
+}
+
+static ConstantRange makeAllowedSignedLE(const ConstantRange &CR, uint32_t W) {
+  return ConstantRange::getNonEmpty(APInt::getSignedMinValue(W),
+                                    CR.getSignedMax() + 1);
+}
+
+static ConstantRange makeAllowedSignedGT(const ConstantRange &CR, uint32_t W) {
+  APInt SMin(CR.getSignedMin());
+  if (SMin.isMaxSignedValue())
+    return ConstantRange::getEmpty(W);
+  return ConstantRange(std::move(SMin) + 1, APInt::getSignedMinValue(W));
+}
+
+static ConstantRange makeAllowedSignedGE(const ConstantRange &CR, uint32_t W) {
+  return ConstantRange::getNonEmpty(CR.getSignedMin(),
+                                    APInt::getSignedMinValue(W));
+}
+
 ConstantRange ConstantRange::makeAllowedICmpRegion(CmpPredicate Pred,
                                                    const ConstantRange &CR) {
   if (CR.isEmptySet())
     return CR;
 
   uint32_t W = CR.getBitWidth();
-  ConstantRange Result = getFull(W);
   switch (Pred) {
   default:
     llvm_unreachable("Invalid ICmp predicate to makeAllowedICmpRegion()");
@@ -127,56 +150,41 @@ ConstantRange ConstantRange::makeAllowedICmpRegion(CmpPredicate Pred,
     APInt UMax(CR.getUnsignedMax());
     if (UMax.isMinValue())
       return getEmpty(W);
-    Result = ConstantRange(APInt::getMinValue(W), std::move(UMax));
+    ConstantRange Result(APInt::getMinValue(W), std::move(UMax));
     if (!Pred.hasSameSign())
       return Result;
+    return Result.intersectWith(makeAllowedSignedLT(CR, W));
   }
-    // For samesign, intersect with signed range.
-    LLVM_FALLTHROUGH;
-  case CmpInst::ICMP_SLT: {
-    APInt SMax(CR.getSignedMax());
-    if (SMax.isMinSignedValue())
-      return getEmpty(W);
-    return Result.intersectWith(
-        ConstantRange(APInt::getSignedMinValue(W), std::move(SMax)));
-  }
+  case CmpInst::ICMP_SLT:
+    return makeAllowedSignedLT(CR, W);
   case CmpInst::ICMP_ULE: {
-    Result = getNonEmpty(APInt::getMinValue(W), CR.getUnsignedMax() + 1);
+    ConstantRange Result =
+        getNonEmpty(APInt::getMinValue(W), CR.getUnsignedMax() + 1);
     if (!Pred.hasSameSign())
       return Result;
+    return Result.intersectWith(makeAllowedSignedLE(CR, W));
   }
-    // For samesign, intersect with signed range.
-    LLVM_FALLTHROUGH;
   case CmpInst::ICMP_SLE:
-    return Result.intersectWith(
-        getNonEmpty(APInt::getSignedMinValue(W), CR.getSignedMax() + 1));
+    return makeAllowedSignedLE(CR, W);
   case CmpInst::ICMP_UGT: {
     APInt UMin(CR.getUnsignedMin());
     if (UMin.isMaxValue())
       return getEmpty(W);
-    Result = ConstantRange(std::move(UMin) + 1, APInt::getZero(W));
+    ConstantRange Result(std::move(UMin) + 1, APInt::getZero(W));
     if (!Pred.hasSameSign())
       return Result;
+    return Result.intersectWith(makeAllowedSignedGT(CR, W));
   }
-    // For samesign, intersect with signed range.
-    LLVM_FALLTHROUGH;
-  case CmpInst::ICMP_SGT: {
-    APInt SMin(CR.getSignedMin());
-    if (SMin.isMaxSignedValue())
-      return getEmpty(W);
-    return Result.intersectWith(
-        ConstantRange(std::move(SMin) + 1, APInt::getSignedMinValue(W)));
-  }
+  case CmpInst::ICMP_SGT:
+    return makeAllowedSignedGT(CR, W);
   case CmpInst::ICMP_UGE: {
-    Result = getNonEmpty(CR.getUnsignedMin(), APInt::getZero(W));
+    ConstantRange Result = getNonEmpty(CR.getUnsignedMin(), APInt::getZero(W));
     if (!Pred.hasSameSign())
       return Result;
+    return Result.intersectWith(makeAllowedSignedGE(CR, W));
   }
-    // For samesign, intersect with signed range.
-    LLVM_FALLTHROUGH;
   case CmpInst::ICMP_SGE:
-    return Result.intersectWith(
-        getNonEmpty(CR.getSignedMin(), APInt::getSignedMinValue(W)));
+    return makeAllowedSignedGE(CR, W);
   }
 }
 
