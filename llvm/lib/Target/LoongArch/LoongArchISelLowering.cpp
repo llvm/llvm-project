@@ -8562,13 +8562,14 @@ bool LoongArchTargetLowering::isEligibleForTailCallOptimization(
     return false;
 
   // Do not tail call opt if caller's and callee's byval arguments do not match.
-  for (unsigned i = 0, j = 0; i < Outs.size(); i++) {
+  for (unsigned i = 0, j = 0; i < Outs.size(); ++i) {
     if (!Outs[i].Flags.isByVal())
       continue;
-    if (j++ >= LoongArchFI->getIncomingByValArgsSize())
+    if (j >= LoongArchFI->getIncomingByValArgsSize())
       return false;
-    if (LoongArchFI->getIncomingByValArgs(i).getValueType() != Outs[i].ArgVT)
+    if (LoongArchFI->getIncomingByValArgs(j).getValueType() != Outs[i].ArgVT)
       return false;
+    ++j;
   }
 
   // The callee has to preserve all registers the caller needs to preserve.
