@@ -256,10 +256,12 @@ const RegisterType *Arm64RegisterTypeDetector::DetectV0Type(uint64_t hwcap,
   static RegisterTypeVector v0_vec16("v0_vec16", "uint16", 8);
   static RegisterTypeVector v0_vec32("v0_vec32", "uint32", 4);
   static RegisterTypeVector v0_vec64("v0_vec64", "uint64", 2);
+  static RegisterTypeVector v0_vec128("v0_vec128", "uint128", 1);
   static RegisterTypeUnion v0_vec_union("v0_vec_union", {{"8", &v0_vec8},
                                                          {"16", &v0_vec16},
                                                          {"32", &v0_vec32},
-                                                         {"64", &v0_vec64}});
+                                                         {"64", &v0_vec64},
+                                                         {"128", &v0_vec128}});
 
   return &v0_vec_union;
 }
@@ -271,21 +273,22 @@ const RegisterType *Arm64RegisterTypeDetector::DetectX0Type(uint64_t hwcap,
   (void)hwcap2;
   (void)hwcap3;
 
-  static RegisterTypeFlags x0_flags_lhs("x0_flags_lhs", 8, {
+  static RegisterTypeFlags x0_flags_big_little("x0_flags_big_little", 8, {
       {"w", 16, 63}, {"x", 0, 15}});
-  static RegisterTypeFlags x0_flags_rhs("x0_flags_rhs", 8, {
+  static RegisterTypeFlags x0_flags_little_big("x0_flags_little_big", 8, {
       {"y", 48, 63}, {"z", 0, 47}});
 
   static RegisterTypeVector x0_vec8( "x0_vec8", "uint8", 8);
   static RegisterTypeVector x0_vec16("x0_vec16", "uint16", 4);
   static RegisterTypeVector x0_vec32("x0_vec32", "uint32", 2);
+  static RegisterTypeVector x0_vec64("x0_vec64", "uint64", 1);
   static RegisterTypeUnion x0_vec_union(
       "x0_vec_union",
-      {{"8", &x0_vec8}, {"16", &x0_vec16}, {"32", &x0_vec32}});
+      {{"8", &x0_vec8}, {"16", &x0_vec16}, {"32", &x0_vec32}, {"64", &x0_vec64}});
 
   static RegisterTypeUnion x0_union(
       "x0_union",
-      {{"lhs", &x0_flags_lhs}, {"rhs", &x0_flags_rhs},
+      {{"big_little", &x0_flags_big_little}, {"little_big", &x0_flags_little_big},
        {"vector", &x0_vec_union}});
 
   return &x0_union;
