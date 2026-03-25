@@ -11,9 +11,20 @@
 /// (e.g. `counted_by`)
 ///
 //===----------------------------------------------------------------------===//
+
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/Expr.h"
+#include "clang/AST/StmtVisitor.h"
+#include "clang/AST/TypeBase.h"
+#include "clang/AST/TypeLoc.h"
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/ADT/StringSwitch.h"
 
 namespace clang {
 
@@ -231,9 +242,73 @@ bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
   return false;
 }
 
+// FIXME: for some reason diagnostics highlight the end character, while
+// getSourceText() does not include the end character.
+static SourceRange getAttrNameRangeImpl(const ASTContext &Ctx,
+                                        SourceLocation Begin,
+                                        bool IsForDiagnostics) {
+  const SourceManager &SM = Ctx.getSourceManager();
+  SourceLocation TokenStart = Begin;
+  while (TokenStart.isMacroID())
+    TokenStart = SM.getImmediateExpansionRange(TokenStart).getBegin();
+  unsigned Offset = IsForDiagnostics ? 1 : 0;
+  SourceLocation End =
+      Lexer::getLocForEndOfToken(TokenStart, Offset, SM, Ctx.getLangOpts());
+  return {TokenStart, End};
+}
+
+StringRef
+BoundsAttributedTypeLoc::getAttrNameAsWritten(const ASTContext &Ctx) const {
+  SourceRange Range =
+      getAttrNameRangeImpl(Ctx, getAttrRange().getBegin(), false);
+  CharSourceRange NameRange = CharSourceRange::getCharRange(Range);
+  return Lexer::getSourceText(NameRange, Ctx.getSourceManager(),
+                              Ctx.getLangOpts());
+}
+
+SourceRange
+BoundsAttributedTypeLoc::getAttrNameRange(const ASTContext &Ctx) const {
+  return getAttrNameRangeImpl(Ctx, getAttrRange().getBegin(), true);
+}
+
+static TypeSourceInfo *getTSI(const Decl *D) {
+  if (const auto *DD = dyn_cast<DeclaratorDecl>(D)) {
+    return DD->getTypeSourceInfo();
+  }
+  return nullptr;
+}
+
+struct TypeLocFinder : public ConstStmtVisitor<TypeLocFinder, TypeLoc> {
+  TypeLoc VisitParenExpr(const ParenExpr *E) { return Visit(E->getSubExpr()); }
+
+  TypeLoc VisitDeclRefExpr(const DeclRefExpr *E) {
+    return getTSI(E->getDecl())->getTypeLoc();
+  }
+
+  TypeLoc VisitMemberExpr(const MemberExpr *E) {
+    return getTSI(E->getMemberDecl())->getTypeLoc();
+  }
+
+  TypeLoc VisitExplicitCastExpr(const ExplicitCastExpr *E) {
+    return E->getTypeInfoAsWritten()->getTypeLoc();
+  }
+
+  TypeLoc VisitCallExpr(const CallExpr *E) {
+    if (const auto *D = E->getCalleeDecl()) {
+      FunctionTypeLoc FTL = getTSI(D)->getTypeLoc().getAs<FunctionTypeLoc>();
+      if (FTL.isNull()) {
+        return FTL;
+      }
+      return FTL.getReturnLoc();
+    }
+    return {};
+  }
+};
+
 static void EmitIncompleteCountedByPointeeNotes(Sema &S,
                                                 const CountAttributedType *CATy,
-                                                NamedDecl *IncompleteTyDecl) {
+                                                NamedDecl *IncompleteTyDecl,
+                                                TypeLoc TL) {
   assert(IncompleteTyDecl == nullptr || isa<TypeDecl>(IncompleteTyDecl));
 
   if (IncompleteTyDecl) {
@@ -253,20 +328,36 @@ static void EmitIncompleteCountedByPointeeNotes(Sema &S,
         << CATy->getPointeeType();
   }
 
-  // Suggest using __sized_by(_or_null) instead of __counted_by(_or_null) as
-  // __sized_by(_or_null) doesn't have the complete type restriction.
-  //
-  // We use the source range of the expression on the CountAttributedType as an
-  // approximation for the source range of the attribute. This isn't quite right
-  // but isn't easy to fix right now.
-  //
-  // TODO: Implement logic to find the relevant TypeLoc for the attribute and
-  // get the SourceRange from that (#113582).
-  //
-  // TODO: We should emit a fix-it here.
-  SourceRange AttrSrcRange = CATy->getCountExpr()->getSourceRange();
+  CountAttributedTypeLoc CATL;
+  if (!TL.isNull())
+    CATL = TL.getAs<CountAttributedTypeLoc>();
+
+  if (CATL.isNull()) {
+    // Fall back to pointing to the count expr - not great, but close enough.
+    // This should happen rarely, if ever.
+    S.Diag(CATy->getCountExpr()->getExprLoc(),
+           diag::note_counted_by_consider_using_sized_by)
+        << CATy->isOrNull();
+    return;
+  }
+  SourceRange AttrSrcRange = CATL.getAttrNameRange(S.getASTContext());
+
+  StringRef Spelling = CATL.getAttrNameAsWritten(S.getASTContext());
+  StringRef FixedSpelling =
+      llvm::StringSwitch<StringRef>(Spelling)
+          .Case("__counted_by", "__sized_by")
+          .Case("counted_by", "sized_by")
+          .Case("__counted_by__", "__sized_by__")
+          .Case("__counted_by_or_null", "__sized_by_or_null")
+          .Case("counted_by_or_null", "sized_by_or_null")
+          .Case("__counted_by_or_null__", "__sized_by_or_null__")
+          .Default("");
+  FixItHint Fix;
+  if (!FixedSpelling.empty())
+    Fix = FixItHint::CreateReplacement(AttrSrcRange, FixedSpelling);
+
   S.Diag(AttrSrcRange.getBegin(), diag::note_counted_by_consider_using_sized_by)
-      << CATy->isOrNull() << AttrSrcRange;
+      << CATy->isOrNull() << AttrSrcRange << Fix;
 }
 
 static std::tuple<const CountAttributedType *, QualType>
@@ -335,7 +426,11 @@ static bool CheckAssignmentToCountAttrPtrWithIncompletePointeeTy(
       << CATy->getAttributeName(/*WithMacroPrefix=*/true) << PointeeTy
       << CATy->isOrNull() << RHSExpr->getSourceRange();
 
-  EmitIncompleteCountedByPointeeNotes(S, CATy, IncompleteTyDecl);
+  TypeLoc TL;
+  if (TypeSourceInfo *TSI = getTSI(Assignee))
+    TL = TSI->getTypeLoc();
+
+  EmitIncompleteCountedByPointeeNotes(S, CATy, IncompleteTyDecl, TL);
   return false; // check failed
 }
 
@@ -408,7 +503,8 @@ bool Sema::BoundsSafetyCheckUseOfCountAttrPtr(const Expr *E) {
       << CATy->getAttributeName(/*WithMacroPrefix=*/true) << CATy->isOrNull()
       << E->getSourceRange();
 
-  EmitIncompleteCountedByPointeeNotes(*this, CATy, IncompleteTyDecl);
+  TypeLoc TL = TypeLocFinder().Visit(E);
+  EmitIncompleteCountedByPointeeNotes(*this, CATy, IncompleteTyDecl, TL);
   return false;
 }
 
