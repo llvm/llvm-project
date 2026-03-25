@@ -57,17 +57,13 @@ static lto::Config createConfig() {
   // If shared memory is enabled, ensure the TargetMachine backend is
   // instantiated with atomics and bulk-memory features so that empty
   // partitioned ThinLTO modules don't incorrectly strip TLS variables or fall
-  // back to defaults. This bypasses the bug that deleted functions take their
+  // back to defaults. This bypasses a bug where deleted functions take their
   // target-features away. This is only necessary for atomics (and not other
   // features) because Atomics and TLS are the only features we lower away
   // during codegen.
   if (ctx.arg.sharedMemory) {
-    if (std::find(c.MAttrs.begin(), c.MAttrs.end(), "+atomics") ==
-        c.MAttrs.end())
-      c.MAttrs.push_back("+atomics");
-    if (std::find(c.MAttrs.begin(), c.MAttrs.end(), "+bulk-memory") ==
-        c.MAttrs.end())
-      c.MAttrs.push_back("+bulk-memory");
+    c.MAttrs.push_back("+atomics");
+    c.MAttrs.push_back("+bulk-memory");
   }
 
   c.CGOptLevel = ctx.arg.ltoCgo;

@@ -1,5 +1,6 @@
-; RUN: opt -module-summary %s -o %t.main.o
-; RUN: opt -module-summary %p/Inputs/thinlto-shared-memory-atomics-empty.ll -o %t.empty.o
+; RUN: split-file %s %t
+; RUN: opt -module-summary %t/main.ll -o %t.main.o
+; RUN: opt -module-summary %t/empty.ll -o %t.empty.o
 ; RUN: wasm-ld --shared-memory %t.main.o %t.empty.o -o %t.wasm
 ; RUN: llvm-nm %t.wasm | FileCheck %s
 
@@ -13,7 +14,7 @@
 ; CHECK-NOT: error:
 ; CHECK: _start
 
-
+;--- main.ll
 target triple = "wasm32-unknown-emscripten"
 
 define void @_start() #0 {
@@ -23,5 +24,17 @@ entry:
 
 attributes #0 = { "target-features"="+atomics,+bulk-memory,+mutable-globals,+sign-ext" }
 
+;--- empty.ll
+target triple = "wasm32-unknown-emscripten"
 
+; Thread-local variable that forces generation of TLS layout
+@my_tls = thread_local global i32 42, align 4
 
+; This function will be removed by dropDeadSymbols because it's unused,
+; taking its target-features attribute block along with it.
+define void @unused() #0 {
+entry:
+  ret void
+}
+
+attributes #0 = { "target-features"="+atomics,+bulk-memory,+mutable-globals,+sign-ext" }
