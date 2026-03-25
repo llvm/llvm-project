@@ -75,19 +75,6 @@ namespace lldb_private {
 /// parses debug information on-demand as LLDB needs it (when setting breakpoints,
 /// evaluating expressions, displaying stack frames, etc.).
 ///
-/// Key Methods Subclasses Must Implement:
-/// - CalculateAbilities(): Examine the object file and return a bitmask of
-///   supported abilities (CompileUnits, LineTables, Functions, etc.)
-/// - InitializeObject(): Perform one-time initialization after selection
-/// - GetNumCompileUnits() / GetCompileUnitAtIndex(): Provide access to compilation
-///   units
-/// - ParseLanguage(), ParseFunctions(), ParseLineTable(), ParseTypes(): Parse
-///   specific kinds of debug information from compile units
-/// - ResolveSymbolContext(): Map addresses to source locations and symbols
-/// - FindGlobalVariables(), FindFunctions(), FindTypes(): Look up debug info by name
-/// - CompleteType(): Fully parse a forward-declared or incomplete type
-/// - GetTypeSystemForLanguage(): Get or create the TypeSystem for a language
-///
 /// Implementation Considerations:
 /// - Lazy parsing: Only parse debug info when needed to minimize memory usage
 ///   and startup time
@@ -613,12 +600,6 @@ private:
 /// - Debug info statistics tracking (index cache hits, parse times, etc.)
 /// - Type creation helpers (MakeType, CopyType) that automatically register
 ///   types in the internal type list
-///
-/// Key Methods Subclasses Must Override:
-/// - CalculateAbilities(): Determine what debug info is available
-/// - CalculateNumCompileUnits(): Count compilation units in the debug info
-/// - ParseCompileUnitAtIndex(): Parse and return a specific compile unit
-/// - All the Parse*() methods from SymbolFile for parsing specific debug info
 ///
 /// What This Class Handles For You:
 /// - Caching parsed compile units in m_compile_units

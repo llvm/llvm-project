@@ -78,20 +78,6 @@ struct RegisterInfo;
 /// disassembly operations and remain valid as long as the parent Disassembler
 /// exists.
 ///
-/// Key methods that subclasses must implement:
-/// - Decode: Parse instruction bytes and populate internal state
-/// - CalculateMnemonicOperandsAndComment: Generate assembly string representation
-/// - DoesBranch: Determine if this is a branch instruction
-/// - IsLoad: Determine if this is a memory load instruction
-/// - IsBarrier: Determine if this is a barrier/fence instruction
-/// - IsAuthenticated: Determine if this uses pointer authentication
-///
-/// Key methods that subclasses may optionally override:
-/// - GetControlFlowKind: Classify control flow behavior (call/return/jump/etc.)
-/// - ParseOperands: Extract structured operand information
-/// - IsCall: Determine if this is a function call
-/// - HasDelaySlot: Indicate if this instruction has a delay slot
-///
 /// Implementations should be careful about:
 /// - Lazy computation: Only calculate strings when needed (CalculateMnemonicOperandsAndCommentIfNeeded)
 /// - Thread safety: Multiple threads may access instruction data
@@ -488,10 +474,6 @@ protected:
 /// 1. Create a Disassembler via FindPlugin/FindPluginForTarget
 /// 2. Call ParseInstructions or AppendInstructions to disassemble code
 /// 3. Access results via GetInstructionList() or use PrintInstructions
-///
-/// Key methods that subclasses must implement:
-/// - DecodeInstructions: Decode machine code bytes into Instruction objects
-/// - FlavorValidForArchSpec: Validate flavor strings for this architecture
 ///
 /// Most implementations also provide their own Instruction subclass that
 /// knows how to decode and represent instructions for that architecture.

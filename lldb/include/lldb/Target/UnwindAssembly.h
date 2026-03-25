@@ -35,15 +35,6 @@ namespace lldb_private {
 /// (ArchSpec). Each architecture typically has one UnwindAssembly implementation
 /// that understands its specific calling conventions and instruction encodings.
 ///
-/// Key methods to implement:
-/// - GetNonCallSiteUnwindPlanFromAssembly(): Create a complete unwind plan by
-///   analyzing function assembly (used when no debug info is available)
-/// - AugmentUnwindPlanFromCallSite(): Enhance an existing unwind plan with
-///   information gleaned from assembly analysis
-/// - GetFastUnwindPlan(): Create a simplified unwind plan for performance-critical
-///   unwinding (e.g., during sampling)
-/// - FirstNonPrologueInsn(): Find where the function prologue ends
-///
 /// Implementation notes:
 /// - Plugins must understand architecture-specific instruction encodings
 /// - Must handle various calling conventions (e.g., ARM's multiple frame pointer modes)

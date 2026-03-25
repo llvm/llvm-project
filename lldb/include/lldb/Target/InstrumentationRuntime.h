@@ -79,19 +79,6 @@ typedef std::map<lldb::InstrumentationRuntimeType,
 ///    - This allows LLDB to display rich diagnostics like "heap-use-after-free
 ///      on address 0x12345678, allocated by thread T0, freed by thread T1"
 ///
-/// Key Methods to Implement:
-/// - GetPatternForRuntimeLibrary(): Returns a regex to match the runtime
-///   library filename (or return an empty pattern and use MatchAllModules)
-/// - CheckIfRuntimeIsValid(): Validates that a module is the actual runtime
-///   library (e.g., by checking for expected symbols or sections)
-/// - Activate(): Sets up breakpoints and any other runtime interaction after
-///   the library is loaded and validated
-/// - GetBacktracesFromExtendedStopInfo(): Optionally extracts extended
-///   diagnostic information from the runtime's internal data structures
-/// - MatchAllModules(): Return true to check all modules rather than just
-///   those matching the pattern (useful for executables or statically linked
-///   runtimes)
-///
 /// Important Implementation Considerations:
 /// - Plugins are instantiated once per process, not per runtime library
 /// - The IsActive() flag prevents duplicate activation

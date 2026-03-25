@@ -35,14 +35,6 @@ namespace lldb_private {
 /// requested protocol name. If a server instance already exists for that
 /// protocol, the existing instance is returned rather than creating a new one.
 ///
-/// Key Methods to Implement:
-/// Subclasses must implement the following pure virtual methods:
-/// - Start(Connection): Initializes the server and begins listening for
-///   connections on the specified socket connection.
-/// - Stop(): Stops the server and closes all active connections.
-/// - GetSocket(): Returns the socket the server is listening on, or nullptr
-///   if not currently listening.
-///
 /// Thread Safety:
 /// Implementations should be thread-safe, as Start() and Stop() may be called
 /// from different threads. The base class GetOrCreate() method uses internal

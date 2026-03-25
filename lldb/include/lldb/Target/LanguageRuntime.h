@@ -89,15 +89,6 @@ protected:
 /// - GetExceptionObjectForThread(): Retrieve exception objects from runtime
 /// - GetRuntimeUnwindPlan(): Provide custom unwinding for async/coroutine frames
 ///
-/// Subclasses must implement:
-/// - GetLanguageType(): Return the language this runtime supports
-/// - GetDynamicTypeAndAddress(): Core dynamic type resolution logic
-/// - CouldHaveDynamicValue(): Quickly determine if dynamic type lookup makes sense
-/// - FixUpDynamicType(): Transform bare dynamic type to match static type form
-/// - GetObjectDescription(): Get string representation from runtime
-/// - CreateExceptionResolver(): Create exception breakpoint resolver
-/// - GetStepThroughTrampolinePlan(): Handle runtime-specific stepping
-///
 /// Important Notes:
 /// - Runtime instances are created per-process via create callbacks
 /// - They can cache process-specific runtime state (e.g., runtime class tables)

@@ -38,9 +38,6 @@ namespace lldb_private {
 /// If no plugin claims responsibility, a default implementation is used that
 /// looks for debug info in the module's object file or a separate symbol file.
 ///
-/// Key methods to implement:
-/// - GetSymbolFile(): Returns the SymbolFile that provides actual debug info
-///
 /// Implementation notes:
 /// - SymbolVendor can aggregate multiple SymbolFile sources if needed
 /// - The vendor should parse debug information lazily (on-demand) for performance

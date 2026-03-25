@@ -48,19 +48,6 @@ namespace lldb_private {
 /// code is accumulated, parsed, evaluated, and results are displayed back
 /// to the user.
 ///
-/// Key Methods Subclasses Must Implement:
-/// - DoInitialization(): Perform any language-specific setup when the REPL starts
-/// - GetSourceFileBasename(): Return the filename to use for REPL code (for
-///   debug info and error messages)
-/// - GetAutoIndentCharacters(): Return characters that trigger auto-indentation
-/// - SourceIsComplete(): Determine if the current input forms a complete
-///   statement/expression that can be evaluated
-/// - GetDesiredIndentation(): Calculate the proper indentation level for the
-///   current line based on language syntax
-/// - GetLanguage(): Return the language this REPL supports
-/// - PrintOneVariable(): Format and display a single variable's value
-/// - CompleteCode(): Provide code completion suggestions for the current input
-///
 /// Implementation Considerations:
 /// - REPLs must handle both single-line expressions and multi-line statements
 /// - Maintain compilation state to enable features like incremental compilation

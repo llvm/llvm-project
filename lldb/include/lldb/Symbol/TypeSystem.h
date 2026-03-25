@@ -67,13 +67,6 @@ namespace npdb {
 /// selection is based on the language specified in debug info or inferred from
 /// source files.
 ///
-/// Key methods that subclasses must implement:
-/// - Type creation and manipulation (GetBuiltinTypeForEncodingAndBitSize, etc.)
-/// - Type queries (IsIntegerType, IsPointerType, GetBitSize, etc.)
-/// - AST parsing from debug formats (GetDWARFParser, GetPDBParser)
-/// - Expression evaluation support (GetUserExpression, GetFunctionCaller)
-/// - Type hierarchy navigation (GetDirectBaseClassAtIndex, GetFieldAtIndex, etc.)
-///
 /// Implementation notes:
 /// - This interface extensively uses opaque pointers (lldb::opaque_compiler_type_t)
 ///   to prevent generic LLDB code from depending on language-specific AST types

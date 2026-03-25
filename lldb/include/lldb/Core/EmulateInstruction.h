@@ -134,17 +134,6 @@ protected:
 /// architecture and instruction type. Plugins can optionally be selected by
 /// name to force a specific implementation.
 ///
-/// Key Methods to Implement:
-/// - SupportsEmulatingInstructionsOfType(): Indicates which instruction types
-///   this plugin can emulate (e.g., eInstructionTypeAll,
-///   eInstructionTypePrologueEpilogue, eInstructionTypePCModifying)
-/// - SetTargetTriple(): Configures the emulator for the specific architecture
-/// - ReadInstruction(): Reads the instruction bytes from the current PC
-/// - EvaluateInstruction(): The core method that decodes and emulates the
-///   instruction, invoking callbacks to simulate register/memory changes
-/// - GetRegisterInfo(): Returns register metadata for the architecture
-/// - TestEmulation(): Validates the emulator against test data
-///
 /// Important Implementation Considerations:
 /// - Callbacks are the primary interface - implementations should use
 ///   ReadRegister/WriteRegister/ReadMemory/WriteMemory methods which invoke

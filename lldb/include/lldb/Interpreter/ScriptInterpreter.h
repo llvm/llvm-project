@@ -183,18 +183,6 @@ private:
 /// I/O redirection to ensure script output appears in the appropriate LLDB
 /// streams.
 ///
-/// Key Methods Subclasses Must Implement:
-/// - ExecuteOneLine(): Execute a single line of script code
-/// - ExecuteInterpreterLoop(): Run an interactive interpreter session
-/// - ExecuteMultipleLines(): Execute a multi-line script block
-/// - LoadScriptingModule(): Load a script file or module
-/// - Generate*(): Methods to create script function wrappers for various
-///   extension points (breakpoint callbacks, type scripts, etc.)
-/// - Create*(): Factory methods for script-based objects (synthetic providers,
-///   commands, etc.)
-/// - Run*(): Methods to invoke script callbacks (formatted summaries, commands,
-///   etc.)
-///
 /// Implementation Considerations:
 /// - Thread safety: Multiple threads may access the interpreter simultaneously;
 ///   use AcquireInterpreterLock() to synchronize access to the interpreter state

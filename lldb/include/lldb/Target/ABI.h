@@ -49,18 +49,6 @@ namespace lldb_private {
 /// ABI::FindPlugin(process_sp, arch) which queries all registered ABI
 /// implementations through the PluginManager.
 ///
-/// Key methods that subclasses must implement:
-/// - PrepareTrivialCall: Set up registers/stack to call a function
-/// - GetArgumentValues: Extract function arguments from the current frame
-/// - GetReturnValueObjectImpl: Extract the return value after a function call
-/// - SetReturnValueObject: Modify the return value in a stack frame
-/// - CreateFunctionEntryUnwindPlan: Generate unwind rules at function entry
-/// - CreateDefaultUnwindPlan: Generate default unwind rules for assembly
-/// - RegisterIsVolatile: Determine if a register is caller-saved
-/// - CallFrameAddressIsValid: Validate stack pointer alignment/values
-/// - CodeAddressIsValid: Validate instruction pointer values
-/// - AugmentRegisterInfo: Add ABI-specific register metadata
-///
 /// Implementations should be careful about:
 /// - Thread safety: ABI methods may be called from multiple threads
 /// - Handling both user-space and kernel-space calling conventions
@@ -224,10 +212,6 @@ private:
 /// (DWARF/eh_frame register numbers, generic register kinds) from the
 /// RegisterInfo array provided by GetRegisterInfoArray.
 ///
-/// Subclasses must implement:
-/// - GetRegisterInfoArray: Return a pointer to a static array of RegisterInfo
-///   structures that describe all registers for this ABI
-///
 /// This approach is suitable for architectures where the register set is
 /// well-defined and doesn't vary at runtime. For architectures with dynamic
 /// register information (e.g., varying vector lengths), consider using
@@ -257,15 +241,6 @@ protected:
 /// This class provides the AugmentRegisterInfo implementation that queries
 /// the MCRegisterInfo object (passed to the ABI constructor) to populate
 /// register metadata like DWARF numbers and eh_frame numbers.
-///
-/// Subclasses must implement:
-/// - GetGenericNum: Map register names to LLDB generic register numbers
-///   (e.g., LLDB_REGNUM_GENERIC_PC, LLDB_REGNUM_GENERIC_SP)
-///
-/// Subclasses may optionally override:
-/// - GetMCName: Transform LLDB register names to MCRegisterInfo naming
-///   conventions (e.g., case transformations, prefix changes)
-/// - GetEHAndDWARFNums: Provide custom DWARF/eh_frame number mappings
 ///
 /// This approach is particularly useful for:
 /// - New architectures where LLVM support already exists

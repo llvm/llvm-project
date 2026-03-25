@@ -47,12 +47,6 @@ class IRExecutionUnit;
 /// 4. Optimizing the IR
 /// 5. Preparing the IR for execution (JIT compilation or interpretation)
 ///
-/// Key methods that subclasses must implement:
-/// - Complete(): Provide code completion suggestions for partial expressions
-/// - DoPrepareForExecution(): Generate executable code from the parsed
-///   expression, including JIT compilation and setting up the execution
-///   environment
-///
 /// The parser works in conjunction with several other components:
 /// - Expression: The base class representing the expression being parsed
 /// - IRExecutionUnit: Manages the JIT-compiled code and execution

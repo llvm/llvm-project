@@ -45,11 +45,6 @@ typedef std::vector<lldb::ThreadSP> HistoryThreads;
 /// - GetHistoryThreads(): Return synthetic threads showing allocation/deallocation
 ///   history for a given memory address
 ///
-/// Subclasses must implement:
-/// - GetHistoryThreads(): Query the runtime instrumentation system to retrieve
-///   historical stack traces for the specified address, returning them as a
-///   vector of Thread objects that can be displayed in the debugger
-///
 /// Important Notes:
 /// - Plugins depend on runtime instrumentation being enabled in the target process
 /// - Must handle cases where no history is available for an address gracefully

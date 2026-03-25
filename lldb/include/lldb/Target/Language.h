@@ -65,10 +65,6 @@ public:
 /// - GetUserEntryPointName(): Return language-specific entry point (e.g., "main")
 /// - GetDemangledFunctionNameWithoutArguments(): Parse demangled names
 ///
-/// Subclasses must implement:
-/// - GetLanguageType(): Return the lldb::LanguageType this plugin handles
-/// - IsSourceFile(): Return true if the file path is a source file for this language
-///
 /// Important Notes:
 /// - Language plugins are singleton instances cached for the LLDB session
 /// - They must be stateless or use thread-safe state management

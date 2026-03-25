@@ -34,13 +34,6 @@ namespace lldb_private {
 /// is used for targets that use Clang as their primary type system. The plugin
 /// is created via the CreateInstance callback registered with the PluginManager.
 ///
-/// Key Methods to Implement:
-/// - GetRegisterType(): The core method that creates a CompilerType representing
-///   a register's structure. Given a register name, its flags definition, and
-///   byte size, implementations must construct an appropriate structured type
-///   (typically a struct or class) with fields corresponding to each register
-///   flag/bit field.
-///
 /// Implementation Considerations:
 /// - Implementations should cache created types when possible, as the same
 ///   register type may be requested multiple times

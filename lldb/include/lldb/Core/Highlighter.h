@@ -122,11 +122,6 @@ struct HighlightStyle {
 /// - TreeSitterHighlighter: Uses tree-sitter parsers for multiple languages
 /// - DefaultHighlighter: No-op highlighter that returns unmodified text
 ///
-/// Key methods that subclasses must implement:
-/// - GetName(): Returns a human-readable name for the highlighter
-/// - Highlight(): The main method that applies syntax highlighting to a line
-///   of code, considering the cursor position and previous lines for context
-///
 /// The Highlight() method receives:
 /// - options: A HighlightStyle containing color codes for different token types
 /// - line: The current line to highlight

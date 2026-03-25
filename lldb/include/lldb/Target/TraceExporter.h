@@ -31,10 +31,6 @@ namespace lldb_private {
 /// is selected by name via TraceExporter::FindPlugin(), which looks up the
 /// appropriate exporter in the PluginManager.
 ///
-/// Key methods to implement:
-/// - Export functionality that reads from a TraceCursor and writes to the
-///   target format
-///
 /// Implementation notes:
 /// - Trace exporters are supposed to operate on an architecture-agnostic fashion,
 ///   as a TraceCursor, which feeds the data, hides the actual trace technology

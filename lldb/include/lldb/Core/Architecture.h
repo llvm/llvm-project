@@ -42,20 +42,6 @@ namespace lldb_private {
 /// plugins may be registered, and the first one that supports the given
 /// ArchSpec will be used.
 ///
-/// Key methods that subclasses must implement:
-/// - OverrideStopInfo: Adjust stop reasons for instructions that won't execute
-///   (e.g., ARM IT blocks where the condition is false)
-///
-/// Key methods that subclasses may optionally override:
-/// - GetBytesToSkip: Handle architectures with multiple function entry points
-/// - AdjustBreakpointAddress: Fix breakpoint addresses for special cases
-/// - GetCallableLoadAddress: Add address bits needed for function calls
-/// - GetOpcodeLoadAddress: Strip address bits to get instruction addresses
-/// - GetBreakableLoadAddress: Find better breakpoint locations (e.g., before delay slots)
-/// - GetMemoryTagManager: Provide memory tagging support (MTE, ADI, etc.)
-/// - RegisterWriteCausesReconfigure: Identify registers that change layout
-/// - ReconfigureRegisterInfo: Update register layout after special writes
-///
 /// Implementations should be careful about:
 /// - Not duplicating functionality that belongs in ABI plugins
 /// - Ensuring thread-safety as methods may be called concurrently
