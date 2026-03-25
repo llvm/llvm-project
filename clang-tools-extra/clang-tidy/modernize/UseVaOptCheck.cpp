@@ -33,14 +33,11 @@ public:
         assert(PrevComma);
         if (const auto *II = Tok.getIdentifierInfo();
             II && II->getName() == "__VA_ARGS__") {
-          // FIXME: The replacement really should be " __VA_OPT__(,)
-          // __VA_ARGS__", but this breaks the fixit which removes the , in that
-          // case o_O.
           Check.diag(Tok.getLocation(),
                      "Use __VA_OPT__ instead of GNU extension to __VA_ARGS__")
               << FixItHint::CreateReplacement(
                      SourceRange(PrevComma->getLocation(), Tok.getLocation()),
-                     " __VA_OPT__(',') __VA_ARGS__");
+                     " __VA_OPT__(,) __VA_ARGS__");
         }
         PrevComma = std::nullopt;
         PrevHashHash = false;
