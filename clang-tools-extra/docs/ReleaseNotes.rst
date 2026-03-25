@@ -145,6 +145,11 @@ New checks
   Finds places where structured bindings could be used to decompose pairs and
   suggests replacing them.
 
+- New :doc:`modernize-use-va-opt
+  <clang-tidy/checks/modernize/use-va-opt>` check.
+
+  Use __VA_OPT__ instead of ##__VA_ARGS__ GNU extension.
+
 - New :doc:`performance-string-view-conversions
   <clang-tidy/checks/performance/string-view-conversions>` check.
 

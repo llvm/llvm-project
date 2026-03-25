@@ -57,6 +57,7 @@ add_clang_library(clangTidyModernizeModule STATIC
   UseTransparentFunctorsCheck.cpp
   UseUncaughtExceptionsCheck.cpp
   UseUsingCheck.cpp
+  UseVaOptCheck.cpp
 
   LINK_LIBS
   clangTidy

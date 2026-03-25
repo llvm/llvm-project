@@ -336,6 +336,7 @@ Clang-Tidy Checks
    :doc:`modernize-use-transparent-functors <modernize/use-transparent-functors>`, "Yes"
    :doc:`modernize-use-uncaught-exceptions <modernize/use-uncaught-exceptions>`, "Yes"
    :doc:`modernize-use-using <modernize/use-using>`, "Yes"
+   :doc:`modernize-use-va-opt <modernize/use-va-opt>`, "Yes"
    :doc:`mpi-buffer-deref <mpi/buffer-deref>`, "Yes"
    :doc:`mpi-type-mismatch <mpi/type-mismatch>`, "Yes"
    :doc:`objc-assert-equals <objc/assert-equals>`, "Yes"

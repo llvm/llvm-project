@@ -57,6 +57,7 @@
 #include "UseTransparentFunctorsCheck.h"
 #include "UseUncaughtExceptionsCheck.h"
 #include "UseUsingCheck.h"
+#include "UseVaOptCheck.h"
 
 using namespace clang::ast_matchers;
 
@@ -145,6 +146,7 @@ public:
     CheckFactories.registerCheck<UseUncaughtExceptionsCheck>(
         "modernize-use-uncaught-exceptions");
     CheckFactories.registerCheck<UseUsingCheck>("modernize-use-using");
+    CheckFactories.registerCheck<UseVaOptCheck>("modernize-use-va-opt");
   }
 };
 
