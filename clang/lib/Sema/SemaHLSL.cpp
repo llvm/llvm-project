@@ -4307,7 +4307,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(ArgTyExpr);
     break;
   }
-  case Builtin::BI__builtin_hlsl_quad_read_across_x: {
+  case Builtin::BI__builtin_hlsl_quad_read_across_x:
+  case Builtin::BI__builtin_hlsl_quad_read_across_y: {
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;
 
