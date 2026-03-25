@@ -4094,6 +4094,9 @@ void Parser::ParseDeclarationSpecifiers(
     case tok::kw_auto:
       if (getLangOpts().CPlusPlus11 || getLangOpts().C23) {
         auto MayBeTypeSpecifier = [&]() {
+          // In pre-C23 C, auto can be used as a storage-class specifier.
+          // C23 removes auto from the storage-class specifiers and repurposes
+          // it for type inference (6.7.10).
           if (getLangOpts().C23 && DS.hasTypeSpecifier() &&
               DS.getTypeSpecType() != DeclSpec::TST_auto)
             return true;
