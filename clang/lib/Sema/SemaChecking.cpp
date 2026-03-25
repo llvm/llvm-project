@@ -5094,7 +5094,7 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   case AtomicExpr::AO__opencl_atomic_fetch_min:
   case AtomicExpr::AO__hip_atomic_fetch_max:
   case AtomicExpr::AO__hip_atomic_fetch_min:
-    ArithAllows = AOEVT_Pointer | AOEVT_FP;
+    ArithAllows = AOEVT_FP;
     Form = Arithmetic;
     break;
   case AtomicExpr::AO__c11_atomic_fetch_and:
