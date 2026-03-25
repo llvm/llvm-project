@@ -10,7 +10,7 @@
       _rc = (exp);              \
     } while (_rc == -1);        \
   })
-#define NULL 0
+#include <cstddef>
 
 extern "C" int memfd_create(const char *name, unsigned int flags);
 

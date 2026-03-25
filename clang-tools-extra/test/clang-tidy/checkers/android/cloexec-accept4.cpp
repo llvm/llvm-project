@@ -13,7 +13,7 @@ struct sockaddr {};
       _rc = (exp);              \
     } while (_rc == -1);        \
   })
-#define NULL 0
+#include <cstddef>
 
 extern "C" int accept4(int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags);
 

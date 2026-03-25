@@ -2,7 +2,7 @@
 
 struct sockaddr {};
 typedef int socklen_t;
-#define NULL 0
+#include <cstddef>
 
 extern "C" int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
 
