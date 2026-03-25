@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #if !_ARCH_PPC
-
+#define LONG_DOUBLE_80_BIT_PRECISION
 #include "int_lib.h"
 #include "int_math.h"
 
