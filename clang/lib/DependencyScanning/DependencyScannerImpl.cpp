@@ -528,6 +528,8 @@ void dependencies::initializeScanCompilerInstance(
   ScanInstance.setBuildingModule(false);
   ScanInstance.createVirtualFileSystem(FS, DiagConsumer);
   ScanInstance.createDiagnostics(DiagConsumer, /*ShouldOwnClient=*/false);
+  if (Service.getOpts().Format == ScanningOutputFormat::P1689)
+    ScanInstance.getDiagnostics().setIgnoreAllWarnings(true);
   ScanInstance.createFileManager();
   ScanInstance.createSourceManager();
 
