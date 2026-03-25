@@ -1756,3 +1756,100 @@ spirv.ARM.Graph @reshape_shape_element_count_not_output_rank(%arg0: !spirv.arm.t
   %0 = spirv.Tosa.Reshape %arg0, %arg1 : !spirv.arm.tensor<2x3x4xi8>, !spirv.arm.tensor<4xi32> -> !spirv.arm.tensor<6x4xi8>
   spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<6x4xi8>
 }
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Reverse
+//===----------------------------------------------------------------------===//
+
+spirv.ARM.Graph @reverse_input_output_types_not_matching(%arg0: !spirv.arm.tensor<2x3x4xi8>) -> (!spirv.arm.tensor<2x3x4xi16>) {
+  // expected-error @+1 {{op failed to verify that all of {input1, output} have same type}}
+  %0 = spirv.Tosa.Reverse axis = 1, %arg0 : !spirv.arm.tensor<2x3x4xi8> -> !spirv.arm.tensor<2x3x4xi16>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<2x3x4xi16>
+}
+
+spirv.ARM.Graph @reverse_axis_value_not_in_input_rank_range(%arg0: !spirv.arm.tensor<2x3x4xi8>) -> (!spirv.arm.tensor<2x3x4xi8>) {
+  // expected-error @+1 {{op failed to verify that axis attribute value should be lower than rank(input1)}}
+  %0 = spirv.Tosa.Reverse axis = 3, %arg0 : !spirv.arm.tensor<2x3x4xi8> -> !spirv.arm.tensor<2x3x4xi8>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<2x3x4xi8>
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Slice
+//===----------------------------------------------------------------------===//
+
+spirv.ARM.Graph @slice_input_output_element_types_not_matching(%arg0: !spirv.arm.tensor<4x5x6xi8>) -> (!spirv.arm.tensor<2x3x4xi16>) {
+  %start = spirv.Constant dense<[0, 1, 2]> : !spirv.arm.tensor<3xi32>
+  %size = spirv.Constant dense<[2, 3, 4]> : !spirv.arm.tensor<3xi32>
+  // expected-error @+1 {{op failed to verify that all of {input1, output} have same element type}}
+  %0 = spirv.Tosa.Slice %arg0, %start, %size : !spirv.arm.tensor<4x5x6xi8>, !spirv.arm.tensor<3xi32>, !spirv.arm.tensor<3xi32> -> !spirv.arm.tensor<2x3x4xi16>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<2x3x4xi16>
+}
+
+spirv.ARM.Graph @slice_start_element_count_not_input_rank(%arg0: !spirv.arm.tensor<4x5x6xi8>) -> (!spirv.arm.tensor<2x3x4xi8>) {
+  %start = spirv.Constant dense<[0, 1]> : !spirv.arm.tensor<2xi32>
+  %size = spirv.Constant dense<[2, 3, 4]> : !spirv.arm.tensor<3xi32>
+  // expected-error @+1 {{op failed to verify that the number of elements of start must be rank(input1)}}
+  %0 = spirv.Tosa.Slice %arg0, %start, %size : !spirv.arm.tensor<4x5x6xi8>, !spirv.arm.tensor<2xi32>, !spirv.arm.tensor<3xi32> -> !spirv.arm.tensor<2x3x4xi8>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<2x3x4xi8>
+}
+
+spirv.ARM.Graph @slice_size_element_count_not_input_rank(%arg0: !spirv.arm.tensor<4x5x6xi8>) -> (!spirv.arm.tensor<2x3x4xi8>) {
+  %start = spirv.Constant dense<[0, 1, 2]> : !spirv.arm.tensor<3xi32>
+  %size = spirv.Constant dense<[2, 3]> : !spirv.arm.tensor<2xi32>
+  // expected-error @+1 {{op failed to verify that the number of elements of size must be rank(input1)}}
+  %0 = spirv.Tosa.Slice %arg0, %start, %size : !spirv.arm.tensor<4x5x6xi8>, !spirv.arm.tensor<3xi32>, !spirv.arm.tensor<2xi32> -> !spirv.arm.tensor<2x3x4xi8>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<2x3x4xi8>
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Tile
+//===----------------------------------------------------------------------===//
+
+spirv.ARM.Graph @tile_input_output_element_types_not_matching(%arg0: !spirv.arm.tensor<2x3x4xi8>) -> (!spirv.arm.tensor<4x3x8xi16>) {
+  %multiples = spirv.Constant dense<[2, 1, 2]> : !spirv.arm.tensor<3xi32>
+  // expected-error @+1 {{op failed to verify that all of {input1, output} have same element type}}
+  %0 = spirv.Tosa.Tile %arg0, %multiples : !spirv.arm.tensor<2x3x4xi8>, !spirv.arm.tensor<3xi32> -> !spirv.arm.tensor<4x3x8xi16>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<4x3x8xi16>
+}
+
+spirv.ARM.Graph @tile_input_output_ranks_not_matching(%arg0: !spirv.arm.tensor<2x3x4xi8>) -> (!spirv.arm.tensor<2x12xi8>) {
+  %multiples = spirv.Constant dense<[1, 1, 1]> : !spirv.arm.tensor<3xi32>
+  // expected-error @+1 {{op failed to verify that all of {input1, output} have same rank}}
+  %0 = spirv.Tosa.Tile %arg0, %multiples : !spirv.arm.tensor<2x3x4xi8>, !spirv.arm.tensor<3xi32> -> !spirv.arm.tensor<2x12xi8>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<2x12xi8>
+}
+
+spirv.ARM.Graph @tile_multiples_element_count_not_input_rank(%arg0: !spirv.arm.tensor<2x3x4xi8>) -> (!spirv.arm.tensor<4x3x8xi8>) {
+  %multiples = spirv.Constant dense<[2, 1]> : !spirv.arm.tensor<2xi32>
+  // expected-error @+1 {{op failed to verify that the number of elements of multiples must be rank(input1)}}
+  %0 = spirv.Tosa.Tile %arg0, %multiples : !spirv.arm.tensor<2x3x4xi8>, !spirv.arm.tensor<2xi32> -> !spirv.arm.tensor<4x3x8xi8>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<4x3x8xi8>
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Transpose
+//===----------------------------------------------------------------------===//
+
+spirv.ARM.Graph @transpose_input_output_element_types_not_matching(%arg0: !spirv.arm.tensor<2x3x4xi8>) -> (!spirv.arm.tensor<4x2x3xi16>) {
+  // expected-error @+1 {{op failed to verify that all of {input1, output} have same element type}}
+  %0 = spirv.Tosa.Transpose perms = [2, 0, 1], %arg0 : !spirv.arm.tensor<2x3x4xi8> -> !spirv.arm.tensor<4x2x3xi16>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<4x2x3xi16>
+}
+
+spirv.ARM.Graph @transpose_input_output_ranks_not_matching(%arg0: !spirv.arm.tensor<2x3x4xi8>) -> (!spirv.arm.tensor<24xi8>) {
+  // expected-error @+1 {{op failed to verify that all of {input1, output} have same rank}}
+  %0 = spirv.Tosa.Transpose perms = [2, 0, 1], %arg0 : !spirv.arm.tensor<2x3x4xi8> -> !spirv.arm.tensor<24xi8>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<24xi8>
+}
+
+spirv.ARM.Graph @transpose_input_output_element_counts_not_matching(%arg0: !spirv.arm.tensor<2x3x4xi8>) -> (!spirv.arm.tensor<3x3x3xi8>) {
+  // expected-error @+1 {{op failed to verify that all of {input1, output} have same element count}}
+  %0 = spirv.Tosa.Transpose perms = [2, 0, 1], %arg0 : !spirv.arm.tensor<2x3x4xi8> -> !spirv.arm.tensor<3x3x3xi8>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<3x3x3xi8>
+}
+
+spirv.ARM.Graph @transpose_perms_element_count_not_input_rank(%arg0: !spirv.arm.tensor<2x3x4xi8>) -> (!spirv.arm.tensor<4x2x3xi8>) {
+  // expected-error @+1 {{op failed to verify that the number of elements of perms must be rank(input1)}}
+  %0 = spirv.Tosa.Transpose perms = [1, 0], %arg0 : !spirv.arm.tensor<2x3x4xi8> -> !spirv.arm.tensor<4x2x3xi8>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<4x2x3xi8>
+}
