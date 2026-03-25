@@ -264,23 +264,15 @@ unsigned AMDGPUSubtarget::getMaxWorkitemID(const Function &Kernel,
 }
 
 bool AMDGPUSubtarget::isSingleLaneExecution(const Function &Func) const {
-  // If the function calls the WWM intrinsic, just return false as
-  // all threads will be active at some point
-  for (const_inst_iterator Inst = inst_begin(Func), InstEnd = inst_end(Func);
-       Inst != InstEnd; ++Inst) {
-    const Instruction *I = &(*Inst);
-    if (auto *callInst = dyn_cast<CallInst>(I)) {
-      Function *calledFunc = callInst->getCalledFunction();
-      if (calledFunc && calledFunc->isIntrinsic() &&
-          calledFunc->getIntrinsicID() == Intrinsic::amdgcn_strict_wwm)
-        return false;
-    }
-  }
-
   for (int I = 0; I < 3; ++I) {
     if (getMaxWorkitemID(Func, I) > 0)
       return false;
   }
+
+  // If the function calls the WWM intrinsic, just return false as
+  // all threads will be active at some point
+  if (!Func.hasFnAttribute("amdgpu-no-wwm"))
+    return false;
 
   return true;
 }
