@@ -7169,7 +7169,7 @@ TargetLowering::prepareUREMEqFold(EVT SETCCVT, SDValue REMNode,
       K = -1;
       // And ensure that comparison constant is tautological,
       // it will always compare true/false.
-      Q = -1;
+      Q.setAllBits();
     }
 
     PAmts.push_back(DAG.getConstant(P, DL, SVT));
@@ -7436,11 +7436,11 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
     if (D.isOne()) {
       // Set P, A and K to a bogus values so we can try to splat them.
       P = 0;
-      A = -1;
+      A.setAllBits();
       K = -1;
 
       // x ?% 1 == 0  <-->  true  <-->  x u<= -1
-      Q = -1;
+      Q.setAllBits();
     }
 
     PAmts.push_back(DAG.getConstant(P, DL, SVT));
