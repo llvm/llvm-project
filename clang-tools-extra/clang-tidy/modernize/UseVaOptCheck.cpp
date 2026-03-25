@@ -18,8 +18,7 @@ namespace clang::tidy::modernize {
 namespace {
 class VaOptPPCallbacks : public PPCallbacks {
 public:
-  VaOptPPCallbacks(Preprocessor *PP, UseVaOptCheck *Check)
-      : PP(PP), Check(Check) {}
+  VaOptPPCallbacks(UseVaOptCheck &Check) : Check(Check) {}
 
   void MacroDefined(const Token &MacroNameTok,
                     const MacroDirective *MD) override {
@@ -37,8 +36,8 @@ public:
           // FIXME: The replacement really should be " __VA_OPT__(,)
           // __VA_ARGS__", but this breaks the fixit which removes the , in that
           // case o_O.
-          Check->diag(Tok.getLocation(),
-                      "Use __VA_OPT__ instead of GNU extension to __VA_ARGS__")
+          Check.diag(Tok.getLocation(),
+                     "Use __VA_OPT__ instead of GNU extension to __VA_ARGS__")
               << FixItHint::CreateReplacement(
                      SourceRange(PrevComma->getLocation(), Tok.getLocation()),
                      " __VA_OPT__(',') __VA_ARGS__");
@@ -59,15 +58,14 @@ public:
   }
 
 private:
-  Preprocessor *PP;
-  UseVaOptCheck *Check;
+  UseVaOptCheck &Check;
 };
 } // namespace
 
 void UseVaOptCheck::registerPPCallbacks(const SourceManager &SM,
                                         Preprocessor *PP,
                                         Preprocessor *ModuleExpanderPP) {
-  PP->addPPCallbacks(std::make_unique<VaOptPPCallbacks>(PP, this));
+  PP->addPPCallbacks(std::make_unique<VaOptPPCallbacks>(*this));
 }
 
 } // namespace clang::tidy::modernize
