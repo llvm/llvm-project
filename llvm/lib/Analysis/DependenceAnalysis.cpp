@@ -2217,8 +2217,6 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
   const SCEVAddRecExpr *SrcAddRec = dyn_cast<SCEVAddRecExpr>(Src);
   const SCEVAddRecExpr *DstAddRec = dyn_cast<SCEVAddRecExpr>(Dst);
   if (SrcAddRec && DstAddRec) {
-    const SCEV *SrcConst = SrcAddRec->getStart();
-    const SCEV *DstConst = DstAddRec->getStart();
     const SCEV *SrcCoeff = SrcAddRec->getStepRecurrence(*SE);
     const SCEV *DstCoeff = DstAddRec->getStepRecurrence(*SE);
     const Loop *CurSrcLoop = SrcAddRec->getLoop();
