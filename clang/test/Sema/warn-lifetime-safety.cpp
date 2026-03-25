@@ -2360,7 +2360,7 @@ void dangling_view_from_non_pointer_param() {
 
 MyObj getMyObj(const MyObj &obj [[clang::lifetimebound]]);
 
-void gsl_owner_return_does_not_crash() {
+void gsl_owner_return() {
   MyObj obj;
   View v = obj;
   getMyObj(obj);
@@ -2369,15 +2369,14 @@ void gsl_owner_return_does_not_crash() {
 
 std::unique_ptr<S> getUniqueS(const std::string &s [[clang::lifetimebound]]);
 
-// FIXME: GSL Owner return types of lifetimebound calls are not yet tracked.
 void owner_return_unique_ptr_s() {
-  auto ptr = getUniqueS(std::string("temp"));
-  (void)ptr; // Should warn.
+  auto ptr = getUniqueS(std::string("temp")); // expected-warning {{object whose reference is captured does not live long enough}} \
+                                              // expected-note {{destroyed here}}
+  (void)ptr;                                  // expected-note {{later used here}}
 }
 
 // FIXME: The warning here is from the local unique_ptr being destroyed on
-// return, not from lifetimebound origin tracking. GSL Owner return types are
-// not yet tracked.
+// return. The chain breaks and doesn't trace back to `auto ups = getUniqueS(local)`.
 std::string_view return_dangling_view_through_owner() {
   std::string local;
   auto ups = getUniqueS(local);

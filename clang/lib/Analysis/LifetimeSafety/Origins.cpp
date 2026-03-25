@@ -306,9 +306,7 @@ void OriginManager::collectLifetimeboundOriginTypes(
 }
 
 void OriginManager::registerLifetimeboundOriginType(QualType QT) {
-  // TODO: Support [[gsl::Owner]] return types. For now, skip them because they
-  // change owner origin-list shape and can break GSL construction flow.
-  if (!QT->getAsCXXRecordDecl() || isGslOwnerType(QT) || hasOrigins(QT))
+  if (!QT->getAsCXXRecordDecl() || hasOrigins(QT))
     return;
 
   LifetimeboundOriginTypes.insert(
