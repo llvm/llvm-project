@@ -17841,7 +17841,7 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
     LLVM_DEBUG(dbgs() << "SLP: Adding cost " << P.second << " for bundle "
                       << shortBundleName(P.first->Scalars, P.first->Idx)
                       << ".\n"
-                      << "SLP: Current total cost = " << Cost << "\n");
+                      << "SLP: Current total cost = " << NewCost << "\n");
   }
   if (NewCost + LoadsExtractsCost >= Cost) {
     DeletedNodes.clear();
@@ -17850,9 +17850,9 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
   } else {
     // If the remaining tree is just a buildvector - exit, it will cause
     // endless attempts to vectorize.
-    if (VectorizableTree.size()>= 2 && VectorizableTree.front()->hasState() &&
+    if (VectorizableTree.size() >= 2 && VectorizableTree.front()->hasState() &&
         VectorizableTree.front()->getOpcode() == Instruction::InsertElement &&
-       TransformedToGatherNodes.contains(VectorizableTree[1].get()))
+        TransformedToGatherNodes.contains(VectorizableTree[1].get()))
       return InstructionCost::getInvalid();
     if (VectorizableTree.size() >= 3 && VectorizableTree.front()->hasState() &&
         VectorizableTree.front()->getOpcode() == Instruction::InsertElement &&
