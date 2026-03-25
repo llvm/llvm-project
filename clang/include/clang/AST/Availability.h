@@ -66,6 +66,11 @@ public:
 
   bool isDomainName() const { return !DomainName.empty(); }
   StringRef getDomainName() const { return DomainName; }
+
+  /// Returns true if the anyAppleOS version is valid (empty or >= 26.0).
+  static bool validateAnyAppleOSVersion(const llvm::VersionTuple &Version) {
+    return Version.empty() || Version >= llvm::VersionTuple(26, 0);
+  }
 };
 
 class Decl;
