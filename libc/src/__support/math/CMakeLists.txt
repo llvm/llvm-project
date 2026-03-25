@@ -2812,7 +2812,7 @@ add_header_library(
   HDRS
     log1pf.h
   DEPENDS
-    .common_constants
+    .acoshf_utils
     libc.src.__support.FPUtil.except_value_utils
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fma
