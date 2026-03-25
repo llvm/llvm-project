@@ -106,6 +106,18 @@ define <2 x i32> @add_not_add_m1_vec(<2 x i32> %a, <2 x i32> %b) {
   ret <2 x i32> %r
 }
 
+define <2 x i32> @add_not_add_m1_vec_poison(<2 x i32> %a, <2 x i32> %b) {
+; CHECK-LABEL: @add_not_add_m1_vec_poison(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub <2 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i32> [[TMP1]], splat (i32 -2)
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %not = xor <2 x i32> %b, splat (i32 -1)
+  %add = add <2 x i32> %a, <i32 -1, i32 poison>
+  %r = add <2 x i32> %add, %not
+  ret <2 x i32> %r
+}
+
 ;------------------------------------------------------------------------------;
 ; One-use tests
 ;------------------------------------------------------------------------------;
