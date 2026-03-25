@@ -26313,6 +26313,7 @@ public:
     bool IsCmpSelMinMax = isCmpSelMinMax(Root);
     SmallVector<std::pair<Instruction *, unsigned>> Worklist(
         1, std::make_pair(Root, 0));
+    SmallPtrSet<Value *, 8> Operands;
     SmallVector<std::pair<Instruction *, unsigned>> PossibleOrderedReductionOps;
     // Checks if the operands of the \p TreeN instruction are also reduction
     // operations or should be treated as reduced values or an extra argument,
@@ -26341,13 +26342,17 @@ public:
             !hasRequiredNumberOfUses(IsCmpSelMinMax, EdgeInst)) {
           IsReducedVal = true;
           CurrentRK = ReductionOrdering::None;
-          if (PossibleReducedVals.size() < ReductionLimit)
+          if (PossibleReducedVals.size() < ReductionLimit &&
+              !Operands.contains(EdgeInst))
             PossibleOrderedReductionOps.emplace_back(EdgeInst, Level);
         }
         if (CurrentRK == ReductionOrdering::None ||
+            Operands.contains(EdgeInst) ||
             (R.isAnalyzedReductionRoot(EdgeInst) &&
              all_of(EdgeInst->operands(), IsaPred<Constant>))) {
           PossibleReducedVals.push_back(EdgeVal);
+          if (auto *I = dyn_cast<Instruction>(EdgeVal); I && !isCmpSelMinMax(I))
+            Operands.insert_range(I->operands());
           continue;
         }
         if (CurrentRK == ReductionOrdering::Ordered)
