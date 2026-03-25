@@ -53,6 +53,61 @@ LIBC_INLINE double asinpi(double x) {
     using Float128 = fputil::DyadicFloat<128>;
     using DoubleDouble = fputil::DoubleDouble;
 
+    // For |x| < 2^-511, x^2 would underflow to subnormal, raising a
+    // spurious underflow exception. Since asinpi(x) = x/pi with correction
+    // x^2/(6*pi) < 2^-1024 relative (negligible), compute x/pi directly
+    // in Float128.
+    if (LIBC_UNLIKELY(x_exp < 512)) {
+      Float128 x_f128(x);
+      Float128 r = fputil::quick_mul(x_f128, ONE_OVER_PI_F128);
+      double result = static_cast<double>(r);
+
+      // IEEE 754 "after rounding" tininess: the 53-bit unlimited-exponent
+      // result is strictly between +-2^-1022. DyadicFloat's conversion
+      // checks the *IEEE subnormal* result (52-bit at the boundary), not
+      // the 53-bit unlimited-exponent result, so we detect it here.
+      int exp_hi = r.exponent + 127 + FPBits::EXP_BIAS;
+      if (LIBC_UNLIKELY(exp_hi <= 0) && !r.mantissa.is_zero()) {
+        bool raise_underflow = true;
+        // When exp_hi == 0, a carry in 53-bit rounding can push the
+        // result to exactly 2^-1022 (not tiny). Check for this.
+        if (exp_hi == 0) {
+          constexpr unsigned SHIFT_53 = 128 - FPBits::SIG_LEN - 1;
+          using MantT = typename Float128::MantissaType;
+          MantT m53 = r.mantissa >> SHIFT_53;
+          constexpr MantT ALL_ONES_53 = (MantT(1) << (FPBits::SIG_LEN + 1)) - 1;
+          if (m53 == ALL_ONES_53) {
+            // All 53 bits set. carry happens if rounding rounds away
+            // from zero at this precision.
+            bool round_bit =
+                static_cast<bool>((r.mantissa >> (SHIFT_53 - 1)) & 1);
+            MantT sticky_mask = (MantT(1) << (SHIFT_53 - 1)) - 1;
+            bool sticky = (r.mantissa & sticky_mask) != 0;
+            bool lsb = static_cast<bool>(m53 & 1);
+            switch (fputil::quick_get_round()) {
+            case FE_TONEAREST:
+              // Carry if round_bit && (lsb || sticky) (round half to even).
+              raise_underflow = !(round_bit && (lsb || sticky));
+              break;
+            case FE_UPWARD:
+              raise_underflow = xbits.is_neg() || !(round_bit || sticky);
+              break;
+            case FE_DOWNWARD:
+              raise_underflow = !xbits.is_neg() || !(round_bit || sticky);
+              break;
+            case FE_TOWARDZERO:
+            default:
+              raise_underflow = true; // truncation never carries
+              break;
+            }
+          }
+        }
+        if (raise_underflow)
+          fputil::raise_except_if_required(FE_UNDERFLOW | FE_INEXACT);
+      }
+      return result;
+    }
+
     unsigned idx = 0;
     DoubleDouble x_sq = fputil::exact_mult(x, x);
     double err = xbits.abs().get_val() * 0x1.0p-51;
