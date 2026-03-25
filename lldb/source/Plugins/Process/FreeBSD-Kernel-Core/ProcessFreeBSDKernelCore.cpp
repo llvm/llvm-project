@@ -255,7 +255,7 @@ bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
     if (lldb::addr_t allproc_addr = FindSymbol("allproc");
         allproc_addr != LLDB_INVALID_ADDRESS) {
       for (lldb::addr_t proc = ReadPointerFromMemory(allproc_addr, error);
-           proc != 0 && proc != LLDB_INVALID_ADDRESS && error.Success();
+           error.Success() && proc != 0 && proc != LLDB_INVALID_ADDRESS;
            proc = ReadPointerFromMemory(proc + offset_p_list, error)) {
         int32_t pid =
             ReadSignedIntegerFromMemory(proc + offset_p_pid, 4, -1, error);
@@ -263,10 +263,9 @@ bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
           return false;
         process_addrs.emplace_back(proc, pid);
       }
-    }
-
-    if (error.Fail())
+    } else {
       return false;
+    }
 
     std::sort(process_addrs.begin(), process_addrs.end(),
               [](const std::pair<lldb::addr_t, int32_t> &a,
