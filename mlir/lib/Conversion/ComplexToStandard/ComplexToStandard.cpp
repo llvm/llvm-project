@@ -182,12 +182,12 @@ struct BinaryComplexOpConversion : public OpConversionPattern<BinaryComplexOp> {
 
     Value realLhs = complex::ReOp::create(b, elementType, adaptor.getLhs());
     Value realRhs = complex::ReOp::create(b, elementType, adaptor.getRhs());
-    Value resultReal = BinaryStandardOp::create(b, elementType, realLhs,
-                                                realRhs, fmf.getValue());
+    Value resultReal =
+        BinaryStandardOp::create(b, realLhs, realRhs, fmf.getValue());
     Value imagLhs = complex::ImOp::create(b, elementType, adaptor.getLhs());
     Value imagRhs = complex::ImOp::create(b, elementType, adaptor.getRhs());
-    Value resultImag = BinaryStandardOp::create(b, elementType, imagLhs,
-                                                imagRhs, fmf.getValue());
+    Value resultImag =
+        BinaryStandardOp::create(b, imagLhs, imagRhs, fmf.getValue());
     rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, resultReal,
                                                    resultImag);
     return success();

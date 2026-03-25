@@ -150,7 +150,7 @@ static LogicalResult convertTanOp(math::TanOp op, PatternRewriter &rewriter) {
   Type type = operand.getType();
   Value sin = math::SinOp::create(b, type, operand);
   Value cos = math::CosOp::create(b, type, operand);
-  Value div = arith::DivFOp::create(b, type, sin, cos);
+  Value div = arith::DivFOp::create(b, sin, cos);
   rewriter.replaceOp(op, div);
   return success();
 }
@@ -212,8 +212,8 @@ static LogicalResult convertFmaFOp(math::FmaOp op, PatternRewriter &rewriter) {
   Value operandB = op.getOperand(1);
   Value operandC = op.getOperand(2);
   Type type = op.getType();
-  Value mult = arith::MulFOp::create(b, type, operandA, operandB);
-  Value add = arith::AddFOp::create(b, type, mult, operandC);
+  Value mult = arith::MulFOp::create(b, operandA, operandB);
+  Value add = arith::AddFOp::create(b, mult, operandC);
   rewriter.replaceOp(op, add);
   return success();
 }
@@ -289,7 +289,7 @@ static LogicalResult convertCeilOp(math::CeilOp op, PatternRewriter &rewriter) {
   Value incrValue =
       arith::SelectOp::create(b, op->getLoc(), gtCheck, one, zero);
 
-  Value add = arith::AddFOp::create(b, opType, fpFixedConvert, incrValue);
+  Value add = arith::AddFOp::create(b, fpFixedConvert, incrValue);
   Value ret = arith::SelectOp::create(b, isSpecialValOrLargeVal, operand, add);
   rewriter.replaceOp(op, ret);
   return success();
@@ -331,9 +331,9 @@ static LogicalResult convertFPowIOp(math::FPowIOp op,
 
   while (absPower > 0) {
     if (absPower & 1)
-      res = arith::MulFOp::create(b, baseType, base, res);
+      res = arith::MulFOp::create(b, base, res);
     absPower >>= 1;
-    base = arith::MulFOp::create(b, baseType, base, base);
+    base = arith::MulFOp::create(b, base, base);
   }
 
   // Make sure not to introduce UB in case of negative power.
@@ -356,7 +356,7 @@ static LogicalResult convertFPowIOp(math::FPowIOp op,
         arith::CmpFOp::create(b, arith::CmpFPredicate::OEQ, res, zero);
     Value negZeroEqCheck =
         arith::CmpFOp::create(b, arith::CmpFPredicate::OEQ, res, negZero);
-    res = arith::DivFOp::create(b, baseType, one, res);
+    res = arith::DivFOp::create(b, one, res);
     res =
         arith::SelectOp::create(b, op->getLoc(), zeroEqCheck, posInfinity, res);
     res = arith::SelectOp::create(b, op->getLoc(), negZeroEqCheck, negInfinity,
@@ -450,7 +450,7 @@ static LogicalResult convertExp2fOp(math::Exp2Op op,
   Value operand = op.getOperand();
   Type opType = operand.getType();
   Value ln2 = createFloatConst(op->getLoc(), opType, llvm::numbers::ln2, b);
-  Value mult = arith::MulFOp::create(b, opType, operand, ln2);
+  Value mult = arith::MulFOp::create(b, operand, ln2);
   Value exp = math::ExpOp::create(b, op->getLoc(), mult);
   rewriter.replaceOp(op, exp);
   return success();
@@ -478,7 +478,7 @@ static LogicalResult convertRoundOp(math::RoundOp op,
   Value expMask = createIntConst(loc, i32Ty, (1 << 8) - 1, b);
 
   Value incrValue = math::CopySignOp::create(b, half, operand);
-  Value add = arith::AddFOp::create(b, opType, operand, incrValue);
+  Value add = arith::AddFOp::create(b, operand, incrValue);
   Value fpFixedConvert = createTruncatedFPValue(add, b);
 
   // There are three cases where adding 0.5 to the value and truncating by
