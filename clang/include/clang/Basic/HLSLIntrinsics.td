@@ -370,38 +370,28 @@ function to compensate for the lack of UBYTE4 support in some hardware.
 }
 
 // Computes the partial derivative with regard to the x screen space coordinate.
-def hlsl_ddx : HLSLBuiltin<"ddx"> {
+def hlsl_ddx : HLSLOneArgDetail<"ddx", "ddx_impl"> {
   let Doc = [{
 \fn T ddx(T x)
 \brief Computes the partial derivative of the specified value with regard to
 the screen-space x-coordinate.
 \param x [in] The floating-point scalar or vector to process.
 }];
-  let DetailFunc = "ddx_impl";
   let ParamNames = ["input"];
-  let Args = [Varying];
-  let ReturnType = Varying;
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingScalar = 1;
-  let VaryingVecSizes = [2, 3, 4];
   let VaryingMatDims = [];
 }
 
 // Computes the partial derivative with regard to the y screen space coordinate.
-def hlsl_ddy : HLSLBuiltin<"ddy"> {
+def hlsl_ddy : HLSLOneArgDetail<"ddy", "ddy_impl"> {
   let Doc = [{
 \fn T ddy(T x)
 \brief Computes the partial derivative of the specified value with regard to
 the screen-space y-coordinate.
 \param x [in] The floating-point scalar or vector to process.
 }];
-  let DetailFunc = "ddy_impl";
   let ParamNames = ["input"];
-  let Args = [Varying];
-  let ReturnType = Varying;
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingScalar = 1;
-  let VaryingVecSizes = [2, 3, 4];
   let VaryingMatDims = [];
 }
 
@@ -460,7 +450,7 @@ Return the computed distance vector.
 }
 
 // Flips the surface-normal to face in a direction opposite to I.
-def hlsl_faceforward : HLSLBuiltin<"faceforward"> {
+def hlsl_faceforward : HLSLThreeArgDetail<"faceforward", "faceforward_impl"> {
   let Doc = [{
 \fn T faceforward(T N, T I, T Ng)
 \brief Flips the surface-normal (if needed) to face in a direction opposite
@@ -473,13 +463,8 @@ position to the shading position.
 Return a floating-point, surface normal vector that is facing the view
 direction.
 }];
-  let DetailFunc = "faceforward_impl";
   let ParamNames = ["N", "I", "Ng"];
-  let Args = [Varying, Varying, Varying];
-  let ReturnType = Varying;
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingScalar = 1;
-  let VaryingVecSizes = [2, 3, 4];
   let VaryingMatDims = [];
 }
 
@@ -515,20 +500,15 @@ def hlsl_fmod_vec : HLSLBuiltin<"fmod"> {
 }
 
 // Computes the sum of the absolute values of the partial derivatives.
-def hlsl_fwidth : HLSLBuiltin<"fwidth"> {
+def hlsl_fwidth : HLSLOneArgDetail<"fwidth", "fwidth_impl"> {
   let Doc = [{
 \fn T fwidth(T x)
 \brief Computes the sum of the absolute values of the partial derivatives
 with regard to the x and y screen space coordinates.
 \param x [in] The floating-point scalar or vector to process.
 }];
-  let DetailFunc = "fwidth_impl";
   let ParamNames = ["input"];
-  let Args = [Varying];
-  let ReturnType = Varying;
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingScalar = 1;
-  let VaryingVecSizes = [2, 3, 4];
   let VaryingMatDims = [];
 }
 
@@ -606,7 +586,7 @@ def hlsl_lit_float : HLSLBuiltin<"lit"> {
 // Returns a reflection vector.
 // Scalar reflect: V = I - 2 * N * I * N (dot product is just multiplication
 // for scalars).
-def hlsl_reflect : HLSLBuiltin<"reflect"> {
+def hlsl_reflect : HLSLTwoArgDetail<"reflect", "reflect_impl"> {
   let Doc = [{
 \fn T reflect(T I, T N)
 \brief Returns a reflection using an incident ray, \a I, and a surface
@@ -622,13 +602,8 @@ V = I - 2 * N * dot(I N) .
 
 N must already be normalized in order to achieve the desired result.
 }];
-  let DetailFunc = "reflect_impl";
   let ParamNames = ["I", "N"];
-  let Args = [Varying, Varying];
-  let ReturnType = Varying;
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingScalar = 1;
-  let VaryingVecSizes = [2, 3, 4];
   let VaryingMatDims = [];
 }
 
@@ -672,8 +647,8 @@ Result type, the type of I, and the type of N must all be the same type.
 }
 
 
-// Returns a smooth Hermite interpolation between 0 and 1 (scalar overloads).
-def hlsl_smoothstep : HLSLBuiltin<"smoothstep"> {
+// Returns a smooth Hermite interpolation between 0 and 1.
+def hlsl_smoothstep : HLSLThreeArgDetail<"smoothstep", "smoothstep_impl"> {
   let Doc = [{
 \fn T smoothstep(T Min, T Max, T X)
 \brief Returns a smooth Hermite interpolation between 0 and 1, if \a X is in
@@ -686,22 +661,7 @@ The return value is 0.0 if \a X <= \a Min and 1.0 if \a X >= \a Max. When \a
 Min < \a X < \a Max, the function performs smooth Hermite interpolation
 between 0 and 1.
 }];
-  let DetailFunc = "smoothstep_impl";
   let ParamNames = ["Min", "Max", "X"];
-  let Args = [Varying, Varying, Varying];
-  let ReturnType = Varying;
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingScalar = 1;
-  let VaryingMatDims = [];
-}
-
-// Returns a smooth Hermite interpolation between 0 and 1 (vector overloads).
-def hlsl_smoothstep_vec : HLSLBuiltin<"smoothstep"> {
-  let DetailFunc = "smoothstep_vec_impl";
-  let ParamNames = ["Min", "Max", "X"];
-  let Args = [Varying, Varying, Varying];
-  let ReturnType = Varying;
-  let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingVecSizes = [2, 3, 4];
   let VaryingMatDims = [];
 }

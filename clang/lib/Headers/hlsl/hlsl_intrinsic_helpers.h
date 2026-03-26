@@ -120,17 +120,6 @@ template <typename T> constexpr T smoothstep_impl(T Min, T Max, T X) {
 #endif
 }
 
-template <typename T, int N>
-constexpr vector<T, N> smoothstep_vec_impl(vector<T, N> Min, vector<T, N> Max,
-                                           vector<T, N> X) {
-#if (__has_builtin(__builtin_spirv_smoothstep))
-  return __builtin_spirv_smoothstep(Min, Max, X);
-#else
-  vector<T, N> S = saturate((X - Min) / (Max - Min));
-  return (3 - 2 * S) * S * S;
-#endif
-}
-
 template <typename T> constexpr vector<T, 4> lit_impl(T NDotL, T NDotH, T M) {
   bool DiffuseCond = NDotL < 0;
   T Diffuse = select<T>(DiffuseCond, 0, NDotL);
