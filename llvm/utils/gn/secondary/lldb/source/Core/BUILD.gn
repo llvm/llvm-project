@@ -1,4 +1,5 @@
 import("//lldb/utils/TableGen/lldb_tablegen.gni")
+import("//llvm/utils/gn/build/write_cmake_config.gni")
 
 lldb_tablegen("CoreProperties") {
   args = [ "-gen-lldb-property-defs" ]
@@ -7,6 +8,12 @@ lldb_tablegen("CoreProperties") {
 lldb_tablegen("CorePropertiesEnum") {
   args = [ "-gen-lldb-property-enum-defs" ]
   td_file = "CoreProperties.td"
+}
+
+write_cmake_config("SafeAutoloadPaths.inc") {
+  input = "SafeAutoloadPaths.inc.in"
+  output = "$target_gen_dir/SafeAutoloadPaths.inc"
+  values = [ "SAFE_PATH_ENTRIES=" ]
 }
 
 static_library("Core") {
@@ -18,6 +25,7 @@ static_library("Core") {
   deps = [
     ":CoreProperties",
     ":CorePropertiesEnum",
+    ":SafeAutoloadPaths.inc",
     "//clang/lib/Driver",
 
     #"//lldb/source/Breakpoint", # Dependency cycle.

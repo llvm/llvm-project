@@ -65,7 +65,7 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
       // EXPERIMENTAL: "Conjured" symbols.
       // FIXME: Handle structs.
       if (RightV.isUnknown()) {
-        unsigned Count = currBldrCtx->blockCount();
+        unsigned Count = getNumVisitedCurrent();
         RightV = svalBuilder.conjureSymbolVal(nullptr, getCFGElementRef(), LCtx,
                                               Count);
       }
@@ -83,7 +83,7 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
       if (B->isAdditiveOp()) {
         // TODO: This can be removed after we enable history tracking with
         // SymSymExpr.
-        unsigned Count = currBldrCtx->blockCount();
+        unsigned Count = getNumVisitedCurrent();
         RightV = conjureOffsetSymbolOnLocation(
             RightV, LeftV, getCFGElementRef(), RHS->getType(), svalBuilder,
             Count, LCtx);
@@ -170,7 +170,7 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
         // LValue on the LHS will bind to.
         LHSVal = svalBuilder.conjureSymbolVal(/*symbolTag=*/nullptr,
                                               getCFGElementRef(), LCtx, LTy,
-                                              currBldrCtx->blockCount());
+                                              getNumVisitedCurrent());
         // However, we need to convert the symbol to the computation type.
         Result = svalBuilder.evalCast(LHSVal, CTy, LTy);
       } else {
@@ -201,9 +201,8 @@ void ExprEngine::VisitBlockExpr(const BlockExpr *BE, ExplodedNode *Pred,
 
   const BlockDecl *BD = BE->getBlockDecl();
   // Get the value of the block itself.
-  SVal V = svalBuilder.getBlockPointer(BD, T,
-                                       Pred->getLocationContext(),
-                                       currBldrCtx->blockCount());
+  SVal V = svalBuilder.getBlockPointer(BD, T, Pred->getLocationContext(),
+                                       getNumVisitedCurrent());
 
   ProgramStateRef State = Pred->getState();
 
@@ -498,7 +497,7 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
           if (val.isUnknown()) {
             DefinedOrUnknownSVal NewSym = svalBuilder.conjureSymbolVal(
                 /*symbolTag=*/nullptr, getCFGElementRef(), LCtx, resultType,
-                currBldrCtx->blockCount());
+                getNumVisitedCurrent());
             state = state->BindExpr(CastE, LCtx, NewSym);
           } else
             // Else, bind to the derived region value.
@@ -522,7 +521,7 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
         if (val.isUnknown()) {
           val = svalBuilder.conjureSymbolVal(
               /*symbolTag=*/nullptr, getCFGElementRef(), LCtx, resultType,
-              currBldrCtx->blockCount());
+              getNumVisitedCurrent());
         }
         state = state->BindExpr(CastE, LCtx, val);
         Bldr.generateNode(CastE, Pred, state);
@@ -568,7 +567,7 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
           resultType = getContext().getPointerType(resultType);
         SVal result = svalBuilder.conjureSymbolVal(
             /*symbolTag=*/nullptr, getCFGElementRef(), LCtx, resultType,
-            currBldrCtx->blockCount());
+            getNumVisitedCurrent());
         state = state->BindExpr(CastE, LCtx, result);
         Bldr.generateNode(CastE, Pred, state);
         continue;
@@ -661,7 +660,7 @@ void ExprEngine::VisitDeclStmt(const DeclStmt *DS, ExplodedNode *Pred,
 
           InitVal = svalBuilder.conjureSymbolVal(
               /*symbolTag=*/nullptr, getCFGElementRef(), LC, Ty,
-              currBldrCtx->blockCount());
+              getNumVisitedCurrent());
         }
 
 
@@ -831,7 +830,7 @@ void ExprEngine::VisitGuardedExpr(const Expr *Ex,
 
   if (!hasValue)
     V = svalBuilder.conjureSymbolVal(nullptr, getCFGElementRef(), LCtx,
-                                     currBldrCtx->blockCount());
+                                     getNumVisitedCurrent());
 
   // Generate a new node with the binding from the appropriate path.
   B.generateNode(Ex, Pred, state->BindExpr(Ex, LCtx, V, true));
@@ -1115,7 +1114,7 @@ void ExprEngine::VisitIncrementDecrementOperator(const UnaryOperator* U,
     if (Result.isUnknown()){
       DefinedOrUnknownSVal SymVal = svalBuilder.conjureSymbolVal(
           /*symbolTag=*/nullptr, getCFGElementRef(), LCtx,
-          currBldrCtx->blockCount());
+          getNumVisitedCurrent());
       Result = SymVal;
 
       // If the value is a location, ++/-- should always preserve

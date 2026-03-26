@@ -60,6 +60,28 @@ using namespace llvm::offload::debug;
     Plugin::error(ErrorCode::UNKNOWN, "%s failed with error %d, %s",           \
     #Fn, rc, getZeErrorName(rc)), Fn, __VA_ARGS__)
 
+
+#define CALL_ZE_HANDLE_ERROR(HandleErrFn, Fn, ...)                             \
+  do {                                                                         \
+    ze_result_t rc;                                                            \
+    CALL_ZE(rc, Fn, __VA_ARGS__);                                              \
+    if (rc != ZE_RESULT_SUCCESS) {                                             \
+      HandleErrFn(Plugin::error(ErrorCode::UNKNOWN, "%s failed with error %d," \
+                  " %s",   #Fn, rc, getZeErrorName(rc)));                      \
+    }                                                                          \
+  } while (0)
+
+#define CALL_ZE_ACCUM_ERROR(Err, Fn, ...)                                      \
+  do {                                                                         \
+    ze_result_t rc;                                                            \
+    CALL_ZE(rc, Fn, __VA_ARGS__);                                              \
+    if (rc != ZE_RESULT_SUCCESS) {                                             \
+      Err = joinErrors(std::move(Err),                                         \
+        Plugin::error(ErrorCode::UNKNOWN, "%s failed with error %d,"           \
+                  " %s",   #Fn, rc, getZeErrorName(rc)));                      \
+    }                                                                          \
+  } while (0)
+
 #define CALL_ZE_EXT_SILENT_RET(Device, Ret, Name, ...)                         \
   do {                                                                         \
     ze_result_t rc;                                                            \

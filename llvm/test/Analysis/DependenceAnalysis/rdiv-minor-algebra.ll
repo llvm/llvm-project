@@ -34,7 +34,7 @@
 define void @f(ptr %A) {
 ; CHECK-ALL-LABEL: 'f'
 ; CHECK-ALL-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.0, align 1
-; CHECK-ALL-NEXT:    da analyze - consistent output [S]!
+; CHECK-ALL-NEXT:    da analyze - output [S]!
 ; CHECK-ALL-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
 ; CHECK-ALL-NEXT:    da analyze - none!
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.1, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
@@ -42,7 +42,7 @@ define void @f(ptr %A) {
 ;
 ; CHECK-SYMBOLIC-RDIV-LABEL: 'f'
 ; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.0, align 1
-; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - consistent output [S]!
+; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - output [S]!
 ; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
 ; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - output [*|<]!
 ; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 1, ptr %gep.1, align 1 --> Dst: store i8 1, ptr %gep.1, align 1

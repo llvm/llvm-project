@@ -13,6 +13,7 @@
 #ifndef CLANG_CIR_DIALECT_IR_CIRATTRS_H
 #define CLANG_CIR_DIALECT_IR_CIRATTRS_H
 
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "clang/Basic/AddressSpaces.h"

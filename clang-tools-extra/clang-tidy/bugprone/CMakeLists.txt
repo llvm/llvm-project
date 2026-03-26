@@ -40,6 +40,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   MissingEndComparisonCheck.cpp
   UnintendedCharOstreamOutputCheck.cpp
   ReturnConstRefFromParameterCheck.cpp
+  StdExceptionBaseclassCheck.cpp
   SuspiciousStringviewDataUsageCheck.cpp
   SwitchMissingDefaultCaseCheck.cpp
   IncDecInConditionsCheck.cpp

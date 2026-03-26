@@ -338,12 +338,12 @@ public:
 private:
   static PyVectorType
   getChecked(std::vector<int64_t> shape, PyType &elementType,
-             std::optional<nanobind::list> scalable,
+             std::optional<nanobind::sequence> scalable,
              std::optional<std::vector<int64_t>> scalableDims,
              DefaultingPyLocation loc);
 
   static PyVectorType get(std::vector<int64_t> shape, PyType &elementType,
-                          std::optional<nanobind::list> scalable,
+                          std::optional<nanobind::sequence> scalable,
                           std::optional<std::vector<int64_t>> scalableDims,
                           DefaultingPyMlirContext context);
 };
@@ -450,8 +450,6 @@ class MLIR_PYTHON_API_EXPORTED PyDynamicType
     : public PyConcreteType<PyDynamicType> {
 public:
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsADynamicType;
-  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
-      mlirDynamicTypeGetTypeID;
   static constexpr const char *pyClassName = "DynamicType";
   using PyConcreteType::PyConcreteType;
 

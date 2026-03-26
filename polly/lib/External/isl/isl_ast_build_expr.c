@@ -281,10 +281,14 @@ static isl_bool ast_expr_is_zero(__isl_keep isl_ast_expr *expr)
 	return isl_val_is_zero(expr->u.v);
 }
 
-/* Create an expression representing the sum of "expr1" and "expr2",
+/* Create a binary expression by calling "fn" on "expr1" and "expr2",
  * provided neither of the two expressions is identically zero.
+ * Otherwise, return the non-zero expression (or zero if they are both zero).
  */
-static __isl_give isl_ast_expr *ast_expr_add(__isl_take isl_ast_expr *expr1,
+static __isl_give isl_ast_expr *ast_expr_binary_non_zero(
+	__isl_give isl_ast_expr *(*fn)(__isl_take isl_ast_expr *expr1,
+		__isl_take isl_ast_expr *expr2),
+	__isl_take isl_ast_expr *expr1,
 	__isl_take isl_ast_expr *expr2)
 {
 	if (!expr1 || !expr2)
@@ -300,11 +304,29 @@ static __isl_give isl_ast_expr *ast_expr_add(__isl_take isl_ast_expr *expr1,
 		return expr1;
 	}
 
-	return isl_ast_expr_add(expr1, expr2);
+	return fn(expr1, expr2);
 error:
 	isl_ast_expr_free(expr1);
 	isl_ast_expr_free(expr2);
 	return NULL;
+}
+
+/* Create an expression representing the sum of "expr1" and "expr2",
+ * provided neither of the two expressions is identically zero.
+ */
+static __isl_give isl_ast_expr *ast_expr_add(__isl_take isl_ast_expr *expr1,
+	__isl_take isl_ast_expr *expr2)
+{
+	return ast_expr_binary_non_zero(&isl_ast_expr_add, expr1, expr2);
+}
+
+/* Create an expression representing the disjunction of "expr1" and "expr2",
+ * provided neither of the two expressions is identically zero.
+ */
+static __isl_give isl_ast_expr *ast_expr_or(__isl_take isl_ast_expr *expr1,
+	__isl_take isl_ast_expr *expr2)
+{
+	return ast_expr_binary_non_zero(&isl_ast_expr_or, expr1, expr2);
 }
 
 /* Subtract expr2 from expr1.
@@ -1060,8 +1082,9 @@ static isl_stat replace_by_partial_if_simpler(struct isl_parallel_stat *stat)
  * and set data->sign accordingly.
  * Also check if "c" is part of a positively weighted sum of constraints
  * that is equal to data->div, where each constraint has distinct non-zero
- * coefficients.  If "c" is the last constraint in this sum
- * (and the sum is "simpler" than data->nonneg)
+ * coefficients.  If "c" does not involve any non-zero coefficients,
+ * then it is not considered to be part of this sum.  If "c" is
+ * the last constraint in this sum (and the sum is "simpler" than data->nonneg)
  * then also replace data->nonneg by this sum.
  * If "c" is equal or opposite to data->div, then it is not considered
  * to be part of a sum.
@@ -1104,9 +1127,12 @@ static isl_stat check_parallel_or_opposite(struct isl_extract_mod_data *data,
 		stat.partial = isl_bool_false;
 
 	ok = parallel_or_opposite_scan(&stat, &is_parallel_or_opposite, 0);
-	if (ok >= 0 && ok)
-		if (update_partial(&stat) < 0)
+	if (ok >= 0 && ok) {
+		if (stat.partial && !stat.f)
+			ok = isl_bool_false;
+		else if (update_partial(&stat) < 0)
 			ok = isl_bool_error;
+	}
 	isl_val_free(stat.f);
 	if (ok < 0 || !ok)
 		return isl_stat_non_error_bool(ok);
@@ -1952,6 +1978,21 @@ error:
 	return NULL;
 }
 
+/* Are "set" and "bset" disjoint?
+ */
+static isl_bool is_disjoint(__isl_keep isl_set *set,
+	__isl_keep isl_basic_set *bset)
+{
+	isl_set *set2;
+	isl_bool disjoint;
+
+	set2 = isl_set_from_basic_set(isl_basic_set_copy(bset));
+	disjoint = isl_set_is_disjoint(set, set2);
+	isl_set_free(set2);
+
+	return disjoint;
+}
+
 /* Wrapper around isl_constraint_cmp_last_non_zero for use
  * as a callback to isl_constraint_list_sort.
  * If isl_constraint_cmp_last_non_zero cannot tell the constraints
@@ -1970,6 +2011,8 @@ static int cmp_constraint(__isl_keep isl_constraint *a,
 
 /* Construct an isl_ast_expr that evaluates the conditions defining "bset".
  * The result is simplified in terms of build->domain.
+ *
+ * If "bset" is empty (within the build domain), then return the expression "0".
  *
  * If "bset" is not bounded by any constraint, then we construct
  * the expression "1", i.e., "true".
@@ -1992,11 +2035,24 @@ __isl_give isl_ast_expr *isl_ast_build_expr_from_basic_set(
 	 __isl_keep isl_ast_build *build, __isl_take isl_basic_set *bset)
 {
 	int i;
+	isl_bool disjoint;
 	isl_size n;
 	isl_constraint *c;
 	isl_constraint_list *list;
 	isl_ast_expr *res;
-	isl_set *set;
+	isl_set *set, *domain;
+
+	domain = isl_ast_build_get_domain(build);
+	disjoint = is_disjoint(domain, bset);
+	isl_set_free(domain);
+
+	if (disjoint < 0) {
+		build = NULL;
+	} else if (disjoint) {
+		isl_ctx *ctx = isl_ast_build_get_ctx(build);
+		isl_basic_set_free(bset);
+		return isl_ast_expr_from_val(isl_val_zero(ctx));
+	}
 
 	list = isl_basic_set_get_constraint_list(bset);
 	isl_basic_set_free(bset);
@@ -2095,7 +2151,7 @@ __isl_give isl_ast_expr *isl_ast_build_expr_from_set_internal(
 		bset = isl_basic_set_gist(bset,
 				isl_set_simple_hull(isl_set_copy(domain)));
 		expr = isl_ast_build_expr_from_basic_set(build, bset);
-		res = isl_ast_expr_or(res, expr);
+		res = ast_expr_or(res, expr);
 	}
 
 	isl_set_free(domain);

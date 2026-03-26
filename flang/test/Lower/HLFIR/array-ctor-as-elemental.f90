@@ -54,8 +54,7 @@ end subroutine
 ! CHECK:           %[[VAL_12:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<i64>
 ! CHECK:           %[[VAL_13:.*]] = arith.divsi %[[VAL_11]], %[[VAL_12]] : i64
 ! CHECK:           %[[VAL_14:.*]] = arith.constant 0 : i64
-! CHECK:           %[[VAL_15:.*]] = arith.cmpi sgt, %[[VAL_13]], %[[VAL_14]] : i64
-! CHECK:           %[[VAL_16:.*]] = arith.select %[[VAL_15]], %[[VAL_13]], %[[VAL_14]] : i64
+! CHECK:           %[[VAL_16:.*]] = arith.maxsi %[[VAL_13]], %[[VAL_14]] : i64
 ! CHECK:           %[[VAL_17:.*]] = arith.addi %[[VAL_6]], %[[VAL_16]] : i64
 ! CHECK:           %[[VAL_18:.*]] = fir.convert %[[VAL_17]] : (i64) -> index
 ! CHECK:           %[[VAL_19:.*]] = fir.shape %[[VAL_18]] : (index) -> !fir.shape<1>

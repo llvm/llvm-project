@@ -107,22 +107,22 @@ gpu.module @test_1_1_assignment {
   // CHECK-LABEL: dpas_no_sg_data
   gpu.func @dpas_no_sg_data(%a: memref<128x128xf16>, %b: memref<128x128xf16>) {
     %tdesc_a = xegpu.create_nd_tdesc %a[0, 0] : memref<128x128xf16>
-      -> !xegpu.tensor_desc<128x128xf16, #xegpu.layout<sg_layout = [8, 8], lane_layout = [1, 16], lane_data = [1, 1],
+      -> !xegpu.tensor_desc<128x128xf16, #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 128], lane_layout = [1, 16], lane_data = [1, 1],
       order = [1, 0]>>
-    %load_a =  xegpu.load_nd %tdesc_a {layout = #xegpu.layout<sg_layout = [8, 8], lane_layout = [1, 16], lane_data = [1, 1], order = [1, 0]>} : !xegpu.tensor_desc<128x128xf16, #xegpu.layout<sg_layout = [8, 8], lane_layout = [1, 16], lane_data = [1, 1],
+    %load_a =  xegpu.load_nd %tdesc_a {layout = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 128], lane_layout = [1, 16], lane_data = [1, 1], order = [1, 0]>} : !xegpu.tensor_desc<128x128xf16, #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 128], lane_layout = [1, 16], lane_data = [1, 1],
       order = [1, 0]>>
       -> vector<128x128xf16>
     %tdesc_b = xegpu.create_nd_tdesc %b[0, 0] : memref<128x128xf16>
-      -> !xegpu.tensor_desc<128x128xf16, #xegpu.layout<sg_layout = [8, 8], lane_layout = [1, 16], lane_data = [2, 1],
+      -> !xegpu.tensor_desc<128x128xf16, #xegpu.layout<sg_layout = [8, 8], sg_data = [128, 16], lane_layout = [1, 16], lane_data = [2, 1],
       order = [1, 0]>>
-    %load_b =  xegpu.load_nd %tdesc_b {layout = #xegpu.layout<sg_layout = [8, 8], lane_layout = [1, 16], lane_data = [2, 1], order = [1, 0]>} : !xegpu.tensor_desc<128x128xf16, #xegpu.layout<sg_layout = [8, 8], lane_layout = [1, 16], lane_data = [2, 1],
+    %load_b =  xegpu.load_nd %tdesc_b {layout = #xegpu.layout<sg_layout = [8, 8], sg_data = [128, 16], lane_layout = [1, 16], lane_data = [2, 1], order = [1, 0]>} : !xegpu.tensor_desc<128x128xf16, #xegpu.layout<sg_layout = [8, 8], sg_data = [128, 16], lane_layout = [1, 16], lane_data = [2, 1],
       order = [1, 0]>>
       -> vector<128x128xf16>
-    // CHECK: %[[DPAS:.*]] = xegpu.dpas %{{.*}}, %{{.*}} {layout_a = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1], order = [1, 0]>, layout_b = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1], order = [1, 0]>, layout_cd = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1], order = [1, 0]>} : vector<16x16xf16>, vector<16x16xf16> -> vector<16x16xf32>
+    // CHECK: %[[DPAS:.*]] = xegpu.dpas %{{.*}}, %{{.*}} {layout_a = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1], order = [1, 0]>, layout_b = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1], order = [1, 0]>, layout_cd = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1], order = [1, 0]>} : vector<16x128xf16>, vector<128x16xf16> -> vector<16x16xf32>
     %dpas = xegpu.dpas %load_a, %load_b
-      {layout_a = #xegpu.layout<sg_layout = [8, 8], lane_layout = [1, 16], lane_data = [1, 1], order = [1, 0]>,
-       layout_b = #xegpu.layout<sg_layout = [8, 8], lane_layout = [1, 16], lane_data = [2, 1], order = [1, 0]>,
-       layout_cd =  #xegpu.layout<sg_layout = [8, 8], lane_layout = [1, 16], lane_data = [1, 1], order = [1, 0]>}
+      {layout_a = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 128], lane_layout = [1, 16], lane_data = [1, 1], order = [1, 0]>,
+       layout_b = #xegpu.layout<sg_layout = [8, 8], sg_data = [128, 16], lane_layout = [1, 16], lane_data = [2, 1], order = [1, 0]>,
+       layout_cd =  #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 16], lane_layout = [1, 16], lane_data = [1, 1], order = [1, 0]>}
       : vector<128x128xf16>, vector<128x128xf16> -> vector<128x128xf32>
     gpu.return
   }
@@ -178,8 +178,8 @@ gpu.module @test_1_1_assignment {
     %c0 = arith.constant 0 : index
     %c128 = arith.constant 128 : index
     %c1024 = arith.constant 1024 : index
-    %block_id_x = gpu.block_id  x
-    %block_id_y = gpu.block_id  y
+    %block_id_x = gpu.block_id x
+    %block_id_y = gpu.block_id y
     %0 = arith.muli %block_id_x, %c128 : index
     %1 = arith.muli %block_id_y, %c128 : index
     %2 = xegpu.create_nd_tdesc %arg2[%0, %1] : memref<1024x1024xf32> -> !xegpu.tensor_desc<128x128xf32, #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 16]>>
@@ -373,4 +373,27 @@ gpu.module @test_1_1_assignment {
     %cst = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32]>} dense<1.0> : vector<256x128xf32>
     gpu.return
   }
+}
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/182999:
+// Tensors without an XeGPU layout encoding (e.g. tensor<?xi32>) used to crash
+// VectorType::get() because dynamic sizes are not valid for VectorType.
+// The pass should now leave such tensors unchanged.
+
+// CHECK-LABEL: func.func @no_crash_on_dynamic_tensor
+// CHECK-SAME: %[[ARG0:.*]]: tensor<?xi32>
+// CHECK: scf.for
+// CHECK: tensor.insert
+// CHECK: return
+func.func @no_crash_on_dynamic_tensor(%arg0: tensor<?xi32>, %arg1: index) -> tensor<?xi32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %result = scf.for %i = %c0 to %arg1 step %c1 iter_args(%acc = %arg0) -> (tensor<?xi32>) {
+    %val = arith.index_cast %i : index to i32
+    %updated = tensor.insert %val into %acc[%i] : tensor<?xi32>
+    scf.yield %updated : tensor<?xi32>
+  }
+  return %result : tensor<?xi32>
 }

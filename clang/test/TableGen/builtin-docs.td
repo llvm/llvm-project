@@ -1,6 +1,16 @@
 // RUN: clang-tblgen -gen-builtin-docs -I%p/../../include %s -o - 2>&1 | \
 // RUN:    FileCheck %s
 
+// Test that the Undocumented category always sorts after all documented
+// categories, even when its name would come earlier alphabetically (e.g.
+// "Undocumented" < "Work-Item Builtins").
+// RUN: clang-tblgen -gen-builtin-docs -I%p/../../include %s -o - 2>&1 | \
+// RUN:    FileCheck --check-prefix=CAT-ORDER %s
+// CAT-ORDER:     ABI Builtins
+// CAT-ORDER:     Instruction Builtins
+// CAT-ORDER:     Work-Item Builtins
+// CAT-ORDER:     Undocumented
+
 // Test that mismatched ArgNames count produces an error.
 // RUN: not clang-tblgen -gen-builtin-docs -I%p/../../include %s -o - \
 // RUN:    -DERROR_ARGNAMES_MISMATCH 2>&1 | \
@@ -226,7 +236,16 @@ def __builtin_test_no_doc : TestBuiltin<"int(int, int)">;
 // CHECK:      void __builtin_test_store(int val, int address_space<1> * ptr)
 // CHECK:      Stores a value to the given global memory pointer.
 
-// --- Undocumented (alphabetically between Instruction and Work-Item) ---
+// --- Work-Item Builtins (inline doc, no ArgNames) ---
+// CHECK:      Work-Item Builtins
+// CHECK-NEXT: ==================
+// CHECK:      These builtins return work-item identification.
+// CHECK:      ``__builtin_test_workitem_id_x``
+// CHECK:      unsigned int __builtin_test_workitem_id_x()
+// CHECK:      **Target Features:** some-feature
+// CHECK:      Returns the work-item id in the x dimension.
+
+// --- Undocumented (sorted last, after all documented categories) ---
 // CHECK:      Undocumented
 // CHECK-NEXT: ============
 
@@ -238,15 +257,6 @@ def __builtin_test_no_doc : TestBuiltin<"int(int, int)">;
 // CHECK:      ``__builtin_test_undocumented``
 // CHECK:      void __builtin_test_undocumented()
 // CHECK:      No documentation.
-
-// --- Work-Item Builtins (inline doc, no ArgNames) ---
-// CHECK:      Work-Item Builtins
-// CHECK-NEXT: ==================
-// CHECK:      These builtins return work-item identification.
-// CHECK:      ``__builtin_test_workitem_id_x``
-// CHECK:      unsigned int __builtin_test_workitem_id_x()
-// CHECK:      **Target Features:** some-feature
-// CHECK:      Returns the work-item id in the x dimension.
 
 //===----------------------------------------------------------------------===//
 // Error test: ArgNames count mismatch

@@ -273,10 +273,11 @@ bool CodeGenAction::beginSourceFileAction() {
 
   if (ci.getInvocation().getFrontendOpts().features.IsEnabled(
           Fortran::common::LanguageFeature::OpenMP)) {
-    setOffloadModuleInterfaceAttributes(lb.getModule(),
-                                        ci.getInvocation().getLangOpts());
-    setOpenMPVersionAttribute(lb.getModule(),
-                              ci.getInvocation().getLangOpts().OpenMPVersion);
+    mlir::omp::setOffloadModuleInterfaceAttributes(
+        lb.getModule(),
+        makeOffloadModuleOpts(ci.getInvocation().getLangOpts()));
+    mlir::omp::setOpenMPVersionAttribute(
+        lb.getModule(), ci.getInvocation().getLangOpts().OpenMPVersion);
   }
 
   if (ci.getInvocation().getLangOpts().FastRealMod) {
@@ -635,8 +636,11 @@ void CodeGenAction::lowerHLFIRToFIR() {
     enableOpenMP = fir::EnableOpenMP::Full;
   if (ci.getInvocation().getLangOpts().OpenMPSimd)
     enableOpenMP = fir::EnableOpenMP::Simd;
+  MLIRToLLVMPassPipelineConfig config(level);
+  config.fpMaxminBehavior =
+      ci.getInvocation().getLoweringOpts().getFPMaxminBehavior();
   // Create the pass pipeline
-  fir::createHLFIRToFIRPassPipeline(pm, enableOpenMP, level);
+  fir::createHLFIRToFIRPassPipeline(pm, enableOpenMP, config);
   (void)mlir::applyPassManagerCLOptions(pm);
 
   mlir::TimingScope timingScopeMLIRPasses = timingScopeRoot.nest(
@@ -748,6 +752,7 @@ void CodeGenAction::generateLLVMIR() {
   pm.enableVerifier(/*verifyPasses=*/true);
 
   MLIRToLLVMPassPipelineConfig config(level, opts, mathOpts);
+  config.fpMaxminBehavior = invoc.getLoweringOpts().getFPMaxminBehavior();
   llvm::Triple pipelineTriple(invoc.getTargetOpts().triple);
   config.SkipConvertComplexPow = pipelineTriple.isAMDGCN();
   fir::registerDefaultInlinerPass(config);

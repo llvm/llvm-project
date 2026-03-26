@@ -27,8 +27,9 @@ namespace cpp {
 #endif
 
 template <unsigned N>
-LIBC_INLINE static void inline_copy(const char *from, char *to) {
-#if __has_builtin(__builtin_memcpy_inline)
+LIBC_INLINE LIBC_CONSTEXPR void inline_copy(const char *from, char *to) {
+#if __has_builtin(__builtin_memcpy_inline) &&                                  \
+    !defined(LIBC_HAS_CONSTANT_EVALUATION)
   __builtin_memcpy_inline(to, from, N);
 #else
   for (unsigned i = 0; i < N; ++i)
@@ -46,8 +47,8 @@ LIBC_INLINE static constexpr cpp::enable_if_t<
         cpp::is_trivially_copyable<From>::value,
     To>
 bit_cast(const From &from) {
-  MSAN_UNPOISON(&from, sizeof(From));
-#if __has_builtin(__builtin_bit_cast) || defined(LIBC_COMPILER_IS_MSVC)
+#if __has_builtin(__builtin_bit_cast) || defined(LIBC_COMPILER_IS_MSVC) ||     \
+    defined(LIBC_HAS_CONSTANT_EVALUATION)
   return __builtin_bit_cast(To, from);
 #else
   To to{};
@@ -67,7 +68,6 @@ LIBC_INLINE constexpr cpp::enable_if_t<
         cpp::is_trivially_copyable<From>::value,
     void>
 bit_copy(const From &from, To &to) {
-  MSAN_UNPOISON(&from, sizeof(From));
   char *dst = reinterpret_cast<char *>(&to);
   const char *src = reinterpret_cast<const char *>(&from);
   inline_copy<sizeof(From)>(src, dst);

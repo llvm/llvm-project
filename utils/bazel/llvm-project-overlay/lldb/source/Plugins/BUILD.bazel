@@ -14,7 +14,18 @@ package(
 licenses(["notice"])
 
 cc_library(
-    name = "PluginClangHighlighter",
+    name = "PluginHighlighterDefault",
+    srcs = glob(["Highlighter/Default/*.cpp"]),
+    hdrs = glob(["Highlighter/Default/*.h"]),
+    includes = [".."],
+    deps = [
+        "//lldb:CoreHeaders",
+        "//lldb:Utility",
+    ],
+)
+
+cc_library(
+    name = "PluginHighlighterClang",
     srcs = glob(["Highlighter/Clang/*.cpp"]),
     hdrs = glob(["Highlighter/Clang/*.h"]),
     includes = [".."],
@@ -32,10 +43,11 @@ cc_library(
 cc_library(
     name = "PluginObjCLanguageHeaders",
     hdrs = glob(["Language/ObjC/*.h"]),
+    features = ["-parse_headers"],  # Would otherwise have circular dependencies
     includes = [".."],
     deps = [
-        ":PluginClangHighlighter",
         ":PluginExpressionParserClangHeaders",
+        ":PluginHighlighterClang",
         "//lldb:CoreHeaders",
     ],
 )
@@ -69,8 +81,16 @@ cc_library(
     includes = [".."],
     deps = [
         ":PluginExpressionParserClangHeaders",
+        "//clang:ast",
+        "//clang:basic",
         "//clang:frontend",
         "//lldb:CoreHeaders",
+        "//lldb:ExpressionHeaders",
+        "//lldb:Headers",
+        "//lldb:SymbolHeaders",
+        "//lldb:TargetHeaders",
+        "//lldb:UtilityHeaders",
+        "//llvm:Support",
     ],
 )
 
@@ -80,9 +100,13 @@ cc_library(
     hdrs = glob(["LanguageRuntime/CPlusPlus/*.h"]),
     includes = [".."],
     deps = [
+        ":PluginTypeSystemClangHeaders",
         "//clang:codegen",
         "//lldb:CoreHeaders",
+        "//lldb:DataFormattersHeaders",
+        "//lldb:ExpressionHeaders",
         "//lldb:Headers",
+        "//lldb:InterpreterHeaders",
         "//lldb:SymbolHeaders",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
@@ -181,6 +205,7 @@ cc_library(
 cc_library(
     name = "PluginExpressionParserClangHeaders",
     hdrs = glob(["ExpressionParser/Clang/*.h"]),
+    features = ["-parse_headers"],  # Would otherwise have circular dependencies
     includes = [".."],
     deps = [
         "//lldb:CoreHeaders",
@@ -284,6 +309,7 @@ cc_library(
                "//conditions:default": [],
            }),
     hdrs = glob(["Platform/MacOSX/*.h"]),
+    features = ["-parse_headers"],  # TODO: Attempt to fix in a way that works cross platform
     includes = [".."],
     tags = ["nobuildkite"],
     deps = [
@@ -327,6 +353,7 @@ gentbl_cc_library(
 cc_library(
     name = "PluginSymbolFileDWARFHeaders",
     hdrs = glob(["SymbolFile/DWARF/*.h"]),
+    features = ["-parse_headers"],  # Would otherwise have circular dependencies
     includes = [".."],
     deps = [
         ":PluginTypeSystemClangHeaders",
@@ -402,7 +429,18 @@ cc_library(
     name = "PluginSymbolFileNativePDBHeaders",
     hdrs = glob(["SymbolFile/NativePDB/*.h"]),
     includes = [".."],
-    deps = ["//lldb:Core"],
+    deps = [
+        ":PluginExpressionParserClangHeaders",
+        "//lldb:Core",
+        "//lldb:ExpressionHeaders",
+        "//lldb:Headers",
+        "//lldb:SymbolHeaders",
+        "//lldb:UtilityHeaders",
+        "//llvm:DebugInfoCodeView",
+        "//llvm:DebugInfoPDB",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+    ],
 )
 
 cc_library(
@@ -435,7 +473,16 @@ cc_library(
     name = "PluginSymbolFilePDBHeaders",
     hdrs = glob(["SymbolFile/PDB/*.h"]),
     includes = [".."],
-    deps = ["//lldb:Core"],
+    deps = [
+        ":PluginExpressionParserClangHeaders",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:SymbolHeaders",
+        "//lldb:TargetHeaders",
+        "//lldb:UtilityHeaders",
+        "//llvm:DebugInfoPDB",
+        "//llvm:Support",
+    ],
 )
 
 gentbl_cc_library(
@@ -782,7 +829,7 @@ cc_library(
     includes = [".."],
     deps = [
         ":PluginCPPRuntime",
-        ":PluginClangHighlighter",
+        ":PluginHighlighterClang",
         ":PluginTypeSystemClang",
         "//lldb:Core",
         "//lldb:DataFormatters",
@@ -868,7 +915,7 @@ cc_library(
     hdrs = glob(["Language/ObjCPlusPlus/*.h"]),
     includes = [".."],
     deps = [
-        ":PluginClangHighlighter",
+        ":PluginHighlighterClang",
         "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Target",
@@ -894,9 +941,15 @@ cc_library(
     hdrs = glob(["Language/CPlusPlus/*.h"]),
     includes = [".."],
     deps = [
-        ":PluginClangHighlighter",
         ":PluginExpressionParserClangHeaders",
+        ":PluginHighlighterClang",
+        "//clang:lex",
         "//lldb:CoreHeaders",
+        "//lldb:DataFormatters",
+        "//lldb:Headers",
+        "//lldb:TargetHeaders",
+        "//lldb:UtilityHeaders",
+        "//llvm:Support",
     ],
 )
 
@@ -908,8 +961,8 @@ cc_library(
         ":LanguageCPlusPlusProperties",
         ":PluginCPPRuntime",
         ":PluginCPlusPlusLanguageHeaders",
-        ":PluginClangHighlighter",
         ":PluginExpressionParserClangHeaders",
+        ":PluginHighlighterClang",
         ":PluginTypeSystemClang",
         ":PluginTypeSystemClangHeaders",
         "//clang:basic",
@@ -1166,6 +1219,7 @@ cc_library(
 cc_library(
     name = "PluginDynamicLoaderPosixDYLDHeaders",
     hdrs = glob(["DynamicLoader/POSIX-DYLD/*.h"]),
+    features = ["-parse_headers"],  # Would otherwise have circular dependencies
     includes = [".."],
 )
 
@@ -1290,6 +1344,7 @@ gentbl_cc_library(
 cc_library(
     name = "PluginDynamicLoaderDarwinKernelHeaders",
     hdrs = glob(["DynamicLoader/Darwin-Kernel/*.h"]),
+    features = ["-parse_headers"],  # Would otherwise have circular dependencies
     includes = [".."],
 )
 
@@ -1773,6 +1828,7 @@ cc_library(
         "//lldb:SymbolHeaders",
         "//lldb:Utility",
         "//llvm:Debuginfod",
+        "//llvm:Support",
     ],
 )
 
@@ -2284,29 +2340,6 @@ cc_library(
         "//llvm:BinaryFormat",
         "//llvm:Object",
         "//llvm:Support",
-    ],
-)
-
-cc_library(
-    name = "PluginCXXItaniumABI",
-    srcs = glob(["LanguageRuntime/CPlusPlus/ItaniumABI/*.cpp"]),
-    hdrs = glob(["LanguageRuntime/CPlusPlus/ItaniumABI/*.h"]),
-    includes = [".."],
-    deps = [
-        ":PluginCPPRuntime",
-        ":PluginTypeSystemClang",
-        ":PluginTypeSystemClangHeaders",
-        "//lldb:Breakpoint",
-        "//lldb:Core",
-        "//lldb:DataFormattersHeaders",
-        "//lldb:ExpressionHeaders",
-        "//lldb:Headers",
-        "//lldb:InterpreterHeaders",
-        "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
-        "//lldb:Target",
-        "//lldb:TargetHeaders",
-        "//lldb:Utility",
     ],
 )
 

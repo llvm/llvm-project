@@ -378,6 +378,48 @@ exit:
   ret void
 }
 
+define void @sdiv_power_of_2_divisor_in_replicate_region(i32 %x, ptr %dst, i64 %n) {
+; CHECK-LABEL: define void @sdiv_power_of_2_divisor_in_replicate_region(
+; CHECK-SAME: i32 [[X:%.*]], ptr [[DST:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp sgt i64 [[N]], 0
+; CHECK-NEXT:    [[C_2:%.*]] = icmp slt i64 [[N]], 9
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_2]])
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 99, [[X]]
+; CHECK-NEXT:    [[DIV2:%.*]] = sdiv i32 [[DIV]], 2
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[DST]], i64 [[IV]]
+; CHECK-NEXT:    store i32 [[DIV2]], ptr [[GEP]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %c.1 = icmp sgt i64 %n, 0
+  %c.2 = icmp slt i64 %n, 9
+  call void @llvm.assume(i1 %c.1)
+  call void @llvm.assume(i1 %c.2)
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %div = sdiv i32 99, %x
+  %div2 = sdiv i32 %div, 2
+  %gep = getelementptr i32, ptr %dst, i64 %iv
+  store i32 %div2, ptr %gep, align 4
+  %iv.next = add i64 %iv, 1
+  %done = icmp eq i64 %iv.next, %n
+  br i1 %done, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 attributes #0 = { "target-cpu"="neoverse-v1" }
 attributes #1 = { "target-cpu"="neoverse-v2" }
 

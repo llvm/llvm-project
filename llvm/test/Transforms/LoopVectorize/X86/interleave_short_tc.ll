@@ -14,11 +14,11 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@a = dso_local global [5 x i32] zeroinitializer, align 16
-@b = dso_local global [5 x i32] zeroinitializer, align 16
+@a = global [5 x i32] zeroinitializer, align 16
+@b = global [5 x i32] zeroinitializer, align 16
 
 ; Function Attrs: nofree norecurse nounwind uwtable
-define dso_local void @_Z3fooi(i32 %M) local_unnamed_addr {
+define void @_Z3fooi(i32 %M) {
 ; CHECK-LABEL: @_Z3fooi(
 ; CHECK:       [[VECTOR_BODY:vector\.body]]:
 ; CHECK:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]

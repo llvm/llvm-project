@@ -104,15 +104,13 @@ extern int __attribute__((alias("__Three_var"))) Three_var_;
 // HOST: [[META1:![0-9]+]] = !{i32 1, !"__Three_var", i32 0, i32 1}
 // HOST: [[META2:![0-9]+]] = !{ptr @.offloading.entry_name}
 // HOST: [[META3:![0-9]+]] = !{ptr @.offloading.entry_name.1}
-// HOST: [[META4:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// HOST: [[META5:![0-9]+]] = !{i32 7, !"openmp", i32 51}
-// HOST: [[META6:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// HOST: [[META4:![0-9]+]] = !{i32 7, !"openmp", i32 51}
+// HOST: [[META5:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.
 // DEVICE: [[META0:![0-9]+]] = !{i32 1, !"__Two_var", i32 0, i32 0}
 // DEVICE: [[META1:![0-9]+]] = !{i32 1, !"__Three_var", i32 0, i32 1}
 // DEVICE: [[META2:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 600}
-// DEVICE: [[META3:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// DEVICE: [[META4:![0-9]+]] = !{i32 7, !"openmp", i32 51}
-// DEVICE: [[META5:![0-9]+]] = !{i32 7, !"openmp-device", i32 51}
-// DEVICE: [[META6:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// DEVICE: [[META3:![0-9]+]] = !{i32 7, !"openmp", i32 51}
+// DEVICE: [[META4:![0-9]+]] = !{i32 7, !"openmp-device", i32 51}
+// DEVICE: [[META5:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.

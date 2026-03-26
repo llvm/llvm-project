@@ -16,12 +16,8 @@ class FrameProviderCircularDependencyTestCase(TestBase):
         TestBase.setUp(self)
         self.source = "main.c"
 
-    @expectedFailureAll(oslist=["linux"], archs=["arm$"])
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
-    def test_circular_dependency_with_function_replacement(self):
-        """
-        Test the circular dependency fix with a provider that replaces function names.
-        """
+    def launch_and_stop_at_breakpoint(self):
+        """Build, launch and stop at the breakpoint in bar(). Returns (target, thread)."""
         self.build()
 
         target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
@@ -45,6 +41,19 @@ class FrameProviderCircularDependencyTestCase(TestBase):
         frame0 = thread.GetFrameAtIndex(0)
         self.assertIn("bar", frame0.GetFunctionName(), "Should be stopped in bar()")
 
+        script_path = os.path.join(self.getSourceDir(), "frame_provider.py")
+        self.runCmd("command script import " + script_path)
+
+        return target, thread
+
+    @expectedFailureAll(oslist=["linux"], archs=["arm$"])
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
+    def test_circular_dependency_with_function_replacement(self):
+        """
+        Test the circular dependency fix with a provider that replaces function names.
+        """
+        target, thread = self.launch_and_stop_at_breakpoint()
+
         original_frame_count = thread.GetNumFrames()
         self.assertGreaterEqual(
             original_frame_count, 3, "Should have at least 3 frames: bar, foo, main"
@@ -54,9 +63,6 @@ class FrameProviderCircularDependencyTestCase(TestBase):
         self.assertEqual(frame_names[0], "bar", "Frame 0 should be bar")
         self.assertEqual(frame_names[1], "foo", "Frame 1 should be foo")
         self.assertEqual(frame_names[2], "main", "Frame 2 should be main")
-
-        script_path = os.path.join(self.getSourceDir(), "frame_provider.py")
-        self.runCmd("command script import " + script_path)
 
         # Register the frame provider that accesses input_frames.
         # Before the fix, this registration would trigger the circular dependency:
@@ -117,3 +123,88 @@ class FrameProviderCircularDependencyTestCase(TestBase):
             self.assertNotEqual(pc, 0, f"Frame {i} should have valid PC")
             func_name = frame.GetFunctionName()
             self.assertIsNotNone(func_name, f"Frame {i} should have function name")
+
+    @expectedFailureAll(oslist=["linux"], archs=["arm$"])
+    def test_circular_dependency_handle_command_in_init(self):
+        """
+        Test that calling HandleCommand('bt') in __init__ doesn't cause
+        a circular dependency / deadlock.
+        """
+        target, thread = self.launch_and_stop_at_breakpoint()
+
+        original_frame_count = thread.GetNumFrames()
+
+        # Register a provider that calls HandleCommand("bt") during __init__.
+        # Before the fix, this would deadlock because HandleCommand accesses
+        # the thread's stack frames, re-entering Thread::GetStackFrameList().
+        error = lldb.SBError()
+        provider_id = target.RegisterScriptedFrameProvider(
+            "frame_provider.HandleCommandInInitProvider",
+            lldb.SBStructuredData(),
+            error,
+        )
+
+        # If we reach here without hanging, the fix is working.
+        self.assertTrue(
+            error.Success(),
+            f"Should successfully register provider: {error}",
+        )
+        self.assertNotEqual(provider_id, 0, "Provider ID should be non-zero")
+
+        # Verify the provider passes through all frames unchanged.
+        new_frame_count = thread.GetNumFrames()
+        self.assertEqual(
+            new_frame_count,
+            original_frame_count,
+            "Frame count should be unchanged (pass-through provider)",
+        )
+
+        for i in range(min(new_frame_count, 3)):
+            frame = thread.GetFrameAtIndex(i)
+            self.assertIsNotNone(frame, f"Frame {i} should exist")
+            self.assertIsNotNone(
+                frame.GetFunctionName(), f"Frame {i} should have function name"
+            )
+
+    @expectedFailureAll(oslist=["linux"], archs=["arm$"])
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
+    def test_circular_dependency_evaluate_expression_in_get_frame(self):
+        """
+        Test that calling EvaluateExpression in get_frame_at_index doesn't
+        cause a circular dependency / deadlock.
+        """
+        target, thread = self.launch_and_stop_at_breakpoint()
+
+        original_frame_count = thread.GetNumFrames()
+
+        # Register a provider that calls EvaluateExpression("baz()") during
+        # get_frame_at_index. Before the fix, this would cause a circular
+        # dependency because expression evaluation accesses thread frames.
+        error = lldb.SBError()
+        provider_id = target.RegisterScriptedFrameProvider(
+            "frame_provider.EvaluateExpressionInGetFrameProvider",
+            lldb.SBStructuredData(),
+            error,
+        )
+
+        # If we reach here without hanging, the fix is working.
+        self.assertTrue(
+            error.Success(),
+            f"Should successfully register provider: {error}",
+        )
+        self.assertNotEqual(provider_id, 0, "Provider ID should be non-zero")
+
+        # Verify the provider passes through all frames unchanged.
+        new_frame_count = thread.GetNumFrames()
+        self.assertEqual(
+            new_frame_count,
+            original_frame_count,
+            "Frame count should be unchanged (pass-through provider)",
+        )
+
+        for i in range(min(new_frame_count, 3)):
+            frame = thread.GetFrameAtIndex(i)
+            self.assertIsNotNone(frame, f"Frame {i} should exist")
+            self.assertIsNotNone(
+                frame.GetFunctionName(), f"Frame {i} should have function name"
+            )
