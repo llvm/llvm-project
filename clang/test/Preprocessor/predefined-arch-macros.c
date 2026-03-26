@@ -4326,10 +4326,10 @@
 // CHECK_C864GM4_M32: #define __XSAVEOPT__ 1
 // CHECK_C864GM4_M32: #define __XSAVES__ 1
 // CHECK_C864GM4_M32: #define __XSAVE__ 1
-// CHECK_C864GM4_M32: #define __c86 -4g-m4__ 1
+// CHECK_C864GM4_M32: #define __c86_4g_m4__ 1
 // CHECK_C864GM4_M32: #define __i386 1
 // CHECK_C864GM4_M32: #define __i386__ 1
-// CHECK_C864GM4_M32: #define __tune_c86 -4g-m4__ 1
+// CHECK_C864GM4_M32: #define __tune_c86_4g_m4__ 1
 
 // RUN: %clang -march=c86-4g-m4 -m64 -E -dM %s -o - 2>&1 \
 // RUN:     -target i386-unknown-linux \
@@ -4370,8 +4370,8 @@
 // CHECK_C864GM4_M64: #define __XSAVEOPT__ 1
 // CHECK_C864GM4_M64: #define __XSAVES__ 1
 // CHECK_C864GM4_M64: #define __XSAVE__ 1
-// CHECK_C864GM4_M64: #define __c86 -4g-m4__ 1
-// CHECK_C864GM4_M64: #define __tune_c86 -4g-m4__ 1
+// CHECK_C864GM4_M64: #define __c86_4g_m4__ 1
+// CHECK_C864GM4_M64: #define __tune_c86_4g_m4__ 1
 // CHECK_C864GM4_M64: #define __x86_64 1
 // CHECK_C864GM4_M64: #define __x86_64__ 1
 
@@ -4414,10 +4414,10 @@
 // CHECK_C864GM6_M32: #define __XSAVEOPT__ 1
 // CHECK_C864GM6_M32: #define __XSAVES__ 1
 // CHECK_C864GM6_M32: #define __XSAVE__ 1
-// CHECK_C864GM6_M32: #define __c86 -4g-m6__ 1
+// CHECK_C864GM6_M32: #define __c86_4g_m6__ 1
 // CHECK_C864GM6_M32: #define __i386 1
 // CHECK_C864GM6_M32: #define __i386__ 1
-// CHECK_C864GM6_M32: #define __tune_c86 -4g-m6__ 1
+// CHECK_C864GM6_M32: #define __tune_c86_4g_m6__ 1
 
 // RUN: %clang -march=c86-4g-m6 -m64 -E -dM %s -o - 2>&1 \
 // RUN:     -target i386-unknown-linux \
@@ -4458,8 +4458,8 @@
 // CHECK_C864GM6_M64: #define __XSAVEOPT__ 1
 // CHECK_C864GM6_M64: #define __XSAVES__ 1
 // CHECK_C864GM6_M64: #define __XSAVE__ 1
-// CHECK_C864GM6_M64: #define __c86 -4g-m6__ 1
-// CHECK_C864GM6_M64: #define __tune_c86 -4g-m6__ 1
+// CHECK_C864GM6_M64: #define __c86_4g_m6__ 1
+// CHECK_C864GM6_M64: #define __tune_c86_4g_m6__ 1
 // CHECK_C864GM6_M64: #define __x86_64 1
 // CHECK_C864GM6_M64: #define __x86_64__ 1
 
@@ -4519,10 +4519,10 @@
 // CHECK_C864GM7_M32: #define __XSAVEOPT__ 1
 // CHECK_C864GM7_M32: #define __XSAVES__ 1
 // CHECK_C864GM7_M32: #define __XSAVE__ 1
-// CHECK_C864GM7_M32: #define __c86 -4g-m7__ 1
+// CHECK_C864GM7_M32: #define __c86_4g_m7__ 1
 // CHECK_C864GM7_M32: #define __i386 1
 // CHECK_C864GM7_M32: #define __i386__ 1
-// CHECK_C864GM7_M32: #define __tune_c86 -4g-m7__ 1
+// CHECK_C864GM7_M32: #define __tune_c86_4g_m7__ 1
 
 // RUN: %clang -march=c86-4g-m7 -m64 -E -dM %s -o - 2>&1 \
 // RUN:     -target i386-unknown-linux \
@@ -4580,8 +4580,8 @@
 // CHECK_C864GM7_M64: #define __XSAVEOPT__ 1
 // CHECK_C864GM7_M64: #define __XSAVES__ 1
 // CHECK_C864GM7_M64: #define __XSAVE__ 1
-// CHECK_C864GM7_M64: #define __c86 -4g-m7__ 1
-// CHECK_C864GM7_M64: #define __tune_c86 -4g-m7__ 1
+// CHECK_C864GM7_M64: #define __c86_4g_m7__ 1
+// CHECK_C864GM7_M64: #define __tune_c86_4g_m7__ 1
 // CHECK_C864GM7_M64: #define __x86_64 1
 // CHECK_C864GM7_M64: #define __x86_64__ 1
 

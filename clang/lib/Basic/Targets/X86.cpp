@@ -730,13 +730,13 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     defineCPUMacros(Builder, "geode");
     break;
   case CK_C86_4G_M4:
-    defineCPUMacros(Builder, "c86-4g-m4");
+    defineCPUMacros(Builder, "c86_4g_m4");
     break;
   case CK_C86_4G_M6:
-    defineCPUMacros(Builder, "c86-4g-m6");
+    defineCPUMacros(Builder, "c86_4g_m6");
     break;
   case CK_C86_4G_M7:
-    defineCPUMacros(Builder, "c86-4g-m7");
+    defineCPUMacros(Builder, "c86_4g_m7");
     break;
   }
 
