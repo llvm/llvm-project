@@ -17,7 +17,7 @@
 // UNSUPPORTED: windows
 
 // AIX, macOS and FreeBSD seem to limit the number of processes, not threads via RLIMIT_NPROC
-// XFAIL: target={{.+}}-aix{{.*}}
+// But there is RLIMIT_THREADS in AIX which can be used here to limit the threads.
 // XFAIL: target={{.+}}-apple-{{.*}}
 // XFAIL: freebsd
 
@@ -33,7 +33,12 @@
 
 #if __has_include(<sys/resource.h>)
 #  include <sys/resource.h>
-#  ifdef RLIMIT_NPROC
+#  if defined(_AIX) && defined(RLIMIT_THREADS)
+void force_thread_creation_failure() {
+  rlimit lim = {1, 1};
+  assert(setrlimit(RLIMIT_THREADS, &lim) == 0);
+}
+#  elif RLIMIT_NPROC
 void force_thread_creation_failure() {
   rlimit lim = {1, 1};
   assert(setrlimit(RLIMIT_NPROC, &lim) == 0);
