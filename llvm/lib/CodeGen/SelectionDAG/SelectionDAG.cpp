@@ -6206,17 +6206,15 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, const APInt &DemandedElts,
         KnownBits KnownExp = Known.extractBits(Exponent, Mantissa);
 
         switch (FltSem.nanEncoding) {
-        case fltNanEncoding::IEEE: {
+        case fltNanEncoding::IEEE:
           if (!KnownExp.getMaxValue().isAllOnes() || KnownMan.isZero())
             return true;
           break;
-        }
-        case fltNanEncoding::AllOnes: {
+        case fltNanEncoding::AllOnes:
           if (!KnownExp.getMaxValue().isAllOnes() ||
               !KnownMan.getMaxValue().isAllOnes())
             return true;
           break;
-        }
         case fltNanEncoding::NegativeZero:
           if (Known.Zero.isSignBitSet() || !KnownExp.isZero() ||
               !KnownMan.isZero())
