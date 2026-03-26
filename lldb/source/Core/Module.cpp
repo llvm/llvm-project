@@ -1420,6 +1420,19 @@ bool Module::IsLoadedInTarget(Target *target) {
   return false;
 }
 
+static bool LoadScriptingModule(const FileSpec &scripting_fspec,
+                                ScriptInterpreter &script_interpreter,
+                                Target &target, Status &error) {
+  assert(scripting_fspec);
+
+  StreamString scripting_stream;
+  scripting_fspec.Dump(scripting_stream.AsRawOstream());
+  LoadScriptOptions options;
+  return script_interpreter.LoadScriptingModule(
+      scripting_stream.GetData(), options, error,
+      /*module_sp*/ nullptr, /*extra_path*/ {}, target.shared_from_this());
+}
+
 bool Module::LoadScriptingResourceInTarget(Target *target, Status &error) {
   if (!target) {
     error = Status::FromErrorString("invalid destination Target");
@@ -1489,13 +1502,8 @@ To run all discovered debug scripts in this session:
     LLDB_LOG(GetLog(LLDBLog::Modules), "Auto-loading {0}",
              scripting_fspec.GetPath());
 
-    StreamString scripting_stream;
-    scripting_fspec.Dump(scripting_stream.AsRawOstream());
-    LoadScriptOptions options;
-    bool did_load = script_interpreter->LoadScriptingModule(
-        scripting_stream.GetData(), options, error,
-        /*module_sp*/ nullptr, /*extra_path*/ {}, target->shared_from_this());
-    if (!did_load)
+    if (!LoadScriptingModule(scripting_fspec, *script_interpreter, *target,
+                             error))
       return false;
   }
 
