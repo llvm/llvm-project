@@ -1,4 +1,5 @@
 // RUN: %check_clang_tidy %s bugprone-spuriously-wake-up-functions %t -- --
+
 #include <stddef.h>
 
 struct Node1 {

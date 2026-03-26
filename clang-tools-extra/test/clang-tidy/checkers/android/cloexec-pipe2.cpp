@@ -10,7 +10,6 @@
       _rc = (exp);              \
     } while (_rc == -1);        \
   })
-#include <cstddef>
 
 extern "C" int pipe2(int pipefd[2], int flags);
 
