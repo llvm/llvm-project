@@ -60,13 +60,14 @@ define void @issue92561(ptr addrspace(1) %arg) {
 ; SDAG-NEXT:    image_sample_c_lz v2, [v8, v8, v8, v8], s[0:7], s[12:15] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
 ; SDAG-NEXT:    image_sample_c_lz v1, [v8, v1, v8, v8], s[0:7], s[12:15] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
 ; SDAG-NEXT:    s_waitcnt vmcnt(2)
-; SDAG-NEXT:    v_dual_add_f32 v0, v9, v0 :: v_dual_mov_b32 v9, v8
+; SDAG-NEXT:    v_add_f32_e32 v0, v9, v0
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; SDAG-NEXT:    v_add_f32_e32 v0, v1, v0
+; SDAG-NEXT:    v_dual_mov_b32 v9, v8 :: v_dual_add_f32 v0, v1, v0
 ; SDAG-NEXT:    v_add_f32_e32 v0, v2, v0
 ; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-NEXT:    v_dual_mul_f32 v7, 0x3e800000, v0 :: v_dual_mov_b32 v0, 0
+; SDAG-NEXT:    v_mul_f32_e32 v7, 0x3e800000, v0
+; SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-NEXT:    image_store v[7:9], [v0, v0], s[0:7] dim:SQ_RSRC_IMG_2D unorm
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;

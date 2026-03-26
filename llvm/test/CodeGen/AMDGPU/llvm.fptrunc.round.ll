@@ -659,8 +659,9 @@ define amdgpu_gs <4 x half> @v_fptrunc_round_v4f32_to_v4f16_upward(<4 x float> %
 ; GFX11-SDAG-NEXT:    v_cvt_f16_f32_e64 v1.h, v1
 ; GFX11-SDAG-NEXT:    v_cvt_f16_f32_e64 v1.l, v0
 ; GFX11-SDAG-NEXT:    v_cvt_f16_f32_e64 v3.l, v2
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-NEXT:    v_dual_mov_b32 v0, v1 :: v_dual_mov_b32 v1, v3
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-SDAG-NEXT:    v_mov_b32_e32 v0, v1
+; GFX11-SDAG-NEXT:    v_mov_b32_e32 v1, v3
 ; GFX11-SDAG-NEXT:    ; return to shader part epilog
 ; GISEL-LABEL: v_fptrunc_round_v4f32_to_v4f16_upward:
 ; GISEL:       ; %bb.0:
@@ -695,8 +696,9 @@ define amdgpu_gs <4 x half> @v_fptrunc_round_v4f32_to_v4f16_downward(<4 x float>
 ; GFX11-SDAG-NEXT:    v_cvt_f16_f32_e64 v1.h, v1
 ; GFX11-SDAG-NEXT:    v_cvt_f16_f32_e64 v1.l, v0
 ; GFX11-SDAG-NEXT:    v_cvt_f16_f32_e64 v3.l, v2
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-NEXT:    v_dual_mov_b32 v0, v1 :: v_dual_mov_b32 v1, v3
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-SDAG-NEXT:    v_mov_b32_e32 v0, v1
+; GFX11-SDAG-NEXT:    v_mov_b32_e32 v1, v3
 ; GFX11-SDAG-NEXT:    ; return to shader part epilog
 ; GISEL-LABEL: v_fptrunc_round_v4f32_to_v4f16_downward:
 ; GISEL:       ; %bb.0:
@@ -741,9 +743,11 @@ define amdgpu_gs <8 x half> @v_fptrunc_round_v8f32_to_v8f16_upward(<8 x float> %
 ; GFX11-SDAG-NEXT:    v_cvt_f16_f32_e64 v3.l, v2
 ; GFX11-SDAG-NEXT:    v_cvt_f16_f32_e64 v5.l, v4
 ; GFX11-SDAG-NEXT:    v_cvt_f16_f32_e64 v7.l, v6
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-SDAG-NEXT:    v_dual_mov_b32 v0, v1 :: v_dual_mov_b32 v1, v3
-; GFX11-SDAG-NEXT:    v_dual_mov_b32 v2, v5 :: v_dual_mov_b32 v3, v7
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-SDAG-NEXT:    v_mov_b32_e32 v0, v1
+; GFX11-SDAG-NEXT:    v_dual_mov_b32 v1, v3 :: v_dual_mov_b32 v2, v5
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX11-SDAG-NEXT:    v_mov_b32_e32 v3, v7
 ; GFX11-SDAG-NEXT:    ; return to shader part epilog
 ; GISEL-LABEL: v_fptrunc_round_v8f32_to_v8f16_upward:
 ; GISEL:       ; %bb.0:
@@ -794,9 +798,11 @@ define amdgpu_gs <8 x half> @v_fptrunc_round_v8f32_to_v8f16_downward(<8 x float>
 ; GFX11-SDAG-NEXT:    v_cvt_f16_f32_e64 v3.l, v2
 ; GFX11-SDAG-NEXT:    v_cvt_f16_f32_e64 v5.l, v4
 ; GFX11-SDAG-NEXT:    v_cvt_f16_f32_e64 v7.l, v6
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-SDAG-NEXT:    v_dual_mov_b32 v0, v1 :: v_dual_mov_b32 v1, v3
-; GFX11-SDAG-NEXT:    v_dual_mov_b32 v2, v5 :: v_dual_mov_b32 v3, v7
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-SDAG-NEXT:    v_mov_b32_e32 v0, v1
+; GFX11-SDAG-NEXT:    v_dual_mov_b32 v1, v3 :: v_dual_mov_b32 v2, v5
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX11-SDAG-NEXT:    v_mov_b32_e32 v3, v7
 ; GFX11-SDAG-NEXT:    ; return to shader part epilog
 ; GISEL-LABEL: v_fptrunc_round_v8f32_to_v8f16_downward:
 ; GISEL:       ; %bb.0:

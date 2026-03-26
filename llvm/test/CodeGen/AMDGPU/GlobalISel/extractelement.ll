@@ -2535,7 +2535,8 @@ define amdgpu_ps double @dyn_extract_v7f64_s_v_bitcast(<14 x float> inreg %userD
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 6, v0
 ; GFX11-NEXT:    v_dual_cndmask_b32 v1, v1, v3 :: v_dual_cndmask_b32 v2, v2, v4
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 7, v0
-; GFX11-NEXT:    v_dual_cndmask_b32 v0, v1, v0 :: v_dual_cndmask_b32 v1, v2, v1
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc_lo
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX11-NEXT:    ; return to shader part epilog
@@ -2656,7 +2657,8 @@ define amdgpu_ps double @dyn_extract_v7f64_s_v(<7 x double> inreg %vec, i32 %sel
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, s14, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, s15, vcc_lo
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 7, v0
-; GFX11-NEXT:    v_dual_cndmask_b32 v0, v1, v0 :: v_dual_cndmask_b32 v1, v2, v1
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc_lo
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX11-NEXT:    ; return to shader part epilog

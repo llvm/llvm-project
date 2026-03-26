@@ -225,7 +225,8 @@ define amdgpu_ps void @buffer_store_x1_offen_merged_and(<4 x i32> inreg %rsrc, i
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_dual_add_nc_u32 v7, 4, v0 :: v_dual_add_nc_u32 v8, 8, v0
 ; GFX1250-NEXT:    v_dual_add_nc_u32 v9, 12, v0 :: v_dual_add_nc_u32 v10, 16, v0
-; GFX1250-NEXT:    v_dual_add_nc_u32 v11, 28, v0 :: v_dual_add_nc_u32 v0, 32, v0
+; GFX1250-NEXT:    v_add_nc_u32_e32 v11, 28, v0
+; GFX1250-NEXT:    v_add_nc_u32_e32 v0, 32, v0
 ; GFX1250-NEXT:    s_clause 0x5
 ; GFX1250-NEXT:    buffer_store_b32 v1, v7, s[0:3], null offen
 ; GFX1250-NEXT:    buffer_store_b32 v2, v8, s[0:3], null offen
@@ -329,7 +330,8 @@ define amdgpu_ps void @buffer_store_x1_offen_merged_glc_slc(<4 x i32> inreg %rsr
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_dual_add_nc_u32 v7, 4, v0 :: v_dual_add_nc_u32 v8, 8, v0
 ; GFX1250-NEXT:    v_dual_add_nc_u32 v9, 12, v0 :: v_dual_add_nc_u32 v10, 16, v0
-; GFX1250-NEXT:    v_dual_add_nc_u32 v11, 28, v0 :: v_dual_add_nc_u32 v0, 32, v0
+; GFX1250-NEXT:    v_add_nc_u32_e32 v11, 28, v0
+; GFX1250-NEXT:    v_add_nc_u32_e32 v0, 32, v0
 ; GFX1250-NEXT:    s_clause 0x5
 ; GFX1250-NEXT:    buffer_store_b32 v1, v7, s[0:3], null offen
 ; GFX1250-NEXT:    buffer_store_b32 v2, v8, s[0:3], null offen
@@ -374,7 +376,8 @@ define amdgpu_ps void @buffer_store_x2_offen_merged_and(<4 x i32> inreg %rsrc, i
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
 ; GFX1250-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX1250-NEXT:    v_dual_add_nc_u32 v1, 4, v0 :: v_dual_add_nc_u32 v0, 12, v0
+; GFX1250-NEXT:    v_add_nc_u32_e32 v1, 4, v0
+; GFX1250-NEXT:    v_add_nc_u32_e32 v0, 12, v0
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    buffer_store_b64 v[2:3], v1, s[0:3], null offen
 ; GFX1250-NEXT:    buffer_store_b64 v[4:5], v0, s[0:3], null offen

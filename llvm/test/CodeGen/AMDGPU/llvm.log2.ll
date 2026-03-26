@@ -1135,8 +1135,9 @@ define amdgpu_kernel void @s_log2_v4f32(ptr addrspace(1) %out, <4 x float> %in) 
 ; GFX1100-SDAG-NEXT:    v_log_f32_e32 v6, v6
 ; GFX1100-SDAG-NEXT:    v_log_f32_e32 v7, v7
 ; GFX1100-SDAG-NEXT:    v_mov_b32_e32 v9, 0
+; GFX1100-SDAG-NEXT:    v_sub_f32_e32 v3, v2, v0
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(TRANS32_DEP_3)
-; GFX1100-SDAG-NEXT:    v_dual_sub_f32 v3, v2, v0 :: v_dual_sub_f32 v2, v8, v1
+; GFX1100-SDAG-NEXT:    v_sub_f32_e32 v2, v8, v1
 ; GFX1100-SDAG-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX1100-SDAG-NEXT:    v_dual_sub_f32 v1, v6, v4 :: v_dual_sub_f32 v0, v7, v5
 ; GFX1100-SDAG-NEXT:    global_store_b128 v9, v[0:3], s[4:5]

@@ -97,8 +97,8 @@ define amdgpu_ps void @buffer_store_ofs(<4 x i32> inreg, <4 x float>, i32) {
 ; GFX11-LABEL: buffer_store_ofs:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    s_mov_b32 s4, 0
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, s4
+; GFX11-NEXT:    v_mov_b32_e32 v5, v4
+; GFX11-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], v[4:5], s[0:3], 0 idxen offen
 ; GFX11-NEXT:    s_endpgm
 ;

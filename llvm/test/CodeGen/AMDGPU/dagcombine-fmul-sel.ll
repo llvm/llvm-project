@@ -1186,12 +1186,13 @@ define <2 x double> @fmul_select_v2f64_test10(<2 x double> %x, <2 x i32> %bool.a
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v8, 0x3fe00000
 ; GFX11-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v4, v6
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX11-SDAG-NEXT:    v_dual_cndmask_b32 v9, 0xbff00000, v8 :: v_dual_mov_b32 v8, 0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_2)
+; GFX11-SDAG-NEXT:    v_cndmask_b32_e32 v9, 0xbff00000, v8, vcc_lo
 ; GFX11-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v5, v7
-; GFX11-SDAG-NEXT:    v_mul_f64 v[0:1], v[0:1], v[8:9]
+; GFX11-SDAG-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX11-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_mul_f64 v[0:1], v[0:1], v[8:9]
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-SDAG-NEXT:    v_ldexp_f64 v[2:3], v[2:3], v4
 ; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;

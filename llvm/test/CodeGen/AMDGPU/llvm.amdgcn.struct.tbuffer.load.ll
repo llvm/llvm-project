@@ -202,8 +202,8 @@ define amdgpu_vs <4 x float> @tbuffer_load_ofs(<4 x i32> inreg, i32 %voffs) {
 ; GFX11-LABEL: tbuffer_load_ofs:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    s_mov_b32 s4, 0
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    v_dual_mov_b32 v1, v0 :: v_dual_mov_b32 v0, s4
+; GFX11-NEXT:    v_mov_b32_e32 v1, v0
+; GFX11-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX11-NEXT:    tbuffer_load_format_xyzw v[0:3], v[0:1], s[0:3], 0 format:78 idxen offen
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
@@ -242,8 +242,8 @@ define amdgpu_vs <4 x float> @tbuffer_load_ofs_imm(<4 x i32> inreg, i32 %voffs) 
 ; GFX11-LABEL: tbuffer_load_ofs_imm:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    s_mov_b32 s4, 0
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    v_dual_mov_b32 v1, v0 :: v_dual_mov_b32 v0, s4
+; GFX11-NEXT:    v_mov_b32_e32 v1, v0
+; GFX11-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX11-NEXT:    tbuffer_load_format_xyzw v[0:3], v[0:1], s[0:3], 0 format:78 idxen offen offset:52
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog

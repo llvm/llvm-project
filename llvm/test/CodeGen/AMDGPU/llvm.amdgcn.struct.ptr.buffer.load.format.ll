@@ -420,8 +420,8 @@ define amdgpu_ps <4 x float> @buffer_load_ofs(ptr addrspace(8) inreg, i32) {
 ; GFX11-LABEL: buffer_load_ofs:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    s_mov_b32 s4, 0
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    v_dual_mov_b32 v1, v0 :: v_dual_mov_b32 v0, s4
+; GFX11-NEXT:    v_mov_b32_e32 v1, v0
+; GFX11-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX11-NEXT:    buffer_load_format_xyzw v[0:3], v[0:1], s[0:3], 0 idxen offen
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
@@ -429,8 +429,8 @@ define amdgpu_ps <4 x float> @buffer_load_ofs(ptr addrspace(8) inreg, i32) {
 ; NOPRT-LABEL: buffer_load_ofs:
 ; NOPRT:       ; %bb.0: ; %main_body
 ; NOPRT-NEXT:    s_mov_b32 s4, 0
-; NOPRT-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; NOPRT-NEXT:    v_dual_mov_b32 v1, v0 :: v_dual_mov_b32 v0, s4
+; NOPRT-NEXT:    v_mov_b32_e32 v1, v0
+; NOPRT-NEXT:    v_mov_b32_e32 v0, s4
 ; NOPRT-NEXT:    buffer_load_format_xyzw v[0:3], v[0:1], s[0:3], 0 idxen offen
 ; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
@@ -461,8 +461,8 @@ define amdgpu_ps <4 x float> @buffer_load_ofs_imm(ptr addrspace(8) inreg, i32) {
 ; GFX11-LABEL: buffer_load_ofs_imm:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    s_mov_b32 s4, 0
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    v_dual_mov_b32 v1, v0 :: v_dual_mov_b32 v0, s4
+; GFX11-NEXT:    v_mov_b32_e32 v1, v0
+; GFX11-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX11-NEXT:    buffer_load_format_xyzw v[0:3], v[0:1], s[0:3], 0 idxen offen offset:60
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
@@ -470,8 +470,8 @@ define amdgpu_ps <4 x float> @buffer_load_ofs_imm(ptr addrspace(8) inreg, i32) {
 ; NOPRT-LABEL: buffer_load_ofs_imm:
 ; NOPRT:       ; %bb.0: ; %main_body
 ; NOPRT-NEXT:    s_mov_b32 s4, 0
-; NOPRT-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; NOPRT-NEXT:    v_dual_mov_b32 v1, v0 :: v_dual_mov_b32 v0, s4
+; NOPRT-NEXT:    v_mov_b32_e32 v1, v0
+; NOPRT-NEXT:    v_mov_b32_e32 v0, s4
 ; NOPRT-NEXT:    buffer_load_format_xyzw v[0:3], v[0:1], s[0:3], 0 idxen offen offset:60
 ; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog

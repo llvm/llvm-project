@@ -604,7 +604,8 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_realign_stack(i32
 ; GISEL-GFX11-NEXT:    s_nop
 ; GISEL-GFX11-NEXT:    ;;#ASMEND
 ; GISEL-GFX11-NEXT:    v_dual_mov_b32 v8, v9 :: v_dual_add_nc_u32 v5, 32, v5
-; GISEL-GFX11-NEXT:    v_dual_mov_b32 v9, v10 :: v_dual_mov_b32 v10, v11
+; GISEL-GFX11-NEXT:    v_mov_b32_e32 v9, v10
+; GISEL-GFX11-NEXT:    v_mov_b32_e32 v10, v11
 ; GISEL-GFX11-NEXT:    s_mov_b32 s34, s32
 ; GISEL-GFX11-NEXT:    s_mov_b32 s4, chain_preserve_callee@abs32@lo
 ; GISEL-GFX11-NEXT:    scratch_store_b128 v5, v[1:4], off dlc
@@ -672,7 +673,8 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_realign_stack(i32
 ; DAGISEL-GFX11-NEXT:    ;;#ASMSTART
 ; DAGISEL-GFX11-NEXT:    s_nop
 ; DAGISEL-GFX11-NEXT:    ;;#ASMEND
-; DAGISEL-GFX11-NEXT:    v_dual_mov_b32 v8, v9 :: v_dual_mov_b32 v9, v10
+; DAGISEL-GFX11-NEXT:    v_mov_b32_e32 v8, v9
+; DAGISEL-GFX11-NEXT:    v_mov_b32_e32 v9, v10
 ; DAGISEL-GFX11-NEXT:    scratch_store_b128 v5, v[1:4], off dlc
 ; DAGISEL-GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; DAGISEL-GFX11-NEXT:    scratch_load_b32 v16, off, s33 ; 4-byte Folded Reload

@@ -1082,7 +1082,8 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_realign_stack_chain_call(i32 %idx, 
 ; GISEL-GFX11-NEXT:    s_and_not1_b32 s33, s33, 31
 ; GISEL-GFX11-NEXT:    v_dual_mov_b32 v1, s5 :: v_dual_mov_b32 v2, s6
 ; GISEL-GFX11-NEXT:    v_add_nc_u32_e32 v4, s33, v4
-; GISEL-GFX11-NEXT:    v_dual_mov_b32 v8, v9 :: v_dual_mov_b32 v9, v10
+; GISEL-GFX11-NEXT:    v_mov_b32_e32 v8, v9
+; GISEL-GFX11-NEXT:    v_mov_b32_e32 v9, v10
 ; GISEL-GFX11-NEXT:    v_mov_b32_e32 v10, v11
 ; GISEL-GFX11-NEXT:    s_mov_b32 s34, s32
 ; GISEL-GFX11-NEXT:    s_mov_b32 s4, chain_callee@abs32@lo
@@ -1133,7 +1134,8 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_realign_stack_chain_call(i32 %idx, 
 ; DAGISEL-GFX11-NEXT:    s_and_not1_b32 s33, s33, 31
 ; DAGISEL-GFX11-NEXT:    v_dual_mov_b32 v2, 3 :: v_dual_mov_b32 v3, 4
 ; DAGISEL-GFX11-NEXT:    v_lshl_add_u32 v4, v8, 4, s33
-; DAGISEL-GFX11-NEXT:    v_dual_mov_b32 v8, v9 :: v_dual_mov_b32 v9, v10
+; DAGISEL-GFX11-NEXT:    v_mov_b32_e32 v8, v9
+; DAGISEL-GFX11-NEXT:    v_mov_b32_e32 v9, v10
 ; DAGISEL-GFX11-NEXT:    v_mov_b32_e32 v10, v11
 ; DAGISEL-GFX11-NEXT:    s_mov_b32 s34, s32
 ; DAGISEL-GFX11-NEXT:    s_mov_b32 s5, chain_callee@abs32@hi
