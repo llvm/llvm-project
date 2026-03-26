@@ -2,6 +2,7 @@
 ; RUN: opt -S -passes=instcombine < %s | FileCheck %s
 
 declare half @llvm.fabs.f16(half)
+declare float @llvm.fabs.f32(float)
 declare double @llvm.fabs.f64(double)
 declare <2 x float> @llvm.fabs.v2f32(<2 x float>)
 declare double @llvm.copysign.f64(double, double)
@@ -2579,5 +2580,142 @@ define i1 @fcmp_sqrt_zero_ult_nonzero(half %x) {
 ;
   %sqrt = call half @llvm.sqrt.f16(half %x)
   %cmp = fcmp ult half %sqrt, 1.000000e+00
+  ret i1 %cmp
+}
+
+; fabs(uitofp(a) - uitofp(b)) < 1.0 --> a == b
+define i1 @fabs_uitofp_sub_olt_one(i16 %x, i16 %y) {
+; CHECK-LABEL: @fabs_uitofp_sub_olt_one(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %fx = uitofp i16 %x to float
+  %fy = uitofp i16 %y to float
+  %sub = fsub float %fx, %fy
+  %abs = call float @llvm.fabs.f32(float %sub)
+  %cmp = fcmp olt float %abs, 1.0
+  ret i1 %cmp
+}
+
+; fabs(uitofp(a) - uitofp(b)) u< 1.0 --> a == b
+define i1 @fabs_uitofp_sub_ult_one(i16 %x, i16 %y) {
+; CHECK-LABEL: @fabs_uitofp_sub_ult_one(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %fx = uitofp i16 %x to float
+  %fy = uitofp i16 %y to float
+  %sub = fsub float %fx, %fy
+  %abs = call float @llvm.fabs.f32(float %sub)
+  %cmp = fcmp ult float %abs, 1.0
+  ret i1 %cmp
+}
+
+; fabs(uitofp(a) - uitofp(b)) <= 0.5 --> a == b
+define i1 @fabs_uitofp_sub_ole_half(i16 %x, i16 %y) {
+; CHECK-LABEL: @fabs_uitofp_sub_ole_half(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %fx = uitofp i16 %x to float
+  %fy = uitofp i16 %y to float
+  %sub = fsub float %fx, %fy
+  %abs = call float @llvm.fabs.f32(float %sub)
+  %cmp = fcmp ole float %abs, 0.5
+  ret i1 %cmp
+}
+
+; fabs(sitofp(a) - sitofp(b)) <= 0.5 --> a == b
+define i1 @fabs_sitofp_sub_ole_half(i16 %x, i16 %y) {
+; CHECK-LABEL: @fabs_sitofp_sub_ole_half(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %fx = sitofp i16 %x to float
+  %fy = sitofp i16 %y to float
+  %sub = fsub float %fx, %fy
+  %abs = call float @llvm.fabs.f32(float %sub)
+  %cmp = fcmp ole float %abs, 0.5
+  ret i1 %cmp
+}
+
+
+define i1 @fabs_uitofp_sub_ule_half(i16 %x, i16 %y) {
+; CHECK-LABEL: @fabs_uitofp_sub_ule_half(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %fx = uitofp i16 %x to float
+  %fy = uitofp i16 %y to float
+  %sub = fsub float %fx, %fy
+  %abs = call float @llvm.fabs.f32(float %sub)
+  %cmp = fcmp ule float %abs, 0.5
+  ret i1 %cmp
+}
+
+define i1 @fabs_sitofp_sub_olt_one(i16 %x, i16 %y) {
+; CHECK-LABEL: @fabs_sitofp_sub_olt_one(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %fx = sitofp i16 %x to float
+  %fy = sitofp i16 %y to float
+  %sub = fsub float %fx, %fy
+  %abs = call float @llvm.fabs.f32(float %sub)
+  %cmp = fcmp olt float %abs, 1.0
+  ret i1 %cmp
+}
+
+
+; negative tests
+
+define i1 @fabs_uitofp_sub_ole_one_no_fold(i16 %x, i16 %y) {
+; CHECK-LABEL: @fabs_uitofp_sub_ole_one_no_fold(
+; CHECK-NEXT:    [[FX:%.*]] = uitofp i16 [[X:%.*]] to float
+; CHECK-NEXT:    [[FY:%.*]] = uitofp i16 [[Y:%.*]] to float
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[FX]], [[FY]]
+; CHECK-NEXT:    [[ABS:%.*]] = call float @llvm.fabs.f32(float [[SUB]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ole float [[ABS]], 1.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %fx = uitofp i16 %x to float
+  %fy = uitofp i16 %y to float
+  %sub = fsub float %fx, %fy
+  %abs = call float @llvm.fabs.f32(float %sub)
+  %cmp = fcmp ole float %abs, 1.0
+  ret i1 %cmp
+}
+
+define i1 @fabs_uitofp_sub_olt_two_no_fold(i16 %x, i16 %y) {
+; CHECK-LABEL: @fabs_uitofp_sub_olt_two_no_fold(
+; CHECK-NEXT:    [[FX:%.*]] = uitofp i16 [[X:%.*]] to float
+; CHECK-NEXT:    [[FY:%.*]] = uitofp i16 [[Y:%.*]] to float
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[FX]], [[FY]]
+; CHECK-NEXT:    [[ABS:%.*]] = call float @llvm.fabs.f32(float [[SUB]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[ABS]], 2.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %fx = uitofp i16 %x to float
+  %fy = uitofp i16 %y to float
+  %sub = fsub float %fx, %fy
+  %abs = call float @llvm.fabs.f32(float %sub)
+  %cmp = fcmp olt float %abs, 2.0
+  ret i1 %cmp
+}
+
+define i1 @fabs_sitofp_sub_olt_one_i32_no_fold(i32 %x, i32 %y) {
+; CHECK-LABEL: @fabs_sitofp_sub_olt_one_i32_no_fold(
+; CHECK-NEXT:    [[FX:%.*]] = sitofp i32 [[X:%.*]] to float
+; CHECK-NEXT:    [[FY:%.*]] = sitofp i32 [[Y:%.*]] to float
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[FX]], [[FY]]
+; CHECK-NEXT:    [[ABS:%.*]] = call float @llvm.fabs.f32(float [[SUB]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[ABS]], 1.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %fx = sitofp i32 %x to float
+  %fy = sitofp i32 %y to float
+  %sub = fsub float %fx, %fy
+  %abs = call float @llvm.fabs.f32(float %sub)
+  %cmp = fcmp olt float %abs, 1.0
   ret i1 %cmp
 }

@@ -8765,6 +8765,77 @@ static Instruction *foldFCmpFSubIntoFCmp(FCmpInst &I, Instruction *LHSI,
   return nullptr;
 }
 
+/// Fold: fabs(uitofp(a) - uitofp(b)) pred C --> a == b
+/// where 'pred' is olt, ole, ult, or ule, and C is a positive, Non-NaN float
+/// when the uitofp casts are exact and C is in the valid range.
+///
+/// Since exact uitofp means distinct integers map to distinct floats, the only
+/// values fabs(uitofp(a) - uitofp(b)) can take are {0.0, 1.0, 2.0, ...}.
+/// There are no values in the open interval (0, 1), so:
+///   fabs(...) <  C  where 0 < C <= 1.0  -->  a == b  (strict lt: C=1.0 ok)
+///   fabs(...) <= C  where 0 < C <  1.0  -->  a == b  (le: C must be < 1.0,
+///                                             since le 1.0 is true when diff=1)
+///
+/// The same logic applies to sitofp.
+static Instruction *foldFCmpFAbsFSubIntToFP(FCmpInst &I) {
+  Value *FAbsArg;
+  if (!match(I.getOperand(0), m_FAbs(m_Value(FAbsArg))))
+    return nullptr;
+
+  const APFloat *C;
+  if (!match(I.getOperand(1), m_APFloat(C)))
+    return nullptr;
+
+  FCmpInst::Predicate Pred = I.getPredicate();
+  bool IsStrictLt = Pred == FCmpInst::FCMP_OLT || Pred == FCmpInst::FCMP_ULT;
+  bool IsLe = Pred == FCmpInst::FCMP_OLE || Pred == FCmpInst::FCMP_ULE;
+  if (!IsStrictLt && !IsLe)
+    return nullptr;
+
+  if (C->isNaN() || C->isZero() || C->isNegative())
+    return nullptr;
+
+  APFloat One = APFloat::getOne(C->getSemantics());
+  APFloat::cmpResult Cmp = C->compare(One);
+
+  // For strict-lt (olt/ult): C must be in (0, 1.0] -- C == 1.0 is fine since
+  //   the next possible value after 0.0 is 1.0, and < 1.0 excludes it.
+  // For le (ole/ule): C must be in (0, 1.0) -- C == 1.0 is NOT valid since
+  //   fabs(...) == 1.0 when a and b differ by 1, and <= 1.0 would be true.
+  if (IsStrictLt && Cmp == APFloat::cmpGreaterThan)
+    return nullptr;
+  if (IsLe && Cmp != APFloat::cmpLessThan)
+    return nullptr;
+
+  // Match: fsub(uitofp(A), uitofp(B)) where both casts are uitofp or sitofp
+  Value *A, *B;
+  if (!match(FAbsArg, m_FSub(m_UIToFP(m_Value(A)), m_UIToFP(m_Value(B)))) &&
+      !match(FAbsArg, m_FSub(m_SIToFP(m_Value(A)), m_SIToFP(m_Value(B)))))
+    return nullptr;
+
+  // A and B must have the same integer type
+  if (A->getType() != B->getType())
+    return nullptr;
+
+  // The int-to-fp cast must be exact (no precision loss).
+  // For uitofp: we need MantissaWidth >= IntWidth (all bits representable).
+  // For sitofp: we need MantissaWidth >= IntWidth (sign bit + magnitude).
+  // getFPMantissaWidth() returns the number of bits in the mantissa including
+  // the implicit leading 1 bit (i.e., the precision).
+  Type *FPTy = I.getOperand(0)->getType()->getScalarType();
+  int MantissaWidth = FPTy->getFPMantissaWidth();
+  if (MantissaWidth < 0)
+    return nullptr; // Unknown FP type.
+  unsigned IntWidth = A->getType()->getScalarSizeInBits();
+  // For unsigned: need MantissaWidth >= IntWidth
+  // For signed: need MantissaWidth >= IntWidth (to represent most negative val)
+  if ((unsigned)MantissaWidth < IntWidth)
+    return nullptr;
+
+  // fabs(uitofp(a) - uitofp(b)) < C (0 < C <= 1) --> a == b
+  return new ICmpInst(ICmpInst::ICMP_EQ, A, B);
+}
+
 static Instruction *foldFCmpWithFloorAndCeil(FCmpInst &I,
                                              InstCombinerImpl &IC) {
   Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
@@ -9076,6 +9147,9 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   }
 
   if (Instruction *R = foldFabsWithFcmpZero(I, *this))
+    return R;
+
+  if (Instruction *R = foldFCmpFAbsFSubIntToFP(I))
     return R;
 
   if (Instruction *R = foldSqrtWithFcmpZero(I, *this))
