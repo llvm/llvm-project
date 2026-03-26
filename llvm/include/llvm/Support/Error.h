@@ -811,6 +811,18 @@ T cantFail(Expected<T> ValOrErr, const char *Msg = nullptr) {
   }
 }
 
+/// Calls llvm_unreachable if Pointer is null, otherwise returns the
+/// pointer as is.
+template<typename T>
+LLVM_ATTRIBUTE_RETURNS_NONNULL T* nonNull(T* Pointer, const char *Msg = nullptr) {
+  if (Pointer)
+    return Pointer;
+
+  if (!Msg)
+    Msg = "Expected a non-null pointer but got a null pointer";
+  llvm_unreachable(Msg);
+}
+
 /// Report a fatal error if ValOrErr is a failure value, otherwise unwraps and
 /// returns the contained reference.
 ///

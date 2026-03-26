@@ -453,6 +453,14 @@ violations even in builds that do not enable assertions:
     reportFatalInternalError("Analysis 'foo' not preserved");
   }
 
+Additionally, ``nonNull`` can be used to check/document that a pointer
+is never supposed to be null inline.
+
+.. code-block:: c++
+    setMyPointer("key", Pointer);
+    // [...]
+    Type *P = nonNull(getMyPointer("key"));
+
 Recoverable Errors
 ^^^^^^^^^^^^^^^^^^
 

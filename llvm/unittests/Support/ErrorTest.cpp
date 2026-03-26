@@ -1219,4 +1219,28 @@ TEST(Error, ForwardToExpected) {
   EXPECT_THAT_ERROR(ExpectedReturningFct(false).moveInto(MaybeV), Succeeded());
   EXPECT_EQ(*MaybeV, 42);
 }
+
+TEST(Error, NonNullSuccess) {
+  int tmp = 0;
+  int *ptr = &tmp;
+  const int *cptr = ptr;
+  const int *const ccptr = ptr;
+
+  EXPECT_EQ(ptr, nonNull(&tmp));
+  EXPECT_EQ(ptr, nonNull(ptr));
+  EXPECT_EQ(ptr, nonNull(cptr));
+  EXPECT_EQ(ptr, nonNull(ccptr));
+}
+
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS && !defined(NDEBUG)
+TEST(Error, NonNullFails) {
+  int *NullPtr = nullptr;
+  EXPECT_DEATH(nonNull(NullPtr), "Expected a non-null pointer but got a null pointer")
+      << "nonNull(NullPtr) did not cause an abort for null pointer";
+
+  EXPECT_DEATH(nonNull(NullPtr, "custom message"), "custom message")
+      << "nonNull(nullptr) did not cause an abort for null pointer";
+}
+#endif
+
 } // namespace
