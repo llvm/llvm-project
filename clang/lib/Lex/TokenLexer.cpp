@@ -530,7 +530,7 @@ void TokenLexer::ExpandFunctionArguments() {
                     << Hint;
         if (Hint) {
           Diag << FixItHint::CreateReplacement(
-              SourceRange(ResultToks[ResultToks.size() - 1].getLocation(),
+              SourceRange(ResultToks.back().getLocation(),
                           CurTok.getLocation()),
               " __VA_OPT__(,) __VA_ARGS__");
         }
