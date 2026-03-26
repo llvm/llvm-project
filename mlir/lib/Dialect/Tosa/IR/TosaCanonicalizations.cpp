@@ -935,6 +935,55 @@ void CastOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<NonNarrowingCastsOptimization>(context);
 }
 
+struct CancellingBlockScaledCastsOptimization
+    : public OpRewritePattern<tosa::CastToBlockScaledOp> {
+  using OpRewritePattern<tosa::CastToBlockScaledOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::CastToBlockScaledOp castToBlockScaledOp,
+                                PatternRewriter &rewriter) const override {
+    const Value castToBlockScaledInput = castToBlockScaledOp.getInputData();
+    auto castFromBlockScaledOp =
+        castToBlockScaledInput.getDefiningOp<tosa::CastFromBlockScaledOp>();
+    if (!castFromBlockScaledOp)
+      return rewriter.notifyMatchFailure(
+          castToBlockScaledOp,
+          "input must be cast_from_block_scaled operation");
+
+    const Value innerData = castFromBlockScaledOp.getInputData();
+    const Value innerScale = castFromBlockScaledOp.getInputScale();
+    const auto innerDataTy = llvm::cast<ShapedType>(innerData.getType());
+    const auto innerScaleTy = llvm::cast<ShapedType>(innerScale.getType());
+
+    const Value outerData = castToBlockScaledOp.getOutputData();
+    const Value outerScale = castToBlockScaledOp.getOutputScale();
+    const auto outerDataTy = llvm::cast<ShapedType>(outerData.getType());
+    const auto outerScaleTy = llvm::cast<ShapedType>(outerScale.getType());
+
+    if (innerDataTy != outerDataTy || innerScaleTy != outerScaleTy) {
+      return rewriter.notifyMatchFailure(
+          castToBlockScaledOp,
+          "inputs types to cast_from_block_scaled operation must match output "
+          "types to cast_to_block_scaled");
+    }
+
+    if (castFromBlockScaledOp.getBlockSize() !=
+        castToBlockScaledOp.getBlockSize()) {
+      return rewriter.notifyMatchFailure(
+          castToBlockScaledOp, "block sizes for cast_from_block_scaled and "
+                               "cast_to_block_scaled must match");
+    }
+
+    rewriter.replaceOp(castToBlockScaledOp, {innerData, innerScale});
+
+    return success();
+  }
+};
+
+void CastToBlockScaledOp::getCanonicalizationPatterns(
+    RewritePatternSet &results, MLIRContext *context) {
+  results.add<CancellingBlockScaledCastsOptimization>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // Operator Folders.
 //===----------------------------------------------------------------------===//
@@ -1835,8 +1884,8 @@ OpFoldResult SliceOp::fold(FoldAdaptor adaptor) {
       outputTy.getNumElements() == 1) {
     llvm::SmallVector<uint64_t> indices =
         llvm::to_vector(startElems.getValues<uint64_t>());
-    auto value = operand.getValues<Attribute>()[indices];
-    return SplatElementsAttr::get(outputTy, value);
+    if (auto values = operand.tryGetValues<Attribute>())
+      return SplatElementsAttr::get(outputTy, (*values)[indices]);
   }
 
   return {};

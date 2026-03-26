@@ -11,6 +11,7 @@
 #include "IntegralAP.h"
 #include "Interp.h"
 #include "clang/AST/DeclCXX.h"
+#include "llvm/ADT/ScopeExit.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -125,25 +126,29 @@ Scope::Local EvalEmitter::createLocal(Descriptor *D) {
   return {Off, D};
 }
 
-bool EvalEmitter::jumpTrue(const LabelTy &Label) {
+bool EvalEmitter::jumpTrue(const LabelTy &Label, SourceInfo SI) {
   if (isActive()) {
+    CurrentSource = SI;
     if (S.Stk.pop<bool>())
       ActiveLabel = Label;
   }
   return true;
 }
 
-bool EvalEmitter::jumpFalse(const LabelTy &Label) {
+bool EvalEmitter::jumpFalse(const LabelTy &Label, SourceInfo SI) {
   if (isActive()) {
+    CurrentSource = SI;
     if (!S.Stk.pop<bool>())
       ActiveLabel = Label;
   }
   return true;
 }
 
-bool EvalEmitter::jump(const LabelTy &Label) {
-  if (isActive())
+bool EvalEmitter::jump(const LabelTy &Label, SourceInfo SI) {
+  if (isActive()) {
+    CurrentSource = SI;
     CurrentLabel = ActiveLabel = Label;
+  }
   return true;
 }
 
@@ -157,6 +162,10 @@ bool EvalEmitter::fallthrough(const LabelTy &Label) {
 bool EvalEmitter::speculate(const CallExpr *E, const LabelTy &EndLabel) {
   if (!isActive())
     return true;
+
+  PushIgnoreDiags(S, OpPC);
+  auto _ = llvm::scope_exit([&]() { PopIgnoreDiags(S, OpPC); });
+
   size_t StackSizeBefore = S.Stk.size();
   const Expr *Arg = E->getArg(0);
   if (!this->visit(Arg)) {

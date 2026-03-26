@@ -25,4 +25,9 @@ extern volatile int SSAFJSONFormatAnchorSource;
 [[maybe_unused]] static int SSAFJSONFormatAnchorDestination =
     SSAFJSONFormatAnchorSource;
 
+// This anchor is used to force the linker to link the AnalysisRegistry.
+extern volatile int SSAFAnalysisRegistryAnchorSource;
+[[maybe_unused]] static int SSAFAnalysisRegistryAnchorDestination =
+    SSAFAnalysisRegistryAnchorSource;
+
 #endif // LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_SSAFBUILTINFORCELINKER_H

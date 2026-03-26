@@ -1393,8 +1393,10 @@ transform::SpecializeOp::applyToOne(transform::TransformRewriter &rewriter,
     return DiagnosedSilenceableFailure::success();
   }
   rewriter.setInsertionPoint(target);
+  GenericOpSpecializationOptions opts;
+  opts.emitCategoryOps = getEmitCategory();
   FailureOr<LinalgOp> named =
-      specializeGenericOp(rewriter, cast<GenericOp>(target));
+      specializeGenericOp(rewriter, cast<GenericOp>(target), opts);
   if (succeeded(named)) {
     results.push_back(named->getOperation());
     return DiagnosedSilenceableFailure::success();

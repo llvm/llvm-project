@@ -116,6 +116,9 @@ xegpu::getDistVecTypeBasedOnLaneLayout(xegpu::DistributeLayoutAttr layout,
              effectiveLaneLayout.size() &&
          "Rank of the original vector type should be greater or equal to the "
          "size of the lane layout to distribute the vector type.");
+  // TODO: replace the implementation with
+  //   auto distributedShape = layout.computeDistributedShape(
+  //       SmallVector<int64_t>(originalType.getShape()));
   SmallVector<int64_t> distributedShape(originalType.getShape());
   // Only distribute the last `laneLayout.size()` dimensions. The remaining
   // dimensions are not distributed.
@@ -795,6 +798,66 @@ Value xegpu::lowerCrossLaneReductionToShuffles(
         vector::InsertOp::create(rewriter, loc, fullReduce, reductionResult, i);
   }
   return reductionResult;
+}
+
+Value xegpu::createReductionNeutralValue(OpBuilder &builder, Location loc,
+                                         Type type,
+                                         vector::CombiningKind kind) {
+  auto vecTy = dyn_cast<VectorType>(type);
+  Type elemTy = vecTy ? vecTy.getElementType() : type;
+
+  // Helper to create either a splat vector or scalar constant from an attr.
+  auto makeConst = [&](Attribute scalarAttr) -> Value {
+    if (vecTy)
+      return arith::ConstantOp::create(
+          builder, loc, vecTy, DenseElementsAttr::get(vecTy, scalarAttr));
+    return arith::ConstantOp::create(builder, loc, cast<TypedAttr>(scalarAttr));
+  };
+
+  switch (kind) {
+  case vector::CombiningKind::ADD:
+  case vector::CombiningKind::XOR:
+  case vector::CombiningKind::OR:
+  case vector::CombiningKind::MAXUI:
+    return makeConst(builder.getZeroAttr(elemTy));
+
+  case vector::CombiningKind::MUL:
+  case vector::CombiningKind::AND:
+    return makeConst(builder.getOneAttr(elemTy));
+
+  case vector::CombiningKind::MINSI:
+    if (auto intTy = dyn_cast<IntegerType>(elemTy))
+      return makeConst(builder.getIntegerAttr(
+          elemTy, APInt::getSignedMaxValue(intTy.getWidth())));
+    return nullptr;
+
+  case vector::CombiningKind::MINUI:
+    if (auto intTy = dyn_cast<IntegerType>(elemTy))
+      return makeConst(
+          builder.getIntegerAttr(elemTy, APInt::getMaxValue(intTy.getWidth())));
+    return nullptr;
+
+  case vector::CombiningKind::MAXSI:
+    if (auto intTy = dyn_cast<IntegerType>(elemTy))
+      return makeConst(builder.getIntegerAttr(
+          elemTy, APInt::getSignedMinValue(intTy.getWidth())));
+    return nullptr;
+
+  case vector::CombiningKind::MINNUMF:
+  case vector::CombiningKind::MINIMUMF:
+    if (auto floatTy = dyn_cast<FloatType>(elemTy))
+      return makeConst(builder.getFloatAttr(
+          elemTy, APFloat::getInf(floatTy.getFloatSemantics())));
+    return nullptr;
+
+  case vector::CombiningKind::MAXNUMF:
+  case vector::CombiningKind::MAXIMUMF:
+    if (auto floatTy = dyn_cast<FloatType>(elemTy))
+      return makeConst(builder.getFloatAttr(
+          elemTy, APFloat::getInf(floatTy.getFloatSemantics(), true)));
+    return nullptr;
+  }
+  return nullptr;
 }
 
 /// Explicit instantiations

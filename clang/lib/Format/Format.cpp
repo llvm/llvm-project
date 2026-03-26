@@ -56,7 +56,7 @@ struct ScalarEnumerationTraits<FormatStyle::BreakBeforeNoexceptSpecifierStyle> {
 
 template <> struct MappingTraits<FormatStyle::AlignConsecutiveStyle> {
   static void enumInput(IO &IO, FormatStyle::AlignConsecutiveStyle &Value) {
-    IO.enumCase(Value, "None", FormatStyle::AlignConsecutiveStyle({}));
+    IO.enumCase(Value, "None", FormatStyle::AlignConsecutiveStyle{});
     IO.enumCase(Value, "Consecutive",
                 FormatStyle::AlignConsecutiveStyle(
                     {/*Enabled=*/true, /*AcrossEmptyLines=*/false,
@@ -89,7 +89,7 @@ template <> struct MappingTraits<FormatStyle::AlignConsecutiveStyle> {
                      /*AcrossComments=*/false, /*AlignCompound=*/false,
                      /*AlignFunctionDeclarations=*/true,
                      /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));
-    IO.enumCase(Value, "false", FormatStyle::AlignConsecutiveStyle({}));
+    IO.enumCase(Value, "false", FormatStyle::AlignConsecutiveStyle{});
   }
 
   static void mapping(IO &IO, FormatStyle::AlignConsecutiveStyle &Value) {
@@ -121,6 +121,7 @@ struct ScalarEnumerationTraits<FormatStyle::AttributeBreakingStyle> {
   static void enumeration(IO &IO, FormatStyle::AttributeBreakingStyle &Value) {
     IO.enumCase(Value, "Always", FormatStyle::ABS_Always);
     IO.enumCase(Value, "Leave", FormatStyle::ABS_Leave);
+    IO.enumCase(Value, "LeaveAll", FormatStyle::ABS_LeaveAll);
     IO.enumCase(Value, "Never", FormatStyle::ABS_Never);
   }
 };
@@ -790,22 +791,22 @@ template <> struct ScalarEnumerationTraits<FormatStyle::ShortRecordStyle> {
 
 template <> struct MappingTraits<FormatStyle::SortIncludesOptions> {
   static void enumInput(IO &IO, FormatStyle::SortIncludesOptions &Value) {
-    IO.enumCase(Value, "Never", FormatStyle::SortIncludesOptions({}));
+    IO.enumCase(Value, "Never", FormatStyle::SortIncludesOptions{});
     IO.enumCase(Value, "CaseInsensitive",
-                FormatStyle::SortIncludesOptions({/*Enabled=*/true,
-                                                  /*IgnoreCase=*/true,
-                                                  /*IgnoreExtension=*/false}));
+                FormatStyle::SortIncludesOptions{/*Enabled=*/true,
+                                                 /*IgnoreCase=*/true,
+                                                 /*IgnoreExtension=*/false});
     IO.enumCase(Value, "CaseSensitive",
-                FormatStyle::SortIncludesOptions({/*Enabled=*/true,
-                                                  /*IgnoreCase=*/false,
-                                                  /*IgnoreExtension=*/false}));
+                FormatStyle::SortIncludesOptions{/*Enabled=*/true,
+                                                 /*IgnoreCase=*/false,
+                                                 /*IgnoreExtension=*/false});
 
     // For backward compatibility.
-    IO.enumCase(Value, "false", FormatStyle::SortIncludesOptions({}));
+    IO.enumCase(Value, "false", FormatStyle::SortIncludesOptions{});
     IO.enumCase(Value, "true",
-                FormatStyle::SortIncludesOptions({/*Enabled=*/true,
-                                                  /*IgnoreCase=*/false,
-                                                  /*IgnoreExtension=*/false}));
+                FormatStyle::SortIncludesOptions{/*Enabled=*/true,
+                                                 /*IgnoreCase=*/false,
+                                                 /*IgnoreExtension=*/false});
   }
 
   static void mapping(IO &IO, FormatStyle::SortIncludesOptions &Value) {

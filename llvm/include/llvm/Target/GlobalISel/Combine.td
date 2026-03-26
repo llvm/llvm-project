@@ -643,6 +643,14 @@ def binop_left_to_zero: GICombineRule<
   (apply (GIReplaceReg $dst, $zero))
 >;
 
+// Fold `a bitwiseop (~b +/- c)` -> `a bitwiseop ~(b -/+ c)`
+def binop_with_neg : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_AND, G_OR, G_XOR):$root,
+    [{ return Helper.matchBinopWithNeg(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])
+>;
+
 def urem_pow2_to_mask : GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_UREM):$root,
@@ -1960,6 +1968,15 @@ def APlusBMinusAplusC : GICombineRule<
           (G_SUB $sub1, $B, $add1),
           (G_ADD $root, $A, $sub1)),
    (apply (G_SUB $root, $B, $C))>;
+   
+// fold (A-(B-C)) to A+(C-B)
+def AMinusBMinusC : GICombineRule<
+   (defs root:$root),
+   (match (G_SUB $sub1, $B, $C),
+          (G_SUB $root, $A, $sub1), 
+          [{ return MRI.hasOneNonDBGUse(${sub1}.getReg()); }]),
+   (apply (G_SUB $add, $C, $B), 
+          (G_ADD $root, $A, $add))>;
 
 // fold (A+(B-(C+A))) to (B-C)
 def APlusBMinusCPlusA : GICombineRule<
@@ -1968,6 +1985,20 @@ def APlusBMinusCPlusA : GICombineRule<
           (G_SUB $sub1, $B, $add1),
           (G_ADD $root, $A, $sub1)),
    (apply (G_SUB $root, $B, $C))>;
+  
+// fold (A - (0 - B)) to (A + B)
+def AMinusZeroMinusB : GICombineRule<
+   (defs root:$root),
+   (match (G_SUB $sub1, 0, $B),
+          (G_SUB $root, $A, $sub1)),
+   (apply (G_ADD $root, $A, $B))>;
+
+// fold A - (A - B) -> B
+def AMinusBMinusA: GICombineRule<
+   (defs root:$root),
+   (match (G_SUB $add, $A, $B),
+          (G_SUB $root, $A, $add)),
+   (apply (GIReplaceReg $root, $B))>;
    
 // fold (not (add X, -1)) -> (sub 0, X)
 def NotAPlusNegOne: GICombineRule<
@@ -2037,7 +2068,10 @@ def integer_reassoc_combines: GICombineGroup<[
   AMinusBPlusCMinusA,
   AMinusBPlusBMinusC,
   APlusBMinusAplusC,
+  AMinusBMinusC,
   APlusBMinusCPlusA,
+  AMinusZeroMinusB,
+  AMinusBMinusA,
   NotAPlusNegOne,
   APlusC1MinusC2,
   C2MinusAPlusC1,
@@ -2327,7 +2361,8 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     simplify_neg_minmax, combine_concat_vector,
     sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,
     combine_use_vector_truncate, merge_combines, overflow_combines, 
-    truncsat_combines, lshr_of_trunc_of_lshr, ctls_combines, add_shift, sub_one_from_sub]>;
+    truncsat_combines, lshr_of_trunc_of_lshr, ctls_combines, add_shift, sub_one_from_sub,
+    binop_with_neg]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and

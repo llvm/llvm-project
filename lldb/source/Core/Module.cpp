@@ -142,14 +142,13 @@ Module::Module(const ModuleSpec &module_spec)
   }
 
   Log *log(GetLog(LLDBLog::Object | LLDBLog::Modules));
-  if (log != nullptr)
-    LLDB_LOGF(log, "%p Module::Module((%s) '%s%s%s%s')",
-              static_cast<void *>(this),
-              module_spec.GetArchitecture().GetArchitectureName(),
-              module_spec.GetFileSpec().GetPath().c_str(),
-              module_spec.GetObjectName().IsEmpty() ? "" : "(",
-              module_spec.GetObjectName().AsCString(""),
-              module_spec.GetObjectName().IsEmpty() ? "" : ")");
+  LLDB_LOGF(log, "%p Module::Module((%s) '%s%s%s%s')",
+            static_cast<void *>(this),
+            module_spec.GetArchitecture().GetArchitectureName(),
+            module_spec.GetFileSpec().GetPath().c_str(),
+            module_spec.GetObjectName().IsEmpty() ? "" : "(",
+            module_spec.GetObjectName().AsCString(""),
+            module_spec.GetObjectName().IsEmpty() ? "" : ")");
 
   auto extractor_sp = module_spec.GetExtractor();
   lldb::offset_t file_size = 0;
@@ -174,9 +173,7 @@ Module::Module(const ModuleSpec &module_spec)
   ModuleSpec matching_module_spec;
   if (!modules_specs.FindMatchingModuleSpec(module_spec,
                                             matching_module_spec)) {
-    if (log) {
-      LLDB_LOGF(log, "Found local object file but the specs didn't match");
-    }
+    LLDB_LOGF(log, "Found local object file but the specs didn't match");
     return;
   }
 
@@ -252,11 +249,10 @@ Module::Module(const FileSpec &file_spec, const ArchSpec &arch,
   }
 
   Log *log(GetLog(LLDBLog::Object | LLDBLog::Modules));
-  if (log != nullptr)
-    LLDB_LOGF(log, "%p Module::Module((%s) '%s%s%s%s')",
-              static_cast<void *>(this), m_arch.GetArchitectureName(),
-              m_file.GetPath().c_str(), m_object_name.IsEmpty() ? "" : "(",
-              m_object_name.AsCString(""), m_object_name.IsEmpty() ? "" : ")");
+  LLDB_LOGF(log, "%p Module::Module((%s) '%s%s%s%s')",
+            static_cast<void *>(this), m_arch.GetArchitectureName(),
+            m_file.GetPath().c_str(), m_object_name.IsEmpty() ? "" : "(",
+            m_object_name.AsCString(""), m_object_name.IsEmpty() ? "" : ")");
 }
 
 Module::Module()
@@ -282,11 +278,10 @@ Module::~Module() {
     modules.erase(pos);
   }
   Log *log(GetLog(LLDBLog::Object | LLDBLog::Modules));
-  if (log != nullptr)
-    LLDB_LOGF(log, "%p Module::~Module((%s) '%s%s%s%s')",
-              static_cast<void *>(this), m_arch.GetArchitectureName(),
-              m_file.GetPath().c_str(), m_object_name.IsEmpty() ? "" : "(",
-              m_object_name.AsCString(""), m_object_name.IsEmpty() ? "" : ")");
+  LLDB_LOGF(log, "%p Module::~Module((%s) '%s%s%s%s')",
+            static_cast<void *>(this), m_arch.GetArchitectureName(),
+            m_file.GetPath().c_str(), m_object_name.IsEmpty() ? "" : "(",
+            m_object_name.AsCString(""), m_object_name.IsEmpty() ? "" : ")");
   // Release any auto pointers before we start tearing down our member
   // variables since the object file and symbol files might need to make
   // function calls back into this module object. The ordering is important
@@ -1425,6 +1420,19 @@ bool Module::IsLoadedInTarget(Target *target) {
   return false;
 }
 
+static bool LoadScriptingModule(const FileSpec &scripting_fspec,
+                                ScriptInterpreter &script_interpreter,
+                                Target &target, Status &error) {
+  assert(scripting_fspec);
+
+  StreamString scripting_stream;
+  scripting_fspec.Dump(scripting_stream.AsRawOstream());
+  LoadScriptOptions options;
+  return script_interpreter.LoadScriptingModule(
+      scripting_stream.GetData(), options, error,
+      /*module_sp*/ nullptr, /*extra_path*/ {}, target.shared_from_this());
+}
+
 bool Module::LoadScriptingResourceInTarget(Target *target, Status &error) {
   if (!target) {
     error = Status::FromErrorString("invalid destination Target");
@@ -1468,7 +1476,7 @@ bool Module::LoadScriptingResourceInTarget(Target *target, Status &error) {
 
   for (uint32_t i = 0; i < num_specs; ++i) {
     FileSpec scripting_fspec(file_specs.GetFileSpecAtIndex(i));
-    if (!scripting_fspec && !FileSystem::Instance().Exists(scripting_fspec))
+    if (!FileSystem::Instance().Exists(scripting_fspec))
       continue;
 
     if (should_load == eLoadScriptFromSymFileWarn) {
@@ -1491,13 +1499,11 @@ To run all discovered debug scripts in this session:
       return false;
     }
 
-    StreamString scripting_stream;
-    scripting_fspec.Dump(scripting_stream.AsRawOstream());
-    LoadScriptOptions options;
-    bool did_load = script_interpreter->LoadScriptingModule(
-        scripting_stream.GetData(), options, error,
-        /*module_sp*/ nullptr, /*extra_path*/ {}, target->shared_from_this());
-    if (!did_load)
+    LLDB_LOG(GetLog(LLDBLog::Modules), "Auto-loading {0}",
+             scripting_fspec.GetPath());
+
+    if (!LoadScriptingModule(scripting_fspec, *script_interpreter, *target,
+                             error))
       return false;
   }
 
@@ -1575,7 +1581,7 @@ void Module::LoadPrefixMapsIfNeeded() {
   if (m_prefix_map_search_dirs.empty())
     return;
 
-  Log *log = GetLog(LLDBLog::Symbols);
+  Log *log = GetLog(LLDBLog::Object | LLDBLog::Modules);
   llvm::vfs::FileSystem &vfs = *llvm::vfs::getRealFileSystem();
   // Track visited directories so two starting paths that share ancestors
   // don't redundantly walk the same directory.
@@ -1597,17 +1603,19 @@ void Module::LoadPrefixMapsIfNeeded() {
         if (buf && *buf) {
           llvm::Expected<llvm::json::Value> val =
               llvm::json::parse((*buf)->getBuffer());
-          if (val) {
-            if (llvm::json::Object *obj = val->getAsObject()) {
-              for (const llvm::json::Object::value_type &kv : *obj)
-                if (std::optional<llvm::StringRef> to =
-                        kv.second.getAsString()) {
-                  LLDB_LOG(log, "applying prefix map: '{0}' -> '{1}'", kv.first,
-                           *to);
-                  m_source_mappings.AppendUnique(kv.first.str(), to->str(),
-                                                 /*notify=*/false);
-                }
-            }
+          if (!val) {
+            LLDB_LOG_ERROR(log, val.takeError(), "failed to parse {1}: {0}",
+                           map_file.GetPath());
+            continue;
+          }
+          if (llvm::json::Object *obj = val->getAsObject()) {
+            for (const llvm::json::Object::value_type &kv : *obj)
+              if (std::optional<llvm::StringRef> to = kv.second.getAsString()) {
+                LLDB_LOG(log, "applying prefix map: '{0}' -> '{1}'", kv.first,
+                         *to);
+                m_source_mappings.AppendUnique(kv.first.str(), to->str(),
+                                               /*notify=*/false);
+              }
           }
         }
         break;

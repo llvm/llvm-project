@@ -1,6 +1,6 @@
 # RUN: mkdir -p %t
-# RUN: %python %S/../../../../examples/python/formatter_bytecode.py --compile %s --format c --type-name RigidArray --output %t/c-output.txt
-# RUN: %python %S/../../../../examples/python/formatter_bytecode.py --compile %s --format swift --type-name RigidArray --output %t/swift-output.txt
+# RUN: %python %S/../../../../examples/python/formatter_bytecode.py --compile %s --format c --type-name RigidArray --output %t/c-output.txt --skip-invocation-comment
+# RUN: %python %S/../../../../examples/python/formatter_bytecode.py --compile %s --format swift --type-name RigidArray --output %t/swift-output.txt --skip-invocation-comment
 # RUN: diff -u --strip-trailing-cr %S/Inputs/FormatterBytecode/RigidArrayLLDBFormatterC.txt %t/c-output.txt
 # RUN: diff -u --strip-trailing-cr %S/Inputs/FormatterBytecode/RigidArrayLLDBFormatterSwift.txt %t/swift-output.txt
 import lldb
