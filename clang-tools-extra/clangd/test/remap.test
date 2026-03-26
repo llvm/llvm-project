@@ -1,0 +1,18 @@
+# Paths are not constructed correctly for the test to run on Windows
+# UNSUPPORTED: system-windows
+#
+# RUN: rm -rf %t && mkdir -p %t/src %t/index
+# RUN: echo 'void hello();' > %t/src/test.h
+# RUN: printf '#include "test.h"\nvoid hello() {}\n' > %t/src/test.cpp
+# RUN: clangd-indexer %t/src/test.cpp -- -I%t/src > %t/index/test.idx
+#
+# Remap %t/src -> /remapped/path inside the shard
+# RUN: clangd-remap --path-mappings '%t/src=/remapped/path' %t/index 2>&1 \
+# RUN:   | FileCheck -check-prefix=REMAP %s
+# REMAP: Found 1 shard(s) to process
+# REMAP: Processed: 1 shard(s), 0 renamed, 1 unchanged, 0 error(s)
+#
+# Verify the remapped path appears in the symbol data
+# RUN: dexp %t/index/test.idx -c="lookup -name hello" \
+# RUN:   | FileCheck -check-prefix=LOOKUP %s
+# LOOKUP: file:///remapped/path/test.h

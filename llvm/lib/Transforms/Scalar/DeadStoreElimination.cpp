@@ -40,9 +40,9 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CaptureTracking.h"
+#include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/Loads.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/MemorySSA.h"
@@ -951,11 +951,7 @@ struct DSEState {
   PostDominatorTree &PDT;
   const TargetLibraryInfo &TLI;
   const DataLayout &DL;
-  const LoopInfo &LI;
-
-  // Whether the function contains any irreducible control flow, useful for
-  // being accurately able to detect loops.
-  bool ContainsIrreducibleLoops;
+  const CycleInfo &CI;
 
   // All MemoryDefs that potentially could kill other MemDefs.
   SmallVector<MemoryDef *, 64> MemDefs;
@@ -992,7 +988,7 @@ struct DSEState {
   // Class contains self-reference, make sure it's not copied/moved.
   DSEState(Function &F, AliasAnalysis &AA, MemorySSA &MSSA, DominatorTree &DT,
            PostDominatorTree &PDT, const TargetLibraryInfo &TLI,
-           const LoopInfo &LI);
+           const CycleInfo &CI);
   DSEState(const DSEState &) = delete;
   DSEState &operator=(const DSEState &) = delete;
 
@@ -1168,9 +1164,9 @@ static bool isFuncLocalAndNotCaptured(Value *Arg, const CallBase *CB,
 
 DSEState::DSEState(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
                    DominatorTree &DT, PostDominatorTree &PDT,
-                   const TargetLibraryInfo &TLI, const LoopInfo &LI)
-    : F(F), AA(AA), EA(DT, &LI), BatchAA(AA, &EA), MSSA(MSSA), DT(DT), PDT(PDT),
-      TLI(TLI), DL(F.getDataLayout()), LI(LI) {
+                   const TargetLibraryInfo &TLI, const CycleInfo &CI)
+    : F(F), AA(AA), EA(DT, nullptr, &CI), BatchAA(AA, &EA), MSSA(MSSA), DT(DT),
+      PDT(PDT), TLI(TLI), DL(F.getDataLayout()), CI(CI) {
   // Collect blocks with throwing instructions not modeled in MemorySSA and
   // alloc-like objects.
   unsigned PO = 0;
@@ -1206,9 +1202,6 @@ DSEState::DSEState(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
     else if (uint64_t DeadBytes = Info.getNumberOfDeadBytes())
       InvisibleToCallerAfterRetBounded.insert({&AI, DeadBytes});
   }
-
-  // Collect whether there is any irreducible control flow in the function.
-  ContainsIrreducibleLoops = mayContainIrreducibleControl(F, &LI);
 
   AnyUnreachableExit = any_of(PDT.roots(), [](const BasicBlock *E) {
     return isa<UnreachableInst>(E->getTerminator());
@@ -1605,9 +1598,8 @@ bool DSEState::isGuaranteedLoopIndependent(const Instruction *Current,
   // would also be valid but we currently disable that to limit compile time).
   if (Current->getParent() == KillingDef->getParent())
     return true;
-  const Loop *CurrentLI = LI.getLoopFor(Current->getParent());
-  if (!ContainsIrreducibleLoops && CurrentLI &&
-      CurrentLI == LI.getLoopFor(KillingDef->getParent()))
+  const Cycle *CurrentC = CI.getCycle(Current->getParent());
+  if (CurrentC && CurrentC == CI.getCycle(KillingDef->getParent()))
     return true;
   // Otherwise check the memory location is invariant to any loops.
   return isGuaranteedLoopInvariant(CurrentLoc.Ptr);
@@ -1620,8 +1612,7 @@ bool DSEState::isGuaranteedLoopInvariant(const Value *Ptr) {
       Ptr = GEP->getPointerOperand()->stripPointerCasts();
 
   if (auto *I = dyn_cast<Instruction>(Ptr)) {
-    return I->getParent()->isEntryBlock() ||
-           (!ContainsIrreducibleLoops && !LI.getLoopFor(I->getParent()));
+    return I->getParent()->isEntryBlock() || !CI.getCycle(I->getParent());
   }
   return true;
 }
@@ -2717,9 +2708,9 @@ bool DSEState::eliminateDeadDefs(const MemoryDefWrapper &KillingDefWrapper) {
 static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
                                 DominatorTree &DT, PostDominatorTree &PDT,
                                 const TargetLibraryInfo &TLI,
-                                const LoopInfo &LI) {
+                                const CycleInfo &CI) {
   bool MadeChange = false;
-  DSEState State(F, AA, MSSA, DT, PDT, TLI, LI);
+  DSEState State(F, AA, MSSA, DT, PDT, TLI, CI);
   // For each store:
   for (unsigned I = 0; I < State.MemDefs.size(); I++) {
     MemoryDef *KillingDef = State.MemDefs[I];
@@ -2756,9 +2747,9 @@ PreservedAnalyses DSEPass::run(Function &F, FunctionAnalysisManager &AM) {
   DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
   MemorySSA &MSSA = AM.getResult<MemorySSAAnalysis>(F).getMSSA();
   PostDominatorTree &PDT = AM.getResult<PostDominatorTreeAnalysis>(F);
-  LoopInfo &LI = AM.getResult<LoopAnalysis>(F);
+  CycleInfo &CI = AM.getResult<CycleAnalysis>(F);
 
-  bool Changed = eliminateDeadStores(F, AA, MSSA, DT, PDT, TLI, LI);
+  bool Changed = eliminateDeadStores(F, AA, MSSA, DT, PDT, TLI, CI);
 
 #ifdef LLVM_ENABLE_STATS
   if (AreStatisticsEnabled())
@@ -2772,7 +2763,6 @@ PreservedAnalyses DSEPass::run(Function &F, FunctionAnalysisManager &AM) {
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
   PA.preserve<MemorySSAAnalysis>();
-  PA.preserve<LoopAnalysis>();
   return PA;
 }
 
@@ -2798,9 +2788,9 @@ public:
     MemorySSA &MSSA = getAnalysis<MemorySSAWrapperPass>().getMSSA();
     PostDominatorTree &PDT =
         getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
-    LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+    CycleInfo &CI = getAnalysis<CycleInfoWrapperPass>().getResult();
 
-    bool Changed = eliminateDeadStores(F, AA, MSSA, DT, PDT, TLI, LI);
+    bool Changed = eliminateDeadStores(F, AA, MSSA, DT, PDT, TLI, CI);
 
 #ifdef LLVM_ENABLE_STATS
     if (AreStatisticsEnabled())
@@ -2822,8 +2812,8 @@ public:
     AU.addRequired<MemorySSAWrapperPass>();
     AU.addPreserved<PostDominatorTreeWrapperPass>();
     AU.addPreserved<MemorySSAWrapperPass>();
-    AU.addRequired<LoopInfoWrapperPass>();
-    AU.addPreserved<LoopInfoWrapperPass>();
+    AU.addRequired<CycleInfoWrapperPass>();
+    AU.addPreserved<CycleInfoWrapperPass>();
     AU.addRequired<AssumptionCacheTracker>();
   }
 };
@@ -2841,7 +2831,7 @@ INITIALIZE_PASS_DEPENDENCY(GlobalsAAWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MemoryDependenceWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(CycleInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_END(DSELegacyPass, "dse", "Dead Store Elimination", false,
                     false)

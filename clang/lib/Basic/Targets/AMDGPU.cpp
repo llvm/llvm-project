@@ -53,6 +53,7 @@ const LangASMap AMDGPUTargetInfo::AMDGPUDefIsGenMap = {
     llvm::AMDGPUAS::PRIVATE_ADDRESS, // hlsl_private
     llvm::AMDGPUAS::GLOBAL_ADDRESS,  // hlsl_device
     llvm::AMDGPUAS::PRIVATE_ADDRESS, // hlsl_input
+    llvm::AMDGPUAS::PRIVATE_ADDRESS, // hlsl_output
     llvm::AMDGPUAS::GLOBAL_ADDRESS,  // hlsl_push_constant
 };
 
@@ -82,6 +83,7 @@ const LangASMap AMDGPUTargetInfo::AMDGPUDefIsPrivMap = {
     llvm::AMDGPUAS::PRIVATE_ADDRESS,  // hlsl_private
     llvm::AMDGPUAS::GLOBAL_ADDRESS,   // hlsl_device
     llvm::AMDGPUAS::PRIVATE_ADDRESS,  // hlsl_input
+    llvm::AMDGPUAS::PRIVATE_ADDRESS,  // hlsl_output
     llvm::AMDGPUAS::GLOBAL_ADDRESS,   // hlsl_push_constant
 };
 } // namespace targets
