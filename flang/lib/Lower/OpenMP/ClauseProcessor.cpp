@@ -507,7 +507,8 @@ bool ClauseProcessor::processInitializer(
     ReductionProcessor::GenInitValueCBTy &genInitValueCB) const {
   if (auto *clause = findUniqueClause<omp::clause::Initializer>()) {
     genInitValueCB = [&, clause](fir::FirOpBuilder &builder, mlir::Location loc,
-                                 mlir::Type type, mlir::Value ompOrig) {
+                                 mlir::Type type, mlir::Value moldArg,
+                                 mlir::Value privArg) {
       lower::SymMapScope scope(symMap);
       mlir::Value ompPrivVar;
       const StylizedInstance &inst = clause->v.front();
@@ -515,9 +516,10 @@ bool ClauseProcessor::processInitializer(
       for (const Object &object :
            std::get<StylizedInstance::Variables>(inst.t)) {
         mlir::Value addr;
-        mlir::Type ompOrigType = ompOrig.getType();
+        std::string name = object.sym()->name().ToString();
+        mlir::Type moldArgType = moldArg.getType();
         // Check for unsupported dynamic-length character reductions
-        mlir::Type unwrappedType = fir::unwrapRefType(ompOrigType);
+        mlir::Type unwrappedType = fir::unwrapRefType(moldArgType);
         if (mlir::isa<fir::BoxCharType>(unwrappedType)) {
           TODO(loc, "OpenMP reduction allocation for dynamic length character");
         }
@@ -527,18 +529,20 @@ bool ClauseProcessor::processInitializer(
                  "OpenMP reduction allocation for dynamic length character");
           }
         }
-        // If ompOrig is already a reference, we can use it directly
-        if (fir::isa_ref_type(ompOrigType)) {
-          addr = ompOrig;
+        // For by-ref reductions, omp_priv maps to privArg (the private
+        // allocation) and omp_orig maps to moldArg (the original).
+        if (name == "omp_priv" && privArg) {
+          addr = privArg;
+        } else if (fir::isa_ref_type(moldArgType)) {
+          addr = moldArg;
         } else {
-          addr = builder.createTemporary(loc, ompOrigType);
-          fir::StoreOp::create(builder, loc, ompOrig, addr);
+          addr = builder.createTemporary(loc, moldArgType);
+          fir::StoreOp::create(builder, loc, moldArg, addr);
         }
         fir::FortranVariableFlagsEnum extraFlags = {};
         fir::FortranVariableFlagsAttr attributes =
             Fortran::lower::translateSymbolAttributes(
                 builder.getContext(), *object.sym(), extraFlags);
-        std::string name = object.sym()->name().ToString();
         // Get length parameters for types that need them (e.g., characters).
         // Note: DeclareOp requires exactly one type parameter for non-boxed
         // characters, unlike EmboxOp which doesn't allow them for constant-len.
@@ -570,9 +574,6 @@ bool ClauseProcessor::processInitializer(
               [&](const auto &expr) -> mlir::Value {
                 mlir::Value exprResult = fir::getBase(convertExprToValue(
                     loc, converter, initExpr, symMap, stmtCtx));
-                // Conversion can either give a value or a refrence to a value,
-                // we need to return the reduction type, so an optional load may
-                // be generated.
                 if (auto refType = llvm::dyn_cast<fir::ReferenceType>(
                         exprResult.getType()))
                   if (ompPrivVar.getType() == refType)
