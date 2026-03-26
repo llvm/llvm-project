@@ -290,7 +290,7 @@ bool CandidateHeuristics::tryCriticalResourceDependency(
   };
 
   auto TryEnablesResource = [&Cand, &TryCand, this](unsigned ResourceIdx) {
-    HardwareUnitInfo HWUI = HWUInfo[ResourceIdx];
+    HardwareUnitInfo &HWUI = HWUInfo[ResourceIdx];
     auto CandFlavor = classifyFlavor(*Cand.SU->getInstr(), *SII);
 
     // We want to ensure our DS order matches WMMA order.
@@ -359,7 +359,7 @@ bool CandidateHeuristics::tryCriticalResource(
     GenericSchedulerBase::SchedCandidate &TryCand,
     GenericSchedulerBase::SchedCandidate &Cand, SchedBoundary *Zone) const {
   for (unsigned I = 0; I < HWUInfo.size(); I++) {
-    HardwareUnitInfo HWUI = HWUInfo[I];
+    HardwareUnitInfo &HWUI = HWUInfo[I];
 
     bool CandUsesCrit = HWUI.contains(Cand.SU);
     bool TryCandUsesCrit = HWUI.contains(TryCand.SU);
