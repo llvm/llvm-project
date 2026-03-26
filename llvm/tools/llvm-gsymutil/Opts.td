@@ -46,8 +46,16 @@ def addresses_from_stdin :
 defm json_summary_file :
   Eq<"json-summary-file",
      "Output a categorized summary of errors into the JSON file specified.">;
-defm merged_functions_filter : 
-  Eq<"merged-functions-filter", 
+defm merged_functions_filter :
+  Eq<"merged-functions-filter",
      "When used with --address/--addresses-from-stdin and --merged-functions,\n"
      "filters the merged functions output to only show functions matching any of the specified regex patterns.\n"
      "Can be specified multiple times.">;
+defm reader_version :
+  Eq<"reader-version",
+     "Force the GSYM reader version (auto, v1, v2). Default: auto-detect from file.">,
+  Flags<[HelpHidden]>;
+defm creator_version :
+  Eq<"creator-version",
+     "Force the GSYM creator version (v1, v2). Default: v1.">,
+  Flags<[HelpHidden]>;

@@ -41,7 +41,11 @@
 #include "llvm/DebugInfo/GSYM/DwarfTransformer.h"
 #include "llvm/DebugInfo/GSYM/FunctionInfo.h"
 #include "llvm/DebugInfo/GSYM/GsymCreator.h"
+#include "llvm/DebugInfo/GSYM/GsymCreatorV2.h"
 #include "llvm/DebugInfo/GSYM/GsymReader.h"
+#include "llvm/DebugInfo/GSYM/GsymReaderV2.h"
+#include "llvm/DebugInfo/GSYM/Header.h"
+#include "llvm/DebugInfo/GSYM/HeaderV2.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
 #include "llvm/DebugInfo/GSYM/LookupResult.h"
 #include "llvm/DebugInfo/GSYM/ObjectFileTransformer.h"
@@ -101,6 +105,12 @@ static bool UseMergedFunctions = false;
 static bool LoadDwarfCallSites = false;
 static std::string CallSiteYamlPath;
 static std::vector<std::string> MergedFunctionsFilters;
+
+enum class ReaderVersion { Auto, V1, V2 };
+static ReaderVersion ForceReaderVersion = ReaderVersion::Auto;
+
+enum class CreatorVersion { V1, V2 };
+static CreatorVersion ForceCreatorVersion = CreatorVersion::V1;
 
 static void parseArgs(int argc, char **argv) {
   GSYMUtilOptTable Tbl;
@@ -209,6 +219,36 @@ static void parseArgs(int argc, char **argv) {
       llvm::errs()
           << ToolName
           << ": --merged-functions-filter requires --merged-functions\n";
+      std::exit(1);
+    }
+  }
+
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_reader_version_EQ)) {
+    StringRef Val = A->getValue();
+    if (Val == "auto")
+      ForceReaderVersion = ReaderVersion::Auto;
+    else if (Val == "v1")
+      ForceReaderVersion = ReaderVersion::V1;
+    else if (Val == "v2")
+      ForceReaderVersion = ReaderVersion::V2;
+    else {
+      llvm::errs() << ToolName
+                   << ": for the --reader-version option: '" << Val
+                   << "' is invalid. Use 'auto', 'v1', or 'v2'.\n";
+      std::exit(1);
+    }
+  }
+
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_creator_version_EQ)) {
+    StringRef Val = A->getValue();
+    if (Val == "v1")
+      ForceCreatorVersion = CreatorVersion::V1;
+    else if (Val == "v2")
+      ForceCreatorVersion = CreatorVersion::V2;
+    else {
+      llvm::errs() << ToolName
+                   << ": for the --creator-version option: '" << Val
+                   << "' is invalid. Use 'v1' or 'v2'.\n";
       std::exit(1);
     }
   }
@@ -348,7 +388,12 @@ static llvm::Error handleObjectFile(ObjectFile &Obj, const std::string &OutFile,
   auto ThreadCount =
       NumThreads > 0 ? NumThreads : std::thread::hardware_concurrency();
 
-  GsymCreatorV1 Gsym(Quiet);
+  std::unique_ptr<GsymCreator> GsymPtr;
+  if (ForceCreatorVersion == CreatorVersion::V2)
+    GsymPtr = std::make_unique<GsymCreatorV2>(Quiet);
+  else
+    GsymPtr = std::make_unique<GsymCreatorV1>(Quiet);
+  GsymCreator &Gsym = *GsymPtr;
 
   // See if we can figure out the base address for a given object file, and if
   // we can, then set the base address to use to this value. This will ease
@@ -527,6 +572,56 @@ static llvm::Error convertFileToGSYM(OutputAggregator &Out) {
   return Error::success();
 }
 
+/// Detect the GSYM version by reading the version field from a file.
+static Expected<uint16_t> detectGsymVersion(StringRef Path) {
+  auto BufOrErr = MemoryBuffer::getFileOrSTDIN(Path);
+  if (!BufOrErr)
+    return createStringError(BufOrErr.getError(), "failed to open '%s'",
+                             Path.str().c_str());
+  StringRef Data = (*BufOrErr)->getBuffer();
+  // Need at least 6 bytes: 4 (magic) + 2 (version).
+  if (Data.size() < 6)
+    return createStringError(std::errc::invalid_argument,
+                             "file too small to be a GSYM file");
+  uint32_t Magic;
+  memcpy(&Magic, Data.data(), 4);
+  if (Magic != GSYM_MAGIC && Magic != llvm::byteswap(GSYM_MAGIC))
+    return createStringError(std::errc::invalid_argument,
+                             "not a GSYM file (bad magic)");
+  uint16_t Version;
+  memcpy(&Version, Data.data() + 4, 2);
+  if (Magic != GSYM_MAGIC)
+    Version = llvm::byteswap(Version);
+  return Version;
+}
+
+/// Open a GSYM file, auto-detecting the version unless forced.
+static Expected<std::unique_ptr<GsymReader>> openGsymFile(StringRef Path) {
+  ReaderVersion RV = ForceReaderVersion;
+  if (RV == ReaderVersion::Auto) {
+    auto VersionOrErr = detectGsymVersion(Path);
+    if (!VersionOrErr)
+      return VersionOrErr.takeError();
+    if (*VersionOrErr == GSYM_VERSION)
+      RV = ReaderVersion::V1;
+    else if (*VersionOrErr == GSYM_VERSION_2)
+      RV = ReaderVersion::V2;
+    else
+      return createStringError(std::errc::invalid_argument,
+                               "unsupported GSYM version %u", *VersionOrErr);
+  }
+  if (RV == ReaderVersion::V2) {
+    auto ReaderOrErr = GsymReaderV2::openFile(Path);
+    if (!ReaderOrErr)
+      return ReaderOrErr.takeError();
+    return std::make_unique<GsymReaderV2>(std::move(*ReaderOrErr));
+  }
+  auto ReaderOrErr = GsymReaderV1::openFile(Path);
+  if (!ReaderOrErr)
+    return ReaderOrErr.takeError();
+  return std::make_unique<GsymReaderV1>(std::move(*ReaderOrErr));
+}
+
 static void doLookup(GsymReader &Gsym, uint64_t Addr, raw_ostream &OS) {
   if (UseMergedFunctions) {
     if (auto Results = Gsym.lookupAll(Addr)) {
@@ -661,7 +756,7 @@ int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
 
     std::string InputLine;
     std::string CurrentGSYMPath;
-    std::optional<Expected<GsymReaderV1>> CurrentGsym;
+    std::unique_ptr<GsymReader> CurrentGsym;
 
     while (std::getline(std::cin, InputLine)) {
       // Strip newline characters.
@@ -674,9 +769,10 @@ int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
           llvm::StringRef{StrippedInputLine}.split(' ');
 
       if (GSYMPath != CurrentGSYMPath) {
-        CurrentGsym = GsymReaderV1::openFile(GSYMPath);
-        if (!*CurrentGsym)
-          error(GSYMPath, CurrentGsym->takeError());
+        auto GsymOrErr = openGsymFile(GSYMPath);
+        if (!GsymOrErr)
+          error(GSYMPath, GsymOrErr.takeError());
+        CurrentGsym = std::move(*GsymOrErr);
         CurrentGSYMPath = GSYMPath;
       }
 
@@ -687,7 +783,7 @@ int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
         return 1;
       }
 
-      doLookup(**CurrentGsym, Addr, OS);
+      doLookup(*CurrentGsym, Addr, OS);
 
       OS << "\n";
       OS.flush();
@@ -698,19 +794,19 @@ int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
 
   // Dump or access data inside GSYM files
   for (const auto &GSYMPath : InputFilenames) {
-    auto Gsym = GsymReaderV1::openFile(GSYMPath);
+    auto Gsym = openGsymFile(GSYMPath);
     if (!Gsym)
       error(GSYMPath, Gsym.takeError());
 
     if (LookupAddresses.empty()) {
-      Gsym->dump(outs());
+      (*Gsym)->dump(outs());
       continue;
     }
 
     // Lookup an address in a GSYM file and print any matches.
     OS << "Looking up addresses in \"" << GSYMPath << "\":\n";
     for (auto Addr : LookupAddresses) {
-      doLookup(*Gsym, Addr, OS);
+      doLookup(**Gsym, Addr, OS);
     }
   }
   return EXIT_SUCCESS;
