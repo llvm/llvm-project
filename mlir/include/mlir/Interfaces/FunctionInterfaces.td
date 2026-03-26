@@ -332,7 +332,7 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface", [
 
     /// Erase a single result at `resultIndex`. Returns failure if the function
     /// cannot be updated to have the new signature.
-    LogicalResult eraseResult(unsigned resultIndex) {
+    ::llvm::LogicalResult eraseResult(unsigned resultIndex) {
       ::llvm::BitVector resultsToErase($_op.getNumResults());
       resultsToErase.set(resultIndex);
       return eraseResults(resultsToErase);
@@ -490,8 +490,11 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface", [
     }
 
     /// Return an ArrayAttr containing all result attribute dictionaries of this
-    /// function, or nullptr if no result have attributes.
-    ::mlir::ArrayAttr getAllResultAttrs() { return $_op.getResAttrsAttr(); }
+    /// function, or nullptr if no results have attributes.
+    ::mlir::ArrayAttr getAllResultAttrs() {
+      auto attrs = $_op.getResAttrsAttr();
+      return attrs && !attrs.empty() ? attrs : nullptr;
+    }
 
     /// Return all result attributes of this function.
     void getAllResultAttrs(::llvm::SmallVectorImpl<::mlir::DictionaryAttr> &result) {

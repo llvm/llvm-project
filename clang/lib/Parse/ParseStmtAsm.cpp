@@ -15,7 +15,6 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -30,7 +29,6 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetSelect.h"
 using namespace clang;
 
 namespace {
@@ -196,7 +194,6 @@ void ClangAsmParserCallback::handleDiagnostic(const llvm::SMDiagnostic &D) {
   TheParser.Diag(Loc, diag::err_inline_ms_asm_parsing) << D.getMessage();
 }
 
-/// Parse an identifier in an MS-style inline assembly block.
 ExprResult Parser::ParseMSAsmIdentifier(llvm::SmallVectorImpl<Token> &LineToks,
                                         unsigned &NumLineToksConsumed,
                                         bool IsUnevaluatedContext) {
@@ -351,7 +348,6 @@ static bool buildMSAsmString(Preprocessor &PP, SourceLocation AsmLoc,
   return false;
 }
 
-// Determine if this is a GCC-style asm statement.
 bool Parser::isGCCAsmStatement(const Token &TokAfterAsm) const {
   return TokAfterAsm.is(tok::l_paren) || isGNUAsmQualifier(TokAfterAsm);
 }
@@ -360,21 +356,6 @@ bool Parser::isGNUAsmQualifier(const Token &TokAfterAsm) const {
   return getGNUAsmQualifier(TokAfterAsm) != GNUAsmQualifiers::AQ_unspecified;
 }
 
-/// ParseMicrosoftAsmStatement. When -fms-extensions/-fasm-blocks is enabled,
-/// this routine is called to collect the tokens for an MS asm statement.
-///
-/// [MS]  ms-asm-statement:
-///         ms-asm-block
-///         ms-asm-block ms-asm-statement
-///
-/// [MS]  ms-asm-block:
-///         '__asm' ms-asm-line '\n'
-///         '__asm' '{' ms-asm-instruction-block[opt] '}' ';'[opt]
-///
-/// [MS]  ms-asm-instruction-block
-///         ms-asm-line
-///         ms-asm-line '\n' ms-asm-instruction-block
-///
 StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
   SourceManager &SrcMgr = PP.getSourceManager();
   SourceLocation EndLoc = AsmLoc;
@@ -399,8 +380,7 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
     ++NumTokensRead;
   } else {
     // Single-line inline asm; compute which line it is on.
-    std::pair<FileID, unsigned> ExpAsmLoc =
-        SrcMgr.getDecomposedExpansionLoc(EndLoc);
+    FileIDAndOffset ExpAsmLoc = SrcMgr.getDecomposedExpansionLoc(EndLoc);
     FID = ExpAsmLoc.first;
     LineNo = SrcMgr.getLineNumber(FID, ExpAsmLoc.second);
     LBraceLocs.push_back(SourceLocation());
@@ -427,16 +407,14 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
       InAsmComment = true;
       if (!SingleLineMode) {
         // Compute which line the comment is on.
-        std::pair<FileID, unsigned> ExpSemiLoc =
-            SrcMgr.getDecomposedExpansionLoc(TokLoc);
+        FileIDAndOffset ExpSemiLoc = SrcMgr.getDecomposedExpansionLoc(TokLoc);
         FID = ExpSemiLoc.first;
         LineNo = SrcMgr.getLineNumber(FID, ExpSemiLoc.second);
       }
     } else if (SingleLineMode || InAsmComment) {
       // If end-of-line is significant, check whether this token is on a
       // new line.
-      std::pair<FileID, unsigned> ExpLoc =
-          SrcMgr.getDecomposedExpansionLoc(TokLoc);
+      FileIDAndOffset ExpLoc = SrcMgr.getDecomposedExpansionLoc(TokLoc);
       if (ExpLoc.first != FID ||
           SrcMgr.getLineNumber(ExpLoc.first, ExpLoc.second) != LineNo) {
         // If this is a single-line __asm, we're done, except if the next
@@ -531,13 +509,12 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
 
   // We need an actual supported target.
   const llvm::Triple &TheTriple = Actions.Context.getTargetInfo().getTriple();
-  const std::string &TT = TheTriple.getTriple();
   const llvm::Target *TheTarget = nullptr;
   if (!TheTriple.isX86()) {
     Diag(AsmLoc, diag::err_msasm_unsupported_arch) << TheTriple.getArchName();
   } else {
     std::string Error;
-    TheTarget = llvm::TargetRegistry::lookupTarget(TT, Error);
+    TheTarget = llvm::TargetRegistry::lookupTarget(TheTriple, Error);
     if (!TheTarget)
       Diag(AsmLoc, diag::err_msasm_unable_to_create_target) << Error;
   }
@@ -565,7 +542,8 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
   std::string FeaturesStr =
       llvm::join(TO.Features.begin(), TO.Features.end(), ",");
 
-  std::unique_ptr<llvm::MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TT));
+  std::unique_ptr<llvm::MCRegisterInfo> MRI(
+      TheTarget->createMCRegInfo(TheTriple));
   if (!MRI) {
     Diag(AsmLoc, diag::err_msasm_unable_to_create_target)
         << "target MC unavailable";
@@ -574,11 +552,11 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
   // FIXME: init MCOptions from sanitizer flags here.
   llvm::MCTargetOptions MCOptions;
   std::unique_ptr<llvm::MCAsmInfo> MAI(
-      TheTarget->createMCAsmInfo(*MRI, TT, MCOptions));
+      TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   // Get the instruction descriptor.
   std::unique_ptr<llvm::MCInstrInfo> MII(TheTarget->createMCInstrInfo());
   std::unique_ptr<llvm::MCSubtargetInfo> STI(
-      TheTarget->createMCSubtargetInfo(TT, TO.CPU, FeaturesStr));
+      TheTarget->createMCSubtargetInfo(TheTriple, TO.CPU, FeaturesStr));
   // Target MCTargetDesc may not be linked in clang-based tools.
 
   if (!MAI || !MII || !STI) {
@@ -601,7 +579,7 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
 
   std::unique_ptr<llvm::MCStreamer> Str(createNullStreamer(Ctx));
   std::unique_ptr<llvm::MCAsmParser> Parser(
-      createMCAsmParser(TempSrcMgr, Ctx, *Str.get(), *MAI));
+      createMCAsmParser(TempSrcMgr, Ctx, *Str, *MAI));
 
   std::unique_ptr<llvm::MCTargetAsmParser> TargetParser(
       TheTarget->createMCAsmParser(*STI, *Parser, *MII, MCOptions));
@@ -613,11 +591,11 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
   }
 
   std::unique_ptr<llvm::MCInstPrinter> IP(
-      TheTarget->createMCInstPrinter(llvm::Triple(TT), 1, *MAI, *MII, *MRI));
+      TheTarget->createMCInstPrinter(TheTriple, 1, *MAI, *MII, *MRI));
 
   // Change to the Intel dialect.
   Parser->setAssemblerDialect(1);
-  Parser->setTargetParser(*TargetParser.get());
+  Parser->setTargetParser(*TargetParser);
   Parser->setParsingMSInlineAsm(true);
   TargetParser->setParsingMSInlineAsm(true);
 
@@ -671,15 +649,6 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
                                 ClobberRefs, Exprs, EndLoc);
 }
 
-/// parseGNUAsmQualifierListOpt - Parse a GNU extended asm qualifier list.
-///       asm-qualifier:
-///         volatile
-///         inline
-///         goto
-///
-///       asm-qualifier-list:
-///         asm-qualifier
-///         asm-qualifier-list asm-qualifier
 bool Parser::parseGNUAsmQualifierListOpt(GNUAsmQualifiers &AQ) {
   while (true) {
     const GNUAsmQualifiers::AQ A = getGNUAsmQualifier(Tok);
@@ -699,25 +668,6 @@ bool Parser::parseGNUAsmQualifierListOpt(GNUAsmQualifiers &AQ) {
   return false;
 }
 
-/// ParseAsmStatement - Parse a GNU extended asm statement.
-///       asm-statement:
-///         gnu-asm-statement
-///         ms-asm-statement
-///
-/// [GNU] gnu-asm-statement:
-///         'asm' asm-qualifier-list[opt] '(' asm-argument ')' ';'
-///
-/// [GNU] asm-argument:
-///         asm-string-literal
-///         asm-string-literal ':' asm-operands[opt]
-///         asm-string-literal ':' asm-operands[opt] ':' asm-operands[opt]
-///         asm-string-literal ':' asm-operands[opt] ':' asm-operands[opt]
-///                 ':' asm-clobbers
-///
-/// [GNU] asm-clobbers:
-///         asm-string-literal
-///         asm-clobbers ',' asm-string-literal
-///
 StmtResult Parser::ParseAsmStatement(bool &msAsm) {
   assert(Tok.is(tok::kw_asm) && "Not an asm stmt");
   SourceLocation AsmLoc = ConsumeToken();
@@ -868,19 +818,6 @@ StmtResult Parser::ParseAsmStatement(bool &msAsm) {
                                  T.getCloseLocation());
 }
 
-/// ParseAsmOperands - Parse the asm-operands production as used by
-/// asm-statement, assuming the leading ':' token was eaten.
-///
-/// [GNU] asm-operands:
-///         asm-operand
-///         asm-operands ',' asm-operand
-///
-/// [GNU] asm-operand:
-///         asm-string-literal '(' expression ')'
-///         '[' identifier ']' asm-string-literal '(' expression ')'
-///
-//
-// FIXME: Avoid unnecessary std::string trashing.
 bool Parser::ParseAsmOperandsOpt(SmallVectorImpl<IdentifierInfo *> &Names,
                                  SmallVectorImpl<Expr *> &Constraints,
                                  SmallVectorImpl<Expr *> &Exprs) {
@@ -924,7 +861,7 @@ bool Parser::ParseAsmOperandsOpt(SmallVectorImpl<IdentifierInfo *> &Names,
     // Read the parenthesized expression.
     BalancedDelimiterTracker T(*this, tok::l_paren);
     T.consumeOpen();
-    ExprResult Res = Actions.CorrectDelayedTyposInExpr(ParseExpression());
+    ExprResult Res = ParseExpression();
     T.consumeClose();
     if (Res.isInvalid()) {
       SkipUntil(tok::r_paren, StopAtSemi);

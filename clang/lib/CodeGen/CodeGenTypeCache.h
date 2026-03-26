@@ -53,7 +53,7 @@ struct CodeGenTypeCache {
 
   /// void*, void** in the target's default address space (often 0)
   union {
-    llvm::PointerType *UnqualPtrTy;
+    llvm::PointerType *DefaultPtrTy;
     llvm::PointerType *VoidPtrTy;
     llvm::PointerType *Int8PtrTy;
     llvm::PointerType *VoidPtrPtrTy;
@@ -71,6 +71,9 @@ struct CodeGenTypeCache {
     llvm::PointerType *GlobalsVoidPtrTy;
     llvm::PointerType *GlobalsInt8PtrTy;
   };
+
+  /// Pointer in program address space
+  llvm::PointerType *ProgramPtrTy;
 
   /// void* in the address space for constant globals
   llvm::PointerType *ConstGlobalsPtrTy;

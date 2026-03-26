@@ -6,7 +6,9 @@ add_distinct_clang_unittest(BasicTests
   DiagnosticTest.cpp
   FileEntryTest.cpp
   FileManagerTest.cpp
+  LangOptionsTest.cpp
   LineOffsetMappingTest.cpp
+  OffloadArchTest.cpp
   SanitizersTest.cpp
   SarifTest.cpp
   SourceManagerTest.cpp
@@ -17,4 +19,5 @@ add_distinct_clang_unittest(BasicTests
   LLVMTestingSupport
   LLVM_COMPONENTS
   Support
+  TargetParser
   )

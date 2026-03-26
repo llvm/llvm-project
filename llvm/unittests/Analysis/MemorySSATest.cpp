@@ -70,7 +70,8 @@ protected:
 
 public:
   MemorySSATest()
-      : M("MemorySSATest", C), B(C), DL(DLString), TLI(TLII), F(nullptr) {}
+      : M("MemorySSATest", C), B(C), DL(DLString), TLII(M.getTargetTriple()),
+        TLI(TLII), F(nullptr) {}
 };
 
 TEST_F(MemorySSATest, CreateALoad) {
@@ -88,8 +89,9 @@ TEST_F(MemorySSATest, CreateALoad) {
   B.SetInsertPoint(Left);
   Argument *PointerArg = &*F->arg_begin();
   B.CreateStore(B.getInt8(16), PointerArg);
-  BranchInst::Create(Merge, Left);
-  BranchInst::Create(Merge, Right);
+  UncondBrInst::Create(Merge, Left);
+  UncondBrInst::Create(Merge, Right);
+  ReturnInst::Create(C, Merge);
 
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
@@ -128,6 +130,7 @@ TEST_F(MemorySSATest, CreateLoadsAndStoreUpdater) {
   B.CreateBr(Merge);
   B.SetInsertPoint(Right);
   B.CreateBr(Merge);
+  ReturnInst::Create(C, Merge);
 
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
@@ -217,6 +220,7 @@ TEST_F(MemorySSATest, CreateALoadUpdater) {
   B.CreateBr(Merge);
   B.SetInsertPoint(Right);
   B.CreateBr(Merge);
+  ReturnInst::Create(C, Merge);
 
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
@@ -260,6 +264,7 @@ TEST_F(MemorySSATest, SinkLoad) {
   B.CreateBr(Merge);
   B.SetInsertPoint(Right);
   B.CreateBr(Merge);
+  ReturnInst::Create(C, Merge);
 
   // Load in left block
   B.SetInsertPoint(Left, Left->begin());
@@ -307,10 +312,12 @@ TEST_F(MemorySSATest, MoveAStore) {
   B.CreateCondBr(B.getTrue(), Left, Right);
   B.SetInsertPoint(Left);
   StoreInst *SideStore = B.CreateStore(B.getInt8(16), PointerArg);
-  BranchInst::Create(Merge, Left);
-  BranchInst::Create(Merge, Right);
+  UncondBrInst::Create(Merge, Left);
+  UncondBrInst::Create(Merge, Right);
   B.SetInsertPoint(Merge);
   B.CreateLoad(B.getInt8Ty(), PointerArg);
+  B.CreateRetVoid();
+
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
   MemorySSAUpdater Updater(&MSSA);
@@ -342,10 +349,12 @@ TEST_F(MemorySSATest, MoveAStoreUpdater) {
   B.CreateCondBr(B.getTrue(), Left, Right);
   B.SetInsertPoint(Left);
   auto *SideStore = B.CreateStore(B.getInt8(16), PointerArg);
-  BranchInst::Create(Merge, Left);
-  BranchInst::Create(Merge, Right);
+  UncondBrInst::Create(Merge, Left);
+  UncondBrInst::Create(Merge, Right);
   B.SetInsertPoint(Merge);
   auto *MergeLoad = B.CreateLoad(B.getInt8Ty(), PointerArg);
+  B.CreateRetVoid();
+
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
   MemorySSAUpdater Updater(&MSSA);
@@ -387,10 +396,12 @@ TEST_F(MemorySSATest, MoveAStoreUpdaterMove) {
   B.CreateCondBr(B.getTrue(), Left, Right);
   B.SetInsertPoint(Left);
   auto *SideStore = B.CreateStore(B.getInt8(16), PointerArg);
-  BranchInst::Create(Merge, Left);
-  BranchInst::Create(Merge, Right);
+  UncondBrInst::Create(Merge, Left);
+  UncondBrInst::Create(Merge, Right);
   B.SetInsertPoint(Merge);
   auto *MergeLoad = B.CreateLoad(B.getInt8Ty(), PointerArg);
+  B.CreateRetVoid();
+
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
   MemorySSAUpdater Updater(&MSSA);
@@ -430,10 +441,12 @@ TEST_F(MemorySSATest, MoveAStoreAllAround) {
   B.CreateCondBr(B.getTrue(), Left, Right);
   B.SetInsertPoint(Left);
   auto *SideStore = B.CreateStore(B.getInt8(16), PointerArg);
-  BranchInst::Create(Merge, Left);
-  BranchInst::Create(Merge, Right);
+  UncondBrInst::Create(Merge, Left);
+  UncondBrInst::Create(Merge, Right);
   B.SetInsertPoint(Merge);
   auto *MergeLoad = B.CreateLoad(B.getInt8Ty(), PointerArg);
+  B.CreateRetVoid();
+
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
   MemorySSAUpdater Updater(&MSSA);
@@ -483,10 +496,11 @@ TEST_F(MemorySSATest, RemoveAPhi) {
   B.SetInsertPoint(Left);
   Argument *PointerArg = &*F->arg_begin();
   StoreInst *StoreInst = B.CreateStore(B.getInt8(16), PointerArg);
-  BranchInst::Create(Merge, Left);
-  BranchInst::Create(Merge, Right);
+  UncondBrInst::Create(Merge, Left);
+  UncondBrInst::Create(Merge, Right);
   B.SetInsertPoint(Merge);
   LoadInst *LoadInst = B.CreateLoad(B.getInt8Ty(), PointerArg);
+  B.CreateRetVoid();
 
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
@@ -527,10 +541,11 @@ TEST_F(MemorySSATest, RemoveMemoryAccess) {
   B.SetInsertPoint(Left);
   Argument *PointerArg = &*F->arg_begin();
   StoreInst *StoreInst = B.CreateStore(B.getInt8(16), PointerArg);
-  BranchInst::Create(Merge, Left);
-  BranchInst::Create(Merge, Right);
+  UncondBrInst::Create(Merge, Left);
+  UncondBrInst::Create(Merge, Right);
   B.SetInsertPoint(Merge);
   LoadInst *LoadInst = B.CreateLoad(B.getInt8Ty(), PointerArg);
+  B.CreateRetVoid();
 
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
@@ -579,14 +594,14 @@ TEST_F(MemorySSATest, RemoveMemoryAccess) {
 // We had a bug with caching where the walker would report MemoryDef#3's clobber
 // (below) was MemoryDef#1.
 //
-// define void @F(i8*) {
+// define void @F(ptr) {
 //   %A = alloca i8, i8 1
 // ; 1 = MemoryDef(liveOnEntry)
-//   store i8 0, i8* %A
+//   store i8 0, ptr %A
 // ; 2 = MemoryDef(1)
-//   store i8 1, i8* %A
+//   store i8 1, ptr %A
 // ; 3 = MemoryDef(2)
-//   store i8 2, i8* %A
+//   store i8 2, ptr %A
 // }
 TEST_F(MemorySSATest, TestTripleStore) {
   F = Function::Create(FunctionType::get(B.getVoidTy(), {}, false),
@@ -597,6 +612,7 @@ TEST_F(MemorySSATest, TestTripleStore) {
   StoreInst *S1 = B.CreateStore(ConstantInt::get(Int8, 0), Alloca);
   StoreInst *S2 = B.CreateStore(ConstantInt::get(Int8, 1), Alloca);
   StoreInst *S3 = B.CreateStore(ConstantInt::get(Int8, 2), Alloca);
+  B.CreateRetVoid();
 
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
@@ -627,6 +643,7 @@ TEST_F(MemorySSATest, TestStoreAndLoad) {
   Value *Alloca = B.CreateAlloca(Int8, ConstantInt::get(Int8, 1), "A");
   Instruction *SI = B.CreateStore(ConstantInt::get(Int8, 0), Alloca);
   Instruction *LI = B.CreateLoad(Int8, Alloca);
+  B.CreateRetVoid();
 
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
@@ -640,7 +657,7 @@ TEST_F(MemorySSATest, TestStoreAndLoad) {
 // Another bug (related to the above two fixes): It was noted that, given the
 // following code:
 // ; 1 = MemoryDef(liveOnEntry)
-// store i8 0, i8* %1
+// store i8 0, ptr %1
 //
 // ...A query to getClobberingMemoryAccess(MemoryAccess*, MemoryLocation) would
 // hand back the store (correctly). A later call to
@@ -656,6 +673,7 @@ TEST_F(MemorySSATest, TestStoreDoubleQuery) {
   Type *Int8 = Type::getInt8Ty(C);
   Value *Alloca = B.CreateAlloca(Int8, ConstantInt::get(Int8, 1), "A");
   StoreInst *SI = B.CreateStore(ConstantInt::get(Int8, 0), Alloca);
+  B.CreateRetVoid();
 
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
@@ -720,6 +738,7 @@ TEST_F(MemorySSATest, PartialWalkerCacheWithPhis) {
 
   B.SetInsertPoint(IfEnd);
   Instruction *BelowPhi = B.CreateStore(Zero, AllocA);
+  B.CreateRetVoid();
 
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
@@ -767,6 +786,7 @@ TEST_F(MemorySSATest, WalkerInvariantLoadOpt) {
 
   Instruction *Store = B.CreateStore(One, AllocA);
   Instruction *Load = B.CreateLoad(Int8, AllocA);
+  B.CreateRetVoid();
 
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
@@ -796,6 +816,7 @@ TEST_F(MemorySSATest, WalkerReopt) {
   Value *AllocaB = B.CreateAlloca(Int8, ConstantInt::get(Int8, 1), "B");
   Instruction *SIB = B.CreateStore(ConstantInt::get(Int8, 0), AllocaB);
   Instruction *LIA = B.CreateLoad(Int8, AllocaA);
+  B.CreateRetVoid();
 
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
@@ -834,6 +855,7 @@ TEST_F(MemorySSATest, MoveAboveMemoryDef) {
   StoreInst *StoreC = B.CreateStore(ConstantInt::get(Int8, 4), C);
   StoreInst *StoreA2 = B.CreateStore(ConstantInt::get(Int8, 4), A);
   LoadInst *LoadC = B.CreateLoad(Int8, C);
+  B.CreateRetVoid();
 
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
@@ -874,7 +896,6 @@ TEST_F(MemorySSATest, Irreducible) {
   // }
   // use(x)
 
-  SmallVector<PHINode *, 8> Inserted;
   IRBuilder<> B(C);
   F = Function::Create(FunctionType::get(B.getVoidTy(), {B.getPtrTy()}, false),
                        GlobalValue::ExternalLinkage, "F", &M);
@@ -891,6 +912,7 @@ TEST_F(MemorySSATest, Irreducible) {
   B.SetInsertPoint(LoopMainBB);
   B.CreateCondBr(B.getTrue(), LoopStartBB, AfterLoopBB);
   B.SetInsertPoint(AfterLoopBB);
+  B.CreateRetVoid();
   Argument *FirstArg = &*F->arg_begin();
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
@@ -907,9 +929,9 @@ TEST_F(MemorySSATest, MoveToBeforeLiveOnEntryInvalidatesCache) {
   // Create:
   //   %1 = alloca i8
   //   ; 1 = MemoryDef(liveOnEntry)
-  //   store i8 0, i8* %1
+  //   store i8 0, ptr %1
   //   ; 2 = MemoryDef(1)
-  //   store i8 0, i8* %1
+  //   store i8 0, ptr %1
   //
   // ...And be sure that MSSA's caching doesn't give us `1` for the clobber of
   // `2` after `1` is removed.
@@ -923,6 +945,7 @@ TEST_F(MemorySSATest, MoveToBeforeLiveOnEntryInvalidatesCache) {
   Value *A = B.CreateAlloca(B.getInt8Ty());
   StoreInst *StoreA = B.CreateStore(B.getInt8(0), A);
   StoreInst *StoreB = B.CreateStore(B.getInt8(0), A);
+  B.CreateRetVoid();
 
   setupAnalyses();
 
@@ -949,11 +972,11 @@ TEST_F(MemorySSATest, RemovingDefInvalidatesCache) {
   //   %x = alloca i8
   //   %y = alloca i8
   //   ; 1 = MemoryDef(liveOnEntry)
-  //   store i8 0, i8* %x
+  //   store i8 0, ptr %x
   //   ; 2 = MemoryDef(1)
-  //   store i8 0, i8* %y
+  //   store i8 0, ptr %y
   //   ; 3 = MemoryDef(2)
-  //   store i8 0, i8* %x
+  //   store i8 0, ptr %x
   //
   // And be sure that MSSA's caching handles the removal of def `1`
   // appropriately.
@@ -969,6 +992,7 @@ TEST_F(MemorySSATest, RemovingDefInvalidatesCache) {
   StoreInst *StoreX1 = B.CreateStore(B.getInt8(0), X);
   StoreInst *StoreY = B.CreateStore(B.getInt8(0), Y);
   StoreInst *StoreX2 = B.CreateStore(B.getInt8(0), X);
+  B.CreateRetVoid();
 
   setupAnalyses();
 
@@ -1005,6 +1029,7 @@ TEST_F(MemorySSATest, TestStoreMustAlias) {
   StoreInst *SB2 = B.CreateStore(ConstantInt::get(Int8, 2), AllocaB);
   StoreInst *SA3 = B.CreateStore(ConstantInt::get(Int8, 3), AllocaA);
   StoreInst *SB3 = B.CreateStore(ConstantInt::get(Int8, 3), AllocaB);
+  B.CreateRetVoid();
 
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
@@ -1056,6 +1081,7 @@ TEST_F(MemorySSATest, TestStoreMayAlias) {
   StoreInst *SC2 = B.CreateStore(ConstantInt::get(Int8, 5), AllocaC);
   // Store into arg2, must alias store to arg2 => must
   StoreInst *SB3 = B.CreateStore(ConstantInt::get(Int8, 6), PointerB);
+  B.CreateRetVoid();
   std::initializer_list<StoreInst *> Sts = {SA1, SB1, SC1, SA2, SB2, SC2, SB3};
 
   setupAnalyses();
@@ -1086,16 +1112,17 @@ TEST_F(MemorySSATest, TestStoreMayAlias) {
 
 TEST_F(MemorySSATest, LifetimeMarkersAreClobbers) {
   // Example code:
-  // define void @a(i8* %foo) {
-  //   %bar = getelementptr i8, i8* %foo, i64 1
-  //   %baz = getelementptr i8, i8* %foo, i64 2
-  //   store i8 0, i8* %foo
-  //   store i8 0, i8* %bar
-  //   call void @llvm.lifetime.end.p0i8(i64 3, i8* %foo)
-  //   call void @llvm.lifetime.start.p0i8(i64 3, i8* %foo)
-  //   store i8 0, i8* %foo
-  //   store i8 0, i8* %bar
-  //   call void @llvm.memset.p0i8(i8* %baz, i8 0, i64 1)
+  // define void @a() {
+  //   %foo = alloca i32
+  //   %bar = getelementptr i8, ptr %foo, i64 1
+  //   %baz = getelementptr i8, ptr %foo, i64 2
+  //   store i8 0, ptr %foo
+  //   store i8 0, ptr %bar
+  //   call void @llvm.lifetime.end.p0(ptr %foo)
+  //   call void @llvm.lifetime.start.p0(ptr %foo)
+  //   store i8 0, ptr %foo
+  //   store i8 0, ptr %bar
+  //   call void @llvm.memset.p0i8(ptr %baz, i8 0, i64 1)
   //   ret void
   // }
   //
@@ -1104,14 +1131,14 @@ TEST_F(MemorySSATest, LifetimeMarkersAreClobbers) {
   // it.
 
   IRBuilder<> B(C);
-  F = Function::Create(FunctionType::get(B.getVoidTy(), {B.getPtrTy()}, false),
+  F = Function::Create(FunctionType::get(B.getVoidTy(), {}, false),
                        GlobalValue::ExternalLinkage, "F", &M);
 
   // Make blocks
   BasicBlock *Entry = BasicBlock::Create(C, "entry", F);
 
   B.SetInsertPoint(Entry);
-  Value *Foo = &*F->arg_begin();
+  Value *Foo = B.CreateAlloca(B.getInt32Ty());
 
   Value *Bar = B.CreatePtrAdd(Foo, B.getInt64(1), "bar");
   Value *Baz = B.CreatePtrAdd(Foo, B.getInt64(2), "baz");
@@ -1119,18 +1146,13 @@ TEST_F(MemorySSATest, LifetimeMarkersAreClobbers) {
   B.CreateStore(B.getInt8(0), Foo);
   B.CreateStore(B.getInt8(0), Bar);
 
-  auto GetLifetimeIntrinsic = [&](Intrinsic::ID ID) {
-    return Intrinsic::getOrInsertDeclaration(&M, ID, {Foo->getType()});
-  };
-
-  B.CreateCall(GetLifetimeIntrinsic(Intrinsic::lifetime_end),
-               {B.getInt64(3), Foo});
-  Instruction *LifetimeStart = B.CreateCall(
-      GetLifetimeIntrinsic(Intrinsic::lifetime_start), {B.getInt64(3), Foo});
+  B.CreateLifetimeEnd(Foo);
+  Instruction *LifetimeStart = B.CreateLifetimeStart(Foo);
 
   Instruction *FooStore = B.CreateStore(B.getInt8(0), Foo);
   Instruction *BarStore = B.CreateStore(B.getInt8(0), Bar);
   Instruction *BazMemSet = B.CreateMemSet(Baz, B.getInt8(0), 1, Align(1));
+  B.CreateRetVoid();
 
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
@@ -1241,6 +1263,7 @@ TEST_F(MemorySSATest, TestOptimizedDefsAreProperUses) {
   StoreInst *StoreA = B.CreateStore(ConstantInt::get(Int8, 0), AllocA);
   StoreInst *StoreB = B.CreateStore(ConstantInt::get(Int8, 1), AllocB);
   StoreInst *StoreA2 = B.CreateStore(ConstantInt::get(Int8, 2), AllocA);
+  B.CreateRetVoid();
 
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
@@ -1315,15 +1338,16 @@ TEST_F(MemorySSATest, TestAddedEdgeToBlockWithPhiNotOpt) {
   BasicBlock *Body(BasicBlock::Create(C, "body", F));
   BasicBlock *Exit(BasicBlock::Create(C, "exit", F));
   B.SetInsertPoint(Entry);
-  BranchInst::Create(Header, Entry);
+  UncondBrInst::Create(Header, Entry);
   B.SetInsertPoint(Header);
   B.CreateStore(B.getInt8(16), PointerArg);
   B.CreateCondBr(B.getTrue(), Exit, Body);
   B.SetInsertPoint(Body);
   B.CreateStore(B.getInt8(16), PointerArg);
-  BranchInst::Create(Exit, Body);
+  UncondBrInst::Create(Exit, Body);
   B.SetInsertPoint(Exit);
   StoreInst *S1 = B.CreateStore(B.getInt8(16), PointerArg);
+  B.CreateRetVoid();
 
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
@@ -1373,7 +1397,7 @@ TEST_F(MemorySSATest, TestAddedEdgeToBlockWithPhiOpt) {
 
   B.SetInsertPoint(Entry);
   Value *Alloca = B.CreateAlloca(Int8, ConstantInt::get(Int8, 1), "A");
-  BranchInst::Create(Header, Entry);
+  UncondBrInst::Create(Header, Entry);
 
   B.SetInsertPoint(Header);
   StoreInst *S1 = B.CreateStore(B.getInt8(16), PointerArg);
@@ -1381,10 +1405,11 @@ TEST_F(MemorySSATest, TestAddedEdgeToBlockWithPhiOpt) {
 
   B.SetInsertPoint(Body);
   B.CreateStore(ConstantInt::get(Int8, 0), Alloca);
-  BranchInst::Create(Exit, Body);
+  UncondBrInst::Create(Exit, Body);
 
   B.SetInsertPoint(Exit);
   StoreInst *S2 = B.CreateStore(B.getInt8(16), PointerArg);
+  B.CreateRetVoid();
 
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
@@ -1449,14 +1474,15 @@ TEST_F(MemorySSATest, TestAddedEdgeToBlockWithNoPhiAddNewPhis) {
   B.SetInsertPoint(ABlock);
   B.CreateCondBr(B.getTrue(), BBlock, CBlock);
   B.SetInsertPoint(BBlock);
-  BranchInst::Create(DBlock, BBlock);
+  UncondBrInst::Create(DBlock, BBlock);
   B.SetInsertPoint(CBlock);
-  BranchInst::Create(DBlock, CBlock);
+  UncondBrInst::Create(DBlock, CBlock);
   B.SetInsertPoint(DBlock);
-  BranchInst::Create(EBlock, DBlock);
+  UncondBrInst::Create(EBlock, DBlock);
   B.SetInsertPoint(FBlock);
   B.CreateStore(B.getInt8(16), PointerArg);
-  BranchInst::Create(EBlock, FBlock);
+  UncondBrInst::Create(EBlock, FBlock);
+  ReturnInst::Create(C, EBlock);
 
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
@@ -1491,6 +1517,7 @@ TEST_F(MemorySSATest, TestCallClobber) {
   Instruction *StorePointer1 = B.CreateStore(B.getInt8(0), Pointer1);
   Instruction *StorePointer2 = B.CreateStore(B.getInt8(0), Pointer2);
   Instruction *MemSet = B.CreateMemSet(Pointer2, B.getInt8(0), 1, Align(1));
+  B.CreateRetVoid();
 
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
@@ -1524,6 +1551,7 @@ TEST_F(MemorySSATest, TestLoadClobber) {
       B.CreateLoad(B.getInt8Ty(), Pointer1, /* Volatile */ true);
   Instruction *LoadPointer2 =
       B.CreateLoad(B.getInt8Ty(), Pointer2, /* Volatile */ true);
+  B.CreateRetVoid();
 
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
@@ -1553,18 +1581,16 @@ TEST_F(MemorySSATest, TestLoadClobber) {
 TEST_F(MemorySSATest, TestLoopInvariantEntryBlockPointer) {
   SMDiagnostic E;
   auto LocalM =
-      parseAssemblyString("define void @test(i64 %a0, i8* %a1, i1* %a2) {\n"
+      parseAssemblyString("define void @test(i64 %a0, ptr %a1, ptr %a2) {\n"
                           "entry:\n"
-                          "%v0 = getelementptr i8, i8* %a1, i64 %a0\n"
-                          "%v1 = bitcast i8* %v0 to i64*\n"
-                          "%v2 = bitcast i8* %v0 to i32*\n"
-                          "%v3 = load i1, i1* %a2\n"
+                          "%v0 = getelementptr i8, ptr %a1, i64 %a0\n"
+                          "%v3 = load i1, ptr %a2\n"
                           "br i1 %v3, label %body, label %exit\n"
                           "body:\n"
-                          "store i32 1, i32* %v2\n"
+                          "store i32 1, ptr %v0\n"
                           "br label %exit\n"
                           "exit:\n"
-                          "store i64 0, i64* %v1\n"
+                          "store i64 0, ptr %v0\n"
                           "ret void\n"
                           "}",
                           E, C);
@@ -1584,25 +1610,24 @@ TEST_F(MemorySSATest, TestLoopInvariantEntryBlockPointer) {
       MemoryLocation ML = MemoryLocation::get(SI);
       // Use the 'upward_defs_iterator' which internally calls
       // IsGuaranteedLoopInvariant
-      auto ItA = upward_defs_begin({MA, ML}, MSSA.getDomTree());
-      auto ItB =
-          upward_defs_begin({ItA->first, ItA->second}, MSSA.getDomTree());
+      auto ItA = upward_defs_begin({MA, ML, false}, MSSA.getDomTree());
+      auto ItB = upward_defs_begin(*ItA, MSSA.getDomTree());
       // Check if the location information have been retained
-      EXPECT_TRUE(ItB->second.Size.isPrecise());
-      EXPECT_TRUE(ItB->second.Size.hasValue());
-      EXPECT_TRUE(ItB->second.Size.getValue() == 8);
+      EXPECT_TRUE(ItB->Loc.Size.isPrecise());
+      EXPECT_TRUE(ItB->Loc.Size.hasValue());
+      EXPECT_TRUE(ItB->Loc.Size.getValue() == 8);
     }
   }
 }
 
 TEST_F(MemorySSATest, TestInvariantGroup) {
   SMDiagnostic E;
-  auto M = parseAssemblyString("declare void @f(i8*)\n"
-                               "define i8 @test(i8* %p) {\n"
+  auto M = parseAssemblyString("declare void @f(ptr)\n"
+                               "define i8 @test(ptr %p) {\n"
                                "entry:\n"
-                               "  store i8 42, i8* %p, !invariant.group !0\n"
-                               "  call void @f(i8* %p)\n"
-                               "  %v = load i8, i8* %p, !invariant.group !0\n"
+                               "  store i8 42, ptr %p, !invariant.group !0\n"
+                               "  call void @f(ptr %p)\n"
+                               "  %v = load i8, ptr %p, !invariant.group !0\n"
                                "  ret i8 %v\n"
                                "}\n"
                                "!0 = !{}",
@@ -1659,7 +1684,7 @@ static Instruction *getInstructionByName(Function &F, StringRef Name) {
 TEST_F(MemorySSATest, TestVisitedBlocks) {
   SMDiagnostic E;
   auto M = parseAssemblyString(
-      "define void @test(i64* noalias %P, i64 %N) {\n"
+      "define void @test(ptr noalias %P, i64 %N) {\n"
       "preheader.n:\n"
       "  br label %header.n\n"
       "header.n:\n"
@@ -1672,8 +1697,8 @@ TEST_F(MemorySSATest, TestVisitedBlocks) {
       "  br label %header.i\n"
       "header.i:\n"
       "  %i = phi i64 [ 0, %preheader.i ], [ %inc.i, %header.i ]\n"
-      "  %v1 = load i64, i64* %P, align 8\n"
-      "  %v2 = load i64, i64* %P, align 8\n"
+      "  %v1 = load i64, ptr %P, align 8\n"
+      "  %v2 = load i64, ptr %P, align 8\n"
       "  %inc.i = add nsw i64 %i, 1\n"
       "  %cmp.i = icmp slt i64 %inc.i, %N\n"
       "  br i1 %cmp.i, label %header.i, label %exit.i\n"
@@ -1710,8 +1735,8 @@ TEST_F(MemorySSATest, TestVisitedBlocks) {
     // %preheader.i, label %other.i`
     BB->getTerminator()->eraseFromParent();
     ConstantInt *BoolTrue = ConstantInt::getTrue(F->getContext());
-    BranchInst::Create(getBasicBlockByName(*F, "preheader.i"),
-                       getBasicBlockByName(*F, "other.i"), BoolTrue, BB);
+    CondBrInst::Create(BoolTrue, getBasicBlockByName(*F, "preheader.i"),
+                       getBasicBlockByName(*F, "other.i"), BB);
     SmallVector<DominatorTree::UpdateType, 4> DTUpdates;
     DTUpdates.push_back(DominatorTree::UpdateType(
         DominatorTree::Insert, BB, getBasicBlockByName(*F, "other.i")));

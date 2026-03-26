@@ -41,7 +41,7 @@ ScriptedStackFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame) {
 
   ValueObjectListSP args =
       m_interpreter->GetRecognizedArguments(m_python_object_sp, frame);
-  auto args_synthesized = ValueObjectListSP(new ValueObjectList());
+  auto args_synthesized = std::make_shared<ValueObjectList>();
   if (args) {
     for (const auto &o : args->GetObjects())
       args_synthesized->Append(ValueObjectRecognizerSynthesizedValue::Create(
@@ -146,13 +146,13 @@ StackFrameRecognizerManager::GetRecognizerForFrame(StackFrameSP frame) {
   if (!module_sp)
     return StackFrameRecognizerSP();
   ConstString module_name = module_sp->GetFileSpec().GetFilename();
-  Symbol *symbol = symctx.symbol;
+  const Symbol *symbol = symctx.symbol;
   if (!symbol)
     return StackFrameRecognizerSP();
   Address start_addr = symbol->GetAddress();
   Address current_addr = frame->GetFrameCodeAddress();
 
-  for (auto entry : m_recognizers) {
+  for (const auto &entry : m_recognizers) {
     if (!entry.enabled)
       continue;
 

@@ -171,6 +171,18 @@ def DataLayoutSpecInterface : AttrInterface<"DataLayoutSpecInterface", [DLTIQuer
       /*methodName=*/"getStackAlignmentIdentifier",
       /*args=*/(ins "::mlir::MLIRContext *":$context)
     >,
+    InterfaceMethod<
+      /*description=*/"Returns the function pointer alignment identifier.",
+      /*retTy=*/"::mlir::StringAttr",
+      /*methodName=*/"getFunctionPointerAlignmentIdentifier",
+      /*args=*/(ins "::mlir::MLIRContext *":$context)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the legal int widths identifier.",
+      /*retTy=*/"::mlir::StringAttr",
+      /*methodName=*/"getLegalIntWidthsIdentifier",
+      /*args=*/(ins "::mlir::MLIRContext *":$context)
+    >,
     // Implementations may override this if they have an efficient lookup
     // mechanism.
     InterfaceMethod<
@@ -554,6 +566,30 @@ def DataLayoutOpInterface : OpInterface<"DataLayoutOpInterface"> {
       }]
     >,
     StaticInterfaceMethod<
+      /*description=*/"Returns the function pointer alignment in bits computed "
+                      "using the relevant entries. The data layout object "
+                      "can be used for recursive queries.",
+      /*retTy=*/"Attribute",
+      /*methodName=*/"getFunctionPointerAlignment",
+      /*args=*/(ins "::mlir::DataLayoutEntryInterface":$entry),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::detail::getDefaultFunctionPointerAlignment(entry);
+      }]
+    >,
+    StaticInterfaceMethod<
+      /*description=*/"Returns the legal int widths, each width in bits computed "
+                      "using the relevant entries. The data layout object "
+                      "can be used for recursive queries.",
+      /*retTy=*/"Attribute",
+      /*methodName=*/"getLegalIntWidths",
+      /*args=*/(ins "::mlir::DataLayoutEntryInterface":$entry),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::detail::getDefaultLegalIntWidths(entry);
+      }]
+    >,
+    StaticInterfaceMethod<
       /*description=*/"Returns the value of the property, if the property is "
                       "defined. Otherwise, it returns std::nullopt.",
       /*retTy=*/"std::optional<Attribute>",
@@ -678,6 +714,66 @@ def DataLayoutTypeInterface : TypeInterface<"DataLayoutTypeInterface"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{ return ::mlir::success(); }]
     >,
+  ];
+}
+
+//===----------------------------------------------------------------------===//
+// Dialect interface
+//===----------------------------------------------------------------------===//
+
+def DataLayoutDialectInterface : DialectInterface<"DataLayoutDialectInterface"> {
+  let description = [{
+    An interface to be implemented by dialects that can have identifiers in the
+    data layout specification entries. Provides hooks for verifying the entry
+    validity and combining two entries.
+  }];
+  let cppNamespace = "::mlir";
+
+  let extraClassDeclaration = [{
+    /// Default implementation of entry combination that combines identical
+    /// entries and returns null otherwise.
+    static ::mlir::DataLayoutEntryInterface
+    defaultCombine(::mlir::DataLayoutEntryInterface outer,
+                   ::mlir::DataLayoutEntryInterface inner) {
+      if (!outer || outer == inner)
+        return inner;
+      return {};
+    }
+  }];
+
+  let methods = [
+    InterfaceMethod<[{
+        Checks whether the given data layout entry is valid and reports any errors
+        at the provided location. Derived classes should override this.
+      }],
+      "::mlir::LogicalResult", "verifyEntry",
+      (ins "::mlir::DataLayoutEntryInterface":$entry, "::mlir::Location":$loc),
+      [{
+        return ::llvm::success();
+      }]
+    >,
+    InterfaceMethod<[{
+        Checks whether the given data layout entry is valid and reports any errors
+        at the provided location. Derived classes should override this.
+      }],
+      "::mlir::LogicalResult", "verifyEntry",
+      (ins "::mlir::TargetDeviceSpecInterface":$entry, "::mlir::Location":$loc),
+      [{
+        return ::llvm::success();
+      }]
+    >,
+    InterfaceMethod<[{
+        Combines two entries with identifiers that belong to this dialect. Returns
+        the combined entry or null if the entries are not compatible. Derived
+        classes likely need to reimplement this.
+      }],
+      "::mlir::DataLayoutEntryInterface", "combine",
+      (ins "::mlir::DataLayoutEntryInterface":$outer, 
+           "::mlir::DataLayoutEntryInterface":$inner),
+      [{
+        return defaultCombine(outer, inner);
+      }]
+    > 
   ];
 }
 

@@ -78,6 +78,9 @@ llvm.mlir.global internal @f8E8M0FNU_global_as_i8(1.0 : f8E8M0FNU) : i8
 // CHECK: @bf16_global_as_i16 = internal global i16 16320
 llvm.mlir.global internal @bf16_global_as_i16(1.5 : bf16) : i16
 
+// CHECK: @bool_global_as_i8 = internal global i8 1
+llvm.mlir.global internal @bool_global_as_i8(true) : i8
+
 // CHECK: @explicit_undef = global i32 undef
 llvm.mlir.global external @explicit_undef() : i32 {
   %0 = llvm.mlir.undef : i32
@@ -1280,6 +1283,24 @@ llvm.func @intpointerconversion(%arg0 : i32) -> i32 {
   llvm.return %2 : i32
 }
 
+// CHECK-LABEL: @addrpointerconversion_scalar
+// CHECK-SAME: %[[ARG0:[[:alnum:]]+]]
+llvm.func @addrpointerconversion_scalar(%arg0 : !llvm.ptr) -> i64 {
+// CHECK:      %[[PTR:.*]] = ptrtoaddr ptr %[[ARG0]] to i64
+// CHECK-NEXT: ret i64 %[[PTR]]
+  %1 = llvm.ptrtoaddr %arg0 : !llvm.ptr to i64
+  llvm.return %1 : i64
+}
+
+// CHECK-LABEL: @addrpointerconversion_vector
+// CHECK-SAME: %[[ARG0:[[:alnum:]]+]]
+llvm.func @addrpointerconversion_vector(%arg0 : vector<3x!llvm.ptr>) -> vector<3x i64> {
+// CHECK:      %[[PTR:.*]] = ptrtoaddr <3 x ptr> %[[ARG0]] to <3 x i64>
+// CHECK-NEXT: ret <3 x i64> %[[PTR]]
+  %1 = llvm.ptrtoaddr %arg0 : vector<3x!llvm.ptr> to vector<3x i64>
+  llvm.return %1 : vector<3x i64>
+}
+
 llvm.func @fpconversion(%arg0 : i32) -> i32 {
 // CHECK:      %2 = sitofp i32 %0 to float
 // CHECK-NEXT: %3 = fptosi float %2 to i32
@@ -1555,11 +1576,19 @@ llvm.func @atomicrmw(
   %21 = llvm.atomicrmw fmax %f16_vec_ptr, %f16_vec monotonic : !llvm.ptr, vector<2xf16>
   // CHECK: atomicrmw fmin ptr %{{.*}}, <2 x half> %{{.*}} monotonic
   %22 = llvm.atomicrmw fmin %f16_vec_ptr, %f16_vec monotonic : !llvm.ptr, vector<2xf16>
+  // CHECK: atomicrmw fmaximum ptr %{{.*}}, float %{{.*}} monotonic
+  %23 = llvm.atomicrmw fmaximum %f32_ptr, %f32 monotonic : !llvm.ptr, f32
+  // CHECK: atomicrmw fminimum ptr %{{.*}}, float %{{.*}} monotonic
+  %24 = llvm.atomicrmw fminimum %f32_ptr, %f32 monotonic : !llvm.ptr, f32
+  // CHECK: atomicrmw fmaximum ptr %{{.*}}, <2 x half> %{{.*}} monotonic
+  %25 = llvm.atomicrmw fmaximum %f16_vec_ptr, %f16_vec monotonic : !llvm.ptr, vector<2xf16>
+  // CHECK: atomicrmw fminimum ptr %{{.*}}, <2 x half> %{{.*}} monotonic
+  %26 = llvm.atomicrmw fminimum %f16_vec_ptr, %f16_vec monotonic : !llvm.ptr, vector<2xf16>
 
   // CHECK: atomicrmw volatile
   // CHECK-SAME:  syncscope("singlethread")
   // CHECK-SAME:  align 8
-  %23 = llvm.atomicrmw volatile udec_wrap %i32_ptr, %i32 syncscope("singlethread") monotonic {alignment = 8 : i64} : !llvm.ptr, i32
+  %27 = llvm.atomicrmw volatile udec_wrap %i32_ptr, %i32 syncscope("singlethread") monotonic {alignment = 8 : i64} : !llvm.ptr, i32
   llvm.return
 }
 
@@ -1898,32 +1927,6 @@ llvm.func @cond_br_weights(%cond : i1, %arg0 : i32,  %arg1 : i32) -> i32 {
 
 // -----
 
-llvm.func @fn()
-
-// CHECK-LABEL: @call_branch_weights
-llvm.func @call_branch_weights() {
-  // CHECK: !prof ![[NODE:[0-9]+]]
-  llvm.call @fn() {branch_weights = array<i32 : 42>} : () -> ()
-  llvm.return
-}
-
-// CHECK: ![[NODE]] = !{!"branch_weights", i32 42}
-
-// -----
-
-llvm.func @fn() -> i32
-
-// CHECK-LABEL: @call_branch_weights
-llvm.func @call_branch_weights() {
-  // CHECK: !prof ![[NODE:[0-9]+]]
-  %res = llvm.call @fn() {branch_weights = array<i32 : 42>} : () -> i32
-  llvm.return
-}
-
-// CHECK: ![[NODE]] = !{!"branch_weights", i32 42}
-
-// -----
-
 llvm.func @foo()
 llvm.func @__gxx_personality_v0(...) -> i32
 
@@ -2048,7 +2051,7 @@ module attributes {} {}
 // -----
 
 // CHECK-LABEL: @useInlineAsm
-llvm.func @useInlineAsm(%arg0: i32) {
+llvm.func @useInlineAsm(%arg0: i32, %arg1 : !llvm.ptr) {
   // Constraints string is checked at LLVM InlineAsm instruction construction time.
   // So we can't just use "bar" everywhere, number of in/out arguments has to match.
 
@@ -2073,6 +2076,34 @@ llvm.func @useInlineAsm(%arg0: i32) {
   // CHECK-NEXT:  call { i8, i8 } asm "foo", "=r,=r,r"(i32 {{.*}})
   %5 = llvm.inline_asm "foo", "=r,=r,r" %arg0 : (i32) -> !llvm.struct<(i8, i8)>
 
+  // CHECK-NEXT:  tail call void asm sideeffect "", "*m,~{memory}"(ptr elementtype(ptr) %1)
+  %6 = llvm.inline_asm has_side_effects tail_call_kind = <tail> operand_attrs = [{elementtype = !llvm.ptr}] "", "*m,~{memory}" %arg1 : (!llvm.ptr) -> !llvm.void
+
+  // CHECK-NEXT:  = call { i8, i8 } asm "foo", "=r,=r,r"(i32 {{.*}})
+  %7 = llvm.inline_asm tail_call_kind = <none> "foo", "=r,=r,r" %arg0 : (i32) -> !llvm.struct<(i8, i8)>
+
+  // CHECK-NEXT:  notail call { i8, i8 } asm "foo", "=r,=r,r"(i32 {{.*}})
+  %8 = llvm.inline_asm tail_call_kind = <notail> "foo", "=r,=r,r" %arg0 : (i32) -> !llvm.struct<(i8, i8)>
+
+  llvm.return
+}
+
+// -----
+
+// CHECK: @useInlineAsm2(ptr %[[A0:.*]], i64 %[[A1:.*]], ptr %[[A2:.*]], i64 %[[A3:.*]]) {
+llvm.func @useInlineAsm2(%arg0: !llvm.ptr, %arg1: i64, %arg2: !llvm.ptr, %arg3: i64) {
+  // CHECK:  call { i64, ptr, ptr } asm sideeffect
+  // CHECK-SAME: "ldr x4, [$2], #8   \0A\09ldr x5, [$1]       \0A\09mul x6, x4, $4     \0A\09",
+  // CHECK-SAME: "=r,=r,=r,=*m,r,*m,0,1,2,*m,~{x4},~{x5},~{x6},~{x7},~{cc}"
+  // CHECK-SAME:(ptr elementtype([16 x i64]) %[[A0]], i64 %[[A1]], ptr elementtype([16 x i64]) %[[A2]],
+  // CHECK-SAME: i64 %[[A3]], ptr %[[A0]], ptr %[[A2]], ptr elementtype([16 x i64]) %[[A0]])
+  %0 = llvm.inline_asm has_side_effects operand_attrs = [
+    {elementtype = !llvm.array<16 x i64>}, {}, {elementtype = !llvm.array<16 x i64>},
+    {}, {}, {}, {elementtype = !llvm.array<16 x i64>}]
+    "ldr x4, [$2], #8   \0A\09ldr x5, [$1]       \0A\09mul x6, x4, $4     \0A\09",
+    "=r,=r,=r,=*m,r,*m,0,1,2,*m,~{x4},~{x5},~{x6},~{x7},~{cc}"
+    %arg0, %arg1, %arg2, %arg3, %arg0, %arg2, %arg0 :
+      (!llvm.ptr, i64, !llvm.ptr, i64, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.struct<(i64, ptr, ptr)>
   llvm.return
 }
 
@@ -2361,17 +2392,17 @@ llvm.func @readonly_function(%arg0: !llvm.ptr {llvm.readonly})
 
 // CHECK: declare void @arg_mem_none_func() #[[ATTR:[0-9]+]]
 llvm.func @arg_mem_none_func() attributes {
-  memory_effects = #llvm.memory_effects<other = readwrite, argMem = none, inaccessibleMem = readwrite>}
+  memory_effects = #llvm.memory_effects<other = readwrite, argMem = none, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>}
 
-// CHECK: attributes #[[ATTR]] = { memory(readwrite, argmem: none, errnomem: none) }
+// CHECK: attributes #[[ATTR]] = { memory(readwrite, argmem: none, errnomem: none, target_mem: none) }
 
 // -----
 
 // CHECK: declare void @readwrite_func() #[[ATTR:[0-9]+]]
 llvm.func @readwrite_func() attributes {
-  memory_effects = #llvm.memory_effects<other = readwrite, argMem = readwrite, inaccessibleMem = readwrite>}
+  memory_effects = #llvm.memory_effects<other = readwrite, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>}
 
-// CHECK: attributes #[[ATTR]] = { memory(readwrite, errnomem: none) }
+// CHECK: attributes #[[ATTR]] = { memory(readwrite, errnomem: none, target_mem: none) }
 
 // -----
 
@@ -2545,6 +2576,17 @@ llvm.func @always_inline() attributes { always_inline } {
 
 // -----
 
+// CHECK-LABEL: @inline_hint
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @inline_hint() attributes { inline_hint } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: inlinehint
+
+// -----
+
 // CHECK-LABEL: @optimize_none
 // CHECK-SAME: #[[ATTRS:[0-9]+]]
 llvm.func @optimize_none() attributes { no_inline, optimize_none } {
@@ -2607,6 +2649,402 @@ llvm.func @willreturn() attributes { will_return } {
 
 // -----
 
+// CHECK-LABEL: @noreturn
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @noreturn() attributes { noreturn } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: noreturn
+
+// -----
+
+// CHECK-LABEL: @returnstwice
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @returnstwice() attributes { returns_twice } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: returns_twice
+
+// -----
+
+// CHECK-LABEL: @hot
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @hot() attributes { hot } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: hot
+
+// -----
+
+// CHECK-LABEL: @cold
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @cold() attributes { cold } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME:cold
+
+// -----
+
+// CHECK-LABEL: @noduplicate
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @noduplicate() attributes { noduplicate } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: noduplicate
+
+// -----
+
+// CHECK-LABEL: @no_caller_saved_registers
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @no_caller_saved_registers() attributes { no_caller_saved_registers } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: no_caller_saved_registers
+
+// -----
+
+// CHECK-LABEL: @nocallback
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @nocallback() attributes { nocallback } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: nocallback 
+
+// -----
+
+// CHECK-LABEL: @modular_format
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @modular_format(%arg : i32) attributes { modular_format = "ident,1,1,foo,bar" } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "modular-format"="ident,1,1,foo,bar"
+
+// -----
+
+// CHECK-LABEL: @no_builtins_all
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @no_builtins_all() attributes { nobuiltins = [] } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: no-builtins
+
+// -----
+
+// CHECK-LABEL: @no_builtins_2
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @no_builtins_2() attributes { nobuiltins = ["asdf", "defg"] } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: no-builtin-asdf
+// CHECK-SAME: no-builtin-defg
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @no_builtins_call_all
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @no_builtins_call_all() {
+  llvm.call @f() {nobuiltins = [] } : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: no-builtins
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @no_builtins_call_2
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @no_builtins_call_2() {
+  llvm.call @f() {nobuiltins = ["asdf", "defg"] } : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: no-builtin-asdf
+// CHECK-SAME: no-builtin-defg
+
+// -----
+
+// CHECK-LABEL: @allocsize_1
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @allocsize_1(%arg: i32, %arg2: i32) attributes { allocsize = array<i32: 1> } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: allocsize(1)
+
+// -----
+
+// CHECK-LABEL: @allocsize_2
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @allocsize_2(%arg: i32, %arg2: i32) attributes { allocsize = array<i32:0, 1> } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: allocsize(0,1)
+
+// -----
+
+llvm.func @f(i32, i32)
+
+// CHECK-LABEL: @allocsize_call_1
+// CHECK: call void @f({{.*}}) #[[ATTRS:[0-9]+]]
+llvm.func @allocsize_call_1() {
+  %0 = llvm.mlir.constant(0 : i32) : i32
+  llvm.call @f(%0, %0) {allocsize = array<i32: 1> } : (i32, i32) -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: allocsize(1)
+
+// -----
+
+llvm.func @f(i32, i32)
+
+// CHECK-LABEL: @allocsize_call_2
+// CHECK: call void @f({{.*}}) #[[ATTRS:[0-9]+]]
+llvm.func @allocsize_call_2() {
+  %0 = llvm.mlir.constant(0 : i32) : i32
+  llvm.call @f(%0, %0) {allocsize = array<i32: 1, 0> } : (i32, i32) -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: allocsize(1,0)
+
+// -----
+
+// CHECK-LABEL: @minsize
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @minsize() attributes { minsize } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: minsize
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @minsize_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @minsize_call() {
+  llvm.call @f() {minsize} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: minsize
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @optsize
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @optsize() attributes { optsize } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: optsize
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @optsize_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @optsize_call() {
+  llvm.call @f() {optsize} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: optsize
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @save_reg_params
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @save_reg_params() attributes { save_reg_params } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "save-reg-params"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @save_reg_params_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @save_reg_params_call() {
+  llvm.call @f() {save_reg_params} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "save-reg-params"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @zero_call_used_regs_1
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @zero_call_used_regs_1() attributes { zero_call_used_regs = "skip"} {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "zero-call-used-regs"="skip"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @zero_call_used_regs_2
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @zero_call_used_regs_2() attributes { zero_call_used_regs = "all"} {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "zero-call-used-regs"="all"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @zero_call_used_regs_call_1
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @zero_call_used_regs_call_1() {
+  llvm.call @f() {zero_call_used_regs="used_gpr_all"} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "zero-call-used-regs"="used_gpr_all"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @zero_call_used_regs_call_2
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @zero_call_used_regs_call_2() {
+  llvm.call @f() {zero_call_used_regs="used"} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "zero-call-used-regs"="used"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @trap_func_name_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @trap_func_name_call() {
+  llvm.call @f() {trap_func_name="whatever"} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "trap-func-name"="whatever"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @default_func_attrs
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @default_func_attrs() attributes {default_func_attrs={key="value", justKey}} {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "justKey"
+// CHECK-SAME: "key"="value"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @default_func_attrs
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @default_func_attrs_call() {
+  llvm.call @f() {default_func_attrs={key="value", justKey}} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "justKey"
+// CHECK-SAME: "key"="value"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @builtin_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @builtin_call() {
+  llvm.call @f() {builtin} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: builtin
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @nobuiltin_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @nobuiltin_call() {
+  llvm.call @f() {nobuiltin} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: nobuiltin
+
+// -----
+
 llvm.func @f()
 
 // CHECK-LABEL: @convergent_call
@@ -2646,6 +3084,20 @@ llvm.func @willreturn_call() {
 
 // CHECK: #[[ATTRS]]
 // CHECK-SAME: willreturn
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @noreturn_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @noreturn_call() {
+  llvm.call @f() {noreturn} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: noreturn
 
 // -----
 
@@ -2702,10 +3154,10 @@ llvm.func @fd()
 // CHECK: call void @fc() #[[ATTRS_2:[0-9]+]]
 // CHECK: call void @fd() #[[ATTRS_3:[0-9]+]]
 llvm.func @mem_effects_call() {
-  llvm.call @fa() {memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none>} : () -> ()
-  llvm.call @fb() {memory_effects = #llvm.memory_effects<other = read, argMem = none, inaccessibleMem = write>} : () -> ()
-  llvm.call @fc() {memory_effects = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = write>} : () -> ()
-  llvm.call @fd() {memory_effects = #llvm.memory_effects<other = readwrite, argMem = read, inaccessibleMem = readwrite>} : () -> ()
+  llvm.call @fa() {memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>} : () -> ()
+  llvm.call @fb() {memory_effects = #llvm.memory_effects<other = read, argMem = none, inaccessibleMem = write, errnoMem = none, targetMem0 = none, targetMem1 = none>} : () -> ()
+  llvm.call @fc() {memory_effects = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = write, errnoMem = none, targetMem0 = none, targetMem1 = none>} : () -> ()
+  llvm.call @fd() {memory_effects = #llvm.memory_effects<other = readwrite, argMem = read, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>} : () -> ()
   llvm.return
 
 }
@@ -2713,11 +3165,11 @@ llvm.func @mem_effects_call() {
 // CHECK: #[[ATTRS_0]]
 // CHECK-SAME: memory(none)
 // CHECK: #[[ATTRS_1]]
-// CHECK-SAME: memory(read, argmem: none, inaccessiblemem: write, errnomem: none)
+// CHECK-SAME: memory(read, argmem: none, inaccessiblemem: write, errnomem: none, target_mem: none)
 // CHECK: #[[ATTRS_2]]
-// CHECK-SAME: memory(read, inaccessiblemem: write, errnomem: none)
+// CHECK-SAME: memory(read, inaccessiblemem: write, errnomem: none, target_mem: none)
 // CHECK: #[[ATTRS_3]]
-// CHECK-SAME: memory(readwrite, argmem: read, errnomem: none)
+// CHECK-SAME: memory(readwrite, argmem: read, errnomem: none, target_mem: none)
 
 // -----
 
@@ -2883,6 +3335,37 @@ llvm.func @to()
 
 // -----
 
+llvm.module_flags [#llvm.mlir.module_flag<error, "ProfileSummary",
+                       #llvm.profile_summary<format = InstrProf, total_count = 263646, max_count = 86427,
+                         max_internal_count = 86427, max_function_count = 4691,
+                         num_counts = 3712, num_functions = 796,
+                         is_partial_profile = 0,
+                         partial_profile_ratio = 0.000000e+00 : f64,
+                         detailed_summary =
+                           <cut_off = 10000, min_count = 86427, num_counts = 1>,
+                           <cut_off = 100000, min_count = 86427, num_counts = 1>
+                  >>]
+
+// CHECK: !llvm.module.flags = !{![[#PSUM:]], {{.*}}}
+
+// CHECK: ![[#PSUM]] = !{i32 1, !"ProfileSummary", ![[#SUMLIST:]]}
+// CHECK: ![[#SUMLIST]] = !{![[#FMT:]], ![[#TC:]], ![[#MC:]], ![[#MIC:]], ![[#MFC:]], ![[#NC:]], ![[#NF:]], ![[#IPP:]], ![[#PPR:]], ![[#DS:]]}
+// CHECK: ![[#FMT]] = !{!"ProfileFormat", !"InstrProf"}
+// CHECK: ![[#TC]] = !{!"TotalCount", i64 263646}
+// CHECK: ![[#MC]] = !{!"MaxCount", i64 86427}
+// CHECK: ![[#MIC]] = !{!"MaxInternalCount", i64 86427}
+// CHECK: ![[#MFC]] = !{!"MaxFunctionCount", i64 4691}
+// CHECK: ![[#NC]] = !{!"NumCounts", i64 3712}
+// CHECK: ![[#NF]] = !{!"NumFunctions", i64 796}
+// CHECK: ![[#IPP]] = !{!"IsPartialProfile", i64 0}
+// CHECK: ![[#PPR]] = !{!"PartialProfileRatio", double 0.000000e+00}
+// CHECK: ![[#DS]] = !{!"DetailedSummary", ![[#DETAILED:]]}
+// CHECK: ![[#DETAILED]] = !{![[#DS0:]], ![[#DS1:]]}
+// CHECK: ![[#DS0:]] = !{i64 10000, i64 86427, i64 1}
+// CHECK: ![[#DS1:]] = !{i64 100000, i64 86427, i64 1}
+
+// -----
+
 module attributes {llvm.dependent_libraries = ["foo", "bar"]} {}
 
 // CHECK: !llvm.dependent-libraries =  !{![[#LIBFOO:]], ![[#LIBBAR:]]}
@@ -2961,3 +3444,41 @@ llvm.func internal @i(%arg0: i32) attributes {dso_local} {
   llvm.call @testfn3(%arg0) : (i32 {llvm.alignstack = 8 : i64}) -> ()
   llvm.return
 }
+
+// -----
+
+// CHECK: @test_array_attr_2 = global [2 x { i32, float }] [{ i32, float } { i32 42, float 1.000000e+00 }, { i32, float } { i32 42, float 1.000000e+00 }]
+llvm.mlir.global @test_array_attr_2() : !llvm.array<2 x !llvm.struct<(i32, f32)>> {
+  %0 = llvm.mlir.constant([[42 : i32, 1.000000e+00 : f32],[42 : i32, 1.000000e+00 : f32]]) : !llvm.array<2 x !llvm.struct<(i32, f32)>>
+  llvm.return %0 : !llvm.array<2 x !llvm.struct<(i32, f32)>>
+}
+
+// CHECK: @test_array_attr_3 = global [2 x [3 x { i32, float }]{{.*}}[3 x { i32, float }] [{ i32, float } { i32 1, float 1.000000e+00 }, { i32, float } { i32 2, float 1.000000e+00 }, { i32, float } { i32 3, float 1.000000e+00 }], [3 x { i32, float }] [{ i32, float } { i32 4, float 1.000000e+00 }, { i32, float } { i32 5, float 1.000000e+00 }, { i32, float } { i32 6, float 1.000000e+00 }
+llvm.mlir.global @test_array_attr_3() : !llvm.array<2 x !llvm.array<3 x !llvm.struct<(i32, f32)>>> {
+  %0 = llvm.mlir.constant([[[1 : i32, 1.000000e+00 : f32], [2 : i32, 1.000000e+00 : f32], [3 : i32, 1.000000e+00 : f32]], [[4 : i32, 1.000000e+00 : f32], [5 : i32, 1.000000e+00 : f32], [6 : i32, 1.000000e+00 : f32]]]) : !llvm.array<2 x !llvm.array<3 x !llvm.struct<(i32, f32)>>>
+  llvm.return %0 : !llvm.array<2 x !llvm.array<3 x !llvm.struct<(i32, f32)>>>
+}
+
+// CHECK: @test_array_attr_struct_with_ptr = internal constant [2 x { ptr }] [{ ptr } zeroinitializer, { ptr } undef]
+llvm.mlir.global internal constant @test_array_attr_struct_with_ptr() : !llvm.array<2 x struct<(ptr)>> {
+  %0 = llvm.mlir.constant([[#llvm.zero], [#llvm.undef]]) : !llvm.array<2 x struct<(ptr)>>
+  llvm.return %0 : !llvm.array<2 x struct<(ptr)>>
+}
+
+// CHECK: @test_array_attr_struct_with_struct = internal constant [3 x { i32, float }] [{ i32, float } zeroinitializer, { i32, float } { i32 2, float 1.000000e+00 }, { i32, float } undef]
+llvm.mlir.global internal constant @test_array_attr_struct_with_struct() : !llvm.array<3 x struct<(i32, f32)>> {
+  %0 = llvm.mlir.constant([#llvm.zero, [2 : i32, 1.0 : f32], #llvm.undef]) : !llvm.array<3 x struct<(i32, f32)>>
+  llvm.return %0 : !llvm.array<3 x struct<(i32, f32)>>
+}
+
+// -----
+
+// CHECK: @target_specific_attrs_only = external global double #[[ATTRS:[0-9]+]]
+// CHECK: attributes #[[ATTRS]] = { memory(none) "int-attr"="4" "no-enum-attr" "string-attr"="string" }
+llvm.mlir.global external @target_specific_attrs_only() {target_specific_attrs = [["memory", "0"], ["int-attr", "4"], "no-enum-attr", ["string-attr", "string"]]} : f64
+
+// -----
+
+// CHECK: @target_specific_attrs_combined = global i32 2, section "mysection", align 4 #[[ATTRS:[0-9]+]]
+// CHECK: attributes #[[ATTRS]] = { norecurse "bss-section"="my_bss.1" }
+llvm.mlir.global external @target_specific_attrs_combined(2 : i32) {alignment = 4 : i64, section = "mysection", target_specific_attrs = ["norecurse", ["bss-section", "my_bss.1"]]} : i32

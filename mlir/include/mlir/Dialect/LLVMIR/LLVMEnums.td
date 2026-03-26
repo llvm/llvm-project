@@ -110,6 +110,10 @@ def AtomicBinOpUSubCond : LLVM_EnumAttrCase<"usub_cond",
                                             "usub_cond", "USubCond", 17>;
 def AtomicBinOpUSubSat : LLVM_EnumAttrCase<"usub_sat",
                                            "usub_sat", "USubSat", 18>;
+def AtomicBinOpFMaximum : LLVM_EnumAttrCase<"fmaximum", "fmaximum", "FMaximum", 19>;
+def AtomicBinOpFMinimum : LLVM_EnumAttrCase<"fminimum", "fminimum", "FMinimum", 20>;
+def AtomicBinOpFMaximumNum : LLVM_EnumAttrCase<"fmaximumnum", "fmaximumnum", "FMaximumNum", 21>;
+def AtomicBinOpFMinimumNum : LLVM_EnumAttrCase<"fminimumnum", "fminimumnum", "FMinimumNum", 22>;
 
 // A sentinel value that has no MLIR counterpart.
 def AtomicBadBinOp : LLVM_EnumAttrCase<"", "", "BAD_BINOP", 0>;
@@ -122,7 +126,9 @@ def AtomicBinOp : LLVM_EnumAttr<
      AtomicBinOpNand, AtomicBinOpOr, AtomicBinOpXor, AtomicBinOpMax,
      AtomicBinOpMin, AtomicBinOpUMax, AtomicBinOpUMin, AtomicBinOpFAdd,
      AtomicBinOpFSub, AtomicBinOpFMax, AtomicBinOpFMin, AtomicBinOpUIncWrap,
-     AtomicBinOpUDecWrap, AtomicBinOpUSubCond, AtomicBinOpUSubSat],
+     AtomicBinOpUDecWrap, AtomicBinOpUSubCond, AtomicBinOpUSubSat,
+     AtomicBinOpFMaximum, AtomicBinOpFMinimum, AtomicBinOpFMaximumNum,
+     AtomicBinOpFMinimumNum],
     [AtomicBadBinOp]> {
   let cppNamespace = "::mlir::LLVM";
 }
@@ -601,7 +607,7 @@ def FCmpPredicate : LLVM_EnumAttr<
 def ICmpPredicate : LLVM_EnumAttr<
     "ICmpPredicate",
     "::llvm::CmpInst::Predicate",
-    "lvm.icmp comparison predicate",
+    "llvm.icmp comparison predicate",
     [ICmpPredicateEQ, ICmpPredicateNE, ICmpPredicateSLT, ICmpPredicateSLE,
      ICmpPredicateSGT, ICmpPredicateSGE, ICmpPredicateULT, ICmpPredicateULE,
      ICmpPredicateUGT, ICmpPredicateUGE],
@@ -755,13 +761,16 @@ def FramePointerKindAll
     : LLVM_EnumAttrCase<"All", "all", "All", 2>;
 def FramePointerKindReserved
     : LLVM_EnumAttrCase<"Reserved", "reserved", "Reserved", 3>;
+def FramePointerKindNonLeafNoReserve
+    : LLVM_EnumAttrCase<"NonLeafNoReserve", "non-leaf-no-reserve", "NonLeafNoReserve", 4>;
 
 def FramePointerKindEnum : LLVM_EnumAttr<
     "FramePointerKind",
     "::llvm::FramePointerKind",
     "LLVM FramePointerKind",
     [FramePointerKindNone, FramePointerKindNonLeaf,
-     FramePointerKindAll, FramePointerKindReserved]> {
+     FramePointerKindAll, FramePointerKindReserved,
+     FramePointerKindNonLeafNoReserve]> {
   let cppNamespace = "::mlir::LLVM::framePointerKind";
 }
 
@@ -801,6 +810,32 @@ def RoundingModeAttr : LLVM_EnumAttr<
 def ValidRoundingModeAttr : ConfinedAttr<RoundingModeAttr, [IntMinValue<0>]>;
 
 //===----------------------------------------------------------------------===//
+// DenormalModeKind
+//===----------------------------------------------------------------------===//
+
+def DenormalModeIEEE : LLVM_EnumAttrCase<"IEEE", "ieee", "IEEE", 0>;
+def DenormalModePreserveSign
+    : LLVM_EnumAttrCase<"PreserveSign", "preservesign", "PreserveSign", 1>;
+def DenormalModePositiveZero
+    : LLVM_EnumAttrCase<"PositiveZero", "positivezero", "PositiveZero", 2>;
+def DenormalModeDynamic : LLVM_EnumAttrCase<"Dynamic", "dynamic", "Dynamic", 3>;
+// Needed as llvm::DenormalModeKind defines this.
+def DenormalModeInvalid
+    : LLVM_EnumAttrCase<"Invalid", "invalid", "Invalid", -1>;
+
+def DenormalModeKindAttr : LLVM_EnumAttr<
+    "DenormalModeKind",
+    "::llvm::DenormalMode::DenormalModeKind",
+    "LLVM Denormal Mode Kinds",
+    [DenormalModeIEEE,
+     DenormalModePreserveSign,
+     DenormalModePositiveZero,
+     DenormalModeDynamic,
+     DenormalModeInvalid]> {
+  let cppNamespace = "::mlir::LLVM";
+}
+
+//===----------------------------------------------------------------------===//
 // FPExceptionBehavior
 //===----------------------------------------------------------------------===//
 
@@ -823,7 +858,7 @@ def FPExceptionBehaviorAttr : LLVM_EnumAttr<
 }
 
 //===----------------------------------------------------------------------===//
-// Module Flag Behavior
+// Module Flags
 //===----------------------------------------------------------------------===//
 
 // These values must match llvm::Module::ModFlagBehavior ones.
@@ -852,6 +887,21 @@ def ModFlagBehaviorAttr : LLVM_EnumAttr<
     [ModFlagBehaviorError, ModFlagBehaviorWarning, ModFlagBehaviorRequire,
      ModFlagBehaviorOverride, ModFlagBehaviorAppend,
      ModFlagBehaviorAppendUnique, ModFlagBehaviorMax, ModFlagBehaviorMin]> {
+  let cppNamespace = "::mlir::LLVM";
+}
+
+def LLVM_ProfileSummaryFormatSampleProfile : I64EnumAttrCase<"SampleProfile",
+                                                             0>;
+def LLVM_ProfileSummaryFormatInstrProf : I64EnumAttrCase<"InstrProf", 1>;
+def LLVM_ProfileSummaryFormatCSInstrProf : I64EnumAttrCase<"CSInstrProf", 2>;
+
+def LLVM_ProfileSummaryFormatKind : I64EnumAttr<
+    "ProfileSummaryFormatKind",
+    "LLVM ProfileSummary format kinds", [
+      LLVM_ProfileSummaryFormatSampleProfile,
+      LLVM_ProfileSummaryFormatInstrProf,
+      LLVM_ProfileSummaryFormatCSInstrProf,
+    ]> {
   let cppNamespace = "::mlir::LLVM";
 }
 

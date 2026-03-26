@@ -748,7 +748,6 @@ void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
   // Add any initializers with specified priority; this uses the same  approach
   // as EmitCXXGlobalInitFunc().
   if (!PrioritizedCXXGlobalInits.empty()) {
-    SmallVector<llvm::Function *, 8> LocalCXXGlobalInits;
     llvm::array_pod_sort(PrioritizedCXXGlobalInits.begin(),
                          PrioritizedCXXGlobalInits.end());
     for (SmallVectorImpl<GlobalInitData>::iterator
@@ -1122,9 +1121,9 @@ CodeGenFunction::GenerateCXXGlobalInitFunc(llvm::Function *Fn,
       EmitObjCAutoreleasePoolCleanup(token);
     }
 
-    for (unsigned i = 0, e = Decls.size(); i != e; ++i)
-      if (Decls[i])
-        EmitRuntimeCall(Decls[i]);
+    for (llvm::Function *Decl : Decls)
+      if (Decl)
+        EmitRuntimeCall(Decl);
 
     Scope.ForceCleanup();
 

@@ -444,7 +444,7 @@ TEST_P(DebugLineUnsupportedVersionFixture, ErrorForUnsupportedVersion) {
 
 INSTANTIATE_TEST_SUITE_P(UnsupportedVersionTestParams,
                          DebugLineUnsupportedVersionFixture,
-                         Values(/*1 below min */ 1, /* 1 above max */ 6,
+                         Values(/*1 below min */ 1, /* 1 above max */ 7,
                                 /* Maximum possible */ 0xffff));
 
 #ifdef NO_SUPPORT_DEBUG_ADDR
@@ -864,7 +864,7 @@ TEST_F(DebugLineBasicFixture, CallbackUsedForUnterminatedSequence) {
 }
 
 struct AdjustAddressFixtureBase : public CommonFixture {
-  virtual ~AdjustAddressFixtureBase() {}
+  virtual ~AdjustAddressFixtureBase() = default;
 
   // Create and update the prologue as specified by the subclass, then return
   // the length of the table.

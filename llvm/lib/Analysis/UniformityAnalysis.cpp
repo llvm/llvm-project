@@ -8,6 +8,7 @@
 
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/ADT/GenericUniformityImpl.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Dominators.h"
@@ -31,15 +32,25 @@ bool llvm::GenericUniformityAnalysisImpl<SSAContext>::markDefsDivergent(
 
 template <> void llvm::GenericUniformityAnalysisImpl<SSAContext>::initialize() {
   for (auto &I : instructions(F)) {
-    if (TTI->isSourceOfDivergence(&I))
-      markDivergent(I);
-    else if (TTI->isAlwaysUniform(&I))
+    InstructionUniformity IU = TTI->getInstructionUniformity(&I);
+    switch (IU) {
+    case InstructionUniformity::AlwaysUniform:
       addUniformOverride(I);
+      break;
+    case InstructionUniformity::NeverUniform:
+      markDivergent(I);
+      break;
+    case InstructionUniformity::Custom:
+      addCustomUniformityCandidate(&I);
+      break;
+    case InstructionUniformity::Default:
+      break;
+    }
   }
   for (auto &Arg : F.args()) {
-    if (TTI->isSourceOfDivergence(&Arg)) {
+    if (TTI->getInstructionUniformity(&Arg) ==
+        InstructionUniformity::NeverUniform)
       markDivergent(&Arg);
-    }
   }
 }
 
@@ -101,6 +112,15 @@ bool llvm::GenericUniformityAnalysisImpl<SSAContext>::isDivergentUse(
   return false;
 }
 
+template <>
+bool GenericUniformityAnalysisImpl<SSAContext>::isCustomUniform(
+    const Instruction &I) const {
+  SmallBitVector UniformArgs(I.getNumOperands());
+  for (auto [Idx, Use] : enumerate(I.operands()))
+    UniformArgs[Idx] = !isDivergentUse(Use);
+  return TTI->isUniform(&I, UniformArgs);
+}
+
 // This ensures explicit instantiation of
 // GenericUniformityAnalysisImpl::ImplDeleter::operator()
 template class llvm::GenericUniformityInfo<SSAContext>;
@@ -146,12 +166,12 @@ char UniformityInfoWrapperPass::ID = 0;
 UniformityInfoWrapperPass::UniformityInfoWrapperPass() : FunctionPass(ID) {}
 
 INITIALIZE_PASS_BEGIN(UniformityInfoWrapperPass, "uniformity",
-                      "Uniformity Analysis", true, true)
+                      "Uniformity Analysis", false, true)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(CycleInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(UniformityInfoWrapperPass, "uniformity",
-                    "Uniformity Analysis", true, true)
+                    "Uniformity Analysis", false, true)
 
 void UniformityInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
@@ -178,6 +198,7 @@ bool UniformityInfoWrapperPass::runOnFunction(Function &F) {
 
 void UniformityInfoWrapperPass::print(raw_ostream &OS, const Module *) const {
   OS << "UniformityInfo for function '" << m_function->getName() << "':\n";
+  m_uniformityInfo.print(OS);
 }
 
 void UniformityInfoWrapperPass::releaseMemory() {

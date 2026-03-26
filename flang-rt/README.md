@@ -58,8 +58,8 @@ not provide all C-ABI functionality (such as Windows).
 cmake -S <path-to-llvm-project-source>/llvm     \
   -GNinja                                       \
   -DCMAKE_BUILD_TYPE=Release                    \
-  -DLLVM_ENABLE_PROJECTS="clang;flang;openmp"   \
-  -DLLVM_ENABLE_RUNTIMES="compiler-rt;flang-rt" \
+  -DLLVM_ENABLE_PROJECTS="clang;flang"   \
+  -DLLVM_ENABLE_RUNTIMES="compiler-rt;flang-rt;openmp" \
   ...
 ```
 
@@ -146,15 +146,11 @@ CMake itself provide.
    the compiler for `__float128` or 128-bit `long double` support.
    [More details](docs/Real16MathSupport.md).
 
- * `FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT` (values: `"CUDA"`,`"OpenMP"`, `""` default: `""`)
+ * `FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT` (values: `"CUDA"`, `""` default: `""`)
 
    When set to `CUDA`, builds Flang-RT with experimental support for GPU
    accelerators using CUDA. `CMAKE_CUDA_COMPILER` must be set if not
    automatically detected by CMake. `nvcc` as well as `clang` are supported.
-
-   When set to `OpenMP`, builds Flang-RT with experimental support for
-   GPU accelerators using OpenMP offloading. Only Clang is supported for
-   `CMAKE_C_COMPILER` and `CMAKE_CXX_COMPILER`.
 
  * `FLANG_RT_INCLUDE_CUF` (bool, default: `OFF`)
 
@@ -181,13 +177,10 @@ additional configuration options become available.
    default.
 
 
-### Experimental OpenMP Offload Support
 
-With `-DFLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT=OpenMP`, the following
-additional configuration options become available.
+### GPU Offloading Support
 
- * `FLANG_RT_DEVICE_ARCHITECTURES` (default: `"all"`)
-
-   A list of device architectures that Flang-RT is going to support.
-   If `"all"` uses a pre-defined list of architectures. Same purpose as
-   `LIBOMPTARGET_DEVICE_ARCHITECTURES` from liboffload.
+Flang-RT can be built for GPU targets (AMDGPU, NVPTX) using the LLVM
+runtimes build infrastructure. The easiest way to configure a build for
+GPU offloading is via the CMake cache file at
+`offload/cmake/caches/FlangOffload.cmake`.

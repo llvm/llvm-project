@@ -90,14 +90,8 @@ class Compilation {
         : TC(TC), BoundArch(BoundArch), DeviceOffloadKind(DeviceOffloadKind) {}
 
     bool operator<(const TCArgsKey &K) const {
-      if (TC < K.TC)
-        return true;
-      else if (TC == K.TC && BoundArch < K.BoundArch)
-        return true;
-      else if (TC == K.TC && BoundArch == K.BoundArch &&
-               DeviceOffloadKind < K.DeviceOffloadKind)
-        return true;
-      return false;
+      return std::tie(TC, BoundArch, DeviceOffloadKind) <
+             std::tie(K.TC, K.BoundArch, K.DeviceOffloadKind);
     }
   };
   std::map<TCArgsKey, llvm::opt::DerivedArgList *> TCArgs;

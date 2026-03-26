@@ -74,8 +74,12 @@ inline void printTagged(llvm::raw_ostream &os, const void *ptr, {0} value, size_
     if (Type == "char[]") {
       OS << formatv(TAB_2 "printPtr(os, (const char*) ptr);\n");
     } else {
-      OS << formatv(TAB_2 "const {0} * const tptr = (const {0} * const)ptr;\n",
-                    Type);
+      if (Type == "void *")
+        OS << formatv(TAB_2 "void * const * const tptr = (void * "
+                            "const * const)ptr;\n");
+      else
+        OS << formatv(
+            TAB_2 "const {0} * const tptr = (const {0} * const)ptr;\n", Type);
       // TODO: Handle other cases here
       OS << TAB_2 "os << (const void *)tptr << \" (\";\n";
       if (Type.ends_with("*")) {
@@ -212,6 +216,11 @@ template <typename T> inline void printTagged(llvm::raw_ostream &os, const void 
     OS << formatv("inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, "
                   "enum {0} value);\n",
                   EnumRec{R}.getName());
+  }
+  for (auto *R : Records.getAllDerivedDefinitions("Struct")) {
+    OS << formatv("inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, "
+                  "const struct {0} param);\n",
+                  StructRec{R}.getName());
   }
   OS << "\n";
 

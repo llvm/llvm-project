@@ -21,24 +21,19 @@
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/BinaryFormat/Wasm.h"
-#include "llvm/BinaryFormat/WasmTraits.h"
 #include "llvm/Support/FileOutputBuffer.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/LEB128.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/xxhash.h"
 
 #include <cstdarg>
-#include <map>
 #include <optional>
 
 #define DEBUG_TYPE "lld"
@@ -316,7 +311,8 @@ void Writer::writeBuildId() {
 }
 
 static void setGlobalPtr(DefinedGlobal *g, uint64_t memoryPtr) {
-  LLVM_DEBUG(dbgs() << "setGlobalPtr " << g->getName() << " -> " << memoryPtr << "\n");
+  LLVM_DEBUG(dbgs() << "setGlobalPtr " << g->getName() << " -> " << memoryPtr
+                    << "\n");
   g->global->setPointerValue(memoryPtr);
 }
 
@@ -363,7 +359,8 @@ void Writer::layoutMemory() {
     placeStack();
     if (ctx.arg.globalBase) {
       if (ctx.arg.globalBase < memoryPtr) {
-        error("--global-base cannot be less than stack size when --stack-first is used");
+        error("--global-base cannot be less than stack size when --stack-first "
+              "is used");
         return;
       }
       memoryPtr = ctx.arg.globalBase;
@@ -406,7 +403,15 @@ void Writer::layoutMemory() {
       }
     }
 
+    if (ctx.sym.rodataStart && seg->name.starts_with(".rodata") &&
+        !ctx.sym.rodataStart->getVA())
+      ctx.sym.rodataStart->setVA(memoryPtr);
+
     memoryPtr += seg->size;
+
+    // Might get set more than once if segment merging is not enabled.
+    if (ctx.sym.rodataEnd && seg->name.starts_with(".rodata"))
+      ctx.sym.rodataEnd->setVA(memoryPtr);
   }
 
   // Make space for the memory initialization flag
@@ -581,7 +586,7 @@ void Writer::populateTargetFeatures() {
 
   if (ctx.isPic) {
     // This should not be necessary because all PIC objects should
-    // contain the mutable-globals feature.
+    // contain the `mutable-globals` feature.
     // TODO (https://github.com/llvm/llvm-project/issues/51681)
     allowed.insert("mutable-globals");
   }
@@ -633,20 +638,20 @@ void Writer::populateTargetFeatures() {
     goto done;
 
   if (ctx.arg.sharedMemory) {
-    if (disallowed.count("shared-mem"))
+    if (disallowed.contains("shared-mem"))
       error("--shared-memory is disallowed by " + disallowed["shared-mem"] +
             " because it was not compiled with 'atomics' or 'bulk-memory' "
             "features.");
 
     for (auto feature : {"atomics", "bulk-memory"})
-      if (!allowed.count(feature))
+      if (!allowed.contains(feature))
         error(StringRef("'") + feature +
               "' feature must be used in order to use shared memory");
   }
 
   if (tlsUsed) {
     for (auto feature : {"atomics", "bulk-memory"})
-      if (!allowed.count(feature))
+      if (!allowed.contains(feature))
         error(StringRef("'") + feature +
               "' feature must be used in order to use thread-local storage");
   }
@@ -654,7 +659,7 @@ void Writer::populateTargetFeatures() {
   // Validate that used features are allowed in output
   if (!inferFeatures) {
     for (const auto &feature : used.keys()) {
-      if (!allowed.count(std::string(feature)))
+      if (!allowed.contains(std::string(feature)))
         error(Twine("Target feature '") + feature + "' used by " +
               used[feature] + " is not allowed.");
     }
@@ -668,7 +673,7 @@ void Writer::populateTargetFeatures() {
       if (feature.Prefix == WASM_FEATURE_PREFIX_DISALLOWED)
         continue;
       objectFeatures.insert(feature.Name);
-      if (disallowed.count(feature.Name))
+      if (disallowed.contains(feature.Name))
         error(Twine("Target feature '") + feature.Name + "' used in " +
               fileName + " is disallowed by " + disallowed[feature.Name] +
               ". Use --no-check-features to suppress.");
@@ -683,10 +688,10 @@ done:
   // Finally, if we are emitting relocations, they may refer to locations within
   // the bss segments, so these segments need to exist in the binary.
   if (ctx.arg.emitRelocs ||
-      (ctx.arg.memoryImport.has_value() && !allowed.count("bulk-memory")))
+      (ctx.arg.memoryImport.has_value() && !allowed.contains("bulk-memory")))
     ctx.emitBssSegments = true;
 
-  if (allowed.count("extended-const"))
+  if (allowed.contains("extended-const"))
     ctx.arg.extendedConst = true;
 
   for (auto &feature : allowed)
@@ -697,7 +702,7 @@ void Writer::checkImportExportTargetFeatures() {
   if (ctx.arg.relocatable || !ctx.arg.checkFeatures)
     return;
 
-  if (out.targetFeaturesSec->features.count("mutable-globals") == 0) {
+  if (!out.targetFeaturesSec->features.contains("mutable-globals")) {
     for (const Symbol *sym : out.importSec->importedSymbols) {
       if (auto *global = dyn_cast<GlobalSymbol>(sym)) {
         if (global->getGlobalType()->Mutable) {
@@ -708,10 +713,12 @@ void Writer::checkImportExportTargetFeatures() {
       }
     }
     for (const Symbol *sym : out.exportSec->exportedSymbols) {
-      if (isa<GlobalSymbol>(sym)) {
-        error(Twine("mutable global exported but 'mutable-globals' feature "
-                    "not present in inputs: `") +
-              toString(*sym) + "`. Use --no-check-features to suppress.");
+      if (auto *global = dyn_cast<GlobalSymbol>(sym)) {
+        if (global->getGlobalType()->Mutable) {
+          error(Twine("mutable global exported but 'mutable-globals' feature "
+                      "not present in inputs: `") +
+                toString(*sym) + "`. Use --no-check-features to suppress.");
+        }
       }
     }
   }
@@ -751,7 +758,7 @@ static bool shouldImport(Symbol *sym) {
   if (ctx.isPic || ctx.arg.relocatable || ctx.arg.importUndefined ||
       ctx.arg.unresolvedSymbols == UnresolvedPolicy::ImportDynamic)
     return true;
-  if (ctx.arg.allowUndefinedSymbols.count(sym->getName()) != 0)
+  if (ctx.arg.allowUndefinedSymbols.contains(sym->getName()))
     return true;
 
   return sym->isImported();
@@ -787,6 +794,9 @@ void Writer::calculateExports() {
   unsigned globalIndex =
       out.importSec->getNumImportedGlobals() + out.globalSec->numGlobals();
 
+  bool hasMutableGlobals =
+      out.targetFeaturesSec->features.contains("mutable-globals");
+
   for (Symbol *sym : symtab->symbols()) {
     if (!sym->isExported())
       continue;
@@ -804,7 +814,8 @@ void Writer::calculateExports() {
       }
       export_ = {name, WASM_EXTERNAL_FUNCTION, f->getExportedFunctionIndex()};
     } else if (auto *g = dyn_cast<DefinedGlobal>(sym)) {
-      if (g->getGlobalType()->Mutable && !g->getFile() && !g->forceExport) {
+      if (!hasMutableGlobals && g->getGlobalType()->Mutable && !g->getFile() &&
+          !g->isExportedExplicit()) {
         // Avoid exporting mutable globals are linker synthesized (e.g.
         // __stack_pointer or __tls_base) unless they are explicitly exported
         // from the command line.
@@ -1041,7 +1052,7 @@ void Writer::createOutputSegments() {
       if (ctx.arg.relocatable && !segment->getComdatName().empty()) {
         s = createOutputSegment(name);
       } else {
-        if (segmentMap.count(name) == 0)
+        if (!segmentMap.contains(name))
           segmentMap[name] = createOutputSegment(name);
         s = segmentMap[name];
       }
@@ -1050,18 +1061,18 @@ void Writer::createOutputSegments() {
   }
 
   // Sort segments by type, placing .bss last
-  std::stable_sort(segments.begin(), segments.end(),
-                   [](const OutputSegment *a, const OutputSegment *b) {
-                     auto order = [](StringRef name) {
-                       return StringSwitch<int>(name)
-                           .StartsWith(".tdata", 0)
-                           .StartsWith(".rodata", 1)
-                           .StartsWith(".data", 2)
-                           .StartsWith(".bss", 4)
-                           .Default(3);
-                     };
-                     return order(a->name) < order(b->name);
-                   });
+  llvm::stable_sort(segments,
+                    [](const OutputSegment *a, const OutputSegment *b) {
+                      auto order = [](StringRef name) {
+                        return StringSwitch<int>(name)
+                            .StartsWith(".tdata", 0)
+                            .StartsWith(".rodata", 1)
+                            .StartsWith(".data", 2)
+                            .StartsWith(".bss", 4)
+                            .Default(3);
+                      };
+                      return order(a->name) < order(b->name);
+                    });
 
   for (size_t i = 0; i < segments.size(); ++i)
     segments[i]->index = i;
@@ -1108,7 +1119,7 @@ void Writer::combineOutputSegments() {
     }
   }
 
-  segments = newSegments;
+  segments = std::move(newSegments);
 }
 
 static void createFunction(DefinedFunction *func, StringRef bodyContent) {
@@ -1174,7 +1185,7 @@ void Writer::createSyntheticInitFunctions() {
 
     auto hasTLSRelocs = [](const OutputSegment *segment) {
       if (segment->isTLS())
-        for (const auto* is: segment->inputSegments)
+        for (const auto *is : segment->inputSegments)
           if (is->getRelocations().size())
             return true;
       return false;
@@ -1626,7 +1637,8 @@ void Writer::createInitTLSFunction() {
       writeU8(os, WASM_OPCODE_GLOBAL_SET, "global.set");
       writeUleb128(os, ctx.sym.tlsBase->getGlobalIndex(), "global index");
 
-      // FIXME(wvo): this local needs to be I64 in wasm64, or we need an extend op.
+      // FIXME(wvo): this local needs to be I64 in wasm64, or we need an extend
+      // op.
       writeU8(os, WASM_OPCODE_LOCAL_GET, "local.get");
       writeUleb128(os, 0, "local index");
 
@@ -1712,8 +1724,8 @@ void Writer::createSyntheticSectionsPostLayout() {
 void Writer::run() {
   // For PIC code the table base is assigned dynamically by the loader.
   // For non-PIC, we start at 1 so that accessing table index 0 always traps.
-  if (!ctx.isPic && ctx.sym.definedTableBase)
-    ctx.sym.definedTableBase->setVA(ctx.arg.tableBase);
+  if (!ctx.isPic && ctx.sym.tableBase)
+    setGlobalPtr(cast<DefinedGlobal>(ctx.sym.tableBase), ctx.arg.tableBase);
 
   log("-- createOutputSegments");
   createOutputSegments();
@@ -1892,4 +1904,4 @@ void Writer::createHeader() {
 
 void writeResult() { Writer().run(); }
 
-} // namespace wasm::lld
+} // namespace lld::wasm

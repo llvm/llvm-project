@@ -1,7 +1,7 @@
 // RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s | FileCheck %s
 
 
-module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
+module {
   fir.global @_QMfooEv1 : i32 {
     %0 = fir.zero_bits i32
     fir.has_value %0 : i32
@@ -11,6 +11,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
     fir.has_value %c12_i32 : i32
   } loc(#loc4)
   func.func @test() attributes {fir.bindc_name = "test"} {
+    fir.use_stmt "foo"
     %0 = fir.address_of(@_QMfooEv1) : !fir.ref<i32>
     %1 = fircg.ext_declare %0 {uniq_name = "_QMfooEv1"} : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc1)
     %4 = fir.address_of(@_QFtestExyz) : !fir.ref<i32>

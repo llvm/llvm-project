@@ -10,12 +10,11 @@
 #define _LIBCPP___MUTEX_ONCE_FLAG_H
 
 #include <__config>
-#include <__functional/invoke.h>
 #include <__memory/addressof.h>
-#include <__memory/shared_count.h> // __libcpp_acquire_load
-#include <__tuple/tuple_indices.h>
 #include <__tuple/tuple_size.h>
+#include <__type_traits/invoke.h>
 #include <__utility/forward.h>
+#include <__utility/integer_sequence.h>
 #include <__utility/move.h>
 #include <cstdint>
 #ifndef _LIBCPP_CXX03_LANG
@@ -88,14 +87,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI explicit __call_once_param(_Fp& __f) : __f_(__f) {}
 
   _LIBCPP_HIDE_FROM_ABI void operator()() {
-    typedef typename __make_tuple_indices<tuple_size<_Fp>::value, 1>::type _Index;
-    __execute(_Index());
-  }
-
-private:
-  template <size_t... _Indices>
-  _LIBCPP_HIDE_FROM_ABI void __execute(__tuple_indices<_Indices...>) {
-    std::__invoke(std::get<0>(std::move(__f_)), std::get<_Indices>(std::move(__f_))...);
+    [&]<size_t... _Indices>(__index_sequence<_Indices...>) -> void {
+      std::__invoke(std::get<_Indices>(std::move(__f_))...);
+    }(__make_index_sequence<tuple_size<_Fp>::value>());
   }
 };
 
@@ -120,6 +114,15 @@ void _LIBCPP_HIDE_FROM_ABI __call_once_proxy(void* __vp) {
 }
 
 _LIBCPP_EXPORTED_FROM_ABI void __call_once(volatile once_flag::_State_type&, void*, void (*)(void*));
+
+template <class _ValueType>
+inline _LIBCPP_HIDE_FROM_ABI _ValueType __libcpp_acquire_load(_ValueType const* __value) {
+#if _LIBCPP_HAS_THREADS
+  return __atomic_load_n(__value, __ATOMIC_ACQUIRE);
+#else
+  return *__value;
+#endif
+}
 
 #ifndef _LIBCPP_CXX03_LANG
 

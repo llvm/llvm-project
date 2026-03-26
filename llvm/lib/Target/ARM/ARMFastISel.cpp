@@ -20,6 +20,7 @@
 #include "ARMISelLowering.h"
 #include "ARMMachineFunctionInfo.h"
 #include "ARMSubtarget.h"
+#include "ARMTargetMachine.h"
 #include "MCTargetDesc/ARMAddressingModes.h"
 #include "MCTargetDesc/ARMBaseInfo.h"
 #include "Utils/ARMBaseInfo.h"
@@ -85,7 +86,7 @@ namespace {
   // All possible address modes, plus some.
 class Address {
 public:
-  using BaseKind = enum { RegBase, FrameIndexBase };
+  enum BaseKind { RegBase, FrameIndexBase };
 
 private:
   BaseKind Kind = RegBase;
@@ -134,9 +135,9 @@ class ARMFastISel final : public FastISel {
   /// make the right decision when generating code for different targets.
   const ARMSubtarget *Subtarget;
   Module &M;
-  const TargetMachine &TM;
-  const TargetInstrInfo &TII;
-  const TargetLowering &TLI;
+  const ARMBaseInstrInfo &TII;
+  const ARMTargetLowering &TLI;
+  const ARMBaseTargetMachine &TM;
   ARMFunctionInfo *AFI;
 
   // Convenience variables to avoid some queries.
@@ -145,12 +146,13 @@ class ARMFastISel final : public FastISel {
 
   public:
     explicit ARMFastISel(FunctionLoweringInfo &funcInfo,
-                         const TargetLibraryInfo *libInfo)
-        : FastISel(funcInfo, libInfo),
+                         const TargetLibraryInfo *libInfo,
+                         const LibcallLoweringInfo *libcallLowering)
+        : FastISel(funcInfo, libInfo, libcallLowering),
           Subtarget(&funcInfo.MF->getSubtarget<ARMSubtarget>()),
           M(const_cast<Module &>(*funcInfo.Fn->getParent())),
-          TM(funcInfo.MF->getTarget()), TII(*Subtarget->getInstrInfo()),
-          TLI(*Subtarget->getTargetLowering()) {
+          TII(*Subtarget->getInstrInfo()), TLI(*Subtarget->getTargetLowering()),
+          TM(TLI.getTM()) {
       AFI = funcInfo.MF->getInfo<ARMFunctionInfo>();
       isThumb2 = AFI->isThumbFunction();
       Context = &funcInfo.Fn->getContext();
@@ -438,6 +440,9 @@ Register ARMFastISel::ARMMoveToIntReg(MVT VT, Register SrcReg) {
 // (the high and the low) into integer registers then use a move to get
 // the combined constant into an FP reg.
 Register ARMFastISel::ARMMaterializeFP(const ConstantFP *CFP, MVT VT) {
+  if (VT != MVT::f32 && VT != MVT::f64)
+    return Register();
+
   const APFloat Val = CFP->getValueAPF();
   bool is64bit = VT == MVT::f64;
 
@@ -1263,7 +1268,7 @@ static ARMCC::CondCodes getComparePred(CmpInst::Predicate Pred) {
 }
 
 bool ARMFastISel::SelectBranch(const Instruction *I) {
-  const BranchInst *BI = cast<BranchInst>(I);
+  const CondBrInst *BI = cast<CondBrInst>(I);
   MachineBasicBlock *TBB = FuncInfo.getMBB(BI->getSuccessor(0));
   MachineBasicBlock *FBB = FuncInfo.getMBB(BI->getSuccessor(1));
 
@@ -1892,8 +1897,8 @@ CCAssignFn *ARMFastISel::CCAssignFnForCall(CallingConv::ID CC,
   default:
     report_fatal_error("Unsupported calling convention");
   case CallingConv::Fast:
-    if (Subtarget->hasVFP2Base() && !isVarArg) {
-      if (!Subtarget->isAAPCS_ABI())
+    if (Subtarget->hasFPRegs() && !isVarArg) {
+      if (!TM.isAAPCS_ABI())
         return (Return ? RetFastCC_ARM_APCS : FastCC_ARM_APCS);
       // For AAPCS ABI targets, just use VFP variant of the calling convention.
       return (Return ? RetCC_ARM_AAPCS_VFP : CC_ARM_AAPCS_VFP);
@@ -1902,7 +1907,7 @@ CCAssignFn *ARMFastISel::CCAssignFnForCall(CallingConv::ID CC,
   case CallingConv::C:
   case CallingConv::CXX_FAST_TLS:
     // Use target triple & subtarget features to do actual dispatch.
-    if (Subtarget->isAAPCS_ABI()) {
+    if (TM.isAAPCS_ABI()) {
       if (Subtarget->hasFPRegs() &&
           TM.Options.FloatABIType == FloatABI::Hard && !isVarArg)
         return (Return ? RetCC_ARM_AAPCS_VFP: CC_ARM_AAPCS_VFP);
@@ -1942,8 +1947,11 @@ bool ARMFastISel::ProcessCallArgs(SmallVectorImpl<Value*> &Args,
                                   unsigned &NumBytes,
                                   bool isVarArg) {
   SmallVector<CCValAssign, 16> ArgLocs;
+  SmallVector<Type *, 16> OrigTys;
+  for (Value *Arg : Args)
+    OrigTys.push_back(Arg->getType());
   CCState CCInfo(CC, isVarArg, *FuncInfo.MF, ArgLocs, *Context);
-  CCInfo.AnalyzeCallOperands(ArgVTs, ArgFlags,
+  CCInfo.AnalyzeCallOperands(ArgVTs, ArgFlags, OrigTys,
                              CCAssignFnForCall(CC, false, isVarArg));
 
   // Check that we can handle all of the arguments. If we can't, then bail out
@@ -2092,7 +2100,8 @@ bool ARMFastISel::FinishCall(MVT RetVT, SmallVectorImpl<Register> &UsedRegs,
   if (RetVT != MVT::isVoid) {
     SmallVector<CCValAssign, 16> RVLocs;
     CCState CCInfo(CC, isVarArg, *FuncInfo.MF, RVLocs, *Context);
-    CCInfo.AnalyzeCallResult(RetVT, CCAssignFnForCall(CC, true, isVarArg));
+    CCInfo.AnalyzeCallResult(RetVT, I->getType(),
+                             CCAssignFnForCall(CC, true, isVarArg));
 
     // Copy all of the result registers out of their specified physreg.
     if (RVLocs.size() == 2 && RetVT == MVT::f64) {
@@ -2263,7 +2272,9 @@ Register ARMFastISel::getLibcallReg(const Twine &Name) {
 // TODO: Try to unify this and the normal call bits for ARM, then try to unify
 // with X86.
 bool ARMFastISel::ARMEmitLibcall(const Instruction *I, RTLIB::Libcall Call) {
-  CallingConv::ID CC = TLI.getLibcallCallingConv(Call);
+  RTLIB::LibcallImpl LCImpl = LibcallLowering->getLibcallImpl(Call);
+  if (LCImpl == RTLIB::Unsupported)
+    return false;
 
   // Handle *simple* calls for now.
   Type *RetTy = I->getType();
@@ -2273,11 +2284,13 @@ bool ARMFastISel::ARMEmitLibcall(const Instruction *I, RTLIB::Libcall Call) {
   else if (!isTypeLegal(RetTy, RetVT))
     return false;
 
+  CallingConv::ID CC = LibcallLowering->getLibcallImplCallingConv(LCImpl);
+
   // Can't handle non-double multi-reg retvals.
   if (RetVT != MVT::isVoid && RetVT != MVT::i32) {
     SmallVector<CCValAssign, 16> RVLocs;
     CCState CCInfo(CC, false, *FuncInfo.MF, RVLocs, *Context);
-    CCInfo.AnalyzeCallResult(RetVT, CCAssignFnForCall(CC, true, false));
+    CCInfo.AnalyzeCallResult(RetVT, RetTy, CCAssignFnForCall(CC, true, false));
     if (RVLocs.size() >= 2 && RetVT != MVT::f64)
       return false;
   }
@@ -2316,9 +2329,11 @@ bool ARMFastISel::ARMEmitLibcall(const Instruction *I, RTLIB::Libcall Call) {
                        RegArgs, CC, NumBytes, false))
     return false;
 
+  StringRef FuncName = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LCImpl);
+
   Register CalleeReg;
   if (Subtarget->genLongCalls()) {
-    CalleeReg = getLibcallReg(TLI.getLibcallName(Call));
+    CalleeReg = getLibcallReg(FuncName);
     if (!CalleeReg)
       return false;
   }
@@ -2335,7 +2350,7 @@ bool ARMFastISel::ARMEmitLibcall(const Instruction *I, RTLIB::Libcall Call) {
         constrainOperandRegClass(TII.get(CallOpc), CalleeReg, isThumb2 ? 2 : 0);
     MIB.addReg(CalleeReg);
   } else
-    MIB.addExternalSymbol(TLI.getLibcallName(Call));
+    MIB.addExternalSymbol(FuncName.data());
 
   // Add implicit physical register uses to the call.
   for (Register R : RegArgs)
@@ -2388,7 +2403,8 @@ bool ARMFastISel::SelectCall(const Instruction *I,
       RetVT != MVT::i16 && RetVT != MVT::i32) {
     SmallVector<CCValAssign, 16> RVLocs;
     CCState CCInfo(CC, isVarArg, *FuncInfo.MF, RVLocs, *Context);
-    CCInfo.AnalyzeCallResult(RetVT, CCAssignFnForCall(CC, true, isVarArg));
+    CCInfo.AnalyzeCallResult(RetVT, RetTy,
+                             CCAssignFnForCall(CC, true, isVarArg));
     if (RVLocs.size() >= 2 && RetVT != MVT::f64)
       return false;
   }
@@ -2498,6 +2514,7 @@ bool ARMFastISel::SelectCall(const Instruction *I,
   // Set all unused physreg defs as dead.
   static_cast<MachineInstr *>(MIB)->setPhysRegsDeadExcept(UsedRegs, TRI);
 
+  diagnoseDontCall(*CI);
   return true;
 }
 
@@ -2561,8 +2578,7 @@ bool ARMFastISel::SelectIntrinsicCall(const IntrinsicInst &I) {
     const TargetRegisterClass *RC = isThumb2 ? &ARM::tGPRRegClass
                                              : &ARM::GPRRegClass;
 
-    const ARMBaseRegisterInfo *RegInfo =
-        static_cast<const ARMBaseRegisterInfo *>(Subtarget->getRegisterInfo());
+    const ARMBaseRegisterInfo *RegInfo = Subtarget->getRegisterInfo();
     Register FramePtr = RegInfo->getFrameRegister(*(FuncInfo.MF));
     Register SrcReg = FramePtr;
 
@@ -2635,12 +2651,8 @@ bool ARMFastISel::SelectIntrinsicCall(const IntrinsicInst &I) {
     return SelectCall(&I, "memset");
   }
   case Intrinsic::trap: {
-    unsigned Opcode;
-    if (Subtarget->isThumb())
-      Opcode = ARM::tTRAP;
-    else
-      Opcode = Subtarget->useNaClTrap() ? ARM::TRAPNaCl : ARM::TRAP;
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(Opcode));
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+            TII.get(Subtarget->isThumb() ? ARM::tTRAP : ARM::TRAP));
     return true;
   }
   }
@@ -2796,7 +2808,7 @@ Register ARMFastISel::ARMEmitIntExt(MVT SrcVT, Register SrcReg, MVT DestVT,
     if (setsCPSR)
       MIB.addReg(ARM::CPSR, RegState::Define);
     SrcReg = constrainOperandRegClass(TII.get(Opcode), SrcReg, 1 + setsCPSR);
-    MIB.addReg(SrcReg, isKill * RegState::Kill)
+    MIB.addReg(SrcReg, getKillRegState(isKill))
         .addImm(ImmEnc)
         .add(predOps(ARMCC::AL));
     if (hasS)
@@ -2899,7 +2911,7 @@ bool ARMFastISel::fastSelectInstruction(const Instruction *I) {
       return SelectLoad(I);
     case Instruction::Store:
       return SelectStore(I);
-    case Instruction::Br:
+    case Instruction::CondBr:
       return SelectBranch(I);
     case Instruction::IndirectBr:
       return SelectIndirectBr(I);
@@ -3148,12 +3160,13 @@ bool ARMFastISel::fastLowerArguments() {
 
 namespace llvm {
 
-  FastISel *ARM::createFastISel(FunctionLoweringInfo &funcInfo,
-                                const TargetLibraryInfo *libInfo) {
-    if (funcInfo.MF->getSubtarget<ARMSubtarget>().useFastISel())
-      return new ARMFastISel(funcInfo, libInfo);
+FastISel *ARM::createFastISel(FunctionLoweringInfo &funcInfo,
+                              const TargetLibraryInfo *libInfo,
+                              const LibcallLoweringInfo *libcallLowering) {
+  if (funcInfo.MF->getSubtarget<ARMSubtarget>().useFastISel())
+    return new ARMFastISel(funcInfo, libInfo, libcallLowering);
 
-    return nullptr;
-  }
+  return nullptr;
+}
 
 } // end namespace llvm

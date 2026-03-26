@@ -53,7 +53,7 @@ struct TestTopologicalSortAnalysisPass
         return WalkResult::advance();
       });
 
-      if (llvm::find(selectedOps, nullptr) != selectedOps.end()) {
+      if (llvm::is_contained(selectedOps, nullptr)) {
         root->emitError("invalid test case: some indices are missing among the "
                         "selected ops");
         return WalkResult::skip();

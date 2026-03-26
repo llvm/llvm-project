@@ -120,6 +120,8 @@ Improvements and New Features
 
 - Added :ref:`hardening mode <hardening>` support for ``forward_list`` and ``bitset``.
 
+- The performance of ``std::getline`` has been improved, resulting in a performance uplift of up to 10x.
+
 Deprecations and Removals
 -------------------------
 
@@ -152,9 +154,6 @@ Deprecations and Removals
   specified by the standard. They, together with ``<ciso646>``, are removed in C++20, but libc++ still provides these
   headers as an extension and only deprecates them. The ``_LIBCPP_DISABLE_DEPRECATION_WARNINGS`` macro can be defined to
   suppress deprecation for these headers.
-
-- The ``_LIBCPP_DISABLE_AVAILABILITY`` macro that was used to force-disable availability markup has now been removed.
-  Whether availability markup is used by the library is now solely controlled at configuration-time.
 
 - The pointer safety functions ``declare_reachable``, ``declare_no_pointers``, ``undeclare_no_pointers`` and
   ``__undeclare_reachable`` have been removed from the library. These functions were never implemented in a non-trivial

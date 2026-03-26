@@ -144,7 +144,13 @@ public:
 
   bool IsDefined() const;
 
-  bool IsFloatingPointType(uint32_t &count, bool &is_complex) const;
+  bool IsComplexType() const;
+
+  /// Returns \c true for floating point types (including complex floats).
+  bool IsFloatingPointType() const;
+
+  /// Returns \c true for non-complex float types.
+  bool IsRealFloatingPointType() const;
 
   bool IsFunctionType() const;
 
@@ -159,6 +165,8 @@ public:
   bool IsFunctionPointerType() const;
 
   bool IsMemberFunctionPointerType() const;
+
+  bool IsMemberDataPointerType() const;
 
   bool
   IsBlockPointerType(CompilerType *function_pointer_type_ptr = nullptr) const;
@@ -196,10 +204,10 @@ public:
 
   bool IsVoidType() const;
 
+  bool HasPointerAuthQualifier() const;
+
   /// This is used when you don't care about the signedness of the integer.
   bool IsInteger() const;
-
-  bool IsFloat() const;
 
   /// This is used when you don't care about the signedness of the enum.
   bool IsEnumerationType() const;
@@ -275,6 +283,11 @@ public:
   /// Returns a shared pointer to the type system. The
   /// TypeSystem::TypeSystemSPWrapper can be compared for equality.
   TypeSystemSPWrapper GetTypeSystem() const;
+
+  template <typename TypeSystemType>
+  std::shared_ptr<TypeSystemType> GetTypeSystem() const {
+    return GetTypeSystem().dyn_cast_or_null<TypeSystemType>();
+  }
 
   ConstString GetTypeName(bool BaseOnly = false) const;
 
@@ -395,7 +408,7 @@ public:
   /// Return the size of the type in bits.
   llvm::Expected<uint64_t> GetBitSize(ExecutionContextScope *exe_scope) const;
 
-  lldb::Encoding GetEncoding(uint64_t &count) const;
+  lldb::Encoding GetEncoding() const;
 
   lldb::Format GetFormat() const;
 
@@ -432,6 +445,11 @@ public:
                                           uint32_t *bit_offset_ptr) const;
 
   CompilerDecl GetStaticFieldWithName(llvm::StringRef name) const;
+
+  llvm::Expected<CompilerType>
+  GetDereferencedType(ExecutionContext *exe_ctx, std::string &deref_name,
+                      uint32_t &deref_byte_size, int32_t &deref_byte_offset,
+                      ValueObject *valobj, uint64_t &language_flags) const;
 
   llvm::Expected<CompilerType> GetChildCompilerTypeAtIndex(
       ExecutionContext *exe_ctx, size_t idx, bool transparent_pointers,

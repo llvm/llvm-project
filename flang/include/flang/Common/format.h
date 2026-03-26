@@ -12,6 +12,7 @@
 #include "Fortran-consts.h"
 #include "enum-set.h"
 #include <cstring>
+#include <limits>
 
 // Define a FormatValidator class template to validate a format expression
 // of a given CHAR type.  To enable use in runtime library code as well as
@@ -28,6 +29,80 @@
 
 namespace Fortran::common {
 
+// AddOverflow and MulOverflow are copied from
+// llvm/include/llvm/Support/MathExtras.h and specialised to int64_t.
+
+// __has_builtin is not defined in some compilers. Make sure it is defined.
+#ifndef __has_builtin
+#define __has_builtin(x) 0
+#endif
+
+/// Add two signed integers, computing the two's complement truncated result,
+/// returning true if overflow occurred.
+static inline bool AddOverflow(
+    std::int64_t x, std::int64_t y, std::int64_t &result) {
+#if __has_builtin(__builtin_add_overflow)
+  return __builtin_add_overflow(x, y, &result);
+#else
+  // Perform the unsigned addition.
+  const std::uint64_t ux{static_cast<std::uint64_t>(x)};
+  const std::uint64_t uy{static_cast<std::uint64_t>(y)};
+  const std::uint64_t uresult{ux + uy};
+
+  // Convert to signed.
+  result = static_cast<std::int64_t>(uresult);
+
+  // Adding two positive numbers should result in a positive number.
+  if (x > 0 && y > 0) {
+    return result <= 0;
+  }
+  // Adding two negatives should result in a negative number.
+  if (x < 0 && y < 0) {
+    return result >= 0;
+  }
+  return false;
+#endif
+}
+
+/// Multiply two signed integers, computing the two's complement truncated
+/// result, returning true if an overflow occurred.
+static inline bool MulOverflow(
+    std::int64_t x, std::int64_t y, std::int64_t &result) {
+#if __has_builtin(__builtin_mul_overflow)
+  return __builtin_mul_overflow(x, y, &result);
+#else
+  // Perform the unsigned multiplication on absolute values.
+  const std::uint64_t ux{x < 0 ? (0 - static_cast<std::uint64_t>(x))
+                               : static_cast<std::uint64_t>(x)};
+  const std::uint64_t uy{y < 0 ? (0 - static_cast<std::uint64_t>(y))
+                               : static_cast<std::uint64_t>(y)};
+  const std::uint64_t uresult{ux * uy};
+
+  // Convert to signed.
+  const bool isNegative = (x < 0) ^ (y < 0);
+  result = isNegative ? (0 - uresult) : uresult;
+
+  // If any of the args was 0, result is 0 and no overflow occurs.
+  if (ux == 0 || uy == 0) {
+    return false;
+  }
+
+  // ux and uy are in [1, 2^n], where n is the number of digits.
+  // Check how the max allowed absolute value (2^n for negative, 2^(n-1) for
+  // positive) divided by an argument compares to the other.
+  if (isNegative) {
+    return ux >
+        (static_cast<std::uint64_t>(std::numeric_limits<std::int64_t>::max()) +
+            std::uint64_t{1}) /
+        uy;
+  } else {
+    return ux >
+        (static_cast<std::uint64_t>(std::numeric_limits<std::int64_t>::max())) /
+        uy;
+  }
+#endif
+}
+
 struct FormatMessage {
   const char *text; // message text; may have one %s argument
   const char *arg; // optional %s argument value
@@ -39,7 +114,8 @@ struct FormatMessage {
 // This declaration is logically private to class FormatValidator.
 // It is placed here to work around a clang compilation problem.
 ENUM_CLASS(TokenKind, None, A, B, BN, BZ, D, DC, DP, DT, E, EN, ES, EX, F, G, I,
-    L, O, P, RC, RD, RN, RP, RU, RZ, S, SP, SS, T, TL, TR, X, Z, Colon, Slash,
+    L, LZ, LZP, LZS, O, P, RC, RD, RN, RP, RU, RZ, S, SP, SS, T, TL, TR, X, Z,
+    Colon, Slash,
     Backslash, // nonstandard: inhibit newline on output
     Dollar, // nonstandard: inhibit newline on output on terminals
     Star, LParen, RParen, Comma, Point, Sign,
@@ -140,11 +216,11 @@ private:
   Token token_{}; // current token
   Token knrToken_{}; // k, n, or r UnsignedInteger token
   Token scaleFactorToken_{}; // most recent scale factor token P
-  int64_t integerValue_{-1}; // value of UnsignedInteger token
-  int64_t knrValue_{-1}; // -1 ==> not present
-  int64_t scaleFactorValue_{}; // signed k in kP
-  int64_t wValue_{-1};
-  char argString_[3]{}; // 1-2 character msg arg; usually edit descriptor name
+  std::int64_t integerValue_{-1}; // value of UnsignedInteger token
+  std::int64_t knrValue_{-1}; // -1 ==> not present
+  std::int64_t scaleFactorValue_{}; // signed k in kP
+  std::int64_t wValue_{-1};
+  char argString_[4]{}; // 1-3 character msg arg; usually edit descriptor name
   bool formatHasErrors_{false};
   bool unterminatedFormatError_{false};
   bool suppressMessageCascade_{false};
@@ -214,16 +290,18 @@ template <typename CHAR> void FormatValidator<CHAR>::NextToken() {
   case '7':
   case '8':
   case '9': {
-    int64_t lastValue;
-    const CHAR *lastCursor;
+    const CHAR *lastCursor{};
     integerValue_ = 0;
     bool overflow{false};
     do {
-      lastValue = integerValue_;
       lastCursor = cursor_;
-      integerValue_ = 10 * integerValue_ + c - '0';
-      if (lastValue > integerValue_) {
-        overflow = true;
+      if (!overflow) {
+        overflow = MulOverflow(
+            static_cast<std::int64_t>(10), integerValue_, integerValue_);
+      }
+      if (!overflow) {
+        overflow = AddOverflow(
+            integerValue_, static_cast<std::int64_t>(c - '0'), integerValue_);
       }
       c = NextChar();
     } while (c >= '0' && c <= '9');
@@ -313,7 +391,25 @@ template <typename CHAR> void FormatValidator<CHAR>::NextToken() {
     token_.set_kind(TokenKind::I);
     break;
   case 'L':
-    token_.set_kind(TokenKind::L);
+    switch (LookAheadChar()) {
+    case 'Z':
+      // Advance past 'Z', then look ahead for 'S' or 'P'
+      Advance(TokenKind::LZ);
+      switch (LookAheadChar()) {
+      case 'S':
+        Advance(TokenKind::LZS);
+        break;
+      case 'P':
+        Advance(TokenKind::LZP);
+        break;
+      default:
+        break;
+      }
+      break;
+    default:
+      token_.set_kind(TokenKind::L);
+      break;
+    }
     break;
   case 'O':
     token_.set_kind(TokenKind::O);
@@ -430,11 +526,11 @@ template <typename CHAR> void FormatValidator<CHAR>::NextToken() {
       }
     }
     SetLength();
-    if (stmt_ == IoStmtKind::Read &&
-        previousToken_.kind() != TokenKind::DT) { // 13.3.2p6
-      ReportError("String edit descriptor in READ format expression");
-    } else if (token_.kind() != TokenKind::String) {
+    if (token_.kind() != TokenKind::String) {
       ReportError("Unterminated string");
+    } else if (stmt_ == IoStmtKind::Read &&
+        previousToken_.kind() != TokenKind::DT) { // 13.3.2p6
+      ReportWarning("String edit descriptor in READ format expression");
     }
     break;
   default:
@@ -597,9 +693,22 @@ template <typename CHAR> bool FormatValidator<CHAR>::Check() {
       ReportError("Unexpected '%s' in format expression", signToken);
     }
     // Default message argument.
-    // Alphabetic edit descriptor names are one or two characters in length.
+    // Alphabetic edit descriptor names are one to three characters in length.
     argString_[0] = toupper(format_[token_.offset()]);
-    argString_[1] = token_.length() > 1 ? toupper(*cursor_) : 0;
+    if (token_.length() > 2) {
+      // Three-character descriptor names (e.g., LZP, LZS).
+      // token_.offset() has the first character and *cursor_ has the last;
+      // find the middle character by scanning past any blanks.
+      const CHAR *mid{format_ + token_.offset() + 1};
+      while (mid < cursor_ && IsWhite(*mid)) {
+        ++mid;
+      }
+      argString_[1] = toupper(*mid);
+      argString_[2] = toupper(*cursor_);
+    } else {
+      argString_[1] = token_.length() > 1 ? toupper(*cursor_) : 0;
+      argString_[2] = 0;
+    }
     // Process one format edit descriptor or do format list management.
     switch (token_.kind()) {
     case TokenKind::A:
@@ -717,6 +826,9 @@ template <typename CHAR> bool FormatValidator<CHAR>::Check() {
     case TokenKind::BZ:
     case TokenKind::DC:
     case TokenKind::DP:
+    case TokenKind::LZ:
+    case TokenKind::LZS:
+    case TokenKind::LZP:
     case TokenKind::RC:
     case TokenKind::RD:
     case TokenKind::RN:
@@ -730,6 +842,7 @@ template <typename CHAR> bool FormatValidator<CHAR>::Check() {
       // R1318 blank-interp-edit-desc -> BN | BZ
       // R1319 round-edit-desc -> RU | RD | RZ | RN | RC | RP
       // R1320 decimal-edit-desc -> DC | DP
+      // F202X leading-zero-edit-desc -> LZ | LZS | LZP
       check_r(false);
       NextToken();
       break;
@@ -831,6 +944,9 @@ template <typename CHAR> bool FormatValidator<CHAR>::Check() {
       }
       if (++nestLevel > maxNesting_) {
         maxNesting_ = nestLevel;
+      }
+      if (LookAheadChar() == ')') {
+        ReportError("Nested parenthesized format item list is empty");
       }
       break;
     case TokenKind::RParen:

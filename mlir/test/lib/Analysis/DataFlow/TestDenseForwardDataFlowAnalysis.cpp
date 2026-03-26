@@ -13,9 +13,8 @@
 #include "TestDenseDataFlowAnalysis.h"
 #include "TestDialect.h"
 #include "TestOps.h"
-#include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
-#include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Analysis/DataFlow/DenseAnalysis.h"
+#include "mlir/Analysis/DataFlow/Utils.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
@@ -240,8 +239,7 @@ struct TestLastModifiedPass
     Operation *op = getOperation();
 
     DataFlowSolver solver(DataFlowConfig().setInterprocedural(interprocedural));
-    solver.load<DeadCodeAnalysis>();
-    solver.load<SparseConstantPropagation>();
+    loadBaselineAnalyses(solver);
     solver.load<LastModifiedAnalysis>(assumeFuncWrites);
     solver.load<UnderlyingValueAnalysis>();
     if (failed(solver.initializeAndRun(op)))
@@ -258,7 +256,13 @@ struct TestLastModifiedPass
       os << "test_tag: " << tag.getValue() << ":\n";
       const LastModification *lastMods =
           solver.lookupState<LastModification>(solver.getProgramPointAfter(op));
-      assert(lastMods && "expected a dense lattice");
+      if (!lastMods) {
+        // The lattice may not be computed for operations in unreachable code
+        // (e.g., private functions not called from anywhere in interprocedural
+        // analysis mode).
+        os << " - <not computed>\n";
+        return;
+      }
       for (auto [index, operand] : llvm::enumerate(op->getOperands())) {
         os << " operand #" << index << "\n";
         std::optional<Value> underlyingValue =

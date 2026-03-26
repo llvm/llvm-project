@@ -11,7 +11,7 @@
 #include "src/__support/FPUtil/generic/FMod.h"
 #include "src/__support/macros/properties/types.h"
 
-#include <stdint.h>
+#include "hdr/stdint_proxy.h"
 
 #define FMOD_FUNC(U) (LIBC_NAMESPACE::fputil::generic::FMod<float16, U>::eval)
 

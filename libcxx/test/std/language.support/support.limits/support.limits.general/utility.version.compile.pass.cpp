@@ -331,17 +331,11 @@
 #    error "__cpp_lib_integer_sequence should have the value 201304L in c++23"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_ranges_zip
-#      error "__cpp_lib_ranges_zip should be defined in c++23"
-#    endif
-#    if __cpp_lib_ranges_zip != 202110L
-#      error "__cpp_lib_ranges_zip should have the value 202110L in c++23"
-#    endif
-#  else
-#    ifdef __cpp_lib_ranges_zip
-#      error "__cpp_lib_ranges_zip should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_ranges_zip
+#    error "__cpp_lib_ranges_zip should be defined in c++23"
+#  endif
+#  if __cpp_lib_ranges_zip != 202110L
+#    error "__cpp_lib_ranges_zip should have the value 202110L in c++23"
 #  endif
 
 #  ifndef __cpp_lib_to_underlying
@@ -401,17 +395,11 @@
 #    error "__cpp_lib_constexpr_utility should have the value 201811L in c++26"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_constrained_equality
-#      error "__cpp_lib_constrained_equality should be defined in c++26"
-#    endif
-#    if __cpp_lib_constrained_equality != 202403L
-#      error "__cpp_lib_constrained_equality should have the value 202403L in c++26"
-#    endif
-#  else
-#    ifdef __cpp_lib_constrained_equality
-#      error "__cpp_lib_constrained_equality should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_constrained_equality
+#    error "__cpp_lib_constrained_equality should be defined in c++26"
+#  endif
+#  if __cpp_lib_constrained_equality != 202411L
+#    error "__cpp_lib_constrained_equality should have the value 202411L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_exchange_function
@@ -438,21 +426,15 @@
 #  ifndef __cpp_lib_integer_sequence
 #    error "__cpp_lib_integer_sequence should be defined in c++26"
 #  endif
-#  if __cpp_lib_integer_sequence != 201304L
-#    error "__cpp_lib_integer_sequence should have the value 201304L in c++26"
+#  if __cpp_lib_integer_sequence != 202511L
+#    error "__cpp_lib_integer_sequence should have the value 202511L in c++26"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_ranges_zip
-#      error "__cpp_lib_ranges_zip should be defined in c++26"
-#    endif
-#    if __cpp_lib_ranges_zip != 202110L
-#      error "__cpp_lib_ranges_zip should have the value 202110L in c++26"
-#    endif
-#  else
-#    ifdef __cpp_lib_ranges_zip
-#      error "__cpp_lib_ranges_zip should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_ranges_zip
+#    error "__cpp_lib_ranges_zip should be defined in c++26"
+#  endif
+#  if __cpp_lib_ranges_zip != 202110L
+#    error "__cpp_lib_ranges_zip should have the value 202110L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_to_underlying
@@ -492,4 +474,3 @@
 #endif // TEST_STD_VER > 23
 
 // clang-format on
-

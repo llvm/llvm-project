@@ -1,9 +1,7 @@
 message(STATUS "Building offloading runtime library libomptarget.")
 
-if(LIBOMP_STANDALONE)
-  set(LIBOMP ${LIBOMP_STANDALONE})
-else()
-  set(LIBOMP omp)
+if(NOT TARGET "omp")
+  message(FATAL_ERROR "Error: omp target dependency of libomptarget not found. Please ensure 'openmp' is on LLVM_ENABLE_RUNTIMES list.")
 endif()
 
 add_llvm_library(omptarget
@@ -35,7 +33,7 @@ add_llvm_library(omptarget
 
   LINK_LIBS
   PUBLIC
-  ${LIBOMP}
+  omp
 
   NO_INSTALL_RPATH
   BUILDTREE_ONLY
@@ -44,9 +42,8 @@ target_include_directories(omptarget PRIVATE
   ${LIBOMPTARGET_INCLUDE_DIR} ${LIBOMPTARGET_BINARY_INCLUDE_DIR}
 )
 
-if (LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
-  target_link_libraries(omptarget PRIVATE
-    "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/exports")
+if(LLVM_HAVE_LINK_VERSION_SCRIPT)
+  target_link_libraries(omptarget PRIVATE "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/exports")
 endif()
 
 # Define the TARGET_NAME and DEBUG_PREFIX.

@@ -12,11 +12,11 @@
 
 #include "RISCVInstPrinter.h"
 #include "RISCVBaseInfo.h"
-#include "RISCVMCExpr.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/CommandLine.h"
@@ -76,7 +76,7 @@ void RISCVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   if (PrintAliases && !NoAliases)
     Res = RISCVRVC::uncompress(UncompressedMI, *MI, STI);
   if (Res)
-    NewMI = const_cast<MCInst *>(&UncompressedMI);
+    NewMI = &UncompressedMI;
   if (!PrintAliases || NoAliases || !printAliasInstr(NewMI, Address, STI, O))
     printInstruction(NewMI, Address, STI, O);
   printAnnotation(O, Annot);
@@ -97,18 +97,22 @@ void RISCVInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   }
 
   if (MO.isImm()) {
-    markup(O, Markup::Immediate) << formatImm(MO.getImm());
+    printImm(MI, OpNo, STI, O);
     return;
   }
 
   assert(MO.isExpr() && "Unknown operand kind in printOperand");
-  MO.getExpr()->print(O, &MAI);
+  MAI.printExpr(O, *MO.getExpr());
 }
 
 void RISCVInstPrinter::printBranchOperand(const MCInst *MI, uint64_t Address,
                                           unsigned OpNo,
                                           const MCSubtargetInfo &STI,
                                           raw_ostream &O) {
+  // Do not print the numeric target address when symbolizing.
+  if (SymbolizeOperands)
+    return;
+
   const MCOperand &MO = MI->getOperand(OpNo);
   if (!MO.isImm())
     return printOperand(MI, OpNo, STI, O);
@@ -217,14 +221,34 @@ void RISCVInstPrinter::printVTypeI(const MCInst *MI, unsigned OpNo,
                                    const MCSubtargetInfo &STI, raw_ostream &O) {
   unsigned Imm = MI->getOperand(OpNo).getImm();
   // Print the raw immediate for reserved values: vlmul[2:0]=4, vsew[2:0]=0b1xx,
-  // or non-zero in bits 8 and above.
+  // altfmt=1 without zvfbfa or zvfofp8min extension, or non-zero in bits 9 and
+  // above.
   if (RISCVVType::getVLMUL(Imm) == RISCVVType::VLMUL::LMUL_RESERVED ||
-      RISCVVType::getSEW(Imm) > 64 || (Imm >> 8) != 0) {
+      RISCVVType::getSEW(Imm) > 64 ||
+      (RISCVVType::isAltFmt(Imm) &&
+       !(STI.hasFeature(RISCV::FeatureStdExtZvfbfa) ||
+         STI.hasFeature(RISCV::FeatureStdExtZvfofp8min) ||
+         STI.hasFeature(RISCV::FeatureVendorXSfvfbfexp16e))) ||
+      (Imm >> 9) != 0) {
     O << formatImm(Imm);
     return;
   }
   // Print the text form.
   RISCVVType::printVType(Imm, O);
+}
+
+void RISCVInstPrinter::printXSfmmVType(const MCInst *MI, unsigned OpNo,
+                                       const MCSubtargetInfo &STI,
+                                       raw_ostream &O) {
+  unsigned Imm = MI->getOperand(OpNo).getImm();
+  assert(RISCVVType::isValidXSfmmVType(Imm));
+  unsigned SEW = RISCVVType::getSEW(Imm);
+  O << "e" << SEW;
+  bool AltFmt = RISCVVType::isAltFmt(Imm);
+  if (AltFmt)
+    O << "alt";
+  unsigned Widen = RISCVVType::getXSfmmWiden(Imm);
+  O << ", w" << Widen;
 }
 
 // Print a Zcmp RList. If we are printing architectural register names rather
@@ -316,6 +340,22 @@ void RISCVInstPrinter::printVMaskReg(const MCInst *MI, unsigned OpNo,
   O << ", ";
   printRegName(O, MO.getReg());
   O << ".t";
+}
+
+void RISCVInstPrinter::printImm(const MCInst *MI, unsigned OpNo,
+                                const MCSubtargetInfo &STI, raw_ostream &O) {
+  const MCOperand &Op = MI->getOperand(OpNo);
+  const unsigned Opcode = MI->getOpcode();
+  uint64_t Imm = Op.getImm();
+  if (STI.getTargetTriple().isOSBinFormatMachO() &&
+      (Opcode == RISCV::ANDI || Opcode == RISCV::ORI || Opcode == RISCV::XORI ||
+       Opcode == RISCV::C_ANDI || Opcode == RISCV::AUIPC ||
+       Opcode == RISCV::LUI)) {
+    if (!STI.hasFeature(RISCV::Feature64Bit))
+      Imm &= 0xffffffff;
+    markup(O, Markup::Immediate) << formatHex(Imm);
+  } else
+    markup(O, Markup::Immediate) << formatImm(Imm);
 }
 
 const char *RISCVInstPrinter::getRegisterName(MCRegister Reg) {

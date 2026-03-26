@@ -46,6 +46,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -220,11 +221,11 @@ void Preprocessor::Handle_Pragma(Token &Tok) {
   if (!tok::isStringLiteral(Tok.getKind())) {
     Diag(PragmaLoc, diag::err__Pragma_malformed);
     // Skip bad tokens, and the ')', if present.
-    if (Tok.isNot(tok::r_paren) && Tok.isNot(tok::eof))
+    if (Tok.isNot(tok::r_paren) && Tok.isNot(tok::eof) && Tok.isNot(tok::eod))
       Lex(Tok);
     while (Tok.isNot(tok::r_paren) &&
            !Tok.isAtStartOfLine() &&
-           Tok.isNot(tok::eof))
+           Tok.isNot(tok::eof) && Tok.isNot(tok::eod))
       Lex(Tok);
     if (Tok.is(tok::r_paren))
       Lex(Tok);
@@ -591,7 +592,8 @@ IdentifierInfo *Preprocessor::ParsePragmaPushOrPopMacro(Token &Tok) {
   }
 
   // Remember the macro string.
-  std::string StrVal = getSpelling(Tok);
+  Token StrTok = Tok;
+  std::string StrVal = getSpelling(StrTok);
 
   // Read the ')'.
   Lex(Tok);
@@ -603,6 +605,15 @@ IdentifierInfo *Preprocessor::ParsePragmaPushOrPopMacro(Token &Tok) {
 
   assert(StrVal[0] == '"' && StrVal[StrVal.size()-1] == '"' &&
          "Invalid string token!");
+
+  if (StrVal.size() <= 2) {
+    Diag(StrTok.getLocation(), diag::warn_pargma_push_pop_macro_empty_string)
+        << SourceRange(
+               StrTok.getLocation(),
+               StrTok.getLocation().getLocWithOffset(StrTok.getLength()))
+        << PragmaTok.getIdentifierInfo()->isStr("pop_macro");
+    return nullptr;
+  }
 
   // Create a Token from the string.
   Token MacroTok;
@@ -1069,6 +1080,8 @@ struct PragmaDebugHandler : public PragmaHandler {
         Crasher.setAnnotationRange(SourceRange(Tok.getLocation()));
         PP.EnterToken(Crasher, /*IsReinject*/ false);
       }
+    } else if (II->isStr("sleep")) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
     } else if (II->isStr("dump")) {
       Token DumpAnnot;
       DumpAnnot.startToken();

@@ -16,11 +16,6 @@ target triple = "x86_64-apple-darwin10.0.0"
 ;}
 
 
-;.
-; CHECK: @.memset_pattern = private unnamed_addr constant [4 x i32] [i32 2, i32 2, i32 2, i32 2], align 16
-; CHECK: @.memset_pattern.1 = private unnamed_addr constant [4 x i32] [i32 2, i32 2, i32 2, i32 2], align 16
-; CHECK: @.memset_pattern.2 = private unnamed_addr constant [4 x i32] [i32 2, i32 2, i32 2, i32 2], align 16
-;.
 define void @bar1(ptr %f, i32 %n) nounwind ssp {
 ; CHECK-LABEL: @bar1(
 ; CHECK-NEXT:  entry:
@@ -28,8 +23,8 @@ define void @bar1(ptr %f, i32 %n) nounwind ssp {
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_END:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 3
-; CHECK-NEXT:    call void @memset_pattern16(ptr [[F:%.*]], ptr @.memset_pattern, i64 [[TMP1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
+; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i32.i64(ptr align 4 [[F:%.*]], i32 2, i64 [[TMP1]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -82,8 +77,8 @@ define void @bar2(ptr %f, i32 %n) nounwind ssp {
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_END:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 3
-; CHECK-NEXT:    call void @memset_pattern16(ptr [[F:%.*]], ptr @.memset_pattern.1, i64 [[TMP1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
+; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i32.i64(ptr align 4 [[F:%.*]], i32 2, i64 [[TMP1]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -142,7 +137,8 @@ define void @bar3(ptr nocapture %f, i32 %n) nounwind ssp {
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[TMP3]], 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP1]], [[TMP4]]
 ; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[F:%.*]], i64 [[TMP5]]
-; CHECK-NEXT:    call void @memset_pattern16(ptr [[UGLYGEP]], ptr @.memset_pattern.2, i64 [[TMP1]])
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP0]], 2
+; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i32.i64(ptr align 4 [[UGLYGEP]], i32 2, i64 [[TMP7]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP0]], [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -292,5 +288,5 @@ for.end:                                          ; preds = %for.end.loopexit, %
 }
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nounwind ssp }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
 ;.

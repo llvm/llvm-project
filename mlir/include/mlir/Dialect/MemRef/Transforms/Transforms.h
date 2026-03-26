@@ -23,6 +23,7 @@ class RewritePatternSet;
 class RewriterBase;
 class Value;
 class ValueRange;
+class ReifyRankedShapedTypeOpInterface;
 
 namespace arith {
 class WideIntEmulationConverter;
@@ -37,6 +38,10 @@ class DeallocOp;
 //===----------------------------------------------------------------------===//
 // Patterns
 //===----------------------------------------------------------------------===//
+
+/// Collects a set of patterns that bypass memref.reinterpet_cast Ops. This
+/// simplifies the IR in the context of lowering to EmitC.
+void populateElideReinterpretCastPatterns(RewritePatternSet &patterns);
 
 /// Collects a set of patterns to rewrite ops within the memref dialect.
 void populateExpandOpsPatterns(RewritePatternSet &patterns);
@@ -82,9 +87,11 @@ void populateMemRefWideIntEmulationConversions(
 
 /// Appends patterns for emulating memref operations over narrow types with ops
 /// over wider types.
+/// When `disableAtomicRMW` is true, the store patterns generate non-atomic
+/// read-modify-write sequences instead of atomic operations.
 void populateMemRefNarrowTypeEmulationPatterns(
     const arith::NarrowTypeEmulationConverter &typeConverter,
-    RewritePatternSet &patterns);
+    RewritePatternSet &patterns, bool disableAtomicRMW = false);
 
 /// Appends type conversions for emulating memref operations over narrow types
 /// with ops over wider types.
@@ -143,6 +150,12 @@ FailureOr<memref::AllocOp> multiBuffer(memref::AllocOp allocOp,
 /// memref.load %new_base[%c0,...]
 /// ```
 void populateExtractAddressComputationsPatterns(RewritePatternSet &patterns);
+
+/// Patterns for flattening multi-dimensional memref operations into
+/// one-dimensional memref operations.
+void populateFlattenVectorOpsOnMemrefPatterns(RewritePatternSet &patterns);
+void populateFlattenMemrefOpsPatterns(RewritePatternSet &patterns);
+void populateFlattenMemrefsPatterns(RewritePatternSet &patterns);
 
 /// Build a new memref::AllocaOp whose dynamic sizes are independent of all
 /// given independencies. If the op is already independent of all
@@ -206,7 +219,6 @@ FailureOr<Value> replaceWithIndependentOp(RewriterBase &rewriter,
 memref::AllocaOp allocToAlloca(
     RewriterBase &rewriter, memref::AllocOp alloc,
     function_ref<bool(memref::AllocOp, memref::DeallocOp)> filter = nullptr);
-
 } // namespace memref
 } // namespace mlir
 

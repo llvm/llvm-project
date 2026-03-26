@@ -32,7 +32,7 @@ func.func @pass_through(%arg0: () -> ()) -> (() -> ()) {
 func.func private @llvmlinkage(i32) attributes { "llvm.linkage" = #llvm.linkage<extern_weak> }
 
 // CHECK-LABEL: llvm.func @llvmreadnone(i32)
-// CHECK-SAME: memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none>
+// CHECK-SAME: memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>
 func.func private @llvmreadnone(i32) attributes { llvm.readnone }
 
 // CHECK-LABEL: llvm.func @body(i32)
@@ -94,5 +94,12 @@ func.func private @badllvmlinkage(i32) attributes { "llvm.linkage" = 3 : i64 } /
 
 // expected-error@+1{{C interface for variadic functions is not supported yet.}}
 func.func @variadic_func(%arg0: i32) attributes { "func.varargs" = true, "llvm.emit_c_interface" } {
+  return
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @empty_res_attrs()
+func.func @empty_res_attrs() attributes {res_attrs = []} {
   return
 }

@@ -7,21 +7,23 @@ Detects when objects of certain hostile RAII types persists across suspension
 points in a coroutine. Such hostile types include scoped-lockable types and
 types belonging to a configurable denylist.
 
-Some objects require that they be destroyed on the same thread that created them.
-Traditionally this requirement was often phrased as "must be a local variable",
-under the assumption that local variables always work this way. However this is
-incorrect with C++20 coroutines, since an intervening ``co_await`` may cause the
-coroutine to suspend and later be resumed on another thread.
+Some objects require that they be destroyed on the same thread that created
+them. Traditionally this requirement was often phrased as "must be a local
+variable", under the assumption that local variables always work this way.
+However this is incorrect with C++20 coroutines, since an intervening
+``co_await`` may cause the coroutine to suspend and later be resumed on
+another thread.
 
-The lifetime of an object that requires being destroyed on the same thread must
-not encompass a ``co_await`` or ``co_yield`` point. If you create/destroy an object,
-you must do so without allowing the coroutine to suspend in the meantime.
+The lifetime of an object that requires being destroyed on the same thread
+must not encompass a ``co_await`` or ``co_yield`` point. If you create/destroy
+an object, you must do so without allowing the coroutine to suspend in the
+meantime.
 
 Following types are considered as hostile:
 
- - Scoped-lockable types: A scoped-lockable object persisting across a suspension
-   point is problematic as the lock held by this object could be unlocked by a
-   different thread. This would be undefined behaviour.
+ - Scoped-lockable types: A scoped-lockable object persisting across a
+   suspension point is problematic as the lock held by this object could
+   be unlocked by a different thread. This would be undefined behaviour.
    This includes all types annotated with the ``scoped_lockable`` attribute.
 
  - Types belonging to a configurable denylist.
@@ -81,3 +83,23 @@ Options
     Eg: `my::safe::awaitable;other::awaitable`
     Default is an empty string.
 
+.. option:: AllowedCallees
+
+    A semicolon-separated list of callee function names which can
+    be safely awaited while having hostile RAII objects in scope.
+    Example usage:
+
+    .. code-block:: c++
+
+      // Consider option AllowedCallees = "noop"
+      task noop() { co_return; }
+
+      task coro() {
+        // This persists across the co_await but is not flagged
+        // because the awaitable is considered safe to await on.
+        const std::lock_guard l(&mu_);
+        co_await noop();
+      }
+
+    Eg: `my::safe::await;other::await`
+    Default is an empty string.

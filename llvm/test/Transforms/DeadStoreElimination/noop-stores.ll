@@ -325,7 +325,7 @@ define ptr @zero_memset_after_malloc(i64 %size) {
 ; based on pr25892_lite
 define ptr @zero_memset_after_malloc_with_intermediate_clobbering(i64 %size) {
 ; CHECK-LABEL: @zero_memset_after_malloc_with_intermediate_clobbering(
-; CHECK-NEXT:    [[CALL:%.*]] = call ptr @malloc(i64 [[SIZE:%.*]]) #[[ATTR7:[0-9]+]]
+; CHECK-NEXT:    [[CALL:%.*]] = call ptr @malloc(i64 [[SIZE:%.*]]) #[[ATTR11:[0-9]+]]
 ; CHECK-NEXT:    call void @clobber_memory(ptr [[CALL]])
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[CALL]], i8 0, i64 [[SIZE]], i1 false)
 ; CHECK-NEXT:    ret ptr [[CALL]]
@@ -339,7 +339,7 @@ define ptr @zero_memset_after_malloc_with_intermediate_clobbering(i64 %size) {
 ; based on pr25892_lite
 define ptr @zero_memset_after_malloc_with_different_sizes(i64 %size) {
 ; CHECK-LABEL: @zero_memset_after_malloc_with_different_sizes(
-; CHECK-NEXT:    [[CALL:%.*]] = call ptr @malloc(i64 [[SIZE:%.*]]) #[[ATTR7]]
+; CHECK-NEXT:    [[CALL:%.*]] = call ptr @malloc(i64 [[SIZE:%.*]]) #[[ATTR11]]
 ; CHECK-NEXT:    [[SIZE2:%.*]] = add nsw i64 [[SIZE]], -1
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[CALL]], i8 0, i64 [[SIZE2]], i1 false)
 ; CHECK-NEXT:    ret ptr [[CALL]]
@@ -373,6 +373,35 @@ define ptr @notmalloc_memset(i64 %size, ptr %notmalloc) {
   call void @llvm.memset.p0.i64(ptr %call1, i8 0, i64 %size, i1 false)
   ret ptr %call1
 }
+
+; This should create a customalloc_zeroed call and eliminate the memset
+define ptr @customalloc_memset(i64 %size, i64 %align) {
+; CHECK-LABEL: @customalloc_memset(
+; CHECK-NEXT:    [[CUSTOMALLOC_ZEROED:%.*]] = call ptr @customalloc_zeroed(i64 [[SIZE:%.*]], i64 [[ALIGN:%.*]])
+; CHECK-NEXT:    ret ptr [[CUSTOMALLOC_ZEROED]]
+;
+  %call = call ptr @customalloc(i64 %size, i64 %align)
+  call void @llvm.memset.p0.i64(ptr %call, i8 0, i64 %size, i1 false)
+  ret ptr %call
+}
+
+declare ptr @customalloc(i64, i64) allockind("alloc") "alloc-family"="customalloc" "alloc-variant-zeroed"="customalloc_zeroed"
+declare ptr @customalloc_zeroed(i64, i64) allockind("alloc,zeroed") "alloc-family"="customalloc"
+
+; This should create a customalloc_zeroed_custom_cc call and eliminate the memset while
+; respecting the custom calling convention of the zeroed variant.
+define cc99 ptr @customalloc_memset_custom_cc(i64 %size, i64 %align) {
+; CHECK-LABEL: @customalloc_memset_custom_cc(
+; CHECK-NEXT:    [[CUSTOMALLOC_ZEROED_CUSTOM_CC:%.*]] = call cc99 ptr @customalloc_zeroed_custom_cc(i64 [[SIZE:%.*]], i64 [[ALIGN:%.*]])
+; CHECK-NEXT:    ret ptr [[CUSTOMALLOC_ZEROED_CUSTOM_CC]]
+;
+  %call = call cc99 ptr @customalloc_custom_cc(i64 %size, i64 %align)
+  call void @llvm.memset.p0.i64(ptr %call, i8 0, i64 %size, i1 false)
+  ret ptr %call
+}
+
+declare cc99 ptr @customalloc_custom_cc(i64, i64) allockind("alloc") "alloc-family"="customalloc_custom_cc" "alloc-variant-zeroed"="customalloc_zeroed_custom_cc"
+declare cc99 ptr @customalloc_zeroed_custom_cc(i64, i64) allockind("alloc,zeroed") "alloc-family"="customalloc_custom_cc"
 
 ; This should not create recursive call to calloc.
 define ptr @calloc(i64 %nmemb, i64 %size) inaccessiblememonly {
@@ -455,7 +484,7 @@ cleanup:
 define ptr @malloc_with_no_nointer_null_check(i64 %0, i32 %1) {
 ; CHECK-LABEL: @malloc_with_no_nointer_null_check(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call ptr @malloc(i64 [[TMP0:%.*]]) #[[ATTR7]]
+; CHECK-NEXT:    [[CALL:%.*]] = call ptr @malloc(i64 [[TMP0:%.*]]) #[[ATTR11]]
 ; CHECK-NEXT:    [[A:%.*]] = and i32 [[TMP1:%.*]], 32
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[CLEANUP:%.*]], label [[IF_END:%.*]]
@@ -480,7 +509,7 @@ cleanup:
 ; PR50143
 define ptr @store_zero_after_calloc_inaccessiblememonly() {
 ; CHECK-LABEL: @store_zero_after_calloc_inaccessiblememonly(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @calloc(i64 1, i64 10) #[[ATTR7]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @calloc(i64 1, i64 10) #[[ATTR11]]
 ; CHECK-NEXT:    ret ptr [[CALL]]
 ;
   %call = tail call ptr @calloc(i64 1, i64 10)  inaccessiblememonly
@@ -573,7 +602,7 @@ define ptr @partial_zero_memset_and_store_with_dyn_index_after_calloc(i8 %v, i64
 
 define ptr @zero_memset_after_calloc_inaccessiblememonly()  {
 ; CHECK-LABEL: @zero_memset_after_calloc_inaccessiblememonly(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @calloc(i64 10000, i64 4) #[[ATTR7]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @calloc(i64 10000, i64 4) #[[ATTR11]]
 ; CHECK-NEXT:    ret ptr [[CALL]]
 ;
   %call = tail call ptr @calloc(i64 10000, i64 4) inaccessiblememonly
@@ -669,7 +698,7 @@ if.end:
 
 define ptr @readnone_malloc() {
 ; CHECK-LABEL: @readnone_malloc(
-; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i64 16) #[[ATTR8:[0-9]+]]
+; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i64 16) #[[ATTR12:[0-9]+]]
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[ALLOC]], i8 0, i64 16, i1 false)
 ; CHECK-NEXT:    ret ptr [[ALLOC]]
 ;
@@ -1148,6 +1177,59 @@ if.eq:
 
 if.else:
   br label %if.eq
+
+end:
+  ret void
+}
+
+; Should not optimize as `*x` and `y` ptrs may have different provenance.
+define void @remove_tautological_store_of_ptr(ptr %x, ptr %y) {
+; CHECK-LABEL: @remove_tautological_store_of_ptr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAL:%.*]] = load ptr, ptr [[X:%.*]], align 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[VAL]], [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[END:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    store ptr [[Y]], ptr [[X]], align 8
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %val = load ptr, ptr %x, align 8
+  %cmp = icmp eq ptr %val, %y
+  br i1 %cmp, label %then, label %end
+
+then:
+  store ptr %y, ptr %x, align 8
+  br label %end
+
+end:
+  ret void
+}
+
+; Dominating equality `*x == null` holds, the store would introduce nullary
+; provenance. Thanks to provenance monotonicity, we are allowed to replace a
+; pointer with nullary provenance with one with potentially non-nullary provenance.
+define void @remove_tautological_store_of_null(ptr %x) {
+; CHECK-LABEL: @remove_tautological_store_of_null(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAL:%.*]] = load ptr, ptr [[X:%.*]], align 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[VAL]], null
+; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[END:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %val = load ptr, ptr %x, align 8
+  %cmp = icmp eq ptr %val, null
+  br i1 %cmp, label %then, label %end
+
+then:
+  store ptr null, ptr %x, align 8
+  br label %end
 
 end:
   ret void

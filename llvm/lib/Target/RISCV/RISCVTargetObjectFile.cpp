@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVTargetObjectFile.h"
-#include "MCTargetDesc/RISCVMCExpr.h"
 #include "MCTargetDesc/RISCVMCObjectFileInfo.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -27,7 +27,7 @@ void RISCVELFTargetObjectFile::Initialize(MCContext &Ctx,
                                           const TargetMachine &TM) {
   TargetLoweringObjectFileELF::Initialize(Ctx, TM);
 
-  PLTPCRelativeSpecifier = RISCVMCExpr::VK_PLTPCREL;
+  PLTPCRelativeSpecifier = ELF::R_RISCV_PLT32;
   SupportIndirectSymViaGOTPCRel = true;
 
   SmallDataSection = getContext().getELFSection(
@@ -53,7 +53,7 @@ const MCExpr *RISCVELFTargetObjectFile::getIndirectSymViaGOTPCRel(
   const MCExpr *Res = MCSymbolRefExpr::create(Sym, Ctx);
   Res = MCBinaryExpr::createAdd(
       Res, MCConstantExpr::create(Offset + MV.getConstant(), Ctx), Ctx);
-  return RISCVMCExpr::create(Res, RISCVMCExpr::VK_GOTPCREL, Ctx);
+  return MCSpecifierExpr::create(Res, ELF::R_RISCV_GOT32_PCREL, Ctx);
 }
 
 // A address must be loaded from a small section if its size is less than the
@@ -160,8 +160,20 @@ bool RISCVELFTargetObjectFile::isConstantInSmallSection(
 }
 
 MCSection *RISCVELFTargetObjectFile::getSectionForConstant(
-    const DataLayout &DL, SectionKind Kind, const Constant *C,
-    Align &Alignment) const {
+    const DataLayout &DL, SectionKind Kind, const Constant *C, Align &Alignment,
+    const Function *F) const {
+
+  // The large code model has to put constant pools close to the program, so we
+  // put them in the .text section. Large code model doesn't support PIC, so
+  // there should be no dynamic relocations that would require `.data.rel.ro`
+  // (which could be too far away anyway).
+  if (TM->getCodeModel() == CodeModel::Large) {
+    if (F)
+      return SectionForGlobal(F, SectionKind::getText(), *TM);
+    else
+      return TextSection;
+  }
+
   if (C && isConstantInSmallSection(DL, C)) {
     if (Kind.isMergeableConst4())
       return SmallROData4Section;
@@ -178,12 +190,13 @@ MCSection *RISCVELFTargetObjectFile::getSectionForConstant(
 
   // Otherwise, we work the same as ELF.
   return TargetLoweringObjectFileELF::getSectionForConstant(DL, Kind, C,
-                                                            Alignment);
+                                                            Alignment, F);
 }
 
-const MCExpr *
-RISCVELFTargetObjectFile::createTargetMCExpr(const MCExpr *Expr,
-                                             uint8_t Specifier) const {
-  return RISCVMCExpr::create(Expr, RISCVMCExpr::Specifier(Specifier),
-                             getContext());
+void RISCVMachOTargetObjectFile::getNameWithPrefix(
+    SmallVectorImpl<char> &OutName, const GlobalValue *GV,
+    const TargetMachine &TM) const {
+  // RISC-V does not use section-relative relocations so any global symbol must
+  // be accessed via at least a linker-private symbol.
+  getMangler().getNameWithPrefix(OutName, GV, /*CannotUsePrivateLabel=*/true);
 }

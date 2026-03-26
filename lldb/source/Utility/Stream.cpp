@@ -183,6 +183,12 @@ Stream &Stream::operator<<(const void *p) {
   return *this;
 }
 
+// Stream the result of a formatv expression to this stream.
+Stream &Stream::operator<<(const llvm::formatv_object_base &obj) {
+  obj.format(m_forwarder);
+  return *this;
+}
+
 // Get the current indentation level
 unsigned Stream::GetIndentLevel() const { return m_indent_level; }
 
@@ -200,6 +206,14 @@ void Stream::IndentLess(unsigned amount) {
     m_indent_level -= amount;
   else
     m_indent_level = 0;
+}
+
+// Create an indentation scope that restores the original indent level when the
+// object goes out of scope (RAII).
+Stream::IndentScope Stream::MakeIndentScope(unsigned indent_amount) {
+  IndentScope indent_scope(*this);
+  IndentMore(indent_amount);
+  return indent_scope;
 }
 
 // Get the address size in bytes

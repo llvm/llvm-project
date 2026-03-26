@@ -15,11 +15,12 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i64, dense<64> : 
 #loc3 = loc("test1.f90":4:16)
 
 // CHECK: #[[TY1:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type
+// CHECK-SAME: dataLocation = <[DW_OP_push_object_address, DW_OP_deref]>
 // CHECK-SAME: elements = #llvm.di_subrange<count = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(32), DW_OP_deref]>, stride = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(40), DW_OP_deref]>>,
-// CHECK-SAME: #llvm.di_subrange<count = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(56), DW_OP_deref]>, stride = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(64), DW_OP_deref]>>
-// CHECK-SAME: dataLocation = <[DW_OP_push_object_address, DW_OP_deref]>>
+// CHECK-SAME: #llvm.di_subrange<count = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(56), DW_OP_deref]>, stride = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(64), DW_OP_deref]>>>
 // CHECK: #[[TY2:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type
+// CHECK-SAME: dataLocation = <[DW_OP_push_object_address, DW_OP_deref]>
 // CHECK-SAME: elements = #llvm.di_subrange<count = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(32), DW_OP_deref]>, lowerBound = 3 : i64, stride = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(40), DW_OP_deref]>>,
-// CHECK-SAME: #llvm.di_subrange<count = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(56), DW_OP_deref]>, lowerBound = 4 : i64, stride = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(64), DW_OP_deref]>>, dataLocation = <[DW_OP_push_object_address, DW_OP_deref]>>
+// CHECK-SAME: #llvm.di_subrange<count = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(56), DW_OP_deref]>, lowerBound = 4 : i64, stride = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(64), DW_OP_deref]>>>
 // CHECK: #llvm.di_local_variable<{{.*}}name = "arr"{{.*}}type = #[[TY1]]>
 // CHECK: #llvm.di_local_variable<{{.*}}name = "arr1"{{.*}}type = #[[TY2]]>

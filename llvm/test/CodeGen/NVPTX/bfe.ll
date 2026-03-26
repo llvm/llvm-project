@@ -12,7 +12,7 @@ define i32 @bfe0(i32 %a) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [bfe0_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [bfe0_param_0];
 ; CHECK-NEXT:    bfe.u32 %r2, %r1, 4, 4;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
@@ -27,7 +27,7 @@ define i32 @bfe1(i32 %a) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [bfe1_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [bfe1_param_0];
 ; CHECK-NEXT:    bfe.u32 %r2, %r1, 3, 3;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
@@ -42,7 +42,7 @@ define i32 @bfe2(i32 %a) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [bfe2_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [bfe2_param_0];
 ; CHECK-NEXT:    bfe.u32 %r2, %r1, 5, 3;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
@@ -57,7 +57,7 @@ define i32 @no_bfe_on_32bit_overflow(i32 %a) {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [no_bfe_on_32bit_overflow_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [no_bfe_on_32bit_overflow_param_0];
 ; CHECK-NEXT:    shr.s32 %r2, %r1, 31;
 ; CHECK-NEXT:    and.b32 %r3, %r2, 15;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
@@ -73,7 +73,7 @@ define i32 @no_bfe_on_32bit_overflow_shr_and_pair(i32 %a) {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [no_bfe_on_32bit_overflow_shr_and_pair_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [no_bfe_on_32bit_overflow_shr_and_pair_param_0];
 ; CHECK-NEXT:    shr.s32 %r2, %r1, 31;
 ; CHECK-NEXT:    and.b32 %r3, %r2, 15;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
@@ -89,7 +89,7 @@ define i64 @no_bfe_on_64bit_overflow(i64 %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [no_bfe_on_64bit_overflow_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [no_bfe_on_64bit_overflow_param_0];
 ; CHECK-NEXT:    shr.s64 %rd2, %rd1, 63;
 ; CHECK-NEXT:    and.b64 %rd3, %rd2, 7;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd3;
@@ -105,7 +105,7 @@ define i64 @no_bfe_on_64bit_overflow_shr_and_pair(i64 %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [no_bfe_on_64bit_overflow_shr_and_pair_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [no_bfe_on_64bit_overflow_shr_and_pair_param_0];
 ; CHECK-NEXT:    shr.s64 %rd2, %rd1, 63;
 ; CHECK-NEXT:    and.b64 %rd3, %rd2, 7;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd3;
@@ -121,7 +121,7 @@ define i32 @bfe_ashr_signed_32(i32 %x) {
 ; CHECK-O3-NEXT:    .reg .b32 %r<3>;
 ; CHECK-O3-EMPTY:
 ; CHECK-O3-NEXT:  // %bb.0:
-; CHECK-O3-NEXT:    ld.param.u16 %r1, [bfe_ashr_signed_32_param_0+2];
+; CHECK-O3-NEXT:    ld.param.b16 %r1, [bfe_ashr_signed_32_param_0+2];
 ; CHECK-O3-NEXT:    bfe.s32 %r2, %r1, 4, 12;
 ; CHECK-O3-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-O3-NEXT:    ret;
@@ -131,7 +131,7 @@ define i32 @bfe_ashr_signed_32(i32 %x) {
 ; CHECK-O0-NEXT:    .reg .b32 %r<3>;
 ; CHECK-O0-EMPTY:
 ; CHECK-O0-NEXT:  // %bb.0:
-; CHECK-O0-NEXT:    ld.param.u32 %r1, [bfe_ashr_signed_32_param_0];
+; CHECK-O0-NEXT:    ld.param.b32 %r1, [bfe_ashr_signed_32_param_0];
 ; CHECK-O0-NEXT:    bfe.s32 %r2, %r1, 20, 12;
 ; CHECK-O0-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-O0-NEXT:    ret;
@@ -146,7 +146,7 @@ define i32 @bfe_ashr_unsigned_32(i32 %x) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [bfe_ashr_unsigned_32_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [bfe_ashr_unsigned_32_param_0];
 ; CHECK-NEXT:    bfe.u32 %r2, %r1, 5, 6;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
@@ -161,7 +161,7 @@ define i64 @bfe_ashr_signed_64(i64 %x) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [bfe_ashr_signed_64_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [bfe_ashr_signed_64_param_0];
 ; CHECK-NEXT:    bfe.s64 %rd2, %rd1, 16, 48;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
@@ -176,7 +176,7 @@ define i64 @bfe_ashr_unsigned_64(i64 %x) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [bfe_ashr_unsigned_64_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [bfe_ashr_unsigned_64_param_0];
 ; CHECK-NEXT:    bfe.u64 %rd2, %rd1, 5, 6;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
@@ -192,7 +192,7 @@ define i32 @bfe3(i128 %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.u64 {%rd1, %rd2}, [bfe3_param_0];
+; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [bfe3_param_0];
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    bfe.s32 %r2, %r1, 15, 17;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
@@ -209,7 +209,7 @@ define i64 @bfe4(i128 %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.u64 {%rd1, %rd2}, [bfe4_param_0];
+; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [bfe4_param_0];
 ; CHECK-NEXT:    bfe.s64 %rd3, %rd1, 17, 47;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; CHECK-NEXT:    ret;

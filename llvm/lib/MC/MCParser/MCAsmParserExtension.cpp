@@ -9,7 +9,7 @@
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCStreamer.h"
 
 using namespace llvm;
@@ -50,8 +50,8 @@ bool MCAsmParserExtension::parseDirectiveCGProfile(StringRef, SMLoc) {
   if (getLexer().isNot(AsmToken::EndOfStatement))
     return TokError("unexpected token in directive");
 
-  MCSymbol *FromSym = getContext().getOrCreateSymbol(From);
-  MCSymbol *ToSym = getContext().getOrCreateSymbol(To);
+  MCSymbol *FromSym = getContext().parseSymbol(From);
+  MCSymbol *ToSym = getContext().parseSymbol(To);
 
   getStreamer().emitCGProfileEntry(
       MCSymbolRefExpr::create(FromSym, getContext(), FromLoc),
@@ -60,7 +60,7 @@ bool MCAsmParserExtension::parseDirectiveCGProfile(StringRef, SMLoc) {
 }
 
 bool MCAsmParserExtension::maybeParseUniqueID(int64_t &UniqueID) {
-  MCAsmLexer &L = getLexer();
+  AsmLexer &L = getLexer();
   if (L.isNot(AsmToken::Comma))
     return false;
   Lex();

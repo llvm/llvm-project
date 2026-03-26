@@ -27,37 +27,19 @@
 # CHECK-LABEL: name: inflated_reg_class_copy_use_after_free
 # CHECK: S_NOP 0, implicit-def [[ORIG_REG:%[0-9]+]].sub0_sub1_sub2_sub3
 # CHECK-NEXT: SI_SPILL_AV512_SAVE [[ORIG_REG]], %stack.0, $sgpr32, 0, implicit $exec :: (store (s512) into %stack.0, align 4, addrspace 5)
-# CHECK-NEXT: [[RESTORE0:%[0-9]+]]:vreg_512_align2 = SI_SPILL_V512_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s512) from %stack.0, align 4, addrspace 5)
+# CHECK-NEXT: [[RESTORE0:%[0-9]+]]:vreg_512_align2 = SI_SPILL_AV512_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s512) from %stack.0, align 4, addrspace 5)
 # CHECK-NEXT: early-clobber $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_16X16X1F32_vgprcd_e64 undef %3:vgpr_32, undef %3:vgpr_32, [[RESTORE0]], 0, 0, 0, implicit $mode, implicit $exec, implicit $mode, implicit $exec
 # CHECK-NEXT: undef [[SPLIT0:%[0-9]+]].sub2_sub3:av_512_align2 = COPY undef $vgpr2_vgpr3 {
 # CHECK-NEXT: internal [[SPLIT0]].sub0:av_512_align2 = COPY undef $vgpr0
 # CHECK-NEXT: }
-# CHECK-NEXT: undef [[SPLIT1:%[0-9]+]].sub2_sub3:av_512_align2 = COPY [[SPLIT0]].sub2_sub3 {
-# CHECK-NEXT: internal [[SPLIT1]].sub0:av_512_align2 = COPY [[SPLIT0]].sub0
+# CHECK-NEXT: undef [[SPLIT2:%[0-9]+]].sub2_sub3:av_512_align2 = COPY [[SPLIT0]].sub2_sub3 {
+# CHECK-NEXT: internal [[SPLIT2]].sub0:av_512_align2 = COPY [[SPLIT0]].sub0
 # CHECK-NEXT: }
-# CHECK-NEXT: undef [[SPLIT2:%[0-9]+]].sub2_sub3:av_512_align2 = COPY [[SPLIT1]].sub2_sub3 {
-# CHECK-NEXT: internal [[SPLIT2]].sub0:av_512_align2 = COPY [[SPLIT1]].sub0
-# CHECK-NEXT: }
-# CHECK-NEXT: SI_SPILL_AV512_SAVE [[SPLIT2]], %stack.1, $sgpr32, 0, implicit $exec :: (store (s512) into %stack.1, align 4, addrspace 5)
-# CHECK-NEXT: [[RESTORE1:%[0-9]+]]:av_512_align2 = SI_SPILL_AV512_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s512) from %stack.0, align 4, addrspace 5)
-# CHECK-NEXT: undef [[SPLIT3:%[0-9]+]].sub0_sub1:av_512_align2 = COPY [[RESTORE1]].sub0_sub1
-# CHECK-NEXT: [[RESTORE2:%[0-9]+]]:av_512_align2 = SI_SPILL_AV512_RESTORE %stack.1, $sgpr32, 0, implicit $exec :: (load (s512) from %stack.1, align 4, addrspace 5)
-# CHECK-NEXT: undef [[SPLIT3:%[0-9]+]].sub2_sub3:av_512_align2 = COPY [[RESTORE2]].sub2_sub3 {
-# CHECK-NEXT: internal [[SPLIT3]].sub0:av_512_align2 = COPY [[RESTORE2]].sub0
-# CHECK-NEXT: }
-# CHECK-NEXT: undef [[SPLIT4:%[0-9]+]].sub2_sub3:av_512_align2 = COPY [[SPLIT3]].sub2_sub3 {
-# CHECK-NEXT: internal [[SPLIT4]].sub0:av_512_align2 = COPY [[SPLIT3]].sub0
-# CHECK-NEXT: }
-# CHECK-NEXT: [[SPLIT5:%[0-9]+]].sub2:av_512_align2 = COPY [[SPLIT4]].sub3
-# CHECK-NEXT: undef [[SPLIT6:%[0-9]+]].sub0_sub1_sub2:av_512_align2 = COPY [[SPLIT5]].sub0_sub1_sub2
-# CHECK-NEXT: undef [[SPLIT7:%[0-9]+]].sub0_sub1_sub2:av_512_align2 = COPY [[SPLIT6]].sub0_sub1_sub2
-# CHECK-NEXT: undef [[SPLIT8:%[0-9]+]].sub0:av_512_align2 = COPY [[SPLIT4]].sub0 {
-# CHECK-NEXT: internal [[SPLIT8]].sub2:av_512_align2 = COPY [[SPLIT4]].sub2
-# CHECK-NEXT: }
-# CHECK-NEXT: [[SPLIT9:%[0-9]+]].sub3:av_512_align2 = COPY [[SPLIT8]].sub2
-# CHECK-NEXT: undef [[SPLIT10:%[0-9]+]].sub0_sub1_sub2_sub3:av_512_align2 = COPY [[SPLIT9]].sub0_sub1_sub2_sub3
-# CHECK-NEXT: undef [[SPLIT13:%[0-9]+]].sub0_sub1_sub2_sub3:vreg_512_align2 = COPY [[SPLIT10]].sub0_sub1_sub2_sub3
-# CHECK-NEXT: [[MFMA_USE1:%[0-9]+]].sub4:vreg_512_align2 = COPY [[SPLIT8]].sub0
+# CHECK-NEXT: [[RESTORE2:%[0-9]+]]:av_512_align2 = SI_SPILL_AV512_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s512) from %stack.0, align 4, addrspace 5)
+# CHECK-NEXT: [[MFMA_USE1:%[0-9]+]].sub0_sub1:vreg_512_align2 = COPY [[RESTORE2]].sub0_sub1
+# CHECK-NEXT: [[MFMA_USE1]].sub2:vreg_512_align2 = COPY [[SPLIT2]].sub3 
+# CHECK-NEXT: [[MFMA_USE1]].sub3:vreg_512_align2 = COPY [[SPLIT2]].sub2
+# CHECK-NEXT: [[MFMA_USE1]].sub4:vreg_512_align2 = COPY [[SPLIT2]].sub0
 # CHECK-NEXT: [[MFMA_USE1]].sub5:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
 # CHECK-NEXT: [[MFMA_USE1]].sub6:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
 # CHECK-NEXT: [[MFMA_USE1]].sub7:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec

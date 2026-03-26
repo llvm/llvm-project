@@ -16,7 +16,6 @@
 #include "lld/Common/Memory.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/Parallel.h"
 
 #define DEBUG_TYPE "lld"
 
@@ -58,6 +57,10 @@ void CodeSection::finalizeContents() {
     // All functions should have a non-empty body at this point
     assert(func->getSize());
     bodySize += func->getSize();
+  }
+
+  if (bodySize > UINT32_MAX) {
+    error("section too large to encode: " + Twine(bodySize) + " bytes");
   }
 
   createHeader(bodySize);
@@ -158,6 +161,10 @@ void DataSection::finalizeContents() {
     }
   }
 
+  if (bodySize > UINT32_MAX) {
+    error("section too large to encode: " + Twine(bodySize) + " bytes");
+  }
+
   createHeader(bodySize);
 }
 
@@ -233,7 +240,7 @@ void CustomSection::finalizeInputSections() {
     return;
 
   mergedSection->finalizeContents();
-  inputSections = newSections;
+  inputSections = std::move(newSections);
 }
 
 void CustomSection::finalizeContents() {
@@ -248,6 +255,11 @@ void CustomSection::finalizeContents() {
     payloadSize = alignTo(payloadSize, section->alignment);
     section->outSecOff = payloadSize;
     payloadSize += section->getSize();
+  }
+
+  if (payloadSize > UINT32_MAX) {
+    error("section '" + name + "' too large to encode: " + Twine(payloadSize) +
+          " bytes");
   }
 
   createHeader(payloadSize + nameData.size());

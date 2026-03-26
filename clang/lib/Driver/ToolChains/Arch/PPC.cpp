@@ -7,10 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "PPC.h"
-#include "ToolChains/CommonArgs.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/TargetParser/Host.h"
@@ -77,6 +76,13 @@ void ppc::getPPCTargetFeatures(const Driver &D, const llvm::Triple &Triple,
       !(Triple.isOSAIX() && Triple.isArch64Bit()))
     D.Diag(diag::err_opt_not_valid_on_target)
         << "-maix-shared-lib-tls-model-opt";
+
+  // The integrated assembler counts as a "modern AIX assembler" for the
+  // purposes of the modern-aix-as.
+  if (Args.hasFlag(options::OPT_fintegrated_as, options::OPT_fno_integrated_as,
+                   true) &&
+      Triple.isOSAIX())
+    Features.push_back("+modern-aix-as");
 }
 
 ppc::ReadGOTPtrMode ppc::getPPCReadGOTPtrMode(const Driver &D, const llvm::Triple &Triple,

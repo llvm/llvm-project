@@ -9,7 +9,6 @@
 #include <__hash_table>
 #include <algorithm>
 #include <stdexcept>
-#include <type_traits>
 
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wtautological-constant-out-of-range-compare")
 
@@ -30,6 +29,13 @@ const unsigned indices[] = {
     1,   11,  13,  17,  19,  23,  29,  31,  37,  41,  43,  47,  53,  59,  61,  67,
     71,  73,  79,  83,  89,  97,  101, 103, 107, 109, 113, 121, 127, 131, 137, 139,
     143, 149, 151, 157, 163, 167, 169, 173, 179, 181, 187, 191, 193, 197, 199, 209};
+
+// These are the amount we increment by when checking for potential
+// primes in the  loop in __next_prime.
+const uint8_t increments[] = {
+    0, 10, 2, 4, 2, 4, 6, 2, 6, 4, 2, 4, 6, 6, 2, 6, 4, 2, 6, 4, 6, 8, 4, 2,
+    4, 2,  4, 8, 6, 4, 6, 2, 4, 6, 2, 6, 6, 4, 2, 4, 6, 2, 6, 4, 2, 4, 2, 10,
+};
 
 } // namespace
 
@@ -52,16 +58,14 @@ const unsigned indices[] = {
 // are fewer potential primes to search, and fewer potential primes to divide
 // against.
 
-template <size_t _Sz = sizeof(size_t)>
-inline _LIBCPP_HIDE_FROM_ABI typename enable_if<_Sz == 4, void>::type __check_for_overflow(size_t N) {
-  if (N > 0xFFFFFFFB)
-    std::__throw_overflow_error("__next_prime overflow");
-}
-
-template <size_t _Sz = sizeof(size_t)>
-inline _LIBCPP_HIDE_FROM_ABI typename enable_if<_Sz == 8, void>::type __check_for_overflow(size_t N) {
-  if (N > 0xFFFFFFFFFFFFFFC5ull)
-    std::__throw_overflow_error("__next_prime overflow");
+inline void __check_for_overflow(size_t N) {
+  if constexpr (sizeof(size_t) == 4) {
+    if (N > 0xFFFFFFFB)
+      std::__throw_overflow_error("__next_prime overflow");
+  } else {
+    if (N > 0xFFFFFFFFFFFFFFC5ull)
+      std::__throw_overflow_error("__next_prime overflow");
+  }
 }
 
 size_t __next_prime(size_t n) {
@@ -100,340 +104,14 @@ size_t __next_prime(size_t n) {
     {
       size_t i = 211;
       while (true) {
-        std::size_t q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 10;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 2;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 4;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 2;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 4;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 6;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 2;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 6;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 4;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 2;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 4;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 6;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 6;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 2;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 6;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 4;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 2;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 6;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 4;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 6;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 8;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 4;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 2;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 4;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 2;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 4;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 8;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 6;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 4;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 6;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 2;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 4;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 6;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 2;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 6;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 6;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 4;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 2;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 4;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 6;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 2;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 6;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 4;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 2;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 4;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 2;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
-
-        i += 10;
-        q = n / i;
-        if (q < i)
-          return n;
-        if (n == q * i)
-          break;
+        for (auto inc : increments) {
+          i += inc;
+          std::size_t q = n / i;
+          if (q < i)
+            return n;
+          if (n == q * i)
+            goto next;
+        }
 
         // This will loop i to the next "plane" of potential primes
         i += 2;

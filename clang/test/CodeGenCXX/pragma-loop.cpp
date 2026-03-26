@@ -203,6 +203,43 @@ void for_test_scalable_1(int *List, int Length) {
   }
 }
 
+// Verify for loop is not performing vectorization
+void for_test_width_1(int *List, int Length) {
+#pragma clang loop vectorize_width(1) interleave_count(4) unroll(disable) distribute(disable)
+  for (int i = 0; i < Length; i++) {
+    // CHECK: br label {{.*}}, !llvm.loop ![[LOOP_20:.*]]
+    List[i] = i * 2;
+  }
+}
+
+// Verify for loop is not performing vectorization
+void for_test_fixed_1(int *List, int Length) {
+#pragma clang loop vectorize_width(1, fixed) interleave_count(4) unroll(disable) distribute(disable)
+  for (int i = 0; i < Length; i++) {
+    // CHECK: br label {{.*}}, !llvm.loop ![[LOOP_21:.*]]
+    List[i] = i * 2;
+  }
+}
+
+
+// Verify unroll attributes are directly attached to the loop metadata
+void for_test_vectorize_disable_unroll(int *List, int Length) {
+#pragma clang loop vectorize(disable) unroll_count(8)
+  for (int i = 0; i < Length; i++) {
+    // CHECK: br label {{.*}}, !llvm.loop ![[LOOP_22:.*]]
+    List[i] = i * 2;
+  }
+}
+
+// Verify unroll attributes are directly attached to the loop metadata
+void for_test_interleave_vectorize_disable_unroll(int *List, int Length) {
+#pragma clang loop vectorize(disable) interleave_count(4) unroll_count(8)
+  for (int i = 0; i < Length; i++) {
+    // CHECK: br label {{.*}}, !llvm.loop ![[LOOP_23:.*]]
+    List[i] = i * 2;
+  }
+}
+
 // CHECK-DAG: ![[MP:[0-9]+]] = !{!"llvm.loop.mustprogress"}
 
 // CHECK-DAG: ![[UNROLL_DISABLE:[0-9]+]] = !{!"llvm.loop.unroll.disable"}
@@ -270,3 +307,7 @@ void for_test_scalable_1(int *List, int Length) {
 // CHECK-DAG: ![[LOOP_17]] = distinct !{![[LOOP_17]], ![[MP]], ![[UNROLL_DISABLE]], ![[DISTRIBUTE_DISABLE]], ![[FIXED_VEC]], ![[INTERLEAVE_4]], ![[VECTORIZE_ENABLE]]}
 // CHECK-DAG: ![[LOOP_18]] = distinct !{![[LOOP_18]], ![[MP]], ![[UNROLL_DISABLE]], ![[DISTRIBUTE_DISABLE]], ![[SCALABLE_VEC]], ![[INTERLEAVE_4]], ![[VECTORIZE_ENABLE]]}
 // CHECK-DAG: ![[LOOP_19]] = distinct !{![[LOOP_19]], ![[MP]], ![[UNROLL_DISABLE]], ![[DISTRIBUTE_DISABLE]], ![[WIDTH_1]], ![[SCALABLE_VEC]], ![[INTERLEAVE_4]], ![[VECTORIZE_ENABLE]]}
+// CHECK-DAG: ![[LOOP_20]] = distinct !{![[LOOP_20]], ![[MP]], ![[UNROLL_DISABLE]], ![[DISTRIBUTE_DISABLE]], ![[WIDTH_1]], ![[FIXED_VEC]], ![[INTERLEAVE_4]]}
+// CHECK-DAG: ![[LOOP_21]] = distinct !{![[LOOP_21]], ![[MP]], ![[UNROLL_DISABLE]], ![[DISTRIBUTE_DISABLE]], ![[WIDTH_1]], ![[FIXED_VEC]], ![[INTERLEAVE_4]]}
+// CHECK-DAG: ![[LOOP_22]] = distinct !{![[LOOP_22]], ![[MP]], ![[WIDTH_1]], ![[ISVECTORIZED]], ![[UNROLL_8]]}
+// CHECK-DAG: ![[LOOP_23]] = distinct !{![[LOOP_23]], ![[MP]], ![[WIDTH_1]], ![[INTERLEAVE_4]], ![[ISVECTORIZED]], ![[UNROLL_8]]}

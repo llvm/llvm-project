@@ -39,9 +39,13 @@ enum class DeclUpdateKind {
   StaticLocalNumber,
   DeclMarkedOpenMPThreadPrivate,
   DeclMarkedOpenMPAllocate,
+  DeclMarkedOpenMPIndirectCall,
   DeclMarkedOpenMPDeclareTarget,
   DeclExported,
-  AddedAttrToRecord
+  AddedAttrToRecord,
+  CXXResolvedDtorGlobDelete,
+  CXXResolvedDtorArrayDelete,
+  CXXResolvedDtorGlobArrayDelete
 };
 
 TypeIdx TypeIdxFromBuiltin(const BuiltinType *BT);
@@ -99,8 +103,6 @@ inline bool isPartOfPerModuleInitializer(const Decl *D) {
     return !isTemplateInstantiation(VD->getTemplateSpecializationKind());
   return false;
 }
-
-void updateModuleTimestamp(StringRef ModuleFilename);
 
 } // namespace serialization
 

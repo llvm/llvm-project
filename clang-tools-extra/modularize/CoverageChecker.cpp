@@ -50,18 +50,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CoverageChecker.h"
 #include "ModularizeUtilities.h"
 #include "clang/AST/ASTConsumer.h"
-#include "CoverageChecker.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/Driver/Options.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Options/Options.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Option/Option.h"
@@ -73,7 +73,7 @@
 using namespace Modularize;
 using namespace clang;
 using namespace clang::driver;
-using namespace clang::driver::options;
+using namespace clang::options;
 using namespace clang::tooling;
 namespace cl = llvm::cl;
 namespace sys = llvm::sys;
@@ -329,10 +329,8 @@ bool CoverageChecker::collectFileSystemHeaders() {
   else {
     // Otherwise we only look at the sub-trees specified by the
     // include paths.
-    for (std::vector<std::string>::const_iterator I = IncludePaths.begin(),
-      E = IncludePaths.end();
-      I != E; ++I) {
-      if (!collectFileSystemHeaders(*I))
+    for (const std::string &IncludePath : IncludePaths) {
+      if (!collectFileSystemHeaders(IncludePath))
         return false;
     }
   }

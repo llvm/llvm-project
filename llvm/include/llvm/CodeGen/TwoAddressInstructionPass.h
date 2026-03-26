@@ -19,8 +19,7 @@ public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
   MachineFunctionProperties getSetProperties() const {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::TiedOpsRewritten);
+    return MachineFunctionProperties().setTiedOpsRewritten();
   }
 };
 

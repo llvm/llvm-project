@@ -16,8 +16,8 @@ class StringRef;
 namespace clang {
 
 enum class OffloadArch {
-  UNUSED,
-  UNKNOWN,
+  Unused,
+  Unknown,
   // TODO: Deprecate and remove GPU architectures older than sm_52.
   SM_20,
   SM_21,
@@ -38,6 +38,7 @@ enum class OffloadArch {
   SM_80,
   SM_86,
   SM_87,
+  SM_88,
   SM_89,
   SM_90,
   SM_90a,
@@ -45,8 +46,14 @@ enum class OffloadArch {
   SM_100a,
   SM_101,
   SM_101a,
+  SM_103,
+  SM_103a,
+  SM_110,
+  SM_110a,
   SM_120,
   SM_120a,
+  SM_121,
+  SM_121a,
   GFX600,
   GFX601,
   GFX602,
@@ -95,12 +102,21 @@ enum class OffloadArch {
   GFX1151,
   GFX1152,
   GFX1153,
+  GFX1170,
   GFX12_GENERIC,
   GFX1200,
   GFX1201,
+  GFX1250,
+  GFX1251,
+  GFX12_5_GENERIC,
+  GFX1310,
   AMDGCNSPIRV,
   Generic, // A processor model named 'generic' if the target backend defines a
            // public one.
+  // Intel CPUs
+  GRANITERAPIDS,
+  // Intel GPUs
+  BMG_G21,
   LAST,
 
   CudaDefault = OffloadArch::SM_52,
@@ -116,11 +132,23 @@ static inline bool IsAMDOffloadArch(OffloadArch A) {
   return A >= OffloadArch::GFX600 && A < OffloadArch::Generic;
 }
 
+static inline bool IsIntelCPUOffloadArch(OffloadArch Arch) {
+  return Arch >= OffloadArch::GRANITERAPIDS && Arch < OffloadArch::BMG_G21;
+}
+
+static inline bool IsIntelGPUOffloadArch(OffloadArch Arch) {
+  return Arch >= OffloadArch::BMG_G21 && Arch < OffloadArch::LAST;
+}
+
+static inline bool IsIntelOffloadArch(OffloadArch Arch) {
+  return IsIntelCPUOffloadArch(Arch) || IsIntelGPUOffloadArch(Arch);
+}
+
 const char *OffloadArchToString(OffloadArch A);
 const char *OffloadArchToVirtualArchString(OffloadArch A);
 
 // Convert a string to an OffloadArch enum value. Returns
-// OffloadArch::UNKNOWN if the string is not recognized.
+// OffloadArch::Unknown if the string is not recognized.
 OffloadArch StringToOffloadArch(llvm::StringRef S);
 
 } // namespace clang

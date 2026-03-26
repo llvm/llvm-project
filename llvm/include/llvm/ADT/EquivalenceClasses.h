@@ -60,6 +60,7 @@ namespace llvm {
 ///   5 1 2
 ///
 template <class ElemTy> class EquivalenceClasses {
+public:
   /// ECValue - The EquivalenceClasses data structure is just a set of these.
   /// Each of these represents a relation for a value.  First it stores the
   /// value itself. Next, it provides a "next pointer", which is used to
@@ -122,11 +123,12 @@ template <class ElemTy> class EquivalenceClasses {
     }
   };
 
+private:
   /// TheMapping - This implicitly provides a mapping from ElemTy values to the
   /// ECValues, it just keeps the key as part of the value.
   DenseMap<ElemTy, ECValue *> TheMapping;
 
-  /// List of all members, used to provide a determinstic iteration order.
+  /// List of all members, used to provide a deterministic iteration order.
   SmallVector<const ECValue *> Members;
 
   mutable BumpPtrAllocator ECValueAllocator;
@@ -178,8 +180,8 @@ public:
   }
 
   /// Returns true if \p V is contained an equivalence class.
-  bool contains(const ElemTy &V) const {
-    return TheMapping.find(V) != TheMapping.end();
+  [[nodiscard]] bool contains(const ElemTy &V) const {
+    return TheMapping.contains(V);
   }
 
   /// getLeaderValue - Return the leader for the specified value that is in the
@@ -216,12 +218,12 @@ public:
   /// insert - Insert a new value into the union/find set, ignoring the request
   /// if the value already exists.
   const ECValue &insert(const ElemTy &Data) {
-    auto I = TheMapping.insert({Data, nullptr});
-    if (!I.second)
-      return *I.first->second;
+    auto [I, Inserted] = TheMapping.try_emplace(Data);
+    if (!Inserted)
+      return *I->second;
 
     auto *ECV = new (ECValueAllocator) ECValue(Data);
-    I.first->second = ECV;
+    I->second = ECV;
     Members.push_back(ECV);
     return *ECV;
   }
@@ -254,9 +256,11 @@ public:
       }
       if (!Next) {
         // If the current element is the last element(not leader), set the
-        // successor of the current element's predecessor to null, and set
-        // the 'Leader' field of the class leader to the predecessor element.
-        Pre->Next = nullptr;
+        // successor of the current element's predecessor to null while
+        // preserving the leader bit, and set the 'Leader' field of the class
+        // leader to the predecessor element.
+        Pre->Next = reinterpret_cast<const ECValue *>(
+            static_cast<intptr_t>(Pre->isLeader()));
         Leader->Leader = Pre;
       } else {
         // If the current element is in the middle of class, then simply
@@ -289,6 +293,23 @@ public:
   }
   member_iterator findLeader(const ECValue &ECV) const {
     return member_iterator(ECV.getLeader());
+  }
+
+  /// Erase the class containing \p V, i.e. erase all members of the class from
+  /// the set.
+  void eraseClass(const ElemTy &V) {
+    if (!TheMapping.contains(V))
+      return;
+    iterator_range<member_iterator> LeaderI = members(V);
+    for (member_iterator MI = LeaderI.begin(), ME = LeaderI.end(); MI != ME;) {
+      const ElemTy &ToErase = *MI;
+      ++MI;
+      const ECValue *Cur = TheMapping[ToErase];
+      TheMapping.erase(ToErase);
+      auto I = find(Members, Cur);
+      assert(I != Members.end() && "Can't find input in members!");
+      Members.erase(I);
+    }
   }
 
   /// union - Merge the two equivalence sets for the specified values, inserting

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/LoongArchFixupKinds.h"
-#include "MCTargetDesc/LoongArchMCExpr.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
@@ -22,67 +21,62 @@ using namespace llvm;
 namespace {
 class LoongArchELFObjectWriter : public MCELFObjectTargetWriter {
 public:
-  LoongArchELFObjectWriter(uint8_t OSABI, bool Is64Bit, bool EnableRelax);
+  LoongArchELFObjectWriter(uint8_t OSABI, bool Is64Bit);
 
   ~LoongArchELFObjectWriter() override;
 
-  bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
-                               unsigned Type) const override {
-    return EnableRelax;
+  bool needsRelocateWithSymbol(const MCValue &, unsigned Type) const override {
+    return true;
   }
 
 protected:
-  unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                        const MCFixup &Fixup, bool IsPCRel) const override;
-  bool EnableRelax;
+  unsigned getRelocType(const MCFixup &, const MCValue &,
+                        bool IsPCRel) const override;
 };
 } // end namespace
 
-LoongArchELFObjectWriter::LoongArchELFObjectWriter(uint8_t OSABI, bool Is64Bit,
-                                                   bool EnableRelax)
+LoongArchELFObjectWriter::LoongArchELFObjectWriter(uint8_t OSABI, bool Is64Bit)
     : MCELFObjectTargetWriter(Is64Bit, OSABI, ELF::EM_LOONGARCH,
-                              /*HasRelocationAddend=*/true),
-      EnableRelax(EnableRelax) {}
+                              /*HasRelocationAddend=*/true) {}
 
-LoongArchELFObjectWriter::~LoongArchELFObjectWriter() {}
+LoongArchELFObjectWriter::~LoongArchELFObjectWriter() = default;
 
-unsigned LoongArchELFObjectWriter::getRelocType(MCContext &Ctx,
+unsigned LoongArchELFObjectWriter::getRelocType(const MCFixup &Fixup,
                                                 const MCValue &Target,
-                                                const MCFixup &Fixup,
                                                 bool IsPCRel) const {
   switch (Target.getSpecifier()) {
-  case LoongArchMCExpr::VK_TLS_LE_HI20:
-  case LoongArchMCExpr::VK_TLS_IE_PC_HI20:
-  case LoongArchMCExpr::VK_TLS_IE_HI20:
-  case LoongArchMCExpr::VK_TLS_LD_PC_HI20:
-  case LoongArchMCExpr::VK_TLS_LD_HI20:
-  case LoongArchMCExpr::VK_TLS_GD_PC_HI20:
-  case LoongArchMCExpr::VK_TLS_GD_HI20:
-  case LoongArchMCExpr::VK_TLS_DESC_PC_HI20:
-  case LoongArchMCExpr::VK_TLS_DESC_HI20:
-  case LoongArchMCExpr::VK_TLS_LE_HI20_R:
-  case LoongArchMCExpr::VK_TLS_LD_PCREL20_S2:
-  case LoongArchMCExpr::VK_TLS_GD_PCREL20_S2:
-  case LoongArchMCExpr::VK_TLS_DESC_PCREL20_S2:
-    if (auto *SA = Target.getAddSym())
-      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
+  case ELF::R_LARCH_TLS_LE_HI20:
+  case ELF::R_LARCH_TLS_IE_PC_HI20:
+  case ELF::R_LARCH_TLS_IE_HI20:
+  case ELF::R_LARCH_TLS_LD_PC_HI20:
+  case ELF::R_LARCH_TLS_LD_HI20:
+  case ELF::R_LARCH_TLS_GD_PC_HI20:
+  case ELF::R_LARCH_TLS_GD_HI20:
+  case ELF::R_LARCH_TLS_DESC_PC_HI20:
+  case ELF::R_LARCH_TLS_DESC_HI20:
+  case ELF::R_LARCH_TLS_LE_HI20_R:
+  case ELF::R_LARCH_TLS_LD_PCREL20_S2:
+  case ELF::R_LARCH_TLS_GD_PCREL20_S2:
+  case ELF::R_LARCH_TLS_DESC_PCREL20_S2:
+    if (auto *SA = const_cast<MCSymbol *>(Target.getAddSym()))
+      static_cast<MCSymbolELF *>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;
   }
 
-  unsigned Kind = Fixup.getTargetKind();
+  auto Kind = Fixup.getKind();
   if (mc::isRelocation(Fixup.getKind()))
     return Kind;
   switch (Kind) {
   default:
-    Ctx.reportError(Fixup.getLoc(), "Unsupported relocation type");
+    reportError(Fixup.getLoc(), "Unsupported relocation type");
     return ELF::R_LARCH_NONE;
   case FK_Data_1:
-    Ctx.reportError(Fixup.getLoc(), "1-byte data relocations not supported");
+    reportError(Fixup.getLoc(), "1-byte data relocations not supported");
     return ELF::R_LARCH_NONE;
   case FK_Data_2:
-    Ctx.reportError(Fixup.getLoc(), "2-byte data relocations not supported");
+    reportError(Fixup.getLoc(), "2-byte data relocations not supported");
     return ELF::R_LARCH_NONE;
   case FK_Data_4:
     return IsPCRel ? ELF::R_LARCH_32_PCREL : ELF::R_LARCH_32;
@@ -106,6 +100,6 @@ unsigned LoongArchELFObjectWriter::getRelocType(MCContext &Ctx,
 }
 
 std::unique_ptr<MCObjectTargetWriter>
-llvm::createLoongArchELFObjectWriter(uint8_t OSABI, bool Is64Bit, bool Relax) {
-  return std::make_unique<LoongArchELFObjectWriter>(OSABI, Is64Bit, Relax);
+llvm::createLoongArchELFObjectWriter(uint8_t OSABI, bool Is64Bit) {
+  return std::make_unique<LoongArchELFObjectWriter>(OSABI, Is64Bit);
 }

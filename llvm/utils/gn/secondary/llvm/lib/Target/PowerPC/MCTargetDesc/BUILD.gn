@@ -58,7 +58,6 @@ static_library("MCTargetDesc") {
     "PPCInstPrinter.cpp",
     "PPCMCAsmInfo.cpp",
     "PPCMCCodeEmitter.cpp",
-    "PPCMCExpr.cpp",
     "PPCMCTargetDesc.cpp",
     "PPCPredicates.cpp",
     "PPCXCOFFObjectWriter.cpp",

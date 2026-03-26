@@ -110,7 +110,6 @@ ArchiveMemberHeader::ArchiveMemberHeader(const Archive *Parent,
       raw_string_ostream OS(Buf);
       OS.write_escaped(
           StringRef(ArMemHdr->Terminator, sizeof(ArMemHdr->Terminator)));
-      OS.flush();
       std::string Msg("terminator characters in archive member \"" + Buf +
                       "\" not the correct \"`\\n\" values for the archive "
                       "member header ");
@@ -281,7 +280,6 @@ Expected<StringRef> ArchiveMemberHeader::getName(uint64_t Size) const {
       std::string Buf;
       raw_string_ostream OS(Buf);
       OS.write_escaped(Name.substr(1).rtrim(' '));
-      OS.flush();
       uint64_t ArchiveOffset =
           reinterpret_cast<const char *>(ArMemHdr) - Parent->getData().data();
       return malformedError("long name offset characters after the '/' are "
@@ -307,7 +305,7 @@ Expected<StringRef> ArchiveMemberHeader::getName(uint64_t Size) const {
       if (End == StringRef::npos || End < 1 ||
           Parent->getStringTable()[End - 1] != '/') {
         return malformedError("string table at long name offset " +
-                              Twine(StringOffset) + "not terminated");
+                              Twine(StringOffset) + " not terminated");
       }
       return Parent->getStringTable().slice(StringOffset, End - 1);
     }
@@ -320,7 +318,6 @@ Expected<StringRef> ArchiveMemberHeader::getName(uint64_t Size) const {
       std::string Buf;
       raw_string_ostream OS(Buf);
       OS.write_escaped(Name.substr(3).rtrim(' '));
-      OS.flush();
       uint64_t ArchiveOffset =
           reinterpret_cast<const char *>(ArMemHdr) - Parent->getData().data();
       return malformedError("long name length characters after the #1/ are "
@@ -473,9 +470,7 @@ Archive::Child::Child(const Archive *Parent, const char *Start, Error *Err)
   }
 
   Header = Parent->createArchiveMemberHeader(
-      Start,
-      Parent ? Parent->getData().size() - (Start - Parent->getData().data())
-             : 0,
+      Start, Parent->getData().size() - (Start - Parent->getData().data()),
       Err);
 
   // If we are pointed to real data, Start is not a nullptr, then there must be
@@ -584,7 +579,8 @@ Expected<StringRef> Archive::Child::getBuffer() const {
   if (!FullNameOrErr)
     return FullNameOrErr.takeError();
   const std::string &FullName = *FullNameOrErr;
-  ErrorOr<std::unique_ptr<MemoryBuffer>> Buf = MemoryBuffer::getFile(FullName);
+  ErrorOr<std::unique_ptr<MemoryBuffer>> Buf =
+      MemoryBuffer::getFile(FullName, false, /*RequiresNullTerminator=*/false);
   if (std::error_code EC = Buf.getError())
     return errorCodeToError(EC);
   Parent->ThinBuffers.push_back(std::move(*Buf));

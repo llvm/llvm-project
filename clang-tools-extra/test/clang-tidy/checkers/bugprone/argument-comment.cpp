@@ -12,7 +12,7 @@ void g() {
   // CHECK-NOTES: [[@LINE+2]]:14: warning: argument name 'z' in comment does not match parameter name 'y'
   // CHECK-NOTES: [[@LINE-5]]:19: note: 'y' declared here
   f(/*y=*/0, /*z=*/0);
-  // CHECK-FIXES: {{^}}  f(/*y=*/0, /*z=*/0);
+  // CHECK-FIXES: f(/*y=*/0, /*z=*/0);
 
   f(/*x=*/1, /*y=*/1);
 
@@ -117,12 +117,8 @@ void g() { f6(/*xxy=*/0, 0); }
 }
 
 
+#include <vector>
 namespace std {
-template <typename T>
-class vector {
-public:
-  void assign(int __n, const T &__val);
-};
 template<typename T>
 void swap(T& __a, T& __b);
 } // namespace std

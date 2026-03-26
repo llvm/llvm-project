@@ -51,6 +51,7 @@ include "RISCVMacroFusion.td"
 //===----------------------------------------------------------------------===//
 // RISC-V Scheduling Models
 //===----------------------------------------------------------------------===//
+include "RISCVSchedAndes45.td"
 include "RISCVSchedGenericOOO.td"
 include "RISCVSchedMIPSP8700.td"
 include "RISCVSchedRocket.td"
@@ -58,10 +59,13 @@ include "RISCVSchedSiFive7.td"
 include "RISCVSchedSiFiveP400.td"
 include "RISCVSchedSiFiveP500.td"
 include "RISCVSchedSiFiveP600.td"
+include "RISCVSchedSiFiveP800.td"
+include "RISCVSchedSpacemitX60.td"
+include "RISCVSchedSpacemitX100.td"
 include "RISCVSchedSyntacoreSCR1.td"
 include "RISCVSchedSyntacoreSCR345.td"
 include "RISCVSchedSyntacoreSCR7.td"
-include "RISCVSchedTTAscalonD8.td"
+include "RISCVSchedTTAscalonX.td"
 include "RISCVSchedXiangShanNanHu.td"
 
 //===----------------------------------------------------------------------===//
@@ -92,6 +96,8 @@ def RISCVAsmParser : AsmParser {
 def RISCVAsmWriter : AsmWriter {
   int PassSubtarget = 1;
 }
+
+defm : RemapAllTargetPseudoPointerOperands<GPR>;
 
 def RISCV : Target {
   let InstructionSet = RISCVInstrInfo;

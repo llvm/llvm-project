@@ -202,14 +202,6 @@ public:
     Update();
   }
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
-    size_t index = formatters::ExtractIndexFromString(name.GetCString());
-    if (index == UINT32_MAX)
-      return llvm::createStringError("Type has no child named '%s'",
-                                     name.AsCString());
-    return index;
-  }
-
   lldb::ChildCacheState Update() override;
   llvm::Expected<uint32_t> CalculateNumChildren() override { return m_size; }
   ValueObjectSP GetChildAtIndex(uint32_t idx) override;

@@ -49,7 +49,6 @@ define void @bitreverse_v8i16(ptr %x, ptr %y) {
   store <8 x i16> %c, ptr %x
   ret void
 }
-declare <8 x i16> @llvm.bitreverse.v8i16(<8 x i16>)
 
 define void @bitreverse_v4i32(ptr %x, ptr %y) {
 ; CHECK-LABEL: bitreverse_v4i32:
@@ -104,7 +103,6 @@ define void @bitreverse_v4i32(ptr %x, ptr %y) {
   store <4 x i32> %c, ptr %x
   ret void
 }
-declare <4 x i32> @llvm.bitreverse.v4i32(<4 x i32>)
 
 define void @bitreverse_v2i64(ptr %x, ptr %y) {
 ; RV32-LABEL: bitreverse_v2i64:
@@ -188,7 +186,7 @@ define void @bitreverse_v2i64(ptr %x, ptr %y) {
 ; RV64-NEXT:    lui a3, 16
 ; RV64-NEXT:    lui a4, 4080
 ; RV64-NEXT:    li a5, 255
-; RV64-NEXT:    addiw a3, a3, -256
+; RV64-NEXT:    addi a3, a3, -256
 ; RV64-NEXT:    slli a5, a5, 24
 ; RV64-NEXT:    vsrl.vx v9, v8, a1
 ; RV64-NEXT:    vsrl.vx v10, v8, a2
@@ -211,9 +209,9 @@ define void @bitreverse_v2i64(ptr %x, ptr %y) {
 ; RV64-NEXT:    lui a1, 61681
 ; RV64-NEXT:    lui a2, 209715
 ; RV64-NEXT:    lui a3, 349525
-; RV64-NEXT:    addiw a1, a1, -241
-; RV64-NEXT:    addiw a2, a2, 819
-; RV64-NEXT:    addiw a3, a3, 1365
+; RV64-NEXT:    addi a1, a1, -241
+; RV64-NEXT:    addi a2, a2, 819
+; RV64-NEXT:    addi a3, a3, 1365
 ; RV64-NEXT:    slli a4, a1, 32
 ; RV64-NEXT:    slli a5, a2, 32
 ; RV64-NEXT:    add a1, a1, a4
@@ -254,7 +252,6 @@ define void @bitreverse_v2i64(ptr %x, ptr %y) {
   store <2 x i64> %c, ptr %x
   ret void
 }
-declare <2 x i64> @llvm.bitreverse.v2i64(<2 x i64>)
 
 define void @bitreverse_v16i16(ptr %x, ptr %y) {
 ; CHECK-LABEL: bitreverse_v16i16:
@@ -301,7 +298,6 @@ define void @bitreverse_v16i16(ptr %x, ptr %y) {
   store <16 x i16> %c, ptr %x
   ret void
 }
-declare <16 x i16> @llvm.bitreverse.v16i16(<16 x i16>)
 
 define void @bitreverse_v8i32(ptr %x, ptr %y) {
 ; CHECK-LABEL: bitreverse_v8i32:
@@ -356,7 +352,6 @@ define void @bitreverse_v8i32(ptr %x, ptr %y) {
   store <8 x i32> %c, ptr %x
   ret void
 }
-declare <8 x i32> @llvm.bitreverse.v8i32(<8 x i32>)
 
 define void @bitreverse_v4i64(ptr %x, ptr %y) {
 ; RV32-LABEL: bitreverse_v4i64:
@@ -440,7 +435,7 @@ define void @bitreverse_v4i64(ptr %x, ptr %y) {
 ; RV64-NEXT:    lui a3, 16
 ; RV64-NEXT:    lui a4, 4080
 ; RV64-NEXT:    li a5, 255
-; RV64-NEXT:    addiw a3, a3, -256
+; RV64-NEXT:    addi a3, a3, -256
 ; RV64-NEXT:    slli a5, a5, 24
 ; RV64-NEXT:    vsrl.vx v8, v14, a1
 ; RV64-NEXT:    vsrl.vx v10, v14, a2
@@ -463,9 +458,9 @@ define void @bitreverse_v4i64(ptr %x, ptr %y) {
 ; RV64-NEXT:    lui a1, 61681
 ; RV64-NEXT:    lui a2, 209715
 ; RV64-NEXT:    lui a3, 349525
-; RV64-NEXT:    addiw a1, a1, -241
-; RV64-NEXT:    addiw a2, a2, 819
-; RV64-NEXT:    addiw a3, a3, 1365
+; RV64-NEXT:    addi a1, a1, -241
+; RV64-NEXT:    addi a2, a2, 819
+; RV64-NEXT:    addi a3, a3, 1365
 ; RV64-NEXT:    slli a4, a1, 32
 ; RV64-NEXT:    slli a5, a2, 32
 ; RV64-NEXT:    add a1, a1, a4
@@ -506,4 +501,3 @@ define void @bitreverse_v4i64(ptr %x, ptr %y) {
   store <4 x i64> %c, ptr %x
   ret void
 }
-declare <4 x i64> @llvm.bitreverse.v4i64(<4 x i64>)

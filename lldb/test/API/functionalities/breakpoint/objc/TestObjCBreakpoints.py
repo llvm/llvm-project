@@ -13,6 +13,8 @@ from lldbsuite.test import lldbutil
 
 
 class TestObjCBreakpoints(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     @add_test_categories(["objc"])
     def test_break(self):
         """Test setting Objective-C specific breakpoints (DWARF in .o files)."""

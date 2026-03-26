@@ -28,7 +28,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(EnumValueInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(TemplateParamInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(TypedefInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(BaseRecordInfo)
-LLVM_YAML_IS_SEQUENCE_VECTOR(std::unique_ptr<CommentInfo>)
+LLVM_YAML_IS_SEQUENCE_VECTOR(OwnedPtr<CommentInfo>)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::SmallString<16>)
 
 namespace llvm {
@@ -65,6 +65,34 @@ template <> struct ScalarEnumerationTraits<InfoType> {
   }
 };
 
+template <> struct ScalarEnumerationTraits<clang::doc::CommentKind> {
+  static void enumeration(IO &IO, clang::doc::CommentKind &Value) {
+    IO.enumCase(Value, "FullComment", clang::doc::CommentKind::CK_FullComment);
+    IO.enumCase(Value, "ParagraphComment",
+                clang::doc::CommentKind::CK_ParagraphComment);
+    IO.enumCase(Value, "TextComment", clang::doc::CommentKind::CK_TextComment);
+    IO.enumCase(Value, "InlineCommandComment",
+                clang::doc::CommentKind::CK_InlineCommandComment);
+    IO.enumCase(Value, "HTMLStartTagComment",
+                clang::doc::CommentKind::CK_HTMLStartTagComment);
+    IO.enumCase(Value, "HTMLEndTagComment",
+                clang::doc::CommentKind::CK_HTMLEndTagComment);
+    IO.enumCase(Value, "BlockCommandComment",
+                clang::doc::CommentKind::CK_BlockCommandComment);
+    IO.enumCase(Value, "ParamCommandComment",
+                clang::doc::CommentKind::CK_ParamCommandComment);
+    IO.enumCase(Value, "TParamCommandComment",
+                clang::doc::CommentKind::CK_TParamCommandComment);
+    IO.enumCase(Value, "VerbatimBlockComment",
+                clang::doc::CommentKind::CK_VerbatimBlockComment);
+    IO.enumCase(Value, "VerbatimBlockLineComment",
+                clang::doc::CommentKind::CK_VerbatimBlockLineComment);
+    IO.enumCase(Value, "VerbatimLineComment",
+                clang::doc::CommentKind::CK_VerbatimLineComment);
+    IO.enumCase(Value, "Unknown", clang::doc::CommentKind::CK_Unknown);
+  }
+};
+
 // Scalars to YAML output.
 template <unsigned U> struct ScalarTraits<SmallString<U>> {
 
@@ -81,15 +109,13 @@ template <unsigned U> struct ScalarTraits<SmallString<U>> {
   static QuotingType mustQuote(StringRef) { return QuotingType::Single; }
 };
 
-template <> struct ScalarTraits<std::array<unsigned char, 20>> {
+template <> struct ScalarTraits<SymbolID> {
 
-  static void output(const std::array<unsigned char, 20> &S, void *,
-                     llvm::raw_ostream &OS) {
+  static void output(const SymbolID &S, void *, llvm::raw_ostream &OS) {
     OS << toHex(toStringRef(S));
   }
 
-  static StringRef input(StringRef Scalar, void *,
-                         std::array<unsigned char, 20> &Value) {
+  static StringRef input(StringRef Scalar, void *, SymbolID &Value) {
     if (Scalar.size() != 40)
       return "Error: Incorrect scalar size for USR.";
     Value = stringToSymbol(Scalar);
@@ -141,7 +167,7 @@ static void recordInfoMapping(IO &IO, RecordInfo &I) {
   IO.mapOptional("Parents", I.Parents, llvm::SmallVector<Reference, 4>());
   IO.mapOptional("VirtualParents", I.VirtualParents,
                  llvm::SmallVector<Reference, 4>());
-  IO.mapOptional("ChildRecords", I.Children.Records, std::vector<Reference>());
+  IO.mapOptional("ChildRecords", I.Children.Records, OwningVec<Reference>());
   IO.mapOptional("ChildFunctions", I.Children.Functions);
   IO.mapOptional("ChildEnums", I.Children.Enums);
   IO.mapOptional("ChildTypedefs", I.Children.Typedefs);
@@ -149,7 +175,7 @@ static void recordInfoMapping(IO &IO, RecordInfo &I) {
 }
 
 static void commentInfoMapping(IO &IO, CommentInfo &I) {
-  IO.mapOptional("Kind", I.Kind, SmallString<16>());
+  IO.mapOptional("Kind", I.Kind, CommentKind::CK_Unknown);
   IO.mapOptional("Text", I.Text, SmallString<64>());
   IO.mapOptional("Name", I.Name, SmallString<16>());
   IO.mapOptional("Direction", I.Direction, SmallString<8>());
@@ -211,9 +237,8 @@ template <> struct MappingTraits<NamespaceInfo> {
   static void mapping(IO &IO, NamespaceInfo &I) {
     infoMapping(IO, I);
     IO.mapOptional("ChildNamespaces", I.Children.Namespaces,
-                   std::vector<Reference>());
-    IO.mapOptional("ChildRecords", I.Children.Records,
-                   std::vector<Reference>());
+                   OwningVec<Reference>());
+    IO.mapOptional("ChildRecords", I.Children.Records, OwningVec<Reference>());
     IO.mapOptional("ChildFunctions", I.Children.Functions);
     IO.mapOptional("ChildEnums", I.Children.Enums);
     IO.mapOptional("ChildTypedefs", I.Children.Typedefs);
@@ -301,8 +326,8 @@ template <> struct MappingTraits<CommentInfo> {
   static void mapping(IO &IO, CommentInfo &I) { commentInfoMapping(IO, I); }
 };
 
-template <> struct MappingTraits<std::unique_ptr<CommentInfo>> {
-  static void mapping(IO &IO, std::unique_ptr<CommentInfo> &I) {
+template <> struct MappingTraits<OwnedPtr<CommentInfo>> {
+  static void mapping(IO &IO, OwnedPtr<CommentInfo> &I) {
     if (I)
       commentInfoMapping(IO, *I);
   }
@@ -319,21 +344,20 @@ class YAMLGenerator : public Generator {
 public:
   static const char *Format;
 
-  llvm::Error generateDocs(StringRef RootDir,
-                           llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
-                           const ClangDocContext &CDCtx) override;
+  llvm::Error generateDocumentation(
+      StringRef RootDir, llvm::StringMap<doc::OwnedPtr<doc::Info>> Infos,
+      const ClangDocContext &CDCtx, std::string DirName) override;
   llvm::Error generateDocForInfo(Info *I, llvm::raw_ostream &OS,
                                  const ClangDocContext &CDCtx) override;
 };
 
 const char *YAMLGenerator::Format = "yaml";
 
-llvm::Error
-YAMLGenerator::generateDocs(StringRef RootDir,
-                            llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
-                            const ClangDocContext &CDCtx) {
+llvm::Error YAMLGenerator::generateDocumentation(
+    StringRef RootDir, llvm::StringMap<doc::OwnedPtr<doc::Info>> Infos,
+    const ClangDocContext &CDCtx, std::string DirName) {
   for (const auto &Group : Infos) {
-    doc::Info *Info = Group.getValue().get();
+    doc::Info *Info = getPtr(Group.getValue());
 
     // Output file names according to the USR except the global namesapce.
     // Anonymous namespaces are taken care of in serialization, so here we can
@@ -379,6 +403,10 @@ llvm::Error YAMLGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS,
     break;
   case InfoType::IT_typedef:
     InfoYAML << *static_cast<clang::doc::TypedefInfo *>(I);
+    break;
+  case InfoType::IT_concept:
+  case InfoType::IT_variable:
+  case InfoType::IT_friend:
     break;
   case InfoType::IT_default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),

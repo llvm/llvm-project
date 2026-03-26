@@ -26,7 +26,7 @@ class Builder:
 
     def getTriple(self, arch):
         """Returns the triple for the given architecture or None."""
-        return None
+        return configuration.triple
 
     def getExtraMakeArgs(self):
         """
@@ -37,6 +37,9 @@ class Builder:
 
     def getArchCFlags(self, architecture):
         """Returns the ARCH_CFLAGS for the make system."""
+        triple = self.getTriple(architecture)
+        if triple:
+            return ["ARCH_CFLAGS=-target {}".format(triple)]
         return []
 
     def getMake(self, test_subdir, test_name):
@@ -135,7 +138,7 @@ class Builder:
         cc_type = cc_name
         # A triple prefix of compiler name: <armv7-none-linux-gnu->gcc
         cc_prefix = ""
-        if not "clang-cl" in cc_name and not "llvm-gcc" in cc_name:
+        if "clang-cl" not in cc_name:
             cc_name_parts = cc_name.split("-")
             cc_type = cc_name_parts[-1]
             if len(cc_name_parts) > 1:
@@ -144,7 +147,6 @@ class Builder:
         # A kind of C++ compiler.
         cxx_types = {
             "icc": "icpc",
-            "llvm-gcc": "llvm-g++",
             "gcc": "g++",
             "cc": "c++",
             "clang": "clang++",
@@ -247,13 +249,26 @@ class Builder:
     def _getDebugInfoArgs(self, debug_info):
         if debug_info is None:
             return []
-        if debug_info == "dwarf":
-            return ["MAKE_DSYM=NO"]
-        if debug_info == "dwo":
-            return ["MAKE_DSYM=NO", "MAKE_DWO=YES"]
-        if debug_info == "gmodules":
-            return ["MAKE_DSYM=NO", "MAKE_GMODULES=YES"]
-        return None
+
+        debug_options = debug_info if isinstance(debug_info, list) else [debug_info]
+        option_flags = {
+            "dwarf": {"MAKE_DSYM": "NO"},
+            "dwo": {"MAKE_DSYM": "NO", "MAKE_DWO": "YES"},
+            "gmodules": {"MAKE_DSYM": "NO", "MAKE_GMODULES": "YES"},
+            "debug_names": {"MAKE_DEBUG_NAMES": "YES"},
+            "dwp": {"MAKE_DSYM": "NO", "MAKE_DWP": "YES"},
+            "pdb": {"MAKE_PDB": "YES"},
+        }
+
+        # Collect all flags, with later options overriding earlier ones
+        flags = {}
+
+        for option in debug_options:
+            if not option or option not in option_flags:
+                return None  # Invalid options
+            flags.update(option_flags[option])
+
+        return [f"{key}={value}" for key, value in flags.items()]
 
     def getBuildCommand(
         self,

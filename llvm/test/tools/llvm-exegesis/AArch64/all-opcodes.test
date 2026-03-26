@@ -2,9 +2,19 @@
 # all supported opcodes and gracefully handle unsupported ones.
 
 # RUN: llvm-exegesis --mtriple=aarch64-linux-gnu --mcpu=cortex-a55 --benchmark-phase=prepare-and-assemble-snippet \
+# RUN:               -random-generator-seed=55 \
 # RUN:               --mode=latency --opcode-index=-1 | FileCheck %s
 # RUN: llvm-exegesis --mtriple=aarch64-linux-gnu --mcpu=cortex-a55 --benchmark-phase=prepare-and-assemble-snippet \
+# RUN:               -random-generator-seed=55 \
 # RUN:               --mode=uops --opcode-index=-1 | FileCheck %s
 
-# 100 means "quite a lot"
-# CHECK-COUNT-100: assembled_snippet: {{.*}}
+# RUN: llvm-exegesis --mtriple=aarch64-linux-gnu --mcpu=neoverse-v2 --benchmark-phase=prepare-and-assemble-snippet \
+# RUN:               -random-generator-seed=2 \
+# RUN:               --mode=latency --opcode-index=-1 | FileCheck --check-prefix CHECK-V2 %s
+# RUN: llvm-exegesis --mtriple=aarch64-linux-gnu --mcpu=neoverse-v2 --benchmark-phase=prepare-and-assemble-snippet \
+# RUN:               -random-generator-seed=2 \
+# RUN:               --mode=uops --opcode-index=-1 | FileCheck --check-prefix CHECK-V2 %s
+
+# One snippet per llvm opcode. Not all opcodes available on any given target.
+# CHECK-COUNT-2572: assembled_snippet: {{.*}}
+# CHECK-V2-COUNT-4601: assembled_snippet: {{.*}}

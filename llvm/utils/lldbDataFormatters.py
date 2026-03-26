@@ -3,14 +3,15 @@ LLDB Formatters for LLVM data types.
 
 Load into LLDB with 'command script import /path/to/lldbDataFormatters.py'
 """
+
 from __future__ import annotations
 
 import collections
+from typing import Literal, Optional
 import lldb
-import json
 
 
-def __lldb_init_module(debugger, internal_dict):
+def __lldb_init_module(debugger: lldb.SBDebugger, internal_dict) -> None:
     debugger.HandleCommand("type category define -e llvm -l c++")
     debugger.HandleCommand(
         "type synthetic add -w llvm "
@@ -57,21 +58,16 @@ def __lldb_init_module(debugger, internal_dict):
         f"-F {__name__}.ConstStringSummaryProvider "
         "lldb_private::ConstString"
     )
-
-    # The synthetic providers for PointerIntPair and PointerUnion are disabled
-    # because of a few issues. One example is template arguments that are
-    # non-pointer types that instead specialize PointerLikeTypeTraits.
-    # debugger.HandleCommand(
-    #     "type synthetic add -w llvm "
-    #     f"-l {__name__}.PointerIntPairSynthProvider "
-    #     '-x "^llvm::PointerIntPair<.+>$"'
-    # )
-    # debugger.HandleCommand(
-    #     "type synthetic add -w llvm "
-    #     f"-l {__name__}.PointerUnionSynthProvider "
-    #     '-x "^llvm::PointerUnion<.+>$"'
-    # )
-
+    debugger.HandleCommand(
+        "type synthetic add -w llvm "
+        f"-l {__name__}.PointerIntPairSynthProvider "
+        '-x "^llvm::PointerIntPair<.+>$"'
+    )
+    debugger.HandleCommand(
+        "type synthetic add -w llvm "
+        f"-l {__name__}.PointerUnionSynthProvider "
+        '-x "^llvm::PointerUnion<.+>$"'
+    )
     debugger.HandleCommand(
         "type summary add -w llvm "
         f"-e -F {__name__}.DenseMapSummary "
@@ -82,21 +78,37 @@ def __lldb_init_module(debugger, internal_dict):
         f"-l {__name__}.DenseMapSynthetic "
         '-x "^llvm::DenseMap<.+>$"'
     )
+    debugger.HandleCommand(
+        "type synthetic add -w llvm "
+        f"-l {__name__}.DenseSetSynthetic "
+        '-x "^llvm::DenseSet<.+>$"'
+    )
 
     debugger.HandleCommand(
         "type synthetic add -w llvm "
         f"-l {__name__}.ExpectedSynthetic "
         '-x "^llvm::Expected<.+>$"'
     )
+    debugger.HandleCommand(
+        "type summary add -w llvm "
+        f"-F {__name__}.SmallBitVectorSummary "
+        "llvm::SmallBitVector"
+    )
 
 
 # Pretty printer for llvm::SmallVector/llvm::SmallVectorImpl
 class SmallVectorSynthProvider:
-    def __init__(self, valobj, internal_dict):
+    valobj: lldb.SBValue
+    begin: lldb.SBValue
+    size: lldb.SBValue
+    data_type: lldb.SBType
+    type_size: int
+
+    def __init__(self, valobj, internal_dict) -> None:
         self.valobj = valobj
         self.update()  # initialize this provider
 
-    def num_children(self):
+    def num_children(self) -> int:
         return self.size.GetValueAsUnsigned(0)
 
     def get_child_index(self, name):
@@ -105,7 +117,7 @@ class SmallVectorSynthProvider:
         except:
             return -1
 
-    def get_child_at_index(self, index):
+    def get_child_at_index(self, index) -> Optional[lldb.SBValue]:
         # Do bounds checking.
         if index < 0:
             return None
@@ -137,11 +149,17 @@ class SmallVectorSynthProvider:
 class ArrayRefSynthProvider:
     """Provider for llvm::ArrayRef"""
 
-    def __init__(self, valobj, internal_dict):
+    valobj: lldb.SBValue
+    data: lldb.SBValue
+    length: int
+    data_type: lldb.SBType
+    type_size: int
+
+    def __init__(self, valobj: lldb.SBValue, internal_dict) -> None:
         self.valobj = valobj
         self.update()  # initialize this provider
 
-    def num_children(self):
+    def num_children(self) -> int:
         return self.length
 
     def get_child_index(self, name):
@@ -150,7 +168,7 @@ class ArrayRefSynthProvider:
         except:
             return -1
 
-    def get_child_at_index(self, index):
+    def get_child_at_index(self, index) -> Optional[lldb.SBValue]:
         if index < 0 or index >= self.num_children():
             return None
         offset = index * self.type_size
@@ -167,7 +185,7 @@ class ArrayRefSynthProvider:
         assert self.type_size != 0
 
 
-def SmallStringSummaryProvider(valobj, internal_dict):
+def SmallStringSummaryProvider(valobj: lldb.SBValue, internal_dict) -> str:
     # The underlying SmallVector base class is the first child.
     vector = valobj.GetChildAtIndex(0)
     num_elements = vector.GetNumChildren()
@@ -180,134 +198,251 @@ def SmallStringSummaryProvider(valobj, internal_dict):
     return res
 
 
-def StringRefSummaryProvider(valobj, internal_dict):
-    if valobj.GetNumChildren() == 2:
-        # StringRef's are also used to point at binary blobs in memory,
-        # so filter out suspiciously long strings.
-        max_length = 1024
-        actual_length = valobj.GetChildAtIndex(1).GetValueAsUnsigned()
-        truncate = actual_length > max_length
-        length = min(max_length, actual_length)
-        if length == 0:
-            return '""'
+def StringRefSummaryProvider(valobj: lldb.SBValue, internal_dict) -> str:
+    data_pointer = valobj.GetChildMemberWithName("Data")
+    length = valobj.GetChildMemberWithName("Length").unsigned
+    if data_pointer.unsigned == 0 or length == 0:
+        return '""'
 
-        data = valobj.GetChildAtIndex(0).GetPointeeData(item_count=length)
-        error = lldb.SBError()
-        string = data.ReadRawData(error, 0, data.GetByteSize()).decode()
-        if error.Fail():
-            return "<error: %s>" % error.description
-
-        # json.dumps conveniently escapes the string for us.
-        string = json.dumps(string)
-        if truncate:
-            string += "..."
-        return string
-    return None
+    data = data_pointer.deref
+    # StringRef may be uninitialized with length exceeding available memory,
+    # potentially causing bad_alloc exceptions. Limit the length to max string summary setting.
+    limit_obj = valobj.target.debugger.GetSetting("target.max-string-summary-length")
+    if limit_obj:
+        length = min(length, limit_obj.GetUnsignedIntegerValue())
+    # Get a char[N] type, from the underlying char type.
+    array_type = data.type.GetArrayType(length)
+    # Cast the char* string data to a char[N] array.
+    char_array = data.Cast(array_type)
+    # Use the builtin summary for its support of max-string-summary-length and
+    # display of non-printable bytes.
+    return char_array.summary
 
 
-def ConstStringSummaryProvider(valobj, internal_dict):
+def ConstStringSummaryProvider(valobj: lldb.SBValue, internal_dict) -> str:
     if valobj.GetNumChildren() == 1:
         return valobj.GetChildAtIndex(0).GetSummary()
     return ""
 
 
-def get_expression_path(val):
-    stream = lldb.SBStream()
-    if not val.GetExpressionPath(stream):
-        return None
-    return stream.GetData()
-
-
 class PointerIntPairSynthProvider:
-    def __init__(self, valobj, internal_dict):
+    valobj: lldb.SBValue
+    byteorder: Literal["big", "little"]
+    ptr_size: int
+    value: lldb.SBValue
+    pointer_valobj: Optional[lldb.SBValue]
+    int_valobj: Optional[lldb.SBValue]
+
+    def __init__(self, valobj: lldb.SBValue, internal_dict) -> None:
         self.valobj = valobj
         self.update()
 
-    def num_children(self):
+    def num_children(self) -> int:
         return 2
 
-    def get_child_index(self, name):
+    def get_child_index(self, name: str) -> int:
         if name == "Pointer":
             return 0
         if name == "Int":
             return 1
-        return None
+        return -1
 
-    def get_child_at_index(self, index):
-        expr_path = get_expression_path(self.valobj)
+    def _get_raw_value(self) -> Optional[bytes]:
+        data: lldb.SBData = self.value.GetData()
+        error = lldb.SBError()
+        raw_bytes = data.ReadRawData(error, 0, self.ptr_size)
+        if error.Fail():
+            return None
+
+        return raw_bytes
+
+    def _get_pointer(
+        self, pointer_bit_mask: int, pointer_ty: lldb.SBType
+    ) -> Optional[lldb.SBValue]:
+        raw_bytes = self._get_raw_value()
+        if raw_bytes is None:
+            return
+
+        unmasked_pointer = int.from_bytes(raw_bytes, self.byteorder)
+        pointer_value = unmasked_pointer & pointer_bit_mask
+
+        data = lldb.SBData()
+        data.SetDataFromUInt64Array([pointer_value])
+        return self.valobj.CreateValueFromData("Pointer", data, pointer_ty)
+
+    def _get_int(
+        self, int_shift: int, int_mask: int, int_ty: lldb.SBType
+    ) -> Optional[lldb.SBValue]:
+        raw_bytes = self._get_raw_value()
+        if raw_bytes is None:
+            return
+
+        unmasked_pointer = int.from_bytes(raw_bytes, self.byteorder)
+        int_value = (unmasked_pointer >> int_shift) & int_mask
+
+        data = lldb.SBData()
+        data.SetDataFromUInt64Array([int_value])
+        return self.valobj.CreateValueFromData("Int", data, int_ty)
+
+    def get_child_at_index(self, index) -> Optional[lldb.SBValue]:
         if index == 0:
-            return self.valobj.CreateValueFromExpression(
-                "Pointer", f"({self.pointer_ty.name}){expr_path}.getPointer()"
-            )
+            return self.pointer_valobj
         if index == 1:
-            return self.valobj.CreateValueFromExpression(
-                "Int", f"({self.int_ty.name}){expr_path}.getInt()"
-            )
+            return self.int_valobj
         return None
 
     def update(self):
-        self.pointer_ty = self.valobj.GetType().GetTemplateArgumentType(0)
-        self.int_ty = self.valobj.GetType().GetTemplateArgumentType(2)
+        self.byteorder = (
+            "big"
+            if self.valobj.target.GetByteOrder() == lldb.eByteOrderBig
+            else "little"
+        )
+        self.ptr_size = self.valobj.target.GetAddressByteSize()
+        self.value: lldb.SBValue = self.valobj.GetChildMemberWithName("Value")
+        if not self.value:
+            return
 
+        valobj_type = self.valobj.GetType()
 
-def parse_template_parameters(typename):
-    """
-    LLDB doesn't support template parameter packs, so let's parse them manually.
-    """
-    result = []
-    start = typename.find("<")
-    end = typename.rfind(">")
-    if start < 1 or end < 2 or end - start < 2:
-        return result
+        pointer_ty: lldb.SBType = valobj_type.GetTemplateArgumentType(0)
+        if not pointer_ty:
+            return
 
-    nesting_level = 0
-    current_parameter_start = start + 1
+        int_ty: lldb.SBType = valobj_type.GetTemplateArgumentType(2)
+        if not int_ty:
+            return
 
-    for i in range(start + 1, end + 1):
-        c = typename[i]
-        if c == "<":
-            nesting_level += 1
-        elif c == ">":
-            nesting_level -= 1
-        elif c == "," and nesting_level == 0:
-            result.append(typename[current_parameter_start:i].strip())
-            current_parameter_start = i + 1
+        pointer_info = valobj_type.GetTemplateArgumentType(4)
+        if not pointer_info:
+            return
 
-    result.append(typename[current_parameter_start:i].strip())
+        mask_and_shift_constants = pointer_info.FindDirectNestedType(
+            "MaskAndShiftConstants"
+        ).GetEnumMembers()
 
-    return result
+        # FIXME: SBAPI should provide a way to retrieve an enum member
+        # by name.
+        pointer_bit_mask: lldb.SBTypeEnumMember = (
+            mask_and_shift_constants.GetTypeEnumMemberAtIndex(0)
+        )
+        if pointer_bit_mask.name != "PointerBitMask":
+            return
+
+        int_shift: lldb.SBTypeEnumMember = (
+            mask_and_shift_constants.GetTypeEnumMemberAtIndex(1)
+        )
+        if int_shift.name != "IntShift":
+            return
+
+        int_mask: lldb.SBTypeEnumMember = (
+            mask_and_shift_constants.GetTypeEnumMemberAtIndex(2)
+        )
+        if int_mask.name != "IntMask":
+            return
+
+        self.pointer_valobj = self._get_pointer(
+            pointer_bit_mask.GetValueAsUnsigned(), pointer_ty
+        )
+        self.int_valobj = self._get_int(
+            int_shift.GetValueAsUnsigned(), int_mask.GetValueAsUnsigned(), int_ty
+        )
 
 
 class PointerUnionSynthProvider:
-    def __init__(self, valobj, internal_dict):
+    valobj: lldb.SBValue
+    pointer_valobj: lldb.SBValue
+
+    def __init__(self, valobj: lldb.SBValue, internal_dict) -> None:
         self.valobj = valobj
         self.update()
 
-    def num_children(self):
+    def num_children(self) -> int:
         return 1
 
-    def get_child_index(self, name):
-        if name == "Ptr":
+    def get_child_index(self, name: str) -> int:
+        if name == "Pointer":
             return 0
-        return None
+        return -1
 
-    def get_child_at_index(self, index):
+    def get_child_at_index(self, index: int) -> Optional[lldb.SBValue]:
         if index != 0:
             return None
-        ptr_type_name = self.template_args[self.active_type_tag]
-        return self.valobj.CreateValueFromExpression(
-            "Ptr", f"({ptr_type_name}){self.val_expr_path}.getPointer()"
+
+        return self.pointer_valobj
+
+    @staticmethod
+    def _get_low_bits_for_type(ty: lldb.SBType) -> int:
+        """Return NumLowBitsAvailable for a pointer type (from pointee byte alignment)."""
+        pointee = ty.GetPointeeType()
+        if pointee.IsValid():
+            align = pointee.GetByteAlign()
+            return align.bit_length() - 1 if align > 0 else 0
+        return 0
+
+    def _make_pointer_value(self, name, pointer, ty):
+        """Create an SBValue for a pointer, using proper byte order and address size."""
+        data = lldb.SBData.CreateDataFromUInt64Array(
+            self.valobj.target.GetByteOrder(),
+            self.valobj.process.GetAddressByteSize(),
+            [pointer],
         )
+        return self.valobj.CreateValueFromData(name, data, ty)
 
     def update(self):
-        self.pointer_int_pair = self.valobj.GetChildMemberWithName("Val")
-        self.val_expr_path = get_expression_path(
-            self.valobj.GetChildMemberWithName("Val")
+        self.pointer_valobj = None
+
+        valobj_type = self.valobj.GetType()
+        num_args = valobj_type.GetNumberOfTemplateArguments()
+        if num_args == 0:
+            return
+
+        # Read the raw uintptr_t from PunnedPointer<void*>.
+        val: lldb.SBValue = self.valobj.GetChildMemberWithName("Val")
+        if not val:
+            return
+        byteorder = (
+            "big"
+            if self.valobj.target.GetByteOrder() == lldb.eByteOrderBig
+            else "little"
         )
-        self.active_type_tag = self.valobj.CreateValueFromExpression(
-            "", f"(int){self.val_expr_path}.getInt()"
-        ).GetValueAsSigned()
-        self.template_args = parse_template_parameters(self.valobj.GetType().name)
+        raw_bytes = val.GetData().uint8s
+        if not raw_bytes:
+            return
+        raw_value = int.from_bytes(raw_bytes, byteorder)
+
+        # Compute tag from type alignments (fixed-width encoding).
+        tag_bits = (num_args - 1).bit_length()
+        min_low_bits = min(
+            self._get_low_bits_for_type(valobj_type.GetTemplateArgumentType(i))
+            for i in range(num_args)
+        )
+        if tag_bits > min_low_bits:
+            return self._set_raw_pointer(raw_value, min_low_bits)
+        tag_shift = min_low_bits - tag_bits
+        tag_mask = (1 << tag_bits) - 1
+        active_tag = (raw_value >> tag_shift) & tag_mask
+
+        if active_tag >= num_args:
+            return self._set_raw_pointer(raw_value, min_low_bits)
+
+        active_type: lldb.SBType = valobj_type.GetTemplateArgumentType(active_tag)
+        if not active_type:
+            return self._set_raw_pointer(raw_value, min_low_bits)
+
+        # Clear the active type's low bits to recover the pointer.
+        low_bits = self._get_low_bits_for_type(active_type)
+        pointer = raw_value & ~((1 << low_bits) - 1)
+
+        self.pointer_valobj = self._make_pointer_value("Pointer", pointer, active_type)
+
+    def _set_raw_pointer(self, raw_value, min_low_bits):
+        """Fallback: strip tag bits and show as void* when active type is unknown."""
+        pointer = raw_value & ~((1 << min_low_bits) - 1)
+        void_ptr_ty = self.valobj.target.FindFirstType("void").GetPointerType()
+        if void_ptr_ty.IsValid():
+            self.pointer_valobj = self._make_pointer_value(
+                "Pointer", pointer, void_ptr_ty
+            )
 
 
 def DenseMapSummary(valobj: lldb.SBValue, _) -> str:
@@ -372,7 +507,8 @@ class DenseMapSynthetic:
         # For each key, collect a list of buckets it appears in.
         key_buckets: dict[str, list[int]] = collections.defaultdict(list)
         for index in range(num_buckets):
-            key = buckets.GetValueForExpressionPath(f"[{index}].first")
+            bucket = buckets.GetValueForExpressionPath(f"[{index}]")
+            key = bucket.GetChildAtIndex(0)
             key_buckets[str(key.data)].append(index)
 
         # Heuristic: This is not a multi-map, any repeated (non-unique) keys are
@@ -381,6 +517,26 @@ class DenseMapSynthetic:
         for indexes in key_buckets.values():
             if len(indexes) == 1:
                 self.child_buckets.append(indexes[0])
+
+
+class DenseSetSynthetic:
+    valobj: lldb.SBValue
+    map: lldb.SBValue
+
+    def __init__(self, valobj: lldb.SBValue, _) -> None:
+        self.valobj = valobj
+
+    def num_children(self) -> int:
+        return self.map.num_children
+
+    def get_child_at_index(self, idx: int) -> lldb.SBValue:
+        map_entry = self.map.child[idx]
+        set_entry = map_entry.GetChildAtIndex(0)
+        return set_entry.Clone(f"[{idx}]")
+
+    def update(self):
+        raw_map = self.valobj.GetChildMemberWithName("TheMap")
+        self.map = raw_map.GetSyntheticValue()
 
 
 class ExpectedSynthetic:
@@ -403,8 +559,21 @@ class ExpectedSynthetic:
         # Anonymous union.
         union = self.expected.child[0]
         storage = union.GetChildMemberWithName(member)
-        stored_type = storage.type.template_args[0]
-        self.stored_value = storage.Cast(stored_type).Clone(name)
+        # For reference types, storage is std::reference_wrapper<T>, so we
+        # unwrap to get T. For non-reference types, storage is T directly.
+        # Use GetCanonicalType() to resolve the typedef to the underlying type.
+        canonical_type_name = storage.type.GetCanonicalType().name
+        if "reference_wrapper<" in canonical_type_name:
+            # reference_wrapper<T> stores a T* pointer to the referenced value.
+            # Get the first child (the pointer member) and dereference it.
+            ptr_member = storage.GetChildAtIndex(0)
+            if ptr_member and ptr_member.IsValid() and ptr_member.type.IsPointerType():
+                self.stored_value = ptr_member.Dereference().Clone(name)
+            else:
+                # Fallback: just use storage as-is.
+                self.stored_value = storage.Clone(name)
+        else:
+            self.stored_value = storage.Clone(name)
 
     def num_children(self) -> int:
         return 1
@@ -421,3 +590,28 @@ class ExpectedSynthetic:
         if idx == 0:
             return self.stored_value
         return lldb.SBValue()
+
+
+def SmallBitVectorSummary(valobj, _) -> str:
+    underlyingValue = valobj.GetChildMemberWithName("X").unsigned
+    numBaseBits = valobj.target.addr_size * 8
+    smallNumRawBits = numBaseBits - 1
+    smallNumSizeBits = None
+    if numBaseBits == 32:
+        smallNumSizeBits = 5
+    elif numBaseBits == 64:
+        smallNumSizeBits = 6
+    else:
+        smallNumSizeBits = smallNumRawBits
+    smallNumDataBits = smallNumRawBits - smallNumSizeBits
+
+    # If our underlying value is not small, print we can not dump large values.
+    isSmallMask = 1
+    if underlyingValue & isSmallMask == 0:
+        return "<can not read large SmallBitVector>"
+
+    smallRawBits = underlyingValue >> 1
+    smallSize = smallRawBits >> smallNumDataBits
+    bits = smallRawBits & ((1 << (smallSize + 1)) - 1)
+    # format `bits` in binary (b), with 0 padding, of width `smallSize`, and left aligned (>)
+    return f"[{bits:0>{smallSize}b}]"

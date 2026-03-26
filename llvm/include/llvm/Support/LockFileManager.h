@@ -11,6 +11,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/AdvisoryLock.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 #include <string>
 #include <variant>
@@ -23,7 +24,7 @@ namespace llvm {
 /// atomicity of the file system to ensure that only a single process can create
 /// that ".lock" file. When the lock file is removed, the owning process has
 /// finished the operation.
-class LockFileManager : public AdvisoryLock {
+class LLVM_ABI LockFileManager : public AdvisoryLock {
   SmallString<128> FileName;
   SmallString<128> LockFileName;
   SmallString<128> UniqueLockFileName;
@@ -60,7 +61,7 @@ public:
 
   /// Remove the lock file.  This may delete a different lock file than
   /// the one previously read if there is a race.
-  std::error_code unsafeMaybeUnlock() override;
+  std::error_code unsafeUnlock() override;
 
   /// Unlocks the lock if previously acquired by \c tryLock().
   ~LockFileManager() override;

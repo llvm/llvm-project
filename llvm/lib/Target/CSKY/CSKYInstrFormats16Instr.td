@@ -16,8 +16,9 @@ class J16<bits<5> sop, string opstr, dag ins>
 }
 
 class J16_B<bits<5> sop, string opstr>
-  : CSKY16Inst<AddrModeNone, (outs), (ins CARRY:$ca, br_symbol_16bit:$offset),
-    !strconcat(opstr, "\t$offset"), []> {
+    : CSKY16Inst<AddrModeNone, (outs), (ins CARRY:$ca, br_symbol_16bit:$offset),
+                 !strconcat(opstr, "\t$offset"), []> {
+  bits<0> ca;
   bits<10> offset;
   let Inst{15} = 0;
   let Inst{14 - 10} = sop;
@@ -66,6 +67,8 @@ class R16_XZ_BINOP_NOPat<bits<4> op, bits<2> sop, string opstr> : CSKY16Inst<
 class R16_XZ_BINOP_C<bits<4> op, bits<2> sop, string opstr> : CSKY16Inst<
   AddrModeNone, (outs sGPR:$rz, CARRY:$cout),
   (ins sGPR:$rZ, sGPR:$rx, CARRY:$cin), !strconcat(opstr, "\t$rz, $rx"), []> {
+  bits<0> cout;
+  bits<0> cin;
   bits<4> rz;
   bits<4> rx;
   let Inst{15, 14} = 0b01;
@@ -101,9 +104,10 @@ class R16_Z_UNOP<bits<4> op, bits<2> sop, string opstr> : CSKY16Inst<
   let Constraints = "$rz = $rx";
 }
 
-class R16_XY_CMP<bits<2> sop, string opstr> : CSKY16Inst<
-  AddrModeNone, (outs CARRY:$ca), (ins sGPR:$rx, sGPR:$ry), !strconcat(opstr, "\t$rx, $ry"),
-  []> {
+class R16_XY_CMP<bits<2> sop, string opstr>
+    : CSKY16Inst<AddrModeNone, (outs CARRY:$ca), (ins sGPR:$rx, sGPR:$ry),
+                 !strconcat(opstr, "\t$rx, $ry"), []> {
+  bits<0> ca;
   bits<4> ry;
   bits<4> rx;
   let Inst{15, 14} = 0b01;
@@ -145,9 +149,11 @@ class I16_Z_5<bits<3> sop, dag outs, dag ins,string opstr>
   let Inst{4 - 0} = imm5;
 }
 
-class I16_X_CMP<bits<3> sop, string opstr, Operand Immoperand> : CSKY16Inst<
-  AddrModeNone, (outs CARRY:$ca), (ins mGPR:$rx, Immoperand:$imm5),
-  !strconcat(opstr, "\t$rx, $imm5"), []> {
+class I16_X_CMP<bits<3> sop, string opstr, Operand Immoperand>
+    : CSKY16Inst<AddrModeNone, (outs CARRY:$ca),
+                 (ins mGPR:$rx, Immoperand:$imm5),
+                 !strconcat(opstr, "\t$rx, $imm5"), []> {
+  bits<0> ca;
   bits<3> rx;
   bits<5> imm5;
   let Inst{15, 14} = 0b00;
@@ -158,9 +164,12 @@ class I16_X_CMP<bits<3> sop, string opstr, Operand Immoperand> : CSKY16Inst<
   let isCompare = 1;
 }
 
-class I16_SP_IMM7<bits<3> sop, string opstr> : CSKY16Inst<
-  AddrModeNone, (outs GPRSP:$sp2), (ins GPRSP:$sp1, uimm7_2:$imm7),
-  !strconcat(opstr, "\t$sp2, $sp1, $imm7"), []> {
+class I16_SP_IMM7<bits<3> sop, string opstr>
+    : CSKY16Inst<AddrModeNone, (outs GPRSP:$sp2),
+                 (ins GPRSP:$sp1, uimm7_2:$imm7),
+                 !strconcat(opstr, "\t$sp2, $sp1, $imm7"), []> {
+  bits<0> sp2;
+  bits<0> sp1;
   bits<7> imm7;
   let Inst{15, 14} = 0b00;
   let Inst{13 - 10} = 0b0101;

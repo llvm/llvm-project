@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.3-library -std=hlsl202x -o - -fsyntax-only %s -verify
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -std=hlsl202x -o - -fsyntax-only %s -verify
 
 // template not allowed inside cbuffer.
 cbuffer A {

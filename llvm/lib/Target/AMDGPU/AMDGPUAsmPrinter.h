@@ -20,8 +20,8 @@
 
 namespace llvm {
 
-class AMDGPUMachineFunction;
-struct AMDGPUResourceUsageAnalysis;
+class AMDGPUMachineFunctionInfo;
+class AMDGPUResourceUsageAnalysis;
 class AMDGPUTargetStreamer;
 class MCCodeEmitter;
 class MCOperand;
@@ -36,11 +36,15 @@ class MetadataStreamer;
 } // namespace AMDGPU
 
 class AMDGPUAsmPrinter final : public AsmPrinter {
+public:
+  static char ID;
+
 private:
   unsigned CodeObjectVersion;
   void initializeTargetID(const Module &M);
 
-  AMDGPUResourceUsageAnalysis *ResourceUsage;
+  const AMDGPUResourceUsageAnalysisWrapperPass::FunctionResourceInfo
+      *ResourceUsage;
 
   MCResourceInfo RI;
 
@@ -49,6 +53,9 @@ private:
   std::unique_ptr<AMDGPU::HSAMD::MetadataStreamer> HSAMetadataStream;
 
   MCCodeEmitter *DumpCodeInstEmitter = nullptr;
+
+  // When appropriate, add a _dvgpr$ symbol.
+  void emitDVgprSymbol(MachineFunction &MF);
 
   void getSIProgramInfo(SIProgramInfo &Out, const MachineFunction &MF);
   void getAmdKernelCode(AMDGPU::AMDGPUMCKernelCodeT &Out,
@@ -66,7 +73,7 @@ private:
                                   const MCExpr *TotalNumVGPR,
                                   const MCExpr *NumSGPR,
                                   const MCExpr *ScratchSize, uint64_t CodeSize,
-                                  const AMDGPUMachineFunction *MFI);
+                                  const AMDGPUMachineFunctionInfo *MFI);
   void emitResourceUsageRemarks(const MachineFunction &MF,
                                 const SIProgramInfo &CurrentProgramInfo,
                                 bool isModuleEntryFunction, bool hasMAIInsts);

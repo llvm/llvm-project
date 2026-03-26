@@ -135,7 +135,7 @@ void RTDEF(AllocatableApplyMold)(
 
 int RTDEF(AllocatableAllocate)(Descriptor &descriptor,
     std::int64_t *asyncObject, bool hasStat, const Descriptor *errMsg,
-    const char *sourceFile, int sourceLine) {
+    const char *sourceFile, int sourceLine, MemcpyFct memcpyFct) {
   Terminator terminator{sourceFile, sourceLine};
   if (!descriptor.IsAllocatable()) {
     return ReturnError(terminator, StatInvalidDescriptor, errMsg, hasStat);
@@ -148,8 +148,8 @@ int RTDEF(AllocatableAllocate)(Descriptor &descriptor,
       if (const DescriptorAddendum * addendum{descriptor.Addendum()}) {
         if (const auto *derived{addendum->derivedType()}) {
           if (!derived->noInitializationNeeded()) {
-            stat =
-                Initialize(descriptor, *derived, terminator, hasStat, errMsg);
+            stat = Initialize(
+                descriptor, *derived, terminator, hasStat, errMsg, memcpyFct);
           }
         }
       }
@@ -165,6 +165,26 @@ int RTDEF(AllocatableAllocateSource)(Descriptor &alloc,
       alloc, /*asyncObject=*/nullptr, hasStat, errMsg, sourceFile, sourceLine)};
   if (stat == StatOk) {
     Terminator terminator{sourceFile, sourceLine};
+    if (alloc.rank() != source.rank() && source.rank() != 0) {
+      terminator.Crash("ALLOCATE object has rank %d while SOURCE= has rank %d",
+          alloc.rank(), source.rank());
+    }
+    if (int rank{source.rank()}; rank > 0) {
+      SubscriptValue allocExtent[maxRank], sourceExtent[maxRank];
+      alloc.GetShape(allocExtent);
+      source.GetShape(sourceExtent);
+      for (int j{0}; j < rank; ++j) {
+        if (allocExtent[j] != sourceExtent[j]) {
+          if (!hasStat) {
+            terminator.Crash("ALLOCATE object has extent %jd on dimension %d, "
+                             "but SOURCE= has extent %jd",
+                static_cast<std::intmax_t>(allocExtent[j]), j + 1,
+                static_cast<std::intmax_t>(sourceExtent[j]));
+          }
+          return StatInvalidExtent;
+        }
+      }
+    }
     DoFromSourceAssign(alloc, source, terminator);
   }
   return stat;

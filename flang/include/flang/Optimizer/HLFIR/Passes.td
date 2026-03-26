@@ -58,7 +58,26 @@ def SimplifyHLFIRIntrinsics : Pass<"simplify-hlfir-intrinsics"> {
                         "argument of hlfir.eval_in_mem, which may block "
                         "some existing MLIR transformations (e.g. CSE) "
                         "that otherwise would have been possible across "
-                        "the hlfir.matmul.">];
+                        "the hlfir.matmul.">,
+                 Option<"fpMaxminBehavior", "fp-maxmin-behavior",
+                        "Fortran::common::FPMaxminBehavior",
+                        /*default=*/"Fortran::common::FPMaxminBehavior::Legacy",
+                        "This option defines the FP max/min behavior.",
+                        [{::llvm::cl::values(
+               clEnumValN(Fortran::common::FPMaxminBehavior::Legacy,
+                          "legacy", "cmp+select"),
+               clEnumValN(Fortran::common::FPMaxminBehavior::Portable,
+                          "portable", "same as legacy, except that "
+                          "arith.max/minnumf may be used when nnan "
+                          "and nsz fast math flags are enabled"),
+               clEnumValN(Fortran::common::FPMaxminBehavior::Extremum,
+                          "extremum", "arith.max/minimumf"),
+               clEnumValN(Fortran::common::FPMaxminBehavior::ExtremeNum,
+                          "extremenum", "arith.max/minnumf"))}]>];
+}
+
+def ExpressionSimplification : Pass<"hlfir-expression-simplification"> {
+  let summary = "Simplify Fortran expressions";
 }
 
 def InlineElementals : Pass<"inline-elementals"> {
@@ -67,6 +86,14 @@ def InlineElementals : Pass<"inline-elementals"> {
 
 def InlineHLFIRAssign : Pass<"inline-hlfir-assign"> {
   let summary = "Inline hlfir.assign operations";
+}
+
+def InlineHLFIRCopyIn : Pass<"inline-hlfir-copy-in"> {
+  let summary = "Inline hlfir.copy_in operations";
+}
+
+def PropagateFortranVariableAttributes : Pass<"propagate-fortran-attrs"> {
+  let summary = "Propagate FortranVariableFlagsAttr attributes through HLFIR";
 }
 
 #endif //FORTRAN_DIALECT_HLFIR_PASSES

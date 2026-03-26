@@ -23,7 +23,7 @@ define void @loop1(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-NEXT:    add x13, x1, #16
 ; CHECK-NEXT:    add x8, x1, x10, lsl #2
 ; CHECK-NEXT:    add x9, x0, x10
-; CHECK-NEXT:    mov x14, x10
+; CHECK-NEXT:    and x14, x11, #0x1fffffff8
 ; CHECK-NEXT:  .LBB0_4: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldp q1, q2, [x13, #-16]
@@ -31,12 +31,12 @@ define void @loop1(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-NEXT:    add x13, x13, #32
 ; CHECK-NEXT:    fcmgt v3.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    fcmgt v4.4s, v2.4s, v0.4s
-; CHECK-NEXT:    fcmlt v5.4s, v1.4s, #0.0
-; CHECK-NEXT:    fcmlt v6.4s, v2.4s, #0.0
-; CHECK-NEXT:    bit v1.16b, v0.16b, v3.16b
-; CHECK-NEXT:    bit v2.16b, v0.16b, v4.16b
-; CHECK-NEXT:    bic v1.16b, v1.16b, v5.16b
-; CHECK-NEXT:    bic v2.16b, v2.16b, v6.16b
+; CHECK-NEXT:    bsl v3.16b, v0.16b, v1.16b
+; CHECK-NEXT:    bsl v4.16b, v0.16b, v2.16b
+; CHECK-NEXT:    fcmlt v1.4s, v1.4s, #0.0
+; CHECK-NEXT:    fcmlt v2.4s, v2.4s, #0.0
+; CHECK-NEXT:    bic v1.16b, v3.16b, v1.16b
+; CHECK-NEXT:    bic v2.16b, v4.16b, v2.16b
 ; CHECK-NEXT:    fcvtzs v1.4s, v1.4s
 ; CHECK-NEXT:    fcvtzs v2.4s, v2.4s
 ; CHECK-NEXT:    xtn v1.4h, v1.4s
@@ -63,7 +63,8 @@ define void @loop1(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-NEXT:    fcmp s2, #0.0
 ; CHECK-NEXT:    fcsel s2, s0, s3, mi
 ; CHECK-NEXT:    subs w10, w10, #1
-; CHECK-NEXT:    fcvtzs w11, s2
+; CHECK-NEXT:    fcvtzs s2, s2
+; CHECK-NEXT:    fmov w11, s2
 ; CHECK-NEXT:    strb w11, [x9], #1
 ; CHECK-NEXT:    b.ne .LBB0_7
 ; CHECK-NEXT:  .LBB0_8: // %for.cond.cleanup
@@ -178,12 +179,12 @@ define void @loop2(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-NEXT:    fcmp s3, s1
 ; CHECK-NEXT:    fcsel s4, s1, s3, gt
 ; CHECK-NEXT:    fcmp s3, #0.0
-; CHECK-NEXT:    fcvtzs w11, s2
+; CHECK-NEXT:    fcvtzs s2, s2
 ; CHECK-NEXT:    fcsel s3, s0, s4, mi
 ; CHECK-NEXT:    subs w10, w10, #1
-; CHECK-NEXT:    strb w11, [x9]
-; CHECK-NEXT:    fcvtzs w12, s3
-; CHECK-NEXT:    strb w12, [x9, #1]
+; CHECK-NEXT:    str b2, [x9]
+; CHECK-NEXT:    fcvtzs s3, s3
+; CHECK-NEXT:    stur b3, [x9, #1]
 ; CHECK-NEXT:    add x9, x9, #2
 ; CHECK-NEXT:    b.ne .LBB1_6
 ; CHECK-NEXT:  .LBB1_7: // %for.cond.cleanup
@@ -193,9 +194,9 @@ define void @loop2(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-NEXT:    mov w8, #1132396544 // =0x437f0000
 ; CHECK-NEXT:    and x10, x11, #0x1fffffffc
 ; CHECK-NEXT:    dup v0.4s, w8
+; CHECK-NEXT:    and x12, x11, #0x1fffffffc
 ; CHECK-NEXT:    add x8, x1, x10, lsl #3
 ; CHECK-NEXT:    add x9, x0, x10, lsl #1
-; CHECK-NEXT:    mov x12, x10
 ; CHECK-NEXT:  .LBB1_9: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld2 { v1.4s, v2.4s }, [x1], #32
@@ -340,7 +341,7 @@ define void @loop3(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-NEXT:    dup v0.4s, w8
 ; CHECK-NEXT:    ldr q1, [x12, :lo12:.LCPI2_0]
 ; CHECK-NEXT:    add x9, x10, x10, lsl #1
-; CHECK-NEXT:    mov x12, x10
+; CHECK-NEXT:    and x12, x11, #0x1fffffffc
 ; CHECK-NEXT:    add x8, x1, x9, lsl #2
 ; CHECK-NEXT:    add x9, x0, x9
 ; CHECK-NEXT:  .LBB2_4: // %vector.body
@@ -395,19 +396,19 @@ define void @loop3(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-NEXT:    fcsel s4, s1, s3, gt
 ; CHECK-NEXT:    fcmp s3, #0.0
 ; CHECK-NEXT:    ldr s3, [x8, #8]
-; CHECK-NEXT:    fcvtzs w11, s2
+; CHECK-NEXT:    fcvtzs s2, s2
 ; CHECK-NEXT:    add x8, x8, #12
 ; CHECK-NEXT:    fcsel s4, s0, s4, mi
 ; CHECK-NEXT:    fcmp s3, s1
-; CHECK-NEXT:    strb w11, [x9]
+; CHECK-NEXT:    str b2, [x9]
 ; CHECK-NEXT:    fcsel s5, s1, s3, gt
 ; CHECK-NEXT:    fcmp s3, #0.0
-; CHECK-NEXT:    fcvtzs w12, s4
+; CHECK-NEXT:    fcvtzs s4, s4
 ; CHECK-NEXT:    fcsel s3, s0, s5, mi
 ; CHECK-NEXT:    subs w10, w10, #1
-; CHECK-NEXT:    strb w12, [x9, #1]
-; CHECK-NEXT:    fcvtzs w13, s3
-; CHECK-NEXT:    strb w13, [x9, #2]
+; CHECK-NEXT:    stur b4, [x9, #1]
+; CHECK-NEXT:    fcvtzs s3, s3
+; CHECK-NEXT:    stur b3, [x9, #2]
 ; CHECK-NEXT:    add x9, x9, #3
 ; CHECK-NEXT:    b.ne .LBB2_8
 ; CHECK-NEXT:  .LBB2_9: // %for.cond.cleanup
@@ -563,26 +564,26 @@ define void @loop4(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-NEXT:    fcmp s3, s1
 ; CHECK-NEXT:    fcsel s4, s1, s3, gt
 ; CHECK-NEXT:    fcmp s3, #0.0
-; CHECK-NEXT:    fcvtzs w11, s2
+; CHECK-NEXT:    fcvtzs s2, s2
 ; CHECK-NEXT:    ldp s3, s5, [x8, #8]
 ; CHECK-NEXT:    add x8, x8, #16
 ; CHECK-NEXT:    fcsel s4, s0, s4, mi
 ; CHECK-NEXT:    fcmp s3, s1
-; CHECK-NEXT:    strb w11, [x9]
-; CHECK-NEXT:    fcvtzs w12, s4
+; CHECK-NEXT:    str b2, [x9]
+; CHECK-NEXT:    fcvtzs s4, s4
 ; CHECK-NEXT:    fcsel s6, s1, s3, gt
 ; CHECK-NEXT:    fcmp s3, #0.0
 ; CHECK-NEXT:    fcsel s3, s0, s6, mi
 ; CHECK-NEXT:    fcmp s5, s1
-; CHECK-NEXT:    strb w12, [x9, #1]
+; CHECK-NEXT:    stur b4, [x9, #1]
 ; CHECK-NEXT:    fcsel s6, s1, s5, gt
 ; CHECK-NEXT:    fcmp s5, #0.0
-; CHECK-NEXT:    fcvtzs w13, s3
-; CHECK-NEXT:    fcsel s2, s0, s6, mi
+; CHECK-NEXT:    fcvtzs s3, s3
+; CHECK-NEXT:    fcsel s5, s0, s6, mi
 ; CHECK-NEXT:    subs w10, w10, #1
-; CHECK-NEXT:    strb w13, [x9, #2]
-; CHECK-NEXT:    fcvtzs w14, s2
-; CHECK-NEXT:    strb w14, [x9, #3]
+; CHECK-NEXT:    stur b3, [x9, #2]
+; CHECK-NEXT:    fcvtzs s5, s5
+; CHECK-NEXT:    stur b5, [x9, #3]
 ; CHECK-NEXT:    add x9, x9, #4
 ; CHECK-NEXT:    b.ne .LBB3_6
 ; CHECK-NEXT:  .LBB3_7: // %for.cond.cleanup
@@ -596,7 +597,7 @@ define void @loop4(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-NEXT:    ldr q1, [x12, :lo12:.LCPI3_0]
 ; CHECK-NEXT:    add x8, x1, x10, lsl #4
 ; CHECK-NEXT:    add x9, x0, x10, lsl #2
-; CHECK-NEXT:    mov x12, x10
+; CHECK-NEXT:    and x12, x11, #0x1fffffffc
 ; CHECK-NEXT:  .LBB3_9: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld4 { v2.4s, v3.4s, v4.4s, v5.4s }, [x1], #64

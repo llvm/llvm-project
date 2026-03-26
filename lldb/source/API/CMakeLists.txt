@@ -11,13 +11,6 @@ if(LLDB_ENABLE_PYTHON)
     # inside an extern "C" block.
     remove_module_flags()
   endif()
-  get_target_property(python_bindings_dir swig_wrapper_python BINARY_DIR)
-  set(lldb_python_wrapper ${python_bindings_dir}/LLDBWrapPython.cpp)
-endif()
-
-if(LLDB_ENABLE_LUA)
-  get_target_property(lua_bindings_dir swig_wrapper_lua BINARY_DIR)
-  set(lldb_lua_wrapper ${lua_bindings_dir}/LLDBWrapLua.cpp)
 endif()
 
 # Generate SBLanguages.h from Dwarf.def.
@@ -69,6 +62,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBFileSpecList.cpp
   SBFormat.cpp
   SBFrame.cpp
+  SBFrameList.cpp
   SBFunction.cpp
   SBHostOS.cpp
   SBInstruction.cpp
@@ -122,12 +116,14 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBWatchpoint.cpp
   SBWatchpointOptions.cpp
   SystemInitializerFull.cpp
-  ${lldb_python_wrapper}
-  ${lldb_lua_wrapper}
 
+  ADDITIONAL_HEADER_DIRS
+    ${LLDB_INCLUDE_DIR}/lldb/API
   DEPENDS
     lldb-sbapi-dwarf-enums
 
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     lldbBreakpoint
     lldbCore
@@ -142,58 +138,16 @@ add_lldb_library(liblldb SHARED ${option_framework}
     lldbValueObject
     lldbVersion
     ${LLDB_ALL_PLUGINS}
-  LINK_COMPONENTS
-    Support
 
   ${option_install_prefix}
 )
 
-# lib/pythonX.Y/dist-packages/lldb/_lldb.so is a symlink to lib/liblldb.so,
-# which depends on lib/libLLVM*.so (BUILD_SHARED_LIBS) or lib/libLLVM-10git.so
-# (LLVM_LINK_LLVM_DYLIB). Add an additional rpath $ORIGIN/../../../../lib so
-# that _lldb.so can be loaded from Python.
-if(LLDB_ENABLE_PYTHON AND (BUILD_SHARED_LIBS OR LLVM_LINK_LLVM_DYLIB) AND UNIX AND NOT APPLE)
-  set_property(TARGET liblldb APPEND PROPERTY INSTALL_RPATH "\$ORIGIN/../../../../lib${LLVM_LIBDIR_SUFFIX}")
-endif()
-
-if(Python3_RPATH)
-  set_property(TARGET liblldb APPEND PROPERTY INSTALL_RPATH "${Python3_RPATH}")
-  set_property(TARGET liblldb APPEND PROPERTY BUILD_RPATH   "${Python3_RPATH}")
-endif()
-
-
-if(LLDB_ENABLE_PYTHON)
-  add_dependencies(liblldb swig_wrapper_python)
-
-  if (MSVC)
-    set_property(SOURCE ${lldb_python_wrapper} APPEND_STRING PROPERTY COMPILE_FLAGS " /W0")
-  else()
-    set_property(SOURCE ${lldb_python_wrapper} APPEND_STRING PROPERTY COMPILE_FLAGS " -w")
-  endif()
-
-  set_source_files_properties(${lldb_python_wrapper} PROPERTIES GENERATED ON)
-  if (CLANG_CL)
-    set_property(SOURCE ${lldb_python_wrapper} APPEND_STRING
-      PROPERTY COMPILE_FLAGS " -Wno-unused-function")
-  endif()
-  if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND
-      NOT "${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
-    set_property(SOURCE ${lldb_python_wrapper} APPEND_STRING
-      PROPERTY COMPILE_FLAGS " -Wno-sequence-point -Wno-cast-qual")
-  endif ()
+if (LLDB_ENABLE_PYTHON)
+  add_python_wrapper(liblldb)
 endif()
 
 if(LLDB_ENABLE_LUA)
-  add_dependencies(liblldb swig_wrapper_lua)
-  target_include_directories(liblldb PRIVATE ${LUA_INCLUDE_DIR})
-
-  if (MSVC)
-    set_property(SOURCE ${lldb_lua_wrapper} APPEND_STRING PROPERTY COMPILE_FLAGS " /W0")
-  else()
-    set_property(SOURCE ${lldb_lua_wrapper} APPEND_STRING PROPERTY COMPILE_FLAGS " -w")
-  endif()
-
-  set_source_files_properties(${lldb_lua_wrapper} PROPERTIES GENERATED ON)
+  add_lua_wrapper(liblldb)
 endif()
 
 set_target_properties(liblldb
@@ -262,7 +216,7 @@ elseif (LLDB_EXPORT_ALL_SYMBOLS)
   add_llvm_symbol_exports(liblldb ${exported_symbol_file})
 endif()
 
-if (NOT MSVC)
+if(NOT WIN32 OR MINGW)
   set_target_properties(liblldb
     PROPERTIES
     OUTPUT_NAME lldb
@@ -289,6 +243,79 @@ else()
     )
   endif()
 endif()
+
+# Stage all headers in the include directory in the build dir.
+file(GLOB public_headers ${LLDB_SOURCE_DIR}/include/lldb/API/*.h)
+set(lldb_header_staging_dir ${CMAKE_BINARY_DIR}/include/lldb)
+set(generated_public_headers ${LLDB_OBJ_DIR}/include/lldb/API/SBLanguages.h)
+file(GLOB root_public_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-*.h)
+file(GLOB root_private_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-private*.h)
+list(REMOVE_ITEM root_public_headers ${root_private_headers})
+# Skip the initial copy of lldb-defines.h. The fixed version is generated at build time.
+list(REMOVE_ITEM root_public_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-defines.h)
+
+add_custom_command(
+  OUTPUT ${lldb_header_staging_dir}
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${lldb_header_staging_dir}
+  COMMENT "LLDB headers: create staging directory for LLDB headers")
+
+add_custom_target(liblldb-header-staging-dir DEPENDS ${lldb_header_staging_dir})
+
+find_program(unifdef_EXECUTABLE unifdef)
+
+add_custom_target(liblldb-header-staging)
+
+if (LLDB_BUILD_FRAMEWORK)
+  add_custom_target(lldb-framework-fixup-all-headers)
+  add_dependencies(lldb-framework-fixup-all-headers liblldb-header-staging)
+  add_dependencies(liblldb lldb-framework-fixup-all-headers)
+endif()
+
+foreach(header
+    ${public_headers}
+    ${generated_public_headers}
+    ${root_public_headers})
+  get_filename_component(basename ${header} NAME)
+  set(staged_header ${lldb_header_staging_dir}/${basename})
+
+  if(unifdef_EXECUTABLE)
+    # unifdef returns 0 when the file is unchanged and 1 if something was changed.
+    # That means if we successfully remove SWIG code, the build system believes
+    # that the command has failed and stops. This is undesirable.
+    set(copy_command ${unifdef_EXECUTABLE} -USWIG ${header} > ${staged_header} || (exit 0))
+  else()
+    set(copy_command ${CMAKE_COMMAND} -E copy ${header} ${staged_header})
+  endif()
+
+  add_custom_target(liblldb-stage-header-${basename} DEPENDS ${staged_header})
+  add_dependencies(liblldb-stage-header-${basename} lldb-sbapi-dwarf-enums liblldb-header-staging-dir)
+  add_dependencies(liblldb-header-staging liblldb-stage-header-${basename})
+  add_custom_command(
+    OUTPUT ${staged_header}
+    COMMAND ${copy_command}
+    DEPENDS ${header}
+    COMMENT "LLDB headers: stage LLDB headers in include directory")
+
+  list(APPEND lldb_staged_headers ${staged_header})
+
+  if (LLDB_BUILD_FRAMEWORK)
+    set(output_header $<TARGET_FILE_DIR:liblldb>/Headers/${basename})
+
+    add_custom_target(lldb-framework-fixup-header-${basename} DEPENDS ${staged_header})
+    add_dependencies(lldb-framework-fixup-header-${basename} liblldb-stage-header-${basename})
+    add_dependencies(lldb-framework-fixup-all-headers lldb-framework-fixup-header-${basename})
+
+    add_custom_command(TARGET lldb-framework-fixup-header-${basename} POST_BUILD
+      COMMAND "${Python3_EXECUTABLE}" ${LLDB_SOURCE_DIR}/scripts/framework-header-fix.py -f lldb_main -i ${staged_header} -o ${output_header}
+      COMMENT "LLDB.framework: Fix up and copy framework headers"
+    )
+  endif()
+endforeach()
+
+add_custom_command(TARGET liblldb-header-staging POST_BUILD
+  COMMAND "${Python3_EXECUTABLE}" ${LLDB_SOURCE_DIR}/scripts/version-header-fix.py -i ${LLDB_SOURCE_DIR}/include/lldb/lldb-defines.h -o ${lldb_header_staging_dir}/lldb-defines.h -m ${LLDB_VERSION_MAJOR} -n ${LLDB_VERSION_MINOR} -p ${LLDB_VERSION_PATCH}
+)
+add_dependencies(liblldb liblldb-header-staging)
 
 if(LLDB_BUILD_FRAMEWORK)
   include(LLDBFramework)

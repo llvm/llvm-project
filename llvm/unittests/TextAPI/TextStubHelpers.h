@@ -8,7 +8,6 @@
 
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/TextAPI/InterfaceFile.h"
-#include <algorithm>
 #include <string>
 
 #ifndef TEXT_STUB_HELPERS_H
@@ -39,7 +38,7 @@ inline bool operator==(const ExportedSymbol &LHS, const ExportedSymbol &RHS) {
 }
 
 inline std::string stripWhitespace(std::string S) {
-  S.erase(std::remove_if(S.begin(), S.end(), ::isspace), S.end());
+  llvm::erase_if(S, ::isspace);
   return S;
 }
 

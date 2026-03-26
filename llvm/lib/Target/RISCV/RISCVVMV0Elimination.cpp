@@ -58,8 +58,7 @@ public:
     // TODO: We could move this closer to regalloc, out of SSA, which would
     // allow scheduling past mask operands. We would need to preserve live
     // intervals.
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::IsSSA);
+    return MachineFunctionProperties().setIsSSA();
   }
 };
 

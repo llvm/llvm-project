@@ -214,9 +214,7 @@ class ImplicitNullChecks : public MachineFunctionPass {
 public:
   static char ID;
 
-  ImplicitNullChecks() : MachineFunctionPass(ID) {
-    initializeImplicitNullChecksPass(*PassRegistry::getPassRegistry());
-  }
+  ImplicitNullChecks() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -226,8 +224,7 @@ public:
   }
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 };
 

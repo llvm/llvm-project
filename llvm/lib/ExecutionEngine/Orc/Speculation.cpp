@@ -60,8 +60,6 @@ void IRSpeculationLayer::emit(std::unique_ptr<MaterializationResponsibility> R,
                               ThreadSafeModule TSM) {
 
   assert(TSM && "Speculation Layer received Null Module ?");
-  assert(TSM.getContext().getContext() != nullptr &&
-         "Module with null LLVMContext?");
 
   // Instrumentation of runtime calls, lock the Module
   TSM.withModuleDo([this, &R](Module &M) {

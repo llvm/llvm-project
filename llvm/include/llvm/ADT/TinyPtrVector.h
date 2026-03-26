@@ -15,7 +15,6 @@
 #include <cassert>
 #include <cstddef>
 #include <iterator>
-#include <type_traits>
 
 namespace llvm {
 
@@ -132,47 +131,17 @@ public:
                        : Count == 1 ? PtrUnion(Value)
                                     : PtrUnion(new VecTy(Count, Value))) {}
 
-  // implicit conversion operator to ArrayRef.
-  operator ArrayRef<EltTy>() const {
-    if (Val.isNull())
-      return {};
-    if (isa<EltTy>(Val))
-      return *Val.getAddrOfPtr1();
-    return *cast<VecTy *>(Val);
-  }
-
-  // implicit conversion operator to MutableArrayRef.
-  operator MutableArrayRef<EltTy>() {
-    if (Val.isNull())
-      return {};
-    if (isa<EltTy>(Val))
-      return *Val.getAddrOfPtr1();
-    return *cast<VecTy *>(Val);
-  }
-
-  // Implicit conversion to ArrayRef<U> if EltTy* implicitly converts to U*.
-  template <
-      typename U,
-      std::enable_if_t<std::is_convertible<ArrayRef<EltTy>, ArrayRef<U>>::value,
-                       bool> = false>
-  operator ArrayRef<U>() const {
-    return operator ArrayRef<EltTy>();
-  }
-
   bool empty() const {
     // This vector can be empty if it contains no element, or if it
     // contains a pointer to an empty vector.
-    if (Val.isNull()) return true;
-    if (VecTy *Vec = dyn_cast_if_present<VecTy *>(Val))
-      return Vec->empty();
-    return false;
+    if (isa<EltTy>(Val))
+      return Val.isNull();
+    return cast<VecTy *>(Val)->empty();
   }
 
   unsigned size() const {
-    if (empty())
-      return 0;
     if (isa<EltTy>(Val))
-      return 1;
+      return Val.isNull() ? 0 : 1;
     return cast<VecTy *>(Val)->size();
   }
 
@@ -214,6 +183,9 @@ public:
     return const_reverse_iterator(begin());
   }
 
+  EltTy *data() { return begin(); }
+  const EltTy *data() const { return begin(); }
+
   EltTy operator[](unsigned i) const {
     assert(!Val.isNull() && "can't index into an empty vector");
     if (isa<EltTy>(Val)) {
@@ -250,8 +222,8 @@ public:
     // If we have a single value, convert to a vector.
     if (isa<EltTy>(Val)) {
       EltTy V = cast<EltTy>(Val);
-      Val = new VecTy();
-      cast<VecTy *>(Val)->push_back(V);
+      Val = new VecTy({V, NewVal});
+      return;
     }
 
     // Add the new value, we know we have a vector.
@@ -261,20 +233,19 @@ public:
   void pop_back() {
     // If we have a single value, convert to empty.
     if (isa<EltTy>(Val))
-      Val = (EltTy)nullptr;
-    else if (VecTy *Vec = cast<VecTy *>(Val))
-      Vec->pop_back();
+      Val = EltTy();
+    else
+      cast<VecTy *>(Val)->pop_back();
   }
 
   void clear() {
     // If we have a single value, convert to empty.
     if (isa<EltTy>(Val)) {
       Val = EltTy();
-    } else if (VecTy *Vec = dyn_cast_if_present<VecTy *>(Val)) {
+    } else {
       // If we have a vector form, just clear it.
-      Vec->clear();
+      cast<VecTy *>(Val)->clear();
     }
-    // Otherwise, we're already empty.
   }
 
   iterator erase(iterator I) {
@@ -285,10 +256,10 @@ public:
     if (isa<EltTy>(Val)) {
       if (I == begin())
         Val = EltTy();
-    } else if (VecTy *Vec = dyn_cast_if_present<VecTy *>(Val)) {
+    } else {
       // multiple items in a vector; just do the erase, there is no
       // benefit to collapsing back to a pointer
-      return Vec->erase(I);
+      return cast<VecTy *>(Val)->erase(I);
     }
     return end();
   }
@@ -301,8 +272,8 @@ public:
     if (isa<EltTy>(Val)) {
       if (S == begin() && S != E)
         Val = EltTy();
-    } else if (VecTy *Vec = dyn_cast_if_present<VecTy *>(Val)) {
-      return Vec->erase(S, E);
+    } else {
+      return cast<VecTy *>(Val)->erase(S, E);
     }
     return end();
   }

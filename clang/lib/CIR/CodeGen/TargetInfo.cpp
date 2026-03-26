@@ -1,23 +1,67 @@
 #include "TargetInfo.h"
 #include "ABIInfo.h"
-#include "CIRGenFunctionInfo.h"
-#include "clang/CIR/MissingFeatures.h"
+#include "CIRGenFunction.h"
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
 
-static bool testIfIsVoidTy(QualType ty) {
-  const auto *builtinTy = ty->getAs<BuiltinType>();
-  return builtinTy && builtinTy->getKind() == BuiltinType::Void;
+bool clang::CIRGen::isEmptyRecordForLayout(const ASTContext &context,
+                                           QualType t) {
+  const auto *rd = t->getAsRecordDecl();
+  if (!rd)
+    return false;
+
+  // If this is a C++ record, check the bases first.
+  if (const CXXRecordDecl *cxxrd = dyn_cast<CXXRecordDecl>(rd)) {
+    if (cxxrd->isDynamicClass())
+      return false;
+
+    for (const auto &i : cxxrd->bases())
+      if (!isEmptyRecordForLayout(context, i.getType()))
+        return false;
+  }
+
+  for (const auto *i : rd->fields())
+    if (!isEmptyFieldForLayout(context, i))
+      return false;
+
+  return true;
 }
+
+bool clang::CIRGen::isEmptyFieldForLayout(const ASTContext &context,
+                                          const FieldDecl *fd) {
+  if (fd->isZeroLengthBitField())
+    return true;
+
+  if (fd->isUnnamedBitField())
+    return false;
+
+  return isEmptyRecordForLayout(context, fd->getType());
+}
+
+namespace {
+
+class AMDGPUABIInfo : public ABIInfo {
+public:
+  AMDGPUABIInfo(CIRGenTypes &cgt) : ABIInfo(cgt) {}
+};
+
+class AMDGPUTargetCIRGenInfo : public TargetCIRGenInfo {
+public:
+  AMDGPUTargetCIRGenInfo(CIRGenTypes &cgt)
+      : TargetCIRGenInfo(std::make_unique<AMDGPUABIInfo>(cgt)) {}
+};
+
+} // namespace
 
 namespace {
 
 class X8664ABIInfo : public ABIInfo {
 public:
   X8664ABIInfo(CIRGenTypes &cgt) : ABIInfo(cgt) {}
-
-  void computeInfo(CIRGenFunctionInfo &funcInfo) const override;
 };
 
 class X8664TargetCIRGenInfo : public TargetCIRGenInfo {
@@ -28,18 +72,28 @@ public:
 
 } // namespace
 
-void X8664ABIInfo::computeInfo(CIRGenFunctionInfo &funcInfo) const {
-  // Top level CIR has unlimited arguments and return types. Lowering for ABI
-  // specific concerns should happen during a lowering phase. Assume everything
-  // is direct for now.
-  assert(!cir::MissingFeatures::opCallArgs());
+namespace {
 
-  CanQualType retTy = funcInfo.getReturnType();
-  if (testIfIsVoidTy(retTy))
-    funcInfo.getReturnInfo() = cir::ABIArgInfo::getIgnore();
-  else
-    funcInfo.getReturnInfo() =
-        cir::ABIArgInfo::getDirect(cgt.convertType(retTy));
+class NVPTXABIInfo : public ABIInfo {
+public:
+  NVPTXABIInfo(CIRGenTypes &cgt) : ABIInfo(cgt) {}
+};
+
+class NVPTXTargetCIRGenInfo : public TargetCIRGenInfo {
+public:
+  NVPTXTargetCIRGenInfo(CIRGenTypes &cgt)
+      : TargetCIRGenInfo(std::make_unique<NVPTXABIInfo>(cgt)) {}
+};
+} // namespace
+
+std::unique_ptr<TargetCIRGenInfo>
+clang::CIRGen::createAMDGPUTargetCIRGenInfo(CIRGenTypes &cgt) {
+  return std::make_unique<AMDGPUTargetCIRGenInfo>(cgt);
+}
+
+std::unique_ptr<TargetCIRGenInfo>
+clang::CIRGen::createNVPTXTargetCIRGenInfo(CIRGenTypes &cgt) {
+  return std::make_unique<NVPTXTargetCIRGenInfo>(cgt);
 }
 
 std::unique_ptr<TargetCIRGenInfo>
@@ -56,4 +110,13 @@ bool TargetCIRGenInfo::isNoProtoCallVariadic(
   //   MIPS
   // For everything else, we just prefer false unless we opt out.
   return false;
+}
+
+clang::LangAS
+TargetCIRGenInfo::getGlobalVarAddressSpace(CIRGenModule &cgm,
+                                           const clang::VarDecl *d) const {
+  assert(!cgm.getLangOpts().OpenCL &&
+         !(cgm.getLangOpts().CUDA && cgm.getLangOpts().CUDAIsDevice) &&
+         "Address space agnostic languages only");
+  return d ? d->getType().getAddressSpace() : LangAS::Default;
 }

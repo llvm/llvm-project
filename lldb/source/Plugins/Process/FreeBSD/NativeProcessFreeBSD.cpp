@@ -92,15 +92,13 @@ NativeProcessFreeBSD::Manager::Launch(ProcessLaunchInfo &launch_info,
   if (!WIFSTOPPED(wstatus)) {
     LLDB_LOG(log, "Could not sync with inferior process: wstatus={1}",
              WaitStatus::Decode(wstatus));
-    return llvm::make_error<StringError>("Could not sync with inferior process",
-                                         llvm::inconvertibleErrorCode());
+    return llvm::createStringError("Could not sync with inferior process");
   }
   LLDB_LOG(log, "inferior started, now in stopped state");
 
   ProcessInstanceInfo Info;
   if (!Host::GetProcessInfo(pid, Info)) {
-    return llvm::make_error<StringError>("Cannot get process architecture",
-                                         llvm::inconvertibleErrorCode());
+    return llvm::createStringError("Cannot get process architecture");
   }
 
   // Set the architecture to the exe architecture.
@@ -131,8 +129,7 @@ NativeProcessFreeBSD::Manager::Attach(
   // Retrieve the architecture for the running process.
   ProcessInstanceInfo Info;
   if (!Host::GetProcessInfo(pid, Info)) {
-    return llvm::make_error<StringError>("Cannot get process architecture",
-                                         llvm::inconvertibleErrorCode());
+    return llvm::createStringError("Cannot get process architecture");
   }
 
   std::unique_ptr<NativeProcessFreeBSD> process_up(new NativeProcessFreeBSD(
@@ -324,12 +321,14 @@ void NativeProcessFreeBSD::MonitorSIGTRAP(lldb::pid_t pid) {
         auto thread_info =
             m_threads_stepping_with_breakpoint.find(thread->GetID());
         if (thread_info != m_threads_stepping_with_breakpoint.end() &&
-            thread_info->second == regctx.GetPC()) {
+            llvm::is_contained(thread_info->second, regctx.GetPC())) {
           thread->SetStoppedByTrace();
-          Status brkpt_error = RemoveBreakpoint(thread_info->second);
-          if (brkpt_error.Fail())
-            LLDB_LOG(log, "pid = {0} remove stepping breakpoint: {1}",
-                     thread_info->first, brkpt_error);
+          for (auto &&bp_addr : thread_info->second) {
+            Status brkpt_error = RemoveBreakpoint(bp_addr);
+            if (brkpt_error.Fail())
+              LLDB_LOG(log, "pid = {0} remove stepping breakpoint: {1}",
+                       thread_info->first, brkpt_error);
+          }
           m_threads_stepping_with_breakpoint.erase(thread_info);
         } else
           thread->SetStoppedByBreakpoint();
@@ -994,10 +993,6 @@ Status NativeProcessFreeBSD::ReinitializeThreads() {
   return error;
 }
 
-bool NativeProcessFreeBSD::SupportHardwareSingleStepping() const {
-  return !m_arch.IsMIPS();
-}
-
 void NativeProcessFreeBSD::MonitorClone(::pid_t child_pid, bool is_vfork,
                                         NativeThreadFreeBSD &parent_thread) {
   Log *log = GetLog(POSIXLog::Process);
@@ -1022,7 +1017,8 @@ void NativeProcessFreeBSD::MonitorClone(::pid_t child_pid, bool is_vfork,
   }
 
   struct ptrace_lwpinfo info;
-  const auto siginfo_err = PtraceWrapper(PT_LWPINFO, child_pid, &info, sizeof(info));
+  const auto siginfo_err =
+      PtraceWrapper(PT_LWPINFO, child_pid, &info, sizeof(info));
   if (siginfo_err.Fail()) {
     LLDB_LOG(log, "PT_LWPINFO failed {0}", siginfo_err);
     return;

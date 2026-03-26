@@ -159,7 +159,6 @@ void BPFMIPreEmitChecking::processAtomicInsts() {
 
       LLVM_DEBUG(MI.dump());
       if (hasLiveDefs(MI, TRI)) {
-        DebugLoc Empty;
         const DebugLoc &DL = MI.getDebugLoc();
         const Function &F = MF->getFunction();
         F.getContext().diagnose(DiagnosticInfoUnsupported{

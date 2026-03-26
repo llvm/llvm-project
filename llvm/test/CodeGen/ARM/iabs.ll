@@ -50,3 +50,28 @@ define i64 @test3(i64 %a) {
   %abs = select i1 %b, i64 %a, i64 %tmp1neg
   ret i64 %abs
 }
+
+declare void @callee(...)
+
+define void @testcallframe(i32 %a) {
+; CHECK-LABEL: testcallframe:
+; CHECK:       @ %bb.0: @ %bb
+; CHECK-NEXT:    .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    .pad #8
+; CHECK-NEXT:    sub sp, sp, #8
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    mov r1, #0
+; CHECK-NEXT:    rsbmi r0, r0, #0
+; CHECK-NEXT:    mov r2, #0
+; CHECK-NEXT:    mov r3, #0
+; CHECK-NEXT:    str r1, [sp]
+; CHECK-NEXT:    bl callee
+; CHECK-NEXT:    add sp, sp, #8
+; CHECK-NEXT:    pop {r11, lr}
+; CHECK-NEXT:    bx lr
+bb:
+  %i = tail call i32 @llvm.abs.i32(i32 %a, i1 false)
+  tail call void @callee(i32 %i, i32 0, i32 0, i32 0, i32 0)
+  ret void
+}

@@ -6,6 +6,7 @@
 // RUN: %clang_cc1 -triple i986-unknown-linux-gnu -fdefault-calling-conv=regcall -emit-llvm -o - %s | FileCheck %s --check-prefix=REGCALL --check-prefix=X86 --check-prefix=ALL
 // RUN: %clang_cc1 -triple i686-pc-win32 -fdefault-calling-conv=vectorcall -emit-llvm -o - %s -DWINDOWS | FileCheck %s --check-prefix=WIN32
 // RUN: %clang_cc1 -triple x86_64-windows-msvc -fdefault-calling-conv=vectorcall -emit-llvm -o - %s -DWINDOWS | FileCheck %s --check-prefix=WIN64
+// RUN: %clang_cc1 -triple x86_64-uefi -fdefault-calling-conv=vectorcall -emit-llvm -o - %s -DWINDOWS | FileCheck %s --check-prefix=WIN64
 // RUN: %clang_cc1 -triple i686-pc-win32 -emit-llvm -o - %s -DEXPLICITCC | FileCheck %s --check-prefix=EXPLICITCC
 // RUN: %clang_cc1 -triple m68k-unknown-linux-gnu -mrtd -emit-llvm -o - %s | FileCheck %s --check-prefix=RTDCALL --check-prefix=ALL
 // RUN: %clang_cc1 -triple m68k-unknown-linux-gnu -fdefault-calling-conv=rtdcall -emit-llvm -o - %s | FileCheck %s --check-prefix=RTDCALL --check-prefix=ALL

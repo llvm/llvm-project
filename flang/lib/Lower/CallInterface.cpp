@@ -10,6 +10,7 @@
 #include "flang/Evaluate/fold.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/Mangler.h"
+#include "flang/Lower/OpenACC.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/Support/Utils.h"
@@ -102,7 +103,7 @@ bool Fortran::lower::CallerInterface::requireDispatchCall() const {
       return true;
   }
   // calls with PASS attribute have the passed-object already set in its
-  // arguments. Just check if their is one.
+  // arguments. Just check if there is one.
   std::optional<unsigned> passArg = getPassArgIndex();
   if (passArg)
     return true;
@@ -715,6 +716,17 @@ void Fortran::lower::CallInterface<T>::declare() {
           func.setArgAttrs(placeHolder.index(), placeHolder.value().attributes);
 
       setCUDAAttributes(func, side().getProcedureSymbol(), characteristic);
+
+      if (const Fortran::semantics::Symbol *sym = side().getProcedureSymbol()) {
+        if (const auto &info{
+                sym->GetUltimate()
+                    .detailsIf<Fortran::semantics::SubprogramDetails>()}) {
+          if (!info->openACCRoutineInfos().empty()) {
+            genOpenACCRoutineConstruct(converter, module, func,
+                                       info->openACCRoutineInfos());
+          }
+        }
+      }
     }
   }
 }
@@ -1326,15 +1338,13 @@ private:
           getConverter().getFoldingContext(), toEvExpr(*expr)));
     return std::nullopt;
   }
-  void addFirOperand(
-      mlir::Type type, int entityPosition, Property p,
-      llvm::ArrayRef<mlir::NamedAttribute> attributes = std::nullopt) {
+  void addFirOperand(mlir::Type type, int entityPosition, Property p,
+                     llvm::ArrayRef<mlir::NamedAttribute> attributes = {}) {
     interface.inputs.emplace_back(
         FirPlaceHolder{type, entityPosition, p, attributes});
   }
-  void
-  addFirResult(mlir::Type type, int entityPosition, Property p,
-               llvm::ArrayRef<mlir::NamedAttribute> attributes = std::nullopt) {
+  void addFirResult(mlir::Type type, int entityPosition, Property p,
+                    llvm::ArrayRef<mlir::NamedAttribute> attributes = {}) {
     interface.outputs.emplace_back(
         FirPlaceHolder{type, entityPosition, p, attributes});
   }
@@ -1569,9 +1579,14 @@ Fortran::lower::CallInterface<T>::getProcedureAttrs(
       if (sym->attrs().test(Fortran::semantics::Attr::NON_RECURSIVE) ||
           (sym->owner().context().languageFeatures().IsEnabled(
                Fortran::common::LanguageFeature::DefaultSave) &&
-           !sym->attrs().test(Fortran::semantics::Attr::RECURSIVE))) {
+           !sym->attrs().test(Fortran::semantics::Attr::RECURSIVE)))
         flags = flags | fir::FortranProcedureFlagsEnum::non_recursive;
-      }
+
+      // Set RECURSIVE if the attribute is explicitly present.  This is only
+      // used for debug info generation to maintain consistency with pre-F2018
+      // compilers.
+      if (sym->attrs().test(Fortran::semantics::Attr::RECURSIVE))
+        flags = flags | fir::FortranProcedureFlagsEnum::recursive;
     }
   }
   if (flags != fir::FortranProcedureFlagsEnum::none)
@@ -1754,6 +1769,17 @@ mlir::Type Fortran::lower::getDummyProcedureType(
   if (::mustPassLengthWithDummyProcedure(iface))
     return fir::factory::getCharacterProcedureTupleType(procType);
   return procType;
+}
+
+mlir::Type Fortran::lower::getDummyProcedurePointerType(
+    const Fortran::semantics::Symbol &dummyProcPtr,
+    Fortran::lower::AbstractConverter &converter) {
+  std::optional<Fortran::evaluate::characteristics::Procedure> iface =
+      Fortran::evaluate::characteristics::Procedure::Characterize(
+          dummyProcPtr, converter.getFoldingContext());
+  mlir::Type procPtrType = getProcedureDesignatorType(
+      iface.has_value() ? &*iface : nullptr, converter);
+  return fir::ReferenceType::get(procPtrType);
 }
 
 bool Fortran::lower::isCPtrArgByValueType(mlir::Type ty) {

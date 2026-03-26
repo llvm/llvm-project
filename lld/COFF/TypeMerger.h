@@ -9,6 +9,7 @@
 #ifndef LLD_COFF_TYPEMERGER_H
 #define LLD_COFF_TYPEMERGER_H
 
+#include "COFFLinkerContext.h"
 #include "Config.h"
 #include "DebugTypes.h"
 #include "lld/Common/Timer.h"

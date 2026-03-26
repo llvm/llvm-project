@@ -394,10 +394,10 @@ bool PPCVSXSwapRemoval::gatherVectorInstructions() {
         // (FIXME) a cost model could be used.  However, introduced
         // swaps could potentially be CSEd, so this is not trivial.
         if (isVecReg(MI.getOperand(0).getReg()) &&
-            isVecReg(MI.getOperand(2).getReg()))
+            isVecReg(MI.getOperand(1).getReg()))
           SwapVector[VecIdx].IsSwappable = 1;
         else if (isVecReg(MI.getOperand(0).getReg()) &&
-                 isScalarVecReg(MI.getOperand(2).getReg())) {
+                 isScalarVecReg(MI.getOperand(1).getReg())) {
           SwapVector[VecIdx].IsSwappable = 1;
           SwapVector[VecIdx].SpecialHandling = SHValues::SH_COPYWIDEN;
         }
@@ -559,13 +559,9 @@ unsigned PPCVSXSwapRemoval::lookThruCopyLike(unsigned SrcReg,
   if (!MI->isCopyLike())
     return SrcReg;
 
-  unsigned CopySrcReg;
-  if (MI->isCopy())
-    CopySrcReg = MI->getOperand(1).getReg();
-  else {
-    assert(MI->isSubregToReg() && "bad opcode for lookThruCopyLike");
-    CopySrcReg = MI->getOperand(2).getReg();
-  }
+  assert((MI->isCopy() || MI->isSubregToReg()) &&
+         "bad opcode for lookThruCopyLike");
+  unsigned CopySrcReg = MI->getOperand(1).getReg();
 
   if (!Register::isVirtualRegister(CopySrcReg)) {
     if (!isScalarVecReg(CopySrcReg))

@@ -340,12 +340,12 @@ define <2 x i32> @umulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; CHECK-NEXT:    csinc w11, w12, wzr, lo
 ; CHECK-NEXT:    ldr x12, [sp]
 ; CHECK-NEXT:    fmov s0, w11
-; CHECK-NEXT:    mul x11, x0, x4
+; CHECK-NEXT:    mul x11, x2, x6
 ; CHECK-NEXT:    mov v0.s[1], w8
-; CHECK-NEXT:    mul x8, x2, x6
-; CHECK-NEXT:    stp x11, x10, [x12]
+; CHECK-NEXT:    mul x8, x0, x4
+; CHECK-NEXT:    stp x11, x9, [x12, #16]
 ; CHECK-NEXT:    shl v0.2s, v0.2s, #31
-; CHECK-NEXT:    stp x8, x9, [x12, #16]
+; CHECK-NEXT:    stp x8, x10, [x12]
 ; CHECK-NEXT:    cmlt v0.2s, v0.2s, #0
 ; CHECK-NEXT:    ret
   %t = call {<2 x i128>, <2 x i1>} @llvm.umul.with.overflow.v2i128(<2 x i128> %a0, <2 x i128> %a1)

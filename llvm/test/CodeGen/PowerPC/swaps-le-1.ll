@@ -187,34 +187,34 @@ define void @foo() {
 ; CHECK-P9-NEXT:    .p2align 4
 ; CHECK-P9-NEXT:  .LBB0_1: # %vector.body
 ; CHECK-P9-NEXT:    #
-; CHECK-P9-NEXT:    lxv 2, -32(6)
-; CHECK-P9-NEXT:    lxv 3, -32(5)
-; CHECK-P9-NEXT:    lxv 4, -16(5)
-; CHECK-P9-NEXT:    vadduwm 2, 3, 2
+; CHECK-P9-NEXT:    lxv 2, -32(3)
 ; CHECK-P9-NEXT:    lxv 3, -32(4)
+; CHECK-P9-NEXT:    lxv 4, -16(4)
+; CHECK-P9-NEXT:    vadduwm 2, 3, 2
+; CHECK-P9-NEXT:    lxv 3, -32(5)
 ; CHECK-P9-NEXT:    vmuluwm 2, 2, 3
-; CHECK-P9-NEXT:    lxv 3, -16(6)
+; CHECK-P9-NEXT:    lxv 3, -16(3)
 ; CHECK-P9-NEXT:    vadduwm 3, 4, 3
-; CHECK-P9-NEXT:    lxv 4, 0(5)
-; CHECK-P9-NEXT:    stxv 2, -32(3)
-; CHECK-P9-NEXT:    lxv 2, -16(4)
+; CHECK-P9-NEXT:    lxv 4, 0(4)
+; CHECK-P9-NEXT:    stxv 2, -32(6)
+; CHECK-P9-NEXT:    lxv 2, -16(5)
 ; CHECK-P9-NEXT:    vmuluwm 2, 3, 2
-; CHECK-P9-NEXT:    lxv 3, 0(6)
+; CHECK-P9-NEXT:    lxv 3, 0(3)
 ; CHECK-P9-NEXT:    vadduwm 3, 4, 3
-; CHECK-P9-NEXT:    lxv 4, 16(5)
-; CHECK-P9-NEXT:    addi 5, 5, 64
-; CHECK-P9-NEXT:    stxv 2, -16(3)
-; CHECK-P9-NEXT:    lxv 2, 0(4)
-; CHECK-P9-NEXT:    vmuluwm 2, 3, 2
-; CHECK-P9-NEXT:    lxv 3, 16(6)
-; CHECK-P9-NEXT:    addi 6, 6, 64
-; CHECK-P9-NEXT:    vadduwm 3, 4, 3
-; CHECK-P9-NEXT:    stxv 2, 0(3)
-; CHECK-P9-NEXT:    lxv 2, 16(4)
+; CHECK-P9-NEXT:    lxv 4, 16(4)
 ; CHECK-P9-NEXT:    addi 4, 4, 64
+; CHECK-P9-NEXT:    stxv 2, -16(6)
+; CHECK-P9-NEXT:    lxv 2, 0(5)
 ; CHECK-P9-NEXT:    vmuluwm 2, 3, 2
-; CHECK-P9-NEXT:    stxv 2, 16(3)
+; CHECK-P9-NEXT:    lxv 3, 16(3)
 ; CHECK-P9-NEXT:    addi 3, 3, 64
+; CHECK-P9-NEXT:    vadduwm 3, 4, 3
+; CHECK-P9-NEXT:    stxv 2, 0(6)
+; CHECK-P9-NEXT:    lxv 2, 16(5)
+; CHECK-P9-NEXT:    addi 5, 5, 64
+; CHECK-P9-NEXT:    vmuluwm 2, 3, 2
+; CHECK-P9-NEXT:    stxv 2, 16(6)
+; CHECK-P9-NEXT:    addi 6, 6, 64
 ; CHECK-P9-NEXT:    bdnz .LBB0_1
 ; CHECK-P9-NEXT:  # %bb.2: # %for.end
 ; CHECK-P9-NEXT:    blr

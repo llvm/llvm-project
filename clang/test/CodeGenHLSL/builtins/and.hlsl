@@ -3,7 +3,7 @@
 // RUN:   dxil-pc-shadermodel6.3-library %s \
 // RUN:   -emit-llvm -O1 -o - | FileCheck %s
 
-// CHECK-LABEL: define noundef i1 @_Z15test_and_scalarbb(
+// CHECK-LABEL: define hidden noundef i1 @_Z15test_and_scalarbb(
 // CHECK-SAME: i1 noundef [[X:%.*]], i1 noundef [[Y:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[HLSL_AND:%.*]] = and i1 [[X]], [[Y]]
@@ -13,7 +13,7 @@ bool test_and_scalar(bool x, bool y) {
   return and(x, y);
 }
 
-// CHECK-LABEL: define noundef <2 x i1> @_Z14test_and_bool2Dv2_bS_(
+// CHECK-LABEL: define hidden noundef <2 x i1> @_Z14test_and_bool2Dv2_bS_(
 // CHECK-SAME: <2 x i1> noundef [[X:%.*]], <2 x i1> noundef [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[HLSL_AND:%.*]] = and <2 x i1> [[X]], [[Y]]
@@ -23,7 +23,7 @@ bool2 test_and_bool2(bool2 x, bool2 y) {
   return and(x, y);
 }
 
-// CHECK-LABEL: define noundef <3 x i1> @_Z14test_and_bool3Dv3_bS_(
+// CHECK-LABEL: define hidden noundef <3 x i1> @_Z14test_and_bool3Dv3_bS_(
 // CHECK-SAME: <3 x i1> noundef [[X:%.*]], <3 x i1> noundef [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[HLSL_AND:%.*]] = and <3 x i1> [[X]], [[Y]]
@@ -33,7 +33,7 @@ bool3 test_and_bool3(bool3 x, bool3 y) {
   return and(x, y);
 }
 
-// CHECK-LABEL: define noundef <4 x i1> @_Z14test_and_bool4Dv4_bS_(
+// CHECK-LABEL: define hidden noundef <4 x i1> @_Z14test_and_bool4Dv4_bS_(
 // CHECK-SAME: <4 x i1> noundef [[X:%.*]], <4 x i1> noundef [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[HLSL_AND:%.*]] = and <4 x i1> [[X]], [[Y]]
@@ -43,7 +43,7 @@ bool4 test_and_bool4(bool4 x, bool4 y) {
   return and(x, y);
 }
 
-// CHECK-LABEL: define noundef <4 x i1> @_Z13test_and_int4Dv4_iS_(
+// CHECK-LABEL: define hidden noundef <4 x i1> @_Z13test_and_int4Dv4_iS_(
 // CHECK-SAME: <4 x i32> noundef [[X:%.*]], <4 x i32> noundef [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne <4 x i32> [[X]], zeroinitializer
@@ -55,7 +55,7 @@ bool4 test_and_int4(int4 x, int4 y) {
   return and(x, y);
 }
 
-// CHECK-LABEL: define noundef <4 x i1> @_Z15test_and_float4Dv4_fS_(
+// CHECK-LABEL: define hidden noundef <4 x i1> @_Z15test_and_float4Dv4_fS_(
 // CHECK-SAME: <4 x float> noundef nofpclass(nan inf) [[X:%.*]], <4 x float> noundef nofpclass(nan inf) [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TOBOOL:%.*]] = fcmp reassoc nnan ninf nsz arcp afn une <4 x float> [[X]], zeroinitializer

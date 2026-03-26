@@ -47,6 +47,7 @@
 #include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Triple.h"
@@ -68,15 +69,7 @@ namespace llvm {
 // Command line option to enable vtable value profiling. Defined in
 // ProfileData/InstrProf.cpp: -enable-vtable-value-profiling=
 extern cl::opt<bool> EnableVTableValueProfiling;
-// TODO: Remove -debug-info-correlate in next LLVM release, in favor of
-// -profile-correlate=debug-info.
-cl::opt<bool> DebugInfoCorrelate(
-    "debug-info-correlate",
-    cl::desc("Use debug info to correlate profiles. (Deprecated, use "
-             "-profile-correlate=debug-info)"),
-    cl::init(false));
-
-cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate(
+LLVM_ABI cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate(
     "profile-correlate",
     cl::desc("Use debug info or binary file to correlate profiles."),
     cl::init(InstrProfCorrelator::NONE),
@@ -138,7 +131,7 @@ cl::opt<bool> ConditionalCounterUpdate(
     cl::init(false));
 
 // If the option is not specified, the default behavior about whether
-// counter promotion is done depends on how instrumentaiton lowering
+// counter promotion is done depends on how instrumentation lowering
 // pipeline is setup, i.e., the default value of true of this option
 // does not mean the promotion will be done by default. Explicitly
 // setting this option can override the default behavior.
@@ -175,8 +168,7 @@ cl::opt<bool> SkipRetExitBlock(
     "skip-ret-exit-block", cl::init(true),
     cl::desc("Suppress counter promotion if exit blocks contain ret."));
 
-static cl::opt<bool> SampledInstr("sampled-instrumentation", cl::ZeroOrMore,
-                                  cl::init(false),
+static cl::opt<bool> SampledInstr("sampled-instrumentation",
                                   cl::desc("Do PGO instrumentation sampling"));
 
 static cl::opt<unsigned> SampledInstrPeriod(
@@ -1046,12 +1038,12 @@ void InstrLowerer::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
   // in lightweight mode. We need to move the value profile pointer to the
   // Counter struct to get this working.
   assert(
-      !DebugInfoCorrelate && ProfileCorrelate == InstrProfCorrelator::NONE &&
+      ProfileCorrelate == InstrProfCorrelator::NONE &&
       "Value profiling is not yet supported with lightweight instrumentation");
   GlobalVariable *Name = Ind->getName();
   auto It = ProfileDataMap.find(Name);
   assert(It != ProfileDataMap.end() && It->second.DataVar &&
-         "value profiling detected in function with no counter incerement");
+         "value profiling detected in function with no counter increment");
 
   GlobalVariable *DataVar = It->second.DataVar;
   uint64_t ValueKind = Ind->getValueKind()->getZExtValue();
@@ -1183,7 +1175,7 @@ void InstrLowerer::lowerCover(InstrProfCoverInst *CoverInstruction) {
 
 void InstrLowerer::lowerTimestamp(
     InstrProfTimestampInst *TimestampInstruction) {
-  assert(TimestampInstruction->getIndex()->isZeroValue() &&
+  assert(TimestampInstruction->getIndex()->isNullValue() &&
          "timestamp probes are always the first probe for a function");
   auto &Ctx = M.getContext();
   auto *TimestampAddr = getCounterAddress(TimestampInstruction);
@@ -1200,8 +1192,19 @@ void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
   auto *Addr = getCounterAddress(Inc);
 
   IRBuilder<> Builder(Inc);
-  if (Options.Atomic || AtomicCounterUpdateAll ||
-      (Inc->getIndex()->isZeroValue() && AtomicFirstCounter)) {
+  if (isGPUProfTarget(M)) {
+    auto *I64Ty = Builder.getInt64Ty();
+    auto *PtrTy = Builder.getPtrTy();
+    auto *CalleeTy = FunctionType::get(Type::getVoidTy(M.getContext()),
+                                       {PtrTy, PtrTy, I64Ty}, false);
+    auto Callee =
+        M.getOrInsertFunction("__llvm_profile_instrument_gpu", CalleeTy);
+    Value *CastAddr = Builder.CreatePointerBitCastOrAddrSpaceCast(Addr, PtrTy);
+    Value *Uniform =
+        ConstantPointerNull::get(PointerType::getUnqual(M.getContext()));
+    Builder.CreateCall(Callee, {CastAddr, Uniform, Inc->getStep()});
+  } else if (Options.Atomic || AtomicCounterUpdateAll ||
+             (Inc->getIndex()->isNullValue() && AtomicFirstCounter)) {
     Builder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, Inc->getStep(),
                             MaybeAlign(), AtomicOrdering::Monotonic);
   } else {
@@ -1503,7 +1506,7 @@ static inline Constant *getVTableAddrForProfData(GlobalVariable *GV) {
 }
 
 void InstrLowerer::getOrCreateVTableProfData(GlobalVariable *GV) {
-  assert(!DebugInfoCorrelate &&
+  assert(ProfileCorrelate != InstrProfCorrelator::DEBUG_INFO &&
          "Value profiling is not supported with lightweight instrumentation");
   if (GV->isDeclaration() || GV->hasAvailableExternallyLinkage())
     return;
@@ -1543,8 +1546,7 @@ void InstrLowerer::getOrCreateVTableProfData(GlobalVariable *GV) {
   const std::string PGOVTableName = getPGOName(*GV);
   // Record the length of the vtable. This is needed since vtable pointers
   // loaded from C++ objects might be from the middle of a vtable definition.
-  uint32_t VTableSizeVal =
-      M.getDataLayout().getTypeAllocSize(GV->getValueType());
+  uint32_t VTableSizeVal = GV->getGlobalSize(M.getDataLayout());
 
   Constant *DataVals[] = {
 #define INSTR_PROF_VTABLE_DATA(Type, LLVMType, Name, Init) Init,
@@ -1583,8 +1585,7 @@ GlobalVariable *InstrLowerer::setupProfileSection(InstrProfInstBase *Inc,
 
   // Use internal rather than private linkage so the counter variable shows up
   // in the symbol table when using debug info for correlation.
-  if ((DebugInfoCorrelate ||
-       ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO) &&
+  if (ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO &&
       TT.isOSBinFormatMachO() && Linkage == GlobalValue::PrivateLinkage)
     Linkage = GlobalValue::InternalLinkage;
 
@@ -1690,8 +1691,7 @@ InstrLowerer::getOrCreateRegionCounters(InstrProfCntrInstBase *Inc) {
   auto *CounterPtr = setupProfileSection(Inc, IPSK_cnts);
   PD.RegionCounters = CounterPtr;
 
-  if (DebugInfoCorrelate ||
-      ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO) {
+  if (ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO) {
     LLVMContext &Ctx = M.getContext();
     Function *Fn = Inc->getParent()->getParent();
     if (auto *SP = Fn->getSubprogram()) {
@@ -1736,7 +1736,7 @@ InstrLowerer::getOrCreateRegionCounters(InstrProfCntrInstBase *Inc) {
 void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
   // When debug information is correlated to profile data, a data variable
   // is not needed.
-  if (DebugInfoCorrelate || ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO)
+  if (ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO)
     return;
 
   GlobalVariable *NamePtr = Inc->getName();
@@ -1938,8 +1938,6 @@ void InstrLowerer::emitVNodes() {
 }
 
 void InstrLowerer::emitNameData() {
-  std::string UncompressedData;
-
   if (ReferencedNames.empty())
     return;
 
@@ -1955,11 +1953,9 @@ void InstrLowerer::emitNameData() {
   NamesVar = new GlobalVariable(M, NamesVal->getType(), true,
                                 GlobalValue::PrivateLinkage, NamesVal,
                                 getInstrProfNamesVarName());
-
-  // Make names variable public if current target is a GPU
   if (isGPUProfTarget(M)) {
     NamesVar->setLinkage(GlobalValue::ExternalLinkage);
-    NamesVar->setVisibility(GlobalValue::VisibilityTypes::ProtectedVisibility);
+    NamesVar->setVisibility(GlobalValue::ProtectedVisibility);
   }
 
   NamesSize = CompressedNameStr.size();
@@ -2085,6 +2081,8 @@ bool InstrLowerer::emitRuntimeHook() {
     User->setVisibility(GlobalValue::HiddenVisibility);
     if (TT.supportsCOMDAT())
       User->setComdat(M.getOrInsertComdat(User->getName()));
+    // Explicitly mark this function as cold since it is never called.
+    User->setEntryCount(0);
 
     IRBuilder<> IRB(BasicBlock::Create(M.getContext(), "", User));
     auto *Load = IRB.CreateLoad(Int32Ty, Var);
