@@ -488,10 +488,12 @@ bool RuntimePointerChecking::tryToCreateDiffCheck(
   unsigned AllocSize =
       std::max(DL.getTypeAllocSize(SrcTy), DL.getTypeAllocSize(DstTy));
 
-  // Only matching constant steps matching the AllocSize are supported at the
-  // moment. This simplifies the difference computation. Can be extended in the
-  // future.
-  if (Step->getAPInt().abs() != AllocSize)
+  std::optional<uint64_t> AbsStep = Step->getAPInt().abs().tryZExtValue();
+  if (!AbsStep)
+    return false;
+
+  // Step must be at least AllocSize.
+  if (*AbsStep < AllocSize)
     return false;
 
   // When counting down, the dependence distance needs to be swapped.
@@ -529,7 +531,7 @@ bool RuntimePointerChecking::tryToCreateDiffCheck(
   LLVM_DEBUG(dbgs() << "LAA: Creating diff runtime check for:\n"
                     << "SrcStart: " << *SrcStartInt << '\n'
                     << "SinkStartInt: " << *SinkStartInt << '\n');
-  DiffChecks.emplace_back(SrcStartInt, SinkStartInt, AllocSize,
+  DiffChecks.emplace_back(SrcStartInt, SinkStartInt, AllocSize, *AbsStep,
                           Src->NeedsFreeze || Sink->NeedsFreeze);
   return true;
 }

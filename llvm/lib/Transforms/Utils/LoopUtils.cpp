@@ -2271,12 +2271,17 @@ Value *llvm::addDiffRuntimeChecks(
   // Map to keep track of created compares, The key is the pair of operands for
   // the compare, to allow detecting and re-using redundant compares.
   DenseMap<std::pair<Value *, Value *>, Value *> SeenCompares;
-  for (const auto &[SrcStart, SinkStart, AccessSize, NeedsFreeze] : Checks) {
+  for (const auto &[SrcStart, SinkStart, AccessSize, AbsCommonStrideInBytes,
+                    NeedsFreeze] : Checks) {
     Type *Ty = SinkStart->getType();
-    // Compute VF * IC * AccessSize.
-    auto *VFTimesICTimesSize =
+    // Compute the range of the accessed memory during one vector loop
+    // iteration. This is equal to VF*IC*Stride-(Stride-AccessSize).
+    auto *VectorIterAccessRange =
         ChkBuilder.CreateMul(GetVF(ChkBuilder, Ty->getScalarSizeInBits()),
-                             ConstantInt::get(Ty, IC * AccessSize));
+                             ConstantInt::get(Ty, IC * AbsCommonStrideInBytes));
+    VectorIterAccessRange = ChkBuilder.CreateSub(
+        VectorIterAccessRange,
+        ConstantInt::get(Ty, AbsCommonStrideInBytes - AccessSize));
     const SCEV *SinkStartRewritten = Rewriter.visit(SinkStart);
     const SCEV *SrcStartRewritten = Rewriter.visit(SrcStart);
     Value *Diff = Expander.expandCodeFor(
@@ -2284,13 +2289,13 @@ Value *llvm::addDiffRuntimeChecks(
 
     // Check if the same compare has already been created earlier. In that case,
     // there is no need to check it again.
-    Value *IsConflict = SeenCompares.lookup({Diff, VFTimesICTimesSize});
+    Value *IsConflict = SeenCompares.lookup({Diff, VectorIterAccessRange});
     if (IsConflict)
       continue;
 
     IsConflict =
-        ChkBuilder.CreateICmpULT(Diff, VFTimesICTimesSize, "diff.check");
-    SeenCompares.insert({{Diff, VFTimesICTimesSize}, IsConflict});
+        ChkBuilder.CreateICmpULT(Diff, VectorIterAccessRange, "diff.check");
+    SeenCompares.insert({{Diff, VectorIterAccessRange}, IsConflict});
     if (NeedsFreeze)
       IsConflict =
           ChkBuilder.CreateFreeze(IsConflict, IsConflict->getName() + ".fr");

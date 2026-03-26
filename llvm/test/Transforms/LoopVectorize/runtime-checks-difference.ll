@@ -623,13 +623,12 @@ define void @constant_strided(ptr %p, ptr %p.out) {
 ; CHECK-LABEL: define void @constant_strided(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[P_OUT:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[P2:%.*]] = ptrtoaddr ptr [[P]] to i64
+; CHECK-NEXT:    [[P_OUT1:%.*]] = ptrtoaddr ptr [[P_OUT]] to i64
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P_OUT]], i64 2040
-; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[P]], i64 2040
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[P_OUT]], [[SCEVGEP1]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[P]], [[SCEVGEP]]
-; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[P_OUT1]], [[P2]]
+; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = icmp ult i64 [[TMP0]], 56
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], [[SCALAR_PH:label %.*]], [[VECTOR_PH:label %.*]]
 ;
 entry:
