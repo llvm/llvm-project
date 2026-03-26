@@ -13,14 +13,14 @@
 #include "llvm/DebugInfo/LogicalView/Core/LVType.h"
 #include "llvm/DebugInfo/LogicalView/LVReaderHandler.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/COM.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
-#include "llvm/Testing/Support/Error.h"
-#include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/YAMLTraits.h"
+#include "llvm/Testing/Support/Error.h"
 
 #include "gtest/gtest.h"
 
