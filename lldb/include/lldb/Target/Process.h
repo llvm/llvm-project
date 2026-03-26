@@ -107,6 +107,8 @@ public:
   bool GetWarningsOptimization() const;
   bool GetWarningsUnsupportedLanguage() const;
   bool GetStopOnExec() const;
+  bool GetStopOnFork() const;
+  bool GetStopOnVFork() const;
   std::chrono::seconds GetUtilityExpressionTimeout() const;
   std::chrono::seconds GetInterruptTimeout() const;
   bool GetOSPluginReportsAllThreads() const;

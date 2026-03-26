@@ -1554,8 +1554,9 @@ public:
     ThreadSP thread_sp(m_thread_wp.lock());
     if (thread_sp) {
       ProcessSP process_sp = thread_sp->GetProcess();
-      if (process_sp && process_sp->GetModIDRef().IsRunningExpression() &&
-          thread_sp->IsRunningCallFunctionPlan())
+      if (process_sp && ((process_sp->GetModIDRef().IsRunningExpression() &&
+                          thread_sp->IsRunningCallFunctionPlan()) ||
+                         process_sp->GetStopOnFork()))
         return true;
     }
     return false;
@@ -1610,8 +1611,9 @@ public:
     ThreadSP thread_sp(m_thread_wp.lock());
     if (thread_sp) {
       ProcessSP process_sp = thread_sp->GetProcess();
-      if (process_sp && process_sp->GetModIDRef().IsRunningExpression() &&
-          thread_sp->IsRunningCallFunctionPlan())
+      if (process_sp && ((process_sp->GetModIDRef().IsRunningExpression() &&
+                          thread_sp->IsRunningCallFunctionPlan()) ||
+                         process_sp->GetStopOnVFork()))
         return true;
     }
     return false;
