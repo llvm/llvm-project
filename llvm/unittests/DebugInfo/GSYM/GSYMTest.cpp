@@ -2538,7 +2538,7 @@ static void AddFunctionInfo(GsymCreatorV1 &GC, const char *FuncName,
 
 // Finalize a GsymCreatorV1, encode it and decode it and return the error or
 // GsymReaderV1 that was successfully decoded.
-static Expected<GsymReaderV1> FinalizeEncodeAndDecode(GsymCreatorV1 &GC) {
+static Expected<GsymReaderV1> FinalizeEncodeAndDecode(GsymCreator &GC) {
   OutputAggregator Null(nullptr);
   Error FinalizeErr = GC.finalize(Null);
   if (FinalizeErr)
@@ -2585,7 +2585,7 @@ TEST(GSYMTest, TestGsymSegmenting) {
   size_t FuncIdx = 0;
   // Make sure we get an error if the segment size is too small to encode a
   // single function info.
-  llvm::Expected<std::unique_ptr<GsymCreatorV1>> GCError =
+  llvm::Expected<std::unique_ptr<GsymCreator>> GCError =
       GC.createSegment(57, FuncIdx);
   ASSERT_FALSE((bool)GCError);
   checkError("a segment size of 57 is to small to fit any function infos, "
@@ -2594,25 +2594,25 @@ TEST(GSYMTest, TestGsymSegmenting) {
   // encode any values into the segmented GsymCreatorV1.
   ASSERT_EQ(FuncIdx, (size_t)0);
 
-  llvm::Expected<std::unique_ptr<GsymCreatorV1>> GC1000 =
+  llvm::Expected<std::unique_ptr<GsymCreator>> GC1000 =
       GC.createSegment(128, FuncIdx);
   ASSERT_THAT_EXPECTED(GC1000, Succeeded());
   ASSERT_EQ(FuncIdx, (size_t)1);
-  llvm::Expected<std::unique_ptr<GsymCreatorV1>> GC2000 =
+  llvm::Expected<std::unique_ptr<GsymCreator>> GC2000 =
       GC.createSegment(128, FuncIdx);
   ASSERT_THAT_EXPECTED(GC2000, Succeeded());
   ASSERT_EQ(FuncIdx, (size_t)2);
-  llvm::Expected<std::unique_ptr<GsymCreatorV1>> GC3000 =
+  llvm::Expected<std::unique_ptr<GsymCreator>> GC3000 =
       GC.createSegment(128, FuncIdx);
   ASSERT_THAT_EXPECTED(GC3000, Succeeded());
   ASSERT_EQ(FuncIdx, (size_t)3);
-  llvm::Expected<std::unique_ptr<GsymCreatorV1>> GC4000 =
+  llvm::Expected<std::unique_ptr<GsymCreator>> GC4000 =
       GC.createSegment(128, FuncIdx);
   ASSERT_THAT_EXPECTED(GC4000, Succeeded());
   ASSERT_EQ(FuncIdx, (size_t)4);
   // When there are no function infos left to encode we expect to get  no error
   // and get a NULL GsymCreatorV1 in the return value from createSegment.
-  llvm::Expected<std::unique_ptr<GsymCreatorV1>> GCNull =
+  llvm::Expected<std::unique_ptr<GsymCreator>> GCNull =
       GC.createSegment(128, FuncIdx);
   ASSERT_THAT_EXPECTED(GCNull, Succeeded());
   ASSERT_TRUE(GC1000.get() != nullptr);
@@ -2736,7 +2736,7 @@ TEST(GSYMTest, TestGsymSegmentingNoBase) {
   size_t FuncIdx = 0;
   // Make sure we get an error if the segment size is too small to encode a
   // single function info.
-  llvm::Expected<std::unique_ptr<GsymCreatorV1>> GCError =
+  llvm::Expected<std::unique_ptr<GsymCreator>> GCError =
       GC.createSegment(57, FuncIdx);
   ASSERT_FALSE((bool)GCError);
   checkError("a segment size of 57 is to small to fit any function infos, "
@@ -2745,25 +2745,25 @@ TEST(GSYMTest, TestGsymSegmentingNoBase) {
   // encode any values into the segmented GsymCreatorV1.
   ASSERT_EQ(FuncIdx, (size_t)0);
 
-  llvm::Expected<std::unique_ptr<GsymCreatorV1>> GC1000 =
+  llvm::Expected<std::unique_ptr<GsymCreator>> GC1000 =
       GC.createSegment(128, FuncIdx);
   ASSERT_THAT_EXPECTED(GC1000, Succeeded());
   ASSERT_EQ(FuncIdx, (size_t)1);
-  llvm::Expected<std::unique_ptr<GsymCreatorV1>> GC2000 =
+  llvm::Expected<std::unique_ptr<GsymCreator>> GC2000 =
       GC.createSegment(128, FuncIdx);
   ASSERT_THAT_EXPECTED(GC2000, Succeeded());
   ASSERT_EQ(FuncIdx, (size_t)2);
-  llvm::Expected<std::unique_ptr<GsymCreatorV1>> GC3000 =
+  llvm::Expected<std::unique_ptr<GsymCreator>> GC3000 =
       GC.createSegment(128, FuncIdx);
   ASSERT_THAT_EXPECTED(GC3000, Succeeded());
   ASSERT_EQ(FuncIdx, (size_t)3);
-  llvm::Expected<std::unique_ptr<GsymCreatorV1>> GC4000 =
+  llvm::Expected<std::unique_ptr<GsymCreator>> GC4000 =
       GC.createSegment(128, FuncIdx);
   ASSERT_THAT_EXPECTED(GC4000, Succeeded());
   ASSERT_EQ(FuncIdx, (size_t)4);
   // When there are no function infos left to encode we expect to get  no error
   // and get a NULL GsymCreatorV1 in the return value from createSegment.
-  llvm::Expected<std::unique_ptr<GsymCreatorV1>> GCNull =
+  llvm::Expected<std::unique_ptr<GsymCreator>> GCNull =
       GC.createSegment(128, FuncIdx);
   ASSERT_THAT_EXPECTED(GCNull, Succeeded());
   ASSERT_TRUE(GC1000.get() != nullptr);

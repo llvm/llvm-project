@@ -8,18 +8,29 @@
 
 #include "llvm/DebugInfo/GSYM/GsymReader.h"
 
+#include <assert.h>
+#include <inttypes.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "llvm/DebugInfo/GSYM/GsymReaderV1.h"
 #include "llvm/DebugInfo/GSYM/GsymReaderV2.h"
 #include "llvm/DebugInfo/GSYM/Header.h"
 #include "llvm/DebugInfo/GSYM/HeaderV2.h"
+#include "llvm/DebugInfo/GSYM/InlineInfo.h"
+#include "llvm/DebugInfo/GSYM/LineTable.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 using namespace llvm;
 using namespace gsym;
 
+GsymReader::GsymReader(std::unique_ptr<MemoryBuffer> Buffer)
+    : MemBuffer(std::move(Buffer)), Endian(llvm::endianness::native) {}
+
+GsymReader::GsymReader(GsymReader &&RHS) = default;
+
 /// Detect the GSYM version from raw bytes.
 static Expected<uint16_t> detectVersion(StringRef Data) {
-  // Need at least 6 bytes: 4 (magic) + 2 (version).
   if (Data.size() < 6)
     return createStringError(std::errc::invalid_argument,
                              "data too small to be a GSYM file");
@@ -71,4 +82,279 @@ GsymReader::copyBuffer(StringRef Bytes) {
   if (!R)
     return R.takeError();
   return std::make_unique<GsymReaderV1>(std::move(*R));
+}
+
+std::optional<uint64_t> GsymReader::getAddress(size_t Index) const {
+  switch (CachedAddrOffSize) {
+  case 1: return addressForIndex<uint8_t>(Index);
+  case 2: return addressForIndex<uint16_t>(Index);
+  case 4: return addressForIndex<uint32_t>(Index);
+  case 8: return addressForIndex<uint64_t>(Index);
+  }
+  return std::nullopt;
+}
+
+std::optional<uint64_t> GsymReader::getAddressInfoOffset(size_t Index) const {
+  if (Index < AddrInfoOffsets.size())
+    return AddrInfoOffsets[Index];
+  return std::nullopt;
+}
+
+Expected<uint64_t>
+GsymReader::getAddressIndex(const uint64_t Addr) const {
+  if (Addr >= CachedBaseAddress) {
+    const uint64_t AddrOffset = Addr - CachedBaseAddress;
+    std::optional<uint64_t> AddrOffsetIndex;
+    switch (CachedAddrOffSize) {
+    case 1:
+      AddrOffsetIndex = getAddressOffsetIndex<uint8_t>(AddrOffset);
+      break;
+    case 2:
+      AddrOffsetIndex = getAddressOffsetIndex<uint16_t>(AddrOffset);
+      break;
+    case 4:
+      AddrOffsetIndex = getAddressOffsetIndex<uint32_t>(AddrOffset);
+      break;
+    case 8:
+      AddrOffsetIndex = getAddressOffsetIndex<uint64_t>(AddrOffset);
+      break;
+    default:
+      return createStringError(std::errc::invalid_argument,
+                               "unsupported address offset size %u",
+                               CachedAddrOffSize);
+    }
+    if (AddrOffsetIndex)
+      return *AddrOffsetIndex;
+  }
+  return createStringError(std::errc::invalid_argument,
+                           "address 0x%" PRIx64 " is not in GSYM", Addr);
+}
+
+llvm::Expected<DataExtractor>
+GsymReader::getFunctionInfoDataForAddress(uint64_t Addr,
+                                          uint64_t &FuncStartAddr) const {
+  Expected<uint64_t> ExpectedAddrIdx = getAddressIndex(Addr);
+  if (!ExpectedAddrIdx)
+    return ExpectedAddrIdx.takeError();
+  const uint64_t FirstAddrIdx = *ExpectedAddrIdx;
+  std::optional<uint64_t> FirstFuncStartAddr;
+  const size_t NumAddresses = getNumAddresses();
+  for (uint64_t AddrIdx = FirstAddrIdx; AddrIdx < NumAddresses; ++AddrIdx) {
+    auto ExpextedData = getFunctionInfoDataAtIndex(AddrIdx, FuncStartAddr);
+    if (!ExpextedData)
+      return ExpextedData;
+
+    if (FirstFuncStartAddr.has_value()) {
+      if (*FirstFuncStartAddr != FuncStartAddr)
+        break;
+    } else {
+      FirstFuncStartAddr = FuncStartAddr;
+    }
+
+    uint64_t Offset = 0;
+    uint32_t FuncSize = ExpextedData->getU32(&Offset);
+    if (FuncSize == 0 ||
+        AddressRange(FuncStartAddr, FuncStartAddr + FuncSize).contains(Addr))
+      return ExpextedData;
+  }
+  return createStringError(std::errc::invalid_argument,
+                           "address 0x%" PRIx64 " is not in GSYM", Addr);
+}
+
+llvm::Expected<DataExtractor>
+GsymReader::getFunctionInfoDataAtIndex(uint64_t AddrIdx,
+                                       uint64_t &FuncStartAddr) const {
+  if (AddrIdx >= getNumAddresses())
+    return createStringError(std::errc::invalid_argument,
+                             "invalid address index %" PRIu64, AddrIdx);
+  const uint32_t AddrInfoOffset = AddrInfoOffsets[AddrIdx];
+  assert((Endian == endianness::big || Endian == endianness::little) &&
+         "Endian must be either big or little");
+  StringRef Bytes = MemBuffer->getBuffer().substr(AddrInfoOffset);
+  if (Bytes.empty())
+    return createStringError(std::errc::invalid_argument,
+                             "invalid address info offset 0x%" PRIx32,
+                             AddrInfoOffset);
+  std::optional<uint64_t> OptFuncStartAddr = getAddress(AddrIdx);
+  if (!OptFuncStartAddr)
+    return createStringError(std::errc::invalid_argument,
+                             "failed to extract address[%" PRIu64 "]", AddrIdx);
+  FuncStartAddr = *OptFuncStartAddr;
+  return DataExtractor(Bytes, Endian == llvm::endianness::little, 4);
+}
+
+llvm::Expected<FunctionInfo> GsymReader::getFunctionInfo(uint64_t Addr) const {
+  uint64_t FuncStartAddr = 0;
+  if (auto ExpectedData = getFunctionInfoDataForAddress(Addr, FuncStartAddr))
+    return FunctionInfo::decode(*ExpectedData, FuncStartAddr);
+  else
+    return ExpectedData.takeError();
+}
+
+llvm::Expected<FunctionInfo>
+GsymReader::getFunctionInfoAtIndex(uint64_t Idx) const {
+  uint64_t FuncStartAddr = 0;
+  if (auto ExpectedData = getFunctionInfoDataAtIndex(Idx, FuncStartAddr))
+    return FunctionInfo::decode(*ExpectedData, FuncStartAddr);
+  else
+    return ExpectedData.takeError();
+}
+
+llvm::Expected<LookupResult>
+GsymReader::lookup(uint64_t Addr,
+                   std::optional<DataExtractor> *MergedFunctionsData) const {
+  uint64_t FuncStartAddr = 0;
+  if (auto ExpectedData = getFunctionInfoDataForAddress(Addr, FuncStartAddr))
+    return FunctionInfo::lookup(*ExpectedData, *this, FuncStartAddr, Addr,
+                                MergedFunctionsData);
+  else
+    return ExpectedData.takeError();
+}
+
+llvm::Expected<std::vector<LookupResult>>
+GsymReader::lookupAll(uint64_t Addr) const {
+  std::vector<LookupResult> Results;
+  std::optional<DataExtractor> MergedFunctionsData;
+
+  auto MainResult = lookup(Addr, &MergedFunctionsData);
+  if (!MainResult)
+    return MainResult.takeError();
+
+  Results.push_back(std::move(*MainResult));
+
+  if (MergedFunctionsData) {
+    auto ExpectedMergedFuncExtractors =
+        MergedFunctionsInfo::getFuncsDataExtractors(*MergedFunctionsData);
+    if (!ExpectedMergedFuncExtractors)
+      return ExpectedMergedFuncExtractors.takeError();
+
+    for (DataExtractor &MergedData : *ExpectedMergedFuncExtractors) {
+      if (auto FI = FunctionInfo::lookup(MergedData, *this,
+                                         MainResult->FuncRange.start(), Addr)) {
+        Results.push_back(std::move(*FI));
+      } else {
+        return FI.takeError();
+      }
+    }
+  }
+
+  return Results;
+}
+
+void GsymReader::dump(raw_ostream &OS, const FunctionInfo &FI,
+                      uint32_t Indent) {
+  OS.indent(Indent);
+  OS << FI.Range << " \"" << getString(FI.Name) << "\"\n";
+  if (FI.OptLineTable)
+    dump(OS, *FI.OptLineTable, Indent);
+  if (FI.Inline)
+    dump(OS, *FI.Inline, Indent);
+  if (FI.CallSites)
+    dump(OS, *FI.CallSites, Indent);
+  if (FI.MergedFunctions) {
+    assert(Indent == 0 && "MergedFunctionsInfo should only exist at top level");
+    dump(OS, *FI.MergedFunctions);
+  }
+}
+
+void GsymReader::dump(raw_ostream &OS, const MergedFunctionsInfo &MFI) {
+  for (uint32_t inx = 0; inx < MFI.MergedFunctions.size(); inx++) {
+    OS << "++ Merged FunctionInfos[" << inx << "]:\n";
+    dump(OS, MFI.MergedFunctions[inx], 4);
+  }
+}
+
+void GsymReader::dump(raw_ostream &OS, const CallSiteInfo &CSI) {
+  OS << HEX16(CSI.ReturnOffset);
+
+  std::string Flags;
+  auto addFlag = [&](const char *Flag) {
+    if (!Flags.empty())
+      Flags += " | ";
+    Flags += Flag;
+  };
+
+  if (CSI.Flags == CallSiteInfo::Flags::None)
+    Flags = "None";
+  else {
+    if (CSI.Flags & CallSiteInfo::Flags::InternalCall)
+      addFlag("InternalCall");
+    if (CSI.Flags & CallSiteInfo::Flags::ExternalCall)
+      addFlag("ExternalCall");
+  }
+  OS << " Flags[" << Flags << "]";
+
+  if (!CSI.MatchRegex.empty()) {
+    OS << " MatchRegex[";
+    for (uint32_t i = 0; i < CSI.MatchRegex.size(); ++i) {
+      if (i > 0)
+        OS << ";";
+      OS << getString(CSI.MatchRegex[i]);
+    }
+    OS << "]";
+  }
+}
+
+void GsymReader::dump(raw_ostream &OS, const CallSiteInfoCollection &CSIC,
+                      uint32_t Indent) {
+  OS.indent(Indent);
+  OS << "CallSites (by relative return offset):\n";
+  for (const auto &CS : CSIC.CallSites) {
+    OS.indent(Indent);
+    OS << "  ";
+    dump(OS, CS);
+    OS << "\n";
+  }
+}
+
+void GsymReader::dump(raw_ostream &OS, const LineTable &LT, uint32_t Indent) {
+  OS.indent(Indent);
+  OS << "LineTable:\n";
+  for (auto &LE: LT) {
+    OS.indent(Indent);
+    OS << "  " << HEX64(LE.Addr) << ' ';
+    if (LE.File)
+      dump(OS, getFile(LE.File));
+    OS << ':' << LE.Line << '\n';
+  }
+}
+
+void GsymReader::dump(raw_ostream &OS, const InlineInfo &II, uint32_t Indent) {
+  if (Indent == 0)
+    OS << "InlineInfo:\n";
+  else
+    OS.indent(Indent);
+  OS << II.Ranges << ' ' << getString(II.Name);
+  if (II.CallFile != 0) {
+    if (auto File = getFile(II.CallFile)) {
+      OS << " called from ";
+      dump(OS, File);
+      OS << ':' << II.CallLine;
+    }
+  }
+  OS << '\n';
+  for (const auto &ChildII: II.Children)
+    dump(OS, ChildII, Indent + 2);
+}
+
+void GsymReader::dump(raw_ostream &OS, std::optional<FileEntry> FE) {
+  if (FE) {
+    if (FE->Dir == 0 && FE->Base == 0)
+      return;
+    StringRef Dir = getString(FE->Dir);
+    StringRef Base = getString(FE->Base);
+    if (!Dir.empty()) {
+      OS << Dir;
+      if (Dir.contains('\\') && !Dir.contains('/'))
+        OS << '\\';
+      else
+        OS << '/';
+    }
+    if (!Base.empty()) {
+      OS << Base;
+    }
+    if (!Dir.empty() || !Base.empty())
+      return;
+  }
+  OS << "<invalid-file>";
 }

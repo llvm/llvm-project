@@ -31,61 +31,108 @@ namespace gsym {
 class FileWriter;
 class OutputAggregator;
 
-/// GsymCreator is an abstract interface for creating GSYM data.
+/// GsymCreator is the base class for creating GSYM data.
 ///
 /// The GsymCreator is designed to be used in 3 stages:
 /// - Create FunctionInfo objects and add them
 /// - Finalize the GsymCreator object
 /// - Save to file or section
 ///
-/// The first stage involves creating FunctionInfo objects from another source
-/// of information like compiler debug info metadata, DWARF or Breakpad files.
-/// Any strings in the FunctionInfo or contained information, like InlineInfo
-/// or LineTable objects, should get the string table offsets by calling
-/// GsymCreator::insertString(...). Any file indexes that are needed should be
-/// obtained by calling GsymCreator::insertFile(...). All of the function calls
-/// in GsymCreator are thread safe. This allows multiple threads to create and
-/// add FunctionInfo objects while parsing debug information.
-///
-/// Once all of the FunctionInfo objects have been added, the
-/// GsymCreator::finalize(...) must be called prior to saving. This function
-/// will sort the FunctionInfo objects, finalize the string table, and do any
-/// other passes on the information needed to prepare the information to be
-/// saved.
-///
-/// Once the object has been finalized, it can be saved to a file or section.
-///
-/// Both GsymCreatorV1 and GsymCreatorV2 implement this interface.
+/// This base class contains all shared state and logic. Subclasses
+/// (GsymCreatorV1, GsymCreatorV2) implement version-specific encoding.
 class GsymCreator {
+protected:
+  mutable std::mutex Mutex;
+  std::vector<FunctionInfo> Funcs;
+  StringTableBuilder StrTab;
+  StringSet<> StringStorage;
+  DenseMap<llvm::gsym::FileEntry, uint32_t> FileEntryToIndex;
+  DenseMap<uint64_t, CachedHashStringRef> StringOffsetMap;
+  std::vector<llvm::gsym::FileEntry> Files;
+  std::vector<uint8_t> UUID;
+  std::optional<AddressRanges> ValidTextRanges;
+  std::optional<uint64_t> BaseAddress;
+  bool IsSegment = false;
+  bool Finalized = false;
+  bool Quiet;
+
+  LLVM_ABI std::optional<uint64_t> getFirstFunctionAddress() const;
+  LLVM_ABI std::optional<uint64_t> getLastFunctionAddress() const;
+  LLVM_ABI std::optional<uint64_t> getBaseAddress() const;
+  LLVM_ABI uint8_t getAddressOffsetSize() const;
+  LLVM_ABI uint64_t getMaxAddressOffset() const;
+
+  LLVM_ABI uint32_t insertFileEntry(FileEntry FE);
+  LLVM_ABI uint64_t copyFunctionInfo(const GsymCreator &SrcGC,
+                                     size_t FuncInfoIdx);
+  LLVM_ABI uint32_t copyString(const GsymCreator &SrcGC, uint32_t StrOff);
+  LLVM_ABI uint32_t copyFile(const GsymCreator &SrcGC, uint32_t FileIdx);
+  LLVM_ABI void fixupInlineInfo(const GsymCreator &SrcGC, InlineInfo &II);
+
+  LLVM_ABI llvm::Error saveSegments(StringRef Path,
+                                    llvm::endianness ByteOrder,
+                                    uint64_t SegmentSize) const;
+
+  void setIsSegment() { IsSegment = true; }
+
+  /// Version-specific: calculate header and table sizes.
+  virtual uint64_t calculateHeaderAndTableSize() const = 0;
+
+  /// Version-specific: create a new empty creator of the same version.
+  virtual std::unique_ptr<GsymCreator> createNew(bool Quiet) const = 0;
+
 public:
+  LLVM_ABI GsymCreator(bool Quiet = false);
   virtual ~GsymCreator() = default;
 
-  virtual uint32_t insertString(StringRef S, bool Copy = true) = 0;
-  virtual StringRef getString(uint32_t Offset) = 0;
-  virtual uint32_t
-  insertFile(StringRef Path,
-             sys::path::Style Style = sys::path::Style::native) = 0;
-  virtual void addFunctionInfo(FunctionInfo &&FI) = 0;
-  virtual size_t getNumFunctionInfos() const = 0;
-  virtual void
-  forEachFunctionInfo(
-      std::function<bool(FunctionInfo &)> const &Callback) = 0;
-  virtual void forEachFunctionInfo(
-      std::function<bool(const FunctionInfo &)> const &Callback) const = 0;
-  virtual llvm::Error finalize(OutputAggregator &OS) = 0;
-  virtual llvm::Error
-  save(StringRef Path, llvm::endianness ByteOrder,
-       std::optional<uint64_t> SegmentSize = std::nullopt) const = 0;
+  /// Version-specific: encode to a FileWriter.
   virtual llvm::Error encode(FileWriter &O) const = 0;
-  virtual llvm::Error loadCallSitesFromYAML(StringRef YAMLFile) = 0;
-  virtual void prepareMergedFunctions(OutputAggregator &Out) = 0;
 
-  virtual void setUUID(llvm::ArrayRef<uint8_t> UUIDBytes) = 0;
-  virtual void setBaseAddress(uint64_t Addr) = 0;
-  virtual void SetValidTextRanges(AddressRanges &TextRanges) = 0;
-  virtual const std::optional<AddressRanges> GetValidTextRanges() const = 0;
-  virtual bool IsValidTextAddress(uint64_t Addr) const = 0;
-  virtual bool isQuiet() const = 0;
+  /// Version-specific: load call site info from YAML.
+  virtual llvm::Error loadCallSitesFromYAML(StringRef YAMLFile) = 0;
+
+  LLVM_ABI llvm::Error
+  save(StringRef Path, llvm::endianness ByteOrder,
+       std::optional<uint64_t> SegmentSize = std::nullopt) const;
+
+  LLVM_ABI uint32_t insertString(StringRef S, bool Copy = true);
+  LLVM_ABI StringRef getString(uint32_t Offset);
+
+  LLVM_ABI uint32_t
+  insertFile(StringRef Path,
+             sys::path::Style Style = sys::path::Style::native);
+
+  LLVM_ABI void addFunctionInfo(FunctionInfo &&FI);
+  LLVM_ABI size_t getNumFunctionInfos() const;
+
+  LLVM_ABI void
+  forEachFunctionInfo(
+      std::function<bool(FunctionInfo &)> const &Callback);
+  LLVM_ABI void forEachFunctionInfo(
+      std::function<bool(const FunctionInfo &)> const &Callback) const;
+
+  LLVM_ABI llvm::Error finalize(OutputAggregator &OS);
+  LLVM_ABI void prepareMergedFunctions(OutputAggregator &Out);
+
+  void setUUID(llvm::ArrayRef<uint8_t> UUIDBytes) {
+    UUID.assign(UUIDBytes.begin(), UUIDBytes.end());
+  }
+
+  void setBaseAddress(uint64_t Addr) { BaseAddress = Addr; }
+
+  void SetValidTextRanges(AddressRanges &TextRanges) {
+    ValidTextRanges = TextRanges;
+  }
+
+  const std::optional<AddressRanges> GetValidTextRanges() const {
+    return ValidTextRanges;
+  }
+
+  LLVM_ABI bool IsValidTextAddress(uint64_t Addr) const;
+  bool isQuiet() const { return Quiet; }
+
+  LLVM_ABI llvm::Expected<std::unique_ptr<GsymCreator>>
+  createSegment(uint64_t SegmentSize, size_t &FuncIdx) const;
 };
 
 } // namespace gsym
