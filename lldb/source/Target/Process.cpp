@@ -5281,9 +5281,8 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
                        DiagnosticManager &diagnostic_manager) {
   ExpressionResults return_value = eExpressionSetupError;
 
-  Log *log(GetLog(LLDBLog::State | LLDBLog::Process));
-
   if (!m_run_thread_plan_lock.try_lock()) {
+    Log *log(GetLog(LLDBLog::State | LLDBLog::Process));
     if (log)
       log->Printf("RunThreadPlan could not acquire the RunThreadPlan lock.");
     diagnostic_manager.PutString(
