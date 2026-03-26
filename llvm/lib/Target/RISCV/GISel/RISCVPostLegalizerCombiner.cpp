@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/Support/FormatVariadic.h"
 
 #define GET_GICOMBINER_DEPS
 #include "RISCVGenPostLegalizeGICombiner.inc"
@@ -41,6 +42,56 @@ namespace {
 #define GET_GICOMBINER_TYPES
 #include "RISCVGenPostLegalizeGICombiner.inc"
 #undef GET_GICOMBINER_TYPES
+
+/// Match: G_STORE (G_FCONSTANT +0.0), addr
+/// Return the source vreg in MatchInfo if matched.
+bool matchFoldFPZeroStore(MachineInstr &MI, MachineRegisterInfo &MRI,
+                          const RISCVSubtarget &STI, Register &MatchInfo) {
+  if (MI.getOpcode() != TargetOpcode::G_STORE)
+    return false;
+
+  Register SrcReg = MI.getOperand(0).getReg();
+  if (!SrcReg.isVirtual())
+    return false;
+
+  MachineInstr *Def = MRI.getVRegDef(SrcReg);
+  if (!Def || Def->getOpcode() != TargetOpcode::G_FCONSTANT)
+    return false;
+
+  auto *CFP = Def->getOperand(1).getFPImm();
+  if (!CFP || !CFP->getValueAPF().isPosZero())
+    return false;
+
+  unsigned ValBits = MRI.getType(SrcReg).getSizeInBits();
+  if ((ValBits == 16 && !STI.hasStdExtZfh()) ||
+      (ValBits == 32 && !STI.hasStdExtF()) ||
+      (ValBits == 64 && (!STI.hasStdExtD() || !STI.is64Bit())))
+    return false;
+
+  MatchInfo = SrcReg;
+  return true;
+}
+
+/// Apply: rewrite to G_STORE (G_CONSTANT 0 [XLEN]), addr
+void applyFoldFPZeroStore(MachineInstr &MI, MachineRegisterInfo &MRI,
+                          MachineIRBuilder &B, const RISCVSubtarget &STI,
+                          Register &MatchInfo) {
+  const unsigned XLen = STI.getXLen();
+
+  auto Zero = B.buildConstant(LLT::scalar(XLen), 0);
+  MI.getOperand(0).setReg(Zero.getReg(0));
+
+  MachineInstr *Def = MRI.getVRegDef(MatchInfo);
+  if (Def && MRI.use_nodbg_empty(MatchInfo))
+    Def->eraseFromParent();
+
+#ifndef NDEBUG
+  unsigned ValBits = MRI.getType(MatchInfo).getSizeInBits();
+  LLVM_DEBUG(dbgs() << formatv("[{0}] Fold FP zero store -> int zero "
+                               "(XLEN={1}, ValBits={2}):\n  {3}\n",
+                               DEBUG_TYPE, XLen, ValBits, MI));
+#endif
+}
 
 class RISCVPostLegalizerCombinerImpl : public Combiner {
 protected:

@@ -36,10 +36,12 @@
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GCMetadataPrinter.h"
 #include "llvm/CodeGen/LazyMachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineBlockHashInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -78,6 +80,8 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -116,6 +120,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VCSRevision.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
@@ -145,6 +150,7 @@ enum class PGOMapFeaturesEnum {
   FuncEntryCount,
   BBFreq,
   BrProb,
+  PropellerCFG,
   All,
 };
 static cl::bits<PGOMapFeaturesEnum> PgoAnalysisMapFeatures(
@@ -160,6 +166,12 @@ static cl::bits<PGOMapFeaturesEnum> PgoAnalysisMapFeatures(
     cl::desc(
         "Enable extended information within the SHT_LLVM_BB_ADDR_MAP that is "
         "extracted from PGO related analysis."));
+
+static cl::opt<bool> PgoAnalysisMapEmitBBSectionsCfg(
+    "pgo-analysis-map-emit-bb-sections-cfg",
+    cl::desc("Enable the post-link cfg information from the basic block "
+             "sections profile in the PGO analysis map"),
+    cl::Hidden, cl::init(false));
 
 static cl::opt<bool> BBAddrMapSkipEmitBBEntries(
     "basic-block-address-map-skip-bb-entries",
@@ -179,6 +191,13 @@ static cl::opt<bool> PrintLatency(
     "asm-print-latency",
     cl::desc("Print instruction latencies as verbose asm comments"), cl::Hidden,
     cl::init(false));
+
+static cl::opt<std::string>
+    StackUsageFile("stack-usage-file",
+                   cl::desc("Output filename for stack usage information"),
+                   cl::value_desc("filename"), cl::Hidden);
+
+extern cl::opt<bool> EmitBBHash;
 
 STATISTIC(EmittedInsts, "Number of machine instrs printed");
 
@@ -394,12 +413,63 @@ AsmPrinter::AsmPrinter(TargetMachine &tm, std::unique_ptr<MCStreamer> Streamer,
   VerboseAsm = OutStreamer->isVerboseAsm();
   DwarfUsesRelocationsAcrossSections =
       MAI->doesDwarfUseRelocationsAcrossSections();
+  GetMMI = [this]() {
+    auto *MMIWP = getAnalysisIfAvailable<MachineModuleInfoWrapperPass>();
+    return MMIWP ? &MMIWP->getMMI() : nullptr;
+  };
+  GetORE = [this](MachineFunction &MF) {
+    return &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
+  };
+  GetMDT = [this](MachineFunction &MF) {
+    auto *MDTWrapper =
+        getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
+    return MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
+  };
+  GetMLI = [this](MachineFunction &MF) {
+    auto *MLIWrapper = getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
+    return MLIWrapper ? &MLIWrapper->getLI() : nullptr;
+  };
+  BeginGCAssembly = [this](Module &M) {
+    GCModuleInfo *MI = getAnalysisIfAvailable<GCModuleInfo>();
+    assert(MI && "AsmPrinter didn't require GCModuleInfo?");
+    for (const auto &I : *MI)
+      if (GCMetadataPrinter *MP = getOrCreateGCPrinter(*I))
+        MP->beginAssembly(M, *MI, *this);
+  };
+  FinishGCAssembly = [this](Module &M) {
+    GCModuleInfo *MI = getAnalysisIfAvailable<GCModuleInfo>();
+    assert(MI && "AsmPrinter didn't require GCModuleInfo?");
+    for (GCModuleInfo::iterator I = MI->end(), E = MI->begin(); I != E;)
+      if (GCMetadataPrinter *MP = getOrCreateGCPrinter(**--I))
+        MP->finishAssembly(M, *MI, *this);
+  };
+  EmitStackMaps = [this](Module &M) {
+    GCModuleInfo *MI = getAnalysisIfAvailable<GCModuleInfo>();
+    assert(MI && "AsmPrinter didn't require GCModuleInfo?");
+    bool NeedsDefault = false;
+    if (MI->begin() == MI->end())
+      // No GC strategy, use the default format.
+      NeedsDefault = true;
+    else
+      for (const auto &I : *MI) {
+        if (GCMetadataPrinter *MP = getOrCreateGCPrinter(*I))
+          if (MP->emitStackMaps(SM, *this))
+            continue;
+        // The strategy doesn't have printer or doesn't emit custom stack maps.
+        // Use the default format.
+        NeedsDefault = true;
+      }
+
+    if (NeedsDefault)
+      SM.serializeToStackMapSection();
+  };
+  AssertDebugEHFinalized = [&]() {
+    assert(!DD && Handlers.size() == NumUserHandlers &&
+           "Debug/EH info didn't get finalized");
+  };
 }
 
-AsmPrinter::~AsmPrinter() {
-  assert(!DD && Handlers.size() == NumUserHandlers &&
-         "Debug/EH info didn't get finalized");
-}
+AsmPrinter::~AsmPrinter() { AssertDebugEHFinalized(); }
 
 bool AsmPrinter::isPositionIndependent() const {
   return TM.isPositionIndependent();
@@ -452,6 +522,9 @@ const MCSection *AsmPrinter::getCurrentSection() const {
   return OutStreamer->getCurrentSectionOnly();
 }
 
+/// createDwarfDebug() - Create the DwarfDebug handler.
+DwarfDebug *AsmPrinter::createDwarfDebug() { return new DwarfDebug(this); }
+
 void AsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   MachineFunctionPass::getAnalysisUsage(AU);
@@ -459,30 +532,31 @@ void AsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<GCModuleInfo>();
   AU.addRequired<LazyMachineBlockFrequencyInfoPass>();
   AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
+  if (EmitBBHash)
+    AU.addRequired<MachineBlockHashInfo>();
+  AU.addUsedIfAvailable<BasicBlockSectionsProfileReaderWrapperPass>();
 }
 
 bool AsmPrinter::doInitialization(Module &M) {
-  auto *MMIWP = getAnalysisIfAvailable<MachineModuleInfoWrapperPass>();
-  MMI = MMIWP ? &MMIWP->getMMI() : nullptr;
+  MMI = GetMMI();
   HasSplitStack = false;
   HasNoSplitStack = false;
   DbgInfoAvailable = !M.debug_compile_units().empty();
+  const Triple &Target = TM.getTargetTriple();
 
   AddrLabelSymbols = nullptr;
 
   // Initialize TargetLoweringObjectFile.
-  const_cast<TargetLoweringObjectFile&>(getObjFileLowering())
-    .Initialize(OutContext, TM);
+  TM.getObjFileLowering()->Initialize(OutContext, TM);
 
-  const_cast<TargetLoweringObjectFile &>(getObjFileLowering())
-      .getModuleMetadata(M);
+  TM.getObjFileLowering()->getModuleMetadata(M);
 
   // On AIX, we delay emitting any section information until
   // after emitting the .file pseudo-op. This allows additional
   // information (such as the embedded command line) to be associated
   // with all sections in the object file rather than a single section.
-  if (!TM.getTargetTriple().isOSBinFormatXCOFF())
-    OutStreamer->initSections(false, *TM.getMCSubtargetInfo());
+  if (!Target.isOSBinFormatXCOFF())
+    OutStreamer->initSections(*TM.getMCSubtargetInfo());
 
   // Emit the version-min deployment target directive if needed.
   //
@@ -492,7 +566,6 @@ bool AsmPrinter::doInitialization(Module &M) {
   // alternative is duplicated code in each of the target asm printers that
   // use the directive, where it would need the same conditionalization
   // anyway.
-  const Triple &Target = TM.getTargetTriple();
   if (Target.isOSBinFormatMachO() && Target.isOSDarwin()) {
     Triple TVT(M.getDarwinTargetVariantTriple());
     OutStreamer->emitVersionForTarget(
@@ -528,7 +601,7 @@ bool AsmPrinter::doInitialization(Module &M) {
 
   // On AIX, emit bytes for llvm.commandline metadata after .file so that the
   // C_INFO symbol is preserved if any csect is kept by the linker.
-  if (TM.getTargetTriple().isOSBinFormatXCOFF()) {
+  if (Target.isOSBinFormatXCOFF()) {
     emitModuleCommandLines(M);
     // Now we can generate section information.
     OutStreamer->switchSection(
@@ -545,11 +618,7 @@ bool AsmPrinter::doInitialization(Module &M) {
       OutStreamer->emitXCOFFRenameDirective(XSym, XSym->getSymbolTableName());
   }
 
-  GCModuleInfo *MI = getAnalysisIfAvailable<GCModuleInfo>();
-  assert(MI && "AsmPrinter didn't require GCModuleInfo?");
-  for (const auto &I : *MI)
-    if (GCMetadataPrinter *MP = getOrCreateGCPrinter(*I))
-      MP->beginAssembly(M, *MI, *this);
+  BeginGCAssembly(M);
 
   // Emit module-level inline asm if it exists.
   if (!M.getModuleInlineAsm().empty()) {
@@ -567,13 +636,12 @@ bool AsmPrinter::doInitialization(Module &M) {
     bool EmitCodeView = M.getCodeViewFlag();
     // On Windows targets, emit minimal CodeView compiler info even when debug
     // info is disabled.
-    if ((TM.getTargetTriple().isOSWindows() &&
-         M.getNamedMetadata("llvm.dbg.cu")) ||
-        (TM.getTargetTriple().isUEFI() && EmitCodeView))
+    if ((Target.isOSWindows() || (Target.isUEFI() && EmitCodeView)) &&
+        M.getNamedMetadata("llvm.dbg.cu"))
       Handlers.push_back(std::make_unique<CodeViewDebug>(this));
     if (!EmitCodeView || M.getDwarfVersion()) {
       if (hasDebugInfo()) {
-        DD = new DwarfDebug(this);
+        DD = createDwarfDebug();
         Handlers.push_back(std::unique_ptr<DwarfDebug>(DD));
       }
     }
@@ -639,8 +707,8 @@ bool AsmPrinter::doInitialization(Module &M) {
   if (ES)
     Handlers.push_back(std::unique_ptr<EHStreamer>(ES));
 
-  // Emit tables for any value of cfguard flag (i.e. cfguard=1 or cfguard=2).
-  if (mdconst::extract_or_null<ConstantInt>(M.getModuleFlag("cfguard")))
+  // All CFG modes required the tables emitted.
+  if (M.getControlFlowGuardMode() != ControlFlowGuardMode::Disabled)
     EHHandlers.push_back(std::make_unique<WinCFGuard>(this));
 
   for (auto &Handler : Handlers)
@@ -765,10 +833,10 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   if (GV->isTagged()) {
     Triple T = TM.getTargetTriple();
 
-    if (T.getArch() != Triple::aarch64 || !T.isAndroid())
+    if (T.getArch() != Triple::aarch64)
       OutContext.reportError(SMLoc(),
                              "tagged symbols (-fsanitize=memtag-globals) are "
-                             "only supported on AArch64 Android");
+                             "only supported on AArch64");
     OutStreamer->emitSymbolAttribute(EmittedSym, MCSA_Memtag);
   }
 
@@ -786,7 +854,7 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   SectionKind GVKind = TargetLoweringObjectFile::getKindForGlobal(GV, TM);
 
   const DataLayout &DL = GV->getDataLayout();
-  uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
+  uint64_t Size = GV->getGlobalSize(DL);
 
   // If the alignment is specified, we *must* obey it.  Overaligning a global
   // with a specified alignment is a prompt way to break globals emitted to
@@ -809,7 +877,7 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 
   // If we have a bss global going to a section that supports the
   // zerofill directive, do so here.
-  if (GVKind.isBSS() && MAI->isMachO() && TheSection->isVirtualSection()) {
+  if (GVKind.isBSS() && MAI->isMachO() && TheSection->isBssSection()) {
     if (Size == 0)
       Size = 1; // zerofill of 0 bytes is undefined.
     emitLinkage(GV, GVSym);
@@ -977,8 +1045,22 @@ void AsmPrinter::emitFunctionHeader() {
     emitVisibility(CurrentFnSym, F.getVisibility());
 
   emitLinkage(&F, CurrentFnSym);
-  if (MAI->hasFunctionAlignment())
-    emitAlignment(MF->getAlignment(), &F);
+  if (MAI->hasFunctionAlignment()) {
+    // Make sure that the preferred alignment directive (.prefalign) is
+    // supported before using it. The preferred alignment directive will not
+    // have the intended effect unless function sections are enabled, so check
+    // for that as well.
+    if (MAI->useIntegratedAssembler() && MAI->hasPreferredAlignment() &&
+        TM.getFunctionSections()) {
+      Align Alignment = MF->getAlignment();
+      Align PrefAlignment = MF->getPreferredAlignment();
+      emitAlignment(Alignment, &F);
+      if (Alignment != PrefAlignment)
+        OutStreamer->emitPrefAlign(PrefAlignment);
+    } else {
+      emitAlignment(MF->getPreferredAlignment(), &F);
+    }
+  }
 
   if (MAI->hasDotTypeDotSizeDirective())
     OutStreamer->emitSymbolAttribute(CurrentFnSym, MCSA_ELF_TypeFunction);
@@ -1391,14 +1473,15 @@ static uint32_t getBBAddrMapMetadata(const MachineBasicBlock &MBB) {
 }
 
 static llvm::object::BBAddrMap::Features
-getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges) {
+getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges,
+                    bool HasCalls, const CFGProfile *FuncCFGProfile) {
   // Ensure that the user has not passed in additional options while also
   // specifying all or none.
   if ((PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::None) ||
        PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::All)) &&
       popcount(PgoAnalysisMapFeatures.getBits()) != 1) {
     MF.getFunction().getContext().emitError(
-        "-pgo-anaylsis-map can accept only all or none with no additional "
+        "-pgo-analysis-map can accept only all or none with no additional "
         "values.");
   }
 
@@ -1413,24 +1496,32 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges) {
   bool BrProbEnabled =
       AllFeatures ||
       (!NoFeatures && PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::BrProb));
+  bool PostLinkCfgEnabled = FuncCFGProfile && PgoAnalysisMapEmitBBSectionsCfg;
 
   if ((BBFreqEnabled || BrProbEnabled) && BBAddrMapSkipEmitBBEntries) {
     MF.getFunction().getContext().emitError(
-        "BB entries info is required for BBFreq and BrProb "
-        "features");
+        "BB entries info is required for BBFreq and BrProb features");
   }
-  return {FuncEntryCountEnabled,
-          BBFreqEnabled,
-          BrProbEnabled,
+  return {FuncEntryCountEnabled, BBFreqEnabled, BrProbEnabled,
           MF.hasBBSections() && NumMBBSectionRanges > 1,
-          static_cast<bool>(BBAddrMapSkipEmitBBEntries),
-          false};
+          // Use static_cast to avoid breakage of tests on windows.
+          static_cast<bool>(BBAddrMapSkipEmitBBEntries), HasCalls,
+          static_cast<bool>(EmitBBHash), PostLinkCfgEnabled};
 }
 
 void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   MCSection *BBAddrMapSection =
       getObjFileLowering().getBBAddrMapSection(*MF.getSection());
   assert(BBAddrMapSection && ".llvm_bb_addr_map section is not initialized.");
+  bool HasCalls = !CurrentFnCallsiteEndSymbols.empty();
+
+  const BasicBlockSectionsProfileReader *BBSPR = nullptr;
+  if (auto *BBSPRPass =
+          getAnalysisIfAvailable<BasicBlockSectionsProfileReaderWrapperPass>())
+    BBSPR = &BBSPRPass->getBBSPR();
+  const CFGProfile *FuncCFGProfile = nullptr;
+  if (BBSPR)
+    FuncCFGProfile = BBSPR->getFunctionCFGProfile(MF.getFunction().getName());
 
   const MCSymbol *FunctionSymbol = getFunctionBegin();
 
@@ -1440,8 +1531,9 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   uint8_t BBAddrMapVersion = OutStreamer->getContext().getBBAddrMapVersion();
   OutStreamer->emitInt8(BBAddrMapVersion);
   OutStreamer->AddComment("feature");
-  auto Features = getBBAddrMapFeature(MF, MBBSectionRanges.size());
-  OutStreamer->emitInt8(Features.encode());
+  auto Features = getBBAddrMapFeature(MF, MBBSectionRanges.size(), HasCalls,
+                                      FuncCFGProfile);
+  OutStreamer->emitInt16(Features.encode());
   // Emit BB Information for each basic block in the function.
   if (Features.MultiBBRange) {
     OutStreamer->AddComment("number of basic block ranges");
@@ -1482,27 +1574,41 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
       PrevMBBEndSymbol = MBBSymbol;
     }
 
+    auto MBHI =
+        Features.BBHash ? &getAnalysis<MachineBlockHashInfo>() : nullptr;
+
     if (!Features.OmitBBEntries) {
-      // TODO: Remove this check when version 1 is deprecated.
-      if (BBAddrMapVersion > 1) {
-        OutStreamer->AddComment("BB id");
-        // Emit the BB ID for this basic block.
-        // We only emit BaseID since CloneID is unset for
-        // -basic-block-adress-map.
-        // TODO: Emit the full BBID when labels and sections can be mixed
-        // together.
-        OutStreamer->emitULEB128IntValue(MBB.getBBID()->BaseID);
-      }
+      OutStreamer->AddComment("BB id");
+      // Emit the BB ID for this basic block.
+      // We only emit BaseID since CloneID is unset for
+      // -basic-block-adress-map.
+      // TODO: Emit the full BBID when labels and sections can be mixed
+      // together.
+      OutStreamer->emitULEB128IntValue(MBB.getBBID()->BaseID);
       // Emit the basic block offset relative to the end of the previous block.
       // This is zero unless the block is padded due to alignment.
       emitLabelDifferenceAsULEB128(MBBSymbol, PrevMBBEndSymbol);
-      // Emit the basic block size. When BBs have alignments, their size cannot
-      // always be computed from their offsets.
-      emitLabelDifferenceAsULEB128(MBB.getEndSymbol(), MBBSymbol);
+      const MCSymbol *CurrentLabel = MBBSymbol;
+      if (HasCalls) {
+        auto CallsiteEndSymbols = CurrentFnCallsiteEndSymbols.lookup(&MBB);
+        OutStreamer->AddComment("number of callsites");
+        OutStreamer->emitULEB128IntValue(CallsiteEndSymbols.size());
+        for (const MCSymbol *CallsiteEndSymbol : CallsiteEndSymbols) {
+          // Emit the callsite offset.
+          emitLabelDifferenceAsULEB128(CallsiteEndSymbol, CurrentLabel);
+          CurrentLabel = CallsiteEndSymbol;
+        }
+      }
+      // Emit the offset to the end of the block, which can be used to compute
+      // the total block size.
+      emitLabelDifferenceAsULEB128(MBB.getEndSymbol(), CurrentLabel);
       // Emit the Metadata.
       OutStreamer->emitULEB128IntValue(getBBAddrMapMetadata(MBB));
+      // Emit the Hash.
+      if (MBHI) {
+        OutStreamer->emitInt64(MBHI->getMBBHash(MBB));
+      }
     }
-
     PrevMBBEndSymbol = MBB.getEndSymbol();
   }
 
@@ -1531,6 +1637,11 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
           OutStreamer->AddComment("basic block frequency");
           OutStreamer->emitULEB128IntValue(
               MBFI->getBlockFreq(&MBB).getFrequency());
+          if (Features.PostLinkCfg) {
+            OutStreamer->AddComment("basic block frequency (propeller)");
+            OutStreamer->emitULEB128IntValue(
+                FuncCFGProfile->getBlockCount(*MBB.getBBID()));
+          }
         }
         if (Features.BrProb) {
           unsigned SuccCount = MBB.succ_size();
@@ -1542,6 +1653,11 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
             OutStreamer->AddComment("successor branch probability");
             OutStreamer->emitULEB128IntValue(
                 MBPI->getEdgeProbability(&MBB, SuccMBB).getNumerator());
+            if (Features.PostLinkCfg) {
+              OutStreamer->AddComment("successor branch frequency (propeller)");
+              OutStreamer->emitULEB128IntValue(FuncCFGProfile->getEdgeCount(
+                  *MBB.getBBID(), *SuccMBB->getBBID()));
+            }
           }
         }
       }
@@ -1613,7 +1729,9 @@ void AsmPrinter::emitStackSizeSection(const MachineFunction &MF) {
 }
 
 void AsmPrinter::emitStackUsage(const MachineFunction &MF) {
-  const std::string &OutputFilename = MF.getTarget().Options.StackUsageOutput;
+  const std::string OutputFilename =
+      !StackUsageFile.empty() ? StackUsageFile
+                              : MF.getTarget().Options.StackUsageFile;
 
   // OutputFilename empty implies -fstack-usage is not passed.
   if (OutputFilename.empty())
@@ -1643,6 +1761,96 @@ void AsmPrinter::emitStackUsage(const MachineFunction &MF) {
     *StackUsageStream << "dynamic\n";
   else
     *StackUsageStream << "static\n";
+}
+
+/// Extracts a generalized numeric type identifier of a Function's type from
+/// type metadata. Returns null if metadata cannot be found.
+static ConstantInt *extractNumericCGTypeId(const Function &F) {
+  SmallVector<MDNode *, 2> Types;
+  F.getMetadata(LLVMContext::MD_type, Types);
+  for (const auto &Type : Types) {
+    if (Type->hasGeneralizedMDString()) {
+      MDString *MDGeneralizedTypeId = cast<MDString>(Type->getOperand(1));
+      uint64_t TypeIdVal = llvm::MD5Hash(MDGeneralizedTypeId->getString());
+      IntegerType *Int64Ty = Type::getInt64Ty(F.getContext());
+      return ConstantInt::get(Int64Ty, TypeIdVal);
+    }
+  }
+  return nullptr;
+}
+
+/// Emits .llvm.callgraph section.
+void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
+                                      FunctionCallGraphInfo &FuncCGInfo) {
+  if (!MF.getTarget().Options.EmitCallGraphSection)
+    return;
+
+  // Switch to the call graph section for the function
+  MCSection *FuncCGSection =
+      getObjFileLowering().getCallGraphSection(*getCurrentSection());
+  assert(FuncCGSection && "null callgraph section");
+  OutStreamer->pushSection();
+  OutStreamer->switchSection(FuncCGSection);
+
+  const Function &F = MF.getFunction();
+  // If this function has external linkage or has its address taken and
+  // it is not a callback, then anything could call it.
+  bool IsIndirectTarget =
+      !F.hasLocalLinkage() || F.hasAddressTaken(nullptr,
+                                                /*IgnoreCallbackUses=*/true,
+                                                /*IgnoreAssumeLikeCalls=*/true,
+                                                /*IgnoreLLVMUsed=*/false);
+
+  const auto &DirectCallees = FuncCGInfo.DirectCallees;
+  const auto &IndirectCalleeTypeIDs = FuncCGInfo.IndirectCalleeTypeIDs;
+
+  using namespace callgraph;
+  Flags CGFlags = Flags::None;
+  if (IsIndirectTarget)
+    CGFlags |= Flags::IsIndirectTarget;
+  if (DirectCallees.size() > 0)
+    CGFlags |= Flags::HasDirectCallees;
+  if (IndirectCalleeTypeIDs.size() > 0)
+    CGFlags |= Flags::HasIndirectCallees;
+
+  // Emit function's call graph information.
+  // 1) CallGraphSectionFormatVersion
+  // 2) Flags
+  //    a. LSB bit 0 is set to 1 if the function is a potential indirect
+  //       target.
+  //    b. LSB bit 1 is set to 1 if there are direct callees.
+  //    c. LSB bit 2 is set to 1 if there are indirect callees.
+  //    d. Rest of the 5 bits in Flags are reserved for any future use.
+  // 3) Function entry PC.
+  // 4) FunctionTypeID if the function is indirect target and its type id
+  //    is known, otherwise it is set to 0.
+  // 5) Number of unique direct callees, if at least one exists.
+  // 6) For each unique direct callee, the callee's PC.
+  // 7) Number of unique indirect target type IDs, if at least one exists.
+  // 8) Each unique indirect target type id.
+  OutStreamer->emitInt8(CallGraphSectionFormatVersion::V_0);
+  OutStreamer->emitInt8(static_cast<uint8_t>(CGFlags));
+  OutStreamer->emitSymbolValue(getSymbol(&F), TM.getProgramPointerSize());
+  const auto *TypeId = extractNumericCGTypeId(F);
+  if (IsIndirectTarget && TypeId)
+    OutStreamer->emitInt64(TypeId->getZExtValue());
+  else
+    OutStreamer->emitInt64(0);
+
+  if (DirectCallees.size() > 0) {
+    OutStreamer->emitULEB128IntValue(DirectCallees.size());
+    for (const auto &CalleeSymbol : DirectCallees)
+      OutStreamer->emitSymbolValue(CalleeSymbol, TM.getProgramPointerSize());
+    FuncCGInfo.DirectCallees.clear();
+  }
+  if (IndirectCalleeTypeIDs.size() > 0) {
+    OutStreamer->emitULEB128IntValue(IndirectCalleeTypeIDs.size());
+    for (const auto &CalleeTypeId : IndirectCalleeTypeIDs)
+      OutStreamer->emitInt64(CalleeTypeId);
+    FuncCGInfo.IndirectCalleeTypeIDs.clear();
+  }
+  // End of emitting call graph section contents.
+  OutStreamer->popSection();
 }
 
 void AsmPrinter::emitPCSectionsLabel(const MachineFunction &MF,
@@ -1775,6 +1983,76 @@ static StringRef getMIMnemonic(const MachineInstr &MI, MCStreamer &Streamer) {
   return Name;
 }
 
+void AsmPrinter::handleCallsiteForCallgraph(
+    FunctionCallGraphInfo &FuncCGInfo,
+    const MachineFunction::CallSiteInfoMap &CallSitesInfoMap,
+    const MachineInstr &MI) {
+  assert(MI.isCall() && "This method is meant for call instructions only.");
+  const MachineOperand &CalleeOperand = MI.getOperand(0);
+  if (CalleeOperand.isGlobal() || CalleeOperand.isSymbol()) {
+    // Handle direct calls.
+    MCSymbol *CalleeSymbol = nullptr;
+    switch (CalleeOperand.getType()) {
+    case llvm::MachineOperand::MO_GlobalAddress:
+      CalleeSymbol = getSymbol(CalleeOperand.getGlobal());
+      break;
+    case llvm::MachineOperand::MO_ExternalSymbol:
+      CalleeSymbol = GetExternalSymbolSymbol(CalleeOperand.getSymbolName());
+      break;
+    default:
+      llvm_unreachable(
+          "Expected to only handle direct call instructions here.");
+    }
+    FuncCGInfo.DirectCallees.insert(CalleeSymbol);
+    return; // Early exit after handling the direct call instruction.
+  }
+  const auto &CallSiteInfo = CallSitesInfoMap.find(&MI);
+  if (CallSiteInfo == CallSitesInfoMap.end())
+    return;
+  // Handle indirect callsite info.
+  // Only indirect calls have type identifiers set.
+  for (ConstantInt *CalleeTypeId : CallSiteInfo->second.CalleeTypeIds) {
+    uint64_t CalleeTypeIdVal = CalleeTypeId->getZExtValue();
+    FuncCGInfo.IndirectCalleeTypeIDs.insert(CalleeTypeIdVal);
+  }
+}
+
+/// Helper to emit a symbol for the prefetch target associated with the given
+/// BBID and callsite index.
+void AsmPrinter::emitPrefetchTargetSymbol(unsigned BaseID,
+                                          unsigned CallsiteIndex) {
+  SmallString<128> FunctionName;
+  getNameWithPrefix(FunctionName, &MF->getFunction());
+  MCSymbol *PrefetchTargetSymbol = OutContext.getOrCreateSymbol(
+      "__llvm_prefetch_target_" + FunctionName + "_" + Twine(BaseID) + "_" +
+      Twine(CallsiteIndex));
+  // If the function is weak-linkage it may be replaced by a strong
+  // version, in which case the prefetch targets should also be replaced.
+  OutStreamer->emitSymbolAttribute(
+      PrefetchTargetSymbol,
+      MF->getFunction().isWeakForLinker() ? MCSA_Weak : MCSA_Global);
+  OutStreamer->emitLabel(PrefetchTargetSymbol);
+}
+
+/// Emit dangling prefetch targets that were not mapped to any basic block.
+void AsmPrinter::emitDanglingPrefetchTargets() {
+  const DenseMap<UniqueBBID, SmallVector<unsigned>> &MFPrefetchTargets =
+      MF->getPrefetchTargets();
+  if (MFPrefetchTargets.empty())
+    return;
+  DenseSet<UniqueBBID> MFBBIDs;
+  for (const MachineBasicBlock &MBB : *MF)
+    if (std::optional<UniqueBBID> BBID = MBB.getBBID())
+      MFBBIDs.insert(*BBID);
+
+  for (const auto &[BBID, CallsiteIndexes] : MFPrefetchTargets) {
+    if (MFBBIDs.contains(BBID))
+      continue;
+    for (unsigned CallsiteIndex : CallsiteIndexes)
+      emitPrefetchTargetSymbol(BBID.BaseID, CallsiteIndex);
+  }
+}
+
 /// EmitFunctionBody - This method emits the body and trailer for a
 /// function.
 void AsmPrinter::emitFunctionBody() {
@@ -1785,8 +2063,7 @@ void AsmPrinter::emitFunctionBody() {
 
   if (isVerbose()) {
     // Get MachineDominatorTree or compute it on the fly if it's unavailable
-    auto MDTWrapper = getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
-    MDT = MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
+    MDT = GetMDT(*MF);
     if (!MDT) {
       OwnedMDT = std::make_unique<MachineDominatorTree>();
       OwnedMDT->recalculate(*MF);
@@ -1794,8 +2071,7 @@ void AsmPrinter::emitFunctionBody() {
     }
 
     // Get MachineLoopInfo or compute it on the fly if it's unavailable
-    auto *MLIWrapper = getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
-    MLI = MLIWrapper ? &MLIWrapper->getLI() : nullptr;
+    MLI = GetMLI(*MF);
     if (!MLI) {
       OwnedMLI = std::make_unique<MachineLoopInfo>();
       OwnedMLI->analyze(*MDT);
@@ -1821,11 +2097,37 @@ void AsmPrinter::emitFunctionBody() {
     MBBSectionRanges[MF->front().getSectionID()] =
         MBBSectionRange{CurrentFnBegin, nullptr};
 
+  FunctionCallGraphInfo FuncCGInfo;
+  const auto &CallSitesInfoMap = MF->getCallSitesInfo();
+
+  // Dangling targets are not mapped to any blocks and must be emitted at the
+  // beginning of the function.
+  emitDanglingPrefetchTargets();
+
+  const auto &MFPrefetchTargets = MF->getPrefetchTargets();
   for (auto &MBB : *MF) {
     // Print a label for the basic block.
     emitBasicBlockStart(MBB);
     DenseMap<StringRef, unsigned> MnemonicCounts;
+
+    const SmallVector<unsigned> *PrefetchTargets = nullptr;
+    if (auto BBID = MBB.getBBID()) {
+      auto R = MFPrefetchTargets.find(*BBID);
+      if (R != MFPrefetchTargets.end())
+        PrefetchTargets = &R->second;
+    }
+    auto PrefetchTargetIt =
+        PrefetchTargets ? PrefetchTargets->begin() : nullptr;
+    auto PrefetchTargetEnd = PrefetchTargets ? PrefetchTargets->end() : nullptr;
+    unsigned LastCallsiteIndex = 0;
+
     for (auto &MI : MBB) {
+      if (PrefetchTargetIt != PrefetchTargetEnd &&
+          *PrefetchTargetIt == LastCallsiteIndex) {
+        emitPrefetchTargetSymbol(MBB.getBBID()->BaseID, *PrefetchTargetIt);
+        ++PrefetchTargetIt;
+      }
+
       // Print the assembly for the instruction.
       if (!MI.isPosition() && !MI.isImplicitDef() && !MI.isKill() &&
           !MI.isDebugInstr()) {
@@ -1845,6 +2147,11 @@ void AsmPrinter::emitFunctionBody() {
       if (isVerbose())
         emitComments(MI, STI, OutStreamer->getCommentOS());
 
+#ifndef NDEBUG
+      MCFragment *OldFragment = OutStreamer->getCurrentFragment();
+      size_t OldFragSize = OldFragment->getFixedSize();
+#endif
+
       switch (MI.getOpcode()) {
       case TargetOpcode::CFI_INSTRUCTION:
         emitCFIInstruction(MI);
@@ -1857,6 +2164,7 @@ void AsmPrinter::emitFunctionBody() {
         OutStreamer->emitLabel(MI.getOperand(0).getMCSymbol());
         break;
       case TargetOpcode::EH_LABEL:
+        OutStreamer->AddComment("EH_LABEL");
         OutStreamer->emitLabel(MI.getOperand(0).getMCSymbol());
         // For AsynchEH, insert a Nop if followed by a trap inst
         //   Or the exception won't be caught.
@@ -1926,6 +2234,17 @@ void AsmPrinter::emitFunctionBody() {
         // This is only used to influence register allocation behavior, no
         // actual initialization is needed.
         break;
+      case TargetOpcode::RELOC_NONE: {
+        // Generate a temporary label for the current PC.
+        MCSymbol *Sym = OutContext.createTempSymbol("reloc_none");
+        OutStreamer->emitLabel(Sym);
+        const MCExpr *Dot = MCSymbolRefExpr::create(Sym, OutContext);
+        const MCExpr *Value = MCSymbolRefExpr::create(
+            OutContext.getOrCreateSymbol(MI.getOperand(0).getSymbolName()),
+            OutContext);
+        OutStreamer->emitRelocDirective(*Dot, "BFD_RELOC_NONE", Value, SMLoc());
+        break;
+      }
       default:
         emitInstruction(&MI);
 
@@ -1951,12 +2270,82 @@ void AsmPrinter::emitFunctionBody() {
         break;
       }
 
+#ifndef NDEBUG
+      // Verify that the instruction size reported by InstrInfo matches the
+      // actually emitted size. Many backends performing branch relaxation
+      // on the MIR level rely on this for correctness.
+      // TODO: We currently can't distinguish whether a parse error occurred
+      // when handling INLINEASM.
+      if (OutStreamer->isObj() && !OutContext.hadError() &&
+          (MI.getOpcode() != TargetOpcode::INLINEASM &&
+           MI.getOpcode() != TargetOpcode::INLINEASM_BR)) {
+        const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
+        TargetInstrInfo::InstSizeVerifyMode Mode =
+            TII->getInstSizeVerifyMode(MI);
+        if (Mode != TargetInstrInfo::InstSizeVerifyMode::NoVerify) {
+          unsigned ExpectedSize = TII->getInstSizeInBytes(MI);
+          if (MI.isBundled()) {
+            // Bundled instructions are emitted together.
+            auto It = MI.getIterator(), End = MBB.instr_end();
+            for (++It; It != End && It->isInsideBundle(); ++It)
+              ExpectedSize += TII->getInstSizeInBytes(*It);
+          }
+
+          MCFragment *NewFragment = OutStreamer->getCurrentFragment();
+          unsigned ActualSize;
+          if (OldFragment == NewFragment) {
+            ActualSize = NewFragment->getFixedSize() - OldFragSize;
+          } else {
+            ActualSize = OldFragment->getFixedSize() - OldFragSize;
+            const MCFragment *F = OldFragment->getNext();
+            for (; F != NewFragment; F = F->getNext())
+              ActualSize += F->getFixedSize();
+            ActualSize += NewFragment->getFixedSize();
+          }
+          bool AllowOverEstimate =
+              Mode == TargetInstrInfo::InstSizeVerifyMode::AllowOverEstimate;
+          bool Valid = AllowOverEstimate ? ActualSize <= ExpectedSize
+                                         : ActualSize == ExpectedSize;
+          if (!Valid) {
+            dbgs() << "In function: " << MF->getName() << "\n";
+            dbgs() << "Size mismatch for: " << MI;
+            if (MI.isBundled()) {
+              dbgs() << "{\n";
+              auto It = MI.getIterator(), End = MBB.instr_end();
+              for (++It; It != End && It->isInsideBundle(); ++It)
+                dbgs().indent(2) << *It;
+              dbgs() << "}\n";
+            }
+            dbgs() << "Expected " << (AllowOverEstimate ? "maximum" : "exact")
+                   << " size: " << ExpectedSize << "\n";
+            dbgs() << "Actual size: " << ActualSize << "\n";
+            abort();
+          }
+        }
+      }
+#endif
+
+      if (MI.isCall()) {
+        if (MF->getTarget().Options.BBAddrMap)
+          OutStreamer->emitLabel(createCallsiteEndSymbol(MBB));
+        LastCallsiteIndex++;
+      }
+
+      if (TM.Options.EmitCallGraphSection && MI.isCall())
+        handleCallsiteForCallgraph(FuncCGInfo, CallSitesInfoMap, MI);
+
       // If there is a post-instruction symbol, emit a label for it here.
       if (MCSymbol *S = MI.getPostInstrSymbol())
         OutStreamer->emitLabel(S);
 
       for (auto &Handler : Handlers)
         Handler->endInstruction();
+    }
+    // Emit the remaining prefetch targets for this block. This includes
+    // nonexisting callsite indexes.
+    while (PrefetchTargetIt != PrefetchTargetEnd) {
+      emitPrefetchTargetSymbol(MBB.getBBID()->BaseID, *PrefetchTargetIt);
+      ++PrefetchTargetIt;
     }
 
     // We must emit temporary symbol for the end of this basic block, if either
@@ -2130,6 +2519,9 @@ void AsmPrinter::emitFunctionBody() {
   // Emit section containing stack size metadata.
   emitStackSizeSection(*MF);
 
+  // Emit section containing call graph metadata.
+  emitCallGraphSection(*MF, FuncCGInfo);
+
   // Emit .su file containing function stack size information.
   emitStackUsage(*MF);
 
@@ -2232,11 +2624,13 @@ void AsmPrinter::emitGlobalGOTEquivs() {
 
 void AsmPrinter::emitGlobalAlias(const Module &M, const GlobalAlias &GA) {
   MCSymbol *Name = getSymbol(&GA);
+  const GlobalObject *BaseObject = GA.getAliaseeObject();
+
   bool IsFunction = GA.getValueType()->isFunctionTy();
   // Treat bitcasts of functions as functions also. This is important at least
   // on WebAssembly where object and function addresses can't alias each other.
   if (!IsFunction)
-    IsFunction = isa<Function>(GA.getAliasee()->stripPointerCasts());
+    IsFunction = isa_and_nonnull<Function>(BaseObject);
 
   // AIX's assembly directive `.set` is not usable for aliasing purpose,
   // so AIX has to use the extra-label-at-definition strategy. At this
@@ -2244,7 +2638,7 @@ void AsmPrinter::emitGlobalAlias(const Module &M, const GlobalAlias &GA) {
   // those labels.
   if (TM.getTargetTriple().isOSBinFormatXCOFF()) {
     // Linkage for alias of global variable has been emitted.
-    if (isa<GlobalVariable>(GA.getAliaseeObject()))
+    if (isa_and_nonnull<GlobalVariable>(BaseObject))
       return;
 
     emitLinkage(&GA, Name);
@@ -2296,7 +2690,6 @@ void AsmPrinter::emitGlobalAlias(const Module &M, const GlobalAlias &GA) {
   // size of the alias symbol from the type of the alias. We don't do this in
   // other situations as the alias and aliasee having differing types but same
   // size may be intentional.
-  const GlobalObject *BaseObject = GA.getAliaseeObject();
   if (MAI->hasDotTypeDotSizeDirective() && GA.getValueType()->isSized() &&
       (!BaseObject || BaseObject->hasPrivateLinkage())) {
     const DataLayout &DL = M.getDataLayout();
@@ -2306,9 +2699,6 @@ void AsmPrinter::emitGlobalAlias(const Module &M, const GlobalAlias &GA) {
 }
 
 void AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
-  assert(!TM.getTargetTriple().isOSBinFormatXCOFF() &&
-         "IFunc is not supported on AIX.");
-
   auto EmitLinkage = [&](MCSymbol *Sym) {
     if (GI.hasExternalLinkage() || !MAI->getWeakRefDirective())
       OutStreamer->emitSymbolAttribute(Sym, MCSA_Global);
@@ -2386,32 +2776,30 @@ void AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
 }
 
 void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
-  if (!RS.needsSection())
+  if (!RS.wantsSection())
+    return;
+  if (!RS.getFilename())
     return;
 
   MCSection *RemarksSection =
       OutContext.getObjectFileInfo()->getRemarksSection();
-  if (!RemarksSection) {
+  if (!RemarksSection && RS.needsSection()) {
     OutContext.reportWarning(SMLoc(), "Current object file format does not "
-                                      "support remarks sections. Use the yaml "
-                                      "remark format instead.");
+                                      "support remarks sections.");
+  }
+  if (!RemarksSection)
     return;
-  }
 
-  remarks::RemarkSerializer &RemarkSerializer = RS.getSerializer();
-
-  std::optional<SmallString<128>> Filename;
-  if (std::optional<StringRef> FilenameRef = RS.getFilename()) {
-    Filename = *FilenameRef;
-    sys::fs::make_absolute(*Filename);
-    assert(!Filename->empty() && "The filename can't be empty.");
-  }
+  SmallString<128> Filename = *RS.getFilename();
+  sys::fs::make_absolute(Filename);
+  assert(!Filename.empty() && "The filename can't be empty.");
 
   std::string Buf;
   raw_string_ostream OS(Buf);
+
+  remarks::RemarkSerializer &RemarkSerializer = RS.getSerializer();
   std::unique_ptr<remarks::MetaSerializer> MetaSerializer =
-      Filename ? RemarkSerializer.metaSerializer(OS, Filename->str())
-               : RemarkSerializer.metaSerializer(OS);
+      RemarkSerializer.metaSerializer(OS, Filename);
   MetaSerializer->emit();
 
   // Switch to the remarks section.
@@ -2502,6 +2890,7 @@ bool AsmPrinter::doFinalization(Module &M) {
   // accesses to MF specific features at the module level and so that
   // we can conditionalize accesses based on whether or not it is nullptr.
   MF = nullptr;
+  const Triple &Target = TM.getTargetTriple();
 
   std::vector<GlobalVariable *> GlobalsToTag;
   for (GlobalVariable &G : M.globals()) {
@@ -2541,7 +2930,7 @@ bool AsmPrinter::doFinalization(Module &M) {
     MCSymbol *Name = getSymbol(&F);
     // Function getSymbol gives us the function descriptor symbol for XCOFF.
 
-    if (!TM.getTargetTriple().isOSBinFormatXCOFF()) {
+    if (!Target.isOSBinFormatXCOFF()) {
       GlobalValue::VisibilityTypes V = F.getVisibility();
       if (V == GlobalValue::DefaultVisibility)
         continue;
@@ -2574,7 +2963,7 @@ bool AsmPrinter::doFinalization(Module &M) {
 
   TLOF.emitModuleMetadata(*OutStreamer, M);
 
-  if (TM.getTargetTriple().isOSBinFormatELF()) {
+  if (Target.isOSBinFormatELF()) {
     MachineModuleInfoELF &MMIELF = MMI->getObjFileInfo<MachineModuleInfoELF>();
 
     // Output stubs for external and common global variables.
@@ -2592,7 +2981,7 @@ bool AsmPrinter::doFinalization(Module &M) {
     }
   }
 
-  if (TM.getTargetTriple().isOSBinFormatCOFF()) {
+  if (Target.isOSBinFormatCOFF()) {
     MachineModuleInfoCOFF &MMICOFF =
         MMI->getObjFileInfo<MachineModuleInfoCOFF>();
 
@@ -2627,7 +3016,7 @@ bool AsmPrinter::doFinalization(Module &M) {
   // text sections come after debug info has been emitted. This matters for
   // stack maps as they are arbitrary data, and may even have a custom format
   // through user plugins.
-  emitStackMaps();
+  EmitStackMaps(M);
 
   // Print aliases in topological order, that is, for each alias a = b,
   // b must be printed before a.
@@ -2654,6 +3043,15 @@ bool AsmPrinter::doFinalization(Module &M) {
   // sections after DWARF.
   for (const auto &IFunc : M.ifuncs())
     emitGlobalIFunc(M, IFunc);
+  if (TM.getTargetTriple().isOSBinFormatXCOFF() && hasDebugInfo()) {
+    // Emit section end. This is used to tell the debug line section where the
+    // end is for a text section if we don't use .loc to represent the debug
+    // line.
+    auto *Sec = OutContext.getObjectFileInfo()->getTextSection();
+    OutStreamer->switchSectionNoPrint(Sec);
+    MCSymbol *Sym = Sec->getEndSymbol(OutContext);
+    OutStreamer->emitLabel(Sym);
+  }
 
   // Finalize debug and EH information.
   for (auto &Handler : Handlers)
@@ -2694,18 +3092,14 @@ bool AsmPrinter::doFinalization(Module &M) {
     }
   }
 
-  GCModuleInfo *MI = getAnalysisIfAvailable<GCModuleInfo>();
-  assert(MI && "AsmPrinter didn't require GCModuleInfo?");
-  for (GCModuleInfo::iterator I = MI->end(), E = MI->begin(); I != E; )
-    if (GCMetadataPrinter *MP = getOrCreateGCPrinter(**--I))
-      MP->finishAssembly(M, *MI, *this);
+  FinishGCAssembly(M);
 
   // Emit llvm.ident metadata in an '.ident' directive.
   emitModuleIdents(M);
 
   // Emit bytes for llvm.commandline metadata.
   // The command line metadata is emitted earlier on XCOFF.
-  if (!TM.getTargetTriple().isOSBinFormatXCOFF())
+  if (!Target.isOSBinFormatXCOFF())
     emitModuleCommandLines(M);
 
   // Emit .note.GNU-split-stack and .note.GNU-no-split-stack sections if
@@ -2721,9 +3115,11 @@ bool AsmPrinter::doFinalization(Module &M) {
   // If we don't have any trampolines, then we don't require stack memory
   // to be executable. Some targets have a directive to declare this.
   Function *InitTrampolineIntrinsic = M.getFunction("llvm.init.trampoline");
-  if (!InitTrampolineIntrinsic || InitTrampolineIntrinsic->use_empty())
-    if (MCSection *S = MAI->getNonexecutableStackSection(OutContext))
-      OutStreamer->switchSection(S);
+  bool HasTrampolineUses =
+      InitTrampolineIntrinsic && !InitTrampolineIntrinsic->use_empty();
+  MCSection *S = MAI->getStackSection(OutContext, /*Exec=*/HasTrampolineUses);
+  if (S)
+    OutStreamer->switchSection(S);
 
   if (TM.Options.EmitAddrsig) {
     // Emit address-significance attributes for all globals.
@@ -2738,7 +3134,7 @@ bool AsmPrinter::doFinalization(Module &M) {
   }
 
   // Emit symbol partition specifications (ELF only).
-  if (TM.getTargetTriple().isOSBinFormatELF()) {
+  if (Target.isOSBinFormatELF()) {
     unsigned UniqueID = 0;
     for (const GlobalValue &GV : M.global_values()) {
       if (!GV.hasPartition() || GV.isDeclarationForLinker() ||
@@ -2778,6 +3174,14 @@ MCSymbol *AsmPrinter::getMBBExceptionSym(const MachineBasicBlock &MBB) {
   return Res.first->second;
 }
 
+MCSymbol *AsmPrinter::createCallsiteEndSymbol(const MachineBasicBlock &MBB) {
+  MCContext &Ctx = MF->getContext();
+  MCSymbol *Sym = Ctx.createTempSymbol("BB" + Twine(MF->getFunctionNumber()) +
+                                       "_" + Twine(MBB.getNumber()) + "_CS");
+  CurrentFnCallsiteEndSymbols[&MBB].push_back(Sym);
+  return Sym;
+}
+
 void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   this->MF = &MF;
   const Function &F = MF.getFunction();
@@ -2812,6 +3216,7 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   CurrentFnBegin = nullptr;
   CurrentFnBeginLocal = nullptr;
   CurrentSectionBeginSym = nullptr;
+  CurrentFnCallsiteEndSymbols.clear();
   MBBSectionRanges.clear();
   MBBSectionExceptionSyms.clear();
   bool NeedsLocalForSize = MAI->needsLocalForSize();
@@ -2820,13 +3225,14 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
       F.hasFnAttribute("xray-instruction-threshold") ||
       needFuncLabels(MF, *this) || NeedsLocalForSize ||
       MF.getTarget().Options.EmitStackSizeSection ||
+      MF.getTarget().Options.EmitCallGraphSection ||
       MF.getTarget().Options.BBAddrMap) {
     CurrentFnBegin = createTempSymbol("func_begin");
     if (NeedsLocalForSize)
       CurrentFnSymForSize = CurrentFnBegin;
   }
 
-  ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
+  ORE = GetORE(MF);
 }
 
 namespace {
@@ -2872,7 +3278,8 @@ void AsmPrinter::emitConstantPool() {
       C = CPE.Val.ConstVal;
 
     MCSection *S = getObjFileLowering().getSectionForConstant(
-        getDataLayout(), Kind, C, Alignment, getConstantSectionSuffix(C));
+        getDataLayout(), Kind, C, Alignment, &MF->getFunction(),
+        getConstantSectionSuffix(C));
 
     // The number of sections are small, just do a linear search from the
     // last section to the first.
@@ -3065,7 +3472,7 @@ void AsmPrinter::emitJumpTableSizesSection(const MachineJumpTableInfo &MJTI,
     return;
 
   if (isElf) {
-    MCSymbolELF *LinkedToSym = dyn_cast<MCSymbolELF>(CurrentFnSym);
+    auto *LinkedToSym = static_cast<MCSymbolELF *>(CurrentFnSym);
     int Flags = F.hasComdat() ? static_cast<int>(ELF::SHF_GROUP) : 0;
 
     JumpTableSizesSection = OutContext.getELFSection(
@@ -3282,7 +3689,7 @@ void AsmPrinter::emitXXStructorList(const DataLayout &DL, const Constant *List,
   if (!TM.Options.UseInitArray)
     std::reverse(Structors.begin(), Structors.end());
 
-  const Align Align = DL.getPointerPrefAlignment();
+  const Align Align = DL.getPointerPrefAlignment(DL.getProgramAddressSpace());
   for (Structor &S : Structors) {
     const TargetLoweringObjectFile &Obj = getObjFileLowering();
     const MCSymbol *KeySym = nullptr;
@@ -3455,6 +3862,9 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV,
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(CV))
     return MCConstantExpr::create(CI->getZExtValue(), Ctx);
 
+  if (const ConstantByte *CB = dyn_cast<ConstantByte>(CV))
+    return MCConstantExpr::create(CB->getZExtValue(), Ctx);
+
   if (const ConstantPtrAuth *CPA = dyn_cast<ConstantPtrAuth>(CV))
     return lowerConstantPtrAuth(*CPA);
 
@@ -3528,6 +3938,7 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV,
     break; // Error
   }
 
+  case Instruction::PtrToAddr:
   case Instruction::PtrToInt: {
     const DataLayout &DL = getDataLayout();
 
@@ -3709,7 +4120,8 @@ static void emitGlobalConstantDataSequential(
 
   // Otherwise, emit the values in successive locations.
   uint64_t ElementByteSize = CDS->getElementByteSize();
-  if (isa<IntegerType>(CDS->getElementType())) {
+  if (isa<IntegerType>(CDS->getElementType()) ||
+      isa<ByteType>(CDS->getElementType())) {
     for (uint64_t I = 0, E = CDS->getNumElements(); I != E; ++I) {
       emitGlobalAliasInline(AP, ElementByteSize * I, AliasList);
       if (AP.isVerbose())
@@ -3873,13 +4285,15 @@ static void emitGlobalConstantFP(const ConstantFP *CFP, AsmPrinter &AP) {
   emitGlobalConstantFP(CFP->getValueAPF(), CFP->getType(), AP);
 }
 
-static void emitGlobalConstantLargeInt(const ConstantInt *CI, AsmPrinter &AP) {
+static void emitGlobalConstantLargeAPInt(const APInt &Val,
+                                         uint64_t TypeStoreSize,
+                                         AsmPrinter &AP) {
   const DataLayout &DL = AP.getDataLayout();
-  unsigned BitWidth = CI->getBitWidth();
+  unsigned BitWidth = Val.getBitWidth();
 
   // Copy the value as we may massage the layout for constants whose bit width
   // is not a multiple of 64-bits.
-  APInt Realigned(CI->getValue());
+  APInt Realigned(Val);
   uint64_t ExtraBits = 0;
   unsigned ExtraBitsSize = BitWidth & 63;
 
@@ -3901,34 +4315,45 @@ static void emitGlobalConstantLargeInt(const ConstantInt *CI, AsmPrinter &AP) {
       // ExtraBits     0       1       (BitWidth / 64) - 1
       //       chu[nk1 chu][nk2 chu] ... [nkN-1 chunkN]
       ExtraBitsSize = alignTo(ExtraBitsSize, 8);
-      ExtraBits = Realigned.getRawData()[0] &
-        (((uint64_t)-1) >> (64 - ExtraBitsSize));
+      ExtraBits =
+          Realigned.getRawData()[0] & (((uint64_t)-1) >> (64 - ExtraBitsSize));
       if (BitWidth >= 64)
         Realigned.lshrInPlace(ExtraBitsSize);
     } else
       ExtraBits = Realigned.getRawData()[BitWidth / 64];
   }
 
-  // We don't expect assemblers to support integer data directives
+  // We don't expect assemblers to support data directives
   // for more than 64 bits, so we emit the data in at most 64-bit
   // quantities at a time.
   const uint64_t *RawData = Realigned.getRawData();
   for (unsigned i = 0, e = BitWidth / 64; i != e; ++i) {
-    uint64_t Val = DL.isBigEndian() ? RawData[e - i - 1] : RawData[i];
-    AP.OutStreamer->emitIntValue(Val, 8);
+    uint64_t ChunkVal = DL.isBigEndian() ? RawData[e - i - 1] : RawData[i];
+    AP.OutStreamer->emitIntValue(ChunkVal, 8);
   }
 
   if (ExtraBitsSize) {
     // Emit the extra bits after the 64-bits chunks.
 
     // Emit a directive that fills the expected size.
-    uint64_t Size = AP.getDataLayout().getTypeStoreSize(CI->getType());
-    Size -= (BitWidth / 64) * 8;
+    uint64_t Size = TypeStoreSize - (BitWidth / 64) * 8;
     assert(Size && Size * 8 >= ExtraBitsSize &&
-           (ExtraBits & (((uint64_t)-1) >> (64 - ExtraBitsSize)))
-           == ExtraBits && "Directive too small for extra bits.");
+           (ExtraBits & (((uint64_t)-1) >> (64 - ExtraBitsSize))) ==
+               ExtraBits &&
+           "Directive too small for extra bits.");
     AP.OutStreamer->emitIntValue(ExtraBits, Size);
   }
+}
+
+static void emitGlobalConstantLargeByte(const ConstantByte *CB,
+                                        AsmPrinter &AP) {
+  emitGlobalConstantLargeAPInt(
+      CB->getValue(), AP.getDataLayout().getTypeStoreSize(CB->getType()), AP);
+}
+
+static void emitGlobalConstantLargeInt(const ConstantInt *CI, AsmPrinter &AP) {
+  emitGlobalConstantLargeAPInt(
+      CI->getValue(), AP.getDataLayout().getTypeStoreSize(CI->getType()), AP);
 }
 
 /// Transform a not absolute MCExpr containing a reference to a GOT
@@ -4076,6 +4501,27 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
     return;
   }
 
+  if (const ConstantByte *CB = dyn_cast<ConstantByte>(CV)) {
+    if (isa<VectorType>(CV->getType()))
+      return emitGlobalConstantVector(DL, CV, AP, AliasList);
+
+    const uint64_t StoreSize = DL.getTypeStoreSize(CV->getType());
+    if (StoreSize <= 8) {
+      if (AP.isVerbose())
+        AP.OutStreamer->getCommentOS()
+            << format("0x%" PRIx64 "\n", CB->getZExtValue());
+      AP.OutStreamer->emitIntValue(CB->getZExtValue(), StoreSize);
+    } else {
+      emitGlobalConstantLargeByte(CB, AP);
+    }
+
+    // Emit tail padding if needed
+    if (Size != StoreSize)
+      AP.OutStreamer->emitZeros(Size - StoreSize);
+
+    return;
+  }
+
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(CV)) {
     if (isa<VectorType>(CV->getType()))
       return emitGlobalConstantVector(DL, CV, AP, AliasList);
@@ -4200,10 +4646,11 @@ MCSymbol *AsmPrinter::GetCPISymbol(unsigned CPID) const {
       SectionKind Kind = CPE.getSectionKind(&DL);
       const Constant *C = CPE.Val.ConstVal;
       Align Alignment = CPE.Alignment;
-      if (const MCSectionCOFF *S = dyn_cast<MCSectionCOFF>(
-              getObjFileLowering().getSectionForConstant(DL, Kind, C,
-                                                         Alignment))) {
-        if (MCSymbol *Sym = S->getCOMDATSymbol()) {
+      auto *S = getObjFileLowering().getSectionForConstant(
+          DL, Kind, C, Alignment, &MF->getFunction());
+      if (S && TM.getTargetTriple().isOSBinFormatCOFF()) {
+        if (MCSymbol *Sym =
+                static_cast<const MCSectionCOFF *>(S)->getCOMDATSymbol()) {
           if (Sym->isUndefined())
             OutStreamer->emitSymbolAttribute(Sym, MCSA_Global);
           return Sym;
@@ -4213,7 +4660,7 @@ MCSymbol *AsmPrinter::GetCPISymbol(unsigned CPID) const {
   }
 
   const DataLayout &DL = getDataLayout();
-  return OutContext.getOrCreateSymbol(Twine(DL.getPrivateGlobalPrefix()) +
+  return OutContext.getOrCreateSymbol(Twine(DL.getInternalSymbolPrefix()) +
                                       "CPI" + Twine(getFunctionNumber()) + "_" +
                                       Twine(CPID));
 }
@@ -4227,7 +4674,7 @@ MCSymbol *AsmPrinter::GetJTISymbol(unsigned JTID, bool isLinkerPrivate) const {
 /// FIXME: privatize to AsmPrinter.
 MCSymbol *AsmPrinter::GetJTSetSymbol(unsigned UID, unsigned MBBID) const {
   const DataLayout &DL = getDataLayout();
-  return OutContext.getOrCreateSymbol(Twine(DL.getPrivateGlobalPrefix()) +
+  return OutContext.getOrCreateSymbol(Twine(DL.getInternalSymbolPrefix()) +
                                       Twine(getFunctionNumber()) + "_" +
                                       Twine(UID) + "_set_" + Twine(MBBID));
 }
@@ -4515,27 +4962,6 @@ GCMetadataPrinter *AsmPrinter::getOrCreateGCPrinter(GCStrategy &S) {
   report_fatal_error("no GCMetadataPrinter registered for GC: " + Twine(Name));
 }
 
-void AsmPrinter::emitStackMaps() {
-  GCModuleInfo *MI = getAnalysisIfAvailable<GCModuleInfo>();
-  assert(MI && "AsmPrinter didn't require GCModuleInfo?");
-  bool NeedsDefault = false;
-  if (MI->begin() == MI->end())
-    // No GC strategy, use the default format.
-    NeedsDefault = true;
-  else
-    for (const auto &I : *MI) {
-      if (GCMetadataPrinter *MP = getOrCreateGCPrinter(*I))
-        if (MP->emitStackMaps(SM, *this))
-          continue;
-      // The strategy doesn't have printer or doesn't emit custom stack maps.
-      // Use the default format.
-      NeedsDefault = true;
-    }
-
-  if (NeedsDefault)
-    SM.serializeToStackMapSection();
-}
-
 void AsmPrinter::addAsmPrinterHandler(
     std::unique_ptr<AsmPrinterHandler> Handler) {
   Handlers.insert(Handlers.begin(), std::move(Handler));
@@ -4572,7 +4998,7 @@ void AsmPrinter::emitXRayTable() {
   const Triple &TT = TM.getTargetTriple();
   // Use PC-relative addresses on all targets.
   if (TT.isOSBinFormatELF()) {
-    auto LinkedToSym = cast<MCSymbolELF>(CurrentFnSym);
+    auto LinkedToSym = static_cast<const MCSymbolELF *>(CurrentFnSym);
     auto Flags = ELF::SHF_ALLOC | ELF::SHF_LINK_ORDER;
     StringRef GroupName;
     if (F.hasComdat()) {
@@ -4631,12 +5057,10 @@ void AsmPrinter::emitXRayTable() {
 
   // We then emit a single entry in the index per function. We use the symbols
   // that bound the instrumentation map as the range for a specific function.
-  // Each entry here will be 2 * word size aligned, as we're writing down two
-  // pointers. This should work for both 32-bit and 64-bit platforms.
+  // Each entry contains 2 words and needs to be word-aligned.
   if (FnSledIndex) {
     OutStreamer->switchSection(FnSledIndex);
-    OutStreamer->emitCodeAlignment(Align(2 * WordSizeBytes),
-                                   &getSubtargetInfo());
+    OutStreamer->emitValueToAlignment(Align(WordSizeBytes));
     // For Mach-O, use an "l" symbol as the atom of this subsection. The label
     // difference uses a SUBTRACTOR external relocation which references the
     // symbol.
@@ -4697,7 +5121,7 @@ void AsmPrinter::emitPatchableFunctionEntries() {
         Flags |= ELF::SHF_GROUP;
         GroupName = F.getComdat()->getName();
       }
-      LinkedToSym = cast<MCSymbolELF>(CurrentFnSym);
+      LinkedToSym = static_cast<const MCSymbolELF *>(CurrentFnSym);
     }
     OutStreamer->switchSection(OutContext.getELFSection(
         SectionName, ELF::SHT_PROGBITS, Flags, 0, GroupName, F.hasComdat(),
@@ -4836,8 +5260,8 @@ void AsmPrinter::emitCOFFFeatureSymbol(Module &M) {
     Feat00Value |= COFF::Feat00Flags::SafeSEH;
   }
 
-  if (M.getModuleFlag("cfguard")) {
-    // Object is CFG-aware.
+  if (M.getControlFlowGuardMode() == ControlFlowGuardMode::Enabled) {
+    // Object is CFG-aware. Only set if we actually inserted the checks.
     Feat00Value |= COFF::Feat00Flags::GuardCF;
   }
 
@@ -4855,3 +5279,68 @@ void AsmPrinter::emitCOFFFeatureSymbol(Module &M) {
   OutStreamer->emitAssignment(
       S, MCConstantExpr::create(Feat00Value, MMI->getContext()));
 }
+
+namespace llvm {
+namespace {
+MachineFunctionAnalysisManager &getMFAM(Module &M, ModuleAnalysisManager &MAM,
+                                        MachineFunction &MF) {
+  FunctionAnalysisManager &FAM =
+      MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  MachineFunctionAnalysisManager &MFAM =
+      FAM.getResult<MachineFunctionAnalysisManagerFunctionProxy>(
+             MF.getFunction())
+          .getManager();
+  return MFAM;
+}
+} // anonymous namespace
+
+void setupModuleAsmPrinter(Module &M, ModuleAnalysisManager &MAM,
+                           AsmPrinter &AsmPrinter) {
+  MachineModuleInfo &MMI = MAM.getResult<MachineModuleAnalysis>(M).getMMI();
+  AsmPrinter.GetMMI = [&MMI]() { return &MMI; };
+  AsmPrinter.MMI = &MMI;
+  AsmPrinter.GetORE = [&MAM, &M](MachineFunction &MF) {
+    return &getMFAM(M, MAM, MF)
+                .getResult<MachineOptimizationRemarkEmitterAnalysis>(MF);
+  };
+  AsmPrinter.GetMDT = [&MAM, &M](MachineFunction &MF) {
+    return &getMFAM(M, MAM, MF).getResult<MachineDominatorTreeAnalysis>(MF);
+  };
+  AsmPrinter.GetMLI = [&MAM, &M](MachineFunction &MF) {
+    return &getMFAM(M, MAM, MF).getResult<MachineLoopAnalysis>(MF);
+  };
+  // TODO(boomanaiden154): Get GC working with the new pass manager.
+  AsmPrinter.BeginGCAssembly = [](Module &M) {};
+  AsmPrinter.FinishGCAssembly = [](Module &M) {};
+  AsmPrinter.EmitStackMaps = [](Module &M) {};
+  AsmPrinter.AssertDebugEHFinalized = []() {};
+}
+
+void setupMachineFunctionAsmPrinter(MachineFunctionAnalysisManager &MFAM,
+                                    MachineFunction &MF,
+                                    AsmPrinter &AsmPrinter) {
+  const ModuleAnalysisManagerMachineFunctionProxy::Result &MAMProxy =
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF);
+  MachineModuleInfo &MMI =
+      MAMProxy
+          .getCachedResult<MachineModuleAnalysis>(*MF.getFunction().getParent())
+          ->getMMI();
+  AsmPrinter.GetMMI = [&MMI]() { return &MMI; };
+  AsmPrinter.MMI = &MMI;
+  AsmPrinter.GetORE = [&MFAM](MachineFunction &MF) {
+    return &MFAM.getResult<MachineOptimizationRemarkEmitterAnalysis>(MF);
+  };
+  AsmPrinter.GetMDT = [&MFAM](MachineFunction &MF) {
+    return &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  };
+  AsmPrinter.GetMLI = [&MFAM](MachineFunction &MF) {
+    return &MFAM.getResult<MachineLoopAnalysis>(MF);
+  };
+  // TODO(boomanaiden154): Get GC working with the new pass manager.
+  AsmPrinter.BeginGCAssembly = [](Module &M) {};
+  AsmPrinter.FinishGCAssembly = [](Module &M) {};
+  AsmPrinter.EmitStackMaps = [](Module &M) {};
+  AsmPrinter.AssertDebugEHFinalized = []() {};
+}
+
+} // namespace llvm

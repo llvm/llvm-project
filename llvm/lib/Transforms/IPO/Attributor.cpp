@@ -272,6 +272,9 @@ AA::getInitialValueForObj(Attributor &A, const AbstractAttribute &QueryingAA,
   }
 
   if (RangePtr && !RangePtr->offsetOrSizeAreUnknown()) {
+    int64_t StorageSize = DL.getTypeStoreSize(&Ty);
+    if (StorageSize != RangePtr->Size)
+      return nullptr;
     APInt Offset = APInt(64, RangePtr->Offset);
     return ConstantFoldLoadFromConst(Initializer, &Ty, Offset, DL);
   }
@@ -793,7 +796,7 @@ isPotentiallyReachable(Attributor &A, const Instruction &FromI,
       if (isa<InvokeInst>(CB))
         return false;
 
-      Instruction *Inst = CB->getNextNonDebugInstruction();
+      Instruction *Inst = CB->getNextNode();
       Worklist.push_back(Inst);
       return true;
     };
@@ -987,6 +990,13 @@ static bool addIfNotExistent(LLVMContext &Ctx, const Attribute &Attr,
       if (!ForceReplace && isEqualOrWorse(Attr, AttrSet.getAttribute(Kind)))
         return false;
     }
+    AB.addAttribute(Attr);
+    return true;
+  }
+  if (Attr.isConstantRangeAttribute()) {
+    Attribute::AttrKind Kind = Attr.getKindAsEnum();
+    if (!ForceReplace && AttrSet.hasAttribute(Kind))
+      return false;
     AB.addAttribute(Attr);
     return true;
   }
@@ -2462,7 +2472,7 @@ ChangeStatus Attributor::cleanupIR() {
           Callee->removeParamAttr(Idx, Attribute::NoUndef);
       }
     }
-    if (isa<Constant>(NewV) && isa<BranchInst>(U->getUser())) {
+    if (isa<Constant>(NewV) && isa<CondBrInst>(U->getUser())) {
       Instruction *UserI = cast<Instruction>(U->getUser());
       if (isa<UndefValue>(NewV)) {
         ToBeChangedToUnreachableInsts.insert(UserI);
@@ -3245,7 +3255,8 @@ void InformationCache::initializeInformationCache(const Function &CF,
     case Instruction::CatchSwitch:
     case Instruction::AtomicRMW:
     case Instruction::AtomicCmpXchg:
-    case Instruction::Br:
+    case Instruction::UncondBr:
+    case Instruction::CondBr:
     case Instruction::Resume:
     case Instruction::Ret:
     case Instruction::Load:
@@ -3330,9 +3341,9 @@ void Attributor::checkAndQueryIRAttr(const IRPosition &IRP, AttributeSet Attrs,
 }
 
 void Attributor::identifyDefaultAbstractAttributes(Function &F) {
+  assert(!F.isDeclaration());
+
   if (!VisitedFunctions.insert(&F).second)
-    return;
-  if (F.isDeclaration())
     return;
 
   // In non-module runs we need to look at the call sites of a function to
@@ -3612,6 +3623,8 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
       if (SimplifyAllLoads)
         getAssumedSimplified(IRPosition::value(I), nullptr,
                              UsedAssumedInformation, AA::Intraprocedural);
+      getOrCreateAAFor<AAInvariantLoadPointer>(
+          IRPosition::value(*LI->getPointerOperand()));
       getOrCreateAAFor<AAAddressSpace>(
           IRPosition::value(*LI->getPointerOperand()));
     } else {
@@ -3864,6 +3877,9 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
   }
 
   for (Function *F : Functions) {
+    if (F->isDeclaration())
+      continue;
+
     if (F->hasExactDefinition())
       NumFnWithExactDefinition++;
     else
@@ -3919,13 +3935,17 @@ static bool runAttributorLightOnFunctions(InformationCache &InfoCache,
        &AANoFree::ID, &AANoReturn::ID, &AAMemoryLocation::ID,
        &AAMemoryBehavior::ID, &AAUnderlyingObjects::ID, &AANoCapture::ID,
        &AAInterFnReachability::ID, &AAIntraFnReachability::ID, &AACallEdges::ID,
-       &AANoFPClass::ID, &AAMustProgress::ID, &AANonNull::ID});
+       &AANoFPClass::ID, &AAMustProgress::ID, &AANonNull::ID,
+       &AADenormalFPMath::ID});
   AC.Allowed = &Allowed;
   AC.UseLiveness = false;
 
   Attributor A(Functions, InfoCache, AC);
 
   for (Function *F : Functions) {
+    if (F->isDeclaration())
+      continue;
+
     if (F->hasExactDefinition())
       NumFnWithExactDefinition++;
     else

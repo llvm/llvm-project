@@ -303,14 +303,14 @@ define i32 @test_06(ptr %p, i64 %len, i32 %x) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[MATH:%.*]], [[BACKEDGE:%.*]] ], [ [[LEN:%.*]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = call { i64, i1 } @llvm.usub.with.overflow.i64(i64 [[IV]], i64 1)
-; CHECK-NEXT:    [[MATH]] = extractvalue { i64, i1 } [[TMP0]], 0
-; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[TMP0]], 1
+; CHECK-NEXT:    [[OV:%.*]] = icmp eq i64 [[IV]], 0
 ; CHECK-NEXT:    br i1 [[OV]], label [[EXIT:%.*]], label [[BACKEDGE]]
 ; CHECK:       backedge:
-; CHECK-NEXT:    [[SUNKADDR:%.*]] = mul i64 [[MATH]], 4
+; CHECK-NEXT:    [[SUNKADDR:%.*]] = mul i64 [[IV]], 4
 ; CHECK-NEXT:    [[SUNKADDR1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[SUNKADDR]]
-; CHECK-NEXT:    [[LOADED:%.*]] = load atomic i32, ptr [[SUNKADDR1]] unordered, align 4
+; CHECK-NEXT:    [[SUNKADDR2:%.*]] = getelementptr i8, ptr [[SUNKADDR1]], i64 -4
+; CHECK-NEXT:    [[LOADED:%.*]] = load atomic i32, ptr [[SUNKADDR2]] unordered, align 4
+; CHECK-NEXT:    [[MATH]] = add i64 [[IV]], -1
 ; CHECK-NEXT:    [[COND_2:%.*]] = icmp eq i32 [[LOADED]], [[X:%.*]]
 ; CHECK-NEXT:    br i1 [[COND_2]], label [[FAILURE:%.*]], label [[LOOP]]
 ; CHECK:       exit:

@@ -30,12 +30,12 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Frontend/MultiplexConsumer.h"
-#include "clang/Index/USRGeneration.h"
 #include "clang/InstallAPI/HeaderFile.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "clang/UnifiedSymbolResolution/USRGeneration.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
@@ -419,7 +419,8 @@ ExtractAPIAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
 
   // Do not include location in anonymous decls.
   PrintingPolicy Policy = CI.getASTContext().getPrintingPolicy();
-  Policy.AnonymousTagLocations = false;
+  Policy.AnonymousTagNameStyle =
+      llvm::to_underlying(PrintingPolicy::AnonymousTagMode::Plain);
   CI.getASTContext().setPrintingPolicy(Policy);
 
   if (!CI.getFrontendOpts().ExtractAPIIgnoresFileList.empty()) {
@@ -444,8 +445,7 @@ bool ExtractAPIAction::PrepareToExecuteAction(CompilerInstance &CI) {
     return true;
 
   if (!CI.hasFileManager())
-    if (!CI.createFileManager())
-      return false;
+    CI.createFileManager();
 
   auto Kind = Inputs[0].getKind();
 
@@ -523,7 +523,8 @@ WrappingExtractAPIAction::CreateASTConsumer(CompilerInstance &CI,
 
   // Do not include location in anonymous decls.
   PrintingPolicy Policy = CI.getASTContext().getPrintingPolicy();
-  Policy.AnonymousTagLocations = false;
+  Policy.AnonymousTagNameStyle =
+      llvm::to_underlying(PrintingPolicy::AnonymousTagMode::Plain);
   CI.getASTContext().setPrintingPolicy(Policy);
 
   if (!CI.getFrontendOpts().ExtractAPIIgnoresFileList.empty()) {

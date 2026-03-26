@@ -66,10 +66,7 @@ INITIALIZE_PASS(MachinePostDominatorTreeWrapperPass, "machinepostdomtree",
                 "MachinePostDominator Tree Construction", true, true)
 
 MachinePostDominatorTreeWrapperPass::MachinePostDominatorTreeWrapperPass()
-    : MachineFunctionPass(ID), PDT() {
-  initializeMachinePostDominatorTreeWrapperPassPass(
-      *PassRegistry::getPassRegistry());
-}
+    : MachineFunctionPass(ID), PDT() {}
 
 bool MachinePostDominatorTreeWrapperPass::runOnMachineFunction(
     MachineFunction &F) {
@@ -99,8 +96,8 @@ MachineBasicBlock *MachinePostDominatorTree::findNearestCommonDominator(
     ArrayRef<MachineBasicBlock *> Blocks) const {
   assert(!Blocks.empty());
 
-  MachineBasicBlock *NCD = Blocks.front();
-  for (MachineBasicBlock *BB : Blocks.drop_front()) {
+  MachineBasicBlock *NCD = Blocks.consume_front();
+  for (MachineBasicBlock *BB : Blocks) {
     NCD = Base::findNearestCommonDominator(NCD, BB);
 
     // Stop when the root is reached.

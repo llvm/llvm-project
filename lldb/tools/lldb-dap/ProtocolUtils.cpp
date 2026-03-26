@@ -7,22 +7,27 @@
 //===----------------------------------------------------------------------===//
 
 #include "ProtocolUtils.h"
+#include "JSONUtils.h"
 #include "LLDBUtils.h"
 
 #include "lldb/API/SBDebugger.h"
+#include "lldb/API/SBDeclaration.h"
 #include "lldb/API/SBFormat.h"
 #include "lldb/API/SBMutex.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
 #include "lldb/Host/PosixApi.h" // Adds PATH_MAX for windows
+
+#include <iomanip>
 #include <optional>
+#include <sstream>
 
 using namespace lldb_dap::protocol;
 namespace lldb_dap {
 
 static bool ShouldDisplayAssemblySource(
-    lldb::SBAddress address,
+    lldb::SBLineEntry line_entry,
     lldb::StopDisassemblyType stop_disassembly_display) {
   if (stop_disassembly_display == lldb::eStopDisassemblyTypeNever)
     return false;
@@ -32,7 +37,6 @@ static bool ShouldDisplayAssemblySource(
 
   // A line entry of 0 indicates the line is compiler generated i.e. no source
   // file is associated with the frame.
-  auto line_entry = address.GetLineEntry();
   auto file_spec = line_entry.GetFileSpec();
   if (!file_spec.IsValid() || line_entry.GetLine() == 0 ||
       line_entry.GetLine() == LLDB_INVALID_LINE_NUMBER)
@@ -44,6 +48,106 @@ static bool ShouldDisplayAssemblySource(
   }
 
   return false;
+}
+
+static uint64_t GetDebugInfoSizeInSection(lldb::SBSection section) {
+  uint64_t debug_info_size = 0;
+  const llvm::StringRef section_name(section.GetName());
+  if (section_name.starts_with(".debug") ||
+      section_name.starts_with("__debug") ||
+      section_name.starts_with(".apple") || section_name.starts_with("__apple"))
+    debug_info_size += section.GetFileByteSize();
+
+  const size_t num_sub_sections = section.GetNumSubSections();
+  for (size_t i = 0; i < num_sub_sections; i++)
+    debug_info_size +=
+        GetDebugInfoSizeInSection(section.GetSubSectionAtIndex(i));
+
+  return debug_info_size;
+}
+
+static uint64_t GetDebugInfoSize(lldb::SBModule module) {
+  uint64_t debug_info_size = 0;
+  const size_t num_sections = module.GetNumSections();
+  for (size_t i = 0; i < num_sections; i++)
+    debug_info_size += GetDebugInfoSizeInSection(module.GetSectionAtIndex(i));
+
+  return debug_info_size;
+}
+
+std::string ConvertDebugInfoSizeToString(uint64_t debug_size) {
+  std::ostringstream oss;
+  oss << std::fixed << std::setprecision(1);
+  if (debug_size < 1024) {
+    oss << debug_size << "B";
+  } else if (debug_size < static_cast<uint64_t>(1024 * 1024)) {
+    double kb = double(debug_size) / 1024.0;
+    oss << kb << "KB";
+  } else if (debug_size < 1024 * 1024 * 1024) {
+    double mb = double(debug_size) / (1024.0 * 1024.0);
+    oss << mb << "MB";
+  } else {
+    double gb = double(debug_size) / (1024.0 * 1024.0 * 1024.0);
+    oss << gb << "GB";
+  }
+  return oss.str();
+}
+
+std::optional<protocol::Module> CreateModule(const lldb::SBTarget &target,
+                                             lldb::SBModule &module,
+                                             bool id_only) {
+  if (!target.IsValid() || !module.IsValid())
+    return std::nullopt;
+
+  const llvm::StringRef uuid = module.GetUUIDString();
+  if (uuid.empty())
+    return std::nullopt;
+
+  protocol::Module p_module;
+  p_module.id = uuid;
+
+  if (id_only)
+    return p_module;
+
+  std::array<char, PATH_MAX> path_buffer{};
+  if (const lldb::SBFileSpec file_spec = module.GetFileSpec()) {
+    p_module.name = file_spec.GetFilename();
+
+    const uint32_t path_size =
+        file_spec.GetPath(path_buffer.data(), path_buffer.size());
+    p_module.path = std::string(path_buffer.data(), path_size);
+  }
+
+  if (const uint32_t num_compile_units = module.GetNumCompileUnits();
+      num_compile_units > 0) {
+    p_module.symbolStatus = "Symbols loaded.";
+
+    p_module.debugInfoSizeBytes = GetDebugInfoSize(module);
+
+    if (const lldb::SBFileSpec symbol_fspec = module.GetSymbolFileSpec()) {
+      const uint32_t path_size =
+          symbol_fspec.GetPath(path_buffer.data(), path_buffer.size());
+      p_module.symbolFilePath = std::string(path_buffer.data(), path_size);
+    }
+  } else {
+    p_module.symbolStatus = "Symbols not found.";
+  }
+
+  const auto load_address = module.GetObjectFileHeaderAddress();
+  if (const lldb::addr_t raw_address = load_address.GetLoadAddress(target);
+      raw_address != LLDB_INVALID_ADDRESS)
+    p_module.addressRange = llvm::formatv("{0:x}", raw_address);
+
+  std::array<uint32_t, 3> version_nums{};
+  const uint32_t num_versions =
+      module.GetVersion(version_nums.data(), version_nums.size());
+  if (num_versions > 0) {
+    p_module.version = llvm::formatv(
+        "{:$[.]}", llvm::make_range(version_nums.begin(),
+                                    version_nums.begin() + num_versions));
+  }
+
+  return p_module;
 }
 
 std::optional<protocol::Source> CreateSource(const lldb::SBFileSpec &file) {
@@ -69,10 +173,10 @@ bool IsAssemblySource(const protocol::Source &source) {
 }
 
 bool DisplayAssemblySource(lldb::SBDebugger &debugger,
-                           lldb::SBAddress address) {
+                           lldb::SBLineEntry line_entry) {
   const lldb::StopDisassemblyType stop_disassembly_display =
       GetStopDisassemblyDisplay(debugger);
-  return ShouldDisplayAssemblySource(address, stop_disassembly_display);
+  return ShouldDisplayAssemblySource(line_entry, stop_disassembly_display);
 }
 
 std::string GetLoadAddressString(const lldb::addr_t addr) {
@@ -99,10 +203,9 @@ protocol::Thread CreateThread(lldb::SBThread &thread, lldb::SBFormat &format) {
         queue_kind_label = " (concurrent)";
 
       name = llvm::formatv("Thread {0} Queue: {1}{2}", thread.GetIndexID(),
-                           queue_name, queue_kind_label)
-                 .str();
+                           queue_name, queue_kind_label);
     } else {
-      name = llvm::formatv("Thread {0}", thread.GetIndexID()).str();
+      name = llvm::formatv("Thread {0}", thread.GetIndexID());
     }
   }
   return protocol::Thread{thread.GetThreadID(), name};
@@ -124,9 +227,9 @@ std::vector<protocol::Thread> GetThreads(lldb::SBProcess process,
   return threads;
 }
 
-protocol::ExceptionBreakpointsFilter
+ExceptionBreakpointsFilter
 CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp) {
-  protocol::ExceptionBreakpointsFilter filter;
+  ExceptionBreakpointsFilter filter;
   filter.filter = bp.GetFilter();
   filter.label = bp.GetLabel();
   filter.description = bp.GetLabel();

@@ -131,6 +131,11 @@ static constexpr llvm::StringRef getHasLifetimeMarkerAttrName() {
   return "fir.has_lifetime";
 }
 
+/// Attribute to mark the access groups of an operation.
+static constexpr llvm::StringRef getAccessGroupsAttrName() {
+  return "access_groups";
+}
+
 /// Does the function, \p func, have a host-associations tuple argument?
 /// Some internal procedures may have access to host procedure variables.
 bool hasHostAssociationArgument(mlir::func::FuncOp func);
@@ -238,7 +243,19 @@ std::optional<int64_t> getAllocaByteSize(fir::AllocaOp alloca,
 /// When \p checkWhole is false, then the checking is only done
 /// for continuity in the innermost dimension, otherwise,
 /// the checking is done for continuity of the whole result of rebox.
-bool reboxPreservesContinuity(fir::ReboxOp rebox, bool checkWhole = true);
+/// The caller may specify \p mayHaveNonDefaultLowerBounds, if it is known,
+/// to allow better handling of the rebox operations representing
+/// full array slices.
+bool reboxPreservesContinuity(fir::ReboxOp rebox,
+                              bool mayHaveNonDefaultLowerBounds = true,
+                              bool checkWhole = true);
+
+/// Return true, if \p embox operation produces a contiguous
+/// entity.
+/// When \p checkWhole is false, then the checking is only done
+/// for continuity in the innermost dimension, otherwise,
+/// the checking is done for continuity of the whole result of embox
+bool isContiguousEmbox(fir::EmboxOp embox, bool checkWhole = true);
 
 } // namespace fir
 

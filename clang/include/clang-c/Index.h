@@ -2162,6 +2162,10 @@ enum CXCursorKind {
    */
   CXCursor_OMPStripeDirective = 310,
 
+  /** OpenMP fuse directive
+   */
+  CXCursor_OMPFuseDirective = 311,
+
   /** OpenACC Compute Construct.
    */
   CXCursor_OpenACCComputeConstruct = 320,
@@ -2390,7 +2394,7 @@ CINDEX_LINKAGE unsigned clang_isDeclaration(enum CXCursorKind);
  * A declaration is invalid if it could not be parsed successfully.
  *
  * \returns non-zero if the cursor represents a declaration and it is
- * invalid, otherwise NULL.
+ * invalid, otherwise zero.
  */
 CINDEX_LINKAGE unsigned clang_isInvalidDeclaration(CXCursor);
 
@@ -4647,6 +4651,8 @@ CINDEX_LINKAGE CXModule clang_getModuleForFile(CXTranslationUnit, CXFile);
  * \param Module a module object.
  *
  * \returns the module file where the provided module object came from.
+ *
+ * @deprecated: module files are longer guaranteed to be loaded from a CXFile
  */
 CINDEX_LINKAGE CXFile clang_Module_getASTFile(CXModule Module);
 
@@ -6928,7 +6934,8 @@ enum CXUnaryOperatorKind {
   /** __extension__ marker operator. */
   CXUnaryOperator_Extension,
   /** C++ co_await operator. */
-  CXUnaryOperator_Coawait
+  CXUnaryOperator_Coawait,
+  CXUnaryOperator_Last = CXUnaryOperator_Coawait
 };
 
 /**
@@ -6952,6 +6959,21 @@ clang_getCursorUnaryOperatorKind(CXCursor cursor);
 /**
  * @}
  */
+
+/* CINDEX_DEPRECATED - disabled to silence MSVC deprecation warnings */
+typedef void *CXRemapping;
+
+CINDEX_DEPRECATED CINDEX_LINKAGE CXRemapping clang_getRemappings(const char *);
+
+CINDEX_DEPRECATED CINDEX_LINKAGE CXRemapping
+clang_getRemappingsFromFileList(const char **, unsigned);
+
+CINDEX_DEPRECATED CINDEX_LINKAGE unsigned clang_remap_getNumFiles(CXRemapping);
+
+CINDEX_DEPRECATED CINDEX_LINKAGE void
+clang_remap_getFilenames(CXRemapping, unsigned, CXString *, CXString *);
+
+CINDEX_DEPRECATED CINDEX_LINKAGE void clang_remap_dispose(CXRemapping);
 
 LLVM_CLANG_C_EXTERN_C_END
 

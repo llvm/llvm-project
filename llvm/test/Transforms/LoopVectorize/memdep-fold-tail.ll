@@ -19,12 +19,12 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ;  }
 ;}
 
-@a = common local_unnamed_addr global [18 x i8] zeroinitializer, align 16
+@a = common global [18 x i8] zeroinitializer, align 16
 
 define void @maxvf3() {
 ; CHECK-LABEL: @maxvf3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -34,8 +34,7 @@ define void @maxvf3() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i1> [[TMP0]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [18 x i8], ptr @a, i32 0, i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [18 x i8], ptr @a, i32 0, i32 [[INDEX]]
 ; CHECK-NEXT:    store i8 69, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK:       pred.store.continue:
@@ -48,16 +47,14 @@ define void @maxvf3() {
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE2]]
 ; CHECK:       pred.store.continue2:
 ; CHECK-NEXT:    [[TMP7:%.*]] = add nuw nsw <2 x i32> splat (i32 3), [[VEC_IND]]
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i1> [[TMP0]], i32 0
-; CHECK-NEXT:    br i1 [[TMP8]], label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4:%.*]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4:%.*]]
 ; CHECK:       pred.store.if3:
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i32> [[TMP7]], i32 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [18 x i8], ptr @a, i32 0, i32 [[TMP9]]
 ; CHECK-NEXT:    store i8 7, ptr [[TMP10]], align 8
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE4]]
 ; CHECK:       pred.store.continue4:
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[TMP0]], i32 1
-; CHECK-NEXT:    br i1 [[TMP11]], label [[PRED_STORE_IF5:%.*]], label [[PRED_STORE_CONTINUE6]]
+; CHECK-NEXT:    br i1 [[TMP4]], label [[PRED_STORE_IF5:%.*]], label [[PRED_STORE_CONTINUE6]]
 ; CHECK:       pred.store.if5:
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i32> [[TMP7]], i32 1
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [18 x i8], ptr @a, i32 0, i32 [[TMP12]]
@@ -69,20 +66,7 @@ define void @maxvf3() {
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[INDEX_NEXT]], 16
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[FOR_END:%.*]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[J_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[AJ:%.*]] = getelementptr inbounds [18 x i8], ptr @a, i32 0, i32 [[J]]
-; CHECK-NEXT:    store i8 69, ptr [[AJ]], align 8
-; CHECK-NEXT:    [[JP3:%.*]] = add nuw nsw i32 3, [[J]]
-; CHECK-NEXT:    [[AJP3:%.*]] = getelementptr inbounds [18 x i8], ptr @a, i32 0, i32 [[JP3]]
-; CHECK-NEXT:    store i8 7, ptr [[AJP3]], align 8
-; CHECK-NEXT:    [[J_NEXT]] = add nuw nsw i32 [[J]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[J_NEXT]], 15
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;

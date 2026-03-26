@@ -6,7 +6,7 @@
 // RUN: %clang -target aarch64 -mlittle-endian -march=armv9.6-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV96A %s
 // RUN: %clang -target aarch64_be -mlittle-endian -march=armv9.6a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV96A %s
 // RUN: %clang -target aarch64_be -mlittle-endian -march=armv9.6-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV96A %s
-// GENERICV96A: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.6a"{{.*}} "-target-feature" "+cmpbr"{{.*}} "-target-feature" "+fprcvt"{{.*}} "-target-feature" "+sve2p2"
+// GENERICV96A: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.6a"{{.*}} "-target-feature" "+cmpbr"{{.*}}
 
 // RUN: %clang -target aarch64_be -march=armv9.6a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV96A-BE %s
 // RUN: %clang -target aarch64_be -march=armv9.6-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV96A-BE %s
@@ -14,7 +14,7 @@
 // RUN: %clang -target aarch64 -mbig-endian -march=armv9.6-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV96A-BE %s
 // RUN: %clang -target aarch64_be -mbig-endian -march=armv9.6a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV96A-BE %s
 // RUN: %clang -target aarch64_be -mbig-endian -march=armv9.6-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV96A-BE %s
-// GENERICV96A-BE: "-cc1"{{.*}} "-triple" "aarch64_be{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.6a"{{.*}} "-target-feature" "+cmpbr"{{.*}} "-target-feature" "+fprcvt"{{.*}} "-target-feature" "+sve2p2"
+// GENERICV96A-BE: "-cc1"{{.*}} "-triple" "aarch64_be{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.6a"{{.*}} "-target-feature" "+cmpbr"{{.*}}
 
 // ===== Features supported on aarch64 =====
 
@@ -62,10 +62,6 @@
 // RUN: %clang -target aarch64 -march=armv9.6-a+occmo -### -c %s 2>&1 | FileCheck -check-prefix=V96A-OCCMO %s
 // V96A-OCCMO: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.6a"{{.*}} "-target-feature" "+occmo"
 //
-// RUN: %clang -target aarch64 -march=armv9.6a+pcdphint -### -c %s 2>&1 | FileCheck -check-prefix=V96A-PCDPHINT %s
-// RUN: %clang -target aarch64 -march=armv9.6-a+pcdphint -### -c %s 2>&1 | FileCheck -check-prefix=V96A-PCDPHINT %s
-// V96A-PCDPHINT: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.6a"{{.*}} "-target-feature" "+pcdphint"
-
 // RUN: %clang -target aarch64 -march=armv9.6a+pops -### -c %s 2>&1 | FileCheck -check-prefix=V96A-POPS %s
 // RUN: %clang -target aarch64 -march=armv9.6-a+pops -### -c %s 2>&1 | FileCheck -check-prefix=V96A-POPS %s
 // V96A-POPS: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.6a"{{.*}} "-target-feature" "+pops"

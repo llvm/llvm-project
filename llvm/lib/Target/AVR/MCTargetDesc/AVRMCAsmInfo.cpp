@@ -24,8 +24,6 @@ AVRMCAsmInfo::AVRMCAsmInfo(const Triple &TT, const MCTargetOptions &Options) {
   CalleeSaveStackSlotSize = 2;
   CommentString = ";";
   SeparatorString = "$";
-  PrivateGlobalPrefix = ".L";
-  PrivateLabelPrefix = ".L";
   UsesELFSectionDirectiveForBSS = true;
   SupportsDebugInformation = true;
 }
@@ -63,7 +61,7 @@ AVRMCExpr::Specifier AVRMCExpr::parseSpecifier(StringRef Name) {
 const char *AVRMCExpr::getName() const {
   const auto &Modifier =
       llvm::find_if(ModifierNames, [this](ModifierEntry const &Mod) {
-        return Mod.specifier == specifier;
+        return Mod.specifier == getSpecifier();
       });
 
   if (Modifier != std::end(ModifierNames)) {
@@ -75,7 +73,7 @@ const char *AVRMCExpr::getName() const {
 AVR::Fixups AVRMCExpr::getFixupKind() const {
   AVR::Fixups Kind = AVR::Fixups::LastTargetFixupKind;
 
-  switch (specifier) {
+  switch (getSpecifier()) {
   case AVR::S_LO8:
     Kind = isNegated() ? AVR::fixup_lo8_ldi_neg : AVR::fixup_lo8_ldi;
     break;
@@ -133,7 +131,7 @@ int64_t AVRMCExpr::evaluateAsInt64(int64_t Value) const {
   if (Negated)
     Value *= -1;
 
-  switch (specifier) {
+  switch (getSpecifier()) {
   case AVR::S_LO8:
     Value &= 0xff;
     break;
@@ -195,7 +193,7 @@ bool AVRMCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr,
       return false;
 
     auto Spec = AVR::S_None;
-    if (Value.getSpecifier() != MCSymbolRefExpr::VK_None)
+    if (Value.getSpecifier())
       return false;
     assert(!Value.getSubSym());
     if (E.getSpecifier() == AVR::S_PM)

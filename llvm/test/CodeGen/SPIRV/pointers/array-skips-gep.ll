@@ -13,24 +13,26 @@
 @gv = external addrspace(10) global [10 x i32]
 ; CHECK: %[[#gv:]] = OpVariable %[[#array_pp]] Private
 
-define internal spir_func i32 @foo() {
+define internal spir_func i32 @foo() #0 {
   %array = alloca [10 x i32], align 4
 ; CHECK: %[[#array:]] = OpVariable %[[#array_fp:]] Function
 
   ; Direct load from the pointer index. This requires an OpAccessChain
   %1 = load i32, ptr %array, align 4
 ; CHECK: %[[#ptr:]] = OpAccessChain %[[#int_fp]] %[[#array]] %[[#uint_0]]
-; CHECK: %[[#val:]] = OpLoad %[[#uint_ty]] %[[#ptr]] Aligned 4
+; CHECK: %[[#val:]] = OpLoad %[[#uint_ty]] %[[#ptr]]
 
   ret i32 %1
 ; CHECK: OpReturnValue %[[#val]]
 }
 
+attributes #0 = { optnone noinline }
+
 define internal spir_func i32 @bar() {
   ; Direct load from the pointer index. This requires an OpAccessChain
   %1 = load i32, ptr addrspace(10) @gv
 ; CHECK: %[[#ptr:]] = OpAccessChain %[[#int_pp]] %[[#gv]] %[[#uint_0]]
-; CHECK: %[[#val:]] = OpLoad %[[#uint_ty]] %[[#ptr]] Aligned 4
+; CHECK: %[[#val:]] = OpLoad %[[#uint_ty]] %[[#ptr]]
 
   ret i32 %1
 ; CHECK: OpReturnValue %[[#val]]

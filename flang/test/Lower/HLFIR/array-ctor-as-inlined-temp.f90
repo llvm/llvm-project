@@ -116,7 +116,7 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_implied_do(
 ! CHECK-SAME:                                  %[[VAL_0:.*]]: !fir.ref<i64> {fir.bindc_name = "n"}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.alloca index
-! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest_implied_doEn"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFtest_implied_doEn"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 0 : i64
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 2 : i64
 ! CHECK:           %[[VAL_5:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<i64>
@@ -127,8 +127,7 @@ end subroutine
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 1 : i64
 ! CHECK:           %[[VAL_11:.*]] = arith.divsi %[[VAL_9]], %[[VAL_10]] : i64
 ! CHECK:           %[[VAL_12:.*]] = arith.constant 0 : i64
-! CHECK:           %[[VAL_13:.*]] = arith.cmpi sgt, %[[VAL_11]], %[[VAL_12]] : i64
-! CHECK:           %[[VAL_14:.*]] = arith.select %[[VAL_13]], %[[VAL_11]], %[[VAL_12]] : i64
+! CHECK:           %[[VAL_14:.*]] = arith.maxsi %[[VAL_11]], %[[VAL_12]] : i64
 ! CHECK:           %[[VAL_15:.*]] = arith.muli %[[VAL_4]], %[[VAL_14]] : i64
 ! CHECK:           %[[VAL_16:.*]] = arith.addi %[[VAL_3]], %[[VAL_15]] : i64
 ! CHECK:           %[[VAL_17:.*]] = fir.convert %[[VAL_16]] : (i64) -> index
@@ -178,9 +177,9 @@ end subroutine
 ! CHECK-SAME:                                          %[[VAL_1:.*]]: !fir.ref<i64> {fir.bindc_name = "ub"},
 ! CHECK-SAME:                                          %[[VAL_2:.*]]: !fir.ref<i64> {fir.bindc_name = "stride"}) {
 ! CHECK:           %[[VAL_3:.*]] = fir.alloca index
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest_strided_implied_doElb"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
-! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest_strided_implied_doEstride"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
-! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest_strided_implied_doEub"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFtest_strided_implied_doElb"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFtest_strided_implied_doEstride"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFtest_strided_implied_doEub"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
 ! CHECK:           %[[VAL_7:.*]] = arith.constant 0 : i64
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 2 : i64
 ! CHECK:           %[[VAL_9:.*]] = fir.load %[[VAL_6]]#0 : !fir.ref<i64>
@@ -191,8 +190,7 @@ end subroutine
 ! CHECK:           %[[VAL_14:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i64>
 ! CHECK:           %[[VAL_15:.*]] = arith.divsi %[[VAL_13]], %[[VAL_14]] : i64
 ! CHECK:           %[[VAL_16:.*]] = arith.constant 0 : i64
-! CHECK:           %[[VAL_17:.*]] = arith.cmpi sgt, %[[VAL_15]], %[[VAL_16]] : i64
-! CHECK:           %[[VAL_18:.*]] = arith.select %[[VAL_17]], %[[VAL_15]], %[[VAL_16]] : i64
+! CHECK:           %[[VAL_18:.*]] = arith.maxsi %[[VAL_15]], %[[VAL_16]] : i64
 ! CHECK:           %[[VAL_19:.*]] = arith.muli %[[VAL_8]], %[[VAL_18]] : i64
 ! CHECK:           %[[VAL_20:.*]] = arith.addi %[[VAL_7]], %[[VAL_19]] : i64
 ! CHECK:           %[[VAL_21:.*]] = fir.convert %[[VAL_20]] : (i64) -> index
@@ -241,8 +239,8 @@ end subroutine
 ! CHECK-SAME:                                         %[[VAL_0:.*]]: !fir.ref<i64> {fir.bindc_name = "n"},
 ! CHECK-SAME:                                         %[[VAL_1:.*]]: !fir.ref<i64> {fir.bindc_name = "m"}) {
 ! CHECK:           %[[VAL_2:.*]] = fir.alloca index
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest_nested_implied_doEm"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest_nested_implied_doEn"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFtest_nested_implied_doEm"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFtest_nested_implied_doEn"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 0 : i64
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 0 : i64
 ! CHECK:           %[[VAL_7:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<i64>
@@ -253,8 +251,7 @@ end subroutine
 ! CHECK:           %[[VAL_12:.*]] = arith.constant 1 : i64
 ! CHECK:           %[[VAL_13:.*]] = arith.divsi %[[VAL_11]], %[[VAL_12]] : i64
 ! CHECK:           %[[VAL_14:.*]] = arith.constant 0 : i64
-! CHECK:           %[[VAL_15:.*]] = arith.cmpi sgt, %[[VAL_13]], %[[VAL_14]] : i64
-! CHECK:           %[[VAL_16:.*]] = arith.select %[[VAL_15]], %[[VAL_13]], %[[VAL_14]] : i64
+! CHECK:           %[[VAL_16:.*]] = arith.maxsi %[[VAL_13]], %[[VAL_14]] : i64
 ! CHECK:           %[[VAL_17:.*]] = arith.addi %[[VAL_6]], %[[VAL_16]] : i64
 ! CHECK:           %[[VAL_18:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<i64>
 ! CHECK:           %[[VAL_19:.*]] = arith.constant 1 : i64
@@ -264,8 +261,7 @@ end subroutine
 ! CHECK:           %[[VAL_23:.*]] = arith.constant 1 : i64
 ! CHECK:           %[[VAL_24:.*]] = arith.divsi %[[VAL_22]], %[[VAL_23]] : i64
 ! CHECK:           %[[VAL_25:.*]] = arith.constant 0 : i64
-! CHECK:           %[[VAL_26:.*]] = arith.cmpi sgt, %[[VAL_24]], %[[VAL_25]] : i64
-! CHECK:           %[[VAL_27:.*]] = arith.select %[[VAL_26]], %[[VAL_24]], %[[VAL_25]] : i64
+! CHECK:           %[[VAL_27:.*]] = arith.maxsi %[[VAL_24]], %[[VAL_25]] : i64
 ! CHECK:           %[[VAL_28:.*]] = arith.muli %[[VAL_17]], %[[VAL_27]] : i64
 ! CHECK:           %[[VAL_29:.*]] = arith.addi %[[VAL_5]], %[[VAL_28]] : i64
 ! CHECK:           %[[VAL_30:.*]] = fir.convert %[[VAL_29]] : (i64) -> index

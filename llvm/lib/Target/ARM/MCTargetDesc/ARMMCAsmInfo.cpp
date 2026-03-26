@@ -34,7 +34,7 @@ const MCAsmInfo::AtSpecifier atSpecifiers[] = {
     {ARM::S_GOTTPOFF, "GOTTPOFF"},
     {ARM::S_GOTTPOFF_FDPIC, "gottpoff_fdpic"},
     {ARM::S_PLT, "PLT"},
-    {MCSymbolRefExpr::VK_SECREL, "SECREL32"},
+    {ARM::S_COFF_SECREL, "SECREL32"},
     {ARM::S_TLSCALL, "tlscall"},
     {ARM::S_TLSDESC, "tlsdesc"},
     {ARM::S_TLSGD, "TLSGD"},
@@ -96,11 +96,10 @@ ARMELFMCAsmInfo::ARMELFMCAsmInfo(const Triple &TheTriple) {
     break;
   }
 
+  initializeAtSpecifiers(atSpecifiers);
   // foo(plt) instead of foo@plt
   UseAtForSpecifier = false;
   UseParensForSpecifier = true;
-
-  initializeAtSpecifiers(atSpecifiers);
 }
 
 void ARMELFMCAsmInfo::setUseIntegratedAssembler(bool Value) {
@@ -120,7 +119,7 @@ ARMCOFFMCAsmInfoMicrosoft::ARMCOFFMCAsmInfoMicrosoft() {
   SupportsDebugInformation = true;
   ExceptionsType = ExceptionHandling::WinEH;
   WinEHEncodingType = WinEH::EncodingType::Itanium;
-  PrivateGlobalPrefix = "$M";
+  InternalSymbolPrefix = "$M";
   PrivateLabelPrefix = "$M";
   CommentString = "@";
 
@@ -137,21 +136,20 @@ ARMCOFFMCAsmInfoGNU::ARMCOFFMCAsmInfoGNU() {
   HasSingleParameterDotFile = true;
 
   CommentString = "@";
-  PrivateGlobalPrefix = ".L";
+  InternalSymbolPrefix = ".L";
   PrivateLabelPrefix = ".L";
 
   SupportsDebugInformation = true;
   ExceptionsType = ExceptionHandling::WinEH;
   WinEHEncodingType = WinEH::EncodingType::Itanium;
-  UseAtForSpecifier = false;
-  UseParensForSpecifier = true;
-
   DwarfRegNumForCFI = false;
 
   // Conditional Thumb 4-byte instructions can have an implicit IT.
   MaxInstLength = 6;
 
   initializeAtSpecifiers(atSpecifiers);
+  UseAtForSpecifier = false;
+  UseParensForSpecifier = true;
 }
 
 void ARM::printSpecifierExpr(const MCAsmInfo &MAI, raw_ostream &OS,

@@ -14,6 +14,7 @@
 
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/Allocatable.h"
+#include "flang/Lower/CUDA.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/Character.h"
@@ -29,6 +30,13 @@
 #include "flang/Semantics/symbol.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Location.h"
+#include "llvm/Support/CommandLine.h"
+
+static llvm::cl::opt<bool> enableGPUHeapAlloc(
+    "enable-gpu-heap-alloc",
+    llvm::cl::desc(
+        "Allow the use of heap allocation for dynamically sized arrays on GPU"),
+    llvm::cl::init(false));
 
 static bool hasFinalization(const Fortran::semantics::Symbol &sym) {
   if (sym.has<Fortran::semantics::ObjectEntityDetails>())
@@ -75,9 +83,9 @@ static void createCleanupRegion(Fortran::lower::AbstractConverter &converter,
                                         /*mutableProperties=*/{}};
         Fortran::lower::genDeallocateIfAllocated(converter, mutableBox, loc);
         if (isDoConcurrent)
-          builder.create<fir::YieldOp>(loc);
+          fir::YieldOp::create(builder, loc);
         else
-          builder.create<mlir::omp::YieldOp>(loc);
+          mlir::omp::YieldOp::create(builder, loc);
         return;
       }
     }
@@ -89,29 +97,45 @@ static void createCleanupRegion(Fortran::lower::AbstractConverter &converter,
     mlir::Value arg = builder.loadIfRef(loc, block->getArgument(0));
     assert(mlir::isa<fir::BaseBoxType>(arg.getType()));
 
-    // Deallocate box
-    // The FIR type system doesn't nesecarrily know that this is a mutable box
-    // if we allocated the thread local array on the heap to avoid looped stack
-    // allocations.
+    // Extract address from the box for deallocation.
+    // The FIR type system doesn't necessarily know that this is a mutable
+    // box if we allocated the thread local array on the heap to avoid looped
+    // stack allocations.
     mlir::Value addr =
         hlfir::genVariableRawAddress(loc, builder, hlfir::Entity{arg});
+
+    // Deallocate if allocated
     mlir::Value isAllocated = builder.genIsNotNullAddr(loc, addr);
     fir::IfOp ifOp =
-        builder.create<fir::IfOp>(loc, isAllocated, /*withElseRegion=*/false);
+        fir::IfOp::create(builder, loc, isAllocated, /*withElseRegion=*/false);
     builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
 
     mlir::Value cast = builder.createConvert(
         loc, fir::HeapType::get(fir::dyn_cast_ptrEleTy(addr.getType())), addr);
-    builder.create<fir::FreeMemOp>(loc, cast);
+    fir::FreeMemOp::create(builder, loc, cast);
 
     builder.setInsertionPointAfter(ifOp);
+    // Free the managed descriptor if this is a CUDA device allocatable.
+    if (sym) {
+      unsigned idx = Fortran::lower::getAllocatorIdx(sym->GetUltimate());
+      if (idx != kDefaultAllocator) {
+        cuf::DataAttributeAttr dataAttr =
+            Fortran::lower::translateSymbolCUFDataAttribute(
+                builder.getContext(), sym->GetUltimate());
+        cuf::FreeOp::create(builder, loc, block->getArgument(0), dataAttr);
+      }
+    }
     if (isDoConcurrent)
-      builder.create<fir::YieldOp>(loc);
+      fir::YieldOp::create(builder, loc);
     else
-      builder.create<mlir::omp::YieldOp>(loc);
+      mlir::omp::YieldOp::create(builder, loc);
     return;
   }
 
+  // Handle !fir.boxchar (passed by VALUE for runtime-length characters).
+  // Note: This is distinct from !fir.box<!fir.char<>> which is handled above.
+  // BoxChar is a special tuple type (addr, len) used when character length
+  // is only known at runtime.
   if (auto boxCharTy = mlir::dyn_cast<fir::BoxCharType>(argType)) {
     auto [addr, len] =
         fir::factory::CharacterExprHelper{builder, loc}.createUnboxChar(
@@ -122,11 +146,11 @@ static void createCleanupRegion(Fortran::lower::AbstractConverter &converter,
     auto heapTy = fir::HeapType::get(refTy.getEleTy());
     addr = builder.createConvert(loc, heapTy, addr);
 
-    builder.create<fir::FreeMemOp>(loc, addr);
+    fir::FreeMemOp::create(builder, loc, addr);
     if (isDoConcurrent)
-      builder.create<fir::YieldOp>(loc);
+      fir::YieldOp::create(builder, loc);
     else
-      builder.create<mlir::omp::YieldOp>(loc);
+      mlir::omp::YieldOp::create(builder, loc);
 
     return;
   }
@@ -172,7 +196,7 @@ fir::ShapeShiftOp Fortran::lower::getShapeShift(
       // OpenACC does
       mlir::Value dim = builder.createIntegerConstant(loc, idxTy, i);
       auto dimInfo =
-          builder.create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy, box, dim);
+          fir::BoxDimsOp::create(builder, loc, idxTy, idxTy, idxTy, box, dim);
       lbAndExtents.push_back(useDefaultLowerBounds ? one()
                                                    : dimInfo.getLowerBound());
       lbAndExtents.push_back(dimInfo.getExtent());
@@ -181,7 +205,7 @@ fir::ShapeShiftOp Fortran::lower::getShapeShift(
 
   auto shapeShiftTy = fir::ShapeShiftType::get(builder.getContext(), rank);
   auto shapeShift =
-      builder.create<fir::ShapeShiftOp>(loc, shapeShiftTy, lbAndExtents);
+      fir::ShapeShiftOp::create(builder, loc, shapeShiftTy, lbAndExtents);
   return shapeShift;
 }
 
@@ -270,7 +294,7 @@ static mlir::Value generateZeroShapeForRank(fir::FirOpBuilder &builder,
   mlir::SmallVector<mlir::Value> dims;
   dims.resize(rank, zero);
   mlir::Type shapeTy = fir::ShapeType::get(builder.getContext(), rank);
-  return builder.create<fir::ShapeOp>(loc, shapeTy, dims);
+  return fir::ShapeOp::create(builder, loc, shapeTy, dims);
 }
 
 namespace {
@@ -341,9 +365,9 @@ private:
 
   void createYield(mlir::Value ret) {
     if (isDoConcurrent)
-      builder.create<fir::YieldOp>(loc, ret);
+      fir::YieldOp::create(builder, loc, ret);
     else
-      builder.create<mlir::omp::YieldOp>(loc, ret);
+      mlir::omp::YieldOp::create(builder, loc, ret);
   }
 
   void initTrivialType() {
@@ -376,6 +400,8 @@ private:
     loadedMoldArg = builder.loadIfRef(loc, moldArg);
     return loadedMoldArg;
   }
+
+  bool shouldAllocateTempOnStack(fir::BaseBoxType boxTy) const;
 };
 
 } // namespace
@@ -392,9 +418,9 @@ void PopulateInitAndCleanupRegionsHelper::initBoxedPrivatePointer(
   // Just incase, do initialize the box with a null value
   mlir::Value null = builder.createNullConstant(loc, boxTy.getEleTy());
   mlir::Value nullBox;
-  nullBox = builder.create<fir::EmboxOp>(loc, boxTy, null, shape,
-                                         /*slice=*/mlir::Value{}, lenParams);
-  builder.create<fir::StoreOp>(loc, nullBox, allocatedPrivVarArg);
+  nullBox = fir::EmboxOp::create(builder, loc, boxTy, null, shape,
+                                 /*slice=*/mlir::Value{}, lenParams);
+  fir::StoreOp::create(builder, loc, nullBox, allocatedPrivVarArg);
   createYield(allocatedPrivVarArg);
 }
 /// Check if an allocatable box is unallocated. If so, initialize the boxAlloca
@@ -410,20 +436,24 @@ void PopulateInitAndCleanupRegionsHelper::initBoxedPrivatePointer(
 /// }
 /// omp.yield %box_alloca
 fir::IfOp PopulateInitAndCleanupRegionsHelper::handleNullAllocatable() {
-  mlir::Value addr = builder.create<fir::BoxAddrOp>(loc, getLoadedMoldArg());
+  mlir::Value addr = fir::BoxAddrOp::create(builder, loc, getLoadedMoldArg());
   mlir::Value isNotAllocated = builder.genIsNullAddr(loc, addr);
-  fir::IfOp ifOp = builder.create<fir::IfOp>(loc, isNotAllocated,
-                                             /*withElseRegion=*/true);
+  fir::IfOp ifOp = fir::IfOp::create(builder, loc, isNotAllocated,
+                                     /*withElseRegion=*/true);
   builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
   // Just embox the null address and return.
   // We have to give the embox a shape so that the LLVM box structure has the
   // right rank. This returns an empty value if the types don't match.
   mlir::Value shape = generateZeroShapeForRank(builder, loc, moldArg);
 
-  mlir::Value nullBox =
-      builder.create<fir::EmboxOp>(loc, valType, addr, shape,
-                                   /*slice=*/mlir::Value{}, lenParams);
-  builder.create<fir::StoreOp>(loc, nullBox, allocatedPrivVarArg);
+  auto nullBox = fir::EmboxOp::create(builder, loc, valType, addr, shape,
+                                      /*slice=*/mlir::Value{}, lenParams);
+  if (sym) {
+    unsigned idx = Fortran::lower::getAllocatorIdx(sym->GetUltimate());
+    if (idx != kDefaultAllocator)
+      nullBox.setAllocatorIdx(idx);
+  }
+  fir::StoreOp::create(builder, loc, nullBox, allocatedPrivVarArg);
   return ifOp;
 }
 
@@ -438,21 +468,28 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedScalar(
     builder.setInsertionPointToStart(&ifUnallocated.getElseRegion().front());
   }
 
-  mlir::Value valAlloc = builder.createHeapTemporary(loc, innerTy, /*name=*/{},
-                                                     /*shape=*/{}, lenParams);
+  bool shouldAllocateOnStack = shouldAllocateTempOnStack(boxTy);
+  mlir::Value valAlloc =
+      (shouldAllocateOnStack)
+          ? builder.createTemporary(loc, innerTy, /*name=*/{},
+                                    /*shape=*/{}, lenParams)
+          : builder.createHeapTemporary(loc, innerTy, /*name=*/{},
+                                        /*shape=*/{}, lenParams);
+
   if (scalarInitValue)
     builder.createStoreWithConvert(loc, scalarInitValue, valAlloc);
-  mlir::Value box = builder.create<fir::EmboxOp>(
-      loc, valType, valAlloc, /*shape=*/mlir::Value{},
-      /*slice=*/mlir::Value{}, lenParams);
+  mlir::Value box = fir::EmboxOp::create(builder, loc, valType, valAlloc,
+                                         /*shape=*/mlir::Value{},
+                                         /*slice=*/mlir::Value{}, lenParams);
   initializeIfDerivedTypeBox(
       builder, loc, box, getLoadedMoldArg(), needsInitialization,
       /*isFirstPrivate=*/kind == DeclOperationKind::FirstPrivateOrLocalInit);
   fir::StoreOp lastOp =
-      builder.create<fir::StoreOp>(loc, box, allocatedPrivVarArg);
+      fir::StoreOp::create(builder, loc, box, allocatedPrivVarArg);
 
-  createCleanupRegion(converter, loc, argType, cleanupRegion, sym,
-                      isDoConcurrent);
+  if (!shouldAllocateOnStack)
+    createCleanupRegion(converter, loc, argType, cleanupRegion, sym,
+                        isDoConcurrent);
 
   if (ifUnallocated)
     builder.setInsertionPointAfter(ifUnallocated);
@@ -460,6 +497,24 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedScalar(
     builder.setInsertionPointAfter(lastOp);
 
   createYield(allocatedPrivVarArg);
+}
+
+bool PopulateInitAndCleanupRegionsHelper::shouldAllocateTempOnStack(
+    fir::BaseBoxType boxTy) const {
+  auto offloadMod =
+      llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(*builder.getModule());
+  // On the GPU, always allocate on the stack unless the user explicitly
+  // specifies otherwise since heap allocatins are very expensive.
+  bool isGPU = offloadMod && offloadMod.getIsGPU();
+  if (isGPU && enableGPUHeapAlloc) {
+    // Check if it is adjustable array
+    if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(boxTy.getEleTy())) {
+      if (seqTy.hasUnknownShape() || seqTy.hasDynamicExtents()) {
+        return false;
+      }
+    }
+  }
+  return isGPU;
 }
 
 void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedArray(
@@ -483,14 +538,15 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedArray(
     fir::ShapeShiftOp shape =
         getShapeShift(builder, loc, source, cannotHaveNonDefaultLowerBounds);
     mlir::Type arrayType = source.getElementOrSequenceType();
-    mlir::Value allocatedArray = builder.create<fir::AllocMemOp>(
-        loc, arrayType, /*typeparams=*/mlir::ValueRange{}, shape.getExtents());
-    mlir::Value firClass = builder.create<fir::EmboxOp>(loc, source.getType(),
-                                                        allocatedArray, shape);
+    mlir::Value allocatedArray = fir::AllocMemOp::create(
+        builder, loc, arrayType, /*typeparams=*/mlir::ValueRange{},
+        shape.getExtents());
+    mlir::Value firClass = fir::EmboxOp::create(builder, loc, source.getType(),
+                                                allocatedArray, shape);
     initializeIfDerivedTypeBox(
         builder, loc, firClass, source, needsInitialization,
         /*isFirstprivate=*/kind == DeclOperationKind::FirstPrivateOrLocalInit);
-    builder.create<fir::StoreOp>(loc, firClass, allocatedPrivVarArg);
+    fir::StoreOp::create(builder, loc, firClass, allocatedPrivVarArg);
     if (ifUnallocated)
       builder.setInsertionPointAfter(ifUnallocated);
     createYield(allocatedPrivVarArg);
@@ -502,22 +558,24 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedArray(
 
   // Allocating on the heap in case the whole reduction/privatization is nested
   // inside of a loop
-  auto [temp, needsDealloc] = createTempFromMold(loc, builder, source);
-  // if needsDealloc isn't statically false, add cleanup region. Always
-  // do this for allocatable boxes because they might have been re-allocated
-  // in the body of the loop/parallel region
+  auto temp = [&]() {
+    if (shouldAllocateTempOnStack(boxTy))
+      return createStackTempFromMold(loc, builder, source);
 
-  std::optional<int64_t> cstNeedsDealloc = fir::getIntIfConstant(needsDealloc);
-  assert(cstNeedsDealloc.has_value() &&
-         "createTempFromMold decides this statically");
-  if (cstNeedsDealloc.has_value() && *cstNeedsDealloc != false) {
-    mlir::OpBuilder::InsertionGuard guard(builder);
-    createCleanupRegion(converter, loc, argType, cleanupRegion, sym,
-                        isDoConcurrent);
-  } else {
-    assert(!isAllocatableOrPointer &&
-           "Pointer-like arrays must be heap allocated");
-  }
+    auto [temp, needsDealloc] = createTempFromMold(loc, builder, source);
+    // if needsDealloc, add cleanup region. Always
+    // do this for allocatable boxes because they might have been re-allocated
+    // in the body of the loop/parallel region
+    if (needsDealloc) {
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      createCleanupRegion(converter, loc, argType, cleanupRegion, sym,
+                          isDoConcurrent);
+    } else {
+      assert(!isAllocatableOrPointer &&
+             "Pointer-like arrays must be heap allocated");
+    }
+    return temp;
+  }();
 
   // Put the temporary inside of a box:
   // hlfir::genVariableBox doesn't handle non-default lower bounds
@@ -528,22 +586,21 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedArray(
   if (mlir::isa<fir::BaseBoxType>(temp.getType()))
     // the box created by the declare form createTempFromMold is missing
     // lower bounds info
-    box = builder.create<fir::ReboxOp>(loc, boxType, temp, shapeShift,
-                                       /*shift=*/mlir::Value{});
+    box = fir::ReboxOp::create(builder, loc, boxType, temp, shapeShift,
+                               /*shift=*/mlir::Value{});
   else
-    box = builder.create<fir::EmboxOp>(
-        loc, boxType, temp, shapeShift,
-        /*slice=*/mlir::Value{},
-        /*typeParams=*/llvm::ArrayRef<mlir::Value>{});
+    box = fir::EmboxOp::create(builder, loc, boxType, temp, shapeShift,
+                               /*slice=*/mlir::Value{},
+                               /*typeParams=*/llvm::ArrayRef<mlir::Value>{});
 
   if (scalarInitValue)
-    builder.create<hlfir::AssignOp>(loc, scalarInitValue, box);
+    hlfir::AssignOp::create(builder, loc, scalarInitValue, box);
 
   initializeIfDerivedTypeBox(
       builder, loc, box, getLoadedMoldArg(), needsInitialization,
       /*isFirstPrivate=*/kind == DeclOperationKind::FirstPrivateOrLocalInit);
 
-  builder.create<fir::StoreOp>(loc, box, allocatedPrivVarArg);
+  fir::StoreOp::create(builder, loc, box, allocatedPrivVarArg);
   if (ifUnallocated)
     builder.setInsertionPointAfter(ifUnallocated);
   createYield(allocatedPrivVarArg);
@@ -581,8 +638,8 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupUnboxedDerivedType(
   builder.setInsertionPointToStart(initBlock);
   mlir::Type boxedTy = fir::BoxType::get(valType);
   mlir::Value newBox =
-      builder.create<fir::EmboxOp>(loc, boxedTy, allocatedPrivVarArg);
-  mlir::Value moldBox = builder.create<fir::EmboxOp>(loc, boxedTy, moldArg);
+      fir::EmboxOp::create(builder, loc, boxedTy, allocatedPrivVarArg);
+  mlir::Value moldBox = fir::EmboxOp::create(builder, loc, boxedTy, moldArg);
   initializeIfDerivedTypeBox(builder, loc, newBox, moldBox, needsInitialization,
                              /*isFirstPrivate=*/kind ==
                                  DeclOperationKind::FirstPrivateOrLocalInit);
@@ -601,6 +658,10 @@ void PopulateInitAndCleanupRegionsHelper::populateByRefInitAndCleanupRegions() {
     assert(sym && "Symbol information is required to privatize derived types");
     assert(!scalarInitValue && "ScalarInitvalue is unused for privatization");
   }
+  // Only check for assumed rank if moldArg is a valid Fortran entity.
+  // Boxed types (like allocatable characters) may not be valid entities yet.
+  if (hlfir::isFortranEntity(moldArg) && hlfir::Entity{moldArg}.isAssumedRank())
+    TODO(loc, "Privatization of assumed rank variable");
   mlir::Type valTy = fir::unwrapRefType(argType);
 
   if (fir::isa_trivial(valTy)) {
@@ -613,6 +674,24 @@ void PopulateInitAndCleanupRegionsHelper::populateByRefInitAndCleanupRegions() {
 
   if (auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(valTy)) {
     builder.setInsertionPointToEnd(initBlock);
+
+    // For CUDA device allocatables, allocate the descriptor in managed
+    // memory so that CUF kernels can access it from the GPU.
+    if (sym && mlir::isa<fir::HeapType>(boxTy.getEleTy())) {
+      unsigned idx = Fortran::lower::getAllocatorIdx(sym->GetUltimate());
+      if (idx != kDefaultAllocator) {
+        cuf::DataAttributeAttr dataAttr =
+            Fortran::lower::translateSymbolCUFDataAttribute(
+                builder.getContext(), sym->GetUltimate());
+        allocatedPrivVarArg =
+            cuf::AllocOp::create(builder, loc, valTy,
+                                 /*uniq_name=*/llvm::StringRef{},
+                                 /*bindc_name=*/llvm::StringRef{}, dataAttr,
+                                 /*typeparams=*/mlir::ValueRange{},
+                                 /*shape=*/mlir::ValueRange{})
+                .getResult();
+      }
+    }
 
     // TODO: don't do this unless it is needed
     getLengthParameters(builder, loc, getLoadedMoldArg(), lenParams);
@@ -628,8 +707,10 @@ void PopulateInitAndCleanupRegionsHelper::populateByRefInitAndCleanupRegions() {
     bool isChar = fir::isa_char(innerTy);
     if (fir::isa_trivial(innerTy) || isDerived || isChar) {
       // boxed non-sequence value e.g. !fir.box<!fir.heap<i32>>
-      if ((isDerived || isChar) && (isReduction(kind) || scalarInitValue))
-        TODO(loc, "Reduction of an unsupported boxed type");
+      // Character types in reductions are supported, but derived types are not
+      // yet.
+      if (isDerived && (isReduction(kind) || scalarInitValue))
+        TODO(loc, "Reduction of an unsupported boxed derived type");
       initAndCleanupBoxedScalar(boxTy, needsInitialization);
       return;
     }
@@ -642,8 +723,17 @@ void PopulateInitAndCleanupRegionsHelper::populateByRefInitAndCleanupRegions() {
   }
 
   // Unboxed types:
-  if (auto boxCharTy = mlir::dyn_cast<fir::BoxCharType>(argType)) {
+  if (auto boxCharTy = mlir::dyn_cast<fir::BoxCharType>(valTy)) {
     initAndCleanupBoxchar(boxCharTy);
+    return;
+  }
+  // Handle unboxed character types (e.g., !fir.char<1,1>).
+  // For fixed-length character types, we just need to initialize the value.
+  if (fir::isa_char(valTy)) {
+    builder.setInsertionPointToEnd(initBlock);
+    if (scalarInitValue)
+      builder.createStoreWithConvert(loc, scalarInitValue, allocatedPrivVarArg);
+    createYield(allocatedPrivVarArg);
     return;
   }
   if (fir::isa_derived(valType)) {

@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s \
-// RUN: | mlir-opt -gpu-lower-to-nvvm-pipeline \
+// RUN: | mlir-opt -gpu-lower-to-nvvm-pipeline="allow-pattern-rollback=0" \
 // RUN: | mlir-runner \
 // RUN:   --shared-libs=%mlir_cuda_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \

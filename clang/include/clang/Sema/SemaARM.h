@@ -44,8 +44,8 @@ public:
 
   bool CheckImmediateArg(CallExpr *TheCall, unsigned CheckTy, unsigned ArgIdx,
                          unsigned EltBitWidth, unsigned VecBitWidth);
-  bool CheckARMBuiltinExclusiveCall(unsigned BuiltinID, CallExpr *TheCall,
-                                    unsigned MaxWidth);
+  bool CheckARMBuiltinExclusiveCall(const TargetInfo &TI, unsigned BuiltinID,
+                                    CallExpr *TheCall);
   bool CheckNeonBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
                                     CallExpr *TheCall);
   bool PerformNeonImmChecks(
@@ -91,6 +91,15 @@ public:
   /// Return true if the given vector types are lax-compatible SVE vector types,
   /// false otherwise.
   bool areLaxCompatibleSveTypes(QualType FirstType, QualType SecondType);
+
+  bool checkTargetVersionAttr(const StringRef Param, const SourceLocation Loc,
+                              SmallString<64> &NewParam);
+  bool checkTargetClonesAttr(SmallVectorImpl<StringRef> &Params,
+                             SmallVectorImpl<SourceLocation> &Locs,
+                             SmallVectorImpl<SmallString<64>> &NewParams);
+  bool checkSVETypeSupport(QualType Ty, SourceLocation Loc,
+                           const FunctionDecl *FD,
+                           const llvm::StringMap<bool> &FeatureMap);
 };
 
 SemaARM::ArmStreamingType getArmStreamingFnType(const FunctionDecl *FD);

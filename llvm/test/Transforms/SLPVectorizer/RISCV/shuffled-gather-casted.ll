@@ -58,14 +58,33 @@ define i32 @test1(ptr %p) {
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[D_0:%.*]] = load i16, ptr [[P]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i16> <i16 poison, i16 0, i16 0, i16 0>, i16 [[D_0]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i16> [[TMP0]] to <4 x i32>
-; CHECK-NEXT:    [[TMP2:%.*]] = or <4 x i32> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = and <4 x i32> [[TMP2]], <i32 -1, i32 -16383, i32 65535, i32 -1>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> <i32 -1, i32 -16383, i32 65535, i32 -1>, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i32> [[TMP4]], <i32 65535, i32 -16383, i32 65535, i32 65535>
-; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP5]], <4 x i32> [[TMP6]], <4 x i32> <i32 4, i32 3, i32 2, i32 1>
-; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP7]])
+; CHECK-NEXT:    [[ZEXT_D_0:%.*]] = zext i16 [[D_0]] to i32
+; CHECK-NEXT:    [[ZERO_0:%.*]] = zext i16 0 to i32
+; CHECK-NEXT:    [[ZERO_1:%.*]] = zext i16 0 to i32
+; CHECK-NEXT:    [[ZERO_2:%.*]] = zext i16 0 to i32
+; CHECK-NEXT:    [[OR_D_0:%.*]] = or i32 [[ZEXT_D_0]], 0
+; CHECK-NEXT:    [[OR_ZERO_0:%.*]] = or i32 [[ZERO_0]], 0
+; CHECK-NEXT:    [[OR_ZERO_1:%.*]] = or i32 [[ZERO_1]], 0
+; CHECK-NEXT:    [[OR_ZERO_2:%.*]] = or i32 [[ZERO_2]], 0
+; CHECK-NEXT:    [[SZERO_2:%.*]] = sext i16 -1 to i32
+; CHECK-NEXT:    [[SZERO_0:%.*]] = sext i16 -16383 to i32
+; CHECK-NEXT:    [[UZERO_1:%.*]] = zext i16 -1 to i32
+; CHECK-NEXT:    [[SZERO_3:%.*]] = sext i16 -1 to i32
+; CHECK-NEXT:    [[ZERO_D_0:%.*]] = and i32 [[OR_D_0]], [[SZERO_2]]
+; CHECK-NEXT:    [[AND_ZERO_0:%.*]] = and i32 [[OR_ZERO_0]], [[SZERO_0]]
+; CHECK-NEXT:    [[AND_ZERO_1:%.*]] = and i32 [[OR_ZERO_1]], [[UZERO_1]]
+; CHECK-NEXT:    [[AND_ZERO_2:%.*]] = and i32 [[OR_ZERO_2]], [[SZERO_3]]
+; CHECK-NEXT:    [[D_0_GT_0:%.*]] = icmp eq i32 [[ZEXT_D_0]], 65535
+; CHECK-NEXT:    [[FALSE_0:%.*]] = icmp eq i32 [[SZERO_0]], -16383
+; CHECK-NEXT:    [[FALSE_1:%.*]] = icmp eq i32 [[UZERO_1]], 65535
+; CHECK-NEXT:    [[FALSE_2:%.*]] = icmp eq i32 [[SZERO_3]], 65535
+; CHECK-NEXT:    [[SELECT_0_2:%.*]] = select i1 [[D_0_GT_0]], i32 [[ZERO_D_0]], i32 4
+; CHECK-NEXT:    [[SELECT_1_0:%.*]] = select i1 [[FALSE_0]], i32 [[AND_ZERO_0]], i32 3
+; CHECK-NEXT:    [[SELECT_2_0:%.*]] = select i1 [[FALSE_1]], i32 [[AND_ZERO_1]], i32 2
+; CHECK-NEXT:    [[SELECT_3_0:%.*]] = select i1 [[FALSE_2]], i32 [[AND_ZERO_2]], i32 1
+; CHECK-NEXT:    [[MAX_0:%.*]] = add i32 [[SELECT_0_2]], [[SELECT_1_0]]
+; CHECK-NEXT:    [[MAX_1:%.*]] = add i32 [[MAX_0]], [[SELECT_2_0]]
+; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[MAX_1]], [[SELECT_3_0]]
 ; CHECK-NEXT:    ret i32 [[TMP8]]
 ;
 entry:

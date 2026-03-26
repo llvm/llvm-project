@@ -76,7 +76,9 @@ public:
 
   DumpValueObjectOptions &SetShowLocation(bool show = false);
 
-  DumpValueObjectOptions &SetUseObjectiveC(bool use = false);
+  DumpValueObjectOptions &DisableObjectDescription();
+
+  DumpValueObjectOptions &SetUseObjectDescription(bool use = false);
 
   DumpValueObjectOptions &SetShowSummary(bool show = true);
 
@@ -143,13 +145,14 @@ public:
   ChildPrintingDecider m_child_printing_decider;
   PointerAsArraySettings m_pointer_as_array;
   unsigned m_expand_ptr_type_flags = 0;
+  // The following flags commonly default to false.
   bool m_use_synthetic : 1;
   bool m_scope_already_checked : 1;
   bool m_flat_output : 1;
   bool m_ignore_cap : 1;
   bool m_show_types : 1;
   bool m_show_location : 1;
-  bool m_use_objc : 1;
+  bool m_use_object_desc : 1;
   bool m_hide_root_type : 1;
   bool m_hide_root_name : 1;
   bool m_hide_name : 1;

@@ -27,17 +27,32 @@
 // CHECK111: "-cc1"
 // CHECK111-NOT: "-internal-externc-isystem"
 
+// RUN: %clang -### --target=hexagon-unknown-elf \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -resource-dir=%S/Inputs/resource_dir %s 2>&1 | FileCheck -check-prefix=CHECK-RESOURCE-DIR %s
+// CHECK-RESOURCE-DIR: InstalledDir: [[INSTALLED_DIR:.+]]
+// CHECK-RESOURCE-DIR: "-cc1"
+// CHECK-RESOURCE-DIR: "-resource-dir" "[[RESOURCE:[^"]+]]"
+// CHECK-RESOURCE-DIR: "-internal-isystem" "[[RESOURCE]]{{/|\\\\}}include"
+// CHECK-RESOURCE-DIR: "-internal-externc-isystem" "{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/include"
+
 // RUN: %clangxx -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -nostdinc++ %s 2>&1 | FileCheck -check-prefix=CHECK112 %s
+// CHECK112: InstalledDir: [[INSTALLED_DIR:.+]]
 // CHECK112: "-cc1"
+// CHECK112: "-resource-dir" "[[RESOURCE:[^"]+]]"
+// CHECK112: "-internal-isystem" "[[RESOURCE]]{{/|\\\\}}include"
 // CHECK112-NOT: "-internal-isystem"
 // CHECK112-DAG: "-internal-externc-isystem" "{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/include"
 
 // RUN: %clangxx -### --target=hexagon-unknown-elf -fno-integrated-as    \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/qc/bin \
 // RUN:   -nostdlibinc %s 2>&1 | FileCheck -check-prefix=CHECK113 %s
+// CHECK113: InstalledDir: [[INSTALLED_DIR:.+]]
 // CHECK113: "-cc1"
+// CHECK113: "-resource-dir" "[[RESOURCE:[^"]+]]"
+// CHECK113: "-internal-isystem" "[[RESOURCE]]{{/|\\\\}}include"
 // CHECK113-NOT: "-internal-isystem"
 // CHECK113-NOT: "-internal-externc-isystem"
 
@@ -165,6 +180,13 @@
 // RUN:   %s 2>&1 | FileCheck -check-prefix=CHECK250 %s
 // CHECK250: "-cc1" {{.*}} "-target-cpu" "hexagonv79"
 // CHECK250: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v79/crt0
+
+// RUN: not %clang -### --target=hexagon-unknown-elf \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv81 -fuse-ld=hexagon-link \
+// RUN:   %s 2>&1 | FileCheck -check-prefix=CHECK260 %s
+// CHECK260: "-cc1" {{.*}} "-target-cpu" "hexagonv81"
+// CHECK260: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v81/crt0
 
 // -----------------------------------------------------------------------------
 // Test Linker related args

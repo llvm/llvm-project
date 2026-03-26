@@ -46,12 +46,12 @@ OPTIONS
 
  Write output in LLVM intermediate language (instead of bitcode).
 
-.. option:: -{passname}
+.. option:: -passes=<string>
 
- :program:`opt` provides the ability to run any of LLVM's optimization or
- analysis passes in any order.  The :option:`-help` option lists all the passes
- available.  The order in which the options occur on the command line are the
- order in which they are executed (within pass constraints).
+ A textual (comma-separated) description of the pass pipeline,
+ e.g., ``-passes="sroa,instcombine"``. See
+ `invoking opt <../NewPassManager.html#invoking-opt>`_ for more details on the
+ pass pipeline syntax.
 
 .. option:: -strip-debug
 
@@ -69,6 +69,12 @@ OPTIONS
 .. option:: -stats
 
  Print statistics.
+
+.. option:: --save-stats, --save-stats=cwd, --save-stats=obj
+
+ Save LLVM statistics to a file in the current directory
+ (:option:`--save-stats`/"--save-stats=cwd") or the directory
+ of the output file ("--save-stats=obj") in JSON format.
 
 .. option:: -time-passes
 

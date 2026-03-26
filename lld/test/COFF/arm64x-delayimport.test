@@ -21,7 +21,7 @@ IMPORTS-NEXT:   Name: test.dll
 IMPORTS-NEXT:   Attributes: 0x1
 IMPORTS-NEXT:   ModuleHandle: 0x6080
 IMPORTS-NEXT:   ImportAddressTable: 0x6088
-IMPORTS-NEXT:   ImportNameTable: 0x4390
+IMPORTS-NEXT:   ImportNameTable: 0x4388
 IMPORTS-NEXT:   BoundDelayImportTable: 0x0
 IMPORTS-NEXT:   UnloadDelayImportTable: 0x0
 IMPORTS-NEXT:   Import {
@@ -35,7 +35,7 @@ IMPORTS-NEXT:     Name: test.dll
 IMPORTS-NEXT:     Attributes: 0x1
 IMPORTS-NEXT:     ModuleHandle: 0x6080
 IMPORTS-NEXT:     ImportAddressTable: 0x6098
-IMPORTS-NEXT:     ImportNameTable: 0x43A0
+IMPORTS-NEXT:     ImportNameTable: 0x4398
 IMPORTS-NEXT:     BoundDelayImportTable: 0x0
 IMPORTS-NEXT:     UnloadDelayImportTable: 0x0
 IMPORTS-NEXT:     Import {
@@ -61,31 +61,35 @@ DISASM-NEXT: 180001010: d61f0200     br      x16
 DISASM-NEXT: 180001014: b0000031     adrp    x17, 0x180006000
 DISASM-NEXT: 180001018: 91022231     add     x17, x17, #0x88
 DISASM-NEXT: 18000101c: 14000001     b       0x180001020 <.text+0x20>
-DISASM-NEXT: 180001020: a9b37bfd     stp     x29, x30, [sp, #-0xd0]!
+DISASM-NEXT: 180001020: a9b27bfd     stp     x29, x30, [sp, #-0xe0]!
 DISASM-NEXT: 180001024: 910003fd     mov     x29, sp
 DISASM-NEXT: 180001028: a90107e0     stp     x0, x1, [sp, #0x10]
 DISASM-NEXT: 18000102c: a9020fe2     stp     x2, x3, [sp, #0x20]
 DISASM-NEXT: 180001030: a90317e4     stp     x4, x5, [sp, #0x30]
 DISASM-NEXT: 180001034: a9041fe6     stp     x6, x7, [sp, #0x40]
-DISASM-NEXT: 180001038: ad0287e0     stp     q0, q1, [sp, #0x50]
-DISASM-NEXT: 18000103c: ad038fe2     stp     q2, q3, [sp, #0x70]
-DISASM-NEXT: 180001040: ad0497e4     stp     q4, q5, [sp, #0x90]
-DISASM-NEXT: 180001044: ad059fe6     stp     q6, q7, [sp, #0xb0]
-DISASM-NEXT: 180001048: aa1103e1     mov     x1, x17
-DISASM-NEXT: 18000104c: f0000000     adrp    x0, 0x180004000
-DISASM-NEXT: 180001050: 910d4000     add     x0, x0, #0x350
-DISASM-NEXT: 180001054: 97ffffeb     bl      0x180001000 <.text>
-DISASM-NEXT: 180001058: aa0003f0     mov     x16, x0
-DISASM-NEXT: 18000105c: ad459fe6     ldp     q6, q7, [sp, #0xb0]
-DISASM-NEXT: 180001060: ad4497e4     ldp     q4, q5, [sp, #0x90]
-DISASM-NEXT: 180001064: ad438fe2     ldp     q2, q3, [sp, #0x70]
-DISASM-NEXT: 180001068: ad4287e0     ldp     q0, q1, [sp, #0x50]
-DISASM-NEXT: 18000106c: a9441fe6     ldp     x6, x7, [sp, #0x40]
-DISASM-NEXT: 180001070: a94317e4     ldp     x4, x5, [sp, #0x30]
-DISASM-NEXT: 180001074: a9420fe2     ldp     x2, x3, [sp, #0x20]
-DISASM-NEXT: 180001078: a94107e0     ldp     x0, x1, [sp, #0x10]
-DISASM-NEXT: 18000107c: a8cd7bfd     ldp     x29, x30, [sp], #0xd0
-DISASM-NEXT: 180001080: d61f0200     br      x16
+DISASM-NEXT: 180001038: f9002be8     str     x8,     [sp, #0x50]
+DISASM-NEXT: 18000103c: ad0307e0     stp     q0, q1, [sp, #0x60]
+DISASM-NEXT: 180001040: ad040fe2     stp     q2, q3, [sp, #0x80]
+DISASM-NEXT: 180001044: ad0517e4     stp     q4, q5, [sp, #0xa0]
+DISASM-NEXT: 180001048: ad061fe6     stp     q6, q7, [sp, #0xc0]
+DISASM-NEXT: 18000104c: aa1103e1     mov     x1, x17
+DISASM-NEXT: 180001050: f0000000     adrp    x0, 0x180004000
+DISASM-NEXT: 180001054: 910d2000     add     x0, x0, #0x348
+DISASM-NEXT: 180001058: 90000002     adrp    x2, 0x180001000 <.text>
+DISASM-NEXT: 18000105c: 91000042     add     x2, x2, #0x0
+DISASM-NEXT: 180001060: d63f0040     blr     x2
+DISASM-NEXT: 180001064: aa0003f0     mov     x16, x0
+DISASM-NEXT: 180001068: ad461fe6     ldp     q6, q7, [sp, #0xc0]
+DISASM-NEXT: 18000106c: ad4517e4     ldp     q4, q5, [sp, #0xa0]
+DISASM-NEXT: 180001070: ad440fe2     ldp     q2, q3, [sp, #0x80]
+DISASM-NEXT: 180001074: ad4307e0     ldp     q0, q1, [sp, #0x60]
+DISASM-NEXT: 180001078: f9402be8     ldr     x8,     [sp, #0x50]
+DISASM-NEXT: 18000107c: a9441fe6     ldp     x6, x7, [sp, #0x40]
+DISASM-NEXT: 180001080: a94317e4     ldp     x4, x5, [sp, #0x30]
+DISASM-NEXT: 180001084: a9420fe2     ldp     x2, x3, [sp, #0x20]
+DISASM-NEXT: 180001088: a94107e0     ldp     x0, x1, [sp, #0x10]
+DISASM-NEXT: 18000108c: a8ce7bfd     ldp     x29, x30, [sp], #0xe0
+DISASM-NEXT: 180001090: d61f0200     br      x16
 DISASM-NEXT:                 ...
 DISASM-NEXT: 180002000: 52800040     mov     w0, #0x2                // =2
 DISASM-NEXT: 180002004: d65f03c0     ret
@@ -105,28 +109,28 @@ DISASM-NEXT:                 ...
 DISASM-NEXT: 180003000: ff 25 92 30 00 00            jmpq    *0x3092(%rip)           # 0x180006098
 DISASM-NEXT: 180003006: 48 8d 05 8b 30 00 00         leaq    0x308b(%rip), %rax      # 0x180006098
 DISASM-NEXT: 18000300d: e9 00 00 00 00               jmp     0x180003012 <.text+0x2012>
-DISASM-NEXT: 180003012: 51                           pushq   %rcx
-DISASM-NEXT: 180003013: 52                           pushq   %rdx
-DISASM-NEXT: 180003014: 41 50                        pushq   %r8
-DISASM-NEXT: 180003016: 41 51                        pushq   %r9
-DISASM-NEXT: 180003018: 48 83 ec 48                  subq    $0x48, %rsp
-DISASM-NEXT: 18000301c: 66 0f 7f 04 24               movdqa  %xmm0, (%rsp)
-DISASM-NEXT: 180003021: 66 0f 7f 4c 24 10            movdqa  %xmm1, 0x10(%rsp)
-DISASM-NEXT: 180003027: 66 0f 7f 54 24 20            movdqa  %xmm2, 0x20(%rsp)
-DISASM-NEXT: 18000302d: 66 0f 7f 5c 24 30            movdqa  %xmm3, 0x30(%rsp)
-DISASM-NEXT: 180003033: 48 8b d0                     movq    %rax, %rdx
-DISASM-NEXT: 180003036: 48 8d 0d 13 13 00 00         leaq    0x1313(%rip), %rcx # 0x180004350
-DISASM-NEXT: 18000303d: e8 c6 ef ff ff               callq   0x180002008 <.text+0x1008>
-DISASM-NEXT: 180003042: 66 0f 6f 04 24               movdqa  (%rsp), %xmm0
-DISASM-NEXT: 180003047: 66 0f 6f 4c 24 10            movdqa  0x10(%rsp), %xmm1
-DISASM-NEXT: 18000304d: 66 0f 6f 54 24 20            movdqa  0x20(%rsp), %xmm2
-DISASM-NEXT: 180003053: 66 0f 6f 5c 24 30            movdqa  0x30(%rsp), %xmm3
-DISASM-NEXT: 180003059: 48 83 c4 48                  addq    $0x48, %rsp
-DISASM-NEXT: 18000305d: 41 59                        popq    %r9
-DISASM-NEXT: 18000305f: 41 58                        popq    %r8
-DISASM-NEXT: 180003061: 5a                           popq    %rdx
-DISASM-NEXT: 180003062: 59                           popq    %rcx
-DISASM-NEXT: 180003063: ff e0                        jmpq    *%rax
+DISASM-NEXT: 180003012: 48 89 4c 24 08               movq    %rcx, 0x8(%rsp)
+DISASM-NEXT: 180003017: 48 89 54 24 10               movq    %rdx, 0x10(%rsp)
+DISASM-NEXT: 18000301c: 4c 89 44 24 18               movq    %r8, 0x18(%rsp)
+DISASM-NEXT: 180003021: 4c 89 4c 24 20               movq    %r9, 0x20(%rsp)
+DISASM-NEXT: 180003026: 48 83 ec 68                  subq    $0x68, %rsp
+DISASM-NEXT: 18000302a: 66 0f 7f 44 24 20            movdqa  %xmm0, 0x20(%rsp)
+DISASM-NEXT: 180003030: 66 0f 7f 4c 24 30            movdqa  %xmm1, 0x30(%rsp)
+DISASM-NEXT: 180003036: 66 0f 7f 54 24 40            movdqa  %xmm2, 0x40(%rsp)
+DISASM-NEXT: 18000303c: 66 0f 7f 5c 24 50            movdqa  %xmm3, 0x50(%rsp)
+DISASM-NEXT: 180003042: 48 8b d0                     movq    %rax, %rdx
+DISASM-NEXT: 180003045: 48 8d 0d fc 12 00 00         leaq    0x12fc(%rip), %rcx      # 0x180004348
+DISASM-NEXT: 18000304c: e8 b7 ef ff ff               callq   0x180002008 <.text+0x1008>
+DISASM-NEXT: 180003051: 66 0f 6f 44 24 20            movdqa  0x20(%rsp), %xmm0
+DISASM-NEXT: 180003057: 66 0f 6f 4c 24 30            movdqa  0x30(%rsp), %xmm1
+DISASM-NEXT: 18000305d: 66 0f 6f 54 24 40            movdqa  0x40(%rsp), %xmm2
+DISASM-NEXT: 180003063: 66 0f 6f 5c 24 50            movdqa  0x50(%rsp), %xmm3
+DISASM-NEXT: 180003069: 48 8b 4c 24 70               movq    0x70(%rsp), %rcx
+DISASM-NEXT: 18000306e: 48 8b 54 24 78               movq    0x78(%rsp), %rdx
+DISASM-NEXT: 180003073: 4c 8b 84 24 80 00 00 00      movq    0x80(%rsp), %r8
+DISASM-NEXT: 18000307b: 4c 8b 8c 24 88 00 00 00      movq    0x88(%rsp), %r9
+DISASM-NEXT: 180003083: 48 83 c4 68                  addq    $0x68, %rsp
+DISASM-NEXT: 180003087: ff e0                        jmpq    *%rax
 
 RUN: llvm-readobj --coff-load-config out.dll | FileCheck --check-prefix=LOADCFG %s
 LOADCFG:      AuxiliaryDelayloadIAT: 0x5000
@@ -184,31 +188,35 @@ NATIVE-DISASM-NEXT: 180001010: d61f0200     br      x16
 NATIVE-DISASM-NEXT: 180001014: 90000031     adrp    x17, 0x180005000
 NATIVE-DISASM-NEXT: 180001018: 91022231     add     x17, x17, #0x88
 NATIVE-DISASM-NEXT: 18000101c: 14000001     b       0x180001020 <.text+0x20>
-NATIVE-DISASM-NEXT: 180001020: a9b37bfd     stp     x29, x30, [sp, #-0xd0]!
+NATIVE-DISASM-NEXT: 180001020: a9b27bfd     stp     x29, x30, [sp, #-0xe0]!
 NATIVE-DISASM-NEXT: 180001024: 910003fd     mov     x29, sp
 NATIVE-DISASM-NEXT: 180001028: a90107e0     stp     x0, x1, [sp, #0x10]
 NATIVE-DISASM-NEXT: 18000102c: a9020fe2     stp     x2, x3, [sp, #0x20]
 NATIVE-DISASM-NEXT: 180001030: a90317e4     stp     x4, x5, [sp, #0x30]
 NATIVE-DISASM-NEXT: 180001034: a9041fe6     stp     x6, x7, [sp, #0x40]
-NATIVE-DISASM-NEXT: 180001038: ad0287e0     stp     q0, q1, [sp, #0x50]
-NATIVE-DISASM-NEXT: 18000103c: ad038fe2     stp     q2, q3, [sp, #0x70]
-NATIVE-DISASM-NEXT: 180001040: ad0497e4     stp     q4, q5, [sp, #0x90]
-NATIVE-DISASM-NEXT: 180001044: ad059fe6     stp     q6, q7, [sp, #0xb0]
-NATIVE-DISASM-NEXT: 180001048: aa1103e1     mov     x1, x17
-NATIVE-DISASM-NEXT: 18000104c: d0000000     adrp    x0, 0x180003000
-NATIVE-DISASM-NEXT: 180001050: 910cc000     add     x0, x0, #0x330
-NATIVE-DISASM-NEXT: 180001054: 97ffffeb     bl      0x180001000 <.text>
-NATIVE-DISASM-NEXT: 180001058: aa0003f0     mov     x16, x0
-NATIVE-DISASM-NEXT: 18000105c: ad459fe6     ldp     q6, q7, [sp, #0xb0]
-NATIVE-DISASM-NEXT: 180001060: ad4497e4     ldp     q4, q5, [sp, #0x90]
-NATIVE-DISASM-NEXT: 180001064: ad438fe2     ldp     q2, q3, [sp, #0x70]
-NATIVE-DISASM-NEXT: 180001068: ad4287e0     ldp     q0, q1, [sp, #0x50]
-NATIVE-DISASM-NEXT: 18000106c: a9441fe6     ldp     x6, x7, [sp, #0x40]
-NATIVE-DISASM-NEXT: 180001070: a94317e4     ldp     x4, x5, [sp, #0x30]
-NATIVE-DISASM-NEXT: 180001074: a9420fe2     ldp     x2, x3, [sp, #0x20]
-NATIVE-DISASM-NEXT: 180001078: a94107e0     ldp     x0, x1, [sp, #0x10]
-NATIVE-DISASM-NEXT: 18000107c: a8cd7bfd     ldp     x29, x30, [sp], #0xd0
-NATIVE-DISASM-NEXT: 180001080: d61f0200     br      x16
+NATIVE-DISASM-NEXT: 180001038: f9002be8     str     x8,     [sp, #0x50]
+NATIVE-DISASM-NEXT: 18000103c: ad0307e0     stp     q0, q1, [sp, #0x60]
+NATIVE-DISASM-NEXT: 180001040: ad040fe2     stp     q2, q3, [sp, #0x80]
+NATIVE-DISASM-NEXT: 180001044: ad0517e4     stp     q4, q5, [sp, #0xa0]
+NATIVE-DISASM-NEXT: 180001048: ad061fe6     stp     q6, q7, [sp, #0xc0]
+NATIVE-DISASM-NEXT: 18000104c: aa1103e1     mov     x1, x17
+NATIVE-DISASM-NEXT: 180001050: d0000000     adrp    x0, 0x180003000
+NATIVE-DISASM-NEXT: 180001054: 910cc000     add     x0, x0, #0x330
+NATIVE-DISASM-NEXT: 180001058: 90000002     adrp    x2, 0x180001000 <.text>
+NATIVE-DISASM-NEXT: 18000105c: 91000042     add     x2, x2, #0x0
+NATIVE-DISASM-NEXT: 180001060: d63f0040     blr     x2
+NATIVE-DISASM-NEXT: 180001064: aa0003f0     mov     x16, x0
+NATIVE-DISASM-NEXT: 180001068: ad461fe6     ldp     q6, q7, [sp, #0xc0]
+NATIVE-DISASM-NEXT: 18000106c: ad4517e4     ldp     q4, q5, [sp, #0xa0]
+NATIVE-DISASM-NEXT: 180001070: ad440fe2     ldp     q2, q3, [sp, #0x80]
+NATIVE-DISASM-NEXT: 180001074: ad4307e0     ldp     q0, q1, [sp, #0x60]
+NATIVE-DISASM-NEXT: 180001078: f9402be8     ldr     x8,     [sp, #0x50]
+NATIVE-DISASM-NEXT: 18000107c: a9441fe6     ldp     x6, x7, [sp, #0x40]
+NATIVE-DISASM-NEXT: 180001080: a94317e4     ldp     x4, x5, [sp, #0x30]
+NATIVE-DISASM-NEXT: 180001084: a9420fe2     ldp     x2, x3, [sp, #0x20]
+NATIVE-DISASM-NEXT: 180001088: a94107e0     ldp     x0, x1, [sp, #0x10]
+NATIVE-DISASM-NEXT: 18000108c: a8ce7bfd     ldp     x29, x30, [sp], #0xe0
+NATIVE-DISASM-NEXT: 180001090: d61f0200     br      x16
 
 RUN: llvm-readobj --coff-load-config out-native.dll | FileCheck --check-prefix=NATIVE-LOADCFG %s
 NATIVE-LOADCFG:      AuxiliaryDelayloadIAT: 0x4000
@@ -230,7 +238,7 @@ EC-IMPORTS-NEXT:   Name: test.dll
 EC-IMPORTS-NEXT:   Attributes: 0x1
 EC-IMPORTS-NEXT:   ModuleHandle: 0x6080
 EC-IMPORTS-NEXT:   ImportAddressTable: 0x6088
-EC-IMPORTS-NEXT:   ImportNameTable: 0x4388
+EC-IMPORTS-NEXT:   ImportNameTable: 0x4380
 EC-IMPORTS-NEXT:   BoundDelayImportTable: 0x0
 EC-IMPORTS-NEXT:   UnloadDelayImportTable: 0x0
 EC-IMPORTS-NEXT: }
@@ -243,7 +251,7 @@ EC-IMPORTS-NEXT:     Name: test.dll
 EC-IMPORTS-NEXT:     Attributes: 0x1
 EC-IMPORTS-NEXT:     ModuleHandle: 0x6080
 EC-IMPORTS-NEXT:     ImportAddressTable: 0x6090
-EC-IMPORTS-NEXT:     ImportNameTable: 0x4390
+EC-IMPORTS-NEXT:     ImportNameTable: 0x4388
 EC-IMPORTS-NEXT:     BoundDelayImportTable: 0x0
 EC-IMPORTS-NEXT:     UnloadDelayImportTable: 0x0
 EC-IMPORTS-NEXT:     Import {
@@ -279,28 +287,28 @@ EC-DISASM-NEXT:                 ...
 EC-DISASM-NEXT: 180003000: ff 25 8a 30 00 00            jmpq    *0x308a(%rip)           # 0x180006090
 EC-DISASM-NEXT: 180003006: 48 8d 05 83 30 00 00         leaq    0x3083(%rip), %rax      # 0x180006090
 EC-DISASM-NEXT: 18000300d: e9 00 00 00 00               jmp     0x180003012 <.text+0x2012>
-EC-DISASM-NEXT: 180003012: 51                           pushq   %rcx
-EC-DISASM-NEXT: 180003013: 52                           pushq   %rdx
-EC-DISASM-NEXT: 180003014: 41 50                        pushq   %r8
-EC-DISASM-NEXT: 180003016: 41 51                        pushq   %r9
-EC-DISASM-NEXT: 180003018: 48 83 ec 48                  subq    $0x48, %rsp
-EC-DISASM-NEXT: 18000301c: 66 0f 7f 04 24               movdqa  %xmm0, (%rsp)
-EC-DISASM-NEXT: 180003021: 66 0f 7f 4c 24 10            movdqa  %xmm1, 0x10(%rsp)
-EC-DISASM-NEXT: 180003027: 66 0f 7f 54 24 20            movdqa  %xmm2, 0x20(%rsp)
-EC-DISASM-NEXT: 18000302d: 66 0f 7f 5c 24 30            movdqa  %xmm3, 0x30(%rsp)
-EC-DISASM-NEXT: 180003033: 48 8b d0                     movq    %rax, %rdx
-EC-DISASM-NEXT: 180003036: 48 8d 0d 0b 13 00 00         leaq    0x130b(%rip), %rcx      # 0x180004348
-EC-DISASM-NEXT: 18000303d: e8 c6 ef ff ff               callq   0x180002008 <.text+0x1008>
-EC-DISASM-NEXT: 180003042: 66 0f 6f 04 24               movdqa  (%rsp), %xmm0
-EC-DISASM-NEXT: 180003047: 66 0f 6f 4c 24 10            movdqa  0x10(%rsp), %xmm1
-EC-DISASM-NEXT: 18000304d: 66 0f 6f 54 24 20            movdqa  0x20(%rsp), %xmm2
-EC-DISASM-NEXT: 180003053: 66 0f 6f 5c 24 30            movdqa  0x30(%rsp), %xmm3
-EC-DISASM-NEXT: 180003059: 48 83 c4 48                  addq    $0x48, %rsp
-EC-DISASM-NEXT: 18000305d: 41 59                        popq    %r9
-EC-DISASM-NEXT: 18000305f: 41 58                        popq    %r8
-EC-DISASM-NEXT: 180003061: 5a                           popq    %rdx
-EC-DISASM-NEXT: 180003062: 59                           popq    %rcx
-EC-DISASM-NEXT: 180003063: ff e0                        jmpq    *%rax
+EC-DISASM-NEXT: 180003012: 48 89 4c 24 08               movq    %rcx, 0x8(%rsp)
+EC-DISASM-NEXT: 180003017: 48 89 54 24 10               movq    %rdx, 0x10(%rsp)
+EC-DISASM-NEXT: 18000301c: 4c 89 44 24 18               movq    %r8, 0x18(%rsp)
+EC-DISASM-NEXT: 180003021: 4c 89 4c 24 20               movq    %r9, 0x20(%rsp)
+EC-DISASM-NEXT: 180003026: 48 83 ec 68                  subq    $0x68, %rsp
+EC-DISASM-NEXT: 18000302a: 66 0f 7f 44 24 20            movdqa  %xmm0, 0x20(%rsp)
+EC-DISASM-NEXT: 180003030: 66 0f 7f 4c 24 30            movdqa  %xmm1, 0x30(%rsp)
+EC-DISASM-NEXT: 180003036: 66 0f 7f 54 24 40            movdqa  %xmm2, 0x40(%rsp)
+EC-DISASM-NEXT: 18000303c: 66 0f 7f 5c 24 50            movdqa  %xmm3, 0x50(%rsp)
+EC-DISASM-NEXT: 180003042: 48 8b d0                     movq    %rax, %rdx
+EC-DISASM-NEXT: 180003045: 48 8d 0d f4 12 00 00         leaq    0x12f4(%rip), %rcx      # 0x180004340
+EC-DISASM-NEXT: 18000304c: e8 b7 ef ff ff               callq   0x180002008 <.text+0x1008>
+EC-DISASM-NEXT: 180003051: 66 0f 6f 44 24 20            movdqa  0x20(%rsp), %xmm0
+EC-DISASM-NEXT: 180003057: 66 0f 6f 4c 24 30            movdqa  0x30(%rsp), %xmm1
+EC-DISASM-NEXT: 18000305d: 66 0f 6f 54 24 40            movdqa  0x40(%rsp), %xmm2
+EC-DISASM-NEXT: 180003063: 66 0f 6f 5c 24 50            movdqa  0x50(%rsp), %xmm3
+EC-DISASM-NEXT: 180003069: 48 8b 4c 24 70               movq    0x70(%rsp), %rcx
+EC-DISASM-NEXT: 18000306e: 48 8b 54 24 78               movq    0x78(%rsp), %rdx
+EC-DISASM-NEXT: 180003073: 4c 8b 84 24 80 00 00 00      movq    0x80(%rsp), %r8
+EC-DISASM-NEXT: 18000307b: 4c 8b 8c 24 88 00 00 00      movq    0x88(%rsp), %r9
+EC-DISASM-NEXT: 180003083: 48 83 c4 68                  addq    $0x68, %rsp
+EC-DISASM-NEXT: 180003087: ff e0                        jmpq    *%rax
 
 RUN: llvm-readobj --coff-load-config out-ec.dll | FileCheck --check-prefix=EC-LOADCFG %s
 EC-LOADCFG:      AuxiliaryDelayloadIAT: 0x5000

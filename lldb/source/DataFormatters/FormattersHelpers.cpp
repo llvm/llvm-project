@@ -10,6 +10,7 @@
 
 
 #include "lldb/DataFormatters/FormattersHelpers.h"
+#include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
@@ -125,4 +126,29 @@ lldb_private::formatters::GetArrayAddressOrPointerValue(ValueObject &valobj) {
     return Address(data_addr.address, valobj.GetModule()->GetSectionList());
 
   return data_addr.address;
+}
+
+void lldb_private::formatters::DumpCxxSmartPtrPointerSummary(
+    Stream &stream, ValueObject &ptr, const TypeSummaryOptions &options) {
+  if (ptr.GetValueAsUnsigned(0) == 0) {
+    stream.Printf("nullptr");
+    return;
+  }
+
+  Status error;
+  ValueObjectSP pointee_sp = ptr.Dereference(error);
+  if (!pointee_sp || !error.Success())
+    return;
+
+  if (!pointee_sp->DumpPrintableRepresentation(
+          stream, ValueObject::eValueObjectRepresentationStyleSummary,
+          lldb::eFormatInvalid,
+          ValueObject::PrintableRepresentationSpecialCases::eDisable, false))
+    stream.Printf("ptr = 0x%" PRIx64, ptr.GetValueAsUnsigned(0));
+}
+
+bool lldb_private::formatters::ContainerSizeSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  return FormatEntity::Formatter(nullptr, nullptr, nullptr, false, false)
+      .FormatStringRef("size=${svar%#}", stream, &valobj);
 }

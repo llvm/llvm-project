@@ -12,6 +12,7 @@
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Target/DynamicRegisterInfo.h"
 #include "lldb/Target/MemoryTagManager.h"
+#include "lldb/Target/RegisterContextUnwind.h"
 
 namespace lldb_private {
 
@@ -128,6 +129,14 @@ public:
                                        DataExtractor &reg_data,
                                        RegisterContext &reg_context) const {
     return false;
+  }
+
+  /// Return an UnwindPlan that allows architecture-defined rules for finding
+  /// saved registers, given a particular set of register values.
+  virtual lldb::UnwindPlanSP GetArchitectureUnwindPlan(
+      lldb_private::Thread &thread, lldb_private::RegisterContextUnwind *regctx,
+      std::shared_ptr<const UnwindPlan> current_unwindplan) {
+    return lldb::UnwindPlanSP();
   }
 };
 

@@ -18,8 +18,7 @@ define void @test_pr55096(i64 %c, ptr %p) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i1> [[TMP2]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
-; CHECK-NEXT:    [[TMP4:%.*]] = add i16 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = add i16 [[TMP4]], 2008
+; CHECK-NEXT:    [[TMP5:%.*]] = add i16 [[OFFSET_IDX]], 2008
 ; CHECK-NEXT:    [[TMP6:%.*]] = udiv i16 4943, [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i16, ptr [[P]], i16 [[TMP6]]
 ; CHECK-NEXT:    store i16 0, ptr [[TMP7]], align 2
@@ -36,7 +35,7 @@ define void @test_pr55096(i64 %c, ptr %p) {
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE2]]
 ; CHECK:       pred.store.continue2:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <2 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], 340
 ; CHECK-NEXT:    br i1 [[TMP15]], label [[EXIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       exit:

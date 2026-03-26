@@ -8,8 +8,10 @@ extern "C"
 
 int foo()
 {
-    puts("foo");
-    return 2;
+  puts("foo"); //% self.expect("image lookup -va $pc",
+  //%                          substrs=[' name = "::foo()"',
+  //%                                   ' mangled = "foo"'])
+  return 2;
 }
 
 int main (int argc, char const *argv[], char const *envp[])

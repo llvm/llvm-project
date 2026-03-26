@@ -71,7 +71,7 @@ class NonLocalizedStringChecker
   // Methods that return a localized string
   mutable llvm::SmallSet<std::pair<const IdentifierInfo *, Selector>, 12> LSM;
   // C Functions that return a localized string
-  mutable llvm::SmallSet<const IdentifierInfo *, 5> LSF;
+  mutable llvm::SmallPtrSet<const IdentifierInfo *, 5> LSF;
 
   void initUIMethods(ASTContext &Ctx) const;
   void initLocStringsMethods(ASTContext &Ctx) const;

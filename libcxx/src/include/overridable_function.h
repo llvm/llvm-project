@@ -29,12 +29,12 @@
 // This is a low-level utility which does not work on all platforms, since it needs
 // to make assumptions about the object file format in use. Furthermore, it requires
 // the "base definition" of the function (the one we want to check whether it has been
-// overridden) to be defined using the _LIBCPP_OVERRIDABLE_FUNCTION macro.
+// overridden) to be defined using the OVERRIDABLE_FUNCTION macro.
 //
 // This currently works with Mach-O files (used on Darwin) and with ELF files (used on Linux
 // and others). On platforms where we know how to implement this detection, the macro
 // _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION is defined to 1, and it is defined to 0 on
-// other platforms. The _LIBCPP_OVERRIDABLE_FUNCTION macro is defined to perform a normal
+// other platforms. The OVERRIDABLE_FUNCTION macro is defined to perform a normal
 // function definition on unsupported platforms so that it can be used to define functions
 // regardless of whether detection is actually supported.
 //
@@ -44,7 +44,7 @@
 // Let's say we want to check whether a weak function `f` has been overridden by the user.
 // The general mechanism works by placing `f`'s definition (in the libc++ built library)
 // inside a special section, which we do using the `__section__` attribute via the
-// _LIBCPP_OVERRIDABLE_FUNCTION macro.
+// OVERRIDABLE_FUNCTION macro.
 //
 // Then, when comes the time to check whether the function has been overridden, we take
 // the address of the function and we check whether it falls inside the special function
@@ -66,11 +66,9 @@
 #if defined(_LIBCPP_OBJECT_FORMAT_MACHO)
 
 #  define _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION 1
-#  define _LIBCPP_OVERRIDABLE_FUNCTION(type, name, arglist)                                                            \
-    __attribute__((__section__("__TEXT,__lcxx_override,regular,pure_instructions"))) _LIBCPP_WEAK type name arglist
+#  define OVERRIDABLE_FUNCTION [[gnu::weak, gnu::section("__TEXT,__lcxx_override,regular,pure_instructions")]]
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-template <typename T, T* _Func>
+_LIBCPP_BEGIN_NAMESPACE_STD template <typename T, T* _Func>
 _LIBCPP_HIDE_FROM_ABI inline bool __is_function_overridden() noexcept {
   // Declare two dummy bytes and give them these special `__asm` values. These values are
   // defined by the linker, which means that referring to `&__lcxx_override_start` will
@@ -100,8 +98,7 @@ _LIBCPP_END_NAMESPACE_STD
 #elif defined(_LIBCPP_OBJECT_FORMAT_ELF) && !defined(__NVPTX__)
 
 #  define _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION 1
-#  define _LIBCPP_OVERRIDABLE_FUNCTION(type, name, arglist)                                                            \
-    __attribute__((__section__("__lcxx_override"))) _LIBCPP_WEAK type name arglist
+#  define OVERRIDABLE_FUNCTION [[gnu::weak, gnu::section("__lcxx_override")]]
 
 // This is very similar to what we do for Mach-O above. The ELF linker will implicitly define
 // variables with those names corresponding to the start and the end of the section.
@@ -129,7 +126,7 @@ _LIBCPP_END_NAMESPACE_STD
 #else
 
 #  define _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION 0
-#  define _LIBCPP_OVERRIDABLE_FUNCTION(type, name, arglist) _LIBCPP_WEAK type name arglist
+#  define OVERRIDABLE_FUNCTION [[gnu::weak]]
 
 #endif
 

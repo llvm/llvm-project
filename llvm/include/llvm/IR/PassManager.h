@@ -39,6 +39,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/IR/Analysis.h"
@@ -47,7 +48,6 @@
 #include "llvm/Support/TypeName.h"
 #include <cassert>
 #include <cstring>
-#include <iterator>
 #include <list>
 #include <memory>
 #include <tuple>
@@ -178,11 +178,10 @@ public:
 
   void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName) {
-    for (unsigned Idx = 0, Size = Passes.size(); Idx != Size; ++Idx) {
-      auto *P = Passes[Idx].get();
+    ListSeparator LS(",");
+    for (auto &P : Passes) {
+      OS << LS;
       P->printPipeline(OS, MapClassName2PassName);
-      if (Idx + 1 < Size)
-        OS << ',';
     }
   }
 
@@ -491,6 +490,22 @@ public:
   /// invalidate them, unless they are preserved by the PreservedAnalyses set.
   void invalidate(IRUnitT &IR, const PreservedAnalyses &PA);
 
+  /// Directly clear a cached analysis for an IR unit.
+  ///
+  /// Using invalidate() over this is preferred unless you are really
+  /// sure you want to *only* clear this analysis without asking if it is
+  /// invalid.
+  template <typename AnalysisT> void clearAnalysis(IRUnitT &IR) {
+    AnalysisResultListT &ResultsList = AnalysisResultLists[&IR];
+    AnalysisKey *ID = AnalysisT::ID();
+
+    auto I =
+        llvm::find_if(ResultsList, [&ID](auto &E) { return E.first == ID; });
+    assert(I != ResultsList.end() && "Analysis must be available");
+    ResultsList.erase(I);
+    AnalysisResults.erase({ID, &IR});
+  }
+
 private:
   /// Look up a registered analysis pass.
   PassConceptT &lookUpPass(AnalysisKey *ID) {
@@ -574,7 +589,7 @@ public:
 
     Result(Result &&Arg) : InnerAM(std::move(Arg.InnerAM)) {
       // We have to null out the analysis manager in the moved-from state
-      // because we are taking ownership of the responsibilty to clear the
+      // because we are taking ownership of the responsibility to clear the
       // analysis state.
       Arg.InnerAM = nullptr;
     }
@@ -592,7 +607,7 @@ public:
     Result &operator=(Result &&RHS) {
       InnerAM = RHS.InnerAM;
       // We have to null out the analysis manager in the moved-from state
-      // because we are taking ownership of the responsibilty to clear the
+      // because we are taking ownership of the responsibility to clear the
       // analysis state.
       RHS.InnerAM = nullptr;
       return *this;
@@ -641,8 +656,14 @@ private:
   AnalysisManagerT *InnerAM;
 };
 
+// NOTE: The LLVM_ABI annotation cannot be used here because MSVC disallows
+// storage-class specifiers on class members outside of the class declaration
+// (C2720). LLVM_ATTRIBUTE_VISIBILITY_DEFAULT only applies to non-Windows
+// targets so it is used instead. Without this annotation, compiling LLVM as a
+// shared library with -fvisibility=hidden using GCC fails to export the symbol
+// even though InnerAnalysisManagerProxy is already annotated with LLVM_ABI.
 template <typename AnalysisManagerT, typename IRUnitT, typename... ExtraArgTs>
-AnalysisKey
+LLVM_ATTRIBUTE_VISIBILITY_DEFAULT AnalysisKey
     InnerAnalysisManagerProxy<AnalysisManagerT, IRUnitT, ExtraArgTs...>::Key;
 
 /// Provide the \c FunctionAnalysisManager to \c Module proxy.

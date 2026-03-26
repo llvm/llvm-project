@@ -1,9 +1,9 @@
 // Check that memset() call from a shared library gets intercepted.
-
+// RUN: mkdir -p %t.dir && cd %t.dir
 // RUN: %clangxx_asan -O0 %s -DSHARED_LIB \
 // RUN:     -shared -o %dynamiclib -fPIC %ld_flags_rpath_so
-// RUN: %clangxx_asan -O0 %s -o %t %ld_flags_rpath_exe && \
-// RUN:     not %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_asan -O0 %s -o %t.dir/EXE %ld_flags_rpath_exe && \
+// RUN:     not %run %t.dir/EXE 2>&1 | FileCheck %s
 
 #include <stdio.h>
 #include <string.h>

@@ -9,6 +9,7 @@
 #include "DiagTool.h"
 #include "DiagnosticNames.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
@@ -55,7 +56,6 @@ static char getCharForLevel(DiagnosticsEngine::Level Level) {
 
 static IntrusiveRefCntPtr<DiagnosticsEngine>
 createDiagnostics(unsigned int argc, char **argv) {
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagIDs(new DiagnosticIDs());
   DiagnosticOptions DiagOpts;
 
   // Buffer diagnostics from argument parsing so that we can output them using a
@@ -67,7 +67,8 @@ createDiagnostics(unsigned int argc, char **argv) {
   Args.push_back("diagtool");
   Args.append(argv, argv + argc);
   CreateInvocationOptions CIOpts;
-  CIOpts.Diags = new DiagnosticsEngine(DiagIDs, DiagOpts, DiagsBuffer);
+  CIOpts.Diags = llvm::makeIntrusiveRefCnt<DiagnosticsEngine>(
+      DiagnosticIDs::create(), DiagOpts, DiagsBuffer);
   std::unique_ptr<CompilerInvocation> Invocation =
       createInvocation(Args, CIOpts);
   if (!Invocation)

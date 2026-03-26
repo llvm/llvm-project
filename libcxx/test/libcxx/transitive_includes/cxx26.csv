@@ -14,9 +14,7 @@ algorithm ratio
 algorithm tuple
 algorithm version
 any cstdint
-any cstring
 any initializer_list
-any limits
 any typeinfo
 any version
 array cctype
@@ -82,7 +80,6 @@ ccomplex ios
 ccomplex iosfwd
 ccomplex istream
 ccomplex limits
-ccomplex locale
 ccomplex ratio
 ccomplex sstream
 ccomplex stdexcept
@@ -120,7 +117,6 @@ chrono ios
 chrono iosfwd
 chrono istream
 chrono limits
-chrono locale
 chrono optional
 chrono ratio
 chrono sstream
@@ -177,7 +173,6 @@ complex ios
 complex iosfwd
 complex istream
 complex limits
-complex locale
 complex ratio
 complex sstream
 complex stdexcept
@@ -226,7 +221,6 @@ ctgmath ios
 ctgmath iosfwd
 ctgmath istream
 ctgmath limits
-ctgmath locale
 ctgmath ratio
 ctgmath sstream
 ctgmath stdexcept
@@ -251,7 +245,6 @@ deque stdexcept
 deque tuple
 deque version
 exception cstdint
-exception cstdlib
 exception typeinfo
 exception version
 execution version
@@ -278,7 +271,6 @@ experimental/iterator ios
 experimental/iterator iosfwd
 experimental/iterator iterator
 experimental/iterator limits
-experimental/iterator locale
 experimental/iterator ratio
 experimental/iterator stdexcept
 experimental/iterator streambuf
@@ -324,10 +316,8 @@ filesystem iomanip
 filesystem ios
 filesystem iosfwd
 filesystem limits
-filesystem locale
 filesystem ratio
 filesystem stdexcept
-filesystem streambuf
 filesystem string
 filesystem string_view
 filesystem tuple
@@ -364,7 +354,6 @@ format cctype
 format cerrno
 format climits
 format clocale
-format cmath
 format compare
 format cstddef
 format cstdint
@@ -412,7 +401,6 @@ fstream ios
 fstream iosfwd
 fstream istream
 fstream limits
-fstream locale
 fstream ratio
 fstream stdexcept
 fstream streambuf
@@ -455,7 +443,6 @@ future ios
 future iosfwd
 future istream
 future limits
-future locale
 future ratio
 future sstream
 future stdexcept
@@ -483,10 +470,8 @@ iomanip initializer_list
 iomanip ios
 iomanip iosfwd
 iomanip limits
-iomanip locale
 iomanip ratio
 iomanip stdexcept
-iomanip streambuf
 iomanip string
 iomanip string_view
 iomanip tuple
@@ -522,7 +507,6 @@ iostream cctype
 iostream cerrno
 iostream climits
 iostream clocale
-iostream cmath
 iostream compare
 iostream cstddef
 iostream cstdint
@@ -538,7 +522,6 @@ iostream ios
 iostream iosfwd
 iostream istream
 iostream limits
-iostream locale
 iostream optional
 iostream ostream
 iostream print
@@ -568,7 +551,6 @@ istream initializer_list
 istream ios
 istream iosfwd
 istream limits
-istream locale
 istream ratio
 istream stdexcept
 istream streambuf
@@ -669,6 +651,7 @@ memory_resource cerrno
 memory_resource climits
 memory_resource compare
 memory_resource cstdint
+memory_resource cstring
 memory_resource ctime
 memory_resource limits
 memory_resource ratio
@@ -678,11 +661,11 @@ mutex cerrno
 mutex climits
 mutex compare
 mutex cstdint
+mutex cstring
 mutex ctime
 mutex limits
 mutex ratio
 mutex tuple
-mutex typeinfo
 mutex version
 new version
 numbers version
@@ -709,7 +692,6 @@ ostream cctype
 ostream cerrno
 ostream climits
 ostream clocale
-ostream cmath
 ostream compare
 ostream cstddef
 ostream cstdint
@@ -724,7 +706,6 @@ ostream initializer_list
 ostream ios
 ostream iosfwd
 ostream limits
-ostream locale
 ostream optional
 ostream print
 ostream ratio
@@ -740,7 +721,6 @@ print cctype
 print cerrno
 print climits
 print clocale
-print cmath
 print compare
 print cstddef
 print cstdint
@@ -760,16 +740,11 @@ print string_view
 print tuple
 print typeinfo
 print version
-queue array
 queue cctype
-queue cerrno
 queue climits
-queue clocale
 queue compare
-queue cstddef
 queue cstdint
 queue cstdio
-queue cstdlib
 queue cstring
 queue cwchar
 queue cwctype
@@ -781,7 +756,6 @@ queue stdexcept
 queue string
 queue string_view
 queue tuple
-queue typeinfo
 queue vector
 queue version
 random cctype
@@ -805,6 +779,7 @@ random string
 random string_view
 random tuple
 random version
+ranges array
 ranges cctype
 ranges compare
 ranges concepts
@@ -826,9 +801,7 @@ ranges version
 ratio climits
 ratio cstdint
 ratio version
-regex array
 regex cctype
-regex cerrno
 regex climits
 regex clocale
 regex compare
@@ -876,6 +849,7 @@ set version
 shared_mutex cerrno
 shared_mutex climits
 shared_mutex cstdint
+shared_mutex cstring
 shared_mutex ctime
 shared_mutex limits
 shared_mutex ratio
@@ -905,7 +879,6 @@ sstream ios
 sstream iosfwd
 sstream istream
 sstream limits
-sstream locale
 sstream ratio
 sstream stdexcept
 sstream streambuf
@@ -1004,7 +977,6 @@ strstream ios
 strstream iosfwd
 strstream istream
 strstream limits
-strstream locale
 strstream ratio
 strstream stdexcept
 strstream streambuf
@@ -1019,7 +991,6 @@ syncstream cctype
 syncstream cerrno
 syncstream climits
 syncstream clocale
-syncstream cmath
 syncstream compare
 syncstream cstddef
 syncstream cstdint
@@ -1034,7 +1005,6 @@ syncstream initializer_list
 syncstream ios
 syncstream iosfwd
 syncstream limits
-syncstream locale
 syncstream map
 syncstream optional
 syncstream ostream
@@ -1086,7 +1056,6 @@ thread ios
 thread iosfwd
 thread istream
 thread limits
-thread locale
 thread ratio
 thread sstream
 thread stdexcept
@@ -1143,16 +1112,11 @@ variant cstring
 variant initializer_list
 variant limits
 variant version
-vector array
 vector cctype
-vector cerrno
 vector climits
-vector clocale
 vector compare
-vector cstddef
 vector cstdint
 vector cstdio
-vector cstdlib
 vector cstring
 vector cwchar
 vector cwctype
@@ -1163,5 +1127,4 @@ vector stdexcept
 vector string
 vector string_view
 vector tuple
-vector typeinfo
 vector version

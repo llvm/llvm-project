@@ -68,8 +68,8 @@ makeStridedMemRefDescriptor(T *ptr, T *alignedPtr, ArrayRef<int64_t> shape,
   assert(shape.size() == N);
   assert(shapeAlloc.size() == N);
   StridedMemRefType<T, N> descriptor;
-  descriptor.basePtr = static_cast<T *>(ptr);
-  descriptor.data = static_cast<T *>(alignedPtr);
+  descriptor.basePtr = ptr;
+  descriptor.data = alignedPtr;
   descriptor.offset = 0;
   std::copy(shape.begin(), shape.end(), descriptor.sizes);
   auto strides = makeStrides<N>(shapeAlloc);
@@ -89,8 +89,8 @@ makeStridedMemRefDescriptor(T *ptr, T *alignedPtr, ArrayRef<int64_t> shape = {},
   assert(shape.size() == N);
   assert(shapeAlloc.size() == N);
   StridedMemRefType<T, 0> descriptor;
-  descriptor.basePtr = static_cast<T *>(ptr);
-  descriptor.data = static_cast<T *>(alignedPtr);
+  descriptor.basePtr = ptr;
+  descriptor.data = alignedPtr;
   descriptor.offset = 0;
   return descriptor;
 }
@@ -151,7 +151,7 @@ public:
       AllocFunType allocFun = &::malloc,
       std::function<void(StridedMemRefType<T, Rank>)> freeFun =
           [](StridedMemRefType<T, Rank> descriptor) {
-            ::free(descriptor.data);
+            ::free(descriptor.basePtr);
           })
       : freeFunc(freeFun) {
     if (shapeAlloc.empty())
@@ -164,19 +164,17 @@ public:
     int64_t nElements = 1;
     for (int64_t s : shapeAlloc)
       nElements *= s;
-    auto [data, alignedData] =
+    auto [allocatedPtr, alignedData] =
         detail::allocAligned<T>(nElements, allocFun, alignment);
-    descriptor = detail::makeStridedMemRefDescriptor<Rank>(data, alignedData,
-                                                           shape, shapeAlloc);
+    descriptor = detail::makeStridedMemRefDescriptor<Rank>(
+        allocatedPtr, alignedData, shape, shapeAlloc);
     if (init) {
       for (StridedMemrefIterator<T, Rank> it = descriptor.begin(),
                                           end = descriptor.end();
            it != end; ++it)
         init(*it, it.getIndices());
     } else {
-      memset(descriptor.data, 0,
-             nElements * sizeof(T) +
-                 alignment.value_or(detail::nextPowerOf2(sizeof(T))));
+      memset(alignedData, 0, nElements * sizeof(T));
     }
   }
   /// Take ownership of an existing descriptor with a custom deleter.

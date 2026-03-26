@@ -196,10 +196,6 @@ public:
   /// module.
   virtual bool wasThisDeclarationADefinition(const FunctionDecl *FD);
 
-  virtual bool hasInitializerWithSideEffects(const VarDecl *VD) const {
-    return false;
-  }
-
   /// Finds all declarations lexically contained within the given
   /// DeclContext, after applying an optional filter predicate.
   ///
@@ -434,17 +430,6 @@ public:
     return GetPtr();
   }
 
-  /// Retrieve the pointer to the AST node that this lazy pointer points to,
-  /// if it can be done without triggering deserialization.
-  ///
-  /// \returns a pointer to the AST node, or null if not yet deserialized.
-  T *getWithoutDeserializing() const {
-    if (isOffset()) {
-      return nullptr;
-    }
-    return GetPtr();
-  }
-
   /// Retrieve the address of the AST node pointer. Deserializes the pointee if
   /// necessary.
   T **getAddressOfPointer(ExternalASTSource *Source) const {
@@ -545,7 +530,7 @@ struct PointerLikeTypeTraits<
   static Ptr getFromVoidPointer(void *P) { return Ptr::getFromOpaqueValue(P); }
 
   static constexpr int NumLowBitsAvailable =
-      PointerLikeTypeTraits<T>::NumLowBitsAvailable - 1;
+      PointerLikeTypeTraits<typename Ptr::ValueType>::NumLowBitsAvailable;
 };
 
 } // namespace llvm

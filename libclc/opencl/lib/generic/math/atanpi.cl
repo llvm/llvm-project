@@ -6,10 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/math/clc_atanpi.h>
-#include <clc/opencl/clc.h>
+#include "clc/math/clc_atanpi.h"
 
-#define FUNCTION atanpi
-#define __CLC_BODY <clc/shared/unary_def.inc>
+#define __CLC_FUNCTION atanpi
+#define __CLC_BODY "clc/shared/unary_def.inc"
 
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"

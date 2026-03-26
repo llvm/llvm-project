@@ -16,6 +16,9 @@ bar:
 ; CHECK: brge bar            ; encoding: [0bAAAAA100,0b111101AA]
 
 ; INST-LABEL: <foo>:
-; INST-NEXT: cc f4      brge .+50
-; INST-NEXT: ac f4      brge .+42
-; INST-NEXT: 04 f4      brge .+0
+; INST-NEXT: fc f7      brge .-2
+; INST-NEXT: R_AVR_7_PCREL .text+0x34
+; INST-NEXT: fc f7      brge .-2
+; INST-NEXT: R_AVR_7_PCREL .text+0x2e
+; INST-NEXT: fc f7      brge .-2
+; INST-NEXT: R_AVR_7_PCREL .text+0x6

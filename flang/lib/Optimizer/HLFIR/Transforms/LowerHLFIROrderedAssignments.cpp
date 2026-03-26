@@ -96,7 +96,7 @@ struct MaskedArrayExpr {
   /// hlfir.elemental_addr that form the elemental tree producing
   /// the expression value. hlfir.elemental that produce values
   /// used inside transformational operations are not part of this set.
-  llvm::SmallSet<mlir::Operation *, 4> elementalParts{};
+  hlfir::ElementalTree elementalParts;
   /// Was generateNoneElementalPart called?
   bool noneElementalPartWasGenerated = false;
   /// Is this expression the mask expression of the outer where statement?
@@ -377,7 +377,7 @@ void OrderedAssignmentRewriter::pre(hlfir::ForallOp forallOp) {
   } else {
     step = generateYieldedScalarValue(forallOp.getStepRegion(), idxTy);
   }
-  auto doLoop = builder.create<fir::DoLoopOp>(loc, lb, ub, step);
+  auto doLoop = fir::DoLoopOp::create(builder, loc, lb, ub, step);
   builder.setInsertionPointToStart(doLoop.getBody());
   mlir::Value oldIndex = forallOp.getForallIndexValue();
   mlir::Value newIndex =
@@ -405,7 +405,7 @@ void OrderedAssignmentRewriter::pre(hlfir::ForallMaskOp forallMaskOp) {
   mlir::Location loc = forallMaskOp.getLoc();
   mlir::Value mask = generateYieldedScalarValue(forallMaskOp.getMaskRegion(),
                                                 builder.getI1Type());
-  auto ifOp = builder.create<fir::IfOp>(loc, std::nullopt, mask, false);
+  auto ifOp = fir::IfOp::create(builder, loc, mlir::TypeRange{}, mask, false);
   builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
   constructStack.push_back(ifOp);
 }
@@ -431,14 +431,14 @@ convertToMoldType(mlir::Location loc, fir::FirOpBuilder &builder,
   if (input.isVariable() && mold.isValue()) {
     if (fir::isa_trivial(mold.getType())) {
       // fir.ref<T> to T.
-      mlir::Value load = builder.create<fir::LoadOp>(loc, input);
+      mlir::Value load = fir::LoadOp::create(builder, loc, input);
       return hlfir::Entity{builder.createConvert(loc, mold.getType(), load)};
     }
     // fir.ref<T> to hlfir.expr<T>.
-    mlir::Value asExpr = builder.create<hlfir::AsExprOp>(loc, input);
+    mlir::Value asExpr = hlfir::AsExprOp::create(builder, loc, input);
     if (asExpr.getType() != mold.getType())
       TODO(loc, "hlfir.expr conversion");
-    cleanups.emplace_back([=]() { b->create<hlfir::DestroyOp>(loc, asExpr); });
+    cleanups.emplace_back([=]() { hlfir::DestroyOp::create(*b, loc, asExpr); });
     return hlfir::Entity{asExpr};
   }
   if (input.isValue() && mold.isVariable()) {
@@ -446,7 +446,7 @@ convertToMoldType(mlir::Location loc, fir::FirOpBuilder &builder,
     hlfir::AssociateOp associate = hlfir::genAssociateExpr(
         loc, builder, input, mold.getFortranElementType(), ".tmp.val2ref");
     cleanups.emplace_back(
-        [=]() { b->create<hlfir::EndAssociateOp>(loc, associate); });
+        [=]() { hlfir::EndAssociateOp::create(*b, loc, associate); });
     return hlfir::Entity{associate.getBase()};
   }
   // Variable to Variable mismatch (e.g., fir.heap<T> vs fir.ref<T>), or value
@@ -517,7 +517,10 @@ void OrderedAssignmentRewriter::pre(hlfir::RegionAssignOp regionAssignOp) {
   } else {
     // TODO: preserve allocatable assignment aspects for forall once
     // they are conveyed in hlfir.region_assign.
-    builder.create<hlfir::AssignOp>(loc, rhsEntity, lhsEntity);
+    auto assignOp = hlfir::AssignOp::create(builder, loc, rhsEntity, lhsEntity);
+    if (auto accessGroups = regionAssignOp->getAttrOfType<mlir::ArrayAttr>(
+            fir::getAccessGroupsAttrName()))
+      assignOp->setAttr(fir::getAccessGroupsAttrName(), accessGroups);
   }
   generateCleanupIfAny(loweredLhs.elementalCleanup);
   if (loweredLhs.vectorSubscriptLoopNest)
@@ -530,8 +533,8 @@ void OrderedAssignmentRewriter::generateMaskIfOp(mlir::Value cdt) {
   mlir::Location loc = cdt.getLoc();
   cdt = hlfir::loadTrivialScalar(loc, builder, hlfir::Entity{cdt});
   cdt = builder.createConvert(loc, builder.getI1Type(), cdt);
-  auto ifOp = builder.create<fir::IfOp>(cdt.getLoc(), std::nullopt, cdt,
-                                        /*withElseRegion=*/false);
+  auto ifOp = fir::IfOp::create(builder, cdt.getLoc(), mlir::TypeRange{}, cdt,
+                                /*withElseRegion=*/false);
   constructStack.push_back(ifOp.getOperation());
   builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
 }
@@ -604,7 +607,7 @@ void OrderedAssignmentRewriter::enterElsewhere(hlfir::ElseWhereOp elseWhereOp) {
   if (ifOp.getElseRegion().empty()) {
     mlir::Location loc = elseWhereOp.getLoc();
     builder.createBlock(&ifOp.getElseRegion());
-    auto end = builder.create<fir::ResultOp>(loc);
+    auto end = fir::ResultOp::create(builder, loc);
     builder.setInsertionPoint(end);
   } else {
     builder.setInsertionPoint(&ifOp.getElseRegion().back().back());
@@ -897,62 +900,11 @@ bool OrderedAssignmentRewriter::isRequiredInCurrentRun(
   return false;
 }
 
-/// Is the apply using all the elemental indices in order?
-static bool isInOrderApply(hlfir::ApplyOp apply,
-                           hlfir::ElementalOpInterface elemental) {
-  mlir::Region::BlockArgListType elementalIndices = elemental.getIndices();
-  if (elementalIndices.size() != apply.getIndices().size())
-    return false;
-  for (auto [elementalIdx, applyIdx] :
-       llvm::zip(elementalIndices, apply.getIndices()))
-    if (elementalIdx != applyIdx)
-      return false;
-  return true;
-}
-
-/// Gather the tree of hlfir::ElementalOpInterface use-def, if any, starting
-/// from \p elemental, which may be a nullptr.
-static void
-gatherElementalTree(hlfir::ElementalOpInterface elemental,
-                    llvm::SmallPtrSetImpl<mlir::Operation *> &elementalOps,
-                    bool isOutOfOrder) {
-  if (elemental) {
-    // Only inline an applied elemental that must be executed in order if the
-    // applying indices are in order. An hlfir::Elemental may have been created
-    // for a transformational like transpose, and Fortran 2018 standard
-    // section 10.2.3.2, point 10 imply that impure elemental sub-expression
-    // evaluations should not be masked if they are the arguments of
-    // transformational expressions.
-    if (isOutOfOrder && elemental.isOrdered())
-      return;
-    elementalOps.insert(elemental.getOperation());
-    for (mlir::Operation &op : elemental.getElementalRegion().getOps())
-      if (auto apply = mlir::dyn_cast<hlfir::ApplyOp>(op)) {
-        bool isUnorderedApply =
-            isOutOfOrder || !isInOrderApply(apply, elemental);
-        auto maybeElemental =
-            mlir::dyn_cast_or_null<hlfir::ElementalOpInterface>(
-                apply.getExpr().getDefiningOp());
-        gatherElementalTree(maybeElemental, elementalOps, isUnorderedApply);
-      }
-  }
-}
-
 MaskedArrayExpr::MaskedArrayExpr(mlir::Location loc, mlir::Region &region,
                                  bool isOuterMaskExpr)
     : loc{loc}, region{region}, isOuterMaskExpr{isOuterMaskExpr} {
   mlir::Operation &terminator = region.back().back();
-  if (auto elementalAddr =
-          mlir::dyn_cast<hlfir::ElementalOpInterface>(terminator)) {
-    // Vector subscripted designator (hlfir.elemental_addr terminator).
-    gatherElementalTree(elementalAddr, elementalParts, /*isOutOfOrder=*/false);
-    return;
-  }
-  // Try if elemental expression.
-  mlir::Value entity = mlir::cast<hlfir::YieldOp>(terminator).getEntity();
-  auto maybeElemental = mlir::dyn_cast_or_null<hlfir::ElementalOpInterface>(
-      entity.getDefiningOp());
-  gatherElementalTree(maybeElemental, elementalParts, /*isOutOfOrder=*/false);
+  elementalParts = hlfir::ElementalTree::buildElementalTree(terminator);
 }
 
 void MaskedArrayExpr::generateNoneElementalPart(fir::FirOpBuilder &builder,
@@ -1150,7 +1102,8 @@ computeLoopNestIterationNumber(mlir::Location loc, fir::FirOpBuilder &builder,
     if (!loopExtent)
       loopExtent = extent;
     else
-      loopExtent = builder.create<mlir::arith::MulIOp>(loc, loopExtent, extent);
+      loopExtent =
+          mlir::arith::MulIOp::create(builder, loc, loopExtent, extent);
   }
   assert(loopExtent && "loopNest must not be empty");
   return loopExtent;

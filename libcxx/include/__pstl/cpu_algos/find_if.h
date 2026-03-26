@@ -119,7 +119,7 @@ struct __cpu_parallel_find_if {
           true);
     } else if constexpr (__is_unsequenced_execution_policy_v<_RawExecutionPolicy> &&
                          __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
-      using __diff_t = __iter_diff_t<_ForwardIterator>;
+      using __diff_t = __iterator_difference_type<_ForwardIterator>;
       return __pstl::__simd_first<_Backend>(
           __first, __diff_t(0), __last - __first, [&__pred](_ForwardIterator __iter, __diff_t __i) {
             return __pred(__iter[__i]);

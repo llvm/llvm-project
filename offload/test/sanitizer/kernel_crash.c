@@ -10,11 +10,9 @@
 // UNSUPPORTED: nvptx64-nvidia-cuda
 // UNSUPPORTED: nvptx64-nvidia-cuda-LTO
 // UNSUPPORTED: aarch64-unknown-linux-gnu
-// UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
 // UNSUPPORTED: x86_64-unknown-linux-gnu
-// UNSUPPORTED: x86_64-unknown-linux-gnu-LTO
 // UNSUPPORTED: s390x-ibm-linux-gnu
-// UNSUPPORTED: s390x-ibm-linux-gnu-LTO
+// XFAIL: intelgpu
 
 #include <omp.h>
 
@@ -35,12 +33,12 @@ int main(void) {
   }
 }
 // TRACE: Display 1 of the 3 last kernel launch traces
-// TRACE: Kernel 0: {{.*}} (__omp_offloading_{{.*}}_main_l29)
+// TRACE: Kernel 0: {{.*}} (__omp_offloading_{{.*}}_main_l[[@LINE-9]])
 // TRACE:     launchKernel
 // NDEBG:     main
-// DEBUG:     main {{.*}}kernel_crash.c:29
+// DEBUG:     main {{.*}}kernel_crash.c:[[@LINE-12]]
 //
 // CHECK: Display last 3 kernels launched:
-// CHECK: Kernel 0: {{.*}} (__omp_offloading_{{.*}}_main_l29)
-// CHECK: Kernel 1: {{.*}} (__omp_offloading_{{.*}}_main_l26)
-// CHECK: Kernel 2: {{.*}} (__omp_offloading_{{.*}}_main_l23)
+// CHECK: Kernel 0: {{.*}} (__omp_offloading_{{.*}}_main_l[[@LINE-15]])
+// CHECK: Kernel 1: {{.*}} (__omp_offloading_{{.*}}_main_l[[@LINE-19]])
+// CHECK: Kernel 2: {{.*}} (__omp_offloading_{{.*}}_main_l[[@LINE-23]])

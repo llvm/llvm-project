@@ -5,9 +5,6 @@
 !CHECK: hlfir.declare %{{.*}} {uniq_name = "_QFEx"} : (!fir.ref<f80>) -> (!fir.ref<f80>, !fir.ref<f80>)
 
 program p
+  !$omp declare target
   real(10) :: x
-  !$omp target
-    continue
-  !$omp end target
 end
-

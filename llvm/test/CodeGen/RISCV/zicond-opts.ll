@@ -7,22 +7,132 @@ define i32 @icmp_and(i64 %x, i64 %y) {
 ; RV32ZICOND-LABEL: icmp_and:
 ; RV32ZICOND:       # %bb.0:
 ; RV32ZICOND-NEXT:    or a2, a2, a3
+; RV32ZICOND-NEXT:    snez a2, a2
 ; RV32ZICOND-NEXT:    or a0, a0, a1
-; RV32ZICOND-NEXT:    snez a1, a2
-; RV32ZICOND-NEXT:    snez a0, a0
-; RV32ZICOND-NEXT:    and a0, a0, a1
+; RV32ZICOND-NEXT:    czero.eqz a0, a2, a0
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV64ZICOND-LABEL: icmp_and:
 ; RV64ZICOND:       # %bb.0:
 ; RV64ZICOND-NEXT:    snez a1, a1
-; RV64ZICOND-NEXT:    snez a0, a0
-; RV64ZICOND-NEXT:    and a0, a0, a1
+; RV64ZICOND-NEXT:    czero.eqz a0, a1, a0
 ; RV64ZICOND-NEXT:    ret
   %3 = icmp ne i64 %y, 0
   %4 = icmp ne i64 %x, 0
   %5 = and i1 %4, %3
   %6 = zext i1 %5 to i32
+  ret i32 %6
+}
+
+; Make sure we choose the replace the single use icmp
+define i32 @icmp_and_x_multiple_uses(i64 %x, i64 %y) {
+; RV32ZICOND-LABEL: icmp_and_x_multiple_uses:
+; RV32ZICOND:       # %bb.0:
+; RV32ZICOND-NEXT:    or a2, a2, a3
+; RV32ZICOND-NEXT:    or a0, a0, a1
+; RV32ZICOND-NEXT:    snez a0, a0
+; RV32ZICOND-NEXT:    czero.eqz a1, a0, a2
+; RV32ZICOND-NEXT:    add a0, a1, a0
+; RV32ZICOND-NEXT:    ret
+;
+; RV64ZICOND-LABEL: icmp_and_x_multiple_uses:
+; RV64ZICOND:       # %bb.0:
+; RV64ZICOND-NEXT:    snez a0, a0
+; RV64ZICOND-NEXT:    czero.eqz a1, a0, a1
+; RV64ZICOND-NEXT:    add a0, a1, a0
+; RV64ZICOND-NEXT:    ret
+  %3 = icmp ne i64 %y, 0
+  %4 = icmp ne i64 %x, 0
+  %5 = and i1 %4, %3
+  %6 = zext i1 %5 to i32
+  %7 = zext i1 %4 to i32
+  %8 = add i32 %6, %7
+  ret i32 %8
+}
+
+; Make sure we choose the replace the single use icmp
+define i32 @icmp_and_y_multiple_uses(i64 %x, i64 %y) {
+; RV32ZICOND-LABEL: icmp_and_y_multiple_uses:
+; RV32ZICOND:       # %bb.0:
+; RV32ZICOND-NEXT:    or a2, a2, a3
+; RV32ZICOND-NEXT:    snez a2, a2
+; RV32ZICOND-NEXT:    or a0, a0, a1
+; RV32ZICOND-NEXT:    czero.eqz a0, a2, a0
+; RV32ZICOND-NEXT:    add a0, a0, a2
+; RV32ZICOND-NEXT:    ret
+;
+; RV64ZICOND-LABEL: icmp_and_y_multiple_uses:
+; RV64ZICOND:       # %bb.0:
+; RV64ZICOND-NEXT:    snez a1, a1
+; RV64ZICOND-NEXT:    czero.eqz a0, a1, a0
+; RV64ZICOND-NEXT:    add a0, a0, a1
+; RV64ZICOND-NEXT:    ret
+  %3 = icmp ne i64 %y, 0
+  %4 = icmp ne i64 %x, 0
+  %5 = and i1 %4, %3
+  %6 = zext i1 %5 to i32
+  %7 = zext i1 %3 to i32
+  %8 = add i32 %6, %7
+  ret i32 %8
+}
+
+; Both icmp's have multiple uses, don't optimize
+define i32 @icmp_and_xy_multiple_uses(i64 %x, i64 %y) {
+; RV32ZICOND-LABEL: icmp_and_xy_multiple_uses:
+; RV32ZICOND:       # %bb.0:
+; RV32ZICOND-NEXT:    or a2, a2, a3
+; RV32ZICOND-NEXT:    or a0, a0, a1
+; RV32ZICOND-NEXT:    snez a1, a2
+; RV32ZICOND-NEXT:    snez a0, a0
+; RV32ZICOND-NEXT:    and a2, a0, a1
+; RV32ZICOND-NEXT:    add a0, a1, a0
+; RV32ZICOND-NEXT:    add a0, a2, a0
+; RV32ZICOND-NEXT:    ret
+;
+; RV64ZICOND-LABEL: icmp_and_xy_multiple_uses:
+; RV64ZICOND:       # %bb.0:
+; RV64ZICOND-NEXT:    snez a1, a1
+; RV64ZICOND-NEXT:    snez a0, a0
+; RV64ZICOND-NEXT:    and a2, a0, a1
+; RV64ZICOND-NEXT:    add a0, a1, a0
+; RV64ZICOND-NEXT:    add a0, a2, a0
+; RV64ZICOND-NEXT:    ret
+  %3 = icmp ne i64 %y, 0
+  %4 = icmp ne i64 %x, 0
+  %5 = and i1 %4, %3
+  %6 = zext i1 %5 to i32
+  %7 = zext i1 %3 to i32
+  %8 = zext i1 %4 to i32
+  %9 = add i32 %6, %7
+  %10 = add i32 %9, %8
+  ret i32 %10
+}
+
+
+; (and (icmp x. 0, ne), (icmp y, 0, ne)) -> (czero.eqz (icmp x, 0, ne), y)
+define i32 @icmp_and_select(i64 %x, i64 %y, i32 %z) {
+; RV32ZICOND-LABEL: icmp_and_select:
+; RV32ZICOND:       # %bb.0:
+; RV32ZICOND-NEXT:    sgtz a5, a3
+; RV32ZICOND-NEXT:    snez a2, a2
+; RV32ZICOND-NEXT:    czero.eqz a5, a5, a3
+; RV32ZICOND-NEXT:    czero.nez a2, a2, a3
+; RV32ZICOND-NEXT:    or a2, a2, a5
+; RV32ZICOND-NEXT:    or a0, a0, a1
+; RV32ZICOND-NEXT:    czero.eqz a0, a2, a0
+; RV32ZICOND-NEXT:    czero.eqz a0, a4, a0
+; RV32ZICOND-NEXT:    ret
+;
+; RV64ZICOND-LABEL: icmp_and_select:
+; RV64ZICOND:       # %bb.0:
+; RV64ZICOND-NEXT:    sgtz a1, a1
+; RV64ZICOND-NEXT:    czero.eqz a0, a1, a0
+; RV64ZICOND-NEXT:    czero.eqz a0, a2, a0
+; RV64ZICOND-NEXT:    ret
+  %3 = icmp sgt i64 %y, 0
+  %4 = icmp ne i64 %x, 0
+  %5 = and i1 %4, %3
+  %6 = select i1 %5, i32 %z, i32 0
   ret i32 %6
 }
 
@@ -32,21 +142,17 @@ define i32 @icmp_and_and(i64 %x, i64 %y, i64 %z) {
 ; RV32ZICOND:       # %bb.0:
 ; RV32ZICOND-NEXT:    or a2, a2, a3
 ; RV32ZICOND-NEXT:    or a0, a0, a1
-; RV32ZICOND-NEXT:    or a4, a4, a5
-; RV32ZICOND-NEXT:    snez a1, a2
 ; RV32ZICOND-NEXT:    snez a0, a0
-; RV32ZICOND-NEXT:    and a0, a1, a0
-; RV32ZICOND-NEXT:    snez a1, a4
-; RV32ZICOND-NEXT:    and a0, a1, a0
+; RV32ZICOND-NEXT:    czero.eqz a0, a0, a2
+; RV32ZICOND-NEXT:    or a4, a4, a5
+; RV32ZICOND-NEXT:    czero.eqz a0, a0, a4
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV64ZICOND-LABEL: icmp_and_and:
 ; RV64ZICOND:       # %bb.0:
-; RV64ZICOND-NEXT:    snez a1, a1
 ; RV64ZICOND-NEXT:    snez a0, a0
-; RV64ZICOND-NEXT:    and a0, a1, a0
-; RV64ZICOND-NEXT:    snez a1, a2
-; RV64ZICOND-NEXT:    and a0, a1, a0
+; RV64ZICOND-NEXT:    czero.eqz a0, a0, a1
+; RV64ZICOND-NEXT:    czero.eqz a0, a0, a2
 ; RV64ZICOND-NEXT:    ret
   %4 = icmp ne i64 %y, 0
   %5 = icmp ne i64 %x, 0
@@ -62,37 +168,30 @@ define i64 @rotate_l_nez(i64 %x, i64 %rot.amt, i1 %cond) {
 ; RV32ZICOND-LABEL: rotate_l_nez:
 ; RV32ZICOND:       # %bb.0:
 ; RV32ZICOND-NEXT:    andi a4, a4, 1
-; RV32ZICOND-NEXT:    bexti a3, a2, 5
-; RV32ZICOND-NEXT:    not a5, a2
-; RV32ZICOND-NEXT:    czero.nez a6, a1, a3
-; RV32ZICOND-NEXT:    czero.eqz a7, a0, a3
-; RV32ZICOND-NEXT:    czero.nez t0, a0, a3
-; RV32ZICOND-NEXT:    czero.eqz a3, a1, a3
-; RV32ZICOND-NEXT:    czero.eqz a0, a0, a4
-; RV32ZICOND-NEXT:    czero.eqz a1, a1, a4
-; RV32ZICOND-NEXT:    or a6, a7, a6
-; RV32ZICOND-NEXT:    or a3, a3, t0
-; RV32ZICOND-NEXT:    sll a7, a6, a2
-; RV32ZICOND-NEXT:    srli t0, a3, 1
-; RV32ZICOND-NEXT:    sll a2, a3, a2
-; RV32ZICOND-NEXT:    srli a3, a6, 1
-; RV32ZICOND-NEXT:    srl a6, t0, a5
-; RV32ZICOND-NEXT:    srl a3, a3, a5
-; RV32ZICOND-NEXT:    or a5, a7, a6
-; RV32ZICOND-NEXT:    or a2, a2, a3
 ; RV32ZICOND-NEXT:    czero.nez a2, a2, a4
-; RV32ZICOND-NEXT:    czero.nez a3, a5, a4
-; RV32ZICOND-NEXT:    or a0, a0, a2
-; RV32ZICOND-NEXT:    or a1, a1, a3
+; RV32ZICOND-NEXT:    bexti a3, a2, 5
+; RV32ZICOND-NEXT:    czero.nez a4, a0, a3
+; RV32ZICOND-NEXT:    czero.eqz a5, a1, a3
+; RV32ZICOND-NEXT:    czero.nez a1, a1, a3
+; RV32ZICOND-NEXT:    czero.eqz a0, a0, a3
+; RV32ZICOND-NEXT:    not a3, a2
+; RV32ZICOND-NEXT:    or a4, a5, a4
+; RV32ZICOND-NEXT:    or a0, a0, a1
+; RV32ZICOND-NEXT:    sll a1, a4, a2
+; RV32ZICOND-NEXT:    srli a5, a0, 1
+; RV32ZICOND-NEXT:    sll a2, a0, a2
+; RV32ZICOND-NEXT:    srli a4, a4, 1
+; RV32ZICOND-NEXT:    srl a0, a5, a3
+; RV32ZICOND-NEXT:    srl a3, a4, a3
+; RV32ZICOND-NEXT:    or a0, a1, a0
+; RV32ZICOND-NEXT:    or a1, a2, a3
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV64ZICOND-LABEL: rotate_l_nez:
 ; RV64ZICOND:       # %bb.0:
 ; RV64ZICOND-NEXT:    andi a2, a2, 1
-; RV64ZICOND-NEXT:    rol a1, a0, a1
 ; RV64ZICOND-NEXT:    czero.nez a1, a1, a2
-; RV64ZICOND-NEXT:    czero.eqz a0, a0, a2
-; RV64ZICOND-NEXT:    or a0, a0, a1
+; RV64ZICOND-NEXT:    rol a0, a0, a1
 ; RV64ZICOND-NEXT:    ret
   %6 = call i64 @llvm.fshl.i64(i64 %x, i64 %x, i64 %rot.amt)
   %7 = select i1 %cond, i64 %x, i64 %6
@@ -104,37 +203,30 @@ define i64 @rotate_l_eqz(i64 %x, i64 %rot.amt, i1 %cond) {
 ; RV32ZICOND-LABEL: rotate_l_eqz:
 ; RV32ZICOND:       # %bb.0:
 ; RV32ZICOND-NEXT:    andi a4, a4, 1
-; RV32ZICOND-NEXT:    bexti a3, a2, 5
-; RV32ZICOND-NEXT:    not a5, a2
-; RV32ZICOND-NEXT:    czero.nez a6, a1, a3
-; RV32ZICOND-NEXT:    czero.eqz a7, a0, a3
-; RV32ZICOND-NEXT:    czero.nez t0, a0, a3
-; RV32ZICOND-NEXT:    czero.eqz a3, a1, a3
-; RV32ZICOND-NEXT:    czero.nez a0, a0, a4
-; RV32ZICOND-NEXT:    czero.nez a1, a1, a4
-; RV32ZICOND-NEXT:    or a6, a7, a6
-; RV32ZICOND-NEXT:    or a3, a3, t0
-; RV32ZICOND-NEXT:    sll a7, a6, a2
-; RV32ZICOND-NEXT:    srli t0, a3, 1
-; RV32ZICOND-NEXT:    sll a2, a3, a2
-; RV32ZICOND-NEXT:    srli a3, a6, 1
-; RV32ZICOND-NEXT:    srl a6, t0, a5
-; RV32ZICOND-NEXT:    srl a3, a3, a5
-; RV32ZICOND-NEXT:    or a5, a7, a6
-; RV32ZICOND-NEXT:    or a2, a2, a3
 ; RV32ZICOND-NEXT:    czero.eqz a2, a2, a4
-; RV32ZICOND-NEXT:    czero.eqz a3, a5, a4
-; RV32ZICOND-NEXT:    or a0, a2, a0
-; RV32ZICOND-NEXT:    or a1, a3, a1
+; RV32ZICOND-NEXT:    bexti a3, a2, 5
+; RV32ZICOND-NEXT:    czero.nez a4, a0, a3
+; RV32ZICOND-NEXT:    czero.eqz a5, a1, a3
+; RV32ZICOND-NEXT:    czero.nez a1, a1, a3
+; RV32ZICOND-NEXT:    czero.eqz a0, a0, a3
+; RV32ZICOND-NEXT:    not a3, a2
+; RV32ZICOND-NEXT:    or a4, a5, a4
+; RV32ZICOND-NEXT:    or a0, a0, a1
+; RV32ZICOND-NEXT:    sll a1, a4, a2
+; RV32ZICOND-NEXT:    srli a5, a0, 1
+; RV32ZICOND-NEXT:    sll a2, a0, a2
+; RV32ZICOND-NEXT:    srli a4, a4, 1
+; RV32ZICOND-NEXT:    srl a0, a5, a3
+; RV32ZICOND-NEXT:    srl a3, a4, a3
+; RV32ZICOND-NEXT:    or a0, a1, a0
+; RV32ZICOND-NEXT:    or a1, a2, a3
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV64ZICOND-LABEL: rotate_l_eqz:
 ; RV64ZICOND:       # %bb.0:
 ; RV64ZICOND-NEXT:    andi a2, a2, 1
-; RV64ZICOND-NEXT:    rol a1, a0, a1
-; RV64ZICOND-NEXT:    czero.nez a0, a0, a2
 ; RV64ZICOND-NEXT:    czero.eqz a1, a1, a2
-; RV64ZICOND-NEXT:    or a0, a1, a0
+; RV64ZICOND-NEXT:    rol a0, a0, a1
 ; RV64ZICOND-NEXT:    ret
   %6 = call i64 @llvm.fshl.i64(i64 %x, i64 %x, i64 %rot.amt)
   %7 = select i1 %cond, i64 %6, i64 %x
@@ -237,19 +329,17 @@ define i64 @test_inv_and_nez(i64 %f, i64 %x, i1 %cond) {
 ; RV32ZICOND-LABEL: test_inv_and_nez:
 ; RV32ZICOND:       # %bb.0:
 ; RV32ZICOND-NEXT:    andi a4, a4, 1
-; RV32ZICOND-NEXT:    addi a4, a4, -1
-; RV32ZICOND-NEXT:    orn a3, a4, a3
-; RV32ZICOND-NEXT:    orn a2, a4, a2
-; RV32ZICOND-NEXT:    and a0, a2, a0
-; RV32ZICOND-NEXT:    and a1, a3, a1
+; RV32ZICOND-NEXT:    czero.eqz a3, a3, a4
+; RV32ZICOND-NEXT:    czero.eqz a2, a2, a4
+; RV32ZICOND-NEXT:    andn a0, a0, a2
+; RV32ZICOND-NEXT:    andn a1, a1, a3
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV64ZICOND-LABEL: test_inv_and_nez:
 ; RV64ZICOND:       # %bb.0:
 ; RV64ZICOND-NEXT:    andi a2, a2, 1
-; RV64ZICOND-NEXT:    andn a1, a0, a1
-; RV64ZICOND-NEXT:    czero.nez a0, a0, a2
-; RV64ZICOND-NEXT:    or a0, a1, a0
+; RV64ZICOND-NEXT:    czero.eqz a1, a1, a2
+; RV64ZICOND-NEXT:    andn a0, a0, a1
 ; RV64ZICOND-NEXT:    ret
   %5 = xor i64 %x, -1
   %6 = select i1 %cond, i64 %5, i64 -1
@@ -261,23 +351,53 @@ define i64 @test_inv_and_nez(i64 %f, i64 %x, i1 %cond) {
 define i64 @test_inv_and_eqz(i64 %f, i64 %x, i1 %cond) {
 ; RV32ZICOND-LABEL: test_inv_and_eqz:
 ; RV32ZICOND:       # %bb.0:
-; RV32ZICOND-NEXT:    slli a4, a4, 31
-; RV32ZICOND-NEXT:    srai a4, a4, 31
-; RV32ZICOND-NEXT:    orn a3, a4, a3
-; RV32ZICOND-NEXT:    orn a2, a4, a2
-; RV32ZICOND-NEXT:    and a0, a2, a0
-; RV32ZICOND-NEXT:    and a1, a3, a1
+; RV32ZICOND-NEXT:    andi a4, a4, 1
+; RV32ZICOND-NEXT:    czero.nez a3, a3, a4
+; RV32ZICOND-NEXT:    czero.nez a2, a2, a4
+; RV32ZICOND-NEXT:    andn a0, a0, a2
+; RV32ZICOND-NEXT:    andn a1, a1, a3
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV64ZICOND-LABEL: test_inv_and_eqz:
 ; RV64ZICOND:       # %bb.0:
 ; RV64ZICOND-NEXT:    andi a2, a2, 1
-; RV64ZICOND-NEXT:    andn a1, a0, a1
-; RV64ZICOND-NEXT:    czero.eqz a0, a0, a2
-; RV64ZICOND-NEXT:    or a0, a1, a0
+; RV64ZICOND-NEXT:    czero.nez a1, a1, a2
+; RV64ZICOND-NEXT:    andn a0, a0, a1
 ; RV64ZICOND-NEXT:    ret
   %5 = xor i64 %x, -1
   %6 = select i1 %cond, i64 -1, i64 %5
   %7 = and i64 %6, %f
   ret i64 %7
+}
+
+define i32 @pr166596(i32 %conv.i, i1 %iszero) #0 {
+; RV32ZICOND-LABEL: pr166596:
+; RV32ZICOND:       # %bb.0: # %entry
+; RV32ZICOND-NEXT:    andi a1, a1, 1
+; RV32ZICOND-NEXT:    xori a0, a0, 1
+; RV32ZICOND-NEXT:    zext.h a0, a0
+; RV32ZICOND-NEXT:    clz a0, a0
+; RV32ZICOND-NEXT:    addi a0, a0, 41
+; RV32ZICOND-NEXT:    czero.nez a0, a0, a1
+; RV32ZICOND-NEXT:    addi a0, a0, -9
+; RV32ZICOND-NEXT:    ret
+;
+; RV64ZICOND-LABEL: pr166596:
+; RV64ZICOND:       # %bb.0: # %entry
+; RV64ZICOND-NEXT:    andi a1, a1, 1
+; RV64ZICOND-NEXT:    xori a0, a0, 1
+; RV64ZICOND-NEXT:    zext.h a0, a0
+; RV64ZICOND-NEXT:    clz a0, a0
+; RV64ZICOND-NEXT:    addi a0, a0, 9
+; RV64ZICOND-NEXT:    czero.nez a0, a0, a1
+; RV64ZICOND-NEXT:    addi a0, a0, -9
+; RV64ZICOND-NEXT:    ret
+entry:
+  %not.i = xor i32 %conv.i, 1
+  %conv2.i = trunc i32 %not.i to i16
+  %conv22 = zext i16 %conv2.i to i64
+  %0 = call i64 @llvm.ctlz.i64(i64 %conv22, i1 false)
+  %cast = trunc i64 %0 to i32
+  %clzg = select i1 %iszero, i32 -9, i32 %cast
+  ret i32 %clzg
 }

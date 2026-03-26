@@ -8,7 +8,7 @@ define double @oeq(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-SD-LABEL: oeq:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    stp d9, d8, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-SD-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-SD-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    .cfi_offset b8, -24
@@ -17,7 +17,7 @@ define double @oeq(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-SD-NEXT:    fmov d9, d2
 ; CHECK-SD-NEXT:    bl __eqtf2
 ; CHECK-SD-NEXT:    cmp w0, #0
-; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-SD-NEXT:    fcsel d0, d9, d8, eq
 ; CHECK-SD-NEXT:    ldp d9, d8, [sp], #32 // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    ret
@@ -25,7 +25,7 @@ define double @oeq(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-GI-LABEL: oeq:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    stp d9, d8, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-GI-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-GI-NEXT:    .cfi_offset w30, -16
 ; CHECK-GI-NEXT:    .cfi_offset b8, -24
@@ -34,7 +34,7 @@ define double @oeq(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-GI-NEXT:    fmov d9, d3
 ; CHECK-GI-NEXT:    bl __eqtf2
 ; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-GI-NEXT:    fcsel d0, d8, d9, eq
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp], #32 // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ret
@@ -48,7 +48,7 @@ define double @ogt(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-SD-LABEL: ogt:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    stp d9, d8, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-SD-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-SD-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    .cfi_offset b8, -24
@@ -57,7 +57,7 @@ define double @ogt(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-SD-NEXT:    fmov d9, d2
 ; CHECK-SD-NEXT:    bl __gttf2
 ; CHECK-SD-NEXT:    cmp w0, #0
-; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-SD-NEXT:    fcsel d0, d9, d8, gt
 ; CHECK-SD-NEXT:    ldp d9, d8, [sp], #32 // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    ret
@@ -65,7 +65,7 @@ define double @ogt(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-GI-LABEL: ogt:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    stp d9, d8, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-GI-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-GI-NEXT:    .cfi_offset w30, -16
 ; CHECK-GI-NEXT:    .cfi_offset b8, -24
@@ -74,7 +74,7 @@ define double @ogt(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-GI-NEXT:    fmov d9, d3
 ; CHECK-GI-NEXT:    bl __gttf2
 ; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-GI-NEXT:    fcsel d0, d8, d9, gt
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp], #32 // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ret
@@ -88,7 +88,7 @@ define double @olt(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-SD-LABEL: olt:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    stp d9, d8, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-SD-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-SD-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    .cfi_offset b8, -24
@@ -97,15 +97,15 @@ define double @olt(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-SD-NEXT:    fmov d9, d2
 ; CHECK-SD-NEXT:    bl __lttf2
 ; CHECK-SD-NEXT:    cmp w0, #0
-; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
-; CHECK-SD-NEXT:    fcsel d0, d9, d8, lt
+; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
+; CHECK-SD-NEXT:    fcsel d0, d9, d8, mi
 ; CHECK-SD-NEXT:    ldp d9, d8, [sp], #32 // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: olt:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    stp d9, d8, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-GI-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-GI-NEXT:    .cfi_offset w30, -16
 ; CHECK-GI-NEXT:    .cfi_offset b8, -24
@@ -114,8 +114,8 @@ define double @olt(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-GI-NEXT:    fmov d9, d3
 ; CHECK-GI-NEXT:    bl __lttf2
 ; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
-; CHECK-GI-NEXT:    fcsel d0, d8, d9, lt
+; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
+; CHECK-GI-NEXT:    fcsel d0, d8, d9, mi
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp], #32 // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -128,7 +128,7 @@ define double @ole(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-SD-LABEL: ole:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    stp d9, d8, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-SD-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-SD-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    .cfi_offset b8, -24
@@ -137,7 +137,7 @@ define double @ole(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-SD-NEXT:    fmov d9, d2
 ; CHECK-SD-NEXT:    bl __letf2
 ; CHECK-SD-NEXT:    cmp w0, #0
-; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-SD-NEXT:    fcsel d0, d9, d8, le
 ; CHECK-SD-NEXT:    ldp d9, d8, [sp], #32 // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    ret
@@ -145,7 +145,7 @@ define double @ole(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-GI-LABEL: ole:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    stp d9, d8, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-GI-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-GI-NEXT:    .cfi_offset w30, -16
 ; CHECK-GI-NEXT:    .cfi_offset b8, -24
@@ -154,7 +154,7 @@ define double @ole(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-GI-NEXT:    fmov d9, d3
 ; CHECK-GI-NEXT:    bl __letf2
 ; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-GI-NEXT:    fcsel d0, d8, d9, le
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp], #32 // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ret
@@ -180,12 +180,10 @@ define double @one(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-SD-NEXT:    stp q0, q1, [sp] // 32-byte Folded Spill
 ; CHECK-SD-NEXT:    bl __eqtf2
 ; CHECK-SD-NEXT:    ldp q0, q1, [sp] // 32-byte Folded Reload
-; CHECK-SD-NEXT:    cmp w0, #0
-; CHECK-SD-NEXT:    cset w19, ne
+; CHECK-SD-NEXT:    mov w19, w0
 ; CHECK-SD-NEXT:    bl __unordtf2
 ; CHECK-SD-NEXT:    cmp w0, #0
-; CHECK-SD-NEXT:    cset w8, eq
-; CHECK-SD-NEXT:    tst w8, w19
+; CHECK-SD-NEXT:    ccmp w19, #0, #4, eq
 ; CHECK-SD-NEXT:    ldp x30, x19, [sp, #48] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    fcsel d0, d9, d8, ne
 ; CHECK-SD-NEXT:    ldp d9, d8, [sp, #32] // 16-byte Folded Reload
@@ -226,7 +224,7 @@ define double @ord(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-SD-LABEL: ord:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    stp d9, d8, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-SD-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-SD-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    .cfi_offset b8, -24
@@ -235,7 +233,7 @@ define double @ord(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-SD-NEXT:    fmov d9, d2
 ; CHECK-SD-NEXT:    bl __unordtf2
 ; CHECK-SD-NEXT:    cmp w0, #0
-; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-SD-NEXT:    fcsel d0, d9, d8, eq
 ; CHECK-SD-NEXT:    ldp d9, d8, [sp], #32 // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    ret
@@ -243,7 +241,7 @@ define double @ord(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-GI-LABEL: ord:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    stp d9, d8, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-GI-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-GI-NEXT:    .cfi_offset w30, -16
 ; CHECK-GI-NEXT:    .cfi_offset b8, -24
@@ -252,7 +250,7 @@ define double @ord(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-GI-NEXT:    fmov d9, d3
 ; CHECK-GI-NEXT:    bl __unordtf2
 ; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-GI-NEXT:    fcsel d0, d8, d9, eq
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp], #32 // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ret
@@ -266,7 +264,7 @@ define double @uno(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-SD-LABEL: uno:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    stp d9, d8, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-SD-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-SD-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    .cfi_offset b8, -24
@@ -275,7 +273,7 @@ define double @uno(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-SD-NEXT:    fmov d9, d2
 ; CHECK-SD-NEXT:    bl __unordtf2
 ; CHECK-SD-NEXT:    cmp w0, #0
-; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-SD-NEXT:    fcsel d0, d9, d8, ne
 ; CHECK-SD-NEXT:    ldp d9, d8, [sp], #32 // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    ret
@@ -283,7 +281,7 @@ define double @uno(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-GI-LABEL: uno:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    stp d9, d8, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-GI-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-GI-NEXT:    .cfi_offset w30, -16
 ; CHECK-GI-NEXT:    .cfi_offset b8, -24
@@ -292,7 +290,7 @@ define double @uno(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-GI-NEXT:    fmov d9, d3
 ; CHECK-GI-NEXT:    bl __unordtf2
 ; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-GI-NEXT:    fcsel d0, d8, d9, ne
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp], #32 // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ret
@@ -362,7 +360,7 @@ define double @ugt(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-SD-LABEL: ugt:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    stp d9, d8, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-SD-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-SD-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    .cfi_offset b8, -24
@@ -371,7 +369,7 @@ define double @ugt(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-SD-NEXT:    fmov d9, d2
 ; CHECK-SD-NEXT:    bl __letf2
 ; CHECK-SD-NEXT:    cmp w0, #0
-; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-SD-NEXT:    fcsel d0, d9, d8, gt
 ; CHECK-SD-NEXT:    ldp d9, d8, [sp], #32 // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    ret
@@ -379,7 +377,7 @@ define double @ugt(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-GI-LABEL: ugt:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    stp d9, d8, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-GI-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-GI-NEXT:    .cfi_offset w30, -16
 ; CHECK-GI-NEXT:    .cfi_offset b8, -24
@@ -388,7 +386,7 @@ define double @ugt(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-GI-NEXT:    fmov d9, d3
 ; CHECK-GI-NEXT:    bl __letf2
 ; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-GI-NEXT:    fcsel d0, d8, d9, gt
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp], #32 // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ret
@@ -402,7 +400,7 @@ define double @uge(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-SD-LABEL: uge:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    stp d9, d8, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-SD-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-SD-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    .cfi_offset b8, -24
@@ -411,15 +409,15 @@ define double @uge(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-SD-NEXT:    fmov d9, d2
 ; CHECK-SD-NEXT:    bl __lttf2
 ; CHECK-SD-NEXT:    cmp w0, #0
-; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
-; CHECK-SD-NEXT:    fcsel d0, d9, d8, ge
+; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
+; CHECK-SD-NEXT:    fcsel d0, d9, d8, pl
 ; CHECK-SD-NEXT:    ldp d9, d8, [sp], #32 // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: uge:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    stp d9, d8, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-GI-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-GI-NEXT:    .cfi_offset w30, -16
 ; CHECK-GI-NEXT:    .cfi_offset b8, -24
@@ -428,8 +426,8 @@ define double @uge(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-GI-NEXT:    fmov d9, d3
 ; CHECK-GI-NEXT:    bl __lttf2
 ; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
-; CHECK-GI-NEXT:    fcsel d0, d8, d9, ge
+; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
+; CHECK-GI-NEXT:    fcsel d0, d8, d9, pl
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp], #32 // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -442,7 +440,7 @@ define double @ult(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-SD-LABEL: ult:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    stp d9, d8, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-SD-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-SD-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    .cfi_offset b8, -24
@@ -451,15 +449,15 @@ define double @ult(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-SD-NEXT:    fmov d9, d2
 ; CHECK-SD-NEXT:    bl __getf2
 ; CHECK-SD-NEXT:    cmp w0, #0
-; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
-; CHECK-SD-NEXT:    fcsel d0, d9, d8, lt
+; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
+; CHECK-SD-NEXT:    fcsel d0, d9, d8, mi
 ; CHECK-SD-NEXT:    ldp d9, d8, [sp], #32 // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: ult:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    stp d9, d8, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-GI-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-GI-NEXT:    .cfi_offset w30, -16
 ; CHECK-GI-NEXT:    .cfi_offset b8, -24
@@ -468,8 +466,8 @@ define double @ult(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-GI-NEXT:    fmov d9, d3
 ; CHECK-GI-NEXT:    bl __getf2
 ; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
-; CHECK-GI-NEXT:    fcsel d0, d8, d9, lt
+; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
+; CHECK-GI-NEXT:    fcsel d0, d8, d9, mi
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp], #32 // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -482,7 +480,7 @@ define double @ule(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-SD-LABEL: ule:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    stp d9, d8, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-SD-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-SD-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    .cfi_offset b8, -24
@@ -491,7 +489,7 @@ define double @ule(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-SD-NEXT:    fmov d9, d2
 ; CHECK-SD-NEXT:    bl __gttf2
 ; CHECK-SD-NEXT:    cmp w0, #0
-; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-SD-NEXT:    fcsel d0, d9, d8, le
 ; CHECK-SD-NEXT:    ldp d9, d8, [sp], #32 // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    ret
@@ -499,7 +497,7 @@ define double @ule(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-GI-LABEL: ule:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    stp d9, d8, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-GI-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-GI-NEXT:    .cfi_offset w30, -16
 ; CHECK-GI-NEXT:    .cfi_offset b8, -24
@@ -508,7 +506,7 @@ define double @ule(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-GI-NEXT:    fmov d9, d3
 ; CHECK-GI-NEXT:    bl __gttf2
 ; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-GI-NEXT:    fcsel d0, d8, d9, le
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp], #32 // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ret
@@ -522,7 +520,7 @@ define double @une(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-SD-LABEL: une:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    stp d9, d8, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-SD-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-SD-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    .cfi_offset b8, -24
@@ -531,7 +529,7 @@ define double @une(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-SD-NEXT:    fmov d9, d2
 ; CHECK-SD-NEXT:    bl __netf2
 ; CHECK-SD-NEXT:    cmp w0, #0
-; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-SD-NEXT:    fcsel d0, d9, d8, ne
 ; CHECK-SD-NEXT:    ldp d9, d8, [sp], #32 // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    ret
@@ -539,7 +537,7 @@ define double @une(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-GI-LABEL: une:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    stp d9, d8, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-GI-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-GI-NEXT:    .cfi_offset w30, -16
 ; CHECK-GI-NEXT:    .cfi_offset b8, -24
@@ -548,7 +546,7 @@ define double @une(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-GI-NEXT:    fmov d9, d3
 ; CHECK-GI-NEXT:    bl __netf2
 ; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-GI-NEXT:    fcsel d0, d8, d9, ne
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp], #32 // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ret

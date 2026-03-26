@@ -1,40 +1,8 @@
 // RUN: %check_clang_tidy %s readability-simplify-subscript-expr %t \
 // RUN: -config="{CheckOptions: \
 // RUN: {readability-simplify-subscript-expr.Types: \
-// RUN:    '::std::basic_string;::std::basic_string_view;MyVector'}}" --
-
-namespace std {
-
-template <class T>
-class basic_string {
- public:
-   using size_type = unsigned;
-   using value_type = T;
-   using reference = value_type&;
-   using const_reference = const value_type&;
-
-   reference operator[](size_type);
-   const_reference operator[](size_type) const;
-   T* data();
-   const T* data() const;
-};
-
-using string = basic_string<char>;
-
-template <class T>
-class basic_string_view {
- public:
-  using size_type = unsigned;
-  using const_reference = const T&;
-  using const_pointer = const T*;
-
-  constexpr const_reference operator[](size_type) const;
-  constexpr const_pointer data() const noexcept;
-};
-
-using string_view = basic_string_view<char>;
-
-}
+// RUN:    '::std::basic_string;::std::basic_string_view;MyVector'}}"
+#include <string>
 
 template <class T>
 class MyVector {
@@ -106,3 +74,22 @@ void f(int i) {
 
   char c10 = Foo<std::string>{}.bar(i);
 }
+
+template <typename T>
+struct Wrapper {
+  T value;
+};
+
+void g() {
+  // This used to be a false negative.
+  Wrapper<std::string>().value.data()[10];
+  // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: accessing an element
+  // CHECK-FIXES: Wrapper<std::string>().value[10];
+}
+
+template <typename T>
+void dependent() {
+  T().data()[10];
+}
+
+template void dependent<std::string>();

@@ -15,14 +15,12 @@
 
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
+#include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/IR/Matchers.h"
-#include "mlir/Pass/Pass.h"
-#include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/FloatingPointMode.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
 using namespace mlir;
@@ -175,28 +173,6 @@ DenseElementsAttr transposeType(const RangeType &data, ShapedType inputType,
 
   return DenseElementsAttr::get(outputType,
                                 llvm::ArrayRef<ElementType>(outputValues));
-}
-
-// Try to get the values of a DenseResourceElementsAttr construct
-template <typename T>
-std::optional<ArrayRef<T>> tryGetDenseResourceValues(ElementsAttr attr) {
-  if (auto denseResource = dyn_cast<DenseResourceElementsAttr>(attr)) {
-    // Check that the resource memory blob exists
-    AsmResourceBlob *blob = denseResource.getRawHandle().getBlob();
-    if (!blob)
-      return std::nullopt;
-
-    // Check that the data are in a valid form
-    bool isSplat = false;
-    if (!DenseElementsAttr::isValidRawBuffer(attr.getShapedType(),
-                                             blob->getData(), isSplat)) {
-      return std::nullopt;
-    }
-
-    return blob->template getDataAs<T>();
-  }
-
-  return std::nullopt;
 }
 
 // A type specialized transposition of an ElementsAttr.
@@ -378,8 +354,7 @@ llvm::APInt calculateReducedValue(const mlir::ElementsAttr &oldTensorAttr,
   for (int64_t reductionAxisVal = 1; reductionAxisVal < oldShape[reductionAxis];
        ++reductionAxisVal) {
 
-    int64_t stride = std::accumulate(oldShape.begin() + reductionAxis + 1,
-                                     oldShape.end(), 1, std::multiplies<int>());
+    int64_t stride = llvm::product_of(oldShape.drop_front(reductionAxis + 1));
     int64_t index = indexAtOldTensor + stride * reductionAxisVal;
     reducedValue =
         OperationType::calcOneElement(reducedValue, oldTensor[index]);
@@ -427,8 +402,7 @@ struct ReduceConstantOptimization : public OpRewritePattern<OperationType> {
     auto oldShape = shapedOldElementsValues.getShape();
     auto newShape = resultType.getShape();
 
-    auto newNumOfElements = std::accumulate(newShape.begin(), newShape.end(), 1,
-                                            std::multiplies<int>());
+    int64_t newNumOfElements = llvm::product_of(newShape);
     llvm::SmallVector<APInt> newReducedTensor(newNumOfElements);
 
     for (int64_t reductionIndex = 0; reductionIndex < newNumOfElements;

@@ -3,7 +3,7 @@
 target triple = "dxil-unknown-shadermodel6.0-compute"
 
 
-; CHECK: error: Invalid value for DescriptorRangeFlag: 3
+; CHECK: error: Invalid value for RootDescriptorFlag: 3
 ; CHECK-NOT: Root Signature Definitions
 define void @main() #0 {
 entry:

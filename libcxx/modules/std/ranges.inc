@@ -83,8 +83,10 @@ export namespace std {
     // [range.dangling], dangling iterator handling
     using std::ranges::dangling;
 
+#if _LIBCPP_STD_VER >= 23
     // [range.elementsof], class template elements_­of
-    // using std::ranges::elements_of;
+    using std::ranges::elements_of;
+#endif
 
     using std::ranges::borrowed_iterator_t;
 
@@ -114,6 +116,9 @@ export namespace std {
 
     namespace views {
       using std::ranges::views::iota;
+#if _LIBCPP_STD_VER >= 26
+      using std::ranges::views::indices;
+#endif
     } // namespace views
 
 #if _LIBCPP_STD_VER >= 23
@@ -289,16 +294,13 @@ export namespace std {
     namespace views {
       using std::ranges::views::zip;
     } // namespace views
-#endif // _LIBCPP_STD_VER >= 23
 
-#if 0
     // [range.zip.transform], zip transform view
     using std::ranges::zip_transform_view;
 
     namespace views {
       using std::ranges::views::zip_transform;
     }
-
     using std::ranges::adjacent_view;
 
     namespace views {
@@ -313,6 +315,9 @@ export namespace std {
       using std::ranges::views::pairwise_transform;
     } // namespace views
 
+#endif // _LIBCPP_STD_VER >= 23
+
+#if 0
     using std::ranges::chunk_view;
 
     using std::ranges::chunk_view<V>;

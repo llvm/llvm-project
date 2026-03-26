@@ -91,10 +91,10 @@
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformElect %[[#bool]] %[[#ScopeSubgroup]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testSubGroupElect(i32 addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testSubGroupElect(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func i32 @_Z15sub_group_electv()
   %r2 = tail call spir_func i1 @__spirv_GroupNonUniformElect(i32 3)
-  store i32 %2, i32 addrspace(1)* %0, align 4
+  store i32 %2, ptr addrspace(1) %0, align 4
   ret void
 }
 
@@ -106,10 +106,10 @@ declare dso_local spir_func i1 @__spirv_GroupNonUniformElect(i32)
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformAll %[[#bool]] %[[#ScopeSubgroup]] %[[#true]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testSubGroupNonUniformAll(i32 addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testSubGroupNonUniformAll(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func i32 @_Z25sub_group_non_uniform_alli(i32 0)
   %r2 = tail call spir_func i1 @__spirv_GroupNonUniformAll(i32 3, i1 true)
-  store i32 %2, i32 addrspace(1)* %0, align 4
+  store i32 %2, ptr addrspace(1) %0, align 4
   ret void
 }
 
@@ -121,10 +121,10 @@ declare dso_local spir_func i1 @__spirv_GroupNonUniformAll(i32, i1)
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformAny %[[#bool]] %[[#ScopeSubgroup]] %[[#true]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testSubGroupNonUniformAny(i32 addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testSubGroupNonUniformAny(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func i32 @_Z25sub_group_non_uniform_anyi(i32 0)
   %r2 = tail call spir_func i1 @__spirv_GroupNonUniformAny(i32 3, i1 true)
-  store i32 %2, i32 addrspace(1)* %0, align 4
+  store i32 %2, ptr addrspace(1) %0, align 4
   ret void
 }
 
@@ -146,30 +146,30 @@ declare dso_local spir_func i1 @__spirv_GroupNonUniformAny(i32, i1)
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformAllEqual %[[#bool]] %[[#ScopeSubgroup]] %[[#double_0]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testSubGroupNonUniformAllEqual(i32 addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testSubGroupNonUniformAllEqual(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func i32 @_Z31sub_group_non_uniform_all_equalc(i8 signext 0)
   %r2 = tail call spir_func i1 @__spirv_GroupNonUniformAllEqual(i32 3, i8 signext 10)
-  store i32 %2, i32 addrspace(1)* %0, align 4
+  store i32 %2, ptr addrspace(1) %0, align 4
   %3 = tail call spir_func i32 @_Z31sub_group_non_uniform_all_equalh(i8 zeroext 0)
-  store i32 %3, i32 addrspace(1)* %0, align 4
+  store i32 %3, ptr addrspace(1) %0, align 4
   %4 = tail call spir_func i32 @_Z31sub_group_non_uniform_all_equals(i16 signext 0)
-  store i32 %4, i32 addrspace(1)* %0, align 4
+  store i32 %4, ptr addrspace(1) %0, align 4
   %5 = tail call spir_func i32 @_Z31sub_group_non_uniform_all_equalt(i16 zeroext 0)
-  store i32 %5, i32 addrspace(1)* %0, align 4
+  store i32 %5, ptr addrspace(1) %0, align 4
   %6 = tail call spir_func i32 @_Z31sub_group_non_uniform_all_equali(i32 0)
-  store i32 %6, i32 addrspace(1)* %0, align 4
+  store i32 %6, ptr addrspace(1) %0, align 4
   %7 = tail call spir_func i32 @_Z31sub_group_non_uniform_all_equalj(i32 0)
-  store i32 %7, i32 addrspace(1)* %0, align 4
+  store i32 %7, ptr addrspace(1) %0, align 4
   %8 = tail call spir_func i32 @_Z31sub_group_non_uniform_all_equall(i64 0)
-  store i32 %8, i32 addrspace(1)* %0, align 4
+  store i32 %8, ptr addrspace(1) %0, align 4
   %9 = tail call spir_func i32 @_Z31sub_group_non_uniform_all_equalm(i64 0)
-  store i32 %9, i32 addrspace(1)* %0, align 4
+  store i32 %9, ptr addrspace(1) %0, align 4
   %10 = tail call spir_func i32 @_Z31sub_group_non_uniform_all_equalf(float 0.000000e+00)
-  store i32 %10, i32 addrspace(1)* %0, align 4
+  store i32 %10, ptr addrspace(1) %0, align 4
   %11 = tail call spir_func i32 @_Z31sub_group_non_uniform_all_equalDh(half 0xH0000)
-  store i32 %11, i32 addrspace(1)* %0, align 4
+  store i32 %11, ptr addrspace(1) %0, align 4
   %12 = tail call spir_func i32 @_Z31sub_group_non_uniform_all_equald(double 0.000000e+00)
-  store i32 %12, i32 addrspace(1)* %0, align 4
+  store i32 %12, ptr addrspace(1) %0, align 4
   ret void
 }
 

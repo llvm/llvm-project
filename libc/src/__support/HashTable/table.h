@@ -9,10 +9,12 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_HASHTABLE_TABLE_H
 #define LLVM_LIBC_SRC___SUPPORT_HASHTABLE_TABLE_H
 
+#include "hdr/stdint_proxy.h"
 #include "hdr/types/ENTRY.h"
 #include "src/__support/CPP/bit.h" // bit_ceil
 #include "src/__support/CPP/new.h"
 #include "src/__support/HashTable/bitmask.h"
+#include "src/__support/alloc-checker.h"
 #include "src/__support/hash.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
@@ -21,7 +23,6 @@
 #include "src/string/memory_utils/inline_strcmp.h"
 #include "src/string/string_utils.h"
 #include <stddef.h>
-#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {

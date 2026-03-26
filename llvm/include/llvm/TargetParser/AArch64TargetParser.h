@@ -23,7 +23,6 @@
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
-#include <array>
 #include <set>
 #include <vector>
 
@@ -41,6 +40,8 @@ struct CpuInfo;
 
 static_assert(FEAT_MAX < 62,
               "Number of features in CPUFeatures are limited to 62 entries");
+
+static_assert(PRIOR_MAX < 120, "FeatPriorities is limited to 120 entries");
 
 // Each ArchExtKind correponds directly to a possible -target-feature.
 #define EMIT_ARCHEXTKIND_ENUM
@@ -72,11 +73,12 @@ struct ExtensionInfo {
 
 struct FMVInfo {
   StringRef Name;                // The target_version/target_clones spelling.
-  CPUFeatures FeatureBit;        // Index of the bit in the FMV feature bitset.
+  std::optional<CPUFeatures>
+      FeatureBit;                // Index of the bit in the FMV feature bitset.
   FeatPriorities PriorityBit;    // Index of the bit in the FMV priority bitset.
   std::optional<ArchExtKind> ID; // The architecture extension to enable.
-  FMVInfo(StringRef Name, CPUFeatures FeatureBit, FeatPriorities PriorityBit,
-          std::optional<ArchExtKind> ID)
+  FMVInfo(StringRef Name, std::optional<CPUFeatures> FeatureBit,
+          FeatPriorities PriorityBit, std::optional<ArchExtKind> ID)
       : Name(Name), FeatureBit(FeatureBit), PriorityBit(PriorityBit), ID(ID) {};
 };
 
@@ -115,9 +117,9 @@ struct ArchInfo {
   // Defines the following partial order, indicating when an architecture is
   // a superset of another:
   //
-  // v9.6a > v9.5a > v9.4a > v9.3a > v9.2a > v9.1a > v9a;
-  //                   v       v       v       v       v
-  //                 v8.9a > v8.8a > v8.7a > v8.6a > v8.5a > v8.4a > ... > v8a;
+  // v9.7a > v9.6a > v9.5a > v9.4a > v9.3a > v9.2a > v9.1a > v9a;
+  //                           v       v       v       v       v
+  //                         v8.9a > v8.8a > v8.7a > v8.6a > v8.5a > ... > v8a;
   //
   // v8r has no relation to anything. This is used to determine which
   // features to enable for a given architecture. See
@@ -276,14 +278,14 @@ LLVM_ABI bool isX18ReservedByDefault(const Triple &TT);
 // For a given set of feature names, which can be either target-features, or
 // fmv-features metadata, expand their dependencies and then return a bitmask
 // corresponding to the entries of AArch64::FeatPriorities.
-LLVM_ABI uint64_t getFMVPriority(ArrayRef<StringRef> Features);
+LLVM_ABI APInt getFMVPriority(ArrayRef<StringRef> Features);
 
 // For a given set of FMV feature names, expand their dependencies and then
 // return a bitmask corresponding to the entries of AArch64::CPUFeatures.
 // The values in CPUFeatures are not bitmasks themselves, they are sequential
 // (0, 1, 2, 3, ...). The resulting bitmask is used at runtime to test whether
 // a certain FMV feature is available on the host.
-LLVM_ABI uint64_t getCpuSupportsMask(ArrayRef<StringRef> Features);
+LLVM_ABI APInt getCpuSupportsMask(ArrayRef<StringRef> Features);
 
 LLVM_ABI void PrintSupportedExtensions();
 

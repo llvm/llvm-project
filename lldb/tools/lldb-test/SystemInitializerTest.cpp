@@ -22,8 +22,7 @@
 
 using namespace lldb_private;
 
-SystemInitializerTest::SystemInitializerTest()
-    : SystemInitializerCommon(nullptr) {}
+SystemInitializerTest::SystemInitializerTest() : SystemInitializerCommon() {}
 SystemInitializerTest::~SystemInitializerTest() = default;
 
 llvm::Error SystemInitializerTest::Initialize() {
@@ -70,7 +69,7 @@ void SystemInitializerTest::Terminate() {
 
   // We ignored all the script interpreter earlier, so terminate
   // ScriptInterpreterNone explicitly.
-  LLDB_PLUGIN_INITIALIZE(ScriptInterpreterNone);
+  LLDB_PLUGIN_TERMINATE(ScriptInterpreterNone);
 
   // Now shutdown the common parts, in reverse order.
   SystemInitializerCommon::Terminate();

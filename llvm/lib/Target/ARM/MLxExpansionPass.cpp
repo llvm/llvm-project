@@ -29,7 +29,7 @@ using namespace llvm;
 #define DEBUG_TYPE "mlx-expansion"
 
 static cl::opt<bool>
-ForceExapnd("expand-all-fp-mlx", cl::init(false), cl::Hidden);
+ForceExpand("expand-all-fp-mlx", cl::init(false), cl::Hidden);
 static cl::opt<unsigned>
 ExpandLimit("expand-limit", cl::init(~0U), cl::Hidden);
 
@@ -211,7 +211,7 @@ bool MLxExpansion::FindMLxHazard(MachineInstr *MI) {
   if (NumExpand >= ExpandLimit)
     return false;
 
-  if (ForceExapnd)
+  if (ForceExpand)
     return true;
 
   MachineInstr *DefMI = getAccDefMI(MI);
@@ -283,9 +283,7 @@ MLxExpansion::ExpandFPMLxInstruction(MachineBasicBlock &MBB, MachineInstr *MI,
 
   const MCInstrDesc &MCID1 = TII->get(MulOpc);
   const MCInstrDesc &MCID2 = TII->get(AddSubOpc);
-  const MachineFunction &MF = *MI->getParent()->getParent();
-  Register TmpReg =
-      MRI->createVirtualRegister(TII->getRegClass(MCID1, 0, TRI, MF));
+  Register TmpReg = MRI->createVirtualRegister(TII->getRegClass(MCID1, 0));
 
   MachineInstrBuilder MIB = BuildMI(MBB, MI, MI->getDebugLoc(), MCID1, TmpReg)
     .addReg(Src1Reg, getKillRegState(Src1Kill))

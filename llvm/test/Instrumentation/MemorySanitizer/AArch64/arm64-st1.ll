@@ -15,9 +15,9 @@ define void @st2_8b(<8 x i8> %A, <8 x i8> %B, ptr %P) nounwind sanitize_memory {
 ;
 ; CHECK-LABEL: define void @st2_8b(
 ; CHECK-SAME: <8 x i8> [[A:%.*]], <8 x i8> [[B:%.*]], ptr [[P:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 193514046488576
@@ -41,8 +41,8 @@ define void @st2_8b_undefA(<8 x i8> %A, <8 x i8> %B, ptr %P) nounwind sanitize_m
 ;
 ; CHECK-LABEL: define void @st2_8b_undefA(
 ; CHECK-SAME: <8 x i8> [[A:%.*]], <8 x i8> [[B:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 193514046488576
@@ -66,7 +66,7 @@ define void @st2_8b_undefB(<8 x i8> %A, <8 x i8> %B, ptr %P) nounwind sanitize_m
 ;
 ; CHECK-LABEL: define void @st2_8b_undefB(
 ; CHECK-SAME: <8 x i8> [[A:%.*]], <8 x i8> [[B:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[P]] to i64
@@ -91,7 +91,7 @@ define void @st2_8b_undefAB(<8 x i8> %A, <8 x i8> %B, ptr %P) nounwind sanitize_
 ;
 ; CHECK-LABEL: define void @st2_8b_undefAB(
 ; CHECK-SAME: <8 x i8> [[A:%.*]], <8 x i8> [[B:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 193514046488576
@@ -115,10 +115,10 @@ define void @st3_8b(<8 x i8> %A, <8 x i8> %B, <8 x i8> %C, ptr %P) nounwind sani
 ;
 ; CHECK-LABEL: define void @st3_8b(
 ; CHECK-SAME: <8 x i8> [[A:%.*]], <8 x i8> [[B:%.*]], <8 x i8> [[C:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 193514046488576
@@ -142,9 +142,9 @@ define void @st3_8b_undefA(<8 x i8> %A, <8 x i8> %B, <8 x i8> %C, ptr %P) nounwi
 ;
 ; CHECK-LABEL: define void @st3_8b_undefA(
 ; CHECK-SAME: <8 x i8> [[A:%.*]], <8 x i8> [[B:%.*]], <8 x i8> [[C:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 193514046488576
@@ -168,9 +168,9 @@ define void @st3_8b_undefB(<8 x i8> %A, <8 x i8> %B, <8 x i8> %C, ptr %P) nounwi
 ;
 ; CHECK-LABEL: define void @st3_8b_undefB(
 ; CHECK-SAME: <8 x i8> [[A:%.*]], <8 x i8> [[B:%.*]], <8 x i8> [[C:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 193514046488576
@@ -194,9 +194,9 @@ define void @st3_8b_undefC(<8 x i8> %A, <8 x i8> %B, <8 x i8> %C, ptr %P) nounwi
 ;
 ; CHECK-LABEL: define void @st3_8b_undefC(
 ; CHECK-SAME: <8 x i8> [[A:%.*]], <8 x i8> [[B:%.*]], <8 x i8> [[C:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 193514046488576
@@ -220,8 +220,8 @@ define void @st3_8b_undefAB(<8 x i8> %A, <8 x i8> %B, <8 x i8> %C, ptr %P) nounw
 ;
 ; CHECK-LABEL: define void @st3_8b_undefAB(
 ; CHECK-SAME: <8 x i8> [[A:%.*]], <8 x i8> [[B:%.*]], <8 x i8> [[C:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 193514046488576
@@ -245,8 +245,8 @@ define void @st3_8b_undefAC(<8 x i8> %A, <8 x i8> %B, <8 x i8> %C, ptr %P) nounw
 ;
 ; CHECK-LABEL: define void @st3_8b_undefAC(
 ; CHECK-SAME: <8 x i8> [[A:%.*]], <8 x i8> [[B:%.*]], <8 x i8> [[C:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 193514046488576
@@ -270,7 +270,7 @@ define void @st3_8b_undefBC(<8 x i8> %A, <8 x i8> %B, <8 x i8> %C, ptr %P) nounw
 ;
 ; CHECK-LABEL: define void @st3_8b_undefBC(
 ; CHECK-SAME: <8 x i8> [[A:%.*]], <8 x i8> [[B:%.*]], <8 x i8> [[C:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[P]] to i64
@@ -295,7 +295,7 @@ define void @st3_8b_undefABC(<8 x i8> %A, <8 x i8> %B, <8 x i8> %C, ptr %P) noun
 ;
 ; CHECK-LABEL: define void @st3_8b_undefABC(
 ; CHECK-SAME: <8 x i8> [[A:%.*]], <8 x i8> [[B:%.*]], <8 x i8> [[C:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 193514046488576
@@ -319,11 +319,11 @@ define void @st4_8b(<8 x i8> %A, <8 x i8> %B, <8 x i8> %C, <8 x i8> %D, ptr %P) 
 ;
 ; CHECK-LABEL: define void @st4_8b(
 ; CHECK-SAME: <8 x i8> [[A:%.*]], <8 x i8> [[B:%.*]], <8 x i8> [[C:%.*]], <8 x i8> [[D:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = load <8 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load <8 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = xor i64 [[TMP6]], 193514046488576
@@ -347,10 +347,10 @@ define void @st4_8b_undefA(<8 x i8> %A, <8 x i8> %B, <8 x i8> %C, <8 x i8> %D, p
 ;
 ; CHECK-LABEL: define void @st4_8b_undefA(
 ; CHECK-SAME: <8 x i8> [[A:%.*]], <8 x i8> [[B:%.*]], <8 x i8> [[C:%.*]], <8 x i8> [[D:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 193514046488576
@@ -374,10 +374,10 @@ define void @st4_8b_undefB(<8 x i8> %A, <8 x i8> %B, <8 x i8> %C, <8 x i8> %D, p
 ;
 ; CHECK-LABEL: define void @st4_8b_undefB(
 ; CHECK-SAME: <8 x i8> [[A:%.*]], <8 x i8> [[B:%.*]], <8 x i8> [[C:%.*]], <8 x i8> [[D:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 193514046488576
@@ -401,10 +401,10 @@ define void @st4_8b_undefC(<8 x i8> %A, <8 x i8> %B, <8 x i8> %C, <8 x i8> %D, p
 ;
 ; CHECK-LABEL: define void @st4_8b_undefC(
 ; CHECK-SAME: <8 x i8> [[A:%.*]], <8 x i8> [[B:%.*]], <8 x i8> [[C:%.*]], <8 x i8> [[D:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 193514046488576
@@ -428,10 +428,10 @@ define void @st4_8b_undefD(<8 x i8> %A, <8 x i8> %B, <8 x i8> %C, <8 x i8> %D, p
 ;
 ; CHECK-LABEL: define void @st4_8b_undefD(
 ; CHECK-SAME: <8 x i8> [[A:%.*]], <8 x i8> [[B:%.*]], <8 x i8> [[C:%.*]], <8 x i8> [[D:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 193514046488576
@@ -455,9 +455,9 @@ define void @st4_8b_undefAB(<8 x i8> %A, <8 x i8> %B, <8 x i8> %C, <8 x i8> %D, 
 ;
 ; CHECK-LABEL: define void @st4_8b_undefAB(
 ; CHECK-SAME: <8 x i8> [[A:%.*]], <8 x i8> [[B:%.*]], <8 x i8> [[C:%.*]], <8 x i8> [[D:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 193514046488576
@@ -481,9 +481,9 @@ define void @st4_8b_undefAC(<8 x i8> %A, <8 x i8> %B, <8 x i8> %C, <8 x i8> %D, 
 ;
 ; CHECK-LABEL: define void @st4_8b_undefAC(
 ; CHECK-SAME: <8 x i8> [[A:%.*]], <8 x i8> [[B:%.*]], <8 x i8> [[C:%.*]], <8 x i8> [[D:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 193514046488576
@@ -507,9 +507,9 @@ define void @st4_8b_undefBC(<8 x i8> %A, <8 x i8> %B, <8 x i8> %C, <8 x i8> %D, 
 ;
 ; CHECK-LABEL: define void @st4_8b_undefBC(
 ; CHECK-SAME: <8 x i8> [[A:%.*]], <8 x i8> [[B:%.*]], <8 x i8> [[C:%.*]], <8 x i8> [[D:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 193514046488576
@@ -533,9 +533,9 @@ define void @st4_8b_undefBD(<8 x i8> %A, <8 x i8> %B, <8 x i8> %C, <8 x i8> %D, 
 ;
 ; CHECK-LABEL: define void @st4_8b_undefBD(
 ; CHECK-SAME: <8 x i8> [[A:%.*]], <8 x i8> [[B:%.*]], <8 x i8> [[C:%.*]], <8 x i8> [[D:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 193514046488576
@@ -559,8 +559,8 @@ define void @st4_8b_undefABC(<8 x i8> %A, <8 x i8> %B, <8 x i8> %C, <8 x i8> %D,
 ;
 ; CHECK-LABEL: define void @st4_8b_undefABC(
 ; CHECK-SAME: <8 x i8> [[A:%.*]], <8 x i8> [[B:%.*]], <8 x i8> [[C:%.*]], <8 x i8> [[D:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 193514046488576
@@ -584,8 +584,8 @@ define void @st4_8b_undefABD(<8 x i8> %A, <8 x i8> %B, <8 x i8> %C, <8 x i8> %D,
 ;
 ; CHECK-LABEL: define void @st4_8b_undefABD(
 ; CHECK-SAME: <8 x i8> [[A:%.*]], <8 x i8> [[B:%.*]], <8 x i8> [[C:%.*]], <8 x i8> [[D:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 193514046488576
@@ -609,8 +609,8 @@ define void @st4_8b_undefACD(<8 x i8> %A, <8 x i8> %B, <8 x i8> %C, <8 x i8> %D,
 ;
 ; CHECK-LABEL: define void @st4_8b_undefACD(
 ; CHECK-SAME: <8 x i8> [[A:%.*]], <8 x i8> [[B:%.*]], <8 x i8> [[C:%.*]], <8 x i8> [[D:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 193514046488576
@@ -634,7 +634,7 @@ define void @st4_8b_undefBCD(<8 x i8> %A, <8 x i8> %B, <8 x i8> %C, <8 x i8> %D,
 ;
 ; CHECK-LABEL: define void @st4_8b_undefBCD(
 ; CHECK-SAME: <8 x i8> [[A:%.*]], <8 x i8> [[B:%.*]], <8 x i8> [[C:%.*]], <8 x i8> [[D:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[P]] to i64
@@ -659,7 +659,7 @@ define void @st4_8b_undefABCD(<8 x i8> %A, <8 x i8> %B, <8 x i8> %C, <8 x i8> %D
 ;
 ; CHECK-LABEL: define void @st4_8b_undefABCD(
 ; CHECK-SAME: <8 x i8> [[A:%.*]], <8 x i8> [[B:%.*]], <8 x i8> [[C:%.*]], <8 x i8> [[D:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 193514046488576
@@ -689,9 +689,9 @@ define void @st2_16b(<16 x i8> %A, <16 x i8> %B, ptr %P) nounwind sanitize_memor
 ;
 ; CHECK-LABEL: define void @st2_16b(
 ; CHECK-SAME: <16 x i8> [[A:%.*]], <16 x i8> [[B:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 193514046488576
@@ -715,10 +715,10 @@ define void @st3_16b(<16 x i8> %A, <16 x i8> %B, <16 x i8> %C, ptr %P) nounwind 
 ;
 ; CHECK-LABEL: define void @st3_16b(
 ; CHECK-SAME: <16 x i8> [[A:%.*]], <16 x i8> [[B:%.*]], <16 x i8> [[C:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 48), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 193514046488576
@@ -742,11 +742,11 @@ define void @st4_16b(<16 x i8> %A, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D, ptr
 ;
 ; CHECK-LABEL: define void @st4_16b(
 ; CHECK-SAME: <16 x i8> [[A:%.*]], <16 x i8> [[B:%.*]], <16 x i8> [[C:%.*]], <16 x i8> [[D:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 64), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load <16 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 48), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = xor i64 [[TMP6]], 193514046488576
@@ -776,9 +776,9 @@ define void @st2_4h(<4 x i16> %A, <4 x i16> %B, ptr %P) nounwind sanitize_memory
 ;
 ; CHECK-LABEL: define void @st2_4h(
 ; CHECK-SAME: <4 x i16> [[A:%.*]], <4 x i16> [[B:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 193514046488576
@@ -802,10 +802,10 @@ define void @st3_4h(<4 x i16> %A, <4 x i16> %B, <4 x i16> %C, ptr %P) nounwind s
 ;
 ; CHECK-LABEL: define void @st3_4h(
 ; CHECK-SAME: <4 x i16> [[A:%.*]], <4 x i16> [[B:%.*]], <4 x i16> [[C:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 193514046488576
@@ -829,11 +829,11 @@ define void @st4_4h(<4 x i16> %A, <4 x i16> %B, <4 x i16> %C, <4 x i16> %D, ptr 
 ;
 ; CHECK-LABEL: define void @st4_4h(
 ; CHECK-SAME: <4 x i16> [[A:%.*]], <4 x i16> [[B:%.*]], <4 x i16> [[C:%.*]], <4 x i16> [[D:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = load <4 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load <4 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = xor i64 [[TMP6]], 193514046488576
@@ -863,9 +863,9 @@ define void @st2_8h(<8 x i16> %A, <8 x i16> %B, ptr %P) nounwind sanitize_memory
 ;
 ; CHECK-LABEL: define void @st2_8h(
 ; CHECK-SAME: <8 x i16> [[A:%.*]], <8 x i16> [[B:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 193514046488576
@@ -889,10 +889,10 @@ define void @st3_8h(<8 x i16> %A, <8 x i16> %B, <8 x i16> %C, ptr %P) nounwind s
 ;
 ; CHECK-LABEL: define void @st3_8h(
 ; CHECK-SAME: <8 x i16> [[A:%.*]], <8 x i16> [[B:%.*]], <8 x i16> [[C:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 48), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 193514046488576
@@ -916,11 +916,11 @@ define void @st4_8h(<8 x i16> %A, <8 x i16> %B, <8 x i16> %C, <8 x i16> %D, ptr 
 ;
 ; CHECK-LABEL: define void @st4_8h(
 ; CHECK-SAME: <8 x i16> [[A:%.*]], <8 x i16> [[B:%.*]], <8 x i16> [[C:%.*]], <8 x i16> [[D:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 64), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = load <8 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load <8 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 48), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = xor i64 [[TMP6]], 193514046488576
@@ -950,9 +950,9 @@ define void @st2_2s(<2 x i32> %A, <2 x i32> %B, ptr %P) nounwind sanitize_memory
 ;
 ; CHECK-LABEL: define void @st2_2s(
 ; CHECK-SAME: <2 x i32> [[A:%.*]], <2 x i32> [[B:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 193514046488576
@@ -976,10 +976,10 @@ define void @st3_2s(<2 x i32> %A, <2 x i32> %B, <2 x i32> %C, ptr %P) nounwind s
 ;
 ; CHECK-LABEL: define void @st3_2s(
 ; CHECK-SAME: <2 x i32> [[A:%.*]], <2 x i32> [[B:%.*]], <2 x i32> [[C:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 193514046488576
@@ -1003,11 +1003,11 @@ define void @st4_2s(<2 x i32> %A, <2 x i32> %B, <2 x i32> %C, <2 x i32> %D, ptr 
 ;
 ; CHECK-LABEL: define void @st4_2s(
 ; CHECK-SAME: <2 x i32> [[A:%.*]], <2 x i32> [[B:%.*]], <2 x i32> [[C:%.*]], <2 x i32> [[D:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = xor i64 [[TMP6]], 193514046488576
@@ -1035,9 +1035,9 @@ define void @st2_4s(<4 x i32> %A, <4 x i32> %B, ptr %P) nounwind sanitize_memory
 ;
 ; CHECK-LABEL: define void @st2_4s(
 ; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 193514046488576
@@ -1061,10 +1061,10 @@ define void @st3_4s(<4 x i32> %A, <4 x i32> %B, <4 x i32> %C, ptr %P) nounwind s
 ;
 ; CHECK-LABEL: define void @st3_4s(
 ; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> [[C:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 48), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 193514046488576
@@ -1088,11 +1088,11 @@ define void @st4_4s(<4 x i32> %A, <4 x i32> %B, <4 x i32> %C, <4 x i32> %D, ptr 
 ;
 ; CHECK-LABEL: define void @st4_4s(
 ; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> [[C:%.*]], <4 x i32> [[D:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 64), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 48), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = xor i64 [[TMP6]], 193514046488576
@@ -1123,9 +1123,9 @@ define void @st2_1d(<1 x i64> %A, <1 x i64> %B, ptr %P) nounwind sanitize_memory
 ;
 ; CHECK-LABEL: define void @st2_1d(
 ; CHECK-SAME: <1 x i64> [[A:%.*]], <1 x i64> [[B:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <1 x i64>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <1 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <1 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 193514046488576
@@ -1149,10 +1149,10 @@ define void @st3_1d(<1 x i64> %A, <1 x i64> %B, <1 x i64> %C, ptr %P) nounwind s
 ;
 ; CHECK-LABEL: define void @st3_1d(
 ; CHECK-SAME: <1 x i64> [[A:%.*]], <1 x i64> [[B:%.*]], <1 x i64> [[C:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <1 x i64>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <1 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load <1 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <1 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <1 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 193514046488576
@@ -1176,11 +1176,11 @@ define void @st4_1d(<1 x i64> %A, <1 x i64> %B, <1 x i64> %C, <1 x i64> %D, ptr 
 ;
 ; CHECK-LABEL: define void @st4_1d(
 ; CHECK-SAME: <1 x i64> [[A:%.*]], <1 x i64> [[B:%.*]], <1 x i64> [[C:%.*]], <1 x i64> [[D:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <1 x i64>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <1 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load <1 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = load <1 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <1 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <1 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load <1 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = xor i64 [[TMP6]], 193514046488576
@@ -1210,9 +1210,9 @@ define void @st2_2d(<2 x i64> %A, <2 x i64> %B, ptr %P) nounwind sanitize_memory
 ;
 ; CHECK-LABEL: define void @st2_2d(
 ; CHECK-SAME: <2 x i64> [[A:%.*]], <2 x i64> [[B:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 193514046488576
@@ -1236,8 +1236,8 @@ define void @st2_2d_undefA(<2 x i64> %A, <2 x i64> %B, ptr %P) nounwind sanitize
 ;
 ; CHECK-LABEL: define void @st2_2d_undefA(
 ; CHECK-SAME: <2 x i64> [[A:%.*]], <2 x i64> [[B:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 193514046488576
@@ -1261,7 +1261,7 @@ define void @st2_2d_undefB(<2 x i64> %A, <2 x i64> %B, ptr %P) nounwind sanitize
 ;
 ; CHECK-LABEL: define void @st2_2d_undefB(
 ; CHECK-SAME: <2 x i64> [[A:%.*]], <2 x i64> [[B:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[P]] to i64
@@ -1286,7 +1286,7 @@ define void @st2_2d_undefAB(<2 x i64> %A, <2 x i64> %B, ptr %P) nounwind sanitiz
 ;
 ; CHECK-LABEL: define void @st2_2d_undefAB(
 ; CHECK-SAME: <2 x i64> [[A:%.*]], <2 x i64> [[B:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 193514046488576
@@ -1310,10 +1310,10 @@ define void @st3_2d(<2 x i64> %A, <2 x i64> %B, <2 x i64> %C, ptr %P) nounwind s
 ;
 ; CHECK-LABEL: define void @st3_2d(
 ; CHECK-SAME: <2 x i64> [[A:%.*]], <2 x i64> [[B:%.*]], <2 x i64> [[C:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 48), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 193514046488576
@@ -1337,9 +1337,9 @@ define void @st3_2d_undefA(<2 x i64> %A, <2 x i64> %B, <2 x i64> %C, ptr %P) nou
 ;
 ; CHECK-LABEL: define void @st3_2d_undefA(
 ; CHECK-SAME: <2 x i64> [[A:%.*]], <2 x i64> [[B:%.*]], <2 x i64> [[C:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 48), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 193514046488576
@@ -1363,9 +1363,9 @@ define void @st3_2d_undefB(<2 x i64> %A, <2 x i64> %B, <2 x i64> %C, ptr %P) nou
 ;
 ; CHECK-LABEL: define void @st3_2d_undefB(
 ; CHECK-SAME: <2 x i64> [[A:%.*]], <2 x i64> [[B:%.*]], <2 x i64> [[C:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 48), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 193514046488576
@@ -1389,9 +1389,9 @@ define void @st3_2d_undefC(<2 x i64> %A, <2 x i64> %B, <2 x i64> %C, ptr %P) nou
 ;
 ; CHECK-LABEL: define void @st3_2d_undefC(
 ; CHECK-SAME: <2 x i64> [[A:%.*]], <2 x i64> [[B:%.*]], <2 x i64> [[C:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 48), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 193514046488576
@@ -1415,8 +1415,8 @@ define void @st3_2d_undefAB(<2 x i64> %A, <2 x i64> %B, <2 x i64> %C, ptr %P) no
 ;
 ; CHECK-LABEL: define void @st3_2d_undefAB(
 ; CHECK-SAME: <2 x i64> [[A:%.*]], <2 x i64> [[B:%.*]], <2 x i64> [[C:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 48), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 193514046488576
@@ -1440,8 +1440,8 @@ define void @st3_2d_undefAC(<2 x i64> %A, <2 x i64> %B, <2 x i64> %C, ptr %P) no
 ;
 ; CHECK-LABEL: define void @st3_2d_undefAC(
 ; CHECK-SAME: <2 x i64> [[A:%.*]], <2 x i64> [[B:%.*]], <2 x i64> [[C:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 48), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 193514046488576
@@ -1465,7 +1465,7 @@ define void @st3_2d_undefBC(<2 x i64> %A, <2 x i64> %B, <2 x i64> %C, ptr %P) no
 ;
 ; CHECK-LABEL: define void @st3_2d_undefBC(
 ; CHECK-SAME: <2 x i64> [[A:%.*]], <2 x i64> [[B:%.*]], <2 x i64> [[C:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 48), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[P]] to i64
@@ -1490,7 +1490,7 @@ define void @st3_2d_undefABC(<2 x i64> %A, <2 x i64> %B, <2 x i64> %C, ptr %P) n
 ;
 ; CHECK-LABEL: define void @st3_2d_undefABC(
 ; CHECK-SAME: <2 x i64> [[A:%.*]], <2 x i64> [[B:%.*]], <2 x i64> [[C:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 48), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 193514046488576
@@ -1514,11 +1514,11 @@ define void @st4_2d(<2 x i64> %A, <2 x i64> %B, <2 x i64> %C, <2 x i64> %D, ptr 
 ;
 ; CHECK-LABEL: define void @st4_2d(
 ; CHECK-SAME: <2 x i64> [[A:%.*]], <2 x i64> [[B:%.*]], <2 x i64> [[C:%.*]], <2 x i64> [[D:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 64), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 48), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = xor i64 [[TMP6]], 193514046488576
@@ -1546,10 +1546,10 @@ define void @st4_2d_undefA(<2 x i64> %A, <2 x i64> %B, <2 x i64> %C, <2 x i64> %
 ;
 ; CHECK-LABEL: define void @st4_2d_undefA(
 ; CHECK-SAME: <2 x i64> [[A:%.*]], <2 x i64> [[B:%.*]], <2 x i64> [[C:%.*]], <2 x i64> [[D:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 64), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 48), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 193514046488576
@@ -1573,10 +1573,10 @@ define void @st4_2d_undefB(<2 x i64> %A, <2 x i64> %B, <2 x i64> %C, <2 x i64> %
 ;
 ; CHECK-LABEL: define void @st4_2d_undefB(
 ; CHECK-SAME: <2 x i64> [[A:%.*]], <2 x i64> [[B:%.*]], <2 x i64> [[C:%.*]], <2 x i64> [[D:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 64), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 48), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 193514046488576
@@ -1600,10 +1600,10 @@ define void @st4_2d_undefC(<2 x i64> %A, <2 x i64> %B, <2 x i64> %C, <2 x i64> %
 ;
 ; CHECK-LABEL: define void @st4_2d_undefC(
 ; CHECK-SAME: <2 x i64> [[A:%.*]], <2 x i64> [[B:%.*]], <2 x i64> [[C:%.*]], <2 x i64> [[D:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 64), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 48), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 193514046488576
@@ -1627,10 +1627,10 @@ define void @st4_2d_undefD(<2 x i64> %A, <2 x i64> %B, <2 x i64> %C, <2 x i64> %
 ;
 ; CHECK-LABEL: define void @st4_2d_undefD(
 ; CHECK-SAME: <2 x i64> [[A:%.*]], <2 x i64> [[B:%.*]], <2 x i64> [[C:%.*]], <2 x i64> [[D:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 64), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 193514046488576
@@ -1654,9 +1654,9 @@ define void @st4_2d_undefAB(<2 x i64> %A, <2 x i64> %B, <2 x i64> %C, <2 x i64> 
 ;
 ; CHECK-LABEL: define void @st4_2d_undefAB(
 ; CHECK-SAME: <2 x i64> [[A:%.*]], <2 x i64> [[B:%.*]], <2 x i64> [[C:%.*]], <2 x i64> [[D:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 64), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 48), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 193514046488576
@@ -1680,9 +1680,9 @@ define void @st4_2d_undefAC(<2 x i64> %A, <2 x i64> %B, <2 x i64> %C, <2 x i64> 
 ;
 ; CHECK-LABEL: define void @st4_2d_undefAC(
 ; CHECK-SAME: <2 x i64> [[A:%.*]], <2 x i64> [[B:%.*]], <2 x i64> [[C:%.*]], <2 x i64> [[D:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 64), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 48), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 193514046488576
@@ -1706,9 +1706,9 @@ define void @st4_2d_undefAD(<2 x i64> %A, <2 x i64> %B, <2 x i64> %C, <2 x i64> 
 ;
 ; CHECK-LABEL: define void @st4_2d_undefAD(
 ; CHECK-SAME: <2 x i64> [[A:%.*]], <2 x i64> [[B:%.*]], <2 x i64> [[C:%.*]], <2 x i64> [[D:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 64), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 193514046488576
@@ -1732,9 +1732,9 @@ define void @st4_2d_undefBC(<2 x i64> %A, <2 x i64> %B, <2 x i64> %C, <2 x i64> 
 ;
 ; CHECK-LABEL: define void @st4_2d_undefBC(
 ; CHECK-SAME: <2 x i64> [[A:%.*]], <2 x i64> [[B:%.*]], <2 x i64> [[C:%.*]], <2 x i64> [[D:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 64), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 48), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 193514046488576
@@ -1758,9 +1758,9 @@ define void @st4_2d_undefBD(<2 x i64> %A, <2 x i64> %B, <2 x i64> %C, <2 x i64> 
 ;
 ; CHECK-LABEL: define void @st4_2d_undefBD(
 ; CHECK-SAME: <2 x i64> [[A:%.*]], <2 x i64> [[B:%.*]], <2 x i64> [[C:%.*]], <2 x i64> [[D:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 64), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 193514046488576
@@ -1784,9 +1784,9 @@ define void @st4_2d_undefCD(<2 x i64> %A, <2 x i64> %B, <2 x i64> %C, <2 x i64> 
 ;
 ; CHECK-LABEL: define void @st4_2d_undefCD(
 ; CHECK-SAME: <2 x i64> [[A:%.*]], <2 x i64> [[B:%.*]], <2 x i64> [[C:%.*]], <2 x i64> [[D:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 64), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 193514046488576
@@ -1810,8 +1810,8 @@ define void @st4_2d_undefABC(<2 x i64> %A, <2 x i64> %B, <2 x i64> %C, <2 x i64>
 ;
 ; CHECK-LABEL: define void @st4_2d_undefABC(
 ; CHECK-SAME: <2 x i64> [[A:%.*]], <2 x i64> [[B:%.*]], <2 x i64> [[C:%.*]], <2 x i64> [[D:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 64), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 48), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 193514046488576
@@ -1835,8 +1835,8 @@ define void @st4_2d_undefABD(<2 x i64> %A, <2 x i64> %B, <2 x i64> %C, <2 x i64>
 ;
 ; CHECK-LABEL: define void @st4_2d_undefABD(
 ; CHECK-SAME: <2 x i64> [[A:%.*]], <2 x i64> [[B:%.*]], <2 x i64> [[C:%.*]], <2 x i64> [[D:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 64), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 193514046488576
@@ -1860,8 +1860,8 @@ define void @st4_2d_undefACD(<2 x i64> %A, <2 x i64> %B, <2 x i64> %C, <2 x i64>
 ;
 ; CHECK-LABEL: define void @st4_2d_undefACD(
 ; CHECK-SAME: <2 x i64> [[A:%.*]], <2 x i64> [[B:%.*]], <2 x i64> [[C:%.*]], <2 x i64> [[D:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 64), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 193514046488576
@@ -1885,7 +1885,7 @@ define void @st4_2d_undefBCD(<2 x i64> %A, <2 x i64> %B, <2 x i64> %C, <2 x i64>
 ;
 ; CHECK-LABEL: define void @st4_2d_undefBCD(
 ; CHECK-SAME: <2 x i64> [[A:%.*]], <2 x i64> [[B:%.*]], <2 x i64> [[C:%.*]], <2 x i64> [[D:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 64), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[P]] to i64
@@ -1910,7 +1910,7 @@ define void @st4_2d_undefABCD(<2 x i64> %A, <2 x i64> %B, <2 x i64> %C, <2 x i64
 ;
 ; CHECK-LABEL: define void @st4_2d_undefABCD(
 ; CHECK-SAME: <2 x i64> [[A:%.*]], <2 x i64> [[B:%.*]], <2 x i64> [[C:%.*]], <2 x i64> [[D:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 64), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 193514046488576

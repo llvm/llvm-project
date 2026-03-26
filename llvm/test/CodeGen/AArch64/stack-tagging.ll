@@ -94,8 +94,7 @@ if.end:
 ; CHECK:  ret void
 
 
-; Spooked by the multiple lifetime ranges, StackTagging remove all of them and sets tags on entry and exit.
-define void @BadScope(i32 %b) sanitize_memtag {
+define void @DoubleScope(i32 %b) sanitize_memtag {
 entry:
   %x = alloca i32, align 4
   %tobool = icmp eq i32 %b, 0
@@ -115,14 +114,15 @@ if.end:
   ret void
 }
 
-; CHECK-LABEL: define void @BadScope(
-; CHECK:       call void @llvm.aarch64.settag(ptr {{.*}}, i64 16)
+; CHECK-LABEL: define void @DoubleScope(
 ; CHECK:       br i1
+; CHECK:       call void @llvm.aarch64.settag(
 ; CHECK:       call void @use8(ptr
+; CHECK:       call void @llvm.aarch64.settag(
+; CHECK:       call void @llvm.aarch64.settag(
 ; CHECK-NEXT:  call void @use8(ptr
+; CHECK:       call void @llvm.aarch64.settag(
 ; CHECK:       br label
-; CHECK:       call void @llvm.aarch64.settag(ptr {{.*}}, i64 16)
-; CHECK-NEXT:  ret void
 
 define void @DynamicAllocas(i32 %cnt) sanitize_memtag {
 entry:
@@ -143,54 +143,34 @@ l:
 ; CHECK-NOT: @llvm.aarch64.irg.sp
 ; CHECK:     ret void
 
-; If we can't trace one of the lifetime markers to a single alloca, fall back
-; to poisoning all allocas at the beginning of the function.
-; Each alloca must be poisoned only once.
-define void @UnrecognizedLifetime(i8 %v) sanitize_memtag {
+define void @DoubleEnd(i32 %b) sanitize_memtag {
 entry:
   %x = alloca i32, align 4
-  %y = alloca i32, align 4
-  %z = alloca i32, align 4
-  %tobool = icmp eq i8 %v, 0
-  %xy = select i1 %tobool, ptr %x, ptr %y
-  %cxcy = select i1 %tobool, ptr %x, ptr %y
-  br label %another_bb
+  %tobool = icmp eq i32 %b, 0
+  br i1 %tobool, label %if.end, label %if.then
 
-another_bb:
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %z)
-  store i32 7, ptr %z
-  call void @noUse32(ptr %z)
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %z)
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %z)
-  store i32 7, ptr %z
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %z)
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %cxcy)
-  store i32 8, ptr %xy
-  call void @noUse32(ptr %x)
-  call void @noUse32(ptr %y)
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %cxcy)
+if.then:
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %x)
+  call void @use8(ptr %x) #3
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %x)
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %x)
+  br label %if.end
+
+if.end:
   ret void
 }
 
-; CHECK-LABEL: define void @UnrecognizedLifetime(
-; CHECK: call ptr @llvm.aarch64.irg.sp(i64 0)
-; CHECK: alloca { i32, [12 x i8] }, align 16
-; CHECK: call ptr @llvm.aarch64.tagp
-; CHECK: call void @llvm.aarch64.settag(
-; CHECK: alloca { i32, [12 x i8] }, align 16
-; CHECK: call ptr @llvm.aarch64.tagp
-; CHECK: call void @llvm.aarch64.settag(
-; CHECK: alloca { i32, [12 x i8] }, align 16
-; CHECK: call ptr @llvm.aarch64.tagp
-; CHECK: call void @llvm.aarch64.settag(
-; CHECK: store i32
-; CHECK: call void @noUse32(ptr
-; CHECK: store i32
-; CHECK: store i32
-; CHECK: call void @noUse32(ptr
-; CHECK: call void @llvm.aarch64.settag(
-; CHECK: call void @llvm.aarch64.settag(
-; CHECK: call void @llvm.aarch64.settag(
-; CHECK: ret void
+
+; CHECK-LABEL: define void @DoubleEnd(
+; CHECK:  br i1
+; CHECK:  call void @llvm.lifetime.start.p0(
+; CHECK:  call void @llvm.aarch64.settag(
+; CHECK:  call void @use8(
+; CHECK:  call void @llvm.aarch64.settag(
+; CHECK:  call void @llvm.lifetime.end.p0(
+; CHECK:  br label
+; CHECK:  ret void
+
+
 
 !0 = !{}

@@ -12,11 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRV.h"
-#include "llvm/Demangle/Demangle.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
-#include "llvm/IR/InstVisitor.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Transforms/Utils/Cloning.h"
 
 #include <list>
 
@@ -25,9 +25,7 @@
 using namespace llvm;
 
 namespace {
-struct SPIRVRegularizer : public FunctionPass, InstVisitor<SPIRVRegularizer> {
-  DenseMap<Function *, Function *> Old2NewFuncs;
-
+struct SPIRVRegularizer : public FunctionPass {
 public:
   static char ID;
   SPIRVRegularizer() : FunctionPass(ID) {}
@@ -37,12 +35,10 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     FunctionPass::getAnalysisUsage(AU);
   }
-  void visitCallInst(CallInst &CI);
 
 private:
-  void visitCallScalToVec(CallInst *CI, StringRef MangledName,
-                          StringRef DemangledName);
   void runLowerConstExpr(Function &F);
+  void runLowerI1Comparisons(Function &F);
 };
 } // namespace
 
@@ -157,98 +153,65 @@ void SPIRVRegularizer::runLowerConstExpr(Function &F) {
   }
 }
 
-// It fixes calls to OCL builtins that accept vector arguments and one of them
-// is actually a scalar splat.
-void SPIRVRegularizer::visitCallInst(CallInst &CI) {
-  auto F = CI.getCalledFunction();
-  if (!F)
-    return;
+// Lower i1 comparisons with certain predicates to logical operations.
+// The backend treats i1 as boolean values, and SPIR-V only allows logical
+// operations for boolean values. This function lowers i1 comparisons with
+// certain predicates to logical operations to generate valid SPIR-V.
+void SPIRVRegularizer::runLowerI1Comparisons(Function &F) {
+  for (auto &I : make_early_inc_range(instructions(F))) {
+    auto *Cmp = dyn_cast<ICmpInst>(&I);
+    if (!Cmp)
+      continue;
 
-  auto MangledName = F->getName();
-  char *NameStr = itaniumDemangle(F->getName().data());
-  if (!NameStr)
-    return;
-  StringRef DemangledName(NameStr);
+    bool IsI1 = Cmp->getOperand(0)->getType()->isIntegerTy(1);
+    if (!IsI1)
+      continue;
 
-  // TODO: add support for other builtins.
-  if (DemangledName.starts_with("fmin") || DemangledName.starts_with("fmax") ||
-      DemangledName.starts_with("min") || DemangledName.starts_with("max"))
-    visitCallScalToVec(&CI, MangledName, DemangledName);
-  free(NameStr);
-}
+    auto Pred = Cmp->getPredicate();
+    bool IsTargetPred =
+        Pred >= ICmpInst::ICMP_UGT && Pred <= ICmpInst::ICMP_SLE;
+    if (!IsTargetPred)
+      continue;
 
-void SPIRVRegularizer::visitCallScalToVec(CallInst *CI, StringRef MangledName,
-                                          StringRef DemangledName) {
-  // Check if all arguments have the same type - it's simple case.
-  auto Uniform = true;
-  Type *Arg0Ty = CI->getOperand(0)->getType();
-  auto IsArg0Vector = isa<VectorType>(Arg0Ty);
-  for (unsigned I = 1, E = CI->arg_size(); Uniform && (I != E); ++I)
-    Uniform = isa<VectorType>(CI->getOperand(I)->getType()) == IsArg0Vector;
-  if (Uniform)
-    return;
+    Value *P = Cmp->getOperand(0);
+    Value *Q = Cmp->getOperand(1);
 
-  auto *OldF = CI->getCalledFunction();
-  Function *NewF = nullptr;
-  auto [It, Inserted] = Old2NewFuncs.try_emplace(OldF);
-  if (Inserted) {
-    AttributeList Attrs = CI->getCalledFunction()->getAttributes();
-    SmallVector<Type *, 2> ArgTypes = {OldF->getArg(0)->getType(), Arg0Ty};
-    auto *NewFTy =
-        FunctionType::get(OldF->getReturnType(), ArgTypes, OldF->isVarArg());
-    NewF = Function::Create(NewFTy, OldF->getLinkage(), OldF->getName(),
-                            *OldF->getParent());
-    ValueToValueMapTy VMap;
-    auto NewFArgIt = NewF->arg_begin();
-    for (auto &Arg : OldF->args()) {
-      auto ArgName = Arg.getName();
-      NewFArgIt->setName(ArgName);
-      VMap[&Arg] = &(*NewFArgIt++);
+    IRBuilder<> Builder(Cmp);
+    Value *Result = nullptr;
+    switch (Pred) {
+    case ICmpInst::ICMP_UGT:
+    case ICmpInst::ICMP_SLT:
+      // Result = p & !q
+      Result = Builder.CreateAnd(P, Builder.CreateNot(Q));
+      break;
+    case ICmpInst::ICMP_ULT:
+    case ICmpInst::ICMP_SGT:
+      // Result = q & !p
+      Result = Builder.CreateAnd(Q, Builder.CreateNot(P));
+      break;
+    case ICmpInst::ICMP_ULE:
+    case ICmpInst::ICMP_SGE:
+      // Result = q | !p
+      Result = Builder.CreateOr(Q, Builder.CreateNot(P));
+      break;
+    case ICmpInst::ICMP_UGE:
+    case ICmpInst::ICMP_SLE:
+      // Result = p | !q
+      Result = Builder.CreateOr(P, Builder.CreateNot(Q));
+      break;
+    default:
+      llvm_unreachable("Unexpected predicate");
     }
-    SmallVector<ReturnInst *, 8> Returns;
-    CloneFunctionInto(NewF, OldF, VMap,
-                      CloneFunctionChangeType::LocalChangesOnly, Returns);
-    NewF->setAttributes(Attrs);
-    It->second = NewF;
-  } else {
-    NewF = It->second;
-  }
-  assert(NewF);
 
-  // This produces an instruction sequence that implements a splat of
-  // CI->getOperand(1) to a vector Arg0Ty. However, we use InsertElementInst
-  // and ShuffleVectorInst to generate the same code as the SPIR-V translator.
-  // For instance (transcoding/OpMin.ll), this call
-  //   call spir_func <2 x i32> @_Z3minDv2_ii(<2 x i32> <i32 1, i32 10>, i32 5)
-  // is translated to
-  //    %8 = OpUndef %v2uint
-  //   %14 = OpConstantComposite %v2uint %uint_1 %uint_10
-  //   ...
-  //   %10 = OpCompositeInsert %v2uint %uint_5 %8 0
-  //   %11 = OpVectorShuffle %v2uint %10 %8 0 0
-  // %call = OpExtInst %v2uint %1 s_min %14 %11
-  auto ConstInt = ConstantInt::get(IntegerType::get(CI->getContext(), 32), 0);
-  PoisonValue *PVal = PoisonValue::get(Arg0Ty);
-  Instruction *Inst = InsertElementInst::Create(
-      PVal, CI->getOperand(1), ConstInt, "", CI->getIterator());
-  ElementCount VecElemCount = cast<VectorType>(Arg0Ty)->getElementCount();
-  Constant *ConstVec = ConstantVector::getSplat(VecElemCount, ConstInt);
-  Value *NewVec =
-      new ShuffleVectorInst(Inst, PVal, ConstVec, "", CI->getIterator());
-  CI->setOperand(1, NewVec);
-  CI->replaceUsesOfWith(OldF, NewF);
-  CI->mutateFunctionType(NewF->getFunctionType());
+    Result->takeName(Cmp);
+    Cmp->replaceAllUsesWith(Result);
+    Cmp->eraseFromParent();
+  }
 }
 
 bool SPIRVRegularizer::runOnFunction(Function &F) {
+  runLowerI1Comparisons(F);
   runLowerConstExpr(F);
-  visit(F);
-  for (auto &OldNew : Old2NewFuncs) {
-    Function *OldF = OldNew.first;
-    Function *NewF = OldNew.second;
-    NewF->takeName(OldF);
-    OldF->eraseFromParent();
-  }
   return true;
 }
 

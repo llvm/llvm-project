@@ -22,14 +22,14 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: c
     ; CHECK: [[MOV32ri:%[0-9]+]]:gr32_abcd = MOV32ri 512
-    ; CHECK-NEXT: INLINEASM &"", 1 /* sideeffect attdialect */, 2359305 /* reguse:GR32 */, [[MOV32ri]], 1 /* reguse */, implicit-def early-clobber $df
+    ; CHECK-NEXT: INLINEASM &"", 1 /* sideeffect attdialect */, 3211273 /* reguse:GR32_ABCD */, [[MOV32ri]], 1 /* reguse */, implicit-def early-clobber $df
     ; CHECK-NEXT: [[MOV32ri1:%[0-9]+]]:gr32_abcd = MOV32ri 512
-    ; CHECK-NEXT: INLINEASM &"", 1 /* sideeffect attdialect */, 2359305 /* reguse:GR32 */, [[MOV32ri1]], 1 /* reguse */, implicit-def early-clobber $df
+    ; CHECK-NEXT: INLINEASM &"", 1 /* sideeffect attdialect */, 3211273 /* reguse:GR32_ABCD */, [[MOV32ri1]], 1 /* reguse */, implicit-def early-clobber $df
     ; CHECK-NEXT: RET 0
     %2 = MOV32ri 512
     %0 = COPY %2
-    INLINEASM &"", 1 /* sideeffect attdialect */, 2359305 /* reguse:GR32_ABCD */, %0:gr32_abcd, 1 /* clobber */, implicit-def early-clobber $df
+    INLINEASM &"", 1 /* sideeffect attdialect */, 3211273 /* reguse:GR32_ABCD */, %0:gr32_abcd, 1 /* clobber */, implicit-def early-clobber $df
     %1 = COPY %2
-    INLINEASM &"", 1 /* sideeffect attdialect */, 2359305 /* reguse:GR32_ABCD */, %1:gr32_abcd, 1 /* clobber */, implicit-def early-clobber $df
+    INLINEASM &"", 1 /* sideeffect attdialect */, 3211273 /* reguse:GR32_ABCD */, %1:gr32_abcd, 1 /* clobber */, implicit-def early-clobber $df
     RET 0
 ...
