@@ -1319,14 +1319,12 @@ private:
         if (!dependencesAllowFusion(FC0, FC1, *WriteL0, *WriteL1,
                                     /* AnyDep */ false,
                                     FusionDependenceAnalysis)) {
-          InvalidDependencies++;
           return false;
         }
       for (Instruction *ReadL1 : FC1.MemReads)
         if (!dependencesAllowFusion(FC0, FC1, *WriteL0, *ReadL1,
                                     /* AnyDep */ false,
                                     FusionDependenceAnalysis)) {
-          InvalidDependencies++;
           return false;
         }
     }
@@ -1336,14 +1334,12 @@ private:
         if (!dependencesAllowFusion(FC0, FC1, *WriteL0, *WriteL1,
                                     /* AnyDep */ false,
                                     FusionDependenceAnalysis)) {
-          InvalidDependencies++;
           return false;
         }
       for (Instruction *ReadL0 : FC0.MemReads)
         if (!dependencesAllowFusion(FC0, FC1, *ReadL0, *WriteL1,
                                     /* AnyDep */ false,
                                     FusionDependenceAnalysis)) {
-          InvalidDependencies++;
           return false;
         }
     }
@@ -1355,7 +1351,6 @@ private:
         for (auto &Op : I.operands())
           if (Instruction *Def = dyn_cast<Instruction>(Op))
             if (FC0.L->contains(Def->getParent())) {
-              InvalidDependencies++;
               return false;
             }
 

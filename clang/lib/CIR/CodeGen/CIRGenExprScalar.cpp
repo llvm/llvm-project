@@ -1985,7 +1985,7 @@ mlir::Value ScalarExprEmitter::emitSub(const BinOpInfo &ops) {
 mlir::Value ScalarExprEmitter::emitShl(const BinOpInfo &ops) {
   // TODO: This misses out on the sanitizer check below.
   if (ops.isFixedPointOp()) {
-    assert(cir::MissingFeatures::fixedPointType());
+    assert(!cir::MissingFeatures::fixedPointType());
     cgf.cgm.errorNYI("fixed point");
     return {};
   }
@@ -2017,7 +2017,7 @@ mlir::Value ScalarExprEmitter::emitShl(const BinOpInfo &ops) {
 mlir::Value ScalarExprEmitter::emitShr(const BinOpInfo &ops) {
   // TODO: This misses out on the sanitizer check below.
   if (ops.isFixedPointOp()) {
-    assert(cir::MissingFeatures::fixedPointType());
+    assert(!cir::MissingFeatures::fixedPointType());
     cgf.cgm.errorNYI("fixed point");
     return {};
   }

@@ -1169,10 +1169,13 @@ LLVMInstructionGetAllMetadataOtherThanDebugLoc(LLVMValueRef Value,
     return wrap(static_cast<Value*>(dyn_cast_or_null<name>(unwrap(Val)))); \
   }
 
-// Suppress warning for BranchInst.
-LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
 LLVM_FOR_EACH_VALUE_SUBCLASS(LLVM_DEFINE_VALUE_CAST)
-LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
+
+LLVMValueRef LLVMIsABranchInst(LLVMValueRef Val) {
+  if (Value *V = unwrap(Val))
+    return isa<UncondBrInst, CondBrInst>(V) ? Val : nullptr;
+  return nullptr;
+}
 
 LLVMValueRef LLVMIsAMDNode(LLVMValueRef Val) {
   if (auto *MD = dyn_cast_or_null<MetadataAsValue>(unwrap(Val)))

@@ -34,8 +34,8 @@ class VOP <string opName> {
   string OpName = opName;
 }
 
-// First 13 insts from VOPDY are also VOPDX. DOT2ACC_F32_BF16 is omitted
-defvar VOPDX_Max_Index = 12;
+// First 13 insts from VOPDY are also VOPDX.
+defvar VOPDX_Max_Index = 13;
 defvar VOPD3X_Max_Index = 36;
 
 class VOPD_Component<bits<6> OpIn, string vOPDName> {
@@ -1380,10 +1380,12 @@ class getVOP3ModPat<VOPProfile P, SDPatternOperator node> {
 
 class getVOP3PModPat<VOPProfile P, SDPatternOperator node, bit HasExplicitClamp,
                      bit IsDOT = 0,
-                     ComplexPattern SrcPat = !if(IsDOT, VOP3PModsDOT, VOP3PMods)> {
+                     ComplexPattern SrcPat = !if(IsDOT, VOP3PModsDOT,
+                                                        VOP3PMods),
+                     ComplexPattern Src2Pat = SrcPat> {
   dag src0_dag = (P.Src0VT (SrcPat P.Src0VT:$src0, i32:$src0_modifiers));
   dag src1_dag = (P.Src1VT (SrcPat P.Src1VT:$src1, i32:$src1_modifiers));
-  dag src2_dag = (P.Src2VT (SrcPat P.Src2VT:$src2, i32:$src2_modifiers));
+  dag src2_dag = (P.Src2VT (Src2Pat P.Src2VT:$src2, i32:$src2_modifiers));
   dag clamp_dag = (i1 timm:$clamp);
 
   list<dag> ret3 = [(set P.DstVT:$vdst,
