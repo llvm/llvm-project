@@ -108,3 +108,10 @@ As an example, to build and test in a container for 32-bit Arm:
         --arch arm docker.io/ubuntu:jammy bash
 
 #. Install necessary packages, invoke CMake, build, and run tests.
+
+Building and Testing with an Emulator
+=====================================
+
+If you are cross-compiling the libc for a different architecture, you can use an emulator
+such as QEMU to run the tests directly on your host without a container. See
+:ref:`full_cross_build` for detailed instructions on configuring CMake to use an emulator.
