@@ -1309,7 +1309,10 @@ LogicalResult DsBarrierArriveOp::verify() {
 LogicalResult GlobalPrefetchOp::verify() {
   auto src = cast<MemRefType>(getSrc().getType());
 
-  if (!hasGlobalMemorySpace(src.getMemorySpace()))
+  Attribute memSpace = src.getMemorySpace();
+  if (!memSpace)
+    return this->emitOpError("the source must have address space attribute");
+  if (!hasGlobalMemorySpace(memSpace))
     return this->emitOpError("the source must reside in global address space");
 
   ArrayRef<int64_t> srcShape = src.getShape();
