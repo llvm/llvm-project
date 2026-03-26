@@ -666,7 +666,7 @@ func.func @sparse_wmma_i4_requires_equal_length_wave64(%a: vector<8xi4>, %b: vec
 // GlobalPrefetchOp: source must have address space attribute
 func.func @global_prefetch_no_address_space(%src: memref<64x64xf16>, %i: i64, %j: i64) {
   // expected-error@+1 {{'amdgpu.global_prefetch' op the source must have address space attribute}}
-  amdgpu.global_prefetch %src[%i, %j] RT : memref<64x64xf16>
+  amdgpu.global_prefetch %src[%i, %j] RT WGP : memref<64x64xf16>
   func.return
 }
 
@@ -676,7 +676,7 @@ func.func @global_prefetch_no_address_space(%src: memref<64x64xf16>, %i: i64, %j
 // GlobalPrefetchOp: source must reside in global address space
 func.func @global_prefetch_wrong_address_space(%src: memref<64x64xf16, #gpu.address_space<workgroup>>, %i: i64, %j: i64) {
   // expected-error@+1 {{'amdgpu.global_prefetch' op the source must reside in global address space}}
-  amdgpu.global_prefetch %src[%i, %j] RT : memref<64x64xf16, #gpu.address_space<workgroup>>
+  amdgpu.global_prefetch %src[%i, %j] RT SE : memref<64x64xf16, #gpu.address_space<workgroup>>
   func.return
 }
 
@@ -685,7 +685,7 @@ func.func @global_prefetch_wrong_address_space(%src: memref<64x64xf16, #gpu.addr
 // GlobalPrefetchOp: number of indices must match source shape rank
 func.func @global_prefetch_wrong_num_indices(%src: memref<64x64xf16, #gpu.address_space<global>>, %i: i64) {
   // expected-error@+1 {{'amdgpu.global_prefetch' op the number of indices must match the source shape size}}
-  amdgpu.global_prefetch %src[%i] RT : memref<64x64xf16, #gpu.address_space<global>>
+  amdgpu.global_prefetch %src[%i] RT DEV : memref<64x64xf16, #gpu.address_space<global>>
   func.return
 }
 
@@ -694,7 +694,7 @@ func.func @global_prefetch_wrong_num_indices(%src: memref<64x64xf16, #gpu.addres
 // GlobalPrefetchOp: NT temporal hint is not supported
 func.func @global_prefetch_nt_mode(%src: memref<64x64xf16, #gpu.address_space<global>>, %i: i64, %j: i64) {
   // expected-error@+1 {{'amdgpu.global_prefetch' op does not support NT mode}}
-  amdgpu.global_prefetch %src[%i, %j] NT : memref<64x64xf16, #gpu.address_space<global>>
+  amdgpu.global_prefetch %src[%i, %j] NT SYS : memref<64x64xf16, #gpu.address_space<global>>
   func.return
 }
 
@@ -703,7 +703,7 @@ func.func @global_prefetch_nt_mode(%src: memref<64x64xf16, #gpu.address_space<gl
 // GlobalPrefetchOp: NT_RT requires speculative mode
 func.func @global_prefetch_nt_rt_not_speculative(%src: memref<64x64xf16, #gpu.address_space<global>>, %i: i64, %j: i64) {
   // expected-error@+1 {{'amdgpu.global_prefetch' op operates only in the speculative mode}}
-  amdgpu.global_prefetch %src[%i, %j] NT_RT : memref<64x64xf16, #gpu.address_space<global>>
+  amdgpu.global_prefetch %src[%i, %j] NT_RT WGP : memref<64x64xf16, #gpu.address_space<global>>
   func.return
 }
 
@@ -712,7 +712,7 @@ func.func @global_prefetch_nt_rt_not_speculative(%src: memref<64x64xf16, #gpu.ad
 // GlobalPrefetchOp: RT_NT requires speculative mode
 func.func @global_prefetch_rt_nt_not_speculative(%src: memref<64x64xf16, #gpu.address_space<global>>, %i: i64, %j: i64) {
   // expected-error@+1 {{'amdgpu.global_prefetch' op operates only in the speculative mode}}
-  amdgpu.global_prefetch %src[%i, %j] RT_NT : memref<64x64xf16, #gpu.address_space<global>>
+  amdgpu.global_prefetch %src[%i, %j] RT_NT SE : memref<64x64xf16, #gpu.address_space<global>>
   func.return
 }
 
@@ -721,6 +721,6 @@ func.func @global_prefetch_rt_nt_not_speculative(%src: memref<64x64xf16, #gpu.ad
 // GlobalPrefetchOp: NT_HT requires speculative mode
 func.func @global_prefetch_nt_ht_not_speculative(%src: memref<64x64xf16, #gpu.address_space<global>>, %i: i64, %j: i64) {
   // expected-error@+1 {{'amdgpu.global_prefetch' op operates only in the speculative mode}}
-  amdgpu.global_prefetch %src[%i, %j] NT_HT : memref<64x64xf16, #gpu.address_space<global>>
+  amdgpu.global_prefetch %src[%i, %j] NT_HT DEV : memref<64x64xf16, #gpu.address_space<global>>
   func.return
 }

@@ -88,7 +88,7 @@ def AMDGPU_TemporalHint : I32Enum<"TemporalHint",
     "LU - last-use; "
     "NT_RT - non-temporal for near cache(s) and regular for far caches; "
     "RT_NT - regular for near cache(s) and non-temporal for far caches; "
-    "NT_HT - non-temporal for near cache(s) and high-priority temporal for far caches; ",
+    "NT_HT - non-temporal for near cache(s) and high-priority temporal for far caches",
     [
       I32EnumAttrCase<"RT",    0>,
       I32EnumAttrCase<"NT",    1>,
@@ -97,6 +97,21 @@ def AMDGPU_TemporalHint : I32Enum<"TemporalHint",
       I32EnumAttrCase<"NT_RT", 4>,
       I32EnumAttrCase<"RT_NT", 5>,
       I32EnumAttrCase<"NT_HT", 6>
+    ]> {
+  let cppNamespace = "::mlir::amdgpu";
+}
+
+def AMDGPU_CacheScope : I32Enum<"Scope",
+    "AMDGPU-specific cache scopes. "
+    "WGP - workgroup processor (CUs); "
+    "SE - shader engine (GL2); "
+    "DEV - device; "
+    "SYS - system",
+    [
+      I32EnumAttrCase<"WGP",    0>,
+      I32EnumAttrCase<"SE",     1>,
+      I32EnumAttrCase<"DEV",    2>,
+      I32EnumAttrCase<"SYS",    3>
     ]> {
   let cppNamespace = "::mlir::amdgpu";
 }

@@ -3964,16 +3964,20 @@ struct GlobalPrefetchOpLowering
     const TemporalHint hint = op.getTemporalHint();
     const bool isSpeculative = op.getSpeculative();
 
-    int32_t llvmScopeValue = static_cast<int32_t>(hint);
+    int32_t immArgValue = static_cast<int32_t>(hint);
 
     // Note that only RT and HT can operate in both speculative and
     // non-speculative modes. The other variants (NT_RT, RT_NT, NT_HT, etc.)
     // operate only in the speculative mode and, therefore, do not require
     // toggling the least significant bit for mode changes
+    // Temporal hint is encoded in lower bits - i.e. [2:0]
     if (llvm::is_contained({TemporalHint::RT, TemporalHint::HT}, hint))
-      llvmScopeValue = isSpeculative ? llvmScopeValue : llvmScopeValue | 1;
+      immArgValue = isSpeculative ? immArgValue : immArgValue | 1;
 
-    IntegerAttr scopeAttr = rewriter.getI32IntegerAttr(llvmScopeValue);
+    // Prefetch scope level is encoded in upper bits - i.e., [4:3]
+    immArgValue = static_cast<int32_t>(op.getCacheScope()) << 3 | immArgValue;
+
+    IntegerAttr immArgAttr = rewriter.getI32IntegerAttr(immArgValue);
 
     ValueRange indices = adaptor.getIndices();
     Value memRef = adaptor.getSrc();
@@ -3987,7 +3991,7 @@ struct GlobalPrefetchOpLowering
         rewriter, loc, memRefType, descriptor, indices, inboundsFlags);
 
     Operation *newOp = ROCDL::GlobalPrefetchOp::create(
-        rewriter, loc, prefetchPtr, scopeAttr, {}, {}, {});
+        rewriter, loc, prefetchPtr, immArgAttr, {}, {}, {});
 
     rewriter.replaceOp(op, newOp);
     return success();

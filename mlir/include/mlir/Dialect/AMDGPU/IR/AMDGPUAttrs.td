@@ -50,4 +50,7 @@ def AMDGPU_MFMAPermBAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_MFMAPermB,
 def AMDGPU_TemporalHintAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_TemporalHint,
   "temporal_hint">;
 
+def AMDGPU_CacheScopeAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_CacheScope,
+  "cache_scope">;
+
 #endif // MLIR_DIALECT_AMDGPU_IR_AMDGPUATTRS_TD

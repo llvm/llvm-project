@@ -1957,6 +1957,7 @@ def AMDGPU_GlobalPrefetchOp :
     Arguments<(ins AnyMemRef:$src,
                Variadic<I64>:$indices,
                AMDGPU_TemporalHintAttr:$temporalHint,
+               AMDGPU_CacheScopeAttr:$cacheScope,
                UnitAttr:$speculative)>,
     Results<(outs)> {
 
@@ -1966,18 +1967,19 @@ def AMDGPU_GlobalPrefetchOp :
     the source `memref` and an offset provided by the indices of the element
     containing the cache line. This provides temporal hints (e.g., regular
     or high-priority). Note that out-of-bounds access is allowed in
-    speculative mode. The provided memref must be in the global address space (`#gpu.address_space<global>` or 1).
+    speculative mode. The provided memref must be in the global address space
+    (`#gpu.address_space<global>` or 1).
 
     This operation was introduced in gfx1250.
 
     Example:
     ```mlir
-    amdgpu.global_prefetch %src[%i, %j] RT speculative : memref<64x64xf16, 1>
+    amdgpu.global_prefetch %src[%i, %j] RT SE speculative : memref<64x64xf16, #gpu.address_space<global>>
     ```
   }];
 
   let assemblyFormat = [{
-    $src `[` $indices `]` $temporalHint (`speculative` $speculative^)? attr-dict `:` qualified(type($src))
+    $src `[` $indices `]` $temporalHint $cacheScope (`speculative` $speculative^)? attr-dict `:` qualified(type($src))
   }];
 
   let hasVerifier = 1;
