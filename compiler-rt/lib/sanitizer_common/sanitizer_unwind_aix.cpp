@@ -21,13 +21,13 @@
 namespace __sanitizer {
 
 struct UnwindTraceArg {
-  BufferedStackTrace *stack;
+  BufferedStackTrace* stack;
   u32 max_depth;
 };
 
-static _Unwind_Reason_Code Unwind_Trace(struct _Unwind_Context *ctx,
-                                        void *param) {
-  UnwindTraceArg *arg = (UnwindTraceArg *)param;
+static _Unwind_Reason_Code Unwind_Trace(struct _Unwind_Context* ctx,
+                                        void* param) {
+  UnwindTraceArg* arg = (UnwindTraceArg*)param;
   CHECK_LT(arg->stack->size, arg->max_depth);
   uptr pc = _Unwind_GetIP(ctx);
   // On AIX 32-bit and 64-bit, addresses up through 0x0fffffff are for kernel.
@@ -59,7 +59,7 @@ void BufferedStackTrace::UnwindSlow(uptr pc, u32 max_depth) {
   trace_buffer[0] = pc;
 }
 
-void BufferedStackTrace::UnwindSlow(uptr pc, void *context, u32 max_depth) {
+void BufferedStackTrace::UnwindSlow(uptr pc, void* context, u32 max_depth) {
   CHECK(context);
   UnwindSlow(pc, max_depth);
 }
