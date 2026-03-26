@@ -12,8 +12,19 @@ jobs:
   # Job 1: Windows Native (MSVC)
   # -------------------------------------------------------------
   windows-msvc-shared:
-    name: libc-shared-test with MSVC
-    runs-on: windows-2022
+    name: libc-shared-test with MSVC (${{ matrix.arch }})
+    strategy:
+      fail-fast: false # If one arch fails, let the other finish
+      matrix:
+        - arch: amd64
+          os: windows-latest
+        - arch: amd64_x86
+          os: windows-latest
+        - arch: arm64
+          os: windows-11-arm
+
+    runs-on: ${{ matrix.os }}
+
     steps:
       - name: Checkout LLVM
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
@@ -23,7 +34,7 @@ jobs:
       - name: Setup MSVC Dev Environment
         uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
         with:
-          arch: x64
+          arch: ${{ matrix.arch }}
 
       - name: Configure CMake
         run: |
