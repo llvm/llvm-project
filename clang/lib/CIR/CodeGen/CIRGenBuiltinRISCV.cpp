@@ -29,10 +29,10 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
   }
 
   StringRef intrinsicName;
-  mlir::Type intrinisicType;
+  mlir::Type returnType;
   llvm::SmallVector<mlir::Value> ops;
 
-  // `ICEArguments` is a bitmap indicating whether the argument at the i-th bit
+  // `iceArguments` is a bitmap indicating whether the argument at the i-th bit
   // is required to be a constant integer expression.
   unsigned iceArguments = 0;
   ASTContext::GetBuiltinTypeError error;
@@ -93,7 +93,7 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
   // Zihintpause
   case RISCV::BI__builtin_riscv_pause: {
     intrinsicName = "riscv.pause";
-    intrinisicType = builder.getVoidTy();
+    returnType = builder.getVoidTy();
     break;
   }
 
@@ -136,5 +136,5 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
   }
 
   mlir::Location loc = getLoc(e->getSourceRange());
-  return builder.emitIntrinsicCallOp(loc, intrinsicName, intrinisicType, ops);
+  return builder.emitIntrinsicCallOp(loc, intrinsicName, returnType, ops);
 }
