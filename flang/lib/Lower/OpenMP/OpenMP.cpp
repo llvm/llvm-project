@@ -7161,28 +7161,32 @@ genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   // in opaque pointers for correct LS / NDS / WDS computation.
   // We strip FIR wrappers (box, heap, ref, array) to get the plain scalar
   // type (e.g. i32, f64) that survives FIR-to-LLVM type conversion unchanged.
+  //
+  // Note: this records types per source-level dummy argument, before FIR ABI
+  // transformations (e.g. TargetRewrite adding sret or splitting complex
+  // args). The MLIR-to-LLVM-IR translation reads these types by index and
+  // does not rely on 1:1 correspondence with LLVM function parameters.
   if (auto *owningProc = eval.getOwningProcedure();
       owningProc && !owningProc->isMainProgram()) {
     const auto &subpSym = owningProc->getSubprogramSymbol();
-    if (auto *details =
-            subpSym.GetUltimate()
-                .detailsIf<Fortran::semantics::SubprogramDetails>()) {
-      llvm::SmallVector<mlir::Attribute> argTypeAttrs;
-      for (const auto *arg : details->dummyArgs()) {
-        if (arg) {
-          mlir::Type ty = converter.genType(*arg);
-          // Unwrap FIR container types to get the scalar element type.
-          ty = fir::getFortranElementType(ty);
-          argTypeAttrs.push_back(mlir::TypeAttr::get(ty));
-        } else {
-          argTypeAttrs.push_back(mlir::TypeAttr::get(
-              mlir::NoneType::get(&converter.getMLIRContext())));
-        }
+    auto *details = subpSym.GetUltimate()
+                        .detailsIf<Fortran::semantics::SubprogramDetails>();
+    assert(details && "declare simd must appear in a subprogram");
+    llvm::SmallVector<mlir::Attribute> argTypeAttrs;
+    for (const auto *arg : details->dummyArgs()) {
+      if (arg) {
+        mlir::Type ty = converter.genType(*arg);
+        // Unwrap FIR container types to get the scalar element type.
+        ty = fir::getFortranElementType(ty);
+        argTypeAttrs.push_back(mlir::TypeAttr::get(ty));
+      } else {
+        argTypeAttrs.push_back(mlir::TypeAttr::get(
+            mlir::NoneType::get(&converter.getMLIRContext())));
       }
-      if (!argTypeAttrs.empty())
-        declareSimdOp.setArgTypesAttr(
-            mlir::ArrayAttr::get(&converter.getMLIRContext(), argTypeAttrs));
     }
+    if (!argTypeAttrs.empty())
+      declareSimdOp.setArgTypesAttr(
+          mlir::ArrayAttr::get(&converter.getMLIRContext(), argTypeAttrs));
   }
 }
 

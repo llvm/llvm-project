@@ -11099,12 +11099,9 @@ static void populateLinearParam(
   for (size_t i = 0; i < linearVars.size(); ++i) {
     llvm::OpenMPIRBuilder::DeclareSimdAttrTy &paramAttr =
         attrs[argIndexMap[linearVars[i]]];
-    omp::LinearModifierAttr linearModAttr;
 
-    if (linearModifiers && (*linearModifiers)[i])
-      linearModAttr = dyn_cast<omp::LinearModifierAttr>((*linearModifiers)[i]);
-
-    if (linearModAttr) {
+    if (auto linearModAttr = dyn_cast_if_present<omp::LinearModifierAttr>(
+            (*linearModifiers)[i])) {
       switch (linearModAttr.getValue()) {
       case omp::LinearModifier::ref:
         paramAttr.Kind = llvm::OpenMPIRBuilder::DeclareSimdKindTy::LinearRef;
