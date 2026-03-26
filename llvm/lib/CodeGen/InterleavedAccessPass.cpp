@@ -683,6 +683,51 @@ static std::pair<Value *, APInt> getMask(Value *WideMask, unsigned Factor,
   return {nullptr, GapMask};
 }
 
+static bool
+ReplaceDeinterleaveWithShuffles(unsigned Factor, IntrinsicInst *DI,
+                                Instruction *LoadInst,
+                                SmallSetVector<Instruction *, 32> &DeadInsts) {
+  SmallVector<ExtractValueInst *> Extracts;
+  for (auto User : DI->users()) {
+    auto Extract = dyn_cast<ExtractValueInst>(User);
+    if (!Extract)
+      return false;
+
+    ArrayRef<unsigned> Indices = Extract->getIndices();
+    if (Indices.size() > 1)
+      return false;
+    unsigned Index = Indices[0];
+
+    auto VecTy = dyn_cast<FixedVectorType>(Extract->getType());
+    if (!VecTy)
+      return false;
+    unsigned NIndices = VecTy->getElementCount().getFixedValue();
+
+    SmallVector<int> ShuffleIndices;
+    for (unsigned I = 0; I < NIndices; I++) {
+      ShuffleIndices.push_back(Index);
+      Index += Factor;
+    }
+
+    IRBuilder<> Builder(Extract);
+    Value *NewShuffle = Builder.CreateShuffleVector(
+        LoadInst, ArrayRef<int>(ShuffleIndices), "strided.vec");
+    LLVM_DEBUG(dbgs() << "IA: Replacing:\n"
+                      << *Extract << "\nWith:\n"
+                      << *NewShuffle << "\n");
+    Extract->replaceAllUsesWith(NewShuffle);
+    Extracts.push_back(Extract);
+  }
+
+  for (auto E : Extracts)
+    E->eraseFromParent();
+  if (DI->use_empty()) {
+    DeadInsts.insert(DI);
+    return true;
+  }
+  return false;
+}
+
 bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
     IntrinsicInst *DI, SmallSetVector<Instruction *, 32> &DeadInsts) {
   Instruction *LoadedVal = dyn_cast<Instruction>(DI->getOperand(0));
@@ -696,6 +741,16 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
 
   const unsigned Factor = getDeinterleaveIntrinsicFactor(DI->getIntrinsicID());
   assert(Factor && "unexpected deinterleave intrinsic");
+
+  // If a deinterleave intrinsic is encountered and it is not
+  // legal factor for the target then replace it with shuffle vectors which
+  // are more widely supported (e.g. deinterleave5 on AArch64)
+  if (Factor > MaxFactor) {
+    if (ReplaceDeinterleaveWithShuffles(Factor, DI, LoadedVal, DeadInsts))
+      return true;
+    else
+      llvm_unreachable("IA: Could not handle unsupported intrinsic\n");
+  }
 
   Value *Mask = nullptr;
   if (LI) {
