@@ -167,6 +167,8 @@ char FixupLEAsLegacy::ID = 0;
 
 INITIALIZE_PASS(FixupLEAsLegacy, FIXUPLEA_NAME, FIXUPLEA_DESC, false, false)
 
+static bool isSafeToConvertToLEA(const MachineInstr &MI, bool AllowSub);
+
 MachineInstr *
 FixupLEAsImpl::postRAConvertToLEA(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator &MBBI) const {
@@ -190,36 +192,11 @@ FixupLEAsImpl::postRAConvertToLEA(MachineBasicBlock &MBB,
   }
   }
 
-  if (!MI.isConvertibleTo3Addr())
-    return nullptr;
-
-  switch (MI.getOpcode()) {
-  default:
+  if (!MI.isConvertibleTo3Addr() ||
+      !isSafeToConvertToLEA(MI, /*AllowSub=*/false))
     // Only convert instructions that we've verified are safe.
     return nullptr;
-  case X86::ADD64ri32:
-  case X86::ADD64ri32_DB:
-  case X86::ADD32ri:
-  case X86::ADD32ri_DB:
-    if (!MI.getOperand(2).isImm()) {
-      // convertToThreeAddress will call getImm()
-      // which requires isImm() to be true
-      return nullptr;
-    }
-    break;
-  case X86::SHL64ri:
-  case X86::SHL32ri:
-  case X86::INC64r:
-  case X86::INC32r:
-  case X86::DEC64r:
-  case X86::DEC32r:
-  case X86::ADD64rr:
-  case X86::ADD64rr_DB:
-  case X86::ADD32rr:
-  case X86::ADD32rr_DB:
-    // These instructions are all fine to convert.
-    break;
-  }
+
   return TII->convertToThreeAddress(MI, nullptr, nullptr);
 }
 
@@ -232,18 +209,8 @@ static bool isLEA(unsigned Opcode) {
          Opcode == X86::LEA64_32r;
 }
 
-static MachineBasicBlock::iterator
-getPrevNonDebugInstr(MachineBasicBlock &MBB, MachineBasicBlock::iterator I) {
-  while (I != MBB.begin()) {
-    --I;
-    if (!I->isDebugInstr())
-      return I;
-  }
-  return MBB.end();
-}
-
-static bool isLEAableFromCopy(unsigned Opcode) {
-  switch (Opcode) {
+static bool isSafeToConvertToLEA(const MachineInstr &MI, bool AllowSub) {
+  switch (MI.getOpcode()) {
   default:
     return false;
   case X86::SHL64ri:
@@ -256,14 +223,21 @@ static bool isLEAableFromCopy(unsigned Opcode) {
   case X86::ADD64rr_DB:
   case X86::ADD32rr:
   case X86::ADD32rr_DB:
+    return true;
   case X86::ADD64ri32:
   case X86::ADD64ri32_DB:
   case X86::ADD32ri:
   case X86::ADD32ri_DB:
+    return MI.getOperand(2).isImm();
   case X86::SUB64ri32:
   case X86::SUB32ri:
-    return true;
+    return AllowSub && MI.getOperand(2).isImm();
   }
+}
+
+static bool isLEAableFromCopy(const MachineInstr &MI) {
+  return MI.isConvertibleTo3Addr() &&
+         isSafeToConvertToLEA(MI, /*AllowSub=*/true);
 }
 
 bool FixupLEAsImpl::runOnMachineFunction(MachineFunction &MF) {
@@ -301,7 +275,7 @@ bool FixupLEAsImpl::runOnMachineFunction(MachineFunction &MF) {
 
     // Second pass for creating LEAs. This may reverse some of the
     // transformations above.
-    if (LEAUsesAG) {
+    if (LEAUsesAG && !IsSlowLEA) {
       for (MachineBasicBlock::iterator I = MBB.begin(); I != MBB.end(); ++I)
         processInstruction(I, MBB);
     }
@@ -318,12 +292,12 @@ bool FixupLEAsImpl::foldCopyToLEA(MachineBasicBlock &MBB) const {
 
   for (auto I = MBB.begin(); I != MBB.end();) {
     MachineInstr &MI = *I;
-    if (!isLEAableFromCopy(MI.getOpcode()) || !MI.isConvertibleTo3Addr()) {
+    if (!isLEAableFromCopy(MI)) {
       ++I;
       continue;
     }
 
-    auto Prev = getPrevNonDebugInstr(MBB, I);
+    auto Prev = prev_nodbg(I, MBB.begin());
     if (Prev == MBB.end()) {
       ++I;
       continue;
@@ -759,9 +733,6 @@ bool FixupLEAsImpl::optTwoAddrLEA(MachineBasicBlock::iterator &I,
   } else
     return false;
 
-  // optTwoAddrLEA only rewrites when EFLAGS are dead; preserve that on the
-  // replacement so later transforms can still reason about dead flags.
-  NewMI->addRegisterDead(X86::EFLAGS, TRI);
   MBB.getParent()->substituteDebugValuesForInst(*I, *NewMI, 1);
   MBB.erase(I);
   I = NewMI;
@@ -852,9 +823,6 @@ void FixupLEAsImpl::processInstructionForSlowLEA(MachineBasicBlock::iterator &I,
     LLVM_DEBUG(NewMI->dump(););
   }
   if (NewMI) {
-    // processInstructionForSlowLEA is guarded by dead EFLAGS liveness.
-    // Preserve that on the replacement instruction.
-    NewMI->addRegisterDead(X86::EFLAGS, TRI);
     MBB.getParent()->substituteDebugValuesForInst(*I, *NewMI, 1);
     MBB.erase(I);
     I = NewMI;

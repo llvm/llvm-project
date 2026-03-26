@@ -189,7 +189,7 @@ body:             |
     ; CHECK-LABEL: name: test1add_ebp_32
     ; CHECK: liveins: $eax, $ebp
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $ebp = ADD32rr $ebp, $eax, implicit-def dead $eflags
+    ; CHECK-NEXT: $ebp = ADD32rr $ebp, $eax, implicit-def $eflags
     ; CHECK-NEXT: RET64 $ebp
     $ebp = LEA32r killed $ebp, 1, killed $eax, 0, $noreg
     RET64 $ebp

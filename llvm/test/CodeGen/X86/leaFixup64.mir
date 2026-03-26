@@ -266,7 +266,7 @@ body:             |
     ; CHECK-LABEL: name: test1lea_rbp_64_32_1
     ; CHECK: liveins: $rax, $rbp
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $ebp = ADD32rr $ebp, $eax, implicit-def dead $eflags, implicit $rbp, implicit $rax
+    ; CHECK-NEXT: $ebp = ADD32rr $ebp, $eax, implicit-def $eflags, implicit $rbp, implicit $rax
     ; CHECK-NEXT: RET64 $ebp
     $ebp = LEA64_32r killed $rbp, 1, killed $rax, 0, $noreg
     RET64 $ebp
@@ -382,7 +382,7 @@ body:             |
     ; CHECK-LABEL: name: test1add_rbp_64
     ; CHECK: liveins: $rax, $rbp
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $rbp = ADD64rr $rbp, $rax, implicit-def dead $eflags
+    ; CHECK-NEXT: $rbp = ADD64rr $rbp, $rax, implicit-def $eflags
     ; CHECK-NEXT: RET64 $ebp
     $rbp = LEA64r killed $rbp, 1, killed $rax, 0, $noreg
     RET64 $ebp
@@ -1198,7 +1198,7 @@ body:             |
     ; CHECK-NEXT: NOOP
     ; CHECK-NEXT: NOOP
     ; CHECK-NEXT: NOOP
-    ; CHECK-NEXT: $ebp = ADD32rr $ebp, $eax, implicit-def dead $eflags, implicit $rbp, implicit $rax
+    ; CHECK-NEXT: $ebp = ADD32rr $ebp, $eax, implicit-def $eflags, implicit $rbp, implicit $rax
     ; CHECK-NEXT: NOOP
     ; CHECK-NEXT: NOOP
     ; CHECK-NEXT: NOOP
