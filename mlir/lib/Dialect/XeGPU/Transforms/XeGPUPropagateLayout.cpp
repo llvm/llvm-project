@@ -365,6 +365,10 @@ private:
                                    ArrayRef<LayoutInfoLattice *> operands,
                                    ArrayRef<const LayoutInfoLattice *> results);
 
+  void visitVectorReductionOp(vector::ReductionOp reduction,
+                              ArrayRef<LayoutInfoLattice *> operands,
+                              ArrayRef<const LayoutInfoLattice *> results);
+
   void visitVectorBroadCastOp(vector::BroadcastOp broadcast,
                               ArrayRef<LayoutInfoLattice *> operands,
                               ArrayRef<const LayoutInfoLattice *> results);
@@ -460,6 +464,9 @@ LogicalResult LayoutInfoPropagation::visitOperation(
       })
       .Case([&](vector::MultiDimReductionOp reductionOp) {
         visitVectorMultiReductionOp(reductionOp, operands, results);
+      })
+      .Case([&](vector::ReductionOp reductionOp) {
+        visitVectorReductionOp(reductionOp, operands, results);
       })
       .Case([&](vector::BroadcastOp broadcastOp) {
         visitVectorBroadCastOp(broadcastOp, operands, results);
@@ -625,9 +632,10 @@ void LayoutInfoPropagation::visitVectorMultiReductionOp(
     vector::MultiDimReductionOp reduction,
     ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
+  Type resultTy = reduction.getDestType();
   // The layout of the result must be present.
   LayoutInfo resLayoutInfo = results[0]->getValue();
-  if (!resLayoutInfo.isAssigned())
+  if (llvm::isa<VectorType>(resultTy) && !resLayoutInfo.isAssigned())
     return;
 
   VectorType sourceTy = reduction.getSourceVectorType();
@@ -636,8 +644,30 @@ void LayoutInfoPropagation::visitVectorMultiReductionOp(
   const uArch *uArch = getUArch(xegpu::getChipStr(reduction).value_or(""));
   if (!uArch)
     return;
-  auto consumerLayoutAttr =
-      dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
+  xegpu::DistributeLayoutAttr consumerLayoutAttr;
+  if (!llvm::isa<VectorType>(resultTy)) {
+    auto sgSize = uArch->getSubgroupSize();
+    auto numSgOrErr = getNumSg(reduction, sgSize);
+    if (failed(numSgOrErr)) {
+      reduction.emitWarning(
+          "Unable to determine the number of subgroups for the operation.");
+      return;
+    }
+    auto srcShape = sourceTy.getShape();
+    int srcRank = srcShape.size();
+    SmallVector<int32_t> sgLayout(srcRank, 1);
+    SmallVector<int32_t> sgData(srcRank, 1);
+    sgLayout.back() = numSgOrErr.value();
+    MLIRContext *context = reduction.getContext();
+    consumerLayoutAttr = xegpu::LayoutAttr::get(
+        context, DenseI32ArrayAttr::get(context, sgLayout),
+        DenseI32ArrayAttr::get(context, sgData),
+        /*inst_data =*/nullptr, /*lane_layout =*/nullptr,
+        /*lane_data =*/nullptr, /*order =*/nullptr);
+  } else {
+    consumerLayoutAttr =
+        dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
+  }
 
   // The result layout represents the layout requirements of the operation.
   // it is recorded to anchor layout or temporary layout.
@@ -657,6 +687,42 @@ void LayoutInfoPropagation::visitVectorMultiReductionOp(
   // Accumulator should have the same layout as the result.
   propagateIfChanged(operands[1],
                      operands[1]->meet(LayoutInfo(requiredResLayoutAttr)));
+}
+
+void LayoutInfoPropagation::visitVectorReductionOp(
+    vector::ReductionOp reduction, ArrayRef<LayoutInfoLattice *> operands,
+    ArrayRef<const LayoutInfoLattice *> results) {
+  // The layout of the result must be present.
+
+  VectorType sourceTy = reduction.getSourceVectorType();
+
+  LLVM_DEBUG(DBGS() << "visitVectorReductionOp: " << reduction << "\n");
+  LLVM_DEBUG(DBGS() << "  sourceTy: " << sourceTy << "\n");
+
+  const uArch *uArch = getUArch(xegpu::getChipStr(reduction).value_or(""));
+  if (!uArch)
+    return;
+
+  auto requiredResLayoutAttr =
+      xegpu::setupReductionResultLayout(layoutKind, sourceTy, uArch);
+
+  LLVM_DEBUG(DBGS() << "  requiredResLayoutAttr: " << requiredResLayoutAttr
+                    << "\n");
+
+  xegpu::setTemporaryLayout(reduction->getResult(0), requiredResLayoutAttr);
+
+  // derive the source layout from the dominant layout and reduction dims
+  auto srcLayoutAttr = xegpu::inferReductionSourceLayout(requiredResLayoutAttr);
+
+  LLVM_DEBUG(DBGS() << "  srcLayoutAttr: " << srcLayoutAttr << "\n");
+
+  propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
+
+  if (reduction.getAcc()) {
+    // Accumulator should have the same layout as the result.
+    propagateIfChanged(operands[1],
+                       operands[1]->meet(LayoutInfo(requiredResLayoutAttr)));
+  }
 }
 
 void LayoutInfoPropagation::visitVectorBroadCastOp(
@@ -1286,6 +1352,7 @@ private:
   OpBuilder builder;
   LogicalResult resolveTensorDescConsumer(OpOperand &operand);
   LogicalResult resolveVectorConsumer(OpOperand &operand);
+  LogicalResult assignScalarResultLayout(OpResult &result);
 };
 
 } // namespace
@@ -1294,6 +1361,21 @@ LogicalResult ResolveLayoutConflicts::run() {
   // Scan all operations in the parent op and resolve layout conflicts at
   // tensor descriptor and vector use points.
   auto r = parentOp->walk([&](Operation *op) -> WalkResult {
+    // if the operation inputs vector and output scalar, like multi-reduction we
+    // need to check if the result has layout and add a convert_layout to serve
+    // as anchor op for the reduction op's layout.
+    if (isa<vector::MultiDimReductionOp>(op) || isa<vector::ReductionOp>(op)) {
+      for (OpResult result : op->getResults()) {
+        if (result.getType().isIntOrFloat()) {
+          auto res = assignScalarResultLayout(result);
+          if (failed(res)) {
+            DBGS() << "Failed to resolve vector consumer for multi-reduction "
+                   << *op << "\n";
+            return WalkResult::interrupt();
+          }
+        }
+      }
+    }
     for (OpOperand &operand : op->getOpOperands()) {
       // Handle conflicts in tensor descriptor operands.
       Type operandType = operand.get().getType();
@@ -1319,6 +1401,21 @@ LogicalResult ResolveLayoutConflicts::run() {
   });
 
   return r.wasInterrupted() ? failure() : success();
+}
+
+LogicalResult
+ResolveLayoutConflicts::assignScalarResultLayout(OpResult &result) {
+  Operation *ProducerOp = result.getDefiningOp();
+  // Get the current layout of the vector value.
+  auto producerLayout = xegpu::getDistributeLayoutAttr(result);
+  // Insert a convert_layout op to resolve the conflict.
+  builder.setInsertionPointAfterValue(result);
+  auto convertOp = xegpu::ConvertLayoutOp::create(
+      builder, ProducerOp->getLoc(), result.getType(), result, producerLayout,
+      producerLayout);
+  // Update the users to use the converted value.
+  result.replaceAllUsesExcept(convertOp.getResult(), convertOp);
+  return success();
 }
 
 LogicalResult
