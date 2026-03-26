@@ -527,7 +527,7 @@ static llvm::Error convertFileToGSYM(OutputAggregator &Out) {
   return Error::success();
 }
 
-static void doLookup(GsymReaderV1 &Gsym, uint64_t Addr, raw_ostream &OS) {
+static void doLookup(GsymReader &Gsym, uint64_t Addr, raw_ostream &OS) {
   if (UseMergedFunctions) {
     if (auto Results = Gsym.lookupAll(Addr)) {
       // If we have filters, count matching results first

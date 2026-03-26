@@ -17,7 +17,7 @@ namespace llvm {
 
 namespace gsym {
 
-class GsymReaderV1;
+class GsymReader;
 
 /// GSYM DI Context
 /// This data structure is the top level entity that deals with GSYM
@@ -28,7 +28,7 @@ class GsymReaderV1;
 /// the GSYM interfaces directly.
 class GsymContext : public DIContext {
 public:
-  GsymContext(std::unique_ptr<GsymReaderV1> Reader);
+  GsymContext(std::unique_ptr<GsymReader> Reader);
   ~GsymContext() override;
 
   GsymContext(GsymContext &) = delete;
@@ -56,7 +56,7 @@ public:
   getLocalsForAddress(object::SectionedAddress Address) override;
 
 private:
-  const std::unique_ptr<GsymReaderV1> Reader;
+  const std::unique_ptr<GsymReader> Reader;
 };
 
 } // end namespace gsym
