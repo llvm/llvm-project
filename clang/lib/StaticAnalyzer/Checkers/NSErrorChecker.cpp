@@ -313,3 +313,5 @@ static bool IsCFError(QualType T, IdentifierInfo *II) {
 
 REGISTER_CHECKER(NSError, NSErrorMethodChecker)
 REGISTER_CHECKER(CFError, CFErrorFunctionChecker)
+
+#undef REGISTER_CHECKER

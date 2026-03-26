@@ -1341,6 +1341,84 @@ define i32 @pow2_blsi_sub(i32 %x, i32 %a) {
   ret i32 %r
 }
 
+define i8 @pow2_trunc(i32 %x, i32 %a){
+; CHECK-LABEL: pow2_trunc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %esi, %ecx
+; CHECK-NEXT:    negl %ecx
+; CHECK-NEXT:    andl %esi, %ecx
+; CHECK-NEXT:    movzbl %dil, %eax
+; CHECK-NEXT:    divb %cl
+; CHECK-NEXT:    movzbl %ah, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    retq
+  %neg_a = sub i32 0, %a
+  %y = and i32 %a, %neg_a
+  %x8 = trunc i32 %x to i8
+  %y8 = trunc i32 %y to i8
+  %r = urem i8 %x8, %y8
+  ret i8 %r
+}
+
+define i8 @pow2_trunc_fail(i32 %x, i32 %a){
+; CHECK-LABEL: pow2_trunc_fail:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andb $78, %sil
+; CHECK-NEXT:    movzbl %dil, %eax
+; CHECK-NEXT:    divb %sil
+; CHECK-NEXT:    movzbl %ah, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    retq
+  %y = and i32 %a, 78
+  %x8 = trunc i32 %x to i8
+  %y8 = trunc i32 %y to i8
+  %r = urem i8 %x8, %y8
+  ret i8 %r
+}
+
+define i8 @pow2_trunc_vec(<4 x i32> %x, <4 x i32> %a) {
+; CHECK-LABEL: pow2_trunc_vec:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pxor %xmm2, %xmm2
+; CHECK-NEXT:    psubd %xmm1, %xmm2
+; CHECK-NEXT:    pand %xmm1, %xmm2
+; CHECK-NEXT:    movd %xmm2, %ecx
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    divb %cl
+; CHECK-NEXT:    movzbl %ah, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    retq
+  %a.splat = shufflevector <4 x i32> %a, <4 x i32> poison, <4 x i32> zeroinitializer
+  %a.splat.neg = sub <4 x i32> zeroinitializer, %a.splat
+  %y = and <4 x i32> %a.splat, %a.splat.neg
+  %x8 = trunc <4 x i32> %x to <4 x i8>
+  %y8 = trunc <4 x i32> %y to <4 x i8>
+  %r = urem <4 x i8> %x8, %y8
+  %ext = extractelement <4 x i8> %r, i8 0
+  ret i8 %ext
+}
+
+define i8 @pow2_truncc_vec_fail(<4 x i32> %x, <4 x i32> %a) {
+; CHECK-LABEL: pow2_truncc_vec_fail:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    movd %xmm1, %ecx
+; CHECK-NEXT:    divb %cl
+; CHECK-NEXT:    movzbl %ah, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    retq
+  %a.splat = shufflevector <4 x i32> %a, <4 x i32> poison, <4 x i32> zeroinitializer
+  %y = and <4 x i32> %a.splat, <i32 78, i32 69, i32 67, i32 100>
+  %x8 = trunc <4 x i32> %x to <4 x i8>
+  %y8 = trunc <4 x i32> %y to <4 x i8>
+  %r = urem <4 x i8> %x8, %y8
+  %ext = extractelement <4 x i8> %r, i8 0
+  ret i8 %ext
+}
+
 define i32 @pow2_rotl_extract_vec(<4 x i32> %a0, <4 x i32> %rotamt, i32 %x, ptr %p) {
 ; CHECK-LABEL: pow2_rotl_extract_vec:
 ; CHECK:       # %bb.0:
