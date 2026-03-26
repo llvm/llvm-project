@@ -11,6 +11,7 @@
 
 #include "llvm/CAS/OnDiskGraphDB.h"
 #include "llvm/CAS/ValidationResult.h"
+#include "llvm/Support/Compiler.h"
 #include <atomic>
 
 namespace llvm::cas::ondisk {
@@ -93,7 +94,7 @@ public:
   /// was invalid but has been cleared, \c Skipped if validation is not needed,
   /// or an \c Error if validation cannot be performed or if the data is left
   /// in an invalid state because \p AllowRecovery is false.
-  static Expected<ValidationResult>
+  LLVM_ABI_FOR_TEST static Expected<ValidationResult>
   validateIfNeeded(StringRef Path, StringRef HashName, unsigned HashByteSize,
                    bool CheckHash, OnDiskGraphDB::HashingFuncT HashFn,
                    bool AllowRecovery, bool ForceValidation,

@@ -1,0 +1,61 @@
+name: Build LLVM as shared library on Windows
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-main:
+    name: Windows-LLVM-Shared-Library
+    runs-on: windows-2025
+
+    if: github.repository == 'llvm/llvm-project'
+    steps:
+    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      with:
+        path: ${{ github.workspace }}/llvm
+
+    - name: Setup compiler on Windows
+      run: |
+        $env:CC="clang-cl"
+        $env:CXX="clang-cl"
+        echo "CC=clang-cl" >> $env:GITHUB_ENV
+        echo "CXX=clang-cl" >> $env:GITHUB_ENV
+
+    - name: Install dependencies
+      run: |
+        choco install ninja
+
+    - name: Build LLVM as a shared library on Windows
+      run: |
+        function Error-On-Failure {
+          param (
+              [Parameter(Mandatory)]
+              [ScriptBlock]$Command
+          )
+
+         & $Command
+
+         if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+         }
+        }
+        cd ${{ github.workspace }}/llvm
+        cmake -S ./llvm/ -B build -G Ninja                `
+              -DCMAKE_ASM_MASM_FLAGS="-m64"     `
+              -DLLVM_ENABLE_PLUGINS=On                    `
+              -DLLVM_TARGETS_TO_BUILD="host"              `
+              -DCMAKE_BUILD_TYPE=RelWithDebInfo           `
+              -DCMAKE_CXX_COMPILER=clang-cl               `
+              -DCMAKE_C_COMPILER=clang-cl                 `
+              -DCMAKE_ASM_MASM_COMPILER=llvm-ml           `
+              -DLLVM_BUILD_LLVM_DYLIB_VIS=On              `
+              -DLLVM_LINK_LLVM_DYLIB=On                   `
+              -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON
+        Error-On-Failure { cmake --build build --config RelWithDebInfo --parallel ${{ env.ncpus }} }
+        Error-On-Failure { cmake --build build --target check-llvm-unit --config RelWithDebInfo --parallel ${{ env.ncpus }} }
+        Error-On-Failure { cmake --build build --target check-llvm --config RelWithDebInfo --parallel ${{ env.ncpus }} }

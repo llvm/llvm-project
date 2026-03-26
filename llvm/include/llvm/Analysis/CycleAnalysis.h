@@ -18,6 +18,7 @@
 #include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -27,7 +28,7 @@ class CycleInfoWrapperPass : public FunctionPass {
   CycleInfo CI;
 
 public:
-  static char ID;
+  LLVM_ABI_FOR_TEST static char ID;
 
   CycleInfoWrapperPass();
 

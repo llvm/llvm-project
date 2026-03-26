@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/Support/Compiler.h"
 #include <iterator>
 
 namespace llvm {
@@ -196,16 +197,16 @@ public:
 
   /// Simply initializes some internal state, does not identify
   /// rematerialization candidates.
-  Rematerializer(MachineFunction &MF,
-                 SmallVectorImpl<RegionBoundaries> &Regions,
-                 LiveIntervals &LIS);
+  LLVM_ABI_FOR_TEST Rematerializer(MachineFunction &MF,
+                                   SmallVectorImpl<RegionBoundaries> &Regions,
+                                   LiveIntervals &LIS);
 
   /// Goes through the whole MF and identifies all rematerializable registers.
   /// When \p SupportRollback is set, rematerializations of original registers
   /// can be rolled back and original registers are maintained in the IR even
   /// when they longer have any users. Returns whether there is any
   /// rematerializable register in regions.
-  bool analyze(bool SupportRollback);
+  LLVM_ABI_FOR_TEST bool analyze(bool SupportRollback);
 
   inline const Reg &getReg(RegisterIdx RegIdx) const {
     assert(RegIdx < Regs.size() && "out of bounds");
@@ -304,8 +305,9 @@ public:
   /// registers of the root's dependency DAG that needed to be rematerialized
   /// along the root. References to \ref Rematerializer::Reg should be
   /// considered invalidated by calls to this method.
-  RegisterIdx rematerializeToRegion(RegisterIdx RootIdx, unsigned UseRegion,
-                                    DependencyReuseInfo &DRI);
+  LLVM_ABI_FOR_TEST RegisterIdx rematerializeToRegion(RegisterIdx RootIdx,
+                                                      unsigned UseRegion,
+                                                      DependencyReuseInfo &DRI);
 
   /// Rematerializes register \p RootIdx before position \p InsertPos and
   /// returns the new register's index. The root's dependency DAG is
@@ -315,9 +317,9 @@ public:
   /// registers of the root's dependency DAG that needed to be rematerialized
   /// along the root. References to \ref Rematerializer::Reg should be
   /// considered invalidated by calls to this method.
-  RegisterIdx rematerializeToPos(RegisterIdx RootIdx,
-                                 MachineBasicBlock::iterator InsertPos,
-                                 DependencyReuseInfo &DRI);
+  LLVM_ABI_FOR_TEST RegisterIdx
+  rematerializeToPos(RegisterIdx RootIdx, MachineBasicBlock::iterator InsertPos,
+                     DependencyReuseInfo &DRI);
 
   /// Rolls back all rematerializations of original register \p RootIdx,
   /// transfering all their users back to it and permanently deleting them from
@@ -326,7 +328,7 @@ public:
   /// dependencies of the root register that were fully rematerialized are
   /// re-vived at their original positions; this requires that rollback support
   /// was set when they were rematerialized.
-  void rollbackRematsOf(RegisterIdx RootIdx);
+  LLVM_ABI_FOR_TEST void rollbackRematsOf(RegisterIdx RootIdx);
 
   /// Rolls back register \p RematIdx (which must be a rematerialization)
   /// transfering all its users back to its origin. The latter is revived if it
@@ -345,23 +347,25 @@ public:
   /// ToRegIdx, the latter of which must be a rematerialization of the former or
   /// have the same origin register. Users in \p UseRegion must be reachable
   /// from \p ToRegIdx.
-  void transferRegionUsers(RegisterIdx FromRegIdx, RegisterIdx ToRegIdx,
-                           unsigned UseRegion);
+  LLVM_ABI_FOR_TEST void transferRegionUsers(RegisterIdx FromRegIdx,
+                                             RegisterIdx ToRegIdx,
+                                             unsigned UseRegion);
 
   /// Transfers user \p UserMI from register \p FromRegIdx to \p ToRegIdx,
   /// the latter of which must be a rematerialization of the former or have the
   /// same origin register. \p UserMI must be a direct user of \p FromRegIdx. \p
   /// UserMI must be reachable from \p ToRegIdx.
-  void transferUser(RegisterIdx FromRegIdx, RegisterIdx ToRegIdx,
-                    MachineInstr &UserMI);
+  LLVM_ABI_FOR_TEST void transferUser(RegisterIdx FromRegIdx,
+                                      RegisterIdx ToRegIdx,
+                                      MachineInstr &UserMI);
 
   /// Recomputes all live intervals that have changed as a result of previous
   /// rematerializations/rollbacks.
-  void updateLiveIntervals();
+  LLVM_ABI_FOR_TEST void updateLiveIntervals();
 
   /// Deletes unused rematerialized registers that were left in the MIR to
   /// support rollback.
-  void commitRematerializations();
+  LLVM_ABI_FOR_TEST void commitRematerializations();
 
   /// Determines whether (sub-)register operand \p MO has the same value at
   /// all \p Uses as at \p MO. This implies that it is also available at all \p

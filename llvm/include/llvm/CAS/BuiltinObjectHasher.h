@@ -10,6 +10,7 @@
 #define LLVM_CAS_BUILTINOBJECTHASHER_H
 
 #include "llvm/CAS/ObjectStore.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 
 namespace llvm::cas {
@@ -39,7 +40,7 @@ public:
     return H.finish();
   }
 
-  static Expected<HashT> hashFile(StringRef FilePath);
+  LLVM_ABI_FOR_TEST static Expected<HashT> hashFile(StringRef FilePath);
 
 private:
   HashT finish() { return Hasher.final(); }

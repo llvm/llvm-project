@@ -42,6 +42,7 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 
 namespace llvm {
@@ -155,7 +156,7 @@ inline class_match<IntrinsicInst> m_AnyIntrinsic() {
 
 struct undef_match {
 private:
-  static bool checkAggregate(const ConstantAggregate *CA);
+  LLVM_ABI_FOR_TEST static bool checkAggregate(const ConstantAggregate *CA);
 
 public:
   static bool check(const Value *V) {

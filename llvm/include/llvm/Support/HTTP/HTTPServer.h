@@ -17,6 +17,7 @@
 #define LLVM_SUPPORT_HTTP_HTTPSERVER_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 #ifdef LLVM_ENABLE_HTTPLIB
@@ -62,7 +63,7 @@ public:
   // TODO bring in HTTP headers
 
   void setResponse(StreamingHTTPResponse Response);
-  void setResponse(HTTPResponse Response);
+  LLVM_ABI void setResponse(HTTPResponse Response);
 };
 
 struct HTTPResponse {
@@ -92,7 +93,7 @@ struct StreamingHTTPResponse {
 
 /// Sets the response to stream the file at FilePath, if available, and
 /// otherwise an HTTP 404 error response.
-bool streamFile(HTTPServerRequest &Request, StringRef FilePath);
+LLVM_ABI bool streamFile(HTTPServerRequest &Request, StringRef FilePath);
 
 /// An HTTP server which can listen on a single TCP/IP port for HTTP
 /// requests and delgate them to the appropriate registered handler.
@@ -102,28 +103,28 @@ class HTTPServer {
   unsigned Port = 0;
 #endif
 public:
-  HTTPServer();
+  LLVM_ABI HTTPServer();
   ~HTTPServer();
 
   /// Returns true only if LLVM has been compiled with a working HTTPServer.
-  static bool isAvailable();
+  LLVM_ABI_FOR_TEST static bool isAvailable();
 
   /// Registers a URL pattern routing rule. When the server is listening, each
   /// request is dispatched to the first registered handler whose UrlPathPattern
   /// matches the UrlPath.
-  Error get(StringRef UrlPathPattern, HTTPRequestHandler Handler);
+  LLVM_ABI Error get(StringRef UrlPathPattern, HTTPRequestHandler Handler);
 
   /// Attempts to assign the requested port and interface, returning an Error
   /// upon failure.
-  Error bind(unsigned Port, const char *HostInterface = "0.0.0.0");
+  LLVM_ABI Error bind(unsigned Port, const char *HostInterface = "0.0.0.0");
 
   /// Attempts to assign any available port and interface, returning either the
   /// port number or an Error upon failure.
-  Expected<unsigned> bind(const char *HostInterface = "0.0.0.0");
+  LLVM_ABI Expected<unsigned> bind(const char *HostInterface = "0.0.0.0");
 
   /// Attempts to listen for requests on the bound port. Returns an Error if
   /// called before binding a port.
-  Error listen();
+  LLVM_ABI Error listen();
 
   /// If the server is listening, stop and unbind the socket.
   void stop();

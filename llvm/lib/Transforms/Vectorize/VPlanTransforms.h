@@ -135,7 +135,7 @@ struct VPlanTransforms {
   /// VPHeaderPHIRecipe subclasses for inductions, reductions, and
   /// fixed-order recurrences. This processes all header phis and creates
   /// the appropriate widened recipe for each one.
-  static void createHeaderPhiRecipes(
+  LLVM_ABI_FOR_TEST static void createHeaderPhiRecipes(
       VPlan &Plan, PredicatedScalarEvolution &PSE, Loop &OrigLoop,
       const MapVector<PHINode *, InductionDescriptor> &Inductions,
       const MapVector<PHINode *, RecurrenceDescriptor> &Reductions,

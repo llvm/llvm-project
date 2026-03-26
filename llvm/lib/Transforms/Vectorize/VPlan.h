@@ -1089,7 +1089,7 @@ public:
   /// Returns default flags for \p Opcode for opcodes that support it, asserts
   /// otherwise. Opcodes not supporting default flags include compares and
   /// ComputeReductionResult.
-  static VPIRFlags getDefaultFlags(unsigned Opcode);
+  LLVM_ABI_FOR_TEST static VPIRFlags getDefaultFlags(unsigned Opcode);
 
 #if !defined(NDEBUG)
   /// Returns true if the set flags are valid for \p Opcode.

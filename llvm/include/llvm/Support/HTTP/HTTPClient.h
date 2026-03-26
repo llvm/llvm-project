@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -32,7 +33,7 @@ struct HTTPRequest {
   SmallVector<std::string, 0> Headers;
   HTTPMethod Method = HTTPMethod::GET;
   bool FollowRedirects = true;
-  HTTPRequest(StringRef Url);
+  LLVM_ABI HTTPRequest(StringRef Url);
 };
 
 bool operator==(const HTTPRequest &A, const HTTPRequest &B);
@@ -46,7 +47,7 @@ public:
   virtual Error handleBodyChunk(StringRef BodyChunk) = 0;
 
 protected:
-  ~HTTPResponseHandler();
+  LLVM_ABI ~HTTPResponseHandler();
 };
 
 /// A reusable client that can perform HTTPRequests through a network socket.
@@ -56,31 +57,32 @@ class HTTPClient {
 #endif
 
 public:
-  HTTPClient();
-  ~HTTPClient();
+  LLVM_ABI HTTPClient();
+  LLVM_ABI ~HTTPClient();
 
-  static bool IsInitialized;
+  LLVM_ABI static bool IsInitialized;
 
   /// Returns true only if LLVM has been compiled with a working HTTPClient.
-  static bool isAvailable();
+  LLVM_ABI static bool isAvailable();
 
   /// Must be called at the beginning of a program, while it is a single thread.
-  static void initialize();
+  LLVM_ABI static void initialize();
 
   /// Must be called at the end of a program, while it is a single thread.
   static void cleanup();
 
   /// Sets the timeout for the entire request, in milliseconds. A zero or
   /// negative value means the request never times out.
-  void setTimeout(std::chrono::milliseconds Timeout);
+  LLVM_ABI void setTimeout(std::chrono::milliseconds Timeout);
 
   /// Performs the Request, passing response data to the Handler. Returns all
   /// errors which occur during the request. Aborts if an error is returned by a
   /// Handler method.
-  Error perform(const HTTPRequest &Request, HTTPResponseHandler &Handler);
+  LLVM_ABI Error perform(const HTTPRequest &Request,
+                         HTTPResponseHandler &Handler);
 
   /// Returns the last received response code or zero if none.
-  unsigned responseCode();
+  LLVM_ABI unsigned responseCode();
 };
 
 } // end namespace llvm

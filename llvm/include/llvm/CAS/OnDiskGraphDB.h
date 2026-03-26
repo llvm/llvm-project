@@ -20,6 +20,7 @@
 #include "llvm/CAS/OnDiskCASLogger.h"
 #include "llvm/CAS/OnDiskDataAllocator.h"
 #include "llvm/CAS/OnDiskTrieRawHashMap.h"
+#include "llvm/Support/Compiler.h"
 #include <atomic>
 
 namespace llvm::cas::ondisk {
@@ -351,7 +352,8 @@ public:
   /// loading the data in memory and then writing it to a file, the client could
   /// clone the underlying file directly. The client *must not* write to or
   /// delete the underlying file, the path is provided only for reading/copying.
-  FileBackedData getInternalFileBackedObjectData(ObjectHandle Node) const;
+  LLVM_ABI_FOR_TEST FileBackedData
+  getInternalFileBackedObjectData(ObjectHandle Node) const;
 
   /// \returns Total size of stored objects.
   ///

@@ -1079,8 +1079,8 @@ class UncondBrInst : public SingleLLVMInstructionImpl<llvm::UncondBrInst>,
   friend Context; // for UncondBrInst()
 
 public:
-  static UncondBrInst *create(BasicBlock *Target, InsertPosition InsertBefore,
-                              Context &Ctx);
+  LLVM_ABI_FOR_TEST static UncondBrInst *
+  create(BasicBlock *Target, InsertPosition InsertBefore, Context &Ctx);
   LLVM_ABI BasicBlock *getSuccessor() const;
   LLVM_ABI void setSuccessor(BasicBlock *NewSucc);
   unsigned getNumSuccessors() const { return 1; }
@@ -1105,11 +1105,12 @@ class CondBrInst : public SingleLLVMInstructionImpl<llvm::CondBrInst>,
   friend Context; // for UcnondBrInst()
 
 public:
-  static CondBrInst *create(Value *Cond, BasicBlock *IfTrue,
-                            BasicBlock *IfFalse, InsertPosition InsertBefore,
-                            Context &Ctx);
+  LLVM_ABI_FOR_TEST static CondBrInst *create(Value *Cond, BasicBlock *IfTrue,
+                                              BasicBlock *IfFalse,
+                                              InsertPosition InsertBefore,
+                                              Context &Ctx);
   LLVM_ABI Value *getCondition() const;
-  void setCondition(Value *V);
+  LLVM_ABI_FOR_TEST void setCondition(Value *V);
   LLVM_ABI BasicBlock *getSuccessor(unsigned SuccIdx) const;
   LLVM_ABI void setSuccessor(unsigned Idx, BasicBlock *NewSucc);
   unsigned getNumSuccessors() const { return 2; }
