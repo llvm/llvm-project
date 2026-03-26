@@ -125,7 +125,6 @@ class FrameProviderCircularDependencyTestCase(TestBase):
             self.assertIsNotNone(func_name, f"Frame {i} should have function name")
 
     @expectedFailureAll(oslist=["linux"], archs=["arm$"])
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_circular_dependency_handle_command_in_init(self):
         """
         Test that calling HandleCommand('bt') in __init__ doesn't cause

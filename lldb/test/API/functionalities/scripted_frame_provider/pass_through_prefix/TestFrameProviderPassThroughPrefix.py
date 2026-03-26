@@ -84,7 +84,6 @@ class FrameProviderPassThroughPrefixTestCase(TestBase):
             )
 
     @expectedFailureAll(oslist=["linux"], archs=["arm$"])
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_provider_receives_parent_frames(self):
         """
         Test that the provider's input_frames come from the parent
