@@ -87,6 +87,10 @@ private:
     FailedInst.eraseFromParent();
   }
 
+  template <typename Inst>
+  void handleUnsupportedAtomicSize(Inst *I, const Twine &AtomicOpName,
+                                   Instruction *DiagnosticInst = nullptr) const;
+
   bool bracketInstWithFences(Instruction *I, AtomicOrdering Order);
   IntegerType *getCorrespondingIntegerType(Type *T, const DataLayout &DL);
   LoadInst *convertAtomicLoadToIntegerType(LoadInst *LI);
@@ -130,12 +134,12 @@ private:
                                Value *CASExpected, AtomicOrdering Ordering,
                                AtomicOrdering Ordering2,
                                ArrayRef<RTLIB::Libcall> Libcalls);
-  void expandAtomicLoadToLibcall(LoadInst *LI, StringRef FailureReason);
-  void expandAtomicStoreToLibcall(StoreInst *LI, StringRef FailureReason);
-  void expandAtomicRMWToLibcall(AtomicRMWInst *I, StringRef FailureReason);
-  void expandAtomicCASToLibcall(AtomicCmpXchgInst *I, StringRef AtomicOpName,
-                                Instruction *DiagnosticInst,
-                                StringRef FailureReason);
+  void expandAtomicLoadToLibcall(LoadInst *LI);
+  void expandAtomicStoreToLibcall(StoreInst *LI);
+  void expandAtomicRMWToLibcall(AtomicRMWInst *I);
+  void expandAtomicCASToLibcall(AtomicCmpXchgInst *I,
+                                const Twine &AtomicOpName,
+                                Instruction *DiagnosticInst);
 
   bool expandAtomicRMWToCmpXchg(AtomicRMWInst *AI,
                                 CreateCmpXchgInstFun CreateCmpXchg);
@@ -255,10 +259,16 @@ static void copyMetadataForAtomic(Instruction &Dest,
 }
 
 template <typename Inst>
-static bool atomicSizeSupported(const TargetLowering *TLI, Inst *I,
-                                SmallVectorImpl<char> &FailureReason) {
-  FailureReason.clear();
-  raw_svector_ostream OS(FailureReason);
+static bool atomicSizeSupported(const TargetLowering *TLI, Inst *I) {
+  unsigned Size = getAtomicOpSize(I);
+  Align Alignment = I->getAlign();
+  unsigned MaxSize = TLI->getMaxAtomicSizeInBitsSupported() / 8;
+  return Alignment >= Size && Size <= MaxSize;
+}
+
+template <typename Inst>
+static void writeUnsupportedAtomicSizeReason(const TargetLowering *TLI, Inst *I,
+                                             raw_ostream &OS) {
   unsigned Size = getAtomicOpSize(I);
   Align Alignment = I->getAlign();
   bool NeedSeparator = false;
@@ -277,7 +287,17 @@ static bool atomicSizeSupported(const TargetLowering *TLI, Inst *I,
     OS << "target supports atomics up to " << MaxSize
        << " bytes, but this atomic accesses " << Size << " bytes";
   }
-  return FailureReason.empty();
+}
+
+template <typename Inst>
+void AtomicExpandImpl::handleUnsupportedAtomicSize(
+    Inst *I, const Twine &AtomicOpName, Instruction *DiagnosticInst) const {
+  assert(!atomicSizeSupported(TLI, I) && "expected unsupported atomic size");
+  SmallString<128> FailureReason;
+  raw_svector_ostream OS(FailureReason);
+  writeUnsupportedAtomicSizeReason(TLI, I, OS);
+  handleFailure(*I, Twine("unsupported ") + AtomicOpName + ": " + FailureReason,
+                DiagnosticInst);
 }
 
 bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
@@ -293,9 +313,8 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
     if (!LI->isAtomic())
       return false;
 
-    SmallString<128> FailureReason;
-    if (!atomicSizeSupported(TLI, LI, FailureReason)) {
-      expandAtomicLoadToLibcall(LI, FailureReason.str());
+    if (!atomicSizeSupported(TLI, LI)) {
+      expandAtomicLoadToLibcall(LI);
       return true;
     }
 
@@ -308,9 +327,8 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
     if (!SI->isAtomic())
       return false;
 
-    SmallString<128> FailureReason;
-    if (!atomicSizeSupported(TLI, SI, FailureReason)) {
-      expandAtomicStoreToLibcall(SI, FailureReason.str());
+    if (!atomicSizeSupported(TLI, SI)) {
+      expandAtomicStoreToLibcall(SI);
       return true;
     }
 
@@ -320,9 +338,8 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
       MadeChange = true;
     }
   } else if (RMWI) {
-    SmallString<128> FailureReason;
-    if (!atomicSizeSupported(TLI, RMWI, FailureReason)) {
-      expandAtomicRMWToLibcall(RMWI, FailureReason.str());
+    if (!atomicSizeSupported(TLI, RMWI)) {
+      expandAtomicRMWToLibcall(RMWI);
       return true;
     }
 
@@ -332,9 +349,8 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
       MadeChange = true;
     }
   } else if (CASI) {
-    SmallString<128> FailureReason;
-    if (!atomicSizeSupported(TLI, CASI, FailureReason)) {
-      expandAtomicCASToLibcall(CASI, "cmpxchg", nullptr, FailureReason.str());
+    if (!atomicSizeSupported(TLI, CASI)) {
+      expandAtomicCASToLibcall(CASI, "cmpxchg", nullptr);
       return true;
     }
 
@@ -1815,8 +1831,7 @@ static bool canUseSizedAtomicCall(unsigned Size, Align Alignment,
          Size <= LargestSize;
 }
 
-void AtomicExpandImpl::expandAtomicLoadToLibcall(LoadInst *I,
-                                                 StringRef FailureReason) {
+void AtomicExpandImpl::expandAtomicLoadToLibcall(LoadInst *I) {
   static const RTLIB::Libcall Libcalls[6] = {
       RTLIB::ATOMIC_LOAD,   RTLIB::ATOMIC_LOAD_1, RTLIB::ATOMIC_LOAD_2,
       RTLIB::ATOMIC_LOAD_4, RTLIB::ATOMIC_LOAD_8, RTLIB::ATOMIC_LOAD_16};
@@ -1826,11 +1841,10 @@ void AtomicExpandImpl::expandAtomicLoadToLibcall(LoadInst *I,
       I, Size, I->getAlign(), I->getPointerOperand(), nullptr, nullptr,
       I->getOrdering(), AtomicOrdering::NotAtomic, Libcalls);
   if (!Expanded)
-    handleFailure(*I, Twine("unsupported atomic load: ") + FailureReason);
+    handleUnsupportedAtomicSize(I, "atomic load");
 }
 
-void AtomicExpandImpl::expandAtomicStoreToLibcall(StoreInst *I,
-                                                  StringRef FailureReason) {
+void AtomicExpandImpl::expandAtomicStoreToLibcall(StoreInst *I) {
   static const RTLIB::Libcall Libcalls[6] = {
       RTLIB::ATOMIC_STORE,   RTLIB::ATOMIC_STORE_1, RTLIB::ATOMIC_STORE_2,
       RTLIB::ATOMIC_STORE_4, RTLIB::ATOMIC_STORE_8, RTLIB::ATOMIC_STORE_16};
@@ -1840,13 +1854,12 @@ void AtomicExpandImpl::expandAtomicStoreToLibcall(StoreInst *I,
       I, Size, I->getAlign(), I->getPointerOperand(), I->getValueOperand(),
       nullptr, I->getOrdering(), AtomicOrdering::NotAtomic, Libcalls);
   if (!Expanded)
-    handleFailure(*I, Twine("unsupported atomic store: ") + FailureReason);
+    handleUnsupportedAtomicSize(I, "atomic store");
 }
 
 void AtomicExpandImpl::expandAtomicCASToLibcall(AtomicCmpXchgInst *I,
-                                                StringRef AtomicOpName,
-                                                Instruction *DiagnosticInst,
-                                                StringRef FailureReason) {
+                                                const Twine &AtomicOpName,
+                                                Instruction *DiagnosticInst) {
   static const RTLIB::Libcall Libcalls[6] = {
       RTLIB::ATOMIC_COMPARE_EXCHANGE,   RTLIB::ATOMIC_COMPARE_EXCHANGE_1,
       RTLIB::ATOMIC_COMPARE_EXCHANGE_2, RTLIB::ATOMIC_COMPARE_EXCHANGE_4,
@@ -1858,9 +1871,7 @@ void AtomicExpandImpl::expandAtomicCASToLibcall(AtomicCmpXchgInst *I,
       I->getCompareOperand(), I->getSuccessOrdering(), I->getFailureOrdering(),
       Libcalls);
   if (!Expanded)
-    handleFailure(*I,
-                  Twine("unsupported ") + AtomicOpName + ": " + FailureReason,
-                  DiagnosticInst);
+    handleUnsupportedAtomicSize(I, AtomicOpName, DiagnosticInst);
 }
 
 static ArrayRef<RTLIB::Libcall> GetRMWLibcall(AtomicRMWInst::BinOp Op) {
@@ -1932,13 +1943,10 @@ static ArrayRef<RTLIB::Libcall> GetRMWLibcall(AtomicRMWInst::BinOp Op) {
   llvm_unreachable("Unexpected AtomicRMW operation.");
 }
 
-void AtomicExpandImpl::expandAtomicRMWToLibcall(AtomicRMWInst *I,
-                                                StringRef FailureReason) {
+void AtomicExpandImpl::expandAtomicRMWToLibcall(AtomicRMWInst *I) {
   ArrayRef<RTLIB::Libcall> Libcalls = GetRMWLibcall(I->getOperation());
 
   unsigned Size = getAtomicOpSize(I);
-  auto AtomicOpName =
-      (Twine("atomicrmw ") + I->getOperationName(I->getOperation())).str();
 
   bool Success = false;
   if (!Libcalls.empty())
@@ -1953,7 +1961,7 @@ void AtomicExpandImpl::expandAtomicRMWToLibcall(AtomicRMWInst *I,
   if (!Success) {
     expandAtomicRMWToCmpXchg(
         I,
-        [this, AtomicOpName, FailureReason](
+        [this, I](
             IRBuilderBase &Builder, Value *Addr, Value *Loaded, Value *NewVal,
             Align Alignment, AtomicOrdering MemOpOrder, SyncScope::ID SSID,
             Value *&Success, Value *&NewLoaded, Instruction *MetadataSrc) {
@@ -1968,8 +1976,10 @@ void AtomicExpandImpl::expandAtomicRMWToLibcall(AtomicRMWInst *I,
           NewLoaded = Builder.CreateExtractValue(Pair, 0, "newloaded");
 
           // ...and then expand the CAS into a libcall.
-          expandAtomicCASToLibcall(Pair, AtomicOpName, MetadataSrc,
-                                   FailureReason);
+          expandAtomicCASToLibcall(
+              Pair,
+              Twine("atomicrmw ") + I->getOperationName(I->getOperation()),
+              MetadataSrc);
         });
   }
 }
