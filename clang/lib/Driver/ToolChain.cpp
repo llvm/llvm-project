@@ -1332,14 +1332,13 @@ ToolChain::RuntimeLibType ToolChain::GetRuntimeLibType(
     return *runtimeLibType;
 
   const Arg* A = Args.getLastArg(options::OPT_rtlib_EQ);
-  StringRef LibName = A ? A->getValue() : CLANG_DEFAULT_RTLIB;
+  StringRef LibName = A ? A->getValue() : "";
 
-  // Only use "platform" in tests to override CLANG_DEFAULT_RTLIB!
   if (LibName == "compiler-rt")
     runtimeLibType = ToolChain::RLT_CompilerRT;
   else if (LibName == "libgcc")
     runtimeLibType = ToolChain::RLT_Libgcc;
-  else if (LibName == "platform")
+  else if (LibName == "platform" || LibName == "")
     runtimeLibType = GetDefaultRuntimeLibType();
   else {
     if (A)
@@ -1358,7 +1357,7 @@ ToolChain::UnwindLibType ToolChain::GetUnwindLibType(
     return *unwindLibType;
 
   const Arg *A = Args.getLastArg(options::OPT_unwindlib_EQ);
-  StringRef LibName = A ? A->getValue() : CLANG_DEFAULT_UNWINDLIB;
+  StringRef LibName = A ? A->getValue() : "";
 
   if (LibName == "none")
     unwindLibType = ToolChain::UNW_None;
@@ -1393,14 +1392,13 @@ ToolChain::CXXStdlibType ToolChain::GetCXXStdlibType(const ArgList &Args) const{
     return *cxxStdlibType;
 
   const Arg *A = Args.getLastArg(options::OPT_stdlib_EQ);
-  StringRef LibName = A ? A->getValue() : CLANG_DEFAULT_CXX_STDLIB;
+  StringRef LibName = A ? A->getValue() : "";
 
-  // Only use "platform" in tests to override CLANG_DEFAULT_CXX_STDLIB!
   if (LibName == "libc++")
     cxxStdlibType = ToolChain::CST_Libcxx;
   else if (LibName == "libstdc++")
     cxxStdlibType = ToolChain::CST_Libstdcxx;
-  else if (LibName == "platform")
+  else if (LibName == "platform" || LibName == "")
     cxxStdlibType = GetDefaultCXXStdlibType();
   else {
     if (A)
