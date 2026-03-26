@@ -1702,6 +1702,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32}})
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32}});
 
+  addRulesForIOpcs({amdgcn_permlane16_var, amdgcn_permlanex16_var}, Standard)
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}});
+
   addRulesForIOpcs({amdgcn_permlane16_swap, amdgcn_permlane32_swap}, Standard)
       .Div(S32, {{Vgpr32, Vgpr32}, {IntrId, Vgpr32, Vgpr32}});
 
