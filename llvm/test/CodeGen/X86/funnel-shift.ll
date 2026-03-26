@@ -333,8 +333,7 @@ define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) nounwind {
 ; X86-SSE2-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-SSE2-NEXT:    calll __umoddi3
 ; X86-SSE2-NEXT:    addl $16, %esp
-; X86-SSE2-NEXT:    movl %eax, %ecx
-; X86-SSE2-NEXT:    addl $27, %ecx
+; X86-SSE2-NEXT:    leal 27(%eax), %ecx
 ; X86-SSE2-NEXT:    testb $32, %cl
 ; X86-SSE2-NEXT:    je .LBB10_1
 ; X86-SSE2-NEXT:  # %bb.2:

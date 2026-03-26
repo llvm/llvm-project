@@ -389,8 +389,7 @@ define void @simple_urem_fail_bad_incr3(i32 %N, i32 %rem_amt) nounwind {
 ; CHECK-NEXT:    testb $1, %r14b
 ; CHECK-NEXT:    je .LBB5_7
 ; CHECK-NEXT:  # %bb.4: # in Loop: Header=BB5_2 Depth=1
-; CHECK-NEXT:    movl %eax, %ebp
-; CHECK-NEXT:    incl %ebp
+; CHECK-NEXT:    leal 1(%rax), %ebp
 ; CHECK-NEXT:    jmp .LBB5_6
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB5_5: # %for.body2
@@ -795,8 +794,7 @@ define void @simple_urem_skip_const_rem_amt(i32 %N) nounwind {
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    pushq %r14
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    movl %edi, %ebx
-; CHECK-NEXT:    addl $-4, %ebx
+; CHECK-NEXT:    leal -4(%rdi), %ebx
 ; CHECK-NEXT:    movl $4, %ebp
 ; CHECK-NEXT:    movabsq $970881267157434368, %r14 # imm = 0xD79435E58000000
 ; CHECK-NEXT:    .p2align 4
@@ -901,8 +899,7 @@ define void @simple_urem_multi_latch_non_canonical(i32 %N, i32 %rem_amt) nounwin
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    movl %esi, %ebx
-; CHECK-NEXT:    movl %edi, %ebp
-; CHECK-NEXT:    decl %ebp
+; CHECK-NEXT:    leal -1(%rdi), %ebp
 ; CHECK-NEXT:    xorl %r12d, %r12d
 ; CHECK-NEXT:    xorl %r14d, %r14d
 ; CHECK-NEXT:    xorl %r13d, %r13d
