@@ -290,12 +290,18 @@ static cl::opt<bool> WriteBoltInfoSection(
 static cl::list<GadgetKindBitmask> GadgetScannersToRun(
     "scanners", cl::desc("Which gadget scanners to run"),
     cl::values(
-        clEnumValN(GS_PTRAUTH_RETURN_TARGETS, "ptrauth-pac-ret",
-                   "Unprotected returns (pac-ret)"),
-        clEnumValN(GS_PTRAUTH_TAIL_CALLS, "ptrauth-tail-calls",
-                   "Tail calls performed with unprotected link register"),
+        clEnumValN(GS_PTRAUTH_PAC_RET, "ptrauth-pac-ret",
+                   "Returning from a function with unprotected link register "
+                   "(backward-cf + tail-calls)"),
+
+        clEnumValN(GS_PTRAUTH_TAIL_CALLS_BASIC, "ptrauth-tail-calls",
+                   "Tail calls performed with unauthenticated link register"),
+        clEnumValN(GS_PTRAUTH_TAIL_CALLS_STRICT, "ptrauth-tail-calls-strict",
+                   "Tail calls performed with not fully trusted link register"),
+        clEnumValN(GS_PTRAUTH_RETURN_TARGETS, "ptrauth-backward-cf",
+                   "Unprotected return targets (backward control flow)"),
         clEnumValN(GS_PTRAUTH_BRANCH_AND_CALL_TARGETS, "ptrauth-forward-cf",
-                   "Unprotected calls and branches (forward control-flow)"),
+                   "Unprotected call or branch targets (forward control flow)"),
         clEnumValN(GS_PTRAUTH_SIGN_ORACLES, "ptrauth-sign-oracles",
                    "Signing of untrusted pointers (signing oracles)"),
         clEnumValN(GS_PTRAUTH_AUTH_ORACLES, "ptrauth-auth-oracles",

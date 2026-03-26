@@ -134,19 +134,26 @@ bool shouldDumpDot(const llvm::bolt::BinaryFunction &Function);
 enum GadgetKindBitmask : unsigned {
   /// Scan for unprotected backward control-flow (return instructions).
   GS_PTRAUTH_RETURN_TARGETS = (1 << 0),
-  /// Scan for tail calls performed with untrusted link register.
-  GS_PTRAUTH_TAIL_CALLS = (1 << 1),
+  /// Scan for tail calls performed with completely unprotected link register
+  /// (suitable for pac-ret validation).
+  GS_PTRAUTH_TAIL_CALLS_BASIC = (1 << 1),
+  /// Scan for tail calls performed with not fully trusted link register
+  /// (may require inserting expensive checks by the compiler).
+  GS_PTRAUTH_TAIL_CALLS_STRICT = (1 << 2),
   /// Scan for unprotected forward control-flow (branch and call instructions).
-  GS_PTRAUTH_BRANCH_AND_CALL_TARGETS = (1 << 2),
+  GS_PTRAUTH_BRANCH_AND_CALL_TARGETS = (1 << 3),
   /// Scan for signing oracles.
-  GS_PTRAUTH_SIGN_ORACLES = (1 << 3),
+  GS_PTRAUTH_SIGN_ORACLES = (1 << 4),
   /// Scan for authentication oracles.
-  GS_PTRAUTH_AUTH_ORACLES = (1 << 4),
+  GS_PTRAUTH_AUTH_ORACLES = (1 << 5),
 
+  /// Scan for pac-ret issues.
+  GS_PTRAUTH_PAC_RET = GS_PTRAUTH_RETURN_TARGETS | GS_PTRAUTH_TAIL_CALLS_BASIC,
   /// Scan for all Pointer Authentication issues.
-  GS_PTRAUTH_ALL_MASK = GS_PTRAUTH_RETURN_TARGETS | GS_PTRAUTH_TAIL_CALLS |
-                        GS_PTRAUTH_BRANCH_AND_CALL_TARGETS |
-                        GS_PTRAUTH_SIGN_ORACLES | GS_PTRAUTH_AUTH_ORACLES,
+  GS_PTRAUTH_ALL_MASK =
+      GS_PTRAUTH_RETURN_TARGETS | GS_PTRAUTH_TAIL_CALLS_BASIC |
+      GS_PTRAUTH_TAIL_CALLS_STRICT | GS_PTRAUTH_BRANCH_AND_CALL_TARGETS |
+      GS_PTRAUTH_SIGN_ORACLES | GS_PTRAUTH_AUTH_ORACLES,
 
   /// Run all implemented scanners.
   GS_ALL_MASK = GS_PTRAUTH_ALL_MASK,

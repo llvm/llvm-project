@@ -1419,11 +1419,26 @@ static bool shouldAnalyzeTailCallInst(const BinaryContext &BC,
   return false;
 }
 
+// As tail call instruction is a function call, it may be desired to make sure
+// that the callee is entered with trusted link register, same as for a regular
+// call instruction. Depending on the particular assumptions made about the
+// target environment, this might require expensive checks to be inserted by
+// the compiler, thus it is a security vs. performance trade-off.
+//
+// Nevertheless, a tail call is virtually a return from the current function,
+// so it is worth checking at this point that at least pac-ret is implemented
+// properly. However, checking tail calls involves heuristics to classify
+// branch instructions either as tail call or not, unlike regular return
+// instructions. Thus it may be useful to be able to disable tail call checking
+// while keeping regular pac-ret validation in case of false positives.
 static std::optional<PartialReport<MCPhysReg>>
 shouldReportUnsafeTailCall(const BinaryContext &BC, const BinaryFunction &BF,
-                           const MCInstReference &Inst, const SrcState &S) {
+                           bool Strict, const MCInstReference &Inst,
+                           const SrcState &S) {
+  static const GadgetKind UnauthenticatedLRKind(
+      "unauthenticated link register found before tail call");
   static const GadgetKind UntrustedLRKind(
-      "untrusted link register found before tail call");
+      "not fully trusted link register found before tail call");
 
   if (!shouldAnalyzeTailCallInst(BC, BF, Inst))
     return std::nullopt;
@@ -1458,9 +1473,12 @@ shouldReportUnsafeTailCall(const BinaryContext &BC, const BinaryFunction &BF,
   }
 
   // Returns at most one report per instruction - this is probably OK...
-  for (auto Reg : RegsToCheck)
-    if (!S.TrustedRegs[Reg])
+  for (auto Reg : RegsToCheck) {
+    if (!S.SafeToDerefRegs[Reg])
+      return make_gadget_report(UnauthenticatedLRKind, Inst, Reg);
+    if (Strict && !S.TrustedRegs[Reg])
       return make_gadget_report(UntrustedLRKind, Inst, Reg);
+  }
 
   return std::nullopt;
 }
@@ -1626,8 +1644,11 @@ void FunctionAnalysisContext::findUnsafeUses(
       if (auto Report = shouldReportReturnGadget(BC, Inst, S))
         Reports.push_back(*Report);
     }
-    if (EnabledDetectors & opts::GS_PTRAUTH_TAIL_CALLS) {
-      if (auto Report = shouldReportUnsafeTailCall(BC, BF, Inst, S))
+    const auto TailCallCheckers =
+        opts::GS_PTRAUTH_TAIL_CALLS_BASIC | opts::GS_PTRAUTH_TAIL_CALLS_STRICT;
+    if (EnabledDetectors & TailCallCheckers) {
+      bool Strict = EnabledDetectors & opts::GS_PTRAUTH_TAIL_CALLS_STRICT;
+      if (auto Report = shouldReportUnsafeTailCall(BC, BF, Strict, Inst, S))
         Reports.push_back(*Report);
     }
     if (EnabledDetectors & opts::GS_PTRAUTH_BRANCH_AND_CALL_TARGETS) {
