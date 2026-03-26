@@ -3662,6 +3662,10 @@ public:
   LLVM_ABI static void appendOffset(SmallVectorImpl<uint64_t> &Ops,
                                     int64_t Offset);
 
+  LLVM_ABI static bool
+  extractLeadingOffset(ArrayRef<uint64_t> Ops, int64_t &OffsetInBytes,
+                       SmallVectorImpl<uint64_t> &RemainingOps);
+
   /// If this is a constant offset, extract it. If there is no expression,
   /// return true with an offset of zero.
   LLVM_ABI bool extractIfOffset(int64_t &Offset) const;
