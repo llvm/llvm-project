@@ -23,6 +23,7 @@ add_clang_library(clangTidyPerformanceModule STATIC
   PerformanceTidyModule.cpp
   PreferSingleCharOverloadsCheck.cpp
   StringViewConversionsCheck.cpp
+  SubstrSelfAssignmentCheck.cpp
   TriviallyDestructibleCheck.cpp
   TypePromotionInMathFnCheck.cpp
   UnnecessaryCopyInitializationCheck.cpp
