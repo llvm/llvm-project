@@ -1,10 +1,16 @@
+// REQUIRES: system-darwin || has-gdb
+//
 // This ensures that DW_OP_deref is inserted when necessary, such as when NRVO
 // of a string object occurs in C++.
 //
-// RUN: %clangxx -O0 -fno-exceptions %target_itanium_abi_host_triple %s -o %t.out -g
+// RUN: %clangxx -O0 -fno-exceptions %target_itanium_abi_host_triple %s \
+// RUN:    -o %t.out -g
 // RUN: %test_debuginfo %s %t.out
-// RUN: %clangxx -O1 -fno-exceptions %target_itanium_abi_host_triple %s -o %t.out -g
+
+// RUN: %clangxx -O1 -fno-exceptions %target_itanium_abi_host_triple %s \
+// RUN:     -o %t.out -g
 // RUN: %test_debuginfo %s %t.out
+
 // XFAIL: !system-darwin && gdb-clang-incompatibility
 // PR34513
 volatile int sideeffect = 0;

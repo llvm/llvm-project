@@ -4264,6 +4264,32 @@ static void RenderObjCOptions(const ToolChain &TC, const Driver &D,
 
   if (Args.hasArg(options::OPT_fobjc_disable_direct_methods_for_testing))
     CmdArgs.push_back("-fobjc-disable-direct-methods-for-testing");
+
+  // Forward constant literal flags to cc1.
+  if (types::isObjC(Input.getType())) {
+    bool EnableConstantLiterals =
+        Args.hasFlag(options::OPT_fobjc_constant_literals,
+                     options::OPT_fno_objc_constant_literals,
+                     /*default=*/true) &&
+        Runtime.hasConstantLiteralClasses();
+    if (EnableConstantLiterals)
+      CmdArgs.push_back("-fobjc-constant-literals");
+    if (Args.hasFlag(options::OPT_fconstant_nsnumber_literals,
+                     options::OPT_fno_constant_nsnumber_literals,
+                     /*default=*/true) &&
+        EnableConstantLiterals)
+      CmdArgs.push_back("-fconstant-nsnumber-literals");
+    if (Args.hasFlag(options::OPT_fconstant_nsarray_literals,
+                     options::OPT_fno_constant_nsarray_literals,
+                     /*default=*/true) &&
+        EnableConstantLiterals)
+      CmdArgs.push_back("-fconstant-nsarray-literals");
+    if (Args.hasFlag(options::OPT_fconstant_nsdictionary_literals,
+                     options::OPT_fno_constant_nsdictionary_literals,
+                     /*default=*/true) &&
+        EnableConstantLiterals)
+      CmdArgs.push_back("-fconstant-nsdictionary-literals");
+  }
 }
 
 static void RenderDiagnosticsOptions(const Driver &D, const ArgList &Args,
@@ -4415,11 +4441,7 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
                      !isHIP(InputType) && !isObjC(InputType) &&
                      !isOpenCL(InputType);
 
-  if (Args.hasFlag(options::OPT_fdebug_info_for_profiling,
-                   options::OPT_fno_debug_info_for_profiling, false) &&
-      checkDebugInfoOption(
-          Args.getLastArg(options::OPT_fdebug_info_for_profiling), Args, D, TC))
-    CmdArgs.push_back("-fdebug-info-for-profiling");
+  addDebugInfoForProfilingArgs(D, TC, Args, CmdArgs);
 
   // The 'g' groups options involve a somewhat intricate sequence of decisions
   // about what to pass from the driver to the frontend, but by the time they
@@ -6568,6 +6590,28 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Arg *A = Args.getLastArg(options::OPT_fconstant_string_class_EQ)) {
     CmdArgs.push_back("-fconstant-string-class");
+    CmdArgs.push_back(A->getValue());
+  }
+
+  if (Arg *A = Args.getLastArg(options::OPT_fconstant_array_class_EQ)) {
+    CmdArgs.push_back("-fconstant-array-class");
+    CmdArgs.push_back(A->getValue());
+  }
+  if (Arg *A = Args.getLastArg(options::OPT_fconstant_dictionary_class_EQ)) {
+    CmdArgs.push_back("-fconstant-dictionary-class");
+    CmdArgs.push_back(A->getValue());
+  }
+  if (Arg *A =
+          Args.getLastArg(options::OPT_fconstant_integer_number_class_EQ)) {
+    CmdArgs.push_back("-fconstant-integer-number-class");
+    CmdArgs.push_back(A->getValue());
+  }
+  if (Arg *A = Args.getLastArg(options::OPT_fconstant_float_number_class_EQ)) {
+    CmdArgs.push_back("-fconstant-float-number-class");
+    CmdArgs.push_back(A->getValue());
+  }
+  if (Arg *A = Args.getLastArg(options::OPT_fconstant_double_number_class_EQ)) {
+    CmdArgs.push_back("-fconstant-double-number-class");
     CmdArgs.push_back(A->getValue());
   }
 

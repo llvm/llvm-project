@@ -1141,10 +1141,25 @@ define void @mulhu_v6i16(ptr %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v9, 0
 ; CHECK-NEXT:    lui a1, %hi(.LCPI67_0)
 ; CHECK-NEXT:    addi a1, a1, %lo(.LCPI67_0)
-; CHECK-NEXT:    vle16.v v9, (a1)
-; CHECK-NEXT:    vdivu.vv v8, v8, v9
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vle16.v v10, (a1)
+; CHECK-NEXT:    lui a1, 1048568
+; CHECK-NEXT:    vsetvli zero, zero, e16, m1, tu, ma
+; CHECK-NEXT:    vmv.s.x v9, a1
+; CHECK-NEXT:    li a1, 33
+; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vmulhu.vv v10, v8, v10
+; CHECK-NEXT:    vsub.vv v8, v8, v10
+; CHECK-NEXT:    vmulhu.vv v8, v8, v9
+; CHECK-NEXT:    vmv.s.x v0, a1
+; CHECK-NEXT:    vadd.vv v8, v8, v10
+; CHECK-NEXT:    vmv.v.i v9, 3
+; CHECK-NEXT:    vmerge.vim v9, v9, 2, v0
+; CHECK-NEXT:    vsrl.vv v8, v8, v9
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
@@ -1287,9 +1302,16 @@ define void @mulhs_v6i16(ptr %x) {
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    li a1, 22
 ; CHECK-NEXT:    vmv.s.x v0, a1
-; CHECK-NEXT:    vmv.v.i v9, -7
-; CHECK-NEXT:    vmerge.vim v9, v9, 7, v0
-; CHECK-NEXT:    vdiv.vv v8, v8, v9
+; CHECK-NEXT:    lui a1, 1048571
+; CHECK-NEXT:    addi a1, a1, 1755
+; CHECK-NEXT:    vmv.v.x v9, a1
+; CHECK-NEXT:    lui a1, 5
+; CHECK-NEXT:    addi a1, a1, -1755
+; CHECK-NEXT:    vmerge.vxm v9, v9, a1, v0
+; CHECK-NEXT:    vmulh.vv v8, v8, v9
+; CHECK-NEXT:    vsra.vi v8, v8, 1
+; CHECK-NEXT:    vsrl.vi v9, v8, 15
+; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x

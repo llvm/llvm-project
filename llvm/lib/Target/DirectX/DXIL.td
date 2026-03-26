@@ -921,6 +921,8 @@ def GetDimensions : DXILOp<72, getDimensions> {
 def Barrier : DXILOp<80, barrier> {
   let Doc = "inserts a memory barrier in the shader";
   let intrinsics = [
+    IntrinSelect<int_dx_group_memory_barrier,
+                 [IntrinArgI32<BarrierMode_GroupMemoryBarrier>]>,
     IntrinSelect<int_dx_group_memory_barrier_with_group_sync,
                  [IntrinArgI32<BarrierMode_GroupMemoryBarrierWithGroupSync>]>,
   ];
