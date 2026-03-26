@@ -1078,6 +1078,16 @@ amd_comgr_status_t AMDGPUCompiler::processFile(DataObject *Input,
   Argv.push_back("-Xclang");
   Argv.push_back("-no-disable-free");
 
+  // Append options from AMD_COMGR_DRIVER_OPTIONS_APPEND environment variable.
+  // Options are space-separated and appended after all other options.
+  StringRef EnvOptions = env::getDriverOptionsAppend();
+  if (!EnvOptions.empty()) {
+    SmallVector<StringRef, 8> Options;
+    EnvOptions.split(Options, ' ', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+    for (StringRef Opt : Options)
+      Argv.push_back(Saver.save(Opt).data());
+  }
+
   Argv.push_back(InputFilePath);
 
   Argv.push_back("-o");

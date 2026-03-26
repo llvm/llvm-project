@@ -98,5 +98,10 @@ StringRef getCacheDirectory() {
   return "";
 }
 
+StringRef getDriverOptionsAppend() {
+  static const char *Options = std::getenv("AMD_COMGR_DRIVER_OPTIONS_APPEND");
+  return Options ? Options : "";
+}
+
 } // namespace env
 } // namespace COMGR

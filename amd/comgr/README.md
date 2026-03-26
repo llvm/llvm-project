@@ -207,6 +207,10 @@ include:
   include additional Comgr-specific informational messages.
 * `AMD_COMGR_TIME_STATISTICS`: If this is set, and is not "0", logs will
   include additional Comgr-specific timing information for compilation actions.
+* `AMD_COMGR_DRIVER_OPTIONS_APPEND`: If set, the space-separated options are
+  appended to all clang driver invocations. This can be used to inject
+  additional compiler flags for debugging or experimentation without modifying
+  the application code.
 
 ### VFS
 Comgr implements support for an in-memory, virtual filesystem (VFS) for storing
