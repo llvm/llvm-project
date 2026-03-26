@@ -261,7 +261,8 @@ struct PGOAnalysisMap {
 /// \p ResolveAddress callback invoked for each range base address. It receives
 ///   the offset of the address field in \p Content and the raw value read from
 ///   the stream, and returns the resolved address.
-/// \p PGOAnalyses if non-null, receives the decoded PGO analysis data.
+/// \p PGOAnalyses if non-null, receives the decoded PGO analysis data. On
+///   error, \p PGOAnalyses may be partially populated.
 Expected<std::vector<BBAddrMap>>
 decodeBBAddrMapPayload(ArrayRef<uint8_t> Content, bool IsLittleEndian,
                        uint8_t AddressSize,
