@@ -32,16 +32,15 @@ constexpr uint32_t GSYM_VERSION_2 = 2;
 /// the first bytes in a section when GSYM is contained in a section of an
 /// executable file (ELF, mach-o, COFF).
 ///
-/// The V2 file format consists of the following sections in order:
-///   - Header (this struct, 32 bytes)
-///   - AddrOffsets (address offset table)
-///   - AddrInfoOffsets (address info offset table)
-///   - GlobalData (blob containing FunctionInfos, UUID, string table, etc.)
+/// The V2 file format consists of the following GSYM sections in order:
+///   - Header (this struct, 40 bytes)
+///   - GlobalData (a list of GlobalData, each point to one of the following GSYM sections)
+///   - Followed by all the sections mentioned in the GlobalData list at the specified file offsets and sizes, with padding of zeros for alignment.
 ///
-/// The structure is encoded exactly as it appears in the structure definition
+/// The header structure is encoded exactly as it appears in the structure definition
 /// with no gaps between members. Alignment should not change from system to
-/// system as the members were laid out so that they shouldn't align
-/// differently on different architectures.
+/// system as the members are laid out so that they will align the same
+/// on different architectures.
 ///
 /// When endianness of the system loading a GSYM file matches, the file can
 /// be mmap'ed in and a pointer to the header can be cast to the first bytes
@@ -51,14 +50,13 @@ constexpr uint32_t GSYM_VERSION_2 = 2;
 struct HeaderV2 {
   /// The magic bytes should be set to GSYM_MAGIC. This helps detect if a file
   /// is a GSYM file by scanning the first 4 bytes of a file or section.
-  /// This value might appear byte swapped.
+  /// This value might appear byte swapped when endianness is swapped.
   uint32_t Magic;
-  /// The version number determines how the header is decoded and how each
-  /// InfoType in FunctionInfo is encoded/decoded. As version numbers increase,
+  /// The version number determines how the header is decoded. As version numbers increase,
   /// "Magic" and "Version" members should always appear at offset zero and 4
   /// respectively to ensure clients figure out if they can parse the format.
   uint16_t Version;
-  /// Padding for alignment. Must be set to zero.
+  /// Padding for alignment to keep all the "size" fields together. Must be set to zero.
   uint16_t Padding;
   /// The 64 bit base address that all address offsets in the address offsets
   /// table are relative to. Storing a full 64 bit address allows our address
@@ -77,12 +75,9 @@ struct HeaderV2 {
   uint8_t StrpSize;
   /// Padding for alignment. Must be set to zero.
   uint8_t Padding2;
-  /// The file offset of the start of the GlobalData.
-  ///
-  /// GlobalData is a list of GlobalData objects, with the last one having
-  /// GlobalInfoType == GlobalInfoType::EndOfList. GlobalData contains
-  /// FunctionInfos, UUID, string table, and any other future sections.
-  uint64_t GlobalDataFileOffset;
+  /// The starting point of the global data. This is a list of GlobalData objects, with the last one being the
+  /// GlobalInfoType::EndOfList. Each of the GlobalData objects point to a section in the GSYM, e.g. address FunctionInfos, UUID, string table, and any other future sections.
+  uint8_t GlobalData[0];
 
   /// Check if a header is valid and return an error if anything is wrong.
   ///
