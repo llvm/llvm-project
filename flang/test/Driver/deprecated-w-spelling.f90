@@ -2,9 +2,9 @@
 ! deprecation warnings and suggest the canonical -Wopenmp-* / -Wopenacc-*
 ! spellings.
 
-! RUN: %flang_fc1 -fsyntax-only -Wopen-mp-usage %s 2>&1 | FileCheck --allow-empty --check-prefix=DEPRECATED %s
-! RUN: %flang_fc1 -fsyntax-only -Wno-open-mp-usage %s 2>&1 | FileCheck --allow-empty --check-prefix=DEPRECATED-NO %s
-! RUN: %flang_fc1 -fsyntax-only -Wopen-acc-usage %s 2>&1 | FileCheck --allow-empty --check-prefix=DEPRECATED-ACC %s
+! RUN: %flang_fc1 -fsyntax-only -Wopen-mp-usage %s 2>&1 | FileCheck --check-prefix=DEPRECATED %s
+! RUN: %flang_fc1 -fsyntax-only -Wno-open-mp-usage %s 2>&1 | FileCheck --check-prefix=DEPRECATED-NO %s
+! RUN: %flang_fc1 -fsyntax-only -Wopen-acc-usage %s 2>&1 | FileCheck --check-prefix=DEPRECATED-ACC %s
 ! RUN: %flang_fc1 -fsyntax-only -Wopenmp-usage %s 2>&1 | FileCheck --allow-empty --check-prefix=CANONICAL %s
 ! RUN: %flang_fc1 -fsyntax-only -Wopenacc-usage %s 2>&1 | FileCheck --allow-empty --check-prefix=CANONICAL %s
 
