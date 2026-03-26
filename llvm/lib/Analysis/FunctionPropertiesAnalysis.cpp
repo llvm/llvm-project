@@ -29,9 +29,16 @@ using namespace llvm;
 
 #define DEBUG_TYPE "func-properties-stats"
 
-#define FUNCTION_PROPERTY(Name, Description) STATISTIC(Num##Name, Description);
+#define FUNCTION_PROPERTY(Name, Description)                                   \
+  STATISTIC(Num##Name##BeforeOptimization,                                     \
+            Description " (before optimizations)");                            \
+  STATISTIC(Num##Name##AfterOptimization, Description " (after "               \
+                                                      "optimizations)");
 #define DETAILED_FUNCTION_PROPERTY(Name, Description)                          \
-  STATISTIC(Num##Name, Description);
+  STATISTIC(Num##Name##BeforeOptimization,                                     \
+            Description " (before optimizations)");                            \
+  STATISTIC(Num##Name##AfterOptimization, Description " (after "               \
+                                                      "optimizations)");
 #include "llvm/IR/FunctionProperties.def"
 
 namespace llvm {
@@ -378,11 +385,23 @@ FunctionPropertiesStatisticsPass::run(Function &F,
   LLVM_DEBUG(dbgs() << "STATSCOUNT: running on function " << F.getName()
                     << "\n");
   auto &AnalysisResults = FAM.getResult<FunctionPropertiesAnalysis>(F);
-
-#define FUNCTION_PROPERTY(Name, Description) Num##Name += AnalysisResults.Name;
+  if (IsBeforeOptimization) {
+#define FUNCTION_PROPERTY(Name, Description)                                   \
+  Num##Name##BeforeOptimization += AnalysisResults.Name;
 #define DETAILED_FUNCTION_PROPERTY(Name, Description)                          \
-  Num##Name += AnalysisResults.Name;
+  Num##Name##BeforeOptimization += AnalysisResults.Name;
 #include "llvm/IR/FunctionProperties.def"
+#undef FUNCTION_PROPERTY
+#undef DETAILED_FUNCTION_PROPERTY
+  } else {
+#define FUNCTION_PROPERTY(Name, Description)                                   \
+  Num##Name##AfterOptimization += AnalysisResults.Name;
+#define DETAILED_FUNCTION_PROPERTY(Name, Description)                          \
+  Num##Name##AfterOptimization += AnalysisResults.Name;
+#include "llvm/IR/FunctionProperties.def"
+#undef FUNCTION_PROPERTY
+#undef DETAILED_FUNCTION_PROPERTY
+  }
 
   return PreservedAnalyses::all();
 }

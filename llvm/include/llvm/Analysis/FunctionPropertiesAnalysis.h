@@ -187,7 +187,10 @@ public:
 /// Statistics pass for the FunctionPropertiesAnalysis results.
 struct FunctionPropertiesStatisticsPass
     : PassInfoMixin<FunctionPropertiesStatisticsPass> {
+  explicit FunctionPropertiesStatisticsPass(bool IsBeforeOptimization = false)
+      : IsBeforeOptimization(IsBeforeOptimization) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  bool IsBeforeOptimization;
 };
 
 /// Correctly update FunctionPropertiesInfo post-inlining. A

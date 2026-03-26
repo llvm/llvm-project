@@ -20,7 +20,10 @@ namespace llvm {
 class Function;
 
 struct InstCountPass : PassInfoMixin<InstCountPass> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
+  explicit InstCountPass(bool IsBeforeOptimization = false)
+      : IsBeforeOptimization(IsBeforeOptimization) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  bool IsBeforeOptimization;
 };
 
 } // end namespace llvm
