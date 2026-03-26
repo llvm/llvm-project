@@ -2936,7 +2936,7 @@ static bool printDiff(DiffFormatType Mode, const FileCheckString &CheckStr,
                       unsigned OverwriteActualLine = 0) {
   StringRef ActualLine = CheckRegion.split('\n').first;
   if (CheckRegion.empty()) {
-    ActualLine = "<EOF>";
+    ActualLine = "";
   }
 
   SMLoc PatternLoc = CheckStr.Pat.getLoc();
@@ -3016,10 +3016,6 @@ static bool handleDiffFailure(const FileCheckString &CheckStr,
                               std::vector<FileCheckDiag> *Diags,
                               raw_ostream &OS, bool &HeaderPrinted,
                               unsigned &TotalMismatches) {
-  CheckRegion = CheckRegion.ltrim("\n\r");
-  if (CheckRegion.empty())
-    return false;
-
   if (!HeaderPrinted) {
     StringRef CheckFile =
         SM.getMemoryBuffer(SM.getMainFileID())->getBufferIdentifier();
@@ -3033,8 +3029,12 @@ static bool handleDiffFailure(const FileCheckString &CheckStr,
     HeaderPrinted = true;
   }
 
+  CheckRegion = CheckRegion.ltrim("\n\r");
+
   SMLoc CurrentLoc = SMLoc::getFromPointer(CheckRegion.data());
-  unsigned CurrentLineNo = SM.getLineAndColumn(CurrentLoc).first;
+  unsigned CurrentLineNo = 0;
+  if (!CheckRegion.empty())
+    CurrentLineNo = SM.getLineAndColumn(CurrentLoc).first;
 
   size_t EOL = CheckRegion.find('\n');
   StringRef MismatchLine =

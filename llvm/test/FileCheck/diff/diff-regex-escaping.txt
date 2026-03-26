@@ -3,16 +3,11 @@
 ; RUN:   | FileCheck %s --check-prefix=DIFF
 
 ;--- input.txt
-BLOCK1_FAIL
-KEEP_THIS
-BLOCK2_FAIL
+hello world
 
 ;--- check.txt
-; CHECK: BLOCK1_PASS
-; CHECK: KEEP_THIS
-; CHECK: BLOCK2_PASS
+; CHECK: hello {{U}}niverse
 
 ; DIFF:      @@ -[[#]] +1 @@
-; DIFF-NEXT: -BLOCK1_PASS
-; DIFF-NEXT: +BLOCK1_FAIL
-; DIFF-NEXT:  KEEP_THIS
+; DIFF-NEXT: -hello {{[{][{]U[}][}]}}niverse
+; DIFF-NEXT: +hello world

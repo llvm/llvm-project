@@ -3,16 +3,15 @@
 ; RUN:   | FileCheck %s --check-prefix=DIFF
 
 ;--- input.txt
-BLOCK1_FAIL
-KEEP_THIS
-BLOCK2_FAIL
+ALPHA
+GAMMA
 
 ;--- check.txt
-; CHECK: BLOCK1_PASS
-; CHECK: KEEP_THIS
-; CHECK: BLOCK2_PASS
+; CHECK: ALPHA
+; CHECK: BETA
+; CHECK: GAMMA
 
-; DIFF:      @@ -[[#]] +1 @@
-; DIFF-NEXT: -BLOCK1_PASS
-; DIFF-NEXT: +BLOCK1_FAIL
-; DIFF-NEXT:  KEEP_THIS
+; DIFF:      @@ -[[#]] +[[#]] @@
+; DIFF-NEXT:  ALPHA
+; DIFF-NEXT: -BETA
+; DIFF-NEXT: +GAMMA

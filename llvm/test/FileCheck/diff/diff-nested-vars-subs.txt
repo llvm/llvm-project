@@ -1,0 +1,16 @@
+; RUN: split-file %s %t
+; RUN: %ProtectFileCheckOutput not FileCheck %t/check.txt --input-file=%t/input.txt --diff=unidiff 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=DIFF
+
+;--- input.txt
+SET [[42]]
+DATA: [[42]]
+
+;--- check.txt
+; CHECK: SET [[INNER:.*]]
+; CHECK: DATA: WRONG_VALUE
+
+; DIFF:      @@ -[[#]] +[[#]] @@
+; DIFF-NEXT:  SET {{\[\[}}42{{\]\]}}
+; DIFF-NEXT: -DATA: WRONG_VALUE
+; DIFF-NEXT: +DATA: {{\[\[}}42{{\]\]}}

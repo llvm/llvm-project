@@ -1,7 +1,14 @@
-; RUN: printf "START 42\nFAIL 100\n" > %t.input
-; RUN: %ProtectFileCheckOutput not FileCheck --diff=unidiff --input-file %t.input %s 2>&1 | FileCheck -check-prefix=SUBST %s
-; RUN: %ProtectFileCheckOutput not FileCheck --diff=unidiff-no-substitutions --input-file %t.input %s 2>&1 | FileCheck -check-prefix=RAW %s
+; RUN: split-file %s %t
+; RUN: %ProtectFileCheckOutput not FileCheck %t/check.txt --input-file=%t/input.txt --diff=unidiff 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=SUBST
+; RUN: %ProtectFileCheckOutput not FileCheck %t/check.txt --input-file=%t/input.txt --diff=unidiff-no-substitutions 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=RAW
 
+;--- input.txt
+START 42
+FAIL 100
+
+;--- check.txt
 ; CHECK: START [[VAL:[0-9]+]]
 ; CHECK: FAIL [[VAL]]
 
