@@ -59,6 +59,7 @@ set(supported_sources
   ragged.cpp
   reduction.cpp
   stat.cpp
+  stl-overrides.cpp
   stop.cpp
   sum.cpp
   support.cpp
