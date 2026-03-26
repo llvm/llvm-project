@@ -1242,3 +1242,38 @@ define i64 @wsub_from_neg_const(i32 %a) nounwind {
   %sum = add i64 %ext_a, -42
   ret i64 %sum
 }
+
+define zeroext i1 @smulo_i32(i32 %v1, i32 %v2, ptr %res) {
+; CHECK-LABEL: smulo_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mulh a3, a0, a1
+; CHECK-NEXT:    mul a1, a0, a1
+; CHECK-NEXT:    srai a0, a1, 31
+; CHECK-NEXT:    xor a0, a3, a0
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    sw a1, 0(a2)
+; CHECK-NEXT:    ret
+entry:
+  %t = call {i32, i1} @llvm.smul.with.overflow.i32(i32 %v1, i32 %v2)
+  %val = extractvalue {i32, i1} %t, 0
+  %obit = extractvalue {i32, i1} %t, 1
+  store i32 %val, ptr %res
+  ret i1 %obit
+}
+
+define zeroext i1 @umulo_i32(i32 %v1, i32 %v2, ptr %res) {
+; CHECK-LABEL: umulo_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mulhu a3, a0, a1
+; CHECK-NEXT:    snez a3, a3
+; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    sw a0, 0(a2)
+; CHECK-NEXT:    mv a0, a3
+; CHECK-NEXT:    ret
+entry:
+  %t = call {i32, i1} @llvm.umul.with.overflow.i32(i32 %v1, i32 %v2)
+  %val = extractvalue {i32, i1} %t, 0
+  %obit = extractvalue {i32, i1} %t, 1
+  store i32 %val, ptr %res
+  ret i1 %obit
+}
