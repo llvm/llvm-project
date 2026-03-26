@@ -157,7 +157,7 @@ unsigned DwarfCompileUnit::getOrCreateSourceID(const DIFile *File) {
 DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
     const DIGlobalVariable *GV, ArrayRef<GlobalExpr> GlobalExprs) {
   // Check for pre-existence.
-  if (DIE *Die = getDIE(GV))
+  if (DIE *Die = getDIEs(GV).getVariableDIE(GV))
     return Die;
 
   assert(GV);
@@ -761,7 +761,9 @@ DIE *DwarfCompileUnit::getOrCreateLexicalBlockDIE(LexicalScope *Scope,
 
 DIE *DwarfCompileUnit::constructVariableDIE(DbgVariable &DV, bool Abstract) {
   auto *VariableDie = DIE::get(DIEValueAllocator, DV.getTag());
-  insertDIE(DV.getVariable(), VariableDie);
+  getDIEs(DV.getVariable())
+      .getLVs()
+      .insertDIE(DV.getVariable(), &DV, VariableDie, Abstract);
   DV.setDIE(*VariableDie);
   // Abstract variables don't get common attributes later, so apply them now.
   if (Abstract) {
@@ -958,7 +960,9 @@ DIE *DwarfCompileUnit::constructVariableDIE(DbgVariable &DV,
 DIE *DwarfCompileUnit::constructLabelDIE(DbgLabel &DL,
                                          const LexicalScope &Scope) {
   auto LabelDie = DIE::get(DIEValueAllocator, DL.getTag());
-  insertDIE(DL.getLabel(), LabelDie);
+  getDIEs(DL.getLabel())
+      .getLabels()
+      .insertDIE(DL.getLabel(), &DL, LabelDie, Scope.isAbstractScope());
   DL.setDIE(*LabelDie);
 
   if (Scope.isAbstractScope())

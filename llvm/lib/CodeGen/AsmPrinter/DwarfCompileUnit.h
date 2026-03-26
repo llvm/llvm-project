@@ -79,15 +79,9 @@ class DwarfCompileUnit final : public DwarfUnit {
   // List of concrete lexical block scopes belong to subprograms within this CU.
   DenseMap<const DILocalScope *, DIE *> LexicalBlockDIEs;
 
-  // List of abstract local scopes (either DISubprogram or DILexicalBlock).
-  DenseMap<const DILocalScope *, DIE *> AbstractLocalScopeDIEs;
-  SmallPtrSet<const DISubprogram *, 8> FinalizedAbstractSubprograms;
-
   // List of inlined lexical block scopes that belong to subprograms within this
   // CU.
   DenseMap<const DILocalScope *, SmallVector<DIE *, 2>> InlinedLocalScopeDIEs;
-
-  DenseMap<const DINode *, std::unique_ptr<DbgEntity>> AbstractEntities;
 
   /// DWO ID for correlating skeleton and split units.
   uint64_t DWOId = 0;
@@ -126,22 +120,20 @@ class DwarfCompileUnit final : public DwarfUnit {
 
   bool isDwoUnit() const override;
 
+  DwarfInfoHolder &getDIEs(const DINode *N) { return DwarfUnit::getDIEs(N); }
+
+  DwarfInfoHolder &getDIEs() { return getDIEs(nullptr); }
+
   DenseMap<const DILocalScope *, DIE *> &getAbstractScopeDIEs() {
-    if (isDwoUnit() && !DD->shareAcrossDWOCUs())
-      return AbstractLocalScopeDIEs;
-    return DU->getAbstractScopeDIEs();
+    return getDIEs().getAbstractScopeDIEs();
   }
 
   DenseMap<const DINode *, std::unique_ptr<DbgEntity>> &getAbstractEntities() {
-    if (isDwoUnit() && !DD->shareAcrossDWOCUs())
-      return AbstractEntities;
-    return DU->getAbstractEntities();
+    return getDIEs().getAbstractEntities();
   }
 
   auto &getFinalizedAbstractSubprograms() {
-    if (isDwoUnit() && !DD->shareAcrossDWOCUs())
-      return FinalizedAbstractSubprograms;
-    return DU->getFinalizedAbstractSubprograms();
+    return getDIEs().getFinalizedAbstractSubprograms();
   }
 
   void finishNonUnitTypeDIE(DIE& D, const DICompositeType *CTy) override;
