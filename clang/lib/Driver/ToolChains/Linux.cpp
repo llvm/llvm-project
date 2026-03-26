@@ -540,6 +540,10 @@ static void handlePAuthABI(const Driver &D, const ArgList &DriverArgs,
           options::OPT_fno_ptrauth_init_fini_address_discrimination))
     CC1Args.push_back("-fptrauth-init-fini-address-discrimination");
 
+  if (!DriverArgs.hasArg(options::OPT_fptrauth_elf_got,
+                         options::OPT_fno_ptrauth_elf_got))
+    CC1Args.push_back("-fptrauth-elf-got");
+
   if (!DriverArgs.hasArg(options::OPT_faarch64_jump_table_hardening,
                          options::OPT_fno_aarch64_jump_table_hardening))
     CC1Args.push_back("-faarch64-jump-table-hardening");
