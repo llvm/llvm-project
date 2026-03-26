@@ -7,10 +7,9 @@ define void @external_users(ptr %ptr) {
 ; CHECK-LABEL: define void @external_users(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
-; CHECK-NEXT:    [[LD0:%.*]] = load float, ptr [[PTR0]], align 4
 ; CHECK-NEXT:    [[VECL:%.*]] = load <2 x float>, ptr [[PTR0]], align 4, !sandboxvec [[META0:![0-9]+]]
-; CHECK-NEXT:    [[SUB0:%.*]] = fsub float [[LD0]], 0.000000e+00
 ; CHECK-NEXT:    [[VEC:%.*]] = fsub <2 x float> [[VECL]], zeroinitializer, !sandboxvec [[META0]]
+; CHECK-NEXT:    [[SUB0:%.*]] = extractelement <2 x float> [[VEC]], i32 0, !sandboxvec [[META0]]
 ; CHECK-NEXT:    store <2 x float> [[VEC]], ptr [[PTR0]], align 4, !sandboxvec [[META0]]
 ; CHECK-NEXT:    [[USER:%.*]] = fneg float [[SUB0]]
 ; CHECK-NEXT:    ret void
@@ -26,6 +25,77 @@ define void @external_users(ptr %ptr) {
   %user = fneg float %sub0
   ret void
 }
+
+; The zexts get vectorized into a constant zero-initializer so the external
+; user is extracting from the constant. Such extracts though get folded.
+define void @external_user_of_constant(ptr %ptr, ptr %ptrX) {
+; CHECK-LABEL: define void @external_user_of_constant(
+; CHECK-SAME: ptr [[PTR:%.*]], ptr [[PTRX:%.*]]) {
+; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
+; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr [[PTR0]], align 4, !sandboxvec [[META1:![0-9]+]]
+; CHECK-NEXT:    store i32 0, ptr [[PTRX]], align 4
+; CHECK-NEXT:    ret void
+;
+  %ptr0 = getelementptr float, ptr %ptr, i32 0
+  %ptr1 = getelementptr float, ptr %ptr, i32 1
+  %zext0 = zext i16 0 to i32
+  %zext1 = zext i16 0 to i32
+  store i32 %zext0, ptr %ptr0
+  store i32 %zext1, ptr %ptr1
+
+  store i32 %zext0, ptr %ptrX   ; External user
+  ret void
+}
+
+define void @vector_external_users(ptr %ptr) {
+; CHECK-LABEL: define void @vector_external_users(
+; CHECK-SAME: ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
+; CHECK-NEXT:    [[VECL:%.*]] = load <3 x float>, ptr [[PTR0]], align 4, !sandboxvec [[META2:![0-9]+]]
+; CHECK-NEXT:    [[VEC:%.*]] = fsub <3 x float> [[VECL]], zeroinitializer, !sandboxvec [[META2]]
+; CHECK-NEXT:    [[UNPACKINS2:%.*]] = shufflevector <3 x float> [[VEC]], <3 x float> poison, <2 x i32> <i32 1, i32 2>, !sandboxvec [[META2]]
+; CHECK-NEXT:    store <3 x float> [[VEC]], ptr [[PTR0]], align 4, !sandboxvec [[META2]]
+; CHECK-NEXT:    [[USER:%.*]] = fneg <2 x float> [[UNPACKINS2]]
+; CHECK-NEXT:    ret void
+;
+  %ptr0 = getelementptr float, ptr %ptr, i32 0
+  %ptr1 = getelementptr float, ptr %ptr, i32 1
+  %ld0 = load float, ptr %ptr0
+  %ld1 = load <2 x float>, ptr %ptr1
+  %sub0 = fsub float %ld0, 0.0
+  %sub1 = fsub <2 x float> %ld1, <float 0.0, float 0.0>
+  store float %sub0, ptr %ptr0
+  store <2 x float> %sub1, ptr %ptr1
+  %user = fneg <2 x float> %sub1
+  ret void
+}
+
+define void @vector_external_users_lane_and_index_differ(ptr %ptr) {
+; CHECK-LABEL: define void @vector_external_users_lane_and_index_differ(
+; CHECK-SAME: ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr <2 x float>, ptr [[PTR]], i32 0
+; CHECK-NEXT:    [[VECL:%.*]] = load <4 x float>, ptr [[PTR0]], align 8, !sandboxvec [[META3:![0-9]+]]
+; CHECK-NEXT:    [[VEC:%.*]] = fsub <4 x float> [[VECL]], zeroinitializer, !sandboxvec [[META3]]
+; CHECK-NEXT:    [[UNPACK:%.*]] = shufflevector <4 x float> [[VEC]], <4 x float> poison, <2 x i32> <i32 2, i32 3>, !sandboxvec [[META3]]
+; CHECK-NEXT:    store <4 x float> [[VEC]], ptr [[PTR0]], align 8, !sandboxvec [[META3]]
+; CHECK-NEXT:    [[USER:%.*]] = fneg <2 x float> [[UNPACK]]
+; CHECK-NEXT:    ret void
+;
+  %ptr0 = getelementptr <2 x float>, ptr %ptr, i32 0
+  %ptr1 = getelementptr <2 x float>, ptr %ptr, i32 1
+  %ld0 = load <2 x float>, ptr %ptr0
+  %ld1 = load <2 x float>, ptr %ptr1
+  %sub0 = fsub <2 x float> %ld0, <float 0.0, float 0.0>
+  %sub1 = fsub <2 x float> %ld1, <float 0.0, float 0.0>
+  store <2 x float> %sub0, ptr %ptr0
+  store <2 x float> %sub1, ptr %ptr1
+  %user = fneg <2 x float> %sub1
+  ret void
+}
+
 ;.
 ; CHECK: [[META0]] = distinct !{!"sandboxregion"}
+; CHECK: [[META1]] = distinct !{!"sandboxregion"}
+; CHECK: [[META2]] = distinct !{!"sandboxregion"}
+; CHECK: [[META3]] = distinct !{!"sandboxregion"}
 ;.

@@ -1261,6 +1261,10 @@ static void emitValueBuilder(const Operator &op,
       results = ".results";
     } else if (op.getNumResults() == 1) {
       type = "_ods_ir.OpResult";
+      if (StringRef pythonType =
+              getPythonType(op.getResult(0).constraint.getCppType());
+          !pythonType.empty())
+        type = llvm::formatv("{0}[{1}]", type, pythonType);
       results = ".result";
     }
     os << formatv(valueBuilderTemplate, nameWithoutDialect,

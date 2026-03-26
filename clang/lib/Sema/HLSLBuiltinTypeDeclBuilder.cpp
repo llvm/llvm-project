@@ -1231,14 +1231,26 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCopyAssignmentOperator() {
   return MMB.returnThis().finalize();
 }
 
-BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addArraySubscriptOperators() {
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addArraySubscriptOperators(ResourceDimension Dim) {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = Record->getASTContext();
+
+  uint32_t VecSize = 1;
+  if (Dim != ResourceDimension::Unknown)
+    VecSize = getResourceDimensions(Dim);
+
+  QualType IndexTy = VecSize > 1
+                         ? AST.getExtVectorType(AST.UnsignedIntTy, VecSize)
+                         : AST.UnsignedIntTy;
+
   DeclarationName Subscript =
       AST.DeclarationNames.getCXXOperatorName(OO_Subscript);
 
-  addHandleAccessFunction(Subscript, /*IsConst=*/true, /*IsRef=*/true);
+  addHandleAccessFunction(Subscript, /*IsConst=*/true, /*IsRef=*/true, IndexTy);
   if (getResourceAttrs().ResourceClass == llvm::dxil::ResourceClass::UAV)
-    addHandleAccessFunction(Subscript, /*IsConst=*/false, /*IsRef=*/true);
+    addHandleAccessFunction(Subscript, /*IsConst=*/false, /*IsRef=*/true,
+                            IndexTy);
 
   return *this;
 }
@@ -1250,7 +1262,8 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addLoadMethods() {
   IdentifierInfo &II = AST.Idents.get("Load", tok::TokenKind::identifier);
   DeclarationName Load(&II);
   // TODO: We also need versions with status for CheckAccessFullyMapped.
-  addHandleAccessFunction(Load, /*IsConst=*/false, /*IsRef=*/false);
+  addHandleAccessFunction(Load, /*IsConst=*/false, /*IsRef=*/false,
+                          AST.UnsignedIntTy);
   addLoadWithStatusFunction(Load, /*IsConst=*/false);
 
   return *this;
@@ -1295,7 +1308,7 @@ BuiltinTypeDeclBuilder::addByteAddressBufferLoadMethods() {
     DeclarationName Load(&II);
 
     addHandleAccessFunction(Load, /*IsConst=*/false, /*IsRef=*/false,
-                            ReturnType);
+                            AST.UnsignedIntTy, ReturnType);
     addLoadWithStatusFunction(Load, /*IsConst=*/false, ReturnType);
   };
 
@@ -1885,7 +1898,8 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addLoadWithStatusFunction(
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleAccessFunction(
-    DeclarationName &Name, bool IsConst, bool IsRef, QualType ElemTy) {
+    DeclarationName &Name, bool IsConst, bool IsRef, QualType IndexTy,
+    QualType ElemTy) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = SemaRef.getASTContext();
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
@@ -1915,7 +1929,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleAccessFunction(
   }
   MMB.ReturnTy = ReturnTy;
 
-  MMB.addParam("Index", AST.UnsignedIntTy);
+  MMB.addParam("Index", IndexTy);
 
   if (NeedsTypedBuiltin)
     MMB.callBuiltin("__builtin_hlsl_resource_getpointer_typed", ElemPtrTy,

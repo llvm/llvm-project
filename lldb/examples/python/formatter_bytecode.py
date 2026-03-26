@@ -19,6 +19,7 @@ import re
 import io
 import ast
 import enum
+import shlex
 import textwrap
 from copy import copy
 from dataclasses import dataclass
@@ -93,7 +94,8 @@ sig_init = 1
 sig_get_num_children = 2
 sig_get_child_index = 3
 sig_get_child_at_index = 4
-sig_update = 5
+sig_get_value = 5
+sig_update = 6
 
 SIGNATURES = {
     "summary": sig_summary,
@@ -101,6 +103,7 @@ SIGNATURES = {
     "get_num_children": sig_get_num_children,
     "get_child_index": sig_get_child_index,
     "get_child_at_index": sig_get_child_at_index,
+    "get_value": sig_get_value,
     "update": sig_update,
 }
 
@@ -1147,6 +1150,11 @@ def _main():
     )
     parser.add_argument("-n", "--type-name", help="source type of formatter")
     parser.add_argument(
+        "--skip-invocation-comment",
+        action="store_true",
+        help="do not print invocation comment in compiled output",
+    )
+    parser.add_argument(
         "-o",
         "--output",
         help="output file (required for --assemble)",
@@ -1179,6 +1187,9 @@ def _main():
                 section.write_binary(output)
         else:
             with open(args.output, "w") as output:
+                if not args.skip_invocation_comment:
+                    print("// Generated with:", file=output)
+                    print("//  ", shlex.join(sys.argv), file=output)
                 section.write_source(output, language=args.format)
     elif args.assemble:
         if not args.type_name:
