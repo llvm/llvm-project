@@ -45,7 +45,7 @@ ConfusableIdentifierCheck::~ConfusableIdentifierCheck() = default;
 // We're skipping 1. and 3. for the sake of simplicity, but this can lead to
 // false positive.
 
-static llvm::SmallString<64U> skeleton(StringRef Name) {
+static SmallString<64U> skeleton(StringRef Name) {
   using namespace llvm;
   SmallString<64U> Skeleton;
   Skeleton.reserve(1U + Name.size());
@@ -53,7 +53,6 @@ static llvm::SmallString<64U> skeleton(StringRef Name) {
   const char *Curr = Name.data();
   const char *End = Curr + Name.size();
   while (Curr < End) {
-
     const char *Prev = Curr;
     UTF32 CodePoint = 0;
     const ConversionResult Result = convertUTF8Sequence(
@@ -82,7 +81,8 @@ static llvm::SmallString<64U> skeleton(StringRef Name) {
         errs() << "Unicode conversion issue\n";
         break;
       }
-      Skeleton.append((char *)BufferStart, (char *)IBuffer);
+      Skeleton.append(reinterpret_cast<char *>(BufferStart),
+                      reinterpret_cast<char *>(IBuffer));
     }
   }
   return Skeleton;
@@ -102,7 +102,7 @@ struct Entry {
 // that has no corresponding context, such as an alias template or variable
 // template.
 using DeclsWithinContextMap =
-    llvm::DenseMap<const Decl *, llvm::SmallVector<Entry, 1>>;
+    llvm::DenseMap<const Decl *, SmallVector<Entry, 1>>;
 
 static bool addToContext(DeclsWithinContextMap &DeclsWithinContext,
                          const Decl *Context, Entry E) {
@@ -162,16 +162,14 @@ void ConfusableIdentifierCheck::check(
                  cast<Decl>(ND->getDeclContext()->getNonTransparentContext()));
 
   // Associate template parameters with this declaration of this template.
-  if (const auto *TD = dyn_cast<TemplateDecl>(ND)) {
+  if (const auto *TD = dyn_cast<TemplateDecl>(ND))
     for (const NamedDecl *Param : *TD->getTemplateParameters())
       addDeclToCheck(Param, TD->getTemplatedDecl());
-  }
 
   // Associate function parameters with this declaration of this function.
-  if (const auto *FD = dyn_cast<FunctionDecl>(ND)) {
+  if (const auto *FD = dyn_cast<FunctionDecl>(ND))
     for (const NamedDecl *Param : FD->parameters())
       addDeclToCheck(Param, ND);
-  }
 }
 
 void ConfusableIdentifierCheck::addDeclToCheck(const NamedDecl *ND,
@@ -191,25 +189,21 @@ void ConfusableIdentifierCheck::addDeclToCheck(const NamedDecl *ND,
 }
 
 void ConfusableIdentifierCheck::onEndOfTranslationUnit() {
-  llvm::StringMap<llvm::SmallVector<const IdentifierInfo *, 1>> SkeletonToNames;
+  llvm::StringMap<SmallVector<const IdentifierInfo *, 1>> SkeletonToNames;
   // Compute the skeleton for each identifier.
-  for (auto &[Ident, Decls] : NameToDecls) {
+  for (auto &[Ident, Decls] : NameToDecls)
     SkeletonToNames[skeleton(Ident->getName())].push_back(Ident);
-  }
 
   // Visit each skeleton with more than one identifier.
   for (auto &[Skel, Idents] : SkeletonToNames) {
-    if (Idents.size() < 2) {
+    if (Idents.size() < 2)
       continue;
-    }
 
     // Find the declaration contexts that transitively contain each identifier.
     DeclsWithinContextMap DeclsWithinContext;
-    for (const IdentifierInfo *II : Idents) {
-      for (auto [ND, Parent] : NameToDecls[II]) {
+    for (const IdentifierInfo *II : Idents)
+      for (auto [ND, Parent] : NameToDecls[II])
         addToEnclosingContexts(DeclsWithinContext, Parent, ND);
-      }
-    }
 
     // Check to see if any declaration is declared in a context that
     // transitively contains another declaration with a different identifier but

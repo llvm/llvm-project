@@ -288,25 +288,16 @@ getExplicitAndImplicitNVPTXTargetFeatures(clang::DiagnosticsEngine &diags,
                                           const llvm::Triple triple) {
   llvm::StringRef cpu = targetOpts.cpu;
   llvm::StringMap<bool> implicitFeaturesMap;
-  std::string errorMsg;
-  bool ptxVer = false;
 
   // Add target features specified by the user
   for (auto &userFeature : targetOpts.featuresAsWritten) {
     llvm::StringRef userKeyString(llvm::StringRef(userFeature).drop_front(1));
     implicitFeaturesMap[userKeyString.str()] = (userFeature[0] == '+');
-    // Check if the user provided a PTX version
-    if (userKeyString.starts_with("ptx"))
-      ptxVer = true;
   }
 
-  // Set the default PTX version to `ptx61` if none was provided.
-  // TODO: set the default PTX version based on the chip.
-  if (!ptxVer)
-    implicitFeaturesMap["ptx61"] = true;
-
-  // Set the compute capability.
-  implicitFeaturesMap[cpu.str()] = true;
+  // Set the compute capability (only if one was explicitly provided).
+  if (!cpu.empty())
+    implicitFeaturesMap[cpu.str()] = true;
 
   llvm::SmallVector<std::string> featuresVec;
   for (auto &implicitFeatureItem : implicitFeaturesMap) {
@@ -364,6 +355,7 @@ bool CompilerInstance::setUpTargetMachine() {
 
   llvm::TargetOptions tOpts = llvm::TargetOptions();
   tOpts.EnableAIXExtendedAltivecABI = targetOpts.EnableAIXExtendedAltivecABI;
+  tOpts.VecLib = convertDriverVectorLibraryToVectorLibrary(CGOpts.getVecLib());
 
   targetMachine.reset(theTarget->createTargetMachine(
       triple, /*CPU=*/targetOpts.cpu,

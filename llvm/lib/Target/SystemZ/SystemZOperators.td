@@ -1195,6 +1195,7 @@ def z_replicate_loadi8  : z_replicate_load<i32, z_anyextloadi8>;
 def z_replicate_loadi16 : z_replicate_load<i32, z_anyextloadi16>;
 def z_replicate_loadi32 : z_replicate_load<i32, z_load>;
 def z_replicate_loadi64 : z_replicate_load<i64, z_load>;
+def z_replicate_loadf16 : z_replicate_load<f16, z_load>;
 def z_replicate_loadf32 : z_replicate_load<f32, z_load>;
 def z_replicate_loadf64 : z_replicate_load<f64, z_load>;
 // Byte-swapped replicated vector element loads.
@@ -1211,6 +1212,7 @@ def z_vlei8  : z_vle<i32, z_anyextloadi8>;
 def z_vlei16 : z_vle<i32, z_anyextloadi16>;
 def z_vlei32 : z_vle<i32, z_load>;
 def z_vlei64 : z_vle<i64, z_load>;
+def z_vlef16 : z_vle<f16, z_load>;
 def z_vlef32 : z_vle<f32, z_load>;
 def z_vlef64 : z_vle<f64, z_load>;
 // Byte-swapped vector element loads.
@@ -1282,6 +1284,7 @@ def z_vstei8  : z_vste<i32, truncstorei8>;
 def z_vstei16 : z_vste<i32, truncstorei16>;
 def z_vstei32 : z_vste<i32, store>;
 def z_vstei64 : z_vste<i64, store>;
+def z_vstef16 : z_vste<f16, store>;
 def z_vstef32 : z_vste<f32, store>;
 def z_vstef64 : z_vste<f64, store>;
 // Byte-swapped vector element stores.

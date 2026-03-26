@@ -18,6 +18,7 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 //===----------------------------------------------------------------------===//
 // BufferizableOpInterface
@@ -122,6 +123,10 @@ void AnalysisState::resetCache() {
 }
 
 SymbolTableCollection &BufferizationState::getSymbolTables() {
+  return symbolTables;
+}
+
+SymbolTableCollection &BufferizationState::getSymbolTables() const {
   return symbolTables;
 }
 
@@ -291,8 +296,8 @@ LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
         bufferizationState, copiedOpValues.count(value));
     if (failed(copy))
       return failure();
-    SmallVector<OpOperand *> uses = llvm::to_vector(
-        llvm::map_range(value.getUses(), [](OpOperand &use) { return &use; }));
+    SmallVector<OpOperand *> uses = llvm::map_to_vector(
+        value.getUses(), [](OpOperand &use) { return &use; });
     for (OpOperand *use : uses) {
       // Do not update the alloc_tensor op that we just created.
       if (use->getOwner() == copy->getDefiningOp())
@@ -680,16 +685,6 @@ bool AnalysisState::hasUndefinedContents(OpOperand *opOperand) const {
   return false;
 }
 
-// bufferization.to_buffer is not allowed to change the rank.
-static void ensureToBufferOpIsValid(Value tensor, Type memrefType) {
-#ifndef NDEBUG
-  auto rankedTensorType = llvm::dyn_cast<RankedTensorType>(tensor.getType());
-  assert((!rankedTensorType || llvm::cast<MemRefType>(memrefType).getRank() ==
-                                   rankedTensorType.getRank()) &&
-         "to_buffer would be invalid: mismatching ranks");
-#endif
-}
-
 FailureOr<Value> bufferization::getBuffer(RewriterBase &rewriter, Value value,
                                           const BufferizationOptions &options,
                                           const BufferizationState &state) {
@@ -708,7 +703,7 @@ FailureOr<Value> bufferization::getBuffer(RewriterBase &rewriter, Value value,
   FailureOr<BufferLikeType> bufferType = getBufferType(value, options, state);
   if (failed(bufferType))
     return failure();
-  ensureToBufferOpIsValid(value, *bufferType);
+
   return bufferization::ToBufferOp::create(rewriter, value.getLoc(),
                                            *bufferType, value)
       .getResult();
@@ -730,8 +725,7 @@ bufferization::getBufferType(Value value, const BufferizationOptions &options,
   assert(llvm::isa<TensorLikeType>(value.getType()) &&
          "unexpected non-tensor type");
   invocationStack.push_back(value);
-  auto popFromStack =
-      llvm::make_scope_exit([&]() { invocationStack.pop_back(); });
+  llvm::scope_exit popFromStack([&]() { invocationStack.pop_back(); });
 
   // Try querying BufferizableOpInterface.
   Operation *op = getOwnerOfValue(value);
@@ -970,6 +964,14 @@ FailureOr<BufferLikeType> bufferization::detail::defaultGetBufferType(
     SmallVector<Value> &invocationStack) {
   assert(llvm::isa<TensorType>(value.getType()) && "expected tensor type");
   auto tensorType = cast<TensorType>(value.getType());
+
+  auto elementType = tensorType.getElementType();
+
+  if (!BaseMemRefType::isValidElementType(elementType))
+    return getOwnerOfValue(value)->emitError()
+           << "cannot bufferize value of type " << tensorType
+           << ": element type " << elementType
+           << " is not a valid memref element type";
 
   // No further analysis is possible for a block argument.
   if (llvm::isa<BlockArgument>(value)) {

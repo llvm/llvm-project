@@ -153,10 +153,12 @@ void SIPreAllocateWWMRegs::rewriteRegs(MachineFunction &MF) {
   SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
   for (unsigned Reg : RegsToRewrite) {
-    LIS->removeInterval(Reg);
-
     const Register PhysReg = VRM->getPhys(Reg);
     assert(PhysReg != 0);
+
+    LiveInterval &LI = LIS->getInterval(Reg);
+    Matrix->unassign(LI, /*ClearAllReferencingSegments=*/true);
+    LIS->removeInterval(Reg);
 
     MFI->reserveWWMRegister(PhysReg);
   }

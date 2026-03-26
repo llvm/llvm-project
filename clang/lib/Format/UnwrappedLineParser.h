@@ -159,7 +159,8 @@ private:
   void parseLoopBody(bool KeepBraces, bool WrapRightBrace);
   void parseForOrWhileLoop(bool HasParens = true);
   void parseDoWhile();
-  void parseLabel(bool LeftAlignLabel = false);
+  void parseLabel(FormatStyle::IndentGotoLabelStyle IndentGotoLabels =
+                      FormatStyle::IGLS_OuterIndent);
   void parseCaseLabel();
   void parseSwitch(bool IsExpr);
   void parseNamespace();
@@ -169,8 +170,8 @@ private:
   bool parseEnum();
   bool parseStructLike();
   bool parseRequires(bool SeenEqual);
-  void parseRequiresClause(FormatToken *RequiresToken);
-  void parseRequiresExpression(FormatToken *RequiresToken);
+  void parseRequiresClause();
+  void parseRequiresExpression();
   void parseConstraintExpression();
   void parseCppExportBlock();
   void parseNamespaceOrExportBlock(unsigned AddLevels);

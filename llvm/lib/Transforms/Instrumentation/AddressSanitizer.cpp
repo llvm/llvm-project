@@ -20,6 +20,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
@@ -248,6 +249,11 @@ static cl::opt<bool>
                          "platforms that support this"),
                 cl::Hidden, cl::init(true));
 
+static cl::opt<int>
+    ClShadowAddrSpace("asan-shadow-addr-space",
+                      cl::desc("Address space for pointers to the shadow map"),
+                      cl::Hidden, cl::init(0));
+
 static cl::opt<bool> ClWithIfuncSuppressRemat(
     "asan-with-ifunc-suppress-remat",
     cl::desc("Suppress rematerialization of dynamic shadow address by passing "
@@ -436,6 +442,14 @@ static cl::opt<AsanDtorKind> ClOverrideDestructorKind(
                           "Use global destructors")),
     cl::init(AsanDtorKind::Invalid), cl::Hidden);
 
+static SmallSet<unsigned, 8> SrcAddrSpaces;
+static cl::list<unsigned> ClAddrSpaces(
+    "asan-instrument-address-spaces",
+    cl::desc("Only instrument variables in the specified address spaces."),
+    cl::Hidden, cl::CommaSeparated, cl::callback([](const unsigned &AddrSpace) {
+      SrcAddrSpaces.insert(AddrSpace);
+    }));
+
 // Debug flags.
 
 static cl::opt<int> ClDebug("asan-debug", cl::desc("debug"), cl::Hidden,
@@ -503,6 +517,7 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
   bool IsAMDGPU = TargetTriple.isAMDGPU();
   bool IsHaiku = TargetTriple.isOSHaiku();
   bool IsWasm = TargetTriple.isWasm();
+  bool IsBPF = TargetTriple.isBPF();
 
   ShadowMapping Mapping;
 
@@ -533,9 +548,10 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
   } else {  // LongSize == 64
     // Fuchsia is always PIE, which means that the beginning of the address
     // space is always available.
-    if (IsFuchsia)
-      Mapping.Offset = 0;
-    else if (IsPPC64)
+    if (IsFuchsia) {
+      // kDynamicShadowSentinel tells instrumentation to use the dynamic shadow.
+      Mapping.Offset = kDynamicShadowSentinel;
+    } else if (IsPPC64)
       Mapping.Offset = kPPC64_ShadowOffset64;
     else if (IsSystemZ)
       Mapping.Offset = kSystemZ_ShadowOffset64;
@@ -559,7 +575,7 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
       else
         Mapping.Offset = (kSmallX86_64ShadowOffsetBase &
                           (kSmallX86_64ShadowOffsetAlignMask << Mapping.Scale));
-    } else if (IsWindows && IsX86_64) {
+    } else if (IsWindows && (IsX86_64 || IsAArch64)) {
       Mapping.Offset = kWindowsShadowOffset64;
     } else if (IsMIPS64)
       Mapping.Offset = kMIPS64_ShadowOffset64;
@@ -579,6 +595,8 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
     else if (IsHaiku && IsX86_64)
       Mapping.Offset = (kSmallX86_64ShadowOffsetBase &
                         (kSmallX86_64ShadowOffsetAlignMask << Mapping.Scale));
+    else if (IsBPF)
+      Mapping.Offset = kDynamicShadowSentinel;
     else
       Mapping.Offset = kDefaultShadowOffset64;
   }
@@ -1355,9 +1373,23 @@ static bool GlobalWasGeneratedByCompiler(GlobalVariable *G) {
 static bool isUnsupportedAMDGPUAddrspace(Value *Addr) {
   Type *PtrTy = cast<PointerType>(Addr->getType()->getScalarType());
   unsigned int AddrSpace = PtrTy->getPointerAddressSpace();
+  // Globals in address space 1 and 4 are supported for AMDGPU.
   if (AddrSpace == 3 || AddrSpace == 5)
     return true;
   return false;
+}
+
+static bool isSupportedAddrspace(const Triple &TargetTriple, Value *Addr) {
+  Type *PtrTy = cast<PointerType>(Addr->getType()->getScalarType());
+  unsigned int AddrSpace = PtrTy->getPointerAddressSpace();
+
+  if (!SrcAddrSpaces.empty())
+    return SrcAddrSpaces.count(AddrSpace);
+
+  if (TargetTriple.isAMDGPU())
+    return !isUnsupportedAMDGPUAddrspace(Addr);
+
+  return AddrSpace == 0;
 }
 
 Value *AddressSanitizer::memToShadow(Value *Shadow, IRBuilder<> &IRB) {
@@ -1423,10 +1455,9 @@ bool AddressSanitizer::isInterestingAlloca(const AllocaInst &AI) {
 }
 
 bool AddressSanitizer::ignoreAccess(Instruction *Inst, Value *Ptr) {
-  // Instrument accesses from different address spaces only for AMDGPU.
-  Type *PtrTy = cast<PointerType>(Ptr->getType()->getScalarType());
-  if (PtrTy->getPointerAddressSpace() != 0 &&
-      !(TargetTriple.isAMDGPU() && !isUnsupportedAMDGPUAddrspace(Ptr)))
+  // Check whether the target supports sanitizing the address space
+  // of the pointer.
+  if (!isSupportedAddrspace(TargetTriple, Ptr))
     return true;
 
   // Ignore swifterror addresses.
@@ -1942,7 +1973,7 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
 
   Type *ShadowTy =
       IntegerType::get(*C, std::max(8U, TypeStoreSize >> Mapping.Scale));
-  Type *ShadowPtrTy = PointerType::get(*C, 0);
+  Type *ShadowPtrTy = PointerType::get(*C, ClShadowAddrSpace);
   Value *ShadowPtr = memToShadow(AddrLong, IRB);
   const uint64_t ShadowAlign =
       std::max<uint64_t>(Alignment.valueOrOne().value() >> Mapping.Scale, 1);
@@ -1966,8 +1997,7 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
     // path is rarely taken. This seems to be the case for SPEC benchmarks.
     Instruction *CheckTerm = SplitBlockAndInsertIfThen(
         Cmp, InsertBefore, false, MDBuilder(*C).createUnlikelyBranchWeights());
-    assert(cast<BranchInst>(CheckTerm)->isUnconditional());
-    BasicBlock *NextBB = CheckTerm->getSuccessor(0);
+    BasicBlock *NextBB = cast<UncondBrInst>(CheckTerm)->getSuccessor();
     IRB.SetInsertPoint(CheckTerm);
     Value *Cmp2 = createSlowPathCmp(IRB, AddrLong, ShadowValue, TypeStoreSize);
     if (Recover) {
@@ -1976,7 +2006,7 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
       BasicBlock *CrashBlock =
         BasicBlock::Create(*C, "", NextBB->getParent(), NextBB);
       CrashTerm = new UnreachableInst(*C, CrashBlock);
-      BranchInst *NewTerm = BranchInst::Create(CrashBlock, NextBB, Cmp2);
+      CondBrInst *NewTerm = CondBrInst::Create(Cmp2, CrashBlock, NextBB);
       ReplaceInstWithInst(CheckTerm, NewTerm);
     }
   } else {
@@ -2089,9 +2119,7 @@ bool ModuleAddressSanitizer::shouldInstrumentGlobal(GlobalVariable *G) const {
     return false;
   if (!Ty->isSized()) return false;
   if (!G->hasInitializer()) return false;
-  // Globals in address space 1 and 4 are supported for AMDGPU.
-  if (G->getAddressSpace() &&
-      !(TargetTriple.isAMDGPU() && !isUnsupportedAMDGPUAddrspace(G)))
+  if (!isSupportedAddrspace(TargetTriple, G))
     return false;
   if (GlobalWasGeneratedByCompiler(G)) return false; // Our own globals.
   // Two problems with thread-locals:
@@ -2644,12 +2672,7 @@ void ModuleAddressSanitizer::instrumentGlobals(IRBuilder<> &IRB,
     // zero so we can copy the metadata over as is.
     NewGlobal->copyMetadata(G, 0);
 
-    Value *Indices2[2];
-    Indices2[0] = IRB.getInt32(0);
-    Indices2[1] = IRB.getInt32(0);
-
-    G->replaceAllUsesWith(
-        ConstantExpr::getGetElementPtr(NewTy, NewGlobal, Indices2, true));
+    G->replaceAllUsesWith(NewGlobal);
     NewGlobal->takeName(G);
     G->eraseFromParent();
     NewGlobals[i] = NewGlobal;
@@ -2669,7 +2692,7 @@ void ModuleAddressSanitizer::instrumentGlobals(IRBuilder<> &IRB,
 
     // ODR should not happen for local linkage.
     if (NewGlobal->hasLocalLinkage()) {
-      ODRIndicator = ConstantInt::get(IntptrTy, -1);
+      ODRIndicator = ConstantInt::getAllOnesValue(IntptrTy);
     } else if (UseOdrIndicator) {
       // With local aliases, we need to provide another externally visible
       // symbol __odr_asan_XXX to detect ODR violation.
@@ -3808,11 +3831,7 @@ void FunctionStackPoisoner::handleDynamicAllocaCall(AllocaInst *AI) {
   // redzones, and OldSize is number of allocated blocks with
   // ElementSize size, get allocated memory size in bytes by
   // OldSize * ElementSize.
-  const unsigned ElementSize =
-      F.getDataLayout().getTypeAllocSize(AI->getAllocatedType());
-  Value *OldSize =
-      IRB.CreateMul(IRB.CreateIntCast(AI->getArraySize(), IntptrTy, false),
-                    ConstantInt::get(IntptrTy, ElementSize));
+  Value *OldSize = IRB.CreateAllocationSize(IntptrTy, AI);
 
   // PartialSize = OldSize % 32
   Value *PartialSize = IRB.CreateAnd(OldSize, AllocaRzMask);

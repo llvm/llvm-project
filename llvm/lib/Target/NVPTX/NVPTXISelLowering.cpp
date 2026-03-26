@@ -15,10 +15,12 @@
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
 #include "NVPTXISelDAGToDAG.h"
+#include "NVPTXSelectionDAGInfo.h"
 #include "NVPTXSubtarget.h"
 #include "NVPTXTargetMachine.h"
 #include "NVPTXTargetObjectFile.h"
 #include "NVPTXUtilities.h"
+#include "NVVMProperties.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
@@ -29,6 +31,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
@@ -110,12 +113,6 @@ static cl::opt<bool> UsePrecSqrtF32(
 static cl::opt<bool> UseApproxLog2F32(
     "nvptx-approx-log2f32",
     cl::desc("NVPTX Specific: whether to use lg2.approx for log2"),
-    cl::init(false));
-
-static cl::opt<bool> ForceMinByValParamAlign(
-    "nvptx-force-min-byval-param-align", cl::Hidden,
-    cl::desc("NVPTX Specific: force 4-byte minimal alignment for byval"
-             " params of device functions."),
     cl::init(false));
 
 NVPTX::DivPrecisionLevel
@@ -513,7 +510,7 @@ VectorizePTXValueVTs(const SmallVectorImpl<EVT> &ValueVTs,
 // NVPTXTargetLowering Constructor.
 NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                                          const NVPTXSubtarget &STI)
-    : TargetLowering(TM), nvTM(&TM), STI(STI), GlobalUniqueCallSite(0) {
+    : TargetLowering(TM, STI), nvTM(&TM), STI(STI), GlobalUniqueCallSite(0) {
   // always lower memset, memcpy, and memmove intrinsics to load/store
   // instructions, rather
   // then generating calls to memset, mempcy or memmove.
@@ -712,9 +709,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                        Custom);
   }
 
-  setOperationAction(ISD::BSWAP, MVT::i16, Expand);
-
-  setOperationAction(ISD::BR_JT, MVT::Other, Custom);
+  setOperationAction(ISD::BR_JT, MVT::Other, STI.hasBrx() ? Legal : Expand);
   setOperationAction(ISD::BRIND, MVT::Other, Expand);
 
   // We want to legalize constant related memmove and memcopy
@@ -767,10 +762,12 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // Register custom handling for illegal type loads/stores. We'll try to custom
   // lower almost all illegal types and logic in the lowering will discard cases
   // we can't handle.
-  setOperationAction({ISD::LOAD, ISD::STORE}, {MVT::i128, MVT::f128}, Custom);
+  setOperationAction({ISD::LOAD, ISD::STORE}, {MVT::i128, MVT::i256, MVT::f128},
+                     Custom);
   for (MVT VT : MVT::fixedlen_vector_valuetypes())
     if (!isTypeLegal(VT) && VT.getStoreSizeInBits() <= 256)
-      setOperationAction({ISD::STORE, ISD::LOAD}, VT, Custom);
+      setOperationAction({ISD::STORE, ISD::LOAD, ISD::MSTORE, ISD::MLOAD}, VT,
+                         Custom);
 
   // Custom legalization for LDU intrinsics.
   // TODO: The logic to lower these is not very robust and we should rewrite it.
@@ -865,14 +862,33 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::UMUL_LOHI, MVT::i64, Expand);
 
   // We have some custom DAG combine patterns for these nodes
-  setTargetDAGCombine(
-      {ISD::ADD,          ISD::AND,           ISD::EXTRACT_VECTOR_ELT,
-       ISD::FADD,         ISD::FMAXNUM,       ISD::FMINNUM,
-       ISD::FMAXIMUM,     ISD::FMINIMUM,      ISD::FMAXIMUMNUM,
-       ISD::FMINIMUMNUM,  ISD::MUL,           ISD::SHL,
-       ISD::SREM,         ISD::UREM,          ISD::VSELECT,
-       ISD::BUILD_VECTOR, ISD::ADDRSPACECAST, ISD::LOAD,
-       ISD::STORE,        ISD::ZERO_EXTEND,   ISD::SIGN_EXTEND});
+  setTargetDAGCombine({ISD::ADD,
+                       ISD::AND,
+                       ISD::EXTRACT_VECTOR_ELT,
+                       ISD::FADD,
+                       ISD::FMAXNUM,
+                       ISD::FMINNUM,
+                       ISD::FMAXIMUM,
+                       ISD::FMINIMUM,
+                       ISD::FMAXIMUMNUM,
+                       ISD::FMINIMUMNUM,
+                       ISD::MUL,
+                       ISD::SELECT,
+                       ISD::SHL,
+                       ISD::SREM,
+                       ISD::UREM,
+                       ISD::VSELECT,
+                       ISD::BUILD_VECTOR,
+                       ISD::ADDRSPACECAST,
+                       ISD::LOAD,
+                       ISD::STORE,
+                       ISD::ZERO_EXTEND,
+                       ISD::SIGN_EXTEND,
+                       ISD::INTRINSIC_WO_CHAIN});
+
+  // If the vector operands require register coalescing, scalarize instead
+  if (STI.hasF32x2Instructions())
+    setTargetDAGCombine({ISD::FMA, ISD::FMUL, ISD::FSUB});
 
   // setcc for f16x2 and bf16x2 needs special handling to prevent
   // legalizer's attempt to scalarize it due to v2i1 not being legal.
@@ -1089,7 +1105,9 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // Custom lowering for tcgen05.ld vector operands
   setOperationAction(ISD::INTRINSIC_W_CHAIN,
                      {MVT::v2i32, MVT::v4i32, MVT::v8i32, MVT::v16i32,
-                      MVT::v32i32, MVT::v64i32, MVT::v128i32},
+                      MVT::v32i32, MVT::v64i32, MVT::v128i32, MVT::v2f32,
+                      MVT::v4f32, MVT::v8f32, MVT::v16f32, MVT::v32f32,
+                      MVT::v64f32, MVT::v128f32},
                      Custom);
 
   // Custom lowering for tcgen05.st vector operands
@@ -1105,97 +1123,10 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   //   * MVT::Other - internal.addrspace.wrap
   setOperationAction(ISD::INTRINSIC_WO_CHAIN,
                      {MVT::i32, MVT::i128, MVT::v4f32, MVT::Other}, Custom);
-}
 
-const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
-
-#define MAKE_CASE(V)                                                           \
-  case V:                                                                      \
-    return #V;
-
-  switch ((NVPTXISD::NodeType)Opcode) {
-  case NVPTXISD::FIRST_NUMBER:
-    break;
-
-    MAKE_CASE(NVPTXISD::ATOMIC_CMP_SWAP_B128)
-    MAKE_CASE(NVPTXISD::ATOMIC_SWAP_B128)
-    MAKE_CASE(NVPTXISD::RET_GLUE)
-    MAKE_CASE(NVPTXISD::DeclareArrayParam)
-    MAKE_CASE(NVPTXISD::DeclareScalarParam)
-    MAKE_CASE(NVPTXISD::CALL)
-    MAKE_CASE(NVPTXISD::MoveParam)
-    MAKE_CASE(NVPTXISD::UNPACK_VECTOR)
-    MAKE_CASE(NVPTXISD::BUILD_VECTOR)
-    MAKE_CASE(NVPTXISD::CallPrototype)
-    MAKE_CASE(NVPTXISD::ProxyReg)
-    MAKE_CASE(NVPTXISD::LoadV2)
-    MAKE_CASE(NVPTXISD::LoadV4)
-    MAKE_CASE(NVPTXISD::LoadV8)
-    MAKE_CASE(NVPTXISD::LDUV2)
-    MAKE_CASE(NVPTXISD::LDUV4)
-    MAKE_CASE(NVPTXISD::StoreV2)
-    MAKE_CASE(NVPTXISD::StoreV4)
-    MAKE_CASE(NVPTXISD::StoreV8)
-    MAKE_CASE(NVPTXISD::FSHL_CLAMP)
-    MAKE_CASE(NVPTXISD::FSHR_CLAMP)
-    MAKE_CASE(NVPTXISD::BFI)
-    MAKE_CASE(NVPTXISD::PRMT)
-    MAKE_CASE(NVPTXISD::FCOPYSIGN)
-    MAKE_CASE(NVPTXISD::FMAXNUM3)
-    MAKE_CASE(NVPTXISD::FMINNUM3)
-    MAKE_CASE(NVPTXISD::FMAXIMUM3)
-    MAKE_CASE(NVPTXISD::FMINIMUM3)
-    MAKE_CASE(NVPTXISD::DYNAMIC_STACKALLOC)
-    MAKE_CASE(NVPTXISD::STACKRESTORE)
-    MAKE_CASE(NVPTXISD::STACKSAVE)
-    MAKE_CASE(NVPTXISD::SETP_F16X2)
-    MAKE_CASE(NVPTXISD::SETP_BF16X2)
-    MAKE_CASE(NVPTXISD::MUL_WIDE_SIGNED)
-    MAKE_CASE(NVPTXISD::MUL_WIDE_UNSIGNED)
-    MAKE_CASE(NVPTXISD::BrxEnd)
-    MAKE_CASE(NVPTXISD::BrxItem)
-    MAKE_CASE(NVPTXISD::BrxStart)
-    MAKE_CASE(NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_IS_CANCELED)
-    MAKE_CASE(NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_X)
-    MAKE_CASE(NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_Y)
-    MAKE_CASE(NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_Z)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SHARED_DISABLE_OUTPUT_LANE_CG1)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SHARED_DISABLE_OUTPUT_LANE_CG2)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SHARED_SCALE_D_DISABLE_OUTPUT_LANE_CG1)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SHARED_SCALE_D_DISABLE_OUTPUT_LANE_CG2)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_TENSOR_DISABLE_OUTPUT_LANE_CG1)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_TENSOR_DISABLE_OUTPUT_LANE_CG2)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG1)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG2)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_TENSOR_DISABLE_OUTPUT_LANE_CG1_ASHIFT)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_TENSOR_DISABLE_OUTPUT_LANE_CG2_ASHIFT)
-    MAKE_CASE(
-        NVPTXISD::TCGEN05_MMA_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG1_ASHIFT)
-    MAKE_CASE(
-        NVPTXISD::TCGEN05_MMA_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG2_ASHIFT)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_SHARED_DISABLE_OUTPUT_LANE_CG1)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_SHARED_DISABLE_OUTPUT_LANE_CG2)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_SHARED_SCALE_D_DISABLE_OUTPUT_LANE_CG1)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_SHARED_SCALE_D_DISABLE_OUTPUT_LANE_CG2)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_TENSOR_DISABLE_OUTPUT_LANE_CG1)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_TENSOR_DISABLE_OUTPUT_LANE_CG2)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_TENSOR_DISABLE_OUTPUT_LANE_CG1_ASHIFT)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_TENSOR_DISABLE_OUTPUT_LANE_CG2_ASHIFT)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG1)
-    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG2)
-    MAKE_CASE(
-        NVPTXISD::TCGEN05_MMA_SP_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG1_ASHIFT)
-    MAKE_CASE(
-        NVPTXISD::TCGEN05_MMA_SP_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG2_ASHIFT)
-    MAKE_CASE(NVPTXISD::CVT_E4M3X4_F32X4_RS_SF)
-    MAKE_CASE(NVPTXISD::CVT_E5M2X4_F32X4_RS_SF)
-    MAKE_CASE(NVPTXISD::CVT_E2M3X4_F32X4_RS_SF)
-    MAKE_CASE(NVPTXISD::CVT_E3M2X4_F32X4_RS_SF)
-    MAKE_CASE(NVPTXISD::CVT_E2M1X4_F32X4_RS_SF)
-  }
-  return nullptr;
-
-#undef MAKE_CASE
+  // Custom lowering for bswap
+  setOperationAction(ISD::BSWAP, {MVT::i16, MVT::i32, MVT::i64, MVT::v2i16},
+                     Custom);
 }
 
 TargetLoweringBase::LegalizeTypeAction
@@ -1254,6 +1185,9 @@ SDValue NVPTXTargetLowering::getSqrtEstimate(SDValue Operand, SelectionDAG &DAG,
     }
   }
 }
+
+static Align getArgumentAlignment(const CallBase *CB, Type *Ty, unsigned Idx,
+                                  const DataLayout &DL);
 
 std::string NVPTXTargetLowering::getPrototype(
     const DataLayout &DL, Type *RetTy, const ArgListTy &Args,
@@ -1359,14 +1293,8 @@ std::string NVPTXTargetLowering::getPrototype(
   return Prototype;
 }
 
-Align NVPTXTargetLowering::getFunctionArgumentAlignment(
-    const Function *F, Type *Ty, unsigned Idx, const DataLayout &DL) const {
-  return getAlign(*F, Idx).value_or(getFunctionParamOptimizedAlign(F, Ty, DL));
-}
-
-Align NVPTXTargetLowering::getArgumentAlignment(const CallBase *CB, Type *Ty,
-                                                unsigned Idx,
-                                                const DataLayout &DL) const {
+static Align getArgumentAlignment(const CallBase *CB, Type *Ty, unsigned Idx,
+                                  const DataLayout &DL) {
   if (!CB) {
     // CallSite is zero, fallback to ABI type alignment
     return DL.getABITypeAlign(Ty);
@@ -1621,9 +1549,9 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         Align ParamAlign = commonAlignment(ArgAlign, ParamOffset);
         SDValue ParamAddr =
             DAG.getObjectPtrOffset(dl, ParamSymbol, ParamOffset);
-        SDValue StoreParam =
-            DAG.getStore(ArgDeclare, dl, SrcLoad, ParamAddr,
-                         MachinePointerInfo(ADDRESS_SPACE_PARAM), ParamAlign);
+        SDValue StoreParam = DAG.getStore(
+            ArgDeclare, dl, SrcLoad, ParamAddr,
+            MachinePointerInfo(NVPTX::AddressSpace::DeviceParam), ParamAlign);
         CallPrereqs.push_back(StoreParam);
 
         J += NumElts;
@@ -1693,9 +1621,9 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
               return GetStoredValue(J + K);
             });
 
-        SDValue StoreParam =
-            DAG.getStore(ArgDeclare, dl, Val, Ptr,
-                         MachinePointerInfo(ADDRESS_SPACE_PARAM), CurrentAlign);
+        SDValue StoreParam = DAG.getStore(
+            ArgDeclare, dl, Val, Ptr,
+            MachinePointerInfo(NVPTX::AddressSpace::DeviceParam), CurrentAlign);
         CallPrereqs.push_back(StoreParam);
 
         J += NumElts;
@@ -1810,9 +1738,9 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       SDValue Ptr =
           DAG.getObjectPtrOffset(dl, RetSymbol, TypeSize::getFixed(Offsets[I]));
 
-      SDValue R =
-          DAG.getLoad(VecVT, dl, Call, Ptr,
-                      MachinePointerInfo(ADDRESS_SPACE_PARAM), CurrentAlign);
+      SDValue R = DAG.getLoad(
+          VecVT, dl, Call, Ptr,
+          MachinePointerInfo(NVPTX::AddressSpace::DeviceParam), CurrentAlign);
 
       LoadChains.push_back(R.getValue(1));
       for (const unsigned J : llvm::seq(NumElts))
@@ -2032,7 +1960,7 @@ static ISD::NodeType getScalarOpcodeForReduction(unsigned ReductionOpcode) {
 }
 
 /// Get 3-input scalar reduction opcode
-static std::optional<NVPTXISD::NodeType>
+static std::optional<unsigned>
 getScalar3OpcodeForReduction(unsigned ReductionOpcode) {
   switch (ReductionOpcode) {
   case ISD::VECREDUCE_FMAX:
@@ -2571,9 +2499,8 @@ SDValue NVPTXTargetLowering::LowerFP_ROUND(SDValue Op,
           // Round-inexact-to-odd f64 to f32, then do the final rounding using
           // the hardware f32 -> bf16 instruction.
           SDValue rod = TLI->expandRoundInexactToOdd(
-              WideVT.isVector() ? WideVT.changeVectorElementType(MVT::f32)
-                                : MVT::f32,
-              Wide, Loc, DAG);
+              WideVT.changeElementType(*DAG.getContext(), MVT::f32), Wide, Loc,
+              DAG);
           return DAG.getFPExtendOrRound(rod, Loc, NarrowVT);
         }
       }
@@ -2598,8 +2525,7 @@ SDValue NVPTXTargetLowering::LowerFP_EXTEND(SDValue Op,
     }
     if (WideVT.getScalarType() == MVT::f64 &&
         (STI.getSmVersion() < 90 || STI.getPTXVersion() < 78)) {
-      EVT F32 = NarrowVT.isVector() ? NarrowVT.changeVectorElementType(MVT::f32)
-                                    : MVT::f32;
+      EVT F32 = NarrowVT.changeElementType(*DAG.getContext(), MVT::f32);
       SDLoc Loc(Op);
       if (STI.getSmVersion() >= 80 && STI.getPTXVersion() >= 71) {
         Op = DAG.getNode(ISD::FP_EXTEND, Loc, F32, Narrow);
@@ -2634,7 +2560,12 @@ static SDValue LowerVectorArith(SDValue Op, SelectionDAG &DAG) {
   return V;
 }
 
-static SDValue lowerTcgen05St(SDValue Op, SelectionDAG &DAG) {
+static SDValue lowerTcgen05St(SDValue Op, SelectionDAG &DAG,
+                              bool hasOffset = false) {
+  // skip lowering if the vector operand is already legalized
+  if (!Op->getOperand(hasOffset ? 4 : 3).getValueType().isVector())
+    return Op;
+
   SDNode *N = Op.getNode();
   SDLoc DL(N);
   SmallVector<SDValue, 32> Ops;
@@ -2658,6 +2589,44 @@ static SDValue lowerTcgen05St(SDValue Op, SelectionDAG &DAG) {
                               MemSD->getMemoryVT(), MemSD->getMemOperand());
 
   return Tcgen05StNode;
+}
+
+static SDValue lowerBSWAP(SDValue Op, SelectionDAG &DAG) {
+  SDLoc DL(Op);
+  SDValue Src = Op.getOperand(0);
+  EVT VT = Op.getValueType();
+
+  switch (VT.getSimpleVT().SimpleTy) {
+  case MVT::i16: {
+    SDValue Extended = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Src);
+    SDValue Swapped =
+        getPRMT(Extended, DAG.getConstant(0, DL, MVT::i32), 0x7701, DL, DAG);
+    return DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, Swapped);
+  }
+  case MVT::i32: {
+    return getPRMT(Src, DAG.getConstant(0, DL, MVT::i32), 0x0123, DL, DAG);
+  }
+  case MVT::v2i16: {
+    SDValue Converted = DAG.getBitcast(MVT::i32, Src);
+    SDValue Swapped =
+        getPRMT(Converted, DAG.getConstant(0, DL, MVT::i32), 0x2301, DL, DAG);
+    return DAG.getNode(ISD::BITCAST, DL, MVT::v2i16, Swapped);
+  }
+  case MVT::i64: {
+    SDValue UnpackSrc =
+        DAG.getNode(NVPTXISD::UNPACK_VECTOR, DL, {MVT::i32, MVT::i32}, Src);
+    SDValue SwappedLow =
+        getPRMT(UnpackSrc.getValue(0), DAG.getConstant(0, DL, MVT::i32), 0x0123,
+                DL, DAG);
+    SDValue SwappedHigh =
+        getPRMT(UnpackSrc.getValue(1), DAG.getConstant(0, DL, MVT::i32), 0x0123,
+                DL, DAG);
+    return DAG.getNode(NVPTXISD::BUILD_VECTOR, DL, MVT::i64,
+                       {SwappedHigh, SwappedLow});
+  }
+  default:
+    llvm_unreachable("unsupported type for bswap");
+  }
 }
 
 static unsigned getTcgen05MMADisableOutputLane(unsigned IID) {
@@ -2794,6 +2763,57 @@ lowerTcgen05Ld(SDNode *N, SelectionDAG &DAG, bool HasOffset = false) {
   return {{BuildVector, Chain}};
 }
 
+static SDValue reportInvalidTensormapReplaceUsage(SDValue Op, SelectionDAG &DAG,
+                                                  unsigned Val) {
+  SDNode *N = Op.getNode();
+  SDLoc DL(N);
+
+  const Function &Fn = DAG.getMachineFunction().getFunction();
+
+  unsigned AS = 0;
+  if (auto *MemN = dyn_cast<MemIntrinsicSDNode>(N))
+    AS = MemN->getAddressSpace();
+  Type *PtrTy = PointerType::get(*DAG.getContext(), AS);
+  Module *M = DAG.getMachineFunction().getFunction().getParent();
+
+  DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+      Fn,
+      "Intrinsic " +
+          Intrinsic::getName(N->getConstantOperandVal(1), {PtrTy}, M) +
+          " with value " + Twine(Val) +
+          " is not supported on the given target.",
+      DL.getDebugLoc()));
+  return Op.getOperand(0);
+}
+
+static SDValue lowerTensormapReplaceElemtype(SDValue Op, SelectionDAG &DAG) {
+  SDNode *N = Op.getNode();
+  SDLoc DL(N);
+
+  // immediate argument representing elemtype
+  unsigned Val = N->getConstantOperandVal(3);
+
+  if (!DAG.getSubtarget<NVPTXSubtarget>().hasTensormapReplaceElemtypeSupport(
+          Val))
+    return reportInvalidTensormapReplaceUsage(Op, DAG, Val);
+
+  return Op;
+}
+
+static SDValue lowerTensormapReplaceSwizzleMode(SDValue Op, SelectionDAG &DAG) {
+  SDNode *N = Op.getNode();
+  SDLoc DL(N);
+
+  // immediate argument representing swizzle mode
+  unsigned Val = N->getConstantOperandVal(3);
+
+  if (!DAG.getSubtarget<NVPTXSubtarget>().hasTensormapReplaceSwizzleModeSupport(
+          Val))
+    return reportInvalidTensormapReplaceUsage(Op, DAG, Val);
+
+  return Op;
+}
+
 static SDValue lowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
   SDNode *N = Op.getNode();
   SDValue Intrin = N->getOperand(1);
@@ -2803,7 +2823,6 @@ static SDValue lowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
   switch (IntrinNo) {
   default:
     break;
-  case Intrinsic::nvvm_tcgen05_st_16x64b_x1:
   case Intrinsic::nvvm_tcgen05_st_16x64b_x2:
   case Intrinsic::nvvm_tcgen05_st_16x64b_x4:
   case Intrinsic::nvvm_tcgen05_st_16x64b_x8:
@@ -2823,15 +2842,6 @@ static SDValue lowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
   case Intrinsic::nvvm_tcgen05_st_16x256b_x8:
   case Intrinsic::nvvm_tcgen05_st_16x256b_x16:
   case Intrinsic::nvvm_tcgen05_st_16x256b_x32:
-  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x1:
-  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x2:
-  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x4:
-  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x8:
-  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x16:
-  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x32:
-  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x64:
-  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x128:
-  case Intrinsic::nvvm_tcgen05_st_32x32b_x1:
   case Intrinsic::nvvm_tcgen05_st_32x32b_x2:
   case Intrinsic::nvvm_tcgen05_st_32x32b_x4:
   case Intrinsic::nvvm_tcgen05_st_32x32b_x8:
@@ -2841,6 +2851,14 @@ static SDValue lowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
   case Intrinsic::nvvm_tcgen05_st_32x32b_x64:
   case Intrinsic::nvvm_tcgen05_st_32x32b_x128:
     return lowerTcgen05St(Op, DAG);
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x2:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x4:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x8:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x16:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x32:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x64:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x128:
+    return lowerTcgen05St(Op, DAG, /* hasOffset */ true);
   case Intrinsic::nvvm_tcgen05_mma_shared_disable_output_lane_cg1:
   case Intrinsic::nvvm_tcgen05_mma_shared_disable_output_lane_cg2:
   case Intrinsic::nvvm_tcgen05_mma_shared_scale_d_disable_output_lane_cg1:
@@ -2870,6 +2888,10 @@ static SDValue lowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
   case Intrinsic::
       nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg2_ashift:
     return LowerTcgen05MMADisableOutputLane(Op, DAG);
+  case Intrinsic::nvvm_tensormap_replace_elemtype:
+    return lowerTensormapReplaceElemtype(Op, DAG);
+  case Intrinsic::nvvm_tensormap_replace_swizzle_mode:
+    return lowerTensormapReplaceSwizzleMode(Op, DAG);
   }
   return Op;
 }
@@ -2931,7 +2953,7 @@ static SDValue lowerCvtRSIntrinsics(SDValue Op, SelectionDAG &DAG) {
   using NVPTX::PTXCvtMode::CvtMode;
 
   auto [OpCode, RetTy, CvtModeFlag] =
-      [&]() -> std::tuple<NVPTXISD::NodeType, MVT::SimpleValueType, uint32_t> {
+      [&]() -> std::tuple<unsigned, MVT::SimpleValueType, uint32_t> {
     switch (IntrinsicID) {
     case Intrinsic::nvvm_f32x4_to_e4m3x4_rs_relu_satfinite:
       return {NVPTXISD::CVT_E4M3X4_F32X4_RS_SF, MVT::v4i8,
@@ -2998,6 +3020,121 @@ static SDValue lowerPrmtIntrinsic(SDValue Op, SelectionDAG &DAG) {
   return getPRMT(A, B, Selector, DL, DAG, Mode);
 }
 
+#define TCGEN05_LD_RED_INTR(SHAPE, NUM, TYPE)                                  \
+  Intrinsic::nvvm_tcgen05_ld_red_##SHAPE##_x##NUM##_##TYPE
+
+#define TCGEN05_LD_RED_INST(SHAPE, NUM, TYPE)                                  \
+  NVPTXISD::TCGEN05_LD_RED_##SHAPE##_X##NUM##_##TYPE
+
+static unsigned getTcgen05LdRedID(Intrinsic::ID IID) {
+  switch (IID) {
+  case TCGEN05_LD_RED_INTR(32x32b, 2, f32):
+    return TCGEN05_LD_RED_INST(32x32b, 2, F32);
+  case TCGEN05_LD_RED_INTR(32x32b, 4, f32):
+    return TCGEN05_LD_RED_INST(32x32b, 4, F32);
+  case TCGEN05_LD_RED_INTR(32x32b, 8, f32):
+    return TCGEN05_LD_RED_INST(32x32b, 8, F32);
+  case TCGEN05_LD_RED_INTR(32x32b, 16, f32):
+    return TCGEN05_LD_RED_INST(32x32b, 16, F32);
+  case TCGEN05_LD_RED_INTR(32x32b, 32, f32):
+    return TCGEN05_LD_RED_INST(32x32b, 32, F32);
+  case TCGEN05_LD_RED_INTR(32x32b, 64, f32):
+    return TCGEN05_LD_RED_INST(32x32b, 64, F32);
+  case TCGEN05_LD_RED_INTR(32x32b, 128, f32):
+    return TCGEN05_LD_RED_INST(32x32b, 128, F32);
+  case TCGEN05_LD_RED_INTR(16x32bx2, 2, f32):
+    return TCGEN05_LD_RED_INST(16x32bx2, 2, F32);
+  case TCGEN05_LD_RED_INTR(16x32bx2, 4, f32):
+    return TCGEN05_LD_RED_INST(16x32bx2, 4, F32);
+  case TCGEN05_LD_RED_INTR(16x32bx2, 8, f32):
+    return TCGEN05_LD_RED_INST(16x32bx2, 8, F32);
+  case TCGEN05_LD_RED_INTR(16x32bx2, 16, f32):
+    return TCGEN05_LD_RED_INST(16x32bx2, 16, F32);
+  case TCGEN05_LD_RED_INTR(16x32bx2, 32, f32):
+    return TCGEN05_LD_RED_INST(16x32bx2, 32, F32);
+  case TCGEN05_LD_RED_INTR(16x32bx2, 64, f32):
+    return TCGEN05_LD_RED_INST(16x32bx2, 64, F32);
+  case TCGEN05_LD_RED_INTR(16x32bx2, 128, f32):
+    return TCGEN05_LD_RED_INST(16x32bx2, 128, F32);
+  case TCGEN05_LD_RED_INTR(32x32b, 2, i32):
+    return TCGEN05_LD_RED_INST(32x32b, 2, I32);
+  case TCGEN05_LD_RED_INTR(32x32b, 4, i32):
+    return TCGEN05_LD_RED_INST(32x32b, 4, I32);
+  case TCGEN05_LD_RED_INTR(32x32b, 8, i32):
+    return TCGEN05_LD_RED_INST(32x32b, 8, I32);
+  case TCGEN05_LD_RED_INTR(32x32b, 16, i32):
+    return TCGEN05_LD_RED_INST(32x32b, 16, I32);
+  case TCGEN05_LD_RED_INTR(32x32b, 32, i32):
+    return TCGEN05_LD_RED_INST(32x32b, 32, I32);
+  case TCGEN05_LD_RED_INTR(32x32b, 64, i32):
+    return TCGEN05_LD_RED_INST(32x32b, 64, I32);
+  case TCGEN05_LD_RED_INTR(32x32b, 128, i32):
+    return TCGEN05_LD_RED_INST(32x32b, 128, I32);
+  case TCGEN05_LD_RED_INTR(16x32bx2, 2, i32):
+    return TCGEN05_LD_RED_INST(16x32bx2, 2, I32);
+  case TCGEN05_LD_RED_INTR(16x32bx2, 4, i32):
+    return TCGEN05_LD_RED_INST(16x32bx2, 4, I32);
+  case TCGEN05_LD_RED_INTR(16x32bx2, 8, i32):
+    return TCGEN05_LD_RED_INST(16x32bx2, 8, I32);
+  case TCGEN05_LD_RED_INTR(16x32bx2, 16, i32):
+    return TCGEN05_LD_RED_INST(16x32bx2, 16, I32);
+  case TCGEN05_LD_RED_INTR(16x32bx2, 32, i32):
+    return TCGEN05_LD_RED_INST(16x32bx2, 32, I32);
+  case TCGEN05_LD_RED_INTR(16x32bx2, 64, i32):
+    return TCGEN05_LD_RED_INST(16x32bx2, 64, I32);
+  case TCGEN05_LD_RED_INTR(16x32bx2, 128, i32):
+    return TCGEN05_LD_RED_INST(16x32bx2, 128, I32);
+  default:
+    llvm_unreachable("Invalid tcgen05.ld.red intrinsic ID");
+  }
+}
+
+// Lower vector return type of tcgen05.ld intrinsics
+static std::optional<std::tuple<SDValue, SDValue, SDValue>>
+lowerTcgen05LdRed(SDNode *N, SelectionDAG &DAG) {
+  SDLoc DL(N);
+  EVT ResVT = N->getValueType(0);
+  if (!ResVT.isVector())
+    return {}; // already legalized.
+
+  const unsigned NumElts = ResVT.getVectorNumElements();
+
+  // Create the return type of the instructions
+  // +1 represents the reduction value
+  SmallVector<EVT, 132> ListVTs{
+      NumElts + 1,
+      ResVT.getVectorElementType().isFloatingPoint() ? MVT::f32 : MVT::i32};
+
+  ListVTs.push_back(MVT::Other); // Chain
+
+  SDVTList ResVTs = DAG.getVTList(ListVTs);
+
+  // Prepare the Operands
+  SmallVector<SDValue, 8> Ops{N->getOperand(0)}; // Chain
+
+  // skip IID at index 1
+  for (unsigned i = 2; i < N->getNumOperands(); i++)
+    Ops.push_back(N->getOperand(i));
+
+  unsigned IID = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+  MemIntrinsicSDNode *MemSD = cast<MemIntrinsicSDNode>(N);
+  SDValue NewNode =
+      DAG.getMemIntrinsicNode(getTcgen05LdRedID(IID), DL, ResVTs, Ops,
+                              MemSD->getMemoryVT(), MemSD->getMemOperand());
+
+  // Split vector result
+  SmallVector<SDValue, 132> ScalarRes;
+  for (unsigned i = 0; i < NumElts; ++i) {
+    SDValue Res = NewNode.getValue(i);
+    ScalarRes.push_back(Res);
+  }
+
+  SDValue BuildVector = DAG.getNode(ISD::BUILD_VECTOR, DL, ResVT, ScalarRes);
+  SDValue RedResult = NewNode.getValue(NumElts);
+  SDValue Chain = NewNode.getValue(NumElts + 1);
+  return {{BuildVector, RedResult, Chain}};
+}
+
 static SDValue lowerIntrinsicWChain(SDValue Op, SelectionDAG &DAG) {
   switch (Op->getConstantOperandVal(1)) {
   default:
@@ -3015,6 +3152,15 @@ static SDValue lowerIntrinsicWChain(SDValue Op, SelectionDAG &DAG) {
   case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x2:
     if (auto Res = lowerTcgen05Ld(Op.getNode(), DAG, /*HasOffset=*/true))
       return DAG.getMergeValues({Res->first, Res->second}, SDLoc(Op));
+    return SDValue();
+
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x2_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x2_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x2_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x2_i32:
+    if (auto Res = lowerTcgen05LdRed(Op.getNode(), DAG))
+      return DAG.getMergeValues(
+          {std::get<0>(*Res), std::get<1>(*Res), std::get<2>(*Res)}, SDLoc(Op));
     return SDValue();
   }
 }
@@ -3182,6 +3328,86 @@ static SDValue lowerSELECT(SDValue Op, SelectionDAG &DAG) {
   return Or;
 }
 
+static SDValue lowerMSTORE(SDValue Op, SelectionDAG &DAG) {
+  SDNode *N = Op.getNode();
+
+  SDValue Chain = N->getOperand(0);
+  SDValue Val = N->getOperand(1);
+  SDValue BasePtr = N->getOperand(2);
+  SDValue Offset = N->getOperand(3);
+  SDValue Mask = N->getOperand(4);
+
+  SDLoc DL(N);
+  EVT ValVT = Val.getValueType();
+  MemSDNode *MemSD = cast<MemSDNode>(N);
+  assert(ValVT.isVector() && "Masked vector store must have vector type");
+  assert(MemSD->getAlign() >= DAG.getEVTAlign(ValVT) &&
+         "Unexpected alignment for masked store");
+
+  unsigned Opcode = 0;
+  switch (ValVT.getSimpleVT().SimpleTy) {
+  default:
+    llvm_unreachable("Unexpected masked vector store type");
+  case MVT::v4i64:
+  case MVT::v4f64: {
+    Opcode = NVPTXISD::StoreV4;
+    break;
+  }
+  case MVT::v8i32:
+  case MVT::v8f32: {
+    Opcode = NVPTXISD::StoreV8;
+    break;
+  }
+  }
+
+  SmallVector<SDValue, 8> Ops;
+
+  // Construct the new SDNode. First operand is the chain.
+  Ops.push_back(Chain);
+
+  // The next N operands are the values to store. Encode the mask into the
+  // values using the sentinel register 0 to represent a masked-off element.
+  assert(Mask.getValueType().isVector() &&
+         Mask.getValueType().getVectorElementType() == MVT::i1 &&
+         "Mask must be a vector of i1");
+  assert(Mask.getOpcode() == ISD::BUILD_VECTOR &&
+         "Mask expected to be a BUILD_VECTOR");
+  assert(Mask.getValueType().getVectorNumElements() ==
+             ValVT.getVectorNumElements() &&
+         "Mask size must be the same as the vector size");
+  for (auto [I, Op] : enumerate(Mask->ops())) {
+    // Mask elements must be constants.
+    if (Op.getNode()->getAsZExtVal() == 0) {
+      // Append a sentinel register 0 to the Ops vector to represent a masked
+      // off element, this will be handled in tablegen
+      Ops.push_back(DAG.getRegister(MCRegister::NoRegister,
+                                    ValVT.getVectorElementType()));
+    } else {
+      // Extract the element from the vector to store
+      SDValue ExtVal =
+          DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ValVT.getVectorElementType(),
+                      Val, DAG.getIntPtrConstant(I, DL));
+      Ops.push_back(ExtVal);
+    }
+  }
+
+  // Next, the pointer operand.
+  Ops.push_back(BasePtr);
+
+  // Finally, the offset operand. We expect this to always be undef, and it will
+  // be ignored in lowering, but to mirror the handling of the other vector
+  // store instructions we include it in the new SDNode.
+  assert(Offset.getOpcode() == ISD::UNDEF &&
+         "Offset operand expected to be undef");
+  Ops.push_back(Offset);
+
+  SDValue NewSt =
+      DAG.getMemIntrinsicNode(Opcode, DL, DAG.getVTList(MVT::Other), Ops,
+                              MemSD->getMemoryVT(), MemSD->getMemOperand());
+
+  return NewSt;
+}
+
 SDValue
 NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
@@ -3218,8 +3444,16 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerVECREDUCE(Op, DAG);
   case ISD::STORE:
     return LowerSTORE(Op, DAG);
+  case ISD::MSTORE: {
+    assert(STI.has256BitVectorLoadStore(
+               cast<MemSDNode>(Op.getNode())->getAddressSpace()) &&
+           "Masked store vector not supported on subtarget.");
+    return lowerMSTORE(Op, DAG);
+  }
   case ISD::LOAD:
     return LowerLOAD(Op, DAG);
+  case ISD::MLOAD:
+    return LowerMLOAD(Op, DAG);
   case ISD::SHL_PARTS:
     return LowerShiftLeftParts(Op, DAG);
   case ISD::SRA_PARTS:
@@ -3241,8 +3475,6 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerFP_ROUND(Op, DAG);
   case ISD::FP_EXTEND:
     return LowerFP_EXTEND(Op, DAG);
-  case ISD::BR_JT:
-    return LowerBR_JT(Op, DAG);
   case ISD::VAARG:
     return LowerVAARG(Op, DAG);
   case ISD::VASTART:
@@ -3283,40 +3515,11 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return lowerCTLZCTPOP(Op, DAG);
   case ISD::FREM:
     return lowerFREM(Op, DAG);
-
+  case ISD::BSWAP:
+    return lowerBSWAP(Op, DAG);
   default:
     llvm_unreachable("Custom lowering not defined for operation");
   }
-}
-
-SDValue NVPTXTargetLowering::LowerBR_JT(SDValue Op, SelectionDAG &DAG) const {
-  SDLoc DL(Op);
-  SDValue Chain = Op.getOperand(0);
-  const auto *JT = cast<JumpTableSDNode>(Op.getOperand(1));
-  SDValue Index = Op.getOperand(2);
-
-  unsigned JId = JT->getIndex();
-  MachineJumpTableInfo *MJTI = DAG.getMachineFunction().getJumpTableInfo();
-  ArrayRef<MachineBasicBlock *> MBBs = MJTI->getJumpTables()[JId].MBBs;
-
-  SDValue IdV = DAG.getConstant(JId, DL, MVT::i32);
-
-  // Generate BrxStart node
-  SDVTList VTs = DAG.getVTList(MVT::Other, MVT::Glue);
-  Chain = DAG.getNode(NVPTXISD::BrxStart, DL, VTs, Chain, IdV);
-
-  // Generate BrxItem nodes
-  assert(!MBBs.empty());
-  for (MachineBasicBlock *MBB : MBBs.drop_back())
-    Chain = DAG.getNode(NVPTXISD::BrxItem, DL, VTs, Chain.getValue(0),
-                        DAG.getBasicBlock(MBB), Chain.getValue(1));
-
-  // Generate BrxEnd nodes
-  SDValue EndOps[] = {Chain.getValue(0), DAG.getBasicBlock(MBBs.back()), Index,
-                      IdV, Chain.getValue(1)};
-  SDValue BrxEnd = DAG.getNode(NVPTXISD::BrxEnd, DL, VTs, EndOps);
-
-  return BrxEnd;
 }
 
 // This will prevent AsmPrinter from trying to print the jump tables itself.
@@ -3411,10 +3614,62 @@ SDValue NVPTXTargetLowering::LowerVASTART(SDValue Op, SelectionDAG &DAG) const {
                       MachinePointerInfo(SV));
 }
 
+static std::pair<MemSDNode *, uint32_t>
+convertMLOADToLoadWithUsedBytesMask(MemSDNode *N, SelectionDAG &DAG,
+                                    const NVPTXSubtarget &STI) {
+  SDValue Chain = N->getOperand(0);
+  SDValue BasePtr = N->getOperand(1);
+  SDValue Mask = N->getOperand(3);
+  [[maybe_unused]] SDValue Passthru = N->getOperand(4);
+
+  SDLoc DL(N);
+  EVT ResVT = N->getValueType(0);
+  assert(ResVT.isVector() && "Masked vector load must have vector type");
+  // While we only expect poison passthru vectors as an input to the backend,
+  // when the legalization framework splits a poison vector in half, it creates
+  // two undef vectors, so we can technically expect those too.
+  assert((Passthru.getOpcode() == ISD::POISON ||
+          Passthru.getOpcode() == ISD::UNDEF) &&
+         "Passthru operand expected to be poison or undef");
+
+  // Extract the mask and convert it to a uint32_t representing the used bytes
+  // of the entire vector load
+  uint32_t UsedBytesMask = 0;
+  uint32_t ElementSizeInBits = ResVT.getVectorElementType().getSizeInBits();
+  assert(ElementSizeInBits % 8 == 0 && "Unexpected element size");
+  uint32_t ElementSizeInBytes = ElementSizeInBits / 8;
+  uint32_t ElementMask = (1u << ElementSizeInBytes) - 1u;
+
+  for (SDValue Op : reverse(Mask->ops())) {
+    // We technically only want to do this shift for every
+    // iteration *but* the first, but in the first iteration UsedBytesMask is 0,
+    // so this shift is a no-op.
+    UsedBytesMask <<= ElementSizeInBytes;
+
+    // Mask elements must be constants.
+    if (Op->getAsZExtVal() != 0)
+      UsedBytesMask |= ElementMask;
+  }
+
+  assert(UsedBytesMask != 0 && UsedBytesMask != UINT32_MAX &&
+         "Unexpected masked load with elements masked all on or all off");
+
+  // Create a new load sd node to be handled normally by ReplaceLoadVector.
+  MemSDNode *NewLD = cast<MemSDNode>(
+      DAG.getLoad(ResVT, DL, Chain, BasePtr, N->getMemOperand()).getNode());
+
+  // If our subtarget does not support the used bytes mask pragma, "drop" the
+  // mask by setting it to UINT32_MAX
+  if (!STI.hasUsedBytesMaskPragma())
+    UsedBytesMask = UINT32_MAX;
+
+  return {NewLD, UsedBytesMask};
+}
+
 /// replaceLoadVector - Convert vector loads into multi-output scalar loads.
 static std::optional<std::pair<SDValue, SDValue>>
 replaceLoadVector(SDNode *N, SelectionDAG &DAG, const NVPTXSubtarget &STI) {
-  LoadSDNode *LD = cast<LoadSDNode>(N);
+  MemSDNode *LD = cast<MemSDNode>(N);
   const EVT ResVT = LD->getValueType(0);
   const EVT MemVT = LD->getMemoryVT();
 
@@ -3440,6 +3695,12 @@ replaceLoadVector(SDNode *N, SelectionDAG &DAG, const NVPTXSubtarget &STI) {
     // with 2 x <2 x float>, which will succeed with an alignment of 8.
     return std::nullopt;
   }
+
+  // If we have a masked load, convert it to a normal load now
+  std::optional<uint32_t> UsedBytesMask = std::nullopt;
+  if (LD->getOpcode() == ISD::MLOAD)
+    std::tie(LD, UsedBytesMask) =
+        convertMLOADToLoadWithUsedBytesMask(LD, DAG, STI);
 
   // Since LoadV2 is a target node, we cannot rely on DAG type legalization.
   // Therefore, we must ensure the type is legal.  For i1 and i8, we set the
@@ -3469,9 +3730,13 @@ replaceLoadVector(SDNode *N, SelectionDAG &DAG, const NVPTXSubtarget &STI) {
   // Copy regular operands
   SmallVector<SDValue, 8> OtherOps(LD->ops());
 
+  OtherOps.push_back(
+      DAG.getConstant(UsedBytesMask.value_or(UINT32_MAX), DL, MVT::i32));
+
   // The select routine does not have access to the LoadSDNode instance, so
   // pass along the extension information
-  OtherOps.push_back(DAG.getIntPtrConstant(LD->getExtensionType(), DL));
+  OtherOps.push_back(
+      DAG.getIntPtrConstant(cast<LoadSDNode>(LD)->getExtensionType(), DL));
 
   SDValue NewLD = DAG.getMemIntrinsicNode(Opcode, DL, LdResVTs, OtherOps, MemVT,
                                           LD->getMemOperand());
@@ -3557,6 +3822,42 @@ SDValue NVPTXTargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   }
 
   llvm_unreachable("Unexpected custom lowering for load");
+}
+
+SDValue NVPTXTargetLowering::LowerMLOAD(SDValue Op, SelectionDAG &DAG) const {
+  // v2f16/v2bf16/v2i16/v4i8 are legal, so we can't rely on legalizer to handle
+  // masked loads of these types and have to handle them here.
+  // v2f32 also needs to be handled here if the subtarget has f32x2
+  // instructions, making it legal.
+  //
+  // Note: misaligned masked loads should never reach this point
+  // because the override of isLegalMaskedLoad in NVPTXTargetTransformInfo.cpp
+  // will validate alignment. Therefore, we do not need to special case handle
+  // them here.
+  EVT VT = Op.getValueType();
+  if (NVPTX::isPackedVectorTy(VT)) {
+    auto Result = convertMLOADToLoadWithUsedBytesMask(
+        cast<MemSDNode>(Op.getNode()), DAG, STI);
+    MemSDNode *LD = std::get<0>(Result);
+    uint32_t UsedBytesMask = std::get<1>(Result);
+
+    SDLoc DL(LD);
+
+    // Copy regular operands
+    SmallVector<SDValue, 8> OtherOps(LD->ops());
+
+    OtherOps.push_back(DAG.getConstant(UsedBytesMask, DL, MVT::i32));
+
+    // We currently are not lowering extending loads, but pass the extension
+    // type anyway as later handling expects it.
+    OtherOps.push_back(
+        DAG.getIntPtrConstant(cast<LoadSDNode>(LD)->getExtensionType(), DL));
+    SDValue NewLD =
+        DAG.getMemIntrinsicNode(NVPTXISD::MLoad, DL, LD->getVTList(), OtherOps,
+                                LD->getMemoryVT(), LD->getMemOperand());
+    return NewLD;
+  }
+  return SDValue();
 }
 
 static SDValue lowerSTOREVector(SDValue Op, SelectionDAG &DAG,
@@ -3757,6 +4058,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
   auto PtrVT = getPointerTy(DAG.getDataLayout());
 
   const Function &F = DAG.getMachineFunction().getFunction();
+  const bool IsKernel = isKernelFunction(F);
 
   SDValue Root = DAG.getRoot();
   SmallVector<SDValue, 16> OutChains;
@@ -3812,7 +4114,9 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
       assert(ByvalIn.VT == PtrVT && "ByVal argument must be a pointer");
 
       SDValue P;
-      if (isKernelFunction(F)) {
+      if (IsKernel) {
+        assert(isParamGridConstant(Arg) && "ByVal argument must be lowered to "
+                                           "grid_constant by NVPTXLowerArgs");
         P = ArgSymbol;
         P.getNode()->setIROrder(Arg.getArgNo() + 1);
       } else {
@@ -3843,11 +4147,12 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
             dl, ArgSymbol, TypeSize::getFixed(Offsets[I]));
 
         const Align PartAlign = commonAlignment(ArgAlign, Offsets[I]);
-        SDValue P =
-            DAG.getLoad(VecVT, dl, Root, VecAddr,
-                        MachinePointerInfo(ADDRESS_SPACE_PARAM), PartAlign,
-                        MachineMemOperand::MODereferenceable |
-                            MachineMemOperand::MOInvariant);
+        const unsigned AS = IsKernel ? NVPTX::AddressSpace::EntryParam
+                                     : NVPTX::AddressSpace::DeviceParam;
+        SDValue P = DAG.getLoad(VecVT, dl, Root, VecAddr,
+                                MachinePointerInfo(AS), PartAlign,
+                                MachineMemOperand::MODereferenceable |
+                                    MachineMemOperand::MOInvariant);
         P.getNode()->setIROrder(Arg.getArgNo() + 1);
         for (const unsigned J : llvm::seq(NumElts)) {
           SDValue Elt = getExtractVectorizedValue(P, J, LoadVT, dl, DAG);
@@ -3924,7 +4229,8 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
         DAG.getObjectPtrOffset(dl, RetSymbol, TypeSize::getFixed(Offsets[I]));
 
     Chain = DAG.getStore(Chain, dl, Val, Ptr,
-                         MachinePointerInfo(ADDRESS_SPACE_PARAM), CurrentAlign);
+                         MachinePointerInfo(NVPTX::AddressSpace::DeviceParam),
+                         CurrentAlign);
 
     I += NumElts;
   }
@@ -3945,12 +4251,13 @@ void NVPTXTargetLowering::LowerAsmOperandForConstraint(
 // because we need the information that is only available in the "Value" type
 // of destination
 // pointer. In particular, the address space information.
-bool NVPTXTargetLowering::getTgtMemIntrinsic(
-    IntrinsicInfo &Info, const CallInst &I,
+void NVPTXTargetLowering::getTgtMemIntrinsic(
+    SmallVectorImpl<IntrinsicInfo> &Infos, const CallBase &I,
     MachineFunction &MF, unsigned Intrinsic) const {
+  IntrinsicInfo Info;
   switch (Intrinsic) {
   default:
-    return false;
+    return;
   case Intrinsic::nvvm_match_all_sync_i32p:
   case Intrinsic::nvvm_match_all_sync_i64p:
     Info.opc = ISD::INTRINSIC_W_CHAIN;
@@ -3961,7 +4268,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
 
     // Our result depends on both our and other thread's arguments.
     Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
-    return true;
+    Infos.push_back(Info);
+    return;
   case Intrinsic::nvvm_wmma_m16n16k16_load_a_f16_col:
   case Intrinsic::nvvm_wmma_m16n16k16_load_a_f16_row:
   case Intrinsic::nvvm_wmma_m16n16k16_load_a_f16_col_stride:
@@ -3992,7 +4300,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align = Align(16);
-    return true;
+    Infos.push_back(Info);
+    return;
   }
   case Intrinsic::nvvm_wmma_m16n16k16_load_a_s8_col:
   case Intrinsic::nvvm_wmma_m16n16k16_load_a_s8_col_stride:
@@ -4024,7 +4333,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align = Align(8);
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_wmma_m32n8k16_load_a_s8_col:
@@ -4073,7 +4383,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align = Align(16);
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_wmma_m32n8k16_load_b_s8_col:
@@ -4115,7 +4426,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align = Align(4);
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_wmma_m16n16k16_load_c_f16_col:
@@ -4136,7 +4448,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align = Align(16);
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_wmma_m16n16k16_load_c_f32_col:
@@ -4161,7 +4474,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align = Align(16);
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_wmma_m32n8k16_load_a_bf16_col:
@@ -4192,7 +4506,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align = Align(16);
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_wmma_m8n8k128_load_c_s32_col:
@@ -4216,7 +4531,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align = Align(8);
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_wmma_m8n8k4_load_a_f64_col:
@@ -4234,7 +4550,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align = Align(8);
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_wmma_m8n8k4_load_c_f64_col:
@@ -4247,7 +4564,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align = Align(16);
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_wmma_m16n16k16_store_d_f16_col:
@@ -4268,7 +4586,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
     Info.align = Align(16);
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_wmma_m16n16k16_store_d_f32_col:
@@ -4293,7 +4612,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
     Info.align = Align(16);
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_wmma_m16n16k16_store_d_s32_col:
@@ -4314,7 +4634,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
     Info.align = Align(16);
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_wmma_m8n8k128_store_d_s32_col:
@@ -4334,7 +4655,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
     Info.align = Align(8);
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_wmma_m8n8k4_store_d_f64_col:
@@ -4347,7 +4669,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
     Info.align = Align(16);
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x1_b16:
@@ -4359,7 +4682,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
     Info.align = Align(4);
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x4_b16:
@@ -4371,7 +4695,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
     Info.align = Align(16);
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_atomic_add_gen_f_cta:
@@ -4403,7 +4728,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_prefetch_tensormap: {
@@ -4415,7 +4741,39 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.flags =
         MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
+  }
+
+  case Intrinsic::nvvm_tensormap_replace_global_address:
+  case Intrinsic::nvvm_tensormap_replace_global_stride: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::i64;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align.reset();
+    Infos.push_back(Info);
+    return;
+  }
+
+  case Intrinsic::nvvm_tensormap_replace_rank:
+  case Intrinsic::nvvm_tensormap_replace_box_dim:
+  case Intrinsic::nvvm_tensormap_replace_global_dim:
+  case Intrinsic::nvvm_tensormap_replace_element_stride:
+  case Intrinsic::nvvm_tensormap_replace_elemtype:
+  case Intrinsic::nvvm_tensormap_replace_interleave_layout:
+  case Intrinsic::nvvm_tensormap_replace_swizzle_mode:
+  case Intrinsic::nvvm_tensormap_replace_swizzle_atomicity:
+  case Intrinsic::nvvm_tensormap_replace_fill_mode: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align.reset();
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_ldu_global_i:
@@ -4428,7 +4786,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.flags = MachineMemOperand::MOLoad;
     Info.align = cast<ConstantInt>(I.getArgOperand(1))->getMaybeAlignValue();
 
-    return true;
+    Infos.push_back(Info);
+    return;
   }
   case Intrinsic::nvvm_tex_1d_v4f32_s32:
   case Intrinsic::nvvm_tex_1d_v4f32_f32:
@@ -4494,7 +4853,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align = Align(16);
-    return true;
+    Infos.push_back(Info);
+    return;
 
   case Intrinsic::nvvm_tex_1d_v4s32_s32:
   case Intrinsic::nvvm_tex_1d_v4s32_f32:
@@ -4618,7 +4978,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align = Align(16);
-    return true;
+    Infos.push_back(Info);
+    return;
 
   case Intrinsic::nvvm_suld_1d_i8_clamp:
   case Intrinsic::nvvm_suld_1d_v2i8_clamp:
@@ -4671,7 +5032,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align = Align(16);
-    return true;
+    Infos.push_back(Info);
+    return;
 
   case Intrinsic::nvvm_suld_1d_i16_clamp:
   case Intrinsic::nvvm_suld_1d_v2i16_clamp:
@@ -4724,7 +5086,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align = Align(16);
-    return true;
+    Infos.push_back(Info);
+    return;
 
   case Intrinsic::nvvm_suld_1d_i32_clamp:
   case Intrinsic::nvvm_suld_1d_v2i32_clamp:
@@ -4777,7 +5140,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align = Align(16);
-    return true;
+    Infos.push_back(Info);
+    return;
 
   case Intrinsic::nvvm_suld_1d_i64_clamp:
   case Intrinsic::nvvm_suld_1d_v2i64_clamp:
@@ -4815,7 +5179,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align = Align(16);
-    return true;
+    Infos.push_back(Info);
+    return;
 
   case Intrinsic::nvvm_tcgen05_ld_16x64b_x1:
   case Intrinsic::nvvm_tcgen05_ld_32x32b_x1:
@@ -4826,104 +5191,210 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tcgen05_ld_16x64b_x2:
   case Intrinsic::nvvm_tcgen05_ld_16x128b_x1:
   case Intrinsic::nvvm_tcgen05_ld_32x32b_x2:
-  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x2: {
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x2:
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x2_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x2_i32: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::v2i32;
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
+  }
+
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x2_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x2_f32: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v2f32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tcgen05_ld_16x64b_x4:
   case Intrinsic::nvvm_tcgen05_ld_16x128b_x2:
   case Intrinsic::nvvm_tcgen05_ld_32x32b_x4:
   case Intrinsic::nvvm_tcgen05_ld_16x256b_x1:
-  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x4: {
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x4:
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x4_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x4_i32: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::v4i32;
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
+  }
+
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x4_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x4_f32: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v4f32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tcgen05_ld_16x64b_x8:
   case Intrinsic::nvvm_tcgen05_ld_16x128b_x4:
   case Intrinsic::nvvm_tcgen05_ld_16x256b_x2:
   case Intrinsic::nvvm_tcgen05_ld_32x32b_x8:
-  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x8: {
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x8:
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x8_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x8_i32: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::v8i32;
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
+  }
+
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x8_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x8_f32: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v8f32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tcgen05_ld_16x64b_x16:
   case Intrinsic::nvvm_tcgen05_ld_16x128b_x8:
   case Intrinsic::nvvm_tcgen05_ld_16x256b_x4:
   case Intrinsic::nvvm_tcgen05_ld_32x32b_x16:
-  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x16: {
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x16:
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x16_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x16_i32: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::v16i32;
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
+  }
+
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x16_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x16_f32: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v16f32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tcgen05_ld_16x64b_x32:
   case Intrinsic::nvvm_tcgen05_ld_16x128b_x16:
   case Intrinsic::nvvm_tcgen05_ld_16x256b_x8:
   case Intrinsic::nvvm_tcgen05_ld_32x32b_x32:
-  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x32: {
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x32:
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x32_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x32_i32: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::v32i32;
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
+  }
+
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x32_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x32_f32: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v32f32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tcgen05_ld_16x64b_x64:
   case Intrinsic::nvvm_tcgen05_ld_16x128b_x32:
   case Intrinsic::nvvm_tcgen05_ld_16x256b_x16:
   case Intrinsic::nvvm_tcgen05_ld_32x32b_x64:
-  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x64: {
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x64:
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x64_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x64_i32: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::v64i32;
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
+  }
+
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x64_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x64_f32: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v64f32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tcgen05_ld_16x64b_x128:
   case Intrinsic::nvvm_tcgen05_ld_16x128b_x64:
   case Intrinsic::nvvm_tcgen05_ld_16x256b_x32:
   case Intrinsic::nvvm_tcgen05_ld_32x32b_x128:
-  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x128: {
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x128:
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x128_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x128_i32: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::v128i32;
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
+  }
+
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x128_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x128_f32: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v128f32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tcgen05_st_16x64b_x1:
@@ -4935,7 +5406,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tcgen05_st_16x64b_x2:
@@ -4948,7 +5420,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tcgen05_st_16x64b_x4:
@@ -4962,7 +5435,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tcgen05_st_16x64b_x8:
@@ -4976,7 +5450,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tcgen05_st_16x64b_x16:
@@ -4990,7 +5465,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tcgen05_st_16x64b_x32:
@@ -5004,7 +5480,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tcgen05_st_16x64b_x64:
@@ -5018,7 +5495,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tcgen05_st_16x64b_x128:
@@ -5032,7 +5510,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
     Info.align.reset();
-    return true;
+    Infos.push_back(Info);
+    return;
   }
   case Intrinsic::nvvm_tcgen05_mma_shared_disable_output_lane_cg1:
   case Intrinsic::nvvm_tcgen05_mma_shared_scale_d_disable_output_lane_cg1:
@@ -5055,7 +5534,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
     Info.align = Align(16);
-    return true;
+    Infos.push_back(Info);
+    return;
   }
 
   case Intrinsic::nvvm_tcgen05_mma_shared_disable_output_lane_cg2:
@@ -5079,61 +5559,10 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
     Info.align = Align(16);
-    return true;
+    Infos.push_back(Info);
+    return;
   }
   }
-  return false;
-}
-
-/// getFunctionParamOptimizedAlign - since function arguments are passed via
-/// .param space, we may want to increase their alignment in a way that
-/// ensures that we can effectively vectorize their loads & stores. We can
-/// increase alignment only if the function has internal or has private
-/// linkage as for other linkage types callers may already rely on default
-/// alignment. To allow using 128-bit vectorized loads/stores, this function
-/// ensures that alignment is 16 or greater.
-Align NVPTXTargetLowering::getFunctionParamOptimizedAlign(
-    const Function *F, Type *ArgTy, const DataLayout &DL) const {
-  // Capping the alignment to 128 bytes as that is the maximum alignment
-  // supported by PTX.
-  const Align ABITypeAlign = std::min(Align(128), DL.getABITypeAlign(ArgTy));
-
-  // If a function has linkage different from internal or private, we
-  // must use default ABI alignment as external users rely on it. Same
-  // for a function that may be called from a function pointer.
-  if (!F || !F->hasLocalLinkage() ||
-      F->hasAddressTaken(/*Users=*/nullptr,
-                         /*IgnoreCallbackUses=*/false,
-                         /*IgnoreAssumeLikeCalls=*/true,
-                         /*IgnoreLLVMUsed=*/true))
-    return ABITypeAlign;
-
-  assert(!isKernelFunction(*F) && "Expect kernels to have non-local linkage");
-  return std::max(Align(16), ABITypeAlign);
-}
-
-/// Helper for computing alignment of a device function byval parameter.
-Align NVPTXTargetLowering::getFunctionByValParamAlign(
-    const Function *F, Type *ArgTy, Align InitialAlign,
-    const DataLayout &DL) const {
-  Align ArgAlign = InitialAlign;
-  // Try to increase alignment to enhance vectorization options.
-  if (F)
-    ArgAlign = std::max(ArgAlign, getFunctionParamOptimizedAlign(F, ArgTy, DL));
-
-  // Old ptx versions have a bug. When PTX code takes address of
-  // byval parameter with alignment < 4, ptxas generates code to
-  // spill argument into memory. Alas on sm_50+ ptxas generates
-  // SASS code that fails with misaligned access. To work around
-  // the problem, make sure that we align byval parameters by at
-  // least 4. This bug seems to be fixed at least starting from
-  // ptxas > 9.0.
-  // TODO: remove this after verifying the bug is not reproduced
-  // on non-deprecated ptxas versions.
-  if (ForceMinByValParamAlign)
-    ArgAlign = std::max(ArgAlign, Align(4));
-
-  return ArgAlign;
 }
 
 // Helper for getting a function parameter name. Name is composed from
@@ -5457,7 +5886,7 @@ combineUnpackingMovIntoLoad(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   SDLoc DL(LD);
 
   // the new opcode after we double the number of operands
-  NVPTXISD::NodeType Opcode;
+  unsigned Opcode;
   SmallVector<SDValue> Operands(LD->ops());
   unsigned OldNumOutputs; // non-glue, non-chain outputs
   switch (LD->getOpcode()) {
@@ -5467,6 +5896,9 @@ combineUnpackingMovIntoLoad(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
     // ISD::LOAD -> NVPTXISD::Load (unless it's under-aligned). We have to do it
     // here.
     Opcode = NVPTXISD::LoadV2;
+    // append a "full" used bytes mask operand right before the extension type
+    // operand, signifying that all bytes are used.
+    Operands.push_back(DCI.DAG.getConstant(UINT32_MAX, DL, MVT::i32));
     Operands.push_back(DCI.DAG.getIntPtrConstant(
         cast<LoadSDNode>(LD)->getExtensionType(), DL));
     break;
@@ -5475,9 +5907,9 @@ combineUnpackingMovIntoLoad(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
     Opcode = NVPTXISD::LoadV4;
     break;
   case NVPTXISD::LoadV4:
-    // V8 is only supported for f32. Don't forget, we're not changing the load
-    // size here. This is already a 256-bit load.
-    if (ElementVT != MVT::v2f32)
+    // V8 is only supported for f32/i32. Don't forget, we're not changing the
+    // load size here. This is already a 256-bit load.
+    if (ElementVT != MVT::v2f32 && ElementVT != MVT::v2i32)
       return SDValue();
     OldNumOutputs = 4;
     Opcode = NVPTXISD::LoadV8;
@@ -5540,7 +5972,7 @@ static SDValue combinePackingMovIntoStore(SDNode *N,
   auto *ST = cast<MemSDNode>(N);
 
   // The new opcode after we double the number of operands.
-  NVPTXISD::NodeType Opcode;
+  unsigned Opcode;
   switch (N->getOpcode()) {
   case ISD::STORE:
     // Any packed type is legal, so the legalizer will not have lowered
@@ -5552,9 +5984,9 @@ static SDValue combinePackingMovIntoStore(SDNode *N,
     Opcode = NVPTXISD::StoreV4;
     break;
   case NVPTXISD::StoreV4:
-    // V8 is only supported for f32. Don't forget, we're not changing the store
-    // size here. This is already a 256-bit store.
-    if (ElementVT != MVT::v2f32)
+    // V8 is only supported for f32/i32. Don't forget, we're not changing the
+    // store size here. This is already a 256-bit store.
+    if (ElementVT != MVT::v2f32 && ElementVT != MVT::v2i32)
       return SDValue();
     Opcode = NVPTXISD::StoreV8;
     break;
@@ -5654,13 +6086,125 @@ static SDValue PerformADDCombine(SDNode *N,
   return PerformADDCombineWithOperands(N, N1, N0, DCI);
 }
 
+/// Check if a v2f32 BUILD_VECTOR provably packs values from non-adjacent
+/// register pairs (non-coalescable).
+static bool isNonCoalescableBuildVector(const SDValue &BV) {
+  if (BV.getOpcode() != ISD::BUILD_VECTOR || BV.getValueType() != MVT::v2f32)
+    return false;
+
+  SDValue Elt0 = BV.getOperand(0);
+  SDValue Elt1 = BV.getOperand(1);
+
+  bool IsExt0 = Elt0.getOpcode() == ISD::EXTRACT_VECTOR_ELT;
+  bool IsExt1 = Elt1.getOpcode() == ISD::EXTRACT_VECTOR_ELT;
+
+  // If neither element is an EXTRACT_VECTOR_ELT they are free-standing
+  // scalars and the register allocator can still place them side-by-side.
+  if (!IsExt0 && !IsExt1)
+    return false;
+
+  // If exactly one element is an EXTRACT_VECTOR_ELT, the other is a scalar
+  // that cannot generally occupy the adjacent register slot.
+  if (IsExt0 != IsExt1)
+    return true;
+
+  // At this point both sources are extracting from vectors. If they are from
+  // different vectors, then the BUILD_VECTOR is non-coalescable.
+  SDValue Src0 = Elt0.getOperand(0);
+  SDValue Src1 = Elt1.getOperand(0);
+  if (Src0 != Src1)
+    return true;
+
+  auto *Idx0 = dyn_cast<ConstantSDNode>(Elt0.getOperand(1));
+  auto *Idx1 = dyn_cast<ConstantSDNode>(Elt1.getOperand(1));
+  // If both indices are dynamic they will be lowered to
+  // loads and the vector will be spilled to local memory. The register
+  // allocator can easily place the results in adjacent registers.
+  if (!Idx0 && !Idx1)
+    return false;
+
+  // If one index is dynamic and the other is constant, the value from the
+  // constant load will result in an additional register to pair with the result
+  // from the dynamic load. We consider this non-coalescable.
+  if ((Idx0 && !Idx1) || (!Idx0 && Idx1))
+    return true;
+
+  // Both are constant, adjacent pairs are coalescable
+  return std::abs(Idx0->getSExtValue() - Idx1->getSExtValue()) != 1;
+}
+
+/// Scalarize a v2f32 arithmetic node (FADD, FMUL, FSUB, FMA) when at least
+/// one operand is a BUILD_VECTOR that repacks values from non-adjacent register
+/// pairs.  Without this combine the BUILD_VECTOR forces allocation of a
+/// temporary 64-bit register, increasing register pressure.
+///
+/// Example - before:
+///   t0: v2f32,v2f32,ch = LoadV2 ...
+///   t1: f32 = extract_vector_elt t0, 0
+///   t2: f32 = extract_vector_elt t0:1, 0
+///   t3: v2f32 = BUILD_VECTOR t1, t2       ;; non-coalescable repack
+///   t4: v2f32 = fma t_a, t3, t_c
+///
+/// After:
+///   t0: v2f32,v2f32,ch = LoadV2 ...
+///   t1: f32 = extract_vector_elt t0, 0
+///   t2: f32 = extract_vector_elt t0:1, 0
+///   a0: f32 = extract_vector_elt t_a, 0
+///   a1: f32 = extract_vector_elt t_a, 1
+///   c0: f32 = extract_vector_elt t_c, 0
+///   c1: f32 = extract_vector_elt t_c, 1
+///   r0: f32 = fma a0, t1, c0
+///   r1: f32 = fma a1, t2, c1
+///   t4: v2f32 = BUILD_VECTOR r0, r1
+static SDValue PerformScalarizeV2F32Op(SDNode *N,
+                                       TargetLowering::DAGCombinerInfo &DCI) {
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::v2f32)
+    return SDValue();
+
+  // Only scalarize when at least one operand is a BUILD_VECTOR whose elements
+  // are guaranteed to reside in different register pairs.
+  if (none_of(N->ops(), isNonCoalescableBuildVector))
+    return SDValue();
+
+  SelectionDAG &DAG = DCI.DAG;
+  SDLoc DL(N);
+  EVT EltVT = VT.getVectorElementType();
+  unsigned Opc = N->getOpcode();
+
+  // For each operand, get the scalar element at the given index: if the operand
+  // is a BUILD_VECTOR, grab the element directly; otherwise, emit an
+  // EXTRACT_VECTOR_ELT.
+  auto GetElement = [&](SDValue Op, unsigned Index) -> SDValue {
+    if (Op.getOpcode() == ISD::BUILD_VECTOR)
+      return Op.getOperand(Index);
+    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Op,
+                       DAG.getVectorIdxConstant(Index, DL));
+  };
+
+  // Build scalar operand lists for element 0 and element 1.
+  SmallVector<SDValue, 3> Ops0, Ops1;
+  for (const SDValue &Op : N->ops()) {
+    Ops0.push_back(GetElement(Op, 0));
+    Ops1.push_back(GetElement(Op, 1));
+  }
+
+  SDValue Res0 = DAG.getNode(Opc, DL, EltVT, Ops0, N->getFlags());
+  SDValue Res1 = DAG.getNode(Opc, DL, EltVT, Ops1, N->getFlags());
+
+  return DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Res0, Res1);
+}
+
 /// PerformFADDCombine - Target-specific dag combine xforms for ISD::FADD.
 ///
 static SDValue PerformFADDCombine(SDNode *N,
-                                 TargetLowering::DAGCombinerInfo &DCI,
-                                 CodeGenOptLevel OptLevel) {
+                                  TargetLowering::DAGCombinerInfo &DCI,
+                                  CodeGenOptLevel OptLevel) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
+
+  if (SDValue Result = PerformScalarizeV2F32Op(N, DCI))
+    return Result;
 
   EVT VT = N0.getValueType();
   if (VT.isVector() || !(VT == MVT::f32 || VT == MVT::f64))
@@ -5675,7 +6219,7 @@ static SDValue PerformFADDCombine(SDNode *N,
 }
 
 /// Get 3-input version of a 2-input min/max opcode
-static NVPTXISD::NodeType getMinMax3Opcode(unsigned MinMax2Opcode) {
+static unsigned getMinMax3Opcode(unsigned MinMax2Opcode) {
   switch (MinMax2Opcode) {
   case ISD::FMAXNUM:
   case ISD::FMAXIMUMNUM:
@@ -5706,7 +6250,7 @@ static SDValue PerformFMinMaxCombine(SDNode *N,
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
   unsigned MinMaxOp2 = N->getOpcode();
-  NVPTXISD::NodeType MinMaxOp3 = getMinMax3Opcode(MinMaxOp2);
+  unsigned MinMaxOp3 = getMinMax3Opcode(MinMaxOp2);
 
   if (Op0.getOpcode() == MinMaxOp2 && Op0.hasOneUse()) {
     // (maxnum (maxnum a, b), c) -> (maxnum3 a, b, c)
@@ -5785,8 +6329,8 @@ static SDValue combineMulWide(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   SDValue RHS = Op.getOperand(1);
   if (Op.getOpcode() == ISD::SHL) {
     const auto ShiftAmt = Op.getConstantOperandVal(1);
-    const auto MulVal = APInt(ToVT.getSizeInBits(), 1) << ShiftAmt;
-    RHS = DCI.DAG.getConstant(MulVal, DL, ToVT);
+    const auto MulVal = APInt(FromVT.getSizeInBits(), 1) << ShiftAmt;
+    RHS = DCI.DAG.getConstant(MulVal, DL, FromVT);
   }
   return DCI.DAG.getNode(Opcode, DL, ToVT, Op.getOperand(0), RHS);
 }
@@ -6122,6 +6666,61 @@ static SDValue PerformEXTRACTCombine(SDNode *N,
   return Result;
 }
 
+/// Transform patterns like:
+///   (select (ugt shift_amt, BitWidth-1), 0, (srl/shl x, shift_amt))
+///   (select (ult shift_amt, BitWidth), (srl/shl x, shift_amt), 0)
+/// Into:
+///   (NVPTXISD::SRL_CLAMP x, shift_amt) or (NVPTXISD::SHL_CLAMP x, shift_amt)
+///
+/// These patterns arise from C/C++ code like `shift >= 32 ? 0 : x >> shift`
+/// which guards against undefined behavior. PTX shr/shl instructions clamp
+/// shift amounts >= BitWidth to produce 0 for logical shifts, making the
+/// guard redundant.
+///
+/// Note: We only handle SRL and SHL, not SRA, because arithmetic right
+/// shifts could produce 0 or -1 when shift >= BitWidth.
+/// Note: We don't handle uge or ule. These don't appear because of
+/// canonicalization.
+static SDValue PerformSELECTShiftCombine(SDNode *N,
+                                         TargetLowering::DAGCombinerInfo &DCI) {
+  if (!DCI.isAfterLegalizeDAG())
+    return SDValue();
+
+  using namespace SDPatternMatch;
+  unsigned BitWidth = N->getValueType(0).getSizeInBits();
+  SDValue ShiftAmt, ShiftOp;
+
+  // Match logical shifts where the shift amount in the guard matches the shift
+  // amount in the operation.
+  auto LogicalShift =
+      m_AllOf(m_Value(ShiftOp),
+              m_AnyOf(m_Srl(m_Value(), m_TruncOrSelf(m_Deferred(ShiftAmt))),
+                      m_Shl(m_Value(), m_TruncOrSelf(m_Deferred(ShiftAmt)))));
+
+  // shift_amt > BitWidth-1 ? 0 : shift_op
+  bool MatchedUGT =
+      sd_match(N, m_Select(m_SetCC(m_Value(ShiftAmt),
+                                   m_SpecificInt(APInt(BitWidth, BitWidth - 1)),
+                                   m_SpecificCondCode(ISD::SETUGT)),
+                           m_Zero(), LogicalShift));
+  // shift_amt < BitWidth ? shift_op : 0
+  bool MatchedULT =
+      !MatchedUGT &&
+      sd_match(N, m_Select(m_SetCC(m_Value(ShiftAmt),
+                                   m_SpecificInt(APInt(BitWidth, BitWidth)),
+                                   m_SpecificCondCode(ISD::SETULT)),
+                           LogicalShift, m_Zero()));
+
+  if (!MatchedUGT && !MatchedULT)
+    return SDValue();
+
+  // Return a clamp shift operation, which has the same semantics as PTX shift.
+  unsigned ClampOpc = ShiftOp.getOpcode() == ISD::SRL ? NVPTXISD::SRL_CLAMP
+                                                      : NVPTXISD::SHL_CLAMP;
+  return DCI.DAG.getNode(ClampOpc, SDLoc(N), ShiftOp.getValueType(),
+                         ShiftOp.getOperand(0), ShiftOp.getOperand(1));
+}
+
 static SDValue PerformVSELECTCombine(SDNode *N,
                                      TargetLowering::DAGCombinerInfo &DCI) {
   SDValue VA = N->getOperand(1);
@@ -6369,6 +6968,59 @@ static SDValue sinkProxyReg(SDValue R, SDValue Chain,
   }
 }
 
+static unsigned getF16SubOpc(Intrinsic::ID AddIntrinsicID) {
+  switch (AddIntrinsicID) {
+  default:
+    break;
+  case Intrinsic::nvvm_add_rn_sat_f16:
+  case Intrinsic::nvvm_add_rn_sat_v2f16:
+    return NVPTXISD::SUB_RN_SAT;
+  case Intrinsic::nvvm_add_rn_ftz_sat_f16:
+  case Intrinsic::nvvm_add_rn_ftz_sat_v2f16:
+    return NVPTXISD::SUB_RN_FTZ_SAT;
+  }
+  llvm_unreachable("Invalid F16 add intrinsic");
+}
+
+static SDValue combineF16AddWithNeg(SDNode *N, SelectionDAG &DAG,
+                                    Intrinsic::ID AddIntrinsicID) {
+  SDValue Op1 = N->getOperand(1);
+  SDValue Op2 = N->getOperand(2);
+
+  SDValue SubOp1, SubOp2;
+
+  if (Op1.getOpcode() == ISD::FNEG) {
+    SubOp1 = Op2;
+    SubOp2 = Op1.getOperand(0);
+  } else if (Op2.getOpcode() == ISD::FNEG) {
+    SubOp1 = Op1;
+    SubOp2 = Op2.getOperand(0);
+  } else {
+    return SDValue();
+  }
+
+  SDLoc DL(N);
+  return DAG.getNode(getF16SubOpc(AddIntrinsicID), DL, N->getValueType(0),
+                     SubOp1, SubOp2);
+}
+
+static SDValue combineIntrinsicWOChain(SDNode *N,
+                                       TargetLowering::DAGCombinerInfo &DCI,
+                                       const NVPTXSubtarget &STI) {
+  unsigned IID = N->getConstantOperandVal(0);
+
+  switch (IID) {
+  default:
+    break;
+  case Intrinsic::nvvm_add_rn_sat_f16:
+  case Intrinsic::nvvm_add_rn_ftz_sat_f16:
+  case Intrinsic::nvvm_add_rn_sat_v2f16:
+  case Intrinsic::nvvm_add_rn_ftz_sat_v2f16:
+    return combineF16AddWithNeg(N, DCI.DAG, IID);
+  }
+  return SDValue();
+}
+
 static SDValue combineProxyReg(SDNode *N,
                                TargetLowering::DAGCombinerInfo &DCI) {
 
@@ -6404,6 +7056,10 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
     return PerformEXTRACTCombine(N, DCI);
   case ISD::FADD:
     return PerformFADDCombine(N, DCI, OptLevel);
+  case ISD::FMA:
+  case ISD::FMUL:
+  case ISD::FSUB:
+    return PerformScalarizeV2F32Op(N, DCI);
   case ISD::FMAXNUM:
   case ISD::FMINNUM:
   case ISD::FMAXIMUM:
@@ -6433,8 +7089,12 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
   case NVPTXISD::StoreV2:
   case NVPTXISD::StoreV4:
     return combineSTORE(N, DCI, STI);
+  case ISD::SELECT:
+    return PerformSELECTShiftCombine(N, DCI);
   case ISD::VSELECT:
     return PerformVSELECTCombine(N, DCI);
+  case ISD::INTRINSIC_WO_CHAIN:
+    return combineIntrinsicWOChain(N, DCI, STI);
   }
   return SDValue();
 }
@@ -6610,6 +7270,37 @@ static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
       Results.push_back(Res->second);
     }
     return;
+
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x8_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x8_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x64_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x64_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x4_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x4_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x32_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x32_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x16_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x16_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x128_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_32x32b_x128_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x8_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x8_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x64_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x64_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x4_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x4_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x32_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x32_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x16_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x16_f32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x128_i32:
+  case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x128_f32:
+    if (auto Res = lowerTcgen05LdRed(N, DAG)) {
+      Results.push_back(std::get<0>(*Res));
+      Results.push_back(std::get<1>(*Res));
+      Results.push_back(std::get<2>(*Res));
+    }
+    return;
   }
 }
 
@@ -6705,6 +7396,7 @@ void NVPTXTargetLowering::ReplaceNodeResults(
     ReplaceBITCAST(N, DAG, Results);
     return;
   case ISD::LOAD:
+  case ISD::MLOAD:
     replaceLoadVector(N, DAG, Results, STI);
     return;
   case ISD::INTRINSIC_W_CHAIN:
@@ -6724,7 +7416,7 @@ void NVPTXTargetLowering::ReplaceNodeResults(
 }
 
 NVPTXTargetLowering::AtomicExpansionKind
-NVPTXTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
+NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   Type *Ty = AI->getValOperand()->getType();
 
   if (AI->isFloatingPointOperation()) {
@@ -6812,46 +7504,84 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
 
 bool NVPTXTargetLowering::shouldInsertFencesForAtomic(
     const Instruction *I) const {
-  auto *CI = dyn_cast<AtomicCmpXchgInst>(I);
-  // When CAS bitwidth is not supported on the hardware, the CAS is emulated
-  // using a retry loop that uses a higher-bitwidth monotonic CAS. We enforce
-  // the memory order using explicit fences around the retry loop.
-  // The memory order of natively supported CAS operations can be enforced
-  // by lowering to an atom.cas with the right memory synchronizing effect.
-  // However, atom.cas only supports relaxed, acquire, release and acq_rel.
-  // So we also use explicit fences for enforcing memory order for
-  // seq_cast CAS with natively-supported bitwidths.
-  return CI &&
-         (cast<IntegerType>(CI->getCompareOperand()->getType())->getBitWidth() <
-              STI.getMinCmpXchgSizeInBits() ||
-          CI->getMergedOrdering() == AtomicOrdering::SequentiallyConsistent);
+  // This function returns true iff the operation is emulated using a CAS-loop,
+  // or if it has the memory order seq_cst (which is not natively supported in
+  // the PTX `atom` instruction).
+  //
+  // atomicrmw and cmpxchg instructions not efficiently supported by PTX
+  // are lowered to CAS emulation loops that preserve their memory order,
+  // syncscope, and volatile semantics. For PTX, it is more efficient to use
+  // atom.cas.relaxed.sco instructions within the loop, and fences before and
+  // after the loop to restore order.
+  //
+  // Atomic instructions efficiently supported by PTX are lowered to
+  // `atom.<op>.<sem>.<scope` instruction with their corresponding memory order
+  // and scope. Since PTX does not support seq_cst, we emulate it by lowering to
+  // a fence.sc followed by an atom according to the PTX atomics ABI
+  // https://docs.nvidia.com/cuda/ptx-writers-guide-to-interoperability/atomic-abi.html
+  if (auto *CI = dyn_cast<AtomicCmpXchgInst>(I))
+    return (cast<IntegerType>(CI->getCompareOperand()->getType())
+                ->getBitWidth() < STI.getMinCmpXchgSizeInBits()) ||
+           CI->getMergedOrdering() == AtomicOrdering::SequentiallyConsistent;
+  if (auto *RI = dyn_cast<AtomicRMWInst>(I))
+    return shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::CmpXChg ||
+           RI->getOrdering() == AtomicOrdering::SequentiallyConsistent;
+  return false;
 }
 
 AtomicOrdering NVPTXTargetLowering::atomicOperationOrderAfterFenceSplit(
     const Instruction *I) const {
-  auto *CI = dyn_cast<AtomicCmpXchgInst>(I);
-  bool BitwidthSupportedAndIsSeqCst =
+  // If the operation is emulated by a CAS-loop, we lower the instruction to
+  // atom.<op>.relaxed, since AtomicExpandPass will insert fences for enforcing
+  // the correct memory ordering around the CAS loop.
+  //
+  // When the operation is not emulated, but the memory order is seq_cst,
+  // we must lower to "fence.sc.<scope>; atom.<op>.acquire.<scope>;" to conform
+  // to the PTX atomics ABI.
+  // https://docs.nvidia.com/cuda/ptx-writers-guide-to-interoperability/atomic-abi.html
+  // For such cases, emitLeadingFence() will separately insert the leading
+  // "fence.sc.<scope>;". Here, we only set the memory order to acquire.
+  //
+  // Otherwise, the operation is not emulated, and the memory order is not
+  // seq_cst.  In this case, the LLVM memory order is natively supported by the
+  // PTX `atom` instruction, and we just lower to the corresponding
+  // `atom.<op>.relaxed|acquire|release|acq_rel". For such cases, this function
+  // will NOT be called.
+  // prerequisite: shouldInsertFencesForAtomic() should have returned `true` for
+  // I before its memory order was modified.
+  if (auto *CI = dyn_cast<AtomicCmpXchgInst>(I);
       CI && CI->getMergedOrdering() == AtomicOrdering::SequentiallyConsistent &&
       cast<IntegerType>(CI->getCompareOperand()->getType())->getBitWidth() >=
-          STI.getMinCmpXchgSizeInBits();
-  return BitwidthSupportedAndIsSeqCst ? AtomicOrdering::Acquire
-                                      : AtomicOrdering::Monotonic;
+          STI.getMinCmpXchgSizeInBits())
+    return AtomicOrdering::Acquire;
+  else if (auto *RI = dyn_cast<AtomicRMWInst>(I);
+           RI && RI->getOrdering() == AtomicOrdering::SequentiallyConsistent &&
+           shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::None)
+    return AtomicOrdering::Acquire;
+
+  return AtomicOrdering::Monotonic;
 }
 
 Instruction *NVPTXTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
                                                    Instruction *Inst,
                                                    AtomicOrdering Ord) const {
-  if (!isa<AtomicCmpXchgInst>(Inst))
+  // prerequisite: shouldInsertFencesForAtomic() should have returned `true` for
+  // `Inst` before its memory order was modified. We cannot enforce this with an
+  // assert, because AtomicExpandPass will have modified the memory order
+  // between the initial call to shouldInsertFencesForAtomic() and the call to
+  // this function.
+  if (!isa<AtomicCmpXchgInst>(Inst) && !isa<AtomicRMWInst>(Inst))
     return TargetLoweringBase::emitLeadingFence(Builder, Inst, Ord);
 
-  // Specialize for cmpxchg
-  // Emit a fence.sc leading fence for cmpxchg seq_cst which are not emulated
-  SyncScope::ID SSID = cast<AtomicCmpXchgInst>(Inst)->getSyncScopeID();
+  // Specialize for cmpxchg and atomicrmw
+  auto SSID = getAtomicSyncScopeID(Inst);
+  assert(SSID.has_value() && "Expected an atomic operation");
+
   if (isReleaseOrStronger(Ord))
     return Builder.CreateFence(Ord == AtomicOrdering::SequentiallyConsistent
-                                   ? Ord
+                                   ? AtomicOrdering::SequentiallyConsistent
                                    : AtomicOrdering::Release,
-                               SSID);
+                               SSID.value());
 
   return nullptr;
 }
@@ -6859,19 +7589,25 @@ Instruction *NVPTXTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
 Instruction *NVPTXTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
                                                     Instruction *Inst,
                                                     AtomicOrdering Ord) const {
-  // Specialize for cmpxchg
-  if (!isa<AtomicCmpXchgInst>(Inst))
+  // prerequisite: shouldInsertFencesForAtomic() should have returned `true` for
+  // `Inst` before its memory order was modified. See `emitLeadingFence` for why
+  // this cannot be enforced with an assert.  Specialize for cmpxchg and
+  // atomicrmw
+  auto *CI = dyn_cast<AtomicCmpXchgInst>(Inst);
+  auto *RI = dyn_cast<AtomicRMWInst>(Inst);
+  if (!CI && !RI)
     return TargetLoweringBase::emitTrailingFence(Builder, Inst, Ord);
 
-  auto *CI = cast<AtomicCmpXchgInst>(Inst);
-  auto CASWidth =
-      cast<IntegerType>(CI->getCompareOperand()->getType())->getBitWidth();
-  SyncScope::ID SSID = CI->getSyncScopeID();
-  // Do not emit a trailing fence for cmpxchg seq_cst which are not emulated
-  if (isAcquireOrStronger(Ord) &&
-      (Ord != AtomicOrdering::SequentiallyConsistent ||
-       CASWidth < STI.getMinCmpXchgSizeInBits()))
-    return Builder.CreateFence(AtomicOrdering::Acquire, SSID);
+  auto SSID = getAtomicSyncScopeID(Inst);
+  assert(SSID.has_value() && "Expected an atomic operation");
+
+  bool IsEmulated =
+      CI ? cast<IntegerType>(CI->getCompareOperand()->getType())
+                   ->getBitWidth() < STI.getMinCmpXchgSizeInBits()
+         : shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::CmpXChg;
+
+  if (isAcquireOrStronger(Ord) && IsEmulated)
+    return Builder.CreateFence(AtomicOrdering::Acquire, SSID.value());
 
   return nullptr;
 }

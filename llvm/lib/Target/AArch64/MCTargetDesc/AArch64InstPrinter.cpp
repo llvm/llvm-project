@@ -1034,7 +1034,7 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
       if (!GIC || !GIC->haveFeatures(STI.getFeatureBits()))
         return false;
 
-      NeedsReg = true;
+      NeedsReg = GIC->NeedsReg;
       Ins = "gic\t";
       Name = std::string(GIC->Name);
     } else {
@@ -1163,12 +1163,6 @@ bool AArch64InstPrinter::printSyspAlias(const MCInst *MI,
   if (CnVal == 8 || CnVal == 9) {
     // TLBIP aliases
 
-    if (CnVal == 9) {
-      if (!STI.hasFeature(AArch64::FeatureXS))
-        return false;
-      Encoding &= ~(1 << 7);
-    }
-
     const AArch64TLBIP::TLBIP *TLBIP =
         AArch64TLBIP::lookupTLBIPByEncoding(Encoding);
     if (!TLBIP || !TLBIP->haveFeatures(STI.getFeatureBits()))
@@ -1176,8 +1170,6 @@ bool AArch64InstPrinter::printSyspAlias(const MCInst *MI,
 
     Ins = "tlbip\t";
     Name = std::string(TLBIP->Name);
-    if (CnVal == 9)
-      Name += "nXS";
   } else
     return false;
 

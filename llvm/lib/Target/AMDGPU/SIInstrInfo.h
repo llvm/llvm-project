@@ -52,6 +52,11 @@ static const MachineMemOperand::Flags MOLastUse =
 static const MachineMemOperand::Flags MOCooperative =
     MachineMemOperand::MOTargetFlag3;
 
+/// Mark the MMO of accesses to memory locations that are
+/// never written to by other threads.
+static const MachineMemOperand::Flags MOThreadPrivate =
+    MachineMemOperand::MOTargetFlag4;
+
 /// Utility to store machine instructions worklist.
 struct SIInstrWorklist {
   SIInstrWorklist() = default;
@@ -125,6 +130,11 @@ public:
       unsigned SubIdx, const TargetRegisterClass *SubRC) const;
 
 private:
+  bool optimizeSCC(MachineInstr *SCCValid, MachineInstr *SCCRedefine,
+                   bool NeedInversion) const;
+
+  bool invertSCCUse(MachineInstr *SCCDef) const;
+
   void swapOperands(MachineInstr &Inst) const;
 
   std::pair<bool, MachineBasicBlock *>
@@ -298,6 +308,8 @@ public:
   bool getConstValDefinedInReg(const MachineInstr &MI, const Register Reg,
                                int64_t &ImmVal) const override;
 
+  std::optional<int64_t> getImmOrMaterializedImm(MachineOperand &Op) const;
+
   unsigned getVectorRegSpillSaveOpcode(Register Reg,
                                        const TargetRegisterClass *RC,
                                        unsigned Size,
@@ -315,13 +327,15 @@ public:
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
       int FrameIndex, const TargetRegisterClass *RC, Register VReg,
+      unsigned SubReg = 0,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
-  void reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-                     Register DestReg, unsigned SubIdx,
-                     const MachineInstr &Orig) const override;
+  void
+  reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+                Register DestReg, unsigned SubIdx, const MachineInstr &Orig,
+                LaneBitmask UsedLanes = LaneBitmask::getAll()) const override;
 
   // Splits a V_MOV_B64_DPP_PSEUDO opcode into a pair of v_mov_b32_dpp
   // instructions. Returns a pair of generated instructions.
@@ -453,7 +467,7 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::SALU;
   }
 
-  bool isSALU(uint16_t Opcode) const {
+  bool isSALU(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::SALU;
   }
 
@@ -461,7 +475,7 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::VALU;
   }
 
-  bool isVALU(uint16_t Opcode) const {
+  bool isVALU(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::VALU;
   }
 
@@ -469,7 +483,7 @@ public:
     return isMIMG(MI) || isVSAMPLE(MI) || isVIMAGE(MI);
   }
 
-  bool isImage(uint16_t Opcode) const {
+  bool isImage(uint32_t Opcode) const {
     return isMIMG(Opcode) || isVSAMPLE(Opcode) || isVIMAGE(Opcode);
   }
 
@@ -477,15 +491,16 @@ public:
     return isMUBUF(MI) || isMTBUF(MI) || isImage(MI) || isFLAT(MI);
   }
 
-  bool isVMEM(uint16_t Opcode) const {
-    return isMUBUF(Opcode) || isMTBUF(Opcode) || isImage(Opcode);
+  bool isVMEM(uint32_t Opcode) const {
+    return isMUBUF(Opcode) || isMTBUF(Opcode) || isImage(Opcode) ||
+           isFLAT(Opcode);
   }
 
   static bool isSOP1(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::SOP1;
   }
 
-  bool isSOP1(uint16_t Opcode) const {
+  bool isSOP1(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::SOP1;
   }
 
@@ -493,7 +508,7 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::SOP2;
   }
 
-  bool isSOP2(uint16_t Opcode) const {
+  bool isSOP2(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::SOP2;
   }
 
@@ -501,7 +516,7 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::SOPC;
   }
 
-  bool isSOPC(uint16_t Opcode) const {
+  bool isSOPC(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::SOPC;
   }
 
@@ -509,7 +524,7 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::SOPK;
   }
 
-  bool isSOPK(uint16_t Opcode) const {
+  bool isSOPK(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::SOPK;
   }
 
@@ -517,7 +532,7 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::SOPP;
   }
 
-  bool isSOPP(uint16_t Opcode) const {
+  bool isSOPP(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::SOPP;
   }
 
@@ -525,7 +540,7 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::IsPacked;
   }
 
-  bool isPacked(uint16_t Opcode) const {
+  bool isPacked(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::IsPacked;
   }
 
@@ -533,7 +548,7 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::VOP1;
   }
 
-  bool isVOP1(uint16_t Opcode) const {
+  bool isVOP1(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::VOP1;
   }
 
@@ -541,7 +556,7 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::VOP2;
   }
 
-  bool isVOP2(uint16_t Opcode) const {
+  bool isVOP2(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::VOP2;
   }
 
@@ -551,13 +566,13 @@ public:
 
   static bool isVOP3(const MachineInstr &MI) { return isVOP3(MI.getDesc()); }
 
-  bool isVOP3(uint16_t Opcode) const { return isVOP3(get(Opcode)); }
+  bool isVOP3(uint32_t Opcode) const { return isVOP3(get(Opcode)); }
 
   static bool isSDWA(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::SDWA;
   }
 
-  bool isSDWA(uint16_t Opcode) const {
+  bool isSDWA(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::SDWA;
   }
 
@@ -565,7 +580,7 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::VOPC;
   }
 
-  bool isVOPC(uint16_t Opcode) const {
+  bool isVOPC(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::VOPC;
   }
 
@@ -573,7 +588,7 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::MUBUF;
   }
 
-  bool isMUBUF(uint16_t Opcode) const {
+  bool isMUBUF(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::MUBUF;
   }
 
@@ -581,15 +596,19 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::MTBUF;
   }
 
-  bool isMTBUF(uint16_t Opcode) const {
+  bool isMTBUF(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::MTBUF;
+  }
+
+  static bool isBUF(const MachineInstr &MI) {
+    return isMUBUF(MI) || isMTBUF(MI);
   }
 
   static bool isSMRD(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::SMRD;
   }
 
-  bool isSMRD(uint16_t Opcode) const {
+  bool isSMRD(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::SMRD;
   }
 
@@ -599,33 +618,35 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::DS;
   }
 
-  bool isDS(uint16_t Opcode) const {
+  bool isDS(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::DS;
   }
 
   static bool isLDSDMA(const MachineInstr &MI) {
-    return isVALU(MI) && (isMUBUF(MI) || isFLAT(MI));
+    return (isVALU(MI) && (isMUBUF(MI) || isFLAT(MI))) ||
+           (MI.getDesc().TSFlags & SIInstrFlags::TENSOR_CNT);
   }
 
-  bool isLDSDMA(uint16_t Opcode) {
-    return isVALU(Opcode) && (isMUBUF(Opcode) || isFLAT(Opcode));
+  bool isLDSDMA(uint32_t Opcode) {
+    return (isVALU(Opcode) && (isMUBUF(Opcode) || isFLAT(Opcode))) ||
+           (get(Opcode).TSFlags & SIInstrFlags::TENSOR_CNT);
   }
 
   static bool isGWS(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::GWS;
   }
 
-  bool isGWS(uint16_t Opcode) const {
+  bool isGWS(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::GWS;
   }
 
-  bool isAlwaysGDS(uint16_t Opcode) const;
+  bool isAlwaysGDS(uint32_t Opcode) const;
 
   static bool isMIMG(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::MIMG;
   }
 
-  bool isMIMG(uint16_t Opcode) const {
+  bool isMIMG(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::MIMG;
   }
 
@@ -633,7 +654,7 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::VIMAGE;
   }
 
-  bool isVIMAGE(uint16_t Opcode) const {
+  bool isVIMAGE(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::VIMAGE;
   }
 
@@ -641,7 +662,7 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::VSAMPLE;
   }
 
-  bool isVSAMPLE(uint16_t Opcode) const {
+  bool isVSAMPLE(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::VSAMPLE;
   }
 
@@ -649,7 +670,7 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::Gather4;
   }
 
-  bool isGather4(uint16_t Opcode) const {
+  bool isGather4(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::Gather4;
   }
 
@@ -664,7 +685,7 @@ public:
     return Flags & (SIInstrFlags::FlatGlobal | SIInstrFlags::FlatScratch);
   }
 
-  bool isSegmentSpecificFLAT(uint16_t Opcode) const {
+  bool isSegmentSpecificFLAT(uint32_t Opcode) const {
     auto Flags = get(Opcode).TSFlags;
     return Flags & (SIInstrFlags::FlatGlobal | SIInstrFlags::FlatScratch);
   }
@@ -673,7 +694,7 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::FlatGlobal;
   }
 
-  bool isFLATGlobal(uint16_t Opcode) const {
+  bool isFLATGlobal(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::FlatGlobal;
   }
 
@@ -681,20 +702,20 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::FlatScratch;
   }
 
-  bool isFLATScratch(uint16_t Opcode) const {
+  bool isFLATScratch(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::FlatScratch;
   }
 
   // Any FLAT encoded instruction, including global_* and scratch_*.
-  bool isFLAT(uint16_t Opcode) const {
+  bool isFLAT(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::FLAT;
   }
 
-  /// \returns true for SCRATCH_ instructions, or FLAT_ instructions with
-  /// SCRATCH_ memory operands.
+  /// \returns true for SCRATCH_ instructions, or FLAT/BUF instructions unless
+  /// the MMOs do not include scratch.
   /// Conservatively correct; will return true if \p MI cannot be proven
   /// to not hit scratch.
-  bool mayAccessScratchThroughFlat(const MachineInstr &MI) const;
+  bool mayAccessScratch(const MachineInstr &MI) const;
 
   /// \returns true for FLAT instructions that can access VMEM.
   bool mayAccessVMEMThroughFlat(const MachineInstr &MI) const;
@@ -702,7 +723,7 @@ public:
   /// \returns true for FLAT instructions that can access LDS.
   bool mayAccessLDSThroughFlat(const MachineInstr &MI) const;
 
-  static bool isBlockLoadStore(uint16_t Opcode) {
+  static bool isBlockLoadStore(uint32_t Opcode) {
     switch (Opcode) {
     case AMDGPU::SI_BLOCK_SPILL_V1024_SAVE:
     case AMDGPU::SI_BLOCK_SPILL_V1024_RESTORE:
@@ -716,7 +737,7 @@ public:
     }
   }
 
-  static bool setsSCCifResultIsNonZero(const MachineInstr &MI) {
+  static bool setsSCCIfResultIsNonZero(const MachineInstr &MI) {
     switch (MI.getOpcode()) {
     case AMDGPU::S_ABSDIFF_I32:
     case AMDGPU::S_ABS_I32:
@@ -774,7 +795,7 @@ public:
            Target == AMDGPU::Exp::ET_DUAL_SRC_BLEND1;
   }
 
-  bool isEXP(uint16_t Opcode) const {
+  bool isEXP(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::EXP;
   }
 
@@ -782,7 +803,7 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::IsAtomicNoRet;
   }
 
-  bool isAtomicNoRet(uint16_t Opcode) const {
+  bool isAtomicNoRet(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::IsAtomicNoRet;
   }
 
@@ -790,7 +811,7 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::IsAtomicRet;
   }
 
-  bool isAtomicRet(uint16_t Opcode) const {
+  bool isAtomicRet(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::IsAtomicRet;
   }
 
@@ -799,13 +820,17 @@ public:
                                    SIInstrFlags::IsAtomicNoRet);
   }
 
-  bool isAtomic(uint16_t Opcode) const {
+  bool isAtomic(uint32_t Opcode) const {
     return get(Opcode).TSFlags & (SIInstrFlags::IsAtomicRet |
                                   SIInstrFlags::IsAtomicNoRet);
   }
 
   static bool mayWriteLDSThroughDMA(const MachineInstr &MI) {
-    return isLDSDMA(MI) && MI.getOpcode() != AMDGPU::BUFFER_STORE_LDS_DWORD;
+    unsigned Opc = MI.getOpcode();
+    // Exclude instructions that read FROM LDS (not write to it)
+    return isLDSDMA(MI) && Opc != AMDGPU::BUFFER_STORE_LDS_DWORD &&
+           Opc != AMDGPU::TENSOR_STORE_FROM_LDS_d2 &&
+           Opc != AMDGPU::TENSOR_STORE_FROM_LDS_d4;
   }
 
   static bool isSBarrierSCCWrite(unsigned Opcode) {
@@ -824,7 +849,7 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::WQM;
   }
 
-  bool isWQM(uint16_t Opcode) const {
+  bool isWQM(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::WQM;
   }
 
@@ -832,7 +857,7 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::DisableWQM;
   }
 
-  bool isDisableWQM(uint16_t Opcode) const {
+  bool isDisableWQM(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::DisableWQM;
   }
 
@@ -847,7 +872,7 @@ public:
            (isSpill(MI) && isVALU(MI));
   }
 
-  bool isVGPRSpill(uint16_t Opcode) const {
+  bool isVGPRSpill(uint32_t Opcode) const {
     return Opcode != AMDGPU::SI_SPILL_S32_TO_VGPR &&
            Opcode != AMDGPU::SI_RESTORE_S32_FROM_VGPR &&
            (isSpill(Opcode) && isVALU(Opcode));
@@ -859,13 +884,13 @@ public:
            (isSpill(MI) && isSALU(MI));
   }
 
-  bool isSGPRSpill(uint16_t Opcode) const {
+  bool isSGPRSpill(uint32_t Opcode) const {
     return Opcode == AMDGPU::SI_SPILL_S32_TO_VGPR ||
            Opcode == AMDGPU::SI_RESTORE_S32_FROM_VGPR ||
            (isSpill(Opcode) && isSALU(Opcode));
   }
 
-  bool isSpill(uint16_t Opcode) const {
+  bool isSpill(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::Spill;
   }
 
@@ -875,7 +900,7 @@ public:
 
   static bool isSpill(const MachineInstr &MI) { return isSpill(MI.getDesc()); }
 
-  static bool isWWMRegSpillOpcode(uint16_t Opcode) {
+  static bool isWWMRegSpillOpcode(uint32_t Opcode) {
     return Opcode == AMDGPU::SI_SPILL_WWM_V32_SAVE ||
            Opcode == AMDGPU::SI_SPILL_WWM_AV32_SAVE ||
            Opcode == AMDGPU::SI_SPILL_WWM_V32_RESTORE ||
@@ -891,7 +916,7 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::DPP;
   }
 
-  bool isDPP(uint16_t Opcode) const {
+  bool isDPP(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::DPP;
   }
 
@@ -899,7 +924,7 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::TRANS;
   }
 
-  bool isTRANS(uint16_t Opcode) const {
+  bool isTRANS(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::TRANS;
   }
 
@@ -907,7 +932,7 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::VOP3P;
   }
 
-  bool isVOP3P(uint16_t Opcode) const {
+  bool isVOP3P(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::VOP3P;
   }
 
@@ -915,7 +940,7 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::VINTRP;
   }
 
-  bool isVINTRP(uint16_t Opcode) const {
+  bool isVINTRP(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::VINTRP;
   }
 
@@ -925,14 +950,14 @@ public:
 
   static bool isMAI(const MachineInstr &MI) { return isMAI(MI.getDesc()); }
 
-  bool isMAI(uint16_t Opcode) const { return isMAI(get(Opcode)); }
+  bool isMAI(uint32_t Opcode) const { return isMAI(get(Opcode)); }
 
   static bool isMFMA(const MachineInstr &MI) {
     return isMAI(MI) && MI.getOpcode() != AMDGPU::V_ACCVGPR_WRITE_B32_e64 &&
            MI.getOpcode() != AMDGPU::V_ACCVGPR_READ_B32_e64;
   }
 
-  bool isMFMA(uint16_t Opcode) const {
+  bool isMFMA(uint32_t Opcode) const {
     return isMAI(Opcode) && Opcode != AMDGPU::V_ACCVGPR_WRITE_B32_e64 &&
            Opcode != AMDGPU::V_ACCVGPR_READ_B32_e64;
   }
@@ -945,7 +970,7 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::IsWMMA;
   }
 
-  bool isWMMA(uint16_t Opcode) const {
+  bool isWMMA(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::IsWMMA;
   }
 
@@ -953,7 +978,7 @@ public:
     return isMFMA(MI) || isWMMA(MI) || isSWMMAC(MI);
   }
 
-  bool isMFMAorWMMA(uint16_t Opcode) const {
+  bool isMFMAorWMMA(uint32_t Opcode) const {
     return isMFMA(Opcode) || isWMMA(Opcode) || isSWMMAC(Opcode);
   }
 
@@ -961,11 +986,11 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::IsSWMMAC;
   }
 
-  bool isSWMMAC(uint16_t Opcode) const {
+  bool isSWMMAC(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::IsSWMMAC;
   }
 
-  bool isDOT(uint16_t Opcode) const {
+  bool isDOT(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::IsDOT;
   }
 
@@ -979,7 +1004,7 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::LDSDIR;
   }
 
-  bool isLDSDIR(uint16_t Opcode) const {
+  bool isLDSDIR(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::LDSDIR;
   }
 
@@ -987,7 +1012,7 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::VINTERP;
   }
 
-  bool isVINTERP(uint16_t Opcode) const {
+  bool isVINTERP(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::VINTERP;
   }
 
@@ -1001,6 +1026,14 @@ public:
 
   static bool usesLGKM_CNT(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::LGKM_CNT;
+  }
+
+  static bool usesASYNC_CNT(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::ASYNC_CNT;
+  }
+
+  bool usesASYNC_CNT(uint32_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::ASYNC_CNT;
   }
 
   // Most sopk treat the immediate as a signed 16-bit, however some
@@ -1019,7 +1052,7 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::SCALAR_STORE;
   }
 
-  bool isScalarStore(uint16_t Opcode) const {
+  bool isScalarStore(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::SCALAR_STORE;
   }
 
@@ -1027,7 +1060,7 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::FIXED_SIZE;
   }
 
-  bool isFixedSize(uint16_t Opcode) const {
+  bool isFixedSize(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::FIXED_SIZE;
   }
 
@@ -1035,7 +1068,7 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::FPClamp;
   }
 
-  bool hasFPClamp(uint16_t Opcode) const {
+  bool hasFPClamp(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::FPClamp;
   }
 
@@ -1055,7 +1088,7 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::FPDPRounding;
   }
 
-  bool usesFPDPRounding(uint16_t Opcode) const {
+  bool usesFPDPRounding(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::FPDPRounding;
   }
 
@@ -1063,7 +1096,7 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::FPAtomic;
   }
 
-  bool isFPAtomic(uint16_t Opcode) const {
+  bool isFPAtomic(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::FPAtomic;
   }
 
@@ -1108,7 +1141,7 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::TiedSourceNotRead;
   }
 
-  bool doesNotReadTiedSource(uint16_t Opcode) const {
+  bool doesNotReadTiedSource(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::TiedSourceNotRead;
   }
 
@@ -1166,6 +1199,7 @@ public:
     case AMDGPU::S_WAIT_EXPCNT:
     case AMDGPU::S_WAIT_DSCNT:
     case AMDGPU::S_WAIT_KMCNT:
+    case AMDGPU::S_WAIT_XCNT:
     case AMDGPU::S_WAIT_IDLE:
       return true;
     default:
@@ -1329,6 +1363,7 @@ public:
                          StringRef &ErrInfo) const override;
 
   unsigned getVALUOp(const MachineInstr &MI) const;
+  unsigned getVALUOp(unsigned Opc) const;
 
   void insertScratchExecCopy(MachineFunction &MF, MachineBasicBlock &MBB,
                              MachineBasicBlock::iterator MBBI,
@@ -1351,7 +1386,7 @@ public:
 
   /// Return the size in bytes of the operand OpNo on the given
   // instruction opcode.
-  unsigned getOpSize(uint16_t Opcode, unsigned OpNo) const {
+  unsigned getOpSize(uint32_t Opcode, unsigned OpNo) const {
     const MCOperandInfo &OpInfo = get(Opcode).operands()[OpNo];
 
     if (OpInfo.RegClass == -1) {
@@ -1521,13 +1556,28 @@ public:
     return get(pseudoToMCOpcode(Opcode));
   }
 
-  Register isStackAccess(const MachineInstr &MI, int &FrameIndex) const;
-  Register isSGPRStackAccess(const MachineInstr &MI, int &FrameIndex) const;
+  Register isStackAccess(const MachineInstr &MI, int &FrameIndex,
+                         TypeSize &MemBytes) const;
+  Register isSGPRStackAccess(const MachineInstr &MI, int &FrameIndex,
+                             TypeSize &MemBytes) const;
 
   Register isLoadFromStackSlot(const MachineInstr &MI,
-                               int &FrameIndex) const override;
+                               int &FrameIndex) const override {
+    TypeSize MemBytes = TypeSize::getZero();
+    return isLoadFromStackSlot(MI, FrameIndex, MemBytes);
+  }
+
+  Register isLoadFromStackSlot(const MachineInstr &MI, int &FrameIndex,
+                               TypeSize &MemBytes) const override;
+
   Register isStoreToStackSlot(const MachineInstr &MI,
-                              int &FrameIndex) const override;
+                              int &FrameIndex) const override {
+    TypeSize MemBytes = TypeSize::getZero();
+    return isStoreToStackSlot(MI, FrameIndex, MemBytes);
+  }
+
+  Register isStoreToStackSlot(const MachineInstr &MI, int &FrameIndex,
+                              TypeSize &MemBytes) const override;
 
   unsigned getInstBundleSize(const MachineInstr &MI) const;
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
@@ -1551,7 +1601,8 @@ public:
                                  const ScheduleDAG *DAG) const override;
 
   ScheduleHazardRecognizer *
-  CreateTargetPostRAHazardRecognizer(const MachineFunction &MF) const override;
+  CreateTargetPostRAHazardRecognizer(const MachineFunction &MF,
+                                     MachineLoopInfo *MLI) const override;
 
   ScheduleHazardRecognizer *
   CreateTargetMIHazardRecognizer(const InstrItineraryData *II,
@@ -1562,6 +1613,8 @@ public:
 
   bool isBasicBlockPrologue(const MachineInstr &MI,
                             Register Reg = Register()) const override;
+
+  bool canAddToBBProlog(const MachineInstr &MI) const;
 
   MachineInstr *createPHIDestinationCopy(MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator InsPt,
@@ -1637,22 +1690,21 @@ public:
                            const MachineInstr &MI,
                            unsigned *PredCost = nullptr) const override;
 
+  const MachineOperand &getCalleeOperand(const MachineInstr &MI) const override;
+
   InstructionUniformity
   getInstructionUniformity(const MachineInstr &MI) const final;
 
   InstructionUniformity
   getGenericInstructionUniformity(const MachineInstr &MI) const;
 
-  const MIRFormatter *getMIRFormatter() const override {
-    if (!Formatter)
-      Formatter = std::make_unique<AMDGPUMIRFormatter>();
-    return Formatter.get();
-  }
+  const MIRFormatter *getMIRFormatter() const override;
 
   static unsigned getDSShaderTypeValue(const MachineFunction &MF);
 
   const TargetSchedModel &getSchedModel() const { return SchedModel; }
 
+  // FIXME: This should be removed
   // Enforce operand's \p OpName even alignment if required by target.
   // This is used if an operand is a 32 bit register but needs to be aligned
   // regardless.
@@ -1705,86 +1757,86 @@ bool execMayBeModifiedBeforeAnyUse(const MachineRegisterInfo &MRI,
 namespace AMDGPU {
 
   LLVM_READONLY
-  int getVOPe64(uint16_t Opcode);
+  int32_t getVOPe64(uint32_t Opcode);
 
   LLVM_READONLY
-  int getVOPe32(uint16_t Opcode);
+  int32_t getVOPe32(uint32_t Opcode);
 
   LLVM_READONLY
-  int getSDWAOp(uint16_t Opcode);
+  int32_t getSDWAOp(uint32_t Opcode);
 
   LLVM_READONLY
-  int getDPPOp32(uint16_t Opcode);
+  int32_t getDPPOp32(uint32_t Opcode);
 
   LLVM_READONLY
-  int getDPPOp64(uint16_t Opcode);
+  int32_t getDPPOp64(uint32_t Opcode);
 
   LLVM_READONLY
-  int getBasicFromSDWAOp(uint16_t Opcode);
+  int32_t getBasicFromSDWAOp(uint32_t Opcode);
 
   LLVM_READONLY
-  int getCommuteRev(uint16_t Opcode);
+  int32_t getCommuteRev(uint32_t Opcode);
 
   LLVM_READONLY
-  int getCommuteOrig(uint16_t Opcode);
+  int32_t getCommuteOrig(uint32_t Opcode);
 
   LLVM_READONLY
-  int getAddr64Inst(uint16_t Opcode);
+  int32_t getAddr64Inst(uint32_t Opcode);
 
   /// Check if \p Opcode is an Addr64 opcode.
   ///
   /// \returns \p Opcode if it is an Addr64 opcode, otherwise -1.
   LLVM_READONLY
-  int getIfAddr64Inst(uint16_t Opcode);
+  int32_t getIfAddr64Inst(uint32_t Opcode);
 
   LLVM_READONLY
-  int getSOPKOp(uint16_t Opcode);
+  int32_t getSOPKOp(uint32_t Opcode);
 
   /// \returns SADDR form of a FLAT Global instruction given an \p Opcode
   /// of a VADDR form.
   LLVM_READONLY
-  int getGlobalSaddrOp(uint16_t Opcode);
+  int32_t getGlobalSaddrOp(uint32_t Opcode);
 
   /// \returns VADDR form of a FLAT Global instruction given an \p Opcode
   /// of a SADDR form.
   LLVM_READONLY
-  int getGlobalVaddrOp(uint16_t Opcode);
+  int32_t getGlobalVaddrOp(uint32_t Opcode);
 
   LLVM_READONLY
-  int getVCMPXNoSDstOp(uint16_t Opcode);
+  int32_t getVCMPXNoSDstOp(uint32_t Opcode);
 
   /// \returns ST form with only immediate offset of a FLAT Scratch instruction
   /// given an \p Opcode of an SS (SADDR) form.
   LLVM_READONLY
-  int getFlatScratchInstSTfromSS(uint16_t Opcode);
+  int32_t getFlatScratchInstSTfromSS(uint32_t Opcode);
 
   /// \returns SV (VADDR) form of a FLAT Scratch instruction given an \p Opcode
   /// of an SVS (SADDR + VADDR) form.
   LLVM_READONLY
-  int getFlatScratchInstSVfromSVS(uint16_t Opcode);
+  int32_t getFlatScratchInstSVfromSVS(uint32_t Opcode);
 
   /// \returns SS (SADDR) form of a FLAT Scratch instruction given an \p Opcode
   /// of an SV (VADDR) form.
   LLVM_READONLY
-  int getFlatScratchInstSSfromSV(uint16_t Opcode);
+  int32_t getFlatScratchInstSSfromSV(uint32_t Opcode);
 
   /// \returns SV (VADDR) form of a FLAT Scratch instruction given an \p Opcode
   /// of an SS (SADDR) form.
   LLVM_READONLY
-  int getFlatScratchInstSVfromSS(uint16_t Opcode);
+  int32_t getFlatScratchInstSVfromSS(uint32_t Opcode);
 
   /// \returns earlyclobber version of a MAC MFMA is exists.
   LLVM_READONLY
-  int getMFMAEarlyClobberOp(uint16_t Opcode);
+  int32_t getMFMAEarlyClobberOp(uint32_t Opcode);
 
   /// \returns Version of an MFMA instruction which uses AGPRs for srcC and
   /// vdst, given an \p Opcode of an MFMA which uses VGPRs for srcC/vdst.
   LLVM_READONLY
-  int getMFMASrcCVDstAGPROp(uint16_t Opcode);
+  int32_t getMFMASrcCVDstAGPROp(uint32_t Opcode);
 
   /// \returns v_cmpx version of a v_cmp instruction.
   LLVM_READONLY
-  int getVCMPXOpFromVCMP(uint16_t Opcode);
+  int32_t getVCMPXOpFromVCMP(uint32_t Opcode);
 
   const uint64_t RSRC_DATA_FORMAT = 0xf00000000000LL;
   const uint64_t RSRC_ELEMENT_SIZE_SHIFT = (32 + 19);
@@ -1794,7 +1846,7 @@ namespace AMDGPU {
 } // end namespace AMDGPU
 
 namespace AMDGPU {
-enum AsmComments {
+enum AsmComments : MachineInstr::AsmPrinterFlagTy {
   // For sgpr to vgpr spill instructions
   SGPR_SPILL = MachineInstr::TAsmComments
 };

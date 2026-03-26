@@ -126,9 +126,12 @@ def _generate_driver_tools_def_impl(ctx):
     # This is consistent with how tools/llvm-driver/CMakeLists.txt does it,
     # and this makes sure that more specific tools are checked first.
     # For example, "clang-scan-deps" should not match "clang".
-    tools = [label_to_name[tool.label.name] for tool in ctx.attr.driver_tools]
+    tools = sorted(
+        [label_to_name[tool.label.name] for tool in ctx.attr.driver_tools],
+        reverse = True,
+    )
     tool_alias_pairs = []
-    for tool_name in reversed(tools):
+    for tool_name in tools:
         tool_alias_pairs.append((tool_name, tool_name))
         for extra_alias in _EXTRA_ALIASES.get(tool_name, []):
             tool_alias_pairs.append((tool_name, extra_alias))
@@ -165,13 +168,21 @@ See tools/llvm-driver/CMakeLists.txt for the reference implementation.""",
 
 def llvm_driver_cc_binary(
         name,
+        needs_posix_utility_signal_handling = False,
         deps = None,
         **kwargs):
     """cc_binary wrapper for binaries using the llvm-driver template."""
+    init_llvm_args = ""
+    if needs_posix_utility_signal_handling:
+        init_llvm_args = ", /*InstallPipeSignalExitHandler=*/true, /*NeedsPOSIXUtilitySignalHandling=*/true"
+
     expand_template(
         name = "_gen_" + name,
         out = name + "-driver.cpp",
-        substitutions = {"@TOOL_NAME@": name.replace("-", "_")},
+        substitutions = {
+            "@TOOL_NAME@": name.replace("-", "_"),
+            "@INITLLVM_ARGS@": init_llvm_args,
+        },
         template = "//llvm:cmake/modules/llvm-driver-template.cpp.in",
     )
     deps = deps or []

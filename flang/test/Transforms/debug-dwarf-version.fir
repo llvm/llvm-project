@@ -8,7 +8,7 @@
 // RUN:         | FileCheck --check-prefix=CHECK-DWARF2 %s
 // RUN: fir-opt --add-debug-info= --mlir-print-debuginfo %s \
 // RUN:         | FileCheck --check-prefix=CHECK-WITHOUT-VERSION %s
-// REQUIRES: system-linux
+// REQUIRES: system-linux || system-aix
 
 module {
 } loc(#loc)

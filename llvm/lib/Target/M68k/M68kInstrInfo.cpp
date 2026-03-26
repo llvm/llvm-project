@@ -94,7 +94,7 @@ bool M68kInstrInfo::AnalyzeBranchImpl(MachineBasicBlock &MBB,
 
   // Erase any instructions if allowed at the end of the scope.
   std::vector<std::reference_wrapper<llvm::MachineInstr>> EraseList;
-  auto FinalizeOnReturn = llvm::make_scope_exit([&EraseList] {
+  llvm::scope_exit FinalizeOnReturn([&EraseList] {
     for (auto &Ref : EraseList)
       Ref.get().eraseFromParent();
   });
@@ -572,27 +572,6 @@ bool M68kInstrInfo::ExpandPUSH_POP(MachineInstrBuilder &MIB,
   return true;
 }
 
-bool M68kInstrInfo::ExpandCCR(MachineInstrBuilder &MIB, bool IsToCCR) const {
-  if (MIB->getOpcode() == M68k::MOV8cd) {
-    // Promote used register to the next class
-    MachineOperand &Opd = MIB->getOperand(1);
-    Opd.setReg(getRegisterInfo().getMatchingSuperReg(
-        Opd.getReg(), M68k::MxSubRegIndex8Lo, &M68k::DR16RegClass));
-  }
-
-  // Replace the pseudo instruction with the real one
-  if (IsToCCR)
-    MIB->setDesc(get(M68k::MOV16cd));
-  else if (MIB->getMF()
-               ->getSubtarget<M68kSubtarget>()
-               .atLeastM68010())
-    MIB->setDesc(get(M68k::MOV16dc));
-  else
-    MIB->setDesc(get(M68k::MOV16ds));
-
-  return true;
-}
-
 bool M68kInstrInfo::ExpandMOVEM(MachineInstrBuilder &MIB,
                                 const MCInstrDesc &Desc, bool IsRM) const {
   int Reg = 0, Offset = 0, Base = 0;
@@ -711,6 +690,7 @@ void M68kInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                 const DebugLoc &DL, Register DstReg,
                                 Register SrcReg, bool KillSrc,
                                 bool RenamableDest, bool RenamableSrc) const {
+  const auto &Subtarget = MBB.getParent()->getSubtarget<M68kSubtarget>();
   unsigned Opc = 0;
   MachineFunction &MF = *MBB.getParent();
   const M68kSubtarget &STI = MF.getSubtarget<M68kSubtarget>();
@@ -751,17 +731,17 @@ void M68kInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     }
   } else if (DstReg == M68k::CCR) {
     if (M68k::DR8RegClass.contains(SrcReg)) {
-      Opc = M68k::MOV8cd;
-    } else if (M68k::DR16RegClass.contains(SrcReg)) {
-      Opc = M68k::MOV16cd;
-    } else if (M68k::DR32RegClass.contains(SrcReg)) {
-      Opc = M68k::MOV16cd;
-    } else {
+      // Promote used register to the next class
+      SrcReg = getRegisterInfo().getMatchingSuperReg(
+          SrcReg, M68k::MxSubRegIndex8Lo, &M68k::DR16RegClass);
+    } else if (!M68k::DR16RegClass.contains(SrcReg) &&
+               !M68k::DR32RegClass.contains(SrcReg)) {
       LLVM_DEBUG(dbgs() << "Cannot copy " << RI.getName(SrcReg) << " to CCR\n");
       llvm_unreachable("Invalid register for MOVE to CCR");
     }
   } else if (SrcReg == M68k::SR || DstReg == M68k::SR)
     llvm_unreachable("Cannot emit SR copy instruction");
+  }
 
   if (!Opc) {
     LLVM_DEBUG(dbgs() << "Cannot copy " << RI.getName(SrcReg) << " to "
@@ -896,7 +876,7 @@ void M68kInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator MI,
                                          Register DstReg, int FrameIndex,
                                          const TargetRegisterClass *RC,
-                                         Register VReg,
+                                         Register VReg, unsigned SubReg,
                                          MachineInstr::MIFlag Flags) const {
   const MachineFrameInfo &MFI = MBB.getParent()->getFrameInfo();
   assert(MFI.getObjectSize(FrameIndex) >= TRI.getSpillSize(*RC) &&

@@ -45,7 +45,7 @@ public:
   PluginProperties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(
         PlatformAndroid::GetPluginNameStatic(false));
-    m_collection_sp->Initialize(g_android_properties);
+    m_collection_sp->Initialize(g_android_properties_def);
   }
 };
 

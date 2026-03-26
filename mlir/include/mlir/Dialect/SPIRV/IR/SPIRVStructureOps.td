@@ -187,7 +187,7 @@ def SPIRV_EntryPointOp : SPIRV_Op<"EntryPoint", [InModuleScope]> {
     Execution Model is the execution model for the entry point and its
     static call tree. See Execution Model.
 
-    Entry Point must be the Result <id> of an OpFunction instruction.
+    Entry Point must be the Result `<id>` of an OpFunction instruction.
 
     Name is a name string for the entry point. A module cannot have two
     OpEntryPoint instructions with the same Execution Model and the same
@@ -244,14 +244,14 @@ def SPIRV_ExecutionModeOp : SPIRV_Op<"ExecutionMode", [InModuleScope]> {
   let summary = "Declare an execution mode for an entry point.";
 
   let description = [{
-    Entry Point must be the Entry Point <id> operand of an OpEntryPoint
+    Entry Point must be the Entry Point `<id>` operand of an OpEntryPoint
     instruction.
 
     Mode is the execution mode. See Execution Mode.
 
     This instruction is only valid when the Mode operand is an execution
     mode that takes no Extra Operands, or takes Extra Operands that are not
-    <id> operands.
+    `<id>` operands.
 
     <!-- End of AutoGen section -->
 
@@ -286,6 +286,71 @@ def SPIRV_ExecutionModeOp : SPIRV_Op<"ExecutionMode", [InModuleScope]> {
   let builders = [
     OpBuilder<(ins "spirv::FuncOp":$function,
       "spirv::ExecutionMode":$executionMode, "ArrayRef<int32_t>":$params)>];
+}
+
+// -----
+
+def SPIRV_ExecutionModeIdOp : SPIRV_Op<"ExecutionModeId", []> {
+  let summary = [{
+    Declare an execution mode for an entry point, using <id>s as Extra
+    Operands.
+  }];
+
+  let description = [{
+    Entry Point must be the Entry Point <id> operand of an OpEntryPoint
+    instruction.
+
+    Mode is the execution mode. See Execution Mode.
+
+    This instruction is only valid if the Mode operand is an execution mode
+    that takes Extra Operands that are <id> operands. Otherwise, use
+    OpExecutionMode.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    execution-mode ::= "Invocations" | "SpacingEqual" |
+                           <and other SPIR-V execution modes...>
+    execution-mode-id-op ::= `spirv.ExecutionMode ` ssa-use execution-mode
+                              symbol-reference (`, ` symbol-reference)*
+    ```
+
+    #### Example:
+
+    ```mlir
+    spirv.ExecutionModeId @foo "LocalSizeId" @var0, @var1, @var2
+    spirv.ExecutionModeId @bar "LocalSizeHintId" @x, @y, @z
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_2>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[]>
+  ];
+
+  let arguments = (ins
+    FlatSymbolRefAttr:$fn,
+    SPIRV_ExecutionModeAttr:$execution_mode, 
+    SymbolRefArrayAttr:$values
+  );
+
+  let results = (outs);
+  
+  let hasVerifier = 1;
+  
+  let autogenSerialization = 0;
+
+  let builders = [OpBuilder<(ins "spirv::FuncOp":$function,
+                                 "spirv::ExecutionMode":$executionMode,
+                                 "ArrayRef<Attribute>":$params),
+                            [{
+      build($_builder, $_state,
+            SymbolRefAttr::get(function),
+            ExecutionModeAttr::get($_builder.getContext(), executionMode),
+            $_builder.getArrayAttr(params));
+    }]>];
 }
 
 // -----
@@ -437,7 +502,7 @@ def SPIRV_GlobalVariableOp : SPIRV_Op<"GlobalVariable", [InModuleScope, Symbol]>
     #### Example:
 
     ```mlir
-    spirv.GlobalVariable @var0 : !spirv.ptr<f32, Input> @var0
+    spirv.GlobalVariable @var0 : !spirv.ptr<f32, Input>
     spirv.GlobalVariable @var1 initializer(@var0) : !spirv.ptr<f32, Output>
     spirv.GlobalVariable @var2 bind(1, 2) : !spirv.ptr<f32, Uniform>
     spirv.GlobalVariable @var3 built_in("GlobalInvocationId") : !spirv.ptr<vector<3xi32>, Input>

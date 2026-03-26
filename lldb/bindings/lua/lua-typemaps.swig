@@ -252,7 +252,7 @@ LLDB_NUMBER_TYPEMAP(enum SWIGTYPE);
   luaL_Stream *p = (luaL_Stream *)luaL_checkudata(L, $input, LUA_FILEHANDLE);
   lldb::FileSP file_sp;
   file_sp = std::make_shared<lldb_private::NativeFile>(
-      p->f, lldb_private::NativeFile::eOpenOptionReadWrite, false);
+      p->f, lldb_private::NativeFile::eOpenOptionWriteOnly, false);
   if (!file_sp->IsValid())
     return luaL_error(L, "Invalid file");
   $1 = file_sp;

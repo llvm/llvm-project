@@ -16,13 +16,15 @@
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CrossTU/CrossTUDiagnostic.h"
+#include "clang/Driver/CreateASTUnitFromArgs.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
-#include "clang/Index/USRGeneration.h"
+#include "clang/UnifiedSymbolResolution/USRGeneration.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/YAMLParser.h"
@@ -200,10 +202,10 @@ parseCrossTUIndex(StringRef IndexPath) {
     SmallString<32> FilePath(FilePathInIndex);
     llvm::sys::path::native(FilePath, llvm::sys::path::Style::posix);
 
-    bool InsertionOccured;
-    std::tie(std::ignore, InsertionOccured) =
+    bool InsertionOccurred;
+    std::tie(std::ignore, InsertionOccurred) =
         Result.try_emplace(LookupName, FilePath.begin(), FilePath.end());
-    if (!InsertionOccured)
+    if (!InsertionOccurred)
       return llvm::make_error<IndexError>(
           index_error_code::multiple_definitions, IndexPath.str(), LineNo);
 
@@ -382,22 +384,40 @@ void CrossTranslationUnitContext::emitCrossTUDiagnostics(const IndexError &IE) {
   case index_error_code::missing_index_file:
     Context.getDiagnostics().Report(diag::err_ctu_error_opening)
         << IE.getFileName();
-    break;
+    return;
   case index_error_code::invalid_index_format:
     Context.getDiagnostics().Report(diag::err_extdefmap_parsing)
         << IE.getFileName() << IE.getLineNum();
-    break;
+    return;
   case index_error_code::multiple_definitions:
     Context.getDiagnostics().Report(diag::err_multiple_def_index)
         << IE.getLineNum();
-    break;
+    return;
   case index_error_code::triple_mismatch:
     Context.getDiagnostics().Report(diag::warn_ctu_incompat_triple)
         << IE.getFileName() << IE.getTripleToName() << IE.getTripleFromName();
-    break;
-  default:
-    break;
+    return;
+  case index_error_code::success:
+    llvm_unreachable("There should not be a success error. This case should "
+                     "have been handled by the caller.");
+    return;
+  case index_error_code::unspecified:
+  case index_error_code::missing_definition:
+  case index_error_code::failed_import:
+  case index_error_code::failed_to_get_external_ast:
+  case index_error_code::failed_to_generate_usr:
+  case index_error_code::lang_mismatch:
+  case index_error_code::lang_dialect_mismatch:
+  case index_error_code::load_threshold_reached:
+  case index_error_code::invocation_list_ambiguous:
+  case index_error_code::invocation_list_file_not_found:
+  case index_error_code::invocation_list_empty:
+  case index_error_code::invocation_list_wrong_format:
+  case index_error_code::invocation_list_lookup_unsuccessful:
+    // FIXME: Silently dropping these errors
+    return;
   }
+  llvm_unreachable("Unrecognized index_error_code.");
 }
 
 CrossTranslationUnitContext::ASTUnitStorage::ASTUnitStorage(
@@ -619,7 +639,9 @@ CrossTranslationUnitContext::ASTLoader::loadFromSource(
   auto Diags = llvm::makeIntrusiveRefCnt<DiagnosticsEngine>(DiagID, *DiagOpts,
                                                             DiagClient);
 
-  return ASTUnit::LoadFromCommandLine(
+  // This runs the driver which isn't expected to be free of sandbox violations.
+  auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+  return CreateASTUnitFromCommandLine(
       CommandLineArgs.begin(), (CommandLineArgs.end()),
       CI.getPCHContainerOperations(), DiagOpts, Diags,
       CI.getHeaderSearchOpts().ResourceDir);
@@ -709,7 +731,7 @@ llvm::Error CrossTranslationUnitContext::ASTLoader::lazyInitInvocationList() {
     return llvm::make_error<IndexError>(PreviousParsingResult);
 
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> FileContent =
-      llvm::MemoryBuffer::getFile(InvocationListFilePath);
+      CI.getVirtualFileSystem().getBufferForFile(InvocationListFilePath);
   if (!FileContent) {
     PreviousParsingResult = index_error_code::invocation_list_file_not_found;
     return llvm::make_error<IndexError>(PreviousParsingResult);

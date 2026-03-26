@@ -280,6 +280,28 @@ add_libc_test(
     libc.src.__support.CPP.bit
 )
 
+add_libc_test(
+  weak_avl_test
+  SUITE
+    libc-support-tests
+  SRCS
+    weak_avl_test.cpp
+  DEPENDS
+    libc.src.__support.weak_avl
+)
+
+add_libc_test(
+  wctype_utils_test
+  SUITE
+    libc-support-tests
+  SRCS
+    wctype_utils_test.cpp
+  DEPENDS
+    libc.src.__support.wctype_utils
+    libc.src.__support.wctype.wctype_classification_utils
+    libc.src.__support.macros.properties.os
+)
+
 add_subdirectory(CPP)
 add_subdirectory(File)
 add_subdirectory(RPC)
@@ -293,4 +315,5 @@ add_subdirectory(threads)
 # Cannot currently build this on MacOS in overlay mode
 if(NOT(LIBC_TARGET_OS_IS_DARWIN))
   add_subdirectory(wchar)
+  add_subdirectory(wctype)
 endif()

@@ -623,11 +623,6 @@ for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
 
-declare <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr>, i32 immarg, <32 x i1>, <32 x i8>)
-declare <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr>, i32 immarg, <8 x i1>, <8 x i32>)
-declare void @llvm.masked.scatter.v32i8.v32p0(<32 x i8>, <32 x ptr>, i32 immarg, <32 x i1>)
-declare void @llvm.masked.scatter.v8i32.v8p0(<8 x i32>, <8 x ptr>, i32 immarg, <8 x i1>)
-
 ; Make sure we don't crash in getTgtMemIntrinsic for a vector of pointers.
 define void @gather_of_pointers(ptr noalias nocapture %arg, ptr noalias nocapture readonly %arg1) {
 ; V-LABEL: gather_of_pointers:
@@ -756,8 +751,6 @@ bb2:                                              ; preds = %bb2, %bb
 bb18:                                             ; preds = %bb2
   ret void
 }
-
-declare <2 x ptr> @llvm.masked.gather.v2p0.v2p0(<2 x ptr>, i32 immarg, <2 x i1>, <2 x ptr>)
 
 ; Make sure we don't crash in getTgtMemIntrinsic for a vector of pointers.
 define void @scatter_of_pointers(ptr noalias nocapture %arg, ptr noalias nocapture readonly %arg1) {
@@ -888,8 +881,6 @@ bb18:                                             ; preds = %bb2
   ret void
 }
 
-declare void @llvm.masked.scatter.v2p0.v2p0(<2 x ptr>, <2 x ptr>, i32 immarg, <2 x i1>)
-
 define void @strided_load_startval_add_with_splat(ptr noalias nocapture %arg, ptr noalias nocapture readonly %arg1, i32 signext %arg2) {
 ; CHECK-LABEL: strided_load_startval_add_with_splat:
 ; CHECK:       # %bb.0: # %bb
@@ -1009,9 +1000,6 @@ bb35:                                             ; preds = %bb35, %bb32
   %i45 = icmp eq i32 %i44, 1024
   br i1 %i45, label %bb34, label %bb35
 }
-
-declare <16 x i8> @llvm.masked.gather.v16i8.v16p0(<16 x ptr>, i32 immarg, <16 x i1>, <16 x i8>)
-declare void @llvm.masked.scatter.v16i8.v16p0(<16 x i8>, <16 x ptr>, i32 immarg, <16 x i1>)
 
 define void @gather_no_scalar_remainder(ptr noalias nocapture noundef %arg, ptr noalias nocapture noundef readonly %arg1, i64 noundef %arg2) {
 ; CHECK-LABEL: gather_no_scalar_remainder:

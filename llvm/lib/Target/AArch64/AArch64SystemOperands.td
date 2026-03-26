@@ -435,6 +435,7 @@ let Requires = [{ {AArch64::FeaturePRFM_SLC} }] in {
 def : PRFM<"pst", 0b10, "slc", 0b11, "keep", 0b0>;
 def : PRFM<"pst", 0b10, "slc", 0b11, "strm", 0b1>;
 }
+def : PRFM<"ir",  0b11, "",    0b00, "",     0b0>;
 
 //===----------------------------------------------------------------------===//
 // SVE Prefetch instruction options.
@@ -903,10 +904,12 @@ multiclass TLBI<string name, bit hasTLBIP, bits<3> op1, bits<4> crn, bits<4> crm
     let ExtraRequires = ["AArch64::FeatureXS"];
   }
   if !eq(hasTLBIP, true) then {
-    def : TLBIPEntry<name, op1, crn, crm, op2, needsreg, optionalreg>;
+    def : TLBIPEntry<name, op1, crn, crm, op2, needsreg, optionalreg> {
+      let ExtraRequires = ["AArch64::FeatureD128"];
+    }
     def : TLBIPEntry<!strconcat(name, "nXS"), op1, crn, crm, op2, needsreg, optionalreg> {
       let Encoding{7} = 1;
-      let ExtraRequires = ["AArch64::FeatureXS"];
+      let ExtraRequires = ["AArch64::FeatureD128"];
     }
   }
 }
@@ -2371,6 +2374,10 @@ def : RWSysReg<"MPAMVIDCR_EL2", 0b11, 0b100, 0b1010, 0b0111, 0b000>;
 def : RWSysReg<"MPAMVIDSR_EL2", 0b11, 0b100, 0b1010, 0b0111, 0b001>;
 def : RWSysReg<"MPAMVIDSR_EL3", 0b11, 0b110, 0b1010, 0b0111, 0b001>;
 
+// v9.7a General Improvements
+//                                        Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"SCR2_EL3",                0b11, 0b110, 0b0001, 0b0010, 0b010>;
+
 //===----------------------------------------------------------------------===//
 // FEAT_SRMASK v9.6a registers
 //===----------------------------------------------------------------------===//
@@ -2434,10 +2441,8 @@ def lookupPHintByName : SearchIndex {
   let Key = ["Name"];
 }
 
-let Requires = [{ {AArch64::FeaturePCDPHINT} }] in {
-  def KEEP : PHint<0b00, 0b000, 0b0000, 0b0000, 0b000, "keep">;
-  def STRM : PHint<0b00, 0b000, 0b0000, 0b0000, 0b001, "strm">;
-}
+def KEEP : PHint<0b00, 0b000, 0b0000, 0b0000, 0b000, "keep">;
+def STRM : PHint<0b00, 0b000, 0b0000, 0b0000, 0b001, "strm">;
 
 // v9.6a Realm management extension enhancements
 def : RWSysReg<"GPCBW_EL3", 0b11, 0b110, 0b0010, 0b0001, 0b101>;
@@ -2602,14 +2607,14 @@ foreach n=0-15 in {
 //===----------------------------------------------------------------------===//
 
 // GIC
-class GIC<string name, bits<3> op1, bits<4> crn, bits<4> crm, bits<3> op2> {
+class GIC<string name, bits<3> op1, bits<4> crn, bits<4> crm, bits<3> op2, bit needsreg = 1> {
   string Name = name;
   bits<14> Encoding;
   let Encoding{13-11} = op1;
   let Encoding{10-7} = crn;
   let Encoding{6-3} = crm;
   let Encoding{2-0} = op2;
-  bit NeedsReg = 1;
+  bit NeedsReg = needsreg;
   string RequiresStr = [{ {AArch64::FeatureGCIE} }];
 }
 
@@ -2686,12 +2691,12 @@ def : GSB<"ack",      0b000, 0b1100, 0b0000, 0b001>;
 def : GICR<"cdia",    0b000, 0b1100, 0b0011, 0b000>;
 def : GICR<"cdnmia",  0b000, 0b1100, 0b0011, 0b001>;
 
-//                    Op1    CRn     CRm     Op2
+//                    Op1    CRn     CRm     Op2,   needsreg
 def : GIC<"cdaff",    0b000, 0b1100, 0b0001, 0b011>;
 def : GIC<"cddi",     0b000, 0b1100, 0b0010, 0b000>;
 def : GIC<"cddis",    0b000, 0b1100, 0b0001, 0b000>;
 def : GIC<"cden",     0b000, 0b1100, 0b0001, 0b001>;
-def : GIC<"cdeoi",    0b000, 0b1100, 0b0001, 0b111>;
+def : GIC<"cdeoi",    0b000, 0b1100, 0b0001, 0b111, 0>;
 def : GIC<"cdhm",     0b000, 0b1100, 0b0010, 0b001>;
 def : GIC<"cdpend",   0b000, 0b1100, 0b0001, 0b100>;
 def : GIC<"cdpri",    0b000, 0b1100, 0b0001, 0b010>;

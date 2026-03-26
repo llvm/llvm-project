@@ -12,10 +12,12 @@
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
+#include <cinttypes>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -100,8 +102,10 @@ llvm::Error ValueObjectPrinter::PrintValueObject() {
     llvm::Expected<std::string> object_desc_or_err =
         GetMostSpecializedValue().GetObjectDescription();
     if (!object_desc_or_err) {
-      auto error_msg = toString(object_desc_or_err.takeError());
-      *m_stream << "error: " << error_msg << maybeNewline(error_msg);
+      *m_stream << "warning: `po` was unsuccessful, running `p` instead\n";
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Expressions),
+                     object_desc_or_err.takeError(),
+                     "Object description fallback due to error: {0}");
 
       // Print the value object directly.
       m_options.DisableObjectDescription();
@@ -467,6 +471,9 @@ bool ValueObjectPrinter::PrintValueAndSummaryIfNeeded(bool &value_printed,
         if (m_options.m_hide_pointer_value &&
             IsPointerValue(valobj.GetCompilerType())) {
         } else {
+          if (auto stripped = valobj.GetStrippedPointerValue(
+                  valobj.GetPointerValue().address))
+            m_stream->Printf(" (actual=0x%" PRIx64 ")", *stripped);
           if (ShouldShowName())
             m_stream->PutChar(' ');
           m_stream->PutCString(m_value);

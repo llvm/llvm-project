@@ -77,6 +77,7 @@ LLVM_ABI extern cl::opt<float> OpcWeight;
 LLVM_ABI extern cl::opt<float> TypeWeight;
 LLVM_ABI extern cl::opt<float> ArgWeight;
 LLVM_ABI extern cl::opt<IR2VecKind> IR2VecEmbeddingKind;
+LLVM_ABI extern cl::opt<std::string> VocabFile;
 
 /// Embedding is a datatype that wraps std::vector<double>. It provides
 /// additional functionality for arithmetic and comparison operations.
@@ -138,6 +139,11 @@ public:
   /// within the specified tolerance.
   LLVM_ABI bool approximatelyEquals(const Embedding &RHS,
                                     double Tolerance = 1e-4) const;
+
+  /// Returns true if all elements of the embedding are zero.
+  bool isZero() const {
+    return llvm::all_of(Data, [](double D) { return D == 0.0; });
+  }
 
   LLVM_ABI void print(raw_ostream &OS) const;
 };
@@ -286,6 +292,7 @@ public:
     VectorTy,
     TokenTy,
     IntegerTy,
+    ByteTy,
     FunctionTy,
     PointerTy,
     StructTy,
@@ -326,6 +333,16 @@ public:
 
   Vocabulary(Vocabulary &&) = default;
   Vocabulary &operator=(Vocabulary &&Other) = delete;
+
+  /// Create a Vocabulary by loading embeddings from a JSON file.
+  /// This is the primary entry point for programmatic vocabulary creation,
+  /// suitable for use in Python bindings or other contexts where command-line
+  /// options are not available. Weights are applied to scale the embeddings
+  /// for opcodes, types, and arguments respectively.
+  LLVM_ABI static Expected<Vocabulary> fromFile(StringRef VocabFilePath,
+                                                float OpcWeight = 1.0,
+                                                float TypeWeight = 0.5,
+                                                float ArgWeight = 0.2);
 
   LLVM_ABI bool isValid() const {
     return Storage.size() == NumCanonicalEntries;
@@ -449,9 +466,9 @@ private:
 
   /// String mappings for CanonicalTypeID values
   static constexpr StringLiteral CanonicalTypeNames[] = {
-      "FloatTy",   "VoidTy",   "LabelTy",   "MetadataTy",
-      "VectorTy",  "TokenTy",  "IntegerTy", "FunctionTy",
-      "PointerTy", "StructTy", "ArrayTy",   "UnknownTy"};
+      "FloatTy",  "VoidTy",    "LabelTy",  "MetadataTy", "VectorTy",
+      "TokenTy",  "IntegerTy", "ByteTy",   "FunctionTy", "PointerTy",
+      "StructTy", "ArrayTy",   "UnknownTy"};
   static_assert(std::size(CanonicalTypeNames) ==
                     static_cast<unsigned>(CanonicalTypeID::MaxCanonicalType),
                 "CanonicalTypeNames array size must match MaxCanonicalType");
@@ -479,6 +496,7 @@ private:
       CanonicalTypeID::VectorTy,   // X86_AMXTyID
       CanonicalTypeID::TokenTy,    // TokenTyID
       CanonicalTypeID::IntegerTy,  // IntegerTyID
+      CanonicalTypeID::ByteTy,     // ByteTyID
       CanonicalTypeID::FunctionTy, // FunctionTyID
       CanonicalTypeID::PointerTy,  // PointerTyID
       CanonicalTypeID::StructTy,   // StructTyID
@@ -513,6 +531,13 @@ private:
     assert(Index < MaxPredicateKinds && "Invalid predicate index");
     return getPredicateFromLocalIndex(Index);
   }
+
+  using VocabMap = std::map<std::string, Embedding>;
+
+  /// Generate VocabStorage from vocabulary maps.
+  static VocabStorage buildVocabStorage(const VocabMap &OpcVocab,
+                                        const VocabMap &TypeVocab,
+                                        const VocabMap &ArgVocab);
 };
 
 /// Embedder provides the interface to generate embeddings (vector
@@ -612,13 +637,8 @@ public:
 /// mapping between an entity of the IR (like opcode, type, argument, etc.) and
 /// its corresponding embedding.
 class IR2VecVocabAnalysis : public AnalysisInfoMixin<IR2VecVocabAnalysis> {
-  using VocabMap = std::map<std::string, ir2vec::Embedding>;
   std::optional<ir2vec::VocabStorage> Vocab;
 
-  Error readVocabulary(VocabMap &OpcVocab, VocabMap &TypeVocab,
-                       VocabMap &ArgVocab);
-  void generateVocabStorage(VocabMap &OpcVocab, VocabMap &TypeVocab,
-                            VocabMap &ArgVocab);
   void emitError(Error Err, LLVMContext &Ctx);
 
 public:

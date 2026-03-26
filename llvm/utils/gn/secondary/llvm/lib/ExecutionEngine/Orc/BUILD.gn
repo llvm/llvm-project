@@ -16,17 +16,16 @@ static_library("Orc") {
   ]
   sources = [
     "AbsoluteSymbols.cpp",
+    "BacktraceTools.cpp",
     "COFF.cpp",
     "COFFPlatform.cpp",
     "COFFVCRuntimeSupport.cpp",
     "CompileOnDemandLayer.cpp",
     "CompileUtils.cpp",
     "Core.cpp",
-    "DebugObjectManagerPlugin.cpp",
     "DebugUtils.cpp",
     "EHFrameRegistrationPlugin.cpp",
     "ELFNixPlatform.cpp",
-    "EPCDebugObjectRegistrar.cpp",
     "EPCDynamicLibrarySearchGenerator.cpp",
     "EPCGenericDylibManager.cpp",
     "EPCGenericJITLinkMemoryManager.cpp",

@@ -9,7 +9,7 @@ define float @fold_abs_in_branch(float %arg1, float %arg2) {
 ; GFX10-NEXT:    s_mov_b32 s4, exec_lo
 ; GFX10-NEXT:    v_add_f32_e32 v1, v0, v1
 ; GFX10-NEXT:    v_add_f32_e64 v0, |v1|, |v1|
-; GFX10-NEXT:    v_cmpx_nlt_f32_e32 1.0, v0
+; GFX10-NEXT:    v_cmpx_ge_f32_e32 1.0, v0
 ; GFX10-NEXT:  ; %bb.1: ; %if
 ; GFX10-NEXT:    v_mul_f32_e64 v0, 0x3e4ccccd, |v1|
 ; GFX10-NEXT:  ; %bb.2: ; %exit
@@ -40,7 +40,7 @@ define float @fold_abs_in_branch_multiple_users(float %arg1, float %arg2) {
 ; GFX10-NEXT:    s_mov_b32 s4, exec_lo
 ; GFX10-NEXT:    v_add_f32_e32 v0, v0, v1
 ; GFX10-NEXT:    v_add_f32_e64 v1, |v0|, |v0|
-; GFX10-NEXT:    v_cmpx_nlt_f32_e32 1.0, v1
+; GFX10-NEXT:    v_cmpx_ge_f32_e32 1.0, v1
 ; GFX10-NEXT:  ; %bb.1: ; %if
 ; GFX10-NEXT:    v_mul_f32_e64 v1, 0x3e4ccccd, |v0|
 ; GFX10-NEXT:  ; %bb.2: ; %exit
@@ -126,7 +126,7 @@ define float @fold_abs_in_branch_fabs(float %arg1, float %arg2) {
 ; GFX10-NEXT:    s_mov_b32 s4, exec_lo
 ; GFX10-NEXT:    v_add_f32_e32 v1, v0, v1
 ; GFX10-NEXT:    v_add_f32_e64 v0, |v1|, |v1|
-; GFX10-NEXT:    v_cmpx_nlt_f32_e32 1.0, v0
+; GFX10-NEXT:    v_cmpx_ge_f32_e32 1.0, v0
 ; GFX10-NEXT:  ; %bb.1: ; %if
 ; GFX10-NEXT:    v_mul_f32_e64 v0, 0x3e4ccccd, |v1|
 ; GFX10-NEXT:  ; %bb.2: ; %exit
@@ -158,7 +158,7 @@ define float @fold_abs_in_branch_phi(float %arg1, float %arg2) {
 ; GFX10-NEXT:    s_mov_b32 s4, exec_lo
 ; GFX10-NEXT:    v_add_f32_e32 v0, v0, v1
 ; GFX10-NEXT:    v_add_f32_e64 v0, |v0|, |v0|
-; GFX10-NEXT:    v_cmpx_nlt_f32_e32 1.0, v0
+; GFX10-NEXT:    v_cmpx_ge_f32_e32 1.0, v0
 ; GFX10-NEXT:    s_cbranch_execz .LBB5_3
 ; GFX10-NEXT:  ; %bb.1: ; %header.preheader
 ; GFX10-NEXT:    ; implicit-def: $vgpr0
@@ -166,7 +166,6 @@ define float @fold_abs_in_branch_phi(float %arg1, float %arg2) {
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-NEXT:    v_mul_f32_e32 v0, 0x40400000, v0
 ; GFX10-NEXT:    v_cmp_lt_f32_e32 vcc_lo, -1.0, v0
-; GFX10-NEXT:    v_and_b32_e32 v0, 0x7fffffff, v0
 ; GFX10-NEXT:    s_cbranch_vccnz .LBB5_2
 ; GFX10-NEXT:  .LBB5_3: ; %Flow1
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
@@ -203,7 +202,7 @@ define float @fold_neg_in_branch(float %arg1, float %arg2) {
 ; GFX10-NEXT:    s_mov_b32 s4, exec_lo
 ; GFX10-NEXT:    v_add_f32_e32 v0, v0, v1
 ; GFX10-NEXT:    v_mov_b32_e32 v1, v0
-; GFX10-NEXT:    v_cmpx_nlt_f32_e32 1.0, v0
+; GFX10-NEXT:    v_cmpx_ge_f32_e32 1.0, v0
 ; GFX10-NEXT:  ; %bb.1: ; %if
 ; GFX10-NEXT:    v_rcp_f32_e64 v1, -v0
 ; GFX10-NEXT:    v_mul_f32_e64 v1, |v0|, v1

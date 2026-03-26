@@ -12,6 +12,7 @@
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DarwinSDKInfo.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceLocation.h"
@@ -25,7 +26,6 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/FrontendPluginRegistry.h"
 #include "clang/Frontend/TextDiagnostic.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
@@ -607,15 +607,21 @@ static void SetupLangOpts(CompilerInstance &compiler,
     lang_opts.CPlusPlus11 = true;
     compiler.getHeaderSearchOpts().UseLibcxx = true;
     [[fallthrough]];
-  case lldb::eLanguageTypeC_plus_plus_03:
+  case lldb::eLanguageTypeC_plus_plus_03: {
     lang_opts.CPlusPlus = true;
     if (process_sp
         // We're stopped in a frame without debug-info. The user probably
         // intends to make global queries (which should include Objective-C).
-        && !(frame_sp && frame_sp->HasDebugInformation()))
+        && !(frame_sp && frame_sp->HasDebugInformation())) {
       lang_opts.ObjC =
           process_sp->GetLanguageRuntime(lldb::eLanguageTypeObjC) != nullptr;
-    break;
+      if (lang_opts.ObjC) {
+        language_for_note = lldb::eLanguageTypeObjC_plus_plus;
+        language_fallback_reason = "Possibly stopped inside system library, so "
+                                   "speculatively enabled Objective-C. ";
+      }
+    }
+  } break;
   case lldb::eLanguageTypeObjC_plus_plus:
   case lldb::eLanguageTypeUnknown:
   default:
@@ -719,10 +725,24 @@ static void SetupImportStdModuleLangOpts(CompilerInstance &compiler,
 // Implementation of ClangExpressionParser
 //===----------------------------------------------------------------------===//
 
+static void SetPointerAuthOptionsForArm64e(LangOptions &lang_opts) {
+  lang_opts.PointerAuthIntrinsics = true;
+  lang_opts.PointerAuthCalls = true;
+  lang_opts.PointerAuthReturns = true;
+  lang_opts.PointerAuthAuthTraps = true;
+  lang_opts.PointerAuthIndirectGotos = true;
+  lang_opts.PointerAuthVTPtrAddressDiscrimination = true;
+  lang_opts.PointerAuthVTPtrTypeDiscrimination = true;
+  lang_opts.PointerAuthObjcIsa = true;
+  lang_opts.PointerAuthObjcClassROPointers = true;
+  lang_opts.PointerAuthObjcInterfaceSel = true;
+}
+
 ClangExpressionParser::ClangExpressionParser(
     ExecutionContextScope *exe_scope, Expression &expr,
     bool generate_debug_info, DiagnosticManager &diagnostic_manager,
-    std::vector<std::string> include_directories, std::string filename)
+    std::vector<std::string> include_directories, std::string filename,
+    bool force_disable_ptrauth_codegen)
     : ExpressionParser(exe_scope, expr, generate_debug_info), m_compiler(),
       m_pp_callbacks(nullptr),
       m_include_directories(std::move(include_directories)),
@@ -770,24 +790,28 @@ ClangExpressionParser::ClangExpressionParser(
   if (auto *target_info = TargetInfo::CreateTargetInfo(
           m_compiler->getDiagnostics(),
           m_compiler->getInvocation().getTargetOpts())) {
-    if (log) {
-      LLDB_LOGF(log, "Target datalayout string: '%s'",
-                target_info->getDataLayoutString());
-      LLDB_LOGF(log, "Target ABI: '%s'", target_info->getABI().str().c_str());
-      LLDB_LOGF(log, "Target vector alignment: %d",
-                target_info->getMaxVectorAlign());
-    }
+    LLDB_LOGF(log, "Target datalayout string: '%s'",
+              target_info->getDataLayoutString());
+    LLDB_LOGF(log, "Target ABI: '%s'", target_info->getABI().str().c_str());
+    LLDB_LOGF(log, "Target vector alignment: %d",
+              target_info->getMaxVectorAlign());
     m_compiler->setTarget(target_info);
   } else {
-    if (log)
-      LLDB_LOGF(log, "Failed to create TargetInfo for '%s'",
-                m_compiler->getTargetOpts().Triple.c_str());
+    LLDB_LOGF(log, "Failed to create TargetInfo for '%s'",
+              m_compiler->getTargetOpts().Triple.c_str());
 
     lldbassert(false && "Failed to create TargetInfo.");
   }
 
   // 4. Set language options.
   SetupLangOpts(*m_compiler, *exe_scope, expr, diagnostic_manager);
+
+  const llvm::Triple triple = target_sp->GetArchitecture().GetTriple();
+  const bool enable_ptrauth =
+      triple.isArm64e() && !force_disable_ptrauth_codegen;
+  if (enable_ptrauth)
+    SetPointerAuthOptionsForArm64e(m_compiler->getLangOpts());
+
   auto *clang_expr = dyn_cast<ClangUserExpression>(&m_expr);
   if (clang_expr && clang_expr->DidImportCxxModules()) {
     LLDB_LOG(log, "Adding lang options for importing C++ modules");
@@ -804,6 +828,12 @@ ClangExpressionParser::ClangExpressionParser(
     m_compiler->getCodeGenOpts().setDebugInfo(codegenoptions::FullDebugInfo);
   else
     m_compiler->getCodeGenOpts().setDebugInfo(codegenoptions::NoDebugInfo);
+
+  if (enable_ptrauth) {
+    PointerAuthOptions &ptrauth_opts = m_compiler->getCodeGenOpts().PointerAuth;
+    clang::CompilerInvocation::setDefaultPointerAuthOptions(
+        ptrauth_opts, m_compiler->getLangOpts(), triple);
+  }
 
   // Disable some warnings.
   SetupDefaultClangDiagnostics(*m_compiler);
@@ -874,11 +904,8 @@ ClangExpressionParser::ClangExpressionParser(
   std::string module_name("$__lldb_module");
 
   m_llvm_context = std::make_unique<LLVMContext>();
-  m_code_generator.reset(CreateLLVMCodeGen(
-      m_compiler->getDiagnostics(), module_name,
-      m_compiler->getVirtualFileSystemPtr(), m_compiler->getHeaderSearchOpts(),
-      m_compiler->getPreprocessorOpts(), m_compiler->getCodeGenOpts(),
-      *m_llvm_context));
+  m_code_generator =
+      CreateLLVMCodeGen(*m_compiler, module_name, *m_llvm_context);
 }
 
 ClangExpressionParser::~ClangExpressionParser() = default;
@@ -1539,7 +1566,7 @@ lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
     StreamString error_stream;
     IRForTarget ir_for_target(decl_map, m_expr.NeedsVariableResolution(),
                               *execution_unit_sp, error_stream,
-                              function_name.AsCString());
+                              execution_policy, function_name.AsCString());
 
     if (!ir_for_target.runOnModule(*execution_unit_sp->GetModule())) {
       err = Status(error_stream.GetString().str());

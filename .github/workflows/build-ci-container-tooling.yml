@@ -41,8 +41,9 @@ jobs:
             target: abi-tests
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
+          persist-credentials: false
           sparse-checkout: |
             .github/workflows/containers/github-action-ci-tooling/
             llvm/utils/git/requirements_formatting.txt
@@ -67,8 +68,9 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
+          persist-credentials: false
           sparse-checkout: |
             .github/actions/push-container
 

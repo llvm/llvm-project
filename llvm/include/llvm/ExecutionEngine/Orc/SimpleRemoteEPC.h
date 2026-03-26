@@ -30,8 +30,7 @@ namespace llvm {
 namespace orc {
 
 class LLVM_ABI SimpleRemoteEPC : public ExecutorProcessControl,
-                                 public SimpleRemoteEPCTransportClient,
-                                 private DylibManager {
+                                 public SimpleRemoteEPCTransportClient {
 public:
   /// A setup object containing callbacks to construct a memory manager and
   /// memory access object. Both are optional. If not specified,
@@ -86,16 +85,14 @@ public:
 
   Expected<HandleMessageAction>
   handleMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo, ExecutorAddr TagAddr,
-                SimpleRemoteEPCArgBytesVector ArgBytes) override;
+                shared::WrapperFunctionBuffer ArgBytes) override;
 
   void handleDisconnect(Error Err) override;
 
 private:
   SimpleRemoteEPC(std::shared_ptr<SymbolStringPool> SSP,
                   std::unique_ptr<TaskDispatcher> D)
-      : ExecutorProcessControl(std::move(SSP), std::move(D)) {
-    this->DylibMgr = this;
-  }
+      : ExecutorProcessControl(std::move(SSP), std::move(D)) {}
 
   static Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
   createDefaultMemoryManager(SimpleRemoteEPC &SREPC);
@@ -106,22 +103,17 @@ private:
                     ExecutorAddr TagAddr, ArrayRef<char> ArgBytes);
 
   Error handleSetup(uint64_t SeqNo, ExecutorAddr TagAddr,
-                    SimpleRemoteEPCArgBytesVector ArgBytes);
+                    shared::WrapperFunctionBuffer ArgBytes);
   Error setup(Setup S);
 
   Error handleResult(uint64_t SeqNo, ExecutorAddr TagAddr,
-                     SimpleRemoteEPCArgBytesVector ArgBytes);
+                     shared::WrapperFunctionBuffer ArgBytes);
   void handleCallWrapper(uint64_t RemoteSeqNo, ExecutorAddr TagAddr,
-                         SimpleRemoteEPCArgBytesVector ArgBytes);
-  Error handleHangup(SimpleRemoteEPCArgBytesVector ArgBytes);
+                         shared::WrapperFunctionBuffer ArgBytes);
+  Error handleHangup(shared::WrapperFunctionBuffer ArgBytes);
 
   uint64_t getNextSeqNo() { return NextSeqNo++; }
   void releaseSeqNo(uint64_t SeqNo) {}
-
-  Expected<tpctypes::DylibHandle> loadDylib(const char *DylibPath) override;
-
-  void lookupSymbolsAsync(ArrayRef<LookupRequest> Request,
-                          SymbolLookupCompleteFn F) override;
 
   using PendingCallWrapperResultsMap =
     DenseMap<uint64_t, IncomingWFRHandler>;

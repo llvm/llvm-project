@@ -66,7 +66,7 @@ enum class RefKind : uint8_t {
   // A reference which is a call. Used as a filter for which references
   // to store in data structures used for computing outgoing calls.
   Call = 1 << 4,
-  All = Declaration | Definition | Reference | Spelled,
+  All = Declaration | Definition | Reference | Spelled | Call,
 };
 
 inline RefKind operator|(RefKind L, RefKind R) {

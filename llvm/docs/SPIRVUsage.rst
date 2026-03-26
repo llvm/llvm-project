@@ -30,12 +30,14 @@ Static Compiler Commands
    Description: This command compiles an LLVM IL file (`input.ll`) to a SPIR-V binary (`output.spvt`) for a 32-bit architecture.
 
 2. **Compilation with Extensions and Optimization**
-   Command: `llc -O1 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_arbitrary_precision_integers input.ll -o output.spvt`
-   Description: Compiles an LLVM IL file to SPIR-V with (`-O1`) optimizations, targeting a 64-bit architecture. It enables the SPV_INTEL_arbitrary_precision_integers extension.
+   Command: `llc -O1 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_ALTERA_arbitrary_precision_integers input.ll -o output.spvt`
+   Description: Compiles an LLVM IL file to SPIR-V with (`-O1`) optimizations, targeting a 64-bit architecture. It enables the SPV_ALTERA_arbitrary_precision_integers extension.
 
-3. **Compilation with experimental NonSemantic.Shader.DebugInfo.100 support**
-   Command: `llc --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info input.ll -o output.spvt`
-   Description: Compiles an LLVM IL file to SPIR-V with additional NonSemantic.Shader.DebugInfo.100 instructions. It enables the required SPV_KHR_non_semantic_info extension.
+3. **Compilation with NonSemantic.Shader.DebugInfo support**
+   Command: `llc -g --spirv-ext=+SPV_KHR_non_semantic_info input.ll -o output.spvt`
+   Description: Compiles an LLVM IL file to SPIR-V with NonSemantic.Shader.DebugInfo.100 instructions. The ``-g`` flag causes the backend to emit NSDI instructions when the module contains debug metadata. The required SPV_KHR_non_semantic_info extension must be enabled explicitly.
+
+   Note: ``--spv-emit-nonsemantic-debug-info`` is a deprecated synonym for ``-g`` and will be removed in a future release.
 
 4. **SPIR-V Binary Generation**
    Command: `llc -O0 -mtriple=spirv64-unknown-unknown -filetype=obj input.ll -o output.spvt`
@@ -136,7 +138,7 @@ extensions to enable or disable, each prefixed with ``+`` or ``-``, respectively
 
 To enable multiple extensions, list them separated by comma. For example, to enable support for atomic operations on floating-point numbers and arbitrary precision integers, use:
 
-``-spirv-ext=+SPV_EXT_shader_atomic_float_add,+SPV_INTEL_arbitrary_precision_integers``
+``-spirv-ext=+SPV_EXT_shader_atomic_float_add,+SPV_ALTERA_arbitrary_precision_integers``
 
 To enable all extensions, use the following option:
 ``-spirv-ext=all``
@@ -145,7 +147,7 @@ To enable all KHR extensions, use the following option:
 ``-spirv-ext=khr``
 
 To enable all extensions except specified, specify ``all`` followed by a list of disallowed extensions. For example:
-``-spirv-ext=all,-SPV_INTEL_arbitrary_precision_integers``
+``-spirv-ext=all,-SPV_ALTERA_arbitrary_precision_integers``
 
 Below is a list of supported SPIR-V extensions, sorted alphabetically by their extension names:
 
@@ -169,9 +171,11 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds atomic min and max instruction on floating-point numbers.
    * - ``SPV_INTEL_16bit_atomics``
      - Extends the SPV_EXT_shader_atomic_float_add and SPV_EXT_shader_atomic_float_min_max to support addition, minimum and maximum on 16-bit `bfloat16` floating-point numbers in memory.
+   * - ``SPV_NV_shader_atomic_fp16_vector``
+     - Adds atomic add, min and max instructions on 2 or 4-component vectors with 16-bit float components.
    * - ``SPV_INTEL_2d_block_io``
      - Adds additional subgroup block prefetch, load, load transposed, load transformed and store instructions to read two-dimensional blocks of data from a two-dimensional region of memory, or to write two-dimensional blocks of data to a two dimensional region of memory.
-   * - ``SPV_INTEL_arbitrary_precision_integers``
+   * - ``SPV_ALTERA_arbitrary_precision_integers``
      - Allows generating arbitrary width integer types.
    * - ``SPV_INTEL_bindless_images``
      - Adds instructions to convert convert unsigned integer handles to images, samplers and sampled images.
@@ -245,6 +249,15 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds execution mode and capability to enable maximal reconvergence.
    * - ``SPV_ALTERA_blocking_pipes``
      - Adds new pipe read and write functions that have blocking semantics instead of the non-blocking semantics of the existing pipe read/write functions.
+   * - ``SPV_ALTERA_arbitrary_precision_fixed_point``
+     - Add instructions for fixed point arithmetic. The extension works without SPV_ALTERA_arbitrary_precision_integers, but together they allow greater flexibility in representing arbitrary precision data types.
+   * - ``SPV_EXT_image_raw10_raw12``
+     - Adds Image Channel Data Type definitions for RAW10 and RAW12 image formats.
+   * - ``SPV_ALTERA_arbitrary_precision_floating_point``
+     - Adds instructions for arbitrary precision floating-point arithmetic. The extension works without SPV_ALTERA_arbitrary_precision_integers, but together they allow greater flexibility in representing arbitrary precision data types.
+   * - ``SPV_KHR_fma``
+     - Adds a core fused-multiply-add (fma) instruction to replace the different variants that have existed in extended instruction sets.
+
 
 SPIR-V representation in LLVM IR
 ================================
@@ -622,6 +635,15 @@ LLVM IR representations.
 +--------------------+---------------------------------------------------------+
 | SPIR-V instruction | LLVM IR                                                 |
 +====================+=========================================================+
+| OpMemoryModel      | .. code-block:: llvm                                    |
+|                    |                                                         |
+|                    |    !spirv.MemoryModel = !{!0}                           |
+|                    |    !0 = !{i32 0, i32 1}                                 |
+|                    |    ; Set addressing model to Logical (0) and memory     |
+|                    |    ; model to GLSL450 (1). Valid memory models:         |
+|                    |    ; Simple (0), GLSL450 (1), OpenCL (2),               |
+|                    |    ; VulkanKHR (3).                                     |
++--------------------+---------------------------------------------------------+
 | OpExecutionMode    | .. code-block:: llvm                                    |
 |                    |                                                         |
 |                    |    !spirv.ExecutionMode = !{!0}                         |

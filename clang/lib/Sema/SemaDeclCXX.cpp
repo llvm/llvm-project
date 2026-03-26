@@ -316,8 +316,8 @@ void Sema::SetParamDefaultArgument(ParmVarDecl *Param, Expr *Arg,
   UnparsedDefaultArgInstantiationsMap::iterator InstPos
     = UnparsedDefaultArgInstantiations.find(Param);
   if (InstPos != UnparsedDefaultArgInstantiations.end()) {
-    for (unsigned I = 0, N = InstPos->second.size(); I != N; ++I)
-      InstPos->second[I]->setUninstantiatedDefaultArg(Arg);
+    for (auto &Instantiation : InstPos->second)
+      Instantiation->setUninstantiatedDefaultArg(Arg);
 
     // We're done tracking this parameter's instantiations.
     UnparsedDefaultArgInstantiations.erase(InstPos);
@@ -2547,8 +2547,8 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
                  diag::ext_constexpr_function_never_constant_expr)
         << isa<CXXConstructorDecl>(Dcl) << Dcl->isConsteval()
         << Dcl->getNameInfo().getSourceRange();
-    for (size_t I = 0, N = Diags.size(); I != N; ++I)
-      SemaRef.Diag(Diags[I].first, Diags[I].second);
+    for (const auto &Diag : Diags)
+      SemaRef.Diag(Diag.first, Diag.second);
     // Don't return false here: we allow this for compatibility in
     // system headers.
   }
@@ -3211,17 +3211,15 @@ Sema::CheckDerivedToBaseConversion(QualType Derived, QualType Base,
 std::string Sema::getAmbiguousPathsDisplayString(CXXBasePaths &Paths) {
   std::string PathDisplayStr;
   std::set<unsigned> DisplayedPaths;
-  for (CXXBasePaths::paths_iterator Path = Paths.begin();
-       Path != Paths.end(); ++Path) {
-    if (DisplayedPaths.insert(Path->back().SubobjectNumber).second) {
+  for (const CXXBasePath &Path : Paths) {
+    if (DisplayedPaths.insert(Path.back().SubobjectNumber).second) {
       // We haven't displayed a path to this particular base
       // class subobject yet.
       PathDisplayStr += "\n    ";
       PathDisplayStr += QualType(Context.getCanonicalTagType(Paths.getOrigin()))
                             .getAsString();
-      for (CXXBasePath::const_iterator Element = Path->begin();
-           Element != Path->end(); ++Element)
-        PathDisplayStr += " -> " + Element->Base->getType().getAsString();
+      for (const CXXBasePathElement &Element : Path)
+        PathDisplayStr += " -> " + Element.Base->getType().getAsString();
     }
   }
 
@@ -3782,21 +3780,21 @@ namespace {
       if (CheckReferenceOnly && !ReferenceField)
         return true;
 
-      llvm::SmallVector<unsigned, 4> UsedFieldIndex;
       // Discard the first field since it is the field decl that is being
       // initialized.
-      for (const FieldDecl *FD : llvm::drop_begin(llvm::reverse(Fields)))
-        UsedFieldIndex.push_back(FD->getFieldIndex());
+      auto UsedFields = llvm::drop_begin(llvm::reverse(Fields));
+      auto UsedIter = UsedFields.begin();
+      const auto UsedEnd = UsedFields.end();
 
-      for (auto UsedIter = UsedFieldIndex.begin(),
-                UsedEnd = UsedFieldIndex.end(),
-                OrigIter = InitFieldIndex.begin(),
-                OrigEnd = InitFieldIndex.end();
-           UsedIter != UsedEnd && OrigIter != OrigEnd; ++UsedIter, ++OrigIter) {
-        if (*UsedIter < *OrigIter)
-          return true;
-        if (*UsedIter > *OrigIter)
+      for (const unsigned Orig : InitFieldIndex) {
+        if (UsedIter == UsedEnd)
           break;
+        const unsigned UsedIndex = (*UsedIter)->getFieldIndex();
+        if (UsedIndex < Orig)
+          return true;
+        if (UsedIndex > Orig)
+          break;
+        ++UsedIter;
       }
 
       return false;
@@ -4260,10 +4258,9 @@ static bool FindBaseInitializer(Sema &SemaRef,
     if (SemaRef.IsDerivedFrom(ClassDecl->getLocation(),
                               SemaRef.Context.getCanonicalTagType(ClassDecl),
                               BaseType, Paths)) {
-      for (CXXBasePaths::paths_iterator Path = Paths.begin();
-           Path != Paths.end(); ++Path) {
-        if (Path->back().Base->isVirtual()) {
-          VirtualBaseSpec = Path->back().Base;
+      for (const CXXBasePath &Path : Paths) {
+        if (Path.back().Base->isVirtual()) {
+          VirtualBaseSpec = Path.back().Base;
           break;
         }
       }
@@ -5468,9 +5465,7 @@ bool Sema::SetCtorInitializers(CXXConstructorDecl *Constructor, bool AnyErrors,
 
   bool HadError = false;
 
-  for (unsigned i = 0; i < Initializers.size(); i++) {
-    CXXCtorInitializer *Member = Initializers[i];
-
+  for (CXXCtorInitializer *Member : Initializers) {
     if (Member->isBaseInitializer())
       Info.AllBaseFields[Member->getBaseClass()->getAsCanonical<RecordType>()] =
           Member;
@@ -5675,8 +5670,7 @@ static void DiagnoseBaseOrMemInitializerOrder(
   // Don't check initializers order unless the warning is enabled at the
   // location of at least one initializer.
   bool ShouldCheckOrder = false;
-  for (unsigned InitIndex = 0; InitIndex != Inits.size(); ++InitIndex) {
-    CXXCtorInitializer *Init = Inits[InitIndex];
+  for (const CXXCtorInitializer *Init : Inits) {
     if (!SemaRef.Diags.isIgnored(diag::warn_initializer_out_of_order,
                                  Init->getSourceLocation())) {
       ShouldCheckOrder = true;
@@ -6045,31 +6039,25 @@ void Sema::DiagnoseAbstractType(const CXXRecordDecl *RD) {
   // more than once.
   llvm::SmallPtrSet<const CXXMethodDecl *, 8> SeenPureMethods;
 
-  for (CXXFinalOverriderMap::iterator M = FinalOverriders.begin(),
-                                   MEnd = FinalOverriders.end();
-       M != MEnd;
-       ++M) {
-    for (OverridingMethods::iterator SO = M->second.begin(),
-                                  SOEnd = M->second.end();
-         SO != SOEnd; ++SO) {
+  for (const auto &M : FinalOverriders) {
+    for (const auto &SO : M.second) {
       // C++ [class.abstract]p4:
       //   A class is abstract if it contains or inherits at least one
       //   pure virtual function for which the final overrider is pure
       //   virtual.
 
-      //
-      if (SO->second.size() != 1)
+      if (SO.second.size() != 1)
+        continue;
+      const CXXMethodDecl *Method = SO.second.front().Method;
+
+      if (!Method->isPureVirtual())
         continue;
 
-      if (!SO->second.front().Method->isPureVirtual())
+      if (!SeenPureMethods.insert(Method).second)
         continue;
 
-      if (!SeenPureMethods.insert(SO->second.front().Method).second)
-        continue;
-
-      Diag(SO->second.front().Method->getLocation(),
-           diag::note_pure_virtual_function)
-        << SO->second.front().Method->getDeclName() << RD->getDeclName();
+      Diag(Method->getLocation(), diag::note_pure_virtual_function)
+          << Method->getDeclName() << RD->getDeclName();
     }
   }
 
@@ -6170,7 +6158,7 @@ struct CheckAbstractUsage {
       Sel = Sema::AbstractArrayType;
       T = Info.S.Context.getBaseElementType(T);
     }
-    CanQualType CT = T->getCanonicalTypeUnqualified().getUnqualifiedType();
+    CanQualType CT = T->getCanonicalTypeUnqualified();
     if (CT != Info.AbstractType) return;
 
     // It matched; do some magic.
@@ -6590,17 +6578,47 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
   if (ClassExported && !ClassAttr->isInherited() &&
       TSK == TSK_ExplicitInstantiationDeclaration &&
       !Context.getTargetInfo().getTriple().isOSCygMing()) {
-    Class->dropAttr<DLLExportAttr>();
+    if (auto *DEA = Class->getAttr<DLLExportAttr>()) {
+      Class->addAttr(DLLExportOnDeclAttr::Create(Context, DEA->getLoc()));
+      Class->dropAttr<DLLExportAttr>();
+    }
     return;
   }
 
   // Force declaration of implicit members so they can inherit the attribute.
   ForceDeclarationOfImplicitMembers(Class);
 
+  // Inherited constructors are created lazily; force their creation now so the
+  // loop below can propagate the DLL attribute to them.
+  if (ClassExported && getLangOpts().DllExportInlines) {
+    SmallVector<ConstructorUsingShadowDecl *, 4> Shadows;
+    for (Decl *D : Class->decls())
+      if (auto *S = dyn_cast<ConstructorUsingShadowDecl>(D))
+        Shadows.push_back(S);
+    for (ConstructorUsingShadowDecl *S : Shadows) {
+      CXXConstructorDecl *BC = dyn_cast<CXXConstructorDecl>(S->getTargetDecl());
+      if (!BC || BC->isDeleted())
+        continue;
+      // Skip constructors whose requires clause is not satisfied.
+      // Normally overload resolution filters these, but we are bypassing
+      // it to eagerly create inherited constructors for dllexport.
+      if (BC->getTrailingRequiresClause()) {
+        ConstraintSatisfaction Satisfaction;
+        if (CheckFunctionConstraints(BC, Satisfaction) ||
+            !Satisfaction.IsSatisfied)
+          continue;
+      }
+      findInheritingConstructor(Class->getLocation(), BC, S);
+    }
+  }
+
   // FIXME: MSVC's docs say all bases must be exportable, but this doesn't
   // seem to be true in practice?
 
   for (Decl *Member : Class->decls()) {
+    if (Member->hasAttr<ExcludeFromExplicitInstantiationAttr>())
+      continue;
+
     VarDecl *VD = dyn_cast<VarDecl>(Member);
     CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(Member);
 
@@ -6613,13 +6631,67 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
       if (MD->isDeleted())
         continue;
 
+      if (ClassExported && getLangOpts().DllExportInlines) {
+        CXXConstructorDecl *CD = dyn_cast<CXXConstructorDecl>(MD);
+        if (CD && CD->getInheritedConstructor()) {
+          // Inherited constructors already had their base constructor's
+          // constraints checked before creation via
+          // findInheritingConstructor, so only ABI-compatibility checks
+          // are needed here.
+          //
+          // Don't export inherited constructors whose parameters prevent
+          // ABI-compatible forwarding. When canEmitDelegateCallArgs (in
+          // CodeGen) returns false, Clang inlines the constructor body
+          // instead of emitting a forwarding thunk, producing code that
+          // is not ABI-compatible with MSVC. Suppress the export and warn
+          // so the user gets a linker error rather than a silent runtime
+          // mismatch.
+          if (CD->isVariadic()) {
+            Diag(CD->getLocation(),
+                 diag::warn_dllexport_inherited_ctor_unsupported)
+                << /*variadic=*/0;
+            continue;
+          }
+          if (Context.getTargetInfo()
+                  .getCXXABI()
+                  .areArgsDestroyedLeftToRightInCallee()) {
+            bool HasCalleeCleanupParam = false;
+            for (const ParmVarDecl *P : CD->parameters())
+              if (P->needsDestruction(Context)) {
+                HasCalleeCleanupParam = true;
+                break;
+              }
+            if (HasCalleeCleanupParam) {
+              Diag(CD->getLocation(),
+                   diag::warn_dllexport_inherited_ctor_unsupported)
+                  << /*callee-cleanup=*/1;
+              continue;
+            }
+          }
+        } else if (MD->getTrailingRequiresClause()) {
+          // Don't export methods whose requires clause is not satisfied.
+          // For class template specializations, member constraints may
+          // depend on template arguments and an unsatisfied constraint
+          // means the member should not be available in this
+          // specialization.
+          ConstraintSatisfaction Satisfaction;
+          if (CheckFunctionConstraints(MD, Satisfaction) ||
+              !Satisfaction.IsSatisfied)
+            continue;
+        }
+      }
+
       if (MD->isInlined()) {
         // MinGW does not import or export inline methods. But do it for
-        // template instantiations.
+        // template instantiations and inherited constructors (which are
+        // marked inline but must be exported to match MSVC behavior).
         if (!Context.getTargetInfo().shouldDLLImportComdatSymbols() &&
             TSK != TSK_ExplicitInstantiationDeclaration &&
-            TSK != TSK_ExplicitInstantiationDefinition)
-          continue;
+            TSK != TSK_ExplicitInstantiationDefinition) {
+          if (auto *CD = dyn_cast<CXXConstructorDecl>(MD);
+              !CD || !CD->getInheritedConstructor())
+            continue;
+        }
 
         // MSVC versions before 2015 don't export the move assignment operators
         // and move constructor, so don't attempt to import/export them if
@@ -6627,6 +6699,7 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
         auto *Ctor = dyn_cast<CXXConstructorDecl>(MD);
         if ((MD->isMoveAssignmentOperator() ||
              (Ctor && Ctor->isMoveConstructor())) &&
+            getLangOpts().isCompatibleWithMSVC() &&
             !getLangOpts().isCompatibleWithMSVC(LangOptions::MSVC2015))
           continue;
 
@@ -7012,18 +7085,16 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
     // C++ [class.mem]p14:
     //   In addition, if class T has a user-declared constructor (12.1), every
     //   non-static data member of class T shall have a name different from T.
-    DeclContext::lookup_result R = Record->lookup(Record->getDeclName());
-    for (DeclContext::lookup_iterator I = R.begin(), E = R.end(); I != E;
-         ++I) {
-      NamedDecl *D = (*I)->getUnderlyingDecl();
+    for (const NamedDecl *Element : Record->lookup(Record->getDeclName())) {
+      const NamedDecl *D = Element->getUnderlyingDecl();
       // Invalid IndirectFieldDecls have already been diagnosed with
       // err_anonymous_record_member_redecl in
       // SemaDecl.cpp:CheckAnonMemberRedeclaration.
       if (((isa<FieldDecl>(D) || isa<UnresolvedUsingValueDecl>(D)) &&
            Record->hasUserDeclaredConstructor()) ||
           (isa<IndirectFieldDecl>(D) && !D->isInvalidDecl())) {
-        Diag((*I)->getLocation(), diag::err_member_name_of_class)
-          << D->getDeclName();
+        Diag(Element->getLocation(), diag::err_member_name_of_class)
+            << D->getDeclName();
         break;
       }
     }
@@ -7284,20 +7355,27 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
       CheckCompletedMemberFunction(MD);
   }
 
-  // ms_struct is a request to use the same ABI rules as MSVC.  Check
-  // whether this class uses any C++ features that are implemented
-  // completely differently in MSVC, and if so, emit a diagnostic.
-  // That diagnostic defaults to an error, but we allow projects to
-  // map it down to a warning (or ignore it).  It's a fairly common
-  // practice among users of the ms_struct pragma to mass-annotate
-  // headers, sweeping up a bunch of types that the project doesn't
-  // really rely on MSVC-compatible layout for.  We must therefore
-  // support "ms_struct except for C++ stuff" as a secondary ABI.
+  // {ms,gcc}_struct is a request to change ABI rules to either follow
+  // Microsoft or Itanium C++ ABI. However, even if these attributes are
+  // present, we do not layout classes following foreign ABI rules, but
+  // instead enter a special "compatibility mode", which only changes
+  // alignments of fundamental types and layout of bit fields.
+  // Check whether this class uses any C++ features that are implemented
+  // completely differently in the requested ABI, and if so, emit a
+  // diagnostic. That diagnostic defaults to an error, but we allow
+  // projects to map it down to a warning (or ignore it). It's a fairly
+  // common practice among users of the ms_struct pragma to
+  // mass-annotate headers, sweeping up a bunch of types that the
+  // project doesn't really rely on MSVC-compatible layout for. We must
+  // therefore support "ms_struct except for C++ stuff" as a secondary
+  // ABI.
   // Don't emit this diagnostic if the feature was enabled as a
   // language option (as opposed to via a pragma or attribute), as
   // the option -mms-bitfields otherwise essentially makes it impossible
   // to build C++ code, unless this diagnostic is turned off.
-  if (Record->isMsStruct(Context) && !Context.getLangOpts().MSBitfields &&
+  if (Context.getLangOpts().getLayoutCompatibility() ==
+          LangOptions::LayoutCompatibilityKind::Default &&
+      Record->isMsStruct(Context) != Context.defaultsToMsStruct() &&
       (Record->isPolymorphic() || Record->getNumBases())) {
     Diag(Record->getLocation(), diag::warn_cxx_ms_struct);
   }
@@ -9899,13 +9977,6 @@ bool Sema::ShouldDeleteSpecialMember(CXXMethodDecl *MD,
     return true;
   }
 
-  // For an anonymous struct or union, the copy and assignment special members
-  // will never be used, so skip the check. For an anonymous union declared at
-  // namespace scope, the constructor and destructor are used.
-  if (CSM != CXXSpecialMemberKind::DefaultConstructor &&
-      CSM != CXXSpecialMemberKind::Destructor && RD->isAnonymousStructOrUnion())
-    return false;
-
   // C++11 [class.copy]p7, p18:
   //   If the class definition declares a move constructor or move assignment
   //   operator, an implicitly declared copy constructor or copy assignment
@@ -10552,10 +10623,8 @@ void Sema::FindHiddenVirtualMethods(CXXMethodDecl *MD,
   // Keep the base methods that were overridden or introduced in the subclass
   // by 'using' in a set. A base method not in this set is hidden.
   CXXRecordDecl *DC = MD->getParent();
-  DeclContext::lookup_result R = DC->lookup(MD->getDeclName());
-  for (DeclContext::lookup_iterator I = R.begin(), E = R.end(); I != E; ++I) {
-    NamedDecl *ND = *I;
-    if (UsingShadowDecl *shad = dyn_cast<UsingShadowDecl>(*I))
+  for (NamedDecl *ND : DC->lookup(MD->getDeclName())) {
+    if (UsingShadowDecl *shad = dyn_cast<UsingShadowDecl>(ND))
       ND = shad->getTargetDecl();
     if (CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(ND))
       AddMostOverridenMethods(MD, FHVM.OverridenAndUsingBaseMethods);
@@ -10567,8 +10636,7 @@ void Sema::FindHiddenVirtualMethods(CXXMethodDecl *MD,
 
 void Sema::NoteHiddenVirtualMethods(CXXMethodDecl *MD,
                           SmallVectorImpl<CXXMethodDecl*> &OverloadedMethods) {
-  for (unsigned i = 0, e = OverloadedMethods.size(); i != e; ++i) {
-    CXXMethodDecl *overloadedMD = OverloadedMethods[i];
+  for (const CXXMethodDecl *overloadedMD : OverloadedMethods) {
     PartialDiagnostic PD = PDiag(
          diag::note_hidden_overloaded_virtual_declared_here) << overloadedMD;
     HandleFunctionTypeMismatch(PD, MD->getType(), overloadedMD->getType());
@@ -11003,18 +11071,18 @@ void Sema::ActOnFinishDelayedCXXMethodDeclaration(Scope *S, Decl *MethodD) {
 static void checkMethodTypeQualifiers(Sema &S, Declarator &D, unsigned DiagID) {
   const DeclaratorChunk::FunctionTypeInfo &FTI = D.getFunctionTypeInfo();
   if (FTI.hasMethodTypeQualifiers() && !D.isInvalidType()) {
-    bool DiagOccured = false;
+    bool DiagOccurred = false;
     FTI.MethodQualifiers->forEachQualifier(
-        [DiagID, &S, &DiagOccured](DeclSpec::TQ, StringRef QualName,
-                                   SourceLocation SL) {
+        [DiagID, &S, &DiagOccurred](DeclSpec::TQ, StringRef QualName,
+                                    SourceLocation SL) {
           // This diagnostic should be emitted on any qualifier except an addr
           // space qualifier. However, forEachQualifier currently doesn't visit
           // addr space qualifiers, so there's no way to write this condition
           // right now; we just diagnose on everything.
           S.Diag(SL, DiagID) << QualName << SourceRange(SL);
-          DiagOccured = true;
+          DiagOccurred = true;
         });
-    if (DiagOccured)
+    if (DiagOccurred)
       D.setInvalidType();
   }
 }
@@ -11192,11 +11260,15 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
         FunctionDecl *GlobalOperatorDelete =
             FindDeallocationFunctionForDestructor(Loc, RD, /*Diagnose*/ false,
                                                   /*LookForGlobal*/ true, Name);
-        Destructor->setOperatorGlobalDelete(GlobalOperatorDelete);
+        if (GlobalOperatorDelete) {
+          MarkFunctionReferenced(Loc, GlobalOperatorDelete);
+          Destructor->setOperatorGlobalDelete(GlobalOperatorDelete);
+        }
       }
 
       if (Context.getTargetInfo().emitVectorDeletingDtors(
               Context.getLangOpts())) {
+        bool DestructorIsExported = Destructor->hasAttr<DLLExportAttr>();
         // Lookup delete[] too in case we have to emit a vector deleting dtor.
         DeclarationName VDeleteName =
             Context.DeclarationNames.getCXXOperatorName(OO_Array_Delete);
@@ -11209,14 +11281,20 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
                                                     /*LookForGlobal*/ true,
                                                     VDeleteName);
           Destructor->setGlobalOperatorArrayDelete(GlobalArrOperatorDelete);
+          if (GlobalArrOperatorDelete &&
+              (Context.classMaybeNeedsVectorDeletingDestructor(RD) ||
+               DestructorIsExported))
+            MarkFunctionReferenced(Loc, GlobalArrOperatorDelete);
         } else if (!ArrOperatorDelete) {
           ArrOperatorDelete = FindDeallocationFunctionForDestructor(
               Loc, RD, /*Diagnose*/ false,
               /*LookForGlobal*/ true, VDeleteName);
         }
-        assert(ArrOperatorDelete &&
-               "Should've found at least global array delete");
         Destructor->setOperatorArrayDelete(ArrOperatorDelete);
+        if (ArrOperatorDelete &&
+            (Context.classMaybeNeedsVectorDeletingDestructor(RD) ||
+             DestructorIsExported))
+          MarkFunctionReferenced(Loc, ArrOperatorDelete);
       }
     }
   }
@@ -11607,6 +11685,7 @@ void Sema::CheckExplicitObjectMemberFunction(Declarator &D,
     Diag(ExplicitObjectParam->getLocation(),
          diag::err_explicit_object_default_arg)
         << ExplicitObjectParam->getSourceRange();
+    D.setInvalidType();
   }
 
   if (D.getDeclSpec().getStorageClassSpec() == DeclSpec::SCS_static ||
@@ -12813,9 +12892,8 @@ bool Sema::CheckUsingShadowDecl(BaseUsingDecl *BUD, NamedDecl *Orig,
   // should redeclare it.
   NamedDecl *NonTag = nullptr, *Tag = nullptr;
   bool FoundEquivalentDecl = false;
-  for (LookupResult::iterator I = Previous.begin(), E = Previous.end();
-         I != E; ++I) {
-    NamedDecl *D = (*I)->getUnderlyingDecl();
+  for (NamedDecl *Element : Previous) {
+    NamedDecl *D = Element->getUnderlyingDecl();
     // We can have UsingDecls in our Previous results because we use the same
     // LookupResult for checking whether the UsingDecl itself is a valid
     // redeclaration.
@@ -12836,7 +12914,7 @@ bool Sema::CheckUsingShadowDecl(BaseUsingDecl *BUD, NamedDecl *Orig,
     }
 
     if (IsEquivalentForUsingDecl(Context, D, Target)) {
-      if (UsingShadowDecl *Shadow = dyn_cast<UsingShadowDecl>(*I))
+      if (UsingShadowDecl *Shadow = dyn_cast<UsingShadowDecl>(Element))
         PrevShadow = Shadow;
       FoundEquivalentDecl = true;
     } else if (isEquivalentInternalLinkageDeclaration(D, Target)) {
@@ -12998,8 +13076,7 @@ static CXXBaseSpecifier *findDirectBaseWithType(CXXRecordDecl *Derived,
                                                 QualType DesiredBase,
                                                 bool &AnyDependentBases) {
   // Check whether the named type is a direct base class.
-  CanQualType CanonicalDesiredBase = DesiredBase->getCanonicalTypeUnqualified()
-    .getUnqualifiedType();
+  CanQualType CanonicalDesiredBase = DesiredBase->getCanonicalTypeUnqualified();
   for (auto &Base : Derived->bases()) {
     CanQualType BaseType = Base.getType()->getCanonicalTypeUnqualified();
     if (CanonicalDesiredBase == BaseType)
@@ -13324,8 +13401,8 @@ NamedDecl *Sema::BuildUsingDeclaration(
     if (!R.getAsSingle<TypeDecl>() &&
         !R.getAsSingle<UnresolvedUsingIfExistsDecl>()) {
       Diag(IdentLoc, diag::err_using_typename_non_type);
-      for (LookupResult::iterator I = R.begin(), E = R.end(); I != E; ++I)
-        Diag((*I)->getUnderlyingDecl()->getLocation(),
+      for (const NamedDecl *D : R)
+        Diag(D->getUnderlyingDecl()->getLocation(),
              diag::note_using_decl_target);
       return BuildInvalid();
     }
@@ -13363,10 +13440,10 @@ NamedDecl *Sema::BuildUsingDeclaration(
       return UD;
   }
 
-  for (LookupResult::iterator I = R.begin(), E = R.end(); I != E; ++I) {
+  for (NamedDecl *D : R) {
     UsingShadowDecl *PrevDecl = nullptr;
-    if (!CheckUsingShadowDecl(UD, *I, Previous, PrevDecl))
-      BuildUsingShadowDecl(S, UD, *I, PrevDecl);
+    if (!CheckUsingShadowDecl(UD, D, Previous, PrevDecl))
+      BuildUsingShadowDecl(S, UD, D, PrevDecl);
   }
 
   return UD;
@@ -13502,23 +13579,20 @@ bool Sema::CheckUsingDeclRedeclaration(SourceLocation UsingLoc,
   }
 
   NestedNameSpecifier CNNS = Qual.getCanonical();
-  for (LookupResult::iterator I = Prev.begin(), E = Prev.end(); I != E; ++I) {
-    NamedDecl *D = *I;
-
+  for (const NamedDecl *D : Prev) {
     bool DTypename;
     NestedNameSpecifier DQual = std::nullopt;
-    if (UsingDecl *UD = dyn_cast<UsingDecl>(D)) {
+    if (const auto *UD = dyn_cast<UsingDecl>(D)) {
       DTypename = UD->hasTypename();
       DQual = UD->getQualifier();
-    } else if (UnresolvedUsingValueDecl *UD
-                 = dyn_cast<UnresolvedUsingValueDecl>(D)) {
+    } else if (const auto *UD = dyn_cast<UnresolvedUsingValueDecl>(D)) {
       DTypename = false;
       DQual = UD->getQualifier();
-    } else if (UnresolvedUsingTypenameDecl *UD
-                 = dyn_cast<UnresolvedUsingTypenameDecl>(D)) {
+    } else if (const auto *UD = dyn_cast<UnresolvedUsingTypenameDecl>(D)) {
       DTypename = true;
       DQual = UD->getQualifier();
-    } else continue;
+    } else
+      continue;
 
     // using decls differ if one says 'typename' and the other doesn't.
     // FIXME: non-dependent using decls?
@@ -16404,8 +16478,8 @@ void Sema::FinalizeVarWithDestructor(VarDecl *VD, CXXRecordDecl *ClassDecl) {
         HasConstantInit) {
       Diag(VD->getLocation(),
            diag::err_constexpr_var_requires_const_destruction) << VD;
-      for (unsigned I = 0, N = Notes.size(); I != N; ++I)
-        Diag(Notes[I].first, Notes[I].second);
+      for (const PartialDiagnosticAt &Note : Notes)
+        Diag(Note.first, Note.second);
     }
   }
 
@@ -17684,21 +17758,20 @@ void Sema::DiagnoseStaticAssertDetails(const Expr *E) {
       Expr::EvalResult Result;
       SmallString<12> ValueString;
       bool Print;
-    } DiagSide[2] = {{LHS, Expr::EvalResult(), {}, false},
-                     {RHS, Expr::EvalResult(), {}, false}};
-    for (unsigned I = 0; I < 2; I++) {
-      const Expr *Side = DiagSide[I].Cond;
+    } DiagSides[2] = {{LHS, Expr::EvalResult(), {}, false},
+                      {RHS, Expr::EvalResult(), {}, false}};
+    for (auto &DiagSide : DiagSides) {
+      const Expr *Side = DiagSide.Cond;
 
-      Side->EvaluateAsRValue(DiagSide[I].Result, Context, true);
+      Side->EvaluateAsRValue(DiagSide.Result, Context, true);
 
-      DiagSide[I].Print =
-          ConvertAPValueToString(DiagSide[I].Result.Val, Side->getType(),
-                                 DiagSide[I].ValueString, Context);
+      DiagSide.Print = ConvertAPValueToString(
+          DiagSide.Result.Val, Side->getType(), DiagSide.ValueString, Context);
     }
-    if (DiagSide[0].Print && DiagSide[1].Print) {
+    if (DiagSides[0].Print && DiagSides[1].Print) {
       Diag(Op->getExprLoc(), diag::note_expr_evaluates_to)
-          << DiagSide[0].ValueString << Op->getOpcodeStr()
-          << DiagSide[1].ValueString << Op->getSourceRange();
+          << DiagSides[0].ValueString << Op->getOpcodeStr()
+          << DiagSides[1].ValueString << Op->getSourceRange();
     }
   } else {
     DiagnoseTypeTraitDetails(E);
@@ -17995,13 +18068,10 @@ DeclResult Sema::ActOnTemplatedFriendTag(
 
   if (Invalid) return true;
 
-  bool isAllExplicitSpecializations = true;
-  for (unsigned I = TempParamLists.size(); I-- > 0; ) {
-    if (TempParamLists[I]->size()) {
-      isAllExplicitSpecializations = false;
-      break;
-    }
-  }
+  bool isAllExplicitSpecializations =
+      llvm::all_of(TempParamLists, [](const TemplateParameterList *List) {
+        return List->size() == 0;
+      });
 
   // FIXME: don't ignore attributes.
 
@@ -18999,18 +19069,18 @@ void Sema::LoadExternalVTableUses() {
   SmallVector<ExternalVTableUse, 4> VTables;
   ExternalSource->ReadUsedVTables(VTables);
   SmallVector<VTableUse, 4> NewUses;
-  for (unsigned I = 0, N = VTables.size(); I != N; ++I) {
-    llvm::DenseMap<CXXRecordDecl *, bool>::iterator Pos
-      = VTablesUsed.find(VTables[I].Record);
+  for (const ExternalVTableUse &VTable : VTables) {
+    llvm::DenseMap<CXXRecordDecl *, bool>::iterator Pos =
+        VTablesUsed.find(VTable.Record);
     // Even if a definition wasn't required before, it may be required now.
     if (Pos != VTablesUsed.end()) {
-      if (!Pos->second && VTables[I].DefinitionRequired)
+      if (!Pos->second && VTable.DefinitionRequired)
         Pos->second = true;
       continue;
     }
 
-    VTablesUsed[VTables[I].Record] = VTables[I].DefinitionRequired;
-    NewUses.push_back(VTableUse(VTables[I].Record, VTables[I].Location));
+    VTablesUsed[VTable.Record] = VTable.DefinitionRequired;
+    NewUses.push_back(VTableUse(VTable.Record, VTable.Location));
   }
 
   VTableUses.insert(VTableUses.begin(), NewUses.begin(), NewUses.end());
@@ -19062,6 +19132,8 @@ void Sema::MarkVTableUsed(SourceLocation Loc, CXXRecordDecl *Class,
           // delete().
           ContextRAII SavedContext(*this, DD);
           CheckDestructor(DD);
+          if (!DD->getOperatorDelete())
+            DD->setInvalidDecl();
         } else {
           MarkFunctionReferenced(Loc, Class->getDestructor());
         }
@@ -19134,8 +19206,20 @@ bool Sema::DefineUsedVTables() {
         }
       }
 
-      if (IsExplicitInstantiationDeclaration)
-        DefineVTable = false;
+      if (IsExplicitInstantiationDeclaration) {
+        const bool HasExcludeFromExplicitInstantiation =
+            llvm::any_of(Class->methods(), [](CXXMethodDecl *method) {
+              // If the class has a member function declared with
+              // `__attribute__((exclude_from_explicit_instantiation))`, the
+              // explicit instantiation declaration should not suppress emitting
+              // the vtable, since the corresponding explicit instantiation
+              // definition might not emit the vtable if a triggering method is
+              // excluded.
+              return method->hasAttr<ExcludeFromExplicitInstantiationAttr>();
+            });
+        if (!HasExcludeFromExplicitInstantiation)
+          DefineVTable = false;
+      }
     }
 
     // The exception specifications for all virtual members may be needed even
@@ -19185,14 +19269,10 @@ void Sema::MarkVirtualMembersReferenced(SourceLocation Loc,
   // Mark all functions which will appear in RD's vtable as used.
   CXXFinalOverriderMap FinalOverriders;
   RD->getFinalOverriders(FinalOverriders);
-  for (CXXFinalOverriderMap::const_iterator I = FinalOverriders.begin(),
-                                            E = FinalOverriders.end();
-       I != E; ++I) {
-    for (OverridingMethods::const_iterator OI = I->second.begin(),
-                                           OE = I->second.end();
-         OI != OE; ++OI) {
-      assert(OI->second.size() > 0 && "no final overrider");
-      CXXMethodDecl *Overrider = OI->second.front().Method;
+  for (const auto &FinalOverrider : FinalOverriders) {
+    for (const auto &OverridingMethod : FinalOverrider.second) {
+      assert(OverridingMethod.second.size() > 0 && "no final overrider");
+      CXXMethodDecl *Overrider = OverridingMethod.second.front().Method;
 
       // C++ [basic.def.odr]p2:
       //   [...] A virtual member function is used if it is not pure. [...]
@@ -19288,8 +19368,8 @@ void Sema::CheckDelegatingCtorCycles() {
        I != E; ++I)
     DelegatingCycleHelper(*I, Valid, Invalid, Current, *this);
 
-  for (auto CI = Invalid.begin(), CE = Invalid.end(); CI != CE; ++CI)
-    (*CI)->setInvalidDecl();
+  for (CXXConstructorDecl *CI : Invalid)
+    CI->setInvalidDecl();
 }
 
 namespace {
@@ -19396,9 +19476,9 @@ bool Sema::checkThisInStaticMemberFunctionAttributes(CXXMethodDecl *Method) {
     Expr *Arg = nullptr;
     ArrayRef<Expr *> Args;
     if (const auto *G = dyn_cast<GuardedByAttr>(A))
-      Arg = G->getArg();
+      Args = llvm::ArrayRef(G->args_begin(), G->args_size());
     else if (const auto *G = dyn_cast<PtGuardedByAttr>(A))
-      Arg = G->getArg();
+      Args = llvm::ArrayRef(G->args_begin(), G->args_size());
     else if (const auto *AA = dyn_cast<AcquiredAfterAttr>(A))
       Args = llvm::ArrayRef(AA->args_begin(), AA->args_size());
     else if (const auto *AB = dyn_cast<AcquiredBeforeAttr>(A))
@@ -19420,8 +19500,8 @@ bool Sema::checkThisInStaticMemberFunctionAttributes(CXXMethodDecl *Method) {
     if (Arg && !Finder.TraverseStmt(Arg))
       return true;
 
-    for (unsigned I = 0, N = Args.size(); I != N; ++I) {
-      if (!Finder.TraverseStmt(Args[I]))
+    for (Expr *A : Args) {
+      if (!Finder.TraverseStmt(A))
         return true;
     }
   }
@@ -19655,10 +19735,10 @@ void Sema::ActOnFinishFunctionDeclarationDeclarator(Declarator &Declarator) {
               ExplicitParams->getRAngleLoc(),
               ExplicitParams->getRequiresClause()));
     } else {
-      Declarator.setInventedTemplateParameterList(
-          TemplateParameterList::Create(
-              Context, SourceLocation(), SourceLocation(), FSI.TemplateParams,
-              SourceLocation(), /*RequiresClause=*/nullptr));
+      Declarator.setInventedTemplateParameterList(TemplateParameterList::Create(
+          Context, Declarator.getBeginLoc(), SourceLocation(),
+          FSI.TemplateParams, Declarator.getEndLoc(),
+          /*RequiresClause=*/nullptr));
     }
   }
   InventedParameterInfos.pop_back();

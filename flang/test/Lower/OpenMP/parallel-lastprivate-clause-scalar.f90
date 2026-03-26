@@ -1,7 +1,7 @@
 ! This test checks lowering of `LASTPRIVATE` clause for scalar types.
 
 ! RUN: bbc -fopenmp -emit-hlfir %s -o - | FileCheck %s
-! RUN: flang -fc1 -fopenmp -emit-hlfir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -fopenmp -emit-hlfir %s -o - | FileCheck %s
 
 !CHECK: func @_QPlastprivate_character(%[[ARG1:.*]]: !fir.boxchar<1>{{.*}}) {
 !CHECK-DAG: %[[ARG1_UNBOX:.*]]:2 = fir.unboxchar
@@ -18,10 +18,10 @@
 !CHECK: %[[ARG1_PVT_DECL:.*]]:2 = hlfir.declare %[[ARG1_PVT]] typeparams %[[FIVE]] {uniq_name = "_QFlastprivate_characterEarg1"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
 !CHECK: %[[UNIT:.*]] = arith.constant 6 : i32
 !CHECK-NEXT: %[[ADDR:.*]] = fir.address_of(@_QQclX
-!CHECK-NEXT: %[[CVT0:.*]] = fir.convert %[[ADDR]] 
+!CHECK-NEXT: %[[CVT0:.*]] = fir.convert %[[ADDR]]
 !CHECK-NEXT: %[[CNST:.*]] = arith.constant
 !CHECK-NEXT: %[[CALL_BEGIN_IO:.*]] = fir.call @_FortranAioBeginExternalListOutput(%[[UNIT]], %[[CVT0]], %[[CNST]]) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
-!CHECK-NEXT: %[[CVT_0_1:.*]] = fir.convert %[[ARG1_PVT_DECL]]#0 
+!CHECK-NEXT: %[[CVT_0_1:.*]] = fir.convert %[[ARG1_PVT_DECL]]#0
 !CHECK-NEXT: %[[CVT_0_2:.*]] = fir.convert %[[FIVE]]
 !CHECK-NEXT: %[[CALL_OP_ASCII:.*]] = fir.call @_FortranAioOutputAscii(%[[CALL_BEGIN_IO]], %[[CVT_0_1]], %[[CVT_0_2]])
 !CHECK-NEXT: %[[CALL_END_IO:.*]] = fir.call @_FortranAioEndIoStatement(%[[CALL_BEGIN_IO]])
@@ -45,7 +45,7 @@
 
 subroutine lastprivate_character(arg1)
         character(5) :: arg1
-!$OMP PARALLEL 
+!$OMP PARALLEL
 !$OMP DO LASTPRIVATE(arg1)
 do n = 1, 5
         arg1(n:n) = 'c'
@@ -82,7 +82,7 @@ end subroutine
 
 subroutine lastprivate_int(arg1)
         integer :: arg1
-!$OMP PARALLEL 
+!$OMP PARALLEL
 !$OMP DO LASTPRIVATE(arg1)
 do n = 1, 5
         arg1 = 2
@@ -123,7 +123,7 @@ end subroutine
 
 subroutine mult_lastprivate_int(arg1, arg2)
         integer :: arg1, arg2
-!$OMP PARALLEL 
+!$OMP PARALLEL
 !$OMP DO LASTPRIVATE(arg1) LASTPRIVATE(arg2)
 do n = 1, 5
         arg1 = 2
@@ -165,7 +165,7 @@ end subroutine
 
 subroutine mult_lastprivate_int2(arg1, arg2)
         integer :: arg1, arg2
-!$OMP PARALLEL 
+!$OMP PARALLEL
 !$OMP DO LASTPRIVATE(arg1, arg2)
 do n = 1, 5
         arg1 = 2
@@ -207,7 +207,7 @@ end subroutine
 
 subroutine firstpriv_lastpriv_int(arg1, arg2)
         integer :: arg1, arg2
-!$OMP PARALLEL 
+!$OMP PARALLEL
 !$OMP DO FIRSTPRIVATE(arg1) LASTPRIVATE(arg2)
 do n = 1, 5
         arg1 = 2
@@ -250,7 +250,7 @@ end subroutine
 
 subroutine firstpriv_lastpriv_int2(arg1)
         integer :: arg1
-!$OMP PARALLEL 
+!$OMP PARALLEL
 !$OMP DO FIRSTPRIVATE(arg1) LASTPRIVATE(arg1)
 do n = 1, 5
         arg1 = 2
@@ -259,4 +259,47 @@ end do
 !$OMP END DO
 !$OMP END PARALLEL
 print *, arg1
+end subroutine
+
+! Check that LASTPRIVATE updates the private copy of `i` when used inside
+! nested PARALLEL constructs in which `i` is private.
+!CHECK-LABEL: func @_QPlastprivate_nested_parallel()
+!CHECK:         %[[I:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFlastprivate_nested_parallelEi"} :
+!CHECK-SAME:                  (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:         omp.parallel private(@_QFlastprivate_nested_parallelEi_private_i32 %[[I]]#0 {{.*}})
+!CHECK:           %[[PRIV_I:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFlastprivate_nested_parallelEi"} :
+!CHECK-SAME:                         (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:           omp.parallel {
+!CHECK:             omp.wsloop private(@_QFlastprivate_nested_parallelEi_private_i32 %[[PRIV_I]]#0 {{.*}})
+!CHECK:               hlfir.assign %{{.*}} to %[[PRIV_I]]#0
+
+subroutine lastprivate_nested_parallel()
+  integer :: i
+
+  !$OMP PARALLEL DEFAULT(PRIVATE)
+    !$OMP PARALLEL
+      !$OMP DO LASTPRIVATE(i)
+      do i = 1, 5
+      end do
+    !$OMP END PARALLEL
+  !$OMP END PARALLEL
+end subroutine
+
+!CHECK-LABEL: func @_QPlastprivate_nested_parallel2()
+!CHECK:         omp.parallel {
+!CHECK:           omp.wsloop private(@_QFlastprivate_nested_parallel2Ei_private_i32 {{.*}})
+!CHECK:             %[[PRIV_I:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFlastprivate_nested_parallel2Ei"}
+!CHECK:             omp.parallel {
+!CHECK:               omp.wsloop private(@_QFlastprivate_nested_parallel2Ei_private_i32 %[[PRIV_I]]#0 {{.*}})
+!CHECK:                 hlfir.assign %{{.*}} to %[[PRIV_I]]#0
+
+subroutine lastprivate_nested_parallel2()
+  integer :: i, j, k
+
+  !$omp parallel do lastprivate(i)
+  do j = 1, 10
+    !$omp parallel do lastprivate(i)
+    do k = 2, 20
+    end do
+  end do
 end subroutine

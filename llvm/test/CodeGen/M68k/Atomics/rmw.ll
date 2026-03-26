@@ -210,10 +210,13 @@ define i64 @atomicrmw_xor_i64(i64 %val, ptr %ptr) {
 ; ATOMIC-NEXT:  ; %bb.0:
 ; ATOMIC-NEXT:    suba.l #20, %sp
 ; ATOMIC-NEXT:    .cfi_def_cfa_offset -24
+; ATOMIC-NEXT:    move.l (28,%sp), %d0
+; ATOMIC-NEXT:    move.l %d0, (8,%sp)
+; ATOMIC-NEXT:    move.l (24,%sp), %d0
+; ATOMIC-NEXT:    move.l %d0, (4,%sp)
+; ATOMIC-NEXT:    move.l (32,%sp), %d0
+; ATOMIC-NEXT:    move.l %d0, (%sp)
 ; ATOMIC-NEXT:    move.l #3, (12,%sp)
-; ATOMIC-NEXT:    move.l (28,%sp), (8,%sp)
-; ATOMIC-NEXT:    move.l (24,%sp), (4,%sp)
-; ATOMIC-NEXT:    move.l (32,%sp), (%sp)
 ; ATOMIC-NEXT:    jsr __atomic_fetch_xor_8
 ; ATOMIC-NEXT:    adda.l #20, %sp
 ; ATOMIC-NEXT:    rts
