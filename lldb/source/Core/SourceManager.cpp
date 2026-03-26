@@ -562,7 +562,8 @@ void SourceManager::File::CommonInitializerImpl(SupportFileNSP support_file_nsp,
               remapped = new_spec;
           }
           if (!remapped) {
-            if (auto found = target_sp->FindFileInSourceDirectory(file_spec)) {
+            if (auto found =
+                    target_sp->FindFileInSourceFileSearchPaths(file_spec)) {
               remapped = *found;
             }
           }
