@@ -6642,6 +6642,15 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
       Ops.push_back(Sub);
       return true;
     }
+    // Handle INSERT_SUBVECTOR(UNDEF, SUB, IDX) iff IDX != 0
+    if (InsertIdx != 0 && Src.isUndef() &&
+        peekThroughBitcasts(Sub).getOpcode() != ISD::EXTRACT_SUBVECTOR) {
+      Mask.assign(NumElts, SM_SentinelUndef);
+      std::iota(Mask.begin() + InsertIdx, Mask.begin() + InsertIdx + NumSubElts,
+                0);
+      Ops.push_back(Sub);
+      return true;
+    }
     if (!N->isOnlyUserOf(Sub.getNode()))
       return false;
 
@@ -34931,11 +34940,13 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     EVT VT = N->getValueType(0);
     assert(VT == MVT::v2f32 && "Unexpected type (!= v2f32) on FMIN/FMAX.");
     bool IsStrict = Opc == X86ISD::STRICT_FMIN || Opc == X86ISD::STRICT_FMAX;
-    SDValue UNDEF = DAG.getUNDEF(VT);
+    // For strict FP use a value that can not signal.
+    SDValue Filler =
+        IsStrict ? DAG.getConstantFP(0.0, dl, VT) : DAG.getUNDEF(VT);
     SDValue LHS = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4f32,
-                              N->getOperand(IsStrict ? 1 : 0), UNDEF);
+                              N->getOperand(IsStrict ? 1 : 0), Filler);
     SDValue RHS = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4f32,
-                              N->getOperand(IsStrict ? 2 : 1), UNDEF);
+                              N->getOperand(IsStrict ? 2 : 1), Filler);
     SDValue Res;
     if (IsStrict)
       Res = DAG.getNode(Opc, dl, {MVT::v4f32, MVT::Other},
@@ -41786,17 +41797,6 @@ static SDValue combineX86ShufflesRecursively(
     OpMask.assign(NumElts, SM_SentinelUndef);
     std::iota(OpMask.begin(), OpMask.end(), ExtractIdx);
     OpZero = OpUndef = APInt::getZero(NumElts);
-  } else if (Op.getOpcode() == ISD::INSERT_SUBVECTOR &&
-             Op.getOperand(0).isUndef() && !isNullConstant(Op.getOperand(2))) {
-    SDValue SubVec = Op.getOperand(1);
-    int InsertIdx = Op.getConstantOperandVal(2);
-    unsigned NumElts = VT.getVectorNumElements();
-    unsigned NumSubElts = SubVec.getValueType().getVectorNumElements();
-    OpInputs.assign({SubVec});
-    OpMask.assign(NumElts, SM_SentinelUndef);
-    std::iota(OpMask.begin() + InsertIdx,
-              OpMask.begin() + InsertIdx + NumSubElts, 0);
-    OpZero = OpUndef = APInt::getZero(NumElts);
   } else {
     return SDValue();
   }
@@ -42651,7 +42651,8 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
       SDValue N0 = peekThroughOneUseBitcasts(N.getOperand(0));
       SDValue N1 = peekThroughOneUseBitcasts(N.getOperand(1));
       unsigned SrcOpcode = N0.getOpcode();
-      if (TLI.isBinOp(SrcOpcode) && N1.getOpcode() == SrcOpcode &&
+      if ((SrcOpcode == X86ISD::PSADBW || TLI.isBinOp(SrcOpcode)) &&
+          N1.getOpcode() == SrcOpcode &&
           N0.getValueType() == N1.getValueType() &&
           IsSafeToMoveShuffle(N0, SrcOpcode) &&
           IsSafeToMoveShuffle(N1, SrcOpcode)) {
@@ -42677,11 +42678,12 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
             LHS = DAG.getNode(Opc, DL, ShuffleVT, Op00, Op10);
             RHS = DAG.getNode(Opc, DL, ShuffleVT, Op01, Op11);
           }
-          EVT OpVT = N0.getValueType();
+          EVT OpSrcVT = N0.getOperand(0).getValueType();
+          EVT OpDstVT = N0.getValueType();
           return DAG.getBitcast(ShuffleVT,
-                                DAG.getNode(SrcOpcode, DL, OpVT,
-                                            DAG.getBitcast(OpVT, LHS),
-                                            DAG.getBitcast(OpVT, RHS)));
+                                DAG.getNode(SrcOpcode, DL, OpDstVT,
+                                            DAG.getBitcast(OpSrcVT, LHS),
+                                            DAG.getBitcast(OpSrcVT, RHS)));
         }
       }
       if (isUnaryOp(SrcOpcode) && N1.getOpcode() == SrcOpcode &&
@@ -59426,6 +59428,23 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
     assert(!Op0->hasAnyUseOfValue(1) && "Overflow bit in use");
     return DAG.getNode(X86ISD::ADC, SDLoc(Op0), Op0->getVTList(), Op1,
                        Op0.getOperand(0), Op0.getOperand(2));
+  }
+
+  // Fold ADD(SBB(Y,0,W),C) -> SBB(Y,-C,W)
+  // SBB(Y,0,W) = Y - 0 - CF = Y - CF; adding C gives Y - CF + C = Y - (-C) -
+  // CF. The SBB flags output must be dead: changing the subtrahend from 0 to -C
+  // produces different EFLAGS bits.
+  SDValue SBB = Op0;
+  SDValue C = Op1;
+  if (SBB.getOpcode() != X86ISD::SBB)
+    std::swap(SBB, C);
+  if (SBB.getOpcode() == X86ISD::SBB && SBB->hasOneUse() &&
+      X86::isZeroNode(SBB.getOperand(1)) && !SBB->hasAnyUseOfValue(1)) {
+    SDLoc SBBLoc(SBB);
+    return DAG
+        .getNode(X86ISD::SBB, SBBLoc, SBB->getVTList(), SBB.getOperand(0),
+                 DAG.getNegative(C, SBBLoc, VT), SBB.getOperand(2))
+        .getValue(0);
   }
 
   if (SDValue IFMA52 = matchVPMADD52(N, DAG, DL, VT, Subtarget))

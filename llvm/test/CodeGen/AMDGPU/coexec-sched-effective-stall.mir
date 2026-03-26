@@ -3,14 +3,13 @@
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -run-pass=machine-scheduler -amdgpu-sched-strategy=coexec -verify-misched %s -o - | FileCheck -check-prefix=COEXEC %s
 
 --- |
-  ; Pre-commit test for stall heuristic
-
   define void @test-sched-effective-stall() #0 { ret void }
   define void @test-sched-pending-structural-stall() #0 { ret void }
 
   attributes #0 = { "amdgpu-waves-per-eu"="1,1" }
 ...
 
+---
 name: test-sched-effective-stall
 tracksRegLiveness: true
 body: |
@@ -102,9 +101,9 @@ body: |
     ; COEXEC-NEXT: [[DEF8:%[0-9]+]]:vgpr_32_lo256 = IMPLICIT_DEF
     ; COEXEC-NEXT: [[DEF9:%[0-9]+]]:vgpr_32_lo256 = IMPLICIT_DEF
     ; COEXEC-NEXT: early-clobber %10:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 0, [[DEF2]], [[DEF3]], [[DEF4]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; COEXEC-NEXT: S_NOP 0
+    ; COEXEC-NEXT: S_NOP 0
     ; COEXEC-NEXT: early-clobber %11:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF5]], [[DEF6]], 0, [[DEF7]], [[DEF8]], [[DEF9]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-    ; COEXEC-NEXT: S_NOP 0
-    ; COEXEC-NEXT: S_NOP 0
     ; COEXEC-NEXT: S_ENDPGM 0, implicit %10, implicit %11
     %0:vreg_512_align2 = IMPLICIT_DEF
     %1:vreg_512_align2 = IMPLICIT_DEF

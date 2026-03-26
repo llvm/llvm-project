@@ -507,7 +507,8 @@ bool ClauseProcessor::processInitializer(
     ReductionProcessor::GenInitValueCBTy &genInitValueCB) const {
   if (auto *clause = findUniqueClause<omp::clause::Initializer>()) {
     genInitValueCB = [&, clause](fir::FirOpBuilder &builder, mlir::Location loc,
-                                 mlir::Type type, mlir::Value ompOrig) {
+                                 mlir::Type type, mlir::Value moldArg,
+                                 mlir::Value privArg) {
       lower::SymMapScope scope(symMap);
       mlir::Value ompPrivVar;
       const StylizedInstance &inst = clause->v.front();
@@ -515,9 +516,10 @@ bool ClauseProcessor::processInitializer(
       for (const Object &object :
            std::get<StylizedInstance::Variables>(inst.t)) {
         mlir::Value addr;
-        mlir::Type ompOrigType = ompOrig.getType();
+        std::string name = object.sym()->name().ToString();
+        mlir::Type moldArgType = moldArg.getType();
         // Check for unsupported dynamic-length character reductions
-        mlir::Type unwrappedType = fir::unwrapRefType(ompOrigType);
+        mlir::Type unwrappedType = fir::unwrapRefType(moldArgType);
         if (mlir::isa<fir::BoxCharType>(unwrappedType)) {
           TODO(loc, "OpenMP reduction allocation for dynamic length character");
         }
@@ -527,18 +529,20 @@ bool ClauseProcessor::processInitializer(
                  "OpenMP reduction allocation for dynamic length character");
           }
         }
-        // If ompOrig is already a reference, we can use it directly
-        if (fir::isa_ref_type(ompOrigType)) {
-          addr = ompOrig;
+        // For by-ref reductions, omp_priv maps to privArg (the private
+        // allocation) and omp_orig maps to moldArg (the original).
+        if (name == "omp_priv" && privArg) {
+          addr = privArg;
+        } else if (fir::isa_ref_type(moldArgType)) {
+          addr = moldArg;
         } else {
-          addr = builder.createTemporary(loc, ompOrigType);
-          fir::StoreOp::create(builder, loc, ompOrig, addr);
+          addr = builder.createTemporary(loc, moldArgType);
+          fir::StoreOp::create(builder, loc, moldArg, addr);
         }
         fir::FortranVariableFlagsEnum extraFlags = {};
         fir::FortranVariableFlagsAttr attributes =
             Fortran::lower::translateSymbolAttributes(
                 builder.getContext(), *object.sym(), extraFlags);
-        std::string name = object.sym()->name().ToString();
         // Get length parameters for types that need them (e.g., characters).
         // Note: DeclareOp requires exactly one type parameter for non-boxed
         // characters, unlike EmboxOp which doesn't allow them for constant-len.
@@ -570,9 +574,6 @@ bool ClauseProcessor::processInitializer(
               [&](const auto &expr) -> mlir::Value {
                 mlir::Value exprResult = fir::getBase(convertExprToValue(
                     loc, converter, initExpr, symMap, stmtCtx));
-                // Conversion can either give a value or a refrence to a value,
-                // we need to return the reduction type, so an optional load may
-                // be generated.
                 if (auto refType = llvm::dyn_cast<fir::ReferenceType>(
                         exprResult.getType()))
                   if (ompPrivVar.getType() == refType)
@@ -1488,16 +1489,32 @@ bool ClauseProcessor::processIsDevicePtr(
   return clauseFound;
 }
 
-bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result) const {
+bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result,
+                                    bool isDeclareSimd) const {
   lower::StatementContext stmtCtx;
+  std::vector<mlir::Attribute> typeAttrs;
+  std::vector<mlir::Attribute> linearModAttrs;
   return findRepeatableClause<
       omp::clause::Linear>([&](const omp::clause::Linear &clause,
                                const parser::CharBlock &) {
     auto &objects = std::get<omp::ObjectList>(clause.t);
-    static std::vector<mlir::Attribute> typeAttrs;
 
-    if (!result.linearVars.size())
-      typeAttrs.clear();
+    std::optional<mlir::omp::LinearModifier> explicitLinearMod;
+    if (auto &linearModifier =
+            std::get<std::optional<omp::clause::Linear::LinearModifier>>(
+                clause.t)) {
+      switch (*linearModifier) {
+      case omp::clause::Linear::LinearModifier::Val:
+        explicitLinearMod = mlir::omp::LinearModifier::val;
+        break;
+      case omp::clause::Linear::LinearModifier::Ref:
+        explicitLinearMod = mlir::omp::LinearModifier::ref;
+        break;
+      case omp::clause::Linear::LinearModifier::Uval:
+        explicitLinearMod = mlir::omp::LinearModifier::uval;
+        break;
+      }
+    }
 
     for (const omp::Object &object : objects) {
       semantics::Symbol *sym = object.sym();
@@ -1512,10 +1529,6 @@ bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result) const {
         mlir::Value operand =
             fir::getBase(converter.genExprValue(toEvExpr(*mod), stmtCtx));
         result.linearStepVars.append(objects.size(), operand);
-      } else if (std::get<std::optional<omp::clause::Linear::LinearModifier>>(
-                     clause.t)) {
-        mlir::Location currentLocation = converter.getCurrentLocation();
-        TODO(currentLocation, "Linear modifiers not yet implemented");
       } else {
         // If nothing is present, add the default step of 1.
         fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
@@ -1525,9 +1538,44 @@ bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result) const {
             firOpBuilder.createIntegerConstant(currentLocation, integerTy, 1);
         result.linearStepVars.append(objects.size(), operand);
       }
+
+      // Determine the linear modifier:
+      // 1. Use explicit modifier if provided.
+      // 2. For OpenMP >= 5.2 (Section 5.4.6: "the default linear-modifier
+      //    is val"):
+      //    - declare simd: "ref" for POINTER or non-VALUE dummy args,
+      //      "val" otherwise.
+      //    - do/simd: always "val".
+      // 3. Otherwise, leave unset (UnitAttr placeholder).
+      auto getDeclareSimdDefaultMod = [](const semantics::Symbol &sym) {
+        const auto &ultimate = sym.GetUltimate();
+        if (semantics::IsPointer(ultimate))
+          return mlir::omp::LinearModifier::ref;
+        if (const auto *obj =
+                ultimate.detailsIf<semantics::ObjectEntityDetails>())
+          if (obj->isDummy() && !semantics::IsValue(ultimate))
+            return mlir::omp::LinearModifier::ref;
+        return mlir::omp::LinearModifier::val;
+      };
+
+      std::optional<mlir::omp::LinearModifier> linearMod;
+      if (explicitLinearMod)
+        linearMod = *explicitLinearMod;
+      else if (semaCtx.langOptions().OpenMPVersion >= 52)
+        linearMod = isDeclareSimd ? getDeclareSimdDefaultMod(*sym)
+                                  : mlir::omp::LinearModifier::val;
+
+      if (linearMod)
+        linearModAttrs.push_back(mlir::omp::LinearModifierAttr::get(
+            &converter.getMLIRContext(), *linearMod));
+      else
+        linearModAttrs.push_back(
+            mlir::UnitAttr::get(&converter.getMLIRContext()));
     }
     result.linearVarTypes =
         mlir::ArrayAttr::get(&converter.getMLIRContext(), typeAttrs);
+    result.linearModifiers =
+        mlir::ArrayAttr::get(&converter.getMLIRContext(), linearModAttrs);
   });
 }
 

@@ -39,7 +39,6 @@ define void @test_widen_ptr_induction(ptr %ptr.start.1) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
-; CHECK-NEXT:    [[IND_END4:%.*]] = getelementptr i8, ptr [[PTR_START_1]], i64 10000
 ; CHECK-NEXT:    br i1 true, label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 10000, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
@@ -65,7 +64,7 @@ define void @test_widen_ptr_induction(ptr %ptr.start.1) {
 ; CHECK-NEXT:    br i1 false, label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 10000, [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 10000, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi ptr [ [[IND_END]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END4]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[PTR_START_1]], [[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi ptr [ [[IND_END]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP0]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[PTR_START_1]], [[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
@@ -212,7 +211,6 @@ define void @test_widen_induction_variable_start(ptr %A, i64 %N, i64 %start) {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
-; CHECK-NEXT:    [[IND_END5:%.*]] = add i64 [[START]], [[N_VEC]]
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 2
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF3]]
 ; CHECK:       vec.epilog.ph:
@@ -239,7 +237,7 @@ define void @test_widen_induction_variable_start(ptr %A, i64 %N, i64 %start) {
 ; CHECK-NEXT:    [[CMP_N15:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[CMP_N15]], label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL6:%.*]] = phi i64 [ [[IND_END4]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END5]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[START]], [[ITER_CHECK:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL6:%.*]] = phi i64 [ [[IND_END4]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[START]], [[ITER_CHECK:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV_1:%.*]] = phi i64 [ [[BC_RESUME_VAL6]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_1_NEXT:%.*]], [[LOOP]] ]
@@ -456,4 +454,104 @@ loop:
 
 exit:
   ret void
+}
+
+; Test that epilogue vectorization correctly handles loops where identical
+; induction variables are CSE'd into a single resume phi, avoiding a count
+; mismatch between ResumeValues and the epilogue's scalar preheader phis.
+define i32 @cse_multiple_ivs_with_scalar_resume(ptr %src, i64 %N) {
+; CHECK-LABEL: @cse_multiple_ivs_with_scalar_resume(
+; CHECK-NEXT:  iter.check:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N:%.*]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 2
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH:%.*]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
+; CHECK:       vector.main.loop.iter.check:
+; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[TMP0]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 4
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <2 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP6:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i16, ptr [[SRC:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i16, ptr [[TMP1]], i64 2
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i16>, ptr [[TMP1]], align 2
+; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <2 x i16>, ptr [[TMP2]], align 2
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <2 x i16> [[WIDE_LOAD]] to <2 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = sext <2 x i16> [[WIDE_LOAD3]] to <2 x i32>
+; CHECK-NEXT:    [[TMP5]] = or <2 x i32> [[TMP3]], [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP6]] = or <2 x i32> [[TMP4]], [[VEC_PHI2]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = or <2 x i32> [[TMP6]], [[TMP5]]
+; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @llvm.vector.reduce.or.v2i32(<2 x i32> [[BIN_RDX]])
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
+; CHECK:       vec.epilog.iter.check:
+; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 2
+; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF3]]
+; CHECK:       vec.epilog.ph:
+; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP8]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-NEXT:    [[N_MOD_VF4:%.*]] = urem i64 [[TMP0]], 2
+; CHECK-NEXT:    [[N_VEC5:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF4]]
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i32 0
+; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
+; CHECK:       vec.epilog.vector.body:
+; CHECK-NEXT:    [[INDEX6:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT9:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI7:%.*]] = phi <2 x i32> [ [[TMP9]], [[VEC_EPILOG_PH]] ], [ [[TMP12:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[INDEX6]]
+; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <2 x i16>, ptr [[TMP10]], align 2
+; CHECK-NEXT:    [[TMP11:%.*]] = sext <2 x i16> [[WIDE_LOAD8]] to <2 x i32>
+; CHECK-NEXT:    [[TMP12]] = or <2 x i32> [[TMP11]], [[VEC_PHI7]]
+; CHECK-NEXT:    [[INDEX_NEXT9]] = add nuw i64 [[INDEX6]], 2
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT9]], [[N_VEC5]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
+; CHECK:       vec.epilog.middle.block:
+; CHECK-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vector.reduce.or.v2i32(<2 x i32> [[TMP12]])
+; CHECK-NEXT:    [[CMP_N10:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC5]]
+; CHECK-NEXT:    br i1 [[CMP_N10]], label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
+; CHECK:       vec.epilog.scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC5]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX11:%.*]] = phi i32 [ [[TMP14]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP8]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK]] ]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[IV1_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV2:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[IV2_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi i32 [ [[BC_MERGE_RDX11]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[RDX_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[IV1]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i16, ptr [[GEP]], align 2
+; CHECK-NEXT:    [[EXT:%.*]] = sext i16 [[VAL]] to i32
+; CHECK-NEXT:    [[RDX_NEXT]] = or i32 [[EXT]], [[RDX]]
+; CHECK-NEXT:    [[IV1_NEXT]] = add i64 [[IV1]], 1
+; CHECK-NEXT:    [[IV2_NEXT]] = add i64 [[IV2]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[IV1]], [[N]]
+; CHECK-NEXT:    br i1 [[COND]], label [[EXIT]], label [[LOOP]], {{!llvm.loop ![0-9]+}}
+; CHECK:       exit:
+; CHECK-NEXT:    [[RDX_NEXT_LCSSA:%.*]] = phi i32 [ [[RDX_NEXT]], [[LOOP]] ], [ [[TMP8]], [[MIDDLE_BLOCK]] ], [ [[TMP14]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret i32 [[RDX_NEXT_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv1 = phi i64 [ 0, %entry ], [ %iv1.next, %loop ]
+  %iv2 = phi i64 [ 0, %entry ], [ %iv2.next, %loop ]
+  %rdx = phi i32 [ 0, %entry ], [ %rdx.next, %loop ]
+  %gep = getelementptr i16, ptr %src, i64 %iv1
+  %val = load i16, ptr %gep, align 2
+  %ext = sext i16 %val to i32
+  %rdx.next = or i32 %ext, %rdx
+  %iv1.next = add i64 %iv1, 1
+  %iv2.next = add i64 %iv2, 1
+  %cond = icmp eq i64 %iv1, %N
+  br i1 %cond, label %exit, label %loop
+
+exit:
+  ret i32 %rdx.next
 }

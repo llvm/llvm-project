@@ -366,6 +366,11 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     }
     return false;
   }
+  case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x32_bf16:
+    return SemaRef.BuiltinConstantArgRange(TheCall, /*ArgNum=*/0, /*Low=*/0,
+                                           /*High=*/0) ||
+           SemaRef.BuiltinConstantArgRange(TheCall, /*ArgNum=*/2, /*Low=*/0,
+                                           /*High=*/0);
   default:
     return false;
   }
