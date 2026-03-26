@@ -2031,6 +2031,12 @@ def TuneVXRMPipelineFlush
     : RISCVSimpleTuneFeature<"vxrm-pipeline-flush", "HasVXRMPipelineFlush",
                              "true", "VXRM writes causes pipeline flush">;
 
+def TunePreferAscendingLoadStore
+    : RISCVSimpleTuneFeature<"prefer-ascending-load-store",
+                             "PreferAscendingLoadStore", "true",
+                             "Prefer ascending load/store order for better "
+                             "clustering and performance">;
+
 def TunePreferVsetvliOverReadVLENB
     : RISCVSimpleTuneFeature<
           "prefer-vsetvli-over-read-vlenb", "PreferVsetvliOverReadVLENB",
