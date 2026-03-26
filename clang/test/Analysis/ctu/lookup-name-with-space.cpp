@@ -4,7 +4,7 @@
 // RUN: echo '41:c:@S@G@F@G#@Sa@F@operator void (*)(int)#1 %/t/importee.ast' >> %t/externalDefMap.txt
 // RUN: echo '38:c:@S@G@F@G#@Sa@F@operator void (*)()#1 %/t/importee.ast' >> %t/externalDefMap.txt
 // RUN: echo '14:c:@F@importee# %/t/importee.ast' >> %t/externalDefMap.txt
-// RUN: %clang_cc1 -emit-pch %/S/Inputs/ctu-lookup-name-with-space.cpp -o %t/importee.ast
+// RUN: %clang_cc1 -emit-pch %/S/Inputs/lookup-name-with-space.cpp -o %t/importee.ast
 
 // RUN: cd %t
 // RUN: %clang_analyze_cc1 \
@@ -35,7 +35,7 @@ void importee();
 
 void trigger() {
   // Call an external function to trigger the parsing process of CTU index.
-  // Refer to file Inputs/ctu-lookup-name-with-space.cpp for more details.
+  // Refer to file Inputs/lookup-name-with-space.cpp for more details.
 
   importee(); // expected-no-diagnostics
 }

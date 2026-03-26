@@ -1,8 +1,8 @@
 // RUN: rm -rf %t && mkdir %t
 // RUN: mkdir -p %t/ctudir
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -std=c++17 \
-// RUN:   -emit-pch -o %t/ctudir/ctu-test-import-failure-import.cpp.ast %S/Inputs/ctu-test-import-failure-import.cpp
-// RUN: cp %S/Inputs/ctu-test-import-failure-import.cpp.externalDefMap.ast-dump.txt %t/ctudir/externalDefMap.txt
+// RUN:   -emit-pch -o %t/ctudir/test-import-failure-import.cpp.ast %S/Inputs/test-import-failure-import.cpp
+// RUN: cp %S/Inputs/test-import-failure-import.cpp.externalDefMap.ast-dump.txt %t/ctudir/externalDefMap.txt
 // RUN: %clang_analyze_cc1 -triple x86_64-pc-linux-gnu -std=c++17 \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-config experimental-enable-naive-ctu-analysis=true \
@@ -28,7 +28,7 @@ namespace CommandLine {
 extern const int RootExamples[];
 }
 
-// expected-warning@Inputs/ctu-test-import-failure-import.cpp:14{{incompatible definitions}}
-// expected-warning@Inputs/ctu-test-import-failure-import.cpp:14{{incompatible definitions}}
-// expected-note@Inputs/ctu-test-import-failure-import.cpp:14{{no corresponding field here}}
-// expected-note@Inputs/ctu-test-import-failure-import.cpp:14{{no corresponding field here}}
+// expected-warning@Inputs/test-import-failure-import.cpp:14{{incompatible definitions}}
+// expected-warning@Inputs/test-import-failure-import.cpp:14{{incompatible definitions}}
+// expected-note@Inputs/test-import-failure-import.cpp:14{{no corresponding field here}}
+// expected-note@Inputs/test-import-failure-import.cpp:14{{no corresponding field here}}
