@@ -1235,7 +1235,8 @@ TEST(Error, NonNullSuccess) {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS && !defined(NDEBUG)
 TEST(Error, NonNullFails) {
   int *NullPtr = nullptr;
-  EXPECT_DEATH(nonNull(NullPtr), "Expected a non-null pointer but got a null pointer")
+  EXPECT_DEATH(nonNull(NullPtr),
+               "Expected a non-null pointer but got a null pointer")
       << "nonNull(NullPtr) did not cause an abort for null pointer";
 
   EXPECT_DEATH(nonNull(NullPtr, "custom message"), "custom message")
