@@ -6,7 +6,7 @@
 
 // RUN: cp %S/Inputs/invalid-ast-other.cpp.externalDefMap.ast-dump.txt %t/externalDefMap.txt
 
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -std=c++17 -analyze \
+// RUN: %clang_analyze_cc1 -triple x86_64-pc-linux-gnu -std=c++17 \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-config experimental-enable-naive-ctu-analysis=true \
 // RUN:   -analyzer-config ctu-dir=%t \
