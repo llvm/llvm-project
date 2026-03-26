@@ -403,6 +403,56 @@ struct IsFiniteOpLowering
   }
 };
 
+// A `clampf` is converted into `minimum(value, max)` followed by
+// `maximum(result, min)`, i.e. clampf(x, lo, hi) = maximum(minimum(x, hi), lo)
+struct ClampFOpLowering
+    : public ConvertOpToLLVMPattern<math::ClampFOp,
+                                    /*FailOnUnsupportedFP=*/true> {
+  using ConvertOpToLLVMPattern<
+      math::ClampFOp, /*FailOnUnsupportedFP=*/true>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(math::ClampFOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    const auto &typeConverter = *this->getTypeConverter();
+    auto operandType = adaptor.getValue().getType();
+    auto llvmOperandType = typeConverter.convertType(operandType);
+    if (!llvmOperandType)
+      return failure();
+
+    auto loc = op.getLoc();
+    ConvertFastMath<math::ClampFOp, LLVM::MinimumOp> minAttrs(op);
+    ConvertFastMath<math::ClampFOp, LLVM::MaximumOp> maxAttrs(op);
+
+    if (!isa<LLVM::LLVMArrayType>(llvmOperandType)) {
+      auto minOp = LLVM::MinimumOp::create(
+          rewriter, loc, llvmOperandType,
+          ValueRange{adaptor.getValue(), adaptor.getMax()},
+          minAttrs.getAttrs());
+      rewriter.replaceOpWithNewOp<LLVM::MaximumOp>(
+          op, llvmOperandType, ValueRange{minOp.getResult(), adaptor.getMin()},
+          maxAttrs.getAttrs());
+      return success();
+    }
+
+    if (!isa<VectorType>(op.getResult().getType()))
+      return rewriter.notifyMatchFailure(op, "expected vector result type");
+
+    return LLVM::detail::handleMultidimensionalVectors(
+        op.getOperation(), adaptor.getOperands(), typeConverter,
+        [&](Type llvm1DVectorTy, ValueRange operands) {
+          // operands order: value, min, max
+          auto minOp = LLVM::MinimumOp::create(
+              rewriter, loc, llvm1DVectorTy,
+              ValueRange{operands[0], operands[2]}, minAttrs.getAttrs());
+          return LLVM::MaximumOp::create(
+              rewriter, loc, llvm1DVectorTy,
+              ValueRange{minOp.getResult(), operands[1]}, maxAttrs.getAttrs());
+        },
+        rewriter);
+  }
+};
+
 struct ConvertMathToLLVMPass
     : public impl::ConvertMathToLLVMPassBase<ConvertMathToLLVMPass> {
   using Base::Base;
@@ -431,6 +481,7 @@ void mlir::populateMathToLLVMConversionPatterns(
     AbsFOpLowering,
     AbsIOpLowering,
     CeilOpLowering,
+    ClampFOpLowering,
     CopySignOpLowering,
     CosOpLowering,
     CoshOpLowering,

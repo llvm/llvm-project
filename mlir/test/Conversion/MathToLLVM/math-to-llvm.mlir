@@ -641,3 +641,50 @@ func.func @unsupported_fp_type(%arg0: f4E2M1FN, %arg1: f4E2M1FN, %arg2: f4E2M1FN
   %2 = math.fma %arg1, %arg1, %arg2 : f4E2M1FN
   return
 }
+
+// -----
+
+// CHECK-LABEL: func @clampf(
+// CHECK-SAME: %[[VAL:.*]]: f32, %[[MIN:.*]]: f32, %[[MAX:.*]]: f32
+func.func @clampf(%arg0: f32, %arg1: f32, %arg2: f32) -> f32 {
+  // CHECK: %[[MIN_VAL:.*]] = llvm.intr.minimum(%[[VAL]], %[[MAX]]) : (f32, f32) -> f32
+  // CHECK: %[[RESULT:.*]] = llvm.intr.maximum(%[[MIN_VAL]], %[[MIN]]) : (f32, f32) -> f32
+  %0 = math.clampf %arg0 to [%arg1, %arg2] : f32
+  return %0 : f32
+}
+
+// -----
+
+// CHECK-LABEL: func @clampf_fmf(
+// CHECK-SAME: %[[VAL:.*]]: f32, %[[MIN:.*]]: f32, %[[MAX:.*]]: f32
+func.func @clampf_fmf(%arg0: f32, %arg1: f32, %arg2: f32) -> f32 {
+  // CHECK: %[[MIN_VAL:.*]] = llvm.intr.minimum(%[[VAL]], %[[MAX]]) {fastmathFlags = #llvm.fastmath<fast>} : (f32, f32) -> f32
+  // CHECK: %[[RESULT:.*]] = llvm.intr.maximum(%[[MIN_VAL]], %[[MIN]]) {fastmathFlags = #llvm.fastmath<fast>} : (f32, f32) -> f32
+  %0 = math.clampf %arg0 to [%arg1, %arg2] fastmath<fast> : f32
+  return %0 : f32
+}
+
+// -----
+
+// CHECK-LABEL: func @clampf_vector(
+// CHECK-SAME: %[[VAL:.*]]: vector<4xf32>, %[[MIN:.*]]: vector<4xf32>, %[[MAX:.*]]: vector<4xf32>
+func.func @clampf_vector(%arg0: vector<4xf32>, %arg1: vector<4xf32>, %arg2: vector<4xf32>) -> vector<4xf32> {
+  // CHECK: %[[MIN_VAL:.*]] = llvm.intr.minimum(%[[VAL]], %[[MAX]]) : (vector<4xf32>, vector<4xf32>) -> vector<4xf32>
+  // CHECK: %[[RESULT:.*]] = llvm.intr.maximum(%[[MIN_VAL]], %[[MIN]]) : (vector<4xf32>, vector<4xf32>) -> vector<4xf32>
+  %0 = math.clampf %arg0 to [%arg1, %arg2] : vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @clampf_2dvector(
+func.func @clampf_2dvector(%arg0: vector<4x3xf32>, %arg1: vector<4x3xf32>, %arg2: vector<4x3xf32>) -> vector<4x3xf32> {
+  // CHECK: %[[EXTRACT_VAL:.*]] = llvm.extractvalue %{{.*}}[0] : !llvm.array<4 x vector<3xf32>>
+  // CHECK: %[[EXTRACT_MIN:.*]] = llvm.extractvalue %{{.*}}[0] : !llvm.array<4 x vector<3xf32>>
+  // CHECK: %[[EXTRACT_MAX:.*]] = llvm.extractvalue %{{.*}}[0] : !llvm.array<4 x vector<3xf32>>
+  // CHECK: %[[MIN_VAL:.*]] = llvm.intr.minimum(%[[EXTRACT_VAL]], %[[EXTRACT_MAX]]) : (vector<3xf32>, vector<3xf32>) -> vector<3xf32>
+  // CHECK: %[[MAX_VAL:.*]] = llvm.intr.maximum(%[[MIN_VAL]], %[[EXTRACT_MIN]]) : (vector<3xf32>, vector<3xf32>) -> vector<3xf32>
+  // CHECK: llvm.insertvalue %[[MAX_VAL]], %{{.*}}[0] : !llvm.array<4 x vector<3xf32>>
+  %0 = math.clampf %arg0 to [%arg1, %arg2] : vector<4x3xf32>
+  return %0 : vector<4x3xf32>
+}
