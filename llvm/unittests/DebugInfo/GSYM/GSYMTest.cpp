@@ -978,7 +978,7 @@ TEST(GSYMTest, TestHeaderEncodeDecode) {
 }
 
 static void TestGsymCreatorEncodeError(llvm::endianness ByteOrder,
-                                       const GsymCreator &GC,
+                                       const GsymCreatorV1 &GC,
                                        std::string ExpectedErrorMsg) {
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
@@ -996,7 +996,7 @@ TEST(GSYMTest, TestGsymCreatorEncodeErrors) {
   // Verify we get an error when trying to encode an GsymCreator with no
   // function infos. We shouldn't be saving a GSYM file in this case since
   // there is nothing inside of it.
-  GsymCreator GC;
+  GsymCreatorV1 GC;
   TestGsymCreatorEncodeError(llvm::endianness::little, GC,
                              "no functions to encode");
   const uint64_t FuncAddr = 0x1000;
@@ -1040,7 +1040,7 @@ TEST(GSYMTest, TestGsymCreatorEncodeErrors) {
                              "attempted to encode invalid InlineInfo object");
 }
 
-static void Compare(const GsymCreator &GC, const GsymReaderV1 &GR) {
+static void Compare(const GsymCreatorV1 &GC, const GsymReaderV1 &GR) {
   // Verify that all of the data in a GsymCreator is correctly decoded from
   // a GsymReaderV1. To do this, we iterator over
   GC.forEachFunctionInfo([&](const FunctionInfo &FI) -> bool {
@@ -1051,7 +1051,7 @@ static void Compare(const GsymCreator &GC, const GsymReaderV1 &GR) {
   });
 }
 
-static void TestEncodeDecode(const GsymCreator &GC, llvm::endianness ByteOrder,
+static void TestEncodeDecode(const GsymCreatorV1 &GC, llvm::endianness ByteOrder,
                              uint16_t Version, uint8_t AddrOffSize,
                              uint64_t BaseAddress, uint32_t NumAddresses,
                              ArrayRef<uint8_t> UUID) {
@@ -1074,7 +1074,7 @@ static void TestEncodeDecode(const GsymCreator &GC, llvm::endianness ByteOrder,
 
 TEST(GSYMTest, TestGsymCreator1ByteAddrOffsets) {
   uint8_t UUID[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
-  GsymCreator GC;
+  GsymCreatorV1 GC;
   GC.setUUID(UUID);
   constexpr uint64_t BaseAddr = 0x1000;
   constexpr uint8_t AddrOffSize = 1;
@@ -1097,7 +1097,7 @@ TEST(GSYMTest, TestGsymCreator1ByteAddrOffsets) {
 
 TEST(GSYMTest, TestGsymCreator2ByteAddrOffsets) {
   uint8_t UUID[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
-  GsymCreator GC;
+  GsymCreatorV1 GC;
   GC.setUUID(UUID);
   constexpr uint64_t BaseAddr = 0x1000;
   constexpr uint8_t AddrOffSize = 2;
@@ -1120,7 +1120,7 @@ TEST(GSYMTest, TestGsymCreator2ByteAddrOffsets) {
 
 TEST(GSYMTest, TestGsymCreator4ByteAddrOffsets) {
   uint8_t UUID[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
-  GsymCreator GC;
+  GsymCreatorV1 GC;
   GC.setUUID(UUID);
   constexpr uint64_t BaseAddr = 0x1000;
   constexpr uint8_t AddrOffSize = 4;
@@ -1143,7 +1143,7 @@ TEST(GSYMTest, TestGsymCreator4ByteAddrOffsets) {
 
 TEST(GSYMTest, TestGsymCreator8ByteAddrOffsets) {
   uint8_t UUID[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
-  GsymCreator GC;
+  GsymCreatorV1 GC;
   GC.setUUID(UUID);
   constexpr uint64_t BaseAddr = 0x1000;
   constexpr uint8_t AddrOffSize = 8;
@@ -1180,7 +1180,7 @@ static void VerifyFunctionInfoError(const GsymReaderV1 &GR, uint64_t Addr,
 
 TEST(GSYMTest, TestGsymReaderV1) {
   uint8_t UUID[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
-  GsymCreator GC;
+  GsymCreatorV1 GC;
   GC.setUUID(UUID);
   constexpr uint64_t BaseAddr = 0x1000;
   constexpr uint64_t Func1Addr = BaseAddr;
@@ -1225,7 +1225,7 @@ TEST(GSYMTest, TestGsymLookups) {
   // FunctionInfo or InlineInfo, they only extract information needed for the
   // lookup to happen which avoids allocations which can slow down
   // symbolication.
-  GsymCreator GC;
+  GsymCreatorV1 GC;
   FunctionInfo FI(0x1000, 0x100, GC.insertString("main"));
   const auto ByteOrder = llvm::endianness::native;
   FI.OptLineTable = LineTable();
@@ -1375,7 +1375,7 @@ TEST(GSYMTest, TestDWARFFunctionWithAddresses) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
   OutputAggregator OSAgg(&OS);
-  GsymCreator GC;
+  GsymCreatorV1 GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
@@ -1453,7 +1453,7 @@ TEST(GSYMTest, TestDWARFFunctionWithAddressAndOffset) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
   OutputAggregator OSAgg(&OS);
-  GsymCreator GC;
+  GsymCreatorV1 GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
@@ -1561,7 +1561,7 @@ TEST(GSYMTest, TestDWARFStructMethodNoMangled) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
   OutputAggregator OSAgg(&OS);
-  GsymCreator GC;
+  GsymCreatorV1 GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
@@ -1662,7 +1662,7 @@ TEST(GSYMTest, TestDWARFTextRanges) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
   OutputAggregator OSAgg(&OS);
-  GsymCreator GC;
+  GsymCreatorV1 GC;
   DwarfTransformer DT(*DwarfContext, GC);
   // Only allow addresses between [0x1000 - 0x2000) to be linked into the
   // GSYM.
@@ -1694,7 +1694,7 @@ TEST(GSYMTest, TestEmptySymbolEndAddressOfTextRanges) {
   // Test that if we have valid text ranges and we have a symbol with no size
   // as the last FunctionInfo entry that the size of the symbol gets set to the
   // end address of the text range.
-  GsymCreator GC;
+  GsymCreatorV1 GC;
   AddressRanges TextRanges;
   TextRanges.insert(AddressRange(0x1000, 0x2000));
   GC.SetValidTextRanges(TextRanges);
@@ -1866,7 +1866,7 @@ TEST(GSYMTest, TestDWARFInlineInfo) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
   OutputAggregator OSAgg(&OS);
-  GsymCreator GC;
+  GsymCreatorV1 GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
@@ -2127,7 +2127,7 @@ TEST(GSYMTest, TestDWARFNoLines) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
   OutputAggregator OSAgg(&OS);
-  GsymCreator GC;
+  GsymCreatorV1 GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
@@ -2307,7 +2307,7 @@ TEST(GSYMTest, TestDWARFDeadStripAddr4) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
   OutputAggregator OSAgg(&OS);
-  GsymCreator GC;
+  GsymCreatorV1 GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
@@ -2448,7 +2448,7 @@ TEST(GSYMTest, TestDWARFDeadStripAddr8) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
   OutputAggregator OSAgg(&OS);
-  GsymCreator GC;
+  GsymCreatorV1 GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
@@ -2475,7 +2475,7 @@ TEST(GSYMTest, TestGsymCreatorMultipleSymbolsWithNoSize) {
   // instead of being combined into a single entry. This function tests to make
   // sure we only get one symbol.
   uint8_t UUID[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
-  GsymCreator GC;
+  GsymCreatorV1 GC;
   GC.setUUID(UUID);
   constexpr uint64_t BaseAddr = 0x1000;
   constexpr uint8_t AddrOffSize = 1;
@@ -2497,7 +2497,7 @@ TEST(GSYMTest, TestGsymCreatorMultipleSymbolsWithNoSize) {
 }
 
 // Helper function to quickly create a FunctionInfo in a GsymCreator for testing.
-static void AddFunctionInfo(GsymCreator &GC, const char *FuncName,
+static void AddFunctionInfo(GsymCreatorV1 &GC, const char *FuncName,
                             uint64_t FuncAddr, const char *SourcePath,
                             const char *HeaderPath) {
   FunctionInfo FI(FuncAddr, 0x30, GC.insertString(FuncName));
@@ -2538,7 +2538,7 @@ static void AddFunctionInfo(GsymCreator &GC, const char *FuncName,
 
 // Finalize a GsymCreator, encode it and decode it and return the error or
 // GsymReaderV1 that was successfully decoded.
-static Expected<GsymReaderV1> FinalizeEncodeAndDecode(GsymCreator &GC) {
+static Expected<GsymReaderV1> FinalizeEncodeAndDecode(GsymCreatorV1 &GC) {
   OutputAggregator Null(nullptr);
   Error FinalizeErr = GC.finalize(Null);
   if (FinalizeErr)
@@ -2559,7 +2559,7 @@ TEST(GSYMTest, TestGsymSegmenting) {
   // encoding multiple segments, then we verify that we get the same information
   // when doing lookups on the full GSYM that was decoded from encoding the
   // entire GSYM and also by decoding information from the segments themselves.
-  GsymCreator GC;
+  GsymCreatorV1 GC;
   GC.setBaseAddress(0);
   AddFunctionInfo(GC, "main", 0x1000, "/tmp/main.c", "/tmp/main.h");
   AddFunctionInfo(GC, "foo", 0x2000, "/tmp/foo.c", "/tmp/foo.h");
@@ -2585,7 +2585,7 @@ TEST(GSYMTest, TestGsymSegmenting) {
   size_t FuncIdx = 0;
   // Make sure we get an error if the segment size is too small to encode a
   // single function info.
-  llvm::Expected<std::unique_ptr<GsymCreator>> GCError =
+  llvm::Expected<std::unique_ptr<GsymCreatorV1>> GCError =
       GC.createSegment(57, FuncIdx);
   ASSERT_FALSE((bool)GCError);
   checkError("a segment size of 57 is to small to fit any function infos, "
@@ -2594,25 +2594,25 @@ TEST(GSYMTest, TestGsymSegmenting) {
   // encode any values into the segmented GsymCreator.
   ASSERT_EQ(FuncIdx, (size_t)0);
 
-  llvm::Expected<std::unique_ptr<GsymCreator>> GC1000 =
+  llvm::Expected<std::unique_ptr<GsymCreatorV1>> GC1000 =
       GC.createSegment(128, FuncIdx);
   ASSERT_THAT_EXPECTED(GC1000, Succeeded());
   ASSERT_EQ(FuncIdx, (size_t)1);
-  llvm::Expected<std::unique_ptr<GsymCreator>> GC2000 =
+  llvm::Expected<std::unique_ptr<GsymCreatorV1>> GC2000 =
       GC.createSegment(128, FuncIdx);
   ASSERT_THAT_EXPECTED(GC2000, Succeeded());
   ASSERT_EQ(FuncIdx, (size_t)2);
-  llvm::Expected<std::unique_ptr<GsymCreator>> GC3000 =
+  llvm::Expected<std::unique_ptr<GsymCreatorV1>> GC3000 =
       GC.createSegment(128, FuncIdx);
   ASSERT_THAT_EXPECTED(GC3000, Succeeded());
   ASSERT_EQ(FuncIdx, (size_t)3);
-  llvm::Expected<std::unique_ptr<GsymCreator>> GC4000 =
+  llvm::Expected<std::unique_ptr<GsymCreatorV1>> GC4000 =
       GC.createSegment(128, FuncIdx);
   ASSERT_THAT_EXPECTED(GC4000, Succeeded());
   ASSERT_EQ(FuncIdx, (size_t)4);
   // When there are no function infos left to encode we expect to get  no error
   // and get a NULL GsymCreator in the return value from createSegment.
-  llvm::Expected<std::unique_ptr<GsymCreator>> GCNull =
+  llvm::Expected<std::unique_ptr<GsymCreatorV1>> GCNull =
       GC.createSegment(128, FuncIdx);
   ASSERT_THAT_EXPECTED(GCNull, Succeeded());
   ASSERT_TRUE(GC1000.get() != nullptr);
@@ -2711,7 +2711,7 @@ TEST(GSYMTest, TestGsymSegmentingNoBase) {
   // encoding multiple segments, then we verify that we get the same information
   // when doing lookups on the full GSYM that was decoded from encoding the
   // entire GSYM and also by decoding information from the segments themselves.
-  GsymCreator GC;
+  GsymCreatorV1 GC;
   AddFunctionInfo(GC, "main", 0x1000, "/tmp/main.c", "/tmp/main.h");
   AddFunctionInfo(GC, "foo", 0x2000, "/tmp/foo.c", "/tmp/foo.h");
   AddFunctionInfo(GC, "bar", 0x3000, "/tmp/bar.c", "/tmp/bar.h");
@@ -2736,7 +2736,7 @@ TEST(GSYMTest, TestGsymSegmentingNoBase) {
   size_t FuncIdx = 0;
   // Make sure we get an error if the segment size is too small to encode a
   // single function info.
-  llvm::Expected<std::unique_ptr<GsymCreator>> GCError =
+  llvm::Expected<std::unique_ptr<GsymCreatorV1>> GCError =
       GC.createSegment(57, FuncIdx);
   ASSERT_FALSE((bool)GCError);
   checkError("a segment size of 57 is to small to fit any function infos, "
@@ -2745,25 +2745,25 @@ TEST(GSYMTest, TestGsymSegmentingNoBase) {
   // encode any values into the segmented GsymCreator.
   ASSERT_EQ(FuncIdx, (size_t)0);
 
-  llvm::Expected<std::unique_ptr<GsymCreator>> GC1000 =
+  llvm::Expected<std::unique_ptr<GsymCreatorV1>> GC1000 =
       GC.createSegment(128, FuncIdx);
   ASSERT_THAT_EXPECTED(GC1000, Succeeded());
   ASSERT_EQ(FuncIdx, (size_t)1);
-  llvm::Expected<std::unique_ptr<GsymCreator>> GC2000 =
+  llvm::Expected<std::unique_ptr<GsymCreatorV1>> GC2000 =
       GC.createSegment(128, FuncIdx);
   ASSERT_THAT_EXPECTED(GC2000, Succeeded());
   ASSERT_EQ(FuncIdx, (size_t)2);
-  llvm::Expected<std::unique_ptr<GsymCreator>> GC3000 =
+  llvm::Expected<std::unique_ptr<GsymCreatorV1>> GC3000 =
       GC.createSegment(128, FuncIdx);
   ASSERT_THAT_EXPECTED(GC3000, Succeeded());
   ASSERT_EQ(FuncIdx, (size_t)3);
-  llvm::Expected<std::unique_ptr<GsymCreator>> GC4000 =
+  llvm::Expected<std::unique_ptr<GsymCreatorV1>> GC4000 =
       GC.createSegment(128, FuncIdx);
   ASSERT_THAT_EXPECTED(GC4000, Succeeded());
   ASSERT_EQ(FuncIdx, (size_t)4);
   // When there are no function infos left to encode we expect to get  no error
   // and get a NULL GsymCreator in the return value from createSegment.
-  llvm::Expected<std::unique_ptr<GsymCreator>> GCNull =
+  llvm::Expected<std::unique_ptr<GsymCreatorV1>> GCNull =
       GC.createSegment(128, FuncIdx);
   ASSERT_THAT_EXPECTED(GCNull, Succeeded());
   ASSERT_TRUE(GC1000.get() != nullptr);
@@ -3089,7 +3089,7 @@ TEST(GSYMTest, TestDWARFInlineRangeScopes) {
   std::string errors;
   raw_string_ostream OS(errors);
   OutputAggregator OSAgg(&OS);
-  GsymCreator GC;
+  GsymCreatorV1 GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
@@ -3317,7 +3317,7 @@ TEST(GSYMTest, TestDWARFEmptyInline) {
   std::string errors;
   raw_string_ostream OS(errors);
   OutputAggregator OSAgg(&OS);
-  GsymCreator GC;
+  GsymCreatorV1 GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
@@ -3554,7 +3554,7 @@ TEST(GSYMTest, TestFinalizeForLineTables) {
   std::string errors;
   raw_string_ostream OS(errors);
   OutputAggregator OSAgg(&OS);
-  GsymCreator GC;
+  GsymCreatorV1 GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
@@ -3834,7 +3834,7 @@ TEST(GSYMTest, TestRangeWarnings) {
   std::string errors;
   raw_string_ostream OS(errors);
   OutputAggregator OSAgg(&OS);
-  GsymCreator GC;
+  GsymCreatorV1 GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
@@ -4036,7 +4036,7 @@ TEST(GSYMTest, TestEmptyRangeWarnings) {
   std::string errors;
   raw_string_ostream OS(errors);
   OutputAggregator OSAgg(&OS);
-  GsymCreator GC;
+  GsymCreatorV1 GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
@@ -4188,7 +4188,7 @@ TEST(GSYMTest, TestEmptyLinkageName) {
   std::string errors;
   raw_string_ostream OS(errors);
   OutputAggregator OSAgg(&OS);
-  GsymCreator GC;
+  GsymCreatorV1 GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
@@ -4349,7 +4349,7 @@ TEST(GSYMTest, TestLineTablesWithEmptyRanges) {
   std::string errors;
   raw_string_ostream OS(errors);
   OutputAggregator OSAgg(&OS);
-  GsymCreator GC;
+  GsymCreatorV1 GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
@@ -4669,7 +4669,7 @@ TEST(GSYMTest, TestHandlingOfInvalidFileIndexes) {
   std::string errors;
   raw_string_ostream OS(errors);
   OutputAggregator OSAgg(&OS);
-  GsymCreator GC;
+  GsymCreatorV1 GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
@@ -4884,7 +4884,7 @@ TEST(GSYMTest, TestLookupsOfOverlappingAndUnequalRanges) {
   std::string errors;
   raw_string_ostream OS(errors);
   OutputAggregator OSAgg(&OS);
-  GsymCreator GC;
+  GsymCreatorV1 GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
@@ -4984,7 +4984,7 @@ TEST(GSYMTest, TestUnableToLocateDWO) {
   std::string errors;
   raw_string_ostream OS(errors);
   OutputAggregator OSAgg(&OS);
-  GsymCreator GC;
+  GsymCreatorV1 GC;
   // Make a DWARF transformer that is MachO (Apple) to avoid warnings about
   // not finding DWO files.
   DwarfTransformer DT(*DwarfContext, GC, /*LDCS=*/false, /*MachO*/ true);
@@ -5111,7 +5111,7 @@ TEST(GSYMTest, TestDWARFTransformNoErrorForMissingFileDecl) {
   std::string errors;
   raw_string_ostream OS(errors);
   OutputAggregator OSAgg(&OS);
-  GsymCreator GC;
+  GsymCreatorV1 GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());

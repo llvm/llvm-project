@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/DebugInfo/GSYM/FileEntry.h"
 #include "llvm/DebugInfo/GSYM/FunctionInfo.h"
+#include "llvm/DebugInfo/GSYM/GsymCreator.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
@@ -97,7 +98,7 @@ class OutputAggregator;
 ///
 /// - UUID: Raw UUID bytes of the original executable. Only present if a UUID
 ///   was set. No alignment requirement.
-class GsymCreatorV2 {
+class GsymCreatorV2 : public GsymCreator {
   // Private member variables require Mutex protections
   mutable std::mutex Mutex;
   std::vector<FunctionInfo> Funcs;
@@ -269,13 +270,13 @@ public:
   /// \returns An error object that indicates success or failure of the save.
   LLVM_ABI llvm::Error
   save(StringRef Path, llvm::endianness ByteOrder,
-       std::optional<uint64_t> SegmentSize = std::nullopt) const;
+       std::optional<uint64_t> SegmentSize = std::nullopt) const override;
 
   /// Encode a GSYM into the file writer stream at the current position.
   ///
   /// \param O The stream to save the binary data to
   /// \returns An error object that indicates success or failure of the save.
-  LLVM_ABI llvm::Error encode(FileWriter &O) const;
+  LLVM_ABI llvm::Error encode(FileWriter &O) const override;
 
   /// Insert a string into the GSYM string table.
   ///
@@ -287,7 +288,7 @@ public:
   ///             the string is owned by another object that will stay around
   ///             long enough for the GsymCreatorV2 to save the GSYM file.
   /// \returns The unique 32 bit offset into the string table.
-  LLVM_ABI uint32_t insertString(StringRef S, bool Copy = true);
+  LLVM_ABI uint32_t insertString(StringRef S, bool Copy = true) override;
 
   /// Retrieve a string from the GSYM string table given its offset.
   ///
@@ -297,7 +298,7 @@ public:
   /// \param Offset The offset of the string to retrieve, previously returned by
   /// insertString.
   /// \returns The string at the given offset in the string table.
-  LLVM_ABI StringRef getString(uint32_t Offset);
+  LLVM_ABI StringRef getString(uint32_t Offset) override;
 
   /// Insert a file into this GSYM creator.
   ///
@@ -311,7 +312,8 @@ public:
   /// \param   Style The path style for the "Path" parameter.
   /// \returns The unique file index for the inserted file.
   LLVM_ABI uint32_t
-  insertFile(StringRef Path, sys::path::Style Style = sys::path::Style::native);
+  insertFile(StringRef Path,
+             sys::path::Style Style = sys::path::Style::native) override;
 
   /// Add a function info to this GSYM creator.
   ///
@@ -320,7 +322,7 @@ public:
   /// offsets for names and other strings.
   ///
   /// \param   FI The function info object to emplace into our functions list.
-  LLVM_ABI void addFunctionInfo(FunctionInfo &&FI);
+  LLVM_ABI void addFunctionInfo(FunctionInfo &&FI) override;
 
   /// Load call site information from a YAML file.
   ///
@@ -329,7 +331,7 @@ public:
   ///
   /// \param YAMLFile The path to the YAML file containing call site
   /// information.
-  LLVM_ABI llvm::Error loadCallSitesFromYAML(StringRef YAMLFile);
+  LLVM_ABI llvm::Error loadCallSitesFromYAML(StringRef YAMLFile) override;
 
   /// Organize merged FunctionInfo's
   ///
@@ -338,7 +340,7 @@ public:
   ///
   /// \param  Out Output stream to report information about how merged
   /// FunctionInfo's were handled.
-  LLVM_ABI void prepareMergedFunctions(OutputAggregator &Out);
+  LLVM_ABI void prepareMergedFunctions(OutputAggregator &Out) override;
 
   /// Finalize the data in the GSYM creator prior to saving the data out.
   ///
@@ -349,12 +351,12 @@ public:
   ///         function infos, and function infos that were merged or removed.
   /// \returns An error object that indicates success or failure of the
   ///          finalize.
-  LLVM_ABI llvm::Error finalize(OutputAggregator &OS);
+  LLVM_ABI llvm::Error finalize(OutputAggregator &OS) override;
 
   /// Set the UUID value.
   ///
   /// \param UUIDBytes The new UUID bytes.
-  void setUUID(llvm::ArrayRef<uint8_t> UUIDBytes) {
+  void setUUID(llvm::ArrayRef<uint8_t> UUIDBytes) override {
     UUID.assign(UUIDBytes.begin(), UUIDBytes.end());
   }
 
@@ -363,26 +365,27 @@ public:
   /// \param  Callback A callback function that will get called with each
   ///         FunctionInfo. If the callback returns false, stop iterating.
   LLVM_ABI void
-  forEachFunctionInfo(std::function<bool(FunctionInfo &)> const &Callback);
+  forEachFunctionInfo(
+      std::function<bool(FunctionInfo &)> const &Callback) override;
 
   /// Thread safe const iteration over all function infos.
   ///
   /// \param  Callback A callback function that will get called with each
   ///         FunctionInfo. If the callback returns false, stop iterating.
   LLVM_ABI void forEachFunctionInfo(
-      std::function<bool(const FunctionInfo &)> const &Callback) const;
+      std::function<bool(const FunctionInfo &)> const &Callback) const override;
 
   /// Get the current number of FunctionInfo objects contained in this
   /// object.
-  LLVM_ABI size_t getNumFunctionInfos() const;
+  LLVM_ABI size_t getNumFunctionInfos() const override;
 
   /// Set valid .text address ranges that all functions must be contained in.
-  void SetValidTextRanges(AddressRanges &TextRanges) {
+  void SetValidTextRanges(AddressRanges &TextRanges) override {
     ValidTextRanges = TextRanges;
   }
 
   /// Get the valid text ranges.
-  const std::optional<AddressRanges> GetValidTextRanges() const {
+  const std::optional<AddressRanges> GetValidTextRanges() const override {
     return ValidTextRanges;
   }
 
@@ -405,7 +408,7 @@ public:
   ///
   /// \returns True if the address is in the valid text ranges or if no valid
   ///          text ranges have been set, false otherwise.
-  LLVM_ABI bool IsValidTextAddress(uint64_t Addr) const;
+  LLVM_ABI bool IsValidTextAddress(uint64_t Addr) const override;
 
   /// Set the base address to use for the GSYM file.
   ///
@@ -418,12 +421,12 @@ public:
   ///
   /// \param  Addr The address to use as the base address of the GSYM file
   ///              when it is saved to disk.
-  void setBaseAddress(uint64_t Addr) {
+  void setBaseAddress(uint64_t Addr) override {
     BaseAddress = Addr;
   }
 
   /// Whether the transformation should be quiet, i.e. not output warnings.
-  bool isQuiet() const { return Quiet; }
+  bool isQuiet() const override { return Quiet; }
 
 
   /// Create a segmented GSYM creator starting with function info index

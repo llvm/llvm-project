@@ -21,12 +21,12 @@
 using namespace llvm;
 using namespace gsym;
 
-GsymCreator::GsymCreator(bool Quiet)
+GsymCreatorV1::GsymCreatorV1(bool Quiet)
     : StrTab(StringTableBuilder::ELF), Quiet(Quiet) {
   insertFile(StringRef());
 }
 
-uint32_t GsymCreator::insertFile(StringRef Path, llvm::sys::path::Style Style) {
+uint32_t GsymCreatorV1::insertFile(StringRef Path, llvm::sys::path::Style Style) {
   llvm::StringRef directory = llvm::sys::path::parent_path(Path, Style);
   llvm::StringRef filename = llvm::sys::path::filename(Path, Style);
   // We must insert the strings first, then call the FileEntry constructor.
@@ -38,7 +38,7 @@ uint32_t GsymCreator::insertFile(StringRef Path, llvm::sys::path::Style Style) {
   return insertFileEntry(FileEntry(Dir, Base));
 }
 
-uint32_t GsymCreator::insertFileEntry(FileEntry FE) {
+uint32_t GsymCreatorV1::insertFileEntry(FileEntry FE) {
   std::lock_guard<std::mutex> Guard(Mutex);
   const auto NextIndex = Files.size();
   // Find FE in hash map and insert if not present.
@@ -48,7 +48,7 @@ uint32_t GsymCreator::insertFileEntry(FileEntry FE) {
   return R.first->second;
 }
 
-uint32_t GsymCreator::copyFile(const GsymCreator &SrcGC, uint32_t FileIdx) {
+uint32_t GsymCreatorV1::copyFile(const GsymCreatorV1 &SrcGC, uint32_t FileIdx) {
   // File index zero is reserved for a FileEntry with no directory and no
   // filename. Any other file and we need to copy the strings for the directory
   // and filename.
@@ -65,7 +65,7 @@ uint32_t GsymCreator::copyFile(const GsymCreator &SrcGC, uint32_t FileIdx) {
   return insertFileEntry(DstFE);
 }
 
-llvm::Error GsymCreator::save(StringRef Path, llvm::endianness ByteOrder,
+llvm::Error GsymCreatorV1::save(StringRef Path, llvm::endianness ByteOrder,
                               std::optional<uint64_t> SegmentSize) const {
   if (SegmentSize)
     return saveSegments(Path, ByteOrder, *SegmentSize);
@@ -77,7 +77,7 @@ llvm::Error GsymCreator::save(StringRef Path, llvm::endianness ByteOrder,
   return encode(O);
 }
 
-llvm::Error GsymCreator::encode(FileWriter &O) const {
+llvm::Error GsymCreatorV1::encode(FileWriter &O) const {
   std::lock_guard<std::mutex> Guard(Mutex);
   if (Funcs.empty())
     return createStringError(std::errc::invalid_argument,
@@ -203,13 +203,13 @@ llvm::Error GsymCreator::encode(FileWriter &O) const {
   return ErrorSuccess();
 }
 
-llvm::Error GsymCreator::loadCallSitesFromYAML(StringRef YAMLFile) {
+llvm::Error GsymCreatorV1::loadCallSitesFromYAML(StringRef YAMLFile) {
   // Use the loader to load call site information from the YAML file.
   CallSiteInfoLoader Loader(*this, Funcs);
   return Loader.loadYAML(YAMLFile);
 }
 
-void GsymCreator::prepareMergedFunctions(OutputAggregator &Out) {
+void GsymCreatorV1::prepareMergedFunctions(OutputAggregator &Out) {
   // Nothing to do if we have less than 2 functions.
   if (Funcs.size() < 2)
     return;
@@ -252,7 +252,7 @@ void GsymCreator::prepareMergedFunctions(OutputAggregator &Out) {
   std::swap(Funcs, TopLevelFuncs);
 }
 
-llvm::Error GsymCreator::finalize(OutputAggregator &Out) {
+llvm::Error GsymCreatorV1::finalize(OutputAggregator &Out) {
   std::lock_guard<std::mutex> Guard(Mutex);
   if (Finalized)
     return createStringError(std::errc::invalid_argument, "already finalized");
@@ -367,14 +367,14 @@ llvm::Error GsymCreator::finalize(OutputAggregator &Out) {
   return Error::success();
 }
 
-uint32_t GsymCreator::copyString(const GsymCreator &SrcGC, uint32_t StrOff) {
+uint32_t GsymCreatorV1::copyString(const GsymCreatorV1 &SrcGC, uint32_t StrOff) {
   // String offset at zero is always the empty string, no copying needed.
   if (StrOff == 0)
     return 0;
   return StrTab.add(SrcGC.StringOffsetMap.find(StrOff)->second);
 }
 
-uint32_t GsymCreator::insertString(StringRef S, bool Copy) {
+uint32_t GsymCreatorV1::insertString(StringRef S, bool Copy) {
   if (S.empty())
     return 0;
 
@@ -400,19 +400,19 @@ uint32_t GsymCreator::insertString(StringRef S, bool Copy) {
   return StrOff;
 }
 
-StringRef GsymCreator::getString(uint32_t Offset) {
+StringRef GsymCreatorV1::getString(uint32_t Offset) {
   auto I = StringOffsetMap.find(Offset);
   assert(I != StringOffsetMap.end() &&
-         "GsymCreator::getString expects a valid offset as parameter.");
+         "GsymCreatorV1::getString expects a valid offset as parameter.");
   return I->second.val();
 }
 
-void GsymCreator::addFunctionInfo(FunctionInfo &&FI) {
+void GsymCreatorV1::addFunctionInfo(FunctionInfo &&FI) {
   std::lock_guard<std::mutex> Guard(Mutex);
   Funcs.emplace_back(std::move(FI));
 }
 
-void GsymCreator::forEachFunctionInfo(
+void GsymCreatorV1::forEachFunctionInfo(
     std::function<bool(FunctionInfo &)> const &Callback) {
   std::lock_guard<std::mutex> Guard(Mutex);
   for (auto &FI : Funcs) {
@@ -421,7 +421,7 @@ void GsymCreator::forEachFunctionInfo(
   }
 }
 
-void GsymCreator::forEachFunctionInfo(
+void GsymCreatorV1::forEachFunctionInfo(
     std::function<bool(const FunctionInfo &)> const &Callback) const {
   std::lock_guard<std::mutex> Guard(Mutex);
   for (const auto &FI : Funcs) {
@@ -430,18 +430,18 @@ void GsymCreator::forEachFunctionInfo(
   }
 }
 
-size_t GsymCreator::getNumFunctionInfos() const {
+size_t GsymCreatorV1::getNumFunctionInfos() const {
   std::lock_guard<std::mutex> Guard(Mutex);
   return Funcs.size();
 }
 
-bool GsymCreator::IsValidTextAddress(uint64_t Addr) const {
+bool GsymCreatorV1::IsValidTextAddress(uint64_t Addr) const {
   if (ValidTextRanges)
     return ValidTextRanges->contains(Addr);
   return true; // No valid text ranges has been set, so accept all ranges.
 }
 
-std::optional<uint64_t> GsymCreator::getFirstFunctionAddress() const {
+std::optional<uint64_t> GsymCreatorV1::getFirstFunctionAddress() const {
   // If we have finalized then Funcs are sorted. If we are a segment then
   // Funcs will be sorted as well since function infos get added from an
   // already finalized GsymCreator object where its functions were sorted and
@@ -451,7 +451,7 @@ std::optional<uint64_t> GsymCreator::getFirstFunctionAddress() const {
   return std::nullopt;
 }
 
-std::optional<uint64_t> GsymCreator::getLastFunctionAddress() const {
+std::optional<uint64_t> GsymCreatorV1::getLastFunctionAddress() const {
   // If we have finalized then Funcs are sorted. If we are a segment then
   // Funcs will be sorted as well since function infos get added from an
   // already finalized GsymCreator object where its functions were sorted and
@@ -461,13 +461,13 @@ std::optional<uint64_t> GsymCreator::getLastFunctionAddress() const {
   return std::nullopt;
 }
 
-std::optional<uint64_t> GsymCreator::getBaseAddress() const {
+std::optional<uint64_t> GsymCreatorV1::getBaseAddress() const {
   if (BaseAddress)
     return BaseAddress;
   return getFirstFunctionAddress();
 }
 
-uint64_t GsymCreator::getMaxAddressOffset() const {
+uint64_t GsymCreatorV1::getMaxAddressOffset() const {
   switch (getAddressOffsetSize()) {
     case 1: return UINT8_MAX;
     case 2: return UINT16_MAX;
@@ -477,7 +477,7 @@ uint64_t GsymCreator::getMaxAddressOffset() const {
   llvm_unreachable("invalid address offset");
 }
 
-uint8_t GsymCreator::getAddressOffsetSize() const {
+uint8_t GsymCreatorV1::getAddressOffsetSize() const {
   const std::optional<uint64_t> BaseAddress = getBaseAddress();
   const std::optional<uint64_t> LastFuncAddr = getLastFunctionAddress();
   if (BaseAddress && LastFuncAddr) {
@@ -493,7 +493,7 @@ uint8_t GsymCreator::getAddressOffsetSize() const {
   return 1;
 }
 
-uint64_t GsymCreator::calculateHeaderAndTableSize() const {
+uint64_t GsymCreatorV1::calculateHeaderAndTableSize() const {
   uint64_t Size = sizeof(Header);
   const size_t NumFuncs = Funcs.size();
   // Add size of address offset table
@@ -511,14 +511,14 @@ uint64_t GsymCreator::calculateHeaderAndTableSize() const {
 // This function takes a InlineInfo class that was copy constructed from an
 // InlineInfo from the \a SrcGC and updates all members that point to strings
 // and files to point to strings and files from this GsymCreator.
-void GsymCreator::fixupInlineInfo(const GsymCreator &SrcGC, InlineInfo &II) {
+void GsymCreatorV1::fixupInlineInfo(const GsymCreatorV1 &SrcGC, InlineInfo &II) {
   II.Name = copyString(SrcGC, II.Name);
   II.CallFile = copyFile(SrcGC, II.CallFile);
   for (auto &ChildII: II.Children)
     fixupInlineInfo(SrcGC, ChildII);
 }
 
-uint64_t GsymCreator::copyFunctionInfo(const GsymCreator &SrcGC, size_t FuncIdx) {
+uint64_t GsymCreatorV1::copyFunctionInfo(const GsymCreatorV1 &SrcGC, size_t FuncIdx) {
   // To copy a function info we need to copy any files and strings over into
   // this GsymCreator and then copy the function info and update the string
   // table offsets to match the new offsets.
@@ -552,7 +552,7 @@ uint64_t GsymCreator::copyFunctionInfo(const GsymCreator &SrcGC, size_t FuncIdx)
   return Funcs.back().cacheEncoding();
 }
 
-llvm::Error GsymCreator::saveSegments(StringRef Path,
+llvm::Error GsymCreatorV1::saveSegments(StringRef Path,
                                       llvm::endianness ByteOrder,
                                       uint64_t SegmentSize) const {
   if (SegmentSize == 0)
@@ -562,10 +562,10 @@ llvm::Error GsymCreator::saveSegments(StringRef Path,
   size_t FuncIdx = 0;
   const size_t NumFuncs = Funcs.size();
   while (FuncIdx < NumFuncs) {
-    llvm::Expected<std::unique_ptr<GsymCreator>> ExpectedGC =
+    llvm::Expected<std::unique_ptr<GsymCreatorV1>> ExpectedGC =
         createSegment(SegmentSize, FuncIdx);
     if (ExpectedGC) {
-      GsymCreator *GC = ExpectedGC->get();
+      GsymCreatorV1 *GC = ExpectedGC->get();
       if (!GC)
         break; // We had not more functions to encode.
       // Don't collect any messages at all
@@ -589,13 +589,13 @@ llvm::Error GsymCreator::saveSegments(StringRef Path,
   return Error::success();
 }
 
-llvm::Expected<std::unique_ptr<GsymCreator>>
-GsymCreator::createSegment(uint64_t SegmentSize, size_t &FuncIdx) const {
+llvm::Expected<std::unique_ptr<GsymCreatorV1>>
+GsymCreatorV1::createSegment(uint64_t SegmentSize, size_t &FuncIdx) const {
   // No function entries, return empty unique pointer
   if (FuncIdx >= Funcs.size())
-    return std::unique_ptr<GsymCreator>();
+    return std::unique_ptr<GsymCreatorV1>();
 
-  std::unique_ptr<GsymCreator> GC(new GsymCreator(/*Quiet=*/true));
+  std::unique_ptr<GsymCreatorV1> GC(new GsymCreatorV1(/*Quiet=*/true));
 
   // Tell the creator that this is a segment.
   GC->setIsSegment();
