@@ -68,7 +68,9 @@ jobs:
       - name: Prepare dependencies
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y cmake ninja-build clang lld qemu-user-static ${{ matrix.libc }} ${{ matrix.libcpp }}
+          sudo apt-get install -y cmake ninja-build clang lld qemu-user-static \
+            ${{ matrix.libc }} ${{ matrix.libcpp }} \
+            gcc-$${{ matrix.target_triple }} g++-$${{ matrix.target_triple }}
       
       - name: Configure CMake
         run: |
