@@ -46,6 +46,7 @@ const Scope *FindModuleOrSubmoduleContaining(const Scope &);
 const Scope *FindModuleFileContaining(const Scope &);
 const Scope *FindPureProcedureContaining(const Scope &);
 const Scope *FindOpenACCConstructContaining(const Scope *);
+bool HasOpenACCRoutineDirective(const Scope *);
 
 const Symbol *FindInterface(const Symbol &);
 const Symbol *FindSubprogram(const Symbol &);
@@ -333,9 +334,6 @@ const Symbol *FindExternallyVisibleObject(
 // Applies GetUltimate(), then if the symbol is a generic procedure shadowing a
 // specific procedure of the same name, return it instead.
 const Symbol &BypassGeneric(const Symbol &);
-
-// Given a cray pointee symbol, returns the related cray pointer symbol.
-const Symbol &GetCrayPointer(const Symbol &crayPointee);
 
 using SomeExpr = evaluate::Expr<evaluate::SomeType>;
 

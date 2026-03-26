@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected
+// RUN: %clang_cc1 -std=c++11 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++14 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++17 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++20 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++23 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++2c %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
 
 namespace cwg1710 { // cwg1710: no
 // FIXME: all of the following is well-formed
@@ -98,24 +98,7 @@ static_assert(__is_trivially_copyable(A), "");
 #endif
 } // namespace cwg1734
 
-namespace cwg1736 { // cwg1736: 3.9
-#if __cplusplus >= 201103L
-struct S {
-  template <class T> S(T t) {
-    struct L : S {
-      using S::S;
-    };
-    typename T::type value;
-    // since-cxx11-error@-1 {{type 'int' cannot be used prior to '::' because it has no members}}
-    //   since-cxx11-note@#cwg1736-l {{in instantiation of function template specialization 'cwg1736::S::S<int>' requested here}}
-    //   since-cxx11-note@#cwg1736-s {{in instantiation of function template specialization 'cwg1736::S::S<cwg1736::Q>' requested here}}
-    L l(value); // #cwg1736-l
-  }
-};
-struct Q { typedef int type; } q;
-S s(q); // #cwg1736-s
-#endif
-} // namespace cwg1736
+// cwg1736 is in cwg1736.cpp
 
 namespace cwg1738 { // cwg1738: sup P0136R1
 #if __cplusplus >= 201103L

@@ -17,15 +17,13 @@
 #include "shared/rpc_opcodes.h"
 #include "shared/rpc_server.h"
 
+#ifdef OFFLOAD_HAS_FLANG_RT
+#include "flang/Runtime/io-api.h"
+#endif
+
 using namespace llvm;
 using namespace omp;
 using namespace target;
-
-// List of user generated callbacks for the RPC server.
-static llvm::SmallVector<RPCServerTy::RPCServerCallbackTy> &getRPCCallbacks() {
-  static llvm::SmallVector<RPCServerTy::RPCServerCallbackTy> Callbacks;
-  return Callbacks;
-}
 
 template <uint32_t NumLanes>
 rpc::Status handleOffloadOpcodes(plugin::GenericDeviceTy &Device,
@@ -89,21 +87,23 @@ static rpc::Status handleOffloadOpcodes(plugin::GenericDeviceTy &Device,
     return rpc::RPC_ERROR;
 }
 
-static rpc::Status runServer(plugin::GenericDeviceTy &Device, void *Buffer,
-                             bool &ClientInUse) {
+static rpc::Status
+runServer(plugin::GenericDeviceTy &Device, void *Buffer,
+          llvm::SmallSetVector<RPCServerTy::RPCServerCallbackTy, 0> &Callbacks,
+          bool &ClientInUse) {
   const uint64_t NumPorts =
       std::min(Device.requestedRPCPortCount(), rpc::MAX_PORT_COUNT);
   rpc::Server Server(NumPorts, Buffer);
 
-  auto Port = Server.try_open(Device.getWarpSize());
+  auto Port = Server.try_open(Device.getRPCNumLanes());
   if (!Port)
     return rpc::RPC_SUCCESS;
   ClientInUse = true;
 
   rpc::Status Status = rpc::RPC_UNHANDLED_OPCODE;
-  const uint32_t NumLanes = Device.getWarpSize();
+  const uint32_t NumLanes = Device.getRPCNumLanes();
 
-  for (RPCServerTy::RPCServerCallbackTy Callback : getRPCCallbacks()) {
+  for (RPCServerTy::RPCServerCallbackTy Callback : Callbacks) {
     Status = static_cast<rpc::Status>(Callback(&*Port, NumLanes));
     if (Status != rpc::RPC_UNHANDLED_OPCODE)
       break;
@@ -115,7 +115,12 @@ static rpc::Status runServer(plugin::GenericDeviceTy &Device, void *Buffer,
   if (Status == rpc::RPC_UNHANDLED_OPCODE)
     Status = LIBC_NAMESPACE::shared::handle_libc_opcodes(*Port, NumLanes);
 
-  Port->close();
+#ifdef OFFLOAD_HAS_FLANG_RT
+  if (Status == rpc::RPC_UNHANDLED_OPCODE)
+    Status = static_cast<rpc::Status>(
+        Fortran::runtime::io::IONAME(HandleRPCOpcodes)(&*Port, NumLanes));
+#endif
+
   return Status;
 }
 
@@ -131,16 +136,15 @@ void RPCServerTy::ServerThread::shutDown() {
     std::lock_guard<decltype(Mutex)> Lock(Mutex);
     CV.notify_all();
   }
+  if (WakeFunction)
+    WakeFunction();
   if (Worker.joinable())
     Worker.join();
 }
 
 void RPCServerTy::ServerThread::run() {
-  static constexpr auto IdleTime = std::chrono::microseconds(25);
-  static constexpr auto IdleSleep = std::chrono::microseconds(250);
   std::unique_lock<decltype(Mutex)> Lock(Mutex);
 
-  auto LastUse = std::chrono::steady_clock::now();
   for (;;) {
     CV.wait(Lock, [&]() {
       return NumUsers.load(std::memory_order_acquire) > 0 ||
@@ -155,12 +159,8 @@ void RPCServerTy::ServerThread::run() {
     while (NumUsers.load(std::memory_order_relaxed) > 0 &&
            Running.load(std::memory_order_relaxed)) {
 
-      // Suspend this thread briefly if there is no current work.
-      auto Now = std::chrono::steady_clock::now();
-      if (!ClientInUse && Now - LastUse >= IdleTime)
-        std::this_thread::sleep_for(IdleSleep);
-      else if (ClientInUse)
-        LastUse = Now;
+      if (!ClientInUse)
+        SleepFunction();
 
       ClientInUse = false;
       std::lock_guard<decltype(Mutex)> Lock(BufferMutex);
@@ -169,7 +169,8 @@ void RPCServerTy::ServerThread::run() {
           continue;
 
         // If running the server failed, print a message but keep running.
-        if (runServer(*Device, Buffer, ClientInUse) != rpc::RPC_SUCCESS)
+        if (runServer(*Device, Buffer, Callbacks, ClientInUse) !=
+            rpc::RPC_SUCCESS)
           FAILURE_MESSAGE("Unhandled or invalid RPC opcode!");
       }
     }
@@ -182,16 +183,17 @@ RPCServerTy::RPCServerTy(plugin::GenericPluginTy &Plugin)
       Devices(std::make_unique<plugin::GenericDeviceTy *[]>(
           Plugin.getNumDevices())),
       Thread(new ServerThread(Buffers.get(), Devices.get(),
-                              Plugin.getNumDevices(), BufferMutex)) {}
+                              Plugin.getNumDevices(), BufferMutex, Callbacks)) {
+}
 
 llvm::Error RPCServerTy::startThread() {
   Thread->startThread();
   return Error::success();
 }
 
-llvm::Error RPCServerTy::shutDown() {
+llvm::Error RPCServerTy::shutDown(plugin::GenericPluginTy &Plugin) {
   Thread->shutDown();
-  return Error::success();
+  return Plugin.deinitRPCDoorbell();
 }
 
 llvm::Expected<bool>
@@ -207,7 +209,7 @@ Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
   uint64_t NumPorts =
       std::min(Device.requestedRPCPortCount(), rpc::MAX_PORT_COUNT);
   auto RPCBufferOrErr = Device.allocate(
-      rpc::Server::allocation_size(Device.getWarpSize(), NumPorts), nullptr,
+      rpc::Server::allocation_size(Device.getRPCNumLanes(), NumPorts), nullptr,
       TARGET_ALLOC_HOST);
   if (!RPCBufferOrErr)
     return RPCBufferOrErr.takeError();
@@ -217,6 +219,17 @@ Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
     return plugin::Plugin::error(
         error::ErrorCode::UNKNOWN,
         "failed to initialize RPC server for device %d", Device.getDeviceId());
+
+  // The doorbell is used by AMDGPU targets to let the server thread be
+  // descheduled. It is optional and will be ignored if the fields are null.
+  rpc::Doorbell Doorbell{};
+  if (auto Err = Device.Plugin.initRPCDoorbell(Doorbell.value, Doorbell.mailbox,
+                                               Doorbell.event_id))
+    return Err;
+
+  auto *DoorbellPtr = reinterpret_cast<rpc::Doorbell *>(
+      static_cast<uint8_t *>(RPCBuffer) + rpc::Server::doorbell_offset());
+  std::memcpy(DoorbellPtr, &Doorbell, sizeof(rpc::Doorbell));
 
   // Get the address of the RPC client from the device.
   plugin::GlobalTy ClientGlobal("__llvm_rpc_client", sizeof(rpc::Client));
@@ -246,5 +259,12 @@ Error RPCServerTy::deinitDevice(plugin::GenericDeviceTy &Device) {
 
 void RPCServerTy::registerCallback(RPCServerCallbackTy FnPtr) {
   std::lock_guard<decltype(BufferMutex)> Lock(BufferMutex);
-  getRPCCallbacks().push_back(FnPtr);
+  Callbacks.insert(FnPtr);
+}
+
+void RPCServerTy::setSleepFunction(std::function<void()> Sleep,
+                                   std::function<void()> Wake) {
+  std::lock_guard<decltype(BufferMutex)> Lock(BufferMutex);
+  Thread->SleepFunction = std::move(Sleep);
+  Thread->WakeFunction = std::move(Wake);
 }

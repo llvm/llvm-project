@@ -2,7 +2,6 @@
 // RUN: %libomptarget-compile-run-and-check-generic
 // REQUIRES: ompt
 // REQUIRES: gpu
-// XFAIL: intelgpu
 // clang-format on
 
 /*

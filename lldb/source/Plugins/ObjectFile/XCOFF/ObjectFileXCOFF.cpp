@@ -126,15 +126,14 @@ ObjectFile *ObjectFileXCOFF::CreateMemoryInstance(
   return nullptr;
 }
 
-size_t ObjectFileXCOFF::GetModuleSpecifications(
+ModuleSpecList ObjectFileXCOFF::GetModuleSpecifications(
     const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
     lldb::offset_t data_offset, lldb::offset_t file_offset,
-    lldb::offset_t length, lldb_private::ModuleSpecList &specs) {
-  const size_t initial_count = specs.GetSize();
-
+    lldb::offset_t length) {
   if (!extractor_sp || !extractor_sp->HasData())
-    return 0;
+    return {};
 
+  ModuleSpecList specs;
   if (ObjectFileXCOFF::MagicBytesMatch(extractor_sp, 0,
                                        extractor_sp->GetByteSize())) {
     ArchSpec arch_spec =
@@ -145,7 +144,7 @@ size_t ObjectFileXCOFF::GetModuleSpecifications(
                                            llvm::Triple::AIX);
     specs.Append(spec);
   }
-  return specs.GetSize() - initial_count;
+  return specs;
 }
 
 static uint32_t XCOFFHeaderSizeFromMagic(uint32_t magic) {
@@ -167,7 +166,7 @@ bool ObjectFileXCOFF::MagicBytesMatch(DataExtractorSP &extractor_sp,
                                       lldb::addr_t data_offset,
                                       lldb::addr_t data_length) {
   DataExtractorSP magic_extractor_sp =
-      extractor_sp->GetSubsetExtractorSP(data_offset, data_length);
+      extractor_sp->GetSubsetExtractorSP(data_offset);
   // Need to set this as XCOFF is only compatible with Big Endian
   magic_extractor_sp->SetByteOrder(eByteOrderBig);
   lldb::offset_t offset = 0;

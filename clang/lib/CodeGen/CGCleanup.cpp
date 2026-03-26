@@ -346,7 +346,7 @@ static void ResolveAllBranchFixups(CodeGenFunction &CGF,
       createStoreInstBefore(CGF.Builder.getInt32(Fixup.DestinationIndex),
                             CGF.getNormalCleanupDestSlot(),
                             Fixup.InitialBranch->getIterator(), CGF);
-      Fixup.InitialBranch->setSuccessor(0, CleanupEntry);
+      Fixup.InitialBranch->setSuccessor(CleanupEntry);
     }
 
     // Don't add this case to the switch statement twice.
@@ -369,8 +369,7 @@ static llvm::SwitchInst *TransitionToCleanupSwitch(CodeGenFunction &CGF,
   llvm::Instruction *Term = Block->getTerminator();
   assert(Term && "can't transition block without terminator");
 
-  if (llvm::BranchInst *Br = dyn_cast<llvm::BranchInst>(Term)) {
-    assert(Br->isUnconditional());
+  if (llvm::UncondBrInst *Br = dyn_cast<llvm::UncondBrInst>(Term)) {
     auto Load = createLoadInstBefore(CGF.getNormalCleanupDestSlot(),
                                      "cleanup.dest", Term->getIterator(), CGF);
     llvm::SwitchInst *Switch =
@@ -530,9 +529,10 @@ static llvm::BasicBlock *SimplifyCleanupEntry(CodeGenFunction &CGF,
   llvm::BasicBlock *Pred = Entry->getSinglePredecessor();
   if (!Pred) return Entry;
 
-  llvm::BranchInst *Br = dyn_cast<llvm::BranchInst>(Pred->getTerminator());
-  if (!Br || Br->isConditional()) return Entry;
-  assert(Br->getSuccessor(0) == Entry);
+  llvm::UncondBrInst *Br = dyn_cast<llvm::UncondBrInst>(Pred->getTerminator());
+  if (!Br)
+    return Entry;
+  assert(Br->getSuccessor() == Entry);
 
   // If we were previously inserting at the end of the cleanup entry
   // block, we'll need to continue inserting at the end of the
@@ -591,9 +591,9 @@ static void ForwardPrebranchedFallthrough(llvm::BasicBlock *Exit,
   // an unconditional branch or a switch.
   llvm::Instruction *Term = Exit->getTerminator();
 
-  if (llvm::BranchInst *Br = dyn_cast<llvm::BranchInst>(Term)) {
-    assert(Br->isUnconditional() && Br->getSuccessor(0) == From);
-    Br->setSuccessor(0, To);
+  if (llvm::UncondBrInst *Br = dyn_cast<llvm::UncondBrInst>(Term)) {
+    assert(Br->getSuccessor() == From);
+    Br->setSuccessor(To);
   } else {
     llvm::SwitchInst *Switch = cast<llvm::SwitchInst>(Term);
     for (unsigned I = 0, E = Switch->getNumSuccessors(); I != E; ++I)
@@ -626,8 +626,8 @@ static void destroyOptimisticNormalEntry(CodeGenFunction &CGF,
     llvm::SwitchInst *si = cast<llvm::SwitchInst>(use.getUser());
     if (si->getNumCases() == 1 && si->getDefaultDest() == unreachableBB) {
       // Replace the switch with a branch.
-      llvm::BranchInst::Create(si->case_begin()->getCaseSuccessor(),
-                               si->getIterator());
+      llvm::UncondBrInst::Create(si->case_begin()->getCaseSuccessor(),
+                                 si->getIterator());
 
       // The switch operand is a load from the cleanup-dest alloca.
       llvm::LoadInst *condition = cast<llvm::LoadInst>(si->getCondition());
@@ -903,13 +903,13 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough,
         }
 
         llvm::BasicBlock *BranchAfter = Scope.getBranchAfterBlock(0);
-        InstsToAppend.push_back(llvm::BranchInst::Create(BranchAfter));
+        InstsToAppend.push_back(llvm::UncondBrInst::Create(BranchAfter));
 
-      // Build a switch-out if we need it:
-      //   - if there are branch-afters threaded through the scope
-      //   - if fall-through is a branch-after
-      //   - if there are fixups that have nowhere left to go and
-      //     so must be immediately resolved
+        // Build a switch-out if we need it:
+        //   - if there are branch-afters threaded through the scope
+        //   - if fall-through is a branch-after
+        //   - if there are fixups that have nowhere left to go and
+        //     so must be immediately resolved
       } else if (Scope.getNumBranchAfters() ||
                  (HasFallthrough && !FallthroughIsBranchThrough) ||
                  (HasFixups && !HasEnclosingCleanups)) {
@@ -950,7 +950,7 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough,
       } else {
         // We should always have a branch-through destination in this case.
         assert(BranchThroughDest);
-        InstsToAppend.push_back(llvm::BranchInst::Create(BranchThroughDest));
+        InstsToAppend.push_back(llvm::UncondBrInst::Create(BranchThroughDest));
       }
 
       // IV.  Pop the cleanup and emit it.
@@ -975,7 +975,7 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough,
           createStoreInstBefore(Builder.getInt32(Fixup.DestinationIndex),
                                 getNormalCleanupDestSlot(),
                                 Fixup.InitialBranch->getIterator(), *this);
-          Fixup.InitialBranch->setSuccessor(0, NormalEntry);
+          Fixup.InitialBranch->setSuccessor(NormalEntry);
         }
         Fixup.OptimisticBranchBlock = NormalExit;
       }
@@ -1117,7 +1117,7 @@ void CodeGenFunction::EmitBranchThroughCleanup(JumpDest Dest) {
     return;
 
   // Create the branch.
-  llvm::BranchInst *BI = Builder.CreateBr(Dest.getBlock());
+  llvm::UncondBrInst *BI = Builder.CreateBr(Dest.getBlock());
   addInstToCurrentSourceAtom(BI, nullptr);
 
   // Calculate the innermost active normal cleanup.

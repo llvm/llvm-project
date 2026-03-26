@@ -904,10 +904,12 @@ define <128 x i4> @avir_v16i4_to_v128i4(<16 x i4> %arg) {
 ; AVX1-LABEL: avir_v16i4_to_v128i4:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    movq %rdi, %rax
+; AVX1-NEXT:    vpunpckhbw {{.*#+}} xmm2 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
+; AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; AVX1-NEXT:    vpextrb $12, %xmm0, %ecx
 ; AVX1-NEXT:    andl $15, %ecx
 ; AVX1-NEXT:    shlq $32, %rcx
-; AVX1-NEXT:    vpextrd $2, %xmm0, %edx
+; AVX1-NEXT:    vmovd %xmm2, %edx
 ; AVX1-NEXT:    andl $15, %edx
 ; AVX1-NEXT:    vpextrb $9, %xmm0, %esi
 ; AVX1-NEXT:    andl $15, %esi
@@ -938,11 +940,11 @@ define <128 x i4> @avir_v16i4_to_v128i4(<16 x i4> %arg) {
 ; AVX1-NEXT:    vpextrb $4, %xmm0, %ecx
 ; AVX1-NEXT:    andl $15, %ecx
 ; AVX1-NEXT:    shlq $32, %rcx
-; AVX1-NEXT:    vmovd %xmm0, %edx
+; AVX1-NEXT:    vpextrb $1, %xmm0, %edx
 ; AVX1-NEXT:    andl $15, %edx
-; AVX1-NEXT:    vpextrb $1, %xmm0, %esi
+; AVX1-NEXT:    shll $8, %edx
+; AVX1-NEXT:    vmovd %xmm1, %esi
 ; AVX1-NEXT:    andl $15, %esi
-; AVX1-NEXT:    shll $8, %esi
 ; AVX1-NEXT:    orl %edx, %esi
 ; AVX1-NEXT:    vpextrb $2, %xmm0, %edx
 ; AVX1-NEXT:    andl $15, %edx

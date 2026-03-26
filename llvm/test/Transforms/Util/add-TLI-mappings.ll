@@ -16,15 +16,16 @@
 ; SVML-SAME:          ptr @__svml_log10f4,
 ; SVML-SAME:          ptr @__svml_log10f8,
 ; SVML-SAME:          ptr @__svml_log10f16
-; AMDLIBM-SAME:     [11 x ptr] [
+; AMDLIBM-SAME:     [12 x ptr] [
 ; AMDLIBM-SAME:       ptr @amd_vrd2_sin,
 ; AMDLIBM-SAME:       ptr @amd_vrd4_sin,
 ; AMDLIBM-SAME:       ptr @amd_vrd8_sin,
+; AMDLIBM-SAME:       ptr @amd_vrd2_sincos,
 ; AMDLIBM-SAME:       ptr @amd_vrd4_sincos,
 ; AMDLIBM-SAME:       ptr @amd_vrd8_sincos,
 ; AMDLIBM-SAME:       ptr @amd_vrs4_sincosf,
 ; AMDLIBM-SAME:       ptr @amd_vrs8_sincosf,
-; AMDLIBM-SAME:       ptr @amd_vrs16_sincosf
+; AMDLIBM-SAME:       ptr @amd_vrs16_sincosf,
 ; AMDLIBM-SAME:       ptr @amd_vrs4_log10f,
 ; AMDLIBM-SAME:       ptr @amd_vrs8_log10f,
 ; AMDLIBM-SAME:       ptr @amd_vrs16_log10f
@@ -205,6 +206,7 @@ declare double @ldexp(double, i32 signext) #0
 ; AMDLIBM: declare <2 x double> @amd_vrd2_sin(<2 x double>)
 ; AMDLIBM: declare <4 x double> @amd_vrd4_sin(<4 x double>)
 ; AMDLIBM: declare <8 x double> @amd_vrd8_sin(<8 x double>)
+; AMDLIBM: declare void @amd_vrd2_sincos(<2 x double>, ptr, ptr)
 ; AMDLIBM: declare void @amd_vrd4_sincos(<4 x double>, ptr, ptr)
 ; AMDLIBM: declare void @amd_vrd8_sincos(<8 x double>, ptr, ptr)
 ; AMDLIBM: declare void @amd_vrs4_sincosf(<4 x float>, ptr, ptr)
@@ -278,7 +280,8 @@ attributes #0 = { nounwind readnone }
 ; AMDLIBM-SAME:   _ZGV_LLVM_N4v_sin(amd_vrd4_sin),
 ; AMDLIBM-SAME:   _ZGV_LLVM_N8v_sin(amd_vrd8_sin)" }
 ; AMDLIBM:      attributes #[[SINCOS]] = { "vector-function-abi-variant"=
-; AMDLIBM-SAME:   "_ZGV_LLVM_N4vl8l8_sincos(amd_vrd4_sincos),
+; AMDLIBM-SAME:   "_ZGV_LLVM_N2vl8l8_sincos(amd_vrd2_sincos),
+; AMDLIBM-SAME:   _ZGV_LLVM_N4vl8l8_sincos(amd_vrd4_sincos),
 ; AMDLIBM-SAME:   _ZGV_LLVM_N8vl8l8_sincos(amd_vrd8_sincos)" }
 ; AMDLIBM:      attributes #[[SINCOSF]] = { "vector-function-abi-variant"=
 ; AMDLIBM-SAME:   "_ZGV_LLVM_N4vl4l4_sincosf(amd_vrs4_sincosf),

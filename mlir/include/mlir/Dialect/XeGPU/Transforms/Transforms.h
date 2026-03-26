@@ -61,8 +61,6 @@ struct UnrollOptions {
   }
 };
 
-/// Appends patterns for folding aliasing ops into XeGPU ops into `patterns`.
-void populateXeGPUFoldAliasOpsPatterns(RewritePatternSet &patterns);
 /// Appends patterns for optimizing block load operations into `patterns`.
 void populateXeGPUPeepHoleOptimizerPatterns(RewritePatternSet &patterns);
 /// Appends patterns for XeGPU SIMT distribution into `patterns`.
@@ -93,7 +91,7 @@ void populateXeGPUSgToWiDistributeTypeConversionAndLegality(
 ///   1. the unrolled type `unrolledType` and number of unrolled instances
 ///   `numUnrolledInstances` are computed from the `targetShape`.
 ///   2. pack each operand. ExtractStridedSlice are created to break-up the
-///   vector operands. And BuiltinUnrealizedCastop are created to break-up
+///   vector operands. And BuiltinUnrealizedCastOp are created to break-up
 ///    the TensorDesc operands.
 ///   3. the original op is cloned `numUnrolledInstances` times, once for each
 ///   result.
@@ -102,12 +100,6 @@ void populateXeGPUSgToWiDistributeTypeConversionAndLegality(
 ///   to re-assemble the slices into the original shape.
 void populateXeGPUUnrollPatterns(RewritePatternSet &patterns,
                                  const UnrollOptions &options);
-
-enum class LayoutKind { Lane, InstData, Subgroup };
-LogicalResult propagateLayouts(OpBuilder &builder, Operation *target,
-                               LayoutKind layoutKind, bool printOnly = false);
-
-LogicalResult resolveLayoutConflicts(Operation *target);
 
 } // namespace xegpu
 } // namespace mlir

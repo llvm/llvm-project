@@ -239,8 +239,51 @@ case4:
 
 }
 
+define void @switch_remove_dead_cases(i32 %x) {
+; CHECK-LABEL: define void @switch_remove_dead_cases(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 4)
+; CHECK-NEXT:    switch i32 [[X]], label %[[COMMON_RET:.*]] [
+; CHECK-NEXT:      i32 2, label %[[CASE_A:.*]]
+; CHECK-NEXT:      i32 3, label %[[CASE_B:.*]]
+; CHECK-NEXT:    ], !prof [[PROF1:![0-9]+]]
+; CHECK:       [[COMMON_RET]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[CASE_A]]:
+; CHECK-NEXT:    call void @a()
+; CHECK-NEXT:    br label %[[COMMON_RET]]
+; CHECK:       [[CASE_B]]:
+; CHECK-NEXT:    call void @b()
+; CHECK-NEXT:    br label %[[COMMON_RET]]
+;
+  %min = call i32 @llvm.umin.i32(i32 %x, i32 4)
+  switch i32 %min, label %unreachable [
+  i32 2, label %case_a
+  i32 3, label %case_b
+  i32 4, label %case_ret
+  i32 5, label %case_ret
+  ], !prof !1
+
+case_a:
+  call void @a()
+  ret void
+
+case_b:
+  call void @b()
+  ret void
+
+case_ret:
+  ret void
+
+unreachable:
+  unreachable
+}
 
 !0 = !{!"branch_weights", i32 1, i32 2, i32 3, i32 99, i32 5}
 ;.
 ; CHECK: [[PROF0]] = !{!"branch_weights", i32 5, i32 2, i32 3, i32 99}
+;.
+!1 = !{!"branch_weights", i32 11, i32 12, i32 13, i32 14, i32 15}
+;.
+; CHECK: [[PROF1]] = !{!"branch_weights", i32 14, i32 12, i32 13}
 ;.

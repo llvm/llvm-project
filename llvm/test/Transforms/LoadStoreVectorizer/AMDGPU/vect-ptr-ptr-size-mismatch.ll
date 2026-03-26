@@ -11,7 +11,7 @@ target datalayout = "e-p:64:64-p1:64:64-p5:32:32"
 ; CHECK: store ptr undef, ptr %tmp7, align 8
 define void @cast_to_ptr() {
 entry:
-  %ascast = addrspacecast ptr addrspace(5) null to ptr
+  %ascast = addrspacecast ptr addrspace(5) zeroinitializer to ptr
   %tmp4 = icmp eq i32 undef, 0
   %tmp6 = select i1 false, ptr undef, ptr undef
   %tmp7 = select i1 %tmp4, ptr null, ptr %tmp6
@@ -28,7 +28,7 @@ entry:
 define void @cast_to_cast() {
 entry:
   %a.ascast = addrspacecast ptr addrspace(5) undef to ptr
-  %b.ascast = addrspacecast ptr addrspace(5) null to ptr
+  %b.ascast = addrspacecast ptr addrspace(5) zeroinitializer to ptr
   %tmp1 = select i1 false, ptr %a.ascast, ptr undef
   %tmp3 = select i1 false, ptr %b.ascast, ptr undef
   %tmp4 = load ptr, ptr %tmp1, align 8

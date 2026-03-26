@@ -1059,3 +1059,47 @@ exit:
 failed:
   ret i32 -1
 }
+
+; PR180870: %range_check1 here cannot be made invariant.
+define i32 @not_invariant_samesign(i32 %unknown_limit, ptr %length_ptr) {
+; CHECK-LABEL: @not_invariant_samesign(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[HEADER:%.*]]
+; CHECK:       header:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
+; CHECK-NEXT:    [[RANGE_CHECK1_FIRST_ITER:%.*]] = icmp samesign ult i32 [[IV_NEXT]], [[UNKNOWN_LIMIT:%.*]]
+; CHECK-NEXT:    [[IS_POSITIVE:%.*]] = icmp sgt i32 [[UNKNOWN_LIMIT]], 0
+; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[RANGE_CHECK1_FIRST_ITER]], [[IS_POSITIVE]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[LATCH]], label [[RET:%.*]]
+; CHECK:       latch:
+; CHECK-NEXT:    [[IV_PREV:%.*]] = add nsw i32 [[IV]], -1
+; CHECK-NEXT:    [[LENGTH:%.*]] = load i32, ptr [[LENGTH_PTR:%.*]], align 4, !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[RANGE_CHECK2:%.*]] = icmp samesign ult i32 [[IV_PREV]], [[LENGTH]]
+; CHECK-NEXT:    br i1 [[RANGE_CHECK2]], label [[HEADER]], label [[RET]]
+; CHECK:       ret:
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[IV]], [[LATCH]] ], [ [[IV]], [[HEADER]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA]]
+;
+entry:
+  br label %header
+
+header:                                           ; preds = %latch, %entry
+  %iv = phi i32 [ 1, %entry ], [ %iv.next, %latch ]
+  %iv.next = add i32 %iv, 1
+  %range_check1 = icmp samesign ult i32 %iv.next, %unknown_limit
+  %is_positive = icmp sgt i32 %unknown_limit, 0
+  %or.cond = and i1 %range_check1, %is_positive
+  br i1 %or.cond, label %latch, label %ret
+
+latch:                                            ; preds = %header
+  %iv.prev = add i32 %iv, -1
+  %length = load i32, ptr %length_ptr, align 4, !range !0
+  %range_check2 = icmp ult i32 %iv.prev, %length
+  br i1 %range_check2, label %header, label %ret
+
+ret:                                              ; preds = %latch, %header
+  ret i32 %iv
+}
+
+!0 = !{i32 0, i32 2147483647}

@@ -49,7 +49,7 @@ function(tablegen project ofn)
   else()
     set(include_td_dirs "${tblgen_includes}")
     list(TRANSFORM include_td_dirs APPEND "/*.td")
-    file(GLOB_RECURSE global_tds ${include_td_dirs})
+    file(GLOB global_tds ${include_td_dirs})
     set(additional_cmdline
       -o ${CMAKE_CURRENT_BINARY_DIR}/${ofn}
       )
@@ -95,7 +95,9 @@ function(tablegen project ofn)
     set(tblgen_change_flag "--write-if-changed")
   endif()
 
-  if (NOT LLVM_ENABLE_WARNINGS)
+  # Don't pass this flag to mlir-src-sharder, since it doesn't support the
+  # flag, and it doesn't need it.
+  if (NOT LLVM_ENABLE_WARNINGS AND NOT "${project}" STREQUAL "MLIR_SRC_SHARDER")
     list(APPEND LLVM_TABLEGEN_FLAGS "-no-warn-on-unused-template-args")
   endif()
 

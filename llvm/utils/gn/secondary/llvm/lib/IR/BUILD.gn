@@ -73,6 +73,7 @@ static_library("IR") {
     "PassManager.cpp",
     "PassRegistry.cpp",
     "PassTimingInfo.cpp",
+    "PatternMatch.cpp",
     "PrintPasses.cpp",
     "ProfDataUtils.cpp",
     "ProfileSummary.cpp",

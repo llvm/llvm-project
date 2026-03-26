@@ -1221,6 +1221,9 @@ static TypedAttr getScalarConstantAsAttr(OpBuilder &builder,
                                          llvm::Constant *constScalar) {
   MLIRContext *context = builder.getContext();
 
+  if (constScalar->getType()->isVectorTy())
+    return {};
+
   // Convert scalar integers.
   if (auto *constInt = dyn_cast<llvm::ConstantInt>(constScalar)) {
     return builder.getIntegerAttr(
@@ -1269,6 +1272,17 @@ Attribute ModuleImport::getConstantAsAttr(llvm::Constant *constant) {
     return llvm::dyn_cast_if_present<ShapedType>(
         getBuiltinTypeForAttr(convertType(type)));
   };
+
+  // Convert constant vector splat values.
+  if (isa<llvm::ConstantInt, llvm::ConstantFP>(constant)) {
+    assert(constant->getType()->isVectorTy() && "expected a vector splat");
+    auto shape = getConstantShape(constant->getType());
+    if (!shape)
+      return {};
+    Attribute splatAttr =
+        getScalarConstantAsAttr(builder, constant->getSplatValue());
+    return SplatElementsAttr::get(shape, splatAttr);
+  }
 
   // Convert one-dimensional constant arrays or vectors that store 1/2/4/8-byte
   // integer or half/bfloat/float/double values.
@@ -2240,9 +2254,17 @@ ModuleImport::convertAsmInlineOperandAttrs(const llvm::CallBase &llvmCall) {
 LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
   // Convert all instructions that do not provide an MLIR builder.
   Location loc = translateLoc(inst->getDebugLoc());
-  if (inst->getOpcode() == llvm::Instruction::Br) {
-    auto *brInst = cast<llvm::BranchInst>(inst);
+  if (auto *brInst = dyn_cast<llvm::UncondBrInst>(inst)) {
+    llvm::BasicBlock *succ = brInst->getSuccessor();
+    SmallVector<Value> blockArgs;
+    if (failed(convertBranchArgs(brInst, succ, blockArgs)))
+      return failure();
 
+    auto brOp = LLVM::BrOp::create(builder, loc, blockArgs, lookupBlock(succ));
+    mapNoResultOp(inst, brOp);
+    return success();
+  }
+  if (auto *brInst = dyn_cast<llvm::CondBrInst>(inst)) {
     SmallVector<Block *> succBlocks;
     SmallVector<SmallVector<Value>> succBlockArgs;
     for (auto i : llvm::seq<unsigned>(0, brInst->getNumSuccessors())) {
@@ -2254,12 +2276,6 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
       succBlockArgs.push_back(blockArgs);
     }
 
-    if (!brInst->isConditional()) {
-      auto brOp = LLVM::BrOp::create(builder, loc, succBlockArgs.front(),
-                                     succBlocks.front());
-      mapNoResultOp(inst, brOp);
-      return success();
-    }
     FailureOr<Value> condition = convertValue(brInst->getCondition());
     if (failed(condition))
       return failure();
@@ -2648,6 +2664,23 @@ static void processMemoryEffects(llvm::Function *func, LLVMFuncOp funcOp) {
   funcOp.setMemoryEffectsAttr(memAttr);
 }
 
+static void processDenormalFPEnv(llvm::Function *func, LLVMFuncOp funcOp) {
+  llvm::DenormalFPEnv denormalFpEnv = func->getDenormalFPEnv();
+  // Only set the attr when it does not match the default value.
+  if (denormalFpEnv == llvm::DenormalFPEnv::getDefault())
+    return;
+
+  llvm::DenormalMode defaultMode = denormalFpEnv.DefaultMode;
+  llvm::DenormalMode floatMode = denormalFpEnv.F32Mode;
+
+  auto denormalFpEnvAttr = DenormalFPEnvAttr::get(
+      funcOp.getContext(), convertDenormalModeKindFromLLVM(defaultMode.Output),
+      convertDenormalModeKindFromLLVM(defaultMode.Input),
+      convertDenormalModeKindFromLLVM(floatMode.Output),
+      convertDenormalModeKindFromLLVM(floatMode.Input));
+  funcOp.setDenormalFpenvAttr(denormalFpEnvAttr);
+}
+
 // List of LLVM IR attributes that map to an explicit attribute on the MLIR
 // LLVMFuncOp.
 static constexpr std::array kExplicitLLVMFuncOpAttributes{
@@ -2663,8 +2696,6 @@ static constexpr std::array kExplicitLLVMFuncOpAttributes{
     StringLiteral("alwaysinline"),
     StringLiteral("cold"),
     StringLiteral("convergent"),
-    StringLiteral("denormal-fp-math"),
-    StringLiteral("denormal-fp-math-f32"),
     StringLiteral("fp-contract"),
     StringLiteral("frame-pointer"),
     StringLiteral("hot"),
@@ -2673,9 +2704,8 @@ static constexpr std::array kExplicitLLVMFuncOpAttributes{
     StringLiteral("instrument-function-exit"),
     StringLiteral("modular-format"),
     StringLiteral("memory"),
+    StringLiteral("minsize"),
     StringLiteral("no_caller_saved_registers"),
-    StringLiteral("no-infs-fp-math"),
-    StringLiteral("no-nans-fp-math"),
     StringLiteral("no-signed-zeros-fp-math"),
     StringLiteral("no-builtins"),
     StringLiteral("nocallback"),
@@ -2684,12 +2714,17 @@ static constexpr std::array kExplicitLLVMFuncOpAttributes{
     StringLiteral("noreturn"),
     StringLiteral("nounwind"),
     StringLiteral("optnone"),
+    StringLiteral("optsize"),
     StringLiteral("returns_twice"),
+    StringLiteral("save-reg-params"),
     StringLiteral("target-features"),
+    StringLiteral("trap-func-name"),
     StringLiteral("tune-cpu"),
     StringLiteral("uwtable"),
     StringLiteral("vscale_range"),
     StringLiteral("willreturn"),
+    StringLiteral("zero-call-used-regs"),
+    StringLiteral("denormal_fpenv"),
 };
 
 // List of LLVM IR attributes that are handled by prefix to map onto an MLIR
@@ -2760,6 +2795,7 @@ static void processPassthroughAttrs(llvm::Function *func, LLVMFuncOp funcOp) {
 void ModuleImport::processFunctionAttributes(llvm::Function *func,
                                              LLVMFuncOp funcOp) {
   processMemoryEffects(func, funcOp);
+  processDenormalFPEnv(func, funcOp);
   processPassthroughAttrs(func, funcOp);
 
   if (func->hasFnAttribute(llvm::Attribute::NoInline))
@@ -2778,6 +2814,12 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
     funcOp.setWillReturn(true);
   if (func->hasFnAttribute(llvm::Attribute::NoReturn))
     funcOp.setNoreturn(true);
+  if (func->hasFnAttribute(llvm::Attribute::OptimizeForSize))
+    funcOp.setOptsize(true);
+  if (func->hasFnAttribute("save-reg-params"))
+    funcOp.setSaveRegParams(true);
+  if (func->hasFnAttribute(llvm::Attribute::MinSize))
+    funcOp.setMinsize(true);
   if (func->hasFnAttribute(llvm::Attribute::ReturnsTwice))
     funcOp.setReturnsTwice(true);
   if (func->hasFnAttribute(llvm::Attribute::Cold))
@@ -2793,6 +2835,10 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
   if (llvm::Attribute attr = func->getFnAttribute("modular-format");
       attr.isStringAttribute())
     funcOp.setModularFormat(StringAttr::get(context, attr.getValueAsString()));
+  if (llvm::Attribute attr = func->getFnAttribute("zero-call-used-regs");
+      attr.isStringAttribute())
+    funcOp.setZeroCallUsedRegsAttr(
+        StringAttr::get(context, attr.getValueAsString()));
 
   if (func->hasFnAttribute("aarch64_pstate_sm_enabled"))
     funcOp.setArmStreaming(true);
@@ -2856,14 +2902,6 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
       attr.isStringAttribute())
     funcOp.setPreferVectorWidth(attr.getValueAsString());
 
-  if (llvm::Attribute attr = func->getFnAttribute("no-infs-fp-math");
-      attr.isStringAttribute())
-    funcOp.setNoInfsFpMath(attr.getValueAsBool());
-
-  if (llvm::Attribute attr = func->getFnAttribute("no-nans-fp-math");
-      attr.isStringAttribute())
-    funcOp.setNoNansFpMath(attr.getValueAsBool());
-
   if (llvm::Attribute attr = func->getFnAttribute("instrument-function-entry");
       attr.isStringAttribute())
     funcOp.setInstrumentFunctionEntry(
@@ -2877,16 +2915,6 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
   if (llvm::Attribute attr = func->getFnAttribute("no-signed-zeros-fp-math");
       attr.isStringAttribute())
     funcOp.setNoSignedZerosFpMath(attr.getValueAsBool());
-
-  if (llvm::Attribute attr = func->getFnAttribute("denormal-fp-math");
-      attr.isStringAttribute())
-    funcOp.setDenormalFpMathAttr(
-        StringAttr::get(context, attr.getValueAsString()));
-
-  if (llvm::Attribute attr = func->getFnAttribute("denormal-fp-math-f32");
-      attr.isStringAttribute())
-    funcOp.setDenormalFpMathF32Attr(
-        StringAttr::get(context, attr.getValueAsString()));
 
   if (llvm::Attribute attr = func->getFnAttribute("fp-contract");
       attr.isStringAttribute())
@@ -3017,6 +3045,13 @@ LogicalResult ModuleImport::convertCallAttributes(llvm::CallInst *inst,
   op.setNoUnwind(callAttrs.getFnAttr(llvm::Attribute::NoUnwind).isValid());
   op.setWillReturn(callAttrs.getFnAttr(llvm::Attribute::WillReturn).isValid());
   op.setNoreturn(callAttrs.getFnAttr(llvm::Attribute::NoReturn).isValid());
+  op.setOptsize(
+      callAttrs.getFnAttr(llvm::Attribute::OptimizeForSize).isValid());
+  op.setSaveRegParams(callAttrs.getFnAttr("save-reg-params").isValid());
+  op.setBuiltin(callAttrs.getFnAttr(llvm::Attribute::Builtin).isValid());
+  op.setNobuiltin(callAttrs.getFnAttr(llvm::Attribute::NoBuiltin).isValid());
+  op.setMinsize(callAttrs.getFnAttr(llvm::Attribute::MinSize).isValid());
+
   op.setReturnsTwice(
       callAttrs.getFnAttr(llvm::Attribute::ReturnsTwice).isValid());
   op.setHot(callAttrs.getFnAttr(llvm::Attribute::Hot).isValid());
@@ -3030,6 +3065,13 @@ LogicalResult ModuleImport::convertCallAttributes(llvm::CallInst *inst,
   if (llvm::Attribute attr = callAttrs.getFnAttr("modular-format");
       attr.isStringAttribute())
     op.setModularFormat(StringAttr::get(context, attr.getValueAsString()));
+  if (llvm::Attribute attr = callAttrs.getFnAttr("zero-call-used-regs");
+      attr.isStringAttribute())
+    op.setZeroCallUsedRegsAttr(
+        StringAttr::get(context, attr.getValueAsString()));
+  if (llvm::Attribute attr = callAttrs.getFnAttr("trap-func-name");
+      attr.isStringAttribute())
+    op.setTrapFuncNameAttr(StringAttr::get(context, attr.getValueAsString()));
   op.setNoInline(callAttrs.getFnAttr(llvm::Attribute::NoInline).isValid());
   op.setAlwaysInline(
       callAttrs.getFnAttr(llvm::Attribute::AlwaysInline).isValid());

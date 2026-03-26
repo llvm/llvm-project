@@ -478,9 +478,11 @@ implementation.
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 | loop stripe transformation                                  | :good:`done`              | :none:`unclaimed`         | https://github.com/llvm/llvm-project/pull/119891                         |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
-| loop fusion transformation                                  | :part:`in progress`       | :none:`unclaimed`         | https://github.com/llvm/llvm-project/pull/139293                         |
+| loop fusion transformation                                  | :part:`in progress`       | :good:`done`              | https://github.com/llvm/llvm-project/pull/139293                         |
+|                                                             |                           |                           | https://github.com/llvm/llvm-project/pull/161213                         |
+|                                                             |                           |                           | https://github.com/llvm/llvm-project/pull/168898                         |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
-| loop index set splitting transformation                     | :none:`unclaimed`         | :none:`unclaimed`         |                                                                          |
+| loop index set splitting transformation                     | :part:`in progress`       | :none:`unclaimed`         | @amitamd7                                                                |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 | loop transformation apply clause                            | :none:`unclaimed`         | :none:`unclaimed`         |                                                                          |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
@@ -623,9 +625,7 @@ implementation.
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 |Feature                                                      | C/C++ Status              | Fortran Status            | Reviews                                                                  |
 +=============================================================+===========================+===========================+==========================================================================+
-| dyn_groupprivate clause                                     | :part:`In Progress`       | :part:`In Progress`       | C/C++: kevinsala (https://github.com/llvm/llvm-project/pull/152651       |
-|                                                             |                           |                           | https://github.com/llvm/llvm-project/pull/152830                         |
-|                                                             |                           |                           | https://github.com/llvm/llvm-project/pull/152831)                        |
+| dyn_groupprivate clause                                     | :part:`partial`           | :part:`In Progress`       | C/C++: Host device support missing                                       |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 | loop flatten transformation                                 | :none:`unclaimed`         | :none:`unclaimed`         |                                                                          |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
@@ -641,6 +641,9 @@ implementation.
 | fallback modifier for use_device_ptr clause                 | :good:`done`              | :none:`unclaimed`         | Clang: @abhinavgaba (https://github.com/llvm/llvm-project/pull/170578,   |
 |                                                             |                           |                           | https://github.com/llvm/llvm-project/pull/173931)                        |
 |                                                             |                           |                           | RT: @abhinavgaba (https://github.com/llvm/llvm-project/pull/169603)      |
++-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
+| dims clause with strict behavior (multidimensional teams    | :part:`In Progress`       | :part:`In Progress`       | C/C++: kevinsala                                                         |
+| and leagues)                                                |                           |                           | Fortran: skc7, kparzysz, mjklemm                                         |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 
 OpenMP Extensions

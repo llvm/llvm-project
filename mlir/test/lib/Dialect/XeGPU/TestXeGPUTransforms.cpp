@@ -14,6 +14,7 @@
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
+#include "mlir/Dialect/XeGPU/Transforms/XeGPULayoutImpl.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Value.h"
@@ -283,9 +284,16 @@ struct TestXeGPUSgToWiDistributeExperimental
 
   TestXeGPUSgToWiDistributeExperimental() = default;
   TestXeGPUSgToWiDistributeExperimental(
-      const TestXeGPUSgToWiDistributeExperimental &pass) = default;
+      const TestXeGPUSgToWiDistributeExperimental &pass)
+      : PassWrapper(pass) {}
 
   void runOnOperation() override {
+    Operation *op = getOperation();
+    if (!xegpu::recoverTemporaryLayouts(op)) {
+      signalPassFailure();
+      return;
+    }
+
     MLIRContext *ctx = &getContext();
     TypeConverter typeConverter;
     // Define type materializations using UnrealizedConversionCastOp.
@@ -297,11 +305,12 @@ struct TestXeGPUSgToWiDistributeExperimental
     };
     typeConverter.addSourceMaterialization(materializeCast);
     typeConverter.addTargetMaterialization(materializeCast);
+
     ConversionTarget target(*ctx);
     RewritePatternSet patterns(ctx);
     xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
         typeConverter, patterns, target);
-    (void)applyPartialConversion(getOperation(), target, std::move(patterns));
+    (void)applyPartialConversion(op, target, std::move(patterns));
   }
 };
 
@@ -374,7 +383,7 @@ struct TestXeGPUPropagateLayouts
       signalPassFailure();
       return;
     }
-    if (failed(xegpu::propagateLayouts(builder, getOperation(), kind))) {
+    if (failed(xegpu::propagateLayouts(builder, getOperation(), kind, 32))) {
       signalPassFailure();
     }
   }
@@ -403,9 +412,8 @@ struct TestXeGPUResolveLayoutConflicts
       default;
 
   void runOnOperation() override {
-    if (failed(xegpu::resolveLayoutConflicts(getOperation()))) {
+    if (failed(xegpu::resolveLayoutConflicts(getOperation())))
       signalPassFailure();
-    }
   }
 };
 

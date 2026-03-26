@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// The "sycl-ls" utility lists all platforms discovered by SYCL.
+// The "sycl-ls" utility lists all platforms and devices discovered by SYCL.
 //
 // There are two types of output:
 //   concise (default) and
@@ -36,14 +36,69 @@ inline std::string_view getBackendName(const backend &Backend) {
   return "";
 }
 
+std::string getDeviceTypeName(const device &Device) {
+  auto DeviceType = Device.get_info<info::device::device_type>();
+  switch (DeviceType) {
+  case info::device_type::cpu:
+    return "cpu";
+  case info::device_type::gpu:
+    return "gpu";
+  case info::device_type::host:
+    return "host";
+  case info::device_type::accelerator:
+    return "accelerator";
+  default:
+    return "unknown";
+  }
+}
+
+static void printDeviceInfo(const device &Device, bool Verbose,
+                            const std::string &Prepend) {
+  auto DeviceName = Device.get_info<info::device::name>();
+  auto DeviceVendor = Device.get_info<info::device::vendor>();
+  auto DeviceDriverVersion = Device.get_info<info::device::driver_version>();
+
+  if (Verbose) {
+    std::cout << Prepend << "Type              : " << getDeviceTypeName(Device)
+              << std::endl;
+    std::cout << Prepend << "Name              : " << DeviceName << std::endl;
+    std::cout << Prepend << "Vendor            : " << DeviceVendor << std::endl;
+    std::cout << Prepend << "Driver            : " << DeviceDriverVersion
+              << std::endl;
+  } else {
+    std::cout << Prepend << ", " << DeviceName << " [" << DeviceDriverVersion
+              << "]" << std::endl;
+  }
+}
+
+static void
+printSelectorChoice(const detail::DeviceSelectorInvocableType &Selector,
+                    const std::string &Prepend) {
+  try {
+    const auto &Device = device(Selector);
+    std::string DeviceTypeName = getDeviceTypeName(Device);
+    auto Platform = Device.get_info<info::device::platform>();
+    auto PlatformName = Platform.get_info<info::platform::name>();
+    printDeviceInfo(Device, false /*Verbose*/,
+                    Prepend + DeviceTypeName + ", " + PlatformName);
+  } catch (const sycl::exception &Exception) {
+    std::string What = Exception.what();
+    constexpr size_t MaxLength = 80;
+    // Truncate long string so it can fit in one-line
+    if (What.length() > MaxLength)
+      What = What.substr(0, MaxLength) + "...";
+    std::cout << Prepend << What << std::endl;
+  }
+}
+
 int main(int argc, char **argv) {
   llvm::cl::opt<bool> Verbose(
-      "verbose",
-      llvm::cl::desc("Verbosely prints all the discovered platforms"));
+      "verbose", llvm::cl::desc("Verbosely prints all the discovered devices"));
   llvm::cl::alias VerboseShort("v", llvm::cl::desc("Alias for -verbose"),
                                llvm::cl::aliasopt(Verbose));
   llvm::cl::ParseCommandLineOptions(
-      argc, argv, "This program lists all backends discovered by SYCL");
+      argc, argv,
+      "This program lists all backends and devices discovered by SYCL");
 
   try {
     const auto &Platforms = platform::get_platforms();
@@ -55,8 +110,17 @@ int main(int argc, char **argv) {
 
     for (const auto &Platform : Platforms) {
       backend Backend = Platform.get_backend();
-      std::cout << "[" << getBackendName(Backend) << ":"
-                << "unknown" << "]" << std::endl;
+      auto PlatformName = Platform.get_info<info::platform::name>();
+      const auto &Devices = Platform.get_devices();
+
+      for (const auto &Device : Devices) {
+        std::cout << "[" << getBackendName(Backend) << ":"
+                  << getDeviceTypeName(Device) << "]";
+        std::cout << " ";
+        // Verbose parameter is set to false to print regular devices output
+        // first
+        printDeviceInfo(Device, false, PlatformName);
+      }
     }
 
     if (Verbose) {
@@ -71,8 +135,19 @@ int main(int argc, char **argv) {
         std::cout << "    Version  : " << PlatformVersion << std::endl;
         std::cout << "    Name     : " << PlatformName << std::endl;
         std::cout << "    Vendor   : " << PlatformVendor << std::endl;
-        std::cout << "    Devices  : " << "unknown" << std::endl;
+
+        const auto &Devices = Platform.get_devices();
+        std::cout << "    Devices  : " << Devices.size() << std::endl;
+        for (const auto &Device : Devices) {
+          printDeviceInfo(Device, true, "        ");
+        }
       }
+
+      // Print built-in device selectors choice
+      printSelectorChoice(default_selector_v, "default_selector()      : ");
+      printSelectorChoice(accelerator_selector_v, "accelerator_selector()  : ");
+      printSelectorChoice(cpu_selector_v, "cpu_selector()          : ");
+      printSelectorChoice(gpu_selector_v, "gpu_selector()          : ");
     }
   } catch (sycl::exception &e) {
     std::cerr << "SYCL Exception encountered: " << e.what() << std::endl

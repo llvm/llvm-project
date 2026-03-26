@@ -194,12 +194,11 @@ define i32 @issue178245(i32 %i.0.i.i) {
 ; CHECK-LABEL: @issue178245(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL104_I_I_NOT:%.*]] = icmp eq i32 [[I_0_I_I:%.*]], -1177359834
-; CHECK-NEXT:    [[CONV111_I_I:%.*]] = select i1 [[TOBOOL104_I_I_NOT]], i32 0, i32 -5
-; CHECK-NEXT:    [[CAST_SIGN:%.*]] = bitcast i32 [[CONV111_I_I]] to float
+; CHECK-NEXT:    [[CAST_SIGN:%.*]] = select i1 [[TOBOOL104_I_I_NOT]], float 0.000000e+00, float 0xFFFFFFFF60000000
 ; CHECK-NEXT:    [[FCMP:%.*]] = fcmp uno float [[CAST_SIGN]], 0.000000e+00
 ; CHECK-NEXT:    [[COPYSIGN:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[CAST_SIGN]])
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[FCMP]], float 0.000000e+00, float [[COPYSIGN]]
-; CHECK-NEXT:    [[RESULT:%.*]] = bitcast float [[SELECT]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float [[COPYSIGN]] to i32
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[FCMP]], i32 0, i32 [[TMP0]]
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
 entry:

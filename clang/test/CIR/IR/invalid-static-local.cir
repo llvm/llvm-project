@@ -1,0 +1,33 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!s32i = !cir.int<s, 32>
+
+module {
+
+// Global is not marked static_local_guard, but get_global is static_local
+cir.global "private" internal @_ZZ1fvE1x : !s32i
+
+cir.func @test_static_local_mismatch() {
+  // expected-error @below {{static_local attribute mismatch}}
+  %0 = cir.get_global static_local @_ZZ1fvE1x : !cir.ptr<!s32i>
+  cir.return
+}
+
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
+
+// Global is marked static_local_guard, but get_global is not static_local
+cir.global "private" internal static_local_guard<"_ZGVZ1fvE1y"> @_ZZ1fvE1y : !s32i
+
+cir.func @test_static_local_mismatch_reverse() {
+  // expected-error @below {{static_local attribute mismatch}}
+  %0 = cir.get_global @_ZZ1fvE1y : !cir.ptr<!s32i>
+  cir.return
+}
+
+}

@@ -51,6 +51,18 @@ def gi_vop3pmodsdot :
     GIComplexOperandMatcher<s32, "selectVOP3PModsDOT">,
     GIComplexPatternEquiv<VOP3PModsDOT>;
 
+def gi_vop3pnomodsdot :
+    GIComplexOperandMatcher<s32, "selectVOP3PNoModsDOT">,
+    GIComplexPatternEquiv<VOP3PNoModsDOT>;
+
+def gi_vop3pmodsf32 :
+    GIComplexOperandMatcher<s32, "selectVOP3PModsF32">,
+    GIComplexPatternEquiv<VOP3PModsF32>;
+
+def gi_vop3pnomodsf32 :
+    GIComplexOperandMatcher<s32, "selectVOP3PNoModsF32">,
+    GIComplexPatternEquiv<VOP3PNoModsF32>;
+
 def gi_wmmaopselvop3pmods :
     GIComplexOperandMatcher<s32, "selectWMMAOpSelVOP3PMods">,
     GIComplexPatternEquiv<WMMAOpSelVOP3PMods>;
@@ -331,6 +343,10 @@ def : GINodeEquiv<G_AMDGPU_WHOLE_WAVE_FUNC_SETUP, AMDGPUwhole_wave_setup>;
 
 def : GINodeEquiv<G_AMDGPU_SPONENTRY, sponentry>;
 
+def : GINodeEquiv<G_AMDGPU_FLAT_LOAD_MONITOR, AMDGPUflat_load_monitor>;
+def : GINodeEquiv<G_AMDGPU_GLOBAL_LOAD_MONITOR, AMDGPUglobal_load_monitor>;
+
+
 class GISelSop2Pat <
   SDPatternOperator node,
   Instruction inst,
@@ -437,8 +453,8 @@ def gi_bitcast_fpimm_to_i32 : GICustomOperandRenderer<"renderBitcastFPImm32">,
 def gi_bitcast_fpimm_to_i64 : GICustomOperandRenderer<"renderBitcastFPImm64">,
   GISDNodeXFormEquiv<bitcast_fpimm_to_i64>;
 
-def gi_IMMPopCount : GICustomOperandRenderer<"renderPopcntImm">,
-  GISDNodeXFormEquiv<IMMPopCount>;
+def gi_IMMCountTrailingOnes : GICustomOperandRenderer<"renderCountTrailingOnesImm">,
+  GISDNodeXFormEquiv<IMMCountTrailingOnes>;
 
 def gi_extract_cpol : GICustomOperandRenderer<"renderExtractCPol">,
   GISDNodeXFormEquiv<extract_cpol>;

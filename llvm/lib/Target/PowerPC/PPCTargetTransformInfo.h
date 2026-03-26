@@ -66,7 +66,7 @@ public:
   bool isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
                                 AssumptionCache &AC, TargetLibraryInfo *LibInfo,
                                 HardwareLoopInfo &HWLoopInfo) const override;
-  bool canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE, LoopInfo *LI,
+  bool canSaveCmp(Loop *L, CondBrInst **BI, ScalarEvolution *SE, LoopInfo *LI,
                   DominatorTree *DT, AssumptionCache *AC,
                   TargetLibraryInfo *LibInfo) const override;
   bool getTgtMemIntrinsic(IntrinsicInst *Inst,

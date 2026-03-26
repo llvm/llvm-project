@@ -14,6 +14,7 @@
 #include "Sparc.h"
 #include "SparcMachineFunctionInfo.h"
 #include "SparcTargetObjectFile.h"
+#include "SparcTargetTransformInfo.h"
 #include "TargetInfo/SparcTargetInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -147,6 +148,11 @@ public:
 
 TargetPassConfig *SparcTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new SparcPassConfig(*this, PM);
+}
+
+TargetTransformInfo
+SparcTargetMachine::getTargetTransformInfo(const Function &F) const {
+  return TargetTransformInfo(std::make_unique<SparcTTIImpl>(this, F));
 }
 
 void SparcPassConfig::addIRPasses() {

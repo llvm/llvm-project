@@ -4,21 +4,27 @@
 define float @test() {
 ; CHECK-LABEL: define float @test() {
 ; CHECK-NEXT:  [[BB:.*:]]
+; CHECK-NEXT:    [[FADD:%.*]] = fadd float 0.000000e+00, 0.000000e+00
 ; CHECK-NEXT:    [[LOAD:%.*]] = load float, ptr null, align 4
 ; CHECK-NEXT:    [[FADD2:%.*]] = fadd float 0.000000e+00, 0.000000e+00
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> <float poison, float poison, float 0.000000e+00, float poison>, float [[FADD]], i32 3
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> <float 0.000000e+00, float 0.000000e+00, float undef, float undef>, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x float> <float 0.000000e+00, float -0.000000e+00, float -0.000000e+00, float poison>, float [[LOAD]], i32 3
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd <4 x float> zeroinitializer, [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <4 x float> [[TMP1]], [[TMP0]]
 ; CHECK-NEXT:    br i1 false, label %[[BB5:.*]], label %[[BB6:.*]]
 ; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    br label %[[BB8:.*]]
 ; CHECK:       [[BB6]]:
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> poison, float [[FADD2]], i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> poison, <2 x i32> <i32 poison, i32 3>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> [[TMP11]], <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> <float poison, float 0.000000e+00, float poison, float poison>, float [[LOAD]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP5]], float [[FADD2]], i32 2
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> [[TMP1]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x float> [[TMP5]], <4 x float> [[TMP12]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP8:%.*]] = fdiv <4 x float> [[TMP7]], <float 1.000000e+00, float 1.000000e+00, float 0.000000e+00, float 0.000000e+00>
 ; CHECK-NEXT:    br label %[[BB8]]
 ; CHECK:       [[BB8]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = phi <4 x float> [ [[TMP1]], %[[BB5]] ], [ [[TMP8]], %[[BB6]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = phi <4 x float> [ [[TMP3]], %[[BB5]] ], [ [[TMP8]], %[[BB6]] ]
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x float> [[TMP9]], i32 3
 ; CHECK-NEXT:    ret float [[TMP10]]
 ;

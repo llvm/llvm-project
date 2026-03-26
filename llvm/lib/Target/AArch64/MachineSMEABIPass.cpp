@@ -298,8 +298,8 @@ struct MachineSMEABI : public MachineFunctionPass {
   /// within the machine function.
   FunctionInfo collectNeededZAStates(SMEAttrs SMEFnAttrs);
 
-  /// Assigns each edge bundle a ZA state based on the needed states of blocks
-  /// that have incoming or outgoing edges in that bundle.
+  /// Assigns each edge bundle a ZA state based on the desired states of
+  /// incoming and outgoing blocks in the bundle.
   SmallVector<ZAState> assignBundleZAStates(const EdgeBundles &Bundles,
                                             const FunctionInfo &FnInfo);
 
@@ -514,8 +514,8 @@ FunctionInfo MachineSMEABI::collectNeededZAStates(SMEAttrs SMEFnAttrs) {
                       PhysLiveRegsAfterSMEPrologue};
 }
 
-/// Assigns each edge bundle a ZA state based on the needed states of blocks
-/// that have incoming or outgoing blocks in that bundle.
+/// Assigns each edge bundle a ZA state based on the desired states of incoming
+/// and outgoing blocks in the bundle.
 SmallVector<ZAState>
 MachineSMEABI::assignBundleZAStates(const EdgeBundles &Bundles,
                                     const FunctionInfo &FnInfo) {
@@ -531,9 +531,9 @@ MachineSMEABI::assignBundleZAStates(const EdgeBundles &Bundles,
           Bundles.getBundle(BlockID, /*Out=*/false) != I)
         continue;
 
-      // Pick a state that matches all incoming blocks. Fallback to "ACTIVE" if
-      // any blocks doesn't match. This will hoist the state from incoming
-      // blocks to outgoing blocks.
+      // Pick a state that matches all incoming blocks. Fall back to "ACTIVE" if
+      // any incoming state doesn't match. This will hoist the state from
+      // incoming blocks to outgoing blocks.
       if (!BundleState)
         BundleState = Block.DesiredIncomingState;
       else if (BundleState != Block.DesiredIncomingState)
@@ -1129,13 +1129,14 @@ void MachineSMEABI::emitStateChange(EmitContext &Context,
   // This section handles: LOCAL_COMMITTED -> (OFF|LOCAL_SAVED)
   case transitionFrom(ZAState::LOCAL_COMMITTED).to(ZAState::OFF):
   case transitionFrom(ZAState::LOCAL_COMMITTED).to(ZAState::LOCAL_SAVED):
-    // These transistions are a no-op.
+    // These transitions are a no-op.
     break;
 
   // This section handles: LOCAL_(SAVED|COMMITTED) -> ACTIVE[_ZT0_SAVED]
   case transitionFrom(ZAState::LOCAL_COMMITTED).to(ZAState::ACTIVE):
   case transitionFrom(ZAState::LOCAL_COMMITTED).to(ZAState::ACTIVE_ZT0_SAVED):
   case transitionFrom(ZAState::LOCAL_SAVED).to(ZAState::ACTIVE):
+  case transitionFrom(ZAState::LOCAL_SAVED).to(ZAState::ACTIVE_ZT0_SAVED):
     if (HasZAState)
       emitZARestore(Context, MBB, InsertPt, PhysLiveRegs);
     else
@@ -1144,7 +1145,7 @@ void MachineSMEABI::emitStateChange(EmitContext &Context,
       emitZT0SaveRestore(Context, MBB, InsertPt, /*IsSave=*/false);
     break;
 
-  // This section handles transistions to OFF (not previously covered)
+  // This section handles transitions to OFF (not previously covered)
   case transitionFrom(ZAState::ACTIVE).to(ZAState::OFF):
   case transitionFrom(ZAState::ACTIVE_ZT0_SAVED).to(ZAState::OFF):
   case transitionFrom(ZAState::LOCAL_SAVED).to(ZAState::OFF):

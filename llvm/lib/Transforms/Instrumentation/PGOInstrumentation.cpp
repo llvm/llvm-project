@@ -407,8 +407,8 @@ public:
 // Return a string describing the branch condition that can be
 // used in static branch probability heuristics:
 static std::string getBranchCondString(Instruction *TI) {
-  BranchInst *BI = dyn_cast<BranchInst>(TI);
-  if (!BI || !BI->isConditional())
+  CondBrInst *BI = dyn_cast<CondBrInst>(TI);
+  if (!BI)
     return std::string();
 
   Value *Cond = BI->getCondition();
@@ -1692,7 +1692,7 @@ void PGOUseFunc::setBranchWeights() {
     Instruction *TI = BB.getTerminator();
     if (TI->getNumSuccessors() < 2)
       continue;
-    if (!(isa<BranchInst>(TI) || isa<SwitchInst>(TI) ||
+    if (!(isa<CondBrInst>(TI) || isa<SwitchInst>(TI) ||
           isa<IndirectBrInst>(TI) || isa<InvokeInst>(TI) ||
           isa<CallBrInst>(TI)))
       continue;

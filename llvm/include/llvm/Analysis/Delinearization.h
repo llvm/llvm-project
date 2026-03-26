@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This implements an analysis pass that tries to delinearize all GEP
-// instructions in all loops using the SCEV analysis functionality. This pass is
-// only used for testing purposes: if your pass needs delinearization, please
-// use the on-demand SCEVAddRecExpr::delinearize() function.
+// instructions in all loops using the SCEV analysis functionality.
 //
 //===----------------------------------------------------------------------===//
 

@@ -1,4 +1,4 @@
-; RUN: llc <%s --mtriple s390x-ibm-zos -emit-gnuas-syntax-on-zos=false | FileCheck %s
+; RUN: llc <%s --mtriple s390x-ibm-zos | FileCheck %s
 ; RUN: llc <%s --mtriple s390x-ibm-zos --filetype=obj | \
 ; RUN:   od -Ax -tx1 -v | FileCheck --check-prefix=CHECKREL --ignore-case %s
 
@@ -19,7 +19,7 @@ entry:
 
 ; Check the attributes on the function
 ; CHECK:       ENTRY calc
-; CHECK-NEXT: calc XATTR LINKAGE(XPLINK),REFERENCE(CODE),SCOPE(EXPORT)
+; CHECK-NEXT: calc XATTR LINKAGE(XPLINK),REFERENCE(CODE),PSECT(stdin#S),SCOPE(EXPORT)
 ; CHECK-NEXT: calc DS 0H
 
 ; Check the definition of the variable

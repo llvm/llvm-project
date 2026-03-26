@@ -3349,7 +3349,7 @@ auto HexagonVectorCombine::getConstInt(int Val, unsigned Width) const
 
 auto HexagonVectorCombine::isZero(const Value *Val) const -> bool {
   if (auto *C = dyn_cast<Constant>(Val))
-    return C->isZeroValue();
+    return C->isNullValue();
   return false;
 }
 

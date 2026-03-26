@@ -38,21 +38,21 @@ static bool RetValue(InterpState &S, CodePtr &Pt) {
 
 static bool Jmp(InterpState &S, CodePtr &PC, int32_t Offset) {
   PC += Offset;
-  return true;
+  return S.noteStep(PC);
 }
 
 static bool Jt(InterpState &S, CodePtr &PC, int32_t Offset) {
   if (S.Stk.pop<bool>()) {
     PC += Offset;
   }
-  return true;
+  return S.noteStep(PC);
 }
 
 static bool Jf(InterpState &S, CodePtr &PC, int32_t Offset) {
   if (!S.Stk.pop<bool>()) {
     PC += Offset;
   }
-  return true;
+  return S.noteStep(PC);
 }
 
 // https://github.com/llvm/llvm-project/issues/102513
@@ -230,7 +230,7 @@ static bool CheckTemporary(InterpState &S, CodePtr OpPC, const Block *B,
     // FIXME(perf): Since we do this check on every Load from a static
     // temporary, it might make sense to cache the value of the
     // isUsableInConstantExpressions call.
-    if (B->getEvalID() != S.Ctx.getEvalID() &&
+    if (B->getEvalID() != S.EvalID &&
         !MTE->isUsableInConstantExpressions(S.getASTContext())) {
       const SourceInfo &E = S.Current->getSource(OpPC);
       S.FFDiag(E, diag::note_constexpr_access_static_temporary, 1) << AK;
@@ -298,6 +298,11 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC,
   // at the end.
   for (const Function::ParamDescriptor &PDesc : Func->args_reverse())
     TYPE_SWITCH(PDesc.T, S.Stk.discard<T>());
+
+  if (Func->hasThisPointer() && !Func->isThisPointerExplicit())
+    S.Stk.discard<Pointer>();
+  if (Func->hasRVO())
+    S.Stk.discard<Pointer>();
 }
 
 bool isConstexprUnknown(const Pointer &P) {
@@ -626,16 +631,8 @@ bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 
   // In C++14 onwards, it is permitted to read a mutable member whose
   // lifetime began within the evaluation.
-  if (S.getLangOpts().CPlusPlus14 &&
-      Ptr.block()->getEvalID() == S.Ctx.getEvalID()) {
-    // FIXME: This check is necessary because (of the way) we revisit
-    // variables in Compiler.cpp:visitDeclRef. Revisiting a so far
-    // unknown variable will get the same EvalID and we end up allowing
-    // reads from mutable members of it.
-    if (!S.inConstantContext() && isConstexprUnknown(Ptr))
-      return false;
+  if (S.getLangOpts().CPlusPlus14 && Ptr.block()->getEvalID() == S.EvalID)
     return true;
-  }
 
   const SourceInfo &Loc = S.Current->getSource(OpPC);
   const FieldDecl *Field = Ptr.getField();
@@ -1260,7 +1257,8 @@ static bool runRecordDestructor(InterpState &S, CodePtr OpPC,
   const Record *R = Desc->ElemRecord;
   assert(R);
 
-  if (S.Current->hasThisPointer() && S.Current->getFunction()->isDestructor() &&
+  if (!S.Current->isBottomFrame() && S.Current->hasThisPointer() &&
+      S.Current->getFunction()->isDestructor() &&
       Pointer::pointToSameBlock(BasePtr, S.Current->getThis())) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_double_destroy);
@@ -1549,6 +1547,8 @@ bool CheckDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     return false;
   if (!CheckRange(S, OpPC, Ptr, AK_Destroy))
     return false;
+  if (!CheckLifetime(S, OpPC, Ptr.getLifetime(), AK_Destroy))
+    return false;
 
   // Can't call a dtor on a global variable.
   if (Ptr.block()->isStatic()) {
@@ -1661,19 +1661,20 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
   if (!CheckCallDepth(S, OpPC))
     return false;
 
-  auto NewFrame = std::make_unique<InterpFrame>(S, Func, OpPC, VarArgSize);
+  auto Memory = new char[InterpFrame::allocSize(Func)];
+  auto NewFrame = new (Memory) InterpFrame(S, Func, OpPC, VarArgSize);
   InterpFrame *FrameBefore = S.Current;
-  S.Current = NewFrame.get();
+  S.Current = NewFrame;
 
   // Note that we cannot assert(CallResult.hasValue()) here since
   // Ret() above only sets the APValue if the curent frame doesn't
   // have a caller set.
   if (Interpret(S)) {
-    NewFrame.release(); // Frame was delete'd already.
     assert(S.Current == FrameBefore);
     return true;
   }
 
+  InterpFrame::free(NewFrame);
   // Interpreting the function failed somehow. Reset to
   // previous state.
   S.Current = FrameBefore;
@@ -1744,9 +1745,10 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   if (!CheckCallDepth(S, OpPC))
     return cleanup();
 
-  auto NewFrame = std::make_unique<InterpFrame>(S, Func, OpPC, VarArgSize);
+  auto Memory = new char[InterpFrame::allocSize(Func)];
+  auto NewFrame = new (Memory) InterpFrame(S, Func, OpPC, VarArgSize);
   InterpFrame *FrameBefore = S.Current;
-  S.Current = NewFrame.get();
+  S.Current = NewFrame;
 
   InterpStateCCOverride CCOverride(S, Func->isImmediate());
   // Note that we cannot assert(CallResult.hasValue()) here since
@@ -1758,18 +1760,18 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
     S.InitializingBlocks.pop_back();
 
   if (!Success) {
+    InterpFrame::free(NewFrame);
     // Interpreting the function failed somehow. Reset to
     // previous state.
     S.Current = FrameBefore;
     return false;
   }
 
-  NewFrame.release(); // Frame was delete'd already.
   assert(S.Current == FrameBefore);
   return true;
 }
 
-static bool GetDynamicDecl(InterpState &S, CodePtr OpPC, Pointer TypePtr,
+static bool getDynamicDecl(InterpState &S, CodePtr OpPC, Pointer TypePtr,
                            const CXXRecordDecl *&DynamicDecl) {
   TypePtr = TypePtr.stripBaseCasts();
 
@@ -1795,7 +1797,7 @@ static bool GetDynamicDecl(InterpState &S, CodePtr OpPC, Pointer TypePtr,
   } else {
     DynamicDecl = DynamicType->getAsCXXRecordDecl();
   }
-  return true;
+  return DynamicDecl != nullptr;
 }
 
 bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
@@ -1808,7 +1810,7 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
   const FunctionDecl *Callee = Func->getDecl();
 
   const CXXRecordDecl *DynamicDecl = nullptr;
-  if (!GetDynamicDecl(S, OpPC, ThisPtr, DynamicDecl))
+  if (!getDynamicDecl(S, OpPC, ThisPtr, DynamicDecl))
     return false;
   assert(DynamicDecl);
 
@@ -1908,8 +1910,7 @@ bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
   if (!Ptr.isFunctionPointer())
     return Invalid(S, OpPC);
 
-  const FunctionPointer &FuncPtr = Ptr.asFunctionPointer();
-  const Function *F = FuncPtr.getFunction();
+  const Function *F = Ptr.asFunctionPointer().Func;
   assert(F);
   // Don't allow calling block pointers.
   if (!F->getDecl())
@@ -2336,7 +2337,6 @@ bool arePotentiallyOverlappingStringLiterals(const Pointer &LHS,
 
 static void copyPrimitiveMemory(InterpState &S, const Pointer &Ptr,
                                 PrimType T) {
-
   if (T == PT_IntAPS) {
     auto &Val = Ptr.deref<IntegralAP<true>>();
     if (!Val.singleWord()) {
@@ -2355,16 +2355,30 @@ static void copyPrimitiveMemory(InterpState &S, const Pointer &Ptr,
       uint64_t *NewMemory = new (S.P) uint64_t[Val.numWords()];
       Val.take(NewMemory);
     }
+  } else if (T == PT_MemberPtr) {
+    auto &Val = Ptr.deref<MemberPointer>();
+    unsigned PathLength = Val.getPathLength();
+    auto *NewPath = new (S.P) const CXXRecordDecl *[PathLength];
+    std::copy_n(Val.path(), PathLength, NewPath);
+    Val.takePath(NewPath);
   }
 }
 
 template <typename T>
 static void copyPrimitiveMemory(InterpState &S, const Pointer &Ptr) {
   assert(needsAlloc<T>());
-  auto &Val = Ptr.deref<T>();
-  if (!Val.singleWord()) {
-    uint64_t *NewMemory = new (S.P) uint64_t[Val.numWords()];
-    Val.take(NewMemory);
+  if constexpr (std::is_same_v<T, MemberPointer>) {
+    auto &Val = Ptr.deref<MemberPointer>();
+    unsigned PathLength = Val.getPathLength();
+    auto *NewPath = new (S.P) const CXXRecordDecl *[PathLength];
+    std::copy_n(Val.path(), PathLength, NewPath);
+    Val.takePath(NewPath);
+  } else {
+    auto &Val = Ptr.deref<T>();
+    if (!Val.singleWord()) {
+      uint64_t *NewMemory = new (S.P) uint64_t[Val.numWords()];
+      Val.take(NewMemory);
+    }
   }
 }
 
@@ -2375,9 +2389,9 @@ static void finishGlobalRecurse(InterpState &S, const Pointer &Ptr) {
         TYPE_SWITCH_ALLOC(Fi.Desc->getPrimType(), {
           copyPrimitiveMemory<T>(S, Ptr.atField(Fi.Offset));
         });
-        copyPrimitiveMemory(S, Ptr.atField(Fi.Offset), Fi.Desc->getPrimType());
-      } else
+      } else {
         finishGlobalRecurse(S, Ptr.atField(Fi.Offset));
+      }
     }
     return;
   }
@@ -2489,6 +2503,83 @@ bool Destroy(InterpState &S, CodePtr OpPC, uint32_t I) {
 
   S.Current->destroy(I);
   return true;
+}
+
+// Perform a cast towards the class of the Decl (either up or down the
+// hierarchy).
+static bool castBackMemberPointer(InterpState &S,
+                                  const MemberPointer &MemberPtr,
+                                  int32_t BaseOffset,
+                                  const RecordDecl *BaseDecl) {
+  const CXXRecordDecl *Expected;
+  if (MemberPtr.getPathLength() >= 2)
+    Expected = MemberPtr.getPathEntry(MemberPtr.getPathLength() - 2);
+  else
+    Expected = MemberPtr.getRecordDecl();
+
+  assert(Expected);
+  if (Expected->getCanonicalDecl() != BaseDecl->getCanonicalDecl()) {
+    // C++11 [expr.static.cast]p12: In a conversion from (D::*) to (B::*),
+    // if B does not contain the original member and is not a base or
+    // derived class of the class containing the original member, the result
+    // of the cast is undefined.
+    // C++11 [conv.mem]p2 does not cover this case for a cast from (B::*) to
+    // (D::*). We consider that to be a language defect.
+    return false;
+  }
+
+  unsigned OldPathLength = MemberPtr.getPathLength();
+  unsigned NewPathLength = OldPathLength - 1;
+  bool IsDerivedMember = NewPathLength != 0;
+  auto NewPath = S.allocMemberPointerPath(NewPathLength);
+  std::copy_n(MemberPtr.path(), NewPathLength, NewPath);
+
+  S.Stk.push<MemberPointer>(MemberPtr.atInstanceBase(BaseOffset, NewPathLength,
+                                                     NewPath, IsDerivedMember));
+  return true;
+}
+
+static bool appendToMemberPointer(InterpState &S,
+                                  const MemberPointer &MemberPtr,
+                                  int32_t BaseOffset,
+                                  const RecordDecl *BaseDecl,
+                                  bool IsDerivedMember) {
+  unsigned OldPathLength = MemberPtr.getPathLength();
+  unsigned NewPathLength = OldPathLength + 1;
+
+  auto NewPath = S.allocMemberPointerPath(NewPathLength);
+  std::copy_n(MemberPtr.path(), OldPathLength, NewPath);
+  NewPath[OldPathLength] = cast<CXXRecordDecl>(BaseDecl);
+
+  S.Stk.push<MemberPointer>(MemberPtr.atInstanceBase(BaseOffset, NewPathLength,
+                                                     NewPath, IsDerivedMember));
+  return true;
+}
+
+/// DerivedToBaseMemberPointer
+bool CastMemberPtrBasePop(InterpState &S, CodePtr OpPC, int32_t Off,
+                          const RecordDecl *BaseDecl) {
+  const auto &Ptr = S.Stk.pop<MemberPointer>();
+
+  if (!Ptr.isDerivedMember() && Ptr.hasPath())
+    return castBackMemberPointer(S, Ptr, Off, BaseDecl);
+
+  bool IsDerivedMember = Ptr.isDerivedMember() || !Ptr.hasPath();
+  return appendToMemberPointer(S, Ptr, Off, BaseDecl, IsDerivedMember);
+}
+
+/// BaseToDerivedMemberPointer
+bool CastMemberPtrDerivedPop(InterpState &S, CodePtr OpPC, int32_t Off,
+                             const RecordDecl *BaseDecl) {
+  const auto &Ptr = S.Stk.pop<MemberPointer>();
+
+  if (!Ptr.isDerivedMember()) {
+    // Simply append.
+    return appendToMemberPointer(S, Ptr, Off, BaseDecl,
+                                 /*IsDerivedMember=*/false);
+  }
+
+  return castBackMemberPointer(S, Ptr, Off, BaseDecl);
 }
 
 // https://github.com/llvm/llvm-project/issues/102513
