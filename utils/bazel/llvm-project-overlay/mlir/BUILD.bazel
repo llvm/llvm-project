@@ -9156,6 +9156,7 @@ cc_library(
         "//llvm:Core",
         "//llvm:FrontendOpenMP",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -10604,6 +10605,7 @@ cc_library(
         ":Support",
         "//llvm:FrontendOpenMP",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
