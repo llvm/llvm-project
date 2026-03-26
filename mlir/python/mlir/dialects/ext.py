@@ -150,7 +150,7 @@ def result(
 def operand(
     *,
     kw_only: bool = False,
-) -> Any:
+) -> Operand:
     """
     A field specifier for `Operand` definitions.
     """
