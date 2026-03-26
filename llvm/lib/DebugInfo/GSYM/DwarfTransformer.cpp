@@ -735,9 +735,10 @@ llvm::Error DwarfTransformer::verify(StringRef GsymPath,
                                      OutputAggregator &Out) {
   Out << "Verifying GSYM file \"" << GsymPath << "\":\n";
 
-  auto Gsym = GsymReaderV1::openFile(GsymPath);
-  if (!Gsym)
-    return Gsym.takeError();
+  auto GsymOrErr = GsymReader::openFile(GsymPath);
+  if (!GsymOrErr)
+    return GsymOrErr.takeError();
+  auto &Gsym = *GsymOrErr;
 
   auto NumAddrs = Gsym->getNumAddresses();
   DILineInfoSpecifier DLIS(

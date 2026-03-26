@@ -39,6 +39,21 @@ class GsymReader {
 public:
   virtual ~GsymReader() = default;
 
+  /// Open a GSYM file, auto-detecting the format version.
+  ///
+  /// \param Path The file path of the GSYM file to read.
+  /// \returns An expected unique_ptr to a GsymReader or an error.
+  LLVM_ABI static llvm::Expected<std::unique_ptr<GsymReader>>
+  openFile(StringRef Path);
+
+  /// Construct a GsymReader from a buffer, auto-detecting the format version.
+  ///
+  /// \param Bytes A set of bytes that will be copied and owned by the
+  /// returned object on success.
+  /// \returns An expected unique_ptr to a GsymReader or an error.
+  LLVM_ABI static llvm::Expected<std::unique_ptr<GsymReader>>
+  copyBuffer(StringRef Bytes);
+
   /// Get a string from the string table.
   virtual StringRef getString(uint32_t Offset) const = 0;
 

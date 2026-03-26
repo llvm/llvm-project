@@ -44,8 +44,6 @@
 #include "llvm/DebugInfo/GSYM/GsymCreatorV2.h"
 #include "llvm/DebugInfo/GSYM/GsymReader.h"
 #include "llvm/DebugInfo/GSYM/GsymReaderV2.h"
-#include "llvm/DebugInfo/GSYM/Header.h"
-#include "llvm/DebugInfo/GSYM/HeaderV2.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
 #include "llvm/DebugInfo/GSYM/LookupResult.h"
 #include "llvm/DebugInfo/GSYM/ObjectFileTransformer.h"
@@ -572,54 +570,20 @@ static llvm::Error convertFileToGSYM(OutputAggregator &Out) {
   return Error::success();
 }
 
-/// Detect the GSYM version by reading the version field from a file.
-static Expected<uint16_t> detectGsymVersion(StringRef Path) {
-  auto BufOrErr = MemoryBuffer::getFileOrSTDIN(Path);
-  if (!BufOrErr)
-    return createStringError(BufOrErr.getError(), "failed to open '%s'",
-                             Path.str().c_str());
-  StringRef Data = (*BufOrErr)->getBuffer();
-  // Need at least 6 bytes: 4 (magic) + 2 (version).
-  if (Data.size() < 6)
-    return createStringError(std::errc::invalid_argument,
-                             "file too small to be a GSYM file");
-  uint32_t Magic;
-  memcpy(&Magic, Data.data(), 4);
-  if (Magic != GSYM_MAGIC && Magic != llvm::byteswap(GSYM_MAGIC))
-    return createStringError(std::errc::invalid_argument,
-                             "not a GSYM file (bad magic)");
-  uint16_t Version;
-  memcpy(&Version, Data.data() + 4, 2);
-  if (Magic != GSYM_MAGIC)
-    Version = llvm::byteswap(Version);
-  return Version;
-}
-
 /// Open a GSYM file, auto-detecting the version unless forced.
 static Expected<std::unique_ptr<GsymReader>> openGsymFile(StringRef Path) {
-  ReaderVersion RV = ForceReaderVersion;
-  if (RV == ReaderVersion::Auto) {
-    auto VersionOrErr = detectGsymVersion(Path);
-    if (!VersionOrErr)
-      return VersionOrErr.takeError();
-    if (*VersionOrErr == GSYM_VERSION)
-      RV = ReaderVersion::V1;
-    else if (*VersionOrErr == GSYM_VERSION_2)
-      RV = ReaderVersion::V2;
-    else
-      return createStringError(std::errc::invalid_argument,
-                               "unsupported GSYM version %u", *VersionOrErr);
+  if (ForceReaderVersion == ReaderVersion::Auto)
+    return GsymReader::openFile(Path);
+  if (ForceReaderVersion == ReaderVersion::V2) {
+    auto R = GsymReaderV2::openFile(Path);
+    if (!R)
+      return R.takeError();
+    return std::make_unique<GsymReaderV2>(std::move(*R));
   }
-  if (RV == ReaderVersion::V2) {
-    auto ReaderOrErr = GsymReaderV2::openFile(Path);
-    if (!ReaderOrErr)
-      return ReaderOrErr.takeError();
-    return std::make_unique<GsymReaderV2>(std::move(*ReaderOrErr));
-  }
-  auto ReaderOrErr = GsymReaderV1::openFile(Path);
-  if (!ReaderOrErr)
-    return ReaderOrErr.takeError();
-  return std::make_unique<GsymReaderV1>(std::move(*ReaderOrErr));
+  auto R = GsymReaderV1::openFile(Path);
+  if (!R)
+    return R.takeError();
+  return std::make_unique<GsymReaderV1>(std::move(*R));
 }
 
 static void doLookup(GsymReader &Gsym, uint64_t Addr, raw_ostream &OS) {
