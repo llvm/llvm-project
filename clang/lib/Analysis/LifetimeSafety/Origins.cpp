@@ -55,6 +55,8 @@ class LifetimeboundOriginTypeCollector
     : public RecursiveASTVisitor<LifetimeboundOriginTypeCollector> {
 public:
   bool VisitCallExpr(const CallExpr *CE) {
+    // Indirect calls (e.g., function pointers) are skipped because lifetime
+    // annotations currently apply to declarations, not types.
     if (const auto *FD = CE->getDirectCallee())
       collect(FD, FD->getReturnType());
     return true;

@@ -707,6 +707,9 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
         ArgList = getRValueOrigins(Args[I], ArgList);
       }
       if (isGslOwnerType(Args[I]->getType())) {
+        // The constructed gsl::Pointer borrows from the Owner's storage, not
+        // from what the Owner itself borrows, so only the outermost origin is
+        // needed.
         CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
             CallList->getOuterOriginID(), ArgList->getOuterOriginID(),
             KillSrc));
