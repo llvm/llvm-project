@@ -82,7 +82,7 @@
 ; CHECK-SPIRV-DAG: OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugTypeBasic [[str_float]] [[size_32bit]] [[encoding_float]] [[flag_zero]]
 ; CHECK-SPIRV-DAG: OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugTypeBasic [[str_double]] [[size_64bit]] [[encoding_float]] [[flag_zero]]
 
-; CHECK-OPTION: DebugTypeBasic
+; CHECK-OPTION-NOT: DebugTypeBasic
 
 define spir_func void  @test1() !dbg !9 {
 entry:

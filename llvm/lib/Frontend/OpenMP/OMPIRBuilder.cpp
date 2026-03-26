@@ -169,6 +169,10 @@ static void restoreIPandDebugLoc(llvm::IRBuilderBase &Builder,
     Builder.SetCurrentDebugLocation(BB->back().getStableDebugLoc());
 }
 
+static bool hasGridValue(const Triple &T) {
+  return T.isAMDGPU() || T.isNVPTX() || T.isSPIRV();
+}
+
 static const omp::GV &getGridValue(const Triple &T, Function *Kernel) {
   if (T.isAMDGPU()) {
     StringRef Features =
@@ -8056,12 +8060,18 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInit(
   if (Attrs.MinTeams > 1 || Attrs.MaxTeams.front() > 0)
     writeTeamsForKernel(T, *Kernel, Attrs.MinTeams, Attrs.MaxTeams.front());
 
-  int32_t MaxThreadsVal = Attrs.MaxThreads.front();
   // If MaxThreads not set, select the maximum between the default workgroup
   // size and the MinThreads value.
-  if (MaxThreadsVal < 0)
-    MaxThreadsVal = std::max(
-        int32_t(getGridValue(T, Kernel).GV_Default_WG_Size), Attrs.MinThreads);
+  int32_t MaxThreadsVal = Attrs.MaxThreads.front();
+  if (MaxThreadsVal < 0) {
+    if (hasGridValue(T)) {
+      MaxThreadsVal =
+          std::max(int32_t(getGridValue(T, Kernel).GV_Default_WG_Size),
+                   Attrs.MinThreads);
+    } else {
+      MaxThreadsVal = Attrs.MinThreads;
+    }
+  }
 
   if (MaxThreadsVal > 0)
     writeThreadBoundsForKernel(T, *Kernel, Attrs.MinThreads, MaxThreadsVal);
