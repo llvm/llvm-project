@@ -68,8 +68,9 @@ AST_MATCHER(FunctionDecl, hasBody) { return Node.hasBody(); }
 
 AST_MATCHER(Decl, isInImportableModuleUnit) {
   if (const Module *OwningModule = Node.getOwningModule())
-    if (OwningModule->Kind != Module::ModuleImplementationUnit &&
-        OwningModule->Kind != Module::PrivateModuleFragment)
+    if (OwningModule->Kind == Module::ModuleInterfaceUnit ||
+        OwningModule->Kind == Module::ModulePartitionInterface ||
+        OwningModule->Kind == Module::ModulePartitionImplementation)
       return true;
   return false;
 }

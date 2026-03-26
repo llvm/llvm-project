@@ -1,11 +1,5 @@
 // RUN: %check_clang_tidy -std=c++20-or-later %s misc-use-internal-linkage %t
 
-module;
-
-void fn_in_global_module_fragment() {}
-int var_in_global_module_fragment;
-struct StructInGlobalModuleFragment {};
-
 export module test;
 
 export void single_export_fn() {}
