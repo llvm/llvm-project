@@ -179,8 +179,6 @@ public:
         "bugprone-incorrect-enable-if");
     CheckFactories.registerCheck<IncorrectEnableSharedFromThisCheck>(
         "bugprone-incorrect-enable-shared-from-this");
-    CheckFactories.registerCheck<MissingEndComparisonCheck>(
-        "bugprone-missing-end-comparison");
     CheckFactories.registerCheck<UnintendedCharOstreamOutputCheck>(
         "bugprone-unintended-char-ostream-output");
     CheckFactories.registerCheck<ReturnConstRefFromParameterCheck>(
@@ -212,6 +210,8 @@ public:
         "bugprone-misplaced-pointer-arithmetic-in-alloc");
     CheckFactories.registerCheck<MisplacedWideningCastCheck>(
         "bugprone-misplaced-widening-cast");
+    CheckFactories.registerCheck<MissingEndComparisonCheck>(
+        "bugprone-missing-end-comparison");
     CheckFactories.registerCheck<MoveForwardingReferenceCheck>(
         "bugprone-move-forwarding-reference");
     CheckFactories.registerCheck<MultiLevelImplicitPointerConversionCheck>(

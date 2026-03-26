@@ -118,26 +118,6 @@ static std::optional<std::string> getStandardEndText(ASTContext &Context,
   return tooling::fixit::getText(*EndArg, Context).str();
 }
 
-static const UnaryOperator *getParentLogicalNot(const Expr *E,
-                                                ASTContext &Context) {
-  const Expr *CurrentExpr = E;
-  while (true) {
-    auto Parents = Context.getParents(*CurrentExpr);
-    if (Parents.empty())
-      break;
-    if (const auto *P = Parents[0].get<ParenExpr>()) {
-      CurrentExpr = P;
-      continue;
-    }
-    if (const auto *U = Parents[0].get<UnaryOperator>()) {
-      if (U->getOpcode() == UO_LNot)
-        return U;
-    }
-    break;
-  }
-  return nullptr;
-}
-
 void MissingEndComparisonCheck::registerMatchers(MatchFinder *Finder) {
   llvm::SmallVector<StringRef, 32> ExpandedIteratorAlgorithms;
   ExpandedIteratorAlgorithms.append(std::begin(IteratorAlgorithms),
@@ -187,8 +167,21 @@ void MissingEndComparisonCheck::registerMatchers(MatchFinder *Finder) {
                 callee(cxxConversionDecl(returns(booleanType()))),
                 on(ignoringParenImpCasts(declRefExpr(to(VarWithAlgoInit))))));
 
+  const auto BoolUsage = expr(anyOf(IsBoolUsage, IsVariableBoolUsage));
+
   Finder->addMatcher(
-      expr(anyOf(IsBoolUsage, IsVariableBoolUsage)).bind("boolOp"), this);
+      unaryOperator(hasOperatorName("!"),
+                    hasUnaryOperand(ignoringParens(BoolUsage.bind("boolOp"))))
+          .bind("Neg"),
+      this);
+
+  Finder->addMatcher(
+      expr(BoolUsage,
+           unless(hasAncestor(unaryOperator(
+               hasOperatorName("!"), hasUnaryOperand(ignoringParens(
+                                         expr(equalsBoundNode("boolOp"))))))))
+          .bind("boolOp"),
+      this);
 }
 
 void MissingEndComparisonCheck::check(const MatchFinder::MatchResult &Result) {
@@ -209,12 +202,11 @@ void MissingEndComparisonCheck::check(const MatchFinder::MatchResult &Result) {
   if (!EndExprText)
     return;
 
-  const UnaryOperator *NotOp = getParentLogicalNot(BoolOp, *Result.Context);
-  const bool IsNegated = NotOp != nullptr;
+  const auto *NotOp = Result.Nodes.getNodeAs<UnaryOperator>("Neg");
 
-  const auto Diag = diag(BoolOp->getBeginLoc(),
-                         "result of standard algorithm used as 'bool'; did you "
-                         "mean to compare with the end iterator?");
+  auto Diag = diag(BoolOp->getBeginLoc(),
+                   "result of standard algorithm used as 'bool'; did you "
+                   "mean to compare with the end iterator?");
 
   if (EndExprText->empty())
     return;
@@ -233,23 +225,18 @@ void MissingEndComparisonCheck::check(const MatchFinder::MatchResult &Result) {
   if (!Parents.empty() && Parents[0].get<VarDecl>())
     return;
 
-  if (IsNegated) {
-    // !it -> (it == end)
+  const SourceLocation AfterBoolOp =
+      Lexer::getLocForEndOfToken(BoolOp->getEndLoc(), 0, *Result.SourceManager,
+                                 Result.Context->getLangOpts());
+
+  if (NotOp)
     Diag << FixItHint::CreateReplacement(NotOp->getOperatorLoc(), "(");
-    Diag << FixItHint::CreateInsertion(
-        Lexer::getLocForEndOfToken(BoolOp->getEndLoc(), 0,
-                                   *Result.SourceManager,
-                                   Result.Context->getLangOpts()),
-        " == " + *EndExprText + ")");
-  } else {
-    // it -> (it != end)
+  else
     Diag << FixItHint::CreateInsertion(BoolOp->getBeginLoc(), "(");
-    Diag << FixItHint::CreateInsertion(
-        Lexer::getLocForEndOfToken(BoolOp->getEndLoc(), 0,
-                                   *Result.SourceManager,
-                                   Result.Context->getLangOpts()),
-        " != " + *EndExprText + ")");
-  }
+
+  Diag << FixItHint::CreateInsertion(
+      AfterBoolOp,
+      (llvm::Twine(NotOp ? " == " : " != ") + *EndExprText + ")").str());
 }
 
 } // namespace clang::tidy::bugprone

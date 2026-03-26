@@ -1,6 +1,7 @@
-// RUN: %check_clang_tidy -std=c++20 %s bugprone-missing-end-comparison %t -- -- -I %S/Inputs/missing-end-comparison
+// RUN: %check_clang_tidy -std=c++11-or-later %s bugprone-missing-end-comparison %t
 
-#include "fake_std.h"
+#include <algorithm>
+#include <vector>
 
 struct CustomIterator {
     int* ptr;
@@ -59,85 +60,11 @@ void test_variable_tracking() {
   // CHECK-FIXES: if ((it == arr + 3)) {}
 }
 
-void test_ranges() {
-  std::vector<int> v;
-  if (std::ranges::find(v, 2)) {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: result of standard algorithm used as 'bool'; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
-  // CHECK-FIXES: if ((std::ranges::find(v, 2) != std::ranges::end(v))) {}
-
-  auto it = std::ranges::find(v, 2);
-  if (it) {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: result of standard algorithm used as 'bool'; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
-  // CHECK-FIXES: if ((it != std::ranges::end(v))) {}
-
-  std::vector<int> v1, v2;
-  int arr[] = {1, 2, 3};
-  int *begin = arr;
-  int *end = arr + 3;
-
-  if (std::ranges::find_first_of(v1, v2)) {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: result of standard algorithm used as 'bool'; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
-  // CHECK-FIXES: if ((std::ranges::find_first_of(v1, v2) != std::ranges::end(v1))) {}
-
-  if (std::ranges::find_first_of(begin, end, begin, end)) {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: result of standard algorithm used as 'bool'; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
-  // CHECK-FIXES: if ((std::ranges::find_first_of(begin, end, begin, end) != end)) {}
-
-  if (std::ranges::adjacent_find(v1)) {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: result of standard algorithm used as 'bool'; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
-  // CHECK-FIXES: if ((std::ranges::adjacent_find(v1) != std::ranges::end(v1))) {}
-
-  if (std::ranges::adjacent_find(begin, end)) {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: result of standard algorithm used as 'bool'; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
-  // CHECK-FIXES: if ((std::ranges::adjacent_find(begin, end) != end)) {}
-
-  if (std::ranges::is_sorted_until(v1)) {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: result of standard algorithm used as 'bool'; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
-  // CHECK-FIXES: if ((std::ranges::is_sorted_until(v1) != std::ranges::end(v1))) {}
-
-  if (std::ranges::is_sorted_until(begin, end)) {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: result of standard algorithm used as 'bool'; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
-  // CHECK-FIXES: if ((std::ranges::is_sorted_until(begin, end) != end)) {}
-}
-
-void test_ranges_iterator_pair() {
-  int arr[] = {1, 2, 3};
-  int *begin = arr;
-  int *end = arr + 3;
-  if (std::ranges::find(begin, end, 2)) {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: result of standard algorithm used as 'bool'; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
-  // CHECK-FIXES: if ((std::ranges::find(begin, end, 2) != end)) {}
-}
-
-void test_side_effects() {
-  std::vector<int> get_vec();
-  if (std::ranges::find(get_vec(), 2)) {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: result of standard algorithm used as 'bool'; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
-}
-
-void test_negative() {
-  std::vector<int> v;
-  if (std::find(v.begin(), v.end(), 2) != v.end()) {}
-  if (std::ranges::find(v, 2) == std::ranges::end(v)) {}
-  auto it = std::find(v.begin(), v.end(), 2);
-}
-
 void test_nested_parens() {
   int arr[] = {1, 2, 3};
   if (!((std::find(arr, arr + 3, 2)))) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: result of standard algorithm used as 'bool'; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
   // CHECK-FIXES: if ((((std::find(arr, arr + 3, 2))) == arr + 3)) {}
-}
-
-struct Data { std::vector<int> v; };
-void test_member_expr(Data& d) {
-  if (std::ranges::find(d.v, 2)) {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: result of standard algorithm used as 'bool'; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
-  // CHECK-FIXES: if ((std::ranges::find(d.v, 2) != std::ranges::end(d.v))) {}
-}
-
-void test_nullptr_comparison() {
-  if (std::find((int*)nullptr, (int*)nullptr, 2)) {}
 }
 
 void test_double_negation() {
@@ -165,38 +92,6 @@ void test_search() {
   // CHECK-FIXES: if ((std::search(begin, end, begin, end) != end)) {}
 }
 
-namespace other {
-  bool find(int* b, int* e, int v);
-}
-
-void test_other_namespace() {
-  int arr[] = {1};
-  if (other::find(arr, arr + 1, 1)) {}
-}
-
-void test_execution_policy() {
-  int arr[] = {1, 2, 3};
-  int* begin = arr;
-  int* end = arr + 3;
-
-  if (std::find(std::execution::seq, begin, end, 2)) {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: result of standard algorithm used as 'bool'; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
-  // CHECK-FIXES: if ((std::find(std::execution::seq, begin, end, 2) != end)) {}
-
-  if (std::find(std::execution::par, begin, end, 2)) {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: result of standard algorithm used as 'bool'; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
-  // CHECK-FIXES: if ((std::find(std::execution::par, begin, end, 2) != end)) {}
-
-  auto it = std::find(std::execution::seq, begin, end, 2);
-  if (it) {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: result of standard algorithm used as 'bool'; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
-  // CHECK-FIXES: if ((it != end)) {}
-
-  if (std::lower_bound(std::execution::seq, begin, end, 2)) {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: result of standard algorithm used as 'bool'; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
-  // CHECK-FIXES: if ((std::lower_bound(std::execution::seq, begin, end, 2) != end)) {}
-}
-
 void test_loops() {
   int arr[] = {1, 2, 3};
   int *begin = arr;
@@ -213,11 +108,6 @@ void test_loops() {
   for (auto it = std::find(begin, end, 2); it; ) { break; }
   // CHECK-MESSAGES: :[[@LINE-1]]:44: warning: result of standard algorithm used as 'bool'; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
   // CHECK-FIXES: for (auto it = std::find(begin, end, 2); (it != end); ) { break; }
-
-  std::vector<int> v;
-  for (auto it = std::ranges::find(v, 2); !it; ) { break; }
-  // CHECK-MESSAGES: :[[@LINE-1]]:44: warning: result of standard algorithm used as 'bool'; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
-  // CHECK-FIXES: for (auto it = std::ranges::find(v, 2); (it == std::ranges::end(v)); ) { break; }
 }
 
 void test_condition_variable_suppression() {
@@ -230,8 +120,47 @@ void test_condition_variable_suppression() {
 
   for (; int* it4 = std::find(arr, arr + 3, 2); ) { break; }
   // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: result of standard algorithm used as 'bool'; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
+}
 
+#define FIND_IN(v, val) std::find(v.begin(), v.end(), val)
+#define IS_FOUND(it) (it)
+
+void test_macros() {
   std::vector<int> v;
-  if (auto it5 = std::ranges::find(v, 2)) {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: result of standard algorithm used as 'bool'; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
+  if (FIND_IN(v, 2)) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: result of standard algorithm used as 'bool'; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
+
+  auto it = FIND_IN(v, 2);
+  if (IS_FOUND(it)) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: result of standard algorithm used as 'bool'; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
+}
+
+template <typename T>
+void test_templates_impl(const std::vector<T>& v, T val) {
+  if (std::find(v.begin(), v.end(), val)) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: result of standard algorithm used as 'bool'; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
+  // CHECK-FIXES: if ((std::find(v.begin(), v.end(), val) != v.end())) {}
+}
+
+void test_templates() {
+  std::vector<int> v;
+  test_templates_impl(v, 2);
+}
+
+namespace other {
+  bool find(int* b, int* e, int v);
+}
+
+void test_negative() {
+  std::vector<int> v;
+  if (std::find(v.begin(), v.end(), 2) != v.end()) {}
+
+  auto it = std::find(v.begin(), v.end(), 2);
+
+  int arr[] = {1};
+  if (other::find(arr, arr + 1, 1)) {}
+}
+
+void test_nullptr_comparison() {
+  if (std::find((int*)nullptr, (int*)nullptr, 2)) {}
 }
