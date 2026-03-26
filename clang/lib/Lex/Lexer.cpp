@@ -34,7 +34,6 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/NativeFormatting.h"
-#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/Unicode.h"
 #include "llvm/Support/UnicodeCharRanges.h"
 #include <algorithm>
@@ -4449,28 +4448,9 @@ LexStart:
 
   case '@':
     // Objective C support.
-    if (CurPtr[-1] == '@' && LangOpts.ObjC) {
-      FormTokenWithChars(Result, CurPtr, tok::at);
-      if (PP && Result.isAtPhysicalStartOfLine() && !LexingRawMode &&
-          !Is_PragmaLexer) {
-        Token NextPPTok;
-        NextPPTok.startToken();
-        {
-          llvm::SaveAndRestore<bool> SavedParsingPreprocessorDirective(
-              this->ParsingPreprocessorDirective, true);
-          auto NextTokOr = peekNextPPToken();
-          if (NextTokOr.has_value()) {
-            NextPPTok = *NextTokOr;
-          }
-        }
-        if (NextPPTok.is(tok::raw_identifier) &&
-            NextPPTok.getRawIdentifier() == "import") {
-          PP->HandleDirective(Result);
-          return false;
-        }
-      }
-      return true;
-    } else
+    if (CurPtr[-1] == '@' && LangOpts.ObjC)
+      Kind = tok::at;
+    else
       Kind = tok::unknown;
     break;
 
@@ -4631,16 +4611,6 @@ bool Lexer::LexDependencyDirectiveToken(Token &Result) {
       // With a fatal failure in the module loader, we abort parsing.
       return true;
     return false;
-  }
-  if (Result.is(tok::at) && Result.isAtStartOfLine()) {
-    auto NextTok = peekNextPPToken();
-    if (NextTok && NextTok->is(tok::raw_identifier) &&
-        NextTok->getRawIdentifier() == "import") {
-      PP->HandleDirective(Result);
-      if (PP->hadModuleLoaderFatalFailure())
-        return true;
-      return false;
-    }
   }
   if (Result.is(tok::raw_identifier)) {
     Result.setRawIdentifierData(TokPtr);
