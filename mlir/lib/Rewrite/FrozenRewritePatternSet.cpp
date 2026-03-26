@@ -64,10 +64,6 @@ FrozenRewritePatternSet::FrozenRewritePatternSet(
     RewritePatternSet &&patterns, ArrayRef<std::string> disabledPatternLabels,
     ArrayRef<std::string> enabledPatternLabels)
     : impl(std::make_shared<Impl>()) {
-  DenseSet<StringRef> disabledPatterns, enabledPatterns;
-  disabledPatterns.insert_range(disabledPatternLabels);
-  enabledPatterns.insert_range(enabledPatternLabels);
-
   // Functor used to walk all of the operations registered in the context. This
   // is useful for patterns that get applied to multiple operations, such as
   // interface and trait based patterns.
@@ -83,20 +79,42 @@ FrozenRewritePatternSet::FrozenRewritePatternSet(
         impl->nativeOpSpecificPatternList.push_back(std::move(pattern));
       };
 
+  // Returns true if `label` (a pattern's debug name or one of its debug
+  // labels) matches any entry in `userLabels`. A user label matches on exact
+  // string equality; additionally, a user label that does not contain "::"
+  // matches against the suffix of `label` after its last "::", so users can
+  // write e.g. `disable-patterns=FooBar` instead of
+  // `disable-patterns=(anonymous namespace)::FooBar`. Note: an unqualified
+  // user label matches *any* pattern whose unqualified name is the same,
+  // regardless of namespace.
+  auto matchesAnyUserLabel = [](StringRef label,
+                                ArrayRef<std::string> userLabels) {
+    size_t pos = label.rfind("::");
+    StringRef unqualified =
+        (pos == StringRef::npos) ? label : label.substr(pos + 2);
+    for (StringRef ul : userLabels) {
+      if (label == ul)
+        return true;
+      if (!ul.contains("::") && unqualified == ul)
+        return true;
+    }
+    return false;
+  };
+
   for (std::unique_ptr<RewritePattern> &pat : patterns.getNativePatterns()) {
     // Don't add patterns that haven't been enabled by the user.
-    if (!enabledPatterns.empty()) {
+    if (!enabledPatternLabels.empty()) {
       auto isEnabledFn = [&](StringRef label) {
-        return enabledPatterns.count(label);
+        return matchesAnyUserLabel(label, enabledPatternLabels);
       };
       if (!isEnabledFn(pat->getDebugName()) &&
           llvm::none_of(pat->getDebugLabels(), isEnabledFn))
         continue;
     }
     // Don't add patterns that have been disabled by the user.
-    if (!disabledPatterns.empty()) {
+    if (!disabledPatternLabels.empty()) {
       auto isDisabledFn = [&](StringRef label) {
-        return disabledPatterns.count(label);
+        return matchesAnyUserLabel(label, disabledPatternLabels);
       };
       if (isDisabledFn(pat->getDebugName()) ||
           llvm::any_of(pat->getDebugLabels(), isDisabledFn))
