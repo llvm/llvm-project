@@ -51,8 +51,8 @@ private:
   LifetimeSafetyStats &LSStats;
 };
 
-class LifetimeboundOriginTypeCollector
-    : public RecursiveASTVisitor<LifetimeboundOriginTypeCollector> {
+class LifetimeAnnotatedOriginTypeCollector
+    : public RecursiveASTVisitor<LifetimeAnnotatedOriginTypeCollector> {
 public:
   bool VisitCallExpr(const CallExpr *CE) {
     // Indirect calls (e.g., function pointers) are skipped because lifetime
@@ -102,7 +102,7 @@ private:
 bool OriginManager::hasOrigins(QualType QT) const {
   if (QT->isPointerOrReferenceType() || isGslPointerType(QT))
     return true;
-  if (LifetimeboundOriginTypes.contains(QT.getCanonicalType().getTypePtr()))
+  if (LifetimeAnnotatedOriginTypes.contains(QT.getCanonicalType().getTypePtr()))
     return true;
   const auto *RD = QT->getAsCXXRecordDecl();
   if (!RD)
@@ -154,7 +154,7 @@ bool doesDeclHaveStorage(const ValueDecl *D) {
 
 OriginManager::OriginManager(const AnalysisDeclContext &AC)
     : AST(AC.getASTContext()) {
-  collectLifetimeboundOriginTypes(AC);
+  collectLifetimeAnnotatedOriginTypes(AC);
   initializeThisOrigins(AC.getDecl());
 }
 
@@ -294,23 +294,23 @@ void OriginManager::collectMissingOrigins(Stmt &FunctionBody,
   Collector.TraverseStmt(const_cast<Stmt *>(&FunctionBody));
 }
 
-void OriginManager::collectLifetimeboundOriginTypes(
+void OriginManager::collectLifetimeAnnotatedOriginTypes(
     const AnalysisDeclContext &AC) {
-  LifetimeboundOriginTypeCollector Collector;
+  LifetimeAnnotatedOriginTypeCollector Collector;
   if (Stmt *Body = AC.getBody())
     Collector.TraverseStmt(Body);
   if (const auto *CD = dyn_cast<CXXConstructorDecl>(AC.getDecl()))
     for (const auto *Init : CD->inits())
       Collector.TraverseStmt(Init->getInit());
   for (QualType QT : Collector.getCollectedTypes())
-    registerLifetimeboundOriginType(QT);
+    registerLifetimeAnnotatedOriginType(QT);
 }
 
-void OriginManager::registerLifetimeboundOriginType(QualType QT) {
+void OriginManager::registerLifetimeAnnotatedOriginType(QualType QT) {
   if (!QT->getAsCXXRecordDecl() || hasOrigins(QT))
     return;
 
-  LifetimeboundOriginTypes.insert(QT.getCanonicalType().getTypePtr());
+  LifetimeAnnotatedOriginTypes.insert(QT.getCanonicalType().getTypePtr());
 }
 
 } // namespace clang::lifetimes::internal

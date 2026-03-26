@@ -174,10 +174,10 @@ private:
   void initializeThisOrigins(const Decl *D);
 
   /// Pre-scans the function body (and constructor init lists) to discover
-  /// return types of [[clang::lifetimebound]] calls, registering them for
-  /// origin tracking.
-  void collectLifetimeboundOriginTypes(const AnalysisDeclContext &AC);
-  void registerLifetimeboundOriginType(QualType QT);
+  /// return types of lifetime-annotated calls (currently
+  /// [[clang::lifetimebound]]), registering them for origin tracking.
+  void collectLifetimeAnnotatedOriginTypes(const AnalysisDeclContext &AC);
+  void registerLifetimeAnnotatedOriginType(QualType QT);
 
   ASTContext &AST;
   OriginID NextOriginID{0};
@@ -189,9 +189,9 @@ private:
   llvm::DenseMap<const clang::Expr *, OriginList *> ExprToList;
   std::optional<OriginList *> ThisOrigins;
   /// Types that are not inherently pointer-like but require origin tracking
-  /// because of lifetime annotations (e.g., [[clang::lifetimebound]]) on
+  /// because of lifetime annotations (currently [[clang::lifetimebound]]) on
   /// functions that return them.
-  llvm::DenseSet<const Type *> LifetimeboundOriginTypes;
+  llvm::DenseSet<const Type *> LifetimeAnnotatedOriginTypes;
 };
 } // namespace clang::lifetimes::internal
 
