@@ -1,7 +1,7 @@
 ## Test llvm-extract-bundle-entry.
 
 # RUN: yaml2obj %s -o %t.elf
-# RUN: llvm-extract-bundle-entry "file://%t.elf#offset=8192\&size=4048"
+# RUN: llvm-extract-bundle-entry file://%t.elf#offset=8192\&size=4048
 # RUN: llvm-objdump -d %t.elf-offset8192-size4048.co  | FileCheck %s --check-prefix=EXTRACT-BUNDLE-ENTRY
 
 # EXTRACT-BUNDLE-ENTRY:        s_load_dword s7, s[4:5], 0x24                              // 000000001900: C00201C2 00000024
@@ -25,17 +25,17 @@
 # EXTRACT-BUNDLE-ENTRY-NEXT:        global_store_dword v[0:1], v2, off                         // 000000001960: DC708000 007F0200
 # EXTRACT-BUNDLE-ENTRY-NEXT:        s_endpgm                                                   // 000000001968: BF810000
 
-# RUN: not llvm-extract-bundle-entry "file://%t.elf#offset=8192\&size=4048000" 2>&1 | \
+# RUN: not llvm-extract-bundle-entry file://%t.elf#offset=8192\&size=4048000 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=EXTRACT-BUNDLE-ENTRY-ERROR1
 # EXTRACT-BUNDLE-ENTRY-ERROR1: size in URI (4048000) is larger than source (12640)
 
-# RUN: not llvm-extract-bundle-entry "file://%t.elf#offset=819200000\&size=4048" 2>&1 | \
+# RUN: not llvm-extract-bundle-entry file://%t.elf#offset=819200000\&size=4048 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=EXTRACT-BUNDLE-ENTRY-ERROR2
-# EXTRACT-BUNDLE-ENTRY-ERROR2: offset in URI (819200000)  is beyond the size of the source (12640)
+# EXTRACT-BUNDLE-ENTRY-ERROR2: offset in URI (819200000)  is beyond the end of the source (12640)
 
-# RUN: not llvm-extract-bundle-entry "file://%t.elf#offset=8192\&size=8048" 2>&1 | \
+# RUN: not llvm-extract-bundle-entry file://%t.elf#offset=8192\&size=8048 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=EXTRACT-BUNDLE-ENTRY-ERROR3
-# EXTRACT-BUNDLE-ENTRY-ERROR3: offset + size (16240) in URI is beyond the size of the source (12640)
+# EXTRACT-BUNDLE-ENTRY-ERROR3: offset + size (16240) in URI is beyond the end of the source (12640)
 
 # RUN: not llvm-extract-bundle-entry --error 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=EXTRACT-BUNDLE-ENTRY-ERROR4

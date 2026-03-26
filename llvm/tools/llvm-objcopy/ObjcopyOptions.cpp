@@ -1717,9 +1717,16 @@ objcopy::parseStripOptions(ArrayRef<const char *> RawArgsArr,
   return std::move(DC);
 }
 
+Error runExtractBundleEntry(SmallVector<StringRef, 256> args) {
+  for (StringRef Input : args)
+    if (Error Err = object::extractOffloadBundleByURI(Input))
+      return Err;
+
+  return Error::success();
+}
+
 Expected<DriverConfig>
 objcopy::parseExtractBundleEntryOptions(ArrayRef<const char *> ArgsArr) {
-  DriverConfig DC;
   ExtractBundleEntryOptTable T;
   unsigned MissingArgumentIndex, MissingArgumentCount;
   opt::InputArgList InputArgs =
@@ -1745,16 +1752,15 @@ objcopy::parseExtractBundleEntryOptions(ArrayRef<const char *> ArgsArr) {
     return createStringError(errc::invalid_argument, "unknown argument '%s'",
                              Arg->getAsString(InputArgs).c_str());
 
-  SmallVector<StringRef, 256> Positional;
+  DriverConfig DC;
+  SmallVector<StringRef, 256> Arguments;
 
   for (auto *Arg : InputArgs.filtered(EXTRACT_BUNDLE_ENTRY_INPUT))
-    Positional.push_back(Arg->getValue());
-  assert(!Positional.empty());
+    Arguments.push_back(Arg->getValue());
+  assert(!Arguments.empty());
 
-  // Iterate over all input arguments.
-  for (StringRef Input : Positional)
-    if (Error Err = object::extractOffloadBundleByURI(Input))
-      return std::move(Err);
+  if (Error Err = runExtractBundleEntry(Arguments))
+    return std::move(Err);
 
   return std::move(DC);
 }

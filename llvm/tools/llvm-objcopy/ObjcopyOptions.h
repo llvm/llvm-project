@@ -59,10 +59,6 @@ parseStripOptions(ArrayRef<const char *> ArgsArr,
 // returned by this function.
 Expected<DriverConfig>
 parseExtractBundleEntryOptions(ArrayRef<const char *> ArgsArr);
-/*parseExtractBundleEntryOptions(ArrayRef<const char *> ArgsArr,
-                               llvm::function_ref<Error(Error)>
-   ErrorCallback);*/
-
 } // namespace objcopy
 } // namespace llvm
 
