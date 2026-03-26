@@ -1,4 +1,4 @@
-#include "../ctu-hdr.h"
+#include "../hdr.h"
 
 int callback_to_main(int x);
 int f(int x) {

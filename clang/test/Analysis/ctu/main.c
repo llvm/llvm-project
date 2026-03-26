@@ -1,8 +1,8 @@
 // RUN: rm -rf %t && mkdir %t
 // RUN: mkdir -p %t/ctudir2
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu \
-// RUN:   -emit-pch -o %t/ctudir2/ctu-other.c.ast %S/Inputs/ctu-other.c
-// RUN: cp %S/Inputs/ctu-other.c.externalDefMap.ast-dump.txt %t/ctudir2/externalDefMap.txt
+// RUN:   -emit-pch -o %t/ctudir2/other.c.ast %S/Inputs/other.c
+// RUN: cp %S/Inputs/other.c.externalDefMap.ast-dump.txt %t/ctudir2/externalDefMap.txt
 
 // RUN: %clang_analyze_cc1 -triple x86_64-pc-linux-gnu -std=c89 \
 // RUN:   -analyzer-checker=core,debug.ExprInspection \
@@ -69,8 +69,8 @@ int testInlineAsm(void) {
 struct S;
 int g(struct S *);
 void testMacro(void) {
-  g(0); // newctu-warning@Inputs/ctu-other.c:29 {{Access to field 'a' results in a dereference of a null pointer (loaded from variable 'ctx')}}
-        // oldctu-warning@Inputs/ctu-other.c:29 {{Access to field 'a' results in a dereference of a null pointer (loaded from variable 'ctx')}}
+  g(0); // newctu-warning@Inputs/other.c:29 {{Access to field 'a' results in a dereference of a null pointer (loaded from variable 'ctx')}}
+        // oldctu-warning@Inputs/other.c:29 {{Access to field 'a' results in a dereference of a null pointer (loaded from variable 'ctx')}}
 }
 
 // The external function prototype is incomplete.

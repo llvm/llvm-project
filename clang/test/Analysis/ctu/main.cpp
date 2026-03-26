@@ -1,10 +1,10 @@
 // RUN: rm -rf %t && mkdir %t
 // RUN: mkdir -p %t/ctudir
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-pc-linux-gnu \
-// RUN:   -emit-pch -o %t/ctudir/ctu-other.cpp.ast %S/Inputs/ctu-other.cpp
+// RUN:   -emit-pch -o %t/ctudir/other.cpp.ast %S/Inputs/other.cpp
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-pc-linux-gnu \
-// RUN:   -emit-pch -o %t/ctudir/ctu-chain.cpp.ast %S/Inputs/ctu-chain.cpp
-// RUN: cp %S/Inputs/ctu-other.cpp.externalDefMap.ast-dump.txt %t/ctudir/externalDefMap.txt
+// RUN:   -emit-pch -o %t/ctudir/chain.cpp.ast %S/Inputs/chain.cpp
+// RUN: cp %S/Inputs/other.cpp.externalDefMap.ast-dump.txt %t/ctudir/externalDefMap.txt
 
 // RUN: %clang_analyze_cc1 -std=c++14 -triple x86_64-pc-linux-gnu \
 // RUN:   -analyzer-checker=core,debug.ExprInspection \
@@ -30,10 +30,10 @@
 // RUN:   -analyzer-config ctu-dir=%t/ctudir \
 // RUN:   -analyzer-config display-ctu-progress=true 2>&1 %s | FileCheck %s
 
-// CHECK: CTU loaded AST file: {{.*}}ctu-other.cpp.ast
-// CHECK: CTU loaded AST file: {{.*}}ctu-chain.cpp.ast
+// CHECK: CTU loaded AST file: {{.*}}other.cpp.ast
+// CHECK: CTU loaded AST file: {{.*}}chain.cpp.ast
 
-#include "ctu-hdr.h"
+#include "hdr.h"
 
 void clang_analyzer_eval(int);
 
@@ -203,8 +203,8 @@ int main() {
   clang_analyzer_eval(other_macro_diag(1) == 1); // newctu-warning{{TRUE}} ctu
                                                  // newctu-warning@-1{{UNKNOWN}} stu
                                                  // oldctu-warning@-2{{TRUE}}
-  // newctu-warning@Inputs/ctu-other.cpp:93{{REACHABLE}}
-  // oldctu-warning@Inputs/ctu-other.cpp:93{{REACHABLE}}
+  // newctu-warning@Inputs/other.cpp:93{{REACHABLE}}
+  // oldctu-warning@Inputs/other.cpp:93{{REACHABLE}}
   MACRODIAG(); // newctu-warning{{REACHABLE}}
                // oldctu-warning@-1{{REACHABLE}}
 

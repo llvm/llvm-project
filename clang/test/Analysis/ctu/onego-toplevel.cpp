@@ -1,8 +1,8 @@
 // RUN: rm -rf %t && mkdir %t
 // RUN: mkdir -p %t/ctudir
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-pc-linux-gnu \
-// RUN:   -emit-pch -o %t/ctudir/ctu-onego-toplevel-other.cpp.ast %S/Inputs/ctu-onego-toplevel-other.cpp
-// RUN: cp %S/Inputs/ctu-onego-toplevel-other.cpp.externalDefMap.ast-dump.txt %t/ctudir/externalDefMap.txt
+// RUN:   -emit-pch -o %t/ctudir/onego-toplevel-other.cpp.ast %S/Inputs/onego-toplevel-other.cpp
+// RUN: cp %S/Inputs/onego-toplevel-other.cpp.externalDefMap.ast-dump.txt %t/ctudir/externalDefMap.txt
 
 // RUN: %clang_analyze_cc1 -std=c++14 -triple x86_64-pc-linux-gnu \
 // RUN:   -analyzer-checker=core,debug.ExprInspection \

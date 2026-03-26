@@ -7,8 +7,8 @@
 // RUN: rm -rf %t && mkdir %t
 // RUN: mkdir -p %t/ctudir
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-pc-linux-gnu \
-// RUN:   -emit-pch -o %t/ctudir/ctu-onego-existingdef-other.cpp.ast %S/Inputs/ctu-onego-existingdef-other.cpp
-// RUN: cp %S/Inputs/ctu-onego-existingdef-other.cpp.externalDefMap.ast-dump.txt %t/ctudir/externalDefMap.txt
+// RUN:   -emit-pch -o %t/ctudir/onego-existingdef-other.cpp.ast %S/Inputs/onego-existingdef-other.cpp
+// RUN: cp %S/Inputs/onego-existingdef-other.cpp.externalDefMap.ast-dump.txt %t/ctudir/externalDefMap.txt
 
 // Existing and equal function definition in both TU. `other` calls `bar` thus
 // `bar` will be indirectly imported. During the import we recognize that there
