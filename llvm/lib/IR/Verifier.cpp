@@ -7211,8 +7211,9 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::lifetime_start:
   case Intrinsic::lifetime_end: {
     Value *Ptr = Call.getArgOperand(0);
+    IntrinsicInst *II = dyn_cast<IntrinsicInst>(Ptr);
     Check(isa<AllocaInst>(Ptr) || isa<PoisonValue>(Ptr) ||
-              isa<IntrinsicInst>(Ptr),
+              (II && II->getIntrinsicID() == Intrinsic::structured_alloca),
           "llvm.lifetime.start/end can only be used on alloca or poison",
           &Call);
     break;

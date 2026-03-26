@@ -15239,7 +15239,7 @@ the stack for a logical type, such as an aggregate, an array, or a scalar.
 
 Unlike the standard :ref:`alloca <i_alloca>` instruction, the physical memory
 layout of a ``llvm.structured.alloca`` is completely opaque to the IR.
-Exact padding, size, and subtype offsets is target-depentent and may differ
+Exact padding, size, and subtype offsets is target-dependent and may differ
 from the standard ``DataLayout``.
 
 Arguments:
@@ -27814,8 +27814,8 @@ object's lifetime.
 Arguments:
 """"""""""
 
-The argument is either a pointer to an ``alloca`` instruction or a ``poison``
-value.
+The argument is either a pointer to an ``alloca`` instruction, a ``poison``
+value, or an ``llvm.structured.alloca`` instrinsic.
 
 Semantics:
 """"""""""
@@ -27826,8 +27826,8 @@ Otherwise, the stack-allocated object that ``ptr`` points to is initially
 marked as dead. After '``llvm.lifetime.start``', the stack object is marked as
 alive and has an uninitialized value.
 The stack object is marked as dead when either
-:ref:`llvm.lifetime.end <int_lifeend>` to the alloca is executed or the
-function returns.
+:ref:`llvm.lifetime.end <int_lifeend>` to the alloca/structured.alloca is
+executed or the function returns.
 
 After :ref:`llvm.lifetime.end <int_lifeend>` is called,
 '``llvm.lifetime.start``' on the stack object can be called again.
@@ -27855,7 +27855,8 @@ The '``llvm.lifetime.end``' intrinsic specifies the end of a
 Arguments:
 """"""""""
 
-The argument is either a pointer to an ``alloca`` instruction or a ``poison``
+The argument is either a pointer to an ``alloca`` instruction, a ``poison`` or
+an ``llvm.structured.alloca`` intrinsic.
 value.
 
 Semantics:
@@ -27866,7 +27867,8 @@ If ``ptr`` is a ``poison`` value, the intrinsic has no effect.
 Otherwise, the stack-allocated object that ``ptr`` points to becomes dead after
 the call to this intrinsic.
 
-Calling ``llvm.lifetime.end`` on an already dead alloca is no-op.
+Calling ``llvm.lifetime.end`` on an already dead alloca/structured.alloca is
+no-op.
 
 '``llvm.invariant.start``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
