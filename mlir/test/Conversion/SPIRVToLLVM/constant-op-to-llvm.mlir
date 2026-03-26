@@ -59,3 +59,31 @@ spirv.func @float_constant_vector() "None" {
   %0 = spirv.Constant dense<[2.000000e+00, 3.000000e+00]> : vector<2xf32>
   spirv.Return
 }
+
+//===----------------------------------------------------------------------===//
+// spirv.SpecConstant and spirv.mlir.referenceof
+//===----------------------------------------------------------------------===//
+
+// CHECK: llvm.mlir.global private constant @sc_int(-5 : i32) {{.*}} : i32
+// CHECK: llvm.mlir.global private constant @sc_signed(-5 : i32) {{.*}} : i32
+// CHECK: llvm.mlir.global private constant @sc_unsigned(10 : i16) {{.*}} : i16
+// CHECK: llvm.mlir.global private constant @sc_float(3.140000e+00 : f32) {{.*}} : f32
+// CHECK: llvm.mlir.global private constant @sc_bool(true) {{.*}} : i1
+spirv.module Logical GLSL450 {
+  spirv.SpecConstant @sc_int = -5 : i32
+  spirv.SpecConstant @sc_signed = -5 : si32
+  spirv.SpecConstant @sc_unsigned = 10 : ui16
+  spirv.SpecConstant @sc_float = 3.14 : f32
+  spirv.SpecConstant @sc_bool = true
+}
+
+// CHECK-LABEL: @use_spec_consts
+spirv.module Logical GLSL450 {
+  spirv.SpecConstant @sc = 42 : i32
+  spirv.func @use_spec_consts() -> i32 "None" {
+    // CHECK: %[[ADDR:.*]] = llvm.mlir.addressof @sc : !llvm.ptr
+    // CHECK: llvm.load %[[ADDR]] : !llvm.ptr -> i32
+    %0 = spirv.mlir.referenceof @sc : i32
+    spirv.ReturnValue %0 : i32
+  }
+}

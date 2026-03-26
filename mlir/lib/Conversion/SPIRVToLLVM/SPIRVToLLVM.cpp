@@ -441,6 +441,63 @@ public:
   }
 };
 
+/// Converts `spirv.SpecConstant` to an `llvm.mlir.global` constant with a
+/// private linkage, using the spec constant's default value as the initializer.
+/// When lowering to LLVM there is no notion of specialization, so the default
+/// value is used unconditionally.
+class SpecConstantPattern
+    : public SPIRVToLLVMConversion<spirv::SpecConstantOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::SpecConstantOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::SpecConstantOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto defaultValue = cast<TypedAttr>(op.getDefaultValue());
+    auto srcType = defaultValue.getType();
+    auto dstType = getTypeConverter()->convertType(srcType);
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    // Handle signed/unsigned integers: strip the sign by converting to a
+    // signless integer type (analogous to ConstantScalarAndVectorPattern).
+    Attribute initializer = defaultValue;
+    if (isSignedIntegerOrVector(srcType) ||
+        isUnsignedIntegerOrVector(srcType)) {
+      auto signlessType = rewriter.getIntegerType(getBitWidth(srcType));
+      dstType = getTypeConverter()->convertType(signlessType);
+      initializer = rewriter.getIntegerAttr(
+          signlessType, cast<IntegerAttr>(defaultValue).getValue());
+    }
+
+    rewriter.replaceOpWithNewOp<LLVM::GlobalOp>(
+        op, dstType, /*isConstant=*/true, LLVM::Linkage::Private,
+        op.getSymName(), initializer);
+    return success();
+  }
+};
+
+/// Converts `spirv.mlir.referenceof` (referencing a `spirv.SpecConstant`) to a
+/// load from the corresponding `llvm.mlir.global`.
+class ReferenceOfPattern : public SPIRVToLLVMConversion<spirv::ReferenceOfOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::ReferenceOfOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::ReferenceOfOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto dstType = getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    auto ptrType = LLVM::LLVMPointerType::get(op.getContext());
+    Value addr = LLVM::AddressOfOp::create(rewriter, op.getLoc(), ptrType,
+                                           op.getSpecConst());
+    rewriter.replaceOpWithNewOp<LLVM::LoadOp>(op, dstType, addr);
+    return success();
+  }
+};
+
 class BitFieldSExtractPattern
     : public SPIRVToLLVMConversion<spirv::BitFieldSExtractOp> {
 public:
@@ -1850,8 +1907,8 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       IComparePattern<spirv::ULessThanEqualOp, LLVM::ICmpPredicate::ule>,
       IComparePattern<spirv::ULessThanOp, LLVM::ICmpPredicate::ult>,
 
-      // Constant op
-      ConstantScalarAndVectorPattern,
+      // Constant ops
+      ConstantScalarAndVectorPattern, SpecConstantPattern, ReferenceOfPattern,
 
       // Control Flow ops
       BranchConversionPattern, BranchConditionalConversionPattern,
