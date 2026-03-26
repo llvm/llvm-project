@@ -10,6 +10,7 @@
 #include "IndexDataStoreUtils.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/PathRemapper.h"
+#include "clang/Serialization/ModuleFile.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
@@ -182,17 +183,18 @@ void IndexUnitWriter::addRecordFile(StringRef RecordFile,
   Records.push_back(RecordOrUnitData{std::string(RecordFile), Dep, addModule(Mod), IsSystem});
 }
 
-void IndexUnitWriter::addASTFileDependency(OptionalFileEntryRef File,
-                                           bool IsSystem,
-                                           writer::OpaqueModule Mod,
-                                           bool withoutUnitName) {
-  assert(File);
-  if (!SeenASTFiles.insert(*File).second)
+void IndexUnitWriter::addASTFileDependency(
+    const serialization::ModuleFile &ASTFile, bool IsSystem,
+    writer::OpaqueModule Mod, bool withoutUnitName) {
+  if (!SeenASTFiles.insert(&ASTFile).second)
     return;
 
   SmallString<64> UnitName;
   if (!withoutUnitName)
-    getUnitNameForOutputFile(File->getName(), UnitName);
+    getUnitNameForOutputFile(ASTFile.FileName, UnitName);
+  // FIXME: This assumes ModuleFile is backed by a FileEntry.
+  auto File = FileMgr.getOptionalFileRef(ASTFile.FileName);
+  assert(File && "No FileEntry for a ModuleFile");
   addUnitDependency(UnitName.str(), File, IsSystem, Mod);
 }
 

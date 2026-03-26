@@ -25,6 +25,10 @@ namespace clang {
   class FileManager;
   class PathRemapper;
 
+  namespace serialization {
+  class ModuleFile;
+  }
+
 namespace index {
 
 namespace writer {
@@ -78,7 +82,7 @@ class IndexUnitWriter {
   std::vector<writer::OpaqueModule> Modules;
   llvm::DenseMap<const FileEntry *, int> IndexByFile;
   llvm::DenseMap<writer::OpaqueModule, int> IndexByModule;
-  llvm::DenseSet<const FileEntry *> SeenASTFiles;
+  llvm::DenseSet<const serialization::ModuleFile *> SeenASTFiles;
   struct RecordOrUnitData {
     std::string Name;
     int FileIndex;
@@ -108,8 +112,8 @@ public:
                         writer::OpaqueModule Mod);
   void addRecordFile(StringRef RecordFile, OptionalFileEntryRef File,
                      bool IsSystem, writer::OpaqueModule Mod);
-  void addASTFileDependency(OptionalFileEntryRef File, bool IsSystem,
-                            writer::OpaqueModule Mod,
+  void addASTFileDependency(const serialization::ModuleFile &ASTFile,
+                            bool IsSystem, writer::OpaqueModule Mod,
                             bool withoutUnitName = false);
   void addUnitDependency(StringRef UnitFile, OptionalFileEntryRef File,
                          bool IsSystem, writer::OpaqueModule Mod);

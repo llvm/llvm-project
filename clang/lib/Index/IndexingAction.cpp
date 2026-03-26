@@ -875,8 +875,7 @@ static void writeUnitData(const CompilerInstance &CI,
                                          bool isSystemMod) {
     Module *UnitMod = HS.lookupModule(Mod.ModuleName, Mod.ImportLoc,
                                       /*AllowSearch=*/false);
-    UnitWriter.addASTFileDependency(Mod.File, isSystemMod, UnitMod,
-                                    WithoutUnitName);
+    UnitWriter.addASTFileDependency(Mod, isSystemMod, UnitMod, WithoutUnitName);
     if (Mod.isModule() && IndexPcms) {
       produceIndexDataForModuleFile(Mod, CI, IndexOpts, RecordOpts, UnitWriter);
     }

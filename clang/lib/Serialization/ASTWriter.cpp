@@ -1645,8 +1645,8 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
       } else {
         // If we have calculated signature, there is no need to store
         // the size or timestamp.
-        Record.push_back(M.Signature ? 0 : M.File.getSize());
-        Record.push_back(M.Signature ? 0 : getTimestampForOutput(M.File));
+        Record.push_back(M.Signature ? 0 : M.Size);
+        Record.push_back(M.Signature ? 0 : getTimestampForOutput(M.ModTime));
         // Encode CacheKey if it is implicit module, otherwise encode CASID of
         // module file.
         bool CASIDIsKey = M.Kind == serialization::MK_ImplicitModule;
@@ -2015,7 +2015,7 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr) {
           INPUT_FILE,
           InputFileOffsets.size(),
           (uint64_t)Entry.File.getSize(),
-          (uint64_t)getTimestampForOutput(Entry.File),
+          (uint64_t)getTimestampForOutput(Entry.File.getModificationTime()),
           Entry.BufferOverridden,
           Entry.IsTransient,
           Entry.IsTopLevel,
@@ -2332,8 +2332,8 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
     bool Included = HFI->IsLocallyIncluded || PP->alreadyIncluded(*File);
 
     HeaderFileInfoTrait::key_type Key = {
-      Filename, File->getSize(), getTimestampForOutput(*File)
-    };
+        Filename, File->getSize(),
+        getTimestampForOutput(File->getModificationTime())};
     HeaderFileInfoTrait::data_type Data = {
       *HFI, Included, HS.getModuleMap().findResolvedModulesForHeader(*File), {}
     };
@@ -5599,8 +5599,8 @@ const LangOptions &ASTWriter::getLangOpts() const {
   return PP->getLangOpts();
 }
 
-time_t ASTWriter::getTimestampForOutput(const FileEntry *E) const {
-  return IncludeTimestamps ? E->getModificationTime() : 0;
+time_t ASTWriter::getTimestampForOutput(time_t ModTime) const {
+  return IncludeTimestamps ? ModTime : 0;
 }
 
 ASTFileSignature

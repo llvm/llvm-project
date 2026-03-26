@@ -143,7 +143,7 @@ public:
   }
 
   /// Update which module that is being actively traversed.
-  void visitModuleFile(StringRef Filename,
+  void visitModuleFile(ModuleFileName Filename,
                        serialization::ModuleKind Kind) override {
     // If the CurrentFile is not
     // considered stable, update any of it's transitive dependents.
@@ -152,7 +152,7 @@ public:
         !PrebuiltEntryIt->second.isInStableDir())
       PrebuiltEntryIt->second.updateDependentsNotInStableDirs(
           PrebuiltModulesASTMap);
-    CurrentFile = Filename;
+    CurrentFile = Filename.str();
   }
 
   /// Check the header search options for a given module when considering
@@ -228,7 +228,7 @@ static bool visitPrebuiltModule(StringRef PrebuiltModuleFilename,
   PrebuiltModuleListener Listener(CI, ModuleFiles, Worklist,
                                   PrebuiltModulesASTMap, Diags, StableDirs);
 
-  Listener.visitModuleFile(PrebuiltModuleFilename,
+  Listener.visitModuleFile(ModuleFileName::makeExplicit(PrebuiltModuleFilename),
                            serialization::MK_ExplicitModule);
   if (ASTReader::readASTFileControlBlock(
           PrebuiltModuleFilename, CI.getFileManager(), CI.getModuleCache(),
@@ -238,7 +238,13 @@ static bool visitPrebuiltModule(StringRef PrebuiltModuleFilename,
     return true;
 
   while (!Worklist.empty()) {
-    Listener.visitModuleFile(Worklist.back(), serialization::MK_ExplicitModule);
+    // FIXME: This is assuming the PCH only refers to explicitly-built modules,
+    // which technically is not guaranteed. To remove the assumption, we'd need
+    // to also rework how the module files are handled to the scan, specifically
+    // change the values of HeaderSearchOptions::PrebuiltModuleFiles from plain
+    // paths to ModuleFileName.
+    Listener.visitModuleFile(ModuleFileName::makeExplicit(Worklist.back()),
+                             serialization::MK_ExplicitModule);
     if (ASTReader::readASTFileControlBlock(
             Worklist.pop_back_val(), CI.getFileManager(), CI.getModuleCache(),
             CI.getPCHContainerReader(),
