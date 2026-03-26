@@ -1711,7 +1711,7 @@ def ProcessorFeatures {
                                           TuningInsertVZEROUPPER,
                                           TuningAllowLight256Bit];
 
-  // C86-4G-M6
+  // C86-4G-M6: same features as M4; kept separate for future differentiation
   list<SubtargetFeature> C864GM6Features = C864GM4Features;
   list<SubtargetFeature> C864GM6Tuning = C864GM4Tuning;
   
