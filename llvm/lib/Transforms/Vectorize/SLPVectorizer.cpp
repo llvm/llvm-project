@@ -3814,6 +3814,13 @@ private:
                                ArrayRef<Value *> VectorizedVals,
                                SmallPtrSetImpl<Value *> &CheckedExtracts);
 
+  /// Estimates spill/reload cost from vector register pressure for \p E at the
+  /// point of emitting its vector result type \p FinalVecTy.
+  InstructionCost getVectorSpillReloadCost(const TreeEntry *E,
+                                           VectorType *VecTy,
+                                           VectorType *FinalVecTy,
+                                           TTI::TargetCostKind CostKind) const;
+
   /// This is the recursive part of buildTree.
   void buildTreeRec(ArrayRef<Value *> Roots, unsigned Depth, const EdgeInfo &EI,
                     unsigned InterleaveFactor = 0);
@@ -15484,6 +15491,135 @@ unsigned BoUpSLP::getScaleToLoopIterations(const TreeEntry &TE, Value *Scalar,
 }
 
 InstructionCost
+BoUpSLP::getVectorSpillReloadCost(const TreeEntry *E, VectorType *VecTy,
+                                  VectorType *FinalVecTy,
+                                  TTI::TargetCostKind CostKind) const {
+  InstructionCost SpillsReloads = 0;
+
+  // Estimate vector register pressure per target register class: operand
+  // vectors plus the result. The same vector operand is counted once via
+  // CountedOpEntries deduplication. PHIs take the max operand pressure across
+  // incoming slots (only one predecessor is live at a time) plus the result.
+  // All-constant operand bundles are skipped.
+  if (!E->hasState() || E->getOpcode() == Instruction::Store ||
+      E->getOpcode() == Instruction::ExtractElement ||
+      E->getOpcode() == Instruction::ExtractValue ||
+      E->getOpcode() == Instruction::Freeze ||
+      (E->getOpcode() == Instruction::Load &&
+       E->State != TreeEntry::ScatterVectorize))
+    return SpillsReloads;
+
+  const bool IsPHI =
+      E->State == TreeEntry::Vectorize && E->getOpcode() == Instruction::PHI;
+  SmallPtrSet<const TreeEntry *, 8> CountedOpEntries;
+  SmallDenseMap<unsigned, unsigned> PressureByClass;
+  auto AddPartsToClass = [&](unsigned RegClass, unsigned Parts) {
+    assert(Parts != 0 && "Expected non-zero number of parts (registers).");
+    PressureByClass[RegClass] += Parts;
+  };
+
+  auto GetEntryVecTy = [&](const TreeEntry *TE) -> VectorType * {
+    Type *ScalarTy = getValueType(TE->Scalars.front());
+    auto BWIt = MinBWs.find(TE);
+    if (BWIt != MinBWs.end()) {
+      auto *VTy = dyn_cast<FixedVectorType>(ScalarTy);
+      ScalarTy = IntegerType::get(F->getContext(), BWIt->second.first);
+      if (VTy)
+        ScalarTy = getWidenedType(ScalarTy, VTy->getNumElements());
+    }
+    return getWidenedType(ScalarTy, TE->getVectorFactor());
+  };
+
+  if (E->State == TreeEntry::SplitVectorize) {
+    for (const auto [Idx, _] : E->CombinedEntriesWithIndices) {
+      const TreeEntry *OpTE = VectorizableTree[Idx].get();
+
+      if (!CountedOpEntries.insert(OpTE).second)
+        continue;
+      auto *OpVecTy = GetEntryVecTy(OpTE);
+      const unsigned Parts = ::getNumberOfParts(*TTI, OpVecTy);
+      if (Parts == 0)
+        continue;
+      const unsigned RC =
+          TTI->getRegisterClassForType(/*Vector=*/true, OpVecTy);
+      AddPartsToClass(RC, Parts);
+    }
+  } else if (IsPHI) {
+    // Only one predecessor is live at a time — take the max operand pressure
+    // across incoming slots.
+    SmallDenseMap<unsigned, unsigned> MaxOpPressureByClass;
+    for (unsigned Idx : seq<unsigned>(E->getNumOperands())) {
+      const TreeEntry *OpTE = getOperandEntry(E, Idx);
+      auto *OpVecTy = GetEntryVecTy(OpTE);
+      const unsigned Parts = ::getNumberOfParts(*TTI, OpVecTy);
+      if (Parts == 0)
+        continue;
+      const unsigned RC =
+          TTI->getRegisterClassForType(/*Vector=*/true, OpVecTy);
+      MaxOpPressureByClass[RC] = std::max(MaxOpPressureByClass[RC], Parts);
+    }
+    for (auto [RC, Parts] : MaxOpPressureByClass)
+      AddPartsToClass(RC, Parts);
+  } else {
+    for (unsigned Idx : seq<unsigned>(E->getNumOperands())) {
+      // InsertElement operand 0 is the vector being inserted into, which is
+      // built incrementally and does not occupy an extra register.
+      if (E->getOpcode() == Instruction::InsertElement && Idx == 0)
+        continue;
+      ArrayRef<Value *> Ops = E->getOperand(Idx);
+      if (Ops.empty() || allConstant(Ops) || isSplat(Ops))
+        continue;
+      Value *Op = Ops.front();
+      if (!Op)
+        continue;
+      const TreeEntry *OpTE = getOperandEntry(E, Idx);
+
+      if (!CountedOpEntries.insert(OpTE).second)
+        continue;
+      auto *OpVecTy = getWidenedType(Op->getType(), Ops.size());
+      const unsigned Parts = ::getNumberOfParts(*TTI, OpVecTy);
+      if (Parts == 0)
+        continue;
+      const unsigned RC =
+          TTI->getRegisterClassForType(/*Vector=*/true, OpVecTy);
+      AddPartsToClass(RC, Parts);
+    }
+  }
+
+  if (E->getOpcode() != Instruction::Load) {
+    const unsigned ResParts = ::getNumberOfParts(*TTI, VecTy);
+    if (ResParts != 0) {
+      const unsigned RC = TTI->getRegisterClassForType(/*Vector=*/true, VecTy);
+      AddPartsToClass(RC, ResParts);
+    }
+    if (VecTy != FinalVecTy) {
+      const unsigned FinalResParts = ::getNumberOfParts(*TTI, FinalVecTy);
+      if (FinalResParts != 0) {
+        const unsigned RC =
+            TTI->getRegisterClassForType(/*Vector=*/true, FinalVecTy);
+        AddPartsToClass(RC, FinalResParts);
+      }
+    }
+  }
+
+  for (auto [RegClass, UsedRegs] : PressureByClass) {
+    const unsigned NumAvailRegs = TTI->getNumberOfRegisters(RegClass);
+    if (NumAvailRegs == 0 || UsedRegs <= NumAvailRegs)
+      continue;
+    const unsigned SpillCount = UsedRegs - NumAvailRegs;
+    InstructionCost SingleRegSpillReload =
+        TTI->getRegisterClassReloadCost(RegClass, CostKind);
+    // No need to spill cost only for the root entry (Idx == 0), for reduction
+    // and non-returning instructions, like void calls.
+    if (E->Idx > 0 || !UserIgnoreList || !E->Scalars[0]->getType()->isVoidTy())
+      SingleRegSpillReload +=
+          TTI->getRegisterClassSpillCost(RegClass, CostKind);
+    SpillsReloads += SingleRegSpillReload * SpillCount;
+  }
+  return SpillsReloads;
+}
+
+InstructionCost
 BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                       SmallPtrSetImpl<Value *> &CheckedExtracts) {
   ArrayRef<Value *> VL = E->Scalars;
@@ -15510,6 +15646,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   unsigned EntryVF = E->getVectorFactor();
   auto *FinalVecTy = getWidenedType(ScalarTy, EntryVF);
 
+  const InstructionCost SpillsReloads =
+      getVectorSpillReloadCost(E, VecTy, FinalVecTy, CostKind);
   if (E->isGather() || TransformedToGatherNodes.contains(E)) {
     if (allConstant(VL))
       return 0;
@@ -15517,8 +15655,9 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       return InstructionCost::getInvalid();
     if (isa<CmpInst>(VL.front()))
       ScalarTy = VL.front()->getType();
-    return processBuildVector<ShuffleCostEstimator, InstructionCost>(
-        E, ScalarTy, *TTI, VectorizedVals, *this, CheckedExtracts);
+    return SpillsReloads +
+           processBuildVector<ShuffleCostEstimator, InstructionCost>(
+               E, ScalarTy, *TTI, VectorizedVals, *this, CheckedExtracts);
   }
   if (E->State == TreeEntry::SplitVectorize) {
     assert(E->CombinedEntriesWithIndices.size() == 2 &&
@@ -15543,6 +15682,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                                     getWidenedType(ScalarTy, CommonVF),
                                     E->getSplitMask(), CostKind);
     }
+    VectorCost += SpillsReloads;
     LLVM_DEBUG(dumpTreeCosts(E, 0, VectorCost, 0, "Calculated costs for Tree"));
     return VectorCost;
   }
@@ -15658,6 +15798,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
             }
           }
         }
+        VecCost += SpillsReloads;
         LLVM_DEBUG(dumpTreeCosts(E, CommonCost, VecCost - CommonCost,
                                  ScalarCost, "Calculated costs for Tree"));
         return VecCost - ScalarCost;
@@ -15677,7 +15818,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     LLVM_DEBUG(dumpTreeCosts(E, 0, VecCost, ScalarCost,
                              "Calculated GEPs cost for Tree"));
 
-    return VecCost - ScalarCost;
+    return VecCost - ScalarCost + SpillsReloads;
   };
 
   auto GetMinMaxCost = [&](Type *Ty, Instruction *VI = nullptr) {
@@ -15735,7 +15876,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                                           OpTE->Scalars.size());
     }
 
-    return CommonCost - ScalarCost;
+    return CommonCost - ScalarCost + SpillsReloads;
   }
   case Instruction::ExtractValue:
   case Instruction::ExtractElement: {
@@ -15895,7 +16036,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
             ::getShuffleCost(*TTI, TTI::SK_PermuteTwoSrc, InsertVecTy, Mask);
       }
     }
-    return Cost;
+    return Cost + SpillsReloads;
   }
   case Instruction::ZExt:
   case Instruction::SExt:
