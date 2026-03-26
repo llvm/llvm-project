@@ -3935,8 +3935,9 @@ CGObjCCommonMac::GenerateDirectMethod(const ObjCMethodDecl *OMD,
   CodeGenTypes &Types = CGM.getTypes();
   llvm::FunctionType *MethodTy =
       Types.GetFunctionType(Types.arrangeObjCMethodDeclaration(OMD));
-  std::string Name = getSymbolNameForMethod(OMD, /*includeCategoryName*/ false,
-                                            CGM.isObjCDirectPreconditionThunkEnabled());
+  std::string Name =
+      getSymbolNameForMethod(OMD, /*includeCategoryName*/ false,
+                             CGM.isObjCDirectPreconditionThunkEnabled());
   std::string ThunkName = Name + "_thunk";
 
   // Replace OldFn with NewFn: transfer name, replace all uses, and erase.
