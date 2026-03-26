@@ -744,8 +744,8 @@ static void processLaneForReplicateRegion(VPlan &Plan, Type *IdxTy,
 /// each lane, and reconnected in sequence.
 static void dissolveReplicateRegion(VPRegionBlock *Region, ElementCount VF,
                                     VPlan &Plan, Type *IdxTy) {
-  VPBlockBase *FirstLaneRegionEntry = Region->getEntry();
-  VPBlockBase *FirstLaneRegionExiting = Region->getExiting();
+  VPBlockBase *FirstLaneEntry = Region->getEntry();
+  VPBlockBase *FirstLaneExiting = Region->getExiting();
 
   // Disconnect and dissolve the region.
   VPBlockBase *Predecessor = Region->getSinglePredecessor();
@@ -756,38 +756,38 @@ static void dissolveReplicateRegion(VPRegionBlock *Region, ElementCount VF,
   VPBlockUtils::disconnectBlocks(Region, Successor);
 
   VPRegionBlock *ParentRegion = Region->getParent();
-  for (VPBlockBase *VPB : vp_depth_first_shallow(FirstLaneRegionEntry))
+  for (VPBlockBase *VPB : vp_depth_first_shallow(FirstLaneEntry))
     VPB->setParent(ParentRegion);
 
   // Process the original blocks for lane 0: converting their recipes to
   // single-scalar.
-  convertRecipesInRegionBlocksToSingleScalar(Plan, IdxTy, FirstLaneRegionEntry);
+  convertRecipesInRegionBlocksToSingleScalar(Plan, IdxTy, FirstLaneEntry);
 
   // Clone converted blocks for remaining lanes and process each in reverse
   // order, connecting each lane's Exiting block to the subsequent lane's entry.
-  VPBlockBase *NextLaneRegionEntry = Successor;
+  VPBlockBase *NextLaneEntry = Successor;
   unsigned NumLanes = VF.getFixedValue();
   for (int Lane = NumLanes - 1; Lane > 0; --Lane) {
     VPBlockBase *CurrentLaneEntry =
-        VPBlockUtils::cloneFrom(FirstLaneRegionEntry).first;
+        VPBlockUtils::cloneFrom(FirstLaneEntry).first;
     VPBlockBase *CurrentLaneExiting;
     for (VPBlockBase *VPB : vp_depth_first_shallow(CurrentLaneEntry)) {
       VPB->setParent(ParentRegion);
       CurrentLaneExiting = VPB;
     }
     processLaneForReplicateRegion(Plan, IdxTy, Lane,
-                                  cast<VPBasicBlock>(FirstLaneRegionEntry),
+                                  cast<VPBasicBlock>(FirstLaneEntry),
                                   cast<VPBasicBlock>(CurrentLaneEntry));
-    VPBlockUtils::connectBlocks(CurrentLaneExiting, NextLaneRegionEntry);
-    NextLaneRegionEntry = CurrentLaneEntry;
+    VPBlockUtils::connectBlocks(CurrentLaneExiting, NextLaneEntry);
+    NextLaneEntry = CurrentLaneEntry;
   }
 
-  // Connect Predecessor to FirstLaneRegionEntry, and FirstLaneRegionExit to
-  // NextLaneRegionEntry which is the second lane region entry. The latter is
-  // done last so that earlier clonings from FirstLaneRegionEntry stop at
-  // FirstLaneRegionExiting.
-  VPBlockUtils::connectBlocks(Predecessor, FirstLaneRegionEntry);
-  VPBlockUtils::connectBlocks(FirstLaneRegionExiting, NextLaneRegionEntry);
+  // Connect Predecessor to FirstLaneEntry, and FirstLaneRegionExit to
+  // NextLaneEntry which is the second lane region entry. The latter is
+  // done last so that earlier clonings from FirstLaneEntry stop at
+  // FirstLaneExiting.
+  VPBlockUtils::connectBlocks(Predecessor, FirstLaneEntry);
+  VPBlockUtils::connectBlocks(FirstLaneExiting, NextLaneEntry);
 }
 
 /// Collect and dissolve all replicate regions in the vector loop, replicating
@@ -800,8 +800,7 @@ static void replicateReplicateRegionsByVF(VPlan &Plan, ElementCount VF,
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     // Skip regions with live-outs as packing scalar results back into vectors
     // is not yet implemented.
-    if (Region->isReplicator() &&
-        none_of(*Region->getExitingBasicBlock(), IsaPred<VPPredInstPHIRecipe>))
+    if (Region->isReplicator() && Region->getExitingBasicBlock()->empty())
       ReplicateRegions.push_back(Region);
   }
 
