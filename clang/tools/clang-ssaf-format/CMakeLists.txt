@@ -13,3 +13,5 @@ clang_target_link_libraries(clang-ssaf-format
   clangScalableStaticAnalysisFrameworkCore
   clangScalableStaticAnalysisFrameworkTool
   )
+
+export_executable_symbols_for_plugins(clang-ssaf-format)
