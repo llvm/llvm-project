@@ -33,17 +33,17 @@ int main(int, char**) {
 
     std::text_encoding te = loc.encoding();
 #if !defined(__ANDROID__)
-      std::text_encoding classic_te = std::text_encoding(id::ASCII);
-      if(te != id::ASCII) {
-        std::cerr << std::format(
-            "Expected ASCII, received: {{{}, \"{}\"}}, locale: \"{}\"", int(te.mib()), te.name(), loc.name());
-        assert(false);
-      }
-      assert(te == classic_te);
+    std::text_encoding classic_te = std::text_encoding(id::ASCII);
+    if (te != id::ASCII) {
+      std::cerr << std::format(
+          "Expected ASCII, received: {{{}, \"{}\"}}, locale: \"{}\"", int(te.mib()), te.name(), loc.name());
+      assert(false);
+    }
+    assert(te == classic_te);
 #else
-      auto utf8_te = std::text_encoding(id::UTF8);
-      assert(te == id::UTF8);
-      assert(te == utf8_te);
+    auto utf8_te = std::text_encoding(id::UTF8);
+    assert(te == id::UTF8);
+    assert(te == utf8_te);
 #endif
   }
 

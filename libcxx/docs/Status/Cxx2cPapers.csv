@@ -13,7 +13,7 @@
 "`P2013R5 <https://wg21.link/P2013R5>`__","Freestanding Language: Optional ``::operator new``","2023-06 (Varna)","","","`#105370 <https://github.com/llvm/llvm-project/issues/105370>`__",""
 "`P2363R5 <https://wg21.link/P2363R5>`__","Extending associative containers with the remaining heterogeneous overloads","2023-06 (Varna)","","","`#105371 <https://github.com/llvm/llvm-project/issues/105371>`__",""
 "`P1901R2 <https://wg21.link/P1901R2>`__","Enabling the Use of ``weak_ptr`` as Keys in Unordered Associative Containers","2023-06 (Varna)","","","`#105372 <https://github.com/llvm/llvm-project/issues/105372>`__",""
-"`P1885R12 <https://wg21.link/P1885R12>`__","Naming Text Encodings to Demystify Them","2023-06 (Varna)","|Partial|","23","`#105373 <https://github.com/llvm/llvm-project/issues/105373>`__","locale::encoding() is not yet implemented."
+"`P1885R12 <https://wg21.link/P1885R12>`__","Naming Text Encodings to Demystify Them","2023-06 (Varna)","|Complete|","23","`#105373 <https://github.com/llvm/llvm-project/issues/105373>`__",""
 "`P0792R14 <https://wg21.link/P0792R14>`__","``function_ref``: a type-erased callable reference","2023-06 (Varna)","","","`#105376 <https://github.com/llvm/llvm-project/issues/105376>`__",""
 "`P2874R2 <https://wg21.link/P2874R2>`__","P2874R2: Mandating Annex D Require No More","2023-06 (Varna)","|Complete|","12","`#105377 <https://github.com/llvm/llvm-project/issues/105377>`__",""
 "`P2757R3 <https://wg21.link/P2757R3>`__","Type-checking format args","2023-06 (Varna)","","","`#105378 <https://github.com/llvm/llvm-project/issues/105378>`__",""
