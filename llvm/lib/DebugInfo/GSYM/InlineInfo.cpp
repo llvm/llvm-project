@@ -100,7 +100,7 @@ static bool skip(DataExtractor &Data, uint64_t &Offset, bool SkippedRanges) {
 /// \param BaseAddr The address that the relative address range offsets are
 ///                 relative to.
 
-static bool lookup(const GsymReader &GR, DataExtractor &Data, uint64_t &Offset,
+static bool lookup(const GsymReaderBase &GR, DataExtractor &Data, uint64_t &Offset,
                    uint64_t BaseAddr, uint64_t Addr, SourceLocations &SrcLocs,
                    llvm::Error &Err) {
   InlineInfo Inline;
@@ -151,7 +151,7 @@ static bool lookup(const GsymReader &GR, DataExtractor &Data, uint64_t &Offset,
   return true;
 }
 
-llvm::Error InlineInfo::lookup(const GsymReader &GR, DataExtractor &Data,
+llvm::Error InlineInfo::lookup(const GsymReaderBase &GR, DataExtractor &Data,
                                uint64_t BaseAddr, uint64_t Addr,
                                SourceLocations &SrcLocs) {
   // Call our recursive helper function starting at offset zero.

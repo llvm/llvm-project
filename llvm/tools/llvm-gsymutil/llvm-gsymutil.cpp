@@ -386,12 +386,12 @@ static llvm::Error handleObjectFile(ObjectFile &Obj, const std::string &OutFile,
   auto ThreadCount =
       NumThreads > 0 ? NumThreads : std::thread::hardware_concurrency();
 
-  std::unique_ptr<GsymCreator> GsymPtr;
+  std::unique_ptr<GsymCreatorBase> GsymPtr;
   if (ForceCreatorVersion == CreatorVersion::V2)
     GsymPtr = std::make_unique<GsymCreatorV2>(Quiet);
   else
-    GsymPtr = std::make_unique<GsymCreatorV1>(Quiet);
-  GsymCreator &Gsym = *GsymPtr;
+    GsymPtr = std::make_unique<GsymCreator>(Quiet);
+  GsymCreatorBase &Gsym = *GsymPtr;
 
   // See if we can figure out the base address for a given object file, and if
   // we can, then set the base address to use to this value. This will ease
@@ -571,22 +571,22 @@ static llvm::Error convertFileToGSYM(OutputAggregator &Out) {
 }
 
 /// Open a GSYM file, auto-detecting the version unless forced.
-static Expected<std::unique_ptr<GsymReader>> openGsymFile(StringRef Path) {
+static Expected<std::unique_ptr<GsymReaderBase>> openGsymFile(StringRef Path) {
   if (ForceReaderVersion == ReaderVersion::Auto)
-    return GsymReader::openFile(Path);
+    return GsymReaderBase::openFile(Path);
   if (ForceReaderVersion == ReaderVersion::V2) {
     auto R = GsymReaderV2::openFile(Path);
     if (!R)
       return R.takeError();
     return std::make_unique<GsymReaderV2>(std::move(*R));
   }
-  auto R = GsymReaderV1::openFile(Path);
+  auto R = GsymReader::openFile(Path);
   if (!R)
     return R.takeError();
-  return std::make_unique<GsymReaderV1>(std::move(*R));
+  return std::make_unique<GsymReader>(std::move(*R));
 }
 
-static void doLookup(GsymReader &Gsym, uint64_t Addr, raw_ostream &OS) {
+static void doLookup(GsymReaderBase &Gsym, uint64_t Addr, raw_ostream &OS) {
   if (UseMergedFunctions) {
     if (auto Results = Gsym.lookupAll(Addr)) {
       // If we have filters, count matching results first
@@ -720,7 +720,7 @@ int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
 
     std::string InputLine;
     std::string CurrentGSYMPath;
-    std::unique_ptr<GsymReader> CurrentGsym;
+    std::unique_ptr<GsymReaderBase> CurrentGsym;
 
     while (std::getline(std::cin, InputLine)) {
       // Strip newline characters.

@@ -31,25 +31,25 @@ namespace gsym {
 class FileWriter;
 class OutputAggregator;
 
-/// GsymCreator is used to emit GSYM data to a stand alone file or section
+/// GsymCreatorBase is used to emit GSYM data to a stand alone file or section
 /// within a file.
 ///
-/// The GsymCreator is designed to be used in 3 stages:
+/// The GsymCreatorBase is designed to be used in 3 stages:
 /// - Create FunctionInfo objects and add them
-/// - Finalize the GsymCreator object
+/// - Finalize the GsymCreatorBase object
 /// - Save to file or section
 ///
 /// The first stage involves creating FunctionInfo objects from another source
 /// of information like compiler debug info metadata, DWARF or Breakpad files.
 /// Any strings in the FunctionInfo or contained information, like InlineInfo
 /// or LineTable objects, should get the string table offsets by calling
-/// GsymCreator::insertString(...). Any file indexes that are needed should be
-/// obtained by calling GsymCreator::insertFile(...). All of the function calls
-/// in GsymCreator are thread safe. This allows multiple threads to create and
+/// GsymCreatorBase::insertString(...). Any file indexes that are needed should be
+/// obtained by calling GsymCreatorBase::insertFile(...). All of the function calls
+/// in GsymCreatorBase are thread safe. This allows multiple threads to create and
 /// add FunctionInfo objects while parsing debug information.
 ///
 /// Once all of the FunctionInfo objects have been added, the
-/// GsymCreator::finalize(...) must be called prior to saving. This function
+/// GsymCreatorBase::finalize(...) must be called prior to saving. This function
 /// will sort the FunctionInfo objects, finalize the string table, and do any
 /// other passes on the information needed to prepare the information to be
 /// saved.
@@ -137,9 +137,9 @@ class OutputAggregator;
 /// This interface defines the common API used by DwarfTransformer,
 /// ObjectFileTransformer, and other consumers that need to populate
 /// a GSYM file regardless of the output format version.
-class GsymCreator {
+class GsymCreatorBase {
 public:
-  virtual ~GsymCreator() = default;
+  virtual ~GsymCreatorBase() = default;
 
   virtual uint32_t insertString(StringRef S, bool Copy = true) = 0;
   virtual StringRef getString(uint32_t Offset) = 0;
@@ -169,7 +169,7 @@ public:
   virtual bool isQuiet() const = 0;
 };
 
-class GsymCreatorV1 : public GsymCreator {
+class GsymCreator : public GsymCreatorBase {
   // Private member variables require Mutex protections
   mutable std::mutex Mutex;
   std::vector<FunctionInfo> Funcs;
@@ -253,7 +253,7 @@ class GsymCreatorV1 : public GsymCreator {
   /// \returns The number of bytes it will take to encode the function info in
   /// this GsymCreator. This helps calculate the size of the current GSYM
   /// segment file.
-  uint64_t copyFunctionInfo(const GsymCreatorV1 &SrcGC, size_t FuncInfoIdx);
+  uint64_t copyFunctionInfo(const GsymCreator &SrcGC, size_t FuncInfoIdx);
 
   /// Copy a string from \a SrcGC into this object.
   ///
@@ -265,7 +265,7 @@ class GsymCreatorV1 : public GsymCreator {
   /// \param SrcGC The source gsym creator to copy from.
   /// \param StrOff The string table offset from \a SrcGC to copy.
   /// \returns The new string table offset of the string within this object.
-  uint32_t copyString(const GsymCreatorV1 &SrcGC, uint32_t StrOff);
+  uint32_t copyString(const GsymCreator &SrcGC, uint32_t StrOff);
 
   /// Copy a file from \a SrcGC into this object.
   ///
@@ -281,7 +281,7 @@ class GsymCreatorV1 : public GsymCreator {
   /// file index of zero will always return zero as the zero is a reserved file
   /// index that means no file.
   /// \returns The new file index of the file within this object.
-  uint32_t copyFile(const GsymCreatorV1 &SrcGC, uint32_t FileIdx);
+  uint32_t copyFile(const GsymCreator &SrcGC, uint32_t FileIdx);
 
   /// Inserts a FileEntry into the file table.
   ///
@@ -301,7 +301,7 @@ class GsymCreatorV1 : public GsymCreator {
   /// \param II The inline info that contains file indexes and string offsets
   /// that come from \a SrcGC. The entries will be updated by coping any files
   /// and strings over into this object.
-  void fixupInlineInfo(const GsymCreatorV1 &SrcGC, InlineInfo &II);
+  void fixupInlineInfo(const GsymCreator &SrcGC, InlineInfo &II);
 
   /// Save this GSYM file into segments that are roughly \a SegmentSize in size.
   ///
@@ -320,7 +320,7 @@ class GsymCreatorV1 : public GsymCreator {
   llvm::Error saveSegments(StringRef Path, llvm::endianness ByteOrder,
                            uint64_t SegmentSize) const;
 
-  /// Let this creator know that this is a segment of another GsymCreatorV1.
+  /// Let this creator know that this is a segment of another GsymCreator.
   ///
   /// When we have a segment, we know that function infos will be added in
   /// ascending address range order without having to be finalized. We also
@@ -330,7 +330,7 @@ class GsymCreatorV1 : public GsymCreator {
   }
 
 public:
-  LLVM_ABI GsymCreatorV1(bool Quiet = false);
+  LLVM_ABI GsymCreator(bool Quiet = false);
 
   /// Save a GSYM file to a stand alone file.
   ///
@@ -525,7 +525,7 @@ public:
   /// \returns An expected unique pointer to a GsymCreator or an error. The
   /// returned unique pointer can be NULL if there are no more functions to
   /// encode.
-  LLVM_ABI llvm::Expected<std::unique_ptr<GsymCreatorV1>>
+  LLVM_ABI llvm::Expected<std::unique_ptr<GsymCreator>>
   createSegment(uint64_t SegmentSize, size_t &FuncIdx) const;
 };
 

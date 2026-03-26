@@ -98,7 +98,7 @@ class OutputAggregator;
 ///
 /// - UUID: Raw UUID bytes of the original executable. Only present if a UUID
 ///   was set. No alignment requirement.
-class GsymCreatorV2 : public GsymCreator {
+class GsymCreatorV2 : public GsymCreatorBase {
   // Private member variables require Mutex protections
   mutable std::mutex Mutex;
   std::vector<FunctionInfo> Funcs;

@@ -68,7 +68,7 @@ static std::vector<uint8_t> getUUID(const object::ObjectFile &Obj) {
 
 llvm::Error ObjectFileTransformer::convert(const object::ObjectFile &Obj,
                                            OutputAggregator &Out,
-                                           GsymCreator &Gsym) {
+                                           GsymCreatorBase &Gsym) {
   using namespace llvm::object;
 
   const bool IsMachO = isa<MachOObjectFile>(&Obj);

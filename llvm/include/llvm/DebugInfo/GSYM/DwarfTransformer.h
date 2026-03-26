@@ -23,11 +23,11 @@ namespace gsym {
 
 struct CUInfo;
 struct FunctionInfo;
-class GsymCreator;
+class GsymCreatorBase;
 class OutputAggregator;
 
 /// A class that transforms the DWARF in a DWARFContext into GSYM information
-/// by populating the GsymCreator object that it is constructed with. This
+/// by populating the GsymCreatorBase object that it is constructed with. This
 /// class supports converting all DW_TAG_subprogram DIEs into
 /// gsym::FunctionInfo objects that includes line table information and inline
 /// function information. Creating a separate class to transform this data
@@ -48,12 +48,12 @@ public:
   /// executable format). Apple has some compile unit attributes that look like
   /// split DWARF, but they aren't and they can cause warnins to be emitted
   /// about missing DWO files.
-  DwarfTransformer(DWARFContext &D, GsymCreator &G, bool LDCS = false,
+  DwarfTransformer(DWARFContext &D, GsymCreatorBase &G, bool LDCS = false,
                    bool MachO = false)
       : DICtx(D), Gsym(G), LoadDwarfCallSites(LDCS), IsMachO(MachO) {}
 
   /// Extract the DWARF from the supplied object file and convert it into the
-  /// Gsym format in the GsymCreator object that is passed in. Returns an
+  /// Gsym format in the GsymCreatorBase object that is passed in. Returns an
   /// error if something fatal is encountered.
   ///
   /// \param NumThreads The number of threads that the conversion process can
@@ -70,13 +70,13 @@ public:
 
 private:
 
-  /// Parse the DWARF in the object file and convert it into the GsymCreator.
+  /// Parse the DWARF in the object file and convert it into the GsymCreatorBase.
   Error parse();
 
   /// Handle any DIE (debug info entry) from the DWARF.
   ///
   /// This function will find all DW_TAG_subprogram DIEs that convert them into
-  /// GSYM FuntionInfo objects and add them to the GsymCreator supplied during
+  /// GSYM FuntionInfo objects and add them to the GsymCreatorBase supplied during
   /// construction. The DIE and all its children will be recursively parsed
   /// with calls to this function.
   ///
@@ -101,7 +101,7 @@ private:
   void parseCallSiteInfoFromDwarf(CUInfo &CUI, DWARFDie Die, FunctionInfo &FI);
 
   DWARFContext &DICtx;
-  GsymCreator &Gsym;
+  GsymCreatorBase &Gsym;
   bool LoadDwarfCallSites;
   bool IsMachO;
 

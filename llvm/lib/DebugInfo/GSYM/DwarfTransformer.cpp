@@ -64,7 +64,7 @@ struct llvm::gsym::CUInfo {
   /// the first client that asks for a compile unit file index will end up
   /// doing the conversion, and subsequent clients will get the cached GSYM
   /// index.
-  std::optional<uint32_t> DWARFToGSYMFileIndex(GsymCreator &Gsym,
+  std::optional<uint32_t> DWARFToGSYMFileIndex(GsymCreatorBase &Gsym,
                                                uint32_t DwarfFileIdx) {
     if (!LineTable || DwarfFileIdx >= FileCache.size())
       return std::nullopt;
@@ -121,15 +121,15 @@ static DWARFDie GetParentDeclContextDIE(DWARFDie &Die) {
   return DWARFDie();
 }
 
-/// Get the GsymCreator string table offset for the qualified name for the
+/// Get the GsymCreatorBase string table offset for the qualified name for the
 /// DIE passed in. This function will avoid making copies of any strings in
-/// the GsymCreator when possible. We don't need to copy a string when the
+/// the GsymCreatorBase when possible. We don't need to copy a string when the
 /// string comes from our .debug_str section or is an inlined string in the
 /// .debug_info. If we create a qualified name string in this function by
 /// combining multiple strings in the DWARF string table or info, we will make
 /// a copy of the string when we add it to the string table.
 static std::optional<uint32_t>
-getQualifiedNameIndex(DWARFDie &Die, uint64_t Language, GsymCreator &Gsym) {
+getQualifiedNameIndex(DWARFDie &Die, uint64_t Language, GsymCreatorBase &Gsym) {
   // If the dwarf has mangled name, use mangled name
   if (auto LinkageName = Die.getLinkageName()) {
     // We have seen cases were linkage name is actually empty.
@@ -214,7 +214,7 @@ ConvertDWARFRanges(const DWARFAddressRangesVector &DwarfRanges) {
   return Ranges;
 }
 
-static void parseInlineInfo(GsymCreator &Gsym, OutputAggregator &Out,
+static void parseInlineInfo(GsymCreatorBase &Gsym, OutputAggregator &Out,
                             CUInfo &CUI, DWARFDie Die, uint32_t Depth,
                             FunctionInfo &FI, InlineInfo &Parent,
                             const AddressRanges &AllParentRanges,
@@ -308,7 +308,7 @@ static void parseInlineInfo(GsymCreator &Gsym, OutputAggregator &Out,
 }
 
 static void convertFunctionLineTable(OutputAggregator &Out, CUInfo &CUI,
-                                     DWARFDie Die, GsymCreator &Gsym,
+                                     DWARFDie Die, GsymCreatorBase &Gsym,
                                      FunctionInfo &FI) {
   std::vector<uint32_t> RowVector;
   const uint64_t StartAddress = FI.startAddress();
@@ -735,7 +735,7 @@ llvm::Error DwarfTransformer::verify(StringRef GsymPath,
                                      OutputAggregator &Out) {
   Out << "Verifying GSYM file \"" << GsymPath << "\":\n";
 
-  auto GsymOrErr = GsymReader::openFile(GsymPath);
+  auto GsymOrErr = GsymReaderBase::openFile(GsymPath);
   if (!GsymOrErr)
     return GsymOrErr.takeError();
   auto &Gsym = *GsymOrErr;
