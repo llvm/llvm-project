@@ -2412,7 +2412,8 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
   // Only default to -mincremental-linker-compatible if we think we are
   // targeting the MSVC linker.
   bool DefaultIncrementalLinkerCompatible =
-      C.getDefaultToolChain().getTriple().isWindowsMSVCEnvironment();
+      C.getDefaultToolChain().getTriple().isWindowsMSVCEnvironment() ||
+      C.getDefaultToolChain().getTriple().isUEFI();
   if (Args.hasFlag(options::OPT_mincremental_linker_compatible,
                    options::OPT_mno_incremental_linker_compatible,
                    DefaultIncrementalLinkerCompatible))

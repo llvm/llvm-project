@@ -15,3 +15,9 @@
 
 // RUN: %clang '-###' %s -c -o tmp.o -target i686-pc-win32 -integrated-as 2>&1 | FileCheck %s --check-prefix=TEST6
 // TEST6: "-cc1" {{.*}} "-mincremental-linker-compatible"
+
+// RUN: %clang '-###' %s -c -o tmp.o -target x86_64-uefi -integrated-as -mincremental-linker-compatible 2>&1 | FileCheck %s --check-prefix=TEST7
+// TEST7: "-cc1" {{.*}} "-mincremental-linker-compatible"
+
+// RUN: %clang '-###' %s -c -o tmp.o -target x86_64-uefi -integrated-as -mno-incremental-linker-compatible 2>&1 | FileCheck %s --check-prefix=TEST8
+// TEST8-NOT: "-cc1" {{.*}} "-mincremental-linker-compatible"
