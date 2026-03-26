@@ -139,7 +139,7 @@ static void TestV2HeaderAndGlobalData(llvm::endianness ByteOrder,
   EXPECT_EQ(Hdr.AddrOffSize, ExpectedAddrOffSize);
   EXPECT_EQ(Hdr.AddrInfoOffSize, 4u); // Small file, should be 4 bytes.
   EXPECT_EQ(Hdr.StrpSize, 4u);        // Small string table, should be 4 bytes.
-  EXPECT_EQ(Hdr.Padding2, 0u);
+  EXPECT_EQ(Hdr.StrTableEncoding, 0u);
 
   // Decode GlobalData entries starting at offset 24 (after fixed header).
   uint64_t Offset = 24;
@@ -452,7 +452,7 @@ static SmallString<512> buildMinimalV2Binary(uint64_t BaseAddr,
   FW.writeU8(AddrOffSize);           // AddrOffSize
   FW.writeU8(AddrInfoOffSize);       // AddrInfoOffSize
   FW.writeU8(4);                     // StrpSize
-  FW.writeU8(0);                     // Padding2
+  FW.writeU8(0);                     // StrTableEncoding
 
   // GlobalData entries.
   auto writeGD = [&](GlobalInfoType Type, uint64_t Off, uint64_t Size) {

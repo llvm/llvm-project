@@ -25,6 +25,12 @@ class FileWriter;
 
 constexpr uint32_t GSYM_VERSION_2 = 2;
 
+/// Encoding format for the string table.
+enum class StrTableEncodingType : uint8_t {
+  /// A list of NULL-terminated strings (same as V1).
+  Default = 0,
+};
+
 /// The GSYM V2 header.
 ///
 /// The GSYM V2 header is found at the start of a stand alone GSYM file, or as
@@ -90,8 +96,8 @@ struct HeaderV2 {
   /// The size in bytes of each string table reference (strp) in FunctionInfo
   /// and other data structures within GlobalData.
   uint8_t StrpSize;
-  /// Padding for alignment. Must be set to zero.
-  uint8_t Padding2;
+  /// String table encoding. Allows for future encoding for string table.
+  uint8_t StrTableEncoding;
   /// The starting point of the GlobalData array. This is a list of GlobalData
   /// entries, each describing a section in the GSYM file (e.g. AddrOffsets,
   /// FunctionInfo, UUID, StringTable). The array is terminated by an entry
@@ -110,7 +116,8 @@ struct HeaderV2 {
   ///   - check that the address offset size is supported
   ///   - check that the address info offset size is supported
   ///   - check that the strp size is supported
-  ///   - check that padding fields are zero
+  ///   - check that the padding field is zero
+  ///   - check that the string table encoding is supported
   ///
   /// \returns An error if anything is wrong in the header, or Error::success()
   /// if there are no errors.

@@ -69,9 +69,14 @@ llvm::Error HeaderV2::checkForError() const {
   if (Padding != 0)
     return createStringError(std::errc::invalid_argument,
                              "padding must be zero, got %u", Padding);
-  if (Padding2 != 0)
+  switch (static_cast<StrTableEncodingType>(StrTableEncoding)) {
+  case StrTableEncodingType::Default:
+    break;
+  default:
     return createStringError(std::errc::invalid_argument,
-                             "padding2 must be zero, got %u", Padding2);
+                             "unsupported string table encoding %u",
+                             StrTableEncoding);
+  }
   return Error::success();
 }
 
@@ -80,7 +85,7 @@ llvm::Expected<HeaderV2> HeaderV2::decode(DataExtractor &Data) {
   // The fixed portion of the HeaderV2 is 24 bytes:
   //   Magic(4) + Version(2) + Padding(2) + BaseAddress(8) +
   //   NumAddresses(4) + AddrOffSize(1) + AddrInfoOffSize(1) +
-  //   StrpSize(1) + Padding2(1)
+  //   StrpSize(1) + StrTableEncoding(1) = 24 bytes
   constexpr uint64_t FixedHeaderSize = 24;
   if (!Data.isValidOffsetForDataOfSize(Offset, FixedHeaderSize))
     return createStringError(std::errc::invalid_argument,
@@ -94,7 +99,7 @@ llvm::Expected<HeaderV2> HeaderV2::decode(DataExtractor &Data) {
   H.AddrOffSize = Data.getU8(&Offset);
   H.AddrInfoOffSize = Data.getU8(&Offset);
   H.StrpSize = Data.getU8(&Offset);
-  H.Padding2 = Data.getU8(&Offset);
+  H.StrTableEncoding = Data.getU8(&Offset);
   if (llvm::Error Err = H.checkForError())
     return std::move(Err);
   return H;
@@ -111,7 +116,7 @@ llvm::Error HeaderV2::encode(FileWriter &O) const {
   O.writeU8(AddrOffSize);
   O.writeU8(AddrInfoOffSize);
   O.writeU8(StrpSize);
-  O.writeU8(Padding2);
+  O.writeU8(StrTableEncoding);
   return Error::success();
 }
 
@@ -121,5 +126,5 @@ bool llvm::gsym::operator==(const HeaderV2 &LHS, const HeaderV2 &RHS) {
          LHS.NumAddresses == RHS.NumAddresses &&
          LHS.AddrOffSize == RHS.AddrOffSize &&
          LHS.AddrInfoOffSize == RHS.AddrInfoOffSize &&
-         LHS.StrpSize == RHS.StrpSize && LHS.Padding2 == RHS.Padding2;
+         LHS.StrpSize == RHS.StrpSize && LHS.StrTableEncoding == RHS.StrTableEncoding;
 }
