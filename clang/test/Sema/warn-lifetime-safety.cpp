@@ -2310,6 +2310,15 @@ S from_ref() {
   return s;
 }
 
+using SAlias = S;
+SAlias getSAlias(const std::string &s [[clang::lifetimebound]]);
+
+void from_typedef_return() {
+  SAlias s = getSAlias(std::string("temp")); // expected-warning {{object whose reference is captured does not live long enough}} \
+                                             // expected-note {{destroyed here}}
+  use(s);                                    // expected-note {{later used here}}
+}
+
 struct SWithOriginPropagatingCopy {
   SWithOriginPropagatingCopy();
   SWithOriginPropagatingCopy(const std::string &s [[clang::lifetimebound]]) : data(s) {}

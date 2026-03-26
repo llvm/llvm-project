@@ -102,8 +102,7 @@ private:
 bool OriginManager::hasOrigins(QualType QT) const {
   if (QT->isPointerOrReferenceType() || isGslPointerType(QT))
     return true;
-  if (LifetimeboundOriginTypes.contains(
-          QT->getCanonicalTypeUnqualified().getTypePtr()))
+  if (LifetimeboundOriginTypes.contains(QT.getCanonicalType().getTypePtr()))
     return true;
   const auto *RD = QT->getAsCXXRecordDecl();
   if (!RD)
@@ -311,8 +310,7 @@ void OriginManager::registerLifetimeboundOriginType(QualType QT) {
   if (!QT->getAsCXXRecordDecl() || hasOrigins(QT))
     return;
 
-  LifetimeboundOriginTypes.insert(
-      QT->getCanonicalTypeUnqualified().getTypePtr());
+  LifetimeboundOriginTypes.insert(QT.getCanonicalType().getTypePtr());
 }
 
 } // namespace clang::lifetimes::internal
