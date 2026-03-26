@@ -816,11 +816,20 @@ enum CXErrorCode clang_experimental_DependencyScanner_generateReproducer(
                              << EC.message();
     SmallString<128> Path(*Opts.ReproducerLocation);
     llvm::sys::path::append(Path, "reproducer");
-    const char *UniqueSuffix = Opts.UseUniqueReproducerName ? "-%%%%%%" : "";
-    if (auto EC = llvm::sys::fs::createUniqueFile(Path + UniqueSuffix + ".sh",
-                                                  ScriptFD, ReproScriptPath))
-      return ReportFailure() << "failed to create a reproducer script file\n"
-                             << EC.message();
+    if (Opts.UseUniqueReproducerName) {
+      if (auto EC = llvm::sys::fs::createUniqueFile(Path + "-%%%%%%.sh",
+                                                    ScriptFD, ReproScriptPath))
+        return ReportFailure() << "failed to create a reproducer script file\n"
+                              << EC.message();
+    } else {
+      llvm::sys::path::replace_extension(Path, "sh");
+      if (auto EC = llvm::sys::fs::openFileForReadWrite(Path, ScriptFD,
+                                         llvm::sys::fs::CD_OpenAlways, llvm::sys::fs::OF_None)) {
+        return ReportFailure() << "failed to create a reproducer script file\n"
+                               << EC.message();
+      }
+      ReproScriptPath = Path;
+    }
   } else {
     if (auto EC = llvm::sys::fs::createTemporaryFile(
             "reproducer", "sh", ScriptFD, ReproScriptPath)) {
