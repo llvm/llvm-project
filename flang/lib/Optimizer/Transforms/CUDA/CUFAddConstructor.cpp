@@ -209,8 +209,8 @@ struct CUFAddConstructor
         mlir::func::FuncOp initFunc =
             fir::runtime::getRuntimeFunc<mkRTKey(CUFInitModule)>(loc, builder);
         auto initFTy = initFunc.getFunctionType();
-        llvm::SmallVector<mlir::Value> initArgs{
-            fir::runtime::createArguments(builder, loc, initFTy, registeredMod)};
+        llvm::SmallVector<mlir::Value> initArgs{fir::runtime::createArguments(
+            builder, loc, initFTy, registeredMod)};
         fir::CallOp::create(builder, loc, initFunc, initArgs);
       }
     }
