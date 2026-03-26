@@ -345,6 +345,8 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
 
     ArrayRef<int> Mask = Shuffle->getShuffleMask();
     if (Mask.size() * Factor > NumLoadElements) {
+      if (!ShuffleVectorInst::isSingleSourceMask(Mask, NumLoadElements))
+        return false;
       for (unsigned i = 0; i < Mask.size(); i++) {
         if (static_cast<unsigned>(Mask[i]) >= NumLoadElements)
           return false;
@@ -362,6 +364,8 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
 
     ArrayRef<int> Mask = Shuffle->getShuffleMask();
     if (Mask.size() * Factor > NumLoadElements) {
+      if (!ShuffleVectorInst::isSingleSourceMask(Mask, NumLoadElements))
+        return false;
       for (unsigned i = 0; i < Mask.size(); i++) {
         if (static_cast<unsigned>(Mask[i]) >= NumLoadElements)
           return false;
@@ -577,10 +581,14 @@ static void getGapMask(const Constant &MaskConst, unsigned Factor,
   for (unsigned F = 0U; F < Factor; ++F) {
     bool AllZero = true;
     for (unsigned Idx = 0U; Idx < LeafMaskLen; ++Idx) {
-      Constant *C = MaskConst.getAggregateElement(F + Idx * Factor);
-      if (C && !C->isNullValue()) {
-        AllZero = false;
-        break;
+      unsigned NumMaskElements =
+          cast<FixedVectorType>(MaskConst.getType())->getNumElements();
+      if (F + Idx * Factor < NumMaskElements) {
+        Constant *C = MaskConst.getAggregateElement(F + Idx * Factor);
+        if (!C->isNullValue()) {
+          AllZero = false;
+          break;
+        }
       }
     }
     // All mask bits on this field are zero, skipping it.
