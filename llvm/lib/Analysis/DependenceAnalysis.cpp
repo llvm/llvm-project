@@ -1439,24 +1439,25 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
     LLVM_DEBUG(dbgs() << "\t    MLRange = " << MLRange << "\n");
     LLVM_DEBUG(dbgs() << "\t    DeltaRange = " << DeltaRange << "\n");
 
-    if (DeltaRange.intersectWith(MLRange).isEmptySet() &&
-        DeltaRange.getSignedMin().sgt(MLRange.getSignedMax())) {
-      // Delta too big, no dependence
-      ++WeakCrossingSIVindependence;
-      ++WeakCrossingSIVsuccesses;
-      return true;
-    }
-    if (DeltaRange.getSignedMin().eq(MLRange.getSignedMax())) {
-      // i = i' = UB
-      Result.DV[Level].Direction &= ~Dependence::DVEntry::LT;
-      Result.DV[Level].Direction &= ~Dependence::DVEntry::GT;
-      ++WeakCrossingSIVsuccesses;
-      if (!Result.DV[Level].Direction) {
+    if (!MLRange.isFullSet()) {
+      if (APDelta.sgt(MLRange.getSignedMax())) {
+        // Delta too big, no dependence
         ++WeakCrossingSIVindependence;
+        ++WeakCrossingSIVsuccesses;
         return true;
       }
-      Result.DV[Level].Distance = SE->getZero(Delta->getType());
-      return false;
+      if (APDelta.eq(MLRange.getSignedMax())) {
+        // i = i' = UB
+        Result.DV[Level].Direction &= ~Dependence::DVEntry::LT;
+        Result.DV[Level].Direction &= ~Dependence::DVEntry::GT;
+        ++WeakCrossingSIVsuccesses;
+        if (!Result.DV[Level].Direction) {
+          ++WeakCrossingSIVindependence;
+          return true;
+        }
+        Result.DV[Level].Distance = SE->getZero(Delta->getType());
+        return false;
+      }
     }
   }
 
