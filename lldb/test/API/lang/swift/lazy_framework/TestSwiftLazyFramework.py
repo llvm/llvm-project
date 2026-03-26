@@ -12,7 +12,6 @@ class TestSwiftLazyFramework(lldbtest.TestBase):
 
     @swiftTest
     @skipIf(oslist=no_match(["macosx"]))
-    @skipIf(bugnumber="rdar://171278439") # randomly fails to dlopen in CI
     # FIXME: Without the ClangImporter, transitive module dependencies can't be
     # fully resolved, so collectLinkLibraries() misses autolinked frameworks.
     # This causes DoLoadImage() to allocate memory while the process is still
