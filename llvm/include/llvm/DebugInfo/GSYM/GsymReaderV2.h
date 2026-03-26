@@ -106,7 +106,8 @@ public:
   /// \returns An expected FunctionInfo that contains the function info object
   /// or an error object that indicates reason for failing to lookup the
   /// address.
-  LLVM_ABI llvm::Expected<FunctionInfo> getFunctionInfo(uint64_t Addr) const;
+  LLVM_ABI llvm::Expected<FunctionInfo>
+  getFunctionInfo(uint64_t Addr) const override;
 
   /// Get the full function info given an address index.
   ///
@@ -116,7 +117,7 @@ public:
   /// or an error object that indicates reason for failing get the function
   /// info object.
   LLVM_ABI llvm::Expected<FunctionInfo>
-  getFunctionInfoAtIndex(uint64_t AddrIdx) const;
+  getFunctionInfoAtIndex(uint64_t AddrIdx) const override;
 
   /// Lookup an address in the a GSYM.
   ///
@@ -140,7 +141,7 @@ public:
   /// for failing to lookup the address.
   LLVM_ABI llvm::Expected<LookupResult>
   lookup(uint64_t Addr,
-         std::optional<DataExtractor> *MergedFuncsData = nullptr) const;
+         std::optional<DataExtractor> *MergedFuncsData = nullptr) const override;
 
   /// Lookup all merged functions for a given address.
   ///
@@ -153,7 +154,7 @@ public:
   /// \returns A vector of LookupResult objects, where the first element is the
   /// primary result, followed by results for any merged functions
   LLVM_ABI llvm::Expected<std::vector<LookupResult>>
-  lookupAll(uint64_t Addr) const;
+  lookupAll(uint64_t Addr) const override;
 
   /// Get a string from the string table.
   ///
@@ -179,7 +180,7 @@ public:
   /// Dump the entire Gsym data contained in this object.
   ///
   /// \param  OS The output stream to dump to.
-  LLVM_ABI void dump(raw_ostream &OS);
+  LLVM_ABI void dump(raw_ostream &OS) override;
 
   /// Dump a FunctionInfo object.
   ///
@@ -193,7 +194,7 @@ public:
   /// \param Indent The indentation as number of spaces. Used when dumping as an
   /// item within MergedFunctionsInfo.
   LLVM_ABI void dump(raw_ostream &OS, const FunctionInfo &FI,
-                     uint32_t Indent = 0);
+                     uint32_t Indent = 0) override;
 
   /// Dump a MergedFunctionsInfo object.
   ///
@@ -203,7 +204,7 @@ public:
   /// \param  OS The output stream to dump to.
   ///
   /// \param MFI The object to dump.
-  LLVM_ABI void dump(raw_ostream &OS, const MergedFunctionsInfo &MFI);
+  LLVM_ABI void dump(raw_ostream &OS, const MergedFunctionsInfo &MFI) override;
 
   /// Dump a CallSiteInfo object.
   ///
@@ -213,7 +214,7 @@ public:
   /// \param OS The output stream to dump to.
   ///
   /// \param CSI The CallSiteInfo object to dump.
-  LLVM_ABI void dump(raw_ostream &OS, const CallSiteInfo &CSI);
+  LLVM_ABI void dump(raw_ostream &OS, const CallSiteInfo &CSI) override;
 
   /// Dump a CallSiteInfoCollection object.
   ///
@@ -227,7 +228,7 @@ public:
   /// \param Indent The indentation as number of spaces. Used when dumping as an
   /// item from within MergedFunctionsInfo.
   LLVM_ABI void dump(raw_ostream &OS, const CallSiteInfoCollection &CSIC,
-                     uint32_t Indent = 0);
+                     uint32_t Indent = 0) override;
 
   /// Dump a LineTable object.
   ///
@@ -241,7 +242,8 @@ public:
   ///
   /// \param Indent The indentation as number of spaces. Used when dumping as an
   /// item from within MergedFunctionsInfo.
-  LLVM_ABI void dump(raw_ostream &OS, const LineTable &LT, uint32_t Indent = 0);
+  LLVM_ABI void dump(raw_ostream &OS, const LineTable &LT,
+                     uint32_t Indent = 0) override;
 
   /// Dump a InlineInfo object.
   ///
@@ -255,7 +257,7 @@ public:
   /// \param Indent The indentation as number of spaces. Used for recurive
   /// dumping.
   LLVM_ABI void dump(raw_ostream &OS, const InlineInfo &II,
-                     uint32_t Indent = 0);
+                     uint32_t Indent = 0) override;
 
   /// Dump a FileEntry object.
   ///
@@ -265,10 +267,10 @@ public:
   /// \param  OS The output stream to dump to.
   ///
   /// \param FE The object to dump.
-  LLVM_ABI void dump(raw_ostream &OS, std::optional<FileEntry> FE);
+  LLVM_ABI void dump(raw_ostream &OS, std::optional<FileEntry> FE) override;
 
   /// Get the number of addresses in this Gsym file.
-  uint32_t getNumAddresses() const {
+  uint32_t getNumAddresses() const override {
     return Hdr->NumAddresses;
   }
 
@@ -279,7 +281,7 @@ public:
   /// \param Index A index into the address table.
   /// \returns A resolved virtual address for adddress in the address table
   /// or std::nullopt if Index is out of bounds.
-  LLVM_ABI std::optional<uint64_t> getAddress(size_t Index) const;
+  LLVM_ABI std::optional<uint64_t> getAddress(size_t Index) const override;
 
 protected:
 
