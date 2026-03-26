@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <__config>
+#include <locale>
 #include <text_encoding>
 
 #if defined(_LIBCPP_WIN32API)
@@ -217,7 +218,7 @@ _LIBCPP_HIDDEN text_encoding static __get_win32_acp(unsigned int __codepage) {
   case 65001:
     return std::text_encoding::id::UTF8;
   default:
-    return std::text_encoding::id::other;
+    return std::text_encoding::id::unknown;
   }
 }
 
@@ -304,4 +305,9 @@ _LIBCPP_AVAILABILITY_TE_ENVIRONMENT _LIBCPP_EXPORTED_FROM_ABI std::text_encoding
   return __get_env_encoding();
 }
 
+std::text_encoding locale::encoding() const {
+  std::string __name = name();
+
+  return __get_locale_encoding(__name.c_str());
+}
 _LIBCPP_END_NAMESPACE_STD

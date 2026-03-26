@@ -11,43 +11,45 @@
 // REQUIRES: std-at-least-c++26
 // REQUIRES: locale.en_US.UTF-8
 // UNSUPPORTED: no-localization
-// UNSUPPORTED: android
 
 // class locale
 
-// text_encoding encoding() const
+// text_encoding locale::encoding() const
 
 #include <cassert>
 #include <locale>
 #include <text_encoding>
 
-#include "test_macros.h"
 #include "platform_support.h"
 
 using id = std::text_encoding::id;
 
 int main(int, char**) {
-// FIXME: enable once locale::encoding() is implemented
-#if false
   {
-    // 1. Default locale returns a text_encoding representing "ASCII"
-    std::locale loc;
+    // 1. Default locale returns a text_encoding representing "ASCII", or "UTF-8 on Android.
+    const std::locale loc{};
 
-    auto te        = loc.encoding();
-    auto classicTE = std::text_encoding(id::ASCII);
+    std::text_encoding te = loc.encoding();
+
+#if !defined(__ANDROID__)
+    std::text_encoding classic_te = std::text_encoding(id::ASCII);
     assert(te == id::ASCII);
-    assert(te == classicTE);
+    assert(te == classic_te);
+#else
+    auto utf8_te = std::text_encoding(id::UTF8);
+    assert(te == id::UTF8);
+    assert(te == utf8_te);
+#endif
   }
 
   {
     // 2. Locale built with en_US.UTF-8 returns text_encoding representing "UTF-8"
-    std::locale utf8Locale(LOCALE_en_US_UTF_8);
+    const std::locale utf8_locale(LOCALE_en_US_UTF_8);
 
-    auto te     = utf8Locale.encoding();
-    auto utf8TE = std::text_encoding(id::UTF8);
+    std::text_encoding te      = utf8_locale.encoding();
+    std::text_encoding utf8_te = std::text_encoding(id::UTF8);
     assert(te == id::UTF8);
-    assert(te == utf8TE);
+    assert(te == utf8_te);
   }
-#endif
   return 0;
 }

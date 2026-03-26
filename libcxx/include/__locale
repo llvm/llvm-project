@@ -54,6 +54,10 @@ _LIBCPP_HIDE_FROM_ABI bool has_facet(const locale&) _NOEXCEPT;
 template <class _Facet>
 _LIBCPP_HIDE_FROM_ABI const _Facet& use_facet(const locale&);
 
+#  if _LIBCPP_STD_VER >= 26
+struct text_encoding;
+#  endif
+
 class _LIBCPP_EXPORTED_FROM_ABI locale {
 public:
   // locale is essentially a shared_ptr that doesn't support weak_ptrs and never got a move constructor,
@@ -107,6 +111,9 @@ public:
     return std::use_facet<std::collate<_CharT> >(*this).compare(
                __x.data(), __x.data() + __x.size(), __y.data(), __y.data() + __y.size()) < 0;
   }
+#  if _LIBCPP_STD_VER >= 26
+  _LIBCPP_EXPORTED_FROM_ABI std::text_encoding encoding() const;
+#  endif
 
   // global locale objects:
   static locale global(const locale&);
