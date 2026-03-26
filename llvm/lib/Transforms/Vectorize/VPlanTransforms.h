@@ -242,10 +242,19 @@ struct VPlanTransforms {
                                  unsigned BestUF,
                                  PredicatedScalarEvolution &PSE);
 
+  /// Try to simplify VPInstruction::ExplicitVectorLength recipes when the AVL
+  /// is known to be <= VF, replacing them with the AVL directly.
+  static bool simplifyKnownEVL(VPlan &Plan, ElementCount VF,
+                               PredicatedScalarEvolution &PSE);
+
   /// Apply VPlan-to-VPlan optimizations to \p Plan, including induction recipe
   /// optimizations, dead recipe removal, replicate region optimizations and
   /// block merging.
   LLVM_ABI_FOR_TEST static void optimize(VPlan &Plan);
+
+  /// Remove redundant VPBasicBlocks by merging them into their single
+  /// predecessor if the latter has a single successor.
+  static bool mergeBlocksIntoPredecessors(VPlan &Plan);
 
   /// Wrap predicated VPReplicateRecipes with a mask operand in an if-then
   /// region block and remove the mask operand. Optimize the created regions by
@@ -363,8 +372,9 @@ struct VPlanTransforms {
   static void simplifyRecipes(VPlan &Plan);
 
   /// Remove BranchOnCond recipes with true or false conditions together with
-  /// removing dead edges to their successors.
-  static void removeBranchOnConst(VPlan &Plan);
+  /// removing dead edges to their successors. If \p OnlyLatches is true, only
+  /// process loop latches.
+  static void removeBranchOnConst(VPlan &Plan, bool OnlyLatches = false);
 
   /// Perform common-subexpression-elimination on \p Plan.
   static void cse(VPlan &Plan);

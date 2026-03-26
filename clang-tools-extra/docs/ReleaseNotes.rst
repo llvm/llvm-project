@@ -204,6 +204,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/casting-through-void>` check by running only on
   C++ files because suggested ``reinterpret_cast`` is not available in pure C.
 
+- Improved :doc:`bugprone-derived-method-shadowing-base-method
+  <clang-tidy/checks/bugprone/derived-method-shadowing-base-method>` check by 
+  correctly ignoring function templates.
+
 - Improved :doc:`bugprone-exception-escape
   <clang-tidy/checks/bugprone/exception-escape>` check by adding
   `TreatFunctionsWithoutSpecificationAsThrowing` option to support reporting
@@ -219,10 +223,15 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/macro-parentheses>` check by printing the macro
   definition in the warning message if the macro is defined on command line.
 
+- Improved :doc:`bugprone-pointer-arithmetic-on-polymorphic-object
+  <clang-tidy/checks/bugprone/pointer-arithmetic-on-polymorphic-object>` check
+  by fixing a false positive when ``operator[]`` is used in a dependent context.
+
 - Improved :doc:`bugprone-std-namespace-modification
   <clang-tidy/checks/bugprone/std-namespace-modification>` check by fixing
   false positives when extending the standard library with a specialization of
-  user-defined type.
+  user-defined type and by removing detection of the compiler generated ``std``
+  namespace extensions. 
 
 - Improved :doc:`bugprone-string-constructor
   <clang-tidy/checks/bugprone/string-constructor>` check to detect suspicious
@@ -310,8 +319,12 @@ Changes in existing checks
   special member function.
 
 - Improved :doc:`modernize-use-std-format
-  <clang-tidy/checks/modernize/use-std-format>` check by fixing a crash
-  when an argument is part of a macro expansion.
+  <clang-tidy/checks/modernize/use-std-format>` check:
+
+  - Fixed a crash when an argument is part of a macro expansion.
+
+  - Added missing ``#include`` insertion when the format function call
+    appears as an argument to a macro.
 
 - Improved :doc:`modernize-use-trailing-return-type
   <clang-tidy/checks/modernize/use-trailing-return-type>` check by fixing
