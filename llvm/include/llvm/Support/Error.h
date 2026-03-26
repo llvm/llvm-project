@@ -814,8 +814,8 @@ T cantFail(Expected<T> ValOrErr, const char *Msg = nullptr) {
 /// Calls llvm_unreachable if Pointer is null, otherwise returns the
 /// pointer as is.
 template <typename T>
-LLVM_ATTRIBUTE_RETURNS_NONNULL T *nonNull(T *Pointer,
-                                          const char *Msg = nullptr) {
+LLVM_ATTRIBUTE_RETURNS_NONNULL T *checkNotNull(T *Pointer,
+                                               const char *Msg = nullptr) {
   if (Pointer)
     return Pointer;
 

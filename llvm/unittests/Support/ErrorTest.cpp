@@ -1226,21 +1226,21 @@ TEST(Error, NonNullSuccess) {
   const int *cptr = ptr;
   const int *const ccptr = ptr;
 
-  EXPECT_EQ(ptr, nonNull(&tmp));
-  EXPECT_EQ(ptr, nonNull(ptr));
-  EXPECT_EQ(ptr, nonNull(cptr));
-  EXPECT_EQ(ptr, nonNull(ccptr));
+  EXPECT_EQ(ptr, checkNotNull(&tmp));
+  EXPECT_EQ(ptr, checkNotNull(ptr));
+  EXPECT_EQ(ptr, checkNotNull(cptr));
+  EXPECT_EQ(ptr, checkNotNull(ccptr));
 }
 
 #if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
 TEST(Error, NonNullFails) {
   int *NullPtr = nullptr;
-  EXPECT_DEATH(nonNull(NullPtr),
+  EXPECT_DEATH(checkNotNull(NullPtr),
                "Expected a non-null pointer but got a null pointer")
-      << "nonNull(NullPtr) did not cause an abort for null pointer";
+      << "checkNotNull(NullPtr) did not cause an abort for null pointer";
 
-  EXPECT_DEATH(nonNull(NullPtr, "custom message"), "custom message")
-      << "nonNull(nullptr) did not cause an abort for null pointer";
+  EXPECT_DEATH(checkNotNull(NullPtr, "custom message"), "custom message")
+      << "checkNotNull(nullptr) did not cause an abort for null pointer";
 }
 #endif
 
