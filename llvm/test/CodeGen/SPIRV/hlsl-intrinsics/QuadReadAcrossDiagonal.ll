@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-vulkan1.3-unknown %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-vulkan1.3-unknown %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-unknown-vulkan1.3 %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan1.3 %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
 
 ; Test lowering to spir-v backend for various types and scalar/vector
 
@@ -14,7 +14,7 @@
 
 ; CHECK-LABEL: Begin function test_float
 ; CHECK:   %[[#fexpr:]] = OpFunctionParameter %[[#f32]]
-define float @test_float(float %fexpr) {
+define internal float @test_float(float %fexpr) {
 entry:
 ; CHECK:   %[[#fret:]] = OpGroupNonUniformQuadSwap %[[#f32]] %[[#scope]] %[[#fexpr]] %[[#direction]]
   %0 = call float @llvm.spv.quad.read.across.diagonal.f32(float %fexpr)
@@ -23,7 +23,7 @@ entry:
 
 ; CHECK-LABEL: Begin function test_int
 ; CHECK:   %[[#iexpr:]] = OpFunctionParameter %[[#uint]]
-define i32 @test_int(i32 %iexpr) {
+define internal i32 @test_int(i32 %iexpr) {
 entry:
 ; CHECK:   %[[#iret:]] = OpGroupNonUniformQuadSwap %[[#uint]] %[[#scope]] %[[#iexpr]] %[[#direction]]
   %0 = call i32 @llvm.spv.quad.read.across.diagonal.i32(i32 %iexpr)
@@ -32,7 +32,7 @@ entry:
 
 ; CHECK-LABEL: Begin function test_vhalf
 ; CHECK:   %[[#vbexpr:]] = OpFunctionParameter %[[#v4_half]]
-define <4 x half> @test_vhalf(<4 x half> %vbexpr) {
+define internal <4 x half> @test_vhalf(<4 x half> %vbexpr) {
 entry:
 ; CHECK:   %[[#vhalfret:]] = OpGroupNonUniformQuadSwap %[[#v4_half]] %[[#scope]] %[[#vbexpr]] %[[#direction]]
   %0 = call <4 x half> @llvm.spv.quad.read.across.diagonal.v4half(<4 x half> %vbexpr)
