@@ -23,6 +23,12 @@
 using namespace llvm;
 using namespace gsym;
 
+//===----------------------------------------------------------------------===//
+// Creator V2 tests
+//===----------------------------------------------------------------------===//
+
+/// Helper functions
+
 static void checkError(std::string ExpectedMsg, Error Err) {
   ASSERT_TRUE(bool(Err));
   handleAllErrors(std::move(Err), [&](const ErrorInfoBase &Actual) {
@@ -60,17 +66,15 @@ static GlobalData decodeGlobalDataEntry(StringRef Data, uint64_t &Offset,
   return GD;
 }
 
-//===----------------------------------------------------------------------===//
-// Encode error tests
-//===----------------------------------------------------------------------===//
+/// Encode error tests
 
-TEST(GSYMV2Test, TestEncodeErrorNoFunctions) {
+TEST(GSYMV2Test, TestCreatorV2EncodeErrorNoFunctions) {
   GsymCreatorV2 GC;
   auto Result = encodeV2(GC, llvm::endianness::little);
   checkError("no functions to encode", Result.takeError());
 }
 
-TEST(GSYMV2Test, TestEncodeErrorNotFinalized) {
+TEST(GSYMV2Test, TestCreatorV2EncodeErrorNotFinalized) {
   GsymCreatorV2 GC;
   const uint32_t Name = GC.insertString("foo");
   GC.addFunctionInfo(FunctionInfo(0x1000, 0x100, Name));
@@ -79,7 +83,7 @@ TEST(GSYMV2Test, TestEncodeErrorNotFinalized) {
              Result.takeError());
 }
 
-TEST(GSYMV2Test, TestDoubleFinalize) {
+TEST(GSYMV2Test, TestCreatorV2DoubleFinalize) {
   GsymCreatorV2 GC;
   const uint32_t Name = GC.insertString("foo");
   GC.addFunctionInfo(FunctionInfo(0x1000, 0x100, Name));
@@ -91,9 +95,7 @@ TEST(GSYMV2Test, TestDoubleFinalize) {
   checkError("already finalized", std::move(Err));
 }
 
-//===----------------------------------------------------------------------===//
-// Header and GlobalData structure tests
-//===----------------------------------------------------------------------===//
+/// Header and GlobalData structure tests
 
 /// Encode a V2 GSYM and verify the header fields and GlobalData layout.
 static void TestV2HeaderAndGlobalData(llvm::endianness ByteOrder,
@@ -209,30 +211,28 @@ static void TestV2HeaderAndGlobalData(llvm::endianness ByteOrder,
   }
 }
 
-TEST(GSYMV2Test, TestHeaderAndGlobalDataLittle) {
+TEST(GSYMV2Test, TestCreatorV2HeaderAndGlobalDataLittle) {
   TestV2HeaderAndGlobalData(llvm::endianness::little, 0x1000,
                             /*ExpectedAddrOffSize=*/1,
                             /*ExpectedNumAddresses=*/2,
                             /*HasUUID=*/true);
 }
 
-TEST(GSYMV2Test, TestHeaderAndGlobalDataBig) {
+TEST(GSYMV2Test, TestCreatorV2HeaderAndGlobalDataBig) {
   TestV2HeaderAndGlobalData(llvm::endianness::big, 0x1000,
                             /*ExpectedAddrOffSize=*/1,
                             /*ExpectedNumAddresses=*/2,
                             /*HasUUID=*/true);
 }
 
-TEST(GSYMV2Test, TestHeaderAndGlobalDataNoUUID) {
+TEST(GSYMV2Test, TestCreatorV2HeaderAndGlobalDataNoUUID) {
   TestV2HeaderAndGlobalData(llvm::endianness::little, 0x1000,
                             /*ExpectedAddrOffSize=*/1,
                             /*ExpectedNumAddresses=*/2,
                             /*HasUUID=*/false);
 }
 
-//===----------------------------------------------------------------------===//
-// Address offset size tests
-//===----------------------------------------------------------------------===//
+/// Address offset size tests
 
 static void TestV2AddrOffSize(uint64_t BaseAddr, uint64_t Func2Offset,
                               uint8_t ExpectedAddrOffSize) {
@@ -254,27 +254,25 @@ static void TestV2AddrOffSize(uint64_t BaseAddr, uint64_t Func2Offset,
   EXPECT_EQ(HdrOrErr->AddrOffSize, ExpectedAddrOffSize);
 }
 
-TEST(GSYMV2Test, TestAddrOffSize1Byte) {
+TEST(GSYMV2Test, TestCreatorV2AddrOffSize1Byte) {
   TestV2AddrOffSize(0x1000, 0x20, 1);
 }
 
-TEST(GSYMV2Test, TestAddrOffSize2Byte) {
+TEST(GSYMV2Test, TestCreatorV2AddrOffSize2Byte) {
   TestV2AddrOffSize(0x1000, 0x200, 2);
 }
 
-TEST(GSYMV2Test, TestAddrOffSize4Byte) {
+TEST(GSYMV2Test, TestCreatorV2AddrOffSize4Byte) {
   TestV2AddrOffSize(0x1000, 0x20000, 4);
 }
 
-TEST(GSYMV2Test, TestAddrOffSize8Byte) {
+TEST(GSYMV2Test, TestCreatorV2AddrOffSize8Byte) {
   TestV2AddrOffSize(0x1000, 0x100000000ULL, 8);
 }
 
-//===----------------------------------------------------------------------===//
-// AddrInfoOffsets verification
-//===----------------------------------------------------------------------===//
+/// AddrInfoOffsets verification
 
-TEST(GSYMV2Test, TestAddrInfoOffsetsPointToFunctionInfo) {
+TEST(GSYMV2Test, TestCreatorV2AddrInfoOffsetsPointToFunctionInfo) {
   // Verify that each AddrInfoOffset entry points to a valid location within
   // the FunctionInfo section.
   GsymCreatorV2 GC;
@@ -333,11 +331,9 @@ TEST(GSYMV2Test, TestAddrInfoOffsetsPointToFunctionInfo) {
   }
 }
 
-//===----------------------------------------------------------------------===//
-// UUID section verification
-//===----------------------------------------------------------------------===//
+/// UUID section verification
 
-TEST(GSYMV2Test, TestUUIDSection) {
+TEST(GSYMV2Test, TestCreatorV2UUIDSection) {
   GsymCreatorV2 GC;
   const uint32_t Name = GC.insertString("main");
   GC.addFunctionInfo(FunctionInfo(0x1000, 0x100, Name));
