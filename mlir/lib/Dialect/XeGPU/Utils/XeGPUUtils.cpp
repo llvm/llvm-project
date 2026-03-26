@@ -750,11 +750,18 @@ Value xegpu::lowerCrossLaneReductionToShuffles(
     TypedValue<VectorType> src, TypedValue<VectorType> acc,
     vector::CombiningKind kind, int64_t reductionDim, int64_t reductionSize,
     Location loc, PatternRewriter &rewriter) {
-  // Expecting a 2D source vector.
-  assert(src.getType().getRank() == 2 && "expected a 2D source vector");
   VectorType sourceType = src.getType();
-  int64_t sourceH = sourceType.getShape()[0];
-  int64_t sourceW = sourceType.getShape()[1];
+  int64_t sourceRank = sourceType.getRank();
+  // Expecting at least a 2D source vector. Leading dimensions (all except the
+  // last two) must be unit.
+  assert(sourceRank >= 2 && "expected at least a 2D source vector");
+  for (int64_t i = 0; i < sourceRank - 2; ++i)
+    assert(sourceType.getShape()[i] == 1 &&
+           "expected leading dimensions to be unit");
+  int64_t rowIdx = sourceRank - 2;
+  int64_t columnIdx = sourceRank - 1;
+  int64_t sourceH = sourceType.getShape()[rowIdx];
+  int64_t sourceW = sourceType.getShape()[columnIdx];
 
   // Create a constant vector to hold the result of the reduction.
   TypedAttr zeroAttr = rewriter.getZeroAttr(sourceType.getElementType());
@@ -763,39 +770,46 @@ Value xegpu::lowerCrossLaneReductionToShuffles(
       DenseElementsAttr::get(acc.getType(), zeroAttr));
 
   // nSlices is the number of reduction operations needed to reduce the entire
-  // source vector. For example, if reductionDim is 0, we are reducing across
-  // rows, and each slice is a column of the source vector. So the number of
-  // slices is the number of columns, which is sourceW.
-  int nSlices = (reductionDim == 0) ? sourceW : sourceH;
+  // source vector. For example, if reductionDim is the row dim, we are
+  // reducing across rows, and each slice is a column. So the number of slices
+  // is the number of columns, which is sourceW.
+  int nSlices = (reductionDim == rowIdx) ? sourceW : sourceH;
 
   // For each slice of the source, extract the slice vector, do a reduction
   // and, insert the reduced value back to the result vector.
+  int64_t accRank = acc.getType().getRank();
   for (int i = 0; i < nSlices; ++i) {
-    SmallVector<int64_t, 2> sliceOffsets, sliceSizes;
-    if (reductionDim == 1) {
-      sliceOffsets = {i, 0};
-      sliceSizes = {1, sourceW};
+    // Build nD offsets, sizes, and strides. Leading unit dims get
+    // offset=0, size=1. The last two dims are set based on reductionDim.
+    SmallVector<int64_t> sliceOffsets(sourceRank, 0);
+    SmallVector<int64_t> sliceSizes(sourceRank, 1);
+    SmallVector<int64_t> strides(sourceRank, 1);
+    if (reductionDim == columnIdx) {
+      sliceOffsets[rowIdx] = i;
+      sliceSizes[columnIdx] = sourceW;
     } else {
-      sliceOffsets = {0, i};
-      sliceSizes = {sourceH, 1};
+      sliceOffsets[columnIdx] = i;
+      sliceSizes[rowIdx] = sourceH;
     }
 
     vector::ExtractStridedSliceOp extractOp =
         vector::ExtractStridedSliceOp::create(rewriter, loc, src, sliceOffsets,
-                                              sliceSizes, {1, 1});
+                                              sliceSizes, strides);
     int64_t nSliceElements = extractOp.getResult().getType().getNumElements();
     vector::ShapeCastOp slice = vector::ShapeCastOp::create(
         rewriter, loc,
         VectorType::get({nSliceElements}, sourceType.getElementType()),
         extractOp.getResult());
 
-    Value accExtract = vector::ExtractOp::create(rewriter, loc, acc, i);
+    SmallVector<int64_t> accIdx(accRank, 0);
+    accIdx[accRank - 1] = i;
+    Value accExtract = vector::ExtractOp::create(rewriter, loc, acc, accIdx);
     Value fullReduce =
         xegpu::subgroupReduction(loc, rewriter, slice, kind, reductionSize);
     fullReduce =
         vector::makeArithReduction(rewriter, loc, kind, fullReduce, accExtract);
-    reductionResult =
-        vector::InsertOp::create(rewriter, loc, fullReduce, reductionResult, i);
+    reductionResult = vector::InsertOp::create(rewriter, loc, fullReduce,
+                                               reductionResult, accIdx);
   }
   return reductionResult;
 }
