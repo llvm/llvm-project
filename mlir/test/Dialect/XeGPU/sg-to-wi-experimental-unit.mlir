@@ -481,57 +481,55 @@ gpu.func @vector_multi_reduction_3d_leading_unit_dim_lane_local() {
   gpu.return
 }
 
-// Cross-lane 3D reduction with leading unit dim.
-// Source distributed on dim 1, reducing dim 1 => cross-lane shuffle.
 // CHECK-LABEL: gpu.func @vector_multi_reduction_3d_leading_unit_dim_cross_lane
-// CHECK:         %[[SRC:.*]] = arith.constant dense<0.000000e+00> : vector<1x1x2xf32>
-// CHECK:         %[[ACC:.*]] = arith.constant dense<0.000000e+00> : vector<1x2xf32>
-// CHECK:         %[[SLICE0:.*]] = vector.extract_strided_slice %[[SRC]]
+// CHECK-DAG:     %[[SRC:.*]] = arith.constant dense<0.000000e+00> : vector<1x1x2xf32>
+// CHECK-DAG:     %[[ACC:.*]] = arith.constant dense<0.000000e+00> : vector<1x2xf32>
+// CHECK-DAG:     %[[SLICE0:.*]] = vector.extract_strided_slice %[[SRC]]
 // CHECK-SAME:      {offsets = [0, 0, 0], sizes = [1, 1, 1], strides = [1, 1, 1]}
-// CHECK:         %[[FLAT0:.*]] = vector.shape_cast %[[SLICE0]] : vector<1x1x1xf32> to vector<1xf32>
-// CHECK:         %[[ACC0:.*]] = vector.extract %[[ACC]][0, 0] : f32 from vector<1x2xf32>
-// CHECK:         %[[RED0:.*]] = vector.reduction <add>, %[[FLAT0]] : vector<1xf32> into f32
-// CHECK:         %[[C16_0:.*]] = arith.constant 16 : i32
-// CHECK:         %[[C1:.*]] = arith.constant 1 : i32
-// CHECK:         %[[SHUF0_1:.*]], %{{.*}} = gpu.shuffle xor %[[RED0]], %[[C1]], %[[C16_0]] : f32
-// CHECK:         %[[ADD0_1:.*]] = arith.addf %[[RED0]], %[[SHUF0_1]] : f32
-// CHECK:         %[[C16_1:.*]] = arith.constant 16 : i32
-// CHECK:         %[[C2:.*]] = arith.constant 2 : i32
-// CHECK:         %[[SHUF0_2:.*]], %{{.*}} = gpu.shuffle xor %[[ADD0_1]], %[[C2]], %[[C16_1]] : f32
-// CHECK:         %[[ADD0_2:.*]] = arith.addf %[[ADD0_1]], %[[SHUF0_2]] : f32
-// CHECK:         %[[C16_2:.*]] = arith.constant 16 : i32
-// CHECK:         %[[C4:.*]] = arith.constant 4 : i32
-// CHECK:         %[[SHUF0_4:.*]], %{{.*}} = gpu.shuffle xor %[[ADD0_2]], %[[C4]], %[[C16_2]] : f32
-// CHECK:         %[[ADD0_4:.*]] = arith.addf %[[ADD0_2]], %[[SHUF0_4]] : f32
-// CHECK:         %[[C16_3:.*]] = arith.constant 16 : i32
-// CHECK:         %[[C8:.*]] = arith.constant 8 : i32
-// CHECK:         %[[SHUF0_8:.*]], %{{.*}} = gpu.shuffle xor %[[ADD0_4]], %[[C8]], %[[C16_3]] : f32
-// CHECK:         %[[ADD0_8:.*]] = arith.addf %[[ADD0_4]], %[[SHUF0_8]] : f32
-// CHECK:         %[[FINAL0:.*]] = arith.addf %[[ADD0_8]], %[[ACC0]] : f32
-// CHECK:         %[[INS0:.*]] = vector.insert %[[FINAL0]], %{{.*}} [0, 0] : f32 into vector<1x2xf32>
-// CHECK:         %[[SLICE1:.*]] = vector.extract_strided_slice %[[SRC]]
+// CHECK-DAG:     %[[FLAT0:.*]] = vector.shape_cast %[[SLICE0]] : vector<1x1x1xf32> to vector<1xf32>
+// CHECK-DAG:     %[[ACC0:.*]] = vector.extract %[[ACC]][0, 0] : f32 from vector<1x2xf32>
+// CHECK-DAG:     %[[RED0:.*]] = vector.reduction <add>, %[[FLAT0]] : vector<1xf32> into f32
+// CHECK-DAG:     %[[C16_0:.*]] = arith.constant 16 : i32
+// CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : i32
+// CHECK-DAG:     %[[SHUF0_1:.*]], %{{.*}} = gpu.shuffle xor %[[RED0]], %[[C1]], %[[C16_0]] : f32
+// CHECK-DAG:     %[[ADD0_1:.*]] = arith.addf %[[RED0]], %[[SHUF0_1]] : f32
+// CHECK-DAG:     %[[C16_1:.*]] = arith.constant 16 : i32
+// CHECK-DAG:     %[[C2:.*]] = arith.constant 2 : i32
+// CHECK-DAG:     %[[SHUF0_2:.*]], %{{.*}} = gpu.shuffle xor %[[ADD0_1]], %[[C2]], %[[C16_1]] : f32
+// CHECK-DAG:     %[[ADD0_2:.*]] = arith.addf %[[ADD0_1]], %[[SHUF0_2]] : f32
+// CHECK-DAG:     %[[C16_2:.*]] = arith.constant 16 : i32
+// CHECK-DAG:     %[[C4:.*]] = arith.constant 4 : i32
+// CHECK-DAG:     %[[SHUF0_4:.*]], %{{.*}} = gpu.shuffle xor %[[ADD0_2]], %[[C4]], %[[C16_2]] : f32
+// CHECK-DAG:     %[[ADD0_4:.*]] = arith.addf %[[ADD0_2]], %[[SHUF0_4]] : f32
+// CHECK-DAG:     %[[C16_3:.*]] = arith.constant 16 : i32
+// CHECK-DAG:     %[[C8:.*]] = arith.constant 8 : i32
+// CHECK-DAG:     %[[SHUF0_8:.*]], %{{.*}} = gpu.shuffle xor %[[ADD0_4]], %[[C8]], %[[C16_3]] : f32
+// CHECK-DAG:     %[[ADD0_8:.*]] = arith.addf %[[ADD0_4]], %[[SHUF0_8]] : f32
+// CHECK-DAG:     %[[FINAL0:.*]] = arith.addf %[[ADD0_8]], %[[ACC0]] : f32
+// CHECK-DAG:     %[[INS0:.*]] = vector.insert %[[FINAL0]], %{{.*}} [0, 0] : f32 into vector<1x2xf32>
+// CHECK-DAG:     %[[SLICE1:.*]] = vector.extract_strided_slice %[[SRC]]
 // CHECK-SAME:      {offsets = [0, 0, 1], sizes = [1, 1, 1], strides = [1, 1, 1]}
-// CHECK:         %[[FLAT1:.*]] = vector.shape_cast %[[SLICE1]] : vector<1x1x1xf32> to vector<1xf32>
-// CHECK:         %[[ACC1:.*]] = vector.extract %[[ACC]][0, 1] : f32 from vector<1x2xf32>
-// CHECK:         %[[RED1:.*]] = vector.reduction <add>, %[[FLAT1]] : vector<1xf32> into f32
-// CHECK:         %[[C16_4:.*]] = arith.constant 16 : i32
-// CHECK:         %[[C1_1:.*]] = arith.constant 1 : i32
-// CHECK:         %[[SHUF1_1:.*]], %{{.*}} = gpu.shuffle xor %[[RED1]], %[[C1_1]], %[[C16_4]] : f32
-// CHECK:         %[[ADD1_1:.*]] = arith.addf %[[RED1]], %[[SHUF1_1]] : f32
-// CHECK:         %[[C16_5:.*]] = arith.constant 16 : i32
-// CHECK:         %[[C2_1:.*]] = arith.constant 2 : i32
-// CHECK:         %[[SHUF1_2:.*]], %{{.*}} = gpu.shuffle xor %[[ADD1_1]], %[[C2_1]], %[[C16_5]] : f32
-// CHECK:         %[[ADD1_2:.*]] = arith.addf %[[ADD1_1]], %[[SHUF1_2]] : f32
-// CHECK:         %[[C16_6:.*]] = arith.constant 16 : i32
-// CHECK:         %[[C4_1:.*]] = arith.constant 4 : i32
-// CHECK:         %[[SHUF1_4:.*]], %{{.*}} = gpu.shuffle xor %[[ADD1_2]], %[[C4_1]], %[[C16_6]] : f32
-// CHECK:         %[[ADD1_4:.*]] = arith.addf %[[ADD1_2]], %[[SHUF1_4]] : f32
-// CHECK:         %[[C16_7:.*]] = arith.constant 16 : i32
-// CHECK:         %[[C8_1:.*]] = arith.constant 8 : i32
-// CHECK:         %[[SHUF1_8:.*]], %{{.*}} = gpu.shuffle xor %[[ADD1_4]], %[[C8_1]], %[[C16_7]] : f32
-// CHECK:         %[[ADD1_8:.*]] = arith.addf %[[ADD1_4]], %[[SHUF1_8]] : f32
-// CHECK:         %[[FINAL1:.*]] = arith.addf %[[ADD1_8]], %[[ACC1]] : f32
-// CHECK:         vector.insert %[[FINAL1]], %[[INS0]] [0, 1] : f32 into vector<1x2xf32>
+// CHECK-DAG:     %[[FLAT1:.*]] = vector.shape_cast %[[SLICE1]] : vector<1x1x1xf32> to vector<1xf32>
+// CHECK-DAG:     %[[ACC1:.*]] = vector.extract %[[ACC]][0, 1] : f32 from vector<1x2xf32>
+// CHECK-DAG:     %[[RED1:.*]] = vector.reduction <add>, %[[FLAT1]] : vector<1xf32> into f32
+// CHECK-DAG:     %[[C16_4:.*]] = arith.constant 16 : i32
+// CHECK-DAG:     %[[C1_1:.*]] = arith.constant 1 : i32
+// CHECK-DAG:     %[[SHUF1_1:.*]], %{{.*}} = gpu.shuffle xor %[[RED1]], %[[C1_1]], %[[C16_4]] : f32
+// CHECK-DAG:     %[[ADD1_1:.*]] = arith.addf %[[RED1]], %[[SHUF1_1]] : f32
+// CHECK-DAG:     %[[C16_5:.*]] = arith.constant 16 : i32
+// CHECK-DAG:     %[[C2_1:.*]] = arith.constant 2 : i32
+// CHECK-DAG:     %[[SHUF1_2:.*]], %{{.*}} = gpu.shuffle xor %[[ADD1_1]], %[[C2_1]], %[[C16_5]] : f32
+// CHECK-DAG:     %[[ADD1_2:.*]] = arith.addf %[[ADD1_1]], %[[SHUF1_2]] : f32
+// CHECK-DAG:     %[[C16_6:.*]] = arith.constant 16 : i32
+// CHECK-DAG:     %[[C4_1:.*]] = arith.constant 4 : i32
+// CHECK-DAG:     %[[SHUF1_4:.*]], %{{.*}} = gpu.shuffle xor %[[ADD1_2]], %[[C4_1]], %[[C16_6]] : f32
+// CHECK-DAG:     %[[ADD1_4:.*]] = arith.addf %[[ADD1_2]], %[[SHUF1_4]] : f32
+// CHECK-DAG:     %[[C16_7:.*]] = arith.constant 16 : i32
+// CHECK-DAG:     %[[C8_1:.*]] = arith.constant 8 : i32
+// CHECK-DAG:     %[[SHUF1_8:.*]], %{{.*}} = gpu.shuffle xor %[[ADD1_4]], %[[C8_1]], %[[C16_7]] : f32
+// CHECK-DAG:     %[[ADD1_8:.*]] = arith.addf %[[ADD1_4]], %[[SHUF1_8]] : f32
+// CHECK-DAG:     %[[FINAL1:.*]] = arith.addf %[[ADD1_8]], %[[ACC1]] : f32
+// CHECK-DAG:     vector.insert %[[FINAL1]], %[[INS0]] [0, 1] : f32 into vector<1x2xf32>
 // CHECK:         gpu.return
 gpu.func @vector_multi_reduction_3d_leading_unit_dim_cross_lane() {
     %src = arith.constant
