@@ -7744,7 +7744,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     //
     // e.g., "call llvm.aarch64.neon.uqsub.v16i8"
     if (CallInst *CI = dyn_cast<CallInst>(&I)) {
-      errs() << "ZZZ:" << Prefix << " call " << CI->getCalledFunction()->getName() << "\n";
+      errs() << "ZZZ:" << Prefix << " call "
+             << CI->getCalledFunction()->getName() << "\n";
     } else {
       errs() << "ZZZ:" << Prefix << " " << I.getOpcodeName() << "\n";
     }
@@ -7767,7 +7768,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       // The last operand of a CallInst is the function itself.
       NumOperands--;
     } else
-      errs() << "YYY:" << Prefix << " " << *I.getType() << " " << I.getOpcodeName() << "(";
+      errs() << "YYY:" << Prefix << " " << *I.getType() << " "
+             << I.getOpcodeName() << "(";
 
     for (size_t i = 0; i < NumOperands; i++) {
       if (i > 0)
