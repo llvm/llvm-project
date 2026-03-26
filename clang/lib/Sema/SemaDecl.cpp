@@ -18073,8 +18073,9 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
   /// Create a new tag decl in C/ObjC. Since the ODR-like semantics for ObjC/C
   /// implemented asks for structural equivalence checking, the returned decl
   /// here is passed back to the parser, allowing the tag body to be parsed.
-  auto createTagFromNewDecl = [&]() -> TagDecl * {
-    assert(!getLangOpts().CPlusPlus && "not meant for C++ usage");
+  auto createTagFromNewDecl = [&](bool EnumOnly = false) -> TagDecl * {
+    assert((!getLangOpts().CPlusPlus || EnumOnly) &&
+           "not meant for C++ usage except for enums");
     // If there is an identifier, use the location of the identifier as the
     // location of the decl, otherwise use the location of the struct/union
     // keyword.
@@ -18587,6 +18588,24 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
                     return Def;
                   }
 
+                  // For unscoped enums from the global module fragment,
+                  // don't skip the body. Instead, parse it into a throwaway
+                  // decl and keep the locally-parsed enumerators. This
+                  // prevents the enumerators from being lost when a
+                  // subsequent module import triggers
+                  // reconcileExternalVisibleStorage and
+                  // replaceExternalDecls removes the AST-file entries that
+                  // makeMergedDefinitionVisible would have injected.
+                  if (auto *ED = dyn_cast<EnumDecl>(Def);
+                      ED && !ED->isScoped() && ED->isFromGlobalModule()) {
+                    SkipBody->CheckSameAsPrevious = true;
+                    SkipBody->New = createTagFromNewDecl(/*EnumOnly=*/true);
+                    SkipBody->Previous = Def;
+
+                    ProcessDeclAttributeList(S, SkipBody->New, Attrs);
+                    return Def;
+                  }
+
                   SkipBody->ShouldSkip = true;
                   SkipBody->Previous = Def;
                   if (!HiddenDefVisible && Hidden)
@@ -18990,6 +19009,43 @@ bool Sema::ActOnDuplicateDefinition(Scope *S, Decl *Prev,
                                     SkipBodyInfo &SkipBody) {
   if (!hasStructuralCompatLayout(Prev, SkipBody.New))
     return false;
+
+  // For unscoped enums from the global module fragment in C++, keep the
+  // locally-parsed enumerators from the new (throwaway) definition rather
+  // than injecting the old AST-file enumerators. The AST-file enumerators
+  // are categorized as TU-local in the PCM and can be silently removed by
+  // replaceExternalDecls when a subsequent module import triggers
+  // reconcileExternalVisibleStorage. By keeping the local enumerators, we
+  // ensure they survive that process.
+  if (auto *ED = dyn_cast<EnumDecl>(SkipBody.Previous);
+      ED && !ED->isScoped() && ED->isFromGlobalModule() &&
+      getLangOpts().CPlusPlus) {
+    // First, add new (local) enumerators into the enclosing DeclContext's
+    // lookup table so that both qualified and unqualified lookups find them.
+    // Retype them to the old enum's type so that name lookup produces
+    // enumerators whose type matches the original (module) enum, avoiding
+    // type mismatches when user code references the enum type by name.
+    DeclContext *RedeclCtx = ED->getDeclContext()->getRedeclContext();
+    QualType OldEnumType = Context.getCanonicalTagType(ED);
+    if (auto *NewED = dyn_cast<EnumDecl>(SkipBody.New)) {
+      for (auto *ECD : NewED->enumerators()) {
+        ECD->setType(OldEnumType);
+        ECD->setVisibleDespiteOwningModule();
+        if (RedeclCtx->lookup(ECD->getDeclName()).empty())
+          RedeclCtx->makeDeclVisibleInContext(ECD);
+      }
+    }
+
+    // Now make the previous enum type itself visible. Since we already
+    // populated the namespace with the new enumerators above,
+    // makeMergedDefinitionVisible will see them and skip injecting the
+    // old AST-file enumerators (due to its non-empty lookup check).
+    makeMergedDefinitionVisible(SkipBody.Previous);
+
+    // Do NOT call CleanupMergedEnum — we want the new enumerators to
+    // remain in scope.
+    return true;
+  }
 
   // Make the previous decl visible.
   makeMergedDefinitionVisible(SkipBody.Previous);
