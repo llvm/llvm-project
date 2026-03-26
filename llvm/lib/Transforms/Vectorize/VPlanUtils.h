@@ -260,6 +260,13 @@ public:
     Old->clearSuccessors();
   }
 
+  /// Clone the CFG for all nodes reachable from \p Entry, including cloning
+  /// the blocks and their recipes. Operands of cloned recipes will NOT be
+  /// updated. Remapping of operands must be done separately. Returns a pair
+  /// with the new entry and exiting blocks of the cloned region. If \p Entry
+  /// isn't part of a region, return nullptr for the exiting block.
+  static std::pair<VPBlockBase *, VPBlockBase *> cloneFrom(VPBlockBase *Entry);
+
   /// Return an iterator range over \p Range which only includes \p BlockTy
   /// blocks. The accesses are casted to \p BlockTy.
   template <typename BlockTy, typename T>
