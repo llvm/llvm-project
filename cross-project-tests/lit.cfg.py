@@ -357,6 +357,19 @@ def set_apple_lldb_pre_1000_feature():
 # platform and the installed gdb version.
 dwarf_version_string = get_clang_default_dwarf_version_string(config.host_triple)
 gdb_version_string = get_gdb_version_string()
+
+if gdb_version_string:
+    config.available_features.add("has-gdb")
+    print(
+        f"Found GDB version '{gdb_version_string}'",
+        file=sys.stderr,
+    )
+else:
+    print(
+        "No GDB found on host. Skipping tests that require GDB.",
+        file=sys.stderr,
+    )
+
 if dwarf_version_string and gdb_version_string:
     if int(dwarf_version_string) >= 5:
         try:
