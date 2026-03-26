@@ -52,12 +52,11 @@ void initializeLFIMCStreamer(MCStreamer &Streamer, MCContext &Ctx,
   // Create the Target specific MCLFIRewriter.
   assert(TheTarget != nullptr);
   if (FlagEnableRewriting) {
-    Streamer.setLFIRewriter(
-        std::unique_ptr<MCLFIRewriter>(TheTarget->createMCLFIRewriter(
-            Ctx,
-            std::unique_ptr<MCRegisterInfo>(
-                TheTarget->createMCRegInfo(TheTriple)),
-            std::unique_ptr<MCInstrInfo>(TheTarget->createMCInstrInfo()))));
+    auto MRI =
+        std::unique_ptr<MCRegisterInfo>(TheTarget->createMCRegInfo(TheTriple));
+    auto MII = std::unique_ptr<MCInstrInfo>(TheTarget->createMCInstrInfo());
+    Streamer.setLFIRewriter(std::unique_ptr<MCLFIRewriter>(
+        TheTarget->createMCLFIRewriter(Ctx, std::move(MRI), std::move(MII))));
   }
 
   // Emit an ELF Note section in its own COMDAT group which identifies LFI
