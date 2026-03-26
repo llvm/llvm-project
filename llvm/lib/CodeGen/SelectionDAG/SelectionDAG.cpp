@@ -6195,31 +6195,34 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, const APInt &DemandedElts,
 
     // Try to infer NaN from known bits, but only for detecting signaling or
     // nonsignaling NaNs
-    if (!SNaN) {
-      const fltSemantics &FltSem = Op.getValueType().getFltSemantics();
-      const KnownBits Known = computeKnownBits(Op, DemandedElts);
-      const unsigned Mantissa = FltSem.precision - 1;
-      const unsigned Exponent = FltSem.sizeInBits - FltSem.precision;
-      const KnownBits KnownMan = Known.extractBits(Mantissa, 0);
-      const KnownBits KnownExp = Known.extractBits(Exponent, Mantissa);
+    EVT VT = Op.getValueType();
+    if (!SNaN && VT.isFloatingPoint()) {
+      const fltSemantics &FltSem = VT.getFltSemantics();
+      if (FltSem.precision > 0) {
+        KnownBits Known = computeKnownBits(Op, DemandedElts);
+        unsigned Mantissa = FltSem.precision - 1;
+        unsigned Exponent = FltSem.sizeInBits - FltSem.precision;
+        KnownBits KnownMan = Known.extractBits(Mantissa, 0);
+        KnownBits KnownExp = Known.extractBits(Exponent, Mantissa);
 
-      switch (FltSem.nanEncoding) {
-      case fltNanEncoding::IEEE: {
-        if (!KnownExp.getMaxValue().isAllOnes() || KnownMan.isZero())
-          return true;
-        break;
-      }
-      case fltNanEncoding::AllOnes: {
-        if (!KnownExp.getMaxValue().isAllOnes() ||
-            !KnownMan.getMaxValue().isAllOnes())
-          return true;
-        break;
-      }
-      case fltNanEncoding::NegativeZero:
-        if (Known.Zero.isSignBitSet() || !KnownExp.isZero() ||
-            !KnownMan.isZero())
-          return true;
-        break;
+        switch (FltSem.nanEncoding) {
+        case fltNanEncoding::IEEE: {
+          if (!KnownExp.getMaxValue().isAllOnes() || KnownMan.isZero())
+            return true;
+          break;
+        }
+        case fltNanEncoding::AllOnes: {
+          if (!KnownExp.getMaxValue().isAllOnes() ||
+              !KnownMan.getMaxValue().isAllOnes())
+            return true;
+          break;
+        }
+        case fltNanEncoding::NegativeZero:
+          if (Known.Zero.isSignBitSet() || !KnownExp.isZero() ||
+              !KnownMan.isZero())
+            return true;
+          break;
+        }
       }
     }
     return false;
