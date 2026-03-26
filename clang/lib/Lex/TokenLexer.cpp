@@ -523,12 +523,12 @@ void TokenLexer::ExpandFunctionArguments() {
           Macro->isVariadic()) {
         VaArgsPseudoPaste = true;
         // Remove the paste operator, report use of the extension.
-        const unsigned hint =
+        const unsigned Hint =
             (PP.getLangOpts().C23 || PP.getLangOpts().CPlusPlus20) ? 1u : 0u;
         auto Diag = PP.Diag(ResultToks.pop_back_val().getLocation(),
                             diag::ext_paste_comma)
-                    << hint;
-        if (hint) {
+                    << Hint;
+        if (Hint) {
           Diag << FixItHint::CreateReplacement(
               SourceRange(ResultToks[ResultToks.size() - 1].getLocation(),
                           CurTok.getLocation()),
