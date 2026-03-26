@@ -284,9 +284,9 @@ llvm::Error GsymCreatorV2::encode(FileWriter &O) const {
 }
 
 llvm::Error GsymCreatorV2::loadCallSitesFromYAML(StringRef YAMLFile) {
-  // Use the loader to load call site information from the YAML file.
-  CallSiteInfoLoader Loader(*this, Funcs);
-  return Loader.loadYAML(YAMLFile);
+  // TODO: Implement V2-specific call site loading.
+  return createStringError(std::errc::not_supported,
+                           "call site loading not yet supported in V2");
 }
 
 void GsymCreatorV2::prepareMergedFunctions(OutputAggregator &Out) {

@@ -123,11 +123,9 @@ GsymReaderV2::parse() {
       return createStringError(std::errc::invalid_argument,
                               "failed to read file table");
 
-    // Get the string table.
-    FileData.setOffset(Hdr->StrtabOffset);
-    if (FileData.readFixedString(StrTab.Data, Hdr->StrtabSize))
-      return createStringError(std::errc::invalid_argument,
-                              "failed to read string table");
+    // TODO: V2 reader needs to read string table from GlobalData sections.
+    return createStringError(std::errc::not_supported,
+                             "V2 native-endian reader not yet implemented");
 } else {
   // This is the non native endianness case that is not common and not
   // optimized for lookups. Here we decode the important tables into local
@@ -185,12 +183,9 @@ GsymReaderV2::parse() {
         return createStringError(std::errc::invalid_argument,
                                  "failed to read file table");
     }
-    // Get the string table.
-    StrTab.Data = MemBuffer->getBuffer().substr(Hdr->StrtabOffset,
-                                                Hdr->StrtabSize);
-    if (StrTab.Data.empty())
-      return createStringError(std::errc::invalid_argument,
-                               "failed to read string table");
+    // TODO: V2 reader needs to read string table from GlobalData sections.
+    return createStringError(std::errc::not_supported,
+                             "V2 swapped-endian reader not yet implemented");
   }
   return Error::success();
 
@@ -337,47 +332,17 @@ GsymReaderV2::getFunctionInfoAtIndex(uint64_t Idx) const {
 llvm::Expected<LookupResult>
 GsymReaderV2::lookup(uint64_t Addr,
                    std::optional<DataExtractor> *MergedFunctionsData) const {
-  uint64_t FuncStartAddr = 0;
-  if (auto ExpectedData = getFunctionInfoDataForAddress(Addr, FuncStartAddr))
-    return FunctionInfo::lookup(*ExpectedData, *this, FuncStartAddr, Addr,
-                                MergedFunctionsData);
-  else
-    return ExpectedData.takeError();
+  // TODO: V2 reader lookup not yet implemented — FunctionInfo::lookup expects
+  // a GsymReader reference, not GsymReaderV2.
+  return createStringError(std::errc::not_supported,
+                           "V2 reader lookup not yet implemented");
 }
 
 llvm::Expected<std::vector<LookupResult>>
 GsymReaderV2::lookupAll(uint64_t Addr) const {
-  std::vector<LookupResult> Results;
-  std::optional<DataExtractor> MergedFunctionsData;
-
-  // First perform a lookup to get the primary function info result.
-  auto MainResult = lookup(Addr, &MergedFunctionsData);
-  if (!MainResult)
-    return MainResult.takeError();
-
-  // Add the main result as the first entry.
-  Results.push_back(std::move(*MainResult));
-
-  // Now process any merged functions data that was found during the lookup.
-  if (MergedFunctionsData) {
-    // Get data extractors for each merged function.
-    auto ExpectedMergedFuncExtractors =
-        MergedFunctionsInfo::getFuncsDataExtractors(*MergedFunctionsData);
-    if (!ExpectedMergedFuncExtractors)
-      return ExpectedMergedFuncExtractors.takeError();
-
-    // Process each merged function data.
-    for (DataExtractor &MergedData : *ExpectedMergedFuncExtractors) {
-      if (auto FI = FunctionInfo::lookup(MergedData, *this,
-                                         MainResult->FuncRange.start(), Addr)) {
-        Results.push_back(std::move(*FI));
-      } else {
-        return FI.takeError();
-      }
-    }
-  }
-
-  return Results;
+  // TODO: V2 reader lookupAll not yet implemented.
+  return createStringError(std::errc::not_supported,
+                           "V2 reader lookupAll not yet implemented");
 }
 
 void GsymReaderV2::dump(raw_ostream &OS) {

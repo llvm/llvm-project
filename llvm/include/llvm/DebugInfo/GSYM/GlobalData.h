@@ -14,7 +14,7 @@
 namespace llvm {
 namespace gsym {
 
-enum GlobalInfoType : uint32_t {
+enum class GlobalInfoType : uint32_t {
   EndOfList = 0u,
   AddrOffsets = 1u,
   AddrInfoOffsets = 2u,

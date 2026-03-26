@@ -8,6 +8,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_unittest(DebugInfoGSYMTests
   GSYMTest.cpp
+  GSYMV2Test.cpp
   )
 
 target_link_libraries(DebugInfoGSYMTests PRIVATE LLVMTestingSupport)
