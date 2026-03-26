@@ -80,6 +80,9 @@ struct text_encoding
 #    include <version>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+struct text_encoding;
+
+_LIBCPP_AVAILABILITY_TE_ENVIRONMENT _LIBCPP_EXPORTED_FROM_ABI text_encoding __get_locale_encoding(const char* __name);
 
 struct text_encoding {
   enum class id : int_least32_t {
@@ -578,7 +581,13 @@ public:
   }
 
 #    if _LIBCPP_HAS_LOCALIZATION
-  [[nodiscard]] _LIBCPP_AVAILABILITY_TE_ENVIRONMENT _LIBCPP_EXPORTED_FROM_ABI static text_encoding environment();
+  [[nodiscard]] _LIBCPP_AVAILABILITY_TE_ENVIRONMENT _LIBCPP_HIDE_FROM_ABI static text_encoding environment() {
+#      if defined(_LIBCPP_WIN32API)
+    return __get_locale_encoding(nullptr);
+#      else
+    return __get_locale_encoding("");
+#      endif
+  }
 
   template <id _Id>
   [[nodiscard]] _LIBCPP_AVAILABILITY_TE_ENVIRONMENT _LIBCPP_HIDE_FROM_ABI static bool environment_is() {
@@ -1666,7 +1675,6 @@ struct hash<text_encoding> {
 template <>
 inline constexpr bool ranges::enable_borrowed_range<text_encoding::aliases_view> = true;
 
-_LIBCPP_EXPORTED_FROM_ABI text_encoding __get_locale_encoding(const char* __name);
 _LIBCPP_END_NAMESPACE_STD
 
 #  endif // _LIBCPP_STD_VER >= 26

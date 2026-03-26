@@ -222,6 +222,10 @@ _LIBCPP_HIDDEN text_encoding static __get_win32_acp(unsigned int __codepage) {
 }
 
 _LIBCPP_EXPORTED_FROM_ABI std::text_encoding __get_locale_encoding(const char* __name) {
+  if (__name == nullptr) {
+    return __get_win32_acp(::GetACP());
+  }
+
   wchar_t __locale_wbuffer[LOCALE_NAME_MAX_LENGTH + 1]{};
   wchar_t __number_buffer[11]{};
 
@@ -247,8 +251,6 @@ _LIBCPP_EXPORTED_FROM_ABI std::text_encoding __get_locale_encoding(const char* _
   return __get_win32_acp(__acp);
 }
 
-_LIBCPP_HIDDEN static std::text_encoding __get_env_encoding() { return __get_win32_acp(::GetACP()); }
-
 #elif defined(__ANDROID__)
 // Android has minimal libc suppport for locale, and doesn't support any other locale
 // than the ones checked for below.
@@ -259,11 +261,6 @@ _LIBCPP_EXPORTED_FROM_ABI std::text_encoding __get_locale_encoding(const char* _
   }
 
   return std::text_encoding();
-}
-
-// Android is pretty much assumed to always be UTF-8.
-_LIBCPP_HIDDEN static std::text_encoding __get_env_encoding() {
-  return std::text_encoding(std::text_encoding::id::UTF8);
 }
 
 #else  // POSIX
@@ -297,11 +294,6 @@ _LIBCPP_EXPORTED_FROM_ABI std::text_encoding __get_locale_encoding(const char* _
   return __e;
 }
 
-_LIBCPP_HIDDEN static std::text_encoding __get_env_encoding() { return __get_locale_encoding(""); }
 #endif // _LIBCPP_WIN32API
-
-_LIBCPP_AVAILABILITY_TE_ENVIRONMENT _LIBCPP_EXPORTED_FROM_ABI std::text_encoding std::text_encoding::environment() {
-  return __get_env_encoding();
-}
 
 _LIBCPP_END_NAMESPACE_STD

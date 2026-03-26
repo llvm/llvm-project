@@ -293,7 +293,7 @@
 #  define _LIBCPP_AVAILABILITY_HAS_ADDITIONAL_IOSTREAM_EXPLICIT_INSTANTIATIONS_1 0
 #endif
 
-// Controls whether the internal implementation for text_encoding::environment() -> te_impl::__environment() is available
+// Controls whether the implementation for text_encoding::environment() is available
 #define _LIBCPP_AVAILABILITY_HAS_TE_ENVIRONMENT _LIBCPP_INTRODUCED_IN_LLVM_23
 #define _LIBCPP_AVAILABILITY_TE_ENVIRONMENT _LIBCPP_INTRODUCED_IN_LLVM_23_ATTRIBUTE
 
