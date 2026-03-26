@@ -24,34 +24,29 @@
 
 ; ASM-LABEL:  .long  241                      # Symbol subsection for GetFoo
 ; ASM:        .short 4414                     # Record kind: S_LOCAL
-; ASM-NEXT:   .long 4109                      # TypeIndex
+; ASM-NEXT:   .long 4113                      # TypeIndex
 ; ASM-NEXT:   .short 0                        # Flags
 ; ASM-NEXT:   .asciz "foo"
 ; ASM-NEXT:   .p2align 2
 ; ASM-NEXT: .Ltmp
-; ASM:        .cv_def_range  .Ltmp{{.*}} .Ltmp{{.*}}, reg_rel_indir, 335, 0, 40, 0
+; ASM:        .cv_def_range  .Ltmp{{.*}} .Ltmp{{.*}}, frame_ptr_rel, 40
 
 ; OBJ: Subsection [
 ; OBJ:   SubSectionType: Symbols (0xF1)
 ; OBJ:   LocalSym {
 ; OBJ:     Kind: S_LOCAL (0x113E)
-; OBJ:     Type: Foo (0x100D)
+; OBJ:     Type: Foo& (0x1011)
 ; OBJ:     Flags [ (0x0)
 ; OBJ:     ]
 ; OBJ:     VarName: foo
 ; OBJ:   }
-; OBJ:   DefRangeRegisterRelIndirSym {
-; OBJ:     Kind: S_DEFRANGE_REGISTER_REL_INDIR (0x1177)
-; OBJ:     BaseRegister: RSP (0x14F)
-; OBJ:     HasSpilledUDTMember: No
-; OBJ:     OffsetInParent: 0
-; OBJ:     BasePointerOffset: 40
-; OBJ:     OffsetInUDT: 0
+; OBJ:   DefRangeFramePointerRelSym {
+; OBJ:     Kind: S_DEFRANGE_FRAMEPOINTER_REL (0x1142)
+; OBJ:     Offset: 40
 ; OBJ:     LocalVariableAddrRange {
 ; OBJ:       OffsetStart: .text+0x1D
 ; OBJ:       ISectStart: 0x0
 ; OBJ:       Range: 0x16
-; OBJ:     }
 ; OBJ:   }
 
 ; ModuleID = 't.cpp'
