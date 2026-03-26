@@ -1,5 +1,5 @@
 ; REQUIRES: aarch64-registered-target
-; RUN: opt < %s -passes=pseudo-probe -function-sections -S -o %t
+; RUN: opt < %s -passes=pseudo-probe -S -o %t
 ; RUN: FileCheck %s < %t --check-prefix=CHECK-IL
 ; RUN: llc %t -mtriple=arm64-apple-darwin -stop-after=pseudo-probe-inserter -o - | FileCheck %s --check-prefix=CHECK-MIR
 
