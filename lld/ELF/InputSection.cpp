@@ -780,9 +780,8 @@ static int64_t getTlsTpOffset(Ctx &ctx, const Symbol &s) {
     return s.getVA(ctx, 0) + (tls->p_vaddr & (tls->p_align - 1)) - 0x7000;
   case EM_LOONGARCH:
   case EM_RISCV:
-    // See the comment in handleTlsRelocation. For TLSDESC=>IE,
-    // R_RISCV_TLSDESC_{LOAD_LO12,ADD_LO12_I,CALL} also reach here. While
-    // `tls` may be null, the return value is ignored.
+    // For TLSDESC=>IE, R_RISCV_TLSDESC_{LOAD_LO12,ADD_LO12_I,CALL} reference
+    // a non-TLS label and reach here.
     if (s.type != STT_TLS)
       return 0;
     return s.getVA(ctx, 0) + (tls->p_vaddr & (tls->p_align - 1));
@@ -1101,7 +1100,7 @@ void InputSection::relocateNonAlloc(Ctx &ctx, uint8_t *buf,
         continue;
       }
       Err(ctx) << getLocation(offset)
-               << ": R_RISCV_SET_ULEB128 not paired with R_RISCV_SUB_SET128";
+               << ": R_RISCV_SET_ULEB128 not paired with R_RISCV_SUB_ULEB128";
       return;
     }
 

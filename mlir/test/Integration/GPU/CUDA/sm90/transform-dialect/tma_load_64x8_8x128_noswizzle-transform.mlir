@@ -91,7 +91,7 @@ func.func @main() {
     linalg.copy ins(%memref: memref<64x8xf32>) outs(%out: memref<64x8xf32, 3>)
     linalg.copy ins(%memref_1: memref<8x128xf32>) outs(%out_1: memref<8x128xf32, 3>)
 
-    %6 = gpu.thread_id  x
+    %6 = gpu.thread_id x
     %10 = arith.cmpi eq, %6, %c0 : index
     scf.if %10 {
       %11 = memref.load %out[%c45, %c7] : memref<64x8xf32, 3>

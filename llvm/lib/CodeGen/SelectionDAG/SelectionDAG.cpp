@@ -4135,18 +4135,32 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
 
     break;
   }
+  case ISD::FABS:
+    // fabs clears the sign bit
+    Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known.makeNonNegative();
+    break;
   case ISD::FGETSIGN:
     // All bits are zero except the low bit.
     Known.Zero.setBitsFrom(1);
     break;
-  case ISD::ADD:
+  case ISD::ADD: {
+    SDNodeFlags Flags = Op.getNode()->getFlags();
+    Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    bool SelfAdd = Op.getOperand(0) == Op.getOperand(1) &&
+                   isGuaranteedNotToBeUndefOrPoison(
+                       Op.getOperand(0), DemandedElts, false, Depth + 1);
+    Known = KnownBits::add(Known, Known2, Flags.hasNoSignedWrap(),
+                           Flags.hasNoUnsignedWrap(), SelfAdd);
+    break;
+  }
   case ISD::SUB: {
     SDNodeFlags Flags = Op.getNode()->getFlags();
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    Known = KnownBits::computeForAddSub(
-        Op.getOpcode() == ISD::ADD, Flags.hasNoSignedWrap(),
-        Flags.hasNoUnsignedWrap(), Known, Known2);
+    Known = KnownBits::sub(Known, Known2, Flags.hasNoSignedWrap(),
+                           Flags.hasNoUnsignedWrap());
     break;
   }
   case ISD::USUBO:
@@ -4590,10 +4604,10 @@ SelectionDAG::computeOverflowForUnsignedSub(SDValue N0, SDValue N1) const {
   if (isNullConstant(N1))
     return OFK_Never;
 
-  KnownBits N0Known = computeKnownBits(N0);
-  KnownBits N1Known = computeKnownBits(N1);
-  ConstantRange N0Range = ConstantRange::fromKnownBits(N0Known, false);
-  ConstantRange N1Range = ConstantRange::fromKnownBits(N1Known, false);
+  ConstantRange N0Range =
+      computeConstantRangeIncludingKnownBits(N0, /*ForSigned=*/false);
+  ConstantRange N1Range =
+      computeConstantRangeIncludingKnownBits(N1, /*ForSigned=*/false);
   return mapOverflowResult(N0Range.unsignedSubMayOverflow(N1Range));
 }
 
@@ -4603,10 +4617,8 @@ SelectionDAG::computeOverflowForUnsignedMul(SDValue N0, SDValue N1) const {
   if (isNullConstant(N1) || isOneConstant(N1))
     return OFK_Never;
 
-  KnownBits N0Known = computeKnownBits(N0);
-  KnownBits N1Known = computeKnownBits(N1);
-  ConstantRange N0Range = ConstantRange::fromKnownBits(N0Known, false);
-  ConstantRange N1Range = ConstantRange::fromKnownBits(N1Known, false);
+  ConstantRange N0Range = computeConstantRangeIncludingKnownBits(N0, false);
+  ConstantRange N1Range = computeConstantRangeIncludingKnownBits(N1, false);
   return mapOverflowResult(N0Range.unsignedMulMayOverflow(N1Range));
 }
 
@@ -4638,6 +4650,66 @@ SelectionDAG::computeOverflowForSignedMul(SDValue N0, SDValue N1) const {
   }
 
   return OFK_Sometime;
+}
+
+ConstantRange SelectionDAG::computeConstantRange(SDValue Op, bool ForSigned,
+                                                 unsigned Depth) const {
+  EVT VT = Op.getValueType();
+  APInt DemandedElts = VT.isFixedLengthVector()
+                           ? APInt::getAllOnes(VT.getVectorNumElements())
+                           : APInt(1, 1);
+  return computeConstantRange(Op, DemandedElts, ForSigned, Depth);
+}
+
+ConstantRange SelectionDAG::computeConstantRange(SDValue Op,
+                                                 const APInt &DemandedElts,
+                                                 bool ForSigned,
+                                                 unsigned Depth) const {
+  EVT VT = Op.getValueType();
+  unsigned BitWidth = VT.getScalarSizeInBits();
+
+  if (Depth >= MaxRecursionDepth)
+    return ConstantRange::getFull(BitWidth);
+
+  if (ConstantSDNode *C = isConstOrConstSplat(Op, DemandedElts))
+    return ConstantRange(C->getAPIntValue());
+
+  unsigned Opcode = Op.getOpcode();
+  switch (Opcode) {
+  case ISD::VSCALE: {
+    const Function &F = getMachineFunction().getFunction();
+    const APInt &Multiplier = Op.getConstantOperandAPInt(0);
+    return getVScaleRange(&F, BitWidth).multiply(Multiplier);
+  }
+  default:
+    break;
+  }
+
+  return ConstantRange::getFull(BitWidth);
+}
+
+ConstantRange
+SelectionDAG::computeConstantRangeIncludingKnownBits(SDValue Op, bool ForSigned,
+                                                     unsigned Depth) const {
+  EVT VT = Op.getValueType();
+
+  APInt DemandedElts = VT.isFixedLengthVector()
+                           ? APInt::getAllOnes(VT.getVectorNumElements())
+                           : APInt(1, 1);
+
+  return computeConstantRangeIncludingKnownBits(Op, DemandedElts, ForSigned,
+                                                Depth);
+}
+
+ConstantRange SelectionDAG::computeConstantRangeIncludingKnownBits(
+    SDValue Op, const APInt &DemandedElts, bool ForSigned,
+    unsigned Depth) const {
+  KnownBits Known = computeKnownBits(Op, DemandedElts, Depth);
+  ConstantRange CR1 = ConstantRange::fromKnownBits(Known, ForSigned);
+  ConstantRange CR2 = computeConstantRange(Op, DemandedElts, Depth);
+  ConstantRange::PreferredRangeType RangeType =
+      ForSigned ? ConstantRange::Signed : ConstantRange::Unsigned;
+  return CR1.intersectWith(CR2, RangeType);
 }
 
 bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val, bool OrZero,
@@ -4743,12 +4815,12 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val,
   case ISD::SRL: {
     // A logical right-shift of a constant sign-bit will have exactly
     // one bit set.
-    auto *C = isConstOrConstSplat(Val.getOperand(0));
+    auto *C = isConstOrConstSplat(Val.getOperand(0), DemandedElts);
     if (C && C->getAPIntValue().isSignMask())
       return true;
-    return isKnownToBeAPowerOfTwo(Val.getOperand(0), /*OrZero=*/false,
-                                  Depth + 1) &&
-           isKnownNeverZero(Val, Depth);
+    return (OrZero || isKnownNeverZero(Val, DemandedElts, Depth)) &&
+           isKnownToBeAPowerOfTwo(Val.getOperand(0), DemandedElts, OrZero,
+                                  Depth + 1);
   }
 
   case ISD::ROTL:
@@ -4784,6 +4856,30 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val,
     // vscale(power-of-two) is a power-of-two
     return isKnownToBeAPowerOfTwo(Val.getOperand(0), /*OrZero=*/false,
                                   Depth + 1);
+
+  case ISD::VECTOR_SHUFFLE: {
+    assert(!Val.getValueType().isScalableVector());
+    // Demanded elements with undef shuffle mask elements are unknown
+    // - we cannot guarantee they are a power of two, so return false.
+    APInt DemandedLHS, DemandedRHS;
+    const ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(Val);
+    assert(NumElts == SVN->getMask().size() && "Unexpected vector size");
+    if (!getShuffleDemandedElts(NumElts, SVN->getMask(), DemandedElts,
+                                DemandedLHS, DemandedRHS))
+      return false;
+
+    // All demanded elements from LHS must be known power of two.
+    if (!!DemandedLHS && !isKnownToBeAPowerOfTwo(Val.getOperand(0), DemandedLHS,
+                                                 OrZero, Depth + 1))
+      return false;
+
+    // All demanded elements from RHS must be known power of two.
+    if (!!DemandedRHS && !isKnownToBeAPowerOfTwo(Val.getOperand(1), DemandedRHS,
+                                                 OrZero, Depth + 1))
+      return false;
+
+    return true;
+  }
   }
 
   // More could be done here, though the above checks are enough
@@ -5968,7 +6064,7 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, const APInt &DemandedElts,
   assert(!DemandedElts.isZero() && "No demanded elements");
 
   // If we're told that NaNs won't happen, assume they won't.
-  if (getTarget().Options.NoNaNsFPMath || Op->getFlags().hasNoNaNs())
+  if (Op->getFlags().hasNoNaNs())
     return true;
 
   if (Depth >= MaxRecursionDepth)
@@ -6256,17 +6352,41 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
 
   case ISD::SHL: {
     if (Op->getFlags().hasNoSignedWrap() || Op->getFlags().hasNoUnsignedWrap())
-      return isKnownNeverZero(Op.getOperand(0), Depth + 1);
-    KnownBits ValKnown = computeKnownBits(Op.getOperand(0), Depth + 1);
+      return isKnownNeverZero(Op.getOperand(0), DemandedElts, Depth + 1);
+    KnownBits ValKnown =
+        computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     // 1 << X is never zero.
     if (ValKnown.One[0])
       return true;
     // If max shift cnt of known ones is non-zero, result is non-zero.
-    APInt MaxCnt = computeKnownBits(Op.getOperand(1), Depth + 1).getMaxValue();
+    APInt MaxCnt = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1)
+                       .getMaxValue();
     if (MaxCnt.ult(ValKnown.getBitWidth()) &&
         !ValKnown.One.shl(MaxCnt).isZero())
       return true;
     break;
+  }
+
+  case ISD::VECTOR_SHUFFLE: {
+    if (Op.getValueType().isScalableVector())
+      return false;
+
+    unsigned NumElts = DemandedElts.getBitWidth();
+
+    // All demanded elements from LHS and RHS must be known non-zero.
+    // Demanded elements with undef shuffle mask elements are unknown.
+
+    APInt DemandedLHS, DemandedRHS;
+    auto *SVN = cast<ShuffleVectorSDNode>(Op);
+    assert(NumElts == SVN->getMask().size() && "Unexpected vector size");
+    if (!getShuffleDemandedElts(NumElts, SVN->getMask(), DemandedElts,
+                                DemandedLHS, DemandedRHS))
+      return false;
+
+    return (!DemandedLHS ||
+            isKnownNeverZero(Op.getOperand(0), DemandedLHS, Depth + 1)) &&
+           (!DemandedRHS ||
+            isKnownNeverZero(Op.getOperand(1), DemandedRHS, Depth + 1));
   }
 
   case ISD::UADDSAT:
@@ -6317,7 +6437,7 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
   case ISD::BSWAP:
   case ISD::CTPOP:
   case ISD::ABS:
-    return isKnownNeverZero(Op.getOperand(0), Depth + 1);
+    return isKnownNeverZero(Op.getOperand(0), DemandedElts, Depth + 1);
 
   case ISD::SRA:
   case ISD::SRL: {

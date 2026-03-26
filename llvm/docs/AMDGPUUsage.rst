@@ -910,6 +910,8 @@ supported for the ``amdgcn`` target.
      *reserved for future use*             10
      *reserved for future use*             11
      *reserved for downstream use (LLPC)*  12
+     *reserved for future use*             13
+     *reserved for future use*             14
      Streamout Registers                   128             N/A         GS_REGS
      ===================================== =============== =========== ================ ======= ============================
 
@@ -2252,10 +2254,10 @@ The AMDGPU backend supports the following calling conventions:
                                      case the backend assumes that there are no inactive lanes upon entry; any inactive
                                      lanes that need to be preserved must be explicitly present in the IR).
 
-                                     Wave scratch is "empty" at function boundaries. There is no stack pointer input
-                                     or output value, but functions are free to use scratch starting from an initial
-                                     stack pointer. Calls to ``amdgpu_gfx`` functions are allowed and behave like they
-                                     do in ``amdgpu_cs`` functions.
+                                     Chain functions receive a stack pointer from their caller (in s32), similar to
+                                     ``amdgpu_gfx`` functions. If needed, the frame pointer is s33 and the base pointer
+                                     is s34. Calls to ``amdgpu_gfx`` functions are allowed and behave like they do in
+                                     ``amdgpu_cs`` functions.
 
                                      A function may have multiple exits (e.g. one chain exit and one plain ``ret void``
                                      for when the wave ends), but all ``llvm.amdgcn.cs.chain`` exits must be in

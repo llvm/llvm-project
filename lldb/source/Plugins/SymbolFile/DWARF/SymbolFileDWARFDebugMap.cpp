@@ -600,6 +600,15 @@ CompUnitSP SymbolFileDWARFDebugMap::ParseCompileUnitAtIndex(uint32_t cu_idx) {
     if (oso_module) {
       FileSpec so_file_spec;
       if (GetFileSpecForSO(cu_idx, so_file_spec)) {
+        // Apply the module's source path remappings so that compile units
+        // created from N_SO stabs (which may contain paths rewritten by
+        // -fdebug-prefix-map at build time) report their real on-disk paths.
+        // This mirrors what MakeAbsoluteAndRemap does for the dSYM case.
+        if (ModuleSP module_sp = m_objfile_sp->GetModule())
+          if (auto remapped =
+                  module_sp->RemapSourceFile(so_file_spec.GetPath()))
+            so_file_spec.SetFile(*remapped, FileSpec::Style::native);
+
         // User zero as the ID to match the compile unit at offset zero in each
         // .o file.
         lldb::user_id_t cu_id = 0;

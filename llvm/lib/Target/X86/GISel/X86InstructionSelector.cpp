@@ -823,8 +823,9 @@ bool X86InstructionSelector::selectConstant(MachineInstr &I,
     NewOpc = X86::MOV32ri;
     break;
   case 64:
-    // TODO: in case isUInt<32>(Val), X86::MOV32ri can be used
-    if (isInt<32>(Val))
+    if (isUInt<32>(Val))
+      NewOpc = X86::MOV32ri64;
+    else if (isInt<32>(Val))
       NewOpc = X86::MOV64ri32;
     else
       NewOpc = X86::MOV64ri;

@@ -52,11 +52,11 @@ define void @banerjee0(ptr %A, ptr %B, i64 %m, i64 %n) nounwind uwtable ssp {
 ; DELIN-NEXT:  Src: store i64 0, ptr %arrayidx, align 8 --> Dst: store i64 %0, ptr %B.addr.11, align 8
 ; DELIN-NEXT:    da analyze - confused!
 ; DELIN-NEXT:  Src: %0 = load i64, ptr %arrayidx6, align 8 --> Dst: %0 = load i64, ptr %arrayidx6, align 8
-; DELIN-NEXT:    da analyze - none!
+; DELIN-NEXT:    da analyze - input [0 *]!
 ; DELIN-NEXT:  Src: %0 = load i64, ptr %arrayidx6, align 8 --> Dst: store i64 %0, ptr %B.addr.11, align 8
 ; DELIN-NEXT:    da analyze - confused!
 ; DELIN-NEXT:  Src: store i64 %0, ptr %B.addr.11, align 8 --> Dst: store i64 %0, ptr %B.addr.11, align 8
-; DELIN-NEXT:    da analyze - none!
+; DELIN-NEXT:    da analyze - output [0 *]!
 ;
 entry:
   br label %for.cond1.preheader

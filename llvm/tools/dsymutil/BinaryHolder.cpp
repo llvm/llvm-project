@@ -155,13 +155,25 @@ BinaryHolder::ObjectEntry::getObjects() const {
 }
 Expected<const object::ObjectFile &>
 BinaryHolder::ObjectEntry::getObject(const Triple &T) const {
+  // Prefer an exact match, but settle for a compatible match if there is one.
+  object::ObjectFile const *CompatibleMatch = nullptr;
   for (const auto &Obj : Objects) {
     if (const auto *MachO = dyn_cast<object::MachOObjectFile>(Obj.get())) {
-      if (MachO->getArchTriple().str() == T.str())
+      llvm::Triple ObjTriple = MachO->getArchTriple();
+      if (ObjTriple.str() == T.str())
         return *MachO;
-    } else if (Obj->getArch() == T.getArch())
-      return *Obj;
+      if (!CompatibleMatch && ObjTriple.isCompatibleWith(T))
+        CompatibleMatch = MachO;
+    } else {
+      llvm::Triple ObjTriple = Obj->makeTriple();
+      if (ObjTriple.str() == T.str())
+        return *Obj;
+      if (!CompatibleMatch && ObjTriple.isCompatibleWith(T))
+        CompatibleMatch = Obj.get();
+    }
   }
+  if (CompatibleMatch)
+    return *CompatibleMatch;
   return errorCodeToError(object::object_error::arch_not_found);
 }
 

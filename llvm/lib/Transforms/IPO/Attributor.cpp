@@ -2472,7 +2472,7 @@ ChangeStatus Attributor::cleanupIR() {
           Callee->removeParamAttr(Idx, Attribute::NoUndef);
       }
     }
-    if (isa<Constant>(NewV) && isa<BranchInst>(U->getUser())) {
+    if (isa<Constant>(NewV) && isa<CondBrInst>(U->getUser())) {
       Instruction *UserI = cast<Instruction>(U->getUser());
       if (isa<UndefValue>(NewV)) {
         ToBeChangedToUnreachableInsts.insert(UserI);
@@ -3255,7 +3255,8 @@ void InformationCache::initializeInformationCache(const Function &CF,
     case Instruction::CatchSwitch:
     case Instruction::AtomicRMW:
     case Instruction::AtomicCmpXchg:
-    case Instruction::Br:
+    case Instruction::UncondBr:
+    case Instruction::CondBr:
     case Instruction::Resume:
     case Instruction::Ret:
     case Instruction::Load:

@@ -2036,10 +2036,12 @@ public:
         val = arith::AddIOp::create(b, val, offset);
         index = arith::FloorDivSIOp::create(b, val, scaleN);
 
-        // rx = x % scale_n
-        // dx = rx / scale_n
-        Value r = arith::RemSIOp::create(b, val, scaleN);
+        // rx = x - ix * scale_n (x % scale_n, if values are positive)
+        Value scaledIndex = arith::MulIOp::create(b, index, scaleN);
+        Value r = arith::SubIOp::create(b, val, scaledIndex);
         Value rFp = arith::SIToFPOp::create(b, floatTy, r);
+
+        // dx = rx / scale_n
         Value scaleNfp = arith::UIToFPOp::create(b, floatTy, scaleN);
         delta = arith::DivFOp::create(b, rFp, scaleNfp);
       };

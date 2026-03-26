@@ -680,10 +680,11 @@ static Value packSmallFloatVectorOperand(ConversionPatternRewriter &rewriter,
   return input;
 }
 
-/// Converts sparse MFMA (smfmac) operands to the expected ROCDL types.
-static Value convertSparseMFMAVectorOperand(ConversionPatternRewriter &rewriter,
-                                            Location loc, Value input,
-                                            bool allowBf16 = true) {
+/// Converts sparse MFMA/WMMA (smfmac/swmmac) operands to the expected ROCDL
+/// types.
+static Value convertSparseVectorOperand(ConversionPatternRewriter &rewriter,
+                                        Location loc, Value input,
+                                        bool allowBf16 = true) {
   Type inputType = input.getType();
   auto vectorType = cast<VectorType>(inputType);
   // bf16 -> i16 when not allowed (pre-gfx950).
@@ -695,8 +696,10 @@ static Value convertSparseMFMAVectorOperand(ConversionPatternRewriter &rewriter,
       vectorType.getElementTypeBitWidth() <= 8) {
     int64_t numWords = llvm::divideCeil(
         vectorType.getNumElements() * vectorType.getElementTypeBitWidth(), 32);
-    return LLVM::BitcastOp::create(
-        rewriter, loc, VectorType::get(numWords, rewriter.getI32Type()), input);
+    Type castType = (numWords > 1)
+                        ? Type{VectorType::get(numWords, rewriter.getI32Type())}
+                        : rewriter.getI32Type();
+    return LLVM::BitcastOp::create(rewriter, loc, castType, input);
   }
   return input;
 }
@@ -1339,6 +1342,161 @@ static std::optional<StringRef> wmmaOpToIntrinsic(WMMAOp wmma,
   return std::nullopt;
 }
 
+/// Returns the `rocdl` intrinsic corresponding to a SparseWMMA operation
+/// `swmmac` if one exists. This includes checking to ensure the intrinsic is
+/// supported on the architecture you are compiling for.
+struct SparseWMMAOpInfo {
+  StringRef name;
+  bool useSign;
+  bool useReuse;
+  bool useClamp;
+};
+
+static std::optional<SparseWMMAOpInfo>
+sparseWMMAOpToIntrinsic(SparseWMMAOp swmmac, Chipset chipset) {
+  Type sourceAElem = getElementTypeOrSelf(swmmac.getSourceA().getType());
+  Type sourceBElem = getElementTypeOrSelf(swmmac.getSourceB().getType());
+  Type destElem = getElementTypeOrSelf(swmmac.getDestC().getType());
+
+  uint32_t m = swmmac.getM(), n = swmmac.getN(), k = swmmac.getK();
+
+  if ((m != 16) || (n != 16))
+    return std::nullopt;
+
+  const bool isRDNA4 = chipset.majorVersion == 12 && chipset.minorVersion == 0;
+  if (isRDNA4) {
+    if (k == 32) {
+      if (destElem.isF32() && sourceAElem.isF16() && sourceBElem.isF16())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_f32_16x16x32_f16::getOperationName(), false, false,
+            false};
+      if (destElem.isF32() && sourceAElem.isBF16() && sourceBElem.isBF16())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_f32_16x16x32_bf16::getOperationName(), false, false,
+            false};
+      if (destElem.isF16() && sourceAElem.isF16() && sourceBElem.isF16())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_f16_16x16x32_f16::getOperationName(), false, false,
+            false};
+      if (destElem.isBF16() && sourceAElem.isBF16() && sourceBElem.isBF16())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_bf16_16x16x32_bf16::getOperationName(), false, false,
+            false};
+      if (destElem.isInteger(32) && sourceAElem.isInteger(8) &&
+          sourceBElem.isInteger(8))
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_i32_16x16x32_iu8::getOperationName(), true, false,
+            true};
+      if (destElem.isInteger(32) && sourceAElem.isInteger(4) &&
+          sourceBElem.isInteger(4))
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_i32_16x16x32_iu4::getOperationName(), true, false,
+            true};
+      if (destElem.isF32() && sourceAElem.isF8E4M3FN() &&
+          sourceBElem.isF8E4M3FN())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_f32_16x16x32_fp8_fp8::getOperationName(), false,
+            false, false};
+      if (destElem.isF32() && sourceAElem.isF8E4M3FN() &&
+          sourceBElem.isF8E5M2())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_f32_16x16x32_fp8_bf8::getOperationName(), false,
+            false, false};
+      if (destElem.isF32() && sourceAElem.isF8E5M2() &&
+          sourceBElem.isF8E4M3FN())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_f32_16x16x32_bf8_fp8::getOperationName(), false,
+            false, false};
+      if (destElem.isF32() && sourceAElem.isF8E5M2() && sourceBElem.isF8E5M2())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_f32_16x16x32_bf8_bf8::getOperationName(), false,
+            false, false};
+    }
+    if (k == 64) {
+      if (destElem.isInteger(32) && sourceAElem.isInteger(4) &&
+          sourceBElem.isInteger(4))
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_i32_16x16x64_iu4::getOperationName(), true, false,
+            true};
+    }
+  }
+
+  const bool isGFX1250 = chipset == kGfx1250;
+  const bool isWavesize64 = swmmac.getWave64();
+  if (isGFX1250 && !isWavesize64) {
+    if (k == 64) {
+      if (destElem.isF32() && sourceAElem.isF16() && sourceBElem.isF16())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_f32_16x16x64_f16::getOperationName(), true, true,
+            false};
+      if (destElem.isF32() && sourceAElem.isBF16() && sourceBElem.isBF16())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_f32_16x16x64_bf16::getOperationName(), true, true,
+            false};
+      if (destElem.isF16() && sourceAElem.isF16() && sourceBElem.isF16())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_f16_16x16x64_f16::getOperationName(), true, true,
+            false};
+      if (destElem.isBF16() && sourceAElem.isBF16() && sourceBElem.isBF16())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_bf16_16x16x64_bf16::getOperationName(), true, true,
+            false};
+    }
+    if (k == 128) {
+      if (destElem.isF32() && sourceAElem.isF8E4M3FN() &&
+          sourceBElem.isF8E4M3FN())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_f32_16x16x128_fp8_fp8::getOperationName(), false,
+            true, false};
+      if (destElem.isF32() && sourceAElem.isF8E4M3FN() &&
+          sourceBElem.isF8E5M2())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_f32_16x16x128_fp8_bf8::getOperationName(), false,
+            true, false};
+      if (destElem.isF32() && sourceAElem.isF8E5M2() &&
+          sourceBElem.isF8E4M3FN())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_f32_16x16x128_bf8_fp8::getOperationName(), false,
+            true, false};
+      if (destElem.isF32() && sourceAElem.isF8E5M2() && sourceBElem.isF8E5M2())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_f32_16x16x128_bf8_bf8::getOperationName(), false,
+            true, false};
+      if (destElem.isF16() && sourceAElem.isF8E4M3FN() &&
+          sourceBElem.isF8E4M3FN())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_f16_16x16x128_fp8_fp8::getOperationName(), false,
+            true, false};
+      if (destElem.isF16() && sourceAElem.isF8E4M3FN() &&
+          sourceBElem.isF8E5M2())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_f16_16x16x128_fp8_bf8::getOperationName(), false,
+            true, false};
+      if (destElem.isF16() && sourceAElem.isF8E5M2() &&
+          sourceBElem.isF8E4M3FN())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_f16_16x16x128_bf8_fp8::getOperationName(), false,
+            true, false};
+      if (destElem.isF16() && sourceAElem.isF8E5M2() && sourceBElem.isF8E5M2())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_f16_16x16x128_bf8_bf8::getOperationName(), false,
+            true, false};
+      if (destElem.isF16() && sourceAElem.isInteger(8) &&
+          sourceBElem.isInteger(8))
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_f16_16x16x128_bf8_bf8::getOperationName(), false,
+            true, false};
+      if (destElem.isInteger(32) && sourceAElem.isInteger(8) &&
+          sourceBElem.isInteger(8))
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_i32_16x16x128_iu8::getOperationName(), true, true,
+            true};
+    }
+  }
+
+  return std::nullopt;
+}
+
 namespace {
 struct MFMAOpLowering : public ConvertOpToLLVMPattern<MFMAOp> {
   MFMAOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
@@ -1485,10 +1643,10 @@ struct SparseMFMAOpLowering : public ConvertOpToLLVMPattern<SparseMFMAOp> {
       return op->emitOpError("sparse MFMA (smfmac) only supported on gfx942+");
     bool isGfx950 = chipset >= kGfx950;
 
-    Value a = convertSparseMFMAVectorOperand(rewriter, loc,
-                                             adaptor.getSourceA(), isGfx950);
-    Value b = convertSparseMFMAVectorOperand(rewriter, loc,
-                                             adaptor.getSourceB(), isGfx950);
+    Value a = convertSparseVectorOperand(rewriter, loc, adaptor.getSourceA(),
+                                         isGfx950);
+    Value b = convertSparseVectorOperand(rewriter, loc, adaptor.getSourceB(),
+                                         isGfx950);
     Value c = adaptor.getDestC();
 
     std::optional<StringRef> maybeIntrinsic = smfmacOpToIntrinsic(op, chipset);
@@ -1579,6 +1737,87 @@ struct WMMAOpLowering : public ConvertOpToLLVMPattern<WMMAOp> {
     OperationState loweredOp(loc, *maybeIntrinsic);
     loweredOp.addTypes(rawOutType);
     loweredOp.addOperands(operands);
+    loweredOp.addAttributes(attrs);
+    Operation *lowered = rewriter.create(loweredOp);
+
+    Operation *maybeCastBack = lowered;
+    if (rawOutType != outType)
+      maybeCastBack = LLVM::BitcastOp::create(rewriter, loc, outType,
+                                              lowered->getResult(0));
+    rewriter.replaceOp(op, maybeCastBack->getResults());
+
+    return success();
+  }
+};
+
+struct SparseWMMAOpLowering : public ConvertOpToLLVMPattern<SparseWMMAOp> {
+  SparseWMMAOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
+      : ConvertOpToLLVMPattern<SparseWMMAOp>(converter), chipset(chipset) {}
+
+  Chipset chipset;
+
+  LogicalResult
+  matchAndRewrite(SparseWMMAOp op, SparseWMMAOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    auto outType =
+        typeConverter->convertType<VectorType>(op.getDestD().getType());
+    if (!outType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    std::optional<SparseWMMAOpInfo> maybeIntrinsic =
+        sparseWMMAOpToIntrinsic(op, chipset);
+
+    if (!maybeIntrinsic.has_value())
+      return op.emitOpError(
+          "no intrinsic matching Sparse WMMA on the given chipset");
+    SparseWMMAOpInfo intrinsic = maybeIntrinsic.value();
+
+    SmallVector<NamedAttribute> attrs;
+
+    if ((op.getUnsignedA() || op.getUnsignedB()) && !intrinsic.useSign)
+      return op->emitOpError("intrinsic doesn't support unsign");
+    if (intrinsic.useSign) {
+      if (auto attr = op.getUnsignedAAttr())
+        attrs.push_back({"signA", attr});
+      if (auto attr = op.getUnsignedBAttr())
+        attrs.push_back({"signB", attr});
+    }
+
+    if ((op.getReuseA() || op.getReuseB()) && !intrinsic.useReuse)
+      return op->emitOpError("intrinsic doesn't support reuse");
+    if (intrinsic.useReuse) {
+      if (auto attr = op.getReuseAAttr())
+        attrs.push_back({"reuseA", attr});
+      if (auto attr = op.getReuseBAttr())
+        attrs.push_back({"reuseB", attr});
+    }
+
+    if (op.getClamp() && !intrinsic.useClamp)
+      return op->emitOpError("intrinsic doesn't support clamp");
+    if (intrinsic.useClamp && op.getClampAttr())
+      attrs.push_back({"clamp", op.getClampAttr()});
+
+    const bool isGFX1250orHigher =
+        chipset.majorVersion == 12 && chipset.minorVersion >= 5;
+    Value a = convertSparseVectorOperand(rewriter, loc, adaptor.getSourceA(),
+                                         isGFX1250orHigher);
+    Value b = convertSparseVectorOperand(rewriter, loc, adaptor.getSourceB(),
+                                         isGFX1250orHigher);
+    Value c = adaptor.getDestC();
+    VectorType rawOutType = outType;
+    if (!isGFX1250orHigher) {
+      c = convertSparseVectorOperand(rewriter, loc, adaptor.getDestC(), false);
+      rawOutType = cast<VectorType>(c.getType());
+    }
+
+    // Bitcast sparse indices from vector<4xi8> to i32.
+    Value sparseIdx = LLVM::BitcastOp::create(
+        rewriter, loc, rewriter.getI32Type(), adaptor.getSparseIdx());
+
+    OperationState loweredOp(loc, intrinsic.name);
+    loweredOp.addTypes(rawOutType);
+    loweredOp.addOperands({a, b, c, sparseIdx});
     loweredOp.addAttributes(attrs);
     Operation *lowered = rewriter.create(loweredOp);
 
@@ -3833,11 +4072,12 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
            AMDGPUDPPLowering, MemoryCounterWaitOpLowering, LDSBarrierOpLowering,
            SchedBarrierOpLowering, MFMAOpLowering, ScaledMFMAOpLowering,
            SparseMFMAOpLowering, WMMAOpLowering, ScaledWMMAOpLowering,
-           ExtPackedFp8OpLowering, ScaledExtPackedMatrixOpLowering,
-           ScaledExtPackedOpLowering, PackedScaledTruncOpLowering,
-           PackedTrunc2xFp8OpLowering, PackedStochRoundFp8OpLowering,
-           GatherToLDSOpLowering, TransposeLoadOpLowering,
-           AMDGPUPermlaneLowering, AMDGPUMakeDmaBaseLowering<MakeDmaBaseOp>,
+           SparseWMMAOpLowering, ExtPackedFp8OpLowering,
+           ScaledExtPackedMatrixOpLowering, ScaledExtPackedOpLowering,
+           PackedScaledTruncOpLowering, PackedTrunc2xFp8OpLowering,
+           PackedStochRoundFp8OpLowering, GatherToLDSOpLowering,
+           TransposeLoadOpLowering, AMDGPUPermlaneLowering,
+           AMDGPUMakeDmaBaseLowering<MakeDmaBaseOp>,
            AMDGPUMakeDmaBaseLowering<MakeGatherDmaBaseOp>,
            AMDGPULowerDescriptor<MakeDmaDescriptorOp>,
            AMDGPULowerDescriptor<MakeGatherDmaDescriptorOp>,

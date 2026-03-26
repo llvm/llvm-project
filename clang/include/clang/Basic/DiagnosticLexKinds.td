@@ -503,7 +503,7 @@ def warn_cxx98_compat_variadic_macro : Warning<
   InGroup<CXX98CompatPedantic>, DefaultIgnore;
 def ext_named_variadic_macro : Extension<
   "named variadic macros are a GNU extension">, InGroup<VariadicMacros>;
-def err_embedded_directive : Error<"embedding a %select{#|C++ }0%1 directive "
+def err_embedded_directive : Error<"embedding a %select{|#}0%1 directive "
                                    "within macro arguments is not supported">;
 def ext_embedded_directive : Extension<
   "embedding a directive within macro arguments has undefined behavior">,
@@ -996,6 +996,10 @@ def warn_non_modular_include_in_module : Warning<
 def warn_module_conflict : Warning<
   "module '%0' conflicts with already-imported module '%1': %2">,
   InGroup<ModuleConflict>;
+def warn_mmap_path_outside_directory : Warning<
+  "path refers outside of the module directory; such paths in implicitly "
+  "discovered module maps are deprecated">,
+  InGroup<DiagGroup<"module-map-path-outside-directory">>, DefaultIgnore;
 
 // C++20 modules
 def err_pp_module_name_is_macro : Error<

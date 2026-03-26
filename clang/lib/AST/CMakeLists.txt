@@ -76,7 +76,6 @@ add_clang_library(clangAST
   ByteCode/Disasm.cpp
   ByteCode/EvalEmitter.cpp
   ByteCode/Function.cpp
-  ByteCode/FunctionPointer.cpp
   ByteCode/InterpBuiltin.cpp
   ByteCode/InterpBuiltinBitCast.cpp
   ByteCode/Floating.cpp
@@ -96,6 +95,7 @@ add_clang_library(clangAST
   ByteCode/State.cpp
   ByteCode/MemberPointer.cpp
   ByteCode/InterpShared.cpp
+  HLSLResource.cpp
   ItaniumCXXABI.cpp
   ItaniumMangle.cpp
   JSONNodeDumper.cpp

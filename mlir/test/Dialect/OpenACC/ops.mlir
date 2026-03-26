@@ -2522,3 +2522,49 @@ func.func @test_getdeviceptr_opaque_ptr(%a: !llvm.ptr) -> () {
 // CHECK-SAME:    %[[A:.*]]: !llvm.ptr)
 // CHECK:         %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[A]] : !llvm.ptr) -> !llvm.ptr
 // CHECK:         acc.declare_enter dataOperands(%[[DEVPTR]] : !llvm.ptr)
+
+// -----
+
+acc.reduction.recipe @reduction_maximum_memref_f32 : memref<f32> reduction_operator <maximumf> init {
+^bb0(%arg0: memref<f32>):
+  %alloca = memref.alloca() : memref<f32>
+  acc.yield %alloca : memref<f32>
+} combiner {
+^bb0(%arg0: memref<f32>, %arg1: memref<f32>):
+  acc.yield %arg0 : memref<f32>
+}
+
+// CHECK-LABEL: acc.reduction.recipe @reduction_maximum_memref_f32 : memref<f32> reduction_operator <maximumf>
+
+acc.reduction.recipe @reduction_maxnum_memref_f32 : memref<f32> reduction_operator <maxnumf> init {
+^bb0(%arg0: memref<f32>):
+  %alloca = memref.alloca() : memref<f32>
+  acc.yield %alloca : memref<f32>
+} combiner {
+^bb0(%arg0: memref<f32>, %arg1: memref<f32>):
+  acc.yield %arg0 : memref<f32>
+}
+
+// CHECK-LABEL: acc.reduction.recipe @reduction_maxnum_memref_f32 : memref<f32> reduction_operator <maxnumf>
+
+acc.reduction.recipe @reduction_minimum_memref_f32 : memref<f32> reduction_operator <minimumf> init {
+^bb0(%arg0: memref<f32>):
+  %alloca = memref.alloca() : memref<f32>
+  acc.yield %alloca : memref<f32>
+} combiner {
+^bb0(%arg0: memref<f32>, %arg1: memref<f32>):
+  acc.yield %arg0 : memref<f32>
+}
+
+// CHECK-LABEL: acc.reduction.recipe @reduction_minimum_memref_f32 : memref<f32> reduction_operator <minimumf>
+
+acc.reduction.recipe @reduction_minnum_memref_f32 : memref<f32> reduction_operator <minnumf> init {
+^bb0(%arg0: memref<f32>):
+  %alloca = memref.alloca() : memref<f32>
+  acc.yield %alloca : memref<f32>
+} combiner {
+^bb0(%arg0: memref<f32>, %arg1: memref<f32>):
+  acc.yield %arg0 : memref<f32>
+}
+
+// CHECK-LABEL: acc.reduction.recipe @reduction_minnum_memref_f32 : memref<f32> reduction_operator <minnumf>

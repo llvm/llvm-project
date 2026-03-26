@@ -249,6 +249,10 @@ bool vector::isContiguousSlice(MemRefType memrefType, VectorType vectorType) {
       vectorType.getShape().drop_while([](auto v) { return v == 1; });
   auto vecRank = vectorShape.size();
 
+  // A single element is always contiguous.
+  if (vecRank == 0)
+    return true;
+
   if (!memrefType.areTrailingDimsContiguous(vecRank))
     return false;
 
@@ -353,7 +357,7 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
       builder, loc,
       /*vectorType=*/vecToReadTy,
       /*source=*/source,
-      /*indices=*/SmallVector<Value>(vecToReadRank, zero),
+      /*indices=*/Repeated<Value>(vecToReadRank, zero),
       /*padding=*/padValue,
       /*inBounds=*/inBoundsVal);
 
