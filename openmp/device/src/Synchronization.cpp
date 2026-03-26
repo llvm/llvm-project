@@ -182,7 +182,7 @@ void setCriticalLock(omp_lock_t *Lock) { setLock(Lock); }
 
 #if defined(__SPIRV__)
 
-[[clang::loader_uninitialized]] volatile Local<uint32_t> namedBarrierTracker;
+[[clang::loader_uninitialized]] Local<uint32_t> namedBarrierTracker;
 
 void namedBarrierInit() {
   atomic::store(&namedBarrierTracker, 0u, atomic::seq_cst, atomic::workgroup);
