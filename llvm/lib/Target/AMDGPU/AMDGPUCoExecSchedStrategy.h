@@ -350,6 +350,13 @@ public:
                          GenericSchedulerBase::SchedCandidate &Cand,
                          SchedBoundary &Zone);
 
+  /// Prioritize instructions involved the memory pipeline. Currently we don't have
+  /// any modelling of pipelined loads, so we control the layout of the pipeline
+  /// per iteration by giving the user some control over the stalls (e.g. between
+  /// s_barrier_signal and s_barrier_wait) and scheduling the pipeline instructions
+  /// as soon as they are ready.
+  ///
+  /// TODO -- add better modelling and heuristics for pipelining based scheduling.
   bool tryMemoryPipeline(GenericSchedulerBase::SchedCandidate &TryCand,
                          GenericSchedulerBase::SchedCandidate &Cand);
 
