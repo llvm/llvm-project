@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// ADDITIONAL_COMPILE_FLAGS: -Wno-deprecated
+// ADDITIONAL_COMPILE_FLAGS: -Wno-deprecated -Wno-deprecated-copy
 
 // hash_map::hash_map(const hash_map&)
 
