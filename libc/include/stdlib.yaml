@@ -17,8 +17,10 @@ types:
   - type_name: ldiv_t
   - type_name: lldiv_t
   - type_name: locale_t
+  - type_name: rsize_t
   - type_name: size_t
-  - type_name: wchar_t  
+  - type_name: wchar_t
+  - type_name: errno_t
 enums: []
 objects: []
 functions:

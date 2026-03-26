@@ -2133,8 +2133,7 @@ public:
         VScaleRange = getVScaleRange(I->getCaller(), 64);
 
       unsigned EltWidth = getTLI()->getBitWidthForCttzElements(
-          getTLI()->getValueType(DL, RetTy), ArgType.getVectorElementCount(),
-          ZeroIsPoison, &VScaleRange);
+          RetTy, ArgType.getVectorElementCount(), ZeroIsPoison, &VScaleRange);
       Type *NewEltTy = IntegerType::getIntNTy(RetTy->getContext(), EltWidth);
 
       // Create the new vector type & get the vector length

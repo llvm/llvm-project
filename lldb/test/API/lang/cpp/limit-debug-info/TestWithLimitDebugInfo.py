@@ -5,6 +5,8 @@ from lldbsuite.test import lldbutil
 
 
 class TestWithLimitDebugInfo(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def _run_test(self, build_dict):
         self.build(dictionary=build_dict)
 
