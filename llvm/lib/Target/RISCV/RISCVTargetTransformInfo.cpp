@@ -798,16 +798,15 @@ RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
         // - Mask must fit into element in vector unit so VMV won't require a
         // VSETVL prior to VMV
         // - Mask must fit into a scalar register
-        if (unsigned ElementBits = LT.second.getScalarSizeInBits();
-            !Mask.empty() && Mask.size() <= ElementBits &&
-            ElementBits <= ST->getXLen()) {
-          APInt Imm(ElementBits, 0);
+        if (!Mask.empty() &&
+            Mask.size() <= ST->getXLen() &&
+            Mask.size() <= LT.second.getScalarSizeInBits()) {
+          APInt Imm(Mask.size(), 0);
           for (auto [Idx, M] : enumerate(Mask))
             if (M < (int)NumElts)
               Imm.setBit(Idx);
-
           InstructionCost ImmMaskCost =
-              getIntImmCost(Imm, Type::getIntNTy(C, ElementBits), CostKind) +
+              getIntImmCost(Imm, Type::getIntNTy(C, Mask.size()), CostKind) +
               getRISCVInstructionCost(RISCV::VMV_S_X, LT.second, CostKind);
           MaskCost = std::min(ImmMaskCost, MaskCost);
         }
