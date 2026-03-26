@@ -1,8 +1,8 @@
 // RUN: rm -rf %t && mkdir %t
 // RUN: mkdir -p %t/ctudir2
 // RUN: %clang_cc1  \
-// RUN:   -emit-pch -o %t/ctudir2/ctu-import.c.ast %S/Inputs/ctu-import.c
-// RUN: cp %S/Inputs/ctu-import.c.externalDefMap.ast-dump.txt %t/ctudir2/externalDefMap.txt
+// RUN:   -emit-pch -o %t/ctudir2/import.c.ast %S/Inputs/import.c
+// RUN: cp %S/Inputs/import.c.externalDefMap.ast-dump.txt %t/ctudir2/externalDefMap.txt
 // RUN: %clang_analyze_cc1 \
 // RUN:   -analyzer-checker=core,debug.ExprInspection \
 // RUN:   -analyzer-config eagerly-assume=false \

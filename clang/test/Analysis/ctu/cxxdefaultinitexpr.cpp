@@ -1,8 +1,8 @@
 // RUN: rm -rf %t && mkdir %t
 // RUN: mkdir -p %t/ctudir
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -std=c++17 \
-// RUN:   -emit-pch -o %t/ctudir/ctu-cxxdefaultinitexpr-import.cpp.ast %S/Inputs/ctu-cxxdefaultinitexpr-import.cpp
-// RUN: cp %S/Inputs/ctu-cxxdefaultinitexpr-import.cpp.externalDefMap.ast-dump.txt %t/ctudir/externalDefMap.txt
+// RUN:   -emit-pch -o %t/ctudir/cxxdefaultinitexpr-import.cpp.ast %S/Inputs/cxxdefaultinitexpr-import.cpp
+// RUN: cp %S/Inputs/cxxdefaultinitexpr-import.cpp.externalDefMap.ast-dump.txt %t/ctudir/externalDefMap.txt
 // RUN: %clang_analyze_cc1 -triple x86_64-pc-linux-gnu -std=c++17 \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-config experimental-enable-naive-ctu-analysis=true \
