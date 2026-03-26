@@ -33,7 +33,7 @@
 // JSON-INDEX-NEXT:      "HasComments": true,
 // JSON-INDEX-NEXT:      "InfoType": "enum",
 // JSON-INDEX-NEXT:      "Location": {
-// JSON-INDEX-NEXT:        "Filename": "{{.*}}clang-tools-extra{{[\\/]}}test{{[\\/]}}clang-doc{{[\\/]}}Inputs{{[\\/]}}enum.cpp",
+// JSON-INDEX-NEXT:        "Filename": "{{.*}}enum.cpp",
 // JSON-INDEX-NEXT:        "LineNumber": 4
 // JSON-INDEX-NEXT:      },
 // JSON-INDEX-NEXT:      "Members": [
@@ -102,7 +102,7 @@
 // JSON-INDEX-NEXT:      "HasComments": true,
 // JSON-INDEX-NEXT:      "InfoType": "enum",
 // JSON-INDEX-NEXT:      "Location": {
-// JSON-INDEX-NEXT:        "Filename": "{{.*}}clang-tools-extra{{[\\/]}}test{{[\\/]}}clang-doc{{[\\/]}}Inputs{{[\\/]}}enum.cpp",
+// JSON-INDEX-NEXT:        "Filename": "{{.*}}enum.cpp",
 // JSON-INDEX-NEXT:        "LineNumber": 13
 // JSON-INDEX-NEXT:      },
 // JSON-INDEX-NEXT:      "Members": [
@@ -176,7 +176,7 @@
 // JSON-INDEX-NEXT:      "HasComments": true,
 // JSON-INDEX-NEXT:      "InfoType": "enum",
 // JSON-INDEX-NEXT:      "Location": {
-// JSON-INDEX-NEXT:        "Filename": "{{.*}}clang-tools-extra{{[\\/]}}test{{[\\/]}}clang-doc{{[\\/]}}Inputs{{[\\/]}}enum.cpp",
+// JSON-INDEX-NEXT:        "Filename": "{{.*}}enum.cpp",
 // JSON-INDEX-NEXT:        "LineNumber": 26
 // JSON-INDEX-NEXT:      },
 // JSON-INDEX-NEXT:      "Members": [
@@ -258,7 +258,7 @@
 // JSON-INDEX-NEXT:      "HasComments": true,
 // JSON-INDEX-NEXT:      "InfoType": "enum",
 // JSON-INDEX-NEXT:      "Location": {
-// JSON-INDEX-NEXT:        "Filename": "{{.*}}clang-tools-extra{{[\\/]}}test{{[\\/]}}clang-doc{{[\\/]}}Inputs{{[\\/]}}enum.cpp",
+// JSON-INDEX-NEXT:        "Filename": "{{.*}}enum.cpp",
 // JSON-INDEX-NEXT:        "LineNumber": 43
 // JSON-INDEX-NEXT:      },
 // JSON-INDEX-NEXT:      "Members": [
@@ -286,7 +286,7 @@
 // JSON-INDEX-NEXT:      "End": true,
 // JSON-INDEX-NEXT:      "InfoType": "enum",
 // JSON-INDEX-NEXT:      "Location": {
-// JSON-INDEX-NEXT:        "Filename": "{{.*}}clang-tools-extra{{[\\/]}}test{{[\\/]}}clang-doc{{[\\/]}}Inputs{{[\\/]}}enum.cpp",
+// JSON-INDEX-NEXT:        "Filename": "{{.*}}enum.cpp",
 // JSON-INDEX-NEXT:        "LineNumber": 47
 // JSON-INDEX-NEXT:      },
 // JSON-INDEX-NEXT:      "Members": [
