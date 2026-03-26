@@ -108,9 +108,9 @@ public:
 // Test that STR (Thumb T1 encoding) uses add=true, computing address as
 // Rn + imm5*4, not Rn - imm5*4.
 //
-// STR r0, [r1, #8]  =>  Thumb T1 encoding: 0110 0 imm5 Rn Rt
-//   imm5 = 2 (offset = 2*4 = 8), Rn = r1, Rt = r0
-//   opcode = 0110 0 00010 001 000 = 0x6048
+// STR r0, [r1, #4]  =>  Thumb T1 encoding: 0110 0 imm5 Rn Rt
+//   imm5 = 1 (offset = 1*4 = 4), Rn = r1, Rt = r0
+//   opcode = 0110 0 00001 001 000 = 0x6048
 TEST_F(TestARMEmulator, TestSTRT1AddsOffset) {
   ARMEmulatorTester emu;
 
@@ -120,18 +120,18 @@ TEST_F(TestARMEmulator, TestSTRT1AddsOffset) {
   // Set up internal emulator state for Thumb mode.
   emu.SetupThumbMode(0x6048);
 
-  // STR r0, [r1, #8] — T1 encoding
-  // With add=true, should store to 0x1000 + 8 = 0x1008
-  // With the old bug (add=false), it would store to 0x1000 - 8 = 0x0FF8
+  // STR r0, [r1, #4] — T1 encoding
+  // With add=true, should store to 0x1000 + 4 = 0x1004
+  // With the old bug (add=false), it would store to 0x1000 - 4 = 0x0FFC
   const uint32_t opcode = 0x6048;
   ASSERT_TRUE(
       emu.TestEmulateSTRThumb(opcode, EmulateInstructionARM::eEncodingT1));
 
-  // Verify the value was stored at base + offset (0x1008), not base - offset
-  auto it = emu.memory.find(0x1008);
+  // Verify the value was stored at base + offset (0x1004), not base - offset
+  auto it = emu.memory.find(0x1004);
   ASSERT_NE(it, emu.memory.end());
   ASSERT_EQ(it->second, (uint32_t)0xDEADBEEF);
 
-  // Verify nothing was written to the wrong address (0x0FF8)
-  ASSERT_EQ(emu.memory.find(0x0FF8), emu.memory.end());
+  // Verify nothing was written to the wrong address (0x0FFC)
+  ASSERT_EQ(emu.memory.find(0x0FFC), emu.memory.end());
 }
