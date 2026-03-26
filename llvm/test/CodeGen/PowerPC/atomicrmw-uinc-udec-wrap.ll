@@ -4,14 +4,14 @@
 define i8 @atomicrmw_uinc_wrap_i8(ptr %ptr, i8 %val) {
 ; CHECK-LABEL: atomicrmw_uinc_wrap_i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sync
 ; CHECK-NEXT:    rldicr 5, 3, 0, 61
 ; CHECK-NEXT:    not 3, 3
 ; CHECK-NEXT:    li 6, 255
-; CHECK-NEXT:    lwz 7, 0(5)
 ; CHECK-NEXT:    rlwinm 3, 3, 3, 27, 28
+; CHECK-NEXT:    sync
 ; CHECK-NEXT:    slw 6, 6, 3
 ; CHECK-NEXT:    not 6, 6
+; CHECK-NEXT:    lwz 7, 0(5)
 ; CHECK-NEXT:    clrlwi 4, 4, 24
 ; CHECK-NEXT:  .LBB0_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
@@ -61,16 +61,16 @@ define i8 @atomicrmw_uinc_wrap_i8(ptr %ptr, i8 %val) {
 define i16 @atomicrmw_uinc_wrap_i16(ptr %ptr, i16 %val) {
 ; CHECK-LABEL: atomicrmw_uinc_wrap_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sync
 ; CHECK-NEXT:    rldicr 5, 3, 0, 61
 ; CHECK-NEXT:    clrlwi 3, 3, 30
 ; CHECK-NEXT:    lis 6, 0
 ; CHECK-NEXT:    xori 3, 3, 2
-; CHECK-NEXT:    lwz 7, 0(5)
 ; CHECK-NEXT:    ori 6, 6, 65535
 ; CHECK-NEXT:    slwi 3, 3, 3
+; CHECK-NEXT:    sync
 ; CHECK-NEXT:    slw 6, 6, 3
 ; CHECK-NEXT:    not 6, 6
+; CHECK-NEXT:    lwz 7, 0(5)
 ; CHECK-NEXT:    clrlwi 4, 4, 16
 ; CHECK-NEXT:  .LBB1_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
@@ -152,8 +152,8 @@ define i32 @atomicrmw_uinc_wrap_i32(ptr %ptr, i32 %val) {
 ; CHECK-NEXT:    mr 6, 5
 ; CHECK-NEXT:    b .LBB2_1
 ; CHECK-NEXT:  .LBB2_7: # %atomicrmw.end
-; CHECK-NEXT:    mr 3, 5
 ; CHECK-NEXT:    lwsync
+; CHECK-NEXT:    mr 3, 5
 ; CHECK-NEXT:    blr
   %result = atomicrmw uinc_wrap ptr %ptr, i32 %val seq_cst
   ret i32 %result
@@ -194,8 +194,8 @@ define i64 @atomicrmw_uinc_wrap_i64(ptr %ptr, i64 %val) {
 ; CHECK-NEXT:    mr 6, 5
 ; CHECK-NEXT:    b .LBB3_1
 ; CHECK-NEXT:  .LBB3_7: # %atomicrmw.end
-; CHECK-NEXT:    mr 3, 5
 ; CHECK-NEXT:    lwsync
+; CHECK-NEXT:    mr 3, 5
 ; CHECK-NEXT:    blr
   %result = atomicrmw uinc_wrap ptr %ptr, i64 %val seq_cst
   ret i64 %result
@@ -204,14 +204,14 @@ define i64 @atomicrmw_uinc_wrap_i64(ptr %ptr, i64 %val) {
 define i8 @atomicrmw_udec_wrap_i8(ptr %ptr, i8 %val) {
 ; CHECK-LABEL: atomicrmw_udec_wrap_i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sync
 ; CHECK-NEXT:    rldicr 5, 3, 0, 61
 ; CHECK-NEXT:    not 3, 3
 ; CHECK-NEXT:    li 6, 255
-; CHECK-NEXT:    lwz 8, 0(5)
 ; CHECK-NEXT:    rlwinm 3, 3, 3, 27, 28
+; CHECK-NEXT:    sync
 ; CHECK-NEXT:    slw 6, 6, 3
 ; CHECK-NEXT:    not 6, 6
+; CHECK-NEXT:    lwz 8, 0(5)
 ; CHECK-NEXT:    clrlwi 7, 4, 24
 ; CHECK-NEXT:  .LBB4_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
@@ -262,16 +262,16 @@ define i8 @atomicrmw_udec_wrap_i8(ptr %ptr, i8 %val) {
 define i16 @atomicrmw_udec_wrap_i16(ptr %ptr, i16 %val) {
 ; CHECK-LABEL: atomicrmw_udec_wrap_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sync
 ; CHECK-NEXT:    rldicr 5, 3, 0, 61
 ; CHECK-NEXT:    clrlwi 3, 3, 30
 ; CHECK-NEXT:    lis 6, 0
 ; CHECK-NEXT:    xori 3, 3, 2
-; CHECK-NEXT:    lwz 8, 0(5)
 ; CHECK-NEXT:    ori 6, 6, 65535
 ; CHECK-NEXT:    slwi 3, 3, 3
+; CHECK-NEXT:    sync
 ; CHECK-NEXT:    slw 6, 6, 3
 ; CHECK-NEXT:    not 6, 6
+; CHECK-NEXT:    lwz 8, 0(5)
 ; CHECK-NEXT:    clrlwi 7, 4, 16
 ; CHECK-NEXT:  .LBB5_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
@@ -359,8 +359,8 @@ define i32 @atomicrmw_udec_wrap_i32(ptr %ptr, i32 %val) {
 ; CHECK-NEXT:    mr 6, 5
 ; CHECK-NEXT:    b .LBB6_1
 ; CHECK-NEXT:  .LBB6_8: # %atomicrmw.end
-; CHECK-NEXT:    mr 3, 5
 ; CHECK-NEXT:    lwsync
+; CHECK-NEXT:    mr 3, 5
 ; CHECK-NEXT:    blr
   %result = atomicrmw udec_wrap ptr %ptr, i32 %val seq_cst
   ret i32 %result
@@ -406,8 +406,8 @@ define i64 @atomicrmw_udec_wrap_i64(ptr %ptr, i64 %val) {
 ; CHECK-NEXT:    mr 6, 5
 ; CHECK-NEXT:    b .LBB7_1
 ; CHECK-NEXT:  .LBB7_8: # %atomicrmw.end
-; CHECK-NEXT:    mr 3, 5
 ; CHECK-NEXT:    lwsync
+; CHECK-NEXT:    mr 3, 5
 ; CHECK-NEXT:    blr
   %result = atomicrmw udec_wrap ptr %ptr, i64 %val seq_cst
   ret i64 %result

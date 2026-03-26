@@ -62,10 +62,10 @@ define void @testcallframe(i32 %a) {
 ; CHECK-NEXT:    sub sp, sp, #8
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    mov r1, #0
+; CHECK-NEXT:    str r1, [sp]
 ; CHECK-NEXT:    rsbmi r0, r0, #0
 ; CHECK-NEXT:    mov r2, #0
 ; CHECK-NEXT:    mov r3, #0
-; CHECK-NEXT:    str r1, [sp]
 ; CHECK-NEXT:    bl callee
 ; CHECK-NEXT:    add sp, sp, #8
 ; CHECK-NEXT:    pop {r11, lr}

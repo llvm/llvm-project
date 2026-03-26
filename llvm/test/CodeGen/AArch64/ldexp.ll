@@ -139,11 +139,11 @@ define <2 x float> @test_ldexp_v2f32_v2i32(<2 x float> %Val, <2 x i32> %Exp) {
 ; GISEL-NEXT:    .cfi_offset w30, -16
 ; GISEL-NEXT:    .cfi_offset b8, -24
 ; GISEL-NEXT:    .cfi_offset b9, -32
-; GISEL-NEXT:    // kill: def $d1 killed $d1 def $q1
-; GISEL-NEXT:    fmov w0, s1
 ; GISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
+; GISEL-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; GISEL-NEXT:    mov s8, v0.s[1]
 ; GISEL-NEXT:    mov s9, v1.s[1]
+; GISEL-NEXT:    fmov w0, s1
 ; GISEL-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; GISEL-NEXT:    bl ldexpf
 ; GISEL-NEXT:    // kill: def $s0 killed $s0 def $q0

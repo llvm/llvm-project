@@ -75,9 +75,9 @@ define <4 x i32> @umulo_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %p2) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umull2 v2.2d, v0.4s, v1.4s
 ; CHECK-NEXT:    umull v3.2d, v0.2s, v1.2s
-; CHECK-NEXT:    mul v1.4s, v0.4s, v1.4s
+; CHECK-NEXT:    mul v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    uzp2 v2.4s, v3.4s, v2.4s
-; CHECK-NEXT:    str q1, [x0]
+; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    cmtst v2.4s, v2.4s, v2.4s
 ; CHECK-NEXT:    mov v0.16b, v2.16b
 ; CHECK-NEXT:    ret
@@ -142,15 +142,14 @@ define <8 x i32> @umulo_v8i32(<8 x i32> %a0, <8 x i32> %a1, ptr %p2) nounwind {
 ; CHECK-NEXT:    umull v5.2d, v0.2s, v2.2s
 ; CHECK-NEXT:    umull2 v6.2d, v1.4s, v3.4s
 ; CHECK-NEXT:    umull v7.2d, v1.2s, v3.2s
-; CHECK-NEXT:    mul v1.4s, v1.4s, v3.4s
-; CHECK-NEXT:    mul v2.4s, v0.4s, v2.4s
+; CHECK-NEXT:    mul v0.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    uzp2 v4.4s, v5.4s, v4.4s
 ; CHECK-NEXT:    uzp2 v5.4s, v7.4s, v6.4s
-; CHECK-NEXT:    stp q2, q1, [x0]
-; CHECK-NEXT:    cmtst v4.4s, v4.4s, v4.4s
-; CHECK-NEXT:    cmtst v5.4s, v5.4s, v5.4s
-; CHECK-NEXT:    mov v0.16b, v4.16b
-; CHECK-NEXT:    mov v1.16b, v5.16b
+; CHECK-NEXT:    mul v6.4s, v1.4s, v3.4s
+; CHECK-NEXT:    cmtst v3.4s, v4.4s, v4.4s
+; CHECK-NEXT:    cmtst v1.4s, v5.4s, v5.4s
+; CHECK-NEXT:    stp q0, q6, [x0]
+; CHECK-NEXT:    mov v0.16b, v3.16b
 ; CHECK-NEXT:    ret
   %t = call {<8 x i32>, <8 x i1>} @llvm.umul.with.overflow.v8i32(<8 x i32> %a0, <8 x i32> %a1)
   %val = extractvalue {<8 x i32>, <8 x i1>} %t, 0
@@ -236,8 +235,8 @@ define <2 x i32> @umulo_v2i64(<2 x i64> %a0, <2 x i64> %a1, ptr %p2) nounwind {
 ; CHECK-NEXT:    csetm x10, ne
 ; CHECK-NEXT:    mul x8, x9, x8
 ; CHECK-NEXT:    cmp xzr, x13
-; CHECK-NEXT:    csetm x13, ne
-; CHECK-NEXT:    fmov d0, x13
+; CHECK-NEXT:    csetm x12, ne
+; CHECK-NEXT:    fmov d0, x12
 ; CHECK-NEXT:    fmov d1, x11
 ; CHECK-NEXT:    mov v0.d[1], x10
 ; CHECK-NEXT:    mov v1.d[1], x8
@@ -261,16 +260,16 @@ define <4 x i32> @umulo_v4i24(<4 x i24> %a0, <4 x i24> %a1, ptr %p2) nounwind {
 ; CHECK-NEXT:    umull v3.2d, v0.2s, v1.2s
 ; CHECK-NEXT:    mul v1.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    mov w8, v1.s[3]
-; CHECK-NEXT:    uzp2 v0.4s, v3.4s, v2.4s
-; CHECK-NEXT:    ushr v2.4s, v1.4s, #24
 ; CHECK-NEXT:    mov w10, v1.s[1]
 ; CHECK-NEXT:    mov w9, v1.s[2]
+; CHECK-NEXT:    uzp2 v0.4s, v3.4s, v2.4s
+; CHECK-NEXT:    ushr v2.4s, v1.4s, #24
 ; CHECK-NEXT:    str h1, [x0]
-; CHECK-NEXT:    cmtst v2.4s, v2.4s, v2.4s
 ; CHECK-NEXT:    sturh w8, [x0, #9]
 ; CHECK-NEXT:    lsr w8, w8, #16
-; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
+; CHECK-NEXT:    cmtst v2.4s, v2.4s, v2.4s
 ; CHECK-NEXT:    sturh w10, [x0, #3]
+; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
 ; CHECK-NEXT:    strb w8, [x0, #11]
 ; CHECK-NEXT:    lsr w8, w10, #16
 ; CHECK-NEXT:    fmov w10, s1
@@ -298,10 +297,10 @@ define <4 x i32> @umulo_v4i1(<4 x i1> %a0, <4 x i1> %a1, ptr %p2) nounwind {
 ; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI10_0]
 ; CHECK-NEXT:    shl v0.4h, v0.4h, #15
 ; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
-; CHECK-NEXT:    and v1.8b, v0.8b, v1.8b
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    addv h0, v0.4h
+; CHECK-NEXT:    str b0, [x0]
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    addv h1, v1.4h
-; CHECK-NEXT:    str b1, [x0]
 ; CHECK-NEXT:    ret
   %t = call {<4 x i1>, <4 x i1>} @llvm.umul.with.overflow.v4i1(<4 x i1> %a0, <4 x i1> %a1)
   %val = extractvalue {<4 x i1>, <4 x i1>} %t, 0
@@ -340,12 +339,12 @@ define <2 x i32> @umulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; CHECK-NEXT:    csinc w11, w12, wzr, lo
 ; CHECK-NEXT:    ldr x12, [sp]
 ; CHECK-NEXT:    fmov s0, w11
-; CHECK-NEXT:    mul x11, x2, x6
+; CHECK-NEXT:    mul x11, x0, x4
 ; CHECK-NEXT:    mov v0.s[1], w8
-; CHECK-NEXT:    mul x8, x0, x4
-; CHECK-NEXT:    stp x11, x9, [x12, #16]
+; CHECK-NEXT:    mul x8, x2, x6
+; CHECK-NEXT:    stp x11, x10, [x12]
 ; CHECK-NEXT:    shl v0.2s, v0.2s, #31
-; CHECK-NEXT:    stp x8, x10, [x12]
+; CHECK-NEXT:    stp x8, x9, [x12, #16]
 ; CHECK-NEXT:    cmlt v0.2s, v0.2s, #0
 ; CHECK-NEXT:    ret
   %t = call {<2 x i128>, <2 x i1>} @llvm.umul.with.overflow.v2i128(<2 x i128> %a0, <2 x i128> %a1)

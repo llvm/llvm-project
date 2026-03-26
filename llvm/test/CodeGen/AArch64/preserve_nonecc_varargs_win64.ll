@@ -30,19 +30,19 @@ define i32 @caller() nounwind ssp {
 ; CHECK-NEXT:    sub sp, sp, #176
 ; CHECK-NEXT:    mov w8, #10 // =0xa
 ; CHECK-NEXT:    mov w9, #9 // =0x9
-; CHECK-NEXT:    mov w0, #1 // =0x1
-; CHECK-NEXT:    mov w1, #2 // =0x2
-; CHECK-NEXT:    mov w2, #3 // =0x3
-; CHECK-NEXT:    mov w3, #4 // =0x4
-; CHECK-NEXT:    mov w4, #5 // =0x5
-; CHECK-NEXT:    mov w5, #6 // =0x6
-; CHECK-NEXT:    mov w6, #7 // =0x7
-; CHECK-NEXT:    mov w7, #8 // =0x8
 ; CHECK-NEXT:    stp x19, x20, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x21, x22, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    mov w0, #1 // =0x1
+; CHECK-NEXT:    mov w1, #2 // =0x2
 ; CHECK-NEXT:    stp x23, x24, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    mov w2, #3 // =0x3
+; CHECK-NEXT:    mov w3, #4 // =0x4
 ; CHECK-NEXT:    stp x25, x26, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    mov w4, #5 // =0x5
+; CHECK-NEXT:    mov w5, #6 // =0x6
 ; CHECK-NEXT:    stp x27, x28, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    mov w6, #7 // =0x7
+; CHECK-NEXT:    mov w7, #8 // =0x8
 ; CHECK-NEXT:    str x30, [sp, #96] // 8-byte Spill
 ; CHECK-NEXT:    stp d8, d9, [sp, #104] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d10, d11, [sp, #120] // 16-byte Folded Spill

@@ -61,8 +61,8 @@ define void @stg16(ptr %p) {
 ; CHECK-NEXT:    mov x8, #256 // =0x100
 ; CHECK-NEXT:  .LBB5_1: // %entry
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    st2g x0, [x0], #32
 ; CHECK-NEXT:    subs x8, x8, #32
+; CHECK-NEXT:    st2g x0, [x0], #32
 ; CHECK-NEXT:    b.ne .LBB5_1
 ; CHECK-NEXT:  // %bb.2: // %entry
 ; CHECK-NEXT:    ret
@@ -78,8 +78,8 @@ define void @stg17(ptr %p) {
 ; CHECK-NEXT:    mov x8, #256 // =0x100
 ; CHECK-NEXT:  .LBB6_1: // %entry
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    st2g x0, [x0], #32
 ; CHECK-NEXT:    subs x8, x8, #32
+; CHECK-NEXT:    st2g x0, [x0], #32
 ; CHECK-NEXT:    b.ne .LBB6_1
 ; CHECK-NEXT:  // %bb.2: // %entry
 ; CHECK-NEXT:    ret
@@ -106,8 +106,8 @@ define void @stzg17(ptr %p) {
 ; CHECK-NEXT:    mov x8, #256 // =0x100
 ; CHECK-NEXT:  .LBB8_1: // %entry
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    stz2g x0, [x0], #32
 ; CHECK-NEXT:    subs x8, x8, #32
+; CHECK-NEXT:    stz2g x0, [x0], #32
 ; CHECK-NEXT:    b.ne .LBB8_1
 ; CHECK-NEXT:  // %bb.2: // %entry
 ; CHECK-NEXT:    ret
@@ -150,8 +150,8 @@ define void @stg_alloca17() nounwind {
 ; CHECK-LABEL: stg_alloca17:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #288
-; CHECK-NEXT:    mov x8, #256 // =0x100
 ; CHECK-NEXT:    str x29, [sp, #272] // 8-byte Spill
+; CHECK-NEXT:    mov x8, #256 // =0x100
 ; CHECK-NEXT:  .LBB11_1: // %entry
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    st2g sp, [sp], #32
@@ -179,8 +179,8 @@ define void @stg_alloca18() uwtable {
 ; CHECK-NEXT:    stg x9, [x9], #16
 ; CHECK-NEXT:  .LBB12_1: // %entry
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    st2g x9, [x9], #32
 ; CHECK-NEXT:    subs x8, x8, #32
+; CHECK-NEXT:    st2g x9, [x9], #32
 ; CHECK-NEXT:    b.ne .LBB12_1
 ; CHECK-NEXT:  // %bb.2: // %entry
 ; CHECK-NEXT:    add sp, sp, #272

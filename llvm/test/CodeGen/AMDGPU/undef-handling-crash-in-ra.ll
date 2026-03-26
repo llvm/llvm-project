@@ -32,9 +32,17 @@ define amdgpu_kernel void @foo(ptr addrspace(5) %ptr5, ptr %p0, double %v0, <4 x
 ; CHECK-NEXT:    s_add_u32 s4, s4, G@gotpcrel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s5, s5, G@gotpcrel32@hi+12
 ; CHECK-NEXT:    s_load_dwordx2 s[54:55], s[4:5], 0x0
-; CHECK-NEXT:    s_mov_b32 s53, s14
-; CHECK-NEXT:    v_mov_b32_e32 v46, s6
 ; CHECK-NEXT:    v_pk_mov_b32 v[56:57], s[64:65], s[64:65] op_sel:[0,1]
+; CHECK-NEXT:    s_mov_b32 s32, 0
+; CHECK-NEXT:    s_mov_b32 s33, s16
+; CHECK-NEXT:    s_mov_b32 s52, s15
+; CHECK-NEXT:    s_mov_b32 s53, s14
+; CHECK-NEXT:    s_mov_b64 s[36:37], s[10:11]
+; CHECK-NEXT:    v_mov_b32_e32 v40, v0
+; CHECK-NEXT:    v_mov_b32_e32 v60, s66
+; CHECK-NEXT:    v_mov_b32_e32 v61, s67
+; CHECK-NEXT:    v_mov_b32_e32 v46, s6
+; CHECK-NEXT:    flat_store_dwordx2 v[56:57], v[62:63]
 ; CHECK-NEXT:    s_mov_b64 s[4:5], s[48:49]
 ; CHECK-NEXT:    s_mov_b64 s[6:7], s[38:39]
 ; CHECK-NEXT:    s_mov_b64 s[8:9], s[50:51]
@@ -42,19 +50,14 @@ define amdgpu_kernel void @foo(ptr addrspace(5) %ptr5, ptr %p0, double %v0, <4 x
 ; CHECK-NEXT:    s_mov_b32 s13, s15
 ; CHECK-NEXT:    s_mov_b32 s14, s16
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v0
-; CHECK-NEXT:    s_mov_b32 s32, 0
-; CHECK-NEXT:    s_mov_b32 s33, s16
-; CHECK-NEXT:    s_mov_b32 s52, s15
-; CHECK-NEXT:    s_mov_b64 s[36:37], s[10:11]
-; CHECK-NEXT:    v_mov_b32_e32 v40, v0
-; CHECK-NEXT:    v_mov_b32_e32 v60, s66
-; CHECK-NEXT:    v_mov_b32_e32 v61, s67
-; CHECK-NEXT:    flat_store_dwordx2 v[56:57], v[62:63]
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[54:55]
 ; CHECK-NEXT:    flat_load_dwordx2 a[32:33], v[56:57]
 ; CHECK-NEXT:    v_mov_b32_e32 v58, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v59, 0x3ff00000
+; CHECK-NEXT:    flat_store_dwordx2 v[44:45], v[58:59]
+; CHECK-NEXT:    flat_store_dwordx2 v[56:57], v[62:63]
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_mov_b64 s[4:5], s[48:49]
 ; CHECK-NEXT:    s_mov_b64 s[6:7], s[38:39]
 ; CHECK-NEXT:    s_mov_b64 s[8:9], s[50:51]
@@ -63,9 +66,6 @@ define amdgpu_kernel void @foo(ptr addrspace(5) %ptr5, ptr %p0, double %v0, <4 x
 ; CHECK-NEXT:    s_mov_b32 s13, s52
 ; CHECK-NEXT:    s_mov_b32 s14, s33
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v40
-; CHECK-NEXT:    flat_store_dwordx2 v[44:45], v[58:59]
-; CHECK-NEXT:    flat_store_dwordx2 v[56:57], v[62:63]
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[54:55]
 ; CHECK-NEXT:    flat_load_dwordx2 v[0:1], v[46:47] glc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)

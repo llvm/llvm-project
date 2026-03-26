@@ -219,9 +219,9 @@ define i64 @test_and3(i64 %x, i64 %y) {
 ; CHECK-SD-NEXT:    .cfi_offset w19, -8
 ; CHECK-SD-NEXT:    .cfi_offset w20, -16
 ; CHECK-SD-NEXT:    .cfi_offset w30, -32
+; CHECK-SD-NEXT:    mov x19, x1
 ; CHECK-SD-NEXT:    mov x20, x0
 ; CHECK-SD-NEXT:    mov x0, xzr
-; CHECK-SD-NEXT:    mov x19, x1
 ; CHECK-SD-NEXT:    bl callee
 ; CHECK-SD-NEXT:    ands x8, x20, #0x3
 ; CHECK-SD-NEXT:    csel x0, x8, x19, eq
@@ -239,9 +239,9 @@ define i64 @test_and3(i64 %x, i64 %y) {
 ; CHECK-GI-NEXT:    .cfi_offset w21, -24
 ; CHECK-GI-NEXT:    .cfi_offset w30, -32
 ; CHECK-GI-NEXT:    mov x19, x0
+; CHECK-GI-NEXT:    mov x20, x1
 ; CHECK-GI-NEXT:    and x21, x0, #0x3
 ; CHECK-GI-NEXT:    mov x0, xzr
-; CHECK-GI-NEXT:    mov x20, x1
 ; CHECK-GI-NEXT:    bl callee
 ; CHECK-GI-NEXT:    tst x19, #0x3
 ; CHECK-GI-NEXT:    csel x0, x21, x20, eq

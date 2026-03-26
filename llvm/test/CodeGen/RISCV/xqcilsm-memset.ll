@@ -235,10 +235,10 @@ define void @test4b() nounwind {
 ; RV32IXQCILSM-NEXT:    addi a1, a1, %lo(struct4b)
 ; RV32IXQCILSM-NEXT:    lui a0, %hi(struct4b1)
 ; RV32IXQCILSM-NEXT:    addi a0, a0, %lo(struct4b1)
-; RV32IXQCILSM-NEXT:    li a2, 192
 ; RV32IXQCILSM-NEXT:    qc.setwmi zero, 16, 0(a1)
 ; RV32IXQCILSM-NEXT:    qc.setwmi zero, 15, 64(a1)
 ; RV32IXQCILSM-NEXT:    qc.setwmi zero, 16, 124(a1)
+; RV32IXQCILSM-NEXT:    li a2, 192
 ; RV32IXQCILSM-NEXT:    li a1, 0
 ; RV32IXQCILSM-NEXT:    tail memset
 entry:

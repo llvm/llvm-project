@@ -1960,8 +1960,8 @@ define void @test_v2f64_f128(ptr %p, ptr %q) {
 ; SOFT-NEXT:    push {r4, r5, r11, lr}
 ; SOFT-NEXT:    .pad #16
 ; SOFT-NEXT:    sub sp, sp, #16
-; SOFT-NEXT:    ldr r4, [r0]
 ; SOFT-NEXT:    mov r5, r1
+; SOFT-NEXT:    ldr r4, [r0]
 ; SOFT-NEXT:    ldmib r0, {r1, r2, r3}
 ; SOFT-NEXT:    mov r0, r4
 ; SOFT-NEXT:    str r4, [sp]
@@ -1982,8 +1982,8 @@ define void @test_v2f64_f128(ptr %p, ptr %q) {
 ; HARD-NEXT:    push {r4, r5, r11, lr}
 ; HARD-NEXT:    .pad #16
 ; HARD-NEXT:    sub sp, sp, #16
-; HARD-NEXT:    ldr r4, [r0]
 ; HARD-NEXT:    mov r5, r1
+; HARD-NEXT:    ldr r4, [r0]
 ; HARD-NEXT:    ldmib r0, {r1, r2, r3}
 ; HARD-NEXT:    mov r0, r4
 ; HARD-NEXT:    str r4, [sp]
@@ -2223,8 +2223,8 @@ define void @test_v2i64_f128(ptr %p, ptr %q) {
 ; SOFT-NEXT:    push {r4, r5, r11, lr}
 ; SOFT-NEXT:    .pad #16
 ; SOFT-NEXT:    sub sp, sp, #16
-; SOFT-NEXT:    ldr r4, [r0]
 ; SOFT-NEXT:    mov r5, r1
+; SOFT-NEXT:    ldr r4, [r0]
 ; SOFT-NEXT:    ldmib r0, {r1, r2, r3}
 ; SOFT-NEXT:    mov r0, r4
 ; SOFT-NEXT:    str r4, [sp]
@@ -2244,8 +2244,8 @@ define void @test_v2i64_f128(ptr %p, ptr %q) {
 ; HARD-NEXT:    push {r4, r5, r11, lr}
 ; HARD-NEXT:    .pad #16
 ; HARD-NEXT:    sub sp, sp, #16
-; HARD-NEXT:    ldr r4, [r0]
 ; HARD-NEXT:    mov r5, r1
+; HARD-NEXT:    ldr r4, [r0]
 ; HARD-NEXT:    ldmib r0, {r1, r2, r3}
 ; HARD-NEXT:    mov r0, r4
 ; HARD-NEXT:    str r4, [sp]
@@ -2475,8 +2475,8 @@ define void @test_v4f32_f128(ptr %p, ptr %q) {
 ; SOFT-NEXT:    push {r4, r5, r11, lr}
 ; SOFT-NEXT:    .pad #16
 ; SOFT-NEXT:    sub sp, sp, #16
-; SOFT-NEXT:    ldr r4, [r0]
 ; SOFT-NEXT:    mov r5, r1
+; SOFT-NEXT:    ldr r4, [r0]
 ; SOFT-NEXT:    ldmib r0, {r1, r2, r3}
 ; SOFT-NEXT:    mov r0, r4
 ; SOFT-NEXT:    str r4, [sp]
@@ -2498,8 +2498,8 @@ define void @test_v4f32_f128(ptr %p, ptr %q) {
 ; HARD-NEXT:    push {r4, r5, r11, lr}
 ; HARD-NEXT:    .pad #16
 ; HARD-NEXT:    sub sp, sp, #16
-; HARD-NEXT:    ldr r4, [r0]
 ; HARD-NEXT:    mov r5, r1
+; HARD-NEXT:    ldr r4, [r0]
 ; HARD-NEXT:    ldmib r0, {r1, r2, r3}
 ; HARD-NEXT:    mov r0, r4
 ; HARD-NEXT:    str r4, [sp]
@@ -2747,8 +2747,8 @@ define void @test_v4i32_f128(ptr %p, ptr %q) {
 ; SOFT-NEXT:    push {r4, r5, r11, lr}
 ; SOFT-NEXT:    .pad #16
 ; SOFT-NEXT:    sub sp, sp, #16
-; SOFT-NEXT:    ldr r4, [r0]
 ; SOFT-NEXT:    mov r5, r1
+; SOFT-NEXT:    ldr r4, [r0]
 ; SOFT-NEXT:    ldmib r0, {r1, r2, r3}
 ; SOFT-NEXT:    mov r0, r4
 ; SOFT-NEXT:    str r4, [sp]
@@ -2770,8 +2770,8 @@ define void @test_v4i32_f128(ptr %p, ptr %q) {
 ; HARD-NEXT:    push {r4, r5, r11, lr}
 ; HARD-NEXT:    .pad #16
 ; HARD-NEXT:    sub sp, sp, #16
-; HARD-NEXT:    ldr r4, [r0]
 ; HARD-NEXT:    mov r5, r1
+; HARD-NEXT:    ldr r4, [r0]
 ; HARD-NEXT:    ldmib r0, {r1, r2, r3}
 ; HARD-NEXT:    mov r0, r4
 ; HARD-NEXT:    str r4, [sp]
@@ -3019,8 +3019,8 @@ define void @test_v8i16_f128(ptr %p, ptr %q) {
 ; SOFT-NEXT:    push {r4, r5, r11, lr}
 ; SOFT-NEXT:    .pad #16
 ; SOFT-NEXT:    sub sp, sp, #16
-; SOFT-NEXT:    ldr r4, [r0]
 ; SOFT-NEXT:    mov r5, r1
+; SOFT-NEXT:    ldr r4, [r0]
 ; SOFT-NEXT:    ldmib r0, {r1, r2, r3}
 ; SOFT-NEXT:    mov r0, r4
 ; SOFT-NEXT:    str r4, [sp]
@@ -3042,8 +3042,8 @@ define void @test_v8i16_f128(ptr %p, ptr %q) {
 ; HARD-NEXT:    push {r4, r5, r11, lr}
 ; HARD-NEXT:    .pad #16
 ; HARD-NEXT:    sub sp, sp, #16
-; HARD-NEXT:    ldr r4, [r0]
 ; HARD-NEXT:    mov r5, r1
+; HARD-NEXT:    ldr r4, [r0]
 ; HARD-NEXT:    ldmib r0, {r1, r2, r3}
 ; HARD-NEXT:    mov r0, r4
 ; HARD-NEXT:    str r4, [sp]
@@ -3291,8 +3291,8 @@ define void @test_v16i8_f128(ptr %p, ptr %q) {
 ; SOFT-NEXT:    push {r4, r5, r11, lr}
 ; SOFT-NEXT:    .pad #16
 ; SOFT-NEXT:    sub sp, sp, #16
-; SOFT-NEXT:    ldr r4, [r0]
 ; SOFT-NEXT:    mov r5, r1
+; SOFT-NEXT:    ldr r4, [r0]
 ; SOFT-NEXT:    ldmib r0, {r1, r2, r3}
 ; SOFT-NEXT:    mov r0, r4
 ; SOFT-NEXT:    str r4, [sp]
@@ -3314,8 +3314,8 @@ define void @test_v16i8_f128(ptr %p, ptr %q) {
 ; HARD-NEXT:    push {r4, r5, r11, lr}
 ; HARD-NEXT:    .pad #16
 ; HARD-NEXT:    sub sp, sp, #16
-; HARD-NEXT:    ldr r4, [r0]
 ; HARD-NEXT:    mov r5, r1
+; HARD-NEXT:    ldr r4, [r0]
 ; HARD-NEXT:    ldmib r0, {r1, r2, r3}
 ; HARD-NEXT:    mov r0, r4
 ; HARD-NEXT:    str r4, [sp]

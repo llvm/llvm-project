@@ -230,9 +230,9 @@ define arm_aapcs_vfpcc void @thresh_f16(ptr %data, i16 zeroext %N, float %T.coer
 ; CHECK-NEXT:    mvn r3, #7
 ; CHECK-NEXT:    add.w r1, r3, r1, lsl #3
 ; CHECK-NEXT:    vmov r2, s0
-; CHECK-NEXT:    vneg.f16 s0, s0
 ; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    add.w lr, r3, r1, lsr #3
+; CHECK-NEXT:    vneg.f16 s0, s0
 ; CHECK-NEXT:    vmov.f16 r1, s0
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:  .LBB4_2: @ %vector.body
@@ -508,9 +508,9 @@ define arm_aapcs_vfpcc void @thresh_rev_f16(ptr %data, i16 zeroext %N, float %T.
 ; CHECK-NEXT:    mvn r3, #7
 ; CHECK-NEXT:    add.w r1, r3, r1, lsl #3
 ; CHECK-NEXT:    vmov r2, s0
-; CHECK-NEXT:    vneg.f16 s0, s0
 ; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    add.w lr, r3, r1, lsr #3
+; CHECK-NEXT:    vneg.f16 s0, s0
 ; CHECK-NEXT:    vmov.f16 r1, s0
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:  .LBB9_2: @ %vector.body

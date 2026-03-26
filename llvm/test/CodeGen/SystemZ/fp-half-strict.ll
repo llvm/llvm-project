@@ -138,9 +138,9 @@ define half @fun2(half %Op0, half %Op1, half %Op2)  #0 {
 ; NOVEC-NEXT:    .cfi_offset %f8, -168
 ; NOVEC-NEXT:    .cfi_offset %f9, -176
 ; NOVEC-NEXT:    .cfi_offset %f10, -184
+; NOVEC-NEXT:    ler %f8, %f4
 ; NOVEC-NEXT:    ler %f9, %f0
 ; NOVEC-NEXT:    ler %f0, %f2
-; NOVEC-NEXT:    ler %f8, %f4
 ; NOVEC-NEXT:    brasl %r14, __extendhfsf2@PLT
 ; NOVEC-NEXT:    ler %f10, %f0
 ; NOVEC-NEXT:    ler %f0, %f9
@@ -172,9 +172,9 @@ define half @fun2(half %Op0, half %Op1, half %Op2)  #0 {
 ; VECTOR-NEXT:    .cfi_offset %f8, -168
 ; VECTOR-NEXT:    .cfi_offset %f9, -176
 ; VECTOR-NEXT:    .cfi_offset %f10, -184
+; VECTOR-NEXT:    ldr %f8, %f4
 ; VECTOR-NEXT:    ldr %f9, %f0
 ; VECTOR-NEXT:    ldr %f0, %f2
-; VECTOR-NEXT:    ldr %f8, %f4
 ; VECTOR-NEXT:    brasl %r14, __extendhfsf2@PLT
 ; VECTOR-NEXT:    ldr %f10, %f0
 ; VECTOR-NEXT:    ldr %f0, %f9

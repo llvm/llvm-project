@@ -102,11 +102,11 @@ define double @test_v2f64(<2 x double> %a) nounwind {
 ; CHECK-NEXT:    bl __aeabi_dcmplt
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    mov r5, r6
+; CHECK-NEXT:    movne r5, r7
 ; CHECK-NEXT:    mov r0, r7
 ; CHECK-NEXT:    mov r1, r8
 ; CHECK-NEXT:    mov r2, r6
 ; CHECK-NEXT:    mov r3, r4
-; CHECK-NEXT:    movne r5, r7
 ; CHECK-NEXT:    bl __aeabi_dcmplt
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    mov r0, r5
@@ -140,20 +140,20 @@ define fp128 @test_v2f128(<2 x fp128> %a) nounwind {
 ; CHECK-NEXT:    bl __lttf2
 ; CHECK-NEXT:    str r0, [sp, #24] @ 4-byte Spill
 ; CHECK-NEXT:    mov r0, r11
+; CHECK-NEXT:    str r7, [sp]
 ; CHECK-NEXT:    mov r1, r10
+; CHECK-NEXT:    stmib sp, {r4, r6}
 ; CHECK-NEXT:    mov r2, r9
 ; CHECK-NEXT:    mov r3, r8
-; CHECK-NEXT:    str r7, [sp]
-; CHECK-NEXT:    stmib sp, {r4, r6}
 ; CHECK-NEXT:    str r5, [sp, #12]
 ; CHECK-NEXT:    bl __lttf2
 ; CHECK-NEXT:    str r0, [sp, #20] @ 4-byte Spill
 ; CHECK-NEXT:    mov r0, r11
+; CHECK-NEXT:    str r7, [sp]
 ; CHECK-NEXT:    mov r1, r10
+; CHECK-NEXT:    stmib sp, {r4, r6}
 ; CHECK-NEXT:    mov r2, r9
 ; CHECK-NEXT:    mov r3, r8
-; CHECK-NEXT:    str r7, [sp]
-; CHECK-NEXT:    stmib sp, {r4, r6}
 ; CHECK-NEXT:    str r5, [sp, #12]
 ; CHECK-NEXT:    bl __lttf2
 ; CHECK-NEXT:    cmp r0, #0
@@ -165,12 +165,12 @@ define fp128 @test_v2f128(<2 x fp128> %a) nounwind {
 ; CHECK-NEXT:    stmib sp, {r4, r6}
 ; CHECK-NEXT:    movmi r4, r10
 ; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    str r5, [sp, #12]
+; CHECK-NEXT:    movmi r6, r9
 ; CHECK-NEXT:    mov r0, r11
 ; CHECK-NEXT:    mov r1, r10
 ; CHECK-NEXT:    mov r2, r9
 ; CHECK-NEXT:    mov r3, r8
-; CHECK-NEXT:    str r5, [sp, #12]
-; CHECK-NEXT:    movmi r6, r9
 ; CHECK-NEXT:    bl __lttf2
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    mov r0, r7

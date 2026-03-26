@@ -94,15 +94,15 @@ define i128 @swap(ptr %a, i128 %x) {
 ; PPC-PWR8-NEXT:    stw r0, 52(r1)
 ; PPC-PWR8-NEXT:    .cfi_def_cfa_offset 48
 ; PPC-PWR8-NEXT:    .cfi_offset lr, 4
-; PPC-PWR8-NEXT:    mr r4, r3
+; PPC-PWR8-NEXT:    stw r8, 44(r1)
 ; PPC-PWR8-NEXT:    stw r7, 40(r1)
+; PPC-PWR8-NEXT:    mr r4, r3
+; PPC-PWR8-NEXT:    li r3, 16
 ; PPC-PWR8-NEXT:    stw r6, 36(r1)
-; PPC-PWR8-NEXT:    addi r6, r1, 16
 ; PPC-PWR8-NEXT:    stw r5, 32(r1)
 ; PPC-PWR8-NEXT:    addi r5, r1, 32
-; PPC-PWR8-NEXT:    li r3, 16
+; PPC-PWR8-NEXT:    addi r6, r1, 16
 ; PPC-PWR8-NEXT:    li r7, 5
-; PPC-PWR8-NEXT:    stw r8, 44(r1)
 ; PPC-PWR8-NEXT:    bl __atomic_exchange
 ; PPC-PWR8-NEXT:    lwz r6, 28(r1)
 ; PPC-PWR8-NEXT:    lwz r5, 24(r1)
@@ -1072,10 +1072,10 @@ define i128 @cas_weak_acquire_acquire(ptr %a, i128 %cmp, i128 %new) {
 ; PPC-PWR8-NEXT:    stw r5, 32(r1)
 ; PPC-PWR8-NEXT:    addi r5, r1, 32
 ; PPC-PWR8-NEXT:    addi r6, r1, 16
-; PPC-PWR8-NEXT:    li r7, 2
-; PPC-PWR8-NEXT:    li r8, 2
 ; PPC-PWR8-NEXT:    stw r10, 20(r1)
 ; PPC-PWR8-NEXT:    stw r9, 16(r1)
+; PPC-PWR8-NEXT:    li r7, 2
+; PPC-PWR8-NEXT:    li r8, 2
 ; PPC-PWR8-NEXT:    stw r3, 28(r1)
 ; PPC-PWR8-NEXT:    lwz r3, 56(r1)
 ; PPC-PWR8-NEXT:    stw r3, 24(r1)
@@ -1197,10 +1197,10 @@ define i128 @cas_weak_release_monotonic(ptr %a, i128 %cmp, i128 %new) {
 ; PPC-PWR8-NEXT:    stw r5, 32(r1)
 ; PPC-PWR8-NEXT:    addi r5, r1, 32
 ; PPC-PWR8-NEXT:    addi r6, r1, 16
-; PPC-PWR8-NEXT:    li r7, 3
-; PPC-PWR8-NEXT:    li r8, 0
 ; PPC-PWR8-NEXT:    stw r10, 20(r1)
 ; PPC-PWR8-NEXT:    stw r9, 16(r1)
+; PPC-PWR8-NEXT:    li r7, 3
+; PPC-PWR8-NEXT:    li r8, 0
 ; PPC-PWR8-NEXT:    stw r3, 28(r1)
 ; PPC-PWR8-NEXT:    lwz r3, 56(r1)
 ; PPC-PWR8-NEXT:    stw r3, 24(r1)
@@ -1325,10 +1325,10 @@ define i128 @cas_sc_sc(ptr %a, i128 %cmp, i128 %new) {
 ; PPC-PWR8-NEXT:    stw r5, 32(r1)
 ; PPC-PWR8-NEXT:    addi r5, r1, 32
 ; PPC-PWR8-NEXT:    addi r6, r1, 16
-; PPC-PWR8-NEXT:    li r7, 5
-; PPC-PWR8-NEXT:    li r8, 5
 ; PPC-PWR8-NEXT:    stw r10, 20(r1)
 ; PPC-PWR8-NEXT:    stw r9, 16(r1)
+; PPC-PWR8-NEXT:    li r7, 5
+; PPC-PWR8-NEXT:    li r8, 5
 ; PPC-PWR8-NEXT:    stw r3, 28(r1)
 ; PPC-PWR8-NEXT:    lwz r3, 56(r1)
 ; PPC-PWR8-NEXT:    stw r3, 24(r1)
@@ -1453,10 +1453,10 @@ define i128 @cas_acqrel_acquire(ptr %a, i128 %cmp, i128 %new) {
 ; PPC-PWR8-NEXT:    stw r5, 32(r1)
 ; PPC-PWR8-NEXT:    addi r5, r1, 32
 ; PPC-PWR8-NEXT:    addi r6, r1, 16
-; PPC-PWR8-NEXT:    li r7, 4
-; PPC-PWR8-NEXT:    li r8, 2
 ; PPC-PWR8-NEXT:    stw r10, 20(r1)
 ; PPC-PWR8-NEXT:    stw r9, 16(r1)
+; PPC-PWR8-NEXT:    li r7, 4
+; PPC-PWR8-NEXT:    li r8, 2
 ; PPC-PWR8-NEXT:    stw r3, 28(r1)
 ; PPC-PWR8-NEXT:    lwz r3, 56(r1)
 ; PPC-PWR8-NEXT:    stw r3, 24(r1)
@@ -1588,10 +1588,10 @@ define i1 @cas_acqrel_acquire_check_succ(ptr %a, i128 %cmp, i128 %new) {
 ; PPC-PWR8-NEXT:    stw r5, 32(r1)
 ; PPC-PWR8-NEXT:    addi r5, r1, 32
 ; PPC-PWR8-NEXT:    addi r6, r1, 16
-; PPC-PWR8-NEXT:    li r7, 4
-; PPC-PWR8-NEXT:    li r8, 2
 ; PPC-PWR8-NEXT:    stw r10, 20(r1)
 ; PPC-PWR8-NEXT:    stw r9, 16(r1)
+; PPC-PWR8-NEXT:    li r7, 4
+; PPC-PWR8-NEXT:    li r8, 2
 ; PPC-PWR8-NEXT:    stw r3, 28(r1)
 ; PPC-PWR8-NEXT:    lwz r3, 56(r1)
 ; PPC-PWR8-NEXT:    stw r3, 24(r1)
@@ -1717,10 +1717,10 @@ define i1 @bool_cas_weak_acquire_acquire(ptr %a, i128 %cmp, i128 %new) {
 ; PPC-PWR8-NEXT:    stw r5, 32(r1)
 ; PPC-PWR8-NEXT:    addi r5, r1, 32
 ; PPC-PWR8-NEXT:    addi r6, r1, 16
-; PPC-PWR8-NEXT:    li r7, 2
-; PPC-PWR8-NEXT:    li r8, 2
 ; PPC-PWR8-NEXT:    stw r10, 20(r1)
 ; PPC-PWR8-NEXT:    stw r9, 16(r1)
+; PPC-PWR8-NEXT:    li r7, 2
+; PPC-PWR8-NEXT:    li r8, 2
 ; PPC-PWR8-NEXT:    stw r3, 28(r1)
 ; PPC-PWR8-NEXT:    lwz r3, 56(r1)
 ; PPC-PWR8-NEXT:    stw r3, 24(r1)

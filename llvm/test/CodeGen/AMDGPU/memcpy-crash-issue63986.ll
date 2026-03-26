@@ -61,12 +61,12 @@ define void @issue63986(i64 %0, i64 %idxprom, ptr inreg %ptr) {
 ; CHECK-NEXT:    v_and_b32_e32 v2, 15, v0
 ; CHECK-NEXT:    v_and_b32_e32 v0, -16, v0
 ; CHECK-NEXT:    v_add_co_u32_e32 v4, vcc, v6, v0
-; CHECK-NEXT:    v_mov_b32_e32 v3, 0
 ; CHECK-NEXT:    v_addc_co_u32_e32 v5, vcc, v7, v1, vcc
-; CHECK-NEXT:    v_cmp_ne_u64_e64 s[4:5], 0, v[0:1]
-; CHECK-NEXT:    v_cmp_ne_u64_e64 s[6:7], 0, v[2:3]
+; CHECK-NEXT:    v_mov_b32_e32 v3, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v6, s17
 ; CHECK-NEXT:    v_add_co_u32_e32 v4, vcc, s16, v4
+; CHECK-NEXT:    v_cmp_ne_u64_e64 s[4:5], 0, v[0:1]
+; CHECK-NEXT:    v_cmp_ne_u64_e64 s[6:7], 0, v[2:3]
 ; CHECK-NEXT:    v_addc_co_u32_e32 v5, vcc, v6, v5, vcc
 ; CHECK-NEXT:    s_branch .LBB0_11
 ; CHECK-NEXT:  .LBB0_9: ; %Flow14
@@ -182,8 +182,8 @@ define void @issue63986_reduced_expanded(i64 %idxprom) {
 ; CHECK-NEXT:    v_mov_b32_e32 v3, v2
 ; CHECK-NEXT:    v_mov_b32_e32 v4, v2
 ; CHECK-NEXT:    v_mov_b32_e32 v5, v2
-; CHECK-NEXT:    s_and_b64 vcc, exec, 0
 ; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
+; CHECK-NEXT:    s_and_b64 vcc, exec, 0
 ; CHECK-NEXT:  .LBB1_9: ; %loop-memcpy-expansion2
 ; CHECK-NEXT:    s_mov_b64 vcc, vcc
 ; CHECK-NEXT:    s_cbranch_vccz .LBB1_9

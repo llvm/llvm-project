@@ -67,8 +67,8 @@ define i1 @test_return_bool(ptr %value, i8 %oldValue, i8 %newValue) {
 ; CHECK-NEXT:    eor w0, w8, #0x1
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  LBB1_4: ; %cmpxchg.nostore
-; CHECK-NEXT:    eor w0, wzr, #0x1
 ; CHECK-NEXT:    clrex
+; CHECK-NEXT:    eor w0, wzr, #0x1
 ; CHECK-NEXT:    ret
 ;
 ; OUTLINE-ATOMICS-LABEL: test_return_bool:

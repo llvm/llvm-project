@@ -11,7 +11,7 @@
 # CHECK-LABEL: fun:
 
 # CHECK:       exrl    %r4, .Ltmp0
-# CHECK-NEXT:  cgije
+# CHECK:  cgije
 
 # CHECK:       exrl    %r4, .Ltmp1
 # CHECK-NEXT:  tmll

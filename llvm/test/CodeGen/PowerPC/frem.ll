@@ -115,8 +115,8 @@ define <2 x double> @frem2x64(<2 x double> %a, <2 x double> %b) {
 ; CHECK-NEXT:    vmr 31, 3
 ; CHECK-NEXT:    xscpsgndp 2, 63, 63
 ; CHECK-NEXT:    vmr 30, 2
-; CHECK-NEXT:    xscpsgndp 1, 62, 62
 ; CHECK-NEXT:    stxv 61, 32(1) # 16-byte Folded Spill
+; CHECK-NEXT:    xscpsgndp 1, 62, 62
 ; CHECK-NEXT:    bl fmod
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    xscpsgndp 61, 1, 1

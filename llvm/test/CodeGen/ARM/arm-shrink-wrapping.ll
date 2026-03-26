@@ -205,11 +205,11 @@ define i32 @freqSaveAndRestoreOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="al
 ; ARM-ENABLE-NEXT:  @ %bb.1: @ %for.preheader
 ; ARM-ENABLE-NEXT:    push {r4, r7, lr}
 ; ARM-ENABLE-NEXT:    add r7, sp, #4
-; ARM-ENABLE-NEXT:    mov r0, #0
-; ARM-ENABLE-NEXT:    mov r1, #10
 ; ARM-ENABLE-NEXT:    @ InlineAsm Start
 ; ARM-ENABLE-NEXT:    nop
 ; ARM-ENABLE-NEXT:    @ InlineAsm End
+; ARM-ENABLE-NEXT:    mov r0, #0
+; ARM-ENABLE-NEXT:    mov r1, #10
 ; ARM-ENABLE-NEXT:  LBB1_2: @ %for.body
 ; ARM-ENABLE-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; ARM-ENABLE-NEXT:    @ InlineAsm Start
@@ -234,11 +234,11 @@ define i32 @freqSaveAndRestoreOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="al
 ; ARM-DISABLE-NEXT:    cmp r0, #0
 ; ARM-DISABLE-NEXT:    beq LBB1_4
 ; ARM-DISABLE-NEXT:  @ %bb.1: @ %for.preheader
-; ARM-DISABLE-NEXT:    mov r0, #0
-; ARM-DISABLE-NEXT:    mov r1, #10
 ; ARM-DISABLE-NEXT:    @ InlineAsm Start
 ; ARM-DISABLE-NEXT:    nop
 ; ARM-DISABLE-NEXT:    @ InlineAsm End
+; ARM-DISABLE-NEXT:    mov r0, #0
+; ARM-DISABLE-NEXT:    mov r1, #10
 ; ARM-DISABLE-NEXT:  LBB1_2: @ %for.body
 ; ARM-DISABLE-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; ARM-DISABLE-NEXT:    @ InlineAsm Start
@@ -262,11 +262,11 @@ define i32 @freqSaveAndRestoreOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="al
 ; THUMB-ENABLE-NEXT:  @ %bb.1: @ %for.preheader
 ; THUMB-ENABLE-NEXT:    push {r4, r7, lr}
 ; THUMB-ENABLE-NEXT:    add r7, sp, #4
-; THUMB-ENABLE-NEXT:    movs r0, #0
-; THUMB-ENABLE-NEXT:    movs r1, #10
 ; THUMB-ENABLE-NEXT:    @ InlineAsm Start
 ; THUMB-ENABLE-NEXT:    nop
 ; THUMB-ENABLE-NEXT:    @ InlineAsm End
+; THUMB-ENABLE-NEXT:    movs r0, #0
+; THUMB-ENABLE-NEXT:    movs r1, #10
 ; THUMB-ENABLE-NEXT:  LBB1_2: @ %for.body
 ; THUMB-ENABLE-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; THUMB-ENABLE-NEXT:    @ InlineAsm Start
@@ -290,11 +290,11 @@ define i32 @freqSaveAndRestoreOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="al
 ; THUMB-DISABLE-NEXT:    add r7, sp, #4
 ; THUMB-DISABLE-NEXT:    cbz r0, LBB1_4
 ; THUMB-DISABLE-NEXT:  @ %bb.1: @ %for.preheader
-; THUMB-DISABLE-NEXT:    movs r0, #0
-; THUMB-DISABLE-NEXT:    movs r1, #10
 ; THUMB-DISABLE-NEXT:    @ InlineAsm Start
 ; THUMB-DISABLE-NEXT:    nop
 ; THUMB-DISABLE-NEXT:    @ InlineAsm End
+; THUMB-DISABLE-NEXT:    movs r0, #0
+; THUMB-DISABLE-NEXT:    movs r1, #10
 ; THUMB-DISABLE-NEXT:  LBB1_2: @ %for.body
 ; THUMB-DISABLE-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; THUMB-DISABLE-NEXT:    @ InlineAsm Start
@@ -414,11 +414,11 @@ define i32 @freqSaveAndRestoreOutsideLoop2(i32 %cond) "frame-pointer"="all" {
 ; ARM-ENABLE-NEXT:  @ %bb.0: @ %entry
 ; ARM-ENABLE-NEXT:    push {r4, r7, lr}
 ; ARM-ENABLE-NEXT:    add r7, sp, #4
-; ARM-ENABLE-NEXT:    mov r0, #0
-; ARM-ENABLE-NEXT:    mov r1, #10
 ; ARM-ENABLE-NEXT:    @ InlineAsm Start
 ; ARM-ENABLE-NEXT:    nop
 ; ARM-ENABLE-NEXT:    @ InlineAsm End
+; ARM-ENABLE-NEXT:    mov r0, #0
+; ARM-ENABLE-NEXT:    mov r1, #10
 ; ARM-ENABLE-NEXT:  LBB2_1: @ %for.body
 ; ARM-ENABLE-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; ARM-ENABLE-NEXT:    @ InlineAsm Start
@@ -439,11 +439,11 @@ define i32 @freqSaveAndRestoreOutsideLoop2(i32 %cond) "frame-pointer"="all" {
 ; ARM-DISABLE-NEXT:  @ %bb.0: @ %entry
 ; ARM-DISABLE-NEXT:    push {r4, r7, lr}
 ; ARM-DISABLE-NEXT:    add r7, sp, #4
-; ARM-DISABLE-NEXT:    mov r0, #0
-; ARM-DISABLE-NEXT:    mov r1, #10
 ; ARM-DISABLE-NEXT:    @ InlineAsm Start
 ; ARM-DISABLE-NEXT:    nop
 ; ARM-DISABLE-NEXT:    @ InlineAsm End
+; ARM-DISABLE-NEXT:    mov r0, #0
+; ARM-DISABLE-NEXT:    mov r1, #10
 ; ARM-DISABLE-NEXT:  LBB2_1: @ %for.body
 ; ARM-DISABLE-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; ARM-DISABLE-NEXT:    @ InlineAsm Start
@@ -464,11 +464,11 @@ define i32 @freqSaveAndRestoreOutsideLoop2(i32 %cond) "frame-pointer"="all" {
 ; THUMB-ENABLE-NEXT:  @ %bb.0: @ %entry
 ; THUMB-ENABLE-NEXT:    push {r4, r7, lr}
 ; THUMB-ENABLE-NEXT:    add r7, sp, #4
-; THUMB-ENABLE-NEXT:    movs r0, #0
-; THUMB-ENABLE-NEXT:    movs r1, #10
 ; THUMB-ENABLE-NEXT:    @ InlineAsm Start
 ; THUMB-ENABLE-NEXT:    nop
 ; THUMB-ENABLE-NEXT:    @ InlineAsm End
+; THUMB-ENABLE-NEXT:    movs r0, #0
+; THUMB-ENABLE-NEXT:    movs r1, #10
 ; THUMB-ENABLE-NEXT:  LBB2_1: @ %for.body
 ; THUMB-ENABLE-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; THUMB-ENABLE-NEXT:    @ InlineAsm Start
@@ -489,11 +489,11 @@ define i32 @freqSaveAndRestoreOutsideLoop2(i32 %cond) "frame-pointer"="all" {
 ; THUMB-DISABLE-NEXT:  @ %bb.0: @ %entry
 ; THUMB-DISABLE-NEXT:    push {r4, r7, lr}
 ; THUMB-DISABLE-NEXT:    add r7, sp, #4
-; THUMB-DISABLE-NEXT:    movs r0, #0
-; THUMB-DISABLE-NEXT:    movs r1, #10
 ; THUMB-DISABLE-NEXT:    @ InlineAsm Start
 ; THUMB-DISABLE-NEXT:    nop
 ; THUMB-DISABLE-NEXT:    @ InlineAsm End
+; THUMB-DISABLE-NEXT:    movs r0, #0
+; THUMB-DISABLE-NEXT:    movs r1, #10
 ; THUMB-DISABLE-NEXT:  LBB2_1: @ %for.body
 ; THUMB-DISABLE-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; THUMB-DISABLE-NEXT:    @ InlineAsm Start
@@ -586,11 +586,11 @@ define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="all" {
 ; ARM-ENABLE-NEXT:  @ %bb.1: @ %for.preheader
 ; ARM-ENABLE-NEXT:    push {r4, r7, lr}
 ; ARM-ENABLE-NEXT:    add r7, sp, #4
-; ARM-ENABLE-NEXT:    mov r0, #0
-; ARM-ENABLE-NEXT:    mov r1, #10
 ; ARM-ENABLE-NEXT:    @ InlineAsm Start
 ; ARM-ENABLE-NEXT:    nop
 ; ARM-ENABLE-NEXT:    @ InlineAsm End
+; ARM-ENABLE-NEXT:    mov r0, #0
+; ARM-ENABLE-NEXT:    mov r1, #10
 ; ARM-ENABLE-NEXT:  LBB3_2: @ %for.body
 ; ARM-ENABLE-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; ARM-ENABLE-NEXT:    @ InlineAsm Start
@@ -618,11 +618,11 @@ define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="all" {
 ; ARM-DISABLE-NEXT:    cmp r0, #0
 ; ARM-DISABLE-NEXT:    beq LBB3_4
 ; ARM-DISABLE-NEXT:  @ %bb.1: @ %for.preheader
-; ARM-DISABLE-NEXT:    mov r0, #0
-; ARM-DISABLE-NEXT:    mov r1, #10
 ; ARM-DISABLE-NEXT:    @ InlineAsm Start
 ; ARM-DISABLE-NEXT:    nop
 ; ARM-DISABLE-NEXT:    @ InlineAsm End
+; ARM-DISABLE-NEXT:    mov r0, #0
+; ARM-DISABLE-NEXT:    mov r1, #10
 ; ARM-DISABLE-NEXT:  LBB3_2: @ %for.body
 ; ARM-DISABLE-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; ARM-DISABLE-NEXT:    @ InlineAsm Start
@@ -649,11 +649,11 @@ define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="all" {
 ; THUMB-ENABLE-NEXT:  @ %bb.1: @ %for.preheader
 ; THUMB-ENABLE-NEXT:    push {r4, r7, lr}
 ; THUMB-ENABLE-NEXT:    add r7, sp, #4
-; THUMB-ENABLE-NEXT:    movs r0, #0
-; THUMB-ENABLE-NEXT:    movs r1, #10
 ; THUMB-ENABLE-NEXT:    @ InlineAsm Start
 ; THUMB-ENABLE-NEXT:    nop
 ; THUMB-ENABLE-NEXT:    @ InlineAsm End
+; THUMB-ENABLE-NEXT:    movs r0, #0
+; THUMB-ENABLE-NEXT:    movs r1, #10
 ; THUMB-ENABLE-NEXT:  LBB3_2: @ %for.body
 ; THUMB-ENABLE-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; THUMB-ENABLE-NEXT:    @ InlineAsm Start
@@ -680,11 +680,11 @@ define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="all" {
 ; THUMB-DISABLE-NEXT:    add r7, sp, #4
 ; THUMB-DISABLE-NEXT:    cbz r0, LBB3_4
 ; THUMB-DISABLE-NEXT:  @ %bb.1: @ %for.preheader
-; THUMB-DISABLE-NEXT:    movs r0, #0
-; THUMB-DISABLE-NEXT:    movs r1, #10
 ; THUMB-DISABLE-NEXT:    @ InlineAsm Start
 ; THUMB-DISABLE-NEXT:    nop
 ; THUMB-DISABLE-NEXT:    @ InlineAsm End
+; THUMB-DISABLE-NEXT:    movs r0, #0
+; THUMB-DISABLE-NEXT:    movs r1, #10
 ; THUMB-DISABLE-NEXT:  LBB3_2: @ %for.body
 ; THUMB-DISABLE-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; THUMB-DISABLE-NEXT:    @ InlineAsm Start
@@ -790,11 +790,11 @@ define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="all" 
 ; ARM-ENABLE-NEXT:  @ %bb.1: @ %if.then
 ; ARM-ENABLE-NEXT:    push {r4, r7, lr}
 ; ARM-ENABLE-NEXT:    add r7, sp, #4
-; ARM-ENABLE-NEXT:    mov r0, #0
-; ARM-ENABLE-NEXT:    mov r1, #10
 ; ARM-ENABLE-NEXT:    @ InlineAsm Start
 ; ARM-ENABLE-NEXT:    nop
 ; ARM-ENABLE-NEXT:    @ InlineAsm End
+; ARM-ENABLE-NEXT:    mov r0, #0
+; ARM-ENABLE-NEXT:    mov r1, #10
 ; ARM-ENABLE-NEXT:  LBB4_2: @ %for.body
 ; ARM-ENABLE-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; ARM-ENABLE-NEXT:    @ InlineAsm Start
@@ -819,11 +819,11 @@ define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="all" 
 ; ARM-DISABLE-NEXT:    cmp r0, #0
 ; ARM-DISABLE-NEXT:    beq LBB4_4
 ; ARM-DISABLE-NEXT:  @ %bb.1: @ %if.then
-; ARM-DISABLE-NEXT:    mov r0, #0
-; ARM-DISABLE-NEXT:    mov r1, #10
 ; ARM-DISABLE-NEXT:    @ InlineAsm Start
 ; ARM-DISABLE-NEXT:    nop
 ; ARM-DISABLE-NEXT:    @ InlineAsm End
+; ARM-DISABLE-NEXT:    mov r0, #0
+; ARM-DISABLE-NEXT:    mov r1, #10
 ; ARM-DISABLE-NEXT:  LBB4_2: @ %for.body
 ; ARM-DISABLE-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; ARM-DISABLE-NEXT:    @ InlineAsm Start
@@ -847,11 +847,11 @@ define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="all" 
 ; THUMB-ENABLE-NEXT:  @ %bb.1: @ %if.then
 ; THUMB-ENABLE-NEXT:    push {r4, r7, lr}
 ; THUMB-ENABLE-NEXT:    add r7, sp, #4
-; THUMB-ENABLE-NEXT:    movs r0, #0
-; THUMB-ENABLE-NEXT:    movs r1, #10
 ; THUMB-ENABLE-NEXT:    @ InlineAsm Start
 ; THUMB-ENABLE-NEXT:    nop
 ; THUMB-ENABLE-NEXT:    @ InlineAsm End
+; THUMB-ENABLE-NEXT:    movs r0, #0
+; THUMB-ENABLE-NEXT:    movs r1, #10
 ; THUMB-ENABLE-NEXT:  LBB4_2: @ %for.body
 ; THUMB-ENABLE-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; THUMB-ENABLE-NEXT:    @ InlineAsm Start
@@ -875,11 +875,11 @@ define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="all" 
 ; THUMB-DISABLE-NEXT:    add r7, sp, #4
 ; THUMB-DISABLE-NEXT:    cbz r0, LBB4_4
 ; THUMB-DISABLE-NEXT:  @ %bb.1: @ %if.then
-; THUMB-DISABLE-NEXT:    movs r0, #0
-; THUMB-DISABLE-NEXT:    movs r1, #10
 ; THUMB-DISABLE-NEXT:    @ InlineAsm Start
 ; THUMB-DISABLE-NEXT:    nop
 ; THUMB-DISABLE-NEXT:    @ InlineAsm End
+; THUMB-DISABLE-NEXT:    movs r0, #0
+; THUMB-DISABLE-NEXT:    movs r1, #10
 ; THUMB-DISABLE-NEXT:  LBB4_2: @ %for.body
 ; THUMB-DISABLE-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; THUMB-DISABLE-NEXT:    @ InlineAsm Start
@@ -1204,11 +1204,11 @@ define i32 @callVariadicFunc(i32 %cond, i32 %N) "frame-pointer"="all" {
 ; ARM-ENABLE-NEXT:    push {r7, lr}
 ; ARM-ENABLE-NEXT:    mov r7, sp
 ; ARM-ENABLE-NEXT:    sub sp, sp, #12
+; ARM-ENABLE-NEXT:    str r1, [sp]
 ; ARM-ENABLE-NEXT:    mov r0, r1
+; ARM-ENABLE-NEXT:    str r1, [sp, #4]
 ; ARM-ENABLE-NEXT:    mov r2, r1
 ; ARM-ENABLE-NEXT:    mov r3, r1
-; ARM-ENABLE-NEXT:    str r1, [sp]
-; ARM-ENABLE-NEXT:    str r1, [sp, #4]
 ; ARM-ENABLE-NEXT:    str r1, [sp, #8]
 ; ARM-ENABLE-NEXT:    bl _someVariadicFunc
 ; ARM-ENABLE-NEXT:    lsl r0, r0, #3
@@ -1228,11 +1228,11 @@ define i32 @callVariadicFunc(i32 %cond, i32 %N) "frame-pointer"="all" {
 ; ARM-DISABLE-NEXT:    cmp r0, #0
 ; ARM-DISABLE-NEXT:    beq LBB7_2
 ; ARM-DISABLE-NEXT:  @ %bb.1: @ %if.then
+; ARM-DISABLE-NEXT:    str r1, [sp]
 ; ARM-DISABLE-NEXT:    mov r0, r1
+; ARM-DISABLE-NEXT:    str r1, [sp, #4]
 ; ARM-DISABLE-NEXT:    mov r2, r1
 ; ARM-DISABLE-NEXT:    mov r3, r1
-; ARM-DISABLE-NEXT:    str r1, [sp]
-; ARM-DISABLE-NEXT:    str r1, [sp, #4]
 ; ARM-DISABLE-NEXT:    str r1, [sp, #8]
 ; ARM-DISABLE-NEXT:    bl _someVariadicFunc
 ; ARM-DISABLE-NEXT:    lsl r0, r0, #3
@@ -1252,11 +1252,11 @@ define i32 @callVariadicFunc(i32 %cond, i32 %N) "frame-pointer"="all" {
 ; THUMB-ENABLE-NEXT:    push {r7, lr}
 ; THUMB-ENABLE-NEXT:    mov r7, sp
 ; THUMB-ENABLE-NEXT:    sub sp, #12
+; THUMB-ENABLE-NEXT:    strd r1, r1, [sp]
 ; THUMB-ENABLE-NEXT:    mov r0, r1
+; THUMB-ENABLE-NEXT:    str r1, [sp, #8]
 ; THUMB-ENABLE-NEXT:    mov r2, r1
 ; THUMB-ENABLE-NEXT:    mov r3, r1
-; THUMB-ENABLE-NEXT:    strd r1, r1, [sp]
-; THUMB-ENABLE-NEXT:    str r1, [sp, #8]
 ; THUMB-ENABLE-NEXT:    bl _someVariadicFunc
 ; THUMB-ENABLE-NEXT:    lsls r0, r0, #3
 ; THUMB-ENABLE-NEXT:    add sp, #12
@@ -1274,11 +1274,11 @@ define i32 @callVariadicFunc(i32 %cond, i32 %N) "frame-pointer"="all" {
 ; THUMB-DISABLE-NEXT:    sub sp, #12
 ; THUMB-DISABLE-NEXT:    cbz r0, LBB7_2
 ; THUMB-DISABLE-NEXT:  @ %bb.1: @ %if.then
+; THUMB-DISABLE-NEXT:    strd r1, r1, [sp]
 ; THUMB-DISABLE-NEXT:    mov r0, r1
+; THUMB-DISABLE-NEXT:    str r1, [sp, #8]
 ; THUMB-DISABLE-NEXT:    mov r2, r1
 ; THUMB-DISABLE-NEXT:    mov r3, r1
-; THUMB-DISABLE-NEXT:    strd r1, r1, [sp]
-; THUMB-DISABLE-NEXT:    str r1, [sp, #8]
 ; THUMB-DISABLE-NEXT:    bl _someVariadicFunc
 ; THUMB-DISABLE-NEXT:    lsls r0, r0, #3
 ; THUMB-DISABLE-NEXT:    add sp, #12
@@ -1975,8 +1975,8 @@ define float @debug_info(float %gamma, float %slopeLimit, i1 %or.cond, double %t
 ; ARM-ENABLE-NEXT:    vmov d9, r3, r1
 ; ARM-ENABLE-NEXT:    vmov s16, r0
 ; ARM-ENABLE-NEXT:    mov r0, r3
-; ARM-ENABLE-NEXT:    mov r3, r1
 ; ARM-ENABLE-NEXT:    vstr d10, [r4, #16]
+; ARM-ENABLE-NEXT:    mov r3, r1
 ; ARM-ENABLE-NEXT:    vadd.f64 d10, d9, d16
 ; ARM-ENABLE-NEXT:    bl _pow
 ; ARM-ENABLE-NEXT:    vmov.f32 s0, #1.000000e+00
@@ -2078,8 +2078,8 @@ define float @debug_info(float %gamma, float %slopeLimit, i1 %or.cond, double %t
 ; THUMB-ENABLE-NEXT:    vmov d9, r3, r1
 ; THUMB-ENABLE-NEXT:    vmov s16, r0
 ; THUMB-ENABLE-NEXT:    mov r0, r3
-; THUMB-ENABLE-NEXT:    mov r3, r1
 ; THUMB-ENABLE-NEXT:    vstr d10, [r4, #16]
+; THUMB-ENABLE-NEXT:    mov r3, r1
 ; THUMB-ENABLE-NEXT:    vadd.f64 d10, d9, d16
 ; THUMB-ENABLE-NEXT:    bl _pow
 ; THUMB-ENABLE-NEXT:    vmov.f32 s0, #1.000000e+00

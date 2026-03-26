@@ -20,8 +20,8 @@ define void @f16_arg(half %arg, ptr %ptr) #0 {
 ; NOFP16-NEXT:    .cfi_def_cfa_offset 16
 ; NOFP16-NEXT:    .cfi_offset w19, -8
 ; NOFP16-NEXT:    .cfi_offset w30, -16
-; NOFP16-NEXT:    and w0, w0, #0xffff
 ; NOFP16-NEXT:    mov x19, x1
+; NOFP16-NEXT:    and w0, w0, #0xffff
 ; NOFP16-NEXT:    bl __extendhfsf2
 ; NOFP16-NEXT:    str w0, [x19]
 ; NOFP16-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
@@ -41,9 +41,9 @@ define void @v2f16_arg(<2 x half> %arg, ptr %ptr) #0 {
 ; NOFP16-NEXT:    .cfi_offset w20, -16
 ; NOFP16-NEXT:    .cfi_offset w21, -24
 ; NOFP16-NEXT:    .cfi_offset w30, -32
-; NOFP16-NEXT:    and w0, w0, #0xffff
 ; NOFP16-NEXT:    mov x19, x2
 ; NOFP16-NEXT:    mov w20, w1
+; NOFP16-NEXT:    and w0, w0, #0xffff
 ; NOFP16-NEXT:    bl __extendhfsf2
 ; NOFP16-NEXT:    mov w21, w0
 ; NOFP16-NEXT:    and w0, w20, #0xffff
@@ -69,10 +69,10 @@ define void @v3f16_arg(<3 x half> %arg, ptr %ptr) #0 {
 ; NOFP16-NEXT:    .cfi_offset w21, -24
 ; NOFP16-NEXT:    .cfi_offset w22, -32
 ; NOFP16-NEXT:    .cfi_offset w30, -48
-; NOFP16-NEXT:    mov w21, w0
-; NOFP16-NEXT:    and w0, w1, #0xffff
 ; NOFP16-NEXT:    mov x19, x3
 ; NOFP16-NEXT:    mov w20, w2
+; NOFP16-NEXT:    mov w21, w0
+; NOFP16-NEXT:    and w0, w1, #0xffff
 ; NOFP16-NEXT:    bl __extendhfsf2
 ; NOFP16-NEXT:    mov w22, w0
 ; NOFP16-NEXT:    and w0, w21, #0xffff
@@ -105,11 +105,11 @@ define void @v4f16_arg(<4 x half> %arg, ptr %ptr) #0 {
 ; NOFP16-NEXT:    .cfi_offset w22, -32
 ; NOFP16-NEXT:    .cfi_offset w23, -40
 ; NOFP16-NEXT:    .cfi_offset w30, -48
-; NOFP16-NEXT:    and w0, w0, #0xffff
 ; NOFP16-NEXT:    mov x19, x4
 ; NOFP16-NEXT:    mov w20, w3
 ; NOFP16-NEXT:    mov w21, w2
 ; NOFP16-NEXT:    mov w22, w1
+; NOFP16-NEXT:    and w0, w0, #0xffff
 ; NOFP16-NEXT:    bl __extendhfsf2
 ; NOFP16-NEXT:    mov w23, w0
 ; NOFP16-NEXT:    and w0, w22, #0xffff
@@ -177,9 +177,9 @@ define void @v4f16_arg(<4 x half> %arg, ptr %ptr) #0 {
 ; NOFP16-NEXT:    .cfi_offset w20, -16
 ; NOFP16-NEXT:    .cfi_offset w21, -24
 ; NOFP16-NEXT:    .cfi_offset w30, -32
+; NOFP16-NEXT:    mov w19, w1
 ; NOFP16-NEXT:    mov w20, w0
 ; NOFP16-NEXT:    mov w0, w2
-; NOFP16-NEXT:    mov w19, w1
 ; NOFP16-NEXT:    bl __truncsfhf2
 ; NOFP16-NEXT:    mov w21, w0
 ; NOFP16-NEXT:    mov w0, w19
@@ -208,10 +208,10 @@ define void @v4f16_arg(<4 x half> %arg, ptr %ptr) #0 {
 ; NOFP16-NEXT:    .cfi_offset w21, -24
 ; NOFP16-NEXT:    .cfi_offset w22, -32
 ; NOFP16-NEXT:    .cfi_offset w30, -48
-; NOFP16-NEXT:    mov w21, w0
-; NOFP16-NEXT:    mov w0, w3
 ; NOFP16-NEXT:    mov w19, w2
 ; NOFP16-NEXT:    mov w20, w1
+; NOFP16-NEXT:    mov w21, w0
+; NOFP16-NEXT:    mov w0, w3
 ; NOFP16-NEXT:    bl __truncsfhf2
 ; NOFP16-NEXT:    mov w22, w0
 ; NOFP16-NEXT:    mov w0, w19

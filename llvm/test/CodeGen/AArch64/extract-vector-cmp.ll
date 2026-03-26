@@ -81,8 +81,8 @@ define void @vector_loop_with_icmp(ptr nocapture noundef writeonly %dest) {
 ; CHECK-NEXT:    b .LBB5_2
 ; CHECK-NEXT:  .LBB5_1: // %pred.store.continue6
 ; CHECK-NEXT:    // in Loop: Header=BB5_2 Depth=1
-; CHECK-NEXT:    add z0.d, z0.d, #2 // =0x2
 ; CHECK-NEXT:    subs x9, x9, #2
+; CHECK-NEXT:    add z0.d, z0.d, #2 // =0x2
 ; CHECK-NEXT:    add x8, x8, #8
 ; CHECK-NEXT:    b.eq .LBB5_6
 ; CHECK-NEXT:  .LBB5_2: // %vector.body
@@ -182,14 +182,13 @@ define i1 @extract_icmp_v4i32_splat_rhs_mul_use(<4 x i32> %a, ptr %p) {
 ; CHECK-NEXT:    movi v1.4s, #235
 ; CHECK-NEXT:    adrp x8, .LCPI8_0
 ; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI8_0]
-; CHECK-NEXT:    mov x8, x0
 ; CHECK-NEXT:    cmhi v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    xtn v1.4h, v0.4s
 ; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    addv s0, v0.4s
-; CHECK-NEXT:    umov w9, v1.h[1]
-; CHECK-NEXT:    str b0, [x8]
-; CHECK-NEXT:    and w0, w9, #0x1
+; CHECK-NEXT:    umov w8, v1.h[1]
+; CHECK-NEXT:    str b0, [x0]
+; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
   %icmp = icmp ult <4 x i32> %a, splat(i32 235)
   %ext = extractelement <4 x i1> %icmp, i32 1

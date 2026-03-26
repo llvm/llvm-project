@@ -4,14 +4,13 @@
 define i32 @f(ptr %arg, i41 %arg1, ptr %arg2) {
 ; CHECK-LABEL: f:
 ; CHECK:       // %bb.0: // %bb
-; CHECK-NEXT:    and w9, w1, #0x1
-; CHECK-NEXT:    mov w10, #1 // =0x1
-; CHECK-NEXT:    mov x8, x0
-; CHECK-NEXT:    cmp w9, #1
+; CHECK-NEXT:    and w8, w1, #0x1
+; CHECK-NEXT:    mov w9, #1 // =0x1
+; CHECK-NEXT:    cmp w8, #1
+; CHECK-NEXT:    adc x8, xzr, x9
+; CHECK-NEXT:    str x8, [x2]
+; CHECK-NEXT:    str xzr, [x0]
 ; CHECK-NEXT:    mov w0, wzr
-; CHECK-NEXT:    adc x9, xzr, x10
-; CHECK-NEXT:    str x9, [x2]
-; CHECK-NEXT:    str xzr, [x8]
 ; CHECK-NEXT:    ret
 bb:
   %new0 = and i41 %arg1, 1

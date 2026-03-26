@@ -196,8 +196,8 @@ define void @loop_absmax32(ptr nocapture readonly %0, i32 %1, ptr nocapture %2) 
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    lsrs r1, r1, #3
+; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    wls lr, r1, .LBB16_3
 ; CHECK-NEXT:  @ %bb.1: @ %.preheader
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
@@ -247,8 +247,8 @@ define void @loop_absmax32_c(ptr nocapture readonly %0, i32 %1, ptr nocapture %2
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    lsrs r1, r1, #3
+; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    wls lr, r1, .LBB17_3
 ; CHECK-NEXT:  @ %bb.1: @ %.preheader
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
@@ -390,8 +390,8 @@ define void @loop_absmax16(ptr nocapture readonly %0, i32 %1, ptr nocapture %2) 
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    lsrs r1, r1, #3
+; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    wls lr, r1, .LBB20_3
 ; CHECK-NEXT:  @ %bb.1: @ %.preheader
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
@@ -441,8 +441,8 @@ define void @loop_absmax16_c(ptr nocapture readonly %0, i32 %1, ptr nocapture %2
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    lsrs r1, r1, #3
+; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    wls lr, r1, .LBB21_3
 ; CHECK-NEXT:  @ %bb.1: @ %.preheader
 ; CHECK-NEXT:    vmov.i32 q0, #0x0

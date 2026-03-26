@@ -16,11 +16,11 @@ define void @acc_regalloc(ptr %arg, ptr %arg1, ptr %arg2) local_unnamed_addr {
 ; CHECK-NEXT:    lxv v0, 0(0)
 ; CHECK-NEXT:    xxlxor v6, v6, v6
 ; CHECK-NEXT:    xxlxor v4, v4, v4
+; CHECK-NEXT:    stfd f14, -144(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    stfd f15, -136(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    xxlxor v2, v2, v2
 ; CHECK-NEXT:    li r6, 1
 ; CHECK-NEXT:    li r4, 16
-; CHECK-NEXT:    stfd f14, -144(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    stfd f15, -136(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    extswsli r3, r3, 3
 ; CHECK-NEXT:    xvmaddadp v4, v0, v4
 ; CHECK-NEXT:    lxvdsx v1, 0, r3
@@ -109,11 +109,11 @@ define void @acc_regalloc(ptr %arg, ptr %arg1, ptr %arg2) local_unnamed_addr {
 ; TRACKLIVE-NEXT:    lxv v0, 0(0)
 ; TRACKLIVE-NEXT:    xxlxor v6, v6, v6
 ; TRACKLIVE-NEXT:    xxlxor v4, v4, v4
+; TRACKLIVE-NEXT:    stfd f14, -144(r1) # 8-byte Folded Spill
+; TRACKLIVE-NEXT:    stfd f15, -136(r1) # 8-byte Folded Spill
 ; TRACKLIVE-NEXT:    xxlxor v2, v2, v2
 ; TRACKLIVE-NEXT:    li r6, 1
 ; TRACKLIVE-NEXT:    li r4, 16
-; TRACKLIVE-NEXT:    stfd f14, -144(r1) # 8-byte Folded Spill
-; TRACKLIVE-NEXT:    stfd f15, -136(r1) # 8-byte Folded Spill
 ; TRACKLIVE-NEXT:    extswsli r3, r3, 3
 ; TRACKLIVE-NEXT:    xvmaddadp v4, v0, v4
 ; TRACKLIVE-NEXT:    lxvdsx v1, 0, r3

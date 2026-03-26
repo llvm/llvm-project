@@ -226,9 +226,9 @@ define dso_local fastcc void @P10_Spill_CR_GT(ptr %p) unnamed_addr {
 ; CHECK-BE-NEXT:    .cfi_offset cr2, 8
 ; CHECK-BE-NEXT:    .cfi_offset cr2, 8
 ; CHECK-BE-NEXT:    .cfi_offset cr2, 8
-; CHECK-BE-NEXT:    lwz r4, 0(r3)
 ; CHECK-BE-NEXT:    std r30, 128(r1) # 8-byte Folded Spill
 ; CHECK-BE-NEXT:    addi r30, r3, -1
+; CHECK-BE-NEXT:    lwz r4, 0(r3)
 ; CHECK-BE-NEXT:    li r3, 0
 ; CHECK-BE-NEXT:    std r28, 112(r1) # 8-byte Folded Spill
 ; CHECK-BE-NEXT:    std r29, 120(r1) # 8-byte Folded Spill

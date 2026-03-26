@@ -442,8 +442,8 @@ define <4 x i32> @f25_d(ptr %ptr, ptr %dst) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    l %r0, 0(%r2)
 ; CHECK-NEXT:    vlvgp %v0, %r0, %r0
-; CHECK-NEXT:    vrepf %v24, %v0, 1
 ; CHECK-NEXT:    st %r0, 0(%r3)
+; CHECK-NEXT:    vrepf %v24, %v0, 1
 ; CHECK-NEXT:    br %r14
   %L = load atomic i32, ptr %ptr seq_cst, align 4
   store i32 %L, ptr %dst, align 4

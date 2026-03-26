@@ -356,16 +356,16 @@ define <4 x float> @vector_add_f32(<4 x float> %lhs, <4 x float> %rhs) {
 ; CHECK-MVE-NEXT:    add r0, sp, #40
 ; CHECK-MVE-NEXT:    vldrw.u32 q4, [r0]
 ; CHECK-MVE-NEXT:    mov r7, r1
-; CHECK-MVE-NEXT:    mov r0, r3
 ; CHECK-MVE-NEXT:    mov r6, r2
+; CHECK-MVE-NEXT:    mov r0, r3
 ; CHECK-MVE-NEXT:    vmov r4, r1, d9
 ; CHECK-MVE-NEXT:    bl __aeabi_fadd
 ; CHECK-MVE-NEXT:    mov r5, r0
 ; CHECK-MVE-NEXT:    mov r0, r6
 ; CHECK-MVE-NEXT:    mov r1, r4
 ; CHECK-MVE-NEXT:    bl __aeabi_fadd
-; CHECK-MVE-NEXT:    vmov r6, r1, d8
 ; CHECK-MVE-NEXT:    mov r4, r0
+; CHECK-MVE-NEXT:    vmov r6, r1, d8
 ; CHECK-MVE-NEXT:    mov r0, r7
 ; CHECK-MVE-NEXT:    bl __aeabi_fadd
 ; CHECK-MVE-NEXT:    mov r7, r0
@@ -445,9 +445,9 @@ define <2 x double> @vector_add_f64(<2 x double> %lhs, <2 x double> %rhs) {
 ; CHECK-MVE-NEXT:    mov r0, r4
 ; CHECK-MVE-NEXT:    mov r1, r6
 ; CHECK-MVE-NEXT:    bl __aeabi_dadd
-; CHECK-MVE-NEXT:    vmov r2, r3, d8
 ; CHECK-MVE-NEXT:    mov r4, r0
 ; CHECK-MVE-NEXT:    mov r6, r1
+; CHECK-MVE-NEXT:    vmov r2, r3, d8
 ; CHECK-MVE-NEXT:    mov r0, r5
 ; CHECK-MVE-NEXT:    mov r1, r7
 ; CHECK-MVE-NEXT:    bl __aeabi_dadd
@@ -476,9 +476,9 @@ define <2 x double> @vector_add_f64(<2 x double> %lhs, <2 x double> %rhs) {
 ; CHECK-BE-NEXT:    vmov r3, r2, d9
 ; CHECK-BE-NEXT:    mov r1, r4
 ; CHECK-BE-NEXT:    bl __aeabi_dadd
-; CHECK-BE-NEXT:    vmov r3, r2, d8
 ; CHECK-BE-NEXT:    mov r4, r0
 ; CHECK-BE-NEXT:    mov r6, r1
+; CHECK-BE-NEXT:    vmov r3, r2, d8
 ; CHECK-BE-NEXT:    mov r0, r5
 ; CHECK-BE-NEXT:    mov r1, r7
 ; CHECK-BE-NEXT:    bl __aeabi_dadd
@@ -502,9 +502,9 @@ define <2 x double> @vector_add_f64(<2 x double> %lhs, <2 x double> %rhs) {
 ; CHECK-FP-NEXT:    mov r4, r3
 ; CHECK-FP-NEXT:    vmov r2, r3, d8
 ; CHECK-FP-NEXT:    bl __aeabi_dadd
-; CHECK-FP-NEXT:    vmov r2, r3, d9
 ; CHECK-FP-NEXT:    mov r6, r0
 ; CHECK-FP-NEXT:    mov r7, r1
+; CHECK-FP-NEXT:    vmov r2, r3, d9
 ; CHECK-FP-NEXT:    mov r0, r5
 ; CHECK-FP-NEXT:    mov r1, r4
 ; CHECK-FP-NEXT:    bl __aeabi_dadd
@@ -555,15 +555,15 @@ define i32 @main(i64 %x, i64 %y) {
 ; CHECK-LE-NEXT:    mov r4, r1
 ; CHECK-LE-NEXT:    mov r1, r0
 ; CHECK-LE-NEXT:    vmov.32 q4[3], r3
+; CHECK-LE-NEXT:    vstr d9, [sp]
 ; CHECK-LE-NEXT:    movs r0, #0
 ; CHECK-LE-NEXT:    mov r2, r1
 ; CHECK-LE-NEXT:    mov r3, r4
-; CHECK-LE-NEXT:    vstr d9, [sp]
 ; CHECK-LE-NEXT:    bl print_uint32x4_t
+; CHECK-LE-NEXT:    vstr d9, [sp]
 ; CHECK-LE-NEXT:    movs r0, #0
 ; CHECK-LE-NEXT:    movs r2, #1
 ; CHECK-LE-NEXT:    mov r3, r4
-; CHECK-LE-NEXT:    vstr d9, [sp]
 ; CHECK-LE-NEXT:    bl print_uint32x4_t
 ; CHECK-LE-NEXT:    movs r0, #0
 ; CHECK-LE-NEXT:    add sp, #8
@@ -580,18 +580,18 @@ define i32 @main(i64 %x, i64 %y) {
 ; CHECK-BE-NEXT:    sub sp, #8
 ; CHECK-BE-NEXT:    vmov.32 q0[2], r2
 ; CHECK-BE-NEXT:    mov r4, r1
-; CHECK-BE-NEXT:    mov r1, r0
 ; CHECK-BE-NEXT:    vmov.32 q0[3], r3
+; CHECK-BE-NEXT:    mov r1, r0
 ; CHECK-BE-NEXT:    vrev64.32 q4, q0
 ; CHECK-BE-NEXT:    movs r0, #0
+; CHECK-BE-NEXT:    vstr d9, [sp]
 ; CHECK-BE-NEXT:    mov r2, r1
 ; CHECK-BE-NEXT:    mov r3, r4
-; CHECK-BE-NEXT:    vstr d9, [sp]
 ; CHECK-BE-NEXT:    bl print_uint32x4_t
+; CHECK-BE-NEXT:    vstr d9, [sp]
 ; CHECK-BE-NEXT:    movs r0, #0
 ; CHECK-BE-NEXT:    movs r2, #1
 ; CHECK-BE-NEXT:    mov r3, r4
-; CHECK-BE-NEXT:    vstr d9, [sp]
 ; CHECK-BE-NEXT:    bl print_uint32x4_t
 ; CHECK-BE-NEXT:    movs r0, #0
 ; CHECK-BE-NEXT:    add sp, #8

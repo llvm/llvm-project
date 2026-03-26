@@ -145,8 +145,8 @@ define zeroext i1 @saddo5.i32(i32 %v1, i32 %v2, ptr %res) {
 ; FAST:       // %bb.0: // %entry
 ; FAST-NEXT:    adds w8, w0, w1, lsl #16
 ; FAST-NEXT:    cset w9, vs
-; FAST-NEXT:    and w0, w9, #0x1
 ; FAST-NEXT:    str w8, [x2]
+; FAST-NEXT:    and w0, w9, #0x1
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: saddo5.i32:
@@ -616,8 +616,8 @@ define zeroext i1 @umulo.i64(i64 %v1, i64 %v2, ptr %res) {
 ; FAST-NEXT:    mul x9, x0, x1
 ; FAST-NEXT:    cmp xzr, x8
 ; FAST-NEXT:    cset w8, ne
-; FAST-NEXT:    and w0, w8, #0x1
 ; FAST-NEXT:    str x9, [x2]
+; FAST-NEXT:    and w0, w8, #0x1
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: umulo.i64:

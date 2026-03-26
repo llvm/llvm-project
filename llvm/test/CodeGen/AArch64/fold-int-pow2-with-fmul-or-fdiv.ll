@@ -47,15 +47,15 @@ define <4 x float> @fmul_pow2_ldexp_4xfloat(<4 x i32> %i) {
 ; CHECK-NEON-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEON-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEON-NEXT:    .cfi_offset w30, -16
-; CHECK-NEON-NEXT:    mov w0, v0.s[1]
 ; CHECK-NEON-NEXT:    str q0, [sp, #16] // 16-byte Spill
+; CHECK-NEON-NEXT:    mov w0, v0.s[1]
 ; CHECK-NEON-NEXT:    fmov s0, #9.00000000
 ; CHECK-NEON-NEXT:    bl ldexpf
-; CHECK-NEON-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-NEON-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEON-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEON-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
+; CHECK-NEON-NEXT:    fmov w0, s0
 ; CHECK-NEON-NEXT:    fmov s0, #9.00000000
-; CHECK-NEON-NEXT:    fmov w0, s1
 ; CHECK-NEON-NEXT:    bl ldexpf
 ; CHECK-NEON-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEON-NEXT:    // kill: def $s0 killed $s0 def $q0
@@ -95,10 +95,10 @@ define <4 x float> @fmul_pow2_ldexp_4xfloat(<4 x i32> %i) {
 ; CHECK-NO-NEON-NEXT:    .cfi_offset b8, -40
 ; CHECK-NO-NEON-NEXT:    .cfi_offset b9, -48
 ; CHECK-NO-NEON-NEXT:    .cfi_offset b10, -64
-; CHECK-NO-NEON-NEXT:    fmov s0, #9.00000000
 ; CHECK-NO-NEON-NEXT:    mov w19, w3
 ; CHECK-NO-NEON-NEXT:    mov w20, w2
 ; CHECK-NO-NEON-NEXT:    mov w21, w1
+; CHECK-NO-NEON-NEXT:    fmov s0, #9.00000000
 ; CHECK-NO-NEON-NEXT:    bl ldexpf
 ; CHECK-NO-NEON-NEXT:    fmov s8, s0
 ; CHECK-NO-NEON-NEXT:    fmov s0, #9.00000000

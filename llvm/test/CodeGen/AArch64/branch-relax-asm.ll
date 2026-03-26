@@ -12,7 +12,6 @@ define i32 @test_asm_length(i32 %in) {
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  LBB0_2: ; %true
-; CHECK-NEXT:    mov w0, #4
 ; CHECK-NEXT:    ; InlineAsm Start
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    nop
@@ -21,6 +20,7 @@ define i32 @test_asm_length(i32 %in) {
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    ; InlineAsm End
+; CHECK-NEXT:    mov w0, #4 ; =0x4
 ; CHECK-NEXT:    ret
   %val = and i32 %in, 1
   %tst = icmp eq i32 %val, 0

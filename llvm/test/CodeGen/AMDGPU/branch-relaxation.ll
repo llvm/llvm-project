@@ -1135,10 +1135,10 @@ define amdgpu_kernel void @analyze_mask_branch() #0 {
 ;
 ; GFX11-LABEL: analyze_mask_branch:
 ; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX11-NEXT:    ;;#ASMSTART
 ; GFX11-NEXT:    v_mov_b32_e64 v0, 0
 ; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX11-NEXT:    v_cmpx_nlt_f32_e32 0, v0
 ; GFX11-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
 ; GFX11-NEXT:    s_cbranch_execz .LBB9_2
@@ -1187,10 +1187,10 @@ define amdgpu_kernel void @analyze_mask_branch() #0 {
 ;
 ; GFX12-LABEL: analyze_mask_branch:
 ; GFX12:       ; %bb.0: ; %entry
-; GFX12-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX12-NEXT:    ;;#ASMSTART
 ; GFX12-NEXT:    v_mov_b32_e64 v0, 0
 ; GFX12-NEXT:    ;;#ASMEND
+; GFX12-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX12-NEXT:    v_cmpx_nlt_f32_e32 0, v0
 ; GFX12-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX12-NEXT:    s_cbranch_execz .LBB9_2

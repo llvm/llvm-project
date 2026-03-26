@@ -306,8 +306,6 @@ define <5 x double> @call_nofpclass_funcs_v5f64_non_mvt_vector(ptr addrspace(1) 
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_mov_b32_e32 v12, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v13, v1
-; CHECK-NEXT:    v_mov_b32_e32 v0, v23
-; CHECK-NEXT:    v_mov_b32_e32 v1, v22
 ; CHECK-NEXT:    v_mov_b32_e32 v14, v2
 ; CHECK-NEXT:    v_mov_b32_e32 v15, v3
 ; CHECK-NEXT:    v_mov_b32_e32 v16, v4
@@ -316,6 +314,8 @@ define <5 x double> @call_nofpclass_funcs_v5f64_non_mvt_vector(ptr addrspace(1) 
 ; CHECK-NEXT:    v_mov_b32_e32 v19, v7
 ; CHECK-NEXT:    v_mov_b32_e32 v20, v8
 ; CHECK-NEXT:    v_mov_b32_e32 v21, v9
+; CHECK-NEXT:    v_mov_b32_e32 v0, v23
+; CHECK-NEXT:    v_mov_b32_e32 v1, v22
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_min_f64 v[0:1], v[12:13], v[0:1]
 ; CHECK-NEXT:    v_min_f64 v[2:3], v[14:15], v[2:3]

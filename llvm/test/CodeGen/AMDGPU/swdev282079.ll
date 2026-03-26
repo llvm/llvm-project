@@ -10,15 +10,15 @@ define protected amdgpu_kernel void @foo(ptr addrspace(1) %arg, ptr addrspace(1)
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
 ; CHECK-NEXT:    s_add_u32 s8, s8, 16
 ; CHECK-NEXT:    s_addc_u32 s9, s9, 0
-; CHECK-NEXT:    s_mov_b32 s13, s15
-; CHECK-NEXT:    s_mov_b32 s12, s14
 ; CHECK-NEXT:    s_getpc_b64 s[18:19]
 ; CHECK-NEXT:    s_add_u32 s18, s18, eggs@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s19, s19, eggs@rel32@hi+12
+; CHECK-NEXT:    s_mov_b32 s32, 0
+; CHECK-NEXT:    s_mov_b32 s13, s15
+; CHECK-NEXT:    s_mov_b32 s12, s14
 ; CHECK-NEXT:    s_mov_b32 s14, s16
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
-; CHECK-NEXT:    s_mov_b32 s32, 0
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; CHECK-NEXT:    s_mov_b64 s[4:5], src_private_base
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0

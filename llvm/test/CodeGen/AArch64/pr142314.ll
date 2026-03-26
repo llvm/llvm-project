@@ -8,9 +8,9 @@ define <2 x ptr addrspace(1)> @widget() nounwind gc "statepoint-example" {
 ; CHECK:       // %bb.0: // %bb
 ; CHECK-NEXT:    sub sp, sp, #32
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    mov x0, xzr
 ; CHECK-NEXT:    mov x1, xzr
-; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    str q0, [sp]
 ; CHECK-NEXT:    movi d0, #0000000000000000
 ; CHECK-NEXT:    blr xzr

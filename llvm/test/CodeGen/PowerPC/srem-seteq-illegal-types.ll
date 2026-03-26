@@ -125,17 +125,17 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; PPC-NEXT:    mr 29, 6
 ; PPC-NEXT:    clrlwi 6, 7, 31
 ; PPC-NEXT:    clrlwi 3, 3, 31
+; PPC-NEXT:    stw 25, 20(1) # 4-byte Folded Spill
+; PPC-NEXT:    neg 3, 3
+; PPC-NEXT:    stw 26, 24(1) # 4-byte Folded Spill
 ; PPC-NEXT:    stw 27, 28(1) # 4-byte Folded Spill
 ; PPC-NEXT:    neg 27, 6
 ; PPC-NEXT:    stw 28, 32(1) # 4-byte Folded Spill
 ; PPC-NEXT:    neg 28, 5
-; PPC-NEXT:    neg 3, 3
-; PPC-NEXT:    li 5, 0
-; PPC-NEXT:    li 6, 9
-; PPC-NEXT:    stw 25, 20(1) # 4-byte Folded Spill
-; PPC-NEXT:    stw 26, 24(1) # 4-byte Folded Spill
 ; PPC-NEXT:    stw 30, 40(1) # 4-byte Folded Spill
 ; PPC-NEXT:    mr 30, 8
+; PPC-NEXT:    li 5, 0
+; PPC-NEXT:    li 6, 9
 ; PPC-NEXT:    bl __moddi3
 ; PPC-NEXT:    mr 26, 3
 ; PPC-NEXT:    mr 25, 4

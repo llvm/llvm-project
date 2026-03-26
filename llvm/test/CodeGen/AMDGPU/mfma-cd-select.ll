@@ -634,10 +634,10 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_call(ptr addrspace(1) %arg) 
 ; GFX908-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX908-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GFX908-NEXT:    s_mov_b64 s[0:1], s[36:37]
-; GFX908-NEXT:    v_or3_b32 v31, v0, v1, v2
-; GFX908-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; GFX908-NEXT:    s_mov_b32 s32, 0
 ; GFX908-NEXT:    v_mov_b32_e32 v40, 0
+; GFX908-NEXT:    v_or3_b32 v31, v0, v1, v2
+; GFX908-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX908-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX908-NEXT:    global_load_dwordx4 v[28:31], v40, s[34:35] offset:112

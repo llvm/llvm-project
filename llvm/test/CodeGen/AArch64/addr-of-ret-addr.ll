@@ -48,15 +48,15 @@ define dso_local i32 @"bar"(ptr %x, ...) {
 ; CHECK-NEXT:    add x29, sp, #16
 ; CHECK-NEXT:    .seh_add_fp 16
 ; CHECK-NEXT:    .seh_endprologue
-; CHECK-NEXT:    add x9, x29, #24
 ; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    add x9, x29, #24
 ; CHECK-NEXT:    stp x1, x2, [x29, #24]
-; CHECK-NEXT:    stp x9, x0, [sp]
-; CHECK-NEXT:    add x0, x29, #24
-; CHECK-NEXT:    add x1, x29, #8
 ; CHECK-NEXT:    stp x3, x4, [x29, #40]
+; CHECK-NEXT:    add x1, x29, #8
 ; CHECK-NEXT:    stp x5, x6, [x29, #56]
 ; CHECK-NEXT:    str x7, [x29, #72]
+; CHECK-NEXT:    stp x9, x0, [sp]
+; CHECK-NEXT:    add x0, x29, #24
 ; CHECK-NEXT:    blr x8
 ; CHECK-NEXT:    add w0, w0, #1
 ; CHECK-NEXT:    .seh_startepilogue

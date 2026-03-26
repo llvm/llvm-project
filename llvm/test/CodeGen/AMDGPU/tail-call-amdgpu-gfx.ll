@@ -18,18 +18,18 @@ define amdgpu_gfx float @caller(float %arg0) {
 ; GCN-SELDAG-LABEL: caller:
 ; GCN-SELDAG:       ; %bb.0:
 ; GCN-SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-SELDAG-NEXT:    v_add_f32_e32 v0, 1.0, v0
 ; GCN-SELDAG-NEXT:    s_mov_b32 s37, callee@abs32@hi
 ; GCN-SELDAG-NEXT:    s_mov_b32 s36, callee@abs32@lo
+; GCN-SELDAG-NEXT:    v_add_f32_e32 v0, 1.0, v0
 ; GCN-SELDAG-NEXT:    v_mov_b32_e32 v1, 2.0
 ; GCN-SELDAG-NEXT:    s_setpc_b64 s[36:37]
 ;
 ; GCN-GISEL-LABEL: caller:
 ; GCN-GISEL:       ; %bb.0:
 ; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-GISEL-NEXT:    v_add_f32_e32 v0, 1.0, v0
 ; GCN-GISEL-NEXT:    s_mov_b32 s36, callee@abs32@lo
 ; GCN-GISEL-NEXT:    s_mov_b32 s37, callee@abs32@hi
+; GCN-GISEL-NEXT:    v_add_f32_e32 v0, 1.0, v0
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v1, 2.0
 ; GCN-GISEL-NEXT:    s_setpc_b64 s[36:37]
   %add = fadd float %arg0, 1.0

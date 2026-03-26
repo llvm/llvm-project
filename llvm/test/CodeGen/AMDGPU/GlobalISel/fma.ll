@@ -660,16 +660,16 @@ define <3 x half> @v_fma_v3f16(<3 x half> %x, <3 x half> %y, <3 x half> %z) {
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v4, v4
+; GFX6-NEXT:    v_fma_f32 v6, v6, v7, v8
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; GFX6-NEXT:    v_cvt_f32_f16_e32 v5, v5
 ; GFX6-NEXT:    v_fma_f32 v0, v0, v2, v4
-; GFX6-NEXT:    v_fma_f32 v6, v6, v7, v8
+; GFX6-NEXT:    v_cvt_f32_f16_e32 v5, v5
 ; GFX6-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX6-NEXT:    v_cvt_f16_f32_e32 v2, v6
 ; GFX6-NEXT:    v_fma_f32 v1, v1, v3, v5
-; GFX6-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX6-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX6-NEXT:    v_or_b32_e32 v0, v2, v0
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;

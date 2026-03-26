@@ -9750,11 +9750,11 @@ define amdgpu_kernel void @test_limited_sgpr(ptr addrspace(1) %out, ptr addrspac
 ; GFX6-NEXT:    s_add_u32 s40, s40, s11
 ; GFX6-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, -1, 0
 ; GFX6-NEXT:    s_addc_u32 s41, s41, 0
+; GFX6-NEXT:    s_mov_b32 s6, 0
 ; GFX6-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, -1, v0
 ; GFX6-NEXT:    v_mov_b32_e32 v6, 0
-; GFX6-NEXT:    s_mov_b64 s[4:5], exec
-; GFX6-NEXT:    s_mov_b32 s6, 0
 ; GFX6-NEXT:    s_mov_b32 s7, 0xf000
+; GFX6-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX6-NEXT:    s_mov_b64 exec, 15
 ; GFX6-NEXT:    buffer_store_dword v1, off, s[40:43], 0
 ; GFX6-NEXT:    s_waitcnt expcnt(0) lgkmcnt(0)
@@ -9908,11 +9908,11 @@ define amdgpu_kernel void @test_limited_sgpr(ptr addrspace(1) %out, ptr addrspac
 ; GFX6-NEXT:    buffer_store_dword v10, off, s[40:43], s0 offset:12 ; 4-byte Folded Spill
 ; GFX6-NEXT:    s_waitcnt expcnt(3)
 ; GFX6-NEXT:    v_mov_b32_e32 v7, 1
-; GFX6-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX6-NEXT:    buffer_store_dword v7, v4, s[40:43], 0 offen
 ; GFX6-NEXT:    ;;#ASMSTART
 ; GFX6-NEXT:    ; def s[4:11]
 ; GFX6-NEXT:    ;;#ASMEND
+; GFX6-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX6-NEXT:    s_mov_b64 exec, 0xff
 ; GFX6-NEXT:    buffer_store_dword v4, off, s[40:43], 0
 ; GFX6-NEXT:    s_waitcnt expcnt(0)

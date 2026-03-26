@@ -15,12 +15,12 @@ define i32 @invert_bcc(float %x, float %y) #0 {
 ; CHECK-NEXT:    str w8, [x8]
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  LBB0_2: ; %bb2
-; CHECK-NEXT:    mov w0, #1 ; =0x1
 ; CHECK-NEXT:    mov w8, #9 ; =0x9
 ; CHECK-NEXT:    ; InlineAsm Start
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    ; InlineAsm End
+; CHECK-NEXT:    mov w0, #1 ; =0x1
 ; CHECK-NEXT:    str w8, [x8]
 ; CHECK-NEXT:    ret
   %1 = fcmp ueq float %x, %y

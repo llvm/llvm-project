@@ -34,8 +34,8 @@ define i32 @test(i8 zeroext %var_2, i16 signext %var_15, ptr %arr_60) {
 ; CHECK-NEXT:    @ Child Loop BB0_5 Depth 3
 ; CHECK-NEXT:    @ Child Loop BB0_7 Depth 3
 ; CHECK-NEXT:    @ Child Loop BB0_9 Depth 3
-; CHECK-NEXT:    ldr.w r12, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    mov.w r10, #0
+; CHECK-NEXT:    ldr.w r12, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    ldrd r8, r0, [sp] @ 8-byte Folded Reload
 ; CHECK-NEXT:  .LBB0_4: @ %for.cond6.preheader
 ; CHECK-NEXT:    @ Parent Loop BB0_3 Depth=1
@@ -148,8 +148,8 @@ define i32 @test(i8 zeroext %var_2, i16 signext %var_15, ptr %arr_60) {
 ; CHECK-NEXT:    adds r0, #66
 ; CHECK-NEXT:    add.w r8, r8, #66
 ; CHECK-NEXT:    uxtb.w r10, r2
-; CHECK-NEXT:    ldr r2, [sp, #12] @ 4-byte Reload
 ; CHECK-NEXT:    cmp.w r10, #18
+; CHECK-NEXT:    ldr r2, [sp, #12] @ 4-byte Reload
 ; CHECK-NEXT:    blo.w .LBB0_4
 ; CHECK-NEXT:    b .LBB0_3
 ; CHECK-NEXT:  .LBB0_11: @ %for.cond.cleanup
@@ -372,8 +372,8 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:    movw r2, #43691
 ; CHECK-NEXT:    adds r1, #2
 ; CHECK-NEXT:    movt r2, #43690
-; CHECK-NEXT:    ldr r6, [sp, #128]
 ; CHECK-NEXT:    movw r8, :lower16:c
+; CHECK-NEXT:    ldr r6, [sp, #128]
 ; CHECK-NEXT:    umull r1, r2, r1, r2
 ; CHECK-NEXT:    movt r8, :upper16:c
 ; CHECK-NEXT:    movs r1, #4
@@ -441,10 +441,10 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:    bhi .LBB1_17
 ; CHECK-NEXT:  @ %bb.8: @ %for.body6.us.preheader
 ; CHECK-NEXT:    @ in Loop: Header=BB1_6 Depth=1
-; CHECK-NEXT:    ldrd r2, r3, [sp, #120]
+; CHECK-NEXT:    mov r4, r6
 ; CHECK-NEXT:    movs r0, #32
 ; CHECK-NEXT:    movs r1, #0
-; CHECK-NEXT:    mov r4, r6
+; CHECK-NEXT:    ldrd r2, r3, [sp, #120]
 ; CHECK-NEXT:    mov r7, r12
 ; CHECK-NEXT:    mov r6, lr
 ; CHECK-NEXT:    bl __aeabi_ldivmod
@@ -489,9 +489,9 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:    adds r1, #4
 ; CHECK-NEXT:    vcmp.u32 hi, q7, q2
 ; CHECK-NEXT:    vshl.i32 q2, q1, #2
-; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    vadd.i32 q2, q2, r8
 ; CHECK-NEXT:    vadd.i32 q1, q1, r9
+; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vstrwt.32 q0, [q2]
 ; CHECK-NEXT:    bne .LBB1_12
@@ -508,9 +508,9 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:    adds r1, #4
 ; CHECK-NEXT:    vcmp.u32 hi, q6, q2
 ; CHECK-NEXT:    vshl.i32 q2, q1, #2
-; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    vadd.i32 q2, q2, r8
 ; CHECK-NEXT:    vadd.i32 q1, q1, r9
+; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vstrwt.32 q0, [q2]
 ; CHECK-NEXT:    bne .LBB1_14

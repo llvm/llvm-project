@@ -19,9 +19,9 @@ define i32 @main() local_unnamed_addr #1 {
 ; CHECK-NEXT:    bl _Z5setupv
 ; CHECK-NEXT:    movi v0.4s, #1
 ; CHECK-NEXT:    mov w9, #1 // =0x1
+; CHECK-NEXT:    str xzr, [sp, #80]
 ; CHECK-NEXT:    add x0, sp, #48
 ; CHECK-NEXT:    mov x1, sp
-; CHECK-NEXT:    str xzr, [sp, #80]
 ; CHECK-NEXT:    str w9, [sp, #80]
 ; CHECK-NEXT:    stp q0, q0, [sp, #48]
 ; CHECK-NEXT:    ldr w8, [sp, #48]

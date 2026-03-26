@@ -1156,8 +1156,8 @@ define <3 x i64> @v3i64_i64(<3 x i64> %a, <3 x i64> %b, <3 x i64> %d, <3 x i64> 
 ; CHECK-GI-NEXT:    // kill: def $d3 killed $d3 def $q3
 ; CHECK-GI-NEXT:    // kill: def $d4 killed $d4 def $q4
 ; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-GI-NEXT:    // kill: def $d6 killed $d6 def $q6
 ; CHECK-GI-NEXT:    // kill: def $d5 killed $d5 def $q5
+; CHECK-GI-NEXT:    // kill: def $d6 killed $d6 def $q6
 ; CHECK-GI-NEXT:    // kill: def $d7 killed $d7 def $q7
 ; CHECK-GI-NEXT:    ldr x8, [sp]
 ; CHECK-GI-NEXT:    ldr x10, [sp, #24]

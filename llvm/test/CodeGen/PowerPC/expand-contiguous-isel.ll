@@ -65,8 +65,8 @@ define i64 @_Z3fn1N4llvm9StringRefE([2 x i64] %Str.coerce) {
 ; CHECK-GEN-ISEL-TRUE-NEXT:    #
 ; CHECK-GEN-ISEL-TRUE-NEXT:    cmpldi r4, 2
 ; CHECK-GEN-ISEL-TRUE-NEXT:    isellt r7, r4, r5
-; CHECK-GEN-ISEL-TRUE-NEXT:    add r3, r3, r7
 ; CHECK-GEN-ISEL-TRUE-NEXT:    sub. r4, r4, r7
+; CHECK-GEN-ISEL-TRUE-NEXT:    add r3, r3, r7
 ; CHECK-GEN-ISEL-TRUE-NEXT:    bne+ cr0, .LBB0_5
 ; CHECK-GEN-ISEL-TRUE-NEXT:    b .LBB0_15
 ; CHECK-GEN-ISEL-TRUE-NEXT:    .p2align 5
@@ -151,8 +151,8 @@ define i64 @_Z3fn1N4llvm9StringRefE([2 x i64] %Str.coerce) {
 ; CHECK-NEXT:    .p2align 5
 ; CHECK-NEXT:  .LBB0_4: # %if.then4
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    add r3, r3, r6
 ; CHECK-NEXT:    sub. r4, r4, r6
+; CHECK-NEXT:    add r3, r3, r6
 ; CHECK-NEXT:    beq- cr0, .LBB0_20
 ; CHECK-NEXT:  .LBB0_5: # %_ZNK4llvm9StringRefixEm.exit
 ; CHECK-NEXT:    # Parent Loop BB0_2 Depth=1

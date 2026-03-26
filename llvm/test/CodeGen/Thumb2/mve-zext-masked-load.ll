@@ -65,8 +65,8 @@ define arm_aapcs_vfpcc <4 x double> @foo_v4i32(ptr nocapture readonly %pSrc, i32
 ; CHECK-NEXT:    vmov r2, r3, d12
 ; CHECK-NEXT:    vmov.f32 s0, s18
 ; CHECK-NEXT:    vmov.f32 s2, s19
-; CHECK-NEXT:    vmov d9, r0, r1
 ; CHECK-NEXT:    vand q5, q0, q5
+; CHECK-NEXT:    vmov d9, r0, r1
 ; CHECK-NEXT:    vmov r4, r5, d11
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    mov r1, r3

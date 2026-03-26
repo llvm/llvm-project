@@ -817,11 +817,11 @@ define <4 x i128> @sadd(<4 x i128> %a, <4 x i128> %b) local_unnamed_addr {
 ; CHECK-NEXT:    isel 6, 0, 6, 23
 ; CHECK-NEXT:    mtfprd 8, 3
 ; CHECK-NEXT:    addis 3, 2, .LCPI48_0@toc@ha
-; CHECK-NEXT:    mtfprd 10, 4
+; CHECK-NEXT:    mtfprd 9, 4
 ; CHECK-NEXT:    mtfprd 11, 5
 ; CHECK-NEXT:    mtfprd 12, 6
 ; CHECK-NEXT:    addi 3, 3, .LCPI48_0@toc@l
-; CHECK-NEXT:    lxvd2x 9, 0, 3
+; CHECK-NEXT:    lxvd2x 10, 0, 3
 ; CHECK-NEXT:    xxspltd 45, 6, 0
 ; CHECK-NEXT:    xxspltd 46, 7, 0
 ; CHECK-NEXT:    xxspltd 34, 0, 0
@@ -831,12 +831,12 @@ define <4 x i128> @sadd(<4 x i128> %a, <4 x i128> %b) local_unnamed_addr {
 ; CHECK-NEXT:    xxspltd 38, 3, 0
 ; CHECK-NEXT:    xxspltd 39, 4, 0
 ; CHECK-NEXT:    xxspltd 41, 8, 0
-; CHECK-NEXT:    xxspltd 44, 10, 0
+; CHECK-NEXT:    xxspltd 44, 9, 0
 ; CHECK-NEXT:    xxspltd 47, 11, 0
 ; CHECK-NEXT:    xxspltd 48, 12, 0
 ; CHECK-NEXT:    xxlxor 0, 34, 41
 ; CHECK-NEXT:    xxlxor 1, 35, 44
-; CHECK-NEXT:    xxswapd 37, 9
+; CHECK-NEXT:    xxswapd 37, 10
 ; CHECK-NEXT:    xxlxor 2, 39, 37
 ; CHECK-NEXT:    xxlxor 3, 40, 37
 ; CHECK-NEXT:    xxsel 34, 32, 2, 0

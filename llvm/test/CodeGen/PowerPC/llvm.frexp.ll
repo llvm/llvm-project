@@ -8,8 +8,8 @@ define { half, i32 } @test_frexp_f16_i32(half %a) nounwind {
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -48(r1)
 ; CHECK-NEXT:    clrlwi r3, r3, 16
-; CHECK-NEXT:    std r0, 64(r1)
 ; CHECK-NEXT:    addi r4, r1, 44
+; CHECK-NEXT:    std r0, 64(r1)
 ; CHECK-NEXT:    mtfprwz f0, r3
 ; CHECK-NEXT:    xscvhpdp f1, f0
 ; CHECK-NEXT:    bl frexpf
@@ -31,8 +31,8 @@ define half @test_frexp_f16_i32_only_use_fract(half %a) nounwind {
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -48(r1)
 ; CHECK-NEXT:    clrlwi r3, r3, 16
-; CHECK-NEXT:    std r0, 64(r1)
 ; CHECK-NEXT:    addi r4, r1, 44
+; CHECK-NEXT:    std r0, 64(r1)
 ; CHECK-NEXT:    mtfprwz f0, r3
 ; CHECK-NEXT:    xscvhpdp f1, f0
 ; CHECK-NEXT:    bl frexpf
@@ -54,8 +54,8 @@ define i32 @test_frexp_f16_i32_only_use_exp(half %a) nounwind {
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -48(r1)
 ; CHECK-NEXT:    clrlwi r3, r3, 16
-; CHECK-NEXT:    std r0, 64(r1)
 ; CHECK-NEXT:    addi r4, r1, 44
+; CHECK-NEXT:    std r0, 64(r1)
 ; CHECK-NEXT:    mtfprwz f0, r3
 ; CHECK-NEXT:    xscvhpdp f1, f0
 ; CHECK-NEXT:    bl frexpf
@@ -164,8 +164,8 @@ define <2 x i32> @test_frexp_v2f16_v2i32_only_use_exp(<2 x half> %a) nounwind {
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stdu r1, -64(r1)
 ; CHECK-NEXT:    clrlwi r3, r3, 16
-; CHECK-NEXT:    std r0, 80(r1)
 ; CHECK-NEXT:    addi r30, r1, 32
+; CHECK-NEXT:    std r0, 80(r1)
 ; CHECK-NEXT:    mtfprwz f0, r3
 ; CHECK-NEXT:    clrlwi r29, r4, 16
 ; CHECK-NEXT:    mr r4, r30

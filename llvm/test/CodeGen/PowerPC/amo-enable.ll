@@ -118,11 +118,11 @@ define void @test_lwat_csne(ptr noundef %ptr, i32 noundef %value1, i32 noundef %
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stdu r1, -48(r1)
+; CHECK-NEXT:    std r0, 64(r1)
 ; CHECK-NEXT:    mr r30, r6
 ; CHECK-NEXT:    clrldi r4, r4, 32
-; CHECK-NEXT:    clrldi r5, r5, 32
 ; CHECK-NEXT:    mr r6, r3
-; CHECK-NEXT:    std r0, 64(r1)
+; CHECK-NEXT:    clrldi r5, r5, 32
 ; CHECK-NEXT:    lwat r3, r6, 16
 ; CHECK-NEXT:    stw r3, 0(r30)
 ; CHECK-NEXT:    addi r1, r1, 48
@@ -160,9 +160,9 @@ define void @test_ldat_csne(ptr noundef %ptr, i64 noundef %value1, i64 noundef %
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stdu r1, -48(r1)
+; CHECK-NEXT:    std r0, 64(r1)
 ; CHECK-NEXT:    mr r30, r6
 ; CHECK-NEXT:    mr r6, r3
-; CHECK-NEXT:    std r0, 64(r1)
 ; CHECK-NEXT:    ldat r3, r6, 16
 ; CHECK-NEXT:    std r3, 0(r30)
 ; CHECK-NEXT:    addi r1, r1, 48

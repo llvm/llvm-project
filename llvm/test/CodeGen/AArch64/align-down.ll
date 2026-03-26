@@ -55,8 +55,8 @@ define i32 @t3_extrause0(i32 %ptr, i32 %alignment, ptr %mask_storage) nounwind {
 ; CHECK-LABEL: t3_extrause0:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub w8, w1, #1
-; CHECK-NEXT:    bic w0, w0, w8
 ; CHECK-NEXT:    str w8, [x2]
+; CHECK-NEXT:    bic w0, w0, w8
 ; CHECK-NEXT:    ret
   %mask = add i32 %alignment, -1
   store i32 %mask, ptr %mask_storage

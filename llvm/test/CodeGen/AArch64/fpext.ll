@@ -75,8 +75,8 @@ define <3 x double> @fpext_v3f32_v3f64(<3 x float> %a) {
 ; CHECK-SD-NEXT:    fcvtl v3.2d, v0.2s
 ; CHECK-SD-NEXT:    fcvtl2 v2.2d, v0.4s
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
-; CHECK-SD-NEXT:    fmov d0, d3
 ; CHECK-SD-NEXT:    ext v1.16b, v3.16b, v3.16b, #8
+; CHECK-SD-NEXT:    fmov d0, d3
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;

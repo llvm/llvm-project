@@ -418,8 +418,8 @@ false:
 define amdgpu_ps void @non_cst_non_compare_input(ptr addrspace(1) %out, i32 %tid, i32 %cond) {
 ; CHECK-LABEL: non_cst_non_compare_input:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_and_b32 s0, 1, s0
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v3
+; CHECK-NEXT:    s_and_b32 s0, 1, s0
 ; CHECK-NEXT:    v_cmp_ne_u32_e64 s[0:1], 0, s0
 ; CHECK-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; CHECK-NEXT:    s_xor_b64 s[2:3], exec, s[2:3]

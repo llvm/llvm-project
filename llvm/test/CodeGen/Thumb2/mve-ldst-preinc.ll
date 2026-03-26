@@ -1020,8 +1020,8 @@ define ptr @strw32_3(ptr %y, ptr %x) {
 ;
 ; CHECK-BE-LABEL: strw32_3:
 ; CHECK-BE:       @ %bb.0: @ %entry
-; CHECK-BE-NEXT:    adds r0, #3
 ; CHECK-BE-NEXT:    vldrw.u32 q0, [r1]
+; CHECK-BE-NEXT:    adds r0, #3
 ; CHECK-BE-NEXT:    vstrw.32 q0, [r0]
 ; CHECK-BE-NEXT:    bx lr
 entry:
@@ -1066,8 +1066,8 @@ entry:
 define ptr @strw32_512(ptr %y, ptr %x) {
 ; CHECK-LABEL: strw32_512:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    add.w r0, r0, #512
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
+; CHECK-NEXT:    add.w r0, r0, #512
 ; CHECK-NEXT:    vstrw.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -1093,8 +1093,8 @@ entry:
 define ptr @strw32_m512(ptr %y, ptr %x) {
 ; CHECK-LABEL: strw32_m512:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    sub.w r0, r0, #512
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
+; CHECK-NEXT:    sub.w r0, r0, #512
 ; CHECK-NEXT:    vstrw.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -1121,8 +1121,8 @@ entry:
 define ptr @strh32_3(ptr %y, ptr %x) {
 ; CHECK-LABEL: strh32_3:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    adds r0, #3
 ; CHECK-NEXT:    vldrh.u32 q0, [r1]
+; CHECK-NEXT:    adds r0, #3
 ; CHECK-NEXT:    vstrh.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -1161,8 +1161,8 @@ entry:
 define ptr @strh32_256(ptr %y, ptr %x) {
 ; CHECK-LABEL: strh32_256:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    add.w r0, r0, #256
 ; CHECK-NEXT:    vldrh.u32 q0, [r1]
+; CHECK-NEXT:    add.w r0, r0, #256
 ; CHECK-NEXT:    vstrh.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -1188,8 +1188,8 @@ entry:
 define ptr @strh32_m256(ptr %y, ptr %x) {
 ; CHECK-LABEL: strh32_m256:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    sub.w r0, r0, #256
 ; CHECK-NEXT:    vldrh.u32 q0, [r1]
+; CHECK-NEXT:    sub.w r0, r0, #256
 ; CHECK-NEXT:    vstrh.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -1228,8 +1228,8 @@ define ptr @strh16_3(ptr %y, ptr %x) {
 ;
 ; CHECK-BE-LABEL: strh16_3:
 ; CHECK-BE:       @ %bb.0: @ %entry
-; CHECK-BE-NEXT:    adds r0, #3
 ; CHECK-BE-NEXT:    vldrh.u16 q0, [r1]
+; CHECK-BE-NEXT:    adds r0, #3
 ; CHECK-BE-NEXT:    vstrh.16 q0, [r0]
 ; CHECK-BE-NEXT:    bx lr
 entry:
@@ -1274,8 +1274,8 @@ entry:
 define ptr @strh16_256(ptr %y, ptr %x) {
 ; CHECK-LABEL: strh16_256:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    add.w r0, r0, #256
 ; CHECK-NEXT:    vldrh.u16 q0, [r1]
+; CHECK-NEXT:    add.w r0, r0, #256
 ; CHECK-NEXT:    vstrh.16 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -1301,8 +1301,8 @@ entry:
 define ptr @strh16_m256(ptr %y, ptr %x) {
 ; CHECK-LABEL: strh16_m256:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    sub.w r0, r0, #256
 ; CHECK-NEXT:    vldrh.u16 q0, [r1]
+; CHECK-NEXT:    sub.w r0, r0, #256
 ; CHECK-NEXT:    vstrh.16 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -1355,8 +1355,8 @@ entry:
 define ptr @strb32_128(ptr %y, ptr %x) {
 ; CHECK-LABEL: strb32_128:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    adds r0, #128
 ; CHECK-NEXT:    vldrb.u32 q0, [r1]
+; CHECK-NEXT:    adds r0, #128
 ; CHECK-NEXT:    vstrb.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -1382,8 +1382,8 @@ entry:
 define ptr @strb32_m128(ptr %y, ptr %x) {
 ; CHECK-LABEL: strb32_m128:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    subs r0, #128
 ; CHECK-NEXT:    vldrb.u32 q0, [r1]
+; CHECK-NEXT:    subs r0, #128
 ; CHECK-NEXT:    vstrb.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -1436,8 +1436,8 @@ entry:
 define ptr @strb16_128(ptr %y, ptr %x) {
 ; CHECK-LABEL: strb16_128:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    adds r0, #128
 ; CHECK-NEXT:    vldrb.u16 q0, [r1]
+; CHECK-NEXT:    adds r0, #128
 ; CHECK-NEXT:    vstrb.16 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -1463,8 +1463,8 @@ entry:
 define ptr @strb16_m128(ptr %y, ptr %x) {
 ; CHECK-LABEL: strb16_m128:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    subs r0, #128
 ; CHECK-NEXT:    vldrb.u16 q0, [r1]
+; CHECK-NEXT:    subs r0, #128
 ; CHECK-NEXT:    vstrb.16 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -1517,8 +1517,8 @@ entry:
 define ptr @strb8_128(ptr %y, ptr %x) {
 ; CHECK-LABEL: strb8_128:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    adds r0, #128
 ; CHECK-NEXT:    vldrb.u8 q0, [r1]
+; CHECK-NEXT:    adds r0, #128
 ; CHECK-NEXT:    vstrb.8 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -1544,8 +1544,8 @@ entry:
 define ptr @strb8_m128(ptr %y, ptr %x) {
 ; CHECK-LABEL: strb8_m128:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    subs r0, #128
 ; CHECK-NEXT:    vldrb.u8 q0, [r1]
+; CHECK-NEXT:    subs r0, #128
 ; CHECK-NEXT:    vstrb.8 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:

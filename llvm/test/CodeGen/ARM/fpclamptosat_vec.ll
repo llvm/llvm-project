@@ -208,15 +208,15 @@ define <4 x i32> @stest_f32i32(<4 x float> %x) {
 ; CHECK-NEXT:    vorr q4, q0, q0
 ; CHECK-NEXT:    vmov r0, s19
 ; CHECK-NEXT:    bl __aeabi_f2lz
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    vmov r0, s18
 ; CHECK-NEXT:    mov r7, r1
 ; CHECK-NEXT:    adr r1, .LCPI3_0
+; CHECK-NEXT:    mov r6, r0
 ; CHECK-NEXT:    vld1.64 {d10, d11}, [r1:128]
-; CHECK-NEXT:    vmov r5, s17
+; CHECK-NEXT:    vmov r0, s18
 ; CHECK-NEXT:    mov r4, #0
-; CHECK-NEXT:    mvn r9, #-2147483648
+; CHECK-NEXT:    vmov r5, s17
 ; CHECK-NEXT:    vmov.32 d13[0], r6
+; CHECK-NEXT:    mvn r9, #-2147483648
 ; CHECK-NEXT:    bl __aeabi_f2lz
 ; CHECK-NEXT:    subs r2, r6, r9
 ; CHECK-NEXT:    vmov.32 d12[0], r0
@@ -416,14 +416,14 @@ define <4 x i32> @ustest_f32i32(<4 x float> %x) {
 ; CHECK-NEXT:    mov r6, r1
 ; CHECK-NEXT:    bl __aeabi_f2lz
 ; CHECK-NEXT:    mov r2, r0
-; CHECK-NEXT:    vmov r0, s17
-; CHECK-NEXT:    vmov.32 d17[0], r2
 ; CHECK-NEXT:    mvn r4, #0
+; CHECK-NEXT:    vmov.32 d17[0], r2
 ; CHECK-NEXT:    subs r2, r2, r4
-; CHECK-NEXT:    vmov r8, s16
-; CHECK-NEXT:    vmov.32 d16[0], r5
-; CHECK-NEXT:    vmov.i64 q5, #0xffffffff
+; CHECK-NEXT:    vmov r0, s17
 ; CHECK-NEXT:    mov r7, #0
+; CHECK-NEXT:    vmov.32 d16[0], r5
+; CHECK-NEXT:    vmov r8, s16
+; CHECK-NEXT:    vmov.i64 q5, #0xffffffff
 ; CHECK-NEXT:    vmov.32 d17[1], r1
 ; CHECK-NEXT:    sbcs r1, r1, #0
 ; CHECK-NEXT:    mov r1, #0
@@ -547,12 +547,12 @@ define <4 x i32> @stest_f16i32(<4 x half> %x) {
 ; CHECK-NEON-NEXT:    sbcs r0, r1, #0
 ; CHECK-NEON-NEXT:    vmov.32 d14[0], r6
 ; CHECK-NEON-NEXT:    mov r0, #0
-; CHECK-NEON-NEXT:    vmov r8, s20
+; CHECK-NEON-NEXT:    mov r7, #0
 ; CHECK-NEON-NEXT:    movwlt r0, #1
 ; CHECK-NEON-NEXT:    cmp r0, #0
-; CHECK-NEON-NEXT:    mvnne r0, #0
 ; CHECK-NEON-NEXT:    vmov.32 d15[1], r1
-; CHECK-NEON-NEXT:    mov r7, #0
+; CHECK-NEON-NEXT:    mvnne r0, #0
+; CHECK-NEON-NEXT:    vmov r8, s20
 ; CHECK-NEON-NEXT:    vdup.32 d11, r0
 ; CHECK-NEON-NEXT:    vmov.32 d14[1], r5
 ; CHECK-NEON-NEXT:    mov r0, r2
@@ -680,15 +680,15 @@ define <4 x i32> @stest_f16i32(<4 x half> %x) {
 ; CHECK-FP16-NEXT:    bl __fixhfdi
 ; CHECK-FP16-NEXT:    vmov.32 d13[0], r0
 ; CHECK-FP16-NEXT:    subs r0, r0, r10
-; CHECK-FP16-NEXT:    vmov s0, r8
 ; CHECK-FP16-NEXT:    sbcs r0, r1, #0
 ; CHECK-FP16-NEXT:    mov r7, #0
-; CHECK-FP16-NEXT:    vmov r9, r8, d8
 ; CHECK-FP16-NEXT:    movwlt r7, #1
 ; CHECK-FP16-NEXT:    cmp r7, #0
+; CHECK-FP16-NEXT:    vmov s0, r8
 ; CHECK-FP16-NEXT:    vmov.32 d13[1], r1
-; CHECK-FP16-NEXT:    vmov r5, r4, d9
+; CHECK-FP16-NEXT:    vmov r9, r8, d8
 ; CHECK-FP16-NEXT:    mvnne r7, #0
+; CHECK-FP16-NEXT:    vmov r5, r4, d9
 ; CHECK-FP16-NEXT:    bl __fixhfdi
 ; CHECK-FP16-NEXT:    vmov.32 d12[0], r0
 ; CHECK-FP16-NEXT:    subs r0, r0, r10
@@ -937,14 +937,14 @@ define <4 x i32> @ustest_f16i32(<4 x half> %x) {
 ; CHECK-NEON-NEXT:    bl __aeabi_h2f
 ; CHECK-NEON-NEXT:    bl __aeabi_f2lz
 ; CHECK-NEON-NEXT:    mov r2, r0
-; CHECK-NEON-NEXT:    vmov r0, s18
-; CHECK-NEON-NEXT:    vmov.32 d17[0], r2
 ; CHECK-NEON-NEXT:    mvn r8, #0
+; CHECK-NEON-NEXT:    vmov.32 d17[0], r2
 ; CHECK-NEON-NEXT:    subs r2, r2, r8
-; CHECK-NEON-NEXT:    vmov r4, s20
-; CHECK-NEON-NEXT:    vmov.32 d16[0], r5
-; CHECK-NEON-NEXT:    vmov.i64 q5, #0xffffffff
+; CHECK-NEON-NEXT:    vmov r0, s18
 ; CHECK-NEON-NEXT:    mov r7, #0
+; CHECK-NEON-NEXT:    vmov.32 d16[0], r5
+; CHECK-NEON-NEXT:    vmov r4, s20
+; CHECK-NEON-NEXT:    vmov.i64 q5, #0xffffffff
 ; CHECK-NEON-NEXT:    vmov.32 d17[1], r1
 ; CHECK-NEON-NEXT:    sbcs r1, r1, #0
 ; CHECK-NEON-NEXT:    mov r1, #0
@@ -1653,11 +1653,11 @@ define <2 x i64> @stest_f64i64(<2 x double> %x) {
 ; CHECK-NEXT:    subs r1, r0, r9
 ; CHECK-NEXT:    mvn r5, #-2147483648
 ; CHECK-NEXT:    sbcs r1, r4, r5
-; CHECK-NEXT:    vorr d0, d8, d8
-; CHECK-NEXT:    sbcs r1, r2, #0
 ; CHECK-NEXT:    mov r7, #0
-; CHECK-NEXT:    sbcs r1, r3, #0
+; CHECK-NEXT:    sbcs r1, r2, #0
 ; CHECK-NEXT:    mov r8, #-2147483648
+; CHECK-NEXT:    sbcs r1, r3, #0
+; CHECK-NEXT:    vorr d0, d8, d8
 ; CHECK-NEXT:    mov r1, #0
 ; CHECK-NEXT:    mov r10, #0
 ; CHECK-NEXT:    movwlt r1, #1
@@ -1722,13 +1722,13 @@ define <2 x i64> @utest_f64i64(<2 x double> %x) {
 ; CHECK-NEXT:    bl __fixunsdfti
 ; CHECK-NEXT:    mov r4, r1
 ; CHECK-NEXT:    subs r1, r2, #1
-; CHECK-NEXT:    vorr d0, d8, d8
 ; CHECK-NEXT:    sbcs r1, r3, #0
 ; CHECK-NEXT:    mov r6, #0
-; CHECK-NEXT:    mov r5, #0
 ; CHECK-NEXT:    movwlo r6, #1
 ; CHECK-NEXT:    cmp r6, #0
 ; CHECK-NEXT:    moveq r4, r6
+; CHECK-NEXT:    vorr d0, d8, d8
+; CHECK-NEXT:    mov r5, #0
 ; CHECK-NEXT:    movne r6, r0
 ; CHECK-NEXT:    bl __fixunsdfti
 ; CHECK-NEXT:    subs r2, r2, #1
@@ -1774,9 +1774,9 @@ define <2 x i64> @ustest_f64i64(<2 x double> %x) {
 ; CHECK-NEXT:    movne r1, r0
 ; CHECK-NEXT:    rsbs r0, r1, #0
 ; CHECK-NEXT:    rscs r0, r4, #0
-; CHECK-NEXT:    vorr d0, d8, d8
-; CHECK-NEXT:    rscs r0, r2, #0
 ; CHECK-NEXT:    mov r7, #0
+; CHECK-NEXT:    rscs r0, r2, #0
+; CHECK-NEXT:    vorr d0, d8, d8
 ; CHECK-NEXT:    rscs r0, r3, #0
 ; CHECK-NEXT:    mov r5, #0
 ; CHECK-NEXT:    movwlt r7, #1
@@ -1832,11 +1832,11 @@ define <2 x i64> @stest_f32i64(<2 x float> %x) {
 ; CHECK-NEXT:    subs r1, r0, r9
 ; CHECK-NEXT:    mvn r5, #-2147483648
 ; CHECK-NEXT:    sbcs r1, r4, r5
-; CHECK-NEXT:    vmov.f32 s0, s16
-; CHECK-NEXT:    sbcs r1, r2, #0
 ; CHECK-NEXT:    mov r7, #0
-; CHECK-NEXT:    sbcs r1, r3, #0
+; CHECK-NEXT:    sbcs r1, r2, #0
 ; CHECK-NEXT:    mov r8, #-2147483648
+; CHECK-NEXT:    sbcs r1, r3, #0
+; CHECK-NEXT:    vmov.f32 s0, s16
 ; CHECK-NEXT:    mov r1, #0
 ; CHECK-NEXT:    mov r10, #0
 ; CHECK-NEXT:    movwlt r1, #1
@@ -1899,15 +1899,15 @@ define <2 x i64> @utest_f32i64(<2 x float> %x) {
 ; CHECK-NEXT:    vmov.f64 d8, d0
 ; CHECK-NEXT:    vmov.f32 s0, s17
 ; CHECK-NEXT:    bl __fixunssfti
-; CHECK-NEXT:    vmov.f32 s0, s16
 ; CHECK-NEXT:    mov r4, r1
 ; CHECK-NEXT:    subs r1, r2, #1
-; CHECK-NEXT:    mov r6, #0
 ; CHECK-NEXT:    sbcs r1, r3, #0
-; CHECK-NEXT:    mov r5, #0
+; CHECK-NEXT:    mov r6, #0
 ; CHECK-NEXT:    movwlo r6, #1
 ; CHECK-NEXT:    cmp r6, #0
 ; CHECK-NEXT:    moveq r4, r6
+; CHECK-NEXT:    vmov.f32 s0, s16
+; CHECK-NEXT:    mov r5, #0
 ; CHECK-NEXT:    movne r6, r0
 ; CHECK-NEXT:    bl __fixunssfti
 ; CHECK-NEXT:    subs r2, r2, #1
@@ -1945,19 +1945,19 @@ define <2 x i64> @ustest_f32i64(<2 x float> %x) {
 ; CHECK-NEXT:    sbcs r1, r3, #0
 ; CHECK-NEXT:    mov r8, #1
 ; CHECK-NEXT:    mov r1, #0
-; CHECK-NEXT:    vmov.f32 s0, s16
 ; CHECK-NEXT:    movge r2, r8
 ; CHECK-NEXT:    movwlt r1, #1
 ; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    mov r7, #0
 ; CHECK-NEXT:    moveq r3, r1
 ; CHECK-NEXT:    moveq r4, r1
 ; CHECK-NEXT:    movne r1, r0
 ; CHECK-NEXT:    rsbs r0, r1, #0
 ; CHECK-NEXT:    rscs r0, r4, #0
-; CHECK-NEXT:    mov r5, #0
+; CHECK-NEXT:    mov r7, #0
 ; CHECK-NEXT:    rscs r0, r2, #0
+; CHECK-NEXT:    vmov.f32 s0, s16
 ; CHECK-NEXT:    rscs r0, r3, #0
+; CHECK-NEXT:    mov r5, #0
 ; CHECK-NEXT:    movwlt r7, #1
 ; CHECK-NEXT:    cmp r7, #0
 ; CHECK-NEXT:    moveq r4, r7
@@ -2016,9 +2016,9 @@ define <2 x i64> @stest_f16i64(<2 x half> %x) {
 ; CHECK-NEON-NEXT:    subs r1, r0, r9
 ; CHECK-NEON-NEXT:    mvn r6, #-2147483648
 ; CHECK-NEON-NEXT:    sbcs r1, r4, r6
-; CHECK-NEON-NEXT:    vmov s0, r8
-; CHECK-NEON-NEXT:    sbcs r1, r2, #0
 ; CHECK-NEON-NEXT:    mov r5, #0
+; CHECK-NEON-NEXT:    sbcs r1, r2, #0
+; CHECK-NEON-NEXT:    vmov s0, r8
 ; CHECK-NEON-NEXT:    sbcs r1, r3, #0
 ; CHECK-NEON-NEXT:    mov r8, #-2147483648
 ; CHECK-NEON-NEXT:    mov r1, #0
@@ -2238,9 +2238,9 @@ define <2 x i64> @ustest_f16i64(<2 x half> %x) {
 ; CHECK-NEON-NEXT:    movne r1, r0
 ; CHECK-NEON-NEXT:    rsbs r0, r1, #0
 ; CHECK-NEON-NEXT:    rscs r0, r4, #0
-; CHECK-NEON-NEXT:    vmov s0, r5
-; CHECK-NEON-NEXT:    rscs r0, r2, #0
 ; CHECK-NEON-NEXT:    mov r7, #0
+; CHECK-NEON-NEXT:    rscs r0, r2, #0
+; CHECK-NEON-NEXT:    vmov s0, r5
 ; CHECK-NEON-NEXT:    rscs r0, r3, #0
 ; CHECK-NEON-NEXT:    mov r5, #0
 ; CHECK-NEON-NEXT:    movwlt r7, #1
@@ -2293,9 +2293,9 @@ define <2 x i64> @ustest_f16i64(<2 x half> %x) {
 ; CHECK-FP16-NEXT:    movne r1, r0
 ; CHECK-FP16-NEXT:    rsbs r0, r1, #0
 ; CHECK-FP16-NEXT:    rscs r0, r4, #0
-; CHECK-FP16-NEXT:    vmov s0, r5
-; CHECK-FP16-NEXT:    rscs r0, r2, #0
 ; CHECK-FP16-NEXT:    mov r7, #0
+; CHECK-FP16-NEXT:    rscs r0, r2, #0
+; CHECK-FP16-NEXT:    vmov s0, r5
 ; CHECK-FP16-NEXT:    rscs r0, r3, #0
 ; CHECK-FP16-NEXT:    mov r5, #0
 ; CHECK-FP16-NEXT:    movwlt r7, #1
@@ -2350,14 +2350,14 @@ define <2 x i32> @stest_f64i32_mm(<2 x double> %x) {
 ; CHECK-NEXT:    vmov r0, r1, d8
 ; CHECK-NEXT:    bl __aeabi_d2lz
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    mov r8, r1
-; CHECK-NEXT:    vmov r0, r1, d9
 ; CHECK-NEXT:    mvn r6, #-2147483648
 ; CHECK-NEXT:    subs r2, r4, r6
-; CHECK-NEXT:    mov r5, #0
+; CHECK-NEXT:    mov r8, r1
 ; CHECK-NEXT:    sbcs r2, r8, #0
-; CHECK-NEXT:    mov r7, #0
+; CHECK-NEXT:    mov r5, #0
+; CHECK-NEXT:    vmov r0, r1, d9
 ; CHECK-NEXT:    movge r4, r6
+; CHECK-NEXT:    mov r7, #0
 ; CHECK-NEXT:    movwlt r5, #1
 ; CHECK-NEXT:    bl __aeabi_d2lz
 ; CHECK-NEXT:    subs r2, r0, r6
@@ -2488,10 +2488,10 @@ define <4 x i32> @stest_f32i32_mm(<4 x float> %x) {
 ; CHECK-NEXT:    bl __aeabi_f2lz
 ; CHECK-NEXT:    vmov r2, s18
 ; CHECK-NEXT:    mov r11, r0
-; CHECK-NEXT:    vmov r0, s17
 ; CHECK-NEXT:    mvn r6, #-2147483648
 ; CHECK-NEXT:    mov r3, #-2147483648
 ; CHECK-NEXT:    mvn r10, #0
+; CHECK-NEXT:    vmov r0, s17
 ; CHECK-NEXT:    vmov r7, s16
 ; CHECK-NEXT:    mov r4, #0
 ; CHECK-NEXT:    str r2, [sp, #4] @ 4-byte Spill
@@ -2510,20 +2510,20 @@ define <4 x i32> @stest_f32i32_mm(<4 x float> %x) {
 ; CHECK-NEXT:    subs r0, r0, r6
 ; CHECK-NEXT:    sbcs r0, r1, #0
 ; CHECK-NEXT:    mov r9, #0
-; CHECK-NEXT:    mov r0, r7
 ; CHECK-NEXT:    movge r5, r6
 ; CHECK-NEXT:    movwlt r9, #1
 ; CHECK-NEXT:    cmp r9, #0
+; CHECK-NEXT:    mov r0, r7
 ; CHECK-NEXT:    movne r9, r1
 ; CHECK-NEXT:    bl __aeabi_f2lz
 ; CHECK-NEXT:    mov r7, r0
 ; CHECK-NEXT:    subs r0, r0, r6
 ; CHECK-NEXT:    sbcs r0, r1, #0
 ; CHECK-NEXT:    mov r8, #0
-; CHECK-NEXT:    ldr r0, [sp, #4] @ 4-byte Reload
 ; CHECK-NEXT:    movge r7, r6
 ; CHECK-NEXT:    movwlt r8, #1
 ; CHECK-NEXT:    cmp r8, #0
+; CHECK-NEXT:    ldr r0, [sp, #4] @ 4-byte Reload
 ; CHECK-NEXT:    movne r8, r1
 ; CHECK-NEXT:    bl __aeabi_f2lz
 ; CHECK-NEXT:    subs r2, r0, r6
@@ -2709,10 +2709,10 @@ define <4 x i32> @stest_f16i32_mm(<4 x half> %x) {
 ; CHECK-NEON-NEXT:    bl __aeabi_f2lz
 ; CHECK-NEON-NEXT:    vmov r2, s16
 ; CHECK-NEON-NEXT:    mov r11, r0
-; CHECK-NEON-NEXT:    vmov r0, s18
 ; CHECK-NEON-NEXT:    mvn r6, #-2147483648
 ; CHECK-NEON-NEXT:    mov r3, #-2147483648
 ; CHECK-NEON-NEXT:    mvn r10, #0
+; CHECK-NEON-NEXT:    vmov r0, s18
 ; CHECK-NEON-NEXT:    vmov r7, s20
 ; CHECK-NEON-NEXT:    mov r4, #0
 ; CHECK-NEON-NEXT:    str r2, [sp, #4] @ 4-byte Spill
@@ -2732,10 +2732,10 @@ define <4 x i32> @stest_f16i32_mm(<4 x half> %x) {
 ; CHECK-NEON-NEXT:    subs r0, r0, r6
 ; CHECK-NEON-NEXT:    sbcs r0, r1, #0
 ; CHECK-NEON-NEXT:    mov r8, #0
-; CHECK-NEON-NEXT:    mov r0, r7
 ; CHECK-NEON-NEXT:    movge r5, r6
 ; CHECK-NEON-NEXT:    movwlt r8, #1
 ; CHECK-NEON-NEXT:    cmp r8, #0
+; CHECK-NEON-NEXT:    mov r0, r7
 ; CHECK-NEON-NEXT:    movne r8, r1
 ; CHECK-NEON-NEXT:    bl __aeabi_h2f
 ; CHECK-NEON-NEXT:    bl __aeabi_f2lz
@@ -2743,10 +2743,10 @@ define <4 x i32> @stest_f16i32_mm(<4 x half> %x) {
 ; CHECK-NEON-NEXT:    subs r0, r0, r6
 ; CHECK-NEON-NEXT:    sbcs r0, r1, #0
 ; CHECK-NEON-NEXT:    mov r9, #0
-; CHECK-NEON-NEXT:    ldr r0, [sp, #4] @ 4-byte Reload
 ; CHECK-NEON-NEXT:    movge r7, r6
 ; CHECK-NEON-NEXT:    movwlt r9, #1
 ; CHECK-NEON-NEXT:    cmp r9, #0
+; CHECK-NEON-NEXT:    ldr r0, [sp, #4] @ 4-byte Reload
 ; CHECK-NEON-NEXT:    movne r9, r1
 ; CHECK-NEON-NEXT:    bl __aeabi_h2f
 ; CHECK-NEON-NEXT:    bl __aeabi_f2lz
@@ -2792,40 +2792,40 @@ define <4 x i32> @stest_f16i32_mm(<4 x half> %x) {
 ; CHECK-FP16-NEXT:    mov r10, r0
 ; CHECK-FP16-NEXT:    mvn r7, #-2147483648
 ; CHECK-FP16-NEXT:    subs r0, r0, r7
-; CHECK-FP16-NEXT:    vmov s0, r6
-; CHECK-FP16-NEXT:    sbcs r0, r1, #0
 ; CHECK-FP16-NEXT:    mov r2, #-2147483648
+; CHECK-FP16-NEXT:    sbcs r0, r1, #0
+; CHECK-FP16-NEXT:    mvn r9, #0
 ; CHECK-FP16-NEXT:    mov r0, #0
 ; CHECK-FP16-NEXT:    movge r10, r7
 ; CHECK-FP16-NEXT:    movwlt r0, #1
 ; CHECK-FP16-NEXT:    cmp r0, #0
 ; CHECK-FP16-NEXT:    movne r0, r1
 ; CHECK-FP16-NEXT:    rsbs r1, r10, #-2147483648
-; CHECK-FP16-NEXT:    mvn r9, #0
 ; CHECK-FP16-NEXT:    sbcs r0, r9, r0
+; CHECK-FP16-NEXT:    vmov s0, r6
 ; CHECK-FP16-NEXT:    vmov s16, r4
 ; CHECK-FP16-NEXT:    mov r11, #0
 ; CHECK-FP16-NEXT:    vmov s18, r5
 ; CHECK-FP16-NEXT:    movge r10, r2
 ; CHECK-FP16-NEXT:    bl __fixhfdi
-; CHECK-FP16-NEXT:    vmov.f32 s0, s18
 ; CHECK-FP16-NEXT:    mov r5, r0
 ; CHECK-FP16-NEXT:    subs r0, r0, r7
-; CHECK-FP16-NEXT:    mov r4, #0
 ; CHECK-FP16-NEXT:    sbcs r0, r1, #0
+; CHECK-FP16-NEXT:    mov r4, #0
 ; CHECK-FP16-NEXT:    movge r5, r7
 ; CHECK-FP16-NEXT:    movwlt r4, #1
 ; CHECK-FP16-NEXT:    cmp r4, #0
+; CHECK-FP16-NEXT:    vmov.f32 s0, s18
 ; CHECK-FP16-NEXT:    movne r4, r1
 ; CHECK-FP16-NEXT:    bl __fixhfdi
-; CHECK-FP16-NEXT:    vmov.f32 s0, s16
 ; CHECK-FP16-NEXT:    mov r6, r0
 ; CHECK-FP16-NEXT:    subs r0, r0, r7
-; CHECK-FP16-NEXT:    mov r8, #0
 ; CHECK-FP16-NEXT:    sbcs r0, r1, #0
+; CHECK-FP16-NEXT:    mov r8, #0
 ; CHECK-FP16-NEXT:    movge r6, r7
 ; CHECK-FP16-NEXT:    movwlt r8, #1
 ; CHECK-FP16-NEXT:    cmp r8, #0
+; CHECK-FP16-NEXT:    vmov.f32 s0, s16
 ; CHECK-FP16-NEXT:    movne r8, r1
 ; CHECK-FP16-NEXT:    bl __fixhfdi
 ; CHECK-FP16-NEXT:    subs r2, r0, r7
@@ -3053,8 +3053,8 @@ define <4 x i32> @ustest_f16i32_mm(<4 x half> %x) {
 ; CHECK-FP16-NEXT:    vmov.u16 r2, d8[1]
 ; CHECK-FP16-NEXT:    mvn r4, #0
 ; CHECK-FP16-NEXT:    vmov.u16 r3, d8[2]
-; CHECK-FP16-NEXT:    vmov s0, r5
 ; CHECK-FP16-NEXT:    mov r6, #0
+; CHECK-FP16-NEXT:    vmov s0, r5
 ; CHECK-FP16-NEXT:    mov r8, #0
 ; CHECK-FP16-NEXT:    vmov s16, r2
 ; CHECK-FP16-NEXT:    subs r2, r0, r4
@@ -3072,9 +3072,9 @@ define <4 x i32> @ustest_f16i32_mm(<4 x half> %x) {
 ; CHECK-FP16-NEXT:    movne r6, r0
 ; CHECK-FP16-NEXT:    bl __fixhfdi
 ; CHECK-FP16-NEXT:    subs r2, r0, r4
-; CHECK-FP16-NEXT:    vmov.f32 s0, s18
-; CHECK-FP16-NEXT:    sbcs r2, r1, #0
 ; CHECK-FP16-NEXT:    mov r7, #0
+; CHECK-FP16-NEXT:    sbcs r2, r1, #0
+; CHECK-FP16-NEXT:    vmov.f32 s0, s18
 ; CHECK-FP16-NEXT:    mov r2, #0
 ; CHECK-FP16-NEXT:    movge r0, r4
 ; CHECK-FP16-NEXT:    movwlt r2, #1
@@ -3087,9 +3087,9 @@ define <4 x i32> @ustest_f16i32_mm(<4 x half> %x) {
 ; CHECK-FP16-NEXT:    movne r7, r0
 ; CHECK-FP16-NEXT:    bl __fixhfdi
 ; CHECK-FP16-NEXT:    subs r2, r0, r4
-; CHECK-FP16-NEXT:    vmov.f32 s0, s16
-; CHECK-FP16-NEXT:    sbcs r2, r1, #0
 ; CHECK-FP16-NEXT:    mov r5, #0
+; CHECK-FP16-NEXT:    sbcs r2, r1, #0
+; CHECK-FP16-NEXT:    vmov.f32 s0, s16
 ; CHECK-FP16-NEXT:    mov r2, #0
 ; CHECK-FP16-NEXT:    movge r0, r4
 ; CHECK-FP16-NEXT:    movwlt r2, #1
@@ -3628,11 +3628,11 @@ define <2 x i64> @stest_f64i64_mm(<2 x double> %x) {
 ; CHECK-NEXT:    subs r1, r0, r9
 ; CHECK-NEXT:    mvn r5, #-2147483648
 ; CHECK-NEXT:    sbcs r1, r4, r5
-; CHECK-NEXT:    vorr d0, d8, d8
-; CHECK-NEXT:    sbcs r1, r2, #0
 ; CHECK-NEXT:    mov r7, #0
-; CHECK-NEXT:    sbcs r1, r3, #0
+; CHECK-NEXT:    sbcs r1, r2, #0
 ; CHECK-NEXT:    mov r8, #-2147483648
+; CHECK-NEXT:    sbcs r1, r3, #0
+; CHECK-NEXT:    vorr d0, d8, d8
 ; CHECK-NEXT:    mov r1, #0
 ; CHECK-NEXT:    mov r10, #0
 ; CHECK-NEXT:    movwlt r1, #1
@@ -3695,13 +3695,13 @@ define <2 x i64> @utest_f64i64_mm(<2 x double> %x) {
 ; CHECK-NEXT:    bl __fixunsdfti
 ; CHECK-NEXT:    mov r4, r1
 ; CHECK-NEXT:    subs r1, r2, #1
-; CHECK-NEXT:    vorr d0, d8, d8
 ; CHECK-NEXT:    sbcs r1, r3, #0
 ; CHECK-NEXT:    mov r6, #0
-; CHECK-NEXT:    mov r5, #0
 ; CHECK-NEXT:    movwlo r6, #1
 ; CHECK-NEXT:    cmp r6, #0
 ; CHECK-NEXT:    moveq r4, r6
+; CHECK-NEXT:    vorr d0, d8, d8
+; CHECK-NEXT:    mov r5, #0
 ; CHECK-NEXT:    movne r6, r0
 ; CHECK-NEXT:    bl __fixunsdfti
 ; CHECK-NEXT:    subs r2, r2, #1
@@ -3736,9 +3736,9 @@ define <2 x i64> @ustest_f64i64_mm(<2 x double> %x) {
 ; CHECK-NEXT:    mov r5, r0
 ; CHECK-NEXT:    subs r0, r2, #1
 ; CHECK-NEXT:    sbcs r0, r3, #0
-; CHECK-NEXT:    vorr d0, d8, d8
-; CHECK-NEXT:    mov r0, #0
 ; CHECK-NEXT:    mov r4, r1
+; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    vorr d0, d8, d8
 ; CHECK-NEXT:    movwlt r0, #1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    moveq r5, r0
@@ -3788,11 +3788,11 @@ define <2 x i64> @stest_f32i64_mm(<2 x float> %x) {
 ; CHECK-NEXT:    subs r1, r0, r9
 ; CHECK-NEXT:    mvn r5, #-2147483648
 ; CHECK-NEXT:    sbcs r1, r4, r5
-; CHECK-NEXT:    vmov.f32 s0, s16
-; CHECK-NEXT:    sbcs r1, r2, #0
 ; CHECK-NEXT:    mov r7, #0
-; CHECK-NEXT:    sbcs r1, r3, #0
+; CHECK-NEXT:    sbcs r1, r2, #0
 ; CHECK-NEXT:    mov r8, #-2147483648
+; CHECK-NEXT:    sbcs r1, r3, #0
+; CHECK-NEXT:    vmov.f32 s0, s16
 ; CHECK-NEXT:    mov r1, #0
 ; CHECK-NEXT:    mov r10, #0
 ; CHECK-NEXT:    movwlt r1, #1
@@ -3853,15 +3853,15 @@ define <2 x i64> @utest_f32i64_mm(<2 x float> %x) {
 ; CHECK-NEXT:    vmov.f64 d8, d0
 ; CHECK-NEXT:    vmov.f32 s0, s17
 ; CHECK-NEXT:    bl __fixunssfti
-; CHECK-NEXT:    vmov.f32 s0, s16
 ; CHECK-NEXT:    mov r4, r1
 ; CHECK-NEXT:    subs r1, r2, #1
-; CHECK-NEXT:    mov r6, #0
 ; CHECK-NEXT:    sbcs r1, r3, #0
-; CHECK-NEXT:    mov r5, #0
+; CHECK-NEXT:    mov r6, #0
 ; CHECK-NEXT:    movwlo r6, #1
 ; CHECK-NEXT:    cmp r6, #0
 ; CHECK-NEXT:    moveq r4, r6
+; CHECK-NEXT:    vmov.f32 s0, s16
+; CHECK-NEXT:    mov r5, #0
 ; CHECK-NEXT:    movne r6, r0
 ; CHECK-NEXT:    bl __fixunssfti
 ; CHECK-NEXT:    subs r2, r2, #1
@@ -3893,19 +3893,19 @@ define <2 x i64> @ustest_f32i64_mm(<2 x float> %x) {
 ; CHECK-NEXT:    vmov.f64 d8, d0
 ; CHECK-NEXT:    vmov.f32 s0, s17
 ; CHECK-NEXT:    bl __fixsfti
-; CHECK-NEXT:    vmov.f32 s0, s16
 ; CHECK-NEXT:    mov r5, r0
 ; CHECK-NEXT:    subs r0, r2, #1
-; CHECK-NEXT:    mov r4, r1
 ; CHECK-NEXT:    sbcs r0, r3, #0
-; CHECK-NEXT:    mov r6, #0
+; CHECK-NEXT:    mov r4, r1
 ; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    vmov.f32 s0, s16
 ; CHECK-NEXT:    movwlt r0, #1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    moveq r5, r0
 ; CHECK-NEXT:    moveq r4, r0
 ; CHECK-NEXT:    movne r0, r3
 ; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    mov r6, #0
 ; CHECK-NEXT:    movwmi r4, #0
 ; CHECK-NEXT:    movwmi r5, #0
 ; CHECK-NEXT:    bl __fixsfti
@@ -3953,9 +3953,9 @@ define <2 x i64> @stest_f16i64_mm(<2 x half> %x) {
 ; CHECK-NEON-NEXT:    subs r1, r0, r9
 ; CHECK-NEON-NEXT:    mvn r6, #-2147483648
 ; CHECK-NEON-NEXT:    sbcs r1, r4, r6
-; CHECK-NEON-NEXT:    vmov s0, r8
-; CHECK-NEON-NEXT:    sbcs r1, r2, #0
 ; CHECK-NEON-NEXT:    mov r5, #0
+; CHECK-NEON-NEXT:    sbcs r1, r2, #0
+; CHECK-NEON-NEXT:    vmov s0, r8
 ; CHECK-NEON-NEXT:    sbcs r1, r3, #0
 ; CHECK-NEON-NEXT:    mov r8, #-2147483648
 ; CHECK-NEON-NEXT:    mov r1, #0
@@ -4162,9 +4162,9 @@ define <2 x i64> @ustest_f16i64_mm(<2 x half> %x) {
 ; CHECK-NEON-NEXT:    mov r5, r0
 ; CHECK-NEON-NEXT:    subs r0, r2, #1
 ; CHECK-NEON-NEXT:    sbcs r0, r3, #0
-; CHECK-NEON-NEXT:    vmov s0, r6
-; CHECK-NEON-NEXT:    mov r0, #0
 ; CHECK-NEON-NEXT:    mov r4, r1
+; CHECK-NEON-NEXT:    mov r0, #0
+; CHECK-NEON-NEXT:    vmov s0, r6
 ; CHECK-NEON-NEXT:    movwlt r0, #1
 ; CHECK-NEON-NEXT:    cmp r0, #0
 ; CHECK-NEON-NEXT:    moveq r5, r0
@@ -4203,9 +4203,9 @@ define <2 x i64> @ustest_f16i64_mm(<2 x half> %x) {
 ; CHECK-FP16-NEXT:    mov r5, r0
 ; CHECK-FP16-NEXT:    subs r0, r2, #1
 ; CHECK-FP16-NEXT:    sbcs r0, r3, #0
-; CHECK-FP16-NEXT:    vmov s0, r7
-; CHECK-FP16-NEXT:    mov r0, #0
 ; CHECK-FP16-NEXT:    mov r4, r1
+; CHECK-FP16-NEXT:    mov r0, #0
+; CHECK-FP16-NEXT:    vmov s0, r7
 ; CHECK-FP16-NEXT:    movwlt r0, #1
 ; CHECK-FP16-NEXT:    cmp r0, #0
 ; CHECK-FP16-NEXT:    moveq r5, r0

@@ -3607,8 +3607,8 @@ define void @v_fneg_copytoreg_f32(ptr addrspace(1) %out, float %a, float %b, flo
 ; SI-NEXT:    v_lshlrev_b32_e32 v6, 2, v6
 ; SI-NEXT:    v_add_i32_e32 v0, vcc, v0, v6
 ; SI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; SI-NEXT:    v_mul_f32_e32 v2, v2, v3
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v5
+; SI-NEXT:    v_mul_f32_e32 v2, v2, v3
 ; SI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; SI-NEXT:    s_cbranch_execz .LBB220_2
 ; SI-NEXT:  ; %bb.1: ; %if
@@ -3628,8 +3628,8 @@ define void @v_fneg_copytoreg_f32(ptr addrspace(1) %out, float %a, float %b, flo
 ; VI-NEXT:    v_lshlrev_b32_e32 v6, 2, v6
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, v0, v6
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    v_mul_f32_e32 v2, v2, v3
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v5
+; VI-NEXT:    v_mul_f32_e32 v2, v2, v3
 ; VI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; VI-NEXT:    s_cbranch_execz .LBB220_2
 ; VI-NEXT:  ; %bb.1: ; %if

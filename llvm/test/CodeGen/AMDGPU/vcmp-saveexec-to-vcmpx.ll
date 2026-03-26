@@ -214,26 +214,26 @@ define amdgpu_cs void @check_live_outs(i32 %a, i32 %b) {
 ; GCN-LABEL: check_live_outs:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_mov_b32 s8, SCRATCH_RSRC_DWORD0
+; GCN-NEXT:    v_cmp_eq_u32_e64 s4, v0, v1
 ; GCN-NEXT:    s_mov_b32 s9, SCRATCH_RSRC_DWORD1
 ; GCN-NEXT:    s_mov_b32 s10, -1
 ; GCN-NEXT:    s_mov_b32 s11, 0x31c16000
 ; GCN-NEXT:    s_add_u32 s8, s8, s0
-; GCN-NEXT:    v_cmp_eq_u32_e64 s0, v0, v1
-; GCN-NEXT:    s_addc_u32 s9, s9, 0
 ; GCN-NEXT:    s_mov_b32 s32, 0
-; GCN-NEXT:    s_and_saveexec_b32 s1, s0
+; GCN-NEXT:    s_addc_u32 s9, s9, 0
+; GCN-NEXT:    s_and_saveexec_b32 s0, s4
 ; GCN-NEXT:    s_cbranch_execz .LBB6_2
 ; GCN-NEXT:  ; %bb.1: ; %l1
-; GCN-NEXT:    s_getpc_b64 s[2:3]
-; GCN-NEXT:    s_add_u32 s2, s2, check_live_outs_helper@gotpcrel32@lo+4
-; GCN-NEXT:    s_addc_u32 s3, s3, check_live_outs_helper@gotpcrel32@hi+12
-; GCN-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x0
-; GCN-NEXT:    v_mov_b32_e32 v1, 0
+; GCN-NEXT:    s_getpc_b64 s[0:1]
+; GCN-NEXT:    s_add_u32 s0, s0, check_live_outs_helper@gotpcrel32@lo+4
+; GCN-NEXT:    s_addc_u32 s1, s1, check_live_outs_helper@gotpcrel32@hi+12
+; GCN-NEXT:    v_mov_b32_e32 v0, s4
+; GCN-NEXT:    s_load_dwordx2 s[6:7], s[0:1], 0x0
 ; GCN-NEXT:    s_mov_b64 s[0:1], s[8:9]
 ; GCN-NEXT:    s_mov_b64 s[2:3], s[10:11]
+; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
+; GCN-NEXT:    s_swappc_b64 s[30:31], s[6:7]
 ; GCN-NEXT:  .LBB6_2: ; %l2
 ; GCN-NEXT:    s_endpgm
   %cond = icmp eq i32 %a, %b

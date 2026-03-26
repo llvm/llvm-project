@@ -415,8 +415,8 @@ false:
 define amdgpu_ps void @non_cst_non_compare_input(ptr addrspace(1) %out, i32 %tid, i32 %cond) {
 ; GFX10-LABEL: non_cst_non_compare_input:
 ; GFX10:       ; %bb.0: ; %entry
-; GFX10-NEXT:    s_and_b32 s0, 1, s0
 ; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v3
+; GFX10-NEXT:    s_and_b32 s0, 1, s0
 ; GFX10-NEXT:    v_cmp_ne_u32_e64 s0, 0, s0
 ; GFX10-NEXT:    s_and_saveexec_b32 s1, vcc_lo
 ; GFX10-NEXT:    s_xor_b32 s1, exec_lo, s1

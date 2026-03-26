@@ -22,11 +22,10 @@ define i32 @spill_fpr_with_gpr_stack_object(i64 %d) "aarch64_pstate_sm_compatibl
 ; CHECK0-NEXT:    str d8, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK0-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK0-NEXT:    .cfi_offset b8, -16
-; CHECK0-NEXT:    mov x8, x0
-; CHECK0-NEXT:    mov w0, wzr
 ; CHECK0-NEXT:    //APP
 ; CHECK0-NEXT:    //NO_APP
-; CHECK0-NEXT:    str x8, [sp, #8]
+; CHECK0-NEXT:    str x0, [sp, #8]
+; CHECK0-NEXT:    mov w0, wzr
 ; CHECK0-NEXT:    ldr d8, [sp], #16 // 8-byte Folded Reload
 ; CHECK0-NEXT:    ret
 ;
@@ -39,11 +38,10 @@ define i32 @spill_fpr_with_gpr_stack_object(i64 %d) "aarch64_pstate_sm_compatibl
 ; CHECK1024-NEXT:    .cfi_def_cfa_offset 2080
 ; CHECK1024-NEXT:    .cfi_offset w29, -8
 ; CHECK1024-NEXT:    .cfi_offset b8, -1040
-; CHECK1024-NEXT:    mov x8, x0
-; CHECK1024-NEXT:    mov w0, wzr
 ; CHECK1024-NEXT:    //APP
 ; CHECK1024-NEXT:    //NO_APP
-; CHECK1024-NEXT:    str x8, [sp, #8]
+; CHECK1024-NEXT:    str x0, [sp, #8]
+; CHECK1024-NEXT:    mov w0, wzr
 ; CHECK1024-NEXT:    add sp, sp, #1040
 ; CHECK1024-NEXT:    ldr x29, [sp, #1032] // 8-byte Reload
 ; CHECK1024-NEXT:    ldr d8, [sp] // 8-byte Reload

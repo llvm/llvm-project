@@ -58,8 +58,8 @@ define float @foo2(ptr %x0, ptr %x1) nounwind {
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    addvl sp, sp, #-4
 ; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    fmov s0, #1.00000000
 ; CHECK-NEXT:    add x8, sp, #16
+; CHECK-NEXT:    fmov s0, #1.00000000
 ; CHECK-NEXT:    mov w2, #2 // =0x2
 ; CHECK-NEXT:    mov w3, #3 // =0x3
 ; CHECK-NEXT:    mov w4, #4 // =0x4
@@ -467,20 +467,20 @@ define void @non_sve_caller_high_range_non_sve_callee_high_range(float %f0, floa
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 16 + 16 * VG
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    movi d0, #0000000000000000
-; CHECK-NEXT:    ldr z16, [x0]
-; CHECK-NEXT:    ldr z17, [x1]
+; CHECK-NEXT:    ldr z3, [x0]
+; CHECK-NEXT:    ldr z0, [x1]
 ; CHECK-NEXT:    fmov s1, #1.00000000
 ; CHECK-NEXT:    fmov s2, #2.00000000
-; CHECK-NEXT:    fmov s3, #3.00000000
 ; CHECK-NEXT:    fmov s4, #4.00000000
 ; CHECK-NEXT:    fmov s5, #5.00000000
 ; CHECK-NEXT:    addvl x0, sp, #1
 ; CHECK-NEXT:    fmov s6, #6.00000000
 ; CHECK-NEXT:    fmov s7, #7.00000000
+; CHECK-NEXT:    str z0, [sp]
+; CHECK-NEXT:    movi d0, #0000000000000000
 ; CHECK-NEXT:    mov x1, sp
-; CHECK-NEXT:    str z17, [sp]
-; CHECK-NEXT:    str z16, [sp, #1, mul vl]
+; CHECK-NEXT:    str z3, [sp, #1, mul vl]
+; CHECK-NEXT:    fmov s3, #3.00000000
 ; CHECK-NEXT:    bl non_sve_callee_high_range
 ; CHECK-NEXT:    addvl sp, sp, #2
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
@@ -534,21 +534,20 @@ define <vscale x 4 x float> @sve_caller_non_sve_callee_high_range(<vscale x 4 x 
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x4d, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x50, 0x1e, 0x22, 0x40, 0x1c // $d13 @ cfa - 48 * VG - 16
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x4e, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x48, 0x1e, 0x22, 0x40, 0x1c // $d14 @ cfa - 56 * VG - 16
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x4f, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x40, 0x1e, 0x22, 0x40, 0x1c // $d15 @ cfa - 64 * VG - 16
-; CHECK-NEXT:    mov z25.d, z0.d
+; CHECK-NEXT:    mov z3.d, z0.d
 ; CHECK-NEXT:    str z0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    movi d0, #0000000000000000
-; CHECK-NEXT:    mov z24.d, z1.d
+; CHECK-NEXT:    str z1, [sp, #1, mul vl]
 ; CHECK-NEXT:    fmov s1, #1.00000000
-; CHECK-NEXT:    addvl x0, sp, #2
 ; CHECK-NEXT:    fmov s2, #2.00000000
-; CHECK-NEXT:    fmov s3, #3.00000000
-; CHECK-NEXT:    addvl x1, sp, #1
 ; CHECK-NEXT:    fmov s4, #4.00000000
 ; CHECK-NEXT:    fmov s5, #5.00000000
-; CHECK-NEXT:    str z25, [sp, #2, mul vl]
+; CHECK-NEXT:    addvl x0, sp, #2
+; CHECK-NEXT:    str z3, [sp, #2, mul vl]
+; CHECK-NEXT:    fmov s3, #3.00000000
 ; CHECK-NEXT:    fmov s6, #6.00000000
 ; CHECK-NEXT:    fmov s7, #7.00000000
-; CHECK-NEXT:    str z24, [sp, #1, mul vl]
+; CHECK-NEXT:    addvl x1, sp, #1
 ; CHECK-NEXT:    bl non_sve_callee_high_range
 ; CHECK-NEXT:    ldr z0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    addvl sp, sp, #3
@@ -689,20 +688,20 @@ define void @verify_all_operands_are_initialised() {
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x20, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 32 + 8 * VG
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    movi d0, #0000000000000000
-; CHECK-NEXT:    fmov z16.s, #9.00000000
+; CHECK-NEXT:    fmov z6.s, #9.00000000
 ; CHECK-NEXT:    mov w8, #1090519040 // =0x41000000
+; CHECK-NEXT:    movi d0, #0000000000000000
+; CHECK-NEXT:    str w8, [sp]
+; CHECK-NEXT:    add x8, sp, #16
 ; CHECK-NEXT:    fmov s1, #1.00000000
 ; CHECK-NEXT:    fmov s2, #2.00000000
-; CHECK-NEXT:    str w8, [sp]
 ; CHECK-NEXT:    fmov s3, #3.00000000
 ; CHECK-NEXT:    fmov s4, #4.00000000
-; CHECK-NEXT:    add x0, sp, #16
 ; CHECK-NEXT:    fmov s5, #5.00000000
+; CHECK-NEXT:    str z6, [x8]
 ; CHECK-NEXT:    fmov s6, #6.00000000
-; CHECK-NEXT:    add x8, sp, #16
+; CHECK-NEXT:    add x0, sp, #16
 ; CHECK-NEXT:    fmov s7, #7.00000000
-; CHECK-NEXT:    str z16, [x8]
 ; CHECK-NEXT:    bl func_f8_and_v0_passed_via_memory
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    add sp, sp, #16

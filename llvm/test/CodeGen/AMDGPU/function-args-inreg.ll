@@ -2504,16 +2504,16 @@ define void @void_func_a13i32_inreg([13  x i32] inreg %arg0, ptr addrspace(1) %p
 ; GFX11-NEXT:    scratch_store_b32 off, v40, s33 ; 4-byte Folded Spill
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s26
 ; GFX11-NEXT:    s_add_i32 s32, s32, 16
-; GFX11-NEXT:    v_dual_mov_b32 v4, s22 :: v_dual_mov_b32 v3, s21
-; GFX11-NEXT:    v_dual_mov_b32 v2, s20 :: v_dual_mov_b32 v9, s19
-; GFX11-NEXT:    s_getpc_b64 s[20:21]
-; GFX11-NEXT:    s_add_u32 s20, s20, extern@gotpcrel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s21, s21, extern@gotpcrel32@hi+12
-; GFX11-NEXT:    v_dual_mov_b32 v8, s18 :: v_dual_mov_b32 v7, s17
-; GFX11-NEXT:    v_dual_mov_b32 v6, s16 :: v_dual_mov_b32 v13, s3
-; GFX11-NEXT:    s_load_b64 s[16:17], s[20:21], 0x0
-; GFX11-NEXT:    v_writelane_b32 v40, s25, 2
 ; GFX11-NEXT:    v_dual_mov_b32 v14, s24 :: v_dual_mov_b32 v5, s23
+; GFX11-NEXT:    v_dual_mov_b32 v4, s22 :: v_dual_mov_b32 v3, s21
+; GFX11-NEXT:    s_getpc_b64 s[22:23]
+; GFX11-NEXT:    s_add_u32 s22, s22, extern@gotpcrel32@lo+4
+; GFX11-NEXT:    s_addc_u32 s23, s23, extern@gotpcrel32@hi+12
+; GFX11-NEXT:    v_dual_mov_b32 v2, s20 :: v_dual_mov_b32 v9, s19
+; GFX11-NEXT:    v_dual_mov_b32 v8, s18 :: v_dual_mov_b32 v7, s17
+; GFX11-NEXT:    s_load_b64 s[18:19], s[22:23], 0x0
+; GFX11-NEXT:    v_writelane_b32 v40, s25, 2
+; GFX11-NEXT:    v_dual_mov_b32 v6, s16 :: v_dual_mov_b32 v13, s3
 ; GFX11-NEXT:    v_dual_mov_b32 v12, s2 :: v_dual_mov_b32 v11, s1
 ; GFX11-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX11-NEXT:    v_mov_b32_e32 v10, s0
@@ -2524,7 +2524,7 @@ define void @void_func_a13i32_inreg([13  x i32] inreg %arg0, ptr addrspace(1) %p
 ; GFX11-NEXT:    global_store_b128 v[0:1], v[10:13], off
 ; GFX11-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_swappc_b64 s[30:31], s[16:17]
+; GFX11-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX11-NEXT:    v_readlane_b32 s30, v40, 0

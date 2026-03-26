@@ -7,8 +7,8 @@
 define void @fun(i32 %Arg) {
 ; CHECK-LABEL: fun:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    ahi %r2, 1
 ; CHECK-NEXT:    lhi %r0, 0
+; CHECK-NEXT:    ahi %r2, 1
 ; CHECK-NEXT:    cijlh %r0, 0, .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    tmll %r2, 16

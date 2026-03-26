@@ -30,8 +30,9 @@ define void @foo(<1 x half> %A, <4 x half> %B, <8 x half> %C) {
 ; CHECK-NEXT:    .cfi_offset %r15, -40
 ; CHECK-NEXT:    aghi %r15, -192
 ; CHECK-NEXT:    .cfi_def_cfa_offset 352
-; CHECK-NEXT:    vst %v28, 176(%r15), 3
 ; CHECK-NEXT:    vmrhg %v0, %v24, %v26
+; CHECK-NEXT:    vst %v28, 176(%r15), 3
+; CHECK-NEXT:    vst %v0, 160(%r15), 3
 ; CHECK-NEXT:    vgbm %v24, 0
 ; CHECK-NEXT:    vgbm %v26, 0
 ; CHECK-NEXT:    vgbm %v28, 0
@@ -40,7 +41,6 @@ define void @foo(<1 x half> %A, <4 x half> %B, <8 x half> %C) {
 ; CHECK-NEXT:    vgbm %v27, 0
 ; CHECK-NEXT:    vgbm %v29, 0
 ; CHECK-NEXT:    vgbm %v31, 0
-; CHECK-NEXT:    vst %v0, 160(%r15), 3
 ; CHECK-NEXT:    brasl %r14, bar@PLT
 ; CHECK-NEXT:    lmg %r14, %r15, 304(%r15)
 ; CHECK-NEXT:    br %r14

@@ -67,9 +67,9 @@ define <2 x double> @powi_v2f64(<2 x double> %a, i32 %b) {
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-SD-NEXT:    .cfi_offset w19, -8
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    mov w19, w0
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-SD-NEXT:    mov d0, v0.d[1]
-; CHECK-SD-NEXT:    mov w19, w0
 ; CHECK-SD-NEXT:    bl __powidf2
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
@@ -190,10 +190,10 @@ define <4 x double> @powi_v4f64(<4 x double> %a, i32 %b) {
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-SD-NEXT:    .cfi_offset w19, -8
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
-; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
-; CHECK-SD-NEXT:    mov d0, v0.d[1]
 ; CHECK-SD-NEXT:    mov w19, w0
 ; CHECK-SD-NEXT:    str q1, [sp, #32] // 16-byte Spill
+; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-SD-NEXT:    mov d0, v0.d[1]
 ; CHECK-SD-NEXT:    bl __powidf2
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
@@ -336,9 +336,9 @@ define <3 x float> @powi_v3f32(<3 x float> %a, i32 %b) {
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-SD-NEXT:    .cfi_offset w19, -8
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    mov w19, w0
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-SD-NEXT:    mov s0, v0.s[1]
-; CHECK-SD-NEXT:    mov w19, w0
 ; CHECK-SD-NEXT:    bl __powisf2
 ; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
@@ -409,9 +409,9 @@ define <4 x float> @powi_v4f32(<4 x float> %a, i32 %b) {
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-SD-NEXT:    .cfi_offset w19, -8
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    mov w19, w0
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-SD-NEXT:    mov s0, v0.s[1]
-; CHECK-SD-NEXT:    mov w19, w0
 ; CHECK-SD-NEXT:    bl __powisf2
 ; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
@@ -501,9 +501,9 @@ define <8 x float> @powi_v8f32(<8 x float> %a, i32 %b) {
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-SD-NEXT:    .cfi_offset w19, -8
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    mov w19, w0
 ; CHECK-SD-NEXT:    stp q0, q1, [sp] // 32-byte Folded Spill
 ; CHECK-SD-NEXT:    mov s0, v0.s[1]
-; CHECK-SD-NEXT:    mov w19, w0
 ; CHECK-SD-NEXT:    bl __powisf2
 ; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp, #32] // 16-byte Spill
@@ -663,8 +663,8 @@ define <7 x half> @powi_v7f16(<7 x half> %a, i32 %b) {
 ; CHECK-SD-NEXT:    .cfi_offset w19, -8
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    mov h1, v0.h[1]
-; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-SD-NEXT:    mov w19, w0
+; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-SD-NEXT:    fcvt s0, h1
 ; CHECK-SD-NEXT:    bl __powisf2
 ; CHECK-SD-NEXT:    fcvt h0, s0
@@ -928,8 +928,8 @@ define <8 x half> @powi_v8f16(<8 x half> %a, i32 %b) {
 ; CHECK-SD-NEXT:    .cfi_offset w19, -8
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    mov h1, v0.h[1]
-; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-SD-NEXT:    mov w19, w0
+; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-SD-NEXT:    fcvt s0, h1
 ; CHECK-SD-NEXT:    bl __powisf2
 ; CHECK-SD-NEXT:    fcvt h0, s0

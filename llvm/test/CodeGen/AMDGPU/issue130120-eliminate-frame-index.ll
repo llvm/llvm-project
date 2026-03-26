@@ -10,7 +10,6 @@ define amdgpu_gfx [13 x i32] @issue130120() {
 ; CHECK-NEXT:    s_movk_i32 s2, 0xf8
 ; CHECK-NEXT:    s_movk_i32 s3, 0xfc
 ; CHECK-NEXT:    s_movk_i32 s34, 0x100
-; CHECK-NEXT:    v_mov_b32_e32 v1, v0
 ; CHECK-NEXT:    s_movk_i32 s35, 0x104
 ; CHECK-NEXT:    s_movk_i32 s36, 0x108
 ; CHECK-NEXT:    s_movk_i32 s37, 0x110
@@ -29,6 +28,7 @@ define amdgpu_gfx [13 x i32] @issue130120() {
 ; CHECK-NEXT:    s_or_b32 s41, s32, 12
 ; CHECK-NEXT:    s_add_i32 s42, s32, 16
 ; CHECK-NEXT:    s_add_i32 s43, s32, 20
+; CHECK-NEXT:    v_mov_b32_e32 v1, v0
 ; CHECK-NEXT:    s_add_i32 s44, s32, 24
 ; CHECK-NEXT:    s_mov_b32 s46, 1
 ; CHECK-NEXT:    s_movk_i32 s45, 0x990

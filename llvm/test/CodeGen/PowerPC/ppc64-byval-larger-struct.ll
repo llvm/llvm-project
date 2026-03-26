@@ -677,8 +677,8 @@ define signext i8 @caller_14(ptr nocapture readonly byval([14 x i8]) %data) #0 {
 ; P8LE-NEXT:    sth r4, 60(r1)
 ; P8LE-NEXT:    addi r4, r1, 66
 ; P8LE-NEXT:    stdx r3, 0, r4
-; P8LE-NEXT:    mr r3, r4
 ; P8LE-NEXT:    stw r5, 74(r1)
+; P8LE-NEXT:    mr r3, r4
 ; P8LE-NEXT:    bl callee
 ; P8LE-NEXT:    nop
 ; P8LE-NEXT:    li r3, 0
@@ -914,8 +914,8 @@ define signext i8 @caller_16(ptr nocapture readonly byval([16 x i8]) %data) #0 {
 ; P8BE-NEXT:    addi r4, r1, 128
 ; P8BE-NEXT:    std r3, 192(r1)
 ; P8BE-NEXT:    std r3, 128(r1)
-; P8BE-NEXT:    mr r3, r4
 ; P8BE-NEXT:    stw r5, 136(r1)
+; P8BE-NEXT:    mr r3, r4
 ; P8BE-NEXT:    bl callee
 ; P8BE-NEXT:    nop
 ; P8BE-NEXT:    li r3, 0
@@ -934,8 +934,8 @@ define signext i8 @caller_16(ptr nocapture readonly byval([16 x i8]) %data) #0 {
 ; P9BE-NEXT:    addi r4, r1, 128
 ; P9BE-NEXT:    std r3, 192(r1)
 ; P9BE-NEXT:    std r3, 128(r1)
-; P9BE-NEXT:    mr r3, r4
 ; P9BE-NEXT:    stw r5, 136(r1)
+; P9BE-NEXT:    mr r3, r4
 ; P9BE-NEXT:    bl callee
 ; P9BE-NEXT:    nop
 ; P9BE-NEXT:    li r3, 0
@@ -954,8 +954,8 @@ define signext i8 @caller_16(ptr nocapture readonly byval([16 x i8]) %data) #0 {
 ; P10BE-NEXT:    rldicl r5, r4, 32, 32
 ; P10BE-NEXT:    addi r4, r1, 128
 ; P10BE-NEXT:    std r3, 128(r1)
-; P10BE-NEXT:    mr r3, r4
 ; P10BE-NEXT:    stw r5, 136(r1)
+; P10BE-NEXT:    mr r3, r4
 ; P10BE-NEXT:    bl callee
 ; P10BE-NEXT:    nop
 ; P10BE-NEXT:    li r3, 0
@@ -1086,8 +1086,8 @@ define signext i8 @caller_18(ptr nocapture readonly byval([18 x i8]) %data) #0 {
 ; P8BE-NEXT:    addi r4, r1, 126
 ; P8BE-NEXT:    std r3, 192(r1)
 ; P8BE-NEXT:    stdx r3, 0, r4
-; P8BE-NEXT:    mr r3, r4
 ; P8BE-NEXT:    stw r5, 134(r1)
+; P8BE-NEXT:    mr r3, r4
 ; P8BE-NEXT:    bl callee
 ; P8BE-NEXT:    nop
 ; P8BE-NEXT:    li r3, 0
@@ -1128,8 +1128,8 @@ define signext i8 @caller_18(ptr nocapture readonly byval([18 x i8]) %data) #0 {
 ; P10BE-NEXT:    rldicl r5, r4, 32, 32
 ; P10BE-NEXT:    addi r4, r1, 126
 ; P10BE-NEXT:    stdx r3, 0, r4
-; P10BE-NEXT:    mr r3, r4
 ; P10BE-NEXT:    stw r5, 134(r1)
+; P10BE-NEXT:    mr r3, r4
 ; P10BE-NEXT:    bl callee
 ; P10BE-NEXT:    nop
 ; P10BE-NEXT:    li r3, 0

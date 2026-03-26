@@ -16,8 +16,8 @@ define i32 @scanfile(i32 %call148, ptr %p) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    cmp w0, #1
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    b.ge LBB0_3
 ; CHECK-NEXT:  ; %bb.1: ; %entry

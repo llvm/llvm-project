@@ -142,18 +142,18 @@ define <4 x i16> @test_v4i16_v4i16_04(<4 x i16> %a, <4 x i16> %b) {
 define i1 @test1(ptr %add.ptr, ptr %result, <2 x i64> %hi, <2 x i64> %lo) {
 ; CHECK-LABEL: test1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q2, [x0]
-; CHECK-NEXT:    movi v3.16b, #1
+; CHECK-NEXT:    ldr q3, [x0]
+; CHECK-NEXT:    movi v2.16b, #1
 ; CHECK-NEXT:    mov w12, #1 // =0x1
-; CHECK-NEXT:    cmgt v0.2d, v2.2d, v0.2d
-; CHECK-NEXT:    cmgt v4.2d, v1.2d, v2.2d
-; CHECK-NEXT:    and v0.16b, v0.16b, v3.16b
-; CHECK-NEXT:    and v3.16b, v4.16b, v3.16b
+; CHECK-NEXT:    cmgt v0.2d, v3.2d, v0.2d
+; CHECK-NEXT:    cmgt v4.2d, v1.2d, v3.2d
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    and v2.16b, v4.16b, v2.16b
 ; CHECK-NEXT:    umov w8, v0.b[8]
-; CHECK-NEXT:    umov w9, v3.b[8]
+; CHECK-NEXT:    umov w9, v2.b[8]
 ; CHECK-NEXT:    umov w10, v0.b[0]
-; CHECK-NEXT:    umov w11, v3.b[0]
-; CHECK-NEXT:    sub v0.2d, v2.2d, v1.2d
+; CHECK-NEXT:    umov w11, v2.b[0]
+; CHECK-NEXT:    sub v0.2d, v3.2d, v1.2d
 ; CHECK-NEXT:    dup v1.2d, x12
 ; CHECK-NEXT:    orr w8, w8, w9
 ; CHECK-NEXT:    add v0.2d, v0.2d, v1.2d
@@ -193,11 +193,11 @@ define i1 @test2(ptr %add.ptr, ptr %result, <2 x i64> %hi, <2 x i64> %lo) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q2, [x0]
 ; CHECK-NEXT:    movi v3.16b, #1
-; CHECK-NEXT:    mov w9, #1 // =0x1
+; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    cmgt v0.2d, v2.2d, v0.2d
 ; CHECK-NEXT:    cmgt v4.2d, v1.2d, v2.2d
 ; CHECK-NEXT:    sub v1.2d, v2.2d, v1.2d
-; CHECK-NEXT:    dup v2.2d, x9
+; CHECK-NEXT:    dup v2.2d, x8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v3.16b
 ; CHECK-NEXT:    and v3.16b, v4.16b, v3.16b
 ; CHECK-NEXT:    mov b5, v0.b[8]
@@ -206,11 +206,11 @@ define i1 @test2(ptr %add.ptr, ptr %result, <2 x i64> %hi, <2 x i64> %lo) {
 ; CHECK-NEXT:    mov v0.b[4], v3.b[0]
 ; CHECK-NEXT:    add v3.2s, v5.2s, v5.2s
 ; CHECK-NEXT:    orr v0.8b, v3.8b, v0.8b
-; CHECK-NEXT:    mov w8, v0.s[1]
-; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov w9, v0.s[1]
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    add v0.2d, v1.2d, v2.2d
 ; CHECK-NEXT:    str q0, [x1]
-; CHECK-NEXT:    orr w8, w9, w8
+; CHECK-NEXT:    orr w8, w8, w9
 ; CHECK-NEXT:    tst w8, #0xff
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret

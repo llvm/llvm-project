@@ -13,8 +13,8 @@ define void @alloc_v4i8(ptr %st_ptr) nounwind {
 ; CHECK-NEXT:    str x30, [sp, #-32]! // 8-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x19, x0
-; CHECK-NEXT:    add x0, sp, #12
 ; CHECK-NEXT:    add x20, sp, #12
+; CHECK-NEXT:    add x0, sp, #12
 ; CHECK-NEXT:    bl def
 ; CHECK-NEXT:    ptrue p0.b, vl2
 ; CHECK-NEXT:    ld2b { z0.b, z1.b }, p0/z, [x20]
@@ -169,11 +169,11 @@ define void @alloc_v8f64(ptr %st_ptr) nounwind {
 ; CHECK-LABEL: alloc_v8f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #96
+; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x19, x0
-; CHECK-NEXT:    mov x0, sp
-; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Spill
 ; CHECK-NEXT:    mov x20, sp
+; CHECK-NEXT:    mov x0, sp
 ; CHECK-NEXT:    bl def
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    mov x8, #4 // =0x4

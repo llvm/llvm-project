@@ -4,10 +4,9 @@
 define  i32 @rndr(ptr %__addr) {
 ; CHECK-LABEL: rndr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mrs x10, RNDR
-; CHECK-NEXT:    mov x9, x0
+; CHECK-NEXT:    mrs x9, RNDR
 ; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    str x10, [x9]
+; CHECK-NEXT:    str x9, [x0]
 ; CHECK-NEXT:    mov w0, w8
 ; CHECK-NEXT:    ret
   %1 = tail call { i64, i1 } @llvm.aarch64.rndr()
@@ -22,10 +21,9 @@ define  i32 @rndr(ptr %__addr) {
 define  i32 @rndrrs(ptr  %__addr) {
 ; CHECK-LABEL: rndrrs:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mrs x10, RNDRRS
-; CHECK-NEXT:    mov x9, x0
+; CHECK-NEXT:    mrs x9, RNDRRS
 ; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    str x10, [x9]
+; CHECK-NEXT:    str x9, [x0]
 ; CHECK-NEXT:    mov w0, w8
 ; CHECK-NEXT:    ret
   %1 = tail call { i64, i1 } @llvm.aarch64.rndrrs()

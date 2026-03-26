@@ -59,17 +59,17 @@ define i32 @xe_migrate_copy(ptr %m, ptr %dst, ptr %tile, ptr %0, ptr %primary_gt
 ; CHECKBE-NEXT:    bc 12, 21, .LBB0_2
 ; CHECKBE-NEXT:  # %bb.1: # %while.body
 ; CHECKBE-NEXT:    crand 20, 20, 1
-; CHECKBE-NEXT:    li 8, 0
+; CHECKBE-NEXT:    li 4, 0
 ; CHECKBE-NEXT:    bc 4, 20, .LBB0_3
 ; CHECKBE-NEXT:  .LBB0_2: # %while.body
-; CHECKBE-NEXT:    li 8, 1
+; CHECKBE-NEXT:    li 4, 1
 ; CHECKBE-NEXT:  .LBB0_3: # %while.body
+; CHECKBE-NEXT:    stw 4, 8(1)
 ; CHECKBE-NEXT:    mr 4, 3
 ; CHECKBE-NEXT:    li 6, 0
 ; CHECKBE-NEXT:    li 7, 0
 ; CHECKBE-NEXT:    li 9, 0
 ; CHECKBE-NEXT:    li 10, 0
-; CHECKBE-NEXT:    stw 8, 8(1)
 ; CHECKBE-NEXT:    bl xe_migrate_ccs_copy
 ; CHECKBE-NEXT:    lwz 0, 36(1)
 ; CHECKBE-NEXT:    addi 1, 1, 32

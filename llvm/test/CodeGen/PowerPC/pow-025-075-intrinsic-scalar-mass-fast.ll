@@ -61,10 +61,10 @@ define double @llvmintr_pow_f64_fast025(double %a) #1 {
 ; CHECK-LNX-LABEL: llvmintr_pow_f64_fast025:
 ; CHECK-LNX:       # %bb.0: # %entry
 ; CHECK-LNX-NEXT:    xstsqrtdp 0, 1
-; CHECK-LNX-NEXT:    vspltisw 2, -3
 ; CHECK-LNX-NEXT:    addis 3, 2, .LCPI1_0@toc@ha
-; CHECK-LNX-NEXT:    xvcvsxwdp 2, 34
+; CHECK-LNX-NEXT:    vspltisw 2, -3
 ; CHECK-LNX-NEXT:    lfs 0, .LCPI1_0@toc@l(3)
+; CHECK-LNX-NEXT:    xvcvsxwdp 2, 34
 ; CHECK-LNX-NEXT:    bc 12, 2, .LBB1_3
 ; CHECK-LNX-NEXT:  # %bb.1: # %entry
 ; CHECK-LNX-NEXT:    xsrsqrtedp 3, 1
@@ -176,10 +176,10 @@ define double @llvmintr_pow_f64_fast075(double %a) #1 {
 ; CHECK-LNX-LABEL: llvmintr_pow_f64_fast075:
 ; CHECK-LNX:       # %bb.0: # %entry
 ; CHECK-LNX-NEXT:    xstsqrtdp 0, 1
-; CHECK-LNX-NEXT:    vspltisw 2, -3
 ; CHECK-LNX-NEXT:    addis 3, 2, .LCPI3_0@toc@ha
-; CHECK-LNX-NEXT:    xvcvsxwdp 2, 34
+; CHECK-LNX-NEXT:    vspltisw 2, -3
 ; CHECK-LNX-NEXT:    lfs 0, .LCPI3_0@toc@l(3)
+; CHECK-LNX-NEXT:    xvcvsxwdp 2, 34
 ; CHECK-LNX-NEXT:    bc 12, 2, .LBB3_3
 ; CHECK-LNX-NEXT:  # %bb.1: # %entry
 ; CHECK-LNX-NEXT:    xsrsqrtedp 3, 1

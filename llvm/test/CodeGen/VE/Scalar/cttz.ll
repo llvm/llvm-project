@@ -11,14 +11,14 @@ define i128 @func128(i128 %p) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea %s2, -1(, %s0)
 ; CHECK-NEXT:    nnd %s2, %s0, %s2
-; CHECK-NEXT:    pcnt %s3, %s2
-; CHECK-NEXT:    lea %s2, -1(, %s1)
-; CHECK-NEXT:    nnd %s1, %s1, %s2
+; CHECK-NEXT:    pcnt %s2, %s2
+; CHECK-NEXT:    lea %s3, -1(, %s1)
+; CHECK-NEXT:    nnd %s1, %s1, %s3
 ; CHECK-NEXT:    pcnt %s1, %s1
-; CHECK-NEXT:    lea %s2, 64(, %s1)
-; CHECK-NEXT:    cmov.l.ne %s2, %s3, %s0
+; CHECK-NEXT:    lea %s1, 64(, %s1)
+; CHECK-NEXT:    cmov.l.ne %s1, %s2, %s0
+; CHECK-NEXT:    or %s0, 0, %s1
 ; CHECK-NEXT:    or %s1, 0, (0)1
-; CHECK-NEXT:    or %s0, 0, %s2
 ; CHECK-NEXT:    b.l.t (, %s10)
   %r = tail call i128 @llvm.cttz.i128(i128 %p, i1 true)
   ret i128 %r

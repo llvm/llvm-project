@@ -445,18 +445,18 @@ define arm_aapcs_vfpcc void @ssatmul_4t_q31(ptr nocapture readonly %pSrcA, ptr n
 ; CHECK-NEXT:    bic r6, r6, #3
 ; CHECK-NEXT:    adr r4, .LCPI2_1
 ; CHECK-NEXT:    subs r6, #4
-; CHECK-NEXT:    vldrw.u32 q2, [r4]
 ; CHECK-NEXT:    mov.w r9, #0
 ; CHECK-NEXT:    mov.w r12, #-1
+; CHECK-NEXT:    vldrw.u32 q2, [r4]
 ; CHECK-NEXT:    add.w lr, r5, r6, lsr #2
 ; CHECK-NEXT:    adr r5, .LCPI2_0
 ; CHECK-NEXT:    vldrw.u32 q0, [r5]
-; CHECK-NEXT:    adr r5, .LCPI2_2
 ; CHECK-NEXT:    subs r6, r3, #1
-; CHECK-NEXT:    vldrw.u32 q3, [r5]
+; CHECK-NEXT:    adr r5, .LCPI2_2
+; CHECK-NEXT:    vstrw.32 q0, [sp] @ 16-byte Spill
 ; CHECK-NEXT:    vdup.32 q1, r6
 ; CHECK-NEXT:    mvn r8, #-2147483648
-; CHECK-NEXT:    vstrw.32 q0, [sp] @ 16-byte Spill
+; CHECK-NEXT:    vldrw.u32 q3, [r5]
 ; CHECK-NEXT:  .LBB2_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [sp] @ 16-byte Reload
@@ -1423,12 +1423,12 @@ define arm_aapcs_vfpcc void @ssatmul_8t_q15(ptr nocapture readonly %pSrcA, ptr n
 ; CHECK-NEXT:    mov r5, sp
 ; CHECK-NEXT:    add.w lr, r4, r12, lsr #3
 ; CHECK-NEXT:    adr r4, .LCPI9_0
+; CHECK-NEXT:    sub.w r12, r3, #1
 ; CHECK-NEXT:    vldrw.u32 q0, [r4]
 ; CHECK-NEXT:    adr r4, .LCPI9_1
-; CHECK-NEXT:    sub.w r12, r3, #1
-; CHECK-NEXT:    vldrw.u32 q4, [r4]
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    vdup.32 q1, r12
+; CHECK-NEXT:    vldrw.u32 q4, [r4]
 ; CHECK-NEXT:  .LBB9_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vdup.32 q5, r3
@@ -1530,12 +1530,12 @@ define arm_aapcs_vfpcc void @ssatmul_8ti_q15(ptr nocapture readonly %pSrcA, ptr 
 ; CHECK-NEXT:    mov r5, sp
 ; CHECK-NEXT:    add.w lr, r4, r12, lsr #3
 ; CHECK-NEXT:    adr r4, .LCPI10_0
+; CHECK-NEXT:    sub.w r12, r3, #1
 ; CHECK-NEXT:    vldrw.u32 q0, [r4]
 ; CHECK-NEXT:    adr r4, .LCPI10_1
-; CHECK-NEXT:    sub.w r12, r3, #1
-; CHECK-NEXT:    vldrw.u32 q4, [r4]
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    vdup.32 q1, r12
+; CHECK-NEXT:    vldrw.u32 q4, [r4]
 ; CHECK-NEXT:  .LBB10_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vdup.32 q5, r3
@@ -2413,12 +2413,12 @@ define arm_aapcs_vfpcc void @ssatmul_8t_q7(ptr nocapture readonly %pSrcA, ptr no
 ; CHECK-NEXT:    mov r5, sp
 ; CHECK-NEXT:    add.w lr, r4, r12, lsr #3
 ; CHECK-NEXT:    adr r4, .LCPI17_0
+; CHECK-NEXT:    sub.w r12, r3, #1
 ; CHECK-NEXT:    vldrw.u32 q0, [r4]
 ; CHECK-NEXT:    adr r4, .LCPI17_1
-; CHECK-NEXT:    sub.w r12, r3, #1
-; CHECK-NEXT:    vldrw.u32 q4, [r4]
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    vdup.32 q1, r12
+; CHECK-NEXT:    vldrw.u32 q4, [r4]
 ; CHECK-NEXT:  .LBB17_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vdup.32 q5, r3
@@ -2512,10 +2512,10 @@ define arm_aapcs_vfpcc void @ssatmul_16t_q7(ptr nocapture readonly %pSrcA, ptr n
 ; CHECK-NEXT:    add.w r6, r3, #15
 ; CHECK-NEXT:    movs r5, #1
 ; CHECK-NEXT:    bic r6, r6, #15
-; CHECK-NEXT:    add r4, sp, #48
-; CHECK-NEXT:    subs r6, #16
 ; CHECK-NEXT:    vmov.i8 q2, #0x0
+; CHECK-NEXT:    subs r6, #16
 ; CHECK-NEXT:    vmov.i8 q3, #0xff
+; CHECK-NEXT:    add r4, sp, #48
 ; CHECK-NEXT:    add.w lr, r5, r6, lsr #4
 ; CHECK-NEXT:    adr r5, .LCPI18_0
 ; CHECK-NEXT:    subs r6, r3, #1
@@ -2528,10 +2528,10 @@ define arm_aapcs_vfpcc void @ssatmul_16t_q7(ptr nocapture readonly %pSrcA, ptr n
 ; CHECK-NEXT:    vldrw.u32 q5, [r6]
 ; CHECK-NEXT:    adr r6, .LCPI18_3
 ; CHECK-NEXT:    vldrw.u32 q6, [r6]
-; CHECK-NEXT:    add r5, sp, #32
-; CHECK-NEXT:    add r6, sp, #64
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    vstrw.32 q0, [sp] @ 16-byte Spill
+; CHECK-NEXT:    add r5, sp, #32
+; CHECK-NEXT:    add r6, sp, #64
 ; CHECK-NEXT:  .LBB18_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [sp, #16] @ 16-byte Reload
@@ -2655,10 +2655,10 @@ define arm_aapcs_vfpcc void @ssatmul_16ti_q7(ptr nocapture readonly %pSrcA, ptr 
 ; CHECK-NEXT:    add.w r6, r3, #15
 ; CHECK-NEXT:    movs r5, #1
 ; CHECK-NEXT:    bic r6, r6, #15
-; CHECK-NEXT:    add r4, sp, #48
-; CHECK-NEXT:    subs r6, #16
 ; CHECK-NEXT:    vmov.i8 q2, #0x0
+; CHECK-NEXT:    subs r6, #16
 ; CHECK-NEXT:    vmov.i8 q3, #0xff
+; CHECK-NEXT:    add r4, sp, #48
 ; CHECK-NEXT:    add.w lr, r5, r6, lsr #4
 ; CHECK-NEXT:    adr r5, .LCPI19_0
 ; CHECK-NEXT:    subs r6, r3, #1
@@ -2671,10 +2671,10 @@ define arm_aapcs_vfpcc void @ssatmul_16ti_q7(ptr nocapture readonly %pSrcA, ptr 
 ; CHECK-NEXT:    vldrw.u32 q5, [r6]
 ; CHECK-NEXT:    adr r6, .LCPI19_3
 ; CHECK-NEXT:    vldrw.u32 q6, [r6]
-; CHECK-NEXT:    add r5, sp, #32
-; CHECK-NEXT:    add r6, sp, #64
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    vstrw.32 q0, [sp] @ 16-byte Spill
+; CHECK-NEXT:    add r5, sp, #32
+; CHECK-NEXT:    add r6, sp, #64
 ; CHECK-NEXT:  .LBB19_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [sp, #16] @ 16-byte Reload

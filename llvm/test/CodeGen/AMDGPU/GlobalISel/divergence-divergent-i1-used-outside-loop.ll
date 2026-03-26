@@ -359,8 +359,8 @@ define void @divergent_i1_icmp_used_outside_loop(i32 %v0, i32 %v1, ptr addrspace
 ; GFX10-NEXT:  .LBB5_2: ; %cond.block.0
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, s4, v0
-; GFX10-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX10-NEXT:    s_andn2_b32 s5, s7, exec_lo
+; GFX10-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX10-NEXT:    s_and_b32 s7, exec_lo, vcc_lo
 ; GFX10-NEXT:    s_or_b32 s7, s5, s7
 ; GFX10-NEXT:    s_and_saveexec_b32 s8, vcc_lo

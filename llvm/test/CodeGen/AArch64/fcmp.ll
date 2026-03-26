@@ -445,8 +445,8 @@ define <2 x fp128> @v2f128_fp128(<2 x fp128> %a, <2 x fp128> %b, <2 x fp128> %d,
 ; CHECK-SD-NEXT:  .LBB12_2: // %entry
 ; CHECK-SD-NEXT:    ldp q0, q1, [sp, #32] // 32-byte Folded Reload
 ; CHECK-SD-NEXT:    bl __lttf2
-; CHECK-SD-NEXT:    ldr q1, [sp, #64] // 16-byte Reload
 ; CHECK-SD-NEXT:    cmp w0, #0
+; CHECK-SD-NEXT:    ldr q1, [sp, #64] // 16-byte Reload
 ; CHECK-SD-NEXT:    b.pl .LBB12_4
 ; CHECK-SD-NEXT:  // %bb.3: // %entry
 ; CHECK-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
@@ -613,11 +613,11 @@ define <2 x double> @v2f128_double(<2 x fp128> %a, <2 x fp128> %b, <2 x double> 
 ; CHECK-SD-NEXT:    str x30, [sp, #80] // 8-byte Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 96
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    stp q4, q5, [sp, #48] // 32-byte Folded Spill
+; CHECK-SD-NEXT:    str q2, [sp, #32] // 16-byte Spill
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-SD-NEXT:    mov v0.16b, v1.16b
 ; CHECK-SD-NEXT:    mov v1.16b, v3.16b
-; CHECK-SD-NEXT:    stp q4, q5, [sp, #48] // 32-byte Folded Spill
-; CHECK-SD-NEXT:    str q2, [sp, #32] // 16-byte Spill
 ; CHECK-SD-NEXT:    bl __lttf2
 ; CHECK-SD-NEXT:    cmp w0, #0
 ; CHECK-SD-NEXT:    ldr q1, [sp, #32] // 16-byte Reload
@@ -685,11 +685,11 @@ define <3 x double> @v3f128_double(<3 x fp128> %a, <3 x fp128> %b, <3 x double> 
 ; CHECK-SD-NEXT:    str q3, [sp, #64] // 16-byte Spill
 ; CHECK-SD-NEXT:    ldp d3, d2, [sp, #168]
 ; CHECK-SD-NEXT:    mov v6.d[1], v7.d[0]
+; CHECK-SD-NEXT:    str q5, [sp, #96] // 16-byte Spill
+; CHECK-SD-NEXT:    ldr d5, [sp, #160]
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-SD-NEXT:    mov v0.16b, v1.16b
 ; CHECK-SD-NEXT:    mov v1.16b, v4.16b
-; CHECK-SD-NEXT:    str q5, [sp, #96] // 16-byte Spill
-; CHECK-SD-NEXT:    ldr d5, [sp, #160]
 ; CHECK-SD-NEXT:    mov v3.d[1], v2.d[0]
 ; CHECK-SD-NEXT:    str q5, [sp, #80] // 16-byte Spill
 ; CHECK-SD-NEXT:    stp q6, q3, [sp, #32] // 32-byte Folded Spill
@@ -740,14 +740,14 @@ define <3 x double> @v3f128_double(<3 x fp128> %a, <3 x fp128> %b, <3 x double> 
 ; CHECK-GI-NEXT:    .cfi_offset w21, -24
 ; CHECK-GI-NEXT:    .cfi_offset w22, -32
 ; CHECK-GI-NEXT:    .cfi_offset w30, -48
-; CHECK-GI-NEXT:    stp q4, q1, [sp] // 32-byte Folded Spill
-; CHECK-GI-NEXT:    mov v1.16b, v3.16b
 ; CHECK-GI-NEXT:    ldr x19, [sp, #176]
-; CHECK-GI-NEXT:    stp q5, q2, [sp, #32] // 32-byte Folded Spill
-; CHECK-GI-NEXT:    ldr d2, [sp, #184]
 ; CHECK-GI-NEXT:    ldr x20, [sp, #200]
 ; CHECK-GI-NEXT:    // kill: def $d6 killed $d6 def $q6
 ; CHECK-GI-NEXT:    // kill: def $d7 killed $d7 def $q7
+; CHECK-GI-NEXT:    stp q4, q1, [sp] // 32-byte Folded Spill
+; CHECK-GI-NEXT:    stp q5, q2, [sp, #32] // 32-byte Folded Spill
+; CHECK-GI-NEXT:    mov v1.16b, v3.16b
+; CHECK-GI-NEXT:    ldr d2, [sp, #184]
 ; CHECK-GI-NEXT:    str q7, [sp, #64] // 16-byte Spill
 ; CHECK-GI-NEXT:    str q2, [sp, #112] // 16-byte Spill
 ; CHECK-GI-NEXT:    ldr d2, [sp, #192]

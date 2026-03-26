@@ -988,8 +988,8 @@ define i32 @test_signed_f128_i32(fp128 %f) {
 ; CHECK-GI-NEXT:    mov v0.d[0], x19
 ; CHECK-GI-NEXT:    csel x20, x8, x9, gt
 ; CHECK-GI-NEXT:    adrp x8, .LCPI30_0
-; CHECK-GI-NEXT:    mov v0.d[1], x20
 ; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI30_0]
+; CHECK-GI-NEXT:    mov v0.d[1], x20
 ; CHECK-GI-NEXT:    bl __lttf2
 ; CHECK-GI-NEXT:    cmp w0, #0
 ; CHECK-GI-NEXT:    csel x8, x19, xzr, mi

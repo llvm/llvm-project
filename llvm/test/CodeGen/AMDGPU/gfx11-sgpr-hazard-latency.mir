@@ -13,10 +13,6 @@ body:             |
   ; GFX11-NEXT:   successors: %bb.1(0x80000000)
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-  ; GFX11-NEXT:   renamable $vgpr1 = V_MOV_B32_e32 0, implicit $exec
-  ; GFX11-NEXT:   renamable $vgpr2 = V_MOV_B32_e32 0, implicit $exec
-  ; GFX11-NEXT:   renamable $vgpr3 = V_MOV_B32_e32 0, implicit $exec
-  ; GFX11-NEXT:   renamable $vgpr4 = V_MOV_B32_e32 0, implicit $exec
   ; GFX11-NEXT:   renamable $sgpr8 = S_MOV_B32 0
   ; GFX11-NEXT:   renamable $sgpr9 = S_MOV_B32 0
   ; GFX11-NEXT:   renamable $sgpr10 = S_MOV_B32 0
@@ -24,6 +20,10 @@ body:             |
   ; GFX11-NEXT:   renamable $sgpr12 = S_MOV_B32 0
   ; GFX11-NEXT:   renamable $sgpr13 = S_MOV_B32 0
   ; GFX11-NEXT:   renamable $sgpr14 = S_MOV_B32 0
+  ; GFX11-NEXT:   renamable $vgpr1 = V_MOV_B32_e32 0, implicit $exec
+  ; GFX11-NEXT:   renamable $vgpr2 = V_MOV_B32_e32 0, implicit $exec
+  ; GFX11-NEXT:   renamable $vgpr3 = V_MOV_B32_e32 0, implicit $exec
+  ; GFX11-NEXT:   renamable $vgpr4 = V_MOV_B32_e32 0, implicit $exec
   ; GFX11-NEXT:   renamable $sgpr15 = S_MOV_B32 0
   ; GFX11-NEXT:   renamable $sgpr16 = S_MOV_B32 0
   ; GFX11-NEXT:   renamable $sgpr17 = S_MOV_B32 0

@@ -353,9 +353,9 @@ define void @test_trunc32(float %in, ptr %addr) nounwind {
 ; SOFT-NEXT:    mflr r0
 ; SOFT-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; SOFT-NEXT:    stdu r1, -48(r1)
-; SOFT-NEXT:    clrldi r3, r3, 32
 ; SOFT-NEXT:    std r0, 64(r1)
 ; SOFT-NEXT:    mr r30, r4
+; SOFT-NEXT:    clrldi r3, r3, 32
 ; SOFT-NEXT:    bl __truncsfhf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    sth r3, 0(r30)
@@ -843,19 +843,19 @@ define <4 x float> @test_extend32_vec4(ptr %p) nounwind {
 ; PPC32-NEXT:    stw r0, 52(r1)
 ; PPC32-NEXT:    stw r30, 16(r1) # 4-byte Folded Spill
 ; PPC32-NEXT:    mr r30, r3
-; PPC32-NEXT:    lhz r3, 0(r3)
 ; PPC32-NEXT:    stfd f29, 24(r1) # 8-byte Folded Spill
 ; PPC32-NEXT:    stfd f30, 32(r1) # 8-byte Folded Spill
 ; PPC32-NEXT:    stfd f31, 40(r1) # 8-byte Folded Spill
+; PPC32-NEXT:    lhz r3, 0(r3)
 ; PPC32-NEXT:    bl __extendhfsf2
-; PPC32-NEXT:    lhz r3, 2(r30)
 ; PPC32-NEXT:    fmr f31, f1
+; PPC32-NEXT:    lhz r3, 2(r30)
 ; PPC32-NEXT:    bl __extendhfsf2
-; PPC32-NEXT:    lhz r3, 4(r30)
 ; PPC32-NEXT:    fmr f30, f1
+; PPC32-NEXT:    lhz r3, 4(r30)
 ; PPC32-NEXT:    bl __extendhfsf2
-; PPC32-NEXT:    lhz r3, 6(r30)
 ; PPC32-NEXT:    fmr f29, f1
+; PPC32-NEXT:    lhz r3, 6(r30)
 ; PPC32-NEXT:    bl __extendhfsf2
 ; PPC32-NEXT:    fmr f4, f1
 ; PPC32-NEXT:    fmr f1, f31
@@ -900,10 +900,10 @@ define <4 x float> @test_extend32_vec4(ptr %p) nounwind {
 ; P8-NEXT:    clrlwi r3, r3, 16
 ; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
-; P8-NEXT:    rldicl r3, r30, 48, 48
 ; P8-NEXT:    xxmrghd vs0, vs1, vs63
-; P8-NEXT:    clrlwi r3, r3, 16
+; P8-NEXT:    rldicl r3, r30, 48, 48
 ; P8-NEXT:    xvcvdpsp vs62, vs0
+; P8-NEXT:    clrlwi r3, r3, 16
 ; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    rldicl r3, r29, 48, 48
@@ -1016,16 +1016,16 @@ define <4 x float> @test_extend32_vec4(ptr %p) nounwind {
 ; BE-NEXT:    lhz r3, 130(r1)
 ; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
-; BE-NEXT:    lhz r3, 128(r1)
 ; BE-NEXT:    stfs f1, 156(r1)
+; BE-NEXT:    lhz r3, 128(r1)
 ; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
-; BE-NEXT:    lhz r3, 114(r1)
 ; BE-NEXT:    stfs f1, 152(r1)
+; BE-NEXT:    lhz r3, 114(r1)
 ; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
-; BE-NEXT:    lhz r3, 112(r1)
 ; BE-NEXT:    stfs f1, 148(r1)
+; BE-NEXT:    lhz r3, 112(r1)
 ; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    stfs f1, 144(r1)
@@ -1047,19 +1047,19 @@ define <4 x double> @test_extend64_vec4(ptr %p) nounwind {
 ; PPC32-NEXT:    stw r0, 52(r1)
 ; PPC32-NEXT:    stw r30, 16(r1) # 4-byte Folded Spill
 ; PPC32-NEXT:    mr r30, r3
-; PPC32-NEXT:    lhz r3, 0(r3)
 ; PPC32-NEXT:    stfd f29, 24(r1) # 8-byte Folded Spill
 ; PPC32-NEXT:    stfd f30, 32(r1) # 8-byte Folded Spill
 ; PPC32-NEXT:    stfd f31, 40(r1) # 8-byte Folded Spill
+; PPC32-NEXT:    lhz r3, 0(r3)
 ; PPC32-NEXT:    bl __extendhfsf2
-; PPC32-NEXT:    lhz r3, 2(r30)
 ; PPC32-NEXT:    fmr f31, f1
+; PPC32-NEXT:    lhz r3, 2(r30)
 ; PPC32-NEXT:    bl __extendhfsf2
-; PPC32-NEXT:    lhz r3, 4(r30)
 ; PPC32-NEXT:    fmr f30, f1
+; PPC32-NEXT:    lhz r3, 4(r30)
 ; PPC32-NEXT:    bl __extendhfsf2
-; PPC32-NEXT:    lhz r3, 6(r30)
 ; PPC32-NEXT:    fmr f29, f1
+; PPC32-NEXT:    lhz r3, 6(r30)
 ; PPC32-NEXT:    bl __extendhfsf2
 ; PPC32-NEXT:    fmr f4, f1
 ; PPC32-NEXT:    fmr f1, f31
@@ -1078,30 +1078,30 @@ define <4 x double> @test_extend64_vec4(ptr %p) nounwind {
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
 ; P8-NEXT:    stdu r1, -112(r1)
-; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    li r4, 48
+; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    std r28, 80(r1) # 8-byte Folded Spill
 ; P8-NEXT:    lhz r28, 2(r3)
 ; P8-NEXT:    std r29, 88(r1) # 8-byte Folded Spill
 ; P8-NEXT:    std r30, 96(r1) # 8-byte Folded Spill
 ; P8-NEXT:    lhz r30, 6(r3)
 ; P8-NEXT:    lhz r29, 4(r3)
-; P8-NEXT:    lhz r3, 0(r3)
 ; P8-NEXT:    stxvd2x vs62, r1, r4 # 16-byte Folded Spill
 ; P8-NEXT:    li r4, 64
+; P8-NEXT:    lhz r3, 0(r3)
 ; P8-NEXT:    stxvd2x vs63, r1, r4 # 16-byte Folded Spill
 ; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
-; P8-NEXT:    mr r3, r28
 ; P8-NEXT:    xxlor vs63, f1, f1
+; P8-NEXT:    mr r3, r28
 ; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
-; P8-NEXT:    mr r3, r29
 ; P8-NEXT:    xxmrghd vs63, vs1, vs63
+; P8-NEXT:    mr r3, r29
 ; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
-; P8-NEXT:    mr r3, r30
 ; P8-NEXT:    xxlor vs62, f1, f1
+; P8-NEXT:    mr r3, r30
 ; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    li r3, 64
@@ -1190,25 +1190,25 @@ define <4 x double> @test_extend64_vec4(ptr %p) nounwind {
 ; BE-NEXT:    std r28, 120(r1) # 8-byte Folded Spill
 ; BE-NEXT:    std r29, 128(r1) # 8-byte Folded Spill
 ; BE-NEXT:    std r30, 136(r1) # 8-byte Folded Spill
+; BE-NEXT:    stfd f29, 152(r1) # 8-byte Folded Spill
+; BE-NEXT:    stfd f30, 160(r1) # 8-byte Folded Spill
+; BE-NEXT:    stfd f31, 168(r1) # 8-byte Folded Spill
 ; BE-NEXT:    lhz r30, 6(r3)
 ; BE-NEXT:    lhz r29, 4(r3)
 ; BE-NEXT:    lhz r28, 2(r3)
 ; BE-NEXT:    lhz r3, 0(r3)
-; BE-NEXT:    stfd f29, 152(r1) # 8-byte Folded Spill
-; BE-NEXT:    stfd f30, 160(r1) # 8-byte Folded Spill
-; BE-NEXT:    stfd f31, 168(r1) # 8-byte Folded Spill
 ; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
-; BE-NEXT:    mr r3, r28
 ; BE-NEXT:    fmr f31, f1
+; BE-NEXT:    mr r3, r28
 ; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
-; BE-NEXT:    mr r3, r29
 ; BE-NEXT:    fmr f30, f1
+; BE-NEXT:    mr r3, r29
 ; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
-; BE-NEXT:    mr r3, r30
 ; BE-NEXT:    fmr f29, f1
+; BE-NEXT:    mr r3, r30
 ; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    fmr f4, f1
@@ -1247,14 +1247,14 @@ define void @test_trunc32_vec4(<4 x float> %a, ptr %p) nounwind {
 ; PPC32-NEXT:    stfd f31, 56(r1) # 8-byte Folded Spill
 ; PPC32-NEXT:    fmr f31, f4
 ; PPC32-NEXT:    bl __truncsfhf2
-; PPC32-NEXT:    fmr f1, f29
 ; PPC32-NEXT:    mr r29, r3
+; PPC32-NEXT:    fmr f1, f29
 ; PPC32-NEXT:    bl __truncsfhf2
-; PPC32-NEXT:    fmr f1, f30
 ; PPC32-NEXT:    mr r28, r3
+; PPC32-NEXT:    fmr f1, f30
 ; PPC32-NEXT:    bl __truncsfhf2
-; PPC32-NEXT:    fmr f1, f31
 ; PPC32-NEXT:    mr r27, r3
+; PPC32-NEXT:    fmr f1, f31
 ; PPC32-NEXT:    bl __truncsfhf2
 ; PPC32-NEXT:    sth r27, 4(r30)
 ; PPC32-NEXT:    sth r28, 2(r30)
@@ -1276,8 +1276,8 @@ define void @test_trunc32_vec4(<4 x float> %a, ptr %p) nounwind {
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
 ; P8-NEXT:    stdu r1, -112(r1)
-; P8-NEXT:    xxsldwi vs0, vs34, vs34, 3
 ; P8-NEXT:    li r3, 48
+; P8-NEXT:    xxsldwi vs0, vs34, vs34, 3
 ; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    std r27, 72(r1) # 8-byte Folded Spill
 ; P8-NEXT:    std r28, 80(r1) # 8-byte Folded Spill
@@ -1299,8 +1299,8 @@ define void @test_trunc32_vec4(<4 x float> %a, ptr %p) nounwind {
 ; P8-NEXT:    xscvspdpn f1, vs0
 ; P8-NEXT:    bl __truncsfhf2
 ; P8-NEXT:    nop
-; P8-NEXT:    xscvspdpn f1, vs63
 ; P8-NEXT:    mr r27, r3
+; P8-NEXT:    xscvspdpn f1, vs63
 ; P8-NEXT:    bl __truncsfhf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    sth r3, 6(r30)
@@ -1350,12 +1350,12 @@ define void @test_trunc32_vec4(<4 x float> %a, ptr %p) nounwind {
 ; SOFT-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; SOFT-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; SOFT-NEXT:    stdu r1, -80(r1)
-; SOFT-NEXT:    clrldi r3, r3, 32
 ; SOFT-NEXT:    std r0, 96(r1)
 ; SOFT-NEXT:    mr r30, r7
 ; SOFT-NEXT:    mr r29, r6
 ; SOFT-NEXT:    mr r28, r5
 ; SOFT-NEXT:    mr r27, r4
+; SOFT-NEXT:    clrldi r3, r3, 32
 ; SOFT-NEXT:    bl __truncsfhf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    mr r26, r3
@@ -1399,16 +1399,16 @@ define void @test_trunc32_vec4(<4 x float> %a, ptr %p) nounwind {
 ; BE-NEXT:    lfs f1, 112(r1)
 ; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
-; BE-NEXT:    lfs f1, 116(r1)
 ; BE-NEXT:    mr r29, r3
+; BE-NEXT:    lfs f1, 116(r1)
 ; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
-; BE-NEXT:    lfs f1, 120(r1)
 ; BE-NEXT:    mr r28, r3
+; BE-NEXT:    lfs f1, 120(r1)
 ; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
-; BE-NEXT:    lfs f1, 124(r1)
 ; BE-NEXT:    mr r27, r3
+; BE-NEXT:    lfs f1, 124(r1)
 ; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    sth r27, 4(r30)
@@ -1445,14 +1445,14 @@ define void @test_trunc64_vec4(<4 x double> %a, ptr %p) nounwind {
 ; PPC32-NEXT:    stfd f31, 56(r1) # 8-byte Folded Spill
 ; PPC32-NEXT:    fmr f31, f4
 ; PPC32-NEXT:    bl __truncdfhf2
-; PPC32-NEXT:    fmr f1, f29
 ; PPC32-NEXT:    mr r29, r3
+; PPC32-NEXT:    fmr f1, f29
 ; PPC32-NEXT:    bl __truncdfhf2
-; PPC32-NEXT:    fmr f1, f30
 ; PPC32-NEXT:    mr r28, r3
+; PPC32-NEXT:    fmr f1, f30
 ; PPC32-NEXT:    bl __truncdfhf2
-; PPC32-NEXT:    fmr f1, f31
 ; PPC32-NEXT:    mr r27, r3
+; PPC32-NEXT:    fmr f1, f31
 ; PPC32-NEXT:    bl __truncdfhf2
 ; PPC32-NEXT:    sth r27, 4(r30)
 ; PPC32-NEXT:    sth r28, 2(r30)
@@ -1476,8 +1476,8 @@ define void @test_trunc64_vec4(<4 x double> %a, ptr %p) nounwind {
 ; P8-NEXT:    stdu r1, -128(r1)
 ; P8-NEXT:    li r3, 48
 ; P8-NEXT:    std r0, 144(r1)
-; P8-NEXT:    xxswapd vs1, vs34
 ; P8-NEXT:    std r27, 88(r1) # 8-byte Folded Spill
+; P8-NEXT:    xxswapd vs1, vs34
 ; P8-NEXT:    std r28, 96(r1) # 8-byte Folded Spill
 ; P8-NEXT:    std r29, 104(r1) # 8-byte Folded Spill
 ; P8-NEXT:    std r30, 112(r1) # 8-byte Folded Spill
@@ -1489,16 +1489,16 @@ define void @test_trunc64_vec4(<4 x double> %a, ptr %p) nounwind {
 ; P8-NEXT:    vmr v31, v3
 ; P8-NEXT:    bl __truncdfhf2
 ; P8-NEXT:    nop
-; P8-NEXT:    xxswapd vs1, vs63
 ; P8-NEXT:    mr r29, r3
+; P8-NEXT:    xxswapd vs1, vs63
 ; P8-NEXT:    bl __truncdfhf2
 ; P8-NEXT:    nop
-; P8-NEXT:    xxlor f1, vs62, vs62
 ; P8-NEXT:    mr r28, r3
+; P8-NEXT:    xxlor f1, vs62, vs62
 ; P8-NEXT:    bl __truncdfhf2
 ; P8-NEXT:    nop
-; P8-NEXT:    xxlor f1, vs63, vs63
 ; P8-NEXT:    mr r27, r3
+; P8-NEXT:    xxlor f1, vs63, vs63
 ; P8-NEXT:    bl __truncdfhf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    sth r3, 6(r30)
@@ -1596,16 +1596,16 @@ define void @test_trunc64_vec4(<4 x double> %a, ptr %p) nounwind {
 ; BE-NEXT:    fmr f31, f4
 ; BE-NEXT:    bl __truncdfhf2
 ; BE-NEXT:    nop
-; BE-NEXT:    fmr f1, f29
 ; BE-NEXT:    mr r29, r3
+; BE-NEXT:    fmr f1, f29
 ; BE-NEXT:    bl __truncdfhf2
 ; BE-NEXT:    nop
-; BE-NEXT:    fmr f1, f30
 ; BE-NEXT:    mr r28, r3
+; BE-NEXT:    fmr f1, f30
 ; BE-NEXT:    bl __truncdfhf2
 ; BE-NEXT:    nop
-; BE-NEXT:    fmr f1, f31
 ; BE-NEXT:    mr r27, r3
+; BE-NEXT:    fmr f1, f31
 ; BE-NEXT:    bl __truncdfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    sth r27, 4(r30)
@@ -1648,8 +1648,8 @@ define float @test_sitofp_fadd_i32(i32 %a, ptr %b) nounwind {
 ; PPC32-NEXT:    bl __truncsfhf2
 ; PPC32-NEXT:    clrlwi r3, r3, 16
 ; PPC32-NEXT:    bl __extendhfsf2
-; PPC32-NEXT:    mr r3, r30
 ; PPC32-NEXT:    fmr f31, f1
+; PPC32-NEXT:    mr r3, r30
 ; PPC32-NEXT:    bl __extendhfsf2
 ; PPC32-NEXT:    fadds f1, f1, f31
 ; PPC32-NEXT:    bl __truncsfhf2
@@ -1677,8 +1677,8 @@ define float @test_sitofp_fadd_i32(i32 %a, ptr %b) nounwind {
 ; P8-NEXT:    clrldi r3, r3, 48
 ; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
-; P8-NEXT:    mr r3, r30
 ; P8-NEXT:    fmr f31, f1
+; P8-NEXT:    mr r3, r30
 ; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    xsaddsp f1, f1, f31
@@ -1720,9 +1720,9 @@ define float @test_sitofp_fadd_i32(i32 %a, ptr %b) nounwind {
 ; SOFT-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; SOFT-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; SOFT-NEXT:    stdu r1, -64(r1)
-; SOFT-NEXT:    extsw r3, r3
 ; SOFT-NEXT:    std r0, 80(r1)
 ; SOFT-NEXT:    mr r30, r4
+; SOFT-NEXT:    extsw r3, r3
 ; SOFT-NEXT:    bl __floatsisf
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    clrldi r3, r3, 32
@@ -1770,8 +1770,8 @@ define float @test_sitofp_fadd_i32(i32 %a, ptr %b) nounwind {
 ; BE-NEXT:    clrldi r3, r3, 48
 ; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
-; BE-NEXT:    mr r3, r30
 ; BE-NEXT:    fmr f31, f1
+; BE-NEXT:    mr r3, r30
 ; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    fadds f1, f1, f31
@@ -1797,8 +1797,8 @@ define half @PR40273(half) nounwind {
 ; PPC32:       # %bb.0:
 ; PPC32-NEXT:    mflr r0
 ; PPC32-NEXT:    stwu r1, -16(r1)
-; PPC32-NEXT:    clrlwi r3, r3, 16
 ; PPC32-NEXT:    stw r0, 20(r1)
+; PPC32-NEXT:    clrlwi r3, r3, 16
 ; PPC32-NEXT:    bl __extendhfsf2
 ; PPC32-NEXT:    lis r3, .LCPI20_0@ha
 ; PPC32-NEXT:    lfs f0, .LCPI20_0@l(r3)
@@ -1817,8 +1817,8 @@ define half @PR40273(half) nounwind {
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
 ; P8-NEXT:    stdu r1, -32(r1)
-; P8-NEXT:    clrldi r3, r3, 48
 ; P8-NEXT:    std r0, 48(r1)
+; P8-NEXT:    clrldi r3, r3, 48
 ; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    xxlxor f0, f0, f0
@@ -1845,8 +1845,8 @@ define half @PR40273(half) nounwind {
 ; SOFT:       # %bb.0:
 ; SOFT-NEXT:    mflr r0
 ; SOFT-NEXT:    stdu r1, -32(r1)
-; SOFT-NEXT:    clrldi r3, r3, 48
 ; SOFT-NEXT:    std r0, 48(r1)
+; SOFT-NEXT:    clrldi r3, r3, 48
 ; SOFT-NEXT:    bl __extendhfsf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    li r4, 0
@@ -1864,8 +1864,8 @@ define half @PR40273(half) nounwind {
 ; BE:       # %bb.0:
 ; BE-NEXT:    mflr r0
 ; BE-NEXT:    stdu r1, -112(r1)
-; BE-NEXT:    clrldi r3, r3, 48
 ; BE-NEXT:    std r0, 128(r1)
+; BE-NEXT:    clrldi r3, r3, 48
 ; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    addis r3, r2, .LCPI20_0@toc@ha

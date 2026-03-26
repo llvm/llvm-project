@@ -35,8 +35,8 @@ define i32 @t1(i32 %a, i32 %b) "frame-pointer"="all" {
 ; A8-LABEL: t1:
 ; A8:       @ %bb.0: @ %entry
 ; A8-NEXT:    mov r2, r0
-; A8-NEXT:    mov r0, #1
 ; A8-NEXT:    cmp r2, #10
+; A8-NEXT:    mov r0, #1
 ; A8-NEXT:    bxle lr
 ; A8-NEXT:  LBB1_1: @ %cond_true
 ; A8-NEXT:    push {r7, lr}

@@ -60,8 +60,8 @@ define void @stg2(i1 %flag) {
 ; CHECK-NEXT:    mov x8, #320 // =0x140
 ; CHECK-NEXT:  .LBB1_2: // %if.then
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    st2g x9, [x9], #32
 ; CHECK-NEXT:    subs x8, x8, #32
+; CHECK-NEXT:    st2g x9, [x9], #32
 ; CHECK-NEXT:    b.ne .LBB1_2
 ; CHECK-NEXT:  // %bb.3: // %if.then
 ; CHECK-NEXT:    b .LBB1_7
@@ -70,8 +70,8 @@ define void @stg2(i1 %flag) {
 ; CHECK-NEXT:    mov x8, #256 // =0x100
 ; CHECK-NEXT:  .LBB1_5: // %if.else
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    st2g x9, [x9], #32
 ; CHECK-NEXT:    subs x8, x8, #32
+; CHECK-NEXT:    st2g x9, [x9], #32
 ; CHECK-NEXT:    b.ne .LBB1_5
 ; CHECK-NEXT:  // %bb.6: // %if.else
 ; CHECK-NEXT:  .LBB1_7: // %if.end

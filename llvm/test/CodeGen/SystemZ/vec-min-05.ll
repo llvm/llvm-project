@@ -225,11 +225,11 @@ define void @f21(ptr %ptr1, ptr %ptr2, ptr %dst) nounwind {
 ; CHECK-NEXT:    vl %v0, 0(%r2), 3
 ; CHECK-NEXT:    vl %v1, 0(%r3), 3
 ; CHECK-NEXT:    lgr %r13, %r4
+; CHECK-NEXT:    vst %v1, 160(%r15), 3
+; CHECK-NEXT:    vst %v0, 176(%r15), 3
 ; CHECK-NEXT:    la %r2, 192(%r15)
 ; CHECK-NEXT:    la %r3, 176(%r15)
 ; CHECK-NEXT:    la %r4, 160(%r15)
-; CHECK-NEXT:    vst %v1, 160(%r15), 3
-; CHECK-NEXT:    vst %v0, 176(%r15), 3
 ; CHECK-NEXT:    brasl %r14, fminl@PLT
 ; CHECK-NEXT:    vl %v0, 192(%r15), 3
 ; CHECK-NEXT:    vst %v0, 0(%r13), 3

@@ -107,8 +107,8 @@ define i32 @mul_one_bit_low_hi_u32(i32 %arg, i32 %arg1, ptr %arg2) {
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v1, v0, 0
-; CHECK-NEXT:    v_alignbit_b32 v0, v1, v0, 31
 ; CHECK-NEXT:    flat_store_dword v[2:3], v1
+; CHECK-NEXT:    v_alignbit_b32 v0, v1, v0, 31
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 bb:

@@ -175,9 +175,9 @@ define <4 x double> @exp_v4f64(<4 x double> %a) {
 ; CHECK-SD-NEXT:    str x30, [sp, #48] // 8-byte Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    str q1, [sp, #32] // 16-byte Spill
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-SD-NEXT:    mov d0, v0.d[1]
-; CHECK-SD-NEXT:    str q1, [sp, #32] // 16-byte Spill
 ; CHECK-SD-NEXT:    bl exp
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
@@ -1478,9 +1478,9 @@ define <4 x double> @exp2_v4f64(<4 x double> %a) {
 ; CHECK-SD-NEXT:    str x30, [sp, #48] // 8-byte Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    str q1, [sp, #32] // 16-byte Spill
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-SD-NEXT:    mov d0, v0.d[1]
-; CHECK-SD-NEXT:    str q1, [sp, #32] // 16-byte Spill
 ; CHECK-SD-NEXT:    bl exp2
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
@@ -2781,9 +2781,9 @@ define <4 x double> @log_v4f64(<4 x double> %a) {
 ; CHECK-SD-NEXT:    str x30, [sp, #48] // 8-byte Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    str q1, [sp, #32] // 16-byte Spill
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-SD-NEXT:    mov d0, v0.d[1]
-; CHECK-SD-NEXT:    str q1, [sp, #32] // 16-byte Spill
 ; CHECK-SD-NEXT:    bl log
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
@@ -4084,9 +4084,9 @@ define <4 x double> @log2_v4f64(<4 x double> %a) {
 ; CHECK-SD-NEXT:    str x30, [sp, #48] // 8-byte Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    str q1, [sp, #32] // 16-byte Spill
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-SD-NEXT:    mov d0, v0.d[1]
-; CHECK-SD-NEXT:    str q1, [sp, #32] // 16-byte Spill
 ; CHECK-SD-NEXT:    bl log2
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
@@ -5387,9 +5387,9 @@ define <4 x double> @log10_v4f64(<4 x double> %a) {
 ; CHECK-SD-NEXT:    str x30, [sp, #48] // 8-byte Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    str q1, [sp, #32] // 16-byte Spill
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-SD-NEXT:    mov d0, v0.d[1]
-; CHECK-SD-NEXT:    str q1, [sp, #32] // 16-byte Spill
 ; CHECK-SD-NEXT:    bl log10
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill

@@ -304,8 +304,8 @@ define i64 @flat_atomic_xchg_i64_ret(ptr %ptr, i64 %in) {
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_mov_b32_e32 v5, v1
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
-; GCN3-NEXT:    v_mov_b32_e32 v4, v0
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
+; GCN3-NEXT:    v_mov_b32_e32 v4, v0
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -1464,8 +1464,8 @@ define double @flat_atomic_xchg_f64_ret(ptr %ptr, double %in) {
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_mov_b32_e32 v5, v1
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
-; GCN3-NEXT:    v_mov_b32_e32 v4, v0
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
+; GCN3-NEXT:    v_mov_b32_e32 v4, v0
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -2668,8 +2668,8 @@ define i64 @flat_atomic_add_i64_ret(ptr %ptr, i64 %in) {
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_mov_b32_e32 v5, v1
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
-; GCN3-NEXT:    v_mov_b32_e32 v4, v0
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
+; GCN3-NEXT:    v_mov_b32_e32 v4, v0
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -4101,8 +4101,8 @@ define i64 @flat_atomic_sub_i64_ret(ptr %ptr, i64 %in) {
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_mov_b32_e32 v5, v1
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
-; GCN3-NEXT:    v_mov_b32_e32 v4, v0
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
+; GCN3-NEXT:    v_mov_b32_e32 v4, v0
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -5812,8 +5812,8 @@ define i64 @flat_atomic_and_i64_ret(ptr %ptr, i64 %in) {
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_mov_b32_e32 v5, v1
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
-; GCN3-NEXT:    v_mov_b32_e32 v4, v0
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
+; GCN3-NEXT:    v_mov_b32_e32 v4, v0
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -7531,8 +7531,8 @@ define i64 @flat_atomic_nand_i64_ret(ptr %ptr, i64 %in) {
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_mov_b32_e32 v5, v1
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
-; GCN3-NEXT:    v_mov_b32_e32 v4, v0
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
+; GCN3-NEXT:    v_mov_b32_e32 v4, v0
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -9414,8 +9414,8 @@ define i64 @flat_atomic_or_i64_ret(ptr %ptr, i64 %in) {
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_mov_b32_e32 v5, v1
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
-; GCN3-NEXT:    v_mov_b32_e32 v4, v0
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
+; GCN3-NEXT:    v_mov_b32_e32 v4, v0
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -11101,8 +11101,8 @@ define i64 @flat_atomic_xor_i64_ret(ptr %ptr, i64 %in) {
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_mov_b32_e32 v5, v1
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
-; GCN3-NEXT:    v_mov_b32_e32 v4, v0
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
+; GCN3-NEXT:    v_mov_b32_e32 v4, v0
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -12788,8 +12788,8 @@ define i64 @flat_atomic_max_i64_ret(ptr %ptr, i64 %in) {
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_mov_b32_e32 v5, v1
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
-; GCN3-NEXT:    v_mov_b32_e32 v4, v0
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
+; GCN3-NEXT:    v_mov_b32_e32 v4, v0
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -15387,8 +15387,8 @@ define i64 @flat_atomic_umax_i64_ret(ptr %ptr, i64 %in) {
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_mov_b32_e32 v5, v1
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
-; GCN3-NEXT:    v_mov_b32_e32 v4, v0
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
+; GCN3-NEXT:    v_mov_b32_e32 v4, v0
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -17777,8 +17777,8 @@ define i64 @flat_atomic_umin_i64_ret(ptr %ptr, i64 %in) {
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_mov_b32_e32 v5, v1
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
-; GCN3-NEXT:    v_mov_b32_e32 v4, v0
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
+; GCN3-NEXT:    v_mov_b32_e32 v4, v0
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -19524,8 +19524,8 @@ define i64 @flat_atomic_min_i64_ret(ptr %ptr, i64 %in) {
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_mov_b32_e32 v5, v1
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
-; GCN3-NEXT:    v_mov_b32_e32 v4, v0
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
+; GCN3-NEXT:    v_mov_b32_e32 v4, v0
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -22150,8 +22150,8 @@ define i64 @flat_atomic_uinc_wrap_i64_ret(ptr %ptr, i64 %in) {
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_mov_b32_e32 v5, v1
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
-; GCN3-NEXT:    v_mov_b32_e32 v4, v0
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
+; GCN3-NEXT:    v_mov_b32_e32 v4, v0
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -24013,8 +24013,8 @@ define i64 @flat_atomic_udec_wrap_i64_ret(ptr %ptr, i64 %in) {
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_mov_b32_e32 v5, v1
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
-; GCN3-NEXT:    v_mov_b32_e32 v4, v0
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
+; GCN3-NEXT:    v_mov_b32_e32 v4, v0
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[8:9], exec, s[4:5]

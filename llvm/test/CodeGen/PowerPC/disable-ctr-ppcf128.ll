@@ -20,10 +20,10 @@ define ppc_fp128 @test_ctr0() {
 ; P9LE-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; P9LE-NEXT:    stdu r1, -48(r1)
 ; P9LE-NEXT:    li r3, 1
-; P9LE-NEXT:    xxlxor f1, f1, f1
-; P9LE-NEXT:    xxlxor f2, f2, f2
 ; P9LE-NEXT:    std r0, 64(r1)
+; P9LE-NEXT:    xxlxor f1, f1, f1
 ; P9LE-NEXT:    rldic r30, r3, 62, 1
+; P9LE-NEXT:    xxlxor f2, f2, f2
 ; P9LE-NEXT:    .p2align 5
 ; P9LE-NEXT:  .LBB0_1: # %bb6
 ; P9LE-NEXT:    #
@@ -80,9 +80,9 @@ define ppc_fp128 @test_ctr0() {
 ; P8LE-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; P8LE-NEXT:    stdu r1, -48(r1)
 ; P8LE-NEXT:    li r3, 1
+; P8LE-NEXT:    std r0, 64(r1)
 ; P8LE-NEXT:    xxlxor f1, f1, f1
 ; P8LE-NEXT:    xxlxor f2, f2, f2
-; P8LE-NEXT:    std r0, 64(r1)
 ; P8LE-NEXT:    rldic r30, r3, 62, 1
 ; P8LE-NEXT:    .p2align 5
 ; P8LE-NEXT:  .LBB0_1: # %bb6

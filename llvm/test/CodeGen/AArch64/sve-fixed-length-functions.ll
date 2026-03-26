@@ -90,10 +90,10 @@ define <3 x i64> @test_v3i64(<3 x i64> %unused, <3 x i64> %a) #0 {
 define <5 x i64> @test_v5i64(<5 x i64> %unused, <5 x i64> %a) #0 {
 ; CHECK-LABEL: test_v5i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldp d3, d4, [sp]
 ; CHECK-NEXT:    fmov d1, d6
 ; CHECK-NEXT:    fmov d0, d5
 ; CHECK-NEXT:    fmov d2, d7
-; CHECK-NEXT:    ldp d3, d4, [sp]
 ; CHECK-NEXT:    ret
   ret <5 x i64> %a
 }

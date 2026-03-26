@@ -516,9 +516,9 @@ define double @sqrt_fdiv_common_operand_extra_use(double %x, ptr %p) nounwind {
 ; CHECK-NEXT:    fmul d1, d0, d1
 ; CHECK-NEXT:    frsqrts d2, d0, d2
 ; CHECK-NEXT:    fmul d1, d1, d2
-; CHECK-NEXT:    fcsel d2, d0, d1, eq
+; CHECK-NEXT:    fcsel d0, d0, d1, eq
+; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    fmov d0, d1
-; CHECK-NEXT:    str d2, [x0]
 ; CHECK-NEXT:    ret
   %sqrt = call fast double @llvm.sqrt.f64(double %x)
   store double %sqrt, ptr %p
@@ -553,8 +553,8 @@ define double @sqrt_simplify_before_recip_3_uses(double %x, ptr %p1, ptr %p2) no
 ; CHECK-NEXT:    frsqrts d2, d0, d2
 ; CHECK-NEXT:    fmul d1, d1, d2
 ; CHECK-NEXT:    fmov d2, x8
-; CHECK-NEXT:    fmul d0, d0, d1
 ; CHECK-NEXT:    fmul d2, d1, d2
+; CHECK-NEXT:    fmul d0, d0, d1
 ; CHECK-NEXT:    str d1, [x0]
 ; CHECK-NEXT:    str d2, [x1]
 ; CHECK-NEXT:    ret
@@ -599,8 +599,8 @@ define double @sqrt_simplify_before_recip_3_uses_order(double %x, ptr %p1, ptr %
 ; CHECK-NEXT:    mov x8, #140737488355328 // =0x800000000000
 ; CHECK-NEXT:    movk x8, #16453, lsl #48
 ; CHECK-NEXT:    fmov d3, x8
-; CHECK-NEXT:    fmul d0, d0, d1
 ; CHECK-NEXT:    fmul d2, d1, d2
+; CHECK-NEXT:    fmul d0, d0, d1
 ; CHECK-NEXT:    fmul d1, d1, d3
 ; CHECK-NEXT:    str d2, [x0]
 ; CHECK-NEXT:    str d1, [x1]

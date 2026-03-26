@@ -3088,9 +3088,9 @@ define <2 x i128> @fptos_v2f64_v2i128(<2 x double> %a) {
 ; CHECK-NOFP16-GI-NEXT:    mov d8, v0.d[1]
 ; CHECK-NOFP16-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NOFP16-GI-NEXT:    bl __fixdfti
-; CHECK-NOFP16-GI-NEXT:    fmov d0, d8
 ; CHECK-NOFP16-GI-NEXT:    mov x19, x0
 ; CHECK-NOFP16-GI-NEXT:    mov x20, x1
+; CHECK-NOFP16-GI-NEXT:    fmov d0, d8
 ; CHECK-NOFP16-GI-NEXT:    bl __fixdfti
 ; CHECK-NOFP16-GI-NEXT:    mov x2, x0
 ; CHECK-NOFP16-GI-NEXT:    mov x3, x1
@@ -3114,9 +3114,9 @@ define <2 x i128> @fptos_v2f64_v2i128(<2 x double> %a) {
 ; CHECK-FP16-GI-NEXT:    mov d8, v0.d[1]
 ; CHECK-FP16-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-FP16-GI-NEXT:    bl __fixdfti
-; CHECK-FP16-GI-NEXT:    fmov d0, d8
 ; CHECK-FP16-GI-NEXT:    mov x19, x0
 ; CHECK-FP16-GI-NEXT:    mov x20, x1
+; CHECK-FP16-GI-NEXT:    fmov d0, d8
 ; CHECK-FP16-GI-NEXT:    bl __fixdfti
 ; CHECK-FP16-GI-NEXT:    mov x2, x0
 ; CHECK-FP16-GI-NEXT:    mov x3, x1
@@ -3197,9 +3197,9 @@ define <2 x i128> @fptou_v2f64_v2i128(<2 x double> %a) {
 ; CHECK-NOFP16-GI-NEXT:    mov d8, v0.d[1]
 ; CHECK-NOFP16-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NOFP16-GI-NEXT:    bl __fixunsdfti
-; CHECK-NOFP16-GI-NEXT:    fmov d0, d8
 ; CHECK-NOFP16-GI-NEXT:    mov x19, x0
 ; CHECK-NOFP16-GI-NEXT:    mov x20, x1
+; CHECK-NOFP16-GI-NEXT:    fmov d0, d8
 ; CHECK-NOFP16-GI-NEXT:    bl __fixunsdfti
 ; CHECK-NOFP16-GI-NEXT:    mov x2, x0
 ; CHECK-NOFP16-GI-NEXT:    mov x3, x1
@@ -3223,9 +3223,9 @@ define <2 x i128> @fptou_v2f64_v2i128(<2 x double> %a) {
 ; CHECK-FP16-GI-NEXT:    mov d8, v0.d[1]
 ; CHECK-FP16-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-FP16-GI-NEXT:    bl __fixunsdfti
-; CHECK-FP16-GI-NEXT:    fmov d0, d8
 ; CHECK-FP16-GI-NEXT:    mov x19, x0
 ; CHECK-FP16-GI-NEXT:    mov x20, x1
+; CHECK-FP16-GI-NEXT:    fmov d0, d8
 ; CHECK-FP16-GI-NEXT:    bl __fixunsdfti
 ; CHECK-FP16-GI-NEXT:    mov x2, x0
 ; CHECK-FP16-GI-NEXT:    mov x3, x1
@@ -3270,8 +3270,8 @@ define <3 x i64> @fptos_v3f32_v3i64(<3 x float> %a) {
 ; CHECK-NOFP16-SD-NEXT:    fcvtzs v3.2d, v1.2d
 ; CHECK-NOFP16-SD-NEXT:    fcvtzs v2.2d, v0.2d
 ; CHECK-NOFP16-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
-; CHECK-NOFP16-SD-NEXT:    fmov d0, d3
 ; CHECK-NOFP16-SD-NEXT:    ext v1.16b, v3.16b, v3.16b, #8
+; CHECK-NOFP16-SD-NEXT:    fmov d0, d3
 ; CHECK-NOFP16-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-NOFP16-SD-NEXT:    ret
 ;
@@ -3282,8 +3282,8 @@ define <3 x i64> @fptos_v3f32_v3i64(<3 x float> %a) {
 ; CHECK-FP16-SD-NEXT:    fcvtzs v3.2d, v1.2d
 ; CHECK-FP16-SD-NEXT:    fcvtzs v2.2d, v0.2d
 ; CHECK-FP16-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
-; CHECK-FP16-SD-NEXT:    fmov d0, d3
 ; CHECK-FP16-SD-NEXT:    ext v1.16b, v3.16b, v3.16b, #8
+; CHECK-FP16-SD-NEXT:    fmov d0, d3
 ; CHECK-FP16-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-FP16-SD-NEXT:    ret
 ;
@@ -3323,8 +3323,8 @@ define <3 x i64> @fptou_v3f32_v3i64(<3 x float> %a) {
 ; CHECK-NOFP16-SD-NEXT:    fcvtzu v3.2d, v1.2d
 ; CHECK-NOFP16-SD-NEXT:    fcvtzu v2.2d, v0.2d
 ; CHECK-NOFP16-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
-; CHECK-NOFP16-SD-NEXT:    fmov d0, d3
 ; CHECK-NOFP16-SD-NEXT:    ext v1.16b, v3.16b, v3.16b, #8
+; CHECK-NOFP16-SD-NEXT:    fmov d0, d3
 ; CHECK-NOFP16-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-NOFP16-SD-NEXT:    ret
 ;
@@ -3335,8 +3335,8 @@ define <3 x i64> @fptou_v3f32_v3i64(<3 x float> %a) {
 ; CHECK-FP16-SD-NEXT:    fcvtzu v3.2d, v1.2d
 ; CHECK-FP16-SD-NEXT:    fcvtzu v2.2d, v0.2d
 ; CHECK-FP16-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
-; CHECK-FP16-SD-NEXT:    fmov d0, d3
 ; CHECK-FP16-SD-NEXT:    ext v1.16b, v3.16b, v3.16b, #8
+; CHECK-FP16-SD-NEXT:    fmov d0, d3
 ; CHECK-FP16-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-FP16-SD-NEXT:    ret
 ;
@@ -4421,9 +4421,9 @@ define <2 x i128> @fptos_v2f32_v2i128(<2 x float> %a) {
 ; CHECK-NOFP16-GI-NEXT:    mov s8, v0.s[1]
 ; CHECK-NOFP16-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NOFP16-GI-NEXT:    bl __fixsfti
-; CHECK-NOFP16-GI-NEXT:    fmov s0, s8
 ; CHECK-NOFP16-GI-NEXT:    mov x19, x0
 ; CHECK-NOFP16-GI-NEXT:    mov x20, x1
+; CHECK-NOFP16-GI-NEXT:    fmov s0, s8
 ; CHECK-NOFP16-GI-NEXT:    bl __fixsfti
 ; CHECK-NOFP16-GI-NEXT:    mov x2, x0
 ; CHECK-NOFP16-GI-NEXT:    mov x3, x1
@@ -4448,9 +4448,9 @@ define <2 x i128> @fptos_v2f32_v2i128(<2 x float> %a) {
 ; CHECK-FP16-GI-NEXT:    mov s8, v0.s[1]
 ; CHECK-FP16-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-FP16-GI-NEXT:    bl __fixsfti
-; CHECK-FP16-GI-NEXT:    fmov s0, s8
 ; CHECK-FP16-GI-NEXT:    mov x19, x0
 ; CHECK-FP16-GI-NEXT:    mov x20, x1
+; CHECK-FP16-GI-NEXT:    fmov s0, s8
 ; CHECK-FP16-GI-NEXT:    bl __fixsfti
 ; CHECK-FP16-GI-NEXT:    mov x2, x0
 ; CHECK-FP16-GI-NEXT:    mov x3, x1
@@ -4534,9 +4534,9 @@ define <2 x i128> @fptou_v2f32_v2i128(<2 x float> %a) {
 ; CHECK-NOFP16-GI-NEXT:    mov s8, v0.s[1]
 ; CHECK-NOFP16-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NOFP16-GI-NEXT:    bl __fixunssfti
-; CHECK-NOFP16-GI-NEXT:    fmov s0, s8
 ; CHECK-NOFP16-GI-NEXT:    mov x19, x0
 ; CHECK-NOFP16-GI-NEXT:    mov x20, x1
+; CHECK-NOFP16-GI-NEXT:    fmov s0, s8
 ; CHECK-NOFP16-GI-NEXT:    bl __fixunssfti
 ; CHECK-NOFP16-GI-NEXT:    mov x2, x0
 ; CHECK-NOFP16-GI-NEXT:    mov x3, x1
@@ -4561,9 +4561,9 @@ define <2 x i128> @fptou_v2f32_v2i128(<2 x float> %a) {
 ; CHECK-FP16-GI-NEXT:    mov s8, v0.s[1]
 ; CHECK-FP16-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-FP16-GI-NEXT:    bl __fixunssfti
-; CHECK-FP16-GI-NEXT:    fmov s0, s8
 ; CHECK-FP16-GI-NEXT:    mov x19, x0
 ; CHECK-FP16-GI-NEXT:    mov x20, x1
+; CHECK-FP16-GI-NEXT:    fmov s0, s8
 ; CHECK-FP16-GI-NEXT:    bl __fixunssfti
 ; CHECK-FP16-GI-NEXT:    mov x2, x0
 ; CHECK-FP16-GI-NEXT:    mov x3, x1

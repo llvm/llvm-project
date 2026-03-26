@@ -12,8 +12,8 @@ define void @arm_min_q31(ptr nocapture readonly %pSrc, i32 %blockSize, ptr nocap
 ; CHECK-NEXT:    subs.w r9, r1, #1
 ; CHECK-NEXT:    beq .LBB0_3
 ; CHECK-NEXT:  @ %bb.1: @ %while.body.preheader
-; CHECK-NEXT:    and r6, r9, #3
 ; CHECK-NEXT:    subs r7, r1, #2
+; CHECK-NEXT:    and r6, r9, #3
 ; CHECK-NEXT:    cmp r7, #3
 ; CHECK-NEXT:    bhs .LBB0_4
 ; CHECK-NEXT:  @ %bb.2:
@@ -53,8 +53,8 @@ define void @arm_min_q31(ptr nocapture readonly %pSrc, i32 %blockSize, ptr nocap
 ; CHECK-NEXT:    csel r12, r11, r6, gt
 ; CHECK-NEXT:    le lr, .LBB0_5
 ; CHECK-NEXT:  @ %bb.6: @ %while.end.loopexit.unr-lcssa.loopexit
-; CHECK-NEXT:    ldr r6, [sp] @ 4-byte Reload
 ; CHECK-NEXT:    sub.w r9, r9, r8
+; CHECK-NEXT:    ldr r6, [sp] @ 4-byte Reload
 ; CHECK-NEXT:    cbz r6, .LBB0_10
 ; CHECK-NEXT:  .LBB0_7: @ %while.body.epil
 ; CHECK-NEXT:    ldr r7, [r0, #4]

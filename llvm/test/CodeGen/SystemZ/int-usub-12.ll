@@ -55,8 +55,8 @@ define i128 @f4(i128 %a, i128 %b) {
 ; CHECK-NEXT:    vl %v1, 0(%r3), 3
 ; CHECK-NEXT:    vscbiq %v2, %v1, %v0
 ; CHECK-NEXT:    vlgvf %r0, %v2, 3
-; CHECK-NEXT:    vgbm %v2, 0
 ; CHECK-NEXT:    xilf %r0, 1
+; CHECK-NEXT:    vgbm %v2, 0
 ; CHECK-NEXT:    jl .LBB3_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    vsq %v2, %v1, %v0

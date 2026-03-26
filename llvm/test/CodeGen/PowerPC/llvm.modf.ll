@@ -304,9 +304,9 @@ define { <2 x double>, <2 x double> } @test_modf_v2f64(<2 x double> %a) {
 ; CHECK-NEXT:    stxv v30, 48(r1) # 16-byte Folded Spill
 ; CHECK-NEXT:    bl modf
 ; CHECK-NEXT:    nop
+; CHECK-NEXT:    addi r4, r1, 40
 ; CHECK-NEXT:    xscpsgndp v30, f1, f1
 ; CHECK-NEXT:    xxswapd vs1, v31
-; CHECK-NEXT:    addi r4, r1, 40
 ; CHECK-NEXT:    bl modf
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    xxmrghd v2, v30, vs1

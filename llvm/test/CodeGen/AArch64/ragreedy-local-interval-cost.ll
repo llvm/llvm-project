@@ -25,19 +25,17 @@ define dso_local void @run_test() local_unnamed_addr uwtable {
 ; CHECK-NEXT:    .cfi_offset b13, -64
 ; CHECK-NEXT:    .cfi_offset b14, -72
 ; CHECK-NEXT:    .cfi_offset b15, -80
-; CHECK-NEXT:    movi v7.2d, #0000000000000000
+; CHECK-NEXT:    // implicit-def: $q18
 ; CHECK-NEXT:    adrp x14, B+48
 ; CHECK-NEXT:    add x14, x14, :lo12:B+48
-; CHECK-NEXT:    // implicit-def: $q18
+; CHECK-NEXT:    // kill: killed $q18
 ; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    // implicit-def: $q18
+; CHECK-NEXT:    movi v7.2d, #0000000000000000
 ; CHECK-NEXT:    mov w9, #8 // =0x8
 ; CHECK-NEXT:    adrp x10, A
 ; CHECK-NEXT:    add x10, x10, :lo12:A
 ; CHECK-NEXT:    mov x11, xzr
-; CHECK-NEXT:    // kill: killed $q18
-; CHECK-NEXT:    // implicit-def: $q18
-; CHECK-NEXT:    mov x12, xzr
-; CHECK-NEXT:    mov x13, x14
 ; CHECK-NEXT:    // implicit-def: $q0
 ; CHECK-NEXT:    // implicit-def: $q2
 ; CHECK-NEXT:    // implicit-def: $q3
@@ -67,6 +65,8 @@ define dso_local void @run_test() local_unnamed_addr uwtable {
 ; CHECK-NEXT:    // kill: killed $q18
 ; CHECK-NEXT:    // implicit-def: $q18
 ; CHECK-NEXT:    // kill: killed $q18
+; CHECK-NEXT:    mov x12, xzr
+; CHECK-NEXT:    mov x13, x14
 ; CHECK-NEXT:  .LBB0_1: // %for.cond1.preheader
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr x18, [x8]

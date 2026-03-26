@@ -14,11 +14,11 @@ target triple = "aarch64"
 define %"class.std::complex" @complex_mul_v2f64(ptr %a, ptr %b) {
 ; CHECK-LABEL: complex_mul_v2f64:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w9, #100 // =0x64
+; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    mov w9, #100 // =0x64
 ; CHECK-NEXT:    whilelo p1.d, xzr, x9
-; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    cntd x10
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    rdvl x11, #2
@@ -110,13 +110,13 @@ exit.block:                                     ; preds = %vector.body
 define %"class.std::complex" @complex_mul_predicated_v2f64(ptr %a, ptr %b, ptr %cond) {
 ; CHECK-LABEL: complex_mul_predicated_v2f64:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    mov w11, #100 // =0x64
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    neg x10, x9
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    cntd x9
-; CHECK-NEXT:    neg x10, x9
-; CHECK-NEXT:    mov w11, #100 // =0x64
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    and x10, x10, x11
 ; CHECK-NEXT:    rdvl x11, #2
 ; CHECK-NEXT:  .LBB1_1: // %vector.body
@@ -211,11 +211,11 @@ exit.block:                                     ; preds = %vector.body
 define %"class.std::complex" @complex_mul_predicated_x2_v2f64(ptr %a, ptr %b, ptr %cond) {
 ; CHECK-LABEL: complex_mul_predicated_x2_v2f64:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w9, #100 // =0x64
+; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    mov w9, #100 // =0x64
 ; CHECK-NEXT:    whilelo p1.d, xzr, x9
-; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    cntd x10
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    rdvl x11, #2

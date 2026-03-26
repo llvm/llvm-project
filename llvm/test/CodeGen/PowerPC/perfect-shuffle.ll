@@ -140,8 +140,8 @@ define <4 x float> @shuffle5(<16 x i8> %v1, <16 x i8> %v2, <16 x i8> %v3, <16 x 
 ;
 ; LE-LABEL: shuffle5:
 ; LE:       # %bb.0: # %entry
-; LE-NEXT:    vpkudum 3, 3, 2
 ; LE-NEXT:    li 3, 8
+; LE-NEXT:    vpkudum 3, 3, 2
 ; LE-NEXT:    vextubrx 3, 3, 2
 ; LE-NEXT:    vmr 2, 3
 ; LE-NEXT:    andi. 3, 3, 255

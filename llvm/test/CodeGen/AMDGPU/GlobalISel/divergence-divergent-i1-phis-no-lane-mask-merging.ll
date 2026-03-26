@@ -65,8 +65,8 @@ exit:
 define amdgpu_ps void @divergent_i1_phi_uniform_branch_simple(ptr addrspace(1) %out, i32 %tid, i32 inreg %cond) {
 ; GFX10-LABEL: divergent_i1_phi_uniform_branch_simple:
 ; GFX10:       ; %bb.0: ; %A
-; GFX10-NEXT:    v_cmp_le_u32_e64 s1, 6, v2
 ; GFX10-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX10-NEXT:    v_cmp_le_u32_e64 s1, 6, v2
 ; GFX10-NEXT:    s_cbranch_scc1 .LBB1_2
 ; GFX10-NEXT:  ; %bb.1: ; %B
 ; GFX10-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 1, v2

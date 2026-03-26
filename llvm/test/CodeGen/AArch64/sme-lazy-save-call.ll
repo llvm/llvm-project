@@ -552,8 +552,8 @@ define i64 @test_shared_private_shared_i64(i64 %x) nounwind "aarch64_inout_za" {
 ; CHECK-COMMON-NEXT:  // %bb.1:
 ; CHECK-COMMON-NEXT:    bl __arm_tpidr2_restore
 ; CHECK-COMMON-NEXT:  .LBB8_2:
-; CHECK-COMMON-NEXT:    mov x0, x1
 ; CHECK-COMMON-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-COMMON-NEXT:    mov x0, x1
 ; CHECK-COMMON-NEXT:    bl shared_za_callee_i64
 ; CHECK-COMMON-NEXT:    mov sp, x29
 ; CHECK-COMMON-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
@@ -597,8 +597,8 @@ define i64  @test_many_callee_arguments(
 ; CHECK-SDAG-NEXT:  // %bb.1:
 ; CHECK-SDAG-NEXT:    bl __arm_tpidr2_restore
 ; CHECK-SDAG-NEXT:  .LBB9_2:
-; CHECK-SDAG-NEXT:    mov x0, x1
 ; CHECK-SDAG-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-SDAG-NEXT:    mov x0, x1
 ; CHECK-SDAG-NEXT:    mov sp, x29
 ; CHECK-SDAG-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
 ; CHECK-SDAG-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
@@ -629,8 +629,8 @@ define i64  @test_many_callee_arguments(
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    bl __arm_tpidr2_restore
 ; CHECK-NEXT:  .LBB9_2:
-; CHECK-NEXT:    mov x0, x1
 ; CHECK-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-NEXT:    mov x0, x1
 ; CHECK-NEXT:    mov sp, x29
 ; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload

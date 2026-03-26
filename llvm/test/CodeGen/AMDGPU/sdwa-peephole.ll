@@ -2109,8 +2109,8 @@ define void @crash_lshlrevb16_not_reg_op() {
 ; NOSDWA-NEXT:    v_mov_b32_e32 v0, s4
 ; NOSDWA-NEXT:    s_lshr_b32 s7, s6, s7
 ; NOSDWA-NEXT:    v_mov_b32_e32 v1, s5
-; NOSDWA-NEXT:    s_mov_b64 s[4:5], 1
 ; NOSDWA-NEXT:    v_mov_b32_e32 v2, s7
+; NOSDWA-NEXT:    s_mov_b64 s[4:5], 1
 ; NOSDWA-NEXT:    flat_store_byte v[0:1], v2
 ; NOSDWA-NEXT:    s_mov_b64 vcc, vcc
 ; NOSDWA-NEXT:    s_cbranch_vccnz .LBB22_1
@@ -2131,8 +2131,8 @@ define void @crash_lshlrevb16_not_reg_op() {
 ; GFX89-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX89-NEXT:    s_lshr_b32 s7, s6, s7
 ; GFX89-NEXT:    v_mov_b32_e32 v1, s5
-; GFX89-NEXT:    s_mov_b64 s[4:5], 1
 ; GFX89-NEXT:    v_mov_b32_e32 v2, s7
+; GFX89-NEXT:    s_mov_b64 s[4:5], 1
 ; GFX89-NEXT:    flat_store_byte v[0:1], v2
 ; GFX89-NEXT:    s_mov_b64 vcc, vcc
 ; GFX89-NEXT:    s_cbranch_vccnz .LBB22_1
@@ -2153,8 +2153,8 @@ define void @crash_lshlrevb16_not_reg_op() {
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    s_lshr_b32 s7, s6, s7
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
-; GFX9-NEXT:    s_mov_b64 s[4:5], 1
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s7
+; GFX9-NEXT:    s_mov_b64 s[4:5], 1
 ; GFX9-NEXT:    flat_store_byte v[0:1], v2
 ; GFX9-NEXT:    s_mov_b64 vcc, vcc
 ; GFX9-NEXT:    s_cbranch_vccnz .LBB22_1

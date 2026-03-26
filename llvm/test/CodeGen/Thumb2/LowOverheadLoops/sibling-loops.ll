@@ -11,8 +11,8 @@ define arm_aapcs_vfpcc void @test(ptr noalias nocapture readonly %off, ptr noali
 ; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, lr}
 ; CHECK-NEXT:    sub.w r9, r1, #2
 ; CHECK-NEXT:    sub.w r8, r0, #2
-; CHECK-NEXT:    subs r5, r2, #2
 ; CHECK-NEXT:    mov r10, r3
+; CHECK-NEXT:    subs r5, r2, #2
 ; CHECK-NEXT:    lsl.w r12, r3, #1
 ; CHECK-NEXT:    movs r0, #0
 ; CHECK-NEXT:    mov r4, r9

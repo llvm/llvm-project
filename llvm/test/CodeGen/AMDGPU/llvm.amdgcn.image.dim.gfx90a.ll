@@ -90,10 +90,10 @@ define amdgpu_ps <4 x float> @load_cube_lwe(<8 x i32> inreg %rsrc, ptr addrspace
 ; GCN-NEXT:    image_load v[4:8], v[0:2], s[0:7] dmask:0xf unorm lwe da
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, v4
+; GCN-NEXT:    global_store_dword v10, v8, s[8:9]
 ; GCN-NEXT:    v_mov_b32_e32 v1, v5
 ; GCN-NEXT:    v_mov_b32_e32 v2, v6
 ; GCN-NEXT:    v_mov_b32_e32 v3, v7
-; GCN-NEXT:    global_store_dword v10, v8, s[8:9]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
@@ -142,10 +142,10 @@ define amdgpu_ps <4 x float> @load_2darray_lwe(<8 x i32> inreg %rsrc, ptr addrsp
 ; GCN-NEXT:    image_load v[4:8], v[0:2], s[0:7] dmask:0xf unorm lwe da
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, v4
+; GCN-NEXT:    global_store_dword v10, v8, s[8:9]
 ; GCN-NEXT:    v_mov_b32_e32 v1, v5
 ; GCN-NEXT:    v_mov_b32_e32 v2, v6
 ; GCN-NEXT:    v_mov_b32_e32 v3, v7
-; GCN-NEXT:    global_store_dword v10, v8, s[8:9]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:

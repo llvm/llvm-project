@@ -5,6 +5,18 @@
 %struct.foo = type { [2 x <4 x i32>] }
 
 define arm_aapcs_vfpcc i32 @test_vadciq_multiple(%struct.foo %a, %struct.foo %b, i32 %carry) {
+; ASM-LABEL: test_vadciq_multiple:
+; ASM:       @ %bb.0: @ %entry
+; ASM-NEXT:    lsls r0, r0, #29
+; ASM-NEXT:    vmsr fpscr_nzcvqc, r0
+; ASM-NEXT:    vadc.i32 q0, q0, q2
+; ASM-NEXT:    vmrs r0, fpscr_nzcvqc
+; ASM-NEXT:    and r0, r0, #536870912
+; ASM-NEXT:    vmsr fpscr_nzcvqc, r0
+; ASM-NEXT:    vadc.i32 q0, q1, q3
+; ASM-NEXT:    vmrs r0, fpscr_nzcvqc
+; ASM-NEXT:    ubfx r0, r0, #29, #1
+; ASM-NEXT:    bx lr
 entry:
   %a.0 = extractvalue %struct.foo %a, 0, 0
   %a.1 = extractvalue %struct.foo %a, 0, 1
@@ -25,6 +37,21 @@ entry:
 }
 
 define arm_aapcs_vfpcc i32 @test_vadciq_pred_multiple(%struct.foo %a, %struct.foo %b, i32 %ipred, i32 %carry) {
+; ASM-LABEL: test_vadciq_pred_multiple:
+; ASM:       @ %bb.0: @ %entry
+; ASM-NEXT:    lsls r1, r1, #29
+; ASM-NEXT:    vmsr p0, r0
+; ASM-NEXT:    vmsr fpscr_nzcvqc, r1
+; ASM-NEXT:    vpst
+; ASM-NEXT:    vadct.i32 q0, q0, q2
+; ASM-NEXT:    vmrs r0, fpscr_nzcvqc
+; ASM-NEXT:    and r0, r0, #536870912
+; ASM-NEXT:    vmsr fpscr_nzcvqc, r0
+; ASM-NEXT:    vpst
+; ASM-NEXT:    vadct.i32 q0, q1, q3
+; ASM-NEXT:    vmrs r0, fpscr_nzcvqc
+; ASM-NEXT:    ubfx r0, r0, #29, #1
+; ASM-NEXT:    bx lr
 entry:
   %a.0 = extractvalue %struct.foo %a, 0, 0
   %a.1 = extractvalue %struct.foo %a, 0, 1

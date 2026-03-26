@@ -401,8 +401,8 @@ define arm_aapcs_vfpcc void @aese_set8_loop_via_ptr(i32 %0, ptr %1, <16 x i8> %2
 ; CHECK-FIX-NEXT:    strb r1, [r2]
 ; CHECK-FIX-NEXT:    bxeq lr
 ; CHECK-FIX-NEXT:  .LBB14_1:
-; CHECK-FIX-NEXT:    vmov.8 d0[0], r1
 ; CHECK-FIX-NEXT:    vld1.64 {d16, d17}, [r2]
+; CHECK-FIX-NEXT:    vmov.8 d0[0], r1
 ; CHECK-FIX-NEXT:  .LBB14_2: @ =>This Inner Loop Header: Depth=1
 ; CHECK-FIX-NEXT:    aese.8 q8, q0
 ; CHECK-FIX-NEXT:    subs r0, r0, #1
@@ -446,8 +446,8 @@ define arm_aapcs_vfpcc void @aese_set8_loop_via_val(i32 %0, i8 zeroext %1, <16 x
 ; CHECK-FIX-NEXT:    cmp r0, #0
 ; CHECK-FIX-NEXT:    bxeq lr
 ; CHECK-FIX-NEXT:  .LBB15_1:
-; CHECK-FIX-NEXT:    vmov.8 d0[0], r1
 ; CHECK-FIX-NEXT:    vld1.64 {d16, d17}, [r2]
+; CHECK-FIX-NEXT:    vmov.8 d0[0], r1
 ; CHECK-FIX-NEXT:  .LBB15_2: @ =>This Inner Loop Header: Depth=1
 ; CHECK-FIX-NEXT:    vmov.8 d16[0], r1
 ; CHECK-FIX-NEXT:    subs r0, r0, #1
@@ -649,8 +649,8 @@ define arm_aapcs_vfpcc void @aese_set16_loop_via_ptr(i32 %0, ptr %1, <16 x i8> %
 ; CHECK-FIX-NEXT:    strh r1, [r2]
 ; CHECK-FIX-NEXT:    bxeq lr
 ; CHECK-FIX-NEXT:  .LBB20_1:
-; CHECK-FIX-NEXT:    vmov.16 d0[0], r1
 ; CHECK-FIX-NEXT:    vld1.64 {d16, d17}, [r2]
+; CHECK-FIX-NEXT:    vmov.16 d0[0], r1
 ; CHECK-FIX-NEXT:  .LBB20_2: @ =>This Inner Loop Header: Depth=1
 ; CHECK-FIX-NEXT:    aese.8 q8, q0
 ; CHECK-FIX-NEXT:    subs r0, r0, #1
@@ -901,8 +901,8 @@ define arm_aapcs_vfpcc void @aese_set32_loop_via_ptr(i32 %0, ptr %1, <16 x i8> %
 ; CHECK-FIX-NEXT:    str r1, [r2]
 ; CHECK-FIX-NEXT:    bxeq lr
 ; CHECK-FIX-NEXT:  .LBB26_1:
-; CHECK-FIX-NEXT:    vmov.32 d0[0], r1
 ; CHECK-FIX-NEXT:    vld1.64 {d16, d17}, [r2]
+; CHECK-FIX-NEXT:    vmov.32 d0[0], r1
 ; CHECK-FIX-NEXT:  .LBB26_2: @ =>This Inner Loop Header: Depth=1
 ; CHECK-FIX-NEXT:    aese.8 q8, q0
 ; CHECK-FIX-NEXT:    subs r0, r0, #1
@@ -1174,8 +1174,8 @@ define arm_aapcs_vfpcc void @aese_set64_loop_via_ptr(i32 %0, ptr %1, <16 x i8> %
 ; CHECK-FIX-NOSCHED-NEXT:    strd r4, r5, [r2]
 ; CHECK-FIX-NOSCHED-NEXT:    beq .LBB32_4
 ; CHECK-FIX-NOSCHED-NEXT:  @ %bb.1:
-; CHECK-FIX-NOSCHED-NEXT:    vmov d0, r4, r5
 ; CHECK-FIX-NOSCHED-NEXT:    vld1.64 {d16, d17}, [r2]
+; CHECK-FIX-NOSCHED-NEXT:    vmov d0, r4, r5
 ; CHECK-FIX-NOSCHED-NEXT:  .LBB32_2: @ =>This Inner Loop Header: Depth=1
 ; CHECK-FIX-NOSCHED-NEXT:    aese.8 q8, q0
 ; CHECK-FIX-NOSCHED-NEXT:    subs r0, r0, #1
@@ -1196,8 +1196,8 @@ define arm_aapcs_vfpcc void @aese_set64_loop_via_ptr(i32 %0, ptr %1, <16 x i8> %
 ; CHECK-CORTEX-FIX-NEXT:    strd r4, r5, [r2]
 ; CHECK-CORTEX-FIX-NEXT:    popeq {r4, r5, r11, pc}
 ; CHECK-CORTEX-FIX-NEXT:  .LBB32_1:
-; CHECK-CORTEX-FIX-NEXT:    vmov d0, r4, r5
 ; CHECK-CORTEX-FIX-NEXT:    vld1.64 {d16, d17}, [r2]
+; CHECK-CORTEX-FIX-NEXT:    vmov d0, r4, r5
 ; CHECK-CORTEX-FIX-NEXT:  .LBB32_2: @ =>This Inner Loop Header: Depth=1
 ; CHECK-CORTEX-FIX-NEXT:    aese.8 q8, q0
 ; CHECK-CORTEX-FIX-NEXT:    subs r0, r0, #1
@@ -1800,8 +1800,8 @@ define arm_aapcs_vfpcc void @aese_setf16_loop_via_ptr(i32 %0, ptr %1, <16 x i8> 
 ; CHECK-FIX-NEXT:    strh r1, [r2]
 ; CHECK-FIX-NEXT:    bxeq lr
 ; CHECK-FIX-NEXT:  .LBB38_1:
-; CHECK-FIX-NEXT:    vmov.16 d0[0], r1
 ; CHECK-FIX-NEXT:    vld1.64 {d16, d17}, [r2]
+; CHECK-FIX-NEXT:    vmov.16 d0[0], r1
 ; CHECK-FIX-NEXT:  .LBB38_2: @ =>This Inner Loop Header: Depth=1
 ; CHECK-FIX-NEXT:    aese.8 q8, q0
 ; CHECK-FIX-NEXT:    subs r0, r0, #1
@@ -2045,43 +2045,24 @@ define arm_aapcs_vfpcc void @aese_setf32_cond_via_val(i1 zeroext %0, float %1, <
 }
 
 define arm_aapcs_vfpcc void @aese_setf32_loop_via_ptr(i32 %0, ptr %1, <16 x i8> %2, ptr %3) nounwind {
-; CHECK-FIX-NOSCHED-LABEL: aese_setf32_loop_via_ptr:
-; CHECK-FIX-NOSCHED:       @ %bb.0:
-; CHECK-FIX-NOSCHED-NEXT:    vldr s4, [r1]
-; CHECK-FIX-NOSCHED-NEXT:    cmp r0, #0
-; CHECK-FIX-NOSCHED-NEXT:    vstr s4, [r2]
-; CHECK-FIX-NOSCHED-NEXT:    bxeq lr
-; CHECK-FIX-NOSCHED-NEXT:  .LBB44_1:
-; CHECK-FIX-NOSCHED-NEXT:    vmov.f32 s0, s4
-; CHECK-FIX-NOSCHED-NEXT:    vld1.64 {d16, d17}, [r2]
-; CHECK-FIX-NOSCHED-NEXT:  .LBB44_2: @ =>This Inner Loop Header: Depth=1
-; CHECK-FIX-NOSCHED-NEXT:    vorr q0, q0, q0
-; CHECK-FIX-NOSCHED-NEXT:    aese.8 q8, q0
-; CHECK-FIX-NOSCHED-NEXT:    subs r0, r0, #1
-; CHECK-FIX-NOSCHED-NEXT:    aesmc.8 q8, q8
-; CHECK-FIX-NOSCHED-NEXT:    bne .LBB44_2
-; CHECK-FIX-NOSCHED-NEXT:  @ %bb.3:
-; CHECK-FIX-NOSCHED-NEXT:    vst1.64 {d16, d17}, [r2]
-; CHECK-FIX-NOSCHED-NEXT:    bx lr
-;
-; CHECK-CORTEX-FIX-LABEL: aese_setf32_loop_via_ptr:
-; CHECK-CORTEX-FIX:       @ %bb.0:
-; CHECK-CORTEX-FIX-NEXT:    vldr s4, [r1]
-; CHECK-CORTEX-FIX-NEXT:    cmp r0, #0
-; CHECK-CORTEX-FIX-NEXT:    vstr s4, [r2]
-; CHECK-CORTEX-FIX-NEXT:    bxeq lr
-; CHECK-CORTEX-FIX-NEXT:  .LBB44_1:
-; CHECK-CORTEX-FIX-NEXT:    vld1.64 {d16, d17}, [r2]
-; CHECK-CORTEX-FIX-NEXT:    vmov.f32 s0, s4
-; CHECK-CORTEX-FIX-NEXT:  .LBB44_2: @ =>This Inner Loop Header: Depth=1
-; CHECK-CORTEX-FIX-NEXT:    vorr q0, q0, q0
-; CHECK-CORTEX-FIX-NEXT:    aese.8 q8, q0
-; CHECK-CORTEX-FIX-NEXT:    subs r0, r0, #1
-; CHECK-CORTEX-FIX-NEXT:    aesmc.8 q8, q8
-; CHECK-CORTEX-FIX-NEXT:    bne .LBB44_2
-; CHECK-CORTEX-FIX-NEXT:  @ %bb.3:
-; CHECK-CORTEX-FIX-NEXT:    vst1.64 {d16, d17}, [r2]
-; CHECK-CORTEX-FIX-NEXT:    bx lr
+; CHECK-FIX-LABEL: aese_setf32_loop_via_ptr:
+; CHECK-FIX:       @ %bb.0:
+; CHECK-FIX-NEXT:    vldr s4, [r1]
+; CHECK-FIX-NEXT:    cmp r0, #0
+; CHECK-FIX-NEXT:    vstr s4, [r2]
+; CHECK-FIX-NEXT:    bxeq lr
+; CHECK-FIX-NEXT:  .LBB44_1:
+; CHECK-FIX-NEXT:    vld1.64 {d16, d17}, [r2]
+; CHECK-FIX-NEXT:    vmov.f32 s0, s4
+; CHECK-FIX-NEXT:  .LBB44_2: @ =>This Inner Loop Header: Depth=1
+; CHECK-FIX-NEXT:    vorr q0, q0, q0
+; CHECK-FIX-NEXT:    aese.8 q8, q0
+; CHECK-FIX-NEXT:    subs r0, r0, #1
+; CHECK-FIX-NEXT:    aesmc.8 q8, q8
+; CHECK-FIX-NEXT:    bne .LBB44_2
+; CHECK-FIX-NEXT:  @ %bb.3:
+; CHECK-FIX-NEXT:    vst1.64 {d16, d17}, [r2]
+; CHECK-FIX-NEXT:    bx lr
   %5 = load float, ptr %1, align 4
   %6 = bitcast <16 x i8> %2 to <4 x float>
   %7 = insertelement <4 x float> %6, float %5, i64 0
@@ -2555,8 +2536,8 @@ define arm_aapcs_vfpcc void @aesd_set8_loop_via_ptr(i32 %0, ptr %1, <16 x i8> %2
 ; CHECK-FIX-NEXT:    strb r1, [r2]
 ; CHECK-FIX-NEXT:    bxeq lr
 ; CHECK-FIX-NEXT:  .LBB60_1:
-; CHECK-FIX-NEXT:    vmov.8 d0[0], r1
 ; CHECK-FIX-NEXT:    vld1.64 {d16, d17}, [r2]
+; CHECK-FIX-NEXT:    vmov.8 d0[0], r1
 ; CHECK-FIX-NEXT:  .LBB60_2: @ =>This Inner Loop Header: Depth=1
 ; CHECK-FIX-NEXT:    aesd.8 q8, q0
 ; CHECK-FIX-NEXT:    subs r0, r0, #1
@@ -2600,8 +2581,8 @@ define arm_aapcs_vfpcc void @aesd_set8_loop_via_val(i32 %0, i8 zeroext %1, <16 x
 ; CHECK-FIX-NEXT:    cmp r0, #0
 ; CHECK-FIX-NEXT:    bxeq lr
 ; CHECK-FIX-NEXT:  .LBB61_1:
-; CHECK-FIX-NEXT:    vmov.8 d0[0], r1
 ; CHECK-FIX-NEXT:    vld1.64 {d16, d17}, [r2]
+; CHECK-FIX-NEXT:    vmov.8 d0[0], r1
 ; CHECK-FIX-NEXT:  .LBB61_2: @ =>This Inner Loop Header: Depth=1
 ; CHECK-FIX-NEXT:    vmov.8 d16[0], r1
 ; CHECK-FIX-NEXT:    subs r0, r0, #1
@@ -2803,8 +2784,8 @@ define arm_aapcs_vfpcc void @aesd_set16_loop_via_ptr(i32 %0, ptr %1, <16 x i8> %
 ; CHECK-FIX-NEXT:    strh r1, [r2]
 ; CHECK-FIX-NEXT:    bxeq lr
 ; CHECK-FIX-NEXT:  .LBB66_1:
-; CHECK-FIX-NEXT:    vmov.16 d0[0], r1
 ; CHECK-FIX-NEXT:    vld1.64 {d16, d17}, [r2]
+; CHECK-FIX-NEXT:    vmov.16 d0[0], r1
 ; CHECK-FIX-NEXT:  .LBB66_2: @ =>This Inner Loop Header: Depth=1
 ; CHECK-FIX-NEXT:    aesd.8 q8, q0
 ; CHECK-FIX-NEXT:    subs r0, r0, #1
@@ -3055,8 +3036,8 @@ define arm_aapcs_vfpcc void @aesd_set32_loop_via_ptr(i32 %0, ptr %1, <16 x i8> %
 ; CHECK-FIX-NEXT:    str r1, [r2]
 ; CHECK-FIX-NEXT:    bxeq lr
 ; CHECK-FIX-NEXT:  .LBB72_1:
-; CHECK-FIX-NEXT:    vmov.32 d0[0], r1
 ; CHECK-FIX-NEXT:    vld1.64 {d16, d17}, [r2]
+; CHECK-FIX-NEXT:    vmov.32 d0[0], r1
 ; CHECK-FIX-NEXT:  .LBB72_2: @ =>This Inner Loop Header: Depth=1
 ; CHECK-FIX-NEXT:    aesd.8 q8, q0
 ; CHECK-FIX-NEXT:    subs r0, r0, #1
@@ -3328,8 +3309,8 @@ define arm_aapcs_vfpcc void @aesd_set64_loop_via_ptr(i32 %0, ptr %1, <16 x i8> %
 ; CHECK-FIX-NOSCHED-NEXT:    strd r4, r5, [r2]
 ; CHECK-FIX-NOSCHED-NEXT:    beq .LBB78_4
 ; CHECK-FIX-NOSCHED-NEXT:  @ %bb.1:
-; CHECK-FIX-NOSCHED-NEXT:    vmov d0, r4, r5
 ; CHECK-FIX-NOSCHED-NEXT:    vld1.64 {d16, d17}, [r2]
+; CHECK-FIX-NOSCHED-NEXT:    vmov d0, r4, r5
 ; CHECK-FIX-NOSCHED-NEXT:  .LBB78_2: @ =>This Inner Loop Header: Depth=1
 ; CHECK-FIX-NOSCHED-NEXT:    aesd.8 q8, q0
 ; CHECK-FIX-NOSCHED-NEXT:    subs r0, r0, #1
@@ -3350,8 +3331,8 @@ define arm_aapcs_vfpcc void @aesd_set64_loop_via_ptr(i32 %0, ptr %1, <16 x i8> %
 ; CHECK-CORTEX-FIX-NEXT:    strd r4, r5, [r2]
 ; CHECK-CORTEX-FIX-NEXT:    popeq {r4, r5, r11, pc}
 ; CHECK-CORTEX-FIX-NEXT:  .LBB78_1:
-; CHECK-CORTEX-FIX-NEXT:    vmov d0, r4, r5
 ; CHECK-CORTEX-FIX-NEXT:    vld1.64 {d16, d17}, [r2]
+; CHECK-CORTEX-FIX-NEXT:    vmov d0, r4, r5
 ; CHECK-CORTEX-FIX-NEXT:  .LBB78_2: @ =>This Inner Loop Header: Depth=1
 ; CHECK-CORTEX-FIX-NEXT:    aesd.8 q8, q0
 ; CHECK-CORTEX-FIX-NEXT:    subs r0, r0, #1
@@ -3954,8 +3935,8 @@ define arm_aapcs_vfpcc void @aesd_setf16_loop_via_ptr(i32 %0, ptr %1, <16 x i8> 
 ; CHECK-FIX-NEXT:    strh r1, [r2]
 ; CHECK-FIX-NEXT:    bxeq lr
 ; CHECK-FIX-NEXT:  .LBB84_1:
-; CHECK-FIX-NEXT:    vmov.16 d0[0], r1
 ; CHECK-FIX-NEXT:    vld1.64 {d16, d17}, [r2]
+; CHECK-FIX-NEXT:    vmov.16 d0[0], r1
 ; CHECK-FIX-NEXT:  .LBB84_2: @ =>This Inner Loop Header: Depth=1
 ; CHECK-FIX-NEXT:    aesd.8 q8, q0
 ; CHECK-FIX-NEXT:    subs r0, r0, #1
@@ -4199,43 +4180,24 @@ define arm_aapcs_vfpcc void @aesd_setf32_cond_via_val(i1 zeroext %0, float %1, <
 }
 
 define arm_aapcs_vfpcc void @aesd_setf32_loop_via_ptr(i32 %0, ptr %1, <16 x i8> %2, ptr %3) nounwind {
-; CHECK-FIX-NOSCHED-LABEL: aesd_setf32_loop_via_ptr:
-; CHECK-FIX-NOSCHED:       @ %bb.0:
-; CHECK-FIX-NOSCHED-NEXT:    vldr s4, [r1]
-; CHECK-FIX-NOSCHED-NEXT:    cmp r0, #0
-; CHECK-FIX-NOSCHED-NEXT:    vstr s4, [r2]
-; CHECK-FIX-NOSCHED-NEXT:    bxeq lr
-; CHECK-FIX-NOSCHED-NEXT:  .LBB90_1:
-; CHECK-FIX-NOSCHED-NEXT:    vmov.f32 s0, s4
-; CHECK-FIX-NOSCHED-NEXT:    vld1.64 {d16, d17}, [r2]
-; CHECK-FIX-NOSCHED-NEXT:  .LBB90_2: @ =>This Inner Loop Header: Depth=1
-; CHECK-FIX-NOSCHED-NEXT:    vorr q0, q0, q0
-; CHECK-FIX-NOSCHED-NEXT:    aesd.8 q8, q0
-; CHECK-FIX-NOSCHED-NEXT:    subs r0, r0, #1
-; CHECK-FIX-NOSCHED-NEXT:    aesimc.8 q8, q8
-; CHECK-FIX-NOSCHED-NEXT:    bne .LBB90_2
-; CHECK-FIX-NOSCHED-NEXT:  @ %bb.3:
-; CHECK-FIX-NOSCHED-NEXT:    vst1.64 {d16, d17}, [r2]
-; CHECK-FIX-NOSCHED-NEXT:    bx lr
-;
-; CHECK-CORTEX-FIX-LABEL: aesd_setf32_loop_via_ptr:
-; CHECK-CORTEX-FIX:       @ %bb.0:
-; CHECK-CORTEX-FIX-NEXT:    vldr s4, [r1]
-; CHECK-CORTEX-FIX-NEXT:    cmp r0, #0
-; CHECK-CORTEX-FIX-NEXT:    vstr s4, [r2]
-; CHECK-CORTEX-FIX-NEXT:    bxeq lr
-; CHECK-CORTEX-FIX-NEXT:  .LBB90_1:
-; CHECK-CORTEX-FIX-NEXT:    vld1.64 {d16, d17}, [r2]
-; CHECK-CORTEX-FIX-NEXT:    vmov.f32 s0, s4
-; CHECK-CORTEX-FIX-NEXT:  .LBB90_2: @ =>This Inner Loop Header: Depth=1
-; CHECK-CORTEX-FIX-NEXT:    vorr q0, q0, q0
-; CHECK-CORTEX-FIX-NEXT:    aesd.8 q8, q0
-; CHECK-CORTEX-FIX-NEXT:    subs r0, r0, #1
-; CHECK-CORTEX-FIX-NEXT:    aesimc.8 q8, q8
-; CHECK-CORTEX-FIX-NEXT:    bne .LBB90_2
-; CHECK-CORTEX-FIX-NEXT:  @ %bb.3:
-; CHECK-CORTEX-FIX-NEXT:    vst1.64 {d16, d17}, [r2]
-; CHECK-CORTEX-FIX-NEXT:    bx lr
+; CHECK-FIX-LABEL: aesd_setf32_loop_via_ptr:
+; CHECK-FIX:       @ %bb.0:
+; CHECK-FIX-NEXT:    vldr s4, [r1]
+; CHECK-FIX-NEXT:    cmp r0, #0
+; CHECK-FIX-NEXT:    vstr s4, [r2]
+; CHECK-FIX-NEXT:    bxeq lr
+; CHECK-FIX-NEXT:  .LBB90_1:
+; CHECK-FIX-NEXT:    vld1.64 {d16, d17}, [r2]
+; CHECK-FIX-NEXT:    vmov.f32 s0, s4
+; CHECK-FIX-NEXT:  .LBB90_2: @ =>This Inner Loop Header: Depth=1
+; CHECK-FIX-NEXT:    vorr q0, q0, q0
+; CHECK-FIX-NEXT:    aesd.8 q8, q0
+; CHECK-FIX-NEXT:    subs r0, r0, #1
+; CHECK-FIX-NEXT:    aesimc.8 q8, q8
+; CHECK-FIX-NEXT:    bne .LBB90_2
+; CHECK-FIX-NEXT:  @ %bb.3:
+; CHECK-FIX-NEXT:    vst1.64 {d16, d17}, [r2]
+; CHECK-FIX-NEXT:    bx lr
   %5 = load float, ptr %1, align 4
   %6 = bitcast <16 x i8> %2 to <4 x float>
   %7 = insertelement <4 x float> %6, float %5, i64 0

@@ -29,27 +29,23 @@ entry:
 define void @caller_extern(ptr %src) optsize {
 ; CHECK-LABEL: caller_extern:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lui a1, %hi(dest)
-; CHECK-NEXT:    addi a1, a1, %lo(dest)
+; CHECK-NEXT:    mv a1, a0
+; CHECK-NEXT:    lui a0, %hi(dest)
+; CHECK-NEXT:    addi a0, a0, %lo(dest)
 ; CHECK-NEXT:    li a2, 7
-; CHECK-NEXT:    mv a3, a0
-; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    mv a1, a3
 ; CHECK-NEXT:    tail memcpy
 ;
 ; CHECK-LARGE-ZICFILP-LABEL: caller_extern:
 ; CHECK-LARGE-ZICFILP:       # %bb.0: # %entry
 ; CHECK-LARGE-ZICFILP-NEXT:    lpad 0
+; CHECK-LARGE-ZICFILP-NEXT:    mv a1, a0
 ; CHECK-LARGE-ZICFILP-NEXT:  .Lpcrel_hi1:
-; CHECK-LARGE-ZICFILP-NEXT:    auipc a1, %pcrel_hi(.LCPI1_0)
+; CHECK-LARGE-ZICFILP-NEXT:    auipc a0, %pcrel_hi(.LCPI1_0)
 ; CHECK-LARGE-ZICFILP-NEXT:  .Lpcrel_hi2:
 ; CHECK-LARGE-ZICFILP-NEXT:    auipc a2, %pcrel_hi(.LCPI1_1)
-; CHECK-LARGE-ZICFILP-NEXT:    lw a1, %pcrel_lo(.Lpcrel_hi1)(a1)
+; CHECK-LARGE-ZICFILP-NEXT:    lw a0, %pcrel_lo(.Lpcrel_hi1)(a0)
 ; CHECK-LARGE-ZICFILP-NEXT:    lw t2, %pcrel_lo(.Lpcrel_hi2)(a2)
 ; CHECK-LARGE-ZICFILP-NEXT:    li a2, 7
-; CHECK-LARGE-ZICFILP-NEXT:    mv a3, a0
-; CHECK-LARGE-ZICFILP-NEXT:    mv a0, a1
-; CHECK-LARGE-ZICFILP-NEXT:    mv a1, a3
 ; CHECK-LARGE-ZICFILP-NEXT:    jr t2
 entry:
   tail call void @llvm.memcpy.p0.p0.i32(ptr @dest, ptr %src, i32 7, i1 false)
@@ -61,27 +57,23 @@ entry:
 define void @caller_extern_pgso(ptr %src) !prof !14 {
 ; CHECK-LABEL: caller_extern_pgso:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lui a1, %hi(dest_pgso)
-; CHECK-NEXT:    addi a1, a1, %lo(dest_pgso)
+; CHECK-NEXT:    mv a1, a0
+; CHECK-NEXT:    lui a0, %hi(dest_pgso)
+; CHECK-NEXT:    addi a0, a0, %lo(dest_pgso)
 ; CHECK-NEXT:    li a2, 7
-; CHECK-NEXT:    mv a3, a0
-; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    mv a1, a3
 ; CHECK-NEXT:    tail memcpy
 ;
 ; CHECK-LARGE-ZICFILP-LABEL: caller_extern_pgso:
 ; CHECK-LARGE-ZICFILP:       # %bb.0: # %entry
 ; CHECK-LARGE-ZICFILP-NEXT:    lpad 0
+; CHECK-LARGE-ZICFILP-NEXT:    mv a1, a0
 ; CHECK-LARGE-ZICFILP-NEXT:  .Lpcrel_hi3:
-; CHECK-LARGE-ZICFILP-NEXT:    auipc a1, %pcrel_hi(.LCPI2_0)
+; CHECK-LARGE-ZICFILP-NEXT:    auipc a0, %pcrel_hi(.LCPI2_0)
 ; CHECK-LARGE-ZICFILP-NEXT:  .Lpcrel_hi4:
 ; CHECK-LARGE-ZICFILP-NEXT:    auipc a2, %pcrel_hi(.LCPI2_1)
-; CHECK-LARGE-ZICFILP-NEXT:    lw a1, %pcrel_lo(.Lpcrel_hi3)(a1)
+; CHECK-LARGE-ZICFILP-NEXT:    lw a0, %pcrel_lo(.Lpcrel_hi3)(a0)
 ; CHECK-LARGE-ZICFILP-NEXT:    lw t2, %pcrel_lo(.Lpcrel_hi4)(a2)
 ; CHECK-LARGE-ZICFILP-NEXT:    li a2, 7
-; CHECK-LARGE-ZICFILP-NEXT:    mv a3, a0
-; CHECK-LARGE-ZICFILP-NEXT:    mv a0, a1
-; CHECK-LARGE-ZICFILP-NEXT:    mv a1, a3
 ; CHECK-LARGE-ZICFILP-NEXT:    jr t2
 entry:
   tail call void @llvm.memcpy.p0.p0.i32(ptr @dest_pgso, ptr %src, i32 7, i1 false)
@@ -248,12 +240,12 @@ define void @caller_indirect_args() nounwind {
 ; CHECK-LABEL: caller_indirect_args:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    lui a1, 262128
-; CHECK-NEXT:    mv a0, sp
+; CHECK-NEXT:    lui a0, 262128
 ; CHECK-NEXT:    sw zero, 0(sp)
 ; CHECK-NEXT:    sw zero, 4(sp)
 ; CHECK-NEXT:    sw zero, 8(sp)
-; CHECK-NEXT:    sw a1, 12(sp)
+; CHECK-NEXT:    sw a0, 12(sp)
+; CHECK-NEXT:    mv a0, sp
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    tail callee_indirect_args
 ;
@@ -261,15 +253,15 @@ define void @caller_indirect_args() nounwind {
 ; CHECK-LARGE-ZICFILP:       # %bb.0: # %entry
 ; CHECK-LARGE-ZICFILP-NEXT:    lpad 0
 ; CHECK-LARGE-ZICFILP-NEXT:    addi sp, sp, -16
-; CHECK-LARGE-ZICFILP-NEXT:    lui a1, 262128
+; CHECK-LARGE-ZICFILP-NEXT:    lui a0, 262128
 ; CHECK-LARGE-ZICFILP-NEXT:  .Lpcrel_hi9:
-; CHECK-LARGE-ZICFILP-NEXT:    auipc a0, %pcrel_hi(.LCPI7_0)
-; CHECK-LARGE-ZICFILP-NEXT:    lw t2, %pcrel_lo(.Lpcrel_hi9)(a0)
-; CHECK-LARGE-ZICFILP-NEXT:    mv a0, sp
+; CHECK-LARGE-ZICFILP-NEXT:    auipc a1, %pcrel_hi(.LCPI7_0)
+; CHECK-LARGE-ZICFILP-NEXT:    lw t2, %pcrel_lo(.Lpcrel_hi9)(a1)
 ; CHECK-LARGE-ZICFILP-NEXT:    sw zero, 0(sp)
 ; CHECK-LARGE-ZICFILP-NEXT:    sw zero, 4(sp)
 ; CHECK-LARGE-ZICFILP-NEXT:    sw zero, 8(sp)
-; CHECK-LARGE-ZICFILP-NEXT:    sw a1, 12(sp)
+; CHECK-LARGE-ZICFILP-NEXT:    sw a0, 12(sp)
+; CHECK-LARGE-ZICFILP-NEXT:    mv a0, sp
 ; CHECK-LARGE-ZICFILP-NEXT:    addi sp, sp, 16
 ; CHECK-LARGE-ZICFILP-NEXT:    jr t2
 entry:

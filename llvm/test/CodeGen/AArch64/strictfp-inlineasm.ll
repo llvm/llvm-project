@@ -4,10 +4,10 @@
 define i32 @foo() strictfp {
 ; CHECK-LABEL: foo:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w0, #-1 // =0xffffffff
 ; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    //APP
 ; CHECK-NEXT:    //NO_APP
+; CHECK-NEXT:    mov w0, #-1 // =0xffffffff
 ; CHECK-NEXT:    ret
 entry:
   tail call void asm sideeffect "", "r"(i32 1) #1, !srcloc !0

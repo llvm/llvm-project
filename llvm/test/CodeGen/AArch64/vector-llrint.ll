@@ -1000,9 +1000,9 @@ define <2 x i64> @llrint_v2i64_v2f128(<2 x fp128> %x) nounwind {
 ; CHECK-SD-LABEL: llrint_v2i64_v2f128:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    sub sp, sp, #48
+; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-SD-NEXT:    mov v0.16b, v1.16b
-; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-SD-NEXT:    bl llrintl
 ; CHECK-SD-NEXT:    fmov d0, x0
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
@@ -1044,10 +1044,10 @@ define <4 x i64> @llrint_v4i64_v4f128(<4 x fp128> %x) nounwind {
 ; CHECK-SD-LABEL: llrint_v4i64_v4f128:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    sub sp, sp, #80
-; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
-; CHECK-SD-NEXT:    mov v0.16b, v1.16b
 ; CHECK-SD-NEXT:    str x30, [sp, #64] // 8-byte Spill
 ; CHECK-SD-NEXT:    stp q3, q2, [sp, #32] // 32-byte Folded Spill
+; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-SD-NEXT:    mov v0.16b, v1.16b
 ; CHECK-SD-NEXT:    bl llrintl
 ; CHECK-SD-NEXT:    fmov d0, x0
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
@@ -1116,12 +1116,12 @@ define <8 x i64> @llrint_v8i64_v8f128(<8 x fp128> %x) nounwind {
 ; CHECK-SD-LABEL: llrint_v8i64_v8f128:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    sub sp, sp, #144
-; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
-; CHECK-SD-NEXT:    mov v0.16b, v1.16b
 ; CHECK-SD-NEXT:    str x30, [sp, #128] // 8-byte Spill
 ; CHECK-SD-NEXT:    stp q3, q2, [sp, #16] // 32-byte Folded Spill
 ; CHECK-SD-NEXT:    stp q5, q4, [sp, #48] // 32-byte Folded Spill
 ; CHECK-SD-NEXT:    stp q7, q6, [sp, #96] // 32-byte Folded Spill
+; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-SD-NEXT:    mov v0.16b, v1.16b
 ; CHECK-SD-NEXT:    bl llrintl
 ; CHECK-SD-NEXT:    fmov d0, x0
 ; CHECK-SD-NEXT:    str q0, [sp, #80] // 16-byte Spill
@@ -1248,11 +1248,11 @@ define <16 x i64> @llrint_v16f128(<16 x fp128> %x) nounwind {
 ; CHECK-SD-NEXT:    sub sp, sp, #272
 ; CHECK-SD-NEXT:    str q2, [sp, #160] // 16-byte Spill
 ; CHECK-SD-NEXT:    ldr q2, [sp, #368]
-; CHECK-SD-NEXT:    stp q0, q3, [sp] // 32-byte Folded Spill
-; CHECK-SD-NEXT:    mov v0.16b, v1.16b
+; CHECK-SD-NEXT:    stp x29, x30, [sp, #256] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    str q2, [sp, #240] // 16-byte Spill
 ; CHECK-SD-NEXT:    ldr q2, [sp, #384]
-; CHECK-SD-NEXT:    stp x29, x30, [sp, #256] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    stp q0, q3, [sp] // 32-byte Folded Spill
+; CHECK-SD-NEXT:    mov v0.16b, v1.16b
 ; CHECK-SD-NEXT:    str q2, [sp, #224] // 16-byte Spill
 ; CHECK-SD-NEXT:    ldr q2, [sp, #336]
 ; CHECK-SD-NEXT:    stp q5, q7, [sp, #32] // 32-byte Folded Spill

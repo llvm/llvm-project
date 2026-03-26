@@ -1001,9 +1001,9 @@ define amdgpu_kernel void @atomic_add_ret_local(ptr addrspace(1) %out, ptr addrs
 ; GFX11-LABEL: atomic_add_ret_local:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_mov_b32 s1, exec_lo
+; GFX11-NEXT:    ; implicit-def: $vgpr1
 ; GFX11-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX11-NEXT:    v_mbcnt_lo_u32_b32 v0, s1, 0
-; GFX11-NEXT:    ; implicit-def: $vgpr1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cmpx_eq_u32_e32 0, v0
 ; GFX11-NEXT:    s_cbranch_execz .LBB7_2
@@ -1032,9 +1032,9 @@ define amdgpu_kernel void @atomic_add_ret_local(ptr addrspace(1) %out, ptr addrs
 ; GFX12-LABEL: atomic_add_ret_local:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_mov_b32 s1, exec_lo
+; GFX12-NEXT:    ; implicit-def: $vgpr1
 ; GFX12-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX12-NEXT:    v_mbcnt_lo_u32_b32 v0, s1, 0
-; GFX12-NEXT:    ; implicit-def: $vgpr1
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_cmpx_eq_u32_e32 0, v0
 ; GFX12-NEXT:    s_cbranch_execz .LBB7_2
@@ -1188,9 +1188,9 @@ define amdgpu_kernel void @add_i32_constant(ptr addrspace(1) %out, ptr addrspace
 ; GFX11-LABEL: add_i32_constant:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_mov_b32 s1, exec_lo
+; GFX11-NEXT:    ; implicit-def: $vgpr1
 ; GFX11-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX11-NEXT:    v_mbcnt_lo_u32_b32 v0, s1, 0
-; GFX11-NEXT:    ; implicit-def: $vgpr1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cmpx_eq_u32_e32 0, v0
 ; GFX11-NEXT:    s_cbranch_execz .LBB8_2
@@ -1218,9 +1218,9 @@ define amdgpu_kernel void @add_i32_constant(ptr addrspace(1) %out, ptr addrspace
 ; GFX12-LABEL: add_i32_constant:
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_mov_b32 s1, exec_lo
+; GFX12-NEXT:    ; implicit-def: $vgpr1
 ; GFX12-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX12-NEXT:    v_mbcnt_lo_u32_b32 v0, s1, 0
-; GFX12-NEXT:    ; implicit-def: $vgpr1
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_cmpx_eq_u32_e32 0, v0
 ; GFX12-NEXT:    s_cbranch_execz .LBB8_2

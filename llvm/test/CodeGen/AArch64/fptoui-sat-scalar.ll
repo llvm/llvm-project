@@ -770,8 +770,8 @@ define i32 @test_unsigned_f128_i32(fp128 %f) {
 ; CHECK-SD-NEXT:    mov w19, w0
 ; CHECK-SD-NEXT:    bl __fixunstfsi
 ; CHECK-SD-NEXT:    adrp x8, .LCPI30_1
-; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-SD-NEXT:    cmp w19, #0
+; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-SD-NEXT:    ldr q1, [x8, :lo12:.LCPI30_1]
 ; CHECK-SD-NEXT:    csel w19, wzr, w0, mi
 ; CHECK-SD-NEXT:    bl __gttf2
@@ -790,8 +790,8 @@ define i32 @test_unsigned_f128_i32(fp128 %f) {
 ; CHECK-GI-NEXT:    .cfi_offset w19, -8
 ; CHECK-GI-NEXT:    .cfi_offset w20, -16
 ; CHECK-GI-NEXT:    .cfi_offset w30, -32
-; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-GI-NEXT:    bl __gttf2
 ; CHECK-GI-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-GI-NEXT:    cmp w0, #0
@@ -801,8 +801,8 @@ define i32 @test_unsigned_f128_i32(fp128 %f) {
 ; CHECK-GI-NEXT:    mov v0.d[0], x19
 ; CHECK-GI-NEXT:    csel x20, x8, xzr, gt
 ; CHECK-GI-NEXT:    adrp x8, .LCPI30_0
-; CHECK-GI-NEXT:    mov v0.d[1], x20
 ; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI30_0]
+; CHECK-GI-NEXT:    mov v0.d[1], x20
 ; CHECK-GI-NEXT:    bl __lttf2
 ; CHECK-GI-NEXT:    cmp w0, #0
 ; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Reload

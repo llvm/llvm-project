@@ -197,12 +197,12 @@ define <2 x float> @test_intrinsic_fminf_v2f32(<2 x float> %x, <2 x float> %y) {
 ; CHECK-NEXT:    .cfi_offset f29, -24
 ; CHECK-NEXT:    .cfi_offset f30, -16
 ; CHECK-NEXT:    .cfi_offset f31, -8
+; CHECK-NEXT:    stfd 29, 8(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stfd 30, 16(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    fmr 30, 2
-; CHECK-NEXT:    fmr 2, 3
-; CHECK-NEXT:    stfd 29, 8(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stfd 31, 24(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    fmr 31, 4
+; CHECK-NEXT:    fmr 2, 3
 ; CHECK-NEXT:    bl fminf
 ; CHECK-NEXT:    fmr 29, 1
 ; CHECK-NEXT:    fmr 1, 30
@@ -236,10 +236,9 @@ define <4 x float> @test_intrinsic_fmin_v4f32(<4 x float> %x, <4 x float> %y) {
 ; CHECK-NEXT:    .cfi_offset f29, -24
 ; CHECK-NEXT:    .cfi_offset f30, -16
 ; CHECK-NEXT:    .cfi_offset f31, -8
+; CHECK-NEXT:    stfd 25, 8(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stfd 26, 16(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    fmr 26, 2
-; CHECK-NEXT:    fmr 2, 5
-; CHECK-NEXT:    stfd 25, 8(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stfd 27, 24(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    fmr 27, 3
 ; CHECK-NEXT:    stfd 28, 32(1) # 8-byte Folded Spill
@@ -250,6 +249,7 @@ define <4 x float> @test_intrinsic_fmin_v4f32(<4 x float> %x, <4 x float> %y) {
 ; CHECK-NEXT:    fmr 30, 7
 ; CHECK-NEXT:    stfd 31, 56(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    fmr 31, 8
+; CHECK-NEXT:    fmr 2, 5
 ; CHECK-NEXT:    bl fminf
 ; CHECK-NEXT:    fmr 25, 1
 ; CHECK-NEXT:    fmr 1, 26
@@ -305,9 +305,6 @@ define <8 x float> @test_intrinsic_fmin_v8f32(<8 x float> %x, <8 x float> %y) {
 ; CHECK-NEXT:    .cfi_offset f29, -24
 ; CHECK-NEXT:    .cfi_offset f30, -16
 ; CHECK-NEXT:    .cfi_offset f31, -8
-; CHECK-NEXT:    stfd 25, 72(1) # 8-byte Folded Spill
-; CHECK-NEXT:    fmr 25, 2
-; CHECK-NEXT:    lfs 2, 136(1)
 ; CHECK-NEXT:    stfd 17, 8(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stfd 18, 16(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stfd 19, 24(1) # 8-byte Folded Spill
@@ -316,6 +313,8 @@ define <8 x float> @test_intrinsic_fmin_v8f32(<8 x float> %x, <8 x float> %y) {
 ; CHECK-NEXT:    stfd 22, 48(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stfd 23, 56(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stfd 24, 64(1) # 8-byte Folded Spill
+; CHECK-NEXT:    stfd 25, 72(1) # 8-byte Folded Spill
+; CHECK-NEXT:    fmr 25, 2
 ; CHECK-NEXT:    stfd 26, 80(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    fmr 26, 3
 ; CHECK-NEXT:    stfd 27, 88(1) # 8-byte Folded Spill
@@ -335,6 +334,7 @@ define <8 x float> @test_intrinsic_fmin_v8f32(<8 x float> %x, <8 x float> %y) {
 ; CHECK-NEXT:    lfs 20, 148(1)
 ; CHECK-NEXT:    lfs 19, 144(1)
 ; CHECK-NEXT:    lfs 18, 140(1)
+; CHECK-NEXT:    lfs 2, 136(1)
 ; CHECK-NEXT:    bl fminf
 ; CHECK-NEXT:    fmr 17, 1
 ; CHECK-NEXT:    fmr 1, 25

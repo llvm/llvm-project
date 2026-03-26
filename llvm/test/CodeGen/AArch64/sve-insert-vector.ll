@@ -443,8 +443,8 @@ define <vscale x 6 x i32>  @insert_nxv6i32_nxv2i32(<vscale x 2 x i32> %sv0, <vsc
 ; CHECK-NEXT:    addvl sp, sp, #-2
 ; CHECK-NEXT:    ldr z2, [sp, #1, mul vl]
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
-; CHECK-NEXT:    mov z1.d, z2.d
 ; CHECK-NEXT:    str z0, [sp]
+; CHECK-NEXT:    mov z1.d, z2.d
 ; CHECK-NEXT:    addvl sp, sp, #2
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret

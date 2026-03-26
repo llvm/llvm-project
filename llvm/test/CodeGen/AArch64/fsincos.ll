@@ -58,9 +58,9 @@ define <2 x double> @sin_v2f64(<2 x double> %a) nounwind {
 ; CHECK-SD-LABEL: sin_v2f64:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #48
+; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-SD-NEXT:    mov d0, v0.d[1]
-; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-SD-NEXT:    bl sin
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
@@ -152,10 +152,10 @@ define <4 x double> @sin_v4f64(<4 x double> %a) nounwind {
 ; CHECK-SD-LABEL: sin_v4f64:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #64
-; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
-; CHECK-SD-NEXT:    mov d0, v0.d[1]
 ; CHECK-SD-NEXT:    str x30, [sp, #48] // 8-byte Spill
 ; CHECK-SD-NEXT:    str q1, [sp, #32] // 16-byte Spill
+; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-SD-NEXT:    mov d0, v0.d[1]
 ; CHECK-SD-NEXT:    bl sin
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
@@ -224,9 +224,9 @@ define <2 x float> @sin_v2f32(<2 x float> %a) nounwind {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #48
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-SD-NEXT:    mov s0, v0.s[1]
-; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-SD-NEXT:    bl sinf
 ; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
@@ -271,9 +271,9 @@ define <3 x float> @sin_v3f32(<3 x float> %a) nounwind {
 ; CHECK-SD-LABEL: sin_v3f32:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #48
+; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-SD-NEXT:    mov s0, v0.s[1]
-; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-SD-NEXT:    bl sinf
 ; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
@@ -330,9 +330,9 @@ define <4 x float> @sin_v4f32(<4 x float> %a) nounwind {
 ; CHECK-SD-LABEL: sin_v4f32:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #48
+; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-SD-NEXT:    mov s0, v0.s[1]
-; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-SD-NEXT:    bl sinf
 ; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
@@ -405,9 +405,9 @@ define <8 x float> @sin_v8f32(<8 x float> %a) nounwind {
 ; CHECK-SD-LABEL: sin_v8f32:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #64
+; CHECK-SD-NEXT:    str x30, [sp, #48] // 8-byte Spill
 ; CHECK-SD-NEXT:    stp q0, q1, [sp] // 32-byte Folded Spill
 ; CHECK-SD-NEXT:    mov s0, v0.s[1]
-; CHECK-SD-NEXT:    str x30, [sp, #48] // 8-byte Spill
 ; CHECK-SD-NEXT:    bl sinf
 ; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp, #32] // 16-byte Spill
@@ -538,8 +538,8 @@ define <7 x half> @sin_v7f16(<7 x half> %a) nounwind {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #48
 ; CHECK-SD-NEXT:    mov h1, v0.h[1]
-; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Spill
+; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-SD-NEXT:    fcvt s0, h1
 ; CHECK-SD-NEXT:    bl sinf
 ; CHECK-SD-NEXT:    fcvt h0, s0
@@ -614,8 +614,8 @@ define <7 x half> @sin_v7f16(<7 x half> %a) nounwind {
 ; CHECK-GI-NEXT:    stp d9, d8, [sp, #128] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    mov h8, v0.h[1]
 ; CHECK-GI-NEXT:    mov h9, v0.h[2]
-; CHECK-GI-NEXT:    fcvt s0, h0
 ; CHECK-GI-NEXT:    str x30, [sp, #144] // 8-byte Spill
+; CHECK-GI-NEXT:    fcvt s0, h0
 ; CHECK-GI-NEXT:    bl sinf
 ; CHECK-GI-NEXT:    fcvt s1, h8
 ; CHECK-GI-NEXT:    fcvt h0, s0
@@ -676,8 +676,8 @@ define <4 x half> @sin_v4f16(<4 x half> %a) nounwind {
 ; CHECK-SD-NEXT:    sub sp, sp, #48
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    mov h1, v0.h[1]
-; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Spill
+; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-SD-NEXT:    fcvt s0, h1
 ; CHECK-SD-NEXT:    bl sinf
 ; CHECK-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
@@ -719,8 +719,8 @@ define <4 x half> @sin_v4f16(<4 x half> %a) nounwind {
 ; CHECK-GI-NEXT:    stp d9, d8, [sp, #56] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    mov h8, v0.h[1]
 ; CHECK-GI-NEXT:    mov h9, v0.h[2]
-; CHECK-GI-NEXT:    fcvt s0, h0
 ; CHECK-GI-NEXT:    str x30, [sp, #72] // 8-byte Spill
+; CHECK-GI-NEXT:    fcvt s0, h0
 ; CHECK-GI-NEXT:    bl sinf
 ; CHECK-GI-NEXT:    fcvt s1, h8
 ; CHECK-GI-NEXT:    fcvt h0, s0
@@ -760,8 +760,8 @@ define <8 x half> @sin_v8f16(<8 x half> %a) nounwind {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #48
 ; CHECK-SD-NEXT:    mov h1, v0.h[1]
-; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Spill
+; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-SD-NEXT:    fcvt s0, h1
 ; CHECK-SD-NEXT:    bl sinf
 ; CHECK-SD-NEXT:    fcvt h0, s0
@@ -838,8 +838,8 @@ define <8 x half> @sin_v8f16(<8 x half> %a) nounwind {
 ; CHECK-GI-NEXT:    stp d9, d8, [sp, #152] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    mov h8, v0.h[1]
 ; CHECK-GI-NEXT:    mov h9, v0.h[2]
-; CHECK-GI-NEXT:    fcvt s0, h0
 ; CHECK-GI-NEXT:    str x30, [sp, #168] // 8-byte Spill
+; CHECK-GI-NEXT:    fcvt s0, h0
 ; CHECK-GI-NEXT:    bl sinf
 ; CHECK-GI-NEXT:    fcvt s1, h8
 ; CHECK-GI-NEXT:    fcvt h0, s0
@@ -1264,9 +1264,9 @@ define <2 x double> @cos_v2f64(<2 x double> %a) nounwind {
 ; CHECK-SD-LABEL: cos_v2f64:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #48
+; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-SD-NEXT:    mov d0, v0.d[1]
-; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-SD-NEXT:    bl cos
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
@@ -1358,10 +1358,10 @@ define <4 x double> @cos_v4f64(<4 x double> %a) nounwind {
 ; CHECK-SD-LABEL: cos_v4f64:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #64
-; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
-; CHECK-SD-NEXT:    mov d0, v0.d[1]
 ; CHECK-SD-NEXT:    str x30, [sp, #48] // 8-byte Spill
 ; CHECK-SD-NEXT:    str q1, [sp, #32] // 16-byte Spill
+; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-SD-NEXT:    mov d0, v0.d[1]
 ; CHECK-SD-NEXT:    bl cos
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
@@ -1430,9 +1430,9 @@ define <2 x float> @cos_v2f32(<2 x float> %a) nounwind {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #48
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-SD-NEXT:    mov s0, v0.s[1]
-; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-SD-NEXT:    bl cosf
 ; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
@@ -1477,9 +1477,9 @@ define <3 x float> @cos_v3f32(<3 x float> %a) nounwind {
 ; CHECK-SD-LABEL: cos_v3f32:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #48
+; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-SD-NEXT:    mov s0, v0.s[1]
-; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-SD-NEXT:    bl cosf
 ; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
@@ -1536,9 +1536,9 @@ define <4 x float> @cos_v4f32(<4 x float> %a) nounwind {
 ; CHECK-SD-LABEL: cos_v4f32:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #48
+; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-SD-NEXT:    mov s0, v0.s[1]
-; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-SD-NEXT:    bl cosf
 ; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
@@ -1611,9 +1611,9 @@ define <8 x float> @cos_v8f32(<8 x float> %a) nounwind {
 ; CHECK-SD-LABEL: cos_v8f32:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #64
+; CHECK-SD-NEXT:    str x30, [sp, #48] // 8-byte Spill
 ; CHECK-SD-NEXT:    stp q0, q1, [sp] // 32-byte Folded Spill
 ; CHECK-SD-NEXT:    mov s0, v0.s[1]
-; CHECK-SD-NEXT:    str x30, [sp, #48] // 8-byte Spill
 ; CHECK-SD-NEXT:    bl cosf
 ; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp, #32] // 16-byte Spill
@@ -1744,8 +1744,8 @@ define <7 x half> @cos_v7f16(<7 x half> %a) nounwind {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #48
 ; CHECK-SD-NEXT:    mov h1, v0.h[1]
-; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Spill
+; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-SD-NEXT:    fcvt s0, h1
 ; CHECK-SD-NEXT:    bl cosf
 ; CHECK-SD-NEXT:    fcvt h0, s0
@@ -1820,8 +1820,8 @@ define <7 x half> @cos_v7f16(<7 x half> %a) nounwind {
 ; CHECK-GI-NEXT:    stp d9, d8, [sp, #128] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    mov h8, v0.h[1]
 ; CHECK-GI-NEXT:    mov h9, v0.h[2]
-; CHECK-GI-NEXT:    fcvt s0, h0
 ; CHECK-GI-NEXT:    str x30, [sp, #144] // 8-byte Spill
+; CHECK-GI-NEXT:    fcvt s0, h0
 ; CHECK-GI-NEXT:    bl cosf
 ; CHECK-GI-NEXT:    fcvt s1, h8
 ; CHECK-GI-NEXT:    fcvt h0, s0
@@ -1882,8 +1882,8 @@ define <4 x half> @cos_v4f16(<4 x half> %a) nounwind {
 ; CHECK-SD-NEXT:    sub sp, sp, #48
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    mov h1, v0.h[1]
-; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Spill
+; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-SD-NEXT:    fcvt s0, h1
 ; CHECK-SD-NEXT:    bl cosf
 ; CHECK-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
@@ -1925,8 +1925,8 @@ define <4 x half> @cos_v4f16(<4 x half> %a) nounwind {
 ; CHECK-GI-NEXT:    stp d9, d8, [sp, #56] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    mov h8, v0.h[1]
 ; CHECK-GI-NEXT:    mov h9, v0.h[2]
-; CHECK-GI-NEXT:    fcvt s0, h0
 ; CHECK-GI-NEXT:    str x30, [sp, #72] // 8-byte Spill
+; CHECK-GI-NEXT:    fcvt s0, h0
 ; CHECK-GI-NEXT:    bl cosf
 ; CHECK-GI-NEXT:    fcvt s1, h8
 ; CHECK-GI-NEXT:    fcvt h0, s0
@@ -1966,8 +1966,8 @@ define <8 x half> @cos_v8f16(<8 x half> %a) nounwind {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #48
 ; CHECK-SD-NEXT:    mov h1, v0.h[1]
-; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Spill
+; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-SD-NEXT:    fcvt s0, h1
 ; CHECK-SD-NEXT:    bl cosf
 ; CHECK-SD-NEXT:    fcvt h0, s0
@@ -2044,8 +2044,8 @@ define <8 x half> @cos_v8f16(<8 x half> %a) nounwind {
 ; CHECK-GI-NEXT:    stp d9, d8, [sp, #152] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    mov h8, v0.h[1]
 ; CHECK-GI-NEXT:    mov h9, v0.h[2]
-; CHECK-GI-NEXT:    fcvt s0, h0
 ; CHECK-GI-NEXT:    str x30, [sp, #168] // 8-byte Spill
+; CHECK-GI-NEXT:    fcvt s0, h0
 ; CHECK-GI-NEXT:    bl cosf
 ; CHECK-GI-NEXT:    fcvt s1, h8
 ; CHECK-GI-NEXT:    fcvt h0, s0

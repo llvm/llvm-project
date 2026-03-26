@@ -65,15 +65,14 @@ define i16 @test_v7i16_load_store(ptr addrspace(1) %ptr1, ptr addrspace(1) %ptr2
 ; GCN-SDAG-NEXT:    global_load_b128 v[8:11], v[2:3], off
 ; GCN-SDAG-NEXT:    v_mov_b64_e32 v[12:13], 0
 ; GCN-SDAG-NEXT:    s_wait_loadcnt 0x0
-; GCN-SDAG-NEXT:    s_wait_xcnt 0x1
-; GCN-SDAG-NEXT:    v_pk_add_u16 v1, v6, v10
 ; GCN-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GCN-SDAG-NEXT:    v_pk_add_u16 v3, v5, v9
+; GCN-SDAG-NEXT:    v_pk_add_u16 v1, v6, v10
 ; GCN-SDAG-NEXT:    v_pk_add_u16 v5, v7, v11
 ; GCN-SDAG-NEXT:    v_mov_b64_e32 v[6:7], 12
 ; GCN-SDAG-NEXT:    v_mov_b64_e32 v[10:11], 8
-; GCN-SDAG-NEXT:    v_lshrrev_b32_e32 v0, 16, v1
 ; GCN-SDAG-NEXT:    v_pk_add_u16 v2, v4, v8
+; GCN-SDAG-NEXT:    v_lshrrev_b32_e32 v0, 16, v1
 ; GCN-SDAG-NEXT:    s_clause 0x2
 ; GCN-SDAG-NEXT:    global_store_b16 v[6:7], v5, off
 ; GCN-SDAG-NEXT:    global_store_b32 v[10:11], v1, off

@@ -408,8 +408,8 @@ define i32 @bfi4(i32 %A, i2 zeroext %BB, ptr %d) {
 ; CHECK-NEXT:    movweq lr, #32
 ; CHECK-NEXT:    orr r1, r1, r3, lsl #8
 ; CHECK-NEXT:    and r3, r0, #64
-; CHECK-NEXT:    and r0, r0, #128
 ; CHECK-NEXT:    orr r1, r1, lr
+; CHECK-NEXT:    and r0, r0, #128
 ; CHECK-NEXT:    orr r1, r1, r3, lsl #1
 ; CHECK-NEXT:    str r1, [r2]
 ; CHECK-NEXT:    pop {r11, pc}

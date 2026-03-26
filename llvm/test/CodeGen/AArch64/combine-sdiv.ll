@@ -673,8 +673,8 @@ define <8 x i64> @combine_vec_sdiv_by_pow2b_v8i64(<8 x i64> %x) {
 ; CHECK-SD-NEXT:    ushl v4.2d, v4.2d, v5.2d
 ; CHECK-SD-NEXT:    ushl v5.2d, v6.2d, v5.2d
 ; CHECK-SD-NEXT:    cmlt v6.2d, v1.2d, #0
-; CHECK-SD-NEXT:    ldr q17, [x8, :lo12:.LCPI23_1]
 ; CHECK-SD-NEXT:    ushl v7.2d, v7.2d, v16.2d
+; CHECK-SD-NEXT:    ldr q17, [x8, :lo12:.LCPI23_1]
 ; CHECK-SD-NEXT:    adrp x8, .LCPI23_2
 ; CHECK-SD-NEXT:    add v4.2d, v0.2d, v4.2d
 ; CHECK-SD-NEXT:    add v5.2d, v2.2d, v5.2d

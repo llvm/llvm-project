@@ -5,9 +5,9 @@ define dso_local arm_aapcs_vfpcc i32 @minmaxval4(ptr nocapture readonly %x, ptr 
 ; CHECK-LABEL: minmaxval4:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    push {r7, lr}
+; CHECK-NEXT:    movs r2, #10
 ; CHECK-NEXT:    vmov.i32 q0, #0x80000000
 ; CHECK-NEXT:    vmvn.i32 q1, #0x80000000
-; CHECK-NEXT:    movs r2, #10
 ; CHECK-NEXT:    dlstp.32 lr, r2
 ; CHECK-NEXT:  .LBB0_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1

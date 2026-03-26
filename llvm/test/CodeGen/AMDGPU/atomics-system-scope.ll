@@ -540,8 +540,8 @@ define double @flat_system_atomic_fadd_f64(ptr %ptr, double %val) {
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_dual_mov_b32 v5, v1 :: v_dual_mov_b32 v4, v0
 ; GFX1250-NEXT:    s_mov_b64 s[0:1], src_shared_base
-; GFX1250-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX1250-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX1250-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    v_cmpx_ne_u32_e64 s1, v5
 ; GFX1250-NEXT:    s_xor_b32 s0, exec_lo, s0
@@ -605,8 +605,8 @@ define double @flat_one_as_atomic_fadd_f64(ptr %ptr, double %val) {
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_dual_mov_b32 v5, v1 :: v_dual_mov_b32 v4, v0
 ; GFX1250-NEXT:    s_mov_b64 s[0:1], src_shared_base
-; GFX1250-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX1250-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX1250-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    v_cmpx_ne_u32_e64 s1, v5
 ; GFX1250-NEXT:    s_xor_b32 s0, exec_lo, s0

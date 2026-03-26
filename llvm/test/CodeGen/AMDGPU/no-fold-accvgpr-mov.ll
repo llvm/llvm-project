@@ -43,8 +43,8 @@ define amdgpu_kernel void @matmul_kernel(i32 %a0, i32 %a1) {
 ; GFX908:       ; %bb.0: ; %entry
 ; GFX908-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX908-NEXT:    v_accvgpr_write_b32 a2, 0
-; GFX908-NEXT:    v_accvgpr_write_b32 a1, 0
 ; GFX908-NEXT:    s_mov_b32 s2, 0
+; GFX908-NEXT:    v_accvgpr_write_b32 a1, 0
 ; GFX908-NEXT:    s_mov_b32 s3, 0
 ; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX908-NEXT:    s_cmp_lg_u32 s0, 0

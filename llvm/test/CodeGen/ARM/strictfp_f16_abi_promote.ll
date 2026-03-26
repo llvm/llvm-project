@@ -146,9 +146,9 @@ define void @v4f16_arg(<4 x half> %arg, ptr %ptr) #0 {
 ; NOFP16:       @ %bb.0:
 ; NOFP16-NEXT:    push {r4, r5, r6, lr}
 ; NOFP16-NEXT:    vmov d1, r2, r3
+; NOFP16-NEXT:    mov r4, r1
 ; NOFP16-NEXT:    mov r5, r0
 ; NOFP16-NEXT:    vmov d0, r0, r1
-; NOFP16-NEXT:    mov r4, r1
 ; NOFP16-NEXT:    vmov r0, s2
 ; NOFP16-NEXT:    bl __gnu_f2h_ieee
 ; NOFP16-NEXT:    uxth r6, r0

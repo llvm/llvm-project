@@ -7,9 +7,9 @@
 define i256 @f1(i256 %a, i256 %sh) {
 ; CHECK-LABEL: f1:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    l %r0, 28(%r4)
 ; CHECK-NEXT:    vl %v1, 16(%r3), 3
 ; CHECK-NEXT:    vl %v0, 0(%r3), 3
-; CHECK-NEXT:    l %r0, 28(%r4)
 ; CHECK-NEXT:    clijhe %r0, 128, .LBB0_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    lr %r1, %r0
@@ -51,9 +51,9 @@ define i256 @f1(i256 %a, i256 %sh) {
 define i256 @f2(i256 %a, i256 %sh) {
 ; CHECK-LABEL: f2:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    l %r0, 28(%r4)
 ; CHECK-NEXT:    vl %v1, 0(%r3), 3
 ; CHECK-NEXT:    vl %v0, 16(%r3), 3
-; CHECK-NEXT:    l %r0, 28(%r4)
 ; CHECK-NEXT:    clijhe %r0, 128, .LBB1_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    lr %r1, %r0
@@ -95,8 +95,8 @@ define i256 @f2(i256 %a, i256 %sh) {
 define i256 @f3(i256 %a, i256 %sh) {
 ; CHECK-LABEL: f3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl %v0, 16(%r3), 3
 ; CHECK-NEXT:    l %r0, 28(%r4)
+; CHECK-NEXT:    vl %v0, 16(%r3), 3
 ; CHECK-NEXT:    vl %v2, 0(%r3), 3
 ; CHECK-NEXT:    clijhe %r0, 128, .LBB2_2
 ; CHECK-NEXT:  # %bb.1:

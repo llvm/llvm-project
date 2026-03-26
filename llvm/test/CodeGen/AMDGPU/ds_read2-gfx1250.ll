@@ -849,10 +849,10 @@ define amdgpu_kernel void @ds_read_call_read(ptr addrspace(1) %out, ptr addrspac
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b96 s[36:38], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
-; GFX1250-NEXT:    v_dual_mov_b32 v42, 0 :: v_dual_mov_b32 v31, v0
-; GFX1250-NEXT:    s_mov_b64 s[10:11], s[6:7]
-; GFX1250-NEXT:    s_add_nc_u64 s[8:9], s[4:5], 12
 ; GFX1250-NEXT:    s_mov_b64 s[12:13], void_func_void@abs64
+; GFX1250-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; GFX1250-NEXT:    v_dual_mov_b32 v42, 0 :: v_dual_mov_b32 v31, v0
+; GFX1250-NEXT:    s_add_nc_u64 s[8:9], s[4:5], 12
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX1250-NEXT:    s_mov_b64 s[6:7], s[2:3]

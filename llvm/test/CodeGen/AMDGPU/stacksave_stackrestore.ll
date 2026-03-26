@@ -851,20 +851,20 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_call_with_stack_objects
 ; WAVE32-OPT:       ; %bb.0:
 ; WAVE32-OPT-NEXT:    s_getpc_b64 s[20:21]
 ; WAVE32-OPT-NEXT:    s_mov_b32 s20, s0
-; WAVE32-OPT-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
-; WAVE32-OPT-NEXT:    s_load_dwordx4 s[20:23], s[20:21], 0x0
-; WAVE32-OPT-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; WAVE32-OPT-NEXT:    s_movk_i32 s32, 0x1200
+; WAVE32-OPT-NEXT:    s_load_dwordx4 s[20:23], s[20:21], 0x0
+; WAVE32-OPT-NEXT:    v_mov_b32_e32 v3, 42
+; WAVE32-OPT-NEXT:    v_mov_b32_e32 v4, 17
+; WAVE32-OPT-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; WAVE32-OPT-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; WAVE32-OPT-NEXT:    s_mov_b32 s13, s9
 ; WAVE32-OPT-NEXT:    s_mov_b32 s12, s8
 ; WAVE32-OPT-NEXT:    s_mov_b64 s[8:9], s[4:5]
 ; WAVE32-OPT-NEXT:    s_mov_b32 s4, s32
-; WAVE32-OPT-NEXT:    v_mov_b32_e32 v3, 42
-; WAVE32-OPT-NEXT:    v_mov_b32_e32 v4, 17
-; WAVE32-OPT-NEXT:    v_or3_b32 v31, v0, v1, v2
-; WAVE32-OPT-NEXT:    s_mov_b32 s14, s10
 ; WAVE32-OPT-NEXT:    s_mov_b32 s17, stack_passed_argument@abs32@hi
 ; WAVE32-OPT-NEXT:    s_mov_b32 s16, stack_passed_argument@abs32@lo
+; WAVE32-OPT-NEXT:    s_mov_b32 s14, s10
+; WAVE32-OPT-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; WAVE32-OPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE32-OPT-NEXT:    s_bitset0_b32 s23, 21
 ; WAVE32-OPT-NEXT:    s_add_u32 s20, s20, s11
@@ -874,10 +874,10 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_call_with_stack_objects
 ; WAVE32-OPT-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; WAVE32-OPT-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; WAVE32-OPT-NEXT:    s_mov_b64 s[0:1], s[20:21]
-; WAVE32-OPT-NEXT:    s_mov_b64 s[2:3], s[22:23]
 ; WAVE32-OPT-NEXT:    buffer_store_dword v3, off, s[20:23], 0
 ; WAVE32-OPT-NEXT:    s_waitcnt_vscnt null, 0x0
 ; WAVE32-OPT-NEXT:    buffer_store_dword v4, off, s[20:23], s32 offset:4
+; WAVE32-OPT-NEXT:    s_mov_b64 s[2:3], s[22:23]
 ; WAVE32-OPT-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; WAVE32-OPT-NEXT:    ;;#ASMSTART
 ; WAVE32-OPT-NEXT:    ; use s15
@@ -888,20 +888,20 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_call_with_stack_objects
 ; WAVE64-OPT:       ; %bb.0:
 ; WAVE64-OPT-NEXT:    s_getpc_b64 s[20:21]
 ; WAVE64-OPT-NEXT:    s_mov_b32 s20, s0
-; WAVE64-OPT-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
-; WAVE64-OPT-NEXT:    s_load_dwordx4 s[20:23], s[20:21], 0x0
-; WAVE64-OPT-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; WAVE64-OPT-NEXT:    s_movk_i32 s32, 0x2400
+; WAVE64-OPT-NEXT:    s_load_dwordx4 s[20:23], s[20:21], 0x0
+; WAVE64-OPT-NEXT:    v_mov_b32_e32 v3, 42
+; WAVE64-OPT-NEXT:    v_mov_b32_e32 v4, 17
+; WAVE64-OPT-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; WAVE64-OPT-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; WAVE64-OPT-NEXT:    s_mov_b32 s13, s9
 ; WAVE64-OPT-NEXT:    s_mov_b32 s12, s8
 ; WAVE64-OPT-NEXT:    s_mov_b64 s[8:9], s[4:5]
 ; WAVE64-OPT-NEXT:    s_mov_b32 s4, s32
-; WAVE64-OPT-NEXT:    v_mov_b32_e32 v3, 42
-; WAVE64-OPT-NEXT:    v_mov_b32_e32 v4, 17
-; WAVE64-OPT-NEXT:    v_or3_b32 v31, v0, v1, v2
-; WAVE64-OPT-NEXT:    s_mov_b32 s14, s10
 ; WAVE64-OPT-NEXT:    s_mov_b32 s17, stack_passed_argument@abs32@hi
 ; WAVE64-OPT-NEXT:    s_mov_b32 s16, stack_passed_argument@abs32@lo
+; WAVE64-OPT-NEXT:    s_mov_b32 s14, s10
+; WAVE64-OPT-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; WAVE64-OPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE64-OPT-NEXT:    s_add_u32 s20, s20, s11
 ; WAVE64-OPT-NEXT:    s_addc_u32 s21, s21, 0
@@ -910,10 +910,10 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_call_with_stack_objects
 ; WAVE64-OPT-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; WAVE64-OPT-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; WAVE64-OPT-NEXT:    s_mov_b64 s[0:1], s[20:21]
-; WAVE64-OPT-NEXT:    s_mov_b64 s[2:3], s[22:23]
 ; WAVE64-OPT-NEXT:    buffer_store_dword v3, off, s[20:23], 0
 ; WAVE64-OPT-NEXT:    s_waitcnt_vscnt null, 0x0
 ; WAVE64-OPT-NEXT:    buffer_store_dword v4, off, s[20:23], s32 offset:4
+; WAVE64-OPT-NEXT:    s_mov_b64 s[2:3], s[22:23]
 ; WAVE64-OPT-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; WAVE64-OPT-NEXT:    ;;#ASMSTART
 ; WAVE64-OPT-NEXT:    ; use s15
@@ -1271,10 +1271,10 @@ define void @func_stacksave_stackrestore_call_with_stack_objects() {
 ; WAVE32-OPT-NEXT:    s_mov_b32 exec_lo, s16
 ; WAVE32-OPT-NEXT:    v_writelane_b32 v32, s30, 0
 ; WAVE32-OPT-NEXT:    v_mov_b32_e32 v0, 42
-; WAVE32-OPT-NEXT:    v_mov_b32_e32 v1, 17
 ; WAVE32-OPT-NEXT:    s_addk_i32 s32, 0x1200
-; WAVE32-OPT-NEXT:    s_mov_b32 s17, stack_passed_argument@abs32@hi
+; WAVE32-OPT-NEXT:    v_mov_b32_e32 v1, 17
 ; WAVE32-OPT-NEXT:    s_mov_b32 s18, s32
+; WAVE32-OPT-NEXT:    s_mov_b32 s17, stack_passed_argument@abs32@hi
 ; WAVE32-OPT-NEXT:    s_mov_b32 s16, stack_passed_argument@abs32@lo
 ; WAVE32-OPT-NEXT:    v_writelane_b32 v32, s31, 1
 ; WAVE32-OPT-NEXT:    s_lshr_b32 s19, s18, 5
@@ -1306,10 +1306,10 @@ define void @func_stacksave_stackrestore_call_with_stack_objects() {
 ; WAVE64-OPT-NEXT:    s_mov_b64 exec, s[16:17]
 ; WAVE64-OPT-NEXT:    v_writelane_b32 v32, s30, 0
 ; WAVE64-OPT-NEXT:    v_mov_b32_e32 v0, 42
-; WAVE64-OPT-NEXT:    v_mov_b32_e32 v1, 17
 ; WAVE64-OPT-NEXT:    s_addk_i32 s32, 0x2400
-; WAVE64-OPT-NEXT:    s_mov_b32 s17, stack_passed_argument@abs32@hi
+; WAVE64-OPT-NEXT:    v_mov_b32_e32 v1, 17
 ; WAVE64-OPT-NEXT:    s_mov_b32 s18, s32
+; WAVE64-OPT-NEXT:    s_mov_b32 s17, stack_passed_argument@abs32@hi
 ; WAVE64-OPT-NEXT:    s_mov_b32 s16, stack_passed_argument@abs32@lo
 ; WAVE64-OPT-NEXT:    v_writelane_b32 v32, s31, 1
 ; WAVE64-OPT-NEXT:    s_lshr_b32 s19, s18, 6

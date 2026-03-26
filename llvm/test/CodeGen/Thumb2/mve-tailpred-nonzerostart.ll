@@ -10,11 +10,11 @@ define arm_aapcs_vfpcc void @start12(ptr nocapture readonly %x, ptr nocapture re
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r4, pc}
 ; CHECK-NEXT:  .LBB0_1: @ %vector.ph
+; CHECK-NEXT:    subs r3, #12
 ; CHECK-NEXT:    vmov r12, s0
 ; CHECK-NEXT:    adds r0, #48
 ; CHECK-NEXT:    adds r1, #48
 ; CHECK-NEXT:    adds r2, #48
-; CHECK-NEXT:    subs r3, #12
 ; CHECK-NEXT:    dlstp.32 lr, r3
 ; CHECK-NEXT:  .LBB0_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
@@ -64,15 +64,15 @@ define arm_aapcs_vfpcc void @start11(ptr nocapture readonly %x, ptr nocapture re
 ; CHECK-NEXT:  .LBB1_1: @ %vector.ph
 ; CHECK-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
-; CHECK-NEXT:    vmov r12, s0
 ; CHECK-NEXT:    adds r4, r3, #3
 ; CHECK-NEXT:    adr r5, .LCPI1_0
+; CHECK-NEXT:    vmov r12, s0
 ; CHECK-NEXT:    bic lr, r4, #3
 ; CHECK-NEXT:    adds r0, #44
 ; CHECK-NEXT:    adds r1, #44
 ; CHECK-NEXT:    adds r2, #44
-; CHECK-NEXT:    vldrw.u32 q0, [r5]
 ; CHECK-NEXT:    movs r4, #11
+; CHECK-NEXT:    vldrw.u32 q0, [r5]
 ; CHECK-NEXT:    vdup.32 q1, r3
 ; CHECK-NEXT:  .LBB1_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
@@ -134,8 +134,8 @@ define arm_aapcs_vfpcc void @startS(i32 %S, ptr nocapture readonly %x, ptr nocap
 ; CHECK-NEXT:    cmp r5, #1
 ; CHECK-NEXT:    blt .LBB2_3
 ; CHECK-NEXT:  @ %bb.1: @ %vector.ph
-; CHECK-NEXT:    vmov r12, s0
 ; CHECK-NEXT:    adds r4, r5, #3
+; CHECK-NEXT:    vmov r12, s0
 ; CHECK-NEXT:    bic lr, r4, #3
 ; CHECK-NEXT:    adr r4, .LCPI2_0
 ; CHECK-NEXT:    add.w r1, r1, r0, lsl #2
@@ -203,8 +203,8 @@ define arm_aapcs_vfpcc void @startSmod4(i32 %S, ptr nocapture readonly %x, ptr n
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r4, pc}
 ; CHECK-NEXT:  .LBB3_1: @ %vector.ph
-; CHECK-NEXT:    vmov r12, s0
 ; CHECK-NEXT:    mvn r4, #12
+; CHECK-NEXT:    vmov r12, s0
 ; CHECK-NEXT:    and.w r4, r4, r0, lsl #2
 ; CHECK-NEXT:    add r1, r4
 ; CHECK-NEXT:    add r2, r4

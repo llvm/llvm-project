@@ -1166,9 +1166,9 @@ define void @va3_caller() nounwind {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64-NEXT:    lui a1, 5
+; RV64-NEXT:    lui a2, 5
+; RV64-NEXT:    addi a2, a2, -480
 ; RV64-NEXT:    li a0, 2
-; RV64-NEXT:    addi a2, a1, -480
 ; RV64-NEXT:    li a1, 1111
 ; RV64-NEXT:    call va3
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -1198,9 +1198,9 @@ define void @va3_caller() nounwind {
 ; RV64-WITHFP-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64-WITHFP-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64-WITHFP-NEXT:    addi s0, sp, 16
-; RV64-WITHFP-NEXT:    lui a1, 5
+; RV64-WITHFP-NEXT:    lui a2, 5
+; RV64-WITHFP-NEXT:    addi a2, a2, -480
 ; RV64-WITHFP-NEXT:    li a0, 2
-; RV64-WITHFP-NEXT:    addi a2, a1, -480
 ; RV64-WITHFP-NEXT:    li a1, 1111
 ; RV64-WITHFP-NEXT:    call va3
 ; RV64-WITHFP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload

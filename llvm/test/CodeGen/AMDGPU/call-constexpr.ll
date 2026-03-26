@@ -121,15 +121,15 @@ define amdgpu_kernel void @test_bitcast_argument_type() #0 {
 ; SDAG-NEXT:    s_addc_u32 s1, s1, 0
 ; SDAG-NEXT:    s_mov_b32 s13, s15
 ; SDAG-NEXT:    s_mov_b32 s12, s14
-; SDAG-NEXT:    s_getpc_b64 s[18:19]
-; SDAG-NEXT:    s_add_u32 s18, s18, ident_i32@rel32@lo+4
-; SDAG-NEXT:    s_addc_u32 s19, s19, ident_i32@rel32@hi+12
 ; SDAG-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; SDAG-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; SDAG-NEXT:    v_or_b32_e32 v0, v0, v1
 ; SDAG-NEXT:    v_or_b32_e32 v31, v0, v2
-; SDAG-NEXT:    v_mov_b32_e32 v0, 2.0
+; SDAG-NEXT:    s_getpc_b64 s[18:19]
+; SDAG-NEXT:    s_add_u32 s18, s18, ident_i32@rel32@lo+4
+; SDAG-NEXT:    s_addc_u32 s19, s19, ident_i32@rel32@hi+12
 ; SDAG-NEXT:    s_mov_b32 s14, s16
+; SDAG-NEXT:    v_mov_b32_e32 v0, 2.0
 ; SDAG-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; SDAG-NEXT:    v_add_i32_e32 v0, vcc, 1, v0
 ; SDAG-NEXT:    flat_store_dword v[0:1], v0
@@ -148,11 +148,11 @@ define amdgpu_kernel void @test_bitcast_argument_type() #0 {
 ; GISEL-NEXT:    s_mov_b32 s12, s14
 ; GISEL-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; GISEL-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
+; GISEL-NEXT:    v_or_b32_e32 v31, v0, v2
 ; GISEL-NEXT:    s_getpc_b64 s[18:19]
 ; GISEL-NEXT:    s_add_u32 s18, s18, ident_i32@rel32@lo+4
 ; GISEL-NEXT:    s_addc_u32 s19, s19, ident_i32@rel32@hi+12
-; GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
-; GISEL-NEXT:    v_or_b32_e32 v31, v0, v2
 ; GISEL-NEXT:    v_mov_b32_e32 v0, 2.0
 ; GISEL-NEXT:    s_mov_b32 s14, s16
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[18:19]
@@ -177,15 +177,15 @@ define amdgpu_kernel void @test_bitcast_argument_and_return_types() #0 {
 ; SDAG-NEXT:    s_addc_u32 s1, s1, 0
 ; SDAG-NEXT:    s_mov_b32 s13, s15
 ; SDAG-NEXT:    s_mov_b32 s12, s14
-; SDAG-NEXT:    s_getpc_b64 s[18:19]
-; SDAG-NEXT:    s_add_u32 s18, s18, ident_i32@rel32@lo+4
-; SDAG-NEXT:    s_addc_u32 s19, s19, ident_i32@rel32@hi+12
 ; SDAG-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; SDAG-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; SDAG-NEXT:    v_or_b32_e32 v0, v0, v1
 ; SDAG-NEXT:    v_or_b32_e32 v31, v0, v2
-; SDAG-NEXT:    v_mov_b32_e32 v0, 2.0
+; SDAG-NEXT:    s_getpc_b64 s[18:19]
+; SDAG-NEXT:    s_add_u32 s18, s18, ident_i32@rel32@lo+4
+; SDAG-NEXT:    s_addc_u32 s19, s19, ident_i32@rel32@hi+12
 ; SDAG-NEXT:    s_mov_b32 s14, s16
+; SDAG-NEXT:    v_mov_b32_e32 v0, 2.0
 ; SDAG-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; SDAG-NEXT:    v_add_f32_e32 v0, 1.0, v0
 ; SDAG-NEXT:    flat_store_dword v[0:1], v0
@@ -204,11 +204,11 @@ define amdgpu_kernel void @test_bitcast_argument_and_return_types() #0 {
 ; GISEL-NEXT:    s_mov_b32 s12, s14
 ; GISEL-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; GISEL-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
+; GISEL-NEXT:    v_or_b32_e32 v31, v0, v2
 ; GISEL-NEXT:    s_getpc_b64 s[18:19]
 ; GISEL-NEXT:    s_add_u32 s18, s18, ident_i32@rel32@lo+4
 ; GISEL-NEXT:    s_addc_u32 s19, s19, ident_i32@rel32@hi+12
-; GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
-; GISEL-NEXT:    v_or_b32_e32 v31, v0, v2
 ; GISEL-NEXT:    v_mov_b32_e32 v0, 2.0
 ; GISEL-NEXT:    s_mov_b32 s14, s16
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[18:19]
@@ -245,12 +245,12 @@ define amdgpu_kernel void @test_bitcast_use_workitem_id_x() #3 {
 ; SDAG-NEXT:    s_addc_u32 s1, s1, 0
 ; SDAG-NEXT:    s_mov_b32 s13, s15
 ; SDAG-NEXT:    s_mov_b32 s12, s14
-; SDAG-NEXT:    v_mov_b32_e32 v31, v0
 ; SDAG-NEXT:    s_getpc_b64 s[18:19]
 ; SDAG-NEXT:    s_add_u32 s18, s18, use_workitem_id_x@rel32@lo+4
 ; SDAG-NEXT:    s_addc_u32 s19, s19, use_workitem_id_x@rel32@hi+12
-; SDAG-NEXT:    v_mov_b32_e32 v0, 9
 ; SDAG-NEXT:    s_mov_b32 s14, s16
+; SDAG-NEXT:    v_mov_b32_e32 v31, v0
+; SDAG-NEXT:    v_mov_b32_e32 v0, 9
 ; SDAG-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; SDAG-NEXT:    v_add_f32_e32 v0, 1.0, v0
 ; SDAG-NEXT:    flat_store_dword v[0:1], v0
@@ -297,15 +297,15 @@ define amdgpu_kernel void @test_invoke() #0 personality ptr @__gxx_personality_v
 ; SDAG-NEXT:    s_addc_u32 s1, s1, 0
 ; SDAG-NEXT:    s_mov_b32 s13, s15
 ; SDAG-NEXT:    s_mov_b32 s12, s14
-; SDAG-NEXT:    s_getpc_b64 s[18:19]
-; SDAG-NEXT:    s_add_u32 s18, s18, ident_i32@rel32@lo+4
-; SDAG-NEXT:    s_addc_u32 s19, s19, ident_i32@rel32@hi+12
 ; SDAG-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; SDAG-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; SDAG-NEXT:    v_or_b32_e32 v0, v0, v1
 ; SDAG-NEXT:    v_or_b32_e32 v31, v0, v2
-; SDAG-NEXT:    v_mov_b32_e32 v0, 2.0
+; SDAG-NEXT:    s_getpc_b64 s[18:19]
+; SDAG-NEXT:    s_add_u32 s18, s18, ident_i32@rel32@lo+4
+; SDAG-NEXT:    s_addc_u32 s19, s19, ident_i32@rel32@hi+12
 ; SDAG-NEXT:    s_mov_b32 s14, s16
+; SDAG-NEXT:    v_mov_b32_e32 v0, 2.0
 ; SDAG-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; SDAG-NEXT:    v_add_f32_e32 v0, 1.0, v0
 ; SDAG-NEXT:    flat_store_dword v[0:1], v0
@@ -324,11 +324,11 @@ define amdgpu_kernel void @test_invoke() #0 personality ptr @__gxx_personality_v
 ; GISEL-NEXT:    s_mov_b32 s12, s14
 ; GISEL-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; GISEL-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
+; GISEL-NEXT:    v_or_b32_e32 v31, v0, v2
 ; GISEL-NEXT:    s_getpc_b64 s[18:19]
 ; GISEL-NEXT:    s_add_u32 s18, s18, ident_i32@rel32@lo+4
 ; GISEL-NEXT:    s_addc_u32 s19, s19, ident_i32@rel32@hi+12
-; GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
-; GISEL-NEXT:    v_or_b32_e32 v31, v0, v2
 ; GISEL-NEXT:    v_mov_b32_e32 v0, 2.0
 ; GISEL-NEXT:    s_mov_b32 s14, s16
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[18:19]

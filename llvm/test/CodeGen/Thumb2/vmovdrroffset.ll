@@ -30,9 +30,9 @@ define arm_aapcs_vfpcc double @zero(double %a, double %b, double %c) {
 ; CHECK-NEXT:    mov r2, r0
 ; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    bl __aeabi_dadd
+; CHECK-NEXT:    mov r2, r0
 ; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    ldr r1, [sp, #4]
-; CHECK-NEXT:    mov r2, r0
 ; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    bl __aeabi_ddiv
 ; CHECK-NEXT:    vmov d0, r0, r1

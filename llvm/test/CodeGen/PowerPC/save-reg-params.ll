@@ -454,12 +454,10 @@ define void @mixed_1(double %a, i64 %b, i64 %c, i32 signext %d, i64 %e, float %f
 ; 32BIT-NEXT:    mflr 0
 ; 32BIT-NEXT:    stwu 1, -112(1)
 ; 32BIT-NEXT:    stw 0, 120(1)
-; 32BIT-NEXT:    stfd 1, 136(1)
-; 32BIT-NEXT:    xsadddp 1, 1, 5
 ; 32BIT-NEXT:    stw 24, 64(1) # 4-byte Folded Spill
-; 32BIT-NEXT:    lwz 24, 168(1)
 ; 32BIT-NEXT:    stw 25, 68(1) # 4-byte Folded Spill
 ; 32BIT-NEXT:    lwz 25, 188(1)
+; 32BIT-NEXT:    lwz 24, 168(1)
 ; 32BIT-NEXT:    stw 26, 72(1) # 4-byte Folded Spill
 ; 32BIT-NEXT:    stw 27, 76(1) # 4-byte Folded Spill
 ; 32BIT-NEXT:    stw 28, 80(1) # 4-byte Folded Spill
@@ -486,6 +484,8 @@ define void @mixed_1(double %a, i64 %b, i64 %c, i32 signext %d, i64 %e, float %f
 ; 32BIT-NEXT:    stw 7, 152(1)
 ; 32BIT-NEXT:    stw 6, 148(1)
 ; 32BIT-NEXT:    stw 5, 144(1)
+; 32BIT-NEXT:    stfd 1, 136(1)
+; 32BIT-NEXT:    xsadddp 1, 1, 5
 ; 32BIT-NEXT:    bl .consume_f64[PR]
 ; 32BIT-NEXT:    nop
 ; 32BIT-NEXT:    fadds 1, 30, 31
@@ -523,22 +523,20 @@ define void @mixed_1(double %a, i64 %b, i64 %c, i32 signext %d, i64 %e, float %f
 ; 64BIT-NEXT:    mflr 0
 ; 64BIT-NEXT:    stdu 1, -176(1)
 ; 64BIT-NEXT:    std 0, 192(1)
-; 64BIT-NEXT:    stfd 1, 224(1)
-; 64BIT-NEXT:    xsadddp 1, 1, 5
 ; 64BIT-NEXT:    std 27, 120(1) # 8-byte Folded Spill
 ; 64BIT-NEXT:    lwz 27, 292(1)
 ; 64BIT-NEXT:    std 28, 128(1) # 8-byte Folded Spill
+; 64BIT-NEXT:    mr 28, 4
 ; 64BIT-NEXT:    std 29, 136(1) # 8-byte Folded Spill
 ; 64BIT-NEXT:    std 30, 144(1) # 8-byte Folded Spill
 ; 64BIT-NEXT:    std 31, 152(1) # 8-byte Folded Spill
 ; 64BIT-NEXT:    stfd 30, 160(1) # 8-byte Folded Spill
 ; 64BIT-NEXT:    stfd 31, 168(1) # 8-byte Folded Spill
 ; 64BIT-NEXT:    fmr 31, 3
-; 64BIT-NEXT:    fmr 30, 2
 ; 64BIT-NEXT:    mr 31, 7
+; 64BIT-NEXT:    fmr 30, 2
 ; 64BIT-NEXT:    mr 30, 6
 ; 64BIT-NEXT:    mr 29, 5
-; 64BIT-NEXT:    mr 28, 4
 ; 64BIT-NEXT:    stfd 5, 296(1)
 ; 64BIT-NEXT:    stfd 4, 280(1)
 ; 64BIT-NEXT:    stfs 3, 272(1)
@@ -547,6 +545,8 @@ define void @mixed_1(double %a, i64 %b, i64 %c, i32 signext %d, i64 %e, float %f
 ; 64BIT-NEXT:    std 6, 248(1)
 ; 64BIT-NEXT:    std 5, 240(1)
 ; 64BIT-NEXT:    std 4, 232(1)
+; 64BIT-NEXT:    stfd 1, 224(1)
+; 64BIT-NEXT:    xsadddp 1, 1, 5
 ; 64BIT-NEXT:    bl .consume_f64[PR]
 ; 64BIT-NEXT:    nop
 ; 64BIT-NEXT:    fadds 1, 30, 31
@@ -659,7 +659,6 @@ define void @mixed_3(<2 x double> %a, i64 %b, double %c, float %d, i32 signext %
 ; 32BIT-NEXT:    stwu 1, -80(1)
 ; 32BIT-NEXT:    xsadddp 0, 34, 3
 ; 32BIT-NEXT:    stw 0, 88(1)
-; 32BIT-NEXT:    stfd 1, 128(1)
 ; 32BIT-NEXT:    stw 29, 60(1) # 4-byte Folded Spill
 ; 32BIT-NEXT:    addi 3, 1, 104
 ; 32BIT-NEXT:    lwz 29, 148(1)
@@ -669,12 +668,13 @@ define void @mixed_3(<2 x double> %a, i64 %b, double %c, float %d, i32 signext %
 ; 32BIT-NEXT:    fmr 31, 2
 ; 32BIT-NEXT:    mr 31, 10
 ; 32BIT-NEXT:    mr 30, 9
-; 32BIT-NEXT:    xsadddp 1, 0, 1
 ; 32BIT-NEXT:    stxvd2x 34, 0, 3
 ; 32BIT-NEXT:    stfd 3, 144(1)
 ; 32BIT-NEXT:    stfs 2, 136(1)
+; 32BIT-NEXT:    stfd 1, 128(1)
 ; 32BIT-NEXT:    stw 10, 124(1)
 ; 32BIT-NEXT:    stw 9, 120(1)
+; 32BIT-NEXT:    xsadddp 1, 0, 1
 ; 32BIT-NEXT:    bl .consume_f64[PR]
 ; 32BIT-NEXT:    nop
 ; 32BIT-NEXT:    mr 3, 30
@@ -695,16 +695,14 @@ define void @mixed_3(<2 x double> %a, i64 %b, double %c, float %d, i32 signext %
 ; 32BIT-NEXT:    lwz 0, 8(1)
 ; 32BIT-NEXT:    mtlr 0
 ; 32BIT-NEXT:    blr
-; 32BIT: NumOfGPRsSaved = 3
 ;
 ; 64BIT-LABEL: mixed_3:
 ; 64BIT:       # %bb.0: # %entry
 ; 64BIT-NEXT:    mflr 0
 ; 64BIT-NEXT:    stdu 1, -144(1)
 ; 64BIT-NEXT:    xsadddp 0, 34, 3
-; 64BIT-NEXT:    std 0, 160(1)
-; 64BIT-NEXT:    stfd 1, 216(1)
 ; 64BIT-NEXT:    addi 3, 1, 192
+; 64BIT-NEXT:    std 0, 160(1)
 ; 64BIT-NEXT:    std 30, 120(1) # 8-byte Folded Spill
 ; 64BIT-NEXT:    std 31, 128(1) # 8-byte Folded Spill
 ; 64BIT-NEXT:    stfd 31, 136(1) # 8-byte Folded Spill
@@ -712,12 +710,13 @@ define void @mixed_3(<2 x double> %a, i64 %b, double %c, float %d, i32 signext %
 ; 64BIT-NEXT:    fmr 31, 2
 ; 64BIT-NEXT:    mr 30, 5
 ; 64BIT-NEXT:    stxvd2x 34, 0, 3
-; 64BIT-NEXT:    xsadddp 1, 0, 1
 ; 64BIT-NEXT:    std 10, 248(1)
 ; 64BIT-NEXT:    stfd 3, 240(1)
 ; 64BIT-NEXT:    std 8, 232(1)
 ; 64BIT-NEXT:    stfs 2, 224(1)
+; 64BIT-NEXT:    stfd 1, 216(1)
 ; 64BIT-NEXT:    std 5, 208(1)
+; 64BIT-NEXT:    xsadddp 1, 0, 1
 ; 64BIT-NEXT:    bl .consume_f64[PR]
 ; 64BIT-NEXT:    nop
 ; 64BIT-NEXT:    mr 3, 30
@@ -736,7 +735,6 @@ define void @mixed_3(<2 x double> %a, i64 %b, double %c, float %d, i32 signext %
 ; 64BIT-NEXT:    ld 0, 16(1)
 ; 64BIT-NEXT:    mtlr 0
 ; 64BIT-NEXT:    blr
-; 64BIT: NumOfGPRsSaved = 2
 entry:
   %vecext = extractelement <2 x double> %a, i64 0
   %add = fadd double %vecext, %f

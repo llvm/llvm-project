@@ -5,14 +5,14 @@
 define void @phi2(i32, i32, ptr) local_unnamed_addr {
 ; CHECK-LABEL: phi2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    divw 7, 3, 4
+; CHECK-NEXT:    mtctr 3
 ; CHECK-NEXT:    li 5, 55
 ; CHECK-NEXT:    li 6, 48
-; CHECK-NEXT:    mtctr 3
+; CHECK-NEXT:    divw 7, 3, 4
 ; CHECK-NEXT:    bdz .LBB0_4
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    divw 9, 7, 4
 ; CHECK-NEXT:    mullw 8, 7, 4
+; CHECK-NEXT:    divw 9, 7, 4
 ; CHECK-NEXT:    sub 3, 3, 8
 ; CHECK-NEXT:    cmplwi 3, 10
 ; CHECK-NEXT:    isellt 8, 6, 5
@@ -21,9 +21,9 @@ define void @phi2(i32, i32, ptr) local_unnamed_addr {
 ; CHECK-NEXT:    bdz .LBB0_3
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_2:
+; CHECK-NEXT:    mullw 10, 9, 4
 ; CHECK-NEXT:    mr 3, 7
 ; CHECK-NEXT:    mr 7, 9
-; CHECK-NEXT:    mullw 10, 9, 4
 ; CHECK-NEXT:    divw 9, 9, 4
 ; CHECK-NEXT:    sub 3, 3, 10
 ; CHECK-NEXT:    cmplwi 3, 10

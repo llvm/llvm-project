@@ -14,12 +14,12 @@ define amdgpu_kernel void @known_x_0(ptr addrspace(1) %out) !reqd_work_group_siz
 ; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; CHECK-NEXT:    s_add_u32 s0, s0, s17
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
-; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 20, v2
 ; CHECK-NEXT:    s_getpc_b64 s[4:5]
 ; CHECK-NEXT:    s_add_u32 s4, s4, callee@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s5, s5, callee@rel32@hi+12
-; CHECK-NEXT:    v_lshl_or_b32 v31, v1, 10, v0
+; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 20, v2
 ; CHECK-NEXT:    s_mov_b32 s32, 0
+; CHECK-NEXT:    v_lshl_or_b32 v31, v1, 10, v0
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; CHECK-NEXT:    s_endpgm
 ;
@@ -30,11 +30,11 @@ define amdgpu_kernel void @known_x_0(ptr addrspace(1) %out) !reqd_work_group_siz
 ; GISEL-NEXT:    s_add_u32 s0, s0, s17
 ; GISEL-NEXT:    s_addc_u32 s1, s1, 0
 ; GISEL-NEXT:    v_lshlrev_b32_e32 v0, 20, v2
-; GISEL-NEXT:    v_lshl_or_b32 v31, v1, 10, v0
 ; GISEL-NEXT:    s_getpc_b64 s[4:5]
 ; GISEL-NEXT:    s_add_u32 s4, s4, callee@rel32@lo+4
 ; GISEL-NEXT:    s_addc_u32 s5, s5, callee@rel32@hi+12
 ; GISEL-NEXT:    s_mov_b32 s32, 0
+; GISEL-NEXT:    v_lshl_or_b32 v31, v1, 10, v0
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GISEL-NEXT:    s_endpgm
   call void @callee()
@@ -52,8 +52,8 @@ define amdgpu_kernel void @known_y_0(ptr addrspace(1) %out) !reqd_work_group_siz
 ; CHECK-NEXT:    s_getpc_b64 s[4:5]
 ; CHECK-NEXT:    s_add_u32 s4, s4, callee@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s5, s5, callee@rel32@hi+12
-; CHECK-NEXT:    v_lshl_or_b32 v31, v2, 20, v0
 ; CHECK-NEXT:    s_mov_b32 s32, 0
+; CHECK-NEXT:    v_lshl_or_b32 v31, v2, 20, v0
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; CHECK-NEXT:    s_endpgm
 ;
@@ -63,11 +63,11 @@ define amdgpu_kernel void @known_y_0(ptr addrspace(1) %out) !reqd_work_group_siz
 ; GISEL-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; GISEL-NEXT:    s_add_u32 s0, s0, s17
 ; GISEL-NEXT:    s_addc_u32 s1, s1, 0
-; GISEL-NEXT:    v_lshl_or_b32 v31, v2, 20, v0
 ; GISEL-NEXT:    s_getpc_b64 s[4:5]
 ; GISEL-NEXT:    s_add_u32 s4, s4, callee@rel32@lo+4
 ; GISEL-NEXT:    s_addc_u32 s5, s5, callee@rel32@hi+12
 ; GISEL-NEXT:    s_mov_b32 s32, 0
+; GISEL-NEXT:    v_lshl_or_b32 v31, v2, 20, v0
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GISEL-NEXT:    s_endpgm
   call void @callee()
@@ -85,8 +85,8 @@ define amdgpu_kernel void @known_z_0(ptr addrspace(1) %out) !reqd_work_group_siz
 ; CHECK-NEXT:    s_getpc_b64 s[4:5]
 ; CHECK-NEXT:    s_add_u32 s4, s4, callee@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s5, s5, callee@rel32@hi+12
-; CHECK-NEXT:    v_lshl_or_b32 v31, v1, 10, v0
 ; CHECK-NEXT:    s_mov_b32 s32, 0
+; CHECK-NEXT:    v_lshl_or_b32 v31, v1, 10, v0
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; CHECK-NEXT:    s_endpgm
 ;
@@ -96,11 +96,11 @@ define amdgpu_kernel void @known_z_0(ptr addrspace(1) %out) !reqd_work_group_siz
 ; GISEL-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; GISEL-NEXT:    s_add_u32 s0, s0, s17
 ; GISEL-NEXT:    s_addc_u32 s1, s1, 0
-; GISEL-NEXT:    v_lshl_or_b32 v31, v1, 10, v0
 ; GISEL-NEXT:    s_getpc_b64 s[4:5]
 ; GISEL-NEXT:    s_add_u32 s4, s4, callee@rel32@lo+4
 ; GISEL-NEXT:    s_addc_u32 s5, s5, callee@rel32@hi+12
 ; GISEL-NEXT:    s_mov_b32 s32, 0
+; GISEL-NEXT:    v_lshl_or_b32 v31, v1, 10, v0
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GISEL-NEXT:    s_endpgm
   call void @callee()
@@ -118,8 +118,8 @@ define amdgpu_kernel void @known_yz_0(ptr addrspace(1) %out) !reqd_work_group_si
 ; CHECK-NEXT:    s_getpc_b64 s[4:5]
 ; CHECK-NEXT:    s_add_u32 s4, s4, callee@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s5, s5, callee@rel32@hi+12
-; CHECK-NEXT:    v_mov_b32_e32 v31, v0
 ; CHECK-NEXT:    s_mov_b32 s32, 0
+; CHECK-NEXT:    v_mov_b32_e32 v31, v0
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; CHECK-NEXT:    s_endpgm
 ;
@@ -132,8 +132,8 @@ define amdgpu_kernel void @known_yz_0(ptr addrspace(1) %out) !reqd_work_group_si
 ; GISEL-NEXT:    s_getpc_b64 s[4:5]
 ; GISEL-NEXT:    s_add_u32 s4, s4, callee@rel32@lo+4
 ; GISEL-NEXT:    s_addc_u32 s5, s5, callee@rel32@hi+12
-; GISEL-NEXT:    v_mov_b32_e32 v31, v0
 ; GISEL-NEXT:    s_mov_b32 s32, 0
+; GISEL-NEXT:    v_mov_b32_e32 v31, v0
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GISEL-NEXT:    s_endpgm
   call void @callee()
@@ -151,8 +151,8 @@ define amdgpu_kernel void @known_xz_0(ptr addrspace(1) %out) !reqd_work_group_si
 ; CHECK-NEXT:    s_getpc_b64 s[4:5]
 ; CHECK-NEXT:    s_add_u32 s4, s4, callee@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s5, s5, callee@rel32@hi+12
-; CHECK-NEXT:    v_lshlrev_b32_e32 v31, 10, v1
 ; CHECK-NEXT:    s_mov_b32 s32, 0
+; CHECK-NEXT:    v_lshlrev_b32_e32 v31, 10, v1
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; CHECK-NEXT:    s_endpgm
 ;
@@ -162,11 +162,11 @@ define amdgpu_kernel void @known_xz_0(ptr addrspace(1) %out) !reqd_work_group_si
 ; GISEL-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; GISEL-NEXT:    s_add_u32 s0, s0, s17
 ; GISEL-NEXT:    s_addc_u32 s1, s1, 0
-; GISEL-NEXT:    v_lshlrev_b32_e32 v31, 10, v1
 ; GISEL-NEXT:    s_getpc_b64 s[4:5]
 ; GISEL-NEXT:    s_add_u32 s4, s4, callee@rel32@lo+4
 ; GISEL-NEXT:    s_addc_u32 s5, s5, callee@rel32@hi+12
 ; GISEL-NEXT:    s_mov_b32 s32, 0
+; GISEL-NEXT:    v_lshlrev_b32_e32 v31, 10, v1
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GISEL-NEXT:    s_endpgm
   call void @callee()
@@ -185,8 +185,8 @@ define amdgpu_kernel void @known_xyz_0(ptr addrspace(1) %out) !reqd_work_group_s
 ; CHECK-NEXT:    s_getpc_b64 s[4:5]
 ; CHECK-NEXT:    s_add_u32 s4, s4, callee@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s5, s5, callee@rel32@hi+12
-; CHECK-NEXT:    v_mov_b32_e32 v31, 0
 ; CHECK-NEXT:    s_mov_b32 s32, 0
+; CHECK-NEXT:    v_mov_b32_e32 v31, 0
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; CHECK-NEXT:    s_endpgm
 ;
@@ -199,8 +199,8 @@ define amdgpu_kernel void @known_xyz_0(ptr addrspace(1) %out) !reqd_work_group_s
 ; GISEL-NEXT:    s_getpc_b64 s[4:5]
 ; GISEL-NEXT:    s_add_u32 s4, s4, callee@rel32@lo+4
 ; GISEL-NEXT:    s_addc_u32 s5, s5, callee@rel32@hi+12
-; GISEL-NEXT:    v_mov_b32_e32 v31, 0
 ; GISEL-NEXT:    s_mov_b32 s32, 0
+; GISEL-NEXT:    v_mov_b32_e32 v31, 0
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GISEL-NEXT:    s_endpgm
   call void @callee()

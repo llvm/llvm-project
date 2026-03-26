@@ -19,10 +19,10 @@ define dso_local void @test(i64 %arg, i64 %arg1, ptr %arg2) {
 ; CHECK-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stdu r1, -64(r1)
+; CHECK-NEXT:    std r0, 80(r1)
 ; CHECK-NEXT:    mr r30, r5
 ; CHECK-NEXT:    sub r29, r4, r3
 ; CHECK-NEXT:    addi r28, r5, -4
-; CHECK-NEXT:    std r0, 80(r1)
 ; CHECK-NEXT:    .p2align 5
 ; CHECK-NEXT:  .LBB0_3: # %bb5
 ; CHECK-NEXT:    #

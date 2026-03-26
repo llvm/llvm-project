@@ -1347,18 +1347,18 @@ define amdgpu_kernel void @ds_read_call_read(ptr addrspace(1) %out, ptr addrspac
 ; CI-NEXT:    v_add_i32_e32 v40, vcc, s6, v3
 ; CI-NEXT:    ds_read_b32 v41, v40
 ; CI-NEXT:    s_addc_u32 s9, s5, 0
+; CI-NEXT:    s_mov_b32 s17, void_func_void@abs32@hi
+; CI-NEXT:    s_mov_b32 s16, void_func_void@abs32@lo
 ; CI-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; CI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; CI-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; CI-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; CI-NEXT:    s_mov_b64 s[0:1], s[48:49]
-; CI-NEXT:    s_mov_b32 s17, void_func_void@abs32@hi
-; CI-NEXT:    s_mov_b32 s16, void_func_void@abs32@lo
-; CI-NEXT:    v_or_b32_e32 v31, v0, v2
-; CI-NEXT:    s_mov_b64 s[2:3], s[50:51]
 ; CI-NEXT:    s_mov_b32 s32, 0
 ; CI-NEXT:    s_mov_b32 s39, 0xf000
 ; CI-NEXT:    s_mov_b32 s38, -1
+; CI-NEXT:    v_or_b32_e32 v31, v0, v2
+; CI-NEXT:    s_mov_b64 s[2:3], s[50:51]
 ; CI-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CI-NEXT:    ds_read_b32 v0, v40 offset:4
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1374,7 +1374,7 @@ define amdgpu_kernel void @ds_read_call_read(ptr addrspace(1) %out, ptr addrspac
 ; GFX9-NEXT:    s_mov_b32 s14, s10
 ; GFX9-NEXT:    s_mov_b32 s12, s8
 ; GFX9-NEXT:    s_mov_b32 s13, s9
-; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; GFX9-NEXT:    s_mov_b32 s17, void_func_void@abs32@hi
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_add_u32 s36, s36, s11
 ; GFX9-NEXT:    s_mov_b64 s[10:11], s[6:7]
@@ -1386,16 +1386,16 @@ define amdgpu_kernel void @ds_read_call_read(ptr addrspace(1) %out, ptr addrspac
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_lshl_add_u32 v41, v0, 2, s6
 ; GFX9-NEXT:    ds_read_b32 v42, v41
+; GFX9-NEXT:    s_mov_b32 s16, void_func_void@abs32@lo
+; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; GFX9-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX9-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GFX9-NEXT:    s_mov_b64 s[0:1], s[36:37]
-; GFX9-NEXT:    s_mov_b32 s17, void_func_void@abs32@hi
-; GFX9-NEXT:    s_mov_b32 s16, void_func_void@abs32@lo
-; GFX9-NEXT:    v_or3_b32 v31, v0, v1, v2
-; GFX9-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; GFX9-NEXT:    s_mov_b32 s32, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v40, 0
+; GFX9-NEXT:    v_or3_b32 v31, v0, v1, v2
+; GFX9-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX9-NEXT:    ds_read_b32 v0, v41 offset:4
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)

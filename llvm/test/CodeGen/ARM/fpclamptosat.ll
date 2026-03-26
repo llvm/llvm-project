@@ -3660,8 +3660,8 @@ define void @unroll_maxmin(ptr nocapture %0, ptr nocapture readonly %1, i32 %2) 
 ; VFP2:       @ %bb.0:
 ; VFP2-NEXT:    subs r1, #8
 ; VFP2-NEXT:    subs r0, #8
-; VFP2-NEXT:    vldr s0, .LCPI54_0
 ; VFP2-NEXT:    mov.w r2, #1024
+; VFP2-NEXT:    vldr s0, .LCPI54_0
 ; VFP2-NEXT:  .LBB54_1: @ =>This Inner Loop Header: Depth=1
 ; VFP2-NEXT:    vldr s2, [r1, #8]
 ; VFP2-NEXT:    subs r2, #2
@@ -3831,8 +3831,8 @@ define void @unroll_minmax(ptr nocapture %0, ptr nocapture readonly %1, i32 %2) 
 ; VFP2:       @ %bb.0:
 ; VFP2-NEXT:    subs r1, #8
 ; VFP2-NEXT:    subs r0, #8
-; VFP2-NEXT:    vldr s0, .LCPI55_0
 ; VFP2-NEXT:    mov.w r2, #1024
+; VFP2-NEXT:    vldr s0, .LCPI55_0
 ; VFP2-NEXT:  .LBB55_1: @ =>This Inner Loop Header: Depth=1
 ; VFP2-NEXT:    vldr s2, [r1, #8]
 ; VFP2-NEXT:    subs r2, #2

@@ -19,8 +19,8 @@ declare { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.ppc.mma.disassemble
 define void @testPHI1(ptr %Dst, ptr %Src, i32 signext %Len) {
 ; CHECK-LABEL: testPHI1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxsetaccz acc0
 ; CHECK-NEXT:    cmpwi r5, 3
+; CHECK-NEXT:    xxsetaccz acc0
 ; CHECK-NEXT:    blt cr0, .LBB0_3
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    lxv v2, 0(r4)
@@ -46,8 +46,8 @@ define void @testPHI1(ptr %Dst, ptr %Src, i32 signext %Len) {
 ;
 ; CHECK-BE-LABEL: testPHI1:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    xxsetaccz acc0
 ; CHECK-BE-NEXT:    cmpwi r5, 3
+; CHECK-BE-NEXT:    xxsetaccz acc0
 ; CHECK-BE-NEXT:    blt cr0, .LBB0_3
 ; CHECK-BE-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-BE-NEXT:    lxv v2, 0(r4)
@@ -476,11 +476,11 @@ define dso_local signext i32 @testNestedPHI(i32 signext %cond, i32 signext %coun
 ; CHECK-WACC-NEXT:    bdnz .LBB3_4
 ; CHECK-WACC-NEXT:  .LBB3_5: # %for.cond.cleanup
 ; CHECK-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
-; CHECK-WACC-NEXT:    li r3, 0
 ; CHECK-WACC-NEXT:    stxv v4, 48(r5)
 ; CHECK-WACC-NEXT:    stxv v5, 32(r5)
 ; CHECK-WACC-NEXT:    stxv v2, 16(r5)
 ; CHECK-WACC-NEXT:    stxv v3, 0(r5)
+; CHECK-WACC-NEXT:    li r3, 0
 ; CHECK-WACC-NEXT:    blr
 ;
 ; CHECK-BE-WACC-LABEL: testNestedPHI:
@@ -508,11 +508,11 @@ define dso_local signext i32 @testNestedPHI(i32 signext %cond, i32 signext %coun
 ; CHECK-BE-WACC-NEXT:    bdnz .LBB3_4
 ; CHECK-BE-WACC-NEXT:  .LBB3_5: # %for.cond.cleanup
 ; CHECK-BE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
-; CHECK-BE-WACC-NEXT:    li r3, 0
 ; CHECK-BE-WACC-NEXT:    stxv v5, 48(r5)
 ; CHECK-BE-WACC-NEXT:    stxv v4, 32(r5)
 ; CHECK-BE-WACC-NEXT:    stxv v3, 16(r5)
 ; CHECK-BE-WACC-NEXT:    stxv v2, 0(r5)
+; CHECK-BE-WACC-NEXT:    li r3, 0
 ; CHECK-BE-WACC-NEXT:    blr
 entry:
   %tobool.not = icmp eq i32 %cond, 0

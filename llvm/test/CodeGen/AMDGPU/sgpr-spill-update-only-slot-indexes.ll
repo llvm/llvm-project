@@ -35,9 +35,9 @@ define amdgpu_kernel void @kernel() {
 ; GCN-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; GCN-NEXT:    s_mov_b64 s[0:1], s[36:37]
+; GCN-NEXT:    s_mov_b32 s32, 0
 ; GCN-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; GCN-NEXT:    s_mov_b64 s[2:3], s[38:39]
-; GCN-NEXT:    s_mov_b32 s32, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GCN-NEXT:    s_endpgm

@@ -88,15 +88,15 @@ define void @test(ptr dereferenceable(4) %.ial, ptr noalias dereferenceable(4) %
 ; CHECK-P10-NEXT:    lwz r5, 0(r7)
 ; CHECK-P10-NEXT:    extsw r7, r4
 ; CHECK-P10-NEXT:    rldic r4, r3, 3, 29
-; CHECK-P10-NEXT:    addi r10, r4, 8
 ; CHECK-P10-NEXT:    sub r3, r7, r3
 ; CHECK-P10-NEXT:    lxvdsx vs0, 0, r8
+; CHECK-P10-NEXT:    addi r10, r4, 8
 ; CHECK-P10-NEXT:    rldicl r3, r3, 60, 4
 ; CHECK-P10-NEXT:    extswsli r5, r5, 3
 ; CHECK-P10-NEXT:    addi r3, r3, 1
 ; CHECK-P10-NEXT:    sub r4, r10, r5
-; CHECK-P10-NEXT:    add r5, r9, r10
 ; CHECK-P10-NEXT:    mtctr r3
+; CHECK-P10-NEXT:    add r5, r9, r10
 ; CHECK-P10-NEXT:    add r4, r6, r4
 ; CHECK-P10-NEXT:    .p2align 4
 ; CHECK-P10-NEXT:  .LBB0_2: # %_loop_2_do_

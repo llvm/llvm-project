@@ -39,10 +39,10 @@ define amdgpu_kernel void @vgpr_mfma_pass_av_split_crash(double %arg1, i1 %arg2,
 ; CHECK-NEXT:    s_and_b64 s[4:5], exec, s[16:17]
 ; CHECK-NEXT:    v_mov_b32_e32 v18, 0x55555523
 ; CHECK-NEXT:    v_mov_b32_e32 v19, 0xbfd55555
+; CHECK-NEXT:    ; implicit-def: $agpr0_agpr1
 ; CHECK-NEXT:    s_and_b64 s[6:7], exec, s[18:19]
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    v_mov_b64_e32 v[20:21], 0
-; CHECK-NEXT:    ; implicit-def: $agpr0_agpr1
 ; CHECK-NEXT:    ; implicit-def: $vgpr22_vgpr23
 ; CHECK-NEXT:    s_branch .LBB0_2
 ; CHECK-NEXT:  .LBB0_1: ; %Flow9
@@ -94,18 +94,18 @@ define amdgpu_kernel void @vgpr_mfma_pass_av_split_crash(double %arg1, i1 %arg2,
 ; CHECK-NEXT:    ; Parent Loop BB0_2 Depth=1
 ; CHECK-NEXT:    ; => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    v_accvgpr_read_b32 v27, a3
+; CHECK-NEXT:    s_mov_b64 vcc, s[2:3]
 ; CHECK-NEXT:    v_accvgpr_read_b32 v26, a2
 ; CHECK-NEXT:    s_mov_b64 s[24:25], -1
-; CHECK-NEXT:    s_mov_b64 s[8:9], -1
-; CHECK-NEXT:    s_mov_b64 vcc, s[2:3]
 ; CHECK-NEXT:    ; implicit-def: $agpr2_agpr3
+; CHECK-NEXT:    s_mov_b64 s[8:9], -1
 ; CHECK-NEXT:    s_cbranch_vccz .LBB0_5
 ; CHECK-NEXT:  ; %bb.7: ; %.lr.ph2070.i.i.i3291
 ; CHECK-NEXT:    ; in Loop: Header=BB0_6 Depth=2
 ; CHECK-NEXT:    v_accvgpr_mov_b32 a3, a1
+; CHECK-NEXT:    s_mov_b64 vcc, s[6:7]
 ; CHECK-NEXT:    v_accvgpr_mov_b32 a2, a0
 ; CHECK-NEXT:    s_mov_b64 s[8:9], s[18:19]
-; CHECK-NEXT:    s_mov_b64 vcc, s[6:7]
 ; CHECK-NEXT:    s_cbranch_vccz .LBB0_5
 ; CHECK-NEXT:  ; %bb.8: ; %.preheader1856.preheader.i.i.i3325
 ; CHECK-NEXT:    ; in Loop: Header=BB0_6 Depth=2
@@ -152,13 +152,13 @@ define amdgpu_kernel void @vgpr_mfma_pass_av_split_crash(double %arg1, i1 %arg2,
 ; CHECK-NEXT:    v_accvgpr_write_b32 a1, v25
 ; CHECK-NEXT:  .LBB0_15: ; %Flow6
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    s_mov_b64 s[24:25], -1
 ; CHECK-NEXT:    s_and_b64 vcc, exec, s[8:9]
+; CHECK-NEXT:    s_mov_b64 s[24:25], -1
 ; CHECK-NEXT:    s_cbranch_vccz .LBB0_1
 ; CHECK-NEXT:  ; %bb.16: ; %._crit_edge2105.i.i.i2330
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    s_mov_b64 s[24:25], 0
 ; CHECK-NEXT:    global_store_dwordx2 v0, v[20:21], s[12:13]
+; CHECK-NEXT:    s_mov_b64 s[24:25], 0
 ; CHECK-NEXT:    s_branch .LBB0_1
 ; CHECK-NEXT:  .LBB0_17: ; %DummyReturnBlock
 ; CHECK-NEXT:    s_endpgm

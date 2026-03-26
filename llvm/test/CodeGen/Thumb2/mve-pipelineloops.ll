@@ -26,10 +26,10 @@ define void @arm_cmplx_dot_prod_q15(ptr noundef %pSrcA, ptr noundef %pSrcB, i32 
 ; CHECK-NEXT:    vldrh.u16 q2, [r0, #-16]
 ; CHECK-NEXT:    vmlaldavax.s16 r8, r5, q0, q1
 ; CHECK-NEXT:    vldrh.u16 q3, [r1, #-16]
-; CHECK-NEXT:    vmlsldava.s16 r4, r7, q2, q3
-; CHECK-NEXT:    vldrh.u16 q0, [r1], #32
 ; CHECK-NEXT:    sub.w lr, lr, #1
 ; CHECK-NEXT:    cmp.w lr, #0
+; CHECK-NEXT:    vmlsldava.s16 r4, r7, q2, q3
+; CHECK-NEXT:    vldrh.u16 q0, [r1], #32
 ; CHECK-NEXT:    vldrh.u16 q1, [r0], #32
 ; CHECK-NEXT:    beq .LBB0_3
 ; CHECK-NEXT:    .p2align 2

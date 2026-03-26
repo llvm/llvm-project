@@ -259,8 +259,8 @@ define ptr @sc_memchr(ptr %src, i64 %n) "aarch64_pstate_sm_compatible" {
 ; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_offset b13, -80
 ; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_offset b14, -88
 ; CHECK-NO-SME-ROUTINES-NEXT:    .cfi_offset b15, -96
-; CHECK-NO-SME-ROUTINES-NEXT:    mov x2, x1
 ; CHECK-NO-SME-ROUTINES-NEXT:    mrs x19, SVCR
+; CHECK-NO-SME-ROUTINES-NEXT:    mov x2, x1
 ; CHECK-NO-SME-ROUTINES-NEXT:    tbz w19, #0, .LBB4_2
 ; CHECK-NO-SME-ROUTINES-NEXT:  // %bb.1: // %entry
 ; CHECK-NO-SME-ROUTINES-NEXT:    smstop sm

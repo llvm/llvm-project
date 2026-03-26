@@ -55,15 +55,15 @@ define amdgpu_kernel void @f2(i32 %arg, i32 %arg1, i32 %arg2, i1 %arg3, i32 %arg
 ; GFX11-NEXT:    s_mov_b64 s[16:17], s[4:5]
 ; GFX11-NEXT:    v_mov_b32_e32 v31, v0
 ; GFX11-NEXT:    s_load_b32 s19, s[16:17], 0x24
+; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_mov_b32 s12, s13
 ; GFX11-NEXT:    s_mov_b64 s[10:11], s[6:7]
-; GFX11-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
+; GFX11-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GFX11-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX11-NEXT:    s_mov_b32 s20, 0
 ; GFX11-NEXT:    s_mov_b32 s0, -1
 ; GFX11-NEXT:    s_mov_b32 s3, exec_lo
-; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_mul_lo_u32 v0, s19, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -136,14 +136,14 @@ define amdgpu_kernel void @f2(i32 %arg, i32 %arg1, i32 %arg2, i1 %arg3, i32 %arg
 ; GFX11-NEXT:  .LBB2_6: ; %bb18
 ; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-NEXT:    s_and_b32 s1, 0xffff, s1
-; GFX11-NEXT:    s_cselect_b32 s13, -1, 0
-; GFX11-NEXT:    v_readfirstlane_b32 s1, v0
-; GFX11-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s13
-; GFX11-NEXT:    s_and_b32 s13, s8, s13
+; GFX11-NEXT:    s_cselect_b32 s1, -1, 0
+; GFX11-NEXT:    v_readfirstlane_b32 s13, v0
+; GFX11-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s1
+; GFX11-NEXT:    s_and_b32 s1, s8, s1
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    s_and_b32 s13, s13, exec_lo
+; GFX11-NEXT:    s_and_b32 s1, s1, exec_lo
 ; GFX11-NEXT:    v_readfirstlane_b32 s19, v2
-; GFX11-NEXT:    s_cselect_b32 s1, s19, s1
+; GFX11-NEXT:    s_cselect_b32 s1, s19, s13
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s1, s1, 1
 ; GFX11-NEXT:    s_and_b32 s13, 0xffff, s0

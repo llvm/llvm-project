@@ -11,9 +11,9 @@ define i8 @test1(i32 %a, ptr %pa) {
 ;
 ; CHECK-BE-LABEL: test1:
 ; CHECK-BE:       // %bb.0:
-; CHECK-BE-NEXT:    mov w8, w0
-; CHECK-BE-NEXT:    lsr w0, w0, #24
-; CHECK-BE-NEXT:    str w8, [x1]
+; CHECK-BE-NEXT:    lsr w8, w0, #24
+; CHECK-BE-NEXT:    str w0, [x1]
+; CHECK-BE-NEXT:    mov w0, w8
 ; CHECK-BE-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test1:

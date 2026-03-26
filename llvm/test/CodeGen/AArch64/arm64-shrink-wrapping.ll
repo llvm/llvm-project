@@ -838,8 +838,8 @@ end:
 define i32 @stack_realign(i32 %a, i32 %b, ptr %ptr1, ptr %ptr2) {
 ; ENABLE-LABEL: stack_realign:
 ; ENABLE:       ; %bb.0:
-; ENABLE-NEXT:    lsl w9, w0, w1
-; ENABLE-NEXT:    lsl w8, w1, w0
+; ENABLE-NEXT:    lsl w8, w0, w1
+; ENABLE-NEXT:    lsl w9, w1, w0
 ; ENABLE-NEXT:    cmp w0, w1
 ; ENABLE-NEXT:    b.ge LBB13_2
 ; ENABLE-NEXT:  ; %bb.1: ; %true
@@ -854,8 +854,8 @@ define i32 @stack_realign(i32 %a, i32 %b, ptr %ptr1, ptr %ptr2) {
 ; ENABLE-NEXT:    mov sp, x29
 ; ENABLE-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; ENABLE-NEXT:  LBB13_2: ; %false
-; ENABLE-NEXT:    str w9, [x2]
-; ENABLE-NEXT:    str w8, [x3]
+; ENABLE-NEXT:    str w8, [x2]
+; ENABLE-NEXT:    str w9, [x3]
 ; ENABLE-NEXT:    ret
 ;
 ; DISABLE-LABEL: stack_realign:
@@ -867,15 +867,15 @@ define i32 @stack_realign(i32 %a, i32 %b, ptr %ptr1, ptr %ptr2) {
 ; DISABLE-NEXT:    .cfi_def_cfa w29, 16
 ; DISABLE-NEXT:    .cfi_offset w30, -8
 ; DISABLE-NEXT:    .cfi_offset w29, -16
-; DISABLE-NEXT:    lsl w9, w0, w1
-; DISABLE-NEXT:    lsl w8, w1, w0
+; DISABLE-NEXT:    lsl w8, w0, w1
+; DISABLE-NEXT:    lsl w9, w1, w0
 ; DISABLE-NEXT:    cmp w0, w1
 ; DISABLE-NEXT:    b.ge LBB13_2
 ; DISABLE-NEXT:  ; %bb.1: ; %true
 ; DISABLE-NEXT:    str w0, [sp]
 ; DISABLE-NEXT:  LBB13_2: ; %false
-; DISABLE-NEXT:    str w9, [x2]
-; DISABLE-NEXT:    str w8, [x3]
+; DISABLE-NEXT:    str w8, [x2]
+; DISABLE-NEXT:    str w9, [x3]
 ; DISABLE-NEXT:    mov sp, x29
 ; DISABLE-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; DISABLE-NEXT:    ret

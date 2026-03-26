@@ -11,9 +11,9 @@ define void @julia__typed_vcat_20() #0 {
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stdu r1, -48(r1)
+; CHECK-NEXT:    std r0, 64(r1)
 ; CHECK-NEXT:    li r30, 0
 ; CHECK-NEXT:    li r4, 1
-; CHECK-NEXT:    std r0, 64(r1)
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %bb3
 ; CHECK-NEXT:    #
@@ -75,8 +75,8 @@ define void @julia__hypot_17() #0 {
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stdu r1, -48(r1)
-; CHECK-NEXT:    li r30, 3
 ; CHECK-NEXT:    std r0, 64(r1)
+; CHECK-NEXT:    li r30, 3
 ; CHECK-NEXT:    .p2align 5
 ; CHECK-NEXT:  .LBB1_1: # %bb1
 ; CHECK-NEXT:    #
@@ -162,8 +162,8 @@ define void @func_48786() #0 {
 ; CHECK-P9-LABEL: func_48786:
 ; CHECK-P9:       # %bb.0: # %bb
 ; CHECK-P9-NEXT:    ld r3, 0(r3)
-; CHECK-P9-NEXT:    cmpdi r3, 0
 ; CHECK-P9-NEXT:    mtctr r3
+; CHECK-P9-NEXT:    cmpdi r3, 0
 ; CHECK-P9-NEXT:    crnot 4*cr5+lt, eq
 ; CHECK-P9-NEXT:    b .LBB2_2
 ; CHECK-P9-NEXT:    .p2align 5

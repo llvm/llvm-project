@@ -13,9 +13,9 @@ define void @test(ptr %cast) strictfp {
 ; CHECK-NEXT:    std 29, -24(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stdu 1, -64(1)
+; CHECK-NEXT:    std 0, 80(1)
 ; CHECK-NEXT:    addi 30, 3, -8
 ; CHECK-NEXT:    li 29, 255
-; CHECK-NEXT:    std 0, 80(1)
 ; CHECK-NEXT:    .p2align 5
 ; CHECK-NEXT:  .LBB0_1: # %for.body
 ; CHECK-NEXT:    #
@@ -95,9 +95,9 @@ define void @testTan(ptr %cast) strictfp {
 ; CHECK-NEXT:    std 29, -24(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stdu 1, -64(1)
+; CHECK-NEXT:    std 0, 80(1)
 ; CHECK-NEXT:    addi 30, 3, -8
 ; CHECK-NEXT:    li 29, 255
-; CHECK-NEXT:    std 0, 80(1)
 ; CHECK-NEXT:    .p2align 5
 ; CHECK-NEXT:  .LBB2_1: # %for.body
 ; CHECK-NEXT:    #
@@ -146,10 +146,10 @@ define void @testAtan2(ptr %cast1, ptr %cast2) strictfp {
 ; CHECK-NEXT:    std 29, -24(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stdu 1, -64(1)
+; CHECK-NEXT:    std 0, 80(1)
 ; CHECK-NEXT:    addi 30, 3, -8
 ; CHECK-NEXT:    addi 29, 4, -8
 ; CHECK-NEXT:    li 28, 255
-; CHECK-NEXT:    std 0, 80(1)
 ; CHECK-NEXT:    .p2align 5
 ; CHECK-NEXT:  .LBB3_1: # %for.body
 ; CHECK-NEXT:    #

@@ -50,14 +50,14 @@ define dso_local void @P10_Spill_CR_UN(ptr %arg, ptr %arg1, i32 %arg2) local_unn
 ; CHECK-NEXT:    .cfi_offset cr2, 8
 ; CHECK-NEXT:    .cfi_offset cr3, 8
 ; CHECK-NEXT:    .cfi_offset cr4, 8
-; CHECK-NEXT:    std r29, 200(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r30, 208(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    mr r29, r3
-; CHECK-NEXT:    mr r3, r4
-; CHECK-NEXT:    mr r30, r4
 ; CHECK-NEXT:    std r27, 184(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r28, 192(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    mr r28, r5
+; CHECK-NEXT:    std r29, 200(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r30, 208(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    mr r30, r4
+; CHECK-NEXT:    mr r29, r3
+; CHECK-NEXT:    mr r3, r4
 ; CHECK-NEXT:    bl call_1@notoc
 ; CHECK-NEXT:    cmpwi r3, 0
 ; CHECK-NEXT:    mr r3, r29
@@ -84,9 +84,9 @@ define dso_local void @P10_Spill_CR_UN(ptr %arg, ptr %arg1, i32 %arg2) local_unn
 ; CHECK-NEXT:  # %bb.4: # %bb37
 ; CHECK-NEXT:    bc 4, 4*cr5+lt, .LBB0_14
 ; CHECK-NEXT:  .LBB0_5: # %bb42
+; CHECK-NEXT:    cmpwi r28, 0
 ; CHECK-NEXT:    paddi r3, 0, global_1@PCREL, 1
 ; CHECK-NEXT:    li r4, 0
-; CHECK-NEXT:    cmpwi r28, 0
 ; CHECK-NEXT:    isel r3, r3, r4, 4*cr2+gt
 ; CHECK-NEXT:    crnot 4*cr2+lt, eq
 ; CHECK-NEXT:    bl call_5@notoc
@@ -145,21 +145,21 @@ define dso_local void @P10_Spill_CR_UN(ptr %arg, ptr %arg1, i32 %arg2) local_unn
 ; CHECK-NEXT:    # implicit-def: $r3
 ; CHECK-NEXT:  .LBB0_15: # %bb50
 ; CHECK-NEXT:    li r4, 0
-; CHECK-NEXT:    xxspltidp vs3, -1082130432
-; CHECK-NEXT:    xxspltidp vs4, -1082130432
+; CHECK-NEXT:    li r5, -1
 ; CHECK-NEXT:    extsh r9, r3
 ; CHECK-NEXT:    extsw r6, r28
-; CHECK-NEXT:    li r5, 0
-; CHECK-NEXT:    li r7, 0
 ; CHECK-NEXT:    std r30, 104(r1)
 ; CHECK-NEXT:    std r29, 96(r1)
+; CHECK-NEXT:    xxspltidp vs3, -1082130432
+; CHECK-NEXT:    xxspltidp vs4, -1082130432
+; CHECK-NEXT:    li r7, 0
 ; CHECK-NEXT:    li r8, 0
 ; CHECK-NEXT:    li r10, 0
 ; CHECK-NEXT:    xxlxor f1, f1, f1
 ; CHECK-NEXT:    std r4, 152(r1)
-; CHECK-NEXT:    li r4, -1
-; CHECK-NEXT:    std r4, 112(r1)
+; CHECK-NEXT:    std r5, 112(r1)
 ; CHECK-NEXT:    li r4, 1024
+; CHECK-NEXT:    li r5, 0
 ; CHECK-NEXT:    bl call_4@notoc
 ; CHECK-NEXT:  .LBB0_16: # %bb54
 ; CHECK-NEXT:    bc 12, 4*cr2+un, .LBB0_19
@@ -196,14 +196,14 @@ define dso_local void @P10_Spill_CR_UN(ptr %arg, ptr %arg1, i32 %arg2) local_unn
 ; CHECK-BE-NEXT:    .cfi_offset cr2, 8
 ; CHECK-BE-NEXT:    .cfi_offset cr2, 8
 ; CHECK-BE-NEXT:    .cfi_offset cr2, 8
-; CHECK-BE-NEXT:    std r29, 216(r1) # 8-byte Folded Spill
-; CHECK-BE-NEXT:    std r30, 224(r1) # 8-byte Folded Spill
-; CHECK-BE-NEXT:    mr r29, r3
-; CHECK-BE-NEXT:    mr r3, r4
-; CHECK-BE-NEXT:    mr r30, r4
 ; CHECK-BE-NEXT:    std r27, 200(r1) # 8-byte Folded Spill
 ; CHECK-BE-NEXT:    std r28, 208(r1) # 8-byte Folded Spill
 ; CHECK-BE-NEXT:    mr r28, r5
+; CHECK-BE-NEXT:    std r29, 216(r1) # 8-byte Folded Spill
+; CHECK-BE-NEXT:    std r30, 224(r1) # 8-byte Folded Spill
+; CHECK-BE-NEXT:    mr r30, r4
+; CHECK-BE-NEXT:    mr r29, r3
+; CHECK-BE-NEXT:    mr r3, r4
 ; CHECK-BE-NEXT:    bl call_1
 ; CHECK-BE-NEXT:    nop
 ; CHECK-BE-NEXT:    cmpwi r3, 0
@@ -234,9 +234,9 @@ define dso_local void @P10_Spill_CR_UN(ptr %arg, ptr %arg1, i32 %arg2) local_unn
 ; CHECK-BE-NEXT:  # %bb.4: # %bb37
 ; CHECK-BE-NEXT:    bc 4, 4*cr5+lt, .LBB0_14
 ; CHECK-BE-NEXT:  .LBB0_5: # %bb42
+; CHECK-BE-NEXT:    cmpwi r28, 0
 ; CHECK-BE-NEXT:    li r4, 0
 ; CHECK-BE-NEXT:    addi r3, r3, global_1@toc@l
-; CHECK-BE-NEXT:    cmpwi r28, 0
 ; CHECK-BE-NEXT:    isel r3, r3, r4, 4*cr2+gt
 ; CHECK-BE-NEXT:    crnot 4*cr2+lt, eq
 ; CHECK-BE-NEXT:    bl call_5
@@ -303,21 +303,21 @@ define dso_local void @P10_Spill_CR_UN(ptr %arg, ptr %arg1, i32 %arg2) local_unn
 ; CHECK-BE-NEXT:    # implicit-def: $r3
 ; CHECK-BE-NEXT:  .LBB0_15: # %bb50
 ; CHECK-BE-NEXT:    li r4, 0
-; CHECK-BE-NEXT:    xxspltidp vs3, -1082130432
-; CHECK-BE-NEXT:    xxspltidp vs4, -1082130432
+; CHECK-BE-NEXT:    li r5, -1
 ; CHECK-BE-NEXT:    extsh r9, r3
 ; CHECK-BE-NEXT:    extsw r6, r28
-; CHECK-BE-NEXT:    li r5, 0
-; CHECK-BE-NEXT:    li r7, 0
 ; CHECK-BE-NEXT:    std r30, 120(r1)
 ; CHECK-BE-NEXT:    std r29, 112(r1)
+; CHECK-BE-NEXT:    xxspltidp vs3, -1082130432
+; CHECK-BE-NEXT:    xxspltidp vs4, -1082130432
+; CHECK-BE-NEXT:    li r7, 0
 ; CHECK-BE-NEXT:    li r8, 0
 ; CHECK-BE-NEXT:    li r10, 0
 ; CHECK-BE-NEXT:    xxlxor f1, f1, f1
 ; CHECK-BE-NEXT:    std r4, 168(r1)
-; CHECK-BE-NEXT:    li r4, -1
-; CHECK-BE-NEXT:    std r4, 128(r1)
+; CHECK-BE-NEXT:    std r5, 128(r1)
 ; CHECK-BE-NEXT:    li r4, 1024
+; CHECK-BE-NEXT:    li r5, 0
 ; CHECK-BE-NEXT:    bl call_4
 ; CHECK-BE-NEXT:    nop
 ; CHECK-BE-NEXT:  .LBB0_16: # %bb54

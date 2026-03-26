@@ -106,8 +106,8 @@ define <4 x i32> @v_dupQ32(i32 %A) nounwind {
 define <4 x i16> @v_dup16_const(i16 %y, ptr %p) {
 ; CHECK-LABEL: v_dup16_const:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi.4h v0, #10
 ; CHECK-NEXT:    mov w8, #10 // =0xa
+; CHECK-NEXT:    movi.4h v0, #10
 ; CHECK-NEXT:    strh w8, [x1]
 ; CHECK-NEXT:    ret
     %i = insertelement <4 x i16> undef, i16 10, i32 0

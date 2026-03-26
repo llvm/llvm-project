@@ -6,8 +6,8 @@
 define i32 @test() {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    trap
+; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    blr
   call void @llvm.trap()
   ret i32 0

@@ -9,10 +9,10 @@ define i32 @relax_b18(i32 signext %a, i32 signext %b) {
 ; LA32R-NEXT:    beq $a0, $a1, .LBB0_1
 ; LA32R-NEXT:    b .LBB0_2
 ; LA32R-NEXT:  .LBB0_1: # %iftrue
-; LA32R-NEXT:    ori $a0, $zero, 1
 ; LA32R-NEXT:    #APP
 ; LA32R-NEXT:    .space 1048576
 ; LA32R-NEXT:    #NO_APP
+; LA32R-NEXT:    ori $a0, $zero, 1
 ; LA32R-NEXT:    ret
 ; LA32R-NEXT:  .LBB0_2: # %iffalse
 ; LA32R-NEXT:    move $a0, $zero
@@ -23,10 +23,10 @@ define i32 @relax_b18(i32 signext %a, i32 signext %b) {
 ; LA32S-NEXT:    beq $a0, $a1, .LBB0_1
 ; LA32S-NEXT:    b .LBB0_2
 ; LA32S-NEXT:  .LBB0_1: # %iftrue
-; LA32S-NEXT:    ori $a0, $zero, 1
 ; LA32S-NEXT:    #APP
 ; LA32S-NEXT:    .space 1048576
 ; LA32S-NEXT:    #NO_APP
+; LA32S-NEXT:    ori $a0, $zero, 1
 ; LA32S-NEXT:    ret
 ; LA32S-NEXT:  .LBB0_2: # %iffalse
 ; LA32S-NEXT:    move $a0, $zero
@@ -37,10 +37,10 @@ define i32 @relax_b18(i32 signext %a, i32 signext %b) {
 ; LA64-NEXT:    beq $a0, $a1, .LBB0_1
 ; LA64-NEXT:    b .LBB0_2
 ; LA64-NEXT:  .LBB0_1: # %iftrue
-; LA64-NEXT:    ori $a0, $zero, 1
 ; LA64-NEXT:    #APP
 ; LA64-NEXT:    .space 1048576
 ; LA64-NEXT:    #NO_APP
+; LA64-NEXT:    ori $a0, $zero, 1
 ; LA64-NEXT:    ret
 ; LA64-NEXT:  .LBB0_2: # %iffalse
 ; LA64-NEXT:    move $a0, $zero
@@ -63,10 +63,10 @@ define i32 @relax_b23(i1 %a) {
 ; LA32R-NEXT:    bne $a0, $zero, .LBB1_1
 ; LA32R-NEXT:    b .LBB1_2
 ; LA32R-NEXT:  .LBB1_1: # %iftrue
-; LA32R-NEXT:    ori $a0, $zero, 1
 ; LA32R-NEXT:    #APP
 ; LA32R-NEXT:    .space 16777216
 ; LA32R-NEXT:    #NO_APP
+; LA32R-NEXT:    ori $a0, $zero, 1
 ; LA32R-NEXT:    ret
 ; LA32R-NEXT:  .LBB1_2: # %iffalse
 ; LA32R-NEXT:    move $a0, $zero
@@ -78,10 +78,10 @@ define i32 @relax_b23(i1 %a) {
 ; LA32S-NEXT:    bnez $a0, .LBB1_1
 ; LA32S-NEXT:    b .LBB1_2
 ; LA32S-NEXT:  .LBB1_1: # %iftrue
-; LA32S-NEXT:    ori $a0, $zero, 1
 ; LA32S-NEXT:    #APP
 ; LA32S-NEXT:    .space 16777216
 ; LA32S-NEXT:    #NO_APP
+; LA32S-NEXT:    ori $a0, $zero, 1
 ; LA32S-NEXT:    ret
 ; LA32S-NEXT:  .LBB1_2: # %iffalse
 ; LA32S-NEXT:    move $a0, $zero
@@ -93,10 +93,10 @@ define i32 @relax_b23(i1 %a) {
 ; LA64-NEXT:    bnez $a0, .LBB1_1
 ; LA64-NEXT:    b .LBB1_2
 ; LA64-NEXT:  .LBB1_1: # %iftrue
-; LA64-NEXT:    ori $a0, $zero, 1
 ; LA64-NEXT:    #APP
 ; LA64-NEXT:    .space 16777216
 ; LA64-NEXT:    #NO_APP
+; LA64-NEXT:    ori $a0, $zero, 1
 ; LA64-NEXT:    ret
 ; LA64-NEXT:  .LBB1_2: # %iffalse
 ; LA64-NEXT:    move $a0, $zero
@@ -124,10 +124,10 @@ define i32 @relax_b28(i1 %a) {
 ; LA32R-NEXT:    addi.w $a0, $a0, %pcadd_lo12(.Lpcadd_hi0)
 ; LA32R-NEXT:    jr $a0
 ; LA32R-NEXT:  .LBB2_1: # %iftrue
-; LA32R-NEXT:    ori $a0, $zero, 1
 ; LA32R-NEXT:    #APP
 ; LA32R-NEXT:    .space 536870912
 ; LA32R-NEXT:    #NO_APP
+; LA32R-NEXT:    ori $a0, $zero, 1
 ; LA32R-NEXT:    addi.w $sp, $sp, 16
 ; LA32R-NEXT:    ret
 ; LA32R-NEXT:  .LBB2_2: # %iffalse
@@ -146,10 +146,10 @@ define i32 @relax_b28(i1 %a) {
 ; LA32S-NEXT:    addi.w $a0, $a0, %pc_lo12(.LBB2_2)
 ; LA32S-NEXT:    jr $a0
 ; LA32S-NEXT:  .LBB2_1: # %iftrue
-; LA32S-NEXT:    ori $a0, $zero, 1
 ; LA32S-NEXT:    #APP
 ; LA32S-NEXT:    .space 536870912
 ; LA32S-NEXT:    #NO_APP
+; LA32S-NEXT:    ori $a0, $zero, 1
 ; LA32S-NEXT:    addi.w $sp, $sp, 16
 ; LA32S-NEXT:    ret
 ; LA32S-NEXT:  .LBB2_2: # %iffalse
@@ -168,10 +168,10 @@ define i32 @relax_b28(i1 %a) {
 ; LA64-NEXT:    addi.d $a0, $a0, %pc_lo12(.LBB2_2)
 ; LA64-NEXT:    jr $a0
 ; LA64-NEXT:  .LBB2_1: # %iftrue
-; LA64-NEXT:    ori $a0, $zero, 1
 ; LA64-NEXT:    #APP
 ; LA64-NEXT:    .space 536870912
 ; LA64-NEXT:    #NO_APP
+; LA64-NEXT:    ori $a0, $zero, 1
 ; LA64-NEXT:    addi.d $sp, $sp, 16
 ; LA64-NEXT:    ret
 ; LA64-NEXT:  .LBB2_2: # %iffalse

@@ -24,8 +24,8 @@ define signext i32 @main() {
 ; CHECK-NEXT:    lhi %r2, 0
 ; CHECK-NEXT:    sthrl %r2, e
 ; CHECK-NEXT:    st %r0, 4(%r1)
-; CHECK-NEXT:    lghi %r2, 0
 ; CHECK-NEXT:    strl %r0, d
+; CHECK-NEXT:    lghi %r2, 0
 ; CHECK-NEXT:    br %r14
   %e = load i64, ptr @e, align 8
   %esh = lshr i64 %e, 32

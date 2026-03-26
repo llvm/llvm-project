@@ -51,10 +51,6 @@ define i32 @test_musttail_variadic_spill(i32 %arg0, ...) {
 ; CHECK-NEXT:    .cfi_offset w27, -88
 ; CHECK-NEXT:    .cfi_offset w28, -96
 ; CHECK-NEXT:    mov w19, w0
-; CHECK-NEXT:  Lloh0:
-; CHECK-NEXT:    adrp x0, _asdf@PAGE
-; CHECK-NEXT:  Lloh1:
-; CHECK-NEXT:    add x0, x0, _asdf@PAGEOFF
 ; CHECK-NEXT:    mov x20, x1
 ; CHECK-NEXT:    mov x21, x2
 ; CHECK-NEXT:    mov x22, x3
@@ -63,8 +59,12 @@ define i32 @test_musttail_variadic_spill(i32 %arg0, ...) {
 ; CHECK-NEXT:    mov x25, x6
 ; CHECK-NEXT:    mov x26, x7
 ; CHECK-NEXT:    stp q7, q6, [sp] ; 32-byte Folded Spill
-; CHECK-NEXT:    mov x27, x8
 ; CHECK-NEXT:    stp q5, q4, [sp, #32] ; 32-byte Folded Spill
+; CHECK-NEXT:    mov x27, x8
+; CHECK-NEXT:  Lloh0:
+; CHECK-NEXT:    adrp x0, _asdf@PAGE
+; CHECK-NEXT:  Lloh1:
+; CHECK-NEXT:    add x0, x0, _asdf@PAGEOFF
 ; CHECK-NEXT:    stp q3, q2, [sp, #64] ; 32-byte Folded Spill
 ; CHECK-NEXT:    stp q1, q0, [sp, #96] ; 32-byte Folded Spill
 ; CHECK-NEXT:    bl _puts
@@ -191,14 +191,14 @@ define void @h_thunk(ptr %this, ...) {
 ; CHECK-NEXT:    br x9
 ; CHECK-NEXT:  LBB5_2: ; %else
 ; CHECK-NEXT:  Lloh2:
-; CHECK-NEXT:    adrp x10, _g@GOTPAGE
-; CHECK-NEXT:    ldr x9, [x0, #16]
+; CHECK-NEXT:    adrp x9, _g@GOTPAGE
 ; CHECK-NEXT:    mov w11, #42 ; =0x2a
 ; CHECK-NEXT:  Lloh3:
-; CHECK-NEXT:    ldr x10, [x10, _g@GOTPAGEOFF]
+; CHECK-NEXT:    ldr x9, [x9, _g@GOTPAGEOFF]
+; CHECK-NEXT:    ldr x10, [x0, #16]
 ; CHECK-NEXT:  Lloh4:
-; CHECK-NEXT:    str w11, [x10]
-; CHECK-NEXT:    br x9
+; CHECK-NEXT:    str w11, [x9]
+; CHECK-NEXT:    br x10
 ; CHECK-NEXT:    .loh AdrpLdrGotStr Lloh2, Lloh3, Lloh4
   %cond = load i1, ptr %this
   br i1 %cond, label %then, label %else

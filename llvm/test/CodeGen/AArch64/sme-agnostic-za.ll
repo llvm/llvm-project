@@ -295,55 +295,30 @@ declare i64 @many_args_private_za_callee(
 ; stack pointer before the call -- in this test the call to __arm_sme_save
 ; should occur _before_ the stack decrement.
 define i64  @test_many_callee_arguments(
-; CHECK-SDAG-LABEL: test_many_callee_arguments:
-; CHECK-SDAG:       // %bb.0:
-; CHECK-SDAG-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-SDAG-NEXT:    str x19, [sp, #16] // 8-byte Spill
-; CHECK-SDAG-NEXT:    mov x29, sp
-; CHECK-SDAG-NEXT:    mov x8, x0
-; CHECK-SDAG-NEXT:    bl __arm_sme_state_size
-; CHECK-SDAG-NEXT:    sub sp, sp, x0
-; CHECK-SDAG-NEXT:    ldp x9, x10, [x29, #32]
-; CHECK-SDAG-NEXT:    mov x19, sp
-; CHECK-SDAG-NEXT:    mov x0, x19
-; CHECK-SDAG-NEXT:    bl __arm_sme_save
-; CHECK-SDAG-NEXT:    stp x9, x10, [sp, #-16]!
-; CHECK-SDAG-NEXT:    mov x0, x8
-; CHECK-SDAG-NEXT:    bl many_args_private_za_callee
-; CHECK-SDAG-NEXT:    add sp, sp, #16
-; CHECK-SDAG-NEXT:    mov x1, x0
-; CHECK-SDAG-NEXT:    mov x0, x19
-; CHECK-SDAG-NEXT:    bl __arm_sme_restore
-; CHECK-SDAG-NEXT:    mov x0, x1
-; CHECK-SDAG-NEXT:    mov sp, x29
-; CHECK-SDAG-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
-; CHECK-SDAG-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
-; CHECK-SDAG-NEXT:    ret
-;
-; CHECK-LABEL: test_many_callee_arguments:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #16] // 8-byte Spill
-; CHECK-NEXT:    mov x29, sp
-; CHECK-NEXT:    mov x8, x0
-; CHECK-NEXT:    bl __arm_sme_state_size
-; CHECK-NEXT:    sub sp, sp, x0
-; CHECK-NEXT:    mov x19, sp
-; CHECK-NEXT:    ldp x9, x10, [x29, #32]
-; CHECK-NEXT:    mov x0, x19
-; CHECK-NEXT:    bl __arm_sme_save
-; CHECK-NEXT:    stp x9, x10, [sp, #-16]!
-; CHECK-NEXT:    mov x0, x8
-; CHECK-NEXT:    bl many_args_private_za_callee
-; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    mov x1, x0
-; CHECK-NEXT:    mov x0, x19
-; CHECK-NEXT:    bl __arm_sme_restore
-; CHECK-NEXT:    mov x0, x1
-; CHECK-NEXT:    mov sp, x29
-; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
-; CHECK-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-COMMON-LABEL: test_many_callee_arguments:
+; CHECK-COMMON:       // %bb.0:
+; CHECK-COMMON-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
+; CHECK-COMMON-NEXT:    str x19, [sp, #16] // 8-byte Spill
+; CHECK-COMMON-NEXT:    mov x29, sp
+; CHECK-COMMON-NEXT:    mov x8, x0
+; CHECK-COMMON-NEXT:    bl __arm_sme_state_size
+; CHECK-COMMON-NEXT:    sub sp, sp, x0
+; CHECK-COMMON-NEXT:    ldp x9, x10, [x29, #32]
+; CHECK-COMMON-NEXT:    mov x19, sp
+; CHECK-COMMON-NEXT:    mov x0, x19
+; CHECK-COMMON-NEXT:    bl __arm_sme_save
+; CHECK-COMMON-NEXT:    stp x9, x10, [sp, #-16]!
+; CHECK-COMMON-NEXT:    mov x0, x8
+; CHECK-COMMON-NEXT:    bl many_args_private_za_callee
+; CHECK-COMMON-NEXT:    add sp, sp, #16
+; CHECK-COMMON-NEXT:    mov x1, x0
+; CHECK-COMMON-NEXT:    mov x0, x19
+; CHECK-COMMON-NEXT:    bl __arm_sme_restore
+; CHECK-COMMON-NEXT:    mov x0, x1
+; CHECK-COMMON-NEXT:    mov sp, x29
+; CHECK-COMMON-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
+; CHECK-COMMON-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
+; CHECK-COMMON-NEXT:    ret
   i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, i64 %7, i64 %8, i64 %9
 ) nounwind "aarch64_za_state_agnostic" {
   %ret = call i64 @many_args_private_za_callee(

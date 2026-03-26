@@ -1073,8 +1073,8 @@ define double @test_fmax_f64(double %a0, double %a1, double %a2, double %a3) {
 define double @test_fmadd_strategy(double %a0, double %a1, double %a2, double %a3, i64 %flag) {
 ; CHECK-LABEL: test_fmadd_strategy:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsub.d fa5, fa0, fa1
 ; CHECK-NEXT:    andi a0, a0, 1
+; CHECK-NEXT:    fsub.d fa5, fa0, fa1
 ; CHECK-NEXT:    beqz a0, .LBB76_2
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    fmul.d fa4, fa0, fa1

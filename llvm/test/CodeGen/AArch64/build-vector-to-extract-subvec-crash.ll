@@ -10,14 +10,13 @@ define i32 @widget(i64 %arg, <8 x i16> %arg1) {
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    dup v0.8h, v0.h[0]
-; CHECK-NEXT:    bfi x9, x0, #1, #3
-; CHECK-NEXT:    mov x8, x0
-; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    bfi x8, x0, #1, #3
 ; CHECK-NEXT:    str q1, [sp]
-; CHECK-NEXT:    ld1 { v0.h }[1], [x9]
-; CHECK-NEXT:    str q0, [x8]
+; CHECK-NEXT:    ld1 { v0.h }[1], [x8]
+; CHECK-NEXT:    str q0, [x0]
+; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
 bb:

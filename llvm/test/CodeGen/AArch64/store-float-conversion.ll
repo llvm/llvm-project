@@ -119,9 +119,8 @@ define i32 @f32_to_i32_multiple_uses(float %f, ptr %dst) {
 ; CHECK-LABEL: f32_to_i32_multiple_uses:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtzs w8, s0
-; CHECK-NEXT:    mov x9, x0
+; CHECK-NEXT:    strb w8, [x0]
 ; CHECK-NEXT:    mov w0, w8
-; CHECK-NEXT:    strb w8, [x9]
 ; CHECK-NEXT:    ret
 entry:
   %conv = fptosi float %f to i32

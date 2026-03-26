@@ -822,8 +822,8 @@ define dso_local signext i32 @array3() local_unnamed_addr #0 {
 ; LINUX64LE-NEXT:    stdu r1, -208(r1)
 ; LINUX64LE-NEXT:    addis r3, r2, .L_MergedGlobals@toc@ha
 ; LINUX64LE-NEXT:    addi r30, r1, 32
-; LINUX64LE-NEXT:    li r5, 160
 ; LINUX64LE-NEXT:    std r0, 224(r1)
+; LINUX64LE-NEXT:    li r5, 160
 ; LINUX64LE-NEXT:    addi r3, r3, .L_MergedGlobals@toc@l
 ; LINUX64LE-NEXT:    addi r4, r3, 264
 ; LINUX64LE-NEXT:    mr r3, r30

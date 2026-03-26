@@ -25,6 +25,13 @@ define void @foo() {
 ; CHECK-VEC-NEXT:    vrepif %v0, 10
 ; CHECK-VEC-NEXT:    vst %v0, 184(%r15), 3
 ; CHECK-VEC-NEXT:    vrepif %v0, 9
+; CHECK-VEC-NEXT:    vst %v0, 168(%r15), 3
+; CHECK-VEC-NEXT:    mvghi 160(%r15), 6
+; CHECK-VEC-NEXT:    lghi %r2, 1
+; CHECK-VEC-NEXT:    lghi %r3, 2
+; CHECK-VEC-NEXT:    lghi %r4, 3
+; CHECK-VEC-NEXT:    lghi %r5, 4
+; CHECK-VEC-NEXT:    lghi %r6, 5
 ; CHECK-VEC-NEXT:    vrepif %v24, 1
 ; CHECK-VEC-NEXT:    vrepif %v26, 2
 ; CHECK-VEC-NEXT:    vrepif %v28, 3
@@ -33,13 +40,6 @@ define void @foo() {
 ; CHECK-VEC-NEXT:    vrepif %v27, 6
 ; CHECK-VEC-NEXT:    vrepif %v29, 7
 ; CHECK-VEC-NEXT:    vrepif %v31, 8
-; CHECK-VEC-NEXT:    lghi %r2, 1
-; CHECK-VEC-NEXT:    lghi %r3, 2
-; CHECK-VEC-NEXT:    lghi %r4, 3
-; CHECK-VEC-NEXT:    lghi %r5, 4
-; CHECK-VEC-NEXT:    lghi %r6, 5
-; CHECK-VEC-NEXT:    vst %v0, 168(%r15), 3
-; CHECK-VEC-NEXT:    mvghi 160(%r15), 6
 ; CHECK-VEC-NEXT:    brasl %r14, bar@PLT
 ; CHECK-VEC-NEXT:    lmg %r6, %r15, 248(%r15)
 ; CHECK-VEC-NEXT:    br %r14
@@ -55,6 +55,13 @@ define void @foo() {
 ; CHECK-STACK-NEXT:    vrepif %v0, 10
 ; CHECK-STACK-NEXT:    vst %v0, 184(%r15), 3
 ; CHECK-STACK-NEXT:    vrepif %v0, 9
+; CHECK-STACK-NEXT:    vst %v0, 168(%r15), 3
+; CHECK-STACK-NEXT:    mvghi 160(%r15), 6
+; CHECK-STACK-NEXT:    lghi %r2, 1
+; CHECK-STACK-NEXT:    lghi %r3, 2
+; CHECK-STACK-NEXT:    lghi %r4, 3
+; CHECK-STACK-NEXT:    lghi %r5, 4
+; CHECK-STACK-NEXT:    lghi %r6, 5
 ; CHECK-STACK-NEXT:    vrepif %v24, 1
 ; CHECK-STACK-NEXT:    vrepif %v26, 2
 ; CHECK-STACK-NEXT:    vrepif %v28, 3
@@ -63,13 +70,6 @@ define void @foo() {
 ; CHECK-STACK-NEXT:    vrepif %v27, 6
 ; CHECK-STACK-NEXT:    vrepif %v29, 7
 ; CHECK-STACK-NEXT:    vrepif %v31, 8
-; CHECK-STACK-NEXT:    lghi %r2, 1
-; CHECK-STACK-NEXT:    lghi %r3, 2
-; CHECK-STACK-NEXT:    lghi %r4, 3
-; CHECK-STACK-NEXT:    lghi %r5, 4
-; CHECK-STACK-NEXT:    lghi %r6, 5
-; CHECK-STACK-NEXT:    vst %v0, 168(%r15), 3
-; CHECK-STACK-NEXT:    mvghi 160(%r15), 6
 ; CHECK-STACK-NEXT:    brasl %r14, bar@PLT
 ; CHECK-STACK-NEXT:    lmg %r6, %r15, 248(%r15)
 ; CHECK-STACK-NEXT:    br %r14

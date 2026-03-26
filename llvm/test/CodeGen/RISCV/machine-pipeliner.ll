@@ -54,10 +54,10 @@ define void @test_pipelined_1(ptr noalias %in, ptr noalias %out, i32 signext %cn
 ; CHECK-PIPELINED:       # %bb.0: # %entry
 ; CHECK-PIPELINED-NEXT:    blez a2, .LBB1_6
 ; CHECK-PIPELINED-NEXT:  # %bb.1: # %for.body.preheader
-; CHECK-PIPELINED-NEXT:    lw a7, 0(a1)
 ; CHECK-PIPELINED-NEXT:    addi a2, a2, -1
-; CHECK-PIPELINED-NEXT:    addi a3, a0, 4
+; CHECK-PIPELINED-NEXT:    lw a7, 0(a1)
 ; CHECK-PIPELINED-NEXT:    addi a5, a1, 4
+; CHECK-PIPELINED-NEXT:    addi a3, a0, 4
 ; CHECK-PIPELINED-NEXT:    sh2add.uw a6, a2, a1
 ; CHECK-PIPELINED-NEXT:    addi a6, a6, 4
 ; CHECK-PIPELINED-NEXT:    beq a5, a6, .LBB1_5

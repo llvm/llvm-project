@@ -108,8 +108,8 @@ endif:
 define amdgpu_kernel void @sgpr_if_else_valu_br(ptr addrspace(1) %out, float %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ; SI-LABEL: sgpr_if_else_valu_br:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0xc
 ; SI-NEXT:    v_cvt_f32_u32_e32 v0, v0
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0xc
 ; SI-NEXT:    ; implicit-def: $sgpr8
 ; SI-NEXT:    v_cmp_lg_f32_e32 vcc, 0, v0
 ; SI-NEXT:    s_and_saveexec_b64 s[6:7], vcc
@@ -159,8 +159,8 @@ define amdgpu_kernel void @sgpr_if_else_valu_cmp_phi_br(ptr addrspace(1) %out, p
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0xd
-; SI-NEXT:    s_mov_b32 s6, 0
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; SI-NEXT:    s_mov_b32 s6, 0
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; SI-NEXT:    ; implicit-def: $sgpr8_sgpr9
 ; SI-NEXT:    s_and_saveexec_b64 s[10:11], vcc

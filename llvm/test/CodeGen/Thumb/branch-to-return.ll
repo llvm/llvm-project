@@ -9,8 +9,8 @@ define i32 @foo(ptr %x, i32 %n) {
 ; CHECK-NEXT:    cmp r1, #1
 ; CHECK-NEXT:    blt .LBB0_4
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
-; CHECK-NEXT:    bic r3, r1, #3
 ; CHECK-NEXT:    mov r12, r0
+; CHECK-NEXT:    bic r3, r1, #3
 ; CHECK-NEXT:    cmp r1, #4
 ; CHECK-NEXT:    bhs .LBB0_3
 ; CHECK-NEXT:  @ %bb.2:

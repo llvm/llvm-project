@@ -420,9 +420,9 @@ define void @constrained_vector_frem_v3f64(ptr %a) #0 {
 ; SZ13-NEXT:    .cfi_offset %f8, -168
 ; SZ13-NEXT:    vl %v2, 0(%r2), 4
 ; SZ13-NEXT:    ld %f8, 16(%r2)
-; SZ13-NEXT:    vgmg %v0, 2, 11
 ; SZ13-NEXT:    lgr %r13, %r2
 ; SZ13-NEXT:    vst %v2, 176(%r15), 3 # 16-byte Spill
+; SZ13-NEXT:    vgmg %v0, 2, 11
 ; SZ13-NEXT:    # kill: def $f2d killed $f2d killed $v2
 ; SZ13-NEXT:    brasl %r14, fmod@PLT
 ; SZ13-NEXT:    # kill: def $f0d killed $f0d def $v0
@@ -1450,20 +1450,20 @@ define void @constrained_vector_pow_v3f64(ptr %a) #0 {
 ; SZ13-NEXT:    .cfi_offset %f8, -168
 ; SZ13-NEXT:    .cfi_offset %f9, -176
 ; SZ13-NEXT:    larl %r1, .LCPI33_0
-; SZ13-NEXT:    ld %f9, 0(%r1)
 ; SZ13-NEXT:    vl %v0, 0(%r2), 4
+; SZ13-NEXT:    ld %f9, 0(%r1)
 ; SZ13-NEXT:    ld %f8, 16(%r2)
-; SZ13-NEXT:    ldr %f2, %f9
 ; SZ13-NEXT:    lgr %r13, %r2
 ; SZ13-NEXT:    vst %v0, 176(%r15), 3 # 16-byte Spill
 ; SZ13-NEXT:    # kill: def $f0d killed $f0d killed $v0
+; SZ13-NEXT:    ldr %f2, %f9
 ; SZ13-NEXT:    brasl %r14, pow@PLT
 ; SZ13-NEXT:    # kill: def $f0d killed $f0d def $v0
 ; SZ13-NEXT:    vst %v0, 160(%r15), 3 # 16-byte Spill
 ; SZ13-NEXT:    vl %v0, 176(%r15), 3 # 16-byte Reload
-; SZ13-NEXT:    ldr %f2, %f9
 ; SZ13-NEXT:    vrepg %v0, %v0, 1
 ; SZ13-NEXT:    # kill: def $f0d killed $f0d killed $v0
+; SZ13-NEXT:    ldr %f2, %f9
 ; SZ13-NEXT:    brasl %r14, pow@PLT
 ; SZ13-NEXT:    vl %v1, 160(%r15), 3 # 16-byte Reload
 ; SZ13-NEXT:    # kill: def $f0d killed $f0d def $v0
@@ -1647,9 +1647,9 @@ define <2 x double> @constrained_vector_powi_v2f64() #0 {
 ; S390X-NEXT:    brasl %r14, __powidf2@PLT
 ; S390X-NEXT:    larl %r1, .LCPI36_1
 ; S390X-NEXT:    ld %f1, 0(%r1)
-; S390X-NEXT:    lghi %r2, 3
 ; S390X-NEXT:    ldr %f8, %f0
 ; S390X-NEXT:    ldr %f0, %f1
+; S390X-NEXT:    lghi %r2, 3
 ; S390X-NEXT:    brasl %r14, __powidf2@PLT
 ; S390X-NEXT:    ldr %f2, %f8
 ; S390X-NEXT:    ld %f8, 160(%r15) # 8-byte Reload
@@ -1705,15 +1705,15 @@ define <3 x float> @constrained_vector_powi_v3f32() #0 {
 ; S390X-NEXT:    brasl %r14, __powisf2@PLT
 ; S390X-NEXT:    larl %r1, .LCPI37_1
 ; S390X-NEXT:    le %f1, 0(%r1)
-; S390X-NEXT:    lghi %r2, 3
 ; S390X-NEXT:    ler %f8, %f0
 ; S390X-NEXT:    ler %f0, %f1
+; S390X-NEXT:    lghi %r2, 3
 ; S390X-NEXT:    brasl %r14, __powisf2@PLT
 ; S390X-NEXT:    larl %r1, .LCPI37_2
 ; S390X-NEXT:    le %f1, 0(%r1)
-; S390X-NEXT:    lghi %r2, 3
 ; S390X-NEXT:    ler %f9, %f0
 ; S390X-NEXT:    ler %f0, %f1
+; S390X-NEXT:    lghi %r2, 3
 ; S390X-NEXT:    brasl %r14, __powisf2@PLT
 ; S390X-NEXT:    ler %f2, %f9
 ; S390X-NEXT:    ler %f4, %f8
@@ -1782,15 +1782,15 @@ define void @constrained_vector_powi_v3f64(ptr %a) #0 {
 ; S390X-NEXT:    brasl %r14, __powidf2@PLT
 ; S390X-NEXT:    larl %r1, .LCPI38_1
 ; S390X-NEXT:    ld %f1, 0(%r1)
-; S390X-NEXT:    lghi %r2, 3
 ; S390X-NEXT:    ldr %f8, %f0
 ; S390X-NEXT:    ldr %f0, %f1
+; S390X-NEXT:    lghi %r2, 3
 ; S390X-NEXT:    brasl %r14, __powidf2@PLT
 ; S390X-NEXT:    larl %r1, .LCPI38_2
 ; S390X-NEXT:    ld %f1, 0(%r1)
-; S390X-NEXT:    lghi %r2, 3
 ; S390X-NEXT:    ldr %f9, %f0
 ; S390X-NEXT:    ldr %f0, %f1
+; S390X-NEXT:    lghi %r2, 3
 ; S390X-NEXT:    brasl %r14, __powidf2@PLT
 ; S390X-NEXT:    std %f0, 16(%r13)
 ; S390X-NEXT:    std %f9, 8(%r13)
@@ -1862,21 +1862,21 @@ define <4 x double> @constrained_vector_powi_v4f64() #0 {
 ; S390X-NEXT:    brasl %r14, __powidf2@PLT
 ; S390X-NEXT:    larl %r1, .LCPI39_1
 ; S390X-NEXT:    ld %f1, 0(%r1)
-; S390X-NEXT:    lghi %r2, 3
 ; S390X-NEXT:    ldr %f8, %f0
 ; S390X-NEXT:    ldr %f0, %f1
+; S390X-NEXT:    lghi %r2, 3
 ; S390X-NEXT:    brasl %r14, __powidf2@PLT
 ; S390X-NEXT:    larl %r1, .LCPI39_2
 ; S390X-NEXT:    ld %f1, 0(%r1)
-; S390X-NEXT:    lghi %r2, 3
 ; S390X-NEXT:    ldr %f9, %f0
 ; S390X-NEXT:    ldr %f0, %f1
+; S390X-NEXT:    lghi %r2, 3
 ; S390X-NEXT:    brasl %r14, __powidf2@PLT
 ; S390X-NEXT:    larl %r1, .LCPI39_3
 ; S390X-NEXT:    ld %f1, 0(%r1)
-; S390X-NEXT:    lghi %r2, 3
 ; S390X-NEXT:    ldr %f10, %f0
 ; S390X-NEXT:    ldr %f0, %f1
+; S390X-NEXT:    lghi %r2, 3
 ; S390X-NEXT:    brasl %r14, __powidf2@PLT
 ; S390X-NEXT:    ldr %f2, %f10
 ; S390X-NEXT:    ldr %f4, %f9
@@ -4754,18 +4754,18 @@ define void @constrained_vector_log10_maxnum_v3f64(ptr %a) #0 {
 ; SZ13-NEXT:    .cfi_def_cfa_offset 360
 ; SZ13-NEXT:    std %f8, 192(%r15) # 8-byte Spill
 ; SZ13-NEXT:    .cfi_offset %f8, -168
-; SZ13-NEXT:    larl %r1, .LCPI88_0
 ; SZ13-NEXT:    vl %v0, 0(%r2), 4
-; SZ13-NEXT:    ld %f2, 0(%r1)
+; SZ13-NEXT:    larl %r1, .LCPI88_0
 ; SZ13-NEXT:    ld %f8, 16(%r2)
+; SZ13-NEXT:    ld %f2, 0(%r1)
 ; SZ13-NEXT:    lgr %r13, %r2
 ; SZ13-NEXT:    vst %v0, 176(%r15), 3 # 16-byte Spill
 ; SZ13-NEXT:    # kill: def $f0d killed $f0d killed $v0
 ; SZ13-NEXT:    brasl %r14, fmax@PLT
-; SZ13-NEXT:    larl %r1, .LCPI88_1
 ; SZ13-NEXT:    # kill: def $f0d killed $f0d def $v0
 ; SZ13-NEXT:    vst %v0, 160(%r15), 3 # 16-byte Spill
 ; SZ13-NEXT:    vl %v0, 176(%r15), 3 # 16-byte Reload
+; SZ13-NEXT:    larl %r1, .LCPI88_1
 ; SZ13-NEXT:    ld %f2, 0(%r1)
 ; SZ13-NEXT:    vrepg %v0, %v0, 1
 ; SZ13-NEXT:    # kill: def $f0d killed $f0d killed $v0
@@ -5133,20 +5133,20 @@ define void @constrained_vector_minnum_v3f64(ptr %a) #0 {
 ; SZ13-NEXT:    .cfi_offset %f8, -168
 ; SZ13-NEXT:    .cfi_offset %f9, -176
 ; SZ13-NEXT:    larl %r1, .LCPI93_0
-; SZ13-NEXT:    ld %f9, 0(%r1)
 ; SZ13-NEXT:    vl %v0, 0(%r2), 4
+; SZ13-NEXT:    ld %f9, 0(%r1)
 ; SZ13-NEXT:    ld %f8, 16(%r2)
-; SZ13-NEXT:    ldr %f2, %f9
 ; SZ13-NEXT:    lgr %r13, %r2
 ; SZ13-NEXT:    vst %v0, 176(%r15), 3 # 16-byte Spill
 ; SZ13-NEXT:    # kill: def $f0d killed $f0d killed $v0
+; SZ13-NEXT:    ldr %f2, %f9
 ; SZ13-NEXT:    brasl %r14, fmin@PLT
 ; SZ13-NEXT:    # kill: def $f0d killed $f0d def $v0
 ; SZ13-NEXT:    vst %v0, 160(%r15), 3 # 16-byte Spill
 ; SZ13-NEXT:    vl %v0, 176(%r15), 3 # 16-byte Reload
-; SZ13-NEXT:    ldr %f2, %f9
 ; SZ13-NEXT:    vrepg %v0, %v0, 1
 ; SZ13-NEXT:    # kill: def $f0d killed $f0d killed $v0
+; SZ13-NEXT:    ldr %f2, %f9
 ; SZ13-NEXT:    brasl %r14, fmin@PLT
 ; SZ13-NEXT:    vl %v1, 160(%r15), 3 # 16-byte Reload
 ; SZ13-NEXT:    # kill: def $f0d killed $f0d def $v0

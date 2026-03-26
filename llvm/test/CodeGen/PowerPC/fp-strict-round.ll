@@ -213,11 +213,11 @@ define <4 x float> @nearbyint_v4f32(<4 x float> %vf1, <4 x float> %vf2) strictfp
 ; P8-NEXT:    .cfi_offset v29, -48
 ; P8-NEXT:    .cfi_offset v30, -32
 ; P8-NEXT:    .cfi_offset v31, -16
-; P8-NEXT:    xxsldwi vs0, v2, v2, 3
 ; P8-NEXT:    li r3, 128
-; P8-NEXT:    xscvspdpn f1, vs0
+; P8-NEXT:    xxsldwi vs0, v2, v2, 3
 ; P8-NEXT:    stxvd2x v29, r1, r3 # 16-byte Folded Spill
 ; P8-NEXT:    li r3, 144
+; P8-NEXT:    xscvspdpn f1, vs0
 ; P8-NEXT:    stxvd2x v30, r1, r3 # 16-byte Folded Spill
 ; P8-NEXT:    li r3, 160
 ; P8-NEXT:    stxvd2x v31, r1, r3 # 16-byte Folded Spill

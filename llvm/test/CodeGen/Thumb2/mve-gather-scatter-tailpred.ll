@@ -74,10 +74,10 @@ define dso_local void @mve_gatherscatter_offset(ptr noalias nocapture readonly %
 ; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    add.w r4, r0, r3, lsl #2
 ; CHECK-NEXT:    adr r0, .LCPI1_0
-; CHECK-NEXT:    vldrw.u32 q2, [r0]
-; CHECK-NEXT:    add.w r12, r3, #4
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    vmov.i32 q1, #0x14
+; CHECK-NEXT:    vldrw.u32 q2, [r0]
+; CHECK-NEXT:    add.w r12, r3, #4
 ; CHECK-NEXT:    dlstp.32 lr, r3
 ; CHECK-NEXT:  .LBB1_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
@@ -143,9 +143,9 @@ define dso_local void @mve_scatter_qi(ptr noalias nocapture readonly %A, ptr noa
 ; CHECK-NEXT:    add.w r4, r0, r3, lsl #2
 ; CHECK-NEXT:    adr r0, .LCPI2_0
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    add.w r12, r3, #4
-; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    movw lr, #1250
+; CHECK-NEXT:    vmov.i32 q0, #0x0
+; CHECK-NEXT:    add.w r12, r3, #4
 ; CHECK-NEXT:    vadd.i32 q1, q1, r1
 ; CHECK-NEXT:    movs r1, #3
 ; CHECK-NEXT:  .LBB2_1: @ %vector.body
@@ -216,15 +216,15 @@ define void @justoffsets(ptr noalias nocapture readonly %r, ptr noalias nocaptur
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    beq .LBB3_3
 ; CHECK-NEXT:  @ %bb.1: @ %vector.ph
-; CHECK-NEXT:    adr r5, .LCPI3_1
 ; CHECK-NEXT:    adr r4, .LCPI3_0
-; CHECK-NEXT:    vldrw.u32 q0, [r5]
-; CHECK-NEXT:    adr r5, .LCPI3_2
+; CHECK-NEXT:    adr r5, .LCPI3_1
 ; CHECK-NEXT:    movw r9, #47888
 ; CHECK-NEXT:    movw r10, #50417
-; CHECK-NEXT:    vldrw.u32 q1, [r5]
+; CHECK-NEXT:    vldrw.u32 q0, [r5]
+; CHECK-NEXT:    adr r5, .LCPI3_2
 ; CHECK-NEXT:    vldrw.u32 q2, [r4]
 ; CHECK-NEXT:    movw r4, #32769
+; CHECK-NEXT:    vldrw.u32 q1, [r5]
 ; CHECK-NEXT:    movw r12, #7471
 ; CHECK-NEXT:    mov.w r3, #32768
 ; CHECK-NEXT:    movw r11, #38470

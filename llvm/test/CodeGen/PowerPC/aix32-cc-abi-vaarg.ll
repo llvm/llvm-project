@@ -114,8 +114,8 @@ define double @double_va_arg(double %a, ...) local_unnamed_addr  {
 ; CHECK-NEXT:    fadd 0, 0, 0
 ; CHECK-NEXT:    stw 7, 40(1)
 ; CHECK-NEXT:    stw 8, 44(1)
-; CHECK-NEXT:    fadd 1, 1, 0
 ; CHECK-NEXT:    stw 9, 48(1)
+; CHECK-NEXT:    fadd 1, 1, 0
 ; CHECK-NEXT:    stw 10, 52(1)
 ; CHECK-NEXT:    stw 3, -4(1)
 ; CHECK-NEXT:    blr

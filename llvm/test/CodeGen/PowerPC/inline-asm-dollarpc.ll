@@ -41,9 +41,9 @@ define dso_local i32 @dollarpc() #0 {
 ; IAS64-EMPTY:
 ; IAS64-NEXT:    #NO_APP
 ; IAS64-NEXT:    stw 3, -12(1)
-; IAS64-NEXT:    rldimi 3, 5, 32, 0
 ; IAS64-NEXT:    stw 5, -8(1)
 ; IAS64-NEXT:    stw 4, -16(1)
+; IAS64-NEXT:    rldimi 3, 5, 32, 0
 ; IAS64-NEXT:    blr
 ;
 ; NOIAS-LABEL: dollarpc:
@@ -59,9 +59,9 @@ define dso_local i32 @dollarpc() #0 {
 ; NOIAS-EMPTY:
 ; NOIAS-NEXT:    #NO_APP
 ; NOIAS-NEXT:    stw 3, -12(1)
-; NOIAS-NEXT:    rldimi 3, 5, 32, 0
 ; NOIAS-NEXT:    stw 5, -8(1)
 ; NOIAS-NEXT:    stw 4, -16(1)
+; NOIAS-NEXT:    rldimi 3, 5, 32, 0
 ; NOIAS-NEXT:    blr
 entry:
   %retval = alloca i32, align 4

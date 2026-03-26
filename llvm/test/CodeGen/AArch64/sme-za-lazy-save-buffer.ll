@@ -31,8 +31,8 @@ define float @multi_bb_stpidr2_save_required(i32 %a, float %b, float %c) "aarch6
 ; CHECK-NEXT:    fadd s0, s0, s1
 ; CHECK-NEXT:    b .LBB1_5
 ; CHECK-NEXT:  .LBB1_2: // %use_c
-; CHECK-NEXT:    fmov s0, s1
 ; CHECK-NEXT:    sub x8, x29, #16
+; CHECK-NEXT:    fmov s0, s1
 ; CHECK-NEXT:    msr TPIDR2_EL0, x8
 ; CHECK-NEXT:    bl cosf
 ; CHECK-NEXT:    smstart za
@@ -92,8 +92,8 @@ define float @multi_bb_stpidr2_save_required_stackprobe(i32 %a, float %b, float 
 ; CHECK-NEXT:    fadd s0, s0, s1
 ; CHECK-NEXT:    b .LBB2_8
 ; CHECK-NEXT:  .LBB2_5: // %use_c
-; CHECK-NEXT:    fmov s0, s1
 ; CHECK-NEXT:    sub x8, x29, #16
+; CHECK-NEXT:    fmov s0, s1
 ; CHECK-NEXT:    msr TPIDR2_EL0, x8
 ; CHECK-NEXT:    bl cosf
 ; CHECK-NEXT:    smstart za

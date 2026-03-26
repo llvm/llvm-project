@@ -2522,12 +2522,12 @@ define <12 x i8> @load_v12i8(ptr addrspace(8) inreg %buf) {
 ; SDAG-NEXT:    v_lshrrev_b64 v[3:4], 24, v[0:1]
 ; SDAG-NEXT:    v_lshrrev_b32_e32 v14, 8, v0
 ; SDAG-NEXT:    v_lshrrev_b32_e32 v13, 16, v0
-; SDAG-NEXT:    v_lshrrev_b64 v[11:12], 24, v[2:3]
 ; SDAG-NEXT:    v_lshrrev_b32_e32 v5, 8, v1
 ; SDAG-NEXT:    v_lshrrev_b32_e32 v6, 16, v1
 ; SDAG-NEXT:    v_lshrrev_b32_e32 v7, 24, v1
 ; SDAG-NEXT:    v_lshrrev_b32_e32 v9, 8, v2
 ; SDAG-NEXT:    v_lshrrev_b32_e32 v10, 16, v2
+; SDAG-NEXT:    v_lshrrev_b64 v[11:12], 24, v[2:3]
 ; SDAG-NEXT:    v_mov_b32_e32 v4, v1
 ; SDAG-NEXT:    v_mov_b32_e32 v8, v2
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v14

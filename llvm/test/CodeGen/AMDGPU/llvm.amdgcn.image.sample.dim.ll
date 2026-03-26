@@ -1994,8 +1994,8 @@ define amdgpu_ps float @sample_c_d_o_2darray_V1_tfe(<8 x i32> inreg %rsrc, <4 x 
 ; VERDE-NEXT:    s_mov_b32 s15, 0xf000
 ; VERDE-NEXT:    s_mov_b32 s14, -1
 ; VERDE-NEXT:    s_waitcnt vmcnt(0)
-; VERDE-NEXT:    v_mov_b32_e32 v0, v9
 ; VERDE-NEXT:    buffer_store_dword v10, off, s[12:15], 0
+; VERDE-NEXT:    v_mov_b32_e32 v0, v9
 ; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
@@ -2020,8 +2020,8 @@ define amdgpu_ps float @sample_c_d_o_2darray_V1_tfe(<8 x i32> inreg %rsrc, <4 x 
 ; GFX10-NEXT:    v_mov_b32_e32 v10, v12
 ; GFX10-NEXT:    image_sample_c_d_o v[9:10], v[0:8], s[0:7], s[8:11] dmask:0x4 dim:SQ_RSRC_IMG_2D_ARRAY tfe
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_mov_b32_e32 v0, v9
 ; GFX10-NEXT:    global_store_dword v11, v10, s[12:13]
+; GFX10-NEXT:    v_mov_b32_e32 v0, v9
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: sample_c_d_o_2darray_V1_tfe:

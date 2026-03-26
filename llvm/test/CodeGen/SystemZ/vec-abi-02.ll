@@ -736,9 +736,9 @@ define void @loadAndPass_char_32() {
 ; CHECK-NEXT:    lgrl %r1, global_char_32@GOT
 ; CHECK-NEXT:    vl %v0, 0(%r1), 3
 ; CHECK-NEXT:    vl %v1, 16(%r1), 3
-; CHECK-NEXT:    la %r2, 160(%r15)
 ; CHECK-NEXT:    vst %v1, 176(%r15), 3
 ; CHECK-NEXT:    vst %v0, 160(%r15), 3
+; CHECK-NEXT:    la %r2, 160(%r15)
 ; CHECK-NEXT:    brasl %r14, passCallee_char_32@PLT
 ; CHECK-NEXT:    lmg %r14, %r15, 304(%r15)
 ; CHECK-NEXT:    br %r14
@@ -849,9 +849,9 @@ define void @loadAndPass_int_32() {
 ; CHECK-NEXT:    lgrl %r1, global_int_32@GOT
 ; CHECK-NEXT:    vl %v0, 0(%r1), 3
 ; CHECK-NEXT:    vl %v1, 16(%r1), 3
-; CHECK-NEXT:    la %r2, 160(%r15)
 ; CHECK-NEXT:    vst %v1, 176(%r15), 3
 ; CHECK-NEXT:    vst %v0, 160(%r15), 3
+; CHECK-NEXT:    la %r2, 160(%r15)
 ; CHECK-NEXT:    brasl %r14, passCallee_int_32@PLT
 ; CHECK-NEXT:    lmg %r14, %r15, 304(%r15)
 ; CHECK-NEXT:    br %r14
@@ -918,9 +918,9 @@ define void @loadAndPass___int128_32() {
 ; CHECK-NEXT:    lgrl %r1, global___int128_32@GOT
 ; CHECK-NEXT:    vl %v0, 0(%r1), 3
 ; CHECK-NEXT:    vl %v1, 16(%r1), 3
-; CHECK-NEXT:    la %r2, 160(%r15)
 ; CHECK-NEXT:    vst %v1, 176(%r15), 3
 ; CHECK-NEXT:    vst %v0, 160(%r15), 3
+; CHECK-NEXT:    la %r2, 160(%r15)
 ; CHECK-NEXT:    brasl %r14, passCallee___int128_32@PLT
 ; CHECK-NEXT:    lmg %r14, %r15, 304(%r15)
 ; CHECK-NEXT:    br %r14
@@ -994,9 +994,9 @@ define void @loadAndPass__Float16_32() {
 ; CHECK-NEXT:    lgrl %r1, global__Float16_32@GOT
 ; CHECK-NEXT:    vl %v0, 0(%r1), 3
 ; CHECK-NEXT:    vl %v1, 16(%r1), 3
-; CHECK-NEXT:    la %r2, 160(%r15)
 ; CHECK-NEXT:    vst %v1, 176(%r15), 3
 ; CHECK-NEXT:    vst %v0, 160(%r15), 3
+; CHECK-NEXT:    la %r2, 160(%r15)
 ; CHECK-NEXT:    brasl %r14, passCallee__Float16_32@PLT
 ; CHECK-NEXT:    lmg %r14, %r15, 304(%r15)
 ; CHECK-NEXT:    br %r14
@@ -1091,9 +1091,9 @@ define void @loadAndPass_double_32() {
 ; CHECK-NEXT:    lgrl %r1, global_double_32@GOT
 ; CHECK-NEXT:    vl %v0, 0(%r1), 3
 ; CHECK-NEXT:    vl %v1, 16(%r1), 3
-; CHECK-NEXT:    la %r2, 160(%r15)
 ; CHECK-NEXT:    vst %v1, 176(%r15), 3
 ; CHECK-NEXT:    vst %v0, 160(%r15), 3
+; CHECK-NEXT:    la %r2, 160(%r15)
 ; CHECK-NEXT:    brasl %r14, passCallee_double_32@PLT
 ; CHECK-NEXT:    lmg %r14, %r15, 304(%r15)
 ; CHECK-NEXT:    br %r14

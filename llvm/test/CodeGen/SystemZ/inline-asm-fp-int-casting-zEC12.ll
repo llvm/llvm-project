@@ -152,9 +152,9 @@ define <2 x i32> @vec64_and_r(<2 x i32> %cc_dep1) {
 ; CHECK-NEXT:    lr %r0, %r3
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    lr %r3, %r0
 ; CHECK-NEXT:    srlg %r2, %r0, 32
 ; CHECK-NEXT:    # kill: def $r2l killed $r2l killed $r2d
+; CHECK-NEXT:    lr %r3, %r0
 ; CHECK-NEXT:    br %r14
 entry:
   %0 = tail call <2 x i32> asm sideeffect "", "=r,0"(<2 x i32> %cc_dep1)

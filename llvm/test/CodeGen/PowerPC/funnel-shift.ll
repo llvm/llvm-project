@@ -77,9 +77,9 @@ define i128 @fshl_i128(i128 %x, i128 %y, i128 %z) nounwind {
 ; CHECK32_32-NEXT:    lwz 12, 52(1)
 ; CHECK32_32-NEXT:    stw 29, 20(1) # 4-byte Folded Spill
 ; CHECK32_32-NEXT:    andi. 11, 12, 64
+; CHECK32_32-NEXT:    stw 30, 24(1) # 4-byte Folded Spill
 ; CHECK32_32-NEXT:    mcrf 1, 0
 ; CHECK32_32-NEXT:    mr 11, 6
-; CHECK32_32-NEXT:    stw 30, 24(1) # 4-byte Folded Spill
 ; CHECK32_32-NEXT:    bne 0, .LBB2_2
 ; CHECK32_32-NEXT:  # %bb.1:
 ; CHECK32_32-NEXT:    mr 11, 4
@@ -293,8 +293,8 @@ define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK32_32-NEXT:    li 6, 37
 ; CHECK32_32-NEXT:    bl __umoddi3
 ; CHECK32_32-NEXT:    rotlwi 5, 30, 27
-; CHECK32_32-NEXT:    rlwimi 5, 27, 27, 0, 4
 ; CHECK32_32-NEXT:    andi. 3, 4, 32
+; CHECK32_32-NEXT:    rlwimi 5, 27, 27, 0, 4
 ; CHECK32_32-NEXT:    mr 6, 5
 ; CHECK32_32-NEXT:    bne 0, .LBB3_2
 ; CHECK32_32-NEXT:  # %bb.1:

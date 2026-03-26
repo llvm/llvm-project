@@ -17,15 +17,15 @@ define void @_Z3fooPfS_Pi(ptr noalias nocapture noundef %_a, ptr noalias nocaptu
 ; AIX64-NEXT:    cmpwi 5, 1
 ; AIX64-NEXT:    bltlr 0
 ; AIX64-NEXT:  # %bb.1: # %for.body.preheader
-; AIX64-NEXT:    li 6, 0
 ; AIX64-NEXT:    cmplwi 5, 1
+; AIX64-NEXT:    li 6, 0
 ; AIX64-NEXT:    beq 0, L..BB0_4
 ; AIX64-NEXT:  # %bb.2: # %for.body.preheader.new
 ; AIX64-NEXT:    rlwinm 6, 5, 0, 1, 30
-; AIX64-NEXT:    xxspltib 0, 6
 ; AIX64-NEXT:    addi 9, 4, -8
 ; AIX64-NEXT:    addi 7, 3, -8
 ; AIX64-NEXT:    li 8, 8
+; AIX64-NEXT:    xxspltib 0, 6
 ; AIX64-NEXT:    li 10, 12
 ; AIX64-NEXT:    li 11, 4
 ; AIX64-NEXT:    addi 6, 6, -2
@@ -68,11 +68,11 @@ define void @_Z3fooPfS_Pi(ptr noalias nocapture noundef %_a, ptr noalias nocaptu
 ; AIX32-NEXT:    li 6, 0
 ; AIX32-NEXT:    beq 0, L..BB0_4
 ; AIX32-NEXT:  # %bb.2: # %for.body.preheader.new
-; AIX32-NEXT:    xxspltib 0, 6
 ; AIX32-NEXT:    addi 12, 4, -8
 ; AIX32-NEXT:    addi 8, 3, -8
 ; AIX32-NEXT:    rlwinm 7, 5, 0, 1, 30
 ; AIX32-NEXT:    li 9, 8
+; AIX32-NEXT:    xxspltib 0, 6
 ; AIX32-NEXT:    li 10, 12
 ; AIX32-NEXT:    li 11, 0
 ; AIX32-NEXT:    .align 4
@@ -110,15 +110,15 @@ define void @_Z3fooPfS_Pi(ptr noalias nocapture noundef %_a, ptr noalias nocaptu
 ; LINUX64LE-NEXT:    cmpwi 5, 1
 ; LINUX64LE-NEXT:    bltlr 0
 ; LINUX64LE-NEXT:  # %bb.1: # %for.body.preheader
-; LINUX64LE-NEXT:    li 6, 0
 ; LINUX64LE-NEXT:    cmplwi 5, 1
+; LINUX64LE-NEXT:    li 6, 0
 ; LINUX64LE-NEXT:    beq 0, .LBB0_4
 ; LINUX64LE-NEXT:  # %bb.2: # %for.body.preheader.new
 ; LINUX64LE-NEXT:    rlwinm 6, 5, 0, 1, 30
-; LINUX64LE-NEXT:    xxspltib 0, 6
 ; LINUX64LE-NEXT:    addi 8, 4, -8
 ; LINUX64LE-NEXT:    addi 7, 3, -8
 ; LINUX64LE-NEXT:    li 9, 8
+; LINUX64LE-NEXT:    xxspltib 0, 6
 ; LINUX64LE-NEXT:    li 10, 12
 ; LINUX64LE-NEXT:    li 11, 4
 ; LINUX64LE-NEXT:    addi 6, 6, -2

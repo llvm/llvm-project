@@ -258,8 +258,8 @@ define i32 @f21(i32 %foo, ptr %dest) {
 ; CHECK-LABEL: f21:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srak %r0, %r2, 28
-; CHECK-NEXT:    risblg %r2, %r2, 28, 158, 36
 ; CHECK-NEXT:    st %r0, 0(%r3)
+; CHECK-NEXT:    risblg %r2, %r2, 28, 158, 36
 ; CHECK-NEXT:    br %r14
   %shr = ashr i32 %foo, 28
   store i32 %shr, ptr %dest
@@ -272,8 +272,8 @@ define i64 @f22(i64 %foo, ptr %dest) {
 ; CHECK-LABEL: f22:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srag %r0, %r2, 60
-; CHECK-NEXT:    risbg %r2, %r2, 60, 190, 4
 ; CHECK-NEXT:    stg %r0, 0(%r3)
+; CHECK-NEXT:    risbg %r2, %r2, 60, 190, 4
 ; CHECK-NEXT:    br %r14
   %shr = ashr i64 %foo, 60
   store i64 %shr, ptr %dest
@@ -485,8 +485,8 @@ define i64 @f39(i64 %foo, ptr %dest) {
 ; CHECK-LABEL: f39:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srag %r0, %r2, 35
-; CHECK-NEXT:    risbg %r2, %r2, 33, 189, 31
 ; CHECK-NEXT:    stg %r0, 0(%r3)
+; CHECK-NEXT:    risbg %r2, %r2, 33, 189, 31
 ; CHECK-NEXT:    br %r14
   %ashr = ashr i64 %foo, 35
   store i64 %ashr, ptr %dest
@@ -500,8 +500,8 @@ define i64 @f40(i64 %foo, ptr %dest) {
 ; CHECK-LABEL: f40:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srag %r0, %r2, 36
-; CHECK-NEXT:    risbg %r2, %r0, 33, 189, 2
 ; CHECK-NEXT:    stg %r0, 0(%r3)
+; CHECK-NEXT:    risbg %r2, %r0, 33, 189, 2
 ; CHECK-NEXT:    br %r14
   %ashr = ashr i64 %foo, 36
   store i64 %ashr, ptr %dest

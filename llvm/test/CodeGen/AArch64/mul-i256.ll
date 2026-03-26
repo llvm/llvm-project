@@ -26,8 +26,8 @@ define i256 @mul_i256(i256 %a, i256 %b) nounwind {
 ; CHECK-NEXT:    umulh x17, x1, x5
 ; CHECK-NEXT:    adds x1, x16, x9
 ; CHECK-NEXT:    cinc x9, x15, hs
-; CHECK-NEXT:    mul x0, x0, x4
 ; CHECK-NEXT:    adds x9, x12, x9
+; CHECK-NEXT:    mul x0, x0, x4
 ; CHECK-NEXT:    cset w12, hs
 ; CHECK-NEXT:    adds x9, x11, x9
 ; CHECK-NEXT:    adc x11, x17, x12

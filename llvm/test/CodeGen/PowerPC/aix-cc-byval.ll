@@ -51,16 +51,16 @@ entry:
 define zeroext i8 @test_byval_1Byte(ptr byval(%struct.S0) align 1 %s0, ptr byval(%struct.S1) align 1 %s) {
 ; 32BIT-LABEL: test_byval_1Byte:
 ; 32BIT:       # %bb.0: # %entry
-; 32BIT-NEXT:    mr 4, 3
-; 32BIT-NEXT:    srwi 3, 3, 24
-; 32BIT-NEXT:    stw 4, 24(1)
+; 32BIT-NEXT:    srwi 4, 3, 24
+; 32BIT-NEXT:    stw 3, 24(1)
+; 32BIT-NEXT:    mr 3, 4
 ; 32BIT-NEXT:    blr
 ;
 ; 64BIT-LABEL: test_byval_1Byte:
 ; 64BIT:       # %bb.0: # %entry
-; 64BIT-NEXT:    mr 4, 3
-; 64BIT-NEXT:    rldicl 3, 3, 8, 56
-; 64BIT-NEXT:    std 4, 48(1)
+; 64BIT-NEXT:    rldicl 4, 3, 8, 56
+; 64BIT-NEXT:    std 3, 48(1)
+; 64BIT-NEXT:    mr 3, 4
 ; 64BIT-NEXT:    blr
 entry:
   %0 = load i8, ptr %s, align 1
@@ -514,12 +514,12 @@ define zeroext i8 @test_byval_32Byte(ptr byval(%struct.S32) align 1 %s) {
 ; 32BIT:       # %bb.0: # %entry
 ; 32BIT-NEXT:    stw 8, 44(1)
 ; 32BIT-NEXT:    stw 3, 24(1)
-; 32BIT-NEXT:    lbz 3, 45(1)
 ; 32BIT-NEXT:    stw 4, 28(1)
 ; 32BIT-NEXT:    stw 5, 32(1)
 ; 32BIT-NEXT:    stw 6, 36(1)
 ; 32BIT-NEXT:    stw 7, 40(1)
 ; 32BIT-NEXT:    stw 9, 48(1)
+; 32BIT-NEXT:    lbz 3, 45(1)
 ; 32BIT-NEXT:    stw 10, 52(1)
 ; 32BIT-NEXT:    blr
 ;
@@ -527,8 +527,8 @@ define zeroext i8 @test_byval_32Byte(ptr byval(%struct.S32) align 1 %s) {
 ; 64BIT:       # %bb.0: # %entry
 ; 64BIT-NEXT:    std 5, 64(1)
 ; 64BIT-NEXT:    std 3, 48(1)
-; 64BIT-NEXT:    lbz 3, 69(1)
 ; 64BIT-NEXT:    std 4, 56(1)
+; 64BIT-NEXT:    lbz 3, 69(1)
 ; 64BIT-NEXT:    std 6, 72(1)
 ; 64BIT-NEXT:    blr
 entry:
@@ -600,21 +600,21 @@ define double @test_byval_31Byte(ptr byval(%struct.S31) align 1 %s) {
 ; 32BIT:       # %bb.0: # %entry
 ; 32BIT-NEXT:    stw 8, 44(1)
 ; 32BIT-NEXT:    stw 7, 40(1)
-; 32BIT-NEXT:    lfd 1, 40(1)
 ; 32BIT-NEXT:    stw 3, 24(1)
 ; 32BIT-NEXT:    stw 4, 28(1)
 ; 32BIT-NEXT:    stw 5, 32(1)
 ; 32BIT-NEXT:    stw 6, 36(1)
 ; 32BIT-NEXT:    stw 9, 48(1)
+; 32BIT-NEXT:    lfd 1, 40(1)
 ; 32BIT-NEXT:    stw 10, 52(1)
 ; 32BIT-NEXT:    blr
 ;
 ; 64BIT-LABEL: test_byval_31Byte:
 ; 64BIT:       # %bb.0: # %entry
 ; 64BIT-NEXT:    std 5, 64(1)
-; 64BIT-NEXT:    lfd 1, 64(1)
 ; 64BIT-NEXT:    std 3, 48(1)
 ; 64BIT-NEXT:    std 4, 56(1)
+; 64BIT-NEXT:    lfd 1, 64(1)
 ; 64BIT-NEXT:    std 6, 72(1)
 ; 64BIT-NEXT:    blr
 entry:
@@ -634,9 +634,9 @@ define i32 @call_test_byval_homogeneous_float_struct() {
 ; 32BIT-NEXT:    stw 0, 88(1)
 ; 32BIT-NEXT:    stw 3, 72(1)
 ; 32BIT-NEXT:    stw 3, 68(1)
+; 32BIT-NEXT:    stw 3, 64(1)
 ; 32BIT-NEXT:    lwz 5, 72(1)
 ; 32BIT-NEXT:    lwz 4, 68(1)
-; 32BIT-NEXT:    stw 3, 64(1)
 ; 32BIT-NEXT:    bl .test_byval_homogeneous_float_struct[PR]
 ; 32BIT-NEXT:    nop
 ; 32BIT-NEXT:    addi 1, 1, 80

@@ -1361,10 +1361,10 @@ define i32 @f11(double %d, <vscale x 4 x i32> %vs) "aarch64_pstate_sm_compatible
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .seh_save_reg_x x30, 16
 ; CHECK-NEXT:    .seh_endprologue
-; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    //APP
 ; CHECK-NEXT:    //NO_APP
 ; CHECK-NEXT:    str d0, [sp, #8]
+; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    .seh_startepilogue
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_reg_x x30, 16
@@ -1397,11 +1397,11 @@ define i32 @f12(double %d, <vscale x 4 x i32> %vs) "aarch64_pstate_sm_compatible
 ; CHECK-NEXT:    .seh_allocz 1
 ; CHECK-NEXT:    .seh_endprologue
 ; CHECK-NEXT:    addvl x8, sp, #1
-; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    //APP
 ; CHECK-NEXT:    //NO_APP
-; CHECK-NEXT:    str d0, [x8, #8]
 ; CHECK-NEXT:    str d0, [sp]
+; CHECK-NEXT:    str d0, [x8, #8]
+; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    .seh_startepilogue
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    .seh_allocz 1
@@ -1440,10 +1440,10 @@ define i32 @f13(double %d, <vscale x 4 x i32> %vs) "frame-pointer"="all" {
 ; CHECK-NEXT:    add x29, sp, #8
 ; CHECK-NEXT:    .seh_add_fp 8
 ; CHECK-NEXT:    .seh_endprologue
-; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    //APP
 ; CHECK-NEXT:    //NO_APP
 ; CHECK-NEXT:    str d0, [x29, #16]
+; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    .seh_startepilogue
 ; CHECK-NEXT:    ldp x29, x30, [sp, #8] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_fplr 8
@@ -1481,11 +1481,11 @@ define i32 @f14(double %d, <vscale x 4 x i32> %vs) "frame-pointer"="all" {
 ; CHECK-NEXT:    .seh_endprologue
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    addvl x8, x29, #-1
-; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    //APP
 ; CHECK-NEXT:    //NO_APP
 ; CHECK-NEXT:    str d0, [x29, #16]
 ; CHECK-NEXT:    stur d0, [x8, #-8]
+; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    .seh_startepilogue
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    .seh_allocz 1

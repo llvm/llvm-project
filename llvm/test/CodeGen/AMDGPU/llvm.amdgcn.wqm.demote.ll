@@ -162,8 +162,8 @@ define amdgpu_ps void @branch(float %arg0, float %arg1) {
 ; SI-NEXT:    s_mov_b64 s[2:3], exec
 ; SI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; SI-NEXT:    v_and_b32_e32 v0, 1, v0
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; SI-NEXT:    v_cmp_eq_u32_e64 s[0:1], 1, v0
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; SI-NEXT:    s_and_saveexec_b64 s[4:5], s[0:1]
 ; SI-NEXT:    s_xor_b64 s[0:1], exec, s[4:5]
 ; SI-NEXT:    s_cbranch_execz .LBB2_3
@@ -189,8 +189,8 @@ define amdgpu_ps void @branch(float %arg0, float %arg1) {
 ; GFX9-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX9-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX9-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-NEXT:    v_cmp_eq_u32_e64 s[0:1], 1, v0
+; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], s[0:1]
 ; GFX9-NEXT:    s_xor_b64 s[0:1], exec, s[4:5]
 ; GFX9-NEXT:    s_cbranch_execz .LBB2_3
@@ -243,8 +243,8 @@ define amdgpu_ps void @branch(float %arg0, float %arg1) {
 ; GFX10-64-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX10-64-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX10-64-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX10-64-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX10-64-NEXT:    v_cmp_eq_u32_e64 s[0:1], 1, v0
+; GFX10-64-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX10-64-NEXT:    s_and_saveexec_b64 s[4:5], s[0:1]
 ; GFX10-64-NEXT:    s_xor_b64 s[0:1], exec, s[4:5]
 ; GFX10-64-NEXT:    s_cbranch_execz .LBB2_3

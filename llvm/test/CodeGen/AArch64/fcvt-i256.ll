@@ -762,8 +762,8 @@ define i256 @f32_to_s256(float %val) {
 ; CHECK-GI-NEXT:    cset w16, hs
 ; CHECK-GI-NEXT:    adds x2, x15, x14
 ; CHECK-GI-NEXT:    and x14, x16, #0x1
-; CHECK-GI-NEXT:    mul x0, x10, x9
 ; CHECK-GI-NEXT:    cset w15, hs
+; CHECK-GI-NEXT:    mul x0, x10, x9
 ; CHECK-GI-NEXT:    add x9, x13, x14
 ; CHECK-GI-NEXT:    and x10, x15, #0x1
 ; CHECK-GI-NEXT:    add x11, x12, x11
@@ -1131,8 +1131,8 @@ define i256 @f64_to_s256(double %val) {
 ; CHECK-GI-NEXT:    cset w16, hs
 ; CHECK-GI-NEXT:    adds x2, x15, x14
 ; CHECK-GI-NEXT:    and x14, x16, #0x1
-; CHECK-GI-NEXT:    mul x0, x10, x8
 ; CHECK-GI-NEXT:    cset w15, hs
+; CHECK-GI-NEXT:    mul x0, x10, x8
 ; CHECK-GI-NEXT:    add x8, x13, x14
 ; CHECK-GI-NEXT:    and x10, x15, #0x1
 ; CHECK-GI-NEXT:    add x11, x12, x11
@@ -1654,10 +1654,10 @@ define i256 @f32_to_u256_sat(float %val) {
 ; CHECK-GI-NEXT:    and w8, w8, #0x7fffff
 ; CHECK-GI-NEXT:    cmp w9, #150
 ; CHECK-GI-NEXT:    mov x0, #-1 // =0xffffffffffffffff
-; CHECK-GI-NEXT:    orr w8, w8, #0x800000
 ; CHECK-GI-NEXT:    mov x1, #-1 // =0xffffffffffffffff
 ; CHECK-GI-NEXT:    mov x2, #-1 // =0xffffffffffffffff
 ; CHECK-GI-NEXT:    mov x3, #-1 // =0xffffffffffffffff
+; CHECK-GI-NEXT:    orr w8, w8, #0x800000
 ; CHECK-GI-NEXT:    b.hs .LBB9_5
 ; CHECK-GI-NEXT:  // %bb.4: // %fp-to-i-if-exp.small
 ; CHECK-GI-NEXT:    mov w10, #150 // =0x96
@@ -1732,8 +1732,8 @@ define i256 @f64_to_s256_sat(double %val) {
 ; CHECK-SD-NEXT:    mov x3, x0
 ; CHECK-SD-NEXT:    b.vs .LBB10_8
 ; CHECK-SD-NEXT:  // %bb.2: // %fp-to-i-if-check.saturate
-; CHECK-SD-NEXT:    asr x8, x9, #63
 ; CHECK-SD-NEXT:    cmp x10, #1278
+; CHECK-SD-NEXT:    asr x8, x9, #63
 ; CHECK-SD-NEXT:    b.lo .LBB10_5
 ; CHECK-SD-NEXT:  // %bb.3: // %fp-to-i-if-saturate
 ; CHECK-SD-NEXT:    mvn x0, x8
@@ -2087,8 +2087,8 @@ define i256 @f64_to_u256_sat(double %val) {
 ; CHECK-GI-NEXT:    mov x3, x0
 ; CHECK-GI-NEXT:    tbnz x8, #63, .LBB11_8
 ; CHECK-GI-NEXT:  // %bb.3: // %fp-to-i-if-check.saturate
-; CHECK-GI-NEXT:    mov x0, #-1 // =0xffffffffffffffff
 ; CHECK-GI-NEXT:    cmp x9, #1279
+; CHECK-GI-NEXT:    mov x0, #-1 // =0xffffffffffffffff
 ; CHECK-GI-NEXT:    mov x1, #-1 // =0xffffffffffffffff
 ; CHECK-GI-NEXT:    mov x2, #-1 // =0xffffffffffffffff
 ; CHECK-GI-NEXT:    mov x3, #-1 // =0xffffffffffffffff

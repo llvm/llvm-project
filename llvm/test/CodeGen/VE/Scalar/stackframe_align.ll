@@ -24,9 +24,9 @@ define ptr @test_frame7(ptr %0) {
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB0_2:
-; CHECK-NEXT:    ld1b.zx %s1, (, %s0)
+; CHECK-NEXT:    ld1b.zx %s0, (, %s0)
+; CHECK-NEXT:    st1b %s0, 9(, %s11)
 ; CHECK-NEXT:    lea %s0, 9(, %s11)
-; CHECK-NEXT:    st1b %s1, 9(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
 ;
@@ -47,9 +47,9 @@ define ptr @test_frame7(ptr %0) {
 ; CHECKFP-NEXT:    monc
 ; CHECKFP-NEXT:    or %s0, 0, %s62
 ; CHECKFP-NEXT:  .LBB0_2:
-; CHECKFP-NEXT:    ld1b.zx %s1, (, %s0)
+; CHECKFP-NEXT:    ld1b.zx %s0, (, %s0)
+; CHECKFP-NEXT:    st1b %s0, -7(, %s9)
 ; CHECKFP-NEXT:    lea %s0, -7(, %s9)
-; CHECKFP-NEXT:    st1b %s1, -7(, %s9)
 ; CHECKFP-NEXT:    or %s11, 0, %s9
 ; CHECKFP-NEXT:    ld %s10, 8(, %s11)
 ; CHECKFP-NEXT:    ld %s9, (, %s11)
@@ -79,9 +79,9 @@ define ptr @test_frame7_align8(ptr %0) {
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB1_2:
-; CHECK-NEXT:    ld1b.zx %s1, (, %s0)
+; CHECK-NEXT:    ld1b.zx %s0, (, %s0)
+; CHECK-NEXT:    st1b %s0, 8(, %s11)
 ; CHECK-NEXT:    lea %s0, 8(, %s11)
-; CHECK-NEXT:    st1b %s1, 8(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
 ;
@@ -102,9 +102,9 @@ define ptr @test_frame7_align8(ptr %0) {
 ; CHECKFP-NEXT:    monc
 ; CHECKFP-NEXT:    or %s0, 0, %s62
 ; CHECKFP-NEXT:  .LBB1_2:
-; CHECKFP-NEXT:    ld1b.zx %s1, (, %s0)
+; CHECKFP-NEXT:    ld1b.zx %s0, (, %s0)
+; CHECKFP-NEXT:    st1b %s0, -8(, %s9)
 ; CHECKFP-NEXT:    lea %s0, -8(, %s9)
-; CHECKFP-NEXT:    st1b %s1, -8(, %s9)
 ; CHECKFP-NEXT:    or %s11, 0, %s9
 ; CHECKFP-NEXT:    ld %s10, 8(, %s11)
 ; CHECKFP-NEXT:    ld %s9, (, %s11)
@@ -134,9 +134,9 @@ define ptr @test_frame16_align16(ptr %0) {
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB2_2:
-; CHECK-NEXT:    ld1b.zx %s1, (, %s0)
+; CHECK-NEXT:    ld1b.zx %s0, (, %s0)
+; CHECK-NEXT:    st1b %s0, (, %s11)
 ; CHECK-NEXT:    lea %s0, (, %s11)
-; CHECK-NEXT:    st1b %s1, (, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
 ;
@@ -157,9 +157,9 @@ define ptr @test_frame16_align16(ptr %0) {
 ; CHECKFP-NEXT:    monc
 ; CHECKFP-NEXT:    or %s0, 0, %s62
 ; CHECKFP-NEXT:  .LBB2_2:
-; CHECKFP-NEXT:    ld1b.zx %s1, (, %s0)
+; CHECKFP-NEXT:    ld1b.zx %s0, (, %s0)
+; CHECKFP-NEXT:    st1b %s0, -16(, %s9)
 ; CHECKFP-NEXT:    lea %s0, -16(, %s9)
-; CHECKFP-NEXT:    st1b %s1, -16(, %s9)
 ; CHECKFP-NEXT:    or %s11, 0, %s9
 ; CHECKFP-NEXT:    ld %s10, 8(, %s11)
 ; CHECKFP-NEXT:    ld %s9, (, %s11)
@@ -194,9 +194,9 @@ define ptr @test_frame16_align32(ptr %0) {
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB3_2:
-; CHECK-NEXT:    ld1b.zx %s1, (, %s0)
+; CHECK-NEXT:    ld1b.zx %s0, (, %s0)
+; CHECK-NEXT:    st1b %s0, 192(, %s11)
 ; CHECK-NEXT:    lea %s0, 192(, %s11)
-; CHECK-NEXT:    st1b %s1, 192(, %s11)
 ; CHECK-NEXT:    or %s11, 0, %s9
 ; CHECK-NEXT:    ld %s10, 8(, %s11)
 ; CHECK-NEXT:    ld %s9, (, %s11)
@@ -220,9 +220,9 @@ define ptr @test_frame16_align32(ptr %0) {
 ; CHECKFP-NEXT:    monc
 ; CHECKFP-NEXT:    or %s0, 0, %s62
 ; CHECKFP-NEXT:  .LBB3_2:
-; CHECKFP-NEXT:    ld1b.zx %s1, (, %s0)
+; CHECKFP-NEXT:    ld1b.zx %s0, (, %s0)
+; CHECKFP-NEXT:    st1b %s0, 192(, %s11)
 ; CHECKFP-NEXT:    lea %s0, 192(, %s11)
-; CHECKFP-NEXT:    st1b %s1, 192(, %s11)
 ; CHECKFP-NEXT:    or %s11, 0, %s9
 ; CHECKFP-NEXT:    ld %s10, 8(, %s11)
 ; CHECKFP-NEXT:    ld %s9, (, %s11)
@@ -257,9 +257,9 @@ define ptr @test_frame32_align32(ptr %0) {
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB4_2:
-; CHECK-NEXT:    ld1b.zx %s1, (, %s0)
+; CHECK-NEXT:    ld1b.zx %s0, (, %s0)
+; CHECK-NEXT:    st1b %s0, 192(, %s11)
 ; CHECK-NEXT:    lea %s0, 192(, %s11)
-; CHECK-NEXT:    st1b %s1, 192(, %s11)
 ; CHECK-NEXT:    or %s11, 0, %s9
 ; CHECK-NEXT:    ld %s10, 8(, %s11)
 ; CHECK-NEXT:    ld %s9, (, %s11)
@@ -283,9 +283,9 @@ define ptr @test_frame32_align32(ptr %0) {
 ; CHECKFP-NEXT:    monc
 ; CHECKFP-NEXT:    or %s0, 0, %s62
 ; CHECKFP-NEXT:  .LBB4_2:
-; CHECKFP-NEXT:    ld1b.zx %s1, (, %s0)
+; CHECKFP-NEXT:    ld1b.zx %s0, (, %s0)
+; CHECKFP-NEXT:    st1b %s0, 192(, %s11)
 ; CHECKFP-NEXT:    lea %s0, 192(, %s11)
-; CHECKFP-NEXT:    st1b %s1, 192(, %s11)
 ; CHECKFP-NEXT:    or %s11, 0, %s9
 ; CHECKFP-NEXT:    ld %s10, 8(, %s11)
 ; CHECKFP-NEXT:    ld %s9, (, %s11)

@@ -335,6 +335,7 @@ define i64 @caller3() nounwind {
 ; LA32-NEXT:    st.w $zero, $sp, 12
 ; LA32-NEXT:    ori $a0, $zero, 14
 ; LA32-NEXT:    st.w $a0, $sp, 8
+; LA32-NEXT:    st.w $zero, $sp, 0
 ; LA32-NEXT:    ori $s0, $zero, 1
 ; LA32-NEXT:    ori $s2, $zero, 2
 ; LA32-NEXT:    ori $s4, $zero, 3
@@ -348,7 +349,6 @@ define i64 @caller3() nounwind {
 ; LA32-NEXT:    ori $t4, $zero, 11
 ; LA32-NEXT:    ori $t6, $zero, 12
 ; LA32-NEXT:    ori $t8, $zero, 13
-; LA32-NEXT:    st.w $zero, $sp, 0
 ; LA32-NEXT:    move $s1, $zero
 ; LA32-NEXT:    move $s3, $zero
 ; LA32-NEXT:    move $s5, $zero
@@ -379,27 +379,27 @@ define i64 @caller3() nounwind {
 ;
 ; LA64-LABEL: caller3:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    addi.d $sp, $sp, -176
-; LA64-NEXT:    st.d $ra, $sp, 168 # 8-byte Folded Spill
-; LA64-NEXT:    st.d $fp, $sp, 160 # 8-byte Folded Spill
-; LA64-NEXT:    st.d $s0, $sp, 152 # 8-byte Folded Spill
-; LA64-NEXT:    st.d $s1, $sp, 144 # 8-byte Folded Spill
-; LA64-NEXT:    st.d $s2, $sp, 136 # 8-byte Folded Spill
-; LA64-NEXT:    st.d $s3, $sp, 128 # 8-byte Folded Spill
-; LA64-NEXT:    st.d $s4, $sp, 120 # 8-byte Folded Spill
-; LA64-NEXT:    st.d $s5, $sp, 112 # 8-byte Folded Spill
-; LA64-NEXT:    st.d $s6, $sp, 104 # 8-byte Folded Spill
-; LA64-NEXT:    st.d $s7, $sp, 96 # 8-byte Folded Spill
-; LA64-NEXT:    st.d $s8, $sp, 88 # 8-byte Folded Spill
-; LA64-NEXT:    fst.d $fs0, $sp, 80 # 8-byte Folded Spill
-; LA64-NEXT:    fst.d $fs1, $sp, 72 # 8-byte Folded Spill
-; LA64-NEXT:    fst.d $fs2, $sp, 64 # 8-byte Folded Spill
-; LA64-NEXT:    fst.d $fs3, $sp, 56 # 8-byte Folded Spill
-; LA64-NEXT:    fst.d $fs4, $sp, 48 # 8-byte Folded Spill
-; LA64-NEXT:    fst.d $fs5, $sp, 40 # 8-byte Folded Spill
-; LA64-NEXT:    fst.d $fs6, $sp, 32 # 8-byte Folded Spill
-; LA64-NEXT:    fst.d $fs7, $sp, 24 # 8-byte Folded Spill
-; LA64-NEXT:    ori $fp, $zero, 26
+; LA64-NEXT:    addi.d $sp, $sp, -160
+; LA64-NEXT:    st.d $ra, $sp, 152 # 8-byte Folded Spill
+; LA64-NEXT:    st.d $s0, $sp, 144 # 8-byte Folded Spill
+; LA64-NEXT:    st.d $s1, $sp, 136 # 8-byte Folded Spill
+; LA64-NEXT:    st.d $s2, $sp, 128 # 8-byte Folded Spill
+; LA64-NEXT:    st.d $s3, $sp, 120 # 8-byte Folded Spill
+; LA64-NEXT:    st.d $s4, $sp, 112 # 8-byte Folded Spill
+; LA64-NEXT:    st.d $s5, $sp, 104 # 8-byte Folded Spill
+; LA64-NEXT:    st.d $s6, $sp, 96 # 8-byte Folded Spill
+; LA64-NEXT:    st.d $s7, $sp, 88 # 8-byte Folded Spill
+; LA64-NEXT:    st.d $s8, $sp, 80 # 8-byte Folded Spill
+; LA64-NEXT:    fst.d $fs0, $sp, 72 # 8-byte Folded Spill
+; LA64-NEXT:    fst.d $fs1, $sp, 64 # 8-byte Folded Spill
+; LA64-NEXT:    fst.d $fs2, $sp, 56 # 8-byte Folded Spill
+; LA64-NEXT:    fst.d $fs3, $sp, 48 # 8-byte Folded Spill
+; LA64-NEXT:    fst.d $fs4, $sp, 40 # 8-byte Folded Spill
+; LA64-NEXT:    fst.d $fs5, $sp, 32 # 8-byte Folded Spill
+; LA64-NEXT:    fst.d $fs6, $sp, 24 # 8-byte Folded Spill
+; LA64-NEXT:    fst.d $fs7, $sp, 16 # 8-byte Folded Spill
+; LA64-NEXT:    ori $a0, $zero, 26
+; LA64-NEXT:    st.d $a0, $sp, 0
 ; LA64-NEXT:    ori $s0, $zero, 1
 ; LA64-NEXT:    ori $s1, $zero, 2
 ; LA64-NEXT:    ori $s2, $zero, 3
@@ -425,30 +425,28 @@ define i64 @caller3() nounwind {
 ; LA64-NEXT:    ori $t6, $zero, 23
 ; LA64-NEXT:    ori $t7, $zero, 24
 ; LA64-NEXT:    ori $t8, $zero, 25
-; LA64-NEXT:    st.d $fp, $sp, 0
 ; LA64-NEXT:    pcaddu18i $ra, %call36(callee_with_many_param)
 ; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    move $a0, $s0
-; LA64-NEXT:    fld.d $fs7, $sp, 24 # 8-byte Folded Reload
-; LA64-NEXT:    fld.d $fs6, $sp, 32 # 8-byte Folded Reload
-; LA64-NEXT:    fld.d $fs5, $sp, 40 # 8-byte Folded Reload
-; LA64-NEXT:    fld.d $fs4, $sp, 48 # 8-byte Folded Reload
-; LA64-NEXT:    fld.d $fs3, $sp, 56 # 8-byte Folded Reload
-; LA64-NEXT:    fld.d $fs2, $sp, 64 # 8-byte Folded Reload
-; LA64-NEXT:    fld.d $fs1, $sp, 72 # 8-byte Folded Reload
-; LA64-NEXT:    fld.d $fs0, $sp, 80 # 8-byte Folded Reload
-; LA64-NEXT:    ld.d $s8, $sp, 88 # 8-byte Folded Reload
-; LA64-NEXT:    ld.d $s7, $sp, 96 # 8-byte Folded Reload
-; LA64-NEXT:    ld.d $s6, $sp, 104 # 8-byte Folded Reload
-; LA64-NEXT:    ld.d $s5, $sp, 112 # 8-byte Folded Reload
-; LA64-NEXT:    ld.d $s4, $sp, 120 # 8-byte Folded Reload
-; LA64-NEXT:    ld.d $s3, $sp, 128 # 8-byte Folded Reload
-; LA64-NEXT:    ld.d $s2, $sp, 136 # 8-byte Folded Reload
-; LA64-NEXT:    ld.d $s1, $sp, 144 # 8-byte Folded Reload
-; LA64-NEXT:    ld.d $s0, $sp, 152 # 8-byte Folded Reload
-; LA64-NEXT:    ld.d $fp, $sp, 160 # 8-byte Folded Reload
-; LA64-NEXT:    ld.d $ra, $sp, 168 # 8-byte Folded Reload
-; LA64-NEXT:    addi.d $sp, $sp, 176
+; LA64-NEXT:    fld.d $fs7, $sp, 16 # 8-byte Folded Reload
+; LA64-NEXT:    fld.d $fs6, $sp, 24 # 8-byte Folded Reload
+; LA64-NEXT:    fld.d $fs5, $sp, 32 # 8-byte Folded Reload
+; LA64-NEXT:    fld.d $fs4, $sp, 40 # 8-byte Folded Reload
+; LA64-NEXT:    fld.d $fs3, $sp, 48 # 8-byte Folded Reload
+; LA64-NEXT:    fld.d $fs2, $sp, 56 # 8-byte Folded Reload
+; LA64-NEXT:    fld.d $fs1, $sp, 64 # 8-byte Folded Reload
+; LA64-NEXT:    fld.d $fs0, $sp, 72 # 8-byte Folded Reload
+; LA64-NEXT:    ld.d $s8, $sp, 80 # 8-byte Folded Reload
+; LA64-NEXT:    ld.d $s7, $sp, 88 # 8-byte Folded Reload
+; LA64-NEXT:    ld.d $s6, $sp, 96 # 8-byte Folded Reload
+; LA64-NEXT:    ld.d $s5, $sp, 104 # 8-byte Folded Reload
+; LA64-NEXT:    ld.d $s4, $sp, 112 # 8-byte Folded Reload
+; LA64-NEXT:    ld.d $s3, $sp, 120 # 8-byte Folded Reload
+; LA64-NEXT:    ld.d $s2, $sp, 128 # 8-byte Folded Reload
+; LA64-NEXT:    ld.d $s1, $sp, 136 # 8-byte Folded Reload
+; LA64-NEXT:    ld.d $s0, $sp, 144 # 8-byte Folded Reload
+; LA64-NEXT:    ld.d $ra, $sp, 152 # 8-byte Folded Reload
+; LA64-NEXT:    addi.d $sp, $sp, 160
 ; LA64-NEXT:    ret
   %ret = call preserve_nonecc i64 @callee_with_many_param(i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15, i64 16, i64 17, i64 18, i64 19, i64 20, i64 21, i64 22, i64 23, i64 24, i64 25, i64 26)
   ret i64 %ret

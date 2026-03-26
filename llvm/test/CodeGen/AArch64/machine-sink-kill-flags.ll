@@ -12,18 +12,17 @@ target triple = "arm64-apple-ios8.0.0"
 define i32 @test(ptr %ptr) {
 ; CHECK-LABEL: test:
 ; CHECK:       ; %bb.0: ; %bb
-; CHECK-NEXT:    mov x8, x0
-; CHECK-NEXT:    mov w9, wzr
+; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:  LBB0_1: ; %.thread
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    lsr w11, w9, #1
-; CHECK-NEXT:    sub w10, w9, #1
-; CHECK-NEXT:    mov w9, w11
-; CHECK-NEXT:    tbnz w10, #0, LBB0_1
+; CHECK-NEXT:    lsr w10, w8, #1
+; CHECK-NEXT:    sub w9, w8, #1
+; CHECK-NEXT:    mov w8, w10
+; CHECK-NEXT:    tbnz w9, #0, LBB0_1
 ; CHECK-NEXT:  ; %bb.2: ; %bb343
-; CHECK-NEXT:    and w9, w10, #0x1
+; CHECK-NEXT:    and w8, w9, #0x1
+; CHECK-NEXT:    str w8, [x0]
 ; CHECK-NEXT:    mov w0, #-1 ; =0xffffffff
-; CHECK-NEXT:    str w9, [x8]
 ; CHECK-NEXT:    ret
 bb:
   br label %.thread

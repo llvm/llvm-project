@@ -927,20 +927,20 @@ define <4 x i32> @clmul_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; LE-NEXT:    vmuluwm 13, 2, 13
 ; LE-NEXT:    vmuluwm 14, 2, 14
 ; LE-NEXT:    addis 3, 2, .LCPI2_1@toc@ha
-; LE-NEXT:    vsldoi 12, 1, 1, 1
-; LE-NEXT:    vsldoi 8, 0, 0, 1
+; LE-NEXT:    vsldoi 11, 1, 1, 1
+; LE-NEXT:    xxland 43, 35, 43
 ; LE-NEXT:    addi 3, 3, .LCPI2_1@toc@l
-; LE-NEXT:    xxland 44, 35, 44
-; LE-NEXT:    vmuluwm 12, 2, 12
-; LE-NEXT:    xxland 40, 35, 40
-; LE-NEXT:    vmuluwm 8, 2, 8
+; LE-NEXT:    vmuluwm 11, 2, 11
+; LE-NEXT:    vsldoi 12, 0, 0, 1
 ; LE-NEXT:    vsldoi 10, 5, 5, 1
+; LE-NEXT:    xxland 42, 35, 42
+; LE-NEXT:    vmuluwm 10, 2, 10
 ; LE-NEXT:    vsldoi 6, 1, 1, 2
 ; LE-NEXT:    xxland 38, 35, 38
 ; LE-NEXT:    vmuluwm 6, 2, 6
 ; LE-NEXT:    vsldoi 7, 0, 0, 2
-; LE-NEXT:    vsldoi 9, 5, 5, 2
-; LE-NEXT:    vsldoi 11, 4, 4, 2
+; LE-NEXT:    vsldoi 8, 5, 5, 2
+; LE-NEXT:    vsldoi 9, 4, 4, 2
 ; LE-NEXT:    vsldoi 1, 1, 1, 3
 ; LE-NEXT:    vsldoi 0, 0, 0, 3
 ; LE-NEXT:    xxland 33, 35, 33
@@ -974,47 +974,47 @@ define <4 x i32> @clmul_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; LE-NEXT:    vmuluwm 13, 2, 13
 ; LE-NEXT:    addi 3, 3, .LCPI2_3@toc@l
 ; LE-NEXT:    xxlxor 0, 0, 45
-; LE-NEXT:    xxlxor 0, 0, 44
-; LE-NEXT:    xxlxor 0, 0, 40
-; LE-NEXT:    xxland 40, 35, 42
-; LE-NEXT:    vmuluwm 8, 2, 8
-; LE-NEXT:    xxlxor 0, 0, 40
-; LE-NEXT:    vslw 8, 4, 4
-; LE-NEXT:    xxland 40, 35, 40
-; LE-NEXT:    vmuluwm 8, 2, 8
-; LE-NEXT:    xxlxor 0, 0, 40
-; LE-NEXT:    xxland 40, 35, 1
+; LE-NEXT:    xxlxor 0, 0, 43
+; LE-NEXT:    xxland 43, 35, 44
+; LE-NEXT:    vmuluwm 11, 2, 11
+; LE-NEXT:    xxlxor 0, 0, 43
+; LE-NEXT:    xxlxor 0, 0, 42
+; LE-NEXT:    vslw 10, 4, 4
+; LE-NEXT:    xxland 42, 35, 42
+; LE-NEXT:    vmuluwm 10, 2, 10
+; LE-NEXT:    xxlxor 0, 0, 42
+; LE-NEXT:    xxland 42, 35, 1
 ; LE-NEXT:    lxvd2x 1, 0, 3
 ; LE-NEXT:    addis 3, 2, .LCPI2_4@toc@ha
-; LE-NEXT:    vmuluwm 8, 2, 8
+; LE-NEXT:    vmuluwm 10, 2, 10
 ; LE-NEXT:    addi 3, 3, .LCPI2_4@toc@l
-; LE-NEXT:    xxlxor 0, 0, 40
-; LE-NEXT:    xxland 40, 35, 1
+; LE-NEXT:    xxlxor 0, 0, 42
+; LE-NEXT:    xxland 42, 35, 1
 ; LE-NEXT:    lxvd2x 1, 0, 3
 ; LE-NEXT:    addis 3, 2, .LCPI2_5@toc@ha
-; LE-NEXT:    vmuluwm 8, 2, 8
+; LE-NEXT:    vmuluwm 10, 2, 10
 ; LE-NEXT:    addi 3, 3, .LCPI2_5@toc@l
-; LE-NEXT:    xxlxor 0, 0, 40
-; LE-NEXT:    xxland 40, 35, 1
+; LE-NEXT:    xxlxor 0, 0, 42
+; LE-NEXT:    xxland 42, 35, 1
 ; LE-NEXT:    lxvd2x 1, 0, 3
 ; LE-NEXT:    addis 3, 2, .LCPI2_6@toc@ha
-; LE-NEXT:    vmuluwm 8, 2, 8
+; LE-NEXT:    vmuluwm 10, 2, 10
 ; LE-NEXT:    addi 3, 3, .LCPI2_6@toc@l
-; LE-NEXT:    xxlxor 0, 0, 40
-; LE-NEXT:    xxland 40, 35, 1
+; LE-NEXT:    xxlxor 0, 0, 42
+; LE-NEXT:    xxland 42, 35, 1
 ; LE-NEXT:    lxvd2x 1, 0, 3
 ; LE-NEXT:    addis 3, 2, .LCPI2_7@toc@ha
-; LE-NEXT:    vmuluwm 8, 2, 8
+; LE-NEXT:    vmuluwm 10, 2, 10
 ; LE-NEXT:    addi 3, 3, .LCPI2_7@toc@l
-; LE-NEXT:    xxlxor 0, 0, 40
+; LE-NEXT:    xxlxor 0, 0, 42
 ; LE-NEXT:    xxlxor 0, 0, 38
 ; LE-NEXT:    xxland 38, 35, 39
 ; LE-NEXT:    vmuluwm 6, 2, 6
 ; LE-NEXT:    xxlxor 0, 0, 38
-; LE-NEXT:    xxland 38, 35, 41
+; LE-NEXT:    xxland 38, 35, 40
 ; LE-NEXT:    vmuluwm 6, 2, 6
 ; LE-NEXT:    xxlxor 0, 0, 38
-; LE-NEXT:    xxland 38, 35, 43
+; LE-NEXT:    xxland 38, 35, 41
 ; LE-NEXT:    vmuluwm 6, 2, 6
 ; LE-NEXT:    xxlxor 0, 0, 38
 ; LE-NEXT:    xxland 38, 35, 1
@@ -4255,23 +4255,23 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; LE-NEXT:    xxswapd 2, 0
 ; LE-NEXT:    xxsldwi 3, 0, 0, 3
 ; LE-NEXT:    mffprwz 9, 1
-; LE-NEXT:    mffprwz 10, 2
-; LE-NEXT:    mffprwz 11, 3
-; LE-NEXT:    slwi 12, 9, 1
+; LE-NEXT:    mffprwz 11, 2
+; LE-NEXT:    mffprwz 12, 3
+; LE-NEXT:    slwi 10, 9, 1
 ; LE-NEXT:    srwi 9, 9, 1
-; LE-NEXT:    and 12, 12, 8
+; LE-NEXT:    and 10, 10, 8
 ; LE-NEXT:    and 9, 9, 7
-; LE-NEXT:    or 9, 9, 12
-; LE-NEXT:    slwi 12, 10, 1
-; LE-NEXT:    srwi 10, 10, 1
-; LE-NEXT:    and 12, 12, 8
-; LE-NEXT:    and 10, 10, 7
-; LE-NEXT:    or 10, 10, 12
-; LE-NEXT:    slwi 12, 11, 1
+; LE-NEXT:    or 9, 9, 10
+; LE-NEXT:    slwi 10, 11, 1
 ; LE-NEXT:    srwi 11, 11, 1
-; LE-NEXT:    and 12, 12, 8
+; LE-NEXT:    and 10, 10, 8
 ; LE-NEXT:    and 11, 11, 7
-; LE-NEXT:    or 11, 11, 12
+; LE-NEXT:    or 10, 11, 10
+; LE-NEXT:    slwi 11, 12, 1
+; LE-NEXT:    srwi 12, 12, 1
+; LE-NEXT:    and 11, 11, 8
+; LE-NEXT:    and 12, 12, 7
+; LE-NEXT:    or 11, 12, 11
 ; LE-NEXT:    slwi 12, 9, 2
 ; LE-NEXT:    srwi 9, 9, 2
 ; LE-NEXT:    and 12, 12, 6

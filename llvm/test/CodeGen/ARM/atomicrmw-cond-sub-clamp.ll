@@ -167,9 +167,9 @@ define i64 @atomicrmw_usub_sat_i64(ptr %ptr, i64 %val) {
 ; CHECK-NEXT:    cmp r1, #0
 ; CHECK-NEXT:    bne .LBB7_1
 ; CHECK-NEXT:  @ %bb.2: @ %atomicrmw.end
+; CHECK-NEXT:    dmb ish
 ; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    mov r1, r5
-; CHECK-NEXT:    dmb ish
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, r11, pc}
   %result = atomicrmw usub_sat ptr %ptr, i64 %val seq_cst
   ret i64 %result

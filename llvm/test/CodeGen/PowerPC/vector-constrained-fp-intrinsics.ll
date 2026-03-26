@@ -230,8 +230,8 @@ define <2 x double> @constrained_vector_frem_v2f64(<2 x double> %x, <2 x double>
 ; PC64LE9-NEXT:    vmr 31, 3
 ; PC64LE9-NEXT:    xscpsgndp 2, 63, 63
 ; PC64LE9-NEXT:    vmr 30, 2
-; PC64LE9-NEXT:    xscpsgndp 1, 62, 62
 ; PC64LE9-NEXT:    stxv 61, 32(1) # 16-byte Folded Spill
+; PC64LE9-NEXT:    xscpsgndp 1, 62, 62
 ; PC64LE9-NEXT:    bl fmod
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    xscpsgndp 61, 1, 1
@@ -261,17 +261,17 @@ define <3 x float> @constrained_vector_frem_v3f32(<3 x float> %x, <3 x float> %y
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
 ; PC64LE-NEXT:    stdu 1, -96(1)
-; PC64LE-NEXT:    xxsldwi 0, 34, 34, 1
-; PC64LE-NEXT:    xxsldwi 2, 35, 35, 1
 ; PC64LE-NEXT:    li 3, 48
 ; PC64LE-NEXT:    std 0, 112(1)
+; PC64LE-NEXT:    xxsldwi 0, 34, 34, 1
+; PC64LE-NEXT:    xxsldwi 2, 35, 35, 1
 ; PC64LE-NEXT:    stfd 30, 80(1) # 8-byte Folded Spill
 ; PC64LE-NEXT:    stfd 31, 88(1) # 8-byte Folded Spill
-; PC64LE-NEXT:    xscvspdpn 1, 0
-; PC64LE-NEXT:    xscvspdpn 2, 2
 ; PC64LE-NEXT:    stxvd2x 62, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    li 3, 64
 ; PC64LE-NEXT:    vmr 30, 2
+; PC64LE-NEXT:    xscvspdpn 1, 0
+; PC64LE-NEXT:    xscvspdpn 2, 2
 ; PC64LE-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    vmr 31, 3
 ; PC64LE-NEXT:    bl fmodf
@@ -371,18 +371,18 @@ define <3 x double> @constrained_vector_frem_v3f64(<3 x double> %x, <3 x double>
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
 ; PC64LE-NEXT:    stdu 1, -96(1)
+; PC64LE-NEXT:    li 3, 48
 ; PC64LE-NEXT:    std 0, 112(1)
 ; PC64LE-NEXT:    stfd 28, 64(1) # 8-byte Folded Spill
 ; PC64LE-NEXT:    fmr 28, 2
-; PC64LE-NEXT:    fmr 2, 4
-; PC64LE-NEXT:    li 3, 48
 ; PC64LE-NEXT:    stfd 29, 72(1) # 8-byte Folded Spill
 ; PC64LE-NEXT:    stfd 30, 80(1) # 8-byte Folded Spill
 ; PC64LE-NEXT:    fmr 30, 5
+; PC64LE-NEXT:    fmr 29, 3
 ; PC64LE-NEXT:    stfd 31, 88(1) # 8-byte Folded Spill
 ; PC64LE-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    fmr 31, 6
-; PC64LE-NEXT:    fmr 29, 3
+; PC64LE-NEXT:    fmr 2, 4
 ; PC64LE-NEXT:    bl fmod
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    xxlor 63, 1, 1
@@ -416,14 +416,14 @@ define <3 x double> @constrained_vector_frem_v3f64(<3 x double> %x, <3 x double>
 ; PC64LE9-NEXT:    std 0, 96(1)
 ; PC64LE9-NEXT:    stfd 28, 48(1) # 8-byte Folded Spill
 ; PC64LE9-NEXT:    stxv 63, 32(1) # 16-byte Folded Spill
-; PC64LE9-NEXT:    fmr 28, 2
-; PC64LE9-NEXT:    fmr 2, 4
 ; PC64LE9-NEXT:    stfd 29, 56(1) # 8-byte Folded Spill
 ; PC64LE9-NEXT:    stfd 30, 64(1) # 8-byte Folded Spill
 ; PC64LE9-NEXT:    stfd 31, 72(1) # 8-byte Folded Spill
 ; PC64LE9-NEXT:    fmr 31, 6
 ; PC64LE9-NEXT:    fmr 30, 5
 ; PC64LE9-NEXT:    fmr 29, 3
+; PC64LE9-NEXT:    fmr 28, 2
+; PC64LE9-NEXT:    fmr 2, 4
 ; PC64LE9-NEXT:    bl fmod
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    xscpsgndp 63, 1, 1
@@ -471,14 +471,14 @@ define <4 x double> @constrained_vector_frem_v4f64(<4 x double> %x, <4 x double>
 ; PC64LE-NEXT:    vmr 28, 2
 ; PC64LE-NEXT:    stxvd2x 61, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    li 3, 96
-; PC64LE-NEXT:    xxlor 1, 60, 60
 ; PC64LE-NEXT:    vmr 29, 3
+; PC64LE-NEXT:    xxlor 1, 60, 60
 ; PC64LE-NEXT:    stxvd2x 62, 1, 3 # 16-byte Folded Spill
-; PC64LE-NEXT:    vmr 30, 4
 ; PC64LE-NEXT:    li 3, 112
-; PC64LE-NEXT:    xxlor 2, 62, 62
+; PC64LE-NEXT:    vmr 30, 4
 ; PC64LE-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    vmr 31, 5
+; PC64LE-NEXT:    xxlor 2, 62, 62
 ; PC64LE-NEXT:    bl fmod
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    xxlor 59, 1, 1
@@ -523,8 +523,8 @@ define <4 x double> @constrained_vector_frem_v4f64(<4 x double> %x, <4 x double>
 ; PC64LE9-NEXT:    vmr 30, 4
 ; PC64LE9-NEXT:    xscpsgndp 2, 62, 62
 ; PC64LE9-NEXT:    vmr 28, 2
-; PC64LE9-NEXT:    xscpsgndp 1, 60, 60
 ; PC64LE9-NEXT:    stxv 59, 32(1) # 16-byte Folded Spill
+; PC64LE9-NEXT:    xscpsgndp 1, 60, 60
 ; PC64LE9-NEXT:    stxv 61, 64(1) # 16-byte Folded Spill
 ; PC64LE9-NEXT:    stxv 63, 96(1) # 16-byte Folded Spill
 ; PC64LE9-NEXT:    vmr 31, 5
@@ -1224,8 +1224,8 @@ define <2 x double> @constrained_vector_pow_v2f64(<2 x double> %x, <2 x double> 
 ; PC64LE9-NEXT:    vmr 31, 3
 ; PC64LE9-NEXT:    xscpsgndp 2, 63, 63
 ; PC64LE9-NEXT:    vmr 30, 2
-; PC64LE9-NEXT:    xscpsgndp 1, 62, 62
 ; PC64LE9-NEXT:    stxv 61, 32(1) # 16-byte Folded Spill
+; PC64LE9-NEXT:    xscpsgndp 1, 62, 62
 ; PC64LE9-NEXT:    bl pow
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    xscpsgndp 61, 1, 1
@@ -1255,17 +1255,17 @@ define <3 x float> @constrained_vector_pow_v3f32(<3 x float> %x, <3 x float> %y)
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
 ; PC64LE-NEXT:    stdu 1, -96(1)
-; PC64LE-NEXT:    xxsldwi 0, 34, 34, 1
-; PC64LE-NEXT:    xxsldwi 2, 35, 35, 1
 ; PC64LE-NEXT:    li 3, 48
 ; PC64LE-NEXT:    std 0, 112(1)
+; PC64LE-NEXT:    xxsldwi 0, 34, 34, 1
+; PC64LE-NEXT:    xxsldwi 2, 35, 35, 1
 ; PC64LE-NEXT:    stfd 30, 80(1) # 8-byte Folded Spill
 ; PC64LE-NEXT:    stfd 31, 88(1) # 8-byte Folded Spill
-; PC64LE-NEXT:    xscvspdpn 1, 0
-; PC64LE-NEXT:    xscvspdpn 2, 2
 ; PC64LE-NEXT:    stxvd2x 62, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    li 3, 64
 ; PC64LE-NEXT:    vmr 30, 2
+; PC64LE-NEXT:    xscvspdpn 1, 0
+; PC64LE-NEXT:    xscvspdpn 2, 2
 ; PC64LE-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    vmr 31, 3
 ; PC64LE-NEXT:    bl powf
@@ -1365,18 +1365,18 @@ define <3 x double> @constrained_vector_pow_v3f64(<3 x double> %x, <3 x double> 
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
 ; PC64LE-NEXT:    stdu 1, -96(1)
+; PC64LE-NEXT:    li 3, 48
 ; PC64LE-NEXT:    std 0, 112(1)
 ; PC64LE-NEXT:    stfd 28, 64(1) # 8-byte Folded Spill
 ; PC64LE-NEXT:    fmr 28, 2
-; PC64LE-NEXT:    fmr 2, 4
-; PC64LE-NEXT:    li 3, 48
 ; PC64LE-NEXT:    stfd 29, 72(1) # 8-byte Folded Spill
 ; PC64LE-NEXT:    stfd 30, 80(1) # 8-byte Folded Spill
 ; PC64LE-NEXT:    fmr 30, 5
+; PC64LE-NEXT:    fmr 29, 3
 ; PC64LE-NEXT:    stfd 31, 88(1) # 8-byte Folded Spill
 ; PC64LE-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    fmr 31, 6
-; PC64LE-NEXT:    fmr 29, 3
+; PC64LE-NEXT:    fmr 2, 4
 ; PC64LE-NEXT:    bl pow
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    xxlor 63, 1, 1
@@ -1410,14 +1410,14 @@ define <3 x double> @constrained_vector_pow_v3f64(<3 x double> %x, <3 x double> 
 ; PC64LE9-NEXT:    std 0, 96(1)
 ; PC64LE9-NEXT:    stfd 28, 48(1) # 8-byte Folded Spill
 ; PC64LE9-NEXT:    stxv 63, 32(1) # 16-byte Folded Spill
-; PC64LE9-NEXT:    fmr 28, 2
-; PC64LE9-NEXT:    fmr 2, 4
 ; PC64LE9-NEXT:    stfd 29, 56(1) # 8-byte Folded Spill
 ; PC64LE9-NEXT:    stfd 30, 64(1) # 8-byte Folded Spill
 ; PC64LE9-NEXT:    stfd 31, 72(1) # 8-byte Folded Spill
 ; PC64LE9-NEXT:    fmr 31, 6
 ; PC64LE9-NEXT:    fmr 30, 5
 ; PC64LE9-NEXT:    fmr 29, 3
+; PC64LE9-NEXT:    fmr 28, 2
+; PC64LE9-NEXT:    fmr 2, 4
 ; PC64LE9-NEXT:    bl pow
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    xscpsgndp 63, 1, 1
@@ -1465,14 +1465,14 @@ define <4 x double> @constrained_vector_pow_v4f64(<4 x double> %x, <4 x double> 
 ; PC64LE-NEXT:    vmr 28, 2
 ; PC64LE-NEXT:    stxvd2x 61, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    li 3, 96
-; PC64LE-NEXT:    xxlor 1, 60, 60
 ; PC64LE-NEXT:    vmr 29, 3
+; PC64LE-NEXT:    xxlor 1, 60, 60
 ; PC64LE-NEXT:    stxvd2x 62, 1, 3 # 16-byte Folded Spill
-; PC64LE-NEXT:    vmr 30, 4
 ; PC64LE-NEXT:    li 3, 112
-; PC64LE-NEXT:    xxlor 2, 62, 62
+; PC64LE-NEXT:    vmr 30, 4
 ; PC64LE-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    vmr 31, 5
+; PC64LE-NEXT:    xxlor 2, 62, 62
 ; PC64LE-NEXT:    bl pow
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    xxlor 59, 1, 1
@@ -1517,8 +1517,8 @@ define <4 x double> @constrained_vector_pow_v4f64(<4 x double> %x, <4 x double> 
 ; PC64LE9-NEXT:    vmr 30, 4
 ; PC64LE9-NEXT:    xscpsgndp 2, 62, 62
 ; PC64LE9-NEXT:    vmr 28, 2
-; PC64LE9-NEXT:    xscpsgndp 1, 60, 60
 ; PC64LE9-NEXT:    stxv 59, 32(1) # 16-byte Folded Spill
+; PC64LE9-NEXT:    xscpsgndp 1, 60, 60
 ; PC64LE9-NEXT:    stxv 61, 64(1) # 16-byte Folded Spill
 ; PC64LE9-NEXT:    stxv 63, 96(1) # 16-byte Folded Spill
 ; PC64LE9-NEXT:    vmr 31, 5
@@ -1565,8 +1565,8 @@ define <1 x float> @constrained_vector_powi_v1f32(<1 x float> %x, i32 %y) #0 {
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
 ; PC64LE-NEXT:    stdu 1, -32(1)
-; PC64LE-NEXT:    clrldi 4, 4, 32
 ; PC64LE-NEXT:    std 0, 48(1)
+; PC64LE-NEXT:    clrldi 4, 4, 32
 ; PC64LE-NEXT:    bl __powisf2
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    addi 1, 1, 32
@@ -1578,8 +1578,8 @@ define <1 x float> @constrained_vector_powi_v1f32(<1 x float> %x, i32 %y) #0 {
 ; PC64LE9:       # %bb.0: # %entry
 ; PC64LE9-NEXT:    mflr 0
 ; PC64LE9-NEXT:    stdu 1, -32(1)
-; PC64LE9-NEXT:    clrldi 4, 4, 32
 ; PC64LE9-NEXT:    std 0, 48(1)
+; PC64LE9-NEXT:    clrldi 4, 4, 32
 ; PC64LE9-NEXT:    bl __powisf2
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    addi 1, 1, 32
@@ -1671,17 +1671,17 @@ define <3 x float> @constrained_vector_powi_v3f32(<3 x float> %x, i32 %y) #0 {
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
 ; PC64LE-NEXT:    stdu 1, -96(1)
-; PC64LE-NEXT:    xxsldwi 0, 34, 34, 1
 ; PC64LE-NEXT:    std 0, 112(1)
 ; PC64LE-NEXT:    std 30, 64(1) # 8-byte Folded Spill
-; PC64LE-NEXT:    clrldi 30, 5, 32
 ; PC64LE-NEXT:    li 3, 48
+; PC64LE-NEXT:    xxsldwi 0, 34, 34, 1
+; PC64LE-NEXT:    clrldi 30, 5, 32
 ; PC64LE-NEXT:    stfd 30, 80(1) # 8-byte Folded Spill
 ; PC64LE-NEXT:    stfd 31, 88(1) # 8-byte Folded Spill
 ; PC64LE-NEXT:    xscvspdpn 1, 0
-; PC64LE-NEXT:    mr 4, 30
 ; PC64LE-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    vmr 31, 2
+; PC64LE-NEXT:    mr 4, 30
 ; PC64LE-NEXT:    bl __powisf2
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    xxswapd 0, 63
@@ -1775,14 +1775,14 @@ define <3 x double> @constrained_vector_powi_v3f64(<3 x double> %x, i32 %y) #0 {
 ; PC64LE-NEXT:    stdu 1, -96(1)
 ; PC64LE-NEXT:    std 0, 112(1)
 ; PC64LE-NEXT:    std 30, 64(1) # 8-byte Folded Spill
-; PC64LE-NEXT:    clrldi 30, 6, 32
 ; PC64LE-NEXT:    li 3, 48
+; PC64LE-NEXT:    clrldi 30, 6, 32
 ; PC64LE-NEXT:    stfd 30, 80(1) # 8-byte Folded Spill
 ; PC64LE-NEXT:    stfd 31, 88(1) # 8-byte Folded Spill
 ; PC64LE-NEXT:    fmr 31, 3
 ; PC64LE-NEXT:    fmr 30, 2
-; PC64LE-NEXT:    mr 4, 30
 ; PC64LE-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
+; PC64LE-NEXT:    mr 4, 30
 ; PC64LE-NEXT:    bl __powidf2
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    xxlor 63, 1, 1
@@ -1866,11 +1866,11 @@ define <4 x double> @constrained_vector_powi_v4f64(<4 x double> %x, i32 %y) #0 {
 ; PC64LE-NEXT:    li 3, 64
 ; PC64LE-NEXT:    mr 4, 30
 ; PC64LE-NEXT:    stxvd2x 62, 1, 3 # 16-byte Folded Spill
-; PC64LE-NEXT:    vmr 30, 2
 ; PC64LE-NEXT:    li 3, 80
-; PC64LE-NEXT:    xxlor 1, 62, 62
+; PC64LE-NEXT:    vmr 30, 2
 ; PC64LE-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    vmr 31, 3
+; PC64LE-NEXT:    xxlor 1, 62, 62
 ; PC64LE-NEXT:    bl __powidf2
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    xxlor 61, 1, 1
@@ -1913,8 +1913,8 @@ define <4 x double> @constrained_vector_powi_v4f64(<4 x double> %x, i32 %y) #0 {
 ; PC64LE9-NEXT:    clrldi 30, 7, 32
 ; PC64LE9-NEXT:    stxv 61, 32(1) # 16-byte Folded Spill
 ; PC64LE9-NEXT:    xscpsgndp 1, 62, 62
-; PC64LE9-NEXT:    mr 4, 30
 ; PC64LE9-NEXT:    stxv 63, 64(1) # 16-byte Folded Spill
+; PC64LE9-NEXT:    mr 4, 30
 ; PC64LE9-NEXT:    vmr 31, 3
 ; PC64LE9-NEXT:    bl __powidf2
 ; PC64LE9-NEXT:    nop
@@ -2047,14 +2047,14 @@ define <3 x float> @constrained_vector_sin_v3f32(<3 x float> %x) #0 {
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
 ; PC64LE-NEXT:    stdu 1, -80(1)
-; PC64LE-NEXT:    xxsldwi 0, 34, 34, 1
 ; PC64LE-NEXT:    li 3, 48
+; PC64LE-NEXT:    xxsldwi 0, 34, 34, 1
 ; PC64LE-NEXT:    std 0, 96(1)
 ; PC64LE-NEXT:    stfd 30, 64(1) # 8-byte Folded Spill
 ; PC64LE-NEXT:    stfd 31, 72(1) # 8-byte Folded Spill
-; PC64LE-NEXT:    xscvspdpn 1, 0
 ; PC64LE-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    vmr 31, 2
+; PC64LE-NEXT:    xscvspdpn 1, 0
 ; PC64LE-NEXT:    bl sinf
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    xxswapd 0, 63
@@ -2213,11 +2213,11 @@ define <4 x double> @constrained_vector_sin_v4f64(<4 x double> %x) #0 {
 ; PC64LE-NEXT:    stxvd2x 61, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    li 3, 64
 ; PC64LE-NEXT:    stxvd2x 62, 1, 3 # 16-byte Folded Spill
-; PC64LE-NEXT:    vmr 30, 2
 ; PC64LE-NEXT:    li 3, 80
-; PC64LE-NEXT:    xxlor 1, 62, 62
+; PC64LE-NEXT:    vmr 30, 2
 ; PC64LE-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    vmr 31, 3
+; PC64LE-NEXT:    xxlor 1, 62, 62
 ; PC64LE-NEXT:    bl sin
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    xxlor 61, 1, 1
@@ -2382,14 +2382,14 @@ define <3 x float> @constrained_vector_cos_v3f32(<3 x float> %x) #0 {
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
 ; PC64LE-NEXT:    stdu 1, -80(1)
-; PC64LE-NEXT:    xxsldwi 0, 34, 34, 1
 ; PC64LE-NEXT:    li 3, 48
+; PC64LE-NEXT:    xxsldwi 0, 34, 34, 1
 ; PC64LE-NEXT:    std 0, 96(1)
 ; PC64LE-NEXT:    stfd 30, 64(1) # 8-byte Folded Spill
 ; PC64LE-NEXT:    stfd 31, 72(1) # 8-byte Folded Spill
-; PC64LE-NEXT:    xscvspdpn 1, 0
 ; PC64LE-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    vmr 31, 2
+; PC64LE-NEXT:    xscvspdpn 1, 0
 ; PC64LE-NEXT:    bl cosf
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    xxswapd 0, 63
@@ -2548,11 +2548,11 @@ define <4 x double> @constrained_vector_cos_v4f64(<4 x double> %x) #0 {
 ; PC64LE-NEXT:    stxvd2x 61, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    li 3, 64
 ; PC64LE-NEXT:    stxvd2x 62, 1, 3 # 16-byte Folded Spill
-; PC64LE-NEXT:    vmr 30, 2
 ; PC64LE-NEXT:    li 3, 80
-; PC64LE-NEXT:    xxlor 1, 62, 62
+; PC64LE-NEXT:    vmr 30, 2
 ; PC64LE-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    vmr 31, 3
+; PC64LE-NEXT:    xxlor 1, 62, 62
 ; PC64LE-NEXT:    bl cos
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    xxlor 61, 1, 1
@@ -2717,14 +2717,14 @@ define <3 x float> @constrained_vector_exp_v3f32(<3 x float> %x) #0 {
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
 ; PC64LE-NEXT:    stdu 1, -80(1)
-; PC64LE-NEXT:    xxsldwi 0, 34, 34, 1
 ; PC64LE-NEXT:    li 3, 48
+; PC64LE-NEXT:    xxsldwi 0, 34, 34, 1
 ; PC64LE-NEXT:    std 0, 96(1)
 ; PC64LE-NEXT:    stfd 30, 64(1) # 8-byte Folded Spill
 ; PC64LE-NEXT:    stfd 31, 72(1) # 8-byte Folded Spill
-; PC64LE-NEXT:    xscvspdpn 1, 0
 ; PC64LE-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    vmr 31, 2
+; PC64LE-NEXT:    xscvspdpn 1, 0
 ; PC64LE-NEXT:    bl expf
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    xxswapd 0, 63
@@ -2883,11 +2883,11 @@ define <4 x double> @constrained_vector_exp_v4f64(<4 x double> %x) #0 {
 ; PC64LE-NEXT:    stxvd2x 61, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    li 3, 64
 ; PC64LE-NEXT:    stxvd2x 62, 1, 3 # 16-byte Folded Spill
-; PC64LE-NEXT:    vmr 30, 2
 ; PC64LE-NEXT:    li 3, 80
-; PC64LE-NEXT:    xxlor 1, 62, 62
+; PC64LE-NEXT:    vmr 30, 2
 ; PC64LE-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    vmr 31, 3
+; PC64LE-NEXT:    xxlor 1, 62, 62
 ; PC64LE-NEXT:    bl exp
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    xxlor 61, 1, 1
@@ -3052,14 +3052,14 @@ define <3 x float> @constrained_vector_exp2_v3f32(<3 x float> %x) #0 {
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
 ; PC64LE-NEXT:    stdu 1, -80(1)
-; PC64LE-NEXT:    xxsldwi 0, 34, 34, 1
 ; PC64LE-NEXT:    li 3, 48
+; PC64LE-NEXT:    xxsldwi 0, 34, 34, 1
 ; PC64LE-NEXT:    std 0, 96(1)
 ; PC64LE-NEXT:    stfd 30, 64(1) # 8-byte Folded Spill
 ; PC64LE-NEXT:    stfd 31, 72(1) # 8-byte Folded Spill
-; PC64LE-NEXT:    xscvspdpn 1, 0
 ; PC64LE-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    vmr 31, 2
+; PC64LE-NEXT:    xscvspdpn 1, 0
 ; PC64LE-NEXT:    bl exp2f
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    xxswapd 0, 63
@@ -3218,11 +3218,11 @@ define <4 x double> @constrained_vector_exp2_v4f64(<4 x double> %x) #0 {
 ; PC64LE-NEXT:    stxvd2x 61, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    li 3, 64
 ; PC64LE-NEXT:    stxvd2x 62, 1, 3 # 16-byte Folded Spill
-; PC64LE-NEXT:    vmr 30, 2
 ; PC64LE-NEXT:    li 3, 80
-; PC64LE-NEXT:    xxlor 1, 62, 62
+; PC64LE-NEXT:    vmr 30, 2
 ; PC64LE-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    vmr 31, 3
+; PC64LE-NEXT:    xxlor 1, 62, 62
 ; PC64LE-NEXT:    bl exp2
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    xxlor 61, 1, 1
@@ -3387,14 +3387,14 @@ define <3 x float> @constrained_vector_log_v3f32(<3 x float> %x) #0 {
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
 ; PC64LE-NEXT:    stdu 1, -80(1)
-; PC64LE-NEXT:    xxsldwi 0, 34, 34, 1
 ; PC64LE-NEXT:    li 3, 48
+; PC64LE-NEXT:    xxsldwi 0, 34, 34, 1
 ; PC64LE-NEXT:    std 0, 96(1)
 ; PC64LE-NEXT:    stfd 30, 64(1) # 8-byte Folded Spill
 ; PC64LE-NEXT:    stfd 31, 72(1) # 8-byte Folded Spill
-; PC64LE-NEXT:    xscvspdpn 1, 0
 ; PC64LE-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    vmr 31, 2
+; PC64LE-NEXT:    xscvspdpn 1, 0
 ; PC64LE-NEXT:    bl logf
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    xxswapd 0, 63
@@ -3553,11 +3553,11 @@ define <4 x double> @constrained_vector_log_v4f64(<4 x double> %x) #0 {
 ; PC64LE-NEXT:    stxvd2x 61, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    li 3, 64
 ; PC64LE-NEXT:    stxvd2x 62, 1, 3 # 16-byte Folded Spill
-; PC64LE-NEXT:    vmr 30, 2
 ; PC64LE-NEXT:    li 3, 80
-; PC64LE-NEXT:    xxlor 1, 62, 62
+; PC64LE-NEXT:    vmr 30, 2
 ; PC64LE-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    vmr 31, 3
+; PC64LE-NEXT:    xxlor 1, 62, 62
 ; PC64LE-NEXT:    bl log
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    xxlor 61, 1, 1
@@ -3722,14 +3722,14 @@ define <3 x float> @constrained_vector_log10_v3f32(<3 x float> %x) #0 {
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
 ; PC64LE-NEXT:    stdu 1, -80(1)
-; PC64LE-NEXT:    xxsldwi 0, 34, 34, 1
 ; PC64LE-NEXT:    li 3, 48
+; PC64LE-NEXT:    xxsldwi 0, 34, 34, 1
 ; PC64LE-NEXT:    std 0, 96(1)
 ; PC64LE-NEXT:    stfd 30, 64(1) # 8-byte Folded Spill
 ; PC64LE-NEXT:    stfd 31, 72(1) # 8-byte Folded Spill
-; PC64LE-NEXT:    xscvspdpn 1, 0
 ; PC64LE-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    vmr 31, 2
+; PC64LE-NEXT:    xscvspdpn 1, 0
 ; PC64LE-NEXT:    bl log10f
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    xxswapd 0, 63
@@ -3888,11 +3888,11 @@ define <4 x double> @constrained_vector_log10_v4f64(<4 x double> %x) #0 {
 ; PC64LE-NEXT:    stxvd2x 61, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    li 3, 64
 ; PC64LE-NEXT:    stxvd2x 62, 1, 3 # 16-byte Folded Spill
-; PC64LE-NEXT:    vmr 30, 2
 ; PC64LE-NEXT:    li 3, 80
-; PC64LE-NEXT:    xxlor 1, 62, 62
+; PC64LE-NEXT:    vmr 30, 2
 ; PC64LE-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    vmr 31, 3
+; PC64LE-NEXT:    xxlor 1, 62, 62
 ; PC64LE-NEXT:    bl log10
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    xxlor 61, 1, 1
@@ -4057,14 +4057,14 @@ define <3 x float> @constrained_vector_log2_v3f32(<3 x float> %x) #0 {
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
 ; PC64LE-NEXT:    stdu 1, -80(1)
-; PC64LE-NEXT:    xxsldwi 0, 34, 34, 1
 ; PC64LE-NEXT:    li 3, 48
+; PC64LE-NEXT:    xxsldwi 0, 34, 34, 1
 ; PC64LE-NEXT:    std 0, 96(1)
 ; PC64LE-NEXT:    stfd 30, 64(1) # 8-byte Folded Spill
 ; PC64LE-NEXT:    stfd 31, 72(1) # 8-byte Folded Spill
-; PC64LE-NEXT:    xscvspdpn 1, 0
 ; PC64LE-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    vmr 31, 2
+; PC64LE-NEXT:    xscvspdpn 1, 0
 ; PC64LE-NEXT:    bl log2f
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    xxswapd 0, 63
@@ -4223,11 +4223,11 @@ define <4 x double> @constrained_vector_log2_v4f64(<4 x double> %x) #0 {
 ; PC64LE-NEXT:    stxvd2x 61, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    li 3, 64
 ; PC64LE-NEXT:    stxvd2x 62, 1, 3 # 16-byte Folded Spill
-; PC64LE-NEXT:    vmr 30, 2
 ; PC64LE-NEXT:    li 3, 80
-; PC64LE-NEXT:    xxlor 1, 62, 62
+; PC64LE-NEXT:    vmr 30, 2
 ; PC64LE-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    vmr 31, 3
+; PC64LE-NEXT:    xxlor 1, 62, 62
 ; PC64LE-NEXT:    bl log2
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    xxlor 61, 1, 1
@@ -4523,14 +4523,14 @@ define <3 x float> @constrained_vector_nearbyint_v3f32(<3 x float> %x) #0 {
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
 ; PC64LE-NEXT:    stdu 1, -80(1)
-; PC64LE-NEXT:    xxsldwi 0, 34, 34, 1
 ; PC64LE-NEXT:    li 3, 48
+; PC64LE-NEXT:    xxsldwi 0, 34, 34, 1
 ; PC64LE-NEXT:    std 0, 96(1)
 ; PC64LE-NEXT:    stfd 30, 64(1) # 8-byte Folded Spill
 ; PC64LE-NEXT:    stfd 31, 72(1) # 8-byte Folded Spill
-; PC64LE-NEXT:    xscvspdpn 1, 0
 ; PC64LE-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    vmr 31, 2
+; PC64LE-NEXT:    xscvspdpn 1, 0
 ; PC64LE-NEXT:    bl nearbyintf
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    xxswapd 0, 63
@@ -4689,11 +4689,11 @@ define <4 x double> @constrained_vector_nearbyint_v4f64(<4 x double> %x) #0 {
 ; PC64LE-NEXT:    stxvd2x 61, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    li 3, 64
 ; PC64LE-NEXT:    stxvd2x 62, 1, 3 # 16-byte Folded Spill
-; PC64LE-NEXT:    vmr 30, 2
 ; PC64LE-NEXT:    li 3, 80
-; PC64LE-NEXT:    xxlor 1, 62, 62
+; PC64LE-NEXT:    vmr 30, 2
 ; PC64LE-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    vmr 31, 3
+; PC64LE-NEXT:    xxlor 1, 62, 62
 ; PC64LE-NEXT:    bl nearbyint
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    xxlor 61, 1, 1
@@ -4817,17 +4817,17 @@ define <3 x float> @constrained_vector_maxnum_v3f32(<3 x float> %x, <3 x float> 
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
 ; PC64LE-NEXT:    stdu 1, -96(1)
-; PC64LE-NEXT:    xxsldwi 0, 34, 34, 1
-; PC64LE-NEXT:    xxsldwi 2, 35, 35, 1
 ; PC64LE-NEXT:    li 3, 48
 ; PC64LE-NEXT:    std 0, 112(1)
+; PC64LE-NEXT:    xxsldwi 0, 34, 34, 1
+; PC64LE-NEXT:    xxsldwi 2, 35, 35, 1
 ; PC64LE-NEXT:    stfd 30, 80(1) # 8-byte Folded Spill
 ; PC64LE-NEXT:    stfd 31, 88(1) # 8-byte Folded Spill
-; PC64LE-NEXT:    xscvspdpn 1, 0
-; PC64LE-NEXT:    xscvspdpn 2, 2
 ; PC64LE-NEXT:    stxvd2x 62, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    li 3, 64
 ; PC64LE-NEXT:    vmr 30, 2
+; PC64LE-NEXT:    xscvspdpn 1, 0
+; PC64LE-NEXT:    xscvspdpn 2, 2
 ; PC64LE-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    vmr 31, 3
 ; PC64LE-NEXT:    bl fmaxf
@@ -5049,17 +5049,17 @@ define <3 x float> @constrained_vector_minnum_v3f32(<3 x float> %x, <3 x float> 
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
 ; PC64LE-NEXT:    stdu 1, -96(1)
-; PC64LE-NEXT:    xxsldwi 0, 34, 34, 1
-; PC64LE-NEXT:    xxsldwi 2, 35, 35, 1
 ; PC64LE-NEXT:    li 3, 48
 ; PC64LE-NEXT:    std 0, 112(1)
+; PC64LE-NEXT:    xxsldwi 0, 34, 34, 1
+; PC64LE-NEXT:    xxsldwi 2, 35, 35, 1
 ; PC64LE-NEXT:    stfd 30, 80(1) # 8-byte Folded Spill
 ; PC64LE-NEXT:    stfd 31, 88(1) # 8-byte Folded Spill
-; PC64LE-NEXT:    xscvspdpn 1, 0
-; PC64LE-NEXT:    xscvspdpn 2, 2
 ; PC64LE-NEXT:    stxvd2x 62, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    li 3, 64
 ; PC64LE-NEXT:    vmr 30, 2
+; PC64LE-NEXT:    xscvspdpn 1, 0
+; PC64LE-NEXT:    xscvspdpn 2, 2
 ; PC64LE-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    vmr 31, 3
 ; PC64LE-NEXT:    bl fminf
@@ -8093,14 +8093,14 @@ define <3 x float> @constrained_vector_tan_v3f32(<3 x float> %x) #0 {
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
 ; PC64LE-NEXT:    stdu 1, -80(1)
-; PC64LE-NEXT:    xxsldwi 0, 34, 34, 1
 ; PC64LE-NEXT:    li 3, 48
+; PC64LE-NEXT:    xxsldwi 0, 34, 34, 1
 ; PC64LE-NEXT:    std 0, 96(1)
 ; PC64LE-NEXT:    stfd 30, 64(1) # 8-byte Folded Spill
 ; PC64LE-NEXT:    stfd 31, 72(1) # 8-byte Folded Spill
-; PC64LE-NEXT:    xscvspdpn 1, 0
 ; PC64LE-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    vmr 31, 2
+; PC64LE-NEXT:    xscvspdpn 1, 0
 ; PC64LE-NEXT:    bl tanf
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    xxswapd 0, 63
@@ -8259,11 +8259,11 @@ define <4 x double> @constrained_vector_tan_v4f64(<4 x double> %x) #0 {
 ; PC64LE-NEXT:    stxvd2x 61, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    li 3, 64
 ; PC64LE-NEXT:    stxvd2x 62, 1, 3 # 16-byte Folded Spill
-; PC64LE-NEXT:    vmr 30, 2
 ; PC64LE-NEXT:    li 3, 80
-; PC64LE-NEXT:    xxlor 1, 62, 62
+; PC64LE-NEXT:    vmr 30, 2
 ; PC64LE-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    vmr 31, 3
+; PC64LE-NEXT:    xxlor 1, 62, 62
 ; PC64LE-NEXT:    bl tan
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    xxlor 61, 1, 1
@@ -8411,8 +8411,8 @@ define <2 x double> @constrained_vector_atan2_v2f64(<2 x double> %x, <2 x double
 ; PC64LE9-NEXT:    vmr 31, 3
 ; PC64LE9-NEXT:    xscpsgndp 2, 63, 63
 ; PC64LE9-NEXT:    vmr 30, 2
-; PC64LE9-NEXT:    xscpsgndp 1, 62, 62
 ; PC64LE9-NEXT:    stxv 61, 32(1) # 16-byte Folded Spill
+; PC64LE9-NEXT:    xscpsgndp 1, 62, 62
 ; PC64LE9-NEXT:    bl atan2
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    xscpsgndp 61, 1, 1
@@ -8442,17 +8442,17 @@ define <3 x float> @constrained_vector_atan2_v3f32(<3 x float> %x, <3 x float> %
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
 ; PC64LE-NEXT:    stdu 1, -96(1)
-; PC64LE-NEXT:    xxsldwi 0, 34, 34, 1
-; PC64LE-NEXT:    xxsldwi 2, 35, 35, 1
 ; PC64LE-NEXT:    li 3, 48
 ; PC64LE-NEXT:    std 0, 112(1)
+; PC64LE-NEXT:    xxsldwi 0, 34, 34, 1
+; PC64LE-NEXT:    xxsldwi 2, 35, 35, 1
 ; PC64LE-NEXT:    stfd 30, 80(1) # 8-byte Folded Spill
 ; PC64LE-NEXT:    stfd 31, 88(1) # 8-byte Folded Spill
-; PC64LE-NEXT:    xscvspdpn 1, 0
-; PC64LE-NEXT:    xscvspdpn 2, 2
 ; PC64LE-NEXT:    stxvd2x 62, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    li 3, 64
 ; PC64LE-NEXT:    vmr 30, 2
+; PC64LE-NEXT:    xscvspdpn 1, 0
+; PC64LE-NEXT:    xscvspdpn 2, 2
 ; PC64LE-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    vmr 31, 3
 ; PC64LE-NEXT:    bl atan2f
@@ -8552,18 +8552,18 @@ define <3 x double> @constrained_vector_atan2_v3f64(<3 x double> %x, <3 x double
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
 ; PC64LE-NEXT:    stdu 1, -96(1)
+; PC64LE-NEXT:    li 3, 48
 ; PC64LE-NEXT:    std 0, 112(1)
 ; PC64LE-NEXT:    stfd 28, 64(1) # 8-byte Folded Spill
 ; PC64LE-NEXT:    fmr 28, 2
-; PC64LE-NEXT:    fmr 2, 4
-; PC64LE-NEXT:    li 3, 48
 ; PC64LE-NEXT:    stfd 29, 72(1) # 8-byte Folded Spill
 ; PC64LE-NEXT:    stfd 30, 80(1) # 8-byte Folded Spill
 ; PC64LE-NEXT:    fmr 30, 5
+; PC64LE-NEXT:    fmr 29, 3
 ; PC64LE-NEXT:    stfd 31, 88(1) # 8-byte Folded Spill
 ; PC64LE-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    fmr 31, 6
-; PC64LE-NEXT:    fmr 29, 3
+; PC64LE-NEXT:    fmr 2, 4
 ; PC64LE-NEXT:    bl atan2
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    xxlor 63, 1, 1
@@ -8597,14 +8597,14 @@ define <3 x double> @constrained_vector_atan2_v3f64(<3 x double> %x, <3 x double
 ; PC64LE9-NEXT:    std 0, 96(1)
 ; PC64LE9-NEXT:    stfd 28, 48(1) # 8-byte Folded Spill
 ; PC64LE9-NEXT:    stxv 63, 32(1) # 16-byte Folded Spill
-; PC64LE9-NEXT:    fmr 28, 2
-; PC64LE9-NEXT:    fmr 2, 4
 ; PC64LE9-NEXT:    stfd 29, 56(1) # 8-byte Folded Spill
 ; PC64LE9-NEXT:    stfd 30, 64(1) # 8-byte Folded Spill
 ; PC64LE9-NEXT:    stfd 31, 72(1) # 8-byte Folded Spill
 ; PC64LE9-NEXT:    fmr 31, 6
 ; PC64LE9-NEXT:    fmr 30, 5
 ; PC64LE9-NEXT:    fmr 29, 3
+; PC64LE9-NEXT:    fmr 28, 2
+; PC64LE9-NEXT:    fmr 2, 4
 ; PC64LE9-NEXT:    bl atan2
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    xscpsgndp 63, 1, 1
@@ -8652,14 +8652,14 @@ define <4 x double> @constrained_vector_atan2_v4f64(<4 x double> %x, <4 x double
 ; PC64LE-NEXT:    vmr 28, 2
 ; PC64LE-NEXT:    stxvd2x 61, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    li 3, 96
-; PC64LE-NEXT:    xxlor 1, 60, 60
 ; PC64LE-NEXT:    vmr 29, 3
+; PC64LE-NEXT:    xxlor 1, 60, 60
 ; PC64LE-NEXT:    stxvd2x 62, 1, 3 # 16-byte Folded Spill
-; PC64LE-NEXT:    vmr 30, 4
 ; PC64LE-NEXT:    li 3, 112
-; PC64LE-NEXT:    xxlor 2, 62, 62
+; PC64LE-NEXT:    vmr 30, 4
 ; PC64LE-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
 ; PC64LE-NEXT:    vmr 31, 5
+; PC64LE-NEXT:    xxlor 2, 62, 62
 ; PC64LE-NEXT:    bl atan2
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    xxlor 59, 1, 1
@@ -8704,8 +8704,8 @@ define <4 x double> @constrained_vector_atan2_v4f64(<4 x double> %x, <4 x double
 ; PC64LE9-NEXT:    vmr 30, 4
 ; PC64LE9-NEXT:    xscpsgndp 2, 62, 62
 ; PC64LE9-NEXT:    vmr 28, 2
-; PC64LE9-NEXT:    xscpsgndp 1, 60, 60
 ; PC64LE9-NEXT:    stxv 59, 32(1) # 16-byte Folded Spill
+; PC64LE9-NEXT:    xscpsgndp 1, 60, 60
 ; PC64LE9-NEXT:    stxv 61, 64(1) # 16-byte Folded Spill
 ; PC64LE9-NEXT:    stxv 63, 96(1) # 16-byte Folded Spill
 ; PC64LE9-NEXT:    vmr 31, 5

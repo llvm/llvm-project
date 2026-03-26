@@ -94,8 +94,8 @@ define i64 @select_or_reduce_nxv2i1(ptr nocapture noundef readonly %src) {
 ; CHECK-LABEL: select_or_reduce_nxv2i1:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cntd x8
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov x9, xzr
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    neg x10, x8
 ; CHECK-NEXT:    add x10, x10, #4
 ; CHECK-NEXT:  .LBB2_1: // %vector.body
@@ -137,8 +137,8 @@ define i64 @br_or_reduce_nxv2i1(ptr nocapture noundef readonly %src, ptr noundef
 ; CHECK-LABEL: br_or_reduce_nxv2i1:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cntd x8
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov x9, xzr
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    neg x10, x8
 ; CHECK-NEXT:    add x10, x10, #4
 ; CHECK-NEXT:  .LBB3_1: // %vector.body

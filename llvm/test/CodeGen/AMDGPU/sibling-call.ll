@@ -31,27 +31,27 @@ define fastcc i32 @i32_fastcc_i32_i32_stack_object(i32 %arg0, i32 %arg1) #1 {
 ; FIJI:       ; %bb.0:
 ; FIJI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; FIJI-NEXT:    v_mov_b32_e32 v2, 9
-; FIJI-NEXT:    v_add_u32_e32 v0, vcc, v0, v1
 ; FIJI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:20
 ; FIJI-NEXT:    s_waitcnt vmcnt(0)
+; FIJI-NEXT:    v_add_u32_e32 v0, vcc, v0, v1
 ; FIJI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; HAWAII-LABEL: i32_fastcc_i32_i32_stack_object:
 ; HAWAII:       ; %bb.0:
 ; HAWAII-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; HAWAII-NEXT:    v_mov_b32_e32 v2, 9
-; HAWAII-NEXT:    v_add_i32_e32 v0, vcc, v0, v1
 ; HAWAII-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:20
 ; HAWAII-NEXT:    s_waitcnt vmcnt(0)
+; HAWAII-NEXT:    v_add_i32_e32 v0, vcc, v0, v1
 ; HAWAII-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: i32_fastcc_i32_i32_stack_object:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 9
-; GFX9-NEXT:    v_add_u32_e32 v0, v0, v1
 ; GFX9-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:20
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_add_u32_e32 v0, v0, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %alloca = alloca [16 x i32], align 4, addrspace(5)
   %gep = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 5
@@ -139,10 +139,10 @@ define amdgpu_kernel void @kernel_call_i32_fastcc_i32_i32_unused_result(i32 %a, 
 ; FIJI-NEXT:    s_add_u32 s0, s0, s9
 ; FIJI-NEXT:    s_addc_u32 s1, s1, 0
 ; FIJI-NEXT:    s_mov_b32 flat_scratch_lo, s7
-; FIJI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
 ; FIJI-NEXT:    s_getpc_b64 s[6:7]
 ; FIJI-NEXT:    s_add_u32 s6, s6, i32_fastcc_i32_i32@gotpcrel32@lo+4
 ; FIJI-NEXT:    s_addc_u32 s7, s7, i32_fastcc_i32_i32@gotpcrel32@hi+12
+; FIJI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
 ; FIJI-NEXT:    s_load_dwordx2 s[6:7], s[6:7], 0x0
 ; FIJI-NEXT:    s_mov_b32 s32, 0
 ; FIJI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -158,10 +158,10 @@ define amdgpu_kernel void @kernel_call_i32_fastcc_i32_i32_unused_result(i32 %a, 
 ; HAWAII-NEXT:    s_add_u32 s0, s0, s9
 ; HAWAII-NEXT:    s_addc_u32 s1, s1, 0
 ; HAWAII-NEXT:    s_mov_b32 flat_scratch_lo, s7
-; HAWAII-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
 ; HAWAII-NEXT:    s_getpc_b64 s[6:7]
 ; HAWAII-NEXT:    s_add_u32 s6, s6, i32_fastcc_i32_i32@gotpcrel32@lo+4
 ; HAWAII-NEXT:    s_addc_u32 s7, s7, i32_fastcc_i32_i32@gotpcrel32@hi+12
+; HAWAII-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
 ; HAWAII-NEXT:    s_load_dwordx2 s[6:7], s[6:7], 0x0
 ; HAWAII-NEXT:    s_mov_b32 s32, 0
 ; HAWAII-NEXT:    s_waitcnt lgkmcnt(0)
@@ -176,12 +176,12 @@ define amdgpu_kernel void @kernel_call_i32_fastcc_i32_i32_unused_result(i32 %a, 
 ; GFX9-NEXT:    s_addc_u32 flat_scratch_hi, s7, 0
 ; GFX9-NEXT:    s_add_u32 s0, s0, s9
 ; GFX9-NEXT:    s_addc_u32 s1, s1, 0
-; GFX9-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
 ; GFX9-NEXT:    s_getpc_b64 s[6:7]
 ; GFX9-NEXT:    s_add_u32 s6, s6, i32_fastcc_i32_i32@gotpcrel32@lo+4
 ; GFX9-NEXT:    s_addc_u32 s7, s7, i32_fastcc_i32_i32@gotpcrel32@hi+12
-; GFX9-NEXT:    s_load_dwordx2 s[6:7], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
 ; GFX9-NEXT:    s_mov_b32 s32, 0
+; GFX9-NEXT:    s_load_dwordx2 s[6:7], s[6:7], 0x0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
@@ -388,8 +388,9 @@ define fastcc i32 @no_sibling_call_callee_more_stack_space(i32 %a, i32 %b) #1 {
 ; GCN-NEXT:    s_add_u32 s4, s4, i32_fastcc_i32_i32_a32i32@gotpcrel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s5, s5, i32_fastcc_i32_i32_a32i32@gotpcrel32@hi+12
 ; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
-; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    v_writelane_b32 v40, s30, 0
+; GCN-NEXT:    v_mov_b32_e32 v2, 0
+; GCN-NEXT:    v_writelane_b32 v40, s31, 1
 ; GCN-NEXT:    buffer_store_dword v2, off, s[0:3], s32
 ; GCN-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:4
 ; GCN-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:8
@@ -422,7 +423,6 @@ define fastcc i32 @no_sibling_call_callee_more_stack_space(i32 %a, i32 %b) #1 {
 ; GCN-NEXT:    v_mov_b32_e32 v28, 0
 ; GCN-NEXT:    v_mov_b32_e32 v29, 0
 ; GCN-NEXT:    v_mov_b32_e32 v30, 0
-; GCN-NEXT:    v_writelane_b32 v40, s31, 1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GCN-NEXT:    v_readlane_b32 s31, v40, 1
@@ -620,6 +620,8 @@ define hidden fastcc i32 @indirect_divergent_sibling_call_i32_fastcc_i32_i32(ptr
 ; FIJI-NEXT:    v_writelane_b32 v40, s54, 14
 ; FIJI-NEXT:    v_writelane_b32 v40, s55, 15
 ; FIJI-NEXT:    v_writelane_b32 v40, s64, 16
+; FIJI-NEXT:    s_addk_i32 s32, 0x400
+; FIJI-NEXT:    v_writelane_b32 v40, s65, 17
 ; FIJI-NEXT:    s_mov_b32 s50, s15
 ; FIJI-NEXT:    s_mov_b32 s51, s14
 ; FIJI-NEXT:    s_mov_b32 s52, s13
@@ -630,8 +632,6 @@ define hidden fastcc i32 @indirect_divergent_sibling_call_i32_fastcc_i32_i32(ptr
 ; FIJI-NEXT:    s_mov_b64 s[48:49], s[4:5]
 ; FIJI-NEXT:    v_add_u32_e32 v3, vcc, v3, v4
 ; FIJI-NEXT:    s_mov_b64 s[54:55], exec
-; FIJI-NEXT:    s_addk_i32 s32, 0x400
-; FIJI-NEXT:    v_writelane_b32 v40, s65, 17
 ; FIJI-NEXT:  .LBB18_1: ; =>This Inner Loop Header: Depth=1
 ; FIJI-NEXT:    v_readfirstlane_b32 s16, v0
 ; FIJI-NEXT:    v_readfirstlane_b32 s17, v1
@@ -711,6 +711,8 @@ define hidden fastcc i32 @indirect_divergent_sibling_call_i32_fastcc_i32_i32(ptr
 ; HAWAII-NEXT:    v_writelane_b32 v40, s54, 14
 ; HAWAII-NEXT:    v_writelane_b32 v40, s55, 15
 ; HAWAII-NEXT:    v_writelane_b32 v40, s64, 16
+; HAWAII-NEXT:    s_addk_i32 s32, 0x400
+; HAWAII-NEXT:    v_writelane_b32 v40, s65, 17
 ; HAWAII-NEXT:    s_mov_b32 s50, s15
 ; HAWAII-NEXT:    s_mov_b32 s51, s14
 ; HAWAII-NEXT:    s_mov_b32 s52, s13
@@ -721,8 +723,6 @@ define hidden fastcc i32 @indirect_divergent_sibling_call_i32_fastcc_i32_i32(ptr
 ; HAWAII-NEXT:    s_mov_b64 s[48:49], s[4:5]
 ; HAWAII-NEXT:    v_add_i32_e32 v3, vcc, v3, v4
 ; HAWAII-NEXT:    s_mov_b64 s[54:55], exec
-; HAWAII-NEXT:    s_addk_i32 s32, 0x400
-; HAWAII-NEXT:    v_writelane_b32 v40, s65, 17
 ; HAWAII-NEXT:  .LBB18_1: ; =>This Inner Loop Header: Depth=1
 ; HAWAII-NEXT:    v_readfirstlane_b32 s16, v0
 ; HAWAII-NEXT:    v_readfirstlane_b32 s17, v1
@@ -802,6 +802,8 @@ define hidden fastcc i32 @indirect_divergent_sibling_call_i32_fastcc_i32_i32(ptr
 ; GFX9-NEXT:    v_writelane_b32 v40, s54, 14
 ; GFX9-NEXT:    v_writelane_b32 v40, s55, 15
 ; GFX9-NEXT:    v_writelane_b32 v40, s64, 16
+; GFX9-NEXT:    s_addk_i32 s32, 0x400
+; GFX9-NEXT:    v_writelane_b32 v40, s65, 17
 ; GFX9-NEXT:    s_mov_b32 s50, s15
 ; GFX9-NEXT:    s_mov_b32 s51, s14
 ; GFX9-NEXT:    s_mov_b32 s52, s13
@@ -812,8 +814,6 @@ define hidden fastcc i32 @indirect_divergent_sibling_call_i32_fastcc_i32_i32(ptr
 ; GFX9-NEXT:    s_mov_b64 s[48:49], s[4:5]
 ; GFX9-NEXT:    v_add_u32_e32 v3, v3, v4
 ; GFX9-NEXT:    s_mov_b64 s[54:55], exec
-; GFX9-NEXT:    s_addk_i32 s32, 0x400
-; GFX9-NEXT:    v_writelane_b32 v40, s65, 17
 ; GFX9-NEXT:  .LBB18_1: ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    v_readfirstlane_b32 s16, v0
 ; GFX9-NEXT:    v_readfirstlane_b32 s17, v1
@@ -922,11 +922,11 @@ define fastcc void @sibling_call_byval_and_stack_passed(i32 %stack.out.arg, [64 
 ; GCN-NEXT:    buffer_store_dword v1, off, s[0:3], s32
 ; GCN-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:8
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
-; GCN-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:12
-; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:16
 ; GCN-NEXT:    s_getpc_b64 s[16:17]
 ; GCN-NEXT:    s_add_u32 s16, s16, void_fastcc_byval_and_stack_passed@rel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s17, s17, void_fastcc_byval_and_stack_passed@rel32@hi+12
+; GCN-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:12
+; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:16
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
@@ -1040,10 +1040,10 @@ define hidden fastcc <3 x i16> @sibling_call_v3i16_fastcc_v3i16(<3 x i16> %a) #1
 ; HAWAII-LABEL: sibling_call_v3i16_fastcc_v3i16:
 ; HAWAII:       ; %bb.0: ; %entry
 ; HAWAII-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; HAWAII-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; HAWAII-NEXT:    s_getpc_b64 s[16:17]
 ; HAWAII-NEXT:    s_add_u32 s16, s16, v3i16_fastcc_v3i16@rel32@lo+4
 ; HAWAII-NEXT:    s_addc_u32 s17, s17, v3i16_fastcc_v3i16@rel32@hi+12
+; HAWAII-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; HAWAII-NEXT:    s_setpc_b64 s[16:17]
 ;
 ; GFX9-LABEL: sibling_call_v3i16_fastcc_v3i16:

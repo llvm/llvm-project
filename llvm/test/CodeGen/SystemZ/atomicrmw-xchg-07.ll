@@ -85,31 +85,31 @@ define void @f1_fpuse(ptr align 16 %ret, ptr align 16 %src, ptr align 16 %b) {
 ; SOFTFP-NEXT:    stg %r0, 216(%r15)
 ; SOFTFP-NEXT:    stg %r1, 208(%r15)
 ; SOFTFP-NEXT:    stg %r0, 232(%r15)
+; SOFTFP-NEXT:    stg %r1, 224(%r15)
 ; SOFTFP-NEXT:    la %r2, 240(%r15)
 ; SOFTFP-NEXT:    la %r3, 224(%r15)
 ; SOFTFP-NEXT:    la %r4, 208(%r15)
-; SOFTFP-NEXT:    stg %r1, 224(%r15)
 ; SOFTFP-NEXT:    brasl %r14, __addtf3@PLT
-; SOFTFP-NEXT:    lg %r3, 248(%r15)
-; SOFTFP-NEXT:    lg %r2, 240(%r15)
-; SOFTFP-NEXT:    lg %r0, 8(%r12)
-; SOFTFP-NEXT:    lg %r1, 0(%r12)
+; SOFTFP-NEXT:    lg %r1, 248(%r15)
+; SOFTFP-NEXT:    lg %r0, 240(%r15)
+; SOFTFP-NEXT:    lg %r2, 8(%r12)
+; SOFTFP-NEXT:    lg %r3, 0(%r12)
 ; SOFTFP-NEXT:  .LBB1_1: # %atomicrmw.start
 ; SOFTFP-NEXT:    # =>This Inner Loop Header: Depth=1
-; SOFTFP-NEXT:    lgr %r4, %r1
-; SOFTFP-NEXT:    lgr %r5, %r0
-; SOFTFP-NEXT:    cdsg %r4, %r2, 0(%r12)
-; SOFTFP-NEXT:    lgr %r0, %r5
-; SOFTFP-NEXT:    lgr %r1, %r4
+; SOFTFP-NEXT:    lgr %r4, %r3
+; SOFTFP-NEXT:    lgr %r5, %r2
+; SOFTFP-NEXT:    cdsg %r4, %r0, 0(%r12)
+; SOFTFP-NEXT:    lgr %r2, %r5
+; SOFTFP-NEXT:    lgr %r3, %r4
 ; SOFTFP-NEXT:    jl .LBB1_1
 ; SOFTFP-NEXT:  # %bb.2: # %atomicrmw.end
-; SOFTFP-NEXT:    stg %r1, 160(%r15)
-; SOFTFP-NEXT:    stg %r1, 176(%r15)
-; SOFTFP-NEXT:    stg %r0, 168(%r15)
+; SOFTFP-NEXT:    stg %r3, 160(%r15)
+; SOFTFP-NEXT:    stg %r3, 176(%r15)
+; SOFTFP-NEXT:    stg %r2, 168(%r15)
+; SOFTFP-NEXT:    stg %r2, 184(%r15)
 ; SOFTFP-NEXT:    la %r2, 192(%r15)
 ; SOFTFP-NEXT:    la %r3, 176(%r15)
 ; SOFTFP-NEXT:    la %r4, 160(%r15)
-; SOFTFP-NEXT:    stg %r0, 184(%r15)
 ; SOFTFP-NEXT:    brasl %r14, __addtf3@PLT
 ; SOFTFP-NEXT:    lg %r0, 200(%r15)
 ; SOFTFP-NEXT:    lg %r1, 192(%r15)

@@ -10,8 +10,8 @@ define i32 @invert_bcc_block_align_higher_func(i32 %x, i32 %y) align 4 #0 {
 ; CHECK-NEXT:    mov w8, #9 ; =0x9
 ; CHECK-NEXT:    cmp w0, w1
 ; CHECK-NEXT:    mov w9, #42 ; =0x2a
-; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    csel w8, w9, w8, eq
+; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    str w8, [x8]
 ; CHECK-NEXT:    ret
   %1 = icmp eq i32 %x, %y

@@ -12,10 +12,11 @@ define dso_local i64 @cdtbcd_test(i64 noundef %ll) {
 ; CHECK-NEXT:    cdtbcd r3, r3
 ; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
+;
 ; CHECK-AIX32-LABEL: cdtbcd_test:
 ; CHECK-AIX32:       # %bb.0: # %entry
-; CHECK-AIX32-NEXT:    li r3, 0
 ; CHECK-AIX32-NEXT:    cdtbcd r4, r4
+; CHECK-AIX32-NEXT:    li r3, 0
 ; CHECK-AIX32-NEXT:    blr
 entry:
   %conv = trunc i64 %ll to i32
@@ -30,6 +31,7 @@ define dso_local zeroext i32 @cdtbcd_test_ui(i32 noundef zeroext %ui) {
 ; CHECK-NEXT:    cdtbcd r3, r3
 ; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
+;
 ; CHECK-AIX32-LABEL: cdtbcd_test_ui:
 ; CHECK-AIX32:       # %bb.0: # %entry
 ; CHECK-AIX32-NEXT:    cdtbcd r3, r3
@@ -45,10 +47,11 @@ define dso_local i64 @cbcdtd_test(i64 noundef %ll) {
 ; CHECK-NEXT:    cbcdtd r3, r3
 ; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
+;
 ; CHECK-AIX32-LABEL: cbcdtd_test:
 ; CHECK-AIX32:       # %bb.0: # %entry
-; CHECK-AIX32-NEXT:    li r3, 0
 ; CHECK-AIX32-NEXT:    cbcdtd r4, r4
+; CHECK-AIX32-NEXT:    li r3, 0
 ; CHECK-AIX32-NEXT:    blr
 entry:
   %conv = trunc i64 %ll to i32
@@ -63,6 +66,7 @@ define dso_local zeroext i32 @cbcdtd_test_ui(i32 noundef zeroext %ui) {
 ; CHECK-NEXT:    cbcdtd r3, r3
 ; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
+;
 ; CHECK-AIX32-LABEL: cbcdtd_test_ui:
 ; CHECK-AIX32:       # %bb.0: # %entry
 ; CHECK-AIX32-NEXT:    cbcdtd r3, r3
@@ -74,14 +78,15 @@ entry:
 
 define dso_local i64 @addg6s_test(i64 noundef %ll, i64 noundef %ll2) {
 ; CHECK-LABEL: addg6s_test:
-; CHECK:       bb.0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addg6s r3, r3, r4
 ; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
+;
 ; CHECK-AIX32-LABEL: addg6s_test:
 ; CHECK-AIX32:       # %bb.0: # %entry
-; CHECK-AIX32-NEXT:    li r3, 0
 ; CHECK-AIX32-NEXT:    addg6s r4, r4, r6
+; CHECK-AIX32-NEXT:    li r3, 0
 ; CHECK-AIX32-NEXT:    blr
 entry:
   %conv = trunc i64 %ll to i32
@@ -97,6 +102,7 @@ define dso_local zeroext i32 @addg6s_test_ui(i32 noundef zeroext %ui, i32 nounde
 ; CHECK-NEXT:    addg6s r3, r3, r4
 ; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
+;
 ; CHECK-AIX32-LABEL: addg6s_test_ui:
 ; CHECK-AIX32:       # %bb.0: # %entry
 ; CHECK-AIX32-NEXT:    addg6s r3, r3, r4

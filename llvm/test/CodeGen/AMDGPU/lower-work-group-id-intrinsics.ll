@@ -290,8 +290,8 @@ define amdgpu_cs void @caller() {
 ; GFX9-SDAG-NEXT:    s_load_dwordx4 s[8:11], s[8:9], 0x10
 ; GFX9-SDAG-NEXT:    s_mov_b32 s5, callee@abs32@hi
 ; GFX9-SDAG-NEXT:    s_mov_b32 s4, callee@abs32@lo
-; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, ttmp9
 ; GFX9-SDAG-NEXT:    s_mov_b32 s32, 0
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, ttmp9
 ; GFX9-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    s_add_u32 s8, s8, s0
 ; GFX9-SDAG-NEXT:    s_addc_u32 s9, s9, 0
@@ -307,8 +307,8 @@ define amdgpu_cs void @caller() {
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[8:9], 0x10
 ; GFX9-GISEL-NEXT:    s_mov_b32 s4, callee@abs32@lo
 ; GFX9-GISEL-NEXT:    s_mov_b32 s5, callee@abs32@hi
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, ttmp9
 ; GFX9-GISEL-NEXT:    s_mov_b32 s32, 0
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, ttmp9
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    s_add_u32 s8, s8, s0
 ; GFX9-GISEL-NEXT:    s_addc_u32 s9, s9, 0
@@ -319,21 +319,19 @@ define amdgpu_cs void @caller() {
 ;
 ; GFX12-SDAG-LABEL: caller:
 ; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, ttmp9
 ; GFX12-SDAG-NEXT:    s_mov_b32 s1, callee@abs32@hi
 ; GFX12-SDAG-NEXT:    s_mov_b32 s0, callee@abs32@lo
 ; GFX12-SDAG-NEXT:    s_mov_b32 s32, 0
-; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, ttmp9
 ; GFX12-SDAG-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: caller:
 ; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, ttmp9
 ; GFX12-GISEL-NEXT:    s_mov_b32 s0, callee@abs32@lo
 ; GFX12-GISEL-NEXT:    s_mov_b32 s1, callee@abs32@hi
 ; GFX12-GISEL-NEXT:    s_mov_b32 s32, 0
-; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, ttmp9
 ; GFX12-GISEL-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;
@@ -346,11 +344,11 @@ define amdgpu_cs void @caller() {
 ; GFX1250-SDAG-NEXT:    s_add_co_i32 s0, s0, 1
 ; GFX1250-SDAG-NEXT:    s_getreg_b32 s2, hwreg(HW_REG_IB_STS2, 6, 4)
 ; GFX1250-SDAG-NEXT:    s_mul_i32 s0, ttmp9, s0
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-SDAG-NEXT:    s_add_co_i32 s1, s1, s0
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
+; GFX1250-SDAG-NEXT:    s_add_co_i32 s3, s1, s0
 ; GFX1250-SDAG-NEXT:    s_cmp_eq_u32 s2, 0
-; GFX1250-SDAG-NEXT:    s_cselect_b32 s2, ttmp9, s1
 ; GFX1250-SDAG-NEXT:    s_mov_b64 s[0:1], callee@abs64
+; GFX1250-SDAG-NEXT:    s_cselect_b32 s2, ttmp9, s3
 ; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX1250-SDAG-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
 ; GFX1250-SDAG-NEXT:    s_endpgm

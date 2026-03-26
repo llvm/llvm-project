@@ -341,15 +341,15 @@ define <vscale x 2 x i64> @load_frozen_before_zext_multiuse4(ptr %src1, ptr %src
 ; CHECK-LABEL: load_frozen_before_zext_multiuse4:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mov z2.d, #27 // =0x1b
 ; CHECK-NEXT:    mov w8, #1234 // =0x4d2
-; CHECK-NEXT:    mov z3.d, #27 // =0x1b
-; CHECK-NEXT:    mov z1.d, x8
+; CHECK-NEXT:    mov z3.d, x8
 ; CHECK-NEXT:    ld1b { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    ld1b { z2.d }, p0/z, [x1]
+; CHECK-NEXT:    ld1b { z1.d }, p0/z, [x1]
 ; CHECK-NEXT:    and z0.d, z0.d, #0xff
 ; CHECK-NEXT:    cmpeq p1.d, p0/z, z0.d, #3
-; CHECK-NEXT:    add z0.d, z0.d, z1.d
-; CHECK-NEXT:    sel z1.d, p1, z2.d, z3.d
+; CHECK-NEXT:    add z0.d, z0.d, z3.d
+; CHECK-NEXT:    sel z1.d, p1, z1.d, z2.d
 ; CHECK-NEXT:    st1b { z1.d }, p0, [x2]
 ; CHECK-NEXT:    ret
   %load = load <vscale x 2 x i8>, ptr %src1, align 1

@@ -109,10 +109,10 @@ declare void @foo_v5i64(<5 x i64>)
 define void @test_v5i64(<5 x i64> %unused, <5 x i64> %a) #0 {
 ; CHECK-LABEL: test_v5i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldp d3, d4, [sp]
 ; CHECK-NEXT:    fmov d1, d6
 ; CHECK-NEXT:    fmov d0, d5
 ; CHECK-NEXT:    fmov d2, d7
-; CHECK-NEXT:    ldp d3, d4, [sp]
 ; CHECK-NEXT:    b foo_v5i64
   tail call void @foo_v5i64(<5 x i64> %a)
   ret void
@@ -132,6 +132,7 @@ declare void @foo_v9i16(<9 x i16>)
 define void @test_v9i16(<9 x i16> %unused, <9 x i16> %a) #0 {
 ; CHECK-LABEL: test_v9i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr w8, [sp, #72]
 ; CHECK-NEXT:    ldr w0, [sp, #8]
 ; CHECK-NEXT:    ldr w1, [sp, #16]
 ; CHECK-NEXT:    ldr w2, [sp, #24]
@@ -140,7 +141,6 @@ define void @test_v9i16(<9 x i16> %unused, <9 x i16> %a) #0 {
 ; CHECK-NEXT:    ldr w5, [sp, #48]
 ; CHECK-NEXT:    ldr w6, [sp, #56]
 ; CHECK-NEXT:    ldr w7, [sp, #64]
-; CHECK-NEXT:    ldr w8, [sp, #72]
 ; CHECK-NEXT:    str w8, [sp]
 ; CHECK-NEXT:    b foo_v9i16
   tail call void @foo_v9i16(<9 x i16> %a)

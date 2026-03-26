@@ -216,11 +216,11 @@ define amdgpu_kernel void @call_coldcc() #0 {
 ; SI-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; SI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; SI-NEXT:    v_or_b32_e32 v31, v0, v2
-; SI-NEXT:    v_mov_b32_e32 v0, 1.0
 ; SI-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; SI-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; SI-NEXT:    s_mov_b64 s[0:1], s[20:21]
 ; SI-NEXT:    s_mov_b64 s[2:3], s[22:23]
+; SI-NEXT:    v_mov_b32_e32 v0, 1.0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
@@ -252,10 +252,10 @@ define amdgpu_kernel void @call_coldcc() #0 {
 ; VI-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; VI-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; VI-NEXT:    s_mov_b64 s[0:1], s[88:89]
+; VI-NEXT:    s_mov_b32 s32, 0
 ; VI-NEXT:    v_or_b32_e32 v31, v0, v2
 ; VI-NEXT:    s_mov_b64 s[2:3], s[90:91]
 ; VI-NEXT:    v_mov_b32_e32 v0, 1.0
-; VI-NEXT:    s_mov_b32 s32, 0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; VI-NEXT:    flat_store_dword v[0:1], v0
@@ -268,7 +268,7 @@ define amdgpu_kernel void @call_coldcc() #0 {
 ; GFX11-NEXT:    s_getpc_b64 s[4:5]
 ; GFX11-NEXT:    s_add_u32 s4, s4, coldcc@gotpcrel32@lo+4
 ; GFX11-NEXT:    s_addc_u32 s5, s5, coldcc@gotpcrel32@hi+12
-; GFX11-NEXT:    v_dual_mov_b32 v31, v0 :: v_dual_mov_b32 v0, 1.0
+; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_load_b64 s[16:17], s[4:5], 0x0
 ; GFX11-NEXT:    s_mov_b32 s12, s13
 ; GFX11-NEXT:    s_mov_b64 s[10:11], s[6:7]
@@ -276,7 +276,7 @@ define amdgpu_kernel void @call_coldcc() #0 {
 ; GFX11-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GFX11-NEXT:    s_mov_b32 s13, s14
 ; GFX11-NEXT:    s_mov_b32 s14, s15
-; GFX11-NEXT:    s_mov_b32 s32, 0
+; GFX11-NEXT:    v_dual_mov_b32 v31, v0 :: v_dual_mov_b32 v0, 1.0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX11-NEXT:    global_store_b32 v[0:1], v0, off
@@ -289,12 +289,12 @@ define amdgpu_kernel void @call_coldcc() #0 {
 ; GFX1250-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; GFX1250-NEXT:    s_get_pc_i64 s[6:7]
 ; GFX1250-NEXT:    s_add_nc_u64 s[6:7], s[6:7], coldcc@gotpcrel+4
-; GFX1250-NEXT:    v_dual_mov_b32 v31, v0 :: v_dual_mov_b32 v0, 1.0
-; GFX1250-NEXT:    s_load_b64 s[12:13], s[6:7], 0x0 nv
 ; GFX1250-NEXT:    s_add_nc_u64 s[8:9], s[4:5], 36
+; GFX1250-NEXT:    s_load_b64 s[12:13], s[6:7], 0x0 nv
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_mov_b64 s[6:7], s[2:3]
+; GFX1250-NEXT:    v_dual_mov_b32 v31, v0 :: v_dual_mov_b32 v0, 1.0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_swap_pc_i64 s[30:31], s[12:13]
 ; GFX1250-NEXT:    global_store_b32 v[0:1], v0, off
@@ -328,11 +328,11 @@ define amdgpu_kernel void @call_fastcc() #0 {
 ; SI-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; SI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; SI-NEXT:    v_or_b32_e32 v31, v0, v2
-; SI-NEXT:    v_mov_b32_e32 v0, 1.0
 ; SI-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; SI-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; SI-NEXT:    s_mov_b64 s[0:1], s[20:21]
 ; SI-NEXT:    s_mov_b64 s[2:3], s[22:23]
+; SI-NEXT:    v_mov_b32_e32 v0, 1.0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
@@ -364,10 +364,10 @@ define amdgpu_kernel void @call_fastcc() #0 {
 ; VI-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; VI-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; VI-NEXT:    s_mov_b64 s[0:1], s[88:89]
+; VI-NEXT:    s_mov_b32 s32, 0
 ; VI-NEXT:    v_or_b32_e32 v31, v0, v2
 ; VI-NEXT:    s_mov_b64 s[2:3], s[90:91]
 ; VI-NEXT:    v_mov_b32_e32 v0, 1.0
-; VI-NEXT:    s_mov_b32 s32, 0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; VI-NEXT:    flat_store_dword v[0:1], v0
@@ -380,7 +380,7 @@ define amdgpu_kernel void @call_fastcc() #0 {
 ; GFX11-NEXT:    s_getpc_b64 s[4:5]
 ; GFX11-NEXT:    s_add_u32 s4, s4, fastcc@gotpcrel32@lo+4
 ; GFX11-NEXT:    s_addc_u32 s5, s5, fastcc@gotpcrel32@hi+12
-; GFX11-NEXT:    v_dual_mov_b32 v31, v0 :: v_dual_mov_b32 v0, 1.0
+; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_load_b64 s[16:17], s[4:5], 0x0
 ; GFX11-NEXT:    s_mov_b32 s12, s13
 ; GFX11-NEXT:    s_mov_b64 s[10:11], s[6:7]
@@ -388,7 +388,7 @@ define amdgpu_kernel void @call_fastcc() #0 {
 ; GFX11-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GFX11-NEXT:    s_mov_b32 s13, s14
 ; GFX11-NEXT:    s_mov_b32 s14, s15
-; GFX11-NEXT:    s_mov_b32 s32, 0
+; GFX11-NEXT:    v_dual_mov_b32 v31, v0 :: v_dual_mov_b32 v0, 1.0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX11-NEXT:    global_store_b32 v[0:1], v0, off
@@ -401,12 +401,12 @@ define amdgpu_kernel void @call_fastcc() #0 {
 ; GFX1250-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; GFX1250-NEXT:    s_get_pc_i64 s[6:7]
 ; GFX1250-NEXT:    s_add_nc_u64 s[6:7], s[6:7], fastcc@gotpcrel+4
-; GFX1250-NEXT:    v_dual_mov_b32 v31, v0 :: v_dual_mov_b32 v0, 1.0
-; GFX1250-NEXT:    s_load_b64 s[12:13], s[6:7], 0x0 nv
 ; GFX1250-NEXT:    s_add_nc_u64 s[8:9], s[4:5], 36
+; GFX1250-NEXT:    s_load_b64 s[12:13], s[6:7], 0x0 nv
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_mov_b64 s[6:7], s[2:3]
+; GFX1250-NEXT:    v_dual_mov_b32 v31, v0 :: v_dual_mov_b32 v0, 1.0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_swap_pc_i64 s[30:31], s[12:13]
 ; GFX1250-NEXT:    global_store_b32 v[0:1], v0, off

@@ -442,7 +442,7 @@ define i128 @_Z28atomic_cmp_swap_relaxed_i128RNSt3__16atomicInEERnn(ptr nonnull 
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB9_2: # %bb
-; CHECK-NEXT:    or %s6, 0, %s1
+; CHECK-NEXT:    or %s4, 0, %s1
 ; CHECK-NEXT:    or %s1, 0, %s0
 ; CHECK-NEXT:    st %s3, 248(, %s11)
 ; CHECK-NEXT:    st %s2, 240(, %s11)
@@ -451,9 +451,9 @@ define i128 @_Z28atomic_cmp_swap_relaxed_i128RNSt3__16atomicInEERnn(ptr nonnull 
 ; CHECK-NEXT:    lea.sl %s12, __atomic_compare_exchange@hi(, %s0)
 ; CHECK-NEXT:    lea %s3, 240(, %s11)
 ; CHECK-NEXT:    or %s0, 16, (0)1
+; CHECK-NEXT:    or %s2, 0, %s4
 ; CHECK-NEXT:    or %s4, 0, (0)1
 ; CHECK-NEXT:    or %s5, 0, (0)1
-; CHECK-NEXT:    or %s2, 0, %s6
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    or %s1, 0, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -489,7 +489,7 @@ define i128 @_Z28atomic_cmp_swap_relaxed_u128RNSt3__16atomicIoEERoo(ptr nonnull 
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB10_2: # %bb
-; CHECK-NEXT:    or %s6, 0, %s1
+; CHECK-NEXT:    or %s4, 0, %s1
 ; CHECK-NEXT:    or %s1, 0, %s0
 ; CHECK-NEXT:    st %s3, 248(, %s11)
 ; CHECK-NEXT:    st %s2, 240(, %s11)
@@ -498,9 +498,9 @@ define i128 @_Z28atomic_cmp_swap_relaxed_u128RNSt3__16atomicIoEERoo(ptr nonnull 
 ; CHECK-NEXT:    lea.sl %s12, __atomic_compare_exchange@hi(, %s0)
 ; CHECK-NEXT:    lea %s3, 240(, %s11)
 ; CHECK-NEXT:    or %s0, 16, (0)1
+; CHECK-NEXT:    or %s2, 0, %s4
 ; CHECK-NEXT:    or %s4, 0, (0)1
 ; CHECK-NEXT:    or %s5, 0, (0)1
-; CHECK-NEXT:    or %s2, 0, %s6
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    or %s1, 0, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -891,7 +891,7 @@ define i128 @_Z28atomic_cmp_swap_acquire_i128RNSt3__16atomicInEERnn(ptr nonnull 
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB20_2: # %bb
-; CHECK-NEXT:    or %s6, 0, %s1
+; CHECK-NEXT:    or %s4, 0, %s1
 ; CHECK-NEXT:    or %s1, 0, %s0
 ; CHECK-NEXT:    st %s3, 248(, %s11)
 ; CHECK-NEXT:    st %s2, 240(, %s11)
@@ -900,9 +900,9 @@ define i128 @_Z28atomic_cmp_swap_acquire_i128RNSt3__16atomicInEERnn(ptr nonnull 
 ; CHECK-NEXT:    lea.sl %s12, __atomic_compare_exchange@hi(, %s0)
 ; CHECK-NEXT:    lea %s3, 240(, %s11)
 ; CHECK-NEXT:    or %s0, 16, (0)1
+; CHECK-NEXT:    or %s2, 0, %s4
 ; CHECK-NEXT:    or %s4, 2, (0)1
 ; CHECK-NEXT:    or %s5, 2, (0)1
-; CHECK-NEXT:    or %s2, 0, %s6
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    or %s1, 0, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -938,7 +938,7 @@ define i128 @_Z28atomic_cmp_swap_acquire_u128RNSt3__16atomicIoEERoo(ptr nonnull 
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB21_2: # %bb
-; CHECK-NEXT:    or %s6, 0, %s1
+; CHECK-NEXT:    or %s4, 0, %s1
 ; CHECK-NEXT:    or %s1, 0, %s0
 ; CHECK-NEXT:    st %s3, 248(, %s11)
 ; CHECK-NEXT:    st %s2, 240(, %s11)
@@ -947,9 +947,9 @@ define i128 @_Z28atomic_cmp_swap_acquire_u128RNSt3__16atomicIoEERoo(ptr nonnull 
 ; CHECK-NEXT:    lea.sl %s12, __atomic_compare_exchange@hi(, %s0)
 ; CHECK-NEXT:    lea %s3, 240(, %s11)
 ; CHECK-NEXT:    or %s0, 16, (0)1
+; CHECK-NEXT:    or %s2, 0, %s4
 ; CHECK-NEXT:    or %s4, 2, (0)1
 ; CHECK-NEXT:    or %s5, 2, (0)1
-; CHECK-NEXT:    or %s2, 0, %s6
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    or %s1, 0, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -1349,7 +1349,7 @@ define i128 @_Z28atomic_cmp_swap_seq_cst_i128RNSt3__16atomicInEERnn(ptr nonnull 
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB31_2: # %bb
-; CHECK-NEXT:    or %s6, 0, %s1
+; CHECK-NEXT:    or %s4, 0, %s1
 ; CHECK-NEXT:    or %s1, 0, %s0
 ; CHECK-NEXT:    st %s3, 248(, %s11)
 ; CHECK-NEXT:    st %s2, 240(, %s11)
@@ -1358,9 +1358,9 @@ define i128 @_Z28atomic_cmp_swap_seq_cst_i128RNSt3__16atomicInEERnn(ptr nonnull 
 ; CHECK-NEXT:    lea.sl %s12, __atomic_compare_exchange@hi(, %s0)
 ; CHECK-NEXT:    lea %s3, 240(, %s11)
 ; CHECK-NEXT:    or %s0, 16, (0)1
+; CHECK-NEXT:    or %s2, 0, %s4
 ; CHECK-NEXT:    or %s4, 5, (0)1
 ; CHECK-NEXT:    or %s5, 5, (0)1
-; CHECK-NEXT:    or %s2, 0, %s6
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    or %s1, 0, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -1396,7 +1396,7 @@ define i128 @_Z28atomic_cmp_swap_seq_cst_u128RNSt3__16atomicIoEERoo(ptr nonnull 
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB32_2: # %bb
-; CHECK-NEXT:    or %s6, 0, %s1
+; CHECK-NEXT:    or %s4, 0, %s1
 ; CHECK-NEXT:    or %s1, 0, %s0
 ; CHECK-NEXT:    st %s3, 248(, %s11)
 ; CHECK-NEXT:    st %s2, 240(, %s11)
@@ -1405,9 +1405,9 @@ define i128 @_Z28atomic_cmp_swap_seq_cst_u128RNSt3__16atomicIoEERoo(ptr nonnull 
 ; CHECK-NEXT:    lea.sl %s12, __atomic_compare_exchange@hi(, %s0)
 ; CHECK-NEXT:    lea %s3, 240(, %s11)
 ; CHECK-NEXT:    or %s0, 16, (0)1
+; CHECK-NEXT:    or %s2, 0, %s4
 ; CHECK-NEXT:    or %s4, 5, (0)1
 ; CHECK-NEXT:    or %s5, 5, (0)1
-; CHECK-NEXT:    or %s2, 0, %s6
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    or %s1, 0, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -1919,7 +1919,7 @@ define i128 @_Z32atomic_cmp_swap_relaxed_stk_i128Rnn(ptr nonnull align 16 derefe
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB42_2: # %bb
-; CHECK-NEXT:    or %s6, 0, %s0
+; CHECK-NEXT:    or %s4, 0, %s0
 ; CHECK-NEXT:    st %s2, 264(, %s11)
 ; CHECK-NEXT:    st %s1, 256(, %s11)
 ; CHECK-NEXT:    lea %s0, __atomic_compare_exchange@lo
@@ -1928,9 +1928,9 @@ define i128 @_Z32atomic_cmp_swap_relaxed_stk_i128Rnn(ptr nonnull align 16 derefe
 ; CHECK-NEXT:    lea %s1, 240(, %s11)
 ; CHECK-NEXT:    lea %s3, 256(, %s11)
 ; CHECK-NEXT:    or %s0, 16, (0)1
+; CHECK-NEXT:    or %s2, 0, %s4
 ; CHECK-NEXT:    or %s4, 0, (0)1
 ; CHECK-NEXT:    or %s5, 0, (0)1
-; CHECK-NEXT:    or %s2, 0, %s6
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    or %s1, 0, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -1969,7 +1969,7 @@ define i128 @_Z32atomic_cmp_swap_relaxed_stk_u128Roo(ptr nonnull align 16 derefe
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB43_2: # %bb
-; CHECK-NEXT:    or %s6, 0, %s0
+; CHECK-NEXT:    or %s4, 0, %s0
 ; CHECK-NEXT:    st %s2, 264(, %s11)
 ; CHECK-NEXT:    st %s1, 256(, %s11)
 ; CHECK-NEXT:    lea %s0, __atomic_compare_exchange@lo
@@ -1978,9 +1978,9 @@ define i128 @_Z32atomic_cmp_swap_relaxed_stk_u128Roo(ptr nonnull align 16 derefe
 ; CHECK-NEXT:    lea %s1, 240(, %s11)
 ; CHECK-NEXT:    lea %s3, 256(, %s11)
 ; CHECK-NEXT:    or %s0, 16, (0)1
+; CHECK-NEXT:    or %s2, 0, %s4
 ; CHECK-NEXT:    or %s4, 0, (0)1
 ; CHECK-NEXT:    or %s5, 0, (0)1
-; CHECK-NEXT:    or %s2, 0, %s6
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    or %s1, 0, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -2366,7 +2366,7 @@ define i128 @_Z31atomic_cmp_swap_relaxed_gv_i128Rnn(ptr nonnull align 16 derefer
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB53_2: # %bb
-; CHECK-NEXT:    or %s6, 0, %s0
+; CHECK-NEXT:    or %s4, 0, %s0
 ; CHECK-NEXT:    st %s2, 248(, %s11)
 ; CHECK-NEXT:    st %s1, 240(, %s11)
 ; CHECK-NEXT:    lea %s0, __atomic_compare_exchange@lo
@@ -2377,9 +2377,9 @@ define i128 @_Z31atomic_cmp_swap_relaxed_gv_i128Rnn(ptr nonnull align 16 derefer
 ; CHECK-NEXT:    lea.sl %s1, gv_i128@hi(, %s0)
 ; CHECK-NEXT:    lea %s3, 240(, %s11)
 ; CHECK-NEXT:    or %s0, 16, (0)1
+; CHECK-NEXT:    or %s2, 0, %s4
 ; CHECK-NEXT:    or %s4, 0, (0)1
 ; CHECK-NEXT:    or %s5, 0, (0)1
-; CHECK-NEXT:    or %s2, 0, %s6
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    or %s1, 0, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -2415,7 +2415,7 @@ define i128 @_Z31atomic_cmp_swap_relaxed_gv_u128Roo(ptr nonnull align 16 derefer
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB54_2: # %bb
-; CHECK-NEXT:    or %s6, 0, %s0
+; CHECK-NEXT:    or %s4, 0, %s0
 ; CHECK-NEXT:    st %s2, 248(, %s11)
 ; CHECK-NEXT:    st %s1, 240(, %s11)
 ; CHECK-NEXT:    lea %s0, __atomic_compare_exchange@lo
@@ -2426,9 +2426,9 @@ define i128 @_Z31atomic_cmp_swap_relaxed_gv_u128Roo(ptr nonnull align 16 derefer
 ; CHECK-NEXT:    lea.sl %s1, gv_u128@hi(, %s0)
 ; CHECK-NEXT:    lea %s3, 240(, %s11)
 ; CHECK-NEXT:    or %s0, 16, (0)1
+; CHECK-NEXT:    or %s2, 0, %s4
 ; CHECK-NEXT:    or %s4, 0, (0)1
 ; CHECK-NEXT:    or %s5, 0, (0)1
-; CHECK-NEXT:    or %s2, 0, %s6
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    or %s1, 0, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9

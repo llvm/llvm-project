@@ -77,8 +77,8 @@ define void @test_byval_pointers(ptr %a, ptr byval(%struct.s) %b) {
 ; CHECK-NEXT:    b.mi LBB1_2
 ; CHECK-NEXT:    b.gt LBB1_2
 ; CHECK-NEXT:  ; %bb.1: ; %then
-; CHECK-NEXT:    add x1, sp, #32
 ; CHECK-NEXT:    add x19, sp, #32
+; CHECK-NEXT:    add x1, sp, #32
 ; CHECK-NEXT:    bl _fn
 ; CHECK-NEXT:    str xzr, [x19]
 ; CHECK-NEXT:  LBB1_2: ; %exit
@@ -125,8 +125,8 @@ define void @test_inalloca_pointers(ptr %a, ptr inalloca(%struct.s) %b) {
 ; CHECK-NEXT:    b.mi LBB2_2
 ; CHECK-NEXT:    b.gt LBB2_2
 ; CHECK-NEXT:  ; %bb.1: ; %then
-; CHECK-NEXT:    add x1, sp, #32
 ; CHECK-NEXT:    add x19, sp, #32
+; CHECK-NEXT:    add x1, sp, #32
 ; CHECK-NEXT:    bl _fn
 ; CHECK-NEXT:    str xzr, [x19]
 ; CHECK-NEXT:  LBB2_2: ; %exit
@@ -173,8 +173,8 @@ define void @test_preallocated_pointers(ptr %a, ptr preallocated(%struct.s) %b) 
 ; CHECK-NEXT:    b.mi LBB3_2
 ; CHECK-NEXT:    b.gt LBB3_2
 ; CHECK-NEXT:  ; %bb.1: ; %then
-; CHECK-NEXT:    add x1, sp, #32
 ; CHECK-NEXT:    add x19, sp, #32
+; CHECK-NEXT:    add x1, sp, #32
 ; CHECK-NEXT:    bl _fn
 ; CHECK-NEXT:    str xzr, [x19]
 ; CHECK-NEXT:  LBB3_2: ; %exit

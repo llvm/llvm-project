@@ -297,10 +297,10 @@ define arm_aapcs_vfpcc <4 x i32> @ustest_f16i32(<4 x half> %x) {
 ; CHECK-NEXT:    bfi r3, r2, #0, #8
 ; CHECK-NEXT:    csetm r0, lt
 ; CHECK-NEXT:    bfi r3, r0, #8, #8
-; CHECK-NEXT:    vmov.u16 r0, q4[0]
 ; CHECK-NEXT:    vmov.i32 q5, #0x0
 ; CHECK-NEXT:    vmov q0[3], q0[1], r5, r1
 ; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    vmov.u16 r0, q4[0]
 ; CHECK-NEXT:    vpsel q6, q0, q5
 ; CHECK-NEXT:    bl __fixhfdi
 ; CHECK-NEXT:    mov r4, r0
@@ -1371,10 +1371,10 @@ define arm_aapcs_vfpcc <4 x i32> @ustest_f16i32_mm(<4 x half> %x) {
 ; CHECK-NEXT:    bfi r3, r2, #0, #8
 ; CHECK-NEXT:    csetm r0, lt
 ; CHECK-NEXT:    bfi r3, r0, #8, #8
-; CHECK-NEXT:    vmov.u16 r0, q4[0]
 ; CHECK-NEXT:    vmov.i32 q5, #0x0
 ; CHECK-NEXT:    vmov q0[3], q0[1], r5, r1
 ; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    vmov.u16 r0, q4[0]
 ; CHECK-NEXT:    vpsel q6, q0, q5
 ; CHECK-NEXT:    bl __fixhfdi
 ; CHECK-NEXT:    mov r4, r0
@@ -1845,8 +1845,8 @@ define arm_aapcs_vfpcc <2 x i64> @ustest_f64i64_mm(<2 x double> %x) {
 ; CHECK-NEXT:    cset r2, lt
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csel r5, r0, r2, ne
-; CHECK-NEXT:    csel r0, r3, r2, ne
 ; CHECK-NEXT:    csel r4, r1, r2, ne
+; CHECK-NEXT:    csel r0, r3, r2, ne
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    itt mi
 ; CHECK-NEXT:    movmi r4, #0
@@ -1979,8 +1979,8 @@ define arm_aapcs_vfpcc <2 x i64> @ustest_f32i64_mm(<2 x float> %x) {
 ; CHECK-NEXT:    cset r2, lt
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csel r6, r0, r2, ne
-; CHECK-NEXT:    csel r0, r3, r2, ne
 ; CHECK-NEXT:    csel r5, r1, r2, ne
+; CHECK-NEXT:    csel r0, r3, r2, ne
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    itt mi
@@ -2071,9 +2071,9 @@ define arm_aapcs_vfpcc <2 x i64> @ustest_f16i64_mm(<2 x half> %x) {
 ; CHECK-NEXT:    vmov q4, q0
 ; CHECK-NEXT:    bl __fixhfti
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov.u16 r0, q4[0]
 ; CHECK-NEXT:    mov r5, r1
 ; CHECK-NEXT:    cmp r3, #0
+; CHECK-NEXT:    vmov.u16 r0, q4[0]
 ; CHECK-NEXT:    itt mi
 ; CHECK-NEXT:    movmi r5, #0
 ; CHECK-NEXT:    movmi r4, #0

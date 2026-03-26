@@ -112,8 +112,8 @@ define i64 @g_multi_use(i64 %a, i64 %b, ptr %out) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs x8, x0, x1
 ; CHECK-NEXT:    sbc x8, x8, xzr
-; CHECK-NEXT:    add x0, x8, #10
 ; CHECK-NEXT:    str x8, [x2]
+; CHECK-NEXT:    add x0, x8, #10
 ; CHECK-NEXT:    ret
   %ov  = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %a, i64 %b)
   %val = extractvalue { i64, i1 } %ov, 0
@@ -131,8 +131,8 @@ define i32 @g_multi_use_i32(i32 %a, i32 %b, ptr %out) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs w8, w0, w1
 ; CHECK-NEXT:    sbc w8, w8, wzr
-; CHECK-NEXT:    add w0, w8, #10
 ; CHECK-NEXT:    str w8, [x2]
+; CHECK-NEXT:    add w0, w8, #10
 ; CHECK-NEXT:    ret
   %ov  = call {i32, i1} @llvm.usub.with.overflow.i32(i32 %a, i32 %b)
   %val = extractvalue { i32, i1 } %ov, 0

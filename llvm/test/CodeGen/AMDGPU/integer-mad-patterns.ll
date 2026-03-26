@@ -10713,8 +10713,8 @@ define i16 @other_use_mul_mad_i16_var(i16 %x, i16 %y, i16 %z, ptr addrspace(3) %
 ; GFX67-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX67-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX67-NEXT:    v_mul_u32_u24_e32 v4, v0, v1
-; GFX67-NEXT:    v_mad_u32_u24 v0, v0, v1, v2
 ; GFX67-NEXT:    s_mov_b32 m0, -1
+; GFX67-NEXT:    v_mad_u32_u24 v0, v0, v1, v2
 ; GFX67-NEXT:    ds_write_b16 v3, v4
 ; GFX67-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX67-NEXT:    s_setpc_b64 s[30:31]
@@ -10723,8 +10723,8 @@ define i16 @other_use_mul_mad_i16_var(i16 %x, i16 %y, i16 %z, ptr addrspace(3) %
 ; GFX8:       ; %bb.0: ; %entry
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_mul_lo_u16_e32 v4, v0, v1
-; GFX8-NEXT:    v_mad_u16 v0, v0, v1, v2
 ; GFX8-NEXT:    s_mov_b32 m0, -1
+; GFX8-NEXT:    v_mad_u16 v0, v0, v1, v2
 ; GFX8-NEXT:    ds_write_b16 v3, v4
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
@@ -10991,22 +10991,22 @@ define <2 x i16> @other_use_mul_mad_v2i16_var(<2 x i16> %x, <2 x i16> %y, <2 x i
 ; GFX67-SDAG-LABEL: other_use_mul_mad_v2i16_var:
 ; GFX67-SDAG:       ; %bb.0: ; %entry
 ; GFX67-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX67-SDAG-NEXT:    v_lshrrev_b32_e32 v4, 16, v2
 ; GFX67-SDAG-NEXT:    v_lshrrev_b32_e32 v5, 16, v1
 ; GFX67-SDAG-NEXT:    v_lshrrev_b32_e32 v6, 16, v0
 ; GFX67-SDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX67-SDAG-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GFX67-SDAG-NEXT:    v_lshrrev_b32_e32 v4, 16, v2
 ; GFX67-SDAG-NEXT:    v_mul_u32_u24_e32 v7, v0, v1
 ; GFX67-SDAG-NEXT:    v_mul_u32_u24_e32 v8, v6, v5
-; GFX67-SDAG-NEXT:    v_mad_u32_u24 v4, v6, v5, v4
-; GFX67-SDAG-NEXT:    v_mad_u32_u24 v0, v0, v1, v2
 ; GFX67-SDAG-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
 ; GFX67-SDAG-NEXT:    v_and_b32_e32 v7, 0xffff, v7
+; GFX67-SDAG-NEXT:    v_mad_u32_u24 v4, v6, v5, v4
+; GFX67-SDAG-NEXT:    v_mad_u32_u24 v0, v0, v1, v2
+; GFX67-SDAG-NEXT:    v_or_b32_e32 v7, v7, v8
 ; GFX67-SDAG-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
 ; GFX67-SDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX67-SDAG-NEXT:    v_or_b32_e32 v7, v7, v8
-; GFX67-SDAG-NEXT:    v_or_b32_e32 v0, v0, v4
 ; GFX67-SDAG-NEXT:    s_mov_b32 m0, -1
+; GFX67-SDAG-NEXT:    v_or_b32_e32 v0, v0, v4
 ; GFX67-SDAG-NEXT:    ds_write_b32 v3, v7
 ; GFX67-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX67-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -11030,8 +11030,8 @@ define <2 x i16> @other_use_mul_mad_v2i16_var(<2 x i16> %x, <2 x i16> %y, <2 x i
 ; GFX67-GISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX67-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX67-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX67-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX67-GISEL-NEXT:    s_mov_b32 m0, -1
+; GFX67-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX67-GISEL-NEXT:    ds_write_b32 v3, v6
 ; GFX67-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX67-GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -11048,8 +11048,8 @@ define <2 x i16> @other_use_mul_mad_v2i16_var(<2 x i16> %x, <2 x i16> %y, <2 x i
 ; GFX8-SDAG-NEXT:    v_mad_u16 v4, v5, v4, v7
 ; GFX8-SDAG-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
 ; GFX8-SDAG-NEXT:    v_mad_u16 v0, v0, v1, v2
-; GFX8-SDAG-NEXT:    v_or_b32_e32 v0, v0, v4
 ; GFX8-SDAG-NEXT:    s_mov_b32 m0, -1
+; GFX8-SDAG-NEXT:    v_or_b32_e32 v0, v0, v4
 ; GFX8-SDAG-NEXT:    ds_write_b32 v3, v6
 ; GFX8-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -11066,8 +11066,8 @@ define <2 x i16> @other_use_mul_mad_v2i16_var(<2 x i16> %x, <2 x i16> %y, <2 x i
 ; GFX8-GISEL-NEXT:    v_mad_u16 v0, v0, v1, v2
 ; GFX8-GISEL-NEXT:    v_mad_u16 v1, v4, v5, v7
 ; GFX8-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX8-GISEL-NEXT:    s_mov_b32 m0, -1
+; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX8-GISEL-NEXT:    ds_write_b32 v3, v6
 ; GFX8-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]

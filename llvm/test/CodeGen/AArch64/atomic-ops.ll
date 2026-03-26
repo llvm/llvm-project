@@ -36,8 +36,8 @@ define dso_local i8 @test_atomic_load_add_i8(i8 %offset) nounwind {
 ; MSVC_INLINE_ATOMICS-NEXT:    stlxrb w11, w10, [x9]
 ; MSVC_INLINE_ATOMICS-NEXT:    cbnz w11, .LBB0_1
 ; MSVC_INLINE_ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; MSVC_INLINE_ATOMICS-NEXT:    mov w0, w8
 ; MSVC_INLINE_ATOMICS-NEXT:    dmb ish
+; MSVC_INLINE_ATOMICS-NEXT:    mov w0, w8
 ; MSVC_INLINE_ATOMICS-NEXT:    ret
 ;
 ; OUTLINE_ATOMICS-LABEL: test_atomic_load_add_i8:
@@ -628,8 +628,8 @@ define dso_local i32 @test_atomic_load_and_i32(i32 %offset) nounwind {
 ; MSVC_INLINE_ATOMICS-NEXT:    stlxr w11, w10, [x9]
 ; MSVC_INLINE_ATOMICS-NEXT:    cbnz w11, .LBB10_1
 ; MSVC_INLINE_ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; MSVC_INLINE_ATOMICS-NEXT:    mov w0, w8
 ; MSVC_INLINE_ATOMICS-NEXT:    dmb ish
+; MSVC_INLINE_ATOMICS-NEXT:    mov w0, w8
 ; MSVC_INLINE_ATOMICS-NEXT:    ret
 ;
 ; OUTLINE_ATOMICS-LABEL: test_atomic_load_and_i32:
@@ -750,8 +750,8 @@ define dso_local i8 @test_atomic_load_or_i8(i8 %offset) nounwind {
 ; MSVC_INLINE_ATOMICS-NEXT:    stlxrb w11, w10, [x9]
 ; MSVC_INLINE_ATOMICS-NEXT:    cbnz w11, .LBB12_1
 ; MSVC_INLINE_ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; MSVC_INLINE_ATOMICS-NEXT:    mov w0, w8
 ; MSVC_INLINE_ATOMICS-NEXT:    dmb ish
+; MSVC_INLINE_ATOMICS-NEXT:    mov w0, w8
 ; MSVC_INLINE_ATOMICS-NEXT:    ret
 ;
 ; OUTLINE_ATOMICS-LABEL: test_atomic_load_or_i8:
@@ -1094,8 +1094,8 @@ define dso_local i32 @test_atomic_load_xor_i32(i32 %offset) nounwind {
 ; MSVC_INLINE_ATOMICS-NEXT:    stlxr w11, w10, [x9]
 ; MSVC_INLINE_ATOMICS-NEXT:    cbnz w11, .LBB18_1
 ; MSVC_INLINE_ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; MSVC_INLINE_ATOMICS-NEXT:    mov w0, w8
 ; MSVC_INLINE_ATOMICS-NEXT:    dmb ish
+; MSVC_INLINE_ATOMICS-NEXT:    mov w0, w8
 ; MSVC_INLINE_ATOMICS-NEXT:    ret
 ;
 ; OUTLINE_ATOMICS-LABEL: test_atomic_load_xor_i32:
@@ -1264,8 +1264,8 @@ define dso_local i16 @test_atomic_load_xchg_i16(i16 %offset) nounwind {
 ; MSVC_INLINE_ATOMICS-NEXT:    stlxrh w10, w8, [x9]
 ; MSVC_INLINE_ATOMICS-NEXT:    cbnz w10, .LBB21_1
 ; MSVC_INLINE_ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; MSVC_INLINE_ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; MSVC_INLINE_ATOMICS-NEXT:    dmb ish
+; MSVC_INLINE_ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; MSVC_INLINE_ATOMICS-NEXT:    ret
 ;
 ; OUTLINE_ATOMICS-LABEL: test_atomic_load_xchg_i16:
@@ -1734,8 +1734,8 @@ define dso_local i8 @test_atomic_load_max_i8(i8 %offset) nounwind {
 ; MSVC_INLINE_ATOMICS-NEXT:    stlxrb w11, w10, [x9]
 ; MSVC_INLINE_ATOMICS-NEXT:    cbnz w11, .LBB28_1
 ; MSVC_INLINE_ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; MSVC_INLINE_ATOMICS-NEXT:    mov w0, w8
 ; MSVC_INLINE_ATOMICS-NEXT:    dmb ish
+; MSVC_INLINE_ATOMICS-NEXT:    mov w0, w8
 ; MSVC_INLINE_ATOMICS-NEXT:    ret
 ;
 ; OUTLINE_ATOMICS-LABEL: test_atomic_load_max_i8:
@@ -1767,8 +1767,8 @@ define dso_local i8 @test_atomic_load_max_i8(i8 %offset) nounwind {
 ; MSVC_OUTLINE_ATOMICS-NEXT:    stlxrb w11, w10, [x9]
 ; MSVC_OUTLINE_ATOMICS-NEXT:    cbnz w11, .LBB28_1
 ; MSVC_OUTLINE_ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; MSVC_OUTLINE_ATOMICS-NEXT:    mov w0, w8
 ; MSVC_OUTLINE_ATOMICS-NEXT:    dmb ish
+; MSVC_OUTLINE_ATOMICS-NEXT:    mov w0, w8
 ; MSVC_OUTLINE_ATOMICS-NEXT:    ret
 ;
 ; LSE-LABEL: test_atomic_load_max_i8:
@@ -2176,8 +2176,8 @@ define dso_local i32 @test_atomic_load_umin_i32(i32 %offset) nounwind {
 ; MSVC_INLINE_ATOMICS-NEXT:    stlxr w11, w10, [x9]
 ; MSVC_INLINE_ATOMICS-NEXT:    cbnz w11, .LBB34_1
 ; MSVC_INLINE_ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; MSVC_INLINE_ATOMICS-NEXT:    mov w0, w8
 ; MSVC_INLINE_ATOMICS-NEXT:    dmb ish
+; MSVC_INLINE_ATOMICS-NEXT:    mov w0, w8
 ; MSVC_INLINE_ATOMICS-NEXT:    ret
 ;
 ; OUTLINE_ATOMICS-LABEL: test_atomic_load_umin_i32:
@@ -2207,8 +2207,8 @@ define dso_local i32 @test_atomic_load_umin_i32(i32 %offset) nounwind {
 ; MSVC_OUTLINE_ATOMICS-NEXT:    stlxr w11, w10, [x9]
 ; MSVC_OUTLINE_ATOMICS-NEXT:    cbnz w11, .LBB34_1
 ; MSVC_OUTLINE_ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; MSVC_OUTLINE_ATOMICS-NEXT:    mov w0, w8
 ; MSVC_OUTLINE_ATOMICS-NEXT:    dmb ish
+; MSVC_OUTLINE_ATOMICS-NEXT:    mov w0, w8
 ; MSVC_OUTLINE_ATOMICS-NEXT:    ret
 ;
 ; LSE-LABEL: test_atomic_load_umin_i32:
@@ -2470,8 +2470,8 @@ define dso_local i32 @test_atomic_load_umax_i32(i32 %offset) nounwind {
 ; MSVC_INLINE_ATOMICS-NEXT:    stlxr w11, w10, [x9]
 ; MSVC_INLINE_ATOMICS-NEXT:    cbnz w11, .LBB38_1
 ; MSVC_INLINE_ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; MSVC_INLINE_ATOMICS-NEXT:    mov w0, w8
 ; MSVC_INLINE_ATOMICS-NEXT:    dmb ish
+; MSVC_INLINE_ATOMICS-NEXT:    mov w0, w8
 ; MSVC_INLINE_ATOMICS-NEXT:    ret
 ;
 ; OUTLINE_ATOMICS-LABEL: test_atomic_load_umax_i32:
@@ -2501,8 +2501,8 @@ define dso_local i32 @test_atomic_load_umax_i32(i32 %offset) nounwind {
 ; MSVC_OUTLINE_ATOMICS-NEXT:    stlxr w11, w10, [x9]
 ; MSVC_OUTLINE_ATOMICS-NEXT:    cbnz w11, .LBB38_1
 ; MSVC_OUTLINE_ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; MSVC_OUTLINE_ATOMICS-NEXT:    mov w0, w8
 ; MSVC_OUTLINE_ATOMICS-NEXT:    dmb ish
+; MSVC_OUTLINE_ATOMICS-NEXT:    mov w0, w8
 ; MSVC_OUTLINE_ATOMICS-NEXT:    ret
 ;
 ; LSE-LABEL: test_atomic_load_umax_i32:
@@ -2778,8 +2778,8 @@ define dso_local i32 @test_atomic_load_uinc_wrap_i32(i32 %offset) nounwind {
 ; MSVC_INLINE_ATOMICS-NEXT:    stlxr w11, w10, [x9]
 ; MSVC_INLINE_ATOMICS-NEXT:    cbnz w11, .LBB42_1
 ; MSVC_INLINE_ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; MSVC_INLINE_ATOMICS-NEXT:    mov w0, w8
 ; MSVC_INLINE_ATOMICS-NEXT:    dmb ish
+; MSVC_INLINE_ATOMICS-NEXT:    mov w0, w8
 ; MSVC_INLINE_ATOMICS-NEXT:    ret
 ;
 ; OUTLINE_ATOMICS-LABEL: test_atomic_load_uinc_wrap_i32:
@@ -2809,8 +2809,8 @@ define dso_local i32 @test_atomic_load_uinc_wrap_i32(i32 %offset) nounwind {
 ; MSVC_OUTLINE_ATOMICS-NEXT:    stlxr w11, w10, [x9]
 ; MSVC_OUTLINE_ATOMICS-NEXT:    cbnz w11, .LBB42_1
 ; MSVC_OUTLINE_ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; MSVC_OUTLINE_ATOMICS-NEXT:    mov w0, w8
 ; MSVC_OUTLINE_ATOMICS-NEXT:    dmb ish
+; MSVC_OUTLINE_ATOMICS-NEXT:    mov w0, w8
 ; MSVC_OUTLINE_ATOMICS-NEXT:    ret
 ;
 ; LSE-LABEL: test_atomic_load_uinc_wrap_i32:
@@ -3134,8 +3134,8 @@ define dso_local i32 @test_atomic_load_udec_wrap_i32(i32 %offset) nounwind {
 ; MSVC_INLINE_ATOMICS-NEXT:    stlxr w11, w10, [x9]
 ; MSVC_INLINE_ATOMICS-NEXT:    cbnz w11, .LBB46_1
 ; MSVC_INLINE_ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; MSVC_INLINE_ATOMICS-NEXT:    mov w0, w8
 ; MSVC_INLINE_ATOMICS-NEXT:    dmb ish
+; MSVC_INLINE_ATOMICS-NEXT:    mov w0, w8
 ; MSVC_INLINE_ATOMICS-NEXT:    ret
 ;
 ; OUTLINE_ATOMICS-LABEL: test_atomic_load_udec_wrap_i32:
@@ -3169,8 +3169,8 @@ define dso_local i32 @test_atomic_load_udec_wrap_i32(i32 %offset) nounwind {
 ; MSVC_OUTLINE_ATOMICS-NEXT:    stlxr w11, w10, [x9]
 ; MSVC_OUTLINE_ATOMICS-NEXT:    cbnz w11, .LBB46_1
 ; MSVC_OUTLINE_ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; MSVC_OUTLINE_ATOMICS-NEXT:    mov w0, w8
 ; MSVC_OUTLINE_ATOMICS-NEXT:    dmb ish
+; MSVC_OUTLINE_ATOMICS-NEXT:    mov w0, w8
 ; MSVC_OUTLINE_ATOMICS-NEXT:    ret
 ;
 ; LSE-LABEL: test_atomic_load_udec_wrap_i32:
@@ -3492,8 +3492,8 @@ define dso_local i32 @test_atomic_load_usub_cond_i32(i32 %offset) nounwind {
 ; MSVC_INLINE_ATOMICS-NEXT:    stlxr w11, w10, [x9]
 ; MSVC_INLINE_ATOMICS-NEXT:    cbnz w11, .LBB50_1
 ; MSVC_INLINE_ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; MSVC_INLINE_ATOMICS-NEXT:    mov w0, w8
 ; MSVC_INLINE_ATOMICS-NEXT:    dmb ish
+; MSVC_INLINE_ATOMICS-NEXT:    mov w0, w8
 ; MSVC_INLINE_ATOMICS-NEXT:    ret
 ;
 ; OUTLINE_ATOMICS-LABEL: test_atomic_load_usub_cond_i32:
@@ -3523,8 +3523,8 @@ define dso_local i32 @test_atomic_load_usub_cond_i32(i32 %offset) nounwind {
 ; MSVC_OUTLINE_ATOMICS-NEXT:    stlxr w11, w10, [x9]
 ; MSVC_OUTLINE_ATOMICS-NEXT:    cbnz w11, .LBB50_1
 ; MSVC_OUTLINE_ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; MSVC_OUTLINE_ATOMICS-NEXT:    mov w0, w8
 ; MSVC_OUTLINE_ATOMICS-NEXT:    dmb ish
+; MSVC_OUTLINE_ATOMICS-NEXT:    mov w0, w8
 ; MSVC_OUTLINE_ATOMICS-NEXT:    ret
 ;
 ; LSE-LABEL: test_atomic_load_usub_cond_i32:
@@ -3824,8 +3824,8 @@ define dso_local i32 @test_atomic_load_usub_sat_i32(i32 %offset) nounwind {
 ; MSVC_INLINE_ATOMICS-NEXT:    stlxr w11, w10, [x9]
 ; MSVC_INLINE_ATOMICS-NEXT:    cbnz w11, .LBB54_1
 ; MSVC_INLINE_ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; MSVC_INLINE_ATOMICS-NEXT:    mov w0, w8
 ; MSVC_INLINE_ATOMICS-NEXT:    dmb ish
+; MSVC_INLINE_ATOMICS-NEXT:    mov w0, w8
 ; MSVC_INLINE_ATOMICS-NEXT:    ret
 ;
 ; OUTLINE_ATOMICS-LABEL: test_atomic_load_usub_sat_i32:
@@ -3855,8 +3855,8 @@ define dso_local i32 @test_atomic_load_usub_sat_i32(i32 %offset) nounwind {
 ; MSVC_OUTLINE_ATOMICS-NEXT:    stlxr w11, w10, [x9]
 ; MSVC_OUTLINE_ATOMICS-NEXT:    cbnz w11, .LBB54_1
 ; MSVC_OUTLINE_ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; MSVC_OUTLINE_ATOMICS-NEXT:    mov w0, w8
 ; MSVC_OUTLINE_ATOMICS-NEXT:    dmb ish
+; MSVC_OUTLINE_ATOMICS-NEXT:    mov w0, w8
 ; MSVC_OUTLINE_ATOMICS-NEXT:    ret
 ;
 ; LSE-LABEL: test_atomic_load_usub_sat_i32:

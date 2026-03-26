@@ -32,6 +32,7 @@ define <4 x i8> @issue176578() #0 {
 ; CHECK-NEXT:    v_writelane_b32 v41, s51, 11
 ; CHECK-NEXT:    v_writelane_b32 v41, s52, 12
 ; CHECK-NEXT:    v_writelane_b32 v41, s53, 13
+; CHECK-NEXT:    s_addk_i32 s32, 0x400
 ; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; CHECK-NEXT:    v_writelane_b32 v41, s54, 14
 ; CHECK-NEXT:    v_mov_b32_e32 v40, v31
@@ -44,7 +45,6 @@ define <4 x i8> @issue176578() #0 {
 ; CHECK-NEXT:    s_mov_b64 s[38:39], s[6:7]
 ; CHECK-NEXT:    s_mov_b64 s[48:49], s[4:5]
 ; CHECK-NEXT:    s_mov_b32 s54, 0
-; CHECK-NEXT:    s_addk_i32 s32, 0x400
 ; CHECK-NEXT:    s_branch .LBB0_2
 ; CHECK-NEXT:  .LBB0_1: ; %Flow
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1

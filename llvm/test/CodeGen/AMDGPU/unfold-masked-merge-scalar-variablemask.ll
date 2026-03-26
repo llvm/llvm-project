@@ -646,8 +646,8 @@ define i32 @s_in_multiuse_A(i32 inreg %x, i32 inreg %y, i32 inreg %z, i32 inreg 
 ; GCN-NEXT:    s_or_saveexec_b32 s16, -1
 ; GCN-NEXT:    scratch_store_b32 off, v40, s33 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b32 exec_lo, s16
-; GCN-NEXT:    v_writelane_b32 v40, s2, 4
 ; GCN-NEXT:    s_add_i32 s32, s32, 16
+; GCN-NEXT:    v_writelane_b32 v40, s2, 4
 ; GCN-NEXT:    s_getpc_b64 s[16:17]
 ; GCN-NEXT:    s_add_u32 s16, s16, use32@gotpcrel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s17, s17, use32@gotpcrel32@hi+12

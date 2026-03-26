@@ -188,7 +188,8 @@ define i32 @caller_half_in_fregs() nounwind {
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    addi.w $sp, $sp, -16
 ; LA32S-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32S-NEXT:    lu12i.w $t0, 4
+; LA32S-NEXT:    lu12i.w $a0, 4
+; LA32S-NEXT:    st.w $a0, $sp, 0
 ; LA32S-NEXT:    ori $a0, $zero, 1
 ; LA32S-NEXT:    ori $a1, $zero, 2
 ; LA32S-NEXT:    ori $a2, $zero, 3
@@ -197,7 +198,6 @@ define i32 @caller_half_in_fregs() nounwind {
 ; LA32S-NEXT:    ori $a5, $zero, 6
 ; LA32S-NEXT:    ori $a6, $zero, 7
 ; LA32S-NEXT:    ori $a7, $zero, 8
-; LA32S-NEXT:    st.w $t0, $sp, 0
 ; LA32S-NEXT:    bl callee_half_in_fregs
 ; LA32S-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32S-NEXT:    addi.w $sp, $sp, 16
@@ -207,7 +207,8 @@ define i32 @caller_half_in_fregs() nounwind {
 ; LA32F-ILP32S:       # %bb.0:
 ; LA32F-ILP32S-NEXT:    addi.w $sp, $sp, -16
 ; LA32F-ILP32S-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32F-ILP32S-NEXT:    lu12i.w $t0, -12
+; LA32F-ILP32S-NEXT:    lu12i.w $a0, -12
+; LA32F-ILP32S-NEXT:    st.w $a0, $sp, 0
 ; LA32F-ILP32S-NEXT:    ori $a0, $zero, 1
 ; LA32F-ILP32S-NEXT:    ori $a1, $zero, 2
 ; LA32F-ILP32S-NEXT:    ori $a2, $zero, 3
@@ -216,7 +217,6 @@ define i32 @caller_half_in_fregs() nounwind {
 ; LA32F-ILP32S-NEXT:    ori $a5, $zero, 6
 ; LA32F-ILP32S-NEXT:    ori $a6, $zero, 7
 ; LA32F-ILP32S-NEXT:    ori $a7, $zero, 8
-; LA32F-ILP32S-NEXT:    st.w $t0, $sp, 0
 ; LA32F-ILP32S-NEXT:    bl callee_half_in_fregs
 ; LA32F-ILP32S-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32F-ILP32S-NEXT:    addi.w $sp, $sp, 16
@@ -245,7 +245,8 @@ define i32 @caller_half_in_fregs() nounwind {
 ; LA32D-ILP32S:       # %bb.0:
 ; LA32D-ILP32S-NEXT:    addi.w $sp, $sp, -16
 ; LA32D-ILP32S-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32D-ILP32S-NEXT:    lu12i.w $t0, -12
+; LA32D-ILP32S-NEXT:    lu12i.w $a0, -12
+; LA32D-ILP32S-NEXT:    st.w $a0, $sp, 0
 ; LA32D-ILP32S-NEXT:    ori $a0, $zero, 1
 ; LA32D-ILP32S-NEXT:    ori $a1, $zero, 2
 ; LA32D-ILP32S-NEXT:    ori $a2, $zero, 3
@@ -254,7 +255,6 @@ define i32 @caller_half_in_fregs() nounwind {
 ; LA32D-ILP32S-NEXT:    ori $a5, $zero, 6
 ; LA32D-ILP32S-NEXT:    ori $a6, $zero, 7
 ; LA32D-ILP32S-NEXT:    ori $a7, $zero, 8
-; LA32D-ILP32S-NEXT:    st.w $t0, $sp, 0
 ; LA32D-ILP32S-NEXT:    bl callee_half_in_fregs
 ; LA32D-ILP32S-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32D-ILP32S-NEXT:    addi.w $sp, $sp, 16
@@ -303,8 +303,9 @@ define i32 @caller_half_in_fregs() nounwind {
 ; LA64F-LP64S:       # %bb.0:
 ; LA64F-LP64S-NEXT:    addi.d $sp, $sp, -16
 ; LA64F-LP64S-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; LA64F-LP64S-NEXT:    lu12i.w $t0, -12
-; LA64F-LP64S-NEXT:    lu32i.d $t0, 0
+; LA64F-LP64S-NEXT:    lu12i.w $a0, -12
+; LA64F-LP64S-NEXT:    lu32i.d $a0, 0
+; LA64F-LP64S-NEXT:    st.w $a0, $sp, 0
 ; LA64F-LP64S-NEXT:    ori $a0, $zero, 1
 ; LA64F-LP64S-NEXT:    ori $a1, $zero, 2
 ; LA64F-LP64S-NEXT:    ori $a2, $zero, 3
@@ -313,7 +314,6 @@ define i32 @caller_half_in_fregs() nounwind {
 ; LA64F-LP64S-NEXT:    ori $a5, $zero, 6
 ; LA64F-LP64S-NEXT:    ori $a6, $zero, 7
 ; LA64F-LP64S-NEXT:    ori $a7, $zero, 8
-; LA64F-LP64S-NEXT:    st.w $t0, $sp, 0
 ; LA64F-LP64S-NEXT:    pcaddu18i $ra, %call36(callee_half_in_fregs)
 ; LA64F-LP64S-NEXT:    jirl $ra, $ra, 0
 ; LA64F-LP64S-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
@@ -344,8 +344,9 @@ define i32 @caller_half_in_fregs() nounwind {
 ; LA64D-LP64S:       # %bb.0:
 ; LA64D-LP64S-NEXT:    addi.d $sp, $sp, -16
 ; LA64D-LP64S-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; LA64D-LP64S-NEXT:    lu12i.w $t0, -12
-; LA64D-LP64S-NEXT:    lu32i.d $t0, 0
+; LA64D-LP64S-NEXT:    lu12i.w $a0, -12
+; LA64D-LP64S-NEXT:    lu32i.d $a0, 0
+; LA64D-LP64S-NEXT:    st.w $a0, $sp, 0
 ; LA64D-LP64S-NEXT:    ori $a0, $zero, 1
 ; LA64D-LP64S-NEXT:    ori $a1, $zero, 2
 ; LA64D-LP64S-NEXT:    ori $a2, $zero, 3
@@ -354,7 +355,6 @@ define i32 @caller_half_in_fregs() nounwind {
 ; LA64D-LP64S-NEXT:    ori $a5, $zero, 6
 ; LA64D-LP64S-NEXT:    ori $a6, $zero, 7
 ; LA64D-LP64S-NEXT:    ori $a7, $zero, 8
-; LA64D-LP64S-NEXT:    st.w $t0, $sp, 0
 ; LA64D-LP64S-NEXT:    pcaddu18i $ra, %call36(callee_half_in_fregs)
 ; LA64D-LP64S-NEXT:    jirl $ra, $ra, 0
 ; LA64D-LP64S-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
@@ -1018,7 +1018,8 @@ define i32 @caller_half_on_stack() nounwind {
 ; LA32S-NEXT:    st.w $a1, $sp, 8
 ; LA32S-NEXT:    ori $a1, $a0, 2432
 ; LA32S-NEXT:    st.w $a1, $sp, 4
-; LA32S-NEXT:    ori $t0, $a0, 2304
+; LA32S-NEXT:    ori $a0, $a0, 2304
+; LA32S-NEXT:    st.w $a0, $sp, 0
 ; LA32S-NEXT:    ori $a0, $zero, 1
 ; LA32S-NEXT:    ori $a1, $zero, 2
 ; LA32S-NEXT:    ori $a2, $zero, 3
@@ -1027,7 +1028,6 @@ define i32 @caller_half_on_stack() nounwind {
 ; LA32S-NEXT:    ori $a5, $zero, 6
 ; LA32S-NEXT:    ori $a6, $zero, 7
 ; LA32S-NEXT:    ori $a7, $zero, 8
-; LA32S-NEXT:    st.w $t0, $sp, 0
 ; LA32S-NEXT:    bl callee_half_on_stack
 ; LA32S-NEXT:    ld.w $ra, $sp, 44 # 4-byte Folded Reload
 ; LA32S-NEXT:    addi.w $sp, $sp, 48
@@ -1054,7 +1054,8 @@ define i32 @caller_half_on_stack() nounwind {
 ; LA32F-ILP32S-NEXT:    st.w $a1, $sp, 8
 ; LA32F-ILP32S-NEXT:    ori $a1, $a0, 2432
 ; LA32F-ILP32S-NEXT:    st.w $a1, $sp, 4
-; LA32F-ILP32S-NEXT:    ori $t0, $a0, 2304
+; LA32F-ILP32S-NEXT:    ori $a0, $a0, 2304
+; LA32F-ILP32S-NEXT:    st.w $a0, $sp, 0
 ; LA32F-ILP32S-NEXT:    ori $a0, $zero, 1
 ; LA32F-ILP32S-NEXT:    ori $a1, $zero, 2
 ; LA32F-ILP32S-NEXT:    ori $a2, $zero, 3
@@ -1063,7 +1064,6 @@ define i32 @caller_half_on_stack() nounwind {
 ; LA32F-ILP32S-NEXT:    ori $a5, $zero, 6
 ; LA32F-ILP32S-NEXT:    ori $a6, $zero, 7
 ; LA32F-ILP32S-NEXT:    ori $a7, $zero, 8
-; LA32F-ILP32S-NEXT:    st.w $t0, $sp, 0
 ; LA32F-ILP32S-NEXT:    bl callee_half_on_stack
 ; LA32F-ILP32S-NEXT:    ld.w $ra, $sp, 44 # 4-byte Folded Reload
 ; LA32F-ILP32S-NEXT:    addi.w $sp, $sp, 48
@@ -1074,7 +1074,8 @@ define i32 @caller_half_on_stack() nounwind {
 ; LA32F-ILP32D-NEXT:    addi.w $sp, $sp, -16
 ; LA32F-ILP32D-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32F-ILP32D-NEXT:    lu12i.w $a0, -12
-; LA32F-ILP32D-NEXT:    ori $t0, $a0, 3200
+; LA32F-ILP32D-NEXT:    ori $a1, $a0, 3200
+; LA32F-ILP32D-NEXT:    st.w $a1, $sp, 0
 ; LA32F-ILP32D-NEXT:    ori $a1, $a0, 2304
 ; LA32F-ILP32D-NEXT:    movgr2fr.w $fa0, $a1
 ; LA32F-ILP32D-NEXT:    ori $a1, $a0, 2432
@@ -1099,7 +1100,6 @@ define i32 @caller_half_on_stack() nounwind {
 ; LA32F-ILP32D-NEXT:    ori $a5, $zero, 6
 ; LA32F-ILP32D-NEXT:    ori $a6, $zero, 7
 ; LA32F-ILP32D-NEXT:    ori $a7, $zero, 8
-; LA32F-ILP32D-NEXT:    st.w $t0, $sp, 0
 ; LA32F-ILP32D-NEXT:    bl callee_half_on_stack
 ; LA32F-ILP32D-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32F-ILP32D-NEXT:    addi.w $sp, $sp, 16
@@ -1126,7 +1126,8 @@ define i32 @caller_half_on_stack() nounwind {
 ; LA32D-ILP32S-NEXT:    st.w $a1, $sp, 8
 ; LA32D-ILP32S-NEXT:    ori $a1, $a0, 2432
 ; LA32D-ILP32S-NEXT:    st.w $a1, $sp, 4
-; LA32D-ILP32S-NEXT:    ori $t0, $a0, 2304
+; LA32D-ILP32S-NEXT:    ori $a0, $a0, 2304
+; LA32D-ILP32S-NEXT:    st.w $a0, $sp, 0
 ; LA32D-ILP32S-NEXT:    ori $a0, $zero, 1
 ; LA32D-ILP32S-NEXT:    ori $a1, $zero, 2
 ; LA32D-ILP32S-NEXT:    ori $a2, $zero, 3
@@ -1135,7 +1136,6 @@ define i32 @caller_half_on_stack() nounwind {
 ; LA32D-ILP32S-NEXT:    ori $a5, $zero, 6
 ; LA32D-ILP32S-NEXT:    ori $a6, $zero, 7
 ; LA32D-ILP32S-NEXT:    ori $a7, $zero, 8
-; LA32D-ILP32S-NEXT:    st.w $t0, $sp, 0
 ; LA32D-ILP32S-NEXT:    bl callee_half_on_stack
 ; LA32D-ILP32S-NEXT:    ld.w $ra, $sp, 44 # 4-byte Folded Reload
 ; LA32D-ILP32S-NEXT:    addi.w $sp, $sp, 48
@@ -1146,7 +1146,8 @@ define i32 @caller_half_on_stack() nounwind {
 ; LA32D-ILP32D-NEXT:    addi.w $sp, $sp, -16
 ; LA32D-ILP32D-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32D-ILP32D-NEXT:    lu12i.w $a0, -12
-; LA32D-ILP32D-NEXT:    ori $t0, $a0, 3200
+; LA32D-ILP32D-NEXT:    ori $a1, $a0, 3200
+; LA32D-ILP32D-NEXT:    st.w $a1, $sp, 0
 ; LA32D-ILP32D-NEXT:    ori $a1, $a0, 2304
 ; LA32D-ILP32D-NEXT:    movgr2fr.w $fa0, $a1
 ; LA32D-ILP32D-NEXT:    ori $a1, $a0, 2432
@@ -1171,7 +1172,6 @@ define i32 @caller_half_on_stack() nounwind {
 ; LA32D-ILP32D-NEXT:    ori $a5, $zero, 6
 ; LA32D-ILP32D-NEXT:    ori $a6, $zero, 7
 ; LA32D-ILP32D-NEXT:    ori $a7, $zero, 8
-; LA32D-ILP32D-NEXT:    st.w $t0, $sp, 0
 ; LA32D-ILP32D-NEXT:    bl callee_half_on_stack
 ; LA32D-ILP32D-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32D-ILP32D-NEXT:    addi.w $sp, $sp, 16
@@ -1182,8 +1182,9 @@ define i32 @caller_half_on_stack() nounwind {
 ; LA64S-NEXT:    addi.d $sp, $sp, -16
 ; LA64S-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; LA64S-NEXT:    lu12i.w $a0, -12
-; LA64S-NEXT:    ori $t0, $a0, 3200
-; LA64S-NEXT:    lu32i.d $t0, 0
+; LA64S-NEXT:    ori $a1, $a0, 3200
+; LA64S-NEXT:    lu32i.d $a1, 0
+; LA64S-NEXT:    st.w $a1, $sp, 0
 ; LA64S-NEXT:    ori $a1, $a0, 2304
 ; LA64S-NEXT:    movgr2fr.w $fa0, $a1
 ; LA64S-NEXT:    ori $a1, $a0, 2432
@@ -1208,7 +1209,6 @@ define i32 @caller_half_on_stack() nounwind {
 ; LA64S-NEXT:    ori $a5, $zero, 6
 ; LA64S-NEXT:    ori $a6, $zero, 7
 ; LA64S-NEXT:    ori $a7, $zero, 8
-; LA64S-NEXT:    st.w $t0, $sp, 0
 ; LA64S-NEXT:    pcaddu18i $ra, %call36(callee_half_on_stack)
 ; LA64S-NEXT:    jirl $ra, $ra, 0
 ; LA64S-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
@@ -1244,8 +1244,9 @@ define i32 @caller_half_on_stack() nounwind {
 ; LA64F-LP64S-NEXT:    ori $a1, $a0, 2432
 ; LA64F-LP64S-NEXT:    lu32i.d $a1, 0
 ; LA64F-LP64S-NEXT:    st.w $a1, $sp, 8
-; LA64F-LP64S-NEXT:    ori $t0, $a0, 2304
-; LA64F-LP64S-NEXT:    lu32i.d $t0, 0
+; LA64F-LP64S-NEXT:    ori $a0, $a0, 2304
+; LA64F-LP64S-NEXT:    lu32i.d $a0, 0
+; LA64F-LP64S-NEXT:    st.w $a0, $sp, 0
 ; LA64F-LP64S-NEXT:    ori $a0, $zero, 1
 ; LA64F-LP64S-NEXT:    ori $a1, $zero, 2
 ; LA64F-LP64S-NEXT:    ori $a2, $zero, 3
@@ -1254,7 +1255,6 @@ define i32 @caller_half_on_stack() nounwind {
 ; LA64F-LP64S-NEXT:    ori $a5, $zero, 6
 ; LA64F-LP64S-NEXT:    ori $a6, $zero, 7
 ; LA64F-LP64S-NEXT:    ori $a7, $zero, 8
-; LA64F-LP64S-NEXT:    st.w $t0, $sp, 0
 ; LA64F-LP64S-NEXT:    pcaddu18i $ra, %call36(callee_half_on_stack)
 ; LA64F-LP64S-NEXT:    jirl $ra, $ra, 0
 ; LA64F-LP64S-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
@@ -1266,8 +1266,9 @@ define i32 @caller_half_on_stack() nounwind {
 ; LA64F-LP64D-NEXT:    addi.d $sp, $sp, -16
 ; LA64F-LP64D-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; LA64F-LP64D-NEXT:    lu12i.w $a0, -12
-; LA64F-LP64D-NEXT:    ori $t0, $a0, 3200
-; LA64F-LP64D-NEXT:    lu32i.d $t0, 0
+; LA64F-LP64D-NEXT:    ori $a1, $a0, 3200
+; LA64F-LP64D-NEXT:    lu32i.d $a1, 0
+; LA64F-LP64D-NEXT:    st.w $a1, $sp, 0
 ; LA64F-LP64D-NEXT:    ori $a1, $a0, 2304
 ; LA64F-LP64D-NEXT:    movgr2fr.w $fa0, $a1
 ; LA64F-LP64D-NEXT:    ori $a1, $a0, 2432
@@ -1292,7 +1293,6 @@ define i32 @caller_half_on_stack() nounwind {
 ; LA64F-LP64D-NEXT:    ori $a5, $zero, 6
 ; LA64F-LP64D-NEXT:    ori $a6, $zero, 7
 ; LA64F-LP64D-NEXT:    ori $a7, $zero, 8
-; LA64F-LP64D-NEXT:    st.w $t0, $sp, 0
 ; LA64F-LP64D-NEXT:    pcaddu18i $ra, %call36(callee_half_on_stack)
 ; LA64F-LP64D-NEXT:    jirl $ra, $ra, 0
 ; LA64F-LP64D-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
@@ -1328,8 +1328,9 @@ define i32 @caller_half_on_stack() nounwind {
 ; LA64D-LP64S-NEXT:    ori $a1, $a0, 2432
 ; LA64D-LP64S-NEXT:    lu32i.d $a1, 0
 ; LA64D-LP64S-NEXT:    st.w $a1, $sp, 8
-; LA64D-LP64S-NEXT:    ori $t0, $a0, 2304
-; LA64D-LP64S-NEXT:    lu32i.d $t0, 0
+; LA64D-LP64S-NEXT:    ori $a0, $a0, 2304
+; LA64D-LP64S-NEXT:    lu32i.d $a0, 0
+; LA64D-LP64S-NEXT:    st.w $a0, $sp, 0
 ; LA64D-LP64S-NEXT:    ori $a0, $zero, 1
 ; LA64D-LP64S-NEXT:    ori $a1, $zero, 2
 ; LA64D-LP64S-NEXT:    ori $a2, $zero, 3
@@ -1338,7 +1339,6 @@ define i32 @caller_half_on_stack() nounwind {
 ; LA64D-LP64S-NEXT:    ori $a5, $zero, 6
 ; LA64D-LP64S-NEXT:    ori $a6, $zero, 7
 ; LA64D-LP64S-NEXT:    ori $a7, $zero, 8
-; LA64D-LP64S-NEXT:    st.w $t0, $sp, 0
 ; LA64D-LP64S-NEXT:    pcaddu18i $ra, %call36(callee_half_on_stack)
 ; LA64D-LP64S-NEXT:    jirl $ra, $ra, 0
 ; LA64D-LP64S-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
@@ -1350,8 +1350,9 @@ define i32 @caller_half_on_stack() nounwind {
 ; LA64D-LP64D-NEXT:    addi.d $sp, $sp, -16
 ; LA64D-LP64D-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; LA64D-LP64D-NEXT:    lu12i.w $a0, -12
-; LA64D-LP64D-NEXT:    ori $t0, $a0, 3200
-; LA64D-LP64D-NEXT:    lu32i.d $t0, 0
+; LA64D-LP64D-NEXT:    ori $a1, $a0, 3200
+; LA64D-LP64D-NEXT:    lu32i.d $a1, 0
+; LA64D-LP64D-NEXT:    st.w $a1, $sp, 0
 ; LA64D-LP64D-NEXT:    ori $a1, $a0, 2304
 ; LA64D-LP64D-NEXT:    movgr2fr.w $fa0, $a1
 ; LA64D-LP64D-NEXT:    ori $a1, $a0, 2432
@@ -1376,7 +1377,6 @@ define i32 @caller_half_on_stack() nounwind {
 ; LA64D-LP64D-NEXT:    ori $a5, $zero, 6
 ; LA64D-LP64D-NEXT:    ori $a6, $zero, 7
 ; LA64D-LP64D-NEXT:    ori $a7, $zero, 8
-; LA64D-LP64D-NEXT:    st.w $t0, $sp, 0
 ; LA64D-LP64D-NEXT:    pcaddu18i $ra, %call36(callee_half_on_stack)
 ; LA64D-LP64D-NEXT:    jirl $ra, $ra, 0
 ; LA64D-LP64D-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload

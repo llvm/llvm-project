@@ -783,8 +783,8 @@ define i32 @fcmpri(i32 %argc, ptr nocapture readonly %argv) #0 {
 ; CHECK-NEXT:    mov w0, #-1 // =0xffffffff
 ; CHECK-NEXT:    bl yoo
 ; CHECK-NEXT:    cmp w19, #0
-; CHECK-NEXT:    mov w1, #2 // =0x2
 ; CHECK-NEXT:    fmov d8, d0
+; CHECK-NEXT:    mov w1, #2 // =0x2
 ; CHECK-NEXT:    cinc w0, w19, gt
 ; CHECK-NEXT:    bl xoo
 ; CHECK-NEXT:    fmov d0, #-1.00000000
@@ -1516,8 +1516,8 @@ define i32 @fcmpri_u(i32 %argc, ptr nocapture readonly %argv) #0 {
 ; CHECK-NEXT:    mov w0, #-1 // =0xffffffff
 ; CHECK-NEXT:    bl yoo
 ; CHECK-NEXT:    cmp w19, #0
-; CHECK-NEXT:    mov w1, #2 // =0x2
 ; CHECK-NEXT:    fmov d8, d0
+; CHECK-NEXT:    mov w1, #2 // =0x2
 ; CHECK-NEXT:    cinc w0, w19, ne
 ; CHECK-NEXT:    bl xoo
 ; CHECK-NEXT:    fmov d0, #-1.00000000

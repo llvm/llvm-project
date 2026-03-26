@@ -363,9 +363,9 @@ define void @test_pipelined_loop(ptr addrspace(1) %foo, ptr addrspace(3) %lds, p
 ; WITHASYNC-NEXT:    global_load_dword v[0:1], off lds
 ; WITHASYNC-NEXT:    ; asyncmark
 ; WITHASYNC-NEXT:    global_load_dword v[0:1], off lds
+; WITHASYNC-NEXT:    ; asyncmark
 ; WITHASYNC-NEXT:    s_mov_b32 s6, 2
 ; WITHASYNC-NEXT:    s_mov_b64 s[4:5], 0
-; WITHASYNC-NEXT:    ; asyncmark
 ; WITHASYNC-NEXT:  .LBB4_1: ; %loop_body
 ; WITHASYNC-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; WITHASYNC-NEXT:    v_readfirstlane_b32 s7, v2
@@ -403,9 +403,9 @@ define void @test_pipelined_loop(ptr addrspace(1) %foo, ptr addrspace(3) %lds, p
 ; WITHOUT-NEXT:    global_load_dword v[0:1], off lds
 ; WITHOUT-NEXT:    ; asyncmark
 ; WITHOUT-NEXT:    global_load_dword v[0:1], off lds
+; WITHOUT-NEXT:    ; asyncmark
 ; WITHOUT-NEXT:    s_mov_b32 s6, 2
 ; WITHOUT-NEXT:    s_mov_b64 s[4:5], 0
-; WITHOUT-NEXT:    ; asyncmark
 ; WITHOUT-NEXT:  .LBB4_1: ; %loop_body
 ; WITHOUT-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; WITHOUT-NEXT:    v_readfirstlane_b32 s7, v2
@@ -510,11 +510,11 @@ define void @test_pipelined_loop_with_global(ptr addrspace(1) %foo, ptr addrspac
 ; WITHASYNC-NEXT:    s_add_i32 s6, s6, 1
 ; WITHASYNC-NEXT:    global_load_dword v[0:1], off lds
 ; WITHASYNC-NEXT:    v_cmp_ge_i32_e32 vcc, s6, v7
+; WITHASYNC-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
 ; WITHASYNC-NEXT:    v_mov_b32_e32 v16, v14
 ; WITHASYNC-NEXT:    v_mov_b32_e32 v17, v10
 ; WITHASYNC-NEXT:    v_mov_b32_e32 v10, v8
 ; WITHASYNC-NEXT:    v_mov_b32_e32 v14, v9
-; WITHASYNC-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
 ; WITHASYNC-NEXT:    ; asyncmark
 ; WITHASYNC-NEXT:    ; wait_asyncmark(2)
 ; WITHASYNC-NEXT:    s_andn2_b64 exec, exec, s[4:5]
@@ -571,11 +571,11 @@ define void @test_pipelined_loop_with_global(ptr addrspace(1) %foo, ptr addrspac
 ; WITHOUT-NEXT:    s_add_i32 s6, s6, 1
 ; WITHOUT-NEXT:    global_load_dword v[0:1], off lds
 ; WITHOUT-NEXT:    v_cmp_ge_i32_e32 vcc, s6, v7
+; WITHOUT-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
 ; WITHOUT-NEXT:    v_mov_b32_e32 v16, v14
 ; WITHOUT-NEXT:    v_mov_b32_e32 v17, v10
 ; WITHOUT-NEXT:    v_mov_b32_e32 v10, v8
 ; WITHOUT-NEXT:    v_mov_b32_e32 v14, v9
-; WITHOUT-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
 ; WITHOUT-NEXT:    ; asyncmark
 ; WITHOUT-NEXT:    ; wait_asyncmark(2)
 ; WITHOUT-NEXT:    s_andn2_b64 exec, exec, s[4:5]

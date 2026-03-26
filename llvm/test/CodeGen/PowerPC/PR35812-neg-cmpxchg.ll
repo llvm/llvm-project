@@ -88,8 +88,8 @@ define signext i32 @main() nounwind {
 ; CHECK-P7-NEXT:    bne- 0, .LBB0_4
 ; CHECK-P7-NEXT:  # %bb.1: # %cmpxchg.fencedstore
 ; CHECK-P7-NEXT:    lis 6, 0
-; CHECK-P7-NEXT:    li 7, 234
 ; CHECK-P7-NEXT:    sync
+; CHECK-P7-NEXT:    li 7, 234
 ; CHECK-P7-NEXT:    ori 6, 6, 65535
 ; CHECK-P7-NEXT:    slw 7, 7, 4
 ; CHECK-P7-NEXT:    slw 6, 6, 4
@@ -108,8 +108,8 @@ define signext i32 @main() nounwind {
 ; CHECK-P7-NEXT:    cmplwi 8, 33059
 ; CHECK-P7-NEXT:    beq+ 0, .LBB0_2
 ; CHECK-P7-NEXT:  .LBB0_4: # %cmpxchg.nostore
-; CHECK-P7-NEXT:    crxor 20, 20, 20
 ; CHECK-P7-NEXT:    lwsync
+; CHECK-P7-NEXT:    crxor 20, 20, 20
 ; CHECK-P7-NEXT:    b .LBB0_6
 ; CHECK-P7-NEXT:  .LBB0_5: # %cmpxchg.success
 ; CHECK-P7-NEXT:    lwsync

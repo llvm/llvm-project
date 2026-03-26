@@ -63,8 +63,8 @@ define void @wombat() #0 {
 ; CHECK-NEXT:    mr 6, 29
 ; CHECK-NEXT:    evmergehi 7, 8, 8
 ; CHECK-NEXT:    bl fma
-; CHECK-NEXT:    evmergelo 3, 3, 4
 ; CHECK-NEXT:    addi 28, 28, -1
+; CHECK-NEXT:    evmergelo 3, 3, 4
 ; CHECK-NEXT:    cmplwi 28, 0
 ; CHECK-NEXT:    efdctsiz 3, 3
 ; CHECK-NEXT:    bc 12, 1, .LBB1_1

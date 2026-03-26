@@ -210,10 +210,10 @@ define <32 x i32> @ret_v32i32_call_v32i32_v32i32_v32i32_i32(<32 x i32> %x, <32 x
 ; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
 ; CHECK-NEXT:    vle32.v v24, (a0)
-; CHECK-NEXT:    mv a3, sp
+; CHECK-NEXT:    mv a0, sp
+; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    mv a0, sp
 ; CHECK-NEXT:    li a2, 42
-; CHECK-NEXT:    vse32.v v8, (a3)
 ; CHECK-NEXT:    vmv.v.v v8, v24
 ; CHECK-NEXT:    call ext3
 ; CHECK-NEXT:    addi sp, s0, -256
@@ -267,9 +267,9 @@ define <32 x i32> @call_split_vector_args(ptr %pa, ptr %pb) {
 ; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    vle32.v v16, (a1)
-; CHECK-NEXT:    mv a1, sp
 ; CHECK-NEXT:    mv a0, sp
-; CHECK-NEXT:    vse32.v v16, (a1)
+; CHECK-NEXT:    vse32.v v16, (a0)
+; CHECK-NEXT:    mv a0, sp
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
@@ -313,7 +313,7 @@ define <32 x i32> @pass_vector_arg_via_stack(<32 x i32> %x, <32 x i32> %y, <32 x
 ; CHECK-NEXT:    sd ra, 136(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    li a0, 32
-; CHECK-NEXT:    li t0, 8
+; CHECK-NEXT:    li a7, 8
 ; CHECK-NEXT:    li a1, 1
 ; CHECK-NEXT:    li a2, 2
 ; CHECK-NEXT:    li a3, 3
@@ -322,9 +322,9 @@ define <32 x i32> @pass_vector_arg_via_stack(<32 x i32> %x, <32 x i32> %y, <32 x
 ; CHECK-NEXT:    li a6, 6
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    sd a7, 128(sp)
 ; CHECK-NEXT:    vse32.v v8, (sp)
 ; CHECK-NEXT:    li a7, 7
-; CHECK-NEXT:    sd t0, 128(sp)
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    vmv.v.i v16, 0
 ; CHECK-NEXT:    call vector_arg_via_stack
@@ -378,8 +378,8 @@ define <4 x i1> @pass_vector_mask_arg_via_stack(<4 x i1> %v) {
 ; CHECK-NEXT:    vmv.v.v v17, v16
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmsne.vi v16, v17, 0
-; CHECK-NEXT:    li a7, 7
 ; CHECK-NEXT:    vsm.v v16, (a2)
+; CHECK-NEXT:    li a7, 7
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    li a1, 0
 ; CHECK-NEXT:    li a2, 0

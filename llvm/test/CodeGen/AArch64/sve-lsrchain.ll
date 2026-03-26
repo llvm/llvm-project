@@ -12,13 +12,13 @@ define void @test(ptr nocapture noundef readonly %kernel, i32 noundef %kw, float
 ; CHECK-NEXT:    ands x11, x8, x9
 ; CHECK-NEXT:    b.eq .LBB0_6
 ; CHECK-NEXT:  // %bb.2: // %for.body.us.preheader
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    add x11, x2, x11, lsl #1
 ; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    mov x9, xzr
 ; CHECK-NEXT:    mov w10, wzr
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    add x11, x2, x11, lsl #1
 ; CHECK-NEXT:    mov x12, #4 // =0x4
+; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    mov x13, #8 // =0x8
 ; CHECK-NEXT:  .LBB0_3: // %for.body.us
 ; CHECK-NEXT:    // =>This Loop Header: Depth=1

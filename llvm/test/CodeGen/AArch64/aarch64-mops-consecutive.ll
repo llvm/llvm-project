@@ -28,9 +28,9 @@ define void @consecutive() {
 ; CHECK-MOPS-NEXT:    movk w12, #6938, lsl #16
 ; CHECK-MOPS-NEXT:    strh w8, [sp, #1036]
 ; CHECK-MOPS-NEXT:    mov w8, #30 // =0x1e
+; CHECK-MOPS-NEXT:    str w12, [sp, #1032]
 ; CHECK-MOPS-NEXT:    add x0, sp, #1008
 ; CHECK-MOPS-NEXT:    add x1, sp, #8
-; CHECK-MOPS-NEXT:    str w12, [sp, #1032]
 ; CHECK-MOPS-NEXT:    str q0, [sp, #1008]
 ; CHECK-MOPS-NEXT:    str d1, [sp, #1024]
 ; CHECK-MOPS-NEXT:    strb w8, [sp, #1038]

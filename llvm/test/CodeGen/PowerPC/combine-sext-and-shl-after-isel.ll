@@ -139,8 +139,8 @@ false:
 define dso_local i64 @no_extswsli(ptr %base, i32 %index, i1 %flag) {
 ; CHECK-LABEL: no_extswsli:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    extsw r4, r4
 ; CHECK-NEXT:    andi. r5, r5, 1
+; CHECK-NEXT:    extsw r4, r4
 ; CHECK-NEXT:    bc 4, gt, .LBB2_2
 ; CHECK-NEXT:  # %bb.1: # %true
 ; CHECK-NEXT:    sldi r4, r4, 3
@@ -152,8 +152,8 @@ define dso_local i64 @no_extswsli(ptr %base, i32 %index, i1 %flag) {
 ;
 ; CHECK-BE-LABEL: no_extswsli:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    extsw r4, r4
 ; CHECK-BE-NEXT:    andi. r5, r5, 1
+; CHECK-BE-NEXT:    extsw r4, r4
 ; CHECK-BE-NEXT:    bc 4, gt, .LBB2_2
 ; CHECK-BE-NEXT:  # %bb.1: # %true
 ; CHECK-BE-NEXT:    sldi r4, r4, 3
@@ -165,8 +165,8 @@ define dso_local i64 @no_extswsli(ptr %base, i32 %index, i1 %flag) {
 ;
 ; CHECK-P9-LABEL: no_extswsli:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    extsw r4, r4
 ; CHECK-P9-NEXT:    andi. r5, r5, 1
+; CHECK-P9-NEXT:    extsw r4, r4
 ; CHECK-P9-NEXT:    bc 4, gt, .LBB2_2
 ; CHECK-P9-NEXT:  # %bb.1: # %true
 ; CHECK-P9-NEXT:    sldi r4, r4, 3
@@ -178,8 +178,8 @@ define dso_local i64 @no_extswsli(ptr %base, i32 %index, i1 %flag) {
 ;
 ; CHECK-P9-BE-LABEL: no_extswsli:
 ; CHECK-P9-BE:       # %bb.0: # %entry
-; CHECK-P9-BE-NEXT:    extsw r4, r4
 ; CHECK-P9-BE-NEXT:    andi. r5, r5, 1
+; CHECK-P9-BE-NEXT:    extsw r4, r4
 ; CHECK-P9-BE-NEXT:    bc 4, gt, .LBB2_2
 ; CHECK-P9-BE-NEXT:  # %bb.1: # %true
 ; CHECK-P9-BE-NEXT:    sldi r4, r4, 3
@@ -208,13 +208,13 @@ define hidden void @testCaller(i1 %incond) local_unnamed_addr align 2 nounwind {
 ; CHECK-NEXT:    stw r12, 8(r1)
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -64(r1)
-; CHECK-NEXT:    std r0, 80(r1)
-; CHECK-NEXT:    std r30, 48(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    andi. r3, r3, 1
-; CHECK-NEXT:    li r3, -1
-; CHECK-NEXT:    li r30, 0
-; CHECK-NEXT:    crmove 4*cr2+lt, gt
+; CHECK-NEXT:    std r0, 80(r1)
 ; CHECK-NEXT:    std r29, 40(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    li r3, -1
+; CHECK-NEXT:    std r30, 48(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    crmove 4*cr2+lt, gt
+; CHECK-NEXT:    li r30, 0
 ; CHECK-NEXT:    b .LBB3_2
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB3_1: # %if.end116
@@ -252,13 +252,13 @@ define hidden void @testCaller(i1 %incond) local_unnamed_addr align 2 nounwind {
 ; CHECK-BE-NEXT:    stw r12, 8(r1)
 ; CHECK-BE-NEXT:    mflr r0
 ; CHECK-BE-NEXT:    stdu r1, -80(r1)
-; CHECK-BE-NEXT:    std r0, 96(r1)
-; CHECK-BE-NEXT:    std r30, 64(r1) # 8-byte Folded Spill
 ; CHECK-BE-NEXT:    andi. r3, r3, 1
-; CHECK-BE-NEXT:    li r3, -1
-; CHECK-BE-NEXT:    li r30, 0
-; CHECK-BE-NEXT:    crmove 4*cr2+lt, gt
+; CHECK-BE-NEXT:    std r0, 96(r1)
 ; CHECK-BE-NEXT:    std r29, 56(r1) # 8-byte Folded Spill
+; CHECK-BE-NEXT:    li r3, -1
+; CHECK-BE-NEXT:    std r30, 64(r1) # 8-byte Folded Spill
+; CHECK-BE-NEXT:    crmove 4*cr2+lt, gt
+; CHECK-BE-NEXT:    li r30, 0
 ; CHECK-BE-NEXT:    b .LBB3_2
 ; CHECK-BE-NEXT:    .p2align 4
 ; CHECK-BE-NEXT:  .LBB3_1: # %if.end116
@@ -298,10 +298,10 @@ define hidden void @testCaller(i1 %incond) local_unnamed_addr align 2 nounwind {
 ; CHECK-P9-NEXT:    stdu r1, -64(r1)
 ; CHECK-P9-NEXT:    andi. r3, r3, 1
 ; CHECK-P9-NEXT:    std r0, 80(r1)
-; CHECK-P9-NEXT:    std r30, 48(r1) # 8-byte Folded Spill
-; CHECK-P9-NEXT:    li r3, -1
-; CHECK-P9-NEXT:    li r30, 0
 ; CHECK-P9-NEXT:    std r29, 40(r1) # 8-byte Folded Spill
+; CHECK-P9-NEXT:    li r3, -1
+; CHECK-P9-NEXT:    std r30, 48(r1) # 8-byte Folded Spill
+; CHECK-P9-NEXT:    li r30, 0
 ; CHECK-P9-NEXT:    crmove 4*cr2+lt, gt
 ; CHECK-P9-NEXT:    b .LBB3_2
 ; CHECK-P9-NEXT:    .p2align 4
@@ -341,10 +341,10 @@ define hidden void @testCaller(i1 %incond) local_unnamed_addr align 2 nounwind {
 ; CHECK-P9-BE-NEXT:    stdu r1, -80(r1)
 ; CHECK-P9-BE-NEXT:    andi. r3, r3, 1
 ; CHECK-P9-BE-NEXT:    std r0, 96(r1)
-; CHECK-P9-BE-NEXT:    std r30, 64(r1) # 8-byte Folded Spill
-; CHECK-P9-BE-NEXT:    li r3, -1
-; CHECK-P9-BE-NEXT:    li r30, 0
 ; CHECK-P9-BE-NEXT:    std r29, 56(r1) # 8-byte Folded Spill
+; CHECK-P9-BE-NEXT:    li r3, -1
+; CHECK-P9-BE-NEXT:    std r30, 64(r1) # 8-byte Folded Spill
+; CHECK-P9-BE-NEXT:    li r30, 0
 ; CHECK-P9-BE-NEXT:    crmove 4*cr2+lt, gt
 ; CHECK-P9-BE-NEXT:    b .LBB3_2
 ; CHECK-P9-BE-NEXT:    .p2align 4

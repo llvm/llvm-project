@@ -18573,11 +18573,11 @@ define void @mul_use_commutative_clmul_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0
 ; RV32I-NEXT:    lw s2, 720(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    sw s2, 8(a0)
 ; RV32I-NEXT:    sw s1, 12(a0)
-; RV32I-NEXT:    addi a0, sp, 736
 ; RV32I-NEXT:    sw s3, 736(sp)
 ; RV32I-NEXT:    sw s0, 740(sp)
 ; RV32I-NEXT:    sw s2, 744(sp)
 ; RV32I-NEXT:    sw s1, 748(sp)
+; RV32I-NEXT:    addi a0, sp, 736
 ; RV32I-NEXT:    call vector_use
 ; RV32I-NEXT:    lw a0, 732(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    sw s3, 0(a0)
@@ -21631,11 +21631,11 @@ define void @mul_use_commutative_clmul_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0
 ; RV32IM-NEXT:    lw s2, 604(sp) # 4-byte Folded Reload
 ; RV32IM-NEXT:    sw s2, 8(a0)
 ; RV32IM-NEXT:    sw s1, 12(a0)
-; RV32IM-NEXT:    addi a0, sp, 624
 ; RV32IM-NEXT:    sw s3, 624(sp)
 ; RV32IM-NEXT:    sw s0, 628(sp)
 ; RV32IM-NEXT:    sw s2, 632(sp)
 ; RV32IM-NEXT:    sw s1, 636(sp)
+; RV32IM-NEXT:    addi a0, sp, 624
 ; RV32IM-NEXT:    call vector_use
 ; RV32IM-NEXT:    lw a0, 620(sp) # 4-byte Folded Reload
 ; RV32IM-NEXT:    sw s3, 0(a0)
@@ -24547,11 +24547,11 @@ define void @mul_use_commutative_clmul_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0
 ; RV32IMZBS-NEXT:    lw s2, 704(sp) # 4-byte Folded Reload
 ; RV32IMZBS-NEXT:    sw s2, 8(a0)
 ; RV32IMZBS-NEXT:    sw s1, 12(a0)
-; RV32IMZBS-NEXT:    addi a0, sp, 720
 ; RV32IMZBS-NEXT:    sw s3, 720(sp)
 ; RV32IMZBS-NEXT:    sw s0, 724(sp)
 ; RV32IMZBS-NEXT:    sw s2, 728(sp)
 ; RV32IMZBS-NEXT:    sw s1, 732(sp)
+; RV32IMZBS-NEXT:    addi a0, sp, 720
 ; RV32IMZBS-NEXT:    call vector_use
 ; RV32IMZBS-NEXT:    lw a0, 716(sp) # 4-byte Folded Reload
 ; RV32IMZBS-NEXT:    sw s3, 0(a0)

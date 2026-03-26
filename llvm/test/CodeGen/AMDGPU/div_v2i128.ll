@@ -1611,9 +1611,9 @@ define <2 x i128> @v_udiv_v2i128_v_pow2k(<2 x i128> %lhs) {
 ; SDAG-NEXT:    v_alignbit_b32 v1, v3, v2, 1
 ; SDAG-NEXT:    v_alignbit_b32 v5, v7, v6, 1
 ; SDAG-NEXT:    v_mov_b32_e32 v3, 0
-; SDAG-NEXT:    v_mov_b32_e32 v7, 0
 ; SDAG-NEXT:    v_mov_b32_e32 v2, v8
 ; SDAG-NEXT:    v_mov_b32_e32 v6, v9
+; SDAG-NEXT:    v_mov_b32_e32 v7, 0
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: v_udiv_v2i128_v_pow2k:

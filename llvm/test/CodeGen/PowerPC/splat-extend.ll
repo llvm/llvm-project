@@ -57,8 +57,8 @@ define i32 @crash(ptr %p) {
 ; CHECK-NEXT:    xxspltib v2, 127
 ; CHECK-NEXT:    vextsb2w v2, v2
 ; CHECK-NEXT:    stxv v2, 0(r3)
-; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    stxv v2, 0(0)
+; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    blr
 entry:
   store <4 x i32> <i32 127, i32 127, i32 127, i32 127>, ptr %p, align 16

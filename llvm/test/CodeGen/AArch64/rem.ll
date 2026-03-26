@@ -3743,12 +3743,12 @@ define <2 x i128> @sv2i128(<2 x i128> %d, <2 x i128> %e) {
 ; CHECK-SD-NEXT:    .cfi_offset w23, -40
 ; CHECK-SD-NEXT:    .cfi_offset w24, -48
 ; CHECK-SD-NEXT:    .cfi_offset w30, -64
+; CHECK-SD-NEXT:    mov x19, x7
+; CHECK-SD-NEXT:    mov x20, x6
 ; CHECK-SD-NEXT:    mov x21, x3
 ; CHECK-SD-NEXT:    mov x22, x2
 ; CHECK-SD-NEXT:    mov x2, x4
 ; CHECK-SD-NEXT:    mov x3, x5
-; CHECK-SD-NEXT:    mov x19, x7
-; CHECK-SD-NEXT:    mov x20, x6
 ; CHECK-SD-NEXT:    bl __modti3
 ; CHECK-SD-NEXT:    mov x23, x0
 ; CHECK-SD-NEXT:    mov x24, x1
@@ -3831,13 +3831,13 @@ define <3 x i128> @sv3i128(<3 x i128> %d, <3 x i128> %e) {
 ; CHECK-SD-NEXT:    .cfi_offset w28, -80
 ; CHECK-SD-NEXT:    .cfi_offset w30, -96
 ; CHECK-SD-NEXT:    ldp x23, x24, [sp, #112]
-; CHECK-SD-NEXT:    mov x21, x3
+; CHECK-SD-NEXT:    mov x19, x5
 ; CHECK-SD-NEXT:    ldp x25, x26, [sp, #96]
+; CHECK-SD-NEXT:    mov x20, x4
+; CHECK-SD-NEXT:    mov x21, x3
 ; CHECK-SD-NEXT:    mov x22, x2
 ; CHECK-SD-NEXT:    mov x2, x6
 ; CHECK-SD-NEXT:    mov x3, x7
-; CHECK-SD-NEXT:    mov x19, x5
-; CHECK-SD-NEXT:    mov x20, x4
 ; CHECK-SD-NEXT:    bl __modti3
 ; CHECK-SD-NEXT:    mov x27, x0
 ; CHECK-SD-NEXT:    mov x28, x1
@@ -3891,10 +3891,10 @@ define <3 x i128> @sv3i128(<3 x i128> %d, <3 x i128> %e) {
 ; CHECK-GI-NEXT:    mov x19, x2
 ; CHECK-GI-NEXT:    ldp x25, x26, [sp, #112]
 ; CHECK-GI-NEXT:    mov x20, x3
-; CHECK-GI-NEXT:    mov x2, x6
-; CHECK-GI-NEXT:    mov x3, x7
 ; CHECK-GI-NEXT:    mov x21, x4
 ; CHECK-GI-NEXT:    mov x22, x5
+; CHECK-GI-NEXT:    mov x2, x6
+; CHECK-GI-NEXT:    mov x3, x7
 ; CHECK-GI-NEXT:    bl __modti3
 ; CHECK-GI-NEXT:    mov x27, x0
 ; CHECK-GI-NEXT:    mov x28, x1
@@ -3951,15 +3951,15 @@ define <4 x i128> @sv4i128(<4 x i128> %d, <4 x i128> %e) {
 ; CHECK-SD-NEXT:    .cfi_offset w28, -80
 ; CHECK-SD-NEXT:    .cfi_offset w30, -88
 ; CHECK-SD-NEXT:    .cfi_offset w29, -96
+; CHECK-SD-NEXT:    ldp x8, x26, [sp, #176]
 ; CHECK-SD-NEXT:    mov x23, x3
 ; CHECK-SD-NEXT:    mov x24, x2
-; CHECK-SD-NEXT:    stp x6, x7, [sp, #16] // 16-byte Folded Spill
-; CHECK-SD-NEXT:    ldp x8, x26, [sp, #176]
+; CHECK-SD-NEXT:    ldp x27, x28, [sp, #160]
+; CHECK-SD-NEXT:    ldp x29, x19, [sp, #144]
 ; CHECK-SD-NEXT:    mov x21, x5
 ; CHECK-SD-NEXT:    ldp x2, x3, [sp, #128]
 ; CHECK-SD-NEXT:    mov x22, x4
-; CHECK-SD-NEXT:    ldp x27, x28, [sp, #160]
-; CHECK-SD-NEXT:    ldp x29, x19, [sp, #144]
+; CHECK-SD-NEXT:    stp x6, x7, [sp, #16] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    str x8, [sp, #8] // 8-byte Spill
 ; CHECK-SD-NEXT:    bl __modti3
 ; CHECK-SD-NEXT:    mov x20, x0
@@ -4021,16 +4021,16 @@ define <4 x i128> @sv4i128(<4 x i128> %d, <4 x i128> %e) {
 ; CHECK-GI-NEXT:    .cfi_offset w28, -80
 ; CHECK-GI-NEXT:    .cfi_offset w30, -88
 ; CHECK-GI-NEXT:    .cfi_offset w29, -96
+; CHECK-GI-NEXT:    ldp x9, x8, [sp, #176]
 ; CHECK-GI-NEXT:    mov x19, x2
 ; CHECK-GI-NEXT:    mov x20, x3
-; CHECK-GI-NEXT:    mov x21, x4
 ; CHECK-GI-NEXT:    ldp x2, x3, [sp, #128]
-; CHECK-GI-NEXT:    mov x22, x5
-; CHECK-GI-NEXT:    ldp x9, x8, [sp, #176]
-; CHECK-GI-NEXT:    mov x23, x7
 ; CHECK-GI-NEXT:    ldp x24, x25, [sp, #144]
+; CHECK-GI-NEXT:    mov x21, x4
 ; CHECK-GI-NEXT:    ldp x26, x27, [sp, #160]
+; CHECK-GI-NEXT:    mov x22, x5
 ; CHECK-GI-NEXT:    stp x9, x6, [sp, #16] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    mov x23, x7
 ; CHECK-GI-NEXT:    str x8, [sp, #8] // 8-byte Spill
 ; CHECK-GI-NEXT:    bl __modti3
 ; CHECK-GI-NEXT:    mov x28, x0
@@ -4089,12 +4089,12 @@ define <2 x i128> @uv2i128(<2 x i128> %d, <2 x i128> %e) {
 ; CHECK-SD-NEXT:    .cfi_offset w23, -40
 ; CHECK-SD-NEXT:    .cfi_offset w24, -48
 ; CHECK-SD-NEXT:    .cfi_offset w30, -64
+; CHECK-SD-NEXT:    mov x19, x7
+; CHECK-SD-NEXT:    mov x20, x6
 ; CHECK-SD-NEXT:    mov x21, x3
 ; CHECK-SD-NEXT:    mov x22, x2
 ; CHECK-SD-NEXT:    mov x2, x4
 ; CHECK-SD-NEXT:    mov x3, x5
-; CHECK-SD-NEXT:    mov x19, x7
-; CHECK-SD-NEXT:    mov x20, x6
 ; CHECK-SD-NEXT:    bl __umodti3
 ; CHECK-SD-NEXT:    mov x23, x0
 ; CHECK-SD-NEXT:    mov x24, x1
@@ -4177,13 +4177,13 @@ define <3 x i128> @uv3i128(<3 x i128> %d, <3 x i128> %e) {
 ; CHECK-SD-NEXT:    .cfi_offset w28, -80
 ; CHECK-SD-NEXT:    .cfi_offset w30, -96
 ; CHECK-SD-NEXT:    ldp x23, x24, [sp, #112]
-; CHECK-SD-NEXT:    mov x21, x3
+; CHECK-SD-NEXT:    mov x19, x5
 ; CHECK-SD-NEXT:    ldp x25, x26, [sp, #96]
+; CHECK-SD-NEXT:    mov x20, x4
+; CHECK-SD-NEXT:    mov x21, x3
 ; CHECK-SD-NEXT:    mov x22, x2
 ; CHECK-SD-NEXT:    mov x2, x6
 ; CHECK-SD-NEXT:    mov x3, x7
-; CHECK-SD-NEXT:    mov x19, x5
-; CHECK-SD-NEXT:    mov x20, x4
 ; CHECK-SD-NEXT:    bl __umodti3
 ; CHECK-SD-NEXT:    mov x27, x0
 ; CHECK-SD-NEXT:    mov x28, x1
@@ -4237,10 +4237,10 @@ define <3 x i128> @uv3i128(<3 x i128> %d, <3 x i128> %e) {
 ; CHECK-GI-NEXT:    mov x19, x2
 ; CHECK-GI-NEXT:    ldp x25, x26, [sp, #112]
 ; CHECK-GI-NEXT:    mov x20, x3
-; CHECK-GI-NEXT:    mov x2, x6
-; CHECK-GI-NEXT:    mov x3, x7
 ; CHECK-GI-NEXT:    mov x21, x4
 ; CHECK-GI-NEXT:    mov x22, x5
+; CHECK-GI-NEXT:    mov x2, x6
+; CHECK-GI-NEXT:    mov x3, x7
 ; CHECK-GI-NEXT:    bl __umodti3
 ; CHECK-GI-NEXT:    mov x27, x0
 ; CHECK-GI-NEXT:    mov x28, x1
@@ -4297,15 +4297,15 @@ define <4 x i128> @uv4i128(<4 x i128> %d, <4 x i128> %e) {
 ; CHECK-SD-NEXT:    .cfi_offset w28, -80
 ; CHECK-SD-NEXT:    .cfi_offset w30, -88
 ; CHECK-SD-NEXT:    .cfi_offset w29, -96
+; CHECK-SD-NEXT:    ldp x8, x26, [sp, #176]
 ; CHECK-SD-NEXT:    mov x23, x3
 ; CHECK-SD-NEXT:    mov x24, x2
-; CHECK-SD-NEXT:    stp x6, x7, [sp, #16] // 16-byte Folded Spill
-; CHECK-SD-NEXT:    ldp x8, x26, [sp, #176]
+; CHECK-SD-NEXT:    ldp x27, x28, [sp, #160]
+; CHECK-SD-NEXT:    ldp x29, x19, [sp, #144]
 ; CHECK-SD-NEXT:    mov x21, x5
 ; CHECK-SD-NEXT:    ldp x2, x3, [sp, #128]
 ; CHECK-SD-NEXT:    mov x22, x4
-; CHECK-SD-NEXT:    ldp x27, x28, [sp, #160]
-; CHECK-SD-NEXT:    ldp x29, x19, [sp, #144]
+; CHECK-SD-NEXT:    stp x6, x7, [sp, #16] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    str x8, [sp, #8] // 8-byte Spill
 ; CHECK-SD-NEXT:    bl __umodti3
 ; CHECK-SD-NEXT:    mov x20, x0
@@ -4367,16 +4367,16 @@ define <4 x i128> @uv4i128(<4 x i128> %d, <4 x i128> %e) {
 ; CHECK-GI-NEXT:    .cfi_offset w28, -80
 ; CHECK-GI-NEXT:    .cfi_offset w30, -88
 ; CHECK-GI-NEXT:    .cfi_offset w29, -96
+; CHECK-GI-NEXT:    ldp x9, x8, [sp, #176]
 ; CHECK-GI-NEXT:    mov x19, x2
 ; CHECK-GI-NEXT:    mov x20, x3
-; CHECK-GI-NEXT:    mov x21, x4
 ; CHECK-GI-NEXT:    ldp x2, x3, [sp, #128]
-; CHECK-GI-NEXT:    mov x22, x5
-; CHECK-GI-NEXT:    ldp x9, x8, [sp, #176]
-; CHECK-GI-NEXT:    mov x23, x7
 ; CHECK-GI-NEXT:    ldp x24, x25, [sp, #144]
+; CHECK-GI-NEXT:    mov x21, x4
 ; CHECK-GI-NEXT:    ldp x26, x27, [sp, #160]
+; CHECK-GI-NEXT:    mov x22, x5
 ; CHECK-GI-NEXT:    stp x9, x6, [sp, #16] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    mov x23, x7
 ; CHECK-GI-NEXT:    str x8, [sp, #8] // 8-byte Spill
 ; CHECK-GI-NEXT:    bl __umodti3
 ; CHECK-GI-NEXT:    mov x28, x0
