@@ -1,4 +1,4 @@
-// XFAIL: !system-darwin || !target-aarch64
+// XFAIL: !system-darwin
 //// Suboptimal coverage, see inlined comments.
 
 // REQUIRES: lldb
