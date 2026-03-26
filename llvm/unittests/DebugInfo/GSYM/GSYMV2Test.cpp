@@ -10,11 +10,15 @@
 #include "llvm/DebugInfo/GSYM/FileWriter.h"
 #include "llvm/DebugInfo/GSYM/FunctionInfo.h"
 #include "llvm/DebugInfo/GSYM/GlobalData.h"
+#include "llvm/DebugInfo/GSYM/GsymCreator.h"
 #include "llvm/DebugInfo/GSYM/GsymCreatorV2.h"
+#include "llvm/DebugInfo/GSYM/GsymReader.h"
 #include "llvm/DebugInfo/GSYM/GsymReaderV2.h"
 #include "llvm/DebugInfo/GSYM/HeaderV2.h"
+#include "llvm/DebugInfo/GSYM/InlineInfo.h"
 #include "llvm/DebugInfo/GSYM/OutputAggregator.h"
 #include "llvm/Support/DataExtractor.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Testing/Support/Error.h"
 
 #include "gtest/gtest.h"
@@ -583,7 +587,7 @@ TEST(GSYMV2Test, TestReaderV2TooSmall) {
 }
 
 //===----------------------------------------------------------------------===//
-// Round-trip tests: Creator V2 -> Reader V2
+// Creator/reader round-trip tests: Creator V2 -> Reader V2
 //===----------------------------------------------------------------------===//
 
 /// Helper to create, finalize, encode with GsymCreatorV2, then decode with
@@ -852,4 +856,255 @@ TEST(GSYMV2Test, TestRoundTripSwappedAddressTable) {
   EXPECT_EQ(GR->getAddress(1), std::optional<uint64_t>(0x8020u));
   EXPECT_EQ(GR->getAddress(2), std::optional<uint64_t>(0x8040u));
   EXPECT_EQ(GR->getAddress(3), std::nullopt);
+}
+
+//===----------------------------------------------------------------------===//
+// Version round-trip tests: V1 -> V2 -> V1 and V2 -> V1 -> V2
+//===----------------------------------------------------------------------===//
+
+/// Recursively re-insert inline info strings and files from a reader into a
+/// creator.
+static void fixupInlineInfoForTransfer(const GsymReaderBase &Reader,
+                                       GsymCreatorBase &Creator,
+                                       InlineInfo &II) {
+  II.Name = Creator.insertString(Reader.getString(II.Name));
+  if (II.CallFile != 0) {
+    if (auto FE = Reader.getFile(II.CallFile)) {
+      StringRef Dir = Reader.getString(FE->Dir);
+      StringRef Base = Reader.getString(FE->Base);
+      SmallString<128> Path;
+      if (!Dir.empty()) {
+        Path = Dir;
+        llvm::sys::path::append(Path, Base);
+      } else {
+        Path = Base;
+      }
+      II.CallFile = Creator.insertFile(Path);
+    }
+  }
+  for (auto &Child : II.Children)
+    fixupInlineInfoForTransfer(Reader, Creator, Child);
+}
+
+/// Transfer all function infos from a reader into a creator, re-inserting
+/// all strings and files so that offsets are valid in the new creator.
+static void transferFunctions(const GsymReaderBase &Reader,
+                              GsymCreatorBase &Creator) {
+  for (uint32_t I = 0; I < Reader.getNumAddresses(); ++I) {
+    auto FI = Reader.getFunctionInfoAtIndex(I);
+    ASSERT_THAT_EXPECTED(FI, Succeeded());
+
+    // Re-insert function name.
+    FI->Name = Creator.insertString(Reader.getString(FI->Name));
+
+    // Re-insert line table file entries.
+    if (FI->OptLineTable) {
+      for (size_t J = 0; J < FI->OptLineTable->size(); ++J) {
+        LineEntry &LE = FI->OptLineTable->get(J);
+        if (LE.File != 0) {
+          if (auto FE = Reader.getFile(LE.File)) {
+            StringRef Dir = Reader.getString(FE->Dir);
+            StringRef Base = Reader.getString(FE->Base);
+            SmallString<128> Path;
+            if (!Dir.empty()) {
+              Path = Dir;
+              llvm::sys::path::append(Path, Base);
+            } else {
+              Path = Base;
+            }
+            LE.File = Creator.insertFile(Path);
+          }
+        }
+      }
+    }
+
+    // Re-insert inline info strings and files.
+    if (FI->Inline)
+      fixupInlineInfoForTransfer(Reader, Creator, *FI->Inline);
+
+    Creator.addFunctionInfo(std::move(*FI));
+  }
+}
+
+/// Encode a GsymCreatorBase to bytes.
+static SmallString<1024> encodeCreator(const GsymCreatorBase &GC) {
+  SmallString<1024> Str;
+  raw_svector_ostream OS(Str);
+  FileWriter FW(OS, llvm::endianness::native);
+  llvm::Error Err = GC.encode(FW);
+  EXPECT_FALSE(bool(Err));
+  return Str;
+}
+
+/// Collect lookup results for a set of addresses from a reader.
+static std::vector<LookupResult>
+collectLookups(const GsymReaderBase &Reader,
+               ArrayRef<uint64_t> Addrs) {
+  std::vector<LookupResult> Results;
+  for (auto Addr : Addrs) {
+    auto LR = Reader.lookup(Addr);
+    EXPECT_TRUE(bool(LR));
+    if (LR)
+      Results.push_back(std::move(*LR));
+  }
+  return Results;
+}
+
+TEST(GSYMV2Test, TestVersionRoundTripV1ToV2ToV1) {
+  // Create a V1 GSYM with line tables and inline info.
+  GsymCreator GC1;
+  FunctionInfo FI(0x1000, 0x100, GC1.insertString("main"));
+  FI.OptLineTable = LineTable();
+  const uint32_t MainFile = GC1.insertFile("/tmp/main.c");
+  const uint32_t FooFile = GC1.insertFile("/tmp/foo.h");
+  FI.OptLineTable->push(LineEntry(0x1000, MainFile, 5));
+  FI.OptLineTable->push(LineEntry(0x1010, FooFile, 10));
+  FI.OptLineTable->push(LineEntry(0x1020, MainFile, 8));
+  FI.Inline = InlineInfo();
+  FI.Inline->Name = GC1.insertString("inlined_func");
+  FI.Inline->CallFile = MainFile;
+  FI.Inline->CallLine = 6;
+  FI.Inline->Ranges.insert(AddressRange(0x1010, 0x1020));
+  InlineInfo NestedInline;
+  NestedInline.Name = GC1.insertString("deep_inline");
+  NestedInline.CallFile = FooFile;
+  NestedInline.CallLine = 33;
+  NestedInline.Ranges.insert(AddressRange(0x1012, 0x1018));
+  FI.Inline->Children.emplace_back(NestedInline);
+  GC1.addFunctionInfo(std::move(FI));
+
+  FunctionInfo FI2(0x1100, 0x50, GC1.insertString("helper"));
+  FI2.OptLineTable = LineTable();
+  FI2.OptLineTable->push(LineEntry(0x1100, MainFile, 20));
+  FI2.OptLineTable->push(LineEntry(0x1120, MainFile, 25));
+  GC1.addFunctionInfo(std::move(FI2));
+
+  OutputAggregator Null(nullptr);
+  ASSERT_FALSE(bool(GC1.finalize(Null)));
+  SmallString<1024> OrigV1Bytes = encodeCreator(GC1);
+  ASSERT_GT(OrigV1Bytes.size(), 0u);
+
+  // Read original V1.
+  auto OrigReader = GsymReader::copyBuffer(OrigV1Bytes);
+  ASSERT_THAT_EXPECTED(OrigReader, Succeeded());
+
+  // Collect lookup results from original V1.
+  std::vector<uint64_t> TestAddrs = {0x1000, 0x1008, 0x1010, 0x1012,
+                                     0x1015, 0x1020, 0x1100, 0x1120};
+  auto OrigResults = collectLookups(*OrigReader, TestAddrs);
+  ASSERT_EQ(OrigResults.size(), TestAddrs.size());
+
+  // Convert V1 → V2.
+  GsymCreatorV2 GC2;
+  transferFunctions(*OrigReader, GC2);
+  ASSERT_FALSE(bool(GC2.finalize(Null)));
+  SmallString<1024> V2Bytes = encodeCreator(GC2);
+  ASSERT_GT(V2Bytes.size(), 0u);
+
+  auto V2Reader = GsymReaderV2::copyBuffer(V2Bytes);
+  ASSERT_THAT_EXPECTED(V2Reader, Succeeded());
+
+  // Verify V2 lookups match original V1.
+  auto V2Results = collectLookups(*V2Reader, TestAddrs);
+  ASSERT_EQ(V2Results.size(), TestAddrs.size());
+  for (size_t I = 0; I < TestAddrs.size(); ++I)
+    EXPECT_EQ(V2Results[I], OrigResults[I])
+        << "Mismatch at address " << TestAddrs[I] << " after V1->V2";
+
+  // Convert V2 → V1.
+  GsymCreator GC3;
+  transferFunctions(*V2Reader, GC3);
+  ASSERT_FALSE(bool(GC3.finalize(Null)));
+  SmallString<1024> FinalV1Bytes = encodeCreator(GC3);
+  ASSERT_GT(FinalV1Bytes.size(), 0u);
+
+  auto FinalReader = GsymReader::copyBuffer(FinalV1Bytes);
+  ASSERT_THAT_EXPECTED(FinalReader, Succeeded());
+
+  // Verify final V1 lookups match original V1.
+  auto FinalResults = collectLookups(*FinalReader, TestAddrs);
+  ASSERT_EQ(FinalResults.size(), TestAddrs.size());
+  for (size_t I = 0; I < TestAddrs.size(); ++I)
+    EXPECT_EQ(FinalResults[I], OrigResults[I])
+        << "Mismatch at address " << TestAddrs[I] << " after V1->V2->V1";
+}
+
+TEST(GSYMV2Test, TestVersionRoundTripV2ToV1ToV2) {
+  // Create a V2 GSYM with line tables and inline info.
+  GsymCreatorV2 GC1;
+  FunctionInfo FI(0x2000, 0x200, GC1.insertString("entry"));
+  FI.OptLineTable = LineTable();
+  const uint32_t SrcFile = GC1.insertFile("/src/app.cc");
+  const uint32_t HdrFile = GC1.insertFile("/src/util.h");
+  FI.OptLineTable->push(LineEntry(0x2000, SrcFile, 10));
+  FI.OptLineTable->push(LineEntry(0x2040, HdrFile, 50));
+  FI.OptLineTable->push(LineEntry(0x2080, HdrFile, 55));
+  FI.OptLineTable->push(LineEntry(0x20C0, SrcFile, 15));
+  FI.Inline = InlineInfo();
+  FI.Inline->Name = GC1.insertString("util_helper");
+  FI.Inline->CallFile = SrcFile;
+  FI.Inline->CallLine = 11;
+  FI.Inline->Ranges.insert(AddressRange(0x2040, 0x20C0));
+  InlineInfo Child;
+  Child.Name = GC1.insertString("util_detail");
+  Child.CallFile = HdrFile;
+  Child.CallLine = 52;
+  Child.Ranges.insert(AddressRange(0x2080, 0x20A0));
+  FI.Inline->Children.emplace_back(Child);
+  GC1.addFunctionInfo(std::move(FI));
+
+  FunctionInfo FI2(0x2200, 0x100, GC1.insertString("cleanup"));
+  FI2.OptLineTable = LineTable();
+  FI2.OptLineTable->push(LineEntry(0x2200, SrcFile, 30));
+  FI2.OptLineTable->push(LineEntry(0x2250, SrcFile, 35));
+  GC1.addFunctionInfo(std::move(FI2));
+
+  OutputAggregator Null(nullptr);
+  ASSERT_FALSE(bool(GC1.finalize(Null)));
+  SmallString<1024> OrigV2Bytes = encodeCreator(GC1);
+  ASSERT_GT(OrigV2Bytes.size(), 0u);
+
+  // Read original V2.
+  auto OrigReader = GsymReaderV2::copyBuffer(OrigV2Bytes);
+  ASSERT_THAT_EXPECTED(OrigReader, Succeeded());
+
+  // Collect lookup results from original V2.
+  std::vector<uint64_t> TestAddrs = {0x2000, 0x2020, 0x2040, 0x2080,
+                                     0x2090, 0x20C0, 0x2200, 0x2250};
+  auto OrigResults = collectLookups(*OrigReader, TestAddrs);
+  ASSERT_EQ(OrigResults.size(), TestAddrs.size());
+
+  // Convert V2 → V1.
+  GsymCreator GC2;
+  transferFunctions(*OrigReader, GC2);
+  ASSERT_FALSE(bool(GC2.finalize(Null)));
+  SmallString<1024> V1Bytes = encodeCreator(GC2);
+  ASSERT_GT(V1Bytes.size(), 0u);
+
+  auto V1Reader = GsymReader::copyBuffer(V1Bytes);
+  ASSERT_THAT_EXPECTED(V1Reader, Succeeded());
+
+  // Verify V1 lookups match original V2.
+  auto V1Results = collectLookups(*V1Reader, TestAddrs);
+  ASSERT_EQ(V1Results.size(), TestAddrs.size());
+  for (size_t I = 0; I < TestAddrs.size(); ++I)
+    EXPECT_EQ(V1Results[I], OrigResults[I])
+        << "Mismatch at address " << TestAddrs[I] << " after V2->V1";
+
+  // Convert V1 → V2.
+  GsymCreatorV2 GC3;
+  transferFunctions(*V1Reader, GC3);
+  ASSERT_FALSE(bool(GC3.finalize(Null)));
+  SmallString<1024> FinalV2Bytes = encodeCreator(GC3);
+  ASSERT_GT(FinalV2Bytes.size(), 0u);
+
+  auto FinalReader = GsymReaderV2::copyBuffer(FinalV2Bytes);
+  ASSERT_THAT_EXPECTED(FinalReader, Succeeded());
+
+  // Verify final V2 lookups match original V2.
+  auto FinalResults = collectLookups(*FinalReader, TestAddrs);
+  ASSERT_EQ(FinalResults.size(), TestAddrs.size());
+  for (size_t I = 0; I < TestAddrs.size(); ++I)
+    EXPECT_EQ(FinalResults[I], OrigResults[I])
+        << "Mismatch at address " << TestAddrs[I] << " after V2->V1->V2";
 }
