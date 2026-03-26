@@ -10,8 +10,8 @@
 #define LLVM_ADT_ARRAYREF_H
 
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 #include <algorithm>
 #include <array>
@@ -19,7 +19,6 @@
 #include <cstddef>
 #include <initializer_list>
 #include <iterator>
-#include <memory>
 #include <type_traits>
 #include <vector>
 
@@ -66,10 +65,6 @@ namespace llvm {
     /// Construct an empty ArrayRef.
     /*implicit*/ ArrayRef() = default;
 
-    /// Construct an empty ArrayRef from std::nullopt.
-    /*implicit*/ LLVM_DEPRECATED("Use {} or ArrayRef<T>() instead", "{}")
-    ArrayRef(std::nullopt_t) {}
-
     /// Construct an ArrayRef from a single element.
     /*implicit*/ ArrayRef(const T &OneElt LLVM_LIFETIME_BOUND)
         : Data(&OneElt), Length(1) {}
@@ -98,11 +93,6 @@ namespace llvm {
             void>>
     /*implicit*/ constexpr ArrayRef(const C &V)
         : Data(V.data()), Length(V.size()) {}
-
-    /// Construct an ArrayRef from a std::array
-    template <size_t N>
-    /*implicit*/ constexpr ArrayRef(const std::array<T, N> &Arr)
-        : Data(Arr.data()), Length(N) {}
 
     /// Construct an ArrayRef from a C array.
     template <size_t N>
@@ -161,6 +151,20 @@ namespace llvm {
     const T &back() const {
       assert(!empty());
       return Data[Length-1];
+    }
+
+    /// consume_front() - Returns the first element and drops it from ArrayRef.
+    const T &consume_front() {
+      const T &Ret = front();
+      *this = drop_front();
+      return Ret;
+    }
+
+    /// consume_back() - Returns the last element and drops it from ArrayRef.
+    const T &consume_back() {
+      const T &Ret = back();
+      *this = drop_back();
+      return Ret;
     }
 
     // copy - Allocate copy in Allocator and return ArrayRef<T> to it.
@@ -308,9 +312,6 @@ namespace llvm {
     /// Construct an empty MutableArrayRef.
     /*implicit*/ MutableArrayRef() = default;
 
-    /// Construct an empty MutableArrayRef from std::nullopt.
-    /*implicit*/ MutableArrayRef(std::nullopt_t) : ArrayRef<T>() {}
-
     /// Construct a MutableArrayRef from a single element.
     /*implicit*/ MutableArrayRef(T &OneElt) : ArrayRef<T>(OneElt) {}
 
@@ -321,8 +322,8 @@ namespace llvm {
     /// Construct a MutableArrayRef from a range.
     MutableArrayRef(T *begin, T *end) : ArrayRef<T>(begin, end) {}
 
-    /// Construct a MutableArrayRef from a type that has a data() method that
-    /// returns a pointer convertible to T *.
+    /// Construct a MutableArrayRef from a type that has data() and size(),
+    /// where data() returns a pointer convertible to T *const *.
     template <typename C,
               typename = std::enable_if_t<
                   std::conjunction_v<
@@ -330,12 +331,7 @@ namespace llvm {
                           decltype(std::declval<C &>().data()) *, T *const *>,
                       std::is_integral<decltype(std::declval<C &>().size())>>,
                   void>>
-    /*implicit*/ constexpr MutableArrayRef(const C &V) : ArrayRef<T>(V) {}
-
-    /// Construct a MutableArrayRef from a std::array
-    template <size_t N>
-    /*implicit*/ constexpr MutableArrayRef(std::array<T, N> &Arr)
-        : ArrayRef<T>(Arr) {}
+    /*implicit*/ constexpr MutableArrayRef(C &&V) : ArrayRef<T>(V) {}
 
     /// Construct a MutableArrayRef from a C array.
     template <size_t N>
@@ -359,6 +355,20 @@ namespace llvm {
     T &back() const {
       assert(!this->empty());
       return data()[this->size()-1];
+    }
+
+    /// consume_front() - Returns the first element and drops it from ArrayRef.
+    T &consume_front() {
+      T &Ret = front();
+      *this = drop_front();
+      return Ret;
+    }
+
+    /// consume_back() - Returns the last element and drops it from ArrayRef.
+    T &consume_back() {
+      T &Ret = back();
+      *this = drop_back();
+      return Ret;
     }
 
     /// slice(n, m) - Chop off the first N elements of the array, and keep M
@@ -435,29 +445,6 @@ namespace llvm {
     }
   };
 
-  /// This is a MutableArrayRef that owns its array.
-  template <typename T> class OwningArrayRef : public MutableArrayRef<T> {
-  public:
-    OwningArrayRef() = default;
-    OwningArrayRef(size_t Size) : MutableArrayRef<T>(new T[Size], Size) {}
-
-    OwningArrayRef(ArrayRef<T> Data)
-        : MutableArrayRef<T>(new T[Data.size()], Data.size()) {
-      std::copy(Data.begin(), Data.end(), this->begin());
-    }
-
-    OwningArrayRef(OwningArrayRef &&Other) { *this = std::move(Other); }
-
-    OwningArrayRef &operator=(OwningArrayRef &&Other) {
-      delete[] this->data();
-      this->MutableArrayRef<T>::operator=(Other);
-      Other.MutableArrayRef<T>::operator=(MutableArrayRef<T>());
-      return *this;
-    }
-
-    ~OwningArrayRef() { delete[] this->data(); }
-  };
-
   /// @name ArrayRef Deduction guides
   /// @{
   /// Deduction guide to construct an ArrayRef from a single element.
@@ -532,7 +519,8 @@ namespace llvm {
   }
 
   template <typename T>
-  inline bool operator==(SmallVectorImpl<T> &LHS, ArrayRef<T> RHS) {
+  [[nodiscard]] inline bool operator==(const SmallVectorImpl<T> &LHS,
+                                       ArrayRef<T> RHS) {
     return ArrayRef<T>(LHS).equals(RHS);
   }
 
@@ -542,8 +530,30 @@ namespace llvm {
   }
 
   template <typename T>
-  inline bool operator!=(SmallVectorImpl<T> &LHS, ArrayRef<T> RHS) {
+  [[nodiscard]] inline bool operator!=(const SmallVectorImpl<T> &LHS,
+                                       ArrayRef<T> RHS) {
     return !(LHS == RHS);
+  }
+
+  template <typename T>
+  inline bool operator<(ArrayRef<T> LHS, ArrayRef<T> RHS) {
+    return std::lexicographical_compare(LHS.begin(), LHS.end(), RHS.begin(),
+                                        RHS.end());
+  }
+
+  template <typename T>
+  inline bool operator>(ArrayRef<T> LHS, ArrayRef<T> RHS) {
+    return RHS < LHS;
+  }
+
+  template <typename T>
+  inline bool operator<=(ArrayRef<T> LHS, ArrayRef<T> RHS) {
+    return !(LHS > RHS);
+  }
+
+  template <typename T>
+  inline bool operator>=(ArrayRef<T> LHS, ArrayRef<T> RHS) {
+    return !(LHS < RHS);
   }
 
   /// @}

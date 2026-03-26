@@ -12,7 +12,7 @@
 #include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {
-[[gnu::returns_twice]] int sigsetjmp_epilogue(jmp_buf buffer, int retval) {
+[[gnu::returns_twice]] int sigsetjmp_epilogue(sigjmp_buf buffer, int retval) {
   // If set is NULL, then the signal mask is unchanged (i.e., how is
   // ignored), but the current value of the signal mask is nevertheless
   // returned in oldset (if it is not NULL).

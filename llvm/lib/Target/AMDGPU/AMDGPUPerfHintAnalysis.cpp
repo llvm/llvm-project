@@ -16,7 +16,6 @@
 #include "AMDGPU.h"
 #include "AMDGPUTargetMachine.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
@@ -134,8 +133,8 @@ static std::pair<const Value *, const Type *> getMemoryInstrPtrAndType(
 
 bool AMDGPUPerfHint::isIndirectAccess(const Instruction *Inst) const {
   LLVM_DEBUG(dbgs() << "[isIndirectAccess] " << *Inst << '\n');
-  SmallSet<const Value *, 32> WorkSet;
-  SmallSet<const Value *, 32> Visited;
+  SmallPtrSet<const Value *, 32> WorkSet;
+  SmallPtrSet<const Value *, 32> Visited;
   if (const Value *MO = getMemoryInstrPtrAndType(Inst).first) {
     if (isGlobalAddr(MO))
       WorkSet.insert(MO);

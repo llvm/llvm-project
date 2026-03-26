@@ -1,7 +1,7 @@
 ; REQUIRES: asserts
 ; RUN: opt -passes=loop-vectorize,dce,instcombine -mtriple riscv64-linux-gnu \
 ; RUN:   -mattr=+v -debug-only=loop-vectorize --disable-output \
-; RUN:   -riscv-v-vector-bits-min=128 -scalable-vectorization=off -S < %s 2>&1 | FileCheck %s
+; RUN:   -scalable-vectorization=off -S < %s 2>&1 | FileCheck %s
 
 ; CHECK-LABEL: foo
 ; CHECK: LV: IC is 2
@@ -9,7 +9,7 @@
 ; CHECK: %{{.*}} = add {{.*}}, 16
 
 ; Function Attrs: nofree norecurse nosync nounwind writeonly
-define dso_local void @foo(i32 signext %n, ptr nocapture %A) local_unnamed_addr #0 {
+define void @foo(i32 signext %n, ptr nocapture %A) #0 {
 entry:
   %cmp5 = icmp sgt i32 %n, 0
   br i1 %cmp5, label %for.body.preheader, label %for.cond.cleanup

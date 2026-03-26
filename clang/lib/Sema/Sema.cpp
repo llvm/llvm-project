@@ -73,6 +73,7 @@
 #include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <optional>
@@ -276,10 +277,9 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       Context(ctxt), Consumer(consumer), Diags(PP.getDiagnostics()),
       SourceMgr(PP.getSourceManager()), APINotes(SourceMgr, LangOpts),
       AnalysisWarnings(*this), ThreadSafetyDeclCache(nullptr),
-      LateTemplateParser(nullptr), LateTemplateParserCleanup(nullptr),
-      OpaqueParser(nullptr), CurContext(nullptr), ExternalSource(nullptr),
-      StackHandler(Diags), CurScope(nullptr), Ident_super(nullptr),
-      AMDGPUPtr(std::make_unique<SemaAMDGPU>(*this)),
+      LateTemplateParser(nullptr), OpaqueParser(nullptr), CurContext(nullptr),
+      ExternalSource(nullptr), StackHandler(Diags), CurScope(nullptr),
+      Ident_super(nullptr), AMDGPUPtr(std::make_unique<SemaAMDGPU>(*this)),
       ARMPtr(std::make_unique<SemaARM>(*this)),
       AVRPtr(std::make_unique<SemaAVR>(*this)),
       BPFPtr(std::make_unique<SemaBPF>(*this)),
@@ -322,9 +322,8 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
           static_cast<unsigned>(ComparisonCategoryType::Last) + 1),
       StdSourceLocationImplDecl(nullptr), CXXTypeInfoDecl(nullptr),
       GlobalNewDeleteDeclared(false), DisableTypoCorrection(false),
-      TyposCorrected(0), IsBuildingRecoveryCallExpr(false), NumSFINAEErrors(0),
-      AccessCheckingSFINAE(false), CurrentInstantiationScope(nullptr),
-      InNonInstantiationSFINAEContext(false), NonInstantiationEntries(0),
+      TyposCorrected(0), IsBuildingRecoveryCallExpr(false),
+      CurrentInstantiationScope(nullptr), NonInstantiationEntries(0),
       ArgPackSubstIndex(std::nullopt), SatisfactionCache(Context) {
   assert(pp.TUKind == TUKind);
   TUScope = nullptr;
@@ -443,9 +442,7 @@ void Sema::Initialize() {
   if (getLangOpts().MSVCCompat) {
     if (getLangOpts().CPlusPlus &&
         IdResolver.begin(&Context.Idents.get("type_info")) == IdResolver.end())
-      PushOnScopeChains(
-          Context.buildImplicitRecord("type_info", TagTypeKind::Class),
-          TUScope);
+      PushOnScopeChains(Context.getMSTypeInfoTagDecl(), TUScope);
 
     addImplicitTypedef("size_t", Context.getSizeType());
   }
@@ -656,23 +653,26 @@ ASTMutationListener *Sema::getASTMutationListener() const {
   return getASTConsumer().GetASTMutationListener();
 }
 
-void Sema::addExternalSource(ExternalSemaSource *E) {
+void Sema::addExternalSource(IntrusiveRefCntPtr<ExternalSemaSource> E) {
   assert(E && "Cannot use with NULL ptr");
 
   if (!ExternalSource) {
-    ExternalSource = E;
+    ExternalSource = std::move(E);
     return;
   }
 
-  if (auto *Ex = dyn_cast<MultiplexExternalSemaSource>(ExternalSource))
-    Ex->AddSource(E);
+  if (auto *Ex = dyn_cast<MultiplexExternalSemaSource>(ExternalSource.get()))
+    Ex->AddSource(std::move(E));
   else
-    ExternalSource = new MultiplexExternalSemaSource(ExternalSource.get(), E);
+    ExternalSource = llvm::makeIntrusiveRefCnt<MultiplexExternalSemaSource>(
+        ExternalSource, std::move(E));
 }
 
 void Sema::PrintStats() const {
   llvm::errs() << "\n*** Semantic Analysis Stats:\n";
-  llvm::errs() << NumSFINAEErrors << " SFINAE diagnostics trapped.\n";
+  if (SFINAETrap *Trap = getSFINAEContext())
+    llvm::errs() << int(Trap->hasErrorOccurred())
+                 << " SFINAE diagnostics trapped.\n";
 
   BumpAlloc.PrintStats();
   AnalysisWarnings.PrintStats();
@@ -843,6 +843,20 @@ ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
     }
   }
 
+  bool IsExplicitCast = isa<CStyleCastExpr>(E) || isa<CXXStaticCastExpr>(E) ||
+                        isa<CXXFunctionalCastExpr>(E);
+
+  if ((Kind == CK_IntegralCast || Kind == CK_IntegralToBoolean ||
+       (Kind == CK_NoOp && E->getType()->isIntegerType() &&
+        Ty->isIntegerType())) &&
+      IsExplicitCast) {
+    if (const auto *SourceOBT = E->getType()->getAs<OverflowBehaviorType>()) {
+      if (Ty->isIntegerType() && !Ty->isOverflowBehaviorType()) {
+        Ty = Context.getOverflowBehaviorType(SourceOBT->getBehaviorKind(), Ty);
+      }
+    }
+  }
+
   return ImplicitCastExpr::Create(Context, Ty, Kind, E, BasePath, VK,
                                   CurFPFeatureOverrides());
 }
@@ -940,6 +954,12 @@ bool Sema::isExternalWithNoLinkageType(const ValueDecl *VD) const {
   return getLangOpts().CPlusPlus && VD->hasExternalFormalLinkage() &&
          !isExternalFormalLinkage(VD->getType()->getLinkage()) &&
          !isFunctionOrVarDeclExternC(VD);
+}
+
+bool Sema::isMainFileLoc(SourceLocation Loc) const {
+  if (TUKind != TU_Complete || getLangOpts().IsHeaderFile)
+    return false;
+  return SourceMgr.isInMainFile(Loc);
 }
 
 /// Obtains a sorted list of functions and variables that are undefined but
@@ -1249,9 +1269,6 @@ void Sema::ActOnEndOfTranslationUnit() {
             ? TUFragmentKind::Private
             : TUFragmentKind::Normal);
 
-    if (LateTemplateParserCleanup)
-      LateTemplateParserCleanup(OpaqueParser);
-
     CheckDelayedMemberExceptionSpecs();
   } else {
     // If we are building a TU prefix for serialization, it is safe to transfer
@@ -1435,7 +1452,7 @@ void Sema::ActOnEndOfTranslationUnit() {
   //   translation unit contains a file scope declaration of that
   //   identifier, with the composite type as of the end of the
   //   translation unit, with an initializer equal to 0.
-  llvm::SmallSet<VarDecl *, 32> Seen;
+  llvm::SmallPtrSet<VarDecl *, 32> Seen;
   for (TentativeDefinitionsType::iterator
            T = TentativeDefinitions.begin(ExternalSource.get()),
            TEnd = TentativeDefinitions.end();
@@ -1485,6 +1502,13 @@ void Sema::ActOnEndOfTranslationUnit() {
       Consumer.CompleteTentativeDefinition(VD);
   }
 
+  // In incremental mode, tentative definitions belong to the current
+  // partial translation unit (PTU). Once they have been completed and
+  // emitted to codegen, drop them to prevent re-emission in future PTUs.
+  if (PP.isIncrementalProcessingEnabled())
+    TentativeDefinitions.erase(TentativeDefinitions.begin(ExternalSource.get()),
+                               TentativeDefinitions.end());
+
   for (auto *D : ExternalDeclarations) {
     if (!D || D->isInvalidDecl() || D->getPreviousDecl() || !D->isUsed())
       continue;
@@ -1492,8 +1516,17 @@ void Sema::ActOnEndOfTranslationUnit() {
     Consumer.CompleteExternalDeclaration(D);
   }
 
+  // Visit all pending #pragma export.
+  for (const PendingPragmaInfo &Exported : PendingExportedNames.values()) {
+    if (!Exported.Used)
+      Diag(Exported.NameLoc, diag::warn_failed_to_resolve_pragma) << "export";
+  }
+
   if (LangOpts.HLSL)
     HLSL().ActOnEndOfTranslationUnit(getASTContext().getTranslationUnitDecl());
+  if (LangOpts.OpenACC)
+    OpenACC().ActOnEndOfTranslationUnit(
+        getASTContext().getTranslationUnitDecl());
 
   // If there were errors, disable 'unused' warnings since they will mostly be
   // noise. Don't warn for a use from a module: either we should warn on all
@@ -1577,6 +1610,40 @@ void Sema::ActOnEndOfTranslationUnit() {
     emitAndClearUnusedLocalTypedefWarnings();
   }
 
+  if (!Diags.isIgnored(diag::warn_unused_but_set_global, SourceLocation())) {
+    // Diagnose unused-but-set static globals in a deterministic order.
+    // Not tracking shadowing info for static globals; there's nothing to
+    // shadow.
+    struct LocAndDiag {
+      SourceLocation Loc;
+      PartialDiagnostic PD;
+    };
+    SmallVector<LocAndDiag, 16> DeclDiags;
+    auto addDiag = [&DeclDiags](SourceLocation Loc, PartialDiagnostic PD) {
+      DeclDiags.push_back(LocAndDiag{Loc, std::move(PD)});
+    };
+
+    // For -Wunused-but-set-variable we only care about variables that were
+    // referenced by the TU end.
+    for (const auto &Ref : RefsMinusAssignments) {
+      const VarDecl *VD = Ref.first;
+      // Only diagnose internal linkage file vars defined in the main file to
+      // match -Wunused-variable behavior and avoid false positives from
+      // headers.
+      if (VD->isInternalLinkageFileVar() && isMainFileLoc(VD->getLocation()))
+        DiagnoseUnusedButSetDecl(VD, addDiag);
+    }
+
+    llvm::sort(DeclDiags,
+               [](const LocAndDiag &LHS, const LocAndDiag &RHS) -> bool {
+                 // Sorting purely for determinism; matches behavior in
+                 // Sema::ActOnPopScope.
+                 return LHS.Loc < RHS.Loc;
+               });
+    for (const LocAndDiag &D : DeclDiags)
+      Diag(D.Loc, D.PD);
+  }
+
   if (!Diags.isIgnored(diag::warn_unused_private_field, SourceLocation())) {
     // FIXME: Load additional unused private field candidates from the external
     // source.
@@ -1584,7 +1651,7 @@ void Sema::ActOnEndOfTranslationUnit() {
     RecordCompleteMap MNCComplete;
     for (const NamedDecl *D : UnusedPrivateFields) {
       const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(D->getDeclContext());
-      if (RD && !RD->isUnion() &&
+      if (RD && !RD->isUnion() && !D->hasAttr<UnusedAttr>() &&
           IsRecordFullyDefined(RD, RecordsComplete, MNCComplete)) {
         Diag(D->getLocation(), diag::warn_unused_private_field)
               << D->getDeclName();
@@ -1616,6 +1683,8 @@ void Sema::ActOnEndOfTranslationUnit() {
 
   if (!PP.isIncrementalProcessingEnabled())
     TUScope = nullptr;
+
+  checkExposure(Context.getTranslationUnitDecl());
 }
 
 
@@ -1677,7 +1746,8 @@ void Sema::EmitDiagnostic(unsigned DiagID, const DiagnosticBuilder &DB) {
   // issue I am not seeing yet), then there should at least be a clarifying
   // comment somewhere.
   Diagnostic DiagInfo(&Diags, DB);
-  if (std::optional<TemplateDeductionInfo *> Info = isSFINAEContext()) {
+  if (SFINAETrap *Trap = getSFINAEContext()) {
+    sema::TemplateDeductionInfo *Info = Trap->getDeductionInfo();
     switch (DiagnosticIDs::getDiagnosticSFINAEResponse(DiagInfo.getID())) {
     case DiagnosticIDs::SFINAE_Report:
       // We'll report the diagnostic below.
@@ -1686,37 +1756,37 @@ void Sema::EmitDiagnostic(unsigned DiagID, const DiagnosticBuilder &DB) {
     case DiagnosticIDs::SFINAE_SubstitutionFailure:
       // Count this failure so that we know that template argument deduction
       // has failed.
-      ++NumSFINAEErrors;
+      Trap->setErrorOccurred();
 
       // Make a copy of this suppressed diagnostic and store it with the
       // template-deduction information.
-      if (*Info && !(*Info)->hasSFINAEDiagnostic()) {
-        (*Info)->addSFINAEDiagnostic(DiagInfo.getLocation(),
-                       PartialDiagnostic(DiagInfo, Context.getDiagAllocator()));
-      }
+      if (Info && !Info->hasSFINAEDiagnostic())
+        Info->addSFINAEDiagnostic(
+            DiagInfo.getLocation(),
+            PartialDiagnostic(DiagInfo, Context.getDiagAllocator()));
 
       Diags.setLastDiagnosticIgnored(true);
       return;
 
     case DiagnosticIDs::SFINAE_AccessControl: {
       // Per C++ Core Issue 1170, access control is part of SFINAE.
-      // Additionally, the AccessCheckingSFINAE flag can be used to temporarily
+      // Additionally, the WithAccessChecking flag can be used to temporarily
       // make access control a part of SFINAE for the purposes of checking
       // type traits.
-      if (!AccessCheckingSFINAE && !getLangOpts().CPlusPlus11)
+      if (!Trap->withAccessChecking() && !getLangOpts().CPlusPlus11)
         break;
 
       SourceLocation Loc = DiagInfo.getLocation();
 
       // Suppress this diagnostic.
-      ++NumSFINAEErrors;
+      Trap->setErrorOccurred();
 
       // Make a copy of this suppressed diagnostic and store it with the
       // template-deduction information.
-      if (*Info && !(*Info)->hasSFINAEDiagnostic()) {
-        (*Info)->addSFINAEDiagnostic(DiagInfo.getLocation(),
-                       PartialDiagnostic(DiagInfo, Context.getDiagAllocator()));
-      }
+      if (Info && !Info->hasSFINAEDiagnostic())
+        Info->addSFINAEDiagnostic(
+            DiagInfo.getLocation(),
+            PartialDiagnostic(DiagInfo, Context.getDiagAllocator()));
 
       Diags.setLastDiagnosticIgnored(true);
 
@@ -1736,13 +1806,13 @@ void Sema::EmitDiagnostic(unsigned DiagID, const DiagnosticBuilder &DB) {
         return;
       // Make a copy of this suppressed diagnostic and store it with the
       // template-deduction information;
-      if (*Info) {
-        (*Info)->addSuppressedDiagnostic(
+      if (Info) {
+        Info->addSuppressedDiagnostic(
             DiagInfo.getLocation(),
             PartialDiagnostic(DiagInfo, Context.getDiagAllocator()));
         if (!Diags.getDiagnosticIDs()->isNote(DiagID))
           PrintContextStack([Info](SourceLocation Loc, PartialDiagnostic PD) {
-            (*Info)->addSuppressedDiagnostic(Loc, std::move(PD));
+            Info->addSuppressedDiagnostic(Loc, std::move(PD));
           });
       }
 
@@ -1786,17 +1856,27 @@ bool Sema::hasUncompilableErrorOccurred() const {
 }
 
 // Print notes showing how we can reach FD starting from an a priori
-// known-callable function.
+// known-callable function. When a function has multiple callers, emit
+// each call chain separately. The first note in each chain uses
+// "called by" and subsequent notes use "which is called by".
 static void emitCallStackNotes(Sema &S, const FunctionDecl *FD) {
   auto FnIt = S.CUDA().DeviceKnownEmittedFns.find(FD);
-  while (FnIt != S.CUDA().DeviceKnownEmittedFns.end()) {
-    // Respect error limit.
+  if (FnIt == S.CUDA().DeviceKnownEmittedFns.end())
+    return;
+
+  for (const auto &CallerInfo : FnIt->second) {
     if (S.Diags.hasFatalErrorOccurred())
       return;
-    DiagnosticBuilder Builder(
-        S.Diags.Report(FnIt->second.Loc, diag::note_called_by));
-    Builder << FnIt->second.FD;
-    FnIt = S.CUDA().DeviceKnownEmittedFns.find(FnIt->second.FD);
+    S.Diags.Report(CallerInfo.Loc, diag::note_called_by) << CallerInfo.FD;
+    // Walk up the rest of the chain using "which is called by".
+    auto NextIt = S.CUDA().DeviceKnownEmittedFns.find(CallerInfo.FD);
+    while (NextIt != S.CUDA().DeviceKnownEmittedFns.end()) {
+      if (S.Diags.hasFatalErrorOccurred())
+        return;
+      const auto &Next = NextIt->second.front();
+      S.Diags.Report(Next.Loc, diag::note_which_is_called_by) << Next.FD;
+      NextIt = S.CUDA().DeviceKnownEmittedFns.find(Next.FD);
+    }
   }
 }
 
@@ -1846,6 +1926,11 @@ public:
   // different depending on whether it is in OpenMP device context.
   llvm::SmallPtrSet<CanonicalDeclPtr<Decl>, 4> DoneMap[2];
 
+  // Functions that need their deferred diagnostics emitted. Collected
+  // during the graph walk and emitted afterwards so that all callers
+  // are known when producing call chain notes.
+  llvm::SetVector<CanonicalDeclPtr<const FunctionDecl>> FnsToEmit;
+
   // Emission state of the root node of the current use graph.
   bool ShouldEmitRootNode;
 
@@ -1881,21 +1966,21 @@ public:
     // Visit the dtors of all members
     for (const FieldDecl *FD : RD->fields()) {
       QualType FT = FD->getType();
-      if (const auto *RT = FT->getAs<RecordType>())
-        if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl()))
-          if (ClassDecl->hasDefinition())
-            if (CXXDestructorDecl *MemberDtor = ClassDecl->getDestructor())
-              asImpl().visitUsedDecl(MemberDtor->getLocation(), MemberDtor);
+      if (const auto *ClassDecl = FT->getAsCXXRecordDecl();
+          ClassDecl &&
+          (ClassDecl->isBeingDefined() || ClassDecl->isCompleteDefinition()))
+        if (CXXDestructorDecl *MemberDtor = ClassDecl->getDestructor())
+          asImpl().visitUsedDecl(MemberDtor->getLocation(), MemberDtor);
     }
 
     // Also visit base class dtors
     for (const auto &Base : RD->bases()) {
       QualType BaseType = Base.getType();
-      if (const auto *RT = BaseType->getAs<RecordType>())
-        if (const auto *BaseDecl = dyn_cast<CXXRecordDecl>(RT->getDecl()))
-          if (BaseDecl->hasDefinition())
-            if (CXXDestructorDecl *BaseDtor = BaseDecl->getDestructor())
-              asImpl().visitUsedDecl(BaseDtor->getLocation(), BaseDtor);
+      if (const auto *BaseDecl = BaseType->getAsCXXRecordDecl();
+          BaseDecl &&
+          (BaseDecl->isBeingDefined() || BaseDecl->isCompleteDefinition()))
+        if (CXXDestructorDecl *BaseDtor = BaseDecl->getDestructor())
+          asImpl().visitUsedDecl(BaseDtor->getLocation(), BaseDtor);
     }
   }
 
@@ -1906,11 +1991,11 @@ public:
         if (VD->isThisDeclarationADefinition() &&
             VD->needsDestruction(S.Context)) {
           QualType VT = VD->getType();
-          if (const auto *RT = VT->getAs<RecordType>())
-            if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl()))
-              if (ClassDecl->hasDefinition())
-                if (CXXDestructorDecl *Dtor = ClassDecl->getDestructor())
-                  asImpl().visitUsedDecl(Dtor->getLocation(), Dtor);
+          if (const auto *ClassDecl = VT->getAsCXXRecordDecl();
+              ClassDecl && (ClassDecl->isBeingDefined() ||
+                            ClassDecl->isCompleteDefinition()))
+            if (CXXDestructorDecl *Dtor = ClassDecl->getDestructor())
+              asImpl().visitUsedDecl(Dtor->getLocation(), Dtor);
         }
 
     Inherited::VisitDeclStmt(DS);
@@ -1940,13 +2025,16 @@ public:
     if (Caller && S.LangOpts.OpenMP && UsePath.size() == 1 &&
         (ShouldEmitRootNode || InOMPDeviceContext))
       S.OpenMP().finalizeOpenMPDelayedAnalysis(Caller, FD, Loc);
-    if (Caller)
-      S.CUDA().DeviceKnownEmittedFns[FD] = {Caller, Loc};
-    // Always emit deferred diagnostics for the direct users. This does not
-    // lead to explosion of diagnostics since each user is visited at most
-    // twice.
+    if (Caller) {
+      auto &Callers = S.CUDA().DeviceKnownEmittedFns[FD];
+      CanonicalDeclPtr<const FunctionDecl> CanonCaller(Caller);
+      if (llvm::none_of(Callers, [CanonCaller](const auto &C) {
+            return C.FD == CanonCaller;
+          }))
+        Callers.push_back({Caller, Loc});
+    }
     if (ShouldEmitRootNode || InOMPDeviceContext)
-      emitDeferredDiags(FD, Caller);
+      FnsToEmit.insert(FD);
     // Do not revisit a function if the function body has been completely
     // visited before.
     if (!Done.insert(FD).second)
@@ -1971,15 +2059,12 @@ public:
       checkVar(cast<VarDecl>(D));
   }
 
-  // Emit any deferred diagnostics for FD
-  void emitDeferredDiags(FunctionDecl *FD, bool ShowCallStack) {
+  void emitDeferredDiags(const FunctionDecl *FD) {
     auto It = S.DeviceDeferredDiags.find(FD);
     if (It == S.DeviceDeferredDiags.end())
       return;
     bool HasWarningOrError = false;
-    bool FirstDiag = true;
     for (PartialDiagnosticAt &PDAt : It->second) {
-      // Respect error limit.
       if (S.Diags.hasFatalErrorOccurred())
         return;
       const SourceLocation &Loc = PDAt.first;
@@ -1991,13 +2076,14 @@ public:
         DiagnosticBuilder Builder(S.Diags.Report(Loc, PD.getDiagID()));
         PD.Emit(Builder);
       }
-      // Emit the note on the first diagnostic in case too many diagnostics
-      // cause the note not emitted.
-      if (FirstDiag && HasWarningOrError && ShowCallStack) {
-        emitCallStackNotes(S, FD);
-        FirstDiag = false;
-      }
     }
+    if (HasWarningOrError)
+      emitCallStackNotes(S, FD);
+  }
+
+  void emitCollectedDiags() {
+    for (const auto &FD : FnsToEmit)
+      emitDeferredDiags(FD);
   }
 };
 } // namespace
@@ -2014,6 +2100,7 @@ void Sema::emitDeferredDiags() {
   DeferredDiagnosticsEmitter DDE(*this);
   for (auto *D : DeclsToCheckForDeferredDiags)
     DDE.checkRecordedDecl(D);
+  DDE.emitCollectedDiags();
 }
 
 // In CUDA, there are some constructs which may appear in semantically-valid
@@ -2213,9 +2300,9 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
       else
         PD << "expression";
 
-      if (Diag(Loc, PD, FD)
-          << false /*show bit size*/ << 0 << Ty << false /*return*/
-          << TI.getTriple().str()) {
+      if (Diag(Loc, PD) << false /*show bit size*/ << 0 << Ty
+                        << false /*return*/
+                        << TI.getTriple().str()) {
         if (D)
           D->setInvalidDecl();
       }
@@ -2232,9 +2319,8 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
       else
         PD << "expression";
 
-      if (Diag(Loc, PD, FD)
-          << false /*show bit size*/ << 0 << Ty << true /*return*/
-          << TI.getTriple().str()) {
+      if (Diag(Loc, PD) << false /*show bit size*/ << 0 << Ty << true /*return*/
+                        << TI.getTriple().str()) {
         if (D)
           D->setInvalidDecl();
       }
@@ -2252,12 +2338,23 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
     if (Ty->isSVESizelessBuiltinType() && FD) {
       llvm::StringMap<bool> CallerFeatureMap;
       Context.getFunctionFeatureMap(CallerFeatureMap, FD);
-      if (!Builtin::evaluateRequiredTargetFeatures("sve", CallerFeatureMap)) {
-        if (!Builtin::evaluateRequiredTargetFeatures("sme", CallerFeatureMap))
-          Diag(Loc, diag::err_sve_vector_in_non_sve_target) << Ty;
-        else if (!IsArmStreamingFunction(FD,
-                                         /*IncludeLocallyStreaming=*/true)) {
-          Diag(Loc, diag::err_sve_vector_in_non_streaming_function) << Ty;
+      ARM().checkSVETypeSupport(Ty, Loc, FD, CallerFeatureMap);
+    }
+
+    if (auto *VT = Ty->getAs<VectorType>();
+        VT && FD &&
+        (VT->getVectorKind() == VectorKind::SveFixedLengthData ||
+         VT->getVectorKind() == VectorKind::SveFixedLengthPredicate) &&
+        (LangOpts.VScaleMin != LangOpts.VScaleStreamingMin ||
+         LangOpts.VScaleMax != LangOpts.VScaleStreamingMax)) {
+      if (IsArmStreamingFunction(FD, /*IncludeLocallyStreaming=*/true)) {
+        Diag(Loc, diag::err_sve_fixed_vector_in_streaming_function)
+            << Ty << /*Streaming*/ 0;
+      } else if (const auto *FTy = FD->getType()->getAs<FunctionProtoType>()) {
+        if (FTy->getAArch64SMEAttributes() &
+            FunctionType::SME_PStateSMCompatibleMask) {
+          Diag(Loc, diag::err_sve_fixed_vector_in_streaming_function)
+              << Ty << /*StreamingCompatible*/ 1;
         }
       }
     }
@@ -2421,8 +2518,8 @@ static void markEscapingByrefs(const FunctionScopeInfo &FSI, Sema &S) {
 }
 
 Sema::PoppedFunctionScopePtr
-Sema::PopFunctionScopeInfo(const AnalysisBasedWarnings::Policy *WP,
-                           const Decl *D, QualType BlockType) {
+Sema::PopFunctionScopeInfo(const AnalysisBasedWarnings::Policy *WP, Decl *D,
+                           QualType BlockType) {
   assert(!FunctionScopes.empty() && "mismatched push/pop!");
 
   markEscapingByrefs(*FunctionScopes.back(), *this);
@@ -2434,9 +2531,10 @@ Sema::PopFunctionScopeInfo(const AnalysisBasedWarnings::Policy *WP,
     OpenMP().popOpenMPFunctionRegion(Scope.get());
 
   // Issue any analysis-based warnings.
-  if (WP && D)
+  if (WP && D) {
+    inferNoReturnAttr(*this, D);
     AnalysisWarnings.IssueWarnings(*WP, Scope.get(), D, BlockType);
-  else
+  } else
     for (const auto &PUD : Scope->PossiblyUnreachableDiags)
       Diag(PUD.Loc, PUD.PD);
 

@@ -182,6 +182,11 @@ def OutlineableOpenMPOpInterface : OpInterface<"OutlineableOpenMPOpInterface"> {
   let methods = [
     InterfaceMethod<"Get alloca block", "::mlir::Block*", "getAllocaBlock",
       (ins), [{
+      // For taskloop: put the allocas inside of the wrapped loop. Loop wrappers
+      // are expected to contain only the wrapped loop (or another loop wrapper)
+      if (LoopWrapperInterface loopWrapper =
+              mlir::dyn_cast<LoopWrapperInterface>($_op.getOperation()))
+        return &loopWrapper.getWrappedLoop()->getRegion(0).front();
       return &$_op.getRegion().front();
       }]>,
   ];
@@ -329,14 +334,16 @@ def DeclareTargetInterface : OpInterface<"DeclareTargetInterface"> {
       /*retTy=*/"void",
       /*methodName=*/"setDeclareTarget",
       (ins "mlir::omp::DeclareTargetDeviceType":$deviceType,
-            "mlir::omp::DeclareTargetCaptureClause":$captureClause), [{}], [{
+           "mlir::omp::DeclareTargetCaptureClause":$captureClause,
+           "bool":$automap), [{}], [{
         $_op->setAttr("omp.declare_target",
                   mlir::omp::DeclareTargetAttr::get(
                       $_op->getContext(),
                       mlir::omp::DeclareTargetDeviceTypeAttr::get(
                           $_op->getContext(), deviceType),
                       mlir::omp::DeclareTargetCaptureClauseAttr::get(
-                          $_op->getContext(), captureClause)));
+                          $_op->getContext(), captureClause),
+                      mlir::BoolAttr::get($_op->getContext(), automap)));
       }]>,
       InterfaceMethod<
       /*description=*/[{
@@ -374,6 +381,19 @@ def DeclareTargetInterface : OpInterface<"DeclareTargetInterface"> {
           if (auto dAttr = llvm::dyn_cast_or_null<mlir::omp::DeclareTargetAttr>(dTar))
             return dAttr.getCaptureClause().getValue();
         return {};
+      }]>,
+      InterfaceMethod<
+      /*description=*/[{
+        Return true if the DeclareTarget attribute has the AUTOMAP modifier.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"getDeclareTargetAutomap",
+      (ins), [{}], [{
+        if (mlir::Attribute dTar = $_op->getAttr("omp.declare_target"))
+          if (auto dAttr = llvm::dyn_cast_or_null<mlir::omp::DeclareTargetAttr>(dTar))
+            if (auto autoVal = dAttr.getAutomap())
+              return autoVal.getValue();
+         return false;
       }]>
   ];
 }
@@ -548,6 +568,92 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
             ::mlir::StringAttr::get($_op->getContext(), "omp.target_triples"),
             ::mlir::ArrayAttr::get($_op->getContext(), names));
       }]>
+  ];
+}
+
+def LoopTransformationInterface : OpInterface<"LoopTransformationInterface"> {
+  let description = [{
+    Methods that are common for OpenMP loop transformation operations.
+  }];
+
+  let cppNamespace = "::mlir::omp";
+
+  let methods = [
+
+    InterfaceMethod<
+      /*description=*/[{
+        Get the indices for the arguments that represent CanonicalLoopInfo
+        applyees, i.e. loops that are transformed/consumed by this operation.
+      }],
+      /*returnType=*/ "std::pair<unsigned, unsigned>",
+      /*methodName=*/ "getApplyeesODSOperandIndexAndLength",
+      /*args=*/(ins)
+    >,
+
+    InterfaceMethod<
+      /*description=*/[{
+        Get the indices for the arguments that represent CanonicalLoopInfo
+        generatees, i.e. loops that are emitted by this operation.
+      }],
+      /*returnType=*/ "std::pair<unsigned, unsigned>",
+      /*methodName=*/ "getGenerateesODSOperandIndexAndLength",
+      /*args=*/(ins)
+    >,
+
+    InterfaceMethod<
+      /*description=*/[{
+        Return the number of applyees of this loop transformation.
+      }],
+      /*returnType=*/ "unsigned",
+      /*methodName=*/ "getNumApplyees",
+      /*args=*/       (ins),
+      /*methodBody=*/ "",
+      /*defaultImpl=*/[{
+        return $_op.getApplyeesODSOperandIndexAndLength().second;
+      }]
+    >,
+
+    InterfaceMethod<
+      /*description=*/[{
+        Return the number of generatees of this loop transformation.
+      }],
+      /*returnType=*/ "unsigned",
+      /*methodName=*/ "getNumGeneratees",
+      /*args=*/       (ins),
+      /*methodBody=*/ "",
+      /*defaultImpl=*/[{
+        return $_op.getGenerateesODSOperandIndexAndLength().second;
+      }]
+    >,
+
+    InterfaceMethod<
+      /*description=*/[{
+        Return whether the provided operand is an applyee of this operation.
+      }],
+      /*returnType=*/ "unsigned",
+      /*methodName=*/ "isApplyee",
+      /*args=*/       (ins "unsigned":$opnum),
+      /*methodBody=*/ "",
+      /*defaultImpl=*/[{
+        auto applyeeArgs = $_op.getApplyeesODSOperandIndexAndLength();
+        return (applyeeArgs.first <= opnum && opnum < applyeeArgs.first + applyeeArgs.second) ;
+      }]
+    >,
+
+    InterfaceMethod<
+      /*description=*/[{
+        Return whether the provided operand is a generatee of this operation.
+      }],
+      /*returnType=*/ "unsigned",
+      /*methodName=*/ "isGeneratee",
+      /*args=*/       (ins "unsigned":$opnum),
+      /*methodBody=*/ "",
+      /*defaultImpl=*/[{
+        auto generateeArgs = $_op.getGenerateesODSOperandIndexAndLength();
+        return (generateeArgs.first <= opnum && opnum < generateeArgs.first + generateeArgs.second) ;
+      }]
+    >,
+
   ];
 }
 

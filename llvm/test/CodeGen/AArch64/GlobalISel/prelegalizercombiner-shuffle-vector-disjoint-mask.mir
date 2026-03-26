@@ -80,22 +80,3 @@ body:             |
     %2:_(<4 x s32>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(-1,0,1,-1)
     RET_ReallyLR implicit %2
 ...
-
----
-name: shuffle_vector_scalar
-tracksRegLiveness: true
-body:             |
-  bb.1:
-    liveins: $x0, $x1
-
-    ; CHECK-LABEL: name: shuffle_vector_scalar
-    ; CHECK: liveins: $x0, $x1
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s64>) = G_BUILD_VECTOR [[COPY]](s64), [[COPY]](s64), [[COPY]](s64), [[COPY]](s64)
-    ; CHECK-NEXT: RET_ReallyLR implicit [[BUILD_VECTOR]](<4 x s64>)
-    %0:_(s64) = COPY $x0
-    %1:_(s64) = COPY $x1
-    %2:_(<4 x s64>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(0, 0, 0, 0)
-    RET_ReallyLR implicit %2
-...

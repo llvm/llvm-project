@@ -1,7 +1,8 @@
 # RUN: %PYTHON %s | FileCheck %s
 
-from mlir.dialects import arith, func, linalg, tensor, memref
+from mlir.dialects import arith, func, linalg, tensor, memref, builtin
 from mlir.dialects.linalg.opdsl.lang import *
+from mlir.extras import types as T
 from mlir.ir import *
 
 
@@ -45,42 +46,6 @@ def testFill():
                     value=FloatAttr.get(f32, 0.0), result=f32
                 ).result
                 linalg.fill(zero, outs=[out])
-
-    print(module)
-
-
-# CHECK-LABEL: TEST: testNamedStructuredOpCustomForm
-@run
-def testNamedStructuredOpCustomForm():
-    with Context() as ctx, Location.unknown():
-        module = Module.create()
-        f32 = F32Type.get()
-        with InsertionPoint(module.body):
-
-            @func.FuncOp.from_py_func(
-                RankedTensorType.get((4, 8), f32), RankedTensorType.get((4, 8), f32)
-            )
-            def named_form(lhs, rhs):
-                init_result = tensor.EmptyOp([4, 8], f32)
-                # Check for the named form with custom format
-                #      CHECK: linalg.elemwise_unary
-                # CHECK-SAME:    cast = #linalg.type_fn<cast_signed>
-                # CHECK-SAME:    fun = #linalg.unary_fn<exp>
-                # CHECK-SAME:    ins(%{{.*}} : tensor<4x8xf32>) outs(%{{.*}} : tensor<4x8xf32>)
-                unary_result = linalg.elemwise_unary(lhs, outs=[init_result.result])
-                #      CHECK: linalg.elemwise_binary
-                # CHECK-SAME:    cast = #linalg.type_fn<cast_unsigned>
-                # CHECK-SAME:    fun = #linalg.binary_fn<mul>
-                # CHECK-SAME:    ins(%{{.*}}, %{{.*}} : tensor<4x8xf32>, tensor<4x8xf32>) outs(%{{.*}} : tensor<4x8xf32>)
-                #      CHECK: return
-                binary_result = linalg.elemwise_binary(
-                    lhs,
-                    rhs,
-                    outs=[init_result.result],
-                    fun=BinaryFn.mul,
-                    cast=TypeFn.cast_unsigned,
-                )
-                return unary_result, binary_result
 
     print(module)
 
@@ -699,12 +664,32 @@ def testPackUnPackOp():
 
                 return unpacked
 
+            @func.FuncOp.from_py_func(
+                MemRefType.get((128, 128), f32),
+                MemRefType.get((16, 16, 8, 8), f32),
+            )
+            def memref_pack(src, dst):
+                linalg.pack(src, dst, inner_dims_pos=[1, 0], inner_tiles=[8, 8])
+
+                linalg.unpack(
+                    dst,
+                    src,
+                    inner_dims_pos=[0, 1],
+                    inner_tiles=[8, 8],
+                )
+
         # CHECK-LABEL:   func.func @tensor_pack(
         # CHECK-SAME:      %[[VAL_0:.*]]: tensor<128x128xf32>, %[[VAL_1:.*]]: tensor<16x16x8x8xf32>) -> tensor<128x128xf32> {
         # CHECK:           %[[VAL_2:.*]] = arith.constant 0.000000e+00 : f32
         # CHECK:           %[[VAL_3:.*]] = linalg.pack %[[VAL_0]] padding_value(%[[VAL_2]] : f32) inner_dims_pos = [1, 0] inner_tiles = [8, 8] into %[[VAL_1]] : tensor<128x128xf32> -> tensor<16x16x8x8xf32>
         # CHECK:           %[[VAL_4:.*]] = linalg.unpack %[[VAL_3]] inner_dims_pos = [0, 1] inner_tiles = [8, 8] into %[[VAL_0]] : tensor<16x16x8x8xf32> -> tensor<128x128xf32>
         # CHECK:           return %[[VAL_4]] : tensor<128x128xf32>
+        # CHECK:         }
+        # CHECK-LABEL:   func.func @memref_pack(
+        # CHECK-SAME:      %[[VAL_0:.*]]: memref<128x128xf32>, %[[VAL_1:.*]]: memref<16x16x8x8xf32>) {
+        # CHECK:           linalg.pack %[[VAL_0]] inner_dims_pos = [1, 0] inner_tiles = [8, 8] into %[[VAL_1]] : memref<128x128xf32> -> memref<16x16x8x8xf32>
+        # CHECK:           linalg.unpack %[[VAL_1]] inner_dims_pos = [0, 1] inner_tiles = [8, 8] into %[[VAL_0]] : memref<16x16x8x8xf32> -> memref<128x128xf32>
+        # CHECK:           return
         # CHECK:         }
         print(module)
 
@@ -893,3 +878,76 @@ def testElementwiseOp():
                     )
 
         print(module)
+
+
+@run
+def testReduceOp():
+    with Context(), Location.unknown():
+        f32 = T.f32()
+        tensor_type = T.tensor(10, f32)
+
+        @builtin.module
+        def module():
+            @func.func(tensor_type)
+            def reduce_op(input):
+                c1 = arith.constant(f32, 1.0)
+                single_result = ir.RankedTensorType.get((), f32)
+                dims = ir.DenseI64ArrayAttr.get([0])
+                init = tensor.splat(single_result, c1, [])
+
+                @linalg.reduce(
+                    result=[single_result],
+                    inputs=[input],
+                    inits=[init],
+                    dimensions=dims,
+                )
+                def reduced(element: f32, acc: f32):
+                    return arith.mulf(acc, element)
+
+                return tensor.extract(reduced, [])
+
+        print(module)
+
+
+# CHECK-LABEL:   func.func @reduce_op(
+# CHECK-SAME:      %[[ARG0:.*]]: tensor<10xf32>) -> f32 {
+# CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1.000000e+00 : f32
+# CHECK:           %[[SPLAT_0:.*]] = tensor.splat %[[CONSTANT_0]] : tensor<f32>
+# CHECK:           %[[REDUCE_0:.*]] = linalg.reduce { arith.mulf } ins(%[[ARG0]] : tensor<10xf32>) outs(%[[SPLAT_0]] : tensor<f32>) dimensions = [0]
+# CHECK:           %[[EXTRACT_0:.*]] = tensor.extract %[[REDUCE_0]][] : tensor<f32>
+# CHECK:           return %[[EXTRACT_0]] : f32
+# CHECK:         }
+
+
+@run
+def testMapOp():
+    with Context(), Location.unknown():
+        f32 = T.f32()
+        tensor_type = T.tensor(10, f32)
+
+        @builtin.module
+        def module():
+            @func.func(tensor_type)
+            def map_op(input):
+                empty = tensor.empty(tensor_type.shape, f32)
+
+                @linalg.map(
+                    result=[tensor_type],
+                    inputs=[input, input],
+                    init=empty,
+                )
+                def add(element: f32, acc: f32, init: f32):
+                    return arith.addf(element, acc)
+
+                return add
+
+        module.verify()
+        print(module)
+
+
+# CHECK-LABEL:   func.func @map_op(
+# CHECK-SAME:                      %[[ARG0:.*]]: tensor<10xf32>) -> tensor<10xf32> {
+# CHECK:           %[[EMPTY_0:.*]] = tensor.empty() : tensor<10xf32>
+# CHECK:           %[[MAP_0:.*]] = linalg.map { arith.addf } ins(%[[ARG0]], %[[ARG0]] : tensor<10xf32>, tensor<10xf32>) outs(%[[EMPTY_0]] : tensor<10xf32>)
+# CHECK:           return %[[MAP_0]] : tensor<10xf32>
+# CHECK:         }

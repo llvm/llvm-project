@@ -205,9 +205,10 @@ define <4 x double> @matrix_multiply_two_operands_negated_with_same_size(<2 x do
 
 define <2 x double> @matrix_multiply_two_operands_with_multiple_uses(<6 x double> %a, <3 x double> %b) {
 ; CHECK-LABEL: @matrix_multiply_two_operands_with_multiple_uses(
-; CHECK-NEXT:    [[RES:%.*]] = tail call <2 x double> @llvm.matrix.multiply.v2f64.v6f64.v3f64(<6 x double> [[A:%.*]], <3 x double> [[B:%.*]], i32 2, i32 3, i32 1)
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <6 x double> [[A]], <6 x double> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[RES_3:%.*]] = fsub <2 x double> [[RES]], [[TMP1]]
+; CHECK-NEXT:    [[A_NEG:%.*]] = fneg <6 x double> [[A:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = tail call <2 x double> @llvm.matrix.multiply.v2f64.v6f64.v3f64(<6 x double> [[A]], <3 x double> [[B:%.*]], i32 2, i32 3, i32 1)
+; CHECK-NEXT:    [[RES_2:%.*]] = shufflevector <6 x double> [[A_NEG]], <6 x double> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[RES_3:%.*]] = fadd <2 x double> [[RES_2]], [[RES]]
 ; CHECK-NEXT:    ret <2 x double> [[RES_3]]
 ;
   %a.neg = fneg <6 x double> %a

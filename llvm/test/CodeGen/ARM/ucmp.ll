@@ -4,12 +4,9 @@
 define i8 @ucmp_8_8(i8 zeroext %x, i8 zeroext %y) nounwind {
 ; CHECK-LABEL: ucmp_8_8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    cmp r0, r1
-; CHECK-NEXT:    mov r0, #0
-; CHECK-NEXT:    mov r2, #0
-; CHECK-NEXT:    movwlo r0, #1
-; CHECK-NEXT:    movwhi r2, #1
-; CHECK-NEXT:    sub r0, r2, r0
+; CHECK-NEXT:    subs r0, r0, r1
+; CHECK-NEXT:    movwhi r0, #1
+; CHECK-NEXT:    mvnlo r0, #0
 ; CHECK-NEXT:    bx lr
   %1 = call i8 @llvm.ucmp(i8 %x, i8 %y)
   ret i8 %1
@@ -18,12 +15,9 @@ define i8 @ucmp_8_8(i8 zeroext %x, i8 zeroext %y) nounwind {
 define i8 @ucmp_8_16(i16 zeroext %x, i16 zeroext %y) nounwind {
 ; CHECK-LABEL: ucmp_8_16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    cmp r0, r1
-; CHECK-NEXT:    mov r0, #0
-; CHECK-NEXT:    mov r2, #0
-; CHECK-NEXT:    movwlo r0, #1
-; CHECK-NEXT:    movwhi r2, #1
-; CHECK-NEXT:    sub r0, r2, r0
+; CHECK-NEXT:    subs r0, r0, r1
+; CHECK-NEXT:    movwhi r0, #1
+; CHECK-NEXT:    mvnlo r0, #0
 ; CHECK-NEXT:    bx lr
   %1 = call i8 @llvm.ucmp(i16 %x, i16 %y)
   ret i8 %1
@@ -32,12 +26,9 @@ define i8 @ucmp_8_16(i16 zeroext %x, i16 zeroext %y) nounwind {
 define i8 @ucmp_8_32(i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: ucmp_8_32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    cmp r0, r1
-; CHECK-NEXT:    mov r0, #0
-; CHECK-NEXT:    mov r2, #0
-; CHECK-NEXT:    movwlo r0, #1
-; CHECK-NEXT:    movwhi r2, #1
-; CHECK-NEXT:    sub r0, r2, r0
+; CHECK-NEXT:    subs r0, r0, r1
+; CHECK-NEXT:    movwhi r0, #1
+; CHECK-NEXT:    mvnlo r0, #0
 ; CHECK-NEXT:    bx lr
   %1 = call i8 @llvm.ucmp(i32 %x, i32 %y)
   ret i8 %1
@@ -92,12 +83,9 @@ define i8 @ucmp_8_128(i128 %x, i128 %y) nounwind {
 define i32 @ucmp_32_32(i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: ucmp_32_32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    cmp r0, r1
-; CHECK-NEXT:    mov r0, #0
-; CHECK-NEXT:    mov r2, #0
-; CHECK-NEXT:    movwlo r0, #1
-; CHECK-NEXT:    movwhi r2, #1
-; CHECK-NEXT:    sub r0, r2, r0
+; CHECK-NEXT:    subs r0, r0, r1
+; CHECK-NEXT:    movwhi r0, #1
+; CHECK-NEXT:    mvnlo r0, #0
 ; CHECK-NEXT:    bx lr
   %1 = call i32 @llvm.ucmp(i32 %x, i32 %y)
   ret i32 %1

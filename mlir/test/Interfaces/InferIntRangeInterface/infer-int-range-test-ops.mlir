@@ -184,3 +184,19 @@ func.func @propagate_from_block_to_iterarg(%arg0: index, %arg1: i1) {
   }
   return
 }
+
+// CHECK-LABEL: func @multiple_loop_ivs
+func.func @multiple_loop_ivs(%arg0: memref<?x64xi32>) {
+  %ub1 = test.with_bounds { umin = 1 : index, umax = 32 : index,
+                          smin = 1 : index, smax = 32 : index } : index
+  %c0_i32 = arith.constant 0 : i32
+  // CHECK: scf.forall
+  scf.forall (%arg1, %arg2) in (%ub1, 64) {
+    // CHECK: test.reflect_bounds {smax = 31 : index, smin = 0 : index, umax = 31 : index, umin = 0 : index}
+    %1 = test.reflect_bounds %arg1 : index
+    // CHECK-NEXT: test.reflect_bounds {smax = 63 : index, smin = 0 : index, umax = 63 : index, umin = 0 : index}
+    %2 = test.reflect_bounds %arg2 : index
+    memref.store %c0_i32, %arg0[%1, %2] : memref<?x64xi32>
+  }
+  return
+}

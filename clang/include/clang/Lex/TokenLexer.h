@@ -65,7 +65,7 @@ class TokenLexer {
 
   /// The offset of the macro expansion in the
   /// "source location address space".
-  unsigned MacroStartSLocOffset;
+  SourceLocation::UIntTy MacroStartSLocOffset;
 
   /// Location of the macro definition.
   SourceLocation MacroDefStart;
@@ -99,6 +99,10 @@ class TokenLexer {
   /// When true, the produced tokens have Token::IsReinjected flag set.
   /// See the flag documentation for details.
   bool IsReinject : 1;
+
+  /// This is true if this TokenLexer is created when handling a C++ module
+  /// directive.
+  bool LexingCXXModuleDirective : 1;
 
 public:
   /// Create a TokenLexer for the specified macro with the specified actual
@@ -150,6 +154,14 @@ public:
   /// isParsingPreprocessorDirective - Return true if we are in the middle of a
   /// preprocessor directive.
   bool isParsingPreprocessorDirective() const;
+
+  /// setLexingCXXModuleDirective - This is set to true if this TokenLexer is
+  /// created when handling a C++ module directive.
+  void setLexingCXXModuleDirective(bool Val = true);
+
+  /// isLexingCXXModuleDirective - Return true if we are lexing a C++ module or
+  /// import directive.
+  bool isLexingCXXModuleDirective() const;
 
 private:
   void destroy();

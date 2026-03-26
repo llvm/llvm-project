@@ -57,10 +57,10 @@ func.func @entry() {
   // ( 1, 4 )    ->  ( 3, 4, 5 )
   // ( 2, 5 )
   //
-  %d = vector.flat_transpose %a { rows = 2: i32, columns = 2: i32 } : vector<4xf64> -> vector<4xf64>
-  %e = vector.flat_transpose %b { rows = 2: i32, columns = 2: i32 } : vector<4xf64> -> vector<4xf64>
-  %f = vector.flat_transpose %c { rows = 2: i32, columns = 3: i32 } : vector<6xf64> -> vector<6xf64>
-  %g = vector.flat_transpose %c { rows = 3: i32, columns = 2: i32 } : vector<6xf64> -> vector<6xf64>
+  %d = llvm.intr.matrix.transpose %a { rows = 2: i32, columns = 2: i32 } : vector<4xf64> into vector<4xf64>
+  %e = llvm.intr.matrix.transpose %b { rows = 2: i32, columns = 2: i32 } : vector<4xf64> into vector<4xf64>
+  %f = llvm.intr.matrix.transpose %c { rows = 2: i32, columns = 3: i32 } : vector<6xf64> into vector<6xf64>
+  %g = llvm.intr.matrix.transpose %c { rows = 3: i32, columns = 2: i32 } : vector<6xf64> into vector<6xf64>
 
   vector.print %d : vector<4xf64>
   vector.print %e : vector<4xf64>

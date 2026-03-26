@@ -244,7 +244,7 @@ LIBC_INLINE T fdim(T x, T y) {
     return y;
   }
 
-  return (x > y ? x - y : 0);
+  return (x > y ? x - y : T(0));
 }
 
 // Avoid reusing `issignaling` macro.

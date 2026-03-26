@@ -31,6 +31,7 @@ def testGetDenseElementsUnsupported():
             # CHECK: unimplemented array format conversion from format:
             print(e)
 
+
 # CHECK-LABEL: TEST: testGetDenseElementsUnSupportedTypeOkIfExplicitTypeProvided
 @run
 def testGetDenseElementsUnSupportedTypeOkIfExplicitTypeProvided():
@@ -41,8 +42,9 @@ def testGetDenseElementsUnSupportedTypeOkIfExplicitTypeProvided():
         # realistic example would be a NumPy extension type like the bfloat16
         # type from the ml_dtypes package, which isn't a dependency of this
         # test.
-        attr = DenseElementsAttr.get(array.view(np.datetime64),
-                                     type=IntegerType.get_signless(64))
+        attr = DenseElementsAttr.get(
+            array.view(np.datetime64), type=IntegerType.get_signless(64)
+        )
         # CHECK: dense<{{\[}}[1, 2, 3], [4, 5, 6]]> : tensor<2x3xi64>
         print(attr)
         # CHECK: {{\[}}[1 2 3]
@@ -134,6 +136,7 @@ def testGetDenseElementsFromListMixedTypes():
 ################################################################################
 # Splats.
 ################################################################################
+
 
 # CHECK-LABEL: TEST: testGetDenseElementsSplatInt
 @run
@@ -255,11 +258,10 @@ def testGetDenseElementsInteger4():
 @run
 def testGetDenseElementsBool():
     with Context():
-        bool_array = np.array([[1, 0, 1], [0, 1, 0]], dtype=np.bool_)
-        array = np.packbits(bool_array, axis=None, bitorder="little")
-        attr = DenseElementsAttr.get(
-            array, type=IntegerType.get_signless(1), shape=bool_array.shape
+        bool_array = np.array(
+            [[True, False, True], [False, True, False]], dtype=np.bool_
         )
+        attr = DenseElementsAttr.get(bool_array)
         # CHECK: dense<{{\[}}[true, false, true], [false, true, false]]> : tensor<2x3xi1>
         print(attr)
 
@@ -617,3 +619,34 @@ def testGetDenseResourceElementsAttr():
     # CHECK: BACKING MEMORY DELETED
     # CHECK: EXIT FUNCTION
     print("EXIT FUNCTION")
+
+
+# CHECK-LABEL: TEST: testGetDenseResourceElementsAttrScalar
+@run
+def testGetDenseResourceElementsAttrScalar():
+    with Context(), Location.unknown():
+        element_type = IntegerType.get_signless(64)
+        tensor_type = RankedTensorType.get((), element_type)
+        resource = DenseResourceElementsAttr.get_from_buffer(
+            memoryview(np.array(42, dtype=np.int64)), "scalar", tensor_type
+        )
+        module = Module.create()
+        module.operation.attributes["test.resource"] = resource
+        # CHECK: test.resource = dense_resource<scalar> : tensor<i64>
+        # CHECK: scalar: "0x080000002A00000000000000"
+        print(module)
+
+
+# CHECK-LABEL: TEST: testDanglingResource
+print("TEST: testDanglingResource")
+# see https://github.com/llvm/llvm-project/pull/149414, https://github.com/llvm/llvm-project/pull/150137, https://github.com/llvm/llvm-project/pull/150561
+# This error occurs only when there is an alive context with a DenseResourceElementsAttr
+# in the end of the program, so we put it here without an encapsulating function.
+ctx = Context()
+
+with ctx, Location.unknown():
+    DenseResourceElementsAttr.get_from_buffer(
+        memoryview(np.array([1, 2, 3])),
+        "some_resource",
+        RankedTensorType.get((3,), IntegerType.get_signed(32)),
+    )

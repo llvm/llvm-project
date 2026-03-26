@@ -102,7 +102,7 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
   WebAssemblyOperand(SMLoc Start, SMLoc End, CaLOp C)
       : Kind(CatchList), StartLoc(Start), EndLoc(End), CaL(C) {}
 
-  ~WebAssemblyOperand() {
+  ~WebAssemblyOperand() override {
     if (isBrList())
       BrL.~BrLOp();
     if (isCatchList())
@@ -180,7 +180,7 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
     }
   }
 
-  void print(raw_ostream &OS) const override {
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override {
     switch (Kind) {
     case Token:
       OS << "Tok:" << Tok.Tok;
@@ -212,15 +212,14 @@ static wasm::WasmLimits defaultLimits() {
 static MCSymbolWasm *getOrCreateFunctionTableSymbol(MCContext &Ctx,
                                                     const StringRef &Name,
                                                     bool Is64) {
-  MCSymbolWasm *Sym = cast_or_null<MCSymbolWasm>(Ctx.lookupSymbol(Name));
+  auto *Sym = static_cast<MCSymbolWasm *>(Ctx.lookupSymbol(Name));
   if (Sym) {
     if (!Sym->isFunctionTable())
       Ctx.reportError(SMLoc(), "symbol is not a wasm funcref table");
   } else {
-    Sym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(Name));
+    Sym = static_cast<MCSymbolWasm *>(Ctx.getOrCreateSymbol(Name));
     Sym->setFunctionTable(Is64);
     // The default function table is synthesized by the linker.
-    Sym->setUndefined();
   }
   return Sym;
 }
@@ -416,6 +415,21 @@ public:
     return Name;
   }
 
+  StringRef expectStringOrIdent() {
+    if (Lexer.is(AsmToken::String)) {
+      auto Str = Lexer.getTok().getStringContents();
+      Parser.Lex();
+      return Str;
+    }
+    if (Lexer.is(AsmToken::Identifier)) {
+      auto Name = Lexer.getTok().getString();
+      Parser.Lex();
+      return Name;
+    }
+    error("Expected string or identifier, got: ", Lexer.getTok());
+    return StringRef();
+  }
+
   bool parseRegTypeList(SmallVectorImpl<wasm::ValType> &Types) {
     while (Lexer.is(AsmToken::Identifier)) {
       auto Type = WebAssembly::parseType(Lexer.getTok().getString());
@@ -470,6 +484,29 @@ public:
     Operands.push_back(std::make_unique<WebAssemblyOperand>(
         Flt.getLoc(), Flt.getEndLoc(), WebAssemblyOperand::FltOp{Val}));
     Parser.Lex();
+    return false;
+  }
+
+  bool addMemOrderOrDefault(OperandVector &Operands) {
+    auto &Tok = Lexer.getTok();
+    int64_t Order = wasm::WASM_MEM_ORDER_SEQ_CST;
+    if (Tok.is(AsmToken::Identifier)) {
+      StringRef S = Tok.getString();
+      Order = StringSwitch<int64_t>(S)
+                  .Case("acqrel", wasm::WASM_MEM_ORDER_ACQ_REL)
+                  .Case("seqcst", wasm::WASM_MEM_ORDER_SEQ_CST)
+                  .Default(-1);
+      if (Order != -1) {
+        if (!STI->checkFeatures("+relaxed-atomics"))
+          return error("memory ordering requires relaxed-atomics feature: ",
+                       Tok);
+        Parser.Lex();
+      } else {
+        Order = wasm::WASM_MEM_ORDER_SEQ_CST;
+      }
+    }
+    Operands.push_back(std::make_unique<WebAssemblyOperand>(
+        Tok.getLoc(), Tok.getEndLoc(), WebAssemblyOperand::IntOp{Order}));
     return false;
   }
 
@@ -669,6 +706,15 @@ public:
       if (parseFunctionTableOperand(&FunctionTable))
         return true;
       ExpectFuncType = true;
+    } else if (Name == "ref.test") {
+      // When we get support for wasm-gc types, this should become
+      // ExpectRefType.
+      ExpectFuncType = true;
+    }
+
+    if (Name.contains("atomic.")) {
+      if (addMemOrderOrDefault(Operands))
+        return true;
     }
 
     // Returns true if the next tokens are a catch clause
@@ -699,7 +745,7 @@ public:
       ExpectBlockType = false;
       // The "true" here will cause this to be a nameless symbol.
       MCSymbol *Sym = Ctx.createTempSymbol("typeindex", true);
-      auto *WasmSym = cast<MCSymbolWasm>(Sym);
+      auto *WasmSym = static_cast<MCSymbolWasm *>(Sym);
       WasmSym->setSignature(Signature);
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
       const MCExpr *Expr =
@@ -896,7 +942,8 @@ public:
 
   bool checkDataSection() {
     if (CurrentState != DataSection) {
-      auto *WS = cast<MCSectionWasm>(getStreamer().getCurrentSectionOnly());
+      auto *WS = static_cast<const MCSectionWasm *>(
+          getStreamer().getCurrentSectionOnly());
       if (WS && WS->isText())
         return error("data directive must occur in a data segment: ",
                      Lexer.getTok());
@@ -944,7 +991,8 @@ public:
           return error("Unknown type in .globaltype modifier: ", TypeTok);
       }
       // Now set this symbol with the correct type.
-      auto *WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
+      auto *WasmSym =
+          static_cast<MCSymbolWasm *>(Ctx.getOrCreateSymbol(SymName));
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_GLOBAL);
       WasmSym->setGlobalType(wasm::WasmGlobalType{uint8_t(*Type), Mutable});
       // And emit the directive again.
@@ -975,7 +1023,8 @@ public:
 
       // Now that we have the name and table type, we can actually create the
       // symbol
-      auto *WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
+      auto *WasmSym =
+          static_cast<MCSymbolWasm *>(Ctx.getOrCreateSymbol(SymName));
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_TABLE);
       if (Is64) {
         Limits.Flags |= wasm::WASM_LIMITS_FLAG_IS_64;
@@ -995,7 +1044,8 @@ public:
       auto SymName = expectIdent();
       if (SymName.empty())
         return ParseStatus::Failure;
-      auto *WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
+      auto *WasmSym =
+          static_cast<MCSymbolWasm *>(Ctx.getOrCreateSymbol(SymName));
       if (WasmSym->isDefined()) {
         // We push 'Function' either when a label is parsed or a .functype
         // directive is parsed. The reason it is not easy to do this uniformly
@@ -1034,10 +1084,11 @@ public:
         return ParseStatus::Failure;
       if (expect(AsmToken::Comma, ","))
         return ParseStatus::Failure;
-      auto ExportName = expectIdent();
+      auto ExportName = expectStringOrIdent();
       if (ExportName.empty())
         return ParseStatus::Failure;
-      auto *WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
+      auto *WasmSym =
+          static_cast<MCSymbolWasm *>(Ctx.getOrCreateSymbol(SymName));
       WasmSym->setExportName(Ctx.allocateString(ExportName));
       TOut.emitExportName(WasmSym, ExportName);
       return expect(AsmToken::EndOfStatement, "EOL");
@@ -1049,10 +1100,11 @@ public:
         return ParseStatus::Failure;
       if (expect(AsmToken::Comma, ","))
         return ParseStatus::Failure;
-      auto ImportModule = expectIdent();
+      auto ImportModule = expectStringOrIdent();
       if (ImportModule.empty())
         return ParseStatus::Failure;
-      auto *WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
+      auto *WasmSym =
+          static_cast<MCSymbolWasm *>(Ctx.getOrCreateSymbol(SymName));
       WasmSym->setImportModule(Ctx.allocateString(ImportModule));
       TOut.emitImportModule(WasmSym, ImportModule);
       return expect(AsmToken::EndOfStatement, "EOL");
@@ -1064,10 +1116,11 @@ public:
         return ParseStatus::Failure;
       if (expect(AsmToken::Comma, ","))
         return ParseStatus::Failure;
-      auto ImportName = expectIdent();
+      StringRef ImportName = expectStringOrIdent();
       if (ImportName.empty())
         return ParseStatus::Failure;
-      auto *WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
+      auto *WasmSym =
+          static_cast<MCSymbolWasm *>(Ctx.getOrCreateSymbol(SymName));
       WasmSym->setImportName(Ctx.allocateString(ImportName));
       TOut.emitImportName(WasmSym, ImportName);
       return expect(AsmToken::EndOfStatement, "EOL");
@@ -1077,7 +1130,8 @@ public:
       auto SymName = expectIdent();
       if (SymName.empty())
         return ParseStatus::Failure;
-      auto *WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
+      auto *WasmSym =
+          static_cast<MCSymbolWasm *>(Ctx.getOrCreateSymbol(SymName));
       auto *Signature = Ctx.createWasmSignature();
       if (parseRegTypeList(Signature->Params))
         return ParseStatus::Failure;
@@ -1156,11 +1210,21 @@ public:
     case Match_Success: {
       ensureLocals(Out);
       // Fix unknown p2align operands.
+      const MCInstrDesc &Desc = MII.get(Inst.getOpcode());
       auto Align = WebAssembly::GetDefaultP2AlignAny(Inst.getOpcode());
       if (Align != -1U) {
-        auto &Op0 = Inst.getOperand(0);
-        if (Op0.getImm() == -1)
-          Op0.setImm(Align);
+        unsigned I = 0;
+        // It's operand 0 for regular memory ops and 1 for atomics.
+        for (unsigned E = Desc.getNumOperands(); I < E; ++I) {
+          if (Desc.operands()[I].OperandType == WebAssembly::OPERAND_P2ALIGN) {
+            auto &Op = Inst.getOperand(I);
+            if (Op.getImm() == -1) {
+              Op.setImm(Align);
+            }
+            break;
+          }
+        }
+        assert(I < 2 && "Default p2align set but operand not found");
       }
       if (Is64) {
         // Upgrade 32-bit loads/stores to 64-bit. These mostly differ by having
@@ -1214,11 +1278,12 @@ public:
 
   void doBeforeLabelEmit(MCSymbol *Symbol, SMLoc IDLoc) override {
     // Code below only applies to labels in text sections.
-    auto *CWS = cast<MCSectionWasm>(getStreamer().getCurrentSectionOnly());
+    auto *CWS = static_cast<const MCSectionWasm *>(
+        getStreamer().getCurrentSectionOnly());
     if (!CWS->isText())
       return;
 
-    auto *WasmSym = cast<MCSymbolWasm>(Symbol);
+    auto *WasmSym = static_cast<MCSymbolWasm *>(Symbol);
     // Unlike other targets, we don't allow data in text sections (labels
     // declared with .type @object).
     if (WasmSym->getType() == wasm::WASM_SYMBOL_TYPE_DATA) {

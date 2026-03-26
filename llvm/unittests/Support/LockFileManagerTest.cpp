@@ -12,7 +12,6 @@
 #include "llvm/Testing/Support/Error.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
-#include <memory>
 
 using namespace llvm;
 using llvm::unittest::TempDir;

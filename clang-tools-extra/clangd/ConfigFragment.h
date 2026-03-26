@@ -315,7 +315,7 @@ struct Fragment {
     /// AngledHeaders (i.e. a header matches a regex in both QuotedHeaders and
     /// AngledHeaders), system headers use <> and non-system headers use "".
     /// These can match any suffix of the header file in question.
-    /// Matching is performed against the header text, not its absolute path
+    /// Matching is performed against the absolute path of the header
     /// within the project.
     std::vector<Located<std::string>> QuotedHeaders;
     /// List of regexes for headers that should always be included with a
@@ -323,7 +323,7 @@ struct Fragment {
     /// AngledHeaders (i.e. a header matches a regex in both QuotedHeaders and
     /// AngledHeaders), system headers use <> and non-system headers use "".
     /// These can match any suffix of the header file in question.
-    /// Matching is performed against the header text, not its absolute path
+    /// Matching is performed against the absolute path of the header
     /// within the project.
     std::vector<Located<std::string>> AngledHeaders;
   };
@@ -354,6 +354,12 @@ struct Fragment {
     ///   All  => enable all code patterns and snippets suggestion
     ///   None => disable all code patterns and snippets suggestion
     std::optional<Located<std::string>> CodePatterns;
+    /// How to filter macros before offering them as suggestions
+    /// Values are Config::MacroFilterPolicy:
+    ///   ExactPrefix:  Suggest macros if the prefix matches exactly
+    ///   FuzzyMatch:   Fuzzy-match macros if they do not have "_" as prefix or
+    ///   suffix
+    std::optional<Located<std::string>> MacroFilter;
   };
   CompletionBlock Completion;
 
@@ -361,6 +367,8 @@ struct Fragment {
   struct HoverBlock {
     /// Whether hover show a.k.a type.
     std::optional<Located<bool>> ShowAKA;
+    /// Limit the number of characters returned when hovering a macro.
+    std::optional<Located<uint32_t>> MacroContentsLimit;
   };
   HoverBlock Hover;
 
@@ -393,6 +401,17 @@ struct Fragment {
     std::vector<Located<std::string>> DisabledModifiers;
   };
   SemanticTokensBlock SemanticTokens;
+
+  /// Configures documentation style and behaviour.
+  struct DocumentationBlock {
+    /// Specifies the format of comments in the code.
+    /// Valid values are enum Config::CommentFormatPolicy values:
+    /// - Plaintext: Treat comments as plain text.
+    /// - Markdown: Treat comments as Markdown.
+    /// - Doxygen: Treat comments as doxygen.
+    std::optional<Located<std::string>> CommentFormat;
+  };
+  DocumentationBlock Documentation;
 };
 
 } // namespace config

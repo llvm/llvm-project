@@ -350,7 +350,7 @@ define void @callsite_readonly_nounwind_not_willreturn(ptr %f, ptr %p) {
 
 define void @callsite_readonly_nounwind_willreturn(ptr %f, ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@callsite_readonly_nounwind_willreturn
-; CHECK-SAME: (ptr nofree noundef nonnull captures(none) [[F:%.*]], ptr captures(none) [[P:%.*]]) {
+; CHECK-SAME: (ptr nofree noundef nonnull captures(none) [[F:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:    call void [[F]](ptr captures(none) [[P]])
 ; CHECK-NEXT:    ret void
 ;

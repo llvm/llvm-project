@@ -90,11 +90,11 @@ bool ExternalFileUnit::Emit(const char *data, std::size_t bytes,
   CheckDirectAccess(handler);
   WriteFrame(frameOffsetInFile_, recordOffsetInFrame_ + furthestAfter, handler);
   if (positionInRecord > furthestPositionInRecord) {
-    std::memset(Frame() + recordOffsetInFrame_ + furthestPositionInRecord, ' ',
-        positionInRecord - furthestPositionInRecord);
+    runtime::memset(Frame() + recordOffsetInFrame_ + furthestPositionInRecord,
+        ' ', positionInRecord - furthestPositionInRecord);
   }
   char *to{Frame() + recordOffsetInFrame_ + positionInRecord};
-  std::memcpy(to, data, bytes);
+  runtime::memcpy(to, data, bytes);
   if (swapEndianness_) {
     SwapEndianness(to, bytes, elementBytes);
   }
@@ -119,7 +119,8 @@ bool ExternalFileUnit::Receive(char *data, std::size_t bytes,
   auto need{recordOffsetInFrame_ + furthestAfter};
   auto got{ReadFrame(frameOffsetInFile_, need, handler)};
   if (got >= need) {
-    std::memcpy(data, Frame() + recordOffsetInFrame_ + positionInRecord, bytes);
+    runtime::memcpy(
+        data, Frame() + recordOffsetInFrame_ + positionInRecord, bytes);
     if (swapEndianness_) {
       SwapEndianness(data, bytes, elementBytes);
     }
@@ -310,7 +311,8 @@ bool ExternalFileUnit::AdvanceRecord(IoErrorHandler &handler) {
         // Pad remainder of fixed length record
         WriteFrame(
             frameOffsetInFile_, recordOffsetInFrame_ + *openRecl, handler);
-        std::memset(Frame() + recordOffsetInFrame_ + furthestPositionInRecord,
+        runtime::memset(
+            Frame() + recordOffsetInFrame_ + furthestPositionInRecord,
             isUnformatted.value_or(false) ? 0 : ' ',
             *openRecl - furthestPositionInRecord);
         furthestPositionInRecord = *openRecl;
@@ -781,8 +783,11 @@ void ExternalFileUnit::DoEndfile(IoErrorHandler &handler) {
   frameOffsetInFile_ += recordOffsetInFrame_ + furthestPositionInRecord;
   recordOffsetInFrame_ = 0;
   FlushOutput(handler);
-  Truncate(frameOffsetInFile_, handler);
-  TruncateFrame(frameOffsetInFile_, handler);
+  if (access != Access::Stream || executionEnvironment.truncateStream) {
+    // Stream output after positioning truncates with some compilers.
+    Truncate(frameOffsetInFile_, handler);
+    TruncateFrame(frameOffsetInFile_, handler);
+  }
   BeginRecord();
   impliedEndfile_ = false;
   anyWriteSinceLastPositioning_ = false;
@@ -821,25 +826,29 @@ void ExternalFileUnit::HitEndOnRead(IoErrorHandler &handler) {
 }
 
 ChildIo &ExternalFileUnit::PushChildIo(IoStatementState &parent) {
-  OwningPtr<ChildIo> current{std::move(child_)};
+  ChildIo *current{child_};
   Terminator &terminator{parent.GetIoErrorHandler()};
-  OwningPtr<ChildIo> next{New<ChildIo>{terminator}(parent, std::move(current))};
-  child_.reset(next.release());
+  child_ = new (AllocateMemoryOrCrash(terminator, sizeof(ChildIo)))
+      ChildIo{parent, current};
+  leftTabLimit = positionInRecord;
   return *child_;
 }
 
 void ExternalFileUnit::PopChildIo(ChildIo &child) {
-  if (child_.get() != &child) {
+  ChildIo *previous = child.AcquirePrevious();
+  if (child_ != &child) {
     child.parent().GetIoErrorHandler().Crash(
         "ChildIo being popped is not top of stack");
   }
-  child_.reset(child.AcquirePrevious().release()); // deletes top child
+  child_->~ChildIo(); // delete top child
+  FreeMemory(child_);
+  child_ = previous;
 }
 
 std::uint32_t ExternalFileUnit::ReadHeaderOrFooter(std::int64_t frameOffset) {
   std::uint32_t word;
   char *wordPtr{reinterpret_cast<char *>(&word)};
-  std::memcpy(wordPtr, Frame() + frameOffset, sizeof word);
+  runtime::memcpy(wordPtr, Frame() + frameOffset, sizeof word);
   if (swapEndianness_) {
     SwapEndianness(wordPtr, sizeof word, sizeof word);
   }

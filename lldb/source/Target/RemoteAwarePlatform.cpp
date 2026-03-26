@@ -29,9 +29,8 @@ bool RemoteAwarePlatform::GetModuleSpec(const FileSpec &module_file_spec,
   return false;
 }
 
-Status RemoteAwarePlatform::ResolveExecutable(
-    const ModuleSpec &module_spec, lldb::ModuleSP &exe_module_sp,
-    const FileSpecList *module_search_paths_ptr) {
+Status RemoteAwarePlatform::ResolveExecutable(const ModuleSpec &module_spec,
+                                              lldb::ModuleSP &exe_module_sp) {
   ModuleSpec resolved_module_spec(module_spec);
 
   // The host platform can resolve the path more aggressively.
@@ -47,32 +46,32 @@ Status RemoteAwarePlatform::ResolveExecutable(
     if (!FileSystem::Instance().Exists(resolved_file_spec))
       FileSystem::Instance().ResolveExecutableLocation(resolved_file_spec);
   } else if (m_remote_platform_sp) {
-    return GetCachedExecutable(resolved_module_spec, exe_module_sp,
-                               module_search_paths_ptr);
+    return GetCachedExecutable(resolved_module_spec, exe_module_sp);
   }
 
-  return Platform::ResolveExecutable(resolved_module_spec, exe_module_sp,
-                                     module_search_paths_ptr);
+  return Platform::ResolveExecutable(resolved_module_spec, exe_module_sp);
 }
 
 Status RemoteAwarePlatform::RunShellCommand(
     llvm::StringRef command, const FileSpec &working_dir, int *status_ptr,
     int *signo_ptr, std::string *command_output,
-    const Timeout<std::micro> &timeout) {
+    std::string *separated_error_output, const Timeout<std::micro> &timeout) {
   return RunShellCommand(llvm::StringRef(), command, working_dir, status_ptr,
-                         signo_ptr, command_output, timeout);
+                         signo_ptr, command_output, separated_error_output,
+                         timeout);
 }
 
 Status RemoteAwarePlatform::RunShellCommand(
     llvm::StringRef shell, llvm::StringRef command, const FileSpec &working_dir,
     int *status_ptr, int *signo_ptr, std::string *command_output,
-    const Timeout<std::micro> &timeout) {
+    std::string *separated_error_output, const Timeout<std::micro> &timeout) {
   if (m_remote_platform_sp)
-    return m_remote_platform_sp->RunShellCommand(shell, command, working_dir,
-                                                 status_ptr, signo_ptr,
-                                                 command_output, timeout);
+    return m_remote_platform_sp->RunShellCommand(
+        shell, command, working_dir, status_ptr, signo_ptr, command_output,
+        separated_error_output, timeout);
   return Platform::RunShellCommand(shell, command, working_dir, status_ptr,
-                                   signo_ptr, command_output, timeout);
+                                   signo_ptr, command_output,
+                                   separated_error_output, timeout);
 }
 
 Status RemoteAwarePlatform::MakeDirectory(const FileSpec &file_spec,

@@ -18,6 +18,7 @@ include "TestDialect.td"
 include "TestAttrDefs.td"
 include "TestInterfaces.td"
 include "mlir/IR/BuiltinTypes.td"
+include "mlir/IR/BuiltinTypeInterfaces.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
 include "mlir/Dialect/Bufferization/IR/BufferizationTypeInterfaces.td"
 
@@ -352,6 +353,13 @@ def TestTypeCustomString : Test_Type<"TestTypeCustomString"> {
                               custom<BarString>(ref($foo)) `>` }];
 }
 
+def TestCustomStorageCtor : Test_Type<"TestCustomStorageCtor"> {
+    let mnemonic = "custom_storage_ctor_type";
+    let parameters = (ins "int":$value);
+    let assemblyFormat = "`<` $value `>`";
+    let hasStorageCustomConstructor = 1;
+}
+
 def TestTypeOptionalString : Test_Type<"TestTypeOptionalString"> {
   let parameters = (ins StringRefParameter<"description", [{"default"}]>:$str);
   let mnemonic = "optional_type_string";
@@ -397,6 +405,36 @@ def TestTypeVerification : Test_Type<"TestTypeVerification"> {
   let parameters = (ins AnyTypeOf<[I16, I32]>:$param);
   let mnemonic = "type_verification";
   let assemblyFormat = "`<` $param `>`";
+}
+
+// Test type with PredTypeTrait - single parameter predicate.
+def TestTypePredTrait : Test_Type<"TestTypePredTrait",
+    [PredTypeTrait<"value must be positive", CPred<"$value > 0">>]> {
+  let parameters = (ins "unsigned":$value);
+  let mnemonic = "type_pred_trait";
+  let assemblyFormat = "`<` $value `>`";
+}
+
+// Test type with PredTypeTrait - two parameter predicate.
+def TestTypePredTraitMultiParam : Test_Type<"TestTypePredTraitMultiParam",
+    [PredTypeTrait<"value must be at least min",
+                   CPred<"$value >= $minValue">>]> {
+  let parameters = (ins "unsigned":$value, "unsigned":$minValue);
+  let mnemonic = "type_pred_trait_multi";
+  let assemblyFormat = "`<` $value `,` $minValue `>`";
+}
+
+// Test type combining parameter type constraints with PredTypeTrait.
+def TestTypePredTraitCombined : Test_Type<"TestTypePredTraitCombined",
+    [PredTypeTrait<"count must match number of elements",
+                   CPred<"$count == $elements.size()">>]> {
+  let parameters = (ins
+    "unsigned":$count,
+    ArrayRefParameter<"int64_t">:$elements,
+    AnyTypeOf<[I16, I32]>:$elementType
+  );
+  let mnemonic = "type_pred_trait_combined";
+  let assemblyFormat = "`<` $count `,` `[` $elements `]` `,` $elementType `>`";
 }
 
 def TestTypeOpAsmTypeInterface : Test_Type<"TestTypeOpAsmTypeInterface",
@@ -460,6 +498,29 @@ def TestMemrefType : Test_Type<"TestMemref",
       return test::TestMemrefType::get(
         getContext(), shape.value_or(getShape()), elementType, getMemSpace());
     }
+  }];
+}
+
+// Test implementation of an interface with methods specifying a
+// method body
+def TestBaseBody : Test_Type<"TestBaseBody",
+    [DeclareTypeInterfaceMethods<TestBaseTypeInterfacePrintTypeA>]> {
+  let mnemonic = "test_base_body";
+}
+
+def TestTypeNewlineAndIndent : Test_Type<"TestTypeNewlineAndIndent"> {
+  let mnemonic = "newline_and_indent";
+  let hasCustomAssemblyFormat = 1;
+}
+
+def TestTypeDenseElement : Test_Type<"TestDenseElement",
+    [DeclareTypeInterfaceMethods<DenseElementTypeInterface,
+      ["getDenseElementBitSize", "convertToAttribute", "convertFromAttribute"]>
+    ]> {
+  let mnemonic = "dense_element";
+  let description = [{
+    A test type that implements DenseElementTypeInterface to test dense
+    elements with custom element types. Elements are stored as 32-bit integers.
   }];
 }
 

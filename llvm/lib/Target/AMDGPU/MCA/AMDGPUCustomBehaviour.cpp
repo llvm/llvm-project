@@ -21,8 +21,8 @@
 
 namespace llvm::mca {
 
-void AMDGPUInstrPostProcess::postProcessInstruction(
-    std::unique_ptr<Instruction> &Inst, const MCInst &MCI) {
+void AMDGPUInstrPostProcess::postProcessInstruction(Instruction &Inst,
+                                                    const MCInst &MCI) {
   switch (MCI.getOpcode()) {
   case AMDGPU::S_WAITCNT:
   case AMDGPU::S_WAITCNT_soft:
@@ -44,7 +44,7 @@ void AMDGPUInstrPostProcess::postProcessInstruction(
 
 // s_waitcnt instructions encode important information as immediate operands
 // which are lost during the MCInst -> mca::Instruction lowering.
-void AMDGPUInstrPostProcess::processWaitCnt(std::unique_ptr<Instruction> &Inst,
+void AMDGPUInstrPostProcess::processWaitCnt(Instruction &Inst,
                                             const MCInst &MCI) {
   for (int Idx = 0, N = MCI.size(); Idx < N; Idx++) {
     MCAOperand Op;
@@ -55,7 +55,7 @@ void AMDGPUInstrPostProcess::processWaitCnt(std::unique_ptr<Instruction> &Inst,
       Op = MCAOperand::createImm(MCOp.getImm());
     }
     Op.setIndex(Idx);
-    Inst->addOperand(Op);
+    Inst.addOperand(Op);
   }
 }
 
@@ -322,13 +322,13 @@ bool AMDGPUCustomBehaviour::hasModifiersSet(
 }
 
 // taken from SIInstrInfo::isGWS()
-bool AMDGPUCustomBehaviour::isGWS(uint16_t Opcode) const {
+bool AMDGPUCustomBehaviour::isGWS(uint32_t Opcode) const {
   const MCInstrDesc &MCID = MCII.get(Opcode);
   return MCID.TSFlags & SIInstrFlags::GWS;
 }
 
 // taken from SIInstrInfo::isAlwaysGDS()
-bool AMDGPUCustomBehaviour::isAlwaysGDS(uint16_t Opcode) const {
+bool AMDGPUCustomBehaviour::isAlwaysGDS(uint32_t Opcode) const {
   return Opcode == AMDGPU::DS_ORDERED_COUNT ||
          Opcode == AMDGPU::DS_ADD_GS_REG_RTN ||
          Opcode == AMDGPU::DS_SUB_GS_REG_RTN || isGWS(Opcode);

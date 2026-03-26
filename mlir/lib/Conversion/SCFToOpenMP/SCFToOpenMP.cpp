@@ -20,10 +20,9 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/WalkPatternRewriteDriver.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTSCFTOOPENMPPASS
@@ -151,32 +150,48 @@ static const llvm::fltSemantics &fltSemanticsForType(FloatType type) {
   llvm_unreachable("unknown float type");
 }
 
+/// Helper to create a splat attribute for vector types, or return the scalar
+/// attribute for scalar types.
+static Attribute getSplatOrScalarAttr(Type type, Attribute val) {
+  if (auto vecType = dyn_cast<VectorType>(type))
+    return DenseElementsAttr::get(vecType, val);
+  return val;
+}
+
 /// Returns an attribute with the minimum (if `min` is set) or the maximum value
 /// (otherwise) for the given float type.
 static Attribute minMaxValueForFloat(Type type, bool min) {
-  auto fltType = cast<FloatType>(type);
-  return FloatAttr::get(
-      type, llvm::APFloat::getLargest(fltSemanticsForType(fltType), min));
+  Type elType = getElementTypeOrSelf(type);
+  auto fltType = cast<FloatType>(elType);
+  auto val = llvm::APFloat::getLargest(fltSemanticsForType(fltType), min);
+
+  return getSplatOrScalarAttr(type, FloatAttr::get(elType, val));
 }
 
 /// Returns an attribute with the signed integer minimum (if `min` is set) or
 /// the maximum value (otherwise) for the given integer type, regardless of its
 /// signedness semantics (only the width is considered).
 static Attribute minMaxValueForSignedInt(Type type, bool min) {
-  auto intType = cast<IntegerType>(type);
+  Type elType = getElementTypeOrSelf(type);
+  auto intType = cast<IntegerType>(elType);
   unsigned bitwidth = intType.getWidth();
-  return IntegerAttr::get(type, min ? llvm::APInt::getSignedMinValue(bitwidth)
-                                    : llvm::APInt::getSignedMaxValue(bitwidth));
+  auto val = min ? llvm::APInt::getSignedMinValue(bitwidth)
+                 : llvm::APInt::getSignedMaxValue(bitwidth);
+
+  return getSplatOrScalarAttr(type, IntegerAttr::get(elType, val));
 }
 
 /// Returns an attribute with the unsigned integer minimum (if `min` is set) or
 /// the maximum value (otherwise) for the given integer type, regardless of its
 /// signedness semantics (only the width is considered).
 static Attribute minMaxValueForUnsignedInt(Type type, bool min) {
-  auto intType = cast<IntegerType>(type);
+  Type elType = getElementTypeOrSelf(type);
+  auto intType = cast<IntegerType>(elType);
   unsigned bitwidth = intType.getWidth();
-  return IntegerAttr::get(type, min ? llvm::APInt::getZero(bitwidth)
-                                    : llvm::APInt::getAllOnes(bitwidth));
+  auto val =
+      min ? llvm::APInt::getZero(bitwidth) : llvm::APInt::getAllOnes(bitwidth);
+
+  return getSplatOrScalarAttr(type, IntegerAttr::get(elType, val));
 }
 
 /// Creates an OpenMP reduction declaration and inserts it into the provided
@@ -188,8 +203,9 @@ createDecl(PatternRewriter &builder, SymbolTable &symbolTable,
            scf::ReduceOp reduce, int64_t reductionIndex, Attribute initValue) {
   OpBuilder::InsertionGuard guard(builder);
   Type type = reduce.getOperands()[reductionIndex].getType();
-  auto decl = builder.create<omp::DeclareReductionOp>(reduce.getLoc(),
-                                                      "__scf_reduction", type);
+  auto decl = omp::DeclareReductionOp::create(builder, reduce.getLoc(),
+                                              "__scf_reduction", type,
+                                              /*byref_element_type=*/{});
   symbolTable.insert(decl);
 
   builder.createBlock(&decl.getInitializerRegion(),
@@ -197,13 +213,13 @@ createDecl(PatternRewriter &builder, SymbolTable &symbolTable,
                       {reduce.getOperands()[reductionIndex].getLoc()});
   builder.setInsertionPointToEnd(&decl.getInitializerRegion().back());
   Value init =
-      builder.create<LLVM::ConstantOp>(reduce.getLoc(), type, initValue);
-  builder.create<omp::YieldOp>(reduce.getLoc(), init);
+      LLVM::ConstantOp::create(builder, reduce.getLoc(), type, initValue);
+  omp::YieldOp::create(builder, reduce.getLoc(), init);
 
   Operation *terminator =
       &reduce.getReductions()[reductionIndex].front().back();
   assert(isa<scf::ReduceReturnOp>(terminator) &&
-         "expected reduce op to be terminated by redure return");
+         "expected reduce op to be terminated by reduce return");
   builder.setInsertionPoint(terminator);
   builder.replaceOpWithNewOp<omp::YieldOp>(terminator,
                                            terminator->getOperands());
@@ -228,14 +244,19 @@ static omp::DeclareReductionOp addAtomicRMW(OpBuilder &builder,
                       {reduceOperandLoc, reduceOperandLoc});
   Block *atomicBlock = &decl.getAtomicReductionRegion().back();
   builder.setInsertionPointToEnd(atomicBlock);
-  Value loaded = builder.create<LLVM::LoadOp>(reduce.getLoc(), decl.getType(),
-                                              atomicBlock->getArgument(1));
-  builder.create<LLVM::AtomicRMWOp>(reduce.getLoc(), atomicKind,
-                                    atomicBlock->getArgument(0), loaded,
-                                    LLVM::AtomicOrdering::monotonic);
-  builder.create<omp::YieldOp>(reduce.getLoc(), ArrayRef<Value>());
+  Value loaded = LLVM::LoadOp::create(builder, reduce.getLoc(), decl.getType(),
+                                      atomicBlock->getArgument(1));
+  LLVM::AtomicRMWOp::create(builder, reduce.getLoc(), atomicKind,
+                            atomicBlock->getArgument(0), loaded,
+                            LLVM::AtomicOrdering::monotonic);
+  omp::YieldOp::create(builder, reduce.getLoc(), ArrayRef<Value>());
   return decl;
 }
+
+/// Returns true if the type is supported by llvm.atomicrmw.
+/// LLVM IR currently does not support atomic operations on vector types.
+/// See LLVM Language Reference Manual on 'atomicrmw'.
+static bool supportsAtomic(Type type) { return !isa<VectorType>(type); }
 
 /// Creates an OpenMP reduction declaration that corresponds to the given SCF
 /// reduction and returns it. Recognizes common reductions in order to identify
@@ -261,91 +282,119 @@ static omp::DeclareReductionOp declareReduction(PatternRewriter &builder,
   // Match simple binary reductions that can be expressed with atomicrmw.
   Type type = reduce.getOperands()[reductionIndex].getType();
   Block &reduction = reduce.getReductions()[reductionIndex].front();
+
+  // Handle scalar element type extraction for vector bitwidth safety.
+  Type elType = getElementTypeOrSelf(type);
+
+  // Arithmetic Reductions
   if (matchSimpleReduction<arith::AddFOp, LLVM::FAddOp>(reduction)) {
-    omp::DeclareReductionOp decl =
-        createDecl(builder, symbolTable, reduce, reductionIndex,
-                   builder.getFloatAttr(type, 0.0));
-    return addAtomicRMW(builder, LLVM::AtomicBinOp::fadd, decl, reduce,
-                        reductionIndex);
-  }
-  if (matchSimpleReduction<arith::AddIOp, LLVM::AddOp>(reduction)) {
-    omp::DeclareReductionOp decl =
-        createDecl(builder, symbolTable, reduce, reductionIndex,
-                   builder.getIntegerAttr(type, 0));
-    return addAtomicRMW(builder, LLVM::AtomicBinOp::add, decl, reduce,
-                        reductionIndex);
-  }
-  if (matchSimpleReduction<arith::OrIOp, LLVM::OrOp>(reduction)) {
-    omp::DeclareReductionOp decl =
-        createDecl(builder, symbolTable, reduce, reductionIndex,
-                   builder.getIntegerAttr(type, 0));
-    return addAtomicRMW(builder, LLVM::AtomicBinOp::_or, decl, reduce,
-                        reductionIndex);
-  }
-  if (matchSimpleReduction<arith::XOrIOp, LLVM::XOrOp>(reduction)) {
-    omp::DeclareReductionOp decl =
-        createDecl(builder, symbolTable, reduce, reductionIndex,
-                   builder.getIntegerAttr(type, 0));
-    return addAtomicRMW(builder, LLVM::AtomicBinOp::_xor, decl, reduce,
-                        reductionIndex);
-  }
-  if (matchSimpleReduction<arith::AndIOp, LLVM::AndOp>(reduction)) {
     omp::DeclareReductionOp decl = createDecl(
         builder, symbolTable, reduce, reductionIndex,
-        builder.getIntegerAttr(
-            type, llvm::APInt::getAllOnes(type.getIntOrFloatBitWidth())));
-    return addAtomicRMW(builder, LLVM::AtomicBinOp::_and, decl, reduce,
-                        reductionIndex);
+        getSplatOrScalarAttr(type, builder.getFloatAttr(elType, 0.0)));
+    return supportsAtomic(type) ? addAtomicRMW(builder, LLVM::AtomicBinOp::fadd,
+                                               decl, reduce, reductionIndex)
+                                : decl;
+  }
+  if (matchSimpleReduction<arith::AddIOp, LLVM::AddOp>(reduction)) {
+    omp::DeclareReductionOp decl = createDecl(
+        builder, symbolTable, reduce, reductionIndex,
+        getSplatOrScalarAttr(type, builder.getIntegerAttr(elType, 0)));
+    return supportsAtomic(type) ? addAtomicRMW(builder, LLVM::AtomicBinOp::add,
+                                               decl, reduce, reductionIndex)
+                                : decl;
+  }
+  if (matchSimpleReduction<arith::OrIOp, LLVM::OrOp>(reduction)) {
+    omp::DeclareReductionOp decl = createDecl(
+        builder, symbolTable, reduce, reductionIndex,
+        getSplatOrScalarAttr(type, builder.getIntegerAttr(elType, 0)));
+    return supportsAtomic(type) ? addAtomicRMW(builder, LLVM::AtomicBinOp::_or,
+                                               decl, reduce, reductionIndex)
+                                : decl;
+  }
+  if (matchSimpleReduction<arith::XOrIOp, LLVM::XOrOp>(reduction)) {
+    omp::DeclareReductionOp decl = createDecl(
+        builder, symbolTable, reduce, reductionIndex,
+        getSplatOrScalarAttr(type, builder.getIntegerAttr(elType, 0)));
+    return supportsAtomic(type) ? addAtomicRMW(builder, LLVM::AtomicBinOp::_xor,
+                                               decl, reduce, reductionIndex)
+                                : decl;
+  }
+  if (matchSimpleReduction<arith::AndIOp, LLVM::AndOp>(reduction)) {
+    APInt allOnes = llvm::APInt::getAllOnes(elType.getIntOrFloatBitWidth());
+    omp::DeclareReductionOp decl = createDecl(
+        builder, symbolTable, reduce, reductionIndex,
+        getSplatOrScalarAttr(type, builder.getIntegerAttr(elType, allOnes)));
+    return supportsAtomic(type) ? addAtomicRMW(builder, LLVM::AtomicBinOp::_and,
+                                               decl, reduce, reductionIndex)
+                                : decl;
   }
 
   // Match simple binary reductions that cannot be expressed with atomicrmw.
   // TODO: add atomic region using cmpxchg (which needs atomic load to be
   // available as an op).
   if (matchSimpleReduction<arith::MulFOp, LLVM::FMulOp>(reduction)) {
-    return createDecl(builder, symbolTable, reduce, reductionIndex,
-                      builder.getFloatAttr(type, 1.0));
+    return createDecl(
+        builder, symbolTable, reduce, reductionIndex,
+        getSplatOrScalarAttr(type, builder.getFloatAttr(elType, 1.0)));
   }
+
   if (matchSimpleReduction<arith::MulIOp, LLVM::MulOp>(reduction)) {
-    return createDecl(builder, symbolTable, reduce, reductionIndex,
-                      builder.getIntegerAttr(type, 1));
+    return createDecl(
+        builder, symbolTable, reduce, reductionIndex,
+        getSplatOrScalarAttr(type, builder.getIntegerAttr(elType, 1)));
   }
 
   // Match select-based min/max reductions.
   bool isMin;
-  if (matchSelectReduction<arith::CmpFOp, arith::SelectOp>(
+  // Floating Point Min/Max
+  if (matchSelectReduction<arith::CmpFOp, arith::SelectOp,
+                           arith::CmpFPredicate>(
           reduction, {arith::CmpFPredicate::OLT, arith::CmpFPredicate::OLE},
           {arith::CmpFPredicate::OGT, arith::CmpFPredicate::OGE}, isMin) ||
-      matchSelectReduction<LLVM::FCmpOp, LLVM::SelectOp>(
-          reduction, {LLVM::FCmpPredicate::olt, LLVM::FCmpPredicate::ole},
-          {LLVM::FCmpPredicate::ogt, LLVM::FCmpPredicate::oge}, isMin)) {
+      matchSelectReduction<arith::CmpFOp, arith::SelectOp,
+                           arith::CmpFPredicate>(
+          reduction, {arith::CmpFPredicate::OGT, arith::CmpFPredicate::OGE},
+          {arith::CmpFPredicate::OLT, arith::CmpFPredicate::OLE}, isMin)) {
     return createDecl(builder, symbolTable, reduce, reductionIndex,
                       minMaxValueForFloat(type, !isMin));
   }
-  if (matchSelectReduction<arith::CmpIOp, arith::SelectOp>(
+
+  // Integer Min/Max
+  if (matchSelectReduction<arith::CmpIOp, arith::SelectOp,
+                           arith::CmpIPredicate>(
           reduction, {arith::CmpIPredicate::slt, arith::CmpIPredicate::sle},
           {arith::CmpIPredicate::sgt, arith::CmpIPredicate::sge}, isMin) ||
-      matchSelectReduction<LLVM::ICmpOp, LLVM::SelectOp>(
-          reduction, {LLVM::ICmpPredicate::slt, LLVM::ICmpPredicate::sle},
-          {LLVM::ICmpPredicate::sgt, LLVM::ICmpPredicate::sge}, isMin)) {
+      matchSelectReduction<arith::CmpIOp, arith::SelectOp,
+                           arith::CmpIPredicate>(
+          reduction, {arith::CmpIPredicate::sgt, arith::CmpIPredicate::sge},
+          {arith::CmpIPredicate::slt, arith::CmpIPredicate::sle}, isMin)) {
     omp::DeclareReductionOp decl =
         createDecl(builder, symbolTable, reduce, reductionIndex,
                    minMaxValueForSignedInt(type, !isMin));
-    return addAtomicRMW(builder,
-                        isMin ? LLVM::AtomicBinOp::min : LLVM::AtomicBinOp::max,
-                        decl, reduce, reductionIndex);
+    return supportsAtomic(type) ? addAtomicRMW(builder,
+                                               isMin ? LLVM::AtomicBinOp::min
+                                                     : LLVM::AtomicBinOp::max,
+                                               decl, reduce, reductionIndex)
+                                : decl;
   }
-  if (matchSelectReduction<arith::CmpIOp, arith::SelectOp>(
+
+  // Unsigned Integer Min/Max
+  if (matchSelectReduction<arith::CmpIOp, arith::SelectOp,
+                           arith::CmpIPredicate>(
           reduction, {arith::CmpIPredicate::ult, arith::CmpIPredicate::ule},
           {arith::CmpIPredicate::ugt, arith::CmpIPredicate::uge}, isMin) ||
-      matchSelectReduction<LLVM::ICmpOp, LLVM::SelectOp>(
-          reduction, {LLVM::ICmpPredicate::ugt, LLVM::ICmpPredicate::ule},
-          {LLVM::ICmpPredicate::ugt, LLVM::ICmpPredicate::uge}, isMin)) {
+      matchSelectReduction<arith::CmpIOp, arith::SelectOp,
+                           arith::CmpIPredicate>(
+          reduction, {arith::CmpIPredicate::ugt, arith::CmpIPredicate::uge},
+          {arith::CmpIPredicate::ult, arith::CmpIPredicate::ule}, isMin)) {
     omp::DeclareReductionOp decl =
         createDecl(builder, symbolTable, reduce, reductionIndex,
                    minMaxValueForUnsignedInt(type, !isMin));
-    return addAtomicRMW(
-        builder, isMin ? LLVM::AtomicBinOp::umin : LLVM::AtomicBinOp::umax,
-        decl, reduce, reductionIndex);
+    return supportsAtomic(type) ? addAtomicRMW(builder,
+                                               isMin ? LLVM::AtomicBinOp::umin
+                                                     : LLVM::AtomicBinOp::umax,
+                                               decl, reduce, reductionIndex)
+                                : decl;
   }
 
   return nullptr;
@@ -381,8 +430,9 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
     // Allocate reduction variables. Make sure the we don't overflow the stack
     // with local `alloca`s by saving and restoring the stack pointer.
     Location loc = parallelOp.getLoc();
-    Value one = rewriter.create<LLVM::ConstantOp>(
-        loc, rewriter.getIntegerType(64), rewriter.getI64IntegerAttr(1));
+    Value one =
+        LLVM::ConstantOp::create(rewriter, loc, rewriter.getIntegerType(64),
+                                 rewriter.getI64IntegerAttr(1));
     SmallVector<Value> reductionVariables;
     reductionVariables.reserve(parallelOp.getNumReductions());
     auto ptrType = LLVM::LLVMPointerType::get(parallelOp.getContext());
@@ -391,9 +441,9 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
               isa<LLVM::PointerElementTypeInterface>(init.getType())) &&
              "cannot create a reduction variable if the type is not an LLVM "
              "pointer element");
-      Value storage =
-          rewriter.create<LLVM::AllocaOp>(loc, ptrType, init.getType(), one, 0);
-      rewriter.create<LLVM::StoreOp>(loc, init, storage);
+      Value storage = LLVM::AllocaOp::create(rewriter, loc, ptrType,
+                                             init.getType(), one, 0);
+      LLVM::StoreOp::create(rewriter, loc, init, storage);
       reductionVariables.push_back(storage);
     }
 
@@ -412,8 +462,8 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
       assert(redRegion.hasOneBlock() &&
              "expect reduction region to have one block");
       Value pvtRedVar = parallelOp.getRegion().addArgument(x.getType(), loc);
-      Value pvtRedVal = rewriter.create<LLVM::LoadOp>(reduce.getLoc(),
-                                                      rD.getType(), pvtRedVar);
+      Value pvtRedVal = LLVM::LoadOp::create(rewriter, reduce.getLoc(),
+                                             rD.getType(), pvtRedVar);
       // Make a copy of the reduction combiner region in the body
       mlir::OpBuilder builder(rewriter.getContext());
       builder.setInsertionPoint(reduce);
@@ -428,7 +478,7 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
           assert(yieldOp && yieldOp.getResults().size() == 1 &&
                  "expect YieldOp in reduction region to return one result");
           Value redVal = yieldOp.getResults()[0];
-          rewriter.create<LLVM::StoreOp>(loc, redVal, pvtRedVar);
+          LLVM::StoreOp::create(rewriter, loc, redVal, pvtRedVar);
           rewriter.eraseOp(yieldOp);
           break;
         }
@@ -436,18 +486,19 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
     }
     rewriter.eraseOp(reduce);
 
-    Value numThreadsVar;
+    SmallVector<Value> numThreadsVars;
     if (numThreads > 0) {
-      numThreadsVar = rewriter.create<LLVM::ConstantOp>(
-          loc, rewriter.getI32IntegerAttr(numThreads));
+      Value numThreadsVar = LLVM::ConstantOp::create(
+          rewriter, loc, rewriter.getI32IntegerAttr(numThreads));
+      numThreadsVars.push_back(numThreadsVar);
     }
     // Create the parallel wrapper.
-    auto ompParallel = rewriter.create<omp::ParallelOp>(
-        loc,
+    auto ompParallel = omp::ParallelOp::create(
+        rewriter, loc,
         /* allocate_vars = */ llvm::SmallVector<Value>{},
         /* allocator_vars = */ llvm::SmallVector<Value>{},
         /* if_expr = */ Value{},
-        /* num_threads = */ numThreadsVar,
+        /* num_threads_vars = */ numThreadsVars,
         /* private_vars = */ ValueRange(),
         /* private_syms = */ nullptr,
         /* private_needs_barrier = */ nullptr,
@@ -465,7 +516,7 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
       {
         OpBuilder::InsertionGuard allocaGuard(rewriter);
         // Create worksharing loop wrapper.
-        auto wsloopOp = rewriter.create<omp::WsloopOp>(parallelOp.getLoc());
+        auto wsloopOp = omp::WsloopOp::create(rewriter, parallelOp.getLoc());
         if (!reductionVariables.empty()) {
           wsloopOp.setReductionSymsAttr(
               ArrayAttr::get(rewriter.getContext(), reductionSyms));
@@ -477,7 +528,7 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
           wsloopOp.setReductionByref(
               DenseBoolArrayAttr::get(rewriter.getContext(), reductionByRef));
         }
-        rewriter.create<omp::TerminatorOp>(loc); // omp.parallel terminator.
+        omp::TerminatorOp::create(rewriter, loc); // omp.parallel terminator.
 
         // The wrapper's entry block arguments will define the reduction
         // variables.
@@ -491,9 +542,11 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
                                               parallelOp.getLoc()));
 
         // Create loop nest and populate region with contents of scf.parallel.
-        auto loopOp = rewriter.create<omp::LoopNestOp>(
-            parallelOp.getLoc(), parallelOp.getLowerBound(),
-            parallelOp.getUpperBound(), parallelOp.getStep());
+        auto loopOp = omp::LoopNestOp::create(
+            rewriter, parallelOp.getLoc(), parallelOp.getLowerBound().size(),
+            parallelOp.getLowerBound(), parallelOp.getUpperBound(),
+            parallelOp.getStep(), /*loop_inclusive=*/false,
+            /*tile_sizes=*/nullptr);
 
         rewriter.inlineRegionBefore(parallelOp.getRegion(), loopOp.getRegion(),
                                     loopOp.getRegion().begin());
@@ -512,13 +565,13 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
             rewriter.splitBlock(&loopOpEntryBlock, loopOpEntryBlock.begin());
         rewriter.setInsertionPointToStart(&loopOpEntryBlock);
 
-        auto scope = rewriter.create<memref::AllocaScopeOp>(parallelOp.getLoc(),
-                                                            TypeRange());
-        rewriter.create<omp::YieldOp>(loc, ValueRange());
+        auto scope = memref::AllocaScopeOp::create(
+            rewriter, parallelOp.getLoc(), TypeRange());
+        omp::YieldOp::create(rewriter, loc, ValueRange());
         Block *scopeBlock = rewriter.createBlock(&scope.getBodyRegion());
         rewriter.mergeBlocks(ops, scopeBlock);
         rewriter.setInsertionPointToEnd(&*scope.getBodyRegion().begin());
-        rewriter.create<memref::AllocaScopeReturnOp>(loc, ValueRange());
+        memref::AllocaScopeReturnOp::create(rewriter, loc, ValueRange());
       }
     }
 
@@ -527,7 +580,7 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
     results.reserve(reductionVariables.size());
     for (auto [variable, type] :
          llvm::zip(reductionVariables, parallelOp.getResultTypes())) {
-      Value res = rewriter.create<LLVM::LoadOp>(loc, type, variable);
+      Value res = LLVM::LoadOp::create(rewriter, loc, type, variable);
       results.push_back(res);
     }
     rewriter.replaceOp(parallelOp, results);
@@ -538,15 +591,18 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
 
 /// Applies the conversion patterns in the given function.
 static LogicalResult applyPatterns(ModuleOp module, unsigned numThreads) {
-  ConversionTarget target(*module.getContext());
-  target.addIllegalOp<scf::ReduceOp, scf::ReduceReturnOp, scf::ParallelOp>();
-  target.addLegalDialect<omp::OpenMPDialect, LLVM::LLVMDialect,
-                         memref::MemRefDialect>();
-
   RewritePatternSet patterns(module.getContext());
   patterns.add<ParallelOpLowering>(module.getContext(), numThreads);
   FrozenRewritePatternSet frozen(std::move(patterns));
-  return applyPartialConversion(module, target, frozen);
+  walkAndApplyPatterns(module, frozen);
+  auto status = module.walk([](Operation *op) {
+    if (isa<scf::ReduceOp, scf::ReduceReturnOp, scf::ParallelOp>(op)) {
+      op->emitError("unconverted operation found");
+      return WalkResult::interrupt();
+    }
+    return WalkResult::advance();
+  });
+  return failure(status.wasInterrupted());
 }
 
 /// A pass converting SCF operations to OpenMP operations.

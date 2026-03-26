@@ -19,7 +19,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Intrinsics.h"
@@ -38,30 +37,6 @@ public:
 
   SPIRVMergeRegionExitTargets() : FunctionPass(ID) {}
 
-  // Gather all the successors of |BB|.
-  // This function asserts if the terminator neither a branch, switch or return.
-  std::unordered_set<BasicBlock *> gatherSuccessors(BasicBlock *BB) {
-    std::unordered_set<BasicBlock *> output;
-    auto *T = BB->getTerminator();
-
-    if (auto *BI = dyn_cast<BranchInst>(T)) {
-      output.insert(BI->getSuccessor(0));
-      if (BI->isConditional())
-        output.insert(BI->getSuccessor(1));
-      return output;
-    }
-
-    if (auto *SI = dyn_cast<SwitchInst>(T)) {
-      output.insert(SI->getDefaultDest());
-      for (auto &Case : SI->cases())
-        output.insert(Case.getCaseSuccessor());
-      return output;
-    }
-
-    assert(isa<ReturnInst>(T) && "Unhandled terminator type.");
-    return output;
-  }
-
   /// Create a value in BB set to the value associated with the branch the block
   /// terminator will take.
   llvm::Value *createExitVariable(
@@ -70,18 +45,15 @@ public:
     auto *T = BB->getTerminator();
     if (isa<ReturnInst>(T))
       return nullptr;
+    if (auto *BI = dyn_cast<UncondBrInst>(T))
+      return TargetToValue.lookup(BI->getSuccessor());
 
     IRBuilder<> Builder(BB);
     Builder.SetInsertPoint(T);
 
-    if (auto *BI = dyn_cast<BranchInst>(T)) {
-
-      BasicBlock *LHSTarget = BI->getSuccessor(0);
-      BasicBlock *RHSTarget =
-          BI->isConditional() ? BI->getSuccessor(1) : nullptr;
-
-      Value *LHS = TargetToValue.lookup(LHSTarget);
-      Value *RHS = TargetToValue.lookup(RHSTarget);
+    if (auto *BI = dyn_cast<CondBrInst>(T)) {
+      Value *LHS = TargetToValue.lookup(BI->getSuccessor(0));
+      Value *RHS = TargetToValue.lookup(BI->getSuccessor(1));
 
       if (LHS == nullptr || RHS == nullptr)
         return LHS == nullptr ? RHS : LHS;
@@ -90,33 +62,6 @@ public:
 
     // TODO: add support for switch cases.
     llvm_unreachable("Unhandled terminator type.");
-  }
-
-  /// Replaces |BB|'s branch targets present in |ToReplace| with |NewTarget|.
-  void replaceBranchTargets(BasicBlock *BB,
-                            const SmallPtrSet<BasicBlock *, 4> &ToReplace,
-                            BasicBlock *NewTarget) {
-    auto *T = BB->getTerminator();
-    if (isa<ReturnInst>(T))
-      return;
-
-    if (auto *BI = dyn_cast<BranchInst>(T)) {
-      for (size_t i = 0; i < BI->getNumSuccessors(); i++) {
-        if (ToReplace.count(BI->getSuccessor(i)) != 0)
-          BI->setSuccessor(i, NewTarget);
-      }
-      return;
-    }
-
-    if (auto *SI = dyn_cast<SwitchInst>(T)) {
-      for (size_t i = 0; i < SI->getNumSuccessors(); i++) {
-        if (ToReplace.count(SI->getSuccessor(i)) != 0)
-          SI->setSuccessor(i, NewTarget);
-      }
-      return;
-    }
-
-    assert(false && "Unhandled terminator type.");
   }
 
   AllocaInst *CreateVariable(Function &F, Type *Type,
@@ -133,7 +78,7 @@ public:
     // Gather all the exit targets for this region.
     SmallPtrSet<BasicBlock *, 4> ExitTargets;
     for (BasicBlock *Exit : CR->Exits) {
-      for (BasicBlock *Target : gatherSuccessors(Exit)) {
+      for (BasicBlock *Target : successors(Exit)) {
         if (CR->Blocks.count(Target) == 0)
           ExitTargets.insert(Target);
       }
@@ -192,8 +137,12 @@ public:
     }
 
     // Fix exit branches to redirect to the new exit.
-    for (auto Exit : CR->Exits)
-      replaceBranchTargets(Exit, ExitTargets, NewExitTarget);
+    for (auto Exit : CR->Exits) {
+      Instruction *T = Exit->getTerminator();
+      for (auto I = succ_begin(T), E = succ_end(T); I != E; ++I)
+        if (ExitTargets.contains(*I))
+          I.getUse()->set(NewExitTarget);
+    }
 
     CR = CR->Parent;
     while (CR) {
@@ -224,8 +173,7 @@ public:
 
     std::unordered_set<BasicBlock *> ExitTargets;
     for (auto *Exit : CR->Exits) {
-      auto Set = gatherSuccessors(Exit);
-      for (auto *BB : Set) {
+      for (auto *BB : successors(Exit)) {
         if (CR->Blocks.count(BB) == 0)
           ExitTargets.insert(BB);
       }
@@ -235,7 +183,7 @@ public:
   }
 #endif
 
-  virtual bool runOnFunction(Function &F) override {
+  bool runOnFunction(Function &F) override {
     LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     auto *TopLevelRegion =
         getAnalysis<SPIRVConvergenceRegionAnalysisWrapperPass>()

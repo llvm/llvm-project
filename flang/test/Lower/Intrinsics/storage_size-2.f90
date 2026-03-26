@@ -11,8 +11,8 @@ subroutine test_storage_size(n)
   end interface
   integer n
   print*, storage_size(return_char(n))
-! CHECK: %[[val_16:.*]] = fir.call @_QPreturn_char(%[[res_addr:[^,]*]], %[[res_len:[^,]*]], {{.*}})
-! CHECK: %[[res:.*]]:2 = hlfir.declare %[[res_addr]] typeparams %[[res_len]]
+! CHECK: %[[res:.*]]:2 = hlfir.declare %[[res_addr:[^,]*]] typeparams %[[res_len:[^ ]*]]
+! CHECK: %[[val_16:.*]] = fir.call @_QPreturn_char(%[[res_addr]], %[[res_len]], {{.*}})
 ! CHECK: %[[false:.*]] = arith.constant false
 ! CHECK: %[[expr:.*]] = hlfir.as_expr %[[res]]#0 move %[[false]] : (!fir.boxchar<1>, i1) -> !hlfir.expr<!fir.char<1,?>>
 ! CHECK: %[[assoc:.*]]:3 = hlfir.associate %[[expr]] typeparams %[[res_len]] {adapt.valuebyref} : (!hlfir.expr<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>, i1)

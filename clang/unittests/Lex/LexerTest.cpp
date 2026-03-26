@@ -41,8 +41,8 @@ using testing::ElementsAre;
 class LexerTest : public ::testing::Test {
 protected:
   LexerTest()
-      : FileMgr(FileMgrOpts), DiagID(new DiagnosticIDs()),
-        Diags(DiagID, DiagOpts, new IgnoringDiagConsumer()),
+      : FileMgr(FileMgrOpts),
+        Diags(DiagnosticIDs::create(), DiagOpts, new IgnoringDiagConsumer()),
         SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions) {
     TargetOpts->Triple = "x86_64-apple-darwin11.1.0";
     Target = TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
@@ -89,6 +89,30 @@ protected:
     return toks;
   }
 
+  bool MainFileIsMultipleIncludeGuarded(StringRef Filename, StringRef Source) {
+    FileEntryRef FE = FileMgr.getVirtualFileRef(Filename, Source.size(), 0);
+    SourceMgr.setMainFileID(
+        SourceMgr.createFileID(FE, SourceLocation(), SrcMgr::C_User));
+    SourceMgr.overrideFileContents(
+        FE, llvm::MemoryBuffer::getMemBufferCopy(Source, Filename));
+
+    TrivialModuleLoader ModLoader;
+    HeaderSearchOptions HSOpts;
+    HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, Target.get());
+    PreprocessorOptions PPOpts;
+    std::unique_ptr<Preprocessor> LocalPP = std::make_unique<Preprocessor>(
+        PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
+        /*IILookup=*/nullptr,
+        /*OwnsHeaderSearch=*/false);
+    if (!PreDefines.empty())
+      LocalPP->setPredefines(PreDefines);
+    LocalPP->Initialize(*Target);
+    LocalPP->EnterMainSourceFile();
+    std::vector<Token> Toks;
+    LocalPP->LexTokensUntilEOF(&Toks);
+    return LocalPP->getHeaderSearchInfo().isFileMultipleIncludeGuarded(FE);
+  }
+
   std::string getSourceText(Token Begin, Token End) {
     bool Invalid;
     StringRef Str =
@@ -102,7 +126,6 @@ protected:
 
   FileSystemOptions FileMgrOpts;
   FileManager FileMgr;
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID;
   DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags;
   SourceManager SourceMgr;
@@ -359,6 +382,16 @@ TEST_F(LexerTest, LexAPI) {
   EXPECT_EQ("INN", Lexer::getImmediateMacroName(idLoc2, SourceMgr, LangOpts));
   EXPECT_EQ("NOF2", Lexer::getImmediateMacroName(idLoc3, SourceMgr, LangOpts));
   EXPECT_EQ("N", Lexer::getImmediateMacroName(idLoc4, SourceMgr, LangOpts));
+}
+
+TEST_F(LexerTest, MainFileHeaderGuardedWithCPlusPlusModules) {
+  LangOpts.CPlusPlus = true;
+  LangOpts.CPlusPlusModules = true;
+
+  EXPECT_TRUE(MainFileIsMultipleIncludeGuarded("guarded.h", "#ifndef GUARD\n"
+                                                            "#define GUARD\n"
+                                                            "int x;\n"
+                                                            "#endif\n"));
 }
 
 TEST_F(LexerTest, HandlesSplitTokens) {
@@ -796,7 +829,7 @@ TEST_F(LexerTest, CheckFirstPPToken) {
     EXPECT_FALSE(Lexer::getRawToken(PP->getMainFileFirstPPTokenLoc(), Tok,
                                     PP->getSourceManager(), PP->getLangOpts(),
                                     /*IgnoreWhiteSpace=*/false));
-    EXPECT_TRUE(Tok.isFirstPPToken());
+    EXPECT_TRUE(PP->getMainFileFirstPPTokenLoc() == Tok.getLocation());
     EXPECT_TRUE(Tok.is(tok::hash));
   }
 
@@ -812,7 +845,7 @@ TEST_F(LexerTest, CheckFirstPPToken) {
     EXPECT_FALSE(Lexer::getRawToken(PP->getMainFileFirstPPTokenLoc(), Tok,
                                     PP->getSourceManager(), PP->getLangOpts(),
                                     /*IgnoreWhiteSpace=*/false));
-    EXPECT_TRUE(Tok.isFirstPPToken());
+    EXPECT_TRUE(PP->getMainFileFirstPPTokenLoc() == Tok.getLocation());
     EXPECT_TRUE(Tok.is(tok::raw_identifier));
     EXPECT_TRUE(Tok.getRawIdentifier() == "FOO");
   }

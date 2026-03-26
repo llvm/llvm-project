@@ -23,8 +23,6 @@ E::E() noexcept : foo(s()) {}
 // CHECK-NEXT:    call void @_Z1sv(ptr addrspace(5) dead_on_unwind writable sret([[STRUCT_S:%.*]]) align 1 [[THIS1_ASCAST]]) #[[ATTR2:[0-9]+]]
 // CHECK-NEXT:    ret void
 //
-// CHECK-LABEL: declare void @_Z1sv(
-// CHECK-SAME: ptr addrspace(5) dead_on_unwind writable sret([[STRUCT_S]]) align 1) #[[ATTR1:[0-9]+]]
 //
 // CHECK-LABEL: define hidden void @_ZN1EC1Ev(
 // CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] align 2 {

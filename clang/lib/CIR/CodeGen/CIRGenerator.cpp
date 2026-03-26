@@ -13,6 +13,7 @@
 #include "CIRGenModule.h"
 
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Target/LLVMIR/Import.h"
 
@@ -53,6 +54,7 @@ void CIRGenerator::Initialize(ASTContext &astContext) {
   mlirContext->loadDialect<mlir::DLTIDialect>();
   mlirContext->loadDialect<cir::CIRDialect>();
   mlirContext->getOrLoadDialect<mlir::acc::OpenACCDialect>();
+  mlirContext->getOrLoadDialect<mlir::omp::OpenMPDialect>();
 
   // Register extensions to integrate CIR types with OpenACC.
   mlir::DialectRegistry registry;
@@ -147,9 +149,48 @@ void CIRGenerator::HandleTagDeclDefinition(TagDecl *d) {
   // inline initializers as definitions.
   if (astContext->getTargetInfo().getCXXABI().isMicrosoft())
     cgm->errorNYI(d->getSourceRange(), "HandleTagDeclDefinition: MSABI");
-  // For OpenMP emit declare reduction functions, if required.
-  if (astContext->getLangOpts().OpenMP)
-    cgm->errorNYI(d->getSourceRange(), "HandleTagDeclDefinition: OpenMP");
+
+  // For OpenMP emit declare reduction functions or declare mapper, if
+  // required.
+  if (astContext->getLangOpts().OpenMP) {
+    for (Decl *member : d->decls()) {
+      if (auto *drd = dyn_cast<OMPDeclareReductionDecl>(member)) {
+        if (astContext->DeclMustBeEmitted(drd))
+          cgm->errorNYI(d->getSourceRange(),
+                        "HandleTagDeclDefinition: OMPDeclareReductionDecl");
+      } else if (auto *dmd = dyn_cast<OMPDeclareMapperDecl>(member)) {
+        if (astContext->DeclMustBeEmitted(dmd))
+          cgm->errorNYI(d->getSourceRange(),
+                        "HandleTagDeclDefinition: OMPDeclareMapperDecl");
+      }
+    }
+  }
+}
+
+void CIRGenerator::HandleTagDeclRequiredDefinition(const TagDecl *D) {
+  if (diags.hasErrorOccurred())
+    return;
+
+  assert(!cir::MissingFeatures::generateDebugInfo());
+}
+
+void CIRGenerator::HandleCXXStaticMemberVarInstantiation(VarDecl *D) {
+  if (diags.hasErrorOccurred())
+    return;
+
+  cgm->handleCXXStaticMemberVarInstantiation(D);
+}
+
+void CIRGenerator::HandleOpenACCRoutineReference(const FunctionDecl *FD,
+                                                 const OpenACCRoutineDecl *RD) {
+  llvm::StringRef mangledName = cgm->getMangledName(FD);
+  cir::FuncOp entry =
+      mlir::dyn_cast_if_present<cir::FuncOp>(cgm->getGlobalValue(mangledName));
+
+  // if this wasn't generated, don't force it to be.
+  if (!entry)
+    return;
+  cgm->emitOpenACCRoutineDecl(FD, entry, RD->getBeginLoc(), RD->clauses());
 }
 
 void CIRGenerator::CompleteTentativeDefinition(VarDecl *d) {
@@ -157,4 +198,11 @@ void CIRGenerator::CompleteTentativeDefinition(VarDecl *d) {
     return;
 
   cgm->emitTentativeDefinition(d);
+}
+
+void CIRGenerator::HandleVTable(CXXRecordDecl *rd) {
+  if (diags.hasErrorOccurred())
+    return;
+
+  cgm->emitVTable(rd);
 }

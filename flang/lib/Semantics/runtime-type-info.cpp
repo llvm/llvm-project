@@ -771,6 +771,12 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
   auto &foldingContext{context_.foldingContext()};
   auto typeAndShape{evaluate::characteristics::TypeAndShape::Characterize(
       symbol, foldingContext)};
+  bool isDevice{object.cudaDataAttr() &&
+      *object.cudaDataAttr() == common::CUDADataAttr::Device};
+  bool isManaged{object.cudaDataAttr() &&
+      *object.cudaDataAttr() == common::CUDADataAttr::Managed};
+  bool isUnified{object.cudaDataAttr() &&
+      *object.cudaDataAttr() == common::CUDADataAttr::Unified};
   CHECK(typeAndShape.has_value());
   auto dyType{typeAndShape->type()};
   int rank{typeAndShape->Rank()};
@@ -901,6 +907,15 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
                                  .str()),
               object));
     }
+  }
+  if (isDevice) {
+    AddValue(values, componentSchema_, "memoryspace"s, GetEnumValue("device"));
+  } else if (isManaged) {
+    AddValue(values, componentSchema_, "memoryspace"s, GetEnumValue("managed"));
+  } else if (isUnified) {
+    AddValue(values, componentSchema_, "memoryspace"s, GetEnumValue("unified"));
+  } else {
+    AddValue(values, componentSchema_, "memoryspace"s, GetEnumValue("host"));
   }
   if (!hasDataInit) {
     AddValue(values, componentSchema_, "initialization"s,
@@ -1131,7 +1146,7 @@ void RuntimeTableBuilder::DescribeSpecialProc(
   if (auto proc{evaluate::characteristics::Procedure::Characterize(
           specific, context_.foldingContext())}) {
     std::uint8_t isArgDescriptorSet{0};
-    std::uint8_t isArgContiguousSet{0};
+    bool specialCaseFlag{0};
     int argThatMightBeDescriptor{0};
     MaybeExpr which;
     if (isAssignment) {
@@ -1197,7 +1212,7 @@ void RuntimeTableBuilder::DescribeSpecialProc(
                         TypeAndShape::Attr::AssumedShape) ||
                 dummyData.attrs.test(evaluate::characteristics::
                         DummyDataObject::Attr::Contiguous)) {
-              isArgContiguousSet |= 1;
+              specialCaseFlag = true;
             }
           }
         }
@@ -1216,7 +1231,7 @@ void RuntimeTableBuilder::DescribeSpecialProc(
         return;
       }
       if (ddo->type.type().IsPolymorphic()) {
-        isArgDescriptorSet |= 1;
+        argThatMightBeDescriptor = 1;
       }
       switch (io.value()) {
       case common::DefinedIo::ReadFormatted:
@@ -1231,6 +1246,9 @@ void RuntimeTableBuilder::DescribeSpecialProc(
       case common::DefinedIo::WriteUnformatted:
         which = writeUnformattedEnum_;
         break;
+      }
+      if (context_.defaultKinds().GetDefaultKind(TypeCategory::Integer) == 8) {
+        specialCaseFlag = true; // UNIT= & IOSTAT= INTEGER(8)
       }
     }
     if (argThatMightBeDescriptor != 0) {
@@ -1262,8 +1280,8 @@ void RuntimeTableBuilder::DescribeSpecialProc(
     }
     CHECK(bindingIndex <= 255);
     AddValue(values, specialSchema_, "istypebound"s, IntExpr<1>(bindingIndex));
-    AddValue(values, specialSchema_, "isargcontiguousset"s,
-        IntExpr<1>(isArgContiguousSet));
+    AddValue(values, specialSchema_, "specialcaseflag"s,
+        IntExpr<1>(specialCaseFlag));
     AddValue(values, specialSchema_, procCompName,
         SomeExpr{evaluate::ProcedureDesignator{specific}});
     // index might already be present in the case of an override
@@ -1370,12 +1388,37 @@ CollectNonTbpDefinedIoGenericInterfaces(
           if (const DeclTypeSpec *
               declType{GetDefinedIoSpecificArgType(*specific)}) {
             const DerivedTypeSpec &derived{DEREF(declType->AsDerived())};
-            if (const Symbol *
-                dtDesc{derived.scope()
-                        ? derived.scope()->runtimeDerivedTypeDescription()
+            const Scope *derivedScope{derived.scope()};
+            if (!declType->IsPolymorphic()) {
+              // A defined I/O subroutine with a monomorphic "dtv" dummy
+              // argument implies a non-extensible sequence or BIND(C) derived
+              // type.  Such types may be defined more than once in the program
+              // so long as they are structurally equivalent.  If the current
+              // scope has an equivalent type, use it for the table rather
+              // than the "dtv" argument's type.
+              if (const Symbol *inScope{scope.FindSymbol(derived.name())}) {
+                const Symbol *localDerived{&inScope->GetUltimate()};
+                if (const auto *generic{
+                        localDerived->detailsIf<GenericDetails>()}) {
+                  localDerived = generic->derivedType();
+                }
+                if (localDerived && localDerived->has<DerivedTypeDetails>()) {
+                  DerivedTypeSpec localDerivedType{
+                      inScope->name(), *localDerived};
+                  if (evaluate::DynamicType{derived, /*isPolymorphic=*/false}
+                          .IsTkCompatibleWith(evaluate::DynamicType{
+                              localDerivedType, /*iP=*/false})) {
+                    derivedScope = localDerived->scope();
+                  }
+                }
+              }
+            }
+            if (const Symbol *dtDesc{derivedScope
+                        ? derivedScope->runtimeDerivedTypeDescription()
                         : nullptr}) {
               if (useRuntimeTypeInfoEntries &&
-                  &derived.scope()->parent() == &generic->owner()) {
+                  derivedScope == derived.scope() &&
+                  &derivedScope->parent() == &generic->owner()) {
                 // This non-TBP defined I/O generic was defined in the
                 // same scope as the derived type, and it will be
                 // included in the derived type's special bindings
@@ -1383,19 +1426,26 @@ CollectNonTbpDefinedIoGenericInterfaces(
               } else {
                 // Local scope's specific overrides host's for this type
                 bool updated{false};
+                std::uint8_t flags{0};
+                if (declType->IsPolymorphic()) {
+                  flags |= IsDtvArgPolymorphic;
+                }
+                if (scope.context().GetDefaultKind(TypeCategory::Integer) ==
+                    8) {
+                  flags |= DefinedIoInteger8;
+                }
                 for (auto [iter, end]{result.equal_range(dtDesc)}; iter != end;
                      ++iter) {
                   NonTbpDefinedIo &nonTbp{iter->second};
                   if (nonTbp.definedIo == which) {
                     nonTbp.subroutine = &*specific;
-                    nonTbp.isDtvArgPolymorphic = declType->IsPolymorphic();
+                    nonTbp.flags = flags;
                     updated = true;
                   }
                 }
                 if (!updated) {
-                  result.emplace(dtDesc,
-                      NonTbpDefinedIo{
-                          &*specific, which, declType->IsPolymorphic()});
+                  result.emplace(
+                      dtDesc, NonTbpDefinedIo{&*specific, which, flags});
                 }
               }
             }
@@ -1432,7 +1482,8 @@ static const Symbol *FindSpecificDefinedIo(const Scope &scope,
       const Symbol &specific{*ref};
       if (const DeclTypeSpec *
           thisType{GetDefinedIoSpecificArgType(specific)}) {
-        if (evaluate::DynamicType{DEREF(thisType->AsDerived()), true}
+        if (evaluate::DynamicType{
+                DEREF(thisType->AsDerived()), thisType->IsPolymorphic()}
                 .IsTkCompatibleWith(derived)) {
           return &specific.GetUltimate();
         }

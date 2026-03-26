@@ -555,6 +555,7 @@ func.func @reduction_tile_parallel_using_tile_sizes(
 }
 //  CHECK-DAG: #[[MAP0:.*]] = affine_map<()[s0] -> (s0 ceildiv 5)>
 //  CHECK-DAG: #[[MAP1:.*]] = affine_map<(d0)[s0] -> (-d0 + s0, 5)>
+//  CHECK-DAG: #[[MAP2:.*]] = affine_map<()[s0] -> (s0 floordiv 5)>
 //      CHECK: func @reduction_tile_parallel_using_tile_sizes(%[[ARG0:.+]]: tensor<?x?xf32>, %[[ARG1:.+]]: tensor<?xf32>
 //  CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
 //  CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
@@ -566,7 +567,7 @@ func.func @reduction_tile_parallel_using_tile_sizes(
 // CHECK-SAME:      outs(%[[E]] :
 //      CHECK:   %[[L:.*]] = scf.forall (%[[IV:.+]]) = (0) to (%[[D1]]) step (5) shared_outs(%[[ARG3:.+]] = %[[F]])
 //  CHECK-DAG:     %[[TS0:.+]] = affine.min #[[MAP1]](%[[IV]])[%[[D1]]]
-//  CHECK-DAG:     %[[INIT_OFFSET:.+]] = affine.apply #[[MAP0]]()[%[[IV]]]
+//  CHECK-DAG:     %[[INIT_OFFSET:.+]] = affine.apply #[[MAP2]]()[%[[IV]]]
 //  CHECK-DAG:     %[[INCHUNK:.+]] = tensor.extract_slice %[[ARG0]][0, %[[IV]]] [%[[D0]], %[[TS0]]] [1, 1]
 //  CHECK-DAG:     %[[ET:.+]] = tensor.extract_slice %[[ARG3]][0, %[[INIT_OFFSET]]] [%[[D0]], 1] [1, 1]
 //      CHECK:     %[[PARTIAL:.+]] = linalg.generic
@@ -619,7 +620,7 @@ module {
     }
   }
 }
-//  CHECK-DAG: #[[MAP0:.*]] = affine_map<()[s0] -> (s0 ceildiv 64)>
+//  CHECK-DAG: #[[MAP0:.*]] = affine_map<()[s0] -> (s0 floordiv 64)>
 //      CHECK: func @reduction_using_forall_tile_single_of_multiple_reduction_inner(%[[ARG0:.+]]: tensor<86x128xf32>, %[[ARG1:.+]]: tensor<4096x86x128xf32>, %[[ARG2:.+]]: tensor<4096xf32>)
 //      CHECK:   %[[E:.*]] = tensor.empty() : tensor<4096x2xf32>
 //      CHECK:   %[[F:.*]] = linalg.fill
@@ -671,7 +672,7 @@ module {
     }
   }
 }
-//  CHECK-DAG: #[[MAP0:.*]] = affine_map<()[s0] -> (s0 ceildiv 64)>
+//  CHECK-DAG: #[[MAP0:.*]] = affine_map<()[s0] -> (s0 floordiv 64)>
 //      CHECK: func @reduction_using_forall_tilesize_0_of_multiple_reduction_inner(%[[ARG0:.+]]: tensor<86x128xf32>, %[[ARG1:.+]]: tensor<4096x86x128xf32>, %[[ARG2:.+]]: tensor<4096xf32>)
 //      CHECK:   %[[E:.*]] = tensor.empty() : tensor<4096x2xf32>
 //      CHECK:   %[[F:.*]] = linalg.fill
@@ -691,3 +692,39 @@ module {
 //      CHECK:   %[[R:.*]] = linalg.reduce ins(%[[L]]
 // CHECK-SAME:       outs(%[[ARG2]] :
 //      CHECK:   return %[[R]]
+
+// -----
+
+// Check that linalg.index is correctly offset after partial reduction tiling.
+
+func.func @reduction_tile_with_linalg_index(%arg0: tensor<8x128xf32>, %out: tensor<8xi32>) -> tensor<8xi32> {
+  %red = linalg.generic {
+      indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                       affine_map<(d0, d1) -> (d0)>],
+      iterator_types = ["parallel", "reduction"]}
+      ins(%arg0 : tensor<8x128xf32>)
+      outs(%out : tensor<8xi32>) {
+    ^bb0(%in: f32, %acc: i32):
+      %idx = linalg.index 1 : index
+      %idx_i32 = arith.index_cast %idx : index to i32
+      %sum = arith.addi %idx_i32, %acc : i32
+      linalg.yield %sum : i32
+  } -> tensor<8xi32>
+  return %red : tensor<8xi32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1, %2, %3, %loop = transform.structured.tile_reduction_using_for %0
+      by tile_sizes = [0, 32] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// CHECK-DAG: #[[$INDEX_MAP:.*]] = affine_map<(d0)[s0] -> (d0 + s0)>
+// CHECK-LABEL: func @reduction_tile_with_linalg_index(
+//       CHECK:   scf.for %[[IV:[a-zA-Z0-9]+]] =
+//       CHECK:     linalg.generic
+//       CHECK:       %[[LOCAL_IDX:.+]] = linalg.index 1 : index
+//       CHECK:       affine.apply #[[$INDEX_MAP]](%[[IV]])[%[[LOCAL_IDX]]]

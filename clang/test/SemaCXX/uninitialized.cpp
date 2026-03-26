@@ -2,6 +2,23 @@
 // RUN: %clang_cc1 -fsyntax-only -Wall -Wc++20-compat -Wuninitialized -Wno-unused-value -Wno-unused-lambda-capture -Wno-uninitialized-const-reference -std=c++1z -verify %s -fexperimental-new-constant-interpreter
 // RUN: %clang_cc1 -fsyntax-only -Wall -Wc++20-compat -Wuninitialized -Wno-unused-value -Wno-unused-lambda-capture -Wno-uninitialized-const-reference -std=c++20 -verify %s
 
+#if defined(BE_THE_HEADER)
+
+// Wuninitialized-explicit-init should warn in system headers (std::construct_at...) too.
+
+#pragma clang system_header
+namespace std {
+template <class T, class... U>
+constexpr T* construct_at(T* ptr, U&&... args) {
+  return ::new (static_cast<void*>(ptr)) T(static_cast<U&&>(args)...);  // #FIELD_EMBED2_CONSTRUCT_AT
+}
+}
+
+#else
+
+#define BE_THE_HEADER
+#include __FILE__
+
 void* operator new(__SIZE_TYPE__, void*);
 
 // definitions for std::move
@@ -168,6 +185,10 @@ void test_const_ptr() {
   const int *ptr2;
   foo(ptr); // expected-warning {{variable 'ptr' is uninitialized when used here}}
   foobar(&ptr2);
+  int *ptr3; // expected-note {{initialize the variable 'ptr3' to silence this warning}}
+  const int *ptr4; // expected-note {{initialize the variable 'ptr4' to silence this warning}}
+  bar(ptr3); // expected-warning {{variable 'ptr3' is uninitialized when used here}}
+  bar(ptr4); // expected-warning {{variable 'ptr4' is uninitialized when used here}}
 }
 }
 
@@ -1508,7 +1529,7 @@ struct InheritWithExplicit<Special> {
 void aggregate() {
   struct NonAgg {
     NonAgg() { }
-    [[clang::require_explicit_initialization]] int na;  // expected-warning {{'require_explicit_initialization' attribute is ignored in non-aggregate type 'NonAgg'}}
+    [[clang::require_explicit_initialization]] int na;  // expected-warning {{'clang::require_explicit_initialization' attribute is ignored in non-aggregate type 'NonAgg'}}
   };
   NonAgg nonagg;  // no-warning
   (void)nonagg;
@@ -1564,11 +1585,11 @@ void aggregate() {
     explicit F(const char(&)[1]) : f1() {
       // expected-warning@+1 {{field in 'Embed' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_EMBED2 {{'embed2' declared here}}
       ::new(static_cast<void*>(&f1)) decltype(f1);
-      // expected-warning@+1 {{field in 'Embed' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_EMBED2 {{'embed2' declared here}}
-      ::new(static_cast<void*>(&f1)) decltype(f1)();
+      // expected-warning@#FIELD_EMBED2_CONSTRUCT_AT {{field in 'Embed' requires explicit initialization but is not explicitly initialized}} expected-note@+1 {{in instantiation of function template specialization 'std::construct_at<Embed>' requested here}} expected-note@#FIELD_EMBED2 {{'embed2' declared here}}
+      std::construct_at(&f1);
 #if __cplusplus >= 202002L
-      // expected-warning@+1 {{field 'embed2' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_EMBED2 {{'embed2' declared here}}
-      ::new(static_cast<void*>(&f1)) decltype(f1)(1);
+      // expected-warning@#FIELD_EMBED2_CONSTRUCT_AT {{field 'embed2' requires explicit initialization but is not explicitly initialized}} expected-note@+1 {{in instantiation of function template specialization 'std::construct_at<Embed, int>' requested here}} expected-note@#FIELD_EMBED2 {{'embed2' declared here}}
+      std::construct_at(&f1, 1);
 #endif
       // expected-warning@+1 {{field 'embed2' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_EMBED2 {{'embed2' declared here}}
       ::new(static_cast<void*>(&f1)) decltype(f1){1};
@@ -1624,6 +1645,8 @@ void aggregate() {
   S::foo(S{1, 2, 3, 4});
   S::foo(S{.s1 = 100, .s4 = 100});
   S::foo(S{.s1 = 100}); // expected-warning {{field 's4' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_S4 {{'s4' declared here}}
+
+  (void)sizeof(S{}); // no warning -- unevaluated operand
 
   S s{.s1 = 100, .s4 = 100};
   (void)s;
@@ -1717,7 +1740,7 @@ void aggregate() {
   InheritWithExplicit<> agg;  // expected-warning {{field in 'InheritWithExplicit<>' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_G2 {{'g2' declared here}}
   (void)agg;
 
-  InheritWithExplicit<Polymorphic> polymorphic;  // expected-warning@#FIELD_G2 {{'require_explicit_initialization' attribute is ignored in non-aggregate type 'InheritWithExplicit<Polymorphic>'}}
+  InheritWithExplicit<Polymorphic> polymorphic;  // expected-warning@#FIELD_G2 {{'clang::require_explicit_initialization' attribute is ignored in non-aggregate type 'InheritWithExplicit<Polymorphic>'}}
   (void)polymorphic;
 
   Inherit<Special> specialized_explicit;  // expected-warning {{field in 'Inherit<Special>' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_G3 {{'g3' declared here}}
@@ -1726,3 +1749,5 @@ void aggregate() {
   InheritWithExplicit<Special> specialized_implicit;  // no-warning
   (void)specialized_implicit;
 }
+
+#endif

@@ -13,13 +13,7 @@
 
 #include "MCTargetDesc/RISCVAsmBackend.h"
 #include "MCTargetDesc/RISCVMCAsmInfo.h"
-#include "RISCVFixupKinds.h"
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/MC/MCAssembler.h"
-#include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCStreamer.h"
-#include "llvm/MC/MCValue.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
@@ -31,8 +25,8 @@ RISCV::Specifier RISCV::parseSpecifierName(StringRef name) {
       .Case("lo", RISCV::S_LO)
       .Case("hi", ELF::R_RISCV_HI20)
       .Case("pcrel_lo", RISCV::S_PCREL_LO)
-      .Case("pcrel_hi", ELF::R_RISCV_PCREL_HI20)
-      .Case("got_pcrel_hi", ELF::R_RISCV_GOT_HI20)
+      .Case("pcrel_hi", RISCV::S_PCREL_HI)
+      .Case("got_pcrel_hi", RISCV::S_GOT_HI)
       .Case("tprel_lo", RISCV::S_TPREL_LO)
       .Case("tprel_hi", ELF::R_RISCV_TPREL_HI20)
       .Case("tprel_add", ELF::R_RISCV_TPREL_ADD)
@@ -59,9 +53,9 @@ StringRef RISCV::getSpecifierName(Specifier S) {
     return "hi";
   case RISCV::S_PCREL_LO:
     return "pcrel_lo";
-  case ELF::R_RISCV_PCREL_HI20:
+  case RISCV::S_PCREL_HI:
     return "pcrel_hi";
-  case ELF::R_RISCV_GOT_HI20:
+  case RISCV::S_GOT_HI:
     return "got_pcrel_hi";
   case RISCV::S_TPREL_LO:
     return "tprel_lo";
@@ -81,7 +75,7 @@ StringRef RISCV::getSpecifierName(Specifier S) {
     return "tlsdesc_call";
   case ELF::R_RISCV_TLS_GD_HI20:
     return "tls_gd_pcrel_hi";
-  case ELF::R_RISCV_CALL_PLT:
+  case RISCV::S_CALL_PLT:
     return "call_plt";
   case ELF::R_RISCV_32_PCREL:
     return "32_pcrel";

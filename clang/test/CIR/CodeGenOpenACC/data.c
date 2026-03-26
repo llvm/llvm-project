@@ -1,8 +1,11 @@
 // RUN: %clang_cc1 -fopenacc -emit-cir -fclangir %s -o - | FileCheck %s
 
 void acc_data(int cond) {
-  // CHECK: cir.func{{.*}} @acc_data(%[[ARG:.*]]: !s32i{{.*}}) {
+  // CHECK: cir.func{{.*}} @acc_data(%[[ARG:.*]]: !s32i{{.*}}) {{.*}}{
   // CHECK-NEXT: %[[COND:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["cond", init]
+
+  int *ptr;
+  // CHECK-NEXT: %[[PTR:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["ptr"]
   // CHECK-NEXT: cir.store %[[ARG]], %[[COND]] : !s32i, !cir.ptr<!s32i>
 
 #pragma acc data default(none)
@@ -15,7 +18,7 @@ void acc_data(int cond) {
   // CHECK-NEXT: cir.const
   // CHECK-NEXT: cir.store
   // CHECK-NEXT: cir.load
-  // CHECK-NEXT: cir.unary
+  // CHECK-NEXT: cir.inc
   // CHECK-NEXT: cir.store
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
@@ -30,7 +33,7 @@ void acc_data(int cond) {
   // CHECK-NEXT: cir.const
   // CHECK-NEXT: cir.store
   // CHECK-NEXT: cir.load
-  // CHECK-NEXT: cir.unary
+  // CHECK-NEXT: cir.inc
   // CHECK-NEXT: cir.store
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue present>}
@@ -84,7 +87,7 @@ void acc_data(int cond) {
 #pragma acc data default(none) if(cond)
   {}
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[BOOL_CAST:.*]] = cir.cast(int_to_bool, %[[COND_LOAD]] : !s32i), !cir.bool
+  // CHECK-NEXT: %[[BOOL_CAST:.*]] = cir.cast int_to_bool %[[COND_LOAD]] : !s32i -> !cir.bool
   // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[BOOL_CAST]] : !cir.bool to i1
   // CHECK-NEXT: acc.data if(%[[CONV_CAST]]) {
   // CHECK-NEXT: acc.terminator
@@ -93,7 +96,7 @@ void acc_data(int cond) {
 #pragma acc data default(none) if(1)
   {}
   // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[BOOL_CAST:.*]] = cir.cast(int_to_bool, %[[ONE_LITERAL]] : !s32i), !cir.bool
+  // CHECK-NEXT: %[[BOOL_CAST:.*]] = cir.cast int_to_bool %[[ONE_LITERAL]] : !s32i -> !cir.bool
   // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[BOOL_CAST]] : !cir.bool to i1
   // CHECK-NEXT: acc.data if(%[[CONV_CAST]]) {
   // CHECK-NEXT: acc.terminator
@@ -103,7 +106,7 @@ void acc_data(int cond) {
   {}
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[EQ_RES:.*]] = cir.cmp(eq, %[[COND_LOAD]], %[[ONE_LITERAL]]) : !s32i, !cir.bool
+  // CHECK-NEXT: %[[EQ_RES:.*]] = cir.cmp eq %[[COND_LOAD]], %[[ONE_LITERAL]] : !s32i
   // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[EQ_RES]] : !cir.bool to i1
   // CHECK-NEXT: acc.data if(%[[CONV_CAST]]) {
   // CHECK-NEXT: acc.terminator
@@ -220,6 +223,51 @@ void acc_data(int cond) {
   // CHECK-NEXT: acc.data wait({%[[CONV_CAST]] : si32, %[[ONE_CAST]] : si32}) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: attributes {defaultAttr = #acc<defaultvalue none>}
+
+#pragma acc data deviceptr(ptr)
+  {}
+  // CHECK-NEXT: %[[DEV_PTR:.*]] = acc.deviceptr varPtr(%[[PTR]] : !cir.ptr<!cir.ptr<!s32i>>) -> !cir.ptr<!cir.ptr<!s32i>> {name = "ptr"}
+  // CHECK-NEXT: acc.data dataOperands(%[[DEV_PTR]] : !cir.ptr<!cir.ptr<!s32i>>) {
+  // CHECK-NEXT: acc.terminator
+  // CHECK-NEXT: } loc
+#pragma acc data deviceptr(ptr) device_type(radeon) async
+  {}
+  // CHECK-NEXT: %[[DEV_PTR:.*]] = acc.deviceptr varPtr(%[[PTR]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<radeon>]) -> !cir.ptr<!cir.ptr<!s32i>> {name = "ptr"}
+  // CHECK-NEXT: acc.data async([#acc.device_type<radeon>]) dataOperands(%[[DEV_PTR]] : !cir.ptr<!cir.ptr<!s32i>>) {
+  // CHECK-NEXT: acc.terminator
+  // CHECK-NEXT: } loc
+
+#pragma acc data present(cond)
+  {}
+  // CHECK-NEXT: %[[PRESENT:.*]] = acc.present varPtr(%[[COND]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {name = "cond"}
+  // CHECK-NEXT: acc.data dataOperands(%[[PRESENT]] : !cir.ptr<!s32i>) {
+  // CHECK-NEXT: acc.terminator
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.delete accPtr(%[[PRESENT]] : !cir.ptr<!s32i>) {dataClause = #acc<data_clause acc_present>, name = "cond"}
+
+#pragma acc data present(cond) device_type(radeon) async
+  {}
+  // CHECK-NEXT: %[[PRESENT:.*]] = acc.present varPtr(%[[COND]] : !cir.ptr<!s32i>) async([#acc.device_type<radeon>]) -> !cir.ptr<!s32i> {name = "cond"}
+  // CHECK-NEXT: acc.data async([#acc.device_type<radeon>]) dataOperands(%[[PRESENT]] : !cir.ptr<!s32i>) {
+  // CHECK-NEXT: acc.terminator
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.delete accPtr(%[[PRESENT]] : !cir.ptr<!s32i>) async([#acc.device_type<radeon>]) {dataClause = #acc<data_clause acc_present>, name = "cond"}
+
+#pragma acc data attach(ptr)
+  {}
+  // CHECK-NEXT: %[[ATTACH:.*]] = acc.attach varPtr(%[[PTR]] : !cir.ptr<!cir.ptr<!s32i>>) -> !cir.ptr<!cir.ptr<!s32i>> {name = "ptr"}
+  // CHECK-NEXT: acc.data dataOperands(%[[ATTACH]] : !cir.ptr<!cir.ptr<!s32i>>) {
+  // CHECK-NEXT: acc.terminator
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.detach accPtr(%[[ATTACH]] : !cir.ptr<!cir.ptr<!s32i>>) {dataClause = #acc<data_clause acc_attach>, name = "ptr"}
+
+#pragma acc data attach(ptr) device_type(radeon) async
+  {}
+  // CHECK-NEXT: %[[ATTACH:.*]] = acc.attach varPtr(%[[PTR]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<radeon>]) -> !cir.ptr<!cir.ptr<!s32i>> {name = "ptr"}
+  // CHECK-NEXT: acc.data async([#acc.device_type<radeon>]) dataOperands(%[[ATTACH]] : !cir.ptr<!cir.ptr<!s32i>>) {
+  // CHECK-NEXT: acc.terminator
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.detach accPtr(%[[ATTACH]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<radeon>]) {dataClause = #acc<data_clause acc_attach>, name = "ptr"}
 
   // CHECK-NEXT: cir.return
 }

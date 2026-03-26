@@ -326,6 +326,15 @@ void SparcAsmPrinter::lowerToMCInst(const MachineInstr *MI, MCInst &OutMI) {
 void SparcAsmPrinter::emitInstruction(const MachineInstr *MI) {
   Sparc_MC::verifyInstructionPredicates(MI->getOpcode(),
                                         getSubtargetInfo().getFeatureBits());
+  if (MI->isBundle()) {
+    const MachineBasicBlock *MBB = MI->getParent();
+    MachineBasicBlock::const_instr_iterator I = ++MI->getIterator();
+    while (I != MBB->instr_end() && I->isInsideBundle()) {
+      emitInstruction(&*I);
+      ++I;
+    }
+    return;
+  }
 
   switch (MI->getOpcode()) {
   default: break;
@@ -394,7 +403,7 @@ void SparcAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
     O << MO.getSymbolName();
     break;
   case MachineOperand::MO_ConstantPoolIndex:
-    O << DL.getPrivateGlobalPrefix() << "CPI" << getFunctionNumber() << "_"
+    O << DL.getInternalSymbolPrefix() << "CPI" << getFunctionNumber() << "_"
       << MO.getIndex();
     break;
   case MachineOperand::MO_Metadata:

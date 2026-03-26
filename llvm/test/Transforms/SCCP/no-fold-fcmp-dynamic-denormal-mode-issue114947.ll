@@ -106,13 +106,14 @@ define <vscale x 2 x i1> @fold_fcmp_nondenormal_double_ieee_dynamic_scalable_vec
   ret <vscale x 2 x i1> %cmp
 }
 
-define <vscale x 2 x i1> @no_fold_fcmp_denormal_double_ieee_dynamic_scalaable_vector_splat() #0 {
-; CHECK-LABEL: define <vscale x 2 x i1> @no_fold_fcmp_denormal_double_ieee_dynamic_scalaable_vector_splat(
+define <vscale x 2 x i1> @no_fold_fcmp_denormal_double_ieee_dynamic_scalable_vector_splat() #0 {
+; CHECK-LABEL: define <vscale x 2 x i1> @no_fold_fcmp_denormal_double_ieee_dynamic_scalable_vector_splat(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    ret <vscale x 2 x i1> splat (i1 true)
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une <vscale x 2 x double> splat (double 0x8000000000000), zeroinitializer
+; CHECK-NEXT:    ret <vscale x 2 x i1> [[CMP]]
 ;
   %cmp = fcmp une <vscale x 2 x double> splat (double 0x8000000000000), zeroinitializer
   ret <vscale x 2 x i1> %cmp
 }
 
-attributes #0 = { "denormal-fp-math"="ieee,dynamic" }
+attributes #0 = { denormal_fpenv(ieee|dynamic) }

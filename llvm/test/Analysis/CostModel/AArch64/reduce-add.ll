@@ -6,6 +6,7 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 define void @reduce() {
 ; CHECK-LABEL: 'reduce'
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V1i8 = call i8 @llvm.vector.reduce.add.v1i8(<1 x i8> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V2i8 = call i8 @llvm.vector.reduce.add.v2i8(<2 x i8> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V3i8 = call i8 @llvm.vector.reduce.add.v3i8(<3 x i8> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V4i8 = call i8 @llvm.vector.reduce.add.v4i8(<4 x i8> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V8i8 = call i8 @llvm.vector.reduce.add.v8i8(<8 x i8> undef)
@@ -24,6 +25,7 @@ define void @reduce() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %V1i8 = call i8 @llvm.vector.reduce.add.v1i8(<1 x i8> undef)
+  %V2i8 = call i8 @llvm.vector.reduce.add.v2i8(<2 x i8> undef)
   %V3i8 = call i8 @llvm.vector.reduce.add.v3i8(<3 x i8> undef)
   %V4i8 = call i8 @llvm.vector.reduce.add.v4i8(<4 x i8> undef)
   %V8i8 = call i8 @llvm.vector.reduce.add.v8i8(<8 x i8> undef)
@@ -41,20 +43,3 @@ define void @reduce() {
   %V4i64 = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> undef)
   ret void
 }
-
-declare i8 @llvm.vector.reduce.add.v1i8(<1 x i8>)
-declare i8 @llvm.vector.reduce.add.v3i8(<3 x i8>)
-declare i8 @llvm.vector.reduce.add.v4i8(<4 x i8>)
-declare i8 @llvm.vector.reduce.add.v8i8(<8 x i8>)
-declare i8 @llvm.vector.reduce.add.v16i8(<16 x i8>)
-declare i8 @llvm.vector.reduce.add.v32i8(<32 x i8>)
-declare i8 @llvm.vector.reduce.add.v64i8(<64 x i8>)
-declare i16 @llvm.vector.reduce.add.v2i16(<2 x i16>)
-declare i16 @llvm.vector.reduce.add.v4i16(<4 x i16>)
-declare i16 @llvm.vector.reduce.add.v8i16(<8 x i16>)
-declare i16 @llvm.vector.reduce.add.v16i16(<16 x i16>)
-declare i32 @llvm.vector.reduce.add.v2i32(<2 x i32>)
-declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
-declare i32 @llvm.vector.reduce.add.v8i32(<8 x i32>)
-declare i64 @llvm.vector.reduce.add.v2i64(<2 x i64>)
-declare i64 @llvm.vector.reduce.add.v4i64(<4 x i64>)

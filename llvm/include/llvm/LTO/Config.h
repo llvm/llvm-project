@@ -34,6 +34,7 @@ class Error;
 class Module;
 class ModuleSummaryIndex;
 class raw_pwrite_stream;
+class PassPlugin;
 
 namespace lto {
 
@@ -50,7 +51,12 @@ struct Config {
   TargetOptions Options;
   std::vector<std::string> MAttrs;
   std::vector<std::string> MllvmArgs;
-  std::vector<std::string> PassPlugins;
+  // LTO will register both lists of plugins, but
+  // if an LTO client has already loaded a set of plugins,
+  // they should register them via LoadedPassPlugins.
+  // LoadedPassPlugins is currently used by distributed thin-lto.
+  std::vector<llvm::PassPlugin *> LoadedPassPlugins;
+  std::vector<std::string> PassPluginFilenames;
   /// For adding passes that run right before codegen.
   std::function<void(legacy::PassManager &)> PreCodeGenPassesHook;
   std::optional<Reloc::Model> RelocModel = Reloc::PIC_;
@@ -93,6 +99,11 @@ struct Config {
   /// The lld linker uses string saver to keep symbol names alive and doesn't
   /// need to create copies, so it can set this field to false.
   bool KeepSymbolNameCopies = true;
+
+  /// This flag is used as one of parameters to calculate cache entries and to
+  /// ensure that in-process cache and out-of-process (DTLTO) cache are
+  /// distinguished.
+  mutable bool Dtlto = 0;
 
   /// Allows non-imported definitions to get the potentially more constraining
   /// visibility from the prevailing definition. FromPrevailing is the default

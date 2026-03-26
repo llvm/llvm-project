@@ -116,7 +116,13 @@ TEST_F(HostTest, GetProcessInfoSetsPriority) {
   ASSERT_TRUE(Info.IsZombie().has_value());
   ASSERT_FALSE(Info.IsZombie().value());
 
-  ASSERT_TRUE(Info.IsCoreDumping().has_value());
-  ASSERT_FALSE(Info.IsCoreDumping().value());
+  const llvm::VersionTuple host_version = HostInfo::GetOSVersion();
+  ASSERT_FALSE(host_version.empty());
+  if (host_version >= llvm::VersionTuple(4, 15, 0)) {
+    ASSERT_TRUE(Info.IsCoreDumping().has_value());
+    ASSERT_FALSE(Info.IsCoreDumping().value());
+  } else {
+    ASSERT_FALSE(Info.IsCoreDumping().has_value());
+  }
 }
 #endif

@@ -51,23 +51,22 @@ struct JITEngine {
   /// Run jit compilation if \p Image is a bitcode image, otherwise simply
   /// return \p Image. It is expected to return a memory buffer containing the
   /// generated device image that could be loaded to the device directly.
-  Expected<const __tgt_device_image *>
-  process(const __tgt_device_image &Image,
-          target::plugin::GenericDeviceTy &Device);
+  Expected<std::unique_ptr<MemoryBuffer>>
+  process(StringRef Image, target::plugin::GenericDeviceTy &Device);
 
 private:
   /// Compile the bitcode image \p Image and generate the binary image that can
   /// be loaded to the target device of the triple \p Triple architecture \p
   /// MCpu. \p PostProcessing will be called after codegen to handle cases such
   /// as assembler as an external tool.
-  Expected<const __tgt_device_image *>
-  compile(const __tgt_device_image &Image, const std::string &ComputeUnitKind,
+  Expected<std::unique_ptr<MemoryBuffer>>
+  compile(StringRef Image, const std::string &ComputeUnitKind,
           PostProcessingFn PostProcessing);
 
   /// Create or retrieve the object image file from the file system or via
   /// compilation of the \p Image.
   Expected<std::unique_ptr<MemoryBuffer>>
-  getOrCreateObjFile(const __tgt_device_image &Image, LLVMContext &Ctx,
+  getOrCreateObjFile(StringRef Image, LLVMContext &Ctx,
                      const std::string &ComputeUnitKind);
 
   /// Run backend, which contains optimization and code generation.
@@ -88,12 +87,6 @@ private:
   struct ComputeUnitInfo {
     /// LLVM Context in which the modules will be constructed.
     LLVMContext Context;
-
-    /// Output images generated from LLVM backend.
-    SmallVector<std::unique_ptr<MemoryBuffer>, 4> JITImages;
-
-    /// A map of embedded IR images to JITed images.
-    DenseMap<const __tgt_device_image *, __tgt_device_image *> TgtImageMap;
   };
 
   /// Map from (march) "CPUs" (e.g., sm_80, or gfx90a), which we call compute

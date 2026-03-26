@@ -200,35 +200,6 @@ void BranchInfo::print(raw_ostream &OS) const {
      << '\n';
 }
 
-ErrorOr<const BranchInfo &> FuncBranchData::getBranch(uint64_t From,
-                                                      uint64_t To) const {
-  for (const BranchInfo &I : Data)
-    if (I.From.Offset == From && I.To.Offset == To && I.From.Name == I.To.Name)
-      return I;
-
-  return make_error_code(llvm::errc::invalid_argument);
-}
-
-ErrorOr<const BranchInfo &>
-FuncBranchData::getDirectCallBranch(uint64_t From) const {
-  // Commented out because it can be expensive.
-  // assert(std::is_sorted(Data.begin(), Data.end()));
-  struct Compare {
-    bool operator()(const BranchInfo &BI, const uint64_t Val) const {
-      return BI.From.Offset < Val;
-    }
-    bool operator()(const uint64_t Val, const BranchInfo &BI) const {
-      return Val < BI.From.Offset;
-    }
-  };
-  auto Range = std::equal_range(Data.begin(), Data.end(), From, Compare());
-  for (const auto &RI : llvm::make_range(Range))
-    if (RI.From.Name != RI.To.Name)
-      return RI;
-
-  return make_error_code(llvm::errc::invalid_argument);
-}
-
 void MemInfo::print(raw_ostream &OS) const {
   OS << (Offset.IsSymbol + 3) << " " << Offset.Name << " "
      << Twine::utohexstr(Offset.Offset) << " " << (Addr.IsSymbol + 3) << " "
@@ -570,7 +541,7 @@ void DataReader::readBasicSampleData(BinaryFunction &BF) {
   if (!SampleDataOrErr)
     return;
 
-  // Basic samples mode territory (without LBR info)
+  // Basic samples mode territory (without brstack info)
   // First step is to assign BB execution count based on samples from perf
   BF.ProfileMatchRatio = 1.0f;
   BF.removeTagsFromProfile();
@@ -578,8 +549,8 @@ void DataReader::readBasicSampleData(BinaryFunction &BF) {
   bool NormalizeByCalls = usesEvent("branches");
   static bool NagUser = true;
   if (NagUser) {
-    outs()
-        << "BOLT-INFO: operating with basic samples profiling data (no LBR).\n";
+    outs() << "BOLT-INFO: operating with basic samples profiling data (no "
+              "brstack).\n";
     if (NormalizeByInsnCount)
       outs() << "BOLT-INFO: normalizing samples by instruction count.\n";
     else if (NormalizeByCalls)
@@ -907,7 +878,7 @@ ErrorOr<uint64_t> DataReader::parseHexField(char EndChar, bool EndNl) {
   StringRef NumStr = NumStrRes.get();
   uint64_t Num;
   if (NumStr.getAsInteger(16, Num)) {
-    reportError("expected hexidecimal number");
+    reportError("expected hexadecimal number");
     Diag << "Found: " << NumStr << "\n";
     return make_error_code(llvm::errc::io_error);
   }

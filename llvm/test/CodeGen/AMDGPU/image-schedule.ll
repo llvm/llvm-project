@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=tonga < %s | FileCheck -check-prefixes=GCN %s
 
 ; The first image store and the second image load use the same descriptor and
 ; the same coordinate. Check that they do not get swapped by the machine

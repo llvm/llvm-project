@@ -56,7 +56,6 @@ private:
   bool tryMergeNullishCoalescingEqual();
   bool tryTransformCSharpForEach();
   bool tryMergeForEach();
-  bool tryTransformTryUsageForC();
 
   // Merge the most recently lexed tokens into a single token if their kinds are
   // correct.
@@ -132,8 +131,8 @@ private:
 
   llvm::SmallMapVector<IdentifierInfo *, TokenType, 8> Macros;
 
-  llvm::SmallPtrSet<IdentifierInfo *, 8> TemplateNames, TypeNames,
-      VariableTemplates;
+  llvm::SmallPtrSet<IdentifierInfo *, 8> MacrosSkippedByRemoveParentheses,
+      TemplateNames, TypeNames, VariableTemplates;
 
   bool FormattingDisabled;
   llvm::Regex FormatOffRegex; // For one line.

@@ -1,4 +1,4 @@
-//===--- RedundantAccessSpecifiersCheck.cpp - clang-tidy ------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -43,7 +43,7 @@ void RedundantAccessSpecifiersCheck::check(
       LastASDecl = ASDecl;
 
       if (CheckFirstDeclaration) {
-        AccessSpecifier DefaultSpecifier =
+        const AccessSpecifier DefaultSpecifier =
             MatchedDecl->isClass() ? AS_private : AS_public;
         if (ASDecl->getAccess() == DefaultSpecifier) {
           diag(ASDecl->getLocation(),

@@ -17,6 +17,7 @@
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/Attr.h"
 #include "clang/Sema/Sema.h"
 
@@ -36,6 +37,20 @@ static bool CheckWasmBuiltinArgIsTable(Sema &S, CallExpr *E, unsigned ArgIndex,
            << ArgIndex + 1 << ArgExpr->getSourceRange();
   }
   ElTy = ATy->getElementType();
+  return false;
+}
+
+static bool CheckWasmTableElement(Sema &S, QualType &ElTy, CallExpr *E,
+                                  unsigned TableIndex, unsigned ArgIndex) {
+  Expr *NewElemArg = E->getArg(ArgIndex);
+  QualType QT = NewElemArg->getType();
+  // Compare the types after removing insignificant qualifiers
+  if (!S.getASTContext().hasSameType(ElTy.getTypePtr(), QT.getTypePtr())) {
+    return S.Diag(NewElemArg->getBeginLoc(),
+                  diag::err_wasm_builtin_arg_must_match_table_element_type)
+           << (ArgIndex + 1) << (TableIndex + 1)
+           << NewElemArg->getSourceRange();
+  }
   return false;
 }
 
@@ -114,7 +129,7 @@ bool SemaWasm::BuiltinWasmTableGet(CallExpr *TheCall) {
   return false;
 }
 
-/// Check that the first argumnet is a WebAssembly table, the second is
+/// Check that the first argument is a WebAssembly table, the second is
 /// an index to use as index into the table and the third is the reference
 /// type to set into the table.
 bool SemaWasm::BuiltinWasmTableSet(CallExpr *TheCall) {
@@ -128,7 +143,7 @@ bool SemaWasm::BuiltinWasmTableSet(CallExpr *TheCall) {
   if (CheckWasmBuiltinArgIsInteger(SemaRef, TheCall, 1))
     return true;
 
-  if (!getASTContext().hasSameType(ElTy, TheCall->getArg(2)->getType()))
+  if (CheckWasmTableElement(SemaRef, ElTy, TheCall, 0, 2))
     return true;
 
   return false;
@@ -157,12 +172,8 @@ bool SemaWasm::BuiltinWasmTableGrow(CallExpr *TheCall) {
   if (CheckWasmBuiltinArgIsTable(SemaRef, TheCall, 0, ElTy))
     return true;
 
-  Expr *NewElemArg = TheCall->getArg(1);
-  if (!getASTContext().hasSameType(ElTy, NewElemArg->getType())) {
-    return Diag(NewElemArg->getBeginLoc(),
-                diag::err_wasm_builtin_arg_must_match_table_element_type)
-           << 2 << 1 << NewElemArg->getSourceRange();
-  }
+  if (CheckWasmTableElement(SemaRef, ElTy, TheCall, 0, 1))
+    return true;
 
   if (CheckWasmBuiltinArgIsInteger(SemaRef, TheCall, 2))
     return true;
@@ -184,12 +195,8 @@ bool SemaWasm::BuiltinWasmTableFill(CallExpr *TheCall) {
   if (CheckWasmBuiltinArgIsInteger(SemaRef, TheCall, 1))
     return true;
 
-  Expr *NewElemArg = TheCall->getArg(2);
-  if (!getASTContext().hasSameType(ElTy, NewElemArg->getType())) {
-    return Diag(NewElemArg->getBeginLoc(),
-                diag::err_wasm_builtin_arg_must_match_table_element_type)
-           << 3 << 1 << NewElemArg->getSourceRange();
-  }
+  if (CheckWasmTableElement(SemaRef, ElTy, TheCall, 0, 2))
+    return true;
 
   if (CheckWasmBuiltinArgIsInteger(SemaRef, TheCall, 3))
     return true;
@@ -213,7 +220,7 @@ bool SemaWasm::BuiltinWasmTableCopy(CallExpr *TheCall) {
     return true;
 
   Expr *TableYArg = TheCall->getArg(1);
-  if (!getASTContext().hasSameType(XElTy, YElTy)) {
+  if (!getASTContext().hasSameType(XElTy.getTypePtr(), YElTy.getTypePtr())) {
     return Diag(TableYArg->getBeginLoc(),
                 diag::err_wasm_builtin_arg_must_match_table_element_type)
            << 2 << 1 << TableYArg->getSourceRange();
@@ -224,6 +231,58 @@ bool SemaWasm::BuiltinWasmTableCopy(CallExpr *TheCall) {
       return true;
   }
 
+  return false;
+}
+
+bool SemaWasm::BuiltinWasmTestFunctionPointerSignature(const TargetInfo &TI,
+                                                       CallExpr *TheCall) {
+  if (SemaRef.checkArgCount(TheCall, 1))
+    return true;
+
+  Expr *FuncPtrArg = TheCall->getArg(0);
+  QualType ArgType = FuncPtrArg->getType();
+
+  // Check that the argument is a function pointer
+  const PointerType *PtrTy = ArgType->getAs<PointerType>();
+  if (!PtrTy) {
+    return Diag(FuncPtrArg->getBeginLoc(),
+                diag::err_typecheck_expect_function_pointer)
+           << ArgType << FuncPtrArg->getSourceRange();
+  }
+
+  const FunctionProtoType *FuncTy =
+      PtrTy->getPointeeType()->getAs<FunctionProtoType>();
+  if (!FuncTy) {
+    return Diag(FuncPtrArg->getBeginLoc(),
+                diag::err_typecheck_expect_function_pointer)
+           << ArgType << FuncPtrArg->getSourceRange();
+  }
+
+  if (TI.getABI() == "experimental-mv") {
+    auto isStructOrUnion = [](QualType T) {
+      return T->isUnionType() || T->isStructureType();
+    };
+    if (isStructOrUnion(FuncTy->getReturnType())) {
+      return Diag(
+                 FuncPtrArg->getBeginLoc(),
+                 diag::
+                     err_wasm_builtin_test_fp_sig_cannot_include_struct_or_union)
+             << 0 << FuncTy->getReturnType() << FuncPtrArg->getSourceRange();
+    }
+    auto NParams = FuncTy->getNumParams();
+    for (unsigned I = 0; I < NParams; I++) {
+      if (isStructOrUnion(FuncTy->getParamType(I))) {
+        return Diag(
+                   FuncPtrArg->getBeginLoc(),
+                   diag::
+                       err_wasm_builtin_test_fp_sig_cannot_include_struct_or_union)
+               << 1 << FuncPtrArg->getSourceRange();
+      }
+    }
+  }
+
+  // Set return type to int (the result of the test)
+  TheCall->setType(getASTContext().IntTy);
   return false;
 }
 
@@ -249,6 +308,8 @@ bool SemaWasm::CheckWebAssemblyBuiltinFunctionCall(const TargetInfo &TI,
     return BuiltinWasmTableFill(TheCall);
   case WebAssembly::BI__builtin_wasm_table_copy:
     return BuiltinWasmTableCopy(TheCall);
+  case WebAssembly::BI__builtin_wasm_test_function_pointer_signature:
+    return BuiltinWasmTestFunctionPointerSignature(TI, TheCall);
   }
 
   return false;

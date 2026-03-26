@@ -30,6 +30,10 @@
 #include <arm64intr.h>
 #endif
 
+#if defined(__ARM_ACLE)
+#include <arm_acle.h>
+#endif
+
 /* For the definition of jmp_buf. */
 #if __STDC_HOSTED__
 #include <setjmp.h>
@@ -392,6 +396,7 @@ __int64 _InterlockedAdd64_nf(__int64 volatile *, __int64);
 __int64 _InterlockedAdd64_rel(__int64 volatile *, __int64);
 __int64 _ReadStatusReg(int);
 void _WriteStatusReg(int, __int64);
+unsigned int __sys(int, __int64);
 
 unsigned short __cdecl _byteswap_ushort(unsigned short val);
 unsigned long __cdecl _byteswap_ulong (unsigned long val);

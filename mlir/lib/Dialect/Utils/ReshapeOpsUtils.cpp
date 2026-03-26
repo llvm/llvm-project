@@ -13,7 +13,7 @@
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/LogicalResult.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 #include <numeric>
 #include <optional>
@@ -375,11 +375,11 @@ mlir::composeReassociationIndices(
   if (consumerReassociations.empty())
     return composedIndices;
 
-  size_t consumerDims = std::accumulate(
-      consumerReassociations.begin(), consumerReassociations.end(), 0,
-      [](size_t all, ReassociationIndicesRef indices) {
-        return all + indices.size();
-      });
+  size_t consumerDims =
+      llvm::accumulate(consumerReassociations, size_t(0),
+                       [](size_t all, ReassociationIndicesRef indices) {
+                         return all + indices.size();
+                       });
   if (producerReassociations.size() != consumerDims)
     return std::nullopt;
 
@@ -408,7 +408,7 @@ mlir::convertReassociationIndicesToExprs(
 }
 
 template <typename AffineExprTy>
-unsigned getMaxPosOfType(ArrayRef<ReassociationExprs> exprArrays) {
+static unsigned getMaxPosOfType(ArrayRef<ReassociationExprs> exprArrays) {
   unsigned pos = 0;
   for (const auto &exprs : exprArrays) {
     for (auto expr : exprs) {
@@ -423,11 +423,10 @@ unsigned getMaxPosOfType(ArrayRef<ReassociationExprs> exprArrays) {
 
 ArrayAttr mlir::getReassociationIndicesAttribute(
     Builder &b, ArrayRef<ReassociationIndices> reassociation) {
-  SmallVector<Attribute, 4> reassociationAttr =
-      llvm::to_vector<4>(llvm::map_range(
-          reassociation, [&](const ReassociationIndices &indices) -> Attribute {
-            return cast<Attribute>(b.getI64ArrayAttr(indices));
-          }));
+  SmallVector<Attribute, 4> reassociationAttr = llvm::map_to_vector<4>(
+      reassociation, [&](const ReassociationIndices &indices) -> Attribute {
+        return cast<Attribute>(b.getI64ArrayAttr(indices));
+      });
   return b.getArrayAttr(reassociationAttr);
 }
 
@@ -505,7 +504,7 @@ LogicalResult mlir::reshapeLikeShapesAreCompatible(
         linearizedStaticShape *= dim.value();
     }
     if (foundDynamicShape) {
-      if (!ShapedType::isDynamic(collapsedShape[map.index()])) {
+      if (ShapedType::isStatic(collapsedShape[map.index()])) {
         return emitError(
             "expected dimension " + Twine(map.index()) +
             " of collapsed type to be dynamic since one or more of the "

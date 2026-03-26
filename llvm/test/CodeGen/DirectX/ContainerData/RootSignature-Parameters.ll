@@ -15,9 +15,9 @@ attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 !3 = !{ !4, !5, !6, !7 } ; list of root signature elements
 !4 = !{ !"RootFlags", i32 1 } ; 1 = allow_input_assembler_input_layout
 !5 = !{ !"RootConstants", i32 0, i32 1, i32 2, i32 3 }
-!6 = !{ !"RootSRV", i32 1, i32 4, i32 5, i32 6 }
+!6 = !{ !"RootSRV", i32 1, i32 4, i32 5, i32 4 }
 !7 = !{ !"DescriptorTable", i32 0, !8, !9 }
-!8 = !{ !"SRV", i32 0, i32 1, i32 0, i32 -1, i32 4 }
+!8 = !{ !"SRV", i32 1, i32 1, i32 0, i32 -1, i32 4 }
 !9 = !{ !"UAV", i32 5, i32 1, i32 10, i32 5, i32 2 }
 
 ;CHECK-LABEL: Definition for 'main':
@@ -25,26 +25,26 @@ attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 ;CHECK-NEXT:  Version: 2
 ;CHECK-NEXT:  RootParametersOffset: 24
 ;CHECK-NEXT:  NumParameters: 3
-;CHECK-NEXT:   - Parameter Type: 1
-;CHECK-NEXT:     Shader Visibility: 0
+;CHECK-NEXT:   - Parameter Type: Constants32Bit
+;CHECK-NEXT:     Shader Visibility: All
 ;CHECK-NEXT:     Register Space: 2
 ;CHECK-NEXT:     Shader Register: 1
 ;CHECK-NEXT:     Num 32 Bit Values: 3
-;CHECK-NEXT:   - Parameter Type: 3
-;CHECK-NEXT:     Shader Visibility: 1
+;CHECK-NEXT:   - Parameter Type: SRV
+;CHECK-NEXT:     Shader Visibility: Vertex
 ;CHECK-NEXT:     Register Space: 5
 ;CHECK-NEXT:     Shader Register: 4
-;CHECK-NEXT:     Flags: 6
-;CHECK-NEXT:   - Parameter Type: 0
-;CHECK-NEXT:     Shader Visibility: 0
+;CHECK-NEXT:     Flags: 4
+;CHECK-NEXT:   - Parameter Type: DescriptorTable
+;CHECK-NEXT:     Shader Visibility: All
 ;CHECK-NEXT:     NumRanges: 2
-;CHECK-NEXT:     - Range Type: 0
+;CHECK-NEXT:     - Range Type: SRV
 ;CHECK-NEXT:       Register Space: 0
 ;CHECK-NEXT:       Base Shader Register: 1
-;CHECK-NEXT:       Num Descriptors: 0
+;CHECK-NEXT:       Num Descriptors: 1
 ;CHECK-NEXT:       Offset In Descriptors From Table Start: 4294967295
 ;CHECK-NEXT:       Flags: 4
-;CHECK-NEXT:     - Range Type: 1
+;CHECK-NEXT:     - Range Type: UAV
 ;CHECK-NEXT:       Register Space: 10
 ;CHECK-NEXT:       Base Shader Register: 1
 ;CHECK-NEXT:       Num Descriptors: 5

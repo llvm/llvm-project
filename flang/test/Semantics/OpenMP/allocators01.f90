@@ -16,7 +16,7 @@ use omp_lib
     allocate(arr3(3), arr4(4, 4))
   !$omp end allocators
 
-  !ERROR: Object 'arr1' in ALLOCATORS directive not found in corresponding ALLOCATE statement
+  !ERROR: A list item in an ALLOCATORS construct must be specified on the associated ALLOCATE statement
   !$omp allocators allocate(omp_default_mem_alloc: arr1, arr2)
     allocate(arr2(2, 2))
 

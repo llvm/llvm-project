@@ -1,29 +1,31 @@
 #include "TargetInfo.h"
 #include "ABIInfo.h"
+#include "CIRGenFunction.h"
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
 
 bool clang::CIRGen::isEmptyRecordForLayout(const ASTContext &context,
                                            QualType t) {
-  const RecordType *rt = t->getAs<RecordType>();
-  if (!rt)
+  const auto *rd = t->getAsRecordDecl();
+  if (!rd)
     return false;
-
-  const RecordDecl *rd = rt->getDecl();
 
   // If this is a C++ record, check the bases first.
   if (const CXXRecordDecl *cxxrd = dyn_cast<CXXRecordDecl>(rd)) {
     if (cxxrd->isDynamicClass())
       return false;
 
-    for (const auto &I : cxxrd->bases())
-      if (!isEmptyRecordForLayout(context, I.getType()))
+    for (const auto &i : cxxrd->bases())
+      if (!isEmptyRecordForLayout(context, i.getType()))
         return false;
   }
 
-  for (const auto *I : rd->fields())
-    if (!isEmptyFieldForLayout(context, I))
+  for (const auto *i : rd->fields())
+    if (!isEmptyFieldForLayout(context, i))
       return false;
 
   return true;
@@ -42,6 +44,21 @@ bool clang::CIRGen::isEmptyFieldForLayout(const ASTContext &context,
 
 namespace {
 
+class AMDGPUABIInfo : public ABIInfo {
+public:
+  AMDGPUABIInfo(CIRGenTypes &cgt) : ABIInfo(cgt) {}
+};
+
+class AMDGPUTargetCIRGenInfo : public TargetCIRGenInfo {
+public:
+  AMDGPUTargetCIRGenInfo(CIRGenTypes &cgt)
+      : TargetCIRGenInfo(std::make_unique<AMDGPUABIInfo>(cgt)) {}
+};
+
+} // namespace
+
+namespace {
+
 class X8664ABIInfo : public ABIInfo {
 public:
   X8664ABIInfo(CIRGenTypes &cgt) : ABIInfo(cgt) {}
@@ -54,6 +71,30 @@ public:
 };
 
 } // namespace
+
+namespace {
+
+class NVPTXABIInfo : public ABIInfo {
+public:
+  NVPTXABIInfo(CIRGenTypes &cgt) : ABIInfo(cgt) {}
+};
+
+class NVPTXTargetCIRGenInfo : public TargetCIRGenInfo {
+public:
+  NVPTXTargetCIRGenInfo(CIRGenTypes &cgt)
+      : TargetCIRGenInfo(std::make_unique<NVPTXABIInfo>(cgt)) {}
+};
+} // namespace
+
+std::unique_ptr<TargetCIRGenInfo>
+clang::CIRGen::createAMDGPUTargetCIRGenInfo(CIRGenTypes &cgt) {
+  return std::make_unique<AMDGPUTargetCIRGenInfo>(cgt);
+}
+
+std::unique_ptr<TargetCIRGenInfo>
+clang::CIRGen::createNVPTXTargetCIRGenInfo(CIRGenTypes &cgt) {
+  return std::make_unique<NVPTXTargetCIRGenInfo>(cgt);
+}
 
 std::unique_ptr<TargetCIRGenInfo>
 clang::CIRGen::createX8664TargetCIRGenInfo(CIRGenTypes &cgt) {
@@ -69,4 +110,13 @@ bool TargetCIRGenInfo::isNoProtoCallVariadic(
   //   MIPS
   // For everything else, we just prefer false unless we opt out.
   return false;
+}
+
+clang::LangAS
+TargetCIRGenInfo::getGlobalVarAddressSpace(CIRGenModule &cgm,
+                                           const clang::VarDecl *d) const {
+  assert(!cgm.getLangOpts().OpenCL &&
+         !(cgm.getLangOpts().CUDA && cgm.getLangOpts().CUDAIsDevice) &&
+         "Address space agnostic languages only");
+  return d ? d->getType().getAddressSpace() : LangAS::Default;
 }
