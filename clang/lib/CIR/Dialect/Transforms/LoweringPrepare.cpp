@@ -9,6 +9,7 @@
 #include "PassDetail.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/IRMapping.h"
+#include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attrs.inc"
 #include "clang/AST/Mangle.h"
@@ -21,9 +22,11 @@
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Dialect/Passes.h"
 #include "clang/CIR/Interfaces/ASTAttrInterfaces.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Path.h"
 
@@ -1724,7 +1727,7 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
     else if (auto globalDtor = fnOp.getGlobalDtorPriority())
       globalDtorList.emplace_back(fnOp.getName(), globalDtor.value());
 
-    if (auto attr = fnOp->getAttr(cir::CUDAKernelNameAttr::getMnemonic())) {
+    if (mlir::Attribute attr = fnOp->getAttr(cir::CUDAKernelNameAttr::getMnemonic())) {
       auto kernelNameAttr = dyn_cast<CUDAKernelNameAttr>(attr);
       std::string kernelName = kernelNameAttr.getKernelName();
       cudaKernelMap[kernelName] = fnOp;
@@ -1734,15 +1737,15 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
   }
 }
 
-static std::string getCUDAPrefix(clang::ASTContext *astCtx) {
+static llvm::StringRef getCUDAPrefix(clang::ASTContext *astCtx) {
   if (astCtx->getLangOpts().HIP)
     return "hip";
   return "cuda";
 }
 
-static std::string addUnderscoredPrefix(llvm::StringRef prefix,
+static llvm::StringRef addUnderscoredPrefix(llvm::StringRef prefix,
                                         llvm::StringRef name) {
-  return ("__" + prefix + name).str();
+  return ("__" + prefix + name).getSingleStringRef();
 }
 
 /// Creates a global constructor function for the module:
@@ -1787,8 +1790,10 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
     return;
   }
 
-  std::string cudaGPUBinaryName =
-      mlir::cast<CUDABinaryHandleAttr>(cudaBinaryHandleAttr).getName();
+  llvm::StringRef cudaGPUBinaryName =
+      mlir::cast<CUDABinaryHandleAttr>(cudaBinaryHandleAttr)
+          .getName()
+          .getValue();
 
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> gpuBinaryOrErr =
       llvm::MemoryBuffer::getFile(cudaGPUBinaryName);
@@ -1801,24 +1806,25 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
       std::move(gpuBinaryOrErr.get());
 
   // Set up common types and builder.
-  std::string cudaPrefix = getCUDAPrefix(astCtx);
+  llvm::StringRef cudaPrefix = getCUDAPrefix(astCtx);
   mlir::Location loc = mlirModule->getLoc();
   CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointToStart(mlirModule.getBody());
 
-  auto voidTy = builder.getVoidTy();
-  auto voidPtrTy = builder.getVoidPtrTy();
-  auto voidPtrPtrTy = builder.getPointerTo(voidPtrTy);
-  auto intTy = builder.getSIntNTy(32);
-  auto charTy = cir::IntType::get(&getContext(), astCtx->getCharWidth(),
-                                  /*isSigned=*/false);
+  VoidType voidTy = builder.getVoidTy();
+  PointerType voidPtrTy = builder.getVoidPtrTy();
+  PointerType voidPtrPtrTy = builder.getPointerTo(voidPtrTy);
+  IntType intTy = builder.getSIntNTy(32);
+  IntType charTy = cir::IntType::get(&getContext(), astCtx->getCharWidth(),
+                                     /*isSigned=*/false);
 
   // --- Create fatbin globals ---
 
   // Create the fatbin string constant with GPU binary contents.
   auto fatbinType =
       ArrayType::get(&getContext(), charTy, gpuBinary->getBuffer().size());
-  std::string fatbinStrName = addUnderscoredPrefix(cudaPrefix, "_fatbin_str");
+  llvm::StringRef fatbinStrName =
+      addUnderscoredPrefix(cudaPrefix, "_fatbin_str");
   GlobalOp fatbinStr = GlobalOp::create(builder, loc, fatbinStrName, fatbinType,
                                         /*isConstant=*/true, {},
                                         GlobalLinkageKind::PrivateLinkage);
@@ -1833,7 +1839,7 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
   auto fatbinWrapperType = RecordType::get(
       &getContext(), {intTy, intTy, voidPtrTy, voidPtrTy},
       /*packed=*/false, /*padded=*/false, RecordType::RecordKind::Struct);
-  std::string fatbinWrapperName =
+  llvm::StringRef fatbinWrapperName =
       addUnderscoredPrefix(cudaPrefix, "_fatbin_wrapper");
   GlobalOp fatbinWrapper = GlobalOp::create(
       builder, loc, fatbinWrapperName, fatbinWrapperType,
@@ -1848,14 +1854,14 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
   auto fatbinStrSymbol =
       mlir::FlatSymbolRefAttr::get(fatbinStr.getSymNameAttr());
   auto fatbinInit = GlobalViewAttr::get(voidPtrTy, fatbinStrSymbol);
-  auto unusedInit = builder.getConstNullPtrAttr(voidPtrTy);
+  mlir::TypedAttr unusedInit = builder.getConstNullPtrAttr(voidPtrTy);
   fatbinWrapper.setInitialValueAttr(cir::ConstRecordAttr::get(
       fatbinWrapperType,
       mlir::ArrayAttr::get(&getContext(),
                            {magicInit, versionInit, fatbinInit, unusedInit})));
 
   // Create the GPU binary handle global variable.
-  std::string gpubinHandleName =
+  llvm::StringRef gpubinHandleName =
       addUnderscoredPrefix(cudaPrefix, "_gpubin_handle");
 
   GlobalOp gpuBinHandle = GlobalOp::create(

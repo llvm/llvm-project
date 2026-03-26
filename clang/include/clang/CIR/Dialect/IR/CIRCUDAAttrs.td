@@ -64,7 +64,7 @@ def CIR_CUDABinaryHandleAttr : CIR_Attr<
     and then generate various registration functions.
   }];
 
-  let parameters = (ins "std::string":$name);
+  let parameters = (ins "mlir::StringAttr":$name);
   let assemblyFormat = "`<` $name `>`";
 }
 
