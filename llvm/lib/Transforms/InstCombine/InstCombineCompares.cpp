@@ -7638,8 +7638,10 @@ Instruction *InstCombinerImpl::foldICmpCommutative(CmpPredicate Pred,
       !CxtI.isSigned()) {
     if (ShAmt >= X->getType()->getScalarSizeInBits())
       return nullptr;
-    if (canEvaluateShifted(Op1, ShAmt, Instruction::LShr, &CxtI)) {
-      Value *NewOp1 = getShiftedValue(Op1, ShAmt, Instruction::LShr);
+    if (canEvaluateShifted(Op1, ShAmt, /*IsLeftShift=*/false,
+                           ShiftSemantics::Unsigned, &CxtI)) {
+      Value *NewOp1 = getShiftedValue(Op1, ShAmt, /*IsLeftShift=*/false,
+                                      ShiftSemantics::Unsigned);
       return new ICmpInst(Pred, X, NewOp1);
     }
   }
@@ -7648,8 +7650,10 @@ Instruction *InstCombinerImpl::foldICmpCommutative(CmpPredicate Pred,
       !CxtI.isUnsigned()) {
     if (ShAmt >= X->getType()->getScalarSizeInBits())
       return nullptr;
-    if (canEvaluateShifted(Op1, ShAmt, Instruction::AShr, &CxtI)) {
-      Value *NewOp1 = getShiftedValue(Op1, ShAmt, Instruction::AShr);
+    if (canEvaluateShifted(Op1, ShAmt, /*IsLeftShift=*/false,
+                           ShiftSemantics::Signed, &CxtI)) {
+      Value *NewOp1 = getShiftedValue(Op1, ShAmt, /*IsLeftShift=*/false,
+                                      ShiftSemantics::Signed);
       return new ICmpInst(Pred, X, NewOp1);
     }
   }
