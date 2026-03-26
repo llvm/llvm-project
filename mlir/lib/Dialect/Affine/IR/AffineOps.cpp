@@ -3961,9 +3961,8 @@ void AffinePrefetchOp::print(OpAsmPrinter &p) {
       (*this)->getAttrOfType<AffineMapAttr>(getMapAttrStrName());
   if (mapAttr)
     p.printAffineMapOfSSAIds(mapAttr, getMapOperands());
-  p << ']' << ", " << (getIsWrite() ? "write" : "read") << ", "
-    << "locality<" << getLocalityHint() << ">, "
-    << (getIsDataCache() ? "data" : "instr");
+  p << ']' << ", " << (getIsWrite() ? "write" : "read") << ", " << "locality<"
+    << getLocalityHint() << ">, " << (getIsDataCache() ? "data" : "instr");
   p.printOptionalAttrDict(
       (*this)->getAttrs(),
       /*elidedAttrs=*/{getMapAttrStrName(), getLocalityHintAttrStrName(),
@@ -5038,16 +5037,9 @@ struct DropUnitExtentBasis
     Location loc = delinearizeOp->getLoc();
     Type indexType = delinearizeOp.getLinearIndex().getType();
     auto getZero = [&]() -> Value {
-      if (!zero) {
-        Value scalarZero = arith::ConstantIndexOp::create(rewriter, loc, 0);
-        if (auto vecTy = dyn_cast<VectorType>(indexType)) {
-          zero = arith::ConstantOp::create(
-              rewriter, loc,
-              DenseElementsAttr::get(vecTy, rewriter.getIndexAttr(0)));
-        } else {
-          zero = scalarZero;
-        }
-      }
+      if (!zero)
+        zero = arith::ConstantOp::create(rewriter, loc,
+                                         rewriter.getZeroAttr(indexType));
       return zero.value();
     };
 
@@ -5425,13 +5417,8 @@ struct DropLinearizeUnitComponentsIfDisjointOrZero final
                                          "no unit basis entries to replace");
 
     if (newIndices.empty()) {
-      Type resultType = op.getLinearIndex().getType();
-      if (auto vecTy = dyn_cast<VectorType>(resultType)) {
-        rewriter.replaceOpWithNewOp<arith::ConstantOp>(
-            op, DenseElementsAttr::get(vecTy, rewriter.getIndexAttr(0)));
-      } else {
-        rewriter.replaceOpWithNewOp<arith::ConstantIndexOp>(op, 0);
-      }
+      rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+          op, rewriter.getZeroAttr(op.getLinearIndex().getType()));
       return success();
     }
     rewriter.replaceOpWithNewOp<affine::AffineLinearizeIndexOp>(
