@@ -444,7 +444,7 @@ def testExtDialectWithRegion():
 
             with InsertionPoint(if_.then.blocks[0]):
                 v = arith.constant(i32, 2)
-                YieldOp(v)
+                yield_ = YieldOp(v)
 
             with InsertionPoint(if_.else_.blocks[0]):
                 v = arith.constant(i32, 3)
@@ -472,6 +472,25 @@ def testExtDialectWithRegion():
         # CHECK:     }) : () -> ()
         # CHECK: }
         print(module)
+
+        # CHECK: True
+        print(yield_.has_trait(IsTerminatorTrait))
+        # CHECK: False
+        print(yield_.has_trait(NoTerminatorTrait))
+        # CHECK: True
+        print(yield_.has_trait(ParentIsIfTrait))
+        # CHECK: False
+        print(nt.operation.has_trait(IsTerminatorTrait))
+        # CHECK: True
+        print(nt.operation.has_trait(NoTerminatorTrait))
+        # CHECK: False
+        print(nt.operation.has_trait(ParentIsIfTrait))
+        # CHECK: False
+        print(NoTermOp.has_trait(IsTerminatorTrait))
+        # CHECK: True
+        print(NoTermOp.has_trait(NoTerminatorTrait))
+        # CHECK: False
+        print(NoTermOp.has_trait(ParentIsIfTrait))
 
         # CHECK: %c2_i32 = arith.constant 2 : i32
         print(if_.then.blocks[0])
