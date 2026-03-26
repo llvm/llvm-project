@@ -2099,7 +2099,8 @@ void LoopVectorizationLegality::prepareToFoldTailByMasking() {
   SmallPtrSet<Value *, 8> SafePointers;
 
   // Mark all blocks for predication, including those that ordinarily do not
-  // need predication such as the header block.
+  // need predication such as the header block, and collect instructions needing
+  // predication in TailFoldedMaskedOp.
   for (BasicBlock *BB : TheLoop->blocks()) {
     [[maybe_unused]] bool R =
         blockCanBePredicated(BB, SafePointers, TailFoldedMaskedOp);

@@ -449,8 +449,8 @@ public:
   /// Returns true if instruction \p I requires a mask for vectorization.
   /// This accounts for both control flow masking (conditionally executed
   /// blocks) and tail-folding masking (predicated loop vectorization).
-  bool isMaskRequired(const Instruction *I, bool LoopPredicated) const {
-    if (LoopPredicated)
+  bool isMaskRequired(const Instruction *I, bool TailFolded) const {
+    if (TailFolded)
       return TailFoldedMaskedOp.contains(I);
     return ConditionallyExecutedOps.contains(I);
   }
