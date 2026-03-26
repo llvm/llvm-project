@@ -59,8 +59,8 @@ DILDiagnosticError::DILDiagnosticError(llvm::StringRef expr,
   m_detail.rendered = std::move(rendered_str);
 }
 
-static CompilerType ResolveTypeByName(const std::string &name,
-                                      ExecutionContextScope &ctx_scope) {
+CompilerType ResolveTypeByName(const std::string &name,
+                               ExecutionContextScope &ctx_scope) {
   // Internally types don't have global scope qualifier in their names and
   // LLDB doesn't support queries with it too.
   llvm::StringRef name_ref(name);
