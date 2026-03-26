@@ -995,7 +995,7 @@ void SampleProfileMatcher::UpdateWithSalvagedProfiles() {
     // We need to remove the old entry to avoid duplicating the function
     // processing.
     SymbolMap->erase(FuncName);
-    auto Ret = SymbolMap->emplace(I.second, I.first);
+    [[maybe_unused]] auto Ret = SymbolMap->emplace(I.second, I.first);
     LLVM_DEBUG({
       if (!Ret.second)
         dbgs() << "Profile Function " << I.second
