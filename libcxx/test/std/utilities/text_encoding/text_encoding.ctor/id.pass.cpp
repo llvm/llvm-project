@@ -23,47 +23,35 @@
 
 using id = std::text_encoding::id;
 
-constexpr void id_ctor(id i, std::string_view expect_name) {
-  std::same_as<std::text_encoding> decltype(auto) te = std::text_encoding(i);
-
-  assert(te.mib() == i);
-  assert(expect_name == te.name());
-  assert(std::ranges::contains(te.aliases(), expect_name));
-}
-
-constexpr void id_ctors() {
-  for (auto pair : unique_encoding_data) {
-    id_ctor(id(pair.mib), pair.name);
-  }
-}
-
-constexpr void test_unknown_other() {
-  {
-    std::text_encoding te = std::text_encoding(id::other);
-
-    assert(te.mib() == id::other);
-    assert(std::string_view("") == te.name());
-    assert(std::ranges::empty(te.aliases()));
-  }
-
-  {
-    std::text_encoding te = std::text_encoding(id::unknown);
-
-    assert(te.mib() == id::unknown);
-    assert(std::string_view("") == te.name());
-    assert(std::ranges::empty(te.aliases()));
-  }
-}
-
 constexpr bool test() {
   {
     // 2. Constructing an object with a valid id must set mib() and the name to the corresponding value.
-    id_ctors();
+    for (auto pair : unique_encoding_data) {
+      std::same_as<std::text_encoding> decltype(auto) te = std::text_encoding(id(pair.mib));
+
+      assert(te.mib() == id(pair.mib));
+      assert(pair.name == te.name());
+      assert(std::ranges::contains(te.aliases(), pair.name));
+    }
   }
 
   {
     // 3. Constructing an object using id::unknown or id::other must set mib() to id::unknown or id::other, respectively, and the name to an empty string.
-    test_unknown_other();
+    {
+      std::text_encoding te = std::text_encoding(id::other);
+
+      assert(te.mib() == id::other);
+      assert(std::string_view("") == te.name());
+      assert(std::ranges::empty(te.aliases()));
+    }
+
+    {
+      std::text_encoding te = std::text_encoding(id::unknown);
+
+      assert(te.mib() == id::unknown);
+      assert(std::string_view("") == te.name());
+      assert(std::ranges::empty(te.aliases()));
+    }
   }
 
   return true;

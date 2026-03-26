@@ -44,7 +44,7 @@ constexpr bool test() {
     assert(other_te1 == other_te2);
   }
 
-  // 4. operator==(const text_encoding&, const text_encoding&) returns false when comparingtext_encodings with different ids
+  // 4. operator==(const text_encoding&, const text_encoding&) returns false when comparing text_encodings with different ids
   {
     std::text_encoding te1 = std::text_encoding(id::UTF8);
     std::text_encoding te2 = std::text_encoding(id::UTF16);
