@@ -10,8 +10,7 @@
 //
 // UNSUPPORTED: nvptx64-nvidia-cuda
 // UNSUPPORTED: nvptx64-nvidia-cuda-LTO
-// https://github.com/llvm/llvm-project/issues/182119
-// UNSUPPORTED: intelgpu
+// XFAIL: intelgpu
 // clang-format on
 
 #include <cassert>

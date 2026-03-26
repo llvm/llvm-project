@@ -4,8 +4,6 @@
 // where the count (len/2) is a variable expression, not a constant.
 
 // RUN: %libomptarget-compile-run-and-check-generic
-// https://github.com/llvm/llvm-project/issues/182119
-// UNSUPPORTED: intelgpu
 #include <omp.h>
 #include <stdio.h>
 

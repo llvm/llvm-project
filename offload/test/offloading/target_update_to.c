@@ -1,6 +1,4 @@
 // RUN: %libomptarget-compile-run-and-check-generic
-// https://github.com/llvm/llvm-project/issues/182119
-// UNSUPPORTED: intelgpu
 // This test checks that "update to" clause in OpenMP supports strided sections.
 // #pragma omp target update to(result[0:8:2]) updates every other element
 // (stride 2)

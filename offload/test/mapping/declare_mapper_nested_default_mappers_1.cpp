@@ -1,9 +1,7 @@
 // RUN: %libomptarget-compilexx-run-and-check-generic
 
 // UNSUPPORTED: amdgcn-amd-amdhsa
-// https://github.com/llvm/llvm-project/issues/182119
-// UNSUPPORTED: intelgpu
-
+// XFAIL: intelgpu
 extern "C" int printf(const char *, ...);
 
 typedef struct {

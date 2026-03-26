@@ -15,8 +15,6 @@
 // RUN:   -DEXTENDS=AFTER
 // RUN: %libomptarget-run-generic 2>&1 \
 // RUN: | %fcheck-generic
-// https://github.com/llvm/llvm-project/issues/182119
-// UNSUPPORTED: intelgpu
 
 // END.
 

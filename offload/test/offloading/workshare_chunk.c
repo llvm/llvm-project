@@ -2,8 +2,7 @@
 // RUN: %libomptarget-compileopt-run-and-check-generic
 
 // REQUIRES: gpu
-// https://github.com/llvm/llvm-project/issues/182119
-// UNSUPPORTED: intelgpu
+// XFAIL: intelgpu
 
 // clang-format off
 

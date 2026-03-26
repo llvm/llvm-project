@@ -3,8 +3,6 @@
 // RUN: | %fcheck-generic
 
 // REQUIRES: unified_shared_memory
-// https://github.com/llvm/llvm-project/issues/182119
-// UNSUPPORTED: intelgpu
 
 #include <stdio.h>
 

@@ -1,8 +1,6 @@
 // clang-format off
 // RUN: %libomptarget-compile-generic -DREQ=1 && %libomptarget-run-generic 2>&1 | %fcheck-generic -check-prefix=GOOD
 // RUN: %libomptarget-compile-generic -DREQ=2 && %not --crash %libomptarget-run-generic 2>&1 | %fcheck-generic -check-prefix=BAD
-// https://github.com/llvm/llvm-project/issues/182119
-// UNSUPPORTED: intelgpu
 // clang-format on
 
 /*

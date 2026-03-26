@@ -1,9 +1,6 @@
 // RUN: %libomptarget-compile-run-and-check-generic
-// XFAIL: intelgpu
 // Tests struct member arrays with both variable count expression and variable
 // stride.
-// https://github.com/llvm/llvm-project/issues/182119
-// UNSUPPORTED: intelgpu
 
 #include <omp.h>
 #include <stdio.h>

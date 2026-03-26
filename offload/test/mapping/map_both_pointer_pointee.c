@@ -3,8 +3,7 @@
 // REQUIRES: unified_shared_memory
 // UNSUPPORTED: amdgcn-amd-amdhsa
 //
-// https://github.com/llvm/llvm-project/issues/182119
-// UNSUPPORTED: intelgpu
+// XFAIL: intelgpu
 
 #pragma omp declare target
 int *ptr1;

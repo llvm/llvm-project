@@ -1,6 +1,4 @@
 // RUN: %libomptarget-compile-run-and-check-generic
-// https://github.com/llvm/llvm-project/issues/182119
-// UNSUPPORTED: intelgpu
 // This test checks that "update from" with user-defined mapper supports strided
 // sections using fixed-size arrays in structs.
 
