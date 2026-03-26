@@ -38,7 +38,7 @@ void force_thread_creation_failure() {
   rlimit lim = {1, 1};
   assert(setrlimit(RLIMIT_THREADS, &lim) == 0);
 }
-#  elif RLIMIT_NPROC
+#  elif defined(RLIMIT_NPROC)
 void force_thread_creation_failure() {
   rlimit lim = {1, 1};
   assert(setrlimit(RLIMIT_NPROC, &lim) == 0);
