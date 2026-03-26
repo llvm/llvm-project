@@ -441,7 +441,7 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
       m_private_state_listener_sp(
           Listener::MakeListener("lldb.process.internal_state_listener")),
       m_current_private_state_thread_sp(std::make_shared<PrivateStateThread>(
-          *this, eStateUnloaded, eStateUnloaded, false, "rename-this-thread")),
+          *this, eStateUnloaded, eStateUnloaded, "rename-this-thread")),
       m_mod_id(), m_process_unique_id(0), m_thread_index_id(0),
       m_thread_id_to_index_id_map(), m_exit_status(-1),
       m_thread_list_real(*this), m_thread_list(*this), m_thread_plans(*this),
@@ -3897,9 +3897,9 @@ bool Process::PrivateStateThread::IsOnThread(const HostThread &thread) const {
   return m_private_state_thread.EqualsThread(thread);
 }
 
-bool Process::StartPrivateStateThread(lldb::StateType state,
-                                      bool run_lock_is_running,
-                                      bool is_secondary_thread) {
+bool Process::StartPrivateStateThread(
+    lldb::StateType state, bool run_lock_is_running,
+    std::shared_ptr<PrivateStateThread> *backup_ptr) {
   Log *log = GetLog(LLDBLog::Events);
 
   bool already_running = PrivateStateThreadIsRunning();
@@ -3907,7 +3907,7 @@ bool Process::StartPrivateStateThread(lldb::StateType state,
             already_running ? " already running"
                             : " starting private state thread");
 
-  if (!is_secondary_thread && already_running)
+  if (backup_ptr == nullptr && already_running)
     return true;
 
   // Create a thread that watches our internal state and controls which events
@@ -3931,12 +3931,12 @@ bool Process::StartPrivateStateThread(lldb::StateType state,
                "<lldb.process.internal-state(pid=%" PRIu64 ")>", GetID());
   }
 
-  if (is_secondary_thread) {
+  if (backup_ptr) {
     // StartupThread expects the m_current_private_state_thread_sp to be in
     // place already, so do that first:
-    m_current_private_state_thread_sp.reset(
-        new PrivateStateThread(*this, GetPublicState(), GetPrivateState(),
-                               is_secondary_thread, thread_name));
+    *backup_ptr = m_current_private_state_thread_sp;
+    m_current_private_state_thread_sp.reset(new PrivateStateThread(
+        *this, GetPublicState(), GetPrivateState(), thread_name));
   } else
     m_current_private_state_thread_sp->SetThreadName(thread_name);
 
@@ -5216,8 +5216,6 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
     LLDB_LOGF(log, "Running thread plan on private state thread, spinning up "
                    "another state thread to handle the events.");
 
-    backup_private_state_thread = m_current_private_state_thread_sp;
-
     // One other bit of business: we want to run just this thread plan and
     // anything it pushes, and then stop, returning control here. But in the
     // normal course of things, the plan above us on the stack would be given a
@@ -5234,7 +5232,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
 
     // Now spin up the private state thread:
     StartPrivateStateThread(lldb::eStateStopped, /* RunLock is stopped*/ false,
-                            /*secondary_thread=*/true);
+                            &backup_private_state_thread);
     if (!m_current_private_state_thread_sp) {
       // If we can't spin up a thread here we can't run this expression.  But
       // presumably the old private state thread is still good, so just put it

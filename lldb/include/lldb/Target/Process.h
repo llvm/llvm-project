@@ -3186,15 +3186,11 @@ protected:
   /// private state thread that we spin up when we need to run an expression on
   /// the private state thread.
   struct PrivateStateThread {
-    PrivateStateThread(
-        Process &process, lldb::StateType public_state,
-        lldb::StateType private_state,
-        bool is_secondary_thread, // FIXME: Can I get rid of this?
-        llvm::StringRef thread_name)
+    PrivateStateThread(Process &process, lldb::StateType public_state,
+                       lldb::StateType private_state,
+                       llvm::StringRef thread_name)
         : m_process(process), m_public_state(public_state),
-          m_private_state(private_state),
-          m_is_secondary_thread(is_secondary_thread),
-          m_thread_name(thread_name) {}
+          m_private_state(private_state), m_thread_name(thread_name) {}
     // This returns false if we couldn't start up the thread.  If that happens,
     // you won't be doing any debugging today.
     bool StartupThread();
@@ -3281,11 +3277,6 @@ protected:
     ProcessRunLock m_public_run_lock;
     ProcessRunLock m_private_run_lock;
     bool m_is_running = false;
-    /// If we need to run an expression modally in the private state thread, we
-    /// have to spin up a secondary private state thread to manage the events
-    /// that drive that interaction.  This will be true if this is a modal
-    /// private state thread.
-    bool m_is_secondary_thread;
     ///< This will be the thread name given to the Private State HostThread when
     ///< it gets spun up.
     std::string m_thread_name;
@@ -3508,10 +3499,15 @@ protected:
   void SetPrivateState(lldb::StateType state);
 
   // Starts the private state thread and assigns it to
-  // m_current_private_state_thread_sp.  Clients who are making a secondary
-  // thread for now have to manage backing that up by hand.
-  bool StartPrivateStateThread(lldb::StateType state, bool run_lock_is_running,
-                               bool is_secondary_thread = false);
+  // m_current_private_state_thread_sp.  If backup_ptr is non-null, this is
+  // a "secondary" thread, and the current thread will be backed up into
+  // backup_ptr before being replaced by the new thread. Pass a non-null
+  // backup_ptr in the case where you have to temporarily spin up a secondary
+  // state thread to handle events from a hand-called function on the primary
+  // private state thread.
+  bool StartPrivateStateThread(
+      lldb::StateType state, bool run_lock_is_running,
+      std::shared_ptr<PrivateStateThread> *backup_ptr = nullptr);
 
   void StopPrivateStateThread();
 
@@ -3520,10 +3516,8 @@ protected:
   void ResumePrivateStateThread();
 
 private:
-  // The starts up the private state thread that will watch for events from the
-  // debugee. Pass true for is_secondary_thread in the case where you have to
-  // temporarily spin up a secondary state thread to handle events from a hand-
-  // called function on the primary private state thread.
+  // Starts up the private state thread that will watch for events from the
+  // debugee.
 
   lldb::thread_result_t RunPrivateStateThread();
 
