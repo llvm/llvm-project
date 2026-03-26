@@ -4442,16 +4442,14 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
 /// HIP non-RDC \c -S for AMDGCN: emit host and device assembly separately and
 /// bundle with \c clang-offload-bundler (new offload driver), instead of
 /// \c llvm-offload-binary / \c clang-linker-wrapper fatbin embedding.
-static bool shouldBundleHIPAsmWithNewDriver(const Compilation &C,
-                                            const llvm::opt::DerivedArgList &Args,
-                                            const Driver &D) {
-  if (!C.isOffloadingHostKind(Action::OFK_HIP))
-    return false;
-  if (!Args.hasArg(options::OPT_S) || Args.hasArg(options::OPT_emit_llvm))
-    return false;
-  if (D.offloadDeviceOnly())
-    return false;
-  if (Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false))
+static bool
+shouldBundleHIPAsmWithNewDriver(const Compilation &C,
+                                const llvm::opt::DerivedArgList &Args,
+                                const Driver &D) {
+  if (!C.isOffloadingHostKind(Action::OFK_HIP) ||
+      !Args.hasArg(options::OPT_S) || Args.hasArg(options::OPT_emit_llvm) ||
+      D.offloadDeviceOnly() ||
+      Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false))
     return false;
 
   bool HasAMDGCNHIPDevice = false;
@@ -4939,11 +4937,11 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
   return Sorted;
 }
 
-Action *Driver::BuildOffloadingActions(Compilation &C,
-                                       llvm::opt::DerivedArgList &Args,
-                                       const InputTy &Input, StringRef CUID,
-                                       Action *HostAction,
-                                       ActionList *HIPAsmBundleDeviceOut) const {
+Action *
+Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
+                               const InputTy &Input, StringRef CUID,
+                               Action *HostAction,
+                               ActionList *HIPAsmBundleDeviceOut) const {
   // Don't build offloading actions if explicitly disabled or we do not have a
   // valid source input.
   if (offloadHostOnly() || !types::isSrcFile(Input.first))
@@ -5147,7 +5145,8 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
              *C.getOffloadToolChains<Action::OFK_HIP>().first->second, nullptr,
              Action::OFK_HIP);
   } else if (HIPNoRDC) {
-    // Host + device assembly: defer to clang-offload-bundler (see BuildActions).
+    // Host + device assembly: defer to clang-offload-bundler (see
+    // BuildActions).
     if (HIPAsmBundleDeviceOut &&
         shouldBundleHIPAsmWithNewDriver(C, Args, C.getDriver())) {
       for (Action *OA : OffloadActions)
@@ -5308,8 +5307,7 @@ Action *Driver::ConstructPhaseAction(
                      options::OPT_no_offload_new_driver,
                      C.getActiveOffloadKinds() != Action::OFK_None) &&
         !offloadDeviceOnly() && !isSaveTempsEnabled() &&
-        !(Args.hasArg(options::OPT_S) &&
-          !Args.hasArg(options::OPT_emit_llvm)))
+        !(Args.hasArg(options::OPT_S) && !Args.hasArg(options::OPT_emit_llvm)))
       return Input;
 
     if (isUsingLTO() && TargetDeviceOffloadKind == Action::OFK_None) {
