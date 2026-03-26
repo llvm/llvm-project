@@ -550,6 +550,11 @@ private:
   bool exactSIVtest(const SCEVAddRecExpr *Src, const SCEVAddRecExpr *Dst,
                     unsigned Level, FullDependence &Result) const;
 
+  /// weakZeroSIVtestImpl - Core implementation for weakZeroSrcSIVtest and
+  /// weakZeroDstSIVtest.
+  bool weakZeroSIVtestImpl(const SCEVAddRecExpr *AR, const SCEV *Const,
+                           unsigned Level, FullDependence &Result) const;
+
   /// weakZeroSrcSIVtest - Tests the weak-zero SIV subscript pair
   /// (Src and Dst) for dependence.
   /// Things of the form [c1] and [c2 + a*i],
