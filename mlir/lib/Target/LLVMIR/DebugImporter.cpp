@@ -59,10 +59,10 @@ DICompileUnitAttr DebugImporter::translateImpl(llvm::DICompileUnit *node) {
           node->getNameTableKind()));
   SmallVector<DINodeAttr> imports;
   if (node->getImportedEntities()) {
-    for (llvm::DIImportedEntity *ie : node->getImportedEntities()) {
-      if (DINodeAttr na = translate(static_cast<llvm::DINode *>(ie)))
-        imports.push_back(na);
-    }
+    for (llvm::DIImportedEntity *importedEntity : node->getImportedEntities())
+      if (DINodeAttr nodeAttr =
+              translate(static_cast<llvm::DINode *>(importedEntity)))
+        imports.push_back(nodeAttr);
   }
   return DICompileUnitAttr::get(
       context, getOrCreateDistinctID(node),

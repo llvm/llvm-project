@@ -135,8 +135,8 @@ llvm::DICompileUnit *DebugTranslation::translateImpl(DICompileUnitAttr attr) {
           attr.getNameTableKind()));
 
   llvm::SmallVector<llvm::Metadata *> importNodes;
-  for (DINodeAttr n : attr.getImportedEntities())
-    importNodes.push_back(translate(n));
+  for (DINodeAttr importNode : attr.getImportedEntities())
+    importNodes.push_back(translate(importNode));
   if (!importNodes.empty())
     cu->replaceImportedEntities(llvm::MDTuple::get(llvmCtx, importNodes));
 
