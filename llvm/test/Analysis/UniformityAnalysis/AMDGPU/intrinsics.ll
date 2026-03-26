@@ -839,5 +839,12 @@ define amdgpu_cs void @call_whole_wave(ptr addrspace(1) %out) {
 
 declare amdgpu_gfx_whole_wave i32 @wwf(i1, i32) #0
 
+; CHECK: DIVERGENT:   %v = call i1 @llvm.amdgcn.wqm.vote(i1 %c)
+define amdgpu_kernel void @wqm_vote(i32 %a, i32 %b) #1 {
+  %c = icmp eq i32 %a, %b
+  %v = call i1 @llvm.amdgcn.wqm.vote(i1 %c) #1
+  ret void
+}
+
 attributes #0 = { nounwind convergent }
 attributes #1 = { nounwind readnone convergent }
