@@ -803,7 +803,7 @@ RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
             Mask.size() <= LT.second.getScalarSizeInBits()) {
           APInt Imm(Mask.size(), 0);
           for (auto [Idx, M] : enumerate(Mask))
-            if (M < (int)NumElts)
+            if (M >= (int)NumElts)
               Imm.setBit(Idx);
           InstructionCost ImmMaskCost =
               getIntImmCost(Imm, Type::getIntNTy(C, Mask.size()), CostKind) +
