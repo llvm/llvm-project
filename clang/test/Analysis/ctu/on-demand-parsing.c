@@ -1,15 +1,15 @@
 // RUN: rm -rf %t
 // RUN: mkdir -p %t
-// RUN: cp "%s" "%t/ctu-on-demand-parsing.c"
-// RUN: cp "%S/Inputs/ctu-other.c" "%t/ctu-other.c"
+// RUN: cp "%s" "%t/on-demand-parsing.c"
+// RUN: cp "%S/Inputs/other.c" "%t/other.c"
 //
 // Path substitutions on Windows platform could contain backslashes. These are escaped in the json file.
 // compile_commands.json is only needed for extdef_mapping, not for the analysis itself.
-// RUN: echo '[{"directory":"%t","command":"gcc -std=c89 -Wno-visibility ctu-other.c","file":"ctu-other.c"}]' | sed -e 's/\\/\\\\/g' > %t/compile_commands.json
+// RUN: echo '[{"directory":"%t","command":"gcc -std=c89 -Wno-visibility other.c","file":"other.c"}]' | sed -e 's/\\/\\\\/g' > %t/compile_commands.json
 //
-// RUN: echo '"%t/ctu-other.c": ["gcc", "-std=c89", "-Wno-visibility", "ctu-other.c"]' | sed -e 's/\\/\\\\/g' > %t/invocations.yaml
+// RUN: echo '"%t/other.c": ["gcc", "-std=c89", "-Wno-visibility", "other.c"]' | sed -e 's/\\/\\\\/g' > %t/invocations.yaml
 //
-// RUN: cd "%t" && %clang_extdef_map "%t/ctu-other.c" > externalDefMap.txt
+// RUN: cd "%t" && %clang_extdef_map "%t/other.c" > externalDefMap.txt
 //
 // RUN: cd "%t" && %clang_analyze_cc1 -std=c89 \
 // RUN:   -analyzer-checker=core,debug.ExprInspection \
@@ -17,7 +17,7 @@
 // RUN:   -analyzer-config ctu-dir=. \
 // RUN:   -analyzer-config ctu-invocation-list=invocations.yaml \
 // RUN:   -analyzer-config ctu-phase1-inlining=all \
-// RUN:   -verify ctu-on-demand-parsing.c
+// RUN:   -verify on-demand-parsing.c
 //
 // FIXME: On-demand ctu should be tested in the same file that we have for the
 // PCH version, but with a different verify prefix (e.g. -verfiy=on-demand-ctu)
@@ -58,7 +58,7 @@ struct S;
 int g(struct S *);
 void testMacro(void) {
   g(0);
-  // expected-warning@ctu-other.c:29 {{Access to field 'a' results in a dereference of a null pointer (loaded from variable 'ctx')}}
+  // expected-warning@other.c:29 {{Access to field 'a' results in a dereference of a null pointer (loaded from variable 'ctx')}}
 }
 
 // The external function prototype is incomplete.

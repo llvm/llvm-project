@@ -1,17 +1,17 @@
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/Inputs
-// RUN: cp %s %t/ctu-on-demand-parsing.cpp
-// RUN: cp %S/ctu-hdr.h %t/ctu-hdr.h
-// RUN: cp %S/Inputs/ctu-chain.cpp %t/Inputs/ctu-chain.cpp
-// RUN: cp %S/Inputs/ctu-other.cpp %t/Inputs/ctu-other.cpp
+// RUN: cp %s %t/on-demand-parsing.cpp
+// RUN: cp %S/hdr.h %t/hdr.h
+// RUN: cp %S/Inputs/chain.cpp %t/Inputs/chain.cpp
+// RUN: cp %S/Inputs/other.cpp %t/Inputs/other.cpp
 //
 // Path substitutions on Windows platform could contain backslashes. These are escaped in the json file.
 // compile_commands.json is only needed for the extdef_mapping, not for the analysis itself.
-// RUN: echo '[{"directory":"%t/Inputs","command":"clang++ ctu-chain.cpp","file":"ctu-chain.cpp"},{"directory":"%t/Inputs","command":"clang++ ctu-other.cpp","file":"ctu-other.cpp"}]' | sed -e 's/\\/\\\\/g' > %t/compile_commands.json
+// RUN: echo '[{"directory":"%t/Inputs","command":"clang++ chain.cpp","file":"chain.cpp"},{"directory":"%t/Inputs","command":"clang++ other.cpp","file":"other.cpp"}]' | sed -e 's/\\/\\\\/g' > %t/compile_commands.json
 //
-// RUN: echo '{"%t/Inputs/ctu-chain.cpp": ["g++", "%t/Inputs/ctu-chain.cpp"], "%t/Inputs/ctu-other.cpp": ["g++", "%t/Inputs/ctu-other.cpp"]}' | sed -e 's/\\/\\\\/g' > %t/invocations.yaml
+// RUN: echo '{"%t/Inputs/chain.cpp": ["g++", "%t/Inputs/chain.cpp"], "%t/Inputs/other.cpp": ["g++", "%t/Inputs/other.cpp"]}' | sed -e 's/\\/\\\\/g' > %t/invocations.yaml
 //
-// RUN: cd "%t" && %clang_extdef_map Inputs/ctu-chain.cpp Inputs/ctu-other.cpp > externalDefMap.txt
+// RUN: cd "%t" && %clang_extdef_map Inputs/chain.cpp Inputs/other.cpp > externalDefMap.txt
 //
 // RUN: cd "%t" && %clang_analyze_cc1 \
 // RUN:   -analyzer-checker=core,debug.ExprInspection \
@@ -19,16 +19,16 @@
 // RUN:   -analyzer-config ctu-dir=. \
 // RUN:   -analyzer-config ctu-invocation-list=invocations.yaml \
 // RUN:   -analyzer-config ctu-phase1-inlining=all \
-// RUN:   -verify ctu-on-demand-parsing.cpp
+// RUN:   -verify on-demand-parsing.cpp
 // RUN: cd "%t" && %clang_analyze_cc1 \
 // RUN:   -analyzer-checker=core,debug.ExprInspection \
 // RUN:   -analyzer-config experimental-enable-naive-ctu-analysis=true \
 // RUN:   -analyzer-config ctu-dir=. \
 // RUN:   -analyzer-config ctu-invocation-list=invocations.yaml \
-// RUN:   -analyzer-config display-ctu-progress=true ctu-on-demand-parsing.cpp 2>&1 | FileCheck %t/ctu-on-demand-parsing.cpp
+// RUN:   -analyzer-config display-ctu-progress=true on-demand-parsing.cpp 2>&1 | FileCheck %t/on-demand-parsing.cpp
 //
-// CHECK: CTU loaded AST file: {{.*}}ctu-other.cpp
-// CHECK: CTU loaded AST file: {{.*}}ctu-chain.cpp
+// CHECK: CTU loaded AST file: {{.*}}other.cpp
+// CHECK: CTU loaded AST file: {{.*}}chain.cpp
 
 // FIXME: On-demand ctu should be tested in the same file that we have for the
 // PCH version, but with a different verify prefix (e.g. -verfiy=on-demand-ctu)
@@ -37,7 +37,7 @@
 // REQUIRES: system-linux
 // UNSUPPORTED: target={{.*}}-zos{{.*}}
 
-#include "ctu-hdr.h"
+#include "hdr.h"
 
 void clang_analyzer_eval(int);
 
@@ -111,6 +111,6 @@ int main() {
   clang_analyzer_eval(fun_using_anon_struct(8) == 8); // expected-warning{{TRUE}}
 
   clang_analyzer_eval(other_macro_diag(1) == 1); // expected-warning{{TRUE}}
-  // expected-warning@Inputs/ctu-other.cpp:93{{REACHABLE}}
+  // expected-warning@Inputs/other.cpp:93{{REACHABLE}}
   MACRODIAG(); // expected-warning{{REACHABLE}}
 }

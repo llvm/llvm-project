@@ -1,8 +1,8 @@
 // RUN: rm -rf %t && mkdir %t
 // RUN: mkdir -p %t/ctudir
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-pc-linux-gnu \
-// RUN:   -emit-pch -o %t/ctudir/ctu-onego-small-other.cpp.ast %S/Inputs/ctu-onego-small-other.cpp
-// RUN: cp %S/Inputs/ctu-onego-small-other.cpp.externalDefMap.ast-dump.txt %t/ctudir/externalDefMap.txt
+// RUN:   -emit-pch -o %t/ctudir/onego-small-other.cpp.ast %S/Inputs/onego-small-other.cpp
+// RUN: cp %S/Inputs/onego-small-other.cpp.externalDefMap.ast-dump.txt %t/ctudir/externalDefMap.txt
 
 // Small function defined in another TU.
 int bar();
