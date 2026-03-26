@@ -34,3 +34,19 @@ __clc_sincos_reduced_eval(__CLC_HALFN x) {
   ret.sin = __clc_mad(x, t * __clc_mad(t, 0x1.0bp-7h, -0x1.554p-3h), x);
   return ret;
 }
+
+_CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_SINCOS_RET_GENTYPE
+__clc_sincospi_reduced_eval(__CLC_HALFN x) {
+  __CLC_HALFN t = x * x;
+  __CLC_HALFN sx = __clc_mad(t, 0x1.b84p+0h, -0x1.46cp+2h);
+  sx = x * t * sx;
+  sx = __clc_mad(x, 0x1.92p+1h, sx);
+
+  __CLC_HALFN cx = __clc_mad(t, 0x1.fbp+1h, -0x1.3bcp+2h);
+  cx = __clc_mad(t, cx, 1.0h);
+
+  __CLC_SINCOS_RET_GENTYPE ret;
+  ret.cos = cx;
+  ret.sin = sx;
+  return ret;
+}

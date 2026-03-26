@@ -142,10 +142,11 @@ ModuleSP DynamicLoaderDarwin::FindTargetModuleForImageInfo(
     LazyBool using_sc;
     LazyBool private_sc;
     FileSpec sc_path;
+    std::optional<uint64_t> size;
     SymbolSharedCacheUse sc_mode = ModuleList::GetGlobalModuleListProperties()
                                        .GetSharedCacheBinaryLoading();
     if (GetSharedCacheInformation(sc_base_addr, sc_uuid, using_sc, private_sc,
-                                  sc_path) &&
+                                  sc_path, size) &&
         sc_uuid) {
       if (module_spec.GetUUID())
         image_info = HostInfo::GetSharedCacheImageInfo(module_spec.GetUUID(),

@@ -365,9 +365,10 @@ private:
   /// \c SubModules vector at which that submodule resides.
   mutable llvm::StringMap<unsigned> SubModuleIndex;
 
-  /// The AST file if this is a top-level module which has a
+  /// The AST file name and key if this is a top-level module which has a
   /// corresponding serialized AST file, or null otherwise.
-  OptionalFileEntryRef ASTFile;
+  std::optional<ModuleFileName> ASTFileName;
+  std::optional<ModuleFileKey> ASTFileKey;
 
   /// The top-level headers associated with this module.
   llvm::SmallSetVector<FileEntryRef, 2> TopHeaders;
@@ -840,15 +841,26 @@ public:
     return getTopLevelModule()->Name;
   }
 
-  /// The serialized AST file for this module, if one was created.
-  OptionalFileEntryRef getASTFile() const {
-    return getTopLevelModule()->ASTFile;
+  /// The serialized AST file name for this module, if one was created.
+  const ModuleFileName *getASTFileName() const {
+    const Module *TopLevel = getTopLevelModule();
+    return TopLevel->ASTFileName ? &*TopLevel->ASTFileName : nullptr;
   }
 
-  /// Set the serialized AST file for the top-level module of this module.
-  void setASTFile(OptionalFileEntryRef File) {
-    assert((!getASTFile() || getASTFile() == File) && "file path changed");
-    getTopLevelModule()->ASTFile = File;
+  /// The serialized AST file key for this module, if one was created.
+  const ModuleFileKey *getASTFileKey() const {
+    const Module *TopLevel = getTopLevelModule();
+    return TopLevel->ASTFileKey ? &*TopLevel->ASTFileKey : nullptr;
+  }
+
+  /// Set the serialized module file for the top-level module of this module.
+  void setASTFileNameAndKey(ModuleFileName NewName, ModuleFileKey NewKey) {
+    assert(((!getASTFileName() && !getASTFileKey()) ||
+            *getASTFileKey() == NewKey) &&
+           "file path changed");
+    Module *TopLevel = getTopLevelModule();
+    TopLevel->ASTFileName = NewName;
+    TopLevel->ASTFileKey = NewKey;
   }
 
   /// Retrieve the umbrella directory as written.

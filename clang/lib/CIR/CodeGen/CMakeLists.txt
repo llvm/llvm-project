@@ -14,6 +14,8 @@ add_clang_library(clangCIR
   CIRGenBuiltin.cpp
   CIRGenBuiltinAArch64.cpp
   CIRGenBuiltinAMDGPU.cpp
+  CIRGenAMDGPU.cpp
+  CIRGenBuiltinRISCV.cpp
   CIRGenBuiltinX86.cpp
   CIRGenCall.cpp
   CIRGenClass.cpp
