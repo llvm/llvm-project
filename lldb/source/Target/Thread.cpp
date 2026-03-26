@@ -1632,8 +1632,15 @@ llvm::Error Thread::LoadScriptedFrameProvider(
         last_id);
   }
 
+  // Protect provider construction (__init__) from re-entrancy. If the
+  // provider calls back into the frame machinery (e.g. HandleCommand("bt"))
+  // during __init__, GetStackFrameList() will find this thread in the
+  // active-provider map and return input_frames instead of trying to
+  // build a new synthetic list — preventing infinite recursion.
+  PushProviderFrameList(input_frames);
   auto provider_or_err =
       SyntheticFrameProvider::CreateInstance(input_frames, descriptor);
+  PopProviderFrameList();
   if (!provider_or_err)
     return provider_or_err.takeError();
 
