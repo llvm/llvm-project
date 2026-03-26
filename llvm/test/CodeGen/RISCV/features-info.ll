@@ -78,6 +78,7 @@
 ; CHECK-NEXT:   optimized-zero-stride-load       - Optimized (perform fewer memory operations)zero-stride vector load.
 ; CHECK-NEXT:   permissive-zalrsc                - Implementation permits non-base instructions between LR/SC pairs.
 ; CHECK-NEXT:   predictable-select-expensive     - Prefer likely predicted branches over selects.
+; CHECK-NEXT:   prefer-ascending-load-store      - Prefer ascending load/store order for better clustering and performance.
 ; CHECK-NEXT:   prefer-vsetvli-over-read-vlenb   - Prefer vsetvli over read vlenb CSR to calculate VLEN.
 ; CHECK-NEXT:   prefer-w-inst                    - Prefer instructions with W suffix.
 ; CHECK-NEXT:   q                                - 'Q' (Quad-Precision Floating-Point).
