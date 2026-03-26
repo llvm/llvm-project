@@ -6488,9 +6488,8 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
       transformToPartialReduction(Chain, CostCtx.Types, Plan, Phi);
 }
 
-void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
-                                                 VPRecipeBuilder &RecipeBuilder,
-                                                 VPCostContext &CostCtx) {
+void VPlanTransforms::makeMemOpWideningDecisions(
+    VPlan &Plan, VFRange &Range, VPRecipeBuilder &RecipeBuilder) {
   // Collect all loads/stores first. We will start with ones having simpler
   // decisions followed by more complex ones that are potentially
   // guided/dependent on the simpler ones.
@@ -6511,10 +6510,9 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
   VPBuilder FinalRedStoresBuilder(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
 
   for (VPInstruction *VPI : MemOps) {
-    Instruction *Instr = cast<Instruction>(VPI->getUnderlyingValue());
-
     auto ReplaceWith = [&](VPRecipeBase *New) {
-      RecipeBuilder.setRecipe(Instr, New);
+      RecipeBuilder.setRecipe(cast<Instruction>(VPI->getUnderlyingValue()),
+                              New);
       New->insertBefore(VPI);
       if (VPI->getOpcode() == Instruction::Load)
         VPI->replaceAllUsesWith(New->getVPSingleValue());
@@ -6538,7 +6536,7 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
 
     VPRecipeBase *Recipe = RecipeBuilder.tryToWidenMemory(VPI, Range);
     if (!Recipe)
-      Recipe = RecipeBuilder.handleReplication(cast<VPInstruction>(VPI), Range);
+      Recipe = RecipeBuilder.handleReplication(VPI, Range);
 
     ReplaceWith(Recipe);
   }
