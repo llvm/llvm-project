@@ -1748,6 +1748,10 @@ DEF_TRAVERSE_DECL(StaticAssertDecl, {
   TRY_TO(TraverseStmt(D->getMessage()));
 })
 
+DEF_TRAVERSE_DECL(ConstevalBlockDecl, {
+  TRY_TO(TraverseStmt(D->getCallExpr()));
+})
+
 DEF_TRAVERSE_DECL(TranslationUnitDecl, {
   // Code in an unnamed namespace shows up automatically in
   // decls_begin()/decls_end().  Thus we don't need to recurse on

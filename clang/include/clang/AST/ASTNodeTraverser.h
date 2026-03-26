@@ -683,6 +683,10 @@ public:
     Visit(D->getMessage());
   }
 
+  void VisitConstevalBlockDecl(const ConstevalBlockDecl *D) {
+    Visit(D->getCallExpr());
+  }
+
   void VisitFunctionTemplateDecl(const FunctionTemplateDecl *D) {
     dumpTemplateDecl(D);
   }

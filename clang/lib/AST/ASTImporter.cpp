@@ -516,6 +516,7 @@ namespace clang {
     ExpectedDecl VisitEmptyDecl(EmptyDecl *D);
     ExpectedDecl VisitAccessSpecDecl(AccessSpecDecl *D);
     ExpectedDecl VisitStaticAssertDecl(StaticAssertDecl *D);
+    ExpectedDecl VisitConstevalBlockDecl(ConstevalBlockDecl *D);
     ExpectedDecl VisitTranslationUnitDecl(TranslationUnitDecl *D);
     ExpectedDecl VisitBindingDecl(BindingDecl *D);
     ExpectedDecl VisitNamespaceDecl(NamespaceDecl *D);
@@ -2863,6 +2864,29 @@ ExpectedDecl ASTNodeImporter::VisitStaticAssertDecl(StaticAssertDecl *D) {
   return ToD;
 }
 
+ExpectedDecl ASTNodeImporter::VisitConstevalBlockDecl(ConstevalBlockDecl *D) {
+  auto DCOrErr = Importer.ImportContext(D->getDeclContext());
+  if (!DCOrErr)
+    return DCOrErr.takeError();
+  DeclContext *DC = *DCOrErr;
+  DeclContext *LexicalDC = DC;
+
+  Error Err = Error::success();
+  auto ToLocation = importChecked(Err, D->getLocation());
+  auto ToCallExpr = importChecked(Err, D->getCallExpr());
+  if (Err)
+    return std::move(Err);
+
+  ConstevalBlockDecl *ToD;
+  if (GetImportedOrCreateDecl(ToD, D, Importer.getToContext(), DC, ToLocation,
+                              ToCallExpr))
+    return ToD;
+
+  ToD->setLexicalDeclContext(LexicalDC);
+  LexicalDC->addDeclInternal(ToD);
+  return ToD;
+}
+
 ExpectedDecl ASTNodeImporter::VisitNamespaceDecl(NamespaceDecl *D) {
   // Import the major distinguishing characteristics of this namespace.
   DeclContext *DC, *LexicalDC;
@@ -3442,7 +3466,8 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
       if (GetImportedOrCreateSpecialDecl(
               D2CXX, CXXRecordDecl::CreateLambda, D, Importer.getToContext(),
               DC, *TInfoOrErr, Loc, DCXX->getLambdaDependencyKind(),
-              DCXX->isGenericLambda(), DCXX->getLambdaCaptureDefault()))
+              DCXX->isGenericLambda(), DCXX->isLambdaForConstevalBlock(),
+              DCXX->getLambdaCaptureDefault()))
         return D2CXX;
       Decl *ContextDecl = DCXX->getLambdaContextDecl();
       ExpectedDecl CDeclOrErr = import(ContextDecl);

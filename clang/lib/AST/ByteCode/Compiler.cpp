@@ -5966,8 +5966,9 @@ template <class Emitter>
 bool Compiler<Emitter>::visitDeclStmt(const DeclStmt *DS,
                                       bool EvaluateConditionDecl) {
   for (const auto *D : DS->decls()) {
-    if (isa<StaticAssertDecl, TagDecl, TypedefNameDecl, BaseUsingDecl,
-            FunctionDecl, NamespaceAliasDecl, UsingDirectiveDecl>(D))
+    if (isa<StaticAssertDecl, ConstevalBlockDecl, TagDecl, TypedefNameDecl,
+            BaseUsingDecl, FunctionDecl, NamespaceAliasDecl,
+            UsingDirectiveDecl>(D))
       continue;
 
     const auto *VD = dyn_cast<VarDecl>(D);

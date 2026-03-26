@@ -165,10 +165,19 @@ Parser::DeclGroupPtrTy Parser::ParseDeclarationAfterTemplate(
   if (Tok.is(tok::kw_static_assert)) {
     // A static_assert declaration may not be templated.
     Diag(Tok.getLocation(), diag::err_templated_invalid_declaration)
-      << TemplateInfo.getSourceRange();
+      << 0 /*static_assert*/ << TemplateInfo.getSourceRange();
     // Parse the static_assert declaration to improve error recovery.
     return Actions.ConvertDeclToDeclGroup(
         ParseStaticAssertDeclaration(DeclEnd));
+  }
+
+  // The same applies to consteval blocks.
+  if (Tok.is(tok::kw_consteval) && NextToken().is(tok::l_brace)) {
+    Diag(Tok.getLocation(), diag::err_templated_invalid_declaration)
+      << 1 /*consteval block*/ << TemplateInfo.getSourceRange();
+    // Parse the consteval block declaration to improve error recovery.
+    return Actions.ConvertDeclToDeclGroup(
+        ParseConstevalBlockDeclaration(DeclEnd));
   }
 
   // We are parsing a member template.

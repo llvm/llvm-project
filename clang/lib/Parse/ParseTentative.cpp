@@ -32,6 +32,11 @@ bool Parser::isCXXDeclarationStatement(
   case tok::kw_static_assert:
   case tok::kw__Static_assert:
     return true;
+    // consteval-block-declaration
+  case tok::kw_consteval:
+    if (NextToken().is(tok::l_brace))
+      return true;
+    goto default_case;
   case tok::coloncolon:
   case tok::identifier: {
     if (DisambiguatingWithExpression) {
@@ -79,6 +84,7 @@ bool Parser::isCXXDeclarationStatement(
     [[fallthrough]];
     // simple-declaration
   default:
+  default_case:
 
     if (DisambiguatingWithExpression) {
       TentativeParsingAction TPA(*this, /*Unannotated=*/true);
@@ -1168,6 +1174,10 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
     return isCXXDeclarationSpecifier(AllowImplicitTypename, BracedCastResult,
                                      InvalidAsDeclSpec);
 
+    // 'consteval' in a consteval-block-declaration is not a specifier.
+  case tok::kw_consteval:
+    return NextToken().is(tok::l_brace) ? TPResult::False : TPResult::True;
+
     // decl-specifier:
     //   storage-class-specifier
     //   type-specifier
@@ -1178,7 +1188,6 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
   case tok::kw_friend:
   case tok::kw_typedef:
   case tok::kw_constexpr:
-  case tok::kw_consteval:
   case tok::kw_constinit:
     // storage-class-specifier
   case tok::kw_register:

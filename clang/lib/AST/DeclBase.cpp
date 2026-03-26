@@ -984,6 +984,7 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case FileScopeAsm:
     case TopLevelStmt:
     case StaticAssert:
+    case ConstevalBlock:
     case ObjCPropertyImpl:
     case PragmaComment:
     case PragmaDetectMismatch:
@@ -1120,13 +1121,14 @@ bool Decl::AccessDeclContextCheck() const {
   // 3. this is a non-type template parameter
   // 4. the context is not a record
   // 5. it's invalid
-  // 6. it's a C++0x static_assert.
+  // 6. it's a C++0x static_assert or C++26 consteval block
   // 7. it's a block literal declaration
   // 8. it's a temporary with lifetime extended due to being default value.
   if (isa<TranslationUnitDecl>(this) || isa<TemplateTypeParmDecl>(this) ||
       isa<NonTypeTemplateParmDecl>(this) || !getDeclContext() ||
       !isa<CXXRecordDecl>(getDeclContext()) || isInvalidDecl() ||
-      isa<StaticAssertDecl>(this) || isa<BlockDecl>(this) ||
+      isa<StaticAssertDecl>(this) || isa<ConstevalBlockDecl>(this) ||
+      isa<BlockDecl>(this) ||
       // FIXME: a ParmVarDecl can have ClassTemplateSpecialization
       // as DeclContext (?).
       isa<ParmVarDecl>(this) ||

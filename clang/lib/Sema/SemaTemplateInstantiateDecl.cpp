@@ -2101,6 +2101,17 @@ Decl *TemplateDeclInstantiator::VisitStaticAssertDecl(StaticAssertDecl *D) {
       InstantiatedMessageExpr.get(), D->getRParenLoc(), D->isFailed());
 }
 
+Decl *TemplateDeclInstantiator::VisitConstevalBlockDecl(ConstevalBlockDecl *D) {
+  EnterExpressionEvaluationContext Unevaluated(
+      SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+
+  ExprResult Call = SemaRef.SubstExpr(D->getCallExpr(), TemplateArgs);
+  if (Call.isInvalid())
+    return nullptr;
+
+  return SemaRef.BuildConstevalBlockDeclaration(D->getLocation(), Call.get());
+}
+
 Decl *TemplateDeclInstantiator::VisitEnumDecl(EnumDecl *D) {
   EnumDecl *PrevDecl = nullptr;
   if (EnumDecl *PatternPrev = getPreviousDeclForInstantiation(D)) {
@@ -2606,7 +2617,7 @@ Decl *TemplateDeclInstantiator::VisitCXXRecordDecl(CXXRecordDecl *D) {
   if (D->isLambda())
     Record = CXXRecordDecl::CreateLambda(
         SemaRef.Context, Owner, D->getLambdaTypeInfo(), D->getLocation(),
-        D->getLambdaDependencyKind(), D->isGenericLambda(),
+        D->getLambdaDependencyKind(), D->isGenericLambda(), D->isLambdaForConstevalBlock(),
         D->getLambdaCaptureDefault());
   else
     Record = CXXRecordDecl::Create(SemaRef.Context, D->getTagKind(), Owner,

@@ -124,6 +124,9 @@ C++ Language Changes
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
+- Clang now supports more parts of `P2996 <https://wg21.link/p2996>`_ Reflection for C++26, including
+  ``consteval`` blocks.
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 

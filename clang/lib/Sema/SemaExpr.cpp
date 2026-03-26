@@ -19810,6 +19810,17 @@ bool Sema::tryCaptureVariable(
         Parm && Parm->getDeclContext() == DC)
       return true;
 
+    // Issue a more specific diagnostics (and don't suggest any fixits) if
+    // we're in a consteval block.
+    if (LSI && LSI->Lambda->isLambdaForConstevalBlock()) {
+      if (BuildAndDiagnose) {
+        Diag(ExprLoc, diag::err_consteval_block_capture) << Var;
+        Diag(Var->getLocation(), diag::note_previous_decl) << Var;
+        Diag(LSI->Lambda->getBeginLoc(), diag::note_consteval_block);
+      }
+      return true;
+    }
+
     // If we are instantiating a generic lambda call operator body,
     // we do not want to capture new variables.  What was captured
     // during either a lambdas transformation or initial parsing

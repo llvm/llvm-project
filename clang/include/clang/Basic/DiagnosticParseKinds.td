@@ -894,7 +894,7 @@ def warn_cxx98_compat_two_right_angle_brackets : Warning<
   "consecutive right angle brackets are incompatible with C++98 (use '> >')">,
   InGroup<CXX98Compat>, DefaultIgnore;
 def err_templated_invalid_declaration : Error<
-  "a static_assert declaration cannot be a template">;
+  "a %select{static_assert|consteval block}0 declaration cannot be a template">;
 def err_multiple_template_declarators : Error<
   "%select{|a template declaration|an explicit template specialization|"
   "an explicit template instantiation}0 can "

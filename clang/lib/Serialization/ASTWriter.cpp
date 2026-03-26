@@ -7439,6 +7439,7 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
     BitsPacker LambdaBits;
     LambdaBits.addBits(Lambda.DependencyKind, /*Width=*/2);
     LambdaBits.addBit(Lambda.IsGenericLambda);
+    LambdaBits.addBit(Lambda.IsConstevalBlock);
     LambdaBits.addBits(Lambda.CaptureDefault, /*Width=*/2);
     LambdaBits.addBits(Lambda.NumCaptures, /*Width=*/15);
     LambdaBits.addBit(Lambda.HasKnownInternalLinkage);

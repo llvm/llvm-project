@@ -2015,6 +2015,7 @@ static bool CheckConstexprDeclStmt(Sema &SemaRef, const FunctionDecl *Dcl,
   for (const auto *DclIt : DS->decls()) {
     switch (DclIt->getKind()) {
     case Decl::StaticAssert:
+    case Decl::ConstevalBlock:
     case Decl::Using:
     case Decl::UsingShadow:
     case Decl::UsingDirective:
@@ -18031,6 +18032,43 @@ Decl *Sema::BuildStaticAssertDeclaration(SourceLocation StaticAssertLoc,
 
   CurContext->addDecl(Decl);
   return Decl;
+}
+
+Decl *Sema::ActOnConstevalBlockDeclaration(SourceLocation ConstevalLoc,
+                                           Expr *Call) {
+  DiagCompat(ConstevalLoc, diag_compat::consteval_block);
+
+  if (DiagnoseUnexpandedParameterPack(Call, UPPC_ConstevalBlock))
+    return nullptr;
+
+  return BuildConstevalBlockDeclaration(ConstevalLoc, Call);
+}
+
+Decl *Sema::BuildConstevalBlockDeclaration(SourceLocation ConstevalLoc,
+                                           Expr *Call) {
+  ExprResult FullExpr = ActOnFinishFullExpr(Call, ConstevalLoc,
+                                            /*DiscardedValue=*/false,
+                                            /*IsConstexpr=*/true);
+  if (FullExpr.isInvalid())
+    return nullptr;
+
+  Expr* E = FullExpr.get();
+  Decl* D = ConstevalBlockDecl::Create(Context, CurContext, ConstevalLoc, Call);
+  CurContext->addDecl(D);
+
+  if (!E->isTypeDependent() && !E->isValueDependent()) {
+    SmallVector<PartialDiagnosticAt, 4> PDiags;
+    Expr::EvalResult ER;
+    ER.Diag = &PDiags;
+    if (!Call->EvaluateAsConstantExpr(ER, Context,
+                                      ConstantExprKind::ConstevalBlock)) {
+      Diag(ConstevalLoc, diag::err_consteval_block_eval_failed);
+      for (PartialDiagnosticAt PD : PDiags)
+        Diag(PD.first, PD.second);
+    }
+  }
+
+  return D;
 }
 
 DeclResult Sema::ActOnTemplatedFriendTag(

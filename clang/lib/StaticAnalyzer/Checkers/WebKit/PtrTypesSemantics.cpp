@@ -759,6 +759,11 @@ public:
     return true;
   }
 
+  bool VisitConstevalBlockDecl(const ConstevalBlockDecl *SAD) {
+    // Any consteval block is considered trivial.
+    return true;
+  }
+
   bool VisitCallExpr(const CallExpr *CE) {
     if (!checkArguments(CE))
       return false;

@@ -5117,8 +5117,8 @@ static NonCLikeKind getNonCLikeKindForAnonymousStruct(const CXXRecordDecl *RD) {
 
     //  -- declare any members other than non-static data members, member
     //     enumerations, or member classes,
-    if (isa<StaticAssertDecl>(D) || isa<IndirectFieldDecl>(D) ||
-        isa<EnumDecl>(D))
+    if (isa<StaticAssertDecl, ConstevalBlockDecl>(D) ||
+        isa<IndirectFieldDecl>(D) || isa<EnumDecl>(D))
       continue;
     auto *MemberRD = dyn_cast<CXXRecordDecl>(D);
     if (!MemberRD) {
@@ -5830,7 +5830,7 @@ Decl *Sema::BuildAnonymousStructOrUnion(Scope *S, DeclSpec &DS,
         }
       } else if (isa<AccessSpecDecl>(Mem)) {
         // Any access specifier is fine.
-      } else if (isa<StaticAssertDecl>(Mem)) {
+      } else if (isa<StaticAssertDecl, ConstevalBlockDecl>(Mem)) {
         // In C++1z, static_assert declarations are also fine.
       } else {
         // We have something that isn't a non-static data

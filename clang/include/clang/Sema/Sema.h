@@ -6051,6 +6051,9 @@ public:
                                      Expr *AssertExpr, Expr *AssertMessageExpr,
                                      SourceLocation RParenLoc, bool Failed);
 
+  Decl *ActOnConstevalBlockDeclaration(SourceLocation ConstevalLoc, Expr *Call);
+  Decl *BuildConstevalBlockDeclaration(SourceLocation ConstevalLoc, Expr *Call);
+
   /// Try to print more useful information about a failed static_assert
   /// with expression \E
   void DiagnoseStaticAssertDetails(const Expr *E);
@@ -9143,6 +9146,7 @@ public:
   CXXRecordDecl *createLambdaClosureType(SourceRange IntroducerRange,
                                          TypeSourceInfo *Info,
                                          unsigned LambdaDependencyKind,
+                                         bool ForConstevalBlock,
                                          LambdaCaptureDefault CaptureDefault);
 
   /// Number lambda for linkage purposes if necessary.
@@ -9218,6 +9222,7 @@ public:
   /// We do the capture lookup here, but they are not actually captured until
   /// after we know what the qualifiers of the call operator are.
   void ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
+                                            bool ForConstevalBlock,
                                             Scope *CurContext);
 
   /// This is called after parsing the explicit template parameter list
@@ -14561,6 +14566,9 @@ public:
 
     // A requires-clause.
     UPPC_RequiresClause,
+
+    /// The body of a consteval block.
+    UPPC_ConstevalBlock,
   };
 
   /// Diagnose unexpanded parameter packs.

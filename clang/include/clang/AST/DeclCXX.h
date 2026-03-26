@@ -397,6 +397,10 @@ private:
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsGenericLambda : 1;
 
+    /// Whether this is the body of a C++26 consteval-block-declaration.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned IsConstevalBlock : 1;
+
     /// The Default Capture.
     LLVM_PREFERRED_TYPE(LambdaCaptureDefault)
     unsigned CaptureDefault : 2;
@@ -435,11 +439,12 @@ private:
     TypeSourceInfo *MethodTyInfo;
 
     LambdaDefinitionData(CXXRecordDecl *D, TypeSourceInfo *Info, unsigned DK,
-                         bool IsGeneric, LambdaCaptureDefault CaptureDefault)
+                         bool IsGeneric, bool IsConstevalBlock,
+                         LambdaCaptureDefault CaptureDefault)
         : DefinitionData(D), DependencyKind(DK), IsGenericLambda(IsGeneric),
-          CaptureDefault(CaptureDefault), NumCaptures(0),
-          NumExplicitCaptures(0), HasKnownInternalLinkage(0), ManglingNumber(0),
-          IndexInContext(0), MethodTyInfo(Info) {
+          IsConstevalBlock(IsConstevalBlock), CaptureDefault(CaptureDefault),
+          NumCaptures(0), NumExplicitCaptures(0), HasKnownInternalLinkage(0),
+          ManglingNumber(0), IndexInContext(0), MethodTyInfo(Info) {
       IsLambda = true;
 
       // C++1z [expr.prim.lambda]p4:
@@ -567,6 +572,7 @@ public:
   static CXXRecordDecl *CreateLambda(const ASTContext &C, DeclContext *DC,
                                      TypeSourceInfo *Info, SourceLocation Loc,
                                      unsigned DependencyKind, bool IsGeneric,
+                                     bool IsConstevalBlock,
                                      LambdaCaptureDefault CaptureDefault);
   static CXXRecordDecl *CreateDeserialized(const ASTContext &C,
                                            GlobalDeclID ID);
@@ -1025,6 +1031,10 @@ public:
   /// lambda function object (i.e. function call operator is
   /// a template).
   bool isGenericLambda() const;
+
+  /// Determine whether this class describes a lambda that is the body
+  /// of a C++26 consteval-block-declaration.
+  bool isLambdaForConstevalBlock() const;
 
   /// Determine whether this lambda should have an implicit default constructor
   /// and copy and move assignment operators.
@@ -4175,6 +4185,41 @@ public:
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == StaticAssert; }
+};
+
+/// A C++26 consteval block declaration.
+class ConstevalBlockDecl : public Decl {
+  Expr *Call;
+
+  ConstevalBlockDecl(DeclContext *DC, SourceLocation ConstevalLoc,
+                     Expr *Call)
+      : Decl(ConstevalBlock, DC, ConstevalLoc), Call(Call) {}
+
+  virtual void anchor();
+
+public:
+  friend class ASTDeclReader;
+
+  static ConstevalBlockDecl *Create(ASTContext &C, DeclContext *DC,
+                                    SourceLocation ConstevalLoc,
+                                    Expr *Expr);
+  static ConstevalBlockDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
+
+  /// Get the call expression that invokes the lambda that is the body of this
+  /// consteval block.
+  Expr *getCallExpr() { return Call; }
+  const Expr *getCallExpr() const { return Call; }
+
+  /// Get the lambda that corresponds to the body of the consteval block.
+  LambdaExpr* getLambda();
+  const LambdaExpr *getLambda() const {
+    return const_cast<ConstevalBlockDecl *>(this)->getLambda();
+  }
+
+  SourceRange getSourceRange() const override LLVM_READONLY;
+
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  static bool classofKind(Kind K) { return K == ConstevalBlock; }
 };
 
 /// A binding in a decomposition declaration. For instance, given:

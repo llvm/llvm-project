@@ -246,7 +246,7 @@ getGenericLambdaTemplateParameterList(LambdaScopeInfo *LSI, Sema &SemaRef) {
 
 CXXRecordDecl *
 Sema::createLambdaClosureType(SourceRange IntroducerRange, TypeSourceInfo *Info,
-                              unsigned LambdaDependencyKind,
+                              unsigned LambdaDependencyKind, bool ForConstevalBlock,
                               LambdaCaptureDefault CaptureDefault) {
   DeclContext *DC = CurContext;
 
@@ -255,7 +255,7 @@ Sema::createLambdaClosureType(SourceRange IntroducerRange, TypeSourceInfo *Info,
   // Start constructing the lambda class.
   CXXRecordDecl *Class = CXXRecordDecl::CreateLambda(
       Context, DC, Info, IntroducerRange.getBegin(), LambdaDependencyKind,
-      IsGenericLambda, CaptureDefault);
+      IsGenericLambda, ForConstevalBlock, CaptureDefault);
   DC->addDecl(Class);
 
   return Class;
@@ -1103,6 +1103,7 @@ void Sema::CompleteLambdaCallOperator(
 }
 
 void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
+                                                bool ForConstevalBlock,
                                                 Scope *CurrentScope) {
 
   LambdaScopeInfo *LSI = getCurLambda();
@@ -1150,7 +1151,8 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
   }
 
   CXXRecordDecl *Class = createLambdaClosureType(
-      Intro.Range, /*Info=*/nullptr, LambdaDependencyKind, Intro.Default);
+      Intro.Range, /*Info=*/nullptr, LambdaDependencyKind, ForConstevalBlock,
+      Intro.Default);
   LSI->Lambda = Class;
 
   CXXMethodDecl *Method = CreateLambdaCallOperator(Intro.Range, Class);

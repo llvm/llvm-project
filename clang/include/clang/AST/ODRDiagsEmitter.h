@@ -99,12 +99,15 @@ private:
   // err_module_odr_violation_mismatch_decl_unknown,
   // and note_module_odr_violation_mismatch_decl_unknown
   // This list should be the same Decl's as in ODRHash::isSubDeclToBeProcessed
+  //
+  // FIXME: Use %enum_select for this.
   enum ODRMismatchDecl {
     EndOfClass,
     PublicSpecifer,
     PrivateSpecifer,
     ProtectedSpecifer,
     StaticAssert,
+    ConstevalBlock,
     Field,
     CXXMethod,
     TypeAlias,

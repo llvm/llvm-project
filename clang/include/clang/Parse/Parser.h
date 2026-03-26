@@ -4694,8 +4694,18 @@ private:
                         LambdaIntroducerTentativeParse *Tentative = nullptr);
 
   /// ParseLambdaExpressionAfterIntroducer - Parse the rest of a lambda
-  /// expression.
-  ExprResult ParseLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro);
+  /// expression. If ConstevalBlockStart is valid, we're parsing the body
+  /// of a C++26 consteval block.
+  ExprResult ParseLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
+    SourceLocation ConstevalBlockStart = {});
+
+  /// ParseConstevalBlockDeclaration - Parse a C++26 'consteval' block.
+  ///
+  /// \verbatim
+  ///       consteval-block-declaration:
+  //          consteval compound-statement
+  /// \endverbatim
+  Decl *ParseConstevalBlockDeclaration(SourceLocation &DeclEnd);
 
   //===--------------------------------------------------------------------===//
   // C++ 5.2p1: C++ Casts

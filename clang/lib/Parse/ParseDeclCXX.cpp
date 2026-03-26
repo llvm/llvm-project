@@ -1021,6 +1021,41 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd) {
                                               T.getCloseLocation());
 }
 
+Decl *Parser::ParseConstevalBlockDeclaration(SourceLocation &DeclEnd) {
+  assert(Tok.is(tok::kw_consteval) && NextToken().is(tok::l_brace) &&
+         "not a consteval block declaration");
+
+  SourceLocation ConstevalLoc = ConsumeToken();
+
+  // C++26 [dcl.pre]: For a consteval-block-declaration D, the expression E
+  // corresponding to D is:
+  //
+  //     [] static consteval -> void compound-statement ()
+  //
+  EnterExpressionEvaluationContext ConstantEvaluated(
+      Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+
+  // Fabricate a fake lambda introducer.
+  LambdaIntroducer Intro;
+  Intro.Range = SourceRange(ConstevalLoc, ConstevalLoc);
+
+  // Parse the body and call the resulting lambda.
+  ExprResult Lambda = ParseLambdaExpressionAfterIntroducer(Intro, ConstevalLoc);
+  if (Lambda.isInvalid())
+    return nullptr;
+
+  ExprResult Call =
+      Actions.ActOnCallExpr(getCurScope(), Lambda.get(), ConstevalLoc,
+                            /*ArgExprs=*/MultiExprArg(), ConstevalLoc);
+
+  Call = Actions.ActOnConstantExpression(Call);
+  if (Call.isInvalid())
+    return nullptr;
+
+  DeclEnd = Tok.getLocation();
+  return Actions.ActOnConstevalBlockDeclaration(ConstevalLoc, Call.get());
+}
+
 SourceLocation Parser::ParseDecltypeSpecifier(DeclSpec &DS) {
   assert(Tok.isOneOf(tok::kw_decltype, tok::annot_decltype) &&
          "Not a decltype specifier");
@@ -2716,6 +2751,14 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
     SourceLocation DeclEnd;
     return DeclGroupPtrTy::make(
         DeclGroupRef(ParseStaticAssertDeclaration(DeclEnd)));
+  }
+
+  // consteval-block-declaration.
+  if (TemplateInfo.Kind == ParsedTemplateKind::NonTemplate &&
+      Tok.is(tok::kw_consteval) && NextToken().is(tok::l_brace)) {
+    SourceLocation DeclEnd;
+    return DeclGroupPtrTy::make(
+        DeclGroupRef(ParseConstevalBlockDeclaration(DeclEnd)));
   }
 
   if (Tok.is(tok::kw_template)) {

@@ -762,6 +762,8 @@ public:
     /// evaluation is not part of the evaluation, but all other temporaries
     /// are destroyed.
     ImmediateInvocation,
+    /// A consteval block.
+    ConstevalBlock,
   };
 
   /// Evaluate an expression that is required to be a constant expression. Does

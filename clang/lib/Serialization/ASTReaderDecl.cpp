@@ -405,6 +405,7 @@ public:
   void VisitFriendDecl(FriendDecl *D);
   void VisitFriendTemplateDecl(FriendTemplateDecl *D);
   void VisitStaticAssertDecl(StaticAssertDecl *D);
+  void VisitConstevalBlockDecl(ConstevalBlockDecl *D);
   void VisitBlockDecl(BlockDecl *BD);
   void VisitOutlinedFunctionDecl(OutlinedFunctionDecl *D);
   void VisitCapturedDecl(CapturedDecl *CD);
@@ -2034,6 +2035,7 @@ void ASTDeclReader::ReadCXXDefinitionData(
     BitsUnpacker LambdaBits(Record.readInt());
     Lambda.DependencyKind = LambdaBits.getNextBits(/*Width=*/2);
     Lambda.IsGenericLambda = LambdaBits.getNextBit();
+    Lambda.IsConstevalBlock = LambdaBits.getNextBit();
     Lambda.CaptureDefault = LambdaBits.getNextBits(/*Width=*/2);
     Lambda.NumCaptures = LambdaBits.getNextBits(/*Width=*/15);
     Lambda.HasKnownInternalLinkage = LambdaBits.getNextBit();
@@ -2145,6 +2147,7 @@ void ASTDeclMerger::MergeDefinitionData(
     auto &Lambda2 = static_cast<CXXRecordDecl::LambdaDefinitionData &>(MergeDD);
     DetectedOdrViolation |= Lambda1.DependencyKind != Lambda2.DependencyKind;
     DetectedOdrViolation |= Lambda1.IsGenericLambda != Lambda2.IsGenericLambda;
+    DetectedOdrViolation |= Lambda1.IsConstevalBlock != Lambda2.IsConstevalBlock;
     DetectedOdrViolation |= Lambda1.CaptureDefault != Lambda2.CaptureDefault;
     DetectedOdrViolation |= Lambda1.NumCaptures != Lambda2.NumCaptures;
     DetectedOdrViolation |=
@@ -2189,7 +2192,7 @@ void ASTDeclReader::ReadCXXRecordDefinition(CXXRecordDecl *D, bool Update,
          "lambda definition should not be added by update record");
   if (IsLambda)
     DD = new (C) CXXRecordDecl::LambdaDefinitionData(
-        D, nullptr, CXXRecordDecl::LDK_Unknown, false, LCD_None);
+        D, nullptr, CXXRecordDecl::LDK_Unknown, false, false, LCD_None);
   else
     DD = new (C) struct CXXRecordDecl::DefinitionData(D);
 
@@ -2782,6 +2785,11 @@ void ASTDeclReader::VisitStaticAssertDecl(StaticAssertDecl *D) {
   D->AssertExprAndFailed.setInt(Record.readInt());
   D->Message = cast_or_null<StringLiteral>(Record.readExpr());
   D->RParenLoc = readSourceLocation();
+}
+
+void ASTDeclReader::VisitConstevalBlockDecl(ConstevalBlockDecl *D) {
+  VisitDecl(D);
+  D->Call = Record.readExpr();
 }
 
 void ASTDeclReader::VisitEmptyDecl(EmptyDecl *D) {
@@ -4105,6 +4113,9 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
     break;
   case DECL_STATIC_ASSERT:
     D = StaticAssertDecl::CreateDeserialized(Context, ID);
+    break;
+  case DECL_CONSTEVAL_BLOCK:
+    D = ConstevalBlockDecl::CreateDeserialized(Context, ID);
     break;
   case DECL_OBJC_METHOD:
     D = ObjCMethodDecl::CreateDeserialized(Context, ID);

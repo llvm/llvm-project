@@ -1998,6 +1998,7 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
   case Decl::Empty:
   case Decl::FunctionTemplate:
   case Decl::StaticAssert:
+  case Decl::ConstevalBlock:
   case Decl::TypeAliasTemplate:
   case Decl::UsingShadow:
   case Decl::VarTemplate:

@@ -597,6 +597,8 @@ ODRDiagsEmitter::FindTypeDiffs(DeclHashes &FirstHashes,
       llvm_unreachable("Invalid access specifier");
     case Decl::StaticAssert:
       return StaticAssert;
+    case Decl::ConstevalBlock:
+      return ConstevalBlock;
     case Decl::Field:
       return Field;
     case Decl::CXXMethod:
@@ -923,10 +925,13 @@ bool ODRDiagsEmitter::diagnoseMismatch(
 
   // Used with err_module_odr_violation_record and
   // note_module_odr_violation_record
+  //
+  // FIXME: This should use %enum_select.
   enum ODRCXXRecordDifference {
     StaticAssertCondition,
     StaticAssertMessage,
     StaticAssertOnlyMessage,
+    ConstevalBlockBody,
     MethodName,
     MethodDeleted,
     MethodDefaulted,
@@ -1031,6 +1036,25 @@ bool ODRDiagsEmitter::diagnoseMismatch(
                  StaticAssertMessage);
         return true;
       }
+    }
+    break;
+  }
+
+  case ConstevalBlock: {
+    const ConstevalBlockDecl *FirstBlock = cast<ConstevalBlockDecl>(FirstDecl);
+    const ConstevalBlockDecl *SecondBlock =
+        cast<ConstevalBlockDecl>(SecondDecl);
+
+    const Expr *FirstExpr = FirstBlock->getCallExpr();
+    const Expr *SecondExpr = SecondBlock->getCallExpr();
+    unsigned FirstODRHash = computeODRHash(FirstExpr);
+    unsigned SecondODRHash = computeODRHash(SecondExpr);
+    if (FirstODRHash != SecondODRHash) {
+      DiagError(FirstExpr->getBeginLoc(), FirstExpr->getSourceRange(),
+                ConstevalBlockBody);
+      DiagNote(SecondExpr->getBeginLoc(), SecondExpr->getSourceRange(),
+               ConstevalBlockBody);
+      return true;
     }
     break;
   }
@@ -1611,6 +1635,7 @@ bool ODRDiagsEmitter::diagnoseMismatch(const RecordDecl *FirstRecord,
   case PrivateSpecifer:
   case ProtectedSpecifer:
   case StaticAssert:
+  case ConstevalBlock:
   case CXXMethod:
   case TypeAlias:
   case Friend:
@@ -1663,6 +1688,7 @@ bool ODRDiagsEmitter::diagnoseMismatch(
     return false;
 
   // Keep in sync with select options in err_module_odr_violation_function.
+  // FIXME: Use %enum_select for this.
   enum ODRFunctionDifference {
     ReturnType,
     ParameterName,
@@ -2053,6 +2079,7 @@ bool ODRDiagsEmitter::diagnoseMismatch(
   case PrivateSpecifer:
   case ProtectedSpecifer:
   case StaticAssert:
+  case ConstevalBlock:
   case CXXMethod:
   case TypeAlias:
   case Friend:
@@ -2182,6 +2209,7 @@ bool ODRDiagsEmitter::diagnoseMismatch(
   case PrivateSpecifer:
   case ProtectedSpecifer:
   case StaticAssert:
+  case ConstevalBlock:
   case CXXMethod:
   case TypeAlias:
   case Friend:

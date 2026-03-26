@@ -141,12 +141,13 @@ CXXRecordDecl *
 CXXRecordDecl::CreateLambda(const ASTContext &C, DeclContext *DC,
                             TypeSourceInfo *Info, SourceLocation Loc,
                             unsigned DependencyKind, bool IsGeneric,
+                            bool IsConstevalBlock,
                             LambdaCaptureDefault CaptureDefault) {
   auto *R = new (C, DC) CXXRecordDecl(CXXRecord, TagTypeKind::Class, C, DC, Loc,
                                       Loc, nullptr, nullptr);
   R->setBeingDefined(true);
   R->DefinitionData = new (C) struct LambdaDefinitionData(
-      R, Info, DependencyKind, IsGeneric, CaptureDefault);
+      R, Info, DependencyKind, IsGeneric, IsConstevalBlock, CaptureDefault);
   R->setImplicit(true);
   return R;
 }
@@ -1679,6 +1680,11 @@ bool CXXRecordDecl::isCLike() const {
 bool CXXRecordDecl::isGenericLambda() const {
   if (!isLambda()) return false;
   return getLambdaData().IsGenericLambda;
+}
+
+bool CXXRecordDecl::isLambdaForConstevalBlock() const {
+  if (!isLambda()) return false;
+  return getLambdaData().IsConstevalBlock;
 }
 
 #ifndef NDEBUG
@@ -3648,6 +3654,48 @@ StaticAssertDecl *StaticAssertDecl::CreateDeserialized(ASTContext &C,
                                                        GlobalDeclID ID) {
   return new (C, ID) StaticAssertDecl(nullptr, SourceLocation(), nullptr,
                                       nullptr, SourceLocation(), false);
+}
+
+void ConstevalBlockDecl::anchor() {}
+
+ConstevalBlockDecl *ConstevalBlockDecl::Create(ASTContext &C, DeclContext *DC,
+                                               SourceLocation ConstevalLoc,
+                                               Expr *Call) {
+  assert(Call);
+  return new (C, DC) ConstevalBlockDecl(DC, ConstevalLoc, Call);
+}
+
+ConstevalBlockDecl *ConstevalBlockDecl::CreateDeserialized(ASTContext &C,
+                                                           GlobalDeclID ID) {
+  return new (C, ID) ConstevalBlockDecl(nullptr, SourceLocation(), nullptr);
+}
+
+SourceRange ConstevalBlockDecl::getSourceRange() const {
+  assert(Call && "should not be called before deserialization is complete");
+  return {getLocation(), Call->getEndLoc()};
+}
+
+LambdaExpr* ConstevalBlockDecl::getLambda() {
+  auto *CE = cast<CallExpr>(Call);
+
+  // Since the call expression always calls a 'static consteval' lambda with
+  // type 'void()', the AST is very predictable. In a template, we have:
+  //
+  // `-CallExpr
+  //   `-LambdaExpr
+  //
+  if (auto* Lambda = dyn_cast<LambdaExpr>(CE->getCallee()))
+    return Lambda;
+
+  // And outside a template, we end up with:
+  //
+  // CXXOperatorCallExpr
+  //   |-ImplicitCastExpr
+  //   | `-DeclRefExpr (lambda call operator)
+  //   `-MaterializeTemporaryExpr
+  //     `-LambdaExpr
+  //
+  return cast<LambdaExpr>(CE->getArg(0)->IgnoreUnlessSpelledInSource());
 }
 
 VarDecl *ValueDecl::getPotentiallyDecomposedVarDecl() {

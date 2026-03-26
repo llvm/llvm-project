@@ -61,6 +61,7 @@ defm constexpr_static_var : CXX23Compat<
 
 // C++26 compatibility with C++23 and earlier.
 defm decomp_decl_cond : CXX26Compat<"structured binding declaration in a condition is">;
+defm consteval_block : CXX26Compat<"consteval blocks are">;
 
 // Compatibility warnings duplicated across multiple language versions.
 foreach std = [14, 20, 23] in {
@@ -1756,7 +1757,8 @@ def err_static_assert_requirement_failed : Error<
   "static assertion failed due to requirement '%0'%select{: %2|}1">;
 def note_expr_evaluates_to : Note<
   "expression evaluates to '%0 %1 %2'">;
-
+def err_consteval_block_eval_failed : Error<
+  "could not evaluate consteval block">;
 
 def subst_user_defined_msg : TextSubstitution<
   "%select{the message|the expression}0 in "
@@ -6214,7 +6216,7 @@ def err_unexpanded_parameter_pack : Error<
   "using declaration|friend declaration|qualifier|initializer|default argument|"
   "non-type template parameter type|exception type|explicit specialization|"
   "partial specialization|__if_exists name|__if_not_exists name|lambda|block|"
-  "type constraint|requirement|requires clause}0 "
+  "type constraint|requirement|requires clause|consteval block}0 "
   "contains%plural{0: an|:}1 unexpanded parameter pack"
   "%plural{0:|1: %2|2:s %2 and %3|:s %2, %3, ...}1">;
 
@@ -7433,7 +7435,7 @@ def err_illegal_decl_mempointer_in_nonclass
 def err_reference_to_void : Error<"cannot form a reference to 'void'">;
 def err_nonfunction_block_type : Error<
   "block pointer to non-function type is invalid">;
-def err_return_block_has_expr : Error<"void block should not return a value">;
+def err_return_block_has_expr : Error<"%select{void|consteval}0 block should not return a value">;
 def err_block_return_missing_expr : Error<
   "non-void block should return a value">;
 def err_func_def_incomplete_result : Error<
@@ -8867,11 +8869,16 @@ let CategoryName = "Lambda Issue" in {
   def err_lambda_impcap : Error<
     "variable %0 cannot be implicitly captured in a lambda with no "
     "capture-default specified">;
+  def err_consteval_block_capture : Error<
+    "cannot capture variable %0 in consteval block">;
+  def err_consteval_block_this_invalid : Error<
+    "cannot capture 'this' in consteval block">;
   def note_lambda_variable_capture_fixit : Note<
     "capture %0 by %select{value|reference}1">;
   def note_lambda_default_capture_fixit : Note<
     "default capture by %select{value|reference}0">;
   def note_lambda_decl : Note<"lambda expression begins here">;
+  def note_consteval_block : Note<"consteval block begins here">;
   def err_lambda_unevaluated_operand : Error<
     "lambda expression in an unevaluated operand">;
   def err_lambda_in_constant_expression : Error<
