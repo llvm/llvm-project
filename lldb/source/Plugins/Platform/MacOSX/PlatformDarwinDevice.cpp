@@ -30,7 +30,7 @@ PlatformDarwinDevice::GetContainedFilesIntoVectorOfFileSpecsCallback(
 }
 
 void PlatformDarwinDevice::AddSharedCacheDirectory(
-    const char *dir, const char *log_msg_descriptor) {
+    llvm::StringRef dir, llvm::StringRef log_msg_descriptor) {
   Log *log = GetLog(LLDBLog::Host);
   const bool find_directories = true;
   const bool find_files = false;
@@ -55,7 +55,7 @@ void PlatformDarwinDevice::AddSharedCacheDirectory(
       LLDB_LOGF(log,
                 "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
                 "added %s %s",
-                log_msg_descriptor, sc_directory.GetPath().c_str());
+                log_msg_descriptor.str().c_str(), sc_directory.GetPath().c_str());
     }
 
     // See if we have arch subdirs under sc_directory, and if there is
@@ -74,7 +74,7 @@ void PlatformDarwinDevice::AddSharedCacheDirectory(
         LLDB_LOGF(log,
                   "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
                   "added %s %s",
-                  log_msg_descriptor, subdir.GetPath().c_str());
+                  log_msg_descriptor.str().c_str(), subdir.GetPath().c_str());
       }
     }
   }

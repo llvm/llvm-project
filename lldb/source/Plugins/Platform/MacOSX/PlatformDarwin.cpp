@@ -868,12 +868,9 @@ FileSpec PlatformDarwin::GetSDKDirectoryForModules(XcodeSDK::Type sdk_type) {
 //
 // The directory name can be one of many formats, such as
 //     10.0 (21R329) universal
-//     17.0 (23X1010104078) universal
 //     17.0 (23A200) arm64e
 //     17.0 (20A352)
 //     Watch4,2 10.0 (21R329)
-//     iPhone11,2 26.0 (23A276)
-//     iPhone13,2 17.0 (18C22)
 std::tuple<llvm::VersionTuple, llvm::StringRef>
 PlatformDarwin::ParseVersionBuildDir(llvm::StringRef dir) {
   llvm::StringRef build;
@@ -882,10 +879,10 @@ PlatformDarwin::ParseVersionBuildDir(llvm::StringRef dir) {
   llvm::SmallVector<llvm::StringRef> parts;
   dir.split(parts, ' ');
   for (llvm::StringRef part : parts) {
-    // Look for an OS version number like "17.0"
+    // Look for an OS version number, eg "17.0"
     if (isdigit(part[0]))
       version.tryParse(part);
-    // Look for a build number "(20A352)"
+    // Look for a build number, eg "(20A352)"
     if (part.consume_front("(")) {
       size_t pos = part.find(')');
       build = part.slice(0, pos);
