@@ -1,12 +1,12 @@
-# RUN: llc -run-pass=none -o - %s | FileCheck --match-full-lines %s
+# RUN: llc -run-pass=none -print-symbolic-inline-asm-ops -o - %s | FileCheck --match-full-lines %s
 
 ---
 name: test_attdialect
 body: |
   bb.0:
     ; CHECK-LABEL: name: test_attdialect
-    ; CHECK: INLINEASM &"", 0 /* attdialect */
-    INLINEASM &"", 0
+    ; CHECK: INLINEASM &"", attdialect
+    INLINEASM &"", attdialect
 ...
 
 ---
@@ -14,8 +14,8 @@ name: test_sideeffect
 body: |
   bb.0:
     ; CHECK-LABEL: name: test_sideeffect
-    ; CHECK: INLINEASM &"", 1 /* sideeffect attdialect */
-    INLINEASM &"", 1
+    ; CHECK: INLINEASM &"", sideeffect attdialect
+    INLINEASM &"", sideeffect
 ...
 
 ---
@@ -23,18 +23,17 @@ name: test_alignstack
 body: |
   bb.0:
     ; CHECK-LABEL: name: test_alignstack
-    ; CHECK: INLINEASM &"", 2 /* alignstack attdialect */
-    INLINEASM &"", 2
+    ; CHECK: INLINEASM &"", alignstack attdialect
+    INLINEASM &"", alignstack
 ...
 
 ---
 name: test_inteldialect
 body: |
   bb.0:
-    ; TODO: Fix printing inteldialect.
     ; CHECK-LABEL: name: test_inteldialect
-    ; CHECK: INLINEASM &"", 4
-    INLINEASM &"", 4
+    ; CHECK: INLINEASM &"", inteldialect
+    INLINEASM &"", inteldialect
 ...
 
 ---
@@ -42,8 +41,8 @@ name: test_mayload
 body: |
   bb.0:
     ; CHECK-LABEL: name: test_mayload
-    ; CHECK: INLINEASM &"", 8 /* mayload attdialect */
-    INLINEASM &"", 8
+    ; CHECK: INLINEASM &"", mayload attdialect
+    INLINEASM &"", mayload
 ...
 
 ---
@@ -51,8 +50,8 @@ name: test_maystore
 body: |
   bb.0:
     ; CHECK-LABEL: name: test_maystore
-    ; CHECK: INLINEASM &"", 16 /* maystore attdialect */
-    INLINEASM &"", 16
+    ; CHECK: INLINEASM &"", maystore attdialect
+    INLINEASM &"", maystore
 ...
 
 ---
@@ -60,8 +59,8 @@ name: test_isconvergent
 body: |
   bb.0:
     ; CHECK-LABEL: name: test_isconvergent
-    ; CHECK: INLINEASM &"", 32 /* isconvergent attdialect */
-    INLINEASM &"", 32
+    ; CHECK: INLINEASM &"", isconvergent attdialect
+    INLINEASM &"", isconvergent
 ...
 
 ---
@@ -69,8 +68,8 @@ name: test_unwind
 body: |
   bb.0:
     ; CHECK-LABEL: name: test_unwind
-    ; CHECK: INLINEASM &"", 64 /* unwind attdialect */
-    INLINEASM &"", 64
+    ; CHECK: INLINEASM &"", unwind attdialect
+    INLINEASM &"", unwind
 ...
 
 ---
@@ -78,6 +77,6 @@ name: test_combined
 body: |
   bb.0:
     ; CHECK-LABEL: name: test_combined
-    ; CHECK: INLINEASM &"", 13 /* sideeffect mayload */
-    INLINEASM &"", 13
+    ; CHECK: INLINEASM &"", sideeffect mayload inteldialect
+    INLINEASM &"", sideeffect mayload inteldialect
 ...

@@ -231,6 +231,16 @@ getIntegerWidthAndSignedness(const clang::ASTContext &astContext,
   return {width, isSigned};
 }
 
+/// Create a checked overflow arithmetic op and return its result and overflow
+/// flag.
+template <typename OpTy>
+static std::pair<mlir::Value, mlir::Value>
+emitOverflowOp(CIRGenBuilderTy &builder, mlir::Location loc,
+               cir::IntType resultTy, mlir::Value lhs, mlir::Value rhs) {
+  auto op = OpTy::create(builder, loc, resultTy, lhs, rhs);
+  return {op.getResult(), op.getOverflow()};
+}
+
 // Given one or more integer types, this function produces an integer type that
 // encompasses them: any value in one of the given types could be expressed in
 // the encompassing type.
@@ -1900,37 +1910,35 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
         &getMLIRContext(), encompassingInfo.width, encompassingInfo.isSigned);
     auto resultCIRTy = mlir::cast<cir::IntType>(cgm.convertType(resultQTy));
 
-    mlir::Value left = emitScalarExpr(leftArg);
-    mlir::Value right = emitScalarExpr(rightArg);
+    mlir::Value x = emitScalarExpr(leftArg);
+    mlir::Value y = emitScalarExpr(rightArg);
     Address resultPtr = emitPointerWithAlignment(resultArg);
 
     // Extend each operand to the encompassing type, if necessary.
-    if (left.getType() != encompassingCIRTy)
-      left =
-          builder.createCast(cir::CastKind::integral, left, encompassingCIRTy);
-    if (right.getType() != encompassingCIRTy)
-      right =
-          builder.createCast(cir::CastKind::integral, right, encompassingCIRTy);
+    if (x.getType() != encompassingCIRTy)
+      x = builder.createCast(cir::CastKind::integral, x, encompassingCIRTy);
+    if (y.getType() != encompassingCIRTy)
+      y = builder.createCast(cir::CastKind::integral, y, encompassingCIRTy);
 
     // Perform the operation on the extended values.
-    cir::BinOpOverflowKind opKind;
+    mlir::Location loc = getLoc(e->getSourceRange());
+    mlir::Value result, overflow;
     switch (builtinID) {
     default:
       llvm_unreachable("Unknown overflow builtin id.");
     case Builtin::BI__builtin_add_overflow:
-      opKind = cir::BinOpOverflowKind::Add;
+      std::tie(result, overflow) =
+          emitOverflowOp<cir::AddOverflowOp>(builder, loc, resultCIRTy, x, y);
       break;
     case Builtin::BI__builtin_sub_overflow:
-      opKind = cir::BinOpOverflowKind::Sub;
+      std::tie(result, overflow) =
+          emitOverflowOp<cir::SubOverflowOp>(builder, loc, resultCIRTy, x, y);
       break;
     case Builtin::BI__builtin_mul_overflow:
-      opKind = cir::BinOpOverflowKind::Mul;
+      std::tie(result, overflow) =
+          emitOverflowOp<cir::MulOverflowOp>(builder, loc, resultCIRTy, x, y);
       break;
     }
-
-    mlir::Location loc = getLoc(e->getSourceRange());
-    auto arithOp = cir::BinOpOverflowOp::create(builder, loc, resultCIRTy,
-                                                opKind, left, right);
 
     // Here is a slight difference from the original clang CodeGen:
     //   - In the original clang CodeGen, the checked arithmetic result is
@@ -1944,9 +1952,9 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     // Finally, store the result using the pointer.
     bool isVolatile =
         resultArg->getType()->getPointeeType().isVolatileQualified();
-    builder.createStore(loc, arithOp.getResult(), resultPtr, isVolatile);
+    builder.createStore(loc, result, resultPtr, isVolatile);
 
-    return RValue::get(arithOp.getOverflow());
+    return RValue::get(overflow);
   }
 
   case Builtin::BI__builtin_uadd_overflow:
@@ -1974,8 +1982,13 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     const clang::Expr *resultArg = e->getArg(2);
     Address resultPtr = emitPointerWithAlignment(resultArg);
 
-    // Decide which of the arithmetic operation we are lowering to:
-    cir::BinOpOverflowKind arithKind;
+    clang::QualType resultQTy =
+        resultArg->getType()->castAs<clang::PointerType>()->getPointeeType();
+    auto resultCIRTy = mlir::cast<cir::IntType>(cgm.convertType(resultQTy));
+
+    // Create the appropriate overflow-checked arithmetic operation.
+    mlir::Location loc = getLoc(e->getSourceRange());
+    mlir::Value result, overflow;
     switch (builtinID) {
     default:
       llvm_unreachable("Unknown overflow builtin id.");
@@ -1985,7 +1998,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     case Builtin::BI__builtin_sadd_overflow:
     case Builtin::BI__builtin_saddl_overflow:
     case Builtin::BI__builtin_saddll_overflow:
-      arithKind = cir::BinOpOverflowKind::Add;
+      std::tie(result, overflow) =
+          emitOverflowOp<cir::AddOverflowOp>(builder, loc, resultCIRTy, x, y);
       break;
     case Builtin::BI__builtin_usub_overflow:
     case Builtin::BI__builtin_usubl_overflow:
@@ -1993,7 +2007,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     case Builtin::BI__builtin_ssub_overflow:
     case Builtin::BI__builtin_ssubl_overflow:
     case Builtin::BI__builtin_ssubll_overflow:
-      arithKind = cir::BinOpOverflowKind::Sub;
+      std::tie(result, overflow) =
+          emitOverflowOp<cir::SubOverflowOp>(builder, loc, resultCIRTy, x, y);
       break;
     case Builtin::BI__builtin_umul_overflow:
     case Builtin::BI__builtin_umull_overflow:
@@ -2001,24 +2016,17 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     case Builtin::BI__builtin_smul_overflow:
     case Builtin::BI__builtin_smull_overflow:
     case Builtin::BI__builtin_smulll_overflow:
-      arithKind = cir::BinOpOverflowKind::Mul;
+      std::tie(result, overflow) =
+          emitOverflowOp<cir::MulOverflowOp>(builder, loc, resultCIRTy, x, y);
       break;
     }
 
-    clang::QualType resultQTy =
-        resultArg->getType()->castAs<clang::PointerType>()->getPointeeType();
-    auto resultCIRTy = mlir::cast<cir::IntType>(cgm.convertType(resultQTy));
-
-    mlir::Location loc = getLoc(e->getSourceRange());
-    cir::BinOpOverflowOp arithOp = cir::BinOpOverflowOp::create(
-        builder, loc, resultCIRTy, arithKind, x, y);
-
     bool isVolatile =
         resultArg->getType()->getPointeeType().isVolatileQualified();
-    builder.createStore(loc, emitToMemory(arithOp.getResult(), resultQTy),
-                        resultPtr, isVolatile);
+    builder.createStore(loc, emitToMemory(result, resultQTy), resultPtr,
+                        isVolatile);
 
-    return RValue::get(arithOp.getOverflow());
+    return RValue::get(overflow);
   }
 
   case Builtin::BIaddressof:
@@ -2376,11 +2384,12 @@ emitTargetArchBuiltinExpr(CIRGenFunction *cgf, unsigned builtinID,
   case llvm::Triple::wasm32:
   case llvm::Triple::wasm64:
   case llvm::Triple::hexagon:
-  case llvm::Triple::riscv32:
-  case llvm::Triple::riscv64:
     // These are actually NYI, but that will be reported by emitBuiltinExpr.
     // At this point, we don't even know that the builtin is target-specific.
     return std::nullopt;
+  case llvm::Triple::riscv32:
+  case llvm::Triple::riscv64:
+    return cgf->emitRISCVBuiltinExpr(builtinID, e);
   default:
     return std::nullopt;
   }

@@ -8,6 +8,7 @@
 
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/ADT/GenericUniformityImpl.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Dominators.h"
@@ -35,10 +36,13 @@ template <> void llvm::GenericUniformityAnalysisImpl<SSAContext>::initialize() {
     switch (IU) {
     case InstructionUniformity::AlwaysUniform:
       addUniformOverride(I);
-      continue;
+      break;
     case InstructionUniformity::NeverUniform:
       markDivergent(I);
-      continue;
+      break;
+    case InstructionUniformity::Custom:
+      addCustomUniformityCandidate(&I);
+      break;
     case InstructionUniformity::Default:
       break;
     }
@@ -106,6 +110,15 @@ bool llvm::GenericUniformityAnalysisImpl<SSAContext>::isDivergentUse(
     return isTemporalDivergent(*UseInstr->getParent(), *DefInstr);
   }
   return false;
+}
+
+template <>
+bool GenericUniformityAnalysisImpl<SSAContext>::isCustomUniform(
+    const Instruction &I) const {
+  SmallBitVector UniformArgs(I.getNumOperands());
+  for (auto [Idx, Use] : enumerate(I.operands()))
+    UniformArgs[Idx] = !isDivergentUse(Use);
+  return TTI->isUniform(&I, UniformArgs);
 }
 
 // This ensures explicit instantiation of

@@ -12841,7 +12841,9 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
 
       S.Diag(Fn->getLocation(), diag::note_ovl_candidate_deleted)
           << (unsigned)FnKindPair.first << (unsigned)FnKindPair.second << FnDesc
-          << (Fn->isDeleted() ? (Fn->isDeletedAsWritten() ? 1 : 2) : 0);
+          << (Fn->isDeleted()
+                  ? (Fn->getCanonicalDecl()->isDeletedAsWritten() ? 1 : 2)
+                  : 0);
       MaybeEmitInheritedConstructorNote(S, Cand->FoundDecl);
       return;
     }

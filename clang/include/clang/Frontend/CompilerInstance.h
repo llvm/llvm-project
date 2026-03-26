@@ -17,6 +17,7 @@
 #include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/DependencyDirectivesScanner.h"
+#include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/ModuleLoader.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -167,13 +168,10 @@ class CompilerInstance : public ModuleLoader {
   /// Should we delete the BuiltModules when we're done?
   bool DeleteBuiltModules = true;
 
-  /// The location of the module-import keyword for the last module
-  /// import.
-  SourceLocation LastModuleImportLoc;
-
-  /// The result of the last module import.
-  ///
-  ModuleLoadResult LastModuleImportResult;
+  /// Cache of module import results keyed by import location.
+  /// It is important to eliminate redundant diagnostics
+  /// when both the preprocessor and parser see the same import declaration.
+  llvm::SmallDenseMap<SourceLocation, ModuleLoadResult, 4> ModuleImportResults;
 
   /// Whether we should (re)build the global module index once we
   /// have finished with this translation unit.
@@ -867,7 +865,7 @@ public:
 
   void createASTReader();
 
-  bool loadModuleFile(StringRef FileName,
+  bool loadModuleFile(ModuleFileName FileName,
                       serialization::ModuleFile *&LoadedModuleFile);
 
   /// Configuration object for making the result of \c cloneForModuleCompile()

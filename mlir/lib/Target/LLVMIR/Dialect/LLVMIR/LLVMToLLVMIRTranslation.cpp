@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/CallInterfaces.h"
@@ -213,6 +214,54 @@ convertCallLLVMIntrinsicOp(CallIntrinsicOp op, llvm::IRBuilderBase &builder,
   if (op.getNumResults() == 1)
     moduleTranslation.mapValue(op->getResults().front()) = inst;
   return success();
+}
+
+/// Recursively converts an MLIR metadata attribute to an LLVM metadata node.
+static llvm::Metadata *
+convertMetadataAttr(Attribute attr, llvm::IRBuilderBase &builder,
+                    LLVM::ModuleTranslation &moduleTranslation) {
+  return llvm::TypeSwitch<Attribute, llvm::Metadata *>(attr)
+      .Case<LLVM::MDStringAttr>([&](auto a) -> llvm::Metadata * {
+        return llvm::MDString::get(builder.getContext(),
+                                   a.getValue().getValue());
+      })
+      .Case<LLVM::MDConstantAttr>([&](auto a) -> llvm::Metadata * {
+        IntegerAttr intAttr = llvm::dyn_cast<IntegerAttr>(a.getValue());
+        if (!intAttr)
+          return nullptr;
+        return llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+            llvm::Type::getIntNTy(builder.getContext(),
+                                  intAttr.getType().getIntOrFloatBitWidth()),
+            intAttr.getValue()));
+      })
+      .Case<LLVM::MDFuncAttr>([&](auto a) -> llvm::Metadata * {
+        if (llvm::Function *fn =
+                moduleTranslation.lookupFunction(a.getName().getValue()))
+          return llvm::ValueAsMetadata::get(fn);
+        return nullptr;
+      })
+      .Case<LLVM::MDNodeAttr>([&](auto a) -> llvm::Metadata * {
+        SmallVector<llvm::Metadata *> operands;
+        for (Attribute op : a.getOperands())
+          operands.push_back(
+              convertMetadataAttr(op, builder, moduleTranslation));
+        return llvm::MDNode::get(builder.getContext(), operands);
+      })
+      .Default([](auto) -> llvm::Metadata * { return nullptr; });
+}
+
+static void convertNamedMetadataOp(StringRef metadataName, ArrayAttr nodes,
+                                   llvm::IRBuilderBase &builder,
+                                   LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
+  llvm::NamedMDNode *namedMD =
+      llvmModule->getOrInsertNamedMetadata(metadataName);
+  for (Attribute nodeAttr : nodes) {
+    llvm::Metadata *md =
+        convertMetadataAttr(nodeAttr, builder, moduleTranslation);
+    if (auto *mdNode = llvm::dyn_cast_or_null<llvm::MDNode>(md))
+      namedMD->addOperand(mdNode);
+  }
 }
 
 static void convertLinkerOptionsOp(ArrayAttr options,
@@ -636,14 +685,14 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
   // Emit branches.  We need to look up the remapped blocks and ignore the
   // block arguments that were transformed into PHI nodes.
   if (auto brOp = dyn_cast<LLVM::BrOp>(opInst)) {
-    llvm::BranchInst *branch =
+    llvm::UncondBrInst *branch =
         builder.CreateBr(moduleTranslation.lookupBlock(brOp.getSuccessor()));
     moduleTranslation.mapBranch(&opInst, branch);
     moduleTranslation.setLoopMetadata(&opInst, branch);
     return success();
   }
   if (auto condbrOp = dyn_cast<LLVM::CondBrOp>(opInst)) {
-    llvm::BranchInst *branch = builder.CreateCondBr(
+    llvm::CondBrInst *branch = builder.CreateCondBr(
         moduleTranslation.lookupValue(condbrOp.getOperand(0)),
         moduleTranslation.lookupBlock(condbrOp.getSuccessor(0)),
         moduleTranslation.lookupBlock(condbrOp.getSuccessor(1)));

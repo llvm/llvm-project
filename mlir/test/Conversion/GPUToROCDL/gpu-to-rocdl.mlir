@@ -100,18 +100,18 @@ gpu.module @test_module {
     // CHECK: rocdl.workgroup.id.z range <i32, 0, 28> : i32
     %bIdZ = gpu.block_id z
 
-    // CHECK: llvm.call @__ockl_get_local_size(%{{.*}}) : (i32) -> (i64 {llvm.range = #llvm.constant_range<i64, 1, 9>})
+    // CHECK: llvm.mlir.constant(8 : i64) : i64
     %bDimX = gpu.block_dim x
-    // CHECK: llvm.call @__ockl_get_local_size(%{{.*}}) : (i32) -> (i64 {llvm.range = #llvm.constant_range<i64, 1, 13>})
+    // CHECK: llvm.mlir.constant(12 : i64) : i64
     %bDimY = gpu.block_dim y
-    // CHECK: llvm.call @__ockl_get_local_size(%{{.*}}) : (i32) -> (i64 {llvm.range = #llvm.constant_range<i64, 1, 17>})
+    // CHECK: llvm.mlir.constant(16 : i64) : i64
     %bDimZ = gpu.block_dim z
 
-    // CHECK: llvm.call @__ockl_get_num_groups(%{{.*}}) : (i32) -> (i64 {llvm.range = #llvm.constant_range<i64, 1, 21>})
+    // CHECK: llvm.mlir.constant(20 : i64) : i64
     %gDimX = gpu.grid_dim x
-    // CHECK: llvm.call @__ockl_get_num_groups(%{{.*}}) : (i32) -> (i64 {llvm.range = #llvm.constant_range<i64, 1, 25>})
+    // CHECK: llvm.mlir.constant(24 : i64) : i64
     %gDimY = gpu.grid_dim y
-    // CHECK: llvm.call @__ockl_get_num_groups(%{{.*}}) : (i32) -> (i64 {llvm.range = #llvm.constant_range<i64, 1, 29>})
+    // CHECK: llvm.mlir.constant(28 : i64) : i64
     %gDimZ = gpu.grid_dim z
 
     // "Usage" to make the ID calls not die
