@@ -61,9 +61,13 @@ Error DXContainer::parseHeader() {
   return readStruct(Data.getBuffer(), Data.getBuffer().data(), Header);
 }
 
-Error DXContainer::parseDXILHeader(StringRef Part) {
+Error DXContainer::parseDXILHeader(dxbc::PartType PT, StringRef Part) {
+  bool IsDebug = dxbc::isDebugProgramPart(PT);
+  std::optional<DXILData> &DXIL = IsDebug ? this->DebugDXIL : this->DXIL;
+
   if (DXIL)
-    return parseFailed("More than one DXIL part is present in the file");
+    return parseFailed(formatv("More than one {0} part is present in the file",
+                               dxbc::getProgramPartName(IsDebug)));
   const char *Current = Part.begin();
   dxbc::ProgramHeader Header;
   if (Error Err = readStruct(Part, Current, Header))
@@ -173,8 +177,10 @@ Error DXContainer::parsePartOffsets() {
     StringRef PartData = Data.getBuffer().substr(PartDataStart, PartSize);
     LastOffset = PartOffset + PartSize;
     switch (PT) {
+    case dxbc::PartType::ILDB:
+      [[fallthrough]];
     case dxbc::PartType::DXIL:
-      if (Error Err = parseDXILHeader(PartData))
+      if (Error Err = parseDXILHeader(PT, PartData))
         return Err;
       break;
     case dxbc::PartType::SFI0:
