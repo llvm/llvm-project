@@ -921,6 +921,8 @@ def GetDimensions : DXILOp<72, getDimensions> {
 def Barrier : DXILOp<80, barrier> {
   let Doc = "inserts a memory barrier in the shader";
   let intrinsics = [
+    IntrinSelect<int_dx_group_memory_barrier,
+                 [IntrinArgI32<BarrierMode_GroupMemoryBarrier>]>,
     IntrinSelect<int_dx_group_memory_barrier_with_group_sync,
                  [IntrinArgI32<BarrierMode_GroupMemoryBarrierWithGroupSync>]>,
   ];
@@ -1162,6 +1164,10 @@ def WaveActiveBit : DXILOp<120, waveActiveBit> {
                  [
                    IntrinArgIndex<0>, IntrinArgI8<WaveBitOpKind_Xor>,
                  ]>,
+    IntrinSelect<int_dx_wave_reduce_and,
+                 [
+                   IntrinArgIndex<0>, IntrinArgI8<WaveBitOpKind_And>,
+                 ]>
   ];
 
   let arguments = [OverloadTy, Int8Ty];
@@ -1213,6 +1219,10 @@ def QuadOp : DXILOp<123, quadOp> {
     IntrinSelect<int_dx_quad_read_across_x,
                  [
                    IntrinArgIndex<0>, IntrinArgI8<QuadOpKind_ReadAcrossX>
+                 ]>,
+    IntrinSelect<int_dx_quad_read_across_y,
+                 [
+                   IntrinArgIndex<0>, IntrinArgI8<QuadOpKind_ReadAcrossY>
                  ]>,
   ];
 

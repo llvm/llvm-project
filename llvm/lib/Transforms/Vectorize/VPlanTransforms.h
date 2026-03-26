@@ -149,9 +149,14 @@ struct VPlanTransforms {
       VPlan &Plan, const DenseSet<BasicBlock *> &BlocksNeedingPredication,
       ElementCount MinVF);
 
-  /// Update \p Plan to account for all early exits.
-  LLVM_ABI_FOR_TEST static void handleEarlyExits(VPlan &Plan,
-                                                 UncountableExitStyle Style);
+  /// Update \p Plan to account for all early exits. If \p Style is not
+  /// NoUncountableExit, handles uncountable early exits and checks that all
+  /// loads are dereferenceable. Returns false if a non-dereferenceable load is
+  /// found.
+  LLVM_ABI_FOR_TEST static bool
+  handleEarlyExits(VPlan &Plan, UncountableExitStyle Style, Loop *TheLoop,
+                   PredicatedScalarEvolution &PSE, DominatorTree &DT,
+                   AssumptionCache *AC);
 
   /// If a check is needed to guard executing the scalar epilogue loop, it will
   /// be added to the middle block.
@@ -236,6 +241,11 @@ struct VPlanTransforms {
   static void optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
                                  unsigned BestUF,
                                  PredicatedScalarEvolution &PSE);
+
+  /// Try to simplify VPInstruction::ExplicitVectorLength recipes when the AVL
+  /// is known to be <= VF, replacing them with the AVL directly.
+  static bool simplifyKnownEVL(VPlan &Plan, ElementCount VF,
+                               PredicatedScalarEvolution &PSE);
 
   /// Apply VPlan-to-VPlan optimizations to \p Plan, including induction recipe
   /// optimizations, dead recipe removal, replicate region optimizations and
@@ -358,8 +368,9 @@ struct VPlanTransforms {
   static void simplifyRecipes(VPlan &Plan);
 
   /// Remove BranchOnCond recipes with true or false conditions together with
-  /// removing dead edges to their successors.
-  static void removeBranchOnConst(VPlan &Plan);
+  /// removing dead edges to their successors. If \p OnlyLatches is true, only
+  /// process loop latches.
+  static void removeBranchOnConst(VPlan &Plan, bool OnlyLatches = false);
 
   /// Perform common-subexpression-elimination on \p Plan.
   static void cse(VPlan &Plan);

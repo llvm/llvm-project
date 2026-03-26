@@ -28,7 +28,14 @@ using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
 
+#define GET_SUBTARGETINFO_ENUM
+#include "NVPTXGenSubtargetInfo.inc"
+
 #include "NVPTXGenAsmWriter.inc"
+
+static bool hasParamSubqualifiers(const MCSubtargetInfo &STI) {
+  return STI.hasFeature(NVPTX::PTX83);
+}
 
 NVPTXInstPrinter::NVPTXInstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,
                                    const MCRegisterInfo &MRI)
@@ -75,14 +82,14 @@ void NVPTXInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
 void NVPTXInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                  StringRef Annot, const MCSubtargetInfo &STI,
                                  raw_ostream &OS) {
-  printInstruction(MI, Address, OS);
+  printInstruction(MI, Address, STI, OS);
 
   // Next always print the annotation.
   printAnnotation(OS, Annot);
 }
 
 void NVPTXInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
-                                    raw_ostream &O) {
+                                    const MCSubtargetInfo &, raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg()) {
     MCRegister Reg = Op.getReg();
@@ -95,7 +102,8 @@ void NVPTXInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   }
 }
 
-void NVPTXInstPrinter::printCvtMode(const MCInst *MI, int OpNum, raw_ostream &O,
+void NVPTXInstPrinter::printCvtMode(const MCInst *MI, int OpNum,
+                                    const MCSubtargetInfo &, raw_ostream &O,
                                     StringRef Modifier) {
   const MCOperand &MO = MI->getOperand(OpNum);
   int64_t Imm = MO.getImm();
@@ -158,14 +166,15 @@ void NVPTXInstPrinter::printCvtMode(const MCInst *MI, int OpNum, raw_ostream &O,
 }
 
 void NVPTXInstPrinter::printFTZFlag(const MCInst *MI, int OpNum,
-                                    raw_ostream &O) {
+                                    const MCSubtargetInfo &, raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(OpNum);
   const int Imm = MO.getImm();
   if (Imm)
     O << ".ftz";
 }
 
-void NVPTXInstPrinter::printCmpMode(const MCInst *MI, int OpNum, raw_ostream &O,
+void NVPTXInstPrinter::printCmpMode(const MCInst *MI, int OpNum,
+                                    const MCSubtargetInfo &, raw_ostream &O,
                                     StringRef Modifier) {
   const MCOperand &MO = MI->getOperand(OpNum);
   int64_t Imm = MO.getImm();
@@ -272,6 +281,7 @@ void NVPTXInstPrinter::printCmpMode(const MCInst *MI, int OpNum, raw_ostream &O,
 }
 
 void NVPTXInstPrinter::printAtomicCode(const MCInst *MI, int OpNum,
+                                       const MCSubtargetInfo &STI,
                                        raw_ostream &O, StringRef Modifier) {
   const MCOperand &MO = MI->getOperand(OpNum);
   int Imm = (int)MO.getImm();
@@ -337,12 +347,12 @@ void NVPTXInstPrinter::printAtomicCode(const MCInst *MI, int OpNum,
     case NVPTX::AddressSpace::EntryParam:
     case NVPTX::AddressSpace::DeviceParam:
     case NVPTX::AddressSpace::Local:
-      O << "." << A;
+      O << "." << addressSpaceToString(A, hasParamSubqualifiers(STI));
       return;
     }
     report_fatal_error(formatv(
         "NVPTX AtomicCode Printer does not support \"{}\" addsp modifier.",
-        AddressSpaceToString(A)));
+        addressSpaceToString(A)));
   } else if (Modifier == "sign") {
     switch (Imm) {
     case NVPTX::PTXLdStInstCode::Signed:
@@ -364,7 +374,8 @@ void NVPTXInstPrinter::printAtomicCode(const MCInst *MI, int OpNum,
   llvm_unreachable(formatv("Unknown Modifier: {}", Modifier).str().c_str());
 }
 
-void NVPTXInstPrinter::printMmaCode(const MCInst *MI, int OpNum, raw_ostream &O,
+void NVPTXInstPrinter::printMmaCode(const MCInst *MI, int OpNum,
+                                    const MCSubtargetInfo &, raw_ostream &O,
                                     StringRef Modifier) {
   const MCOperand &MO = MI->getOperand(OpNum);
   int Imm = (int)MO.getImm();
@@ -381,22 +392,24 @@ void NVPTXInstPrinter::printMmaCode(const MCInst *MI, int OpNum, raw_ostream &O,
 }
 
 void NVPTXInstPrinter::printMemOperand(const MCInst *MI, int OpNum,
+                                       const MCSubtargetInfo &STI,
                                        raw_ostream &O, StringRef Modifier) {
-  printOperand(MI, OpNum, O);
+  printOperand(MI, OpNum, STI, O);
 
   if (Modifier == "add") {
     O << ", ";
-    printOperand(MI, OpNum + 1, O);
+    printOperand(MI, OpNum + 1, STI, O);
   } else {
     if (MI->getOperand(OpNum + 1).isImm() &&
         MI->getOperand(OpNum + 1).getImm() == 0)
       return; // don't print ',0' or '+0'
     O << "+";
-    printOperand(MI, OpNum + 1, O);
+    printOperand(MI, OpNum + 1, STI, O);
   }
 }
 
 void NVPTXInstPrinter::printUsedBytesMaskPragma(const MCInst *MI, int OpNum,
+                                                const MCSubtargetInfo &,
                                                 raw_ostream &O) {
   auto &Op = MI->getOperand(OpNum);
   assert(Op.isImm() && "Invalid operand");
@@ -407,21 +420,23 @@ void NVPTXInstPrinter::printUsedBytesMaskPragma(const MCInst *MI, int OpNum,
 }
 
 void NVPTXInstPrinter::printRegisterOrSinkSymbol(const MCInst *MI, int OpNum,
+                                                 const MCSubtargetInfo &STI,
                                                  raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNum);
   if (Op.isReg() && Op.getReg() == MCRegister::NoRegister)
     O << "_";
   else
-    printOperand(MI, OpNum, O);
+    printOperand(MI, OpNum, STI, O);
 }
 
 void NVPTXInstPrinter::printHexu32imm(const MCInst *MI, int OpNum,
-                                      raw_ostream &O) {
+                                      const MCSubtargetInfo &, raw_ostream &O) {
   int64_t Imm = MI->getOperand(OpNum).getImm();
   O << formatHex(Imm) << "U";
 }
 
 void NVPTXInstPrinter::printProtoIdent(const MCInst *MI, int OpNum,
+                                       const MCSubtargetInfo &,
                                        raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNum);
   assert(Op.isExpr() && "Call prototype is not an MCExpr?");
@@ -431,7 +446,7 @@ void NVPTXInstPrinter::printProtoIdent(const MCInst *MI, int OpNum,
 }
 
 void NVPTXInstPrinter::printPrmtMode(const MCInst *MI, int OpNum,
-                                     raw_ostream &O) {
+                                     const MCSubtargetInfo &, raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(OpNum);
   int64_t Imm = MO.getImm();
 
@@ -462,6 +477,7 @@ void NVPTXInstPrinter::printPrmtMode(const MCInst *MI, int OpNum,
 }
 
 void NVPTXInstPrinter::printTmaReductionMode(const MCInst *MI, int OpNum,
+                                             const MCSubtargetInfo &,
                                              raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(OpNum);
   using RedTy = nvvm::TMAReductionOp;
@@ -497,7 +513,7 @@ void NVPTXInstPrinter::printTmaReductionMode(const MCInst *MI, int OpNum,
 }
 
 void NVPTXInstPrinter::printCTAGroup(const MCInst *MI, int OpNum,
-                                     raw_ostream &O) {
+                                     const MCSubtargetInfo &, raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(OpNum);
   using CGTy = nvvm::CTAGroupKind;
 
@@ -516,7 +532,8 @@ void NVPTXInstPrinter::printCTAGroup(const MCInst *MI, int OpNum,
 }
 
 void NVPTXInstPrinter::printCallOperand(const MCInst *MI, int OpNum,
-                                        raw_ostream &O, StringRef Modifier) {
+                                        const MCSubtargetInfo &, raw_ostream &O,
+                                        StringRef Modifier) {
   const MCOperand &MO = MI->getOperand(OpNum);
   assert(MO.isImm() && "Invalid operand");
   const auto Imm = MO.getImm();
@@ -539,7 +556,7 @@ void NVPTXInstPrinter::printCallOperand(const MCInst *MI, int OpNum,
 
 template <unsigned Bits>
 void NVPTXInstPrinter::printHexUImm(const MCInst *MI, int OpNum,
-                                    raw_ostream &O) {
+                                    const MCSubtargetInfo &, raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(OpNum);
   assert(MO.isImm() && "Expected immediate operand");
   assert(isInt<Bits>(MO.getImm()) &&

@@ -2919,7 +2919,7 @@ class Type(Structure):
         """
         return conf.lib.clang_Type_getSizeOf(self)  # type: ignore [no-any-return]
 
-    def get_offset(self, fieldname: str) -> int:
+    def get_offset(self, fieldname: TUnion[str, bytes]) -> int:
         """
         Retrieve the offset of a field in the record.
         """
@@ -3071,10 +3071,29 @@ class CompletionChunkKind(BaseEnumeration):
     VERTICAL_SPACE = 20
 
 
-class _CXUnsavedFile(Structure):
+class UnsavedFile(Structure):
     """Helper for passing unsaved file arguments."""
 
     _fields_ = [("name", c_char_p), ("contents", c_char_p), ("length", c_ulong)]
+
+
+class _CXUnsavedFile(UnsavedFile):
+    """
+    _CXUnsavedFile acts as an alias to UnsavedFile.
+    This will be removed  in a future release.
+    All existing usage should be replaced directly with UnsavedFile.
+    No other changes are required.
+    """
+
+    def __getattribute__(self, attr):
+        warnings.warn(
+            "'_CXUnsavedFile' will be renamed to 'UnsavedFile' for consistency. "
+            "'UnsavedFile' is already available to use and existing uses should "
+            "be adapted to refer to it instead. '_CXUnsavedFile' will be "
+            "removed in a future release.",
+            DeprecationWarning,
+        )
+        return super().__getattribute__(attr)
 
 
 class CompletionChunk:
@@ -3464,10 +3483,10 @@ class TranslationUnit(ClangObject):
     @staticmethod
     def process_unsaved_files(
         unsaved_files: list[InMemoryFile],
-    ) -> Array[_CXUnsavedFile] | None:
+    ) -> Array[UnsavedFile] | None:
         unsaved_array = None
         if len(unsaved_files):
-            unsaved_array = (_CXUnsavedFile * len(unsaved_files))()
+            unsaved_array = (UnsavedFile * len(unsaved_files))()
             for i, (name, contents) in enumerate(unsaved_files):
                 if hasattr(contents, "read"):
                     contents = contents.read()
@@ -4320,6 +4339,7 @@ FUNCTION_LIST: list[LibFunc] = [
     ("clang_getCanonicalCursor", [Cursor], Cursor),
     ("clang_getCanonicalType", [Type], Type),
     ("clang_getChildDiagnostics", [Diagnostic], c_object_p),
+    ("clang_getClangVersion", [], _CXString),
     ("clang_getCompletionAvailability", [c_void_p], c_int),
     ("clang_getCompletionBriefComment", [c_void_p], _CXString),
     ("clang_getCompletionChunkCompletionString", [c_void_p, c_int], c_object_p),
@@ -4630,6 +4650,11 @@ class Config:
 
         return library
 
+    def get_version(self):
+        """
+        Returns the libclang version string used by the bindings
+        """
+        return _CXString.from_result(self.lib.clang_getClangVersion())
 
 conf = Config()
 

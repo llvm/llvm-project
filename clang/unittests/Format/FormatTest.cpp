@@ -17532,6 +17532,8 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
                "#elif ((a || b) && c) || d\n"
                "#endif",
                NoSpace);
+  // Space between sizeof and C compound literal.
+  verifyFormat("a = sizeof (int){};", NoSpace);
 
   FormatStyle Space = getLLVMStyle();
   Space.SpaceBeforeParens = FormatStyle::SBPO_Always;
@@ -20950,6 +20952,14 @@ TEST_F(FormatTest, AlignConsecutiveShortCaseStatements) {
                "}",
                Alignment);
 
+  Alignment.ColumnLimit = 40;
+  verifyFormat("switch (level) {\n"
+               "default: return \"a bit longer string\";\n"
+               "case log::warning: return \"foo\";\n"
+               "}",
+               Alignment);
+  Alignment.ColumnLimit = 80;
+
   Alignment.AlignConsecutiveShortCaseStatements.AcrossEmptyLines = true;
 
   verifyFormat("switch (level) {\n"
@@ -21042,6 +21052,14 @@ TEST_F(FormatTest, AlignConsecutiveShortCaseStatements) {
                "case log::warning : return \"warning\";\n"
                "case log::error   :\n"
                "default           : return \"default\";\n"
+               "}",
+               Alignment);
+
+  verifyFormat("switch (level) {\n"
+               "case log::error   :\n"
+               "default           : return \"default\";\n"
+               "case log::info    : return \"info\";\n"
+               "case log::warning : return \"warning\";\n"
                "}",
                Alignment);
 }
@@ -29361,8 +29379,15 @@ TEST_F(FormatTest, KeepFormFeed) {
 }
 
 TEST_F(FormatTest, ShortNamespacesOption) {
-  auto Style = getLLVMStyle();
+  auto Style = getLLVMStyleWithColumns(60);
   Style.AllowShortNamespacesOnASingleLine = true;
+
+  verifyFormat("namespace {\n"
+               "void xxxxx(nnn::TTTTT *mmm, YYYYY &yyyyy);\n"
+               "} // namespace",
+               Style);
+
+  Style.ColumnLimit = 80;
   Style.CompactNamespaces = true;
   Style.FixNamespaceComments = false;
 

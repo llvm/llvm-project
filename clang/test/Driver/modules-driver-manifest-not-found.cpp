@@ -6,9 +6,9 @@
 //--- main.cpp
 // empty
 
-// RUN: %clang -std=c++23 -nostdlib -fmodules \
+// RUN: %clang -std=c++23 -nostdlib \
 // RUN:   -fmodules-driver -Rmodules-driver \
-// RUN:   -fmodule-map-file=%t/module.modulemap %t/main.cpp \
+// RUN:   %t/main.cpp \
 // RUN:   -fmodules-cache-path=%t/modules-cache \
 // RUN:   %t/main.cpp -### 2>&1 \
 // RUN:   | sed 's:\\\\\?:/:g' \

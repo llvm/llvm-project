@@ -44,11 +44,11 @@ define i8 @dummy() !prof !0 {
 
 !0 = !{!"function_entry_count", i32 10}
 ;.
-; WITHGLOBALSAA: attributes #[[ATTR0:[0-9]+]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(write, inaccessiblemem: none, target_mem0: none, target_mem1: none) }
-; WITHGLOBALSAA: attributes #[[ATTR1:[0-9]+]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(read, argmem: none, inaccessiblemem: none, target_mem0: none, target_mem1: none) }
+; WITHGLOBALSAA: attributes #[[ATTR0:[0-9]+]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(write, inaccessiblemem: none, target_mem: none) }
+; WITHGLOBALSAA: attributes #[[ATTR1:[0-9]+]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(read, argmem: none, inaccessiblemem: none, target_mem: none) }
 ;.
-; NOGLOBALSAA: attributes #[[ATTR0:[0-9]+]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(write, argmem: readwrite, inaccessiblemem: none, target_mem0: none, target_mem1: none) }
-; NOGLOBALSAA: attributes #[[ATTR1:[0-9]+]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(read, argmem: none, inaccessiblemem: none, target_mem0: none, target_mem1: none) }
+; NOGLOBALSAA: attributes #[[ATTR0:[0-9]+]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(write, argmem: readwrite, inaccessiblemem: none, target_mem: none) }
+; NOGLOBALSAA: attributes #[[ATTR1:[0-9]+]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(read, argmem: none, inaccessiblemem: none, target_mem: none) }
 ;.
 ; WITHGLOBALSAA: [[META0:![0-9]+]] = !{!"function_entry_count", i32 10}
 ; WITHGLOBALSAA: [[PROF1]] = !{!"unknown", !"globalopt"}

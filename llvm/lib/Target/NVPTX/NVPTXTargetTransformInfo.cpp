@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTXTargetTransformInfo.h"
-#include "NVPTXUtilities.h"
+#include "NVVMProperties.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
