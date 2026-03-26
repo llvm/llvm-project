@@ -3509,22 +3509,26 @@ static bool isFreeConcat(ArrayRef<InstLane> Item, TTI::TargetCostKind CostKind,
   return true;
 }
 
-static Value *generateNewInstTree(ArrayRef<InstLane> Item, FixedVectorType *Ty,
-                                  const SmallPtrSet<Use *, 4> &IdentityLeafs,
-                                  const SmallPtrSet<Use *, 4> &SplatLeafs,
-                                  const SmallPtrSet<Use *, 4> &ConcatLeafs,
-                                  IRBuilderBase &Builder,
-                                  const TargetTransformInfo *TTI) {
+static Value *
+generateNewInstTree(ArrayRef<InstLane> Item, FixedVectorType *Ty,
+                    const SmallVectorImpl<SmallVector<InstLane>> &IdentityLeafs,
+                    const SmallVectorImpl<SmallVector<InstLane>> &SplatLeafs,
+                    const SmallVectorImpl<SmallVector<InstLane>> &ConcatLeafs,
+                    IRBuilderBase &Builder, const TargetTransformInfo *TTI) {
   auto [FrontU, FrontLane] = Item.front();
 
-  if (IdentityLeafs.contains(FrontU)) {
+  auto Contains = [](const SmallVectorImpl<SmallVector<InstLane>> &Set,
+                     ArrayRef<InstLane> Item) {
+    return any_of(Set, [&](ArrayRef<InstLane> E) { return E == Item; });
+  };
+
+  if (Contains(IdentityLeafs, Item))
     return FrontU->get();
-  }
-  if (SplatLeafs.contains(FrontU)) {
+  if (Contains(SplatLeafs, Item)) {
     SmallVector<int, 16> Mask(Ty->getNumElements(), FrontLane);
     return Builder.CreateShuffleVector(FrontU->get(), Mask);
   }
-  if (ConcatLeafs.contains(FrontU)) {
+  if (Contains(ConcatLeafs, Item)) {
     unsigned NumElts =
         cast<FixedVectorType>(FrontU->get()->getType())->getNumElements();
     SmallVector<Value *> Values(Item.size() / NumElts, nullptr);
@@ -3613,7 +3617,7 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
 
   SmallVector<SmallVector<InstLane>> Worklist;
   Worklist.push_back(Start);
-  SmallPtrSet<Use *, 4> IdentityLeafs, SplatLeafs, ConcatLeafs;
+  SmallVector<SmallVector<InstLane>> IdentityLeafs, SplatLeafs, ConcatLeafs;
   unsigned NumVisited = 0;
 
   while (!Worklist.empty()) {
@@ -3642,11 +3646,11 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
           return !E.value().first || (IsEquiv(E.value().first->get(), FrontV) &&
                                       E.value().second == (int)E.index());
         })) {
-      IdentityLeafs.insert(FrontU);
+      IdentityLeafs.push_back(std::move(Item));
       continue;
     }
     // Look for constants, for the moment only supporting constant splats.
-    if (auto *C = dyn_cast<Constant>(FrontU);
+    if (auto *C = dyn_cast<Constant>(FrontU->get());
         C && C->getSplatValue() &&
         all_of(drop_begin(Item), [Item](InstLane &IL) {
           Value *FrontV = Item.front().first->get();
@@ -3655,7 +3659,7 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
                         cast<Constant>(U->get())->getSplatValue() ==
                             cast<Constant>(FrontV)->getSplatValue());
         })) {
-      SplatLeafs.insert(FrontU);
+      SplatLeafs.push_back(std::move(Item));
       continue;
     }
     // Look for a splat value.
@@ -3664,7 +3668,7 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
           auto [U, Lane] = IL;
           return !U || (U->get() == FrontU->get() && Lane == FrontLane);
         })) {
-      SplatLeafs.insert(FrontU);
+      SplatLeafs.push_back(std::move(Item));
       continue;
     }
 
@@ -3749,7 +3753,7 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
     }
 
     if (isFreeConcat(Item, CostKind, TTI)) {
-      ConcatLeafs.insert(FrontU);
+      ConcatLeafs.push_back(std::move(Item));
       continue;
     }
 
