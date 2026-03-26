@@ -22,12 +22,13 @@ void llvm::clearDebugInfoForSpillFIs(MachineFunction &MF,
   MachineFrameInfo &MFI = MF.getFrameInfo();
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
-      if (MI.isDebugValue()) {
-        for (MachineOperand &Op : MI.debug_operands()) {
-          if (Op.isFI() && !MFI.isFixedObjectIndex(Op.getIndex()) &&
-              SpillFIs[Op.getIndex()]) {
-            Op.ChangeToRegister(Register(), false /*isDef*/);
-          }
+      if (!MI.isDebugValue())
+        continue;
+
+      for (MachineOperand &Op : MI.debug_operands()) {
+        if (Op.isFI() && !MFI.isFixedObjectIndex(Op.getIndex()) &&
+            SpillFIs[Op.getIndex()]) {
+          Op.ChangeToRegister(Register(), false /*isDef*/);
         }
       }
     }
