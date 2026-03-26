@@ -21,7 +21,7 @@ std::unique_ptr<GsymCreator> GsymCreatorV2::createNew(bool Quiet) const {
 }
 
 uint64_t GsymCreatorV2::calculateHeaderAndTableSize() const {
-  constexpr uint64_t HeaderSize = 24;
+  const uint64_t HeaderSize = sizeof(HeaderV2);
   const size_t NumFuncs = Funcs.size();
   const uint32_t NumEntries = 5 + (UUID.empty() ? 0 : 1) + 1;
   uint64_t Size = HeaderSize + NumEntries * 24;
@@ -91,7 +91,7 @@ llvm::Error GsymCreatorV2::encode(FileWriter &O) const {
   const uint64_t GlobalDataArraySize =
       static_cast<uint64_t>(NumGlobalDataEntries) * 24;
 
-  constexpr uint64_t HeaderSize = 24;
+  const uint64_t HeaderSize = sizeof(HeaderV2);
   uint64_t CurOffset = HeaderSize + GlobalDataArraySize;
 
   // AddrOffsets section.

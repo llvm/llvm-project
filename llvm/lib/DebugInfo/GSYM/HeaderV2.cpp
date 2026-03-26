@@ -85,8 +85,8 @@ llvm::Expected<HeaderV2> HeaderV2::decode(DataExtractor &Data) {
   // The fixed portion of the HeaderV2 is 24 bytes:
   //   Magic(4) + Version(2) + Padding(2) + BaseAddress(8) +
   //   NumAddresses(4) + AddrOffSize(1) + AddrInfoOffSize(1) +
-  //   StrpSize(1) + StrTableEncoding(1) = 24 bytes
-  constexpr uint64_t FixedHeaderSize = 24;
+  //   StrpSize(1) + StrTableEncoding(1)
+  const uint64_t FixedHeaderSize = sizeof(HeaderV2);
   if (!Data.isValidOffsetForDataOfSize(Offset, FixedHeaderSize))
     return createStringError(std::errc::invalid_argument,
                              "not enough data for a gsym::HeaderV2");

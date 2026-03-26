@@ -98,12 +98,11 @@ struct HeaderV2 {
   uint8_t StrpSize;
   /// String table encoding. Allows for future encoding for string table.
   uint8_t StrTableEncoding;
-  /// The starting point of the GlobalData array. This is a list of GlobalData
-  /// entries, each describing a section in the GSYM file (e.g. AddrOffsets,
-  /// FunctionInfo, UUID, StringTable). The array is terminated by an entry
-  /// with Type set to EndOfList and FileOffset, FileSize, and Padding all
-  /// set to zero.
-  uint8_t GlobalData[0];
+  // The GlobalData array immediately follows the header at offset
+  // sizeof(HeaderV2). Each GlobalData entry describes a section in the GSYM
+  // file (e.g. AddrOffsets, FunctionInfo, UUID, StringTable). The array is
+  // terminated by an entry with Type set to EndOfList and all other fields
+  // set to zero. See GlobalData.h for details.
 
   /// Check if a header is valid and return an error if anything is wrong.
   ///

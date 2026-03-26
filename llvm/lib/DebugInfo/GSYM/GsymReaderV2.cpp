@@ -111,7 +111,7 @@ llvm::Error GsymReaderV2::parse() {
   const StringRef Buf = MemBuffer->getBuffer();
   const uint64_t BufSize = Buf.size();
 
-  if (BufSize < 24)
+  if (BufSize < sizeof(HeaderV2))
     return createStringError(std::errc::invalid_argument,
                              "not enough data for a GSYM V2 header");
 
@@ -154,7 +154,7 @@ llvm::Error GsymReaderV2::parse() {
   CachedAddrOffSize = Hdr->AddrOffSize;
 
   // Parse GlobalData entries to find section locations.
-  uint64_t Offset = 24;
+  uint64_t Offset = sizeof(HeaderV2);
   uint64_t AddrOffsetsOff = 0, AddrOffsetsSize = 0;
   uint64_t AddrInfoOffsetsOff = 0, AddrInfoOffsetsSize = 0;
   uint64_t StringTableOff = 0, StringTableSize = 0;
