@@ -4092,11 +4092,9 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
       setRequiredFeatureString(TLBI->getRequiredFeatures(), Str);
       return TokError(Str);
     }
-    ExpectRegister = TLBI->NeedsReg;
-    bool hasTLBID = getSTI().hasFeature(AArch64::FeatureTLBID);
-    if (hasAll || hasTLBID) {
-      OptionalRegister = TLBI->OptionalReg;
-    }
+    ExpectRegister = TLBI->needsReg();
+    if (hasAll || hasTLBID)
+      OptionalRegister = TLBI->optionalReg();
     createSysAlias(TLBI->Encoding, Operands, S);
   } else if (Mnemonic == "mlbi") {
     const AArch64MLBI::MLBI *MLBI = AArch64MLBI::lookupMLBIByName(Op);
@@ -4140,10 +4138,9 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
       setRequiredFeatureString(PLBI->getRequiredFeatures(), Str);
       return TokError(Str);
     }
-    ExpectRegister = PLBI->NeedsReg;
-    if (hasAll || hasTLBID) {
-      OptionalRegister = PLBI->OptionalReg;
-    }
+    ExpectRegister = PLBI->needsReg();
+    if (hasAll || hasTLBID)
+      OptionalRegister = PLBI->optionalReg();
     createSysAlias(PLBI->Encoding, Operands, S);
   } else if (Mnemonic == "cfp" || Mnemonic == "dvp" || Mnemonic == "cpp" ||
              Mnemonic == "cosp") {
