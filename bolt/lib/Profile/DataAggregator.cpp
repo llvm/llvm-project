@@ -392,6 +392,19 @@ void DataAggregator::parsePreAggregated() {
   ParsingBuf = FileBuf->getBuffer();
   Col = 0;
   Line = 1;
+
+  // When processing a shared object, filter pre-aggregated entries by buildid.
+  if (BC && !BC->HasFixedLoadAddress && BC->getFilename().ends_with(".so")) {
+    if (auto FileBID = BC->getFileBuildID()) {
+      FilterBuildID = *FileBID;
+      outs() << "PERF2BOLT: filtering pre-aggregated data for buildid "
+             << *FileBID << "\n";
+    } else {
+      errs() << "PERF2BOLT-WARNING: cannot read buildid from input binary, "
+                "won't filter pre-aggregated data\n";
+    }
+  }
+
   if (parsePreAggregatedLBRSamples()) {
     errs() << "PERF2BOLT: failed to parse samples\n";
     exit(1);
@@ -1437,6 +1450,11 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
     EventNames.insert(EventName);
     return std::error_code();
   }
+
+  // Reset external addresses.
+  for (std::optional<Location> &Loc : Addr)
+    if (Loc && Loc->Name != FilterBuildID)
+      Loc->Offset = Trace::EXTERNAL;
 
   const uint64_t FromOffset = Addr[0]->Offset;
   BinaryFunction *FromFunc = getBinaryFunctionContainingAddress(FromOffset);
