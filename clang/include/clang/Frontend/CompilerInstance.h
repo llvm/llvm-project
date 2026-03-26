@@ -168,10 +168,13 @@ class CompilerInstance : public ModuleLoader {
   /// Should we delete the BuiltModules when we're done?
   bool DeleteBuiltModules = true;
 
-  /// Cache of module import results keyed by import location.
-  /// It is important to eliminate redundant diagnostics
-  /// when both the preprocessor and parser see the same import declaration.
-  llvm::SmallDenseMap<SourceLocation, ModuleLoadResult, 4> ModuleImportResults;
+  /// The location of the module-import keyword for the last module
+  /// import.
+  SourceLocation LastModuleImportLoc;
+
+  /// The result of the last module import.
+  ///
+  ModuleLoadResult LastModuleImportResult;
 
   /// Whether we should (re)build the global module index once we
   /// have finished with this translation unit.
