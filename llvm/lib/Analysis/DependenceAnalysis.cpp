@@ -1423,12 +1423,6 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEV *Coeff,
     const SCEV *ML =
         SE->getMulExpr(SE->getMulExpr(ConstCoeff, UpperBound), ConstantTwo);
     LLVM_DEBUG(dbgs() << "\t    ML = " << *ML << "\n");
-    if (SE->isKnownPredicate(CmpInst::ICMP_SGT, Delta, ML)) {
-      // Delta too big, no dependence
-      ++WeakCrossingSIVindependence;
-      ++WeakCrossingSIVsuccesses;
-      return true;
-    }
     if (SE->isKnownPredicate(CmpInst::ICMP_EQ, Delta, ML)) {
       // i = i' = UB
       Result.DV[Level].Direction &= ~Dependence::DVEntry::LT;
