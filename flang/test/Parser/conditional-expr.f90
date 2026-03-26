@@ -9,7 +9,6 @@ subroutine simple_conditional(x, y, z)
   ! CHECK-LABEL: simple_conditional
   ! CHECK: z = ( x>5 ? y : 10 )
   ! TREE: ConditionalExpr
-  ! TREE-NEXT: Branch
   ! TREE-NEXT: Scalar -> Logical -> Expr
   ! TREE: Expr -> Designator -> DataRef -> Name = 'y'
   ! TREE: Expr -> LiteralConstant -> IntLiteralConstant = '10'
@@ -20,13 +19,12 @@ end subroutine
 subroutine multi_branch_conditional(x, y, z)
   integer :: x, y, z
   ! CHECK-LABEL: multi_branch_conditional
-  ! CHECK: z = ( x>10 ? 100 : y<5 ? 50 : 0 )
+  ! CHECK: z = ( x>10 ? 100 : ( y<5 ? 50 : 0 ) )
   ! TREE: ConditionalExpr
-  ! TREE-NEXT: Branch
   ! TREE-NEXT: Scalar -> Logical -> Expr
   ! TREE: Expr -> LiteralConstant -> IntLiteralConstant = '100'
-  ! TREE: Branch
-  ! TREE-NEXT: Scalar -> Logical -> Expr
+  ! TREE: Expr -> ConditionalExpr
+  ! TREE: Scalar -> Logical -> Expr
   ! TREE: Expr -> LiteralConstant -> IntLiteralConstant = '50'
   ! TREE: Expr -> LiteralConstant -> IntLiteralConstant = '0'
   z = (x > 10 ? 100 : y < 5 ? 50 : 0)
@@ -40,11 +38,9 @@ subroutine nested_conditionals(x, y, w, z, flag1, flag2)
   ! Nested in value position
   ! CHECK: z = ( flag1 ? ( x>y ? x : y ) : 0 )
   ! TREE: ConditionalExpr
-  ! TREE-NEXT: Branch
   ! TREE-NEXT: Scalar -> Logical -> Expr
   ! TREE: Expr -> ConditionalExpr
-  ! TREE-NEXT: Branch
-  ! TREE-NEXT: Scalar -> Logical -> Expr
+  ! TREE: Scalar -> Logical -> Expr
   ! TREE: Expr -> Designator -> DataRef -> Name = 'x'
   ! TREE: Expr -> Designator -> DataRef -> Name = 'y'
   ! TREE: Expr -> LiteralConstant -> IntLiteralConstant = '0'
@@ -102,10 +98,10 @@ subroutine many_branches(x, z)
   integer :: x, z
   ! CHECK-LABEL: many_branches
   ! Four branches
-  ! CHECK: z = ( x>10 ? 100 : x>5 ? 50 : x>0 ? 10 : 0 )
+  ! CHECK: z = ( x>10 ? 100 : ( x>5 ? 50 : ( x>0 ? 10 : 0 ) ) )
   z = (x > 10 ? 100 : x > 5 ? 50 : x > 0 ? 10 : 0)
   ! Five branches
-  ! CHECK: z = ( x>20 ? 1 : x>15 ? 2 : x>10 ? 3 : x>5 ? 4 : 5 )
+  ! CHECK: z = ( x>20 ? 1 : ( x>15 ? 2 : ( x>10 ? 3 : ( x>5 ? 4 : 5 ) ) ) )
   z = (x > 20 ? 1 : x > 15 ? 2 : x > 10 ? 3 : x > 5 ? 4 : 5)
 end subroutine
 
@@ -217,7 +213,6 @@ subroutine array_valued(flag)
   ! Whole array conditional
   ! CHECK: arr3 = ( flag ? arr1 : arr2 )
   ! TREE: ConditionalExpr
-  ! TREE-NEXT: Branch
   ! TREE-NEXT: Scalar -> Logical -> Expr
   ! TREE: Expr -> Designator -> DataRef -> Name = 'arr1'
   ! TREE: Expr -> Designator -> DataRef -> Name = 'arr2'

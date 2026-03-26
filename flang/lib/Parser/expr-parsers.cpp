@@ -61,6 +61,34 @@ TYPE_PARSER(parenthesized(
 TYPE_PARSER(construct<AcImpliedDoControl>(
     maybe(integerTypeSpec / "::"), loopBounds(scalarIntExpr)))
 
+// Conditional expression lookahead helper: checks if input starting with '('
+// contains '?' at nesting level 1. This avoids exponential backtracking when
+// parsing deeply nested parentheses that are not conditional expressions.
+struct ConditionalExprLookahead {
+  using resultType = Success;
+  constexpr ConditionalExprLookahead() {}
+  std::optional<Success> Parse(ParseState &state) const {
+    if (std::optional<const char *> at{state.PeekAtNextChar()}) {
+      if (**at != '(') {
+        return std::nullopt;
+      }
+      const char *const start{*at};
+      const char *const limit{start + state.BytesRemaining()};
+      int nestLevel{0};
+      for (const char *p{start}; p < limit; ++p) {
+        if (*p == '(') {
+          ++nestLevel;
+        } else if (*p == ')' && --nestLevel == 0) {
+          return std::nullopt;
+        } else if (*p == '?' && nestLevel == 1) {
+          return {Success{}};
+        }
+      }
+    }
+    return std::nullopt;
+  }
+};
+
 // R1001 primary ->
 //         literal-constant | designator | array-constructor |
 //         structure-constructor | function-reference | type-param-inquiry |
@@ -70,7 +98,8 @@ TYPE_PARSER(construct<AcImpliedDoControl>(
 constexpr auto primary{instrumented("primary"_en_US,
     first(construct<Expr>(indirect(charLiteralConstantSubstring)),
         construct<Expr>(literalConstant),
-        construct<Expr>(Parser<ConditionalExpr>{}),
+        construct<Expr>(ConditionalExprLookahead{} >>
+            parenthesized(Parser<ConditionalExpr>{})),
         construct<Expr>(construct<Expr::Parentheses>("(" >>
             expr / !","_tok / recovery(")"_tok, SkipPastNested<'(', ')'>{}))),
         construct<Expr>(indirect(functionReference) / !"("_tok / !"%"_tok),
@@ -99,39 +128,12 @@ constexpr auto level1Expr{sourced(
 //   ( scalar-logical-expr ? expr
 //     [ : scalar-logical-expr ? expr ]...
 //     : expr )
-// Lookahead helper: checks if input starting with '(' contains '?' at nesting
-// level 1. This avoids exponential backtracking when parsing deeply nested
-// parentheses that are not conditional expressions.
-struct ConditionalExprLookahead {
-  using resultType = Success;
-  constexpr ConditionalExprLookahead() {}
-  std::optional<Success> Parse(ParseState &state) const {
-    if (std::optional<const char *> at{state.PeekAtNextChar()}) {
-      if (**at != '(') {
-        return std::nullopt;
-      }
-      const char *const start{*at};
-      const char *const limit{start + state.BytesRemaining()};
-      int nestLevel{0};
-      for (const char *p{start}; p < limit; ++p) {
-        if (*p == '(') {
-          ++nestLevel;
-        } else if (*p == ')' && --nestLevel == 0) {
-          return std::nullopt;
-        } else if (*p == '?' && nestLevel == 1) {
-          return {Success{}};
-        }
-      }
-    }
-    return std::nullopt;
-  }
-};
-TYPE_PARSER(ConditionalExprLookahead{} >>
-    parenthesized(construct<ConditionalExpr>(
-        some(construct<ConditionalExpr::Branch>(
-                 scalarLogicalExpr / "?", indirect(expr)) /
-            ":"),
-        indirect(expr))))
+// The chained list form is encoded as a right-associative tree: the else-expr
+// is either a chained conditional-expr (which need not be separately
+// parenthesized) or a terminal expr.
+TYPE_PARSER(
+    construct<ConditionalExpr>(scalarLogicalExpr / "?", indirect(expr) / ":",
+        indirect(construct<Expr>(Parser<ConditionalExpr>{}) || expr)))
 
 // R1004 mult-operand -> level-1-expr [power-op mult-operand]
 // R1007 power-op -> **

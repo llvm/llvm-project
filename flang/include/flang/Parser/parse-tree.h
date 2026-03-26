@@ -1684,11 +1684,9 @@ struct ImageSelector {
 //     : expr )
 struct ConditionalExpr {
   TUPLE_CLASS_BOILERPLATE(ConditionalExpr);
-  struct Branch {
-    TUPLE_CLASS_BOILERPLATE(Branch);
-    std::tuple<ScalarLogicalExpr, common::Indirection<Expr>> t;
-  };
-  std::tuple<std::list<Branch>, common::Indirection<Expr>> t;
+  std::tuple<ScalarLogicalExpr, common::Indirection<Expr>,
+      common::Indirection<Expr>>
+      t;
 };
 
 // R1001 - R1022 expressions

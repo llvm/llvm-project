@@ -902,14 +902,11 @@ public:
   void Unparse(const Expr::NEQV &x) { Walk(x.t, ".NEQV."); }
   void Unparse(const ConditionalExpr &x) { // F2023: R1002
     Put("( ");
-    const auto &branches{std::get<std::list<ConditionalExpr::Branch>>(x.t)};
-    for (const auto &branch : branches) {
-      Walk(std::get<ScalarLogicalExpr>(branch.t));
-      Put(" ? ");
-      Walk(std::get<common::Indirection<Expr>>(branch.t));
-      Put(" : ");
-    }
-    Walk(std::get<common::Indirection<Expr>>(x.t));
+    Walk(std::get<0>(x.t)); // scalar-logical-expr
+    Put(" ? ");
+    Walk(std::get<1>(x.t)); // then-expr
+    Put(" : ");
+    Walk(std::get<2>(x.t)); // else-expr (recursive for chained conditionals)
     Put(" )");
   }
   void Unparse(const Expr::ComplexConstructor &x) {
