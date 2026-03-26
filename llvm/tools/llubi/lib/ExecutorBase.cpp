@@ -1,4 +1,4 @@
-//===- ExecutorAPI.cpp - Non-visitor methods of InstExecutor --------------===//
+//===- ExecutorBase.cpp - Non-visitor methods of InstExecutor -------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ExecutorAPI.h"
+#include "ExecutorBase.h"
 
 namespace llvm::ubi {
 Frame::Frame(Function &F, CallBase *CallSite, Frame *LastFrame,
@@ -27,7 +27,7 @@ Frame::Frame(Function &F, CallBase *CallSite, Frame *LastFrame,
     ValueMap[&Arg] = Args[Arg.getArgNo()];
 }
 
-void ExecutorAPI::reportImmediateUB(StringRef Msg) {
+void ExecutorBase::reportImmediateUB(StringRef Msg) {
   // Check if we have already reported an immediate UB.
   if (!Status)
     return;
@@ -36,7 +36,7 @@ void ExecutorAPI::reportImmediateUB(StringRef Msg) {
   Handler.onImmediateUB(Msg);
 }
 
-void ExecutorAPI::reportError(StringRef Msg) {
+void ExecutorBase::reportError(StringRef Msg) {
   // Check if we have already reported an error message.
   if (!Status)
     return;
@@ -44,11 +44,11 @@ void ExecutorAPI::reportError(StringRef Msg) {
   Handler.onError(Msg);
 }
 
-std::optional<uint64_t> ExecutorAPI::verifyMemAccess(const MemoryObject &MO,
-                                                     const APInt &Address,
-                                                     uint64_t AccessSize,
-                                                     Align Alignment,
-                                                     bool IsStore) {
+std::optional<uint64_t> ExecutorBase::verifyMemAccess(const MemoryObject &MO,
+                                                      const APInt &Address,
+                                                      uint64_t AccessSize,
+                                                      Align Alignment,
+                                                      bool IsStore) {
   // Loading from a stack object outside its lifetime is not undefined
   // behavior and returns a poison value instead. Storing to it is still
   // undefined behavior.
@@ -78,7 +78,7 @@ std::optional<uint64_t> ExecutorAPI::verifyMemAccess(const MemoryObject &MO,
   return Offset.getZExtValue();
 }
 
-AnyValue ExecutorAPI::load(const AnyValue &Ptr, Align Alignment, Type *ValTy) {
+AnyValue ExecutorBase::load(const AnyValue &Ptr, Align Alignment, Type *ValTy) {
   if (Ptr.isPoison()) {
     reportImmediateUB("Invalid memory access with a poison pointer.");
     return AnyValue::getPoisonValue(Ctx, ValTy);
@@ -104,8 +104,8 @@ AnyValue ExecutorAPI::load(const AnyValue &Ptr, Align Alignment, Type *ValTy) {
   return AnyValue::getPoisonValue(Ctx, ValTy);
 }
 
-void ExecutorAPI::store(const AnyValue &Ptr, Align Alignment,
-                        const AnyValue &Val, Type *ValTy) {
+void ExecutorBase::store(const AnyValue &Ptr, Align Alignment,
+                         const AnyValue &Val, Type *ValTy) {
   if (Ptr.isPoison()) {
     reportImmediateUB("Invalid memory access with a poison pointer.");
     return;

@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Context.h"
-#include "ExecutorAPI.h"
+#include "ExecutorBase.h"
 #include "Value.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/InlineAsm.h"
@@ -64,7 +64,7 @@ static AnyValue mulNoWrap(const APInt &LHS, const APInt &RHS, bool HasNSW,
 /// Unlike the Context class that manages the global state,
 /// InstExecutor only maintains the state for call frames.
 class InstExecutor : public InstVisitor<InstExecutor, void>,
-                     public ExecutorAPI {
+                     public ExecutorBase {
   const DataLayout &DL;
   std::list<Frame> CallStack;
   AnyValue None;
@@ -257,7 +257,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
 public:
   InstExecutor(Context &C, EventHandler &H, Function &F,
                ArrayRef<AnyValue> Args, AnyValue &RetVal)
-      : ExecutorAPI(C, H), DL(Ctx.getDataLayout()) {
+      : ExecutorBase(C, H), DL(Ctx.getDataLayout()) {
     CallStack.emplace_back(F, /*CallSite=*/nullptr, /*LastFrame=*/nullptr, Args,
                            RetVal, Ctx.getTLIImpl());
   }

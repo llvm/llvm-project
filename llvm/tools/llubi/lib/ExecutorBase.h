@@ -1,4 +1,4 @@
-//===--- ExecutorAPI.h - Non-visitor methods of InstExecutor --------------===//
+//===--- ExecutorBase.h - Non-visitor methods of InstExecutor -------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements non-visitor methods of InstExecutor for code reuse.
+// This file declares non-visitor methods of InstExecutor for code reuse.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TOOLS_LLUBI_EXECUTORAPI_H
-#define LLVM_TOOLS_LLUBI_EXECUTORAPI_H
+#ifndef LLVM_TOOLS_LLUBI_EXECUTORBASE_H
+#define LLVM_TOOLS_LLUBI_EXECUTORBASE_H
 
 #include "Context.h"
 #include "Value.h"
@@ -67,7 +67,7 @@ struct Frame {
         const TargetLibraryInfoImpl &TLIImpl);
 };
 
-class ExecutorAPI {
+class ExecutorBase {
 protected:
   Context &Ctx;
   EventHandler &Handler;
@@ -75,8 +75,11 @@ protected:
   bool Status;
   Frame *CurrentFrame = nullptr;
 
+  ExecutorBase(Context &C, EventHandler &H)
+      : Ctx(C), Handler(H), Status(true) {}
+
 public:
-  ExecutorAPI(Context &C, EventHandler &H) : Ctx(C), Handler(H), Status(true) {}
+  ~ExecutorBase() = default;
 
   void reportImmediateUB(StringRef Msg);
   void reportError(StringRef Msg);
@@ -95,4 +98,4 @@ public:
 
 } // namespace llvm::ubi
 
-#endif // LLVM_TOOLS_LLUBI_EXECUTORAPI_H
+#endif // LLVM_TOOLS_LLUBI_EXECUTORBASE_H
