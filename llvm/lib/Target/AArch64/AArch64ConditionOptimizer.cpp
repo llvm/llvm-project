@@ -597,52 +597,21 @@ bool AArch64ConditionOptimizerImpl::optimizeIntraBlock(MachineBasicBlock &MBB) {
   }
 
   // Extract condition codes from both CSINCs (operand 3)
-  AArch64CC::CondCode FirstCond =
+  AArch64CC::CondCode FirstCondCode =
       (AArch64CC::CondCode)(int)FirstCSINC->getOperand(3).getImm();
-  AArch64CC::CondCode SecondCond =
+  AArch64CC::CondCode SecondCondCode =
       (AArch64CC::CondCode)(int)SecondCSINC->getOperand(3).getImm();
 
-  const int FirstImm = (int)FirstCmpMI->getOperand(2).getImm();
-  const int SecondImm = (int)SecondCmpMI->getOperand(2).getImm();
-
   LLVM_DEBUG(dbgs() << "Comparing intra-block CSINCs: "
-                    << AArch64CC::getCondCodeName(FirstCond) << " #" << FirstImm
-                    << " and " << AArch64CC::getCondCodeName(SecondCond) << " #"
-                    << SecondImm << '\n');
+                    << AArch64CC::getCondCodeName(FirstCondCode) << " #"
+                    << FirstCmpMI->getOperand(2).getImm() << " and "
+                    << AArch64CC::getCondCodeName(SecondCondCode) << " #"
+                    << SecondCmpMI->getOperand(2).getImm() << '\n');
 
-  // Check if both conditions are the same (GT/GT, LT/LT, HI/HI, LO/LO)
-  // and immediates differ by 1.
-  if (FirstCond == SecondCond &&
-      (isGreaterThan(FirstCond) || isLessThan(FirstCond)) &&
-      std::abs(SecondImm - FirstImm) == 1) {
-    // Pick which comparison to adjust to match the other
-    // For GT/HI: adjust the one with smaller immediate
-    // For LT/LO: adjust the one with larger immediate
-    bool adjustFirst = (FirstImm < SecondImm);
-    if (isLessThan(FirstCond)) {
-      adjustFirst = !adjustFirst;
-    }
+  CmpCondPair First{FirstCmpMI, FirstCSINC, FirstCondCode};
+  CmpCondPair Second{SecondCmpMI, SecondCSINC, SecondCondCode};
 
-    MachineInstr *CmpToAdjust = adjustFirst ? FirstCmpMI : SecondCmpMI;
-    MachineInstr *CSINCToAdjust = adjustFirst ? FirstCSINC : SecondCSINC;
-    AArch64CC::CondCode CondToAdjust = adjustFirst ? FirstCond : SecondCond;
-    int TargetImm = adjustFirst ? SecondImm : FirstImm;
-
-    CmpInfo Adj = getAdjustedCmpInfo(CmpToAdjust, CondToAdjust);
-
-    if (Adj.Imm == TargetImm &&
-        Adj.Opc == (adjustFirst ? SecondCmpMI : FirstCmpMI)->getOpcode()) {
-      LLVM_DEBUG(dbgs() << "Successfully optimizing intra-block CSINC pair\n");
-
-      // Modify the selected CMP and CSINC
-      CmpCondPair ToChange{CmpToAdjust, CSINCToAdjust, CondToAdjust};
-      applyCmpAdjustment(ToChange, Adj);
-
-      return true;
-    }
-  }
-
-  return false;
+  return tryOptimizePair(First, Second);
 }
 
 // Optimizes CMP+Bcc pairs across two basic blocks in the dominator tree.
