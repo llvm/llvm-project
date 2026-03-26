@@ -10,7 +10,7 @@
 
 // <text_encoding>
 
-// text_encoding::aliases_view::begin()
+// constexpr implementation-defined text_encoding::aliases_view::begin() const;
 
 #include "test_macros.h"
 #include <cassert>

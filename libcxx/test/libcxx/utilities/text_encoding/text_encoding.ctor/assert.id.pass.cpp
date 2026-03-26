@@ -11,7 +11,7 @@
 
 // <text_encoding>
 
-// text_encoding text_encoding(id)
+// text_encoding text_encoding(std::text_encoding::id) noexcept
 
 #include <climits>
 #include <text_encoding>
@@ -19,7 +19,7 @@
 #include "check_assertion.h"
 
 int main(int, char**) {
-  // Make sure that text_encoding(id) asserts when the input id not in the range of allowed values
+  // Make sure that text_encoding(id) asserts when the input id is not in the range of allowed values
 
   TEST_LIBCPP_ASSERT_FAILURE(std::text_encoding(std::text_encoding::id(33)), "Mib for NATS-DANO used");
   TEST_LIBCPP_ASSERT_FAILURE(std::text_encoding(std::text_encoding::id(34)), "Mib for NATS-DANO-ADD used");

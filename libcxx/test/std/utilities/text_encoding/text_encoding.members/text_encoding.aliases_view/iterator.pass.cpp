@@ -11,6 +11,8 @@
 // <text_encoding>
 
 // text_encoding::aliases_view::iterator (implementation-defined)
+//
+// Implementation is almost trivial, so everything is tested here.
 
 #include <cassert>
 #include <compare>
@@ -31,6 +33,13 @@ constexpr bool test() {
   static_assert(std::three_way_comparable<decltype(i)>);
 
   {
+    ASSERT_NOEXCEPT(i == j);
+    ASSERT_NOEXCEPT(i != k);
+    ASSERT_NOEXCEPT(i <=> j);
+    ASSERT_NOEXCEPT(i > j);
+    ASSERT_NOEXCEPT(i < j);
+    ASSERT_NOEXCEPT(i >= j);
+    ASSERT_NOEXCEPT(i <= j);
     assert(i == j);
     assert(i != k);
     assert(i <= j);
@@ -39,6 +48,8 @@ constexpr bool test() {
     assert(std::string_view(*i) == std::string_view(*j));
   }
   {
+    ASSERT_NOEXCEPT(*i);
+    ASSERT_NOEXCEPT(i[0]);
     assert(std::string_view(i[0]) == std::string_view(j[0]));
     assert(std::string_view(i[1]) != std::string_view(j[3]));
   }
@@ -67,6 +78,9 @@ constexpr bool test() {
     assert(std::string_view(*i) == std::string_view(*j));
   }
   {
+    ASSERT_NOEXCEPT(i + 1);
+    ASSERT_NOEXCEPT(1 + i);
+    ASSERT_NOEXCEPT(i - 1);
     auto temp = i + 2;
     assert(i != temp);
     assert(std::string_view(*temp) != std::string_view(*j));
@@ -74,17 +88,26 @@ constexpr bool test() {
     assert(std::string_view(*temp2) == std::string_view(*j));
   }
   {
+    ASSERT_NOEXCEPT(i - j);
     assert(i - j == 0);
     assert(k - i > 0);
   }
   {
-    auto temp = ++i;
+    ASSERT_NOEXCEPT(i++);
+    ASSERT_NOEXCEPT(++i);
+    ASSERT_NOEXCEPT(i--);
+    ASSERT_NOEXCEPT(--i);
+    auto& temp = ++i;
     assert(temp == i);
+    assert(&temp == &i);
+
     auto temp2 = j++;
     assert(temp2 == j - 1);
     assert(i == j);
   }
   {
+    ASSERT_NOEXCEPT(i += 2);
+    ASSERT_NOEXCEPT(i -= 2);
     i += 2;
     j += 3;
 
@@ -97,28 +120,6 @@ constexpr bool test() {
     assert(i == j);
     assert(i != tempi && (tempi - i) == 2);
     assert(j != tempj && (tempj - j) == 3);
-  }
-
-  { // noexcept
-    ASSERT_NOEXCEPT(*i);
-    ASSERT_NOEXCEPT(i[0]);
-    ASSERT_NOEXCEPT(i + 1);
-    ASSERT_NOEXCEPT(1 + i);
-    ASSERT_NOEXCEPT(i - 1);
-    ASSERT_NOEXCEPT(i - j);
-    ASSERT_NOEXCEPT(i++);
-    ASSERT_NOEXCEPT(++i);
-    ASSERT_NOEXCEPT(i--);
-    ASSERT_NOEXCEPT(--i);
-    ASSERT_NOEXCEPT(i += 2);
-    ASSERT_NOEXCEPT(i -= 2);
-    ASSERT_NOEXCEPT(i == j);
-    ASSERT_NOEXCEPT(i != k);
-    ASSERT_NOEXCEPT(i <=> j);
-    ASSERT_NOEXCEPT(i > j);
-    ASSERT_NOEXCEPT(i < j);
-    ASSERT_NOEXCEPT(i >= j);
-    ASSERT_NOEXCEPT(i <= j);
   }
   { // iterator operator return types
     ASSERT_SAME_TYPE(const char*, decltype(*i));

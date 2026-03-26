@@ -31,6 +31,10 @@ constexpr bool test() {
     std::text_encoding te1 = std::text_encoding(id::UTF8);
     std::text_encoding te2 = std::text_encoding(id::UTF8);
     assert(te1 == te2);
+
+    const std::text_encoding& te11 = te1;
+    const std::text_encoding& te22 = te2;
+    assert(te11 == te22);
   }
 
   // 3. operator==(const text_encoding&, const text_encoding&) for text_encodings with ids of "other" return true if the names are equal

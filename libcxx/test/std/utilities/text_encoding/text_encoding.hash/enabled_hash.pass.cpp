@@ -15,7 +15,6 @@
 #include <text_encoding>
 
 #include "poisoned_hash_helper.h"
-#include "test_macros.h"
 
 int main(int, char**) {
   test_library_hash_specializations_available();

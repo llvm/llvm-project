@@ -12,12 +12,11 @@
 // REQUIRES: locale.fr_CA.ISO8859-1
 
 // UNSUPPORTED: no-localization
-// UNSUPPORTED: windows, android
 // UNSUPPORTED: availability-te-environment-missing
+// REQUIRES: android
 
 // std::text_encoding::environment()
 
-#include <algorithm>
 #include <cassert>
 #include <cstdlib>
 #include <text_encoding>
@@ -25,16 +24,13 @@
 #include "platform_support.h" // locale name macros
 
 int main(int, char**) {
-  // The default text_encoding::environment() which relies on nl_langinfo is
-  // affected by changes to the "LANG" environment variable on POSIX systems.
-  setenv("LANG", LOCALE_fr_CA_ISO8859_1, 1);
+  // On Android, UTF-8 is unconditionally returned.
+  ::setenv("LANG", LOCALE_fr_CA_ISO8859_1, 1);
 
   auto te = std::text_encoding::environment();
-
-  assert(std::text_encoding::environment_is<std::text_encoding::id::ISOLatin1>());
+  assert(std::text_encoding::environment_is<std::text_encoding::id::UTF8>());
   assert(te == std::text_encoding::environment());
-  assert(te.mib() == std::text_encoding::id::ISOLatin1);
-  assert(std::ranges::contains(te.aliases(), std::string_view("ISO_8859-1")));
+  assert(te.mib() == std::text_encoding::id::UTF8);
 
   return 0;
 }

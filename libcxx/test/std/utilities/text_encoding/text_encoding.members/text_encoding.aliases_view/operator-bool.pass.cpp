@@ -20,19 +20,23 @@
 
 using id = std::text_encoding::id;
 
+constexpr void test_other_unknown() {}
+
+constexpr void test_primary_encodings() {}
+
 constexpr bool test() {
   // 1. An alias_view of a text_encoding object for "other" and "unknown" are empty
   {
     {
       std::text_encoding te_other                  = std::text_encoding(id::other);
       std::text_encoding::aliases_view other_range = te_other.aliases();
-      assert(other_range.empty());
+      assert(!bool(other_range));
     }
 
     {
       std::text_encoding te_unknown                  = std::text_encoding(id::unknown);
       std::text_encoding::aliases_view unknown_range = te_unknown.aliases();
-      assert(unknown_range.empty());
+      assert(!bool(unknown_range));
     }
   }
 
@@ -41,7 +45,7 @@ constexpr bool test() {
     for (auto& data : unique_encoding_data) {
       std::text_encoding te                  = std::text_encoding(id(data.mib));
       std::text_encoding::aliases_view range = te.aliases();
-      assert(!range.empty());
+      assert(bool(range));
     }
   }
 

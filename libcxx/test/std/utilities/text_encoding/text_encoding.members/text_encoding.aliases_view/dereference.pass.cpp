@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++26
-// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=9000000
 
 // <text_encoding>
 
@@ -25,6 +24,7 @@ constexpr bool test() {
   auto iter                                = aliases.begin();
 
   ASSERT_SAME_TYPE(decltype(aliases[0]), const char*);
+  assert(aliases.size() >= 2 && "assumed below");
   assert(std::string_view(aliases[0]) == *iter);
   assert(std::string_view(aliases[1]) == std::string_view(*(iter + 1)));
 

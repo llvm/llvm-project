@@ -10,7 +10,7 @@
 
 // <text_encoding>
 
-// text_encoding::text_encoding(id) noexcept
+// text_encoding::text_encoding(std::text_encoding::id) noexcept
 
 #include <algorithm>
 #include <cassert>

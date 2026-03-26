@@ -12,6 +12,7 @@
 
 // template <> struct hash<text_encoding>
 
+#include "poisoned_hash_helper.h"
 #include <cassert>
 #include <cstdint>
 #include <text_encoding>
@@ -53,6 +54,7 @@ void test_te_hash() {
 
 int main(int, char**) {
   test_te_hash();
+  test_hash_enabled<std::text_encoding>();
 
   return 0;
 }
