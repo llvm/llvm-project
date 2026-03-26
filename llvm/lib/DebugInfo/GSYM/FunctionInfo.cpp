@@ -236,7 +236,7 @@ llvm::Expected<uint64_t> FunctionInfo::encode(FileWriter &Out,
 }
 
 llvm::Expected<LookupResult>
-FunctionInfo::lookup(DataExtractor &Data, const GsymReaderBase &GR,
+FunctionInfo::lookup(DataExtractor &Data, const GsymReader &GR,
                      uint64_t FuncAddr, uint64_t Addr,
                      std::optional<DataExtractor> *MergedFuncsData) {
   LookupResult LR;

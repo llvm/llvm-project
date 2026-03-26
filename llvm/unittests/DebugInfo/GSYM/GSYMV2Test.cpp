@@ -11,8 +11,10 @@
 #include "llvm/DebugInfo/GSYM/FunctionInfo.h"
 #include "llvm/DebugInfo/GSYM/GlobalData.h"
 #include "llvm/DebugInfo/GSYM/GsymCreator.h"
+#include "llvm/DebugInfo/GSYM/GsymCreatorV1.h"
 #include "llvm/DebugInfo/GSYM/GsymCreatorV2.h"
 #include "llvm/DebugInfo/GSYM/GsymReader.h"
+#include "llvm/DebugInfo/GSYM/GsymReaderV1.h"
 #include "llvm/DebugInfo/GSYM/GsymReaderV2.h"
 #include "llvm/DebugInfo/GSYM/HeaderV2.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
@@ -864,8 +866,8 @@ TEST(GSYMV2Test, TestRoundTripSwappedAddressTable) {
 
 /// Recursively re-insert inline info strings and files from a reader into a
 /// creator.
-static void fixupInlineInfoForTransfer(const GsymReaderBase &Reader,
-                                       GsymCreatorBase &Creator,
+static void fixupInlineInfoForTransfer(const GsymReader &Reader,
+                                       GsymCreator &Creator,
                                        InlineInfo &II) {
   II.Name = Creator.insertString(Reader.getString(II.Name));
   if (II.CallFile != 0) {
@@ -888,8 +890,8 @@ static void fixupInlineInfoForTransfer(const GsymReaderBase &Reader,
 
 /// Transfer all function infos from a reader into a creator, re-inserting
 /// all strings and files so that offsets are valid in the new creator.
-static void transferFunctions(const GsymReaderBase &Reader,
-                              GsymCreatorBase &Creator) {
+static void transferFunctions(const GsymReader &Reader,
+                              GsymCreator &Creator) {
   for (uint32_t I = 0; I < Reader.getNumAddresses(); ++I) {
     auto FI = Reader.getFunctionInfoAtIndex(I);
     ASSERT_THAT_EXPECTED(FI, Succeeded());
@@ -926,8 +928,8 @@ static void transferFunctions(const GsymReaderBase &Reader,
   }
 }
 
-/// Encode a GsymCreatorBase to bytes.
-static SmallString<1024> encodeCreator(const GsymCreatorBase &GC) {
+/// Encode a GsymCreator to bytes.
+static SmallString<1024> encodeCreator(const GsymCreator &GC) {
   SmallString<1024> Str;
   raw_svector_ostream OS(Str);
   FileWriter FW(OS, llvm::endianness::native);
@@ -938,7 +940,7 @@ static SmallString<1024> encodeCreator(const GsymCreatorBase &GC) {
 
 /// Collect lookup results for a set of addresses from a reader.
 static std::vector<LookupResult>
-collectLookups(const GsymReaderBase &Reader,
+collectLookups(const GsymReader &Reader,
                ArrayRef<uint64_t> Addrs) {
   std::vector<LookupResult> Results;
   for (auto Addr : Addrs) {
@@ -952,7 +954,7 @@ collectLookups(const GsymReaderBase &Reader,
 
 TEST(GSYMV2Test, TestVersionRoundTripV1ToV2ToV1) {
   // Create a V1 GSYM with line tables and inline info.
-  GsymCreator GC1;
+  GsymCreatorV1 GC1;
   FunctionInfo FI(0x1000, 0x100, GC1.insertString("main"));
   FI.OptLineTable = LineTable();
   const uint32_t MainFile = GC1.insertFile("/tmp/main.c");
@@ -985,7 +987,7 @@ TEST(GSYMV2Test, TestVersionRoundTripV1ToV2ToV1) {
   ASSERT_GT(OrigV1Bytes.size(), 0u);
 
   // Read original V1.
-  auto OrigReader = GsymReader::copyBuffer(OrigV1Bytes);
+  auto OrigReader = GsymReaderV1::copyBuffer(OrigV1Bytes);
   ASSERT_THAT_EXPECTED(OrigReader, Succeeded());
 
   // Collect lookup results from original V1.
@@ -1012,13 +1014,13 @@ TEST(GSYMV2Test, TestVersionRoundTripV1ToV2ToV1) {
         << "Mismatch at address " << TestAddrs[I] << " after V1->V2";
 
   // Convert V2 → V1.
-  GsymCreator GC3;
+  GsymCreatorV1 GC3;
   transferFunctions(*V2Reader, GC3);
   ASSERT_FALSE(bool(GC3.finalize(Null)));
   SmallString<1024> FinalV1Bytes = encodeCreator(GC3);
   ASSERT_GT(FinalV1Bytes.size(), 0u);
 
-  auto FinalReader = GsymReader::copyBuffer(FinalV1Bytes);
+  auto FinalReader = GsymReaderV1::copyBuffer(FinalV1Bytes);
   ASSERT_THAT_EXPECTED(FinalReader, Succeeded());
 
   // Verify final V1 lookups match original V1.
@@ -1075,13 +1077,13 @@ TEST(GSYMV2Test, TestVersionRoundTripV2ToV1ToV2) {
   ASSERT_EQ(OrigResults.size(), TestAddrs.size());
 
   // Convert V2 → V1.
-  GsymCreator GC2;
+  GsymCreatorV1 GC2;
   transferFunctions(*OrigReader, GC2);
   ASSERT_FALSE(bool(GC2.finalize(Null)));
   SmallString<1024> V1Bytes = encodeCreator(GC2);
   ASSERT_GT(V1Bytes.size(), 0u);
 
-  auto V1Reader = GsymReader::copyBuffer(V1Bytes);
+  auto V1Reader = GsymReaderV1::copyBuffer(V1Bytes);
   ASSERT_THAT_EXPECTED(V1Reader, Succeeded());
 
   // Verify V1 lookups match original V2.

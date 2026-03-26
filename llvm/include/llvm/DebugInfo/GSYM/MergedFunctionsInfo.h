@@ -20,7 +20,7 @@ class raw_ostream;
 
 namespace gsym {
 
-class GsymReaderBase;
+class GsymReader;
 struct FunctionInfo;
 struct MergedFunctionsInfo {
   std::vector<FunctionInfo> MergedFunctions;

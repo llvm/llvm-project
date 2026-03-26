@@ -25,7 +25,7 @@ class raw_ostream;
 
 namespace gsym {
 
-class GsymReaderBase;
+class GsymReader;
 /// Function information in GSYM files encodes information for one contiguous
 /// address range. If a function has discontiguous address ranges, they will
 /// need to be encoded using multiple FunctionInfo objects.
@@ -185,7 +185,7 @@ struct FunctionInfo {
   /// \param GR The GSYM reader that contains the string and file table that
   /// will be used to fill in information in the returned result.
   ///
-  /// \param FuncAddr The function start address decoded from the GsymReaderBase.
+  /// \param FuncAddr The function start address decoded from the GsymReader.
   ///
   /// \param Addr The address to lookup.
   ///
@@ -197,7 +197,7 @@ struct FunctionInfo {
   /// encountered during decoding. An error should only be returned if the
   /// address is not contained in the FunctionInfo or if the data is corrupted.
   LLVM_ABI static llvm::Expected<LookupResult>
-  lookup(DataExtractor &Data, const GsymReaderBase &GR, uint64_t FuncAddr,
+  lookup(DataExtractor &Data, const GsymReader &GR, uint64_t FuncAddr,
          uint64_t Addr,
          std::optional<DataExtractor> *MergedFuncsData = nullptr);
 

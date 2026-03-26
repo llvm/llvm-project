@@ -20,12 +20,12 @@ class ObjectFile;
 
 namespace gsym {
 
-class GsymCreatorBase;
+class GsymCreator;
 class OutputAggregator;
 
 class ObjectFileTransformer {
 public:
-  /// Extract any object file data that is needed by the GsymCreatorBase.
+  /// Extract any object file data that is needed by the GsymCreator.
   ///
   /// The extracted information includes the UUID of the binary and converting
   /// all function symbols from any symbol tables into FunctionInfo objects.
@@ -42,7 +42,7 @@ public:
   /// the DWARF, or Error::success() if all goes well.
   LLVM_ABI static llvm::Error convert(const object::ObjectFile &Obj,
                                       OutputAggregator &Output,
-                                      GsymCreatorBase &Gsym);
+                                      GsymCreator &Gsym);
 };
 
 } // namespace gsym

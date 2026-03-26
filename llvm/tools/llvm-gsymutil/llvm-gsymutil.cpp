@@ -42,8 +42,10 @@
 #include "llvm/DebugInfo/GSYM/DwarfTransformer.h"
 #include "llvm/DebugInfo/GSYM/FunctionInfo.h"
 #include "llvm/DebugInfo/GSYM/GsymCreator.h"
+#include "llvm/DebugInfo/GSYM/GsymCreatorV1.h"
 #include "llvm/DebugInfo/GSYM/GsymCreatorV2.h"
 #include "llvm/DebugInfo/GSYM/GsymReader.h"
+#include "llvm/DebugInfo/GSYM/GsymReaderV1.h"
 #include "llvm/DebugInfo/GSYM/GsymReaderV2.h"
 #include "llvm/DebugInfo/GSYM/Header.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
@@ -390,12 +392,12 @@ static llvm::Error handleObjectFile(ObjectFile &Obj, const std::string &OutFile,
   auto ThreadCount =
       NumThreads > 0 ? NumThreads : std::thread::hardware_concurrency();
 
-  std::unique_ptr<GsymCreatorBase> GsymPtr;
+  std::unique_ptr<GsymCreator> GsymPtr;
   if (ForceCreatorVersion == CreatorVersion::V2)
     GsymPtr = std::make_unique<GsymCreatorV2>(Quiet);
   else
-    GsymPtr = std::make_unique<GsymCreator>(Quiet);
-  GsymCreatorBase &Gsym = *GsymPtr;
+    GsymPtr = std::make_unique<GsymCreatorV1>(Quiet);
+  GsymCreator &Gsym = *GsymPtr;
 
   // See if we can figure out the base address for a given object file, and if
   // we can, then set the base address to use to this value. This will ease
@@ -538,19 +540,19 @@ static llvm::Error handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
 }
 
 /// Open a GSYM file, auto-detecting the version unless forced.
-static Expected<std::unique_ptr<GsymReaderBase>> openGsymFile(StringRef Path) {
+static Expected<std::unique_ptr<GsymReader>> openGsymFile(StringRef Path) {
   if (ForceReaderVersion == ReaderVersion::Auto)
-    return GsymReaderBase::openFile(Path);
+    return GsymReader::openFile(Path);
   if (ForceReaderVersion == ReaderVersion::V2) {
     auto R = GsymReaderV2::openFile(Path);
     if (!R)
       return R.takeError();
     return std::make_unique<GsymReaderV2>(std::move(*R));
   }
-  auto R = GsymReader::openFile(Path);
+  auto R = GsymReaderV1::openFile(Path);
   if (!R)
     return R.takeError();
-  return std::make_unique<GsymReader>(std::move(*R));
+  return std::make_unique<GsymReaderV1>(std::move(*R));
 }
 
 /// Check if a file starts with the GSYM magic bytes.
@@ -569,8 +571,8 @@ static bool isGSYMFile(StringRef Filename) {
 
 /// Re-insert a file entry from a reader into a creator, reconstructing the
 /// full path from separate Dir and Base components.
-static uint32_t transferFile(const GsymReaderBase &Reader,
-                             GsymCreatorBase &Creator, uint32_t FileIdx) {
+static uint32_t transferFile(const GsymReader &Reader,
+                             GsymCreator &Creator, uint32_t FileIdx) {
   auto FE = Reader.getFile(FileIdx);
   if (!FE)
     return FileIdx;
@@ -588,8 +590,8 @@ static uint32_t transferFile(const GsymReaderBase &Reader,
 
 /// Fix up string and file references in an InlineInfo tree so they refer to
 /// the creator's tables instead of the reader's.
-static void fixupInlineInfo(const GsymReaderBase &Reader,
-                            GsymCreatorBase &Creator, InlineInfo &II) {
+static void fixupInlineInfo(const GsymReader &Reader,
+                            GsymCreator &Creator, InlineInfo &II) {
   II.Name = Creator.insertString(Reader.getString(II.Name));
   if (II.CallFile != 0)
     II.CallFile = transferFile(Reader, Creator, II.CallFile);
@@ -599,8 +601,8 @@ static void fixupInlineInfo(const GsymReaderBase &Reader,
 
 /// Fix up all string and file references in a FunctionInfo so they refer to
 /// the creator's tables instead of the reader's.
-static void fixupFunctionInfo(const GsymReaderBase &Reader,
-                              GsymCreatorBase &Creator, FunctionInfo &FI) {
+static void fixupFunctionInfo(const GsymReader &Reader,
+                              GsymCreator &Creator, FunctionInfo &FI) {
   FI.Name = Creator.insertString(Reader.getString(FI.Name));
   if (FI.OptLineTable) {
     for (size_t J = 0; J < FI.OptLineTable->size(); ++J) {
@@ -632,12 +634,12 @@ static llvm::Error handleGSYMConversion(StringRef Filename,
     return ReaderOrErr.takeError();
   auto &Reader = **ReaderOrErr;
 
-  std::unique_ptr<GsymCreatorBase> CreatorPtr;
+  std::unique_ptr<GsymCreator> CreatorPtr;
   if (ForceCreatorVersion == CreatorVersion::V2)
     CreatorPtr = std::make_unique<GsymCreatorV2>(Quiet);
   else
-    CreatorPtr = std::make_unique<GsymCreator>(Quiet);
-  GsymCreatorBase &Creator = *CreatorPtr;
+    CreatorPtr = std::make_unique<GsymCreatorV1>(Quiet);
+  GsymCreator &Creator = *CreatorPtr;
 
   // Transfer all function infos, re-inserting strings and files.
   for (uint32_t I = 0; I < Reader.getNumAddresses(); ++I) {
@@ -702,7 +704,7 @@ static llvm::Error convertFileToGSYM(OutputAggregator &Out) {
   return Error::success();
 }
 
-static void doLookup(GsymReaderBase &Gsym, uint64_t Addr, raw_ostream &OS) {
+static void doLookup(GsymReader &Gsym, uint64_t Addr, raw_ostream &OS) {
   if (UseMergedFunctions) {
     if (auto Results = Gsym.lookupAll(Addr)) {
       // If we have filters, count matching results first
@@ -836,7 +838,7 @@ int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
 
     std::string InputLine;
     std::string CurrentGSYMPath;
-    std::unique_ptr<GsymReaderBase> CurrentGsym;
+    std::unique_ptr<GsymReader> CurrentGsym;
 
     while (std::getline(std::cin, InputLine)) {
       // Strip newline characters.

@@ -22,7 +22,7 @@ class raw_ostream;
 
 namespace gsym {
 
-class GsymReaderBase;
+class GsymReader;
 /// Inline information stores the name of the inline function along with
 /// an array of address ranges. It also stores the call file and call line
 /// that called this inline function. This allows us to unwind inline call
@@ -118,7 +118,7 @@ struct InlineInfo {
   /// \returns An error if the inline information is corrupt, or
   ///          Error::success() for all other cases, even when no information
   ///          is added to \a SrcLocs.
-  LLVM_ABI static llvm::Error lookup(const GsymReaderBase &GR, DataExtractor &Data,
+  LLVM_ABI static llvm::Error lookup(const GsymReader &GR, DataExtractor &Data,
                                      uint64_t BaseAddr, uint64_t Addr,
                                      SourceLocations &SrcLocs);
 

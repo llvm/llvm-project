@@ -43,7 +43,7 @@ namespace gsym {
 /// GsymReaderV2 objects must use one of the static functions to create an
 /// instance: GsymReaderV2::openFile(...) and GsymReaderV2::copyBuffer(...).
 
-class GsymReaderV2 : public GsymReaderBase {
+class GsymReaderV2 : public GsymReader {
   GsymReaderV2(std::unique_ptr<MemoryBuffer> Buffer);
   llvm::Error parse();
 

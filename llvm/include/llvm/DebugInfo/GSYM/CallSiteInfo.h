@@ -26,7 +26,7 @@ struct FunctionsYAML;
 
 namespace gsym {
 class FileWriter;
-class GsymCreatorBase;
+class GsymCreator;
 struct FunctionInfo;
 struct CallSiteInfo {
   enum Flags : uint8_t {
@@ -96,8 +96,8 @@ public:
   /// Constructor that initializes the CallSiteInfoLoader with necessary data
   /// structures.
   ///
-  /// \param GCreator A reference to the GsymCreatorBase.
-  CallSiteInfoLoader(GsymCreatorBase &GCreator, std::vector<FunctionInfo> &Funcs)
+  /// \param GCreator A reference to the GsymCreator.
+  CallSiteInfoLoader(GsymCreator &GCreator, std::vector<FunctionInfo> &Funcs)
       : GCreator(GCreator), Funcs(Funcs) {}
 
   /// This method reads the specified YAML file, parses its content, and updates
@@ -132,7 +132,7 @@ private:
                                    StringMap<FunctionInfo *> &FuncMap);
 
   /// Reference to the parent Gsym Creator object.
-  GsymCreatorBase &GCreator;
+  GsymCreator &GCreator;
 
   /// Reference to the vector of FunctionInfo objects to be populated.
   std::vector<FunctionInfo> &Funcs;
