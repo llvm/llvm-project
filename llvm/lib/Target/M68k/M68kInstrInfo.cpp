@@ -690,59 +690,64 @@ void M68kInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                 const DebugLoc &DL, Register DstReg,
                                 Register SrcReg, bool KillSrc,
                                 bool RenamableDest, bool RenamableSrc) const {
-  const auto &Subtarget = MBB.getParent()->getSubtarget<M68kSubtarget>();
   unsigned Opc = 0;
   MachineFunction &MF = *MBB.getParent();
   const M68kSubtarget &STI = MF.getSubtarget<M68kSubtarget>();
 
-  // First deal with the normal symmetric copies.
-  if (M68k::XR32RegClass.contains(DstReg, SrcReg))
+  // Symmetric register copies
+  if (M68k::XR32RegClass.contains(DstReg, SrcReg)) {
     Opc = M68k::MOV32rr;
-  else if (M68k::XR16RegClass.contains(DstReg, SrcReg))
+  } else if (M68k::XR16RegClass.contains(DstReg, SrcReg)) {
     Opc = M68k::MOV16rr;
-  else if (M68k::DR8RegClass.contains(DstReg, SrcReg))
+  } else if (M68k::DR8RegClass.contains(DstReg, SrcReg)) {
     Opc = M68k::MOV8dd;
+  }
 
-  // Now deal with asymmetrically sized copies. The cases that follow are upcast
-  // moves.
-  //
-  // NOTE
-  // These moves are not aware of type nature of these values and thus
-  // won't do any SExt or ZExt and upper bits will basically contain garbage.
-  else if (M68k::DR8RegClass.contains(SrcReg)) {
-    if (M68k::XR16RegClass.contains(DstReg))
-      Opc = M68k::MOVXd16d8;
-    else if (M68k::XR32RegClass.contains(DstReg))
-      Opc = M68k::MOVXd32d8;
+  // Asymmetric register copies
+  // 8 -> 16
+  else if (M68k::DR8RegClass.contains(SrcReg) &&
+             M68k::XR16RegClass.contains(DstReg)) {
+    Opc = M68k::MOVXd16d8;
+  // 8 -> 32
+  } else if (M68k::DR8RegClass.contains(SrcReg) &&
+             M68k::XR32RegClass.contains(DstReg)) {
+    Opc = M68k::MOVXd32d8;
+  // 16 -> 32
   } else if (M68k::XR16RegClass.contains(SrcReg) &&
-             M68k::XR32RegClass.contains(DstReg))
+             M68k::XR32RegClass.contains(DstReg)) {
     Opc = M68k::MOVXd32d16;
+  }
 
+  // Copy from CCR
+  // NOTE: M68000 uses MOVE from SR to copy from CCR, all other variants use
   else if (SrcReg == M68k::CCR) {
-    if (M68k::DR8RegClass.contains(DstReg)) {
-      Opc = M68k::MOV8dc;
-    } else if (M68k::DR16RegClass.contains(DstReg)) {
-      Opc = STI.isM68000() ? M68k::MOV16ds : M68k::MOV16dc;
-    } else if (M68k::DR32RegClass.contains(DstReg)) {
+    if (M68k::DR8RegClass.contains(DstReg) ||
+    M68k::DR16RegClass.contains(DstReg) ||
+    M68k::DR32RegClass.contains(DstReg)) {
       Opc = STI.isM68000() ? M68k::MOV16ds : M68k::MOV16dc;
     } else {
       LLVM_DEBUG(dbgs() << "Cannot copy CCR to " << RI.getName(DstReg) << '\n');
       llvm_unreachable("Invalid register for MOVE from CCR");
     }
-  } else if (DstReg == M68k::CCR) {
-    if (M68k::DR8RegClass.contains(SrcReg)) {
-      // Promote used register to the next class
-      SrcReg = getRegisterInfo().getMatchingSuperReg(
-          SrcReg, M68k::MxSubRegIndex8Lo, &M68k::DR16RegClass);
-    } else if (!M68k::DR16RegClass.contains(SrcReg) &&
-               !M68k::DR32RegClass.contains(SrcReg)) {
+  }
+
+  // Copy to CCR
+  else if (DstReg == M68k::CCR) {
+    if (M68k::DR8RegClass.contains(SrcReg) ||
+          M68k::DR16RegClass.contains(SrcReg) ||
+          M68k::DR32RegClass.contains(SrcReg)) {
+      Opc = M68k::MOV16cd;
+    } else {
       LLVM_DEBUG(dbgs() << "Cannot copy " << RI.getName(SrcReg) << " to CCR\n");
       llvm_unreachable("Invalid register for MOVE to CCR");
     }
-  } else if (SrcReg == M68k::SR || DstReg == M68k::SR)
-    llvm_unreachable("Cannot emit SR copy instruction");
   }
 
+  // SR should never be a valid register for copying
+  else if (SrcReg == M68k::SR || DstReg == M68k::SR)
+    llvm_unreachable("Cannot explicitly copy to/from SR");
+
+  // We should now have our opcode
   if (!Opc) {
     LLVM_DEBUG(dbgs() << "Cannot copy " << RI.getName(SrcReg) << " to "
                       << RI.getName(DstReg) << '\n');
