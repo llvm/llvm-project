@@ -2238,10 +2238,10 @@ S multiple_lifetimebound_params() {
                                          // expected-note {{later used here}}
 }
 
-int getInt(const std::string &s [[clang::lifetimebound]]);
-
 // TODO: Diagnose [[clang::lifetimebound]] on functions whose return value
 // cannot refer to any object (e.g., returning int or enum).
+int getInt(const std::string &s [[clang::lifetimebound]]);
+
 void primitive_return() {
   int i = getInt(std::string("temp"));
   use(i);
