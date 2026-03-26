@@ -6,8 +6,7 @@ define i64 @mov_dec(<32 x i8> %x) {
 ; CHECK-LABEL: mov_dec:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovmskb %ymm0, %ecx
-; CHECK-NEXT:    movl %ecx, %eax
-; CHECK-NEXT:    decl %eax
+; CHECK-NEXT:    leal -1(%rcx), %eax
 ; CHECK-NEXT:    shlq $32, %rcx
 ; CHECK-NEXT:    orq %rcx, %rax
 ; CHECK-NEXT:    vzeroupper
@@ -26,8 +25,7 @@ define i64 @mov_inc(<32 x i8> %x) {
 ; CHECK-LABEL: mov_inc:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovmskb %ymm0, %ecx
-; CHECK-NEXT:    movl %ecx, %eax
-; CHECK-NEXT:    incl %eax
+; CHECK-NEXT:    leal 1(%rcx), %eax
 ; CHECK-NEXT:    shlq $32, %rcx
 ; CHECK-NEXT:    orq %rcx, %rax
 ; CHECK-NEXT:    vzeroupper
@@ -46,8 +44,7 @@ define i64 @mov_add_imm(<32 x i8> %x) {
 ; CHECK-LABEL: mov_add_imm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovmskb %ymm0, %ecx
-; CHECK-NEXT:    movl %ecx, %eax
-; CHECK-NEXT:    addl $5, %eax
+; CHECK-NEXT:    leal 5(%rcx), %eax
 ; CHECK-NEXT:    shlq $32, %rcx
 ; CHECK-NEXT:    orq %rcx, %rax
 ; CHECK-NEXT:    vzeroupper
@@ -86,8 +83,7 @@ define i64 @mov_shl(<32 x i8> %x) {
 ; CHECK-LABEL: mov_shl:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovmskb %ymm0, %ecx
-; CHECK-NEXT:    movl %ecx, %eax
-; CHECK-NEXT:    shll $2, %eax
+; CHECK-NEXT:    leal (,%rcx,4), %eax
 ; CHECK-NEXT:    shlq $32, %rcx
 ; CHECK-NEXT:    orq %rcx, %rax
 ; CHECK-NEXT:    vzeroupper
@@ -99,5 +95,43 @@ define i64 @mov_shl(<32 x i8> %x) {
   %shl = shl nuw i64 %ext, 32
   %shl_op.ext = zext i32 %shl_op to i64
   %res = or disjoint i64 %shl, %shl_op.ext
+  ret i64 %res
+}
+
+define i64 @mov_sub_imm(<32 x i8> %x) {
+; CHECK-LABEL: mov_sub_imm:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpmovmskb %ymm0, %ecx
+; CHECK-NEXT:    leal -5(%rcx), %eax
+; CHECK-NEXT:    shlq $32, %rcx
+; CHECK-NEXT:    orq %rcx, %rax
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %cmp = icmp slt <32 x i8> %x, zeroinitializer
+  %mvmsk = bitcast <32 x i1> %cmp to i32
+  %sub = add i32 %mvmsk, -5
+  %ext = zext i32 %mvmsk to i64
+  %shl = shl nuw i64 %ext, 32
+  %sub.ext = zext i32 %sub to i64
+  %res = or disjoint i64 %shl, %sub.ext
+  ret i64 %res
+}
+
+define i64 @mov_add_self(<32 x i8> %x) {
+; CHECK-LABEL: mov_add_self:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpmovmskb %ymm0, %ecx
+; CHECK-NEXT:    leal (%rcx,%rcx), %eax
+; CHECK-NEXT:    shlq $32, %rcx
+; CHECK-NEXT:    orq %rcx, %rax
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %cmp = icmp slt <32 x i8> %x, zeroinitializer
+  %mvmsk = bitcast <32 x i1> %cmp to i32
+  %add = add i32 %mvmsk, %mvmsk
+  %ext = zext i32 %mvmsk to i64
+  %shl = shl nuw i64 %ext, 32
+  %add.ext = zext i32 %add to i64
+  %res = or disjoint i64 %shl, %add.ext
   ret i64 %res
 }
