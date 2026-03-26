@@ -1656,8 +1656,6 @@ class DebugCommunication(object):
         self.send.close()
         if self._recv_thread.is_alive():
             self._recv_thread.join()
-        if self.log_file:
-            dump_dap_log(self.log_file)
 
     def request_setInstructionBreakpoints(self, memory_reference=[]):
         breakpoints = []

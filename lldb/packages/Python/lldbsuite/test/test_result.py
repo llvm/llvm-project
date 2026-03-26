@@ -296,3 +296,10 @@ class LLDBTestResult(unittest.TextTestResult):
         self.stream.write(
             "XPASS: LLDB (%s) :: %s\n" % (self._config_string(test), str(test))
         )
+
+    def stopTest(self, test):
+        """Dump the session info for debugging."""
+        super(LLDBTestResult, self).stopTest(test)
+        dumpSessionInfo = getattr(test, "dumpSessionInfo", None)
+        if dumpSessionInfo:
+            dumpSessionInfo()

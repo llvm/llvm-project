@@ -34,7 +34,7 @@ class DAPTestCaseBase(TestBase):
         self.assertTrue(
             is_exe(self.lldbDAPExec), "lldb-dap must exist and be executable"
         )
-        log_file_path = self.getBuildArtifact("dap.log")
+        log_file_path = self.getLogBasenameForCurrentTest() + "-dap.log"
         self.dap_server = dap_server.DebugAdapterServer(
             executable=self.lldbDAPExec,
             connection=connection,
@@ -44,6 +44,7 @@ class DAPTestCaseBase(TestBase):
             additional_args=additional_args or [],
             spawn_helper=self.spawnSubprocess,
         )
+        self.log_files.append(log_file_path)
 
     def build_and_create_debug_adapter(
         self,

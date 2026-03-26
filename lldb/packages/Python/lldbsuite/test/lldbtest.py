@@ -44,6 +44,7 @@ import signal
 from subprocess import *
 import sys
 import time
+import datetime
 import traceback
 from typing import Optional, Union
 
@@ -1247,16 +1248,14 @@ class Base(unittest.TestCase):
         Dump the debugger interactions leading to a test error/failure.  This
         allows for more convenient postmortem analysis.
 
-        See also LLDBTestResult (dotest.py) which is a singlton class derived
+        See also LLDBTestResult (dotest.py) which is a singleton class derived
         from TextTestResult and overwrites addError, addFailure, and
         addExpectedFailure methods to allow us to to mark the test instance as
         such.
         """
-
-        # We are here because self.tearDown() detected that this test instance
-        # either errored or failed.  The lldb.test_result singleton contains
-        # two lists (errors and failures) which get populated by the unittest
-        # framework.  Look over there for stack trace information.
+        # The lldb.test_result singleton contains two lists (errors and
+        # failures) which get populated by the unittest framework.  Look over
+        # there for stack trace information.
         #
         # The lists contain 2-tuples of TestCase instances and strings holding
         # formatted tracebacks.
@@ -1287,14 +1286,12 @@ class Base(unittest.TestCase):
         session_file = self.getLogBasenameForCurrentTest() + ".log"
 
         # Python 3 doesn't support unbuffered I/O in text mode.  Open buffered.
-        session = encoded_file.open(session_file, "utf-8", mode="w")
+        session = encoded_file.open(session_file, "utf-8", mode="a")
 
         if not self.__unexpected__ and not self.__skipped__:
             for test, traceback in pairs:
                 if test is self:
                     print(traceback, file=session)
-
-        import datetime
 
         print(
             "Session info generated @",
@@ -1309,6 +1306,7 @@ class Base(unittest.TestCase):
             # keep all log files, rename them to include prefix
             src_log_basename = self.getLogBasenameForCurrentTest()
             dst_log_basename = self.getLogBasenameForCurrentTest(prefix)
+            files = []
             for src in self.log_files:
                 if os.path.isfile(src):
                     dst = src.replace(src_log_basename, dst_log_basename)
@@ -1323,6 +1321,12 @@ class Base(unittest.TestCase):
 
                     lldbutil.mkdir_p(os.path.dirname(dst))
                     os.rename(src, dst)
+                    files.append(dst)
+            if files:
+                print(
+                    "Log Files:\n - %s" % ("\n - ".join(files)),
+                    file=sys.stderr,
+                )
         else:
             # success!  (and we don't want log files) delete log files
             for log_file in self.log_files:
