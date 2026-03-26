@@ -1662,6 +1662,7 @@ struct hash<text_encoding> {
 template <>
 inline constexpr bool ranges::enable_borrowed_range<text_encoding::aliases_view> = true;
 
+_LIBCPP_EXPORTED_FROM_ABI text_encoding __get_locale_encoding(const char* __name);
 _LIBCPP_END_NAMESPACE_STD
 
 #  endif // _LIBCPP_STD_VER >= 26
