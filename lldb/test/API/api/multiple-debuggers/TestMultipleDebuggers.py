@@ -10,6 +10,7 @@ from lldbsuite.test import lldbutil
 
 
 class TestMultipleSimultaneousDebuggers(TestBase):
+    SHARED_BUILD_TESTCASE = False
     NO_DEBUG_INFO_TESTCASE = True
 
     # Times out on heavily loaded Linux buildbots, don't want to get into tweaking

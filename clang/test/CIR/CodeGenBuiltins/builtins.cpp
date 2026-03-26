@@ -21,10 +21,10 @@ extern "C" void *test_return_address(void) {
   // CIR: {{%.*}} = cir.return_address([[ARG]])
 
   // LLVM-LABEL: @test_return_address
-  // LLVM: {{%.*}} = call ptr @llvm.returnaddress(i32 1)
+  // LLVM: {{%.*}} = call ptr @llvm.returnaddress.p0(i32 1)
 
   // OGCG-LABEL: @test_return_address
-  // OGCG: {{%.*}} = call ptr @llvm.returnaddress(i32 1)
+  // OGCG: {{%.*}} = call ptr @llvm.returnaddress.p0(i32 1)
 }
 
 extern "C" void *test_frame_address(void) {

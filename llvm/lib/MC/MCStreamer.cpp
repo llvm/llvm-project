@@ -382,6 +382,15 @@ void MCStreamer::emitCVDefRangeDirective(
   emitCVDefRangeDirective(Ranges, BytePrefix);
 }
 
+void MCStreamer::emitCVDefRangeDirective(
+    ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
+    codeview::DefRangeRegisterRelIndirHeader DRHdr) {
+  SmallString<20> BytePrefix;
+  copyBytesForDefRange(BytePrefix, codeview::S_DEFRANGE_REGISTER_REL_INDIR,
+                       DRHdr);
+  emitCVDefRangeDirective(Ranges, BytePrefix);
+}
+
 void MCStreamer::emitEHSymAttributes(const MCSymbol *Symbol,
                                      MCSymbol *EHSymbol) {
 }

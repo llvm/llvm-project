@@ -34,7 +34,7 @@
 ; CHECK-NEXT:     Function Alias Analysis Results
 ; CHECK-NEXT:     Post-Dominator Tree Construction
 ; CHECK-NEXT:     Memory SSA
-; CHECK-NEXT:     Natural Loop Information
+; CHECK-NEXT:     Cycle Info Analysis
 ; CHECK-NEXT:     Dead Store Elimination
 ; CHECK-NEXT:     DXIL Legalizer
 ; CHECK-NEXT:   DXIL Resource Binding Analysis

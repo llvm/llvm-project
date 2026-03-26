@@ -21,6 +21,8 @@ class Mode(Enum):
 
 
 class RegisterCommandsTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def get_supported_vg(self):
         # Changing VL trashes the register state, so we need to run the program
         # just to test this. Then run it again for the test.

@@ -512,6 +512,11 @@ public:
   CoreFoundationABI CFRuntime = CoreFoundationABI::Unspecified;
 
   std::string ObjCConstantStringClass;
+  std::string ObjCConstantArrayClass;
+  std::string ObjCConstantDictionaryClass;
+  std::string ObjCConstantIntegerNumberClass;
+  std::string ObjCConstantFloatNumberClass;
+  std::string ObjCConstantDoubleNumberClass;
 
   /// The name of the handler function to be called when -ftrapv is
   /// specified.

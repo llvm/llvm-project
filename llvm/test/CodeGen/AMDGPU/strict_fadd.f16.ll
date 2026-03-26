@@ -44,7 +44,7 @@ define half @v_constained_fadd_f16_fpexcept_strict(half %x, half %y) #0 {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_add_f16_e32 v0, v0, v1
+; GFX12-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.l
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %val = call half @llvm.experimental.constrained.fadd.f16(half %x, half %y, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret half %val
@@ -76,7 +76,7 @@ define half @v_constained_fadd_f16_fpexcept_ignore(half %x, half %y) #0 {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_add_f16_e32 v0, v0, v1
+; GFX12-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.l
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %val = call half @llvm.experimental.constrained.fadd.f16(half %x, half %y, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret half %val
@@ -108,7 +108,7 @@ define half @v_constained_fadd_f16_fpexcept_maytrap(half %x, half %y) #0 {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_add_f16_e32 v0, v0, v1
+; GFX12-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.l
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %val = call half @llvm.experimental.constrained.fadd.f16(half %x, half %y, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
   ret half %val
@@ -334,7 +334,7 @@ define <3 x half> @v_constained_fadd_v3f16_fpexcept_strict(<3 x half> %x, <3 x h
 ; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    v_pk_add_f16 v0, v0, v2
-; GFX12-SDAG-NEXT:    v_add_f16_e32 v1, v1, v3
+; GFX12-SDAG-NEXT:    v_add_f16_e32 v1.l, v1.l, v3.l
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-LABEL: v_constained_fadd_v3f16_fpexcept_strict:
@@ -450,18 +450,10 @@ define <4 x half> @v_constained_fadd_v4f16_fpexcept_strict(<4 x half> %x, <4 x h
 ; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-NEXT:    v_lshrrev_b32_e32 v4, 16, v3
-; GFX12-SDAG-NEXT:    v_lshrrev_b32_e32 v5, 16, v2
-; GFX12-SDAG-NEXT:    v_lshrrev_b32_e32 v6, 16, v0
-; GFX12-SDAG-NEXT:    v_lshrrev_b32_e32 v7, 16, v1
-; GFX12-SDAG-NEXT:    v_add_f16_e32 v1, v1, v3
-; GFX12-SDAG-NEXT:    v_add_f16_e32 v0, v0, v2
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX12-SDAG-NEXT:    v_add_f16_e32 v2, v6, v5
-; GFX12-SDAG-NEXT:    v_add_f16_e32 v3, v7, v4
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-SDAG-NEXT:    v_perm_b32 v0, v2, v0, 0x5040100
-; GFX12-SDAG-NEXT:    v_perm_b32 v1, v3, v1, 0x5040100
+; GFX12-SDAG-NEXT:    v_add_f16_e32 v1.h, v1.h, v3.h
+; GFX12-SDAG-NEXT:    v_add_f16_e32 v0.h, v0.h, v2.h
+; GFX12-SDAG-NEXT:    v_add_f16_e32 v0.l, v0.l, v2.l
+; GFX12-SDAG-NEXT:    v_add_f16_e32 v1.l, v1.l, v3.l
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-LABEL: v_constained_fadd_v4f16_fpexcept_strict:

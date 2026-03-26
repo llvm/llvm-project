@@ -2710,8 +2710,9 @@ programming patterns, makes programs more concise, and improves the safety of
 container creation.  There are several feature macros associated with object
 literals and subscripting: ``__has_feature(objc_array_literals)`` tests the
 availability of array literals; ``__has_feature(objc_dictionary_literals)``
-tests the availability of dictionary literals;
-``__has_feature(objc_subscripting)`` tests the availability of object
+tests the availability of dictionary literals; ``objc_constant_literals``
+tests the availability of having number, array, and dictionary literals
+emitted at compile time; ``__has_feature(objc_subscripting)`` tests the availability of object
 subscripting.
 
 Objective-C Autosynthesis of Properties

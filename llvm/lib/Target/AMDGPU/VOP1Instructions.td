@@ -370,7 +370,7 @@ defm V_NOT_B32 : VOP1Inst <"v_not_b32", VOP_I32_I32>;
 defm V_BFREV_B32 : VOP1Inst <"v_bfrev_b32", VOP_I32_I32, DivergentUnaryFrag<bitreverse>>;
 defm V_FFBH_U32 : VOP1Inst <"v_ffbh_u32", VOP_I32_I32, AMDGPUffbh_u32>;
 defm V_FFBL_B32 : VOP1Inst <"v_ffbl_b32", VOP_I32_I32, AMDGPUffbl_b32>;
-defm V_FFBH_I32 : VOP1Inst <"v_ffbh_i32", VOP_I32_I32, AMDGPUffbh_i32>;
+defm V_FFBH_I32 : VOP1Inst <"v_ffbh_i32", VOP_I32_I32, int_amdgcn_sffbh>;
 
 let SchedRW = [WriteDoubleAdd], IsDPMACCInstruction = 1 in {
 defm V_FREXP_EXP_I32_F64 : VOP1Inst <"v_frexp_exp_i32_f64", VOP_I32_F64_SPECIAL_OMOD, int_amdgcn_frexp_exp>;

@@ -145,4 +145,4 @@ LIBC_INLINE constexpr float acosf(float x) {
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC___SUPPORT_MATH_ACOS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_ACOSF_H

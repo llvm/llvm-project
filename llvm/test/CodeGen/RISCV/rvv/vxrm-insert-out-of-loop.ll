@@ -293,16 +293,16 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV64X60-NEXT:  # %bb.2: # %for.cond1.preheader.us.preheader
 ; RV64X60-NEXT:    addi sp, sp, -48
 ; RV64X60-NEXT:    .cfi_def_cfa_offset 48
-; RV64X60-NEXT:    sd s0, 40(sp) # 8-byte Folded Spill
-; RV64X60-NEXT:    sd s1, 32(sp) # 8-byte Folded Spill
-; RV64X60-NEXT:    sd s2, 24(sp) # 8-byte Folded Spill
-; RV64X60-NEXT:    sd s3, 16(sp) # 8-byte Folded Spill
 ; RV64X60-NEXT:    sd s4, 8(sp) # 8-byte Folded Spill
-; RV64X60-NEXT:    .cfi_offset s0, -8
-; RV64X60-NEXT:    .cfi_offset s1, -16
-; RV64X60-NEXT:    .cfi_offset s2, -24
-; RV64X60-NEXT:    .cfi_offset s3, -32
+; RV64X60-NEXT:    sd s3, 16(sp) # 8-byte Folded Spill
+; RV64X60-NEXT:    sd s2, 24(sp) # 8-byte Folded Spill
+; RV64X60-NEXT:    sd s1, 32(sp) # 8-byte Folded Spill
+; RV64X60-NEXT:    sd s0, 40(sp) # 8-byte Folded Spill
 ; RV64X60-NEXT:    .cfi_offset s4, -40
+; RV64X60-NEXT:    .cfi_offset s3, -32
+; RV64X60-NEXT:    .cfi_offset s2, -24
+; RV64X60-NEXT:    .cfi_offset s1, -16
+; RV64X60-NEXT:    .cfi_offset s0, -8
 ; RV64X60-NEXT:    li t0, 0
 ; RV64X60-NEXT:    li t1, 0
 ; RV64X60-NEXT:    addi s1, a7, -1
@@ -401,16 +401,16 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV64X60-NEXT:    bne s0, s2, .LBB0_10
 ; RV64X60-NEXT:    j .LBB0_3
 ; RV64X60-NEXT:  .LBB0_11:
-; RV64X60-NEXT:    ld s0, 40(sp) # 8-byte Folded Reload
-; RV64X60-NEXT:    ld s1, 32(sp) # 8-byte Folded Reload
-; RV64X60-NEXT:    ld s2, 24(sp) # 8-byte Folded Reload
-; RV64X60-NEXT:    ld s3, 16(sp) # 8-byte Folded Reload
 ; RV64X60-NEXT:    ld s4, 8(sp) # 8-byte Folded Reload
-; RV64X60-NEXT:    .cfi_restore s0
-; RV64X60-NEXT:    .cfi_restore s1
-; RV64X60-NEXT:    .cfi_restore s2
-; RV64X60-NEXT:    .cfi_restore s3
+; RV64X60-NEXT:    ld s3, 16(sp) # 8-byte Folded Reload
+; RV64X60-NEXT:    ld s2, 24(sp) # 8-byte Folded Reload
+; RV64X60-NEXT:    ld s1, 32(sp) # 8-byte Folded Reload
+; RV64X60-NEXT:    ld s0, 40(sp) # 8-byte Folded Reload
 ; RV64X60-NEXT:    .cfi_restore s4
+; RV64X60-NEXT:    .cfi_restore s3
+; RV64X60-NEXT:    .cfi_restore s2
+; RV64X60-NEXT:    .cfi_restore s1
+; RV64X60-NEXT:    .cfi_restore s0
 ; RV64X60-NEXT:    addi sp, sp, 48
 ; RV64X60-NEXT:    .cfi_def_cfa_offset 0
 ; RV64X60-NEXT:  .LBB0_12: # %for.cond.cleanup

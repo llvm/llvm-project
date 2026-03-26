@@ -241,6 +241,8 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
     BFloat16Format = &llvm::APFloat::BFloat();
   }
 
+  // TODO: This is not really true for targets without half support, but also
+  // should just be assumed true for the dummy target.
   HasFastHalfType = true;
   HasFloat16 = true;
   WavefrontSize = (GPUFeatures & llvm::AMDGPU::FEATURE_WAVE32) ? 32 : 64;
@@ -303,6 +305,8 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__HAS_FP64__");
   if (hasFastFMA())
     Builder.defineMacro("FP_FAST_FMA");
+  if (HasFastHalfType)
+    Builder.defineMacro("FP_FAST_FMA_HALF");
 
   Builder.defineMacro("__AMDGCN_CUMODE__", Twine(CUMode));
 

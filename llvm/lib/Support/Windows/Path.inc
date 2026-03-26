@@ -1710,6 +1710,10 @@ std::error_code real_path(const Twine &path, SmallVectorImpl<char> &dest,
   return std::error_code();
 }
 
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnested-anon-types"
+#endif
 // This struct is normally only available in the Windows Driver Kit (WDK)
 // headers, not in the standard Windows SDK.
 struct LLVM_REPARSE_DATA_BUFFER {
@@ -1737,6 +1741,9 @@ struct LLVM_REPARSE_DATA_BUFFER {
     } GenericReparseBuffer;
   };
 };
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 
 std::error_code readlink(const Twine &path, SmallVectorImpl<char> &dest) {
   dest.clear();

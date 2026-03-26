@@ -138,7 +138,7 @@ class Builder:
         cc_type = cc_name
         # A triple prefix of compiler name: <armv7-none-linux-gnu->gcc
         cc_prefix = ""
-        if not "clang-cl" in cc_name and not "llvm-gcc" in cc_name:
+        if "clang-cl" not in cc_name:
             cc_name_parts = cc_name.split("-")
             cc_type = cc_name_parts[-1]
             if len(cc_name_parts) > 1:
@@ -147,7 +147,6 @@ class Builder:
         # A kind of C++ compiler.
         cxx_types = {
             "icc": "icpc",
-            "llvm-gcc": "llvm-g++",
             "gcc": "g++",
             "cc": "c++",
             "clang": "clang++",

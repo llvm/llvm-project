@@ -5,6 +5,8 @@ from lldbsuite.test import lldbutil
 
 
 class TestOrderedSet(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def test_ordered_set(self):
         self.build()
         self.run_tests()

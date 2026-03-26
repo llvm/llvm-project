@@ -97,7 +97,7 @@ ObjectFileCOFF::CreateInstance(const ModuleSP &module_sp,
     return nullptr;
   }
 
-  LLDB_LOG(log, "ObjectFileCOFF::ObjectFileCOFF module = {1} ({2}), file = {3}",
+  LLDB_LOG(log, "ObjectFileCOFF::ObjectFileCOFF module = {0} ({1}), file = {2}",
            module_sp.get(), module_sp->GetSpecificationDescription(),
            file->GetPath());
 

@@ -170,6 +170,9 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
           args.getLastArg(clang::options::OPT_dwarf_debug_flags))
     opts.DwarfDebugFlags = arg->getValue();
 
+  opts.DebugInfoForProfiling =
+      args.hasArg(clang::options::OPT_fdebug_info_for_profiling);
+
   return true;
 }
 

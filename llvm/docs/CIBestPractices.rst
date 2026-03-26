@@ -155,6 +155,24 @@ Note that it is not always possible to enable this (e.g., issues that use a
 ``workflow_run`` trigger). But when possible, this makes testing the workflow
 much simpler.
 
+Disable Credential Persistance
+------------------------------
+
+Github's ``actions/checkout`` action will by default leave credentials from
+the default Github token inside the git checkout it creates. This can present
+a security risk as someone might be able to exfiltrate the token if they are
+able to read any files within the git repository. This should be disabled by
+default as follows:
+
+.. code-block:: yaml
+
+  uses: actions/checkout@<commit SHA> # <version number>
+  with:
+    persist-credentials: false
+
+It is acceptable to leave credential persistence enabled if necessary, but one
+should be extra cautious when doing so.
+
 Container Best Practices
 ========================
 

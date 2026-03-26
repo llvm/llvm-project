@@ -12,6 +12,7 @@
 
 #include "CGBlocks.h"
 #include "CGCleanup.h"
+#include "CGObjCMacConstantLiteralUtil.h"
 #include "CGObjCRuntime.h"
 #include "CGRecordLayout.h"
 #include "CodeGenFunction.h"
@@ -39,6 +40,7 @@
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdio>
+#include <numeric>
 
 using namespace clang;
 using namespace CodeGen;
@@ -733,7 +735,10 @@ enum class ObjCLabelType {
   LayoutBitMap,
 };
 
+using namespace CGObjCMacConstantLiteralUtil;
+
 class CGObjCCommonMac : public CodeGen::CGObjCRuntime {
+
 public:
   class SKIP_SCAN {
   public:
@@ -906,11 +911,35 @@ protected:
   /// Cached reference to the class for constant strings. This value has type
   /// int * but is actually an Obj-C class pointer.
   llvm::WeakTrackingVH ConstantStringClassRef;
+  llvm::WeakTrackingVH ConstantArrayClassRef;
+  llvm::WeakTrackingVH ConstantDictionaryClassRef;
+
+  llvm::WeakTrackingVH ConstantIntegerNumberClassRef;
+  llvm::WeakTrackingVH ConstantFloatNumberClassRef;
+  llvm::WeakTrackingVH ConstantDoubleNumberClassRef;
 
   /// The LLVM type corresponding to NSConstantString.
   llvm::StructType *NSConstantStringType = nullptr;
+  llvm::StructType *NSConstantArrayType = nullptr;
+  llvm::StructType *NSConstantDictionaryType = nullptr;
+
+  llvm::StructType *NSConstantIntegerNumberType = nullptr;
+  llvm::StructType *NSConstantFloatNumberType = nullptr;
+  llvm::StructType *NSConstantDoubleNumberType = nullptr;
 
   llvm::StringMap<llvm::GlobalVariable *> NSConstantStringMap;
+
+  /// Uniqued CF boolean singletons
+  llvm::GlobalVariable *DefinedCFBooleanTrue = nullptr;
+  llvm::GlobalVariable *DefinedCFBooleanFalse = nullptr;
+
+  /// Uniqued `NSNumber`s
+  llvm::DenseMap<NSConstantNumberMapInfo, llvm::GlobalVariable *>
+      NSConstantNumberMap;
+
+  /// Cached empty collection singletons
+  llvm::GlobalVariable *DefinedEmptyNSDictionary = nullptr;
+  llvm::GlobalVariable *DefinedEmptyNSArray = nullptr;
 
   /// GetMethodVarName - Return a unique constant for the given
   /// selector's name. The return value has type char *.
@@ -1013,6 +1042,38 @@ protected:
 
   std::string GetSectionName(StringRef Section, StringRef MachOAttributes);
 
+  /// Returns the section name to use for NSNumber integer literals.
+  static constexpr llvm::StringLiteral GetNSConstantIntegerNumberSectionName() {
+    return "__DATA,__objc_intobj,regular,no_dead_strip";
+  }
+
+  /// Returns the section name to use for NSNumber float literals.
+  static constexpr llvm::StringLiteral GetNSConstantFloatNumberSectionName() {
+    return "__DATA,__objc_floatobj,regular,no_dead_strip";
+  }
+
+  /// Returns the section name to use for NSNumber double literals.
+  static constexpr llvm::StringLiteral GetNSConstantDoubleNumberSectionName() {
+    return "__DATA,__objc_doubleobj,regular,no_dead_strip";
+  }
+
+  /// Returns the section name used for the internal ID arrays
+  /// used by `NSConstantArray` and `NSConstantDictionary`.
+  static constexpr llvm::StringLiteral
+  GetNSConstantCollectionStorageSectionName() {
+    return "__DATA,__objc_arraydata,regular,no_dead_strip";
+  }
+
+  /// Returns the section name to use for NSArray literals.
+  static constexpr llvm::StringLiteral GetNSConstantArraySectionName() {
+    return "__DATA,__objc_arrayobj,regular,no_dead_strip";
+  }
+
+  /// Returns the section name to use for NSDictionary literals.
+  static constexpr llvm::StringLiteral GetNSConstantDictionarySectionName() {
+    return "__DATA,__objc_dictobj,regular,no_dead_strip";
+  }
+
 public:
   /// CreateMetadataVar - Create a global variable with internal
   /// linkage for use by the Objective-C runtime.
@@ -1061,8 +1122,93 @@ public:
 
   bool isNonFragileABI() const { return ObjCABI == 2; }
 
+  /// Emits, and caches, a reference to the `__kCFBooleanTrue` singleton.
+  llvm::GlobalVariable *EmitConstantCFBooleanTrue() {
+    if (DefinedCFBooleanTrue)
+      return DefinedCFBooleanTrue;
+
+    assert(CGM.getLangOpts().ObjCRuntime.hasConstantCFBooleans() &&
+           "The current ABI doesn't support the constant CFBooleanTrue "
+           "singleton!");
+
+    DefinedCFBooleanTrue = cast<llvm::GlobalVariable>(
+        CGM.CreateRuntimeVariable(CGM.DefaultPtrTy, "__kCFBooleanTrue"));
+    DefinedCFBooleanTrue->addAttribute("objc_arc_inert");
+    return DefinedCFBooleanTrue;
+  }
+
+  /// Emits, and caches, a reference to the `__kCFBooleanFalse` singleton.
+  llvm::GlobalVariable *EmitConstantCFBooleanFalse() {
+    if (DefinedCFBooleanFalse)
+      return DefinedCFBooleanFalse;
+
+    assert(CGM.getLangOpts().ObjCRuntime.hasConstantCFBooleans() &&
+           "The current ABI doesn't support the constant CFBooleanFalse "
+           "singleton!");
+
+    DefinedCFBooleanFalse = cast<llvm::GlobalVariable>(
+        CGM.CreateRuntimeVariable(CGM.DefaultPtrTy, "__kCFBooleanFalse"));
+    DefinedCFBooleanFalse->addAttribute("objc_arc_inert");
+    return DefinedCFBooleanFalse;
+  }
+
+  /// Emits, and caches, a reference to the empty dictionary singleton.
+  llvm::GlobalVariable *EmitEmptyConstantNSDictionary() {
+    if (DefinedEmptyNSDictionary)
+      return DefinedEmptyNSDictionary;
+
+    assert(CGM.getLangOpts().ObjCRuntime.hasConstantEmptyCollections() &&
+           "The current ABI doesn't support an empty constant NSDictionary "
+           "singleton!");
+
+    DefinedEmptyNSDictionary = cast<llvm::GlobalVariable>(
+        CGM.CreateRuntimeVariable(CGM.DefaultPtrTy, "__NSDictionary0__struct"));
+    DefinedEmptyNSDictionary->addAttribute("objc_arc_inert");
+    return DefinedEmptyNSDictionary;
+  }
+
+  /// Emits, and caches, a reference to the empty array singleton.
+  llvm::GlobalVariable *EmitEmptyConstantNSArray() {
+    if (DefinedEmptyNSArray)
+      return DefinedEmptyNSArray;
+
+    assert(
+        CGM.getLangOpts().ObjCRuntime.hasConstantEmptyCollections() &&
+        "The current ABI doesn't support an empty constant NSArray singleton!");
+
+    DefinedEmptyNSArray = cast<llvm::GlobalVariable>(
+        CGM.CreateRuntimeVariable(CGM.DefaultPtrTy, "__NSArray0__struct"));
+    DefinedEmptyNSArray->addAttribute("objc_arc_inert");
+    return DefinedEmptyNSArray;
+  }
+
   ConstantAddress GenerateConstantString(const StringLiteral *SL) override;
+
+  ConstantAddress GenerateConstantNumber(const bool Value,
+                                         const QualType &Ty) override;
+  ConstantAddress GenerateConstantNumber(const llvm::APSInt &Value,
+                                         const QualType &Ty) override;
+  ConstantAddress GenerateConstantNumber(const llvm::APFloat &Value,
+                                         const QualType &Ty) override;
+  ConstantAddress
+  GenerateConstantArray(const ArrayRef<llvm::Constant *> &Objects) override;
+  ConstantAddress GenerateConstantDictionary(
+      const ObjCDictionaryLiteral *E,
+      ArrayRef<std::pair<llvm::Constant *, llvm::Constant *>> KeysAndObjects)
+      override;
+
   ConstantAddress GenerateConstantNSString(const StringLiteral *SL);
+  ConstantAddress GenerateConstantNSNumber(const bool Value,
+                                           const QualType &Ty);
+  ConstantAddress GenerateConstantNSNumber(const llvm::APSInt &Value,
+                                           const QualType &Ty);
+  ConstantAddress GenerateConstantNSNumber(const llvm::APFloat &Value,
+                                           const QualType &Ty);
+  ConstantAddress
+  GenerateConstantNSArray(const ArrayRef<llvm::Constant *> &Objects);
+  ConstantAddress GenerateConstantNSDictionary(
+      const ObjCDictionaryLiteral *E,
+      ArrayRef<std::pair<llvm::Constant *, llvm::Constant *>> KeysAndObjects);
 
   llvm::Function *
   GenerateMethod(const ObjCMethodDecl *OMD,
@@ -1099,6 +1245,12 @@ public:
   virtual llvm::Constant *GetOrEmitProtocolRef(const ObjCProtocolDecl *PD) = 0;
 
   virtual llvm::Constant *getNSConstantStringClassRef() = 0;
+  virtual llvm::Constant *getNSConstantArrayClassRef() = 0;
+  virtual llvm::Constant *getNSConstantDictionaryClassRef() = 0;
+
+  virtual llvm::Constant *getNSConstantIntegerNumberClassRef() = 0;
+  virtual llvm::Constant *getNSConstantFloatNumberClassRef() = 0;
+  virtual llvm::Constant *getNSConstantDoubleNumberClassRef() = 0;
 
   llvm::Constant *BuildGCBlockLayout(CodeGen::CodeGenModule &CGM,
                                      const CGBlockInfo &blockInfo) override;
@@ -1112,6 +1264,8 @@ public:
 
 private:
   void fillRunSkipBlockVars(CodeGenModule &CGM, const CGBlockInfo &blockInfo);
+  llvm::GlobalVariable *EmitNSConstantCollectionLiteralArrayStorage(
+      const ArrayRef<llvm::Constant *> &Elements);
 };
 
 namespace {
@@ -1295,6 +1449,12 @@ public:
   CGObjCMac(CodeGen::CodeGenModule &cgm);
 
   llvm::Constant *getNSConstantStringClassRef() override;
+  llvm::Constant *getNSConstantArrayClassRef() override;
+  llvm::Constant *getNSConstantDictionaryClassRef() override;
+
+  llvm::Constant *getNSConstantIntegerNumberClassRef() override;
+  llvm::Constant *getNSConstantFloatNumberClassRef() override;
+  llvm::Constant *getNSConstantDoubleNumberClassRef() override;
 
   llvm::Function *ModuleInitFunction() override;
 
@@ -1577,6 +1737,12 @@ public:
   CGObjCNonFragileABIMac(CodeGen::CodeGenModule &cgm);
 
   llvm::Constant *getNSConstantStringClassRef() override;
+  llvm::Constant *getNSConstantArrayClassRef() override;
+  llvm::Constant *getNSConstantDictionaryClassRef() override;
+
+  llvm::Constant *getNSConstantIntegerNumberClassRef() override;
+  llvm::Constant *getNSConstantFloatNumberClassRef() override;
+  llvm::Constant *getNSConstantDoubleNumberClassRef() override;
 
   llvm::Function *ModuleInitFunction() override;
 
@@ -1907,6 +2073,34 @@ CGObjCCommonMac::GenerateConstantString(const StringLiteral *SL) {
               : GenerateConstantNSString(SL));
 }
 
+ConstantAddress CGObjCCommonMac::GenerateConstantNumber(const bool Value,
+                                                        const QualType &Ty) {
+  return GenerateConstantNSNumber(Value, Ty);
+}
+
+ConstantAddress
+CGObjCCommonMac::GenerateConstantNumber(const llvm::APSInt &Value,
+                                        const QualType &Ty) {
+  return GenerateConstantNSNumber(Value, Ty);
+}
+
+ConstantAddress
+CGObjCCommonMac::GenerateConstantNumber(const llvm::APFloat &Value,
+                                        const QualType &Ty) {
+  return GenerateConstantNSNumber(Value, Ty);
+}
+
+ConstantAddress CGObjCCommonMac::GenerateConstantArray(
+    const ArrayRef<llvm::Constant *> &Objects) {
+  return GenerateConstantNSArray(Objects);
+}
+
+ConstantAddress CGObjCCommonMac::GenerateConstantDictionary(
+    const ObjCDictionaryLiteral *E,
+    ArrayRef<std::pair<llvm::Constant *, llvm::Constant *>> KeysAndObjects) {
+  return GenerateConstantNSDictionary(E, KeysAndObjects);
+}
+
 static llvm::StringMapEntry<llvm::GlobalVariable *> &
 GetConstantStringEntry(llvm::StringMap<llvm::GlobalVariable *> &Map,
                        const StringLiteral *Literal, unsigned &StringLength) {
@@ -1929,6 +2123,27 @@ llvm::Constant *CGObjCMac::getNSConstantStringClassRef() {
   return GV;
 }
 
+llvm::Constant *CGObjCMac::getNSConstantArrayClassRef() {
+  llvm_unreachable("constant array literals not supported for fragile ABI");
+}
+
+llvm::Constant *CGObjCMac::getNSConstantDictionaryClassRef() {
+  llvm_unreachable("constant dictionary literals not supported for fragile "
+                   "ABI");
+}
+
+llvm::Constant *CGObjCMac::getNSConstantIntegerNumberClassRef() {
+  llvm_unreachable("constant number literals not supported for fragile ABI");
+}
+
+llvm::Constant *CGObjCMac::getNSConstantFloatNumberClassRef() {
+  llvm_unreachable("constant number literals not supported for fragile ABI");
+}
+
+llvm::Constant *CGObjCMac::getNSConstantDoubleNumberClassRef() {
+  llvm_unreachable("constant number literals not supported for fragile ABI");
+}
+
 llvm::Constant *CGObjCNonFragileABIMac::getNSConstantStringClassRef() {
   if (llvm::Value *V = ConstantStringClassRef)
     return cast<llvm::Constant>(V);
@@ -1938,6 +2153,76 @@ llvm::Constant *CGObjCNonFragileABIMac::getNSConstantStringClassRef() {
                                         : "OBJC_CLASS_$_" + StringClass;
   llvm::Constant *GV = GetClassGlobal(str, NotForDefinition);
   ConstantStringClassRef = GV;
+  return GV;
+}
+
+llvm::Constant *CGObjCNonFragileABIMac::getNSConstantArrayClassRef() {
+  if (llvm::Value *V = ConstantArrayClassRef)
+    return cast<llvm::Constant>(V);
+
+  const std::string &ArrayClass = CGM.getLangOpts().ObjCConstantArrayClass;
+  std::string Str = ArrayClass.empty() ? "OBJC_CLASS_$_NSConstantArray"
+                                       : "OBJC_CLASS_$_" + ArrayClass;
+  llvm::Constant *GV = GetClassGlobal(Str, NotForDefinition);
+
+  ConstantArrayClassRef = GV;
+  return GV;
+}
+
+llvm::Constant *CGObjCNonFragileABIMac::getNSConstantDictionaryClassRef() {
+  if (llvm::Value *V = ConstantDictionaryClassRef)
+    return cast<llvm::Constant>(V);
+
+  const std::string &DictionaryClass =
+      CGM.getLangOpts().ObjCConstantDictionaryClass;
+  std::string Str = DictionaryClass.empty()
+                        ? "OBJC_CLASS_$_NSConstantDictionary"
+                        : "OBJC_CLASS_$_" + DictionaryClass;
+  llvm::Constant *GV = GetClassGlobal(Str, NotForDefinition);
+
+  ConstantDictionaryClassRef = GV;
+  return GV;
+}
+
+llvm::Constant *CGObjCNonFragileABIMac::getNSConstantIntegerNumberClassRef() {
+  if (llvm::Value *V = ConstantIntegerNumberClassRef)
+    return cast<llvm::Constant>(V);
+
+  const std::string &NumberClass =
+      CGM.getLangOpts().ObjCConstantIntegerNumberClass;
+  std::string Str = NumberClass.empty() ? "OBJC_CLASS_$_NSConstantIntegerNumber"
+                                        : "OBJC_CLASS_$_" + NumberClass;
+  llvm::Constant *GV = GetClassGlobal(Str, NotForDefinition);
+
+  ConstantIntegerNumberClassRef = GV;
+  return GV;
+}
+
+llvm::Constant *CGObjCNonFragileABIMac::getNSConstantFloatNumberClassRef() {
+  if (llvm::Value *V = ConstantFloatNumberClassRef)
+    return cast<llvm::Constant>(V);
+
+  const std::string &NumberClass =
+      CGM.getLangOpts().ObjCConstantFloatNumberClass;
+  std::string Str = NumberClass.empty() ? "OBJC_CLASS_$_NSConstantFloatNumber"
+                                        : "OBJC_CLASS_$_" + NumberClass;
+  llvm::Constant *GV = GetClassGlobal(Str, NotForDefinition);
+
+  ConstantFloatNumberClassRef = GV;
+  return GV;
+}
+
+llvm::Constant *CGObjCNonFragileABIMac::getNSConstantDoubleNumberClassRef() {
+  if (llvm::Value *V = ConstantDoubleNumberClassRef)
+    return cast<llvm::Constant>(V);
+
+  const std::string &NumberClass =
+      CGM.getLangOpts().ObjCConstantDoubleNumberClass;
+  std::string Str = NumberClass.empty() ? "OBJC_CLASS_$_NSConstantDoubleNumber"
+                                        : "OBJC_CLASS_$_" + NumberClass;
+  llvm::Constant *GV = GetClassGlobal(Str, NotForDefinition);
+
+  ConstantDoubleNumberClassRef = GV;
   return GV;
 }
 
@@ -1956,6 +2241,9 @@ CGObjCCommonMac::GenerateConstantNSString(const StringLiteral *Literal) {
 
   // If we don't already have it, construct the type for a constant NSString.
   if (!NSConstantStringType) {
+    // NOTE: The existing implementation used a pointer to a Int32Ty not a
+    // struct pointer as the ISA type when emitting constant strings so this is
+    // maintained for now
     NSConstantStringType =
         llvm::StructType::create({CGM.DefaultPtrTy, CGM.Int8PtrTy, CGM.IntTy},
                                  "struct.__builtin_NSString");
@@ -2000,6 +2288,354 @@ CGObjCCommonMac::GenerateConstantNSString(const StringLiteral *Literal) {
                      ? NSStringNonFragileABISection
                      : NSStringSection);
   Entry.second = GV;
+
+  return ConstantAddress(GV, GV->getValueType(), Alignment);
+}
+
+/// Emit the boolean singletons for BOOL literals @YES @NO
+ConstantAddress CGObjCCommonMac::GenerateConstantNSNumber(const bool Value,
+                                                          const QualType &Ty) {
+  llvm::GlobalVariable *Val =
+      Value ? EmitConstantCFBooleanTrue() : EmitConstantCFBooleanFalse();
+  return ConstantAddress(Val, Val->getValueType(), CGM.getPointerAlign());
+}
+
+/// Generate a constant NSConstantIntegerNumber from an ObjC integer literal
+/*
+  struct __builtin_NSConstantIntegerNumber {
+    struct._class_t *isa; // point to _NSConstantIntegerNumberClassReference
+    char const *const _encoding;
+    long long const _value;
+  };
+*/
+ConstantAddress
+CGObjCCommonMac::GenerateConstantNSNumber(const llvm::APSInt &Value,
+                                          const QualType &Ty) {
+  CharUnits Alignment = CGM.getPointerAlign();
+
+  // check if we've already emitted, if so emit a reference to it
+  llvm::GlobalVariable *&Entry =
+      NSConstantNumberMap[{CGM.getContext().getCanonicalType(Ty), Value}];
+  if (Entry) {
+    return ConstantAddress(Entry, Entry->getValueType(), Alignment);
+  }
+
+  // The encoding type
+  std::string ObjCEncodingType;
+  CodeGenFunction(CGM).getContext().getObjCEncodingForType(Ty,
+                                                           ObjCEncodingType);
+
+  llvm::Constant *const Class = getNSConstantIntegerNumberClassRef();
+
+  if (!NSConstantIntegerNumberType) {
+    NSConstantIntegerNumberType = llvm::StructType::create(
+        {
+            CGM.DefaultPtrTy, // isa
+            CGM.Int8PtrTy,    // _encoding
+            CGM.Int64Ty,      // _value
+        },
+        "struct.__builtin_NSConstantIntegerNumber");
+  }
+
+  ConstantInitBuilder Builder(CGM);
+  auto Fields = Builder.beginStruct(NSConstantIntegerNumberType);
+
+  // Class pointer.
+  Fields.add(Class);
+
+  // add the @encode
+  Fields.add(CGM.GetAddrOfConstantCString(ObjCEncodingType).getPointer());
+
+  // add the value stored.
+  llvm::Constant *IntegerValue =
+      llvm::ConstantInt::get(CGM.Int64Ty, Value.extOrTrunc(64));
+
+  Fields.add(IntegerValue);
+
+  // The struct
+  llvm::GlobalVariable *const GV = Fields.finishAndCreateGlobal(
+      "_unnamed_nsconstantintegernumber_", Alignment,
+      /* constant */ true, llvm::GlobalVariable::PrivateLinkage);
+
+  GV->setSection(GetNSConstantIntegerNumberSectionName());
+  GV->addAttribute("objc_arc_inert");
+
+  Entry = GV;
+
+  return ConstantAddress(GV, GV->getValueType(), Alignment);
+}
+
+/// Generate either a constant NSConstantFloatNumber or NSConstantDoubleNumber
+/*
+  struct __builtin_NSConstantFloatNumber {
+    struct._class_t *isa;
+    float const _value;
+  };
+
+  struct __builtin_NSConstantDoubleNumber {
+    struct._class_t *isa;
+    double const _value;
+  };
+*/
+ConstantAddress
+CGObjCCommonMac::GenerateConstantNSNumber(const llvm::APFloat &Value,
+                                          const QualType &Ty) {
+  CharUnits Alignment = CGM.getPointerAlign();
+
+  // check if we've already emitted, if so emit a reference to it
+  llvm::GlobalVariable *&Entry =
+      NSConstantNumberMap[{CGM.getContext().getCanonicalType(Ty), Value}];
+  if (Entry) {
+    return ConstantAddress(Entry, Entry->getValueType(), Alignment);
+  }
+
+  // @encode type used to pick which class type to use
+  std::string ObjCEncodingType;
+  CodeGenFunction(CGM).getContext().getObjCEncodingForType(Ty,
+                                                           ObjCEncodingType);
+
+  assert((ObjCEncodingType == "d" || ObjCEncodingType == "f") &&
+         "Unexpected or unknown ObjCEncodingType used in constant NSNumber");
+
+  llvm::GlobalValue::LinkageTypes Linkage =
+      llvm::GlobalVariable::PrivateLinkage;
+
+  // Handle floats
+  if (ObjCEncodingType == "f") {
+    llvm::Constant *const Class = getNSConstantFloatNumberClassRef();
+
+    if (!NSConstantFloatNumberType) {
+      NSConstantFloatNumberType = llvm::StructType::create(
+          {
+              CGM.DefaultPtrTy, // isa
+              CGM.FloatTy,      // _value
+          },
+          "struct.__builtin_NSConstantFloatNumber");
+    }
+
+    ConstantInitBuilder Builder(CGM);
+    auto Fields = Builder.beginStruct(NSConstantFloatNumberType);
+
+    // Class pointer.
+    Fields.add(Class);
+
+    // add the value stored.
+    llvm::Constant *FV = llvm::ConstantFP::get(CGM.FloatTy, Value);
+    Fields.add(FV);
+
+    // The struct
+    llvm::GlobalVariable *const GV = Fields.finishAndCreateGlobal(
+        "_unnamed_nsconstantfloatnumber_", Alignment,
+        /*constant*/ true, Linkage);
+
+    GV->setSection(GetNSConstantFloatNumberSectionName());
+    GV->addAttribute("objc_arc_inert");
+
+    Entry = GV;
+
+    return ConstantAddress(GV, GV->getValueType(), Alignment);
+  }
+
+  llvm::Constant *const Class = getNSConstantDoubleNumberClassRef();
+  if (!NSConstantDoubleNumberType) {
+    // NOTE: this will be padded on some 32-bit targets and is expected
+    NSConstantDoubleNumberType = llvm::StructType::create(
+        {
+            CGM.DefaultPtrTy, // isa
+            CGM.DoubleTy,     // _value
+        },
+        "struct.__builtin_NSConstantDoubleNumber");
+  }
+
+  ConstantInitBuilder Builder(CGM);
+  auto Fields = Builder.beginStruct(NSConstantDoubleNumberType);
+
+  // Class pointer.
+  Fields.add(Class);
+
+  // add the value stored.
+  llvm::Constant *DV = llvm::ConstantFP::get(CGM.DoubleTy, Value);
+  Fields.add(DV);
+
+  // The struct
+  llvm::GlobalVariable *const GV = Fields.finishAndCreateGlobal(
+      "_unnamed_nsconstantdoublenumber_", Alignment,
+      /*constant*/ true, Linkage);
+
+  GV->setSection(GetNSConstantDoubleNumberSectionName());
+  GV->addAttribute("objc_arc_inert");
+
+  Entry = GV;
+
+  return ConstantAddress(GV, GV->getValueType(), Alignment);
+}
+
+/// Shared private method to emit the id array storage for constant NSArray and
+/// NSDictionary literals
+llvm::GlobalVariable *
+CGObjCCommonMac::EmitNSConstantCollectionLiteralArrayStorage(
+    const ArrayRef<llvm::Constant *> &Elements) {
+  llvm::Type *ElementsTy = Elements[0]->getType();
+  llvm::ArrayType *ArrayTy = llvm::ArrayType::get(ElementsTy, Elements.size());
+
+  llvm::Constant *const ArrayData = llvm::ConstantArray::get(ArrayTy, Elements);
+
+  llvm::GlobalVariable *ObjectsGV = new llvm::GlobalVariable(
+      CGM.getModule(), ArrayTy, true, llvm::GlobalValue::InternalLinkage,
+      ArrayData, "_unnamed_array_storage");
+
+  ObjectsGV->setAlignment(CGM.getPointerAlign().getAsAlign());
+  ObjectsGV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+  ObjectsGV->setSection(GetNSConstantCollectionStorageSectionName());
+  return ObjectsGV;
+}
+
+/// Generate a constant NSConstantArray from an ObjC array literal
+/*
+  struct __builtin_NSArray {
+    struct._class_t *isa;
+    NSUInteger const _count;
+    id const *const _objects;
+  };
+*/
+ConstantAddress CGObjCCommonMac::GenerateConstantNSArray(
+    const ArrayRef<llvm::Constant *> &Objects) {
+  CharUnits Alignment = CGM.getPointerAlign();
+
+  if (Objects.size() == 0) {
+    llvm::GlobalVariable *GV = EmitEmptyConstantNSArray();
+    return ConstantAddress(GV, GV->getValueType(), Alignment);
+  }
+
+  ASTContext &Context = CGM.getContext();
+  CodeGenTypes &Types = CGM.getTypes();
+  llvm::Constant *const Class = getNSConstantArrayClassRef();
+  llvm::Type *const NSUIntegerTy =
+      Types.ConvertType(Context.getNSUIntegerType());
+
+  if (!NSConstantArrayType) {
+    NSConstantArrayType = llvm::StructType::create(
+        {
+            CGM.DefaultPtrTy, // isa
+            NSUIntegerTy,     // _count
+            CGM.DefaultPtrTy, // _objects
+        },
+        "struct.__builtin_NSArray");
+  }
+
+  ConstantInitBuilder Builder(CGM);
+  auto Fields = Builder.beginStruct(NSConstantArrayType);
+
+  // Class pointer.
+  Fields.add(Class);
+
+  // count
+  uint64_t ObjectCount = Objects.size();
+  llvm::Constant *Count = llvm::ConstantInt::get(NSUIntegerTy, ObjectCount);
+  Fields.add(Count);
+
+  // objects
+  llvm::GlobalVariable *ObjectsGV =
+      EmitNSConstantCollectionLiteralArrayStorage(Objects);
+  Fields.add(ObjectsGV);
+
+  // The struct
+  llvm::GlobalVariable *GV = Fields.finishAndCreateGlobal(
+      "_unnamed_nsarray_", Alignment,
+      /* constant */ true, llvm::GlobalValue::PrivateLinkage);
+
+  GV->setSection(GetNSConstantArraySectionName());
+  GV->addAttribute("objc_arc_inert");
+
+  return ConstantAddress(GV, GV->getValueType(), Alignment);
+}
+
+/// Generate a constant NSConstantDictionary from an ObjC dictionary literal
+/*
+  struct __builtin_NSDictionary {
+    struct._class_t *isa;
+    NSUInteger const _hashOptions;
+    NSUInteger const _count;
+    id const *const _keys;
+    id const *const _objects;
+  };
+ */
+ConstantAddress CGObjCCommonMac::GenerateConstantNSDictionary(
+    const ObjCDictionaryLiteral *E,
+    ArrayRef<std::pair<llvm::Constant *, llvm::Constant *>> KeysAndObjects) {
+  CharUnits Alignment = CGM.getPointerAlign();
+
+  if (KeysAndObjects.size() == 0) {
+    llvm::GlobalVariable *GV = EmitEmptyConstantNSDictionary();
+    return ConstantAddress(GV, GV->getValueType(), Alignment);
+  }
+
+  ASTContext &Context = CGM.getContext();
+  CodeGenTypes &Types = CGM.getTypes();
+  llvm::Constant *const Class = getNSConstantDictionaryClassRef();
+
+  llvm::Type *const NSUIntegerTy =
+      Types.ConvertType(Context.getNSUIntegerType());
+
+  if (!NSConstantDictionaryType) {
+    NSConstantDictionaryType = llvm::StructType::create(
+        {
+            CGM.DefaultPtrTy, // isa
+            NSUIntegerTy,     // _hashOptions
+            NSUIntegerTy,     // _count
+            CGM.DefaultPtrTy, // _keys
+            CGM.DefaultPtrTy, // _objects
+        },
+        "struct.__builtin_NSDictionary");
+  }
+
+  ConstantInitBuilder Builder(CGM);
+  auto Fields = Builder.beginStruct(NSConstantDictionaryType);
+
+  // Class pointer.
+  Fields.add(Class);
+
+  // Use the hashing helper to manage the keys and sorting
+  auto HashOpts(NSDictionaryBuilder::Options::Sorted);
+  NSDictionaryBuilder DictBuilder(E, KeysAndObjects, HashOpts);
+
+  // Ask `HashBuilder` for the fully sorted keys / values and the count
+  uint64_t const NumElements = DictBuilder.getNumElements();
+
+  llvm::Constant *OptionsConstant = llvm::ConstantInt::get(
+      NSUIntegerTy, static_cast<uint64_t>(DictBuilder.getOptions()));
+  Fields.add(OptionsConstant);
+
+  // count
+  llvm::Constant *Count = llvm::ConstantInt::get(NSUIntegerTy, NumElements);
+  Fields.add(Count);
+
+  // Split sorted pairs into separate keys and objects arrays for storage.
+  SmallVector<llvm::Constant *, 16> SortedKeys, SortedObjects;
+  SortedKeys.reserve(NumElements);
+  SortedObjects.reserve(NumElements);
+  for (auto &[Key, Obj] : DictBuilder.getElements()) {
+    SortedKeys.push_back(Key);
+    SortedObjects.push_back(Obj);
+  }
+
+  // keys
+  llvm::GlobalVariable *KeysGV =
+      EmitNSConstantCollectionLiteralArrayStorage(SortedKeys);
+  Fields.add(KeysGV);
+
+  // objects
+  llvm::GlobalVariable *ObjectsGV =
+      EmitNSConstantCollectionLiteralArrayStorage(SortedObjects);
+  Fields.add(ObjectsGV);
+
+  // The struct
+  llvm::GlobalVariable *GV = Fields.finishAndCreateGlobal(
+      "_unnamed_nsdictionary_", Alignment,
+      /* constant */ true, llvm::GlobalValue::PrivateLinkage);
+
+  GV->setSection(GetNSConstantDictionarySectionName());
+  GV->addAttribute("objc_arc_inert");
 
   return ConstantAddress(GV, GV->getValueType(), Alignment);
 }

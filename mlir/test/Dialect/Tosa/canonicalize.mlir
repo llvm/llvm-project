@@ -1388,3 +1388,59 @@ func.func @test_canonicalize_narrowing_cast_i32_to_i8_to_i16(%arg0: tensor<13x21
   %1 = tosa.cast %0 : (tensor<13x21x3xi8>) -> tensor<13x21x3xi16>
   return %1 : tensor<13x21x3xi16>
 }
+
+// -----
+
+// CHECK-LABEL: @test_canonicalize_cast_from_cast_to_block_scaled_f4E2M1
+// CHECK: return %arg0, %arg1 : tensor<15x3x2x256xf4E2M1FN>, tensor<15x3x2x8xf8E8M0FNU>
+func.func @test_canonicalize_cast_from_cast_to_block_scaled_f4E2M1(%arg0: tensor<15x3x2x256xf4E2M1FN>, %arg1: tensor<15x3x2x8xf8E8M0FNU>) -> (tensor<15x3x2x256xf4E2M1FN>, tensor<15x3x2x8xf8E8M0FNU>) {
+  %0 = tosa.cast_from_block_scaled %arg0, %arg1 {block_size = BLOCK_SIZE_32} : (tensor<15x3x2x256xf4E2M1FN>, tensor<15x3x2x8xf8E8M0FNU>) -> tensor<15x3x2x256xf32>
+  %1, %2 = tosa.cast_to_block_scaled %0 {block_size = BLOCK_SIZE_32} : (tensor<15x3x2x256xf32>) -> (tensor<15x3x2x256xf4E2M1FN>, tensor<15x3x2x8xf8E8M0FNU>)
+  return %1, %2 : tensor<15x3x2x256xf4E2M1FN>, tensor<15x3x2x8xf8E8M0FNU>
+}
+
+// -----
+
+// CHECK-LABEL: @test_canonicalize_cast_from_cast_to_block_scaled_f8E5M2
+// CHECK: return %arg0, %arg1 : tensor<160xf8E5M2>, tensor<5xf8E8M0FNU>
+func.func @test_canonicalize_cast_from_cast_to_block_scaled_f8E5M2(%arg0: tensor<160xf8E5M2>, %arg1: tensor<5xf8E8M0FNU>) -> (tensor<160xf8E5M2>, tensor<5xf8E8M0FNU>) {
+  %0 = tosa.cast_from_block_scaled %arg0, %arg1 {block_size = BLOCK_SIZE_32} : (tensor<160xf8E5M2>, tensor<5xf8E8M0FNU>) -> tensor<160xf32>
+  %1, %2 = tosa.cast_to_block_scaled %0 {block_size = BLOCK_SIZE_32} : (tensor<160xf32>) -> (tensor<160xf8E5M2>, tensor<5xf8E8M0FNU>)
+  return %1, %2 : tensor<160xf8E5M2>, tensor<5xf8E8M0FNU>
+}
+
+// -----
+
+// CHECK-LABEL: @test_do_not_canonicalize_cast_from_cast_to_block_scaled_different_types_f8E5M2_f6E2M3
+// CHECK: %[[values:.+]] = tosa.cast_from_block_scaled %arg0, %arg1
+// CHECK: %[[data:.+]], %[[scales:.+]] = tosa.cast_to_block_scaled %[[values]]
+// CHECK: return %[[data]], %[[scales]] : tensor<160xf6E2M3FN>, tensor<5xf8E8M0FNU>
+func.func @test_do_not_canonicalize_cast_from_cast_to_block_scaled_different_types_f8E5M2_f6E2M3(%arg0: tensor<160xf8E5M2>, %arg1: tensor<5xf8E8M0FNU>) -> (tensor<160xf6E2M3FN>, tensor<5xf8E8M0FNU>) {
+  %0 = tosa.cast_from_block_scaled %arg0, %arg1 {block_size = BLOCK_SIZE_32} : (tensor<160xf8E5M2>, tensor<5xf8E8M0FNU>) -> tensor<160xf32>
+  %1, %2 = tosa.cast_to_block_scaled %0 {block_size = BLOCK_SIZE_32} : (tensor<160xf32>) -> (tensor<160xf6E2M3FN>, tensor<5xf8E8M0FNU>)
+  return %1, %2 : tensor<160xf6E2M3FN>, tensor<5xf8E8M0FNU>
+}
+
+// -----
+
+// CHECK-LABEL: @test_do_not_canonicalize_cast_from_cast_to_block_scaled_different_types_f6E2M3_f6E3M2
+// CHECK: %[[values:.+]] = tosa.cast_from_block_scaled %arg0, %arg1
+// CHECK: %[[data:.+]], %[[scales:.+]] = tosa.cast_to_block_scaled %[[values]]
+// CHECK: return %[[data]], %[[scales]] : tensor<32xf6E3M2FN>, tensor<1xf8E8M0FNU>
+func.func @test_do_not_canonicalize_cast_from_cast_to_block_scaled_different_types_f6E2M3_f6E3M2(%arg0: tensor<32xf6E2M3FN>, %arg1: tensor<1xf8E8M0FNU>) -> (tensor<32xf6E3M2FN>, tensor<1xf8E8M0FNU>) {
+  %0 = tosa.cast_from_block_scaled %arg0, %arg1 {block_size = BLOCK_SIZE_32} : (tensor<32xf6E2M3FN>, tensor<1xf8E8M0FNU>) -> tensor<32xf32>
+  %1, %2 = tosa.cast_to_block_scaled %0 {block_size = BLOCK_SIZE_32} : (tensor<32xf32>) -> (tensor<32xf6E3M2FN>, tensor<1xf8E8M0FNU>)
+  return %1, %2 : tensor<32xf6E3M2FN>, tensor<1xf8E8M0FNU>
+}
+
+// -----
+
+// CHECK-LABEL: @test_do_not_canonicalize_cast_from_cast_to_block_scaled_unranked
+// CHECK: %[[values:.+]] = tosa.cast_from_block_scaled %arg0, %arg1
+// CHECK: %[[data:.+]], %[[scales:.+]] = tosa.cast_to_block_scaled %[[values]]
+// CHECK: return %[[data]], %[[scales]] : tensor<*xf6E2M3FN>, tensor<*xf8E8M0FNU>
+func.func @test_do_not_canonicalize_cast_from_cast_to_block_scaled_unranked(%arg0: tensor<3x64xf6E2M3FN>, %arg1: tensor<3x2xf8E8M0FNU>) -> (tensor<*xf6E2M3FN>, tensor<*xf8E8M0FNU>) {
+  %0 = tosa.cast_from_block_scaled %arg0, %arg1 {block_size = BLOCK_SIZE_32} : (tensor<3x64xf6E2M3FN>, tensor<3x2xf8E8M0FNU>) -> tensor<*xf32>
+  %1, %2 = tosa.cast_to_block_scaled %0 {block_size = BLOCK_SIZE_32} : (tensor<*xf32>) -> (tensor<*xf6E2M3FN>, tensor<*xf8E8M0FNU>)
+  return %1, %2 : tensor<*xf6E2M3FN>, tensor<*xf8E8M0FNU>
+}

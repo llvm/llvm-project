@@ -13,6 +13,7 @@ class TestLinkerSymbols(TestBase):
     # set this to true.  That way it won't be run once for
     # each debug info format.
     NO_DEBUG_INFO_TESTCASE = True
+    SHARED_BUILD_TESTCASE = False
 
     @skipUnlessPlatform(["linux"])
     def test_linker_symbols(self):

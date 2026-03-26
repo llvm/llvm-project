@@ -263,6 +263,7 @@ LLVM_ABI std::string getScopedName(const LVStringRefs &Components,
 // S_DEFRANGE_SUBFIELD_REGISTER             0x1143
 // S_DEFRANGE_FRAMEPOINTER_REL_FULL_SCOPE   0x1144
 // S_DEFRANGE_REGISTER_REL                  0x1145
+// S_DEFRANGE_REGISTER_REL_INDIR            0x1177
 // When recording CodeView debug location, the above values are truncated
 // to a uint8_t value in order to fit the 'OpCode' used for the logical
 // debug location operations.

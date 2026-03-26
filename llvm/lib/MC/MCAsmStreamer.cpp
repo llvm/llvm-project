@@ -359,6 +359,10 @@ public:
       ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
       codeview::DefRangeFramePointerRelHeader DRHdr) override;
 
+  void emitCVDefRangeDirective(
+      ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
+      codeview::DefRangeRegisterRelIndirHeader DRHdr) override;
+
   void emitCVStringTableDirective() override;
   void emitCVFileChecksumsDirective() override;
   void emitCVFileChecksumOffsetDirective(unsigned FileNo) override;
@@ -1940,6 +1944,16 @@ void MCAsmStreamer::emitCVDefRangeDirective(
   PrintCVDefRangePrefix(Ranges);
   OS << ", frame_ptr_rel, ";
   OS << DRHdr.Offset;
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitCVDefRangeDirective(
+    ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
+    codeview::DefRangeRegisterRelIndirHeader DRHdr) {
+  PrintCVDefRangePrefix(Ranges);
+  OS << ", reg_rel_indir, ";
+  OS << DRHdr.Register << ", " << DRHdr.Flags << ", " << DRHdr.BasePointerOffset
+     << ", " << DRHdr.OffsetInUdt;
   EmitEOL();
 }
 

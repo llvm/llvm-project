@@ -15,6 +15,8 @@ from lldbsuite.test import lldbutil
 # Note: Simply applying the @skipIf decorator here confuses the test harness
 # and gives a spurious failure.
 class Rdar12408181TestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)

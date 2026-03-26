@@ -50,9 +50,17 @@ mlirDynamicOpTraitAttach(MlirDynamicOpTrait dynamicOpTrait,
 MLIR_CAPI_EXPORTED MlirDynamicOpTrait
 mlirDynamicOpTraitIsTerminatorCreate(void);
 
+/// Get the type ID of the dynamic op trait that indicates the operation is a
+/// terminator.
+MLIR_CAPI_EXPORTED MlirTypeID mlirDynamicOpTraitIsTerminatorGetTypeID(void);
+
 /// Get the dynamic op trait that indicates regions have no terminator.
 MLIR_CAPI_EXPORTED MlirDynamicOpTrait
 mlirDynamicOpTraitNoTerminatorCreate(void);
+
+/// Get the type ID of the dynamic op trait that indicates regions have no
+/// terminator.
+MLIR_CAPI_EXPORTED MlirTypeID mlirDynamicOpTraitNoTerminatorGetTypeID(void);
 
 /// Destroy the dynamic op trait.
 MLIR_CAPI_EXPORTED void

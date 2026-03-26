@@ -1141,6 +1141,47 @@ Error LVSymbolVisitor::visitKnownRecord(
   return Error::success();
 }
 
+// S_DEFRANGE_REGISTER_REL_INDIR
+Error LVSymbolVisitor::visitKnownRecord(
+    CVSymbol &Record, DefRangeRegisterRelIndirSym &DefRangeRegisterRelIndir) {
+  // DefRanges don't have types, just registers and code offsets.
+  LLVM_DEBUG({
+    if (LocalSymbol)
+      W.getOStream() << formatv("Symbol: {0}, ", LocalSymbol->getName());
+
+    W.printBoolean("HasSpilledUDTMember",
+                   DefRangeRegisterRelIndir.hasSpilledUDTMember());
+    W.printNumber("OffsetInParent", DefRangeRegisterRelIndir.offsetInParent());
+    W.printNumber("BasePointerOffset",
+                  DefRangeRegisterRelIndir.Hdr.BasePointerOffset);
+    W.printNumber("OffsetInUdt", DefRangeRegisterRelIndir.Hdr.OffsetInUdt);
+    printLocalVariableAddrRange(DefRangeRegisterRelIndir.Range,
+                                DefRangeRegisterRelIndir.getRelocationOffset());
+    printLocalVariableAddrGap(DefRangeRegisterRelIndir.Gaps);
+  });
+
+  if (LVSymbol *Symbol = LocalSymbol) {
+    Symbol->setHasCodeViewLocation();
+    LocalSymbol = nullptr;
+
+    // Add location debug location. Operands: [Register, Offset, OffsetInUdt].
+    dwarf::Attribute Attr =
+        dwarf::Attribute(SymbolKind::S_DEFRANGE_REGISTER_REL_INDIR);
+    const uint64_t Operand1 = DefRangeRegisterRelIndir.Hdr.Register;
+    const uint64_t Operand2 = DefRangeRegisterRelIndir.Hdr.BasePointerOffset;
+    const uint64_t Operand3 = DefRangeRegisterRelIndir.Hdr.OffsetInUdt;
+
+    const LocalVariableAddrRange Range = DefRangeRegisterRelIndir.Range;
+    const LVAddress Address =
+        Reader->linearAddress(Range.ISectStart, Range.OffsetStart);
+
+    Symbol->addLocation(Attr, Address, Address + Range.Range, 0, 0);
+    Symbol->addLocationOperands(LVSmall(Attr), {Operand1, Operand2, Operand3});
+  }
+
+  return Error::success();
+}
+
 // S_DEFRANGE_REGISTER
 Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record,
                                         DefRangeRegisterSym &DefRangeRegister) {

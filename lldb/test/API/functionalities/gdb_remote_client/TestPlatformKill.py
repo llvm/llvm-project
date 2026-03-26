@@ -7,6 +7,8 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 
 class TestPlatformKill(GDBRemoteTestBase):
+    SHARED_BUILD_TESTCASE = False
+
     @skipIfRemote
     def test_kill_different_platform(self):
         """Test connecting to a remote linux platform"""

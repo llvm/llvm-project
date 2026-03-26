@@ -26,6 +26,7 @@
 #include "lldb/Target/Unwind.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/ConvertUTF.h"
 
@@ -78,6 +79,16 @@ bool SyntheticStackFrameList::FetchFramesUpTo(
           m_thread.GetProcess()->GetTarget().GetDebugger().InterruptRequested())
         return true;
 
+      // Ensure the provider sees its parent StackFrameList, not the
+      // synthetic list being constructed. In a chain A->B->C, provider C
+      // must consult B's output - using its own list would be nonsensical.
+      // This also applies when the provider runs commands or expressions:
+      // any path that fetches a StackFrameList should transparently get the
+      // parent list. As a side benefit, this avoids circular re-entrancy and
+      // deadlocks on the private state thread.
+      m_thread.PushProviderFrameList(m_input_frames);
+      auto clear_active_frames =
+          llvm::scope_exit([&]() { m_thread.PopProviderFrameList(); });
       auto frame_or_err = m_provider->GetFrameAtIndex(idx);
 
       if (!frame_or_err) {

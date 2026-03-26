@@ -139,13 +139,6 @@ cmake_path(NORMAL_PATH FLANG_RT_INSTALL_RESOURCE_LIB_PATH)
 # Important: flang-rt user options must be prefixed with "FLANG_RT_". Variables
 # with this prefix will be forwarded in bootstrap builds.
 
-# TODO: Support tests for the GPU target.
-set(FLANG_RT_INCLUDE_TESTS_default ${LLVM_INCLUDE_TESTS})
-if ("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn|^nvptx")
-  set(FLANG_RT_INCLUDE_TESTS_default OFF)
-endif()
-option(FLANG_RT_INCLUDE_TESTS "Generate build targets for the flang-rt unit and regression-tests." "${FLANG_RT_INCLUDE_TESTS_default}")
-
 # Provide an interface to link against the LLVM libc/libc++ projects directly.
 set(FLANG_RT_SUPPORTED_PROVIDERS system llvm)
 set(FLANG_RT_LIBC_PROVIDER "system" CACHE STRING "Specify C library to use. Supported values are ${FLANG_RT_SUPPORTED_PROVIDERS}.")
@@ -171,11 +164,22 @@ else ()
   #       breaking change unless the driver is changed.
   option(FLANG_RT_ENABLE_SHARED "Build Flang-RT as a shared library." OFF)
 endif ()
-if (NOT FLANG_RT_ENABLE_STATIC AND NOT FLANG_RT_ENABLE_SHARED)
-  message(FATAL_ERROR "
-      Must build at least one type of library
-      (FLANG_RT_ENABLE_STATIC=ON, FLANG_RT_ENABLE_SHARED=ON, or both)
-    ")
+
+
+# TODO: Support tests for the GPU target.
+set(FLANG_RT_INCLUDE_TESTS_default ${LLVM_INCLUDE_TESTS})
+if ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx")
+  set(FLANG_RT_INCLUDE_TESTS_default OFF)
+elseif (NOT FLANG_RT_ENABLE_STATIC AND NOT FLANG_RT_ENABLE_SHARED)
+  set(FLANG_RT_INCLUDE_TESTS_default OFF)
+endif()
+option(FLANG_RT_INCLUDE_TESTS "Generate build targets for the flang-rt unit and regression-tests." "${FLANG_RT_INCLUDE_TESTS_default}")
+if (FLANG_RT_INCLUDE_TESTS AND NOT FLANG_RT_ENABLE_STATIC AND NOT FLANG_RT_ENABLE_SHARED)
+  message(WARNING "FLANG_RT_INCLUDE_TESTS=${FLANG_RT_INCLUDE_TESTS} requires a "
+                  "library to be built (FLANG_RT_ENABLE_STATIC=ON or "
+                  "FLANG_RT_ENABLE_SHARED=ON).\n"
+                  "Tests are disabled: check-flang-rt does nothing")
+  set(FLANG_RT_INCLUDE_TESTS OFF)
 endif ()
 
 
@@ -263,7 +267,7 @@ find_package(Threads)
 # FIXME: The NVPTX target will erroneously report it has backtrace support. This
 #        is caused by using "-c -flto" in the required flags to suppress CUDA
 #        tools from being required for the CMake flag checks to succeed.
-if (NOT "${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx")
+if (NOT "${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^nvptx")
   find_package(Backtrace)
 endif()
 set(HAVE_BACKTRACE ${Backtrace_FOUND})

@@ -33,6 +33,32 @@ static bool hasPointerType(const Expr *E) {
 constexpr inline auto buildEntityPointerLevel =
     UnsafeBufferUsageTUSummaryExtractor::buildEntityPointerLevel;
 
+static llvm::Error makeUnsupportedStmtKindError(const Stmt *Unsupported) {
+  return llvm::createStringError(
+      "unsupported expression kind for translation to "
+      "EntityPointerLevel: %s",
+      Unsupported->getStmtClassName());
+}
+
+static llvm::Error makeCreateEntityNameError(const NamedDecl *FailedDecl,
+                                             ASTContext &Ctx) {
+  std::string LocStr = FailedDecl->getSourceRange().getBegin().printToString(
+      Ctx.getSourceManager());
+  return llvm::createStringError(
+      "failed to create entity name for %s declared at %s",
+      FailedDecl->getNameAsString().c_str(), LocStr.c_str());
+}
+
+static llvm::Error makeAddEntitySummaryError(const NamedDecl *FailedContributor,
+                                             ASTContext &Ctx) {
+  std::string LocStr =
+      FailedContributor->getSourceRange().getBegin().printToString(
+          Ctx.getSourceManager());
+  return llvm::createStringError(
+      "failed to add entity summary for contributor %s declared at %s",
+      FailedContributor->getNameAsString().c_str(), LocStr.c_str());
+}
+
 // Translate a pointer type expression 'E' to a (set of) EntityPointerLevel(s)
 // associated with the declared type of the base address of `E`. If the base
 // address of `E` is not associated with an entity, the translation result is an
@@ -59,10 +85,7 @@ class EntityPointerLevelTranslator
 
   // Fallback method for all unsupported expression kind:
   llvm::Error fallback(const Stmt *E) {
-    return llvm::createStringError(
-        "unsupported expression kind for translation to "
-        "EntityPointerLevel: %s",
-        E->getStmtClassName());
+    return makeUnsupportedStmtKindError(E);
   }
 
   static EntityPointerLevel incrementPointerLevel(const EntityPointerLevel &E) {
@@ -92,10 +115,12 @@ class EntityPointerLevelTranslator
   }
 
   UnsafeBufferUsageTUSummaryExtractor &Extractor;
+  ASTContext &Ctx;
 
 public:
-  EntityPointerLevelTranslator(UnsafeBufferUsageTUSummaryExtractor &Extractor)
-      : Extractor(Extractor) {}
+  EntityPointerLevelTranslator(UnsafeBufferUsageTUSummaryExtractor &Extractor,
+                               ASTContext &Ctx)
+      : Extractor(Extractor), Ctx(Ctx) {}
 
   Expected<EntityPointerLevelSet> translate(const Expr *E) { return Visit(E); }
 
@@ -210,18 +235,14 @@ private:
   Expected<EntityPointerLevelSet> VisitDeclRefExpr(const DeclRefExpr *E) {
     if (auto EntityName = getEntityName(E->getDecl()))
       return EntityPointerLevelSet{createEntityPointerLevelFor(*EntityName)};
-    return llvm::createStringError(
-        "failed to create entity name from the Decl of " +
-        E->getNameInfo().getAsString());
+    return makeCreateEntityNameError(E->getDecl(), Ctx);
   }
 
   // Translate({., ->}f) -> {(MemberDecl, 1)}
   Expected<EntityPointerLevelSet> VisitMemberExpr(const MemberExpr *E) {
     if (auto EntityName = getEntityName(E->getMemberDecl()))
       return EntityPointerLevelSet{createEntityPointerLevelFor(*EntityName)};
-    return llvm::createStringError(
-        "failed to create entity name from the MemberDecl of " +
-        E->getMemberDecl()->getNameAsString());
+    return makeCreateEntityNameError(E->getMemberDecl(), Ctx);
   }
 
   Expected<EntityPointerLevelSet>
@@ -232,9 +253,10 @@ private:
 
 Expected<EntityPointerLevelSet>
 buildEntityPointerLevels(std::set<const Expr *> &&UnsafePointers,
-                         UnsafeBufferUsageTUSummaryExtractor &Extractor) {
+                         UnsafeBufferUsageTUSummaryExtractor &Extractor,
+                         ASTContext &Ctx) {
   EntityPointerLevelSet Result{};
-  EntityPointerLevelTranslator Translator{Extractor};
+  EntityPointerLevelTranslator Translator{Extractor, Ctx};
   llvm::Error AllErrors = llvm::ErrorSuccess();
 
   for (const Expr *Ptr : UnsafePointers) {
@@ -258,24 +280,90 @@ buildEntityPointerLevels(std::set<const Expr *> &&UnsafePointers,
 }
 } // namespace
 
+static std::set<const Expr *> findUnsafePointersInContributor(const Decl *D) {
+  if (isa<FunctionDecl>(D) || isa<VarDecl>(D))
+    return findUnsafePointers(D);
+  if (auto *RD = dyn_cast<RecordDecl>(D)) {
+    std::set<const Expr *> Result;
+
+    for (const FieldDecl *FD : RD->fields()) {
+      Result.merge(findUnsafePointers(FD));
+    }
+    return Result;
+  }
+  return {};
+}
+
 std::unique_ptr<UnsafeBufferUsageEntitySummary>
 UnsafeBufferUsageTUSummaryExtractor::extractEntitySummary(
     const Decl *Contributor, ASTContext &Ctx, llvm::Error &Error) {
-  // FIXME: findUnsafePointers should accept more kinds of `Decl`s than just
-  // `FunctionDecl`:
-  if (const auto *FD = dyn_cast<FunctionDecl>(Contributor)) {
-    Expected<EntityPointerLevelSet> EPLs =
-        buildEntityPointerLevels(findUnsafePointers(FD), *this);
+  Expected<EntityPointerLevelSet> EPLs = buildEntityPointerLevels(
+      findUnsafePointersInContributor(Contributor), *this, Ctx);
 
-    if (EPLs)
-      return std::make_unique<UnsafeBufferUsageEntitySummary>(
-          UnsafeBufferUsageEntitySummary(std::move(*EPLs)));
-    Error = EPLs.takeError();
-  }
+  if (EPLs)
+    return std::make_unique<UnsafeBufferUsageEntitySummary>(
+        UnsafeBufferUsageEntitySummary(std::move(*EPLs)));
+  Error = EPLs.takeError();
   return nullptr;
 }
 
 void UnsafeBufferUsageTUSummaryExtractor::HandleTranslationUnit(
     ASTContext &Ctx) {
-  // FIXME: impl me!
+
+  // FIXME: I suppose finding contributor Decls is commonly needed by all/many
+  // extractors
+  class ContributorFinder : public DynamicRecursiveASTVisitor {
+  public:
+    std::vector<const NamedDecl *> Contributors;
+
+    bool VisitFunctionDecl(FunctionDecl *D) override {
+      Contributors.push_back(D);
+      return true;
+    }
+
+    bool VisitRecordDecl(RecordDecl *D) override {
+      Contributors.push_back(D);
+      return true;
+    }
+
+    bool VisitVarDecl(VarDecl *D) override {
+      DeclContext *DC = D->getDeclContext();
+
+      if (DC->isFileContext() || DC->isNamespace())
+        Contributors.push_back(D);
+      return false;
+    }
+  } ContributorFinder;
+
+  ContributorFinder.VisitTranslationUnitDecl(Ctx.getTranslationUnitDecl());
+
+  llvm::Error Errors = llvm::ErrorSuccess();
+  auto addError = [&Errors](llvm::Error Err) {
+    Errors = llvm::joinErrors(std::move(Errors), std::move(Err));
+  };
+
+  for (auto *CD : ContributorFinder.Contributors) {
+    llvm::Error Error = llvm::ErrorSuccess();
+    auto EntitySummary = extractEntitySummary(CD, Ctx, Error);
+
+    if (Error)
+      addError(std::move(Error));
+    if (EntitySummary->empty())
+      continue;
+
+    auto ContributorName = getEntityName(CD);
+
+    if (!ContributorName) {
+      addError(makeCreateEntityNameError(CD, Ctx));
+      continue;
+    }
+
+    auto [EntitySummaryPtr, Success] = SummaryBuilder.addSummary(
+        addEntity(*ContributorName), std::move(EntitySummary));
+
+    if (!Success)
+      addError(makeAddEntitySummaryError(CD, Ctx));
+  }
+  // FIXME: handle errors!
+  llvm::consumeError(std::move(Errors));
 }

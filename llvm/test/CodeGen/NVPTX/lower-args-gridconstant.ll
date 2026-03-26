@@ -249,7 +249,7 @@ define ptx_kernel void @grid_const_inlineasm_escape(ptr byval(%struct.s) align 4
   ret void
 }
 
-define ptx_kernel void @grid_const_partial_escape(ptr byval(i32) "nvvm.grid_constant" %input, ptr %output) {
+define ptx_kernel void @grid_const_partial_escape(ptr byval(i32) align 4 "nvvm.grid_constant" %input, ptr %output) {
 ; PTX-LABEL: grid_const_partial_escape(
 ; PTX:       {
 ; PTX-NEXT:    .reg .b32 %r<3>;
@@ -288,7 +288,7 @@ define ptx_kernel void @grid_const_partial_escape(ptr byval(i32) "nvvm.grid_cons
   ret void
 }
 
-define ptx_kernel i32 @grid_const_partial_escapemem(ptr byval(%struct.s) "nvvm.grid_constant" %input, ptr %output) {
+define ptx_kernel i32 @grid_const_partial_escapemem(ptr byval(%struct.s) align 4 "nvvm.grid_constant" %input, ptr %output) {
 ; PTX-LABEL: grid_const_partial_escapemem(
 ; PTX:       {
 ; PTX-NEXT:    .reg .b32 %r<4>;
@@ -391,7 +391,7 @@ merge:
 }
 
 ; NOTE: %input2 is *not* grid_constant
-define ptx_kernel void @grid_const_phi_ngc(ptr byval(%struct.s) align 4 "nvvm.grid_constant" %input1, ptr byval(%struct.s) %input2, ptr %inout) {
+define ptx_kernel void @grid_const_phi_ngc(ptr byval(%struct.s) align 4 "nvvm.grid_constant" %input1, ptr byval(%struct.s) align 4 %input2, ptr %inout) {
 ; PTX-LABEL: grid_const_phi_ngc(
 ; PTX:       {
 ; PTX-NEXT:    .reg .pred %p<2>;
@@ -449,7 +449,7 @@ merge:
 }
 
 ; NOTE: %input2 is *not* grid_constant
-define ptx_kernel void @grid_const_select(ptr byval(i32) align 4 "nvvm.grid_constant" %input1, ptr byval(i32) %input2, ptr %inout) {
+define ptx_kernel void @grid_const_select(ptr byval(i32) align 4 "nvvm.grid_constant" %input1, ptr byval(i32) align 4 %input2, ptr %inout) {
 ; PTX-LABEL: grid_const_select(
 ; PTX:       {
 ; PTX-NEXT:    .reg .pred %p<2>;
@@ -487,7 +487,7 @@ define ptx_kernel void @grid_const_select(ptr byval(i32) align 4 "nvvm.grid_cons
   ret void
 }
 
-define ptx_kernel i32 @grid_const_ptrtoint(ptr byval(i32) "nvvm.grid_constant" %input) {
+define ptx_kernel i32 @grid_const_ptrtoint(ptr byval(i32) align 4 "nvvm.grid_constant" %input) {
 ; PTX-LABEL: grid_const_ptrtoint(
 ; PTX:       {
 ; PTX-NEXT:    .reg .b32 %r<4>;

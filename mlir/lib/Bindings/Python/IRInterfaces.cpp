@@ -36,16 +36,16 @@ namespace {
 
 /// Takes in an optional ist of operands and converts them into a std::vector
 /// of MlirVlaues. Returns an empty std::vector if the list is empty.
-std::vector<MlirValue> wrapOperands(std::optional<nb::list> operandList) {
+std::vector<MlirValue> wrapOperands(std::optional<nb::sequence> operandList) {
   std::vector<MlirValue> mlirOperands;
 
-  if (!operandList || operandList->size() == 0) {
+  if (!operandList || nb::len(*operandList) == 0) {
     return mlirOperands;
   }
 
   // Note: as the list may contain other lists this may not be final size.
-  mlirOperands.reserve(operandList->size());
-  for (size_t i = 0, e = operandList->size(); i < e; ++i) {
+  mlirOperands.reserve(nb::len(*operandList));
+  for (size_t i = 0, e = nb::len(*operandList); i < e; ++i) {
     nb::handle operand = (*operandList)[i];
     intptr_t index = static_cast<intptr_t>(i);
     if (operand.is_none())
@@ -143,7 +143,7 @@ public:
   /// Given the arguments required to build an operation, attempts to infer its
   /// return types. Throws value_error on failure.
   std::vector<PyType>
-  inferReturnTypes(std::optional<nb::list> operandList,
+  inferReturnTypes(std::optional<nb::sequence> operandList,
                    std::optional<PyAttribute> attributes, void *properties,
                    std::optional<std::vector<PyRegion>> regions,
                    DefaultingPyMlirContext context,
@@ -213,14 +213,15 @@ public:
             "type.")
         .def_static(
             "get",
-            [](nb::list shape, PyType &elementType) {
+            [](nb::typed<nb::list, nb::int_> shape, PyType &elementType) {
               return PyShapedTypeComponents(std::move(shape), elementType);
             },
             nb::arg("shape"), nb::arg("element_type"),
             "Create a ranked shaped type components object.")
         .def_static(
             "get",
-            [](nb::list shape, PyType &elementType, PyAttribute &attribute) {
+            [](nb::typed<nb::list, nb::int_> shape, PyType &elementType,
+               PyAttribute &attribute) {
               return PyShapedTypeComponents(std::move(shape), elementType,
                                             attribute);
             },
@@ -300,7 +301,7 @@ public:
   /// Given the arguments required to build an operation, attempts to infer the
   /// shaped type components. Throws value_error on failure.
   std::vector<PyShapedTypeComponents> inferReturnTypeComponents(
-      std::optional<nb::list> operandList,
+      std::optional<nb::sequence> operandList,
       std::optional<PyAttribute> attributes, void *properties,
       std::optional<std::vector<PyRegion>> regions,
       DefaultingPyMlirContext context, DefaultingPyLocation location) {

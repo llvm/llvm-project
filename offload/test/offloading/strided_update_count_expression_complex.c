@@ -1,5 +1,5 @@
 // RUN: %libomptarget-compile-run-and-check-generic
-// XFAIL: intelgpu
+// XFAIL: *
 // Tests non-contiguous array sections with complex expression-based count
 // scenarios including multiple struct arrays and non-zero offset.
 
@@ -130,6 +130,8 @@ void test_2_complex_count_with_offset() {
     }
 
     // Count: (len-offset)/2 with stride 2
+    // s1.arr[2:4:2]
+    // s2.arr[1:4:2]
 #pragma omp target update from(                                                \
         s1.arr[s1.offset : (s1.len - s1.offset) / 2 : 2],                      \
             s2.arr[s2.offset : (s2.len - s2.offset) / 2 : 2])
@@ -238,14 +240,14 @@ void test_2_complex_count_with_offset() {
 // CHECK: s1 results:
 // CHECK-NEXT: 0.000000
 // CHECK-NEXT: 1.000000
-// CHECK-NEXT: 2.000000
-// CHECK-NEXT: 6.000000
 // CHECK-NEXT: 4.000000
-// CHECK-NEXT: 10.000000
-// CHECK-NEXT: 6.000000
-// CHECK-NEXT: 14.000000
+// CHECK-NEXT: 3.000000
 // CHECK-NEXT: 8.000000
-// CHECK-NEXT: 18.000000
+// CHECK-NEXT: 5.000000
+// CHECK-NEXT: 12.000000
+// CHECK-NEXT: 7.000000
+// CHECK-NEXT: 16.000000
+// CHECK-NEXT: 9.000000
 // CHECK: s2 results:
 // CHECK-NEXT: 0.000000
 // CHECK-NEXT: 20.000000

@@ -96,7 +96,6 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $vgpr11 = nofpexcept V_EXP_F32_e32 killed $vgpr10, implicit $mode, implicit $exec
     ; CHECK-NEXT: S_SET_VGPR_MSB 65, implicit-def $mode
-    ; CHECK-NEXT: S_WAIT_XCNT 0
     ; CHECK-NEXT: $vgpr256 = nofpexcept V_EXP_F32_e32 killed $vgpr257, implicit $mode, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0
   $vgpr11 = nofpexcept V_EXP_F32_e32 killed $vgpr10, implicit $mode, implicit $exec

@@ -1463,6 +1463,8 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     unsigned BuiltinWMMAOp;
     // Need return type when D and C are of different types.
     bool NeedReturnType = false;
+    // Need to remove unused neg modifiers.
+    bool RemoveABNeg = false;
 
     switch (BuiltinID) {
     case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x16_f16_w32:
@@ -1607,8 +1609,9 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f32_16x16x4_f32;
       break;
     case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x32_bf16:
-      ArgsForMatchingMatrixTypes = {5, 1};
+      ArgsForMatchingMatrixTypes = {3, 0};
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f32_16x16x32_bf16;
+      RemoveABNeg = true;
       break;
     case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x32_f16:
       ArgsForMatchingMatrixTypes = {5, 1};
@@ -1778,8 +1781,12 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     }
 
     SmallVector<Value *, 6> Args;
-    for (int i = 0, e = E->getNumArgs(); i != e; ++i)
+    for (int i = 0, e = E->getNumArgs(); i != e; ++i) {
+      // Remove unused neg modifiers.
+      if (RemoveABNeg && (i == 0 || i == 2))
+        continue;
       Args.push_back(EmitScalarExpr(E->getArg(i)));
+    }
     if (AppendFalseForOpselArg)
       Args.push_back(Builder.getFalse());
 

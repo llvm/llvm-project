@@ -119,5 +119,43 @@ void EPCGenericDylibManager::lookupAsync(tpctypes::DylibHandle H,
       H, Lookup);
 }
 
+Expected<tpctypes::DylibHandle>
+EPCGenericDylibManager::loadDylib(const char *DylibPath) {
+  return open(DylibPath, 0);
+}
+
+/// Async helper to chain together calls to lookupAsync to fulfill all
+/// the requests.
+/// FIXME: The dylib manager should support multiple LookupRequests natively.
+static void
+lookupSymbolsAsyncHelper(EPCGenericDylibManager &DylibMgr,
+                         ArrayRef<DylibManager::LookupRequest> Request,
+                         std::vector<tpctypes::LookupResult> Result,
+                         DylibManager::SymbolLookupCompleteFn Complete) {
+  if (Request.empty())
+    return Complete(std::move(Result));
+
+  auto &Element = Request.front();
+  DylibMgr.lookupAsync(Element.Handle, Element.Symbols,
+                       [&DylibMgr, Request, Complete = std::move(Complete),
+                        Result = std::move(Result)](auto R) mutable {
+                         if (!R)
+                           return Complete(R.takeError());
+                         Result.push_back({});
+                         Result.back().reserve(R->size());
+                         llvm::append_range(Result.back(), *R);
+
+                         lookupSymbolsAsyncHelper(
+                             DylibMgr, Request.drop_front(), std::move(Result),
+                             std::move(Complete));
+                       });
+}
+
+void EPCGenericDylibManager::lookupSymbolsAsync(
+    ArrayRef<DylibManager::LookupRequest> Request,
+    DylibManager::SymbolLookupCompleteFn Complete) {
+  lookupSymbolsAsyncHelper(*this, Request, {}, std::move(Complete));
+}
+
 } // end namespace orc
 } // end namespace llvm

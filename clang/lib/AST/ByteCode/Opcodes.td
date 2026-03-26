@@ -178,6 +178,9 @@ def Jt : JumpOpcode;
 // [Bool] -> [], jumps if false.
 def Jf : JumpOpcode;
 
+def PushIgnoreDiags : Opcode;
+def PopIgnoreDiags : Opcode;
+
 def StartSpeculation : Opcode;
 def EndSpeculation : Opcode;
 def BCP : Opcode {

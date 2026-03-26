@@ -95,7 +95,7 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
     // New arguments will simply be `llvm.ptr` with the correct address space
     Type workgroupPtrType =
         rewriter.getType<LLVM::LLVMPointerType>(workgroupAddrSpace);
-    SmallVector<Type> argTypes(numAttributions, workgroupPtrType);
+    Repeated<Type> argTypes(numAttributions, workgroupPtrType);
 
     // Attributes: noalias, llvm.mlir.workgroup_attribution(<size>, <type>)
     std::array attrs{

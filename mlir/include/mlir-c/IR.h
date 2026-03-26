@@ -631,6 +631,11 @@ MLIR_CAPI_EXPORTED size_t mlirOperationHashValue(MlirOperation op);
 /// Gets the context this operation is associated with
 MLIR_CAPI_EXPORTED MlirContext mlirOperationGetContext(MlirOperation op);
 
+/// Checks if the operation name has a trait identified by the given type id.
+MLIR_CAPI_EXPORTED bool mlirOperationNameHasTrait(MlirStringRef opName,
+                                                  MlirTypeID traitTypeID,
+                                                  MlirContext context);
+
 /// Gets the location of the operation.
 MLIR_CAPI_EXPORTED MlirLocation mlirOperationGetLocation(MlirOperation op);
 

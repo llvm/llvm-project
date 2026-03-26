@@ -12,6 +12,7 @@ exe_name = "uaf"  # Must match Makefile
 
 
 class TestDarwinMTE(TestBase):
+    SHARED_BUILD_TESTCASE = False
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipUnlessFeature(cpu_feature.AArch64.MTE)

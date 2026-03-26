@@ -2072,8 +2072,8 @@ static bool areCFlagsAliveInSuccessors(const MachineBasicBlock *MBB) {
 
 /// \returns The condition code operand index for \p Instr if it is a branch
 /// or select and -1 otherwise.
-static int
-findCondCodeUseOperandIdxForBranchOrSelect(const MachineInstr &Instr) {
+int AArch64InstrInfo::findCondCodeUseOperandIdxForBranchOrSelect(
+    const MachineInstr &Instr) {
   switch (Instr.getOpcode()) {
   default:
     return -1;
@@ -2105,7 +2105,8 @@ findCondCodeUseOperandIdxForBranchOrSelect(const MachineInstr &Instr) {
 /// Returns AArch64CC::Invalid if either the instruction does not use condition
 /// codes or we don't optimize CmpInstr in the presence of such instructions.
 static AArch64CC::CondCode findCondCodeUsedByInstr(const MachineInstr &Instr) {
-  int CCIdx = findCondCodeUseOperandIdxForBranchOrSelect(Instr);
+  int CCIdx =
+      AArch64InstrInfo::findCondCodeUseOperandIdxForBranchOrSelect(Instr);
   return CCIdx >= 0 ? static_cast<AArch64CC::CondCode>(
                           Instr.getOperand(CCIdx).getImm())
                     : AArch64CC::Invalid;
