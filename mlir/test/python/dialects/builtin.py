@@ -259,6 +259,10 @@ def testBuiltinTraits():
         module = builtin.ModuleOp()
 
         # CHECK: True
-        print(module.has_trait(NoTerminatorTrait))
+        print(module.operation.has_trait(NoTerminatorTrait))
         # CHECK: False
-        print(module.has_trait(IsTerminatorTrait))
+        print(module.operation.has_trait(IsTerminatorTrait))
+        # CHECK: True
+        print(builtin.ModuleOp.has_trait(NoTerminatorTrait))
+        # CHECK: False
+        print(builtin.ModuleOp.has_trait(IsTerminatorTrait))

@@ -141,6 +141,10 @@ def testFunctionTraits():
     ret = func.ReturnOp([])
 
     # CHECK: False
-    print(ret.has_trait(NoTerminatorTrait))
+    print(ret.operation.has_trait(NoTerminatorTrait))
     # CHECK: True
-    print(ret.has_trait(IsTerminatorTrait))
+    print(ret.operation.has_trait(IsTerminatorTrait))
+    # CHECK: False
+    print(func.ReturnOp.has_trait(NoTerminatorTrait))
+    # CHECK: True
+    print(func.ReturnOp.has_trait(IsTerminatorTrait))

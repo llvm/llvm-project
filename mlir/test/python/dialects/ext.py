@@ -480,11 +480,17 @@ def testExtDialectWithRegion():
         # CHECK: True
         print(yield_.has_trait(ParentIsIfTrait))
         # CHECK: False
-        print(nt.has_trait(IsTerminatorTrait))
+        print(nt.operation.has_trait(IsTerminatorTrait))
         # CHECK: True
-        print(nt.has_trait(NoTerminatorTrait))
+        print(nt.operation.has_trait(NoTerminatorTrait))
         # CHECK: False
-        print(nt.has_trait(ParentIsIfTrait))
+        print(nt.operation.has_trait(ParentIsIfTrait))
+        # CHECK: False
+        print(NoTermOp.has_trait(IsTerminatorTrait))
+        # CHECK: True
+        print(NoTermOp.has_trait(NoTerminatorTrait))
+        # CHECK: False
+        print(NoTermOp.has_trait(ParentIsIfTrait))
 
         # CHECK: %c2_i32 = arith.constant 2 : i32
         print(if_.then.blocks[0])

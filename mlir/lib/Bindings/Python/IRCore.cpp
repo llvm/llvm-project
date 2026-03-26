@@ -3965,12 +3965,18 @@ void populateIRCore(nb::module_ &m) {
                callback: A callable that takes an Operation and returns a WalkResult.
                walk_order: The order of traversal (PRE_ORDER or POST_ORDER).
                op_class: If provided, only operations of this type are passed to the callback.)")
-      .def("has_trait", [](PyOperationBase &self, nb::type_object &traitCls) {
-        PyTypeID traitTypeID =
-            nb::cast<PyTypeID>(traitCls.attr(PyDynamicOpTrait::typeIDAttr));
-        return mlirOperationHasTrait(self.getOperation().get(),
-                                     traitTypeID.get());
-      });
+      .def(
+          "has_trait",
+          [](PyOperationBase &self, nb::type_object &traitCls) {
+            PyTypeID traitTypeID =
+                nb::cast<PyTypeID>(traitCls.attr(PyDynamicOpTrait::typeIDAttr));
+            MlirIdentifier opName =
+                mlirOperationGetName(self.getOperation().get());
+            return mlirOperationNameHasTrait(
+                mlirIdentifierStr(opName), traitTypeID.get(),
+                self.getOperation().getContext()->get());
+          },
+          "trait_cls"_a, "Checks if the operation has a given trait.");
 
   nb::class_<PyOperation, PyOperationBase>(m, "Operation")
       .def_static(
@@ -4172,6 +4178,18 @@ void populateIRCore(nb::module_ &m) {
       "cls"_a, "source"_a, nb::kw_only(), "source_name"_a = "",
       "context"_a = nb::none(),
       "Parses a specific, generated OpView based on class level attributes.");
+  opViewClass.attr("has_trait") = classmethod(
+      [](nb::object &self, nb::type_object &traitCls,
+         DefaultingPyMlirContext &context) {
+        PyTypeID traitTypeID =
+            nb::cast<PyTypeID>(traitCls.attr(PyDynamicOpTrait::typeIDAttr));
+        std::string opName = nb::cast<std::string>(self.attr("OPERATION_NAME"));
+        return mlirOperationNameHasTrait(
+            mlirStringRefCreate(opName.data(), opName.size()),
+            traitTypeID.get(), context->get());
+      },
+      "cls"_a, "trait_cls"_a, "context"_a = nb::none(),
+      "Checks if the operation has a given trait.");
 
   PyOpAdaptor::bind(m);
 
