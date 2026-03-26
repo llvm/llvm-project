@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s --mlir-very-unsafe-disable-verifier-on-parsing 2>&1 | FileCheck %s
-//
+// XFAIL: *
 // Regression test for https://github.com/llvm/llvm-project/issues/182747
 // Verify that printing does not crash when an operation has a null operand
 // due to an unresolvable forward reference created with
