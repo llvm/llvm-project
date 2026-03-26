@@ -229,6 +229,15 @@ PowIStrengthReduction<PowIOpTy, DivOpTy, MulOpTy>::matchAndRewrite(
   // Inverse the base for negative exponent, i.e. for
   // `[fi]powi(x, negative_exponent)` set `x` to `1 / x`.
   if (exponentIsNegative) {
+    // For integer-base power ops (`math.ipowi`), a negative exponent produces
+    // an integer division `1/x^|n|`. This is:
+    //   - Division by zero when x == 0 (undefined behaviour).
+    //   - Integer truncation to 0 for |x| > 1 (almost certainly not intended).
+    // The signed interpretation of narrow integer types (e.g. i1 `true` == -1)
+    // makes this especially surprising. Don't perform this transformation for
+    // integer power; leave it to the runtime or other lowerings.
+    if constexpr (std::is_same_v<PowIOpTy, math::IPowIOp>)
+      return failure();
     if constexpr (std::is_same_v<PowIOpTy, complex::PowiOp>)
       result = DivOpTy::create(rewriter, loc, op.getType(), bcast(one), result,
                                op.getFastmathAttr());
