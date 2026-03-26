@@ -748,18 +748,15 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
       unsigned Scale = NumDstEltBits / NumSrcEltBits;
       unsigned NumSrcElts = SrcVT.getVectorNumElements();
       APInt DemandedSrcBits = APInt::getZero(NumSrcEltBits);
-      APInt DemandedSrcElts = APInt::getZero(NumSrcElts);
       for (unsigned i = 0; i != Scale; ++i) {
         unsigned EltOffset = IsLE ? i : (Scale - 1 - i);
         unsigned BitOffset = EltOffset * NumSrcEltBits;
-        APInt Sub = DemandedBits.extractBits(NumSrcEltBits, BitOffset);
-        if (!Sub.isZero()) {
-          DemandedSrcBits |= Sub;
-          for (unsigned j = 0; j != NumElts; ++j)
-            if (DemandedElts[j])
-              DemandedSrcElts.setBit((j * Scale) + i);
-        }
+        DemandedSrcBits |= DemandedBits.extractBits(NumSrcEltBits, BitOffset);
       }
+      // Recursive calls below may turn not demanded elements into poison, so we
+      // need to demand all smaller source elements that maps to a demanded
+      // destination element.
+      APInt DemandedSrcElts = APIntOps::ScaleBitMask(DemandedElts, NumSrcElts);
 
       if (SDValue V = SimplifyMultipleUseDemandedBits(
               Src, DemandedSrcBits, DemandedSrcElts, DAG, Depth + 1))
@@ -1473,6 +1470,17 @@ bool TargetLowering::SimplifyDemandedBits(
         SDValue Xor = TLO.DAG.getNode(ISD::XOR, dl, VT, Op0.getOperand(0), Op1);
         return TLO.CombineTo(Op, Xor);
       }
+    }
+
+    // (X +/- Y) & Y --> ~X & Y when Y is a power of 2 (or zero).
+    SDValue X, Y;
+    if (sd_match(Op,
+                 m_And(m_Value(Y),
+                       m_OneUse(m_AnyOf(m_Add(m_Value(X), m_Deferred(Y)),
+                                        m_Sub(m_Value(X), m_Deferred(Y)))))) &&
+        TLO.DAG.isKnownToBeAPowerOfTwo(Y, DemandedElts, /*OrZero=*/true)) {
+      return TLO.CombineTo(
+          Op, TLO.DAG.getNode(ISD::AND, dl, VT, TLO.DAG.getNOT(dl, X, VT), Y));
     }
 
     // AND(INSERT_SUBVECTOR(C,X,I),M) -> INSERT_SUBVECTOR(AND(C,M),X,I)
@@ -2256,11 +2264,31 @@ bool TargetLowering::SimplifyDemandedBits(
       }
     }
 
-    // For pow-2 bitwidths we only demand the bottom modulo amt bits.
     if (isPowerOf2_32(BitWidth)) {
+      // Fold FSHR(Op0,Op1,Op2) -> SRL(Op1,Op2)
+      // iff we're guaranteed not to use Op0.
+      // TODO: Add FSHL equivalent?
+      if (!IsFSHL && !DemandedBits.isAllOnes() &&
+          (!TLO.LegalOperations() || isOperationLegal(ISD::SRL, VT))) {
+        KnownBits KnownAmt =
+            TLO.DAG.computeKnownBits(Op2, DemandedElts, Depth + 1);
+        unsigned MaxShiftAmt =
+            KnownAmt.getMaxValue().getLimitedValue(BitWidth - 1);
+        // Check we don't demand any shifted bits outside Op1.
+        if (DemandedBits.countl_zero() >= MaxShiftAmt) {
+          EVT AmtVT = Op2.getValueType();
+          SDValue NewAmt =
+              TLO.DAG.getNode(ISD::AND, dl, AmtVT, Op2,
+                              TLO.DAG.getConstant(BitWidth - 1, dl, AmtVT));
+          SDValue NewOp = TLO.DAG.getNode(ISD::SRL, dl, VT, Op1, NewAmt);
+          return TLO.CombineTo(Op, NewOp);
+        }
+      }
+
+      // For pow-2 bitwidths we only demand the bottom modulo amt bits.
       APInt DemandedAmtBits(Op2.getScalarValueSizeInBits(), BitWidth - 1);
-      if (SimplifyDemandedBits(Op2, DemandedAmtBits, DemandedElts,
-                               Known2, TLO, Depth + 1))
+      if (SimplifyDemandedBits(Op2, DemandedAmtBits, DemandedElts, Known2, TLO,
+                               Depth + 1))
         return true;
     }
     break;
@@ -2786,18 +2814,15 @@ bool TargetLowering::SimplifyDemandedBits(
       unsigned Scale = BitWidth / NumSrcEltBits;
       unsigned NumSrcElts = SrcVT.getVectorNumElements();
       APInt DemandedSrcBits = APInt::getZero(NumSrcEltBits);
-      APInt DemandedSrcElts = APInt::getZero(NumSrcElts);
       for (unsigned i = 0; i != Scale; ++i) {
         unsigned EltOffset = IsLE ? i : (Scale - 1 - i);
         unsigned BitOffset = EltOffset * NumSrcEltBits;
-        APInt Sub = DemandedBits.extractBits(NumSrcEltBits, BitOffset);
-        if (!Sub.isZero()) {
-          DemandedSrcBits |= Sub;
-          for (unsigned j = 0; j != NumElts; ++j)
-            if (DemandedElts[j])
-              DemandedSrcElts.setBit((j * Scale) + i);
-        }
+        DemandedSrcBits |= DemandedBits.extractBits(NumSrcEltBits, BitOffset);
       }
+      // Recursive calls below may turn not demanded elements into poison, so we
+      // need to demand all smaller source elements that maps to a demanded
+      // destination element.
+      APInt DemandedSrcElts = APIntOps::ScaleBitMask(DemandedElts, NumSrcElts);
 
       APInt KnownSrcUndef, KnownSrcZero;
       if (SimplifyDemandedVectorElts(Src, DemandedSrcElts, KnownSrcUndef,
@@ -3806,19 +3831,22 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     if (SimplifyDemandedVectorElts(Op1, DemandedElts, SrcUndef, SrcZero, TLO,
                                    Depth + 1))
       return true;
-    // If we know that a demanded element was zero in Op1 we don't need to
-    // demand it in Op0 - its guaranteed to be zero.
-    APInt DemandedElts0 = DemandedElts & ~SrcZero;
-    if (SimplifyDemandedVectorElts(Op0, DemandedElts0, KnownUndef, KnownZero,
+    // FIXME: If we know that a demanded element was zero in Op1 we don't need
+    // to demand it in Op0 - its guaranteed to be zero. There is however a
+    // restriction, as we must not make any of the originally demanded elements
+    // more poisonous. We could reduce amount of elements demanded, but then we
+    // also need a to inform SimplifyDemandedVectorElts that some elements must
+    // not be made more poisonous.
+    if (SimplifyDemandedVectorElts(Op0, DemandedElts, KnownUndef, KnownZero,
                                    TLO, Depth + 1))
       return true;
 
-    KnownUndef &= DemandedElts0;
-    KnownZero &= DemandedElts0;
+    KnownUndef &= DemandedElts;
+    KnownZero &= DemandedElts;
 
-    // If every element pair has a zero/undef then just fold to zero.
-    // fold (and x, undef) -> 0  /  (and x, 0) -> 0
-    // fold (mul x, undef) -> 0  /  (mul x, 0) -> 0
+    // If every element pair has a zero/undef/poison then just fold to zero.
+    // fold (and x, undef/poison) -> 0  /  (and x, 0) -> 0
+    // fold (mul x, undef/poison) -> 0  /  (mul x, 0) -> 0
     if (DemandedElts.isSubsetOf(SrcZero | KnownZero | SrcUndef | KnownUndef))
       return TLO.CombineTo(Op, TLO.DAG.getConstant(0, SDLoc(Op), VT));
 
@@ -6570,6 +6598,11 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
                                   bool IsAfterLegalTypes,
                                   SmallVectorImpl<SDNode *> &Created) const {
   SDLoc dl(N);
+
+  // If the sdiv has an 'exact' bit we can use a simpler lowering.
+  if (N->getFlags().hasExact())
+    return BuildExactSDIV(*this, N, dl, DAG, Created);
+
   EVT VT = N->getValueType(0);
   EVT SVT = VT.getScalarType();
   EVT ShVT = getShiftAmountTy(VT, DAG.getDataLayout());
@@ -6579,9 +6612,18 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
 
   // Check to see if we can do this.
   // FIXME: We should be more aggressive here.
-  if (!isTypeLegal(VT)) {
+  EVT QueryVT = VT;
+  if (VT.isVector()) {
+    // If the vector type will be legalized to a vector type with the same
+    // element type, allow the transform before type legalization if MULHS or
+    // SMUL_LOHI are supported.
+    QueryVT = getLegalTypeToTransformTo(*DAG.getContext(), VT);
+    if (!QueryVT.isVector() ||
+        QueryVT.getVectorElementType() != VT.getVectorElementType())
+      return SDValue();
+  } else if (!isTypeLegal(VT)) {
     // Limit this to simple scalars for now.
-    if (VT.isVector() || !VT.isSimple())
+    if (!VT.isSimple())
       return SDValue();
 
     // If this type will be promoted to a large enough type with a legal
@@ -6595,9 +6637,38 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
       return SDValue();
   }
 
-  // If the sdiv has an 'exact' bit we can use a simpler lowering.
-  if (N->getFlags().hasExact())
-    return BuildExactSDIV(*this, N, dl, DAG, Created);
+  bool HasMULHS =
+      isOperationLegalOrCustom(ISD::MULHS, QueryVT, IsAfterLegalization);
+  bool HasSMUL_LOHI =
+      isOperationLegalOrCustom(ISD::SMUL_LOHI, QueryVT, IsAfterLegalization);
+
+  if (isTypeLegal(VT) && !HasMULHS && !HasSMUL_LOHI && MulVT == EVT()) {
+    // If type twice as wide legal, widen and use a mul plus a shift.
+    EVT WideVT = VT.widenIntegerElementType(*DAG.getContext());
+    // Some targets like AMDGPU try to go from SDIV to SDIVREM which is then
+    // custom lowered. This is very expensive so avoid it at all costs for
+    // constant divisors.
+    if ((!IsAfterLegalTypes && isOperationExpand(ISD::SDIV, VT) &&
+         isOperationCustom(ISD::SDIVREM, VT.getScalarType())) ||
+        isOperationLegalOrCustom(ISD::MUL, WideVT))
+      MulVT = WideVT;
+  }
+
+  if (!HasMULHS && !HasSMUL_LOHI && MulVT == EVT())
+    return SDValue();
+
+  // If we're after type legalization and SVT is not legal, use the
+  // promoted type for creating constants to avoid creating nodes with
+  // illegal types.
+  if (IsAfterLegalTypes && VT.isVector()) {
+    SVT = getTypeToTransformTo(*DAG.getContext(), SVT);
+    if (SVT.bitsLT(VT.getScalarType()))
+      return SDValue();
+    ShSVT = getTypeToTransformTo(*DAG.getContext(), ShSVT);
+    if (ShSVT.bitsLT(ShVT.getScalarType()))
+      return SDValue();
+  }
+  const unsigned SVTBits = SVT.getSizeInBits();
 
   SmallVector<SDValue, 16> MagicFactors, Factors, Shifts, ShiftMasks;
 
@@ -6625,7 +6696,8 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
       NumeratorFactor = -1;
     }
 
-    MagicFactors.push_back(DAG.getConstant(magics.Magic, dl, SVT));
+    MagicFactors.push_back(
+        DAG.getConstant(magics.Magic.zext(SVTBits), dl, SVT));
     Factors.push_back(DAG.getSignedConstant(NumeratorFactor, dl, SVT));
     Shifts.push_back(DAG.getConstant(magics.ShiftAmount, dl, ShSVT));
     ShiftMasks.push_back(DAG.getSignedConstant(ShiftMask, dl, SVT));
@@ -6664,44 +6736,21 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
   }
 
   // Multiply the numerator (operand 0) by the magic value.
-  // FIXME: We should support doing a MUL in a wider type.
   auto GetMULHS = [&](SDValue X, SDValue Y) {
-    // If the type isn't legal, use a wider mul of the type calculated
-    // earlier.
-    if (!isTypeLegal(VT)) {
-      X = DAG.getNode(ISD::SIGN_EXTEND, dl, MulVT, X);
-      Y = DAG.getNode(ISD::SIGN_EXTEND, dl, MulVT, Y);
-      Y = DAG.getNode(ISD::MUL, dl, MulVT, X, Y);
-      Y = DAG.getNode(ISD::SRL, dl, MulVT, Y,
-                      DAG.getShiftAmountConstant(EltBits, MulVT, dl));
-      return DAG.getNode(ISD::TRUNCATE, dl, VT, Y);
-    }
-
-    if (isOperationLegalOrCustom(ISD::MULHS, VT, IsAfterLegalization))
+    if (HasMULHS)
       return DAG.getNode(ISD::MULHS, dl, VT, X, Y);
-    if (isOperationLegalOrCustom(ISD::SMUL_LOHI, VT, IsAfterLegalization)) {
+    if (HasSMUL_LOHI) {
       SDValue LoHi =
           DAG.getNode(ISD::SMUL_LOHI, dl, DAG.getVTList(VT, VT), X, Y);
-      return SDValue(LoHi.getNode(), 1);
+      return LoHi.getValue(1);
     }
-    // If type twice as wide legal, widen and use a mul plus a shift.
-    unsigned Size = VT.getScalarSizeInBits();
-    EVT WideVT = VT.changeElementType(
-        *DAG.getContext(), EVT::getIntegerVT(*DAG.getContext(), Size * 2));
-    // Some targets like AMDGPU try to go from SDIV to SDIVREM which is then
-    // custom lowered. This is very expensive so avoid it at all costs for
-    // constant divisors.
-    if ((!IsAfterLegalTypes && isOperationExpand(ISD::SDIV, VT) &&
-         isOperationCustom(ISD::SDIVREM, VT.getScalarType())) ||
-        isOperationLegalOrCustom(ISD::MUL, WideVT)) {
-      X = DAG.getNode(ISD::SIGN_EXTEND, dl, WideVT, X);
-      Y = DAG.getNode(ISD::SIGN_EXTEND, dl, WideVT, Y);
-      Y = DAG.getNode(ISD::MUL, dl, WideVT, X, Y);
-      Y = DAG.getNode(ISD::SRL, dl, WideVT, Y,
-                      DAG.getShiftAmountConstant(EltBits, WideVT, dl));
-      return DAG.getNode(ISD::TRUNCATE, dl, VT, Y);
-    }
-    return SDValue();
+
+    X = DAG.getNode(ISD::SIGN_EXTEND, dl, MulVT, X);
+    Y = DAG.getNode(ISD::SIGN_EXTEND, dl, MulVT, Y);
+    Y = DAG.getNode(ISD::MUL, dl, MulVT, X, Y);
+    Y = DAG.getNode(ISD::SRL, dl, MulVT, Y,
+                    DAG.getShiftAmountConstant(EltBits, MulVT, dl));
+    return DAG.getNode(ISD::TRUNCATE, dl, VT, Y);
   };
 
   SDValue Q = GetMULHS(N0, MagicFactor);
@@ -6738,6 +6787,11 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
                                   bool IsAfterLegalTypes,
                                   SmallVectorImpl<SDNode *> &Created) const {
   SDLoc dl(N);
+
+  // If the udiv has an 'exact' bit we can use a simpler lowering.
+  if (N->getFlags().hasExact())
+    return BuildExactUDIV(*this, N, dl, DAG, Created);
+
   EVT VT = N->getValueType(0);
   EVT SVT = VT.getScalarType();
   EVT ShVT = getShiftAmountTy(VT, DAG.getDataLayout());
@@ -6747,9 +6801,18 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
 
   // Check to see if we can do this.
   // FIXME: We should be more aggressive here.
-  if (!isTypeLegal(VT)) {
+  EVT QueryVT = VT;
+  if (VT.isVector()) {
+    // If the vector type will be legalized to a vector type with the same
+    // element type, allow the transform before type legalization if MULHU or
+    // UMUL_LOHI are supported.
+    QueryVT = getLegalTypeToTransformTo(*DAG.getContext(), VT);
+    if (!QueryVT.isVector() ||
+        QueryVT.getVectorElementType() != VT.getVectorElementType())
+      return SDValue();
+  } else if (!isTypeLegal(VT)) {
     // Limit this to simple scalars for now.
-    if (VT.isVector() || !VT.isSimple())
+    if (!VT.isSimple())
       return SDValue();
 
     // If this type will be promoted to a large enough type with a legal
@@ -6763,9 +6826,25 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
       return SDValue();
   }
 
-  // If the udiv has an 'exact' bit we can use a simpler lowering.
-  if (N->getFlags().hasExact())
-    return BuildExactUDIV(*this, N, dl, DAG, Created);
+  bool HasMULHU =
+      isOperationLegalOrCustom(ISD::MULHU, QueryVT, IsAfterLegalization);
+  bool HasUMUL_LOHI =
+      isOperationLegalOrCustom(ISD::UMUL_LOHI, QueryVT, IsAfterLegalization);
+
+  if (isTypeLegal(VT) && !HasMULHU && !HasUMUL_LOHI && MulVT == EVT()) {
+    // If type twice as wide legal, widen and use a mul plus a shift.
+    EVT WideVT = VT.widenIntegerElementType(*DAG.getContext());
+    // Some targets like AMDGPU try to go from UDIV to UDIVREM which is then
+    // custom lowered. This is very expensive so avoid it at all costs for
+    // constant divisors.
+    if ((!IsAfterLegalTypes && isOperationExpand(ISD::UDIV, VT) &&
+         isOperationCustom(ISD::UDIVREM, VT.getScalarType())) ||
+        isOperationLegalOrCustom(ISD::MUL, WideVT))
+      MulVT = WideVT;
+  }
+
+  if (!HasMULHU && !HasUMUL_LOHI && MulVT == EVT())
+    return SDValue();
 
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -6787,7 +6866,19 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
   }
   const unsigned SVTBits = SVT.getSizeInBits();
 
+  // Allow i32 to be widened to i64 for uncooperative divisors if i64 MULHU or
+  // UMUL_LOHI is supported.
+  const EVT WideSVT = MVT::i64;
+  const bool HasWideMULHU =
+      VT == MVT::i32 &&
+      isOperationLegalOrCustom(ISD::MULHU, WideSVT, IsAfterLegalization);
+  const bool HasWideUMUL_LOHI =
+      VT == MVT::i32 &&
+      isOperationLegalOrCustom(ISD::UMUL_LOHI, WideSVT, IsAfterLegalization);
+  const bool AllowWiden = (HasWideMULHU || HasWideUMUL_LOHI);
+
   bool UseNPQ = false, UsePreShift = false, UsePostShift = false;
+  bool UseWiden = false;
   SmallVector<SDValue, 16> PreShifts, PostShifts, MagicFactors, NPQFactors;
 
   auto BuildUDIVPattern = [&](ConstantSDNode *C) {
@@ -6807,9 +6898,16 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
     } else {
       UnsignedDivisionByConstantInfo magics =
           UnsignedDivisionByConstantInfo::get(
-              Divisor, std::min(KnownLeadingZeros, Divisor.countl_zero()));
+              Divisor, std::min(KnownLeadingZeros, Divisor.countl_zero()),
+              /*AllowEvenDivisorOptimization=*/true,
+              /*AllowWidenOptimization=*/AllowWiden);
 
-      MagicFactor = DAG.getConstant(magics.Magic.zext(SVTBits), dl, SVT);
+      if (magics.Widen) {
+        UseWiden = true;
+        MagicFactor = DAG.getConstant(magics.Magic, dl, WideSVT);
+      } else {
+        MagicFactor = DAG.getConstant(magics.Magic.zext(SVTBits), dl, SVT);
+      }
 
       assert(magics.PreShift < Divisor.getBitWidth() &&
              "We shouldn't generate an undefined shift!");
@@ -6861,50 +6959,48 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
     PostShift = PostShifts[0];
   }
 
+  if (UseWiden) {
+    // Compute: (WideSVT(x) * MagicFactor) >> WideSVTBits.
+    SDValue WideN0 = DAG.getNode(ISD::ZERO_EXTEND, dl, WideSVT, N0);
+
+    // Perform WideSVTxWideSVT -> 2*WideSVT multiplication and extract high
+    // WideSVT bits
+    SDValue High;
+    if (HasWideMULHU) {
+      High = DAG.getNode(ISD::MULHU, dl, WideSVT, WideN0, MagicFactor);
+    } else {
+      assert(HasWideUMUL_LOHI);
+      SDValue LoHi =
+          DAG.getNode(ISD::UMUL_LOHI, dl, DAG.getVTList(WideSVT, WideSVT),
+                      WideN0, MagicFactor);
+      High = LoHi.getValue(1);
+    }
+
+    Created.push_back(High.getNode());
+    return DAG.getNode(ISD::TRUNCATE, dl, VT, High);
+  }
+
   SDValue Q = N0;
   if (UsePreShift) {
     Q = DAG.getNode(ISD::SRL, dl, VT, Q, PreShift);
     Created.push_back(Q.getNode());
   }
 
-  // FIXME: We should support doing a MUL in a wider type.
   auto GetMULHU = [&](SDValue X, SDValue Y) {
-    // If the type isn't legal, use a wider mul of the type calculated
-    // earlier.
-    if (!isTypeLegal(VT)) {
-      X = DAG.getNode(ISD::ZERO_EXTEND, dl, MulVT, X);
-      Y = DAG.getNode(ISD::ZERO_EXTEND, dl, MulVT, Y);
-      Y = DAG.getNode(ISD::MUL, dl, MulVT, X, Y);
-      Y = DAG.getNode(ISD::SRL, dl, MulVT, Y,
-                      DAG.getShiftAmountConstant(EltBits, MulVT, dl));
-      return DAG.getNode(ISD::TRUNCATE, dl, VT, Y);
-    }
-
-    if (isOperationLegalOrCustom(ISD::MULHU, VT, IsAfterLegalization))
+    if (HasMULHU)
       return DAG.getNode(ISD::MULHU, dl, VT, X, Y);
-    if (isOperationLegalOrCustom(ISD::UMUL_LOHI, VT, IsAfterLegalization)) {
+    if (HasUMUL_LOHI) {
       SDValue LoHi =
           DAG.getNode(ISD::UMUL_LOHI, dl, DAG.getVTList(VT, VT), X, Y);
-      return SDValue(LoHi.getNode(), 1);
+      return LoHi.getValue(1);
     }
-    // If type twice as wide legal, widen and use a mul plus a shift.
-    unsigned Size = VT.getScalarSizeInBits();
-    EVT WideVT = VT.changeElementType(
-        *DAG.getContext(), EVT::getIntegerVT(*DAG.getContext(), Size * 2));
-    // Some targets like AMDGPU try to go from UDIV to UDIVREM which is then
-    // custom lowered. This is very expensive so avoid it at all costs for
-    // constant divisors.
-    if ((!IsAfterLegalTypes && isOperationExpand(ISD::UDIV, VT) &&
-         isOperationCustom(ISD::UDIVREM, VT.getScalarType())) ||
-        isOperationLegalOrCustom(ISD::MUL, WideVT)) {
-      X = DAG.getNode(ISD::ZERO_EXTEND, dl, WideVT, X);
-      Y = DAG.getNode(ISD::ZERO_EXTEND, dl, WideVT, Y);
-      Y = DAG.getNode(ISD::MUL, dl, WideVT, X, Y);
-      Y = DAG.getNode(ISD::SRL, dl, WideVT, Y,
-                      DAG.getShiftAmountConstant(EltBits, WideVT, dl));
-      return DAG.getNode(ISD::TRUNCATE, dl, VT, Y);
-    }
-    return SDValue(); // No mulhu or equivalent
+
+    X = DAG.getNode(ISD::ZERO_EXTEND, dl, MulVT, X);
+    Y = DAG.getNode(ISD::ZERO_EXTEND, dl, MulVT, Y);
+    Y = DAG.getNode(ISD::MUL, dl, MulVT, X, Y);
+    Y = DAG.getNode(ISD::SRL, dl, MulVT, Y,
+                    DAG.getShiftAmountConstant(EltBits, MulVT, dl));
+    return DAG.getNode(ISD::TRUNCATE, dl, VT, Y);
   };
 
   // Multiply the numerator (operand 0) by the magic value.
@@ -6972,7 +7068,7 @@ turnVectorIntoSplatVector(MutableArrayRef<SDValue> Values,
 }
 
 /// Given an ISD::UREM used only by an ISD::SETEQ or ISD::SETNE
-/// where the divisor is constant and the comparison target is zero,
+/// where the divisor and comparison target are constants,
 /// return a DAG expression that will generate the same comparison result
 /// using only multiplications, additions and shifts/rotations.
 /// Ref: "Hacker's Delight" 10-17.
@@ -6997,7 +7093,8 @@ TargetLowering::prepareUREMEqFold(EVT SETCCVT, SDValue REMNode,
                                   SDValue CompTargetNode, ISD::CondCode Cond,
                                   DAGCombinerInfo &DCI, const SDLoc &DL,
                                   SmallVectorImpl<SDNode *> &Created) const {
-  // fold (seteq/ne (urem N, D), 0) -> (setule/ugt (rotr (mul N, P), K), Q)
+  // fold (seteq/ne (urem N, D), C) ->
+  //      (setule/ugt (rotr (mul (sub N, C), P), K), Q)
   // - D must be constant, with D = D0 * 2^K where D0 is odd
   // - P is the multiplicative inverse of D0 modulo 2^W
   // - Q = floor(((2^W) - 1) / D)
@@ -7049,7 +7146,7 @@ TargetLowering::prepareUREMEqFold(EVT SETCCVT, SDValue REMNode,
     HadTautologicalLanes |= TautologicalLane;
     AllLanesAreTautological &= TautologicalLane;
 
-    // If we are comparing with non-zero, we need'll need  to subtract said
+    // If we are comparing with non-zero, we need'll need to subtract said
     // comparison value from the LHS. But there is no point in doing that if
     // every lane where we are comparing with non-zero is tautological..
     if (!Cmp.isZero())
@@ -7089,17 +7186,15 @@ TargetLowering::prepareUREMEqFold(EVT SETCCVT, SDValue REMNode,
     if (TautologicalLane) {
       // Set P and K amount to a bogus values so we can try to splat them.
       P = 0;
-      K = -1;
+      KAmts.push_back(DAG.getAllOnesConstant(DL, ShSVT));
       // And ensure that comparison constant is tautological,
       // it will always compare true/false.
-      Q = -1;
+      Q.setAllBits();
+    } else {
+      KAmts.push_back(DAG.getConstant(K, DL, ShSVT));
     }
 
     PAmts.push_back(DAG.getConstant(P, DL, SVT));
-    KAmts.push_back(
-        DAG.getConstant(APInt(ShSVT.getSizeInBits(), K, /*isSigned=*/false,
-                              /*implicitTrunc=*/true),
-                        DL, ShSVT));
     QAmts.push_back(DAG.getConstant(Q, DL, SVT));
     return true;
   };
@@ -7298,9 +7393,8 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
     // FIXME: we don't fold `rem %X, -C` to `rem %X, C` in DAGCombine.
 
     // WARNING: this fold is only valid for positive divisors!
-    APInt D = C->getAPIntValue();
-    if (D.isNegative())
-      D.negate(); //  `rem %X, -C` is equivalent to `rem %X, C`
+    // `rem %X, -C` is equivalent to `rem %X, C`
+    APInt D = C->getAPIntValue().abs();
 
     HadIntMinDivisor |= D.isMinSignedValue();
 
@@ -7352,7 +7446,7 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
       // A = 2^(W-1)
       A = APInt::getSignedMinValue(W);
       // - Q = 2^(W-K) - 1
-      Q = APInt::getAllOnes(W - K).zext(W);
+      Q = APInt::getLowBitsSet(W, W - K);
     }
 
     // If the divisor is 1 the result can be constant-folded. Likewise, we
@@ -7360,19 +7454,17 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
     if (D.isOne()) {
       // Set P, A and K to a bogus values so we can try to splat them.
       P = 0;
-      A = -1;
-      K = -1;
+      A.setAllBits();
+      KAmts.push_back(DAG.getAllOnesConstant(DL, ShSVT));
 
       // x ?% 1 == 0  <-->  true  <-->  x u<= -1
-      Q = -1;
+      Q.setAllBits();
+    } else {
+      KAmts.push_back(DAG.getConstant(K, DL, ShSVT));
     }
 
     PAmts.push_back(DAG.getConstant(P, DL, SVT));
     AAmts.push_back(DAG.getConstant(A, DL, SVT));
-    KAmts.push_back(
-        DAG.getConstant(APInt(ShSVT.getSizeInBits(), K, /*isSigned=*/false,
-                              /*implicitTrunc=*/true),
-                        DL, ShSVT));
     QAmts.push_back(DAG.getConstant(Q, DL, SVT));
     return true;
   };
@@ -7508,7 +7600,8 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
 }
 
 SDValue TargetLowering::getSqrtInputTest(SDValue Op, SelectionDAG &DAG,
-                                         const DenormalMode &Mode) const {
+                                         const DenormalMode &Mode,
+                                         SDNodeFlags Flags) const {
   SDLoc DL(Op);
   EVT VT = Op.getValueType();
   EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
@@ -7519,7 +7612,8 @@ SDValue TargetLowering::getSqrtInputTest(SDValue Op, SelectionDAG &DAG,
   if (Mode.Input == DenormalMode::PreserveSign ||
       Mode.Input == DenormalMode::PositiveZero) {
     // Test = X == 0.0
-    return DAG.getSetCC(DL, CCVT, Op, FPZero, ISD::SETEQ);
+    return DAG.getSetCC(DL, CCVT, Op, FPZero, ISD::SETEQ, /*Chain=*/{},
+                        /*Signaling=*/false, Flags);
   }
 
   // Testing it with denormal inputs to avoid wrong estimate.
@@ -7528,8 +7622,9 @@ SDValue TargetLowering::getSqrtInputTest(SDValue Op, SelectionDAG &DAG,
   const fltSemantics &FltSem = VT.getFltSemantics();
   APFloat SmallestNorm = APFloat::getSmallestNormalized(FltSem);
   SDValue NormC = DAG.getConstantFP(SmallestNorm, DL, VT);
-  SDValue Fabs = DAG.getNode(ISD::FABS, DL, VT, Op);
-  return DAG.getSetCC(DL, CCVT, Fabs, NormC, ISD::SETLT);
+  SDValue Fabs = DAG.getNode(ISD::FABS, DL, VT, Op, Flags);
+  return DAG.getSetCC(DL, CCVT, Fabs, NormC, ISD::SETLT, /*Chain=*/{},
+                      /*Signaling=*/false, Flags);
 }
 
 SDValue TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
@@ -7880,12 +7975,12 @@ bool TargetLowering::expandMUL_LOHI(unsigned Opcode, EVT VT, const SDLoc &dl,
   assert((LL.getNode() && LH.getNode() && RL.getNode() && RH.getNode()) ||
          (!LL.getNode() && !LH.getNode() && !RL.getNode() && !RH.getNode()));
 
-  SDVTList VTs = DAG.getVTList(HiLoVT, HiLoVT);
   auto MakeMUL_LOHI = [&](SDValue L, SDValue R, SDValue &Lo, SDValue &Hi,
                           bool Signed) -> bool {
     if ((Signed && HasSMUL_LOHI) || (!Signed && HasUMUL_LOHI)) {
+      SDVTList VTs = DAG.getVTList(HiLoVT, HiLoVT);
       Lo = DAG.getNode(Signed ? ISD::SMUL_LOHI : ISD::UMUL_LOHI, dl, VTs, L, R);
-      Hi = SDValue(Lo.getNode(), 1);
+      Hi = Lo.getValue(1);
       return true;
     }
     if ((Signed && HasMULHS) || (!Signed && HasMULHU)) {
@@ -8049,8 +8144,15 @@ bool TargetLowering::expandMUL(SDNode *N, SDValue &Lo, SDValue &Hi, EVT HiLoVT,
 // If (1 << (BitWidth / 2)) % Constant == 1, then the remainder
 // can be computed
 // as:
-//   Sum += __builtin_uadd_overflow(Lo, High, &Sum);
-//   Remainder = Sum % Constant
+//   Sum = __builtin_uadd_overflow(Lo, High, &Sum);
+//   Remainder = Sum % Constant;
+//
+// If (1 << (BitWidth / 2)) % Constant != 1, we can search for a smaller value
+// W such that W != (BitWidth / 2) and (1 << W) % Constant == 1. We can break
+// High:Low into 3 chunks of W bits and compute remainder as
+//   Sum = Chunk0 + Chunk1 + Chunk2;
+//   Remainder = Sum % Constant;
+//
 // This is based on "Remainder by Summing Digits" from Hacker's Delight.
 //
 // For division, we can compute the remainder using the algorithm described
@@ -8114,36 +8216,68 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
     Divisor.lshrInPlace(TrailingZeros);
   }
 
+  // Look for the largest chunk width W such that (1 << W) % Divisor == 1.
+  unsigned BestChunkWidth = 0;
+  for (unsigned I = HBitWidth, E = HBitWidth / 2; I > E; --I) {
+    APInt Mod = APInt::getOneBitSet(Divisor.getBitWidth(), I).urem(Divisor);
+
+    if (!Mod.isOne())
+      continue;
+
+    // If best chunk is HBitWidth, we can use it and handle the carry out.
+    // Otherwise, ensure the sum won't overflow HiLoVT (HBitWidth).
+    // Summing N chunks adds ceil(log2(N)) extra carry bits to the width.
+    // Safety check: Base Chunk Width (I) + Carry Bits <= Register Width.
+    unsigned NumChunks = divideCeil(BitWidth, I);
+    if (I == HBitWidth || I + llvm::bit_width(NumChunks - 1) <= HBitWidth) {
+      BestChunkWidth = I;
+      break;
+    }
+  }
+
+  // If we didn't find a chunk size, exit.
+  if (!BestChunkWidth)
+    return false;
+
   SDLoc dl(N);
-  SDValue Sum;
+
+  assert(!LL == !LH && "Expected both input halves or no input halves!");
+  if (!LL)
+    std::tie(LL, LH) = DAG.SplitScalar(N->getOperand(0), dl, HiLoVT, HiLoVT);
+
+  bool HasFSHR = isOperationLegal(ISD::FSHR, HiLoVT);
+
+  auto GetFSHR = [&](SDValue Lo, SDValue Hi, unsigned ShiftAmt) {
+    assert(ShiftAmt > 0 && ShiftAmt < HBitWidth);
+    if (HasFSHR)
+      return DAG.getNode(ISD::FSHR, dl, HiLoVT, Hi, Lo,
+                         DAG.getShiftAmountConstant(ShiftAmt, HiLoVT, dl));
+    return DAG.getNode(
+        ISD::OR, dl, HiLoVT,
+        DAG.getNode(ISD::SRL, dl, HiLoVT, Lo,
+                    DAG.getShiftAmountConstant(ShiftAmt, HiLoVT, dl)),
+        DAG.getNode(
+            ISD::SHL, dl, HiLoVT, Hi,
+            DAG.getShiftAmountConstant(HBitWidth - ShiftAmt, HiLoVT, dl)));
+  };
+
+  // Shift the input by the number of TrailingZeros in the divisor. The
+  // shifted out bits will be added to the remainder later.
   SDValue PartialRem;
+  if (TrailingZeros && Opcode != ISD::UDIV) {
+    // Save the shifted off bits if we need the remainder.
+    APInt Mask = APInt::getLowBitsSet(HBitWidth, TrailingZeros);
+    PartialRem = DAG.getNode(ISD::AND, dl, HiLoVT, LL,
+                             DAG.getConstant(Mask, dl, HiLoVT));
+  }
 
-  // If (1 << HBitWidth) % divisor == 1, we can add the two halves together and
-  // then add in the carry.
-  // TODO: If we can't split it in half, we might be able to split into 3 or
-  // more pieces using a smaller bit width.
-  if (HalfMaxPlus1.urem(Divisor).isOne()) {
-    assert(!LL == !LH && "Expected both input halves or no input halves!");
-    if (!LL)
-      std::tie(LL, LH) = DAG.SplitScalar(N->getOperand(0), dl, HiLoVT, HiLoVT);
-
-    // Shift the input by the number of TrailingZeros in the divisor. The
-    // shifted out bits will be added to the remainder later.
+  SDValue Sum;
+  // If BestChunkWidth is HBitWidth add low and high half. If there is a carry
+  // out, add that to the final sum.
+  if (BestChunkWidth == HBitWidth) {
+    // Shift LH:LL right if there were trailing zeros in the divisor.
     if (TrailingZeros) {
-      // Save the shifted off bits if we need the remainder.
-      if (Opcode != ISD::UDIV) {
-        APInt Mask = APInt::getLowBitsSet(HBitWidth, TrailingZeros);
-        PartialRem = DAG.getNode(ISD::AND, dl, HiLoVT, LL,
-                                 DAG.getConstant(Mask, dl, HiLoVT));
-      }
-
-      LL = DAG.getNode(
-          ISD::OR, dl, HiLoVT,
-          DAG.getNode(ISD::SRL, dl, HiLoVT, LL,
-                      DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl)),
-          DAG.getNode(ISD::SHL, dl, HiLoVT, LH,
-                      DAG.getShiftAmountConstant(HBitWidth - TrailingZeros,
-                                                 HiLoVT, dl)));
+      LL = GetFSHR(LL, LH, TrailingZeros);
       LH = DAG.getNode(ISD::SRL, dl, HiLoVT, LH,
                        DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl));
     }
@@ -8169,11 +8303,33 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
                               DAG.getConstant(0, dl, HiLoVT));
       Sum = DAG.getNode(ISD::ADD, dl, HiLoVT, Sum, Carry);
     }
-  }
+  } else {
+    // Otherwise split into multple chunks and add them together. We chose
+    // BestChunkWidth so that the sum will not overflow.
+    SDValue Mask = DAG.getConstant(
+        APInt::getLowBitsSet(HBitWidth, BestChunkWidth), dl, HiLoVT);
 
-  // If we didn't find a sum, we can't do the expansion.
-  if (!Sum)
-    return false;
+    for (unsigned I = 0; I < BitWidth - TrailingZeros; I += BestChunkWidth) {
+      // If there were trailing zeros in the divisor, increase the shift amount.
+      unsigned Shift = I + TrailingZeros;
+      SDValue Chunk;
+      if (Shift == 0)
+        Chunk = LL;
+      else if (Shift >= HBitWidth)
+        Chunk = DAG.getNode(
+            ISD::SRL, dl, HiLoVT, LH,
+            DAG.getShiftAmountConstant(Shift - HBitWidth, HiLoVT, dl));
+      else
+        Chunk = GetFSHR(LL, LH, Shift);
+      // If we're on the last chunk, we don't need an AND.
+      if (I + BestChunkWidth < BitWidth - TrailingZeros)
+        Chunk = DAG.getNode(ISD::AND, dl, HiLoVT, Chunk, Mask);
+      if (!Sum)
+        Sum = Chunk;
+      else
+        Sum = DAG.getNode(ISD::ADD, dl, HiLoVT, Sum, Chunk);
+    }
+  }
 
   // Perform a HiLoVT urem on the Sum using truncated divisor.
   SDValue RemL =
@@ -8182,6 +8338,13 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
   SDValue RemH = DAG.getConstant(0, dl, HiLoVT);
 
   if (Opcode != ISD::UREM) {
+    // If we didn't shift LH/LR earlier, do it now.
+    if (BestChunkWidth != HBitWidth && TrailingZeros) {
+      LL = GetFSHR(LL, LH, TrailingZeros);
+      LH = DAG.getNode(ISD::SRL, dl, HiLoVT, LH,
+                       DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl));
+    }
+
     // Subtract the remainder from the shifted dividend.
     SDValue Dividend = DAG.getNode(ISD::BUILD_PAIR, dl, VT, LL, LH);
     SDValue Rem = DAG.getNode(ISD::BUILD_PAIR, dl, VT, RemL, RemH);
@@ -8208,10 +8371,12 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
     if (TrailingZeros) {
       RemL = DAG.getNode(ISD::SHL, dl, HiLoVT, RemL,
                          DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl));
-      RemL = DAG.getNode(ISD::ADD, dl, HiLoVT, RemL, PartialRem);
+
+      RemL = DAG.getNode(ISD::OR, dl, HiLoVT, RemL, PartialRem,
+                         SDNodeFlags::Disjoint);
     }
     Result.push_back(RemL);
-    Result.push_back(DAG.getConstant(0, dl, HiLoVT));
+    Result.push_back(RemH);
   }
 
   return true;
@@ -8425,6 +8590,49 @@ SDValue TargetLowering::expandROT(SDNode *Node, bool AllowVectorOps,
   return DAG.getNode(ISD::OR, DL, VT, ShVal, HsVal);
 }
 
+/// Check if CLMUL on VT can eventually reach a type with legal CLMUL through
+/// a chain of halving decompositions (halving element width) and/or vector
+/// widening (doubling element count). This guides expansion strategy selection:
+/// if true, the halving/widening path produces better code than bit-by-bit.
+///
+/// HalveDepth tracks halving steps only (each creates ~4x more operations).
+/// Widening steps are cheap (O(1) pad/extract) and don't count.
+/// Limiting halvings to 2 prevents exponential blowup:
+///   1 halving: ~4 sub-CLMULs (good, e.g. v8i16 -> v8i8)
+///   2 halvings: ~16 sub-CLMULs (acceptable, e.g. v4i32 -> v4i16 -> v8i8)
+///   3 halvings: ~64 sub-CLMULs (worse than bit-by-bit expansion)
+static bool canNarrowCLMULToLegal(const TargetLowering &TLI, LLVMContext &Ctx,
+                                  EVT VT, unsigned HalveDepth = 0,
+                                  unsigned TotalDepth = 0) {
+  if (HalveDepth > 2 || TotalDepth > 8 || !VT.isFixedLengthVector())
+    return false;
+  if (TLI.isOperationLegalOrCustom(ISD::CLMUL, VT))
+    return true;
+  if (!TLI.isTypeLegal(VT))
+    return false;
+
+  unsigned BW = VT.getScalarSizeInBits();
+
+  // Halve: halve element width, same element count.
+  // This is the expensive step -- each halving creates ~4x more operations.
+  if (BW % 2 == 0) {
+    EVT HalfEltVT = EVT::getIntegerVT(Ctx, BW / 2);
+    EVT HalfVT = VT.changeVectorElementType(Ctx, HalfEltVT);
+    if (TLI.isTypeLegal(HalfVT) &&
+        canNarrowCLMULToLegal(TLI, Ctx, HalfVT, HalveDepth + 1, TotalDepth + 1))
+      return true;
+  }
+
+  // Widen: double element count (fixed-width vectors only).
+  // This is cheap -- just INSERT_SUBVECTOR + EXTRACT_SUBVECTOR.
+  EVT WideVT = VT.getDoubleNumVectorElementsVT(Ctx);
+  if (TLI.isTypeLegal(WideVT) &&
+      canNarrowCLMULToLegal(TLI, Ctx, WideVT, HalveDepth, TotalDepth + 1))
+    return true;
+
+  return false;
+}
+
 SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
   SDLoc DL(Node);
   EVT VT = Node->getValueType(0);
@@ -8432,18 +8640,121 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
   SDValue Y = Node->getOperand(1);
   unsigned BW = VT.getScalarSizeInBits();
   unsigned Opcode = Node->getOpcode();
+  LLVMContext &Ctx = *DAG.getContext();
 
   switch (Opcode) {
   case ISD::CLMUL: {
+    // For vector types, try decomposition strategies that leverage legal
+    // CLMUL on narrower or wider element types, avoiding the expensive
+    // bit-by-bit expansion.
+    if (VT.isVector()) {
+      // Strategy 1: Halving decomposition to half-element-width CLMUL.
+      // Applies ExpandIntRes_CLMUL's identity element-wise:
+      //   CLMUL(X, Y) = (Hi << HalfBW) | Lo
+      // where:
+      //   Lo = CLMUL(XLo, YLo)
+      //   Hi = CLMULH(XLo, YLo) ^ CLMUL(XLo, YHi) ^ CLMUL(XHi, YLo)
+      unsigned HalfBW = BW / 2;
+      if (BW % 2 == 0) {
+        EVT HalfEltVT = EVT::getIntegerVT(Ctx, HalfBW);
+        EVT HalfVT =
+            EVT::getVectorVT(Ctx, HalfEltVT, VT.getVectorElementCount());
+        if (isTypeLegal(HalfVT) && canNarrowCLMULToLegal(*this, Ctx, HalfVT,
+                                                         /*HalveDepth=*/1)) {
+          SDValue ShAmt = DAG.getShiftAmountConstant(HalfBW, VT, DL);
+
+          // Extract low and high halves of each element.
+          SDValue XLo = DAG.getNode(ISD::TRUNCATE, DL, HalfVT, X);
+          SDValue XHi = DAG.getNode(ISD::TRUNCATE, DL, HalfVT,
+                                    DAG.getNode(ISD::SRL, DL, VT, X, ShAmt));
+          SDValue YLo = DAG.getNode(ISD::TRUNCATE, DL, HalfVT, Y);
+          SDValue YHi = DAG.getNode(ISD::TRUNCATE, DL, HalfVT,
+                                    DAG.getNode(ISD::SRL, DL, VT, Y, ShAmt));
+
+          // Lo = CLMUL(XLo, YLo)
+          SDValue Lo = DAG.getNode(ISD::CLMUL, DL, HalfVT, XLo, YLo);
+
+          // Hi = CLMULH(XLo, YLo) ^ CLMUL(XLo, YHi) ^ CLMUL(XHi, YLo)
+          SDValue LoH = DAG.getNode(ISD::CLMULH, DL, HalfVT, XLo, YLo);
+          SDValue Cross1 = DAG.getNode(ISD::CLMUL, DL, HalfVT, XLo, YHi);
+          SDValue Cross2 = DAG.getNode(ISD::CLMUL, DL, HalfVT, XHi, YLo);
+          SDValue Cross = DAG.getNode(ISD::XOR, DL, HalfVT, Cross1, Cross2);
+          SDValue Hi = DAG.getNode(ISD::XOR, DL, HalfVT, LoH, Cross);
+
+          // Reassemble: Result = ZExt(Lo) | (AnyExt(Hi) << HalfBW)
+          SDValue LoExt = DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Lo);
+          SDValue HiExt = DAG.getNode(ISD::ANY_EXTEND, DL, VT, Hi);
+          SDValue HiShifted = DAG.getNode(ISD::SHL, DL, VT, HiExt, ShAmt);
+          return DAG.getNode(ISD::OR, DL, VT, LoExt, HiShifted);
+        }
+      }
+
+      // Strategy 2: Promote to double-element-width CLMUL.
+      // CLMUL(X, Y) = Trunc(CLMUL(AnyExt(X), AnyExt(Y)))
+      {
+        EVT ExtVT = VT.widenIntegerElementType(Ctx);
+        if (isTypeLegal(ExtVT) && isOperationLegalOrCustom(ISD::CLMUL, ExtVT)) {
+          // If CLMUL on ExtVT is Custom (not Legal), the target may
+          // scalarize it, costing O(NumElements) scalar ops. The bit-by-bit
+          // fallback costs O(BW) vectorized iterations. Only widen when
+          // element count is small enough that scalarization is cheaper.
+          unsigned NumElts = VT.getVectorMinNumElements();
+          if (isOperationLegal(ISD::CLMUL, ExtVT) || NumElts < BW) {
+            SDValue XExt = DAG.getNode(ISD::ANY_EXTEND, DL, ExtVT, X);
+            SDValue YExt = DAG.getNode(ISD::ANY_EXTEND, DL, ExtVT, Y);
+            SDValue Mul = DAG.getNode(ISD::CLMUL, DL, ExtVT, XExt, YExt);
+            return DAG.getNode(ISD::TRUNCATE, DL, VT, Mul);
+          }
+        }
+      }
+
+      // Strategy 3: Widen element count (pad with undef, do CLMUL on wider
+      // vector, extract lower result). CLMUL is element-wise, so upper
+      // (undef) lanes don't affect the lower results.
+      // e.g. v4i16 => pad to v8i16 => halve to v8i8 PMUL => extract v4i16.
+      if (auto EC = VT.getVectorElementCount(); EC.isFixed()) {
+        EVT WideVT = EVT::getVectorVT(Ctx, VT.getVectorElementType(), EC * 2);
+        if (isTypeLegal(WideVT) && canNarrowCLMULToLegal(*this, Ctx, WideVT)) {
+          SDValue Undef = DAG.getUNDEF(WideVT);
+          SDValue XWide = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, WideVT, Undef,
+                                      X, DAG.getVectorIdxConstant(0, DL));
+          SDValue YWide = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, WideVT, Undef,
+                                      Y, DAG.getVectorIdxConstant(0, DL));
+          SDValue WideRes = DAG.getNode(ISD::CLMUL, DL, WideVT, XWide, YWide);
+          return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, WideRes,
+                             DAG.getVectorIdxConstant(0, DL));
+        }
+      }
+    }
+
     // NOTE: If you change this expansion, please update the cost model
     // calculation in BasicTTIImpl::getTypeBasedIntrinsicInstrCost for
     // Intrinsic::clmul.
+
+    EVT SetCCVT = getSetCCResultType(DAG.getDataLayout(), Ctx, VT);
+
     SDValue Res = DAG.getConstant(0, DL, VT);
     for (unsigned I = 0; I < BW; ++I) {
+      SDValue ShiftAmt = DAG.getShiftAmountConstant(I, VT, DL);
       SDValue Mask = DAG.getConstant(APInt::getOneBitSet(BW, I), DL, VT);
       SDValue YMasked = DAG.getNode(ISD::AND, DL, VT, Y, Mask);
-      SDValue Mul = DAG.getNode(ISD::MUL, DL, VT, X, YMasked);
-      Res = DAG.getNode(ISD::XOR, DL, VT, Res, Mul);
+
+      // For targets with a fast bit test instruction (e.g., x86 BT) or without
+      // multiply, use a shift-based expansion to avoid expensive MUL
+      // instructions.
+      SDValue Part;
+      if (!hasBitTest(Y, ShiftAmt) &&
+          isOperationLegalOrCustom(
+              ISD::MUL, getTypeToTransformTo(*DAG.getContext(), VT))) {
+        Part = DAG.getNode(ISD::MUL, DL, VT, X, YMasked);
+      } else {
+        // Canonical bit test: (Y & (1 << I)) != 0
+        SDValue Zero = DAG.getConstant(0, DL, VT);
+        SDValue Cond = DAG.getSetCC(DL, SetCCVT, YMasked, Zero, ISD::SETEQ);
+        SDValue XShifted = DAG.getNode(ISD::SHL, DL, VT, X, ShiftAmt);
+        Part = DAG.getSelect(DL, VT, Cond, Zero, XShifted);
+      }
+      Res = DAG.getNode(ISD::XOR, DL, VT, Res, Part);
     }
     return Res;
   }
@@ -8461,12 +8772,24 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
     }
     [[fallthrough]];
   case ISD::CLMULH: {
-    EVT ExtVT = VT.changeElementType(
-        *DAG.getContext(), EVT::getIntegerVT(*DAG.getContext(), 2 * BW));
-    // For example, ExtVT = i64 based operations aren't legal on a 32-bit
-    // target; use bitreverse-based lowering in this case.
+    EVT ExtVT = VT.widenIntegerElementType(Ctx);
+    // Use bitreverse-based lowering (CLMULR/H = rev(CLMUL(rev,rev)) >> S)
+    // when any of these hold:
+    // (a) ZERO_EXTEND to ExtVT or SRL on ExtVT isn't legal.
+    // (b) CLMUL is legal on VT but not on ExtVT (e.g. v8i8 on AArch64).
+    // (c) CLMUL on ExtVT isn't legal, but CLMUL on VT can be efficiently
+    //     expanded via halving/widening to reach legal CLMUL. The bitreverse
+    //     path creates CLMUL(VT) which will be expanded efficiently. The
+    //     promote path would create CLMUL(ExtVT) => halving => CLMULH(VT),
+    //     causing a cycle.
+    // Note: when CLMUL is legal on ExtVT, the zext => CLMUL(ExtVT) => shift
+    // => trunc path is preferred over the bitreverse path, as it avoids the
+    // cost of 3 bitreverse operations.
     if (!isOperationLegalOrCustom(ISD::ZERO_EXTEND, ExtVT) ||
-        !isOperationLegalOrCustom(ISD::SRL, ExtVT)) {
+        !isOperationLegalOrCustom(ISD::SRL, ExtVT) ||
+        (!isOperationLegalOrCustom(ISD::CLMUL, ExtVT) &&
+         (isOperationLegalOrCustom(ISD::CLMUL, VT) ||
+          canNarrowCLMULToLegal(*this, Ctx, VT)))) {
       SDValue XRev = DAG.getNode(ISD::BITREVERSE, DL, VT, X);
       SDValue YRev = DAG.getNode(ISD::BITREVERSE, DL, VT, Y);
       SDValue ClMul = DAG.getNode(ISD::CLMUL, DL, VT, XRev, YRev);
@@ -9612,14 +9935,35 @@ SDValue TargetLowering::expandVPCTLZ(SDNode *Node, SelectionDAG &DAG) const {
   return DAG.getNode(ISD::VP_CTPOP, dl, VT, Op, Mask, VL);
 }
 
+SDValue TargetLowering::expandCTLS(SDNode *Node, SelectionDAG &DAG) const {
+  SDLoc dl(Node);
+  EVT VT = Node->getValueType(0);
+  SDValue Op = DAG.getFreeze(Node->getOperand(0));
+  unsigned NumBitsPerElt = VT.getScalarSizeInBits();
+
+  // CTLS(x) = CTLZ(OR(SHL(XOR(x, SRA(x, BW-1)), 1), 1))
+  // This transforms the sign bits into leading zeros that can be counted.
+  SDValue ShiftAmt = DAG.getShiftAmountConstant(NumBitsPerElt - 1, VT, dl);
+  SDValue SignBit = DAG.getNode(ISD::SRA, dl, VT, Op, ShiftAmt);
+  SDValue Xor = DAG.getNode(ISD::XOR, dl, VT, Op, SignBit);
+  SDValue Shl =
+      DAG.getNode(ISD::SHL, dl, VT, Xor, DAG.getShiftAmountConstant(1, VT, dl));
+  SDValue Or = DAG.getNode(ISD::OR, dl, VT, Shl, DAG.getConstant(1, dl, VT));
+  return DAG.getNode(ISD::CTLZ_ZERO_UNDEF, dl, VT, Or);
+}
+
 SDValue TargetLowering::CTTZTableLookup(SDNode *Node, SelectionDAG &DAG,
                                         const SDLoc &DL, EVT VT, SDValue Op,
                                         unsigned BitWidth) const {
   if (BitWidth != 32 && BitWidth != 64)
     return SDValue();
+
+  const DataLayout &TD = DAG.getDataLayout();
+  if (!isOperationCustom(ISD::ConstantPool, getPointerTy(TD)))
+    return SDValue();
+
   APInt DeBruijn = BitWidth == 32 ? APInt(32, 0x077CB531U)
                                   : APInt(64, 0x0218A392CD3D5DBFULL);
-  const DataLayout &TD = DAG.getDataLayout();
   MachinePointerInfo PtrInfo =
       MachinePointerInfo::getConstantPool(DAG.getMachineFunction());
   unsigned ShiftAmt = BitWidth - Log2_32(BitWidth);
@@ -9775,7 +10119,8 @@ SDValue TargetLowering::expandVectorFindLastActive(SDNode *N,
     VScaleRange = getVScaleRange(&DAG.getMachineFunction().getFunction(), 64);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   uint64_t EltWidth = TLI.getBitWidthForCttzElements(
-      BoolVT.getTypeForEVT(*DAG.getContext()), MaskVT.getVectorElementCount(),
+      EVT(getVectorIdxTy(DAG.getDataLayout())).getTypeForEVT(*DAG.getContext()),
+      MaskVT.getVectorElementCount(),
       /*ZeroIsPoison=*/true, &VScaleRange);
   // If the step vector element type is smaller than the mask element type,
   // use the mask type directly to avoid widening issues.
@@ -9990,8 +10335,7 @@ SDValue TargetLowering::expandAVG(SDNode *N, SelectionDAG &DAG) const {
 
   // For scalars, see if we can efficiently extend/truncate to use add+shift.
   if (VT.isScalarInteger()) {
-    unsigned BW = VT.getScalarSizeInBits();
-    EVT ExtVT = VT.getIntegerVT(*DAG.getContext(), 2 * BW);
+    EVT ExtVT = VT.widenIntegerElementType(*DAG.getContext());
     if (isTypeLegal(ExtVT) && isTruncateFree(ExtVT, VT)) {
       LHS = DAG.getNode(ExtOpc, dl, ExtVT, LHS);
       RHS = DAG.getNode(ExtOpc, dl, ExtVT, RHS);
@@ -10007,7 +10351,9 @@ SDValue TargetLowering::expandAVG(SDNode *N, SelectionDAG &DAG) const {
   }
 
   // avgflooru(lhs, rhs) -> or(lshr(add(lhs, rhs),1),shl(overflow, typesize-1))
-  if (Opc == ISD::AVGFLOORU && VT.isScalarInteger() && !isTypeLegal(VT)) {
+  if (Opc == ISD::AVGFLOORU && VT.isScalarInteger() && !isTypeLegal(VT) &&
+      isOperationLegalOrCustom(
+          ISD::UADDO, getLegalTypeToTransformTo(*DAG.getContext(), VT))) {
     SDValue UAddWithOverflow =
         DAG.getNode(ISD::UADDO, dl, DAG.getVTList(VT, MVT::i1), {RHS, LHS});
 
@@ -11281,7 +11627,7 @@ void TargetLowering::forceExpandWideMUL(SelectionDAG &DAG, const SDLoc &dl,
                                         SDValue &Hi) const {
   EVT VT = LHS.getValueType();
   assert(RHS.getValueType() == VT && "Mismatching operand types");
-  EVT WideVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits() * 2);
+  EVT WideVT = VT.widenIntegerElementType(*DAG.getContext());
   // We can fall back to a libcall with an illegal type for the MUL if we
   // have a libcall big enough.
   RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;
@@ -11405,10 +11751,7 @@ TargetLowering::expandFixedPointMul(SDNode *Node, SelectionDAG &DAG) const {
   SDValue Lo, Hi;
   unsigned LoHiOp = Signed ? ISD::SMUL_LOHI : ISD::UMUL_LOHI;
   unsigned HiOp = Signed ? ISD::MULHS : ISD::MULHU;
-  EVT WideVT = EVT::getIntegerVT(*DAG.getContext(), VTSize * 2);
-  if (VT.isVector())
-    WideVT =
-        EVT::getVectorVT(*DAG.getContext(), WideVT, VT.getVectorElementCount());
+  EVT WideVT = VT.widenIntegerElementType(*DAG.getContext());
   if (isOperationLegalOrCustom(LoHiOp, VT)) {
     SDValue Result = DAG.getNode(LoHiOp, dl, DAG.getVTList(VT, VT), LHS, RHS);
     Lo = Result.getValue(0);
@@ -11696,13 +12039,10 @@ bool TargetLowering::expandMULO(SDNode *Node, SDValue &Result,
     }
   }
 
-  EVT WideVT = EVT::getIntegerVT(*DAG.getContext(), VT.getScalarSizeInBits() * 2);
-  if (VT.isVector())
-    WideVT =
-        EVT::getVectorVT(*DAG.getContext(), WideVT, VT.getVectorElementCount());
-
   SDValue BottomHalf;
   SDValue TopHalf;
+  EVT WideVT = VT.widenIntegerElementType(*DAG.getContext());
+
   static const unsigned Ops[2][3] =
       { { ISD::MULHU, ISD::UMUL_LOHI, ISD::ZERO_EXTEND },
         { ISD::MULHS, ISD::SMUL_LOHI, ISD::SIGN_EXTEND }};
@@ -11897,22 +12237,27 @@ SDValue TargetLowering::expandFP_TO_INT_SAT(SDNode *Node,
   // If the integer bounds are exactly representable as floats and min/max are
   // legal, emit a min+max+fptoi sequence. Otherwise we have to use a sequence
   // of comparisons and selects.
-  bool MinMaxLegal = isOperationLegal(ISD::FMINNUM, SrcVT) &&
-                     isOperationLegal(ISD::FMAXNUM, SrcVT);
-  if (AreExactFloatBounds && MinMaxLegal) {
+  auto EmitMinMax = [&](unsigned MinOpcode, unsigned MaxOpcode,
+                        bool MayPropagateNaN) {
+    bool MinMaxLegal = isOperationLegalOrCustom(MinOpcode, SrcVT) &&
+                       isOperationLegalOrCustom(MaxOpcode, SrcVT);
+    if (!MinMaxLegal)
+      return SDValue();
+
     SDValue Clamped = Src;
 
-    // Clamp Src by MinFloat from below. If Src is NaN the result is MinFloat.
-    Clamped = DAG.getNode(ISD::FMAXNUM, dl, SrcVT, Clamped, MinFloatNode);
-    // Clamp by MaxFloat from above. NaN cannot occur.
-    Clamped = DAG.getNode(ISD::FMINNUM, dl, SrcVT, Clamped, MaxFloatNode);
+    // Clamp Src by MinFloat from below. If !MayPropagateNaN and Src is NaN
+    // then the result is MinFloat.
+    Clamped = DAG.getNode(MaxOpcode, dl, SrcVT, Clamped, MinFloatNode);
+    // Clamp by MaxFloat from above. If !MayPropagateNaN then NaN cannot occur.
+    Clamped = DAG.getNode(MinOpcode, dl, SrcVT, Clamped, MaxFloatNode);
     // Convert clamped value to integer.
     SDValue FpToInt = DAG.getNode(IsSigned ? ISD::FP_TO_SINT : ISD::FP_TO_UINT,
                                   dl, DstVT, Clamped);
 
-    // In the unsigned case we're done, because we mapped NaN to MinFloat,
-    // which will cast to zero.
-    if (!IsSigned)
+    // If !MayPropagateNan and the conversion is unsigned case we're done,
+    // because we mapped NaN to MinFloat, which will cast to zero.
+    if (!MayPropagateNaN && !IsSigned)
       return FpToInt;
 
     // Otherwise, select 0 if Src is NaN.
@@ -11921,6 +12266,19 @@ SDValue TargetLowering::expandFP_TO_INT_SAT(SDNode *Node,
         getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), SrcVT);
     SDValue IsNan = DAG.getSetCC(dl, SetCCVT, Src, Src, ISD::CondCode::SETUO);
     return DAG.getSelect(dl, DstVT, IsNan, ZeroInt, FpToInt);
+  };
+  if (AreExactFloatBounds) {
+    if (SDValue Res = EmitMinMax(ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM,
+                                 /*MayPropagateNaN=*/false))
+      return Res;
+    // These may propagate NaN for sNaN operands.
+    if (SDValue Res =
+            EmitMinMax(ISD::FMINNUM, ISD::FMAXNUM, /*MayPropagateNaN=*/true))
+      return Res;
+    // These always propagate NaN.
+    if (SDValue Res =
+            EmitMinMax(ISD::FMINIMUM, ISD::FMAXIMUM, /*MayPropagateNaN=*/true))
+      return Res;
   }
 
   SDValue MinIntNode = DAG.getConstant(MinInt, dl, DstVT);
@@ -12731,9 +13089,11 @@ SDValue TargetLowering::scalarizeExtractedVectorLoad(EVT ResultVT,
   if (ResultVT.bitsGT(VecEltVT)) {
     // If the result type of vextract is wider than the load, then issue an
     // extending load instead.
-    ISD::LoadExtType ExtType = isLoadExtLegal(ISD::ZEXTLOAD, ResultVT, VecEltVT)
-                                   ? ISD::ZEXTLOAD
-                                   : ISD::EXTLOAD;
+    ISD::LoadExtType ExtType =
+        isLoadLegal(ResultVT, VecEltVT, Alignment,
+                    OriginalLoad->getAddressSpace(), ISD::ZEXTLOAD, false)
+            ? ISD::ZEXTLOAD
+            : ISD::EXTLOAD;
     Load = DAG.getExtLoad(ExtType, DL, ResultVT, OriginalLoad->getChain(),
                           NewPtr, MPI, VecEltVT, Alignment,
                           OriginalLoad->getMemOperand()->getFlags(),
@@ -12752,4 +13112,18 @@ SDValue TargetLowering::scalarizeExtractedVectorLoad(EVT ResultVT,
   }
 
   return Load;
+}
+
+// Set type id for call site info and metadata 'call_target'.
+// We are filtering for:
+// a) The call-graph-section use case that wants to know about indirect
+//    calls, or
+// b) We want to annotate indirect calls.
+void TargetLowering::setTypeIdForCallsiteInfo(
+    const CallBase *CB, MachineFunction &MF,
+    MachineFunction::CallSiteInfo &CSInfo) const {
+  if (CB && CB->isIndirectCall() &&
+      (MF.getTarget().Options.EmitCallGraphSection ||
+       MF.getTarget().Options.EmitCallSiteInfo))
+    CSInfo = MachineFunction::CallSiteInfo(*CB);
 }

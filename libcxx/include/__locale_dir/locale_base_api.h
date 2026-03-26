@@ -228,8 +228,8 @@ inline _LIBCPP_HIDE_FROM_ABI wint_t __towupper(wint_t __ch, __locale_t __loc) { 
 inline _LIBCPP_HIDE_FROM_ABI wint_t __towlower(wint_t __ch, __locale_t __loc) { return towlower_l(__ch, __loc); }
 #      endif
 
-inline _LIBCPP_HIDE_FROM_ABI size_t
-__strftime(char* __s, size_t __max, const char* __format, const tm* __tm, __locale_t __loc) {
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_ATTRIBUTE_FORMAT(__strftime__, 3, 0) size_t
+    __strftime(char* __s, size_t __max, const char* __format, const tm* __tm, __locale_t __loc) {
   return strftime_l(__s, __max, __format, __tm, __loc);
 }
 

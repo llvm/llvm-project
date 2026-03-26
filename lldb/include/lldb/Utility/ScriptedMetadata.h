@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_INTERPRETER_SCRIPTEDMETADATA_H
-#define LLDB_INTERPRETER_SCRIPTEDMETADATA_H
+#ifndef LLDB_UTILITY_SCRIPTEDMETADATA_H
+#define LLDB_UTILITY_SCRIPTEDMETADATA_H
 
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/StreamString.h"
@@ -65,4 +65,4 @@ private:
 };
 } // namespace lldb_private
 
-#endif // LLDB_INTERPRETER_SCRIPTEDMETADATA_H
+#endif // LLDB_UTILITY_SCRIPTEDMETADATA_H

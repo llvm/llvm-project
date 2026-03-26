@@ -22,6 +22,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVCallLowering.cpp
   SPIRVInlineAsmLowering.cpp
   SPIRVCommandLine.cpp
+  SPIRVCtorDtorLowering.cpp
   SPIRVEmitIntrinsics.cpp
   SPIRVGlobalRegistry.cpp
   SPIRVInstrInfo.cpp
@@ -49,6 +50,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVSubtarget.cpp
   SPIRVTargetMachine.cpp
   SPIRVTargetTransformInfo.cpp
+  SPIRVTypeInst.cpp
   SPIRVUtils.cpp
   SPIRVEmitNonSemanticDI.cpp
   SPIRVCBufferAccess.cpp

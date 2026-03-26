@@ -926,7 +926,7 @@ let Command = "memory read" in {
       : Option<"binary", "b">,
         Group<2>,
         Desc<"If true, memory will be saved as binary. If false, the memory is "
-             "saved save as an ASCII dump that uses the format, size, count "
+             "saved as an ASCII dump that uses the format, size, count "
              "and number per line settings.">;
   def memory_read_type : Option<"type", "t">,
                          Groups<[3, 4]>,
@@ -2267,6 +2267,12 @@ let Command = "type synth add" in {
   def type_synth_add_cascade : Option<"cascade", "C">,
                                Arg<"Boolean">,
                                Desc<"If true, cascade through typedef chains.">;
+  def type_synth_add_wants_deref
+      : Option<"requires-dereference", "D">,
+        Arg<"Boolean">,
+        Desc<"If true, when this synthetic provider matches a pointer or "
+             "reference type, it will receive the dereferenced value object "
+             "instead of the raw pointer or reference.">;
   def type_synth_add_skip_pointers
       : Option<"skip-pointers", "p">,
         Desc<"Don't use this format for pointers-to-type objects.">;

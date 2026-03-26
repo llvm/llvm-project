@@ -31,6 +31,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 
 usage = "git clang-format [OPTIONS] [<commit>] [<commit>|--staged] [--] [<file>...]"
 
@@ -707,7 +708,10 @@ def create_temporary_index(tree=None):
     If `tree` is not None, use that as the tree to read in.  Otherwise, an
     empty index is created."""
     gitdir = run("git", "rev-parse", "--git-dir")
-    path = os.path.join(gitdir, temp_index_basename)
+    # Use a unique filename to avoid stale .lock files when concurrent git
+    # operations (e.g. pre-commit hooks) race with this process.
+    fd, path = tempfile.mkstemp(prefix=temp_index_basename + "-", dir=gitdir)
+    os.close(fd)
     if tree is None:
         tree = "--empty"
     run("git", "read-tree", "--index-output=" + path, tree)

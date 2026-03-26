@@ -137,30 +137,6 @@ struct CXXStandardLibraryVersionInfo {
   std::uint64_t Version;
 };
 
-/// Record the previous 'export' keyword info.
-///
-/// Since P1857R3, the standard introduced several rules to determine whether
-/// the 'module', 'export module', 'import', 'export import' is a valid
-/// directive introducer. This class is used to record the previous 'export'
-/// keyword token, and then handle 'export module' and 'export import'.
-class ExportContextualKeywordInfo {
-  Token ExportTok;
-  bool AtPhysicalStartOfLine = false;
-
-public:
-  ExportContextualKeywordInfo() = default;
-  ExportContextualKeywordInfo(const Token &Tok, bool AtPhysicalStartOfLine)
-      : ExportTok(Tok), AtPhysicalStartOfLine(AtPhysicalStartOfLine) {}
-
-  bool isValid() const { return ExportTok.is(tok::kw_export); }
-  bool isAtPhysicalStartOfLine() const { return AtPhysicalStartOfLine; }
-  Token getExportTok() const { return ExportTok; }
-  void reset() {
-    ExportTok.startToken();
-    AtPhysicalStartOfLine = false;
-  }
-};
-
 class ModuleNameLoc final
     : llvm::TrailingObjects<ModuleNameLoc, IdentifierLoc> {
   friend TrailingObjects;
@@ -405,17 +381,11 @@ private:
   llvm::DenseMap<FileID, SmallVector<const char *>> CheckPoints;
   unsigned CheckPointCounter = 0;
 
-  /// Whether the import is an `@import` or a standard c++ modules import.
-  bool IsAtImport = false;
-
-  /// Whether the last token we lexed was an '@'.
-  bool LastTokenWasAt = false;
-
   /// Whether we're importing a standard C++20 named Modules.
   bool ImportingCXXNamedModules = false;
 
   /// Whether the last token we lexed was an 'export' keyword.
-  ExportContextualKeywordInfo LastTokenWasExportKeyword;
+  Token LastExportKeyword;
 
   /// First pp-token source location in current translation unit.
   SourceLocation FirstPPTokenLoc;
@@ -1857,8 +1827,11 @@ public:
   bool LexModuleNameContinue(Token &Tok, SourceLocation UseLoc,
                              SmallVectorImpl<Token> &Suffix,
                              SmallVectorImpl<IdentifierLoc> &Path,
-                             bool AllowMacroExpansion = true,
-                             bool IsPartition = false);
+                             bool AllowMacroExpansion, bool IsPartition);
+  bool HandleModuleName(StringRef DirType, SourceLocation UseLoc, Token &Tok,
+                        SmallVectorImpl<IdentifierLoc> &Path,
+                        SmallVectorImpl<Token> &DirToks,
+                        bool AllowMacroExpansion, bool IsPartition);
   void EnterModuleSuffixTokenStream(ArrayRef<Token> Toks);
   void HandleCXXImportDirective(Token Import);
   void HandleCXXModuleDirective(Token Module);
@@ -1869,8 +1842,7 @@ public:
   /// This consumes the import/module directive, modifies the
   /// lexer/preprocessor state, and advances the lexer(s) so that the next token
   /// read is the correct one.
-  bool HandleModuleContextualKeyword(Token &Result,
-                                     bool TokAtPhysicalStartOfLine);
+  bool HandleModuleContextualKeyword(Token &Result);
 
   /// Get the start location of the first pp-token in main file.
   SourceLocation getMainFileFirstPPTokenLoc() const {
@@ -1879,7 +1851,6 @@ public:
     return FirstPPTokenLoc;
   }
 
-  bool LexAfterModuleImport(Token &Result);
   void CollectPPImportSuffix(SmallVectorImpl<Token> &Toks,
                              bool StopUntilEOD = false);
   bool CollectPPImportSuffixAndEnterStream(SmallVectorImpl<Token> &Toks,
@@ -2936,6 +2907,7 @@ private:
   void HandleIncludeMacrosDirective(SourceLocation HashLoc, Token &Tok);
   void HandleImportDirective(SourceLocation HashLoc, Token &Tok);
   void HandleMicrosoftImportDirective(Token &Tok);
+  void HandleObjCImportDirective(Token &AtTok, Token &ImportTok);
 
 public:
   /// Check that the given module is available, producing a diagnostic if not.
@@ -3198,9 +3170,6 @@ private:
   }
   static bool CLK_DependencyDirectivesLexer(Preprocessor &P, Token &Result) {
     return P.CurLexer->LexDependencyDirectiveToken(Result);
-  }
-  static bool CLK_LexAfterModuleImport(Preprocessor &P, Token &Result) {
-    return P.LexAfterModuleImport(Result);
   }
 };
 

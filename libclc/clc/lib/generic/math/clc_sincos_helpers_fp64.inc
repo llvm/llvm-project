@@ -6,6 +6,84 @@
 //
 //===----------------------------------------------------------------------===//
 
+#pragma OPENCL FP_CONTRACT OFF
+
+_CLC_DEF _CLC_OVERLOAD __CLC_SINCOS_RET_GENTYPE
+__clc_sincos_reduced_eval(__CLC_DOUBLEN x, __CLC_DOUBLEN y) {
+  const __CLC_DOUBLEN S0 = -0x1.5555555555555p-3;
+  const __CLC_DOUBLEN S1 = 0x1.1111111110bb3p-7;
+  const __CLC_DOUBLEN S2 = -0x1.a01a019e83e5cp-13;
+  const __CLC_DOUBLEN S3 = 0x1.71de3796cde01p-19;
+  const __CLC_DOUBLEN S4 = -0x1.ae600b42fdfa7p-26;
+  const __CLC_DOUBLEN S5 = 0x1.5e0b2f9a43bb8p-33;
+
+  const __CLC_DOUBLEN C0 = 0x1.5555555555555p-5;
+  const __CLC_DOUBLEN C1 = -0x1.6c16c16c16967p-10;
+  const __CLC_DOUBLEN C2 = 0x1.a01a019f4ec90p-16;
+  const __CLC_DOUBLEN C3 = -0x1.27e4fa17f65f6p-22;
+  const __CLC_DOUBLEN C4 = 0x1.1eeb69037ab78p-29;
+  const __CLC_DOUBLEN C5 = -0x1.907db46cc5e42p-37;
+
+  __CLC_DOUBLEN x2 = x * x;
+  __CLC_DOUBLEN x3 = x * x2;
+  __CLC_DOUBLEN r = 0.5 * x2;
+  __CLC_DOUBLEN t = 1.0 - r;
+  __CLC_DOUBLEN u = 1.0 - t;
+  __CLC_DOUBLEN v = u - r;
+
+  __CLC_DOUBLEN cxy = t + __clc_mad(x2 * x2, __clc_mad(x2, __clc_mad(x2, __clc_mad(x2, __clc_mad(x2, __clc_mad(x2, C5, C4), C3), C2), C1), C0), __clc_mad(x, -y, v));
+  __CLC_DOUBLEN sxy = __clc_mad(x2, __clc_mad(x2, __clc_mad(x2, __clc_mad(x2, S5, S4), S3), S2), S1);
+  sxy = x - __clc_mad(-x3, S0, __clc_mad(x2, __clc_mad(-x3, sxy, __CLC_FP_LIT(0.5) * y), -y));
+
+  __CLC_SINCOS_RET_GENTYPE ret;
+  ret.cos = cxy;
+  ret.sin = sxy;
+  return ret;
+}
+
+_CLC_DEF _CLC_OVERLOAD __CLC_SINCOS_RET_GENTYPE
+__clc_sincospi_reduced_eval(__CLC_GENTYPE x) {
+  __CLC_GENTYPE t = x * x;
+
+  __CLC_GENTYPE sx = __clc_mad(t, __clc_mad(t, __clc_mad(t, __clc_mad(t,
+              __clc_mad(t,
+                  0x1.e357ef99eb0bbp-12, -0x1.e2fe76fdffd2bp-8), 0x1.50782d5f14825p-4), -0x1.32d2ccdfe9424p-1),
+                  0x1.466bc67754fffp+1), -0x1.4abbce625be09p+2);
+  sx = x * t * sx;
+  sx = __clc_mad(x, 0x1.921fb54442d18p+1, sx);
+
+  __CLC_GENTYPE cx = __clc_mad(t, __clc_mad(t, __clc_mad(t, __clc_mad(t,
+              __clc_mad(t, __clc_mad(t,
+                  -0x1.b167302e21c33p-14, 0x1.f9c89ca1d4f33p-10), -0x1.a6d1e7294bff9p-6), 0x1.e1f5067b90b37p-3),
+                  -0x1.55d3c7e3c325bp+0), 0x1.03c1f081b5a67p+2), -0x1.3bd3cc9be45dep+2);
+  cx = __clc_mad(t, cx, 1.0);
+
+  __CLC_SINCOS_RET_GENTYPE ret;
+  ret.cos = cx;
+  ret.sin = sx;
+  return ret;
+}
+
+_CLC_DEF _CLC_OVERLOAD __CLC_DOUBLEN __clc_tan_reduced_eval(__CLC_DOUBLEN x,
+                                                            __CLC_DOUBLEN xx,
+                                                            __CLC_INTN is_odd) {
+  __CLC_DOUBLEN s = __clc_ep_sqr(__clc_ep_make_pair(x, xx)).hi;
+  __CLC_DOUBLEN p = s * __clc_mad(s, __clc_mad(s, __clc_mad(s, __clc_mad(s,
+                 __clc_mad(s, __clc_mad(s, __clc_mad(s, __clc_mad(s,
+                 __clc_mad(s, __clc_mad(s, __clc_mad(s, __clc_mad(s,
+                 __clc_mad(s,
+                     0x1.5e089c751c08cp-16, -0x1.78809a9a29f71p-15),
+                     0x1.7746f90a8aaep-14), -0x1.bb44da6fbf144p-16),
+                     0x1.1e634a7943acfp-13), 0x1.d250fdeb68febp-13),
+                     0x1.37fd9b58c4d95p-11), 0x1.7d5af15120e2cp-10),
+                     0x1.d6d93e09491dfp-9), 0x1.226e12033784dp-7),
+                     0x1.664f49ac36ae2p-6), 0x1.ba1ba1b451c21p-5),
+                     0x1.11111111185b7p-3), 0x1.55555555554eep-2);
+  __CLC_EP_PAIR t = __clc_ep_fast_add(__clc_ep_make_pair(x, xx), __clc_ep_mul(x, p));
+  __CLC_EP_PAIR tr = __clc_ep_fast_recip(t);
+  return __CLC_CONVERT_LONGN(is_odd) ? -tr.hi : t.hi;
+}
+
 _CLC_DEF _CLC_OVERLOAD void __clc_sincos_piby4(__CLC_DOUBLEN x,
                                                __CLC_DOUBLEN xx,
                                                private __CLC_DOUBLEN *sinval,
@@ -47,8 +125,8 @@ _CLC_DEF _CLC_OVERLOAD void __clc_sincos_piby4(__CLC_DOUBLEN x,
 
   __CLC_DOUBLEN x2 = x * x;
   __CLC_DOUBLEN x3 = x2 * x;
-  __CLC_DOUBLEN r = (__CLC_DOUBLEN)0.5 * x2;
-  __CLC_DOUBLEN t = (__CLC_DOUBLEN)1.0 - r;
+  __CLC_DOUBLEN r = __CLC_FP_LIT(0.5) * x2;
+  __CLC_DOUBLEN t = __CLC_FP_LIT(1.0) - r;
 
   __CLC_DOUBLEN sp = __clc_fma(
       __clc_fma(__clc_fma(__clc_fma(sc6, x2, sc5), x2, sc4), x2, sc3), x2, sc2);
@@ -60,299 +138,136 @@ _CLC_DEF _CLC_OVERLOAD void __clc_sincos_piby4(__CLC_DOUBLEN x,
                                               x2, cc3),
                                     x2, cc2),
                           x2, cc1),
-                x2 * x2, __clc_fma(x, xx, (1.0 - t) - r));
+                x2 * x2, __clc_fma(x, xx, (__CLC_FP_LIT(1.0) - t) - r));
 
-  *sinval =
-      x - __clc_fma(-x3, sc1, __clc_fma(__clc_fma(-x3, sp, 0.5 * xx), x2, -xx));
+  *sinval = x - __clc_fma(-x3, sc1,
+                          __clc_fma(__clc_fma(-x3, sp, __CLC_FP_LIT(0.5) * xx),
+                                    x2, -xx));
   *cosval = cp;
 }
 
-_CLC_DEF _CLC_OVERLOAD void __clc_tan_piby4(__CLC_DOUBLEN x, __CLC_DOUBLEN xx,
-                                            private __CLC_DOUBLEN *leadval,
-                                            private __CLC_DOUBLEN *tailval) {
-  // 0x3fe921fb54442d18
-  const __CLC_DOUBLEN piby4_lead = 7.85398163397448278999e-01;
-  // 0x3c81a62633145c06
-  const __CLC_DOUBLEN piby4_tail = 3.06161699786838240164e-17;
-
-  // In order to maintain relative precision transform using the identity:
-  // tan(pi/4-x) = (1-tan(x))/(1+tan(x)) for arguments close to pi/4.
-  // Similarly use tan(x-pi/4) = (tan(x)-1)/(tan(x)+1) close to -pi/4.
-
-  __CLC_LONGN ca = x > 0.68;
-  __CLC_LONGN cb = x < -0.68;
-  __CLC_DOUBLEN transform = ca ? 1.0 : 0.0;
-  transform = cb ? -1.0 : transform;
-
-  __CLC_DOUBLEN tx = __clc_fma(-transform, x, piby4_lead) +
-                     __clc_fma(-transform, xx, piby4_tail);
-  __CLC_LONGN c = ca | cb;
-  x = c ? tx : x;
-  xx = c ? 0.0 : xx;
-
-  // Core Remez [2,3] approximation to tan(x+xx) on the interval [0,0.68].
-  __CLC_DOUBLEN t1 = x;
-  __CLC_DOUBLEN r = __clc_fma(2.0, x * xx, x * x);
-
-  __CLC_DOUBLEN a = __clc_fma(r,
-                              __clc_fma(r, 0.224044448537022097264602535574e-3,
-                                        -0.229345080057565662883358588111e-1),
-                              0.372379159759792203640806338901e0);
-
-  __CLC_DOUBLEN b =
-      __clc_fma(r,
-                __clc_fma(r,
-                          __clc_fma(r, -0.232371494088563558304549252913e-3,
-                                    0.260656620398645407524064091208e-1),
-                          -0.515658515729031149329237816945e0),
-                0.111713747927937668539901657944e1);
-
-  __CLC_DOUBLEN t2 = __clc_fma(MATH_DIVIDE(a, b), x * r, xx);
-
-  __CLC_DOUBLEN tp = t1 + t2;
-
-  // Compute -1.0/(t1 + t2) accurately
-  __CLC_DOUBLEN z1 =
-      __CLC_AS_GENTYPE(__CLC_AS_ULONGN(tp) & 0xffffffff00000000L);
-  __CLC_DOUBLEN z2 = t2 - (z1 - t1);
-  __CLC_DOUBLEN trec = -MATH_RECIP(tp);
-  __CLC_DOUBLEN trec_top =
-      __CLC_AS_GENTYPE(__CLC_AS_ULONGN(trec) & 0xffffffff00000000L);
-
-  __CLC_DOUBLEN tpr = __clc_fma(
-      __clc_fma(trec_top, z2, __clc_fma(trec_top, z1, 1.0)), trec, trec_top);
-
-  __CLC_DOUBLEN tpt = transform * (1.0 - MATH_DIVIDE(2.0 * tp, 1.0 + tp));
-  __CLC_DOUBLEN tptr = transform * (MATH_DIVIDE(2.0 * tp, tp - 1.0) - 1.0);
-
-  *leadval = c ? tpt : tp;
-  *tailval = c ? tptr : tpr;
-}
-
-// Reduction for medium sized arguments
-_CLC_DEF _CLC_OVERLOAD void
-__clc_remainder_piby2_medium(__CLC_DOUBLEN x, private __CLC_DOUBLEN *r,
-                             private __CLC_DOUBLEN *rr,
-                             private __CLC_INTN *regn) {
+// Reduction for small sized arguments
+_CLC_DEF _CLC_OVERLOAD __CLC_INTN __clc_remainder_piby2_small(
+    __CLC_DOUBLEN x, private __CLC_DOUBLEN *rh, private __CLC_DOUBLEN *rt) {
   // How many pi/2 is x a multiple of?
-  const __CLC_DOUBLEN two_by_pi = 0x1.45f306dc9c883p-1;
-  __CLC_DOUBLEN dnpi2 = __clc_trunc(__clc_fma(x, two_by_pi, 0.5));
+  const __CLC_DOUBLEN twobypi = 0x1.45f306dc9c883p-1;
+  const __CLC_DOUBLEN piby2_h = 0x1.921fb54442d18p+0;
+  const __CLC_DOUBLEN piby2_m = 0x1.1a62633145c00p-54;
+  const __CLC_DOUBLEN piby2_t = 0x1.b839a252049c0p-104;
 
-  const __CLC_DOUBLEN piby2_h = -7074237752028440.0 / 0x1.0p+52;
-  const __CLC_DOUBLEN piby2_m = -2483878800010755.0 / 0x1.0p+105;
-  const __CLC_DOUBLEN piby2_t = -3956492004828932.0 / 0x1.0p+158;
+  __CLC_DOUBLEN dn_pi2 = __clc_rint(x * twobypi);
 
   // Compute product of npi2 with 159 bits of 2/pi
-  __CLC_DOUBLEN p_hh = piby2_h * dnpi2;
-  __CLC_DOUBLEN p_ht = __clc_fma(piby2_h, dnpi2, -p_hh);
-  __CLC_DOUBLEN p_mh = piby2_m * dnpi2;
-  __CLC_DOUBLEN p_mt = __clc_fma(piby2_m, dnpi2, -p_mh);
-  __CLC_DOUBLEN p_th = piby2_t * dnpi2;
-  __CLC_DOUBLEN p_tt = __clc_fma(piby2_t, dnpi2, -p_th);
+  __CLC_DOUBLEN xt = __clc_fma(dn_pi2, -piby2_h, x);
+  __CLC_DOUBLEN yh = __clc_fma(dn_pi2, -piby2_m, xt);
+  __CLC_DOUBLEN ph = dn_pi2 * piby2_m;
+  __CLC_DOUBLEN pt = __clc_fma(dn_pi2, piby2_m, -ph);
 
   // Reduce to 159 bits
-  __CLC_DOUBLEN ph = p_hh;
-  __CLC_DOUBLEN pm = p_ht + p_mh;
-  __CLC_DOUBLEN t = p_mh - (pm - p_ht);
-  __CLC_DOUBLEN pt = p_th + t + p_mt + p_tt;
-  t = ph + pm;
-  pm = pm - (t - ph);
-  ph = t;
-  t = pm + pt;
-  pt = pt - (t - pm);
-  pm = t;
+  __CLC_DOUBLEN th = xt - ph;
+  __CLC_DOUBLEN tt = (xt - th) - ph;
+  __CLC_DOUBLEN yt = __clc_fma(dn_pi2, -piby2_t, ((th - yh) + tt) - pt);
 
-  // Subtract from x
-  t = x + ph;
-  __CLC_DOUBLEN qh = t + pm;
-  __CLC_DOUBLEN qt = pm - (qh - t) + pt;
+  __CLC_EP_PAIR result = __clc_ep_fast_add(yh, yt);
+  *rh = result.lo;
+  *rt = result.hi;
 
-  *r = qh;
-  *rr = qt;
-  *regn = __CLC_CONVERT_INTN(__CLC_CONVERT_LONGN(dnpi2)) & 0x3;
+  return __CLC_CONVERT_INTN(dn_pi2) & 0x3;
 }
 
 // Given positive argument x, reduce it to the range [-pi/4,pi/4] using
 // extra precision, and return the result in r, rr.
 // Return value "regn" tells how many lots of pi/2 were subtracted
 // from x to put it in the range [-pi/4,pi/4], mod 4.
-_CLC_DEF _CLC_OVERLOAD void
-__clc_remainder_piby2_large(__CLC_DOUBLEN x, private __CLC_DOUBLEN *r,
-                            private __CLC_DOUBLEN *rr,
-                            private __CLC_INTN *regn) {
+_CLC_DEF _CLC_OVERLOAD __CLC_INTN __clc_remainder_piby2_large(
+    __CLC_DOUBLEN x, private __CLC_DOUBLEN *r, private __CLC_DOUBLEN *rr) {
+  // Scale x by relevant part of 2/pi
+  __CLC_DOUBLEN p0 = __clc_get_twobypi_bits(x, 2);
+  __CLC_DOUBLEN p1 = __clc_get_twobypi_bits(x, 1);
+  __CLC_DOUBLEN p2 = __clc_get_twobypi_bits(x, 0);
 
-  __CLC_LONGN ux = __CLC_AS_LONGN(x);
-  __CLC_INTN e = __CLC_CONVERT_INTN(ux >> EXPSHIFTBITS_DP64) - EXPBIAS_DP64;
-  __CLC_INTN i = __clc_max(23, (e >> 3) + 17);
-  __CLC_INTN j = 150 - i;
-  __CLC_INTN j16 = j & ~0xf;
-  __CLC_DOUBLEN fract_temp;
-
-  // The following extracts 192 consecutive bits of 2/pi aligned on an arbitrary
-  // byte boundary
-  __CLC_ULONGN q0 = __CLC_USE_TABLE(pibits_tbl, j16);
-  __CLC_ULONGN q1 = __CLC_USE_TABLE(pibits_tbl, (j16 + 8));
-  __CLC_ULONGN q2 = __CLC_USE_TABLE(pibits_tbl, (j16 + 16));
-  __CLC_ULONGN q3 = __CLC_USE_TABLE(pibits_tbl, (j16 + 24));
-  __CLC_ULONGN q4 = __CLC_USE_TABLE(pibits_tbl, (j16 + 32));
-
-  __CLC_UINTN q0s0 = __CLC_CONVERT_UINTN(q0);
-  __CLC_UINTN q0s1 = __CLC_CONVERT_UINTN(q0 >> 32);
-
-  __CLC_UINTN q1s0 = __CLC_CONVERT_UINTN(q1);
-  __CLC_UINTN q1s1 = __CLC_CONVERT_UINTN(q1 >> 32);
-
-  __CLC_UINTN q2s0 = __CLC_CONVERT_UINTN(q2);
-  __CLC_UINTN q2s1 = __CLC_CONVERT_UINTN(q2 >> 32);
-
-  __CLC_UINTN q3s0 = __CLC_CONVERT_UINTN(q3);
-  __CLC_UINTN q3s1 = __CLC_CONVERT_UINTN(q3 >> 32);
-
-  __CLC_UINTN q4s0 = __CLC_CONVERT_UINTN(q4);
-  __CLC_UINTN q4s1 = __CLC_CONVERT_UINTN(q4 >> 32);
-
-  __CLC_INTN k = (j >> 2) & 0x3;
-  __CLC_INTN c0 = k == 0;
-  __CLC_INTN c1 = k == 1;
-  __CLC_INTN c2 = k == 2;
-  __CLC_INTN c3 = k == 3;
-
-  __CLC_UINTN u0, u1, u2, u3, u4, u5, u6;
-
-  u0 = c1 ? q0s1 : q0s0;
-  u0 = c2 ? q1s0 : u0;
-  u0 = c3 ? q1s1 : u0;
-
-  u1 = c1 ? q1s0 : q0s1;
-  u1 = c2 ? q1s1 : u1;
-  u1 = c3 ? q2s0 : u1;
-
-  u2 = c1 ? q1s1 : q1s0;
-  u2 = c2 ? q2s0 : u2;
-  u2 = c3 ? q2s1 : u2;
-
-  u3 = c1 ? q2s0 : q1s1;
-  u3 = c2 ? q2s1 : u3;
-  u3 = c3 ? q3s0 : u3;
-
-  u4 = c1 ? q2s1 : q2s0;
-  u4 = c2 ? q3s0 : u4;
-  u4 = c3 ? q3s1 : u4;
-
-  u5 = c1 ? q3s0 : q2s1;
-  u5 = c2 ? q3s1 : u5;
-  u5 = c3 ? q4s0 : u5;
-
-  u6 = c1 ? q3s1 : q3s0;
-  u6 = c2 ? q4s0 : u6;
-  u6 = c3 ? q4s1 : u6;
-
-  __CLC_UINTN v0 = bytealign(u1, u0, j);
-  __CLC_UINTN v1 = bytealign(u2, u1, j);
-  __CLC_UINTN v2 = bytealign(u3, u2, j);
-  __CLC_UINTN v3 = bytealign(u4, u3, j);
-  __CLC_UINTN v4 = bytealign(u5, u4, j);
-  __CLC_UINTN v5 = bytealign(u6, u5, j);
-
-  // Place those 192 bits in 4 48-bit doubles along with correct exponent
-  // If i > 1018 we would get subnormals so we scale p up and x down to get the
-  // same product
-  i = 2 + 8 * i;
-  x *= __CLC_CONVERT_BIT_INTN(i > 1018) ? 0x1.0p-136 : 1.0;
-  i -= i > 1018 ? 136 : 0;
-
-#define doublen_lohi(x, y)                                                     \
-  __CLC_AS_DOUBLEN(__CLC_CONVERT_ULONGN((x)) & 0xFFFFFFFF |                    \
-                   __CLC_CONVERT_ULONGN((y)) << 32)
-
-  __CLC_UINTN ua = __CLC_CONVERT_UINTN(EXPBIAS_DP64 + EXPSHIFTBITS_DP64 - i)
-                   << 20;
-  __CLC_DOUBLEN a = doublen_lohi((__CLC_ULONGN)0, ua);
-  __CLC_DOUBLEN p0 = doublen_lohi(v0, ua | (v1 & 0xffffU)) - a;
-  ua += 0x03000000U;
-  a = doublen_lohi((__CLC_ULONGN)0, ua);
-  __CLC_DOUBLEN p1 =
-      doublen_lohi(((v2 << 16) | (v1 >> 16)), (ua | (v2 >> 16))) - a;
-  ua += 0x03000000U;
-  a = doublen_lohi((__CLC_ULONGN)0, ua);
-  __CLC_DOUBLEN p2 = doublen_lohi(v3, (ua | (v4 & 0xffffU))) - a;
-  ua += 0x03000000U;
-  a = doublen_lohi((__CLC_ULONGN)0, ua);
-  __CLC_DOUBLEN p3 =
-      doublen_lohi(((v5 << 16) | (v4 >> 16)), (ua | (v5 >> 16))) - a;
-
-#undef doublen_lohi
+  x = __clc_ldexp(x, __CLC_CONVERT_INTN(x >= 0x1.0p+945) ? -128 : 0);
 
   // Exact multiply
-  __CLC_DOUBLEN f0h = p0 * x;
-  __CLC_DOUBLEN f0l = __clc_fma(p0, x, -f0h);
-  __CLC_DOUBLEN f1h = p1 * x;
-  __CLC_DOUBLEN f1l = __clc_fma(p1, x, -f1h);
-  __CLC_DOUBLEN f2h = p2 * x;
-  __CLC_DOUBLEN f2l = __clc_fma(p2, x, -f2h);
-  __CLC_DOUBLEN f3h = p3 * x;
-  __CLC_DOUBLEN f3l = __clc_fma(p3, x, -f3h);
+  __CLC_EP_PAIR rp0 = __clc_ep_mul(p0, x);
+  __CLC_EP_PAIR rp1 = __clc_ep_mul(p1, x);
+  __CLC_EP_PAIR rp2 = __clc_ep_mul(p2, x);
 
-  // Accumulate product into 4 doubles
-  __CLC_DOUBLEN s, t;
+  // Accumulate product into 3 doubles
+  __CLC_EP_PAIR v2 = __clc_ep_add(rp2.lo, rp1.hi);
+  __CLC_EP_PAIR v1 = __clc_ep_add(rp1.lo, rp0.hi);
+  __CLC_EP_PAIR w2 = __clc_ep_add(v2.lo, v1.hi);
 
-  __CLC_DOUBLEN f3 = f3h + f2h;
-  t = f2h - (f3 - f3h);
-  s = f3l + t;
-  t = t - (s - f3l);
+  __CLC_DOUBLEN e3 = rp2.hi;
+  __CLC_DOUBLEN e2 = v2.hi;
+  __CLC_DOUBLEN e1 = w2.hi;
+  __CLC_DOUBLEN e0 = w2.lo + v1.lo + rp0.lo;
 
-  __CLC_DOUBLEN f2 = s + f1h;
-  t = f1h - (f2 - s) + t;
-  s = f2l + t;
-  t = t - (s - f2l);
+  __CLC_EP_PAIR e32 = __clc_ep_fast_add(e3, e2);
+  __CLC_EP_PAIR e21 = __clc_ep_fast_add(e32.lo, e1);
+  __CLC_EP_PAIR e10 = __clc_ep_fast_add(e21.lo, e0);
 
-  __CLC_DOUBLEN f1 = s + f0h;
-  t = f0h - (f1 - s) + t;
-  s = f1l + t;
+  __CLC_DOUBLEN f2 = e32.hi;
+  __CLC_DOUBLEN f1 = e21.hi;
+  __CLC_DOUBLEN f0 = e10.hi;
 
-  __CLC_DOUBLEN f0 = s + f0l;
-
-  // Strip off unwanted large integer bits
-  f3 = 0x1.0p+10 * __clc_fract(f3 * 0x1.0p-10, &fract_temp);
-  f3 += f3 + f2 < 0.0 ? 0x1.0p+10 : 0.0;
+  __CLC_DOUBLEN f2_scale = __clc_ldexp(f2, -2);
 
   // Compute least significant integer bits
-  t = f3 + f2;
-  __CLC_DOUBLEN di = t - __clc_fract(t, &fract_temp);
-  i = __CLC_CONVERT_INTN(__CLC_CONVERT_FLOATN(di));
+  __CLC_DOUBLEN unused;
+  __CLC_DOUBLEN f2_frac = __clc_fract(f2_scale, &unused);
 
-  // Shift out remaining integer part
-  f3 -= di;
-  s = f3 + f2;
-  t = f2 - (s - f3);
-  f3 = s;
-  f2 = t;
-  s = f2 + f1;
-  t = f1 - (s - f2);
-  f2 = s;
-  f1 = t;
-  f1 += f0;
+  f2 = __clc_ldexp(f2_frac, 2);
 
-  // Subtract 1 if fraction is >= 0.5, and update regn
-  __CLC_INTN g = __CLC_CONVERT_INTN(f3 >= 0.5 ? 1L : 0L);
-  i += g;
-  f3 -= __CLC_CONVERT_DOUBLEN(__CLC_CONVERT_FLOATN(g));
+  f2 += (f2 + f1) < 0.0 ? 4.0 : 0.0;
 
-  // Shift up bits
-  s = f3 + f2;
-  t = f2 - (s - f3);
-  f3 = s;
-  f2 = t + f1;
+  __CLC_INTN i = __CLC_CONVERT_INTN(f2 + f1);
+  f2 -= __CLC_CONVERT_DOUBLEN(i);
+
+  __CLC_EP_PAIR f21 = __clc_ep_fast_add(f2, f1);
+  __CLC_EP_PAIR f10 = __clc_ep_fast_add(f21.lo, f0);
+  f2 = f21.hi;
+  f1 = f10.hi;
+  f0 = f10.lo;
+
+  __CLC_S_GENTYPE g = f2 >= __CLC_FP_LIT(0.5);
+  i += __CLC_CONVERT_INTN(g) ? 1 : 0;
+  f2 -= g ? __CLC_FP_LIT(1.0) : __CLC_FP_LIT(0.0);
+
+  __CLC_EP_PAIR rf = __clc_ep_fast_add(f2, f1);
+  f2 = rf.hi;
+  f1 = rf.lo;
 
   // Multiply precise fraction by pi/2 to get radians
-  const __CLC_DOUBLEN p2h = 7074237752028440.0 / 0x1.0p+52;
-  const __CLC_DOUBLEN p2t = 4967757600021510.0 / 0x1.0p+106;
+  const __CLC_DOUBLEN p2h = 0x1.921fb54442d18p+0;
+  const __CLC_DOUBLEN p2t = 0x1.1a62633145c07p-54;
 
-  __CLC_DOUBLEN rhi = f3 * p2h;
-  __CLC_DOUBLEN rlo =
-      __clc_fma(f2, p2h, __clc_fma(f3, p2t, __clc_fma(f3, p2h, -rhi)));
+  __CLC_DOUBLEN rh = f2 * p2h;
+  __CLC_DOUBLEN rt =
+      __clc_fma(f1, p2h, __clc_fma(f2, p2t, __clc_fma(f2, p2h, -rh)));
 
-  *r = rhi + rlo;
-  *rr = rlo - (*r - rhi);
-  *regn = i & 0x3;
+  __CLC_EP_PAIR result = __clc_ep_fast_add(rh, rt);
+  *r = result.lo;
+  *rr = result.hi;
+
+  return i & 0x3;
+}
+
+_CLC_DEF _CLC_OVERLOAD __CLC_INTN __clc_argReductionS(
+    private __CLC_DOUBLEN *r_lo, private __CLC_DOUBLEN *r_hi, __CLC_DOUBLEN x) {
+  __CLC_LONGN is_large = x >= (__CLC_DOUBLEN)0x1.0p+30;
+
+#ifdef __CLC_SCALAR1
+  if (is_large)
+    return __clc_remainder_piby2_large(x, r_lo, r_hi);
+  return __clc_remainder_piby2_small(x, r_lo, r_hi);
+#else
+  __CLC_DOUBLEN rlo_1, rlo_2;
+  __CLC_DOUBLEN rhi_1, rhi_2;
+  __CLC_INTN ret1 = __clc_remainder_piby2_small(x, &rlo_1, &rhi_1);
+  __CLC_INTN ret2 = __clc_remainder_piby2_large(x, &rlo_2, &rhi_2);
+  *r_lo = is_large ? rlo_2 : rlo_1;
+  *r_hi = is_large ? rhi_2 : rhi_1;
+  return __CLC_CONVERT_INTN(is_large) ? ret2 : ret1;
+#endif
 }

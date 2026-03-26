@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
       return 2;
     }
 
-    const llvm::StringRef From = Values[0].trim();
+    const StringRef From = Values[0].trim();
     llvm::UTF32 CodePoint = 0;
     From.getAsInteger(16, CodePoint);
 

@@ -187,7 +187,7 @@ llvm::Constant *CodeGenModule::getBuiltinLibFunction(const FunctionDecl *FD,
 
   // TODO: This list should be expanded or refactored after all GCC-compatible
   // std libcall builtins are implemented.
-  static SmallDenseMap<unsigned, StringRef, 64> F128Builtins{
+  static const SmallDenseMap<unsigned, StringRef, 64> F128Builtins{
       {Builtin::BI__builtin___fprintf_chk, "__fprintf_chkieee128"},
       {Builtin::BI__builtin___printf_chk, "__printf_chkieee128"},
       {Builtin::BI__builtin___snprintf_chk, "__snprintf_chkieee128"},
@@ -216,7 +216,7 @@ llvm::Constant *CodeGenModule::getBuiltinLibFunction(const FunctionDecl *FD,
   // The AIX library functions frexpl, ldexpl, and modfl are for 128-bit
   // IBM 'long double' (i.e. __ibm128). Map to the 'double' versions
   // if it is 64-bit 'long double' mode.
-  static SmallDenseMap<unsigned, StringRef, 4> AIXLongDouble64Builtins{
+  static const SmallDenseMap<unsigned, StringRef, 4> AIXLongDouble64Builtins{
       {Builtin::BI__builtin_frexpl, "frexp"},
       {Builtin::BI__builtin_ldexpl, "ldexp"},
       {Builtin::BI__builtin_modfl, "modf"},
@@ -233,12 +233,12 @@ llvm::Constant *CodeGenModule::getBuiltinLibFunction(const FunctionDecl *FD,
     if (getTriple().isPPC64() &&
         &getTarget().getLongDoubleFormat() == &llvm::APFloat::IEEEquad() &&
         F128Builtins.contains(BuiltinID))
-      Name = F128Builtins[BuiltinID];
+      Name = F128Builtins.lookup(BuiltinID);
     else if (getTriple().isOSAIX() &&
              &getTarget().getLongDoubleFormat() ==
                  &llvm::APFloat::IEEEdouble() &&
              AIXLongDouble64Builtins.contains(BuiltinID))
-      Name = AIXLongDouble64Builtins[BuiltinID];
+      Name = AIXLongDouble64Builtins.lookup(BuiltinID);
     else
       Name = Context.BuiltinInfo.getName(BuiltinID).substr(10);
   }
@@ -390,7 +390,9 @@ static RValue EmitBinaryAtomicPost(CodeGenFunction &CGF,
 /// Note: In order to lower Microsoft's _InterlockedCompareExchange* intrinsics
 /// invoke the function EmitAtomicCmpXchgForMSIntrin.
 Value *MakeAtomicCmpXchgValue(CodeGenFunction &CGF, const CallExpr *E,
-                                     bool ReturnBool) {
+                              bool ReturnBool,
+                              llvm::AtomicOrdering SuccessOrdering,
+                              llvm::AtomicOrdering FailureOrdering) {
   QualType T = ReturnBool ? E->getArg(1)->getType() : E->getType();
   Address DestAddr = CheckAtomicAlignment(CGF, E);
 
@@ -403,8 +405,7 @@ Value *MakeAtomicCmpXchgValue(CodeGenFunction &CGF, const CallExpr *E,
   Value *New = EmitToInt(CGF, CGF.EmitScalarExpr(E->getArg(2)), T, IntType);
 
   Value *Pair = CGF.Builder.CreateAtomicCmpXchg(
-      DestAddr, Cmp, New, llvm::AtomicOrdering::SequentiallyConsistent,
-      llvm::AtomicOrdering::SequentiallyConsistent);
+      DestAddr, Cmp, New, SuccessOrdering, FailureOrdering);
   if (ReturnBool)
     // Extract boolean success flag and zext it to int.
     return CGF.Builder.CreateZExt(CGF.Builder.CreateExtractValue(Pair, 1),
@@ -926,10 +927,10 @@ CodeGenFunction::evaluateOrEmitBuiltinObjectSize(const Expr *E, unsigned Type,
                                                  llvm::IntegerType *ResType,
                                                  llvm::Value *EmittedE,
                                                  bool IsDynamic) {
-  uint64_t ObjectSize;
-  if (!E->tryEvaluateObjectSize(ObjectSize, getContext(), Type))
-    return emitBuiltinObjectSize(E, Type, ResType, EmittedE, IsDynamic);
-  return ConstantInt::get(ResType, ObjectSize, /*isSigned=*/true);
+  if (std::optional<uint64_t> ObjectSize =
+          E->tryEvaluateObjectSize(getContext(), Type))
+    return ConstantInt::get(ResType, *ObjectSize, /*isSigned=*/true);
+  return emitBuiltinObjectSize(E, Type, ResType, EmittedE, IsDynamic);
 }
 
 namespace {
@@ -2877,10 +2878,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_fmaxf:
     case Builtin::BI__builtin_fmaxf16:
     case Builtin::BI__builtin_fmaxl:
-    case Builtin::BI__builtin_fmaxf128:
-      return RValue::get(emitBinaryMaybeConstrainedFPBuiltin(*this, E,
-                                   Intrinsic::maxnum,
-                                   Intrinsic::experimental_constrained_maxnum));
+    case Builtin::BI__builtin_fmaxf128: {
+      IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
+      Builder.getFastMathFlags().setNoSignedZeros();
+      return RValue::get(emitBinaryMaybeConstrainedFPBuiltin(
+          *this, E, Intrinsic::maxnum,
+          Intrinsic::experimental_constrained_maxnum));
+    }
 
     case Builtin::BIfmin:
     case Builtin::BIfminf:
@@ -2889,10 +2893,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_fminf:
     case Builtin::BI__builtin_fminf16:
     case Builtin::BI__builtin_fminl:
-    case Builtin::BI__builtin_fminf128:
-      return RValue::get(emitBinaryMaybeConstrainedFPBuiltin(*this, E,
-                                   Intrinsic::minnum,
-                                   Intrinsic::experimental_constrained_minnum));
+    case Builtin::BI__builtin_fminf128: {
+      IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
+      Builder.getFastMathFlags().setNoSignedZeros();
+      return RValue::get(emitBinaryMaybeConstrainedFPBuiltin(
+          *this, E, Intrinsic::minnum,
+          Intrinsic::experimental_constrained_minnum));
+    }
 
     case Builtin::BIfmaximum_num:
     case Builtin::BIfmaximum_numf:
@@ -3685,6 +3692,16 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(
         emitBuiltinWithOneOverloadedType<1>(*this, E, Intrinsic::bswap));
   }
+  case Builtin::BI__builtin_bitreverseg: {
+    Value *ArgValue = EmitScalarExpr(E->getArg(0));
+    llvm::IntegerType *IntTy = cast<llvm::IntegerType>(ArgValue->getType());
+    assert(IntTy &&
+           "LLVM's __builtin_bitreverseg only support integer variants");
+    if (IntTy->getBitWidth() == 1)
+      return RValue::get(ArgValue);
+    return RValue::get(
+        emitBuiltinWithOneOverloadedType<1>(*this, E, Intrinsic::bitreverse));
+  }
   case Builtin::BI__builtin_bitreverse8:
   case Builtin::BI__builtin_bitreverse16:
   case Builtin::BI__builtin_bitreverse32:
@@ -4199,6 +4216,29 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_reduce_minimum:
     return RValue::get(emitBuiltinWithOneOverloadedType<1>(
         *this, E, Intrinsic::vector_reduce_fminimum, "rdx.minimum"));
+  case Builtin::BI__builtin_reduce_assoc_fadd:
+  case Builtin::BI__builtin_reduce_in_order_fadd: {
+    llvm::Value *Vector = EmitScalarExpr(E->getArg(0));
+    llvm::Type *ScalarTy = Vector->getType()->getScalarType();
+    llvm::Value *StartValue = nullptr;
+    if (E->getNumArgs() == 2)
+      StartValue = Builder.CreateFPCast(EmitScalarExpr(E->getArg(1)), ScalarTy);
+    llvm::Value *Args[] = {/*start_value=*/StartValue
+                               ? StartValue
+                               : llvm::ConstantFP::get(ScalarTy, -0.0F),
+                           /*vector=*/Vector};
+    llvm::Function *F =
+        CGM.getIntrinsic(Intrinsic::vector_reduce_fadd, Vector->getType());
+    llvm::CallBase *Reduce = Builder.CreateCall(F, Args, "rdx.addf");
+    if (BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_reduce_assoc_fadd) {
+      // `__builtin_reduce_assoc_fadd` is an associative reduction which
+      // requires the reassoc FMF flag.
+      llvm::FastMathFlags FMF;
+      FMF.setAllowReassoc();
+      cast<llvm::CallBase>(Reduce)->setFastMathFlags(FMF);
+    }
+    return RValue::get(Reduce);
+  }
 
   case Builtin::BI__builtin_matrix_transpose: {
     auto *MatrixTy = E->getArg(0)->getType()->castAs<ConstantMatrixType>();
@@ -4784,11 +4824,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_return_address: {
     Value *Depth = ConstantEmitter(*this).emitAbstract(E->getArg(0),
                                                    getContext().UnsignedIntTy);
-    Function *F = CGM.getIntrinsic(Intrinsic::returnaddress);
+    Function *F =
+        CGM.getIntrinsic(Intrinsic::returnaddress, {CGM.ProgramPtrTy});
     return RValue::get(Builder.CreateCall(F, Depth));
   }
   case Builtin::BI_ReturnAddress: {
-    Function *F = CGM.getIntrinsic(Intrinsic::returnaddress);
+    Function *F =
+        CGM.getIntrinsic(Intrinsic::returnaddress, {CGM.ProgramPtrTy});
     return RValue::get(Builder.CreateCall(F, Builder.getInt32(0)));
   }
   case Builtin::BI__builtin_frame_address: {
@@ -5040,14 +5082,18 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__sync_val_compare_and_swap_4:
   case Builtin::BI__sync_val_compare_and_swap_8:
   case Builtin::BI__sync_val_compare_and_swap_16:
-    return RValue::get(MakeAtomicCmpXchgValue(*this, E, false));
+    return RValue::get(MakeAtomicCmpXchgValue(
+        *this, E, false, AtomicOrdering::SequentiallyConsistent,
+        AtomicOrdering::SequentiallyConsistent));
 
   case Builtin::BI__sync_bool_compare_and_swap_1:
   case Builtin::BI__sync_bool_compare_and_swap_2:
   case Builtin::BI__sync_bool_compare_and_swap_4:
   case Builtin::BI__sync_bool_compare_and_swap_8:
   case Builtin::BI__sync_bool_compare_and_swap_16:
-    return RValue::get(MakeAtomicCmpXchgValue(*this, E, true));
+    return RValue::get(MakeAtomicCmpXchgValue(
+        *this, E, true, AtomicOrdering::SequentiallyConsistent,
+        AtomicOrdering::SequentiallyConsistent));
 
   case Builtin::BI__sync_swap_1:
   case Builtin::BI__sync_swap_2:

@@ -48,6 +48,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
+#include "llvm/Support/NVVMAttributes.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/TargetParser/Triple.h"
@@ -1306,16 +1307,23 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         break; // No other 'amdgcn.atomic.*'
       }
 
+      switch (F->getIntrinsicID()) {
+      default:
+        break;
       // Legacy wmma iu intrinsics without the optional clamp operand.
-      if (F->getIntrinsicID() == Intrinsic::amdgcn_wmma_i32_16x16x64_iu8 &&
-          F->arg_size() == 7) {
-        NewFn = nullptr;
-        return true;
-      }
-      if (F->getIntrinsicID() == Intrinsic::amdgcn_swmmac_i32_16x16x128_iu8 &&
-          F->arg_size() == 8) {
-        NewFn = nullptr;
-        return true;
+      case Intrinsic::amdgcn_wmma_i32_16x16x64_iu8:
+        if (F->arg_size() == 7) {
+          NewFn = nullptr;
+          return true;
+        }
+        break;
+      case Intrinsic::amdgcn_swmmac_i32_16x16x128_iu8:
+      case Intrinsic::amdgcn_wmma_f32_16x16x32_bf16:
+        if (F->arg_size() == 8) {
+          NewFn = nullptr;
+          return true;
+        }
+        break;
       }
 
       if (Name.consume_front("ds.") || Name.consume_front("global.atomic.") ||
@@ -2705,7 +2713,7 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     Value *Ptr = CI->getArgOperand(0);
     Value *Val = CI->getArgOperand(1);
     Rep = Builder.CreateAtomicRMW(AtomicRMWInst::FAdd, Ptr, Val, MaybeAlign(),
-                                  AtomicOrdering::SequentiallyConsistent);
+                                  AtomicOrdering::Monotonic);
   } else if (Name.starts_with("atomic.load.inc.32.p") ||
              Name.starts_with("atomic.load.dec.32.p")) {
     Value *Ptr = CI->getArgOperand(0);
@@ -2713,7 +2721,7 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     auto Op = Name.starts_with("atomic.load.inc") ? AtomicRMWInst::UIncWrap
                                                   : AtomicRMWInst::UDecWrap;
     Rep = Builder.CreateAtomicRMW(Op, Ptr, Val, MaybeAlign(),
-                                  AtomicOrdering::SequentiallyConsistent);
+                                  AtomicOrdering::Monotonic);
   } else if (Name == "clz.ll") {
     // llvm.nvvm.clz.ll returns an i32, but llvm.ctlz.i64 returns an i64.
     Value *Arg = CI->getArgOperand(0);
@@ -4714,6 +4722,41 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
     return UpgradeLegacyWMMAIUIntrinsicCall(F, CI, Builder, {T1, T2, T3, T4});
   }
 
+  switch (F->getIntrinsicID()) {
+  default:
+    break;
+  case Intrinsic::amdgcn_wmma_f32_16x16x32_bf16: {
+    // Drop src0 and src1 modifiers.
+    const Value *Op0 = CI->getArgOperand(0);
+    const Value *Op2 = CI->getArgOperand(2);
+    assert(Op0->getType()->isIntegerTy() && Op2->getType()->isIntegerTy());
+    const ConstantInt *ModA = dyn_cast<ConstantInt>(Op0);
+    const ConstantInt *ModB = dyn_cast<ConstantInt>(Op2);
+    if (!ModA->isZero() || !ModB->isZero())
+      reportFatalUsageError(Name + " matrix A and B modifiers shall be zero");
+
+    SmallVector<Value *, 8> Args{CI->getArgOperand(1), CI->getArgOperand(3)};
+    for (int I = 4, E = CI->arg_size(); I < E; ++I)
+      Args.push_back(CI->getArgOperand(I));
+
+    Function *NewDecl = Intrinsic::getOrInsertDeclaration(
+        F->getParent(), F->getIntrinsicID(),
+        {F->getReturnType(), Args[0]->getType()});
+
+    SmallVector<OperandBundleDef, 1> Bundles;
+    CI->getOperandBundlesAsDefs(Bundles);
+
+    auto *NewCall = cast<CallInst>(Builder.CreateCall(NewDecl, Args, Bundles));
+    NewCall->setTailCallKind(cast<CallInst>(CI)->getTailCallKind());
+    NewCall->setCallingConv(CI->getCallingConv());
+    NewCall->setAttributes(CI->getAttributes());
+    NewCall->setDebugLoc(CI->getDebugLoc());
+    NewCall->copyMetadata(*CI);
+    NewCall->takeName(CI);
+    return NewCall;
+  }
+  }
+
   AtomicRMWInst::BinOp RMWOp =
       StringSwitch<AtomicRMWInst::BinOp>(Name)
           .StartsWith("ds.fadd", AtomicRMWInst::FAdd)
@@ -4871,7 +4914,7 @@ static void upgradeDbgIntrinsicToDbgRecord(StringRef Name, CallBase *CI) {
     if (CI->arg_size() == 4) {
       auto *Offset = dyn_cast_or_null<Constant>(CI->getArgOperand(1));
       // Nonzero offset dbg.values get dropped without a replacement.
-      if (!Offset || !Offset->isZeroValue())
+      if (!Offset || !Offset->isNullValue())
         return;
       VarOp = 2;
       ExprOp = 3;
@@ -5195,7 +5238,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     assert(CI->arg_size() == 4);
     // Drop nonzero offsets instead of attempting to upgrade them.
     if (auto *Offset = dyn_cast_or_null<Constant>(CI->getArgOperand(1)))
-      if (Offset->isZeroValue()) {
+      if (Offset->isNullValue()) {
         NewCall = Builder.CreateCall(
             NewFn,
             {CI->getArgOperand(0), CI->getArgOperand(2), CI->getArgOperand(3)});
@@ -5875,33 +5918,33 @@ bool static upgradeSingleNVVMAnnotation(GlobalValue *GV, StringRef K,
   }
   if (K == "maxclusterrank" || K == "cluster_max_blocks") {
     const auto CV = mdconst::extract<ConstantInt>(V)->getZExtValue();
-    cast<Function>(GV)->addFnAttr("nvvm.maxclusterrank", llvm::utostr(CV));
+    cast<Function>(GV)->addFnAttr(NVVMAttr::MaxClusterRank, llvm::utostr(CV));
     return true;
   }
   if (K == "minctasm") {
     const auto CV = mdconst::extract<ConstantInt>(V)->getZExtValue();
-    cast<Function>(GV)->addFnAttr("nvvm.minctasm", llvm::utostr(CV));
+    cast<Function>(GV)->addFnAttr(NVVMAttr::MinCTASm, llvm::utostr(CV));
     return true;
   }
   if (K == "maxnreg") {
     const auto CV = mdconst::extract<ConstantInt>(V)->getZExtValue();
-    cast<Function>(GV)->addFnAttr("nvvm.maxnreg", llvm::utostr(CV));
+    cast<Function>(GV)->addFnAttr(NVVMAttr::MaxNReg, llvm::utostr(CV));
     return true;
   }
   if (K.consume_front("maxntid") && isXYZ(K)) {
-    upgradeNVVMFnVectorAttr("nvvm.maxntid", K[0], GV, V);
+    upgradeNVVMFnVectorAttr(NVVMAttr::MaxNTID, K[0], GV, V);
     return true;
   }
   if (K.consume_front("reqntid") && isXYZ(K)) {
-    upgradeNVVMFnVectorAttr("nvvm.reqntid", K[0], GV, V);
+    upgradeNVVMFnVectorAttr(NVVMAttr::ReqNTID, K[0], GV, V);
     return true;
   }
   if (K.consume_front("cluster_dim_") && isXYZ(K)) {
-    upgradeNVVMFnVectorAttr("nvvm.cluster_dim", K[0], GV, V);
+    upgradeNVVMFnVectorAttr(NVVMAttr::ClusterDim, K[0], GV, V);
     return true;
   }
   if (K == "grid_constant") {
-    const auto Attr = Attribute::get(GV->getContext(), "nvvm.grid_constant");
+    const auto Attr = Attribute::get(GV->getContext(), NVVMAttr::GridConstant);
     for (const auto &Op : cast<MDNode>(V)->operands()) {
       // For some reason, the index is 1-based in the metadata. Good thing we're
       // able to auto-upgrade it!
@@ -6345,6 +6388,23 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
     RemovingAttrs = true;
   }
 
+  if (Attribute A = F.getFnAttribute("nooutline");
+      A.isValid() && A.isStringAttribute()) {
+    AttrsToRemove.addAttribute("nooutline");
+    AttrsToAdd.addAttribute(Attribute::NoOutline);
+    AddingAttrs = RemovingAttrs = true;
+  }
+
+  if (Attribute A = F.getFnAttribute("uniform-work-group-size");
+      A.isValid() && A.isStringAttribute() && !A.getValueAsString().empty()) {
+    AttrsToRemove.addAttribute("uniform-work-group-size");
+    RemovingAttrs = true;
+    if (A.getValueAsString() == "true") {
+      AttrsToAdd.addAttribute("uniform-work-group-size");
+      AddingAttrs = true;
+    }
+  }
+
   if (!F.empty()) {
     // For some reason this is called twice, and the first time is before any
     // instructions are loaded into the body.
@@ -6741,6 +6801,17 @@ void llvm::UpgradeAttributes(AttrBuilder &B) {
     B.removeAttribute("null-pointer-is-valid");
     if (NullPointerIsValid)
       B.addAttribute(Attribute::NullPointerIsValid);
+  }
+
+  A = B.getAttribute("uniform-work-group-size");
+  if (A.isValid()) {
+    StringRef Val = A.getValueAsString();
+    if (!Val.empty()) {
+      bool IsTrue = Val == "true";
+      B.removeAttribute("uniform-work-group-size");
+      if (IsTrue)
+        B.addAttribute("uniform-work-group-size");
+    }
   }
 }
 

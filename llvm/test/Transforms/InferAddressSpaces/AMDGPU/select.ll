@@ -164,7 +164,7 @@ define amdgpu_kernel void @store_select_group_global_mismatch_flat_constexpr_swa
 ; CHECK: %select = select i1 %c, ptr addrspacecast (ptr addrspace(3) null to ptr), ptr addrspacecast (ptr addrspace(1) null to ptr)
 ; CHECK: store i32 7, ptr %select
 define amdgpu_kernel void @store_select_group_global_mismatch_null_null(i1 %c) #0 {
-  %select = select i1 %c, ptr addrspacecast (ptr addrspace(3) null to ptr), ptr addrspacecast (ptr addrspace(1) null to ptr)
+  %select = select i1 %c, ptr addrspacecast (ptr addrspace(3) zeroinitializer to ptr), ptr addrspacecast (ptr addrspace(1) null to ptr)
   store i32 7, ptr %select
   ret void
 }

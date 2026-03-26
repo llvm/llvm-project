@@ -205,7 +205,7 @@ Error MemAllocatorTy::MemPoolTy::init(MemAllocatorTy *AllocatorIn) {
 }
 
 void MemAllocatorTy::MemPoolTy::printUsage() {
-  ODBG_OS([&](llvm::raw_ostream &Os) {
+  ODBG_OS(OLDT_Alloc, [&](llvm::raw_ostream &Os) {
     auto PrintNum = [&](uint64_t Num) {
       if (Num > 1e9)
         Os << llvm::format("%.2e", float(Num));
@@ -254,7 +254,7 @@ Error MemAllocatorTy::MemPoolTy::deinit() {
   printUsage();
   for (auto &Bucket : Buckets) {
     for (auto *Block : Bucket) {
-      ODBG_IF([&]() { Allocator->log(0, Block->Size, AllocKind); });
+      ODBG_IF(OLDT_Alloc, [&]() { Allocator->log(0, Block->Size, AllocKind); });
       auto Err =
           Allocator->deallocFromL0(reinterpret_cast<void *>(Block->Base));
       delete Block;
@@ -301,8 +301,12 @@ Expected<void *> MemAllocatorTy::MemPoolTy::alloc(size_t Size,
     void *Base = *BaseOrErr;
     if (ZeroInit) {
       auto Err = Allocator->enqueueMemSet(Base, 0, BlockSize);
-      if (Err)
-        return Err;
+      if (Err) {
+        // deallocate Base on error.
+        if (auto DeallocErr = Allocator->deallocFromL0(Base))
+          return joinErrors(std::move(Err), std::move(DeallocErr));
+        return std::move(Err);
+      }
     }
 
     BlockTy *Block = new BlockTy(Base, BlockSize, ChunkSize);
@@ -466,7 +470,7 @@ Error MemAllocatorTy::deinit() {
     CounterPool.reset(nullptr);
   }
   // Report memory usage if requested.
-  ODBG_OS([&](llvm::raw_ostream &Os) {
+  ODBG_OS(OLDT_Alloc, [&](llvm::raw_ostream &Os) {
     for (size_t Kind = 0; Kind < MaxMemKind; Kind++) {
       auto &Stat = Stats[Kind];
       Os << "Memory usage for " << allocKindToStr(Kind) << ", device " << Device
@@ -708,12 +712,24 @@ Expected<ze_event_handle_t> EventPoolTy::getEvent() {
     ze_event_desc_t EventDesc{ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr, 0, 0, 0};
     EventDesc.wait = 0;
     EventDesc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
+    uint32_t CreatedEvents = 0;
     for (uint32_t I = 0; I < PoolSize; I++) {
       EventDesc.index = I;
       ze_event_handle_t Event;
-      CALL_ZE_RET_ERROR(zeEventCreate, Pool, &EventDesc, &Event);
+      ze_result_t RC;
+      CALL_ZE(RC, zeEventCreate, Pool, &EventDesc, &Event);
+      if (RC != ZE_RESULT_SUCCESS) {
+        // Log the error and skip this event.
+        ODBG(OLDT_Init) << "Warning: zeEventCreate failed at index " << I
+                        << " with code " << RC << ". Skipping this event.";
+        continue;
+      }
       Events.push_back(Event);
+      CreatedEvents++;
     }
+    PoolSize = CreatedEvents;
+    ODBG(OLDT_Init) << "Created a new event pool " << Pool << " with "
+                    << PoolSize << " events";
   }
 
   auto Ret = Events.back();

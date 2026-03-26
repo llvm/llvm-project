@@ -17,6 +17,7 @@
 #include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/DependencyDirectivesScanner.h"
+#include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/ModuleLoader.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -167,13 +168,10 @@ class CompilerInstance : public ModuleLoader {
   /// Should we delete the BuiltModules when we're done?
   bool DeleteBuiltModules = true;
 
-  /// The location of the module-import keyword for the last module
-  /// import.
-  SourceLocation LastModuleImportLoc;
-
-  /// The result of the last module import.
-  ///
-  ModuleLoadResult LastModuleImportResult;
+  /// Cache of module import results keyed by import location.
+  /// It is important to eliminate redundant diagnostics
+  /// when both the preprocessor and parser see the same import declaration.
+  llvm::SmallDenseMap<SourceLocation, ModuleLoadResult, 4> ModuleImportResults;
 
   /// Whether we should (re)build the global module index once we
   /// have finished with this translation unit.
@@ -196,6 +194,14 @@ class CompilerInstance : public ModuleLoader {
 
   /// Force an output buffer.
   std::unique_ptr<llvm::raw_pwrite_stream> OutputStream;
+
+  using GenModuleActionWrapperFunc =
+      std::function<std::unique_ptr<FrontendAction>(
+          const FrontendOptions &, std::unique_ptr<FrontendAction>)>;
+
+  /// An optional callback function used to wrap all FrontendActions
+  /// produced to generate imported modules before they are executed.
+  GenModuleActionWrapperFunc GenModuleActionWrapper;
 
   CompilerInstance(const CompilerInstance &) = delete;
   void operator=(const CompilerInstance &) = delete;
@@ -738,11 +744,6 @@ public:
     GetDependencyDirectives = std::move(Getter);
   }
 
-  std::string getSpecificModuleCachePath(StringRef ContextHash);
-  std::string getSpecificModuleCachePath() {
-    return getSpecificModuleCachePath(getInvocation().computeContextHash());
-  }
-
   /// Create the AST context.
   void createASTContext();
 
@@ -864,7 +865,7 @@ public:
 
   void createASTReader();
 
-  bool loadModuleFile(StringRef FileName,
+  bool loadModuleFile(ModuleFileName FileName,
                       serialization::ModuleFile *&LoadedModuleFile);
 
   /// Configuration object for making the result of \c cloneForModuleCompile()
@@ -957,6 +958,14 @@ public:
   GlobalModuleIndex *loadGlobalModuleIndex(SourceLocation TriggerLoc) override;
 
   bool lookupMissingImports(StringRef Name, SourceLocation TriggerLoc) override;
+
+  void setGenModuleActionWrapper(GenModuleActionWrapperFunc Wrapper) {
+    GenModuleActionWrapper = Wrapper;
+  }
+
+  GenModuleActionWrapperFunc getGenModuleActionWrapper() const {
+    return GenModuleActionWrapper;
+  }
 
   void addDependencyCollector(std::shared_ptr<DependencyCollector> Listener) {
     DependencyCollectors.push_back(std::move(Listener));

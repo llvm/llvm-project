@@ -1728,6 +1728,8 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     if (SanArgs.linkCXXRuntimes())
       StaticRuntimes.push_back("scudo_standalone_cxx");
   }
+  if (SanArgs.needsUbsanLoopDetectRt())
+    NonWholeStaticRuntimes.push_back("ubsan_loop_detect");
 }
 
 // Should be called before we add system libraries (C++ ABI, libstdc++/libc++,
@@ -1749,11 +1751,17 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     CmdArgs.push_back(Args.MakeArgString(S));
   }
 
+  // Add shared runtimes before adding fuzzer and its dependencies.
+  for (auto RT : SharedRuntimes)
+    addSanitizerRuntime(TC, Args, CmdArgs, RT, true, false);
+
   // Inject libfuzzer dependencies.
+  bool FuzzerNeedsSanitizerDeps = false;
   if (SanArgs.needsFuzzer() && SanArgs.linkRuntimes() &&
       !Args.hasArg(options::OPT_shared)) {
 
     addSanitizerRuntime(TC, Args, CmdArgs, "fuzzer", false, true);
+    FuzzerNeedsSanitizerDeps = true;
     if (SanArgs.needsFuzzerInterceptors())
       addSanitizerRuntime(TC, Args, CmdArgs, "fuzzer_interceptors", false,
                           true);
@@ -1768,8 +1776,6 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     }
   }
 
-  for (auto RT : SharedRuntimes)
-    addSanitizerRuntime(TC, Args, CmdArgs, RT, true, false);
   for (auto RT : HelperStaticRuntimes)
     addSanitizerRuntime(TC, Args, CmdArgs, RT, false, true);
   bool AddExportDynamic = false;
@@ -1790,19 +1796,26 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     CmdArgs.push_back("--export-dynamic-symbol=__cfi_check");
 
   if (SanArgs.hasMemTag()) {
-    if (!TC.getTriple().isAndroid()) {
-      TC.getDriver().Diag(diag::err_drv_unsupported_opt_for_target)
-          << "-fsanitize=memtag*" << TC.getTriple().str();
-    }
+    CmdArgs.push_back("-z");
     CmdArgs.push_back(
-        Args.MakeArgString("--android-memtag-mode=" + SanArgs.getMemtagMode()));
-    if (SanArgs.hasMemtagHeap())
-      CmdArgs.push_back("--android-memtag-heap");
-    if (SanArgs.hasMemtagStack())
-      CmdArgs.push_back("--android-memtag-stack");
+        Args.MakeArgString("memtag-mode=" + SanArgs.getMemtagMode()));
+
+    if (SanArgs.hasMemtagHeap()) {
+      CmdArgs.push_back("-z");
+      CmdArgs.push_back("memtag-heap");
+    }
+
+    if (SanArgs.hasMemtagStack()) {
+      CmdArgs.push_back("-z");
+      CmdArgs.push_back("memtag-stack");
+    }
+
+    if (TC.getTriple().isAndroid())
+      CmdArgs.push_back("--android-memtag-note");
   }
 
-  return !StaticRuntimes.empty() || !NonWholeStaticRuntimes.empty();
+  return !StaticRuntimes.empty() || !NonWholeStaticRuntimes.empty() ||
+         FuzzerNeedsSanitizerDeps;
 }
 
 bool tools::addXRayRuntime(const ToolChain&TC, const ArgList &Args, ArgStringList &CmdArgs) {
@@ -2338,6 +2351,16 @@ bool tools::checkDebugInfoOption(const Arg *A, const ArgList &Args,
   D.Diag(diag::warn_drv_unsupported_debug_info_opt_for_target)
       << A->getAsString(Args) << TC.getTripleString();
   return false;
+}
+
+void tools::addDebugInfoForProfilingArgs(const Driver &D, const ToolChain &TC,
+                                         const ArgList &Args,
+                                         ArgStringList &CmdArgs) {
+  if (Args.hasFlag(options::OPT_fdebug_info_for_profiling,
+                   options::OPT_fno_debug_info_for_profiling, false) &&
+      checkDebugInfoOption(
+          Args.getLastArg(options::OPT_fdebug_info_for_profiling), Args, D, TC))
+    CmdArgs.push_back("-fdebug-info-for-profiling");
 }
 
 void tools::AddAssemblerKPIC(const ToolChain &ToolChain, const ArgList &Args,
@@ -2949,16 +2972,22 @@ void tools::addMachineOutlinerArgs(const Driver &D,
   if (Arg *A = Args.getLastArg(options::OPT_moutline,
                                options::OPT_mno_outline)) {
     if (A->getOption().matches(options::OPT_moutline)) {
-      // We only support -moutline in AArch64 and ARM targets right now. If
-      // we're not compiling for these, emit a warning and ignore the flag.
-      // Otherwise, add the proper mllvm flags.
-      if (!(Triple.isARM() || Triple.isThumb() || Triple.isAArch64())) {
-        D.Diag(diag::warn_drv_moutline_unsupported_opt) << Triple.getArchName();
-      } else {
+      // We only support -moutline in AArch64, ARM, RISC-V and X86 targets right
+      // now. If we're compiling for these, add the proper mllvm flags.
+      // Otherwise, emit a warning and ignore the flag.
+      if (Triple.isARM() || Triple.isThumb() || Triple.isAArch64() ||
+          Triple.isRISCV() || Triple.isX86()) {
         addArg(Twine("-enable-machine-outliner"));
+      } else {
+        D.Diag(diag::warn_drv_moutline_unsupported_opt) << Triple.getArchName();
       }
     } else {
-      // Disable all outlining behaviour.
+      if (!IsLTO)
+        // Disable all outlining behaviour using `nooutline` attribute, in case
+        // Linker Invocation lacks `-mno-outline`.
+        CmdArgs.push_back("-mno-outline");
+
+      // Disable Pass in Pipeline
       addArg(Twine("-enable-machine-outliner=never"));
     }
   }
@@ -3056,19 +3085,29 @@ void tools::addOpenMPDeviceRTL(const Driver &D,
   }
 }
 
-void tools::addOpenCLBuiltinsLib(const Driver &D,
+void tools::addOpenCLBuiltinsLib(const Driver &D, const llvm::Triple &TT,
                                  const llvm::opt::ArgList &DriverArgs,
                                  llvm::opt::ArgStringList &CC1Args) {
-  const Arg *A = DriverArgs.getLastArg(options::OPT_libclc_lib_EQ);
-  if (!A)
-    return;
 
-  // If the namespec is of the form :filename we use it exactly.
-  StringRef LibclcNamespec(A->getValue());
+  StringRef LibclcNamespec;
+  const Arg *A = DriverArgs.getLastArg(options::OPT_libclc_lib_EQ);
+  if (A) {
+    // If the namespec is of the form :filename we use it exactly.
+    LibclcNamespec = A->getValue();
+  } else {
+    if (!TT.isAMDGPU() || TT.getEnvironment() != llvm::Triple::LLVM)
+      return;
+
+    // TODO: Should this accept following -stdlib to override?
+    if (DriverArgs.hasArg(options::OPT_no_offloadlib,
+                          options::OPT_nodefaultlibs, options::OPT_nostdlib))
+      return;
+  }
+
   bool FilenameSearch = LibclcNamespec.consume_front(":");
   if (FilenameSearch) {
     SmallString<128> LibclcFile(LibclcNamespec);
-    if (llvm::sys::fs::exists(LibclcFile)) {
+    if (D.getVFS().exists(LibclcFile)) {
       CC1Args.push_back("-mlink-builtin-bitcode");
       CC1Args.push_back(DriverArgs.MakeArgString(LibclcFile));
       return;
@@ -3090,7 +3129,7 @@ void tools::addOpenCLBuiltinsLib(const Driver &D,
     if (!CPU.empty()) {
       SmallString<128> CPUPath(BasePath);
       llvm::sys::path::append(CPUPath, CPU, "libclc.bc");
-      if (llvm::sys::fs::exists(CPUPath)) {
+      if (D.getVFS().exists(CPUPath)) {
         CC1Args.push_back("-mlink-builtin-bitcode");
         CC1Args.push_back(DriverArgs.MakeArgString(CPUPath));
         return;
@@ -3101,7 +3140,7 @@ void tools::addOpenCLBuiltinsLib(const Driver &D,
   // Fall back to the generic library for the triple.
   SmallString<128> GenericPath(BasePath);
   llvm::sys::path::append(GenericPath, "libclc.bc");
-  if (llvm::sys::fs::exists(GenericPath)) {
+  if (D.getVFS().exists(GenericPath)) {
     CC1Args.push_back("-mlink-builtin-bitcode");
     CC1Args.push_back(DriverArgs.MakeArgString(GenericPath));
     return;

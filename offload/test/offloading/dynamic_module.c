@@ -5,7 +5,7 @@
 // RUN: %libomptarget-compileopt-generic %t.so && %libomptarget-run-generic 2>&1 | %fcheck-generic
 //
 // REQUIRES: gpu
-// XFAIL: intelgpu
+
 // clang-format on
 
 #ifdef SHARED

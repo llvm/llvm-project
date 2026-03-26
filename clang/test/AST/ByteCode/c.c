@@ -433,3 +433,16 @@ void intPtrCmp1(void) { &i + 1 == 2; } // all-warning {{comparison between point
                                        // all-warning {{equality comparison result unused}}
 void intPtrCmp2(void) { 2 == &i + 1; } // all-warning {{comparison between pointer and integer}} \
                                        // all-warning {{equality comparison result unused}}
+
+/// evaluateStrlen on a non-block pointer.
+char *strcpy(char *restrict s1, const char *restrict s2);
+void strcpy_fn(char *x) {
+  strcpy(x, (char*)&strcpy_fn);
+}
+
+/// strcpy on a non-integer pointer.
+void strcpyDouble(void) {
+  char buf[1];
+  const double test_buf[] = {'4', '2'};
+  __builtin_strcpy(buf, test_buf + 1); // all-error {{incompatible pointer types}}
+}

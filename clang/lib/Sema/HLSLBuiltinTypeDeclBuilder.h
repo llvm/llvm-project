@@ -65,6 +65,9 @@ public:
 
   BuiltinTypeDeclBuilder &addSimpleTemplateParams(ArrayRef<StringRef> Names,
                                                   ConceptDecl *CD);
+  BuiltinTypeDeclBuilder &
+  addSimpleTemplateParams(ArrayRef<StringRef> Names,
+                          ArrayRef<QualType> DefaultTypes, ConceptDecl *CD);
   CXXRecordDecl *finalizeForwardDeclaration() { return Record; }
   BuiltinTypeDeclBuilder &completeDefinition();
 
@@ -80,7 +83,8 @@ public:
   addTextureHandle(ResourceClass RC, bool IsROV, ResourceDimension RD,
                    AccessSpecifier Access = AccessSpecifier::AS_private);
   BuiltinTypeDeclBuilder &addSamplerHandle();
-  BuiltinTypeDeclBuilder &addArraySubscriptOperators();
+  BuiltinTypeDeclBuilder &addArraySubscriptOperators(
+      ResourceDimension Dim = ResourceDimension::Unknown);
 
   // Builtin types constructors
   BuiltinTypeDeclBuilder &addDefaultHandleConstructor();
@@ -92,13 +96,22 @@ public:
 
   // Builtin types methods
   BuiltinTypeDeclBuilder &addLoadMethods();
+  BuiltinTypeDeclBuilder &addTextureLoadMethods(ResourceDimension Dim);
   BuiltinTypeDeclBuilder &addByteAddressBufferLoadMethods();
   BuiltinTypeDeclBuilder &addByteAddressBufferStoreMethods();
   BuiltinTypeDeclBuilder &addSampleMethods(ResourceDimension Dim);
+  BuiltinTypeDeclBuilder &addSampleBiasMethods(ResourceDimension Dim);
+  BuiltinTypeDeclBuilder &addSampleGradMethods(ResourceDimension Dim);
+  BuiltinTypeDeclBuilder &addSampleLevelMethods(ResourceDimension Dim);
+  BuiltinTypeDeclBuilder &addSampleCmpMethods(ResourceDimension Dim);
+  BuiltinTypeDeclBuilder &addSampleCmpLevelZeroMethods(ResourceDimension Dim);
+  BuiltinTypeDeclBuilder &addGatherMethods(ResourceDimension Dim);
+  BuiltinTypeDeclBuilder &addGatherCmpMethods(ResourceDimension Dim);
   BuiltinTypeDeclBuilder &addIncrementCounterMethod();
   BuiltinTypeDeclBuilder &addDecrementCounterMethod();
   BuiltinTypeDeclBuilder &addHandleAccessFunction(DeclarationName &Name,
                                                   bool IsConst, bool IsRef,
+                                                  QualType IndexTy,
                                                   QualType ElemTy = QualType());
   BuiltinTypeDeclBuilder &
   addLoadWithStatusFunction(DeclarationName &Name, bool IsConst,
@@ -127,11 +140,13 @@ private:
   BuiltinTypeDeclBuilder &
   addCounterHandleMember(ResourceClass RC, bool IsROV, bool RawBuffer,
                          AccessSpecifier Access = AccessSpecifier::AS_private);
+  QualType getGatherReturnType();
   FieldDecl *getResourceHandleField() const;
   FieldDecl *getResourceCounterHandleField() const;
   QualType getFirstTemplateTypeParam();
   QualType getHandleElementType();
   Expr *getConstantIntExpr(int value);
+  Expr *getConstantUnsignedIntExpr(unsigned value);
   HLSLAttributedResourceType::Attributes getResourceAttrs() const;
 };
 

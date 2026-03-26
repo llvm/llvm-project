@@ -175,7 +175,10 @@ have a recommended practice where to put them, so libc++ applies it whenever it 
   This protects programmers from assuming too much about how the internals of a function work, making code more robust
   in the presence of future optimizations.
 
-``[[nodiscard]]`` should not be applied to conversion functions because Clang already diagnoses unused cast results.
+``[[nodiscard]]`` should not be applied to functions if Clang already diagnoses unused results, for example:
+- conversion functions
+- equality operators
+- relational operators
 
 Applications of ``[[nodiscard]]`` are code like any other code, so we aim to test them on public interfaces. This can be
 done with a ``.verify.cpp`` test. Many examples are available. Just look for tests with the suffix
@@ -207,3 +210,18 @@ prevent compilers from generating said debug information. Aliases inside type tr
 should be annotated for the same reason.
 
 This is enforced by the clang-tidy check ``libcpp-nodebug-on-aliases``.
+
+Naming benchmarks
+=================
+
+Libc++ contains several benchmarks. It is helpful to observe some consistency when naming benchmarks since it makes it
+easier to search for and filter benchmark names from various other tools like LNT. In particular, we name benchmarks
+after the function they are measuring, with a few transformations to help filtering:
+
+- Constructors are named ``ctor`` to make the name independent on the container being benchmarked.
+- Copy and move operations use ``Self`` instead of the container type, again to make their name independent from the
+  container being benchmarked.
+
+When multiple benchmarks measure the same function under different circumstances, we add context as a parenthesis
+after the function signature. For example, ``std::vector<bool>::ctor(Self&&, const allocator_type&) (equal allocators)``
+would be the allocator-aware move constructor for ``std::vector<bool>`` in the case of equal allocators.

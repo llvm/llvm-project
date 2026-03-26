@@ -525,7 +525,15 @@ ModRefResult LocalAliasAnalysis::getModRef(Operation *op, Value location) {
                  : aliasResult.isNo() ? "NoAlias"
                                       : "MayAlias");
     } else {
-      LDBG() << "    No effect value, assuming MayAlias";
+      // An effect on a non-addressable resource cannot affect a pointer-based
+      // location.
+      if (!effect.getResource()->isAddressable()) {
+        LDBG() << "    Effect on non-addressable resource '"
+               << effect.getResource()->getName() << "', skipping (NoAlias)";
+        aliasResult = AliasResult::NoAlias;
+      } else {
+        LDBG() << "    No effect value, assuming MayAlias";
+      }
     }
 
     // If we don't alias, ignore this effect.

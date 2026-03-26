@@ -78,15 +78,13 @@ NativeProcessNetBSD::Manager::Launch(ProcessLaunchInfo &launch_info,
   if (!WIFSTOPPED(wstatus)) {
     LLDB_LOG(log, "Could not sync with inferior process: wstatus={1}",
              WaitStatus::Decode(wstatus));
-    return llvm::make_error<StringError>("Could not sync with inferior process",
-                                         llvm::inconvertibleErrorCode());
+    return llvm::createStringError("Could not sync with inferior process");
   }
   LLDB_LOG(log, "inferior started, now in stopped state");
 
   ProcessInstanceInfo Info;
   if (!Host::GetProcessInfo(pid, Info)) {
-    return llvm::make_error<StringError>("Cannot get process architecture",
-                                         llvm::inconvertibleErrorCode());
+    return llvm::createStringError("Cannot get process architecture");
   }
 
   // Set the architecture to the exe architecture.
@@ -117,8 +115,7 @@ NativeProcessNetBSD::Manager::Attach(
   // Retrieve the architecture for the running process.
   ProcessInstanceInfo Info;
   if (!Host::GetProcessInfo(pid, Info)) {
-    return llvm::make_error<StringError>("Cannot get process architecture",
-                                         llvm::inconvertibleErrorCode());
+    return llvm::createStringError("Cannot get process architecture");
   }
 
   std::unique_ptr<NativeProcessNetBSD> process_up(new NativeProcessNetBSD(

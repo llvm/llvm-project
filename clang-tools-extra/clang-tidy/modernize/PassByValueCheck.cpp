@@ -173,9 +173,9 @@ static bool hasRValueOverload(const CXXConstructorDecl *Ctor,
         C->getNumParams() != Ctor->getNumParams())
       return false;
     for (int I = 0, E = C->getNumParams(); I < E; ++I) {
-      const clang::QualType CandidateParamType =
+      const QualType CandidateParamType =
           C->parameters()[I]->getType().getCanonicalType();
-      const clang::QualType CtorParamType =
+      const QualType CtorParamType =
           Ctor->parameters()[I]->getType().getCanonicalType();
       const bool IsLValueRValuePair =
           CtorParamType->isLValueReferenceType() &&
@@ -216,11 +216,13 @@ PassByValueCheck::PassByValueCheck(StringRef Name, ClangTidyContext *Context)
       Inserter(Options.getLocalOrGlobal("IncludeStyle",
                                         utils::IncludeSorter::IS_LLVM),
                areDiagsSelfContained()),
-      ValuesOnly(Options.get("ValuesOnly", false)) {}
+      ValuesOnly(Options.get("ValuesOnly", false)),
+      IgnoreMacros(Options.get("IgnoreMacros", false)) {}
 
 void PassByValueCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IncludeStyle", Inserter.getStyle());
   Options.store(Opts, "ValuesOnly", ValuesOnly);
+  Options.store(Opts, "IgnoreMacros", IgnoreMacros);
 }
 
 void PassByValueCheck::registerMatchers(MatchFinder *Finder) {
@@ -272,6 +274,9 @@ void PassByValueCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Initializer =
       Result.Nodes.getNodeAs<CXXCtorInitializer>("Initializer");
   const SourceManager &SM = *Result.SourceManager;
+
+  if (IgnoreMacros && ParamDecl->getBeginLoc().isMacroID())
+    return;
 
   // If the parameter is used or anything other than the copy, do not apply
   // the changes.

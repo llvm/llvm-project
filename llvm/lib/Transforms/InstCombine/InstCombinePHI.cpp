@@ -178,8 +178,10 @@ bool InstCombinerImpl::foldIntegerTypedPHI(PHINode &PN) {
 
     // First look backward:
     if (auto *PI = dyn_cast<PtrToIntInst>(Arg)) {
-      AvailablePtrVals.emplace_back(PI->getOperand(0));
-      continue;
+      if (PI->getOperand(0)->getType() == IntToPtr->getType()) {
+        AvailablePtrVals.emplace_back(PI->getOperand(0));
+        continue;
+      }
     }
 
     // Next look forward:
@@ -1310,10 +1312,7 @@ static Value *simplifyUsingControlFlow(InstCombiner &Self, PHINode &PN,
     SuccForValue[C] = Succ;
     ++SuccCount[Succ];
   };
-  if (auto *BI = dyn_cast<BranchInst>(IDom->getTerminator())) {
-    if (BI->isUnconditional())
-      return nullptr;
-
+  if (auto *BI = dyn_cast<CondBrInst>(IDom->getTerminator())) {
     Cond = BI->getCondition();
     AddSucc(ConstantInt::getTrue(Context), BI->getSuccessor(0));
     AddSucc(ConstantInt::getFalse(Context), BI->getSuccessor(1));

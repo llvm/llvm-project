@@ -1,3 +1,10 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
 #include "clang/Basic/OffloadArch.h"
 
 #include "llvm/ADT/STLExtras.h"
@@ -17,7 +24,7 @@ struct OffloadArchToStringMap {
 #define GFX(gpu) {OffloadArch::GFX##gpu, "gfx" #gpu, "compute_amdgcn"}
 static const OffloadArchToStringMap ArchNames[] = {
     // clang-format off
-    {OffloadArch::UNUSED, "", ""},
+    {OffloadArch::Unused, "", ""},
     SM(20), {OffloadArch::SM_21, "sm_21", "compute_20"}, // Fermi
     SM(30), {OffloadArch::SM_32_, "sm_32", "compute_32"}, SM(35), SM(37),  // Kepler
     SM(50), SM(52), SM(53),          // Maxwell
@@ -96,6 +103,7 @@ static const OffloadArchToStringMap ArchNames[] = {
     GFX(1201), // gfx1201
     GFX(1250), // gfx1250
     GFX(1251), // gfx1251
+    {OffloadArch::GFX12_5_GENERIC, "gfx12-5-generic", "compute_amdgcn"},
     GFX(1310), // gfx1310
     {OffloadArch::AMDGCNSPIRV, "amdgcnspirv", "compute_amdgcn"},
     // Intel CPUs
@@ -134,7 +142,7 @@ OffloadArch StringToOffloadArch(llvm::StringRef S) {
         return S == Map.ArchName;
       });
   if (Result == std::end(ArchNames))
-    return OffloadArch::UNKNOWN;
+    return OffloadArch::Unknown;
   return Result->Arch;
 }
 
