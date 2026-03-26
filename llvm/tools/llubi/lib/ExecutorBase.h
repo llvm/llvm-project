@@ -77,10 +77,9 @@ protected:
 
   ExecutorBase(Context &C, EventHandler &H)
       : Ctx(C), Handler(H), Status(true) {}
-
-public:
   ~ExecutorBase() = default;
 
+public:
   void reportImmediateUB(StringRef Msg);
   void reportError(StringRef Msg);
 
