@@ -4925,14 +4925,6 @@ LogicalResult AffineDelinearizeIndexOp::verify() {
       }))
     return emitOpError("no basis element may be statically non-positive");
 
-  // All result types must match the input type.
-  Type inputType = getLinearIndex().getType();
-  for (Type resultType : getResultTypes()) {
-    if (resultType != inputType)
-      return emitOpError("result types must match the linear index type, got ")
-             << resultType << " vs " << inputType;
-  }
-
   return success();
 }
 
@@ -5314,14 +5306,6 @@ LogicalResult AffineLinearizeIndexOp::verify() {
         "mismatch between dynamic and static basis (kDynamic marker but no "
         "corresponding dynamic basis entry) -- this can only happen due to an "
         "incorrect fold/rewrite");
-
-  // All multi_index types must match the result type.
-  Type resultType = getLinearIndex().getType();
-  for (Value idx : getMultiIndex()) {
-    if (idx.getType() != resultType)
-      return emitOpError("multi_index types must match the result type, got ")
-             << idx.getType() << " vs " << resultType;
-  }
 
   return success();
 }

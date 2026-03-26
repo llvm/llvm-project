@@ -1070,9 +1070,17 @@ def AffineVectorStoreOp : AffineStoreOpBase<"vector_store"> {
 //===----------------------------------------------------------------------===//
 
 def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index",
-    [Pure, TypesMatchWith<"linear_index type must match result types",
-                          "multi_index", "linear_index",
-                          "$_self[0]">]> {
+    [Pure,
+     // Infer linear_index type from the first result type during parsing.
+     TypesMatchWith<"linear_index type must match result types",
+                    "multi_index", "linear_index", "$_self[0]">,
+     // Verify all result types match the linear_index type.
+     TypesMatchWith<"all result types must match linear_index type",
+                    "linear_index", "multi_index", "$_self",
+                    "[](::mlir::Type a, ::mlir::TypeRange b) { "
+                    "return llvm::all_of(b, [a](::mlir::Type t) { "
+                    "return t == a; }); }">
+    ]> {
   let summary = "delinearize an index";
   let description = [{
     The `affine.delinearize_index` operation takes a single index value and
@@ -1179,7 +1187,9 @@ def AffineLinearizeIndexOp : Affine_Op<"linearize_index",
     [Pure, AttrSizedOperandSegments,
      TypesMatchWith<"multi_index types must match result type",
                     "linear_index", "multi_index", "$_self",
-                    "[](::mlir::Type a, ::mlir::TypeRange b) { return llvm::all_of(b, [a](::mlir::Type t) { return t == a; }); }">]> {
+                    "[](::mlir::Type a, ::mlir::TypeRange b) { "
+                    "return llvm::all_of(b, [a](::mlir::Type t) { "
+                    "return t == a; }); }">]> {
   let summary = "linearize an index";
   let description = [{
     The `affine.linearize_index` operation takes a sequence of index values and a
