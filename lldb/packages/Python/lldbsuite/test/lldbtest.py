@@ -967,6 +967,9 @@ class Base(unittest.TestCase):
                 self.lib_lldb = lib
                 self.darwinWithFramework = self.platformIsDarwin()
 
+        # As the last operation, mark the setup completed for dumpSessionInfo.
+        self.__setup_done__ = True
+
     def setAsync(self, value):
         """Sets async mode to True/False and ensures it is reset after the testcase completes."""
         old_async = self.dbg.GetAsync()
@@ -1253,6 +1256,10 @@ class Base(unittest.TestCase):
         addExpectedFailure methods to allow us to to mark the test instance as
         such.
         """
+        # Ensure 'setUp' has completed.
+        if not getattr(self, "__setup_done__", False):
+            return
+
         # The lldb.test_result singleton contains two lists (errors and
         # failures) which get populated by the unittest framework.  Look over
         # there for stack trace information.
@@ -1285,6 +1292,7 @@ class Base(unittest.TestCase):
 
         session_file = self.getLogBasenameForCurrentTest() + ".log"
 
+        lldbutil.mkdir_p(os.path.dirname(session_file))
         # Python 3 doesn't support unbuffered I/O in text mode.  Open buffered.
         session = encoded_file.open(session_file, "utf-8", mode="a")
 
