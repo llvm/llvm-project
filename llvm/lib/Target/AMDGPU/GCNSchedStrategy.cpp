@@ -2447,7 +2447,7 @@ bool RewriteMFMAFormStage::initHeuristics(
       MachineOperand *Src2 = TII->getNamedOperand(MI, AMDGPU::OpName::src2);
       if (Src2 && Src2->isReg() && Src2->getReg() != DstReg &&
           !canSafelyConvertToAGPR(Src2->getReg()))
-          return false;
+        return false;
     }
   }
 
