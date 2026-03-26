@@ -21,35 +21,33 @@ using namespace llvm;
 
 #define DEBUG_TYPE "instcount"
 
-STATISTIC(TotalInstsBeforeOptimization,
+STATISTIC(TotalInstsPreOptimizations,
           "Number of instructions of all types (before optimizations)");
-STATISTIC(TotalInstsAfterOptimization,
+STATISTIC(TotalInsts,
           "Number of instructions of all types (after optimizations)");
-STATISTIC(TotalBlocksBeforeOptimization,
+STATISTIC(TotalBlocksPreOptimizations,
           "Number of basic blocks (before optimizations)");
-STATISTIC(TotalBlocksAfterOptimization,
-          "Number of basic blocks (after optimizations)");
-STATISTIC(TotalFuncsBeforeOptimization,
+STATISTIC(TotalBlocks, "Number of basic blocks (after optimizations)");
+STATISTIC(TotalFuncsPreOptimizations,
           "Number of non-external functions (before optimizations)");
-STATISTIC(TotalFuncsAfterOptimization,
-          "Number of non-external functions (after optimizations)");
-STATISTIC(LargestFunctionSizeBeforeOptimization,
+STATISTIC(TotalFuncs, "Number of non-external functions (after optimizations)");
+STATISTIC(LargestFunctionSizePreOptimizations,
           "Largest number of instructions in a single function (before "
           "optimizations)");
-STATISTIC(LargestFunctionSizeAfterOptimization,
+STATISTIC(LargestFunctionSize,
           "Largest number of instructions in a single function (after "
           "optimizations)");
-STATISTIC(LargestFunctionBBCountBeforeOptimization,
+STATISTIC(LargestFunctionBBCountPreOptimizations,
           "Largest number of basic blocks in a single function (before "
           "optimizations)");
-STATISTIC(LargestFunctionBBCountAfterOptimization,
+STATISTIC(LargestFunctionBBCount,
           "Largest number of basic blocks in a single function (after "
           "optimizations)");
 
 #define HANDLE_INST(N, OPCODE, CLASS)                                          \
-  STATISTIC(Num##OPCODE##InstBeforeOptimization,                               \
+  STATISTIC(Num##OPCODE##InstPreOptimizations,                                 \
             "Number of " #OPCODE " insts (before optimizations)");             \
-  STATISTIC(Num##OPCODE##InstAfterOptimization,                                \
+  STATISTIC(Num##OPCODE##Inst,                                                 \
             "Number of " #OPCODE " insts (after optimizations)");
 
 #include "llvm/IR/Instruction.def"
@@ -57,39 +55,38 @@ STATISTIC(LargestFunctionBBCountAfterOptimization,
 namespace {
 class InstCount : public InstVisitor<InstCount> {
   friend class InstVisitor<InstCount>;
-  bool IsBeforeOptimization;
+  bool IsPreOptimizations;
 
 public:
-  InstCount(bool IsBeforeOptimization)
-      : IsBeforeOptimization(IsBeforeOptimization) {}
+  InstCount(bool IsPreOptimizations) : IsPreOptimizations(IsPreOptimizations) {}
 
   void visitFunction(Function &F) {
-    if (IsBeforeOptimization) {
-      ++TotalFuncsBeforeOptimization;
-      LargestFunctionSizeBeforeOptimization.updateMax(F.getInstructionCount());
-      LargestFunctionBBCountBeforeOptimization.updateMax(F.size());
+    if (IsPreOptimizations) {
+      ++TotalFuncsPreOptimizations;
+      LargestFunctionSizePreOptimizations.updateMax(F.getInstructionCount());
+      LargestFunctionBBCountPreOptimizations.updateMax(F.size());
     } else {
-      ++TotalFuncsAfterOptimization;
-      LargestFunctionSizeAfterOptimization.updateMax(F.getInstructionCount());
-      LargestFunctionBBCountAfterOptimization.updateMax(F.size());
+      ++TotalFuncs;
+      LargestFunctionSize.updateMax(F.getInstructionCount());
+      LargestFunctionBBCount.updateMax(F.size());
     }
   }
 
   void visitBasicBlock(BasicBlock &BB) {
-    if (IsBeforeOptimization)
-      ++TotalBlocksBeforeOptimization;
+    if (IsPreOptimizations)
+      ++TotalBlocksPreOptimizations;
     else
-      ++TotalBlocksAfterOptimization;
+      ++TotalBlocks;
   }
 
 #define HANDLE_INST(N, OPCODE, CLASS)                                          \
   void visit##OPCODE(CLASS &) {                                                \
-    if (IsBeforeOptimization) {                                                \
-      ++Num##OPCODE##InstBeforeOptimization;                                   \
-      ++TotalInstsBeforeOptimization;                                          \
+    if (IsPreOptimizations) {                                                  \
+      ++Num##OPCODE##InstPreOptimizations;                                     \
+      ++TotalInstsPreOptimizations;                                            \
     } else {                                                                   \
-      ++Num##OPCODE##InstAfterOptimization;                                    \
-      ++TotalInstsAfterOptimization;                                           \
+      ++Num##OPCODE##Inst;                                                     \
+      ++TotalInsts;                                                            \
     }                                                                          \
   }
 
@@ -106,7 +103,7 @@ PreservedAnalyses InstCountPass::run(Function &F,
                                      FunctionAnalysisManager &FAM) {
   LLVM_DEBUG(dbgs() << "INSTCOUNT: running on function " << F.getName()
                     << "\n");
-  InstCount(this->IsBeforeOptimization).visit(F);
+  InstCount(this->IsPreOptimizations).visit(F);
 
   return PreservedAnalyses::all();
 }

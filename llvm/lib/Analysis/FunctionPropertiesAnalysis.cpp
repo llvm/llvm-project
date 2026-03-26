@@ -30,15 +30,15 @@ using namespace llvm;
 #define DEBUG_TYPE "func-properties-stats"
 
 #define FUNCTION_PROPERTY(Name, Description)                                   \
-  STATISTIC(Num##Name##BeforeOptimization,                                     \
+  STATISTIC(Num##Name##PreOptimizations,                                       \
             Description " (before optimizations)");                            \
-  STATISTIC(Num##Name##AfterOptimization, Description " (after "               \
-                                                      "optimizations)");
+  STATISTIC(Num##Name, Description " (after "                                  \
+                                   "optimizations)");
 #define DETAILED_FUNCTION_PROPERTY(Name, Description)                          \
-  STATISTIC(Num##Name##BeforeOptimization,                                     \
+  STATISTIC(Num##Name##PreOptimizations,                                       \
             Description " (before optimizations)");                            \
-  STATISTIC(Num##Name##AfterOptimization, Description " (after "               \
-                                                      "optimizations)");
+  STATISTIC(Num##Name, Description " (after "                                  \
+                                   "optimizations)");
 #include "llvm/IR/FunctionProperties.def"
 
 namespace llvm {
@@ -385,19 +385,18 @@ FunctionPropertiesStatisticsPass::run(Function &F,
   LLVM_DEBUG(dbgs() << "STATSCOUNT: running on function " << F.getName()
                     << "\n");
   auto &AnalysisResults = FAM.getResult<FunctionPropertiesAnalysis>(F);
-  if (IsBeforeOptimization) {
+  if (IsPreOptimizations) {
 #define FUNCTION_PROPERTY(Name, Description)                                   \
-  Num##Name##BeforeOptimization += AnalysisResults.Name;
+  Num##Name##PreOptimizations += AnalysisResults.Name;
 #define DETAILED_FUNCTION_PROPERTY(Name, Description)                          \
-  Num##Name##BeforeOptimization += AnalysisResults.Name;
+  Num##Name##PreOptimizations += AnalysisResults.Name;
 #include "llvm/IR/FunctionProperties.def"
 #undef FUNCTION_PROPERTY
 #undef DETAILED_FUNCTION_PROPERTY
   } else {
-#define FUNCTION_PROPERTY(Name, Description)                                   \
-  Num##Name##AfterOptimization += AnalysisResults.Name;
+#define FUNCTION_PROPERTY(Name, Description) Num##Name += AnalysisResults.Name;
 #define DETAILED_FUNCTION_PROPERTY(Name, Description)                          \
-  Num##Name##AfterOptimization += AnalysisResults.Name;
+  Num##Name += AnalysisResults.Name;
 #include "llvm/IR/FunctionProperties.def"
 #undef FUNCTION_PROPERTY
 #undef DETAILED_FUNCTION_PROPERTY

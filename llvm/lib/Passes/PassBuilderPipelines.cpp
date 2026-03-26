@@ -418,13 +418,13 @@ void PassBuilder::invokePipelineEarlySimplificationEPCallbacks(
 
 // Helper to add AnnotationRemarksPass.
 static void addAnnotationRemarksPass(ModulePassManager &MPM,
-                                     bool IsBeforeOptimization = false) {
+                                     bool IsIsPreOptimizations = false) {
   // Count the stats for InstCount and FunctionPropertiesAnalysis
-  if (IsBeforeOptimization && AreStatisticsEnabled()) {
+  if (IsIsPreOptimizations && AreStatisticsEnabled()) {
     MPM.addPass(
-        createModuleToFunctionPassAdaptor(InstCountPass(IsBeforeOptimization)));
+        createModuleToFunctionPassAdaptor(InstCountPass(IsIsPreOptimizations)));
     MPM.addPass(createModuleToFunctionPassAdaptor(
-        FunctionPropertiesStatisticsPass(IsBeforeOptimization)));
+        FunctionPropertiesStatisticsPass(IsIsPreOptimizations)));
     return;
   }
 
@@ -432,9 +432,9 @@ static void addAnnotationRemarksPass(ModulePassManager &MPM,
 
   if (AreStatisticsEnabled()) {
     MPM.addPass(
-        createModuleToFunctionPassAdaptor(InstCountPass(IsBeforeOptimization)));
+        createModuleToFunctionPassAdaptor(InstCountPass(IsIsPreOptimizations)));
     MPM.addPass(createModuleToFunctionPassAdaptor(
-        FunctionPropertiesStatisticsPass(IsBeforeOptimization)));
+        FunctionPropertiesStatisticsPass(IsIsPreOptimizations)));
   }
 }
 
