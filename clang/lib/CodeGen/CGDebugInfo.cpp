@@ -700,9 +700,7 @@ static llvm::dwarf::SourceLanguage GetSourceLanguage(const CodeGenModule &CGM) {
 
   llvm::dwarf::SourceLanguage LangTag;
   if (LO.CPlusPlus) {
-    if (LO.HLSL)
-      LangTag = llvm::dwarf::DW_LANG_HLSL;
-    else if (LO.HIP)
+    if (LO.HIP)
       LangTag = llvm::dwarf::DW_LANG_HIP;
     else if (LO.ObjC)
       LangTag = llvm::dwarf::DW_LANG_ObjC_plus_plus;
@@ -740,9 +738,7 @@ GetDISourceLanguageName(const CodeGenModule &CGM) {
   uint32_t LangVersion = 0;
   llvm::dwarf::SourceLanguageName LangTag;
   if (LO.CPlusPlus) {
-    if (LO.HLSL) {
-      LangTag = llvm::dwarf::DW_LNAME_HLSL;
-    } else if (LO.HIP) {
+    if (LO.HIP) {
       LangTag = llvm::dwarf::DW_LNAME_HIP;
     } else if (LO.ObjC) {
       LangTag = llvm::dwarf::DW_LNAME_ObjC_plus_plus;
