@@ -191,14 +191,14 @@ public:
 
   void setProducesCoexecWindow(bool Val) { ProducesCoexecWindow = Val; }
 
-  bool contains(SUnit *SU) { return AllSUs.contains(SU); }
+  bool contains(SUnit *SU) const { return AllSUs.contains(SU); }
 
   /// \returns true if there is a difference in priority between \p SU and \p
   /// Other. If so, \returns the SUnit with higher priority. This
   /// method looks through the PrioritySUs to determine if one SU is more
   /// prioritized than the other. If neither are in the PrioritySUs list, then
   /// neither have priority over each other.
-  SUnit *getHigherPriority(SUnit *SU, SUnit *Other) {
+  SUnit *getHigherPriority(SUnit *SU, SUnit *Other) const {
     for (auto *SUOrder : PrioritySUs) {
       if (SUOrder == SU)
         return SU;
@@ -213,6 +213,7 @@ public:
     AllSUs.clear();
     PrioritySUs.clear();
     TotalCycles = 0;
+    Type = AMDGPU::InstructionFlavor::Other;
     ProducesCoexecWindow = false;
   }
 
@@ -270,9 +271,9 @@ public:
   /// Update the state to reflect that \p SU is going to be scheduled.
   void updateForScheduling(SUnit *SU);
 
-  /// Sort the HardwarUnitInfo vector. After sorting, the HWUI that are highest
+  /// Sort the HWUInfo vector. After sorting, the HardwareUnits that are highest
   /// priority are first. Priority is determined by maximizing coexecution and
-  /// keeping the critical Hardware unit busy.
+  /// keeping the critical HardwareUnit busy.
   void sortHWUIResources();
 
   /// Check for critical resource consumption. Prefer the candidate that uses

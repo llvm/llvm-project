@@ -208,8 +208,8 @@ void CandidateHeuristics::initialize(ScheduleDAGMI *SchedDAG,
   HWUInfo.resize((int)InstructionFlavor::NUM_FLAVORS);
 
   for (unsigned I = 0; I < HWUInfo.size(); I++) {
-    HWUInfo[I].setType(I);
     HWUInfo[I].reset();
+    HWUInfo[I].setType(I);
   }
 
   HWUInfo[(int)InstructionFlavor::WMMA].setProducesCoexecWindow(true);
@@ -290,7 +290,7 @@ bool CandidateHeuristics::tryCriticalResourceDependency(
   };
 
   auto TryEnablesResource = [&Cand, &TryCand, this](unsigned ResourceIdx) {
-    HardwareUnitInfo &HWUI = HWUInfo[ResourceIdx];
+    const HardwareUnitInfo &HWUI = HWUInfo[ResourceIdx];
     auto CandFlavor = classifyFlavor(*Cand.SU->getInstr(), *SII);
 
     // We want to ensure our DS order matches WMMA order.
@@ -359,7 +359,7 @@ bool CandidateHeuristics::tryCriticalResource(
     GenericSchedulerBase::SchedCandidate &TryCand,
     GenericSchedulerBase::SchedCandidate &Cand, SchedBoundary *Zone) const {
   for (unsigned I = 0; I < HWUInfo.size(); I++) {
-    HardwareUnitInfo &HWUI = HWUInfo[I];
+    const HardwareUnitInfo &HWUI = HWUInfo[I];
 
     bool CandUsesCrit = HWUI.contains(Cand.SU);
     bool TryCandUsesCrit = HWUI.contains(TryCand.SU);
@@ -527,7 +527,7 @@ void AMDGPUCoExecSchedStrategy::pickNodeFromQueue(
         PickedPending = FromPending;
         Cand.setBest(TryCand);
       } else {
-        printCandidateDecision(TryCand, Cand);
+        LLVM_DEBUG(printCandidateDecision(TryCand, Cand));
       }
     }
   };
