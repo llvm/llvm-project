@@ -2410,7 +2410,7 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
                     options::OPT_mno_relax_all);
 
   // Only default to -mincremental-linker-compatible if we think we are
-  // targeting the MSVC linker.
+  // targeting the MSVC linker or PE COFF (*-uefi triples).
   bool DefaultIncrementalLinkerCompatible =
       C.getDefaultToolChain().getTriple().isWindowsMSVCEnvironment() ||
       C.getDefaultToolChain().getTriple().isUEFI();
