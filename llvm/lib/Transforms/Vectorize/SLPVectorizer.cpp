@@ -25781,8 +25781,10 @@ bool SLPVectorizerPass::vectorizeStores(
                   [this, &R](ArrayRef<Value *> Chain, unsigned Idx,
                              unsigned MinVF, unsigned &Size) {
                     return vectorizeStoreChain(Chain, R, Idx, MinVF, Size);
-                  }))
+                  })) {
             CtxPtr.reset();
+            break;
+          }
         }
       }
     }
