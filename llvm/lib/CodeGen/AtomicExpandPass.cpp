@@ -137,8 +137,7 @@ private:
   void expandAtomicLoadToLibcall(LoadInst *LI);
   void expandAtomicStoreToLibcall(StoreInst *LI);
   void expandAtomicRMWToLibcall(AtomicRMWInst *I);
-  void expandAtomicCASToLibcall(AtomicCmpXchgInst *I,
-                                const Twine &AtomicOpName,
+  void expandAtomicCASToLibcall(AtomicCmpXchgInst *I, const Twine &AtomicOpName,
                                 Instruction *DiagnosticInst);
 
   bool expandAtomicRMWToCmpXchg(AtomicRMWInst *AI,
@@ -1960,11 +1959,10 @@ void AtomicExpandImpl::expandAtomicRMWToLibcall(AtomicRMWInst *I) {
   // CAS libcall, via a CAS loop, instead.
   if (!Success) {
     expandAtomicRMWToCmpXchg(
-        I,
-        [this, I](
-            IRBuilderBase &Builder, Value *Addr, Value *Loaded, Value *NewVal,
-            Align Alignment, AtomicOrdering MemOpOrder, SyncScope::ID SSID,
-            Value *&Success, Value *&NewLoaded, Instruction *MetadataSrc) {
+        I, [this, I](IRBuilderBase &Builder, Value *Addr, Value *Loaded,
+                     Value *NewVal, Align Alignment, AtomicOrdering MemOpOrder,
+                     SyncScope::ID SSID, Value *&Success, Value *&NewLoaded,
+                     Instruction *MetadataSrc) {
           // Create the CAS instruction normally...
           AtomicCmpXchgInst *Pair = Builder.CreateAtomicCmpXchg(
               Addr, Loaded, NewVal, Alignment, MemOpOrder,
@@ -1976,10 +1974,10 @@ void AtomicExpandImpl::expandAtomicRMWToLibcall(AtomicRMWInst *I) {
           NewLoaded = Builder.CreateExtractValue(Pair, 0, "newloaded");
 
           // ...and then expand the CAS into a libcall.
-          expandAtomicCASToLibcall(
-              Pair,
-              Twine("atomicrmw ") + I->getOperationName(I->getOperation()),
-              MetadataSrc);
+          expandAtomicCASToLibcall(Pair,
+                                   Twine("atomicrmw ") +
+                                       I->getOperationName(I->getOperation()),
+                                   MetadataSrc);
         });
   }
 }
