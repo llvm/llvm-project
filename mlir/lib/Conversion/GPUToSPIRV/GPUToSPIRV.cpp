@@ -20,7 +20,6 @@
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/Support/ErrorHandling.h"
 #include <optional>
 
 using namespace mlir;
@@ -575,8 +574,6 @@ LogicalResult GPUSubgroupBroadcastConversion::matchAndRewrite(
     result = spirv::GroupNonUniformBroadcastFirstOp::create(
         rewriter, loc, scope, adaptor.getSrc());
     break;
-  default:
-    llvm_unreachable("unsupported gpu.subgroup_broadcast type");
   }
 
   rewriter.replaceOp(op, result);
