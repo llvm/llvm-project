@@ -468,7 +468,7 @@ Preprocessor::CheckEndOfDirective(StringRef DirType, bool EnableMacros,
   Token Tmp;
   // Avoid use-of-uninitialized-memory for edge case(s) where there is no extra
   // token to be parsed.
-  Tmp.setKind(tok::eod);
+  Tmp.startToken();
   auto ReadNextTok = [this, ExtraToks, &Tmp](auto &&LexFn) {
     std::invoke(LexFn, this, Tmp);
     if (ExtraToks && Tmp.isNot(tok::eod))
