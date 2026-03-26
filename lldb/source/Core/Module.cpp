@@ -1463,7 +1463,7 @@ bool Module::LoadScriptingResourceInTarget(Target *target, Status &error) {
 
   for (uint32_t i = 0; i < num_specs; ++i) {
     FileSpec scripting_fspec(file_specs.GetFileSpecAtIndex(i));
-    if (!scripting_fspec && !FileSystem::Instance().Exists(scripting_fspec))
+    if (!FileSystem::Instance().Exists(scripting_fspec))
       continue;
 
     if (should_load == eLoadScriptFromSymFileWarn) {
