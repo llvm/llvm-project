@@ -42,8 +42,8 @@ subroutine do_simd_linear
 !CHECK: %{{.*}} = arith.constant 1 : i32
 !CHECK: %[[IV_STEP:.*]] = arith.constant 1 : i32
 !CHECK: omp.wsloop {
-!OPENMP52: omp.simd linear(val(%[[X]]#0 : !fir.ref<i32> = %[[CONST]] : i32), val(%[[I]]#0 : !fir.ref<i32> = %[[IV_STEP]] : i32)) private({{.*}}) {
-!OPENMP45: omp.simd linear(%[[X]]#0 : !fir.ref<i32> = %[[CONST]] : i32, %[[I]]#0 : !fir.ref<i32> = %[[IV_STEP]] : i32) private({{.*}}) {
+!OPENMP52: omp.simd linear(val(%[[X]]#0 : !fir.ref<i32> = %[[CONST]] : i32), val(%[[I]]#0 : !fir.ref<i32> = %[[IV_STEP]] : i32)) {
+!OPENMP45: omp.simd linear(%[[X]]#0 : !fir.ref<i32> = %[[CONST]] : i32, %[[I]]#0 : !fir.ref<i32> = %[[IV_STEP]] : i32) {
     integer :: x
     !$omp do simd linear(x:1)
     do i = 1, 10

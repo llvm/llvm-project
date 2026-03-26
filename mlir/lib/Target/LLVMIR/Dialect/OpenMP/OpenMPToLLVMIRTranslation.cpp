@@ -277,17 +277,41 @@ public:
     }
   }
 
-  // Rewrite all uses of the original variable in `BBName`
-  //  with the linear variable in-place
-  void rewriteInPlace(llvm::IRBuilderBase &builder, const std::string &BBName,
+  // Rewrite all uses of the original variable, in the basic blocks whose names
+  // start with `prefix`, with the linear variable in-place.
+  void rewriteInPlace(llvm::IRBuilderBase &builder, llvm::BasicBlock *startBB,
+                      llvm::BasicBlock *endBB, llvm::StringRef prefix,
                       size_t varIndex) {
-    llvm::SmallVector<llvm::User *> users;
-    for (llvm::User *user : linearOrigVal[varIndex]->users())
-      users.push_back(user);
-    for (auto *user : users) {
+    llvm::SmallVector<llvm::BasicBlock *, 32> worklist;
+    llvm::SmallPtrSet<llvm::BasicBlock *, 32> visited;
+    llvm::SmallPtrSet<llvm::BasicBlock *, 32> matchingBBs;
+
+    assert(startBB && endBB && "Invalid startBB/endBB");
+
+    // Traverse basic blocks from startBB to endBB and save those
+    // whose names start with the specified prefix.
+    worklist.push_back(startBB);
+    visited.insert(startBB);
+
+    while (!worklist.empty()) {
+      llvm::BasicBlock *bb = worklist.pop_back_val();
+
+      if (bb->hasName() && bb->getName().starts_with(prefix))
+        matchingBBs.insert(bb);
+
+      if (bb == endBB)
+        continue;
+
+      for (llvm::BasicBlock *succ : llvm::successors(bb)) {
+        if (visited.insert(succ).second)
+          worklist.push_back(succ);
+      }
+    }
+
+    // Rewrite all uses in the matching BBs.
+    for (auto *user : linearOrigVal[varIndex]->users()) {
       if (auto *userInst = dyn_cast<llvm::Instruction>(user)) {
-        if (userInst->getParent()->getName().str().find(BBName) !=
-            std::string::npos)
+        if (matchingBBs.contains(userInst->getParent()))
           user->replaceUsesOfWith(linearOrigVal[varIndex],
                                   linearLoopBodyTemps[varIndex]);
       }
@@ -3383,6 +3407,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
       linearClauseProcessor.initLinearStep(moduleTranslation, linearStep);
   }
 
+  llvm::BasicBlock *sourceBlock = builder.GetInsertBlock();
   llvm::Expected<llvm::BasicBlock *> regionBlock = convertOmpOpRegions(
       wsloopOp.getRegion(), "omp.wsloop.region", builder, moduleTranslation);
 
@@ -3450,8 +3475,10 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
     if (failed(handleError(afterBarrierIP, *loopOp)))
       return failure();
     for (size_t index = 0; index < wsloopOp.getLinearVars().size(); index++)
-      linearClauseProcessor.rewriteInPlace(builder, "omp.loop_nest.region",
-                                           index);
+      linearClauseProcessor.rewriteInPlace(
+          builder, sourceBlock->getSingleSuccessor(), *regionBlock,
+          "omp.loop_nest.region", index);
+
     builder.restoreIP(oldIP);
   }
 
@@ -3822,15 +3849,18 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
   });
 
   for (size_t index = 0; index < simdOp.getLinearVars().size(); index++) {
-    linearClauseProcessor.rewriteInPlace(builder, "omp.loop_nest.region",
-                                         index);
+    llvm::BasicBlock *startBB = sourceBlock->getSingleSuccessor();
+    llvm::BasicBlock *endBB = *regionBlock;
+    linearClauseProcessor.rewriteInPlace(builder, startBB, endBB,
+                                         "omp.loop_nest.region", index);
+
     if (hasOrderedRegions) {
       // Also rewrite uses in ordered regions so they read the current value
-      linearClauseProcessor.rewriteInPlace(builder, "omp.ordered.region",
-                                           index);
+      linearClauseProcessor.rewriteInPlace(builder, startBB, endBB,
+                                           "omp.ordered.region", index);
       // Also rewrite uses in finalize blocks (code after ordered regions)
-      linearClauseProcessor.rewriteInPlace(builder, "omp_region.finalize",
-                                           index);
+      linearClauseProcessor.rewriteInPlace(builder, startBB, endBB,
+                                           "omp_region.finalize", index);
     }
   }
 
