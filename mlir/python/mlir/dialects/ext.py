@@ -130,7 +130,7 @@ def result(
     infer_type: bool = False,
     default_factory: Optional[Callable[[], Any]] = None,
     kw_only: bool = False,
-) -> Any:
+) -> Result:
     """
     A field specifier for `Result` definitions.
     """
