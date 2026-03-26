@@ -329,17 +329,6 @@ using UsesAllocators = tomp::clause::UsesAllocatorsT<TypeTy, IdTy, ExprTy>;
 using Weak = tomp::clause::WeakT<TypeTy, IdTy, ExprTy>;
 using When = tomp::clause::WhenT<TypeTy, IdTy, ExprTy>;
 using Write = tomp::clause::WriteT<TypeTy, IdTy, ExprTy>;
-
-DefinedOperator makeDefinedOperator(const parser::DefinedOperator &inp,
-                                    semantics::SemanticsContext &semaCtx);
-
-ProcedureDesignator
-makeProcedureDesignator(const parser::ProcedureDesignator &inp,
-                        semantics::SemanticsContext &semaCtx);
-
-ReductionOperator
-makeReductionOperator(const parser::OmpReductionIdentifier &inp,
-                      semantics::SemanticsContext &semaCtx);
 } // namespace clause
 
 using tomp::type::operator==;
