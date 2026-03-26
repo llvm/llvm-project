@@ -6,7 +6,7 @@ import lldbsuite.test.lldbutil as lldbutil
 class TestSwiftExtraClangFlags(TestBase):
     # Don't run ClangImporter tests if Clangimporter is disabled.
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
-    @skipIf(oslist=['windows'])
+    @skipIf(oslist=["windows"])
     @swiftTest
     def test_sanity(self):
         self.build()
@@ -17,7 +17,7 @@ class TestSwiftExtraClangFlags(TestBase):
 
     # Don't run ClangImporter tests if Clangimporter is disabled.
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
-    @skipIf(oslist=['windows'])
+    @skipIf(oslist=["windows"])
     @swiftTest
     def test_extra_clang_flags(self):
         """
@@ -61,7 +61,7 @@ class TestSwiftExtraClangFlags(TestBase):
 
     # Don't run ClangImporter tests if Clangimporter is disabled.
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
-    @skipIf(oslist=['windows'])
+    @skipIf(oslist=["windows"])
     @swiftTest
     def test_invalid_extra_clang_flags(self):
         """

@@ -9,20 +9,21 @@ from lldbsuite.test.decorators import *
 class TestSwiftForwardInteropExpressions(TestBase):
 
     def setup(self, bkpt_str):
-         self.build()
-         
-         _, _, thread, _ = lldbutil.run_to_source_breakpoint(
-             self, bkpt_str, lldb.SBFileSpec('main.swift'))
-         return thread
+        self.build()
 
-    @skipIfLinux # rdar://106871422"
-    @skipIf(setting=('symbols.use-swift-clangimporter', 'false')) # rdar://106871275
+        _, _, thread, _ = lldbutil.run_to_source_breakpoint(
+            self, bkpt_str, lldb.SBFileSpec("main.swift")
+        )
+        return thread
+
+    @skipIfLinux  # rdar://106871422"
+    @skipIf(setting=("symbols.use-swift-clangimporter", "false"))  # rdar://106871275
     @swiftTest
     def test(self):
-        self.setup('Break here')
-        
-        types_log = self.getBuildArtifact('types.log')
-        self.expect("log enable lldb types -v -f "+ types_log)
+        self.setup("Break here")
+
+        types_log = self.getBuildArtifact("types.log")
+        self.expect("log enable lldb types -v -f " + types_log)
         # Check that we can call free functions.
         self.expect('expr returnsInt()', substrs=['Int32', '42'])
 
@@ -64,4 +65,3 @@ class TestSwiftForwardInteropExpressions(TestBase):
         self.setup('Break here')
 
         self.expect('po CxxSubclass()', substrs=['CxxClass', 'a : 100', 'b : 101', 'c : 102'])
-

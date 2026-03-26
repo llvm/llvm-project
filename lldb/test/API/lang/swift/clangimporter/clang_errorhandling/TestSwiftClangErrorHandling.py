@@ -12,7 +12,7 @@ class TestSwiftExtraClangFlags(TestBase):
 
     # Don't run ClangImporter tests if Clangimporter is disabled.
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
-    @skipIf(oslist=['windows'])
+    @skipIf(oslist=["windows"])
     @swiftTest
     def test_extra_clang_flags(self):
         """

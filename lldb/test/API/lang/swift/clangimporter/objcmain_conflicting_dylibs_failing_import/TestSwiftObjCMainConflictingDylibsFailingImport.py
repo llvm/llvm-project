@@ -62,4 +62,3 @@ class TestSwiftObjCMainConflictingDylibsFailingImport(TestBase):
         # self.expect("expression foo", "expected result", substrs=["$R3", "23"])
         # self.expect("expression $R3", "expected result", substrs=["23"])
         # self.expect("expression $R4", "expected result", substrs=["23"])
-
