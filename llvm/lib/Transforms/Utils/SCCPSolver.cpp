@@ -651,7 +651,7 @@ static Value *revertMappingRangeCheck(Value *X, const unsigned OpCode,
                                       const ConstantRange &XRange,
                                       SmallPtrSetImpl<Value *> &InsertedValues,
                                       ICmpInst &ICmpBeingReplaced) {
-  // We support interger vector/scalar.
+  // We support integer vector/scalar.
   // For vector, the mapping must be fixed, i.e., splat C.
   assert(X->getType()->getScalarType()->isIntegerTy() &&
          "Only support integer mapping");
@@ -660,7 +660,13 @@ static Value *revertMappingRangeCheck(Value *X, const unsigned OpCode,
   if (!XCmpCR)
     return nullptr;
 
-  // Use XRange to implify XCmpCR. E.g.:
+  IRBuilder<NoFolder> Builder(&ICmpBeingReplaced);
+  if (XCmpCR->isEmptySet())
+    return Builder.getFalse();
+  if (XCmpCR->isFullSet())
+    return Builder.getTrue();
+
+  // Use XRange to simplify XCmpCR. E.g.:
   // XCmpCR = [5, 10), *XCmpCR = [5, 0) --> NewCmpCR = [0, 10) -> ult
   *XCmpCR = simplifyCmpRange(*XCmpCR, XRange);
 
@@ -669,7 +675,6 @@ static Value *revertMappingRangeCheck(Value *X, const unsigned OpCode,
   APInt RHS, Offset;
   XCmpCR->getEquivalentICmp(Pred, RHS, Offset);
 
-  IRBuilder<NoFolder> Builder(&ICmpBeingReplaced);
   if (!Offset.isZero()) {
     X = Builder.CreateAdd(X, ConstantInt::get(X->getType(), Offset));
     InsertedValues.insert(X);
