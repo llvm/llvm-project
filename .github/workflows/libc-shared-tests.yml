@@ -8,9 +8,6 @@ on:
       - '.github/workflows/libc-shared-tests.yml'
 
 jobs:
-  # -------------------------------------------------------------
-  # Job 1: Windows Native (MSVC)
-  # -------------------------------------------------------------
   windows-msvc-shared:
     name: libc-shared-test with MSVC (${{ matrix.arch }})
     strategy:
@@ -18,9 +15,9 @@ jobs:
       matrix:
         include:
           - arch: amd64
-            os: windows-latest
+            os: windows-2022
           - arch: amd64_x86
-            os: windows-latest
+            os: windows-2022
           - arch: arm64
             os: windows-11-arm
 
@@ -48,9 +45,6 @@ jobs:
       - name: Build and Test
         run: cmake --build build --target libc-shared-tests
 
-  # -------------------------------------------------------------
-  # Job 2: Linux Emulated
-  # -------------------------------------------------------------
   linux-cross-arch-shared:
     name: libc-shared-tests on (${{ matrix.arch }})
     runs-on: ubuntu-24.04
