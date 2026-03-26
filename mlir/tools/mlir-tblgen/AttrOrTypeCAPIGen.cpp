@@ -76,6 +76,9 @@ static void emitAttrTypeHeader(StringRef name, raw_ostream &os) {
 }
 
 namespace {
+
+static const bool EMIT_DECLS = true;
+static const bool EMIT_DEFS = false;
 struct CAPIDefGenerator : DefGenerator {
   CAPIDefGenerator(ArrayRef<const llvm::Record *> defs, raw_ostream &os,
                    const StringRef &defType, const StringRef &valueType,
@@ -145,14 +148,29 @@ static bool isEnumParam(const AttrOrTypeParameter &param) {
   }
 }
 
-static void emitGettorDeclOrDef(StringRef name, ArrayRef<AttrOrTypeParameter> params,
+static llvm::StringRef getDefCppType(const AttrOrTypeDef &def) {
+    const llvm::Record *rec = def.getDef();
+    const llvm::RecordVal *name_val = rec->getValue("cppType");
+    const llvm::Init *name_init = name_val->getValue();
+    return llvm::cast<llvm::StringInit>(name_init)->getValue();
+}
+
+static llvm::StringRef getDefCppType(const EnumInfo &def) {
+    const llvm::Record rec = def.getDef();
+    const llvm::RecordVal *name_val = rec.getValue("cppType");
+    const llvm::Init *name_init = name_val->getValue();
+    return llvm::cast<llvm::StringInit>(name_init)->getValue();
+}
+
+
+static void emitGettorDeclOrDef(const AttrOrTypeDef &def, ArrayRef<AttrOrTypeParameter> params,
                                 raw_ostream &os, bool isAttrGenerator, bool isDeclGenerator) {
   os << "MLIR_CAPI_EXPORTED ";
   if (isAttrGenerator)
     os << "MlirAttribute ";
   else
     os << "MlirType ";
-  os << llvm::StringRef(namespacePrefix()).lower() << name << "Get(";
+  os << llvm::StringRef(namespacePrefix()).lower() << def.getCppClassName() << "Get(";
   SmallVector<MethodParameter> params_ =
       getGettorParams(params, {{"MlirContext", "context"}});
   for (auto [i, param] : llvm::enumerate(params_)) {
@@ -164,7 +182,7 @@ static void emitGettorDeclOrDef(StringRef name, ArrayRef<AttrOrTypeParameter> pa
   } else {
     os << ") {\n";
     os << "\treturn wrap(";
-    os << name << "::get(unwrap(context)";
+    os << getDefCppType(def) << "::get(unwrap(context)";
     if (params.size() > 0) {
       os << ", ";
     } 
@@ -188,7 +206,7 @@ static void emitGettorDeclOrDef(StringRef name, ArrayRef<AttrOrTypeParameter> pa
   }
 }
 
-static void emitAccessorDecls(StringRef name,
+static void emitAccessorDecls(const AttrOrTypeDef &def,
                               ArrayRef<AttrOrTypeParameter> params,
                               raw_ostream &os, bool isAttrGenerator) {
   for (AttrOrTypeParameter param : params) {
@@ -196,7 +214,7 @@ static void emitAccessorDecls(StringRef name,
       continue;
     std::string paramName = param.getName().str();
     os << "MLIR_CAPI_EXPORTED ";
-    os << mapParamTypeToCAPI(param) << " " << toLower(namespacePrefix()) << name
+    os << mapParamTypeToCAPI(param) << " " << toLower(namespacePrefix()) << def.getCppClassName()
        << "Get" << withCapitalFirstLetter(param.getName().str());
     if (isAttrGenerator)
       os << "(MlirAttribute attr);";
@@ -206,23 +224,74 @@ static void emitAccessorDecls(StringRef name,
   }
 }
 
-static void emitTypeIDDecl(StringRef name, raw_ostream &os) {
-  os << "MLIR_CAPI_EXPORTED MlirTypeID " << toLower(namespacePrefix()) << name
-     << "GetTypeID();\n";
+static void emitTypeIDDeclOrDef(const AttrOrTypeDef &def, raw_ostream &os, bool isDeclGenerator) {
+  os << "MLIR_CAPI_EXPORTED MlirTypeID " << toLower(namespacePrefix()) << def.getCppClassName()
+     << "GetTypeID(";
+     if (isDeclGenerator) {
+      os << ");\n";
+     } else {
+      os << ") {\n";
+      os << "\treturn wrap(" << getDefCppType(def) << "::getTypeID());\n";
+      os << "}\n";
+     }
 }
 
-static void emitIsADecl(StringRef name, raw_ostream &os, bool isAttrGenerator) {
+static void emitTypeIDDeclOrDef(const EnumInfo &enumInfo, raw_ostream &os, bool isDeclGenerator) {
+  os << "MLIR_CAPI_EXPORTED MlirTypeID " << toLower(namespacePrefix()) << enumInfo.getEnumClassName()
+     << "GetTypeID(";
+     if (isDeclGenerator) {
+      os << ");\n";
+     } else {
+      os << ") {\n";
+      os << "\treturn wrap(" << getDefCppType(enumInfo) << "::getTypeID());\n";
+      os << "}\n";
+     }
+}
+
+static void emitTypeIDDecl(const AttrOrTypeDef &def, raw_ostream &os) {
+  emitTypeIDDeclOrDef(def, os, EMIT_DECLS);
+}
+
+static void emitIsADeclOrDef(const AttrOrTypeDef &def, raw_ostream &os,
+                              bool isAttrGenerator, bool isDeclGenerator) {
   os << "MLIR_CAPI_EXPORTED bool mlir"; // JEG: Perhaps this one is correct?
   if (isAttrGenerator)
     os << "Attribute";
   else
     os << "Type";
-  os << "IsA" << namespacePrefix() << name;
+  os << "IsA" << namespacePrefix() << def.getCppClassName();
   if (isAttrGenerator)
-    os << "(MlirAttribute attr);";
+    os << "(MlirAttribute attr";
   else
-    os << "(MlirType type);";
-  os << "\n";
+    os << "(MlirType type";
+
+  if (isDeclGenerator) {
+    os << ");\n";
+  } else {
+
+    os << ") {\n";
+    os << "\treturn llvm::isa<" << getDefCppType(def)
+                              << ">(unwrap(" << (isAttrGenerator? "attr" : "type") << "));\n";
+    os << "}\n";
+  }
+}
+
+static void emitIsADeclOrDef(const EnumInfo &enumInfo, raw_ostream &os,
+                              bool isDeclGenerator) {
+  std::string name = enumInfo.getEnumClassName().str() + "Attr";
+  os << "MLIR_CAPI_EXPORTED bool mlirAttributeIsA" << namespacePrefix() << name;
+  os << "(MlirAttribute attr";
+  if (isDeclGenerator) {
+    os << ");\n";
+  } else {
+    os << ") {\n";
+    os << "\treturn llvm::isa<" << getDefCppType(enumInfo) << ">(unwrap(attr));\n";
+    os << "}\n";
+  }
+}
+
+static void emitIsADecl(const AttrOrTypeDef &def, raw_ostream &os, bool isAttrGenerator) {
+  emitIsADeclOrDef(def, os, isAttrGenerator, EMIT_DECLS);
 }
 
 static bool emitEnumDecls(ArrayRef<const Record *> records, raw_ostream &os) {
@@ -246,13 +315,14 @@ static bool emitEnumDecls(ArrayRef<const Record *> records, raw_ostream &os) {
       os << " : " << enumInfo.getUnderlyingType();
     os << " {\n";
 
+    auto prefix = formatv("{0}{1}_", namespacePrefix(), enumInfo.getEnumClassName());
     for (const EnumCase &enumerant : enumInfo.getAllCases()) {
       auto symbol = makeIdentifier(enumerant.getSymbol());
       auto value = enumerant.getValue();
       if (value >= 0)
-        os << formatv("  {0} = {1},\n", symbol, value);
+        os << formatv("  {0}{1} = {2},\n", prefix, symbol, value);
       else
-        os << formatv("  {0},\n", symbol);
+        os << formatv("  {0}{1},\n", prefix, symbol);
     }
     os << "};\n";
     // Add convenience typedef
@@ -296,8 +366,8 @@ static bool emitEnumAttrDecls(ArrayRef<const Record *> records, raw_ostream &os,
        << toLower(namespacePrefix()) << enumInfo.getEnumClassName() << " value);\n";
 
     std::string name = enumInfo.getEnumClassName().str() + "Attr";
-    emitTypeIDDecl(name, os);
-    emitIsADecl(name, os, /*isAttrGenerator*/ true);
+    emitTypeIDDeclOrDef(enumInfo, os, EMIT_DECLS);
+    emitIsADeclOrDef(enumInfo, os, EMIT_DECLS);
 
     os << "MLIR_CAPI_EXPORTED " << toLower(namespacePrefix())
        << enumInfo.getEnumClassName() << " ";
@@ -334,11 +404,11 @@ bool CAPIDefGenerator::emitDecls(StringRef selectedDialect) {
     ArrayRef<AttrOrTypeParameter> params = def.getParameters();
     emitAttrTypeHeader(name, os);
     if (!llvm::any_of(params, isUnsupportedParam))
-      emitGettorDeclOrDef(name, params, os, isAttrGenerator, true);
-    emitTypeIDDecl(name, os);
-    emitIsADecl(name, os, isAttrGenerator);
+      emitGettorDeclOrDef(def, params, os, isAttrGenerator, EMIT_DECLS);
+    emitTypeIDDecl(def, os);
+    emitIsADecl(def, os, isAttrGenerator);
     if (def.genAccessors() && !params.empty())
-      emitAccessorDecls(name, params, os, isAttrGenerator);
+      emitAccessorDecls(def, params, os, isAttrGenerator);
   }
 
   os << "\n";
@@ -355,11 +425,12 @@ bool CAPIDefGenerator::emitDefs(StringRef selectedDialect) {
     return false;
 
   for (const AttrOrTypeDef &def : defs) {
-    StringRef name = def.getCppClassName();
     ArrayRef<AttrOrTypeParameter> params = def.getParameters();
     if (!llvm::any_of(params, isUnsupportedParam)) {
-        emitGettorDeclOrDef(name, params, os, isAttrGenerator, false);
+        emitGettorDeclOrDef(def, params, os, isAttrGenerator, EMIT_DEFS);
     }
+    emitTypeIDDeclOrDef(def, os, EMIT_DEFS);
+    emitIsADeclOrDef(def, os, isAttrGenerator, EMIT_DEFS);
   }
 
   return false;
