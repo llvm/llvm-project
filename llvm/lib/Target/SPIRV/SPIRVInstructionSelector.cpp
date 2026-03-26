@@ -19,6 +19,7 @@
 #include "SPIRVInstrInfo.h"
 #include "SPIRVRegisterInfo.h"
 #include "SPIRVTargetMachine.h"
+#include "SPIRVTypeInst.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/StringExtras.h"
@@ -360,6 +361,9 @@ private:
 
   bool selectWaveOpInst(Register ResVReg, SPIRVTypeInst ResType,
                         MachineInstr &I, unsigned Opcode) const;
+
+  bool selectBarrierInst(MachineInstr &I, unsigned Scope, unsigned MemSem,
+                         bool WithGroupSync) const;
 
   bool selectWaveActiveCountBits(Register ResVReg, SPIRVTypeInst ResType,
                                  MachineInstr &I) const;
@@ -2893,6 +2897,41 @@ bool SPIRVInstructionSelector::selectWaveOpInst(Register ResVReg,
   return true;
 }
 
+bool SPIRVInstructionSelector::selectBarrierInst(MachineInstr &I,
+                                                 unsigned Scope,
+                                                 unsigned MemSem,
+                                                 bool WithGroupSync) const {
+  auto BarrierType =
+      WithGroupSync ? SPIRV::OpControlBarrier : SPIRV::OpMemoryBarrier;
+
+  MemSem |= SPIRV::MemorySemantics::AcquireRelease;
+
+  assert(((Scope != SPIRV::Scope::Workgroup) ||
+          ((MemSem & SPIRV::MemorySemantics::WorkgroupMemory) > 0)) &&
+         "Workgroup Scope must set WorkGroupMemory semantic "
+         "in Barrier instruction");
+
+  assert(((Scope != SPIRV::Scope::Device) ||
+          ((MemSem & SPIRV::MemorySemantics::UniformMemory) > 0 &&
+           (MemSem & SPIRV::MemorySemantics::ImageMemory) > 0)) &&
+         "Device Scope must set UniformMemory and ImageMemory semantic "
+         "in Barrier instruction");
+
+  Register MemSemReg = buildI32Constant(MemSem, I);
+  Register ScopeReg = buildI32Constant(Scope, I);
+  MachineBasicBlock &BB = *I.getParent();
+  auto MI =
+      BuildMI(BB, I, I.getDebugLoc(), TII.get(BarrierType)).addUse(ScopeReg);
+
+  // OpControlBarrier needs to also set Execution Scope
+  if (WithGroupSync) {
+    MI.addUse(ScopeReg);
+  }
+
+  MI.addUse(MemSemReg).constrainAllUses(TII, TRI, RBI);
+  return true;
+}
+
 bool SPIRVInstructionSelector::selectWaveActiveCountBits(
     Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I) const {
 
@@ -4379,18 +4418,14 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectFirstBitHigh(ResVReg, ResType, I, /*IsSigned=*/true);
   case Intrinsic::spv_firstbitlow: // There is no CL equivlent of FindILsb
     return selectFirstBitLow(ResVReg, ResType, I);
-  case Intrinsic::spv_group_memory_barrier_with_group_sync: {
-    Register MemSemReg =
-        buildI32Constant(SPIRV::MemorySemantics::SequentiallyConsistent, I);
-    Register ScopeReg = buildI32Constant(SPIRV::Scope::Workgroup, I);
-    MachineBasicBlock &BB = *I.getParent();
-    BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpControlBarrier))
-        .addUse(ScopeReg)
-        .addUse(ScopeReg)
-        .addUse(MemSemReg)
-        .constrainAllUses(TII, TRI, RBI);
-    return true;
-  }
+  case Intrinsic::spv_group_memory_barrier:
+    return selectBarrierInst(I, SPIRV::Scope::Workgroup,
+                             SPIRV::MemorySemantics::WorkgroupMemory,
+                             /*WithGroupSync*/ false);
+  case Intrinsic::spv_group_memory_barrier_with_group_sync:
+    return selectBarrierInst(I, SPIRV::Scope::Workgroup,
+                             SPIRV::MemorySemantics::WorkgroupMemory,
+                             /*WithGroupSync*/ true);
   case Intrinsic::spv_generic_cast_to_ptr_explicit: {
     Register PtrReg = I.getOperand(I.getNumExplicitDefs() + 1).getReg();
     SPIRV::StorageClass::StorageClass ResSC =
