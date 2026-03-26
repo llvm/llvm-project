@@ -943,6 +943,7 @@
 {'is_defined': True, 'name': '_ZNSt6__ndk113shared_futureIvED1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk113shared_futureIvED2Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk113shared_futureIvEaSERKS1_', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt6__ndk113text_encoding11environmentEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk114__num_get_base10__get_baseERNS_8ios_baseE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk114__num_get_base5__srcE', 'size': 33, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt6__ndk114__num_put_base12__format_intEPcPKcbj', 'type': 'FUNC'}
@@ -1197,6 +1198,7 @@
 {'is_defined': True, 'name': '_ZNSt6__ndk120__libcpp_atomic_waitEPVKNS_17__cxx_atomic_implIiNS_22__cxx_atomic_base_implIiEEEEi', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk120__libcpp_atomic_waitEPVKvi', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk120__throw_system_errorEiPKc', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt6__ndk121__get_locale_encodingEPKc', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk121__throw_runtime_errorEPKc', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk121recursive_timed_mutex4lockEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk121recursive_timed_mutex6unlockEv', 'type': 'FUNC'}
@@ -1558,7 +1560,6 @@
 {'is_defined': True, 'name': '_ZNSt6__ndk19__num_putIcE23__widen_and_group_floatEPcS2_S2_S2_RS2_S3_RKNS_6localeE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk19__num_putIwE21__widen_and_group_intEPcS2_S2_PwRS3_S4_RKNS_6localeE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk19__num_putIwE23__widen_and_group_floatEPcS2_S2_PwRS3_S4_RKNS_6localeE', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt6__ndk19__te_impl13__environmentEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk19basic_iosIcNS_11char_traitsIcEEE7copyfmtERKS3_', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk19basic_iosIcNS_11char_traitsIcEEED0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk19basic_iosIcNS_11char_traitsIcEEED1Ev', 'type': 'FUNC'}
