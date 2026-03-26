@@ -16,11 +16,29 @@ namespace gsym {
 
 enum class GlobalInfoType : uint32_t {
   EndOfList = 0u,
+  // The address offsets table. It's a list of function addresses subtracted by
+  // HeaderV2::BaseAddress, hence "offset".
+  //
+  // This table and the address
+  // info offsets table (see below) have the same number of items. The items are
+  // 1-1 mapped.
+  //
+  // Given an address, this table is used to do a binary search to find the
+  // index into the address info offsets table, where the location of the
+  // FunctionInfo for the same function can be found in the GSYM.
   AddrOffsets = 1u,
+  // The address info offsets table. It's a list of file offsets in the GSYM
+  // where FunctionInfo for each functions can be found.
   AddrInfoOffsets = 2u,
+  // The string table. It contains all the strings used by the rest of the GSYM.
+  // The exact storage of the strings is determined by
+  // HeaderV2::StrTableEncoding.
   StringTable = 3u,
+  // The file table. It's a list of files, referred by FunctionInfo objects.
   FileTable = 4u,
+  // A list of FunctionInfo objects, terminated by EndOfList.
   FunctionInfo = 5u,
+  // Optional UUID of the GSYM.
   UUID = 6u,
 };
 

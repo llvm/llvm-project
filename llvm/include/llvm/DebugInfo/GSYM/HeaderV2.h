@@ -47,16 +47,8 @@ enum class StrTableEncodingType : uint8_t {
 /// file offset, and size. The sections can appear in any order in the file
 /// since each GlobalData entry contains an absolute file offset. The
 /// GlobalData array is terminated by an entry with type EndOfList and all
-/// other fields set to zero.
-///
-/// The GlobalInfoType values are:
-///   EndOfList       = 0  (terminates GlobalData array)
-///   AddrOffsets     = 1  (address offset table)
-///   AddrInfoOffsets = 2  (address info offset table)
-///   StringTable     = 3  (string table)
-///   FileTable       = 4  (file table)
-///   FunctionInfo    = 5  (FunctionInfo data blob)
-///   UUID            = 6  (binary UUID)
+/// other fields set to zero. See GlobalInfoType (in GlobalData.h) for all
+/// section types.
 ///
 /// The header structure is encoded exactly as it appears in the structure
 /// definition with no gaps between members. Alignment should not change from
