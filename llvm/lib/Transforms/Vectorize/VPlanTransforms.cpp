@@ -2688,7 +2688,7 @@ static void licm(VPlan &Plan) {
                "replicate regions");
         // narrowToSingleScalarRecipes should have already maximally narrowed
         // replicates to single-scalar replicates.
-        // TODO: When unrolling, replicatebyVF doesn't handle sunk
+        // TODO: When unrolling, replicateByVF doesn't handle sunk
         // non-single-scalar replicates correctly.
         if (!RepR->isSingleScalar())
           continue;
