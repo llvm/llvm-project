@@ -8053,7 +8053,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInit(
   }
 
   // Set the grid value in the config needed for lowering later on
-  Config.setGridValue(getGridValue(T, Kernel));
+  if (hasGridValue(T))
+    Config.setGridValue(getGridValue(T, Kernel));
 
   // Manifest the launch configuration in the metadata matching the kernel
   // environment.
