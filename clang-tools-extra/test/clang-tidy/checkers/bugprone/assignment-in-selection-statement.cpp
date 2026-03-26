@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s -std=c++17 bugprone-assignment-in-selection-statement %t
+// RUN: %check_clang_tidy %s -std=c++17-or-later bugprone-assignment-in-selection-statement %t
 
 struct S {
   int A = 1;

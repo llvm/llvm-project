@@ -177,6 +177,10 @@ New checks
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
+- New alias :doc:`cert-exp45-c <clang-tidy/checks/cert/exp45-c>`
+  to :doc:`bugprone-assignment-in-selection-statement
+  <clang-tidy/checks/bugprone/assignment-in-selection-statement>`.
+
 - Renamed :doc:`hicpp-exception-baseclass
   <clang-tidy/checks/hicpp/exception-baseclass>`
   to :doc:`bugprone-std-exception-baseclass
