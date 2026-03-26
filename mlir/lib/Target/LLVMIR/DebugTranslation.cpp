@@ -130,7 +130,7 @@ llvm::DICompileUnit *DebugTranslation::translateImpl(DICompileUnitAttr attr) {
                                    : "",
       static_cast<llvm::DICompileUnit::DebugEmissionKind>(
           attr.getEmissionKind()),
-      0, true, false,
+      0, true, attr.getIsDebugInfoForProfiling(),
       static_cast<llvm::DICompileUnit::DebugNameTableKind>(
           attr.getNameTableKind()));
 }

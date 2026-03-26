@@ -3,10 +3,10 @@
 // CHECK-DAG: #[[FILE:.*]] = #llvm.di_file<"debuginfo.mlir" in "/test/">
 #file = #llvm.di_file<"debuginfo.mlir" in "/test/">
 
-// CHECK-DAG: #[[CU:.*]] = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #[[FILE]], producer = "MLIR", isOptimized = true, emissionKind = Full>
+// CHECK-DAG: #[[CU:.*]] = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #[[FILE]], producer = "MLIR", isOptimized = true, emissionKind = Full, isDebugInfoForProfiling = true>
 #cu = #llvm.di_compile_unit<
   id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #file,
-  producer = "MLIR", isOptimized = true, emissionKind = Full
+  producer = "MLIR", isOptimized = true, emissionKind = Full, isDebugInfoForProfiling = true
 >
 
 // CHECK-DAG: #[[NULL:.*]] = #llvm.di_null_type

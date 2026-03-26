@@ -4441,11 +4441,7 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
                      !isHIP(InputType) && !isObjC(InputType) &&
                      !isOpenCL(InputType);
 
-  if (Args.hasFlag(options::OPT_fdebug_info_for_profiling,
-                   options::OPT_fno_debug_info_for_profiling, false) &&
-      checkDebugInfoOption(
-          Args.getLastArg(options::OPT_fdebug_info_for_profiling), Args, D, TC))
-    CmdArgs.push_back("-fdebug-info-for-profiling");
+  addDebugInfoForProfilingArgs(D, TC, Args, CmdArgs);
 
   // The 'g' groups options involve a somewhat intricate sequence of decisions
   // about what to pass from the driver to the frontend, but by the time they
