@@ -50,9 +50,8 @@ private:
 // CHECK-NEXT:    ],
 // CHECK-NEXT:    "Description": {
 // CHECK-NEXT:      "BriefComments": [
-// CHECK-NEXT:        [
-// CHECK-NEXT:          {
-// CHECK-NEXT:            "TextComment": "This is a brief description."
+// CHECK-NEXT:        {
+// CHECK-NEXT:          "TextComment": "This is a brief description."
 // CHECK:           "HasBriefComments": true,
 // CHECK-NEXT:      "HasParagraphComments": true,
 // CHECK-NEXT:      "ParagraphComments": [

@@ -22,11 +22,9 @@
 // JSON-INDEX-NEXT:    {
 // JSON-INDEX-NEXT:      "Description": {
 // JSON-INDEX-NEXT:        "BriefComments": [
-// JSON-INDEX-NEXT:          [
-// JSON-INDEX-NEXT:            {
-// JSON-INDEX-NEXT:              "TextComment": "For specifying RGB colors"
-// JSON-INDEX-NEXT:            }
-// JSON-INDEX-NEXT:          ]
+// JSON-INDEX-NEXT:          {
+// JSON-INDEX-NEXT:            "TextComment": "For specifying RGB colors"
+// JSON-INDEX-NEXT:          }
 // JSON-INDEX-NEXT:        ],
 // JSON-INDEX-NEXT:        "HasBriefComments": true
 // JSON-INDEX-NEXT:      },
@@ -91,11 +89,9 @@
 // JSON-INDEX-NEXT:    {
 // JSON-INDEX-NEXT:      "Description": {
 // JSON-INDEX-NEXT:        "BriefComments": [
-// JSON-INDEX-NEXT:          [
-// JSON-INDEX-NEXT:            {
-// JSON-INDEX-NEXT:              "TextComment": "Shape Types"
-// JSON-INDEX-NEXT:            }
-// JSON-INDEX-NEXT:          ]
+// JSON-INDEX-NEXT:          {
+// JSON-INDEX-NEXT:            "TextComment": "Shape Types"
+// JSON-INDEX-NEXT:          }
 // JSON-INDEX-NEXT:        ],
 // JSON-INDEX-NEXT:        "HasBriefComments": true
 // JSON-INDEX-NEXT:      },
@@ -165,11 +161,9 @@
 // JSON-INDEX-NEXT:      },
 // JSON-INDEX-NEXT:      "Description": {
 // JSON-INDEX-NEXT:        "BriefComments": [
-// JSON-INDEX-NEXT:          [
-// JSON-INDEX-NEXT:            {
-// JSON-INDEX-NEXT:              "TextComment": "Specify the size"
-// JSON-INDEX-NEXT:            }
-// JSON-INDEX-NEXT:          ]
+// JSON-INDEX-NEXT:          {
+// JSON-INDEX-NEXT:            "TextComment": "Specify the size"
+// JSON-INDEX-NEXT:          }
 // JSON-INDEX-NEXT:        ],
 // JSON-INDEX-NEXT:        "HasBriefComments": true
 // JSON-INDEX-NEXT:      },
@@ -206,11 +200,9 @@
 // JSON-INDEX-NEXT:        {
 // JSON-INDEX-NEXT:          "Description": {
 // JSON-INDEX-NEXT:            "BriefComments": [
-// JSON-INDEX-NEXT:              [
-// JSON-INDEX-NEXT:                {
-// JSON-INDEX-NEXT:                  "TextComment": "A tennis ball."
-// JSON-INDEX-NEXT:                }
-// JSON-INDEX-NEXT:              ]
+// JSON-INDEX-NEXT:              {
+// JSON-INDEX-NEXT:                "TextComment": "A tennis ball."
+// JSON-INDEX-NEXT:              }
 // JSON-INDEX-NEXT:            ],
 // JSON-INDEX-NEXT:            "HasBriefComments": true
 // JSON-INDEX-NEXT:          },
@@ -247,11 +239,9 @@
 // JSON-INDEX-NEXT:      },
 // JSON-INDEX-NEXT:      "Description": {
 // JSON-INDEX-NEXT:        "BriefComments": [
-// JSON-INDEX-NEXT:          [
-// JSON-INDEX-NEXT:            {
-// JSON-INDEX-NEXT:              "TextComment": "Very long number"
-// JSON-INDEX-NEXT:            }
-// JSON-INDEX-NEXT:          ]
+// JSON-INDEX-NEXT:          {
+// JSON-INDEX-NEXT:            "TextComment": "Very long number"
+// JSON-INDEX-NEXT:          }
 // JSON-INDEX-NEXT:        ],
 // JSON-INDEX-NEXT:        "HasBriefComments": true
 // JSON-INDEX-NEXT:      },
@@ -763,11 +753,9 @@
 // JSON-VEHICLES-INDEX-NEXT:      {
 // JSON-VEHICLES-INDEX-NEXT:        "Description": {
 // JSON-VEHICLES-INDEX-NEXT:          "BriefComments": [
-// JSON-VEHICLES-INDEX-NEXT:            [
-// JSON-VEHICLES-INDEX-NEXT:              {
-// JSON-VEHICLES-INDEX-NEXT:                "TextComment": "specify type of car"
-// JSON-VEHICLES-INDEX-NEXT:              }
-// JSON-VEHICLES-INDEX-NEXT:            ]
+// JSON-VEHICLES-INDEX-NEXT:            {
+// JSON-VEHICLES-INDEX-NEXT:              "TextComment": "specify type of car"
+// JSON-VEHICLES-INDEX-NEXT:            }
 // JSON-VEHICLES-INDEX-NEXT:          ],
 // JSON-VEHICLES-INDEX-NEXT:          "HasBriefComments": true
 // JSON-VEHICLES-INDEX-NEXT:        },
