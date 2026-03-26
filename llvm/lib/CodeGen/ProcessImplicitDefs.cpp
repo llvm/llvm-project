@@ -107,8 +107,15 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
   MachineBasicBlock::instr_iterator SearchMI = MI->getIterator();
   MachineBasicBlock::instr_iterator SearchE = MI->getParent()->instr_end();
   bool ImplicitDefIsDead = false;
+  bool SearchedWholeBlock = true;
+  constexpr unsigned SearchLimit = 60000;
+  unsigned Count = 0;
   for (++SearchMI; SearchMI != SearchE; ++SearchMI) {
     bool DefinesReg = false;
+    if (++Count > SearchLimit) {
+      SearchedWholeBlock = false;
+      break;
+    }
     for (MachineOperand &MO : SearchMI->operands()) {
       if (!MO.isReg())
         continue;
@@ -129,7 +136,8 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
 
   // If we have added an undef flag to all uses (i.e. we have found a redefining
   // MI or there are no successors), we can erase the IMPLICIT_DEF.
-  if (ImplicitDefIsDead || MI->getParent()->succ_empty()) {
+  if (ImplicitDefIsDead ||
+      (SearchedWholeBlock && MI->getParent()->succ_empty())) {
     if (ImplicitDefIsDead)
       LLVM_DEBUG(dbgs() << "Physreg def: " << *SearchMI);
     MI->eraseFromParent();
