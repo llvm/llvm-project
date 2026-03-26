@@ -473,8 +473,7 @@ static unsigned getMaxTCFromNonZeroRange(PredicatedScalarEvolution &PSE,
   const SCEV *TripCount = SE->getTripCountFromExitCount(BTC, BTC->getType(), L);
   ConstantRange TCRange = SE->getUnsignedRange(TripCount);
   APInt MaxTCFromRange = TCRange.getUnsignedMax();
-  if (MaxTCFromRange.ugt(0) &&
-      MaxTCFromRange.ule(std::numeric_limits<unsigned>::max()))
+  if (!MaxTCFromRange.isZero() && MaxTCFromRange.getActiveBits() <= 32)
     return MaxTCFromRange.getZExtValue();
   return 0;
 }
