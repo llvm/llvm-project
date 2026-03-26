@@ -6852,13 +6852,9 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
 
-  // Compute known bits once; used both to reduce the Hacker's Delight magic
-  // and to check simple-wide-magic conditions below.
-  KnownBits Known0 = DAG.computeKnownBits(N0);
-
   // Try to use leading zeros of the dividend to reduce the multiplier and
   // avoid expensive fixups.
-  unsigned KnownLeadingZeros = Known0.countMinLeadingZeros();
+  unsigned KnownLeadingZeros = DAG.computeKnownBits(N0).countMinLeadingZeros();
 
   // If we're after type legalization and SVT is not legal, use the
   // promoted type for creating constants to avoid creating nodes with

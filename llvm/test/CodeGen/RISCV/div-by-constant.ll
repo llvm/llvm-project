@@ -278,18 +278,20 @@ define i16 @udiv16_constant_no_add(i16 %a) nounwind {
 }
 
 define i16 @udiv16_constant_add(i16 %a) nounwind {
-; RV32-LABEL: udiv16_constant_add:
-; RV32:       # %bb.0:
-; RV32-NEXT:    slli a1, a0, 16
-; RV32-NEXT:    lui a2, 149808
-; RV32-NEXT:    mulhu a1, a1, a2
-; RV32-NEXT:    srli a1, a1, 16
-; RV32-NEXT:    sub a0, a0, a1
-; RV32-NEXT:    slli a0, a0, 16
-; RV32-NEXT:    srli a0, a0, 17
-; RV32-NEXT:    add a0, a0, a1
-; RV32-NEXT:    srli a0, a0, 2
-; RV32-NEXT:    ret
+; RV32IM-LABEL: udiv16_constant_add:
+; RV32IM:       # %bb.0:
+; RV32IM-NEXT:    slli a0, a0, 16
+; RV32IM-NEXT:    srli a0, a0, 16
+; RV32IM-NEXT:    lui a1, 149798
+; RV32IM-NEXT:    mulhu a0, a0, a1
+; RV32IM-NEXT:    ret
+;
+; RV32IMZB-LABEL: udiv16_constant_add:
+; RV32IMZB:       # %bb.0:
+; RV32IMZB-NEXT:    zext.h a0, a0
+; RV32IMZB-NEXT:    lui a1, 149798
+; RV32IMZB-NEXT:    mulhu a0, a0, a1
+; RV32IMZB-NEXT:    ret
 ;
 ; RV64-LABEL: udiv16_constant_add:
 ; RV64:       # %bb.0:
