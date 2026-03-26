@@ -1366,8 +1366,8 @@ define i128 @abd_select_i128(i128 %a, i128 %b) nounwind {
 
 ; This used to be miscompiled into (abdu %v, i32:-1)
 ; https://github.com/llvm/llvm-project/issues/185467
-define i32 @issue185467(i32 range(i32 0, 2147483647) %v) {
-; X86-LABEL: issue185467:
+define i32 @PR185467(i32 range(i32 0, 2147483647) %v) {
+; X86-LABEL: PR185467:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    incl %ecx
@@ -1376,7 +1376,7 @@ define i32 @issue185467(i32 range(i32 0, 2147483647) %v) {
 ; X86-NEXT:    cmovsl %ecx, %eax
 ; X86-NEXT:    retl
 ;
-; X64-LABEL: issue185467:
+; X64-LABEL: PR185467:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    leal 1(%rdi), %ecx
