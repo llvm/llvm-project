@@ -156,6 +156,7 @@ struct SubroutineSubprogram; // R1534
 // with order of the the requirement productions in the grammar.
 struct DerivedTypeDef; // R726
 struct EnumDef; // R759
+struct EnumerationTypeDef; // F2023 R766
 struct TypeDeclarationStmt; // R801
 struct AccessStmt; // R827
 struct AllocatableStmt; // R829
@@ -398,7 +399,8 @@ struct OtherSpecificationStmt {
 struct SpecificationConstruct {
   UNION_CLASS_BOILERPLATE(SpecificationConstruct);
   std::variant<common::Indirection<DerivedTypeDef>,
-      common::Indirection<EnumDef>, Statement<common::Indirection<GenericStmt>>,
+      common::Indirection<EnumDef>, common::Indirection<EnumerationTypeDef>,
+      Statement<common::Indirection<GenericStmt>>,
       common::Indirection<InterfaceBlock>,
       Statement<common::Indirection<ParameterStmt>>,
       Statement<common::Indirection<OldParameterStmt>>,
@@ -1227,6 +1229,33 @@ struct EnumDef {
   TUPLE_CLASS_BOILERPLATE(EnumDef);
   std::tuple<Statement<EnumDefStmt>, std::list<Statement<EnumeratorDefStmt>>,
       Statement<EndEnumStmt>>
+      t;
+};
+
+// F2023 R767 enumeration-type-stmt ->
+//        ENUMERATION TYPE [ [ , access-spec ] :: ] enumeration-type-name
+struct EnumerationTypeStmt {
+  TUPLE_CLASS_BOILERPLATE(EnumerationTypeStmt);
+  std::tuple<std::optional<AccessSpec>, Name> t;
+};
+
+// F2023 R768 enumeration-enumerator-stmt -> ENUMERATOR [ :: ]
+// enumerator-name-list
+WRAPPER_CLASS(EnumerationEnumeratorStmt, std::list<Name>);
+
+// F2023 R769 end-enumeration-type-stmt ->
+//        END ENUMERATION TYPE [ enumeration-type-name ]
+WRAPPER_CLASS(EndEnumerationTypeStmt, std::optional<Name>);
+
+// F2023 R766 enumeration-type-def ->
+//        enumeration-type-stmt
+//        enumeration-enumerator-stmt [ enumeration-enumerator-stmt ]...
+//        end-enumeration-type-stmt
+struct EnumerationTypeDef {
+  TUPLE_CLASS_BOILERPLATE(EnumerationTypeDef);
+  std::tuple<Statement<EnumerationTypeStmt>,
+      std::list<Statement<EnumerationEnumeratorStmt>>,
+      Statement<EndEnumerationTypeStmt>>
       t;
 };
 
