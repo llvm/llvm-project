@@ -45,43 +45,19 @@ define <vscale x 2 x i64> @lrint_v2_i64_f64(<vscale x 2 x double> %x) {
   ret <vscale x 2 x i64> %a
 }
 
-define <vscale x 4 x i64> @lrint_v4_i64_f64(<vscale x 4 x float> %x) vscale_range(2,16){
-; CHECK-LABEL: lrint_v4_i64_f64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpklo z1.d, z0.s
-; CHECK-NEXT:    uunpkhi z0.d, z0.s
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    frint64x z1.s, p0/z, z1.s
-; CHECK-NEXT:    frint64x z2.s, p0/z, z0.s
-; CHECK-NEXT:    movprfx z0, z1
-; CHECK-NEXT:    fcvtzs z0.d, p0/m, z1.s
-; CHECK-NEXT:    movprfx z1, z2
-; CHECK-NEXT:    fcvtzs z1.d, p0/m, z2.s
-; CHECK-NEXT:    ret
-  %a = call <vscale x 4 x i64> @llvm.lrint.nxv4i64.nxv4f32(<vscale x 4 x float> %x)
-  ret <vscale x 4 x i64> %a
-}
-
-define <vscale x 4 x i32> @llrint_v4_i32_f32(<vscale x 4 x float> %x) {
-; CHECK-LABEL: llrint_v4_i32_f32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    frint32x z0.s, p0/z, z0.s
-; CHECK-NEXT:    fcvtzs z0.s, p0/z, z0.s
-; CHECK-NEXT:    ret
-  %a = call <vscale x 4 x i32> @llvm.llrint.nxv4i32.nxv4f32(<vscale x 4 x float> %x)
-  ret <vscale x 4 x i32> %a
-}
-
-define <vscale x 2 x i32> @llrint_v2_i32_f64(<vscale x 2 x double> %x) {
-; CHECK-LABEL: llrint_v2_i32_f64:
+define void @lrint_v4_i64_f32(<4 x float> %x, ptr %dst) vscale_range(2, 16) {
+; CHECK-LABEL: lrint_v4_i64_f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    frint64x z0.d, p0/z, z0.d
-; CHECK-NEXT:    fcvtzs z0.d, p0/z, z0.d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    frint64x z0.s, p0/z, z0.s
+; CHECK-NEXT:    fcvtzs z0.d, p0/m, z0.s
+; CHECK-NEXT:    ptrue p0.d, vl4
+; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 2 x i32> @llvm.llrint.nxv2i32.nxv2f64(<vscale x 2 x double> %x)
-  ret <vscale x 2 x i32> %a
+  %a = call <4 x i64> @llvm.lrint.v4i64.v4f32(<4 x float> %x)
+  store <4 x i64> %a, ptr %dst
+  ret void
 }
 
 define <vscale x 2 x i64> @llrint_v2_i64_f32(<vscale x 2 x float> %x) vscale_range(1, 16){
@@ -106,19 +82,17 @@ define <vscale x 2 x i64> @llrint_v2_i64_f64(<vscale x 2 x double> %x) {
   ret <vscale x 2 x i64> %a
 }
 
-define <vscale x 4 x i64> @llrint_v4_i64_f64(<vscale x 4 x float> %x) vscale_range(2,16){
-; CHECK-LABEL: llrint_v4_i64_f64:
+define void @llrint_v4_i64_f32(<4 x float> %x, ptr %dst) vscale_range(2, 16) {
+; CHECK-LABEL: llrint_v4_i64_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpklo z1.d, z0.s
-; CHECK-NEXT:    uunpkhi z0.d, z0.s
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    frint64x z1.s, p0/z, z1.s
-; CHECK-NEXT:    frint64x z2.s, p0/z, z0.s
-; CHECK-NEXT:    movprfx z0, z1
-; CHECK-NEXT:    fcvtzs z0.d, p0/m, z1.s
-; CHECK-NEXT:    movprfx z1, z2
-; CHECK-NEXT:    fcvtzs z1.d, p0/m, z2.s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    frint64x z0.s, p0/z, z0.s
+; CHECK-NEXT:    fcvtzs z0.d, p0/m, z0.s
+; CHECK-NEXT:    ptrue p0.d, vl4
+; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 4 x i64> @llvm.llrint.nxv4i64.nxv4f32(<vscale x 4 x float> %x)
-  ret <vscale x 4 x i64> %a
+  %a = call <4 x i64> @llvm.llrint.v4i64.v4f32(<4 x float> %x)
+  store <4 x i64> %a, ptr %dst
+  ret void
 }

@@ -5300,9 +5300,22 @@ SDValue AArch64TargetLowering::LowerVectorXRINT(SDValue Op,
   unsigned IntBits = VT.getScalarSizeInBits();
   unsigned FPBits = CastVT.getScalarSizeInBits();
 
-  // Use FRINT32X/FRINT64X if Sve2p2 is available
-  if (Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSVE2p2() &&
-      (FPBits == 32 || FPBits == 64)) {
+  // Convert fixed-length vectors to scalable and re-emit the same opcode.
+  if (useSVEForFixedLengthVectorVT(Op.getValueType(),
+                                   !Subtarget->isNeonAvailable())) {
+    EVT ContainerSrcVT =
+        getContainerForFixedLengthVector(DAG, Src.getValueType());
+    EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
+    SDValue ScalableSrc = convertToScalableVector(DAG, ContainerSrcVT, Src);
+
+    SDValue ScalableRes =
+        DAG.getNode(Op.getOpcode(), DL, ContainerVT, ScalableSrc);
+    return convertFromScalableVector(DAG, VT, ScalableRes);
+  }
+
+  // Lower to FRINT32X/FRINT64X for scalable vectors if Sve2p2 is available.
+  if (VT.isScalableVector() && Subtarget->isSVEorStreamingSVEAvailable() &&
+      Subtarget->hasSVE2p2() && (FPBits == 32 || FPBits == 64)) {
     assert(IntBits == 32 || IntBits == 64);
     unsigned FrintOp = (IntBits == 32) ? AArch64ISD::FRINT32_MERGE_PASSTHRU
                                        : AArch64ISD::FRINT64_MERGE_PASSTHRU;
