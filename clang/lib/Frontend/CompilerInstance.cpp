@@ -1220,8 +1220,6 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
     if (hasSourceManager() && !Act.isModelParsingAction())
       getSourceManager().clearIDTables();
 
-    ModuleImportResults.clear();
-
     if (Act.BeginSourceFile(*this, FIF)) {
       if (llvm::Error Err = Act.Execute()) {
         consumeError(std::move(Err)); // FIXME this drops errors on the floor.
@@ -2245,15 +2243,14 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
   SourceLocation ModuleNameLoc = Path[0].getLoc();
 
   // If we've already handled this import, just return the cached result.
-  // This cache eliminates redundant diagnostics when both the preprocessor
-  // and parser see the same import declaration.
-  if (ImportLoc.isValid()) {
-    auto CacheIt = ModuleImportResults.find(ImportLoc);
-    if (CacheIt != ModuleImportResults.end()) {
-      if (CacheIt->second && ModuleName != getLangOpts().CurrentModule)
-        TheASTReader->makeModuleVisible(CacheIt->second, Visibility, ImportLoc);
-      return CacheIt->second;
-    }
+  // This one-element cache is important to eliminate redundant diagnostics
+  // when both the preprocessor and parser see the same import declaration.
+  if (ImportLoc.isValid() && LastModuleImportLoc == ImportLoc) {
+    // Make the named module visible.
+    if (LastModuleImportResult && ModuleName != getLangOpts().CurrentModule)
+      TheASTReader->makeModuleVisible(LastModuleImportResult, Visibility,
+                                      ImportLoc);
+    return LastModuleImportResult;
   }
 
   // If we don't already have information on this module, load the module now.
@@ -2431,7 +2428,8 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
                                              *Module, getDiagnostics())) {
       getDiagnostics().Report(ImportLoc, diag::note_module_import_here)
           << SourceRange(Path.front().getLoc(), Path.back().getLoc());
-      ModuleImportResults[ImportLoc] = ModuleLoadResult();
+      LastModuleImportLoc = ImportLoc;
+      LastModuleImportResult = ModuleLoadResult();
       return ModuleLoadResult();
     }
 
@@ -2444,8 +2442,9 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
       .getModuleMap()
       .resolveLinkAsDependencies(Module->getTopLevelModule());
 
-  ModuleImportResults[ImportLoc] = ModuleLoadResult(Module);
-  return ModuleLoadResult(Module);
+  LastModuleImportLoc = ImportLoc;
+  LastModuleImportResult = ModuleLoadResult(Module);
+  return LastModuleImportResult;
 }
 
 void CompilerInstance::createModuleFromSource(SourceLocation ImportLoc,
