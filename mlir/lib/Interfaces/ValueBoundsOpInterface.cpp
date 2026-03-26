@@ -115,8 +115,8 @@ ValueBoundsConstraintSet::Variable::Variable(AffineMap map,
   // Turn all dims into symbols.
   Builder b(map.getContext());
   // Inline size chosen empirically based on compilation profiling.
-  // Profiled: 490K calls, avg=1.5+-0.6. N=8 covers >99% of cases inline.
-  SmallVector<AffineExpr, 8> dimReplacements, symReplacements;
+  // Profiled: 490K calls, avg=1.5+-0.6. N=4 covers >99% of cases inline.
+  SmallVector<AffineExpr, 4> dimReplacements, symReplacements;
   for (int64_t i = 0, e = map.getNumDims(); i < e; ++i)
     dimReplacements.push_back(b.getAffineSymbolExpr(i));
   for (int64_t i = 0, e = map.getNumSymbols(); i < e; ++i)
