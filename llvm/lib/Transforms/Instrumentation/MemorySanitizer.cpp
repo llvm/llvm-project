@@ -5611,35 +5611,29 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       // If the value is fully initialized, the shadow will be 000...001.
       // Otherwise, the shadow will be all zero.
       // (This is the opposite of how we typically handle shadows.)
-      ShadowA =
-          IRB.CreateZExt(IRB.CreateICmpEQ(ShadowA, getCleanShadow(ATy)),
-                         getShadowTy(ATy));
-      ShadowB =
-          IRB.CreateZExt(IRB.CreateICmpEQ(ShadowB, getCleanShadow(BTy)),
-                       getShadowTy(BTy));
+      ShadowA = IRB.CreateZExt(IRB.CreateICmpEQ(ShadowA, getCleanShadow(ATy)),
+                               getShadowTy(ATy));
+      ShadowB = IRB.CreateZExt(IRB.CreateICmpEQ(ShadowB, getCleanShadow(BTy)),
+                               getShadowTy(BTy));
       // TODO: the CreateSelect approach used below for floating-point is more
       //       generic than CreateZExt. Investigate whether it is worthwhile
       //       unifying the two approaches.
 
-      ShadowAB =
-          IRB.CreateIntrinsic(RTy, Intrinsic::aarch64_neon_ummla,
-                              {getCleanShadow(RTy), ShadowA, ShadowB});
+      ShadowAB = IRB.CreateIntrinsic(RTy, Intrinsic::aarch64_neon_ummla,
+                                     {getCleanShadow(RTy), ShadowA, ShadowB});
 
       // ummla multiplies a 2x8 matrix with an 8x2 matrix. If all entries of the
       // input matrices are equal to 0x1, all entries of the output matrix will
       // be 0x8.
       FullyInit = ConstantVector::getSplat(
-        RTy->getElementCount(),
-        ConstantInt::get(RTy->getElementType(), 0x8));
+          RTy->getElementCount(), ConstantInt::get(RTy->getElementType(), 0x8));
 
       ShadowAB = IRB.CreateICmpNE(ShadowAB, FullyInit);
     } else {
-      Constant* ABZeros = ConstantVector::getSplat(
-                         ATy->getElementCount(),
-                         ConstantFP::get(ATy->getElementType(), 0));
-      Constant* ABOnes = ConstantVector::getSplat(
-                         ATy->getElementCount(),
-                         ConstantFP::get(ATy->getElementType(), 1));
+      Constant *ABZeros = ConstantVector::getSplat(
+          ATy->getElementCount(), ConstantFP::get(ATy->getElementType(), 0));
+      Constant *ABOnes = ConstantVector::getSplat(
+          ATy->getElementCount(), ConstantFP::get(ATy->getElementType(), 1));
 
       // As per the integer case, if the shadow is clean, we store 0x1,
       // otherwise we store 0x0 (the opposite of usual shadow arithmetic).
@@ -5648,20 +5642,18 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       ShadowB = IRB.CreateSelect(IRB.CreateICmpEQ(ShadowB, getCleanShadow(BTy)),
                                  ABOnes, ABZeros);
 
-      Constant* RZeros = ConstantVector::getSplat(
-                         RTy->getElementCount(),
-                         ConstantFP::get(RTy->getElementType(), 0));
+      Constant *RZeros = ConstantVector::getSplat(
+          RTy->getElementCount(), ConstantFP::get(RTy->getElementType(), 0));
 
-      ShadowAB =
-          IRB.CreateIntrinsic(RTy, Intrinsic::aarch64_neon_bfmmla,
-                              {RZeros, ShadowA, ShadowB});
+      ShadowAB = IRB.CreateIntrinsic(RTy, Intrinsic::aarch64_neon_bfmmla,
+                                     {RZeros, ShadowA, ShadowB});
 
-      // bfmmla multiplies a 2x4 matrix with an 4x2 matrix. If all entries of the
-      // input matrices are equal to 0x1, all entries of the output matrix will
-      // be 4.0. (To avoid floating-point error, we check if each entry < 3.5.)
+      // bfmmla multiplies a 2x4 matrix with an 4x2 matrix. If all entries of
+      // the input matrices are equal to 0x1, all entries of the output matrix
+      // will be 4.0. (To avoid floating-point error, we check if each entry
+      // < 3.5.)
       FullyInit = ConstantVector::getSplat(
-        RTy->getElementCount(),
-        ConstantFP::get(RTy->getElementType(), 3.5));
+          RTy->getElementCount(), ConstantFP::get(RTy->getElementType(), 3.5));
 
       // FCmpULT: "yields true if either operand is a QNAN or op1 is less than"
       //           op2"
