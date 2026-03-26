@@ -49,11 +49,6 @@
 #include "llvm/Support/Debug.h"
 #include <optional>
 
-static llvm::cl::opt<bool> enablePreciseInit(
-    "enable-precise-init",
-    llvm::cl::desc("Enable precise component initialization for derived types"),
-    llvm::cl::init(false));
-
 static llvm::cl::opt<bool>
     allowAssumedRank("allow-assumed-rank",
                      llvm::cl::desc("Enable assumed rank lowering"),
@@ -818,43 +813,39 @@ mustBeDefaultInitializedAtRuntime(const Fortran::lower::pft::Variable &var) {
   return Fortran::lower::hasDefaultInitialization(sym);
 }
 
-namespace {
-/// Determines if \p sym represents a complex derived type.
-/// A derived type is considered complex if it contains allocatable, pointer,
-/// or procedure pointer components, or nested complex derived types.
-static bool isComplexDerivedType(const Fortran::semantics::Symbol &sym) {
+/// Determines whether a derived type component requires non-trivial
+/// initialization. A component requires non-trivial initialization if it is an
+/// allocatable or pointer data component, or if it is a nested derived type
+/// that contains such components.
+static bool RequiresNonTrivialComponentInitialization(
+    const Fortran::semantics::Symbol &sym) {
   const Fortran::semantics::DeclTypeSpec *declTy = sym.GetType();
   if (!declTy || !declTy->AsDerived())
     return false;
   const Fortran::semantics::DerivedTypeSpec &derivedSpec = *declTy->AsDerived();
   const Fortran::semantics::Scope *scope = derivedSpec.GetScope();
-  if (!scope)
-    return false;
+  assert(scope && "derived type has no scope");
   const auto &typeDetails =
       derivedSpec.typeSymbol().get<Fortran::semantics::DerivedTypeDetails>();
+
   for (const auto &compName : typeDetails.componentNames()) {
     auto iter = scope->find(compName);
-    if (iter == scope->cend())
-      continue;
+    assert(iter != scope->cend() && "component symbol not found in scope");
     const Fortran::semantics::Symbol &compSym = iter->second.get();
     const auto *objDetails =
         compSym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
-    const auto *procDetails =
-        compSym.detailsIf<Fortran::semantics::ProcEntityDetails>();
-    if (Fortran::semantics::IsAllocatableOrPointer(compSym)) {
-      return true;
-    } else if (procDetails && procDetails->init().has_value()) {
-      return true;
-    } else if (objDetails && objDetails->init() && compSym.Rank() > 0) {
-      return true;
-    } else if (isComplexDerivedType(compSym)) {
+    // If data component is an allocatable/pointer,
+    // or a nested derived type that requires initialization,
+    // return true.
+    if (objDetails && (Fortran::semantics::IsAllocatableOrPointer(compSym) ||
+                       RequiresNonTrivialComponentInitialization(compSym))) {
       return true;
     }
   }
   return false;
 }
 
-/// Performs precise, component-wise initialization for \p derivedSpec,
+/// Performs component-wise initialization for \p derivedSpec,
 /// selectively generating IR only for components that require it.
 static void genDerivedTypeComponentInit(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
@@ -862,31 +853,34 @@ static void genDerivedTypeComponentInit(
     mlir::Value baseAddr, fir::RecordType recTy) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   const Fortran::semantics::Scope *scope = derivedSpec.GetScope();
-  if (!scope)
-    return;
+  assert(scope && "derived type has no scope");
   const auto &typeDetails =
       derivedSpec.typeSymbol().get<Fortran::semantics::DerivedTypeDetails>();
+
   for (const auto &compName : typeDetails.componentNames()) {
     auto scopeIter = scope->find(compName);
-    if (scopeIter == scope->cend())
-      continue;
+    assert(scopeIter != scope->cend() &&
+           "component name must exist in its scope");
     const Fortran::semantics::Symbol &compSym = scopeIter->second.get();
+    // Only process data components; procedure pointers are ignored.
     const auto *objDetails =
         compSym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
-    const auto *procDetails =
-        compSym.detailsIf<Fortran::semantics::ProcEntityDetails>();
-    // Determine if the component requires initialization.
-    // Dynamic descriptors (pointers/allocatables) and explicitly initialized
-    // entities must be processed.
-    bool needsInit = Fortran::semantics::IsAllocatableOrPointer(compSym) ||
-                     (objDetails && objDetails->init()) ||
-                     (procDetails && procDetails->init().has_value());
-    if (!needsInit && !Fortran::lower::hasDefaultInitialization(compSym))
+    if (!objDetails)
+      continue;
+
+    bool isPtrOrAlloc = Fortran::semantics::IsAllocatableOrPointer(compSym);
+    const Fortran::semantics::DeclTypeSpec *declTy = compSym.GetType();
+    bool isNestedDerived = declTy && declTy->AsDerived();
+    // Targets are pointer or allocatable components, or nested derived types
+    // containing them.
+    bool isTargetComponent =
+        isPtrOrAlloc ||
+        (isNestedDerived && RequiresNonTrivialComponentInitialization(compSym));
+    if (!isTargetComponent)
       continue;
     std::string name = converter.getRecordTypeFieldName(compSym);
     mlir::Type compFirTy = recTy.getType(name);
-    if (!compFirTy)
-      continue;
+    assert(compFirTy && "Component field type not found in RecordType");
     // Compute the memory coordinate of the current component.
     auto fieldIdx = fir::FieldIndexOp::create(
         builder, loc, fir::FieldType::get(recTy.getContext()), name, recTy,
@@ -894,167 +888,73 @@ static void genDerivedTypeComponentInit(
     auto compAddr =
         fir::CoordinateOp::create(builder, loc, builder.getRefType(compFirTy),
                                   baseAddr, mlir::ValueRange{fieldIdx});
-
-    // Case A: Standard data components (ObjectEntityDetails).
-    if (objDetails) {
-      if (objDetails->init()) {
-        // Subcase A.1: Component has explicit initialization.
-        if (Fortran::semantics::IsPointer(compSym)) {
-          // Subcase A.1.1: Pointer with explicit target.
-          std::string globalName = fir::NameUniquer::doGenerated(
-              (converter.mangleName(derivedSpec) + fir::kNameSeparator + name +
-               fir::kNameSeparator + "init")
-                  .str());
-          fir::GlobalOp global = builder.getNamedGlobal(globalName);
-          if (!global) {
-            global = builder.createGlobal(loc, compFirTy, globalName,
-                                          builder.createInternalLinkage(),
-                                          mlir::Attribute{}, true);
-            createGlobalInitialization(
-                builder, global, [&](fir::FirOpBuilder &b) {
-                  mlir::Value initBox = Fortran::lower::genInitialDataTarget(
-                      converter, loc, compFirTy, *objDetails->init());
-                  fir::HasValueOp::create(b, loc, initBox);
-                });
-          }
-          auto srcAddr = fir::AddrOfOp::create(
-              builder, loc, global.resultType(), global.getSymbol());
-          mlir::Value loadedBox = fir::LoadOp::create(builder, loc, srcAddr);
-          fir::StoreOp::create(builder, loc, loadedBox, compAddr);
-        } else {
-          // Subcase A.1.2: Non-pointer components with explicit initialization.
-          Fortran::lower::StatementContext stmtCtx(/*cleanupProhibited=*/true);
-          if (mlir::isa<fir::SequenceType>(compFirTy)) {
-            std::string globalName = fir::NameUniquer::doGenerated(
-                (converter.mangleName(derivedSpec) + fir::kNameSeparator +
-                 name + fir::kNameSeparator + "arr_init")
-                    .str());
-            fir::GlobalOp global = builder.getNamedGlobal(globalName);
-            if (!global) {
-              const auto &initExpr = objDetails->init().value();
-              cuf::DataAttributeAttr dataAttr = {};
-              global = Fortran::lower::tryCreatingDenseGlobal(
-                  builder, loc, compFirTy, globalName,
-                  builder.createInternalLinkage(), /*isConst=*/true, initExpr,
-                  dataAttr);
-            }
-            if (global) {
-              auto srcAddr = fir::AddrOfOp::create(
-                  builder, loc, global.resultType(), global.getSymbol());
-              fir::CopyOp::create(builder, loc, srcAddr, compAddr,
-                                  /*noOverlap=*/true);
-            } else {
-              Fortran::lower::StatementContext inlineCtx;
-              Fortran::lower::SymMap emptyMap;
-              hlfir::Entity lhs{compAddr};
-              hlfir::Entity rhs = Fortran::lower::convertExprToHLFIR(
-                  loc, converter, objDetails->init().value(), emptyMap,
-                  inlineCtx);
-              hlfir::AssignOp::create(builder, loc, rhs, lhs);
-            }
-          } else {
-            // Scalar component: Evaluate the expression and store directly.
-            fir::ExtendedValue exInitVal = genInitializerExprValue(
-                converter, loc, objDetails->init().value(), stmtCtx);
-            mlir::Value initVal = fir::getBase(exInitVal);
-            if (fir::isa_ref_type(initVal.getType()) &&
-                !fir::isa_ref_type(compFirTy))
-              initVal = fir::LoadOp::create(builder, loc, initVal);
-            mlir::Value castVal =
-                builder.createConvert(loc, compFirTy, initVal);
-            fir::StoreOp::create(builder, loc, castVal, compAddr);
-          }
-        }
-      } else if (Fortran::semantics::IsAllocatableOrPointer(compSym)) {
-        // Subcase A.2: Pointer or allocatable without initialization.
-        // Create deallocated/disassociated value.
-        std::string globalName = fir::NameUniquer::doGenerated(
-            (converter.mangleName(derivedSpec) + fir::kNameSeparator + name +
-             fir::kNameSeparator + "null_box")
-                .str());
-        fir::GlobalOp global = builder.getNamedGlobal(globalName);
-        if (!global) {
-          global = builder.createGlobal(loc, compFirTy, globalName,
-                                        builder.createInternalLinkage(),
-                                        mlir::Attribute{}, true);
-          createGlobalInitialization(
-              builder, global, [&](fir::FirOpBuilder &b) {
-                mlir::Value nullBox = fir::factory::createUnallocatedBox(
-                    b, loc, compFirTy, mlir::ValueRange{});
-                fir::HasValueOp::create(b, loc, nullBox);
-              });
-        }
-        auto srcAddr = fir::AddrOfOp::create(builder, loc, global.resultType(),
-                                             global.getSymbol());
-        mlir::Value loadedBox = fir::LoadOp::create(builder, loc, srcAddr);
-        fir::StoreOp::create(builder, loc, loadedBox, compAddr);
-      } else if (Fortran::lower::hasDefaultInitialization(compSym)) {
-        // Subcase A.3: Nested derived type requires initialization.
-        // Derived type has no explicit initialization but contains
-        // components requiring initialization.
-        if (mlir::isa<fir::SequenceType>(compFirTy) &&
-            isComplexDerivedType(compSym)) {
-          // Complex derived type arrays.
-          mlir::Value box =
-              builder.createBox(loc, fir::ExtendedValue(compAddr));
-          fir::runtime::genDerivedTypeInitialize(builder, loc, box);
-        } else if (isComplexDerivedType(compSym)) {
-          // Complex derived type scalars.
-          const Fortran::semantics::DeclTypeSpec *compDeclTy =
-              compSym.GetType();
-          auto nestedRecTy = mlir::dyn_cast<fir::RecordType>(compFirTy);
-          genDerivedTypeComponentInit(converter, loc, *compDeclTy->AsDerived(),
-                                      compAddr, nestedRecTy);
-        } else {
-          // Simple derived type scalars.
-          Fortran::lower::StatementContext stmtCtx;
-          mlir::Value initVal = genDefaultInitializerValue(
-              converter, loc, compSym, compFirTy, stmtCtx);
-          mlir::Value castVal = builder.createConvert(loc, compFirTy, initVal);
-          fir::StoreOp::create(builder, loc, castVal, compAddr);
-        }
-      }
-    }
-    // Case B: Procedure pointers (ProcEntityDetails).
-    else if (procDetails) {
-      if (procDetails->init().has_value()) {
-        // Has a procedure or NULL() target.
-        std::string globalName = fir::NameUniquer::doGenerated(
-            (converter.mangleName(derivedSpec) + fir::kNameSeparator + name +
-             fir::kNameSeparator + "init")
-                .str());
-        fir::GlobalOp global = builder.getNamedGlobal(globalName);
-        if (!global) {
-          global = builder.createGlobal(loc, compFirTy, globalName,
-                                        builder.createInternalLinkage(),
-                                        mlir::Attribute{}, true);
-          createGlobalInitialization(
-              builder, global, [&](fir::FirOpBuilder &b) {
-                mlir::Value procBox;
-                auto targetSym = *procDetails->init();
-                if (targetSym) {
-                  procBox =
-                      Fortran::lower::convertProcedureDesignatorInitialTarget(
-                          converter, loc, *targetSym);
-                  procBox = b.createConvert(loc, compFirTy, procBox);
-                } else {
-                  procBox = fir::factory::createNullBoxProc(b, loc, compFirTy);
-                }
-                fir::HasValueOp::create(b, loc, procBox);
-              });
-        }
-        auto srcAddr = fir::AddrOfOp::create(builder, loc, global.resultType(),
-                                             global.getSymbol());
-        mlir::Value loadedBox = fir::LoadOp::create(builder, loc, srcAddr);
-        fir::StoreOp::create(builder, loc, loadedBox, compAddr);
-      } else {
-        // Has no initialization.
-        continue;
-      }
+    if (isPtrOrAlloc) {
+      // Target 1: pointer or allocatable component.
+      mlir::Value nullBox = fir::factory::createUnallocatedBox(
+          builder, loc, compFirTy, mlir::ValueRange{});
+      fir::StoreOp::create(builder, loc, nullBox, compAddr);
+    } else if (isNestedDerived) {
+      // Target 2: Nested derived type containing pointer/allocatable
+      // components.
+      auto nestedRecTy = mlir::cast<fir::RecordType>(compFirTy);
+      genDerivedTypeComponentInit(converter, loc, *declTy->AsDerived(),
+                                  compAddr, nestedRecTy);
     }
   }
 }
-} // namespace
+
+/// Checks if a derived type meets the criteria for component-wise
+/// initialization. The type must contain at least one pointer/allocatable
+/// component, and strictly NO explicit initialization anywhere in its
+/// hierarchy.
+static bool isEligibleForComponentWiseInit(
+    const Fortran::semantics::DerivedTypeSpec &derivedSpec) {
+  bool hasPtrOrAlloc = false;
+  auto checkImpl = [&](const Fortran::semantics::DerivedTypeSpec &spec,
+                       auto &self) -> bool {
+    const Fortran::semantics::Scope *scope = spec.scope();
+    assert(scope && "derived type has no scope");
+    const auto &typeDetails =
+        spec.typeSymbol().get<Fortran::semantics::DerivedTypeDetails>();
+    for (const auto &compName : typeDetails.componentNames()) {
+      auto scopeIter = scope->find(compName);
+      assert(scopeIter != scope->cend() &&
+             "component name must exist in its scope");
+      const Fortran::semantics::Symbol &comp = scopeIter->second.get();
+      const auto *objDetails =
+          comp.detailsIf<Fortran::semantics::ObjectEntityDetails>();
+      const auto *procDetails =
+          comp.detailsIf<Fortran::semantics::ProcEntityDetails>();
+      // If any data component or procedure pointer has explicit
+      // initialization, abort and fall back to the global memcpy approach.
+      if ((objDetails && objDetails->init()) ||
+          (procDetails && procDetails->init())) {
+        return false;
+      }
+      if (Fortran::semantics::IsAllocatableOrPointer(comp)) {
+        hasPtrOrAlloc = true;
+        continue;
+      }
+      // Recursively traverse nested derived types.
+      if (const Fortran::semantics::DeclTypeSpec *declTy = comp.GetType()) {
+        if (const Fortran::semantics::DerivedTypeSpec *nestedSpec =
+                declTy->AsDerived()) {
+          // If it is an array of derived types that requires initialization,
+          // fall back to memcpy to avoid generating expensive runtime loops.
+          if (comp.Rank() > 0 &&
+              RequiresNonTrivialComponentInitialization(comp)) {
+            return false;
+          }
+          if (!self(*nestedSpec, self)) {
+            return false;
+          }
+        }
+      }
+    }
+    return true;
+  };
+  return checkImpl(derivedSpec, checkImpl) && hasPtrOrAlloc;
+}
 
 /// Call default initialization runtime routine to initialize \p var.
 void Fortran::lower::defaultInitializeAtRuntime(
@@ -1083,7 +983,7 @@ void Fortran::lower::defaultInitializeAtRuntime(
     mlir::Type symTy = converter.genType(sym);
     const auto *details =
         sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
-    bool useFastInit =
+    bool isDerivedTypeScalar =
         details && !Fortran::semantics::IsPolymorphic(sym) &&
         declTy->category() ==
             Fortran::semantics::DeclTypeSpec::Category::TypeDerived &&
@@ -1091,11 +991,11 @@ void Fortran::lower::defaultInitializeAtRuntime(
         !sym.test(Fortran::semantics::Symbol::Flag::OmpPrivate) &&
         !sym.test(Fortran::semantics::Symbol::Flag::OmpFirstPrivate) &&
         !Fortran::semantics::HasCUDAComponent(sym);
-    if (useFastInit) {
-      if (enablePreciseInit) {
-        // Precise initialization
+    if (isDerivedTypeScalar) {
+      const auto &derivedSpec = *declTy->AsDerived();
+      if (isEligibleForComponentWiseInit(derivedSpec)) {
+        // Component-wise initialization
         mlir::Value baseAddr = fir::getBase(exv);
-        const auto &derivedSpec = *sym.GetType()->AsDerived();
         auto recTy = mlir::cast<fir::RecordType>(
             fir::unwrapPassByRefType(baseAddr.getType()));
         genDerivedTypeComponentInit(converter, loc, derivedSpec, baseAddr,
