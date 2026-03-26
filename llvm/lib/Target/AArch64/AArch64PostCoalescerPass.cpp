@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 //===----------------------------------------------------------------------===//
 
+#include "AArch64.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/InitializePasses.h"
 
@@ -18,13 +20,18 @@ using namespace llvm;
 
 namespace {
 
-struct AArch64PostCoalescer : public MachineFunctionPass {
+struct AArch64PostCoalescerImpl {
+  LiveIntervals &LIS;
+  MachineRegisterInfo *MRI;
+
+  explicit AArch64PostCoalescerImpl(LiveIntervals &LIS) : LIS(LIS) {}
+  bool run(MachineFunction &MF);
+};
+
+struct AArch64PostCoalescerLegacy : public MachineFunctionPass {
   static char ID;
 
-  AArch64PostCoalescer() : MachineFunctionPass(ID) {}
-
-  LiveIntervals *LIS;
-  MachineRegisterInfo *MRI;
+  AArch64PostCoalescerLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -33,32 +40,29 @@ struct AArch64PostCoalescer : public MachineFunctionPass {
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
+    AU.setPreservesCFG();
     AU.addRequired<LiveIntervalsWrapperPass>();
+    AU.addPreserved<LiveIntervalsWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
 
-char AArch64PostCoalescer::ID = 0;
+char AArch64PostCoalescerLegacy::ID = 0;
 
 } // end anonymous namespace
 
-INITIALIZE_PASS_BEGIN(AArch64PostCoalescer, "aarch64-post-coalescer-pass",
+INITIALIZE_PASS_BEGIN(AArch64PostCoalescerLegacy, "aarch64-post-coalescer-pass",
                       "AArch64 Post Coalescer Pass", false, false)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
-INITIALIZE_PASS_END(AArch64PostCoalescer, "aarch64-post-coalescer-pass",
+INITIALIZE_PASS_END(AArch64PostCoalescerLegacy, "aarch64-post-coalescer-pass",
                     "AArch64 Post Coalescer Pass", false, false)
 
-bool AArch64PostCoalescer::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
-
+bool AArch64PostCoalescerImpl::run(MachineFunction &MF) {
   AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
   if (!FuncInfo->hasStreamingModeChanges())
     return false;
 
   MRI = &MF.getRegInfo();
-  LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   bool Changed = false;
 
   for (MachineBasicBlock &MBB : MF) {
@@ -81,11 +85,11 @@ bool AArch64PostCoalescer::runOnMachineFunction(MachineFunction &MF) {
 
         // MI must be erased from the basic block before recalculating the live
         // interval.
-        LIS->RemoveMachineInstrFromMaps(MI);
+        LIS.RemoveMachineInstrFromMaps(MI);
         MI.eraseFromParent();
 
-        LIS->removeInterval(Src);
-        LIS->createAndComputeVirtRegInterval(Src);
+        LIS.removeInterval(Src);
+        LIS.createAndComputeVirtRegInterval(Src);
 
         Changed = true;
         break;
@@ -97,6 +101,27 @@ bool AArch64PostCoalescer::runOnMachineFunction(MachineFunction &MF) {
   return Changed;
 }
 
+bool AArch64PostCoalescerLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+
+  auto &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  return AArch64PostCoalescerImpl(LIS).run(MF);
+}
+
+PreservedAnalyses
+AArch64PostCoalescerPass::run(MachineFunction &MF,
+                              MachineFunctionAnalysisManager &MFAM) {
+  auto &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  const bool Changed = AArch64PostCoalescerImpl(LIS).run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  PA.preserve<LiveIntervalsAnalysis>();
+  return PA;
+}
+
 FunctionPass *llvm::createAArch64PostCoalescerPass() {
-  return new AArch64PostCoalescer();
+  return new AArch64PostCoalescerLegacy();
 }
