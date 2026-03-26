@@ -1235,11 +1235,16 @@ TEST(Error, NonNullSuccess) {
 #if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
 TEST(Error, NonNullFails) {
   int *NullPtr = nullptr;
-  EXPECT_DEATH(checkNotNull(NullPtr),
+  EXPECT_DEATH(NullPtr = checkNotNull(NullPtr),
                "Expected a non-null pointer but got a null pointer")
       << "checkNotNull(NullPtr) did not cause an abort for null pointer";
 
-  EXPECT_DEATH(checkNotNull(NullPtr, "custom message"), "custom message")
+  EXPECT_DEATH(NullPtr = checkNotNull(nullptr),
+               "Expected a non-null pointer but got a null pointer")
+      << "checkNotNull(NullPtr) did not cause an abort for null pointer";
+
+  EXPECT_DEATH(NullPtr = checkNotNull(NullPtr, "custom message"),
+               "custom message")
       << "checkNotNull(nullptr) did not cause an abort for null pointer";
 }
 #endif

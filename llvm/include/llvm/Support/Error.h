@@ -813,14 +813,15 @@ T cantFail(Expected<T> ValOrErr, const char *Msg = nullptr) {
 
 /// Calls llvm_unreachable if Pointer is null, otherwise returns the
 /// pointer as is.
-template <typename T>
-LLVM_ATTRIBUTE_RETURNS_NONNULL T *checkNotNull(T *Pointer,
-                                               const char *Msg = nullptr) {
-  if (Pointer)
+template <typename T, typename = std::enable_if_t<
+                          std::is_pointer_v<T> ||
+                          std::is_constructible_v<T, std::nullptr_t>>>
+[[nodiscard]] T checkNotNull(
+    T Pointer,
+    const char *Msg = "Expected a non-null pointer but got a null pointer") {
+  assert(Msg);
+  if (Pointer != nullptr)
     return Pointer;
-
-  if (!Msg)
-    Msg = "Expected a non-null pointer but got a null pointer";
   llvm_unreachable(Msg);
 }
 
