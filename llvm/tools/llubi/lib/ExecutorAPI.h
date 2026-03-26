@@ -1,9 +1,12 @@
-//===--- ExecutorAPI.h - Interface of InstExecutor ---------------*- C++
-//-*-===//
+//===--- ExecutorAPI.h - Non-visitor methods of InstExecutor --------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file implements non-visitor methods of InstExecutor for code reuse.
 //
 //===----------------------------------------------------------------------===//
 

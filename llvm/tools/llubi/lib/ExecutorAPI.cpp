@@ -1,9 +1,12 @@
-//===- ExecutorAPI.cpp - Interface of InstExecutor ---------------*- C++
-//-*-===//
+//===- ExecutorAPI.cpp - Non-visitor methods of InstExecutor --------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file implements non-visitor methods of InstExecutor for code reuse.
 //
 //===----------------------------------------------------------------------===//
 
@@ -32,6 +35,7 @@ void ExecutorAPI::reportImmediateUB(StringRef Msg) {
   // TODO: Provide stack trace information.
   Handler.onImmediateUB(Msg);
 }
+
 void ExecutorAPI::reportError(StringRef Msg) {
   // Check if we have already reported an error message.
   if (!Status)
@@ -99,6 +103,7 @@ AnyValue ExecutorAPI::load(const AnyValue &Ptr, Align Alignment, Type *ValTy) {
   }
   return AnyValue::getPoisonValue(Ctx, ValTy);
 }
+
 void ExecutorAPI::store(const AnyValue &Ptr, Align Alignment,
                         const AnyValue &Val, Type *ValTy) {
   if (Ptr.isPoison()) {
