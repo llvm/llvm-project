@@ -49,7 +49,7 @@ jobs:
         run: cmake --build build --target libc-shared-tests
 
   # -------------------------------------------------------------
-  # Job 2: Linux Emulated (ppc64le & s390x)
+  # Job 2: Linux Emulated
   # -------------------------------------------------------------
   linux-cross-arch-shared:
     name: libc-shared-tests on (${{ matrix.arch }})
