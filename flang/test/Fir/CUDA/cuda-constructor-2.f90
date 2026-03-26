@@ -107,7 +107,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 // CHECK: fir.global internal @_QMtestEmanx.managed.ptr {section = "__nv_managed_data__"} : !fir.llvm_ptr<i8>
 // CHECK:   fir.zero_bits !fir.llvm_ptr<i8>
 
-// Constructor should register with CUFRegisterManagedVariable.
+// Constructor should register with CUFRegisterManagedVariable then init module.
 // CHECK: llvm.func internal @__cudaFortranConstructor()
 // CHECK: fir.address_of(@_QMtestEmanx.managed.ptr) : !fir.ref<!fir.llvm_ptr<i8>>
 // CHECK: fir.call @_FortranACUFRegisterManagedVariable
+// CHECK: fir.call @_FortranACUFInitModule
