@@ -1383,7 +1383,8 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
   const SCEV *SrcConst = Src->getStart();
   const SCEV *DstConst = Dst->getStart();
 
-  assert(Coeff == SE->getNegativeSCEV(Dst->getStepRecurrence(*SE)));
+  assert(Coeff == SE->getNegativeSCEV(Dst->getStepRecurrence(*SE)) &&
+         "Unexpected input for weakCrossingSIVtest");
 
   LLVM_DEBUG(dbgs() << "\tWeak-Crossing SIV test\n");
   LLVM_DEBUG(dbgs() << "\t    Coeff = " << *Coeff << "\n");
