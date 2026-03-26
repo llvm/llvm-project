@@ -2993,10 +2993,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   /// Get the elapsed time in milliseconds between two events.
   Error getEventElapsedTimeImpl(void *StartEventPtr, void *EndEventPtr,
                                 float *ElapsedTime) override {
-    if (!ElapsedTime)
-      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                           "elapsed time output pointer is null");
-
     AMDGPUEventTy *StartEvent =
         reinterpret_cast<AMDGPUEventTy *>(StartEventPtr);
     AMDGPUEventTy *EndEvent = reinterpret_cast<AMDGPUEventTy *>(EndEventPtr);

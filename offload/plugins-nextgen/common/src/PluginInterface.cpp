@@ -1571,6 +1571,9 @@ Error GenericDeviceTy::syncEvent(void *EventPtr) {
 Error GenericDeviceTy::getEventElapsedTime(void *StartEventPtr,
                                            void *EndEventPtr,
                                            float *ElapsedTime) {
+  if (!ElapsedTime)
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "elapsed time output pointer is null");
   return getEventElapsedTimeImpl(StartEventPtr, EndEventPtr, ElapsedTime);
 }
 
