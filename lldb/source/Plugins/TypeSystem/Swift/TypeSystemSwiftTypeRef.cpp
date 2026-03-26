@@ -3864,6 +3864,7 @@ TypeSystemSwiftTypeRef::GetCanonicalType(lldb::opaque_compiler_type_t type,
 CompilerType
 TypeSystemSwiftTypeRef::GetCanonicalType(opaque_compiler_type_t type,
                                          const ExecutionContext *exe_ctx) {
+  static constexpr const char *FUNC_NAME = __FUNCTION__;
   auto impl = [&]() {
     using namespace swift::Demangle;
     Demangler dem;
@@ -3881,7 +3882,7 @@ TypeSystemSwiftTypeRef::GetCanonicalType(opaque_compiler_type_t type,
       CompilerType result =
           GetTypeFromMangledTypename(ast_type.GetMangledTypeName());
       if (result && !llvm::isa<TypeSystemSwiftTypeRefForExpressions>(this))
-        DiagnoseSwiftASTContextFallback(__FUNCTION__, type);
+        DiagnoseSwiftASTContextFallback(FUNC_NAME, type);
       return result;
     }
     auto flavor = SwiftLanguageRuntime::GetManglingFlavor(AsMangledName(type));
@@ -4104,6 +4105,7 @@ CompilerType TypeSystemSwiftTypeRef::GetVoidFunctionType(
 llvm::Expected<uint64_t>
 TypeSystemSwiftTypeRef::GetBitSize(opaque_compiler_type_t type,
                                    ExecutionContextScope *exe_scope) {
+  static constexpr const char *FUNC_NAME = __FUNCTION__;
   auto impl = [&]() -> llvm::Expected<uint64_t> {
     auto get_static_size = [&](bool cached_only) -> std::optional<uint64_t> {
       if (IsMeaninglessWithoutDynamicResolution(type))
@@ -4165,13 +4167,13 @@ TypeSystemSwiftTypeRef::GetBitSize(opaque_compiler_type_t type,
           AsMangledName(type));
 
       // Runtime failed, fallback to SwiftASTContext.
-      if (UseSwiftASTContextFallback(__FUNCTION__, type)) {
+      if (UseSwiftASTContextFallback(FUNC_NAME, type)) {
         if (auto swift_ast_context =
                 GetSwiftASTContext(GetSymbolContext(exe_scope))) {
           auto result = swift_ast_context->GetBitSize(
               ReconstructType(type, exe_scope), exe_scope);
           if (result)
-            DiagnoseSwiftASTContextFallback(__FUNCTION__, type);
+            DiagnoseSwiftASTContextFallback(FUNC_NAME, type);
           return result;
         }
       }
@@ -4206,6 +4208,7 @@ TypeSystemSwiftTypeRef::GetBitSize(opaque_compiler_type_t type,
 std::optional<uint64_t>
 TypeSystemSwiftTypeRef::GetByteStride(opaque_compiler_type_t type,
                                       ExecutionContextScope *exe_scope) {
+  static constexpr const char *FUNC_NAME = __FUNCTION__;
   auto impl = [&]() -> std::optional<uint64_t> {
     if (auto *runtime =
             SwiftLanguageRuntime::Get(exe_scope->CalculateProcess())) {
@@ -4214,13 +4217,13 @@ TypeSystemSwiftTypeRef::GetByteStride(opaque_compiler_type_t type,
         return stride;
     }
     // Runtime failed, fallback to SwiftASTContext.
-    if (UseSwiftASTContextFallback(__FUNCTION__, type)) {
+    if (UseSwiftASTContextFallback(FUNC_NAME, type)) {
       if (auto swift_ast_context =
               GetSwiftASTContext(GetSymbolContext(exe_scope))) {
         auto result =
             swift_ast_context->GetByteStride(ReconstructType(type), exe_scope);
         if (result)
-          DiagnoseSwiftASTContextFallback(__FUNCTION__, type);
+          DiagnoseSwiftASTContextFallback(FUNC_NAME, type);
         return result;
       }
     }
@@ -4462,6 +4465,7 @@ TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
     uint32_t &child_bitfield_bit_size, uint32_t &child_bitfield_bit_offset,
     bool &child_is_base_class, bool &child_is_deref_of_parent,
     ValueObject *valobj, uint64_t &language_flags) {
+  static constexpr const char *FUNC_NAME = __FUNCTION__;
   child_name = "";
   child_byte_size = 0;
   child_byte_offset = 0;
@@ -4529,13 +4533,13 @@ TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
                 AsMangledName(type));
 
     // Runtime failed, fallback to SwiftASTContext.
-    if (UseSwiftASTContextFallback(__FUNCTION__, type)) {
+    if (UseSwiftASTContextFallback(FUNC_NAME, type)) {
       // FIXME: SwiftASTContext can sometimes find more Clang types because it
       // imports Clang modules from source. We should be able to replicate this
       // and remove this fallback.
       auto result = fallback();
       if (result)
-        DiagnoseSwiftASTContextFallback(__FUNCTION__, type);
+        DiagnoseSwiftASTContextFallback(FUNC_NAME, type);
       return result;
     }
     return llvm::createStringError(llvm::inconvertibleErrorCode(), error);
@@ -5075,6 +5079,7 @@ TypeSystemSwiftTypeRef::GetStaticSelfType(lldb::opaque_compiler_type_t type) {
 CompilerType
 TypeSystemSwiftTypeRef::GetInstanceType(opaque_compiler_type_t type,
                                         ExecutionContextScope *exe_scope) {
+  static constexpr const char *FUNC_NAME = __FUNCTION__;
   auto impl = [&]() -> CompilerType {
     using namespace swift::Demangle;
     auto mangled_name = AsMangledName(type);
@@ -5094,13 +5099,13 @@ TypeSystemSwiftTypeRef::GetInstanceType(opaque_compiler_type_t type,
       // type alias in the REPL. In these cases, fallback to asking the AST
       // for the canonical type.
       // Runtime failed, fallback to SwiftASTContext.
-      if (UseSwiftASTContextFallback(__FUNCTION__, type))
+      if (UseSwiftASTContextFallback(FUNC_NAME, type))
         if (auto swift_ast_context =
                 GetSwiftASTContext(GetSymbolContext(exe_scope))) {
           auto result = swift_ast_context->GetInstanceType(
               ReconstructType(type, exe_scope), exe_scope);
           if (result)
-            DiagnoseSwiftASTContextFallback(__FUNCTION__, type);
+            DiagnoseSwiftASTContextFallback(FUNC_NAME, type);
           return result;
         }
       return {};
@@ -5375,6 +5380,7 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
     size_t data_byte_size, uint32_t bitfield_bit_size,
     uint32_t bitfield_bit_offset, ExecutionContextScope *exe_scope,
     bool is_base_class) {
+  static constexpr const char *FUNC_NAME = __FUNCTION__;
   if (!type)
     return false;
 
@@ -5540,7 +5546,7 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
                 ReconstructType(type, exe_scope), s, format, data, data_offset,
                 data_byte_size, bitfield_bit_size, bitfield_bit_offset,
                 exe_scope, is_base_class)) {
-          DiagnoseSwiftASTContextFallback(__FUNCTION__, type);
+          DiagnoseSwiftASTContextFallback(FUNC_NAME, type);
           return true;
         }
       }
@@ -5577,7 +5583,7 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
                 ReconstructType(type, exe_scope), s, format, data, data_offset,
                 data_byte_size, bitfield_bit_size, bitfield_bit_offset,
                 exe_scope, is_base_class)) {
-          DiagnoseSwiftASTContextFallback(__FUNCTION__, type);
+          DiagnoseSwiftASTContextFallback(FUNC_NAME, type);
           return true;
         }
       }
