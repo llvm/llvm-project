@@ -48,30 +48,39 @@ The check also handles range-based algorithms introduced in C++20.
 
 Supported algorithms:
 
+- ``std::adjacent_find``
 - ``std::find``
-- ``std::find_if``
-- ``std::find_if_not``
-- ``std::search``
-- ``std::search_n``
 - ``std::find_end``
 - ``std::find_first_of``
-- ``std::lower_bound``
-- ``std::upper_bound``
-- ``std::partition_point``
-- ``std::min_element``
-- ``std::max_element``
-- ``std::adjacent_find``
+- ``std::find_if``
+- ``std::find_if_not``
 - ``std::is_sorted_until``
+- ``std::lower_bound``
+- ``std::max_element``
+- ``std::min_element``
+- ``std::partition_point``
+- ``std::search``
+- ``std::search_n``
+- ``std::upper_bound``
+- ``std::ranges::adjacent_find``
 - ``std::ranges::find``
+- ``std::ranges::find_first_of``
 - ``std::ranges::find_if``
 - ``std::ranges::find_if_not``
-- ``std::ranges::lower_bound``
-- ``std::ranges::upper_bound``
-- ``std::ranges::min_element``
-- ``std::ranges::max_element``
-- ``std::ranges::find_first_of``
-- ``std::ranges::adjacent_find``
 - ``std::ranges::is_sorted_until``
+- ``std::ranges::lower_bound``
+- ``std::ranges::max_element``
+- ``std::ranges::min_element``
+- ``std::ranges::upper_bound``
+
+Limitations
+-----------
+
+This check has the following known limitations:
+
+- It only tracks variables that are directly initialized by a call to one of
+  the supported algorithms. Intermediate variable assignments or values passed
+  through function calls are not followed.
 
 Options
 -------
