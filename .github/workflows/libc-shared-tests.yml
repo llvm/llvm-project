@@ -13,17 +13,13 @@ jobs:
   # -------------------------------------------------------------
   windows-msvc-shared:
     name: libc-shared-test with MSVC (${{ matrix.arch }})
+    runs-on: windows-latest
     strategy:
       fail-fast: false # If one arch fails, let the other finish
       matrix:
         - arch: amd64
-          os: windows-latest
         - arch: amd64_x86
-          os: windows-latest
-        - arch: arm64
-          os: windows-11-arm
-
-    runs-on: ${{ matrix.os }}
+        - arch: amd64_arm64
 
     steps:
       - name: Checkout LLVM
