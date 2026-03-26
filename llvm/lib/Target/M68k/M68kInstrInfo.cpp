@@ -706,13 +706,13 @@ void M68kInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   // Asymmetric register copies
   // 8 -> 16
   else if (M68k::DR8RegClass.contains(SrcReg) &&
-             M68k::XR16RegClass.contains(DstReg)) {
+           M68k::XR16RegClass.contains(DstReg)) {
     Opc = M68k::MOVXd16d8;
-  // 8 -> 32
+    // 8 -> 32
   } else if (M68k::DR8RegClass.contains(SrcReg) &&
              M68k::XR32RegClass.contains(DstReg)) {
     Opc = M68k::MOVXd32d8;
-  // 16 -> 32
+    // 16 -> 32
   } else if (M68k::XR16RegClass.contains(SrcReg) &&
              M68k::XR32RegClass.contains(DstReg)) {
     Opc = M68k::MOVXd32d16;
@@ -722,8 +722,8 @@ void M68kInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   // NOTE: M68000 uses MOVE from SR to copy from CCR, all other variants use
   else if (SrcReg == M68k::CCR) {
     if (M68k::DR8RegClass.contains(DstReg) ||
-    M68k::DR16RegClass.contains(DstReg) ||
-    M68k::DR32RegClass.contains(DstReg)) {
+        M68k::DR16RegClass.contains(DstReg) ||
+        M68k::DR32RegClass.contains(DstReg)) {
       Opc = STI.isM68000() ? M68k::MOV16ds : M68k::MOV16dc;
     } else {
       LLVM_DEBUG(dbgs() << "Cannot copy CCR to " << RI.getName(DstReg) << '\n');
@@ -734,8 +734,8 @@ void M68kInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   // Copy to CCR
   else if (DstReg == M68k::CCR) {
     if (M68k::DR8RegClass.contains(SrcReg) ||
-          M68k::DR16RegClass.contains(SrcReg) ||
-          M68k::DR32RegClass.contains(SrcReg)) {
+        M68k::DR16RegClass.contains(SrcReg) ||
+        M68k::DR32RegClass.contains(SrcReg)) {
       Opc = M68k::MOV16cd;
     } else {
       LLVM_DEBUG(dbgs() << "Cannot copy " << RI.getName(SrcReg) << " to CCR\n");
