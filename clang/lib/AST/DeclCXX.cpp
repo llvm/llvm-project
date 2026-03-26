@@ -137,12 +137,10 @@ CXXRecordDecl *CXXRecordDecl::Create(const ASTContext &C, TagKind TK,
       CXXRecordDecl(CXXRecord, TK, C, DC, StartLoc, IdLoc, Id, PrevDecl);
 }
 
-CXXRecordDecl *
-CXXRecordDecl::CreateLambda(const ASTContext &C, DeclContext *DC,
-                            TypeSourceInfo *Info, SourceLocation Loc,
-                            unsigned DependencyKind, bool IsGeneric,
-                            bool IsConstevalBlock,
-                            LambdaCaptureDefault CaptureDefault) {
+CXXRecordDecl *CXXRecordDecl::CreateLambda(
+    const ASTContext &C, DeclContext *DC, TypeSourceInfo *Info,
+    SourceLocation Loc, unsigned DependencyKind, bool IsGeneric,
+    bool IsConstevalBlock, LambdaCaptureDefault CaptureDefault) {
   auto *R = new (C, DC) CXXRecordDecl(CXXRecord, TagTypeKind::Class, C, DC, Loc,
                                       Loc, nullptr, nullptr);
   R->setBeingDefined(true);
@@ -1683,7 +1681,8 @@ bool CXXRecordDecl::isGenericLambda() const {
 }
 
 bool CXXRecordDecl::isLambdaForConstevalBlock() const {
-  if (!isLambda()) return false;
+  if (!isLambda())
+    return false;
   return getLambdaData().IsConstevalBlock;
 }
 
@@ -3675,7 +3674,7 @@ SourceRange ConstevalBlockDecl::getSourceRange() const {
   return {getLocation(), Call->getEndLoc()};
 }
 
-LambdaExpr* ConstevalBlockDecl::getLambda() {
+LambdaExpr *ConstevalBlockDecl::getLambda() {
   auto *CE = cast<CallExpr>(Call);
 
   // Since the call expression always calls a 'static consteval' lambda with
@@ -3684,7 +3683,7 @@ LambdaExpr* ConstevalBlockDecl::getLambda() {
   // `-CallExpr
   //   `-LambdaExpr
   //
-  if (auto* Lambda = dyn_cast<LambdaExpr>(CE->getCallee()))
+  if (auto *Lambda = dyn_cast<LambdaExpr>(CE->getCallee()))
     return Lambda;
 
   // And outside a template, we end up with:

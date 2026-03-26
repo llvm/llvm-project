@@ -2147,7 +2147,8 @@ void ASTDeclMerger::MergeDefinitionData(
     auto &Lambda2 = static_cast<CXXRecordDecl::LambdaDefinitionData &>(MergeDD);
     DetectedOdrViolation |= Lambda1.DependencyKind != Lambda2.DependencyKind;
     DetectedOdrViolation |= Lambda1.IsGenericLambda != Lambda2.IsGenericLambda;
-    DetectedOdrViolation |= Lambda1.IsConstevalBlock != Lambda2.IsConstevalBlock;
+    DetectedOdrViolation |=
+        Lambda1.IsConstevalBlock != Lambda2.IsConstevalBlock;
     DetectedOdrViolation |= Lambda1.CaptureDefault != Lambda2.CaptureDefault;
     DetectedOdrViolation |= Lambda1.NumCaptures != Lambda2.NumCaptures;
     DetectedOdrViolation |=

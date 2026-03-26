@@ -18052,8 +18052,8 @@ Decl *Sema::BuildConstevalBlockDeclaration(SourceLocation ConstevalLoc,
   if (FullExpr.isInvalid())
     return nullptr;
 
-  Expr* E = FullExpr.get();
-  Decl* D = ConstevalBlockDecl::Create(Context, CurContext, ConstevalLoc, Call);
+  Expr *E = FullExpr.get();
+  Decl *D = ConstevalBlockDecl::Create(Context, CurContext, ConstevalLoc, Call);
   CurContext->addDecl(D);
 
   if (!E->isTypeDependent() && !E->isValueDependent()) {

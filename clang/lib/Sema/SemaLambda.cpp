@@ -246,7 +246,8 @@ getGenericLambdaTemplateParameterList(LambdaScopeInfo *LSI, Sema &SemaRef) {
 
 CXXRecordDecl *
 Sema::createLambdaClosureType(SourceRange IntroducerRange, TypeSourceInfo *Info,
-                              unsigned LambdaDependencyKind, bool ForConstevalBlock,
+                              unsigned LambdaDependencyKind,
+                              bool ForConstevalBlock,
                               LambdaCaptureDefault CaptureDefault) {
   DeclContext *DC = CurContext;
 

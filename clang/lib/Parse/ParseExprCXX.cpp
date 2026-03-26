@@ -1205,9 +1205,8 @@ static void DiagnoseStaticSpecifierRestrictions(Parser &P,
   }
 }
 
-ExprResult
-Parser::ParseLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
-                                             SourceLocation ConstevalBlockStart) {
+ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
+    LambdaIntroducer &Intro, SourceLocation ConstevalBlockStart) {
   assert(!ConstevalBlockStart.isValid() || Tok.is(tok::l_brace));
   SourceLocation LambdaBeginLoc = Intro.Range.getBegin();
   if (getLangOpts().HLSL)

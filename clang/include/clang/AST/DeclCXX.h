@@ -4191,8 +4191,7 @@ public:
 class ConstevalBlockDecl : public Decl {
   Expr *Call;
 
-  ConstevalBlockDecl(DeclContext *DC, SourceLocation ConstevalLoc,
-                     Expr *Call)
+  ConstevalBlockDecl(DeclContext *DC, SourceLocation ConstevalLoc, Expr *Call)
       : Decl(ConstevalBlock, DC, ConstevalLoc), Call(Call) {}
 
   virtual void anchor();
@@ -4201,8 +4200,7 @@ public:
   friend class ASTDeclReader;
 
   static ConstevalBlockDecl *Create(ASTContext &C, DeclContext *DC,
-                                    SourceLocation ConstevalLoc,
-                                    Expr *Expr);
+                                    SourceLocation ConstevalLoc, Expr *Expr);
   static ConstevalBlockDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   /// Get the call expression that invokes the lambda that is the body of this
@@ -4211,7 +4209,7 @@ public:
   const Expr *getCallExpr() const { return Call; }
 
   /// Get the lambda that corresponds to the body of the consteval block.
-  LambdaExpr* getLambda();
+  LambdaExpr *getLambda();
   const LambdaExpr *getLambda() const {
     return const_cast<ConstevalBlockDecl *>(this)->getLambda();
   }
