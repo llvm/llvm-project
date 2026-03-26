@@ -1,4 +1,4 @@
-
+# This file provides the defaults for the stdlib/unwindlib/rtlib arguments
 --stdlib=@CLANG_DEFAULT_CXX_STDLIB@
 --unwindlib=@CLANG_DEFAULT_UNWINDLIB@
 --rtlib=@CLANG_DEFAULT_RTLIB@

@@ -39,36 +39,6 @@ if (CLANG_BOLT AND NOT LLVM_BUILD_INSTRUMENTED)
   endif()
 endif()
 
-if(NOT CLANG_LINKS_TO_CREATE)
-  set(CLANG_LINKS_TO_CREATE clang++ clang-cl clang-cpp)
-endif()
-
-if (CLANG_ENABLE_HLSL)
-  set(HLSL_LINK clang-dxc)
-endif()
-
-set(config_files)
-foreach(binary clang ${CLANG_LINKS_TO_CREATE} ${HLSL_LINK})
-  set(config_path "${LLVM_RUNTIME_OUTPUT_INTDIR}/${binary}.cfg")
-  configure_file(clang.cfg.in "${config_path}" @ONLY)
-  list(APPEND config_files "${config_path}")
-endforeach()
-
-install(
-  FILES ${config_files}
-  DESTINATION "${CMAKE_INSTALL_BINDIR}"
-  COMPONENT clang-config-files
-)
-
-if(NOT LLVM_ENABLE_IDE)
-  # Add a dummy target so this can be used with LLVM_DISTRIBUTION_COMPONENTS
-  add_custom_target(clang-config-files
-    DEPENDS ${config_files}
-  )
-  add_llvm_install_targets(install-clang-config-files
-                           COMPONENT clang-config-files)
-endif()
-
 add_clang_tool(clang
   driver.cpp
   cc1_main.cpp
@@ -108,11 +78,45 @@ if(CLANG_PLUGIN_SUPPORT)
   export_executable_symbols_for_plugins(clang)
 endif()
 
-add_dependencies(clang clang-resource-headers clang-config-files)
+add_dependencies(clang clang-resource-headers)
+
+if(NOT CLANG_LINKS_TO_CREATE)
+  set(CLANG_LINKS_TO_CREATE clang++ clang-cl clang-cpp)
+endif()
+
+if (CLANG_ENABLE_HLSL)
+  set(HLSL_LINK clang-dxc)
+endif()
 
 foreach(link ${CLANG_LINKS_TO_CREATE} ${HLSL_LINK})
   add_clang_symlink(${link} clang)
 endforeach()
+
+set(config_files)
+foreach(binary clang ${CLANG_LINKS_TO_CREATE})
+  if (NOT ${binary} STREQUAL "clang-cl")
+    set(config_path "${LLVM_RUNTIME_OUTPUT_INTDIR}/${binary}.cfg")
+    configure_file(clang.cfg.in "${config_path}" @ONLY)
+    list(APPEND config_files "${config_path}")
+  endif()
+endforeach()
+
+install(
+  FILES ${config_files}
+  DESTINATION "${CMAKE_INSTALL_BINDIR}"
+  COMPONENT clang-config-files
+)
+
+if(NOT LLVM_ENABLE_IDE)
+  # Add a dummy target so this can be used with LLVM_DISTRIBUTION_COMPONENTS
+  add_custom_target(clang-config-files
+    DEPENDS ${config_files}
+  )
+  add_llvm_install_targets(install-clang-config-files
+                           COMPONENT clang-config-files)
+endif()
+
+add_dependencies(clang clang-config-files)
 
 # Configure plist creation for OS X.
 set (TOOL_INFO_PLIST "Info.plist" CACHE STRING "Plist name")
