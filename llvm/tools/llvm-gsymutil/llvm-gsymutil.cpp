@@ -38,14 +38,18 @@
 #include <system_error>
 #include <vector>
 
+#include "llvm/DebugInfo/GSYM/CallSiteInfo.h"
 #include "llvm/DebugInfo/GSYM/DwarfTransformer.h"
 #include "llvm/DebugInfo/GSYM/FunctionInfo.h"
 #include "llvm/DebugInfo/GSYM/GsymCreator.h"
 #include "llvm/DebugInfo/GSYM/GsymCreatorV2.h"
 #include "llvm/DebugInfo/GSYM/GsymReader.h"
 #include "llvm/DebugInfo/GSYM/GsymReaderV2.h"
+#include "llvm/DebugInfo/GSYM/Header.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
+#include "llvm/DebugInfo/GSYM/LineTable.h"
 #include "llvm/DebugInfo/GSYM/LookupResult.h"
+#include "llvm/DebugInfo/GSYM/MergedFunctionsInfo.h"
 #include "llvm/DebugInfo/GSYM/ObjectFileTransformer.h"
 #include "llvm/DebugInfo/GSYM/OutputAggregator.h"
 
@@ -533,43 +537,6 @@ static llvm::Error handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
   return Error::success();
 }
 
-static llvm::Error handleFileConversionToGSYM(StringRef Filename,
-                                              const std::string &OutFile,
-                                              OutputAggregator &Out) {
-  ErrorOr<std::unique_ptr<MemoryBuffer>> BuffOrErr =
-      MemoryBuffer::getFileOrSTDIN(Filename);
-  error(Filename, BuffOrErr.getError());
-  std::unique_ptr<MemoryBuffer> Buffer = std::move(BuffOrErr.get());
-  return handleBuffer(Filename, *Buffer, OutFile, Out);
-}
-
-static llvm::Error convertFileToGSYM(OutputAggregator &Out) {
-  // Expand any .dSYM bundles to the individual object files contained therein.
-  std::vector<std::string> Objects;
-  std::string OutFile = OutputFilename;
-  if (OutFile.empty()) {
-    OutFile = ConvertFilename;
-    OutFile += ".gsym";
-  }
-
-  Out << "Input file: " << ConvertFilename << "\n";
-
-  if (auto DsymObjectsOrErr =
-          MachOObjectFile::findDsymObjectMembers(ConvertFilename)) {
-    if (DsymObjectsOrErr->empty())
-      Objects.push_back(ConvertFilename);
-    else
-      llvm::append_range(Objects, *DsymObjectsOrErr);
-  } else {
-    error(DsymObjectsOrErr.takeError());
-  }
-
-  for (StringRef Object : Objects)
-    if (Error Err = handleFileConversionToGSYM(Object, OutFile, Out))
-      return Err;
-  return Error::success();
-}
-
 /// Open a GSYM file, auto-detecting the version unless forced.
 static Expected<std::unique_ptr<GsymReaderBase>> openGsymFile(StringRef Path) {
   if (ForceReaderVersion == ReaderVersion::Auto)
@@ -584,6 +551,155 @@ static Expected<std::unique_ptr<GsymReaderBase>> openGsymFile(StringRef Path) {
   if (!R)
     return R.takeError();
   return std::make_unique<GsymReader>(std::move(*R));
+}
+
+/// Check if a file starts with the GSYM magic bytes.
+static bool isGSYMFile(StringRef Filename) {
+  auto BuffOrErr = MemoryBuffer::getFileOrSTDIN(Filename, /*IsText=*/false,
+                                                /*RequiresNullTerminator=*/false);
+  if (!BuffOrErr)
+    return false;
+  StringRef Data = (*BuffOrErr)->getBuffer();
+  if (Data.size() < 4)
+    return false;
+  uint32_t Magic;
+  memcpy(&Magic, Data.data(), sizeof(Magic));
+  return Magic == GSYM_MAGIC || Magic == GSYM_CIGAM;
+}
+
+/// Re-insert a file entry from a reader into a creator, reconstructing the
+/// full path from separate Dir and Base components.
+static uint32_t transferFile(const GsymReaderBase &Reader,
+                             GsymCreatorBase &Creator, uint32_t FileIdx) {
+  auto FE = Reader.getFile(FileIdx);
+  if (!FE)
+    return FileIdx;
+  StringRef Dir = Reader.getString(FE->Dir);
+  StringRef Base = Reader.getString(FE->Base);
+  SmallString<128> Path;
+  if (!Dir.empty()) {
+    Path = Dir;
+    llvm::sys::path::append(Path, Base);
+  } else {
+    Path = Base;
+  }
+  return Creator.insertFile(Path);
+}
+
+/// Fix up string and file references in an InlineInfo tree so they refer to
+/// the creator's tables instead of the reader's.
+static void fixupInlineInfo(const GsymReaderBase &Reader,
+                            GsymCreatorBase &Creator, InlineInfo &II) {
+  II.Name = Creator.insertString(Reader.getString(II.Name));
+  if (II.CallFile != 0)
+    II.CallFile = transferFile(Reader, Creator, II.CallFile);
+  for (auto &Child : II.Children)
+    fixupInlineInfo(Reader, Creator, Child);
+}
+
+/// Fix up all string and file references in a FunctionInfo so they refer to
+/// the creator's tables instead of the reader's.
+static void fixupFunctionInfo(const GsymReaderBase &Reader,
+                              GsymCreatorBase &Creator, FunctionInfo &FI) {
+  FI.Name = Creator.insertString(Reader.getString(FI.Name));
+  if (FI.OptLineTable) {
+    for (size_t J = 0; J < FI.OptLineTable->size(); ++J) {
+      LineEntry &LE = FI.OptLineTable->get(J);
+      if (LE.File != 0)
+        LE.File = transferFile(Reader, Creator, LE.File);
+    }
+  }
+  if (FI.Inline)
+    fixupInlineInfo(Reader, Creator, *FI.Inline);
+  if (FI.CallSites) {
+    for (auto &CS : FI.CallSites->CallSites) {
+      for (auto &Idx : CS.MatchRegex)
+        Idx = Creator.insertString(Reader.getString(Idx));
+    }
+  }
+  if (FI.MergedFunctions) {
+    for (auto &MF : FI.MergedFunctions->MergedFunctions)
+      fixupFunctionInfo(Reader, Creator, MF);
+  }
+}
+
+/// Convert a GSYM file to a (possibly different version) GSYM file.
+static llvm::Error handleGSYMConversion(StringRef Filename,
+                                        const std::string &OutFile,
+                                        OutputAggregator &Out) {
+  auto ReaderOrErr = openGsymFile(Filename);
+  if (!ReaderOrErr)
+    return ReaderOrErr.takeError();
+  auto &Reader = **ReaderOrErr;
+
+  std::unique_ptr<GsymCreatorBase> CreatorPtr;
+  if (ForceCreatorVersion == CreatorVersion::V2)
+    CreatorPtr = std::make_unique<GsymCreatorV2>(Quiet);
+  else
+    CreatorPtr = std::make_unique<GsymCreator>(Quiet);
+  GsymCreatorBase &Creator = *CreatorPtr;
+
+  // Transfer all function infos, re-inserting strings and files.
+  for (uint32_t I = 0; I < Reader.getNumAddresses(); ++I) {
+    auto FI = Reader.getFunctionInfoAtIndex(I);
+    if (!FI)
+      return FI.takeError();
+    fixupFunctionInfo(Reader, Creator, *FI);
+    Creator.addFunctionInfo(std::move(*FI));
+  }
+
+  if (auto Err = Creator.finalize(Out))
+    return Err;
+
+  Out << "Output file (" << (ForceCreatorVersion == CreatorVersion::V2 ? "v2" : "v1")
+      << "): " << OutFile << "\n";
+
+  if (auto Err = Creator.save(OutFile, llvm::endianness::native))
+    return Err;
+
+  return Error::success();
+}
+
+static llvm::Error handleFileConversionToGSYM(StringRef Filename,
+                                              const std::string &OutFile,
+                                              OutputAggregator &Out) {
+  ErrorOr<std::unique_ptr<MemoryBuffer>> BuffOrErr =
+      MemoryBuffer::getFileOrSTDIN(Filename);
+  error(Filename, BuffOrErr.getError());
+  std::unique_ptr<MemoryBuffer> Buffer = std::move(BuffOrErr.get());
+  return handleBuffer(Filename, *Buffer, OutFile, Out);
+}
+
+static llvm::Error convertFileToGSYM(OutputAggregator &Out) {
+  std::string OutFile = OutputFilename;
+  if (OutFile.empty()) {
+    OutFile = ConvertFilename;
+    OutFile += ".gsym";
+  }
+
+  Out << "Input file: " << ConvertFilename << "\n";
+
+  // If the input is a GSYM file, do GSYM-to-GSYM conversion.
+  if (isGSYMFile(ConvertFilename))
+    return handleGSYMConversion(ConvertFilename, OutFile, Out);
+
+  // Otherwise, treat it as a DWARF object file.
+  // Expand any .dSYM bundles to the individual object files contained therein.
+  std::vector<std::string> Objects;
+  if (auto DsymObjectsOrErr =
+          MachOObjectFile::findDsymObjectMembers(ConvertFilename)) {
+    if (DsymObjectsOrErr->empty())
+      Objects.push_back(ConvertFilename);
+    else
+      llvm::append_range(Objects, *DsymObjectsOrErr);
+  } else {
+    error(DsymObjectsOrErr.takeError());
+  }
+
+  for (StringRef Object : Objects)
+    if (Error Err = handleFileConversionToGSYM(Object, OutFile, Out))
+      return Err;
+  return Error::success();
 }
 
 static void doLookup(GsymReaderBase &Gsym, uint64_t Addr, raw_ostream &OS) {
