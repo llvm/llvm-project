@@ -217,6 +217,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
 std::optional<LanguageControlFlag> LanguageFeatureControl::FindWarning(
     std::string_view input) {
   bool negated{false};
+  // TODO: replace with starts_with when moving to C++20
   if (input.size() > 3 && input.substr(0, 3) == "no-") {
     negated = true;
     input = input.substr(3);
@@ -227,9 +228,10 @@ std::optional<LanguageControlFlag> LanguageFeatureControl::FindWarning(
   return std::nullopt;
 }
 
-std::optional<std::string_view> LanguageFeatureControl::GetCanonicalSpelling(
+std::optional<std::string_view> LanguageFeatureControl::CheckDeprecatedSpelling(
     std::string_view input) const {
   // Strip "no-" prefix for lookup, same as FindWarning does.
+  // TODO: replace with starts_with when moving to C++20
   if (input.size() > 3 && input.substr(0, 3) == "no-") {
     input = input.substr(3);
   }

@@ -148,18 +148,18 @@ public:
   void AddAlternativeCliSpelling(UsageWarning w, std::string input) {
     cliOptions_.insert({input, {w}});
   }
-  void AddDeprecatedCliSpelling(
-      LanguageFeature f, std::string deprecated, std::string canonical) {
+  void AddDeprecatedCliSpelling(LanguageFeature f,
+      const std::string &deprecated, const std::string &canonical) {
     cliOptions_.insert({deprecated, {f}});
-    deprecatedCliOptions_.insert({std::move(deprecated), std::move(canonical)});
+    deprecatedCliOptions_.insert({deprecated, canonical});
   }
-  void AddDeprecatedCliSpelling(
-      UsageWarning w, std::string deprecated, std::string canonical) {
+  void AddDeprecatedCliSpelling(UsageWarning w, const std::string &deprecated,
+      const std::string &canonical) {
     cliOptions_.insert({deprecated, {w}});
-    deprecatedCliOptions_.insert({std::move(deprecated), std::move(canonical)});
+    deprecatedCliOptions_.insert({deprecated, canonical});
   }
   // Returns the canonical spelling if the input is a deprecated spelling.
-  std::optional<std::string_view> GetCanonicalSpelling(
+  std::optional<std::string_view> CheckDeprecatedSpelling(
       std::string_view input) const;
   void ReplaceCliCanonicalSpelling(LanguageFeature f, std::string input);
   void ReplaceCliCanonicalSpelling(UsageWarning w, std::string input);
