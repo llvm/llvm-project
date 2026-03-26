@@ -2482,3 +2482,117 @@ func.func @fold_single_index_vector(%vec: vector<4xindex>) -> vector<4xindex> {
   %0 = affine.linearize_index [%vec] by () : vector<4xindex>
   return %0 : vector<4xindex>
 }
+
+// -----
+
+// Vector: cancel delinearize(linearize_disjoint) partial match.
+
+// CHECK-LABEL: func @cancel_delinearize_linearize_disjoint_partial_vector(
+// CHECK-SAME:     %[[V0:.+]]: vector<4xindex>, %[[V1:.+]]: vector<4xindex>, %[[V2:.+]]: vector<4xindex>)
+// CHECK:         return %[[V0]], %[[V1]], %[[V2]]
+func.func @cancel_delinearize_linearize_disjoint_partial_vector(
+    %v0: vector<4xindex>, %v1: vector<4xindex>, %v2: vector<4xindex>)
+    -> (vector<4xindex>, vector<4xindex>, vector<4xindex>) {
+  %0 = affine.linearize_index disjoint [%v0, %v1, %v2] by (3, 2, 32) : vector<4xindex>
+  %1:3 = affine.delinearize_index %0 into (3, 2, 32) : vector<4xindex>, vector<4xindex>, vector<4xindex>
+  return %1#0, %1#1, %1#2 : vector<4xindex>, vector<4xindex>, vector<4xindex>
+}
+
+// -----
+
+// Vector: cancel linearize(delinearize) exact.
+
+// CHECK-LABEL: func @cancel_linearize_delinearize_exact_vector(
+// CHECK-SAME:     %[[ARG:.+]]: vector<4xindex>)
+// CHECK:         return %[[ARG]]
+func.func @cancel_linearize_delinearize_exact_vector(%arg: vector<4xindex>) -> vector<4xindex> {
+  %0:3 = affine.delinearize_index %arg into (2, 4, 8) : vector<4xindex>, vector<4xindex>, vector<4xindex>
+  %1 = affine.linearize_index [%0#0, %0#1, %0#2] by (2, 4, 8) : vector<4xindex>
+  return %1 : vector<4xindex>
+}
+
+// -----
+
+// Vector: drop all unit bases in delinearize.
+
+// CHECK-LABEL: func @drop_all_unit_bases_vector(
+// CHECK-SAME:     %[[VEC:.+]]: vector<4xindex>)
+// CHECK-DAG:     %[[C0:.+]] = arith.constant dense<0> : vector<4xindex>
+// CHECK-NOT:     affine.delinearize_index
+// CHECK:         return %[[C0]], %[[C0]]
+func.func @drop_all_unit_bases_vector(%vec: vector<4xindex>) -> (vector<4xindex>, vector<4xindex>) {
+  %0:2 = affine.delinearize_index %vec into (1, 1) : vector<4xindex>, vector<4xindex>
+  return %0#0, %0#1 : vector<4xindex>, vector<4xindex>
+}
+
+// -----
+
+// Vector: drop all unit bases no outer bound.
+
+// CHECK-LABEL: func @drop_all_unit_bases_no_outer_bound_vector(
+// CHECK-SAME:     %[[VEC:.+]]: vector<4xindex>)
+// CHECK-DAG:     %[[C0:.+]] = arith.constant dense<0> : vector<4xindex>
+// CHECK-NOT:     affine.delinearize_index
+// CHECK:         return %[[VEC]], %[[C0]], %[[C0]]
+func.func @drop_all_unit_bases_no_outer_bound_vector(%vec: vector<4xindex>) -> (vector<4xindex>, vector<4xindex>, vector<4xindex>) {
+  %0:3 = affine.delinearize_index %vec into (1, 1) : vector<4xindex>, vector<4xindex>, vector<4xindex>
+  return %0#0, %0#1, %0#2 : vector<4xindex>, vector<4xindex>, vector<4xindex>
+}
+
+// -----
+
+// Vector: linearize all zero unit basis.
+
+// CHECK-LABEL: @linearize_all_zero_unit_basis_vector
+// CHECK:         arith.constant dense<0> : vector<4xindex>
+// CHECK-NOT:     affine.linearize_index
+func.func @linearize_all_zero_unit_basis_vector() -> vector<4xindex> {
+  %c0 = arith.constant dense<0> : vector<4xindex>
+  %ret = affine.linearize_index [%c0, %c0] by (1, 1) : vector<4xindex>
+  return %ret : vector<4xindex>
+}
+
+// -----
+
+// Vector: linearize one element basis fold.
+
+// CHECK-LABEL: @linearize_one_element_basis_vector
+// CHECK-SAME:    (%[[V:.+]]: vector<4xindex>)
+// CHECK-NOT:     affine.linearize_index
+// CHECK:         return %[[V]]
+func.func @linearize_one_element_basis_vector(%v: vector<4xindex>) -> vector<4xindex> {
+  %ret = affine.linearize_index [%v] by (8) : vector<4xindex>
+  return %ret : vector<4xindex>
+}
+
+// -----
+
+// Vector: drop leading zero in linearize.
+
+// CHECK-LABEL: @linearize_drop_leading_zero_vector
+// CHECK-SAME:    (%[[V0:.+]]: vector<4xindex>, %[[V1:.+]]: vector<4xindex>)
+// CHECK-NOT:     affine.linearize_index
+// CHECK:         return %[[V1]]
+func.func @linearize_drop_leading_zero_vector(%v0: vector<4xindex>, %v1: vector<4xindex>) -> vector<4xindex> {
+  %c0 = arith.constant dense<0> : vector<4xindex>
+  %ret = affine.linearize_index [%c0, %v1] by (4, 8) : vector<4xindex>
+  return %ret : vector<4xindex>
+}
+
+// -----
+
+// Vector: split delinearize spanning last linearize arg.
+
+// CHECK-LABEL: func @split_delinearize_spanning_final_part_vector
+// CHECK-SAME:    (%[[V0:.+]]: vector<4xindex>, %[[V1:.+]]: vector<4xindex>, %[[V2:.+]]: vector<4xindex>)
+// CHECK:         %[[LIN:.+]] = affine.linearize_index disjoint [%[[V0]], %[[V1]]] by (3, 2) : vector<4xindex>
+// CHECK:         %[[DELIN1:.+]]:2 = affine.delinearize_index %[[LIN]] into (2, 3) : vector<4xindex>, vector<4xindex>
+// CHECK:         %[[DELIN2:.+]]:2 = affine.delinearize_index %[[V2]] into (8, 4) : vector<4xindex>, vector<4xindex>
+// CHECK:         return %[[DELIN1]]#0, %[[DELIN1]]#1, %[[DELIN2]]#0, %[[DELIN2]]#1
+func.func @split_delinearize_spanning_final_part_vector(
+    %v0: vector<4xindex>, %v1: vector<4xindex>, %v2: vector<4xindex>)
+    -> (vector<4xindex>, vector<4xindex>, vector<4xindex>, vector<4xindex>) {
+  %0 = affine.linearize_index disjoint [%v0, %v1, %v2] by (3, 2, 32) : vector<4xindex>
+  %1:4 = affine.delinearize_index %0 into (2, 3, 8, 4) : vector<4xindex>, vector<4xindex>, vector<4xindex>, vector<4xindex>
+  return %1#0, %1#1, %1#2, %1#3 : vector<4xindex>, vector<4xindex>, vector<4xindex>, vector<4xindex>
+}
