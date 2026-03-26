@@ -823,6 +823,29 @@ define void @imp_fn() !dbg !12 {
 
 ; // -----
 
+; CHECK-DAG: #[[M:.+]] = #llvm.di_module<{{.*}}name = "mod1"{{.*}}>
+; CHECK-DAG: #[[IE:.+]] = #llvm.di_imported_entity<tag = DW_TAG_imported_module{{.*}}entity = #[[M]]{{.*}}>
+; CHECK-DAG: #llvm.di_compile_unit<{{.*}}importedEntities = #[[IE]]>
+
+define void @compile_unit_imports() !dbg !4 {
+  ret void
+}
+
+!llvm.dbg.cu = !{!1}
+!llvm.module.flags = !{!0}
+
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, imports: !5)
+!2 = !DIFile(filename: "debug-info.ll", directory: "/")
+!3 = !DISubroutineType(types: !8)
+!4 = distinct !DISubprogram(name: "compile_unit_imports", linkageName: "compile_unit_imports", scope: !2, file: !2, line: 1, type: !3, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !1)
+!5 = !{!6}
+!6 = !DIImportedEntity(tag: DW_TAG_imported_module, scope: !2, entity: !7)
+!7 = !DIModule(scope: !2, name: "mod1", line: 5)
+!8 = !{}
+
+; // -----
+
 ; Test that annotations are handled correctly
 
 ; CHECK-LABEL: @fn_with_annotations

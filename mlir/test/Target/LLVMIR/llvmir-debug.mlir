@@ -740,3 +740,33 @@ llvm.mlir.global @data() {dbg_exprs = [#var_expression, #var_expression1]} : i64
 // CHECK: ![[VAR1]] = {{.*}}!DIGlobalVariable(name: "a"{{.*}})
 // CHECK: ![[EXP2]] = !DIGlobalVariableExpression(var: ![[VAR2:[0-9]+]], expr: !DIExpression())
 // CHECK: ![[VAR2]] = {{.*}}!DIGlobalVariable(name: "b"{{.*}})
+
+// -----
+
+// Test lowering compile unit `importedEntities` to LLVM IR `imports`.
+
+#file = #llvm.di_file<"test.mlir" in "">
+#ns = #llvm.di_namespace<name = "imported_ns", exportSymbols = false>
+#ie = #llvm.di_imported_entity<tag = DW_TAG_imported_module, scope = #file, entity = #ns, file = #file>
+#cu = #llvm.di_compile_unit<
+  id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #file,
+  producer = "MLIR", isOptimized = false, emissionKind = Full,
+  importedEntities = #ie
+>
+#sp_ty = #llvm.di_subroutine_type<callingConvention = DW_CC_normal>
+#sp = #llvm.di_subprogram<
+  compileUnit = #cu, scope = #file, name = "fn_cu_imports",
+  file = #file, line = 1, scopeLine = 1, subprogramFlags = Definition,
+  type = #sp_ty
+>
+
+// CHECK-LABEL: define void @fn_cu_imports()
+llvm.func @fn_cu_imports() {
+  llvm.return
+} loc(fused<#sp>["cu_imports.mlir":1:1])
+
+// CHECK-DAG: ![[FILE:[0-9]+]] = !DIFile(filename: "test.mlir", directory: "")
+// CHECK-DAG: ![[NS:[0-9]+]] = !DINamespace(name: "imported_ns"{{.*}})
+// CHECK-DAG: ![[IE:[0-9]+]] = !DIImportedEntity(tag: DW_TAG_imported_module{{.*}}entity: ![[NS]]{{.*}})
+// CHECK-DAG: ![[IMP_LIST:[0-9]+]] = !{![[IE]]}
+// CHECK-DAG: !DICompileUnit({{.*}}imports: ![[IMP_LIST]])
