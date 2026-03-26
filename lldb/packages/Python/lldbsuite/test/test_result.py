@@ -16,6 +16,7 @@ import unittest
 
 # LLDB Modules
 from . import configuration
+from lldbsuite.support import funcutils
 from lldbsuite.test_event import build_exception
 
 
@@ -302,4 +303,7 @@ class LLDBTestResult(unittest.TextTestResult):
         super(LLDBTestResult, self).stopTest(test)
         dumpSessionInfo = getattr(test, "dumpSessionInfo", None)
         if dumpSessionInfo:
-            dumpSessionInfo()
+            if funcutils.requires_self(dumpSessionInfo):
+                dumpSessionInfo(test)
+            else:
+                dumpSessionInfo()
