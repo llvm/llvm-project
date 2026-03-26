@@ -21,6 +21,7 @@ enum GlobalInfoType : uint32_t {
   StringTable = 3u,
   FileTable = 4u,
   FunctionInfo = 5u,
+  UUID = 6u,
 };
 
 /// GlobalData describes a section of data in a GSYM file by its type, file
@@ -28,6 +29,7 @@ enum GlobalInfoType : uint32_t {
 /// sections can be located at arbitrary file offsets.
 struct GlobalData {
   GlobalInfoType Type;
+  uint32_t Padding;
   uint64_t FileOffset;
   uint64_t FileSize;
 };

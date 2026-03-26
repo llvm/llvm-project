@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_GSYM_HEADERV2_H
 #define LLVM_DEBUGINFO_GSYM_HEADERV2_H
 
+#include "llvm/DebugInfo/GSYM/Header.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
@@ -22,8 +23,6 @@ class DataExtractor;
 namespace gsym {
 class FileWriter;
 
-constexpr uint32_t GSYM_MAGIC = 0x4753594d; // 'GSYM'
-constexpr uint32_t GSYM_CIGAM = 0x4d595347; // 'MYSG'
 constexpr uint32_t GSYM_VERSION_2 = 2;
 
 /// The GSYM V2 header.
@@ -32,21 +31,38 @@ constexpr uint32_t GSYM_VERSION_2 = 2;
 /// the first bytes in a section when GSYM is contained in a section of an
 /// executable file (ELF, mach-o, COFF).
 ///
-/// The V2 file format consists of the following GSYM sections in order:
-///   - Header (this struct, 40 bytes)
-///   - GlobalData (a list of GlobalData, each point to one of the following GSYM sections)
-///   - Followed by all the sections mentioned in the GlobalData list at the specified file offsets and sizes, with padding of zeros for alignment.
+/// The V2 file layout is:
 ///
-/// The header structure is encoded exactly as it appears in the structure definition
-/// with no gaps between members. Alignment should not change from system to
-/// system as the members are laid out so that they will align the same
-/// on different architectures.
+///   [HeaderV2 - 24 bytes fixed]
+///   [GlobalData entries - array of 24-byte entries, terminated by EndOfList]
+///   [... data sections at arbitrary file offsets, zero-padded for alignment]
+///
+/// Each GlobalData entry (see GlobalData.h) describes a section by its type,
+/// file offset, and size. The sections can appear in any order in the file
+/// since each GlobalData entry contains an absolute file offset. The
+/// GlobalData array is terminated by an entry with type EndOfList and all
+/// other fields set to zero.
+///
+/// The GlobalInfoType values are:
+///   EndOfList       = 0  (terminates GlobalData array)
+///   AddrOffsets     = 1  (address offset table)
+///   AddrInfoOffsets = 2  (address info offset table)
+///   StringTable     = 3  (string table)
+///   FileTable       = 4  (file table)
+///   FunctionInfo    = 5  (FunctionInfo data blob)
+///   UUID            = 6  (binary UUID)
+///
+/// The header structure is encoded exactly as it appears in the structure
+/// definition with no gaps between members. Alignment should not change from
+/// system to system as the members are laid out so that they will align the
+/// same on different architectures.
 ///
 /// When endianness of the system loading a GSYM file matches, the file can
 /// be mmap'ed in and a pointer to the header can be cast to the first bytes
 /// of the file (stand alone GSYM file) or section data (GSYM in a section).
-/// When endianness is swapped, the HeaderV2::decode() function should be used
-/// to decode the header.
+/// The trailing GlobalData array can also be mmap'ed directly as each entry
+/// is naturally aligned at 24 bytes. When endianness is swapped, the
+/// HeaderV2::decode() function should be used to decode the header.
 struct HeaderV2 {
   /// The magic bytes should be set to GSYM_MAGIC. This helps detect if a file
   /// is a GSYM file by scanning the first 4 bytes of a file or section.
@@ -56,7 +72,9 @@ struct HeaderV2 {
   /// "Magic" and "Version" members should always appear at offset zero and 4
   /// respectively to ensure clients figure out if they can parse the format.
   uint16_t Version;
-  /// Padding for alignment to keep all the "size" fields together. Must be set to zero.
+  /// Padding for alignment of BaseAddress to 8 bytes. Must be zero. Without this padding,
+  /// one of the size fields (AddrOffSize, AddrInfoOffSize, StrpSize) would need
+  /// to be placed here, separating it from the other size fields.
   uint16_t Padding;
   /// The 64 bit base address that all address offsets in the address offsets
   /// table are relative to. Storing a full 64 bit address allows our address
@@ -68,15 +86,17 @@ struct HeaderV2 {
   /// The size in bytes of each address offset in the address offsets table.
   uint8_t AddrOffSize;
   /// The size in bytes of each entry in the address info offsets table.
-  /// These offsets point into GlobalData.
   uint8_t AddrInfoOffSize;
   /// The size in bytes of each string table reference (strp) in FunctionInfo
   /// and other data structures within GlobalData.
   uint8_t StrpSize;
   /// Padding for alignment. Must be set to zero.
   uint8_t Padding2;
-  /// The starting point of the global data. This is a list of GlobalData objects, with the last one being the
-  /// GlobalInfoType::EndOfList. Each of the GlobalData objects point to a section in the GSYM, e.g. address FunctionInfos, UUID, string table, and any other future sections.
+  /// The starting point of the GlobalData array. This is a list of GlobalData
+  /// entries, each describing a section in the GSYM file (e.g. AddrOffsets,
+  /// FunctionInfo, UUID, StringTable). The array is terminated by an entry
+  /// with Type set to EndOfList and FileOffset, FileSize, and Padding all
+  /// set to zero.
   uint8_t GlobalData[0];
 
   /// Check if a header is valid and return an error if anything is wrong.
