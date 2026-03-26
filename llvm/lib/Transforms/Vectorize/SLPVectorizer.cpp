@@ -11812,17 +11812,35 @@ public:
     // Check profitability if number of copyables > VL.size() / 2.
     // 1. Reorder operands for better matching.
     if (isCommutative(MainOp)) {
+      Value *BestFrontOp = nullptr;
       for (auto [OpL, OpR] : zip(Operands.front(), Operands.back())) {
         // Make instructions the first operands.
         if (!isa<Instruction>(OpL) && isa<Instruction>(OpR)) {
+          BestFrontOp = OpR;
           std::swap(OpL, OpR);
           continue;
         }
         // Make constants the second operands.
         if ((isa<Constant>(OpL) && !match(OpR, m_Zero())) ||
             match(OpL, m_Zero())) {
+          if (isa<Instruction>(OpR))
+            BestFrontOp = OpR;
           std::swap(OpL, OpR);
           continue;
+        }
+        if (isa<Instruction>(OpL))
+          BestFrontOp = OpL;
+      }
+      // If some of the RHS operands better match most of LHS - swap such
+      // operands to increase matching rate.
+      if (auto *BestLHS = dyn_cast_if_present<Instruction>(BestFrontOp)) {
+        const unsigned BestOpcode = BestLHS->getOpcode();
+        for (auto [OpL, OpR] : zip(Operands.front(), Operands.back())) {
+          auto *OpRI = dyn_cast<Instruction>(OpR);
+          if (!OpRI)
+            continue;
+          if (OpRI->getOpcode() == BestOpcode)
+            std::swap(OpL, OpR);
         }
       }
     }
