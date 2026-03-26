@@ -8682,7 +8682,8 @@ static Instruction *foldFCmpFSubIntoFCmp(FCmpInst &I, Instruction *LHSI,
     const APFloat *C;
     Value *IntSrc;
     if (match(RHSC, m_APFloat(C)) &&
-        match(LHSI, m_FSub(m_Specific(RHSC), m_IToFP(m_Value(IntSrc))))) {
+        match(LHSI, m_FSub(m_Specific(RHSC), m_IToFP(m_Value(IntSrc)))) &&
+        C->isNormal()) {
       // Requirements on C and Y:
       // 1. C is finite, nonzero, normal.
       // 2. C shouldn't be too large, that is, ULP(C) <= 1.
@@ -8694,8 +8695,7 @@ static Instruction *foldFCmpFSubIntoFCmp(FCmpInst &I, Instruction *LHSI,
       // 0, 0` for ordered and unordered predicates as long as C is finite and
       // nonzero.
       int MantissaWidth = LHSI->getType()->getFPMantissaWidth();
-      if (C->isFiniteNonZero() && C->isNormal() && MantissaWidth != -1 &&
-          ilogb(*C) < MantissaWidth) {
+      if (MantissaWidth != -1 && ilogb(*C) < MantissaWidth) {
         Constant *ZeroC = ConstantFP::getZero(LHSI->getType());
         I.setPredicate(I.getSwappedPredicate());
         CI.replaceOperand(I, 0, Y);

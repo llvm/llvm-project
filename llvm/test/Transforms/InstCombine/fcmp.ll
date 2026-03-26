@@ -1814,10 +1814,11 @@ define i1 @fcmp_oeq_fsub_const(float %x, float %y) {
 
 define i1 @pr185561(i32 %arg0) {
 ; CHECK-LABEL: @pr185561(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[ARG0:%.*]], 1
+; CHECK-NEXT:    [[V0:%.*]] = add i32 [[ARG0:%.*]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[V0]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %v0 = add nsw i32 %arg0, -1
+  %v0 = add i32 %arg0, -1
   %v1 = sitofp i32 %v0 to float
   %v2 = fsub float 1.000000e+00, %v1
   %v3 = fcmp olt float %v2, 1.000000e+00
@@ -1907,6 +1908,46 @@ define i1 @same_const_sub_no_fold_wrong_mantissa_width(i32 %x) {
   %f = sitofp i32 %x to float
   %s = fsub float 3.3554432e+07, %f
   %cmp = fcmp oeq float %s, 3.3554432e+07
+  ret i1 %cmp
+}
+
+define i1 @same_const_sub_sitofp_x86_fp80_eq(i32 %x) {
+; CHECK-LABEL: @same_const_sub_sitofp_x86_fp80_eq(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %f = sitofp i32 %x to x86_fp80
+  %s = fsub x86_fp80 0xK3FFF8000000000000000, %f
+  %cmp = fcmp oeq x86_fp80 %s, 0xK3FFF8000000000000000
+  ret i1 %cmp
+}
+
+define i1 @same_const_sub_no_fold_x86_fp80_large_c(i32 %x) {
+; CHECK-LABEL: @same_const_sub_no_fold_x86_fp80_large_c(
+; CHECK-NOT:    icmp
+; CHECK-NEXT:    [[F:%.*]] = sitofp i32 [[X:%.*]] to x86_fp80
+; CHECK-NEXT:    [[S:%.*]] = fsub x86_fp80 0xK403F8000000000000000, [[F]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq x86_fp80 [[S]], 0xK403F8000000000000000
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %f = sitofp i32 %x to x86_fp80
+  ; 2^64, so ilogb(C) == 64, which should fail `ilogb(C) < MantissaWidth`
+  %s = fsub x86_fp80 0xK403F8000000000000000, %f
+  %cmp = fcmp oeq x86_fp80 %s, 0xK403F8000000000000000
+  ret i1 %cmp
+}
+
+define i1 @same_const_sub_no_fold_ppcfp128(i32 %x) {
+; CHECK-LABEL: @same_const_sub_no_fold_ppcfp128(
+; CHECK-NOT:    icmp
+; CHECK-NEXT:    [[F:%.*]] = sitofp i32 [[X:%.*]] to ppc_fp128
+; CHECK-NEXT:    [[S:%.*]] = fsub ppc_fp128 0xM3FF00000000000000000000000000000, [[F]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq ppc_fp128 [[S]], 0xM3FF00000000000000000000000000000
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %f = sitofp i32 %x to ppc_fp128
+  %s = fsub ppc_fp128 0xM3FF00000000000000000000000000000, %f
+  %cmp = fcmp oeq ppc_fp128 %s, 0xM3FF00000000000000000000000000000
   ret i1 %cmp
 }
 
