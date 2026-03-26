@@ -14,7 +14,8 @@ define i8 @atomicrmw_add_i8(i8 %val, ptr %ptr) {
 ; NO-ATOMIC-000-NEXT:    move.b (19,%sp), %d0
 ; NO-ATOMIC-000-NEXT:    and.l #255, %d0
 ; NO-ATOMIC-000-NEXT:    move.l %d0, (4,%sp)
-; NO-ATOMIC-000-NEXT:    move.l (20,%sp), (%sp)
+; NO-ATOMIC-000-NEXT:    move.l (20,%sp), %d0
+; NO-ATOMIC-000-NEXT:    move.l %d0, (%sp)
 ; NO-ATOMIC-000-NEXT:    jsr __sync_fetch_and_add_1
 ; NO-ATOMIC-000-NEXT:    adda.l #12, %sp
 ; NO-ATOMIC-000-NEXT:    rts
@@ -27,7 +28,8 @@ define i8 @atomicrmw_add_i8(i8 %val, ptr %ptr) {
 ; NO-ATOMIC-010-NEXT:    move.b (19,%sp), %d0
 ; NO-ATOMIC-010-NEXT:    and.l #255, %d0
 ; NO-ATOMIC-010-NEXT:    move.l %d0, (4,%sp)
-; NO-ATOMIC-010-NEXT:    move.l (20,%sp), (%sp)
+; NO-ATOMIC-010-NEXT:    move.l (20,%sp), %d0
+; NO-ATOMIC-010-NEXT:    move.l %d0, (%sp)
 ; NO-ATOMIC-010-NEXT:    jsr __sync_fetch_and_add_1
 ; NO-ATOMIC-010-NEXT:    adda.l #12, %sp
 ; NO-ATOMIC-010-NEXT:    rts
@@ -73,7 +75,8 @@ define i16 @atomicrmw_sub_i16(i16 %val, ptr %ptr) {
 ; NO-ATOMIC-000-NEXT:    move.w (18,%sp), %d0
 ; NO-ATOMIC-000-NEXT:    and.l #65535, %d0
 ; NO-ATOMIC-000-NEXT:    move.l %d0, (4,%sp)
-; NO-ATOMIC-000-NEXT:    move.l (20,%sp), (%sp)
+; NO-ATOMIC-000-NEXT:    move.l (20,%sp), %d0
+; NO-ATOMIC-000-NEXT:    move.l %d0, (%sp)
 ; NO-ATOMIC-000-NEXT:    jsr __sync_fetch_and_sub_2
 ; NO-ATOMIC-000-NEXT:    adda.l #12, %sp
 ; NO-ATOMIC-000-NEXT:    rts
@@ -86,7 +89,8 @@ define i16 @atomicrmw_sub_i16(i16 %val, ptr %ptr) {
 ; NO-ATOMIC-010-NEXT:    move.w (18,%sp), %d0
 ; NO-ATOMIC-010-NEXT:    and.l #65535, %d0
 ; NO-ATOMIC-010-NEXT:    move.l %d0, (4,%sp)
-; NO-ATOMIC-010-NEXT:    move.l (20,%sp), (%sp)
+; NO-ATOMIC-010-NEXT:    move.l (20,%sp), %d0
+; NO-ATOMIC-010-NEXT:    move.l %d0, (%sp)
 ; NO-ATOMIC-010-NEXT:    jsr __sync_fetch_and_sub_2
 ; NO-ATOMIC-010-NEXT:    adda.l #12, %sp
 ; NO-ATOMIC-010-NEXT:    rts
@@ -129,8 +133,10 @@ define i32 @atomicrmw_and_i32(i32 %val, ptr %ptr) {
 ; NO-ATOMIC-000-NEXT:  ; %bb.0:
 ; NO-ATOMIC-000-NEXT:    suba.l #12, %sp
 ; NO-ATOMIC-000-NEXT:    .cfi_def_cfa_offset -16
-; NO-ATOMIC-000-NEXT:    move.l (16,%sp), (4,%sp)
-; NO-ATOMIC-000-NEXT:    move.l (20,%sp), (%sp)
+; NO-ATOMIC-000-NEXT:    move.l (16,%sp), %d0
+; NO-ATOMIC-000-NEXT:    move.l %d0, (4,%sp)
+; NO-ATOMIC-000-NEXT:    move.l (20,%sp), %d0
+; NO-ATOMIC-000-NEXT:    move.l %d0, (%sp)
 ; NO-ATOMIC-000-NEXT:    jsr __sync_fetch_and_and_4
 ; NO-ATOMIC-000-NEXT:    adda.l #12, %sp
 ; NO-ATOMIC-000-NEXT:    rts
@@ -140,8 +146,10 @@ define i32 @atomicrmw_and_i32(i32 %val, ptr %ptr) {
 ; NO-ATOMIC-010-NEXT:  ; %bb.0:
 ; NO-ATOMIC-010-NEXT:    suba.l #12, %sp
 ; NO-ATOMIC-010-NEXT:    .cfi_def_cfa_offset -16
-; NO-ATOMIC-010-NEXT:    move.l (16,%sp), (4,%sp)
-; NO-ATOMIC-010-NEXT:    move.l (20,%sp), (%sp)
+; NO-ATOMIC-010-NEXT:    move.l (16,%sp), %d0
+; NO-ATOMIC-010-NEXT:    move.l %d0, (4,%sp)
+; NO-ATOMIC-010-NEXT:    move.l (20,%sp), %d0
+; NO-ATOMIC-010-NEXT:    move.l %d0, (%sp)
 ; NO-ATOMIC-010-NEXT:    jsr __sync_fetch_and_and_4
 ; NO-ATOMIC-010-NEXT:    adda.l #12, %sp
 ; NO-ATOMIC-010-NEXT:    rts
@@ -184,10 +192,13 @@ define i64 @atomicrmw_xor_i64(i64 %val, ptr %ptr) {
 ; NO-ATOMIC-000-NEXT:  ; %bb.0:
 ; NO-ATOMIC-000-NEXT:    suba.l #20, %sp
 ; NO-ATOMIC-000-NEXT:    .cfi_def_cfa_offset -24
+; NO-ATOMIC-000-NEXT:    move.l (28,%sp), %d0
+; NO-ATOMIC-000-NEXT:    move.l %d0, (8,%sp)
+; NO-ATOMIC-000-NEXT:    move.l (24,%sp), %d0
+; NO-ATOMIC-000-NEXT:    move.l %d0, (4,%sp)
+; NO-ATOMIC-000-NEXT:    move.l (32,%sp), %d0
+; NO-ATOMIC-000-NEXT:    move.l %d0, (%sp)
 ; NO-ATOMIC-000-NEXT:    move.l #3, (12,%sp)
-; NO-ATOMIC-000-NEXT:    move.l (28,%sp), (8,%sp)
-; NO-ATOMIC-000-NEXT:    move.l (24,%sp), (4,%sp)
-; NO-ATOMIC-000-NEXT:    move.l (32,%sp), (%sp)
 ; NO-ATOMIC-000-NEXT:    jsr __atomic_fetch_xor_8
 ; NO-ATOMIC-000-NEXT:    adda.l #20, %sp
 ; NO-ATOMIC-000-NEXT:    rts
@@ -197,10 +208,13 @@ define i64 @atomicrmw_xor_i64(i64 %val, ptr %ptr) {
 ; NO-ATOMIC-010-NEXT:  ; %bb.0:
 ; NO-ATOMIC-010-NEXT:    suba.l #20, %sp
 ; NO-ATOMIC-010-NEXT:    .cfi_def_cfa_offset -24
+; NO-ATOMIC-010-NEXT:    move.l (28,%sp), %d0
+; NO-ATOMIC-010-NEXT:    move.l %d0, (8,%sp)
+; NO-ATOMIC-010-NEXT:    move.l (24,%sp), %d0
+; NO-ATOMIC-010-NEXT:    move.l %d0, (4,%sp)
+; NO-ATOMIC-010-NEXT:    move.l (32,%sp), %d0
+; NO-ATOMIC-010-NEXT:    move.l %d0, (%sp)
 ; NO-ATOMIC-010-NEXT:    move.l #3, (12,%sp)
-; NO-ATOMIC-010-NEXT:    move.l (28,%sp), (8,%sp)
-; NO-ATOMIC-010-NEXT:    move.l (24,%sp), (4,%sp)
-; NO-ATOMIC-010-NEXT:    move.l (32,%sp), (%sp)
 ; NO-ATOMIC-010-NEXT:    jsr __atomic_fetch_xor_8
 ; NO-ATOMIC-010-NEXT:    adda.l #20, %sp
 ; NO-ATOMIC-010-NEXT:    rts
@@ -233,7 +247,8 @@ define i8 @atomicrmw_or_i8(i8 %val, ptr %ptr) {
 ; NO-ATOMIC-000-NEXT:    move.b (19,%sp), %d0
 ; NO-ATOMIC-000-NEXT:    and.l #255, %d0
 ; NO-ATOMIC-000-NEXT:    move.l %d0, (4,%sp)
-; NO-ATOMIC-000-NEXT:    move.l (20,%sp), (%sp)
+; NO-ATOMIC-000-NEXT:    move.l (20,%sp), %d0
+; NO-ATOMIC-000-NEXT:    move.l %d0, (%sp)
 ; NO-ATOMIC-000-NEXT:    jsr __sync_fetch_and_or_1
 ; NO-ATOMIC-000-NEXT:    adda.l #12, %sp
 ; NO-ATOMIC-000-NEXT:    rts
@@ -246,7 +261,8 @@ define i8 @atomicrmw_or_i8(i8 %val, ptr %ptr) {
 ; NO-ATOMIC-010-NEXT:    move.b (19,%sp), %d0
 ; NO-ATOMIC-010-NEXT:    and.l #255, %d0
 ; NO-ATOMIC-010-NEXT:    move.l %d0, (4,%sp)
-; NO-ATOMIC-010-NEXT:    move.l (20,%sp), (%sp)
+; NO-ATOMIC-010-NEXT:    move.l (20,%sp), %d0
+; NO-ATOMIC-010-NEXT:    move.l %d0, (%sp)
 ; NO-ATOMIC-010-NEXT:    jsr __sync_fetch_and_or_1
 ; NO-ATOMIC-010-NEXT:    adda.l #12, %sp
 ; NO-ATOMIC-010-NEXT:    rts
@@ -294,7 +310,8 @@ define i16 @atmoicrmw_nand_i16(i16 %val, ptr %ptr) {
 ; NO-ATOMIC-000-NEXT:    move.l %d2, %d0
 ; NO-ATOMIC-000-NEXT:    and.l #65535, %d0
 ; NO-ATOMIC-000-NEXT:    move.l %d0, (4,%sp)
-; NO-ATOMIC-000-NEXT:    move.l (20,%sp), (%sp)
+; NO-ATOMIC-000-NEXT:    move.l (20,%sp), %d0
+; NO-ATOMIC-000-NEXT:    move.l %d0, (%sp)
 ; NO-ATOMIC-000-NEXT:    jsr __sync_fetch_and_nand_2
 ; NO-ATOMIC-000-NEXT:    move.w %d2, %d0
 ; NO-ATOMIC-000-NEXT:    movem.l (8,%sp), %d2 ; 8-byte Folded Reload
@@ -311,7 +328,8 @@ define i16 @atmoicrmw_nand_i16(i16 %val, ptr %ptr) {
 ; NO-ATOMIC-010-NEXT:    move.l %d2, %d0
 ; NO-ATOMIC-010-NEXT:    and.l #65535, %d0
 ; NO-ATOMIC-010-NEXT:    move.l %d0, (4,%sp)
-; NO-ATOMIC-010-NEXT:    move.l (20,%sp), (%sp)
+; NO-ATOMIC-010-NEXT:    move.l (20,%sp), %d0
+; NO-ATOMIC-010-NEXT:    move.l %d0, (%sp)
 ; NO-ATOMIC-010-NEXT:    jsr __sync_fetch_and_nand_2
 ; NO-ATOMIC-010-NEXT:    move.w %d2, %d0
 ; NO-ATOMIC-010-NEXT:    movem.l (8,%sp), %d2 ; 8-byte Folded Reload
@@ -357,8 +375,10 @@ define i32 @atomicrmw_min_i32(i32 %val, ptr %ptr) {
 ; NO-ATOMIC-000-NEXT:  ; %bb.0:
 ; NO-ATOMIC-000-NEXT:    suba.l #12, %sp
 ; NO-ATOMIC-000-NEXT:    .cfi_def_cfa_offset -16
-; NO-ATOMIC-000-NEXT:    move.l (16,%sp), (4,%sp)
-; NO-ATOMIC-000-NEXT:    move.l (20,%sp), (%sp)
+; NO-ATOMIC-000-NEXT:    move.l (16,%sp), %d0
+; NO-ATOMIC-000-NEXT:    move.l %d0, (4,%sp)
+; NO-ATOMIC-000-NEXT:    move.l (20,%sp), %d0
+; NO-ATOMIC-000-NEXT:    move.l %d0, (%sp)
 ; NO-ATOMIC-000-NEXT:    jsr __sync_fetch_and_min_4
 ; NO-ATOMIC-000-NEXT:    adda.l #12, %sp
 ; NO-ATOMIC-000-NEXT:    rts
@@ -368,8 +388,10 @@ define i32 @atomicrmw_min_i32(i32 %val, ptr %ptr) {
 ; NO-ATOMIC-010-NEXT:  ; %bb.0:
 ; NO-ATOMIC-010-NEXT:    suba.l #12, %sp
 ; NO-ATOMIC-010-NEXT:    .cfi_def_cfa_offset -16
-; NO-ATOMIC-010-NEXT:    move.l (16,%sp), (4,%sp)
-; NO-ATOMIC-010-NEXT:    move.l (20,%sp), (%sp)
+; NO-ATOMIC-010-NEXT:    move.l (16,%sp), %d0
+; NO-ATOMIC-010-NEXT:    move.l %d0, (4,%sp)
+; NO-ATOMIC-010-NEXT:    move.l (20,%sp), %d0
+; NO-ATOMIC-010-NEXT:    move.l %d0, (%sp)
 ; NO-ATOMIC-010-NEXT:    jsr __sync_fetch_and_min_4
 ; NO-ATOMIC-010-NEXT:    adda.l #12, %sp
 ; NO-ATOMIC-010-NEXT:    rts
@@ -580,7 +602,8 @@ define i8 @atomicrmw_i8_umin(i8 %val, ptr %ptr) {
 ; NO-ATOMIC-000-NEXT:    move.b (19,%sp), %d0
 ; NO-ATOMIC-000-NEXT:    and.l #255, %d0
 ; NO-ATOMIC-000-NEXT:    move.l %d0, (4,%sp)
-; NO-ATOMIC-000-NEXT:    move.l (20,%sp), (%sp)
+; NO-ATOMIC-000-NEXT:    move.l (20,%sp), %d0
+; NO-ATOMIC-000-NEXT:    move.l %d0, (%sp)
 ; NO-ATOMIC-000-NEXT:    jsr __sync_fetch_and_umin_1
 ; NO-ATOMIC-000-NEXT:    adda.l #12, %sp
 ; NO-ATOMIC-000-NEXT:    rts
@@ -593,7 +616,8 @@ define i8 @atomicrmw_i8_umin(i8 %val, ptr %ptr) {
 ; NO-ATOMIC-010-NEXT:    move.b (19,%sp), %d0
 ; NO-ATOMIC-010-NEXT:    and.l #255, %d0
 ; NO-ATOMIC-010-NEXT:    move.l %d0, (4,%sp)
-; NO-ATOMIC-010-NEXT:    move.l (20,%sp), (%sp)
+; NO-ATOMIC-010-NEXT:    move.l (20,%sp), %d0
+; NO-ATOMIC-010-NEXT:    move.l %d0, (%sp)
 ; NO-ATOMIC-010-NEXT:    jsr __sync_fetch_and_umin_1
 ; NO-ATOMIC-010-NEXT:    adda.l #12, %sp
 ; NO-ATOMIC-010-NEXT:    rts
@@ -650,7 +674,8 @@ define i16 @atomicrmw_umax_i16(i16 %val, ptr %ptr) {
 ; NO-ATOMIC-000-NEXT:    move.w (18,%sp), %d0
 ; NO-ATOMIC-000-NEXT:    and.l #65535, %d0
 ; NO-ATOMIC-000-NEXT:    move.l %d0, (4,%sp)
-; NO-ATOMIC-000-NEXT:    move.l (20,%sp), (%sp)
+; NO-ATOMIC-000-NEXT:    move.l (20,%sp), %d0
+; NO-ATOMIC-000-NEXT:    move.l %d0, (%sp)
 ; NO-ATOMIC-000-NEXT:    jsr __sync_fetch_and_umax_2
 ; NO-ATOMIC-000-NEXT:    adda.l #12, %sp
 ; NO-ATOMIC-000-NEXT:    rts
@@ -663,7 +688,8 @@ define i16 @atomicrmw_umax_i16(i16 %val, ptr %ptr) {
 ; NO-ATOMIC-010-NEXT:    move.w (18,%sp), %d0
 ; NO-ATOMIC-010-NEXT:    and.l #65535, %d0
 ; NO-ATOMIC-010-NEXT:    move.l %d0, (4,%sp)
-; NO-ATOMIC-010-NEXT:    move.l (20,%sp), (%sp)
+; NO-ATOMIC-010-NEXT:    move.l (20,%sp), %d0
+; NO-ATOMIC-010-NEXT:    move.l %d0, (%sp)
 ; NO-ATOMIC-010-NEXT:    jsr __sync_fetch_and_umax_2
 ; NO-ATOMIC-010-NEXT:    adda.l #12, %sp
 ; NO-ATOMIC-010-NEXT:    rts
@@ -720,7 +746,8 @@ define i16 @atomicrmw_xchg_i16(i16 %val, ptr %ptr) {
 ; NO-ATOMIC-000-NEXT:    move.w (18,%sp), %d0
 ; NO-ATOMIC-000-NEXT:    and.l #65535, %d0
 ; NO-ATOMIC-000-NEXT:    move.l %d0, (4,%sp)
-; NO-ATOMIC-000-NEXT:    move.l (20,%sp), (%sp)
+; NO-ATOMIC-000-NEXT:    move.l (20,%sp), %d0
+; NO-ATOMIC-000-NEXT:    move.l %d0, (%sp)
 ; NO-ATOMIC-000-NEXT:    jsr __sync_lock_test_and_set_2
 ; NO-ATOMIC-000-NEXT:    adda.l #12, %sp
 ; NO-ATOMIC-000-NEXT:    rts
@@ -733,7 +760,8 @@ define i16 @atomicrmw_xchg_i16(i16 %val, ptr %ptr) {
 ; NO-ATOMIC-010-NEXT:    move.w (18,%sp), %d0
 ; NO-ATOMIC-010-NEXT:    and.l #65535, %d0
 ; NO-ATOMIC-010-NEXT:    move.l %d0, (4,%sp)
-; NO-ATOMIC-010-NEXT:    move.l (20,%sp), (%sp)
+; NO-ATOMIC-010-NEXT:    move.l (20,%sp), %d0
+; NO-ATOMIC-010-NEXT:    move.l %d0, (%sp)
 ; NO-ATOMIC-010-NEXT:    jsr __sync_lock_test_and_set_2
 ; NO-ATOMIC-010-NEXT:    adda.l #12, %sp
 ; NO-ATOMIC-010-NEXT:    rts
@@ -775,8 +803,10 @@ define i32 @atomicrmw_xchg_i32(i32 %val, ptr %ptr) {
 ; NO-ATOMIC-000-NEXT:  ; %bb.0: ; %entry
 ; NO-ATOMIC-000-NEXT:    suba.l #12, %sp
 ; NO-ATOMIC-000-NEXT:    .cfi_def_cfa_offset -16
-; NO-ATOMIC-000-NEXT:    move.l (16,%sp), (4,%sp)
-; NO-ATOMIC-000-NEXT:    move.l (20,%sp), (%sp)
+; NO-ATOMIC-000-NEXT:    move.l (16,%sp), %d0
+; NO-ATOMIC-000-NEXT:    move.l %d0, (4,%sp)
+; NO-ATOMIC-000-NEXT:    move.l (20,%sp), %d0
+; NO-ATOMIC-000-NEXT:    move.l %d0, (%sp)
 ; NO-ATOMIC-000-NEXT:    jsr __sync_lock_test_and_set_4
 ; NO-ATOMIC-000-NEXT:    adda.l #12, %sp
 ; NO-ATOMIC-000-NEXT:    rts
@@ -786,8 +816,10 @@ define i32 @atomicrmw_xchg_i32(i32 %val, ptr %ptr) {
 ; NO-ATOMIC-010-NEXT:  ; %bb.0: ; %entry
 ; NO-ATOMIC-010-NEXT:    suba.l #12, %sp
 ; NO-ATOMIC-010-NEXT:    .cfi_def_cfa_offset -16
-; NO-ATOMIC-010-NEXT:    move.l (16,%sp), (4,%sp)
-; NO-ATOMIC-010-NEXT:    move.l (20,%sp), (%sp)
+; NO-ATOMIC-010-NEXT:    move.l (16,%sp), %d0
+; NO-ATOMIC-010-NEXT:    move.l %d0, (4,%sp)
+; NO-ATOMIC-010-NEXT:    move.l (20,%sp), %d0
+; NO-ATOMIC-010-NEXT:    move.l %d0, (%sp)
 ; NO-ATOMIC-010-NEXT:    jsr __sync_lock_test_and_set_4
 ; NO-ATOMIC-010-NEXT:    adda.l #12, %sp
 ; NO-ATOMIC-010-NEXT:    rts
