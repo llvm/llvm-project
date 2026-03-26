@@ -1141,13 +1141,18 @@ const SCEV *DependenceInfo::collectUpperBound(const Loop *L, Type *T) const {
   return nullptr;
 }
 
-// Calls collectUpperBound(), then attempts to cast it to SCEVConstant.
-// If the cast fails, returns NULL.
-const SCEVConstant *DependenceInfo::collectConstantUpperBound(const Loop *L,
-                                                              Type *T) const {
+// Calls collectUpperBound(), then attempts to cast it to APInt.
+// If the cast fails, returns std::nullopt.
+std::optional<APInt>
+DependenceInfo::collectNonNegativeConstantUpperBound(const Loop *L,
+                                                     Type *T) const {
   if (const SCEV *UB = collectUpperBound(L, T))
-    return dyn_cast<SCEVConstant>(UB);
-  return nullptr;
+    if (auto *C = dyn_cast<SCEVConstant>(UB)) {
+      APInt Res = C->getAPInt();
+      if (Res.isNonNegative())
+        return Res;
+    }
+  return std::nullopt;
 }
 
 /// Returns \p A - \p B if it guaranteed not to signed wrap. Otherwise returns
@@ -1682,16 +1687,10 @@ bool DependenceInfo::exactSIVtest(const SCEVAddRecExpr *Src,
   LLVM_DEBUG(dbgs() << "\t    X = " << X << ", Y = " << Y << "\n");
 
   // since SCEV construction normalizes, LM = 0
-  std::optional<APInt> UM;
-  // UM is perhaps unavailable, let's check
-  if (const SCEVConstant *CUB =
-          collectConstantUpperBound(Src->getLoop(), Delta->getType())) {
-    APInt Tmp = CUB->getAPInt();
-    if (Tmp.isNonNegative()) {
-      UM = CUB->getAPInt();
-      LLVM_DEBUG(dbgs() << "\t    UM = " << *UM << "\n");
-    }
-  }
+  std::optional<APInt> UM =
+      collectNonNegativeConstantUpperBound(Src->getLoop(), Delta->getType());
+  if (UM)
+    LLVM_DEBUG(dbgs() << "\t    UM = " << *UM << "\n");
 
   APInt TU(APInt::getSignedMaxValue(Bits));
   APInt TL(APInt::getSignedMinValue(Bits));
@@ -2020,27 +2019,15 @@ bool DependenceInfo::exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   LLVM_DEBUG(dbgs() << "\t    X = " << X << ", Y = " << Y << "\n");
 
   // since SCEV construction seems to normalize, LM = 0
-  std::optional<APInt> SrcUM;
-  // SrcUM is perhaps unavailable, let's check
-  if (const SCEVConstant *UpperBound =
-          collectConstantUpperBound(SrcLoop, Delta->getType())) {
-    APInt Tmp = UpperBound->getAPInt();
-    if (Tmp.isNonNegative()) {
-      SrcUM = UpperBound->getAPInt();
-      LLVM_DEBUG(dbgs() << "\t    SrcUM = " << *SrcUM << "\n");
-    }
-  }
+  std::optional<APInt> SrcUM =
+      collectNonNegativeConstantUpperBound(SrcLoop, Delta->getType());
+  if (SrcUM)
+    LLVM_DEBUG(dbgs() << "\t    SrcUM = " << *SrcUM << "\n");
 
-  std::optional<APInt> DstUM;
-  // DstUM is perhaps unavailable, let's check
-  if (const SCEVConstant *UpperBound =
-          collectConstantUpperBound(DstLoop, Delta->getType())) {
-    APInt Tmp = UpperBound->getAPInt();
-    if (Tmp.isNonNegative()) {
-      DstUM = UpperBound->getAPInt();
-      LLVM_DEBUG(dbgs() << "\t    DstUM = " << *DstUM << "\n");
-    }
-  }
+  std::optional<APInt> DstUM =
+      collectNonNegativeConstantUpperBound(DstLoop, Delta->getType());
+  if (DstUM)
+    LLVM_DEBUG(dbgs() << "\t    DstUM = " << *DstUM << "\n");
 
   APInt TU(APInt::getSignedMaxValue(Bits));
   APInt TL(APInt::getSignedMinValue(Bits));
