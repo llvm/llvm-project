@@ -660,6 +660,23 @@ def SingleTypedResultOp : TestOp<"single_typed_result"> {
 // CHECK: def single_typed_result(in_: _ods_ir.Value, *, results: _Optional[_Sequence[_ods_ir.Type]] = None, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None) -> _ods_ir.OpResult[_ods_ir.IntegerType]:
 // CHECK:   return SingleTypedResultOp(in_=in_, results=results, loc=loc, ip=ip).result
 
+// CHECK: @_ods_cext.register_operation(_Dialect)
+// CHECK-LABEL: class TypedVariadicOperandOp(_ods_ir.OpView):
+// CHECK: OPERATION_NAME = "test.typed_variadic_operand"
+def TypedVariadicOperandOp : TestOp<"typed_variadic_operand"> {
+  // CHECK: def __init__(self, variadic: _Sequence[_ods_ir.Value[_ods_ir.IntegerType]], non_variadic: _ods_ir.Value[_ods_ir.FloatType], *, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None):
+
+  // CHECK: @builtins.property
+  // CHECK: def non_variadic(self) -> _ods_ir.Value[_ods_ir.FloatType]:
+  //
+  // CHECK: @builtins.property
+  // CHECK: def variadic(self) -> _ods_ir.OpOperandList[_ods_ir.IntegerType]:
+  let arguments = (ins Variadic<I32>:$variadic, F32:$non_variadic);
+}
+
+// CHECK: def typed_variadic_operand(variadic: _Sequence[_ods_ir.Value[_ods_ir.IntegerType]], non_variadic: _ods_ir.Value[_ods_ir.FloatType], *, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None) -> TypedVariadicOperandOp:
+// CHECK:   return TypedVariadicOperandOp(variadic=variadic, non_variadic=non_variadic, loc=loc, ip=ip)
+
 // CHECK-LABEL: class VariadicAndNormalRegionOp(_ods_ir.OpView):
 // CHECK: OPERATION_NAME = "test.variadic_and_normal_region"
 def VariadicAndNormalRegionOp : TestOp<"variadic_and_normal_region"> {

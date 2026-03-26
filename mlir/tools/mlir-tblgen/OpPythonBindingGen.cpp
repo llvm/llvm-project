@@ -449,6 +449,10 @@ static void emitElementAccessors(
         } else {
           type = std::strcmp(kind, "operand") == 0 ? "_ods_ir.OpOperandList"
                                                    : "_ods_ir.OpResultList";
+          if (StringRef pythonType =
+                  getPythonType(element.constraint.getCppType());
+              !pythonType.empty())
+            type = llvm::formatv("{0}[{1}]", type, pythonType);
           os << formatv(opOneVariadicTemplate, sanitizeName(element.name),
                         pyAttrName, numElements, i, type);
         }
@@ -488,12 +492,10 @@ static void emitElementAccessors(
           type = std::strcmp(kind, "operand") == 0 ? "_ods_ir.Value"
                                                    : "_ods_ir.OpResult";
         }
-        if (std::strcmp(type.c_str(), "_ods_ir.Value") == 0 ||
-            std::strcmp(type.c_str(), "_ods_ir.OpResult") == 0) {
-          StringRef pythonType = getPythonType(element.constraint.getCppType());
-          if (!pythonType.empty())
-            type += "[" + pythonType.str() + "]";
-        }
+        if (StringRef pythonType =
+                getPythonType(element.constraint.getCppType());
+            !pythonType.empty())
+          type = llvm::formatv("{0}[{1}]", type, pythonType);
         os << formatv(opVariadicEqualPrefixTemplate, sanitizeName(element.name),
                       pyAttrName, numSimpleLength, numVariadicGroups,
                       numPrecedingSimple, numPrecedingVariadic, type);
@@ -525,12 +527,10 @@ static void emitElementAccessors(
       if (!element.isVariableLength() || element.isOptional()) {
         type = std::strcmp(kind, "operand") == 0 ? "_ods_ir.Value"
                                                  : "_ods_ir.OpResult";
-        if (std::strcmp(type.c_str(), "_ods_ir.Value") == 0 ||
-            std::strcmp(type.c_str(), "_ods_ir.OpResult") == 0) {
-          StringRef pythonType = getPythonType(element.constraint.getCppType());
-          if (!pythonType.empty())
-            type += "[" + pythonType.str() + "]";
-        }
+        if (StringRef pythonType =
+                getPythonType(element.constraint.getCppType());
+            !pythonType.empty())
+          type = llvm::formatv("{0}[{1}]", type, pythonType);
         if (!element.isVariableLength()) {
           trailing = "[0]";
         } else if (element.isOptional()) {
@@ -538,6 +538,11 @@ static void emitElementAccessors(
           trailing = std::string(
               formatv(opVariadicSegmentOptionalTrailingTemplate, kind));
         }
+      } else {
+        if (StringRef pythonType =
+                getPythonType(element.constraint.getCppType());
+            !pythonType.empty())
+          type = llvm::formatv("{0}[{1}]", type, pythonType);
       }
 
       os << formatv(opVariadicSegmentTemplate, sanitizeName(element.name), kind,
@@ -1170,7 +1175,12 @@ static SmallVector<std::string> emitDefaultOpBuilder(const Operator &op,
     } else if (auto *ntype =
                    llvm::dyn_cast_if_present<NamedTypeConstraint *>(arg)) {
       if (ntype->isVariadic()) {
-        argTypes[idx] = "_Sequence[_ods_ir.Value]";
+        std::string type = "_ods_ir.Value";
+        if (StringRef pythonType =
+                getPythonType(ntype->constraint.getCppType());
+            !pythonType.empty())
+          type = llvm::formatv("{0}[{1}]", type, pythonType);
+        argTypes[idx] = llvm::formatv("_Sequence[{0}]", type);
       } else {
         std::string type = "_ods_ir.Value";
         if (StringRef pythonType =
