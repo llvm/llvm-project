@@ -6216,8 +6216,8 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, const APInt &DemandedElts,
             return true;
           break;
         case fltNanEncoding::NegativeZero:
-          if (Known.Zero.isSignBitSet() || !KnownExp.isZero() ||
-              !KnownMan.isZero())
+          if (Known.Zero.isSignBitSet() || !KnownExp.getMinValue().isZero() ||
+              !KnownMan.getMinValue().isZero())
             return true;
           break;
         }
