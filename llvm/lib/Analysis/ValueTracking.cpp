@@ -5788,12 +5788,13 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
     if (Op->getOpcode() == Instruction::SIToFP) {
       // If the signed integer is known non-negative, the result is
-      // non-negative.
-      if (IntKnown.isNonNegative())
+      // non-negative. If the signed integer is known negative, the result is
+      // negative.
+      if (IntKnown.isNonNegative()) {
         Known.signBitMustBeZero();
-      // If the signed integer is known negative, the result is negative.
-      else if (IntKnown.isNegative())
+      } else if (IntKnown.isNegative()) {
         Known.signBitMustBeOne();
+      }
     }
 
     // Guard kept for ilogb()
