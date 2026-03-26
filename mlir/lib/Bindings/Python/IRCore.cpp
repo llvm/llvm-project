@@ -189,25 +189,6 @@ nb::object PyBlock::getCapsule() {
 // Collections.
 //------------------------------------------------------------------------------
 
-nb::typed<nb::object, PyRegion> PyRegionIterator::dunderNext() {
-  operation->checkValid();
-  if (nextIndex >= mlirOperationGetNumRegions(operation->get())) {
-    PyErr_SetNone(PyExc_StopIteration);
-    // python functions should return NULL after setting any exception
-    return nb::object();
-  }
-  MlirRegion region = mlirOperationGetRegion(operation->get(), nextIndex++);
-  return nb::cast(PyRegion(operation, region));
-}
-
-void PyRegionIterator::bind(nb::module_ &m) {
-  nb::class_<PyRegionIterator>(m, "RegionIterator")
-      .def("__iter__", &PyRegionIterator::dunderIter,
-           "Returns an iterator over the regions in the operation.")
-      .def("__next__", &PyRegionIterator::dunderNext,
-           "Returns the next region in the iteration.");
-}
-
 PyRegionList::PyRegionList(PyOperationRef operation, intptr_t startIndex,
                            intptr_t length, intptr_t step)
     : Sliceable(startIndex,
@@ -215,16 +196,6 @@ PyRegionList::PyRegionList(PyOperationRef operation, intptr_t startIndex,
                              : length,
                 step),
       operation(std::move(operation)) {}
-
-PyRegionIterator PyRegionList::dunderIter() {
-  operation->checkValid();
-  return PyRegionIterator(operation, startIndex);
-}
-
-void PyRegionList::bindDerived(ClassTy &c) {
-  c.def("__iter__", &PyRegionList::dunderIter,
-        "Returns an iterator over the regions in the sequence.");
-}
 
 intptr_t PyRegionList::getRawNumElements() {
   operation->checkValid();
@@ -5023,7 +4994,6 @@ void populateIRCore(nb::module_ &m) {
   PyOpOperands::bind(m);
   PyOpResultList::bind(m);
   PyOpSuccessors::bind(m);
-  PyRegionIterator::bind(m);
   PyRegionList::bind(m);
 
   // Debug bindings.
