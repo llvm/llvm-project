@@ -1,6 +1,7 @@
 add_llvm_component_library(LLVMDebugInfoGSYM
   DwarfTransformer.cpp
   Header.cpp
+  HeaderV2.cpp
   FileWriter.cpp
   FunctionInfo.cpp
   GsymCreator.cpp
