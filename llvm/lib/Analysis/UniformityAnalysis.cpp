@@ -66,37 +66,44 @@ bool llvm::GenericUniformityAnalysisImpl<SSAContext>::printDivergentArgs(
 }
 
 template <> void llvm::GenericUniformityAnalysisImpl<SSAContext>::initialize() {
-  // Pre-populate UniformValues with all values, then seed divergence.
-  // Values are removed from UniformValues as divergence is propagated.
+  // Pre-populate UniformValues with uniform values, then seed divergence.
+  // NeverUniform values are not inserted -- they are divergent by definition
+  // and will be reported as such by isDivergent() (not in UniformValues).
   SmallVector<const Value *, 4> DivergentArgs;
   for (auto &Arg : F.args()) {
-    UniformValues.insert(&Arg);
     if (TTI->getInstructionUniformity(&Arg) ==
-        InstructionUniformity::NeverUniform) {
-      markDivergent(&Arg);
+        InstructionUniformity::NeverUniform)
       DivergentArgs.push_back(&Arg);
-    }
+    else
+      UniformValues.insert(&Arg);
   }
   for (auto &I : instructions(F)) {
-    UniformValues.insert(&I);
     InstructionUniformity IU = TTI->getInstructionUniformity(&I);
     switch (IU) {
     case InstructionUniformity::AlwaysUniform:
+      UniformValues.insert(&I);
       addUniformOverride(I);
       continue;
     case InstructionUniformity::NeverUniform:
-      markDivergent(I);
+      // Skip inserting -- divergent by definition. Add to Worklist directly
+      // so compute() propagates divergence to users.
+      if (I.isTerminator())
+        DivergentTermBlocks.insert(I.getParent());
+      Worklist.push_back(&I);
       continue;
     case InstructionUniformity::Custom:
+      UniformValues.insert(&I);
       addCustomUniformityCandidate(&I);
       continue;
     case InstructionUniformity::Default:
+      UniformValues.insert(&I);
       break;
     }
   }
-  // Push users of divergent arguments after all instructions are in
-  // UniformValues, so markDivergent (called inside pushUsers) can
-  // successfully erase the user instruction from the set.
+  // Arguments are not instructions and cannot go on the Worklist, so we
+  // propagate their divergence to users explicitly here. This must happen
+  // after all instructions are in UniformValues so markDivergent (called
+  // inside pushUsers) can successfully erase user instructions from the set.
   for (const Value *Arg : DivergentArgs)
     pushUsers(Arg);
 }
