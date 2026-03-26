@@ -274,7 +274,6 @@ def command(command_name=None, doc=None):
     def callable(function):
         """Registers an lldb command for the decorated function."""
         command = "command script add -f %s.%s %s" % (function.__module__, function.__name__, command_name or function.__name__)
-        global debugger
         debugger.HandleCommand(command)
         if doc:
             function.__doc__ = doc
