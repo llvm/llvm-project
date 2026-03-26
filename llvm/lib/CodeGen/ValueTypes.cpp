@@ -64,7 +64,8 @@ EVT EVT::getIntegerVectorWithElementWidth(LLVMContext &Context,
   if (!isVector() || !isInteger() || isScalableVector())
     return EVT();
 
-  unsigned TotalBits = getVectorMinNumElements() * getScalarSizeInBits();
+  TypeSize TotalBits =
+      TypeSize::getFixed(getVectorMinNumElements() * getScalarSizeInBits());
   if (TotalBits % NewEltWidth != 0 || NewEltWidth > TotalBits)
     return EVT();
 

@@ -6981,10 +6981,10 @@ static SDValue combineSelectAsExtAnd(SDValue Cond, SDValue T, SDValue F,
   return DAG.getNode(ISD::AND, DL, OpVT, CondMask, T.getOperand(0));
 }
 
-// Widden int vector is not power of 2 in length.
-static SDValue widdenIntVectorSelect(SDNode *N, SelectionDAG &DAG,
-                                     const TargetLowering &TLI, SDValue Cond,
-                                     SDValue TrueVal, SDValue FalseVal) {
+// Widen int vector is not power of 2 in length.
+static SDValue widenIntVectorSelect(SDNode *N, SelectionDAG &DAG,
+                                    const TargetLowering &TLI, SDValue Cond,
+                                    SDValue TrueVal, SDValue FalseVal) {
   EVT ResultVT = N->getValueType(0);
   if (ResultVT.isSimple() || !ResultVT.isVector() ||
       ResultVT.isPow2VectorType() ||
@@ -6996,13 +6996,13 @@ static SDValue widdenIntVectorSelect(SDNode *N, SelectionDAG &DAG,
   if (!EltVT.isInteger() || ResultVT.getVectorElementCount().isScalar())
     return SDValue();
 
-  SDValue WiddenTrue = DAG.WidenVector(TrueVal, SDLoc(TrueVal));
-  SDValue WiddenFalse = DAG.WidenVector(FalseVal, SDLoc(FalseVal));
+  SDValue WidenTrue = DAG.WidenVector(TrueVal, SDLoc(TrueVal));
+  SDValue WidenFalse = DAG.WidenVector(FalseVal, SDLoc(FalseVal));
 
-  EVT WiddenVT = WiddenTrue.getValueType();
-  SDValue WiddenSelect = DAG.getNode(ISD::SELECT, SDLoc(N), WiddenVT, Cond,
-                                     WiddenTrue, WiddenFalse);
-  return DAG.getExtractSubvector(SDLoc(N), ResultVT, WiddenSelect, 0);
+  EVT WidenVT = WidenTrue.getValueType();
+  SDValue WidenSelect =
+      DAG.getNode(ISD::SELECT, SDLoc(N), WidenVT, Cond, WidenTrue, WidenFalse);
+  return DAG.getExtractSubvector(SDLoc(N), ResultVT, WidenSelect, 0);
 }
 
 // Try to convert vXiY into vPiQ with:
@@ -7017,8 +7017,7 @@ static SDValue castIntVectorSelect(SDNode *N, SelectionDAG &DAG,
   EVT ResultVT = N->getValueType(0);
   if (!ResultVT.isVector() || ResultVT.isScalableVector() ||
       TLI.getTypeAction(*DAG.getContext(), ResultVT) ==
-          TargetLowering::TypeLegal ||
-      !TLI.shouldCastIntVectorSelect(ResultVT))
+          TargetLowering::TypeLegal)
     return SDValue();
 
   EVT EltVT = ResultVT.getVectorElementType();
@@ -12998,7 +12997,7 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
   if (SDValue R = combineSelectAsExtAnd(N0, N1, N2, DL, DAG))
     return R;
 
-  if (SDValue R = widdenIntVectorSelect(N, DAG, TLI, N0, N1, N2))
+  if (SDValue R = widenIntVectorSelect(N, DAG, TLI, N0, N1, N2))
     return R;
 
   if (SDValue R = castIntVectorSelect(N, DAG, TLI, N0, N1, N2))
