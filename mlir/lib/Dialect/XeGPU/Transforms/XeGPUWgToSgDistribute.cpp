@@ -600,8 +600,10 @@ struct WgToSgConvertLayoutOp
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
 
-    VectorType resultType = op.getResult().getType();
-    ArrayRef<int64_t> wgShape = resultType.getShape();
+    Type resultType = op.getResult().getType();
+    ArrayRef<int64_t> wgShape;
+    if (isa<VectorType>(resultType))
+      wgShape = cast<VectorType>(resultType).getShape();
     auto inputLayout = op.getInputLayout();
     auto targetLayout = op.getTargetLayout();
 
