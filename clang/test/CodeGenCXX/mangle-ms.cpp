@@ -18,13 +18,18 @@ namespace N {
   namespace {
     int anonymous;
 // CHECK-DAG: @"?anonymous@?A0x{{[^@]*}}@N@@3HA"
+
+    namespace {
+      int nested_anonymous;
+// CHECK-DAG: @"?nested_anonymous@?A0x{{[^@]*}}@1N@@3HA"
+    }
   }
 }
 
 static int c;
 // CHECK-DAG: @c
 
-int _c(void) {return N::anonymous + c;}
+int _c(void) {return N::anonymous + N::nested_anonymous + c;}
 // CHECK-DAG: @"?_c@@YAHXZ"
 // X64-DAG:   @"?_c@@YAHXZ"
 
