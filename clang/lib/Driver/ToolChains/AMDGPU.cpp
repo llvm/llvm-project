@@ -14,6 +14,7 @@
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "clang/Options/Options.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Error.h"
@@ -81,12 +82,6 @@ RocmInstallationDetector::CommonBitcodeLibsPreferences::
                     DriverArgs.hasFlag(options::OPT_ffast_math,
                                        options::OPT_fno_fast_math, false);
 
-  const bool DefaultSqrt = IsKnownOffloading ? true : false;
-  CorrectSqrt =
-      DriverArgs.hasArg(options::OPT_cl_fp32_correctly_rounded_divide_sqrt) ||
-      DriverArgs.hasFlag(
-          options::OPT_fhip_fp32_correctly_rounded_divide_sqrt,
-          options::OPT_fno_hip_fp32_correctly_rounded_divide_sqrt, DefaultSqrt);
   // GPU Sanitizer currently only supports ASan and is enabled through host
   // ASan.
   GPUSan = (DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
@@ -127,14 +122,6 @@ void RocmInstallationDetector::scanLibDevicePath(llvm::StringRef Path) {
       FiniteOnly.Off = FilePath;
     } else if (BaseName == "oclc_finite_only_on") {
       FiniteOnly.On = FilePath;
-    } else if (BaseName == "oclc_daz_opt_on") {
-      DenormalsAreZero.On = FilePath;
-    } else if (BaseName == "oclc_daz_opt_off") {
-      DenormalsAreZero.Off = FilePath;
-    } else if (BaseName == "oclc_correctly_rounded_sqrt_on") {
-      CorrectlyRoundedSqrt.On = FilePath;
-    } else if (BaseName == "oclc_correctly_rounded_sqrt_off") {
-      CorrectlyRoundedSqrt.Off = FilePath;
     } else if (BaseName == "oclc_unsafe_math_on") {
       UnsafeMath.On = FilePath;
     } else if (BaseName == "oclc_unsafe_math_off") {
@@ -161,8 +148,7 @@ void RocmInstallationDetector::scanLibDevicePath(llvm::StringRef Path) {
 
       llvm::Twine GfxName = Twine("gfx") + IsaVersionNumber;
       SmallString<8> Tmp;
-      LibDeviceMap.insert(
-        std::make_pair(GfxName.toStringRef(Tmp), FilePath.str()));
+      LibDeviceMap.insert({GfxName.toStringRef(Tmp), FilePath.str()});
     }
   }
 }
@@ -243,8 +229,15 @@ RocmInstallationDetector::getInstallationPathCandidates() {
 
     // Some versions of the rocm llvm package install to /opt/rocm/llvm/bin
     // Some versions of the aomp package install to /opt/rocm/aomp/bin
-    if (ParentName == "llvm" || ParentName.starts_with("aomp"))
+    if (ParentName == "llvm" || ParentName.starts_with("aomp")) {
       ParentDir = llvm::sys::path::parent_path(ParentDir);
+      ParentName = llvm::sys::path::filename(ParentDir);
+
+      // Some versions of the rocm llvm package install to
+      // /opt/rocm/lib/llvm/bin, so also back up if within the lib dir still
+      if (ParentName == "lib")
+        ParentDir = llvm::sys::path::parent_path(ParentDir);
+    }
 
     return Candidate(ParentDir.str(), /*StrictChecking=*/true);
   };
@@ -320,7 +313,7 @@ RocmInstallationDetector::getInstallationPathCandidates() {
 
 RocmInstallationDetector::RocmInstallationDetector(
     const Driver &D, const llvm::Triple &HostTriple,
-    const llvm::opt::ArgList &Args, bool DetectHIPRuntime, bool DetectDeviceLib)
+    const llvm::opt::ArgList &Args, bool DetectHIPRuntime)
     : D(D) {
   Verbose = Args.hasArg(options::OPT_v);
   RocmPathArg = Args.getLastArgValue(options::OPT_rocm_path_EQ);
@@ -346,7 +339,7 @@ RocmInstallationDetector::RocmInstallationDetector(
     unsigned Minor = ~0U;
     SmallVector<StringRef, 3> Parts;
     HIPVersionArg.split(Parts, '.');
-    if (Parts.size())
+    if (!Parts.empty())
       Parts[0].getAsInteger(0, Major);
     if (Parts.size() > 1)
       Parts[1].getAsInteger(0, Minor);
@@ -374,15 +367,13 @@ RocmInstallationDetector::RocmInstallationDetector(
 
   if (DetectHIPRuntime)
     detectHIPRuntime();
-  if (DetectDeviceLib)
-    detectDeviceLibrary();
 }
 
 void RocmInstallationDetector::detectDeviceLibrary() {
   assert(LibDevicePath.empty());
 
   if (!RocmDeviceLibPathArg.empty())
-    LibDevicePath = RocmDeviceLibPathArg[RocmDeviceLibPathArg.size() - 1];
+    LibDevicePath = RocmDeviceLibPathArg.back();
   else if (std::optional<std::string> LibPathEnv =
                llvm::sys::Process::GetEnv("HIP_DEVICE_LIB_PATH"))
     LibDevicePath = std::move(*LibPathEnv);
@@ -641,6 +632,8 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         Args.MakeArgString("-plugin-opt=-mattr=" + llvm::join(Features, ",")));
   }
 
+  getToolChain().addProfileRTLibs(Args, CmdArgs);
+
   if (Args.hasArg(options::OPT_stdlib))
     CmdArgs.append({"-lc", "-lm"});
   if (Args.hasArg(options::OPT_startfiles)) {
@@ -744,11 +737,10 @@ AMDGPUToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
           << llvm::toString(GPUsOrErr.takeError()) << "-mcpu";
     } else {
       auto &GPUs = *GPUsOrErr;
-      if (GPUs.size() > 1) {
+      if (llvm::SmallSet<std::string, 1>(GPUs.begin(), GPUs.end()).size() > 1)
         getDriver().Diag(diag::warn_drv_multi_gpu_arch)
             << llvm::Triple::getArchTypeName(getArch())
             << llvm::join(GPUs, ", ") << "-mcpu";
-      }
       DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_mcpu_EQ),
                         Args.MakeArgString(GPUs.front()));
     }
@@ -841,7 +833,8 @@ bool AMDGPUToolChain::isWave64(const llvm::opt::ArgList &DriverArgs,
 ROCMToolChain::ROCMToolChain(const Driver &D, const llvm::Triple &Triple,
                              const ArgList &Args)
     : AMDGPUToolChain(D, Triple, Args) {
-  RocmInstallation->detectDeviceLibrary();
+  if (Triple.getEnvironment() != llvm::Triple::LLVM)
+    RocmInstallation->detectDeviceLibrary();
 }
 
 void AMDGPUToolChain::addClangTargetOptions(
@@ -871,7 +864,7 @@ void AMDGPUToolChain::addClangTargetOptions(
     CC1Args.push_back("-disable-llvm-optzns");
 
   if (DeviceOffloadingKind == Action::OFK_None)
-    addOpenCLBuiltinsLib(getDriver(), DriverArgs, CC1Args);
+    addOpenCLBuiltinsLib(getDriver(), getTriple(), DriverArgs, CC1Args);
 }
 
 void AMDGPUToolChain::addClangWarningOptions(ArgStringList &CC1Args) const {
@@ -960,6 +953,17 @@ void ROCMToolChain::addClangTargetOptions(
                           true))
     return;
 
+  // For SPIR-V (SPIRVAMDToolChain) we must not link any device libraries so we
+  // skip it.
+  const llvm::Triple &TT = this->getEffectiveTriple();
+  if (TT.isSPIRV())
+    return;
+
+  // With an LLVM environment, only use libraries provided by the resource
+  // directory.
+  if (TT.getEnvironment() == llvm::Triple::LLVM)
+    return;
+
   // Get the device name and canonicalize it
   const StringRef GpuArch = getGPUArch(DriverArgs);
   auto Kind = llvm::AMDGPU::parseArchAMDGCN(GpuArch);
@@ -1025,8 +1029,10 @@ RocmInstallationDetector::getCommonBitcodeLibs(
 
   auto AddBCLib = [&](ToolChain::BitCodeLibraryInfo BCLib,
                       bool Internalize = true) {
-    BCLib.ShouldInternalize = Internalize;
-    BCLibs.emplace_back(BCLib);
+    if (!BCLib.Path.empty()) {
+      BCLib.ShouldInternalize = Internalize;
+      BCLibs.emplace_back(BCLib);
+    }
   };
   auto AddSanBCLibs = [&]() {
     if (Pref.GPUSan)
@@ -1038,11 +1044,9 @@ RocmInstallationDetector::getCommonBitcodeLibs(
   if (!Pref.IsOpenMP)
     AddBCLib(getOCKLPath());
   else if (Pref.GPUSan && Pref.IsOpenMP)
-    AddBCLib(getOCKLPath(), false);
-  AddBCLib(getDenormalsAreZeroPath(Pref.DAZ));
+    AddBCLib(getOCKLPath());
   AddBCLib(getUnsafeMathPath(Pref.UnsafeMathOpt || Pref.FastRelaxedMath));
   AddBCLib(getFiniteOnlyPath(Pref.FiniteOnly || Pref.FastRelaxedMath));
-  AddBCLib(getCorrectlyRoundedSqrtPath(Pref.CorrectSqrt));
   AddBCLib(getWavefrontSize64Path(Pref.Wave64));
   AddBCLib(LibDeviceFile);
   auto ABIVerPath = getABIVersionPath(Pref.ABIVer);

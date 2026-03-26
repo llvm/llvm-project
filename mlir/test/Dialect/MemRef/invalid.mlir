@@ -159,7 +159,7 @@ func.func @memref_reinterpret_cast_too_many_offsets(%in: memref<?xf32>) {
 // -----
 
 func.func @memref_reinterpret_cast_incompatible_element_types(%in: memref<*xf32>) {
-  // expected-error @+1 {{different element types specified}}
+  // expected-error @+1 {{source element type ('f32') does not match result element type ('i32')}}
   %out = memref.reinterpret_cast %in to
            offset: [0], sizes: [10], strides: [1]
          : memref<*xf32> to memref<10xi32, strided<[1], offset: 0>>
@@ -425,6 +425,14 @@ func.func @expand_shape_illegal_output_shape(%arg0: memref<2xf32>) {
 
 // -----
 
+func.func @expand_shape_output_shape_dynamic_dim_mismatch(%arg0: memref<?xf32>) {
+  // expected-error @+1 {{incorrect number of dynamic sizes, has 0, expected 2}}
+  %0 = memref.expand_shape %arg0 [[0, 1]] output_shape [2, 3] : memref<?xf32> into memref<?x?xf32>
+  return
+}
+
+// -----
+
 func.func @collapse_shape_out_of_bounds(%arg0: memref<?x?xf32>) {
   // expected-error @+1 {{op reassociation index 2 is out of bounds}}
   %0 = memref.collapse_shape %arg0 [[0, 1, 2]] : memref<?x?xf32> into memref<?xf32>
@@ -624,7 +632,7 @@ func.func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 func.func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = memref.alloc() : memref<2048xi8>
-  // expected-error@+1 {{incorrect number of size operands for type}}
+  // expected-error@+1 {{incorrect number of dynamic sizes, has 1, expected 2}}
   %1 = memref.view %0[%arg2][%arg0]
     : memref<2048xi8> to memref<?x?xf32>
   return
@@ -927,7 +935,7 @@ func.func @bad_alloc_wrong_dynamic_dim_count() {
 ^bb0:
   %0 = arith.constant 7 : index
   // Test alloc with wrong number of dynamic dimensions.
-  // expected-error@+1 {{dimension operand count does not equal memref dynamic dimension count}}
+  // expected-error@+1 {{incorrect number of dynamic sizes, has 1, expected 0}}
   %1 = memref.alloc(%0)[%0] : memref<2x4xf32, affine_map<(d0, d1)[s0] -> ((d0 + s0), d1)>, 1>
   return
 }
@@ -1144,7 +1152,7 @@ func.func @memref_realloc_sizes_2(%src : memref<?xf32>, %d : index)
 // -----
 
 func.func @memref_realloc_type(%src : memref<256xf32>) -> memref<?xi32>{
-  // expected-error@+1 {{different element types}}
+  // expected-error@+1 {{source element type ('f32') does not match result element type ('i32')}}
   %0 = memref.realloc %src : memref<256xf32> to memref<?xi32>
   return %0 : memref<?xi32>
 }

@@ -23,10 +23,10 @@ export void call0() {
 
 // struct from vector
 // CHECK-LABEL: define void {{.*}}call1
-// CHECK: [[A:%.*]] = alloca <2 x i32>, align 8
+// CHECK: [[A:%.*]] = alloca <2 x i32>, align 4
 // CHECK-NEXT: [[s:%.*]] = alloca %struct.S, align 1
-// CHECK-NEXT: store <2 x i32> <i32 1, i32 2>, ptr [[A]], align 8
-// CHECK-NEXT: [[L:%.*]] = load <2 x i32>, ptr [[A]], align 8
+// CHECK-NEXT: store <2 x i32> <i32 1, i32 2>, ptr [[A]], align 4
+// CHECK-NEXT: [[L:%.*]] = load <2 x i32>, ptr [[A]], align 4
 // CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds %struct.S, ptr [[s]], i32 0, i32 0
 // CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds %struct.S, ptr [[s]], i32 0, i32 1
 // CHECK-NEXT: [[VL:%.*]] = extractelement <2 x i32> [[L]], i64 0
@@ -169,10 +169,10 @@ export void call9(Derived D) {
 
 // Derived struct from vector
 // CHECK-LABEL: call10
-// CHECK: [[IAddr:%.*]] = alloca <4 x i32>, align 16
+// CHECK: [[IAddr:%.*]] = alloca <4 x i32>, align 4
 // CHECK-NEXT: [[D:%.*]] = alloca %struct.Derived, align 1
-// CHECK-NEXT: store <4 x i32> %I, ptr [[IAddr]], align 16
-// CHECK-NEXT: [[A:%.*]] = load <4 x i32>, ptr [[IAddr]], align 16
+// CHECK-NEXT: store <4 x i32> %I, ptr [[IAddr]], align 4
+// CHECK-NEXT: [[A:%.*]] = load <4 x i32>, ptr [[IAddr]], align 4
 // CHECK-NEXT: [[Gep:%.*]] = getelementptr inbounds %struct.Derived, ptr [[D]], i32 0, i32 0
 // CHECK-NEXT: [[E:%.*]] = getelementptr inbounds nuw %struct.BFields, ptr [[Gep]], i32 0, i32 1
 // CHECK-NEXT: [[Gep1:%.*]] = getelementptr inbounds %struct.Derived, ptr [[D]], i32 0, i32 0, i32 0
@@ -236,10 +236,10 @@ struct Empty {
 
 // cast to an empty struct
 // CHECK-LABEL: call12
-// CHECK: [[I:%.*]] = alloca <4 x i32>, align 16
+// CHECK: [[I:%.*]] = alloca <4 x i32>, align 4
 // CHECK-NEXT: [[E:%.*]] = alloca %struct.Empty, align 1
-// CHECK-NEXT: store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr [[I]], align 16
-// CHECK-NEXT: [[A:%.*]] = load <4 x i32>, ptr [[I]], align 16
+// CHECK-NEXT: store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr [[I]], align 4
+// CHECK-NEXT: [[A:%.*]] = load <4 x i32>, ptr [[I]], align 4
 // CHECK-NEXt: ret void
 export void call12() {
   int4 I = {1,2,3,4};

@@ -180,6 +180,13 @@ MCSymbolWasm *WebAssemblyAsmPrinter::getMCSymbolForFunction(
 }
 
 void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
+  if (GV->hasCommonLinkage()) {
+    OutContext.reportError(SMLoc(),
+                           "common symbols are not yet implemented for Wasm: " +
+                               getSymbol(GV)->getName());
+    return;
+  }
+
   if (!WebAssembly::isWasmVarAddressSpace(GV->getAddressSpace())) {
     AsmPrinter::emitGlobalVariable(GV);
     return;
@@ -404,7 +411,7 @@ void WebAssemblyAsmPrinter::emitEndOfAsmFile(Module &M) {
     if (!G.hasInitializer() && G.hasExternalLinkage() &&
         !WebAssembly::isWasmVarAddressSpace(G.getAddressSpace()) &&
         G.getValueType()->isSized()) {
-      uint16_t Size = M.getDataLayout().getTypeAllocSize(G.getValueType());
+      uint16_t Size = G.getGlobalSize(M.getDataLayout());
       OutStreamer->emitELFSize(getSymbol(&G),
                                MCConstantExpr::create(Size, OutContext));
     }
@@ -659,6 +666,12 @@ void WebAssemblyAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case WebAssembly::ARGUMENT_v2f64_S:
   case WebAssembly::ARGUMENT_v8f16:
   case WebAssembly::ARGUMENT_v8f16_S:
+  case WebAssembly::ARGUMENT_externref:
+  case WebAssembly::ARGUMENT_externref_S:
+  case WebAssembly::ARGUMENT_funcref:
+  case WebAssembly::ARGUMENT_funcref_S:
+  case WebAssembly::ARGUMENT_exnref:
+  case WebAssembly::ARGUMENT_exnref_S:
     // These represent values which are live into the function entry, so there's
     // no instruction to emit.
     break;

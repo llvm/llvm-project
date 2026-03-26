@@ -8,7 +8,7 @@
 
 #include "flang-rt/runtime/environment.h"
 #include "environment-default-list.h"
-#include "memory.h"
+#include "flang-rt/runtime/memory.h"
 #include "flang-rt/runtime/tools.h"
 #include <cstdio>
 #include <cstdlib>
@@ -16,11 +16,14 @@
 #include <limits>
 
 #ifdef _WIN32
+#ifdef _MSC_VER
 extern char **_environ;
-#elif defined(__FreeBSD__)
+#endif
+#elif defined(__FreeBSD__) || RT_GPU_TARGET
 // FreeBSD has environ in crt rather than libc. Using "extern char** environ"
 // in the code of a shared library makes it fail to link with -Wl,--no-undefined
 // See https://reviews.freebsd.org/D30842#840642
+// GPU targets do not provide environ.
 #else
 extern char **environ;
 #endif
@@ -49,6 +52,8 @@ static void (*PostConfigEnvCallback[ExecutionEnvironment::nConfigEnvCallback])(
     int, const char *[], const char *[], const EnvironmentDefaultList *){
     nullptr};
 
+// No environment support on the GPU.
+#if !RT_GPU_TARGET
 static void SetEnvironmentDefaults(const EnvironmentDefaultList *envDefaults) {
   if (!envDefaults) {
     return;
@@ -141,6 +146,17 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
     }
   }
 
+  if (auto *x{std::getenv("FORT_TRUNCATE_STREAM")}) {
+    char *end;
+    auto n{std::strtol(x, &end, 10)};
+    if (n >= 0 && n <= 1 && *end == '\0') {
+      truncateStream = n != 0;
+    } else {
+      std::fprintf(stderr,
+          "Fortran runtime: FORT_TRUNCATE_STREAM=%s is invalid; ignored\n", x);
+    }
+  }
+
   if (auto *x{std::getenv("NO_STOP_MESSAGE")}) {
     char *end;
     auto n{std::strtol(x, &end, 10)};
@@ -201,6 +217,18 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
       std::fprintf(stderr,
           "Fortran runtime: NV_CUDAFOR_DEVICE_IS_MANAGED=%s is invalid; "
           "ignored\n",
+          x);
+    }
+  }
+
+  if (auto *x{std::getenv("FORT_NO_EMPTY_ALLOCATION")}) {
+    char *end;
+    auto n{std::strtol(x, &end, 10)};
+    if (n >= 0 && n <= 1 && *end == '\0') {
+      noEmptyAllocation = n != 0;
+    } else {
+      std::fprintf(stderr,
+          "Fortran runtime: FORT_NO_EMPTY_ALLOCATION=%s is invalid; ignored\n",
           x);
     }
   }
@@ -289,6 +317,7 @@ std::int32_t ExecutionEnvironment::UnsetEnv(
 
   return status;
 }
+#endif
 
 extern "C" {
 

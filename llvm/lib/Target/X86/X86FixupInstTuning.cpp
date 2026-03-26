@@ -23,10 +23,14 @@
 
 #include "X86.h"
 #include "X86InstrInfo.h"
+#include "X86RegisterInfo.h"
 #include "X86Subtarget.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/IR/Analysis.h"
 
 using namespace llvm;
 
@@ -35,11 +39,25 @@ using namespace llvm;
 STATISTIC(NumInstChanges, "Number of instructions changes");
 
 namespace {
-class X86FixupInstTuningPass : public MachineFunctionPass {
+class X86FixupInstTuningImpl {
+public:
+  bool runOnMachineFunction(MachineFunction &MF);
+
+private:
+  bool processInstruction(MachineFunction &MF, MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator &I);
+
+  const X86InstrInfo *TII = nullptr;
+  const X86Subtarget *ST = nullptr;
+  const MCSchedModel *SM = nullptr;
+  const X86RegisterInfo *TRI = nullptr;
+};
+
+class X86FixupInstTuningLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  X86FixupInstTuningPass() : MachineFunctionPass(ID) {}
+  X86FixupInstTuningLegacy() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override { return "X86 Fixup Inst Tuning"; }
 
@@ -51,20 +69,15 @@ public:
   MachineFunctionProperties getRequiredProperties() const override {
     return MachineFunctionProperties().setNoVRegs();
   }
-
-private:
-  const X86InstrInfo *TII = nullptr;
-  const X86Subtarget *ST = nullptr;
-  const MCSchedModel *SM = nullptr;
 };
 } // end anonymous namespace
 
-char X86FixupInstTuningPass::ID = 0;
+char X86FixupInstTuningLegacy ::ID = 0;
 
-INITIALIZE_PASS(X86FixupInstTuningPass, DEBUG_TYPE, DEBUG_TYPE, false, false)
+INITIALIZE_PASS(X86FixupInstTuningLegacy, DEBUG_TYPE, DEBUG_TYPE, false, false)
 
-FunctionPass *llvm::createX86FixupInstTuning() {
-  return new X86FixupInstTuningPass();
+FunctionPass *llvm::createX86FixupInstTuningLegacyPass() {
+  return new X86FixupInstTuningLegacy();
 }
 
 template <typename T>
@@ -75,7 +88,7 @@ static std::optional<bool> CmpOptionals(T NewVal, T CurVal) {
   return std::nullopt;
 }
 
-bool X86FixupInstTuningPass::processInstruction(
+bool X86FixupInstTuningImpl::processInstruction(
     MachineFunction &MF, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator &I) {
   MachineInstr &MI = *I;
@@ -247,7 +260,8 @@ bool X86FixupInstTuningPass::processInstruction(
       return false;
     // Convert to VPBLENDD if scaling the VPBLENDW mask down/up loses no bits.
     APInt MaskW =
-        APInt(8, MI.getOperand(NumOperands - 1).getImm(), /*IsSigned=*/false);
+        APInt(8, MI.getOperand(NumOperands - 1).getImm(), /*IsSigned=*/false,
+              /*implicitTrunc=*/true);
     APInt MaskD = APIntOps::ScaleBitMask(MaskW, 4, /*MatchAllBits=*/true);
     if (MaskW != APIntOps::ScaleBitMask(MaskD, 8, /*MatchAllBits=*/true))
       return false;
@@ -291,6 +305,40 @@ bool X86FixupInstTuningPass::processInstruction(
     }
     LLVM_DEBUG(dbgs() << "     With: " << MI);
     return false;
+  };
+
+  // `vpermq ymm, ymm, 0x44` -> `vinserti128 ymm, ymm, xmm, 1`
+  // `vpermpd ymm, ymm, 0x44` -> `vinsertf128 ymm, ymm, xmm, 1`
+  // When the immediate is 0x44, VPERMQ/VPERMPD duplicates the lower 128-bit
+  // lane to both lanes. 0x44 = 0b01_00_01_00 means qwords[3:0] = {src[1],
+  // src[0], src[1], src[0]} This is equivalent to inserting the lower 128-bits
+  // into the upper 128-bit position.
+  auto ProcessVPERMQToVINSERT128 = [&](unsigned NewOpc) -> bool {
+    if (MI.getOperand(NumOperands - 1).getImm() != 0x44)
+      return false;
+    if (!NewOpcPreferable(NewOpc, /*ReplaceInTie*/ false))
+      return false;
+
+    // Get the XMM subregister of the source YMM register.
+    Register SrcReg = MI.getOperand(1).getReg();
+    Register XmmReg = TRI->getSubReg(SrcReg, X86::sub_xmm);
+
+    LLVM_DEBUG(dbgs() << "Replacing: " << MI);
+    {
+      // Transform: VPERMQ $dst, $src, $0x44
+      // Into:      VINSERTI128 $dst, $src, $xmm_src, $1
+      MI.setDesc(TII->get(NewOpc));
+      // Remove the immediate operand.
+      MI.removeOperand(NumOperands - 1);
+      // Add the XMM subregister operand.
+      MI.addOperand(MachineOperand::CreateReg(XmmReg, /*isDef=*/false,
+                                              /*isImp=*/false,
+                                              /*isKill=*/false));
+      // Add the immediate (1 = insert into high 128-bits).
+      MI.addOperand(MachineOperand::CreateImm(1));
+    }
+    LLVM_DEBUG(dbgs() << "     With: " << MI);
+    return true;
   };
 
   switch (Opc) {
@@ -381,7 +429,10 @@ bool X86FixupInstTuningPass::processInstruction(
     return ProcessVPERMILPSmi(X86::VPSHUFDZ256mik);
   case X86::VPERMILPSZmik:
     return ProcessVPERMILPSmi(X86::VPSHUFDZmik);
-
+  case X86::VPERMQYri:
+    return ProcessVPERMQToVINSERT128(X86::VINSERTI128rri);
+  case X86::VPERMPDYri:
+    return ProcessVPERMQToVINSERT128(X86::VINSERTF128rri);
   case X86::MOVLHPSrr:
   case X86::UNPCKLPDrr:
     return ProcessUNPCKLPDrr(X86::PUNPCKLQDQrr, X86::SHUFPDrri);
@@ -622,11 +673,12 @@ bool X86FixupInstTuningPass::processInstruction(
   }
 }
 
-bool X86FixupInstTuningPass::runOnMachineFunction(MachineFunction &MF) {
+bool X86FixupInstTuningImpl::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "Start X86FixupInstTuning\n";);
   bool Changed = false;
   ST = &MF.getSubtarget<X86Subtarget>();
   TII = ST->getInstrInfo();
+  TRI = ST->getRegisterInfo();
   SM = &ST->getSchedModel();
 
   for (MachineBasicBlock &MBB : MF) {
@@ -639,4 +691,19 @@ bool X86FixupInstTuningPass::runOnMachineFunction(MachineFunction &MF) {
   }
   LLVM_DEBUG(dbgs() << "End X86FixupInstTuning\n";);
   return Changed;
+}
+
+bool X86FixupInstTuningLegacy::runOnMachineFunction(MachineFunction &MF) {
+  X86FixupInstTuningImpl Impl;
+  return Impl.runOnMachineFunction(MF);
+}
+
+PreservedAnalyses
+X86FixupInstTuningPass::run(MachineFunction &MF,
+                            MachineFunctionAnalysisManager &MFAM) {
+  X86FixupInstTuningImpl Impl;
+  return Impl.runOnMachineFunction(MF)
+             ? getMachineFunctionPassPreservedAnalyses()
+                   .preserveSet<CFGAnalyses>()
+             : PreservedAnalyses::all();
 }

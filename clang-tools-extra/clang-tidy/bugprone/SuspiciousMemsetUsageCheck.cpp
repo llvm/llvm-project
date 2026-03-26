@@ -70,10 +70,8 @@ void SuspiciousMemsetUsageCheck::check(const MatchFinder::MatchResult &Result) {
       return;
     Diag << FixItHint::CreateReplacement(
         CharSourceRange::getTokenRange(CharRange), "0");
-  }
-
-  else if (const auto *NumFill =
-               Result.Nodes.getNodeAs<IntegerLiteral>("num-fill")) {
+  } else if (const auto *NumFill =
+                 Result.Nodes.getNodeAs<IntegerLiteral>("num-fill")) {
     // Case 2: fill_char of memset() is larger in size than an unsigned char
     // so it gets truncated during conversion.
 
@@ -88,9 +86,7 @@ void SuspiciousMemsetUsageCheck::check(const MatchFinder::MatchResult &Result) {
 
     diag(NumFill->getBeginLoc(), "memset fill value is out of unsigned "
                                  "character range, gets truncated");
-  }
-
-  else if (const auto *Call = Result.Nodes.getNodeAs<CallExpr>("call")) {
+  } else if (const auto *Call = Result.Nodes.getNodeAs<CallExpr>("call")) {
     // Case 3: byte_count of memset() is zero. This is most likely an
     // argument swap.
 

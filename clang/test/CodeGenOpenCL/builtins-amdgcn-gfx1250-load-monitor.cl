@@ -7,60 +7,60 @@ typedef int    v4i   __attribute__((ext_vector_type(4)));
 
 // CHECK-GFX1250-LABEL: @test_amdgcn_global_load_monitor_b32(
 // CHECK-GFX1250-NEXT:  entry:
-// CHECK-GFX1250-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.global.load.monitor.b32.i32(ptr addrspace(1) [[INPTR:%.*]], i32 1)
+// CHECK-GFX1250-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.global.load.monitor.b32.i32(ptr addrspace(1) [[INPTR:%.*]], i32 0, metadata [[META8:![0-9]+]])
 // CHECK-GFX1250-NEXT:    ret i32 [[TMP0]]
 //
 int test_amdgcn_global_load_monitor_b32(global int* inptr)
 {
-  return __builtin_amdgcn_global_load_monitor_b32(inptr, 1);
+  return __builtin_amdgcn_global_load_monitor_b32(inptr, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
 }
 
 // CHECK-GFX1250-LABEL: @test_amdgcn_global_load_monitor_b64(
 // CHECK-GFX1250-NEXT:  entry:
-// CHECK-GFX1250-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.global.load.monitor.b64.v2i32(ptr addrspace(1) [[INPTR:%.*]], i32 10)
+// CHECK-GFX1250-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.global.load.monitor.b64.v2i32(ptr addrspace(1) [[INPTR:%.*]], i32 2, metadata [[META9:![0-9]+]])
 // CHECK-GFX1250-NEXT:    ret <2 x i32> [[TMP0]]
 //
 v2i test_amdgcn_global_load_monitor_b64(global v2i* inptr)
 {
-  return __builtin_amdgcn_global_load_monitor_b64(inptr, 10);
+  return __builtin_amdgcn_global_load_monitor_b64(inptr, __ATOMIC_ACQUIRE, __MEMORY_SCOPE_DEVICE);
 }
 
 // CHECK-GFX1250-LABEL: @test_amdgcn_global_load_monitor_b128(
 // CHECK-GFX1250-NEXT:  entry:
-// CHECK-GFX1250-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.global.load.monitor.b128.v4i32(ptr addrspace(1) [[INPTR:%.*]], i32 22)
+// CHECK-GFX1250-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.global.load.monitor.b128.v4i32(ptr addrspace(1) [[INPTR:%.*]], i32 2, metadata [[META10:![0-9]+]])
 // CHECK-GFX1250-NEXT:    ret <4 x i32> [[TMP0]]
 //
 v4i test_amdgcn_global_load_monitor_b128(global v4i* inptr)
 {
-  return __builtin_amdgcn_global_load_monitor_b128(inptr, 22);
+  return __builtin_amdgcn_global_load_monitor_b128(inptr, __ATOMIC_ACQUIRE, __MEMORY_SCOPE_WRKGRP);
 }
 
 // CHECK-GFX1250-LABEL: @test_amdgcn_flat_load_monitor_b32(
 // CHECK-GFX1250-NEXT:  entry:
-// CHECK-GFX1250-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.flat.load.monitor.b32.i32(ptr [[INPTR:%.*]], i32 27)
+// CHECK-GFX1250-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.flat.load.monitor.b32.i32(ptr [[INPTR:%.*]], i32 0, metadata [[META8]])
 // CHECK-GFX1250-NEXT:    ret i32 [[TMP0]]
 //
 int test_amdgcn_flat_load_monitor_b32(int* inptr)
 {
-  return __builtin_amdgcn_flat_load_monitor_b32(inptr, 27);
+  return __builtin_amdgcn_flat_load_monitor_b32(inptr, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
 }
 
 // CHECK-GFX1250-LABEL: @test_amdgcn_flat_load_monitor_b64(
 // CHECK-GFX1250-NEXT:  entry:
-// CHECK-GFX1250-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.flat.load.monitor.b64.v2i32(ptr [[INPTR:%.*]], i32 1)
+// CHECK-GFX1250-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.flat.load.monitor.b64.v2i32(ptr [[INPTR:%.*]], i32 5, metadata [[META11:![0-9]+]])
 // CHECK-GFX1250-NEXT:    ret <2 x i32> [[TMP0]]
 //
 v2i test_amdgcn_flat_load_monitor_b64(v2i* inptr)
 {
-  return __builtin_amdgcn_flat_load_monitor_b64(inptr, 1);
+  return __builtin_amdgcn_flat_load_monitor_b64(inptr, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_CLUSTR);
 }
 
 // CHECK-GFX1250-LABEL: @test_amdgcn_flat_load_monitor_b128(
 // CHECK-GFX1250-NEXT:  entry:
-// CHECK-GFX1250-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.flat.load.monitor.b128.v4i32(ptr [[INPTR:%.*]], i32 0)
+// CHECK-GFX1250-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.flat.load.monitor.b128.v4i32(ptr [[INPTR:%.*]], i32 0, metadata [[META8]])
 // CHECK-GFX1250-NEXT:    ret <4 x i32> [[TMP0]]
 //
 v4i test_amdgcn_flat_load_monitor_b128(v4i* inptr)
 {
-  return __builtin_amdgcn_flat_load_monitor_b128(inptr, 0);
+  return __builtin_amdgcn_flat_load_monitor_b128(inptr, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
 }

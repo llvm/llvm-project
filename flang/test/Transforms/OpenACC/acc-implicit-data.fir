@@ -11,7 +11,7 @@ func.func @test_fir_scalar_in_serial() {
   return
 }
 
-// CHECK: acc.firstprivate varPtr({{.*}} : !fir.ref<i64>) -> !fir.ref<i64> {implicit = true, name = "scalarvar"}
+// CHECK: acc.firstprivate varPtr({{.*}} : !fir.ref<i64>) recipe({{.*}}) -> !fir.ref<i64> {implicit = true, name = "scalarvar"}
 
 // -----
 
@@ -24,7 +24,7 @@ func.func @test_fir_scalar_in_parallel() {
   return
 }
 
-// CHECK: acc.firstprivate varPtr({{.*}} : !fir.ref<f32>) -> !fir.ref<f32> {implicit = true, name = "scalarvar"}
+// CHECK: acc.firstprivate varPtr({{.*}} : !fir.ref<f32>) recipe({{.*}}) -> !fir.ref<f32> {implicit = true, name = "scalarvar"}
 
 // -----
 
@@ -133,7 +133,7 @@ func.func @test_fir_derivedtype_in_parallel_defaultpresent() {
   return
 }
 
-// CHECK: %[[PRESENT:.*]] = acc.present varPtr({{.*}} : !fir.ref<!fir.type<_QFTaggr{field:f32}>>) -> !fir.ref<!fir.type<_QFTaggr{field:f32}>> {implicit = true, name = "aggrvar"}
+// CHECK: %[[PRESENT:.*]] = acc.present varPtr({{.*}} : !fir.ref<!fir.type<_QFTaggr{field:f32}>>) -> !fir.ref<!fir.type<_QFTaggr{field:f32}>> {acc.from_default, implicit = true, name = "aggrvar"}
 // CHECK: acc.delete accPtr(%[[PRESENT]] : !fir.ref<!fir.type<_QFTaggr{field:f32}>>) {dataClause = #acc<data_clause acc_present>, implicit = true, name = "aggrvar"}
 
 // -----
@@ -147,7 +147,7 @@ func.func @test_fir_derivedtype_in_kernels_defaultpresent() {
   return
 }
 
-// CHECK: %[[PRESENT:.*]] = acc.present varPtr({{.*}} : !fir.ref<!fir.type<_QFTaggr{field:f32}>>) -> !fir.ref<!fir.type<_QFTaggr{field:f32}>> {implicit = true, name = "aggrvar"}
+// CHECK: %[[PRESENT:.*]] = acc.present varPtr({{.*}} : !fir.ref<!fir.type<_QFTaggr{field:f32}>>) -> !fir.ref<!fir.type<_QFTaggr{field:f32}>> {acc.from_default, implicit = true, name = "aggrvar"}
 // CHECK: acc.delete accPtr(%[[PRESENT]] : !fir.ref<!fir.type<_QFTaggr{field:f32}>>) {dataClause = #acc<data_clause acc_present>, implicit = true, name = "aggrvar"}
 
 // -----
@@ -161,7 +161,7 @@ func.func @test_fir_array_in_parallel_defaultpresent() {
   return
 }
 
-// CHECK: %[[PRESENT:.*]] = acc.present varPtr({{.*}} : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {implicit = true, name = "arrayvar"}
+// CHECK: %[[PRESENT:.*]] = acc.present varPtr({{.*}} : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {acc.from_default, implicit = true, name = "arrayvar"}
 // CHECK: acc.delete accPtr(%[[PRESENT]] : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_present>, implicit = true, name = "arrayvar"}
 
 // -----
@@ -175,7 +175,7 @@ func.func @test_fir_array_in_kernels_defaultpresent() {
   return
 }
 
-// CHECK: %[[PRESENT:.*]] = acc.present varPtr({{.*}} : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {implicit = true, name = "arrayvar"}
+// CHECK: %[[PRESENT:.*]] = acc.present varPtr({{.*}} : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {acc.from_default, implicit = true, name = "arrayvar"}
 // CHECK: acc.delete accPtr(%[[PRESENT]] : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_present>, implicit = true, name = "arrayvar"}
 
 // -----
@@ -189,7 +189,7 @@ func.func @test_fir_scalar_in_parallel_defaultpresent() {
   return
 }
 
-// CHECK: acc.firstprivate varPtr({{.*}} : !fir.ref<f32>) -> !fir.ref<f32> {implicit = true, name = "scalarvar"}
+// CHECK: acc.firstprivate varPtr({{.*}} : !fir.ref<f32>) recipe({{.*}}) -> !fir.ref<f32> {implicit = true, name = "scalarvar"}
 
 // -----
 
@@ -356,3 +356,41 @@ func.func @test_acc_declare_deviceptr() {
 // CHECK-NOT: acc.copyin
 // CHECK: acc.deviceptr
 
+
+// -----
+
+// Test that implicit deviceptr is generated for a symbol with CUDA device attribute
+func.func @test_cuda_device_implicit_deviceptr() {
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFEa"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %2 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
+  %c0 = arith.constant 0 : index
+  %3 = fir.shape %c0 : (index) -> !fir.shape<1>
+  %4 = fir.embox %2(%3) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+  fir.store %4 to %1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %5:2 = hlfir.declare %1 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
+  %c1 = arith.constant 1 : index
+  %c16_i32 = arith.constant 16 : i32
+  %c0_i32 = arith.constant 0 : i32
+  %6 = fir.convert %5#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
+  %7 = fir.convert %c1 : (index) -> i64
+  %8 = fir.convert %c16_i32 : (i32) -> i64
+  fir.call @_FortranAAllocatableSetBounds(%6, %c0_i32, %7, %8) fastmath<contract> : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
+  %9 = cuf.allocate %5#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>} -> i32
+  acc.serial {
+    %cst = arith.constant 1.000000e+02 : f32
+    %10 = fir.load %5#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+    %c5 = arith.constant 5 : index
+    %11 = hlfir.designate %10 (%c5)  : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> !fir.ref<f32>
+    hlfir.assign %cst to %11 : f32, !fir.ref<f32>
+    acc.yield
+  }
+  return
+}
+
+func.func private @_FortranAAllocatableSetBounds(!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
+
+// CHECK-LABEL: func.func @test_cuda_device_implicit_deviceptr
+// CHECK-NOT: acc.copyin
+// CHECK: acc.deviceptr
+// CHECK-NOT: acc.copyout

@@ -5,6 +5,8 @@ from clang.cindex import (
     AccessSpecifier,
     AvailabilityKind,
     BinaryOperator,
+    CompletionChunkKind,
+    CompletionString,
     CursorKind,
     ExceptionSpecificationKind,
     LanguageKind,
@@ -22,7 +24,10 @@ from clang.cindex import (
 
 
 class TestEnums(unittest.TestCase):
+    # Test all enum classes, except for AvailabilityKindCompat since it is
+    # just a copy of AvailabilityKind and has no corresponding C-class
     enums = BaseEnumeration.__subclasses__()
+    enums.remove(CompletionString.AvailabilityKindCompat)
 
     def test_from_id(self):
         """Check that kinds can be constructed from valid IDs"""
@@ -41,6 +46,7 @@ class TestEnums(unittest.TestCase):
             "CX_StorageClass": StorageClass,
             "CXAvailabilityKind": AvailabilityKind,
             "CXBinaryOperatorKind": BinaryOperator,
+            "CXCompletionChunkKind": CompletionChunkKind,
             "CXCursorKind": CursorKind,
             "CXCursor_ExceptionSpecificationKind": ExceptionSpecificationKind,
             "CXLanguageKind": LanguageKind,

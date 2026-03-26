@@ -35,7 +35,7 @@ static const MCPhysReg GPRArgRegs[] = {CSKY::R0, CSKY::R1, CSKY::R2, CSKY::R3};
 
 CSKYTargetLowering::CSKYTargetLowering(const TargetMachine &TM,
                                        const CSKYSubtarget &STI)
-    : TargetLowering(TM), Subtarget(STI) {
+    : TargetLowering(TM, STI), Subtarget(STI) {
   // Register Class
   addRegisterClass(MVT::i32, &CSKY::GPRRegClass);
 
@@ -117,15 +117,15 @@ CSKYTargetLowering::CSKYTargetLowering(const TargetMachine &TM,
   };
 
   ISD::NodeType FPOpToExpand[] = {
-      ISD::FSIN, ISD::FCOS,      ISD::FSINCOS,    ISD::FPOW,
-      ISD::FREM, ISD::FCOPYSIGN, ISD::FP16_TO_FP, ISD::FP_TO_FP16};
+      ISD::FSIN,      ISD::FCOS,       ISD::FSINCOS,   ISD::FPOW,
+      ISD::FCOPYSIGN, ISD::FP16_TO_FP, ISD::FP_TO_FP16};
 
   if (STI.useHardFloat()) {
 
     MVT AllVTy[] = {MVT::f32, MVT::f64};
 
     for (auto VT : AllVTy) {
-      setOperationAction(ISD::FREM, VT, Expand);
+      setOperationAction(ISD::FREM, VT, LibCall);
       setOperationAction(ISD::SELECT_CC, VT, Expand);
       setOperationAction(ISD::BR_CC, VT, Expand);
 

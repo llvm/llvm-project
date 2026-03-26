@@ -19,15 +19,15 @@ namespace clang::tidy::utils::fixit {
 
 FixItHint changeVarDeclToReference(const VarDecl &Var, ASTContext &Context) {
   SourceLocation AmpLocation = Var.getLocation();
-  auto Token = utils::lexer::getPreviousToken(
+  const std::optional<Token> Token = utils::lexer::getPreviousToken(
       AmpLocation, Context.getSourceManager(), Context.getLangOpts());
 
   // For parameter packs the '&' must go before the '...' token
-  if (Token.is(tok::ellipsis))
-    return FixItHint::CreateInsertion(Token.getLocation(), "&");
+  if (Token && Token->is(tok::ellipsis))
+    return FixItHint::CreateInsertion(Token->getLocation(), "&");
 
-  if (!Token.is(tok::unknown))
-    AmpLocation = Lexer::getLocForEndOfToken(Token.getLocation(), 0,
+  if (Token)
+    AmpLocation = Lexer::getLocForEndOfToken(Token->getLocation(), 0,
                                              Context.getSourceManager(),
                                              Context.getLangOpts());
   return FixItHint::CreateInsertion(AmpLocation, "&");
@@ -53,10 +53,9 @@ skipLParensBackwards(SourceLocation Start, const ASTContext &Context) {
     return std::nullopt;
 
   auto PreviousTokenLParen = [&Start, &Context]() {
-    Token T;
-    T = lexer::getPreviousToken(Start, Context.getSourceManager(),
-                                Context.getLangOpts());
-    return T.is(tok::l_paren);
+    const std::optional<Token> T = lexer::getPreviousToken(
+        Start, Context.getSourceManager(), Context.getLangOpts());
+    return T && T->is(tok::l_paren);
   };
 
   while (Start.isValid() && PreviousTokenLParen())
@@ -236,14 +235,13 @@ bool areParensNeededForStatement(const Stmt &Node) {
   if (isa<ParenExpr>(&Node))
     return false;
 
-  if (isa<clang::BinaryOperator>(&Node) || isa<UnaryOperator>(&Node))
+  if (isa<BinaryOperator, UnaryOperator>(&Node))
     return true;
 
-  if (isa<clang::ConditionalOperator>(&Node) ||
-      isa<BinaryConditionalOperator>(&Node))
+  if (isa<ConditionalOperator, BinaryConditionalOperator>(&Node))
     return true;
 
-  if (const auto *Op = dyn_cast<CXXOperatorCallExpr>(&Node)) {
+  if (const auto *Op = dyn_cast<CXXOperatorCallExpr>(&Node))
     switch (Op->getOperator()) {
     case OO_PlusPlus:
       [[fallthrough]];
@@ -258,7 +256,6 @@ bool areParensNeededForStatement(const Stmt &Node) {
     default:
       return true;
     };
-  }
 
   if (isa<CStyleCastExpr>(&Node))
     return true;
@@ -270,10 +267,8 @@ bool areParensNeededForStatement(const Stmt &Node) {
 // prefix unary operator, e.g. when it is a binary or ternary operator
 // syntactically.
 static bool needParensAfterUnaryOperator(const Expr &ExprNode) {
-  if (isa<clang::BinaryOperator>(&ExprNode) ||
-      isa<clang::ConditionalOperator>(&ExprNode)) {
+  if (isa<BinaryOperator, ConditionalOperator>(&ExprNode))
     return true;
-  }
   if (const auto *Op = dyn_cast<CXXOperatorCallExpr>(&ExprNode)) {
     return Op->getNumArgs() == 2 && Op->getOperator() != OO_PlusPlus &&
            Op->getOperator() != OO_MinusMinus && Op->getOperator() != OO_Call &&
@@ -285,7 +280,7 @@ static bool needParensAfterUnaryOperator(const Expr &ExprNode) {
 // Format a pointer to an expression: prefix with '*' but simplify
 // when it already begins with '&'.  Return empty string on failure.
 std::string formatDereference(const Expr &ExprNode, const ASTContext &Context) {
-  if (const auto *Op = dyn_cast<clang::UnaryOperator>(&ExprNode)) {
+  if (const auto *Op = dyn_cast<UnaryOperator>(&ExprNode)) {
     if (Op->getOpcode() == UO_AddrOf) {
       // Strip leading '&'.
       return std::string(
@@ -301,9 +296,8 @@ std::string formatDereference(const Expr &ExprNode, const ASTContext &Context) {
   Text.consume_back("->");
 
   // Add leading '*'.
-  if (needParensAfterUnaryOperator(ExprNode)) {
+  if (needParensAfterUnaryOperator(ExprNode))
     return (llvm::Twine("*(") + Text + ")").str();
-  }
   return (llvm::Twine("*") + Text).str();
 }
 

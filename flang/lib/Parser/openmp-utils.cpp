@@ -15,12 +15,25 @@
 #include "flang/Common/indirection.h"
 #include "flang/Common/template.h"
 #include "flang/Common/visit.h"
+#include "flang/Parser/tools.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Frontend/OpenMP/OMP.h"
 
 #include <tuple>
 #include <type_traits>
 #include <variant>
 
 namespace Fortran::parser::omp {
+
+std::string GetUpperName(llvm::omp::Clause id, unsigned version) {
+  llvm::StringRef name{llvm::omp::getOpenMPClauseName(id, version)};
+  return parser::ToUpperCaseLetters(name);
+}
+
+std::string GetUpperName(llvm::omp::Directive id, unsigned version) {
+  llvm::StringRef name{llvm::omp::getOpenMPDirectiveName(id, version)};
+  return parser::ToUpperCaseLetters(name);
+}
 
 const OpenMPDeclarativeConstruct *GetOmp(const DeclarationConstruct &x) {
   if (auto *y = std::get_if<SpecificationConstruct>(&x.u)) {
@@ -41,44 +54,48 @@ const OpenMPConstruct *GetOmp(const ExecutionPartConstruct &x) {
   return nullptr;
 }
 
+const OpenMPLoopConstruct *GetOmpLoop(const ExecutionPartConstruct &x) {
+  if (auto *construct{GetOmp(x)}) {
+    if (auto *omp{std::get_if<OpenMPLoopConstruct>(&construct->u)}) {
+      return omp;
+    }
+  }
+  return nullptr;
+}
+const DoConstruct *GetDoConstruct(const ExecutionPartConstruct &x) {
+  if (auto *y{std::get_if<ExecutableConstruct>(&x.u)}) {
+    if (auto *z{std::get_if<common::Indirection<DoConstruct>>(&y->u)}) {
+      return &z->value();
+    }
+  }
+  return nullptr;
+}
+
 const OmpObjectList *GetOmpObjectList(const OmpClause &clause) {
-  // Clauses with OmpObjectList as its data member
-  using MemberObjectListClauses = std::tuple<OmpClause::Copyin,
-      OmpClause::Copyprivate, OmpClause::Exclusive, OmpClause::Firstprivate,
-      OmpClause::HasDeviceAddr, OmpClause::Inclusive, OmpClause::IsDevicePtr,
-      OmpClause::Link, OmpClause::Private, OmpClause::Shared,
-      OmpClause::UseDeviceAddr, OmpClause::UseDevicePtr>;
+  return common::visit([](auto &&s) { return GetOmpObjectList(s); }, clause.u);
+}
 
-  // Clauses with OmpObjectList in the tuple
-  using TupleObjectListClauses = std::tuple<OmpClause::AdjustArgs,
-      OmpClause::Affinity, OmpClause::Aligned, OmpClause::Allocate,
-      OmpClause::Enter, OmpClause::From, OmpClause::InReduction,
-      OmpClause::Lastprivate, OmpClause::Linear, OmpClause::Map,
-      OmpClause::Reduction, OmpClause::TaskReduction, OmpClause::To>;
-
-  // TODO:: Generate the tuples using TableGen.
+const OmpObjectList *GetOmpObjectList(const OmpClause::Depend &clause) {
   return common::visit(
       common::visitors{
-          [&](const OmpClause::Depend &x) -> const OmpObjectList * {
-            if (auto *taskDep{std::get_if<OmpDependClause::TaskDep>(&x.v.u)}) {
-              return &std::get<OmpObjectList>(taskDep->t);
-            } else {
-              return nullptr;
-            }
-          },
-          [&](const auto &x) -> const OmpObjectList * {
-            using Ty = std::decay_t<decltype(x)>;
-            if constexpr (common::HasMember<Ty, MemberObjectListClauses>) {
-              return &x.v;
-            } else if constexpr (common::HasMember<Ty,
-                                     TupleObjectListClauses>) {
-              return &std::get<OmpObjectList>(x.v.t);
-            } else {
-              return nullptr;
-            }
-          },
+          [](const OmpDoacross &) -> const OmpObjectList * { return nullptr; },
+          [](const OmpDependClause::TaskDep &x) { return GetOmpObjectList(x); },
       },
-      clause.u);
+      clause.v.u);
+}
+
+const OmpObjectList *GetOmpObjectList(const OmpDependClause::TaskDep &x) {
+  return &std::get<OmpObjectList>(x.t);
+}
+
+const OmpClause *FindClause(
+    const OmpDirectiveSpecification &spec, llvm::omp::Clause clauseId) {
+  for (auto &clause : spec.Clauses().v) {
+    if (clause.Id() == clauseId) {
+      return &clause;
+    }
+  }
+  return nullptr;
 }
 
 const BlockConstruct *GetFortranBlockConstruct(
@@ -121,13 +138,19 @@ bool IsStrictlyStructuredBlock(const Block &block) {
   }
 }
 
-const OmpCombinerExpression *GetCombinerExpr(
-    const OmpReductionSpecifier &rspec) {
-  return addr_if(std::get<std::optional<OmpCombinerExpression>>(rspec.t));
+const OmpCombinerExpression *GetCombinerExpr(const OmpReductionSpecifier &x) {
+  return addr_if(std::get<std::optional<OmpCombinerExpression>>(x.t));
 }
 
-const OmpInitializerExpression *GetInitializerExpr(const OmpClause &init) {
-  if (auto *wrapped{std::get_if<OmpClause::Initializer>(&init.u)}) {
+const OmpCombinerExpression *GetCombinerExpr(const OmpClause &x) {
+  if (auto *wrapped{std::get_if<OmpClause::Combiner>(&x.u)}) {
+    return &wrapped->v.v;
+  }
+  return nullptr;
+}
+
+const OmpInitializerExpression *GetInitializerExpr(const OmpClause &x) {
+  if (auto *wrapped{std::get_if<OmpClause::Initializer>(&x.u)}) {
     return &wrapped->v.v;
   }
   return nullptr;
@@ -151,6 +174,53 @@ OmpAllocateInfo SplitOmpAllocate(const OmpAllocateDirective &x) {
   OmpAllocateInfo info;
   SplitOmpAllocateHelper(info, x);
   return info;
+}
+
+void ExecutionPartIterator::step() {
+  // Advance the iterator to the next legal position. If the current
+  // position is a DO-loop or a loop construct, step into it.
+  if (valid()) {
+    IteratorType where{at()};
+    if (auto *loop{GetOmpLoop(*where)}) {
+      stack_.emplace_back(std::get<Block>(loop->t), &*where);
+    } else if (auto *loop{GetDoConstruct(*where)}) {
+      stack_.emplace_back(std::get<Block>(loop->t), &*where);
+    } else {
+      ++stack_.back().location.at;
+    }
+    adjust();
+  }
+}
+
+void ExecutionPartIterator::next() {
+  // Advance the iterator to the next legal position. If the current
+  // position is a DO-loop or a loop construct, step over it.
+  if (valid()) {
+    ++stack_.back().location.at;
+    adjust();
+  }
+}
+
+void ExecutionPartIterator::adjust() {
+  // If the iterator is not at a legal location, keep advancing it until
+  // it lands at a legal location or becomes invalid.
+  while (valid()) {
+    if (stack_.back().location.atEnd()) {
+      stack_.pop_back();
+      if (valid()) {
+        ++stack_.back().location.at;
+      }
+    } else if (auto *block{GetFortranBlockConstruct(*at())}) {
+      stack_.emplace_back(std::get<Block>(block->t), &*at());
+    } else {
+      break;
+    }
+  }
+}
+
+bool LoopNestIterator::isLoop(const ExecutionPartConstruct &c) {
+  return Unwrap<OpenMPLoopConstruct>(c) != nullptr ||
+      Unwrap<DoConstruct>(c) != nullptr;
 }
 
 } // namespace Fortran::parser::omp

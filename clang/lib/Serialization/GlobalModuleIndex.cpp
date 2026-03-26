@@ -24,6 +24,7 @@
 #include "llvm/Bitstream/BitstreamWriter.h"
 #include "llvm/Support/DJB.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/LockFileManager.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/OnDiskHashTable.h"
@@ -250,6 +251,9 @@ GlobalModuleIndex::~GlobalModuleIndex() {
 
 std::pair<GlobalModuleIndex *, llvm::Error>
 GlobalModuleIndex::readIndex(StringRef Path) {
+  // This is a compiler-internal input/output, let's bypass the sandbox.
+  auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+
   // Load the index file, if it's there.
   llvm::SmallString<128> IndexPath;
   IndexPath += Path;
@@ -634,6 +638,7 @@ llvm::Error GlobalModuleIndexBuilder::loadModuleFile(FileEntryRef File) {
       // Load stored size/modification time.
       off_t StoredSize = (off_t)Record[Idx++];
       time_t StoredModTime = (time_t)Record[Idx++];
+      (void)Record[Idx++]; // ImplicitModuleSuffixLength
 
       // Skip the stored signature.
       // FIXME: we could read the signature out of the import and validate it.
@@ -843,6 +848,9 @@ llvm::Error
 GlobalModuleIndex::writeIndex(FileManager &FileMgr,
                               const PCHContainerReader &PCHContainerRdr,
                               StringRef Path) {
+  // This is a compiler-internal input/output, let's bypass the sandbox.
+  auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+
   llvm::SmallString<128> IndexPath;
   IndexPath += Path;
   llvm::sys::path::append(IndexPath, IndexFileName);

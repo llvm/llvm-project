@@ -771,7 +771,7 @@ Error ASTNodeImporter::ImportTemplateArgumentListInfo(
   TemplateArgumentListInfo ToTAInfo(*ToLAngleLocOrErr, *ToRAngleLocOrErr);
   if (auto Err = ImportTemplateArgumentListInfo(Container, ToTAInfo))
     return Err;
-  Result = ToTAInfo;
+  Result = std::move(ToTAInfo);
   return Error::success();
 }
 
@@ -1291,6 +1291,26 @@ bool ASTNodeImporter::hasSameVisibilityContextAndLinkage(TypedefNameDecl *Found,
 
 using namespace clang;
 
+auto ASTImporter::FunctionDeclImportCycleDetector::makeScopedCycleDetection(
+    const FunctionDecl *D) {
+  const FunctionDecl *LambdaD = nullptr;
+  if (!isCycle(D) && D) {
+    FunctionDeclsWithImportInProgress.insert(D);
+    LambdaD = D;
+  }
+  return llvm::scope_exit([this, LambdaD]() {
+    if (LambdaD) {
+      FunctionDeclsWithImportInProgress.erase(LambdaD);
+    }
+  });
+}
+
+bool ASTImporter::FunctionDeclImportCycleDetector::isCycle(
+    const FunctionDecl *D) const {
+  return FunctionDeclsWithImportInProgress.find(D) !=
+         FunctionDeclsWithImportInProgress.end();
+}
+
 ExpectedType ASTNodeImporter::VisitType(const Type *T) {
   Importer.FromDiag(SourceLocation(), diag::err_unsupported_ast_node)
     << T->getTypeClassName();
@@ -1713,9 +1733,10 @@ ExpectedType ASTNodeImporter::VisitAutoType(const AutoType *T) {
   if (!ToDeducedTypeOrErr)
     return ToDeducedTypeOrErr.takeError();
 
-  ExpectedDecl ToTypeConstraintConcept = import(T->getTypeConstraintConcept());
-  if (!ToTypeConstraintConcept)
-    return ToTypeConstraintConcept.takeError();
+  Expected<TemplateDecl *> ToTypeConstraint =
+      import(T->getTypeConstraintConcept());
+  if (!ToTypeConstraint)
+    return ToTypeConstraint.takeError();
 
   SmallVector<TemplateArgument, 2> ToTemplateArgs;
   if (Error Err = ImportTemplateArguments(T->getTypeConstraintArguments(),
@@ -1723,9 +1744,8 @@ ExpectedType ASTNodeImporter::VisitAutoType(const AutoType *T) {
     return std::move(Err);
 
   return Importer.getToContext().getAutoType(
-      *ToDeducedTypeOrErr, T->getKeyword(), /*IsDependent*/false,
-      /*IsPack=*/false, cast_or_null<ConceptDecl>(*ToTypeConstraintConcept),
-      ToTemplateArgs);
+      T->getDeducedKind(), *ToDeducedTypeOrErr, T->getKeyword(),
+      *ToTypeConstraint, ToTemplateArgs);
 }
 
 ExpectedType ASTNodeImporter::VisitDeducedTemplateSpecializationType(
@@ -1739,8 +1759,8 @@ ExpectedType ASTNodeImporter::VisitDeducedTemplateSpecializationType(
     return ToDeducedTypeOrErr.takeError();
 
   return Importer.getToContext().getDeducedTemplateSpecializationType(
-      T->getKeyword(), *ToTemplateNameOrErr, *ToDeducedTypeOrErr,
-      T->isDependentType());
+      T->getDeducedKind(), *ToDeducedTypeOrErr, T->getKeyword(),
+      *ToTemplateNameOrErr);
 }
 
 ExpectedType ASTNodeImporter::VisitTagType(const TagType *T) {
@@ -1987,6 +2007,18 @@ ExpectedType clang::ASTNodeImporter::VisitBTFTagAttributedType(
 
   return Importer.getToContext().getBTFTagAttributedType(ToBTFAttr,
                                                          ToWrappedType);
+}
+
+ExpectedType clang::ASTNodeImporter::VisitOverflowBehaviorType(
+    const clang::OverflowBehaviorType *T) {
+  Error Err = Error::success();
+  OverflowBehaviorType::OverflowBehaviorKind ToKind = T->getBehaviorKind();
+  QualType ToUnderlyingType = importChecked(Err, T->getUnderlyingType());
+  if (Err)
+    return std::move(Err);
+
+  return Importer.getToContext().getOverflowBehaviorType(ToKind,
+                                                         ToUnderlyingType);
 }
 
 ExpectedType clang::ASTNodeImporter::VisitHLSLAttributedResourceType(
@@ -2527,8 +2559,7 @@ Error ASTNodeImporter::ImportDefinition(
   // Complete the definition even if error is returned.
   // The RecordDecl may be already part of the AST so it is better to
   // have it in complete state even if something is wrong with it.
-  auto DefinitionCompleterScopeExit =
-      llvm::make_scope_exit(DefinitionCompleter);
+  llvm::scope_exit DefinitionCompleterScopeExit(DefinitionCompleter);
 
   if (Error Err = setTypedefNameForAnonDecl(From, To, Importer))
     return Err;
@@ -3413,12 +3444,14 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
               DC, *TInfoOrErr, Loc, DCXX->getLambdaDependencyKind(),
               DCXX->isGenericLambda(), DCXX->getLambdaCaptureDefault()))
         return D2CXX;
-      CXXRecordDecl::LambdaNumbering Numbering = DCXX->getLambdaNumbering();
-      ExpectedDecl CDeclOrErr = import(Numbering.ContextDecl);
+      Decl *ContextDecl = DCXX->getLambdaContextDecl();
+      ExpectedDecl CDeclOrErr = import(ContextDecl);
       if (!CDeclOrErr)
         return CDeclOrErr.takeError();
-      Numbering.ContextDecl = *CDeclOrErr;
-      D2CXX->setLambdaNumbering(Numbering);
+      if (ContextDecl != nullptr) {
+        D2CXX->setLambdaContextDecl(*CDeclOrErr);
+      }
+      D2CXX->setLambdaNumbering(DCXX->getLambdaNumbering());
     } else {
       if (GetImportedOrCreateDecl(D2CXX, D, Importer.getToContext(),
                                   D->getTagKind(), DC, *BeginLocOrErr, Loc,
@@ -4038,7 +4071,10 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
     // E.g.: auto foo() { struct X{}; return X(); }
     // To avoid an infinite recursion when importing, create the FunctionDecl
     // with a simplified return type.
-    if (hasReturnTypeDeclaredInside(D)) {
+    // Reuse this approach for auto return types declared as typenames from
+    // template params, tracked in FindFunctionDeclImportCycle.
+    if (hasReturnTypeDeclaredInside(D) ||
+        Importer.FindFunctionDeclImportCycle.isCycle(D)) {
       FromReturnTy = Importer.getFromContext().VoidTy;
       UsedDifferentProtoType = true;
     }
@@ -4061,6 +4097,8 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
   }
 
   Error Err = Error::success();
+  auto ScopedReturnTypeDeclCycleDetector =
+      Importer.FindFunctionDeclImportCycle.makeScopedCycleDetection(D);
   auto T = importChecked(Err, FromTy);
   auto TInfo = importChecked(Err, FromTSI);
   auto ToInnerLocStart = importChecked(Err, D->getInnerLocStart());
@@ -9711,12 +9749,16 @@ Expected<Attr *> ASTImporter::Import(const Attr *FromAttr) {
   }
   case attr::GuardedBy: {
     const auto *From = cast<GuardedByAttr>(FromAttr);
-    AI.importAttr(From, AI.importArg(From->getArg()).value());
+    AI.importAttr(From,
+                  AI.importArrayArg(From->args(), From->args_size()).value(),
+                  From->args_size());
     break;
   }
   case attr::PtGuardedBy: {
     const auto *From = cast<PtGuardedByAttr>(FromAttr);
-    AI.importAttr(From, AI.importArg(From->getArg()).value());
+    AI.importAttr(From,
+                  AI.importArrayArg(From->args(), From->args_size()).value(),
+                  From->args_size());
     break;
   }
   case attr::AcquiredAfter: {
@@ -9774,8 +9816,7 @@ Expected<Decl *> ASTImporter::Import(Decl *FromD) {
 
   // Push FromD to the stack, and remove that when we return.
   ImportPath.push(FromD);
-  auto ImportPathBuilder =
-      llvm::make_scope_exit([this]() { ImportPath.pop(); });
+  llvm::scope_exit ImportPathBuilder([this]() { ImportPath.pop(); });
 
   // Check whether there was a previous failed import.
   // If yes return the existing error.
@@ -10593,6 +10634,9 @@ ASTNodeImporter::ImportAPValue(const APValue &FromValue) {
                Elts.data(), FromValue.getVectorLength());
     break;
   }
+  case APValue::Matrix:
+    // Matrix values cannot currently arise in APValue import contexts.
+    llvm_unreachable("Matrix APValue import not yet supported");
   case APValue::Array:
     Result.MakeArray(FromValue.getArrayInitializedElts(),
                      FromValue.getArraySize());

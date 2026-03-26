@@ -55,7 +55,7 @@ static const SanitizerMask SupportsCoverage =
     SanitizerKind::SafeStack | SanitizerKind::ShadowCallStack |
     SanitizerKind::Thread | SanitizerKind::ObjCCast | SanitizerKind::KCFI |
     SanitizerKind::NumericalStability | SanitizerKind::Vptr |
-    SanitizerKind::CFI;
+    SanitizerKind::CFI | SanitizerKind::AllocToken;
 static const SanitizerMask RecoverableByDefault =
     SanitizerKind::Undefined | SanitizerKind::Integer |
     SanitizerKind::ImplicitConversion | SanitizerKind::Nullability |
@@ -84,9 +84,9 @@ static const SanitizerMask CFIClasses =
     SanitizerKind::CFIUnrelatedCast;
 static const SanitizerMask CompatibleWithMinimalRuntime =
     TrappingSupported | SanitizerKind::Scudo | SanitizerKind::ShadowCallStack |
-    SanitizerKind::MemtagStack | SanitizerKind::MemtagHeap |
-    SanitizerKind::MemtagGlobals | SanitizerKind::KCFI |
-    SanitizerKind::AllocToken;
+    SanitizerKind::SafeStack | SanitizerKind::MemtagStack |
+    SanitizerKind::MemtagHeap | SanitizerKind::MemtagGlobals |
+    SanitizerKind::KCFI | SanitizerKind::AllocToken;
 
 enum CoverageFeature {
   CoverageFunc = 1 << 0,
@@ -108,6 +108,7 @@ enum CoverageFeature {
   CoverageTraceLoads = 1 << 16,
   CoverageTraceStores = 1 << 17,
   CoverageControlFlow = 1 << 18,
+  CoverageTracePCEntryExit = 1 << 19,
 };
 
 enum BinaryMetadataFeature {
@@ -358,7 +359,7 @@ bool SanitizerArgs::needsFuzzerInterceptors() const {
 bool SanitizerArgs::needsUbsanRt() const {
   // All of these include ubsan.
   if (needsAsanRt() || needsMsanRt() || needsNsanRt() || needsHwasanRt() ||
-      needsTsanRt() || needsDfsanRt() || needsLsanRt() ||
+      needsTsanRt() || needsDfsanRt() || needsLsanRt() || needsTysanRt() ||
       needsCfiCrossDsoDiagRt() || (needsScudoRt() && !requiresMinimalRuntime()))
     return false;
 
@@ -408,6 +409,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                                 // unused-argument diagnostics.
   SanitizerMask DiagnosedKinds; // All Kinds we have diagnosed up to now.
                                 // Used to deduplicate diagnostics.
+  SanitizerMask IgnoreForUbsanFeature; // Accumulated set of values passed to
+                                       // `-fsanitize-ignore-for-ubsan-feature`.
   SanitizerMask Kinds;
   const SanitizerMask Supported = setGroupBits(TC.getSupportedSanitizers());
 
@@ -419,10 +422,18 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   const Driver &D = TC.getDriver();
   SanitizerMask TrappingKinds = parseSanitizeTrapArgs(D, Args, DiagnoseErrors);
   SanitizerMask InvalidTrappingKinds = TrappingKinds & NotAllowedWithTrap;
+  const llvm::Triple &Triple = TC.getTriple();
 
   MinimalRuntime =
       Args.hasFlag(options::OPT_fsanitize_minimal_runtime,
                    options::OPT_fno_sanitize_minimal_runtime, MinimalRuntime);
+  HandlerPreserveAllRegs =
+      Args.hasFlag(options::OPT_fsanitize_handler_preserve_all_regs,
+                   options::OPT_fno_sanitize_handler_preserve_all_regs,
+                   HandlerPreserveAllRegs) &&
+      MinimalRuntime && (Triple.isAArch64() || Triple.isX86_64());
+  TrapLoop = Args.hasFlag(options::OPT_fsanitize_trap_loop,
+                          options::OPT_fno_sanitize_trap_loop, false);
 
   // The object size sanitizer should not be enabled at -O0.
   Arg *OptLevel = Args.getLastArg(options::OPT_O_Group);
@@ -490,7 +501,6 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       // -fsanitize=function and -fsanitize=kcfi instrument indirect function
       // calls to load a type hash before the function label. Therefore, an
       // execute-only target doesn't support the function and kcfi sanitizers.
-      const llvm::Triple &Triple = TC.getTriple();
       if (isExecuteOnlyTarget(Triple, Args)) {
         if (SanitizerMask KindsToDiagnose =
                 Add & NotAllowedWithExecuteOnly & ~DiagnosedKinds) {
@@ -607,6 +617,11 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       Arg->claim();
       SanitizerMask Remove = parseArgValues(D, Arg, DiagnoseErrors);
       AllRemove |= expandSanitizerGroups(Remove);
+    } else if (Arg->getOption().matches(
+                   options::OPT_fsanitize_ignore_for_ubsan_feature_EQ)) {
+      Arg->claim();
+      IgnoreForUbsanFeature |=
+          expandSanitizerGroups(parseArgValues(D, Arg, DiagnoseErrors));
     }
   }
 
@@ -949,10 +964,10 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   }
 
   int InsertionPointTypes = CoverageFunc | CoverageBB | CoverageEdge;
-  int InstrumentationTypes = CoverageTracePC | CoverageTracePCGuard |
-                             CoverageInline8bitCounters | CoverageTraceLoads |
-                             CoverageTraceStores | CoverageInlineBoolFlag |
-                             CoverageControlFlow;
+  int InstrumentationTypes = CoverageTracePC | CoverageTracePCEntryExit |
+                             CoverageTracePCGuard | CoverageInline8bitCounters |
+                             CoverageTraceLoads | CoverageTraceStores |
+                             CoverageInlineBoolFlag | CoverageControlFlow;
   if ((CoverageFeatures & InsertionPointTypes) &&
       !(CoverageFeatures & InstrumentationTypes) && DiagnoseErrors) {
     D.Diag(clang::diag::warn_drv_deprecated_arg)
@@ -963,9 +978,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
 
   // trace-pc w/o func/bb/edge implies edge.
   if (!(CoverageFeatures & InsertionPointTypes)) {
-    if (CoverageFeatures &
-        (CoverageTracePC | CoverageTracePCGuard | CoverageInline8bitCounters |
-         CoverageInlineBoolFlag | CoverageControlFlow))
+    if (CoverageFeatures & (CoverageTracePC | CoverageTracePCEntryExit |
+                            CoverageTracePCGuard | CoverageInline8bitCounters |
+                            CoverageInlineBoolFlag | CoverageControlFlow))
       CoverageFeatures |= CoverageEdge;
 
     if (CoverageFeatures & CoverageStackDepth)
@@ -1176,6 +1191,13 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         options::OPT_fno_sanitize_alloc_token_extended, AllocTokenExtended);
   }
 
+  if (AllAddedKinds & SanitizerKind::Type) {
+    TysanOutlineInstrumentation =
+        Args.hasFlag(options::OPT_fsanitize_type_outline_instrumentation,
+                     options::OPT_fno_sanitize_type_outline_instrumentation,
+                     TysanOutlineInstrumentation);
+  }
+
   LinkRuntimes = Args.hasFlag(options::OPT_fsanitize_link_runtime,
                               options::OPT_fno_sanitize_link_runtime,
                               !Args.hasArg(options::OPT_r));
@@ -1200,6 +1222,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   MergeHandlers.Mask |= MergeKinds;
 
   AnnotateDebugInfo.Mask |= AnnotateDebugInfoKinds;
+  SuppressUBSanFeature.Mask |= IgnoreForUbsanFeature;
 
   // Zero out SkipHotCutoffs for unused sanitizers
   SkipHotCutoffs.clear(~Sanitizers.Mask);
@@ -1305,6 +1328,8 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
       std::make_pair(CoverageTraceGep, "-fsanitize-coverage-trace-gep"),
       std::make_pair(Coverage8bitCounters, "-fsanitize-coverage-8bit-counters"),
       std::make_pair(CoverageTracePC, "-fsanitize-coverage-trace-pc"),
+      std::make_pair(CoverageTracePCEntryExit,
+                     "-fsanitize-coverage-trace-pc-entry-exit"),
       std::make_pair(CoverageTracePCGuard,
                      "-fsanitize-coverage-trace-pc-guard"),
       std::make_pair(CoverageInline8bitCounters,
@@ -1379,6 +1404,11 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   if (Sanitizers.empty())
     return;
   CmdArgs.push_back(Args.MakeArgString("-fsanitize=" + toString(Sanitizers)));
+
+  if (!SuppressUBSanFeature.empty())
+    CmdArgs.push_back(
+        Args.MakeArgString("-fsanitize-ignore-for-ubsan-feature=" +
+                           toString(SuppressUBSanFeature)));
 
   if (!RecoverableSanitizers.empty())
     CmdArgs.push_back(Args.MakeArgString("-fsanitize-recover=" +
@@ -1469,6 +1499,12 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   if (MinimalRuntime)
     CmdArgs.push_back("-fsanitize-minimal-runtime");
 
+  if (TrapLoop)
+    CmdArgs.push_back("-fsanitize-trap-loop");
+
+  if (HandlerPreserveAllRegs)
+    CmdArgs.push_back("-fsanitize-handler-preserve-all-regs");
+
   if (AsanFieldPadding)
     CmdArgs.push_back(Args.MakeArgString("-fsanitize-address-field-padding=" +
                                          Twine(AsanFieldPadding)));
@@ -1498,6 +1534,11 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   if (AsanOutlineInstrumentation) {
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("-asan-instrumentation-with-call-threshold=0");
+  }
+
+  if (!TysanOutlineInstrumentation) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-tysan-outline-instrumentation=false");
   }
 
   // When emitting Stable ABI instrumentation, force outlining calls and avoid
@@ -1595,7 +1636,9 @@ SanitizerMask parseArgValues(const Driver &D, const llvm::opt::Arg *A,
        A->getOption().matches(options::OPT_fno_sanitize_merge_handlers_EQ) ||
        A->getOption().matches(options::OPT_fsanitize_annotate_debug_info_EQ) ||
        A->getOption().matches(
-           options::OPT_fno_sanitize_annotate_debug_info_EQ)) &&
+           options::OPT_fno_sanitize_annotate_debug_info_EQ) ||
+       A->getOption().matches(
+           options::OPT_fsanitize_ignore_for_ubsan_feature_EQ)) &&
       "Invalid argument in parseArgValues!");
   SanitizerMask Kinds;
   for (int i = 0, n = A->getNumValues(); i != n; ++i) {
@@ -1676,6 +1719,7 @@ int parseCoverageFeatures(const Driver &D, const llvm::opt::Arg *A,
                 .Case("trace-gep", CoverageTraceGep)
                 .Case("8bit-counters", Coverage8bitCounters)
                 .Case("trace-pc", CoverageTracePC)
+                .Case("trace-pc-entry-exit", CoverageTracePCEntryExit)
                 .Case("trace-pc-guard", CoverageTracePCGuard)
                 .Case("no-prune", CoverageNoPrune)
                 .Case("inline-8bit-counters", CoverageInline8bitCounters)

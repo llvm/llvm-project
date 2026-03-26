@@ -210,6 +210,14 @@ public:
   AnyResourceExtType(const AnyResourceExtType &) = delete;
   AnyResourceExtType &operator=(const AnyResourceExtType &) = delete;
 
+  Type *getResourceType() const {
+    // Sampler and feedback resources do not have an underlying type.
+    if (isa<SamplerExtType>(this) || isa<FeedbackTextureExtType>(this))
+      return nullptr;
+    // All other resources store the type in a parameter.
+    return getTypeParameter(0);
+  }
+
   static bool classof(const TargetExtType *T) {
     return isa<RawBufferExtType>(T) || isa<TypedBufferExtType>(T) ||
            isa<TextureExtType>(T) || isa<MSTextureExtType>(T) ||
@@ -376,13 +384,18 @@ public:
       return !(*this == RHS);
     }
     bool operator<(const ResourceBinding &RHS) const {
-      return std::tie(RecordID, Space, LowerBound, Size) <
-             std::tie(RHS.RecordID, RHS.Space, RHS.LowerBound, RHS.Size);
+      // a size of 0 indicates unbounded. Accounting for when the size is 0
+      // guarantees a well ordered results.
+      const bool LHSIsUnbounded = Size == 0;
+      const bool RHSIsUnbounded = RHS.Size == 0;
+      return std::tie(RecordID, Space, LowerBound, LHSIsUnbounded, Size) <
+             std::tie(RHS.RecordID, RHS.Space, RHS.LowerBound, RHSIsUnbounded,
+                      RHS.Size);
     }
     bool overlapsWith(const ResourceBinding &RHS) const {
       if (Space != RHS.Space)
         return false;
-      if (Size == UINT32_MAX)
+      if (Size == 0)
         return LowerBound < RHS.LowerBound;
       return LowerBound + Size - 1 >= RHS.LowerBound;
     }

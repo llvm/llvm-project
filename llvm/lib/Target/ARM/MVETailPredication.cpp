@@ -385,7 +385,7 @@ void MVETailPredication::InsertVCTPIntrinsic(IntrinsicInst *ActiveLaneMask,
   PHINode *Processed = Builder.CreatePHI(Ty, 2);
   Processed->addIncoming(Start, L->getLoopPreheader());
 
-  // Replace @llvm.get.active.mask() with the ARM specific VCTP intrinic, and
+  // Replace @llvm.get.active.mask() with the ARM specific VCTP intrinsic, and
   // thus represent the effect of tail predication.
   Builder.SetInsertPoint(ActiveLaneMask);
   ConstantInt *Factor = ConstantInt::get(cast<IntegerType>(Ty), VectorWidth);
@@ -435,8 +435,7 @@ bool MVETailPredication::TryConvertActiveLaneMask(Value *TripCount) {
     }
     LLVM_DEBUG(dbgs() << "ARM TP: Safe to insert VCTP. Start is " << *StartSCEV
                       << "\n");
-    SCEVExpander Expander(*SE, L->getHeader()->getDataLayout(),
-                          "start");
+    SCEVExpander Expander(*SE, "start");
     Instruction *Ins = L->getLoopPreheader()->getTerminator();
     Value *Start = Expander.expandCodeFor(StartSCEV, StartSCEV->getType(), Ins);
     LLVM_DEBUG(dbgs() << "ARM TP: Created start value " << *Start << "\n");

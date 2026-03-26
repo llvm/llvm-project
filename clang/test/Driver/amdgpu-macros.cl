@@ -66,6 +66,7 @@
 // AMDGCN-based processors.
 //
 
+// RUN: %clang -E -dM -target amdgcn %s 2>&1 | FileCheck --check-prefixes=DUMMY,SLOW_FMAF -DWAVEFRONT_SIZE=64 %s
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx600 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=64 -DCPU=gfx600 -DFAMILY=GFX6
 // RUN: %clang -E -dM -target amdgcn -mcpu=tahiti %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=64 -DCPU=gfx600 -DFAMILY=GFX6
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx601 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,SLOW_FMAF %s -DWAVEFRONT_SIZE=64 -DCPU=gfx601 -DFAMILY=GFX6
@@ -128,10 +129,12 @@
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1151 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1151 -DFAMILY=GFX11
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1152 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1152 -DFAMILY=GFX11
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1153 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1153 -DFAMILY=GFX11
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx1170 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1170 -DFAMILY=GFX11
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1200 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1200 -DFAMILY=GFX12
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1201 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1201 -DFAMILY=GFX12
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1250 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1250 -DFAMILY=GFX12
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1251 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1251 -DFAMILY=GFX12
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx1310 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1310 -DFAMILY=GFX13
 
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx9-generic %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=64 -DCPU=gfx9_generic -DFAMILY=GFX9
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx9-4-generic %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=64 -DCPU=gfx9_4_generic -DFAMILY=GFX9
@@ -139,6 +142,7 @@
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx10-3-generic %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx10_3_generic -DFAMILY=GFX10
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx11-generic %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx11_generic -DFAMILY=GFX11
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx12-generic %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx12_generic -DFAMILY=GFX12
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx12-5-generic %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx12_5_generic -DFAMILY=GFX12
 
 // ARCH-GCN-DAG: #define FP_FAST_FMA 1
 
@@ -157,6 +161,15 @@
 // ARCH-GCN-DAG: #define __GCC_DESTRUCTIVE_SIZE 128
 // ARCH-GCN-DAG: #define __GCC_CONSTRUCTIVE_SIZE 128
 // UNSAFEFPATOMIC-DAG: #define __AMDGCN_UNSAFE_FP_ATOMICS__ 1
+
+
+// DUMMY-DAG: #define __AMDGCN__ 1
+// DUMMY-DAG: #define __AMDGPU__ 1
+// DUMMY-DAG: #define __AMD__ 1
+// DUMMY-DAG: #define __HAS_FMAF__ 1
+// DUMMY-DAG: #define __HAS_FP64__ 1
+// DUMMY-DAG: #define __HAS_LDEXPF__ 1
+
 
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx906 \
 // RUN:   %s 2>&1 | FileCheck --check-prefix=CUMODE-ON %s

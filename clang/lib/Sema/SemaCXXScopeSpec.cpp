@@ -381,11 +381,17 @@ namespace {
 class NestedNameSpecifierValidatorCCC final
     : public CorrectionCandidateCallback {
 public:
-  explicit NestedNameSpecifierValidatorCCC(Sema &SRef)
-      : SRef(SRef) {}
+  explicit NestedNameSpecifierValidatorCCC(Sema &SRef, bool HasQualifier)
+      : SRef(SRef), HasQualifier(HasQualifier) {}
 
   bool ValidateCandidate(const TypoCorrection &candidate) override {
-    return SRef.isAcceptableNestedNameSpecifier(candidate.getCorrectionDecl());
+    const NamedDecl *ND = candidate.getCorrectionDecl();
+    if (!SRef.isAcceptableNestedNameSpecifier(ND))
+      return false;
+    // A template type parameter cannot have a nested name specifier.
+    if (HasQualifier && isa<TemplateTypeParmDecl>(ND))
+      return false;
+    return true;
   }
 
   std::unique_ptr<CorrectionCandidateCallback> clone() override {
@@ -394,6 +400,7 @@ public:
 
  private:
   Sema &SRef;
+  bool HasQualifier;
 };
 
 }
@@ -596,7 +603,7 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
     // different kind of error, so look for typos.
     DeclarationName Name = Found.getLookupName();
     Found.clear();
-    NestedNameSpecifierValidatorCCC CCC(*this);
+    NestedNameSpecifierValidatorCCC CCC(*this, /*HasQualifier=*/!SS.isEmpty());
     if (TypoCorrection Corrected = CorrectTypo(
             Found.getLookupNameInfo(), Found.getLookupKind(), S, &SS, CCC,
             CorrectTypoKind::ErrorRecovery, LookupCtx, EnteringContext)) {
@@ -785,7 +792,8 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
           << IdInfo.Identifier << getLangOpts().CPlusPlus;
       return true;
     }
-    if (::ExtendNestedNameSpecifier(*this, SS, ND, IdInfo.IdentifierLoc,
+    if (Found.getLookupKind() == LookupNestedNameSpecifierName &&
+        ::ExtendNestedNameSpecifier(*this, SS, ND, IdInfo.IdentifierLoc,
                                     IdInfo.CCLoc)) {
       const Type *T = SS.getScopeRep().getAsType();
       Diag(IdInfo.IdentifierLoc, diag::err_expected_class_or_namespace)

@@ -45,7 +45,8 @@ Location DebugImporter::translateFuncLocation(llvm::Function *func) {
 //===----------------------------------------------------------------------===//
 
 DIBasicTypeAttr DebugImporter::translateImpl(llvm::DIBasicType *node) {
-  return DIBasicTypeAttr::get(context, node->getTag(), node->getName(),
+  return DIBasicTypeAttr::get(context, node->getTag(),
+                              getStringAttrOrNull(node->getRawName()),
                               node->getSizeInBits(), node->getEncoding());
 }
 
@@ -60,7 +61,8 @@ DICompileUnitAttr DebugImporter::translateImpl(llvm::DICompileUnit *node) {
       context, getOrCreateDistinctID(node),
       node->getSourceLanguage().getUnversionedName(),
       translate(node->getFile()), getStringAttrOrNull(node->getRawProducer()),
-      node->isOptimized(), emissionKind.value(), nameTableKind.value(),
+      node->isOptimized(), emissionKind.value(),
+      node->isDebugInfoForProfiling(), nameTableKind.value(),
       getStringAttrOrNull(node->getRawSplitDebugFilename()));
 }
 
@@ -103,8 +105,10 @@ DIDerivedTypeAttr DebugImporter::translateImpl(llvm::DIDerivedType *node) {
       translate(dyn_cast_or_null<llvm::DINode>(node->getExtraData()));
   return DIDerivedTypeAttr::get(
       context, node->getTag(), getStringAttrOrNull(node->getRawName()),
+      translate(node->getFile()), node->getLine(), translate(node->getScope()),
       baseType, node->getSizeInBits(), node->getAlignInBits(),
-      node->getOffsetInBits(), node->getDWARFAddressSpace(), extraData);
+      node->getOffsetInBits(), node->getDWARFAddressSpace(),
+      symbolizeDIFlags(node->getFlags()).value_or(DIFlags::Zero), extraData);
 }
 
 DIStringTypeAttr DebugImporter::translateImpl(llvm::DIStringType *node) {

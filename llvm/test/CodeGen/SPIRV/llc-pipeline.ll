@@ -11,9 +11,11 @@
 ; REQUIRES:asserts
 
 ; SPIRV-O0:Target Library Information
+; SPIRV-O0-NEXT:Runtime Library Function Analysis
 ; SPIRV-O0-NEXT:Target Pass Configuration
 ; SPIRV-O0-NEXT:Machine Module Information
 ; SPIRV-O0-NEXT:Target Transform Information
+; SPIRV-O0-NEXT:Library Function Lowering Analysis
 ; SPIRV-O0-NEXT:Create Garbage Collector Module Metadata
 ; SPIRV-O0-NEXT:Assumption Cache Tracker
 ; SPIRV-O0-NEXT:Profile summary info
@@ -21,15 +23,18 @@
 ; SPIRV-O0-NEXT:  ModulePass Manager
 ; SPIRV-O0-NEXT:    Pre-ISel Intrinsic Lowering
 ; SPIRV-O0-NEXT:    FunctionPass Manager
-; SPIRV-O0-NEXT:      Expand large div/rem
-; SPIRV-O0-NEXT:      Expand fp
+; SPIRV-O0-NEXT:      Expand IR instructions
+; SPIRV-O0-NEXT:      Expand Atomic instructions
 ; SPIRV-O0-NEXT:      Lower Garbage Collection Instructions
 ; SPIRV-O0-NEXT:      Shadow Stack GC Lowering
 ; SPIRV-O0-NEXT:      Remove unreachable blocks from the CFG
 ; SPIRV-O0-NEXT:      Instrument function entry/exit with calls to e.g. mcount() (post inlining)
 ; SPIRV-O0-NEXT:      Scalarize Masked Memory Intrinsics
 ; SPIRV-O0-NEXT:      Expand reduction intrinsics
+; SPIRV-O0-NEXT:    Expand variadic functions
+; SPIRV-O0-NEXT:    FunctionPass Manager
 ; SPIRV-O0-NEXT:      SPIR-V Regularizer
+; SPIRV-O0-NEXT:    SPIRV lower ctors and dtors
 ; SPIRV-O0-NEXT:    SPIRV prepare functions
 ; SPIRV-O0-NEXT:    SPIRV prepare global variables
 ; SPIRV-O0-NEXT:    FunctionPass Manager
@@ -37,11 +42,13 @@
 ; SPIRV-O0-NEXT:      Remove unreachable blocks from the CFG
 ; SPIRV-O0-NEXT:      SPIRV strip convergent intrinsics
 ; SPIRV-O0-NEXT:    SPIRV Legalize Implicit Binding
+; SPIRV-O0-NEXT:    SPIRV Legalize Zero-Size Arrays
 ; SPIRV-O0-NEXT:    SPIRV CBuffer Access
+; SPIRV-O0-NEXT:    SPIRV push constant Access
 ; SPIRV-O0-NEXT:    SPIRV emit intrinsics
 ; SPIRV-O0-NEXT:    FunctionPass Manager
 ; SPIRV-O0-NEXT:      SPIRV legalize bitcast pass
-; SPIRV-O0-NEXT:      Prepare callbr
+; SPIRV-O0-NEXT:      Prepare inline asm insts
 ; SPIRV-O0-NEXT:      Safe Stack instrumentation pass
 ; SPIRV-O0-NEXT:      Insert stack protectors
 ; SPIRV-O0-NEXT:      Analysis containing CSE Info
@@ -71,6 +78,7 @@
 ; SPIRV-O0-NEXT:      Analyze Machine Code For Garbage Collection
 ; SPIRV-O0-NEXT:      Insert fentry calls
 ; SPIRV-O0-NEXT:      Insert XRay ops
+; SPIRV-O0-NEXT:      SPIRV NonSemantic.Shader.DebugInfo.100 emitter
 ; SPIRV-O0-NEXT:      Machine Sanitizer Binary Metadata
 ; SPIRV-O0-NEXT:      Lazy Machine Block Frequency Analysis
 ; SPIRV-O0-NEXT:      Machine Optimization Remark Emitter
@@ -83,9 +91,11 @@
 ; SPIRV-O0-NEXT:      Free MachineFunction
 
 ; SPIRV-Opt:Target Library Information
+; SPIRV-Opt-NEXT:Runtime Library Function Analysis
 ; SPIRV-Opt-NEXT:Target Pass Configuration
 ; SPIRV-Opt-NEXT:Machine Module Information
 ; SPIRV-Opt-NEXT:Target Transform Information
+; SPIRV-Opt-NEXT:Library Function Lowering Analysis
 ; SPIRV-Opt-NEXT:Assumption Cache Tracker
 ; SPIRV-Opt-NEXT:Type-Based Alias Analysis
 ; SPIRV-Opt-NEXT:Scoped NoAlias Alias Analysis
@@ -95,8 +105,8 @@
 ; SPIRV-Opt-NEXT:  ModulePass Manager
 ; SPIRV-Opt-NEXT:    Pre-ISel Intrinsic Lowering
 ; SPIRV-Opt-NEXT:    FunctionPass Manager
-; SPIRV-Opt-NEXT:      Expand large div/rem
-; SPIRV-Opt-NEXT:      Expand fp
+; SPIRV-Opt-NEXT:      Expand IR instructions
+; SPIRV-Opt-NEXT:      Expand Atomic instructions
 ; SPIRV-Opt-NEXT:      Dominator Tree Construction
 ; SPIRV-Opt-NEXT:      Basic Alias Analysis (stateless AA impl)
 ; SPIRV-Opt-NEXT:      Natural Loop Information
@@ -129,18 +139,26 @@
 ; SPIRV-Opt-NEXT:      Instrument function entry/exit with calls to e.g. mcount() (post inlining)
 ; SPIRV-Opt-NEXT:      Scalarize Masked Memory Intrinsics
 ; SPIRV-Opt-NEXT:      Expand reduction intrinsics
+; SPIRV-Opt-NEXT:    Expand variadic functions
+; SPIRV-Opt-NEXT:    FunctionPass Manager
 ; SPIRV-Opt-NEXT:      SPIR-V Regularizer
+; SPIRV-Opt-NEXT:    SPIRV lower ctors and dtors
 ; SPIRV-Opt-NEXT:    SPIRV prepare functions
 ; SPIRV-Opt-NEXT:    SPIRV prepare global variables
 ; SPIRV-Opt-NEXT:    FunctionPass Manager
 ; SPIRV-Opt-NEXT:      Dominator Tree Construction
 ; SPIRV-Opt-NEXT:      Natural Loop Information
+; SPIRV-Opt-NEXT:      Post-Dominator Tree Construction
+; SPIRV-Opt-NEXT:      Branch Probability Analysis
+; SPIRV-Opt-NEXT:      Block Frequency Analysis
 ; SPIRV-Opt-NEXT:      CodeGen Prepare
 ; SPIRV-Opt-NEXT:      Lower invoke and unwind, for unwindless code generators
 ; SPIRV-Opt-NEXT:      Remove unreachable blocks from the CFG
 ; SPIRV-Opt-NEXT:      SPIRV strip convergent intrinsics
 ; SPIRV-Opt-NEXT:    SPIRV Legalize Implicit Binding
+; SPIRV-Opt-NEXT:    SPIRV Legalize Zero-Size Arrays
 ; SPIRV-Opt-NEXT:    SPIRV CBuffer Access
+; SPIRV-Opt-NEXT:    SPIRV push constant Access
 ; SPIRV-Opt-NEXT:    SPIRV emit intrinsics
 ; SPIRV-Opt-NEXT:    FunctionPass Manager
 ; SPIRV-Opt-NEXT:      SPIRV legalize bitcast pass
@@ -148,7 +166,7 @@
 ; SPIRV-Opt-NEXT:      Basic Alias Analysis (stateless AA impl)
 ; SPIRV-Opt-NEXT:      Function Alias Analysis Results
 ; SPIRV-Opt-NEXT:      ObjC ARC contraction
-; SPIRV-Opt-NEXT:      Prepare callbr
+; SPIRV-Opt-NEXT:      Prepare inline asm insts
 ; SPIRV-Opt-NEXT:      Safe Stack instrumentation pass
 ; SPIRV-Opt-NEXT:      Insert stack protectors
 ; SPIRV-Opt-NEXT:      Analysis containing CSE Info
@@ -200,6 +218,7 @@
 ; SPIRV-Opt-NEXT:      Analyze Machine Code For Garbage Collection
 ; SPIRV-Opt-NEXT:      Insert fentry calls
 ; SPIRV-Opt-NEXT:      Insert XRay ops
+; SPIRV-Opt-NEXT:      SPIRV NonSemantic.Shader.DebugInfo.100 emitter
 ; SPIRV-Opt-NEXT:      Machine Sanitizer Binary Metadata
 ; SPIRV-Opt-NEXT:      Lazy Machine Block Frequency Analysis
 ; SPIRV-Opt-NEXT:      Machine Optimization Remark Emitter

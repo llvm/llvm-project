@@ -216,7 +216,7 @@ char f3(int a) {
 // CIR-NEXT:   %[[RETVAL:.*]] = cir.load{{.*}} %[[RETVAL_ADDR]]
 // CIR-NEXT:   cir.return %[[RETVAL]]
 
-// LLVM:      define{{.*}} i8 @f3(i32 %[[ARG_A:.*]])
+// LLVM:      define{{.*}} i8 @f3(i32{{.*}} %[[ARG_A:.*]])
 // LLVM-NEXT:   %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
 // LLVM-NEXT:   %[[RETVAL_ADDR:.*]] = alloca i8, i64 1, align 1
 // LLVM-NEXT:   store i32 %[[ARG_A]], ptr %[[A_ADDR]], align 4
@@ -233,7 +233,7 @@ char f3(int a) {
 // OGCG-NEXT:   store i32 %[[ARG_A]], ptr %[[A_ADDR]], align 4
 // OGCG-NEXT:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR]], align 4
 // OGCG-NEXT:   store i32 %[[A_VAL]], ptr @cs, align 4
-// OGCG-NEXT:   %[[CS_B_VAL:.*]] = load i8, ptr getelementptr inbounds nuw (%struct.CompleteS, ptr @cs, i32 0, i32 1), align 4
+// OGCG-NEXT:   %[[CS_B_VAL:.*]] = load i8, ptr getelementptr inbounds nuw (i8, ptr @cs, i64 4), align 4
 // OGCG-NEXT:   ret i8 %[[CS_B_VAL]]
 
 char f4(int a, struct CompleteS *p) {
@@ -258,7 +258,7 @@ char f4(int a, struct CompleteS *p) {
 // CIR-NEXT:   %[[RETVAL:.*]] = cir.load{{.*}} %[[RETVAL_ADDR]]
 // CIR-NEXT:   cir.return %[[RETVAL]]
 
-// LLVM:      define{{.*}} i8 @f4(i32 %[[ARG_A:.*]], ptr %[[ARG_P:.*]])
+// LLVM:      define{{.*}} i8 @f4(i32{{.*}} %[[ARG_A:.*]], ptr{{.*}} %[[ARG_P:.*]])
 // LLVM-NEXT:   %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
 // LLVM-NEXT:   %[[P_ADDR:.*]] = alloca ptr, i64 1, align 8
 // LLVM-NEXT:   %[[RETVAL_ADDR:.*]] = alloca i8, i64 1, align 1

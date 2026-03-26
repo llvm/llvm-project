@@ -52,8 +52,9 @@ static bool containsMisleadingBidi(StringRef Buffer,
     }
     llvm::UTF32 CodePoint = 0;
     const llvm::ConversionResult Result = llvm::convertUTF8Sequence(
-        (const llvm::UTF8 **)&CurPtr, (const llvm::UTF8 *)Buffer.end(),
-        &CodePoint, llvm::strictConversion);
+        reinterpret_cast<const llvm::UTF8 **>(&CurPtr),
+        reinterpret_cast<const llvm::UTF8 *>(Buffer.end()), &CodePoint,
+        llvm::strictConversion);
 
     // If conversion fails, utf-8 is designed so that we can just try next char.
     if (Result != llvm::conversionOK) {
@@ -63,25 +64,26 @@ static bool containsMisleadingBidi(StringRef Buffer,
 
     // Open a PDF context.
     if (CodePoint == RLO || CodePoint == RLE || CodePoint == LRO ||
-        CodePoint == LRE)
+        CodePoint == LRE) {
       BidiContexts.push_back(PDF);
     // Close PDF Context.
-    else if (CodePoint == PDF) {
+    } else if (CodePoint == PDF) {
       if (!BidiContexts.empty() && BidiContexts.back() == PDF)
         BidiContexts.pop_back();
     }
     // Open a PDI Context.
-    else if (CodePoint == RLI || CodePoint == LRI || CodePoint == FSI)
+    else if (CodePoint == RLI || CodePoint == LRI || CodePoint == FSI) {
       BidiContexts.push_back(PDI);
     // Close a PDI Context.
-    else if (CodePoint == PDI) {
+    } else if (CodePoint == PDI) {
       auto R = llvm::find(llvm::reverse(BidiContexts), PDI);
       if (R != BidiContexts.rend())
         BidiContexts.resize(BidiContexts.rend() - R - 1);
     }
     // Line break or equivalent
-    else if (CodePoint == PS)
+    else if (CodePoint == PS) {
       BidiContexts.clear();
+    }
   }
   return !BidiContexts.empty();
 }

@@ -531,18 +531,25 @@ TEST(CompletionTest, HeuristicsForMemberFunctionCompletion) {
 
   Annotations Code(R"cpp(
       struct Foo {
-        static int staticMethod(int);
-        int method(int) const;
+        static int staticMethod(int name);
+        int method(int name) const;
         template <typename T, typename U, typename V = int>
-        T generic(U, V);
+        T generic(U nameU, V nameV);
         template <typename T, int U>
         static T staticGeneric();
         Foo() {
-          this->$canBeCall^
+          this->$canBeCallNoStatic^
           $canBeCall^
           Foo::$canBeCall^
         }
       };
+
+      int Foo::$isDefinition^ {
+      }
+      ;
+
+      int i = Foo::$canBeCallStaticOnly^
+      ;
 
       struct Derived : Foo {
         using Foo::method;
@@ -556,9 +563,10 @@ TEST(CompletionTest, HeuristicsForMemberFunctionCompletion) {
         OtherClass() {
           Foo f;
           Derived d;
-          f.$canBeCall^
+          f.$canBeCallNoStatic^
           ; // Prevent parsing as 'f.f'
           f.Foo::$canBeCall^
+          ;
           &Foo::$canNotBeCall^
           ;
           d.Foo::$canBeCall^
@@ -573,6 +581,7 @@ TEST(CompletionTest, HeuristicsForMemberFunctionCompletion) {
         f.$canBeCall^
         ; // Prevent parsing as 'f.f'
         f.Foo::$canBeCall^
+        ;
         &Foo::$canNotBeCall^
         ;
         d.Foo::$canBeCall^
@@ -585,39 +594,129 @@ TEST(CompletionTest, HeuristicsForMemberFunctionCompletion) {
   for (const auto &P : Code.points("canNotBeCall")) {
     auto Results = completions(TU, P, /*IndexSymbols*/ {}, Opts);
     EXPECT_THAT(Results.Completions,
-                Contains(AllOf(named("method"), signature("(int) const"),
+                Contains(AllOf(named("method"), signature("(int name) const"),
                                snippetSuffix(""))));
     // We don't have any arguments to deduce against if this isn't a call.
-    // Thus, we should emit these deducible template arguments explicitly.
     EXPECT_THAT(
         Results.Completions,
         Contains(AllOf(named("generic"),
-                       signature("<typename T, typename U>(U, V)"),
+                       signature("<typename T, typename U>(U nameU, V nameV)"),
                        snippetSuffix("<${1:typename T}, ${2:typename U}>"))));
+    EXPECT_THAT(Results.Completions,
+                Contains(AllOf(named("staticMethod"), signature("(int name)"),
+                               snippetSuffix(""))));
+    EXPECT_THAT(Results.Completions,
+                Contains(AllOf(
+                    named("staticGeneric"), signature("<typename T, int U>()"),
+                    snippetSuffix("<${1:typename T}, ${2:int U}>"))));
   }
 
   for (const auto &P : Code.points("canBeCall")) {
     auto Results = completions(TU, P, /*IndexSymbols*/ {}, Opts);
     EXPECT_THAT(Results.Completions,
-                Contains(AllOf(named("method"), signature("(int) const"),
-                               snippetSuffix("(${1:int})"))));
+                Contains(AllOf(named("method"), signature("(int name) const"),
+                               snippetSuffix("(${1:int name})"))));
     EXPECT_THAT(
         Results.Completions,
-        Contains(AllOf(named("generic"), signature("<typename T>(U, V)"),
-                       snippetSuffix("<${1:typename T}>(${2:U}, ${3:V})"))));
-  }
-
-  // static method will always keep the snippet
-  for (const auto &P : Code.points()) {
-    auto Results = completions(TU, P, /*IndexSymbols*/ {}, Opts);
+        Contains(AllOf(
+            named("generic"), signature("<typename T>(U nameU, V nameV)"),
+            snippetSuffix("<${1:typename T}>(${2:U nameU}, ${3:V nameV})"))));
     EXPECT_THAT(Results.Completions,
-                Contains(AllOf(named("staticMethod"), signature("(int)"),
-                               snippetSuffix("(${1:int})"))));
+                Contains(AllOf(named("staticMethod"), signature("(int name)"),
+                               snippetSuffix("(${1:int name})"))));
     EXPECT_THAT(Results.Completions,
                 Contains(AllOf(
                     named("staticGeneric"), signature("<typename T, int U>()"),
                     snippetSuffix("<${1:typename T}, ${2:int U}>()"))));
   }
+
+  for (const auto &P : Code.points("canBeCallNoStatic")) {
+    auto Results = completions(TU, P, /*IndexSymbols*/ {}, Opts);
+    EXPECT_THAT(Results.Completions,
+                Contains(AllOf(named("method"), signature("(int name) const"),
+                               snippetSuffix("(${1:int name})"))));
+    EXPECT_THAT(
+        Results.Completions,
+        Contains(AllOf(
+            named("generic"), signature("<typename T>(U nameU, V nameV)"),
+            snippetSuffix("<${1:typename T}>(${2:U nameU}, ${3:V nameV})"))));
+  }
+
+  for (const auto &P : Code.points("canBeCallStaticOnly")) {
+    auto Results = completions(TU, P, /*IndexSymbols*/ {}, Opts);
+    EXPECT_THAT(Results.Completions,
+                Contains(AllOf(named("method"), signature("(int name) const"),
+                               snippetSuffix(""))));
+    EXPECT_THAT(
+        Results.Completions,
+        Contains(AllOf(named("generic"),
+                       signature("<typename T, typename U>(U nameU, V nameV)"),
+                       snippetSuffix("<${1:typename T}, ${2:typename U}>"))));
+    EXPECT_THAT(Results.Completions,
+                Contains(AllOf(named("staticMethod"), signature("(int name)"),
+                               snippetSuffix("(${1:int name})"))));
+    EXPECT_THAT(Results.Completions,
+                Contains(AllOf(
+                    named("staticGeneric"), signature("<typename T, int U>()"),
+                    snippetSuffix("<${1:typename T}, ${2:int U}>()"))));
+  }
+
+  for (const auto &P : Code.points("isDefinition")) {
+    auto Results = completions(TU, P, /*IndexSymbols*/ {}, Opts);
+
+    EXPECT_THAT(Results.Completions,
+                Contains(AllOf(named("method"), signature("(int name) const"),
+                               snippetSuffix("(int name) const"))));
+    EXPECT_THAT(
+        Results.Completions,
+        Contains(AllOf(named("generic"),
+                       signature("<typename T, typename U>(U nameU, V nameV)"),
+                       snippetSuffix("(U nameU, V nameV)"))));
+    EXPECT_THAT(Results.Completions,
+                Contains(AllOf(named("staticMethod"), signature("(int name)"),
+                               snippetSuffix("(int name)"))));
+    EXPECT_THAT(Results.Completions,
+                Contains(AllOf(named("staticGeneric"),
+                               signature("<typename T, int U>()"),
+                               snippetSuffix("()"))));
+  }
+}
+
+TEST(CompletionTest, PrivateMemberDefinition) {
+  clangd::CodeCompleteOptions Opts;
+  Opts.EnableSnippets = true;
+  auto Results = completions(
+      R"cpp(
+    class Foo {
+        int func(int a, int b);
+    };
+    int Foo::func^
+  )cpp",
+      /*IndexSymbols=*/{}, Opts);
+  EXPECT_THAT(Results.Completions,
+              Contains(AllOf(named("func"), signature("(int a, int b)"),
+                             snippetSuffix("(int a, int b)"))));
+}
+
+TEST(CompletionTest, DefaultArgsWithValues) {
+  clangd::CodeCompleteOptions Opts;
+  Opts.EnableSnippets = true;
+  auto Results = completions(
+      R"cpp(
+    struct Arg {
+        Arg(int a, int b);
+    };
+    struct Foo {
+      void foo(int x = 42, int y = 0, Arg arg = Arg(42,  0));
+    };
+    void Foo::foo^
+  )cpp",
+      /*IndexSymbols=*/{}, Opts);
+  EXPECT_THAT(Results.Completions,
+              Contains(AllOf(
+                  named("foo"),
+                  signature("(int x = 42, int y = 0, Arg arg = Arg(42,  0))"),
+                  snippetSuffix("(int x, int y, Arg arg)"))));
 }
 
 TEST(CompletionTest, NoSnippetsInUsings) {
@@ -2822,6 +2921,18 @@ TEST(CompletionTest, ArgumentListsPolicy) {
                                          named("FOO"), snippetSuffix("($0)"))));
   }
   {
+    auto Results = completions(
+        R"cpp(
+      void function() {
+        auto Lambda = [](int a, const double &b) {return 1.f;};
+        Lam^
+      })cpp",
+        {}, Opts);
+    EXPECT_THAT(
+        Results.Completions,
+        UnorderedElementsAre(AllOf(named("Lambda"), snippetSuffix("($0)"))));
+  }
+  {
     Opts.ArgumentLists = Config::ArgumentListsPolicy::None;
     auto Results = completions(
         R"cpp(
@@ -4689,6 +4800,64 @@ TEST(CompletionTest, ListExplicitObjectOverloads) {
                                    snippetSuffix("(${1:float a})")),
                              AllOf(named("foo3"), signature("(int a) const"),
                                    snippetSuffix("(${1:int a})"))));
+  }
+}
+
+TEST(CompletionTest, FuzzyMatchMacro) {
+  Annotations Code(R"cpp(
+  #define gl_foo() 42
+  #define _gl_foo() 42
+  #define glfbar() 42
+
+  int gl_frob();
+  int _gl_frob();
+
+  int main() {
+    int y = glf$c1^;
+    int y = _gl$c2^;
+  }
+  )cpp");
+
+  auto TU = TestTU::withCode(Code.code());
+
+  // Exact prefix should match macro or symbol
+  {
+    CodeCompleteOptions Opts{};
+    EXPECT_EQ(Opts.MacroFilter, Config::MacroFilterPolicy::ExactPrefix);
+
+    {
+      auto Results = completions(TU, Code.point("c1"), {}, Opts);
+      EXPECT_THAT(
+          Results.Completions,
+          ElementsAre(named("gl_frob"), named("_gl_frob"), named("glfbar")));
+    }
+
+    {
+      auto Results = completions(TU, Code.point("c2"), {}, Opts);
+      EXPECT_THAT(Results.Completions,
+                  ElementsAre(named("_gl_frob"), named("_gl_foo")));
+    }
+  }
+
+  // but with fuzzy match
+  {
+    CodeCompleteOptions Opts{};
+    Opts.MacroFilter = Config::MacroFilterPolicy::FuzzyMatch;
+
+    // don't suggest underscore macros in general,
+    {
+      auto Results = completions(TU, Code.point("c1"), {}, Opts);
+      EXPECT_THAT(Results.Completions,
+                  ElementsAre(named("gl_frob"), named("_gl_frob"),
+                              named("glfbar"), named("gl_foo")));
+    }
+
+    // but do suggest when macro contains exact prefix
+    {
+      auto Results = completions(TU, Code.point("c2"), {}, Opts);
+      EXPECT_THAT(Results.Completions,
+                  ElementsAre(named("_gl_frob"), named("_gl_foo")));
+    }
   }
 }
 

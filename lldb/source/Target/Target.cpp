@@ -70,6 +70,7 @@
 
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/ThreadPool.h"
 
 #include <memory>
@@ -156,8 +157,6 @@ static Status installExecutable(const Installer &installer) {
   return Status();
 }
 
-constexpr std::chrono::milliseconds EvaluateExpressionOptions::default_timeout;
-
 Target::Arch::Arch(const ArchSpec &spec)
     : m_spec(spec),
       m_plugin_up(PluginManager::CreateArchitectureInstance(spec)) {}
@@ -187,6 +186,8 @@ Target::Target(Debugger &debugger, const ArchSpec &target_arch,
       m_internal_stop_hooks(), m_latest_stop_hook_id(0), m_valid(true),
       m_suppress_stop_hooks(false), m_is_dummy_target(is_dummy_target),
       m_target_unique_id(g_target_unique_id++),
+      m_target_session_name(
+          llvm::formatv("Session {0}", m_target_unique_id).str()),
       m_frame_recognizer_manager_up(
           std::make_unique<StackFrameRecognizerManager>()) {
   SetEventName(eBroadcastBitBreakpointChanged, "breakpoint-changed");
@@ -194,6 +195,7 @@ Target::Target(Debugger &debugger, const ArchSpec &target_arch,
   SetEventName(eBroadcastBitModulesUnloaded, "modules-unloaded");
   SetEventName(eBroadcastBitWatchpointChanged, "watchpoint-changed");
   SetEventName(eBroadcastBitSymbolsLoaded, "symbols-loaded");
+  SetEventName(eBroadcastBitNewTargetCreated, "new-target-created");
 
   CheckInWithManager();
 
@@ -1543,9 +1545,7 @@ Module *Target::GetExecutableModulePointer() {
 static void LoadScriptingResourceForModule(const ModuleSP &module_sp,
                                            Target *target) {
   Status error;
-  StreamString feedback_stream;
-  if (module_sp && !module_sp->LoadScriptingResourceInTarget(target, error,
-                                                             feedback_stream)) {
+  if (module_sp && !module_sp->LoadScriptingResourceInTarget(target, error)) {
     if (error.AsCString())
       target->GetDebugger().GetAsyncErrorStream()->Printf(
           "unable to load scripting data for module %s - error reported was "
@@ -1553,9 +1553,6 @@ static void LoadScriptingResourceForModule(const ModuleSP &module_sp,
           module_sp->GetFileSpec().GetFileNameStrippingExtension().GetCString(),
           error.AsCString());
   }
-  if (feedback_stream.GetSize())
-    target->GetDebugger().GetAsyncErrorStream()->Printf(
-        "%s\n", feedback_stream.GetData());
 }
 
 void Target::ClearModules(bool delete_locations) {
@@ -2282,8 +2279,10 @@ size_t Target::ReadScalarIntegerFromMemory(const Address &addr, uint32_t byte_si
       else
         scalar = data.GetMaxU64(&offset, byte_size);
 
-      if (is_signed)
+      if (is_signed) {
+        scalar.MakeSigned();
         scalar.SignExtend(byte_size * 8);
+      }
       return bytes_read;
     }
   } else {
@@ -2298,7 +2297,7 @@ int64_t Target::ReadSignedIntegerFromMemory(const Address &addr,
                                             int64_t fail_value, Status &error,
                                             bool force_live_memory) {
   Scalar scalar;
-  if (ReadScalarIntegerFromMemory(addr, integer_byte_size, false, scalar, error,
+  if (ReadScalarIntegerFromMemory(addr, integer_byte_size, true, scalar, error,
                                   force_live_memory))
     return scalar.SLongLong(fail_value);
   return fail_value;
@@ -2615,7 +2614,8 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
 
   if (language == eLanguageTypeMipsAssembler // GNU AS and LLVM use it for all
                                              // assembly code
-      || language == eLanguageTypeUnknown) {
+      || language == eLanguageTypeAssembly ||
+      language == eLanguageTypeUnknown) {
     LanguageSet languages_for_expressions =
         Language::GetLanguagesSupportingTypeSystemsForExpressions();
 
@@ -2818,11 +2818,8 @@ llvm::Error Target::SetLabel(llvm::StringRef label) {
   for (size_t i = 0; i < targets.GetNumTargets(); i++) {
     TargetSP target_sp = targets.GetTargetAtIndex(i);
     if (target_sp && target_sp->GetLabel() == label) {
-        return llvm::make_error<llvm::StringError>(
-            llvm::formatv(
-                "Cannot use label '{0}' since it's set in target #{1}.", label,
-                i),
-            llvm::inconvertibleErrorCode());
+      return llvm::createStringErrorV(
+          "Cannot use label '{0}' since it's set in target #{1}.", label, i);
     }
   }
 
@@ -2861,7 +2858,7 @@ ExpressionResults Target::EvaluateExpression(
   // We shouldn't run stop hooks in expressions.
   bool old_suppress_value = m_suppress_stop_hooks;
   m_suppress_stop_hooks = true;
-  auto on_exit = llvm::make_scope_exit([this, old_suppress_value]() {
+  llvm::scope_exit on_exit([this, old_suppress_value]() {
     m_suppress_stop_hooks = old_suppress_value;
   });
 
@@ -2899,9 +2896,19 @@ ExpressionResults Target::EvaluateExpression(
     result_valobj_sp = persistent_var_sp->GetValueObject();
     execution_results = eExpressionCompleted;
   } else {
+    // If this expression is being evaluated from inside a frame provider,
+    // force single-thread execution. Resuming all threads while a provider
+    // is mid-construction could cause unwanted process state changes.
+    EvaluateExpressionOptions effective_options = options;
+    if (ThreadSP thread_sp = exe_ctx.GetThreadSP()) {
+      if (thread_sp->IsAnyProviderActive()) {
+        effective_options.SetStopOthers(true);
+        effective_options.SetTryAllThreads(false);
+      }
+    }
     llvm::StringRef prefix = GetExpressionPrefixContents();
     execution_results =
-        UserExpression::Evaluate(exe_ctx, options, expr, prefix,
+        UserExpression::Evaluate(exe_ctx, effective_options, expr, prefix,
                                  result_valobj_sp, fixed_expression, ctx_obj);
   }
 
@@ -3197,7 +3204,7 @@ bool Target::RunStopHooks(bool at_initial_stop) {
   }
 
   StreamSP output_sp = m_debugger.GetAsyncOutputStream();
-  auto on_exit = llvm::make_scope_exit([output_sp] { output_sp->Flush(); });
+  llvm::scope_exit on_exit([output_sp] { output_sp->Flush(); });
 
   size_t num_hooks_with_output = llvm::count_if(
       active_hooks, [](auto h) { return !h->GetSuppressOutput(); });
@@ -3715,6 +3722,74 @@ Status Target::Attach(ProcessAttachInfo &attach_info, Stream *stream) {
     }
   }
   return error;
+}
+
+llvm::Expected<uint32_t> Target::AddScriptedFrameProviderDescriptor(
+    const ScriptedFrameProviderDescriptor &descriptor) {
+  if (!descriptor.IsValid())
+    return llvm::createStringError("invalid frame provider descriptor");
+
+  uint32_t descriptor_id = descriptor.GetID();
+
+  llvm::StringRef name = descriptor.GetName();
+  if (name.empty())
+    return llvm::createStringError(
+        "frame provider descriptor has no class name");
+
+  {
+    std::unique_lock<std::recursive_mutex> guard(
+        m_frame_provider_descriptors_mutex);
+    m_frame_provider_descriptors[descriptor_id] = descriptor;
+  }
+
+  InvalidateThreadFrameProviders();
+
+  return descriptor_id;
+}
+
+bool Target::RemoveScriptedFrameProviderDescriptor(uint32_t id) {
+  bool removed = false;
+  {
+    std::lock_guard<std::recursive_mutex> guard(
+        m_frame_provider_descriptors_mutex);
+    removed = m_frame_provider_descriptors.erase(id);
+  }
+
+  if (removed)
+    InvalidateThreadFrameProviders();
+  return removed;
+}
+
+void Target::ClearScriptedFrameProviderDescriptors() {
+  {
+    std::lock_guard<std::recursive_mutex> guard(
+        m_frame_provider_descriptors_mutex);
+    m_frame_provider_descriptors.clear();
+  }
+
+  InvalidateThreadFrameProviders();
+}
+
+const llvm::DenseMap<uint32_t, ScriptedFrameProviderDescriptor> &
+Target::GetScriptedFrameProviderDescriptors() const {
+  std::lock_guard<std::recursive_mutex> guard(
+      m_frame_provider_descriptors_mutex);
+  return m_frame_provider_descriptors;
+}
+
+void Target::InvalidateThreadFrameProviders() {
+  ProcessSP process_sp = GetProcessSP();
+  if (!process_sp)
+    return;
+  for (ThreadSP thread_sp : process_sp->Threads()) {
+    // Clear frame providers on existing threads so they reload with new config.
+    thread_sp->ClearScriptedFrameProvider();
+    // Notify threads that the stack traces might have changed.
+    if (thread_sp->EventTypeHasListeners(Thread::eBroadcastBitStackChanged)) {
+      auto data_sp = std::make_shared<Thread::ThreadEventData>(thread_sp);
+      thread_sp->BroadcastEvent(Thread::eBroadcastBitStackChanged, data_sp);
+    }
+  }
 }
 
 void Target::FinalizeFileActions(ProcessLaunchInfo &info) {
@@ -4388,7 +4463,7 @@ public:
 TargetExperimentalProperties::TargetExperimentalProperties()
     : Properties(OptionValuePropertiesSP(
           new TargetExperimentalOptionValueProperties())) {
-  m_collection_sp->Initialize(g_target_experimental_properties);
+  m_collection_sp->Initialize(g_target_experimental_properties_def);
 }
 
 // TargetProperties
@@ -4437,7 +4512,7 @@ TargetProperties::TargetProperties(Target *target)
         true, m_experimental_properties_up->GetValueProperties());
   } else {
     m_collection_sp = std::make_shared<TargetOptionValueProperties>("target");
-    m_collection_sp->Initialize(g_target_properties);
+    m_collection_sp->Initialize(g_target_properties_def);
     m_experimental_properties_up =
         std::make_unique<TargetExperimentalProperties>();
     m_collection_sp->AppendProperty(
@@ -5087,17 +5162,17 @@ void TargetProperties::SetProcessLaunchInfo(
   const FileAction *input_file_action =
       launch_info.GetFileActionForFD(STDIN_FILENO);
   if (input_file_action) {
-    SetStandardInputPath(input_file_action->GetPath());
+    SetStandardInputPath(input_file_action->GetFileSpec().GetPath());
   }
   const FileAction *output_file_action =
       launch_info.GetFileActionForFD(STDOUT_FILENO);
   if (output_file_action) {
-    SetStandardOutputPath(output_file_action->GetPath());
+    SetStandardOutputPath(output_file_action->GetFileSpec().GetPath());
   }
   const FileAction *error_file_action =
       launch_info.GetFileActionForFD(STDERR_FILENO);
   if (error_file_action) {
-    SetStandardErrorPath(error_file_action->GetPath());
+    SetStandardErrorPath(error_file_action->GetFileSpec().GetPath());
   }
   SetDetachOnError(launch_info.GetFlags().Test(lldb::eLaunchFlagDetachOnError));
   SetDisableASLR(launch_info.GetFlags().Test(lldb::eLaunchFlagDisableASLR));
@@ -5200,6 +5275,11 @@ Target::TargetEventData::TargetEventData(const lldb::TargetSP &target_sp,
                                          const ModuleList &module_list)
     : EventData(), m_target_sp(target_sp), m_module_list(module_list) {}
 
+Target::TargetEventData::TargetEventData(
+    const lldb::TargetSP &target_sp, const lldb::TargetSP &created_target_sp)
+    : EventData(), m_target_sp(target_sp),
+      m_created_target_sp(created_target_sp), m_module_list() {}
+
 Target::TargetEventData::~TargetEventData() = default;
 
 llvm::StringRef Target::TargetEventData::GetFlavorString() {
@@ -5232,6 +5312,15 @@ TargetSP Target::TargetEventData::GetTargetFromEvent(const Event *event_ptr) {
   if (event_data)
     target_sp = event_data->m_target_sp;
   return target_sp;
+}
+
+TargetSP
+Target::TargetEventData::GetCreatedTargetFromEvent(const Event *event_ptr) {
+  TargetSP created_target_sp;
+  const TargetEventData *event_data = GetEventDataFromEvent(event_ptr);
+  if (event_data)
+    created_target_sp = event_data->m_created_target_sp;
+  return created_target_sp;
 }
 
 ModuleList
@@ -5284,4 +5373,74 @@ void Target::NotifyBreakpointChanged(
     Breakpoint &bp, const lldb::EventDataSP &breakpoint_data_sp) {
   if (EventTypeHasListeners(Target::eBroadcastBitBreakpointChanged))
     BroadcastEvent(Target::eBroadcastBitBreakpointChanged, breakpoint_data_sp);
+}
+
+// FIXME: the language plugin should expression options dynamically and
+// we should validate here (by asking the language plugin) that the options
+// being set/retrieved are actually valid options.
+
+llvm::Error
+EvaluateExpressionOptions::SetBooleanLanguageOption(llvm::StringRef option_name,
+                                                    bool value) {
+  if (option_name.empty())
+    return llvm::createStringError("can't set an option with an empty name");
+
+  if (StructuredData::ObjectSP existing_sp =
+          GetLanguageOptions().GetValueForKey(option_name);
+      existing_sp && existing_sp->GetType() != eStructuredDataTypeBoolean)
+    return llvm::createStringErrorV("trying to override existing option '{0}' "
+                                    "of type '{1}' with a boolean value",
+                                    option_name, existing_sp->GetType());
+
+  GetLanguageOptions().AddBooleanItem(option_name, value);
+
+  return llvm::Error::success();
+}
+
+llvm::Expected<bool> EvaluateExpressionOptions::GetBooleanLanguageOption(
+    llvm::StringRef option_name) const {
+  const StructuredData::Dictionary &opts = GetLanguageOptions();
+
+  if (!opts.HasKey(option_name))
+    return llvm::createStringErrorV("option '{0}' does not exist", option_name);
+
+  bool result;
+  if (!opts.GetValueForKeyAsBoolean(option_name, result))
+    return llvm::createStringErrorV("failed to get option '{0}' as boolean",
+                                    option_name);
+
+  return result;
+}
+
+const StructuredData::Dictionary &
+EvaluateExpressionOptions::GetLanguageOptions() const {
+  assert(m_language_options_sp);
+
+  return *m_language_options_sp;
+}
+
+StructuredData::Dictionary &EvaluateExpressionOptions::GetLanguageOptions() {
+  assert(m_language_options_sp);
+
+  return *m_language_options_sp;
+}
+
+// FIXME: this option is C++ plugin specific and should be registered by it,
+// instead of hard-coding it here.
+constexpr llvm::StringLiteral s_cpp_ignore_context_qualifiers_option =
+    "c++-ignore-context-qualifiers";
+
+EvaluateExpressionOptions::EvaluateExpressionOptions()
+    : m_language_options_sp(std::make_shared<StructuredData::Dictionary>()) {
+  SetCppIgnoreContextQualifiers(false);
+}
+
+void EvaluateExpressionOptions::SetCppIgnoreContextQualifiers(bool value) {
+  llvm::cantFail(
+      SetBooleanLanguageOption(s_cpp_ignore_context_qualifiers_option, value));
+}
+
+bool EvaluateExpressionOptions::GetCppIgnoreContextQualifiers() const {
+  return llvm::cantFail(
+      GetBooleanLanguageOption(s_cpp_ignore_context_qualifiers_option));
 }

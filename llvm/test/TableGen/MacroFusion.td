@@ -41,7 +41,7 @@ def TestBothFusionPredicate: Fusion<"test-both-fusion-predicate", "HasBothFusion
                                     "Test BothFusionPredicate",
                                     [BothFusionPredicate]>;
 
-def TestFusion: SimpleFusion<"test-fusion", "HasTestFusion", "Test Fusion",
+def TestFusion: SimpleFusion<"test", "HasTestFusion", "Test Fusion",
                              CheckOpcode<[Inst0, Inst1]>,
                              CheckAll<[
                                CheckOpcode<[Inst1]>,
@@ -49,7 +49,7 @@ def TestFusion: SimpleFusion<"test-fusion", "HasTestFusion", "Test Fusion",
                              ]>>;
 
 let IsCommutable = 1 in
-def TestCommutableFusion: SimpleFusion<"test-commutable-fusion", "HasTestCommutableFusion",
+def TestCommutableFusion: SimpleFusion<"test-commutable", "HasTestCommutableFusion",
                                        "Test Commutable Fusion",
                                        CheckOpcode<[Inst0]>,
                                        CheckAll<[
@@ -57,12 +57,12 @@ def TestCommutableFusion: SimpleFusion<"test-commutable-fusion", "HasTestCommuta
                                          CheckRegOperand<0, X0>
                                        ]>>;
 
-def TestSingleFusion: SingleFusion<"test-single-fusion", "HasTestSingleFusion",
+def TestSingleFusion: SingleFusion<"test-single", "HasTestSingleFusion",
                                    "Test SingleFusion",
                                    Inst0, Inst2,
                                    secondInstPred=CheckRegOperand<0, X0>>;
 
-def TestFirstSameRegFusion: Fusion<"test-first-same-reg-fusion", "HasTestFirstSameRegFusion",
+def TestFirstSameRegFusion: Fusion<"test-first-same-reg", "HasTestFirstSameRegFusion",
                                    "Test FirstSameReg",
                                    [FirstInstHasSameReg<0, 1>]> {
   bit IsCommutable = 1;
@@ -72,19 +72,22 @@ def TestFirstSameRegFusion: Fusion<"test-first-same-reg-fusion", "HasTestFirstSa
 // CHECK-PREDICATOR-NEXT:  #undef GET_Test_MACRO_FUSION_PRED_DECL
 // CHECK-PREDICATOR-EMPTY:
 // CHECK-PREDICATOR-NEXT:  namespace llvm {
+// CHECK-PREDICATOR-EMPTY:
 // CHECK-PREDICATOR-NEXT:  bool isTestBothFusionPredicate(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &);
 // CHECK-PREDICATOR-NEXT:  bool isTestCommutableFusion(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &);
 // CHECK-PREDICATOR-NEXT:  bool isTestFirstSameRegFusion(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &);
 // CHECK-PREDICATOR-NEXT:  bool isTestFusion(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &);
 // CHECK-PREDICATOR-NEXT:  bool isTestSingleFusion(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &);
-// CHECK-PREDICATOR-NEXT:  } // end namespace llvm
 // CHECK-PREDICATOR-EMPTY:
-// CHECK-PREDICATOR-NEXT:  #endif
+// CHECK-PREDICATOR-NEXT:  } // namespace llvm
+// CHECK-PREDICATOR-EMPTY:
+// CHECK-PREDICATOR-NEXT:  #endif // GET_Test_MACRO_FUSION_PRED_DECL
 
 // CHECK-PREDICATOR:       #ifdef GET_Test_MACRO_FUSION_PRED_IMPL
 // CHECK-PREDICATOR-NEXT:  #undef GET_Test_MACRO_FUSION_PRED_IMPL
 // CHECK-PREDICATOR-EMPTY:
 // CHECK-PREDICATOR-NEXT:  namespace llvm {
+// CHECK-PREDICATOR-EMPTY:
 // CHECK-PREDICATOR-NEXT:  bool isTestBothFusionPredicate(
 // CHECK-PREDICATOR-NEXT:      const TargetInstrInfo &TII,
 // CHECK-PREDICATOR-NEXT:      const TargetSubtargetInfo &STI,
@@ -256,19 +259,20 @@ def TestFirstSameRegFusion: Fusion<"test-first-same-reg-fusion", "HasTestFirstSa
 // CHECK-PREDICATOR-NEXT:    }
 // CHECK-PREDICATOR-NEXT:    return true;
 // CHECK-PREDICATOR-NEXT:  }
-// CHECK-PREDICATOR-NEXT:  } // end namespace llvm
 // CHECK-PREDICATOR-EMPTY:
-// CHECK-PREDICATOR-NEXT:  #endif
+// CHECK-PREDICATOR-NEXT:  } // namespace llvm
+// CHECK-PREDICATOR-EMPTY:
+// CHECK-PREDICATOR-NEXT:  #endif // GET_Test_MACRO_FUSION_PRED_IMPL
 
 // Check that we have generated target subfeature.
-// CHECK-SUBTARGET: { "test-both-fusion-predicate", "Test BothFusionPredicate", Test::TestBothFusionPredicate
-// CHECK-SUBTARGET: { "test-commutable-fusion", "Test Commutable Fusion", Test::TestCommutableFusion
-// CHECK-SUBTARGET: { "test-first-same-reg-fusion", "Test FirstSameReg", Test::TestFirstSameRegFusion
-// CHECK-SUBTARGET: { "test-fusion", "Test Fusion", Test::TestFusion
-// CHECK-SUBTARGET: { "test-single-fusion", "Test SingleFusion", Test::TestSingleFusion
+// CHECK-SUBTARGET: { "fusion-test", "Test Fusion", Test::TestFusion,
+// CHECK-SUBTARGET: { "fusion-test-both-fusion-predicate", "Test BothFusionPredicate", Test::TestBothFusionPredicate,
+// CHECK-SUBTARGET: { "fusion-test-commutable", "Test Commutable Fusion", Test::TestCommutableFusion,
+// CHECK-SUBTARGET: { "fusion-test-first-same-reg", "Test FirstSameReg", Test::TestFirstSameRegFusion,
+// CHECK-SUBTARGET: { "fusion-test-single", "Test SingleFusion", Test::TestSingleFusion,
 
 // Check that we have generated `getMacroFusions()` function.
-// CHECK-SUBTARGET:      std::vector<MacroFusionPredTy> getMacroFusions() const override;
+// CHECK-SUBTARGET:      std::vector<MacroFusionPredTy> getMacroFusions() const final;
 
 // CHECK-SUBTARGET:      std::vector<MacroFusionPredTy> TestGenSubtargetInfo::getMacroFusions() const {
 // CHECK-SUBTARGET-NEXT:   std::vector<MacroFusionPredTy> Fusions;

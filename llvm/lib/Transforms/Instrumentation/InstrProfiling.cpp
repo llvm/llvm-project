@@ -168,8 +168,7 @@ cl::opt<bool> SkipRetExitBlock(
     "skip-ret-exit-block", cl::init(true),
     cl::desc("Suppress counter promotion if exit blocks contain ret."));
 
-static cl::opt<bool> SampledInstr("sampled-instrumentation", cl::ZeroOrMore,
-                                  cl::init(false),
+static cl::opt<bool> SampledInstr("sampled-instrumentation",
                                   cl::desc("Do PGO instrumentation sampling"));
 
 static cl::opt<unsigned> SampledInstrPeriod(
@@ -1176,7 +1175,7 @@ void InstrLowerer::lowerCover(InstrProfCoverInst *CoverInstruction) {
 
 void InstrLowerer::lowerTimestamp(
     InstrProfTimestampInst *TimestampInstruction) {
-  assert(TimestampInstruction->getIndex()->isZeroValue() &&
+  assert(TimestampInstruction->getIndex()->isNullValue() &&
          "timestamp probes are always the first probe for a function");
   auto &Ctx = M.getContext();
   auto *TimestampAddr = getCounterAddress(TimestampInstruction);
@@ -1193,8 +1192,19 @@ void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
   auto *Addr = getCounterAddress(Inc);
 
   IRBuilder<> Builder(Inc);
-  if (Options.Atomic || AtomicCounterUpdateAll ||
-      (Inc->getIndex()->isZeroValue() && AtomicFirstCounter)) {
+  if (isGPUProfTarget(M)) {
+    auto *I64Ty = Builder.getInt64Ty();
+    auto *PtrTy = Builder.getPtrTy();
+    auto *CalleeTy = FunctionType::get(Type::getVoidTy(M.getContext()),
+                                       {PtrTy, PtrTy, I64Ty}, false);
+    auto Callee =
+        M.getOrInsertFunction("__llvm_profile_instrument_gpu", CalleeTy);
+    Value *CastAddr = Builder.CreatePointerBitCastOrAddrSpaceCast(Addr, PtrTy);
+    Value *Uniform =
+        ConstantPointerNull::get(PointerType::getUnqual(M.getContext()));
+    Builder.CreateCall(Callee, {CastAddr, Uniform, Inc->getStep()});
+  } else if (Options.Atomic || AtomicCounterUpdateAll ||
+             (Inc->getIndex()->isNullValue() && AtomicFirstCounter)) {
     Builder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, Inc->getStep(),
                             MaybeAlign(), AtomicOrdering::Monotonic);
   } else {
@@ -1536,8 +1546,7 @@ void InstrLowerer::getOrCreateVTableProfData(GlobalVariable *GV) {
   const std::string PGOVTableName = getPGOName(*GV);
   // Record the length of the vtable. This is needed since vtable pointers
   // loaded from C++ objects might be from the middle of a vtable definition.
-  uint32_t VTableSizeVal =
-      M.getDataLayout().getTypeAllocSize(GV->getValueType());
+  uint32_t VTableSizeVal = GV->getGlobalSize(M.getDataLayout());
 
   Constant *DataVals[] = {
 #define INSTR_PROF_VTABLE_DATA(Type, LLVMType, Name, Init) Init,
@@ -2072,6 +2081,8 @@ bool InstrLowerer::emitRuntimeHook() {
     User->setVisibility(GlobalValue::HiddenVisibility);
     if (TT.supportsCOMDAT())
       User->setComdat(M.getOrInsertComdat(User->getName()));
+    // Explicitly mark this function as cold since it is never called.
+    User->setEntryCount(0);
 
     IRBuilder<> IRB(BasicBlock::Create(M.getContext(), "", User));
     auto *Load = IRB.CreateLoad(Int32Ty, Var);

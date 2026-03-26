@@ -23,7 +23,6 @@
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/TargetParser/Triple.h"
 
-#include <functional>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -33,35 +32,24 @@ namespace orc {
 
 class DebugObject;
 
-/// Creates and manages DebugObjects for JITLink artifacts.
-///
-/// DebugObjects are created when linking for a MaterializationResponsibility
-/// starts. They are pending as long as materialization is in progress.
-///
-/// There can only be one pending DebugObject per MaterializationResponsibility.
-/// If materialization fails, pending DebugObjects are discarded.
-///
-/// Once executable code for the MaterializationResponsibility is emitted, the
-/// corresponding DebugObject is finalized to target memory and the provided
-/// DebugObjectRegistrar is notified. Ownership of DebugObjects remains with the
-/// plugin.
+/// Debugger support for ELF platforms with the GDB JIT Interface. The plugin
+/// emits and manages a separate debug object allocation in addition to the
+/// LinkGraph's own allocation and it notifies the debugger when necessary.
 ///
 class LLVM_ABI ELFDebugObjectPlugin : public ObjectLinkingLayer::Plugin {
 public:
-  /// Create the plugin to submit DebugObjects for JITLink artifacts. For all
-  /// options the recommended setting is true.
+  /// Create the plugin for the given session and set additional options
   ///
   /// RequireDebugSections:
-  ///   Submit debug objects to the executor only if they contain actual debug
-  ///   info. Turning this off may allow minimal debugging based on raw symbol
-  ///   names. Note that this may cause significant memory and transport
-  ///   overhead for objects built with a release configuration.
+  ///   Emit debug objects only if the LinkGraph contains debug info. Turning
+  ///   this off allows minimal debugging based on raw symbol names, but it
+  ///   comes with significant overhead for release configurations.
   ///
   /// AutoRegisterCode:
   ///   Notify the debugger for each new debug object. This is a good default
   ///   mode, but it may cause significant overhead when adding many modules in
-  ///   sequence. When turning this off, the user has to issue the call to
-  ///   __jit_debug_register_code() on the executor side manually.
+  ///   sequence. Otherwise the user must call __jit_debug_register_code() in
+  ///   the debug session manually.
   ///
   ELFDebugObjectPlugin(ExecutionSession &ES, bool RequireDebugSections,
                        bool AutoRegisterCode, Error &Err);
@@ -69,7 +57,7 @@ public:
 
   void notifyMaterializing(MaterializationResponsibility &MR,
                            jitlink::LinkGraph &G, jitlink::JITLinkContext &Ctx,
-                           MemoryBufferRef InputObject) override;
+                           MemoryBufferRef InputObj) override;
 
   Error notifyFailed(MaterializationResponsibility &MR) override;
   Error notifyRemovingResources(JITDylib &JD, ResourceKey K) override;
@@ -94,6 +82,8 @@ private:
   ExecutorAddr RegistrationAction;
   bool RequireDebugSections;
   bool AutoRegisterCode;
+
+  DebugObject *getPendingDebugObj(MaterializationResponsibility &MR);
 };
 
 } // namespace orc

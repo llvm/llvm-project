@@ -21,20 +21,23 @@ bext z0.b, z1.b, z31.b
 # CHECK-NEXT: [0.1] - N2UnitB
 # CHECK-NEXT: [1.0] - N2UnitD
 # CHECK-NEXT: [1.1] - N2UnitD
-# CHECK-NEXT: [2]   - N2UnitL2
-# CHECK-NEXT: [3.0] - N2UnitL01
-# CHECK-NEXT: [3.1] - N2UnitL01
-# CHECK-NEXT: [4]   - N2UnitM0
-# CHECK-NEXT: [5]   - N2UnitM1
-# CHECK-NEXT: [6.0] - N2UnitS
-# CHECK-NEXT: [6.1] - N2UnitS
-# CHECK-NEXT: [7]   - N2UnitV0
-# CHECK-NEXT: [8]   - N2UnitV1
+# CHECK-NEXT: [2.0] - N2UnitFlg
+# CHECK-NEXT: [2.1] - N2UnitFlg
+# CHECK-NEXT: [2.2] - N2UnitFlg
+# CHECK-NEXT: [3]   - N2UnitL2
+# CHECK-NEXT: [4.0] - N2UnitL01
+# CHECK-NEXT: [4.1] - N2UnitL01
+# CHECK-NEXT: [5]   - N2UnitM0
+# CHECK-NEXT: [6]   - N2UnitM1
+# CHECK-NEXT: [7.0] - N2UnitS
+# CHECK-NEXT: [7.1] - N2UnitS
+# CHECK-NEXT: [8]   - N2UnitV0
+# CHECK-NEXT: [9]   - N2UnitV1
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6.0]  [6.1]  [7]    [8]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     2.00
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6.0]  [6.1]  [7]    [8]    Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     2.00   bext	z0.b, z1.b, z31.b
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   bext	z0.b, z1.b, z31.b

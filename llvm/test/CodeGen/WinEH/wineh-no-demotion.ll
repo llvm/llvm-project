@@ -120,7 +120,7 @@ shared:
   call void @h(i32 %phi)
   unreachable
 
-; CHECK: %phi = phi i32 [ 0, %right ], [ -1, %right.other ]
+; CHECK: %phi = phi i32 [ -1, %right.other ], [ 0, %right ]
 ; CHECK: call void @h(i32 %phi)
 
 ; CHECK: %phi.for.left = phi i32 [ 1, %left ]

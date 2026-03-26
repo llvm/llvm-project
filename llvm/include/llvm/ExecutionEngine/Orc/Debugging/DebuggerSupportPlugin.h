@@ -14,7 +14,6 @@
 #define LLVM_EXECUTIONENGINE_ORC_DEBUGGERSUPPORTPLUGIN_H
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
-#include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/Support/Compiler.h"
 

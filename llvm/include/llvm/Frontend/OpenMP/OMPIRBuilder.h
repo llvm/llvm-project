@@ -14,9 +14,12 @@
 #ifndef LLVM_FRONTEND_OPENMP_OMPIRBUILDER_H
 #define LLVM_FRONTEND_OPENMP_OMPIRBUILDER_H
 
+#include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Frontend/Atomic/Atomic.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
@@ -138,6 +141,8 @@ public:
   // Default address space for the target.
   unsigned DefaultTargetAS = 0;
 
+  CallingConv::ID RuntimeCC = llvm::CallingConv::C;
+
   LLVM_ABI OpenMPIRBuilderConfig();
   LLVM_ABI OpenMPIRBuilderConfig(bool IsTargetDevice, bool IsGPU,
                                  bool OpenMPOffloadMandatory,
@@ -169,6 +174,8 @@ public:
   }
 
   unsigned getDefaultTargetAS() const { return DefaultTargetAS; }
+
+  CallingConv::ID getRuntimeCC() const { return RuntimeCC; }
 
   bool hasRequiresFlags() const { return RequiresFlags; }
   LLVM_ABI bool hasRequiresReverseOffload() const;
@@ -208,6 +215,7 @@ public:
   void setSeparator(StringRef S) { Separator = S; }
   void setGridValue(omp::GV G) { GridValue = G; }
   void setDefaultTargetAS(unsigned AS) { DefaultTargetAS = AS; }
+  void setRuntimeCC(CallingConv::ID CC) { RuntimeCC = CC; }
 
   LLVM_ABI void setHasRequiresReverseOffload(bool Value);
   LLVM_ABI void setHasRequiresUnifiedAddress(bool Value);
@@ -390,6 +398,8 @@ public:
     OMPTargetGlobalVarEntryIndirect = 0x8,
     /// Mark the entry as a register requires global.
     OMPTargetGlobalRegisterRequires = 0x10,
+    /// Mark the entry as a declare target indirect vtable.
+    OMPTargetGlobalVarEntryIndirectVTable = 0x20,
   };
 
   /// Kind of device clause for declare target variables
@@ -570,16 +580,33 @@ public:
   using FinalizeCallbackTy = std::function<Error(InsertPointTy CodeGenIP)>;
 
   struct FinalizationInfo {
+    FinalizationInfo(FinalizeCallbackTy FiniCB, omp::Directive DK,
+                     bool IsCancellable)
+        : DK(DK), IsCancellable(IsCancellable), FiniCB(std::move(FiniCB)) {}
+    /// The directive kind of the innermost directive that has an associated
+    /// region which might require finalization when it is left.
+    const omp::Directive DK;
+
+    /// Flag to indicate if the directive is cancellable.
+    const bool IsCancellable;
+
+    /// The basic block to which control should be transferred to
+    /// implement the FiniCB. Memoized to avoid generating finalization
+    /// multiple times.
+    Expected<BasicBlock *> getFiniBB(IRBuilderBase &Builder);
+
+    /// For cases where there is an unavoidable existing finalization block
+    /// (e.g. loop finialization after omp sections). The existing finalization
+    /// block must not contain any non-finalization code.
+    Error mergeFiniBB(IRBuilderBase &Builder, BasicBlock *ExistingFiniBB);
+
+  private:
+    /// Access via getFiniBB.
+    BasicBlock *FiniBB = nullptr;
+
     /// The finalization callback provided by the last in-flight invocation of
     /// createXXXX for the directive of kind DK.
     FinalizeCallbackTy FiniCB;
-
-    /// The directive kind of the innermost directive that has an associated
-    /// region which might require finalization when it is left.
-    omp::Directive DK;
-
-    /// Flag to indicate if the directive is cancellable.
-    bool IsCancellable;
   };
 
   /// Push a finalization callback on the finalization stack.
@@ -622,6 +649,38 @@ public:
   /// \return an error, if any were triggered during execution.
   using BodyGenCallbackTy =
       function_ref<Error(InsertPointTy AllocaIP, InsertPointTy CodeGenIP)>;
+
+  /// Callback type for task duplication function code generation. This is the
+  /// task duplication function passed to __kmpc_taskloop. It is expected that
+  /// this function will set up (first)private variables in the duplicated task
+  /// which have non-trivial (copy-)constructors. Insertion points are handled
+  /// the same way as for BodyGenCallbackTy.
+  ///
+  /// \ref createTaskloop lays out the task's auxiliary data structure as:
+  /// `{ lower bound, upper bound, step, data... }`. DestPtr and SrcPtr point
+  /// to this data.
+  ///
+  /// It is acceptable for the callback to be set to nullptr. In that case no
+  /// function will be generated and nullptr will be passed as the task
+  /// duplication function to __kmpc_taskloop.
+  ///
+  /// \param AllocaIP is the insertion point at which new alloca instructions
+  ///                 should be placed. The BasicBlock it is pointing to must
+  ///                 not be split.
+  /// \param CodeGenIP is the insertion point at which the body code should be
+  ///                  placed.
+  /// \param DestPtr This is a pointer to data inside the newly duplicated
+  ///                task's auxiliary data structure (allocated after the task
+  ///                descriptor.)
+  /// \param SrcPtr This is a pointer to data inside the original task's
+  ///               auxiliary data structure (allocated after the task
+  ///               descriptor.)
+  ///
+  /// \return The insertion point immediately after the generated code, or an
+  /// error if any occured.
+  using TaskDupCallbackTy = function_ref<Expected<InsertPointTy>(
+      InsertPointTy AllocaIP, InsertPointTy CodeGenIP, Value *DestPtr,
+      Value *SrcPtr)>;
 
   // This is created primarily for sections construct as llvm::function_ref
   // (BodyGenCallbackTy) is not storable (as described in the comments of
@@ -1110,11 +1169,17 @@ private:
   /// \param NeedsBarrier Indicates whether a barrier must be inserted after
   ///                     the loop.
   /// \param LoopType Type of workshare loop.
+  /// \param HasDistSchedule Defines if the clause being lowered is
+  /// dist_schedule as this is handled slightly differently
+  /// \param DistScheduleSchedType Defines the Schedule Type for the Distribute
+  /// loop. Defaults to None if no Distribute loop is present.
   ///
   /// \returns Point where to insert code after the workshare construct.
   InsertPointOrErrorTy applyStaticWorkshareLoop(
       DebugLoc DL, CanonicalLoopInfo *CLI, InsertPointTy AllocaIP,
-      omp::WorksharingLoopType LoopType, bool NeedsBarrier);
+      omp::WorksharingLoopType LoopType, bool NeedsBarrier,
+      bool HasDistSchedule = false,
+      omp::OMPScheduleType DistScheduleSchedType = omp::OMPScheduleType::None);
 
   /// Modifies the canonical loop a statically-scheduled workshare loop with a
   /// user-specified chunk size.
@@ -1127,13 +1192,22 @@ private:
   /// \param NeedsBarrier Indicates whether a barrier must be inserted after the
   ///                     loop.
   /// \param ChunkSize    The user-specified chunk size.
+  /// \param SchedType    Optional type of scheduling to be passed to the init
+  /// function.
+  /// \param DistScheduleChunkSize    The size of dist_shcedule chunk considered
+  /// as a unit when
+  ///                 scheduling. If \p nullptr, defaults to 1.
+  /// \param DistScheduleSchedType Defines the Schedule Type for the Distribute
+  /// loop. Defaults to None if no Distribute loop is present.
   ///
   /// \returns Point where to insert code after the workshare construct.
-  InsertPointOrErrorTy applyStaticChunkedWorkshareLoop(DebugLoc DL,
-                                                       CanonicalLoopInfo *CLI,
-                                                       InsertPointTy AllocaIP,
-                                                       bool NeedsBarrier,
-                                                       Value *ChunkSize);
+  InsertPointOrErrorTy applyStaticChunkedWorkshareLoop(
+      DebugLoc DL, CanonicalLoopInfo *CLI, InsertPointTy AllocaIP,
+      bool NeedsBarrier, Value *ChunkSize,
+      omp::OMPScheduleType SchedType =
+          omp::OMPScheduleType::UnorderedStaticChunked,
+      Value *DistScheduleChunkSize = nullptr,
+      omp::OMPScheduleType DistScheduleSchedType = omp::OMPScheduleType::None);
 
   /// Modifies the canonical loop to be a dynamically-scheduled workshare loop.
   ///
@@ -1178,6 +1252,26 @@ private:
                        LoopAnalysis &LIA, LoopInfo &LI, llvm::Loop *L,
                        const Twine &NamePrefix = "");
 
+  /// Creates a task duplication function to be passed to kmpc_taskloop.
+  ///
+  /// The OpenMP runtime defines this function as taking the destination
+  /// kmp_task_t, source kmp_task_t, and a lastprivate flag. This function is
+  /// called on the source and destination tasks after the source task has been
+  /// duplicated to create the destination task. At this point the destination
+  /// task has been otherwise set up from the runtime's perspective, but this
+  /// function is needed to fix up any data for the duplicated task e.g. private
+  /// variables with non-trivial constructors.
+  ///
+  /// \param PrivatesTy    The type of the privates structure for the task.
+  /// \param PrivatesIndex The index inside the privates structure containing
+  ///                      the data for the callback.
+  /// \param DupCB         The callback to generate the duplication code. See
+  ///                      documentation for \ref TaskDupCallbackTy. This can be
+  ///                      nullptr.
+  Expected<Value *> createTaskDuplicationFunction(Type *PrivatesTy,
+                                                  int32_t PrivatesIndex,
+                                                  TaskDupCallbackTy DupCB);
+
 public:
   /// Modifies the canonical loop to be a workshare loop.
   ///
@@ -1212,6 +1306,10 @@ public:
   /// \param LoopType Information about type of loop worksharing.
   ///                 It corresponds to type of loop workshare OpenMP pragma.
   /// \param NoLoop If true, no-loop code is generated.
+  /// \param HasDistSchedule Defines if the clause being lowered is
+  /// dist_schedule as this is handled slightly differently
+  ///
+  /// \param DistScheduleChunkSize The chunk size for dist_schedule loop
   ///
   /// \returns Point where to insert code after the workshare construct.
   LLVM_ABI InsertPointOrErrorTy applyWorkshareLoop(
@@ -1223,7 +1321,8 @@ public:
       bool HasOrderedClause = false,
       omp::WorksharingLoopType LoopType =
           omp::WorksharingLoopType::ForStaticLoop,
-      bool NoLoop = false);
+      bool NoLoop = false, bool HasDistSchedule = false,
+      Value *DistScheduleChunkSize = nullptr);
 
   /// Tile a loop nest.
   ///
@@ -1271,6 +1370,59 @@ public:
   LLVM_ABI std::vector<CanonicalLoopInfo *>
   tileLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
             ArrayRef<Value *> TileSizes);
+
+  /// Fuse a sequence of loops.
+  ///
+  /// Fuses the loops of \p Loops.
+  /// The merging of the loops is done in the following structure:
+  ///
+  /// Example:
+  /// \code
+  ///   for (int i = lb0; i < ub0; i += st0) // trip count is calculated as:
+  ///     body(i)                            // tc0 = (ub0 - lb0 + st0) / st0
+  ///   for (int j = lb1; j < ub1; j += st1)
+  ///     body(j);
+  ///
+  ///   ...
+  ///
+  ///   for (int k = lbk; j < ubk; j += stk)
+  ///     body(k);
+  /// \endcode
+  ///
+  /// After fusing the loops a single loop is left:
+  /// \code
+  /// for (fuse.index = 0; fuse.index < max(tc0, tc1, ... tck); ++fuse.index) {
+  ///    if (fuse.index < tc0){
+  ///      iv0 = lb0 + st0 * fuse.index;
+  ///      original.index0 = iv0
+  ///      body(0);
+  ///    }
+  ///    if (fuse.index < tc1){
+  ///      iv1 = lb1 + st1 * fuse.index;
+  ///      original.index1 = iv1
+  ///      body(1);
+  ///    }
+  ///
+  ///    ...
+  ///
+  ///    if (fuse.index < tck){
+  ///      ivk = lbk + stk * fuse.index;
+  ///      original.indexk = ivk
+  ///      body(k);
+  ///    }
+  /// }
+  /// \endcode
+  ///
+  ///
+  /// @param DL        Debug location for instructions added by fusion.
+  ///
+  /// @param Loops     Loops to fuse. The CanonicalLoopInfo objects are
+  ///                  invalidated by this method, i.e. should not used after
+  ///                  fusion.
+  ///
+  /// \returns A single loop generated by the loop fusion
+  LLVM_ABI CanonicalLoopInfo *fuseLoops(DebugLoc DL,
+                                        ArrayRef<CanonicalLoopInfo *> Loops);
 
   /// Fully unroll a loop.
   ///
@@ -1359,6 +1511,60 @@ public:
         : DepKind(DepKind), DepValueType(DepValueType), DepVal(DepVal) {}
   };
 
+  /// Return the LLVM struct type matching runtime `kmp_task_affinity_info_t`.
+  /// `{ kmp_intptr_t base_addr; size_t len; flags (bitfield storage as i32) }`
+  LLVM_ABI llvm::StructType *getKmpTaskAffinityInfoTy();
+
+  /// A struct to pack the relevant information for an OpenMP affinity clause.
+  struct AffinityData {
+    Value *Count; // number of kmp_task_affinity_info_t entries
+    Value *Info;  // kmp_task_affinity_info_t
+  };
+
+  /// Generator for `#omp taskloop`
+  ///
+  /// \param Loc The location where the taskloop construct was encountered.
+  /// \param AllocaIP The insertion point to be used for alloca instructions.
+  /// \param BodyGenCB Callback that will generate the region code.
+  /// \param LoopInfo Callback that return the CLI
+  /// \param LBVal Lowerbound value of loop
+  /// \param UBVal Upperbound value of loop
+  /// \param StepVal Step value of loop
+  /// \param Untied True if the task is untied, false if the task is tied.
+  /// \param IfCond i1 value. If it evaluates to `false`, an undeferred
+  ///               task is generated, and the encountering thread must
+  ///               suspend the current task region, for which execution
+  ///               cannot be resumed until execution of the structured
+  ///               block that is associated with the generated task is
+  ///               completed.
+  /// \param GrainSize Value of the GrainSize/Num of Tasks if present
+  /// \param NoGroup False if NoGroup is defined, true if not
+  /// \param Sched If Grainsize is defined, Sched is 1. Num Tasks, Shed is 2.
+  /// Otherwise Sched is 0
+  /// \param Final i1 value which is `true` if the task is final, `false` if the
+  ///              task is not final.
+  /// \param Mergeable If the given task is `mergeable`
+  /// \param Priority `priority-value' specifies the execution order of the
+  ///                 tasks that is generated by the construct
+  /// \param NumOfCollapseLoops Defines the number of loops that are being
+  /// collapsed. The default value is 1, as thats the value when collapse is not
+  /// used.
+  /// \param DupCB The callback to generate the duplication code. See
+  /// documentation for \ref TaskDupCallbackTy. This can be nullptr.
+  /// \param TaskContextStructPtrVal If non-null, a pointer to  to be placed
+  ///                                immediately after the {lower bound, upper
+  ///                                bound, step} values in the task data.
+  LLVM_ABI InsertPointOrErrorTy createTaskloop(
+      const LocationDescription &Loc, InsertPointTy AllocaIP,
+      BodyGenCallbackTy BodyGenCB,
+      llvm::function_ref<llvm::Expected<llvm::CanonicalLoopInfo *>()> LoopInfo,
+      Value *LBVal, Value *UBVal, Value *StepVal, bool Untied = false,
+      Value *IfCond = nullptr, Value *GrainSize = nullptr, bool NoGroup = false,
+      int Sched = 0, Value *Final = nullptr, bool Mergeable = false,
+      Value *Priority = nullptr, uint64_t NumOfCollapseLoops = 1,
+      TaskDupCallbackTy DupCB = nullptr,
+      Value *TaskContextStructPtrVal = nullptr);
+
   /// Generator for `#omp task`
   ///
   /// \param Loc The location where the task construct was encountered.
@@ -1373,17 +1579,21 @@ public:
   ///                    cannot be resumed until execution of the structured
   ///                    block that is associated with the generated task is
   ///                    completed.
+  /// \param Dependencies Vector of DependData objects holding information of
+  ///        dependencies as specified by the 'depend' clause.
+  /// \param Affinities AffinityData object holding information of accumulated
+  ///        affinities as specified by the 'affinity' clause.
   /// \param EventHandle If present, signifies the event handle as part of
   ///			 the detach clause
   /// \param Mergeable	 If the given task is `mergeable`
   /// \param priority `priority-value' specifies the execution order of the
   ///                 tasks that is generated by the construct
-  LLVM_ABI InsertPointOrErrorTy
-  createTask(const LocationDescription &Loc, InsertPointTy AllocaIP,
-             BodyGenCallbackTy BodyGenCB, bool Tied = true,
-             Value *Final = nullptr, Value *IfCondition = nullptr,
-             SmallVector<DependData> Dependencies = {}, bool Mergeable = false,
-             Value *EventHandle = nullptr, Value *Priority = nullptr);
+  LLVM_ABI InsertPointOrErrorTy createTask(
+      const LocationDescription &Loc, InsertPointTy AllocaIP,
+      BodyGenCallbackTy BodyGenCB, bool Tied = true, Value *Final = nullptr,
+      Value *IfCondition = nullptr, SmallVector<DependData> Dependencies = {},
+      AffinityData Affinities = {}, bool Mergeable = false,
+      Value *EventHandle = nullptr, Value *Priority = nullptr);
 
   /// Generator for the taskgroup construct
   ///
@@ -1440,6 +1650,9 @@ public:
   using ReductionGenAtomicCBTy = std::function<InsertPointOrErrorTy(
       InsertPointTy, Type *, Value *, Value *)>;
 
+  using ReductionGenDataPtrPtrCBTy = std::function<InsertPointOrErrorTy(
+      InsertPointTy, Value *ByRefVal, Value *&Res)>;
+
   /// Enum class for reduction evaluation types scalar, complex and aggregate.
   enum class EvalKind { Scalar, Complex, Aggregate };
 
@@ -1448,17 +1661,25 @@ public:
     ReductionInfo(Type *ElementType, Value *Variable, Value *PrivateVariable,
                   EvalKind EvaluationKind, ReductionGenCBTy ReductionGen,
                   ReductionGenClangCBTy ReductionGenClang,
-                  ReductionGenAtomicCBTy AtomicReductionGen)
+                  ReductionGenAtomicCBTy AtomicReductionGen,
+                  ReductionGenDataPtrPtrCBTy DataPtrPtrGen,
+                  Type *ByRefAllocatedType = nullptr,
+                  Type *ByRefElementType = nullptr)
         : ElementType(ElementType), Variable(Variable),
           PrivateVariable(PrivateVariable), EvaluationKind(EvaluationKind),
           ReductionGen(ReductionGen), ReductionGenClang(ReductionGenClang),
-          AtomicReductionGen(AtomicReductionGen) {}
+          AtomicReductionGen(AtomicReductionGen), DataPtrPtrGen(DataPtrPtrGen),
+          ByRefAllocatedType(ByRefAllocatedType),
+          ByRefElementType(ByRefElementType) {}
+
     ReductionInfo(Value *PrivateVariable)
         : ElementType(nullptr), Variable(nullptr),
           PrivateVariable(PrivateVariable), EvaluationKind(EvalKind::Scalar),
-          ReductionGen(), ReductionGenClang(), AtomicReductionGen() {}
+          ReductionGen(), ReductionGenClang(), AtomicReductionGen(),
+          DataPtrPtrGen() {}
 
-    /// Reduction element type, must match pointee type of variable.
+    /// Reduction element type, must match pointee type of variable. For by-ref
+    /// reductions, this would be just an opaque `ptr`.
     Type *ElementType;
 
     /// Reduction variable of pointer type.
@@ -1485,6 +1706,21 @@ public:
     /// reduction. If null, the implementation will use the non-atomic version
     /// along with the appropriate synchronization mechanisms.
     ReductionGenAtomicCBTy AtomicReductionGen;
+
+    ReductionGenDataPtrPtrCBTy DataPtrPtrGen;
+
+    /// For by-ref reductions, we need to keep track of 2 extra types that are
+    /// potentially different:
+    /// * The allocated type is the type of the storage allocated by the
+    /// reduction op's `alloc` region. For example, for allocatables and arrays,
+    /// this type would be the descriptor/box struct.
+    Type *ByRefAllocatedType;
+
+    /// * The by-ref element type is the type of the actual storage needed for
+    /// the data of the allocatable or array. For example, an float allocatable
+    /// of would need some float storage to store intermediate reduction
+    /// results.
+    Type *ByRefElementType;
   };
 
   enum class CopyAction : unsigned {
@@ -1529,14 +1765,15 @@ private:
 
   /// Function to shuffle over the value from the remote lane.
   void shuffleAndStore(InsertPointTy AllocaIP, Value *SrcAddr, Value *DstAddr,
-                       Type *ElementType, Value *Offset,
-                       Type *ReductionArrayTy);
+                       Type *ElementType, Value *Offset, Type *ReductionArrayTy,
+                       bool IsByRefElem);
 
   /// Emit instructions to copy a Reduce list, which contains partially
   /// aggregated values, in the specified direction.
-  void emitReductionListCopy(
+  Error emitReductionListCopy(
       InsertPointTy AllocaIP, CopyAction Action, Type *ReductionArrayTy,
       ArrayRef<ReductionInfo> ReductionInfos, Value *SrcBase, Value *DestBase,
+      ArrayRef<bool> IsByRef,
       CopyOptionsTy CopyOptions = {nullptr, nullptr, nullptr});
 
   /// Emit a helper that reduces data across two OpenMP threads (lanes)
@@ -1610,11 +1847,13 @@ private:
   /// \param ReduceFn The reduction function.
   /// \param FuncAttrs Optional param to specify any function attributes that
   ///                  need to be copied to the new function.
+  /// \param IsByRef For each reduction clause, whether the reduction is by-ref
+  ///                  or not.
   ///
   /// \return The ShuffleAndReduce function.
-  Function *emitShuffleAndReduceFunction(
+  Expected<Function *> emitShuffleAndReduceFunction(
       ArrayRef<OpenMPIRBuilder::ReductionInfo> ReductionInfos,
-      Function *ReduceFn, AttributeList FuncAttrs);
+      Function *ReduceFn, AttributeList FuncAttrs, ArrayRef<bool> IsByRef);
 
   /// Helper function for CreateCanonicalScanLoops to create InputLoop
   /// in the firstGen and Scan Loop in the SecondGen
@@ -1674,12 +1913,14 @@ private:
   /// \param ReductionInfos Array type containing the ReductionOps.
   /// \param FuncAttrs Optional param to specify any function attributes that
   ///                  need to be copied to the new function.
+  /// \param IsByRef For each reduction clause, whether the reduction is by-ref
+  ///                  or not.
   ///
   /// \return The InterWarpCopy function.
   Expected<Function *>
   emitInterWarpCopyFunction(const LocationDescription &Loc,
                             ArrayRef<ReductionInfo> ReductionInfos,
-                            AttributeList FuncAttrs);
+                            AttributeList FuncAttrs, ArrayRef<bool> IsByRef);
 
   /// This function emits a helper that copies all the reduction variables from
   /// the team into the provided global buffer for the reduction variables.
@@ -1694,9 +1935,10 @@ private:
   ///                  need to be copied to the new function.
   ///
   /// \return The ListToGlobalCopy function.
-  Function *emitListToGlobalCopyFunction(ArrayRef<ReductionInfo> ReductionInfos,
-                                         Type *ReductionsBufferTy,
-                                         AttributeList FuncAttrs);
+  Expected<Function *>
+  emitListToGlobalCopyFunction(ArrayRef<ReductionInfo> ReductionInfos,
+                               Type *ReductionsBufferTy,
+                               AttributeList FuncAttrs, ArrayRef<bool> IsByRef);
 
   /// This function emits a helper that copies all the reduction variables from
   /// the team into the provided global buffer for the reduction variables.
@@ -1711,9 +1953,10 @@ private:
   ///                  need to be copied to the new function.
   ///
   /// \return The GlobalToList function.
-  Function *emitGlobalToListCopyFunction(ArrayRef<ReductionInfo> ReductionInfos,
-                                         Type *ReductionsBufferTy,
-                                         AttributeList FuncAttrs);
+  Expected<Function *>
+  emitGlobalToListCopyFunction(ArrayRef<ReductionInfo> ReductionInfos,
+                               Type *ReductionsBufferTy,
+                               AttributeList FuncAttrs, ArrayRef<bool> IsByRef);
 
   /// This function emits a helper that reduces all the reduction variables from
   /// the team into the provided global buffer for the reduction variables.
@@ -1732,10 +1975,11 @@ private:
   ///                  need to be copied to the new function.
   ///
   /// \return The ListToGlobalReduce function.
-  Function *
+  Expected<Function *>
   emitListToGlobalReduceFunction(ArrayRef<ReductionInfo> ReductionInfos,
                                  Function *ReduceFn, Type *ReductionsBufferTy,
-                                 AttributeList FuncAttrs);
+                                 AttributeList FuncAttrs,
+                                 ArrayRef<bool> IsByRef);
 
   /// This function emits a helper that reduces all the reduction variables from
   /// the team into the provided global buffer for the reduction variables.
@@ -1754,13 +1998,29 @@ private:
   ///                  need to be copied to the new function.
   ///
   /// \return The GlobalToListReduce function.
-  Function *
+  Expected<Function *>
   emitGlobalToListReduceFunction(ArrayRef<ReductionInfo> ReductionInfos,
                                  Function *ReduceFn, Type *ReductionsBufferTy,
-                                 AttributeList FuncAttrs);
+                                 AttributeList FuncAttrs,
+                                 ArrayRef<bool> IsByRef);
 
   /// Get the function name of a reduction function.
   std::string getReductionFuncName(StringRef Name) const;
+
+  /// Generate a Fortran descriptor for array reductions
+  ///
+  /// \param DescriptorAddr Address of the descriptor to initialize
+  /// \param DataPtr Pointer to the actual data the descriptor should reference
+  /// \param ElemType Type of elements in the array (may be array type)
+  /// \param DescriptorType Type of the descriptor structure
+  /// \param DataPtrPtrGen Callback to get the base_ptr field in the descriptor
+  ///
+  /// \return Error if DataPtrPtrGen fails, otherwise success.
+  InsertPointOrErrorTy generateReductionDescriptor(
+      Value *DescriptorAddr, Value *DataPtr, Value *SrcDescriptorAddr,
+      Type *DescriptorType,
+      function_ref<InsertPointOrErrorTy(InsertPointTy, Value *, Value *&)>
+          DataPtrPtrGen);
 
   /// Emits reduction function.
   /// \param ReducerName Name of the function calling the reduction.
@@ -1773,6 +2033,7 @@ private:
   /// \return The reduction function.
   Expected<Function *> createReductionFunction(
       StringRef ReducerName, ArrayRef<ReductionInfo> ReductionInfos,
+      ArrayRef<bool> IsByRef,
       ReductionGenCBKind ReductionGenCBKind = ReductionGenCBKind::MLIR,
       AttributeList FuncAttrs = {});
 
@@ -2025,11 +2286,13 @@ public:
   ///                           reduction variables.
   /// \param AllocaIP           An insertion point suitable for allocas usable
   ///                           in reductions.
-  /// \param CodeGenIP           An insertion point suitable for code
-  /// generation. \param ReductionInfos     A list of info on each reduction
-  /// variable. \param IsNoWait           Optional flag set if the reduction is
-  /// marked as
-  ///                           nowait.
+  /// \param CodeGenIP          An insertion point suitable for code
+  ///                           generation.
+  /// \param ReductionInfos     A list of info on each reduction
+  ///                           variable.
+  /// \param IsNoWait           Optional flag set if the reduction is
+  ///                           marked as nowait.
+  /// \param IsByRef For each reduction clause, whether the reduction is by-ref.
   /// \param IsTeamsReduction   Optional flag set if it is a teams
   ///                           reduction.
   /// \param GridValue          Optional GPU grid value.
@@ -2039,7 +2302,8 @@ public:
   LLVM_ABI InsertPointOrErrorTy createReductionsGPU(
       const LocationDescription &Loc, InsertPointTy AllocaIP,
       InsertPointTy CodeGenIP, ArrayRef<ReductionInfo> ReductionInfos,
-      bool IsNoWait = false, bool IsTeamsReduction = false,
+      ArrayRef<bool> IsByRef, bool IsNoWait = false,
+      bool IsTeamsReduction = false,
       ReductionGenCBKind ReductionGenCBKind = ReductionGenCBKind::MLIR,
       std::optional<omp::GV> GridValue = {}, unsigned ReductionBufNum = 1024,
       Value *SrcLocInfo = nullptr);
@@ -2132,6 +2396,10 @@ public:
 
   LLVM_ABI Function *getOrCreateRuntimeFunctionPtr(omp::RuntimeFunction FnID);
 
+  CallInst *createRuntimeFunctionCall(FunctionCallee Callee,
+                                      ArrayRef<Value *> Args,
+                                      StringRef Name = "");
+
   /// Return the (LLVM-IR) string describing the source location \p LocStr.
   LLVM_ABI Constant *getOrCreateSrcLocStr(StringRef LocStr,
                                           uint32_t &SrcLocStrSize);
@@ -2181,8 +2449,7 @@ public:
   ///
   /// \return an error, if any were triggered during execution.
   LLVM_ABI Error emitCancelationCheckImpl(Value *CancelFlag,
-                                          omp::Directive CanceledDirective,
-                                          FinalizeCallbackTy ExitCB = {});
+                                          omp::Directive CanceledDirective);
 
   /// Generate a target region entry call.
   ///
@@ -2263,6 +2530,9 @@ public:
     PostOutlineCBTy PostOutlineCB;
     BasicBlock *EntryBB, *ExitBB, *OuterAllocaBB;
     SmallVector<Value *, 2> ExcludeArgsFromAggregate;
+    SetVector<Value *> Inputs, Outputs;
+    // TODO: this should be safe to enable by default
+    bool FixUpNonEntryAllocas = false;
 
     /// Collect all blocks in between EntryBB and ExitBB in both the given
     /// vector and set.
@@ -2430,6 +2700,9 @@ public:
     /// Total number of iterations of the SPMD or Generic-SPMD kernel or null if
     /// it is a generic kernel.
     Value *LoopTripCount = nullptr;
+
+    /// Device ID value used in the kernel launch.
+    Value *DeviceID = nullptr;
   };
 
   /// Data structure that contains the needed information to construct the
@@ -2674,7 +2947,8 @@ public:
   enum EmitMetadataErrorKind {
     EMIT_MD_TARGET_REGION_ERROR,
     EMIT_MD_DECLARE_TARGET_ERROR,
-    EMIT_MD_GLOBAL_VAR_LINK_ERROR
+    EMIT_MD_GLOBAL_VAR_LINK_ERROR,
+    EMIT_MD_GLOBAL_VAR_INDIRECT_ERROR
   };
 
   /// Callback function type
@@ -2994,7 +3268,7 @@ public:
   /// The `omp target` interface
   ///
   /// For more information about the usage of this interface,
-  /// \see openmp/libomptarget/deviceRTLs/common/include/target.h
+  /// \see openmp/device/include/Interface.h
   ///
   ///{
 
@@ -3337,7 +3611,8 @@ private:
   /// Common interface to finalize the region
   ///
   /// \param OMPD Directive to generate exiting code for
-  /// \param FinIP Insertion point for emitting Finalization code and exit call
+  /// \param FinIP Insertion point for emitting Finalization code and exit call.
+  ///              This block must not contain any non-finalization code.
   /// \param ExitCall Call to the ending OMP Runtime Function
   /// \param HasFinalize indicate if the directive will require finalization
   ///         and has a finalization callback in the stack that
@@ -3666,6 +3941,109 @@ public:
   LLVM_ABI GlobalVariable *
   getOrCreateInternalVariable(Type *Ty, const StringRef &Name,
                               std::optional<unsigned> AddressSpace = {});
+
+  using IteratorBodyGenTy = llvm::function_ref<llvm::Error(
+      InsertPointTy BodyIP, llvm::Value *LinearIV)>;
+
+  /// Create a canonical iterator loop at the current insertion point.
+  ///
+  /// This helper splits the current block and builds a canonical loop
+  /// using createLoopSkeleton(). The resulting control flow looks like:
+  ///
+  ///   CurBB -> Preheader -> Header -> Body -> Latch -> After -> ContBB
+  ///
+  /// The body of the loop is produced by calling \p BodyGen with the insertion
+  /// point for the loop body and the induction variable.
+  /// Unlike createCanonicalLoop(), this function is intended for \p BodyGen
+  /// that may perform region lowering (e.g., translating MLIR regions) and are
+  /// not guaranteed to preserve the canonical skeleton's body terminator. In
+  /// particular:
+  ///
+  ///  - The skeleton’s unconditional branch from the loop body is removed
+  ///    before invoking \p BodyGen.
+  ///  - \p BodyGen may freely emit instructions and temporarily introduce
+  ///    control flow.
+  ///  - If the loop body does not end with a terminator after \p BodyGen
+  ///    returns, a branch to the latch is inserted to restore canonical form.
+  ///
+  /// \param Loc The location where the iterator modifier was encountered.
+  /// \param TripCount Number of loop iterations.
+  /// \param BodyGen Callback to generate the loop body.
+  /// \param Name Base name used for creating the loop
+  /// \returns The insertion position *after* the iterator loop
+  LLVM_ABI InsertPointOrErrorTy createIteratorLoop(
+      LocationDescription Loc, llvm::Value *TripCount,
+      IteratorBodyGenTy BodyGen, llvm::StringRef Name = "iterator");
+
+  /// Kind of parameter in a function with 'declare simd' directive.
+  enum class DeclareSimdKindTy {
+    Linear,
+    LinearRef,
+    LinearUVal,
+    LinearVal,
+    Uniform,
+    Vector,
+  };
+
+  /// Attribute set of the `declare simd` parameter.
+  struct DeclareSimdAttrTy {
+    DeclareSimdKindTy Kind = DeclareSimdKindTy::Vector;
+    llvm::APSInt StrideOrArg;
+    llvm::APSInt Alignment;
+    bool HasVarStride = false;
+  };
+
+  enum class DeclareSimdBranch {
+    Undefined,
+    Inbranch,
+    Notinbranch,
+  };
+
+  /// Emit x86 vector-function ABI attributes for a `declare simd` function.
+  ///
+  /// Generates and attaches `_ZGV*` vector function ABI attributes to \p Fn
+  /// following the x86 vector ABI used by OpenMP `declare simd`. For each
+  /// supported ISA (SSE, AVX, AVX2, AVX512) and masking variant, this
+  /// constructs the appropriate mangled vector-function name and adds it as a
+  /// function attribute.
+  ///
+  /// \param Fn          The scalar function to which vector-function attributes
+  ///                    are attached.
+  /// \param NumElements Number of elements used to derive the vector length
+  ///                    when
+  ///                    \p VLENVal is not specified.
+  /// \param VLENVal     User provided vector length.
+  /// \param ParamAttrs  Array of attribute set of the `declare simd` parameter.
+  /// \param Branch      `undefined`, `inbranch` or `notinbranch` clause.
+  LLVM_ABI void emitX86DeclareSimdFunction(
+      llvm::Function *Fn, unsigned NumElements, const llvm::APSInt &VLENVal,
+      llvm::ArrayRef<DeclareSimdAttrTy> ParamAttrs, DeclareSimdBranch Branch);
+
+  /// Emit AArch64 vector-function ABI attributes for a `declare simd` function.
+  ///
+  /// Generates and attaches `_ZGV*` vector function ABI attributes to \p Fn
+  /// following the AArch64 vector-function ABI. The emitted names depend on the
+  /// selected ISA, user-specified vector length, parameter attribute mangling,
+  /// and the declare simd branch clause.
+  ///
+  /// \param Fn                  The scalar function to which vector-function
+  ///                            attributes are attached.
+  /// \param VLENVal             User provided vector length.
+  /// \param ParamAttrs          Array of attribute set of the `declare simd`
+  ///                            parameter.
+  /// \param Branch              `undefined`, `inbranch` or `notinbranch`
+  ///                            clause.
+  /// \param ISA                 `'n'` for Advanced SIMD or `'s'` for SVE.
+  /// \param NarrowestDataSize   Narrowest data size in bits used to infer the
+  ///                            default vector length when \p VLENVal is
+  ///                            absent.
+  /// \param OutputBecomesInput  Whether result values are represented as input
+  ///                            parameters in the emitted vector-function ABI
+  ///                            name.
+  LLVM_ABI void emitAArch64DeclareSimdFunction(
+      llvm::Function *Fn, unsigned VLENVal,
+      llvm::ArrayRef<DeclareSimdAttrTy> ParamAttrs, DeclareSimdBranch Branch,
+      char ISA, unsigned NarrowestDataSize, bool OutputBecomesInput);
 };
 
 /// Class to represented the control flow structure of an OpenMP canonical loop.
@@ -3824,7 +4202,7 @@ public:
 
   /// Returns whether this object currently represents the IR of a loop. If
   /// returning false, it may have been consumed by a loop transformation or not
-  /// been intialized. Do not use in this case;
+  /// been initialized. Do not use in this case;
   bool isValid() const { return Header; }
 
   /// The preheader ensures that there is only a single edge entering the loop.
@@ -3852,7 +4230,7 @@ public:
   /// eventually branch to the \p Latch block.
   BasicBlock *getBody() const {
     assert(isValid() && "Requires a valid canonical loop");
-    return cast<BranchInst>(Cond->getTerminator())->getSuccessor(0);
+    return cast<CondBrInst>(Cond->getTerminator())->getSuccessor(0);
   }
 
   /// Reaching the latch indicates the end of the loop body code. In the

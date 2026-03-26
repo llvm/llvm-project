@@ -63,7 +63,7 @@ add_optional_dependency(LLDB_ENABLE_LZMA "Enable LZMA compression support in LLD
 add_optional_dependency(LLDB_ENABLE_LUA "Enable Lua scripting support in LLDB" LuaAndSwig LUAANDSWIG_FOUND)
 add_optional_dependency(LLDB_ENABLE_PYTHON "Enable Python scripting support in LLDB" PythonAndSwig PYTHONANDSWIG_FOUND)
 add_optional_dependency(LLDB_ENABLE_LIBXML2 "Enable Libxml 2 support in LLDB" LibXml2 LIBXML2_FOUND VERSION ${LLDB_LIBXML2_VERSION})
-add_optional_dependency(LLDB_ENABLE_FBSDVMCORE "Enable libfbsdvmcore support in LLDB" FBSDVMCore FBSDVMCore_FOUND QUIET)
+add_optional_dependency(LLDB_ENABLE_TREESITTER "Enable Tree-sitter syntax highlighting" TreeSitter TREESITTER_FOUND)
 
 option(LLDB_USE_ENTITLEMENTS "When codesigning, use entitlements if available" ON)
 option(LLDB_BUILD_FRAMEWORK "Build LLDB.framework (Darwin only)" OFF)
@@ -99,6 +99,7 @@ if(LLDB_BUILD_FRAMEWORK)
 
   get_filename_component(LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR ${LLDB_FRAMEWORK_BUILD_DIR} ABSOLUTE
     BASE_DIR ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR})
+  set(LLDB_FRAMEWORK_DIR "${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/LLDB.framework")
 
   # Essentially, emit the framework's dSYM outside of the framework directory.
   set(LLDB_DEBUGINFO_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin CACHE STRING
@@ -162,6 +163,33 @@ if (LLDB_ENABLE_LIBEDIT)
   set(CMAKE_EXTRA_INCLUDE_FILES)
 endif()
 
+if (APPLE)
+  set(default_enable_mte OFF)
+
+  # The MTE launcher complicates injecting the sanitizer runtime libraries.
+  # Default to OFF when any sanitizer is enabled.
+  if (NOT LLVM_USE_SANITIZER)
+    execute_process(
+        COMMAND sysctl -n hw.optional.arm.FEAT_MTE4
+        OUTPUT_VARIABLE SYSCTL_OUTPUT
+        ERROR_QUIET
+        RESULT_VARIABLE SYSCTL_RESULT
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if(SYSCTL_RESULT EQUAL 0 AND SYSCTL_OUTPUT STREQUAL "1")
+      set(default_enable_mte ON)
+    endif()
+  endif()
+
+  option(LLDB_ENABLE_MTE "Run the LLDB test suite with MTE enabled." ${default_enable_mte})
+
+  if (LLDB_ENABLE_MTE)
+    message(STATUS "Running the LLDB test suite with MTE")
+  endif()
+else()
+  set(LLDB_ENABLE_MTE OFF)
+endif()
+
 if (LLDB_ENABLE_PYTHON)
   if(CMAKE_SYSTEM_NAME MATCHES "Windows")
     set(default_embed_python_home ON)
@@ -172,8 +200,6 @@ if (LLDB_ENABLE_PYTHON)
     "Embed PYTHONHOME in the binary. If set to OFF, PYTHONHOME environment variable will be used to to locate Python."
     ${default_embed_python_home})
 
-  include_directories(${Python3_INCLUDE_DIRS})
-
   if (LLDB_EMBED_PYTHON_HOME)
     get_filename_component(PYTHON_HOME "${Python3_EXECUTABLE}" DIRECTORY)
     set(LLDB_PYTHON_HOME "${PYTHON_HOME}" CACHE STRING
@@ -182,16 +208,26 @@ if (LLDB_ENABLE_PYTHON)
 
   # Enable targeting the Python Limited C API.
   set(PYTHON_LIMITED_API_MIN_SWIG_VERSION "4.2")
+  if (SWIG_VERSION VERSION_EQUAL "4.4.0" AND Python3_VERSION VERSION_GREATER_EQUAL "3.13")
+    set(AFFECTED_BY_SWIG_BUG TRUE)
+  else()
+    set(AFFECTED_BY_SWIG_BUG FALSE)
+  endif()
+
   if (SWIG_VERSION VERSION_GREATER_EQUAL PYTHON_LIMITED_API_MIN_SWIG_VERSION
-      AND NOT LLDB_EMBED_PYTHON_HOME)
+      AND NOT LLDB_EMBED_PYTHON_HOME AND NOT AFFECTED_BY_SWIG_BUG)
     set(default_enable_python_limited_api ON)
   else()
     set(default_enable_python_limited_api OFF)
   endif()
+
   option(LLDB_ENABLE_PYTHON_LIMITED_API "Force LLDB to only use the Python Limited API (requires SWIG 4.2 or later)"
     ${default_enable_python_limited_api})
 
   # Diagnose unsupported configurations.
+  if (LLDB_ENABLE_PYTHON_LIMITED_API AND AFFECTED_BY_SWIG_BUG)
+    message(SEND_ERROR "LLDB_ENABLE_PYTHON_LIMITED_API is not compatible with SWIG 4.4.0 and Python >= 3.13 due to a bug in SWIG: https://github.com/swig/swig/issues/3283")
+  endif()
   if (LLDB_ENABLE_PYTHON_LIMITED_API AND LLDB_EMBED_PYTHON_HOME)
     message(SEND_ERROR "LLDB_ENABLE_PYTHON_LIMITED_API is not compatible with LLDB_EMBED_PYTHON_HOME")
   endif()

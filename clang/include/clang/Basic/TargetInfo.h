@@ -138,6 +138,7 @@ struct TransferrableTargetInfo {
   unsigned short NewAlign;
   unsigned MaxVectorAlign;
   unsigned MaxTLSAlign;
+  bool VectorsAreElementAligned;
 
   const llvm::fltSemantics *HalfFormat, *BFloat16Format, *FloatFormat,
       *DoubleFormat, *LongDoubleFormat, *Float128Format, *Ibm128Format;
@@ -296,9 +297,11 @@ protected:
   // TargetInfo Constructor.  Default initializes all fields.
   TargetInfo(const llvm::Triple &T);
 
-  // UserLabelPrefix must match DL's getGlobalPrefix() when interpreted
-  // as a DataLayout object.
-  void resetDataLayout(StringRef DL, const char *UserLabelPrefix = "");
+  /// Set the data layout to the given string.
+  void resetDataLayout(StringRef DL);
+
+  /// Set the data layout based on current triple and ABI.
+  void resetDataLayout();
 
   // Target features that are read-only and should not be disabled/enabled
   // by command line options. Such features are for emitting predefined
@@ -867,6 +870,9 @@ public:
             llvm::isPowerOf2_64(AtomicSizeInBits / getCharWidth()));
   }
 
+  /// True if vectors are element-aligned for this target.
+  bool vectorsAreElementAligned() const { return VectorsAreElementAligned; }
+
   /// Return the maximum vector alignment supported for the given target.
   unsigned getMaxVectorAlign() const { return MaxVectorAlign; }
 
@@ -1011,10 +1017,12 @@ public:
     return ComplexLongDoubleUsesFP2Ret;
   }
 
-  /// Check whether llvm intrinsics such as llvm.convert.to.fp16 should be used
-  /// to convert to and from __fp16.
-  /// FIXME: This function should be removed once all targets stop using the
-  /// conversion intrinsics.
+  /// Check whether conversions to and from __fp16 should go through an integer
+  /// bitcast with i16.
+  ///
+  /// FIXME: This function should be removed. The intrinsics / no longer exist,
+  /// and are emulated with bitcast + fp cast. This only exists because of
+  /// misuse in ABI determining contexts.
   virtual bool useFP16ConversionIntrinsics() const {
     return true;
   }
@@ -1129,6 +1137,7 @@ public:
       CI_HasMatchingInput = 0x08,  // This output operand has a matching input.
       CI_ImmediateConstant = 0x10, // This operand must be an immediate constant
       CI_EarlyClobber = 0x20,      // "&" output constraint (early clobber).
+      CI_OutputOperandBounds = 0x40, // Output operand bounds.
     };
     unsigned Flags;
     int TiedOperand;
@@ -1225,11 +1234,11 @@ public:
     void setOutputOperandBounds(unsigned Min, unsigned Max) {
       ImmRange.Min = Min;
       ImmRange.Max = Max;
-      ImmRange.isConstrained = true;
+      Flags |= CI_OutputOperandBounds;
     }
     std::optional<std::pair<unsigned, unsigned>>
     getOutputOperandBounds() const {
-      return ImmRange.isConstrained
+      return (Flags & CI_OutputOperandBounds) != 0
                  ? std::make_pair(ImmRange.Min, ImmRange.Max)
                  : std::optional<std::pair<unsigned, unsigned>>();
     }
@@ -1562,7 +1571,7 @@ public:
   /// which requires support for cpu_supports and cpu_is functionality.
   bool supportsMultiVersioning() const {
     return getTriple().isX86() || getTriple().isAArch64() ||
-           getTriple().isRISCV();
+           getTriple().isRISCV() || getTriple().isOSAIX();
   }
 
   /// Identify whether this target supports IFuncs.
@@ -1573,6 +1582,9 @@ public:
       return true;
     if (getTriple().getArch() == llvm::Triple::ArchType::avr)
       return true;
+    if (getTriple().isOSAIX())
+      return getTriple().getOSMajorVersion() == 0 ||
+             getTriple().getOSVersion() >= VersionTuple(7, 2);
     return getTriple().isOSBinFormatELF() &&
            ((getTriple().isOSLinux() && !getTriple().isMusl()) ||
             getTriple().isOSFreeBSD());
@@ -1852,6 +1864,9 @@ public:
       getTargetOpts().OpenCLFeaturesMap[Name] = V;
     }
   }
+
+  /// Set features that depend on other features.
+  virtual void setDependentOpenCLOpts();
 
   /// Get supported OpenCL extensions and optional core features.
   llvm::StringMap<bool> &getSupportedOpenCLOpts() {

@@ -129,12 +129,27 @@ static SDValue stripExtractLoElt(SDValue In) {
   return In;
 }
 
+static SDValue emitRegSequence(llvm::SelectionDAG &CurDAG, unsigned DstRegClass,
+                               EVT DstTy, ArrayRef<SDValue> Elts,
+                               ArrayRef<unsigned> SubRegClass,
+                               const SDLoc &DL) {
+  assert(Elts.size() == SubRegClass.size() && "array size mismatch");
+  unsigned NumElts = Elts.size();
+  SmallVector<SDValue, 17> Ops(2 * NumElts + 1);
+  Ops[0] = (CurDAG.getTargetConstant(DstRegClass, DL, MVT::i32));
+  for (unsigned i = 0; i < NumElts; ++i) {
+    Ops[2 * i + 1] = Elts[i];
+    Ops[2 * i + 2] = CurDAG.getTargetConstant(SubRegClass[i], DL, MVT::i32);
+  }
+  return SDValue(
+      CurDAG.getMachineNode(TargetOpcode::REG_SEQUENCE, DL, DstTy, Ops), 0);
+}
+
 } // end anonymous namespace
 
 INITIALIZE_PASS_BEGIN(AMDGPUDAGToDAGISelLegacy, "amdgpu-isel",
                       "AMDGPU DAG->DAG Pattern Instruction Selection", false,
                       false)
-INITIALIZE_PASS_DEPENDENCY(AMDGPUArgumentUsageInfo)
 INITIALIZE_PASS_DEPENDENCY(AMDGPUPerfHintAnalysisLegacy)
 INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
 #ifdef EXPENSIVE_CHECKS
@@ -238,7 +253,6 @@ bool AMDGPUDAGToDAGISelLegacy::runOnMachineFunction(MachineFunction &MF) {
 }
 
 void AMDGPUDAGToDAGISelLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<AMDGPUArgumentUsageInfo>();
   AU.addRequired<UniformityInfoWrapperPass>();
 #ifdef EXPENSIVE_CHECKS
   AU.addRequired<DominatorTreeWrapperPass>();
@@ -1306,7 +1320,7 @@ bool AMDGPUDAGToDAGISel::SelectDS1Addr1Offset(SDValue Addr, SDValue &Base,
 
           // FIXME: Select to VOP3 version for with-carry.
           unsigned SubOp = AMDGPU::V_SUB_CO_U32_e32;
-          if (Subtarget->hasAddNoCarry()) {
+          if (Subtarget->hasAddNoCarryInsts()) {
             SubOp = AMDGPU::V_SUB_U32_e64;
             Opnds.push_back(
                 CurDAG->getTargetConstant(0, {}, MVT::i1)); // clamp bit
@@ -1491,7 +1505,7 @@ bool AMDGPUDAGToDAGISel::SelectDSReadWrite2(SDValue Addr, SDValue &Base,
           Opnds.push_back(Zero);
           Opnds.push_back(Addr.getOperand(1));
           unsigned SubOp = AMDGPU::V_SUB_CO_U32_e32;
-          if (Subtarget->hasAddNoCarry()) {
+          if (Subtarget->hasAddNoCarryInsts()) {
             SubOp = AMDGPU::V_SUB_U32_e64;
             Opnds.push_back(
                 CurDAG->getTargetConstant(0, {}, MVT::i1)); // clamp bit
@@ -1675,7 +1689,7 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFScratchOffen(SDNode *Parent,
   if (ConstantSDNode *CAddr = dyn_cast<ConstantSDNode>(Addr)) {
     int64_t Imm = CAddr->getSExtValue();
     const int64_t NullPtr =
-        AMDGPUTargetMachine::getNullPointerValue(AMDGPUAS::PRIVATE_ADDRESS);
+        AMDGPU::getNullPointerValue(AMDGPUAS::PRIVATE_ADDRESS);
     // Don't fold null pointer.
     if (Imm != NullPtr) {
       const uint32_t MaxOffset = SIInstrInfo::getMaxMUBUFImmOffset(*Subtarget);
@@ -1850,72 +1864,83 @@ bool AMDGPUDAGToDAGISel::SelectFlatOffsetImpl(SDNode *N, SDValue Addr,
          isFlatScratchBaseLegal(Addr))) {
       int64_t COffsetVal = cast<ConstantSDNode>(N1)->getSExtValue();
 
-      const SIInstrInfo *TII = Subtarget->getInstrInfo();
-      if (TII->isLegalFLATOffset(COffsetVal, AS, FlatVariant)) {
-        Addr = N0;
-        OffsetVal = COffsetVal;
-      } else {
-        // If the offset doesn't fit, put the low bits into the offset field and
-        // add the rest.
-        //
-        // For a FLAT instruction the hardware decides whether to access
-        // global/scratch/shared memory based on the high bits of vaddr,
-        // ignoring the offset field, so we have to ensure that when we add
-        // remainder to vaddr it still points into the same underlying object.
-        // The easiest way to do that is to make sure that we split the offset
-        // into two pieces that are both >= 0 or both <= 0.
-
-        SDLoc DL(N);
-        uint64_t RemainderOffset;
-
-        std::tie(OffsetVal, RemainderOffset) =
-            TII->splitFlatOffset(COffsetVal, AS, FlatVariant);
-
-        SDValue AddOffsetLo =
-            getMaterializedScalarImm32(Lo_32(RemainderOffset), DL);
-        SDValue Clamp = CurDAG->getTargetConstant(0, DL, MVT::i1);
-
-        if (Addr.getValueType().getSizeInBits() == 32) {
-          SmallVector<SDValue, 3> Opnds;
-          Opnds.push_back(N0);
-          Opnds.push_back(AddOffsetLo);
-          unsigned AddOp = AMDGPU::V_ADD_CO_U32_e32;
-          if (Subtarget->hasAddNoCarry()) {
-            AddOp = AMDGPU::V_ADD_U32_e64;
-            Opnds.push_back(Clamp);
-          }
-          Addr = SDValue(CurDAG->getMachineNode(AddOp, DL, MVT::i32, Opnds), 0);
+      // Adding the offset to the base address in a FLAT instruction must not
+      // change the memory aperture in which the address falls. Therefore we can
+      // only fold offsets from inbounds GEPs into FLAT instructions.
+      bool IsInBounds =
+          Addr.getOpcode() == ISD::PTRADD && Addr->getFlags().hasInBounds();
+      if (COffsetVal == 0 || FlatVariant != SIInstrFlags::FLAT || IsInBounds) {
+        const SIInstrInfo *TII = Subtarget->getInstrInfo();
+        if (TII->isLegalFLATOffset(COffsetVal, AS, FlatVariant)) {
+          Addr = N0;
+          OffsetVal = COffsetVal;
         } else {
-          // TODO: Should this try to use a scalar add pseudo if the base address
-          // is uniform and saddr is usable?
-          SDValue Sub0 = CurDAG->getTargetConstant(AMDGPU::sub0, DL, MVT::i32);
-          SDValue Sub1 = CurDAG->getTargetConstant(AMDGPU::sub1, DL, MVT::i32);
+          // If the offset doesn't fit, put the low bits into the offset field
+          // and add the rest.
+          //
+          // For a FLAT instruction the hardware decides whether to access
+          // global/scratch/shared memory based on the high bits of vaddr,
+          // ignoring the offset field, so we have to ensure that when we add
+          // remainder to vaddr it still points into the same underlying object.
+          // The easiest way to do that is to make sure that we split the offset
+          // into two pieces that are both >= 0 or both <= 0.
 
-          SDNode *N0Lo = CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG,
-                                                DL, MVT::i32, N0, Sub0);
-          SDNode *N0Hi = CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG,
-                                                DL, MVT::i32, N0, Sub1);
+          SDLoc DL(N);
+          uint64_t RemainderOffset;
 
-          SDValue AddOffsetHi =
-              getMaterializedScalarImm32(Hi_32(RemainderOffset), DL);
+          std::tie(OffsetVal, RemainderOffset) =
+              TII->splitFlatOffset(COffsetVal, AS, FlatVariant);
 
-          SDVTList VTs = CurDAG->getVTList(MVT::i32, MVT::i1);
+          SDValue AddOffsetLo =
+              getMaterializedScalarImm32(Lo_32(RemainderOffset), DL);
+          SDValue Clamp = CurDAG->getTargetConstant(0, DL, MVT::i1);
 
-          SDNode *Add =
-              CurDAG->getMachineNode(AMDGPU::V_ADD_CO_U32_e64, DL, VTs,
-                                     {AddOffsetLo, SDValue(N0Lo, 0), Clamp});
+          if (Addr.getValueType().getSizeInBits() == 32) {
+            SmallVector<SDValue, 3> Opnds;
+            Opnds.push_back(N0);
+            Opnds.push_back(AddOffsetLo);
+            unsigned AddOp = AMDGPU::V_ADD_CO_U32_e32;
+            if (Subtarget->hasAddNoCarryInsts()) {
+              AddOp = AMDGPU::V_ADD_U32_e64;
+              Opnds.push_back(Clamp);
+            }
+            Addr =
+                SDValue(CurDAG->getMachineNode(AddOp, DL, MVT::i32, Opnds), 0);
+          } else {
+            // TODO: Should this try to use a scalar add pseudo if the base
+            // address is uniform and saddr is usable?
+            SDValue Sub0 =
+                CurDAG->getTargetConstant(AMDGPU::sub0, DL, MVT::i32);
+            SDValue Sub1 =
+                CurDAG->getTargetConstant(AMDGPU::sub1, DL, MVT::i32);
 
-          SDNode *Addc = CurDAG->getMachineNode(
-              AMDGPU::V_ADDC_U32_e64, DL, VTs,
-              {AddOffsetHi, SDValue(N0Hi, 0), SDValue(Add, 1), Clamp});
+            SDNode *N0Lo = CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG,
+                                                  DL, MVT::i32, N0, Sub0);
+            SDNode *N0Hi = CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG,
+                                                  DL, MVT::i32, N0, Sub1);
 
-          SDValue RegSequenceArgs[] = {
-              CurDAG->getTargetConstant(AMDGPU::VReg_64RegClassID, DL, MVT::i32),
-              SDValue(Add, 0), Sub0, SDValue(Addc, 0), Sub1};
+            SDValue AddOffsetHi =
+                getMaterializedScalarImm32(Hi_32(RemainderOffset), DL);
 
-          Addr = SDValue(CurDAG->getMachineNode(AMDGPU::REG_SEQUENCE, DL,
-                                                MVT::i64, RegSequenceArgs),
-                         0);
+            SDVTList VTs = CurDAG->getVTList(MVT::i32, MVT::i1);
+
+            SDNode *Add =
+                CurDAG->getMachineNode(AMDGPU::V_ADD_CO_U32_e64, DL, VTs,
+                                       {AddOffsetLo, SDValue(N0Lo, 0), Clamp});
+
+            SDNode *Addc = CurDAG->getMachineNode(
+                AMDGPU::V_ADDC_U32_e64, DL, VTs,
+                {AddOffsetHi, SDValue(N0Hi, 0), SDValue(Add, 1), Clamp});
+
+            SDValue RegSequenceArgs[] = {
+                CurDAG->getTargetConstant(AMDGPU::VReg_64RegClassID, DL,
+                                          MVT::i32),
+                SDValue(Add, 0), Sub0, SDValue(Addc, 0), Sub1};
+
+            Addr = SDValue(CurDAG->getMachineNode(AMDGPU::REG_SEQUENCE, DL,
+                                                  MVT::i64, RegSequenceArgs),
+                           0);
+          }
         }
       }
     }
@@ -2994,6 +3019,37 @@ void AMDGPUDAGToDAGISel::SelectDSBvhStackIntrinsic(SDNode *N, unsigned IntrID) {
   CurDAG->setNodeMemRefs(cast<MachineSDNode>(Selected), {MMO});
 }
 
+void AMDGPUDAGToDAGISel::SelectTensorLoadStore(SDNode *N, unsigned IntrID) {
+  bool IsLoad = IntrID == Intrinsic::amdgcn_tensor_load_to_lds;
+  unsigned Opc =
+      IsLoad ? AMDGPU::TENSOR_LOAD_TO_LDS_d4 : AMDGPU::TENSOR_STORE_FROM_LDS_d4;
+
+  SmallVector<SDValue, 7> TensorOps;
+  // First two groups
+  TensorOps.push_back(N->getOperand(2)); // D# group 0
+  TensorOps.push_back(N->getOperand(3)); // D# group 1
+
+  // Use _D2 version if both group 2 and 3 are zero-initialized.
+  SDValue Group2 = N->getOperand(4);
+  SDValue Group3 = N->getOperand(5);
+  if (ISD::isBuildVectorAllZeros(Group2.getNode()) &&
+      ISD::isBuildVectorAllZeros(Group3.getNode())) {
+    Opc = IsLoad ? AMDGPU::TENSOR_LOAD_TO_LDS_d2
+                 : AMDGPU::TENSOR_STORE_FROM_LDS_d2;
+  } else {                       // Has at least 4 groups
+    TensorOps.push_back(Group2); // D# group 2
+    TensorOps.push_back(Group3); // D# group 3
+  }
+
+  // TODO: Handle the fifth group: N->getOperand(6), which is silently ignored
+  // for now because all existing targets only support up to 4 groups.
+  TensorOps.push_back(CurDAG->getTargetConstant(0, SDLoc(N), MVT::i1)); // r128
+  TensorOps.push_back(N->getOperand(7)); // cache policy
+  TensorOps.push_back(N->getOperand(0)); // chain
+
+  (void)CurDAG->SelectNodeTo(N, Opc, MVT::Other, TensorOps);
+}
+
 static unsigned gwsIntrinToOpcode(unsigned IntrID) {
   switch (IntrID) {
   case Intrinsic::amdgcn_ds_gws_init:
@@ -3069,9 +3125,38 @@ void AMDGPUDAGToDAGISel::SelectDS_GWS(SDNode *N, unsigned IntrID) {
   SDValue OffsetField = CurDAG->getTargetConstant(ImmOffset, SL, MVT::i32);
 
   const unsigned Opc = gwsIntrinToOpcode(IntrID);
+
+  const MCInstrDesc &InstrDesc = TII->get(Opc);
+  int Data0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::data0);
+
+  const TargetRegisterClass *DataRC = TII->getRegClass(InstrDesc, Data0Idx);
+
   SmallVector<SDValue, 5> Ops;
-  if (HasVSrc)
-    Ops.push_back(N->getOperand(2));
+  if (HasVSrc) {
+    const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
+
+    SDValue Data = N->getOperand(2);
+    MVT DataVT = Data.getValueType().getSimpleVT();
+    if (TRI->isTypeLegalForClass(*DataRC, DataVT)) {
+      // Normal 32-bit case.
+      Ops.push_back(N->getOperand(2));
+    } else {
+      // Operand is really 32-bits, but requires 64-bit alignment, so use the
+      // even aligned 64-bit register class.
+      const SDValue RegSeqOps[] = {
+          CurDAG->getTargetConstant(DataRC->getID(), SL, MVT::i32), Data,
+          CurDAG->getTargetConstant(AMDGPU::sub0, SL, MVT::i32),
+          SDValue(
+              CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, SL, MVT::i32),
+              0),
+          CurDAG->getTargetConstant(AMDGPU::sub1, SL, MVT::i32)};
+
+      Ops.push_back(SDValue(CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE,
+                                                   SL, MVT::v2i32, RegSeqOps),
+                            0));
+    }
+  }
+
   Ops.push_back(OffsetField);
   Ops.push_back(Chain);
 
@@ -3246,6 +3331,10 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_VOID(SDNode *N) {
   case Intrinsic::amdgcn_ds_gws_sema_p:
   case Intrinsic::amdgcn_ds_gws_sema_release_all:
     SelectDS_GWS(N, IntrID);
+    return;
+  case Intrinsic::amdgcn_tensor_load_to_lds:
+  case Intrinsic::amdgcn_tensor_store_from_lds:
+    SelectTensorLoadStore(N, IntrID);
     return;
   default:
     break;
@@ -3618,6 +3707,37 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PModsDOT(SDValue In, SDValue &Src,
   return SelectVOP3PMods(In, Src, SrcMods, true);
 }
 
+bool AMDGPUDAGToDAGISel::SelectVOP3PNoModsDOT(SDValue In, SDValue &Src) const {
+  SDValue SrcTmp, SrcModsTmp;
+  SelectVOP3PMods(In, SrcTmp, SrcModsTmp, true);
+  if (cast<ConstantSDNode>(SrcModsTmp)->getZExtValue() == SISrcMods::OP_SEL_1) {
+    Src = SrcTmp;
+    return true;
+  }
+
+  return false;
+}
+
+bool AMDGPUDAGToDAGISel::SelectVOP3PModsF32(SDValue In, SDValue &Src,
+                                            SDValue &SrcMods) const {
+  SelectVOP3Mods(In, Src, SrcMods);
+  unsigned Mods = SISrcMods::OP_SEL_1;
+  Mods |= cast<ConstantSDNode>(SrcMods)->getZExtValue();
+  SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
+  return true;
+}
+
+bool AMDGPUDAGToDAGISel::SelectVOP3PNoModsF32(SDValue In, SDValue &Src) const {
+  SDValue SrcTmp, SrcModsTmp;
+  SelectVOP3PModsF32(In, SrcTmp, SrcModsTmp);
+  if (cast<ConstantSDNode>(SrcModsTmp)->getZExtValue() == SISrcMods::OP_SEL_1) {
+    Src = SrcTmp;
+    return true;
+  }
+
+  return false;
+}
+
 bool AMDGPUDAGToDAGISel::SelectWMMAOpSelVOP3PMods(SDValue In,
                                                   SDValue &Src) const {
   const ConstantSDNode *C = cast<ConstantSDNode>(In);
@@ -3632,9 +3752,9 @@ bool AMDGPUDAGToDAGISel::SelectWMMAOpSelVOP3PMods(SDValue In,
   return true;
 }
 
-static MachineSDNode *buildRegSequence32(SmallVectorImpl<SDValue> &Elts,
-                                         llvm::SelectionDAG *CurDAG,
-                                         const SDLoc &DL) {
+MachineSDNode *
+AMDGPUDAGToDAGISel::buildRegSequence32(SmallVectorImpl<SDValue> &Elts,
+                                       const SDLoc &DL) const {
   unsigned DstRegClass;
   EVT DstTy;
   switch (Elts.size()) {
@@ -3664,9 +3784,9 @@ static MachineSDNode *buildRegSequence32(SmallVectorImpl<SDValue> &Elts,
   return CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, DL, DstTy, Ops);
 }
 
-static MachineSDNode *buildRegSequence16(SmallVectorImpl<SDValue> &Elts,
-                                         llvm::SelectionDAG *CurDAG,
-                                         const SDLoc &DL) {
+MachineSDNode *
+AMDGPUDAGToDAGISel::buildRegSequence16(SmallVectorImpl<SDValue> &Elts,
+                                       const SDLoc &DL) const {
   SmallVector<SDValue, 8> PackedElts;
   assert("unhandled Reg sequence size" &&
          (Elts.size() == 8 || Elts.size() == 16));
@@ -3679,6 +3799,20 @@ static MachineSDNode *buildRegSequence16(SmallVectorImpl<SDValue> &Elts,
     if (isExtractHiElt(Elts[i + 1], HiSrc) && LoSrc == HiSrc) {
       PackedElts.push_back(HiSrc);
     } else {
+      if (Subtarget->useRealTrue16Insts()) {
+        // FIXME-TRUE16. For now pack VGPR_32 for 16-bit source before
+        // passing to v_perm_b32. Eventually we should use replace v_perm_b32
+        // by reg_sequence.
+        SDValue Undef = SDValue(
+            CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, MVT::i16),
+            0);
+        Elts[i] =
+            emitRegSequence(*CurDAG, AMDGPU::VGPR_32RegClassID, MVT::i32,
+                            {Elts[i], Undef}, {AMDGPU::lo16, AMDGPU::hi16}, DL);
+        Elts[i + 1] = emitRegSequence(*CurDAG, AMDGPU::VGPR_32RegClassID,
+                                      MVT::i32, {Elts[i + 1], Undef},
+                                      {AMDGPU::lo16, AMDGPU::hi16}, DL);
+      }
       SDValue PackLoLo = CurDAG->getTargetConstant(0x05040100, DL, MVT::i32);
       MachineSDNode *Packed =
           CurDAG->getMachineNode(AMDGPU::V_PERM_B32_e64, DL, MVT::i32,
@@ -3686,24 +3820,25 @@ static MachineSDNode *buildRegSequence16(SmallVectorImpl<SDValue> &Elts,
       PackedElts.push_back(SDValue(Packed, 0));
     }
   }
-
-  return buildRegSequence32(PackedElts, CurDAG, DL);
+  return buildRegSequence32(PackedElts, DL);
 }
 
-static MachineSDNode *buildRegSequence(SmallVectorImpl<SDValue> &Elts,
-                                       llvm::SelectionDAG *CurDAG,
-                                       const SDLoc &DL, unsigned ElementSize) {
+MachineSDNode *
+AMDGPUDAGToDAGISel::buildRegSequence(SmallVectorImpl<SDValue> &Elts,
+                                     const SDLoc &DL,
+                                     unsigned ElementSize) const {
   if (ElementSize == 16)
-    return buildRegSequence16(Elts, CurDAG, DL);
+    return buildRegSequence16(Elts, DL);
   if (ElementSize == 32)
-    return buildRegSequence32(Elts, CurDAG, DL);
+    return buildRegSequence32(Elts, DL);
   llvm_unreachable("Unhandled element size");
 }
 
-static void selectWMMAModsNegAbs(unsigned ModOpcode, unsigned &Mods,
-                                 SmallVectorImpl<SDValue> &Elts, SDValue &Src,
-                                 llvm::SelectionDAG *CurDAG, const SDLoc &DL,
-                                 unsigned ElementSize) {
+void AMDGPUDAGToDAGISel::selectWMMAModsNegAbs(unsigned ModOpcode,
+                                              unsigned &Mods,
+                                              SmallVectorImpl<SDValue> &Elts,
+                                              SDValue &Src, const SDLoc &DL,
+                                              unsigned ElementSize) const {
   if (ModOpcode == ISD::FNEG) {
     Mods |= SISrcMods::NEG;
     // Check if all elements also have abs modifier
@@ -3715,17 +3850,17 @@ static void selectWMMAModsNegAbs(unsigned ModOpcode, unsigned &Mods,
     }
     if (Elts.size() != NegAbsElts.size()) {
       // Neg
-      Src = SDValue(buildRegSequence(Elts, CurDAG, DL, ElementSize), 0);
+      Src = SDValue(buildRegSequence(Elts, DL, ElementSize), 0);
     } else {
       // Neg and Abs
       Mods |= SISrcMods::NEG_HI;
-      Src = SDValue(buildRegSequence(NegAbsElts, CurDAG, DL, ElementSize), 0);
+      Src = SDValue(buildRegSequence(NegAbsElts, DL, ElementSize), 0);
     }
   } else {
     assert(ModOpcode == ISD::FABS);
     // Abs
     Mods |= SISrcMods::NEG_HI;
-    Src = SDValue(buildRegSequence(Elts, CurDAG, DL, ElementSize), 0);
+    Src = SDValue(buildRegSequence(Elts, DL, ElementSize), 0);
   }
 }
 
@@ -3764,7 +3899,7 @@ bool AMDGPUDAGToDAGISel::SelectWMMAModsF16Neg(SDValue In, SDValue &Src,
 
     // All elements have neg modifier
     if (BV->getNumOperands() * 2 == EltsF16.size()) {
-      Src = SDValue(buildRegSequence16(EltsF16, CurDAG, SDLoc(In)), 0);
+      Src = SDValue(buildRegSequence16(EltsF16, SDLoc(In)), 0);
       Mods |= SISrcMods::NEG;
       Mods |= SISrcMods::NEG_HI;
     }
@@ -3783,7 +3918,7 @@ bool AMDGPUDAGToDAGISel::SelectWMMAModsF16Neg(SDValue In, SDValue &Src,
 
     // All pairs of elements have neg modifier
     if (BV->getNumOperands() == EltsV2F16.size()) {
-      Src = SDValue(buildRegSequence32(EltsV2F16, CurDAG, SDLoc(In)), 0);
+      Src = SDValue(buildRegSequence32(EltsV2F16, SDLoc(In)), 0);
       Mods |= SISrcMods::NEG;
       Mods |= SISrcMods::NEG_HI;
     }
@@ -3814,8 +3949,7 @@ bool AMDGPUDAGToDAGISel::SelectWMMAModsF16NegAbs(SDValue In, SDValue &Src,
 
     // All elements have ModOpcode modifier
     if (BV->getNumOperands() * 2 == EltsF16.size())
-      selectWMMAModsNegAbs(ModOpcode, Mods, EltsF16, Src, CurDAG, SDLoc(In),
-                           16);
+      selectWMMAModsNegAbs(ModOpcode, Mods, EltsF16, Src, SDLoc(In), 16);
   }
 
   // mods are on v2f16 elements
@@ -3834,8 +3968,7 @@ bool AMDGPUDAGToDAGISel::SelectWMMAModsF16NegAbs(SDValue In, SDValue &Src,
 
     // All elements have ModOpcode modifier
     if (BV->getNumOperands() == EltsV2F16.size())
-      selectWMMAModsNegAbs(ModOpcode, Mods, EltsV2F16, Src, CurDAG, SDLoc(In),
-                           32);
+      selectWMMAModsNegAbs(ModOpcode, Mods, EltsV2F16, Src, SDLoc(In), 32);
   }
 
   SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
@@ -3863,8 +3996,7 @@ bool AMDGPUDAGToDAGISel::SelectWMMAModsF32NegAbs(SDValue In, SDValue &Src,
 
     // All elements had ModOpcode modifier
     if (BV->getNumOperands() == EltsF32.size())
-      selectWMMAModsNegAbs(ModOpcode, Mods, EltsF32, Src, CurDAG, SDLoc(In),
-                           32);
+      selectWMMAModsNegAbs(ModOpcode, Mods, EltsF32, Src, SDLoc(In), 32);
   }
 
   SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
@@ -4244,7 +4376,7 @@ static std::pair<unsigned, uint8_t> BitOp3_Op(SDValue In,
     SmallVector<SDValue, 3> Backup(Src.begin(), Src.end());
     if (!getOperandBits(LHS, LHSBits) ||
         !getOperandBits(RHS, RHSBits)) {
-      Src = Backup;
+      Src = std::move(Backup);
       return std::make_pair(0, 0);
     }
 
@@ -4409,16 +4541,23 @@ bool AMDGPUDAGToDAGISel::isVGPRImm(const SDNode * N) const {
 
 bool AMDGPUDAGToDAGISel::isUniformLoad(const SDNode *N) const {
   const auto *Ld = cast<LoadSDNode>(N);
-
   const MachineMemOperand *MMO = Ld->getMemOperand();
-  if (N->isDivergent() && !AMDGPU::isUniformMMO(MMO))
+
+  // FIXME: We ought to able able to take the direct isDivergent result. We
+  // cannot rely on the MMO for a uniformity check, and should stop using
+  // it. This is a hack for 2 ways that the IR divergence analysis is superior
+  // to the DAG divergence: Recognizing shift-of-workitem-id as always
+  // uniform, and isSingleLaneExecution. These should be handled in the DAG
+  // version, and then this can be dropped.
+  if (Ld->isDivergent() && !AMDGPU::isUniformMMO(MMO))
     return false;
 
   return MMO->getSize().hasValue() &&
          Ld->getAlign() >=
              Align(std::min(MMO->getSize().getValue().getKnownMinValue(),
                             uint64_t(4))) &&
-         ((Ld->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS ||
+         (MMO->isInvariant() ||
+          (Ld->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS ||
            Ld->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT) ||
           (Subtarget->getScalarizeGlobalBehavior() &&
            Ld->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS &&

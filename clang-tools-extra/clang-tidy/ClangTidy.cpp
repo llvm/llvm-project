@@ -17,26 +17,27 @@
 #include "ClangTidy.h"
 #include "ClangTidyCheck.h"
 #include "ClangTidyDiagnosticConsumer.h"
-#include "ClangTidyModuleRegistry.h"
+#include "ClangTidyModule.h"
 #include "ClangTidyProfiling.h"
 #include "ExpandModularHeadersPPCallbacks.h"
 #include "clang-tidy-config.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Format/Format.h"
 #include "clang/Frontend/ASTConsumers.h"
 #include "clang/Frontend/CompilerInstance.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/MultiplexConsumer.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Rewrite/Frontend/FixItRewriter.h"
 #include "clang/Tooling/Core/Diagnostic.h"
-#include "clang/Tooling/DiagnosticsYaml.h"
+#include "clang/Tooling/DiagnosticsYaml.h" // IWYU pragma: keep
 #include "clang/Tooling/Refactoring.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/Process.h"
+#include <memory>
 #include <utility>
 
 #if CLANG_TIDY_ENABLE_STATIC_ANALYZER
@@ -63,8 +64,7 @@ void (*RegisterCustomChecks)(const ClangTidyOptions &O,
 namespace {
 #if CLANG_TIDY_ENABLE_STATIC_ANALYZER
 #define ANALYZER_CHECK_NAME_PREFIX "clang-analyzer-"
-static constexpr llvm::StringLiteral AnalyzerCheckNamePrefix =
-    ANALYZER_CHECK_NAME_PREFIX;
+static constexpr StringRef AnalyzerCheckNamePrefix = ANALYZER_CHECK_NAME_PREFIX;
 
 class AnalyzerDiagnosticConsumer : public ento::PathDiagnosticConsumer {
 public:
@@ -108,9 +108,8 @@ public:
     DiagOpts.ShowColors = Context.getOptions().UseColor.value_or(
         llvm::sys::Process::StandardOutHasColors());
     DiagPrinter->BeginSourceFile(LangOpts);
-    if (DiagOpts.ShowColors && !llvm::sys::Process::StandardOutIsDisplayed()) {
+    if (DiagOpts.ShowColors && !llvm::sys::Process::StandardOutIsDisplayed())
       llvm::sys::Process::UseANSIEscapeCodes(true);
-    }
   }
 
   SourceManager &getSourceManager() { return SourceMgr; }
@@ -178,7 +177,7 @@ public:
               ++AppliedFixes;
             }
             FixLoc = getLocation(FixAbsoluteFilePath, Repl.getOffset());
-            FixLocations.push_back(std::make_pair(FixLoc, CanBeApplied));
+            FixLocations.emplace_back(FixLoc, CanBeApplied);
             Entry.BuildDir = Error.BuildDirectory;
           }
         }
@@ -213,7 +212,8 @@ public:
         }
         const StringRef Code = Buffer.get()->getBuffer();
         auto Style = format::getStyle(
-            *Context.getOptionsForFile(File).FormatStyle, File, "none");
+            Context.getOptionsForFile(File).FormatStyle.value_or("none"), File,
+            "none");
         if (!Style) {
           llvm::errs() << llvm::toString(Style.takeError()) << "\n";
           continue;
@@ -234,9 +234,8 @@ public:
           llvm::errs() << llvm::toString(FormattedReplacements.takeError())
                        << ". Skipping formatting.\n";
         }
-        if (!tooling::applyAllReplacements(Replacements.get(), Rewrite)) {
+        if (!tooling::applyAllReplacements(Replacements.get(), Rewrite))
           llvm::errs() << "Can't apply replacements for file " << File << "\n";
-        }
         AnyNotWritten |= Rewrite.overwriteChangedFiles();
       }
 
@@ -342,7 +341,7 @@ private:
   std::unique_ptr<ClangTidyProfiling> Profiling;
   std::unique_ptr<ast_matchers::MatchFinder> Finder;
   std::vector<std::unique_ptr<ClangTidyCheck>> Checks;
-  void anchor() override {};
+  void anchor() override {}
 };
 
 } // namespace
@@ -364,9 +363,8 @@ ClangTidyASTConsumerFactory::ClangTidyASTConsumerFactory(
 }
 
 #if CLANG_TIDY_ENABLE_STATIC_ANALYZER
-static void
-setStaticAnalyzerCheckerOpts(const ClangTidyOptions &Opts,
-                             clang::AnalyzerOptions &AnalyzerOptions) {
+static void setStaticAnalyzerCheckerOpts(const ClangTidyOptions &Opts,
+                                         AnalyzerOptions &AnalyzerOptions) {
   for (const auto &Opt : Opts.CheckOptions) {
     StringRef OptName(Opt.getKey());
     if (!OptName.consume_front(AnalyzerCheckNamePrefix))
@@ -411,9 +409,9 @@ static CheckersList getAnalyzerCheckersAndPackages(ClangTidyContext &Context,
 }
 #endif // CLANG_TIDY_ENABLE_STATIC_ANALYZER
 
-std::unique_ptr<clang::ASTConsumer>
-ClangTidyASTConsumerFactory::createASTConsumer(
-    clang::CompilerInstance &Compiler, StringRef File) {
+std::unique_ptr<ASTConsumer>
+ClangTidyASTConsumerFactory::createASTConsumer(CompilerInstance &Compiler,
+                                               StringRef File) {
   // FIXME: Move this to a separate method, so that CreateASTConsumer doesn't
   // modify Compiler.
   SourceManager *SM = &Compiler.getSourceManager();
@@ -447,8 +445,8 @@ ClangTidyASTConsumerFactory::createASTConsumer(
   if (!Context.getOptions().SystemHeaders.value_or(false))
     FinderOptions.IgnoreSystemHeaders = true;
 
-  std::unique_ptr<ast_matchers::MatchFinder> Finder(
-      new ast_matchers::MatchFinder(std::move(FinderOptions)));
+  auto Finder =
+      std::make_unique<ast_matchers::MatchFinder>(std::move(FinderOptions));
 
   Preprocessor *PP = &Compiler.getPreprocessor();
   Preprocessor *ModuleExpanderPP = PP;
@@ -491,10 +489,9 @@ ClangTidyASTConsumerFactory::createASTConsumer(
 
 std::vector<std::string> ClangTidyASTConsumerFactory::getCheckNames() {
   std::vector<std::string> CheckNames;
-  for (const auto &CheckFactory : *CheckFactories) {
+  for (const auto &CheckFactory : *CheckFactories)
     if (Context.isCheckEnabled(CheckFactory.getKey()))
       CheckNames.emplace_back(CheckFactory.getKey());
-  }
 
 #if CLANG_TIDY_ENABLE_STATIC_ANALYZER
   for (const auto &AnalyzerCheck : getAnalyzerCheckersAndPackages(
@@ -519,10 +516,10 @@ ClangTidyOptions::OptionMap ClangTidyASTConsumerFactory::getCheckOptions() {
 std::vector<std::string> getCheckNames(const ClangTidyOptions &Options,
                                        bool AllowEnablingAnalyzerAlphaCheckers,
                                        bool ExperimentalCustomChecks) {
-  clang::tidy::ClangTidyContext Context(
-      std::make_unique<DefaultOptionsProvider>(ClangTidyGlobalOptions(),
-                                               Options),
-      AllowEnablingAnalyzerAlphaCheckers, false, ExperimentalCustomChecks);
+  ClangTidyContext Context(std::make_unique<DefaultOptionsProvider>(
+                               ClangTidyGlobalOptions(), Options),
+                           AllowEnablingAnalyzerAlphaCheckers, false,
+                           ExperimentalCustomChecks);
   ClangTidyASTConsumerFactory Factory(Context);
   return Factory.getCheckNames();
 }
@@ -545,10 +542,10 @@ ClangTidyOptions::OptionMap
 getCheckOptions(const ClangTidyOptions &Options,
                 bool AllowEnablingAnalyzerAlphaCheckers,
                 bool ExperimentalCustomChecks) {
-  clang::tidy::ClangTidyContext Context(
-      std::make_unique<DefaultOptionsProvider>(ClangTidyGlobalOptions(),
-                                               Options),
-      AllowEnablingAnalyzerAlphaCheckers, false, ExperimentalCustomChecks);
+  ClangTidyContext Context(std::make_unique<DefaultOptionsProvider>(
+                               ClangTidyGlobalOptions(), Options),
+                           AllowEnablingAnalyzerAlphaCheckers, false,
+                           ExperimentalCustomChecks);
   ClangTidyDiagnosticConsumer DiagConsumer(Context);
   auto DiagOpts = std::make_unique<DiagnosticOptions>();
   DiagnosticsEngine DE(llvm::makeIntrusiveRefCnt<DiagnosticIDs>(), *DiagOpts,
@@ -559,12 +556,11 @@ getCheckOptions(const ClangTidyOptions &Options,
 }
 
 std::vector<ClangTidyError>
-runClangTidy(clang::tidy::ClangTidyContext &Context,
-             const CompilationDatabase &Compilations,
+runClangTidy(ClangTidyContext &Context, const CompilationDatabase &Compilations,
              ArrayRef<std::string> InputFiles,
              llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> BaseFS,
              bool ApplyAnyFix, bool EnableCheckProfile,
-             llvm::StringRef StoreCheckProfile, bool Quiet) {
+             StringRef StoreCheckProfile, bool Quiet) {
   ClangTool Tool(Compilations, InputFiles,
                  std::make_shared<PCHContainerOperations>(), BaseFS);
 
@@ -586,6 +582,24 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
         return AdjustedArgs;
       };
 
+  // Remove unwanted arguments passed to the compiler
+  const ArgumentsAdjuster PerFileArgumentRemover =
+      [&Context](const CommandLineArguments &Args, StringRef Filename) {
+        ClangTidyOptions Opts = Context.getOptionsForFile(Filename);
+        CommandLineArguments AdjustedArgs = Args;
+
+        if (Opts.RemovedArgs) {
+          for (const StringRef ArgToRemove : *Opts.RemovedArgs) {
+            AdjustedArgs.erase(std::remove(AdjustedArgs.begin(),
+                                           AdjustedArgs.end(), ArgToRemove),
+                               AdjustedArgs.end());
+          }
+        }
+
+        return AdjustedArgs;
+      };
+
+  Tool.appendArgumentsAdjuster(PerFileArgumentRemover);
   Tool.appendArgumentsAdjuster(PerFileExtraArgumentsInserter);
   Tool.appendArgumentsAdjuster(getStripPluginsAdjuster());
   Context.setEnableProfiling(EnableCheckProfile);
@@ -624,13 +638,14 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
     class Action : public ASTFrontendAction {
     public:
       Action(ClangTidyASTConsumerFactory *Factory) : Factory(Factory) {}
+
+    private:
+      ClangTidyASTConsumerFactory *Factory;
+
       std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &Compiler,
                                                      StringRef File) override {
         return Factory->createASTConsumer(Compiler, File);
       }
-
-    private:
-      ClangTidyASTConsumerFactory *Factory;
     };
 
     ClangTidyASTConsumerFactory ConsumerFactory;
@@ -669,7 +684,7 @@ void handleErrors(llvm::ArrayRef<ClangTidyError> Errors,
   WarningsAsErrorsCount += Reporter.getWarningsAsErrorsCount();
 }
 
-void exportReplacements(const llvm::StringRef MainFilePath,
+void exportReplacements(const StringRef MainFilePath,
                         const std::vector<ClangTidyError> &Errors,
                         raw_ostream &OS) {
   TranslationUnitDiagnostics TUD;
@@ -690,7 +705,7 @@ ChecksAndOptions getAllChecksAndOptions(bool AllowEnablingAnalyzerAlphaCheckers,
   ChecksAndOptions Result;
   ClangTidyOptions Opts;
   Opts.Checks = "*";
-  clang::tidy::ClangTidyContext Context(
+  ClangTidyContext Context(
       std::make_unique<DefaultOptionsProvider>(ClangTidyGlobalOptions(), Opts),
       AllowEnablingAnalyzerAlphaCheckers, false, ExperimentalCustomChecks);
   ClangTidyCheckFactories Factories;
@@ -716,7 +731,7 @@ ChecksAndOptions getAllChecksAndOptions(bool AllowEnablingAnalyzerAlphaCheckers,
     Result.Checks.insert(Buffer);
   }
 
-  static constexpr llvm::StringLiteral OptionNames[] = {
+  static constexpr StringRef OptionNames[] = {
 #define GET_CHECKER_OPTIONS
 #define CHECKER_OPTION(TYPE, CHECKER, OPTION_NAME, DESCRIPTION, DEFAULT,       \
                        RELEASE, HIDDEN)                                        \
@@ -731,9 +746,8 @@ ChecksAndOptions getAllChecksAndOptions(bool AllowEnablingAnalyzerAlphaCheckers,
 #endif // CLANG_TIDY_ENABLE_STATIC_ANALYZER
 
   Context.setOptionsCollector(&Result.Options);
-  for (const auto &Factory : Factories) {
+  for (const auto &Factory : Factories)
     Factory.getValue()(Factory.getKey(), &Context);
-  }
 
   return Result;
 }

@@ -1,46 +1,31 @@
 # Try to detect in the system several dependencies required by the different
 # components of libomptarget. These are the dependencies we have:
-#
-# libffi : required to launch target kernels given function and argument
-#          pointers.
 
 include (FindPackageHandleStandardArgs)
 
 ################################################################################
 # Looking for LLVM...
 ################################################################################
+# Note that OPENMP_STANDALONE_BUILD is FALSE, when
+# openmp is built with -DLLVM_ENABLE_RUNTIMES="openmp" vs
+# -DLLVM_ENABLE_PROJECTS="openmp", but openmp build
+# is actually done as a standalone project build with many
+# LLVM CMake variables propagated to it.
+list(APPEND LIBOMPTARGET_LLVM_INCLUDE_DIRS
+  ${LLVM_MAIN_INCLUDE_DIR} ${LLVM_BINARY_DIR}/include
+  )
+message(STATUS
+  "Using LLVM include directories: ${LIBOMPTARGET_LLVM_INCLUDE_DIRS}")
 
-if (OPENMP_STANDALONE_BUILD)
-  # Complete LLVM package is required for building libomptarget
-  # in an out-of-tree mode.
-  find_package(LLVM REQUIRED)
-  message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
-  message(STATUS "Using LLVM in: ${LLVM_DIR}")
-  list(APPEND LIBOMPTARGET_LLVM_INCLUDE_DIRS ${LLVM_INCLUDE_DIRS})
-  list(APPEND CMAKE_MODULE_PATH ${LLVM_CMAKE_DIR})
-  include(AddLLVM)
-  if(TARGET omptarget)
-    message(FATAL_ERROR "CMake target 'omptarget' already exists. "
-                        "Use an LLVM installation that doesn't expose its 'omptarget' target.")
-  endif()
+################################################################################
+# Looking for offload-arch...
+################################################################################
+if(TARGET offload-arch)
+  get_property(LIBOMPTARGET_OFFLOAD_ARCH TARGET offload-arch PROPERTY LOCATION)
 else()
-  # Note that OPENMP_STANDALONE_BUILD is FALSE, when
-  # openmp is built with -DLLVM_ENABLE_RUNTIMES="openmp" vs
-  # -DLLVM_ENABLE_PROJECTS="openmp", but openmp build
-  # is actually done as a standalone project build with many
-  # LLVM CMake variables propagated to it.
-  list(APPEND LIBOMPTARGET_LLVM_INCLUDE_DIRS
-    ${LLVM_MAIN_INCLUDE_DIR} ${LLVM_BINARY_DIR}/include
-    )
-  message(STATUS
-    "Using LLVM include directories: ${LIBOMPTARGET_LLVM_INCLUDE_DIRS}")
+  find_program(LIBOMPTARGET_OFFLOAD_ARCH NAMES offload-arch
+               PATHS ${LLVM_TOOLS_BINARY_DIR})
 endif()
-
-################################################################################
-# Looking for libffi...
-################################################################################
-find_package(FFI QUIET)
-set(LIBOMPTARGET_DEP_LIBFFI_FOUND ${FFI_FOUND})
 
 ################################################################################
 # Looking for NVIDIA GPUs...
@@ -86,6 +71,29 @@ if(LIBOMPTARGET_AMDGPU_ARCH)
   if(amdgpu_arch_list)
     set(LIBOMPTARGET_FOUND_AMDGPU_GPU TRUE)
     set(LIBOMPTARGET_AMDGPU_DETECTED_ARCH_LIST "${amdgpu_arch_list}")
+  endif()
+endif()
+
+################################################################################
+# Looking for Level0
+################################################################################
+find_path(LIBOMPTARGET_DEP_LEVEL_ZERO_INCLUDE_DIR NAMES level_zero/ze_api.h)
+
+if(NOT LIBOMPTARGET_DEP_LEVEL_ZERO_INCLUDE_DIR)
+  set(LIBOMPTARGET_DEP_LEVEL_ZERO_FOUND FALSE)
+else()
+  set(LIBOMPTARGET_DEP_LEVEL_ZERO_FOUND TRUE)
+  find_library(LIBOMPTARGET_DEP_LEVEL_ZERO_LIBRARY NAMES ze_loader)
+endif()
+
+if(LIBOMPTARGET_OFFLOAD_ARCH)
+  execute_process(COMMAND ${LIBOMPTARGET_OFFLOAD_ARCH} "--only=intel"
+                  OUTPUT_VARIABLE LIBOMPTARGET_INTELGPU_ARCH_OUTPUT
+                  OUTPUT_STRIP_TRAILING_WHITESPACE)
+  string(REPLACE "\n" ";" intelgpu_arch_list "${LIBOMPTARGET_INTELGPU_ARCH_OUTPUT}")
+  if(intelgpu_arch_list)
+    set(LIBOMPTARGET_FOUND_INTELGPU_GPU TRUE)
+    set(LIBOMPTARGET_INTELGPU_DETECTED_ARCH_LIST "${intelgpu_arch_list}")
   endif()
 endif()
 

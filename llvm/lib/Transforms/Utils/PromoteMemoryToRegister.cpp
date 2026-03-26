@@ -65,19 +65,30 @@ STATISTIC(NumPHIInsert,     "Number of PHI nodes inserted");
 
 bool llvm::isAllocaPromotable(const AllocaInst *AI) {
   // Only allow direct and non-volatile loads and stores...
+  // All loads and stores must use the same type (determined by the first one
+  // seen). We don't require the type to match the alloca's declared type.
+  Type *ExpectedType = nullptr;
   for (const User *U : AI->users()) {
     if (const LoadInst *LI = dyn_cast<LoadInst>(U)) {
       // Note that atomic loads can be transformed; atomic semantics do
       // not have any meaning for a local alloca.
-      if (LI->isVolatile() || LI->getType() != AI->getAllocatedType())
+      if (LI->isVolatile())
+        return false;
+      if (!ExpectedType)
+        ExpectedType = LI->getType();
+      else if (LI->getType() != ExpectedType)
         return false;
     } else if (const StoreInst *SI = dyn_cast<StoreInst>(U)) {
-      if (SI->getValueOperand() == AI ||
-          SI->getValueOperand()->getType() != AI->getAllocatedType())
+      if (SI->getValueOperand() == AI)
         return false; // Don't allow a store OF the AI, only INTO the AI.
       // Note that atomic stores can be transformed; atomic semantics do
       // not have any meaning for a local alloca.
       if (SI->isVolatile())
+        return false;
+      Type *StoreType = SI->getValueOperand()->getType();
+      if (!ExpectedType)
+        ExpectedType = StoreType;
+      else if (StoreType != ExpectedType)
         return false;
     } else if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(U)) {
       if (!II->isLifetimeStartOrEnd() && !II->isDroppable() &&
@@ -199,6 +210,10 @@ struct AllocaInfo {
   BasicBlock *OnlyBlock;
   bool OnlyUsedInOneBlock;
 
+  /// The type used by all loads/stores of this alloca. This may differ from
+  /// the alloca's declared type if all accesses use a different type.
+  Type *ValueType;
+
   /// Debug users of the alloca - does not include dbg.assign intrinsics.
   DPUserVec DPUsers;
   /// Helper to update assignment tracking debug info.
@@ -210,6 +225,7 @@ struct AllocaInfo {
     OnlyStore = nullptr;
     OnlyBlock = nullptr;
     OnlyUsedInOneBlock = true;
+    ValueType = nullptr;
     DPUsers.clear();
     AssignmentTracking.clear();
   }
@@ -229,11 +245,21 @@ struct AllocaInfo {
         // Remember the basic blocks which define new values for the alloca
         DefiningBlocks.push_back(SI->getParent());
         OnlyStore = SI;
+        if (!ValueType)
+          ValueType = SI->getValueOperand()->getType();
+        else
+          assert(ValueType == SI->getValueOperand()->getType() &&
+                 "All stores were checked to have used the same type");
       } else {
         LoadInst *LI = cast<LoadInst>(User);
         // Otherwise it must be a load instruction, keep track of variable
         // reads.
         UsingBlocks.push_back(LI->getParent());
+        if (!ValueType)
+          ValueType = LI->getType();
+        else
+          assert(ValueType == LI->getType() &&
+                 "All loads where checked to have used the same type");
       }
 
       if (OnlyUsedInOneBlock) {
@@ -380,6 +406,8 @@ struct PromoteMem2Reg {
   /// For each alloca, keep an instance of a helper class that gives us an easy
   /// way to update assignment tracking debug info if the alloca is promoted.
   SmallVector<AssignmentTrackingInfo, 8> AllocaATInfo;
+  /// For each alloca, the type used by all loads/stores of this alloca.
+  SmallVector<Type *, 8> AllocaValueTypes;
   /// A set of dbg.assigns to delete because they've been demoted to
   /// dbg.values. Call cleanUpDbgAssigns to delete them.
   SmallPtrSet<DbgVariableRecord *, 8> DVRAssignsToDelete;
@@ -745,6 +773,7 @@ void PromoteMem2Reg::run() {
 
   AllocaATInfo.resize(Allocas.size());
   AllocaDPUsers.resize(Allocas.size());
+  AllocaValueTypes.resize(Allocas.size());
 
   AllocaInfo Info;
   LargeBlockInfo LBI;
@@ -806,6 +835,7 @@ void PromoteMem2Reg::run() {
       AllocaATInfo[AllocaNum] = Info.AssignmentTracking;
     if (!Info.DPUsers.empty())
       AllocaDPUsers[AllocaNum] = Info.DPUsers;
+    AllocaValueTypes[AllocaNum] = Info.ValueType;
 
     // Keep the reverse mapping of the 'Allocas' array for the rename pass.
     AllocaLookup[Allocas[AllocaNum]] = AllocaNum;
@@ -847,7 +877,7 @@ void PromoteMem2Reg::run() {
   // been stored yet.  In this case, it will get this null value.
   IncomingVals.resize(Allocas.size());
   for (unsigned i = 0, e = Allocas.size(); i != e; ++i)
-    IncomingVals.init(i, UndefValue::get(Allocas[i]->getAllocatedType()));
+    IncomingVals.init(i, UndefValue::get(AllocaValueTypes[i]));
 
   // When handling debug info, treat all incoming values as if they have
   // compiler-generated (empty) locations, representing the uninitialized
@@ -1061,9 +1091,9 @@ bool PromoteMem2Reg::QueuePhiNode(BasicBlock *BB, unsigned AllocaNo,
   if (PN)
     return false;
 
-  // Create a PhiNode using the dereferenced type... and add the phi-node to the
-  // BasicBlock.
-  PN = PHINode::Create(Allocas[AllocaNo]->getAllocatedType(), getNumPreds(BB),
+  // Create a PhiNode using the type from loads/stores... and add the phi-node
+  // to the BasicBlock.
+  PN = PHINode::Create(AllocaValueTypes[AllocaNo], getNumPreds(BB),
                        Allocas[AllocaNo]->getName() + "." + Twine(Version++));
   PN->insertBefore(BB->begin());
   ++NumPHIInsert;
