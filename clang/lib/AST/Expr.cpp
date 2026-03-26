@@ -3505,6 +3505,24 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
       return Exp->getSubExpr()->isConstantInitializer(Ctx, false, Culprit);
     break;
   }
+  case ObjCBoxedExprClass: {
+    const ObjCBoxedExpr *BE = cast<ObjCBoxedExpr>(this);
+    if (Culprit)
+      *Culprit = this;
+    return BE->isExpressibleAsConstantInitializer();
+  }
+  case ObjCArrayLiteralClass: {
+    const ObjCArrayLiteral *ALE = cast<ObjCArrayLiteral>(this);
+    if (Culprit)
+      *Culprit = this;
+    return ALE->isExpressibleAsConstantInitializer();
+  }
+  case ObjCDictionaryLiteralClass: {
+    const ObjCDictionaryLiteral *DLE = cast<ObjCDictionaryLiteral>(this);
+    if (Culprit)
+      *Culprit = this;
+    return DLE->isExpressibleAsConstantInitializer();
+  }
   case PackIndexingExprClass: {
     return cast<PackIndexingExpr>(this)
         ->getSelectedExpr()

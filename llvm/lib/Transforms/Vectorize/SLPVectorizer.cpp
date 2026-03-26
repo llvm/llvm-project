@@ -17841,7 +17841,7 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
     LLVM_DEBUG(dbgs() << "SLP: Adding cost " << P.second << " for bundle "
                       << shortBundleName(P.first->Scalars, P.first->Idx)
                       << ".\n"
-                      << "SLP: Current total cost = " << Cost << "\n");
+                      << "SLP: Current total cost = " << NewCost << "\n");
   }
   if (NewCost + LoadsExtractsCost >= Cost) {
     DeletedNodes.clear();
@@ -17850,9 +17850,9 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
   } else {
     // If the remaining tree is just a buildvector - exit, it will cause
     // endless attempts to vectorize.
-    if (VectorizableTree.size()>= 2 && VectorizableTree.front()->hasState() &&
+    if (VectorizableTree.size() >= 2 && VectorizableTree.front()->hasState() &&
         VectorizableTree.front()->getOpcode() == Instruction::InsertElement &&
-       TransformedToGatherNodes.contains(VectorizableTree[1].get()))
+        TransformedToGatherNodes.contains(VectorizableTree[1].get()))
       return InstructionCost::getInvalid();
     if (VectorizableTree.size() >= 3 && VectorizableTree.front()->hasState() &&
         VectorizableTree.front()->getOpcode() == Instruction::InsertElement &&
@@ -26313,6 +26313,7 @@ public:
     bool IsCmpSelMinMax = isCmpSelMinMax(Root);
     SmallVector<std::pair<Instruction *, unsigned>> Worklist(
         1, std::make_pair(Root, 0));
+    SmallPtrSet<Value *, 8> Operands;
     SmallVector<std::pair<Instruction *, unsigned>> PossibleOrderedReductionOps;
     // Checks if the operands of the \p TreeN instruction are also reduction
     // operations or should be treated as reduced values or an extra argument,
@@ -26341,13 +26342,17 @@ public:
             !hasRequiredNumberOfUses(IsCmpSelMinMax, EdgeInst)) {
           IsReducedVal = true;
           CurrentRK = ReductionOrdering::None;
-          if (PossibleReducedVals.size() < ReductionLimit)
+          if (PossibleReducedVals.size() < ReductionLimit &&
+              !Operands.contains(EdgeInst))
             PossibleOrderedReductionOps.emplace_back(EdgeInst, Level);
         }
         if (CurrentRK == ReductionOrdering::None ||
+            Operands.contains(EdgeInst) ||
             (R.isAnalyzedReductionRoot(EdgeInst) &&
              all_of(EdgeInst->operands(), IsaPred<Constant>))) {
           PossibleReducedVals.push_back(EdgeVal);
+          if (EdgeInst && !isCmpSelMinMax(EdgeInst))
+            Operands.insert_range(EdgeInst->operands());
           continue;
         }
         if (CurrentRK == ReductionOrdering::Ordered)
@@ -26402,8 +26407,11 @@ public:
 
     SmallVector<Value *> ReducedValsCandidates;
     bool AdjustedToOrdered = false;
+    SmallPtrSet<Instruction *, 16> Visited;
     while (!Worklist.empty()) {
       auto [TreeN, Level] = Worklist.pop_back_val();
+      if (!Visited.insert(TreeN).second)
+        continue;
       SmallVector<Value *> PossibleRedVals;
       SmallVector<Instruction *> PossibleReductionOps;
       CheckOperands(TreeN, PossibleRedVals, PossibleReductionOps, Level);

@@ -1580,7 +1580,7 @@ enum NodeType {
   EXPERIMENTAL_VECTOR_HISTOGRAM,
 
   /// Returns the number of number of trailing (least significant) zero elements
-  /// in a vector. Has a single vector operand. The result is poison if the
+  /// in a vector. Has a single i1 vector operand. The result is poison if the
   /// return type isn't wide enough to hold the maximum number of elements in
   /// the input vector.
   CTTZ_ELTS,

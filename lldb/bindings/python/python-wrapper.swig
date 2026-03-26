@@ -134,7 +134,7 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallTypeScript(
 #endif
       ) {
     pfunc_impl = (PyObject *)(*pyfunct_wrapper);
-    if (pfunc_impl->ob_refcnt == 1) {
+    if (Py_REFCNT(pfunc_impl) == 1) {
       Py_XDECREF(pfunc_impl);
       pfunc_impl = NULL;
     }

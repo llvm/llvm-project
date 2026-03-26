@@ -1347,7 +1347,7 @@ bool TargetLoweringBase::isFreeAddrSpaceCast(unsigned SrcAS,
 }
 
 unsigned TargetLoweringBase::getBitWidthForCttzElements(
-    EVT RetVT, ElementCount EC, bool ZeroIsPoison,
+    Type *RetTy, ElementCount EC, bool ZeroIsPoison,
     const ConstantRange *VScaleRange) const {
   // Find the smallest "sensible" element type to use for the expansion.
   ConstantRange CR(APInt(64, EC.getKnownMinValue()));
@@ -1357,7 +1357,7 @@ unsigned TargetLoweringBase::getBitWidthForCttzElements(
   if (ZeroIsPoison)
     CR = CR.subtract(APInt(64, 1));
 
-  unsigned EltWidth = RetVT.getScalarSizeInBits();
+  unsigned EltWidth = RetTy->getScalarSizeInBits();
   EltWidth = std::min(EltWidth, CR.getActiveBits());
   EltWidth = std::max(llvm::bit_ceil(EltWidth), (unsigned)8);
 
