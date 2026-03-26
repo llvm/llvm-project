@@ -61,6 +61,8 @@ LIBC_INLINE float16 log2p1f16(float16 x) {
     //   > Q = fpminimax(log2(1 + x), [|1, 2, 3, 4, 5|], [|SG...|],
     //                   [-2^-3, 2^-3]);
     //   > Q;
+    //   > dirtyinfnorm((log2(1 + x) - Q) / log2(1 + x), [-2^-3, 2^-3]);
+    //   0x1.6ed1f4728dcb6f1d6a651a3c728937f7468f8eedfp-22
     if (x_abs <= 0x3000U) {
       // log2p1(+/-0) = +/-0
       if (x_abs == 0U)
@@ -189,6 +191,8 @@ LIBC_INLINE float16 log2p1f16(float16 x) {
   //   > display = hexadecimal;
   //   > P = fpminimax(log2(1 + x)/x, 2, [|SG...|], [-2^-5, 2^-5]);
   //   > x * P;
+  //   > dirtyinfnorm((log2(1 + x)/x - P) / (log2(1 + x)/x), [-2^-5, 2^-5]);
+  //   0x1.0087f3cad284d0a4464b1e27e83258b5e69a647f5p-19
   float log2p1_d_over_f =
       v * fputil::polyeval(v, 0x1.715476p+0f, -0x1.71771ap-1f, 0x1.ecb38ep-2f);
   float log2_1_mant = LOG2F_F[f] + log2p1_d_over_f;
