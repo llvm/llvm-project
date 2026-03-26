@@ -220,6 +220,10 @@ GenericGlobalHandlerTy::readProfilingGlobals(GenericDeviceTy &Device,
           ReadSection(Table.DataStart, Table.DataStop, ProfData.DataSection))
     return Err;
 
+  ProfData.DeviceCountersDelta =
+      reinterpret_cast<intptr_t>(Table.CountersStart) -
+      reinterpret_cast<intptr_t>(Table.DataStart);
+
   // Get the profiling version from the device.
   if (auto Err = Device.dataRetrieve(&ProfData.Version, Table.VersionVar,
                                      sizeof(uint64_t),
@@ -264,18 +268,27 @@ Error GPUProfGlobals::write() const {
                          "The compiler-rt profiling library must be linked for "
                          "GPU PGO to work.");
 
-  // The sections must be laid out contiguously so that lprofWriteDataImpl
-  // computes the correct CountersDelta from the pointer arithmetic.
+  // Lay out as [Data][Counters][Names] to match the raw profile format order.
   // TODO: Move this interface to compiler-rt.
-  SmallVector<char> Buffer(CountersSection.size() + DataSection.size() +
+  SmallVector<char> Buffer(DataSection.size() + CountersSection.size() +
                            NamesSection.size());
-  char *CountersBegin = Buffer.data();
-  char *DataBegin = CountersBegin + CountersSection.size();
-  char *NamesBegin = DataBegin + DataSection.size();
+  char *DataBegin = Buffer.data();
+  char *CountersBegin = DataBegin + DataSection.size();
+  char *NamesBegin = CountersBegin + CountersSection.size();
 
-  memcpy(CountersBegin, CountersSection.data(), CountersSection.size());
   memcpy(DataBegin, DataSection.data(), DataSection.size());
+  memcpy(CountersBegin, CountersSection.data(), CountersSection.size());
   memcpy(NamesBegin, NamesSection.data(), NamesSection.size());
+
+  // Adjust CounterPtr values so they are consistent with the host layout rather
+  // than the device layout.
+  intptr_t HostDelta = CountersBegin - DataBegin;
+  intptr_t Adjustment = HostDelta - DeviceCountersDelta;
+  auto *Records = reinterpret_cast<__llvm_profile_data *>(DataBegin);
+  size_t NumRecords = DataSection.size() / sizeof(__llvm_profile_data);
+  for (size_t I = 0; I < NumRecords; I++)
+    Records[I].CounterPtr = reinterpret_cast<void *>(
+        reinterpret_cast<intptr_t>(Records[I].CounterPtr) + Adjustment);
 
   int Result = __llvm_write_custom_profile(
       TargetTriple.str().c_str(),

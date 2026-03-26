@@ -1836,6 +1836,11 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
     Linkage = GlobalValue::PrivateLinkage;
     Visibility = GlobalValue::DefaultVisibility;
   }
+  // AMDGPU objects are always ET_DYN, so non-local symbols with default
+  // visibility are preemptible. The CounterPtr label difference emits a REL32
+  // relocation that lld rejects against preemptible targets.
+  if (TT.isAMDGPU() && !GlobalValue::isLocalLinkage(Linkage))
+    Visibility = GlobalValue::ProtectedVisibility;
   auto *Data =
       new GlobalVariable(M, DataTy, false, Linkage, nullptr, DataVarName);
   Constant *RelativeCounterPtr;

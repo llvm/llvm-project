@@ -83,6 +83,9 @@ struct GPUProfGlobals {
   SmallVector<char> NamesSection;
   SmallVector<char> CountersSection;
   SmallVector<char> DataSection;
+  /// Distance from __llvm_prf_data to __llvm_prf_cnts on the device. Used to
+  /// adjust CounterPtr label differences when remapping to the host buffer.
+  intptr_t DeviceCountersDelta = 0;
   Triple TargetTriple;
   uint64_t Version = INSTR_PROF_RAW_VERSION;
 
