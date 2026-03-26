@@ -7569,11 +7569,11 @@ TargetLowering::prepareSREMEqFold(EVT ResVT, SDValue REMNode,
   if (ResVT.bitsGT(SETCCVT))
     SETCCVT = ResVT;
 
-  if (!DCI.isBeforeLegalizeOps() && (
-      !isOperationLegalOrCustom(ISD::SETCC, SETCCVT) ||
-      !isOperationLegalOrCustom(ISD::AND, VT) ||
-      !isCondCodeLegalOrCustom(Cond, VT.getSimpleVT()) ||
-      !isOperationLegalOrCustom(ISD::VSELECT, SETCCVT)))
+  if (!DCI.isBeforeLegalizeOps() &&
+      (!isOperationLegalOrCustom(ISD::SETCC, SETCCVT) ||
+       !isOperationLegalOrCustom(ISD::AND, VT) ||
+       !isCondCodeLegalOrCustom(Cond, VT.getSimpleVT()) ||
+       !isOperationLegalOrCustom(ISD::VSELECT, SETCCVT)))
     return SDValue();
 
   SDValue Fold =
