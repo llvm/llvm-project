@@ -149,8 +149,8 @@ class SPIRVLegalizePointerCast : public FunctionPass {
   // which should be the load being legalized. Returns the loaded value.
   Value *loadFirstValueFromAggregate(IRBuilder<> &B, Type *ElementType,
                                      Value *Source, LoadInst *BadLoad) {
-    SmallVector<Type *, 2> Types = {BadLoad->getPointerOperandType(),
-                                    Source->getType()};
+    std::array<Type *, 2> Types = {BadLoad->getPointerOperandType(),
+                                   Source->getType()};
     SmallVector<Value *, 8> Args{/* isInBounds= */ B.getInt1(false), Source};
 
     Type *AggregateType = GR->findDeducedElementType(Source);
@@ -193,7 +193,7 @@ class SPIRVLegalizePointerCast : public FunctionPass {
     unsigned ScalarsPerArrayElement = ArrElemVecTy->getNumElements();
     // Load each element of the array.
     SmallVector<Value *, 4> LoadedElements;
-    SmallVector<Type *, 2> Types = {Source->getType(), Source->getType()};
+    std::array<Type *, 2> Types = {Source->getType(), Source->getType()};
     for (unsigned I = 0, E = TargetType->getNumElements(); I < E; ++I) {
       unsigned ArrayIndex = I / ScalarsPerArrayElement;
       unsigned ElementIndexInArrayElem = I % ScalarsPerArrayElement;
@@ -215,7 +215,7 @@ class SPIRVLegalizePointerCast : public FunctionPass {
                              Value *Source) {
     // Load each element of the array.
     SmallVector<Value *, 4> LoadedElements;
-    SmallVector<Type *, 2> Types = {Source->getType(), Source->getType()};
+    std::array<Type *, 2> Types = {Source->getType(), Source->getType()};
     for (unsigned I = 0, E = TargetType->getNumElements(); I < E; ++I) {
       // Create a GEP to access the i-th element of the array.
       std::array<Value *, 4> Args = {B.getInt1(/*Inbounds=*/false), Source,
@@ -232,6 +232,7 @@ class SPIRVLegalizePointerCast : public FunctionPass {
     return buildVectorFromLoadedElements(B, TargetType, LoadedElements);
   }
 
+  // Stores elements from a vector into a matrix (an array of vectors).
   void storeMatrixArrayFromVector(IRBuilder<> &B, Value *SrcVector,
                                   Value *DstArrayPtr, ArrayType *ArrTy,
                                   Align Alignment) {
@@ -240,9 +241,12 @@ class SPIRVLegalizePointerCast : public FunctionPass {
     Type *ElemTy = ArrElemVecTy->getElementType();
     unsigned ScalarsPerArrayElement = ArrElemVecTy->getNumElements();
     unsigned SrcNumElements = SrcVecTy->getNumElements();
+    assert(
+        SrcNumElements % ScalarsPerArrayElement == 0 &&
+        "Source vector size must be a multiple of array element vector size");
 
-    SmallVector<Type *, 2> Types = {DstArrayPtr->getType(),
-                                    DstArrayPtr->getType()};
+    std::array<Type *, 2> Types = {DstArrayPtr->getType(),
+                                   DstArrayPtr->getType()};
 
     for (unsigned I = 0; I < SrcNumElements; I += ScalarsPerArrayElement) {
       unsigned ArrayIndex = I / ScalarsPerArrayElement;
@@ -275,11 +279,10 @@ class SPIRVLegalizePointerCast : public FunctionPass {
     // Ensure the element types of the array and vector are the same.
     assert(VecTy->getElementType() == ElemTy &&
            "Element types of array and vector must be the same.");
+    std::array<Type *, 2> Types = {DstArrayPtr->getType(),
+                                   DstArrayPtr->getType()};
 
-    SmallVector<Type *, 2> Types = {DstArrayPtr->getType(),
-                                    DstArrayPtr->getType()};
-
-    for (unsigned I = 0; I < VecTy->getNumElements(); ++I) {
+    for (unsigned I = 0, E = VecTy->getNumElements(); I < E; ++I) {
       // Create a GEP to access the i-th element of the array.
       std::array<Value *, 4> Args = {B.getInt1(/*Inbounds=*/false), DstArrayPtr,
                                      B.getInt32(0),
@@ -426,7 +429,7 @@ class SPIRVLegalizePointerCast : public FunctionPass {
   // Stores the given Src value into the first entry of the Dst aggregate.
   Value *storeToFirstValueAggregate(IRBuilder<> &B, Value *Src, Value *Dst,
                                     Type *DstPointeeType, Align Alignment) {
-    SmallVector<Type *, 2> Types = {Dst->getType(), Dst->getType()};
+    std::array<Type *, 2> Types = {Dst->getType(), Dst->getType()};
     SmallVector<Value *, 8> Args{/* isInBounds= */ B.getInt1(true), Dst};
     buildGEPIndexChain(B, Src->getType(), DstPointeeType, Args);
     auto *GEP = B.CreateIntrinsic(Intrinsic::spv_gep, {Types}, {Args});
