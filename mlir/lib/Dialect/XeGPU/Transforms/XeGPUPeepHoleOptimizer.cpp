@@ -442,6 +442,20 @@ class MultiRed2dOpPattern
     auto loc = reductionOp.getLoc();
     auto acc = reductionOp.getAcc();
 
+    // If the result is scalar after reduction, look for consumer
+    // convert_layout op and remove it. The layout propagation pass will
+    // re-install it properly after the decomposition.
+    Type resultType = reductionOp.getResult().getType();
+    if (resultType.isIntOrFloat()) {
+      for (auto &use : reductionOp.getResult().getUses()) {
+        if (auto convertLayoutOp =
+                llvm::dyn_cast<xegpu::ConvertLayoutOp>(use.getOwner())) {
+          rewriter.replaceOp(convertLayoutOp, reductionOp.getResult());
+          break;
+        }
+      }
+    }
+
     SmallVector<int64_t> accShape(sourceVecType.getShape());
     accShape.erase(accShape.begin() + intraLaneDim);
     Type eTy = sourceVecType.getElementType();
@@ -576,6 +590,17 @@ struct XeGPUPeepHoleOptimizerPass final
     MLIRContext *ctx = &getContext();
     RewritePatternSet emptyPatterns(ctx);
     (void)applyPatternsGreedily(getOperation(), std::move(emptyPatterns));
+
+    // Remove the temporary layout after all patterns are applied.
+    getOperation()->walk([](Operation *op) {
+      SmallVector<StringAttr> attrsToRemove;
+      for (auto namedAttr : op->getDiscardableAttrs()) {
+        if (isa<xegpu::DistributeLayoutAttr>(namedAttr.getValue()))
+          attrsToRemove.push_back(namedAttr.getName());
+      }
+      for (auto attrName : attrsToRemove)
+        op->removeDiscardableAttr(attrName);
+    });
   }
 };
 
