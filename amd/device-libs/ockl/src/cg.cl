@@ -205,35 +205,45 @@ __ockl_multi_grid_is_valid(void)
 void
 __ockl_multi_grid_sync(void)
 {
-    __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "");
+    __builtin_amdgcn_fence(__ATOMIC_RELEASE, "workgroup");
     __builtin_amdgcn_s_barrier();
 
-    bool cwwi = choose_one_workgroup_workitem();
-    uint nwm1 = (uint)__ockl_get_num_groups(0) * (uint)__ockl_get_num_groups(1) * (uint)__ockl_get_num_groups(2) - 1;
-    __global struct mg_info *mi = (global struct mg_info *)get_mg_info_arg();
-    uint nwg = mi->num_wg;
-    __global struct mg_sync *sgs = &mi->sgs;
+    if (choose_one_workgroup_workitem()) {
+        uint nwm1 = (uint)__ockl_get_num_groups(0) * (uint)__ockl_get_num_groups(1) * (uint)__ockl_get_num_groups(2) - 1;
+        __global struct mg_info *mi = (global struct mg_info *)get_mg_info_arg();
+        uint nwg = mi->num_wg;
+        __global struct mg_sync *sgs = &mi->sgs;
 
-    if (cwwi) {
+        __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, "workgroup");
+        __builtin_amdgcn_fence(__ATOMIC_RELEASE, "agent");
+
         if (AVOID_GWS()) {
             single_grid_sync(sgs, nwg);
         } else {
             __ockl_gws_barrier(nwm1, 0);
         }
-    }
 
-    if (choose_one_grid_workitem()) {
-        multi_grid_sync(mi->mgs, mi->num_grids);
-    }
+        if (choose_one_grid_workitem()) {
+            __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, "agent");
+            __builtin_amdgcn_fence(__ATOMIC_RELEASE, "");
 
-    if (cwwi) {
+            multi_grid_sync(mi->mgs, mi->num_grids);
+
+            __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, "");
+            __builtin_amdgcn_fence(__ATOMIC_RELEASE, "agent");
+        }
+
         if (AVOID_GWS()) {
             single_grid_sync(sgs, nwg);
         } else {
             __ockl_gws_barrier(nwm1, 0);
         }
+
+        __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, "agent");
+        __builtin_amdgcn_fence(__ATOMIC_RELEASE, "workgroup");
     }
 
     __builtin_amdgcn_s_barrier();
+    __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, "workgroup");
 }
 
