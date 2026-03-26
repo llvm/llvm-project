@@ -66,11 +66,6 @@ static cl::opt<bool>
                                      "context in this module's profiles"),
                             cl::Hidden, cl::init(false));
 
-static cl::opt<bool> ClPrintMemProfInlineCallStacks(
-    "memprof-print-inline-call-stacks",
-    cl::desc("Print inline call stack for each callsite for debugging"),
-    cl::Hidden, cl::init(false));
-
 static cl::opt<bool> PrintMatchedAllocStack(
     "memprof-print-matched-alloc-stack",
     cl::desc("Print full stack context for matched "
@@ -655,21 +650,18 @@ static void dumpInlineCallStack(Instruction &I, CallBase *CI,
   bool First = true;
   for (const DILocation *DIL = I.getDebugLoc(); DIL;
        DIL = DIL->getInlinedAt()) {
-    std::string FrameStr;
-    raw_string_ostream FrameOS(FrameStr);
     StringRef Name = DIL->getScope()->getSubprogram()->getLinkageName();
     if (Name.empty())
       Name = DIL->getScope()->getSubprogram()->getName();
-    FrameOS << Name << ":" << GetOffset(DIL) << ":"
-            << (ProfileHasColumns ? DIL->getColumn() : 0) << ":"
-            << (DIL->getInlinedAt() ? "1" : "0");
-    uint64_t FrameID = llvm::MD5Hash(FrameStr);
+    auto CalleeGUID = Function::getGUIDAssumingExternalLinkage(Name);
+    uint64_t FrameID = computeStackId(CalleeGUID, GetOffset(DIL),
+                                      ProfileHasColumns ? DIL->getColumn() : 0);
     if (SeenFrames.insert(FrameID).second) {
       std::string DictMsg;
       raw_string_ostream DictOS(DictMsg);
-      DictOS << "frame: " << format_hex_no_prefix(FrameID, 16) << " "
-             << FrameStr;
-      ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemProfUse", CI)
+      DictOS << "frame: " << FrameID << " " << Name << ":" << GetOffset(DIL)
+             << ":" << (ProfileHasColumns ? DIL->getColumn() : 0);
+      ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, "MemProfUse", CI)
                << DictOS.str());
     }
 
@@ -677,7 +669,7 @@ static void dumpInlineCallStack(Instruction &I, CallBase *CI,
       First = false;
     else
       CallStackOS << ",";
-    CallStackOS << format_hex_no_prefix(FrameID, 16);
+    CallStackOS << FrameID;
   }
 
   // Dump inline call stack info.  Stacks are deduplicated using StackHash.
@@ -686,7 +678,8 @@ static void dumpInlineCallStack(Instruction &I, CallBase *CI,
     std::string Msg;
     raw_string_ostream OS(Msg);
     OS << "inline call stack: " << CallStack;
-    ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemProfUse", CI) << OS.str());
+    ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, "MemProfUse", CI)
+             << OS.str());
   }
 }
 
@@ -820,7 +813,7 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
       if (CalledFunction && CalledFunction->isIntrinsic())
         continue;
 
-      if (ClPrintMemProfInlineCallStacks)
+      if (ORE.allowExtraAnalysis(DEBUG_TYPE))
         dumpInlineCallStack(I, CI, ORE, SeenFrames, SeenStacks,
                             ProfileHasColumns);
 

@@ -1,10 +1,10 @@
 ; RUN: llvm-profdata merge %S/Inputs/memprof.memprofraw --profiled-binary %S/Inputs/memprof.exe -o %t.memprofdata
-; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -memprof-print-inline-call-stacks -pass-remarks=memprof -S 2>&1 | FileCheck %s
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pass-remarks-analysis=memprof -S 2>&1 | FileCheck %s
 
-; CHECK: remark: memprof.cc:5:10: frame: [[FOO:[0-9a-f]+]] _Z3foov:1:10:0
+; CHECK: remark: memprof.cc:5:10: frame: [[FOO:[0-9]+]] _Z3foov:1:10
 ; CHECK: remark: memprof.cc:5:10: inline call stack: [[FOO]]
-; CHECK: remark: memprof.cc:9:12: frame: [[BAR:[0-9a-f]+]] _Z3barv:2:12:1
-; CHECK: remark: memprof.cc:9:12: frame: [[BAZ:[0-9a-f]+]] _Z3bazv:3:13:0
+; CHECK: remark: memprof.cc:9:12: frame: [[BAR:[0-9]+]] _Z3barv:2:12
+; CHECK: remark: memprof.cc:9:12: frame: [[BAZ:[0-9]+]] _Z3bazv:3:13
 ; CHECK: remark: memprof.cc:9:12: inline call stack: [[BAR]],[[BAZ]]
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
