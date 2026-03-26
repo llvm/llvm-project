@@ -191,7 +191,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
 endif()
 
 # The NVPTX target needs to override linking to pass compiler flag checks.
-if("${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx")
+if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^nvptx")
   set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -flto -c")
 endif()
 
