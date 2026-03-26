@@ -2,6 +2,7 @@
 
 // UNSUPPORTED: amdgcn-amd-amdhsa
 // XFAIL: intelgpu
+
 extern "C" int printf(const char *, ...);
 
 typedef struct {

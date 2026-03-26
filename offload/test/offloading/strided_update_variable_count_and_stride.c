@@ -1,6 +1,7 @@
 // RUN: %libomptarget-compile-run-and-check-generic
 // Tests combining variable count expression AND variable stride in array
 // sections.
+
 #include <omp.h>
 #include <stdio.h>
 

@@ -1,4 +1,5 @@
 // RUN: %libomptarget-compile-run-and-check-generic
+
 #include <omp.h>
 #include <stdio.h>
 #include <string.h>

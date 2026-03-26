@@ -1,6 +1,7 @@
 // RUN: %libomptarget-compile-run-and-check-generic
 // Tests non-contiguous array sections with complex expression-based count
 // scenarios including multiple struct arrays and non-zero offset.
+
 #include <omp.h>
 #include <stdio.h>
 

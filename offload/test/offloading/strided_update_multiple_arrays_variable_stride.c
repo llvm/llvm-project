@@ -1,6 +1,7 @@
 // RUN: %libomptarget-compile-run-and-check-generic
 // Tests multiple arrays with different variable strides in single update
 // clause.
+
 #include <omp.h>
 #include <stdio.h>
 
