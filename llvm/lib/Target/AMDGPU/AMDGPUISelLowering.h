@@ -20,7 +20,7 @@
 
 namespace llvm {
 
-class AMDGPUMachineFunction;
+class AMDGPUMachineFunctionInfo;
 class AMDGPUSubtarget;
 struct ArgDescriptor;
 
@@ -145,7 +145,7 @@ protected:
 
   static EVT getEquivalentMemType(LLVMContext &Context, EVT VT);
 
-  virtual SDValue LowerGlobalAddress(AMDGPUMachineFunction *MFI, SDValue Op,
+  virtual SDValue LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI, SDValue Op,
                                      SelectionDAG &DAG) const;
 
   /// Return 64-bit value Op as two 32-bit integers.

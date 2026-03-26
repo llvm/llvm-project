@@ -146,6 +146,7 @@ Clang-Tidy Checks
    :doc:`bugprone-sizeof-expression <bugprone/sizeof-expression>`,
    :doc:`bugprone-spuriously-wake-up-functions <bugprone/spuriously-wake-up-functions>`,
    :doc:`bugprone-standalone-empty <bugprone/standalone-empty>`, "Yes"
+   :doc:`bugprone-std-exception-baseclass <bugprone/std-exception-baseclass>`,
    :doc:`bugprone-std-namespace-modification <bugprone/std-namespace-modification>`,
    :doc:`bugprone-string-constructor <bugprone/string-constructor>`, "Yes"
    :doc:`bugprone-string-integer-assignment <bugprone/string-integer-assignment>`, "Yes"
@@ -241,7 +242,6 @@ Clang-Tidy Checks
    :doc:`google-runtime-operator <google/runtime-operator>`,
    :doc:`google-upgrade-googletest-case <google/upgrade-googletest-case>`, "Yes"
    :doc:`hicpp-exception-baseclass <hicpp/exception-baseclass>`,
-   :doc:`hicpp-ignored-remove-result <hicpp/ignored-remove-result>`,
    :doc:`hicpp-multiway-paths-covered <hicpp/multiway-paths-covered>`,
    :doc:`hicpp-signed-bitwise <hicpp/signed-bitwise>`,
    :doc:`linuxkernel-must-check-errs <linuxkernel/must-check-errs>`,
@@ -326,6 +326,7 @@ Clang-Tidy Checks
    :doc:`modernize-use-ranges <modernize/use-ranges>`, "Yes"
    :doc:`modernize-use-scoped-lock <modernize/use-scoped-lock>`, "Yes"
    :doc:`modernize-use-starts-ends-with <modernize/use-starts-ends-with>`, "Yes"
+   :doc:`modernize-use-std-bit <modernize/use-std-bit>`, "Yes"
    :doc:`modernize-use-std-format <modernize/use-std-format>`, "Yes"
    :doc:`modernize-use-std-numbers <modernize/use-std-numbers>`, "Yes"
    :doc:`modernize-use-std-print <modernize/use-std-print>`, "Yes"
@@ -416,6 +417,7 @@ Clang-Tidy Checks
    :doc:`readability-redundant-member-init <readability/redundant-member-init>`, "Yes"
    :doc:`readability-redundant-parentheses <readability/redundant-parentheses>`, "Yes"
    :doc:`readability-redundant-preprocessor <readability/redundant-preprocessor>`,
+   :doc:`readability-redundant-qualified-alias <readability/redundant-qualified-alias>`, "Yes"
    :doc:`readability-redundant-smartptr-get <readability/redundant-smartptr-get>`, "Yes"
    :doc:`readability-redundant-string-cstr <readability/redundant-string-cstr>`, "Yes"
    :doc:`readability-redundant-string-init <readability/redundant-string-init>`, "Yes"
@@ -600,8 +602,10 @@ Check aliases
    :doc:`hicpp-avoid-goto <hicpp/avoid-goto>`, :doc:`cppcoreguidelines-avoid-goto <cppcoreguidelines/avoid-goto>`,
    :doc:`hicpp-braces-around-statements <hicpp/braces-around-statements>`, :doc:`readability-braces-around-statements <readability/braces-around-statements>`, "Yes"
    :doc:`hicpp-deprecated-headers <hicpp/deprecated-headers>`, :doc:`modernize-deprecated-headers <modernize/deprecated-headers>`, "Yes"
+   :doc:`hicpp-exception-baseclass <hicpp/exception-baseclass>`, :doc:`bugprone-std-exception-baseclass <bugprone/std-exception-baseclass>`,
    :doc:`hicpp-explicit-conversions <hicpp/explicit-conversions>`, :doc:`google-explicit-constructor <google/explicit-constructor>`, "Yes"
    :doc:`hicpp-function-size <hicpp/function-size>`, :doc:`readability-function-size <readability/function-size>`,
+   :doc:`hicpp-ignored-remove-result <hicpp/ignored-remove-result>`, :doc:`bugprone-unused-return-value <bugprone/unused-return-value>`,
    :doc:`hicpp-invalid-access-moved <hicpp/invalid-access-moved>`, :doc:`bugprone-use-after-move <bugprone/use-after-move>`,
    :doc:`hicpp-member-init <hicpp/member-init>`, :doc:`cppcoreguidelines-pro-type-member-init <cppcoreguidelines/pro-type-member-init>`, "Yes"
    :doc:`hicpp-move-const-arg <hicpp/move-const-arg>`, :doc:`performance-move-const-arg <performance/move-const-arg>`, "Yes"

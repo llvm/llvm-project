@@ -9,7 +9,7 @@
 #include "Mapper.h"
 #include "Serialize.h"
 #include "clang/AST/Comment.h"
-#include "clang/Index/USRGeneration.h"
+#include "clang/UnifiedSymbolResolution/USRGeneration.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Mutex.h"

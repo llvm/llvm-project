@@ -911,6 +911,15 @@ def : Pat<(vec.vt (xor (and (xor (vec.vt V128:$v1), (vec.vt V128:$v2)),
                        (vec.vt V128:$v2))),
           (BITSELECT $v2, $v1, $c)>;
 
+// vselect(cond, vnot(X), zero) => andnot(cond, X)
+// DAGCombiner converts and(vnot(X), sext(cmp)) into vselect(cmp, vnot(X), zero)
+// which the generic vselect pattern below lowers to v128.not + v128.bitselect.
+// Match it first and emit a single v128.andnot instead.
+foreach vec = IntVecs in
+def : Pat<(vec.vt (vselect
+            (vec.int_vt V128:$c), (vnot (vec.vt V128:$x)), immAllZerosV)),
+          (ANDNOT $c, $x)>;
+
 // Also implement vselect in terms of bitselect
 foreach vec = StdVecs in
 def : Pat<(vec.vt (vselect
@@ -999,7 +1008,9 @@ defvar inst = !cast<NI>(reduction[1]);
 defvar vec = !cast<Vec>(reduction[2]);
 def : Pat<(i32 (and (i32 (intrinsic (vec.vt V128:$x))), (i32 1))), (inst $x)>;
 def : Pat<(i32 (setne (i32 (intrinsic (vec.vt V128:$x))), (i32 0))), (inst $x)>;
+def : Pat<(i32 (setne (i32 (intrinsic (vec.vt V128:$x))), (i32 1))), (i32 (EQZ_I32 (inst $x)))>;
 def : Pat<(i32 (seteq (i32 (intrinsic (vec.vt V128:$x))), (i32 1))), (inst $x)>;
+def : Pat<(i32 (seteq (i32 (intrinsic (vec.vt V128:$x))), (i32 0))), (i32 (EQZ_I32 (inst $x)))>;
 }
 
 multiclass SIMDBitmask<Vec vec, bits<32> simdop> {

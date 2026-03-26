@@ -377,7 +377,7 @@ private:
       const AdjustActuals &, bool isSubroutine, SymbolVector &&tried,
       bool mightBeStructureConstructor = false);
   void EmitGenericResolutionError(const Symbol &, bool dueToNullActuals,
-      bool isSubroutine, ActualArguments &, const SymbolVector &,
+      bool isSubroutine, const ActualArguments &, const SymbolVector &,
       const AdjustActuals &);
   const Symbol &AccessSpecific(
       const Symbol &originalGeneric, const Symbol &specific);

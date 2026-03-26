@@ -19,6 +19,7 @@
 #include "llvm/IR/FPEnv.h"
 #include "llvm/Support/ErrorHandling.h"
 
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Location.h"
@@ -231,9 +232,12 @@ public:
     return createLoad(loc, ptr, /*isVolatile=*/false, alignment);
   }
 
+  mlir::Value createNot(mlir::Location loc, mlir::Value value) {
+    return cir::NotOp::create(*this, loc, value);
+  }
+
   mlir::Value createNot(mlir::Value value) {
-    return cir::UnaryOp::create(*this, value.getLoc(), value.getType(),
-                                cir::UnaryOpKind::Not, value);
+    return createNot(value.getLoc(), value);
   }
 
   /// Create a do-while operation.
@@ -272,9 +276,19 @@ public:
     return cir::ContinueOp::create(*this, loc);
   }
 
-  mlir::Value createUnaryOp(mlir::Location loc, cir::UnaryOpKind kind,
-                            mlir::Value operand) {
-    return cir::UnaryOp::create(*this, loc, kind, operand);
+  mlir::Value createInc(mlir::Location loc, mlir::Value input,
+                        bool nsw = false) {
+    return cir::IncOp::create(*this, loc, input, nsw);
+  }
+
+  mlir::Value createDec(mlir::Location loc, mlir::Value input,
+                        bool nsw = false) {
+    return cir::DecOp::create(*this, loc, input, nsw);
+  }
+
+  mlir::Value createMinus(mlir::Location loc, mlir::Value input,
+                          bool nsw = false) {
+    return cir::MinusOp::create(*this, loc, input, nsw);
   }
 
   mlir::TypedAttr getConstPtrAttr(mlir::Type type, int64_t value) {
@@ -326,6 +340,18 @@ public:
     return cir::GlobalViewAttr::get(type, symbol, indices);
   }
 
+  /// Get constant address of a global variable as an MLIR attribute.
+  /// This overload converts raw int64_t indices to an ArrayAttr.
+  cir::GlobalViewAttr getGlobalViewAttr(cir::PointerType type,
+                                        cir::GlobalOp globalOp,
+                                        llvm::ArrayRef<int64_t> indices) {
+    llvm::SmallVector<mlir::Attribute> attrs;
+    for (int64_t ind : indices)
+      attrs.push_back(getI64IntegerAttr(ind));
+    mlir::ArrayAttr arAttr = mlir::ArrayAttr::get(getContext(), attrs);
+    return getGlobalViewAttr(type, globalOp, arAttr);
+  }
+
   mlir::Value createGetGlobal(mlir::Location loc, cir::GlobalOp global,
                               bool threadLocal = false) {
     assert(!cir::MissingFeatures::addressSpace());
@@ -369,14 +395,15 @@ public:
     return CIRBaseBuilderTy::createStore(loc, flag, dst);
   }
 
-  [[nodiscard]] cir::GlobalOp createGlobal(mlir::ModuleOp mlirModule,
-                                           mlir::Location loc,
-                                           mlir::StringRef name,
-                                           mlir::Type type, bool isConstant,
-                                           cir::GlobalLinkageKind linkage) {
+  [[nodiscard]] cir::GlobalOp
+  createGlobal(mlir::ModuleOp mlirModule, mlir::Location loc,
+               mlir::StringRef name, mlir::Type type, bool isConstant,
+               cir::GlobalLinkageKind linkage,
+               mlir::ptr::MemorySpaceAttrInterface addrSpace) {
     mlir::OpBuilder::InsertionGuard guard(*this);
     setInsertionPointToStart(mlirModule.getBody());
-    return cir::GlobalOp::create(*this, loc, name, type, isConstant, linkage);
+    return cir::GlobalOp::create(*this, loc, name, type, isConstant, addrSpace,
+                                 linkage);
   }
 
   cir::GetMemberOp createGetMember(mlir::Location loc, mlir::Type resultTy,
@@ -518,6 +545,11 @@ public:
   mlir::Value createPtrIsNull(mlir::Value ptr) {
     mlir::Value nullPtr = getNullPtr(ptr.getType(), ptr.getLoc());
     return createCompare(ptr.getLoc(), cir::CmpOpKind::eq, ptr, nullPtr);
+  }
+
+  mlir::Value createPtrIsNotNull(mlir::Value ptr) {
+    mlir::Value nullPtr = getNullPtr(ptr.getType(), ptr.getLoc());
+    return createCompare(ptr.getLoc(), cir::CmpOpKind::ne, ptr, nullPtr);
   }
 
   mlir::Value createAddrSpaceCast(mlir::Location loc, mlir::Value src,

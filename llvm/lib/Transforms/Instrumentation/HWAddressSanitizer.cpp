@@ -1123,8 +1123,8 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
   }
   IRB.CreateCall(Asm, TCI.PtrLong);
   if (Recover)
-    cast<BranchInst>(CheckFailTerm)
-        ->setSuccessor(0, TCI.TagMismatchTerm->getParent());
+    cast<UncondBrInst>(CheckFailTerm)
+        ->setSuccessor(TCI.TagMismatchTerm->getParent());
 }
 
 bool HWAddressSanitizer::ignoreMemIntrinsic(OptimizationRemarkEmitter &ORE,
@@ -1529,19 +1529,10 @@ void HWAddressSanitizer::instrumentStack(OptimizationRemarkEmitter &ORE,
     if (DetectUseAfterScope && !SInfo.CallsReturnTwice &&
         memtag::isSupportedLifetime(Info, &DT, &LI)) {
       TagStarts();
-      if (!memtag::forAllReachableExits(DT, PDT, LI, Info, SInfo.RetVec,
-                                        TagEnd)) {
-        for (auto *End : Info.LifetimeEnd)
-          End->eraseFromParent();
-        ORE.emit([&]() {
-          return OptimizationRemarkMissed(DEBUG_TYPE, "supportedLifetime", AI);
-        });
-
-      } else {
-        ORE.emit([&]() {
-          return OptimizationRemark(DEBUG_TYPE, "supportedLifetime", AI);
-        });
-      }
+      memtag::forAllReachableExits(DT, PDT, LI, Info, SInfo.RetVec, TagEnd);
+      ORE.emit([&]() {
+        return OptimizationRemark(DEBUG_TYPE, "supportedLifetime", AI);
+      });
     } else if (DetectUseAfterScope && ClStrictUseAfterScope) {
       // SInfo.CallsReturnTwice || !isStandardLifetime
       ORE.emit([&]() {

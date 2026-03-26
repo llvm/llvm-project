@@ -27,37 +27,20 @@ llvm.func @rocdl_special_regs() -> i32 {
   // CHECK: call range(i32 0, 16) i32 @llvm.amdgcn.cluster.workgroup.id.z()
   %12 = rocdl.cluster.workgroup.id.z range <i32, 0, 16> : i32
 
-  // CHECK: call i64 @__ockl_get_local_size(i32 0)
-  %13 = rocdl.workgroup.dim.x : i64
-  // CHECK: call i64 @__ockl_get_local_size(i32 1)
-  %14 = rocdl.workgroup.dim.y : i64
-  // CHECK: call i64 @__ockl_get_local_size(i32 2)
-  %15 = rocdl.workgroup.dim.z : i64
-
-  // CHECK: call i64 @__ockl_get_num_groups(i32 0)
-  %16 = rocdl.grid.dim.x : i64
-  // CHECK: call i64 @__ockl_get_num_groups(i32 1)
-  %17 = rocdl.grid.dim.y : i64
-  // CHECK: call i64 @__ockl_get_num_groups(i32 2)
-  %18 = rocdl.grid.dim.z : i64
-
   // CHECK: call range(i32 0, 64) i32 @llvm.amdgcn.workitem.id.x()
-  %19 = rocdl.workitem.id.x range <i32, 0, 64> : i32
-
-  // CHECK: call range(i64 1, 65) i64 @__ockl_get_local_size(i32 0)
-  %20 = rocdl.workgroup.dim.x range <i32, 1, 65> : i64
+  %13 = rocdl.workitem.id.x range <i32, 0, 64> : i32
 
   // CHECK: call i32 @llvm.amdgcn.wave.id()
-  %21 = rocdl.wave.id : i32
+  %14 = rocdl.wave.id : i32
 
   // CHECK: call range(i32 32, 65) i32 @llvm.amdgcn.wave.id()
-  %22 = rocdl.wave.id range <i32, 32, 65> : i32
+  %15 = rocdl.wave.id range <i32, 32, 65> : i32
 
   // CHECK: call i32 @llvm.amdgcn.wavefrontsize()
-  %23 = rocdl.wavefrontsize : i32
+  %16 = rocdl.wavefrontsize : i32
 
   // CHECK: call range(i32 32, 65) i32 @llvm.amdgcn.wavefrontsize()
-  %24 = rocdl.wavefrontsize range <i32, 32, 65> : i32
+  %17 = rocdl.wavefrontsize range <i32, 32, 65> : i32
 
   llvm.return %1 : i32
 }

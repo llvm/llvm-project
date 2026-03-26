@@ -19,7 +19,6 @@ class CXXRecordDecl;
 namespace interp {
 
 class Context;
-class FunctionPointer;
 
 class MemberPointer final {
 private:
@@ -100,7 +99,6 @@ public:
   ComparisonCategoryResult compare(const MemberPointer &RHS) const;
 
   std::optional<Pointer> toPointer(const Context &Ctx) const;
-  FunctionPointer toFunctionPointer(const Context &Ctx) const;
 
   bool isBaseCastPossible() const {
     if (PtrOffset < 0)

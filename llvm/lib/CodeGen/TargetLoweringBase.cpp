@@ -1231,6 +1231,10 @@ void TargetLoweringBase::initActions() {
     // Only some target support this vector operation. Most need to expand it.
     setOperationAction(ISD::VECTOR_COMPRESS, VT, Expand);
 
+    // cttz.elts defaults to expand.
+    setOperationAction({ISD::CTTZ_ELTS, ISD::CTTZ_ELTS_ZERO_POISON}, VT,
+                       Expand);
+
     // VP operations default to expand.
 #define BEGIN_REGISTER_VP_SDNODE(SDOPC, ...)                                   \
     setOperationAction(ISD::SDOPC, VT, Expand);
@@ -2208,7 +2212,8 @@ int TargetLoweringBase::InstructionOpcodeToISD(unsigned Opcode) const {
   };
   switch (static_cast<InstructionOpcodes>(Opcode)) {
   case Ret:            return 0;
-  case Br:             return 0;
+  case UncondBr:       return 0;
+  case CondBr:         return 0;
   case Switch:         return 0;
   case IndirectBr:     return 0;
   case Invoke:         return 0;

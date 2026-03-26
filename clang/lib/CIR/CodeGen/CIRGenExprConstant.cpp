@@ -1644,12 +1644,6 @@ mlir::Attribute ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &d) {
         // be a problem for the near future.
         if (cd->isTrivial() && cd->isDefaultConstructor()) {
           const auto *cxxrd = ty->castAsCXXRecordDecl();
-          if (cxxrd->getNumBases() != 0) {
-            // There may not be anything additional to do here, but this will
-            // force us to pause and test this path when it is supported.
-            cgm.errorNYI("tryEmitPrivateForVarInit: cxx record with bases");
-            return {};
-          }
           if (!cgm.getTypes().isZeroInitializable(cxxrd)) {
             // To handle this case, we really need to go through
             // emitNullConstant, but we need an attribute, not a value
@@ -1897,6 +1891,9 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
     assert(!cir::MissingFeatures::cxxABI());
 
     const ValueDecl *memberDecl = value.getMemberPointerDecl();
+    if (!memberDecl)
+      return builder.getZeroInitAttr(cgm.convertType(destType));
+
     if (value.isMemberPointerToDerivedMember()) {
       cgm.errorNYI(
           "ConstExprEmitter::tryEmitPrivate member pointer to derived member");

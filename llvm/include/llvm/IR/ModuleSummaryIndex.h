@@ -1102,16 +1102,22 @@ public:
     return *Callsites;
   }
 
-  void addCallsite(CallsiteInfo &Callsite) {
+  void addCallsite(CallsiteInfo &&Callsite) {
     if (!Callsites)
       Callsites = std::make_unique<CallsitesTy>();
-    Callsites->push_back(Callsite);
+    Callsites->push_back(std::move(Callsite));
   }
 
   ArrayRef<AllocInfo> allocs() const {
     if (Allocs)
       return *Allocs;
     return {};
+  }
+
+  void addAlloc(AllocInfo &&Alloc) {
+    if (!Allocs)
+      Allocs = std::make_unique<AllocsTy>();
+    Allocs->push_back(std::move(Alloc));
   }
 
   AllocsTy &mutableAllocs() {
@@ -1574,7 +1580,7 @@ public:
   // in the way some record are interpreted, like flags for instance.
   // Note that incrementing this may require changes in both BitcodeReader.cpp
   // and BitcodeWriter.cpp.
-  static constexpr uint64_t BitcodeSummaryVersion = 12;
+  static constexpr uint64_t BitcodeSummaryVersion = 13;
 
   // Regular LTO module name for ASM writer
   static constexpr const char *getRegularLTOModuleName() {

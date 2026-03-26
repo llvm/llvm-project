@@ -27,7 +27,6 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
@@ -35,10 +34,6 @@
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
-
-namespace llvm {
-class TargetLowering;
-}
 
 #define DEBUG_TYPE "expand-memcmp"
 
@@ -390,17 +385,14 @@ void MemCmpExpansion::emitLoadCompareByteBlock(unsigned BlockIndex,
     // next LoadCmpBlock,
     Value *Cmp = Builder.CreateICmp(ICmpInst::ICMP_NE, Diff,
                                     ConstantInt::get(Diff->getType(), 0));
-    BranchInst *CmpBr =
-        BranchInst::Create(EndBlock, LoadCmpBlocks[BlockIndex + 1], Cmp);
-    Builder.Insert(CmpBr);
+    Builder.CreateCondBr(Cmp, EndBlock, LoadCmpBlocks[BlockIndex + 1]);
     if (DTU)
       DTU->applyUpdates(
           {{DominatorTree::Insert, BB, EndBlock},
            {DominatorTree::Insert, BB, LoadCmpBlocks[BlockIndex + 1]}});
   } else {
     // The last block has an unconditional branch to EndBlock.
-    BranchInst *CmpBr = BranchInst::Create(EndBlock);
-    Builder.Insert(CmpBr);
+    Builder.CreateBr(EndBlock);
     if (DTU)
       DTU->applyUpdates({{DominatorTree::Insert, BB, EndBlock}});
   }
@@ -488,10 +480,9 @@ void MemCmpExpansion::emitLoadCompareBlockMultipleLoads(unsigned BlockIndex,
   // Early exit branch if difference found to ResultBlock. Otherwise,
   // continue to next LoadCmpBlock or EndBlock.
   BasicBlock *BB = Builder.GetInsertBlock();
-  BranchInst *CmpBr = BranchInst::Create(ResBlock.BB, NextBB, Cmp);
+  CondBrInst *CmpBr = Builder.CreateCondBr(Cmp, ResBlock.BB, NextBB);
   setExplicitlyUnknownBranchWeightsIfProfiled(*CmpBr, DEBUG_TYPE,
                                               CI->getFunction());
-  Builder.Insert(CmpBr);
   if (DTU)
     DTU->applyUpdates({{DominatorTree::Insert, BB, ResBlock.BB},
                        {DominatorTree::Insert, BB, NextBB}});
@@ -554,10 +545,9 @@ void MemCmpExpansion::emitLoadCompareBlock(unsigned BlockIndex) {
   // Early exit branch if difference found to ResultBlock. Otherwise, continue
   // to next LoadCmpBlock or EndBlock.
   BasicBlock *BB = Builder.GetInsertBlock();
-  BranchInst *CmpBr = BranchInst::Create(NextBB, ResBlock.BB, Cmp);
+  CondBrInst *CmpBr = Builder.CreateCondBr(Cmp, NextBB, ResBlock.BB);
   setExplicitlyUnknownBranchWeightsIfProfiled(*CmpBr, DEBUG_TYPE,
                                               CI->getFunction());
-  Builder.Insert(CmpBr);
   if (DTU)
     DTU->applyUpdates({{DominatorTree::Insert, BB, NextBB},
                        {DominatorTree::Insert, BB, ResBlock.BB}});
@@ -582,8 +572,7 @@ void MemCmpExpansion::emitMemCmpResultBlock() {
     Builder.SetInsertPoint(ResBlock.BB, InsertPt);
     Value *Res = ConstantInt::get(Type::getInt32Ty(CI->getContext()), 1);
     PhiRes->addIncoming(Res, ResBlock.BB);
-    BranchInst *NewBr = BranchInst::Create(EndBlock);
-    Builder.Insert(NewBr);
+    Builder.CreateBr(EndBlock);
     if (DTU)
       DTU->applyUpdates({{DominatorTree::Insert, ResBlock.BB, EndBlock}});
     return;
@@ -601,8 +590,7 @@ void MemCmpExpansion::emitMemCmpResultBlock() {
                                               DEBUG_TYPE, CI->getFunction());
 
   PhiRes->addIncoming(Res, ResBlock.BB);
-  BranchInst *NewBr = BranchInst::Create(EndBlock);
-  Builder.Insert(NewBr);
+  Builder.CreateBr(EndBlock);
   if (DTU)
     DTU->applyUpdates({{DominatorTree::Insert, ResBlock.BB, EndBlock}});
 }
@@ -835,9 +823,9 @@ Value *MemCmpExpansion::getMemCmpExpansion() {
 ///  %phi.res = phi i32 [ %48, %loadbb3 ], [ %11, %res_block ]
 ///  ret i32 %phi.res
 static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
-                         const TargetLowering *TLI, const DataLayout *DL,
-                         ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI,
-                         DomTreeUpdater *DTU, const bool IsBCmp) {
+                         const DataLayout *DL, ProfileSummaryInfo *PSI,
+                         BlockFrequencyInfo *BFI, DomTreeUpdater *DTU,
+                         const bool IsBCmp) {
   NumMemCmpCalls++;
 
   // Early exit from expansion if -Oz.
@@ -895,13 +883,12 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
 
 // Returns true if a change was made.
 static bool runOnBlock(BasicBlock &BB, const TargetLibraryInfo *TLI,
-                       const TargetTransformInfo *TTI, const TargetLowering *TL,
-                       const DataLayout &DL, ProfileSummaryInfo *PSI,
-                       BlockFrequencyInfo *BFI, DomTreeUpdater *DTU);
+                       const TargetTransformInfo *TTI, const DataLayout &DL,
+                       ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI,
+                       DomTreeUpdater *DTU);
 
 static PreservedAnalyses runImpl(Function &F, const TargetLibraryInfo *TLI,
                                  const TargetTransformInfo *TTI,
-                                 const TargetLowering *TL,
                                  ProfileSummaryInfo *PSI,
                                  BlockFrequencyInfo *BFI, DominatorTree *DT);
 
@@ -918,8 +905,6 @@ public:
     if (!TPC) {
       return false;
     }
-    const TargetLowering* TL =
-        TPC->getTM<TargetMachine>().getSubtargetImpl(F)->getTargetLowering();
 
     const TargetLibraryInfo *TLI =
         &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
@@ -932,7 +917,7 @@ public:
     DominatorTree *DT = nullptr;
     if (auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>())
       DT = &DTWP->getDomTree();
-    auto PA = runImpl(F, TLI, TTI, TL, PSI, BFI, DT);
+    auto PA = runImpl(F, TLI, TTI, PSI, BFI, DT);
     return !PA.areAllPreserved();
   }
 
@@ -948,9 +933,9 @@ private:
 };
 
 bool runOnBlock(BasicBlock &BB, const TargetLibraryInfo *TLI,
-                const TargetTransformInfo *TTI, const TargetLowering *TL,
-                const DataLayout &DL, ProfileSummaryInfo *PSI,
-                BlockFrequencyInfo *BFI, DomTreeUpdater *DTU) {
+                const TargetTransformInfo *TTI, const DataLayout &DL,
+                ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI,
+                DomTreeUpdater *DTU) {
   for (Instruction &I : BB) {
     CallInst *CI = dyn_cast<CallInst>(&I);
     if (!CI) {
@@ -959,7 +944,7 @@ bool runOnBlock(BasicBlock &BB, const TargetLibraryInfo *TLI,
     LibFunc Func;
     if (TLI->getLibFunc(*CI, Func) &&
         (Func == LibFunc_memcmp || Func == LibFunc_bcmp) &&
-        expandMemCmp(CI, TTI, TL, &DL, PSI, BFI, DTU, Func == LibFunc_bcmp)) {
+        expandMemCmp(CI, TTI, &DL, PSI, BFI, DTU, Func == LibFunc_bcmp)) {
       return true;
     }
   }
@@ -968,8 +953,8 @@ bool runOnBlock(BasicBlock &BB, const TargetLibraryInfo *TLI,
 
 PreservedAnalyses runImpl(Function &F, const TargetLibraryInfo *TLI,
                           const TargetTransformInfo *TTI,
-                          const TargetLowering *TL, ProfileSummaryInfo *PSI,
-                          BlockFrequencyInfo *BFI, DominatorTree *DT) {
+                          ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI,
+                          DominatorTree *DT) {
   std::optional<DomTreeUpdater> DTU;
   if (DT)
     DTU.emplace(DT, DomTreeUpdater::UpdateStrategy::Lazy);
@@ -977,7 +962,7 @@ PreservedAnalyses runImpl(Function &F, const TargetLibraryInfo *TLI,
   const DataLayout& DL = F.getDataLayout();
   bool MadeChanges = false;
   for (auto BBIt = F.begin(); BBIt != F.end();) {
-    if (runOnBlock(*BBIt, TLI, TTI, TL, DL, PSI, BFI, DTU ? &*DTU : nullptr)) {
+    if (runOnBlock(*BBIt, TLI, TTI, DL, PSI, BFI, DTU ? &*DTU : nullptr)) {
       MadeChanges = true;
       // If changes were made, restart the function from the beginning, since
       // the structure of the function was changed.
@@ -1000,7 +985,6 @@ PreservedAnalyses runImpl(Function &F, const TargetLibraryInfo *TLI,
 
 PreservedAnalyses ExpandMemCmpPass::run(Function &F,
                                         FunctionAnalysisManager &FAM) {
-  const auto *TL = TM->getSubtargetImpl(F)->getTargetLowering();
   const auto &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
   const auto &TTI = FAM.getResult<TargetIRAnalysis>(F);
   auto *PSI = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F)
@@ -1010,7 +994,7 @@ PreservedAnalyses ExpandMemCmpPass::run(Function &F,
                                 : nullptr;
   auto *DT = FAM.getCachedResult<DominatorTreeAnalysis>(F);
 
-  return runImpl(F, &TLI, &TTI, TL, PSI, BFI, DT);
+  return runImpl(F, &TLI, &TTI, PSI, BFI, DT);
 }
 
 char ExpandMemCmpLegacyPass::ID = 0;

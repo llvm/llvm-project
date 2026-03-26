@@ -6466,6 +6466,14 @@ static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
   if (checkPlaceholderForOverload(S, From))
     return ExprError();
 
+  if (From->containsErrors()) {
+    // The expression already has errors, so the correct cast kind can't be
+    // determined. Use RecoveryExpr to keep the expected type T and mark the
+    // result as invalid, preventing further cascading errors.
+    return S.CreateRecoveryExpr(From->getBeginLoc(), From->getEndLoc(), {From},
+                                T);
+  }
+
   // C++1z [expr.const]p3:
   //  A converted constant expression of type T is an expression,
   //  implicitly converted to type T, where the converted
@@ -7474,8 +7482,13 @@ void Sema::AddOverloadCandidate(
       QualType ParamType = Proto->getParamType(ArgIdx);
       auto ParamABI = Proto->getExtParameterInfo(ArgIdx).getABI();
       if (ParamABI == ParameterABI::HLSLOut ||
-          ParamABI == ParameterABI::HLSLInOut)
+          ParamABI == ParameterABI::HLSLInOut) {
         ParamType = ParamType.getNonReferenceType();
+        if (ParamABI == ParameterABI::HLSLInOut &&
+            Args[ArgIdx]->getType().getAddressSpace() ==
+                LangAS::hlsl_groupshared)
+          Diag(Args[ArgIdx]->getBeginLoc(), diag::warn_hlsl_groupshared_inout);
+      }
       Candidate.Conversions[ConvIdx] = TryCopyInitialization(
           *this, Args[ArgIdx], ParamType, SuppressUserConversions,
           /*InOverloadResolution=*/true,
@@ -12828,7 +12841,9 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
 
       S.Diag(Fn->getLocation(), diag::note_ovl_candidate_deleted)
           << (unsigned)FnKindPair.first << (unsigned)FnKindPair.second << FnDesc
-          << (Fn->isDeleted() ? (Fn->isDeletedAsWritten() ? 1 : 2) : 0);
+          << (Fn->isDeleted()
+                  ? (Fn->getCanonicalDecl()->isDeletedAsWritten() ? 1 : 2)
+                  : 0);
       MaybeEmitInheritedConstructorNote(S, Cand->FoundDecl);
       return;
     }

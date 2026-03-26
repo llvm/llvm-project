@@ -3115,9 +3115,8 @@ bool RewriteStatepointsForGC::runOnFunction(Function &F, DominatorTree &DT,
   // as long as all statepoints are in rare blocks.  If we had in-register
   // lowering for live values this would be a much safer transform.
   auto getConditionInst = [](Instruction *TI) -> Instruction * {
-    if (auto *BI = dyn_cast<BranchInst>(TI))
-      if (BI->isConditional())
-        return dyn_cast<Instruction>(BI->getCondition());
+    if (auto *BI = dyn_cast<CondBrInst>(TI))
+      return dyn_cast<Instruction>(BI->getCondition());
     // TODO: Extend this to handle switches
     return nullptr;
   };

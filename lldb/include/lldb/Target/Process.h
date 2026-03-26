@@ -685,8 +685,7 @@ public:
   /// \return
   ///    A status object indicating if the operation was sucessful or not.
   virtual llvm::Error LoadModules() {
-    return llvm::make_error<llvm::StringError>("Not implemented.",
-                                               llvm::inconvertibleErrorCode());
+    return llvm::createStringError("Not implemented.");
   }
 
   /// Query remote GDBServer for a detailed loaded library list

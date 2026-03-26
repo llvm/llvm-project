@@ -3,6 +3,10 @@ add_custom_target(libc-unit-tests)
 add_custom_target(libc-hermetic-tests)
 add_dependencies(check-libc libc-unit-tests libc-hermetic-tests)
 
+if (TARGET check-hdrgen)
+  add_dependencies(check-libc check-hdrgen)
+endif()
+
 add_custom_target(exhaustive-check-libc)
 add_custom_target(libc-long-running-tests)
 

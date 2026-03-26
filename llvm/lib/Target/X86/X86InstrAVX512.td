@@ -6145,11 +6145,17 @@ let Predicates = [HasAVX512, NoVLX] in {
                 (v8i64 (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src1, sub_ymm)),
                  timm:$src2)), sub_ymm)>;
 
+  def : Pat<(v4i64 (X86vsrai (v4i64 (X86VBroadcastld64 addr:$src1)), (i8 timm:$src2))),
+            (EXTRACT_SUBREG (v8i64 (VPSRAQZmbi addr:$src1, timm:$src2)), sub_ymm)>;
+
   def : Pat<(v2i64 (X86vsrai (v2i64 VR128X:$src1), (i8 timm:$src2))),
             (EXTRACT_SUBREG (v8i64
               (VPSRAQZri
                 (v8i64 (INSERT_SUBREG (IMPLICIT_DEF), VR128X:$src1, sub_xmm)),
                  timm:$src2)), sub_xmm)>;
+
+  def : Pat<(v2i64 (X86vsrai (v2i64 (X86VBroadcastld64 addr:$src1)), (i8 timm:$src2))),
+            (EXTRACT_SUBREG (v8i64 (VPSRAQZmbi addr:$src1, timm:$src2)), sub_xmm)>;
 }
 
 //===-------------------------------------------------------------------===//
@@ -9097,13 +9103,13 @@ multiclass avx512_ord_cmp_sae<bits<8> opc, X86VectorVTInfo _,
 
 let Defs = [EFLAGS], Predicates = [HasAVX512] in {
   defm VUCOMISSZ : avx512_ord_cmp_sae<0x2E, v4f32x_info, "vucomiss", SSEPackedSingle>,
-                                   AVX512PSIi8Base, EVEX_CD8<32, CD8VT1>;
+                                   TB, EVEX_CD8<32, CD8VT1>;
   defm VUCOMISDZ : avx512_ord_cmp_sae<0x2E, v2f64x_info, "vucomisd", SSEPackedDouble>,
-                                   AVX512PDIi8Base, REX_W, EVEX_CD8<64, CD8VT1>;
+                                   TB, PD, REX_W, EVEX_CD8<64, CD8VT1>;
   defm VCOMISSZ : avx512_ord_cmp_sae<0x2F, v4f32x_info, "vcomiss", SSEPackedSingle>,
-                                   AVX512PSIi8Base, EVEX_CD8<32, CD8VT1>;
+                                   TB, EVEX_CD8<32, CD8VT1>;
   defm VCOMISDZ : avx512_ord_cmp_sae<0x2F, v2f64x_info, "vcomisd", SSEPackedDouble>,
-                                   AVX512PDIi8Base, REX_W, EVEX_CD8<64, CD8VT1>;
+                                   TB, PD, REX_W, EVEX_CD8<64, CD8VT1>;
 }
 
 let Defs = [EFLAGS], Predicates = [HasAVX512] in {
@@ -9138,10 +9144,10 @@ let Defs = [EFLAGS], Predicates = [HasAVX512] in {
 
 let Defs = [EFLAGS], Predicates = [HasFP16] in {
   defm VUCOMISHZ : avx512_ord_cmp_sae<0x2E, v8f16x_info, "vucomish",
-                                SSEPackedSingle>, AVX512PSIi8Base, T_MAP5,
+                                SSEPackedSingle>, TB, T_MAP5,
                                 EVEX_CD8<16, CD8VT1>;
   defm VCOMISHZ : avx512_ord_cmp_sae<0x2F, v8f16x_info, "vcomish",
-                                SSEPackedSingle>, AVX512PSIi8Base, T_MAP5,
+                                SSEPackedSingle>, TB, T_MAP5,
                                 EVEX_CD8<16, CD8VT1>;
   defm VUCOMISHZ : sse12_ord_cmp<0x2E, FR16X, X86any_fcmp, f16, f16mem, loadf16,
                                 "ucomish", SSEPackedSingle>, T_MAP5, EVEX,

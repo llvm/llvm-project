@@ -233,9 +233,10 @@ public:
 
     for (CachedBlock &Entry : LRUEntries) {
       Str->append("  StartBlockAddress: 0x%zx, EndBlockAddress: 0x%zx, "
-                  "BlockSize: %zu%s",
+                  "BlockSize: %zu%s, Flags: %s",
                   Entry.CommitBase, Entry.CommitBase + Entry.CommitSize,
-                  Entry.CommitSize, Entry.Time == 0 ? " [R]" : "");
+                  Entry.CommitSize, Entry.Time == 0 ? " [R]" : "",
+                  Entry.Flags & CachedBlock::NoAccess ? "NoAccess" : "None");
       const s64 ResidentPages =
           Entry.MemMap.getResidentPages(Entry.CommitBase, Entry.CommitSize);
 
