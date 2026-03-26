@@ -3,8 +3,6 @@
 ; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-ALL
 ; RUN: opt < %s -disable-output "-passes=print<da>" -da-enable-dependence-test=exact-rdiv 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-EXACT-RDIV
-; RUN: opt < %s -disable-output "-passes=print<da>" -da-enable-dependence-test=symbolic-rdiv 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-SYMBOLIC-RDIV
 
 ; for (i0 = INT64_MIN; i0 != INT64_MAX; i0++) {
 ;   if (i0 == 0)
@@ -34,14 +32,6 @@ define void @rdiv_large_btc(ptr %A) {
 ; CHECK-EXACT-RDIV-NEXT:    da analyze - none!
 ; CHECK-EXACT-RDIV-NEXT:  Src: store i8 0, ptr %gep.1, align 1 --> Dst: store i8 0, ptr %gep.1, align 1
 ; CHECK-EXACT-RDIV-NEXT:    da analyze - output [*]!
-;
-; CHECK-SYMBOLIC-RDIV-LABEL: 'rdiv_large_btc'
-; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.0, align 1
-; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - output [*]!
-; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.1, align 1
-; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - output [|<]!
-; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 0, ptr %gep.1, align 1 --> Dst: store i8 0, ptr %gep.1, align 1
-; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - output [*]!
 ;
 entry:
   br label %loop.0.header
