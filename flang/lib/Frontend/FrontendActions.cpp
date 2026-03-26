@@ -273,10 +273,11 @@ bool CodeGenAction::beginSourceFileAction() {
 
   if (ci.getInvocation().getFrontendOpts().features.IsEnabled(
           Fortran::common::LanguageFeature::OpenMP)) {
-    setOffloadModuleInterfaceAttributes(lb.getModule(),
-                                        ci.getInvocation().getLangOpts());
-    setOpenMPVersionAttribute(lb.getModule(),
-                              ci.getInvocation().getLangOpts().OpenMPVersion);
+    mlir::omp::setOffloadModuleInterfaceAttributes(
+        lb.getModule(),
+        makeOffloadModuleOpts(ci.getInvocation().getLangOpts()));
+    mlir::omp::setOpenMPVersionAttribute(
+        lb.getModule(), ci.getInvocation().getLangOpts().OpenMPVersion);
   }
 
   if (ci.getInvocation().getLangOpts().FastRealMod) {
