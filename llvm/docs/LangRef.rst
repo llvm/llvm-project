@@ -15349,8 +15349,8 @@ the stack for a logical type, such as an aggregate, an array, or a scalar.
 
 Unlike the standard :ref:`alloca <i_alloca>` instruction, the physical memory
 layout of a ``llvm.structured.alloca`` is completely opaque to the IR.
-Exact padding, size, and subtype offsets is target-dependent and may differ
-from the standard ``DataLayout``.
+Exact padding, size, alignment and subtype offsets is target-dependent and
+may differ from the standard ``DataLayout``.
 
 Arguments:
 """"""""""
