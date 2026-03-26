@@ -405,8 +405,8 @@ the screen-space y-coordinate.
   let VaryingMatDims = [];
 }
 
-// Returns a distance scalar between X and Y (scalar overloads).
-// Scalar distance is equivalent to abs(X - Y).
+// Returns a distance scalar between X and Y.
+// The distance between X and Y is length(X - Y).
 def hlsl_distance : HLSLBuiltin<"distance"> {
   let Doc = [{
 \fn K distance(T X, T Y)
@@ -414,22 +414,12 @@ def hlsl_distance : HLSLBuiltin<"distance"> {
 \param X The X input value.
 \param Y The Y input value.
 }];
-  let ParamNames = ["X", "Y"];
-  let Body = "return abs(X - Y);";
-  let Args = [Varying, Varying];
-  let ReturnType = Varying;
-  let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingScalar = 1;
-  let VaryingMatDims = [];
-}
-
-// Returns a distance scalar between X and Y (vector overloads).
-def hlsl_distance_vec : HLSLBuiltin<"distance"> {
-  let DetailFunc = "distance_vec_impl";
+  let DetailFunc = "distance_impl";
   let ParamNames = ["X", "Y"];
   let Args = [Varying, Varying];
   let ReturnType = VaryingElemType;
   let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingScalar = 1;
   let VaryingVecSizes = [2, 3, 4];
   let VaryingMatDims = [];
 }
@@ -565,8 +555,9 @@ This function uses the following formula: X * 2^Exp
   let VaryingMatDims = [];
 }
 
-// Returns the length of the specified floating-point vector (scalar overloads).
+// Returns the length of the specified floating-point vector.
 // Scalar length is equivalent to abs(X).
+// Vector length is equivalent to sqrt(dot(X, X)).
 def hlsl_length : HLSLBuiltin<"length"> {
   let Doc = [{
 \fn T length(T x)
@@ -575,22 +566,12 @@ def hlsl_length : HLSLBuiltin<"length"> {
 
 Length is based on the following formula: sqrt(x[0]^2 + x[1]^2 + ...).
 }];
-  let ParamNames = ["X"];
-  let Body = "return abs(X);";
-  let Args = [Varying];
-  let ReturnType = Varying;
-  let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingScalar = 1;
-  let VaryingMatDims = [];
-}
-
-// Returns the length of the specified floating-point vector (vector overloads).
-def hlsl_length_vec : HLSLBuiltin<"length"> {
-  let DetailFunc = "length_vec_impl";
+  let DetailFunc = "length_impl";
   let ParamNames = ["X"];
   let Args = [Varying];
   let ReturnType = VaryingElemType;
   let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingScalar = 1;
   let VaryingVecSizes = [2, 3, 4];
   let VaryingMatDims = [];
 }

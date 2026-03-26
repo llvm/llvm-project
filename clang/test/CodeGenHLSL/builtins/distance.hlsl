@@ -10,14 +10,14 @@
 // CHECK-SAME: half noundef nofpclass(nan inf) [[X:%.*]], half noundef nofpclass(nan inf) [[Y:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[SUB_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn half [[X]], [[Y]]
-// CHECK-NEXT:    [[ELT_ABS_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef nofpclass(nan inf) half @llvm.fabs.f16(half [[SUB_I]])
+// CHECK-NEXT:    [[ELT_ABS_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef nofpclass(nan inf) half @llvm.fabs.f16(half nofpclass(nan inf) [[SUB_I]])
 // CHECK-NEXT:    ret half [[ELT_ABS_I]]
 //
 // SPVCHECK-LABEL: define hidden spir_func noundef nofpclass(nan inf) half @_Z18test_distance_halfDhDh(
 // SPVCHECK-SAME: half noundef nofpclass(nan inf) [[X:%.*]], half noundef nofpclass(nan inf) [[Y:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // SPVCHECK-NEXT:  [[ENTRY:.*:]]
 // SPVCHECK-NEXT:    [[SUB_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn half [[X]], [[Y]]
-// SPVCHECK-NEXT:    [[ELT_ABS_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef nofpclass(nan inf) half @llvm.fabs.f16(half [[SUB_I]])
+// SPVCHECK-NEXT:    [[ELT_ABS_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef nofpclass(nan inf) half @llvm.fabs.f16(half nofpclass(nan inf) [[SUB_I]])
 // SPVCHECK-NEXT:    ret half [[ELT_ABS_I]]
 //
 half test_distance_half(half X, half Y) { return distance(X, Y); }
@@ -77,14 +77,14 @@ half test_distance_half4(half4 X, half4 Y) { return distance(X, Y); }
 // CHECK-SAME: float noundef nofpclass(nan inf) [[X:%.*]], float noundef nofpclass(nan inf) [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[SUB_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn float [[X]], [[Y]]
-// CHECK-NEXT:    [[ELT_ABS_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef nofpclass(nan inf) float @llvm.fabs.f32(float [[SUB_I]])
+// CHECK-NEXT:    [[ELT_ABS_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef nofpclass(nan inf) float @llvm.fabs.f32(float nofpclass(nan inf) [[SUB_I]])
 // CHECK-NEXT:    ret float [[ELT_ABS_I]]
 //
 // SPVCHECK-LABEL: define hidden spir_func noundef nofpclass(nan inf) float @_Z19test_distance_floatff(
 // SPVCHECK-SAME: float noundef nofpclass(nan inf) [[X:%.*]], float noundef nofpclass(nan inf) [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SPVCHECK-NEXT:  [[ENTRY:.*:]]
 // SPVCHECK-NEXT:    [[SUB_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn float [[X]], [[Y]]
-// SPVCHECK-NEXT:    [[ELT_ABS_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef nofpclass(nan inf) float @llvm.fabs.f32(float [[SUB_I]])
+// SPVCHECK-NEXT:    [[ELT_ABS_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef nofpclass(nan inf) float @llvm.fabs.f32(float nofpclass(nan inf) [[SUB_I]])
 // SPVCHECK-NEXT:    ret float [[ELT_ABS_I]]
 //
 float test_distance_float(float X, float Y) { return distance(X, Y); }
