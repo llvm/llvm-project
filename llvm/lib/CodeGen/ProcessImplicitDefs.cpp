@@ -102,22 +102,23 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
   }
 
   // This is a physreg implicit-def.
-  // Look for the first instruction to use or define an alias.
-  MachineBasicBlock::instr_iterator UserMI = MI->getIterator();
-  MachineBasicBlock::instr_iterator UserE = MI->getParent()->instr_end();
+  // Try to add undef flag to all uses.  If all uses are updated remove
+  // implicit-def.
+  MachineBasicBlock::instr_iterator SearchMI = MI->getIterator();
+  MachineBasicBlock::instr_iterator SearchE = MI->getParent()->instr_end();
   bool ImplicitDefIsDead = false;
-  for (++UserMI; UserMI != UserE; ++UserMI) {
+  for (++SearchMI; SearchMI != SearchE; ++SearchMI) {
     bool DefinesReg = false;
-    for (MachineOperand &MO : UserMI->operands()) {
+    for (MachineOperand &MO : SearchMI->operands()) {
       if (!MO.isReg())
         continue;
-      Register UserReg = MO.getReg();
-      if (!UserReg.isPhysical() || !TRI->regsOverlap(Reg, UserReg))
+      Register SearchReg = MO.getReg();
+      if (!SearchReg.isPhysical() || !TRI->regsOverlap(Reg, SearchReg))
         continue;
-      // UserMI uses or redefines Reg. Set <undef> flags on all uses.
-      if (!ImplicitDefIsDead && MO.isUse())
+      // SearchMI uses or redefines Reg. Set <undef> flags on all uses.
+      if (MO.isUse())
         MO.setIsUndef();
-      if (MO.isDef())
+      if (MO.isDef() && TRI->isSubRegisterEq(SearchReg, Reg))
         DefinesReg = true;
     }
     if (DefinesReg) {
@@ -129,7 +130,8 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
   // If we have added an undef flag to all uses (i.e. we have found a redefining
   // MI or there are no successors), we can erase the IMPLICIT_DEF.
   if (ImplicitDefIsDead || MI->getParent()->succ_empty()) {
-    LLVM_DEBUG(dbgs() << "Physreg user: " << *UserMI);
+    if (ImplicitDefIsDead)
+      LLVM_DEBUG(dbgs() << "Physreg def: " << *SearchMI);
     MI->eraseFromParent();
     return;
   }
