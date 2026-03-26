@@ -2960,7 +2960,8 @@ static void populateStmtsForFindingGadgets(SmallVector<const Stmt *> &Stmts,
   if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
     AddStmt(FD->getBody());
     for (const auto *PD : FD->parameters())
-      AddStmt(PD->getDefaultArg());
+      if (PD->hasDefaultArg() && !PD->hasUninstantiatedDefaultArg())
+        AddStmt(PD->getDefaultArg());
     if (const auto *CtorD = dyn_cast<CXXConstructorDecl>(FD))
       llvm::append_range(
           Stmts, llvm::map_range(CtorD->inits(),
