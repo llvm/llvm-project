@@ -6841,6 +6841,18 @@ the configuration (without a prefix: ``Auto``).
      true:                                  false:
      class Foo : Bar {}             vs.     class Foo: Bar {}
 
+.. _SpaceBeforeEnumColon:
+
+**_SpaceBeforeEnumColon** (``Boolean``) :versionbadge:`clang-format 24` :ref:`¶ <_SpaceBeforeEnumColon>`
+  If ``false``, spaces will be removed before the colon specifying the
+  underlying type of an enum.
+
+  .. code-block:: c++
+
+     true:                                  false:
+     enum Foo : int {}           vs.        enum Foo: int {}
+     enum class Bar : unsigned {}           enum class Bar: unsigned {}
+
 .. _SpaceBeforeJsonColon:
 
 **SpaceBeforeJsonColon** (``Boolean``) :versionbadge:`clang-format 17` :ref:`¶ <SpaceBeforeJsonColon>`

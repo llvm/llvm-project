@@ -4342,7 +4342,7 @@ TEST_F(TokenAnnotatorTest, UserDefinedLiteral) {
 TEST_F(TokenAnnotatorTest, EnumColonInTypedef) {
   auto Tokens = annotate("typedef enum : int {} foo;");
   ASSERT_EQ(Tokens.size(), 9u) << Tokens;
-  EXPECT_TOKEN(Tokens[2], tok::colon, TT_Unknown); // Not TT_InheritanceColon.
+  EXPECT_TOKEN(Tokens[2], tok::colon, TT_EnumUnderlyingTypeColon);
 }
 
 TEST_F(TokenAnnotatorTest, BitFieldColon) {

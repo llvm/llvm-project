@@ -18632,6 +18632,64 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeColon) {
                InvertedSpaceStyle);
 }
 
+TEST_F(FormatTest, SpaceBeforeEnumColon) {
+  FormatStyle Style = getLLVMStyle();
+
+  // Default: SpaceBeforeEnumColon is true
+  EXPECT_TRUE(Style.SpaceBeforeEnumColon);
+  verifyFormat("enum Foo : int {};", Style);
+  verifyFormat("enum class Foo : int {};", Style);
+  verifyFormat("enum struct Foo : int {};", Style);
+  verifyFormat("enum Foo : int;", Style);
+  verifyFormat("enum Foo : unsigned int { A, B, C };", Style);
+  verifyFormat("enum class Foo : unsigned char { A, B, C };", Style);
+
+  // SpaceBeforeEnumColon set to false
+  Style.SpaceBeforeEnumColon = false;
+  verifyFormat("enum Foo: int {};", Style);
+  verifyFormat("enum class Foo: int {};", Style);
+  verifyFormat("enum struct Foo: int {};", Style);
+  verifyFormat("enum Foo: int;", Style);
+  verifyFormat("enum Foo: unsigned int { A, B, C };", Style);
+  verifyFormat("enum class Foo: unsigned char { A, B, C };", Style);
+
+  // Ensure typedef enum also works
+  verifyFormat("typedef enum Foo: int {} Foo_t;", Style);
+
+  // Ensure other colons are not affected
+  verifyFormat("class Foo : Bar {};", Style);
+  Style.SpaceBeforeInheritanceColon = true;
+  verifyFormat("class Foo : Bar {};", Style);
+
+  // Ensure ternary and case colons are not affected
+  verifyFormat("int x = a ? b : c;", Style);
+  verifyFormat("switch (x) {\n"
+               "case 1:\n"
+               "default:\n"
+               "}",
+               Style);
+
+  // Ensure ctor initializer colons are not affected
+  Style.SpaceBeforeCtorInitializerColon = true;
+  verifyFormat("Foo::Foo() : a(a) {}", Style);
+
+  // Ensure range-based for colons are not affected
+  Style.SpaceBeforeRangeBasedForLoopColon = true;
+  verifyFormat("for (auto a : b) {\n}", Style);
+
+  // Combined: all colon spaces off
+  FormatStyle NoSpaceStyle = getLLVMStyle();
+  NoSpaceStyle.SpaceBeforeEnumColon = false;
+  NoSpaceStyle.SpaceBeforeCtorInitializerColon = false;
+  NoSpaceStyle.SpaceBeforeInheritanceColon = false;
+  NoSpaceStyle.SpaceBeforeRangeBasedForLoopColon = false;
+  verifyFormat("enum Foo: int {};", NoSpaceStyle);
+  verifyFormat("class Foo: Bar {};", NoSpaceStyle);
+  verifyFormat("Foo::Foo(): foo(1) {}", NoSpaceStyle);
+  verifyFormat("for (auto a: b) {\n}", NoSpaceStyle);
+  verifyFormat("int x = a ? b : c;", NoSpaceStyle);
+}
+
 TEST_F(FormatTest, ConfigurableSpaceAroundPointerQualifiers) {
   FormatStyle Style = getLLVMStyle();
 

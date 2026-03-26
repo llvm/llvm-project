@@ -1347,6 +1347,27 @@ private:
         return false;
       // Goto labels and case labels are already identified in
       // UnwrappedLineParser.
+      // Identify colons specifying the underlying type of an enum.
+      // e.g. enum Foo : int { ... }
+      //      enum class Bar : unsigned { ... }
+      //      enum Qux : short;
+      if (Style.isCpp() && (Line.First->is(tok::kw_enum) ||
+          Line.startsWith(tok::kw_typedef, tok::kw_enum))) {
+        // Make sure we're not inside the enum body (past the opening brace).
+        bool InsideBraces = false;
+        for (auto *T = Tok->Previous; T; T = T->Previous) {
+          if (T->is(tok::l_brace)) {
+            InsideBraces = true;
+            break;
+          }
+          if (T->is(tok::r_brace))
+            break;
+        }
+        if (!InsideBraces) {
+          Tok->setType(TT_EnumUnderlyingTypeColon);
+          break;
+        }
+      }
       if (Tok->isTypeFinalized())
         break;
       // Colons from ?: are handled in parseConditional().
@@ -5550,6 +5571,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   if (Right.is(TT_CtorInitializerColon))
     return Style.SpaceBeforeCtorInitializerColon;
   if (Right.is(TT_InheritanceColon) && !Style.SpaceBeforeInheritanceColon)
+    return false;
+  if (Right.is(TT_EnumUnderlyingTypeColon) && !Style.SpaceBeforeEnumColon)
     return false;
   if (Right.is(TT_RangeBasedForLoopColon) &&
       !Style.SpaceBeforeRangeBasedForLoopColon) {

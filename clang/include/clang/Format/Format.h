@@ -5129,6 +5129,18 @@ struct FormatStyle {
   /// \version 7
   bool SpaceBeforeInheritanceColon;
 
+  /// If ``false``, spaces will be removed before the colon specifying the
+  /// underlying type of an enum.
+  /// \code
+  ///   true:                                  false:
+  ///   enum Foo : int {}           vs.        enum Foo: int {}
+  ///   enum class Bar : unsigned {}           enum class Bar: unsigned {}
+  ///   enum struct Baz : char {};             enum struct Baz: char {};
+  ///   enum Qux : short;                      enum Qux: short;
+  /// \endcode
+  /// \version 24
+  bool SpaceBeforeEnumColon;
+
   /// If ``true``, a space will be added before a JSON colon. For other
   /// languages, e.g. JavaScript, use ``SpacesInContainerLiterals`` instead.
   /// \code
@@ -6077,6 +6089,7 @@ struct FormatStyle {
            SpaceBeforeCtorInitializerColon ==
                R.SpaceBeforeCtorInitializerColon &&
            SpaceBeforeInheritanceColon == R.SpaceBeforeInheritanceColon &&
+           SpaceBeforeEnumColon == R.SpaceBeforeEnumColon &&
            SpaceBeforeJsonColon == R.SpaceBeforeJsonColon &&
            SpaceBeforeParens == R.SpaceBeforeParens &&
            SpaceBeforeParensOptions == R.SpaceBeforeParensOptions &&
