@@ -1246,12 +1246,11 @@ define i64 @wsub_from_neg_const(i32 %a) nounwind {
 define zeroext i1 @smulo_i32(i32 %v1, i32 %v2, ptr %res) {
 ; CHECK-LABEL: smulo_i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mulh a3, a0, a1
-; CHECK-NEXT:    mul a1, a0, a1
-; CHECK-NEXT:    srai a0, a1, 31
-; CHECK-NEXT:    xor a0, a3, a0
+; CHECK-NEXT:    wmul a4, a0, a1
+; CHECK-NEXT:    srai a0, a4, 31
+; CHECK-NEXT:    xor a0, a5, a0
 ; CHECK-NEXT:    snez a0, a0
-; CHECK-NEXT:    sw a1, 0(a2)
+; CHECK-NEXT:    sw a4, 0(a2)
 ; CHECK-NEXT:    ret
 entry:
   %t = call {i32, i1} @llvm.smul.with.overflow.i32(i32 %v1, i32 %v2)
@@ -1264,11 +1263,9 @@ entry:
 define zeroext i1 @umulo_i32(i32 %v1, i32 %v2, ptr %res) {
 ; CHECK-LABEL: umulo_i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mulhu a3, a0, a1
-; CHECK-NEXT:    snez a3, a3
-; CHECK-NEXT:    mul a0, a0, a1
-; CHECK-NEXT:    sw a0, 0(a2)
-; CHECK-NEXT:    mv a0, a3
+; CHECK-NEXT:    wmulu a4, a0, a1
+; CHECK-NEXT:    snez a0, a5
+; CHECK-NEXT:    sw a4, 0(a2)
 ; CHECK-NEXT:    ret
 entry:
   %t = call {i32, i1} @llvm.umul.with.overflow.i32(i32 %v1, i32 %v2)
