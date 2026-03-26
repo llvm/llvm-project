@@ -1268,15 +1268,20 @@ gpu.func
   // CHECK-NOT: xegpu.convert_layout
   // CHECK: gpu.yield %{{.*}} : vector<16xf32>
   gpu.func @convert_layout_removed_when_compatible(%laneid: index){
-    %r = gpu.warp_execute_on_lane_0(%laneid)[16] -> (vector<1xf32>) {
+    %r:2 = gpu.warp_execute_on_lane_0(%laneid)[16] -> (vector<1xf32>, f32) {
       %0 = "some_op"() : () -> vector<16xf32>
+      %2 = "some_op"() : () -> f32
       %1 = xegpu.convert_layout %0
         <{input_layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
         target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>}> 
         : vector<16xf32>
-      gpu.yield %1 : vector<16xf32>
+      %3 = xegpu.convert_layout %2
+        <{input_layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
+        target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>}> 
+        : f32
+      gpu.yield %1, %3 : vector<16xf32>, f32
     }
-    "some_user_op"(%r) : (vector<1xf32>) -> ()
+    "some_user_op"(%r#0, %r#1) : (vector<1xf32>, f32) -> ()
     gpu.return
   }
 }
