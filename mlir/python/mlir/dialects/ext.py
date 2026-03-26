@@ -165,7 +165,7 @@ def attribute(
     *,
     default_factory: Optional[Callable[[], Any]] = None,
     kw_only: bool = False,
-) -> Any:
+) -> ir.Attribute:
     """
     A field specifier for attribute definitions.
     """
