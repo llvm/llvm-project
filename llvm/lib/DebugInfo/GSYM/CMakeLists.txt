@@ -4,8 +4,10 @@ add_llvm_component_library(LLVMDebugInfoGSYM
   FileWriter.cpp
   FunctionInfo.cpp
   GsymCreator.cpp
+  GsymCreatorV2.cpp
   GsymContext.cpp
   GsymReader.cpp
+  GsymReaderV2.cpp
   InlineInfo.cpp
   LineTable.cpp
   LookupResult.cpp
