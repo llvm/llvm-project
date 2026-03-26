@@ -692,21 +692,18 @@ void HexagonToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   if (DriverArgs.hasArg(options::OPT_nostdinc))
     return;
 
-  const bool IsELF = !getTriple().isMusl() && !getTriple().isOSLinux();
+  const Driver &D = getDriver();
+  const bool UseBuiltins = !DriverArgs.hasArg(options::OPT_nobuiltininc);
+  const bool HasSysRoot = !D.SysRoot.empty();
   const bool IsLinuxMusl = getTriple().isMusl() && getTriple().isOSLinux();
 
-  const Driver &D = getDriver();
-  SmallString<128> ResourceDirInclude(D.ResourceDir);
-  if (!IsELF) {
+  if (UseBuiltins) {
+    SmallString<128> ResourceDirInclude(D.ResourceDir);
     llvm::sys::path::append(ResourceDirInclude, "include");
-    if (!DriverArgs.hasArg(options::OPT_nobuiltininc) &&
-        (!IsLinuxMusl || DriverArgs.hasArg(options::OPT_nostdlibinc)))
-      addSystemInclude(DriverArgs, CC1Args, ResourceDirInclude);
+    addSystemInclude(DriverArgs, CC1Args, ResourceDirInclude);
   }
   if (DriverArgs.hasArg(options::OPT_nostdlibinc))
     return;
-
-  const bool HasSysRoot = !D.SysRoot.empty();
   if (HasSysRoot) {
     SmallString<128> P(D.SysRoot);
     if (IsLinuxMusl)
@@ -719,15 +716,11 @@ void HexagonToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
     addSystemInclude(DriverArgs, CC1Args, P + "/usr/local/include");
     // TOOL_INCLUDE_DIR
     AddMultilibIncludeArgs(DriverArgs, CC1Args);
+  } else {
+    std::string TargetDir = getHexagonTargetDir(D.Dir, D.PrefixDirs);
+    addExternCSystemInclude(DriverArgs, CC1Args,
+                            TargetDir + "/hexagon/include");
   }
-
-  if (!DriverArgs.hasArg(options::OPT_nobuiltininc) && IsLinuxMusl)
-    addSystemInclude(DriverArgs, CC1Args, ResourceDirInclude);
-
-  if (HasSysRoot)
-    return;
-  std::string TargetDir = getHexagonTargetDir(D.Dir, D.PrefixDirs);
-  addExternCSystemInclude(DriverArgs, CC1Args, TargetDir + "/hexagon/include");
 }
 
 void HexagonToolChain::addLibCxxIncludePaths(
