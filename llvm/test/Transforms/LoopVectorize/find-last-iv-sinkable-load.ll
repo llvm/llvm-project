@@ -635,7 +635,9 @@ define i64 @findlast_load_cond_store_other_block(ptr noalias %a, ptr %b, i64 %n)
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP8]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    store i64 0, ptr [[TMP3]], align 8
+; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP10]]
+; CHECK-NEXT:    store i64 0, ptr [[TMP11]], align 8
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[TMP8]], i32 1
