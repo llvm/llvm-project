@@ -783,8 +783,9 @@ static BitVector &lookupOrCreateBitVector(MappingTy &mapping, KeyTy key,
 ///   ...
 /// }
 /// There are two sets: {{%r0, %arg0}, {%r1, %arg1}}.
-static llvm::EquivalenceClasses<Value> computeTiedSuccessorInputs(
-    const RegionBranchSuccessorMapping &operandToInputs) {
+static llvm::EquivalenceClasses<Value>
+computeTiedSuccessorInputs(const RegionBranchSuccessorMapping &operandToInputs,
+                           RegionBranchOpInterface branchOp) {
   llvm::EquivalenceClasses<Value> tiedSuccessorInputs;
   for (const auto &[operand, inputs] : operandToInputs) {
     assert(!inputs.empty() && "expected non-empty inputs");
@@ -794,6 +795,75 @@ static llvm::EquivalenceClasses<Value> computeTiedSuccessorInputs(
       // As we explore more successor operand to successor input mappings,
       // existing sets may get merged.
       tiedSuccessorInputs.unionSets(firstInput, nextInput);
+    }
+  }
+
+  // Also tie region entry block args with op results at the same slot index
+  // when the back-edge has been optimized away for a single-iteration loop.
+  //
+  // In the general case (e.g., scf.for with tripCount > 1), a single yield
+  // operand maps to BOTH the body block arg (back-edge) AND the result (exit),
+  // so they end up in the same equivalence class via the loop above. When a
+  // trip-count optimization removes the back-edge (e.g., scf.for with
+  // tripCount == 1), the yield only maps to the result, and the body block arg
+  // is only mapped from the init operand — leaving them in separate classes.
+  // Without the explicit tying below, RemoveDeadRegionBranchOpSuccessorInputs
+  // could remove a body block arg and its init operand independently from the
+  // corresponding result, leaving the op structurally invalid.
+  //
+  // Detection: if a region's terminator exits ONLY to parent (single successor,
+  // indicating a trip-count optimization removed the back-edge), but the parent
+  // CAN enter the region (so the region is reachable), and the region inputs
+  // and parent inputs have matching counts, then they are positionally tied.
+  //
+  // Crucially, this does NOT apply to scf.while's before-region, whose
+  // terminator (scf.condition) always exits to both the after-region AND parent
+  // simultaneously. That case has two successors and is correctly excluded.
+  ValueRange parentInputs =
+      branchOp.getSuccessorInputs(RegionSuccessor::parent());
+  if (!parentInputs.empty()) {
+    // Collect regions that parent can enter.
+    SmallVector<RegionSuccessor> parentSuccessors;
+    branchOp.getSuccessorRegions(RegionBranchPoint::parent(), parentSuccessors);
+
+    for (Region &region : branchOp.getOperation()->getRegions()) {
+      // Check that the region is reachable from the parent.
+      bool parentCanEnter =
+          llvm::any_of(parentSuccessors, [&](const RegionSuccessor &s) {
+            return !s.isParent() && s.getSuccessor() == &region;
+          });
+      if (!parentCanEnter)
+        continue;
+
+      // Get the entry block's terminator, if it implements
+      // RegionBranchTerminatorOpInterface (otherwise we can't query
+      // successors).
+      if (region.empty() || region.front().empty())
+        continue;
+      auto terminator =
+          dyn_cast<RegionBranchTerminatorOpInterface>(region.front().back());
+      if (!terminator)
+        continue;
+
+      // Check whether the terminator exits ONLY to parent (i.e., the back-edge
+      // has been removed by a single-iteration optimization).
+      SmallVector<RegionSuccessor> terminatorSuccessors;
+      branchOp.getSuccessorRegions(RegionBranchPoint(terminator),
+                                   terminatorSuccessors);
+      if (terminatorSuccessors.size() != 1 ||
+          !terminatorSuccessors.front().isParent())
+        continue;
+
+      // The terminator exits only to parent, while the region is still
+      // reachable from parent. Tie the region inputs with the parent inputs.
+      ValueRange regionInputs =
+          branchOp.getSuccessorInputs(RegionSuccessor(&region));
+      if (regionInputs.size() != parentInputs.size())
+        continue;
+
+      for (auto [regionInput, parentInput] :
+           llvm::zip(regionInputs, parentInputs))
+        tiedSuccessorInputs.unionSets(regionInput, parentInput);
     }
   }
   return tiedSuccessorInputs;
@@ -855,7 +925,7 @@ struct RemoveDeadRegionBranchOpSuccessorInputs : public RewritePattern {
     RegionBranchSuccessorMapping operandToInputs;
     regionBranchOp.getSuccessorOperandInputMapping(operandToInputs);
     llvm::EquivalenceClasses<Value> tiedSuccessorInputs =
-        computeTiedSuccessorInputs(operandToInputs);
+        computeTiedSuccessorInputs(operandToInputs, regionBranchOp);
 
     // Determine which values to remove and group them by block and operation.
     SmallVector<Value> valuesToRemove;
