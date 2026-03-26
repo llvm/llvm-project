@@ -117,7 +117,7 @@ PlatformSP PlatformWasm::CreateInstance(bool force, const ArchSpec *arch) {
 }
 
 llvm::Expected<uint16_t> PlatformWasm::FindFreeTCPPort() {
-  TCPSocket sock(true);
+  TCPSocket sock(/*should_close=*/true);
   Status status = sock.Listen("localhost:0", /*backlog=*/5);
   if (status.Fail())
     return status.takeError();
