@@ -219,4 +219,3 @@ __detail::enable_if_t<__detail::is_arithmetic<T>::Value, vector<T, 4>> select(
 
 } // namespace hlsl
 #endif //_HLSL_HLSL_ALIAS_INTRINSICS_H_
-
