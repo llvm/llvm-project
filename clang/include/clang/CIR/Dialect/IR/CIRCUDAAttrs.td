@@ -32,7 +32,7 @@ def CIR_CUDAKernelNameAttr : CIR_Attr<"CUDAKernelName", "cu.kernel_name"> {
     respective function runtime registration on the host.
   }];
 
-  let parameters = (ins "std::string":$kernel_name);
+  let parameters = (ins "mlir::StringAttr":$kernel_name);
   let assemblyFormat = "`<` $kernel_name `>`";
   let canHaveIllegalCXXABIType = 0;
 }

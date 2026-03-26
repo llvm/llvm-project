@@ -1727,9 +1727,10 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
     else if (auto globalDtor = fnOp.getGlobalDtorPriority())
       globalDtorList.emplace_back(fnOp.getName(), globalDtor.value());
 
-    if (mlir::Attribute attr = fnOp->getAttr(cir::CUDAKernelNameAttr::getMnemonic())) {
+    if (mlir::Attribute attr =
+            fnOp->getAttr(cir::CUDAKernelNameAttr::getMnemonic())) {
       auto kernelNameAttr = dyn_cast<CUDAKernelNameAttr>(attr);
-      std::string kernelName = kernelNameAttr.getKernelName();
+      llvm::StringRef kernelName = kernelNameAttr.getKernelName();
       cudaKernelMap[kernelName] = fnOp;
     }
   } else if (auto threeWayCmp = dyn_cast<cir::CmpThreeWayOp>(op)) {
@@ -1785,7 +1786,7 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
   mlir::Attribute cudaBinaryHandleAttr =
       mlirModule->getAttr(CIRDialect::getCUDABinaryHandleAttrName());
   if (!cudaBinaryHandleAttr) {
-    if (astCtx->getLangOpts().HIP)
+    if (isHIP)
       assert(!cir::MissingFeatures::hipModuleCtor());
     return;
   }
