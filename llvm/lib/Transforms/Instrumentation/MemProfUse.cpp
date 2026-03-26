@@ -686,8 +686,7 @@ static void dumpInlineCallStack(Instruction &I, CallBase *CI,
     std::string Msg;
     raw_string_ostream OS(Msg);
     OS << "inline call stack: " << CallStack;
-    ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemProfUse", CI)
-             << OS.str());
+    ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemProfUse", CI) << OS.str());
   }
 }
 
