@@ -92,7 +92,9 @@ static uint64_t getSymVA(Ctx &ctx, const Symbol &sym, int64_t addend) {
       offset += addend;
       if (auto *ms = dyn_cast<MergeInputSection>(isec);
           ms && offset >= ms->content().size()) {
-        Err(ctx) << ms << ": offset is outside the section";
+        if (offset > ms->content().size())
+          Err(ctx) << ms << ": offset 0x" << Twine::utohexstr(offset)
+                   << " is outside the section";
         return 0;
       }
     }
