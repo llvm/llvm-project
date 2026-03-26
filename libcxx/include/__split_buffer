@@ -191,9 +191,10 @@ public:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
   __swap_layouts(pointer& __begin, pointer& __end, pointer& __back_capacity) {
-    std::swap(__begin_, __begin);
-    std::swap(__end_, __end);
-    std::swap(__back_cap_, __back_capacity);
+    using std::swap;
+    swap(__begin_, __begin);
+    swap(__end_, __end);
+    swap(__back_cap_, __back_capacity);
   }
 
   /// Relocates the objects in the range `[__first, __last)` to the front of the buffer, then swaps
@@ -397,9 +398,10 @@ public:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
   __swap_layouts(pointer& __begin, size_type& __size, size_type& __capacity) {
-    std::swap(__begin_, __begin);
-    std::swap(__size_, __size);
-    std::swap(__cap_, __capacity);
+    using std::swap;
+    swap(__begin_, __begin);
+    swap(__size_, __size);
+    swap(__cap_, __capacity);
   }
 
   /// Relocates the objects in the range `[__first, __first + __n)` to the front of the buffer, then

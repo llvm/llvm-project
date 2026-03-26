@@ -92,6 +92,15 @@ Changes to LLVM infrastructure
   successor order. This can cause subtle breakage when using ``getOperand`` or
   ``setOperand`` to access successors.
 
+* The ``llvm::sys::fs`` link creation API has been refactored:
+
+  * ``create_link`` now tries to create a symbolic link first, falling back to a
+    hard link if that fails (previously it created a symlink on Unix and a hard
+    link on Windows).
+  * Added ``create_symlink``, which always creates a symbolic link. On windows
+    this may fail if symlink permissions are not available.
+  * Added ``readlink``, which reads the target of a symbolic link.
+
 Changes to building LLVM
 ------------------------
 
@@ -158,7 +167,7 @@ Changes to the RISC-V Backend
 
 * `llvm-objdump` now has support for `--symbolize-operands` with RISC-V.
 * `-mcpu=spacemit-x100` was added.
-* Change P extension version to match the 019 draft specification. Encoded in `-march` as `0p19`.
+* Change P extension version to match the 0.21 draft specification.
 * Mnemonics for MOP/HINT-based instructions (`lpad`, `pause`, `ntl.*`, `c.ntl.*`,
   `sspush`, `sspopchk`, `ssrdp`, `c.sspush`, `c.sspopchk`) are now always
   available in the assembler and disassembler without requiring their respective
@@ -172,6 +181,7 @@ Changes to the RISC-V Backend
 * Adds experimental assembler support for the 'Zvzip` (RISC-V Vector
   Reordering Structured Data) extension.
 * `-mcpu=sifive-x160` and `-mcpu=sifive-x180` were added.
+* Support for the experimental `XRivosVisni` vendor extension has been removed.
 
 Changes to the WebAssembly Backend
 ----------------------------------
