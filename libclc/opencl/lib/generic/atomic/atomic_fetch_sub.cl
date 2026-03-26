@@ -18,9 +18,15 @@
 #define __CLC_BODY "atomic_def.inc"
 #include "clc/math/gentype.inc"
 
-#ifdef __opencl_c_atomic_scope_device
+// If the device subress space is 64-bits, the data types atomic_intptr_t,
+// atomic_uintptr_t, atomic_size_t and atomic_ptrdiff_t are supported if the
+// cl_khr_int64_base_atomics and cl_khr_int64_extended_atomics extensions are
+// supported and have been enabled.
+#if __SIZEOF_POINTER__ < 8 || (defined(cl_khr_int64_base_atomics) &&           \
+                               defined(cl_khr_int64_extended_atomics))
 
-#ifdef __opencl_c_atomic_order_seq_cst
+#if defined(__opencl_c_atomic_scope_device) &&                                 \
+    defined(__opencl_c_atomic_order_seq_cst)
 
 _CLC_DEF _CLC_OVERLOAD uintptr_t
 atomic_fetch_sub(volatile __local atomic_uintptr_t *p, ptrdiff_t v) {
@@ -41,7 +47,10 @@ _CLC_DEF _CLC_OVERLOAD uintptr_t atomic_fetch_sub(volatile atomic_uintptr_t *p,
                                    __MEMORY_SCOPE_DEVICE);
 }
 #endif // _CLC_GENERIC_AS_SUPPORTED
-#endif // __opencl_c_atomic_order_seq_cst
+#endif // defined(__opencl_c_atomic_scope_device) &&
+       // defined(__opencl_c_atomic_order_seq_cst)
+
+#ifdef __opencl_c_atomic_scope_device
 
 _CLC_DEF _CLC_OVERLOAD uintptr_t atomic_fetch_sub(
     volatile __local atomic_uintptr_t *p, ptrdiff_t v, memory_order order) {
@@ -49,17 +58,27 @@ _CLC_DEF _CLC_OVERLOAD uintptr_t atomic_fetch_sub(
                                    __MEMORY_SCOPE_DEVICE);
 }
 
+_CLC_DEF _CLC_OVERLOAD uintptr_t atomic_fetch_sub(
+    volatile __global atomic_uintptr_t *p, ptrdiff_t v, memory_order order) {
+  return __scoped_atomic_fetch_sub((volatile __global uintptr_t *)p, v, order,
+                                   __MEMORY_SCOPE_DEVICE);
+}
+
+#if _CLC_GENERIC_AS_SUPPORTED
+_CLC_DEF _CLC_OVERLOAD uintptr_t atomic_fetch_sub(volatile atomic_uintptr_t *p,
+                                                  ptrdiff_t v,
+                                                  memory_order order) {
+  return __scoped_atomic_fetch_sub((volatile uintptr_t *)p, v, order,
+                                   __MEMORY_SCOPE_DEVICE);
+}
+#endif // _CLC_GENERIC_AS_SUPPORTED
+#endif // __opencl_c_atomic_scope_device
+
 _CLC_DEF _CLC_OVERLOAD uintptr_t
 atomic_fetch_sub(volatile __local atomic_uintptr_t *p, ptrdiff_t v,
                  memory_order order, memory_scope scope) {
   return __scoped_atomic_fetch_sub((volatile __local uintptr_t *)p, v, order,
                                    __opencl_get_clang_memory_scope(scope));
-}
-
-_CLC_DEF _CLC_OVERLOAD uintptr_t atomic_fetch_sub(
-    volatile __global atomic_uintptr_t *p, ptrdiff_t v, memory_order order) {
-  return __scoped_atomic_fetch_sub((volatile __global uintptr_t *)p, v, order,
-                                   __MEMORY_SCOPE_DEVICE);
 }
 
 _CLC_DEF _CLC_OVERLOAD uintptr_t
@@ -70,12 +89,6 @@ atomic_fetch_sub(volatile __global atomic_uintptr_t *p, ptrdiff_t v,
 }
 
 #if _CLC_GENERIC_AS_SUPPORTED
-_CLC_DEF _CLC_OVERLOAD uintptr_t atomic_fetch_sub(volatile atomic_uintptr_t *p,
-                                                  ptrdiff_t v,
-                                                  memory_order order) {
-  return __scoped_atomic_fetch_sub((volatile uintptr_t *)p, v, order,
-                                   __MEMORY_SCOPE_DEVICE);
-}
 
 _CLC_DEF _CLC_OVERLOAD uintptr_t atomic_fetch_sub(volatile atomic_uintptr_t *p,
                                                   ptrdiff_t v,
@@ -86,4 +99,6 @@ _CLC_DEF _CLC_OVERLOAD uintptr_t atomic_fetch_sub(volatile atomic_uintptr_t *p,
 }
 
 #endif // _CLC_GENERIC_AS_SUPPORTED
-#endif // __opencl_c_atomic_scope_device
+
+#endif // __SIZEOF_POINTER__ < 8 || (defined(cl_khr_int64_base_atomics) &&
+       // defined(cl_khr_int64_extended_atomics))
