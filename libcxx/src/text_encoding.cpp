@@ -255,7 +255,7 @@ _LIBCPP_HIDDEN static std::text_encoding __get_env_encoding() { return __get_win
 // than the ones checked for below.
 _LIBCPP_HIDDEN static std::text_encoding __get_locale_encoding(const char* __name) {
   string_view __sv(__name);
-  if (__sv == "" || __sv == '*' || __sv == "C" || __sv == "POSIX" || __sv.contains("UTF-8")) {
+  if (__sv == "" || __sv == "*" || __sv == "C" || __sv == "POSIX" || __sv.contains("UTF-8")) {
     return std::text_encoding(std::text_encoding::id::UTF8);
   }
 
