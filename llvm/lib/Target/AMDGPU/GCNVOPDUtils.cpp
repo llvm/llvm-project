@@ -34,6 +34,36 @@ using namespace llvm;
 
 #define DEBUG_TYPE "gcn-vopd-utils"
 
+// Check if MI is a VOP3P instruction with operands that satisfy the constraints
+// for mapping it to a VOP2/VOPD opcode: no modifiers, no clamp, src1 and src2
+// are registers (src0 can be register or literal), and src2 is same as dst.
+static bool canMapVOP3PToVOPD(const MachineInstr &MI) {
+  unsigned Opc = MI.getOpcode();
+  if (Opc != AMDGPU::V_DOT2_F32_F16 && Opc != AMDGPU::V_DOT2_F32_BF16)
+    return false;
+  // src0 can be register or literal
+  int16_t Src0ModsIdx = getNamedOperandIdx(Opc, AMDGPU::OpName::src0_modifiers);
+  if (MI.getOperand(Src0ModsIdx).getImm() != SISrcMods::OP_SEL_1)
+    return false;
+  int16_t Src1ModsIdx = getNamedOperandIdx(Opc, AMDGPU::OpName::src1_modifiers);
+  if (MI.getOperand(Src1ModsIdx).getImm() != SISrcMods::OP_SEL_1)
+    return false;
+  int16_t Src1Idx = getNamedOperandIdx(Opc, AMDGPU::OpName::src1);
+  if (!MI.getOperand(Src1Idx).isReg())
+    return false;
+  int16_t Src2ModsIdx = getNamedOperandIdx(Opc, AMDGPU::OpName::src2_modifiers);
+  if (MI.getOperand(Src2ModsIdx).getImm() != SISrcMods::OP_SEL_1)
+    return false;
+  int16_t Src2Idx = getNamedOperandIdx(Opc, AMDGPU::OpName::src2);
+  if (!MI.getOperand(Src2Idx).isReg())
+    return false;
+  int16_t ClampIdx = getNamedOperandIdx(Opc, AMDGPU::OpName::clamp);
+  if (MI.getOperand(ClampIdx).getImm() != 0)
+    return false;
+  int16_t VdstIdx = getNamedOperandIdx(Opc, AMDGPU::OpName::vdst);
+  return MI.getOperand(VdstIdx).getReg() == MI.getOperand(Src2Idx).getReg();
+}
+
 bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
                                    const MachineInstr &MIX,
                                    const MachineInstr &MIY, bool IsVOPD3) {
@@ -44,7 +74,8 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
 
   if (IsVOPD3 && !ST.hasVOPD3())
     return false;
-  if (!IsVOPD3 && (TII.isVOP3(MIX) || TII.isVOP3(MIY)))
+  if (!IsVOPD3 && ((TII.isVOP3(MIX) && !canMapVOP3PToVOPD(MIX)) ||
+                   (TII.isVOP3(MIY) && !canMapVOP3PToVOPD(MIY))))
     return false;
   if (TII.isDPP(MIX) || TII.isDPP(MIY))
     return false;
@@ -142,9 +173,9 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
   if ((UniqueLiterals.size() + UniqueScalarRegs.size()) > 2)
     return false;
 
-  // On GFX12+ if both OpX and OpY are V_MOV_B32 then OPY uses SRC2
+  // On GFX1170+ if both OpX and OpY are V_MOV_B32 then OPY uses SRC2
   // source-cache.
-  bool SkipSrc = ST.getGeneration() >= AMDGPUSubtarget::GFX12 &&
+  bool SkipSrc = (ST.hasGFX11_7Insts() || ST.hasGFX12Insts()) &&
                  MIX.getOpcode() == AMDGPU::V_MOV_B32_e32 &&
                  MIY.getOpcode() == AMDGPU::V_MOV_B32_e32;
   bool AllowSameVGPR = ST.hasGFX1250Insts();

@@ -212,11 +212,6 @@ ADCEChanged AggressiveDeadCodeElimination::performDeadCodeElimination() {
   return removeDeadInstructions();
 }
 
-static bool isUnconditionalBranch(Instruction *Term) {
-  auto *BR = dyn_cast<BranchInst>(Term);
-  return BR && BR->isUnconditional();
-}
-
 void AggressiveDeadCodeElimination::initialize() {
   auto NumBlocks = F.size();
 
@@ -232,7 +227,7 @@ void AggressiveDeadCodeElimination::initialize() {
     auto &Info = BlockInfo[&BB];
     Info.BB = &BB;
     Info.Terminator = BB.getTerminator();
-    Info.UnconditionalBranch = isUnconditionalBranch(Info.Terminator);
+    Info.UnconditionalBranch = isa<UncondBrInst>(Info.Terminator);
   }
 
   // Initialize instruction map and set pointers to block info.
@@ -339,7 +334,7 @@ bool AggressiveDeadCodeElimination::isAlwaysLive(Instruction &I) {
   }
   if (!I.isTerminator())
     return false;
-  if (RemoveControlFlowFlag && (isa<BranchInst>(I) || isa<SwitchInst>(I)))
+  if (RemoveControlFlowFlag && isa<UncondBrInst, CondBrInst, SwitchInst>(I))
     return false;
   return true;
 }
@@ -682,8 +677,8 @@ void AggressiveDeadCodeElimination::makeUnconditional(BasicBlock *BB,
     collectLiveScopes(*DL);
 
   // Just mark live an existing unconditional branch
-  if (isUnconditionalBranch(PredTerm)) {
-    PredTerm->setSuccessor(0, Target);
+  if (auto *BI = dyn_cast<UncondBrInst>(PredTerm)) {
+    BI->setSuccessor(Target);
     InstInfo[PredTerm].Live = true;
     return;
   }

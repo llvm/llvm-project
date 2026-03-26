@@ -109,6 +109,8 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
     return static_cast<const OMPDynGroupprivateClause *>(C);
   case OMPC_message:
     return static_cast<const OMPMessageClause *>(C);
+  case OMPC_transparent:
+    return static_cast<const OMPTransparentClause *>(C);
   case OMPC_default:
   case OMPC_proc_bind:
   case OMPC_safelen:
@@ -127,7 +129,6 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
   case OMPC_untied:
   case OMPC_mergeable:
   case OMPC_threadset:
-  case OMPC_transparent:
   case OMPC_threadprivate:
   case OMPC_groupprivate:
   case OMPC_flush:

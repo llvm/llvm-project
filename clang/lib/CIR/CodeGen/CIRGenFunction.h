@@ -122,6 +122,7 @@ public:
   const clang::Decl *curFuncDecl = nullptr;
   /// This is the inner-most code context, which includes blocks.
   const clang::Decl *curCodeDecl = nullptr;
+  const CIRGenFunctionInfo *curFnInfo = nullptr;
 
   /// The current function or global initializer that is generated code for.
   /// This is usually a cir::FuncOp, but it can also be a cir::GlobalOp for
@@ -185,6 +186,10 @@ public:
   /// Whether or not a Microsoft-style asm block has been processed within
   /// this fuction. These can potentially set the return value.
   bool sawAsmBlock = false;
+
+  /// In C++, whether we are code generating a thunk. This controls whether we
+  /// should emit cleanups.
+  bool curFuncIsThunk = false;
 
   mlir::Type convertTypeForMem(QualType t);
 
@@ -481,6 +486,8 @@ public:
     bool hasFunctionDecl() const {
       return llvm::isa_and_nonnull<clang::FunctionDecl>(calleeDecl);
     }
+
+    const clang::Decl *getDecl() const { return calleeDecl; }
 
     unsigned getNumParams() const {
       if (const auto *fd = llvm::dyn_cast<clang::FunctionDecl>(calleeDecl))
@@ -965,6 +972,16 @@ public:
                         ArrayRef<mlir::Value *> valuesToReload = {});
   void popCleanupBlock();
 
+  /// Deactivates the given cleanup block. The block cannot be reactivated. Pops
+  /// it if it's the top of the stack.
+  ///
+  /// \param DominatingIP - An instruction which is known to
+  ///   dominate the current IP (if set) and which lies along
+  ///   all paths of execution between the current IP and the
+  ///   the point at which the cleanup comes into scope.
+  void deactivateCleanupBlock(EHScopeStack::stable_iterator cleanup,
+                              mlir::Operation *dominatingIP);
+
   /// Push a cleanup to be run at the end of the current full-expression.  Safe
   /// against the possibility that we're currently inside a
   /// conditionally-evaluated expression.
@@ -1019,6 +1036,12 @@ public:
       cgf.popCleanupBlocks(cleanupStackDepth, valuesToReload);
       performCleanup = false;
       cgf.currentCleanupStackDepth = oldCleanupStackDepth;
+    }
+
+    /// Whether there are any pending cleanups that have been pushed since
+    /// this scope was entered.
+    bool hasPendingCleanups() const {
+      return cgf.ehStack.stable_begin() != cleanupStackDepth;
     }
   };
 
@@ -1234,6 +1257,18 @@ public:
 
   Destroyer *getDestroyer(clang::QualType::DestructionKind kind);
 
+  /// Start generating a thunk function.
+  void startThunk(cir::FuncOp fn, GlobalDecl gd,
+                  const CIRGenFunctionInfo &fnInfo, bool isUnprototyped);
+
+  /// Finish generating a thunk function.
+  void finishThunk();
+
+  /// Generate code for a thunk function.
+  void generateThunk(cir::FuncOp fn, const CIRGenFunctionInfo &fnInfo,
+                     GlobalDecl gd, const ThunkInfo &thunk,
+                     bool isUnprototyped);
+
   /// ----------------------
   /// CIR emit functions
   /// ----------------------
@@ -1425,6 +1460,11 @@ public:
 
   RValue emitCall(clang::QualType calleeTy, const CIRGenCallee &callee,
                   const clang::CallExpr *e, ReturnValueSlot returnValue);
+
+  /// Emit the call and return for a thunk function.
+  void emitCallAndReturnForThunk(cir::FuncOp callee, const ThunkInfo *thunk,
+                                 bool isUnprototyped);
+
   void emitCallArg(CallArgList &args, const clang::Expr *e,
                    clang::QualType argType);
   void emitCallArgs(
@@ -1441,6 +1481,8 @@ public:
                                              mlir::ArrayAttr value,
                                              cir::CaseOpKind kind,
                                              bool buildingTopLevelCase);
+
+  LValue emitCXXTypeidLValue(const CXXTypeidExpr *e);
 
   mlir::LogicalResult emitCaseStmt(const clang::CaseStmt &s,
                                    mlir::Type condType,
@@ -1544,6 +1586,11 @@ public:
                                mlir::Value numElements,
                                mlir::Value allocSizeWithoutCookie);
 
+  /// Create a check for a function parameter that may potentially be
+  /// declared as non-null.
+  void emitNonNullArgCheck(RValue rv, QualType argType, SourceLocation argLoc,
+                           AbstractCallee ac, unsigned paramNum);
+
   RValue emitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *e,
                                        const CXXMethodDecl *md,
                                        ReturnValueSlot returnValue);
@@ -1579,6 +1626,7 @@ public:
 
   mlir::LogicalResult emitDoStmt(const clang::DoStmt &s);
 
+  mlir::Value emitCXXTypeidExpr(const CXXTypeidExpr *e);
   mlir::Value emitDynamicCast(Address thisAddr, const CXXDynamicCastExpr *dce);
 
   /// Emit an expression as an initializer for an object (variable, field, etc.)
@@ -1616,7 +1664,8 @@ public:
   void emitReturnOfRValue(mlir::Location loc, RValue rv, QualType ty);
 
   mlir::Value emitRuntimeCall(mlir::Location loc, cir::FuncOp callee,
-                              llvm::ArrayRef<mlir::Value> args = {});
+                              llvm::ArrayRef<mlir::Value> args = {},
+                              mlir::NamedAttrList attrs = {});
 
   void emitInvariantStart(CharUnits size, mlir::Value addr, mlir::Location loc);
 
@@ -1624,8 +1673,7 @@ public:
   mlir::Value emitScalarExpr(const clang::Expr *e,
                              bool ignoreResultAssign = false);
 
-  mlir::Value emitScalarPrePostIncDec(const UnaryOperator *e, LValue lv,
-                                      cir::UnaryOpKind kind, bool isPre);
+  mlir::Value emitScalarPrePostIncDec(const UnaryOperator *e, LValue lv);
 
   /// Build a debug stoppoint if we are emitting debug info.
   void emitStopPoint(const Stmt *s);
@@ -1656,8 +1704,7 @@ public:
 
   void emitComplexExprIntoLValue(const Expr *e, LValue dest, bool isInit);
 
-  mlir::Value emitComplexPrePostIncDec(const UnaryOperator *e, LValue lv,
-                                       cir::UnaryOpKind op, bool isPre);
+  mlir::Value emitComplexPrePostIncDec(const UnaryOperator *e, LValue lv);
 
   LValue emitComplexAssignmentLValue(const BinaryOperator *e);
   LValue emitComplexCompoundAssignmentLValue(const CompoundAssignOperator *e);
@@ -1769,6 +1816,10 @@ public:
   LValue emitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *e);
 
   LValue emitMemberExpr(const MemberExpr *e);
+
+  /// Emit a musttail call for a thunk with a potentially different ABI.
+  void emitMustTailThunk(GlobalDecl gd, mlir::Value adjustedThisPtr,
+                         cir::FuncOp callee);
 
   /// Emit a call to an AMDGPU builtin function.
   std::optional<mlir::Value> emitAMDGPUBuiltinExpr(unsigned builtinID,
@@ -1888,6 +1939,9 @@ public:
 
   mlir::LogicalResult emitWhileStmt(const clang::WhileStmt &s);
 
+  std::optional<mlir::Value> emitRISCVBuiltinExpr(unsigned builtinID,
+                                                  const CallExpr *expr);
+
   std::optional<mlir::Value> emitX86BuiltinExpr(unsigned builtinID,
                                                 const CallExpr *expr);
 
@@ -1988,9 +2042,7 @@ public:
   ///
   /// \param vaList A reference to the \c va_list as emitted by either
   /// \c emitVAListRef or \c emitMSVAListRef.
-  ///
-  /// \param count The number of arguments in \c vaList
-  void emitVAStart(mlir::Value vaList, mlir::Value count);
+  void emitVAStart(mlir::Value vaList);
 
   /// Emits the end of a CIR variable-argument operation (`cir.va_start`)
   ///

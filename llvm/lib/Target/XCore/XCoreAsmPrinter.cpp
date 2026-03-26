@@ -213,7 +213,7 @@ void XCoreAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
     PrintSymbolOperand(MO, O);
     break;
   case MachineOperand::MO_ConstantPoolIndex:
-    O << DL.getPrivateGlobalPrefix() << "CPI" << getFunctionNumber() << '_'
+    O << DL.getInternalSymbolPrefix() << "CPI" << getFunctionNumber() << '_'
       << MO.getIndex();
     break;
   case MachineOperand::MO_BlockAddress:

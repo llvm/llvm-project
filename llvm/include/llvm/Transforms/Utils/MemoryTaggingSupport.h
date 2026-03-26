@@ -33,10 +33,6 @@ struct AllocaInfo {
   struct BBInfo {
     Intrinsic::ID First = Intrinsic::not_intrinsic;
     Intrinsic::ID Last = Intrinsic::not_intrinsic;
-    // This BB calls lifetime.end twice without a start inbetween.
-    // TODO: handle this case smarter than just throwing out lifetime
-    // annotations completely.
-    bool DoubleEnd = false;
   };
   AllocaInst *AI;
   SmallVector<IntrinsicInst *, 2> LifetimeStart;
@@ -52,7 +48,7 @@ struct AllocaInfo {
 // Returns whether Ends covered all possible exits. If they did not,
 // the caller should remove Ends to ensure that work done at the other
 // exits does not happen outside of the lifetime.
-bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
+void forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
                           const LoopInfo &LI, const AllocaInfo &AInfo,
                           const SmallVectorImpl<Instruction *> &RetVec,
                           llvm::function_ref<void(Instruction *)> Callback);

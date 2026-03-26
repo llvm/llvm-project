@@ -435,7 +435,7 @@ void AsmPrinter::PrintSpecial(const MachineInstr *MI, raw_ostream &OS,
                               StringRef Code) const {
   if (Code == "private") {
     const DataLayout &DL = MF->getDataLayout();
-    OS << DL.getPrivateGlobalPrefix();
+    OS << DL.getInternalSymbolPrefix();
   } else if (Code == "comment") {
     OS << MAI->getCommentString();
   } else if (Code == "uid") {

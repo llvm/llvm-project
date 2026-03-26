@@ -87,7 +87,7 @@ static Value *getCondition(Instruction *I) {
   if (parseWidenableBranch(I, Cond, WC, IfTrueBB, IfFalseBB))
     return Cond;
 
-  return cast<BranchInst>(I)->getCondition();
+  return cast<CondBrInst>(I)->getCondition();
 }
 
 // Set the condition for \p I to \p NewCond. \p I can either be a guard or a
@@ -99,7 +99,7 @@ static void setCondition(Instruction *I, Value *NewCond) {
     GI->setArgOperand(0, NewCond);
     return;
   }
-  cast<BranchInst>(I)->setCondition(NewCond);
+  cast<CondBrInst>(I)->setCondition(NewCond);
 }
 
 // Eliminates the guard instruction properly.
@@ -311,7 +311,7 @@ class GuardWideningImpl {
                                               getCondition(ToWiden), *InsertPt);
 
     if (isGuardAsWidenableBranch(ToWiden)) {
-      setWidenableBranchCond(cast<BranchInst>(ToWiden), Result);
+      setWidenableBranchCond(cast<CondBrInst>(ToWiden), Result);
       return;
     }
     setCondition(ToWiden, Result);
@@ -364,7 +364,7 @@ bool GuardWideningImpl::run() {
       if (isSupportedGuardInstruction(I))
         eliminateGuard(I, MSSAU);
       else {
-        assert(isa<BranchInst>(I) &&
+        assert(isa<CondBrInst>(I) &&
                "Eliminated something other than guard or branch?");
         ++CondBranchEliminated;
       }

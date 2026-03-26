@@ -66,8 +66,7 @@ define double @func(double %d, i32 %n) nounwind {
 ; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IZFINXZDINX-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32IZFINXZDINX-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
-; RV32IZFINXZDINX-NEXT:    mv s1, a1
-; RV32IZFINXZDINX-NEXT:    mv s0, a0
+; RV32IZFINXZDINX-NEXT:    fmv.d s0, a0
 ; RV32IZFINXZDINX-NEXT:    beqz a2, .LBB0_2
 ; RV32IZFINXZDINX-NEXT:  # %bb.1: # %if.else
 ; RV32IZFINXZDINX-NEXT:    addi a2, a2, -1

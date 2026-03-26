@@ -89,6 +89,13 @@ private:
   llvm::Expected<CompilerType> ArithmeticConversion(lldb::ValueObjectSP &lhs,
                                                     lldb::ValueObjectSP &rhs,
                                                     uint32_t location);
+  /// Add or subtract the offset to the pointer according to the pointee type
+  /// byte size.
+  /// \returns A new `ValueObject` with a new pointer value.
+  llvm::Expected<lldb::ValueObjectSP> PointerOffset(lldb::ValueObjectSP ptr,
+                                                    lldb::ValueObjectSP offset,
+                                                    BinaryOpKind operation,
+                                                    uint32_t location);
   llvm::Expected<lldb::ValueObjectSP> EvaluateScalarOp(BinaryOpKind kind,
                                                        lldb::ValueObjectSP lhs,
                                                        lldb::ValueObjectSP rhs,
@@ -97,6 +104,9 @@ private:
   llvm::Expected<lldb::ValueObjectSP>
   EvaluateBinaryAddition(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
                          uint32_t location);
+  llvm::Expected<lldb::ValueObjectSP>
+  EvaluateBinarySubtraction(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
+                            uint32_t location);
   llvm::Expected<CompilerType>
   PickIntegerType(lldb::TypeSystemSP type_system,
                   std::shared_ptr<ExecutionContextScope> ctx,

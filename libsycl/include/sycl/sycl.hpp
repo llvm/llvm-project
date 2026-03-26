@@ -19,5 +19,7 @@
 #include <sycl/__impl/device_selector.hpp>
 #include <sycl/__impl/exception.hpp>
 #include <sycl/__impl/platform.hpp>
+#include <sycl/__impl/queue.hpp>
+#include <sycl/__impl/usm_functions.hpp>
 
 #endif // _LIBSYCL_SYCL_HPP

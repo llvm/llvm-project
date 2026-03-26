@@ -278,8 +278,7 @@ public:
     return false;
   }
 
-  virtual TailFoldingStyle
-  getPreferredTailFoldingStyle(bool IVUpdateMayOverflow = true) const {
+  virtual TailFoldingStyle getPreferredTailFoldingStyle() const {
     return TailFoldingStyle::DataWithoutLaneMask;
   }
 
@@ -344,7 +343,7 @@ public:
 
   virtual bool canMacroFuseCmp() const { return false; }
 
-  virtual bool canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE,
+  virtual bool canSaveCmp(Loop *L, CondBrInst **BI, ScalarEvolution *SE,
                           LoopInfo *LI, DominatorTree *DT, AssumptionCache *AC,
                           TargetLibraryInfo *LibInfo) const {
     return false;
@@ -633,9 +632,21 @@ public:
     }
   }
 
+  virtual InstructionCost
+  getRegisterClassSpillCost(unsigned ClassID,
+                            TTI::TargetCostKind CostKind) const {
+    return TTI::TCC_Basic;
+  }
+
+  virtual InstructionCost
+  getRegisterClassReloadCost(unsigned ClassID,
+                             TTI::TargetCostKind CostKind) const {
+    return TTI::TCC_Basic;
+  }
+
   virtual TypeSize
   getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
-    return TypeSize::getFixed(32);
+    return TypeSize::get(32, K == TargetTransformInfo::RGK_ScalableVector);
   }
 
   virtual unsigned getMinVectorRegisterBitWidth() const { return 128; }
@@ -948,6 +959,10 @@ public:
     case Intrinsic::ssa_copy:
       // These intrinsics don't actually represent code after lowering.
       return 0;
+    case Intrinsic::bswap:
+      if (!ICA.getReturnType()->isVectorTy() &&
+          !isPowerOf2_64(DL.getTypeSizeInBits(ICA.getReturnType())))
+        return InstructionCost::getInvalid();
     }
     return 1;
   }
@@ -1213,6 +1228,11 @@ public:
 
   virtual bool allowVectorElementIndexingUsingGEP() const { return true; }
 
+  virtual bool isUniform(const Instruction *I,
+                         const SmallBitVector &UniformArgs) const {
+    llvm_unreachable("target must implement isUniform for Custom uniformity");
+  }
+
 protected:
   // Obtain the minimum required size to hold the value (without the sign)
   // In case of a vector it returns the min required size for one element.
@@ -1452,7 +1472,8 @@ public:
       IntrinsicCostAttributes CostAttrs(Intrinsic->getIntrinsicID(), *CB);
       return TargetTTI->getIntrinsicInstrCost(CostAttrs, CostKind);
     }
-    case Instruction::Br:
+    case Instruction::UncondBr:
+    case Instruction::CondBr:
     case Instruction::Ret:
     case Instruction::PHI:
     case Instruction::Switch:

@@ -15,30 +15,27 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
 
-static constexpr char KDefaultTypes[] =
+static constexpr char DefaultTypes[] =
     "::std::basic_string;::std::basic_string_view;::std::vector;::std::array;::"
     "std::span";
 
 SimplifySubscriptExprCheck::SimplifySubscriptExprCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context), Types(utils::options::parseStringList(
-                                         Options.get("Types", KDefaultTypes))) {
-}
+                                         Options.get("Types", DefaultTypes))) {}
 
 void SimplifySubscriptExprCheck::registerMatchers(MatchFinder *Finder) {
   const auto TypesMatcher = hasUnqualifiedDesugaredType(
       recordType(hasDeclaration(cxxRecordDecl(hasAnyName(Types)))));
 
   Finder->addMatcher(
-      arraySubscriptExpr(hasBase(
-          cxxMemberCallExpr(
-              has(memberExpr().bind("member")),
-              on(hasType(qualType(
-                  unless(anyOf(substTemplateTypeParmType(),
-                               hasDescendant(substTemplateTypeParmType()))),
-                  anyOf(TypesMatcher, pointerType(pointee(TypesMatcher)))))),
-              callee(namedDecl(hasName("data"))))
-              .bind("call"))),
+      arraySubscriptExpr(
+          hasBase(cxxMemberCallExpr(
+                      has(memberExpr().bind("member")),
+                      on(hasType(qualType(anyOf(
+                          TypesMatcher, pointerType(pointee(TypesMatcher)))))),
+                      callee(namedDecl(hasName("data"))))
+                      .bind("call"))),
       this);
 }
 

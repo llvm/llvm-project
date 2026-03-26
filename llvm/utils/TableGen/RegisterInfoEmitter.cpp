@@ -1990,6 +1990,8 @@ void RegisterInfoEmitter::debugDump(raw_ostream &OS) {
       OS << " " << SRC->getName();
     }
     OS << '\n';
+    if (RC.Artificial)
+      OS << "\tArtificial: 1\n";
   }
 
   for (const CodeGenSubRegIndex &SRI : RegBank.getSubRegIndices()) {
@@ -2002,6 +2004,8 @@ void RegisterInfoEmitter::debugDump(raw_ostream &OS) {
     OS << "\tSize: " << printByHwMode(SRI.Range, [](const SubRegRange &Info) {
       return Info.Size;
     }) << '\n';
+    if (SRI.Artificial)
+      OS << "\tArtificial: 1\n";
   }
 
   for (const CodeGenRegister &R : RegBank.getRegisters()) {
@@ -2018,6 +2022,8 @@ void RegisterInfoEmitter::debugDump(raw_ostream &OS) {
     }
     for (unsigned U : R.getNativeRegUnits())
       OS << "\tRegUnit " << U << '\n';
+    if (R.Artificial)
+      OS << "\tArtificial: 1\n";
   }
 }
 

@@ -7,3 +7,12 @@ define void @test() {
 ; CHECK-NEXT:    retq
   ret void
 }
+
+define void @test2() #0 {
+; CHECK-LABEL: test2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    retq
+  ret void
+}
+
+attributes #0 = { optnone noinline }

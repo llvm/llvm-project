@@ -183,41 +183,41 @@ def test_reductions():
 
 # CHECK-LABEL:   func.func @reductions(
 # CHECK:           %[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32, %[[ARG2:.*]]: f32) {
-# CHECK:           %[[REDUX_0:.*]] = nvvm.redux.sync  and %[[ARG1]], %[[ARG1]] : i32 -> i32
-# CHECK:           %[[REDUX_1:.*]] = nvvm.redux.sync  max %[[ARG1]], %[[ARG1]] : i32 -> i32
-# CHECK:           %[[REDUX_2:.*]] = nvvm.redux.sync  min %[[ARG1]], %[[ARG1]] : i32 -> i32
-# CHECK:           %[[REDUX_3:.*]] = nvvm.redux.sync  or %[[ARG1]], %[[ARG1]] : i32 -> i32
-# CHECK:           %[[REDUX_4:.*]] = nvvm.redux.sync  umax %[[ARG1]], %[[ARG1]] : i32 -> i32
-# CHECK:           %[[REDUX_5:.*]] = nvvm.redux.sync  umin %[[ARG1]], %[[ARG1]] : i32 -> i32
-# CHECK:           %[[REDUX_6:.*]] = nvvm.redux.sync  xor %[[ARG1]], %[[ARG1]] : i32 -> i32
-# CHECK:           %[[REDUX_7:.*]] = nvvm.redux.sync  fmin %[[ARG2]], %[[ARG1]] {abs = true, nan = true} : f32 -> f32
-# CHECK:           %[[REDUX_8:.*]] = nvvm.redux.sync  fmax %[[ARG2]], %[[ARG1]] {abs = true, nan = true} : f32 -> f32
-# CHECK:           %[[REDUX_9:.*]] = nvvm.redux.sync  and %[[ARG1]], %[[ARG1]] : i32 -> i32
-# CHECK:           %[[REDUX_10:.*]] = nvvm.redux.sync  max %[[ARG1]], %[[ARG1]] : i32 -> i32
-# CHECK:           %[[REDUX_11:.*]] = nvvm.redux.sync  min %[[ARG1]], %[[ARG1]] : i32 -> i32
-# CHECK:           %[[REDUX_12:.*]] = nvvm.redux.sync  or %[[ARG1]], %[[ARG1]] : i32 -> i32
-# CHECK:           %[[REDUX_13:.*]] = nvvm.redux.sync  umax %[[ARG1]], %[[ARG1]] : i32 -> i32
-# CHECK:           %[[REDUX_14:.*]] = nvvm.redux.sync  umin %[[ARG1]], %[[ARG1]] : i32 -> i32
-# CHECK:           %[[REDUX_15:.*]] = nvvm.redux.sync  xor %[[ARG1]], %[[ARG1]] : i32 -> i32
-# CHECK:           %[[REDUX_16:.*]] = nvvm.redux.sync  fmin %[[ARG2]], %[[ARG1]] {abs = true} : f32 -> f32
-# CHECK:           %[[REDUX_17:.*]] = nvvm.redux.sync  fmax %[[ARG2]], %[[ARG1]] {abs = true} : f32 -> f32
-# CHECK:           %[[REDUX_18:.*]] = nvvm.redux.sync  and %[[ARG1]], %[[ARG1]] : i32 -> i32
-# CHECK:           %[[REDUX_19:.*]] = nvvm.redux.sync  max %[[ARG1]], %[[ARG1]] : i32 -> i32
-# CHECK:           %[[REDUX_20:.*]] = nvvm.redux.sync  min %[[ARG1]], %[[ARG1]] : i32 -> i32
-# CHECK:           %[[REDUX_21:.*]] = nvvm.redux.sync  or %[[ARG1]], %[[ARG1]] : i32 -> i32
-# CHECK:           %[[REDUX_22:.*]] = nvvm.redux.sync  umax %[[ARG1]], %[[ARG1]] : i32 -> i32
-# CHECK:           %[[REDUX_23:.*]] = nvvm.redux.sync  umin %[[ARG1]], %[[ARG1]] : i32 -> i32
-# CHECK:           %[[REDUX_24:.*]] = nvvm.redux.sync  xor %[[ARG1]], %[[ARG1]] : i32 -> i32
-# CHECK:           %[[REDUX_25:.*]] = nvvm.redux.sync  fmin %[[ARG2]], %[[ARG1]] {nan = true} : f32 -> f32
-# CHECK:           %[[REDUX_26:.*]] = nvvm.redux.sync  fmax %[[ARG2]], %[[ARG1]] {nan = true} : f32 -> f32
-# CHECK:           %[[REDUX_27:.*]] = nvvm.redux.sync  and %[[ARG1]], %[[ARG1]] : i32 -> i32
-# CHECK:           %[[REDUX_28:.*]] = nvvm.redux.sync  max %[[ARG1]], %[[ARG1]] : i32 -> i32
-# CHECK:           %[[REDUX_29:.*]] = nvvm.redux.sync  min %[[ARG1]], %[[ARG1]] : i32 -> i32
-# CHECK:           %[[REDUX_30:.*]] = nvvm.redux.sync  or %[[ARG1]], %[[ARG1]] : i32 -> i32
-# CHECK:           %[[REDUX_31:.*]] = nvvm.redux.sync  umax %[[ARG1]], %[[ARG1]] : i32 -> i32
-# CHECK:           %[[REDUX_32:.*]] = nvvm.redux.sync  umin %[[ARG1]], %[[ARG1]] : i32 -> i32
-# CHECK:           %[[REDUX_33:.*]] = nvvm.redux.sync  xor %[[ARG1]], %[[ARG1]] : i32 -> i32
-# CHECK:           %[[REDUX_34:.*]] = nvvm.redux.sync  fmin %[[ARG2]], %[[ARG1]] : f32 -> f32
-# CHECK:           %[[REDUX_35:.*]] = nvvm.redux.sync  fmax %[[ARG2]], %[[ARG1]] : f32 -> f32
+# CHECK:           %[[REDUX_0:.*]] = nvvm.redux.sync and %[[ARG1]], %[[ARG1]] : i32 -> i32
+# CHECK:           %[[REDUX_1:.*]] = nvvm.redux.sync max %[[ARG1]], %[[ARG1]] : i32 -> i32
+# CHECK:           %[[REDUX_2:.*]] = nvvm.redux.sync min %[[ARG1]], %[[ARG1]] : i32 -> i32
+# CHECK:           %[[REDUX_3:.*]] = nvvm.redux.sync or %[[ARG1]], %[[ARG1]] : i32 -> i32
+# CHECK:           %[[REDUX_4:.*]] = nvvm.redux.sync umax %[[ARG1]], %[[ARG1]] : i32 -> i32
+# CHECK:           %[[REDUX_5:.*]] = nvvm.redux.sync umin %[[ARG1]], %[[ARG1]] : i32 -> i32
+# CHECK:           %[[REDUX_6:.*]] = nvvm.redux.sync xor %[[ARG1]], %[[ARG1]] : i32 -> i32
+# CHECK:           %[[REDUX_7:.*]] = nvvm.redux.sync fmin %[[ARG2]], %[[ARG1]] {abs = true, nan = true} : f32 -> f32
+# CHECK:           %[[REDUX_8:.*]] = nvvm.redux.sync fmax %[[ARG2]], %[[ARG1]] {abs = true, nan = true} : f32 -> f32
+# CHECK:           %[[REDUX_9:.*]] = nvvm.redux.sync and %[[ARG1]], %[[ARG1]] : i32 -> i32
+# CHECK:           %[[REDUX_10:.*]] = nvvm.redux.sync max %[[ARG1]], %[[ARG1]] : i32 -> i32
+# CHECK:           %[[REDUX_11:.*]] = nvvm.redux.sync min %[[ARG1]], %[[ARG1]] : i32 -> i32
+# CHECK:           %[[REDUX_12:.*]] = nvvm.redux.sync or %[[ARG1]], %[[ARG1]] : i32 -> i32
+# CHECK:           %[[REDUX_13:.*]] = nvvm.redux.sync umax %[[ARG1]], %[[ARG1]] : i32 -> i32
+# CHECK:           %[[REDUX_14:.*]] = nvvm.redux.sync umin %[[ARG1]], %[[ARG1]] : i32 -> i32
+# CHECK:           %[[REDUX_15:.*]] = nvvm.redux.sync xor %[[ARG1]], %[[ARG1]] : i32 -> i32
+# CHECK:           %[[REDUX_16:.*]] = nvvm.redux.sync fmin %[[ARG2]], %[[ARG1]] {abs = true} : f32 -> f32
+# CHECK:           %[[REDUX_17:.*]] = nvvm.redux.sync fmax %[[ARG2]], %[[ARG1]] {abs = true} : f32 -> f32
+# CHECK:           %[[REDUX_18:.*]] = nvvm.redux.sync and %[[ARG1]], %[[ARG1]] : i32 -> i32
+# CHECK:           %[[REDUX_19:.*]] = nvvm.redux.sync max %[[ARG1]], %[[ARG1]] : i32 -> i32
+# CHECK:           %[[REDUX_20:.*]] = nvvm.redux.sync min %[[ARG1]], %[[ARG1]] : i32 -> i32
+# CHECK:           %[[REDUX_21:.*]] = nvvm.redux.sync or %[[ARG1]], %[[ARG1]] : i32 -> i32
+# CHECK:           %[[REDUX_22:.*]] = nvvm.redux.sync umax %[[ARG1]], %[[ARG1]] : i32 -> i32
+# CHECK:           %[[REDUX_23:.*]] = nvvm.redux.sync umin %[[ARG1]], %[[ARG1]] : i32 -> i32
+# CHECK:           %[[REDUX_24:.*]] = nvvm.redux.sync xor %[[ARG1]], %[[ARG1]] : i32 -> i32
+# CHECK:           %[[REDUX_25:.*]] = nvvm.redux.sync fmin %[[ARG2]], %[[ARG1]] {nan = true} : f32 -> f32
+# CHECK:           %[[REDUX_26:.*]] = nvvm.redux.sync fmax %[[ARG2]], %[[ARG1]] {nan = true} : f32 -> f32
+# CHECK:           %[[REDUX_27:.*]] = nvvm.redux.sync and %[[ARG1]], %[[ARG1]] : i32 -> i32
+# CHECK:           %[[REDUX_28:.*]] = nvvm.redux.sync max %[[ARG1]], %[[ARG1]] : i32 -> i32
+# CHECK:           %[[REDUX_29:.*]] = nvvm.redux.sync min %[[ARG1]], %[[ARG1]] : i32 -> i32
+# CHECK:           %[[REDUX_30:.*]] = nvvm.redux.sync or %[[ARG1]], %[[ARG1]] : i32 -> i32
+# CHECK:           %[[REDUX_31:.*]] = nvvm.redux.sync umax %[[ARG1]], %[[ARG1]] : i32 -> i32
+# CHECK:           %[[REDUX_32:.*]] = nvvm.redux.sync umin %[[ARG1]], %[[ARG1]] : i32 -> i32
+# CHECK:           %[[REDUX_33:.*]] = nvvm.redux.sync xor %[[ARG1]], %[[ARG1]] : i32 -> i32
+# CHECK:           %[[REDUX_34:.*]] = nvvm.redux.sync fmin %[[ARG2]], %[[ARG1]] : f32 -> f32
+# CHECK:           %[[REDUX_35:.*]] = nvvm.redux.sync fmax %[[ARG2]], %[[ARG1]] : f32 -> f32
 # CHECK:           return
 # CHECK:         }

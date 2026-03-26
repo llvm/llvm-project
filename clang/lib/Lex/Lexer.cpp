@@ -34,6 +34,7 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/NativeFormatting.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/Unicode.h"
 #include "llvm/Support/UnicodeCharRanges.h"
 #include <algorithm>
@@ -862,8 +863,16 @@ SourceLocation Lexer::getLocForEndOfToken(SourceLocation Loc, unsigned Offset,
     return {};
 
   if (Loc.isMacroID()) {
+    // Token split (for example, splitting '>>' into two '>' tokens) is
+    // represented in SourceManager as an ExpansionInfo (see
+    // createForTokenSplit), so these locations are MacroIDs even when no user
+    // macro is involved. For split expansions, the expansion end is already
+    // the correct insertion point.
+    const FileID LocFileID = SM.getFileID(Loc);
     if (Offset > 0 || !isAtEndOfMacroExpansion(Loc, SM, LangOpts, &Loc))
       return {}; // Points inside the macro expansion.
+    if (!SM.getSLocEntry(LocFileID).getExpansion().isExpansionTokenRange())
+      return Loc;
   }
 
   unsigned Len = Lexer::MeasureTokenLength(Loc, SM, LangOpts);
@@ -2098,7 +2107,7 @@ bool Lexer::LexNumericConstant(Token &Result, const char *CurPtr) {
   }
 
   // If we have a digit separator, continue.
-  if (C == '\'' && (LangOpts.CPlusPlus14 || LangOpts.C23)) {
+  if (C == '\'' && LangOpts.AllowLiteralDigitSeparator) {
     auto [Next, NextSize] = getCharAndSizeNoWarn(CurPtr + Size, LangOpts);
     if (isAsciiIdentifierContinue(Next)) {
       if (!isLexingRawMode())
@@ -3231,6 +3240,7 @@ std::optional<Token> Lexer::peekNextPPToken() {
   bool atStartOfLine = IsAtStartOfLine;
   bool atPhysicalStartOfLine = IsAtPhysicalStartOfLine;
   bool leadingSpace = HasLeadingSpace;
+  MultipleIncludeOpt MIOptState = MIOpt;
 
   Token Tok;
   Lex(Tok);
@@ -3241,6 +3251,7 @@ std::optional<Token> Lexer::peekNextPPToken() {
   HasLeadingSpace = leadingSpace;
   IsAtStartOfLine = atStartOfLine;
   IsAtPhysicalStartOfLine = atPhysicalStartOfLine;
+  MIOpt = MIOptState;
   // Restore the lexer back to non-skipping mode.
   LexingRawMode = false;
 
@@ -4438,9 +4449,28 @@ LexStart:
 
   case '@':
     // Objective C support.
-    if (CurPtr[-1] == '@' && LangOpts.ObjC)
-      Kind = tok::at;
-    else
+    if (CurPtr[-1] == '@' && LangOpts.ObjC) {
+      FormTokenWithChars(Result, CurPtr, tok::at);
+      if (PP && Result.isAtPhysicalStartOfLine() && !LexingRawMode &&
+          !Is_PragmaLexer) {
+        Token NextPPTok;
+        NextPPTok.startToken();
+        {
+          llvm::SaveAndRestore<bool> SavedParsingPreprocessorDirective(
+              this->ParsingPreprocessorDirective, true);
+          auto NextTokOr = peekNextPPToken();
+          if (NextTokOr.has_value()) {
+            NextPPTok = *NextTokOr;
+          }
+        }
+        if (NextPPTok.is(tok::raw_identifier) &&
+            NextPPTok.getRawIdentifier() == "import") {
+          PP->HandleDirective(Result);
+          return false;
+        }
+      }
+      return true;
+    } else
       Kind = tok::unknown;
     break;
 
@@ -4601,6 +4631,16 @@ bool Lexer::LexDependencyDirectiveToken(Token &Result) {
       // With a fatal failure in the module loader, we abort parsing.
       return true;
     return false;
+  }
+  if (Result.is(tok::at) && Result.isAtStartOfLine()) {
+    auto NextTok = peekNextPPToken();
+    if (NextTok && NextTok->is(tok::raw_identifier) &&
+        NextTok->getRawIdentifier() == "import") {
+      PP->HandleDirective(Result);
+      if (PP->hadModuleLoaderFatalFailure())
+        return true;
+      return false;
+    }
   }
   if (Result.is(tok::raw_identifier)) {
     Result.setRawIdentifierData(TokPtr);

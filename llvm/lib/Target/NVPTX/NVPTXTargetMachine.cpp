@@ -111,6 +111,8 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeNVPTXAssignValidGlobalNamesPass(PR);
   initializeNVPTXAtomicLowerPass(PR);
   initializeNVPTXLowerArgsLegacyPassPass(PR);
+  initializeNVPTXSetByValParamAlignLegacyPassPass(PR);
+  initializeNVPTXMarkKernelPtrsGlobalLegacyPassPass(PR);
   initializeNVPTXLowerAllocaPass(PR);
   initializeNVPTXLowerUnreachablePass(PR);
   initializeNVPTXCtorDtorLoweringLegacyPass(PR);
@@ -357,6 +359,9 @@ void NVPTXPassConfig::addIRPasses() {
 
   // NVPTXLowerArgs is required for correctness and should be run right
   // before the address space inference passes.
+  if (getNVPTXTargetMachine().getDrvInterface() == NVPTX::CUDA)
+    addPass(createNVPTXMarkKernelPtrsGlobalPass());
+  addPass(createNVPTXSetByValParamAlignPass());
   addPass(createNVPTXLowerArgsPass());
   if (getOptLevel() != CodeGenOptLevel::None) {
     addAddressSpaceInferencePasses();

@@ -130,7 +130,7 @@ llvm::DICompileUnit *DebugTranslation::translateImpl(DICompileUnitAttr attr) {
                                    : "",
       static_cast<llvm::DICompileUnit::DebugEmissionKind>(
           attr.getEmissionKind()),
-      0, true, false,
+      0, true, attr.getIsDebugInfoForProfiling(),
       static_cast<llvm::DICompileUnit::DebugNameTableKind>(
           attr.getNameTableKind()));
 }
@@ -200,8 +200,8 @@ DebugTranslation::translateImpl(DICompositeTypeAttr attr) {
 llvm::DIDerivedType *DebugTranslation::translateImpl(DIDerivedTypeAttr attr) {
   return llvm::DIDerivedType::get(
       llvmCtx, attr.getTag(), getMDStringOrNull(attr.getName()),
-      /*File=*/nullptr, /*Line=*/0,
-      /*Scope=*/nullptr, translate(attr.getBaseType()), attr.getSizeInBits(),
+      translate(attr.getFile()), attr.getLine(), translate(attr.getScope()),
+      translate(attr.getBaseType()), attr.getSizeInBits(),
       attr.getAlignInBits(), attr.getOffsetInBits(),
       attr.getDwarfAddressSpace(), /*PtrAuthData=*/std::nullopt,
       /*Flags=*/static_cast<llvm::DINode::DIFlags>(attr.getFlags()),

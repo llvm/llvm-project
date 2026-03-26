@@ -1917,7 +1917,7 @@ public:
         "store.end",
         GEPNoWrapFlags::inBounds() | GEPNoWrapFlags::noUnsignedWrap());
     Value *LoadBegin = Load->getPointerOperand();
-    BranchInst *BR1 = Builder.CreateCondBr(
+    CondBrInst *BR1 = Builder.CreateCondBr(
         Builder.CreateICmpULT(LoadBegin, StoreEnd), Check1, Fusion);
     setExplicitlyUnknownBranchWeightsIfProfiled(*BR1, DEBUG_TYPE);
 
@@ -1930,7 +1930,7 @@ public:
         LoadBegin, ConstantInt::get(AddrTy, LoadLoc.Size.getValue()),
         "load.end",
         GEPNoWrapFlags::inBounds() | GEPNoWrapFlags::noUnsignedWrap());
-    BranchInst *BR2 = Builder.CreateCondBr(
+    CondBrInst *BR2 = Builder.CreateCondBr(
         Builder.CreateICmpULT(StoreBegin, LoadEnd), Copy, Fusion);
     setExplicitlyUnknownBranchWeightsIfProfiled(*BR2, DEBUG_TYPE);
 

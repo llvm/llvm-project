@@ -112,3 +112,24 @@ div.body {
   max-width: auto;
 }
 }
+
+/* ---------------------------------------------------------------------------
+   Status badges (used via Helpers/Styles.rst substitutions)
+   --------------------------------------------------------------------------- */
+.badge {
+  display: inline-block;
+  padding: 0.15em 0.5em;
+  border-radius: 3px;
+  font-size: 0.8em;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.badge-complete    { background: #2ea44f; color: #fff; }
+.badge-partial     { background: #f0883e; color: #fff; }
+.badge-inprogress  { background: #0969da; color: #fff; }
+.badge-notstarted  { background: #6e7781; color: #fff; }
+.badge-gpuonly     { background: #8250df; color: #fff; }
+.badge-linuxonly   { background: #1a7f37; color: #fff; }
+

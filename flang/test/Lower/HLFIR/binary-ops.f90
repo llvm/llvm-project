@@ -206,8 +206,7 @@ end subroutine
 ! CHECK:  hlfir.declare {{.*}}c"}
 ! CHECK:  %[[VAL_11:.*]] = arith.constant 0 : i64
 ! CHECK:  %[[VAL_12:.*]] = fir.load %{{.*}} : !fir.ref<i64>
-! CHECK:  %[[VAL_13:.*]] = arith.cmpi sgt, %[[VAL_11]], %[[VAL_12]] : i64
-! CHECK:  arith.select %[[VAL_13]], %[[VAL_11]], %[[VAL_12]] : i64
+! CHECK:  arith.maxsi %[[VAL_11]], %[[VAL_12]] : i64
 
 subroutine cmp_int(l, x, y)
   logical :: l
