@@ -37,8 +37,9 @@ else ()
   set(POLLY_TEST_EXTRA_PATHS "")
   set(POLLY_TEST_DEPS llvm-config opt LLVMPolly FileCheck not count)
 
-  if (LLVM_POLLY_LINK_INTO_TOOLS AND TARGET clang)
+  if (TARGET clang)
     set(POLLY_TEST_C_COMPILER "${LLVM_TOOLS_BINARY_DIR}/clang${CMAKE_EXECUTABLE_SUFFIX}")
+    list(APPEND POLLY_TEST_DEPS clang)
   endif ()
 endif()
 
