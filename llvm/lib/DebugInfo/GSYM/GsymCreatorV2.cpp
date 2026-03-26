@@ -52,20 +52,9 @@ static void writeGlobalDataEntry(FileWriter &O, GlobalInfoType Type,
 
 llvm::Error GsymCreatorV2::encode(FileWriter &O) const {
   std::lock_guard<std::mutex> Guard(Mutex);
-  if (Funcs.empty())
-    return createStringError(std::errc::invalid_argument,
-                             "no functions to encode");
-  if (!Finalized)
-    return createStringError(std::errc::invalid_argument,
-                             "GsymCreatorV2 wasn't finalized prior to encoding");
-  if (Funcs.size() > UINT32_MAX)
-    return createStringError(std::errc::invalid_argument,
-                             "too many FunctionInfos");
-
-  std::optional<uint64_t> BaseAddr = getBaseAddress();
-  if (!BaseAddr)
-    return createStringError(std::errc::invalid_argument,
-                             "invalid base address");
+  std::optional<uint64_t> BaseAddr;
+  if (auto Err = validateForEncoding(BaseAddr))
+    return Err;
 
   const uint8_t AddrOffSize = getAddressOffsetSize();
 
@@ -172,20 +161,8 @@ llvm::Error GsymCreatorV2::encode(FileWriter &O) const {
   writeGlobalDataEntry(O, GlobalInfoType::EndOfList, 0, 0);
 
   // Write AddrOffsets section.
-  O.alignTo(AddrOffSize);
   assert(O.tell() == AddrOffsetsOffset);
-  const uint64_t MaxAddressOffset = getMaxAddressOffset();
-  for (const auto &FI : Funcs) {
-    uint64_t AddrOffset = FI.startAddress() - *BaseAddr;
-    assert(AddrOffset <= MaxAddressOffset);
-    (void)MaxAddressOffset;
-    switch (AddrOffSize) {
-    case 1: O.writeU8(static_cast<uint8_t>(AddrOffset)); break;
-    case 2: O.writeU16(static_cast<uint16_t>(AddrOffset)); break;
-    case 4: O.writeU32(static_cast<uint32_t>(AddrOffset)); break;
-    case 8: O.writeU64(AddrOffset); break;
-    }
-  }
+  encodeAddrOffsets(O, AddrOffSize, *BaseAddr);
 
   // Write AddrInfoOffsets section.
   O.alignTo(AddrInfoOffSize);
@@ -203,18 +180,9 @@ llvm::Error GsymCreatorV2::encode(FileWriter &O) const {
   }
 
   // Write FileTable section.
-  O.alignTo(4);
   assert(O.tell() == FileTableOffset);
-  assert(!Files.empty());
-  assert(Files[0].Dir == 0);
-  assert(Files[0].Base == 0);
-  if (Files.size() > UINT32_MAX)
-    return createStringError(std::errc::invalid_argument, "too many files");
-  O.writeU32(static_cast<uint32_t>(Files.size()));
-  for (const auto &File : Files) {
-    O.writeU32(File.Dir);
-    O.writeU32(File.Base);
-  }
+  if (auto Err = encodeFileTable(O))
+    return Err;
 
   // Write StringTable section.
   assert(O.tell() == StringTableOffset);

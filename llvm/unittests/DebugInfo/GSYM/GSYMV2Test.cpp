@@ -85,7 +85,7 @@ TEST(GSYMV2Test, TestCreatorV2EncodeErrorNotFinalized) {
   const uint32_t Name = GC.insertString("foo");
   GC.addFunctionInfo(FunctionInfo(0x1000, 0x100, Name));
   auto Result = encodeV2(GC, llvm::endianness::little);
-  checkError("GsymCreatorV2 wasn't finalized prior to encoding",
+  checkError("GsymCreator wasn't finalized prior to encoding",
              Result.takeError());
 }
 

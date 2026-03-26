@@ -35,21 +35,9 @@ llvm::Error GsymCreatorV1::loadCallSitesFromYAML(StringRef YAMLFile) {
 
 llvm::Error GsymCreatorV1::encode(FileWriter &O) const {
   std::lock_guard<std::mutex> Guard(Mutex);
-  if (Funcs.empty())
-    return createStringError(std::errc::invalid_argument,
-                             "no functions to encode");
-  if (!Finalized)
-    return createStringError(std::errc::invalid_argument,
-                             "GsymCreator wasn't finalized prior to encoding");
-
-  if (Funcs.size() > UINT32_MAX)
-    return createStringError(std::errc::invalid_argument,
-                             "too many FunctionInfos");
-
-  std::optional<uint64_t> BaseAddress = getBaseAddress();
-  if (!BaseAddress)
-    return createStringError(std::errc::invalid_argument,
-                             "invalid base address");
+  std::optional<uint64_t> BaseAddress;
+  if (auto Err = validateForEncoding(BaseAddress))
+    return Err;
   Header Hdr;
   Hdr.Magic = GSYM_MAGIC;
   Hdr.Version = GSYM_VERSION;
@@ -69,45 +57,15 @@ llvm::Error GsymCreatorV1::encode(FileWriter &O) const {
   if (Err)
     return Err;
 
-  const uint64_t MaxAddressOffset = getMaxAddressOffset();
-  O.alignTo(Hdr.AddrOffSize);
-  for (const auto &FuncInfo : Funcs) {
-    uint64_t AddrOffset = FuncInfo.startAddress() - Hdr.BaseAddress;
-    assert(AddrOffset <= MaxAddressOffset);
-    (void)MaxAddressOffset;
-    switch (Hdr.AddrOffSize) {
-    case 1:
-      O.writeU8(static_cast<uint8_t>(AddrOffset));
-      break;
-    case 2:
-      O.writeU16(static_cast<uint16_t>(AddrOffset));
-      break;
-    case 4:
-      O.writeU32(static_cast<uint32_t>(AddrOffset));
-      break;
-    case 8:
-      O.writeU64(AddrOffset);
-      break;
-    }
-  }
+  encodeAddrOffsets(O, Hdr.AddrOffSize, Hdr.BaseAddress);
 
   O.alignTo(4);
   const off_t AddrInfoOffsetsOffset = O.tell();
   for (size_t i = 0, n = Funcs.size(); i < n; ++i)
     O.writeU32(0);
 
-  O.alignTo(4);
-  assert(!Files.empty());
-  assert(Files[0].Dir == 0);
-  assert(Files[0].Base == 0);
-  size_t NumFiles = Files.size();
-  if (NumFiles > UINT32_MAX)
-    return createStringError(std::errc::invalid_argument, "too many files");
-  O.writeU32(static_cast<uint32_t>(NumFiles));
-  for (auto File : Files) {
-    O.writeU32(File.Dir);
-    O.writeU32(File.Base);
-  }
+  if (auto Err = encodeFileTable(O))
+    return Err;
 
   const off_t StrtabOffset = O.tell();
   StrTab.write(O.get_stream());
