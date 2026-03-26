@@ -143,10 +143,9 @@ struct CUFComputeSharedMemoryOffsetsAndSize
           // Static shared memory.
           auto [size, align] = fir::getTypeSizeAndAlignmentOrCrash(
               loc, sharedOp.getInType(), *dl, kindMap);
-          std::string globalName =
-              (funcOp.getName() + cudaSharedMemSuffix +
-               *sharedOp.getBindcName())
-                  .str();
+          std::string globalName = (funcOp.getName() + cudaSharedMemSuffix +
+                                    *sharedOp.getBindcName())
+                                       .str();
           if (createdStaticGlobals.insert(globalName).second) {
             createSharedMemoryGlobal(
                 builder, sharedOp.getLoc(), funcOp.getName(),
