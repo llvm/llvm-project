@@ -1824,9 +1824,9 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
   LegalOperations = Level >= AfterLegalizeVectorOps;
   LegalTypes = Level >= AfterLegalizeTypes;
 
-  bool UseTopologicalSorting = TLI.useTopologicalSorting();
-  if (EnableTopologicalSorting.getNumOccurrences() > 0)
-    UseTopologicalSorting = EnableTopologicalSorting;
+  bool UseTopologicalSorting = EnableTopologicalSorting.getNumOccurrences() > 0
+                                   ? EnableTopologicalSorting
+                                   : TLI.useTopologicalSorting();
 
   WorklistInserter AddNodes(*this);
 
