@@ -8,7 +8,7 @@ class TestSwiftErrorHandlingMissingTypes(TestBase):
 
     @swiftTest
     @expectedFailureWindows
-    @skipIf(setting=('symbols.use-swift-clangimporter', 'true'))
+    @skipIf(swift_module_importer="clangimporter")
     def test(self):
         """Test that errors are surfaced"""
         self.build()

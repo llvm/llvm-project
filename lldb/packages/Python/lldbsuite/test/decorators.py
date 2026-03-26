@@ -166,12 +166,28 @@ def skipTestIfFn(expected_fn, bugnumber=None):
         return skipTestIfFn_impl
 
 
-def _xfailForDebugInfo(expected_fn, bugnumber=None):
+def _xfailForVariant(variant_name, expected_fn, bugnumber=None):
+    """Mark a test method as expected-failure for a specific variant dimension.
+
+    Adds *expected_fn* to the decorated function's `__variant_xfail__`
+    dictionary under the key *variant_name*.  When the `LLDBTestCaseFactory`
+    metaclass expands the test method, it looks up *variant_name* in this
+    dictionary and calls the corresponding function with the concrete variant
+    value.  If the function returns a reason string, the expanded test method
+    is marked as expected failure via `unittest.expectedFailure`.
+
+    Args:
+        variant_name: The variant dimension name (e.g. `"debug_info"`).
+        expected_fn: Callable `(**{variant_name: value}) -> reason | None`.
+        bugnumber: Optional bug reference or the decorated function itself
+            (when the decorator is used without parentheses).
+    """
     def expectedFailure_impl(func):
         if isinstance(func, type) and issubclass(func, unittest.TestCase):
             raise Exception("Decorator can only be used to decorate a test method")
-
-        func.__xfail_for_debug_info_cat_fn__ = expected_fn
+        xfail_dict = getattr(func, "__variant_xfail__", {})
+        xfail_dict[variant_name] = expected_fn
+        func.__variant_xfail__ = xfail_dict
         return func
 
     if callable(bugnumber):
@@ -180,18 +196,44 @@ def _xfailForDebugInfo(expected_fn, bugnumber=None):
         return expectedFailure_impl
 
 
-def _skipForDebugInfo(expected_fn, bugnumber=None):
+def _skipForVariant(variant_name, expected_fn, bugnumber=None):
+    """Mark a test method as skipped for a specific variant dimension.
+
+    Adds *expected_fn* to the decorated function's `__variant_skip__`
+    dictionary under the key *variant_name*.  When the `LLDBTestCaseFactory`
+    metaclass expands the test method, it looks up *variant_name* in this
+    dictionary and calls the corresponding function with the concrete variant
+    value.  If the function returns a reason string, the expanded test method
+    is skipped via `unittest.skip(reason)`.
+
+    Args:
+        variant_name: The variant dimension name (e.g. `"debug_info"`).
+        expected_fn: Callable `(**{variant_name: value}) -> reason | None`.
+        bugnumber: Optional bug reference or the decorated function itself
+            (when the decorator is used without parentheses).
+    """
     def skipImpl(func):
         if isinstance(func, type) and issubclass(func, unittest.TestCase):
             raise Exception("Decorator can only be used to decorate a test method")
-
-        func.__skip_for_debug_info_cat_fn__ = expected_fn
+        skip_dict = getattr(func, "__variant_skip__", {})
+        skip_dict[variant_name] = expected_fn
+        func.__variant_skip__ = skip_dict
         return func
 
     if callable(bugnumber):
         return skipImpl(bugnumber)
     else:
         return skipImpl
+
+
+def _is_setting_enabled(value):
+    """Return True if a setting value represents an enabled state."""
+    return str(value).lower() in ("true", "1", "yes", "on")
+
+
+def _is_setting_disabled(value):
+    """Return True if a setting value represents a disabled state."""
+    return str(value).lower() in ("false", "0", "no", "off")
 
 
 def _decorateTest(
@@ -211,8 +253,28 @@ def _decorateTest(
     dwarf_version=None,
     setting=None,
     asan=None,
+    swift_module_importer=None,
 ):
-    def fn(actual_debug_info=None):
+    # Backward compat: map clangimporter/dwarfimporter settings to
+    # swift_module_importer variant dimension.
+    if setting and not swift_module_importer:
+        key, val = setting[0], setting[1]
+        if key == "symbols.use-swift-clangimporter":
+            if _is_setting_disabled(val):
+                swift_module_importer = ["dwarfimporter"]
+                setting = None
+            elif _is_setting_enabled(val):
+                swift_module_importer = ["clangimporter"]
+                setting = None
+        elif key == "symbols.use-swift-dwarfimporter":
+            if _is_setting_disabled(val):
+                swift_module_importer = ["clangimporter"]
+                setting = None
+            elif _is_setting_enabled(val):
+                swift_module_importer = ["dwarfimporter"]
+                setting = None
+
+    def fn(**actual_variants):
         skip_for_os = _match_decorator_property(
             lldbplatform.translate(oslist), lldbplatformutil.getPlatform()
         )
@@ -225,7 +287,12 @@ def _decorateTest(
         skip_for_arch = _match_decorator_property(
             archs, lldbplatformutil.getArchitecture()
         )
-        skip_for_debug_info = _match_decorator_property(debug_info, actual_debug_info)
+        skip_for_debug_info = _match_decorator_property(
+            debug_info, actual_variants.get("debug_info")
+        )
+        skip_for_swift_module_importer = _match_decorator_property(
+            swift_module_importer, actual_variants.get("swift_module_importer")
+        )
         skip_for_triple = _match_decorator_property(
             triple, lldb.selected_platform.GetTriple()
         )
@@ -272,6 +339,7 @@ def _decorateTest(
             (compiler, skip_for_compiler, "compiler or version"),
             (archs, skip_for_arch, "architecture"),
             (debug_info, skip_for_debug_info, "debug info format"),
+            (swift_module_importer, skip_for_swift_module_importer, "swift variant"),
             (triple, skip_for_triple, "target triple"),
             (swig_version, skip_for_swig_version, "swig version"),
             (py_version, skip_for_py_version, "python version"),
@@ -304,12 +372,16 @@ def _decorateTest(
         return reason_str
 
     if mode == DecorateMode.Skip:
+        if swift_module_importer:
+            return _skipForVariant("swift_module_importer", fn, bugnumber)
         if debug_info:
-            return _skipForDebugInfo(fn, bugnumber)
+            return _skipForVariant("debug_info", fn, bugnumber)
         return skipTestIfFn(fn, bugnumber)
     elif mode == DecorateMode.Xfail:
+        if swift_module_importer:
+            return _xfailForVariant("swift_module_importer", fn, bugnumber)
         if debug_info:
-            return _xfailForDebugInfo(fn, bugnumber)
+            return _xfailForVariant("debug_info", fn, bugnumber)
         return expectedFailureIf(fn(), bugnumber)
     else:
         return None
@@ -339,6 +411,7 @@ def expectedFailureAll(
     dwarf_version=None,
     setting=None,
     asan=None,
+    swift_module_importer=None,
 ):
     return _decorateTest(
         DecorateMode.Xfail,
@@ -357,6 +430,7 @@ def expectedFailureAll(
         dwarf_version=dwarf_version,
         setting=setting,
         asan=asan,
+        swift_module_importer=swift_module_importer,
     )
 
 
@@ -382,6 +456,7 @@ def skipIf(
     dwarf_version=None,
     setting=None,
     asan=None,
+    swift_module_importer=None,
 ):
     return _decorateTest(
         DecorateMode.Skip,
@@ -400,6 +475,7 @@ def skipIf(
         dwarf_version=dwarf_version,
         setting=setting,
         asan=asan,
+        swift_module_importer=swift_module_importer,
     )
 
 
@@ -820,6 +896,7 @@ def swiftTest(func):
             # This configuration is Swift-compatible
             return None
 
+    func.__swift_test__ = True
     return skipTestIfFn(is_not_swift_compatible)(func)
 
 
