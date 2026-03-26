@@ -2353,6 +2353,16 @@ bool tools::checkDebugInfoOption(const Arg *A, const ArgList &Args,
   return false;
 }
 
+void tools::addDebugInfoForProfilingArgs(const Driver &D, const ToolChain &TC,
+                                         const ArgList &Args,
+                                         ArgStringList &CmdArgs) {
+  if (Args.hasFlag(options::OPT_fdebug_info_for_profiling,
+                   options::OPT_fno_debug_info_for_profiling, false) &&
+      checkDebugInfoOption(
+          Args.getLastArg(options::OPT_fdebug_info_for_profiling), Args, D, TC))
+    CmdArgs.push_back("-fdebug-info-for-profiling");
+}
+
 void tools::AddAssemblerKPIC(const ToolChain &ToolChain, const ArgList &Args,
                              ArgStringList &CmdArgs) {
   llvm::Reloc::Model RelocationModel;
