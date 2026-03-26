@@ -31,7 +31,7 @@ class TestForkResumesChild(TestBase):
 
         self.expect(
             "continue",
-            substrs=[f"exited with status = {0 if mode == "parent" else 47}"],
+            substrs=[f"exited with status = {0 if mode == 'parent' else 47}"],
         )
 
     @skipIfWindows
