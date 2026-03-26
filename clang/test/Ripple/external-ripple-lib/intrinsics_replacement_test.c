@@ -1,5 +1,5 @@
 // REQUIRES: target-x86_64 || target=hexagon{{.*}}
-// RUN: %clang -ffreestanding -c -O2 -emit-llvm %S/external_library.c -o %t
+// RUN: %clang -ffreestanding -c -O2 -fenable-ripple -emit-llvm %S/external_library.c -o %t
 // RUN: %clang -ffreestanding -c -O2 -fenable-ripple -emit-llvm -S -o - -ffast-math -fripple-lib %t -mllvm -ripple-disable-link %s | FileCheck %s --implicit-check-not="warning:"
 
 #include "external_library.h"

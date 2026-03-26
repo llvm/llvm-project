@@ -1,6 +1,5 @@
 // This file should be fine for all targets
-// XFAIL: target={{.*(iu|riscv).*}}
-// RUN: %clang -ffreestanding -g -S -O2 -emit-llvm %s
+// RUN: %clang -g -S -O2 -fenable-ripple -emit-llvm %s
 
 #include "../ripple_test.h"
 

@@ -1,5 +1,5 @@
 // REQUIRES: x86-registered-target
-// RUN: %clang -ffreestanding --target=x86_64-linux-gnu -c -O2 -emit-llvm %S/external_library.c -o %t.rlib.bc
+// RUN: %clang -ffreestanding --target=x86_64-linux-gnu -c -O2 -fenable-ripple -emit-llvm %S/external_library.c -o %t.rlib.bc
 // RUN: %clang -ffreestanding --target=x86_64-linux-gnu -c -O2 -fenable-ripple -emit-llvm -S -o - -fripple-lib %t.rlib.bc -mllvm -ripple-disable-link %s | FileCheck %s
 
 #include "external_library.h"

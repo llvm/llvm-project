@@ -1,6 +1,6 @@
 // REQUIRES: hexagon-registered-target
-// RUN: %clang -ffreestanding -Xclang -disable-llvm-passes --target=hexagon-unknown-elf -mcpu=hexagonv81 -S -emit-llvm %s -o - 2>&1 | FileCheck %s --implicit-check-not="warning:" --implicit-check-not="error:"
-// RUN: %clang -ffreestanding -x c -Xclang -disable-llvm-passes --target=hexagon-unknown-elf -mcpu=hexagonv81 -S -emit-llvm %s -o - 2>&1 | FileCheck %s --implicit-check-not="warning:" --implicit-check-not="error:"
+// RUN: %clang -Xclang -disable-llvm-passes -fenable-ripple --target=hexagon-unknown-elf -mcpu=hexagonv81 -S -emit-llvm %s -o - 2>&1 | FileCheck %s --implicit-check-not="warning:" --implicit-check-not="error:"
+// RUN: %clang -x c -Xclang -disable-llvm-passes -fenable-ripple --target=hexagon-unknown-elf -mcpu=hexagonv81 -S -emit-llvm %s -o - 2>&1 | FileCheck %s --implicit-check-not="warning:" --implicit-check-not="error:"
 
 #include "ripple_test.h"
 

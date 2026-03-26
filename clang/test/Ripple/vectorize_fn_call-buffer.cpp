@@ -1,5 +1,5 @@
 // REQUIRES: hexagon-registered-target
-// RUN: %clang_cc1 -triple hexagon-unknown-elf -fenable-ripple -emit-llvm %s -o - -O0 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-BUFFER
+// RUN: %clang --target=hexagon-unknown-elf -S -fenable-ripple -emit-llvm %s -o - -O0 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-BUFFER
 
 #include "ripple_test.h"
 

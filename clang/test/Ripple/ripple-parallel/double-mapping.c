@@ -1,5 +1,10 @@
+<<<<<<< HEAD
 // REQUIRES: target-x86_64 || target-aarch64 || target=hexagon{{.*}}
 // RUN: %clang_cc1 -disable-llvm-passes -emit-llvm -fenable-ripple %s -o - | FileCheck %s
+=======
+// REQUIRES: hexagon-registered-target || aarch64-registered-target || x86-registered-target
+// RUN: %clang -S -Xclang -disable-llvm-passes -emit-llvm -fenable-ripple %s -o - | FileCheck %s
+>>>>>>> f6954408c713 ([QTOOL-139164][Ripple] Move Ripple headers into a dedicated resource subdirectory)
 // XFAIL: *
 
 // Test where a loop maps to 2 different PE dimensions (a thread, a vector)

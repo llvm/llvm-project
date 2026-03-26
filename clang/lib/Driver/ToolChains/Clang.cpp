@@ -7928,6 +7928,15 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       // Add preprocessor flag with Ripple version. 1.0 in this case.
       CmdArgs.push_back("-D__RIPPLE__=10");
 
+      if (!Args.hasArg(options::OPT_nobuiltininc) &&
+          !Args.hasArg(options::OPT_nostdinc)) {
+        // Add ripple_include/* to our system include path.
+        SmallString<128> P(D.ResourceDir);
+        llvm::sys::path::append(P, "include", "ripple_include");
+        CmdArgs.push_back("-internal-isystem");
+        CmdArgs.push_back(Args.MakeArgString(P));
+      }
+
       if (!Args.hasArg(options::OPT_fdisable_ripple_lib)) {
         // Collect all the ripple's runtime libs (.bc files) available for the
         // target.

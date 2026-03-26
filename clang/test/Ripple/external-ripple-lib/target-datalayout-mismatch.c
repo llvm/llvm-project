@@ -1,6 +1,12 @@
+<<<<<<< HEAD
 // REQUIRES: x86-registered-target && aarch64-registered-target
 // RUN: %clang -ffreestanding --target=x86_64-unknown-elf -c -O2 -emit-llvm %S/external_library.c -o %t.rlib.bc
 // RUN: %clang -ffreestanding --target=aarch64-linux-gnu -O2 -fenable-ripple -emit-llvm -S -o - -fripple-lib %t.rlib.bc %s 2> %t; FileCheck %s --input-file %t
+=======
+// REQUIRES: x86-registered-target && arm-registered-target
+// RUN: %clang --target=x86_64-unknown-elf -c -O2 -fenable-ripple -emit-llvm %S/external_library.c -o %t.rlib.bc
+// RUN: %clang --target=arm-linux-gnueabi -O2 -fenable-ripple -emit-llvm -S -o - -fripple-lib %t.rlib.bc %s 2> %t; FileCheck %s --input-file %t
+>>>>>>> f6954408c713 ([QTOOL-139164][Ripple] Move Ripple headers into a dedicated resource subdirectory)
 
 #include "external_library.h"
 #include "../ripple_test.h"

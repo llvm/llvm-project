@@ -87,16 +87,18 @@ set(hip_files
   __clang_hip_runtime_wrapper.h
   )
 
-set(ripple_files
-  ripple.h
-  ripple_hvx.h
-  ripple_math.h
-  __ripple_vec.h
+set (ripple_include_files
+  ripple_include/ripple.h
+  ripple_include/ripple_math.h
+  ripple_include/ripple_hvx.h
+  ripple_include/__ripple_vec.h
+  ripple_include/ripple/zip.h
+  ripple_include/ripple/thread.h
   )
 
-set(ripple_extra_headers
-  ripple/zip.h
-  ripple/thread.h
+set (ripple_include_ripple_files
+  ripple_include/ripple/zip.h
+  ripple_include/ripple/thread.h
   )
 
 set(hlsl_h
@@ -342,7 +344,6 @@ set(files
   ${opencl_files}
   ${ppc_files}
   ${ppc_htm_files}
-  ${ripple_files}
   ${riscv_files}
   ${spirv_files}
   ${systemz_files}
@@ -468,9 +469,10 @@ endfunction(clang_generate_header)
 
 # Copy header files from the source directory to the build directory
 foreach( f ${files} ${cuda_wrapper_files} ${cuda_wrapper_bits_files}
+           ${ripple_include_files} ${ripple_include_ripple_files}
            ${cuda_wrapper_utility_files} ${ppc_wrapper_files} ${openmp_wrapper_files}
            ${zos_wrapper_files} ${hlsl_files} ${llvm_libc_wrapper_files}
-           ${llvm_offload_wrapper_files} ${ripple_extra_headers})
+           ${llvm_offload_wrapper_files})
   copy_header_to_output_dir(${CMAKE_CURRENT_SOURCE_DIR} ${f})
 endforeach( f )
 
@@ -667,10 +669,14 @@ install(
   COMPONENT clang-resource-headers)
 
 install(
-  FILES ${ripple_extra_headers}
-  DESTINATION ${header_install_dir}/ripple
+  FILES ${ripple_include_files}
+  DESTINATION ${header_install_dir}/ripple_include
   COMPONENT clang-resource-headers)
 
+install(
+  FILES ${ripple_include_ripple_files}
+  DESTINATION ${header_install_dir}/ripple_include/ripple
+  COMPONENT clang-resource-headers)
 
 #############################################################
 # Install rules for separate header lists

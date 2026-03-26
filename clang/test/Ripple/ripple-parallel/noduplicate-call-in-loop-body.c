@@ -1,6 +1,6 @@
 // REQUIRES: target-x86_64 || target-aarch64 || target=hexagon{{.*}}
-// RUN: %clang_cc1 -disable-llvm-passes -emit-llvm -Wripple -fenable-ripple -o - %s -DUSE_PRAGMA 2>%t; FileCheck %s --input-file %t
-// RUN: %clang_cc1 -disable-llvm-passes -emit-llvm -Wripple -fenable-ripple -o - %s -DUSE_CALL 2>%t; FileCheck %s --input-file %t
+// RUN: %clang -S -emit-llvm -Wripple -fenable-ripple -o - %s -DUSE_PRAGMA 2>%t; FileCheck %s --input-file %t
+// RUN: %clang -S -emit-llvm -Wripple -fenable-ripple -o - %s -DUSE_CALL 2>%t; FileCheck %s --input-file %t
 
 #include "../ripple_test.h"
 
