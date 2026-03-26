@@ -3965,7 +3965,12 @@ struct GlobalPrefetchOpLowering
     const bool isSpeculative = op.getSpeculative();
 
     int32_t llvmScopeValue = static_cast<int32_t>(hint);
-    if (hint == TemporalHint::RT || hint == TemporalHint::HT)
+
+    // Note that only RT and HT can operate in both speculative and
+    // non-speculative modes. The other variants (NT_RT, RT_NT, NT_HT, etc.)
+    // operate only in the speculative mode and, therefore, do not require
+    // toggling the least significant bit for mode changes
+    if (llvm::is_contained({TemporalHint::RT, TemporalHint::HT}, hint))
       llvmScopeValue = isSpeculative ? llvmScopeValue : llvmScopeValue | 1;
 
     IntegerAttr scopeAttr = rewriter.getI32IntegerAttr(llvmScopeValue);
@@ -3973,10 +3978,14 @@ struct GlobalPrefetchOpLowering
     ValueRange indices = adaptor.getIndices();
     Value memRef = adaptor.getSrc();
     MemRefDescriptor descriptor(memRef);
+    MemRefType memRefType = op.getSrc().getType();
     Location loc = op->getLoc();
-    auto inboundsFlags = isSpeculative ? LLVM::GEPNoWrapFlags::none : LLVM::GEPNoWrapFlags::inbounds | LLVM::GEPNoWrapFlags::nuw;
-    Value prefetchPtr = getStridedElementPtr(rewriter, loc, adaptor.getSrc(), adaptor.getIndices(), inboundsFlags);
-                                            llvmElemTy, basePtr, offset);
+    auto inboundsFlags = isSpeculative ? LLVM::GEPNoWrapFlags::none
+                                       : LLVM::GEPNoWrapFlags::inbounds |
+                                             LLVM::GEPNoWrapFlags::nuw;
+    Value prefetchPtr = getStridedElementPtr(
+        rewriter, loc, memRefType, descriptor, indices, inboundsFlags);
+
     Operation *newOp = ROCDL::GlobalPrefetchOp::create(
         rewriter, loc, prefetchPtr, scopeAttr, {}, {}, {});
 

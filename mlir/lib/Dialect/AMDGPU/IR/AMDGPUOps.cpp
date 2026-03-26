@@ -1309,12 +1309,8 @@ LogicalResult DsBarrierArriveOp::verify() {
 LogicalResult GlobalPrefetchOp::verify() {
   auto src = cast<MemRefType>(getSrc().getType());
 
-  if (auto spaceAttr = dyn_cast<gpu::AddressSpaceAttr>(src.getMemorySpace())) {
-    if (spaceAttr.getValue() != gpu::AddressSpace::Global)
-      return this->emitOpError(
-          "the source must reside in global address space");
-  } else
-    return this->emitOpError("requires gpu address space attrubute");
+  if (!hasGlobalMemorySpace(src.getMemorySpace()))
+    return this->emitOpError("the source must reside in global address space");
 
   ArrayRef<int64_t> srcShape = src.getShape();
   const size_t numIndices = getIndices().size();
