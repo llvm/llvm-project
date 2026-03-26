@@ -65,6 +65,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
+#include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "Utils/AArch64BaseInfo.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -116,7 +117,7 @@ class AArch64ConditionOptimizerImpl {
     unsigned getOpc() const { return CmpMI->getOpcode(); }
   };
 
-  const TargetInstrInfo *TII;
+  const AArch64InstrInfo *TII;
   const TargetRegisterInfo *TRI;
   MachineDominatorTree *DomTree;
   const MachineRegisterInfo *MRI;
@@ -384,20 +385,10 @@ void AArch64ConditionOptimizerImpl::updateCmpInstr(MachineInstr *CmpMI,
 // Modifies the condition code of a conditional instruction.
 void AArch64ConditionOptimizerImpl::updateCondInstr(MachineInstr *CondMI,
                                                     AArch64CC::CondCode NewCC) {
-  // Get the correct operand index for the conditional instruction
-  unsigned CondOpIdx;
-  switch (CondMI->getOpcode()) {
-  case AArch64::Bcc:
-    CondOpIdx = 0;
-    break;
-  case AArch64::CSINCWr:
-  case AArch64::CSINCXr:
-    CondOpIdx = 3;
-    break;
-  default:
-    llvm_unreachable("Unsupported conditional instruction");
-  }
-  CondMI->getOperand(CondOpIdx).setImm(NewCC);
+  int CCOpIdx =
+      AArch64InstrInfo::findCondCodeUseOperandIdxForBranchOrSelect(*CondMI);
+  assert(CCOpIdx >= 0 && "Unsupported conditional instruction");
+  CondMI->getOperand(CCOpIdx).setImm(NewCC);
   ++NumConditionsAdjusted;
 }
 
@@ -684,7 +675,7 @@ bool AArch64ConditionOptimizerImpl::run(MachineFunction &MF,
   LLVM_DEBUG(dbgs() << "********** AArch64 Conditional Compares **********\n"
                     << "********** Function: " << MF.getName() << '\n');
 
-  TII = MF.getSubtarget().getInstrInfo();
+  TII = static_cast<const AArch64InstrInfo *>(MF.getSubtarget().getInstrInfo());
   TRI = MF.getSubtarget().getRegisterInfo();
   DomTree = &MDT;
   MRI = &MF.getRegInfo();
