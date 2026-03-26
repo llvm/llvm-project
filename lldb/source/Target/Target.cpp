@@ -42,7 +42,6 @@
 #include "lldb/Interpreter/OptionGroupWatchpoint.h"
 #include "lldb/Interpreter/OptionValues.h"
 #include "lldb/Interpreter/Property.h"
-#include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/Symbol.h"
@@ -1546,9 +1545,7 @@ Module *Target::GetExecutableModulePointer() {
 static void LoadScriptingResourceForModule(const ModuleSP &module_sp,
                                            Target *target) {
   Status error;
-  StreamString feedback_stream;
-  if (module_sp && !module_sp->LoadScriptingResourceInTarget(target, error,
-                                                             feedback_stream)) {
+  if (module_sp && !module_sp->LoadScriptingResourceInTarget(target, error)) {
     if (error.AsCString())
       target->GetDebugger().GetAsyncErrorStream()->Printf(
           "unable to load scripting data for module %s - error reported was "
@@ -1556,9 +1553,6 @@ static void LoadScriptingResourceForModule(const ModuleSP &module_sp,
           module_sp->GetFileSpec().GetFileNameStrippingExtension().GetCString(),
           error.AsCString());
   }
-  if (feedback_stream.GetSize())
-    target->GetDebugger().GetAsyncErrorStream()->Printf(
-        "%s\n", feedback_stream.GetData());
 }
 
 void Target::ClearModules(bool delete_locations) {
@@ -2620,7 +2614,8 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
 
   if (language == eLanguageTypeMipsAssembler // GNU AS and LLVM use it for all
                                              // assembly code
-      || language == eLanguageTypeUnknown) {
+      || language == eLanguageTypeAssembly ||
+      language == eLanguageTypeUnknown) {
     LanguageSet languages_for_expressions =
         Language::GetLanguagesSupportingTypeSystemsForExpressions();
 
@@ -2823,11 +2818,8 @@ llvm::Error Target::SetLabel(llvm::StringRef label) {
   for (size_t i = 0; i < targets.GetNumTargets(); i++) {
     TargetSP target_sp = targets.GetTargetAtIndex(i);
     if (target_sp && target_sp->GetLabel() == label) {
-        return llvm::make_error<llvm::StringError>(
-            llvm::formatv(
-                "Cannot use label '{0}' since it's set in target #{1}.", label,
-                i),
-            llvm::inconvertibleErrorCode());
+      return llvm::createStringErrorV(
+          "Cannot use label '{0}' since it's set in target #{1}.", label, i);
     }
   }
 
@@ -2904,9 +2896,19 @@ ExpressionResults Target::EvaluateExpression(
     result_valobj_sp = persistent_var_sp->GetValueObject();
     execution_results = eExpressionCompleted;
   } else {
+    // If this expression is being evaluated from inside a frame provider,
+    // force single-thread execution. Resuming all threads while a provider
+    // is mid-construction could cause unwanted process state changes.
+    EvaluateExpressionOptions effective_options = options;
+    if (ThreadSP thread_sp = exe_ctx.GetThreadSP()) {
+      if (thread_sp->IsAnyProviderActive()) {
+        effective_options.SetStopOthers(true);
+        effective_options.SetTryAllThreads(false);
+      }
+    }
     llvm::StringRef prefix = GetExpressionPrefixContents();
     execution_results =
-        UserExpression::Evaluate(exe_ctx, options, expr, prefix,
+        UserExpression::Evaluate(exe_ctx, effective_options, expr, prefix,
                                  result_valobj_sp, fixed_expression, ctx_obj);
   }
 
@@ -3425,93 +3427,6 @@ void Target::SaveScriptedLaunchInfo(lldb_private::ProcessInfo &process_info) {
     default_launch_info.SetScriptedMetadata(process_info.GetScriptedMetadata());
     SetProcessLaunchInfo(default_launch_info);
   }
-}
-
-Status
-Target::RegisterScriptedSymbolLocator(llvm::StringRef class_name,
-                                      StructuredData::DictionarySP args_sp) {
-  if (class_name.empty())
-    return Status::FromErrorString(
-        "class name must not be empty; use ClearScriptedSymbolLocator() to "
-        "unregister");
-
-  ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
-  if (!interpreter)
-    return Status::FromErrorString("no script interpreter available");
-
-  auto interface_sp = interpreter->CreateScriptedSymbolLocatorInterface();
-  if (!interface_sp)
-    return Status::FromErrorString(
-        "failed to create scripted symbol locator interface");
-
-  ExecutionContext exe_ctx;
-  TargetSP target_sp(shared_from_this());
-  exe_ctx.SetTargetSP(target_sp);
-
-  auto obj_or_err =
-      interface_sp->CreatePluginObject(class_name, exe_ctx, args_sp);
-  if (!obj_or_err)
-    return Status::FromError(obj_or_err.takeError());
-
-  m_scripted_symbol_locator_metadata_sp =
-      std::make_shared<ScriptedMetadata>(class_name, args_sp);
-  m_scripted_symbol_locator_interface_sp = interface_sp;
-  m_scripted_source_file_cache.clear();
-
-  // Invalidate cached stack frames so the next backtrace re-resolves line
-  // entries through ApplyFileMappings, which will call our locator.
-  ProcessSP process_sp = GetProcessSP();
-  if (process_sp) {
-    ThreadList &thread_list = process_sp->GetThreadList();
-    for (uint32_t i = 0; i < thread_list.GetSize(false); i++) {
-      if (ThreadSP thread_sp = thread_list.GetThreadAtIndex(i, false))
-        thread_sp->ClearStackFrames();
-    }
-  }
-
-  return Status();
-}
-
-void Target::ClearScriptedSymbolLocator() {
-  m_scripted_symbol_locator_metadata_sp.reset();
-  m_scripted_symbol_locator_interface_sp.reset();
-  m_scripted_source_file_cache.clear();
-
-  // Invalidate cached stack frames so the next backtrace re-resolves line
-  // entries without the scripted locator.
-  ProcessSP process_sp = GetProcessSP();
-  if (process_sp) {
-    ThreadList &thread_list = process_sp->GetThreadList();
-    for (uint32_t i = 0; i < thread_list.GetSize(false); i++) {
-      if (ThreadSP thread_sp = thread_list.GetThreadAtIndex(i, false))
-        thread_sp->ClearStackFrames();
-    }
-  }
-}
-
-ScriptedSymbolLocatorInterfaceSP Target::GetScriptedSymbolLocatorInterface() {
-  return m_scripted_symbol_locator_interface_sp;
-}
-
-llvm::StringRef Target::GetScriptedSymbolLocatorClassName() const {
-  return m_scripted_symbol_locator_metadata_sp
-             ? m_scripted_symbol_locator_metadata_sp->GetClassName()
-             : "";
-}
-
-bool Target::LookupScriptedSourceFileCache(
-    llvm::StringRef key, std::optional<FileSpec> &result) const {
-  auto it = m_scripted_source_file_cache.find(key);
-  if (it != m_scripted_source_file_cache.end()) {
-    result = it->second;
-    return true;
-  }
-  return false;
-}
-
-void Target::InsertScriptedSourceFileCache(
-    llvm::StringRef key, const std::optional<FileSpec> &result) {
-  m_scripted_source_file_cache[key] = result;
 }
 
 Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
@@ -5468,13 +5383,13 @@ llvm::Error
 EvaluateExpressionOptions::SetBooleanLanguageOption(llvm::StringRef option_name,
                                                     bool value) {
   if (option_name.empty())
-    return llvm::createStringError("Can't set an option with an empty name.");
+    return llvm::createStringError("can't set an option with an empty name");
 
   if (StructuredData::ObjectSP existing_sp =
           GetLanguageOptions().GetValueForKey(option_name);
       existing_sp && existing_sp->GetType() != eStructuredDataTypeBoolean)
-    return llvm::createStringErrorV("Trying to override existing option '{0}' "
-                                    "of type '{1}' with a boolean value.",
+    return llvm::createStringErrorV("trying to override existing option '{0}' "
+                                    "of type '{1}' with a boolean value",
                                     option_name, existing_sp->GetType());
 
   GetLanguageOptions().AddBooleanItem(option_name, value);
@@ -5487,12 +5402,11 @@ llvm::Expected<bool> EvaluateExpressionOptions::GetBooleanLanguageOption(
   const StructuredData::Dictionary &opts = GetLanguageOptions();
 
   if (!opts.HasKey(option_name))
-    return llvm::createStringErrorV("Option '{0}' does not exist.",
-                                    option_name);
+    return llvm::createStringErrorV("option '{0}' does not exist", option_name);
 
   bool result;
   if (!opts.GetValueForKeyAsBoolean(option_name, result))
-    return llvm::createStringErrorV("Failed to get option '{0}' as boolean.",
+    return llvm::createStringErrorV("failed to get option '{0}' as boolean",
                                     option_name);
 
   return result;

@@ -46,6 +46,7 @@ static const unsigned DirectXAddrSpaceMap[] = {
     0, // hlsl_private
     0, // hlsl_device
     0, // hlsl_input
+    0, // hlsl_output
     0, // hlsl_push_constant
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
@@ -63,6 +64,7 @@ public:
     HasFastHalfType = true;
     HasFloat16 = true;
     NoAsmVariants = true;
+    VectorsAreElementAligned = true;
     PlatformMinVersion = Triple.getOSVersion();
     PlatformName = llvm::Triple::getOSTypeName(Triple.getOS());
     resetDataLayout();

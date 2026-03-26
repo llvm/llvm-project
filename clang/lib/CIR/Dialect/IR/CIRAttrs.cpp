@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
 #include "mlir/IR/DialectImplementation.h"
@@ -47,11 +48,21 @@ parseFloatLiteral(mlir::AsmParser &parser,
 // AddressSpaceAttr
 //===----------------------------------------------------------------------===//
 
-mlir::ParseResult parseTargetAddressSpace(mlir::AsmParser &p,
-                                          cir::TargetAddressSpaceAttr &attr);
+mlir::ParseResult parseAddressSpaceValue(mlir::AsmParser &p,
+                                         cir::LangAddressSpace &addrSpace) {
+  llvm::SMLoc loc = p.getCurrentLocation();
+  mlir::FailureOr<cir::LangAddressSpace> result =
+      mlir::FieldParser<cir::LangAddressSpace>::parse(p);
+  if (mlir::failed(result))
+    return p.emitError(loc, "expected address space keyword");
+  addrSpace = result.value();
+  return mlir::success();
+}
 
-void printTargetAddressSpace(mlir::AsmPrinter &p,
-                             cir::TargetAddressSpaceAttr attr);
+void printAddressSpaceValue(mlir::AsmPrinter &p,
+                            cir::LangAddressSpace addrSpace) {
+  p << cir::stringifyEnum(addrSpace);
+}
 
 static mlir::ParseResult parseConstPtr(mlir::AsmParser &parser,
                                        mlir::IntegerAttr &value);
@@ -63,6 +74,95 @@ static void printConstPtr(mlir::AsmPrinter &p, mlir::IntegerAttr value);
 
 using namespace mlir;
 using namespace cir;
+
+//===----------------------------------------------------------------------===//
+// MemorySpaceAttrInterface implementations for Lang and Target address space
+// attributes
+//===----------------------------------------------------------------------===//
+
+bool LangAddressSpaceAttr::isValidLoad(
+    mlir::Type type, mlir::ptr::AtomicOrdering ordering,
+    std::optional<int64_t> alignment, const mlir::DataLayout *dataLayout,
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError) const {
+  llvm_unreachable("isValidLoad for LangAddressSpaceAttr NYI");
+}
+
+bool LangAddressSpaceAttr::isValidStore(
+    mlir::Type type, mlir::ptr::AtomicOrdering ordering,
+    std::optional<int64_t> alignment, const mlir::DataLayout *dataLayout,
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError) const {
+  llvm_unreachable("isValidStore for LangAddressSpaceAttr NYI");
+}
+
+bool LangAddressSpaceAttr::isValidAtomicOp(
+    mlir::ptr::AtomicBinOp op, mlir::Type type,
+    mlir::ptr::AtomicOrdering ordering, std::optional<int64_t> alignment,
+    const mlir::DataLayout *dataLayout,
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError) const {
+  llvm_unreachable("isValidAtomicOp for LangAddressSpaceAttr NYI");
+}
+
+bool LangAddressSpaceAttr::isValidAtomicXchg(
+    mlir::Type type, mlir::ptr::AtomicOrdering successOrdering,
+    mlir::ptr::AtomicOrdering failureOrdering, std::optional<int64_t> alignment,
+    const mlir::DataLayout *dataLayout,
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError) const {
+  llvm_unreachable("isValidAtomicXchg for LangAddressSpaceAttr NYI");
+}
+
+bool LangAddressSpaceAttr::isValidAddrSpaceCast(
+    mlir::Type tgt, mlir::Type src,
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError) const {
+  llvm_unreachable("isValidAddrSpaceCast for LangAddressSpaceAttr NYI");
+}
+
+bool LangAddressSpaceAttr::isValidPtrIntCast(
+    mlir::Type intLikeTy, mlir::Type ptrLikeTy,
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError) const {
+  llvm_unreachable("isValidPtrIntCast for LangAddressSpaceAttr NYI");
+}
+
+bool TargetAddressSpaceAttr::isValidLoad(
+    mlir::Type type, mlir::ptr::AtomicOrdering ordering,
+    std::optional<int64_t> alignment, const mlir::DataLayout *dataLayout,
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError) const {
+  llvm_unreachable("isValidLoad for TargetAddressSpaceAttr NYI");
+}
+
+bool TargetAddressSpaceAttr::isValidStore(
+    mlir::Type type, mlir::ptr::AtomicOrdering ordering,
+    std::optional<int64_t> alignment, const mlir::DataLayout *dataLayout,
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError) const {
+  llvm_unreachable("isValidStore for TargetAddressSpaceAttr NYI");
+}
+
+bool TargetAddressSpaceAttr::isValidAtomicOp(
+    mlir::ptr::AtomicBinOp op, mlir::Type type,
+    mlir::ptr::AtomicOrdering ordering, std::optional<int64_t> alignment,
+    const mlir::DataLayout *dataLayout,
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError) const {
+  llvm_unreachable("isValidAtomicOp for TargetAddressSpaceAttr NYI");
+}
+
+bool TargetAddressSpaceAttr::isValidAtomicXchg(
+    mlir::Type type, mlir::ptr::AtomicOrdering successOrdering,
+    mlir::ptr::AtomicOrdering failureOrdering, std::optional<int64_t> alignment,
+    const mlir::DataLayout *dataLayout,
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError) const {
+  llvm_unreachable("isValidAtomicXchg for TargetAddressSpaceAttr NYI");
+}
+
+bool TargetAddressSpaceAttr::isValidAddrSpaceCast(
+    mlir::Type tgt, mlir::Type src,
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError) const {
+  llvm_unreachable("isValidAddrSpaceCast for TargetAddressSpaceAttr NYI");
+}
+
+bool TargetAddressSpaceAttr::isValidPtrIntCast(
+    mlir::Type intLikeTy, mlir::Type ptrLikeTy,
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError) const {
+  llvm_unreachable("isValidPtrIntCast for TargetAddressSpaceAttr NYI");
+}
 
 //===----------------------------------------------------------------------===//
 // General CIR parsing / printing
@@ -250,6 +350,66 @@ LogicalResult FPAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 }
 
 //===----------------------------------------------------------------------===//
+// CmpThreeWayInfoAttr definitions
+//===----------------------------------------------------------------------===//
+
+std::string CmpThreeWayInfoAttr::getAlias() const {
+  std::string alias = "cmpinfo";
+
+  switch (getOrdering()) {
+  case CmpOrdering::Strong:
+    alias.append("_strong_");
+    break;
+  case CmpOrdering::Weak:
+    alias.append("_weak_");
+    break;
+  case CmpOrdering::Partial:
+    alias.append("_partial_");
+    break;
+  }
+
+  auto appendInt = [&](int64_t value) {
+    if (value < 0) {
+      alias.push_back('n');
+      value = -value;
+    }
+    alias.append(std::to_string(value));
+  };
+
+  alias.append("lt");
+  appendInt(getLt());
+  alias.append("eq");
+  appendInt(getEq());
+  alias.append("gt");
+  appendInt(getGt());
+
+  if (std::optional<int> unordered = getUnordered()) {
+    alias.append("un");
+    appendInt(unordered.value());
+  }
+
+  return alias;
+}
+
+LogicalResult
+CmpThreeWayInfoAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                            CmpOrdering ordering, int64_t lt, int64_t eq,
+                            int64_t gt, std::optional<int64_t> unordered) {
+  // The presence of unordered must match the value of ordering.
+  if ((ordering == CmpOrdering::Strong || ordering == CmpOrdering::Weak) &&
+      unordered) {
+    emitError() << "strong and weak ordering do not include unordered";
+    return failure();
+  }
+  if (ordering == CmpOrdering::Partial && !unordered) {
+    emitError() << "partial ordering requires unordered value";
+    return failure();
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ConstComplexAttr definitions
 //===----------------------------------------------------------------------===//
 
@@ -401,6 +561,10 @@ ConstArrayAttr::verify(function_ref<InFlightDiagnostic()> emitError, Type type,
   const auto arrayTy = mlir::cast<ArrayType>(type);
 
   // Make sure both number of elements and subelement types match type.
+  if (arrayAttr.size() > arrayTy.getSize())
+    return emitError() << "constant array has " << arrayAttr.size()
+                       << " values but array type has size "
+                       << arrayTy.getSize();
   if (arrayTy.getSize() != arrayAttr.size() + trailingZerosNum)
     return emitError() << "constant array size should match type size";
   return success();

@@ -384,6 +384,12 @@ func.func private @struct_missing_member_decorator_value(!spirv.struct<(!spirv.m
 
 // -----
 
+// Regression test for https://github.com/llvm/llvm-project/issues/179675
+// expected-error @+1 {{member type must be a valid SPIR-V type}}
+func.func private @struct_type_non_spirv_member(!spirv.struct<(vector<2x2xi1>)>) -> ()
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // StructType (identified)
 //===----------------------------------------------------------------------===//

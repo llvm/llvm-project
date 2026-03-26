@@ -60,6 +60,10 @@ let Definition = "testing", Path = "testing" in {
         Global,
         DefaultFalse,
         Desc<"Used for testing LLDB only. Hide locations of local variables.">;
+  def SafeAutoloadPaths : Property<"safe-auto-load-paths", "FileSpecList">,
+                          DefaultStringValue<"">,
+                          Desc<"List of paths that LLDB will automatically "
+                               "load scripting resources from.">;
 }
 #endif
 
@@ -129,6 +133,10 @@ let Definition = "debugger", Path = "" in {
     Global,
     DefaultTrue,
     Desc<"If true, LLDB will highlight the displayed source code.">;
+  def MarkHiddenFrames: Property<"mark-hidden-frames", "Boolean">,
+    Global,
+    DefaultTrue,
+    Desc<"If true, LLDB will add a marker to delimit hidden frames in backtraces.">;
   def StopShowColumn: Property<"stop-show-column", "Enum">,
     DefaultEnumValue<"eStopShowColumnAnsiOrCaret">,
     EnumValues<"OptionEnumValues(s_stop_show_column_values)">,
@@ -180,7 +188,7 @@ let Definition = "debugger", Path = "" in {
   def ShowProgress
       : Property<"show-progress", "Boolean">,
         Global,
-        DefaultFalse,
+        DefaultTrue,
         Desc<"Whether to show progress using Operating System Command (OSC) "
              "Sequences in supporting terminal emulators.">;
   def ShowProgressAnsiPrefix: Property<"show-progress-ansi-prefix", "String">,

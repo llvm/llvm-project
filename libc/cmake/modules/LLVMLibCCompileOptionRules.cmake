@@ -100,6 +100,10 @@ function(_get_compile_options_from_config output_var)
     list(APPEND config_options "-DLIBC_COPT_MEMSET_X86_USE_SOFTWARE_PREFETCHING")
   endif()
 
+  if(LIBC_CONF_COPT_MEMCPY_X86_USE_NTA_STORES)
+    list(APPEND config_options "-DLIBC_COPT_MEMCPY_X86_USE_NTA_STORES")
+  endif()
+
   if(LIBC_TYPES_TIME_T_IS_32_BIT AND LLVM_LIBC_FULL_BUILD)
     list(APPEND config_options "-DLIBC_TYPES_TIME_T_IS_32_BIT")
   endif()
@@ -145,6 +149,10 @@ function(_get_compile_options_from_config output_var)
     else()
       list(APPEND config_options "-DLIBC_MATH_USE_SYSTEM_FENV")
     endif()
+  endif()
+
+  if(LIBC_CONF_CTYPE_SMALLER_ASCII)
+    list(APPEND config_options "-DLIBC_COPT_CTYPE_SMALLER_ASCII")
   endif()
 
   if(LIBC_CONF_PRINTF_DISABLE_WIDE)

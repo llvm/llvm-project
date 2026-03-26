@@ -70,13 +70,16 @@
 ; LAXX-NEXT:       Expand reduction intrinsics
 ; LAXX-NEXT:       Natural Loop Information
 ; LAXX-NEXT:       Type Promotion
+; LAXX-NEXT:       Post-Dominator Tree Construction
+; LAXX-NEXT:       Branch Probability Analysis
+; LAXX-NEXT:       Block Frequency Analysis
 ; LAXX-NEXT:       CodeGen Prepare
 ; LAXX-NEXT:       Dominator Tree Construction
 ; LAXX-NEXT:       Exception handling preparation
 ; LAXX-NEXT:       Basic Alias Analysis (stateless AA impl)
 ; LAXX-NEXT:       Function Alias Analysis Results
 ; LAXX-NEXT:       ObjC ARC contraction
-; LAXX-NEXT:       Prepare callbr
+; LAXX-NEXT:       Prepare inline asm insts
 ; LAXX-NEXT:       Safe Stack instrumentation pass
 ; LAXX-NEXT:       Insert stack protectors
 ; LAXX-NEXT:       Module Verifier

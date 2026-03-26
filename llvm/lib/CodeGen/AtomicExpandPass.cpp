@@ -20,7 +20,6 @@
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/AtomicExpand.h"
-#include "llvm/CodeGen/AtomicExpandUtils.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -67,6 +66,14 @@ class AtomicExpandImpl {
   const DataLayout *DL = nullptr;
 
 private:
+  /// Callback type for emitting a cmpxchg instruction during RMW expansion.
+  /// Parameters: (Builder, Addr, Loaded, NewVal, AddrAlign, MemOpOrder,
+  ///              SSID, IsVolatile, /* OUT */ Success, /* OUT */ NewLoaded,
+  ///              MetadataSrc)
+  using CreateCmpXchgInstFun = function_ref<void(
+      IRBuilderBase &, Value *, Value *, Value *, Align, AtomicOrdering,
+      SyncScope::ID, Value *&, Value *&, Instruction *)>;
+
   void handleFailure(Instruction &FailedInst, const Twine &Msg) const {
     LLVMContext &Ctx = FailedInst.getContext();
 
@@ -126,9 +133,8 @@ private:
   void expandAtomicRMWToLibcall(AtomicRMWInst *I);
   void expandAtomicCASToLibcall(AtomicCmpXchgInst *I);
 
-  friend bool
-  llvm::expandAtomicRMWToCmpXchg(AtomicRMWInst *AI,
-                                 CreateCmpXchgInstFun CreateCmpXchg);
+  bool expandAtomicRMWToCmpXchg(AtomicRMWInst *AI,
+                                CreateCmpXchgInstFun CreateCmpXchg);
 
   bool processAtomicInstr(Instruction *I);
 
@@ -967,6 +973,8 @@ static Value *performMaskedAtomicOp(AtomicRMWInst::BinOp Op,
   case AtomicRMWInst::FMax:
   case AtomicRMWInst::FMaximum:
   case AtomicRMWInst::FMinimum:
+  case AtomicRMWInst::FMaximumNum:
+  case AtomicRMWInst::FMinimumNum:
   case AtomicRMWInst::UIncWrap:
   case AtomicRMWInst::UDecWrap:
   case AtomicRMWInst::USubCond:
@@ -1742,9 +1750,8 @@ bool AtomicExpandImpl::tryExpandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
   }
 }
 
-// Note: This function is exposed externally by AtomicExpandUtils.h
-bool llvm::expandAtomicRMWToCmpXchg(AtomicRMWInst *AI,
-                                    CreateCmpXchgInstFun CreateCmpXchg) {
+bool AtomicExpandImpl::expandAtomicRMWToCmpXchg(
+    AtomicRMWInst *AI, CreateCmpXchgInstFun CreateCmpXchg) {
   ReplacementIRBuilder Builder(AI, AI->getDataLayout());
   Builder.setIsFPConstrained(
       AI->getFunction()->hasFnAttribute(Attribute::StrictFP));
@@ -1881,6 +1888,8 @@ static ArrayRef<RTLIB::Libcall> GetRMWLibcall(AtomicRMWInst::BinOp Op) {
   case AtomicRMWInst::FMin:
   case AtomicRMWInst::FMaximum:
   case AtomicRMWInst::FMinimum:
+  case AtomicRMWInst::FMaximumNum:
+  case AtomicRMWInst::FMinimumNum:
   case AtomicRMWInst::FAdd:
   case AtomicRMWInst::FSub:
   case AtomicRMWInst::UIncWrap:
@@ -1950,6 +1959,16 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
 
   bool UseSizedLibcall = canUseSizedAtomicCall(Size, Alignment, DL);
   Type *SizedIntTy = Type::getIntNTy(Ctx, Size * 8);
+
+  if (M->getTargetTriple().isOSWindows() && M->getTargetTriple().isX86_64() &&
+      Size == 16) {
+    // x86_64 Windows passes i128 as an XMM vector; on return, it is in
+    // XMM0, and as a parameter, it is passed indirectly. The generic lowering
+    // rules handles this correctly if we pass it as a v2i64 rather than
+    // i128. This is what Clang does in the frontend for such types as well
+    // (see WinX86_64ABIInfo::classify in Clang).
+    SizedIntTy = FixedVectorType::get(Type::getInt64Ty(Ctx), 2);
+  }
 
   const Align AllocaAlignment = DL.getPrefTypeAlign(SizedIntTy);
 

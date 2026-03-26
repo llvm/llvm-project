@@ -378,10 +378,12 @@ private:
   CheckerManager &Mgr;
 };
 
-class GenericTaintChecker : public Checker<check::PreCall, check::PostCall> {
+class GenericTaintChecker
+    : public Checker<check::PreCall, check::PostCall, check::BeginFunction> {
 public:
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
+  void checkBeginFunction(CheckerContext &C) const;
 
   void printState(raw_ostream &Out, ProgramStateRef State, const char *NL,
                   const char *Sep) const override;
@@ -829,8 +831,94 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
                             std::make_move_iterator(Rules.end()));
 }
 
+bool isPointerToCharArray(const QualType &QT) {
+  if (!QT->isPointerType())
+    return false;
+  QualType PointeeType = QT->getPointeeType();
+  return PointeeType->isPointerType() &&
+         PointeeType->getPointeeType()->isCharType();
+}
+
+// The incoming parameters of the main function get tainted
+// if the program called in an untrusted environment.
+void GenericTaintChecker::checkBeginFunction(CheckerContext &C) const {
+  if (!C.inTopFrame() || C.getAnalysisManager()
+                             .getAnalyzerOptions()
+                             .ShouldAssumeControlledEnvironment)
+    return;
+
+  const auto *FD = dyn_cast<FunctionDecl>(C.getLocationContext()->getDecl());
+  if (!FD || !FD->isMain() || FD->param_size() < 2)
+    return;
+
+  if (!FD->parameters()[0]->getType()->isIntegerType())
+    return;
+
+  if (!isPointerToCharArray(FD->parameters()[1]->getType()))
+    return;
+  ProgramStateRef State = C.getState();
+
+  const MemRegion *ArgcReg =
+      State->getRegion(FD->parameters()[0], C.getLocationContext());
+  SVal ArgcSVal = State->getSVal(ArgcReg);
+  State = addTaint(State, ArgcSVal);
+  StringRef ArgcName = FD->parameters()[0]->getName();
+  if (auto N = ArgcSVal.getAs<NonLoc>()) {
+    ConstraintManager &CM = C.getConstraintManager();
+    // The upper bound is the ARG_MAX on an arbitrary Linux
+    // to model that is is typically smaller than INT_MAX.
+    State = CM.assumeInclusiveRange(State, *N, llvm::APSInt::getUnsigned(1),
+                                    llvm::APSInt::getUnsigned(2097152), true);
+  }
+
+  const MemRegion *ArgvReg =
+      State->getRegion(FD->parameters()[1], C.getLocationContext());
+  SVal ArgvSVal = State->getSVal(ArgvReg);
+  State = addTaint(State, ArgvSVal);
+  StringRef ArgvName = FD->parameters()[1]->getName();
+
+  bool HaveEnvp = FD->param_size() > 2;
+  SVal EnvpSVal;
+  StringRef EnvpName;
+  if (HaveEnvp && !isPointerToCharArray(FD->parameters()[2]->getType()))
+    return;
+  if (HaveEnvp) {
+    const MemRegion *EnvPReg =
+        State->getRegion(FD->parameters()[2], C.getLocationContext());
+    EnvpSVal = State->getSVal(EnvPReg);
+    EnvpName = FD->parameters()[2]->getName();
+    State = addTaint(State, EnvpSVal);
+  }
+
+  const NoteTag *OriginatingTag =
+      C.getNoteTag([ArgvSVal, ArgcSVal, ArgcName, ArgvName, EnvpSVal,
+                    EnvpName](PathSensitiveBugReport &BR) -> std::string {
+        if ((!BR.isInteresting(ArgcSVal) && !BR.isInteresting(ArgvSVal) &&
+             !BR.isInteresting(EnvpSVal)))
+          return "";
+        if (BR.getBugType().getCategory() != categories::TaintedData)
+          return "";
+        std::string Message = "";
+        if (BR.isInteresting(ArgvSVal))
+          Message += "'" + ArgvName.str() + "'";
+        if (BR.isInteresting(ArgcSVal)) {
+          if (Message.size() > 0)
+            Message += ", ";
+          Message += "'" + ArgcName.str() + "'";
+        }
+        if (BR.isInteresting(EnvpSVal)) {
+          if (Message.size() > 0)
+            Message += ", ";
+          Message += "'" + EnvpName.str() + "'";
+        }
+        return "Taint originated in " + Message;
+      });
+  C.addTransition(State, OriginatingTag);
+}
+
 void GenericTaintChecker::checkPreCall(const CallEvent &Call,
                                        CheckerContext &C) const {
+
   initTaintRules(C);
 
   // FIXME: this should be much simpler.

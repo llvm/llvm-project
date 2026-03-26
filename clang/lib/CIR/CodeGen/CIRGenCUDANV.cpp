@@ -49,6 +49,12 @@ private:
   mlir::Value prepareKernelArgs(CIRGenFunction &cgf, mlir::Location loc,
                                 FunctionArgList &args);
   mlir::Operation *getKernelHandle(cir::FuncOp fn, GlobalDecl gd) override;
+
+  mlir::Operation *getKernelStub(mlir::Operation *handle) override {
+    auto it = kernelStubs.find(handle);
+    assert(it != kernelStubs.end());
+    return it->second;
+  }
   std::string addPrefixToName(StringRef funcName) const;
   std::string addUnderscoredPrefixToName(StringRef funcName) const;
 
@@ -120,9 +126,6 @@ void CIRGenNVCUDARuntime::emitDeviceStubBodyNew(CIRGenFunction &cgf,
   // This requires arguments to be sent to kernels in a different way.
   if (cgm.getLangOpts().OffloadViaLLVM)
     cgm.errorNYI("CIRGenNVCUDARuntime: Offload via LLVM");
-
-  if (cgm.getLangOpts().HIP)
-    cgm.errorNYI("CIRGenNVCUDARuntime: HIP Support");
 
   CIRGenBuilderTy &builder = cgm.getBuilder();
   mlir::Location loc = fn.getLoc();
@@ -213,7 +216,8 @@ void CIRGenNVCUDARuntime::emitDeviceStubBodyNew(CIRGenFunction &cgf,
       cir::PointerType kernelTy = cir::PointerType::get(globalOp.getSymType());
       mlir::Value kernelVal = cir::GetGlobalOp::create(builder, loc, kernelTy,
                                                        globalOp.getSymName());
-      return kernelVal;
+      mlir::Value func = builder.createBitcast(kernelVal, cgm.voidPtrTy);
+      return func;
     }
     if (cir::FuncOp funcOp = llvm::dyn_cast_or_null<cir::FuncOp>(
             kernelHandles[fn.getSymName()])) {
@@ -325,10 +329,9 @@ mlir::Operation *CIRGenNVCUDARuntime::getKernelHandle(cir::FuncOp fn,
   CIRGenBuilderTy &builder = cgm.getBuilder();
   StringRef globalName = cgm.getMangledName(
       gd.getWithKernelReferenceKind(KernelReferenceKind::Kernel));
-  const VarDecl *varDecl = llvm::dyn_cast_or_null<VarDecl>(gd.getDecl());
-  cir::GlobalOp globalOp =
-      cgm.getOrCreateCIRGlobal(globalName, fn.getFunctionType().getReturnType(),
-                               LangAS::Default, varDecl, NotForDefinition);
+  cir::GlobalOp globalOp = CIRGenModule::createGlobalOp(
+      cgm, fn.getLoc(), globalName, fn.getFunctionType(),
+      /*isConstant=*/true);
 
   globalOp->setAttr("alignment", builder.getI64IntegerAttr(
                                      cgm.getPointerAlign().getQuantity()));

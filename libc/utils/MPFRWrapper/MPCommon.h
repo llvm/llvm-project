@@ -214,6 +214,7 @@ public:
   MPFRNumber log() const;
   MPFRNumber log2() const;
   MPFRNumber log10() const;
+  MPFRNumber log10p1() const;
   MPFRNumber log1p() const;
   MPFRNumber pow(const MPFRNumber &b);
   MPFRNumber remquo(const MPFRNumber &divisor, int &quotient);

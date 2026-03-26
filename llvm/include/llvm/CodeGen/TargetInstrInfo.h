@@ -20,7 +20,6 @@
 #include "llvm/CodeGen/MIRFormatter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineCombinerPattern.h"
-#include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -46,7 +45,9 @@ class DFAPacketizer;
 class InstrItineraryData;
 class LiveIntervals;
 class LiveVariables;
+class MachineCycleInfo;
 class MachineLoop;
+class MachineLoopInfo;
 class MachineMemOperand;
 class MachineModuleInfo;
 class MachineRegisterInfo;
@@ -427,6 +428,22 @@ public:
     return ~0U;
   }
 
+  enum class InstSizeVerifyMode {
+    /// Do not verify instruction size.
+    NoVerify,
+    /// Check that the instruction size matches exactly.
+    ExactSize,
+    /// Allow the reported instruction size to be larger than the actual size.
+    AllowOverEstimate,
+  };
+
+  /// Determine whether/how the instruction size returned by
+  /// getInstSizeInBytes() should be verified.
+  virtual InstSizeVerifyMode
+  getInstSizeVerifyMode(const MachineInstr &MI) const {
+    return InstSizeVerifyMode::NoVerify;
+  }
+
   /// Return true if the instruction is as cheap as a move instruction.
   ///
   /// Targets for different archs need to override this, and different
@@ -461,9 +478,12 @@ public:
   /// The register in Orig->getOperand(0).getReg() will be substituted by
   /// DestReg:SubIdx. Any existing subreg index is preserved or composed with
   /// SubIdx.
-  virtual void reMaterialize(MachineBasicBlock &MBB,
-                             MachineBasicBlock::iterator MI, Register DestReg,
-                             unsigned SubIdx, const MachineInstr &Orig) const;
+  /// \p UsedLanes is a bitmask of the lanes that are live at the
+  /// rematerialization point.
+  virtual void
+  reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+                Register DestReg, unsigned SubIdx, const MachineInstr &Orig,
+                LaneBitmask UsedLanes = LaneBitmask::getAll()) const;
 
   /// Clones instruction or the whole instruction bundle \p Orig and
   /// insert into \p MBB before \p InsertBefore. The target may update operands
@@ -1785,7 +1805,8 @@ public:
   /// Allocate and return a hazard recognizer to use for by non-scheduling
   /// passes.
   virtual ScheduleHazardRecognizer *
-  CreateTargetPostRAHazardRecognizer(const MachineFunction &MF) const {
+  CreateTargetPostRAHazardRecognizer(const MachineFunction &MF,
+                                     MachineLoopInfo *MLI) const {
     return nullptr;
   }
 

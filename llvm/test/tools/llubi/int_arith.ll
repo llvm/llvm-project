@@ -79,6 +79,11 @@ define void @main() {
   %select_vec2 = select i1 false, <2 x i32> splat(i32 10), <2 x i32> splat(i32 20)
   %select_struct = select i1 false, {i32, [2 x i1], { <2 x i16> }} zeroinitializer, {i32, [2 x i1], { <2 x i16> }} {i32 0, [2 x i1] [i1 true, i1 poison],{ <2 x i16> } { <2 x i16> <i16 1, i16 2> }}
 
+  %icmp = icmp eq i32 1, 2
+  %icmp_poison = icmp eq i32 poison, 0
+  %icmp_samgsign = icmp samesign ult i32 1, 0
+  %icmp_samesign_poison = icmp samesign ult i32 1, -1
+
   ret void
 }
 ; CHECK: Entering function: main
@@ -143,5 +148,9 @@ define void @main() {
 ; CHECK-NEXT:   %select_vec1 = select <3 x i1> <i1 true, i1 false, i1 poison>, <3 x i32> splat (i32 10), <3 x i32> splat (i32 20) => { i32 10, i32 20, poison }
 ; CHECK-NEXT:   %select_vec2 = select i1 false, <2 x i32> splat (i32 10), <2 x i32> splat (i32 20) => { i32 20, i32 20 }
 ; CHECK-NEXT:   %select_struct = select i1 false, { i32, [2 x i1], { <2 x i16> } } zeroinitializer, { i32, [2 x i1], { <2 x i16> } } { i32 0, [2 x i1] [i1 true, i1 poison], { <2 x i16> } { <2 x i16> <i16 1, i16 2> } } => { i32 0, { T, poison }, { { i16 1, i16 2 } } }
+; CHECK-NEXT:   %icmp = icmp eq i32 1, 2 => F
+; CHECK-NEXT:   %icmp_poison = icmp eq i32 poison, 0 => poison
+; CHECK-NEXT:   %icmp_samgsign = icmp samesign ult i32 1, 0 => F
+; CHECK-NEXT:   %icmp_samesign_poison = icmp samesign ult i32 1, -1 => poison
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

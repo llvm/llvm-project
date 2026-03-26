@@ -120,6 +120,21 @@ public:
   bool isNotFound() const { return Val.getInt() == NotFound; }
 };
 
+/// Specifies the high-level result of validating input files.
+enum class InputFilesValidation {
+  /// Initial value, before the validation has been performed.
+  NotStarted = 0,
+  /// When the validation is disabled. For example, for a precompiled header.
+  Disabled,
+  /// When the validation is skipped because it was already done in the current
+  /// build session.
+  SkippedInBuildSession,
+  /// When the validation is done only for user files as an optimization.
+  UserFiles,
+  /// When the validation is done both for user files and system files.
+  AllFiles,
+};
+
 /// Information about a module that has been loaded by the ASTReader.
 ///
 /// Each instance of the Module class corresponds to a single AST file, which
@@ -129,8 +144,10 @@ public:
 /// other modules.
 class ModuleFile {
 public:
-  ModuleFile(ModuleKind Kind, FileEntryRef File, unsigned Generation)
-      : Kind(Kind), File(File), Generation(Generation) {}
+  ModuleFile(ModuleKind Kind, ModuleFileKey FileKey, FileEntryRef File,
+             unsigned Generation)
+      : Kind(Kind), FileKey(std::move(FileKey)), File(File),
+        Generation(Generation) {}
   ~ModuleFile();
 
   // === General information ===
@@ -142,7 +159,10 @@ public:
   ModuleKind Kind;
 
   /// The file name of the module file.
-  std::string FileName;
+  ModuleFileName FileName;
+
+  /// The key ModuleManager used for the module file.
+  ModuleFileKey FileKey;
 
   /// The name of the module.
   std::string ModuleName;
@@ -275,6 +295,14 @@ public:
   ///
   /// The time is specified in seconds since the start of the Epoch.
   uint64_t InputFilesValidationTimestamp = 0;
+
+  /// Captures the high-level result of validating input files.
+  ///
+  /// Useful when encountering a changed input file. This way, we can check
+  /// what kind of validation has been done already and can try to figure out
+  /// why a changed file hasn't been discovered earlier.
+  InputFilesValidation InputFilesValidationStatus =
+      InputFilesValidation::NotStarted;
 
   // === Source Locations ===
 

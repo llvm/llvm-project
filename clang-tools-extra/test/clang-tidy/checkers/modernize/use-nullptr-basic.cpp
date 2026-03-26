@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy %s modernize-use-nullptr %t -- -- -fno-delayed-template-parsing
 
 const unsigned int g_null = 0;
-#define NULL 0
+#include <cstddef>
 
 void test_assignment() {
   int *p1 = 0;

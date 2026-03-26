@@ -469,6 +469,7 @@ module std [system] {
     module mismatch {
       header "__algorithm/mismatch.h"
       export std.utility.pair // return type
+      export std.iterator.aliasing_iterator
     }
     module move_backward                          { header "__algorithm/move_backward.h" }
     module move                                   { header "__algorithm/move.h" }
@@ -1364,7 +1365,15 @@ module std [system] {
     module format_string                      { header "__format/format_string.h" }
     module format_to_n_result                 { header "__format/format_to_n_result.h" }
     module formatter                          { header "__format/formatter.h" }
-    module formatter_bool                     { header "__format/formatter_bool.h" }
+    module formatter_bool                {
+      header "__format/formatter_bool.h"
+      export std.format.formatter
+    }
+    module formatter_bool_impl                {
+      header "__format/formatter_bool_impl.h"
+      export std.format.formatter_bool
+      export std.format.formatter
+    }
     module formatter_char                     { header "__format/formatter_char.h" }
     module formatter_floating_point           { header "__format/formatter_floating_point.h" }
     module formatter_integer                  { header "__format/formatter_integer.h" }

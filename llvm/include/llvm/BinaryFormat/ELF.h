@@ -763,108 +763,106 @@ enum {
 };
 
 // AMDGPU specific e_flags.
+#define AMDGPU_MACH_LIST(X)                                                    \
+  X(0x01, EF_AMDGPU_MACH_R600_R600, "r600")                                    \
+  X(0x02, EF_AMDGPU_MACH_R600_R630, "r630")                                    \
+  X(0x03, EF_AMDGPU_MACH_R600_RS880, "rs880")                                  \
+  X(0x04, EF_AMDGPU_MACH_R600_RV670, "rv670")                                  \
+  X(0x05, EF_AMDGPU_MACH_R600_RV710, "rv710")                                  \
+  X(0x06, EF_AMDGPU_MACH_R600_RV730, "rv730")                                  \
+  X(0x07, EF_AMDGPU_MACH_R600_RV770, "rv770")                                  \
+  X(0x08, EF_AMDGPU_MACH_R600_CEDAR, "cedar")                                  \
+  X(0x09, EF_AMDGPU_MACH_R600_CYPRESS, "cypress")                              \
+  X(0x0a, EF_AMDGPU_MACH_R600_JUNIPER, "juniper")                              \
+  X(0x0b, EF_AMDGPU_MACH_R600_REDWOOD, "redwood")                              \
+  X(0x0c, EF_AMDGPU_MACH_R600_SUMO, "sumo")                                    \
+  X(0x0d, EF_AMDGPU_MACH_R600_BARTS, "barts")                                  \
+  X(0x0e, EF_AMDGPU_MACH_R600_CAICOS, "caicos")                                \
+  X(0x0f, EF_AMDGPU_MACH_R600_CAYMAN, "cayman")                                \
+  X(0x10, EF_AMDGPU_MACH_R600_TURKS, "turks")                                  \
+  X(0x20, EF_AMDGPU_MACH_AMDGCN_GFX600, "gfx600")                              \
+  X(0x21, EF_AMDGPU_MACH_AMDGCN_GFX601, "gfx601")                              \
+  X(0x22, EF_AMDGPU_MACH_AMDGCN_GFX700, "gfx700")                              \
+  X(0x23, EF_AMDGPU_MACH_AMDGCN_GFX701, "gfx701")                              \
+  X(0x24, EF_AMDGPU_MACH_AMDGCN_GFX702, "gfx702")                              \
+  X(0x25, EF_AMDGPU_MACH_AMDGCN_GFX703, "gfx703")                              \
+  X(0x26, EF_AMDGPU_MACH_AMDGCN_GFX704, "gfx704")                              \
+  X(0x28, EF_AMDGPU_MACH_AMDGCN_GFX801, "gfx801")                              \
+  X(0x29, EF_AMDGPU_MACH_AMDGCN_GFX802, "gfx802")                              \
+  X(0x2a, EF_AMDGPU_MACH_AMDGCN_GFX803, "gfx803")                              \
+  X(0x2b, EF_AMDGPU_MACH_AMDGCN_GFX810, "gfx810")                              \
+  X(0x2c, EF_AMDGPU_MACH_AMDGCN_GFX900, "gfx900")                              \
+  X(0x2d, EF_AMDGPU_MACH_AMDGCN_GFX902, "gfx902")                              \
+  X(0x2e, EF_AMDGPU_MACH_AMDGCN_GFX904, "gfx904")                              \
+  X(0x2f, EF_AMDGPU_MACH_AMDGCN_GFX906, "gfx906")                              \
+  X(0x30, EF_AMDGPU_MACH_AMDGCN_GFX908, "gfx908")                              \
+  X(0x31, EF_AMDGPU_MACH_AMDGCN_GFX909, "gfx909")                              \
+  X(0x32, EF_AMDGPU_MACH_AMDGCN_GFX90C, "gfx90c")                              \
+  X(0x33, EF_AMDGPU_MACH_AMDGCN_GFX1010, "gfx1010")                            \
+  X(0x34, EF_AMDGPU_MACH_AMDGCN_GFX1011, "gfx1011")                            \
+  X(0x35, EF_AMDGPU_MACH_AMDGCN_GFX1012, "gfx1012")                            \
+  X(0x36, EF_AMDGPU_MACH_AMDGCN_GFX1030, "gfx1030")                            \
+  X(0x37, EF_AMDGPU_MACH_AMDGCN_GFX1031, "gfx1031")                            \
+  X(0x38, EF_AMDGPU_MACH_AMDGCN_GFX1032, "gfx1032")                            \
+  X(0x39, EF_AMDGPU_MACH_AMDGCN_GFX1033, "gfx1033")                            \
+  X(0x3a, EF_AMDGPU_MACH_AMDGCN_GFX602, "gfx602")                              \
+  X(0x3b, EF_AMDGPU_MACH_AMDGCN_GFX705, "gfx705")                              \
+  X(0x3c, EF_AMDGPU_MACH_AMDGCN_GFX805, "gfx805")                              \
+  X(0x3d, EF_AMDGPU_MACH_AMDGCN_GFX1035, "gfx1035")                            \
+  X(0x3e, EF_AMDGPU_MACH_AMDGCN_GFX1034, "gfx1034")                            \
+  X(0x3f, EF_AMDGPU_MACH_AMDGCN_GFX90A, "gfx90a")                              \
+  X(0x41, EF_AMDGPU_MACH_AMDGCN_GFX1100, "gfx1100")                            \
+  X(0x42, EF_AMDGPU_MACH_AMDGCN_GFX1013, "gfx1013")                            \
+  X(0x43, EF_AMDGPU_MACH_AMDGCN_GFX1150, "gfx1150")                            \
+  X(0x44, EF_AMDGPU_MACH_AMDGCN_GFX1103, "gfx1103")                            \
+  X(0x45, EF_AMDGPU_MACH_AMDGCN_GFX1036, "gfx1036")                            \
+  X(0x46, EF_AMDGPU_MACH_AMDGCN_GFX1101, "gfx1101")                            \
+  X(0x47, EF_AMDGPU_MACH_AMDGCN_GFX1102, "gfx1102")                            \
+  X(0x48, EF_AMDGPU_MACH_AMDGCN_GFX1200, "gfx1200")                            \
+  X(0x49, EF_AMDGPU_MACH_AMDGCN_GFX1250, "gfx1250")                            \
+  X(0x4a, EF_AMDGPU_MACH_AMDGCN_GFX1151, "gfx1151")                            \
+  X(0x4c, EF_AMDGPU_MACH_AMDGCN_GFX942, "gfx942")                              \
+  X(0x4e, EF_AMDGPU_MACH_AMDGCN_GFX1201, "gfx1201")                            \
+  X(0x4f, EF_AMDGPU_MACH_AMDGCN_GFX950, "gfx950")                              \
+  X(0x50, EF_AMDGPU_MACH_AMDGCN_GFX1310, "gfx1310")                            \
+  X(0x51, EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC, "gfx9-generic")                  \
+  X(0x52, EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC, "gfx10-1-generic")            \
+  X(0x53, EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC, "gfx10-3-generic")            \
+  X(0x54, EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC, "gfx11-generic")                \
+  X(0x55, EF_AMDGPU_MACH_AMDGCN_GFX1152, "gfx1152")                            \
+  X(0x58, EF_AMDGPU_MACH_AMDGCN_GFX1153, "gfx1153")                            \
+  X(0x59, EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC, "gfx12-generic")                \
+  X(0x5a, EF_AMDGPU_MACH_AMDGCN_GFX1251, "gfx1251")                            \
+  X(0x5b, EF_AMDGPU_MACH_AMDGCN_GFX12_5_GENERIC, "gfx12-5-generic")            \
+  X(0x5d, EF_AMDGPU_MACH_AMDGCN_GFX1170, "gfx1170")                            \
+  X(0x5f, EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC, "gfx9-4-generic")
+
 enum : unsigned {
+  // clang-format off
+
   // Processor selection mask for EF_AMDGPU_MACH_* values.
   EF_AMDGPU_MACH = 0x0ff,
 
   // Not specified processor.
   EF_AMDGPU_MACH_NONE = 0x000,
 
-  // R600-based processors.
+#define X(NUM, ENUM, NAME) ENUM = NUM,
+  AMDGPU_MACH_LIST(X)
+#undef X
 
-  // Radeon HD 2000/3000 Series (R600).
-  EF_AMDGPU_MACH_R600_R600 = 0x001,
-  EF_AMDGPU_MACH_R600_R630 = 0x002,
-  EF_AMDGPU_MACH_R600_RS880 = 0x003,
-  EF_AMDGPU_MACH_R600_RV670 = 0x004,
-  // Radeon HD 4000 Series (R700).
-  EF_AMDGPU_MACH_R600_RV710 = 0x005,
-  EF_AMDGPU_MACH_R600_RV730 = 0x006,
-  EF_AMDGPU_MACH_R600_RV770 = 0x007,
-  // Radeon HD 5000 Series (Evergreen).
-  EF_AMDGPU_MACH_R600_CEDAR = 0x008,
-  EF_AMDGPU_MACH_R600_CYPRESS = 0x009,
-  EF_AMDGPU_MACH_R600_JUNIPER = 0x00a,
-  EF_AMDGPU_MACH_R600_REDWOOD = 0x00b,
-  EF_AMDGPU_MACH_R600_SUMO = 0x00c,
-  // Radeon HD 6000 Series (Northern Islands).
-  EF_AMDGPU_MACH_R600_BARTS = 0x00d,
-  EF_AMDGPU_MACH_R600_CAICOS = 0x00e,
-  EF_AMDGPU_MACH_R600_CAYMAN = 0x00f,
-  EF_AMDGPU_MACH_R600_TURKS = 0x010,
+  // clang-format on
 
-  // Reserved for R600-based processors.
   EF_AMDGPU_MACH_R600_RESERVED_FIRST = 0x011,
   EF_AMDGPU_MACH_R600_RESERVED_LAST = 0x01f,
-
-  // First/last R600-based processors.
   EF_AMDGPU_MACH_R600_FIRST = EF_AMDGPU_MACH_R600_R600,
   EF_AMDGPU_MACH_R600_LAST = EF_AMDGPU_MACH_R600_TURKS,
 
-  // AMDGCN-based processors.
-  // clang-format off
-  EF_AMDGPU_MACH_AMDGCN_GFX600          = 0x020,
-  EF_AMDGPU_MACH_AMDGCN_GFX601          = 0x021,
-  EF_AMDGPU_MACH_AMDGCN_GFX700          = 0x022,
-  EF_AMDGPU_MACH_AMDGCN_GFX701          = 0x023,
-  EF_AMDGPU_MACH_AMDGCN_GFX702          = 0x024,
-  EF_AMDGPU_MACH_AMDGCN_GFX703          = 0x025,
-  EF_AMDGPU_MACH_AMDGCN_GFX704          = 0x026,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X27   = 0x027,
-  EF_AMDGPU_MACH_AMDGCN_GFX801          = 0x028,
-  EF_AMDGPU_MACH_AMDGCN_GFX802          = 0x029,
-  EF_AMDGPU_MACH_AMDGCN_GFX803          = 0x02a,
-  EF_AMDGPU_MACH_AMDGCN_GFX810          = 0x02b,
-  EF_AMDGPU_MACH_AMDGCN_GFX900          = 0x02c,
-  EF_AMDGPU_MACH_AMDGCN_GFX902          = 0x02d,
-  EF_AMDGPU_MACH_AMDGCN_GFX904          = 0x02e,
-  EF_AMDGPU_MACH_AMDGCN_GFX906          = 0x02f,
-  EF_AMDGPU_MACH_AMDGCN_GFX908          = 0x030,
-  EF_AMDGPU_MACH_AMDGCN_GFX909          = 0x031,
-  EF_AMDGPU_MACH_AMDGCN_GFX90C          = 0x032,
-  EF_AMDGPU_MACH_AMDGCN_GFX1010         = 0x033,
-  EF_AMDGPU_MACH_AMDGCN_GFX1011         = 0x034,
-  EF_AMDGPU_MACH_AMDGCN_GFX1012         = 0x035,
-  EF_AMDGPU_MACH_AMDGCN_GFX1030         = 0x036,
-  EF_AMDGPU_MACH_AMDGCN_GFX1031         = 0x037,
-  EF_AMDGPU_MACH_AMDGCN_GFX1032         = 0x038,
-  EF_AMDGPU_MACH_AMDGCN_GFX1033         = 0x039,
-  EF_AMDGPU_MACH_AMDGCN_GFX602          = 0x03a,
-  EF_AMDGPU_MACH_AMDGCN_GFX705          = 0x03b,
-  EF_AMDGPU_MACH_AMDGCN_GFX805          = 0x03c,
-  EF_AMDGPU_MACH_AMDGCN_GFX1035         = 0x03d,
-  EF_AMDGPU_MACH_AMDGCN_GFX1034         = 0x03e,
-  EF_AMDGPU_MACH_AMDGCN_GFX90A          = 0x03f,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X40   = 0x040,
-  EF_AMDGPU_MACH_AMDGCN_GFX1100         = 0x041,
-  EF_AMDGPU_MACH_AMDGCN_GFX1013         = 0x042,
-  EF_AMDGPU_MACH_AMDGCN_GFX1150         = 0x043,
-  EF_AMDGPU_MACH_AMDGCN_GFX1103         = 0x044,
-  EF_AMDGPU_MACH_AMDGCN_GFX1036         = 0x045,
-  EF_AMDGPU_MACH_AMDGCN_GFX1101         = 0x046,
-  EF_AMDGPU_MACH_AMDGCN_GFX1102         = 0x047,
-  EF_AMDGPU_MACH_AMDGCN_GFX1200         = 0x048,
-  EF_AMDGPU_MACH_AMDGCN_GFX1250         = 0x049,
-  EF_AMDGPU_MACH_AMDGCN_GFX1151         = 0x04a,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4B   = 0x04b,
-  EF_AMDGPU_MACH_AMDGCN_GFX942          = 0x04c,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4D   = 0x04d,
-  EF_AMDGPU_MACH_AMDGCN_GFX1201         = 0x04e,
-  EF_AMDGPU_MACH_AMDGCN_GFX950          = 0x04f,
-  EF_AMDGPU_MACH_AMDGCN_GFX1310         = 0x050,
-  EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC    = 0x051,
-  EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC = 0x052,
-  EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC = 0x053,
-  EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC   = 0x054,
-  EF_AMDGPU_MACH_AMDGCN_GFX1152         = 0x055,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X56   = 0x056,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X57   = 0x057,
-  EF_AMDGPU_MACH_AMDGCN_GFX1153         = 0x058,
-  EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC   = 0x059,
-  EF_AMDGPU_MACH_AMDGCN_GFX1251         = 0x05a,
-  EF_AMDGPU_MACH_AMDGCN_GFX1170         = 0x05d,
-  EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC  = 0x05f,
-  // clang-format on
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X27 = 0x027,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X40 = 0x040,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4B = 0x04b,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4D = 0x04d,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X56 = 0x056,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X57 = 0x057,
 
   // First/last AMDGCN-based processors.
   EF_AMDGPU_MACH_AMDGCN_FIRST = EF_AMDGPU_MACH_AMDGCN_GFX600,

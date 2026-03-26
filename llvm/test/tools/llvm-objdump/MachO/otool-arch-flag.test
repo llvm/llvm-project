@@ -1,0 +1,10 @@
+# Test that llvm-otool -arch selects the correct slice from a universal binary.
+
+RUN: llvm-otool -h -arch x86_64 %p/Inputs/macho-universal.x86_64.i386 \
+RUN: | FileCheck %s --check-prefix=X86_64
+
+RUN: llvm-otool -h -arch i386 %p/Inputs/macho-universal.x86_64.i386 \
+RUN: | FileCheck %s --check-prefix=I386
+
+X86_64: 0xfeedfacf
+I386:   0xfeedface

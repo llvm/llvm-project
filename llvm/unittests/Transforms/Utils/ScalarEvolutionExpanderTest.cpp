@@ -82,7 +82,7 @@ TEST_F(ScalarEvolutionExpanderTest, ExpandPtrTypeSCEV) {
   BasicBlock *EntryBB = BasicBlock::Create(Context, "entry", F);
   BasicBlock *LoopBB = BasicBlock::Create(Context, "loop", F);
   BasicBlock *ExitBB = BasicBlock::Create(Context, "exit", F);
-  BranchInst::Create(LoopBB, EntryBB);
+  UncondBrInst::Create(LoopBB, EntryBB);
   ReturnInst::Create(Context, nullptr, ExitBB);
 
   // loop:                            ; preds = %loop, %entry
@@ -95,8 +95,8 @@ TEST_F(ScalarEvolutionExpanderTest, ExpandPtrTypeSCEV) {
   //   br i1 undef, label %loop, label %exit
 
   const DataLayout &DL = F->getDataLayout();
-  BranchInst *Br = BranchInst::Create(
-      LoopBB, ExitBB, PoisonValue::get(Type::getInt1Ty(Context)), LoopBB);
+  CondBrInst *Br = CondBrInst::Create(
+      PoisonValue::get(Type::getInt1Ty(Context)), LoopBB, ExitBB, LoopBB);
   AllocaInst *Alloca = new AllocaInst(I32Ty, DL.getAllocaAddrSpace(), "alloca",
                                       Br->getIterator());
   ConstantInt *Ci32 = ConstantInt::get(Context, APInt(32, 1));
@@ -873,8 +873,8 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVExpandNonAffineAddRec) {
 
   // Expand {5,+,1,+,1}
   auto GetAR3 = [&](ScalarEvolution &SE, Loop *L) -> const SCEVAddRecExpr * {
-    SmallVector<const SCEV *, 3> Ops = {SE.getConstant(APInt(ARBitWidth, 5)),
-                                        SE.getOne(ARType), SE.getOne(ARType)};
+    SmallVector<SCEVUse, 3> Ops = {SE.getConstant(APInt(ARBitWidth, 5)),
+                                   SE.getOne(ARType), SE.getOne(ARType)};
     return cast<SCEVAddRecExpr>(SE.getAddRecExpr(Ops, L, SCEV::FlagAnyWrap));
   };
   TestNoCanonicalIV(GetAR3);
@@ -883,9 +883,9 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVExpandNonAffineAddRec) {
 
   // Expand {5,+,1,+,1,+,1}
   auto GetAR4 = [&](ScalarEvolution &SE, Loop *L) -> const SCEVAddRecExpr * {
-    SmallVector<const SCEV *, 4> Ops = {SE.getConstant(APInt(ARBitWidth, 5)),
-                                        SE.getOne(ARType), SE.getOne(ARType),
-                                        SE.getOne(ARType)};
+    SmallVector<SCEVUse, 4> Ops = {SE.getConstant(APInt(ARBitWidth, 5)),
+                                   SE.getOne(ARType), SE.getOne(ARType),
+                                   SE.getOne(ARType)};
     return cast<SCEVAddRecExpr>(SE.getAddRecExpr(Ops, L, SCEV::FlagAnyWrap));
   };
   TestNoCanonicalIV(GetAR4);
@@ -894,9 +894,9 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVExpandNonAffineAddRec) {
 
   // Expand {5,+,1,+,1,+,1,+,1}
   auto GetAR5 = [&](ScalarEvolution &SE, Loop *L) -> const SCEVAddRecExpr * {
-    SmallVector<const SCEV *, 5> Ops = {SE.getConstant(APInt(ARBitWidth, 5)),
-                                        SE.getOne(ARType), SE.getOne(ARType),
-                                        SE.getOne(ARType), SE.getOne(ARType)};
+    SmallVector<SCEVUse, 5> Ops = {SE.getConstant(APInt(ARBitWidth, 5)),
+                                   SE.getOne(ARType), SE.getOne(ARType),
+                                   SE.getOne(ARType), SE.getOne(ARType)};
     return cast<SCEVAddRecExpr>(SE.getAddRecExpr(Ops, L, SCEV::FlagAnyWrap));
   };
   TestNoCanonicalIV(GetAR5);

@@ -2118,6 +2118,7 @@ public:
 
   DISourceLanguageName getSourceLanguage() const { return SourceLanguage; }
   bool isOptimized() const { return IsOptimized; }
+  bool isDebugInfoForProfiling() const { return DebugInfoForProfiling; }
   unsigned getRuntimeVersion() const { return RuntimeVersion; }
   DebugEmissionKind getEmissionKind() const {
     return (DebugEmissionKind)EmissionKind;

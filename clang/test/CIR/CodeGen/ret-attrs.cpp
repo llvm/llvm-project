@@ -16,7 +16,7 @@ struct Struct{};
 using MemPtrTy = void (Struct::*)();
 
 MemPtrTy not_noundef_memptr(MemPtrTy t){}
-// CIR: cir.func no_inline dso_local @_Z18not_noundef_memptrM6StructFvvE({{.*}}) -> !rec_anon_struct {
+// CIR: cir.func no_inline dso_local @_Z18not_noundef_memptrM6StructFvvE({{.*}}) -> !rec_anon_struct attributes {nothrow} {
 // LLVM: define dso_local { i64, i64 } @_Z18not_noundef_memptrM6StructFvvE({{.*}})
 
 void not_noundef_void(){}
@@ -35,7 +35,6 @@ Incomplete &no_deref_incomplete(){}
 // Nonnull is on ALL references unless we have a non-0 target address space, so
 // this isn't really testable yet.
 
-// TODO: ERICH: Not object type?  BUT This IS?!?!
 int &no_align_not_obj_type(){}
 // CIR:  cir.func no_inline dso_local @_Z21no_align_not_obj_typev() -> (!cir.ptr<!s32i> {llvm.align = 4 : i64, llvm.dereferenceable = 4 : i64, llvm.nonnull, llvm.noundef})
 // LLVM: define dso_local noundef nonnull align 4 dereferenceable(4) ptr @_Z21no_align_not_obj_typev()
