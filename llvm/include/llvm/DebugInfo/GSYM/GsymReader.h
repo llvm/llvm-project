@@ -61,7 +61,224 @@ protected:
   uint32_t CachedNumAddresses = 0;
   uint8_t CachedAddrOffSize = 0;
 
-  LLVM_ABI GsymReader(std::unique_ptr<MemoryBuffer> Buffer);
+  GsymReader(std::unique_ptr<MemoryBuffer> Buffer);
+
+public:
+  LLVM_ABI GsymReader(GsymReader &&RHS);
+  virtual ~GsymReader() = default;
+
+  /// Construct a GsymReader from a file on disk, auto-detecting the format
+  /// version.
+  ///
+  /// \param Path The file path the GSYM file to read.
+  /// \returns An expected unique_ptr to a GsymReader or an error object that
+  /// indicates reason for failing to read the GSYM.
+  LLVM_ABI static llvm::Expected<std::unique_ptr<GsymReader>>
+  openFile(StringRef Path);
+
+  /// Construct a GsymReader from a buffer, auto-detecting the format version.
+  ///
+  /// \param Bytes A set of bytes that will be copied and owned by the
+  /// returned object on success.
+  /// \returns An expected unique_ptr to a GsymReader or an error object that
+  /// indicates reason for failing to read the GSYM.
+  LLVM_ABI static llvm::Expected<std::unique_ptr<GsymReader>>
+  copyBuffer(StringRef Bytes);
+
+  /// Get the full function info for an address.
+  ///
+  /// This should be called when a client will store a copy of the complete
+  /// FunctionInfo for a given address. For one off lookups, use the lookup()
+  /// function below.
+  ///
+  /// Symbolication server processes might want to parse the entire function
+  /// info for a given address and cache it if the process stays around to
+  /// service many symbolication addresses, like for parsing profiling
+  /// information.
+  ///
+  /// \param Addr A virtual address from the orignal object file to lookup.
+  ///
+  /// \returns An expected FunctionInfo that contains the function info object
+  /// or an error object that indicates reason for failing to lookup the
+  /// address.
+  LLVM_ABI llvm::Expected<FunctionInfo> getFunctionInfo(uint64_t Addr) const;
+
+  /// Get the full function info given an address index.
+  ///
+  /// \param AddrIdx A address index for an address in the address table.
+  ///
+  /// \returns An expected FunctionInfo that contains the function info object
+  /// or an error object that indicates reason for failing get the function
+  /// info object.
+  LLVM_ABI llvm::Expected<FunctionInfo>
+  getFunctionInfoAtIndex(uint64_t AddrIdx) const;
+
+  /// Lookup an address in the a GSYM.
+  ///
+  /// Lookup just the information needed for a specific address \a Addr. This
+  /// function is faster that calling getFunctionInfo() as it will only return
+  /// information that pertains to \a Addr and allows the parsing to skip any
+  /// extra information encoded for other addresses. For example the line table
+  /// parsing can stop when a matching LineEntry has been fouhnd, and the
+  /// InlineInfo can stop parsing early once a match has been found and also
+  /// skip information that doesn't match. This avoids memory allocations and
+  /// is much faster for lookups.
+  ///
+  /// \param Addr A virtual address from the orignal object file to lookup.
+  ///
+  /// \param MergedFuncsData A pointer to an optional DataExtractor that, if
+  /// non-null, will be set to the raw data of the MergedFunctionInfo, if
+  /// present.
+  ///
+  /// \returns An expected LookupResult that contains only the information
+  /// needed for the current address, or an error object that indicates reason
+  /// for failing to lookup the address.
+  LLVM_ABI llvm::Expected<LookupResult>
+  lookup(uint64_t Addr,
+         std::optional<DataExtractor> *MergedFuncsData = nullptr) const;
+
+  /// Lookup all merged functions for a given address.
+  ///
+  /// This function performs a lookup for the specified address and then
+  /// retrieves additional LookupResults from any merged functions associated
+  /// with the primary LookupResult.
+  ///
+  /// \param Addr The address to lookup.
+  ///
+  /// \returns A vector of LookupResult objects, where the first element is the
+  /// primary result, followed by results for any merged functions
+  LLVM_ABI llvm::Expected<std::vector<LookupResult>>
+  lookupAll(uint64_t Addr) const;
+
+  /// Get a string from the string table.
+  ///
+  /// \param Offset The string table offset for the string to retrieve.
+  /// \returns The string from the strin table.
+  StringRef getString(uint32_t Offset) const { return StrTab[Offset]; }
+
+  /// Get the a file entry for the suppplied file index.
+  ///
+  /// Used to convert any file indexes in the FunctionInfo data back into
+  /// files. This function can be used for iteration, but is more commonly used
+  /// for random access when doing lookups.
+  ///
+  /// \param Index An index into the file table.
+  /// \returns An optional FileInfo that will be valid if the file index is
+  /// valid, or std::nullopt if the file index is out of bounds,
+  std::optional<FileEntry> getFile(uint32_t Index) const {
+    if (Index < Files.size())
+      return Files[Index];
+    return std::nullopt;
+  }
+
+  /// Dump the entire Gsym data contained in this object.
+  ///
+  /// Version-specific because the header format differs between V1 and V2.
+  ///
+  /// \param  OS The output stream to dump to.
+  virtual void dump(raw_ostream &OS) = 0;
+
+  /// Dump a FunctionInfo object.
+  ///
+  /// This function will convert any string table indexes and file indexes
+  /// into human readable format.
+  ///
+  /// \param  OS The output stream to dump to.
+  ///
+  /// \param FI The object to dump.
+  ///
+  /// \param Indent The indentation as number of spaces. Used when dumping as an
+  /// item within MergedFunctionsInfo.
+  LLVM_ABI void dump(raw_ostream &OS, const FunctionInfo &FI,
+                     uint32_t Indent = 0);
+
+  /// Dump a MergedFunctionsInfo object.
+  ///
+  /// This function will dump a MergedFunctionsInfo object - basically by
+  /// dumping the contained FunctionInfo objects with indentation.
+  ///
+  /// \param  OS The output stream to dump to.
+  ///
+  /// \param MFI The object to dump.
+  LLVM_ABI void dump(raw_ostream &OS, const MergedFunctionsInfo &MFI);
+
+  /// Dump a CallSiteInfo object.
+  ///
+  /// This function will output the details of a CallSiteInfo object in a
+  /// human-readable format.
+  ///
+  /// \param OS The output stream to dump to.
+  ///
+  /// \param CSI The CallSiteInfo object to dump.
+  LLVM_ABI void dump(raw_ostream &OS, const CallSiteInfo &CSI);
+
+  /// Dump a CallSiteInfoCollection object.
+  ///
+  /// This function will iterate over a collection of CallSiteInfo objects and
+  /// dump each one.
+  ///
+  /// \param OS The output stream to dump to.
+  ///
+  /// \param CSIC The CallSiteInfoCollection object to dump.
+  ///
+  /// \param Indent The indentation as number of spaces. Used when dumping as an
+  /// item from within MergedFunctionsInfo.
+  LLVM_ABI void dump(raw_ostream &OS, const CallSiteInfoCollection &CSIC,
+                     uint32_t Indent = 0);
+
+  /// Dump a LineTable object.
+  ///
+  /// This function will convert any string table indexes and file indexes
+  /// into human readable format.
+  ///
+  ///
+  /// \param  OS The output stream to dump to.
+  ///
+  /// \param LT The object to dump.
+  ///
+  /// \param Indent The indentation as number of spaces. Used when dumping as an
+  /// item from within MergedFunctionsInfo.
+  LLVM_ABI void dump(raw_ostream &OS, const LineTable &LT, uint32_t Indent = 0);
+
+  /// Dump a InlineInfo object.
+  ///
+  /// This function will convert any string table indexes and file indexes
+  /// into human readable format.
+  ///
+  /// \param  OS The output stream to dump to.
+  ///
+  /// \param II The object to dump.
+  ///
+  /// \param Indent The indentation as number of spaces. Used for recurive
+  /// dumping.
+  LLVM_ABI void dump(raw_ostream &OS, const InlineInfo &II,
+                     uint32_t Indent = 0);
+
+  /// Dump a FileEntry object.
+  ///
+  /// This function will convert any string table indexes into human readable
+  /// format.
+  ///
+  /// \param  OS The output stream to dump to.
+  ///
+  /// \param FE The object to dump.
+  LLVM_ABI void dump(raw_ostream &OS, std::optional<FileEntry> FE);
+
+  /// Get the number of addresses in this Gsym file.
+  uint32_t getNumAddresses() const {
+    return CachedNumAddresses;
+  }
+
+  /// Gets an address from the address table.
+  ///
+  /// Addresses are stored as offsets from the base address.
+  ///
+  /// \param Index A index into the address table.
+  /// \returns A resolved virtual address for adddress in the address table
+  /// or std::nullopt if Index is out of bounds.
+  LLVM_ABI std::optional<uint64_t> getAddress(size_t Index) const;
+
+protected:
 
   /// Get an appropriate address info offsets array.
   ///
@@ -98,7 +315,6 @@ protected:
       return AIO[Index] + CachedBaseAddress;
     return std::nullopt;
   }
-
   /// Lookup an address offset in the AddrOffsets table.
   ///
   /// Given an address offset, look it up using a binary search of the
@@ -190,220 +406,6 @@ protected:
   /// address.
   LLVM_ABI llvm::Expected<llvm::DataExtractor>
   getFunctionInfoDataAtIndex(uint64_t AddrIdx, uint64_t &FuncStartAddr) const;
-
-public:
-  LLVM_ABI GsymReader(GsymReader &&RHS);
-  virtual ~GsymReader() = default;
-
-  /// Construct a GsymReader from a file on disk, auto-detecting the format
-  /// version.
-  ///
-  /// \param Path The file path the GSYM file to read.
-  /// \returns An expected unique_ptr to a GsymReader or an error object that
-  /// indicates reason for failing to read the GSYM.
-  LLVM_ABI static llvm::Expected<std::unique_ptr<GsymReader>>
-  openFile(StringRef Path);
-
-  /// Construct a GsymReader from a buffer, auto-detecting the format version.
-  ///
-  /// \param Bytes A set of bytes that will be copied and owned by the
-  /// returned object on success.
-  /// \returns An expected unique_ptr to a GsymReader or an error object that
-  /// indicates reason for failing to read the GSYM.
-  LLVM_ABI static llvm::Expected<std::unique_ptr<GsymReader>>
-  copyBuffer(StringRef Bytes);
-
-  /// Get a string from the string table.
-  ///
-  /// \param Offset The string table offset for the string to retrieve.
-  /// \returns The string from the strin table.
-  StringRef getString(uint32_t Offset) const { return StrTab[Offset]; }
-
-  /// Get the a file entry for the suppplied file index.
-  ///
-  /// Used to convert any file indexes in the FunctionInfo data back into
-  /// files. This function can be used for iteration, but is more commonly used
-  /// for random access when doing lookups.
-  ///
-  /// \param Index An index into the file table.
-  /// \returns An optional FileInfo that will be valid if the file index is
-  /// valid, or std::nullopt if the file index is out of bounds,
-  std::optional<FileEntry> getFile(uint32_t Index) const {
-    if (Index < Files.size())
-      return Files[Index];
-    return std::nullopt;
-  }
-
-  /// Get the number of addresses in this Gsym file.
-  uint32_t getNumAddresses() const { return CachedNumAddresses; }
-
-  /// Get the full function info for an address.
-  ///
-  /// This should be called when a client will store a copy of the complete
-  /// FunctionInfo for a given address. For one off lookups, use the lookup()
-  /// function below.
-  ///
-  /// Symbolication server processes might want to parse the entire function
-  /// info for a given address and cache it if the process stays around to
-  /// service many symbolication addresses, like for parsing profiling
-  /// information.
-  ///
-  /// \param Addr A virtual address from the orignal object file to lookup.
-  ///
-  /// \returns An expected FunctionInfo that contains the function info object
-  /// or an error object that indicates reason for failing to lookup the
-  /// address.
-  LLVM_ABI llvm::Expected<FunctionInfo> getFunctionInfo(uint64_t Addr) const;
-
-  /// Get the full function info given an address index.
-  ///
-  /// \param AddrIdx A address index for an address in the address table.
-  ///
-  /// \returns An expected FunctionInfo that contains the function info object
-  /// or an error object that indicates reason for failing get the function
-  /// info object.
-  LLVM_ABI llvm::Expected<FunctionInfo>
-  getFunctionInfoAtIndex(uint64_t AddrIdx) const;
-
-  /// Lookup an address in the a GSYM.
-  ///
-  /// Lookup just the information needed for a specific address \a Addr. This
-  /// function is faster that calling getFunctionInfo() as it will only return
-  /// information that pertains to \a Addr and allows the parsing to skip any
-  /// extra information encoded for other addresses. For example the line table
-  /// parsing can stop when a matching LineEntry has been fouhnd, and the
-  /// InlineInfo can stop parsing early once a match has been found and also
-  /// skip information that doesn't match. This avoids memory allocations and
-  /// is much faster for lookups.
-  ///
-  /// \param Addr A virtual address from the orignal object file to lookup.
-  ///
-  /// \param MergedFuncsData A pointer to an optional DataExtractor that, if
-  /// non-null, will be set to the raw data of the MergedFunctionInfo, if
-  /// present.
-  ///
-  /// \returns An expected LookupResult that contains only the information
-  /// needed for the current address, or an error object that indicates reason
-  /// for failing to lookup the address.
-  LLVM_ABI llvm::Expected<LookupResult>
-  lookup(uint64_t Addr,
-         std::optional<DataExtractor> *MergedFuncsData = nullptr) const;
-
-  /// Lookup all merged functions for a given address.
-  ///
-  /// This function performs a lookup for the specified address and then
-  /// retrieves additional LookupResults from any merged functions associated
-  /// with the primary LookupResult.
-  ///
-  /// \param Addr The address to lookup.
-  ///
-  /// \returns A vector of LookupResult objects, where the first element is the
-  /// primary result, followed by results for any merged functions
-  LLVM_ABI llvm::Expected<std::vector<LookupResult>>
-  lookupAll(uint64_t Addr) const;
-
-  /// Gets an address from the address table.
-  ///
-  /// Addresses are stored as offsets from the base address.
-  ///
-  /// \param Index A index into the address table.
-  /// \returns A resolved virtual address for adddress in the address table
-  /// or std::nullopt if Index is out of bounds.
-  LLVM_ABI std::optional<uint64_t> getAddress(size_t Index) const;
-
-  /// Dump the entire Gsym data contained in this object.
-  ///
-  /// Version-specific because the header format differs between V1 and V2.
-  ///
-  /// \param  OS The output stream to dump to.
-  virtual void dump(raw_ostream &OS) = 0;
-
-  /// Dump a FunctionInfo object.
-  ///
-  /// This function will convert any string table indexes and file indexes
-  /// into human readable format.
-  ///
-  /// \param  OS The output stream to dump to.
-  ///
-  /// \param FI The object to dump.
-  ///
-  /// \param Indent The indentation as number of spaces. Used when dumping as an
-  /// item within MergedFunctionsInfo.
-  LLVM_ABI void dump(raw_ostream &OS, const FunctionInfo &FI,
-                     uint32_t Indent = 0);
-
-  /// Dump a MergedFunctionsInfo object.
-  ///
-  /// This function will dump a MergedFunctionsInfo object - basically by
-  /// dumping the contained FunctionInfo objects with indentation.
-  ///
-  /// \param  OS The output stream to dump to.
-  ///
-  /// \param MFI The object to dump.
-  LLVM_ABI void dump(raw_ostream &OS, const MergedFunctionsInfo &MFI);
-
-  /// Dump a CallSiteInfo object.
-  ///
-  /// This function will output the details of a CallSiteInfo object in a
-  /// human-readable format.
-  ///
-  /// \param OS The output stream to dump to.
-  ///
-  /// \param CSI The CallSiteInfo object to dump.
-  LLVM_ABI void dump(raw_ostream &OS, const CallSiteInfo &CSI);
-
-  /// Dump a CallSiteInfoCollection object.
-  ///
-  /// This function will iterate over a collection of CallSiteInfo objects and
-  /// dump each one.
-  ///
-  /// \param OS The output stream to dump to.
-  ///
-  /// \param CSIC The CallSiteInfoCollection object to dump.
-  ///
-  /// \param Indent The indentation as number of spaces. Used when dumping as an
-  /// item from within MergedFunctionsInfo.
-  LLVM_ABI void dump(raw_ostream &OS, const CallSiteInfoCollection &CSIC,
-                     uint32_t Indent = 0);
-
-  /// Dump a LineTable object.
-  ///
-  /// This function will convert any string table indexes and file indexes
-  /// into human readable format.
-  ///
-  ///
-  /// \param  OS The output stream to dump to.
-  ///
-  /// \param LT The object to dump.
-  ///
-  /// \param Indent The indentation as number of spaces. Used when dumping as an
-  /// item from within MergedFunctionsInfo.
-  LLVM_ABI void dump(raw_ostream &OS, const LineTable &LT,
-                     uint32_t Indent = 0);
-
-  /// Dump a InlineInfo object.
-  ///
-  /// This function will convert any string table indexes and file indexes
-  /// into human readable format.
-  ///
-  /// \param  OS The output stream to dump to.
-  ///
-  /// \param II The object to dump.
-  ///
-  /// \param Indent The indentation as number of spaces. Used for recurive
-  /// dumping.
-  LLVM_ABI void dump(raw_ostream &OS, const InlineInfo &II,
-                     uint32_t Indent = 0);
-
-  /// Dump a FileEntry object.
-  ///
-  /// This function will convert any string table indexes into human readable
-  /// format.
-  ///
-  /// \param  OS The output stream to dump to.
-  ///
-  /// \param FE The object to dump.
-  LLVM_ABI void dump(raw_ostream &OS, std::optional<FileEntry> FE);
 };
 
 } // namespace gsym
