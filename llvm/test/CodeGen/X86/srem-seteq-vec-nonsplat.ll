@@ -2489,3 +2489,122 @@ define <32 x i1> @pr51133(<32 x i8> %x, <32 x i8> %y) {
   %cmpres = and <32 x i1> %cmp4, %cmp
   ret <32 x i1> %cmpres
 }
+
+; One one divisor in even divisor
+define <2 x i64> @test_srem_even_one_i64(<2 x i64> %X) nounwind {
+; CHECK-SSE2-LABEL: test_srem_even_one_i64:
+; CHECK-SSE2:       # %bb.0:
+; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [7905747460161236407,7905747460161236407]
+; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm2
+; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm2
+; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm3
+; CHECK-SSE2-NEXT:    psrlq $32, %xmm3
+; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm3
+; CHECK-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1840700269,1840700269]
+; CHECK-SSE2-NEXT:    paddq %xmm3, %xmm0
+; CHECK-SSE2-NEXT:    psllq $32, %xmm0
+; CHECK-SSE2-NEXT:    paddq %xmm2, %xmm0
+; CHECK-SSE2-NEXT:    paddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm1
+; CHECK-SSE2-NEXT:    psllq $63, %xmm1
+; CHECK-SSE2-NEXT:    psrlq $1, %xmm0
+; CHECK-SSE2-NEXT:    por %xmm1, %xmm0
+; CHECK-SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; CHECK-SSE2-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,0,2,2]
+; CHECK-SSE2-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-SSE2-NEXT:    pand %xmm2, %xmm1
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; CHECK-SSE2-NEXT:    por %xmm1, %xmm0
+; CHECK-SSE2-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE2-NEXT:    retq
+;
+; CHECK-SSE41-LABEL: test_srem_even_one_i64:
+; CHECK-SSE41:       # %bb.0:
+; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [7905747460161236407,7905747460161236407]
+; CHECK-SSE41-NEXT:    movdqa %xmm0, %xmm2
+; CHECK-SSE41-NEXT:    pmuludq %xmm1, %xmm2
+; CHECK-SSE41-NEXT:    movdqa %xmm0, %xmm3
+; CHECK-SSE41-NEXT:    psrlq $32, %xmm3
+; CHECK-SSE41-NEXT:    pmuludq %xmm1, %xmm3
+; CHECK-SSE41-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1840700269,1840700269]
+; CHECK-SSE41-NEXT:    paddq %xmm3, %xmm0
+; CHECK-SSE41-NEXT:    psllq $32, %xmm0
+; CHECK-SSE41-NEXT:    paddq %xmm2, %xmm0
+; CHECK-SSE41-NEXT:    paddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE41-NEXT:    movdqa %xmm0, %xmm1
+; CHECK-SSE41-NEXT:    psllq $63, %xmm1
+; CHECK-SSE41-NEXT:    psrlq $1, %xmm0
+; CHECK-SSE41-NEXT:    por %xmm1, %xmm0
+; CHECK-SSE41-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; CHECK-SSE41-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,0,2,2]
+; CHECK-SSE41-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-SSE41-NEXT:    pand %xmm2, %xmm1
+; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; CHECK-SSE41-NEXT:    por %xmm1, %xmm0
+; CHECK-SSE41-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE41-NEXT:    retq
+;
+; CHECK-AVX1-LABEL: test_srem_even_one_i64:
+; CHECK-AVX1:       # %bb.0:
+; CHECK-AVX1-NEXT:    vmovddup {{.*#+}} xmm1 = [7905747460161236407,7905747460161236407]
+; CHECK-AVX1-NEXT:    # xmm1 = mem[0,0]
+; CHECK-AVX1-NEXT:    vpmuludq %xmm1, %xmm0, %xmm2
+; CHECK-AVX1-NEXT:    vpsrlq $32, %xmm0, %xmm3
+; CHECK-AVX1-NEXT:    vpmuludq %xmm1, %xmm3, %xmm1
+; CHECK-AVX1-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1840700269,1840700269]
+; CHECK-AVX1-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpsllq $32, %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
+; CHECK-AVX1-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpsllq $63, %xmm0, %xmm1
+; CHECK-AVX1-NEXT:    vpsrlq $1, %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    retq
+;
+; CHECK-AVX2-LABEL: test_srem_even_one_i64:
+; CHECK-AVX2:       # %bb.0:
+; CHECK-AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [7905747460161236407,7905747460161236407]
+; CHECK-AVX2-NEXT:    vpmuludq %xmm1, %xmm0, %xmm2
+; CHECK-AVX2-NEXT:    vpsrlq $32, %xmm0, %xmm3
+; CHECK-AVX2-NEXT:    vpmuludq %xmm1, %xmm3, %xmm1
+; CHECK-AVX2-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1840700269,1840700269]
+; CHECK-AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; CHECK-AVX2-NEXT:    vpsllq $32, %xmm0, %xmm0
+; CHECK-AVX2-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
+; CHECK-AVX2-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX2-NEXT:    vpsllq $63, %xmm0, %xmm1
+; CHECK-AVX2-NEXT:    vpsrlq $1, %xmm0, %xmm0
+; CHECK-AVX2-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; CHECK-AVX2-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX2-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX2-NEXT:    vpandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX2-NEXT:    retq
+;
+; CHECK-AVX512VL-LABEL: test_srem_even_one_i64:
+; CHECK-AVX512VL:       # %bb.0:
+; CHECK-AVX512VL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [7905747460161236407,7905747460161236407]
+; CHECK-AVX512VL-NEXT:    vpmuludq %xmm1, %xmm0, %xmm2
+; CHECK-AVX512VL-NEXT:    vpsrlq $32, %xmm0, %xmm3
+; CHECK-AVX512VL-NEXT:    vpmuludq %xmm1, %xmm3, %xmm1
+; CHECK-AVX512VL-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; CHECK-AVX512VL-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; CHECK-AVX512VL-NEXT:    vpsllq $32, %xmm0, %xmm0
+; CHECK-AVX512VL-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
+; CHECK-AVX512VL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; CHECK-AVX512VL-NEXT:    vprorq $1, %xmm0, %xmm0
+; CHECK-AVX512VL-NEXT:    vpminuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; CHECK-AVX512VL-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
+; CHECK-AVX512VL-NEXT:    vpsrlq $63, %xmm0, %xmm0
+; CHECK-AVX512VL-NEXT:    retq
+  %srem = srem <2 x i64> %X, <i64 1, i64 14>
+  %cmp = icmp eq <2 x i64> %srem, <i64 0, i64 0>
+  %ret = zext <2 x i1> %cmp to <2 x i64>
+  ret <2 x i64> %ret
+}

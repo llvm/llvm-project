@@ -7166,17 +7166,15 @@ TargetLowering::prepareUREMEqFold(EVT SETCCVT, SDValue REMNode,
     if (TautologicalLane) {
       // Set P and K amount to a bogus values so we can try to splat them.
       P = 0;
-      K = -1;
+      KAmts.push_back(DAG.getAllOnesConstant(DL, ShSVT));
       // And ensure that comparison constant is tautological,
       // it will always compare true/false.
       Q.setAllBits();
+    } else {
+      KAmts.push_back(DAG.getConstant(K, DL, ShSVT));
     }
 
     PAmts.push_back(DAG.getConstant(P, DL, SVT));
-    KAmts.push_back(
-        DAG.getConstant(APInt(ShSVT.getSizeInBits(), K, /*isSigned=*/false,
-                              /*implicitTrunc=*/true),
-                        DL, ShSVT));
     QAmts.push_back(DAG.getConstant(Q, DL, SVT));
     return true;
   };
@@ -7437,18 +7435,16 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
       // Set P, A and K to a bogus values so we can try to splat them.
       P = 0;
       A.setAllBits();
-      K = -1;
+      KAmts.push_back(DAG.getAllOnesConstant(DL, ShSVT));
 
       // x ?% 1 == 0  <-->  true  <-->  x u<= -1
       Q.setAllBits();
+    } else {
+      KAmts.push_back(DAG.getConstant(K, DL, ShSVT));
     }
 
     PAmts.push_back(DAG.getConstant(P, DL, SVT));
     AAmts.push_back(DAG.getConstant(A, DL, SVT));
-    KAmts.push_back(
-        DAG.getConstant(APInt(ShSVT.getSizeInBits(), K, /*isSigned=*/false,
-                              /*implicitTrunc=*/true),
-                        DL, ShSVT));
     QAmts.push_back(DAG.getConstant(Q, DL, SVT));
     return true;
   };
