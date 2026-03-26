@@ -2981,11 +2981,11 @@ define <7 x i117> @scmp_uncommon_vectors(<7 x i7> %x, <7 x i7> %y) nounwind {
 ; AVX512-NEXT:    pushq %r13
 ; AVX512-NEXT:    pushq %r12
 ; AVX512-NEXT:    pushq %rbx
-; AVX512-NEXT:    movq %rdi, %r15
+; AVX512-NEXT:    movq %rdi, %r12
 ; AVX512-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
 ; AVX512-NEXT:    movzbl {{[0-9]+}}(%rsp), %r11d
 ; AVX512-NEXT:    movzbl {{[0-9]+}}(%rsp), %ebp
-; AVX512-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; AVX512-NEXT:    movzbl {{[0-9]+}}(%rsp), %r15d
 ; AVX512-NEXT:    movzbl {{[0-9]+}}(%rsp), %ebx
 ; AVX512-NEXT:    movzbl {{[0-9]+}}(%rsp), %r14d
 ; AVX512-NEXT:    movzbl {{[0-9]+}}(%rsp), %r10d
@@ -2998,7 +2998,7 @@ define <7 x i117> @scmp_uncommon_vectors(<7 x i7> %x, <7 x i7> %y) nounwind {
 ; AVX512-NEXT:    setg %r10b
 ; AVX512-NEXT:    subb %sil, %r10b
 ; AVX512-NEXT:    movsbq %r10b, %r10
-; AVX512-NEXT:    movq %r10, (%r15)
+; AVX512-NEXT:    movq %r10, (%r12)
 ; AVX512-NEXT:    sarq $63, %r10
 ; AVX512-NEXT:    movq %r10, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; AVX512-NEXT:    addb %r14b, %r14b
@@ -3022,19 +3022,19 @@ define <7 x i117> @scmp_uncommon_vectors(<7 x i7> %x, <7 x i7> %y) nounwind {
 ; AVX512-NEXT:    setg %bl
 ; AVX512-NEXT:    subb %dl, %bl
 ; AVX512-NEXT:    movsbq %bl, %rbx
-; AVX512-NEXT:    movq %rbx, %r12
-; AVX512-NEXT:    sarq $63, %r12
-; AVX512-NEXT:    addb %al, %al
-; AVX512-NEXT:    sarb %al
+; AVX512-NEXT:    movq %rbx, %rsi
+; AVX512-NEXT:    sarq $63, %rsi
+; AVX512-NEXT:    addb %r15b, %r15b
+; AVX512-NEXT:    sarb %r15b
 ; AVX512-NEXT:    addb %cl, %cl
 ; AVX512-NEXT:    sarb %cl
-; AVX512-NEXT:    cmpb %al, %cl
+; AVX512-NEXT:    cmpb %r15b, %cl
 ; AVX512-NEXT:    setl %cl
 ; AVX512-NEXT:    setg %dl
 ; AVX512-NEXT:    subb %cl, %dl
-; AVX512-NEXT:    movsbq %dl, %rcx
-; AVX512-NEXT:    movq %rcx, %rsi
-; AVX512-NEXT:    sarq $63, %rsi
+; AVX512-NEXT:    movsbq %dl, %r15
+; AVX512-NEXT:    movq %r15, %rcx
+; AVX512-NEXT:    sarq $63, %rcx
 ; AVX512-NEXT:    addb %bpl, %bpl
 ; AVX512-NEXT:    sarb %bpl
 ; AVX512-NEXT:    addb %r8b, %r8b
@@ -3069,73 +3069,73 @@ define <7 x i117> @scmp_uncommon_vectors(<7 x i7> %x, <7 x i7> %y) nounwind {
 ; AVX512-NEXT:    movsbq %bpl, %rax
 ; AVX512-NEXT:    movq %rax, %rbp
 ; AVX512-NEXT:    sarq $63, %rbp
-; AVX512-NEXT:    movl %ebp, 96(%r15)
+; AVX512-NEXT:    movl %ebp, 96(%r12)
 ; AVX512-NEXT:    movb $51, %r13b
 ; AVX512-NEXT:    bzhiq %r13, %rbp, %r13
 ; AVX512-NEXT:    shlq $62, %rbp
 ; AVX512-NEXT:    movq %rax, %rdi
 ; AVX512-NEXT:    shrq $2, %rdi
-; AVX512-NEXT:    orq %rbp, %rdi
-; AVX512-NEXT:    movq %rdi, 88(%r15)
+; AVX512-NEXT:    addq %rbp, %rdi
+; AVX512-NEXT:    movq %rdi, 88(%r12)
 ; AVX512-NEXT:    movq %r9, %rdi
 ; AVX512-NEXT:    shrq $44, %rdi
 ; AVX512-NEXT:    movq %r11, %rbp
 ; AVX512-NEXT:    shlq $20, %rbp
-; AVX512-NEXT:    orq %rdi, %rbp
-; AVX512-NEXT:    movq %rbp, 64(%r15)
+; AVX512-NEXT:    addq %rbp, %rdi
+; AVX512-NEXT:    movq %rdi, 64(%r12)
 ; AVX512-NEXT:    movq %rdx, %rdi
 ; AVX512-NEXT:    shrq $33, %rdi
 ; AVX512-NEXT:    movq %r8, %rbp
 ; AVX512-NEXT:    shlq $31, %rbp
-; AVX512-NEXT:    orq %rdi, %rbp
-; AVX512-NEXT:    movq %rbp, 48(%r15)
-; AVX512-NEXT:    movq %rcx, %rdi
+; AVX512-NEXT:    addq %rbp, %rdi
+; AVX512-NEXT:    movq %rdi, 48(%r12)
+; AVX512-NEXT:    movq %r15, %rdi
 ; AVX512-NEXT:    shrq $22, %rdi
-; AVX512-NEXT:    movq %rsi, %rbp
+; AVX512-NEXT:    movq %rcx, %rbp
 ; AVX512-NEXT:    shlq $42, %rbp
-; AVX512-NEXT:    orq %rdi, %rbp
-; AVX512-NEXT:    movq %rbp, 32(%r15)
+; AVX512-NEXT:    addq %rbp, %rdi
+; AVX512-NEXT:    movq %rdi, 32(%r12)
 ; AVX512-NEXT:    movq %rbx, %rdi
 ; AVX512-NEXT:    shrq $11, %rdi
 ; AVX512-NEXT:    movb $42, %bpl
-; AVX512-NEXT:    bzhiq %rbp, %r12, %rbp
-; AVX512-NEXT:    shlq $53, %r12
-; AVX512-NEXT:    orq %rdi, %r12
-; AVX512-NEXT:    movq %r12, 16(%r15)
-; AVX512-NEXT:    movq %r13, %rdi
-; AVX512-NEXT:    shrq $48, %rdi
-; AVX512-NEXT:    movb %dil, 102(%r15)
+; AVX512-NEXT:    bzhiq %rbp, %rsi, %rbp
+; AVX512-NEXT:    shlq $53, %rsi
+; AVX512-NEXT:    addq %rdi, %rsi
+; AVX512-NEXT:    movq %rsi, 16(%r12)
+; AVX512-NEXT:    movq %r13, %rsi
+; AVX512-NEXT:    shrq $48, %rsi
+; AVX512-NEXT:    movb %sil, 102(%r12)
 ; AVX512-NEXT:    shrq $32, %r13
-; AVX512-NEXT:    movw %r13w, 100(%r15)
-; AVX512-NEXT:    movb $53, %dil
-; AVX512-NEXT:    bzhiq %rdi, %r10, %r10
-; AVX512-NEXT:    movq %r14, %r12
-; AVX512-NEXT:    shrq $55, %r12
-; AVX512-NEXT:    shlq $9, %r10
-; AVX512-NEXT:    orq %r12, %r10
+; AVX512-NEXT:    movw %r13w, 100(%r12)
+; AVX512-NEXT:    movb $53, %sil
+; AVX512-NEXT:    bzhiq %rsi, %r10, %rdi
+; AVX512-NEXT:    movq %r14, %r10
+; AVX512-NEXT:    shrq $55, %r10
+; AVX512-NEXT:    shlq $9, %rdi
+; AVX512-NEXT:    addq %r10, %rdi
 ; AVX512-NEXT:    shlq $62, %rax
-; AVX512-NEXT:    orq %r10, %rax
-; AVX512-NEXT:    movq %rax, 80(%r15)
-; AVX512-NEXT:    shlq $42, %rcx
-; AVX512-NEXT:    orq %rbp, %rcx
-; AVX512-NEXT:    movq %rcx, 24(%r15)
-; AVX512-NEXT:    bzhiq %rdi, {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Folded Reload
+; AVX512-NEXT:    orq %rdi, %rax
+; AVX512-NEXT:    movq %rax, 80(%r12)
+; AVX512-NEXT:    shlq $42, %r15
+; AVX512-NEXT:    orq %rbp, %r15
+; AVX512-NEXT:    movq %r15, 24(%r12)
+; AVX512-NEXT:    bzhiq %rsi, {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Folded Reload
 ; AVX512-NEXT:    shlq $53, %rbx
 ; AVX512-NEXT:    orq %rax, %rbx
-; AVX512-NEXT:    movq %rbx, 8(%r15)
+; AVX512-NEXT:    movq %rbx, 8(%r12)
 ; AVX512-NEXT:    shlq $9, %r14
 ; AVX512-NEXT:    andl $511, %r11d # imm = 0x1FF
 ; AVX512-NEXT:    orq %r14, %r11
-; AVX512-NEXT:    movq %r11, 72(%r15)
+; AVX512-NEXT:    movq %r11, 72(%r12)
 ; AVX512-NEXT:    shlq $20, %r9
 ; AVX512-NEXT:    andl $1048575, %r8d # imm = 0xFFFFF
 ; AVX512-NEXT:    orq %r9, %r8
-; AVX512-NEXT:    movq %r8, 56(%r15)
+; AVX512-NEXT:    movq %r8, 56(%r12)
 ; AVX512-NEXT:    shlq $31, %rdx
-; AVX512-NEXT:    andl $2147483647, %esi # imm = 0x7FFFFFFF
-; AVX512-NEXT:    orq %rdx, %rsi
-; AVX512-NEXT:    movq %rsi, 40(%r15)
-; AVX512-NEXT:    movq %r15, %rax
+; AVX512-NEXT:    andl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX512-NEXT:    orq %rdx, %rcx
+; AVX512-NEXT:    movq %rcx, 40(%r12)
+; AVX512-NEXT:    movq %r12, %rax
 ; AVX512-NEXT:    popq %rbx
 ; AVX512-NEXT:    popq %r12
 ; AVX512-NEXT:    popq %r13

@@ -22,11 +22,11 @@ define dso_local void @foo(i64 %x) nounwind {
 ; X86-NEXT:    shrl $21, %ecx
 ; X86-NEXT:    movl %eax, %edx
 ; X86-NEXT:    shll $11, %edx
-; X86-NEXT:    orl %ecx, %edx
+; X86-NEXT:    addl %edx, %ecx
 ; X86-NEXT:    shrl $21, %eax
-; X86-NEXT:    addl $7, %edx
+; X86-NEXT:    addl $7, %ecx
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    pushl %edx
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    calll __divdi3

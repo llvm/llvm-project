@@ -131,10 +131,9 @@ define i64 @xbar(i64 %x, i64 %y, i64 %z) nounwind readnone {
 ;
 ; BMI2-LABEL: xbar:
 ; BMI2:       # %bb.0: # %entry
-; BMI2-NEXT:    movq %rdi, %rax
 ; BMI2-NEXT:    shlq $7, %rsi
-; BMI2-NEXT:    shrq $57, %rax
-; BMI2-NEXT:    orq %rsi, %rax
+; BMI2-NEXT:    shrq $57, %rdi
+; BMI2-NEXT:    leaq (%rsi,%rdi), %rax
 ; BMI2-NEXT:    retq
 entry:
 	%0 = shl i64 %y, 7
@@ -207,10 +206,9 @@ define i64 @xbu(i64 %x, i64 %y, i64 %z) nounwind readnone {
 ;
 ; BMI2-LABEL: xbu:
 ; BMI2:       # %bb.0: # %entry
-; BMI2-NEXT:    movq %rsi, %rax
 ; BMI2-NEXT:    shlq $57, %rdi
-; BMI2-NEXT:    shrq $7, %rax
-; BMI2-NEXT:    orq %rdi, %rax
+; BMI2-NEXT:    shrq $7, %rsi
+; BMI2-NEXT:    leaq (%rdi,%rsi), %rax
 ; BMI2-NEXT:    retq
 entry:
 	%0 = lshr i64 %y, 7

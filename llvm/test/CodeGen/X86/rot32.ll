@@ -207,7 +207,7 @@ define i32 @xbar(i32 %x, i32 %y, i32 %z) nounwind readnone {
 ; BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; BMI2-NEXT:    shll $7, %ecx
 ; BMI2-NEXT:    shrl $25, %eax
-; BMI2-NEXT:    orl %ecx, %eax
+; BMI2-NEXT:    addl %ecx, %eax
 ; BMI2-NEXT:    retl
 ;
 ; X64-LABEL: xbar:
@@ -224,10 +224,9 @@ define i32 @xbar(i32 %x, i32 %y, i32 %z) nounwind readnone {
 ;
 ; BMI264-LABEL: xbar:
 ; BMI264:       # %bb.0: # %entry
-; BMI264-NEXT:    movl %edi, %eax
 ; BMI264-NEXT:    shll $7, %esi
-; BMI264-NEXT:    shrl $25, %eax
-; BMI264-NEXT:    orl %esi, %eax
+; BMI264-NEXT:    shrl $25, %edi
+; BMI264-NEXT:    leal (%esi,%edi), %eax
 ; BMI264-NEXT:    retq
 entry:
 	%0 = shl i32 %y, 7
@@ -343,7 +342,7 @@ define i32 @xbu(i32 %x, i32 %y, i32 %z) nounwind readnone {
 ; BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; BMI2-NEXT:    shll $25, %ecx
 ; BMI2-NEXT:    shrl $7, %eax
-; BMI2-NEXT:    orl %ecx, %eax
+; BMI2-NEXT:    addl %ecx, %eax
 ; BMI2-NEXT:    retl
 ;
 ; X64-LABEL: xbu:
@@ -360,10 +359,9 @@ define i32 @xbu(i32 %x, i32 %y, i32 %z) nounwind readnone {
 ;
 ; BMI264-LABEL: xbu:
 ; BMI264:       # %bb.0: # %entry
-; BMI264-NEXT:    movl %esi, %eax
 ; BMI264-NEXT:    shll $25, %edi
-; BMI264-NEXT:    shrl $7, %eax
-; BMI264-NEXT:    orl %edi, %eax
+; BMI264-NEXT:    shrl $7, %esi
+; BMI264-NEXT:    leal (%edi,%esi), %eax
 ; BMI264-NEXT:    retq
 entry:
 	%0 = lshr i32 %y, 7
