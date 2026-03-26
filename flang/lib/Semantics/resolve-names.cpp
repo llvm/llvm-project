@@ -1037,6 +1037,8 @@ public:
   bool Pre(const parser::DeclarationTypeSpec::Class &);
   void Post(const parser::DeclarationTypeSpec::Class &);
   void Post(const parser::DeclarationTypeSpec::Record &);
+  bool Pre(const parser::DeclarationTypeSpec::TypeOf &);
+  bool Pre(const parser::DeclarationTypeSpec::ClassOf &);
   void Post(const parser::DerivedTypeSpec &);
   bool Pre(const parser::DerivedTypeDef &);
   bool Pre(const parser::DerivedTypeStmt &);
@@ -1270,6 +1272,7 @@ private:
       const parser::Name &name, Symbol &symbol, Symbol::Flag flag);
   bool CheckForHostAssociatedImplicit(const parser::Name &);
   bool HasCycle(const Symbol &, const Symbol *interface);
+  bool ResolveTypeOfOrClassOf(const parser::DataRef &, bool isClassOf);
   bool MustBeScalar(const Symbol &symbol) const {
     return mustBeScalar_.find(symbol) != mustBeScalar_.end();
   }
@@ -6518,6 +6521,119 @@ void DeclarationVisitor::Post(const parser::DeclarationTypeSpec::Record &rec) {
           typeName.source);
     }
   }
+}
+
+// TYPEOF and CLASSOF type specifiers
+bool DeclarationVisitor::ResolveTypeOfOrClassOf(
+    const parser::DataRef &dataRef, bool isClassOf) {
+  const char *specName{isClassOf ? "CLASSOF" : "TYPEOF"};
+
+  if (std::holds_alternative<common::Indirection<parser::ArrayElement>>(
+          dataRef.u)) {
+    Say(currStmtSource().value(),
+        "The data-ref in %s must not have subscripts"_err_en_US, specName);
+    return false;
+  }
+  if (std::holds_alternative<common::Indirection<parser::CoindexedNamedObject>>(
+          dataRef.u)) {
+    Say(currStmtSource().value(),
+        "The data-ref in %s must not have an image-selector"_err_en_US,
+        specName);
+    return false;
+  }
+
+  const parser::Name *name{ResolveDataRef(dataRef)};
+  if (!name || !name->symbol) {
+    return false;
+  }
+
+  // C7115: data-ref shall be a data object, not a procedure or type name.
+  const Symbol &ultimate{name->symbol->GetUltimate()};
+  if (!ultimate.has<ObjectEntityDetails>() &&
+      !ultimate.has<AssocEntityDetails>() && !ultimate.has<EntityDetails>()) {
+    Say(name->source, "'%s' in %s must be a data object"_err_en_US,
+        name->source, specName);
+    return false;
+  }
+
+  // C7114: data-ref shall not be a whole assumed-size array.
+  if (IsAssumedSizeArray(ultimate)) {
+    Say(name->source,
+        "The data-ref in %s must not be a whole assumed-size array"_err_en_US,
+        specName);
+    return false;
+  }
+
+  // Get the declared type of the referenced object.
+  const DeclTypeSpec *refType{ultimate.GetType()};
+  if (!refType) {
+    Say(name->source,
+        "Referenced object '%s' does not have a declared type"_err_en_US,
+        name->source);
+    return false;
+  }
+
+  switch (refType->category()) {
+  case DeclTypeSpec::Numeric:
+  case DeclTypeSpec::Logical:
+  case DeclTypeSpec::Character:
+    if (isClassOf) {
+      Say(currStmtSource().value(),
+          "CLASSOF may not be used with an intrinsic-type object"_err_en_US);
+      return false;
+    }
+    SetDeclTypeSpec(*refType);
+    break;
+  case DeclTypeSpec::TypeDerived:
+  case DeclTypeSpec::ClassDerived: {
+    const DerivedTypeSpec &derived{refType->derivedTypeSpec()};
+    if (isClassOf && !IsExtensibleType(&derived)) {
+      Say(currStmtSource().value(),
+          "CLASSOF requires a data-ref of extensible type"_err_en_US);
+      return false;
+    }
+    auto category{
+        isClassOf ? DeclTypeSpec::ClassDerived : DeclTypeSpec::TypeDerived};
+    if (const DeclTypeSpec *extant{
+            currScope().FindInstantiatedDerivedType(derived, category)}) {
+      SetDeclTypeSpec(*extant);
+    } else {
+      DeclTypeSpec &type{
+          currScope().MakeDerivedType(category, DerivedTypeSpec{derived})};
+      DerivedTypeSpec &newDerived{type.derivedTypeSpec()};
+      newDerived.CookParameters(GetFoldingContext());
+      newDerived.EvaluateParameters(context());
+      if (!newDerived.IsForwardReferenced()) {
+        newDerived.Instantiate(currScope());
+      }
+      SetDeclTypeSpec(type);
+    }
+    break;
+  }
+  case DeclTypeSpec::TypeStar:
+  case DeclTypeSpec::ClassStar:
+    // If data-ref is unlimited polymorphic, TYPEOF gives TYPE(*) and
+    // CLASSOF gives CLASS(*).
+    if (isClassOf) {
+      SetDeclTypeSpec(context().globalScope().MakeClassStarType());
+    } else {
+      SetDeclTypeSpec(context().globalScope().MakeTypeStarType());
+    }
+    break;
+  }
+  return true;
+}
+
+bool DeclarationVisitor::Pre(
+    const parser::DeclarationTypeSpec::TypeOf &typeOf) {
+  ResolveTypeOfOrClassOf(typeOf.v.value(), /*isClassOf=*/false);
+  return false;
+}
+
+bool DeclarationVisitor::Pre(
+    const parser::DeclarationTypeSpec::ClassOf &classOf) {
+  ResolveTypeOfOrClassOf(classOf.v.value(), /*isClassOf=*/true);
+  return false;
 }
 
 // The descendents of DerivedTypeDef in the parse tree are visited directly
