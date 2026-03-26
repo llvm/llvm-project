@@ -10,6 +10,7 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/IRMapping.h"
+#include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Mangle.h"
 #include "clang/Basic/Module.h"
@@ -1745,9 +1746,9 @@ static llvm::StringRef getCUDAPrefix(clang::ASTContext *astCtx) {
   return "cuda";
 }
 
-static std::string addUnderscoredPrefix(llvm::StringRef prefix,
+static llvm::StringRef addUnderscoredPrefix(llvm::StringRef prefix,
                                         llvm::StringRef name) {
-  return ("__" + prefix + name).str();
+  return ("__" + prefix + name).getSingleStringRef();
 }
 
 /// Creates a global constructor function for the module:
@@ -1833,7 +1834,8 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
   // Create the fatbin string constant with GPU binary contents.
   auto fatbinType =
       ArrayType::get(&getContext(), charTy, gpuBinary->getBuffer().size());
-  std::string fatbinStrName = addUnderscoredPrefix(cudaPrefix, "_fatbin_str");
+  llvm::StringRef fatbinStrName =
+      addUnderscoredPrefix(cudaPrefix, "_fatbin_str");
   GlobalOp fatbinStr = GlobalOp::create(builder, loc, fatbinStrName, fatbinType,
                                         /*isConstant=*/true, {},
                                         GlobalLinkageKind::PrivateLinkage);
@@ -1848,7 +1850,7 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
   auto fatbinWrapperType = RecordType::get(
       &getContext(), {intTy, intTy, voidPtrTy, voidPtrTy},
       /*packed=*/false, /*padded=*/false, RecordType::RecordKind::Struct);
-  std::string fatbinWrapperName =
+  llvm::StringRef fatbinWrapperName =
       addUnderscoredPrefix(cudaPrefix, "_fatbin_wrapper");
   GlobalOp fatbinWrapper = GlobalOp::create(
       builder, loc, fatbinWrapperName, fatbinWrapperType,
@@ -1871,7 +1873,7 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
                            {magicInit, versionInit, fatbinInit, unusedInit})));
 
   // Create the GPU binary handle global variable.
-  std::string gpubinHandleName =
+  llvm::StringRef gpubinHandleName =
       addUnderscoredPrefix(cudaPrefix, "_gpubin_handle");
 
   GlobalOp gpuBinHandle = GlobalOp::create(
