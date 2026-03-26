@@ -8171,6 +8171,7 @@ gentbl_cc_library(
     tbl_outs = {
         "include/mlir/Conversion/ConvertToLLVM/ToLLVMAttrInterface.h.inc": ["--gen-attr-interface-decls"],
         "include/mlir/Conversion/ConvertToLLVM/ToLLVMAttrInterface.cpp.inc": ["--gen-attr-interface-defs"],
+        "include/mlir/Conversion/ConvertToLLVM/ToLLVMDialectInterface.h.inc": ["--gen-dialect-interface-decls"],
         "include/mlir/Conversion/ConvertToLLVM/ToLLVMOpInterface.h.inc": ["--gen-op-interface-decls"],
         "include/mlir/Conversion/ConvertToLLVM/ToLLVMOpInterface.cpp.inc": ["--gen-op-interface-defs"],
     },
@@ -9155,6 +9156,7 @@ cc_library(
         "//llvm:Core",
         "//llvm:FrontendOpenMP",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -9254,6 +9256,16 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "LLVMImportDialectInterfaceIncGen",
+    tbl_outs = {
+        "include/mlir/Target/LLVMIR/LLVMImportDialectInterface.h.inc": ["-gen-dialect-interface-decls"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Target/LLVMIR/LLVMImportDialectInterface.td",
+    deps = [":OpBaseTdFiles"],
+)
+
 cc_library(
     name = "FromLLVMIRTranslation",
     srcs = [
@@ -9281,6 +9293,7 @@ cc_library(
         ":IR",
         ":LLVMConversionIncGen",
         ":LLVMDialect",
+        ":LLVMImportDialectInterfaceIncGen",
         ":LLVMIntrinsicConversionIncGen",
         ":Support",
         ":TranslateLib",
@@ -10592,6 +10605,7 @@ cc_library(
         ":Support",
         "//llvm:FrontendOpenMP",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 

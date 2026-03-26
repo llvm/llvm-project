@@ -14,6 +14,7 @@
 #include "orc-rt/Error.h"
 #include "orc-rt-c/Error.h"
 
+#include <cstring>
 #include <system_error>
 
 namespace orc_rt {
