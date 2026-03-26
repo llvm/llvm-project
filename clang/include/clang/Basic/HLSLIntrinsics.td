@@ -603,7 +603,7 @@ def hlsl_lit_float : HLSLBuiltin<"lit"> {
   let ReturnType = VectorType<FloatTy, 4>;
 }
 
-// Returns a reflection vector (scalar overloads).
+// Returns a reflection vector.
 // Scalar reflect: V = I - 2 * N * I * N (dot product is just multiplication
 // for scalars).
 def hlsl_reflect : HLSLBuiltin<"reflect"> {
@@ -622,22 +622,12 @@ V = I - 2 * N * dot(I N) .
 
 N must already be normalized in order to achieve the desired result.
 }];
+  let DetailFunc = "reflect_impl";
   let ParamNames = ["I", "N"];
-  let Body = "return I - 2 * N * I * N;";
   let Args = [Varying, Varying];
   let ReturnType = Varying;
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingScalar = 1;
-  let VaryingMatDims = [];
-}
-
-// Returns a reflection vector (vector overloads).
-def hlsl_reflect_vec : HLSLBuiltin<"reflect"> {
-  let DetailFunc = "reflect_vec_impl";
-  let ParamNames = ["I", "N"];
-  let Args = [Varying, Varying];
-  let ReturnType = Varying;
-  let VaryingTypes = [HalfTy, FloatTy];
   let VaryingVecSizes = [2, 3, 4];
   let VaryingMatDims = [];
 }

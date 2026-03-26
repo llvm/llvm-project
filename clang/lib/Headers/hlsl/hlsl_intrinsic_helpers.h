@@ -63,8 +63,14 @@ enable_if_t<is_same<double, T>::value, T> mul_vec_impl(vector<T, N> x,
   return sum;
 }
 
+template <typename T>
+constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value, T>
+reflect_impl(T I, T N) {
+  return I - 2 * N * I * N;
+}
+
 template <typename T, int L>
-constexpr vector<T, L> reflect_vec_impl(vector<T, L> I, vector<T, L> N) {
+constexpr vector<T, L> reflect_impl(vector<T, L> I, vector<T, L> N) {
 #if (__has_builtin(__builtin_spirv_reflect))
   return __builtin_spirv_reflect(I, N);
 #else
