@@ -1232,7 +1232,7 @@ TEST(Error, NonNullSuccess) {
   EXPECT_EQ(ptr, nonNull(ccptr));
 }
 
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS && !defined(NDEBUG)
+#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
 TEST(Error, NonNullFails) {
   int *NullPtr = nullptr;
   EXPECT_DEATH(nonNull(NullPtr),
