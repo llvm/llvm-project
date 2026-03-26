@@ -287,7 +287,7 @@ void AppleThreadPlanStepThroughDirectDispatch::GetDescription(
     s->PutCString("Step through ObjC direct dispatch function.");
     break;
   default:
-    s->Printf("Step through ObjC direct dispatch  using breakpoints: ");
+    s->Printf("Step through ObjC direct dispatch using breakpoints: ");
     bool first = true;
     for (auto bkpt_sp : m_msgSend_bkpts) {
         if (!first) {

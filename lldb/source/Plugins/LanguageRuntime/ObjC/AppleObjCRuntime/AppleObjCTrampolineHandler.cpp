@@ -811,28 +811,19 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
   Target &target = thread.GetProcess()->GetTarget();
   llvm::StringRef sym_name;
   const DispatchFunction *this_dispatch = nullptr;
-  bool in_sel_stub = false;
-  bool in_class_sel_stub = false;
 
   if (target.ResolveLoadAddress(curr_pc, func_addr)) {
     const Symbol *curr_sym = func_addr.CalculateSymbolContextSymbol();
     if (curr_sym)
       sym_name = curr_sym->GetName().GetStringRef();
-
-    if (!sym_name.empty()) {
-      if (sym_name.consume_front("objc_msgSend$")) {
-        in_sel_stub = true;
-      } else if (sym_name.consume_front("objc_msgSendClass$")) {
-        in_class_sel_stub = true;
-      }
-    }
   }
 
-  // objc has introduced a new section that contains stubs which figure out the
+  // objc has introduced new accelerated dispatch stubs which figure out the
   // selector and in some cases the object in one way or another, then call
   // objc_msgSend.  If we're in one of those stubs, we can use "step through
   // direct dispatch" plan to get to the actual dispatch.
-  if (in_sel_stub || in_class_sel_stub) {
+  if (!sym_name.empty() && (sym_name.consume_front("objc_msgSend$")
+                            || sym_name.consume_front("objc_msgSendClass$"))) {
     ret_plan_sp = std::make_shared<AppleThreadPlanStepThroughDirectDispatch>(
         thread, *this);
     return ret_plan_sp;
