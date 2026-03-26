@@ -309,6 +309,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wctype.iswblank
     libc.src.wctype.iswxdigit
     libc.src.wctype.iswpunct
+    libc.src.wctype.iswprint
 
     # internal entrypoints
     libc.startup.baremetal.init
@@ -794,6 +795,7 @@ endif()
 
 list(APPEND TARGET_LIBM_ENTRYPOINTS
   # bfloat16 entrypoints
+  libc.src.math.atanbf16
   libc.src.math.bf16add
   libc.src.math.bf16addf
   libc.src.math.bf16addl

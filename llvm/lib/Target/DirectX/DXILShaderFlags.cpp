@@ -70,7 +70,6 @@ static bool checkWaveOps(Intrinsic::ID IID) {
   // case Intrinsic::dx_wave_reduce.xor:
   // case Intrinsic::dx_wave_prefixop:
   // case Intrinsic::dx_quad.readat:
-  // case Intrinsic::dx_quad.readacrossx:
   // case Intrinsic::dx_quad.readacrossy:
   // case Intrinsic::dx_quad.readacrossdiagonal:
   // case Intrinsic::dx_wave_prefixballot:
@@ -93,6 +92,7 @@ static bool checkWaveOps(Intrinsic::ID IID) {
   // Wave Active Op Variants
   case Intrinsic::dx_wave_reduce_or:
   case Intrinsic::dx_wave_reduce_xor:
+  case Intrinsic::dx_wave_reduce_and:
   case Intrinsic::dx_wave_reduce_sum:
   case Intrinsic::dx_wave_reduce_usum:
   case Intrinsic::dx_wave_product:
@@ -106,6 +106,9 @@ static bool checkWaveOps(Intrinsic::ID IID) {
   case Intrinsic::dx_wave_prefix_usum:
   case Intrinsic::dx_wave_prefix_product:
   case Intrinsic::dx_wave_prefix_uproduct:
+    // Quad Op Variants
+  case Intrinsic::dx_quad_read_across_x:
+  case Intrinsic::dx_quad_read_across_y:
     return true;
   }
 }
@@ -227,7 +230,7 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
     case Intrinsic::dx_resource_load_typedbuffer: {
       dxil::ResourceTypeInfo &RTI =
           DRTM[cast<TargetExtType>(II->getArgOperand(0)->getType())];
-      if (RTI.isTyped())
+      if (RTI.isTyped() && RTI.isUAV())
         CSF.TypedUAVLoadAdditionalFormats |= RTI.getTyped().ElementCount > 1;
       if (!CSF.TiledResources && checkIfStatusIsExtracted(*II))
         CSF.TiledResources = true;
@@ -269,10 +272,15 @@ ModuleShaderFlags::gatherGlobalModuleFlags(const Module &M,
   // Set the Max64UAVs flag if the number of UAVs is > 8
   uint32_t NumUAVs = 0;
   for (auto &UAV : DRM.uavs())
-    if (MMDI.ValidatorVersion < VersionTuple(1, 6))
+    if (MMDI.ValidatorVersion < VersionTuple(1, 6)) {
       NumUAVs++;
-    else // MMDI.ValidatorVersion >= VersionTuple(1, 6)
-      NumUAVs += UAV.getBinding().Size;
+    } else { // MMDI.ValidatorVersion >= VersionTuple(1, 6)
+      uint32_t Size = UAV.getBinding().Size;
+      uint32_t NewNum = NumUAVs + (Size == 0 ? ~0U : Size);
+      if (NewNum < NumUAVs)
+        NewNum = ~0U;
+      NumUAVs = NewNum;
+    }
   if (NumUAVs > 8)
     CSF.Max64UAVs = true;
 

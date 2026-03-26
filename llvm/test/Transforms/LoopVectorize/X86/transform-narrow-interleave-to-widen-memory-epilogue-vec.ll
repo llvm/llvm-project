@@ -51,11 +51,12 @@ define void @test_4xi64_epilogue_vec(ptr noalias %data, i64 noundef %n) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT3]], [[N]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK-NEXT:    br i1 true, label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds [[S4]], ptr [[DATA]], i64 [[IV]], i32 0
 ; CHECK-NEXT:    store i64 1, ptr [[P0]], align 8
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds [[S4]], ptr [[DATA]], i64 [[IV]], i32 1
@@ -160,3 +161,126 @@ loop:
 exit:
   ret i64 %iv.next
 }
+
+; Test with non-unit IV step and separate trip count IV, where the scalar
+; epilogue resume values must account for the step size.
+define void @test_non_unit_step_resume_values(ptr %p) #1 {
+; CHECK-LABEL: define void @test_non_unit_step_resume_values(
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:  [[ITER_CHECK:.*]]:
+; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; CHECK:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
+; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP0]], 12
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr double, ptr [[P]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr double, ptr [[P]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr double, ptr [[P]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr double, ptr [[P]], i64 [[TMP3]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x double>, ptr [[TMP4]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x double>, ptr [[TMP5]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x double>, ptr [[TMP6]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x double>, ptr [[TMP7]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x double>, ptr [[TMP4]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x double>, ptr [[TMP5]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x double>, ptr [[TMP6]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x double>, ptr [[TMP7]], align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd <4 x double> [[WIDE_LOAD]], [[WIDE_LOAD4]]
+; CHECK-NEXT:    [[TMP9:%.*]] = fadd <4 x double> [[WIDE_LOAD1]], [[WIDE_LOAD5]]
+; CHECK-NEXT:    [[TMP10:%.*]] = fadd <4 x double> [[WIDE_LOAD2]], [[WIDE_LOAD6]]
+; CHECK-NEXT:    [[TMP11:%.*]] = fadd <4 x double> [[WIDE_LOAD3]], [[WIDE_LOAD7]]
+; CHECK-NEXT:    store <4 x double> [[TMP8]], ptr [[TMP4]], align 8
+; CHECK-NEXT:    store <4 x double> [[TMP9]], ptr [[TMP5]], align 8
+; CHECK-NEXT:    store <4 x double> [[TMP10]], ptr [[TMP6]], align 8
+; CHECK-NEXT:    store <4 x double> [[TMP11]], ptr [[TMP7]], align 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
+; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[VEC_EPILOG_ITER_CHECK:.*]]
+; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
+; CHECK-NEXT:    br i1 true, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3]]
+; CHECK:       [[VEC_EPILOG_PH]]:
+; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 96, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
+; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX9:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT12:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX9]], 4
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr double, ptr [[P]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <4 x double>, ptr [[TMP13]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD11:%.*]] = load <4 x double>, ptr [[TMP13]], align 8
+; CHECK-NEXT:    [[TMP14:%.*]] = fadd <4 x double> [[WIDE_LOAD10]], [[WIDE_LOAD11]]
+; CHECK-NEXT:    store <4 x double> [[TMP14]], ptr [[TMP13]], align 8
+; CHECK-NEXT:    [[INDEX_NEXT12]] = add nuw i64 [[INDEX9]], 1
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT12]], 99
+; CHECK-NEXT:    br i1 [[TMP15]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[VEC_EPILOG_SCALAR_PH]]
+; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL13:%.*]] = phi i64 [ 396, %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 384, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL14:%.*]] = phi i64 [ 0, %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 3, %[[VEC_EPILOG_ITER_CHECK]] ], [ 99, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL13]], %[[VEC_EPILOG_SCALAR_PH]] ]
+; CHECK-NEXT:    [[CNT:%.*]] = phi i64 [ [[CNT_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL14]], %[[VEC_EPILOG_SCALAR_PH]] ]
+; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr double, ptr [[P]], i64 [[IV]]
+; CHECK-NEXT:    [[V0:%.*]] = load double, ptr [[GEP0]], align 8
+; CHECK-NEXT:    [[R0:%.*]] = fadd double [[V0]], [[V0]]
+; CHECK-NEXT:    store double [[R0]], ptr [[GEP0]], align 8
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr double, ptr [[GEP0]], i64 1
+; CHECK-NEXT:    [[V1:%.*]] = load double, ptr [[GEP1]], align 8
+; CHECK-NEXT:    [[R1:%.*]] = fadd double [[V1]], [[V1]]
+; CHECK-NEXT:    store double [[R1]], ptr [[GEP1]], align 8
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr double, ptr [[GEP0]], i64 2
+; CHECK-NEXT:    [[V2:%.*]] = load double, ptr [[GEP2]], align 8
+; CHECK-NEXT:    [[R2:%.*]] = fadd double [[V2]], [[V2]]
+; CHECK-NEXT:    store double [[R2]], ptr [[GEP2]], align 8
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr double, ptr [[GEP0]], i64 3
+; CHECK-NEXT:    [[V3:%.*]] = load double, ptr [[GEP3]], align 8
+; CHECK-NEXT:    [[R3:%.*]] = fadd double [[V3]], [[V3]]
+; CHECK-NEXT:    store double [[R3]], ptr [[GEP3]], align 8
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 4
+; CHECK-NEXT:    [[CNT_NEXT]] = add i64 [[CNT]], -1
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[CNT_NEXT]], 0
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
+  %cnt = phi i64 [ %cnt.next, %loop ], [ 99, %entry ]
+  %gep0 = getelementptr double, ptr %p, i64 %iv
+  %v0 = load double, ptr %gep0, align 8
+  %r0 = fadd double %v0, %v0
+  store double %r0, ptr %gep0, align 8
+  %gep1 = getelementptr double, ptr %gep0, i64 1
+  %v1 = load double, ptr %gep1, align 8
+  %r1 = fadd double %v1, %v1
+  store double %r1, ptr %gep1, align 8
+  %gep2 = getelementptr double, ptr %gep0, i64 2
+  %v2 = load double, ptr %gep2, align 8
+  %r2 = fadd double %v2, %v2
+  store double %r2, ptr %gep2, align 8
+  %gep3 = getelementptr double, ptr %gep0, i64 3
+  %v3 = load double, ptr %gep3, align 8
+  %r3 = fadd double %v3, %v3
+  store double %r3, ptr %gep3, align 8
+  %iv.next = add i64 %iv, 4
+  %cnt.next = add i64 %cnt, -1
+  %done = icmp eq i64 %cnt.next, 0
+  br i1 %done, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+attributes #1 = { "target-cpu"="icelake-server" }

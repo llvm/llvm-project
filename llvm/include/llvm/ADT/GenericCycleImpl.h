@@ -220,6 +220,11 @@ void GenericCycle<ContextT>::verifyCycleNest() const {
   if (ParentCycle) {
     assert(is_contained(ParentCycle->children(), this) &&
            "Cycle is not a subcycle of its parent!");
+    assert(ParentCycle->TopLevelCycle == TopLevelCycle &&
+           "Top level cycle of parent cycle must be the same");
+  } else {
+    assert(TopLevelCycle == this &&
+           "Cycle without parent must be top-level cycle");
   }
 #endif
 }
@@ -278,21 +283,10 @@ private:
 };
 
 template <typename ContextT>
-auto GenericCycleInfo<ContextT>::getTopLevelParentCycle(BlockT *Block)
-    -> CycleT * {
-  auto Cycle = BlockMapTopLevel.find(Block);
-  if (Cycle != BlockMapTopLevel.end())
-    return Cycle->second;
-
-  auto MapIt = BlockMap.find(Block);
-  if (MapIt == BlockMap.end())
-    return nullptr;
-
-  auto *C = MapIt->second;
-  while (C->ParentCycle)
-    C = C->ParentCycle;
-  BlockMapTopLevel.try_emplace(Block, C);
-  return C;
+auto GenericCycleInfo<ContextT>::getTopLevelParentCycle(
+    const BlockT *Block) const -> CycleT * {
+  CycleT *Cycle = getCycle(Block);
+  return Cycle ? Cycle->TopLevelCycle : nullptr;
 }
 
 template <typename ContextT>
@@ -310,23 +304,43 @@ void GenericCycleInfo<ContextT>::moveTopLevelCycleToNewParent(CycleT *NewParent,
   *Pos = std::move(CurrentContainer.back());
   CurrentContainer.pop_back();
   Child->ParentCycle = NewParent;
+  Child->TopLevelCycle = NewParent;
+  for (CycleT *Cycle : depth_first(Child))
+    Cycle->TopLevelCycle = NewParent;
 
   NewParent->Blocks.insert_range(Child->blocks());
-
-  for (auto &It : BlockMapTopLevel)
-    if (It.second == Child)
-      It.second = NewParent;
   NewParent->clearCache();
   Child->clearCache();
 }
 
 template <typename ContextT>
+void GenericCycleInfo<ContextT>::verifyBlockNumberEpoch(
+    const FunctionT *Fn) const {
+  assert(BlockNumberEpoch ==
+             GraphTraits<const FunctionT *>::getNumberEpoch(Fn) &&
+         "CycleInfo used with outdated block number epoch");
+}
+
+template <typename ContextT>
+void GenericCycleInfo<ContextT>::addToBlockMap(BlockT *Block, CycleT *Cycle) {
+  // The caller should ensure that BlockMap is large enough.
+  verifyBlockNumberEpoch(Block->getParent());
+  unsigned Number = GraphTraits<BlockT *>::getNumber(Block);
+  BlockMap[Number] = Cycle;
+}
+
+template <typename ContextT>
 void GenericCycleInfo<ContextT>::addBlockToCycle(BlockT *Block, CycleT *Cycle) {
+  // Make sure BlockMap is large enough for the new block.
+  unsigned Number = GraphTraits<BlockT *>::getNumber(Block);
+  if (Number >= BlockMap.size())
+    BlockMap.resize(GraphTraits<FunctionT *>::getMaxNumber(Block->getParent()));
+
   // FixMe: Appending NewBlock is fine as a set of blocks in a cycle. When
   // printing, cycle NewBlock is at the end of list but it should be in the
   // middle to represent actual traversal of a cycle.
   Cycle->appendBlock(Block);
-  BlockMap.try_emplace(Block, Cycle);
+  addToBlockMap(Block, Cycle);
 
   CycleT *ParentCycle = Cycle->getParentCycle();
   while (ParentCycle) {
@@ -335,7 +349,6 @@ void GenericCycleInfo<ContextT>::addBlockToCycle(BlockT *Block, CycleT *Cycle) {
     ParentCycle = Cycle->getParentCycle();
   }
 
-  BlockMapTopLevel.try_emplace(Block, Cycle);
   Cycle->clearCache();
 }
 
@@ -369,7 +382,7 @@ void GenericCycleInfoCompute<ContextT>::run(FunctionT *F) {
     std::unique_ptr<CycleT> NewCycle = std::make_unique<CycleT>();
     NewCycle->appendEntry(HeaderCandidate);
     NewCycle->appendBlock(HeaderCandidate);
-    Info.BlockMap.try_emplace(HeaderCandidate, NewCycle.get());
+    Info.addToBlockMap(HeaderCandidate, NewCycle.get());
 
     // Helper function to process (non-back-edge) predecessors of a discovered
     // block and either add them to the worklist or recognize that the given
@@ -425,11 +438,10 @@ void GenericCycleInfoCompute<ContextT>::run(FunctionT *F) {
                      << Info.Context.print(BlockParent->getHeader()) << "\n");
         }
       } else {
-        Info.BlockMap.try_emplace(Block, NewCycle.get());
+        Info.addToBlockMap(Block, NewCycle.get());
         assert(!is_contained(NewCycle->Blocks, Block));
         NewCycle->Blocks.insert(Block);
         ProcessPredecessors(Block);
-        Info.BlockMapTopLevel.try_emplace(Block, NewCycle.get());
       }
     } while (!Worklist.empty());
 
@@ -510,7 +522,6 @@ void GenericCycleInfoCompute<ContextT>::dfs(FunctionT *F, BlockT *EntryBlock) {
 template <typename ContextT> void GenericCycleInfo<ContextT>::clear() {
   TopLevelCycles.clear();
   BlockMap.clear();
-  BlockMapTopLevel.clear();
 }
 
 /// \brief Compute the cycle info for a function.
@@ -518,6 +529,8 @@ template <typename ContextT>
 void GenericCycleInfo<ContextT>::compute(FunctionT &F) {
   GenericCycleInfoCompute<ContextT> Compute(*this);
   Context = ContextT(&F);
+  BlockNumberEpoch = GraphTraits<FunctionT *>::getNumberEpoch(&F);
+  BlockMap.resize(GraphTraits<FunctionT *>::getMaxNumber(&F));
 
   LLVM_DEBUG(errs() << "Computing cycles for function: " << F.getName()
                     << "\n");
@@ -544,7 +557,9 @@ void GenericCycleInfo<ContextT>::splitCriticalEdge(BlockT *Pred, BlockT *Succ,
 template <typename ContextT>
 auto GenericCycleInfo<ContextT>::getCycle(const BlockT *Block) const
     -> CycleT * {
-  return BlockMap.lookup(Block);
+  verifyBlockNumberEpoch(Block->getParent());
+  unsigned Number = GraphTraits<const BlockT *>::getNumber(Block);
+  return Number < BlockMap.size() ? BlockMap[Number] : nullptr;
 }
 
 /// \brief Find the innermost cycle containing both given cycles.
@@ -618,9 +633,9 @@ void GenericCycleInfo<ContextT>::verifyCycleNest(bool VerifyFull) const {
         Cycle->verifyCycleNest();
       // Check the block map entries for blocks contained in this cycle.
       for (BlockT *BB : Cycle->blocks()) {
-        auto MapIt = BlockMap.find(BB);
-        assert(MapIt != BlockMap.end());
-        assert(Cycle->contains(MapIt->second));
+        CycleT *CycleInBlockMap = getCycle(BB);
+        assert(CycleInBlockMap != nullptr);
+        assert(Cycle->contains(CycleInBlockMap));
       }
     }
   }

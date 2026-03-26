@@ -102,6 +102,9 @@ Improvements to clang-tidy
   manages the creation of temporary header files and ensures that diagnostics
   and fixes are verified for the specified headers.
 
+- Improved :program:`clang-tidy` ``-store-check-profile`` by generating valid
+  JSON when the source file path contains characters that require JSON escaping.
+
 New checks
 ^^^^^^^^^^
 
@@ -201,6 +204,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/casting-through-void>` check by running only on
   C++ files because suggested ``reinterpret_cast`` is not available in pure C.
 
+- Improved :doc:`bugprone-derived-method-shadowing-base-method
+  <clang-tidy/checks/bugprone/derived-method-shadowing-base-method>` check by 
+  correctly ignoring function templates.
+
 - Improved :doc:`bugprone-exception-escape
   <clang-tidy/checks/bugprone/exception-escape>` check by adding
   `TreatFunctionsWithoutSpecificationAsThrowing` option to support reporting
@@ -216,15 +223,25 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/macro-parentheses>` check by printing the macro
   definition in the warning message if the macro is defined on command line.
 
+- Improved :doc:`bugprone-pointer-arithmetic-on-polymorphic-object
+  <clang-tidy/checks/bugprone/pointer-arithmetic-on-polymorphic-object>` check
+  by fixing a false positive when ``operator[]`` is used in a dependent context.
+
 - Improved :doc:`bugprone-std-namespace-modification
   <clang-tidy/checks/bugprone/std-namespace-modification>` check by fixing
   false positives when extending the standard library with a specialization of
-  user-defined type.
+  user-defined type and by removing detection of the compiler generated ``std``
+  namespace extensions. 
 
 - Improved :doc:`bugprone-string-constructor
   <clang-tidy/checks/bugprone/string-constructor>` check to detect suspicious
   string constructor calls when the string class constructor has a default
   allocator argument.
+
+- Improved :doc:`bugprone-unchecked-optional-access
+  <clang-tidy/checks/bugprone/unchecked-optional-access>` to recognize common
+  GoogleTest macros such as ``ASSERT_TRUE`` and ``ASSERT_FALSE``, reducing the
+  number of false positives in test code.
 
 - Improved :doc:`bugprone-unsafe-functions
   <clang-tidy/checks/bugprone/unsafe-functions>` check by adding the function
@@ -232,9 +249,14 @@ Changes in existing checks
   function is unsafe, useless, deprecated in C++17 and removed in C++20).
 
 - Improved :doc:`bugprone-use-after-move
-  <clang-tidy/checks/bugprone/use-after-move>` check by including the name of
-  the invalidating function in the warning message when a custom invalidation
-  function is used (via the `InvalidationFunctions` option).
+  <clang-tidy/checks/bugprone/use-after-move>` check:
+
+  - Include the name of the invalidating function in the warning message when a
+    custom invalidation function is used (via the `InvalidationFunctions`
+    option).
+
+  - Add support for annotation of user-defined types as having the same
+    moved-from semantics as standard smart pointers.
 
 - Improved :doc:`cppcoreguidelines-init-variables
   <clang-tidy/checks/cppcoreguidelines/init-variables>` check by ensuring that
@@ -262,6 +284,9 @@ Changes in existing checks
     option.
 
   - Fixed false positive where an array of pointers to ``const`` was
+    incorrectly diagnosed as allowing the pointee to be made ``const``.
+
+  - Fixed false positive where a pointer used with placement new was
     incorrectly diagnosed as allowing the pointee to be made ``const``.
 
 - Improved :doc:`misc-multiple-inheritance
@@ -294,8 +319,12 @@ Changes in existing checks
   special member function.
 
 - Improved :doc:`modernize-use-std-format
-  <clang-tidy/checks/modernize/use-std-format>` check by fixing a crash
-  when an argument is part of a macro expansion.
+  <clang-tidy/checks/modernize/use-std-format>` check:
+
+  - Fixed a crash when an argument is part of a macro expansion.
+
+  - Added missing ``#include`` insertion when the format function call
+    appears as an argument to a macro.
 
 - Improved :doc:`modernize-use-trailing-return-type
   <clang-tidy/checks/modernize/use-trailing-return-type>` check by fixing
@@ -352,12 +381,15 @@ Changes in existing checks
   - Fixed a false positive involving ``if`` statements which contain
     a ``return``, ``break``, etc., jumped over by a ``goto``.
 
+  - Fixed the check potentially breaking code by deleting one too many
+    characters following an ``else`` or a curly brace.
+
   - Added support for handling attributed ``if`` then-branches such as
     ``[[likely]]`` and ``[[unlikely]]``.
 
   - Diagnose and remove redundant ``else`` branches after calls to
     ``[[noreturn]]`` functions.
-    
+
 - Improved :doc:`readability-enum-initial-value
   <clang-tidy/checks/readability/enum-initial-value>` check: the warning message
   now uses separate note diagnostics for each uninitialized enumerator, making
