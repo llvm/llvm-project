@@ -33,9 +33,9 @@ constexpr uint32_t GSYM_VERSION_2 = 2;
 /// executable file (ELF, mach-o, COFF).
 ///
 /// The V2 file format consists of the following sections in order:
-///   - Header (this struct, 40 bytes)
-///   - AddrOffsets (address offset table, aligned to AddrOffSize)
-///   - AddrInfoOffsets (address info offset table, aligned to AddrInfoOffSize)
+///   - Header (this struct, 32 bytes)
+///   - AddrOffsets (address offset table)
+///   - AddrInfoOffsets (address info offset table)
 ///   - GlobalData (blob containing FunctionInfos, UUID, string table, etc.)
 ///
 /// The structure is encoded exactly as it appears in the structure definition
@@ -58,12 +58,8 @@ struct HeaderV2 {
   /// "Magic" and "Version" members should always appear at offset zero and 4
   /// respectively to ensure clients figure out if they can parse the format.
   uint16_t Version;
-  /// The size in bytes of each address offset in the address offsets table.
-  /// Valid values are 1, 2, 4, or 8.
-  uint8_t AddrOffSize;
-  /// The size in bytes of each entry in the address info offsets table.
-  /// Valid values are 1, 2, 4, or 8. These offsets point into GlobalData.
-  uint8_t AddrInfoOffSize;
+  /// Padding for alignment. Must be set to zero.
+  uint16_t Padding;
   /// The 64 bit base address that all address offsets in the address offsets
   /// table are relative to. Storing a full 64 bit address allows our address
   /// offsets table to be smaller on disk.
@@ -71,13 +67,22 @@ struct HeaderV2 {
   /// The number of addresses stored in the address offsets table and the
   /// address info offsets table.
   uint32_t NumAddresses;
-  /// Reserved for future use. Must be set to zero. Also serve as padding.
-  uint32_t Reserved;
-  /// The file offset of the start of the GlobalData blob. GlobalData contains
+  /// The size in bytes of each address offset in the address offsets table.
+  uint8_t AddrOffSize;
+  /// The size in bytes of each entry in the address info offsets table.
+  /// These offsets point into GlobalData.
+  uint8_t AddrInfoOffSize;
+  /// The size in bytes of each string table reference (strp) in FunctionInfo
+  /// and other data structures within GlobalData.
+  uint8_t StrpSize;
+  /// Padding for alignment. Must be set to zero.
+  uint8_t Padding2;
+  /// The file offset of the start of the GlobalData.
+  ///
+  /// GlobalData is a list of GlobalData objects, with the last one having
+  /// GlobalInfoType == GlobalInfoType::EndOfList. GlobalData contains
   /// FunctionInfos, UUID, string table, and any other future sections.
   uint64_t GlobalDataFileOffset;
-  /// The size in bytes of the GlobalData blob.
-  uint64_t GlobalDataFileSize;
 
   /// Check if a header is valid and return an error if anything is wrong.
   ///
@@ -89,7 +94,8 @@ struct HeaderV2 {
   ///   - check that version number is supported
   ///   - check that the address offset size is supported
   ///   - check that the address info offset size is supported
-  ///   - check that Reserved is zero
+  ///   - check that the strp size is supported
+  ///   - check that padding fields are zero
   ///
   /// \returns An error if anything is wrong in the header, or Error::success()
   /// if there are no errors.
