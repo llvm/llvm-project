@@ -200,6 +200,7 @@ void Flang::addDebugOptions(const llvm::opt::ArgList &Args, const JobAction &JA,
       CmdArgs.push_back(SplitDWARFOut);
     }
   }
+  addDebugInfoForProfilingArgs(D, TC, Args, CmdArgs);
 }
 
 void Flang::addCodegenOptions(const ArgList &Args,

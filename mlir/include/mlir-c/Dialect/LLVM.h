@@ -366,8 +366,8 @@ typedef enum MlirLLVMDINameTableKind MlirLLVMDINameTableKind;
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDICompileUnitAttrGet(
     MlirContext ctx, MlirAttribute id, unsigned int sourceLanguage,
     MlirAttribute file, MlirAttribute producer, bool isOptimized,
-    MlirLLVMDIEmissionKind emissionKind, MlirLLVMDINameTableKind nameTableKind,
-    MlirAttribute splitDebugFilename);
+    MlirLLVMDIEmissionKind emissionKind, bool isDebugInfoForProfiling,
+    MlirLLVMDINameTableKind nameTableKind, MlirAttribute splitDebugFilename);
 
 MLIR_CAPI_EXPORTED MlirStringRef mlirLLVMDICompileUnitAttrGetName(void);
 

@@ -155,6 +155,10 @@ private:
   /// Last hard clause instruction.
   MachineInstr *Clause;
 
+  // Remember whether XCNT is known to be zero because of an S_SET_VGPR_MSB
+  // instruction that we inserted, which implicitly waits for XCNT==0.
+  bool XCntIsZero;
+
   /// S_SET_VGPR_MSB immediately after S_SETREG_IMM32_B32 targeting MODE is
   /// silently dropped on GFX1250. When set, the next S_SET_VGPR_MSB insertion
   /// must be preceded by S_NOP to avoid the hazard.
@@ -254,20 +258,31 @@ bool AMDGPULowerVGPREncoding::setMode(ModeTy NewMode,
     return true;
   }
 
-  I = handleClause(I);
-  I = handleCoissue(I);
+  MachineBasicBlock::instr_iterator InsertPt = handleClause(I);
+  InsertPt = handleCoissue(InsertPt);
   // Case 2 match in handleSetregMode: the setreg's imm[12:19] matched
   // current MSBs, but the next VALU needs different MSBs, so this
   // S_SET_VGPR_MSB would land right after the setreg. Insert S_NOP to
   // prevent it from being silently dropped.
   if (NeedNopBeforeSetVGPRMSB) {
-    BuildMI(*MBB, I, {}, TII->get(AMDGPU::S_NOP)).addImm(0);
+    BuildMI(*MBB, InsertPt, {}, TII->get(AMDGPU::S_NOP)).addImm(0);
     NeedNopBeforeSetVGPRMSB = false;
   }
-  MostRecentModeSet = BuildMI(*MBB, I, {}, TII->get(AMDGPU::S_SET_VGPR_MSB))
-                          .addImm(NewMode.encode() | OldModeBits);
+  MostRecentModeSet =
+      BuildMI(*MBB, InsertPt, {}, TII->get(AMDGPU::S_SET_VGPR_MSB))
+          .addImm(NewMode.encode() | OldModeBits);
   LLVM_DEBUG(dbgs() << "    -> inserted new S_SET_VGPR_MSB: "
                     << *MostRecentModeSet);
+
+  // If we inserted S_SET_VGPR_MSB early then XCNT should remain zero from the
+  // insertion point to the current instruction. Remove any redundant
+  // S_WAIT_XCNT instructions in that range.
+  for (MachineInstr &MI : make_early_inc_range(make_range(InsertPt, I))) {
+    assert(!SIInstrInfo::isVMEM(MI) && !SIInstrInfo::isSMRD(MI));
+    if (MI.getOpcode() == AMDGPU::S_WAIT_XCNT)
+      MI.eraseFromBundle();
+  }
+  XCntIsZero = true;
 
   CurrentMode = NewMode;
   return true;
@@ -372,7 +387,6 @@ bool AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI) {
     return setMode(NewMode, MI.getIterator());
   }
   assert(!TII->hasVGPRUses(MI) || MI.isMetaInstruction() || MI.isPseudo());
-
   return false;
 }
 
@@ -554,6 +568,7 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
   CurrentMode = {};
   for (auto &MBB : MF) {
     MostRecentModeSet = nullptr;
+    XCntIsZero = false;
     NeedNopBeforeSetVGPRMSB = false;
     this->MBB = &MBB;
 
@@ -600,8 +615,20 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
         continue;
       }
 
+      // If XCNT is known to be zero then any S_WAIT_XCNT instruction is
+      // redundant and can be removed.
+      if (MI.getOpcode() == AMDGPU::S_WAIT_XCNT && XCntIsZero) {
+        MI.eraseFromBundle();
+        Changed = true;
+        continue;
+      }
+
       Changed |= runOnMachineInstr(MI);
       NeedNopBeforeSetVGPRMSB = false;
+
+      // Any VMEM or SMEM instruction may increment XCNT.
+      if (SIInstrInfo::isVMEM(MI) || SIInstrInfo::isSMRD(MI))
+        XCntIsZero = false;
 
       if (ClauseRemaining)
         --ClauseRemaining;
