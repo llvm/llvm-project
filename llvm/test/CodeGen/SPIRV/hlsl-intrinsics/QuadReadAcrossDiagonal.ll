@@ -39,6 +39,12 @@ entry:
   ret <4 x half> %0
 }
 
+define void @main() #0 {
+  ret void
+}
+
 declare float @llvm.spv.quad.read.across.diagonal.f32(float)
 declare i32 @llvm.spv.quad.read.across.diagonal.i32(i32)
 declare <4 x half> @llvm.spv.quad.read.across.diagonal.v4half(<4 x half>)
+
+attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
