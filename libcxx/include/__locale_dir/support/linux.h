@@ -216,7 +216,7 @@ __mbsrtowcs(wchar_t* __dest, const char** __src, size_t __len, mbstate_t* __ps, 
 
 // Android pre-API 26 does not have nl_langinfo_l
 #  if !defined(__ANDROID__) || (defined(__ANDROID__) && __ANDROID_API__ >= 26)
-inline _LIBCPP_HIDE_FROM_ABI const char* __nl_langinfo_l(decltype(_LIBCPP_NL_CODESET) __item, __locale_t __loc) {
+inline _LIBCPP_HIDE_FROM_ABI const char* __nl_langinfo(decltype(_LIBCPP_NL_CODESET) __item, __locale_t __loc) {
   return ::nl_langinfo_l(__item, __loc);
 }
 #  endif

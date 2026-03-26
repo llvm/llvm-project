@@ -104,7 +104,7 @@
 //  int     __snprintf(char*, size_t, __locale_t, const char*, ...); // required by the headers
 //  int     __asprintf(char**, __locale_t, const char*, ...);        // required by the headers
 //
-// const char* __nl_langinfo_l(decltype(_LIBCPP_NL_CODESET) __item, __locale_t __loc);
+// const char* __nl_langinfo(decltype(_LIBCPP_NL_CODESET) __item, __locale_t __loc);
 // }
 
 #if _LIBCPP_HAS_LOCALIZATION
@@ -274,7 +274,7 @@ __mbsrtowcs(wchar_t* __dest, const char** __src, size_t __len, mbstate_t* __ps, 
 }
 #      endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
-inline _LIBCPP_HIDE_FROM_ABI const char* __nl_langinfo_l(decltype(_LIBCPP_NL_CODESET) __item, __locale_t __loc) {
+inline _LIBCPP_HIDE_FROM_ABI const char* __nl_langinfo(decltype(_LIBCPP_NL_CODESET) __item, __locale_t __loc) {
   return ::nl_langinfo_l(__item, __loc);
 }
 
