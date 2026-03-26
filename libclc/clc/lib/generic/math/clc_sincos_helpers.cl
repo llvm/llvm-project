@@ -22,7 +22,7 @@
 #include "clc/relational/clc_isinf.h"
 #include "clc/relational/clc_isnan.h"
 
-#if defined(CLC_CLSPV)
+#ifndef __opencl_c_int64
 #include "clc/integer/clc_mul_hi.h"
 #define __CLC_FULL_MUL(A, B, HI, LO)                                           \
   LO = A * B;                                                                  \

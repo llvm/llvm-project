@@ -184,7 +184,7 @@ __clc_argReductionLargeS(private __CLC_FLOATN *r, __CLC_FLOATN x) {
   const __CLC_UINTN b0 = 0xFE5163ABU;
 
   __CLC_UINTN p0, p1, p2, p3, p4, p5, p6, p7;
-#if defined(CLC_CLSPV)
+#ifndef __opencl_c_int64
   __CLC_UINTN c0, c1;
 
   __CLC_FULL_MUL(xm, b0, c0, p0);
