@@ -1390,6 +1390,9 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEV *Coeff,
   Level--;
   const SCEV *Delta = SE->getMinusSCEV(DstConst, SrcConst);
   LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
+  const SCEVConstant *ConstCoeff = dyn_cast<SCEVConstant>(Coeff);
+  if (!ConstCoeff)
+    return false;
   if (Delta->isZero() && SE->isKnownNonZero(Coeff)) {
     Result.DV[Level].Direction &= ~Dependence::DVEntry::LT;
     Result.DV[Level].Direction &= ~Dependence::DVEntry::GT;
@@ -1401,9 +1404,6 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEV *Coeff,
     Result.DV[Level].Distance = Delta; // = 0
     return false;
   }
-  const SCEVConstant *ConstCoeff = dyn_cast<SCEVConstant>(Coeff);
-  if (!ConstCoeff)
-    return false;
 
   if (SE->isKnownNegative(ConstCoeff)) {
     ConstCoeff = dyn_cast<SCEVConstant>(SE->getNegativeSCEV(ConstCoeff));
