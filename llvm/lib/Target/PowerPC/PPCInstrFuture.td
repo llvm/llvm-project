@@ -607,7 +607,7 @@ let Predicates = [HasFutureVector, PairedVectorMemops] in {
   def : Pat<(store v256i1:$XSp, xoaddr:$dst), (STXVPX $XSp, xoaddr:$dst)>;
 }
 
-let Predicates = [HasVSX, HasFutureVector] in {
+let Predicates = [HasFutureVector] in {
   def : Pat<(v4i32 (rotl v4i32:$vA, v4i32:$vB)), (v4i32 (XVRLW v4i32:$vA,
                                                      v4i32:$vB))>;
   def : Pat<(v4i32 (int_ppc_altivec_vrlw v4i32:$vA, v4i32:$vB)),
@@ -660,9 +660,9 @@ let Predicates = [HasVSX, HasFutureVector] in {
 
 //---------------------------- Instruction aliases ---------------------------//
 // Predicate combinations available:
-// [HasVSX, HasFutureVector]
+// [HasVSX, IsISAFuture]
 
-let Predicates = [HasVSX, HasFutureVector] in {
+let Predicates = [HasFutureVector] in {
   def : InstAlias<"xxaes128encp $XTp, $XAp, $XBp",
                   (XXAESENCP vsrprc:$XTp, vsrprc:$XAp, vsrprc:$XBp, 0)>;
   def : InstAlias<"xxaes192encp $XTp, $XAp, $XBp",
