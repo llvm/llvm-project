@@ -201,7 +201,6 @@ void namedBarrier() {
                           atomic::workgroup);
     } while (load != 0);
   }
-  __gpu_sync_threads();
 }
 
 void unsetLock(omp_lock_t *Lock) {
