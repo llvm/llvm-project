@@ -2835,6 +2835,7 @@ void VPlanTransforms::removeBranchOnConst(VPlan &Plan, bool OnlyLatches) {
   if (OnlyLatches)
     VPDT.emplace(Plan);
 
+  SmallVector<VPBlockBase *> DeadSuccs;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getEntry()))) {
     VPValue *Cond;
@@ -2859,15 +2860,43 @@ void VPlanTransforms::removeBranchOnConst(VPlan &Plan, bool OnlyLatches) {
         cast<VPBasicBlock>(VPBB->getSuccessors()[RemovedIdx]);
     assert(count(RemovedSucc->getPredecessors(), VPBB) == 1 &&
            "There must be a single edge between VPBB and its successor");
-    // Values coming from VPBB into phi recipes of RemoveSucc are removed from
+    // Values coming from VPBB into phi recipes of RemovedSucc are removed from
     // these recipes.
     for (VPRecipeBase &R : RemovedSucc->phis())
       cast<VPPhiAccessors>(&R)->removeIncomingValueFor(VPBB);
 
-    // Disconnect blocks and remove the terminator. RemovedSucc will be deleted
-    // automatically on VPlan destruction if it becomes unreachable.
+    // Disconnect blocks and remove the terminator.
     VPBlockUtils::disconnectBlocks(VPBB, RemovedSucc);
     VPBB->back().eraseFromParent();
+    DeadSuccs.push_back(RemovedSucc);
+  }
+
+  // Transitively disconnect all blocks that became unreachable, removing
+  // incoming values from phi recipes and replacing remaining uses with poison.
+  VPTypeAnalysis TypeInfo(Plan);
+  while (!DeadSuccs.empty()) {
+    VPBlockBase *DeadBlock = DeadSuccs.pop_back_val();
+    if (!DeadBlock->getPredecessors().empty())
+      continue;
+    for (VPBlockBase *Succ :
+         SmallVector<VPBlockBase *>(DeadBlock->successors())) {
+      if (auto *SuccBB = dyn_cast<VPBasicBlock>(Succ))
+        for (VPRecipeBase &R : SuccBB->phis())
+          cast<VPPhiAccessors>(&R)->removeIncomingValueFor(DeadBlock);
+      VPBlockUtils::disconnectBlocks(DeadBlock, Succ);
+      if (Succ->getPredecessors().empty())
+        DeadSuccs.push_back(Succ);
+    }
+    auto *DeadBB = dyn_cast<VPBasicBlock>(DeadBlock);
+    if (!DeadBB)
+      continue;
+    for (VPRecipeBase &R : make_early_inc_range(*DeadBB)) {
+      for (VPValue *Def : R.definedValues())
+        if (Def->getNumUsers() > 0)
+          Def->replaceAllUsesWith(Plan.getOrAddLiveIn(
+              PoisonValue::get(TypeInfo.inferScalarType(Def))));
+      R.eraseFromParent();
+    }
   }
 }
 
