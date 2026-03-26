@@ -2687,8 +2687,9 @@ static void licm(VPlan &Plan) {
                "Expected prior transformation of predicated replicates to "
                "replicate regions");
         // narrowToSingleScalarRecipes should have already maximally narrowed
-        // replicates to single-scalar replicates. TODO: When unrolling,
-        // replicatebyVF crashes on non-single-scalar replicates that are sunk.
+        // replicates to single-scalar replicates.
+        // TODO: When unrolling, replicatebyVF doesn't handle sunk
+        // non-single-scalar replicates correctly.
         if (!RepR->isSingleScalar())
           continue;
       }
