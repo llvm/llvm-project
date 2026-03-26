@@ -3697,15 +3697,50 @@ struct AAIntraFnReachabilityFunction final
                             IsTemporaryRQI);
     }
 
-    SmallPtrSet<const BasicBlock *, 16> Visited;
+    // Optimization: Use DT DFS numbers for visited set if available.
+    // This avoids SmallPtrSet allocation and hashing overhead.
+    if (DT) {
+      if (VisitedMap.empty()) {
+        // Resize once.
+        if (auto *Root = DT->getRootNode())
+          VisitedMap.resize(Root->getDFSNumOut() + 1, 0);
+      }
+      // Increment query ID.
+      CurrentQueryID++;
+      if (CurrentQueryID == 0) {
+        // Wrap around handling: clear map.
+        std::fill(VisitedMap.begin(), VisitedMap.end(), 0);
+        CurrentQueryID = 1;
+      }
+    }
+
     SmallVector<const BasicBlock *, 16> Worklist;
     Worklist.push_back(FromBB);
+
+    // Fallback visited set if DT is not available.
+    SmallPtrSet<const BasicBlock *, 16> VisitedFallback;
 
     DenseSet<std::pair<const BasicBlock *, const BasicBlock *>> LocalDeadEdges;
     while (!Worklist.empty()) {
       const BasicBlock *BB = Worklist.pop_back_val();
-      if (!Visited.insert(BB).second)
-        continue;
+
+      bool IsVisited;
+      if (DT) {
+        unsigned DFSNum = DT->getNode(BB)->getDFSNumIn();
+        if (DFSNum < VisitedMap.size()) {
+          if (VisitedMap[DFSNum] == CurrentQueryID)
+            continue;
+          VisitedMap[DFSNum] = CurrentQueryID;
+          IsVisited = false; // Just marked it.
+        } else {
+          // Should not happen if DT is consistent, but fallback safely.
+          if (!VisitedFallback.insert(BB).second)
+            continue;
+        }
+      } else {
+        if (!VisitedFallback.insert(BB).second)
+          continue;
+      }
       for (const BasicBlock *SuccBB : successors(BB)) {
         if (LivenessAA && LivenessAA->isEdgeDead(BB, SuccBB)) {
           LocalDeadEdges.insert({BB, SuccBB});
@@ -3746,6 +3781,12 @@ private:
 
   /// The dominator tree of the function to short-circuit reasoning.
   const DominatorTree *DT = nullptr;
+
+  /// Visited map for graph traversal using DT DFS numbers.
+  std::vector<unsigned> VisitedMap;
+
+  /// Current query ID for VisitedMap.
+  unsigned CurrentQueryID = 0;
 };
 } // namespace
 
