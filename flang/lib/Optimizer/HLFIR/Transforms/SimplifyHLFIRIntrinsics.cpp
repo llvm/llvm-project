@@ -32,94 +32,6 @@ namespace hlfir {
 
 #define DEBUG_TYPE "simplify-hlfir-intrinsics"
 
-namespace {
-// Check if the given mask is an equality comparison of the search array
-// against an invariant value (e.g., MASK = A == target) by traversing
-// HLFIR/FIR operations to find the underlying elemental comparison
-// and extract the invariant search targetVal.
-// It returns true if the mask is a simple equality comparison against a
-// scalar/invariant.
-bool isEqualityMask(mlir::Value mask, mlir::Value searchArray,
-                    mlir::Value &targetVal) {
-  if (!mask)
-    return false;
-
-  // Trace back HLFIR/FIR wrappers to get Elemental producer.
-  mlir::Value currentMask = mask;
-  while (auto def = currentMask.getDefiningOp()) {
-    if (!mlir::isa<hlfir::AsExprOp, fir::ConvertOp, hlfir::DeclareOp,
-                   hlfir::CopyInOp>(def))
-      break;
-    currentMask = def->getOperand(0);
-  }
-  // Ensure the mask is produced by an hlfir.elemental.
-  auto elemental = currentMask.getDefiningOp<hlfir::ElementalOp>();
-  if (!elemental)
-    return false;
-
-  // Inspect the elemental body to find the boolean result logic.
-  mlir::Block &body = elemental.getRegion().front();
-  auto yieldOp = mlir::cast<hlfir::YieldElementOp>(body.getTerminator());
-  mlir::Value val = yieldOp.getElementValue();
-  // Get core comparison, ignoring intermediate type casts.
-  while (auto conv = val.getDefiningOp<fir::ConvertOp>())
-    val = conv.getOperand();
-
-  // We currently only optimize integer equality (arith.cmpi eq).
-  auto cmpOp = val.getDefiningOp<mlir::arith::CmpIOp>();
-  if (!cmpOp || cmpOp.getPredicate() != mlir::arith::CmpIPredicate::eq)
-    return false;
-
-  // Determine if a value is invariant relative to the mask loop.
-  // Handles constants, function arguments, and values defined in outer scopes.
-  auto isInvariant = [&](mlir::Value v) {
-    if (auto arg = mlir::dyn_cast<mlir::BlockArgument>(v))
-      return arg.getOwner()->getParent() != &elemental.getRegion();
-    if (auto *op = v.getDefiningOp())
-      return !elemental.getRegion().isAncestor(op->getParentRegion());
-    return true;
-  };
-
-  // Trace the Array Side to the base buffer.
-  auto getBase = [](mlir::Value v) -> mlir::Value {
-    while (v) {
-      mlir::Operation *def = v.getDefiningOp();
-      if (!def)
-        break;
-      if (auto decl = mlir::dyn_cast<hlfir::DeclareOp>(def))
-        v = decl.getMemref();
-      else if (auto load = mlir::dyn_cast<fir::LoadOp>(def))
-        v = load.getMemref();
-      else if (auto apply = mlir::dyn_cast<hlfir::ApplyOp>(def))
-        v = apply.getExpr();
-      else if (auto des = mlir::dyn_cast<hlfir::DesignateOp>(def))
-        v = des.getMemref();
-      else if (mlir::isa<fir::ConvertOp, hlfir::AsExprOp>(def))
-        v = def->getOperand(0);
-      else
-        break;
-    }
-    return v;
-  };
-
-  mlir::Value lhs = cmpOp.getLhs(), rhs = cmpOp.getRhs();
-  bool lhsInv = isInvariant(lhs), rhsInv = isInvariant(rhs);
-  // The optimization is valid only if exactly one side is invariant (the
-  // target) and the other side is variant (the array element).
-  if (lhsInv == rhsInv)
-    return false;
-
-  targetVal = lhsInv ? lhs : rhs;
-  mlir::Value arraySide = lhsInv ? rhs : lhs;
-
-  // Verify the mask refers to the same array being searched.
-  if (getBase(arraySide) == getBase(searchArray))
-    return true;
-
-  return false;
-}
-} // end anonymous namespace
-
 static llvm::cl::opt<bool> forceMatmulAsElemental(
     "flang-inline-matmul-as-elemental",
     llvm::cl::desc("Expand hlfir.matmul as elemental operation"),
@@ -618,15 +530,6 @@ private:
 
   void
   checkReductions(const llvm::SmallVectorImpl<mlir::Value> &reductions) const {
-    mlir::Value targetVal;
-    // Check if the mask qualifies for the optimized equality mask search path.
-    if (isEqualityMask(this->getMask(), mlir::cast<T>(this->op).getArray(),
-                       targetVal)) {
-      // Expect coordinate indices.
-      assert(reductions.size() == getNumCoors() &&
-             "invalid number of reductions for equality mask MINLOC/MAXLOC");
-      return;
-    }
     if (!useIsFirst())
       assert(reductions.size() == getNumCoors() + 1 &&
              "invalid number of reductions for MINLOC/MAXLOC");
@@ -736,51 +639,6 @@ llvm::SmallVector<mlir::Value>
 MinMaxlocAsElementalConverter<T>::reduceOneElement(
     const llvm::SmallVectorImpl<mlir::Value> &currentValue, hlfir::Entity array,
     mlir::ValueRange oneBasedIndices) {
-  mlir::Value targetVal;
-  // The mask is an equality comparison (e.g., MASK = A == target) inline the
-  // comparison to find the first occurrence efficiently.
-  if (isEqualityMask(this->getMask(), array, targetVal)) {
-    // Directly load the array element and compare with the targetVal.
-    hlfir::Entity elementValue =
-        hlfir::loadElementAt(loc, builder, array, oneBasedIndices);
-    mlir::Value isMatch = mlir::arith::CmpIOp::create(
-        builder, loc, mlir::arith::CmpIPredicate::eq, (mlir::Value)elementValue,
-        targetVal);
-    // currentValue contains [Coord1, ..., CoordN, FirstHitBool]
-    mlir::Value firstHitBool = currentValue.back();
-    // shouldUpdate is true only if we have a match and we haven't found one
-    // yet.
-    mlir::Value shouldUpdate =
-        mlir::arith::AndIOp::create(builder, loc, isMatch, firstHitBool);
-    // Conditional Update: Only update coordinates if a match is found.
-    auto ifOp = fir::IfOp::create(builder, loc,
-                                  mlir::ValueRange(currentValue).getTypes(),
-                                  shouldUpdate, /*withElse=*/true);
-    // If match found and it's the first one, record coordinates.
-    builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-    llvm::SmallVector<mlir::Value> thenResults;
-    unsigned rank = array.getRank();
-    // Get the firstHit flag.
-    for (unsigned i = 0; i < rank; ++i) {
-      mlir::Value loopIdx = builder.createConvert(
-          loc, currentValue[i].getType(), oneBasedIndices[i]);
-      thenResults.emplace_back(loopIdx);
-    }
-
-    // Update the flag: Set to 0 (False) for all future iterations.
-    mlir::Value falseVal =
-        mlir::arith::ConstantIntOp::create(builder, loc, 0, 1);
-    thenResults.emplace_back(falseVal);
-
-    fir::ResultOp::create(builder, loc, thenResults);
-
-    // No match or already found a previous match: maintain the current state.
-    builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
-    fir::ResultOp::create(builder, loc, currentValue);
-
-    builder.setInsertionPointAfter(ifOp);
-    return ifOp.getResults();
-  }
   checkReductions(currentValue);
   hlfir::Entity elementValue =
       hlfir::loadElementAt(loc, builder, array, oneBasedIndices);
@@ -831,49 +689,6 @@ MinMaxlocAsElementalConverter<T>::reduceOneElement(
 template <typename T>
 hlfir::Entity MinMaxlocAsElementalConverter<T>::genFinalResult(
     const llvm::SmallVectorImpl<mlir::Value> &reductionResults) {
-  mlir::Value targetVal;
-  // Finalize results for the equality-mask search.
-  if (isEqualityMask(this->getMask(), mlir::cast<T>(this->op).getArray(),
-                     targetVal)) {
-    unsigned rank = getNumCoors();
-    mlir::Type resultElemTy =
-        hlfir::getFortranElementType(this->getResultType());
-    // MINLOC/MAXLOC returns an integer array of shape [rank].
-    // Manually build the HLFIR expression to hold the resulting coordinates.
-    llvm::SmallVector<int64_t> shapeVec{static_cast<int64_t>(rank)};
-    mlir::Type exprTy = hlfir::ExprType::get(builder.getContext(), shapeVec,
-                                             resultElemTy, false);
-    mlir::Value resRank =
-        builder.createIntegerConstant(loc, builder.getIndexType(), rank);
-    mlir::Value resShape = fir::ShapeOp::create(builder, loc, resRank);
-
-    // Create an elemental operation to map the scalar reduction results
-    // (coordinates) back into a Fortran array result.
-    auto elemental =
-        hlfir::ElementalOp::create(builder, loc, exprTy, resShape,
-                                   /*mold=*/mlir::Value{},
-                                   /*typeparams=*/mlir::ValueRange{},
-                                   /*isUnordered=*/false);
-    {
-      // Fill the elemental body.
-      mlir::OpBuilder::InsertionGuard guard(builder);
-      builder.setInsertionPointToStart(elemental.getBody());
-      // Map the 1-based elemental index, result[i] = reductionResults[i-1].
-      mlir::Value elemIdx = elemental.getIndices()[0];
-      mlir::Value resultVal = reductionResults[0];
-      for (unsigned i = 1; i < rank; ++i) {
-        mlir::Value dimConst =
-            builder.createIntegerConstant(loc, builder.getIndexType(), i + 1);
-        mlir::Value isDimMatch = mlir::arith::CmpIOp::create(
-            builder, loc, mlir::arith::CmpIPredicate::eq, elemIdx, dimConst);
-        // Select specific coordinate matching current elemental dimension.
-        resultVal = mlir::arith::SelectOp::create(
-            builder, loc, isDimMatch, reductionResults[i], resultVal);
-      }
-      hlfir::YieldElementOp::create(builder, loc, resultVal);
-    }
-    return hlfir::Entity{elemental.getResult()};
-  }
   // Identification of the final result of MINLOC/MAXLOC:
   //   * If DIM is absent, the result is rank-one array.
   //   * If DIM is present:
@@ -1370,39 +1185,9 @@ mlir::LogicalResult ReductionAsElementalConverter::convert() {
       extents.push_back(
           builder.createConvert(loc, builder.getIndexType(), dimExtent));
 
-    mlir::Value minMaxMask;
-    if (auto minloc = mlir::dyn_cast<hlfir::MinlocOp>(op)) {
-      minMaxMask = minloc.getMask();
-    } else if (auto maxloc = mlir::dyn_cast<hlfir::MaxlocOp>(op)) {
-      minMaxMask = maxloc.getMask();
-    }
-    mlir::Value targetVal;
-    bool isFixedSearch = false;
-    // Check if the mask allows for a simplified search optimization.
-    if (minMaxMask)
-      isFixedSearch =
-          isEqualityMask(minMaxMask, this->op->getOperand(0), targetVal);
-    llvm::SmallVector<mlir::Value, 1> reductionInitValues;
-    if (isFixedSearch) {
-      // For optimized equality searches, we skip the 'Min/Max value' reduction
-      // and only track coordinate indices and the firstHit flag.
-      unsigned rank = hlfir::Entity{array}.getRank();
-      mlir::Type resElemTy =
-          hlfir::getFortranElementType(this->getResultType());
-      mlir::Value zeroVal = builder.createIntegerConstant(loc, resElemTy, 0);
-
-      // Initialize all coordinates to 0.
-      for (unsigned i = 0; i < rank; ++i) {
-        reductionInitValues.emplace_back(zeroVal);
-      }
-      // First hit flag: [Row, Col, FirstHit=1] (Size: 3)
-      mlir::Type i1Type = builder.getI1Type();
-      mlir::Value firstHitTrue = mlir::arith::ConstantOp::create(
-          builder, loc, i1Type, builder.getBoolAttr(true));
-      reductionInitValues.emplace_back(firstHitTrue);
-    } else {
-      reductionInitValues = genReductionInitValues(inputIndices, extents);
-    }
+    // Initial value for the reduction.
+    llvm::SmallVector<mlir::Value, 1> reductionInitValues =
+        genReductionInitValues(inputIndices, extents);
 
     auto genBody = [&](mlir::Location loc, fir::FirOpBuilder &builder,
                        mlir::ValueRange oneBasedIndices,
@@ -1424,9 +1209,7 @@ mlir::LogicalResult ReductionAsElementalConverter::convert() {
       llvm::transform(reductionValues, std::back_inserter(reductionTypes),
                       [](mlir::Value v) { return v.getType(); });
       fir::IfOp ifOp;
-      // Skip standard masking block in case of 'isFixedSearch', as it handles
-      // its own masking logic inside the comparison.
-      if (mask && !isFixedSearch) {
+      if (mask) {
         // Make the reduction value update conditional on the value
         // of the mask.
         if (!maskValue) {

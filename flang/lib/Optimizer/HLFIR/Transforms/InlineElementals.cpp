@@ -35,12 +35,6 @@ namespace hlfir {
 /// a destroy operation, return those two, otherwise return {}
 static std::optional<std::pair<hlfir::ApplyOp, hlfir::DestroyOp>>
 getTwoUses(hlfir::ElementalOp elemental) {
-  mlir::Operation::user_range users = elemental->getUsers();
-  // don't inline anything with more than one use (plus hfir.destroy)
-  if (std::distance(users.begin(), users.end()) != 2) {
-    return std::nullopt;
-  }
-
   // If the ElementalOp must produce a temporary (e.g. for
   // finalization purposes), then we cannot inline it.
   if (hlfir::elementalOpMustProduceTemp(elemental))
@@ -48,12 +42,21 @@ getTwoUses(hlfir::ElementalOp elemental) {
 
   hlfir::ApplyOp apply;
   hlfir::DestroyOp destroy;
-  for (mlir::Operation *user : users)
-    mlir::TypeSwitch<mlir::Operation *, void>(user)
-        .Case([&](hlfir::ApplyOp op) { apply = op; })
-        .Case([&](hlfir::DestroyOp op) { destroy = op; });
+  unsigned applyCount = 0;
 
-  if (!apply || !destroy)
+  for (mlir::Operation *user : elemental->getUsers()) {
+    mlir::TypeSwitch<mlir::Operation *, void>(user)
+        .Case([&](hlfir::ApplyOp op) {
+          apply = op;
+          applyCount++;
+        })
+        .Case([&](hlfir::DestroyOp op) { destroy = op; });
+  }
+
+  // Only inline if there is a unique 'apply' site. Other users (such as
+  // intrinsic operations) are allowed because scalarizing the elemental
+  // renders the original array result redundant.
+  if (applyCount != 1 || !destroy)
     return std::nullopt;
 
   // we can't inline if the return type of the yield doesn't match the return
@@ -80,7 +83,7 @@ public:
         getTwoUses(elemental);
     if (!maybeTuple)
       return rewriter.notifyMatchFailure(
-          elemental, "hlfir.elemental does not have two uses");
+          elemental, "hlfir.elemental is not a candidate for inlining");
 
     if (elemental.isOrdered()) {
       // We can only inline the ordered elemental into a loop-like
@@ -104,7 +107,9 @@ public:
     rewriter.replaceOp(apply, {yield.getElementValue()});
     rewriter.eraseOp(yield);
     rewriter.eraseOp(destroy);
-    rewriter.eraseOp(elemental);
+    // Only erase the elemental if that was its last use.
+    if (elemental->use_empty())
+      rewriter.eraseOp(elemental);
 
     return mlir::success();
   }
