@@ -471,7 +471,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   if (!Clang) {
     // The last diagnostic contains information about the reason of this
     // failure.
-    std::vector<Diag> Diags(ASTDiags.take());
+    std::vector<Diag> Diags(ASTDiags.take(Inputs.Contents));
     elog("Failed to prepare a compiler instance: {0}",
          !Diags.empty() ? static_cast<DiagBase &>(Diags.back()).Message
                         : "unknown error");
@@ -748,7 +748,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     llvm::append_range(Diags, Patch->patchedDiags());
   // Finally, add diagnostics coming from the AST.
   {
-    std::vector<Diag> D = ASTDiags.take(&*CTContext);
+    std::vector<Diag> D = ASTDiags.take(Inputs.Contents, &*CTContext);
     Diags.insert(Diags.end(), D.begin(), D.end());
   }
   ParsedAST Result(Filename, Inputs.Version, std::move(Preamble),

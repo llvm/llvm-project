@@ -661,7 +661,7 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
     log("Built preamble of size {0} for file {1} version {2} in {3} seconds",
         BuiltPreamble->getSize(), FileName, Inputs.Version,
         PreambleTimer.getTime());
-    std::vector<Diag> Diags = PreambleDiagnostics.take();
+    std::vector<Diag> Diags = PreambleDiagnostics.take(Inputs.Contents);
     auto Result = std::make_shared<PreambleData>(std::move(*BuiltPreamble));
     Result->Version = Inputs.Version;
     Result->CompileCommand = Inputs.CompileCommand;
@@ -708,7 +708,7 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
 
   elog("Could not build a preamble for file {0} version {1}: {2}", FileName,
        Inputs.Version, BuiltPreamble.getError().message());
-  for (const Diag &D : PreambleDiagnostics.take()) {
+  for (const Diag &D : PreambleDiagnostics.take(Inputs.Contents)) {
     if (D.Severity < DiagnosticsEngine::Error)
       continue;
     // Not an ideal way to show errors, but better than nothing!

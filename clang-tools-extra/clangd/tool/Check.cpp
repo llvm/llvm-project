@@ -227,7 +227,7 @@ public:
     log("Parsing command...");
     Invocation =
         buildCompilerInvocation(Inputs, CaptureInvocationDiags, &CC1Args);
-    auto InvocationDiags = CaptureInvocationDiags.take();
+    auto InvocationDiags = CaptureInvocationDiags.take(Inputs.Contents);
     ErrCount += showErrors(InvocationDiags);
     log("internal (cc1) args are: {0}", printArgv(CC1Args));
     if (!Invocation) {
