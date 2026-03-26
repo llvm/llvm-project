@@ -1882,8 +1882,8 @@ bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *SrcConst,
   // For the WeakSIV test, it's possible the loop isn't common to
   // the Src and Dst loops. If it isn't, then there's no need to
   // record a direction.
-  const SCEV *DstCoeff = Dst->getStepRecurrence(*SE);
-  const SCEV *DstConst = Dst->getStart();
+  [[maybe_unused]] const SCEV *DstCoeff = Dst->getStepRecurrence(*SE);
+  [[maybe_unused]] const SCEV *DstConst = Dst->getStart();
   LLVM_DEBUG(dbgs() << "\tWeak-Zero (src) SIV test\n");
   LLVM_DEBUG(dbgs() << "\t    DstCoeff = " << *DstCoeff << "\n");
   LLVM_DEBUG(dbgs() << "\t    SrcConst = " << *SrcConst << "\n");
@@ -1940,8 +1940,8 @@ bool DependenceInfo::weakZeroDstSIVtest(const SCEVAddRecExpr *Src,
 
   // For the WeakSIV test, it's possible the loop isn't common to the
   // Src and Dst loops. If it isn't, then there's no need to record a direction.
-  const SCEV *SrcCoeff = Src->getStepRecurrence(*SE);
-  const SCEV *SrcConst = Src->getStart();
+  [[maybe_unused]] const SCEV *SrcCoeff = Src->getStepRecurrence(*SE);
+  [[maybe_unused]] const SCEV *SrcConst = Src->getStart();
   LLVM_DEBUG(dbgs() << "\tWeak-Zero (dst) SIV test\n");
   LLVM_DEBUG(dbgs() << "\t    SrcCoeff = " << *SrcCoeff << "\n");
   LLVM_DEBUG(dbgs() << "\t    SrcConst = " << *SrcConst << "\n");
