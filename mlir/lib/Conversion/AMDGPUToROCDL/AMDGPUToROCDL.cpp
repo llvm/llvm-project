@@ -3974,20 +3974,8 @@ struct GlobalPrefetchOpLowering
     Value memRef = adaptor.getSrc();
     MemRefDescriptor descriptor(memRef);
     Location loc = op->getLoc();
-    Value offset =
-        LLVM::ConstantOp::create(rewriter, loc, rewriter.getI64Type(), 0);
-    for (auto [i, index] : llvm::enumerate(indices)) {
-      Value stride = descriptor.stride(rewriter, loc, i);
-      Value mulOp = LLVM::MulOp::create(rewriter, loc, rewriter.getI64Type(),
-                                        stride, index);
-      offset = LLVM::AddOp::create(rewriter, loc, rewriter.getI64Type(), offset,
-                                   mulOp);
-    }
-
-    Value basePtr = descriptor.alignedPtr(rewriter, loc);
-    Type elemTy = op.getSrc().getType().getElementType();
-    Type llvmElemTy = getTypeConverter()->convertType(elemTy);
-    Value prefetchPtr = LLVM::GEPOp::create(rewriter, loc, basePtr.getType(),
+    auto inboundsFlags = isSpeculative ? LLVM::GEPNoWrapFlags::none : LLVM::GEPNoWrapFlags::inbounds | LLVM::GEPNoWrapFlags::nuw;
+    Value prefetchPtr = getStridedElementPtr(rewriter, loc, adaptor.getSrc(), adaptor.getIndices(), inboundsFlags);
                                             llvmElemTy, basePtr, offset);
     Operation *newOp = ROCDL::GlobalPrefetchOp::create(
         rewriter, loc, prefetchPtr, scopeAttr, {}, {}, {});
