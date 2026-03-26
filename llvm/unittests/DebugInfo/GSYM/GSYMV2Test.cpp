@@ -588,14 +588,16 @@ TEST(GSYMV2Test, TestReaderV2TooSmall) {
 
 /// Helper to create, finalize, encode with GsymCreatorV2, then decode with
 /// GsymReaderV2 and return the reader.
-static Expected<GsymReaderV2> createAndReadV2(GsymCreatorV2 &GC) {
+static Expected<GsymReaderV2>
+createAndReadV2(GsymCreatorV2 &GC,
+                llvm::endianness ByteOrder = llvm::endianness::native) {
   OutputAggregator Null(nullptr);
   if (auto Err = GC.finalize(Null))
     return std::move(Err);
 
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  FileWriter FW(OutStrm, llvm::endianness::native);
+  FileWriter FW(OutStrm, ByteOrder);
   if (auto Err = GC.encode(FW))
     return std::move(Err);
 
@@ -751,4 +753,103 @@ TEST(GSYMV2Test, TestRoundTripLargeAddressOffsets) {
   auto FI2 = GR->getFunctionInfo(0x1000 + 0x20000);
   ASSERT_THAT_EXPECTED(FI2, Succeeded());
   EXPECT_EQ(GR->getString(FI2->Name), "far");
+}
+
+/// Swapped-endianness round-trip tests
+
+/// Get the non-native byte order.
+static llvm::endianness swappedEndianness() {
+  if constexpr (llvm::endianness::native == llvm::endianness::little)
+    return llvm::endianness::big;
+  else
+    return llvm::endianness::little;
+}
+
+TEST(GSYMV2Test, TestRoundTripSwappedSingleFunction) {
+  GsymCreatorV2 GC;
+  const uint32_t Name = GC.insertString("hello");
+  GC.addFunctionInfo(FunctionInfo(0x2000, 0x200, Name));
+
+  auto GR = createAndReadV2(GC, swappedEndianness());
+  ASSERT_THAT_EXPECTED(GR, Succeeded());
+
+  EXPECT_EQ(GR->getNumAddresses(), 1u);
+  EXPECT_EQ(GR->getHeader().BaseAddress, 0x2000u);
+
+  auto FI = GR->getFunctionInfo(0x2000);
+  ASSERT_THAT_EXPECTED(FI, Succeeded());
+  EXPECT_EQ(FI->Range, AddressRange(0x2000, 0x2200));
+  EXPECT_EQ(GR->getString(FI->Name), "hello");
+}
+
+TEST(GSYMV2Test, TestRoundTripSwappedMultipleFunctions) {
+  GsymCreatorV2 GC;
+  const uint32_t Name1 = GC.insertString("alpha");
+  const uint32_t Name2 = GC.insertString("beta");
+  const uint32_t Name3 = GC.insertString("gamma");
+  GC.addFunctionInfo(FunctionInfo(0x1000, 0x100, Name1));
+  GC.addFunctionInfo(FunctionInfo(0x1100, 0x100, Name2));
+  GC.addFunctionInfo(FunctionInfo(0x1200, 0x100, Name3));
+
+  auto GR = createAndReadV2(GC, swappedEndianness());
+  ASSERT_THAT_EXPECTED(GR, Succeeded());
+
+  EXPECT_EQ(GR->getNumAddresses(), 3u);
+
+  auto FI1 = GR->getFunctionInfo(0x1000);
+  ASSERT_THAT_EXPECTED(FI1, Succeeded());
+  EXPECT_EQ(GR->getString(FI1->Name), "alpha");
+
+  auto FI2 = GR->getFunctionInfo(0x1100);
+  ASSERT_THAT_EXPECTED(FI2, Succeeded());
+  EXPECT_EQ(GR->getString(FI2->Name), "beta");
+
+  auto FI3 = GR->getFunctionInfo(0x1200);
+  ASSERT_THAT_EXPECTED(FI3, Succeeded());
+  EXPECT_EQ(GR->getString(FI3->Name), "gamma");
+}
+
+TEST(GSYMV2Test, TestRoundTripSwappedLookup) {
+  GsymCreatorV2 GC;
+  const uint32_t Name1 = GC.insertString("start");
+  const uint32_t Name2 = GC.insertString("end");
+  GC.addFunctionInfo(FunctionInfo(0x5000, 0x500, Name1));
+  GC.addFunctionInfo(FunctionInfo(0x5500, 0x500, Name2));
+
+  auto GR = createAndReadV2(GC, swappedEndianness());
+  ASSERT_THAT_EXPECTED(GR, Succeeded());
+
+  auto LR1 = GR->lookup(0x5000);
+  ASSERT_THAT_EXPECTED(LR1, Succeeded());
+  EXPECT_EQ(LR1->FuncName, "start");
+  EXPECT_EQ(LR1->FuncRange, AddressRange(0x5000, 0x5500));
+
+  auto LR2 = GR->lookup(0x5500);
+  ASSERT_THAT_EXPECTED(LR2, Succeeded());
+  EXPECT_EQ(LR2->FuncName, "end");
+
+  auto LR3 = GR->lookup(0x5100);
+  ASSERT_THAT_EXPECTED(LR3, Succeeded());
+  EXPECT_EQ(LR3->FuncName, "start");
+
+  auto LR4 = GR->lookup(0x6000);
+  EXPECT_THAT_EXPECTED(LR4, Failed());
+}
+
+TEST(GSYMV2Test, TestRoundTripSwappedAddressTable) {
+  GsymCreatorV2 GC;
+  const uint32_t N1 = GC.insertString("a");
+  const uint32_t N2 = GC.insertString("b");
+  const uint32_t N3 = GC.insertString("c");
+  GC.addFunctionInfo(FunctionInfo(0x8000, 0x10, N1));
+  GC.addFunctionInfo(FunctionInfo(0x8020, 0x10, N2));
+  GC.addFunctionInfo(FunctionInfo(0x8040, 0x10, N3));
+
+  auto GR = createAndReadV2(GC, swappedEndianness());
+  ASSERT_THAT_EXPECTED(GR, Succeeded());
+
+  EXPECT_EQ(GR->getAddress(0), std::optional<uint64_t>(0x8000u));
+  EXPECT_EQ(GR->getAddress(1), std::optional<uint64_t>(0x8020u));
+  EXPECT_EQ(GR->getAddress(2), std::optional<uint64_t>(0x8040u));
+  EXPECT_EQ(GR->getAddress(3), std::nullopt);
 }
