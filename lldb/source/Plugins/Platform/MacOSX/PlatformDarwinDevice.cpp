@@ -55,7 +55,8 @@ void PlatformDarwinDevice::AddSharedCacheDirectory(
       LLDB_LOGF(log,
                 "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
                 "added %s %s",
-                log_msg_descriptor.str().c_str(), sc_directory.GetPath().c_str());
+                log_msg_descriptor.str().c_str(),
+                sc_directory.GetPath().c_str());
     }
 
     // See if we have arch subdirs under sc_directory, and if there is

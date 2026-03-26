@@ -47,7 +47,8 @@ protected:
   ///
   /// \param[in] log_msg_descriptor
   ///     Text to describe the origin of this directory, in logging.
-  void AddSharedCacheDirectory(llvm::StringRef dir, llvm::StringRef log_msg_descriptor);
+  void AddSharedCacheDirectory(llvm::StringRef dir,
+                               llvm::StringRef log_msg_descriptor);
 
   bool UpdateSDKDirectoryInfosIfNeeded();
 
