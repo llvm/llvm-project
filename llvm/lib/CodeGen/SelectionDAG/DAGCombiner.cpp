@@ -5636,7 +5636,7 @@ SDValue DAGCombiner::visitMULHU(SDNode *N) {
   // fold (mulhu x, (1 << c)) -> x >> (bitwidth - c)
   if (isConstantOrConstantVector(N1, /*NoOpaques=*/true,
                                  /*AllowTruncation=*/true) &&
-      hasOperation(ISD::SRL, VT)) {
+      (!LegalOperations || hasOperation(ISD::SRL, VT))) {
     if (SDValue LogBase2 = BuildLogBase2(N1, DL)) {
       unsigned NumEltBits = VT.getScalarSizeInBits();
       SDValue SRLAmt = DAG.getNode(
