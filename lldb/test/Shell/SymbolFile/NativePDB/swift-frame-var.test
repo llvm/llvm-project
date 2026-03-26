@@ -28,14 +28,20 @@ func main() {
     var myString: String = "hello"
     var myPoint: Point = Point(x: 10, y: 20)
     var myDirection: Direction = .north
+    let constInt: Int = 100
+    let constInt8: Int8 = -42
+    let constUInt16: UInt16 = 1000
+    let constBool: Bool = false
+    let constString: String = "world"
     print(myInt32, myBool, myUInt64, myFloat, myDouble,
-          myString, myPoint, myDirection)
+          myString, myPoint, myDirection,
+          constInt, constInt8, constUInt16, constBool, constString)
 }
 
 main()
 
 #--- commands.input
-b main.swift:20
+b main.swift:25
 run
 frame variable
 
@@ -49,3 +55,9 @@ frame variable
 # CHECK: (String) myString = "hello"
 # CHECK: (main.Point) myPoint = (x = 10, y = 20)
 # CHECK: (main.Direction) myDirection = north
+# Local constants
+# CHECK: (Int) constInt = 100
+# CHECK: (Int8) constInt8 = -42
+# CHECK: (UInt16) constUInt16 = 1000
+# CHECK: (Bool) constBool = false
+# CHECK: (String) constString = "world"

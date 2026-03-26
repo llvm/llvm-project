@@ -26,6 +26,10 @@
 #include "PdbFPOProgramToDWARFExpression.h"
 #include <optional>
 
+#if LLDB_ENABLE_SWIFT
+#include "swift/Demangling/Demangle.h"
+#endif
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::npdb;
@@ -102,6 +106,47 @@ GetIntegralTypeInfo(TypeIndex ti, TpiStream &tpi) {
       return std::move(err);
     return GetIntegralTypeInfo(er.UnderlyingType, tpi);
   }
+#if LLDB_ENABLE_SWIFT
+  // Swift integral types are structs.
+  case LF_STRUCTURE:
+  case LF_CLASS: {
+    ClassRecord cr;
+    if (auto err = TypeDeserializer::deserializeAs<ClassRecord>(cvt, cr))
+      return std::move(err);
+    if (!cr.hasUniqueName() || !swift::Demangle::isSwiftSymbol(cr.UniqueName))
+      return llvm::make_error<llvm::StringError>(
+          "Class/structure type is not a Swift type",
+          llvm::inconvertibleErrorCode());
+
+    if (cr.isForwardRef()) {
+      auto expected_ti = tpi.findFullDeclForForwardRef(ti);
+      if (!expected_ti)
+        return expected_ti.takeError();
+      CVType resolved_cvt = tpi.getType(*expected_ti);
+      ClassRecord resolved_cr;
+      if (auto err = TypeDeserializer::deserializeAs<ClassRecord>(
+              resolved_cvt, resolved_cr))
+        return std::move(err);
+      cr = std::move(resolved_cr);
+    }
+
+    // Display name is qualified (for example "Swift::Int".
+    llvm::StringRef name = cr.Name;
+    name.consume_front("Swift::");
+
+    // Check against hardcoded allowlists.
+    static constexpr llvm::StringLiteral kSignedIntTypes[] = {
+        "Int", "Int8", "Int16", "Int32", "Int64"};
+    static constexpr llvm::StringLiteral kUnsignedIntTypes[] = {
+        "UInt", "UInt8", "UInt16", "UInt32", "UInt64", "Bool"};
+    if (llvm::is_contained(kSignedIntTypes, name))
+      return std::make_pair(cr.getSize(), true);
+    if (llvm::is_contained(kUnsignedIntTypes, name))
+      return std::make_pair(cr.getSize(), false);
+    return llvm::make_error<llvm::StringError>(
+        "Swift type is not an integral type", llvm::inconvertibleErrorCode());
+  }
+#endif
   default:
     return llvm::make_error<llvm::StringError>("Type is not integral",
                                                llvm::inconvertibleErrorCode());
