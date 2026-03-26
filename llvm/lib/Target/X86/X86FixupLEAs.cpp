@@ -232,40 +232,6 @@ static bool isLEA(unsigned Opcode) {
          Opcode == X86::LEA64_32r;
 }
 
-static MachineBasicBlock::iterator
-getPrevNonDebugInstr(MachineBasicBlock &MBB, MachineBasicBlock::iterator I) {
-  while (I != MBB.begin()) {
-    --I;
-    if (!I->isDebugInstr())
-      return I;
-  }
-  return MBB.end();
-}
-
-static bool isLEAableFromCopy(unsigned Opcode) {
-  switch (Opcode) {
-  default:
-    return false;
-  case X86::SHL64ri:
-  case X86::SHL32ri:
-  case X86::INC64r:
-  case X86::INC32r:
-  case X86::DEC64r:
-  case X86::DEC32r:
-  case X86::ADD64rr:
-  case X86::ADD64rr_DB:
-  case X86::ADD32rr:
-  case X86::ADD32rr_DB:
-  case X86::ADD64ri32:
-  case X86::ADD64ri32_DB:
-  case X86::ADD32ri:
-  case X86::ADD32ri_DB:
-  case X86::SUB64ri32:
-  case X86::SUB32ri:
-    return true;
-  }
-}
-
 bool FixupLEAsImpl::runOnMachineFunction(MachineFunction &MF) {
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
   bool IsSlowLEA = ST.slowLEA();
@@ -318,12 +284,12 @@ bool FixupLEAsImpl::foldCopyToLEA(MachineBasicBlock &MBB) const {
 
   for (auto I = MBB.begin(); I != MBB.end();) {
     MachineInstr &MI = *I;
-    if (!isLEAableFromCopy(MI.getOpcode()) || !MI.isConvertibleTo3Addr()) {
+    if (!MI.isConvertibleTo3Addr()) {
       ++I;
       continue;
     }
 
-    auto Prev = getPrevNonDebugInstr(MBB, I);
+    auto Prev = prev_nodbg(I, MBB.begin());
     if (Prev == MBB.end()) {
       ++I;
       continue;
@@ -369,7 +335,8 @@ bool FixupLEAsImpl::foldCopyToLEA(MachineBasicBlock &MBB) const {
     if (Prev->getOperand(1).isKill() && !HasKillOnSrcReg)
       ReplacedOps.back()->setIsKill(true);
 
-    MachineInstr *NewMI = TII->convertToThreeAddress(*TmpMI, nullptr, nullptr);
+    MachineBasicBlock::iterator TmpIt(*TmpMI);
+    MachineInstr *NewMI = postRAConvertToLEA(MBB, TmpIt);
     MBB.erase(TmpMI);
     if (!NewMI) {
       ++I;
