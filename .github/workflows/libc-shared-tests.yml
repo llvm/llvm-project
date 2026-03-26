@@ -58,7 +58,7 @@ jobs:
             libc: libc6-dev-ppc64el-cross
             libcpp: libstdc++6-ppc64el-cross
             target_triple: ppc64le-linux-gnu
-    
+
     steps:
       - name: Checkout LLVM
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
@@ -71,7 +71,7 @@ jobs:
           sudo apt-get install -y cmake ninja-build clang lld qemu-user-static \
             ${{ matrix.libc }} ${{ matrix.libcpp }} \
             gcc-${{ matrix.target_triple }} g++-${{ matrix.target_triple }}
-      
+
       - name: Configure CMake
         run: |
           cmake -B build -S runtimes -G Ninja \
@@ -81,6 +81,8 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DLIBC_TARGET_TRIPLE=${{ matrix.target_triple }}
 
-      - name: Build and Run              
+      - name: Build and Run
+        env:
+          QEMU_LD_PREFIX: /usr/${{ matrix.target_triple }}
         run: |
           cmake --build build --target libc-shared-tests
