@@ -370,6 +370,10 @@ static bool CompressEVEXImpl(MachineInstr &MI, MachineBasicBlock &MBB,
   bool IsSetZUCCm = Opc == X86::SETZUCCm;
   if (TSFlags & X86II::EVEX_B && !IsND && !IsSetZUCCm)
     return false;
+  // NF (No Flags) instructions cannot compress to VEX/legacy encoding.
+  // NF_ND can still compress to NF (both remain EVEX).
+  if ((TSFlags & X86II::EVEX_NF) && !IsND)
+    return false;
   // MOVBE*rr is special because it has semantic of NDD but not set EVEX_B.
   bool IsNDLike = IsND || Opc == X86::MOVBE32rr || Opc == X86::MOVBE64rr;
   bool IsRedundantNDD = IsNDLike ? IsRedundantNewDataDest(Opc) : false;
