@@ -5,6 +5,8 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 
+#include <stdbool.h>
+
 void f1(void) {
   _Atomic(int) x = 42;
 }
@@ -2950,4 +2952,95 @@ int atomic_load_and_store_dynamic_order(int *ptr, int order) {
   // OGCG-NEXT:   br label %[[CONTINUE_BLK]]
   // OGCG:      [[CONTINUE_BLK]]:
   // OGCG-NEXT:   %{{.+}} = load i32, ptr %[[RES_SLOT]], align 4
+}
+
+void cmp_bool_int(int* p, int x, int u) {
+  // CIR-LABEL: @cmp_bool_int
+  // CIR: %[[PTR:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+  // CIR: %[[CMP:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!s32i>, !s32i
+  // CIR: %[[UPD:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!s32i>, !s32i
+  // CIR: %[[OLD:.*]], %[[RES:.*]] = cir.atomic.cmpxchg success(seq_cst) failure(seq_cst) syncscope(system) %[[PTR]], %[[CMP]], %[[UPD]] align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
+  // CIR: cir.store{{.*}} %[[RES]], {{.*}} : !cir.bool, !cir.ptr<!cir.bool>
+
+  // LLVM-LABEL: @cmp_bool_int
+  // LLVM: %[[PTR:.*]] = load ptr
+  // LLVM: %[[CMP:.*]] = load i32
+  // LLVM: %[[UPD:.*]] = load i32
+  // LLVM: %[[RES:.*]] = cmpxchg ptr %[[PTR]], i32 %[[CMP]], i32 %[[UPD]] seq_cst seq_cst, align 4
+  // LLVM: %[[TMP:.*]] = extractvalue { i32, i1 } %[[RES]], 1
+  // LLVM: %[[EXT:.*]] = zext i1 %[[TMP]] to i8
+  // LLVM: store i8 %[[EXT]], ptr {{.*}}
+  bool r = __sync_bool_compare_and_swap(p, x, u);
+}
+
+void cmp_bool_long(long* p, long x, long u) {
+  // CIR-LABEL: @cmp_bool_long
+  // CIR: cir.atomic.cmpxchg success(seq_cst) failure(seq_cst) syncscope(system) {{.*}}, {{.*}}, {{.*}} align(8) : (!cir.ptr<!s64i>, !s64i, !s64i) -> (!s64i, !cir.bool)
+
+  // LLVM-LABEL: @cmp_bool_long
+  // LLVM: cmpxchg ptr {{.*}}, i64 {{.*}}, i64 {{.*}} seq_cst seq_cst, align 8
+  bool r = __sync_bool_compare_and_swap(p, x, u);
+}
+
+void cmp_bool_short(short* p, short x, short u) {
+  // CIR-LABEL: @cmp_bool_short
+  // CIR: cir.atomic.cmpxchg success(seq_cst) failure(seq_cst) syncscope(system) {{.*}}, {{.*}}, {{.*}} align(2) : (!cir.ptr<!s16i>, !s16i, !s16i) -> (!s16i, !cir.bool)
+
+  // LLVM-LABEL: @cmp_bool_short
+  // LLVM: cmpxchg ptr {{.*}}, i16 {{.*}}, i16 {{.*}} seq_cst seq_cst, align 2
+  bool r = __sync_bool_compare_and_swap(p, x, u);
+}
+
+void cmp_bool_byte(char* p, char x, char u) {
+  // CIR-LABEL: @cmp_bool_byte
+  // CIR: cir.atomic.cmpxchg success(seq_cst) failure(seq_cst) syncscope(system) {{.*}}, {{.*}}, {{.*}} align(1) : (!cir.ptr<!s8i>, !s8i, !s8i) -> (!s8i, !cir.bool)
+
+  // LLVM-LABEL: @cmp_bool_byte
+  // LLVM: cmpxchg ptr {{.*}}, i8 {{.*}}, i8 {{.*}} seq_cst seq_cst, align 1
+  bool r = __sync_bool_compare_and_swap(p, x, u);
+}
+
+void cmp_val_int(int* p, int x, int u) {
+  // CIR-LABEL: @cmp_val_int
+  // CIR: %[[PTR:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+  // CIR: %[[CMP:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!s32i>, !s32i
+  // CIR: %[[UPD:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!s32i>, !s32i
+  // CIR: %[[OLD:.*]], %[[RES:.*]] = cir.atomic.cmpxchg success(seq_cst) failure(seq_cst) syncscope(system) %[[PTR]], %[[CMP]], %[[UPD]] align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
+  // CIR: cir.store{{.*}} %[[OLD]], {{.*}} : !s32i, !cir.ptr<!s32i>
+
+  // LLVM-LABEL: @cmp_val_int
+  // LLVM: %[[PTR:.*]] = load ptr
+  // LLVM: %[[CMP:.*]] = load i32
+  // LLVM: %[[UPD:.*]] = load i32
+  // LLVM: %[[RES:.*]] = cmpxchg ptr %[[PTR]], i32 %[[CMP]], i32 %[[UPD]] seq_cst seq_cst, align 4
+  // LLVM: %[[TMP:.*]] = extractvalue { i32, i1 } %[[RES]], 0
+  // LLVM: store i32 %[[TMP]], ptr {{.*}}
+  int r = __sync_val_compare_and_swap(p, x, u);
+}
+
+void cmp_val_long(long* p, long x, long u) {
+  // CIR-LABEL: @cmp_val_long
+  // CIR: cir.atomic.cmpxchg success(seq_cst) failure(seq_cst) syncscope(system) {{.*}}, {{.*}}, {{.*}} align(8) : (!cir.ptr<!s64i>, !s64i, !s64i) -> (!s64i, !cir.bool)
+
+  // LLVM-LABEL: @cmp_val_long
+  // LLVM: cmpxchg ptr {{.*}}, i64 {{.*}}, i64 {{.*}} seq_cst seq_cst, align 8
+  long r = __sync_val_compare_and_swap(p, x, u);
+}
+
+void cmp_val_short(short* p, short x, short u) {
+  // CIR-LABEL: @cmp_val_short
+  // CIR: cir.atomic.cmpxchg success(seq_cst) failure(seq_cst) syncscope(system) {{.*}}, {{.*}}, {{.*}} align(2) : (!cir.ptr<!s16i>, !s16i, !s16i) -> (!s16i, !cir.bool)
+
+  // LLVM-LABEL: @cmp_val_short
+  // LLVM: cmpxchg ptr {{.*}}, i16 {{.*}}, i16 {{.*}} seq_cst seq_cst, align 2
+  short r = __sync_val_compare_and_swap(p, x, u);
+}
+
+void cmp_val_byte(char* p, char x, char u) {
+  // CIR-LABEL: @cmp_val_byte
+  // CIR: cir.atomic.cmpxchg success(seq_cst) failure(seq_cst) syncscope(system) {{.*}}, {{.*}}, {{.*}} align(1) : (!cir.ptr<!s8i>, !s8i, !s8i) -> (!s8i, !cir.bool)
+
+  // LLVM-LABEL: @cmp_val_byte
+  // LLVM: cmpxchg ptr {{.*}}, i8 {{.*}}, i8 {{.*}} seq_cst seq_cst, align 1
+  char r = __sync_val_compare_and_swap(p, x, u);
 }

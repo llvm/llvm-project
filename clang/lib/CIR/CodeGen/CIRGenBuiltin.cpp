@@ -172,6 +172,37 @@ static mlir::Value makeBinaryAtomicValue(
   return rmwi->getResult(0);
 }
 
+/// Utility to insert an atomic cmpxchg instruction.
+static mlir::Value makeAtomicCmpXchgValue(CIRGenFunction &cgf,
+                                          const CallExpr *expr,
+                                          bool returnBool) {
+  QualType typ = returnBool ? expr->getArg(1)->getType() : expr->getType();
+  Address destAddr = checkAtomicAlignment(cgf, expr);
+  clang::CIRGen::CIRGenBuilderTy &builder = cgf.getBuilder();
+
+  cir::IntType intType =
+      expr->getArg(0)->getType()->getPointeeType()->isUnsignedIntegerType()
+          ? builder.getUIntNTy(cgf.getContext().getTypeSize(typ))
+          : builder.getSIntNTy(cgf.getContext().getTypeSize(typ));
+  mlir::Value cmpVal = cgf.emitScalarExpr(expr->getArg(1));
+  cmpVal = emitToInt(cgf, cmpVal, typ, intType);
+  mlir::Value newVal =
+      emitToInt(cgf, cgf.emitScalarExpr(expr->getArg(2)), typ, intType);
+
+  cir::AtomicCmpXchgOp op = cir::AtomicCmpXchgOp::create(
+      builder, cgf.getLoc(expr->getSourceRange()), cmpVal.getType(),
+      builder.getBoolTy(), destAddr.getPointer(), cmpVal, newVal,
+      cir::MemOrderAttr::get(&cgf.getMLIRContext(),
+                             cir::MemOrder::SequentiallyConsistent),
+      cir::MemOrderAttr::get(&cgf.getMLIRContext(),
+                             cir::MemOrder::SequentiallyConsistent),
+      cir::SyncScopeKindAttr::get(&cgf.getMLIRContext(),
+                                  cir::SyncScopeKind::System),
+      builder.getI64IntegerAttr(destAddr.getAlignment().getAsAlign().value()));
+
+  return returnBool ? op.getResult(1) : op.getResult(0);
+}
+
 static RValue emitBinaryAtomic(CIRGenFunction &cgf,
                                cir::AtomicFetchKind atomicOpkind,
                                const CallExpr *e) {
@@ -1826,11 +1857,13 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__sync_val_compare_and_swap_4:
   case Builtin::BI__sync_val_compare_and_swap_8:
   case Builtin::BI__sync_val_compare_and_swap_16:
+    return RValue::get(makeAtomicCmpXchgValue(*this, e, false));
   case Builtin::BI__sync_bool_compare_and_swap_1:
   case Builtin::BI__sync_bool_compare_and_swap_2:
   case Builtin::BI__sync_bool_compare_and_swap_4:
   case Builtin::BI__sync_bool_compare_and_swap_8:
   case Builtin::BI__sync_bool_compare_and_swap_16:
+    return RValue::get(makeAtomicCmpXchgValue(*this, e, true));
   case Builtin::BI__sync_swap_1:
   case Builtin::BI__sync_swap_2:
   case Builtin::BI__sync_swap_4:
