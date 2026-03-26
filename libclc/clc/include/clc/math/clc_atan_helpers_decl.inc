@@ -8,3 +8,6 @@
 
 _CLC_DECL _CLC_OVERLOAD _CLC_CONST __CLC_GENTYPE
 __clc_atan_reduced(__CLC_GENTYPE v);
+
+_CLC_DECL _CLC_OVERLOAD _CLC_CONST __CLC_GENTYPE
+__clc_atanpi_reduced(__CLC_GENTYPE v);

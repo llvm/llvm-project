@@ -529,10 +529,8 @@ struct PointerLikeTypeTraits<
   static void *getAsVoidPointer(Ptr P) { return P.getOpaqueValue(); }
   static Ptr getFromVoidPointer(void *P) { return Ptr::getFromOpaqueValue(P); }
 
-  // TODO(#188269): Overclaims on 32-bit. The correct value is:
-  //   PointerLikeTypeTraits<typename Ptr::ValueType>::NumLowBitsAvailable
   static constexpr int NumLowBitsAvailable =
-      PointerLikeTypeTraits<T>::NumLowBitsAvailable - 1;
+      PointerLikeTypeTraits<typename Ptr::ValueType>::NumLowBitsAvailable;
 };
 
 } // namespace llvm

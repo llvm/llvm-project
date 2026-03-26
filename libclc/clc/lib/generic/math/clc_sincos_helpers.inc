@@ -128,7 +128,7 @@ _CLC_DEF _CLC_OVERLOAD void __clc_fullMulS(private __CLC_FLOATN *hi,
                                            private __CLC_FLOATN *lo,
                                            __CLC_FLOATN a, __CLC_FLOATN b,
                                            __CLC_FLOATN bh, __CLC_FLOATN bt) {
-  if (__CLC_HAVE_HW_FMA32()) {
+  if (__CLC_FAST_FMA_F32) {
     __CLC_FLOATN ph = a * b;
     *hi = ph;
     *lo = __clc_fma(a, b, -ph);
@@ -305,7 +305,7 @@ __clc_argReductionLargeS(private __CLC_FLOATN *r, __CLC_FLOATN x) {
 
   __CLC_FLOATN rh, rt;
 
-  if (__CLC_HAVE_HW_FMA32()) {
+  if (__CLC_FAST_FMA_F32) {
     rh = q1 * pio2h;
     rt = __clc_fma(q0, pio2h, __clc_fma(q1, pio2t, __clc_fma(q1, pio2h, -rh)));
   } else {

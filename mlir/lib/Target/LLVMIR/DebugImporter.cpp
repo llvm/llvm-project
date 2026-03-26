@@ -61,7 +61,8 @@ DICompileUnitAttr DebugImporter::translateImpl(llvm::DICompileUnit *node) {
       context, getOrCreateDistinctID(node),
       node->getSourceLanguage().getUnversionedName(),
       translate(node->getFile()), getStringAttrOrNull(node->getRawProducer()),
-      node->isOptimized(), emissionKind.value(), nameTableKind.value(),
+      node->isOptimized(), emissionKind.value(),
+      node->isDebugInfoForProfiling(), nameTableKind.value(),
       getStringAttrOrNull(node->getRawSplitDebugFilename()));
 }
 

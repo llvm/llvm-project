@@ -650,8 +650,6 @@ private:
 
   StackProtectorDescriptor SPDescriptor;
 
-  bool mayTranslateUserTypes(const User &U) const;
-
   /// Switch analysis and optimization.
   class GISelSwitchLowering : public SwitchCG::SwitchLowering {
   public:
