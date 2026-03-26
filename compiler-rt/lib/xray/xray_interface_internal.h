@@ -21,6 +21,12 @@
 #include <utility>
 
 extern "C" {
+
+// Ensure XRay is initialized. Safe to call multiple times; the first call
+// performs flag parsing, sled registration, and (if requested) pre-main
+// patching.  Subsequent calls return immediately.
+extern void __xray_init();
+
 // The following functions have to be defined in assembler, on a per-platform
 // basis. See xray_trampoline_*.S files for implementations.
 extern void __xray_FunctionEntry();
