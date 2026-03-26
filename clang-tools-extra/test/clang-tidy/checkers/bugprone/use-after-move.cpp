@@ -89,6 +89,16 @@ void selfMove() {
   a.foo();
 }
 
+void * operator new(size_t, void *p);
+
+// Don't flag an explicit destructor call
+void explicitDestrucotr() {
+  alignas(A) char storage[sizeof(A)];
+  A& a = *new (storage) A();
+  std::move(a);
+  a.~A(); // It's always valid to destruct a moved object.
+}
+
 // A warning should only be emitted for one use-after-move.
 void onlyFlagOneUseAfterMove() {
   A a;

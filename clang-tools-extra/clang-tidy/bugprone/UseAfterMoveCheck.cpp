@@ -401,9 +401,12 @@ void UseAfterMoveFinder::getDeclRefs(
       }
     };
 
-    auto DeclRefMatcher = declRefExpr(hasDeclaration(equalsNode(MovedVariable)),
-                                      unless(inDecltypeOrTemplateArg()))
-                              .bind("declref");
+    auto DeclRefMatcher =
+        declRefExpr(
+            hasDeclaration(equalsNode(MovedVariable)),
+            unless(inDecltypeOrTemplateArg()),
+            unless(hasParent(memberExpr(hasDeclaration(cxxDestructorDecl())))))
+            .bind("declref");
 
     AddDeclRefs(match(traverse(TK_AsIs, findAll(DeclRefMatcher)), *S->getStmt(),
                       *Context));
