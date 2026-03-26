@@ -34,27 +34,6 @@ namespace clang::ssaf {
 llvm::StringRef getToolName();
 
 //===----------------------------------------------------------------------===//
-// Error Messages
-//===----------------------------------------------------------------------===//
-
-namespace ErrorMessages {
-
-constexpr const char *CannotValidateSummary =
-    "failed to validate summary '{0}': {1}";
-
-constexpr const char *ExtensionNotSupplied = "Extension not supplied";
-
-constexpr const char *NoFormatForExtension =
-    "Format not registered for extension '{0}'";
-
-constexpr const char *OutputDirectoryMissing =
-    "Parent directory does not exist";
-
-constexpr const char *FailedToLoadPlugin = "failed to load plugin '{0}': {1}";
-
-} // namespace ErrorMessages
-
-//===----------------------------------------------------------------------===//
 // Diagnostic Utilities
 //===----------------------------------------------------------------------===//
 
@@ -91,10 +70,22 @@ struct SummaryFile {
   std::string Path;
   SerializationFormat *Format = nullptr;
 
-  /// Constructs a SummaryFile by resolving the serialization format from the
-  /// file extension. Calls fail() and exits if the extension is missing or
-  /// unregistered.
-  static SummaryFile fromPath(llvm::StringRef Path);
+  /// Validates an input path and returns a SummaryFile.
+  ///
+  /// Checks that the path exists, is a regular file, and is readable, then
+  /// resolves the serialization format from the file extension.
+  ///
+  /// Calls fail() and exits on any validation error.
+  static SummaryFile fromInputPath(llvm::StringRef Path);
+
+  /// Validates an output path and returns a SummaryFile.
+  ///
+  /// Checks that the output file does not already exist, that the parent
+  /// directory exists and is writable, then resolves the serialization format
+  /// from the file extension.
+  ///
+  /// Calls fail() and exits on any validation error.
+  static SummaryFile fromOutputPath(llvm::StringRef Path);
 };
 
 } // namespace clang::ssaf

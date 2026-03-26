@@ -12,6 +12,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -24,9 +25,39 @@
 using namespace clang;
 using namespace ssaf;
 
+namespace fs = llvm::sys::fs;
 namespace path = llvm::sys::path;
 
 namespace {
+
+//===----------------------------------------------------------------------===//
+// Error Messages
+//===----------------------------------------------------------------------===//
+
+namespace ErrorMessages {
+
+constexpr const char *CannotValidatePath = "failed to validate path '{0}': {1}";
+
+constexpr const char *ExtensionNotSupplied = "Extension not supplied";
+
+constexpr const char *NoFormatForExtension =
+    "No format registered for extension '{0}'";
+
+constexpr const char *PathDoesNotExist = "Path does not exist";
+
+constexpr const char *PathIsNotAFile = "Path is not a file";
+
+constexpr const char *OutputDirectoryMissing =
+    "Parent directory does not exist";
+
+constexpr const char *OutputDirectoryNotWritable =
+    "Parent directory is not writable";
+
+constexpr const char *FileAlreadyExists = "File already exists";
+
+constexpr const char *FailedToLoadPlugin = "failed to load plugin '{0}': {1}";
+
+} // namespace ErrorMessages
 
 llvm::StringRef ToolName;
 llvm::StringRef ToolVersion;
@@ -116,10 +147,10 @@ void ssaf::initTool(int argc, const char **argv, llvm::StringRef Version,
   llvm::cl::ParseCommandLineOptions(argc, argv, Overview);
 }
 
-SummaryFile SummaryFile::fromPath(llvm::StringRef Path) {
+SummaryFile fromPath(llvm::StringRef Path) {
   llvm::StringRef Extension = path::extension(Path);
   if (Extension.empty()) {
-    fail(ErrorMessages::CannotValidateSummary, Path,
+    fail(ErrorMessages::CannotValidatePath, Path,
          ErrorMessages::ExtensionNotSupplied);
   }
 
@@ -128,8 +159,44 @@ SummaryFile SummaryFile::fromPath(llvm::StringRef Path) {
   if (!Format) {
     std::string BadExtension =
         llvm::formatv(ErrorMessages::NoFormatForExtension, Extension);
-    fail(ErrorMessages::CannotValidateSummary, Path, BadExtension);
+    fail(ErrorMessages::CannotValidatePath, Path, BadExtension);
   }
 
   return {Path.str(), Format};
+}
+
+SummaryFile SummaryFile::fromInputPath(llvm::StringRef Path) {
+  if (!fs::exists(Path)) {
+    fail(ErrorMessages::CannotValidatePath, Path,
+         ErrorMessages::PathDoesNotExist);
+  }
+
+  if (!fs::is_regular_file(Path)) {
+    fail(ErrorMessages::CannotValidatePath, Path,
+         ErrorMessages::PathIsNotAFile);
+  }
+
+  return fromPath(Path);
+}
+
+SummaryFile SummaryFile::fromOutputPath(llvm::StringRef Path) {
+  if (fs::exists(Path)) {
+    fail(ErrorMessages::CannotValidatePath, Path,
+         ErrorMessages::FileAlreadyExists);
+  }
+
+  llvm::StringRef ParentDir = path::parent_path(Path);
+  llvm::StringRef DirToCheck = ParentDir.empty() ? "." : ParentDir;
+
+  if (!fs::exists(DirToCheck)) {
+    fail(ErrorMessages::CannotValidatePath, Path,
+         ErrorMessages::OutputDirectoryMissing);
+  }
+
+  if (fs::access(DirToCheck, fs::AccessMode::Write)) {
+    fail(ErrorMessages::CannotValidatePath, Path,
+         ErrorMessages::OutputDirectoryNotWritable);
+  }
+
+  return fromPath(Path);
 }
