@@ -379,14 +379,10 @@ getPreImageOfModularMul(const ConstantRange &CmpCR, const ConstantRange &SrcCR,
 /// Returns nullopt if the reachable image from SrcCR does not admit one
 /// invertible interval, or if the preimage of CmpCR cannot be expressed as one
 /// ConstantRange.
-static std::optional<ConstantRange> getPreImageOfInvertiblePeriodicMapping(
-    unsigned Opcode, Value *X, const APInt &C, const ConstantRange &SrcCR,
-    const ConstantRange &CmpCR) {
-  // We support interger vector/scalar.
-  // For vector, the mapping must be fixed, i.e., splat C.
-  assert(X->getType()->getScalarType()->isIntegerTy() &&
-         "Only support integer mapping");
-
+static std::optional<ConstantRange>
+getPreImageOfInvertiblePeriodicMapping(unsigned Opcode, const APInt &C,
+                                       const ConstantRange &SrcCR,
+                                       const ConstantRange &CmpCR) {
   // TODO: Support srem and other more complex periodic mappings.
   std::optional<ConstantRange> SrcCmpCR;
   switch (Opcode) {
@@ -648,6 +644,77 @@ static bool replaceSignedInst(SCCPSolver &Solver,
   return true;
 }
 
+/// Revert f(x) ∈ @p CmpCR to x ∈ R', where f(x) = op(x, C), x ∈ @p XRange.
+static Value *revertMappingRangeCheck(Value *X, const unsigned OpCode,
+                                      const APInt &C,
+                                      const ConstantRange &CmpCR,
+                                      const ConstantRange &XRange,
+                                      SmallPtrSetImpl<Value *> &InsertedValues,
+                                      ICmpInst &ICmpBeingReplaced) {
+  // We support interger vector/scalar.
+  // For vector, the mapping must be fixed, i.e., splat C.
+  assert(X->getType()->getScalarType()->isIntegerTy() &&
+         "Only support integer mapping");
+  auto XCmpCR =
+      getPreImageOfInvertiblePeriodicMapping(OpCode, C, XRange, CmpCR);
+  if (!XCmpCR)
+    return nullptr;
+
+  // Use XRange to implify XCmpCR. E.g.:
+  // XCmpCR = [5, 10), *XCmpCR = [5, 0) --> NewCmpCR = [0, 10) -> ult
+  *XCmpCR = simplifyCmpRange(*XCmpCR, XRange);
+
+  // Emit XCmpCR as icmp Pred (X + C1), C2
+  ICmpInst::Predicate Pred;
+  APInt RHS, Offset;
+  XCmpCR->getEquivalentICmp(Pred, RHS, Offset);
+
+  IRBuilder<NoFolder> Builder(&ICmpBeingReplaced);
+  if (!Offset.isZero()) {
+    X = Builder.CreateAdd(X, ConstantInt::get(X->getType(), Offset));
+    InsertedValues.insert(X);
+  }
+
+  Value *NewICmp =
+      Builder.CreateICmp(Pred, X, ConstantInt::get(X->getType(), RHS));
+  InsertedValues.insert(NewICmp);
+  return NewICmp;
+}
+
+/// Given X ∈ @p XRange, relax X ∈ @p CmpCR into single icmp [pred] X, C.
+static Value *relaxTwoInstRangeCheck(Value *X, const ConstantRange &XRange,
+                                     const ConstantRange &CmpCR,
+                                     SmallPtrSetImpl<Value *> &InsertedValues,
+                                     ICmpInst &ICmpBeingReplaced) {
+  // One ICmp range check      : icmp pred X, C
+  // Bail out if CmpCR is already represented by ONE icmp.
+  if (X == ICmpBeingReplaced.getOperand(0))
+    return nullptr;
+
+  // Early exit if we know nothing about X.
+  if (XRange.isFullSet())
+    return nullptr;
+
+  // We are allowed to refine the comparison to either true or false for
+  // out of range inputs. Based on this, try to simplify CmpCR as a single
+  // ult/uge/slt/sge/eq/ne.
+  // E.g., CmpCR = [3, 10), YRange = [5, 0) --> NewCmpCR = [0, 10) -> ult
+  ConstantRange NewCmpCR = simplifyCmpRange(CmpCR, XRange);
+
+  ICmpInst::Predicate Pred;
+  APInt RHS;
+
+  // Fail to simplify CmpCR as single icmp.
+  if (!NewCmpCR.getEquivalentICmp(Pred, RHS))
+    return nullptr;
+
+  IRBuilder<NoFolder> Builder(&ICmpBeingReplaced);
+  Value *NewICmp =
+      Builder.CreateICmp(Pred, X, ConstantInt::get(X->getType(), RHS));
+  InsertedValues.insert(NewICmp);
+  return NewICmp;
+}
+
 /// Try to use \p Inst's value range from \p Solver to simplify it.
 static Value *simplifyInstruction(SCCPSolver &Solver,
                                   SmallPtrSetImpl<Value *> &InsertedValues,
@@ -700,7 +767,6 @@ static Value *simplifyInstruction(SCCPSolver &Solver,
   // Check if we can relax icmp Pred, Y, ... to a simpler form.
   if (auto *ICmp = dyn_cast<ICmpInst>(&Inst)) {
     Value *Y;
-    bool IsOneUse = false, IsTwoInstRangeCheck = true;
     auto MatchExactRangeCheck = [&]() -> std::optional<ConstantRange> {
       const APInt *RHSC;
       // Match icmp Pred LHS, C
@@ -710,8 +776,8 @@ static Value *simplifyInstruction(SCCPSolver &Solver,
       Value *LHS = ICmp->getOperand(0);
       ICmpInst::Predicate Pred = ICmp->getPredicate();
       const APInt *Offset;
-      IsOneUse = LHS->hasOneUse();
-      if (!IsOneUse)
+      // FIXME: Relax this for reverting f(x) ∈ R to x ∈ R'?
+      if (!LHS->hasOneUse())
         return std::nullopt;
       const ConstantRange ExactCmpCR =
           ConstantRange::makeExactICmpRegion(Pred, *RHSC);
@@ -730,7 +796,6 @@ static Value *simplifyInstruction(SCCPSolver &Solver,
           return Pred == ICmpInst::ICMP_EQ ? CR : CR.inverse();
         }
       }
-      IsTwoInstRangeCheck = false;
       Y = LHS;
       return ExactCmpCR;
     };
@@ -749,56 +814,16 @@ static Value *simplifyInstruction(SCCPSolver &Solver,
            match(Y, m_Shl(m_Value(X), m_APInt(C))) ||
            match(Y, m_URem(m_Value(X), m_APInt(C))) ||
            match(Y, m_And(m_Value(X), m_LowBitMask(C))))) {
-        ConstantRange XRange = GetRange(X);
-        if (auto XCmpCR = getPreImageOfInvertiblePeriodicMapping(
-                cast<Instruction>(Y)->getOpcode(), X, *C, XRange, *CmpCR)) {
-          // Use XRange to implify XCmpCR. E.g.:
-          // XCmpCR = [5, 10), *XCmpCR = [5, 0) --> NewCmpCR = [0, 10) -> ult
-          *XCmpCR = simplifyCmpRange(*XCmpCR, XRange);
-
-          // Emit XCmpCR as icmp Pred (X + C1), C2
-          ICmpInst::Predicate Pred;
-          APInt RHS, Offset;
-          XCmpCR->getEquivalentICmp(Pred, RHS, Offset);
-
-          IRBuilder<NoFolder> Builder(&Inst);
-          if (!Offset.isZero()) {
-            X = Builder.CreateAdd(X, ConstantInt::get(X->getType(), Offset));
-            InsertedValues.insert(X);
-          }
-
-          Value *NewICmp =
-              Builder.CreateICmp(Pred, X, ConstantInt::get(X->getType(), RHS));
-          InsertedValues.insert(NewICmp);
-          return NewICmp;
-        }
+        if (Value *V = revertMappingRangeCheck(
+                X, cast<Instruction>(Y)->getOpcode(), *C, *CmpCR, GetRange(X),
+                InsertedValues, *ICmp))
+          return V;
       }
 
-      // Given Y ∈ YRange, try to simplify: Y ∈ CR --> Y ∈ CR'
-      ConstantRange YRange = GetRange(Y);
-
-      // Early exit if
-      //  1. we know nothing about Y or
-      //  2. LHS has >1 uses (tuned by llvm-opt-bench) or
-      //  3. this ICMP is not two-inst range check.
-      if (YRange.isFullSet() || !IsOneUse || !IsTwoInstRangeCheck)
-        return nullptr;
-      // We are allowed to refine the comparison to either true or false for out
-      // of range inputs. Based on this, try to simplify CmpCR as a single
-      // ult/uge/slt/sge/eq/ne.
-      // E.g., CmpCR = [3, 10), YRange = [5, 0) --> NewCmpCR = [0, 10) -> ult
-      ConstantRange NewCmpCR = simplifyCmpRange(*CmpCR, YRange);
-
-      ICmpInst::Predicate Pred;
-      APInt RHS;
-      // NewCmpCR might be CmpCR, i.e., no simplification happens.
-      if (NewCmpCR.getEquivalentICmp(Pred, RHS)) {
-        IRBuilder<NoFolder> Builder(&Inst);
-        Value *NewICmp =
-            Builder.CreateICmp(Pred, Y, ConstantInt::get(Y->getType(), RHS));
-        InsertedValues.insert(NewICmp);
-        return NewICmp;
-      }
+      // Given Y ∈ YRange, try to simplify Y ∈ CR as single icmp.
+      if (Value *V = relaxTwoInstRangeCheck(Y, GetRange(Y), *CmpCR,
+                                            InsertedValues, *ICmp))
+        return V;
     }
   }
 
