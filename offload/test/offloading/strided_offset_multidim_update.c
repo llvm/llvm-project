@@ -1,5 +1,4 @@
 // RUN: %libomptarget-compile-run-and-check-generic
-// XFAIL: intelgpu
 
 // Make sure multi-dimensional strided offset update works correctly.
 
