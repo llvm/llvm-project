@@ -95,10 +95,10 @@ __attribute__((noinline)) void test_nested_member_plain_deref_ptr(struct Contain
 // SHARED: call void @llvm.memcpy
 __attribute__((noinline)) void test_misaligned_access(struct Small *dest, char *buf) {
   struct Small *p = (struct Small *)(buf + 1);  // Misaligned
-  *dest = *p;  // Should trigger alignment check (but doesn't currently)
+  *dest = *p;
 }
 
-// Array bounds: out-of-bounds on local array (check exists)
+// Array bounds: out-of-bounds on local array
 
 // SHARED-LABEL: define {{[^@]*}}@test_local_array_oob
 // SHARED: call void @__ubsan_handle_out_of_bounds
@@ -109,7 +109,7 @@ __attribute__((noinline)) void test_local_array_oob(struct Small *dest) {
   *dest = arr[5];
 }
 
-// Array bounds: past-the-end via parameter (no check currently)
+// Array bounds: past-the-end via parameter
 
 // SHARED-LABEL: define {{[^@]*}}@test_past_the_end_arr_idx
 // SHARED: [[ARR:%.*]] = load ptr, ptr %arr.addr
