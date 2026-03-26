@@ -1,4 +1,4 @@
-//===- GsymReader.cpp -----------------------------------------------------===//
+//===- GsymReaderV1.cpp -----------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -22,14 +22,14 @@
 using namespace llvm;
 using namespace gsym;
 
-GsymReader::GsymReader(std::unique_ptr<MemoryBuffer> Buffer)
+GsymReaderV1::GsymReaderV1(std::unique_ptr<MemoryBuffer> Buffer)
     : MemBuffer(std::move(Buffer)), Endian(llvm::endianness::native) {}
 
-GsymReader::GsymReader(GsymReader &&RHS) = default;
+GsymReaderV1::GsymReaderV1(GsymReaderV1 &&RHS) = default;
 
-GsymReader::~GsymReader() = default;
+GsymReaderV1::~GsymReaderV1() = default;
 
-llvm::Expected<GsymReader> GsymReader::openFile(StringRef Filename) {
+llvm::Expected<GsymReaderV1> GsymReaderV1::openFile(StringRef Filename) {
   // Open the input file and return an appropriate error if needed.
   ErrorOr<std::unique_ptr<MemoryBuffer>> BuffOrErr =
       MemoryBuffer::getFileOrSTDIN(Filename);
@@ -39,17 +39,17 @@ llvm::Expected<GsymReader> GsymReader::openFile(StringRef Filename) {
   return create(BuffOrErr.get());
 }
 
-llvm::Expected<GsymReader> GsymReader::copyBuffer(StringRef Bytes) {
+llvm::Expected<GsymReaderV1> GsymReaderV1::copyBuffer(StringRef Bytes) {
   auto MemBuffer = MemoryBuffer::getMemBufferCopy(Bytes, "GSYM bytes");
   return create(MemBuffer);
 }
 
-llvm::Expected<llvm::gsym::GsymReader>
-GsymReader::create(std::unique_ptr<MemoryBuffer> &MemBuffer) {
+llvm::Expected<llvm::gsym::GsymReaderV1>
+GsymReaderV1::create(std::unique_ptr<MemoryBuffer> &MemBuffer) {
   if (!MemBuffer)
     return createStringError(std::errc::invalid_argument,
                              "invalid memory buffer");
-  GsymReader GR(std::move(MemBuffer));
+  GsymReaderV1 GR(std::move(MemBuffer));
   llvm::Error Err = GR.parse();
   if (Err)
     return std::move(Err);
@@ -57,7 +57,7 @@ GsymReader::create(std::unique_ptr<MemoryBuffer> &MemBuffer) {
 }
 
 llvm::Error
-GsymReader::parse() {
+GsymReaderV1::parse() {
   BinaryStreamReader FileData(MemBuffer->getBuffer(), llvm::endianness::native);
   // Check for the magic bytes. This file format is designed to be mmap'ed
   // into a process and accessed as read only. This is done for performance
@@ -196,15 +196,15 @@ GsymReader::parse() {
 
 }
 
-const Header &GsymReader::getHeader() const {
-  // The only way to get a GsymReader is from GsymReader::openFile(...) or
-  // GsymReader::copyBuffer() and the header must be valid and initialized to
+const Header &GsymReaderV1::getHeader() const {
+  // The only way to get a GsymReaderV1 is from GsymReaderV1::openFile(...) or
+  // GsymReaderV1::copyBuffer() and the header must be valid and initialized to
   // a valid pointer value, so the assert below should not trigger.
   assert(Hdr);
   return *Hdr;
 }
 
-std::optional<uint64_t> GsymReader::getAddress(size_t Index) const {
+std::optional<uint64_t> GsymReaderV1::getAddress(size_t Index) const {
   switch (Hdr->AddrOffSize) {
   case 1: return addressForIndex<uint8_t>(Index);
   case 2: return addressForIndex<uint16_t>(Index);
@@ -214,7 +214,7 @@ std::optional<uint64_t> GsymReader::getAddress(size_t Index) const {
   return std::nullopt;
 }
 
-std::optional<uint64_t> GsymReader::getAddressInfoOffset(size_t Index) const {
+std::optional<uint64_t> GsymReaderV1::getAddressInfoOffset(size_t Index) const {
   const auto NumAddrInfoOffsets = AddrInfoOffsets.size();
   if (Index < NumAddrInfoOffsets)
     return AddrInfoOffsets[Index];
@@ -222,7 +222,7 @@ std::optional<uint64_t> GsymReader::getAddressInfoOffset(size_t Index) const {
 }
 
 Expected<uint64_t>
-GsymReader::getAddressIndex(const uint64_t Addr) const {
+GsymReaderV1::getAddressIndex(const uint64_t Addr) const {
   if (Addr >= Hdr->BaseAddress) {
     const uint64_t AddrOffset = Addr - Hdr->BaseAddress;
     std::optional<uint64_t> AddrOffsetIndex;
@@ -253,7 +253,7 @@ GsymReader::getAddressIndex(const uint64_t Addr) const {
 }
 
 llvm::Expected<DataExtractor>
-GsymReader::getFunctionInfoDataForAddress(uint64_t Addr,
+GsymReaderV1::getFunctionInfoDataForAddress(uint64_t Addr,
                                           uint64_t &FuncStartAddr) const {
   Expected<uint64_t> ExpectedAddrIdx = getAddressIndex(Addr);
   if (!ExpectedAddrIdx)
@@ -296,7 +296,7 @@ GsymReader::getFunctionInfoDataForAddress(uint64_t Addr,
 }
 
 llvm::Expected<DataExtractor>
-GsymReader::getFunctionInfoDataAtIndex(uint64_t AddrIdx,
+GsymReaderV1::getFunctionInfoDataAtIndex(uint64_t AddrIdx,
                                        uint64_t &FuncStartAddr) const {
   if (AddrIdx >= getNumAddresses())
     return createStringError(std::errc::invalid_argument,
@@ -317,7 +317,7 @@ GsymReader::getFunctionInfoDataAtIndex(uint64_t AddrIdx,
   return DataExtractor(Bytes, Endian == llvm::endianness::little, 4);
 }
 
-llvm::Expected<FunctionInfo> GsymReader::getFunctionInfo(uint64_t Addr) const {
+llvm::Expected<FunctionInfo> GsymReaderV1::getFunctionInfo(uint64_t Addr) const {
   uint64_t FuncStartAddr = 0;
   if (auto ExpectedData = getFunctionInfoDataForAddress(Addr, FuncStartAddr))
     return FunctionInfo::decode(*ExpectedData, FuncStartAddr);
@@ -326,7 +326,7 @@ llvm::Expected<FunctionInfo> GsymReader::getFunctionInfo(uint64_t Addr) const {
 }
 
 llvm::Expected<FunctionInfo>
-GsymReader::getFunctionInfoAtIndex(uint64_t Idx) const {
+GsymReaderV1::getFunctionInfoAtIndex(uint64_t Idx) const {
   uint64_t FuncStartAddr = 0;
   if (auto ExpectedData = getFunctionInfoDataAtIndex(Idx, FuncStartAddr))
     return FunctionInfo::decode(*ExpectedData, FuncStartAddr);
@@ -335,7 +335,7 @@ GsymReader::getFunctionInfoAtIndex(uint64_t Idx) const {
 }
 
 llvm::Expected<LookupResult>
-GsymReader::lookup(uint64_t Addr,
+GsymReaderV1::lookup(uint64_t Addr,
                    std::optional<DataExtractor> *MergedFunctionsData) const {
   uint64_t FuncStartAddr = 0;
   if (auto ExpectedData = getFunctionInfoDataForAddress(Addr, FuncStartAddr))
@@ -346,7 +346,7 @@ GsymReader::lookup(uint64_t Addr,
 }
 
 llvm::Expected<std::vector<LookupResult>>
-GsymReader::lookupAll(uint64_t Addr) const {
+GsymReaderV1::lookupAll(uint64_t Addr) const {
   std::vector<LookupResult> Results;
   std::optional<DataExtractor> MergedFunctionsData;
 
@@ -380,7 +380,7 @@ GsymReader::lookupAll(uint64_t Addr) const {
   return Results;
 }
 
-void GsymReader::dump(raw_ostream &OS) {
+void GsymReaderV1::dump(raw_ostream &OS) {
   const auto &Header = getHeader();
   // Dump the GSYM header.
   OS << Header << "\n";
@@ -435,7 +435,7 @@ void GsymReader::dump(raw_ostream &OS) {
   }
 }
 
-void GsymReader::dump(raw_ostream &OS, const FunctionInfo &FI,
+void GsymReaderV1::dump(raw_ostream &OS, const FunctionInfo &FI,
                       uint32_t Indent) {
   OS.indent(Indent);
   OS << FI.Range << " \"" << getString(FI.Name) << "\"\n";
@@ -453,14 +453,14 @@ void GsymReader::dump(raw_ostream &OS, const FunctionInfo &FI,
   }
 }
 
-void GsymReader::dump(raw_ostream &OS, const MergedFunctionsInfo &MFI) {
+void GsymReaderV1::dump(raw_ostream &OS, const MergedFunctionsInfo &MFI) {
   for (uint32_t inx = 0; inx < MFI.MergedFunctions.size(); inx++) {
     OS << "++ Merged FunctionInfos[" << inx << "]:\n";
     dump(OS, MFI.MergedFunctions[inx], 4);
   }
 }
 
-void GsymReader::dump(raw_ostream &OS, const CallSiteInfo &CSI) {
+void GsymReaderV1::dump(raw_ostream &OS, const CallSiteInfo &CSI) {
   OS << HEX16(CSI.ReturnOffset);
 
   std::string Flags;
@@ -492,7 +492,7 @@ void GsymReader::dump(raw_ostream &OS, const CallSiteInfo &CSI) {
   }
 }
 
-void GsymReader::dump(raw_ostream &OS, const CallSiteInfoCollection &CSIC,
+void GsymReaderV1::dump(raw_ostream &OS, const CallSiteInfoCollection &CSIC,
                       uint32_t Indent) {
   OS.indent(Indent);
   OS << "CallSites (by relative return offset):\n";
@@ -504,7 +504,7 @@ void GsymReader::dump(raw_ostream &OS, const CallSiteInfoCollection &CSIC,
   }
 }
 
-void GsymReader::dump(raw_ostream &OS, const LineTable &LT, uint32_t Indent) {
+void GsymReaderV1::dump(raw_ostream &OS, const LineTable &LT, uint32_t Indent) {
   OS.indent(Indent);
   OS << "LineTable:\n";
   for (auto &LE: LT) {
@@ -516,7 +516,7 @@ void GsymReader::dump(raw_ostream &OS, const LineTable &LT, uint32_t Indent) {
   }
 }
 
-void GsymReader::dump(raw_ostream &OS, const InlineInfo &II, uint32_t Indent) {
+void GsymReaderV1::dump(raw_ostream &OS, const InlineInfo &II, uint32_t Indent) {
   if (Indent == 0)
     OS << "InlineInfo:\n";
   else
@@ -534,7 +534,7 @@ void GsymReader::dump(raw_ostream &OS, const InlineInfo &II, uint32_t Indent) {
     dump(OS, ChildII, Indent + 2);
 }
 
-void GsymReader::dump(raw_ostream &OS, std::optional<FileEntry> FE) {
+void GsymReaderV1::dump(raw_ostream &OS, std::optional<FileEntry> FE) {
   if (FE) {
     // IF we have the file from index 0, then don't print anything
     if (FE->Dir == 0 && FE->Base == 0)

@@ -30,20 +30,43 @@ class raw_ostream;
 
 namespace gsym {
 
-/// GsymReader is used to read GSYM data from a file or buffer.
+/// GsymReader is an abstract interface for reading GSYM data.
+///
+/// This interface provides the methods needed by FunctionInfo::lookup and
+/// InlineInfo::lookup to resolve strings and files during symbolication.
+/// Both GsymReaderV1 and GsymReaderV2 implement this interface.
+class GsymReader {
+public:
+  virtual ~GsymReader() = default;
+
+  /// Get a string from the string table.
+  ///
+  /// \param Offset The string table offset for the string to retrieve.
+  /// \returns The string from the string table.
+  virtual StringRef getString(uint32_t Offset) const = 0;
+
+  /// Get a file entry for the supplied file index.
+  ///
+  /// \param Index An index into the file table.
+  /// \returns An optional FileEntry that will be valid if the file index is
+  /// valid, or std::nullopt if the file index is out of bounds.
+  virtual std::optional<FileEntry> getFile(uint32_t Index) const = 0;
+};
+
+/// GsymReaderV1 is used to read GSYM V1 data from a file or buffer.
 ///
 /// This class is optimized for very quick lookups when the endianness matches
 /// the host system. The Header, address table, address info offsets, and file
 /// table is designed to be mmap'ed as read only into memory and used without
 /// any parsing needed. If the endianness doesn't match, we swap these objects
-/// and tables into GsymReader::SwappedData and then point our header and
+/// and tables into GsymReaderV1::SwappedData and then point our header and
 /// ArrayRefs to this swapped internal data.
 ///
-/// GsymReader objects must use one of the static functions to create an
-/// instance: GsymReader::openFile(...) and GsymReader::copyBuffer(...).
+/// GsymReaderV1 objects must use one of the static functions to create an
+/// instance: GsymReaderV1::openFile(...) and GsymReaderV1::copyBuffer(...).
 
-class GsymReader {
-  GsymReader(std::unique_ptr<MemoryBuffer> Buffer);
+class GsymReaderV1 : public GsymReader {
+  GsymReaderV1(std::unique_ptr<MemoryBuffer> Buffer);
   llvm::Error parse();
 
   std::unique_ptr<MemoryBuffer> MemBuffer;
@@ -67,23 +90,23 @@ class GsymReader {
   std::unique_ptr<SwappedData> Swap;
 
 public:
-  LLVM_ABI GsymReader(GsymReader &&RHS);
-  LLVM_ABI ~GsymReader();
+  LLVM_ABI GsymReaderV1(GsymReaderV1 &&RHS);
+  LLVM_ABI ~GsymReaderV1() override;
 
-  /// Construct a GsymReader from a file on disk.
+  /// Construct a GsymReaderV1 from a file on disk.
   ///
   /// \param Path The file path the GSYM file to read.
-  /// \returns An expected GsymReader that contains the object or an error
+  /// \returns An expected GsymReaderV1 that contains the object or an error
   /// object that indicates reason for failing to read the GSYM.
-  LLVM_ABI static llvm::Expected<GsymReader> openFile(StringRef Path);
+  LLVM_ABI static llvm::Expected<GsymReaderV1> openFile(StringRef Path);
 
-  /// Construct a GsymReader from a buffer.
+  /// Construct a GsymReaderV1 from a buffer.
   ///
   /// \param Bytes A set of bytes that will be copied and owned by the
   /// returned object on success.
-  /// \returns An expected GsymReader that contains the object or an error
+  /// \returns An expected GsymReaderV1 that contains the object or an error
   /// object that indicates reason for failing to read the GSYM.
-  LLVM_ABI static llvm::Expected<GsymReader> copyBuffer(StringRef Bytes);
+  LLVM_ABI static llvm::Expected<GsymReaderV1> copyBuffer(StringRef Bytes);
 
   /// Access the GSYM header.
   /// \returns A native endian version of the GSYM header.
@@ -158,7 +181,7 @@ public:
   ///
   /// \param Offset The string table offset for the string to retrieve.
   /// \returns The string from the strin table.
-  StringRef getString(uint32_t Offset) const { return StrTab[Offset]; }
+  StringRef getString(uint32_t Offset) const override { return StrTab[Offset]; }
 
   /// Get the a file entry for the suppplied file index.
   ///
@@ -169,7 +192,7 @@ public:
   /// \param Index An index into the file table.
   /// \returns An optional FileInfo that will be valid if the file index is
   /// valid, or std::nullopt if the file index is out of bounds,
-  std::optional<FileEntry> getFile(uint32_t Index) const {
+  std::optional<FileEntry> getFile(uint32_t Index) const override {
     if (Index < Files.size())
       return Files[Index];
     return std::nullopt;
@@ -361,10 +384,10 @@ protected:
   /// work of parsing the GSYM file and returning an error.
   ///
   /// \param MemBuffer A memory buffer that will transfer ownership into the
-  /// GsymReader.
-  /// \returns An expected GsymReader that contains the object or an error
+  /// GsymReaderV1.
+  /// \returns An expected GsymReaderV1 that contains the object or an error
   /// object that indicates reason for failing to read the GSYM.
-  LLVM_ABI static llvm::Expected<llvm::gsym::GsymReader>
+  LLVM_ABI static llvm::Expected<llvm::gsym::GsymReaderV1>
   create(std::unique_ptr<MemoryBuffer> &MemBuffer);
 
   /// Given an address, find the address index.

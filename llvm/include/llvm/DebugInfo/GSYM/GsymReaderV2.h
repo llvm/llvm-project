@@ -12,6 +12,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/GSYM/FileEntry.h"
 #include "llvm/DebugInfo/GSYM/FunctionInfo.h"
+#include "llvm/DebugInfo/GSYM/GsymReader.h"
 #include "llvm/DebugInfo/GSYM/HeaderV2.h"
 #include "llvm/DebugInfo/GSYM/LineEntry.h"
 #include "llvm/DebugInfo/GSYM/StringTable.h"
@@ -42,7 +43,7 @@ namespace gsym {
 /// GsymReaderV2 objects must use one of the static functions to create an
 /// instance: GsymReaderV2::openFile(...) and GsymReaderV2::copyBuffer(...).
 
-class GsymReaderV2 {
+class GsymReaderV2 : public GsymReader {
   GsymReaderV2(std::unique_ptr<MemoryBuffer> Buffer);
   llvm::Error parse();
 
@@ -68,7 +69,7 @@ class GsymReaderV2 {
 
 public:
   LLVM_ABI GsymReaderV2(GsymReaderV2 &&RHS);
-  LLVM_ABI ~GsymReaderV2();
+  LLVM_ABI ~GsymReaderV2() override;
 
   /// Construct a GsymReaderV2 from a file on disk.
   ///
@@ -158,7 +159,7 @@ public:
   ///
   /// \param Offset The string table offset for the string to retrieve.
   /// \returns The string from the strin table.
-  StringRef getString(uint32_t Offset) const { return StrTab[Offset]; }
+  StringRef getString(uint32_t Offset) const override { return StrTab[Offset]; }
 
   /// Get the a file entry for the suppplied file index.
   ///
@@ -169,7 +170,7 @@ public:
   /// \param Index An index into the file table.
   /// \returns An optional FileInfo that will be valid if the file index is
   /// valid, or std::nullopt if the file index is out of bounds,
-  std::optional<FileEntry> getFile(uint32_t Index) const {
+  std::optional<FileEntry> getFile(uint32_t Index) const override {
     if (Index < Files.size())
       return Files[Index];
     return std::nullopt;

@@ -779,11 +779,11 @@ LLVMSymbolizer::getOrCreateModuleInfo(StringRef ModuleName) {
   // - Otherwise, create a DWARFContext.
   const auto GsymFile = lookUpGsymFile(BinaryName.str());
   if (!GsymFile.empty()) {
-    auto ReaderOrErr = gsym::GsymReader::openFile(GsymFile);
+    auto ReaderOrErr = gsym::GsymReaderV1::openFile(GsymFile);
 
     if (ReaderOrErr) {
-      std::unique_ptr<gsym::GsymReader> Reader =
-          std::make_unique<gsym::GsymReader>(std::move(*ReaderOrErr));
+      std::unique_ptr<gsym::GsymReaderV1> Reader =
+          std::make_unique<gsym::GsymReaderV1>(std::move(*ReaderOrErr));
 
       Context = std::make_unique<gsym::GsymContext>(std::move(Reader));
     }

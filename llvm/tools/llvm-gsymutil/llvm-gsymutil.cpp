@@ -527,7 +527,7 @@ static llvm::Error convertFileToGSYM(OutputAggregator &Out) {
   return Error::success();
 }
 
-static void doLookup(GsymReader &Gsym, uint64_t Addr, raw_ostream &OS) {
+static void doLookup(GsymReaderV1 &Gsym, uint64_t Addr, raw_ostream &OS) {
   if (UseMergedFunctions) {
     if (auto Results = Gsym.lookupAll(Addr)) {
       // If we have filters, count matching results first
@@ -661,7 +661,7 @@ int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
 
     std::string InputLine;
     std::string CurrentGSYMPath;
-    std::optional<Expected<GsymReader>> CurrentGsym;
+    std::optional<Expected<GsymReaderV1>> CurrentGsym;
 
     while (std::getline(std::cin, InputLine)) {
       // Strip newline characters.
@@ -674,7 +674,7 @@ int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
           llvm::StringRef{StrippedInputLine}.split(' ');
 
       if (GSYMPath != CurrentGSYMPath) {
-        CurrentGsym = GsymReader::openFile(GSYMPath);
+        CurrentGsym = GsymReaderV1::openFile(GSYMPath);
         if (!*CurrentGsym)
           error(GSYMPath, CurrentGsym->takeError());
         CurrentGSYMPath = GSYMPath;
@@ -698,7 +698,7 @@ int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
 
   // Dump or access data inside GSYM files
   for (const auto &GSYMPath : InputFilenames) {
-    auto Gsym = GsymReader::openFile(GSYMPath);
+    auto Gsym = GsymReaderV1::openFile(GSYMPath);
     if (!Gsym)
       error(GSYMPath, Gsym.takeError());
 

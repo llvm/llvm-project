@@ -15,7 +15,7 @@ using namespace llvm;
 using namespace llvm::gsym;
 
 GsymContext::~GsymContext() = default;
-GsymContext::GsymContext(std::unique_ptr<GsymReader> Reader)
+GsymContext::GsymContext(std::unique_ptr<GsymReaderV1> Reader)
     : DIContext(CK_GSYM), Reader(std::move(Reader)) {}
 
 void GsymContext::dump(raw_ostream &OS, DIDumpOptions DumpOpts) {}
@@ -119,7 +119,7 @@ GsymContext::getLineInfoForAddressRange(object::SectionedAddress Address,
       for (const auto &LineEntry : LT) {
         if (StartAddr <= LineEntry.Addr && LineEntry.Addr < EndAddr) {
           // Use LineEntry.Addr, LineEntry.File (which is a file index into the
-          // files tables from the GsymReader), and LineEntry.Line (source line
+          // files tables from the GsymReaderV1), and LineEntry.Line (source line
           // number) to add stuff to the DILineInfoTable
         }
       }
