@@ -58,80 +58,45 @@ class OutputAggregator;
 ///
 /// ENCODING
 ///
-/// GSYM files are designed to be memory mapped into a process as shared, read
-/// only data, and used as is.
+/// GSYM V2 files are designed to be memory mapped into a process as shared,
+/// read only data, and used as is.
 ///
-/// The GSYM file format when in a stand alone file consists of:
-///   - Header
-///   - Address Table
-///   - Function Info Offsets
-///   - File Table
-///   - String Table
-///   - Function Info Data
+/// The V2 file layout is:
 ///
-/// HEADER
+///   [HeaderV2 - 24 bytes fixed]
+///   [GlobalData entries - array of 24-byte entries, terminated by EndOfList]
+///   [... data sections at file offsets specified by GlobalData entries ...]
 ///
 /// The header is fully described in "llvm/DebugInfo/GSYM/HeaderV2.h".
+/// Each GlobalData entry (see "llvm/DebugInfo/GSYM/GlobalData.h") describes
+/// a data section by its type, file offset, and size. Sections can appear in
+/// any order since each entry contains an absolute file offset (relative to
+/// the start of the GSYM data). The GlobalData array is terminated by an
+/// entry with type EndOfList and all other fields set to zero.
 ///
-/// ADDRESS TABLE
+/// The data sections are:
 ///
-/// The address table immediately follows the header in the file and consists
-/// of Header.NumAddresses address offsets. These offsets are sorted and can be
-/// binary searched for efficient lookups. Addresses in the address table are
-/// stored as offsets from a 64 bit base address found in Header.BaseAddress.
-/// This allows the address table to contain 8, 16, or 32 offsets. This allows
-/// the address table to not require full 64 bit addresses for each address.
-/// The resulting GSYM size is smaller and causes fewer pages to be touched
-/// during address lookups when the address table is smaller. The size of the
-/// address offsets in the address table is specified in the header in
-/// Header.AddrOffSize. The first offset in the address table is aligned to
-/// Header.AddrOffSize alignment to ensure efficient access when loaded into
-/// memory.
+/// - AddrOffsets: Sorted address offset table with Header.NumAddresses
+///   entries, each Header.AddrOffSize bytes. Addresses are stored as offsets
+///   from Header.BaseAddress. Aligned to Header.AddrOffSize.
 ///
-/// FUNCTION INFO OFFSETS TABLE
+/// - AddrInfoOffsets: File offset table with Header.NumAddresses entries,
+///   each Header.AddrInfoOffSize bytes. Each entry is the file offset (from
+///   the start of the GSYM data) to the corresponding FunctionInfo. Aligned
+///   to Header.AddrInfoOffSize.
 ///
-/// The function info offsets table immediately follows the address table and
-/// consists of Header.NumAddresses 32 bit file offsets: one for each address
-/// in the address table. This data is aligned to a 4 byte boundary. The
-/// offsets in this table are the relative offsets from the start offset of the
-/// GSYM header and point to the function info data for each address in the
-/// address table. Keeping this data separate from the address table helps to
-/// reduce the number of pages that are touched when address lookups occur on a
-/// GSYM file.
+/// - FileTable: A uint32_t count followed by that many FileEntry structs.
+///   See "llvm/DebugInfo/GSYM/FileEntry.h". Aligned to 4 bytes.
 ///
-/// FILE TABLE
+/// - StringTable: NULL-terminated strings referenced by offset. Starts with
+///   an empty string at offset zero. No alignment requirement.
 ///
-/// The file table immediately follows the function info offsets table. The
-/// encoding of the FileTable is:
+/// - FunctionInfo: Encoded FunctionInfo objects. Each entry is pointed to by
+///   the AddrInfoOffsets table. See "llvm/DebugInfo/GSYM/FunctionInfo.h".
+///   Aligned to 4 bytes.
 ///
-/// struct FileTable {
-///   uint32_t Count;
-///   FileEntry Files[];
-/// };
-///
-/// The file table starts with a 32 bit count of the number of files that are
-/// used in all of the function info, followed by that number of FileEntry
-/// structures. The file table is aligned to a 4 byte boundary, Each file in
-/// the file table is represented with a FileEntry structure.
-/// See "llvm/DebugInfo/GSYM/FileEntry.h" for details.
-///
-/// STRING TABLE
-///
-/// The string table follows the file table in stand alone GSYM files and
-/// contains all strings for everything contained in the GSYM file. Any string
-/// data should be added to the string table and any references to strings
-/// inside GSYM information must be stored as 32 bit string table offsets into
-/// this string table. The string table always starts with an empty string at
-/// offset zero and is followed by any strings needed by the GSYM information.
-/// The start of the string table is not aligned to any boundary.
-///
-/// FUNCTION INFO DATA
-///
-/// The function info data is the payload that contains information about the
-/// address that is being looked up. It contains all of the encoded
-/// FunctionInfo objects. Each encoded FunctionInfo's data is pointed to by an
-/// entry in the Function Info Offsets Table. For details on the exact encoding
-/// of FunctionInfo objects, see "llvm/DebugInfo/GSYM/FunctionInfo.h".
+/// - UUID: Raw UUID bytes of the original executable. Only present if a UUID
+///   was set. No alignment requirement.
 class GsymCreatorV2 {
   // Private member variables require Mutex protections
   mutable std::mutex Mutex;
@@ -189,19 +154,12 @@ class GsymCreatorV2 {
   /// file.
   uint64_t getMaxAddressOffset() const;
 
-  /// Calculate the byte size of the GSYM header and tables sizes.
-  ///
-  /// This function will calculate the exact size in bytes of the encocded GSYM
-  /// for the following items:
-  /// - The GSYM header
-  /// - The Address offset table
-  /// - The Address info offset table
-  /// - The file table
-  /// - The string table
+  /// Calculate the byte size of the GSYM V2 header, GlobalData entries, and
+  /// table sections (everything except FunctionInfo data).
   ///
   /// This is used to help split GSYM files into segments.
   ///
-  /// \returns Size in bytes the GSYM header and tables.
+  /// \returns Size in bytes of the header and tables.
   uint64_t calculateHeaderAndTableSize() const;
 
   /// Copy a FunctionInfo from the \a SrcGC GSYM creator into this creator.
