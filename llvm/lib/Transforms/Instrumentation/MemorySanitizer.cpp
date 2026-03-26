@@ -5541,21 +5541,21 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   // Integer matrix multiplication:
   // - <4 x i32> @llvm.aarch64.neon.{s,u,us}mmla.v4i32.v16i8
-  //                 (<4 x i32> %R, <16 x i8> %X, <16 x i8> %Y)
+  //                 (<4 x i32> %R, <16 x i8> %A, <16 x i8> %B)
   //   - <4 x i32> is a 2x2 matrix
-  //   - <16 x i8> %X and %Y are 2x8 and 8x2 matrices respectively
+  //   - <16 x i8> %A and %B are 2x8 and 8x2 matrices respectively
   //
   // Floating-point matrix multiplication:
   // - <4 x float> @llvm.aarch64.neon.bfmmla
-  //                   (<4 x float> %R, <8 x bfloat> %X, <8 x bfloat> %Y)
+  //                   (<4 x float> %R, <8 x bfloat> %A, <8 x bfloat> %B)
   //   - <4 x float> is a 2x2 matrix
-  //   - <8 x bfloat> %X and %Y are 2x4 and 4x2 matrices respectively
+  //   - <8 x bfloat> %A and %B are 2x4 and 4x2 matrices respectively
   //
   // The general shadow propagation approach is:
-  // 1) get the shadows of the input matrices %X and %Y
+  // 1) get the shadows of the input matrices %A and %B
   // 2) map each shadow value to 0x1 if the corresponding value is fully
   //    initialized, and 0x0 otherwise
-  // 3) perform a matrix multiplication on the shadows of %X and %Y [*].
+  // 3) perform a matrix multiplication on the shadows of %A and %B [*].
   //    The output will be a 2x2 matrix. For each element, a value of 0x8
   //    (for {s,u,us}mmla) or 0x4 (for bfmmla) means all the corresponding
   //    inputs were clean; if so, set the shadow to zero, otherwise set to -1.
