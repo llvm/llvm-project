@@ -1,4 +1,4 @@
-//===-- TestARMEmulator.cpp -----------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,13 +8,12 @@
 
 #include "gtest/gtest.h"
 
+#include "Plugins/Instruction/ARM/EmulateInstructionARM.h"
+#include "Utility/ARM_DWARF_Registers.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/RegisterValue.h"
-
-#include "Plugins/Instruction/ARM/EmulateInstructionARM.h"
-#include "Utility/ARM_DWARF_Registers.h"
 
 #include <map>
 
