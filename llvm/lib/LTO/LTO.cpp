@@ -1564,6 +1564,8 @@ public:
 /// an in-process thread when invoked for each task.
 class InProcessThinBackend : public CGThinBackend {
 protected:
+  // Callback used to add generated native object files to the link by code
+  // generating directly into the returned output stream.
   AddStreamFn AddStream;
   FileCache Cache;
 
