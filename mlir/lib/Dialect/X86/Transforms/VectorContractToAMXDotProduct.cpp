@@ -70,9 +70,8 @@ getSrcIndxValue(OpBuilder &rewriter, Location loc, Value operand,
   if (!srcBuff)
     return failure();
 
-  if (isNotAcc) {
+  if (isNotAcc)
     indexVals.pop_back();
-  }
 
   SmallVector<Value> indices;
   indices.reserve(indexVals.size());
@@ -206,8 +205,7 @@ static amx::TileLoadOp createTileLoads(OpBuilder &rewriter, Location loc,
   }
 
   amx::TileType tileType = amx::TileType::get({16, (16 * offset)}, ipType);
-  auto load = amx::TileLoadOp::create(rewriter, loc, tileType, mat, indices);
-  return load;
+  return amx::TileLoadOp::create(rewriter, loc, tileType, mat, indices);
 }
 
 static void performShuffle(OpBuilder &rewriter, Location loc, Value matB,
@@ -424,11 +422,10 @@ static SmallVector<Value> createTileZeros(OpBuilder &rewriter, Location loc,
   return loopItrArgs;
 }
 
-static Value bufferIndxToStore(OpBuilder &rewriter, Location loc,
-                               Value ivInnerLoop, Value ivOuterLoop,
-                               bool isInnerLoopUBHasOddQuot,
-                               bool isInnerLoopUBLarger, bool pack,
-                               unsigned int blockingFactor) {
+static Value getIndxToLoadStoreFromPckBuffer(
+    OpBuilder &rewriter, Location loc, Value ivInnerLoop, Value ivOuterLoop,
+    bool isInnerLoopUBHasOddQuot, bool isInnerLoopUBLarger, bool pack,
+    unsigned int blockingFactor) {
 
   Value c2 = arith::ConstantIndexOp::create(rewriter, loc, 2);
   Value packOffset =
@@ -444,8 +441,6 @@ static Value bufferIndxToStore(OpBuilder &rewriter, Location loc,
         rewriter, loc, rewriter.getIndexType(), ivOuterLoop, c2);
   }
 
-  // if K quotient is odd. Then, BR loop iv is taken
-  // into consideration
   if (isInnerLoopUBHasOddQuot) {
     auto remOuterLoop = arith::RemUIOp::create(
         rewriter, loc, rewriter.getIndexType(), ivOuterLoop, c2);
@@ -454,6 +449,7 @@ static Value bufferIndxToStore(OpBuilder &rewriter, Location loc,
     remInnerLoop = arith::RemUIOp::create(rewriter, loc,
                                           rewriter.getIndexType(), remAdd, c2);
   }
+
   return remInnerLoop;
 }
 
@@ -477,11 +473,11 @@ createLoops(OpBuilder &rewriter, Location loc, Value lowerBound,
       [&](OpBuilder &rewriterNewInnerLoop, Location locNewInnerLoop,
           Value ivNewInnerLoop, ValueRange iterArgsNewInnerLoop) {
         IRMapping mapping;
-        if (outerLoop) {
+        if (outerLoop)
           mapping.map(vectorOpLhs->getOperand(
                           getIndexPosition(contractOp.getLhs(), outerLoop) + 1),
                       ivOuterLoop);
-        }
+
         mapping.map(vectorOpLhs->getOperand(
                         getIndexPosition(contractOp.getLhs(), innerLoop) + 1),
                     ivNewInnerLoop);
@@ -516,10 +512,10 @@ createLoops(OpBuilder &rewriter, Location loc, Value lowerBound,
                   rewriter, locNewInnerLoop, (16 * blockingFactor));
               ivNewInnerLoop = arith::AddIOp::create(rewriter, locNewInnerLoop,
                                                      nLoadIndx, ivNewInnerLoop);
-              indxToStoreInBuffer =
-                  bufferIndxToStore(rewriter, loc, ivNewInnerLoop, ivOuterLoop,
-                                    isInnerLoopUBHasOddQuot,
-                                    isInnerLoopUBLarger, pack, blockingFactor);
+              indxToStoreInBuffer = getIndxToLoadStoreFromPckBuffer(
+                  rewriter, loc, ivNewInnerLoop, ivOuterLoop,
+                  isInnerLoopUBHasOddQuot, isInnerLoopUBLarger, pack,
+                  blockingFactor);
               Value indxToLoadFromMatB =
                   arith::AddIOp::create(rewriter, loc, indxToStoreInBuffer, c1);
               indxToLoadFromBuffer =
@@ -547,12 +543,12 @@ createLoops(OpBuilder &rewriter, Location loc, Value lowerBound,
         }
 
         IRMapping rhsMapping;
-        if (outerLoop) {
+        if (outerLoop)
           rhsMapping.map(
               vectorOpRhs->getOperand(
                   getIndexPosition(contractOp.getRhs(), outerLoop) + 1),
               ivOuterLoop);
-        }
+
         rhsMapping.map(
             vectorOpRhs->getOperand(
                 getIndexPosition(contractOp.getRhs(), innerLoop) + 1),
@@ -568,10 +564,10 @@ createLoops(OpBuilder &rewriter, Location loc, Value lowerBound,
                   rewriter, locNewInnerLoop, (16 * blockingFactor));
               matB = Value();
               indxToLoadFromBuffer = c0;
-              indxToLoadFromBuffer =
-                  bufferIndxToStore(rewriter, loc, nLoadIndx, ivOuterLoop,
-                                    isInnerLoopUBHasOddQuot,
-                                    isInnerLoopUBLarger, pack, blockingFactor);
+              indxToLoadFromBuffer = getIndxToLoadStoreFromPckBuffer(
+                  rewriter, loc, nLoadIndx, ivOuterLoop,
+                  isInnerLoopUBHasOddQuot, isInnerLoopUBLarger, pack,
+                  blockingFactor);
             }
           } else {
             if (!pack) {
@@ -709,13 +705,8 @@ struct VectorContractToAMXDotProduct
                       "transfer_read or a load. And, the result should be "
                       "stored using transfer_write or store.");
 
-    Type ipType;
-    Type opType;
-
-    if (lhsTy.getElementType().isBF16()) {
-      ipType = rewriter.getBF16Type();
-      opType = rewriter.getF32Type();
-    }
+    Type ipType = rewriter.getBF16Type();
+    Type opType = rewriter.getF32Type();
 
     if (lhsTy.getElementType().isSignlessInteger(8)) {
       ipType = rewriter.getIntegerType(8);
@@ -910,6 +901,7 @@ struct VectorContractToAMXDotProduct
     // Case 2: The acc are passed as iter args through the reduction loop.
     // We support, reduction loop depth until 2. TODO: Support for n-depth
     // reduction loop.
+    // TODOs: Re-factor 2a and 2b.
     SmallVector<scf::ForOp> loopLists;
     Operation *current = contractOp;
     while (true) {
@@ -1122,6 +1114,7 @@ struct VectorContractToAMXDotProduct
       }
     }
 
+    // Case 2b: Reduction loop depth is 1.
     if (loopLists.size() == 1) {
       outerLoop = loopLists[0];
       innerLoop = loopLists[0];
