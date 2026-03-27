@@ -724,7 +724,7 @@ ValueObjectSP ABIWindows_x86_64::GetReturnValueObjectImpl(
         (uint64_t)thread.GetRegisterContext()->ReadRegisterAsUnsigned(rax_id,
                                                                       0);
     return_valobj_sp = ValueObjectMemory::Create(
-        &thread, "", Address(storage_addr, nullptr), return_compiler_type);
+        &thread, "", Address(storage_addr), return_compiler_type);
   }
   return return_valobj_sp;
 }
