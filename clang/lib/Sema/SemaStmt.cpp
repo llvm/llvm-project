@@ -3715,15 +3715,18 @@ StmtResult Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc,
     // Delay processing for now.  TODO: there are lots of dependent
     // types we can conclusively prove aren't void.
   } else if (FnRetType->isVoidType()) {
-    if (RetValExp && !isa<InitListExpr>(RetValExp) &&
-        !(getLangOpts().CPlusPlus &&
-          (RetValExp->isTypeDependent() ||
-           RetValExp->getType()->isVoidType()))) {
-      if (!getLangOpts().CPlusPlus &&
-          RetValExp->getType()->isVoidType())
+    if (RetValExp && isa<InitListExpr>(RetValExp)) {
+      Diag(ReturnLoc, diag::err_return_block_has_expr)
+          << (getCurLambda() != nullptr);
+      RetValExp = nullptr;
+    } else if (RetValExp && !(getLangOpts().CPlusPlus &&
+                              (RetValExp->isTypeDependent() ||
+                               RetValExp->getType()->isVoidType()))) {
+      if (!getLangOpts().CPlusPlus && RetValExp->getType()->isVoidType())
         Diag(ReturnLoc, diag::ext_return_has_void_expr) << "literal" << 2;
       else {
-        Diag(ReturnLoc, diag::err_return_block_has_expr);
+        Diag(ReturnLoc, diag::err_return_block_has_expr)
+            << (getCurLambda() != nullptr);
         RetValExp = nullptr;
       }
     }
