@@ -49,7 +49,7 @@ _CLC_DEF _CLC_OVERLOAD _CLC_CONST int __clc_sub_group_reduce_max(int x) {
 }
 
 _CLC_DEF _CLC_OVERLOAD _CLC_CONST ulong __clc_sub_group_reduce_max(ulong x) {
-  return __builtin_amdgcn_wave_reduce_max_u32(x, 0);
+  return __builtin_amdgcn_wave_reduce_max_u64(x, 0);
 }
 
 _CLC_DEF _CLC_OVERLOAD _CLC_CONST long __clc_sub_group_reduce_max(long x) {

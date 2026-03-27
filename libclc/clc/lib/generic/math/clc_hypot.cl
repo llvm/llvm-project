@@ -19,5 +19,5 @@
 #include "clc/relational/clc_isinf.h"
 #include "clc/relational/clc_isunordered.h"
 
-#define __CLC_BODY <clc_hypot.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc_hypot.inc"
+#include "clc/math/gentype.inc"

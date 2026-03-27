@@ -289,6 +289,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.stat.mkdir
     libc.src.sys.stat.mkdirat
     libc.src.sys.stat.stat
+    libc.src.sys.stat.utimensat
 
     # sys/statvfs.h
     libc.src.sys.statvfs.fstatvfs
@@ -382,6 +383,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wctype.iswspace
     libc.src.wctype.iswblank
     libc.src.wctype.iswxdigit
+    libc.src.wctype.iswpunct
+    libc.src.wctype.iswprint
 
     # sys/uio.h entrypoints
     libc.src.sys.uio.writev
@@ -867,6 +870,7 @@ endif()
 
 list(APPEND TARGET_LIBM_ENTRYPOINTS
   # bfloat16 entrypoints
+  libc.src.math.atanbf16
   libc.src.math.bf16add
   libc.src.math.bf16addf
   libc.src.math.bf16addl

@@ -50,6 +50,7 @@ static const unsigned NVPTXAddrSpaceMap[] = {
     0, // hlsl_private
     0, // hlsl_device
     0, // hlsl_input
+    0, // hlsl_output
     0, // hlsl_push_constant
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
@@ -89,7 +90,7 @@ public:
   initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
                  StringRef CPU,
                  const std::vector<std::string> &FeaturesVec) const override {
-    if (GPU != OffloadArch::UNUSED)
+    if (GPU != OffloadArch::Unused)
       Features[OffloadArchToString(GPU)] = true;
     // Only add PTX feature if explicitly requested. Otherwise, let the backend
     // use the minimum required PTX version for the target SM.
@@ -148,7 +149,7 @@ public:
   }
 
   bool isValidCPUName(StringRef Name) const override {
-    return StringToOffloadArch(Name) != OffloadArch::UNKNOWN;
+    return StringToOffloadArch(Name) != OffloadArch::Unknown;
   }
 
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override {
@@ -159,7 +160,7 @@ public:
 
   bool setCPU(const std::string &Name) override {
     GPU = StringToOffloadArch(Name);
-    return GPU != OffloadArch::UNKNOWN;
+    return GPU != OffloadArch::Unknown;
   }
 
   void setSupportedOpenCLOpts() override {

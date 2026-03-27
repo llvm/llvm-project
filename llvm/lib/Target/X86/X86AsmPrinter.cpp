@@ -899,6 +899,11 @@ bool X86AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
       }
       return false;
     }
+  } else {
+    // Constraint 'p' requires modifier 'a'.
+    const InlineAsm::Flag Flags(MI->getOperand(OpNo - 1).getImm());
+    if (Flags.getMemoryConstraintID() == InlineAsm::ConstraintCode::p)
+      return true;
   }
   if (MI->getInlineAsmDialect() == InlineAsm::AD_Intel) {
     PrintIntelMemReference(MI, OpNo, O);

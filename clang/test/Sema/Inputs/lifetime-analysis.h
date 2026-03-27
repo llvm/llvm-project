@@ -176,6 +176,9 @@ struct basic_string {
   basic_string& operator+=(const basic_string&);
   basic_string& operator+=(const T*);
   void push_back(T);
+
+  template<class StringViewLike> basic_string& insert(size_t index, const StringViewLike&);
+
   void clear();
   const T *c_str() const;
   operator basic_string_view<T> () const;

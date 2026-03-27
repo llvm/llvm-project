@@ -164,14 +164,12 @@ public:
 
     const lldb::addr_t load_addr = process_address + m_offset;
 
-    if (log) {
-      LLDB_LOGF(log,
-                "EntityPersistentVariable::Materialize [address = 0x%" PRIx64
-                ", m_name = %s, m_flags = 0x%hx]",
-                (uint64_t)load_addr,
-                m_persistent_variable_sp->GetName().AsCString(),
-                m_persistent_variable_sp->m_flags);
-    }
+    LLDB_LOGF(log,
+              "EntityPersistentVariable::Materialize [address = 0x%" PRIx64
+              ", m_name = %s, m_flags = 0x%hx]",
+              (uint64_t)load_addr,
+              m_persistent_variable_sp->GetName().AsCString(),
+              m_persistent_variable_sp->m_flags);
 
     if (m_persistent_variable_sp->m_flags &
         ExpressionVariable::EVNeedsAllocation) {
@@ -216,14 +214,12 @@ public:
 
     const lldb::addr_t load_addr = process_address + m_offset;
 
-    if (log) {
-      LLDB_LOGF(log,
-                "EntityPersistentVariable::Dematerialize [address = 0x%" PRIx64
-                ", m_name = %s, m_flags = 0x%hx]",
-                (uint64_t)process_address + m_offset,
-                m_persistent_variable_sp->GetName().AsCString(),
-                m_persistent_variable_sp->m_flags);
-    }
+    LLDB_LOGF(log,
+              "EntityPersistentVariable::Dematerialize [address = 0x%" PRIx64
+              ", m_name = %s, m_flags = 0x%hx]",
+              (uint64_t)process_address + m_offset,
+              m_persistent_variable_sp->GetName().AsCString(),
+              m_persistent_variable_sp->m_flags);
 
     if (m_delegate) {
       m_delegate->DidDematerialize(m_persistent_variable_sp);
@@ -449,12 +445,10 @@ public:
     Log *log = GetLog(LLDBLog::Expressions);
 
     const lldb::addr_t load_addr = process_address + m_offset;
-    if (log) {
-      LLDB_LOGF(log,
-                "EntityVariable::Materialize [address = 0x%" PRIx64
-                ", m_variable_sp = %s]",
-                (uint64_t)load_addr, GetName().GetCString());
-    }
+    LLDB_LOGF(log,
+              "EntityVariable::Materialize [address = 0x%" PRIx64
+              ", m_variable_sp = %s]",
+              (uint64_t)load_addr, GetName().GetCString());
 
     ExecutionContextScope *scope = frame_sp.get();
 
@@ -612,12 +606,10 @@ public:
     Log *log = GetLog(LLDBLog::Expressions);
 
     const lldb::addr_t load_addr = process_address + m_offset;
-    if (log) {
-      LLDB_LOGF(log,
-                "EntityVariable::Dematerialize [address = 0x%" PRIx64
-                ", m_variable_sp = %s]",
-                (uint64_t)load_addr, GetName().AsCString());
-    }
+    LLDB_LOGF(log,
+              "EntityVariable::Dematerialize [address = 0x%" PRIx64
+              ", m_variable_sp = %s]",
+              (uint64_t)load_addr, GetName().AsCString());
 
     if (m_temporary_allocation != LLDB_INVALID_ADDRESS) {
       ExecutionContextScope *scope = frame_sp.get();
@@ -1234,12 +1226,10 @@ public:
 
     const lldb::addr_t load_addr = process_address + m_offset;
 
-    if (log) {
-      LLDB_LOGF(log,
-                "EntitySymbol::Materialize [address = 0x%" PRIx64
-                ", m_symbol = %s]",
-                (uint64_t)load_addr, m_symbol.GetName().AsCString());
-    }
+    LLDB_LOGF(log,
+              "EntitySymbol::Materialize [address = 0x%" PRIx64
+              ", m_symbol = %s]",
+              (uint64_t)load_addr, m_symbol.GetName().AsCString());
 
     const Address sym_address = m_symbol.GetAddress();
 
@@ -1283,12 +1273,10 @@ public:
 
     const lldb::addr_t load_addr = process_address + m_offset;
 
-    if (log) {
-      LLDB_LOGF(log,
-                "EntitySymbol::Dematerialize [address = 0x%" PRIx64
-                ", m_symbol = %s]",
-                (uint64_t)load_addr, m_symbol.GetName().AsCString());
-    }
+    LLDB_LOGF(log,
+              "EntitySymbol::Dematerialize [address = 0x%" PRIx64
+              ", m_symbol = %s]",
+              (uint64_t)load_addr, m_symbol.GetName().AsCString());
 
     // no work needs to be done
   }
@@ -1353,12 +1341,10 @@ public:
 
     const lldb::addr_t load_addr = process_address + m_offset;
 
-    if (log) {
-      LLDB_LOGF(log,
-                "EntityRegister::Materialize [address = 0x%" PRIx64
-                ", m_register_info = %s]",
-                (uint64_t)load_addr, m_register_info.name);
-    }
+    LLDB_LOGF(log,
+              "EntityRegister::Materialize [address = 0x%" PRIx64
+              ", m_register_info = %s]",
+              (uint64_t)load_addr, m_register_info.name);
 
     RegisterValue reg_value;
 
@@ -1413,12 +1399,10 @@ public:
 
     const lldb::addr_t load_addr = process_address + m_offset;
 
-    if (log) {
-      LLDB_LOGF(log,
-                "EntityRegister::Dematerialize [address = 0x%" PRIx64
-                ", m_register_info = %s]",
-                (uint64_t)load_addr, m_register_info.name);
-    }
+    LLDB_LOGF(log,
+              "EntityRegister::Dematerialize [address = 0x%" PRIx64
+              ", m_register_info = %s]",
+              (uint64_t)load_addr, m_register_info.name);
 
     Status extract_error;
 

@@ -46,7 +46,7 @@ static Value getMemrefBuffPtr(Location loc, MemRefType type, Value buffer,
   return memRefDescriptor.bufferPtr(rewriter, loc, typeConverter, type);
 }
 
-LogicalResult x86::MaskCompressOp::verify() {
+LogicalResult x86::avx512::MaskCompressOp::verify() {
   if (getSrc() && getConstantSrc())
     return emitError("cannot use both src and constant_src");
 
@@ -60,7 +60,7 @@ LogicalResult x86::MaskCompressOp::verify() {
   return success();
 }
 
-SmallVector<Value> x86::MaskCompressOp::getIntrinsicOperands(
+SmallVector<Value> x86::avx512::MaskCompressOp::getIntrinsicOperands(
     ArrayRef<Value> operands, const LLVMTypeConverter &typeConverter,
     RewriterBase &rewriter) {
   auto loc = getLoc();
@@ -82,9 +82,9 @@ SmallVector<Value> x86::MaskCompressOp::getIntrinsicOperands(
 }
 
 SmallVector<Value>
-x86::DotOp::getIntrinsicOperands(ArrayRef<Value> operands,
-                                 const LLVMTypeConverter &typeConverter,
-                                 RewriterBase &rewriter) {
+x86::avx::DotOp::getIntrinsicOperands(ArrayRef<Value> operands,
+                                      const LLVMTypeConverter &typeConverter,
+                                      RewriterBase &rewriter) {
   SmallVector<Value> intrinsicOperands(operands);
   // Dot product of all elements, broadcasted to all elements.
   Value scale =
@@ -94,7 +94,7 @@ x86::DotOp::getIntrinsicOperands(ArrayRef<Value> operands,
   return intrinsicOperands;
 }
 
-SmallVector<Value> x86::BcstToPackedF32Op::getIntrinsicOperands(
+SmallVector<Value> x86::avx::BcstToPackedF32Op::getIntrinsicOperands(
     ArrayRef<Value> operands, const LLVMTypeConverter &typeConverter,
     RewriterBase &rewriter) {
   Adaptor adaptor(operands, *this);
@@ -102,7 +102,7 @@ SmallVector<Value> x86::BcstToPackedF32Op::getIntrinsicOperands(
                            typeConverter, rewriter)};
 }
 
-SmallVector<Value> x86::CvtPackedEvenIndexedToF32Op::getIntrinsicOperands(
+SmallVector<Value> x86::avx::CvtPackedEvenIndexedToF32Op::getIntrinsicOperands(
     ArrayRef<Value> operands, const LLVMTypeConverter &typeConverter,
     RewriterBase &rewriter) {
   Adaptor adaptor(operands, *this);
@@ -110,7 +110,7 @@ SmallVector<Value> x86::CvtPackedEvenIndexedToF32Op::getIntrinsicOperands(
                            typeConverter, rewriter)};
 }
 
-SmallVector<Value> x86::CvtPackedOddIndexedToF32Op::getIntrinsicOperands(
+SmallVector<Value> x86::avx::CvtPackedOddIndexedToF32Op::getIntrinsicOperands(
     ArrayRef<Value> operands, const LLVMTypeConverter &typeConverter,
     RewriterBase &rewriter) {
   Adaptor adaptor(operands, *this);

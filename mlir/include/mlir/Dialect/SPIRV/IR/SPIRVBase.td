@@ -4583,11 +4583,13 @@ def SPIRV_OC_OpGroupUMax                      : I32EnumAttrCase<"OpGroupUMax", 2
 def SPIRV_OC_OpGroupSMax                      : I32EnumAttrCase<"OpGroupSMax", 271>;
 def SPIRV_OC_OpNoLine                         : I32EnumAttrCase<"OpNoLine", 317>;
 def SPIRV_OC_OpModuleProcessed                : I32EnumAttrCase<"OpModuleProcessed", 330>;
+def SPIRV_OC_OpExecutionModeId                : I32EnumAttrCase<"OpExecutionModeId", 331>;
 def SPIRV_OC_OpGroupNonUniformElect           : I32EnumAttrCase<"OpGroupNonUniformElect", 333>;
 def SPIRV_OC_OpGroupNonUniformAll             : I32EnumAttrCase<"OpGroupNonUniformAll", 334>;
 def SPIRV_OC_OpGroupNonUniformAny             : I32EnumAttrCase<"OpGroupNonUniformAny", 335>;
 def SPIRV_OC_OpGroupNonUniformAllEqual        : I32EnumAttrCase<"OpGroupNonUniformAllEqual", 336>;
 def SPIRV_OC_OpGroupNonUniformBroadcast       : I32EnumAttrCase<"OpGroupNonUniformBroadcast", 337>;
+def SPIRV_OC_OpGroupNonUniformBroadcastFirst  : I32EnumAttrCase<"OpGroupNonUniformBroadcastFirst", 338>;
 def SPIRV_OC_OpGroupNonUniformBallot          : I32EnumAttrCase<"OpGroupNonUniformBallot", 339>;
 def SPIRV_OC_OpGroupNonUniformBallotBitCount  : I32EnumAttrCase<"OpGroupNonUniformBallotBitCount", 342>;
 def SPIRV_OC_OpGroupNonUniformBallotFindLSB   : I32EnumAttrCase<"OpGroupNonUniformBallotFindLSB", 343>;
@@ -4725,9 +4727,11 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpGroupFAdd, SPIRV_OC_OpGroupFMin, SPIRV_OC_OpGroupUMin,
       SPIRV_OC_OpGroupSMin, SPIRV_OC_OpGroupFMax, SPIRV_OC_OpGroupUMax,
       SPIRV_OC_OpGroupSMax, SPIRV_OC_OpNoLine, SPIRV_OC_OpModuleProcessed,
+      SPIRV_OC_OpExecutionModeId,
       SPIRV_OC_OpGroupNonUniformElect, SPIRV_OC_OpGroupNonUniformAll,
       SPIRV_OC_OpGroupNonUniformAny, SPIRV_OC_OpGroupNonUniformAllEqual,
-      SPIRV_OC_OpGroupNonUniformBroadcast, SPIRV_OC_OpGroupNonUniformBallot,
+      SPIRV_OC_OpGroupNonUniformBroadcast, SPIRV_OC_OpGroupNonUniformBroadcastFirst,
+      SPIRV_OC_OpGroupNonUniformBallot,
       SPIRV_OC_OpGroupNonUniformBallotBitCount,
       SPIRV_OC_OpGroupNonUniformBallotFindLSB,
       SPIRV_OC_OpGroupNonUniformBallotFindMSB, SPIRV_OC_OpGroupNonUniformShuffle,

@@ -169,6 +169,10 @@ public:
   /// vector means Src and Dst are reversed in the actual program.
   virtual bool isDirectionNegative() const { return false; }
 
+  /// Negate the dependence by swapping the source and destination, and
+  /// reversing the direction and distance information.
+  virtual void negate(ScalarEvolution &SE) {}
+
   /// If the direction vector is negative, normalize the direction
   /// vector to make it non-negative. Normalization is done by reversing
   /// Src and Dst, plus reversing the dependence directions and distances
@@ -274,6 +278,8 @@ public:
   /// Check if the direction vector is negative. A negative direction
   /// vector means Src and Dst are reversed in the actual program.
   bool isDirectionNegative() const override;
+
+  void negate(ScalarEvolution &SE) override;
 
   /// If the direction vector is negative, normalize the direction
   /// vector to make it non-negative. Normalization is done by reversing
@@ -541,10 +547,13 @@ private:
   /// Returns true if any possible dependence is disproved.
   /// If there might be a dependence, returns false.
   /// Sets appropriate direction entry.
-  bool exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
-                    const SCEV *SrcConst, const SCEV *DstConst,
-                    const Loop *CurrentSrcLoop, const Loop *CurrentDstLoop,
+  bool exactSIVtest(const SCEVAddRecExpr *Src, const SCEVAddRecExpr *Dst,
                     unsigned Level, FullDependence &Result) const;
+
+  /// weakZeroSIVtestImpl - Core implementation for weakZeroSrcSIVtest and
+  /// weakZeroDstSIVtest.
+  bool weakZeroSIVtestImpl(const SCEVAddRecExpr *AR, const SCEV *Const,
+                           unsigned Level, FullDependence &Result) const;
 
   /// weakZeroSrcSIVtest - Tests the weak-zero SIV subscript pair
   /// (Src and Dst) for dependence.
@@ -579,18 +588,6 @@ private:
                      const SCEV *SrcConst, const SCEV *DstConst,
                      const Loop *SrcLoop, const Loop *DstLoop,
                      FullDependence &Result) const;
-
-  /// symbolicRDIVtest - Tests the RDIV subscript pair for dependence.
-  /// Things of the form [c1 + a*i] and [c2 + b*j],
-  /// where i and j are induction variable, c1 and c2 are loop invariant,
-  /// and a and b are constants.
-  /// Returns true if any possible dependence is disproved.
-  /// Works in some cases that exactRDIVtest doesn't,
-  /// and vice versa. Can also be used as a backup for
-  /// ordinary SIV tests.
-  bool symbolicRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
-                        const SCEV *SrcConst, const SCEV *DstConst,
-                        const Loop *SrcLoop, const Loop *DstLoop) const;
 
   /// gcdMIVtest - Tests an MIV subscript pair for dependence.
   /// Returns true if any possible dependence is disproved.
