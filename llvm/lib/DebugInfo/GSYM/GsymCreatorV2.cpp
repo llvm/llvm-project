@@ -138,19 +138,23 @@ llvm::Error GsymCreatorV2::encode(FileWriter &O) const {
     return Err;
 
   // Write GlobalData entries.
+  SmallVector<GlobalData, 8> GDEntries;
   if (HasUUID)
-    GlobalData{GlobalInfoType::UUID, 0, UUIDOffset, UUIDSectionSize}.encode(O);
-  GlobalData{GlobalInfoType::AddrOffsets, 0,
-             AddrOffsetsOffset, AddrOffsetsSize}.encode(O);
-  GlobalData{GlobalInfoType::AddrInfoOffsets, 0,
-             AddrInfoOffsetsOffset, AddrInfoOffsetsSize}.encode(O);
-  GlobalData{GlobalInfoType::FileTable, 0,
-             FileTableOffset, FileTableSize}.encode(O);
-  GlobalData{GlobalInfoType::StringTable, 0,
-             StringTableOffset, StringTableSize}.encode(O);
-  GlobalData{GlobalInfoType::FunctionInfo, 0,
-             FISectionOffset, FISectionSize}.encode(O);
-  GlobalData{GlobalInfoType::EndOfList, 0, 0, 0}.encode(O);
+    GDEntries.push_back({GlobalInfoType::UUID, 0, UUIDOffset, UUIDSectionSize});
+  GDEntries.push_back({GlobalInfoType::AddrOffsets, 0,
+                        AddrOffsetsOffset, AddrOffsetsSize});
+  GDEntries.push_back({GlobalInfoType::AddrInfoOffsets, 0,
+                        AddrInfoOffsetsOffset, AddrInfoOffsetsSize});
+  GDEntries.push_back({GlobalInfoType::FileTable, 0,
+                        FileTableOffset, FileTableSize});
+  GDEntries.push_back({GlobalInfoType::StringTable, 0,
+                        StringTableOffset, StringTableSize});
+  GDEntries.push_back({GlobalInfoType::FunctionInfo, 0,
+                        FISectionOffset, FISectionSize});
+  GDEntries.push_back({GlobalInfoType::EndOfList, 0, 0, 0});
+  for (const GlobalData &GD : GDEntries)
+    if (auto Err = GD.encode(O))
+      return Err;
 
   // Write UUID section.
   if (HasUUID) {

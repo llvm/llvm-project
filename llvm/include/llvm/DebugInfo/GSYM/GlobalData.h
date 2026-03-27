@@ -59,7 +59,8 @@ struct GlobalData {
   /// Encode this GlobalData entry into a FileWriter stream.
   ///
   /// \param O The binary stream to write the data to.
-  LLVM_ABI void encode(FileWriter &O) const;
+  /// \returns An error if the entry is invalid (e.g., non-zero padding).
+  LLVM_ABI llvm::Error encode(FileWriter &O) const;
 
   /// Decode a GlobalData entry from a binary data stream.
   ///

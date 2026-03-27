@@ -13,11 +13,16 @@
 using namespace llvm;
 using namespace gsym;
 
-void GlobalData::encode(FileWriter &O) const {
+llvm::Error GlobalData::encode(FileWriter &O) const {
+  if (Padding != 0)
+    return createStringError(std::errc::invalid_argument,
+                             "GlobalData entry padding must be zero, got %u",
+                             Padding);
   O.writeU32(static_cast<uint32_t>(Type));
   O.writeU32(Padding);
   O.writeU64(FileOffset);
   O.writeU64(FileSize);
+  return Error::success();
 }
 
 llvm::Expected<GlobalData> GlobalData::decode(DataExtractor &Data,
