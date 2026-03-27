@@ -7247,6 +7247,8 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
       case OMPC_final:
       case OMPC_priority:
       case OMPC_novariants:
+      case OMPC_graph_id:
+      case OMPC_graph_reset:
       case OMPC_nocontext:
         // Do not analyze if no parent parallel directive.
         if (isOpenMPParallelDirective(Kind))
@@ -18397,6 +18399,12 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind,
   case OMPC_detach:
     Res = ActOnOpenMPDetachClause(Expr, StartLoc, LParenLoc, EndLoc);
     break;
+  case OMPC_graph_id:
+    Res = ActOnOpenMPGraphIdClause(Expr, StartLoc, LParenLoc, EndLoc);
+    break;
+  case OMPC_graph_reset:
+    Res = ActOnOpenMPGraphResetClause(Expr, StartLoc, LParenLoc, EndLoc);
+    break;
   case OMPC_novariants:
     Res = ActOnOpenMPNovariantsClause(Expr, StartLoc, LParenLoc, EndLoc);
     break;
@@ -19242,6 +19250,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPSimpleClause(
   case OMPC_match:
   case OMPC_nontemporal:
   case OMPC_destroy:
+  case OMPC_graph_id:
+  case OMPC_graph_reset:
   case OMPC_novariants:
   case OMPC_nocontext:
   case OMPC_detach:
@@ -19994,6 +20004,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprWithArgClause(
   case OMPC_severity:
   case OMPC_message:
   case OMPC_destroy:
+  case OMPC_graph_id:
+  case OMPC_graph_reset:
   case OMPC_novariants:
   case OMPC_nocontext:
   case OMPC_detach:
@@ -20213,6 +20225,10 @@ OMPClause *SemaOpenMP::ActOnOpenMPClause(OpenMPClauseKind Kind,
   case OMPC_ompx_bare:
     Res = ActOnOpenMPXBareClause(StartLoc, EndLoc);
     break;
+  case OMPC_graph_reset:
+    Res = ActOnOpenMPGraphResetClause(/*Condition=*/nullptr, StartLoc,
+                                      SourceLocation(), EndLoc);
+    break;
   case OMPC_if:
   case OMPC_final:
   case OMPC_num_threads:
@@ -20268,6 +20284,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPClause(OpenMPClauseKind Kind,
   case OMPC_at:
   case OMPC_severity:
   case OMPC_message:
+  case OMPC_graph_id:
   case OMPC_novariants:
   case OMPC_nocontext:
   case OMPC_detach:
@@ -20614,6 +20631,47 @@ OMPClause *SemaOpenMP::ActOnOpenMPDestroyClause(Expr *InteropVar,
       OMPDestroyClause(InteropVar, StartLoc, LParenLoc, VarLoc, EndLoc);
 }
 
+OMPClause *SemaOpenMP::ActOnOpenMPGraphIdClause(Expr *Id,
+                                                SourceLocation StartLoc,
+                                                SourceLocation LParenLoc,
+                                                SourceLocation EndLoc) {
+  Expr *ValExpr = Id;
+
+  if (!Id->isValueDependent() && !Id->isTypeDependent() &&
+      !Id->isInstantiationDependent() &&
+      !Id->containsUnexpandedParameterPack()) {
+    ExprResult Val = PerformOpenMPImplicitIntegerConversion(LParenLoc, Id);
+    if (Val.isInvalid())
+      return nullptr;
+
+    ValExpr = Val.get();
+  }
+
+  return new (getASTContext())
+      OMPGraphIdClause(ValExpr, StartLoc, LParenLoc, EndLoc);
+}
+
+OMPClause *SemaOpenMP::ActOnOpenMPGraphResetClause(Expr *Condition,
+                                                   SourceLocation StartLoc,
+                                                   SourceLocation LParenLoc,
+                                                   SourceLocation EndLoc) {
+  Expr *ValExpr = Condition;
+  if (Condition && LParenLoc.isValid()) {
+    if (!Condition->isValueDependent() && !Condition->isTypeDependent() &&
+        !Condition->isInstantiationDependent() &&
+        !Condition->containsUnexpandedParameterPack()) {
+      ExprResult Val = SemaRef.CheckBooleanCondition(StartLoc, Condition);
+      if (Val.isInvalid())
+        return nullptr;
+
+      ValExpr = Val.get();
+    }
+  }
+
+  return new (getASTContext())
+      OMPGraphResetClause(ValExpr, StartLoc, LParenLoc, EndLoc);
+}
+
 OMPClause *SemaOpenMP::ActOnOpenMPNovariantsClause(Expr *Condition,
                                                    SourceLocation StartLoc,
                                                    SourceLocation LParenLoc,
@@ -20941,6 +20999,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPVarListClause(OpenMPClauseKind Kind,
   case OMPC_severity:
   case OMPC_message:
   case OMPC_destroy:
+  case OMPC_graph_id:
+  case OMPC_graph_reset:
   case OMPC_novariants:
   case OMPC_nocontext:
   case OMPC_detach:
