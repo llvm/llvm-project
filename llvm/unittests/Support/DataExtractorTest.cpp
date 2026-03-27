@@ -72,6 +72,92 @@ TEST(DataExtractorTest, UnsignedNumbers) {
   EXPECT_EQ(8U, offset);
 }
 
+TEST(DataExtractorTest, GetUnsigned) {
+  // Use data with distinct byte values so each size produces a unique result.
+  const char data[] = "\x01\x02\x03\x04\x05\x06\x07\x08";
+  uint64_t offset;
+
+  // Big-endian data.
+  DataExtractor DE(StringRef(data, sizeof(data) - 1), false, 8);
+
+  offset = 0;
+  EXPECT_EQ(0x01U, DE.getUnsigned(&offset, 1));
+  EXPECT_EQ(1U, offset);
+
+  offset = 0;
+  EXPECT_EQ(0x0102U, DE.getUnsigned(&offset, 2));
+  EXPECT_EQ(2U, offset);
+
+  offset = 0;
+  EXPECT_EQ(0x010203U, DE.getUnsigned(&offset, 3));
+  EXPECT_EQ(3U, offset);
+
+  offset = 0;
+  EXPECT_EQ(0x01020304U, DE.getUnsigned(&offset, 4));
+  EXPECT_EQ(4U, offset);
+
+  offset = 0;
+  EXPECT_EQ(0x0102030405U, DE.getUnsigned(&offset, 5));
+  EXPECT_EQ(5U, offset);
+
+  offset = 0;
+  EXPECT_EQ(0x010203040506U, DE.getUnsigned(&offset, 6));
+  EXPECT_EQ(6U, offset);
+
+  offset = 0;
+  EXPECT_EQ(0x01020304050607U, DE.getUnsigned(&offset, 7));
+  EXPECT_EQ(7U, offset);
+
+  offset = 0;
+  EXPECT_EQ(0x0102030405060708U, DE.getUnsigned(&offset, 8));
+  EXPECT_EQ(8U, offset);
+
+  // Non-zero starting offset.
+  offset = 3;
+  EXPECT_EQ(0x040506U, DE.getUnsigned(&offset, 3));
+  EXPECT_EQ(6U, offset);
+
+  // Little-endian data.
+  DE = DataExtractor(StringRef(data, sizeof(data) - 1), true, 8);
+
+  offset = 0;
+  EXPECT_EQ(0x01U, DE.getUnsigned(&offset, 1));
+  EXPECT_EQ(1U, offset);
+
+  offset = 0;
+  EXPECT_EQ(0x0201U, DE.getUnsigned(&offset, 2));
+  EXPECT_EQ(2U, offset);
+
+  offset = 0;
+  EXPECT_EQ(0x030201U, DE.getUnsigned(&offset, 3));
+  EXPECT_EQ(3U, offset);
+
+  offset = 0;
+  EXPECT_EQ(0x04030201U, DE.getUnsigned(&offset, 4));
+  EXPECT_EQ(4U, offset);
+
+  offset = 0;
+  EXPECT_EQ(0x0504030201U, DE.getUnsigned(&offset, 5));
+  EXPECT_EQ(5U, offset);
+
+  offset = 0;
+  EXPECT_EQ(0x060504030201U, DE.getUnsigned(&offset, 6));
+  EXPECT_EQ(6U, offset);
+
+  offset = 0;
+  EXPECT_EQ(0x07060504030201U, DE.getUnsigned(&offset, 7));
+  EXPECT_EQ(7U, offset);
+
+  offset = 0;
+  EXPECT_EQ(0x0807060504030201U, DE.getUnsigned(&offset, 8));
+  EXPECT_EQ(8U, offset);
+
+  // Non-zero starting offset.
+  offset = 3;
+  EXPECT_EQ(0x060504U, DE.getUnsigned(&offset, 3));
+  EXPECT_EQ(6U, offset);
+}
+
 TEST(DataExtractorTest, SignedNumbers) {
   DataExtractor DE(StringRef(numberData, sizeof(numberData)-1), false, 8);
   uint64_t offset = 0;
