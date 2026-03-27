@@ -117,3 +117,30 @@ func.func @linearize_vector_unroll(%v0: vector<2xindex>, %v1: vector<2xindex>) -
   %0 = affine.linearize_index [%v0, %v1] by (4, 8) : vector<2xindex>
   return %0 : vector<2xindex>
 }
+
+// -----
+
+// Multi-dimensional vector delinearize: unrolled with static positions.
+
+//   CHECK-DAG:   #[[$DIV8:.+]] = affine_map<()[s0] -> (s0 floordiv 8)>
+//   CHECK-DAG:   #[[$MOD8:.+]] = affine_map<()[s0] -> (s0 mod 8)>
+
+// CHECK-LABEL: @delinearize_2d_vector_unroll
+// CHECK-SAME:    (%[[VEC:.+]]: vector<2x2xindex>)
+// CHECK:         %[[POISON:.+]] = ub.poison : vector<2x2xindex>
+// CHECK:         %[[S00:.+]] = vector.extract %[[VEC]][0, 0]
+// CHECK:         %[[D00:.+]] = affine.apply #[[$DIV8]]()[%[[S00]]]
+// CHECK:         %[[M00:.+]] = affine.apply #[[$MOD8]]()[%[[S00]]]
+// CHECK:         %[[R0_00:.+]] = vector.insert %[[D00]], %[[POISON]] [0, 0]
+// CHECK:         %[[R1_00:.+]] = vector.insert %[[M00]], %[[POISON]] [0, 0]
+// CHECK:         %[[S01:.+]] = vector.extract %[[VEC]][0, 1]
+// CHECK:         %[[D01:.+]] = affine.apply #[[$DIV8]]()[%[[S01]]]
+// CHECK:         %[[M01:.+]] = affine.apply #[[$MOD8]]()[%[[S01]]]
+// CHECK:         vector.insert %[[D01]], %[[R0_00]] [0, 1]
+// CHECK:         vector.insert %[[M01]], %[[R1_00]] [0, 1]
+// CHECK:         vector.extract %[[VEC]][1, 0]
+// CHECK:         vector.extract %[[VEC]][1, 1]
+func.func @delinearize_2d_vector_unroll(%vec: vector<2x2xindex>) -> (vector<2x2xindex>, vector<2x2xindex>) {
+  %0:2 = affine.delinearize_index %vec into (4, 8) : vector<2x2xindex>, vector<2x2xindex>
+  return %0#0, %0#1 : vector<2x2xindex>, vector<2x2xindex>
+}
