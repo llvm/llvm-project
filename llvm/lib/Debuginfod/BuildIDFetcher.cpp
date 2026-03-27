@@ -26,6 +26,10 @@ DebuginfodFetcher::fetch(ArrayRef<uint8_t> BuildID) const {
   Expected<std::string> PathOrErr = getCachedOrDownloadDebuginfo(BuildID);
   if (PathOrErr)
     return *PathOrErr;
-  consumeError(PathOrErr.takeError());
+  Error Err = PathOrErr.takeError();
+  if (std::getenv("DEBUGINFOD_VERBOSE"))
+    llvm::errs() << "Debuginfod error: " << Err << "\n";
+  else
+    consumeError(std::move(Err));
   return std::nullopt;
 }
