@@ -70,13 +70,6 @@ defset list<VTypeInfoToWide> AllZvzipVectors = {
   def : VTypeInfoToWide<VF64M1,  VF64M2>;
   def : VTypeInfoToWide<VF64M2,  VF64M4>;
   def : VTypeInfoToWide<VF64M4,  VF64M8>;
-
-  // BF16 (16-bit)
-  def : VTypeInfoToWide<VBF16MF4, VBF16MF2>;
-  def : VTypeInfoToWide<VBF16MF2, VBF16M1>;
-  def : VTypeInfoToWide<VBF16M1,  VBF16M2>;
-  def : VTypeInfoToWide<VBF16M2,  VBF16M4>;
-  def : VTypeInfoToWide<VBF16M4,  VBF16M8>;
 }
 
 multiclass VPseudoVZIP {
