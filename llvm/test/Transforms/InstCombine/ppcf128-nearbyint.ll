@@ -20,8 +20,8 @@ define ppc_fp128 @test_nearbyintl(ppc_fp128 %x) {
 declare double @nearbyint(double)
 
 ; CHECK-LABEL: @test_nearbyint_f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.nearbyint.f64(double [[X:%.*]])
-; CHECK-NEXT:    ret double [[TMP1]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call double @llvm.nearbyint.f64(double [[X:%.*]])
+; CHECK-NEXT:    ret double [[CALL]]
 ;
 define double @test_nearbyint_f64(double %x) {
   %call = tail call double @nearbyint(double %x)
