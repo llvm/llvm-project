@@ -463,7 +463,8 @@ void CrossTranslationUnitContext::emitCrossTUDiagnostics(const IndexError &IE,
     return;
 
   case index_error_code::load_threshold_reached:
-    // This is expected. It is still useful to be aware of, but it is normal operation.
+    // This is expected. It is still useful to be aware of, but it is normal
+    // operation.
     Context.getDiagnostics().Report(Loc,
                                     diag::remark_ctu_import_threshold_reached);
     return;
@@ -483,15 +484,17 @@ void CrossTranslationUnitContext::emitCrossTUDiagnostics(const IndexError &IE,
     return;
 
   case index_error_code::invocation_list_ambiguous:
-    // For automatically generated invocation lists, it is common to list multiple invocations,
-    // if a file is compiled in multiple contexts. No need to block CTU because of this.
+    // For automatically generated invocation lists, it is common to list
+    // multiple invocations, if a file is compiled in multiple contexts. No need
+    // to block CTU because of this.
     Context.getDiagnostics().Report(Loc, diag::warn_multiple_entries_invlist)
         << IE.getFileName();
     return;
 
   case index_error_code::invocation_list_lookup_unsuccessful:
-    // Some files might be missing in the invocation list. It is sad but not fatal,
-    // and CTU can take advantage of the definitions in files with known invocations.
+    // Some files might be missing in the invocation list. It is sad but not
+    // fatal, and CTU can take advantage of the definitions in files with known
+    // invocations.
     Context.getDiagnostics().Report(Loc, diag::warn_invlist_missing_file)
         << IE.getFileName();
     return;
@@ -832,9 +835,8 @@ llvm::Error CrossTranslationUnitContext::ASTLoader::lazyInitInvocationList() {
   assert(ContentBuffer && "If no error was produced after loading, the pointer "
                           "should not be nullptr.");
 
-  llvm::Expected<InvocationListTy> ExpectedInvocationList =
-      parseInvocationList(ContentBuffer->getBuffer(), PathStyle,
-                          InvocationListFilePath);
+  llvm::Expected<InvocationListTy> ExpectedInvocationList = parseInvocationList(
+      ContentBuffer->getBuffer(), PathStyle, InvocationListFilePath);
 
   if (!ExpectedInvocationList) {
     llvm::handleAllErrors(ExpectedInvocationList.takeError(),
