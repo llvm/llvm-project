@@ -45,6 +45,7 @@ namespace gsym {
 ///
 /// GsymReader objects must use one of the static functions to create an
 /// instance: GsymReader::openFile(...) and GsymReader::copyBuffer(...).
+
 class GsymReader {
 protected:
   std::unique_ptr<MemoryBuffer> MemBuffer;

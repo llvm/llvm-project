@@ -136,6 +136,7 @@ GsymReader::getAddressIndex(const uint64_t Addr) const {
   }
   return createStringError(std::errc::invalid_argument,
                            "address 0x%" PRIx64 " is not in GSYM", Addr);
+
 }
 
 llvm::Expected<DataExtractor>
@@ -274,8 +275,10 @@ void GsymReader::dump(raw_ostream &OS, const FunctionInfo &FI,
     dump(OS, *FI.OptLineTable, Indent);
   if (FI.Inline)
     dump(OS, *FI.Inline, Indent);
+
   if (FI.CallSites)
     dump(OS, *FI.CallSites, Indent);
+
   if (FI.MergedFunctions) {
     assert(Indent == 0 && "MergedFunctionsInfo should only exist at top level");
     dump(OS, *FI.MergedFunctions);
@@ -304,6 +307,7 @@ void GsymReader::dump(raw_ostream &OS, const CallSiteInfo &CSI) {
   else {
     if (CSI.Flags & CallSiteInfo::Flags::InternalCall)
       addFlag("InternalCall");
+
     if (CSI.Flags & CallSiteInfo::Flags::ExternalCall)
       addFlag("ExternalCall");
   }
