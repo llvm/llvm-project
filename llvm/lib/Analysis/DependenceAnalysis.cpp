@@ -1783,14 +1783,6 @@ bool DependenceInfo::weakZeroSIVtestImpl(const SCEVAddRecExpr *AR,
   const SCEV *ARCoeff = AR->getStepRecurrence(*SE);
   const SCEV *ARConst = AR->getStart();
 
-  ConstantRange ARRange = SE->getSignedRange(AR);
-  ConstantRange ConstRange = SE->getSignedRange(Const);
-  if (ARRange.intersectWith(ConstRange).isEmptySet()) {
-    ++WeakZeroSIVindependence;
-    ++WeakZeroSIVsuccesses;
-    return true;
-  }
-
   if (!AR->hasNoSignedWrap())
     return false;
 
