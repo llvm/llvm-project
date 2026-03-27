@@ -304,7 +304,10 @@ protected:
   AMDGPU::AMDGPUSchedReason LastAMDGPUReason = AMDGPU::AMDGPUSchedReason::None;
   CandidateHeuristics Heurs;
 
+#ifndef NDEBUG
   void dumpPickSummary(SUnit *SU, bool IsTopNode, SchedCandidate &Cand);
+#endif
+
   bool tryCandidateCoexec(SchedCandidate &Cand, SchedCandidate &TryCand,
                           SchedBoundary *Zone);
   void pickNodeFromQueue(SchedBoundary &Zone, const CandPolicy &ZonePolicy,

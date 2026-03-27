@@ -448,7 +448,7 @@ SUnit *AMDGPUCoExecSchedStrategy::pickNode(bool &IsTopNode) {
 
   bool PickedPending = false;
   SUnit *SU = nullptr;
-  SchedCandidate *PickedCand = nullptr;
+  [[maybe_unused]] SchedCandidate *PickedCand = nullptr;
   do {
     PickedPending = false;
     SU = pickOnlyChoice(Top);
@@ -539,6 +539,7 @@ void AMDGPUCoExecSchedStrategy::pickNodeFromQueue(
   EvaluateQueue(Zone.Pending, /*FromPending=*/true);
 }
 
+#ifndef NDEBUG
 void AMDGPUCoExecSchedStrategy::dumpPickSummary(SUnit *SU, bool IsTopNode,
                                                 SchedCandidate &Cand) {
   const SIInstrInfo *SII = static_cast<const SIInstrInfo *>(DAG->TII);
@@ -563,6 +564,7 @@ void AMDGPUCoExecSchedStrategy::dumpPickSummary(SUnit *SU, bool IsTopNode,
 
   LastAMDGPUReason = AMDGPUSchedReason::None;
 }
+#endif
 
 bool AMDGPUCoExecSchedStrategy::tryCandidateCoexec(SchedCandidate &Cand,
                                                    SchedCandidate &TryCand,
