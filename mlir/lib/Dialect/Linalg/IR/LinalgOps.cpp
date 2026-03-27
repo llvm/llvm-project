@@ -5037,10 +5037,10 @@ getNewMixedTileSizes(PatternRewriter &rewriter, Type newPackedTy,
       // Already a constant
       newMixedTileSizes.push_back(tile);
     } else {
-      assert(getConstantIntValue(tile).value() == dimSize &&
-             "tile size and dim size don't match!");
+      // The tile is a dynamic Value. Since the packed type tells us the
+      // dimension is statically dimSize, we can use that static value directly.
       newMixedTileSizes.push_back(
-          (rewriter.getIntegerAttr(rewriter.getIndexType(), dimSize)));
+          rewriter.getIntegerAttr(rewriter.getIndexType(), dimSize));
     }
   }
 

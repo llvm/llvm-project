@@ -1952,6 +1952,72 @@ func.func @fold_cast_unpack_dynamic_tile_size(
 
 // -----
 
+// Regression test: FoldTensorCastUnPackOp must not crash when a tile size is a
+// dynamic (non-constant) SSA value and the cast makes the packed dim static.
+// The static dim value from the cast should be used as the new tile size.
+// CHECK-LABEL: func.func @fold_cast_unpack_nonconstant_dynamic_tile(
+// CHECK-SAME:     %[[SRC:.*]]: tensor<1x3x8x1xi32>,
+// CHECK-SAME:     %[[TILE:.*]]: index,
+// CHECK-SAME:     %[[DEST:.*]]: tensor<7x3xi32>) -> tensor<7x3xi32> {
+// CHECK:          %[[RES:.*]] = linalg.unpack %[[SRC]] inner_dims_pos = [0, 1] inner_tiles = [8, 1] into %[[DEST]] : tensor<1x3x8x1xi32> -> tensor<7x3xi32>
+// CHECK:          return %[[RES]] : tensor<7x3xi32>
+func.func @fold_cast_unpack_nonconstant_dynamic_tile(
+  %src: tensor<1x3x8x1xi32>,
+  %tile_size: index,
+  %dest: tensor<7x3xi32>) -> tensor<7x3xi32> {
+    %cast = tensor.cast %src : tensor<1x3x8x1xi32> to tensor<?x3x?x1xi32>
+    %unpack = linalg.unpack %cast
+      inner_dims_pos = [0, 1]
+      inner_tiles = [%tile_size, 1]
+      into %dest : tensor<?x3x?x1xi32> -> tensor<7x3xi32>
+    return %unpack : tensor<7x3xi32>
+}
+
+// -----
+
+// When the cast reveals a static dim but the tile is a constant SSA value that
+// doesn't match.
+// CHECK-LABEL: func.func @fold_cast_unpack_constant_tile_mismatch(
+//  CHECK-SAME:     %[[ARG0:.+]]: tensor<1x3x8x1xi32>
+// CHECK-NEXT:          linalg.unpack %[[ARG0]] inner_dims_pos = [0, 1] inner_tiles = [8, 1]
+func.func @fold_cast_unpack_constant_tile_mismatch(
+  %src: tensor<1x3x8x1xi32>,
+  %dest: tensor<7x3xi32>) -> tensor<7x3xi32> {
+    %cast = tensor.cast %src : tensor<1x3x8x1xi32> to tensor<?x3x?x1xi32>
+    %c4 = arith.constant 4 : index
+    %unpack = linalg.unpack %cast
+      inner_dims_pos = [0, 1]
+      inner_tiles = [%c4, 1]
+      into %dest : tensor<?x3x?x1xi32> -> tensor<7x3xi32>
+    return %unpack : tensor<7x3xi32>
+}
+
+// -----
+
+// Regression test: FoldTensorCastPackOp must not crash when a tile size is a
+// dynamic (non-constant) SSA value and the cast makes the packed dim static.
+// The static dim value from the cast should be used as the new tile size.
+// CHECK-LABEL: func.func @fold_cast_pack_nonconstant_dynamic_tile(
+// CHECK-SAME:     %[[SRC:.*]]: tensor<8x3xi32>,
+// CHECK-SAME:     %[[TILE:.*]]: index,
+// CHECK-SAME:     %[[DEST:.*]]: tensor<1x3x8x1xi32>) -> tensor<1x3x8x1xi32> {
+// CHECK:          %[[RES:.*]] = linalg.pack %[[SRC]] inner_dims_pos = [0, 1] inner_tiles = [8, 1] into %[[DEST]] : tensor<8x3xi32> -> tensor<1x3x8x1xi32>
+// CHECK:          return %[[RES]] : tensor<1x3x8x1xi32>
+func.func @fold_cast_pack_nonconstant_dynamic_tile(
+  %src: tensor<8x3xi32>,
+  %tile_size: index,
+  %dest: tensor<1x3x8x1xi32>) -> tensor<1x3x8x1xi32> {
+    %cast = tensor.cast %dest : tensor<1x3x8x1xi32> to tensor<?x3x?x1xi32>
+    %pack = linalg.pack %src
+      inner_dims_pos = [0, 1]
+      inner_tiles = [%tile_size, 1]
+      into %cast : tensor<8x3xi32> -> tensor<?x3x?x1xi32>
+    %res = tensor.cast %pack : tensor<?x3x?x1xi32> to tensor<1x3x8x1xi32>
+    return %res : tensor<1x3x8x1xi32>
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // linalg.unpack + tensor.extract_slice
 //===----------------------------------------------------------------------===//
