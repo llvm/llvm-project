@@ -1225,6 +1225,7 @@ ObjectFile *Module::GetObjectFile() {
 
 SectionList *Module::GetSectionList() {
   // Populate m_sections_up with sections from objfile.
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (!m_sections_up) {
     ObjectFile *obj_file = GetObjectFile();
     if (obj_file != nullptr)
