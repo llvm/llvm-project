@@ -213,7 +213,7 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
   }
 
   // Now we know that the input and output vectors are both integer vectors
-  // of the same size, and that their #elements is not the same. 
+  // of the same size, and that their #elements is not the same.
   // Use data buffer for easy non-integer element ratio vectors handling,
   // For example: <4 x i24> to <3 x i32>.
   bool isLittleEndian = DL.isLittleEndian();
@@ -226,7 +226,7 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
   APInt UndefMask(Buffer.getBitWidth(), 0);
   APInt PoisonMask(Buffer.getBitWidth(), 0);
   unsigned BufferBitSize = 0;
-  
+
   while (Result.size() != NumDstElt) {
     // Load SrcElts into Buffer.
     while (BufferBitSize < DstBitSize) {
@@ -244,16 +244,16 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
       unsigned BitPosition = isLittleEndian ? BufferBitSize : 0;
       if (isa<UndefValue>(Element)) {
         // Set masks fragments bits.
-        UndefMask.setBits(BitPosition, BitPosition+SrcBitSize);
+        UndefMask.setBits(BitPosition, BitPosition + SrcBitSize);
         if (isa<PoisonValue>(Element))
-          PoisonMask.setBits(BitPosition, BitPosition+SrcBitSize);
+          PoisonMask.setBits(BitPosition, BitPosition + SrcBitSize);
         SrcValue = APInt::getZero(DstBitSize);
       } else {
         auto *Src = dyn_cast<ConstantInt>(Element);
         if (!Src)
           return ConstantExpr::getBitCast(C, DestTy);
         SrcValue = Src->getValue();
-      } 
+      }
 
       // Insert src element bits into Buffer on correct position.
       Buffer.insertBits(SrcValue, BitPosition);
@@ -281,7 +281,7 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
       if (isLittleEndian) {
         Buffer.lshrInPlace(DstBitSize);
         UndefMask.lshrInPlace(DstBitSize);
-        PoisonMask.lshrInPlace(DstBitSize); 
+        PoisonMask.lshrInPlace(DstBitSize);
       }
       BufferBitSize -= DstBitSize;
     }
