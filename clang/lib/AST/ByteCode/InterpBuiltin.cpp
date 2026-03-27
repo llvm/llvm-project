@@ -2823,9 +2823,7 @@ static bool interp__builtin_ia32_pmul(
 static bool interp__builtin_ia32_dbpsadbw(InterpState &S, CodePtr OpPC,
                                           const CallExpr *Call) {
   assert(Call->getNumArgs() == 3);
-  QualType Arg2Type = Call->getArg(2)->getType();
-  APSInt ImmVal = popToAPSInt(S, Arg2Type);
-  unsigned Imm = ImmVal.getZExtValue();
+  unsigned Imm = popToUInt64(S, Call->getArg(2));
 
   const Pointer &Src2 = S.Stk.pop<Pointer>();
   const Pointer &Src1 = S.Stk.pop<Pointer>();
@@ -2845,7 +2843,7 @@ static bool interp__builtin_ia32_dbpsadbw(InterpState &S, CodePtr OpPC,
   unsigned BlockOffsetB = ((Imm >> 2) & 0x3) * 4;
 
   unsigned DstIdx = 0;
-  for (unsigned Lane = 0; Lane < NumLanes; ++Lane) {
+  for (unsigned Lane = 0; Lane != NumLanes; ++Lane) {
     unsigned LaneStart = Lane * LaneSize;
 
     for (unsigned J = 0; J < 4; ++J) {
@@ -2856,11 +2854,11 @@ static bool interp__builtin_ia32_dbpsadbw(InterpState &S, CodePtr OpPC,
         INT_TYPE_SWITCH_NO_BOOL(SrcElemT, {
           // Treat as unsigned bytes
           A1Val = static_cast<uint8_t>(
-              Src1.elem<T>(LaneStart + BlockOffsetA + K).toAPSInt().getZExtValue());
+              Src1.elem<T>(LaneStart + BlockOffsetA + K));
           A2Val = static_cast<uint8_t>(
-              Src1.elem<T>(LaneStart + BlockOffsetB + K).toAPSInt().getZExtValue());
+              Src1.elem<T>(LaneStart + BlockOffsetB + K));
           BVal = static_cast<uint8_t>(
-              Src2.elem<T>(LaneStart + 4 * J + K).toAPSInt().getZExtValue());
+              Src2.elem<T>(LaneStart + 4 * J + K));
         });
         SadA += (BVal > A1Val) ? (BVal - A1Val) : (A1Val - BVal);
         SadB += (BVal > A2Val) ? (BVal - A2Val) : (A2Val - BVal);

@@ -12599,10 +12599,10 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
               SourceA.getVectorElt(LaneStart + BlockOffsetA + K)
                   .getInt()
                   .getZExtValue());
-          unsigned B = static_cast<uint8_t>(
-              SourceB.getVectorElt(LaneStart + 4 * J + K)
-                  .getInt()
-                  .getZExtValue());
+          unsigned B =
+              static_cast<uint8_t>(SourceB.getVectorElt(LaneStart + 4 * J + K)
+                                       .getInt()
+                                       .getZExtValue());
           SadA += (B > A) ? (B - A) : (A - B);
 
           unsigned A2 = static_cast<uint8_t>(
