@@ -800,12 +800,6 @@ ZE_APIEXPORT ze_result_t ZE_APICALL zeFenceDestroy(ze_fence_handle_t hFence);
 ZE_APIEXPORT ze_result_t ZE_APICALL
 zeFenceHostSynchronize(ze_fence_handle_t hFence, uint64_t timeout);
 
-/*
- * ============================================================================
- * Level Zero Sysman (System Management) API
- * ============================================================================
- */
-
 #ifdef __cplusplus
 }
 #endif
