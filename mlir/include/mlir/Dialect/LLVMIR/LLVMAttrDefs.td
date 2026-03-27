@@ -427,7 +427,8 @@ def LLVM_DICompileUnitAttr : LLVM_Attr<"DICompileUnit", "di_compile_unit",
     "DIEmissionKind":$emissionKind,
     OptionalParameter<"bool">:$isDebugInfoForProfiling,
     OptionalParameter<"DINameTableKind">:$nameTableKind,
-    OptionalParameter<"StringAttr">:$splitDebugFilename
+    OptionalParameter<"StringAttr">:$splitDebugFilename,
+    OptionalArrayRefParameter<"DINodeAttr">:$importedEntities
   );
   let builders = [
     AttrBuilderWithInferredContext<(ins
@@ -436,10 +437,12 @@ def LLVM_DICompileUnitAttr : LLVM_Attr<"DICompileUnit", "di_compile_unit",
       "DIEmissionKind":$emissionKind,
       CArg<"bool", "false">:$isDebugInfoForProfiling,
       CArg<"DINameTableKind", "DINameTableKind::Default">:$nameTableKind,
-      CArg<"StringAttr", "{}">:$splitDebugFilename
+      CArg<"StringAttr", "{}">:$splitDebugFilename,
+      CArg<"ArrayRef<DINodeAttr>", "{}">:$importedEntities
     ), [{
       return $_get(id.getContext(), id, sourceLanguage, file, producer,
-                   isOptimized, emissionKind, isDebugInfoForProfiling, nameTableKind, splitDebugFilename);
+                   isOptimized, emissionKind, isDebugInfoForProfiling,
+                   nameTableKind, splitDebugFilename, importedEntities);
     }]>
   ];
   let assemblyFormat = "`<` struct(params) `>`";

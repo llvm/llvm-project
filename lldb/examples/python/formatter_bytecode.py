@@ -892,6 +892,13 @@ class Compiler(ast.NodeVisitor):
     def _compile_method(self, node: ast.FunctionDef) -> None:
         self.current_sig = _METHOD_SIGS[node.name]
 
+        return_type = node.returns.id if isinstance(node.returns, ast.Name) else None
+        if node.name == "update" and return_type != "bool":
+            raise CompilerError(
+                "update must be declared to return bool: def update(self) -> bool:",
+                node,
+            )
+
         # Strip 'self' (and 'internal_dict' for __init__) from the arg list;
         # the remaining args become the initial locals.
         args = copy(node.args.args)

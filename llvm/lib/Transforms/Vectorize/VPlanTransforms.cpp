@@ -572,9 +572,7 @@ static void addReplicateRegions(VPlan &Plan) {
   }
 }
 
-/// Remove redundant VPBasicBlocks by merging them into their predecessor if
-/// the predecessor has a single successor.
-static bool mergeBlocksIntoPredecessors(VPlan &Plan) {
+bool VPlanTransforms::mergeBlocksIntoPredecessors(VPlan &Plan) {
   SmallVector<VPBasicBlock *> WorkList;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
@@ -2682,10 +2680,17 @@ static void licm(VPlan &Plan) {
       if (cannotHoistOrSinkRecipe(R))
         continue;
 
-      // TODO: Support sinking VPReplicateRecipe after ensuring replicateByVF
-      // handles sunk recipes correctly.
-      if (isa<VPReplicateRecipe>(&R))
-        continue;
+      if (auto *RepR = dyn_cast<VPReplicateRecipe>(&R)) {
+        assert(!RepR->isPredicated() &&
+               "Expected prior transformation of predicated replicates to "
+               "replicate regions");
+        // narrowToSingleScalarRecipes should have already maximally narrowed
+        // replicates to single-scalar replicates.
+        // TODO: When unrolling, replicateByVF doesn't handle sunk
+        // non-single-scalar replicates correctly.
+        if (!RepR->isSingleScalar())
+          continue;
+      }
 
       // TODO: Use R.definedValues() instead of casting to VPSingleDefRecipe to
       // support recipes with multiple defined values (e.g., interleaved loads).
