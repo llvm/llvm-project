@@ -998,20 +998,13 @@ struct SPIRV final : public VariadicABIInfo {
     if (!F->isDeclaration())
       return false;
 
-    StringRef Name = F->getName();
+    std::string Demangled = llvm::demangle(F->getName());
+    StringRef DemangledName(Demangled);
 
     // Skip any SPIR-V builtins.
-    if (Name.contains("__spirv_"))
+    if (DemangledName.starts_with("__spirv_") ||
+        DemangledName.starts_with("printf("))
       return true;
-
-    // Skip the builtin printf function.
-    if (Name.contains("printf")) {
-      std::string Demangled = llvm::demangle(Name.str());
-      // Demangled name will be "printf(...)" for the builtin, "printf" for
-      // unmangled extern "C", or "namespace::printf(...)" for namespaced.
-      if (StringRef(Demangled).starts_with("printf(") || Demangled == "printf")
-        return true;
-    }
 
     return false;
   }
