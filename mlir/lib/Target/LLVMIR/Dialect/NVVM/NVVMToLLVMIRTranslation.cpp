@@ -692,6 +692,13 @@ public:
   LogicalResult
   convertOperation(Operation *op, llvm::IRBuilderBase &builder,
                    LLVM::ModuleTranslation &moduleTranslation) const final {
+    // All NVVM ops are instruction-level and require an active insertion point.
+    // A null insert block means the op is misplaced (e.g., at module scope),
+    // which would otherwise cause a null dereference in createIntrinsicCall.
+    if (!builder.GetInsertBlock())
+      return op->emitOpError(
+          "cannot be translated to LLVM IR without an active insertion "
+          "point; make sure the op is inside a function");
     Operation &opInst = *op;
 #include "mlir/Dialect/LLVMIR/NVVMConversions.inc"
 
