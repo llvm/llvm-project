@@ -3724,14 +3724,12 @@ struct AAIntraFnReachabilityFunction final
     while (!Worklist.empty()) {
       const BasicBlock *BB = Worklist.pop_back_val();
 
-      bool IsVisited;
       if (DT) {
         unsigned DFSNum = DT->getNode(BB)->getDFSNumIn();
         if (DFSNum < VisitedMap.size()) {
           if (VisitedMap[DFSNum] == CurrentQueryID)
             continue;
           VisitedMap[DFSNum] = CurrentQueryID;
-          IsVisited = false; // Just marked it.
         } else {
           // Should not happen if DT is consistent, but fallback safely.
           if (!VisitedFallback.insert(BB).second)
