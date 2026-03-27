@@ -666,10 +666,21 @@ gpu.func @convert_layout_removed_when_compatible() {
   %0 = "some_op"()
     {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>}
     : () -> vector<16xf32>
+  %2 = "some_op"()
+    {layout_result_0 = #xegpu.layout<lane_layout = [1], lane_data = [1]>}
+    : () -> vector<1xf32>
   %1 = xegpu.convert_layout %0
     <{input_layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
     target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>}>
     : vector<16xf32>
+  %3 = xegpu.convert_layout %2
+    <{input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>, 
+    target_layout = #xegpu.layout<lane_layout = [1], lane_data = [1]>}> 
+    : vector<1xf32>
+  %4 = xegpu.convert_layout %3
+    <{input_layout = #xegpu.layout<lane_layout = [1], lane_data = [1]>,
+    target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>, dims = [0, 1]>}> 
+    : vector<1xf32>
   gpu.return
 }
 }
