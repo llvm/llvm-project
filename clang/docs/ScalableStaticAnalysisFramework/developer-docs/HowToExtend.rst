@@ -53,8 +53,10 @@ Step 2: Register the extractor
 
   using namespace clang::ssaf;
 
+  namespace clang::ssaf {
   // NOLINTNEXTLINE(misc-use-internal-linkage)
-  volatile int SSAFMyExtractorAnchorSource = 0;
+  const volatile int MyExtractorAnchorSource = 0;
+  } // namespace clang::ssaf
 
   static TUSummaryExtractorRegistry::Add<MyExtractor>
       RegisterExtractor("MyExtractor", "My awesome summary extractor");
@@ -65,16 +67,17 @@ Step 3: Add the force-linker anchor
 ===================================
 
 See :doc:`ForceLinkerHeaders` for a full explanation of why this is needed.
-Add the following to the appropriate force-linker header:
+
+For **in-tree** additions, add one line to
+``clang/include/clang/ScalableStaticAnalysisFramework/BuiltinAnchorSources.def``
+(in alphabetical order):
 
 .. code-block:: c++
 
-  extern volatile int SSAFMyExtractorAnchorSource;
-  [[maybe_unused]] static int SSAFMyExtractorAnchorDestination =
-      SSAFMyExtractorAnchorSource;
+  ANCHOR(MyExtractorAnchorSource)
 
-For **in-tree** additions, add this to
-``clang/include/clang/ScalableStaticAnalysisFramework/SSAFBuiltinForceLinker.h``.
+``SSAFBuiltinForceLinker.h`` includes this ``.def`` file automatically — no
+need to edit it directly.
 
 For **downstream** additions, see `Out-of-tree (downstream) extensions`_ below.
 
@@ -125,8 +128,10 @@ Step 2: Register the format
 
   using namespace clang::ssaf;
 
+  namespace clang::ssaf {
   // NOLINTNEXTLINE(misc-use-internal-linkage)
-  volatile int SSAFMyFormatAnchorSource = 0;
+  const volatile int MyFormatAnchorSource = 0;
+  } // namespace clang::ssaf
 
   static SerializationFormatRegistry::Add<MyFormat>
       RegisterFormat("myformat", "My awesome serialization format");
@@ -161,7 +166,9 @@ For each analysis that should be serializable in your format, register a ``Forma
 Step 4: Add the force-linker anchor
 ===================================
 
-Same pattern as for extractors — see `Adding a summary extractor`_ Step 3, and :doc:`ForceLinkerHeaders`.
+Same pattern as for extractors — add the anchor to ``BuiltinAnchorSources.def``
+(in alphabetical order). See `Adding a summary extractor`_ Step 3,
+and :doc:`ForceLinkerHeaders`.
 
 
 Static extensibility
@@ -172,7 +179,7 @@ In-tree extensions
 
 For extensions that are part of the upstream LLVM/Clang tree:
 
-#. Add the anchor to ``clang/include/clang/ScalableStaticAnalysisFramework/SSAFBuiltinForceLinker.h``.
+#. Add the anchor to ``clang/include/clang/ScalableStaticAnalysisFramework/BuiltinAnchorSources.def`` (in alphabetical order).
 #. Add the source files to the ``clangScalableStaticAnalysisFrameworkCore`` CMake library target.
 #. That's it — the ``SSAFForceLinker.h`` umbrella includes ``SSAFBuiltinForceLinker.h``
    transitively, so any binary that includes the umbrella will pull in the registration.
