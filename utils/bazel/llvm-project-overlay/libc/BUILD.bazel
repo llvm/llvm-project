@@ -189,10 +189,6 @@ LLVM_LIBC_HEADERS = [
         has_def_template = True,
     ),
     libc_header_info(
-        "sys/types",
-        has_def_template = True,
-    ),
-    libc_header_info(
         "termios",
         has_def_template = True,
     ),
@@ -230,6 +226,7 @@ LLVM_LIBC_HEADERS = [
     libc_header_info("sys/stat"),
     libc_header_info("sys/statvfs"),
     libc_header_info("sys/time"),
+    libc_header_info("sys/types"),
     libc_header_info("sys/utsname"),
     libc_header_info("sys/wait"),
     libc_header_info("threads"),
