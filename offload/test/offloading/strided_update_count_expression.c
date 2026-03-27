@@ -4,7 +4,6 @@
 // where the count (len/2) is a variable expression, not a constant.
 
 // RUN: %libomptarget-compile-run-and-check-generic
-// XFAIL: intelgpu
 #include <omp.h>
 #include <stdio.h>
 
