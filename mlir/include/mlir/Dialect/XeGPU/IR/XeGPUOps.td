@@ -1521,10 +1521,10 @@ def XeGPU_ConvertLayoutOp: XeGPU_Op<"convert_layout", [Pure, AllTypesMatch<["sou
             : vector<128x128xf16>
         ```
     }];
-    let arguments = (ins XeGPU_ValueOrScalarType: $source,
+    let arguments = (ins XeGPU_VectorOrScalarType: $source,
                          DistributeLayoutAttr: $input_layout,
                          DistributeLayoutAttr: $target_layout);
-    let results = (outs XeGPU_ValueOrScalarType: $result);
+    let results = (outs XeGPU_VectorOrScalarType: $result);
     let assemblyFormat = [{
         $source prop-dict attr-dict `:` type($source)
     }];

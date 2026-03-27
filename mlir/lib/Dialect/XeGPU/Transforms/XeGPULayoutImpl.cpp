@@ -487,7 +487,8 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
       DenseI32ArrayAttr orderAttr =
           consumerLayout ? consumerLayout.getOrder() : nullptr;
       SmallVector<int64_t> sgLayout(srcRank), sgData(srcRank), order(srcRank);
-      int remainingSgCount = numSg;
+      int remainingSgCount =
+          consumerLayout ? consumerLayout.getNumSubgroups() : numSg;
       int consumerIdx = 0;
 
       // First pass: Match consumer's layout on non-reduction dimensions

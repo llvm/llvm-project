@@ -653,12 +653,8 @@ void LayoutInfoPropagation::visitVectorMultiReductionOp(
   int numSg = 0;
   if (layoutKind == xegpu::LayoutKind::Subgroup) {
     auto numSgOrErr = getNumSg(reduction, uArch->getSubgroupSize());
-    if (failed(numSgOrErr)) {
-      reduction.emitWarning(
-          "Unable to determine the number of subgroups for the operation.");
-      return;
-    }
-    numSg = numSgOrErr.value();
+    if (succeeded(numSgOrErr))
+      numSg = numSgOrErr.value();
   }
 
   // The result layout represents the layout requirements of the operation.

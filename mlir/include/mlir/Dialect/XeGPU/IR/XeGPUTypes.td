@@ -26,8 +26,9 @@ def XeGPU_DpasResType: FixedVectorOfRankAndType<[1, 2], [XeGPU_ScalarType]>;
 def XeGPU_OffsetType: FixedVectorOfNonZeroRankOf<[Index]>;
 def XeGPU_MaskType: FixedVectorOfNonZeroRankOf<[I1]>;
 def XeGPU_ValueType: VectorOfRankAndType<[1,2,3,4,5,6], [XeGPU_ScalarType]>;
-def XeGPU_ValueOrScalarType
-    : AnyTypeOf<[XeGPU_ValueType, XeGPU_ScalarType]>;
+def XeGPU_ValueOrScalarType : AnyTypeOf<[XeGPU_ValueType, XeGPU_ScalarType]>;
+def XeGPU_VectorOrScalarType
+    : AnyTypeOf<[VectorOfRankAndType<[1,2,3,4,5,6], [XeGPU_ScalarType, Index]>, XeGPU_ScalarType]>;
 def XeGPU_GatherScatterBaseAddrType
     : AnyTypeOf<[MemRefRankOf<[XeGPU_ScalarType], [1]>, XeGPU_PointerType]>;
 
