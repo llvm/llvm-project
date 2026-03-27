@@ -2941,24 +2941,21 @@ performVectorExtendCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   bool IsSext = N->getOpcode() == ISD::SIGN_EXTEND;
   SDLoc DL(N);
 
-  if (ResVT == MVT::v16i32 &&
-      N->getOperand(0)->getValueType(0) == MVT::v16i8) {
+  if (ResVT == MVT::v16i32 && N->getOperand(0)->getValueType(0) == MVT::v16i8) {
     // Use a tree of extend low/high to split and extend the input in two
     // layers to avoid doing several shuffles and even more extends.
-    unsigned LowOp = IsSext
-      ? WebAssemblyISD::EXTEND_LOW_S
-      : WebAssemblyISD::EXTEND_LOW_U;
-    unsigned HighOp = IsSext
-      ? WebAssemblyISD::EXTEND_HIGH_S
-      : WebAssemblyISD::EXTEND_HIGH_U;
+    unsigned LowOp =
+        IsSext ? WebAssemblyISD::EXTEND_LOW_S : WebAssemblyISD::EXTEND_LOW_U;
+    unsigned HighOp =
+        IsSext ? WebAssemblyISD::EXTEND_HIGH_S : WebAssemblyISD::EXTEND_HIGH_U;
     SDValue Input = N->getOperand(0);
     SDValue LowHalf = DAG.getNode(LowOp, DL, MVT::v8i16, Input);
     SDValue HighHalf = DAG.getNode(HighOp, DL, MVT::v8i16, Input);
     SDValue Subvectors[] = {
-      DAG.getNode(LowOp, DL, MVT::v4i32, LowHalf),
-      DAG.getNode(HighOp, DL, MVT::v4i32, LowHalf),
-      DAG.getNode(LowOp, DL, MVT::v4i32, HighHalf),
-      DAG.getNode(HighOp, DL, MVT::v4i32, HighHalf),
+        DAG.getNode(LowOp, DL, MVT::v4i32, LowHalf),
+        DAG.getNode(HighOp, DL, MVT::v4i32, LowHalf),
+        DAG.getNode(LowOp, DL, MVT::v4i32, HighHalf),
+        DAG.getNode(HighOp, DL, MVT::v4i32, HighHalf),
     };
     return DAG.getNode(ISD::CONCAT_VECTORS, DL, ResVT, Subvectors);
   }
