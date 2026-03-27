@@ -1372,7 +1372,7 @@ R"(All available -march extensions for RISC-V
     xwchc                2.2
 
 Experimental extensions
-    p                    0.19
+    p                    0.21
     y                    0.96
     zibi                 0.1
     zicfilp              1.0       This is a long dummy description
@@ -1383,9 +1383,9 @@ Experimental extensions
     zvfbfa               0.1
     zvfofp8min           0.2
     zvkgs                0.7
+    zvzip                0.1
     smpmpmt              0.6
     svukte               0.3
-    xrivosvisni          0.1
     xrivosvizip          0.1
     xsfmclic             0.1
     xsfsclic             0.1

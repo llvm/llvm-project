@@ -454,8 +454,8 @@ LLVM_ABI extern char &FinalizeISelID;
 /// UnpackMachineBundles - This pass unpack machine instruction bundles.
 LLVM_ABI extern char &UnpackMachineBundlesID;
 
-LLVM_ABI FunctionPass *
-createUnpackMachineBundles(std::function<bool(const MachineFunction &)> Ftor);
+LLVM_ABI FunctionPass *createUnpackMachineBundlesLegacy(
+    std::function<bool(const MachineFunction &)> Ftor);
 
 /// StackMapLiveness - This pass analyses the register live-out set of
 /// stackmap/patchpoint intrinsics and attaches the calculated information to

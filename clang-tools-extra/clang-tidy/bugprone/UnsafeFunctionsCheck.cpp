@@ -227,7 +227,7 @@ void UnsafeFunctionsCheck::registerMatchers(MatchFinder *Finder) {
   }
 
   if (!CustomFunctions.empty()) {
-    std::vector<llvm::StringRef> FunctionNames;
+    std::vector<StringRef> FunctionNames;
     FunctionNames.reserve(CustomFunctions.size());
 
     for (const auto &Entry : CustomFunctions)

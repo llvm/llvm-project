@@ -123,6 +123,10 @@ ModuleDependencyScanner::scan(PathRef FilePath,
 
   if (!ScanningResult) {
     elog("Scanning modules dependencies for {0} failed: {1}", FilePath, S);
+    std::string Cmdline;
+    for (auto &Arg : Cmd.CommandLine)
+      Cmdline += Arg + " ";
+    elog("The command line the scanning tool use is: {0}", Cmdline);
     return std::nullopt;
   }
 

@@ -46,6 +46,7 @@ libclc_configure_source_list(OPENCL_GENERIC_SOURCES
   collective/work_group_any_all.cl
   collective/work_group_broadcast.cl
   collective/work_group_reduce.cl
+  collective/work_group_scan.cl
   common/degrees.cl
   common/mix.cl
   common/radians.cl
@@ -207,8 +208,10 @@ libclc_configure_source_list(OPENCL_GENERIC_SOURCES
   shared/vstore.cl
   subgroup/sub_group_broadcast.cl
   subgroup/sub_group_reduce.cl
+  subgroup/sub_group_non_uniform_reduce.cl
+  subgroup/sub_group_scan_exclusive.cl
+  subgroup/sub_group_scan_inclusive.cl
   subgroup/subgroup.cl
-  subnormal_config.cl
   synchronization/sub_group_barrier.cl
   synchronization/work_group_barrier.cl
   workitem/get_enqueued_local_size.cl

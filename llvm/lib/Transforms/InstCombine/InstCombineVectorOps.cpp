@@ -1168,8 +1168,8 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
     } else {
       // If UseBB is the single successor of Pred, we can add InsertValue to
       // Pred.
-      auto *BI = dyn_cast<BranchInst>(Pred->getTerminator());
-      if (!BI || !BI->isUnconditional())
+      auto *BI = dyn_cast<UncondBrInst>(Pred->getTerminator());
+      if (!BI)
         return nullptr;
     }
   }

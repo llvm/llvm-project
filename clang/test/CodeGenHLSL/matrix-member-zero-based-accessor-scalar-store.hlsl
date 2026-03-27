@@ -29,7 +29,7 @@ void StoreScalarAtMat00(out float4x4 A, float F) {
 // CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 4
 // CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -46,7 +46,7 @@ void StoreScalarAtMat01(out float4x4 A, float F) {
 // CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 2
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 8
 // CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -63,7 +63,7 @@ void StoreScalarAtMat02(out float4x4 A, float F) {
 // CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 3
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 12
 // CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -80,7 +80,7 @@ void StoreScalarAtMat03(out float4x4 A, float F) {
 // CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 4
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 1
 // CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -114,7 +114,7 @@ void StoreScalarAtMat11(out float4x4 A, float F) {
 // CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 6
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 9
 // CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -131,7 +131,7 @@ void StoreScalarAtMat12(out float4x4 A, float F) {
 // CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 7
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 13
 // CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -148,7 +148,7 @@ void StoreScalarAtMat13(out float4x4 A, float F) {
 // CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 8
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 2
 // CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -165,7 +165,7 @@ void StoreScalarAtMat20(out float4x4 A, float F) {
 // CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 9
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 6
 // CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -199,7 +199,7 @@ void StoreScalarAtMat22(out float4x4 A, float F) {
 // CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 11
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 14
 // CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -216,7 +216,7 @@ void StoreScalarAtMat23(out float4x4 A, float F) {
 // CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 12
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 3
 // CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -233,7 +233,7 @@ void StoreScalarAtMat30(out float4x4 A, float F) {
 // CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 13
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 7
 // CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -250,7 +250,7 @@ void StoreScalarAtMat31(out float4x4 A, float F) {
 // CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 14
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 11
 // CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //

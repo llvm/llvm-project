@@ -11,9 +11,9 @@
 // RUN: echo 'module C { header "C.h" }' >> %t/module.modulemap
 // RUN: echo 'module D { header "D.h" }' >> %t/module.modulemap
 
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -I %t %s -verify
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/cache -I %t %s -verify
 // RUN: echo " " >> %t/D.h
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -I %t %s -verify
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/cache -I %t %s -verify
 // expected-no-diagnostics
 
 

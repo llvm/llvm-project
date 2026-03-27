@@ -170,6 +170,9 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
           args.getLastArg(clang::options::OPT_dwarf_debug_flags))
     opts.DwarfDebugFlags = arg->getValue();
 
+  opts.DebugInfoForProfiling =
+      args.hasArg(clang::options::OPT_fdebug_info_for_profiling);
+
   return true;
 }
 
@@ -288,6 +291,10 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (args.hasFlag(clang::options::OPT_fstack_arrays,
                    clang::options::OPT_fno_stack_arrays, false))
     opts.StackArrays = 1;
+
+  if (args.hasFlag(clang::options::OPT_fsafe_trampoline,
+                   clang::options::OPT_fno_safe_trampoline, false))
+    opts.EnableSafeTrampoline = 1;
 
   if (args.getLastArg(clang::options::OPT_floop_interchange))
     opts.InterchangeLoops = 1;

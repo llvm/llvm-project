@@ -137,6 +137,9 @@ void IoChecker::Enter(const parser::ConnectSpec::CharExpr &spec) {
   case ParseKind::Form:
     specKind = IoSpecKind::Form;
     break;
+  case ParseKind::Leading_Zero:
+    specKind = IoSpecKind::Leading_Zero;
+    break;
   case ParseKind::Pad:
     specKind = IoSpecKind::Pad;
     break;
@@ -380,6 +383,9 @@ void IoChecker::Enter(const parser::InquireSpec::CharVar &spec) {
   case ParseKind::Iomsg:
     specKind = IoSpecKind::Iomsg;
     break;
+  case ParseKind::Leading_Zero:
+    specKind = IoSpecKind::Leading_Zero;
+    break;
   case ParseKind::Name:
     specKind = IoSpecKind::Name;
     break;
@@ -519,6 +525,9 @@ void IoChecker::Enter(const parser::IoControlSpec::CharExpr &spec) {
     break;
   case ParseKind::Delim:
     specKind = IoSpecKind::Delim;
+    break;
+  case ParseKind::Leading_Zero:
+    specKind = IoSpecKind::Leading_Zero;
     break;
   case ParseKind::Pad:
     specKind = IoSpecKind::Pad;
@@ -827,6 +836,7 @@ void IoChecker::Leave(const parser::ReadStmt &readStmt) {
   LeaveReadWrite();
   CheckForProhibitedSpecifier(IoSpecKind::Delim); // C1212
   CheckForProhibitedSpecifier(IoSpecKind::Sign); // C1212
+  CheckForProhibitedSpecifier(IoSpecKind::Leading_Zero); // F'2023 C1212
   CheckForProhibitedSpecifier(IoSpecKind::Rec, IoSpecKind::End); // C1220
   if (specifierSet_.test(IoSpecKind::Size)) {
     // F'2023 C1214 - allow with a warning
@@ -882,6 +892,8 @@ void IoChecker::Leave(const parser::WriteStmt &writeStmt) {
   CheckForProhibitedSpecifier(IoSpecKind::Size); // C1213
   CheckForRequiredSpecifier(
       IoSpecKind::Sign, flags_.test(Flag::FmtOrNml), "FMT or NML"); // C1227
+  CheckForRequiredSpecifier(IoSpecKind::Leading_Zero,
+      flags_.test(Flag::FmtOrNml), "FMT or NML"); // F'2023 C1227
   CheckForRequiredSpecifier(IoSpecKind::Delim,
       flags_.test(Flag::StarFmt) || specifierSet_.test(IoSpecKind::Nml),
       "FMT=* or NML"); // C1228
@@ -956,6 +968,7 @@ void IoChecker::CheckStringValue(IoSpecKind specKind, const std::string &value,
       {IoSpecKind::Round,
           {"COMPATIBLE", "DOWN", "NEAREST", "PROCESSOR_DEFINED", "UP", "ZERO"}},
       {IoSpecKind::Sign, {"PLUS", "PROCESSOR_DEFINED", "SUPPRESS"}},
+      {IoSpecKind::Leading_Zero, {"PRINT", "PROCESSOR_DEFINED", "SUPPRESS"}},
       {IoSpecKind::Status,
           // Open values; Close values are {"DELETE", "KEEP"}.
           {"NEW", "OLD", "REPLACE", "SCRATCH", "UNKNOWN"}},

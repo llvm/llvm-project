@@ -862,8 +862,16 @@ SourceLocation Lexer::getLocForEndOfToken(SourceLocation Loc, unsigned Offset,
     return {};
 
   if (Loc.isMacroID()) {
+    // Token split (for example, splitting '>>' into two '>' tokens) is
+    // represented in SourceManager as an ExpansionInfo (see
+    // createForTokenSplit), so these locations are MacroIDs even when no user
+    // macro is involved. For split expansions, the expansion end is already
+    // the correct insertion point.
+    const FileID LocFileID = SM.getFileID(Loc);
     if (Offset > 0 || !isAtEndOfMacroExpansion(Loc, SM, LangOpts, &Loc))
       return {}; // Points inside the macro expansion.
+    if (!SM.getSLocEntry(LocFileID).getExpansion().isExpansionTokenRange())
+      return Loc;
   }
 
   unsigned Len = Lexer::MeasureTokenLength(Loc, SM, LangOpts);

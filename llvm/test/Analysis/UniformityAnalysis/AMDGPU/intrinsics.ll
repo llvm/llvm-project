@@ -35,6 +35,13 @@ define amdgpu_kernel void @v_permlanex16_var_b32(ptr addrspace(1) %out, i32 %src
   ret void
 }
 
+; CHECK: DIVERGENT: %v = call i32 @llvm.amdgcn.permlane64.i32(i32 %src0)
+define amdgpu_kernel void @v_permlane64_b32(ptr addrspace(1) %out, i32 %src0) #0 {
+  %v = call i32 @llvm.amdgcn.permlane64.i32(i32 %src0)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
 ; CHECK: DIVERGENT: %tmp0 = call i32 @llvm.amdgcn.update.dpp.i32(i32 %in1, i32 %in2, i32 1, i32 1, i32 1, i1 false) #0
 define amdgpu_kernel void @update_dpp(ptr addrspace(1) %out, i32 %in1, i32 %in2) #0 {
   %tmp0 = call i32 @llvm.amdgcn.update.dpp.i32(i32 %in1, i32 %in2, i32 1, i32 1, i32 1, i1 false) #0
@@ -204,9 +211,9 @@ define amdgpu_kernel void @wmma_f32_16x16x4_f32(<2 x float> %A, <2 x float> %B, 
   ret void
 }
 
-; CHECK: DIVERGENT: %tmp0 = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x32.bf16.v8f32.v16bf16(i1 false, <16 x bfloat> %A, i1 false, <16 x bfloat> %B, i16 0, <8 x float> %C, i1 false, i1 false)
+; CHECK: DIVERGENT: %tmp0 = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x32.bf16.v8f32.v16bf16(<16 x bfloat> %A, <16 x bfloat> %B, i16 0, <8 x float> %C, i1 false, i1 false)
 define amdgpu_kernel void @wmma_f32_16x16x32_bf16(<16 x bfloat> %A, <16 x bfloat> %B, <8 x float> %C, ptr addrspace(1) %out) {
-  %tmp0 = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x32.bf16.v8f32.v16bf16(i1 0, <16 x bfloat> %A, i1 0, <16 x bfloat> %B, i16 0, <8 x float> %C, i1 false, i1 false)
+  %tmp0 = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x32.bf16.v8f32.v16bf16(<16 x bfloat> %A, <16 x bfloat> %B, i16 0, <8 x float> %C, i1 false, i1 false)
   store <8 x float> %tmp0, ptr addrspace(1) %out
   ret void
 }
@@ -603,6 +610,34 @@ bb:
   %gep = getelementptr i64, ptr addrspace(3) %addr, i32 4
   %tmp0 = call <4 x bfloat> @llvm.amdgcn.ds.read.tr16.b64.v4bf16(ptr addrspace(3) %gep)
   store <4 x bfloat> %tmp0, ptr addrspace(1) %out, align 16
+  ret void
+}
+
+; CHECK: DIVERGENT: %tmp0 = call i32 @llvm.amdgcn.ds.add.gs.reg.rtn.i32(i32 %val, i32 16)
+define amdgpu_gs void @ds_add_gs_reg_rtn_i32(i32 %val, ptr addrspace(1) %out) {
+  %tmp0 = call i32 @llvm.amdgcn.ds.add.gs.reg.rtn.i32(i32 %val, i32 16)
+  store i32 %tmp0, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+; CHECK: DIVERGENT: %tmp0 = call i64 @llvm.amdgcn.ds.add.gs.reg.rtn.i64(i32 %val, i32 32)
+define amdgpu_gs void @ds_add_gs_reg_rtn_i64(i32 %val, ptr addrspace(1) %out) {
+  %tmp0 = call i64 @llvm.amdgcn.ds.add.gs.reg.rtn.i64(i32 %val, i32 32)
+  store i64 %tmp0, ptr addrspace(1) %out, align 8
+  ret void
+}
+
+; CHECK: DIVERGENT: %tmp0 = call i32 @llvm.amdgcn.ds.sub.gs.reg.rtn.i32(i32 %val, i32 16)
+define amdgpu_gs void @ds_sub_gs_reg_rtn_i32(i32 %val, ptr addrspace(1) %out) {
+  %tmp0 = call i32 @llvm.amdgcn.ds.sub.gs.reg.rtn.i32(i32 %val, i32 16)
+  store i32 %tmp0, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+; CHECK: DIVERGENT: %tmp0 = call i64 @llvm.amdgcn.ds.sub.gs.reg.rtn.i64(i32 %val, i32 32)
+define amdgpu_gs void @ds_sub_gs_reg_rtn_i64(i32 %val, ptr addrspace(1) %out) {
+  %tmp0 = call i64 @llvm.amdgcn.ds.sub.gs.reg.rtn.i64(i32 %val, i32 32)
+  store i64 %tmp0, ptr addrspace(1) %out, align 8
   ret void
 }
 
