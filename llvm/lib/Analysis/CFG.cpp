@@ -243,9 +243,9 @@ static bool isReachableImpl(SmallVectorImpl<BasicBlock *> &Worklist,
       // If BB is not part of a cycle, then it can't reach any block that
       // dominates it. An exception is if the block is unreachable, as all
       // reachable blocks dominate an unreachable block.
-      if (!InCycle && DT &&
+      if (!InCycle && DT && DT->isReachableFromEntry(BB) &&
           llvm::all_of(StopSet, [&](const BasicBlock *StopBB) {
-            return DT->isReachableFromEntry(BB) && DT->dominates(StopBB, BB);
+            return DT->dominates(StopBB, BB);
           }))
         continue;
     }
