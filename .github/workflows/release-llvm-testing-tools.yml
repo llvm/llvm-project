@@ -1,0 +1,36 @@
+name: Release mlgo-utils
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/release-llvm-testing-tools.yml'
+      - 'llvm/utils/llvm-testing-tools/**'
+
+jobs:
+  build-package:
+    name: Build Package
+    runs-on: ubuntu-24.04
+    if: github.repository == 'llvm/llvm-project'
+    steps:
+      - name: Fetch LLVM sources
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
+      - name: Build Binaries
+        run: |
+          mkdir build
+          cd build
+          cmake -GNinja \
+            -DCMAKE_BUILD_TYPE=Release \
+            ../llvm
+          ninja split-file FileCheck
+      - name: Build Package
+        run: |
+          cd ../llvm/utils/llvm-testing-tools
+          mkdir ./src/binaries
+          cp ../../../build/bin/FileCheck ./src/binaries/FileCheck
+          cp ../../../build/bin/split-file ./src/binaries/split-file
+          python3 -m build
