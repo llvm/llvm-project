@@ -669,7 +669,7 @@ void CIRGenModule::setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op) {
   assert(!cir::MissingFeatures::opFuncCPUAndFeaturesAttributes());
   assert(!cir::MissingFeatures::opFuncSection());
 
-  assert(!cir::MissingFeatures::setTargetAttributes());
+  getTargetCIRGenInfo().setTargetAttributes(gd.getDecl(), op, *this);
 }
 
 std::optional<cir::SourceLanguage> CIRGenModule::getCIRSourceLanguage() const {
@@ -2560,12 +2560,15 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
   // represent them in dedicated ops. The correct attributes are ensured during
   // translation to LLVM. Thus, we don't need to check for them here.
 
+  const auto *funcDecl = cast<FunctionDecl>(globalDecl.getDecl());
+
   if (!isIncompleteFunction)
     setCIRFunctionAttributes(globalDecl,
                              getTypes().arrangeGlobalDeclaration(globalDecl),
                              func, isThunk);
 
-  assert(!cir::MissingFeatures::setTargetAttributes());
+  if (!isIncompleteFunction && func.isDeclaration())
+    getTargetCIRGenInfo().setTargetAttributes(funcDecl, func, *this);
 
   // TODO(cir): This needs a lot of work to better match CodeGen. That
   // ultimately ends up in setGlobalVisibility, which already has the linkage of
@@ -2577,17 +2580,16 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
   }
 
   // If we plan on emitting this inline builtin, we can't treat it as a builtin.
-  const auto *fd = cast<FunctionDecl>(globalDecl.getDecl());
-  if (fd->isInlineBuiltinDeclaration()) {
+  if (funcDecl->isInlineBuiltinDeclaration()) {
     const FunctionDecl *fdBody;
-    bool hasBody = fd->hasBody(fdBody);
+    bool hasBody = funcDecl->hasBody(fdBody);
     (void)hasBody;
     assert(hasBody && "Inline builtin declarations should always have an "
                       "available body!");
     assert(!cir::MissingFeatures::attributeNoBuiltin());
   }
 
-  if (fd->isReplaceableGlobalAllocationFunction()) {
+  if (funcDecl->isReplaceableGlobalAllocationFunction()) {
     // A replaceable global allocation function does not act like a builtin by
     // default, only if it is invoked by a new-expression or delete-expression.
     func->setAttr(cir::CIRDialect::getNoBuiltinAttrName(),
