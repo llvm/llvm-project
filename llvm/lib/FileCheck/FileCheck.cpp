@@ -2771,10 +2771,9 @@ static DiffContext getDiffContext(SourceMgr &SM, unsigned LineNo,
 //
 // Supported mode:
 // Unified View: A standard top-to-bottom (-Expected / +Actual) format.
-static void renderDiff(DiffFormatType Mode, unsigned ExpectedLineNo,
-                       unsigned ActualLineNo, StringRef ActualLine,
-                       StringRef ExpectedText, const DiffContext &Ctx,
-                       unsigned OverwriteActualLine) {
+static void renderDiff(unsigned ExpectedLineNo, unsigned ActualLineNo,
+                       StringRef ExpectedLine, StringRef ActualLine,
+                       const DiffContext &Ctx) {
   auto &OS = llvm::errs();
 
   // Header
@@ -2789,7 +2788,7 @@ static void renderDiff(DiffFormatType Mode, unsigned ExpectedLineNo,
 
   // Mismatch
   OS.changeColor(raw_ostream::RED);
-  OS << "-" << ExpectedText << "\n";
+  OS << "-" << ExpectedLine << "\n";
 
   OS.changeColor(raw_ostream::GREEN);
   OS << "+" << ActualLine.ltrim() << "\n";
@@ -2803,25 +2802,18 @@ static void renderDiff(DiffFormatType Mode, unsigned ExpectedLineNo,
 
 // Prepares and prints a visual comparison between a CHECK pattern and the
 // input.
-static bool printDiff(DiffFormatType Mode, const FileCheckString &CheckStr,
-                      StringRef CheckRegion, SourceMgr &SM,
-                      const FileCheckRequest &Req,
-                      std::vector<FileCheckDiag> *Diags,
+static bool printDiff(const FileCheckString &CheckStr, StringRef ActualLine,
+                      SourceMgr &SM, std::vector<FileCheckDiag> *Diags,
                       unsigned OverwriteActualLine = 0) {
-  StringRef ActualLine = CheckRegion.split('\n').first;
-  if (CheckRegion.empty()) {
-    ActualLine = "";
-  }
-
   SMLoc PatternLoc = CheckStr.Pat.getLoc();
   unsigned ExpectedLineNo = SM.getLineAndColumn(PatternLoc).first;
   const char *PatPtr = PatternLoc.getPointer();
-  StringRef ExpectedText = StringRef(PatPtr).split('\n').first.rtrim();
+  StringRef ExpectedLine = StringRef(PatPtr).split('\n').first.rtrim();
 
   // Resolve the Actual (Input) line number.
   // Priority: 1. OverwriteActualLine (Found via Fuzzy match)
   //           2. Direct pointer resolution via SourceMgr.
-  SMLoc InputLoc = SMLoc::getFromPointer(CheckRegion.data());
+  SMLoc InputLoc = SMLoc::getFromPointer(ActualLine.data());
 
   unsigned ActualLineNo = OverwriteActualLine;
 
@@ -2839,8 +2831,7 @@ static bool printDiff(DiffFormatType Mode, const FileCheckString &CheckStr,
   unsigned BufID = SM.FindBufferContainingLoc(InputLoc);
   DiffContext Context = getDiffContext(SM, ActualLineNo, BufID);
 
-  renderDiff(Mode, ExpectedLineNo, ActualLineNo, ActualLine, ExpectedText,
-             Context, OverwriteActualLine);
+  renderDiff(ExpectedLineNo, ActualLineNo, ExpectedLine, ActualLine, Context);
 
   llvm::errs() << "\n";
   return true;
@@ -2849,7 +2840,6 @@ static bool printDiff(DiffFormatType Mode, const FileCheckString &CheckStr,
 // Report the mismatch on the current line and advance to the next line.
 static bool handleDiffFailure(const FileCheckString &CheckStr,
                               StringRef &CheckRegion, SourceMgr &SM,
-                              FileCheckRequest &Req,
                               std::vector<FileCheckDiag> *Diags,
                               raw_ostream &OS, bool &HeaderPrinted,
                               unsigned &TotalMismatches) {
@@ -2899,7 +2889,7 @@ static bool handleDiffFailure(const FileCheckString &CheckStr,
   }
 
   // Render the diff for this specific line.
-  printDiff(Req.DiffMode, CheckStr, TargetLine, SM, Req, Diags, TargetLineNo);
+  printDiff(CheckStr, TargetLine, SM, Diags, TargetLineNo);
   TotalMismatches++;
 
   // Advance CheckRegion past the current line to recover for the next CHECK.
@@ -2965,15 +2955,16 @@ bool FileCheck::checkInput(SourceMgr &SM, StringRef Buffer,
       // Handle failure
       if (MatchPos == StringRef::npos) {
         if (IsDiffMode) {
-          handleDiffFailure(CheckStr, CheckRegion, SM, Req, Diags, OS,
-                            HeaderPrinted, TotalMismatches);
+          handleDiffFailure(CheckStr, CheckRegion, SM, Diags, OS, HeaderPrinted,
+                            TotalMismatches);
         }
         ChecksFailed = true;
         i = j;
         break;
       }
-
-      // Extra strict match (only in diff mode)
+      // For strict checks in Diff Mode, any skipped non-whitespace text is
+      // treated as a stray line. Even if a match is found later, we report
+      // the gap as a mismatch.
       if (IsDiffMode && IsStrict && MatchPos > 0) {
         StringRef Skipped = CheckRegion.slice(0, MatchPos);
         if (!Skipped.trim().empty()) {
@@ -2983,13 +2974,14 @@ bool FileCheck::checkInput(SourceMgr &SM, StringRef Buffer,
               (CurrentLineEnd != StringRef::npos)
                   ? CheckRegion.drop_front(CurrentLineEnd + 1).ltrim(" \t\n\r")
                   : CheckRegion.ltrim(" \t\n\r");
-          handleDiffFailure(CheckStr, NextLineRegion, SM, Req, Diags, OS,
+          handleDiffFailure(CheckStr, NextLineRegion, SM, Diags, OS,
                             HeaderPrinted, TotalMismatches);
           ChecksFailed = true;
           i = j;
           break;
         }
       }
+
       CheckRegion = CheckRegion.substr(MatchPos + MatchLen);
     }
 
