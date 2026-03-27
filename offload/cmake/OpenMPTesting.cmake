@@ -2,14 +2,14 @@
 set(ENABLE_CHECK_TARGETS TRUE)
 
 if (TARGET FileCheck)
-  set(OPENMP_FILECHECK_EXECUTABLE ${LLVM_TOOLS_BINARY_DIR}/FileCheck)
+  set(OFFLOAD_FILECHECK_EXECUTABLE ${LLVM_TOOLS_BINARY_DIR}/FileCheck)
 else()
   message(STATUS "Cannot find 'FileCheck'.")
   message(WARNING "The check targets will not be available!")
   set(ENABLE_CHECK_TARGETS FALSE)
 endif()
 
-set(OPENMP_NOT_EXECUTABLE ${LLVM_TOOLS_BINARY_DIR}/not)
+set(OFFLOAD_NOT_EXECUTABLE ${LLVM_TOOLS_BINARY_DIR}/not)
 set(OFFLOAD_DEVICE_INFO_EXECUTABLE ${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-offload-device-info)
 set(OFFLOAD_TBLGEN_EXECUTABLE ${LLVM_RUNTIME_OUTPUT_INTDIR}/offload-tblgen)
 
@@ -77,25 +77,20 @@ function(add_offload_testsuite target comment)
   cmake_parse_arguments(ARG "EXCLUDE_FROM_CHECK_ALL" "" "DEPENDS;ARGS" ${ARGN})
   # EXCLUDE_FROM_CHECK_ALL excludes the test ${target} out of check-offload.
   if (NOT ARG_EXCLUDE_FROM_CHECK_ALL)
-    # Register the testsuites and depends for the check-offload rule.
-    set_property(GLOBAL APPEND PROPERTY OPENMP_LIT_TESTSUITES ${ARG_UNPARSED_ARGUMENTS})
-    set_property(GLOBAL APPEND PROPERTY OPENMP_LIT_DEPENDS ${ARG_DEPENDS})
+    set_property(GLOBAL APPEND PROPERTY OFFLOAD_LIT_TESTSUITES ${ARG_UNPARSED_ARGUMENTS})
+    set_property(GLOBAL APPEND PROPERTY OFFLOAD_LIT_DEPENDS ${ARG_DEPENDS})
   endif()
 
-  if (ARG_EXCLUDE_FROM_CHECK_ALL)
-    add_lit_testsuite(${target}
-      ${comment}
-      ${ARG_UNPARSED_ARGUMENTS}
-      EXCLUDE_FROM_CHECK_ALL
-      DEPENDS clang FileCheck not ${ARG_DEPENDS}
-      ARGS ${ARG_ARGS}
-    )
-  else()
-    add_lit_testsuite(${target}
-      ${comment}
-      ${ARG_UNPARSED_ARGUMENTS}
-      DEPENDS clang FileCheck not ${ARG_DEPENDS}
-      ARGS ${ARG_ARGS}
-    )
+  set(extra_args)
+  if(ARG_EXCLUDE_FROM_CHECK_ALL)
+    list(APPEND extra_args EXCLUDE_FROM_CHECK_ALL)
   endif()
+
+  add_lit_testsuite(${target}
+    ${comment}
+    ${ARG_UNPARSED_ARGUMENTS}
+    ${extra_args}
+    DEPENDS clang FileCheck not ${ARG_DEPENDS}
+    ARGS ${ARG_ARGS}
+  )
 endfunction()
