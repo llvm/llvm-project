@@ -18,7 +18,7 @@ functions:
     return_type: int
     arguments:
       - type: int
-      - type: sockaddr *__restrict
+      - type: struct sockaddr *__restrict
       - type: socklen_t *__restrict
   - name: bind
     standards:
