@@ -1,4 +1,4 @@
-//===- VectorContractToAMXDotProduct.cpp ----------------------===//
+//===- VectorContractToAMXDotProduct.cpp ----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -211,42 +211,41 @@ static amx::TileLoadOp createTileLoads(OpBuilder &rewriter, Location loc,
 }
 
 static void performShuffle(OpBuilder &rewriter, Location loc, Value matB,
-                           Type ipType, unsigned int offset, Value bBuffer,
-                           Value allocStore) {
+                           Type ipType, unsigned int offset, Value packedBuffer,
+                           Value indxToStoreInBuffer) {
+
+  Value c0 = arith::ConstantIndexOp::create(rewriter, loc, 0);
+  Value c16 = arith::ConstantIndexOp::create(rewriter, loc, 16);
 
   auto subview = matB.getDefiningOp<mlir::memref::SubViewOp>();
-  Value c0 = arith::ConstantIndexOp::create(rewriter, loc, 0);
-  SmallVector<Value> vals(subview.getOffsets().size(), c0);
-
-  // Value c1 = arith::ConstantIndexOp::create(rewriter, loc, 1);
-  Value c16 = arith::ConstantIndexOp::create(rewriter, loc, 16);
+  SmallVector<Value> subviewOffset(subview.getOffsets().size(), c0);
 
   Value cStep = arith::ConstantIndexOp::create(rewriter, loc, offset);
   Value cBound = arith::ConstantIndexOp::create(rewriter, loc, (16 * offset));
-  Value nLoadIndx = arith::ConstantIndexOp::create(rewriter, loc, (offset / 2));
+  Value offsetIndx =
+      arith::ConstantIndexOp::create(rewriter, loc, (offset / 2));
 
   scf::ForOp::create(
       rewriter, loc, c0, cBound, cStep, ValueRange{},
       [&](OpBuilder &nestedBuilder, Location loc, Value iv,
           ValueRange iterArgs) {
-        Value i1_load = arith::AddIOp::create(rewriter, loc, nLoadIndx, iv);
-
-        vals[vals.size() - 2] = iv;
-        ValueRange range1(vals);
+        subviewOffset[subviewOffset.size() - 2] = iv;
         auto vec1 = vector::LoadOp::create(
             rewriter, loc, VectorType::get((16 * offset), ipType), matB,
-            range1);
+            ValueRange(subviewOffset));
 
-        vals[vals.size() - 2] = i1_load;
-        ValueRange range2(vals);
+        // Increment the iv by 1 or 2 based on the type to load the next 32/64
+        // elements
+        Value incIV = arith::AddIOp::create(rewriter, loc, offsetIndx, iv);
+        subviewOffset[subviewOffset.size() - 2] = incIV;
         auto vec2 = vector::LoadOp::create(
             rewriter, loc, VectorType::get((16 * offset), ipType), matB,
-            range2);
+            ValueRange(subviewOffset));
 
         vector::ShuffleOp shuffle1;
         vector::ShuffleOp shuffle2;
 
-        if (offset == 2) {
+        if (ipType.isBF16()) {
 
           shuffle1 = vector::ShuffleOp::create(
               rewriter, loc, VectorType::get({(16 * offset)}, ipType), vec1,
@@ -263,7 +262,7 @@ static void performShuffle(OpBuilder &rewriter, Location loc, Value matB,
                                 23, 55, 28, 60, 29, 61, 30, 62, 31, 63});
         }
 
-        if (offset == 4) {
+        if (ipType.isSignlessInteger(8)) {
 
           shuffle1 = vector::ShuffleOp::create(
               rewriter, loc, VectorType::get({(16 * offset)}, ipType), vec1,
@@ -285,13 +284,15 @@ static void performShuffle(OpBuilder &rewriter, Location loc, Value matB,
                   90, 122, 27, 59,  91, 123, 28, 60,  92, 124, 29, 61,  93, 125,
                   30, 62,  94, 126, 31, 63,  95, 127});
         }
-        Value j_pos = arith::DivUIOp::create(rewriter, loc, iv, cStep);
-        Value j16_pos = arith::AddIOp::create(rewriter, loc, c16, j_pos);
 
-        vector::StoreOp::create(rewriter, loc, shuffle1, bBuffer,
-                                ValueRange{allocStore, j_pos, c0});
-        vector::StoreOp::create(rewriter, loc, shuffle2, bBuffer,
-                                ValueRange{allocStore, j16_pos, c0});
+        // iv to store the shuffled elements
+        Value ivShuff1 = arith::DivUIOp::create(rewriter, loc, iv, cStep);
+        Value ivShuff2 = arith::AddIOp::create(rewriter, loc, ivShuff1, c16);
+
+        vector::StoreOp::create(rewriter, loc, shuffle1, packedBuffer,
+                                ValueRange{indxToStoreInBuffer, ivShuff1, c0});
+        vector::StoreOp::create(rewriter, loc, shuffle2, packedBuffer,
+                                ValueRange{indxToStoreInBuffer, ivShuff2, c0});
 
         scf::YieldOp::create(nestedBuilder, loc);
       });
@@ -300,9 +301,12 @@ static void performShuffle(OpBuilder &rewriter, Location loc, Value matB,
 static llvm::DenseMap<Operation *, amx::TileLoadOp>
 packInputs(OpBuilder &rewriter, Location loc,
            SmallVector<vector::ContractionOp> ops, Value matB, Type ipType,
-           unsigned int offset, Value bBuffer, bool pack, Value allocStore,
-           Value addIdx) {
+           unsigned int offset, Value packedBuffer, bool pack,
+           Value indxToStoreInBuffer, Value indxToLoadFromMatB) {
+
   llvm::DenseMap<Operation *, amx::TileLoadOp> readsToTileLoads;
+  Value c0 = arith::ConstantIndexOp::create(rewriter, loc, 0);
+  Value c16 = arith::ConstantIndexOp::create(rewriter, loc, 16);
 
   for (size_t j = 0; j < ops.size(); j++) {
     for (size_t i = 0; i < ops.size(); i++) {
@@ -315,25 +319,23 @@ packInputs(OpBuilder &rewriter, Location loc,
           continue;
         }
 
-        Value c0 = arith::ConstantIndexOp::create(rewriter, loc, 0);
-        Value c16 = arith::ConstantIndexOp::create(rewriter, loc, 16);
-
         if (pack) {
-          performShuffle(rewriter, loc, matB, ipType, offset, bBuffer,
-                         allocStore);
+          performShuffle(rewriter, loc, matB, ipType, offset, packedBuffer,
+                         indxToStoreInBuffer);
         }
 
         amx::TileType tileType =
             amx::TileType::get({16, (16 * offset)}, ipType);
-        auto load = amx::TileLoadOp::create(rewriter, loc, tileType, bBuffer,
-                                            ValueRange{addIdx, c0, c0});
+        auto loadRow1 =
+            amx::TileLoadOp::create(rewriter, loc, tileType, packedBuffer,
+                                    ValueRange{indxToLoadFromMatB, c0, c0});
 
-        auto load1 = amx::TileLoadOp::create(rewriter, loc, tileType, bBuffer,
-                                             ValueRange{addIdx, c16, c0});
+        auto loadRow2 =
+            amx::TileLoadOp::create(rewriter, loc, tileType, packedBuffer,
+                                    ValueRange{indxToLoadFromMatB, c16, c0});
 
-        readsToTileLoads.try_emplace(readOpRhs, load);
-
-        readsToTileLoads.try_emplace(ops[i].getRhs().getDefiningOp(), load1);
+        readsToTileLoads.try_emplace(readOpRhs, loadRow1);
+        readsToTileLoads.try_emplace(ops[i].getRhs().getDefiningOp(), loadRow2);
       }
     }
   }
@@ -342,13 +344,12 @@ packInputs(OpBuilder &rewriter, Location loc,
 }
 
 // Creates tiled amx dot-products.
-static SmallVector<Value> createTiledDp(OpBuilder &rewriter, Location loc,
-                                        SmallVector<vector::ContractionOp> ops,
-                                        Value matA, Value matB, Type ipType,
-                                        Type opType, ValueRange accIterArgs,
-                                        unsigned int offset, bool isVnni,
-                                        Value bBuffer, bool pack,
-                                        Value allocStore, Value addIdx) {
+static SmallVector<Value>
+createTiledDp(OpBuilder &rewriter, Location loc,
+              SmallVector<vector::ContractionOp> ops, Value matA, Value matB,
+              Type ipType, Type opType, ValueRange accIterArgs,
+              unsigned int offset, bool isVnni, Value packedBuffer, bool pack,
+              Value indxToStoreInBuffer, Value indxToLoadFromMatB) {
 
   if (isVnni) {
     matA = collapseInnerDims(rewriter, loc, matA);
@@ -360,10 +361,11 @@ static SmallVector<Value> createTiledDp(OpBuilder &rewriter, Location loc,
   // or load operations.
   llvm::DenseMap<Operation *, amx::TileLoadOp> readsToTileLoads;
 
-  // function call to make the flat.
+  // function call to online pack the input  B matrix
   if (!isVnni) {
-    readsToTileLoads = packInputs(rewriter, loc, ops, matB, ipType, offset,
-                                  bBuffer, pack, allocStore, addIdx);
+    readsToTileLoads =
+        packInputs(rewriter, loc, ops, matB, ipType, offset, packedBuffer, pack,
+                   indxToStoreInBuffer, indxToLoadFromMatB);
   }
 
   // Iterate over the contraction operations and compute the tiled dot-product.
@@ -422,36 +424,37 @@ static SmallVector<Value> createTileZeros(OpBuilder &rewriter, Location loc,
   return loopItrArgs;
 }
 
-static Value bufferIndxToStore(OpBuilder &rewriter, Location loc, Value iv_K,
-                               Value iv_red, bool oddDimK, bool nDimK,
-                               bool pack, unsigned int blockingFactor) {
+static Value bufferIndxToStore(OpBuilder &rewriter, Location loc,
+                               Value ivInnerLoop, Value ivOuterLoop,
+                               bool isInnerLoopUBHasOddQuot,
+                               bool isInnerLoopUBLarger, bool pack,
+                               unsigned int blockingFactor) {
 
   Value c2 = arith::ConstantIndexOp::create(rewriter, loc, 2);
-
-  Value nLoadIndx =
+  Value packOffset =
       arith::ConstantIndexOp::create(rewriter, loc, (16 * blockingFactor));
 
-  Value quotient_K = arith::DivUIOp::create(rewriter, loc, iv_K, nLoadIndx);
-  Value rem_K = arith::RemUIOp::create(rewriter, loc, rewriter.getIndexType(),
-                                       quotient_K, c2);
+  Value quotientInnerLoop =
+      arith::DivUIOp::create(rewriter, loc, ivInnerLoop, packOffset);
+  Value remInnerLoop = arith::RemUIOp::create(
+      rewriter, loc, rewriter.getIndexType(), quotientInnerLoop, c2);
 
-  if (!nDimK && !pack) {
-    rem_K = arith::RemUIOp::create(rewriter, loc, rewriter.getIndexType(),
-                                   iv_red, c2);
+  if (!isInnerLoopUBLarger && !pack) {
+    remInnerLoop = arith::RemUIOp::create(
+        rewriter, loc, rewriter.getIndexType(), ivOuterLoop, c2);
   }
 
   // if K quotient is odd. Then, BR loop iv is taken
   // into consideration
-  if (oddDimK) {
-    auto rem_BR = arith::RemUIOp::create(rewriter, loc, rewriter.getIndexType(),
-                                         iv_red, c2);
+  if (isInnerLoopUBHasOddQuot) {
+    auto remOuterLoop = arith::RemUIOp::create(
+        rewriter, loc, rewriter.getIndexType(), ivOuterLoop, c2);
     auto remAdd = arith::AddIOp::create(rewriter, loc, rewriter.getIndexType(),
-                                        rem_K, rem_BR);
-    rem_K = arith::RemUIOp::create(rewriter, loc, rewriter.getIndexType(),
-                                   remAdd, c2);
+                                        remInnerLoop, remOuterLoop);
+    remInnerLoop = arith::RemUIOp::create(rewriter, loc,
+                                          rewriter.getIndexType(), remAdd, c2);
   }
-
-  return rem_K;
+  return remInnerLoop;
 }
 
 static scf::ForOp
@@ -461,10 +464,15 @@ createLoops(OpBuilder &rewriter, Location loc, Value lowerBound,
             Operation *vectorOpLhs, Operation *vectorOpRhs,
             vector::ContractionOp contractOp, scf::ForOp outerLoop,
             scf::ForOp innerLoop, SmallVector<vector::ContractionOp> ops,
-            Value ivOuterLoop, Value bBuffer, bool pack,
-            arith::ConstantIndexOp innerLoopIndex, bool nDimK, bool oddDimK) {
+            Value ivOuterLoop, Value packedBuffer, bool pack,
+            arith::ConstantIndexOp innerLoopIndex, bool isInnerLoopUBLarger,
+            bool isInnerLoopUBHasOddQuot) {
 
-  auto newLoop1 = scf::ForOp::create(
+  Value c0 = arith::ConstantIndexOp::create(rewriter, loc, 0);
+  Value c1 = arith::ConstantIndexOp::create(rewriter, loc, 1);
+  Value c2 = arith::ConstantIndexOp::create(rewriter, loc, 2);
+
+  auto newLoop = scf::ForOp::create(
       rewriter, loc, lowerBound, upperBound, step, loopItrArgs,
       [&](OpBuilder &rewriterNewInnerLoop, Location locNewInnerLoop,
           Value ivNewInnerLoop, ValueRange iterArgsNewInnerLoop) {
@@ -479,11 +487,8 @@ createLoops(OpBuilder &rewriter, Location loc, Value lowerBound,
                     ivNewInnerLoop);
         auto lhsClone = rewriterNewInnerLoop.clone(*vectorOpLhs, mapping);
 
-        Value c0 = arith::ConstantIndexOp::create(rewriter, locNewInnerLoop, 0);
-        Value c1 = arith::ConstantIndexOp::create(rewriter, locNewInnerLoop, 1);
-        Value c2 = arith::ConstantIndexOp::create(rewriter, locNewInnerLoop, 2);
-        Value allocStore = c0;
-        Value allocGet = c0;
+        Value indxToStoreInBuffer = c0;
+        Value indxToLoadFromBuffer = c0;
 
         if (!isVnni) {
           if (outerLoop) {
@@ -493,16 +498,17 @@ createLoops(OpBuilder &rewriter, Location loc, Value lowerBound,
                 ivOuterLoop = arith::AddIOp::create(rewriter, locNewInnerLoop,
                                                     c1, ivOuterLoop);
 
-                if (!nDimK || oddDimK) {
-                  allocStore = arith::RemUIOp::create(rewriter, locNewInnerLoop,
-                                                      rewriter.getIndexType(),
-                                                      ivOuterLoop, c2);
+                if (!isInnerLoopUBLarger || isInnerLoopUBHasOddQuot) {
+                  indxToStoreInBuffer = arith::RemUIOp::create(
+                      rewriter, locNewInnerLoop, rewriter.getIndexType(),
+                      ivOuterLoop, c2);
                 }
 
-                Value addIdx =
-                    arith::AddIOp::create(rewriter, loc, allocStore, c1);
-                allocGet = arith::RemUIOp::create(
-                    rewriter, loc, rewriter.getIndexType(), addIdx, c2);
+                Value indxToLoadFromMatB = arith::AddIOp::create(
+                    rewriter, loc, indxToStoreInBuffer, c1);
+                indxToLoadFromBuffer = arith::RemUIOp::create(
+                    rewriter, loc, rewriter.getIndexType(), indxToLoadFromMatB,
+                    c2);
               }
 
             } else {
@@ -510,13 +516,15 @@ createLoops(OpBuilder &rewriter, Location loc, Value lowerBound,
                   rewriter, locNewInnerLoop, (16 * blockingFactor));
               ivNewInnerLoop = arith::AddIOp::create(rewriter, locNewInnerLoop,
                                                      nLoadIndx, ivNewInnerLoop);
-              allocStore =
+              indxToStoreInBuffer =
                   bufferIndxToStore(rewriter, loc, ivNewInnerLoop, ivOuterLoop,
-                                    oddDimK, nDimK, pack, blockingFactor);
-              Value addIdx =
-                  arith::AddIOp::create(rewriter, loc, allocStore, c1);
-              allocGet = arith::RemUIOp::create(
-                  rewriter, loc, rewriter.getIndexType(), addIdx, c2);
+                                    isInnerLoopUBHasOddQuot,
+                                    isInnerLoopUBLarger, pack, blockingFactor);
+              Value indxToLoadFromMatB =
+                  arith::AddIOp::create(rewriter, loc, indxToStoreInBuffer, c1);
+              indxToLoadFromBuffer =
+                  arith::RemUIOp::create(rewriter, loc, rewriter.getIndexType(),
+                                         indxToLoadFromMatB, c2);
             }
           } else {
             if (pack) {
@@ -526,13 +534,14 @@ createLoops(OpBuilder &rewriter, Location loc, Value lowerBound,
                                                      nLoadIndx, ivNewInnerLoop);
               Value quotient_K = arith::DivUIOp::create(
                   rewriter, loc, ivNewInnerLoop, nLoadIndx);
-              allocStore = arith::RemUIOp::create(
+              indxToStoreInBuffer = arith::RemUIOp::create(
                   rewriter, loc, rewriter.getIndexType(), quotient_K, c2);
 
-              Value addIdx =
-                  arith::AddIOp::create(rewriter, loc, allocStore, c1);
-              allocGet = arith::RemUIOp::create(
-                  rewriter, loc, rewriter.getIndexType(), addIdx, c2);
+              Value indxToLoadFromMatB =
+                  arith::AddIOp::create(rewriter, loc, indxToStoreInBuffer, c1);
+              indxToLoadFromBuffer =
+                  arith::RemUIOp::create(rewriter, loc, rewriter.getIndexType(),
+                                         indxToLoadFromMatB, c2);
             }
           }
         }
@@ -558,10 +567,11 @@ createLoops(OpBuilder &rewriter, Location loc, Value lowerBound,
               Value nLoadIndx = arith::ConstantIndexOp::create(
                   rewriter, locNewInnerLoop, (16 * blockingFactor));
               matB = Value();
-              allocGet = c0;
-              allocGet =
+              indxToLoadFromBuffer = c0;
+              indxToLoadFromBuffer =
                   bufferIndxToStore(rewriter, loc, nLoadIndx, ivOuterLoop,
-                                    oddDimK, nDimK, pack, blockingFactor);
+                                    isInnerLoopUBHasOddQuot,
+                                    isInnerLoopUBLarger, pack, blockingFactor);
             }
           } else {
             if (!pack) {
@@ -570,28 +580,30 @@ createLoops(OpBuilder &rewriter, Location loc, Value lowerBound,
               matB = Value();
               Value quotient_K = arith::DivUIOp::create(
                   rewriter, loc, ivNewInnerLoop, nLoadIndx);
-              allocGet = arith::RemUIOp::create(
+              indxToLoadFromBuffer = arith::RemUIOp::create(
                   rewriter, loc, rewriter.getIndexType(), quotient_K, c2);
             }
           }
         }
 
+        // compute tiled dot-product
         SmallVector<Value> accumulators = createTiledDp(
             rewriter, locNewInnerLoop, ops, lhsClone->getResult(0), matB,
             ipType, opType, iterArgsNewInnerLoop, blockingFactor, isVnni,
-            bBuffer, pack, allocStore, allocGet);
+            packedBuffer, pack, indxToStoreInBuffer, indxToLoadFromBuffer);
 
         scf::YieldOp::create(rewriterNewInnerLoop, locNewInnerLoop,
                              accumulators);
       });
 
-  return newLoop1;
+  return newLoop;
 }
 
 // Implements tiled dot-product operation for a vector.contract operation or a
 // sequence of vector.contracts inside the reduction loops.
 //
-// For example - for F32 type:
+// For example:
+// Case 1: register blocked vector.contract with prepacked input
 // ```
 //   vector.transfer_read %arg0 {{.}*} : memref<16x32x4xi8>, vector<16x16x4xi8>
 //   vector.transfer_read %arg1 {{.}*} : memref<16x32x4xi8>, vector<16x16x4xi8>
@@ -605,6 +617,52 @@ createLoops(OpBuilder &rewriter, Location loc, Value lowerBound,
 //   amx.tile_muli !amx.tile<16x64xi8> -> !amx.tile<16x16xi32>
 //   amx.tile_store %arg2{{.}*} : memref<32x32xi32>, !amx.tile<16x16xi32>
 // ```
+//
+//
+// Case2: vector.contract with register blocked
+//
+// Output IR with online packing (with s/w pipeline advantage):
+// s/w pipeline: load, pack to VNNI, and store the B sub matrix
+// of the 0th batch-reduce and K iteration.
+// scf.for (0 to 31) {
+// 	- load 0th and 1st  vector<32xbf16>, pack into VNNI, store the
+// 	first shuffle in 0th and 2nd shuffle in 16th index of the
+// 	buffer.
+// }
+// scf.for (0 to br-2) { batch-reduce loop
+//   scf.for (0 to k-2) { K loop
+// 	- load A matrix
+//	- scf.loop for s/w pipeline: load, pack to VNNI, and store the B sub
+// matrix 	for the next K loop iteration 	(c) load VNNI pack B matrix of K
+// iteration from the buffer 	(d) compute the tiled dot-product
+//   }
+//   Last iteration of the the K Loop (k-1) {
+//      - load A matrix
+//      - scf.loop for s/w pipeline: load, pack to VNNI, and store the B sub
+//      matrix for the next batch-reduce + K loop iteration (c) load VNNI pack B
+//      matrix of K iteration from the buffer (d) compute the tiled dot-product
+//   }
+// }
+// Last iteration of the batch-reduce loop (br-1) {
+//   scf.for (0 to k-2) { K loop
+//      - load A matrix
+//      - scf.loop for s/w pipeline: load, pack to VNNI, and store the B sub
+//      matrix for the next K loop iteration (c) load VNNI pack B matrix of K
+//      iteration from the buffer (d) compute the tiled dot-product
+//   }
+//   Last iteration of the the K Loop (k-1) {
+//      - load A matrix
+//      - load VNNI pack B matrix of K iteration from the buffer
+//      - compute the tiled dot-product
+//   }
+// }
+//
+// scf.for (0 to M)
+//   scf.for (0 to N)
+//     - Load the ith and i+1th acc
+//     - Shuffle them as we packed using vpunpack
+//     - Load C matrix and do arith.add with the shuffle
+//     - Store back into C matrix
 struct VectorContractToAMXDotProduct
     : public OpRewritePattern<vector::ContractionOp> {
   using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;
@@ -727,7 +785,6 @@ struct VectorContractToAMXDotProduct
                                              srcBuffLhs, indicesLhs);
 
       // Create the subview and then load.
-      //
       amx::TileLoadOp loadRhs;
       if (!isVnni) {
         VectorType vecTy;
@@ -746,12 +803,10 @@ struct VectorContractToAMXDotProduct
         auto subview = memref::SubViewOp::create(rewriter, loc, srcBuffRhs,
                                                  indexVals, sizes, strides);
         auto bufferType = MemRefType::get({16, (16 * blockingFactor)}, ipType);
-        auto bBuffer = memref::AllocaOp::create(rewriter, loc, bufferType);
+        auto packedBuffer = memref::AllocaOp::create(rewriter, loc, bufferType);
 
-        // create a loop that swaps them.
-
+        // create a loop that does online packing.
         Value c0 = arith::ConstantIndexOp::create(rewriter, loc, 0);
-
         Value step =
             arith::ConstantIndexOp::create(rewriter, loc, blockingFactor);
         Value uBound = arith::ConstantIndexOp::create(rewriter, loc,
@@ -817,14 +872,14 @@ struct VectorContractToAMXDotProduct
               auto rem = arith::RemUIOp::create(
                   rewriter, loc, rewriter.getIndexType(), iv, step);
 
-              vector::StoreOp::create(rewriter, loc, shuffle1, bBuffer,
+              vector::StoreOp::create(rewriter, loc, shuffle1, packedBuffer,
                                       ValueRange{rem, c0});
-              vector::StoreOp::create(rewriter, loc, shuffle2, bBuffer,
+              vector::StoreOp::create(rewriter, loc, shuffle2, packedBuffer,
                                       ValueRange{rem, nextStoreIndx});
 
               scf::YieldOp::create(nestedBuilder, loc);
             });
-        loadRhs = amx::TileLoadOp::create(rewriter, loc, tileType, bBuffer,
+        loadRhs = amx::TileLoadOp::create(rewriter, loc, tileType, packedBuffer,
                                           ValueRange{c0, c0});
       } else {
 
@@ -915,6 +970,22 @@ struct VectorContractToAMXDotProduct
       }
     }
 
+    if (!isVnni) {
+      unsigned int pairCount = 0;
+      for (size_t j = 0; j < ops.size(); j++) {
+        for (size_t i = j; i < ops.size(); i++) {
+
+          if (i != j && validatePairVectorContract(ops[j], ops[i], true, 16)) {
+            pairCount = pairCount + 2;
+          }
+        }
+      }
+
+      if (pairCount != ops.size())
+        return rewriter.notifyMatchFailure(
+            contractOp, "Coudn't find the pair vector contract ");
+    }
+
     scf::ForOp innerLoop;
     scf::ForOp outerLoop;
 
@@ -946,8 +1017,8 @@ struct VectorContractToAMXDotProduct
 
       } else {
 
-        bool nDimK = false;
-        bool oddDimK = false;
+        bool isInnerLoopUBLarger = false;
+        bool isInnerLoopUBHasOddQuot = false;
 
         int64_t ubVal = 16 * blockingFactor;
         mlir::Value ub = innerLoop.getUpperBound();
@@ -958,27 +1029,27 @@ struct VectorContractToAMXDotProduct
           }
         }
 
-        nDimK = ubVal > 16 * blockingFactor;
-        oddDimK = (((ubVal / (16 * blockingFactor)) % 2) == 1) && nDimK;
+        isInnerLoopUBLarger = ubVal > 16 * blockingFactor;
+        isInnerLoopUBHasOddQuot =
+            (((ubVal / (16 * blockingFactor)) % 2) == 1) && isInnerLoopUBLarger;
 
         rewriter.setInsertionPoint(outerLoop);
 
         auto c0 =
             arith::ConstantIndexOp::create(rewriter, outerLoop.getLoc(), 0);
-
         auto c1 =
             arith::ConstantIndexOp::create(rewriter, outerLoop.getLoc(), 1);
-
         auto spillLoopBound = arith::ConstantIndexOp::create(
             rewriter, outerLoop.getLoc(), 16 * blockingFactor);
-        Value subBRLoop = arith::SubIOp::create(rewriter, outerLoop.getLoc(),
-                                                outerLoop.getUpperBound(), c1);
-        Value subKloop =
+
+        Value spillOuterLoop = arith::SubIOp::create(
+            rewriter, outerLoop.getLoc(), outerLoop.getUpperBound(), c1);
+        Value spillInnerLoop =
             arith::SubIOp::create(rewriter, innerLoop.getLoc(),
                                   innerLoop.getUpperBound(), spillLoopBound);
         auto bufferType =
             MemRefType::get({2, 32, (blockingFactor * 16)}, ipType);
-        auto bBuffer =
+        auto packedBuffer =
             memref::AllocaOp::create(rewriter, outerLoop.getLoc(), bufferType);
 
         // First Shuffling outside the reduction loops
@@ -994,28 +1065,29 @@ struct VectorContractToAMXDotProduct
         auto rhsClone = rewriter.clone(*vectorOpRhs, rhsMapping);
 
         performShuffle(rewriter, outerLoop.getLoc(), rhsClone->getResult(0),
-                       ipType, blockingFactor, bBuffer, c0);
+                       ipType, blockingFactor, packedBuffer, c0);
 
         // First Set of Loops
-        auto newLoop1 = scf::ForOp::create(
-            rewriter, outerLoop.getLoc(), outerLoop.getLowerBound(), subBRLoop,
-            outerLoop.getStep(), loopItrArgs,
+        auto newLoopNonSpill = scf::ForOp::create(
+            rewriter, outerLoop.getLoc(), outerLoop.getLowerBound(),
+            spillOuterLoop, outerLoop.getStep(), loopItrArgs,
             [&](OpBuilder &rewriterOuterLoop, Location locOuterLoop,
                 Value ivOuterLoop, ValueRange iterArgsOuterLoop) {
               auto newInnerLoop1 = createLoops(
                   rewriter, innerLoop.getLoc(), innerLoop.getLowerBound(),
-                  subKloop, innerLoop.getStep(), iterArgsOuterLoop, ipType,
-                  opType, blockingFactor, isVnni, vectorOpLhs, vectorOpRhs,
-                  contractOp, outerLoop, innerLoop, ops, ivOuterLoop, bBuffer,
-                  true, spillLoopBound, nDimK, oddDimK);
+                  spillInnerLoop, innerLoop.getStep(), iterArgsOuterLoop,
+                  ipType, opType, blockingFactor, isVnni, vectorOpLhs,
+                  vectorOpRhs, contractOp, outerLoop, innerLoop, ops,
+                  ivOuterLoop, packedBuffer, true, spillLoopBound,
+                  isInnerLoopUBLarger, isInnerLoopUBHasOddQuot);
 
-              auto newInnerLoop =
-                  createLoops(rewriter, innerLoop.getLoc(), subKloop,
-                              innerLoop.getUpperBound(), innerLoop.getStep(),
-                              newInnerLoop1.getResults(), ipType, opType,
-                              blockingFactor, isVnni, vectorOpLhs, vectorOpRhs,
-                              contractOp, outerLoop, innerLoop, ops,
-                              ivOuterLoop, bBuffer, true, c0, nDimK, oddDimK);
+              auto newInnerLoop = createLoops(
+                  rewriter, innerLoop.getLoc(), spillInnerLoop,
+                  innerLoop.getUpperBound(), innerLoop.getStep(),
+                  newInnerLoop1.getResults(), ipType, opType, blockingFactor,
+                  isVnni, vectorOpLhs, vectorOpRhs, contractOp, outerLoop,
+                  innerLoop, ops, ivOuterLoop, packedBuffer, true, c0,
+                  isInnerLoopUBLarger, isInnerLoopUBHasOddQuot);
 
               scf::YieldOp::create(rewriterOuterLoop, locOuterLoop,
                                    newInnerLoop.getResults());
@@ -1023,24 +1095,26 @@ struct VectorContractToAMXDotProduct
 
         // Last set of Loops
         newLoop = scf::ForOp::create(
-            rewriter, outerLoop.getLoc(), subBRLoop, outerLoop.getUpperBound(),
-            outerLoop.getStep(), newLoop1.getResults(),
+            rewriter, outerLoop.getLoc(), spillOuterLoop,
+            outerLoop.getUpperBound(), outerLoop.getStep(),
+            newLoopNonSpill.getResults(),
             [&](OpBuilder &rewriterOuterLoop, Location locOuterLoop,
                 Value ivOuterLoop, ValueRange iterArgsOuterLoop) {
               auto newInnerLoop1 = createLoops(
                   rewriter, innerLoop.getLoc(), innerLoop.getLowerBound(),
-                  subKloop, innerLoop.getStep(), iterArgsOuterLoop, ipType,
-                  opType, blockingFactor, isVnni, vectorOpLhs, vectorOpRhs,
-                  contractOp, outerLoop, innerLoop, ops, ivOuterLoop, bBuffer,
-                  true, spillLoopBound, nDimK, oddDimK);
+                  spillInnerLoop, innerLoop.getStep(), iterArgsOuterLoop,
+                  ipType, opType, blockingFactor, isVnni, vectorOpLhs,
+                  vectorOpRhs, contractOp, outerLoop, innerLoop, ops,
+                  ivOuterLoop, packedBuffer, true, spillLoopBound,
+                  isInnerLoopUBLarger, isInnerLoopUBHasOddQuot);
 
-              auto newInnerLoop =
-                  createLoops(rewriter, innerLoop.getLoc(), subKloop,
-                              innerLoop.getUpperBound(), innerLoop.getStep(),
-                              newInnerLoop1.getResults(), ipType, opType,
-                              blockingFactor, isVnni, vectorOpLhs, vectorOpRhs,
-                              contractOp, outerLoop, innerLoop, ops,
-                              ivOuterLoop, bBuffer, false, c0, nDimK, oddDimK);
+              auto newInnerLoop = createLoops(
+                  rewriter, innerLoop.getLoc(), spillInnerLoop,
+                  innerLoop.getUpperBound(), innerLoop.getStep(),
+                  newInnerLoop1.getResults(), ipType, opType, blockingFactor,
+                  isVnni, vectorOpLhs, vectorOpRhs, contractOp, outerLoop,
+                  innerLoop, ops, ivOuterLoop, packedBuffer, false, c0,
+                  isInnerLoopUBLarger, isInnerLoopUBHasOddQuot);
 
               scf::YieldOp::create(rewriterOuterLoop, locOuterLoop,
                                    newInnerLoop.getResults());
@@ -1065,8 +1139,8 @@ struct VectorContractToAMXDotProduct
             nullptr, false, false);
 
       } else {
-        bool nDimK = false;
-        bool oddDimK = false;
+        bool isInnerLoopUBLarger = false;
+        bool isInnerLoopUBHasOddQuot = false;
 
         int64_t ubVal = 16 * blockingFactor;
         mlir::Value ub = innerLoop.getUpperBound();
@@ -1077,21 +1151,23 @@ struct VectorContractToAMXDotProduct
           }
         }
 
-        nDimK = ubVal > 16 * blockingFactor;
-        oddDimK = (((ubVal / (16 * blockingFactor)) % 2) == 1) && nDimK;
+        isInnerLoopUBLarger = ubVal > 16 * blockingFactor;
+        isInnerLoopUBHasOddQuot =
+            (((ubVal / (16 * blockingFactor)) % 2) == 1) && isInnerLoopUBLarger;
+
         rewriter.setInsertionPoint(innerLoop);
         auto c0 =
             arith::ConstantIndexOp::create(rewriter, innerLoop.getLoc(), 0);
         auto spillLoopBound = arith::ConstantIndexOp::create(
             rewriter, innerLoop.getLoc(), 16 * blockingFactor);
 
-        Value subKloop =
+        Value spillInnerLoop =
             arith::SubIOp::create(rewriter, innerLoop.getLoc(),
                                   innerLoop.getUpperBound(), spillLoopBound);
 
         auto bufferType =
             MemRefType::get({2, 32, (blockingFactor * 16)}, ipType);
-        auto bBuffer =
+        auto packedBuffer =
             memref::AllocaOp::create(rewriter, innerLoop.getLoc(), bufferType);
 
         // First Shuffling outside the reduction loops
@@ -1103,20 +1179,22 @@ struct VectorContractToAMXDotProduct
         auto rhsClone = rewriter.clone(*vectorOpRhs, rhsMapping);
 
         performShuffle(rewriter, innerLoop.getLoc(), rhsClone->getResult(0),
-                       ipType, blockingFactor, bBuffer, c0);
+                       ipType, blockingFactor, packedBuffer, c0);
 
-        auto newLoop1 = createLoops(
-            rewriter, innerLoop.getLoc(), innerLoop.getLowerBound(), subKloop,
-            innerLoop.getStep(), loopItrArgs, ipType, opType, blockingFactor,
-            isVnni, vectorOpLhs, vectorOpRhs, contractOp, nullptr, innerLoop,
-            ops, nullptr, bBuffer, true, spillLoopBound, nDimK, oddDimK);
+        auto newLoopNonSpill = createLoops(
+            rewriter, innerLoop.getLoc(), innerLoop.getLowerBound(),
+            spillInnerLoop, innerLoop.getStep(), loopItrArgs, ipType, opType,
+            blockingFactor, isVnni, vectorOpLhs, vectorOpRhs, contractOp,
+            nullptr, innerLoop, ops, nullptr, packedBuffer, true,
+            spillLoopBound, isInnerLoopUBLarger, isInnerLoopUBHasOddQuot);
 
-        newLoop = createLoops(rewriter, innerLoop.getLoc(), subKloop,
+        newLoop = createLoops(rewriter, innerLoop.getLoc(), spillInnerLoop,
                               innerLoop.getUpperBound(), innerLoop.getStep(),
-                              newLoop1.getResults(), ipType, opType,
+                              newLoopNonSpill.getResults(), ipType, opType,
                               blockingFactor, isVnni, vectorOpLhs, vectorOpRhs,
                               contractOp, nullptr, innerLoop, ops, nullptr,
-                              bBuffer, false, c0, nDimK, oddDimK);
+                              packedBuffer, false, c0, isInnerLoopUBLarger,
+                              isInnerLoopUBHasOddQuot);
       }
     }
 
@@ -1125,17 +1203,41 @@ struct VectorContractToAMXDotProduct
 
     if (!isVnni) {
       Location loc = outerLoop.getLoc();
+      Operation *accReadOp =
+          traceToVectorReadLikeParentOperation(contractOp.getAcc());
+
+      Value srcBuffAcc;
+      SmallVector<Value> indicesAcc;
+
+      llvm::TypeSwitch<Operation *>(accReadOp).Case<TransferReadOp, LoadOp>(
+          [&](auto readOp) {
+            srcBuffAcc = readOp.getOperand(0);
+
+            auto indices = readOp.getIndices();
+            indicesAcc.reserve(indices.size());
+
+            llvm::transform(indices, std::back_inserter(indicesAcc),
+                            [&](OpFoldResult ofr) {
+                              return mlir::getValueOrCreateConstantIndexOp(
+                                  rewriter, loc, ofr);
+                            });
+          });
+
+      auto outputShapes =
+          mlir::cast<mlir::MemRefType>(srcBuffAcc.getType()).getShape();
+      unsigned int M = outputShapes[outputShapes.size() - 2];
+      unsigned int N = outputShapes[outputShapes.size() - 1];
+
       SmallVector<Value> dps = newLoop.getResults();
-      auto bufferType = MemRefType::get({32, 32}, opType);
-      auto bBuffer =
-          memref::AllocaOp::create(rewriter, outerLoop.getLoc(), bufferType);
-      for (int i = 0, k = 0; i < 32; i = i + 16) {
-        for (int j = 0; j < 32; j = j + 16) {
-          Value indexOp_i =
-              arith::ConstantIndexOp::create(rewriter, outerLoop.getLoc(), i);
-          Value indexOp_j =
-              arith::ConstantIndexOp::create(rewriter, outerLoop.getLoc(), j);
-          amx::TileStoreOp::create(rewriter, outerLoop.getLoc(), bBuffer,
+      auto bufferType = MemRefType::get({M, N}, opType);
+      auto resultBuffer = memref::AllocaOp::create(rewriter, loc, bufferType);
+
+      // Store the amx tiled-dot product output into an MxN memref.
+      for (unsigned int i = 0, k = 0; i < M; i = i + 16) {
+        for (unsigned int j = 0; j < N; j = j + 16) {
+          Value indexOp_i = arith::ConstantIndexOp::create(rewriter, loc, i);
+          Value indexOp_j = arith::ConstantIndexOp::create(rewriter, loc, j);
+          amx::TileStoreOp::create(rewriter, loc, resultBuffer,
                                    ValueRange{indexOp_i, indexOp_j}, dps[k]);
           k++;
         }
@@ -1143,19 +1245,21 @@ struct VectorContractToAMXDotProduct
       auto c0 = arith::ConstantIndexOp::create(rewriter, loc, 0);
       auto c16 = arith::ConstantIndexOp::create(rewriter, loc, 16);
       auto one = arith::ConstantIndexOp::create(rewriter, loc, 1);
-      auto mBound = arith::ConstantIndexOp::create(rewriter, loc, 32);
+      auto mBound = arith::ConstantIndexOp::create(rewriter, loc, N);
 
+      // Create a loop that iterates over the MxN memerf, retrives two rows +
+      // shuffle them, add up the C element values and stores them back.
       scf::ForOp::create(
           rewriter, loc, c0, mBound, one, ValueRange{},
           [&](OpBuilder &nestedBuilder, Location loc, Value iv,
               ValueRange iterArgs) {
             auto row = vector::LoadOp::create(rewriter, loc,
                                               VectorType::get(16, opType),
-                                              bBuffer, ValueRange{iv, c0});
+                                              resultBuffer, ValueRange{iv, c0});
 
-            auto row2 = vector::LoadOp::create(rewriter, loc,
-                                               VectorType::get(16, opType),
-                                               bBuffer, ValueRange{iv, c16});
+            auto row2 = vector::LoadOp::create(
+                rewriter, loc, VectorType::get(16, opType), resultBuffer,
+                ValueRange{iv, c16});
 
             auto shuffle1 = vector::ShuffleOp::create(
                 rewriter, loc, VectorType::get(16, opType), row, row2,
@@ -1166,27 +1270,6 @@ struct VectorContractToAMXDotProduct
                 rewriter, loc, VectorType::get(16, opType), row, row2,
                 ArrayRef<int64_t>{8, 9, 10, 11, 24, 25, 26, 27, 12, 13, 14, 15,
                                   28, 29, 30, 31});
-
-            Operation *accReadOp =
-                traceToVectorReadLikeParentOperation(contractOp.getAcc());
-
-            Value srcBuffAcc;
-            SmallVector<Value> indicesAcc;
-
-            llvm::TypeSwitch<Operation *>(accReadOp)
-                .Case<TransferReadOp, LoadOp>([&](auto readOp) {
-                  srcBuffAcc = readOp.getOperand(0);
-
-                  auto indices = readOp.getIndices();
-                  indicesAcc.reserve(indices.size());
-
-                  llvm::transform(
-                      indices, std::back_inserter(indicesAcc),
-                      [&](OpFoldResult ofr) {
-                        return mlir::getValueOrCreateConstantIndexOp(rewriter,
-                                                                     loc, ofr);
-                      });
-                });
 
             indicesAcc[indicesAcc.size() - 2] = iv;
             indicesAcc[indicesAcc.size() - 1] = c0;
@@ -1199,6 +1282,7 @@ struct VectorContractToAMXDotProduct
             Value valueCRow2 = vector::LoadOp::create(
                 rewriter, loc, VectorType::get(16, opType), srcBuffAcc,
                 indicesAcc);
+
             Value addOp;
             Value addOp2;
 
@@ -1227,11 +1311,12 @@ struct VectorContractToAMXDotProduct
             scf::YieldOp::create(nestedBuilder, loc);
           });
     }
-    auto bufferType = MemRefType::get({16, 16}, opType);
-    auto bBuffer =
-        memref::AllocaOp::create(rewriter, outerLoop.getLoc(), bufferType);
 
+    auto bufferType = MemRefType::get({16, 16}, opType);
+    auto resultBuffer =
+        memref::AllocaOp::create(rewriter, outerLoop.getLoc(), bufferType);
     SmallVector<Value> dps = newLoop.getResults();
+
     for (size_t i = 0; i < ops.size(); i++) {
       vector::ContractionOp contOp = ops[i];
       Operation *resultWriteOp =
@@ -1242,7 +1327,7 @@ struct VectorContractToAMXDotProduct
         Value indexOp_0 =
             arith::ConstantIndexOp::create(rewriter, outerLoop.getLoc(), 0);
 
-        amx::TileStoreOp::create(rewriter, outerLoop.getLoc(), bBuffer,
+        amx::TileStoreOp::create(rewriter, outerLoop.getLoc(), resultBuffer,
                                  ValueRange{indexOp_0, indexOp_0}, dps[i]);
 
         auto c0 =
@@ -1257,7 +1342,7 @@ struct VectorContractToAMXDotProduct
             [&](OpBuilder &builder, Location loc, Value iv,
                 ValueRange iterArgs) {
               auto resultAcc = vector::LoadOp::create(
-                  rewriter, loc, VectorType::get(16, opType), bBuffer,
+                  rewriter, loc, VectorType::get(16, opType), resultBuffer,
                   ValueRange{iv, c0});
 
               Operation *accReadOp =
@@ -1283,7 +1368,7 @@ struct VectorContractToAMXDotProduct
 
               Value sum =
                   arith::AddIOp::create(builder, loc, iv, indicesAcc[0]);
-              indicesAcc[0] = sum;
+              indicesAcc[indicesAcc.size() - 2] = sum;
 
               auto acc = vector::LoadOp::create(rewriter, loc,
                                                 VectorType::get(16, opType),
