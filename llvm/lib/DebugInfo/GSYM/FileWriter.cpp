@@ -52,7 +52,8 @@ void FileWriter::writeU64(uint64_t U) {
 void FileWriter::writeUnsigned(uint64_t Value, size_t ByteSize) {
   assert(ByteSize <= 8 && "invalid byte size");
   // Make sure the value fits in the number of bytes specified.
-  assert((ByteSize == 8 || (Value & (uint64_t)-1 << (8 * ByteSize)) == 0) && "potential data loss: higher bits are non-zero");
+  assert((ByteSize == 8 || (Value & (uint64_t)-1 << (8 * ByteSize)) == 0) &&
+         "potential data loss: higher bits are non-zero");
   // Swap and shift bytes if endianness doesn't match.
   if (ByteOrder != llvm::endianness::native) {
     // Say ByteSize is 3.
