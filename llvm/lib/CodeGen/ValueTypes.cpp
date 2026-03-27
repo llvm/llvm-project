@@ -72,9 +72,6 @@ EVT EVT::getIntegerVectorWithElementWidth(LLVMContext &Context,
   unsigned NewNumElements = TotalBits / NewEltWidth;
   EVT NewEltVT = EVT::getIntegerVT(Context, NewEltWidth);
 
-  if (NewNumElements == 1)
-    return NewEltVT;
-
   // Preserve scalability
   ElementCount EC = getVectorElementCount();
   ElementCount NewEC = ElementCount::get(NewNumElements, EC.isScalable());

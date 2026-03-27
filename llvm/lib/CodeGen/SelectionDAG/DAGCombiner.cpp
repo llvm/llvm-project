@@ -7005,6 +7005,16 @@ static SDValue widenIntVectorSelect(SDNode *N, SelectionDAG &DAG,
   return DAG.getExtractSubvector(SDLoc(N), ResultVT, WidenSelect, 0);
 }
 
+static EVT getNewVTWithElemWidthForSelect(LLVMContext &Ctx, EVT OldVT,
+                                          unsigned NewEltWidth,
+                                          const TargetLowering &TLI) {
+  EVT NewVT = OldVT.getIntegerVectorWithElementWidth(Ctx, NewEltWidth);
+  if (NewVT != EVT() && NewVT.getVectorNumElements() == 1 &&
+      TLI.shouldCastVectorSelectToScalar(NewVT))
+    return NewVT.getVectorElementType();
+  return NewVT;
+}
+
 // Try to convert vXiY into vPiQ with:
 // 1. vXiY is not legal type
 // 2. vPiQ is legal type
@@ -7017,8 +7027,7 @@ static SDValue castIntVectorSelect(SDNode *N, SelectionDAG &DAG,
   EVT ResultVT = N->getValueType(0);
   if (!ResultVT.isVector() || ResultVT.isScalableVector() ||
       TLI.getTypeAction(*DAG.getContext(), ResultVT) ==
-          TargetLowering::TypeLegal ||
-      !TLI.shouldCastIntVectorSelect(ResultVT))
+          TargetLowering::TypeLegal)
     return SDValue();
 
   EVT EltVT = ResultVT.getVectorElementType();
@@ -7026,8 +7035,8 @@ static SDValue castIntVectorSelect(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   unsigned NewEltBitSize = EltVT.getSizeInBits() * 2;
-  EVT NewVT = ResultVT.getIntegerVectorWithElementWidth(*DAG.getContext(),
-                                                        NewEltBitSize);
+  EVT NewVT = getNewVTWithElemWidthForSelect(*DAG.getContext(), ResultVT,
+                                             NewEltBitSize, TLI);
   while (true) {
     if (NewVT == EVT())
       return SDValue();
@@ -7036,8 +7045,8 @@ static SDValue castIntVectorSelect(SDNode *N, SelectionDAG &DAG,
       break;
 
     NewEltBitSize *= 2;
-    NewVT = ResultVT.getIntegerVectorWithElementWidth(*DAG.getContext(),
-                                                      NewEltBitSize);
+    NewVT = getNewVTWithElemWidthForSelect(*DAG.getContext(), ResultVT,
+                                           NewEltBitSize, TLI);
   }
 
   SDValue NewTrue = DAG.getBitcast(NewVT, TrueVal);
