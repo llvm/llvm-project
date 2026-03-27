@@ -188,7 +188,8 @@ bool RISCVQCRelaxMarking::runOnMachineFunction(MachineFunction &MF) {
         continue;
 
       MachineOperand &SymOp = MI->getOperand(1);
-      if (!SymOp.isSymbol() && !SymOp.isGlobal() && !SymOp.isMCSymbol() && !SymOp.isCPI())
+      if (!SymOp.isSymbol() && !SymOp.isGlobal() && !SymOp.isMCSymbol() &&
+          !SymOp.isCPI())
         continue;
 
       unsigned NewOpc = getQCMarkedOpcode(*NextMI, STI);

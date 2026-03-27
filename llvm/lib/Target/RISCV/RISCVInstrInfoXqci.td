@@ -1393,7 +1393,7 @@ class PseudoQCAccessStore_rri<string opcodestr>
            [], opcodestr, "$rs2, ${imm12}(${rs1}), $expr">;
 
 
-let Predicates = [HasVendorXqcili] in {
+let Predicates = [IsRV32] in {
 def PseudoQCAccessLB  : PseudoQCAccessLoad_ri<"lb">;
 def PseudoQCAccessLBU : PseudoQCAccessLoad_ri<"lbu">;
 def PseudoQCAccessLH  : PseudoQCAccessLoad_ri<"lh">;
@@ -1433,7 +1433,7 @@ class PseudoQCAccessCStore_rri<string opcodestr, DAGOperand immop>
            (ins GPRC:$rs2, GPRCMem:$rs1, immop:$imm, qc_access_symbol:$expr),
            [], opcodestr, "$rs2, ${imm}(${rs1}), $expr">;
 
-let Predicates = [HasVendorXqcili, HasStdExtZca] in {
+let Predicates = [IsRV32, HasStdExtZca] in {
 def PseudoQCAccessC_LW : PseudoQCAccessCLoad_ri<"c.lw", uimm7_lsb00>;
 let EmitPriority = 0 in
 def : InstAlias<"c.lw $rd, (${rs1}), $expr", (PseudoQCAccessC_LW GPRC:$rd, GPRCMem:$rs1, 0, qc_access_symbol:$expr)>;
@@ -1443,7 +1443,7 @@ let EmitPriority = 0 in
 def : InstAlias<"c.sw $rs2, (${rs1}), $expr", (PseudoQCAccessC_SW GPRC:$rs2, GPRCMem:$rs1, 0, qc_access_symbol:$expr)>;
 }
 
-let Predicates = [HasVendorXqcili, HasStdExtZcb] in {
+let Predicates = [IsRV32, HasStdExtZcb] in {
 // no C_LB so no PseudoQCAccessC_LB
 def PseudoQCAccessC_LBU : PseudoQCAccessCLoad_ri<"c.lbu", uimm2>;
 def PseudoQCAccessC_LH : PseudoQCAccessCLoad_ri<"c.lh", uimm2_lsb0>;
