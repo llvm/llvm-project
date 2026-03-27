@@ -1430,28 +1430,28 @@ CXXRecordDecl *BuiltinTypeDeclBuilder::addMipsSliceType(ResourceDimension Dim,
   // Define the mips_slice_type which is returned by mips_type::operator[].
   // It holds the resource handle and the mip level. It has an operator[]
   // that takes the coordinate and performs the actual resource load.
-  CXXRecordDecl *MipSliceRecord = nullptr;
-  addPrivateNestedRecord("mips_slice_type", MipSliceRecord);
-  BuiltinTypeDeclBuilder MipSliceBuilder(SemaRef, MipSliceRecord);
-  MipSliceBuilder.addFriend(Record);
-  MipSliceBuilder.addHandleMember(getResourceAttrs().ResourceClass, Dim,
-                                  getResourceAttrs().IsROV, false, ReturnType,
-                                  AccessSpecifier::AS_public);
-  MipSliceBuilder.addMemberVariable("__level", IntTy, {},
-                                    AccessSpecifier::AS_public);
+  CXXRecordDecl *MipsSliceRecord = nullptr;
+  addPrivateNestedRecord("mips_slice_type", MipsSliceRecord);
+  BuiltinTypeDeclBuilder MipsSliceBuilder(SemaRef, MipsSliceRecord);
+  MipsSliceBuilder.addFriend(Record);
+  MipsSliceBuilder.addHandleMember(getResourceAttrs().ResourceClass, Dim,
+                                   getResourceAttrs().IsROV, false, ReturnType,
+                                   AccessSpecifier::AS_public);
+  MipsSliceBuilder.addMemberVariable("__level", IntTy, {},
+                                     AccessSpecifier::AS_public);
 
-  MipSliceBuilder.addDefaultHandleConstructor(AccessSpecifier::AS_protected)
+  MipsSliceBuilder.addDefaultHandleConstructor(AccessSpecifier::AS_protected)
       .addCopyConstructor(AccessSpecifier::AS_protected)
       .addCopyAssignmentOperator(AccessSpecifier::AS_protected);
 
-  FieldDecl *LevelField = MipSliceBuilder.Fields["__level"];
+  FieldDecl *LevelField = MipsSliceBuilder.Fields["__level"];
   assert(LevelField && "Could not find the level field.\n");
 
   DeclarationName SubscriptName =
       AST.DeclarationNames.getCXXOperatorName(OO_Subscript);
 
   // operator[](intN coord) on mips_slice_type
-  BuiltinTypeMethodBuilder(MipSliceBuilder, SubscriptName, ReturnType,
+  BuiltinTypeMethodBuilder(MipsSliceBuilder, SubscriptName, ReturnType,
                            /*IsConst=*/true)
       .addParam("Coord", IndexTy)
       .accessFieldOnResource(PH::This, LevelField)
@@ -1460,8 +1460,8 @@ CXXRecordDecl *BuiltinTypeDeclBuilder::addMipsSliceType(ResourceDimension Dim,
                    PH::LastStmt)
       .finalize();
 
-  MipSliceBuilder.completeDefinition();
-  return MipSliceRecord;
+  MipsSliceBuilder.completeDefinition();
+  return MipsSliceRecord;
 }
 
 CXXRecordDecl *BuiltinTypeDeclBuilder::addMipsType(ResourceDimension Dim,
@@ -1471,54 +1471,54 @@ CXXRecordDecl *BuiltinTypeDeclBuilder::addMipsType(ResourceDimension Dim,
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
   // First, define the mips_slice_type that will be returned by our operator[].
-  CXXRecordDecl *MipSliceRecord = addMipsSliceType(Dim, ReturnType);
+  CXXRecordDecl *MipsSliceRecord = addMipsSliceType(Dim, ReturnType);
 
   // Define the mips_type, which provides the syntax `Resource.mips[level]`.
   // It only holds the handle, and its operator[] returns a mips_slice_type
   // initialized with the handle and the requested mip level.
-  CXXRecordDecl *MipRecord = nullptr;
-  addPrivateNestedRecord("mips_type", MipRecord);
-  BuiltinTypeDeclBuilder MipBuilder(SemaRef, MipRecord);
-  MipBuilder.addFriend(Record);
-  MipBuilder.addHandleMember(getResourceAttrs().ResourceClass, Dim,
-                             getResourceAttrs().IsROV, false, ReturnType,
-                             AccessSpecifier::AS_public);
+  CXXRecordDecl *MipsRecord = nullptr;
+  addPrivateNestedRecord("mips_type", MipsRecord);
+  BuiltinTypeDeclBuilder MipsBuilder(SemaRef, MipsRecord);
+  MipsBuilder.addFriend(Record);
+  MipsBuilder.addHandleMember(getResourceAttrs().ResourceClass, Dim,
+                              getResourceAttrs().IsROV, false, ReturnType,
+                              AccessSpecifier::AS_public);
 
-  MipBuilder.addDefaultHandleConstructor(AccessSpecifier::AS_protected)
+  MipsBuilder.addDefaultHandleConstructor(AccessSpecifier::AS_protected)
       .addCopyConstructor(AccessSpecifier::AS_protected)
       .addCopyAssignmentOperator(AccessSpecifier::AS_protected);
 
-  QualType MipSliceTy = AST.getCanonicalTagType(MipSliceRecord);
+  QualType MipsSliceTy = AST.getCanonicalTagType(MipsSliceRecord);
 
   DeclarationName SubscriptName =
       AST.DeclarationNames.getCXXOperatorName(OO_Subscript);
 
   // Locate the fields in the slice type so we can initialize them.
-  FieldDecl *MipSliceHandleField = nullptr;
+  FieldDecl *MipsSliceHandleField = nullptr;
   FieldDecl *LevelField = nullptr;
-  for (auto *F : MipSliceRecord->fields()) {
+  for (auto *F : MipsSliceRecord->fields()) {
     if (F->getName() == "__handle")
-      MipSliceHandleField = F;
+      MipsSliceHandleField = F;
     else if (F->getName() == "__level")
       LevelField = F;
   }
-  assert(MipSliceHandleField && LevelField &&
+  assert(MipsSliceHandleField && LevelField &&
          "Could not find fields on mips_slice_type");
 
   // operator[](int level) on mips_type
-  BuiltinTypeMethodBuilder::LocalVar MipSliceVar("slice", MipSliceTy);
-  BuiltinTypeMethodBuilder(MipBuilder, SubscriptName, MipSliceTy,
+  BuiltinTypeMethodBuilder::LocalVar MipsSliceVar("slice", MipsSliceTy);
+  BuiltinTypeMethodBuilder(MipsBuilder, SubscriptName, MipsSliceTy,
                            /*IsConst=*/true)
       .addParam("Level", IntTy)
-      .declareLocalVar(MipSliceVar)
+      .declareLocalVar(MipsSliceVar)
       .accessHandleFieldOnResource(PH::This)
-      .setFieldOnResource(MipSliceVar, PH::LastStmt, MipSliceHandleField)
-      .setFieldOnResource(MipSliceVar, PH::_0, LevelField)
-      .returnValue(MipSliceVar)
+      .setFieldOnResource(MipsSliceVar, PH::LastStmt, MipsSliceHandleField)
+      .setFieldOnResource(MipsSliceVar, PH::_0, LevelField)
+      .returnValue(MipsSliceVar)
       .finalize();
 
-  MipBuilder.completeDefinition();
-  return MipRecord;
+  MipsBuilder.completeDefinition();
+  return MipsRecord;
 }
 
 BuiltinTypeDeclBuilder &
@@ -1527,11 +1527,11 @@ BuiltinTypeDeclBuilder::addMipsMember(ResourceDimension Dim) {
   ASTContext &AST = Record->getASTContext();
   QualType ReturnType = getHandleElementType();
 
-  CXXRecordDecl *MipRecord = addMipsType(Dim, ReturnType);
+  CXXRecordDecl *MipsRecord = addMipsType(Dim, ReturnType);
 
   // Add the mips field to the texture
-  QualType MipTy = AST.getCanonicalTagType(MipRecord);
-  addMemberVariable("mips", MipTy, {}, AccessSpecifier::AS_public);
+  QualType MipsTy = AST.getCanonicalTagType(MipsRecord);
+  addMemberVariable("mips", MipsTy, {}, AccessSpecifier::AS_public);
 
   return *this;
 }
