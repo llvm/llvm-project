@@ -1,12 +1,12 @@
-; RUN: %llc_dwarf -dwarf-version=3 -O0 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=CHECK --check-prefix=V3 %s
+; This file contains the dwarf-version=2 tests extracted from restrict.ll
+; DWARF v2 is incompatible with 64-bit XCOFF/AIX (requires DWARF64 format which needs DWARF v3+)
 
-; For dwarf-version=2 tests on 32-bit targets, see restrict-32bit.ll
+; UNSUPPORTED: target=powerpc64{{.*}}-aix{{.*}}
+
+; RUN: %llc_dwarf -dwarf-version=2 -O0 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=CHECK --check-prefix=V2 %s
 
 ; CHECK: DW_AT_name ("dst")
 ; V2: DW_AT_type ([[PTR:0x........]]
-; V3: DW_AT_type ([[RESTRICT:0x........]]
-; V3: [[RESTRICT]]: DW_TAG_restrict_type
-; V3-NEXT: DW_AT_type ([[PTR:0x........]]
 ; CHECK: [[PTR]]: DW_TAG_pointer_type
 ; CHECK-NOT: DW_AT_type
 

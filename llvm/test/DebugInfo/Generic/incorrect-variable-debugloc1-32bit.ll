@@ -2,10 +2,12 @@
 ; and DW_OP_lit13 is correctly omitted.
 ; XFAIL: target=hexagon-{{.*}}
 
-; RUN: %llc_dwarf -O2  -dwarf-version 3 -filetype=obj < %s | llvm-dwarfdump - | FileCheck %s  --check-prefix=DWARF23
-; RUN: %llc_dwarf -O2  -dwarf-version 4 -filetype=obj < %s | llvm-dwarfdump - | FileCheck %s  --check-prefix=DWARF4
+; This file contains the dwarf-version=2 tests extracted from incorrect-variable-debugloc1.ll
+; DWARF v2 is incompatible with 64-bit XCOFF/AIX (requires DWARF64 format which needs DWARF v3+)
 
-; For dwarf-version=2 tests on 32-bit targets, see incorrect-variable-debugloc1-32bit.ll
+; UNSUPPORTED: target=powerpc64{{.*}}-aix{{.*}}
+
+; RUN: %llc_dwarf -O2  -dwarf-version 2 -filetype=obj < %s | llvm-dwarfdump - | FileCheck %s  --check-prefix=DWARF23
 
 ; This is a test for PR21176.
 ; DW_OP_const <const> doesn't describe a constant value, but a value at a constant address.
@@ -27,7 +29,6 @@
 ; CHECK: DW_AT_location
 ; CHECK-NOT: DW_AT
 ; DWARF23: DW_OP_lit13{{$}}
-; DWARF4: DW_OP_lit13, DW_OP_stack_value{{$}}
 
 ; Function Attrs: uwtable
 define i32 @main() #0 !dbg !4 {
@@ -77,4 +78,3 @@ attributes #2 = { nounwind readnone }
 !19 = !DILocation(line: 6, column: 7, scope: !4)
 !20 = !DILocation(line: 7, column: 3, scope: !4)
 !21 = !DIExpression(DW_OP_deref)
-
