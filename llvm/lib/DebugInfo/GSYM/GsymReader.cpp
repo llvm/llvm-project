@@ -145,20 +145,32 @@ GsymReader::getFunctionInfoDataForAddress(uint64_t Addr,
   if (!ExpectedAddrIdx)
     return ExpectedAddrIdx.takeError();
   const uint64_t FirstAddrIdx = *ExpectedAddrIdx;
+  // The AddrIdx is the first index of the function info entries that match
+  // \a Addr. We need to iterate over all function info objects that start with
+  // the same address until we find a range that contains \a Addr.
   std::optional<uint64_t> FirstFuncStartAddr;
   const size_t NumAddresses = getNumAddresses();
   for (uint64_t AddrIdx = FirstAddrIdx; AddrIdx < NumAddresses; ++AddrIdx) {
     auto ExpextedData = getFunctionInfoDataAtIndex(AddrIdx, FuncStartAddr);
+    // If there was an error, return the error.
     if (!ExpextedData)
       return ExpextedData;
 
+    // Remember the first function start address if it hasn't already been set.
+    // If it is already valid, check to see if it matches the first function
+    // start address and only continue if it matches.
     if (FirstFuncStartAddr.has_value()) {
       if (*FirstFuncStartAddr != FuncStartAddr)
-        break;
+        break; // Done with consecutive function entries with same address.
     } else {
       FirstFuncStartAddr = FuncStartAddr;
     }
+    // Make sure the current function address ranges contains \a Addr.
+    // Some symbols on Darwin don't have valid sizes, so if we run into a
+    // symbol with zero size, then we have found a match for our address.
 
+    // The first thing the encoding of a FunctionInfo object is the function
+    // size.
     uint64_t Offset = 0;
     uint32_t FuncSize = ExpextedData->getU32(&Offset);
     if (FuncSize == 0 ||
@@ -224,18 +236,23 @@ GsymReader::lookupAll(uint64_t Addr) const {
   std::vector<LookupResult> Results;
   std::optional<DataExtractor> MergedFunctionsData;
 
+  // First perform a lookup to get the primary function info result.
   auto MainResult = lookup(Addr, &MergedFunctionsData);
   if (!MainResult)
     return MainResult.takeError();
 
+  // Add the main result as the first entry.
   Results.push_back(std::move(*MainResult));
 
+  // Now process any merged functions data that was found during the lookup.
   if (MergedFunctionsData) {
+    // Get data extractors for each merged function.
     auto ExpectedMergedFuncExtractors =
         MergedFunctionsInfo::getFuncsDataExtractors(*MergedFunctionsData);
     if (!ExpectedMergedFuncExtractors)
       return ExpectedMergedFuncExtractors.takeError();
 
+    // Process each merged function data.
     for (DataExtractor &MergedData : *ExpectedMergedFuncExtractors) {
       if (auto FI = FunctionInfo::lookup(MergedData, *this,
                                          MainResult->FuncRange.start(), Addr)) {
@@ -347,6 +364,7 @@ void GsymReader::dump(raw_ostream &OS, const InlineInfo &II, uint32_t Indent) {
 
 void GsymReader::dump(raw_ostream &OS, std::optional<FileEntry> FE) {
   if (FE) {
+    // IF we have the file from index 0, then don't print anything
     if (FE->Dir == 0 && FE->Base == 0)
       return;
     StringRef Dir = getString(FE->Dir);
