@@ -14,3 +14,6 @@ breaks smoke*
 breaks rocgdb UT
 [Clang][CodeGen] Restore isEmptyFieldForLayout for empty class handling
 ---
+aborts in its lit test
+[OpenMP][flang] Fix crash in host offload (#187847)
+---
