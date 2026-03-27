@@ -2083,7 +2083,7 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
     const SCEV *SrcCoeff = SrcAddRec->getStepRecurrence(*SE);
     const SCEV *DstCoeff = DstAddRec->getStepRecurrence(*SE);
     const Loop *CurSrcLoop = SrcAddRec->getLoop();
-    const Loop *CurDstLoop = DstAddRec->getLoop();
+    [[maybe_unused]] const Loop *CurDstLoop = DstAddRec->getLoop();
     assert(haveSameSD(CurSrcLoop, CurDstLoop) &&
            "Loops in the SIV test should have the same iteration space and "
            "depth");
