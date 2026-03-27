@@ -285,6 +285,36 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     }
     break;
   }
+  case TargetOpcode::G_UREM: {
+    KnownBits LHSKnown(Known.getBitWidth());
+    KnownBits RHSKnown(Known.getBitWidth());
+
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), LHSKnown, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), RHSKnown, DemandedElts,
+                         Depth + 1);
+
+    APInt MaxRHS = RHSKnown.getMaxValue();
+
+    if (MaxRHS.isPowerOf2()) {
+      unsigned LowBits = MaxRHS.logBase2();
+      // Upper bits are zero
+      Known.Zero.setBitsFrom(LowBits);
+      // Mask for lower bits
+      APInt Mask = APInt::getLowBitsSet(Known.getBitWidth(), LowBits);
+      // Propagate known bits from LHS for lower bits
+      Known.One |= (LHSKnown.One & Mask);
+      Known.Zero |= (LHSKnown.Zero & Mask);
+      break;
+    }
+    if (!MaxRHS.isZero()) {
+      unsigned LeadingZeros = MaxRHS.countLeadingZeros();
+      Known.Zero.setHighBits(LeadingZeros);
+    }
+
+    break;
+  }
+
   case TargetOpcode::G_CONSTANT: {
     Known = KnownBits::makeConstant(MI.getOperand(1).getCImm()->getValue());
     break;
