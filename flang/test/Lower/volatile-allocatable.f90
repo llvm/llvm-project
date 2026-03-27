@@ -127,8 +127,7 @@ end subroutine
 ! CHECK:           %{{.+}} = fir.call @_FortranAAllocatableAllocate(%{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.ref<i64>, i1, !fir.box<none>, !fir.ref<i8>, i32, {{.*}}) -> i32
 ! CHECK:           fir.call @_FortranAAllocatableInitDerivedForAllocate(%{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.ref<none>, i32, i32) -> ()
 ! CHECK:           %{{.+}} = fir.call @_FortranAAllocatableAllocate(%{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.ref<i64>, i1, !fir.box<none>, !fir.ref<i8>, i32, {{.*}}) -> i32
-! CHECK:           %{{.+}}:2 = hlfir.declare %{{.+}} {fortran_attrs = #fir.var_attrs<volatile>, uniq_name =
-! "_QFtest_scalar_volatileEv1"} : (!fir.ref<!fir.type<{{.*}}, volatile>) -> (!fir.ref<!fir.type<{{.*}}>, volatile>, !fir.ref<!fir.type<{{.*}}>, volatile>)
+! CHECK:           %{{.+}}:2 = hlfir.declare %{{.+}} {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFtest_scalar_volatileEv1"} : (!fir.ref<!fir.type<{{.*}}, volatile>) -> (!fir.ref<!fir.type<{{.*}}>, volatile>, !fir.ref<!fir.type<{{.*}}>, volatile>)
 ! CHECK:           %{{.+}} = hlfir.designate %{{.+}}#0{"j"}   : (!fir.ref<!fir.type<{{.*}}>, volatile>) -> !fir.ref<i32, volatile>
 ! CHECK:           %{{.+}}:2 = hlfir.declare %{{.+}} {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro._QMderived_typesText_type.0"} : (!fir.ref<!fir.type<{{.*}}>>) -> (!fir.ref<!fir.type<{{.*}}>>, !fir.ref<!fir.type<{{.*}}>>)
 ! CHECK:           %{{.+}} = fir.call @_FortranAAllocatableAllocateSource(%{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
