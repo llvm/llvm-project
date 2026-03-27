@@ -402,11 +402,16 @@ bool IndexingContext::handleDeclOccurrence(const Decl *D, SourceLocation Loc,
   if (!OrigD)
     OrigD = D;
 
-  if (isTemplateImplicitInstantiation(D) && IsRef) {
-    D = adjustTemplateImplicitInstantiation(D);
-    if (!D)
-      return true;
-    assert(!isTemplateImplicitInstantiation(D));
+  if (isTemplateImplicitInstantiation(D)) {
+    if (IsRef) {
+      D = adjustTemplateImplicitInstantiation(D);
+      if (!D)
+        return true;
+      assert(!isTemplateImplicitInstantiation(D));
+    } else {
+      if (!shouldIndexImplicitInstantiation())
+        return true;
+    }
   }
 
   if (IsRef)
