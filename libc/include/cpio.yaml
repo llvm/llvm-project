@@ -1,5 +1,4 @@
 header: cpio.h
-header_template: cpio.h.def
 standards:
   - POSIX
 macros:
