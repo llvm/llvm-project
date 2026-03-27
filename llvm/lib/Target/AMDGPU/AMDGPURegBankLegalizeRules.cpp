@@ -1536,6 +1536,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
              {IntrId, Imm, Imm, Vgpr32, Vgpr32, Vgpr32, Vgpr32, Imm,
               SgprB32_M0}}});
 
+  addRulesForIOpcs({amdgcn_lds_direct_load}, StandardB)
+      .Div(B32, {{VgprB32}, {IntrId, SgprB32_M0}});
+
   addRulesForIOpcs({amdgcn_lds_param_load}, Standard)
       .Div(S32, {{Vgpr32}, {IntrId, Imm, Imm, SgprB32_M0}});
 
