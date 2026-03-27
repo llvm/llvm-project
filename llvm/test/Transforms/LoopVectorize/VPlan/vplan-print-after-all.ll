@@ -26,7 +26,6 @@
 ; CHECK: VPlan for loop in 'foo' after simplifyBlends
 ; CHECK: VPlan for loop in 'foo' after legalizeAndOptimizeInductions
 ; CHECK: VPlan for loop in 'foo' after narrowToSingleScalarRecipes
-; CHECK: VPlan for loop in 'foo' after removeRedundantExpandSCEVRecipes
 ; CHECK: VPlan for loop in 'foo' after reassociateHeaderMask
 ; CHECK: VPlan for loop in 'foo' after simplifyRecipes
 ; CHECK: VPlan for loop in 'foo' after removeBranchOnConst

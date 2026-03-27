@@ -1147,25 +1147,6 @@ void VPlanTransforms::optimizeInductionLiveOutUsers(
   }
 }
 
-/// Remove redundant EpxandSCEVRecipes in \p Plan's entry block by replacing
-/// them with already existing recipes expanding the same SCEV expression.
-static void removeRedundantExpandSCEVRecipes(VPlan &Plan) {
-  DenseMap<const SCEV *, VPValue *> SCEV2VPV;
-
-  for (VPRecipeBase &R :
-       make_early_inc_range(*Plan.getEntry()->getEntryBasicBlock())) {
-    auto *ExpR = dyn_cast<VPExpandSCEVRecipe>(&R);
-    if (!ExpR)
-      continue;
-
-    const auto &[V, Inserted] = SCEV2VPV.try_emplace(ExpR->getSCEV(), ExpR);
-    if (Inserted)
-      continue;
-    ExpR->replaceAllUsesWith(V->second);
-    ExpR->eraseFromParent();
-  }
-}
-
 static void recursivelyDeleteDeadRecipes(VPValue *V) {
   SmallVector<VPValue *> WorkList;
   SmallPtrSet<VPValue *, 8> Seen;
@@ -2881,7 +2862,6 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   RUN_VPLAN_PASS(simplifyBlends, Plan);
   RUN_VPLAN_PASS(legalizeAndOptimizeInductions, Plan);
   RUN_VPLAN_PASS(narrowToSingleScalarRecipes, Plan);
-  RUN_VPLAN_PASS(removeRedundantExpandSCEVRecipes, Plan);
   RUN_VPLAN_PASS(reassociateHeaderMask, Plan);
   RUN_VPLAN_PASS(simplifyRecipes, Plan);
   RUN_VPLAN_PASS(removeBranchOnConst, Plan, /*OnlyLatches=*/false);

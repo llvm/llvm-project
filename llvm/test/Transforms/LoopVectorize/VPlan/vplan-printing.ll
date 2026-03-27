@@ -483,22 +483,23 @@ define void @print_expand_scev(i64 %y, ptr %ptr) {
 ; CHECK-NEXT:    IR   %inc = add i64 %div, 1
 ; CHECK-NEXT:    EMIT vp<[[VP3]]> = EXPAND SCEV (1 + ((15 + (%y /u 492802768830814060))<nuw><nsw> /u (1 + (%y /u 492802768830814060))<nuw><nsw>))<nuw><nsw>
 ; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = EXPAND SCEV (1 + (%y /u 492802768830814060))<nuw><nsw>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = EXPAND SCEV (1 + (%y /u 492802768830814060))<nuw><nsw>
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
-; CHECK-NEXT:    vp<[[VP5:%[0-9]+]]> = DERIVED-IV ir<0> + vp<[[VP2]]> * vp<[[VP4]]>
+; CHECK-NEXT:    vp<[[VP6:%[0-9]+]]> = DERIVED-IV ir<0> + vp<[[VP2]]> * vp<[[VP4]]>
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, vp<[[VP4]]>, vp<[[VP0]]> (truncated to i8)
-; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = DERIVED-IV ir<0> + vp<[[VP6]]> * vp<[[VP4]]>
-; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = SCALAR-STEPS vp<[[VP7]]>, vp<[[VP4]]>, vp<[[VP0]]>
+; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, vp<[[VP5]]>, vp<[[VP0]]> (truncated to i8)
+; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = DERIVED-IV ir<0> + vp<[[VP7]]> * vp<[[VP4]]>
+; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = SCALAR-STEPS vp<[[VP8]]>, vp<[[VP4]]>, vp<[[VP0]]>
 ; CHECK-NEXT:      WIDEN ir<%v3> = add nuw ir<%iv>, ir<1>
-; CHECK-NEXT:      REPLICATE ir<%gep> = getelementptr inbounds ir<%ptr>, vp<[[VP8]]>
+; CHECK-NEXT:      REPLICATE ir<%gep> = getelementptr inbounds ir<%ptr>, vp<[[VP9]]>
 ; CHECK-NEXT:      REPLICATE store ir<%v3>, ir<%gep>
-; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP6]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP7]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
@@ -513,7 +514,7 @@ define void @print_expand_scev(i64 %y, ptr %ptr) {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP5]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP6]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
