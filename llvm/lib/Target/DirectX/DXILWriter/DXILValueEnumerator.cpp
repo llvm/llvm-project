@@ -103,7 +103,7 @@ static void orderValue(const Value *V, OrderMap &OM) {
   OM.index(V);
 }
 
-static OrderMap orderModule(const Module &M) {
+static OrderMap orderModule(const Module &M, const DXILDebugInfoMap &DIM) {
   // This needs to match the order used by ValueEnumerator::ValueEnumerator()
   // and ValueEnumerator::incorporateFunction().
   OrderMap OM;
@@ -141,8 +141,10 @@ static OrderMap orderModule(const Module &M) {
   for (const Function &F : M) {
     if (F.isDeclaration())
       continue;
-    for (const BasicBlock &BB : F)
-      for (const Instruction &I : BB)
+    for (const BasicBlock &BB : F) {
+      for (const Instruction &I : BB) {
+        if (DIM.VRemove.contains(&I))
+          continue;
         for (const Value *V : I.operands()) {
           if (const auto *MAV = dyn_cast<MetadataAsValue>(V)) {
             if (const auto *VAM =
@@ -155,6 +157,8 @@ static OrderMap orderModule(const Module &M) {
             }
           }
         }
+      }
+    }
   }
   OM.LastGlobalConstantID = OM.size();
 
@@ -188,6 +192,8 @@ static OrderMap orderModule(const Module &M) {
       orderValue(&A, OM);
     for (const BasicBlock &BB : F)
       for (const Instruction &I : BB) {
+        if (DIM.VRemove.contains(&I))
+          continue;
         for (const Value *Op : I.operands())
           if ((isa<Constant>(*Op) && !isa<GlobalValue>(*Op)) ||
               isa<InlineAsm>(*Op))
@@ -199,9 +205,13 @@ static OrderMap orderModule(const Module &M) {
             orderValue(Case.getCaseValue(), OM);
         }
       }
-    for (const BasicBlock &BB : F)
-      for (const Instruction &I : BB)
+    for (const BasicBlock &BB : F) {
+      for (const Instruction &I : BB) {
+        if (DIM.VRemove.contains(&I))
+          continue;
         orderValue(&I, OM);
+      }
+    }
   }
   return OM;
 }
@@ -303,8 +313,9 @@ static void predictValueUseListOrder(const Value *V, const Function *F,
   }
 }
 
-static UseListOrderStack predictUseListOrder(const Module &M) {
-  OrderMap OM = orderModule(M);
+static UseListOrderStack predictUseListOrder(const Module &M,
+                                             const DXILDebugInfoMap &DIM) {
+  OrderMap OM = orderModule(M, DIM);
 
   // Use-list orders need to be serialized after all the users have been added
   // to a value, or else the shuffles will be incomplete.  Store them per
@@ -325,6 +336,8 @@ static UseListOrderStack predictUseListOrder(const Module &M) {
       predictValueUseListOrder(&A, &F, OM, Stack);
     for (const BasicBlock &BB : F)
       for (const Instruction &I : BB) {
+        if (DIM.VRemove.contains(&I))
+          continue;
         for (const Value *Op : I.operands())
           if (isa<Constant>(*Op) || isa<InlineAsm>(*Op)) // Visit GlobalValues.
             predictValueUseListOrder(Op, &F, OM, Stack);
@@ -332,9 +345,13 @@ static UseListOrderStack predictUseListOrder(const Module &M) {
           predictValueUseListOrder(SVI->getShuffleMaskForBitcode(), &F, OM,
                                    Stack);
       }
-    for (const BasicBlock &BB : F)
-      for (const Instruction &I : BB)
+    for (const BasicBlock &BB : F) {
+      for (const Instruction &I : BB) {
+        if (DIM.VRemove.contains(&I))
+          continue;
         predictValueUseListOrder(&I, &F, OM, Stack);
+      }
+    }
   }
 
   // Visit globals last, since the module-level use-list block will be seen
@@ -366,8 +383,8 @@ ValueEnumerator::ValueEnumerator(const Module &M, Type *PrefixType,
                                  const DXILDebugInfoMap &DebugInfo)
     : DebugInfo(DebugInfo) {
   EnumerateType(PrefixType);
-  
-  UseListOrders = predictUseListOrder(M);
+
+  UseListOrders = predictUseListOrder(M, DebugInfo);
 
   // Enumerate the global variables.
   for (const GlobalVariable &GV : M.globals()) {
@@ -377,7 +394,8 @@ ValueEnumerator::ValueEnumerator(const Module &M, Type *PrefixType,
 
   // Enumerate the functions.
   for (const Function &F : M) {
-    EnumerateValue(&F);
+    if (!DebugInfo.VRemove.contains(&F))
+      EnumerateValue(&F);
     EnumerateType(F.getFunctionType());
     EnumerateType(
         TypedPointerType::get(F.getFunctionType(), F.getAddressSpace()));
@@ -454,6 +472,8 @@ ValueEnumerator::ValueEnumerator(const Module &M, Type *PrefixType,
 
     for (const BasicBlock &BB : F)
       for (const Instruction &I : BB) {
+        if (DebugInfo.VRemove.contains(&I))
+          continue;
         for (const Use &Op : I.operands()) {
           auto *MD = dyn_cast<MetadataAsValue>(&Op);
           if (!MD) {
@@ -586,8 +606,11 @@ void ValueEnumerator::print(raw_ostream &OS, const MetadataMapType &Map,
 /// table into the values table.
 void ValueEnumerator::EnumerateValueSymbolTable(const ValueSymbolTable &VST) {
   for (ValueSymbolTable::const_iterator VI = VST.begin(), VE = VST.end();
-       VI != VE; ++VI)
+       VI != VE; ++VI) {
+    if (DebugInfo.VRemove.contains(VI->getValue()))
+      continue;
     EnumerateValue(VI->getValue());
+  }
 }
 
 /// Insert all of the values referenced by named metadata in the specified
@@ -901,6 +924,7 @@ void ValueEnumerator::incorporateFunctionMetadata(const Function &F) {
 void ValueEnumerator::EnumerateValue(const Value *V) {
   assert(!V->getType()->isVoidTy() && "Can't insert void values!");
   assert(!isa<MetadataAsValue>(V) && "EnumerateValue doesn't handle Metadata!");
+  assert(!DebugInfo.VRemove.contains(V) && "Cannot enumerate removed values!");
 
   // Check to see if it's already in!
   unsigned &ValueID = ValueMap[V];
@@ -1077,6 +1101,8 @@ void ValueEnumerator::incorporateFunction(const Function &F) {
   // Add all function-level constants to the value table.
   for (const BasicBlock &BB : F) {
     for (const Instruction &I : BB) {
+      if (DebugInfo.VRemove.contains(&I))
+        continue;
       for (const Use &OI : I.operands()) {
         if ((isa<Constant>(OI) && !isa<GlobalValue>(OI)) || isa<InlineAsm>(OI))
           EnumerateValue(OI);
@@ -1103,6 +1129,8 @@ void ValueEnumerator::incorporateFunction(const Function &F) {
   // Add all of the instructions.
   for (const BasicBlock &BB : F) {
     for (const Instruction &I : BB) {
+      if (DebugInfo.VRemove.contains(&I))
+        continue;
       for (const Use &OI : I.operands()) {
         if (auto *MD = dyn_cast<MetadataAsValue>(&OI)) {
           if (auto *Local = dyn_cast<LocalAsMetadata>(MD->getMetadata())) {

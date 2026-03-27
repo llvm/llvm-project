@@ -14,23 +14,33 @@
 #define LLVM_LIB_TARGET_DIRECTX_DXILDEBUGINFO_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 
 namespace llvm {
 
 class Module;
 class Metadata;
+class Value;
 
 namespace dxil {
 
 class DXILDebugInfoMap {
 public:
   using MDMap = DenseMap<const Metadata *, const Metadata *>;
+  using VMap = DenseMap<const Value *, const Value *>;
+  using VSet = DenseSet<const Value *>;
 
   /// Enumerate extra metadata when Key is encountered in ValueEnumerator.
   MDMap MDExtra;
 
   /// Completely replace one metadata with another in ValueEnumerator.
   MDMap MDReplace;
+
+  /// Replace the name of one value with that of another.
+  VMap VRename;
+
+  /// Remove a value from the output.
+  VSet VRemove;
 };
 
 namespace DXILDebugInfoPass {

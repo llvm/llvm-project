@@ -9,17 +9,63 @@
 #include "DXILDebugInfo.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 #define DEBUG_TYPE "dx-debug-info"
 
 using namespace llvm;
 using namespace llvm::dxil;
 
+// llvm.dbg.value has an additional "offset" operand in DXIL. Transform
+// llvm.dbg.value it to llvm.dx.dbg.value and add zero offset.
+static void replaceDbgVariableIntr(DbgVariableIntrinsic *DVI, Function *NewF,
+                                   DXILDebugInfoMap &Res) {
+  if (DVI->getIntrinsicID() != Intrinsic::dbg_value) {
+    return;
+  }
+
+  Type *Int64Ty = Type::getInt64Ty(DVI->getContext());
+  Constant *ZeroOffset = ConstantInt::get(Int64Ty, 0);
+
+  Value *NewOps[] = {
+      DVI->getOperand(0),
+      ZeroOffset,
+      DVI->getOperand(1),
+      DVI->getOperand(2),
+  };
+
+  CallInst *NewI = CallInst::Create(NewF->getFunctionType(), NewF, NewOps, "",
+                                    std::next(DVI->getIterator()));
+  NewI->setTailCall(DVI->isTailCall());
+  NewI->setDebugLoc(DVI->getDebugLoc());
+  Res.VRemove.insert(DVI);
+}
+
+static void replaceDbgValue(Module &M, DXILDebugInfoMap &Res) {
+  Function *F = getDeclarationIfExists(&M, Intrinsic::dbg_value);
+  if (!F)
+    return;
+
+  Function *NewF = getOrInsertDeclaration(&M, Intrinsic::dx_dbg_value);
+  Res.VRemove.insert(F);
+  Res.VRename.insert({NewF, F});
+
+  for (User *U : F->users()) {
+    auto *DVI = cast<DbgVariableIntrinsic>(U);
+    replaceDbgVariableIntr(DVI, NewF, Res);
+  }
+}
+
 DXILDebugInfoMap DXILDebugInfoPass::run(Module &M) {
   DXILDebugInfoMap Res;
   DebugInfoFinder DIF;
   DIF.processModule(M);
+
+  // Replace llvm.dbg.value with equivalent DXIL intrinsics.
+  replaceDbgValue(M, Res);
 
   for (DICompileUnit *CU : DIF.compile_units()) {
     DISourceLanguageName Lang = CU->getSourceLanguage();
