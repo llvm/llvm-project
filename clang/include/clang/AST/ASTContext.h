@@ -1368,7 +1368,7 @@ public:
   /// This does not include extern shared variables used by device host
   /// functions as addresses of shared variables are per warp, therefore
   /// cannot be accessed by host code.
-  llvm::DenseSet<const VarDecl *> CUDADeviceVarODRUsedByHost;
+  llvm::SetVector<const VarDecl *> CUDADeviceVarODRUsedByHost;
 
   /// Keep track of CUDA/HIP external kernels or device variables ODR-used by
   /// host code. SetVector is used to maintain the order.
