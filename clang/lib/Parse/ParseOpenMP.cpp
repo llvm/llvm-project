@@ -3241,6 +3241,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_partial:
   case OMPC_align:
   case OMPC_message:
+  case OMPC_graph_id:
   case OMPC_ompx_dyn_cgroup_mem:
   case OMPC_dyn_groupprivate:
   case OMPC_transparent:
@@ -3390,6 +3391,20 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
       Clause = ParseOpenMPSingleExprClause(CKind, WrongDirective);
     else
       Clause = ParseOpenMPClause(CKind, WrongDirective);
+    break;
+  case OMPC_graph_reset:
+    if (!FirstClause) {
+      Diag(Tok, diag::err_omp_more_one_clause)
+          << getOpenMPDirectiveName(DKind, OMPVersion)
+          << getOpenMPClauseName(CKind) << 0;
+      ErrorFound = true;
+    }
+
+    if (PP.LookAhead(/*N=*/0).is(tok::l_paren)) {
+      Clause = ParseOpenMPSingleExprClause(CKind, WrongDirective);
+    } else {
+      Clause = ParseOpenMPClause(CKind, WrongDirective);
+    }
     break;
   case OMPC_self_maps:
     // OpenMP [6.0, self_maps clause]
