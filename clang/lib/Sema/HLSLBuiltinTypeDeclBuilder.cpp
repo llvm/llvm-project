@@ -1473,12 +1473,11 @@ CXXRecordDecl *BuiltinTypeDeclBuilder::addMipsType(ResourceDimension Dim,
   // initialized with the handle and the requested mip level.
   CXXRecordDecl *MipsRecord = addPrivateNestedRecord("mips_type");
   BuiltinTypeDeclBuilder MipsBuilder(SemaRef, MipsRecord);
-  MipsBuilder.addFriend(Record);
-  MipsBuilder.addHandleMember(getResourceAttrs().ResourceClass, Dim,
-                              getResourceAttrs().IsROV, false, ReturnType,
-                              AccessSpecifier::AS_public);
-
-  MipsBuilder.addDefaultHandleConstructor(AccessSpecifier::AS_protected)
+  MipsBuilder.addFriend(Record)
+      .addHandleMember(getResourceAttrs().ResourceClass, Dim,
+                       getResourceAttrs().IsROV, false, ReturnType,
+                       AccessSpecifier::AS_public)
+      .addDefaultHandleConstructor(AccessSpecifier::AS_protected)
       .addCopyConstructor(AccessSpecifier::AS_protected)
       .addCopyAssignmentOperator(AccessSpecifier::AS_protected);
 
