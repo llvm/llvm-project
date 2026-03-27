@@ -134,6 +134,292 @@ entry:
   ret float %cond6
 }
 
+define <3 x float> @safe_math_fract_v3f32(<3 x float> %x, ptr addrspace(1) writeonly captures(none) %ip) {
+; GFX6-LABEL: safe_math_fract_v3f32:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_floor_f32_e32 v7, v2
+; GFX6-NEXT:    v_floor_f32_e32 v5, v0
+; GFX6-NEXT:    v_sub_f32_e32 v8, v2, v7
+; GFX6-NEXT:    v_sub_f32_e32 v9, v0, v5
+; GFX6-NEXT:    v_min_f32_e32 v8, 0x3f7fffff, v8
+; GFX6-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; GFX6-NEXT:    v_min_f32_e32 v9, 0x3f7fffff, v9
+; GFX6-NEXT:    v_cndmask_b32_e32 v8, v8, v2, vcc
+; GFX6-NEXT:    v_cmp_u_f32_e32 vcc, v0, v0
+; GFX6-NEXT:    v_mov_b32_e32 v10, 0x204
+; GFX6-NEXT:    v_cndmask_b32_e32 v9, v9, v0, vcc
+; GFX6-NEXT:    v_cmp_class_f32_e32 vcc, v0, v10
+; GFX6-NEXT:    s_mov_b32 s6, 0
+; GFX6-NEXT:    v_cndmask_b32_e64 v0, v9, 0, vcc
+; GFX6-NEXT:    v_cmp_class_f32_e32 vcc, v2, v10
+; GFX6-NEXT:    s_mov_b32 s7, 0xf000
+; GFX6-NEXT:    s_mov_b32 s4, s6
+; GFX6-NEXT:    s_mov_b32 s5, s6
+; GFX6-NEXT:    v_cndmask_b32_e64 v2, v8, 0, vcc
+; GFX6-NEXT:    v_floor_f32_e32 v6, v1
+; GFX6-NEXT:    buffer_store_dword v7, v[3:4], s[4:7], 0 addr64 offset:8
+; GFX6-NEXT:    buffer_store_dwordx2 v[5:6], v[3:4], s[4:7], 0 addr64
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX7-LABEL: safe_math_fract_v3f32:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_mov_b32_e32 v10, 0x204
+; GFX7-NEXT:    v_fract_f32_e32 v8, v0
+; GFX7-NEXT:    v_cmp_class_f32_e32 vcc, v0, v10
+; GFX7-NEXT:    s_mov_b32 s6, 0
+; GFX7-NEXT:    v_floor_f32_e32 v5, v0
+; GFX7-NEXT:    v_fract_f32_e32 v9, v2
+; GFX7-NEXT:    v_cndmask_b32_e64 v0, v8, 0, vcc
+; GFX7-NEXT:    v_cmp_class_f32_e32 vcc, v2, v10
+; GFX7-NEXT:    s_mov_b32 s7, 0xf000
+; GFX7-NEXT:    s_mov_b32 s4, s6
+; GFX7-NEXT:    s_mov_b32 s5, s6
+; GFX7-NEXT:    v_floor_f32_e32 v7, v2
+; GFX7-NEXT:    v_floor_f32_e32 v6, v1
+; GFX7-NEXT:    v_fract_f32_e32 v1, v1
+; GFX7-NEXT:    v_cndmask_b32_e64 v2, v9, 0, vcc
+; GFX7-NEXT:    buffer_store_dwordx3 v[5:7], v[3:4], s[4:7], 0 addr64
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: safe_math_fract_v3f32:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_mov_b32_e32 v10, 0x204
+; GFX8-NEXT:    v_fract_f32_e32 v8, v0
+; GFX8-NEXT:    v_cmp_class_f32_e32 vcc, v0, v10
+; GFX8-NEXT:    v_floor_f32_e32 v5, v0
+; GFX8-NEXT:    v_fract_f32_e32 v9, v2
+; GFX8-NEXT:    v_cndmask_b32_e64 v0, v8, 0, vcc
+; GFX8-NEXT:    v_cmp_class_f32_e32 vcc, v2, v10
+; GFX8-NEXT:    v_floor_f32_e32 v7, v2
+; GFX8-NEXT:    v_floor_f32_e32 v6, v1
+; GFX8-NEXT:    v_fract_f32_e32 v1, v1
+; GFX8-NEXT:    v_cndmask_b32_e64 v2, v9, 0, vcc
+; GFX8-NEXT:    global_store_dwordx3 v[3:4], v[5:7], off
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: safe_math_fract_v3f32:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_fract_f32_e32 v8, v0
+; GFX11-NEXT:    v_cmp_class_f32_e64 s0, v0, 0x204
+; GFX11-NEXT:    v_floor_f32_e32 v5, v0
+; GFX11-NEXT:    v_fract_f32_e32 v9, v2
+; GFX11-NEXT:    v_floor_f32_e32 v7, v2
+; GFX11-NEXT:    v_floor_f32_e32 v6, v1
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, v8, 0, s0
+; GFX11-NEXT:    v_cmp_class_f32_e64 s0, v2, 0x204
+; GFX11-NEXT:    v_fract_f32_e32 v1, v1
+; GFX11-NEXT:    global_store_b96 v[3:4], v[5:7], off
+; GFX11-NEXT:    v_cndmask_b32_e64 v2, v9, 0, s0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: safe_math_fract_v3f32:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_fract_f32_e32 v8, v0
+; GFX12-NEXT:    v_cmp_class_f32_e64 s0, v0, 0x204
+; GFX12-NEXT:    v_floor_f32_e32 v5, v0
+; GFX12-NEXT:    v_fract_f32_e32 v9, v2
+; GFX12-NEXT:    v_floor_f32_e32 v7, v2
+; GFX12-NEXT:    v_floor_f32_e32 v6, v1
+; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-NEXT:    v_cndmask_b32_e64 v0, v8, 0, s0
+; GFX12-NEXT:    v_cmp_class_f32_e64 s0, v2, 0x204
+; GFX12-NEXT:    v_fract_f32_e32 v1, v1
+; GFX12-NEXT:    global_store_b96 v[3:4], v[5:7], off
+; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-NEXT:    v_cndmask_b32_e64 v2, v9, 0, s0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+; GFX6-IR-LABEL: define <3 x float> @safe_math_fract_v3f32(
+; GFX6-IR-SAME: <3 x float> [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0]] {
+; GFX6-IR-NEXT:    [[FLOOR:%.*]] = tail call <3 x float> @llvm.floor.v3f32(<3 x float> [[X]])
+; GFX6-IR-NEXT:    [[SUB:%.*]] = fsub <3 x float> [[X]], [[FLOOR]]
+; GFX6-IR-NEXT:    [[MIN:%.*]] = tail call <3 x float> @llvm.minnum.v3f32(<3 x float> [[SUB]], <3 x float> <float 0x3FEFFFFFE0000000, float poison, float 0x3FEFFFFFE0000000>)
+; GFX6-IR-NEXT:    [[UNO:%.*]] = fcmp uno <3 x float> [[X]], <float 0.000000e+00, float poison, float 0.000000e+00>
+; GFX6-IR-NEXT:    [[COND:%.*]] = select <3 x i1> [[UNO]], <3 x float> [[X]], <3 x float> [[MIN]]
+; GFX6-IR-NEXT:    [[FABS:%.*]] = tail call <3 x float> @llvm.fabs.v3f32(<3 x float> [[X]])
+; GFX6-IR-NEXT:    [[CMPINF:%.*]] = fcmp oeq <3 x float> [[FABS]], <float 0x7FF0000000000000, float poison, float 0x7FF0000000000000>
+; GFX6-IR-NEXT:    [[COND6:%.*]] = select <3 x i1> [[CMPINF]], <3 x float> <float 0.000000e+00, float poison, float 0.000000e+00>, <3 x float> [[COND]]
+; GFX6-IR-NEXT:    store <3 x float> [[FLOOR]], ptr addrspace(1) [[IP]], align 4
+; GFX6-IR-NEXT:    ret <3 x float> [[COND6]]
+; IR-FRACT-LABEL: define <3 x float> @safe_math_fract_v3f32(
+; IR-FRACT-SAME: <3 x float> [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0]] {
+; IR-FRACT-NEXT:    [[FLOOR:%.*]] = tail call <3 x float> @llvm.floor.v3f32(<3 x float> [[X]])
+; IR-FRACT-NEXT:    [[TMP1:%.*]] = extractelement <3 x float> [[X]], i64 0
+; IR-FRACT-NEXT:    [[TMP2:%.*]] = extractelement <3 x float> [[X]], i64 1
+; IR-FRACT-NEXT:    [[TMP3:%.*]] = extractelement <3 x float> [[X]], i64 2
+; IR-FRACT-NEXT:    [[TMP4:%.*]] = call float @llvm.amdgcn.fract.f32(float [[TMP1]])
+; IR-FRACT-NEXT:    [[TMP5:%.*]] = call float @llvm.amdgcn.fract.f32(float [[TMP2]])
+; IR-FRACT-NEXT:    [[TMP6:%.*]] = call float @llvm.amdgcn.fract.f32(float [[TMP3]])
+; IR-FRACT-NEXT:    [[TMP7:%.*]] = insertelement <3 x float> poison, float [[TMP4]], i64 0
+; IR-FRACT-NEXT:    [[TMP8:%.*]] = insertelement <3 x float> [[TMP7]], float [[TMP5]], i64 1
+; IR-FRACT-NEXT:    [[COND:%.*]] = insertelement <3 x float> [[TMP8]], float [[TMP6]], i64 2
+; IR-FRACT-NEXT:    [[FABS:%.*]] = tail call <3 x float> @llvm.fabs.v3f32(<3 x float> [[X]])
+; IR-FRACT-NEXT:    [[CMPINF:%.*]] = fcmp oeq <3 x float> [[FABS]], <float 0x7FF0000000000000, float poison, float 0x7FF0000000000000>
+; IR-FRACT-NEXT:    [[COND6:%.*]] = select <3 x i1> [[CMPINF]], <3 x float> <float 0.000000e+00, float poison, float 0.000000e+00>, <3 x float> [[COND]]
+; IR-FRACT-NEXT:    store <3 x float> [[FLOOR]], ptr addrspace(1) [[IP]], align 4
+; IR-FRACT-NEXT:    ret <3 x float> [[COND6]]
+  %floor = tail call <3 x float> @llvm.floor.v3f32(<3 x float> %x)
+  %sub = fsub <3 x float> %x, %floor
+  %min = tail call <3 x float> @llvm.minnum.v3f32(<3 x float> %sub, <3 x float> <float 0x3FEFFFFFE0000000, float poison, float 0x3FEFFFFFE0000000>)
+  %uno = fcmp uno <3 x float> %x, <float 0.0, float poison, float 0.0>
+  %cond = select <3 x i1> %uno, <3 x float> %x, <3 x float> %min
+  %fabs = tail call <3 x float> @llvm.fabs.v3f32(<3 x float> %x)
+  %cmpinf = fcmp oeq <3 x float> %fabs, <float 0x7FF0000000000000, float poison, float 0x7FF0000000000000>
+  %cond6 = select <3 x i1> %cmpinf, <3 x float> <float 0.0, float poison, float 0.0>, <3 x float> %cond
+  store <3 x float> %floor, ptr addrspace(1) %ip, align 4
+  ret <3 x float> %cond6
+}
+
+define <2 x float> @safe_math_fract_v2f32_const_splat_poison(<2 x float> %x, ptr addrspace(1) writeonly captures(none) %ip) {
+; IR-LABEL: define <2 x float> @safe_math_fract_v2f32_const_splat_poison(
+; IR-SAME: <2 x float> [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0:[0-9]+]] {
+; IR-NEXT:    [[FLOOR:%.*]] = tail call <2 x float> @llvm.floor.v2f32(<2 x float> [[X]])
+; IR-NEXT:    [[SUB:%.*]] = fsub <2 x float> [[X]], [[FLOOR]]
+; IR-NEXT:    [[MIN:%.*]] = tail call <2 x float> @llvm.minnum.v2f32(<2 x float> [[SUB]], <2 x float> poison)
+; IR-NEXT:    [[UNO:%.*]] = fcmp uno <2 x float> [[X]], zeroinitializer
+; IR-NEXT:    [[COND:%.*]] = select <2 x i1> [[UNO]], <2 x float> [[X]], <2 x float> [[MIN]]
+; IR-NEXT:    [[FABS:%.*]] = tail call <2 x float> @llvm.fabs.v2f32(<2 x float> [[X]])
+; IR-NEXT:    [[CMPINF:%.*]] = fcmp oeq <2 x float> [[FABS]], splat (float 0x7FF0000000000000)
+; IR-NEXT:    [[COND6:%.*]] = select <2 x i1> [[CMPINF]], <2 x float> zeroinitializer, <2 x float> [[COND]]
+; IR-NEXT:    store <2 x float> [[FLOOR]], ptr addrspace(1) [[IP]], align 4
+; IR-NEXT:    ret <2 x float> [[COND6]]
+;
+; GFX6-LABEL: safe_math_fract_v2f32_const_splat_poison:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_floor_f32_e32 v5, v1
+; GFX6-NEXT:    v_floor_f32_e32 v4, v0
+; GFX6-NEXT:    v_sub_f32_e32 v7, v1, v5
+; GFX6-NEXT:    v_cmp_u_f32_e32 vcc, v1, v1
+; GFX6-NEXT:    v_sub_f32_e32 v6, v0, v4
+; GFX6-NEXT:    v_cndmask_b32_e32 v7, v7, v1, vcc
+; GFX6-NEXT:    v_cmp_u_f32_e32 vcc, v0, v0
+; GFX6-NEXT:    v_mov_b32_e32 v8, 0x204
+; GFX6-NEXT:    v_cndmask_b32_e32 v6, v6, v0, vcc
+; GFX6-NEXT:    v_cmp_class_f32_e32 vcc, v0, v8
+; GFX6-NEXT:    s_mov_b32 s6, 0
+; GFX6-NEXT:    v_cndmask_b32_e64 v0, v6, 0, vcc
+; GFX6-NEXT:    v_cmp_class_f32_e32 vcc, v1, v8
+; GFX6-NEXT:    s_mov_b32 s7, 0xf000
+; GFX6-NEXT:    s_mov_b32 s4, s6
+; GFX6-NEXT:    s_mov_b32 s5, s6
+; GFX6-NEXT:    v_cndmask_b32_e64 v1, v7, 0, vcc
+; GFX6-NEXT:    buffer_store_dwordx2 v[4:5], v[2:3], s[4:7], 0 addr64
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX7-LABEL: safe_math_fract_v2f32_const_splat_poison:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_floor_f32_e32 v5, v1
+; GFX7-NEXT:    v_floor_f32_e32 v4, v0
+; GFX7-NEXT:    v_sub_f32_e32 v7, v1, v5
+; GFX7-NEXT:    v_cmp_u_f32_e32 vcc, v1, v1
+; GFX7-NEXT:    v_sub_f32_e32 v6, v0, v4
+; GFX7-NEXT:    v_cndmask_b32_e32 v7, v7, v1, vcc
+; GFX7-NEXT:    v_cmp_u_f32_e32 vcc, v0, v0
+; GFX7-NEXT:    v_mov_b32_e32 v8, 0x204
+; GFX7-NEXT:    v_cndmask_b32_e32 v6, v6, v0, vcc
+; GFX7-NEXT:    v_cmp_class_f32_e32 vcc, v0, v8
+; GFX7-NEXT:    s_mov_b32 s6, 0
+; GFX7-NEXT:    v_cndmask_b32_e64 v0, v6, 0, vcc
+; GFX7-NEXT:    v_cmp_class_f32_e32 vcc, v1, v8
+; GFX7-NEXT:    s_mov_b32 s7, 0xf000
+; GFX7-NEXT:    s_mov_b32 s4, s6
+; GFX7-NEXT:    s_mov_b32 s5, s6
+; GFX7-NEXT:    v_cndmask_b32_e64 v1, v7, 0, vcc
+; GFX7-NEXT:    buffer_store_dwordx2 v[4:5], v[2:3], s[4:7], 0 addr64
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: safe_math_fract_v2f32_const_splat_poison:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_floor_f32_e32 v5, v1
+; GFX8-NEXT:    v_floor_f32_e32 v4, v0
+; GFX8-NEXT:    v_sub_f32_e32 v7, v1, v5
+; GFX8-NEXT:    v_cmp_u_f32_e32 vcc, v1, v1
+; GFX8-NEXT:    v_sub_f32_e32 v6, v0, v4
+; GFX8-NEXT:    v_cndmask_b32_e32 v7, v7, v1, vcc
+; GFX8-NEXT:    v_cmp_u_f32_e32 vcc, v0, v0
+; GFX8-NEXT:    v_mov_b32_e32 v8, 0x204
+; GFX8-NEXT:    v_cndmask_b32_e32 v6, v6, v0, vcc
+; GFX8-NEXT:    v_cmp_class_f32_e32 vcc, v0, v8
+; GFX8-NEXT:    v_cndmask_b32_e64 v0, v6, 0, vcc
+; GFX8-NEXT:    v_cmp_class_f32_e32 vcc, v1, v8
+; GFX8-NEXT:    v_cndmask_b32_e64 v1, v7, 0, vcc
+; GFX8-NEXT:    global_store_dwordx2 v[2:3], v[4:5], off
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: safe_math_fract_v2f32_const_splat_poison:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_floor_f32_e32 v4, v0
+; GFX11-NEXT:    v_floor_f32_e32 v5, v1
+; GFX11-NEXT:    v_cmp_u_f32_e32 vcc_lo, v0, v0
+; GFX11-NEXT:    v_cmp_class_f32_e64 s0, v0, 0x204
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_4) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    v_dual_sub_f32 v6, v0, v4 :: v_dual_sub_f32 v7, v1, v5
+; GFX11-NEXT:    global_store_b64 v[2:3], v[4:5], off
+; GFX11-NEXT:    v_cndmask_b32_e32 v6, v6, v0, vcc_lo
+; GFX11-NEXT:    v_cmp_u_f32_e32 vcc_lo, v1, v1
+; GFX11-NEXT:    v_cndmask_b32_e32 v7, v7, v1, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, v6, 0, s0
+; GFX11-NEXT:    v_cmp_class_f32_e64 s0, v1, 0x204
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, v7, 0, s0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: safe_math_fract_v2f32_const_splat_poison:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_floor_f32_e32 v4, v0
+; GFX12-NEXT:    v_floor_f32_e32 v5, v1
+; GFX12-NEXT:    v_cmp_u_f32_e32 vcc_lo, v0, v0
+; GFX12-NEXT:    v_cmp_class_f32_e64 s0, v0, 0x204
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX12-NEXT:    v_dual_sub_f32 v6, v0, v4 :: v_dual_sub_f32 v7, v1, v5
+; GFX12-NEXT:    global_store_b64 v[2:3], v[4:5], off
+; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-NEXT:    v_cndmask_b32_e32 v6, v6, v0, vcc_lo
+; GFX12-NEXT:    v_cmp_u_f32_e32 vcc_lo, v1, v1
+; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-NEXT:    v_cndmask_b32_e32 v7, v7, v1, vcc_lo
+; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-NEXT:    v_cndmask_b32_e64 v0, v6, 0, s0
+; GFX12-NEXT:    v_cmp_class_f32_e64 s0, v1, 0x204
+; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_cndmask_b32_e64 v1, v7, 0, s0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %floor = tail call <2 x float> @llvm.floor.v2f32(<2 x float> %x)
+  %sub = fsub <2 x float> %x, %floor
+  %min = tail call <2 x float> @llvm.minnum.v2f32(<2 x float> %sub, <2 x float> poison)
+  %uno = fcmp uno <2 x float> %x, zeroinitializer
+  %cond = select <2 x i1> %uno, <2 x float> %x, <2 x float> %min
+  %fabs = tail call <2 x float> @llvm.fabs.v2f32(<2 x float> %x)
+  %cmpinf = fcmp oeq <2 x float> %fabs, splat (float 0x7FF0000000000000)
+  %cond6 = select <2 x i1> %cmpinf, <2 x float> zeroinitializer, <2 x float> %cond
+  store <2 x float> %floor, ptr addrspace(1) %ip, align 4
+  ret <2 x float> %cond6
+}
+
 define float @safe_math_fract_f32_swap(float %x, ptr addrspace(1) writeonly captures(none) %ip) {
 ; GFX6-IR-LABEL: define float @safe_math_fract_f32_swap(
 ; GFX6-IR-SAME: float [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0]] {
@@ -336,7 +622,7 @@ entry:
 ; Cannot match fract without a nan check or no-nans.
 define float @no_nan_check_math_fract_f32(float %x, ptr addrspace(1) writeonly captures(none) %ip) {
 ; IR-LABEL: define float @no_nan_check_math_fract_f32(
-; IR-SAME: float [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0:[0-9]+]] {
+; IR-SAME: float [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0]] {
 ; IR-NEXT:  [[ENTRY:.*:]]
 ; IR-NEXT:    [[FLOOR:%.*]] = tail call float @llvm.floor.f32(float [[X]])
 ; IR-NEXT:    [[SUB:%.*]] = fsub float [[X]], [[FLOOR]]
