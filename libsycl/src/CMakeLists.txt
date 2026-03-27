@@ -88,6 +88,7 @@ set(LIBSYCL_SOURCES
     "device_selector.cpp"
     "platform.cpp"
     "queue.cpp"
+    "usm_functions.cpp"
     "detail/context_impl.cpp"
     "detail/device_impl.cpp"
     "detail/global_objects.cpp"

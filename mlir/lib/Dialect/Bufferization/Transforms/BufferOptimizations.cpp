@@ -19,6 +19,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Pass/Pass.h"
 
@@ -103,9 +104,25 @@ static bool defaultIsSmallAlloc(Value alloc, unsigned maximumSizeInBytes,
     }
     return false;
   }
+  // Skip if the element type has no data layout support (e.g., nested memrefs).
+  Type elemType = type.getElementType();
+  if (!elemType.isIntOrFloat() &&
+      !isa<ComplexType, IndexType, VectorType>(elemType) &&
+      !isa<DataLayoutTypeInterface>(elemType))
+    return false;
   unsigned bitwidth = mlir::DataLayout::closest(alloc.getDefiningOp())
-                          .getTypeSizeInBits(type.getElementType());
-  return type.getNumElements() * bitwidth <= maximumSizeInBytes * 8;
+                          .getTypeSizeInBits(elemType);
+  // Use tryGetNumElements to avoid an assertion on integer overflow (e.g. for
+  // very large statically-shaped memrefs).  If the element count overflows
+  // int64_t the allocation is certainly not "small", so return false.
+  std::optional<int64_t> numElements = type.tryGetNumElements();
+  if (!numElements)
+    return false;
+  // Guard against overflow in the size computation as well.
+  if (bitwidth != 0 &&
+      *numElements > static_cast<int64_t>(maximumSizeInBytes * 8ULL / bitwidth))
+    return false;
+  return *numElements * bitwidth <= maximumSizeInBytes * 8;
 }
 
 /// Checks whether the given aliases leave the allocation scope.

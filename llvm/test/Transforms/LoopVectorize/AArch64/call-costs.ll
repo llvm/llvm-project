@@ -130,9 +130,7 @@ define void @call_scalarized(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[OR_COND:%.*]] = extractelement <2 x i1> [[TMP12]], i32 0
 ; CHECK-NEXT:    br i1 [[OR_COND]], label %[[LOOP_LATCH:.*]], label %[[THEN:.*]]
 ; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[IV]], 0
-; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[TMP15]], -1
-; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP16]]
+; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr double, ptr [[DST]], i64 [[IV_NEXT]]
 ; CHECK-NEXT:    [[L:%.*]] = extractelement <2 x double> [[REVERSE]], i32 0
 ; CHECK-NEXT:    [[SQRT:%.*]] = call double @llvm.sqrt.f64(double [[L]])
 ; CHECK-NEXT:    store double [[SQRT]], ptr [[GEP_DST]], align 8

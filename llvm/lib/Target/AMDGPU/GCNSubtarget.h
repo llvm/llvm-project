@@ -66,6 +66,9 @@ protected:
   int LDSBankCount = 0;
   unsigned MaxPrivateElementSize = 0;
 
+  // Instruction cache line size in bytes; set from TableGen subtarget features.
+  unsigned InstCacheLineSize = 0;
+
   // Dynamically set bits that enable features.
   bool DynamicVGPR = false;
   bool DynamicVGPRBlockSize32 = false;
@@ -169,6 +172,9 @@ public:
   }
 
   int getLDSBankCount() const { return LDSBankCount; }
+
+  /// Instruction cache line size in bytes (64 for pre-GFX11, 128 for GFX11+).
+  unsigned getInstCacheLineSize() const { return InstCacheLineSize; }
 
   unsigned getMaxPrivateElementSize(bool ForBufferRSrc = false) const {
     return (ForBufferRSrc || !hasFlatScratchEnabled()) ? MaxPrivateElementSize
@@ -396,10 +402,6 @@ public:
     return isMesa3DOS() && AMDGPU::isShader(F.getCallingConv());
   }
 
-  bool isGFX1170() const {
-    return getGeneration() == GFX11 && hasWMMA128bInsts();
-  }
-
   bool hasMad64_32() const { return getGeneration() >= SEA_ISLANDS; }
 
   bool hasAtomicFaddInsts() const {
@@ -619,12 +621,6 @@ public:
   /// \returns true if the target uses LOADcnt/SAMPLEcnt/BVHcnt, DScnt/KMcnt
   /// and STOREcnt rather than VMcnt, LGKMcnt and VScnt respectively.
   bool hasExtendedWaitCounts() const { return getGeneration() >= GFX12; }
-
-  /// \returns true if inline constants are not supported for F16 pseudo
-  /// scalar transcendentals.
-  bool hasNoF16PseudoScalarTransInlineConstants() const {
-    return getGeneration() == GFX12;
-  }
 
   /// \returns true if the target has packed f32 instructions that only read 32
   /// bits from a scalar operand (SGPR or literal) and replicates the bits to
@@ -907,7 +903,7 @@ public:
 
   /// \returns Maximum flat work group size supported by the subtarget.
   unsigned getMaxFlatWorkGroupSize() const override {
-    return AMDGPU::IsaInfo::getMaxFlatWorkGroupSize(this);
+    return AMDGPU::IsaInfo::getMaxFlatWorkGroupSize();
   }
 
   /// \returns Number of waves per execution unit required to support the given

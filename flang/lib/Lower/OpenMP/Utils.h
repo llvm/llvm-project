@@ -139,10 +139,6 @@ mlir::Value createParentSymAndGenIntermediateMaps(
     OmpMapParentAndMemberData &parentMemberIndices, llvm::StringRef asFortran,
     mlir::omp::ClauseMapFlags mapTypeBits);
 
-mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
-    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
-    fir::RecordType recordType, llvm::StringRef mapperNameStr);
-
 bool requiresImplicitDefaultDeclareMapper(
     const semantics::DerivedTypeSpec &typeSpec);
 
@@ -215,6 +211,14 @@ struct IteratorRange {
 bool hasIteratorIVReference(
     const omp::Object &object,
     const llvm::SmallPtrSetImpl<const Fortran::semantics::Symbol *> &ivSyms);
+
+/// Default name mangler for implicit default mappers.
+///
+/// \param converter The converter to use for name mangling.
+/// \param mapperIdName The name of the mapper to mangle.
+/// \param memberName The name of the member to mangle.
+void defaultMangler(Fortran::lower::AbstractConverter &converter,
+                    std::string &mapperIdName, llvm::StringRef memberName);
 
 mlir::Value genIteratorCoordinate(Fortran::lower::AbstractConverter &converter,
                                   hlfir::Entity entity,

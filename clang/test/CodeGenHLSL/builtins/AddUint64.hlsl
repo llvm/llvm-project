@@ -7,12 +7,12 @@
 // CHECK-LABEL: define hidden noundef <2 x i32> @_Z20test_AddUint64_uint2Dv2_jS_(
 // CHECK-SAME: <2 x i32> noundef [[A:%.*]], <2 x i32> noundef [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <2 x i32>, align 8
-// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <2 x i32>, align 8
-// CHECK-NEXT:    store <2 x i32> [[A]], ptr [[A_ADDR]], align 8
-// CHECK-NEXT:    store <2 x i32> [[B]], ptr [[B_ADDR]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[A_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[B_ADDR]], align 8
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <2 x i32>, align 4
+// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <2 x i32>, align 4
+// CHECK-NEXT:    store <2 x i32> [[A]], ptr [[A_ADDR]], align 4
+// CHECK-NEXT:    store <2 x i32> [[B]], ptr [[B_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[A_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[B_ADDR]], align 4
 // CHECK-NEXT:    [[LOWA:%.*]] = extractelement <2 x i32> [[TMP0]], i64 0
 // CHECK-NEXT:    [[HIGHA:%.*]] = extractelement <2 x i32> [[TMP0]], i64 1
 // CHECK-NEXT:    [[LOWB:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
@@ -34,12 +34,12 @@ uint2 test_AddUint64_uint2(uint2 a, uint2 b) {
 // CHECK-LABEL: define hidden noundef <4 x i32> @_Z20test_AddUint64_uint4Dv4_jS_(
 // CHECK-SAME: <4 x i32> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <4 x i32>, align 16
-// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <4 x i32>, align 16
-// CHECK-NEXT:    store <4 x i32> [[A]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    store <4 x i32> [[B]], ptr [[B_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[B_ADDR]], align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <4 x i32>, align 4
+// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <4 x i32>, align 4
+// CHECK-NEXT:    store <4 x i32> [[A]], ptr [[A_ADDR]], align 4
+// CHECK-NEXT:    store <4 x i32> [[B]], ptr [[B_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[B_ADDR]], align 4
 // CHECK-NEXT:    [[LOWA:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <2 x i32> <i32 0, i32 2>
 // CHECK-NEXT:    [[HIGHA:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <2 x i32> <i32 1, i32 3>
 // CHECK-NEXT:    [[LOWB:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <2 x i32> <i32 0, i32 2>

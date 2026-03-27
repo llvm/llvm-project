@@ -1,23 +1,23 @@
-// Tests for ssaf-linker file I/O error handling.
+// Tests for clang-ssaf-linker file I/O error handling.
 
 // RUN: rm -rf %t
 // RUN: mkdir -p %t
 
 // Malformed JSON input.
-// RUN: not ssaf-linker %S/Inputs/tu-malformed.json -o %t/out.json 2>&1 \
+// RUN: not clang-ssaf-linker %S/Inputs/tu-malformed.json -o %t/out.json 2>&1 \
 // RUN:   | FileCheck %s --match-full-lines --check-prefix=BAD-JSON
-// BAD-JSON:      ssaf-linker: error: reading TUSummary from file '{{.*}}tu-malformed.json'
+// BAD-JSON:      clang-ssaf-linker: error: reading TUSummary from file '{{.*}}tu-malformed.json'
 // BAD-JSON-NEXT: {{.*}}: Invalid JSON value{{.*}}
 
 // Missing required fields in otherwise valid JSON.
-// RUN: not ssaf-linker %S/Inputs/tu-missing-fields.json -o %t/out.json 2>&1 \
+// RUN: not clang-ssaf-linker %S/Inputs/tu-missing-fields.json -o %t/out.json 2>&1 \
 // RUN:        | FileCheck %s --match-full-lines --check-prefix=MISSING-FIELDS
-// MISSING-FIELDS:      ssaf-linker: error: reading TUSummary from file '{{.*}}tu-missing-fields.json'
+// MISSING-FIELDS:      clang-ssaf-linker: error: reading TUSummary from file '{{.*}}tu-missing-fields.json'
 // MISSING-FIELDS-NEXT: failed to read IdTable from field 'id_table': expected JSON array
 
 // Output file already exists.
 // RUN: touch %t/out.json
-// RUN: not ssaf-linker %S/Inputs/tu-empty.json -o %t/out.json 2>&1 \
+// RUN: not clang-ssaf-linker %S/Inputs/tu-empty.json -o %t/out.json 2>&1 \
 // RUN:   | FileCheck %s --match-full-lines --check-prefix=OUTPUT-EXISTS
-// OUTPUT-EXISTS:      ssaf-linker: error: writing LUSummary to file '{{.*}}out.json'
+// OUTPUT-EXISTS:      clang-ssaf-linker: error: writing LUSummary to file '{{.*}}out.json'
 // OUTPUT-EXISTS-NEXT: failed to write file '{{.*}}out.json': file already exists

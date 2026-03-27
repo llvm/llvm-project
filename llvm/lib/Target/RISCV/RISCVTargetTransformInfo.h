@@ -113,7 +113,9 @@ public:
 
   bool shouldExpandReduction(const IntrinsicInst *II) const override;
   bool supportsScalableVectors() const override {
-    return ST->hasVInstructions();
+    // VLEN=32 support is incomplete.
+    return ST->hasVInstructions() &&
+           (ST->getRealMinVLen() >= RISCV::RVVBitsPerBlock);
   }
   bool enableOrderedReductions() const override { return true; }
   bool enableScalableVectorization() const override {

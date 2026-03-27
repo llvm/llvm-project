@@ -1,35 +1,35 @@
-// Tests for ssaf-linker input validation.
+// Tests for clang-ssaf-linker input validation.
 
 // RUN: rm -rf %t
 // RUN: mkdir -p %t
 
 // No extension on output.
-// RUN: not ssaf-linker %S/Inputs/tu-empty.json -o lu 2>&1 \
+// RUN: not clang-ssaf-linker %S/Inputs/tu-empty.json -o lu 2>&1 \
 // RUN:   | FileCheck %s --match-full-lines --check-prefix=NO-EXT-OUTPUT
-// NO-EXT-OUTPUT: ssaf-linker: error: failed to validate summary 'lu': Extension not supplied
+// NO-EXT-OUTPUT: clang-ssaf-linker: error: failed to validate summary 'lu': Extension not supplied
 
 // No extension on input.
-// RUN: not ssaf-linker %S/Inputs/tu-noext -o %t/lu.json 2>&1 \
+// RUN: not clang-ssaf-linker %S/Inputs/tu-noext -o %t/lu.json 2>&1 \
 // RUN:   | FileCheck %s --match-full-lines --check-prefix=NO-EXT-INPUT
-// NO-EXT-INPUT: ssaf-linker: error: failed to validate summary '{{.*}}tu-noext': Extension not supplied
+// NO-EXT-INPUT: clang-ssaf-linker: error: failed to validate summary '{{.*}}tu-noext': Extension not supplied
 
 // Invalid extension on output.
-// RUN: not ssaf-linker %S/Inputs/tu-empty.json -o lu.txt 2>&1 \
+// RUN: not clang-ssaf-linker %S/Inputs/tu-empty.json -o lu.txt 2>&1 \
 // RUN:   | FileCheck %s --match-full-lines --check-prefix=BAD-EXT-OUTPUT
-// BAD-EXT-OUTPUT: ssaf-linker: error: failed to validate summary 'lu.txt': Format not registered for extension 'txt'
+// BAD-EXT-OUTPUT: clang-ssaf-linker: error: failed to validate summary 'lu.txt': Format not registered for extension 'txt'
 
 // Invalid extension on input.
-// RUN: not ssaf-linker %S/Inputs/tu-badext.txt -o %t/lu.json 2>&1 \
+// RUN: not clang-ssaf-linker %S/Inputs/tu-badext.txt -o %t/lu.json 2>&1 \
 // RUN:   | FileCheck %s --match-full-lines --check-prefix=BAD-EXT-INPUT
-// BAD-EXT-INPUT: ssaf-linker: error: failed to validate summary '{{.*}}tu-badext.txt': Format not registered for extension 'txt'
+// BAD-EXT-INPUT: clang-ssaf-linker: error: failed to validate summary '{{.*}}tu-badext.txt': Format not registered for extension 'txt'
 
 // Output directory does not exist.
-// RUN: not ssaf-linker %S/Inputs/tu-empty.json -o %S/Outputs/NonExistentDirectory/lu.json 2>&1 \
+// RUN: not clang-ssaf-linker %S/Inputs/tu-empty.json -o %S/Outputs/NonExistentDirectory/lu.json 2>&1 \
 // RUN:   | FileCheck %s --match-full-lines --check-prefix=OUTPUT-PARENT-DIR-MISSING
-// OUTPUT-PARENT-DIR-MISSING: ssaf-linker: error: failed to validate summary '{{.*}}lu.json': Parent directory does not exist
+// OUTPUT-PARENT-DIR-MISSING: clang-ssaf-linker: error: failed to validate summary '{{.*}}lu.json': Parent directory does not exist
 
 // Input summary does not exist.
-// RUN: not ssaf-linker %S/Inputs/tu-nonexistent.json -o %t/lu.json 2>&1 \
+// RUN: not clang-ssaf-linker %S/Inputs/tu-nonexistent.json -o %t/lu.json 2>&1 \
 // RUN:   | FileCheck %s --match-full-lines --check-prefix=NO-INPUT-FILE
-// NO-INPUT-FILE: ssaf-linker: error: failed to validate summary '{{.*}}tu-nonexistent.json': {{[Nn]}}o such file or directory
+// NO-INPUT-FILE: clang-ssaf-linker: error: failed to validate summary '{{.*}}tu-nonexistent.json': {{[Nn]}}o such file or directory
 

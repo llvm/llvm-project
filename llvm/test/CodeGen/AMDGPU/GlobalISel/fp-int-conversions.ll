@@ -5,52 +5,68 @@
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1200 -new-reg-bank-select < %s | FileCheck %s --check-prefixes=GCN,FAKE16,GFX12
 
 define amdgpu_ps void @s_fptoui_f16_to_i16(half inreg %x, ptr addrspace(1) %out) {
-; FAKE16-LABEL: s_fptoui_f16_to_i16:
-; FAKE16:  ; %bb.0:
-; FAKE16:    v_cvt_u16_f16_e32 v2, s0
+; PREGFX12-FAKE16-LABEL: s_fptoui_f16_to_i16:
+; PREGFX12-FAKE16:  ; %bb.0:
+; PREGFX12-FAKE16:    v_cvt_u16_f16_e32 v2, s0
 ;
 ; TRUE16-LABEL: s_fptoui_f16_to_i16:
 ; TRUE16:  ; %bb.0:
 ; TRUE16:    v_cvt_u16_f16_e32 v2.l, s0
+;
+; GFX12-LABEL: s_fptoui_f16_to_i16:
+; GFX12:  ; %bb.0:
+; GFX12:    v_cvt_u16_f16_e32 v2.l, s0
   %result = fptoui half %x to i16
   store i16 %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_ps void @s_fptosi_f16_to_i16(half inreg %x, ptr addrspace(1) %out) {
-; FAKE16-LABEL: s_fptosi_f16_to_i16:
-; FAKE16:  ; %bb.0:
-; FAKE16:    v_cvt_i16_f16_e32 v2, s0
+; PREGFX12-FAKE16-LABEL: s_fptosi_f16_to_i16:
+; PREGFX12-FAKE16:  ; %bb.0:
+; PREGFX12-FAKE16:    v_cvt_i16_f16_e32 v2, s0
 ;
 ; TRUE16-LABEL: s_fptosi_f16_to_i16:
 ; TRUE16:  ; %bb.0:
 ; TRUE16:    v_cvt_i16_f16_e32 v2.l, s0
+;
+; GFX12-LABEL: s_fptosi_f16_to_i16:
+; GFX12:  ; %bb.0:
+; GFX12:    v_cvt_i16_f16_e32 v2.l, s0
   %result = fptosi half %x to i16
   store i16 %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_ps void @v_fptoui_f16_to_i16(half %x, ptr addrspace(1) %out) {
-; FAKE16-LABEL: v_fptoui_f16_to_i16:
-; FAKE16:  ; %bb.0:
-; FAKE16:    v_cvt_u16_f16_e32 v0, v0
+; PREGFX12-FAKE16-LABEL: v_fptoui_f16_to_i16:
+; PREGFX12-FAKE16:  ; %bb.0:
+; PREGFX12-FAKE16:    v_cvt_u16_f16_e32 v0, v0
 ;
 ; TRUE16-LABEL: v_fptoui_f16_to_i16:
 ; TRUE16:  ; %bb.0:
 ; TRUE16:    v_cvt_u16_f16_e32 v0.l, v0.l
+;
+; GFX12-LABEL: v_fptoui_f16_to_i16:
+; GFX12:  ; %bb.0:
+; GFX12:    v_cvt_u16_f16_e32 v0.l, v0.l
   %result = fptoui half %x to i16
   store i16 %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_ps void @v_fptosi_f16_to_i16(half %x, ptr addrspace(1) %out) {
-; FAKE16-LABEL: v_fptosi_f16_to_i16:
-; FAKE16:  ; %bb.0:
-; FAKE16:    v_cvt_i16_f16_e32 v0, v0
+; PREGFX12-FAKE16-LABEL: v_fptosi_f16_to_i16:
+; PREGFX12-FAKE16:  ; %bb.0:
+; PREGFX12-FAKE16:    v_cvt_i16_f16_e32 v0, v0
 ;
 ; TRUE16-LABEL: v_fptosi_f16_to_i16:
 ; TRUE16:  ; %bb.0:
 ; TRUE16:    v_cvt_i16_f16_e32 v0.l, v0.l
+;
+; GFX12-LABEL: v_fptosi_f16_to_i16:
+; GFX12:  ; %bb.0:
+; GFX12:    v_cvt_i16_f16_e32 v0.l, v0.l
   %result = fptosi half %x to i16
   store i16 %result, ptr addrspace(1) %out
   ret void
@@ -89,30 +105,40 @@ define amdgpu_ps void @s_fptosi_f16_to_i32(half inreg %x, ptr addrspace(1) %out)
 }
 
 define amdgpu_ps void @v_fptoui_f16_to_i32(half %x, ptr addrspace(1) %out) {
-; FAKE16-LABEL: v_fptoui_f16_to_i32:
-; FAKE16:  ; %bb.0:
-; FAKE16:    v_cvt_f32_f16_e32 v0, v0
-; FAKE16:    v_cvt_u32_f32_e32 v0, v0
+; PREGFX12-FAKE16-LABEL: v_fptoui_f16_to_i32:
+; PREGFX12-FAKE16:  ; %bb.0:
+; PREGFX12-FAKE16:    v_cvt_f32_f16_e32 v0, v0
+; PREGFX12-FAKE16:    v_cvt_u32_f32_e32 v0, v0
 ;
 ; TRUE16-LABEL: v_fptoui_f16_to_i32:
 ; TRUE16:  ; %bb.0:
 ; TRUE16:    v_cvt_f32_f16_e32 v0, v0.l
 ; TRUE16:    v_cvt_u32_f32_e32 v0, v0
+;
+; GFX12-LABEL: v_fptoui_f16_to_i32:
+; GFX12:  ; %bb.0:
+; GFX12:    v_cvt_f32_f16_e32 v0, v0.l
+; GFX12:    v_cvt_u32_f32_e32 v0, v0
   %result = fptoui half %x to i32
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_ps void @v_fptosi_f16_to_i32(half %x, ptr addrspace(1) %out) {
-; FAKE16-LABEL: v_fptosi_f16_to_i32:
-; FAKE16:  ; %bb.0:
-; FAKE16:    v_cvt_f32_f16_e32 v0, v0
-; FAKE16:    v_cvt_i32_f32_e32 v0, v0
+; PREGFX12-FAKE16-LABEL: v_fptosi_f16_to_i32:
+; PREGFX12-FAKE16:  ; %bb.0:
+; PREGFX12-FAKE16:    v_cvt_f32_f16_e32 v0, v0
+; PREGFX12-FAKE16:    v_cvt_i32_f32_e32 v0, v0
 ;
 ; TRUE16-LABEL: v_fptosi_f16_to_i32:
 ; TRUE16:  ; %bb.0:
 ; TRUE16:    v_cvt_f32_f16_e32 v0, v0.l
 ; TRUE16:    v_cvt_i32_f32_e32 v0, v0
+;
+; GFX12-LABEL: v_fptosi_f16_to_i32:
+; GFX12:  ; %bb.0:
+; GFX12:    v_cvt_f32_f16_e32 v0, v0.l
+; GFX12:    v_cvt_i32_f32_e32 v0, v0
   %result = fptosi half %x to i32
   store i32 %result, ptr addrspace(1) %out
   ret void
@@ -201,52 +227,68 @@ define amdgpu_ps void @v_fptosi_f64_to_i32(double %x, ptr addrspace(1) %out) {
 }
 
 define amdgpu_ps void @s_uitofp_i16_to_f16(i16 inreg %x, ptr addrspace(1) %out) {
-; FAKE16-LABEL: s_uitofp_i16_to_f16:
-; FAKE16:  ; %bb.0:
-; FAKE16:    v_cvt_f16_u16_e32 v2, s0
+; PREGFX12-FAKE16-LABEL: s_uitofp_i16_to_f16:
+; PREGFX12-FAKE16:  ; %bb.0:
+; PREGFX12-FAKE16:    v_cvt_f16_u16_e32 v2, s0
 ;
 ; TRUE16-LABEL: s_uitofp_i16_to_f16:
 ; TRUE16:  ; %bb.0:
 ; TRUE16:    v_cvt_f16_u16_e32 v2.l, s0
+;
+; GFX12-LABEL: s_uitofp_i16_to_f16:
+; GFX12:  ; %bb.0:
+; GFX12:    v_cvt_f16_u16_e32 v2.l, s0
   %result = uitofp i16 %x to half
   store half %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_ps void @s_sitofp_i16_to_f16(i16 inreg %x, ptr addrspace(1) %out) {
-; FAKE16-LABEL: s_sitofp_i16_to_f16:
-; FAKE16:  ; %bb.0:
-; FAKE16:    v_cvt_f16_i16_e32 v2, s0
+; PREGFX12-FAKE16-LABEL: s_sitofp_i16_to_f16:
+; PREGFX12-FAKE16:  ; %bb.0:
+; PREGFX12-FAKE16:    v_cvt_f16_i16_e32 v2, s0
 ;
 ; TRUE16-LABEL: s_sitofp_i16_to_f16:
 ; TRUE16:  ; %bb.0:
 ; TRUE16:    v_cvt_f16_i16_e32 v2.l, s0
+;
+; GFX12-LABEL: s_sitofp_i16_to_f16:
+; GFX12:  ; %bb.0:
+; GFX12:    v_cvt_f16_i16_e32 v2.l, s0
   %result = sitofp i16 %x to half
   store half %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_ps void @v_uitofp_i16_to_f16(i16 %x, ptr addrspace(1) %out) {
-; FAKE16-LABEL: v_uitofp_i16_to_f16:
-; FAKE16:  ; %bb.0:
-; FAKE16:    v_cvt_f16_u16_e32 v0, v0
+; PREGFX12-FAKE16-LABEL: v_uitofp_i16_to_f16:
+; PREGFX12-FAKE16:  ; %bb.0:
+; PREGFX12-FAKE16:    v_cvt_f16_u16_e32 v0, v0
 ;
 ; TRUE16-LABEL: v_uitofp_i16_to_f16:
 ; TRUE16:  ; %bb.0:
 ; TRUE16:    v_cvt_f16_u16_e32 v0.l, v0.l
+;
+; GFX12-LABEL: v_uitofp_i16_to_f16:
+; GFX12:  ; %bb.0:
+; GFX12:    v_cvt_f16_u16_e32 v0.l, v0.l
   %result = uitofp i16 %x to half
   store half %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_ps void @v_sitofp_i16_to_f16(i16 %x, ptr addrspace(1) %out) {
-; FAKE16-LABEL: v_sitofp_i16_to_f16:
-; FAKE16:  ; %bb.0:
-; FAKE16:    v_cvt_f16_i16_e32 v0, v0
+; PREGFX12-FAKE16-LABEL: v_sitofp_i16_to_f16:
+; PREGFX12-FAKE16:  ; %bb.0:
+; PREGFX12-FAKE16:    v_cvt_f16_i16_e32 v0, v0
 ;
 ; TRUE16-LABEL: v_sitofp_i16_to_f16:
 ; TRUE16:  ; %bb.0:
 ; TRUE16:    v_cvt_f16_i16_e32 v0.l, v0.l
+;
+; GFX12-LABEL: v_sitofp_i16_to_f16:
+; GFX12:  ; %bb.0:
+; GFX12:    v_cvt_f16_i16_e32 v0.l, v0.l
   %result = sitofp i16 %x to half
   store half %result, ptr addrspace(1) %out
   ret void
@@ -267,7 +309,7 @@ define amdgpu_ps void @s_uitofp_i32_to_f16(i32 inreg %x, ptr addrspace(1) %out) 
 ; GFX12:  ; %bb.0:
 ; GFX12:    s_cvt_f32_u32 s0, s0
 ; GFX12:    s_cvt_f16_f32 s0, s0
-; GFX12:    v_mov_b32_e32 v2, s0
+; GFX12:    v_mov_b16_e32 v2.l, s0
   %result = uitofp i32 %x to half
   store half %result, ptr addrspace(1) %out
   ret void
@@ -288,37 +330,47 @@ define amdgpu_ps void @s_sitofp_i32_to_f16(i32 inreg %x, ptr addrspace(1) %out) 
 ; GFX12:  ; %bb.0:
 ; GFX12:    s_cvt_f32_i32 s0, s0
 ; GFX12:    s_cvt_f16_f32 s0, s0
-; GFX12:    v_mov_b32_e32 v2, s0
+; GFX12:    v_mov_b16_e32 v2.l, s0
   %result = sitofp i32 %x to half
   store half %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_ps void @v_uitofp_i32_to_f16(i32 %x, ptr addrspace(1) %out) {
-; FAKE16-LABEL: v_uitofp_i32_to_f16:
-; FAKE16:  ; %bb.0:
-; FAKE16:    v_cvt_f32_u32_e32 v0, v0
-; FAKE16:    v_cvt_f16_f32_e32 v0, v0
+; PREGFX12-FAKE16-LABEL: v_uitofp_i32_to_f16:
+; PREGFX12-FAKE16:  ; %bb.0:
+; PREGFX12-FAKE16:    v_cvt_f32_u32_e32 v0, v0
+; PREGFX12-FAKE16:    v_cvt_f16_f32_e32 v0, v0
 ;
 ; TRUE16-LABEL: v_uitofp_i32_to_f16:
 ; TRUE16:  ; %bb.0:
 ; TRUE16:    v_cvt_f32_u32_e32 v0, v0
 ; TRUE16:    v_cvt_f16_f32_e32 v0.l, v0
+;
+; GFX12-LABEL: v_uitofp_i32_to_f16:
+; GFX12:  ; %bb.0:
+; GFX12:    v_cvt_f32_u32_e32 v0, v0
+; GFX12:    v_cvt_f16_f32_e32 v0.l, v0
   %result = uitofp i32 %x to half
   store half %result, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_ps void @v_sitofp_i32_to_f16(i32 %x, ptr addrspace(1) %out) {
-; FAKE16-LABEL: v_sitofp_i32_to_f16:
-; FAKE16:  ; %bb.0:
-; FAKE16:    v_cvt_f32_i32_e32 v0, v0
-; FAKE16:    v_cvt_f16_f32_e32 v0, v0
+; PREGFX12-FAKE16-LABEL: v_sitofp_i32_to_f16:
+; PREGFX12-FAKE16:  ; %bb.0:
+; PREGFX12-FAKE16:    v_cvt_f32_i32_e32 v0, v0
+; PREGFX12-FAKE16:    v_cvt_f16_f32_e32 v0, v0
 ;
 ; TRUE16-LABEL: v_sitofp_i32_to_f16:
 ; TRUE16:  ; %bb.0:
 ; TRUE16:    v_cvt_f32_i32_e32 v0, v0
 ; TRUE16:    v_cvt_f16_f32_e32 v0.l, v0
+;
+; GFX12-LABEL: v_sitofp_i32_to_f16:
+; GFX12:  ; %bb.0:
+; GFX12:    v_cvt_f32_i32_e32 v0, v0
+; GFX12:    v_cvt_f16_f32_e32 v0.l, v0
   %result = sitofp i32 %x to half
   store half %result, ptr addrspace(1) %out
   ret void
@@ -422,3 +474,5 @@ define amdgpu_ps float @fpext_hif16_to_32(<2 x half> inreg %val) {
   %res = fpext half %hielt to float
   ret float %res
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; FAKE16: {{.*}}

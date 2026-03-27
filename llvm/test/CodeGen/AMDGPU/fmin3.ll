@@ -4,6 +4,8 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-flat-for-global < %s | FileCheck -enable-var-scope -check-prefixes=GFX9 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 -mattr=-flat-for-global < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-TRUE16 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -mattr=-flat-for-global < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-FAKE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1170 -mattr=+real-true16 -mattr=-flat-for-global < %s | FileCheck -enable-var-scope -check-prefixes=GFX1170,GFX1170-TRUE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1170 -mattr=-real-true16 -mattr=-flat-for-global < %s | FileCheck -enable-var-scope -check-prefixes=GFX1170,GFX1170-FAKE16 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=+real-true16 -mattr=-flat-for-global < %s | FileCheck -enable-var-scope -check-prefixes=GFX12,GFX12-TRUE16 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=-real-true16 -mattr=-flat-for-global < %s | FileCheck -enable-var-scope -check-prefixes=GFX12,GFX12-FAKE16 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -mattr=+real-true16 -mattr=-flat-for-global < %s | FileCheck -enable-var-scope -check-prefixes=GFX1250,GFX1250-TRUE16 %s
@@ -130,6 +132,36 @@ define amdgpu_kernel void @test_fmin3_olt_0_f32(ptr addrspace(1) %out, ptr addrs
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[8:11], 0
 ; GFX11-NEXT:    s_endpgm
 ;
+; GFX1170-LABEL: test_fmin3_olt_0_f32:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
+; GFX1170-NEXT:    s_mov_b32 s10, -1
+; GFX1170-NEXT:    s_mov_b32 s11, 0x31016000
+; GFX1170-NEXT:    s_mov_b32 s14, s10
+; GFX1170-NEXT:    s_mov_b32 s15, s11
+; GFX1170-NEXT:    s_mov_b32 s18, s10
+; GFX1170-NEXT:    s_mov_b32 s19, s11
+; GFX1170-NEXT:    s_mov_b32 s22, s10
+; GFX1170-NEXT:    s_mov_b32 s23, s11
+; GFX1170-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1170-NEXT:    s_mov_b32 s12, s2
+; GFX1170-NEXT:    s_mov_b32 s13, s3
+; GFX1170-NEXT:    s_mov_b32 s16, s4
+; GFX1170-NEXT:    s_mov_b32 s17, s5
+; GFX1170-NEXT:    s_mov_b32 s20, s6
+; GFX1170-NEXT:    s_mov_b32 s21, s7
+; GFX1170-NEXT:    buffer_load_b32 v0, off, s[12:15], 0 glc dlc
+; GFX1170-NEXT:    s_waitcnt vmcnt(0)
+; GFX1170-NEXT:    buffer_load_b32 v1, off, s[16:19], 0 glc dlc
+; GFX1170-NEXT:    s_waitcnt vmcnt(0)
+; GFX1170-NEXT:    buffer_load_b32 v2, off, s[20:23], 0 glc dlc
+; GFX1170-NEXT:    s_waitcnt vmcnt(0)
+; GFX1170-NEXT:    s_mov_b32 s8, s0
+; GFX1170-NEXT:    s_mov_b32 s9, s1
+; GFX1170-NEXT:    v_min3_num_f32 v0, v0, v1, v2
+; GFX1170-NEXT:    buffer_store_b32 v0, off, s[8:11], 0
+; GFX1170-NEXT:    s_endpgm
+;
 ; GFX12-LABEL: test_fmin3_olt_0_f32:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
@@ -162,8 +194,8 @@ define amdgpu_kernel void @test_fmin3_olt_0_f32(ptr addrspace(1) %out, ptr addrs
 ;
 ; GFX1250-LABEL: test_fmin3_olt_0_f32:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_load_b256 s[8:15], s[4:5], 0x24
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_load_b256 s[8:15], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_mov_b32 s2, -1
 ; GFX1250-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX1250-NEXT:    s_mov_b32 s6, s2
@@ -321,6 +353,36 @@ define amdgpu_kernel void @test_fmin3_olt_1_f32(ptr addrspace(1) %out, ptr addrs
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[8:11], 0
 ; GFX11-NEXT:    s_endpgm
 ;
+; GFX1170-LABEL: test_fmin3_olt_1_f32:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
+; GFX1170-NEXT:    s_mov_b32 s10, -1
+; GFX1170-NEXT:    s_mov_b32 s11, 0x31016000
+; GFX1170-NEXT:    s_mov_b32 s14, s10
+; GFX1170-NEXT:    s_mov_b32 s15, s11
+; GFX1170-NEXT:    s_mov_b32 s18, s10
+; GFX1170-NEXT:    s_mov_b32 s19, s11
+; GFX1170-NEXT:    s_mov_b32 s22, s10
+; GFX1170-NEXT:    s_mov_b32 s23, s11
+; GFX1170-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1170-NEXT:    s_mov_b32 s12, s2
+; GFX1170-NEXT:    s_mov_b32 s13, s3
+; GFX1170-NEXT:    s_mov_b32 s16, s4
+; GFX1170-NEXT:    s_mov_b32 s17, s5
+; GFX1170-NEXT:    s_mov_b32 s20, s6
+; GFX1170-NEXT:    s_mov_b32 s21, s7
+; GFX1170-NEXT:    buffer_load_b32 v0, off, s[12:15], 0 glc dlc
+; GFX1170-NEXT:    s_waitcnt vmcnt(0)
+; GFX1170-NEXT:    buffer_load_b32 v1, off, s[16:19], 0 glc dlc
+; GFX1170-NEXT:    s_waitcnt vmcnt(0)
+; GFX1170-NEXT:    buffer_load_b32 v2, off, s[20:23], 0 glc dlc
+; GFX1170-NEXT:    s_waitcnt vmcnt(0)
+; GFX1170-NEXT:    s_mov_b32 s8, s0
+; GFX1170-NEXT:    s_mov_b32 s9, s1
+; GFX1170-NEXT:    v_min3_num_f32 v0, v2, v0, v1
+; GFX1170-NEXT:    buffer_store_b32 v0, off, s[8:11], 0
+; GFX1170-NEXT:    s_endpgm
+;
 ; GFX12-LABEL: test_fmin3_olt_1_f32:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
@@ -353,8 +415,8 @@ define amdgpu_kernel void @test_fmin3_olt_1_f32(ptr addrspace(1) %out, ptr addrs
 ;
 ; GFX1250-LABEL: test_fmin3_olt_1_f32:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_load_b256 s[8:15], s[4:5], 0x24
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_load_b256 s[8:15], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_mov_b32 s2, -1
 ; GFX1250-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX1250-NEXT:    s_mov_b32 s6, s2
@@ -552,6 +614,66 @@ define amdgpu_kernel void @test_fmin3_olt_0_f16(ptr addrspace(1) %out, ptr addrs
 ; GFX11-FAKE16-NEXT:    buffer_store_b16 v0, off, s[8:11], 0
 ; GFX11-FAKE16-NEXT:    s_endpgm
 ;
+; GFX1170-TRUE16-LABEL: test_fmin3_olt_0_f16:
+; GFX1170-TRUE16:       ; %bb.0:
+; GFX1170-TRUE16-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
+; GFX1170-TRUE16-NEXT:    s_mov_b32 s10, -1
+; GFX1170-TRUE16-NEXT:    s_mov_b32 s11, 0x31016000
+; GFX1170-TRUE16-NEXT:    s_mov_b32 s14, s10
+; GFX1170-TRUE16-NEXT:    s_mov_b32 s15, s11
+; GFX1170-TRUE16-NEXT:    s_mov_b32 s18, s10
+; GFX1170-TRUE16-NEXT:    s_mov_b32 s19, s11
+; GFX1170-TRUE16-NEXT:    s_mov_b32 s22, s10
+; GFX1170-TRUE16-NEXT:    s_mov_b32 s23, s11
+; GFX1170-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1170-TRUE16-NEXT:    s_mov_b32 s12, s2
+; GFX1170-TRUE16-NEXT:    s_mov_b32 s13, s3
+; GFX1170-TRUE16-NEXT:    s_mov_b32 s16, s4
+; GFX1170-TRUE16-NEXT:    s_mov_b32 s17, s5
+; GFX1170-TRUE16-NEXT:    s_mov_b32 s20, s6
+; GFX1170-TRUE16-NEXT:    s_mov_b32 s21, s7
+; GFX1170-TRUE16-NEXT:    buffer_load_d16_b16 v0, off, s[12:15], 0 glc dlc
+; GFX1170-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX1170-TRUE16-NEXT:    buffer_load_d16_hi_b16 v0, off, s[16:19], 0 glc dlc
+; GFX1170-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX1170-TRUE16-NEXT:    buffer_load_d16_b16 v1, off, s[20:23], 0 glc dlc
+; GFX1170-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX1170-TRUE16-NEXT:    s_mov_b32 s8, s0
+; GFX1170-TRUE16-NEXT:    s_mov_b32 s9, s1
+; GFX1170-TRUE16-NEXT:    v_min3_num_f16 v0.l, v0.l, v0.h, v1.l
+; GFX1170-TRUE16-NEXT:    buffer_store_b16 v0, off, s[8:11], 0
+; GFX1170-TRUE16-NEXT:    s_endpgm
+;
+; GFX1170-FAKE16-LABEL: test_fmin3_olt_0_f16:
+; GFX1170-FAKE16:       ; %bb.0:
+; GFX1170-FAKE16-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
+; GFX1170-FAKE16-NEXT:    s_mov_b32 s10, -1
+; GFX1170-FAKE16-NEXT:    s_mov_b32 s11, 0x31016000
+; GFX1170-FAKE16-NEXT:    s_mov_b32 s14, s10
+; GFX1170-FAKE16-NEXT:    s_mov_b32 s15, s11
+; GFX1170-FAKE16-NEXT:    s_mov_b32 s18, s10
+; GFX1170-FAKE16-NEXT:    s_mov_b32 s19, s11
+; GFX1170-FAKE16-NEXT:    s_mov_b32 s22, s10
+; GFX1170-FAKE16-NEXT:    s_mov_b32 s23, s11
+; GFX1170-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1170-FAKE16-NEXT:    s_mov_b32 s12, s2
+; GFX1170-FAKE16-NEXT:    s_mov_b32 s13, s3
+; GFX1170-FAKE16-NEXT:    s_mov_b32 s16, s4
+; GFX1170-FAKE16-NEXT:    s_mov_b32 s17, s5
+; GFX1170-FAKE16-NEXT:    s_mov_b32 s20, s6
+; GFX1170-FAKE16-NEXT:    s_mov_b32 s21, s7
+; GFX1170-FAKE16-NEXT:    buffer_load_u16 v0, off, s[12:15], 0 glc dlc
+; GFX1170-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX1170-FAKE16-NEXT:    buffer_load_u16 v1, off, s[16:19], 0 glc dlc
+; GFX1170-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX1170-FAKE16-NEXT:    buffer_load_u16 v2, off, s[20:23], 0 glc dlc
+; GFX1170-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX1170-FAKE16-NEXT:    s_mov_b32 s8, s0
+; GFX1170-FAKE16-NEXT:    s_mov_b32 s9, s1
+; GFX1170-FAKE16-NEXT:    v_min3_num_f16 v0, v0, v1, v2
+; GFX1170-FAKE16-NEXT:    buffer_store_b16 v0, off, s[8:11], 0
+; GFX1170-FAKE16-NEXT:    s_endpgm
+;
 ; GFX12-TRUE16-LABEL: test_fmin3_olt_0_f16:
 ; GFX12-TRUE16:       ; %bb.0:
 ; GFX12-TRUE16-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
@@ -614,8 +736,8 @@ define amdgpu_kernel void @test_fmin3_olt_0_f16(ptr addrspace(1) %out, ptr addrs
 ;
 ; GFX1250-TRUE16-LABEL: test_fmin3_olt_0_f16:
 ; GFX1250-TRUE16:       ; %bb.0:
-; GFX1250-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-TRUE16-NEXT:    s_load_b256 s[8:15], s[4:5], 0x24
+; GFX1250-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-TRUE16-NEXT:    s_load_b256 s[8:15], s[4:5], 0x24 nv
 ; GFX1250-TRUE16-NEXT:    s_mov_b32 s2, -1
 ; GFX1250-TRUE16-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX1250-TRUE16-NEXT:    s_mov_b32 s6, s2
@@ -645,8 +767,8 @@ define amdgpu_kernel void @test_fmin3_olt_0_f16(ptr addrspace(1) %out, ptr addrs
 ;
 ; GFX1250-FAKE16-LABEL: test_fmin3_olt_0_f16:
 ; GFX1250-FAKE16:       ; %bb.0:
-; GFX1250-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-FAKE16-NEXT:    s_load_b256 s[8:15], s[4:5], 0x24
+; GFX1250-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-FAKE16-NEXT:    s_load_b256 s[8:15], s[4:5], 0x24 nv
 ; GFX1250-FAKE16-NEXT:    s_mov_b32 s2, -1
 ; GFX1250-FAKE16-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX1250-FAKE16-NEXT:    s_mov_b32 s6, s2
@@ -845,6 +967,66 @@ define amdgpu_kernel void @test_fmin3_olt_1_f16(ptr addrspace(1) %out, ptr addrs
 ; GFX11-FAKE16-NEXT:    buffer_store_b16 v0, off, s[8:11], 0
 ; GFX11-FAKE16-NEXT:    s_endpgm
 ;
+; GFX1170-TRUE16-LABEL: test_fmin3_olt_1_f16:
+; GFX1170-TRUE16:       ; %bb.0:
+; GFX1170-TRUE16-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
+; GFX1170-TRUE16-NEXT:    s_mov_b32 s10, -1
+; GFX1170-TRUE16-NEXT:    s_mov_b32 s11, 0x31016000
+; GFX1170-TRUE16-NEXT:    s_mov_b32 s14, s10
+; GFX1170-TRUE16-NEXT:    s_mov_b32 s15, s11
+; GFX1170-TRUE16-NEXT:    s_mov_b32 s18, s10
+; GFX1170-TRUE16-NEXT:    s_mov_b32 s19, s11
+; GFX1170-TRUE16-NEXT:    s_mov_b32 s22, s10
+; GFX1170-TRUE16-NEXT:    s_mov_b32 s23, s11
+; GFX1170-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1170-TRUE16-NEXT:    s_mov_b32 s12, s2
+; GFX1170-TRUE16-NEXT:    s_mov_b32 s13, s3
+; GFX1170-TRUE16-NEXT:    s_mov_b32 s16, s4
+; GFX1170-TRUE16-NEXT:    s_mov_b32 s17, s5
+; GFX1170-TRUE16-NEXT:    s_mov_b32 s20, s6
+; GFX1170-TRUE16-NEXT:    s_mov_b32 s21, s7
+; GFX1170-TRUE16-NEXT:    buffer_load_d16_b16 v0, off, s[12:15], 0 glc dlc
+; GFX1170-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX1170-TRUE16-NEXT:    buffer_load_d16_hi_b16 v0, off, s[16:19], 0 glc dlc
+; GFX1170-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX1170-TRUE16-NEXT:    buffer_load_d16_b16 v1, off, s[20:23], 0 glc dlc
+; GFX1170-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX1170-TRUE16-NEXT:    s_mov_b32 s8, s0
+; GFX1170-TRUE16-NEXT:    s_mov_b32 s9, s1
+; GFX1170-TRUE16-NEXT:    v_min3_num_f16 v0.l, v1.l, v0.l, v0.h
+; GFX1170-TRUE16-NEXT:    buffer_store_b16 v0, off, s[8:11], 0
+; GFX1170-TRUE16-NEXT:    s_endpgm
+;
+; GFX1170-FAKE16-LABEL: test_fmin3_olt_1_f16:
+; GFX1170-FAKE16:       ; %bb.0:
+; GFX1170-FAKE16-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
+; GFX1170-FAKE16-NEXT:    s_mov_b32 s10, -1
+; GFX1170-FAKE16-NEXT:    s_mov_b32 s11, 0x31016000
+; GFX1170-FAKE16-NEXT:    s_mov_b32 s14, s10
+; GFX1170-FAKE16-NEXT:    s_mov_b32 s15, s11
+; GFX1170-FAKE16-NEXT:    s_mov_b32 s18, s10
+; GFX1170-FAKE16-NEXT:    s_mov_b32 s19, s11
+; GFX1170-FAKE16-NEXT:    s_mov_b32 s22, s10
+; GFX1170-FAKE16-NEXT:    s_mov_b32 s23, s11
+; GFX1170-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1170-FAKE16-NEXT:    s_mov_b32 s12, s2
+; GFX1170-FAKE16-NEXT:    s_mov_b32 s13, s3
+; GFX1170-FAKE16-NEXT:    s_mov_b32 s16, s4
+; GFX1170-FAKE16-NEXT:    s_mov_b32 s17, s5
+; GFX1170-FAKE16-NEXT:    s_mov_b32 s20, s6
+; GFX1170-FAKE16-NEXT:    s_mov_b32 s21, s7
+; GFX1170-FAKE16-NEXT:    buffer_load_u16 v0, off, s[12:15], 0 glc dlc
+; GFX1170-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX1170-FAKE16-NEXT:    buffer_load_u16 v1, off, s[16:19], 0 glc dlc
+; GFX1170-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX1170-FAKE16-NEXT:    buffer_load_u16 v2, off, s[20:23], 0 glc dlc
+; GFX1170-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX1170-FAKE16-NEXT:    s_mov_b32 s8, s0
+; GFX1170-FAKE16-NEXT:    s_mov_b32 s9, s1
+; GFX1170-FAKE16-NEXT:    v_min3_num_f16 v0, v2, v0, v1
+; GFX1170-FAKE16-NEXT:    buffer_store_b16 v0, off, s[8:11], 0
+; GFX1170-FAKE16-NEXT:    s_endpgm
+;
 ; GFX12-TRUE16-LABEL: test_fmin3_olt_1_f16:
 ; GFX12-TRUE16:       ; %bb.0:
 ; GFX12-TRUE16-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
@@ -907,8 +1089,8 @@ define amdgpu_kernel void @test_fmin3_olt_1_f16(ptr addrspace(1) %out, ptr addrs
 ;
 ; GFX1250-TRUE16-LABEL: test_fmin3_olt_1_f16:
 ; GFX1250-TRUE16:       ; %bb.0:
-; GFX1250-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-TRUE16-NEXT:    s_load_b256 s[8:15], s[4:5], 0x24
+; GFX1250-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-TRUE16-NEXT:    s_load_b256 s[8:15], s[4:5], 0x24 nv
 ; GFX1250-TRUE16-NEXT:    s_mov_b32 s2, -1
 ; GFX1250-TRUE16-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX1250-TRUE16-NEXT:    s_mov_b32 s6, s2
@@ -938,8 +1120,8 @@ define amdgpu_kernel void @test_fmin3_olt_1_f16(ptr addrspace(1) %out, ptr addrs
 ;
 ; GFX1250-FAKE16-LABEL: test_fmin3_olt_1_f16:
 ; GFX1250-FAKE16:       ; %bb.0:
-; GFX1250-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-FAKE16-NEXT:    s_load_b256 s[8:15], s[4:5], 0x24
+; GFX1250-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-FAKE16-NEXT:    s_load_b256 s[8:15], s[4:5], 0x24 nv
 ; GFX1250-FAKE16-NEXT:    s_mov_b32 s2, -1
 ; GFX1250-FAKE16-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX1250-FAKE16-NEXT:    s_mov_b32 s6, s2
@@ -1042,6 +1224,15 @@ define <2 x half> @no_fmin3_v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %c, <
 ; GFX11-NEXT:    v_pk_min_f16 v0, v0, v3
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
+; GFX1170-LABEL: no_fmin3_v2f16:
+; GFX1170:       ; %bb.0: ; %entry
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_pk_min_num_f16 v0, v0, v1
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1170-NEXT:    v_pk_min_num_f16 v0, v2, v0
+; GFX1170-NEXT:    v_pk_min_num_f16 v0, v0, v3
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX12-LABEL: no_fmin3_v2f16:
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -1064,9 +1255,9 @@ define <2 x half> @no_fmin3_v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %c, <
 ; GFX1250-NEXT:    v_pk_min3_num_f16 v0, v2, v0, v3
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 entry:
-  %min = call <2 x half> @llvm.minnum.v2f16(<2 x half> %a, <2 x half> %b)
-  %min1 = call <2 x half> @llvm.minnum.v2f16(<2 x half> %c, <2 x half> %min)
-  %res = call <2 x half> @llvm.minnum.v2f16(<2 x half> %min1, <2 x half> %d)
+  %min = call nnan <2 x half> @llvm.minnum.v2f16(<2 x half> %a, <2 x half> %b)
+  %min1 = call nnan <2 x half> @llvm.minnum.v2f16(<2 x half> %c, <2 x half> %min)
+  %res = call nnan <2 x half> @llvm.minnum.v2f16(<2 x half> %min1, <2 x half> %d)
   ret <2 x half> %res
 }
 
@@ -1204,6 +1395,39 @@ define amdgpu_kernel void @test_fmin3_olt_0_f64(ptr addrspace(1) %out, ptr addrs
 ; GFX11-NEXT:    buffer_store_b64 v[0:1], off, s[8:11], 0
 ; GFX11-NEXT:    s_endpgm
 ;
+; GFX1170-LABEL: test_fmin3_olt_0_f64:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
+; GFX1170-NEXT:    s_mov_b32 s10, -1
+; GFX1170-NEXT:    s_mov_b32 s11, 0x31016000
+; GFX1170-NEXT:    s_mov_b32 s14, s10
+; GFX1170-NEXT:    s_mov_b32 s15, s11
+; GFX1170-NEXT:    s_mov_b32 s18, s10
+; GFX1170-NEXT:    s_mov_b32 s19, s11
+; GFX1170-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1170-NEXT:    s_mov_b32 s12, s2
+; GFX1170-NEXT:    s_mov_b32 s13, s3
+; GFX1170-NEXT:    s_mov_b32 s16, s4
+; GFX1170-NEXT:    s_mov_b32 s17, s5
+; GFX1170-NEXT:    buffer_load_b64 v[0:1], off, s[12:15], 0 glc dlc
+; GFX1170-NEXT:    s_waitcnt vmcnt(0)
+; GFX1170-NEXT:    buffer_load_b64 v[2:3], off, s[16:19], 0 glc dlc
+; GFX1170-NEXT:    s_waitcnt vmcnt(0)
+; GFX1170-NEXT:    s_mov_b32 s12, s6
+; GFX1170-NEXT:    s_mov_b32 s13, s7
+; GFX1170-NEXT:    s_mov_b32 s8, s0
+; GFX1170-NEXT:    buffer_load_b64 v[4:5], off, s[12:15], 0 glc dlc
+; GFX1170-NEXT:    s_waitcnt vmcnt(0)
+; GFX1170-NEXT:    s_mov_b32 s9, s1
+; GFX1170-NEXT:    v_max_num_f64 v[0:1], v[0:1], v[0:1]
+; GFX1170-NEXT:    v_max_num_f64 v[2:3], v[2:3], v[2:3]
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1170-NEXT:    v_min_num_f64 v[0:1], v[0:1], v[2:3]
+; GFX1170-NEXT:    v_max_num_f64 v[2:3], v[4:5], v[4:5]
+; GFX1170-NEXT:    v_min_num_f64 v[0:1], v[0:1], v[2:3]
+; GFX1170-NEXT:    buffer_store_b64 v[0:1], off, s[8:11], 0
+; GFX1170-NEXT:    s_endpgm
+;
 ; GFX12-LABEL: test_fmin3_olt_0_f64:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
@@ -1239,8 +1463,8 @@ define amdgpu_kernel void @test_fmin3_olt_0_f64(ptr addrspace(1) %out, ptr addrs
 ;
 ; GFX1250-LABEL: test_fmin3_olt_0_f64:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_load_b256 s[8:15], s[4:5], 0x24
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_load_b256 s[8:15], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_mov_b32 s2, -1
 ; GFX1250-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX1250-NEXT:    s_mov_b32 s6, s2
@@ -1414,6 +1638,39 @@ define amdgpu_kernel void @test_fmin3_olt_1_f64(ptr addrspace(1) %out, ptr addrs
 ; GFX11-NEXT:    buffer_store_b64 v[0:1], off, s[8:11], 0
 ; GFX11-NEXT:    s_endpgm
 ;
+; GFX1170-LABEL: test_fmin3_olt_1_f64:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
+; GFX1170-NEXT:    s_mov_b32 s10, -1
+; GFX1170-NEXT:    s_mov_b32 s11, 0x31016000
+; GFX1170-NEXT:    s_mov_b32 s14, s10
+; GFX1170-NEXT:    s_mov_b32 s15, s11
+; GFX1170-NEXT:    s_mov_b32 s18, s10
+; GFX1170-NEXT:    s_mov_b32 s19, s11
+; GFX1170-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1170-NEXT:    s_mov_b32 s12, s2
+; GFX1170-NEXT:    s_mov_b32 s13, s3
+; GFX1170-NEXT:    s_mov_b32 s16, s4
+; GFX1170-NEXT:    s_mov_b32 s17, s5
+; GFX1170-NEXT:    buffer_load_b64 v[0:1], off, s[12:15], 0 glc dlc
+; GFX1170-NEXT:    s_waitcnt vmcnt(0)
+; GFX1170-NEXT:    buffer_load_b64 v[2:3], off, s[16:19], 0 glc dlc
+; GFX1170-NEXT:    s_waitcnt vmcnt(0)
+; GFX1170-NEXT:    s_mov_b32 s12, s6
+; GFX1170-NEXT:    s_mov_b32 s13, s7
+; GFX1170-NEXT:    s_mov_b32 s8, s0
+; GFX1170-NEXT:    buffer_load_b64 v[4:5], off, s[12:15], 0 glc dlc
+; GFX1170-NEXT:    s_waitcnt vmcnt(0)
+; GFX1170-NEXT:    s_mov_b32 s9, s1
+; GFX1170-NEXT:    v_max_num_f64 v[0:1], v[0:1], v[0:1]
+; GFX1170-NEXT:    v_max_num_f64 v[2:3], v[2:3], v[2:3]
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1170-NEXT:    v_min_num_f64 v[0:1], v[0:1], v[2:3]
+; GFX1170-NEXT:    v_max_num_f64 v[2:3], v[4:5], v[4:5]
+; GFX1170-NEXT:    v_min_num_f64 v[0:1], v[2:3], v[0:1]
+; GFX1170-NEXT:    buffer_store_b64 v[0:1], off, s[8:11], 0
+; GFX1170-NEXT:    s_endpgm
+;
 ; GFX12-LABEL: test_fmin3_olt_1_f64:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
@@ -1449,8 +1706,8 @@ define amdgpu_kernel void @test_fmin3_olt_1_f64(ptr addrspace(1) %out, ptr addrs
 ;
 ; GFX1250-LABEL: test_fmin3_olt_1_f64:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_load_b256 s[8:15], s[4:5], 0x24
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_load_b256 s[8:15], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_mov_b32 s2, -1
 ; GFX1250-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX1250-NEXT:    s_mov_b32 s6, s2
@@ -1497,4 +1754,4 @@ declare <2 x half> @llvm.minnum.v2f16(<2 x half>, <2 x half>)
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone speculatable }
-attributes #2 = { nounwind "no-nans-fp-math"="true" }
+attributes #2 = { nounwind }

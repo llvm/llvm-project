@@ -44,6 +44,7 @@
 #include "ExceptionRecord.h"
 #include "ForwardDecl.h"
 #include "LocalDebugDelegate.h"
+#include "MSVCRTCFrameRecognizer.h"
 #include "ProcessWindowsLog.h"
 #include "TargetThreadWindows.h"
 
@@ -303,6 +304,8 @@ void ProcessWindows::DidLaunch() {
 void ProcessWindows::DidAttach(ArchSpec &arch_spec) {
   llvm::sys::ScopedLock lock(m_mutex);
 
+  RegisterMSVCRTCFrameRecognizer(*this);
+
   // The initial stop won't broadcast the state change event, so account for
   // that here.
   if (m_session_data && GetPrivateState() == eStateStopped &&
@@ -553,10 +556,11 @@ bool ProcessWindows::DoUpdateThreadList(ThreadList &old_thread_list,
       new_thread_list.AddThread(old_thread);
       ++new_size;
       ++continued_threads;
-      LLDB_LOGV(log, "Thread {0} was running and is still running.",
-                old_thread_id);
+      LLDB_LOG_VERBOSE(log, "Thread {0} was running and is still running.",
+                       old_thread_id);
     } else {
-      LLDB_LOGV(log, "Thread {0} was running and has exited.", old_thread_id);
+      LLDB_LOG_VERBOSE(log, "Thread {0} was running and has exited.",
+                       old_thread_id);
       ++exited_threads;
     }
   }
@@ -567,7 +571,8 @@ bool ProcessWindows::DoUpdateThreadList(ThreadList &old_thread_list,
     new_thread_list.AddThread(thread_info.second);
     ++new_size;
     ++new_threads;
-    LLDB_LOGV(log, "Thread {0} is new since last update.", thread_info.first);
+    LLDB_LOG_VERBOSE(log, "Thread {0} is new since last update.",
+                     thread_info.first);
   }
 
   LLDB_LOG(log, "{0} new threads, {1} old threads, {2} exited threads.",
@@ -859,6 +864,15 @@ void ProcessWindows::OnDebuggerError(const Status &error, uint32_t type) {
 
 std::optional<uint32_t> ProcessWindows::GetWatchpointSlotCount() {
   return RegisterContextWindows::GetNumHardwareBreakpointSlots();
+}
+
+std::optional<DWORD> ProcessWindows::GetActiveExceptionCode() const {
+  if (!m_session_data || !m_session_data->m_debugger)
+    return std::nullopt;
+  auto exc = m_session_data->m_debugger->GetActiveException().lock();
+  if (!exc)
+    return std::nullopt;
+  return exc->GetExceptionCode();
 }
 
 Status ProcessWindows::EnableWatchpoint(WatchpointSP wp_sp, bool notify) {

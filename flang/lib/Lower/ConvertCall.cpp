@@ -1349,7 +1349,7 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   hlfir::Entity actual = preparedActual.getActual(loc, builder);
 
   if (arg.testTKR(Fortran::common::IgnoreTKR::Contiguous) &&
-      actual.isBoxAddress()) {
+      actual.isBoxAddress() && fir::isBoxAddressOrValue(dummyType)) {
     // With ignore_tkr(c), pointer to a descriptor should be passed as is
     return PreparedDummyArgument{actual, /*cleanups=*/{}};
   }

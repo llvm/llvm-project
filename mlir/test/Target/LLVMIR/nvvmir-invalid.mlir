@@ -595,7 +595,7 @@ func.func @invalid_range_equal_bounds() {
 
 // -----
 
-// Test for correct return type check for wmma.load fragment a for f64 
+// Test for correct return type check for wmma.load fragment a for f64
 llvm.func @nvvm_wmma_load_a_f64(%arg0: !llvm.ptr, %arg1 : i32) {
   // expected-error @below {{'nvvm.wmma.load' op expected destination type to be f64}}
   %0 = nvvm.wmma.load %arg0, %arg1
@@ -603,3 +603,12 @@ llvm.func @nvvm_wmma_load_a_f64(%arg0: !llvm.ptr, %arg1 : i32) {
     : (!llvm.ptr) -> !llvm.struct<(f64)>
   llvm.return
 }
+
+// -----
+
+// Test that nvvm.barrier0 at module scope (outside any function) produces a
+// proper error instead of crashing with a null dereference in
+// createIntrinsicCall. See https://github.com/llvm/llvm-project/issues/186642
+// expected-error @+2 {{'nvvm.barrier0' op cannot be translated to LLVM IR without an active insertion point}}
+// expected-error @+1 {{LLVM Translation failed for operation: nvvm.barrier0}}
+nvvm.barrier0

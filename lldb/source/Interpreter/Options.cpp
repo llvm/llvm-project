@@ -23,6 +23,7 @@
 #include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/ErrorExtras.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -980,8 +981,8 @@ llvm::Expected<Args> Options::ParseAlias(const Args &args,
 
     // See if the option takes an argument, and see if one was supplied.
     if (long_options_index == -1) {
-      return llvm::createStringError(
-          llvm::formatv("Invalid option with value '{0}'.", char(val)).str());
+      return llvm::createStringErrorV("Invalid option with value '{0}'.",
+                                      char(val));
     }
 
     StreamString option_str;

@@ -26,6 +26,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
 #include "TargetInfo.h"
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
@@ -101,6 +102,12 @@ private:
   llvm::SmallVector<mlir::Attribute> globalScopeAsm;
 
   llvm::DenseSet<clang::GlobalDecl> diagnosedConflictingDefinitions;
+
+  /// A queue of (optional) vtables to consider emitting.
+  std::vector<const CXXRecordDecl *> deferredVTables;
+
+  /// A queue of (optional) vtables that may be emitted opportunistically.
+  std::vector<const CXXRecordDecl *> opportunisticVTables;
 
   void createCUDARuntime();
 
@@ -200,10 +207,11 @@ public:
   cir::GlobalOp getOrCreateCIRGlobal(const VarDecl *d, mlir::Type ty,
                                      ForDefinition_t isForDefinition);
 
-  static cir::GlobalOp createGlobalOp(CIRGenModule &cgm, mlir::Location loc,
-                                      llvm::StringRef name, mlir::Type t,
-                                      bool isConstant = false,
-                                      mlir::Operation *insertPoint = nullptr);
+  static cir::GlobalOp
+  createGlobalOp(CIRGenModule &cgm, mlir::Location loc, llvm::StringRef name,
+                 mlir::Type t, bool isConstant = false,
+                 mlir::ptr::MemorySpaceAttrInterface addrSpace = {},
+                 mlir::Operation *insertPoint = nullptr);
 
   /// Add a global constructor or destructor to the module.
   /// The priority is optional, if not specified, the default priority is used.
@@ -390,7 +398,11 @@ public:
   /// FIXME: this could likely be a common helper and not necessarily related
   /// with codegen.
   clang::CharUnits getNaturalTypeAlignment(clang::QualType t,
-                                           LValueBaseInfo *baseInfo = nullptr);
+                                           LValueBaseInfo *baseInfo = nullptr,
+                                           bool forPointeeType = false);
+  clang::CharUnits
+  getNaturalPointeeTypeAlignment(clang::QualType t,
+                                 LValueBaseInfo *baseInfo = nullptr);
 
   /// Returns the minimum object size for an object of the given class type
   /// (or a class derived from it).
@@ -489,6 +501,10 @@ public:
   void emitExplicitCastExprType(const ExplicitCastExpr *e,
                                 CIRGenFunction *cgf = nullptr);
 
+  void addDeferredVTable(const CXXRecordDecl *rd) {
+    deferredVTables.push_back(rd);
+  }
+
   /// Emit code for a single global function or variable declaration. Forward
   /// declarations are emitted lazily.
   void emitGlobal(clang::GlobalDecl gd);
@@ -579,6 +595,9 @@ public:
   mlir::TypedAttr emitNullConstantForBase(const CXXRecordDecl *record);
 
   mlir::Value emitMemberPointerConstant(const UnaryOperator *e);
+  /// Returns a null attribute to represent either a null method or null data
+  /// member, depending on the type of mpt.
+  mlir::TypedAttr emitNullMemberAttr(QualType t, const MemberPointerType *mpt);
 
   llvm::StringRef getMangledName(clang::GlobalDecl gd);
   // This function is to support the OpenACC 'bind' clause, which names an
@@ -675,6 +694,16 @@ public:
   /// Emit any needed decls for which code generation was deferred.
   void emitDeferred();
 
+  bool shouldOpportunisticallyEmitVTables();
+  /// Emit any vtables which we deferred and still have a use for.
+  void emitDeferredVTables();
+
+  /// Try to emit external vtables as available_externally if they have emitted
+  /// all inlined virtual functions.  It runs after EmitDeferred() and therefore
+  /// is not allowed to create new references to things that need to be emitted
+  /// lazily.
+  void emitVTablesOpportunistically();
+
   /// Helper for `emitDeferred` to apply actual codegen.
   void emitGlobalDecl(const clang::GlobalDecl &d);
 
@@ -757,6 +786,9 @@ public:
   /// Print out an error that codegen doesn't support the specified decl yet.
   void errorUnsupported(const Decl *d, llvm::StringRef type);
 
+  /// Emits AMDGPU specific Metadata.
+  void emitAMDGPUMetadata();
+
 private:
   // An ordered map of canonical GlobalDecls to their mangled names.
   llvm::MapVector<clang::GlobalDecl, llvm::StringRef> mangledDeclNames;
@@ -776,6 +808,16 @@ private:
 
   /// Map source language used to a CIR attribute.
   std::optional<cir::SourceLanguage> getCIRSourceLanguage() const;
+
+  /// Return the AST address space of the underlying global variable for D, as
+  /// determined by its declaration. Normally this is the same as the address
+  /// space of D's type, but in CUDA, address spaces are associated with
+  /// declarations, not types. If D is nullptr, return the default address
+  /// space for global variable.
+  ///
+  /// For languages without explicit address spaces, if D has default address
+  /// space, target-specific global or constant address space may be returned.
+  LangAS getGlobalVarAddressSpace(const VarDecl *decl);
 };
 } // namespace CIRGen
 

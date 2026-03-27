@@ -42,6 +42,7 @@ CODEGENOPT(PrepareForThinLTO , 1, 0) ///< Set when -flto=thin is enabled on the
                                      ///< compile step.
 CODEGENOPT(ProtectParens, 1, 1) ///< -fprotect-parens (enable parenthesis protection)
 CODEGENOPT(StackArrays, 1, 0) ///< -fstack-arrays (enable the stack-arrays pass)
+CODEGENOPT(EnableSafeTrampoline, 1, 0) ///< -fsafe-trampoline (W^X compliant trampoline pool)
 CODEGENOPT(VectorizeLoop, 1, 0) ///< Enable loop vectorization.
 CODEGENOPT(VectorizeSLP, 1, 0) ///< Enable SLP vectorization.
 CODEGENOPT(InterchangeLoops, 1, 0) ///< Enable loop interchange.
@@ -50,6 +51,7 @@ CODEGENOPT(LoopVersioning, 1, 0) ///< Enable loop versioning.
 CODEGENOPT(UnrollLoops, 1, 0) ///< Enable loop unrolling
 CODEGENOPT(AliasAnalysis, 1, 0) ///< Enable alias analysis pass
 CODEGENOPT(DwarfVersion, 3, 0) ///< Dwarf version
+CODEGENOPT(DebugInfoForProfiling, 1, 0)  ///< Emit extra debug info to make sample profile more accurate.
 
 CODEGENOPT(Underscoring, 1, 1)
 ENUM_CODEGENOPT(FPMaxminBehavior, Fortran::common::FPMaxminBehavior, 2, Fortran::common::FPMaxminBehavior::Legacy)

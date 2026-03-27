@@ -61,7 +61,7 @@ struct HasDtor {
 
 template<typename T, typename U, typename V, typename W>
 void dependent_version(const T &cc, const U &ndc, const V &dtor, const W &someInt) {
-  // CHECK: cir.func {{.*}}@_Z17dependent_versionI13CopyConstruct14NonDefaultCtor7HasDtoriEvRKT_RKT0_RKT1_RKT2_(%[[ARG0:.*]]: !cir.ptr<!rec_CopyConstruct> {{.*}}, %[[ARG1:.*]]: !cir.ptr<!rec_NonDefaultCtor> {{.*}}, %[[ARG2:.*]]: !cir.ptr<!rec_HasDtor> {{.*}}, %[[ARG3:.*]]: !cir.ptr<!s32i> {{.*}}) {
+  // CHECK: cir.func {{.*}}@_Z17dependent_versionI13CopyConstruct14NonDefaultCtor7HasDtoriEvRKT_RKT0_RKT1_RKT2_(%[[ARG0:.*]]: !cir.ptr<!rec_CopyConstruct> {{.*}}, %[[ARG1:.*]]: !cir.ptr<!rec_NonDefaultCtor> {{.*}}, %[[ARG2:.*]]: !cir.ptr<!rec_HasDtor> {{.*}}, %[[ARG3:.*]]: !cir.ptr<!s32i> {{.*}}) {{.*}}{
   // CHECK-NEXT: %[[CC:.*]] = cir.alloca !cir.ptr<!rec_CopyConstruct>, !cir.ptr<!cir.ptr<!rec_CopyConstruct>>, ["cc", init, const]
   // CHECK-NEXT: %[[NDC:.*]] = cir.alloca !cir.ptr<!rec_NonDefaultCtor>, !cir.ptr<!cir.ptr<!rec_NonDefaultCtor>>, ["ndc", init, const]
   // CHECK-NEXT: %[[DTOR:.*]] = cir.alloca !cir.ptr<!rec_HasDtor>, !cir.ptr<!cir.ptr<!rec_HasDtor>>, ["dtor", init, const]
