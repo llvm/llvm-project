@@ -736,9 +736,6 @@ public:
         for (uint32_t idx = 0; idx < num_threads; ++idx) {
           Thread *thread = process->GetThreadList().GetThreadAtIndex(idx).get();
           if (thread == current_thread) {
-            result.AppendMessageWithFormat("Resuming thread 0x%4.4" PRIx64
-                                           " in process %" PRIu64 "\n",
-                                           thread->GetID(), process->GetID());
             result.AppendMessageWithFormatv(
                 "Resuming thread {0:x4} in process {1}", thread->GetID(),
                 process->GetID());
