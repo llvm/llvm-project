@@ -549,7 +549,8 @@ static llvm::Expected<std::monostate> parseNoOptions(StringRef Params) {
 static llvm::Expected<bool>
 parseCGPipeline(StringRef Name, llvm::CGSCCPassManager &CGPM,
                 PassInstrumentationCallbacks *PIC,
-                ArrayRef<PassBuilder::PipelineElement> Pipeline) {
+                ArrayRef<PassBuilder::PipelineElement> Pipeline,
+                IntrusiveRefCntPtr<vfs::FileSystem> FS) {
 #define CGSCC_PASS(NAME, CREATE_PASS, PARSER)                                  \
   if (PassBuilder::checkParametrizedPassName(Name, NAME)) {                    \
     auto Params = PassBuilder::parsePassParameters(PARSER, Name, NAME);        \
@@ -660,10 +661,10 @@ void registerPollyPasses(PassBuilder &PB) {
         return Err(parseFunctionPipeline(Name, FPM, PIC, Pipeline));
       });
   PB.registerPipelineParsingCallback(
-      [PIC](StringRef Name, CGSCCPassManager &CGPM,
-            ArrayRef<PassBuilder::PipelineElement> Pipeline) -> bool {
+      [PIC, FS](StringRef Name, CGSCCPassManager &CGPM,
+                ArrayRef<PassBuilder::PipelineElement> Pipeline) -> bool {
         ExitOnError Err("Unable to parse Polly call graph pass: ");
-        return Err(parseCGPipeline(Name, CGPM, PIC, Pipeline));
+        return Err(parseCGPipeline(Name, CGPM, PIC, Pipeline, FS));
       });
   PB.registerPipelineParsingCallback(
       [PIC](StringRef Name, ModulePassManager &MPM,
