@@ -237,7 +237,7 @@ Address StackFrame::GetFrameCodeAddressForSymbolication() {
 
   addr_t offset = lookup_addr.GetOffset();
   if (offset > 0) {
-    lookup_addr.SetOffset(offset - 1);
+    lookup_addr.Slide(-1);
   } else {
     // lookup_addr is the start of a section.  We need do the math on the
     // actual load address and re-compute the section.  We're working with
