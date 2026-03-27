@@ -1060,131 +1060,76 @@ Value *AMDGPUAtomicOptimizerImpl::optimizeAtomicImpl(IRBuilder<> &B,
 }
 
 // Generate a dynamic branch based on the active lane count so that the
-// DPP scan path is only used when enough lanes are active to amortise its
-// overhead.  When the active count is at or below the threshold, each lane
-// independently issues its own atomic, which is cheaper for small groups.
+// optimized scan path is only used when enough lanes are active to amortise
+// its overhead.  When the active count is at or below the threshold, each
+// lane independently issues its own atomic, which is cheaper for small
+// groups.
 //
-// CFG produced:
+// This function builds the outer threshold CFG and delegates the actual
+// atomic optimization to optimizeAtomicImpl.
+//
+// CFG produced (the OptimizedPath sub-CFG is built by optimizeAtomicImpl):
 //
 //  EntryBB:
 //    Ballot / Ctpop -> ActiveCount
-//    cmp ActiveCount >= Threshold
-//    br -> DppBB or NoOptBB
+//    cmp ActiveCount > Threshold
+//    br -> OptBB or NoOptBB
 //
-//  DppBB:
-//    DPP scan / reduction, single-lane gate
-//    br -> SingleLaneBB or DppExitBB
-//
-//  SingleLaneBB:
-//    atomic with reduced value
-//    br -> DppExitBB
-//
-//  DppExitBB:
-//    readfirstlane + per-lane result
-//    br -> MergeBB
+//  OptBB:
+//    [optimizeAtomicImpl rewrites I here, creating its own internal CFG]
+//    br -> TailBB
 //
 //  NoOptBB:
-//    original atomic (unoptimized)
-//    br -> MergeBB
+//    original atomic (unoptimized, each lane issues its own)
+//    br -> TailBB
 //
-//  MergeBB:
+//  TailBB:
 //    PHI merges results from both paths
 Value *AMDGPUAtomicOptimizerImpl::optimizeAtomicWithDynamicThreshold(
     IRBuilder<> &B, Instruction &I, AtomicRMWInst::BinOp Op, unsigned ValIdx,
     unsigned Threshold) const {
   Type *const Ty = I.getType();
-  const unsigned TyBitWidth = DL.getTypeSizeInBits(Ty);
   const bool NeedResult = !I.use_empty();
 
+  // Count active lanes and build the threshold condition.
   Type *const WaveTy = B.getIntNTy(ST.getWavefrontSize());
   CallInst *const Ballot =
       B.CreateIntrinsic(Intrinsic::amdgcn_ballot, WaveTy, B.getTrue());
-
-  Value *Mbcnt = buildMbcnt(B, Ballot);
-
-  // Count active lanes.
   Value *const Ctpop = B.CreateIntCast(
       B.CreateUnaryIntrinsic(Intrinsic::ctpop, Ballot), B.getInt32Ty(), false);
-
-  // Branch: if active lanes > threshold, use DPP; otherwise no-opt.
   Value *const ThresholdCond = B.CreateICmpUGT(Ctpop, B.getInt32(Threshold));
 
-  BasicBlock *const EntryBB = I.getParent();
-  Instruction *const SplitPt = &I;
-  Instruction *const ThenTerm = SplitBlockAndInsertIfThen(
-      ThresholdCond, SplitPt, false, nullptr, &DTU, nullptr);
-  BasicBlock *const DppBB = ThenTerm->getParent();
-  BasicBlock *const MergeBB = I.getParent();
+  // Split at I into: EntryBB -> OptBB (then) / NoOptBB (else) -> TailBB.
+  Instruction *ThenTerm = nullptr, *ElseTerm = nullptr;
+  SplitBlockAndInsertIfThenElse(ThresholdCond, &I, &ThenTerm, &ElseTerm,
+                                nullptr, &DTU, nullptr);
+  BasicBlock *const NoOptBB = ElseTerm->getParent();
+  BasicBlock *const TailBB = I.getParent();
 
-  // Also create NoOptBB between DppBB and MergeBB.
-  BasicBlock *const NoOptBB = BasicBlock::Create(
-      I.getContext(), "atomicrmw.no_opt", I.getFunction(), MergeBB);
-  // Fix CFG: EntryBB's conditional branch false edge -> NoOptBB -> MergeBB.
-  BranchInst *const EntryBr = cast<BranchInst>(EntryBB->getTerminator());
-  EntryBr->setSuccessor(1, NoOptBB);
-  IRBuilder<> NoOptBuilder(NoOptBB);
-  NoOptBuilder.CreateBr(MergeBB);
-  DTU.applyUpdates({{DominatorTree::Insert, EntryBB, NoOptBB},
-                    {DominatorTree::Delete, EntryBB, MergeBB},
-                    {DominatorTree::Insert, NoOptBB, MergeBB}});
-
-  // DppBB: perform DPP scan/reduction and single-lane atomic.
-  B.SetInsertPoint(ThenTerm);
-
-  AtomicRMWInst::BinOp ScanOp = Op;
-  if (Op == AtomicRMWInst::Sub)
-    ScanOp = AtomicRMWInst::Add;
-
-  Value *Identity = getIdentityValueForAtomicOp(Ty, ScanOp);
-  Value *V = I.getOperand(ValIdx);
-
-  auto [NewV, ExclScan] =
-      buildDPPScanAndReduce(B, ScanOp, Ty, V, Identity, NeedResult);
-
-  Value *const DppIsFirst = B.CreateICmpEQ(Mbcnt, B.getInt32(0));
-
-  BasicBlock *const DppOrigBB = B.GetInsertBlock();
-  Instruction *const DppSingleTerm = SplitBlockAndInsertIfThen(
-      DppIsFirst, ThenTerm, false, nullptr, &DTU, nullptr);
-  B.SetInsertPoint(DppSingleTerm);
-  Instruction *const DppNewI = I.clone();
-  B.Insert(DppNewI);
-  DppNewI->setOperand(ValIdx, NewV);
-
-  Value *DppResult = nullptr;
-  if (NeedResult) {
-    B.SetInsertPoint(ThenTerm);
-    PHINode *const DppPHI = B.CreatePHI(Ty, 2);
-    DppPHI->addIncoming(PoisonValue::get(Ty), DppOrigBB);
-    DppPHI->addIncoming(DppNewI, DppSingleTerm->getParent());
-
-    Value *ReadlaneVal = DppPHI;
-    if (TyBitWidth < 32)
-      ReadlaneVal = B.CreateZExt(DppPHI, B.getInt32Ty());
-    Value *BroadcastI = B.CreateIntrinsic(
-        ReadlaneVal->getType(), Intrinsic::amdgcn_readfirstlane, ReadlaneVal);
-    if (TyBitWidth < 32)
-      BroadcastI = B.CreateTrunc(BroadcastI, Ty);
-
-    Value *LaneOffset =
-        B.CreateIntrinsic(Intrinsic::amdgcn_strict_wwm, Ty, ExclScan);
-    DppResult = buildNonAtomicBinOp(B, Op, BroadcastI, LaneOffset);
-  }
-
-  // NoOptBB: each lane independently issues its own atomic.
-  NoOptBuilder.SetInsertPoint(NoOptBB->getTerminator());
+  // NoOptBB: each lane independently issues its own atomic (unoptimized).
   Instruction *const NoOptNewI = I.clone();
-  NoOptBuilder.Insert(NoOptNewI);
-  Value *NoOptResult = NeedResult ? static_cast<Value *>(NoOptNewI) : nullptr;
+  NoOptNewI->insertBefore(ElseTerm->getIterator());
 
-  // MergeBB: PHI-merge results from DppBB and NoOptBB.
+  // Move I into OptBB so that optimizeAtomicImpl rewrites only the optimized
+  // path.  I's uses are temporarily non-dominating; they will be fixed when
+  // optimizeAtomic does replaceAllUsesWith after we return.
+  I.moveBefore(ThenTerm->getIterator());
+  B.SetInsertPoint(&I);
+
+  // Delegate the full scan/reduction + single-lane atomic + result
+  // reconstruction to optimizeAtomicImpl.
+  Value *OptResult =
+      optimizeAtomicImpl(B, I, Op, ValIdx, /*ValDivergent=*/true);
+
   if (!NeedResult)
     return nullptr;
 
-  B.SetInsertPoint(MergeBB, MergeBB->getFirstNonPHIIt());
+  // After optimizeAtomicImpl, I sits in the exit block of the optimized
+  // sub-CFG.  Merge the optimized and no-opt results in TailBB.
+  B.SetInsertPoint(TailBB, TailBB->getFirstNonPHIIt());
   PHINode *const MergePHI = B.CreatePHI(Ty, 2);
-  MergePHI->addIncoming(DppResult, ThenTerm->getParent());
-  MergePHI->addIncoming(NoOptResult, NoOptBB);
+  MergePHI->addIncoming(OptResult, I.getParent());
+  MergePHI->addIncoming(NoOptNewI, NoOptBB);
   return MergePHI;
 }
 
