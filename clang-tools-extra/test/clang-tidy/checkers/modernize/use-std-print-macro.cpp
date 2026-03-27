@@ -1,5 +1,4 @@
-// RUN: %check_clang_tidy -std=c++23-or-later %s modernize-use-std-print %t -- \
-// RUN:   -- -fexceptions
+// RUN: %check_clang_tidy -std=c++23-or-later %s modernize-use-std-print %t
 
 #include <cstdio>
 // CHECK-FIXES: #include <print>
