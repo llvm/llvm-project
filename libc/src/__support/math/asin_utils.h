@@ -69,6 +69,8 @@ LIBC_INLINE double asin_eval(double u) {
 // > g = asin(x) / (pi * x);
 // > P = fpminimax(g, [|0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22|],
 // >              [|D...|], [0, 0.5]);
+// > print("Error:", dirtyinfnorm(P - g, [1e-30; 0.25]));
+// Error : 0x1.a53f84eafa3ea69bb81b6c52b3278872083fca2c757bd778acp-54 ~= 2^-54
 LIBC_INLINE_VAR constexpr double ASINPI_COEFFS[12] = {
     0x1.45f306dc9c881p-2,  // x^0
     0x1.b2995e7b7e756p-5,  // x^2
