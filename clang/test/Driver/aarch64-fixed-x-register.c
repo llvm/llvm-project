@@ -26,6 +26,10 @@
 // RUN: FileCheck --check-prefix=CHECK-FIXED-X7 < %t %s
 // CHECK-FIXED-X7: "-target-feature" "+reserve-x7"
 
+// RUN: not %clang --target=aarch64-none-gnu -ffixed-x8 -### %s 2>&1 | FileCheck --check-prefix=CHECK-NO-FIXED-X8 %s
+// CHECK-NO-FIXED-X8: error: unsupported option '-ffixed-x8' for target 'aarch64-none-gnu'
+// CHECK-NO-FIXED-X8-NOT: "+reserve-x8"
+
 // RUN: %clang --target=aarch64-none-gnu -ffixed-x9 -### %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-FIXED-X9 < %t %s
 // CHECK-FIXED-X9: "-target-feature" "+reserve-x9"
