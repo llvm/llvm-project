@@ -12042,15 +12042,15 @@ bool TargetLowering::expandMULO(SDNode *Node, SDValue &Result,
   EVT WideVT = VT.widenIntegerElementType(*DAG.getContext());
 
   static const unsigned Ops[2][3] =
-      { { ISD::MULHU, ISD::UMUL_LOHI, ISD::ZERO_EXTEND },
-        { ISD::MULHS, ISD::SMUL_LOHI, ISD::SIGN_EXTEND }};
+      { { ISD::UMUL_LOHI, ISD::MULHU, ISD::ZERO_EXTEND },
+        { ISD::SMUL_LOHI, ISD::MULHS, ISD::SIGN_EXTEND }};
   if (isOperationLegalOrCustom(Ops[isSigned][0], VT)) {
-    BottomHalf = DAG.getNode(ISD::MUL, dl, VT, LHS, RHS);
-    TopHalf = DAG.getNode(Ops[isSigned][0], dl, VT, LHS, RHS);
-  } else if (isOperationLegalOrCustom(Ops[isSigned][1], VT)) {
-    BottomHalf = DAG.getNode(Ops[isSigned][1], dl, DAG.getVTList(VT, VT), LHS,
+    BottomHalf = DAG.getNode(Ops[isSigned][0], dl, DAG.getVTList(VT, VT), LHS,
                              RHS);
     TopHalf = BottomHalf.getValue(1);
+  } else if (isOperationLegalOrCustom(Ops[isSigned][1], VT)) {
+    BottomHalf = DAG.getNode(ISD::MUL, dl, VT, LHS, RHS);
+    TopHalf = DAG.getNode(Ops[isSigned][1], dl, VT, LHS, RHS);
   } else if (isTypeLegal(WideVT)) {
     LHS = DAG.getNode(Ops[isSigned][2], dl, WideVT, LHS);
     RHS = DAG.getNode(Ops[isSigned][2], dl, WideVT, RHS);
