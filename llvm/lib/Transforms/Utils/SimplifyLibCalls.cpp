@@ -4089,8 +4089,15 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
     return replaceUnaryCall(CI, Builder, Intrinsic::round);
   case LibFunc_roundeven:
     return replaceUnaryCall(CI, Builder, Intrinsic::roundeven);
-  case LibFunc_nearbyint:
+  case LibFunc_nearbyint: {
+    // Don't convert ppcf128 nearbyint to intrinsic - it needs to stay as
+    // a library call to avoid incorrect lowering that loses precision and
+    // raises spurious FP exceptions.
+    Type *Ty = CI->getType();
+    if (Ty->isPPC_FP128Ty())
+      return nullptr;
     return replaceUnaryCall(CI, Builder, Intrinsic::nearbyint);
+  }
   case LibFunc_rint:
     return replaceUnaryCall(CI, Builder, Intrinsic::rint);
   case LibFunc_trunc:
