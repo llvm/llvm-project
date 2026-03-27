@@ -252,6 +252,8 @@ foreach S = !listconcat(F32VectorSuffixes, F64VectorSuffixes) in {
   def TAN_#S : RuntimeLibcall;
   def TANH_#S : RuntimeLibcall;
   def TGAMMA_#S : RuntimeLibcall;
+  def CDFNORM_#S : RuntimeLibcall;
+  def ROUND_#S : RuntimeLibcall;
 }
 
 foreach S = F64VectorSuffixes in {
@@ -4504,4 +4506,13 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrs8_sinf : RuntimeLibcallImpl<SIN_V8F32>;
   def amd_vrs8_tanf : RuntimeLibcallImpl<TAN_V8F32>;
   def amd_vrs8_tanhf : RuntimeLibcallImpl<TANH_V8F32>;
+  def amd_vrd2_cdfnorm : RuntimeLibcallImpl<CDFNORM_V2F64>;
+  def amd_vrd4_cdfnorm : RuntimeLibcallImpl<CDFNORM_V4F64>;
+  def amd_vrd8_cdfnorm : RuntimeLibcallImpl<CDFNORM_V8F64>;
+  def amd_vrs4_roundf : RuntimeLibcallImpl<ROUND_V4F32>;
+  def amd_vrs8_roundf : RuntimeLibcallImpl<ROUND_V8F32>;
+  def amd_vrs16_roundf : RuntimeLibcallImpl<ROUND_V16F32>;
+  def amd_vrd2_round : RuntimeLibcallImpl<ROUND_V2F64>;
+  def amd_vrd4_round : RuntimeLibcallImpl<ROUND_V4F64>;
+  def amd_vrd8_round : RuntimeLibcallImpl<ROUND_V8F64>;
 }
