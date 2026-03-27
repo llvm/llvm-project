@@ -87,6 +87,26 @@ cl::opt<ubi::UndefValueBehavior> UndefBehavior(
                clEnumVal(ubi::UndefValueBehavior::Zero,
                          "All uses of an uninitialized byte yield zero.")));
 
+cl::opt<ubi::NaNPropagationBehavior> NaNPropagationBehavior(
+    "", cl::desc("Choose NaN propagation behavior:"),
+    cl::values(
+        clEnumVal(ubi::NaNPropagationBehavior::NonDeterministic,
+                  "Non-deterministically choose from 4 cases as specified by "
+                  "language reference."),
+        clEnumVal(ubi::NaNPropagationBehavior::PreferredNaN,
+                  "The quiet bit is set and the payload is all-zero."),
+        clEnumVal(
+            ubi::NaNPropagationBehavior::QuietingNaN,
+            "The quiet bit is set and the payload is copied from any input"
+            "operand that is a NaN."),
+        clEnumVal(ubi::NaNPropagationBehavior::UnchangedNaN,
+                  "The quiet bit and payload are copied from any input operand"
+                  "that is a NaN"),
+        clEnumVal(ubi::NaNPropagationBehavior::TargetSpecificNaN,
+                  "The quiet bit is set and the payload is picked from a"
+                  "target-specific set of “extra” possible NaN payloads."
+                  "Implemented by filling payload with random values")));
+
 class VerboseEventHandler : public ubi::EventHandler {
 public:
   bool onInstructionExecuted(Instruction &I,
@@ -178,6 +198,7 @@ int main(int argc, char **argv) {
   Ctx.setMaxSteps(MaxSteps);
   Ctx.setMaxStackDepth(MaxStackDepth);
   Ctx.setUndefValueBehavior(UndefBehavior);
+  Ctx.setNaNPropagationBehavior(NaNPropagationBehavior);
   Ctx.reseed(Seed);
 
   if (!Ctx.initGlobalValues()) {

@@ -230,8 +230,6 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
   void visitFPUnOp(Instruction &I,
                    function_ref<AnyValue(const APFloat &)> ScalarFn) {
     FastMathFlags FMF = cast<FPMathOperator>(I).getFastMathFlags();
-    DenormalMode DenormMode = CurrentFrame->Func.getDenormalMode(
-        I.getType()->getScalarType()->getFltSemantics());
 
     visitUnOp(I, [&](const AnyValue &Operand) -> AnyValue {
       if (Operand.isPoison())
@@ -311,15 +309,17 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
       APFloat Result = FResult.asFloat();
       // NaN payload propagation
       if (Result.isNaN()) {
-        // We non-deterministically choose from the four cases as specified in
-        // the language reference. The sign is also non-deterministic
-        const int8_t Choice = static_cast<int8_t>(Ctx.getRng()() % 4);
+        NaNPropagationBehavior Choice = Ctx.getNaNPropagationBehavior();
+        if (Choice == NaNPropagationBehavior::NonDeterministic) {
+          uint64_t NonDetChoice = Ctx.getRandomUInt64() % 4 + 1;
+          Choice = static_cast<NaNPropagationBehavior>(NonDetChoice);
+        }
         const bool Sign = Ctx.getRandomBool();
-        if (Choice == 0) {
+        if (Choice == NaNPropagationBehavior::PreferredNaN) {
           // Preferred NaN: the quiet bit is set and the payload is all-zero
           return APFloat::getQNaN(Result.getSemantics(), Sign);
         }
-        if (Choice == 1) {
+        if (Choice == NaNPropagationBehavior::QuietingNaN) {
           // Quieting NaN propagation: the quiet bit is set and the payload is
           // copied from any input operand that is a NaN. We implement this by
           // directly set the quiet bit of the input NaN, and
@@ -336,7 +336,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
             return QuietNaN(FRHS);
           return QuietNaN(Result);
         }
-        if (Choice == 2) {
+        if (Choice == NaNPropagationBehavior::UnchangedNaN) {
           // Unchanged NaN propagation: the quiet bit and payload are copied
           // from any input operand that is a NaN
           auto FlipSign = [&](APFloat &Input) {
@@ -350,11 +350,11 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
             return FlipSign(FRHS);
           return FlipSign(Result);
         }
-        if (Choice == 3) {
+        if (Choice == NaNPropagationBehavior::TargetSpecificNaN) {
           // Target-specific NaN: the quiet bit is set and the payload is picked
           // from a target-specific set of "extra" possible NaN payloads. We
           // approximate this by filling the payload with random values.
-          auto Payload = APInt(64, Ctx.getRng()());
+          auto Payload = APInt(64, Ctx.getRandomUInt64());
           return APFloat::getQNaN(Result.getSemantics(), Sign, &Payload);
         }
       }
@@ -920,7 +920,7 @@ public:
   }
 
   void visitFAdd(BinaryOperator &I) {
-    visitFPBinOp(I, [this](const APFloat &LHS, const APFloat &RHS) -> AnyValue {
+    visitFPBinOp(I, [](const APFloat &LHS, const APFloat &RHS) -> AnyValue {
       APFloat Res = LHS;
       Res.add(RHS, APFloat::rmNearestTiesToEven);
       return Res;
@@ -928,7 +928,7 @@ public:
   }
 
   void visitFSub(BinaryOperator &I) {
-    visitFPBinOp(I, [this](const APFloat &LHS, const APFloat &RHS) -> AnyValue {
+    visitFPBinOp(I, [](const APFloat &LHS, const APFloat &RHS) -> AnyValue {
       APFloat Res = LHS;
       Res.subtract(RHS, APFloat::rmNearestTiesToEven);
       return Res;
@@ -936,7 +936,7 @@ public:
   }
 
   void visitFMul(BinaryOperator &I) {
-    visitFPBinOp(I, [this](const APFloat &LHS, const APFloat &RHS) -> AnyValue {
+    visitFPBinOp(I, [](const APFloat &LHS, const APFloat &RHS) -> AnyValue {
       APFloat Res = LHS;
       Res.multiply(RHS, APFloat::rmNearestTiesToEven);
       return Res;
@@ -944,7 +944,7 @@ public:
   }
 
   void visitFDiv(BinaryOperator &I) {
-    visitFPBinOp(I, [this](const APFloat &LHS, const APFloat &RHS) -> AnyValue {
+    visitFPBinOp(I, [](const APFloat &LHS, const APFloat &RHS) -> AnyValue {
       APFloat Res = LHS;
       Res.divide(RHS, APFloat::rmNearestTiesToEven);
       return Res;

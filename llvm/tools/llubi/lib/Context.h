@@ -47,6 +47,19 @@ enum class UndefValueBehavior {
   Zero,             // All uses of the undef value yield zero.
 };
 
+enum class NaNPropagationBehavior {
+  NonDeterministic, // Non-deterministically choose from the following 4 cases
+  PreferredNaN,     // The quiet bit is set and the payload is all-zero
+  QuietingNaN,  // The quiet bit is set and the payload is copied from any input
+                // operand that is a NaN
+  UnchangedNaN, // The quiet bit and payload are copied from any input operand
+                // that is a NaN
+  TargetSpecificNaN // The quiet bit is set and the payload is picked from a
+                    // target-specific set of “extra” possible NaN payloads,
+                    // currently we implement it by filling payload with random
+                    // values
+};
+
 class MemoryObject : public RefCountedBase<MemoryObject> {
   uint64_t Address;
   uint64_t Size;
@@ -149,6 +162,7 @@ class Context {
   uint32_t MaxSteps = 0;
   uint32_t MaxStackDepth = 256;
   UndefValueBehavior UndefBehavior = UndefValueBehavior::NonDeterministic;
+  NaNPropagationBehavior NaNBehavior = NaNPropagationBehavior::NonDeterministic;
 
   std::mt19937_64 Rng;
 
@@ -200,9 +214,14 @@ public:
   uint32_t getVScale() const { return VScale; }
   uint32_t getMaxSteps() const { return MaxSteps; }
   uint32_t getMaxStackDepth() const { return MaxStackDepth; }
+  NaNPropagationBehavior getNaNPropagationBehavior() const {
+    return NaNBehavior;
+  }
   void setUndefValueBehavior(UndefValueBehavior UB) { UndefBehavior = UB; }
+  void setNaNPropagationBehavior(NaNPropagationBehavior NaNBehav) {
+    NaNBehavior = NaNBehav;
+  }
   void reseed(uint32_t Seed) { Rng.seed(Seed); }
-  std::mt19937_64 &getRng() { return Rng; }
 
   LLVMContext &getContext() const { return Ctx; }
   const DataLayout &getDataLayout() const { return DL; }
@@ -265,6 +284,7 @@ public:
                    EventHandler &Handler);
 
   bool getRandomBool();
+  uint64_t getRandomUInt64();
 };
 
 } // namespace llvm::ubi

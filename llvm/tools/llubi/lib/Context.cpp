@@ -501,7 +501,15 @@ uint64_t Context::getEffectiveTypeStoreSize(Type *Ty) {
 
 bool Context::getRandomBool() {
   // We use the lowest bit of the raw bits from RNG as the result:
-  return static_cast<bool>(Rng() & 1);
+  if (UndefBehavior == UndefValueBehavior::NonDeterministic)
+    return static_cast<bool>(Rng() & 1);
+  return false;
+}
+
+uint64_t Context::getRandomUInt64() {
+  if (UndefBehavior == UndefValueBehavior::NonDeterministic)
+    return Rng();
+  return 0;
 }
 
 void MemoryObject::markAsFreed() {
