@@ -667,10 +667,11 @@ static Value *foldSelectICmpMinMax(const ICmpInst *Cmp, Value *TVal,
   Value *CmpLHS = Cmp->getOperand(0);
   Value *CmpRHS = Cmp->getOperand(1);
   ICmpInst::Predicate Pred = Cmp->getPredicate();
- //  (isGuaranteedNotToBeUndef(NewOp, SQ.AC, &Sel, &DT))
+
   if (match(TVal, m_Zero())) {
     // (X < Y) ? 0 : (X - Y)
-    if (Pred == CmpInst::ICMP_SLT && isGuaranteedNotToBeUndef(CmpLHS, SQ.AC, Cmp, nullptr) &&
+    if (Pred == CmpInst::ICMP_SLT &&
+        isGuaranteedNotToBeUndef(CmpLHS, SQ.AC, Cmp, nullptr) &&
         match(FVal, m_NSWSub(m_Specific(CmpLHS), m_Specific(CmpRHS)))) {
       Value *SMin =
           Builder.CreateBinaryIntrinsic(Intrinsic::smin, CmpRHS, CmpLHS);
@@ -678,7 +679,8 @@ static Value *foldSelectICmpMinMax(const ICmpInst *Cmp, Value *TVal,
     }
 
     // (X > Y) ? 0 : (Y - X)
-    if (Pred == CmpInst::ICMP_SGT && isGuaranteedNotToBeUndef(CmpRHS, SQ.AC, Cmp, nullptr) &&
+    if (Pred == CmpInst::ICMP_SGT &&
+        isGuaranteedNotToBeUndef(CmpRHS, SQ.AC, Cmp, nullptr) &&
         match(FVal, m_NSWSub(m_Specific(CmpRHS), m_Specific(CmpLHS)))) {
       Value *SMin =
           Builder.CreateBinaryIntrinsic(Intrinsic::smin, CmpRHS, CmpLHS);
@@ -688,7 +690,8 @@ static Value *foldSelectICmpMinMax(const ICmpInst *Cmp, Value *TVal,
 
   if (match(FVal, m_Zero())) {
     // (X < Y) ? (Y - X) : 0
-    if (Pred == CmpInst::ICMP_SLT && isGuaranteedNotToBeUndef(CmpRHS, SQ.AC, Cmp, nullptr) &&
+    if (Pred == CmpInst::ICMP_SLT &&
+        isGuaranteedNotToBeUndef(CmpRHS, SQ.AC, Cmp, nullptr) &&
         match(TVal, m_NSWSub(m_Specific(CmpRHS), m_Specific(CmpLHS)))) {
       Value *SMin =
           Builder.CreateBinaryIntrinsic(Intrinsic::smin, CmpRHS, CmpLHS);
@@ -696,7 +699,8 @@ static Value *foldSelectICmpMinMax(const ICmpInst *Cmp, Value *TVal,
     }
 
     // (X > Y) ? (X - Y) : 0
-    if (Pred == CmpInst::ICMP_SGT && isGuaranteedNotToBeUndef(CmpLHS, SQ.AC, Cmp, nullptr) &&
+    if (Pred == CmpInst::ICMP_SGT &&
+        isGuaranteedNotToBeUndef(CmpLHS, SQ.AC, Cmp, nullptr) &&
         match(TVal, m_NSWSub(m_Specific(CmpLHS), m_Specific(CmpRHS)))) {
       Value *SMin =
           Builder.CreateBinaryIntrinsic(Intrinsic::smin, CmpLHS, CmpRHS);
