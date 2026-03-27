@@ -146,8 +146,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setOperationAction(ISD::CLEAR_CACHE, MVT::Other, Expand);
 
   // For 64-bit, since we have so many registers, use the ILP scheduler.
-  // For 32-bit, use the register pressure specific scheduling.
-  // For Atom, always use ILP scheduling.
+  // For 32-bit, use the register pressure specific scheduling, unless
+  // target wants ILP (e.g. Atom)
   if (Subtarget.alwaysILP())
     setSchedulingPreference(Sched::ILP);
   else if (Subtarget.is64Bit())
