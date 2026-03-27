@@ -1070,19 +1070,18 @@ BuiltinTypeDeclBuilder::addFriend(CXXRecordDecl *Friend) {
   return *this;
 }
 
-BuiltinTypeDeclBuilder &
-BuiltinTypeDeclBuilder::addPrivateNestedRecord(StringRef Name,
-                                               CXXRecordDecl *&NestedRecord) {
+CXXRecordDecl *BuiltinTypeDeclBuilder::addPrivateNestedRecord(StringRef Name) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = SemaRef.getASTContext();
   IdentifierInfo &II = AST.Idents.get(Name, tok::TokenKind::identifier);
-  NestedRecord = CXXRecordDecl::Create(AST, TagDecl::TagKind::Struct, Record,
-                                       SourceLocation(), SourceLocation(), &II);
+  CXXRecordDecl *NestedRecord =
+      CXXRecordDecl::Create(AST, TagDecl::TagKind::Struct, Record,
+                            SourceLocation(), SourceLocation(), &II);
   NestedRecord->setImplicit(true);
   NestedRecord->setAccess(AccessSpecifier::AS_private);
   NestedRecord->setLexicalDeclContext(Record);
   Record->addDecl(NestedRecord);
-  return *this;
+  return NestedRecord;
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleMember(
@@ -1424,14 +1423,13 @@ CXXRecordDecl *BuiltinTypeDeclBuilder::addMipsSliceType(ResourceDimension Dim,
   uint32_t VecSize = getResourceDimensions(Dim);
   QualType IntTy = AST.IntTy;
   QualType IndexTy = VecSize > 1 ? AST.getExtVectorType(IntTy, VecSize) : IntTy;
-  QualType Int3Ty = AST.getExtVectorType(IntTy, VecSize + 1);
+  QualType CoordLevelTy = AST.getExtVectorType(IntTy, VecSize + 1);
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
   // Define the mips_slice_type which is returned by mips_type::operator[].
   // It holds the resource handle and the mip level. It has an operator[]
   // that takes the coordinate and performs the actual resource load.
-  CXXRecordDecl *MipsSliceRecord = nullptr;
-  addPrivateNestedRecord("mips_slice_type", MipsSliceRecord);
+  CXXRecordDecl *MipsSliceRecord = addPrivateNestedRecord("mips_slice_type");
   BuiltinTypeDeclBuilder MipsSliceBuilder(SemaRef, MipsSliceRecord);
   MipsSliceBuilder.addFriend(Record);
   MipsSliceBuilder.addHandleMember(getResourceAttrs().ResourceClass, Dim,
@@ -1455,7 +1453,7 @@ CXXRecordDecl *BuiltinTypeDeclBuilder::addMipsSliceType(ResourceDimension Dim,
                            /*IsConst=*/true)
       .addParam("Coord", IndexTy)
       .accessFieldOnResource(PH::This, LevelField)
-      .concat(PH::_0, PH::LastStmt, Int3Ty)
+      .concat(PH::_0, PH::LastStmt, CoordLevelTy)
       .callBuiltin("__builtin_hlsl_resource_load_level", ReturnType, PH::Handle,
                    PH::LastStmt)
       .finalize();
@@ -1476,8 +1474,7 @@ CXXRecordDecl *BuiltinTypeDeclBuilder::addMipsType(ResourceDimension Dim,
   // Define the mips_type, which provides the syntax `Resource.mips[level]`.
   // It only holds the handle, and its operator[] returns a mips_slice_type
   // initialized with the handle and the requested mip level.
-  CXXRecordDecl *MipsRecord = nullptr;
-  addPrivateNestedRecord("mips_type", MipsRecord);
+  CXXRecordDecl *MipsRecord = addPrivateNestedRecord("mips_type");
   BuiltinTypeDeclBuilder MipsBuilder(SemaRef, MipsRecord);
   MipsBuilder.addFriend(Record);
   MipsBuilder.addHandleMember(getResourceAttrs().ResourceClass, Dim,

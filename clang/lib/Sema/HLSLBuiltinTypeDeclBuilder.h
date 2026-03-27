@@ -138,8 +138,7 @@ private:
                     bool IsCounter, QualType ElementTy,
                     AccessSpecifier Access = AccessSpecifier::AS_private);
   BuiltinTypeDeclBuilder &addFriend(CXXRecordDecl *Friend);
-  BuiltinTypeDeclBuilder &addPrivateNestedRecord(StringRef Name,
-                                                 CXXRecordDecl *&NestedRecord);
+  CXXRecordDecl *addPrivateNestedRecord(StringRef Name);
   CXXRecordDecl *addMipsSliceType(ResourceDimension Dim, QualType ReturnType);
   CXXRecordDecl *addMipsType(ResourceDimension Dim, QualType ReturnType);
   BuiltinTypeDeclBuilder &
