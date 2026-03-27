@@ -1678,7 +1678,7 @@ struct ImageSelector {
   std::tuple<std::list<Cosubscript>, std::list<ImageSelectorSpec>> t;
 };
 
-// F2023: R1002 conditional-expr ->
+// F2023 R1002 conditional-expr ->
 //   ( scalar-logical-expr ? expr
 //     [ : scalar-logical-expr ? expr ]...
 //     : expr )

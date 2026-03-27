@@ -124,7 +124,7 @@ constexpr auto level1Expr{sourced(
     primary || // must come before define op to resolve .TRUE._8 ambiguity
     construct<Expr>(construct<Expr::DefinedUnary>(definedOpName, primary)))};
 
-// F2023: R1002 conditional-expr ->
+// F2023 R1002 conditional-expr ->
 //   ( scalar-logical-expr ? expr
 //     [ : scalar-logical-expr ? expr ]...
 //     : expr )

@@ -168,7 +168,7 @@ subroutine error_type_mismatch(flag)
   flag = (flag ? flag : i1)
 end subroutine
 
-! Error: kind mismatch (F2023: C1004)
+! Error: kind mismatch (F2023 C1004)
 subroutine error_kind_mismatch(flag)
   logical :: flag
   integer(kind=4) :: i4
