@@ -670,9 +670,9 @@ void CIRGenModule::setCommonAttributes(GlobalDecl gd, mlir::Operation *gv) {
     setGVProperties(gv, dyn_cast<NamedDecl>(d));
   assert(!cir::MissingFeatures::defaultVisibility());
 
-  if (auto globalOp = mlir::dyn_cast<cir::GlobalOp>(gv)) {
+  if (auto gvi = mlir::dyn_cast<cir::CIRGlobalValueInterface>(gv)) {
     if (d && d->hasAttr<UsedAttr>())
-      addUsedOrCompilerUsedGlobal(globalOp);
+      addUsedOrCompilerUsedGlobal(gvi);
 
     if (const auto *vd = dyn_cast_if_present<VarDecl>(d);
         vd && ((codeGenOpts.KeepPersistentStorageVariables &&
@@ -681,7 +681,7 @@ void CIRGenModule::setCommonAttributes(GlobalDecl gd, mlir::Operation *gv) {
                (codeGenOpts.KeepStaticConsts &&
                 vd->getStorageDuration() == SD_Static &&
                 vd->getType().isConstQualified())))
-      addUsedOrCompilerUsedGlobal(globalOp);
+      addUsedOrCompilerUsedGlobal(gvi);
   }
 }
 
@@ -693,6 +693,8 @@ void CIRGenModule::setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op) {
     if (auto gvi = mlir::dyn_cast<cir::CIRGlobalValueInterface>(op)) {
       if (const auto *sa = d->getAttr<SectionAttr>())
         gvi.setSection(builder.getStringAttr(sa->getName()));
+      if (d->hasAttr<RetainAttr>())
+        addUsedGlobal(gvi);
     }
   }
 
@@ -1111,60 +1113,59 @@ cir::GlobalViewAttr CIRGenModule::getAddrOfGlobalVarAttr(const VarDecl *d) {
   return builder.getGlobalViewAttr(ptrTy, globalOp);
 }
 
-void CIRGenModule::addUsedGlobal(cir::GlobalOp gv) {
-  assert(!gv.isDeclaration() &&
+void CIRGenModule::addUsedGlobal(cir::CIRGlobalValueInterface gv) {
+  assert((mlir::isa<cir::FuncOp>(gv.getOperation()) ||
+          !gv.isDeclarationForLinker()) &&
          "Only globals with definition can force usage.");
-  LLVMUsed.emplace_back(gv);
+  llvmUsed.emplace_back(gv);
 }
 
-void CIRGenModule::addCompilerUsedGlobal(cir::GlobalOp gv) {
-  assert(!gv.isDeclaration() &&
+void CIRGenModule::addCompilerUsedGlobal(cir::CIRGlobalValueInterface gv) {
+  assert(!gv.isDeclarationForLinker() &&
          "Only globals with definition can force usage.");
-  LLVMCompilerUsed.emplace_back(gv);
+  llvmCompilerUsed.emplace_back(gv);
 }
 
-void CIRGenModule::addUsedOrCompilerUsedGlobal(cir::GlobalOp gv) {
-  assert(!gv.isDeclaration() &&
+void CIRGenModule::addUsedOrCompilerUsedGlobal(
+    cir::CIRGlobalValueInterface gv) {
+  assert((mlir::isa<cir::FuncOp>(gv.getOperation()) ||
+          !gv.isDeclarationForLinker()) &&
          "Only globals with definition can force usage.");
   if (getTriple().isOSBinFormatELF())
-    LLVMCompilerUsed.emplace_back(gv);
+    llvmCompilerUsed.emplace_back(gv);
   else
-    LLVMUsed.emplace_back(gv);
+    llvmUsed.emplace_back(gv);
 }
 
 static void emitUsed(CIRGenModule &cgm, StringRef name,
-                     std::vector<cir::GlobalOp> &list) {
-  // Don't create llvm.used if there is no need.
+                     std::vector<cir::CIRGlobalValueInterface> &list) {
   if (list.empty())
     return;
 
-  // Convert List to what ConstantArray needs.
-  auto &builder = cgm.getBuilder();
-  auto loc = builder.getUnknownLoc();
-  llvm::SmallVector<mlir::Attribute, 8> usedArray;
+  CIRGenBuilderTy &builder = cgm.getBuilder();
+  mlir::Location loc = builder.getUnknownLoc();
+  llvm::SmallVector<mlir::Attribute> usedArray;
   usedArray.resize(list.size());
-  for (unsigned i = 0, e = list.size(); i != e; ++i) {
+  for (auto [i, op] : llvm::enumerate(list)) {
     usedArray[i] = cir::GlobalViewAttr::get(
-        cgm.voidPtrTy, mlir::FlatSymbolRefAttr::get(list[i].getSymNameAttr()));
+        cgm.voidPtrTy, mlir::FlatSymbolRefAttr::get(op.getNameAttr()));
   }
 
-  if (usedArray.empty())
-    return;
-  auto arrayTy = cir::ArrayType::get(cgm.voidPtrTy, usedArray.size());
+  cir::ArrayType arrayTy = cir::ArrayType::get(cgm.voidPtrTy, usedArray.size());
 
-  auto initAttr = cir::ConstArrayAttr::get(
+  cir::ConstArrayAttr initAttr = cir::ConstArrayAttr::get(
       arrayTy, mlir::ArrayAttr::get(&cgm.getMLIRContext(), usedArray));
 
-  auto gv = CIRGenModule::createGlobalOp(cgm, loc, name, arrayTy,
-                                         /*isConstant=*/false);
+  cir::GlobalOp gv = CIRGenModule::createGlobalOp(cgm, loc, name, arrayTy,
+                                                  /*isConstant=*/false);
   gv.setLinkage(cir::GlobalLinkageKind::AppendingLinkage);
   gv.setInitialValueAttr(initAttr);
   // TODO(CIR): Set section to "llvm.metadata" once GlobalOp supports sections.
 }
 
 void CIRGenModule::emitLLVMUsed() {
-  emitUsed(*this, "llvm.used", LLVMUsed);
-  emitUsed(*this, "llvm.compiler.used", LLVMCompilerUsed);
+  emitUsed(*this, "llvm.used", llvmUsed);
+  emitUsed(*this, "llvm.compiler.used", llvmCompilerUsed);
 }
 
 void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,

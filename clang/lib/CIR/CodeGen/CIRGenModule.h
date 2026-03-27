@@ -185,14 +185,14 @@ public:
   void updateResolvedBlockAddress(cir::BlockAddressOp op,
                                   cir::LabelOp newLabel);
 
-  /// Add a global value to the LLVMUsed list.
-  void addUsedGlobal(cir::GlobalOp gv);
+  /// Add a global value to the llvmUsed list.
+  void addUsedGlobal(cir::CIRGlobalValueInterface gv);
 
-  /// Add a global value to the LLVMCompilerUsed list.
-  void addCompilerUsedGlobal(cir::GlobalOp gv);
+  /// Add a global value to the llvmCompilerUsed list.
+  void addCompilerUsedGlobal(cir::CIRGlobalValueInterface gv);
 
   /// Add a global to a list to be added to the llvm.compiler.used metadata.
-  void addUsedOrCompilerUsedGlobal(cir::GlobalOp gv);
+  void addUsedOrCompilerUsedGlobal(cir::CIRGlobalValueInterface gv);
 
   /// Emit llvm.used and llvm.compiler.used globals.
   void emitLLVMUsed();
@@ -464,8 +464,8 @@ public:
   /// List of global values which are required to be present in the object file;
   /// This is used for forcing visibility of symbols which may otherwise be
   /// optimized out.
-  std::vector<cir::GlobalOp> LLVMUsed;
-  std::vector<cir::GlobalOp> LLVMCompilerUsed;
+  std::vector<cir::CIRGlobalValueInterface> llvmUsed;
+  std::vector<cir::CIRGlobalValueInterface> llvmCompilerUsed;
 
   mlir::Type getVTableComponentType();
   CIRGenVTables &getVTables() { return vtables; }
