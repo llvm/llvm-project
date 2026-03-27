@@ -190,15 +190,12 @@ ObjectContainerUniversalMachO::GetObjectFile(const FileSpec *file) {
 
 ModuleSpecList ObjectContainerUniversalMachO::GetModuleSpecifications(
     const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
-    lldb::offset_t data_offset, lldb::offset_t file_offset,
-    lldb::offset_t file_size) {
+    lldb::offset_t file_offset, lldb::offset_t file_size) {
   if (!extractor_sp)
     return {};
 
   ModuleSpecList specs;
-  DataExtractorSP data_extractor_sp =
-      extractor_sp->GetSubsetExtractorSP(data_offset);
-  if (ObjectContainerUniversalMachO::MagicBytesMatch(*data_extractor_sp)) {
+  if (ObjectContainerUniversalMachO::MagicBytesMatch(*extractor_sp)) {
     llvm::MachO::fat_header header;
     std::vector<FatArch> fat_archs;
     if (ParseHeader(*data_extractor_sp, header, fat_archs)) {

@@ -114,7 +114,7 @@ lldb_private::ObjectFile *ObjectFileCOFF::CreateMemoryInstance(
 }
 
 ModuleSpecList ObjectFileCOFF::GetModuleSpecifications(
-    const FileSpec &file, DataExtractorSP &extractor_sp, offset_t data_offset,
+    const FileSpec &file, DataExtractorSP &extractor_sp,
     offset_t file_offset, offset_t length) {
   if (!extractor_sp || !extractor_sp->HasData())
     return {};
