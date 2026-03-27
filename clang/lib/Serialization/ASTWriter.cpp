@@ -8072,6 +8072,8 @@ void OMPClauseWriter::VisitOMPSizesClause(OMPSizesClause *C) {
 
 void OMPClauseWriter::VisitOMPCountsClause(OMPCountsClause *C) {
   Record.push_back(C->getNumCounts());
+  Record.push_back(C->getOmpFillIndex());
+  Record.AddSourceLocation(C->getOmpFillLoc());
   for (Expr *Count : C->getCountsRefs())
     Record.AddStmt(Count);
   Record.AddSourceLocation(C->getLParenLoc());

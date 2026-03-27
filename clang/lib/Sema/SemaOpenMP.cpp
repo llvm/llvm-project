@@ -15980,78 +15980,99 @@ StmtResult SemaOpenMP::ActOnOpenMPSplitDirective(ArrayRef<OMPClause *> Clauses,
   // Internal variable names.
   std::string OrigVarName = OrigVar->getNameInfo().getAsString();
 
-  enum class SplitCountKind { Constant, Fill };
-  SmallVector<std::pair<SplitCountKind, uint64_t>, 4> Entries;
-  for (Expr *CountExpr : CountsClause->getCountsRefs()) {
+  unsigned FillIdx = CountsClause->getOmpFillIndex();
+  if (!CountsClause->hasOmpFill()) {
+    return StmtError();
+  }
+
+  unsigned NumItems = CountsClause->getNumCounts();
+  SmallVector<uint64_t, 4> CountValues(NumItems, 0);
+  ArrayRef<Expr *> Refs = CountsClause->getCountsRefs();
+  for (unsigned I = 0; I < NumItems; ++I) {
+    if (I == FillIdx)
+      continue;
+    Expr *CountExpr = Refs[I];
     if (!CountExpr)
       return OMPSplitDirective::Create(Context, StartLoc, EndLoc, Clauses,
                                        NumLoops, AStmt, nullptr, nullptr);
-    if (isOMPFillCountExpr(CountExpr)) {
-      Entries.push_back({SplitCountKind::Fill, 0});
-      continue;
-    }
     std::optional<llvm::APSInt> OptVal =
         CountExpr->getIntegerConstantExpr(Context);
     if (!OptVal || OptVal->isNegative())
       return OMPSplitDirective::Create(Context, StartLoc, EndLoc, Clauses,
                                        NumLoops, AStmt, nullptr, nullptr);
-    Entries.push_back({SplitCountKind::Constant, OptVal->getZExtValue()});
-  }
-
-  if (Entries.empty())
-    return StmtError();
-
-  unsigned NumFill = 0;
-  unsigned FillPos = 0;
-  for (unsigned I = 0; I < Entries.size(); ++I) {
-    if (Entries[I].first == SplitCountKind::Fill) {
-      ++NumFill;
-      FillPos = I;
-    }
-  }
-  if (NumFill > 1) {
-    Diag(CountsClause->getBeginLoc(),
-         diag::err_omp_split_counts_multiple_omp_fill);
-    return StmtError();
-  }
-  if (NumFill == 1 && FillPos != Entries.size() - 1) {
-    Diag(CountsClause->getBeginLoc(),
-         diag::err_omp_split_counts_omp_fill_not_last);
-    return StmtError();
+    CountValues[I] = OptVal->getZExtValue();
   }
 
   Expr *NumIterExpr = LoopHelper.NumIterations;
-  if (NumFill == 1 && !NumIterExpr) {
-    Diag(CountsClause->getBeginLoc(),
-         diag::err_omp_split_counts_omp_fill_no_trip);
-    return StmtError();
-  }
 
-  struct SplitSeg {
-    uint64_t Start;
-    bool EndIsTripCount;
-    uint64_t EndConst;
+  uint64_t RightSum = 0;
+  for (unsigned I = FillIdx + 1; I < NumItems; ++I)
+    RightSum += CountValues[I];
+
+  auto MakeIntLit = [&](uint64_t Val) {
+    return IntegerLiteral::Create(Context, llvm::APInt(IVWidth, Val), IVTy,
+                                  OrigVarLoc);
   };
-  SmallVector<SplitSeg, 4> Segs;
-  uint64_t Cur = 0;
-  for (unsigned I = 0; I < Entries.size(); ++I) {
-    const auto &Ent = Entries[I];
-    if (Ent.first == SplitCountKind::Constant) {
-      uint64_t Nxt = Cur + Ent.second;
-      Segs.push_back({Cur, false, Nxt});
-      Cur = Nxt;
-    } else
-      Segs.push_back({Cur, true, 0});
-  }
 
-  size_t NumSegments = Segs.size();
+  size_t NumSegments = NumItems;
   SmallVector<Stmt *, 4> SplitLoops;
 
-  for (size_t Seg = 0; Seg < NumSegments; ++Seg) {
-    uint64_t StartVal = Segs[Seg].Start;
+  uint64_t LeftAccum = 0;
+  uint64_t RightRemaining = RightSum;
 
-    // Segment IV: .split.iv.<Seg>.<OrigVarName>, init to StartVal, bound by
-    // EndVal.
+  for (size_t Seg = 0; Seg < NumSegments; ++Seg) {
+    Expr *StartExpr = nullptr;
+    Expr *EndExpr = nullptr;
+
+    if (Seg < FillIdx) {
+      StartExpr = MakeIntLit(LeftAccum);
+      LeftAccum += CountValues[Seg];
+      EndExpr = MakeIntLit(LeftAccum);
+    } else if (Seg == FillIdx) {
+      StartExpr = MakeIntLit(LeftAccum);
+      if (RightRemaining == 0) {
+        EndExpr = NumIterExpr;
+      } else {
+        ExprResult Sub =
+            SemaRef.BuildBinOp(CurScope, OrigVarLoc, BO_Sub, NumIterExpr,
+                               MakeIntLit(RightRemaining));
+        if (!Sub.isUsable())
+          return StmtError();
+        EndExpr = Sub.get();
+      }
+    } else {
+      if (RightRemaining == RightSum) {
+        if (RightSum == 0)
+          StartExpr = NumIterExpr;
+        else {
+          ExprResult Sub =
+              SemaRef.BuildBinOp(CurScope, OrigVarLoc, BO_Sub, NumIterExpr,
+                                 MakeIntLit(RightRemaining));
+          if (!Sub.isUsable())
+            return StmtError();
+          StartExpr = Sub.get();
+        }
+      } else {
+        ExprResult Sub =
+            SemaRef.BuildBinOp(CurScope, OrigVarLoc, BO_Sub, NumIterExpr,
+                               MakeIntLit(RightRemaining));
+        if (!Sub.isUsable())
+          return StmtError();
+        StartExpr = Sub.get();
+      }
+      RightRemaining -= CountValues[Seg];
+      if (RightRemaining == 0)
+        EndExpr = NumIterExpr;
+      else {
+        ExprResult Sub =
+            SemaRef.BuildBinOp(CurScope, OrigVarLoc, BO_Sub, NumIterExpr,
+                               MakeIntLit(RightRemaining));
+        if (!Sub.isUsable())
+          return StmtError();
+        EndExpr = Sub.get();
+      }
+    }
+
     SmallString<64> IVName(".split.iv.");
     IVName += (Twine(Seg) + "." + OrigVarName).str();
     VarDecl *IVDecl = buildVarDecl(SemaRef, {}, IVTy, IVName, nullptr, OrigVar);
@@ -16059,25 +16080,14 @@ StmtResult SemaOpenMP::ActOnOpenMPSplitDirective(ArrayRef<OMPClause *> Clauses,
       return buildDeclRefExpr(SemaRef, IVDecl, IVTy, OrigVarLoc);
     };
 
-    llvm::APInt StartAP(IVWidth, StartVal, /*isSigned=*/false);
-    auto *StartLit = IntegerLiteral::Create(Context, StartAP, IVTy, OrigVarLoc);
-
-    Expr *EndBound = nullptr;
-    if (Segs[Seg].EndIsTripCount)
-      EndBound = NumIterExpr;
-    else {
-      llvm::APInt EndAP(IVWidth, Segs[Seg].EndConst, /*isSigned=*/false);
-      EndBound = IntegerLiteral::Create(Context, EndAP, IVTy, OrigVarLoc);
-    }
-
-    SemaRef.AddInitializerToDecl(IVDecl, StartLit, /*DirectInit=*/false);
+    SemaRef.AddInitializerToDecl(IVDecl, StartExpr, /*DirectInit=*/false);
     StmtResult InitStmt = new (Context)
         DeclStmt(DeclGroupRef(IVDecl), OrigVarLocBegin, OrigVarLocEnd);
     if (!InitStmt.isUsable())
       return StmtError();
 
     ExprResult CondExpr = SemaRef.BuildBinOp(
-        CurScope, LoopHelper.Cond->getExprLoc(), BO_LT, MakeIVRef(), EndBound);
+        CurScope, LoopHelper.Cond->getExprLoc(), BO_LT, MakeIVRef(), EndExpr);
     if (!CondExpr.isUsable())
       return StmtError();
 
@@ -16086,7 +16096,6 @@ StmtResult SemaOpenMP::ActOnOpenMPSplitDirective(ArrayRef<OMPClause *> Clauses,
     if (!IncrExpr.isUsable())
       return StmtError();
 
-    // orig_var = IV so the original body sees the same variable.
     ExprResult UpdateExpr = SemaRef.BuildBinOp(CurScope, OrigVarLoc, BO_Assign,
                                                OrigVar, MakeIVRef());
     if (!UpdateExpr.isUsable())
@@ -16106,10 +16115,9 @@ StmtResult SemaOpenMP::ActOnOpenMPSplitDirective(ArrayRef<OMPClause *> Clauses,
         ForStmt(Context, InitStmt.get(), CondExpr.get(), nullptr,
                 IncrExpr.get(), LoopBody, LoopHelper.Init->getBeginLoc(),
                 LoopHelper.Init->getBeginLoc(), LoopHelper.Inc->getEndLoc());
-    // Push the splitted for loops into SplitLoops
     SplitLoops.push_back(For);
   }
-  // Combine all the loops into a compound statement
+
   auto *SplitStmt = CompoundStmt::Create(
       Context, SplitLoops, FPOptionsOverride(),
       SplitLoops.front()->getBeginLoc(), SplitLoops.back()->getEndLoc());
@@ -18067,91 +18075,17 @@ OMPClause *SemaOpenMP::ActOnOpenMPSizesClause(ArrayRef<Expr *> SizeExprs,
                                 SanitizedSizeExprs);
 }
 
-EnumConstantDecl *SemaOpenMP::getOrCreateOMPFillCountMarker() {
-  if (OMPFillCountMarker)
-    return OMPFillCountMarker;
-
-  ASTContext &Ctx = getASTContext();
-  TranslationUnitDecl *TU = Ctx.getTranslationUnitDecl();
-  Preprocessor &PP = SemaRef.PP;
-  IdentifierInfo *EnumII =
-      &PP.getIdentifierTable().get("__clang_omp_counts_fill_tag");
-  EnumDecl *ED = EnumDecl::Create(
-      Ctx, TU, SourceLocation{}, SourceLocation{}, EnumII, /*PrevDecl=*/nullptr,
-      /*IsScoped=*/false, /*IsScopedUsingClassTag=*/false, /*IsFixed=*/false);
-  ED->setImplicit(true);
-
-  QualType IntTy = Ctx.IntTy;
-  ED->setIntegerType(IntTy);
-  ED->setPromotionType(IntTy);
-
-  IdentifierInfo *FillII = &PP.getIdentifierTable().get("omp_fill");
-  llvm::APSInt Zero(Ctx.getIntWidth(IntTy),
-                    /*isUnsigned=*/!IntTy->isSignedIntegerType());
-  Zero.setIsSigned(IntTy->isSignedIntegerType());
-  IntegerLiteral *IL =
-      IntegerLiteral::Create(Ctx, Zero, IntTy, SourceLocation{});
-  EnumConstantDecl *ECD = EnumConstantDecl::Create(Ctx, ED, SourceLocation{},
-                                                   FillII, IntTy, IL, Zero);
-  ECD->setImplicit(true);
-
-  ED->addDecl(ECD);
-
-  llvm::SmallVector<Decl *, 1> Elements;
-  Elements.push_back(ECD);
-  unsigned NumNegativeBits = 0;
-  unsigned NumPositiveBits = 0;
-  Ctx.computeEnumBits(Elements, NumNegativeBits, NumPositiveBits);
-
-  ED->completeDefinition(IntTy, IntTy, NumPositiveBits, NumNegativeBits);
-
-  if (!SemaRef.getLangOpts().CPlusPlus)
-    ECD->setType(IntTy);
-  else {
-    QualType EnumTy = Ctx.getTagType(ElaboratedTypeKeyword::None,
-                                     /*Qualifier=*/std::nullopt, ED,
-                                     /*OwnsTag=*/false);
-    ECD->setType(EnumTy);
-  }
-
-  TU->addDecl(ED);
-
-  OMPFillCountMarker = ECD;
-  return ECD;
-}
-
-ExprResult SemaOpenMP::ActOnOpenMPCountsFillExpr(SourceLocation Loc) {
-  EnumConstantDecl *ECD = getOrCreateOMPFillCountMarker();
-  ASTContext &Ctx = getASTContext();
-  QualType T = ECD->getType();
-  return DeclRefExpr::Create(Ctx, NestedNameSpecifierLoc(), SourceLocation(),
-                             ECD, /*RefersToEnclosingVariableOrCapture=*/false,
-                             Loc, T, VK_PRValue, ECD);
-}
-
-bool SemaOpenMP::isOMPFillCountExpr(const Expr *E) const {
-  if (!E)
-    return false;
-  E = E->IgnoreParenImpCasts();
-  const auto *DRE = dyn_cast<DeclRefExpr>(E);
-  if (!DRE)
-    return false;
-  if (OMPFillCountMarker)
-    return DRE->getDecl() == OMPFillCountMarker;
-  const auto *ECD = dyn_cast<EnumConstantDecl>(DRE->getDecl());
-  return ECD && ECD->isImplicit() && ECD->getName() == "omp_fill";
-}
-
-OMPClause *SemaOpenMP::ActOnOpenMPCountsClause(ArrayRef<Expr *> CountExprs,
-                                               SourceLocation StartLoc,
-                                               SourceLocation LParenLoc,
-                                               SourceLocation EndLoc) {
+OMPClause *SemaOpenMP::ActOnOpenMPCountsClause(
+    ArrayRef<Expr *> CountExprs, SourceLocation StartLoc,
+    SourceLocation LParenLoc, SourceLocation EndLoc, unsigned FillIdx,
+    SourceLocation FillLoc, unsigned FillCount) {
   SmallVector<Expr *> SanitizedCountExprs(CountExprs);
 
-  for (Expr *&CountExpr : SanitizedCountExprs) {
-    if (!CountExpr)
+  for (unsigned I = 0; I < SanitizedCountExprs.size(); ++I) {
+    Expr *&CountExpr = SanitizedCountExprs[I];
+    if (I == FillIdx)
       continue;
-    if (isOMPFillCountExpr(CountExpr))
+    if (!CountExpr)
       continue;
 
     bool IsValid = isNonNegativeIntegerValue(CountExpr, SemaRef, OMPC_counts,
@@ -18165,8 +18099,13 @@ OMPClause *SemaOpenMP::ActOnOpenMPCountsClause(ArrayRef<Expr *> CountExprs,
       CountExpr = nullptr;
   }
 
+  if (FillCount != 1) {
+    Diag(FillCount == 0 ? StartLoc : FillLoc,
+         diag::err_omp_split_counts_not_one_omp_fill);
+  }
+
   return OMPCountsClause::Create(getASTContext(), StartLoc, LParenLoc, EndLoc,
-                                 SanitizedCountExprs);
+                                 SanitizedCountExprs, FillIdx, FillLoc);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPPermutationClause(ArrayRef<Expr *> PermExprs,

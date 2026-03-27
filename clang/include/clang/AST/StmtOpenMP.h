@@ -6068,14 +6068,15 @@ public:
 /// Represents the '#pragma omp split' loop transformation directive.
 ///
 /// \code{.c}
-///   #pragma omp split
+///   #pragma omp split counts(3, omp_fill, 2)
 ///   for (int i = 0; i < n; ++i)
 ///     ...
 /// \endcode
 ///
 /// This directive transforms a single loop into multiple loops based on
 /// index ranges. The transformation splits the iteration space of the loop
-/// into multiple contiguous ranges.
+/// into multiple contiguous ranges. The \c counts clause is required and
+/// exactly one list item must be \c omp_fill.
 class OMPSplitDirective final
     : public OMPCanonicalLoopNestTransformationDirective {
   friend class ASTStmtReader;

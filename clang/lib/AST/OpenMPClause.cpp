@@ -987,16 +987,18 @@ OMPSizesClause *OMPSizesClause::CreateEmpty(const ASTContext &C,
   return new (Mem) OMPSizesClause(NumSizes);
 }
 
-OMPCountsClause *OMPCountsClause::Create(const ASTContext &C,
-                                         SourceLocation StartLoc,
-                                         SourceLocation LParenLoc,
-                                         SourceLocation EndLoc,
-                                         ArrayRef<Expr *> Counts) {
+OMPCountsClause *
+OMPCountsClause::Create(const ASTContext &C, SourceLocation StartLoc,
+                        SourceLocation LParenLoc, SourceLocation EndLoc,
+                        ArrayRef<Expr *> Counts, unsigned FillIdx,
+                        SourceLocation FillLoc) {
   OMPCountsClause *Clause = CreateEmpty(C, Counts.size());
   Clause->setLocStart(StartLoc);
   Clause->setLParenLoc(LParenLoc);
   Clause->setLocEnd(EndLoc);
   Clause->setCountsRefs(Counts);
+  Clause->setOmpFillIndex(FillIdx);
+  Clause->setOmpFillLoc(FillLoc);
   return Clause;
 }
 
@@ -2006,15 +2008,17 @@ void OMPClausePrinter::VisitOMPSizesClause(OMPSizesClause *Node) {
 
 void OMPClausePrinter::VisitOMPCountsClause(OMPCountsClause *Node) {
   OS << "counts(";
-  llvm::interleaveComma(Node->getCountsRefs(), OS, [&](const Expr *E) {
-    if (const auto *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParenImpCasts()))
-      if (const auto *ECD = dyn_cast<EnumConstantDecl>(DRE->getDecl()))
-        if (ECD->isImplicit() && ECD->getName() == "omp_fill") {
-          OS << "omp_fill";
-          return;
-        }
-    E->printPretty(OS, nullptr, Policy, 0);
-  });
+  unsigned FillIdx = Node->getOmpFillIndex();
+  ArrayRef<Expr *> Refs = Node->getCountsRefs();
+  for (unsigned I = 0, N = Refs.size(); I < N; ++I) {
+    if (I)
+      OS << ", ";
+    if (I == FillIdx) {
+      OS << "omp_fill";
+    } else {
+      Refs[I]->printPretty(OS, nullptr, Policy, 0);
+    }
+  }
   OS << ")";
 }
 

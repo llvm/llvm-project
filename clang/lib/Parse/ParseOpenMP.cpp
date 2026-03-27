@@ -28,6 +28,7 @@
 #include "llvm/Frontend/OpenMP/DirectiveNameParser.h"
 #include "llvm/Frontend/OpenMP/OMPAssume.h"
 #include "llvm/Frontend/OpenMP/OMPContext.h"
+#include <climits>
 #include <optional>
 
 using namespace clang;
@@ -2993,6 +2994,9 @@ OMPClause *Parser::ParseOpenMPSizesClause() {
 OMPClause *Parser::ParseOpenMPCountsClause() {
   SourceLocation ClauseNameLoc, OpenLoc, CloseLoc;
   SmallVector<Expr *, 4> ValExprs;
+  unsigned FillIdx = UINT_MAX;
+  unsigned FillCount = 0;
+  SourceLocation FillLoc;
 
   assert(getOpenMPClauseName(OMPC_counts) == PP.getSpelling(Tok) &&
          "Expected parsing to start at clause name");
@@ -3007,14 +3011,12 @@ OMPClause *Parser::ParseOpenMPCountsClause() {
   do {
     if (Tok.is(tok::identifier) &&
         Tok.getIdentifierInfo()->getName() == "omp_fill") {
-      SourceLocation FillLoc = Tok.getLocation();
+      if (FillCount == 0)
+        FillIdx = ValExprs.size();
+      ++FillCount;
+      FillLoc = Tok.getLocation();
       ConsumeToken();
-      ExprResult ER = Actions.OpenMP().ActOnOpenMPCountsFillExpr(FillLoc);
-      if (!ER.isUsable()) {
-        T.skipToEnd();
-        return nullptr;
-      }
-      ValExprs.push_back(ER.get());
+      ValExprs.push_back(nullptr);
     } else {
       ExprResult Val = ParseConstantExpression();
       if (!Val.isUsable()) {
@@ -3030,8 +3032,8 @@ OMPClause *Parser::ParseOpenMPCountsClause() {
   OpenLoc = T.getOpenLocation();
   CloseLoc = T.getCloseLocation();
 
-  return Actions.OpenMP().ActOnOpenMPCountsClause(ValExprs, ClauseNameLoc,
-                                                  OpenLoc, CloseLoc);
+  return Actions.OpenMP().ActOnOpenMPCountsClause(
+      ValExprs, ClauseNameLoc, OpenLoc, CloseLoc, FillIdx, FillLoc, FillCount);
 }
 
 OMPClause *Parser::ParseOpenMPLoopRangeClause() {

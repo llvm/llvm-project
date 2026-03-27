@@ -5,7 +5,7 @@
 void body(int);
 
 void test(void) {
-#pragma omp split counts(3, 7)
+#pragma omp split counts(3, omp_fill)
   for (int i = 0; i < 10; ++i)
     body(i);
 }
@@ -13,7 +13,7 @@ void test(void) {
 // CHECK: OMPSplitDirective
 // CHECK: OMPCountsClause
 // CHECK: IntegerLiteral{{.*}}3
-// CHECK: IntegerLiteral{{.*}}7
+// CHECK: <<<NULL>>>
 // CHECK: ForStmt
 // CHECK: <<<NULL>>>
 // CHECK: CallExpr

@@ -8786,7 +8786,7 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt,
 /// Given
 ///
 /// \code
-///   #pragma omp split counts(2, 3)
+///   #pragma omp split counts(2, omp_fill)
 ///   for (int i = 0; i < n; ++i) {}
 /// \endcode
 ///

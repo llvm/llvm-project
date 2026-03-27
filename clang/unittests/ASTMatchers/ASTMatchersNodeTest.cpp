@@ -3111,7 +3111,7 @@ TEST(ASTMatchersTestOpenMP, OMPSplitDirective) {
 
   StringRef SplitOk = R"(
 void f() {
-#pragma omp split counts(2, 3)
+#pragma omp split counts(2, omp_fill)
   for (int i = 0; i < 10; ++i) {}
 }
 )";
@@ -3160,12 +3160,9 @@ void f() {
   }
   ASSERT_TRUE(Counts);
   ASSERT_EQ(Counts->getNumCounts(), 2u);
-  const Expr *FillExpr = Counts->getCountsRefs()[1]->IgnoreParenImpCasts();
-  const auto *DRE = dyn_cast<DeclRefExpr>(FillExpr);
-  ASSERT_TRUE(DRE);
-  const auto *ECD = dyn_cast<EnumConstantDecl>(DRE->getDecl());
-  ASSERT_TRUE(ECD);
-  EXPECT_EQ(ECD->getName(), "omp_fill");
+  EXPECT_TRUE(Counts->hasOmpFill());
+  EXPECT_EQ(Counts->getOmpFillIndex(), 1u);
+  EXPECT_FALSE(Counts->getCountsRefs()[1]);
 }
 
 TEST(ASTMatchersTest, Finder_DynamicOnlyAcceptsSomeMatchers) {

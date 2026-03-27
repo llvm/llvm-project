@@ -1,4 +1,4 @@
-/* Simple split + counts without omp_fill: syntax, AST dump, ast-print, IR. */
+/* Split + counts with omp_fill: syntax, AST dump, ast-print, IR. */
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=60 -fsyntax-only -verify %s
 // expected-no-diagnostics
 //
@@ -13,13 +13,13 @@ void body(int);
 // PRINT-LABEL: void foo(
 // DUMP-LABEL:  FunctionDecl {{.*}} foo
 void foo(int n) {
-  // PRINT:     #pragma omp split counts(3, 7)
+  // PRINT:     #pragma omp split counts(3, omp_fill)
   // DUMP: OMPSplitDirective
   // DUMP-NEXT: |-OMPCountsClause
   // DUMP-NEXT: | |-IntegerLiteral {{.*}} 'int' 3
-  // DUMP-NEXT: | `-IntegerLiteral {{.*}} 'int' 7
+  // DUMP-NEXT: | `-{{.*}}
   // DUMP-NEXT: {{.*}}`-ForStmt
-#pragma omp split counts(3, 7)
+#pragma omp split counts(3, omp_fill)
   // PRINT: for (int i = 0; i < n; ++i)
   for (int i = 0; i < n; ++i)
     body(i);
@@ -30,5 +30,5 @@ void foo(int n) {
 // LLVM: icmp slt i32 {{.*}}, 3
 // LLVM: call void @body(
 // LLVM: store i32 3, ptr %.split.iv.1.i
-// LLVM: icmp slt i32 {{.*}}, 10
+// LLVM: icmp slt i32 {{.*}}, %{{.*}}
 // LLVM: call void @body(

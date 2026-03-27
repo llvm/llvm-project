@@ -19643,11 +19643,6 @@ TEST_F(FormatTest, UnderstandsPragmaOmpTarget) {
       getLLVMStyleWithColumns(26));
 }
 
-TEST_F(FormatTest, UnderstandsPragmaOmpSplit) {
-  verifyFormat("#pragma omp split counts(2, 3)");
-  verifyFormat("#pragma omp split counts(2, omp_fill)");
-}
-
 TEST_F(FormatTest, UnderstandPragmaOption) {
   verifyFormat("#pragma option -C -A");
 

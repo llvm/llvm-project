@@ -39,6 +39,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <cassert>
+#include <climits>
 #include <cstddef>
 #include <iterator>
 #include <utility>
@@ -1026,7 +1027,7 @@ public:
 /// This represents the 'counts' clause in the '#pragma omp split' directive.
 ///
 /// \code
-/// #pragma omp split counts(3, 5, 2)
+/// #pragma omp split counts(3, omp_fill, 2)
 /// for (int i = 0; i < n; ++i) { ... }
 /// \endcode
 class OMPCountsClause final
@@ -1041,10 +1042,16 @@ class OMPCountsClause final
   /// Number of count expressions in the clause.
   unsigned NumCounts;
 
+  /// 0-based index of the omp_fill list item, or UINT_MAX if absent.
+  unsigned OmpFillIndex;
+
+  /// Source location of the omp_fill keyword.
+  SourceLocation OmpFillLoc;
+
   /// Build an empty clause.
   explicit OMPCountsClause(int NumCounts)
       : OMPClause(llvm::omp::OMPC_counts, SourceLocation(), SourceLocation()),
-        NumCounts(NumCounts) {}
+        NumCounts(NumCounts), OmpFillIndex(UINT_MAX) {}
 
 public:
   /// Build a 'counts' AST node.
@@ -1056,8 +1063,8 @@ public:
   /// \param Counts    Content of the clause.
   static OMPCountsClause *Create(const ASTContext &C, SourceLocation StartLoc,
                                  SourceLocation LParenLoc,
-                                 SourceLocation EndLoc,
-                                 ArrayRef<Expr *> Counts);
+                                 SourceLocation EndLoc, ArrayRef<Expr *> Counts,
+                                 unsigned FillIdx, SourceLocation FillLoc);
 
   /// Build an empty 'counts' AST node for deserialization.
   ///
@@ -1073,6 +1080,12 @@ public:
 
   /// Returns the number of list items.
   unsigned getNumCounts() const { return NumCounts; }
+
+  unsigned getOmpFillIndex() const { return OmpFillIndex; }
+  SourceLocation getOmpFillLoc() const { return OmpFillLoc; }
+  bool hasOmpFill() const { return OmpFillIndex != UINT_MAX; }
+  void setOmpFillIndex(unsigned Idx) { OmpFillIndex = Idx; }
+  void setOmpFillLoc(SourceLocation Loc) { OmpFillLoc = Loc; }
 
   /// Returns the count expressions.
   MutableArrayRef<Expr *> getCountsRefs() {

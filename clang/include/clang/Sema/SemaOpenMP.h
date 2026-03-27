@@ -921,9 +921,9 @@ public:
   OMPClause *ActOnOpenMPCountsClause(ArrayRef<Expr *> CountExprs,
                                      SourceLocation StartLoc,
                                      SourceLocation LParenLoc,
-                                     SourceLocation EndLoc);
-  /// Build the OpenMP \c omp_fill placeholder for a \c counts clause.
-  ExprResult ActOnOpenMPCountsFillExpr(SourceLocation Loc);
+                                     SourceLocation EndLoc, unsigned FillIdx,
+                                     SourceLocation FillLoc,
+                                     unsigned FillCount);
   /// Called on well-form 'permutation' clause after parsing its arguments.
   OMPClause *ActOnOpenMPPermutationClause(ArrayRef<Expr *> PermExprs,
                                           SourceLocation StartLoc,
@@ -1649,12 +1649,6 @@ private:
 
   /// Device number identifier specified by the context selector.
   StringRef DeviceNumID;
-
-  /// Implicit enumerator used to represent \c omp_fill in \c counts clauses.
-  EnumConstantDecl *OMPFillCountMarker = nullptr;
-
-  EnumConstantDecl *getOrCreateOMPFillCountMarker();
-  bool isOMPFillCountExpr(const Expr *E) const;
 };
 
 } // namespace clang

@@ -1772,9 +1772,11 @@ public:
   OMPClause *RebuildOMPCountsClause(ArrayRef<Expr *> Counts,
                                     SourceLocation StartLoc,
                                     SourceLocation LParenLoc,
-                                    SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPCountsClause(Counts, StartLoc,
-                                                      LParenLoc, EndLoc);
+                                    SourceLocation EndLoc, unsigned FillIdx,
+                                    SourceLocation FillLoc) {
+    unsigned FillCount = (FillIdx != UINT_MAX) ? 1 : 0;
+    return getSema().OpenMP().ActOnOpenMPCountsClause(
+        Counts, StartLoc, LParenLoc, EndLoc, FillIdx, FillLoc, FillCount);
   }
 
   /// Build a new OpenMP 'permutation' clause.
@@ -10652,7 +10654,8 @@ TreeTransform<Derived>::TransformOMPCountsClause(OMPCountsClause *C) {
   }
 
   return RebuildOMPCountsClause(TransformedCounts, C->getBeginLoc(),
-                                C->getLParenLoc(), C->getEndLoc());
+                                C->getLParenLoc(), C->getEndLoc(),
+                                C->getOmpFillIndex(), C->getOmpFillLoc());
 }
 
 template <typename Derived>
