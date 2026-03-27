@@ -1,5 +1,5 @@
-// RUN: %check_clang_tidy -std=c++20-or-later %s modernize-use-std-bit %t -check-suffixes=,NOSTRICT
-// RUN: %check_clang_tidy -std=c++20-or-later %s modernize-use-std-bit %t -config="{CheckOptions: { modernize-use-std-bit.StrictMode: true }}" -check-suffixes=,STRICT
+// RUN: %check_clang_tidy -std=c++20-or-later %s modernize-use-std-bit %t -check-suffixes=,NOPROMOTION
+// RUN: %check_clang_tidy -std=c++20-or-later %s modernize-use-std-bit %t -config="{CheckOptions: { modernize-use-std-bit.HonorIntPromotion: true }}" -check-suffixes=,PROMOTION
 // CHECK-FIXES: #include <bit>
 
 /*
@@ -206,8 +206,8 @@ using uint32_t = __UINT32_TYPE__;
 
 int rotate_left_pattern(unsigned char x) {
   // CHECK-MESSAGES: :[[@LINE+3]]:10: warning: use 'std::rotl' instead [modernize-use-std-bit]
-  // CHECK-FIXES-NOSTRICT: return std::rotl(x, 3);
-  // CHECK-FIXES-STRICT: return static_cast<int>(std::rotl(x, 3));
+  // CHECK-FIXES-NOPROMOTION: return std::rotl(x, 3);
+  // CHECK-FIXES-PROMOTION: return static_cast<int>(std::rotl(x, 3));
   return (x) << 3 | x >> 5;
 }
 
@@ -219,22 +219,22 @@ auto rotate_left_pattern_with_cast(unsigned char x) {
 
 unsigned char rotate_left_pattern_with_implicit_cast(unsigned char x) {
   // CHECK-MESSAGES: :[[@LINE+3]]:10: warning: use 'std::rotl' instead [modernize-use-std-bit]
-  // CHECK-FIXES-NOSTRICT: return std::rotl(x, 3);
-  // CHECK-FIXES-STRICT: return static_cast<int>(std::rotl(x, 3));
+  // CHECK-FIXES-NOPROMOTION: return std::rotl(x, 3);
+  // CHECK-FIXES-PROMOTION: return static_cast<int>(std::rotl(x, 3));
   return (x) << 3 | x >> 5;
 }
 
 auto rotate_left_pattern_without_cast(unsigned char x) {
   // CHECK-MESSAGES: :[[@LINE+3]]:10: warning: use 'std::rotl' instead [modernize-use-std-bit]
-  // CHECK-FIXES-NOSTRICT: return std::rotl(x, 3);
-  // CHECK-FIXES-STRICT: return static_cast<int>(std::rotl(x, 3));
+  // CHECK-FIXES-NOPROMOTION: return std::rotl(x, 3);
+  // CHECK-FIXES-PROMOTION: return static_cast<int>(std::rotl(x, 3));
   return x << 3 | x >> 5;
 }
 
 uint32_t rotate_left_pattern_with_surrounding_parenthesis(unsigned char x) {
   // CHECK-MESSAGES: :[[@LINE+3]]:11: warning: use 'std::rotl' instead [modernize-use-std-bit]
-  // CHECK-FIXES-NOSTRICT: return (std::rotl(x, 3));
-  // CHECK-FIXES-STRICT: return (static_cast<int>(std::rotl(x, 3)));
+  // CHECK-FIXES-NOPROMOTION: return (std::rotl(x, 3));
+  // CHECK-FIXES-PROMOTION: return (static_cast<int>(std::rotl(x, 3)));
   return (x << 3 | x >> 5);
 }
 
@@ -252,8 +252,8 @@ uint32_t rotate_left_pattern_int32(uint32_t x) {
 
 unsigned char rotate_left_pattern_perm(unsigned char x) {
   // CHECK-MESSAGES: :[[@LINE+3]]:10: warning: use 'std::rotl' instead [modernize-use-std-bit]
-  // CHECK-FIXES-NOSTRICT: return std::rotl(x, 3);
-  // CHECK-FIXES-STRICT: return static_cast<int>(std::rotl(x, 3));
+  // CHECK-FIXES-NOPROMOTION: return std::rotl(x, 3);
+  // CHECK-FIXES-PROMOTION: return static_cast<int>(std::rotl(x, 3));
   return x >> 5 | x << 3;
 }
 
@@ -271,8 +271,8 @@ uint64_t rotate_right_pattern(uint64_t x) {
 
 unsigned char rotate_right_pattern_perm(unsigned char x0) {
   // CHECK-MESSAGES: :[[@LINE+3]]:10: warning: use 'std::rotr' instead [modernize-use-std-bit]
-  // CHECK-FIXES-NOSTRICT: return std::rotr(x0, 3);
-  // CHECK-FIXES-STRICT: return static_cast<int>(std::rotr(x0, 3));
+  // CHECK-FIXES-NOPROMOTION: return std::rotr(x0, 3);
+  // CHECK-FIXES-PROMOTION: return static_cast<int>(std::rotr(x0, 3));
   return x0 >> 3 | x0 << 5;
 }
 

@@ -19,7 +19,7 @@ UseStdBitCheck::UseStdBitCheck(StringRef Name, ClangTidyContext *Context)
       IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
                                                utils::IncludeSorter::IS_LLVM),
                       areDiagsSelfContained()),
-      StrictMode(Options.get("StrictMode", false)) {}
+      HonorIntPromotion(Options.get("HonorIntPromotion", false)) {}
 
 void UseStdBitCheck::registerMatchers(MatchFinder *Finder) {
   const auto MakeBinaryOperatorMatcher = [](auto Op) {
@@ -112,7 +112,7 @@ void UseStdBitCheck::registerPPCallbacks(const SourceManager &SM,
 
 void UseStdBitCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
-  Options.store(Opts, "StrictMode", StrictMode);
+  Options.store(Opts, "HonorIntPromotion", HonorIntPromotion);
 }
 
 void UseStdBitCheck::check(const MatchFinder::MatchResult &Result) {
@@ -187,7 +187,7 @@ void UseStdBitCheck::check(const MatchFinder::MatchResult &Result) {
     // Only insert cast if the operand is not subject to cast and
     // some implicit promotion happened.
     const bool NeedsIntCast =
-        StrictMode && !HasExplicitIntegerCast &&
+        HonorIntPromotion && !HasExplicitIntegerCast &&
         Context.getTypeSize(MatchedExpr->getType()) > MatchedVarSize;
     const bool IsRotl = ShiftRightAmount.sge(ShiftLeftAmount);
 

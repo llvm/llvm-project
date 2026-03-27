@@ -22,7 +22,7 @@ Expression                     Replacement
 Options
 -------
 
-.. option:: StrictMode
+.. option:: HonorIntPromotion
 
   When set to ``true`` (default is ``false``), insert explicit cast to make sure the
   type of the substituted expression is unchanged. Example:
