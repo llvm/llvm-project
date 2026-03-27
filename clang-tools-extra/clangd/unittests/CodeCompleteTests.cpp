@@ -4038,9 +4038,8 @@ TEST(CompletionTest, ReplaceRange) {
   EXPECT_EQ(Completions.ReplaceRange, A.range("replace"));
 
   // Replace range stops at '(' (method call).
-  const char *BeforeParen =
-      "struct S { int abcd(); }; void f() { S s; "
-      "s.$replace[[$insert[[ab^]]cd]](123); }";
+  const char *BeforeParen = "struct S { int abcd(); }; void f() { S s; "
+                            "s.$replace[[$insert[[ab^]]cd]](123); }";
   Completions = completions(BeforeParen, /*IndexSymbols=*/{}, Opts);
   A = Annotations(BeforeParen);
   EXPECT_EQ(Completions.InsertRange, A.range("insert"));
