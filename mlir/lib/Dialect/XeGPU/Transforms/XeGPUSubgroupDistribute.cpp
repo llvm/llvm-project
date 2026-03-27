@@ -152,6 +152,10 @@ struct MoveFuncBodyToWarpOp : public OpRewritePattern<gpu::GPUFuncOp> {
       return rewriter.notifyMatchFailure(
           gpuFuncOp, "Subgroup distribution requires target attribute attached "
                      "to set the warp size");
+    if (!gpuFuncOp.getBody().hasOneBlock())
+      return rewriter.notifyMatchFailure(
+          gpuFuncOp, "expected gpu.func to have a single block");
+
     // If the function only contains a single void return, skip.
     if (llvm::all_of(gpuFuncOp.getBody().getOps(), [](Operation &op) {
           return isa<gpu::ReturnOp>(op) && !op.getNumOperands();
