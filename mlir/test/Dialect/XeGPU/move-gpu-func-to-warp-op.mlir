@@ -84,12 +84,11 @@ gpu.module @test {
   }
 }
 
-// CHECK-LABEL:  gpu.func @multiple_blocks(
-// CHECK-SAME:                             %[[VAL_0:.*]]: i1) {
-// CHECK:          cf.cond_br %[[VAL_0]], ^bb1, ^bb2
-// CHECK:        ^bb1:
-// CHECK:          "test.unknown"() : () -> ()
-// CHECK:          cf.br ^bb2
-// CHECK:        ^bb2:
-// CHECK:          gpu.return
-// CHECK:        }
+// CHECK-LABEL: gpu.func @multiple_blocks
+// CHECK-SAME:  %[[COND:.*]]: i1
+// CHECK-NEXT:  cf.cond_br %[[COND]], ^bb1, ^bb2
+// CHECK:       ^bb1:
+// CHECK-NEXT:    "test.unknown"() : () -> ()
+// CHECK-NEXT:    cf.br ^bb2
+// CHECK:       ^bb2:
+// CHECK-NEXT:    gpu.return
