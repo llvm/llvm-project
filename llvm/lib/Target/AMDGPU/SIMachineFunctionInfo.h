@@ -586,9 +586,6 @@ private:
 
   bool IsWholeWaveFunction = false;
 
-  // True if the function does not return to the caller.
-  bool DoesNotReturn = false;
-
   using PrologEpilogSGPRSpill =
       std::pair<Register, PrologEpilogSGPRSaveRestoreInfo>;
   // To track the SGPR spill method used for a CSR SGPR register during
@@ -1228,9 +1225,6 @@ public:
   unsigned getMaxNumWorkGroupsZ() const { return MaxNumWorkGroups[2]; }
 
   AMDGPU::ClusterDimsAttr getClusterDims() const { return ClusterDims; }
-
-  /// \returns true if the function does not return to the caller.
-  bool doesNotReturn() const { return DoesNotReturn; }
 };
 
 } // end namespace llvm

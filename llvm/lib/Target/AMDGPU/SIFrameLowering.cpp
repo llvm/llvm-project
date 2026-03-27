@@ -1222,7 +1222,9 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   uint32_t RoundedSize = NumBytes;
 
   // Functions that never return don't need to save and restore the FP or BP.
-  bool SavesStackRegs = !FuncInfo->doesNotReturn();
+  const Function &F = MF.getFunction();
+  bool SavesStackRegs = !(F.hasFnAttribute(Attribute::NoReturn) ||
+                          AMDGPU::isChainCC(F.getCallingConv()));
 
   if (TRI.hasStackRealignment(MF))
     HasFP = true;
@@ -1650,7 +1652,9 @@ void SIFrameLowering::determinePrologEpilogSGPRSaves(
 
   // Functions that don't return to the caller don't need to preserve
   // the FP and BP.
-  if (MFI->doesNotReturn())
+  const Function &F = MF.getFunction();
+  if (F.hasFnAttribute(Attribute::NoReturn) ||
+      AMDGPU::isChainCC(F.getCallingConv()))
     return;
 
   // hasFP only knows about stack objects that already exist. We're now

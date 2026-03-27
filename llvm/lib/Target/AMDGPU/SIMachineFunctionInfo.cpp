@@ -56,9 +56,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
       WorkItemIDX(false), WorkItemIDY(false), WorkItemIDZ(false),
       ImplicitArgPtr(false), GITPtrHigh(0xffffffff), HighBitsOf32BitAddress(0),
       IsWholeWaveFunction(F.getCallingConv() ==
-                          CallingConv::AMDGPU_Gfx_WholeWave),
-      DoesNotReturn(F.hasFnAttribute(Attribute::NoReturn) ||
-                    AMDGPU::isChainCC(F.getCallingConv())) {
+                          CallingConv::AMDGPU_Gfx_WholeWave) {
   const GCNSubtarget &ST = *STI;
   FlatWorkGroupSizes = ST.getFlatWorkGroupSizes(F);
   WavesPerEU = ST.getWavesPerEU(F);
