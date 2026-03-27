@@ -394,7 +394,7 @@ namespace gh187716 {
   struct MixedDerived : Base {
     using Base::Base;
     MixedDerived(Obj&& a, Obj&& b) : Base(std::move(a)) {}
-    // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: rvalue reference parameter 'b' is never moved from inside the function body [cppcoreguidelines-rvalue-reference-param-not-moved]
+    // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: rvalue reference parameter 'b' is never moved
   };
 
   template <class T>
