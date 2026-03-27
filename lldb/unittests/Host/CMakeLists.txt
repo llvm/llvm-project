@@ -23,6 +23,12 @@ if (UNIX)
   )
 endif()
 
+if (WIN32)
+  list(APPEND FILES
+    windows/HostInfoTest.cpp
+  )
+endif()
+
 if (LLDB_ENABLE_TERMIOS)
   list(APPEND FILES
     posix/TerminalTest.cpp

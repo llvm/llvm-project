@@ -36,6 +36,11 @@ public:
 
   static bool GetEnvironmentVar(const std::string &var_name, std::string &var);
 
+  /// Resolves \p path to its subst-drive equivalent if one exists.
+  /// e.g. "C:\\S\\foo\\a.out" -> "S:\\foo\\a.out" when "subst S: C:\\S" is
+  /// active.
+  static std::optional<std::string> ResolveSubstDrive(llvm::StringRef path);
+
 private:
   static FileSpec m_program_filespec;
 };

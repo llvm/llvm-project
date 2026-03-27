@@ -137,3 +137,54 @@ static llvm::ManagedStatic<WindowsUserIDResolver> g_user_id_resolver;
 UserIDResolver &HostInfoWindows::GetUserIDResolver() {
   return *g_user_id_resolver;
 }
+
+std::optional<std::string>
+HostInfoWindows::ResolveSubstDrive(llvm::StringRef path) {
+  std::wstring wpath;
+  if (!llvm::ConvertUTF8toWide(path, wpath))
+    return std::nullopt;
+
+  // Enumerate all logical drives and check whether any is a subst drive
+  // whose target is a prefix of the incoming path.
+  std::array<wchar_t, 512> drive_strings;
+  drive_strings[0] = L'\0';
+  if (!::GetLogicalDriveStringsW(drive_strings.size(), drive_strings.data()))
+    return std::nullopt;
+
+  std::array<wchar_t, 3> drive_buf = {L'_', L':', L'\0'};
+  for (const wchar_t *it = drive_strings.data(); *it != L'\0';
+       it += wcslen(it) + 1) {
+    drive_buf[0] = it[0];
+    std::array<wchar_t, MAX_PATH> device_name;
+    if (!::QueryDosDeviceW(drive_buf.data(), device_name.data(),
+                           device_name.size()))
+      continue;
+
+    // Subst drives appear as "\??\<real-path>" (e.g. "\??\C:\S").
+    // Real drives map to "\Device\Harddisk...". Skip them.
+    std::wstring_view device(device_name.data());
+    if (device.substr(0, 4) != L"\\??\\")
+      continue;
+    std::wstring_view subst_target = device.substr(4);
+    if (subst_target.empty())
+      continue;
+
+    if (wpath.size() < subst_target.size())
+      continue;
+    if (_wcsnicmp(wpath.c_str(), subst_target.data(), subst_target.size()) != 0)
+      continue;
+
+    // The match must land on a path separator (or be the full string).
+    size_t n = subst_target.size();
+    if (n < wpath.size() && wpath[n] != L'\\' && wpath[n] != L'/')
+      continue;
+
+    std::wstring rebuilt(drive_buf.data(), 2); // e.g. L"S:"
+    rebuilt += wpath.substr(n);
+    std::string new_path;
+    if (llvm::convertWideToUTF8(rebuilt, new_path))
+      return new_path;
+  }
+
+  return std::nullopt;
+}

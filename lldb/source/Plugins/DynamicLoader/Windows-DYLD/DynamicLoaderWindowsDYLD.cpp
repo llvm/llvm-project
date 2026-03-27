@@ -10,6 +10,7 @@
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Host/windows/HostInfoWindows.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
@@ -68,8 +69,13 @@ void DynamicLoaderWindowsDYLD::OnLoadModule(lldb::ModuleSP module_sp,
   // Resolve the module unless we already have one.
   if (!module_sp) {
     Status error;
-    module_sp = m_process->GetTarget().GetOrCreateModule(module_spec, 
-                                             true /* notify */, &error);
+    ModuleSpec resolved_spec(module_spec);
+    auto resolved_path =
+        HostInfoWindows::ResolveSubstDrive(module_spec.GetFileSpec().GetPath());
+    if (resolved_path)
+      resolved_spec.GetFileSpec() = FileSpec(*resolved_path);
+    module_sp = m_process->GetTarget().GetOrCreateModule(
+        resolved_spec, true /* notify */, &error);
     if (error.Fail())
       return;
   }
