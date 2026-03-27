@@ -754,10 +754,24 @@ struct SgToWiVectorBitcast : public OpConversionPattern<vector::BitCastOp> {
 /// Distributes a subgroup-level vector.create_mask or vector.constant_mask op
 /// to workitem-level. Each lane computes its own mask bounds based on its
 /// lane coordinates. For each dimension i, the new mask bound is:
-///   new_bound[i] = original_bound[i] - lane_coord[i] * dist_shape[i]
-/// vector.create_mask implicitly clamps to [0, vector_size].
+///   new_bound[i] = original_bound[i] - lane_coord[i] * wi_elem_count[i]
+/// where `wi_elem_count[i]` is the number of elements each workitem holds
+/// along dimension i (i.e., `distType.getShape()[i]`).
+/// `vector.create_mask` implicitly clamps the bounds to
+/// `[0, wi_elem_count[i]]`, so no explicit clamping is needed.
 /// For constant_mask, the constant dim sizes are first materialized as
 /// Values, then the same logic applies, producing a vector.create_mask.
+///
+/// Example:
+///   layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>
+///   %mask = vector.create_mask %m0 : vector<16xi1>
+/// For lane k, wi_elem_count = [1], so:
+///   new_bound = m0 - k * 1
+/// Distributed to:
+///   %lane = gpu.lane_id
+///   %new_bound = affine.apply affine_map<()[s0, s1] -> (-s0 + s1)>
+///                  ()[%lane, %m0]
+///   %mask = vector.create_mask %new_bound : vector<1xi1>
 template <typename OpType,
           typename = std::enable_if_t<llvm::is_one_of<
               OpType, vector::CreateMaskOp, vector::ConstantMaskOp>::value>>
