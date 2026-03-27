@@ -1582,3 +1582,82 @@ func.func @do_not_hoist_vector_transfer_ops_memref(
   }
   func.return %final : vector<4x4xf32>
 }
+
+// -----
+
+// bufferization.to_buffer (without read_only) should not be hoisted out of
+// loops, as it may be used to write to the tensor's buffer.
+// https://github.com/llvm/llvm-project/issues/156032
+
+// CHECK-LABEL: func @do_not_hoist_to_buffer
+// CHECK-NOT: bufferization.to_buffer
+// CHECK: scf.for
+// CHECK:   bufferization.to_buffer
+// CHECK:   linalg.fill
+func.func @do_not_hoist_to_buffer(%arg0: tensor<32xi32>, %lb: index, %ub: index, %step: index) {
+  scf.for %i = %lb to %ub step %step {
+    %buf = bufferization.to_buffer %arg0 : tensor<32xi32> to memref<32xi32>
+    %c = arith.index_cast %i : index to i32
+    linalg.fill ins(%c : i32) outs(%buf : memref<32xi32>)
+  }
+  return
+}
+
+// -----
+
+// bufferization.to_buffer with read_only attribute has no write effects and
+// may be hoisted.
+
+// CHECK-LABEL: func @hoist_to_buffer_readonly
+// CHECK: bufferization.to_buffer{{.*}}read_only
+// CHECK: scf.for
+func.func @hoist_to_buffer_readonly(%arg0: tensor<32xi32>, %lb: index, %ub: index, %step: index) {
+  scf.for %i = %lb to %ub step %step {
+    %buf = bufferization.to_buffer %arg0 read_only : tensor<32xi32> to memref<32xi32>
+    func.call @use(%buf) : (memref<32xi32>) -> ()
+  }
+  return
+}
+func.func private @use(memref<32xi32>)
+
+// -----
+
+// to_buffer (without read_only) should not be hoisted out of scf.forall either.
+// This is the original bug pattern from #156032: tensor.empty + to_buffer
+// inside a parallel loop.
+
+// CHECK-LABEL: func @do_not_hoist_to_buffer_forall
+// CHECK-NOT: bufferization.to_buffer
+// CHECK: scf.forall
+// CHECK:   bufferization.to_buffer
+// CHECK:   linalg.fill
+func.func @do_not_hoist_to_buffer_forall(%n: index) {
+  scf.forall (%i) in (%n) {
+    %t = tensor.empty() : tensor<32xi32>
+    %buf = bufferization.to_buffer %t : tensor<32xi32> to memref<32xi32>
+    %c = arith.index_cast %i : index to i32
+    linalg.fill ins(%c : i32) outs(%buf : memref<32xi32>)
+  }
+  return
+}
+
+// -----
+
+// to_buffer (without read_only) in a nested loop should not be hoisted out of
+// either loop.
+
+// CHECK-LABEL: func @do_not_hoist_to_buffer_nested
+// CHECK-NOT: bufferization.to_buffer
+// CHECK: scf.for
+// CHECK:   scf.for
+// CHECK:     bufferization.to_buffer
+func.func @do_not_hoist_to_buffer_nested(%arg0: tensor<32xi32>, %lb: index, %ub: index, %step: index) {
+  scf.for %i = %lb to %ub step %step {
+    scf.for %j = %lb to %ub step %step {
+      %buf = bufferization.to_buffer %arg0 : tensor<32xi32> to memref<32xi32>
+      %c = arith.index_cast %j : index to i32
+      linalg.fill ins(%c : i32) outs(%buf : memref<32xi32>)
+    }
+  }
+  return
+}

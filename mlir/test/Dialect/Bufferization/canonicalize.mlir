@@ -438,3 +438,42 @@ func.func @negative_input() -> tensor<?x?x?xf16> {
   %11 = bufferization.alloc_tensor(%c10, %idx-3, %idx27) : tensor<?x?x?xf16>
   return %11 : tensor<?x?x?xf16>
 }
+
+// -----
+
+// DeduplicateToBuffer: a second to_buffer on the same tensor in the same block
+// folds to the first.
+// CHECK-LABEL: func @deduplicate_to_buffer(
+// CHECK:         %[[BUF:.+]] = bufferization.to_buffer
+// CHECK-NOT:     bufferization.to_buffer
+// CHECK:         return %[[BUF]], %[[BUF]]
+func.func @deduplicate_to_buffer(%arg0: tensor<32xi32>) -> (memref<32xi32>, memref<32xi32>) {
+  %0 = bufferization.to_buffer %arg0 : tensor<32xi32> to memref<32xi32>
+  %1 = bufferization.to_buffer %arg0 : tensor<32xi32> to memref<32xi32>
+  return %0, %1 : memref<32xi32>, memref<32xi32>
+}
+
+// -----
+
+// DeduplicateToBuffer: read_only and non-read_only ops are NOT deduplicated
+// against each other (different semantics).
+// CHECK-LABEL: func @no_deduplicate_to_buffer_mixed_readonly(
+// CHECK-COUNT-2: bufferization.to_buffer
+func.func @no_deduplicate_to_buffer_mixed_readonly(%arg0: tensor<32xi32>) -> (memref<32xi32>, memref<32xi32>) {
+  %0 = bufferization.to_buffer %arg0 : tensor<32xi32> to memref<32xi32>
+  %1 = bufferization.to_buffer %arg0 read_only : tensor<32xi32> to memref<32xi32>
+  return %0, %1 : memref<32xi32>, memref<32xi32>
+}
+
+// -----
+
+// DeduplicateToBuffer: read_only ops are deduplicated with each other.
+// CHECK-LABEL: func @deduplicate_to_buffer_readonly(
+// CHECK:         %[[BUF:.+]] = bufferization.to_buffer {{.*}} read_only
+// CHECK-NOT:     bufferization.to_buffer
+// CHECK:         return %[[BUF]], %[[BUF]]
+func.func @deduplicate_to_buffer_readonly(%arg0: tensor<32xi32>) -> (memref<32xi32>, memref<32xi32>) {
+  %0 = bufferization.to_buffer %arg0 read_only : tensor<32xi32> to memref<32xi32>
+  %1 = bufferization.to_buffer %arg0 read_only : tensor<32xi32> to memref<32xi32>
+  return %0, %1 : memref<32xi32>, memref<32xi32>
+}

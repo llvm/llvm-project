@@ -704,6 +704,24 @@ FailureOr<Value> bufferization::getBuffer(RewriterBase &rewriter, Value value,
   if (failed(bufferType))
     return failure();
 
+  // Reuse an existing to_buffer op for the same tensor and buffer type in the
+  // same block to avoid emitting duplicate ops. Two to_buffer ops on the same
+  // tensor always alias the same underlying buffer, so they are
+  // interchangeable. Only reuse non-read_only ops: getBuffer() is called when
+  // a writable buffer is needed, so a read_only variant must not be
+  // substituted.
+  Block *insertionBlock = rewriter.getInsertionBlock();
+  for (Operation *user : value.getUsers()) {
+    auto existing = dyn_cast<bufferization::ToBufferOp>(user);
+    if (!existing || existing->getBlock() != insertionBlock)
+      continue;
+    if (existing.getType() != *bufferType)
+      continue;
+    if (existing.getReadOnly())
+      continue;
+    return existing.getResult();
+  }
+
   return bufferization::ToBufferOp::create(rewriter, value.getLoc(),
                                            *bufferType, value)
       .getResult();

@@ -874,12 +874,59 @@ struct DimOfCastOp : public OpRewritePattern<memref::DimOp> {
   }
 };
 
+/// Deduplicate bufferization.to_buffer operations with the same tensor operand,
+/// result type, and read_only attribute within the same block. Two to_buffer
+/// ops on the same tensor always alias the same underlying buffer, so a later
+/// op can be replaced by an earlier one that comes before it in the same block.
+struct DeduplicateToBuffer : public OpRewritePattern<ToBufferOp> {
+  using OpRewritePattern<ToBufferOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ToBufferOp toBuffer,
+                                PatternRewriter &rewriter) const override {
+    Value tensor = toBuffer.getTensor();
+    for (Operation *user : tensor.getUsers()) {
+      auto otherToBuffer = dyn_cast<ToBufferOp>(user);
+      if (!otherToBuffer || otherToBuffer == toBuffer)
+        continue;
+      if (otherToBuffer->getBlock() != toBuffer->getBlock())
+        continue;
+      if (!otherToBuffer->isBeforeInBlock(toBuffer))
+        continue;
+      if (otherToBuffer.getType() != toBuffer.getType())
+        continue;
+      if (otherToBuffer.getReadOnly() != toBuffer.getReadOnly())
+        continue;
+      rewriter.replaceOp(toBuffer, otherToBuffer.getResult());
+      return success();
+    }
+    return failure();
+  }
+};
+
 } // namespace
 
 void ToBufferOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                              MLIRContext *context) {
-  results.add<DimOfCastOp, LoadOfToBuffer, ToBufferOfCast,
+  results.add<DeduplicateToBuffer, DimOfCastOp, LoadOfToBuffer, ToBufferOfCast,
               ToBufferToTensorFolding>(context);
+}
+
+void ToBufferOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  // Declare a write effect on the result memref when read_only is not set.
+  // This prevents passes such as LICM from hoisting to_buffer ops out of
+  // loops: if to_buffer were hoisted, all iterations would share the same
+  // backing buffer, so writes from one iteration would corrupt another's view
+  // of the tensor's storage.
+  //
+  // When read_only is set, no writes can occur through the returned buffer so
+  // sharing across loop iterations is safe and no effects are declared, making
+  // the op eligible for hoisting/CSE.
+  if (!getReadOnly())
+    effects.emplace_back(MemoryEffects::Write::get(),
+                         mlir::cast<OpResult>(getBuffer()),
+                         SideEffects::DefaultResource::get());
 }
 
 LogicalResult ToBufferOp::bufferize(RewriterBase &rewriter,
