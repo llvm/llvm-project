@@ -75,9 +75,8 @@
 ; LAXX-NEXT:       Expand reduction intrinsics
 ; LAXX-NEXT:       Natural Loop Information
 ; LAXX-NEXT:       Type Promotion
-; LAXX-NEXT:       Post-Dominator Tree Construction
-; LAXX-NEXT:       Branch Probability Analysis
-; LAXX-NEXT:       Block Frequency Analysis
+; LAXX-NEXT:       Lazy Branch Probability Analysis
+; LAXX-NEXT:       Lazy Block Frequency Analysis
 ; LAXX-NEXT:       CodeGen Prepare
 ; LAXX-NEXT:       Dominator Tree Construction
 ; LAXX-NEXT:       Exception handling preparation
