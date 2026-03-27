@@ -1030,6 +1030,20 @@ public:
     }
   }
 
+  bool hasNoWrapFlags() const {
+    switch (OpType) {
+    case OperationType::OverflowingBinOp:
+    case OperationType::Trunc:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  WrapFlagsTy getNoWrapFlags() const {
+    return {hasNoUnsignedWrap(), hasNoSignedWrap()};
+  }
+
   bool isDisjoint() const {
     assert(OpType == OperationType::DisjointOp &&
            "recipe cannot have a disjoing flag");

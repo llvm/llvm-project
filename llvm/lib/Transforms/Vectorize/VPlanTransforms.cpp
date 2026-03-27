@@ -3364,11 +3364,9 @@ void VPlanTransforms::addExplicitVectorLength(
   OpVPEVL = Builder.createScalarZExtOrTrunc(
       OpVPEVL, CanIVTy, I32Ty, CanonicalIVIncrement->getDebugLoc());
 
-  auto *NextIter = Builder.createAdd(OpVPEVL, CurrentIteration,
-                                     CanonicalIVIncrement->getDebugLoc(),
-                                     "current.iteration.next",
-                                     {CanonicalIVIncrement->hasNoUnsignedWrap(),
-                                      CanonicalIVIncrement->hasNoSignedWrap()});
+  auto *NextIter = Builder.createAdd(
+      OpVPEVL, CurrentIteration, CanonicalIVIncrement->getDebugLoc(),
+      "current.iteration.next", CanonicalIVIncrement->getNoWrapFlags());
   CurrentIteration->addOperand(NextIter);
 
   VPValue *NextAVL =
