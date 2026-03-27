@@ -358,6 +358,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
           return APFloat::getQNaN(Result.getSemantics(), Sign, &Payload);
         }
       }
+
+      return Result;
     });
   }
 
