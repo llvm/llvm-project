@@ -6,19 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_SUBGROUP_CLC_SUB_GROUP_BROADCAST_H__
-#define __CLC_SUBGROUP_CLC_SUB_GROUP_BROADCAST_H__
+#include "clc/subgroup/clc_sub_group_scan.h"
 
-#include "clc/internal/clc.h"
-
-#define __CLC_FUNCTION __clc_sub_group_broadcast
-
-#define __CLC_BODY "clc/subgroup/clc_subgroup_broadcast.inc"
+#define __CLC_BODY "sub_group_scan_exclusive.inc"
 #include "clc/integer/gentype.inc"
 
-#define __CLC_BODY "clc/subgroup/clc_subgroup_broadcast.inc"
+#define __CLC_BODY "sub_group_scan_exclusive.inc"
 #include "clc/math/gentype.inc"
-
-#undef __CLC_FUNCTION
-
-#endif // __CLC_SUBGROUP_CLC_SUB_GROUP_BROADCAST_H__
