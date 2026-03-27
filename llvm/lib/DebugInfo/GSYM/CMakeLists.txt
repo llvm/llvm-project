@@ -4,6 +4,7 @@ add_llvm_component_library(LLVMDebugInfoGSYM
   HeaderV2.cpp
   FileWriter.cpp
   FunctionInfo.cpp
+  GlobalData.cpp
   GsymCreator.cpp
   GsymCreatorV1.cpp
   GsymCreatorV2.cpp

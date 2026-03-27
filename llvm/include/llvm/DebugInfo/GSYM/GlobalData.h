@@ -9,10 +9,15 @@
 #ifndef LLVM_DEBUGINFO_GSYM_GLOBALDATA_H
 #define LLVM_DEBUGINFO_GSYM_GLOBALDATA_H
 
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/Error.h"
 #include <cstdint>
 
 namespace llvm {
+class DataExtractor;
+
 namespace gsym {
+class FileWriter;
 
 enum class GlobalInfoType : uint32_t {
   EndOfList = 0u,
@@ -50,6 +55,20 @@ struct GlobalData {
   uint32_t Padding;
   uint64_t FileOffset;
   uint64_t FileSize;
+
+  /// Encode this GlobalData entry into a FileWriter stream.
+  ///
+  /// \param O The binary stream to write the data to.
+  /// \returns An error object that indicates success or failure.
+  LLVM_ABI llvm::Error encode(FileWriter &O) const;
+
+  /// Decode a GlobalData entry from a binary data stream.
+  ///
+  /// \param Data The binary stream to read from.
+  /// \param Offset The offset to start reading from. Updated on success.
+  /// \returns A GlobalData entry or an error.
+  LLVM_ABI static llvm::Expected<GlobalData> decode(DataExtractor &Data,
+                                                    uint64_t &Offset);
 };
 
 } // namespace gsym

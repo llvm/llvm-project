@@ -41,15 +41,6 @@ llvm::Error GsymCreatorV2::loadCallSitesFromYAML(StringRef YAMLFile) {
                            "call site loading not yet supported in V2");
 }
 
-/// Write a single GlobalData entry to the output stream.
-static void writeGlobalDataEntry(FileWriter &O, GlobalInfoType Type,
-                                 uint64_t FileOffset, uint64_t FileSize) {
-  O.writeU32(static_cast<uint32_t>(Type));
-  O.writeU32(0); // Padding
-  O.writeU64(FileOffset);
-  O.writeU64(FileSize);
-}
-
 llvm::Error GsymCreatorV2::encode(FileWriter &O) const {
   std::lock_guard<std::mutex> Guard(Mutex);
   std::optional<uint64_t> BaseAddr;
@@ -145,20 +136,27 @@ llvm::Error GsymCreatorV2::encode(FileWriter &O) const {
     return Err;
 
   // Write GlobalData entries.
-  writeGlobalDataEntry(O, GlobalInfoType::AddrOffsets,
-                       AddrOffsetsOffset, AddrOffsetsSize);
-  writeGlobalDataEntry(O, GlobalInfoType::AddrInfoOffsets,
-                       AddrInfoOffsetsOffset, AddrInfoOffsetsSize);
-  writeGlobalDataEntry(O, GlobalInfoType::FileTable,
-                       FileTableOffset, FileTableSize);
-  writeGlobalDataEntry(O, GlobalInfoType::StringTable,
-                       StringTableOffset, StringTableSize);
-  writeGlobalDataEntry(O, GlobalInfoType::FunctionInfo,
-                       FISectionOffset, FISectionSize);
+  if (auto Err = GlobalData{GlobalInfoType::AddrOffsets, 0,
+                            AddrOffsetsOffset, AddrOffsetsSize}.encode(O))
+    return Err;
+  if (auto Err = GlobalData{GlobalInfoType::AddrInfoOffsets, 0,
+                            AddrInfoOffsetsOffset, AddrInfoOffsetsSize}.encode(O))
+    return Err;
+  if (auto Err = GlobalData{GlobalInfoType::FileTable, 0,
+                            FileTableOffset, FileTableSize}.encode(O))
+    return Err;
+  if (auto Err = GlobalData{GlobalInfoType::StringTable, 0,
+                            StringTableOffset, StringTableSize}.encode(O))
+    return Err;
+  if (auto Err = GlobalData{GlobalInfoType::FunctionInfo, 0,
+                            FISectionOffset, FISectionSize}.encode(O))
+    return Err;
   if (HasUUID)
-    writeGlobalDataEntry(O, GlobalInfoType::UUID,
-                         UUIDOffset, UUIDSectionSize);
-  writeGlobalDataEntry(O, GlobalInfoType::EndOfList, 0, 0);
+    if (auto Err = GlobalData{GlobalInfoType::UUID, 0,
+                              UUIDOffset, UUIDSectionSize}.encode(O))
+      return Err;
+  if (auto Err = GlobalData{GlobalInfoType::EndOfList, 0, 0, 0}.encode(O))
+    return Err;
 
   // Write AddrOffsets section.
   assert(O.tell() == AddrOffsetsOffset);
