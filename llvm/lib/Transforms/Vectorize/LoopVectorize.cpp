@@ -7125,7 +7125,7 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
   // First collect all instructions for the recipes in Plan.
   auto GetInstructionForCost = [](const VPRecipeBase *R) -> Instruction * {
     if (auto *S = dyn_cast<VPSingleDefRecipe>(R))
-      return dyn_cast_or_null<Instruction>(S->getUnderlyingValue());
+      return S->getUnderlyingInstr();
     if (auto *WidenMem = dyn_cast<VPWidenMemoryRecipe>(R))
       return &WidenMem->getIngredient();
     return nullptr;
@@ -8283,13 +8283,14 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
       if (isa<VPWidenCanonicalIVRecipe, VPBlendRecipe, VPReductionRecipe>(&R))
         continue;
       auto *VPI = cast<VPInstruction>(&R);
-      if (!VPI->getUnderlyingValue())
-        continue;
 
       // TODO: Gradually replace uses of underlying instruction by analyses on
       // VPlan. Migrate code relying on the underlying instruction from VPlan0
       // to construct recipes below to not use the underlying instruction.
-      Instruction *Instr = cast<Instruction>(VPI->getUnderlyingValue());
+      Instruction *Instr = VPI->getUnderlyingInstr();
+      if (!Instr)
+        continue;
+
       Builder.setInsertPoint(VPI);
 
       // The stores with invariant address inside the loop will be deleted, and

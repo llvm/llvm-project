@@ -69,6 +69,11 @@ public:
   /// Return the underlying Value attached to this VPValue.
   Value *getUnderlyingValue() const { return UnderlyingVal; }
 
+  /// Return the underlying Instruction attached to this VPValue.
+  Instruction *getUnderlyingInstr() const {
+    return cast_or_null<Instruction>(UnderlyingVal);
+  }
+
   /// Return the underlying IR value for a VPIRValue.
   Value *getLiveInIRValue() const;
 

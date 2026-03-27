@@ -63,10 +63,9 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
          make_early_inc_range(make_range(VPBB->begin(), EndIter))) {
 
       VPValue *VPV = Ingredient.getVPSingleValue();
-      if (!VPV->getUnderlyingValue())
+      Instruction *Inst = VPV->getUnderlyingInstr();
+      if (!Inst)
         continue;
-
-      Instruction *Inst = cast<Instruction>(VPV->getUnderlyingValue());
 
       VPRecipeBase *NewRecipe = nullptr;
       if (auto *PhiR = dyn_cast<VPPhi>(&Ingredient)) {
@@ -2755,7 +2754,7 @@ void VPlanTransforms::truncateToMinimalBitwidths(
         continue;
 
       VPValue *ResultVPV = R.getVPSingleValue();
-      auto *UI = cast_or_null<Instruction>(ResultVPV->getUnderlyingValue());
+      auto *UI = ResultVPV->getUnderlyingInstr();
       unsigned NewResSizeInBits = MinBWs.lookup(UI);
       if (!NewResSizeInBits)
         continue;
@@ -3588,9 +3587,8 @@ void VPlanTransforms::dropPoisonGeneratingRecipes(
         } else
           RecWithFlags->dropPoisonGeneratingFlags();
       } else {
-        Instruction *Instr = dyn_cast_or_null<Instruction>(
-            CurRec->getVPSingleValue()->getUnderlyingValue());
-        (void)Instr;
+        [[maybe_unused]] Instruction *Instr =
+            CurRec->getVPSingleValue()->getUnderlyingInstr();
         assert((!Instr || !Instr->hasPoisonGeneratingFlags()) &&
                "found instruction with poison generating flags not covered by "
                "VPRecipeWithIRFlags");

@@ -671,14 +671,6 @@ public:
 
   VPSingleDefRecipe *clone() override = 0;
 
-  /// Returns the underlying instruction.
-  Instruction *getUnderlyingInstr() {
-    return cast<Instruction>(getUnderlyingValue());
-  }
-  const Instruction *getUnderlyingInstr() const {
-    return cast<Instruction>(getUnderlyingValue());
-  }
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print this VPSingleDefRecipe to dbgs() (for debugging).
   LLVM_ABI_FOR_TEST LLVM_DUMP_METHOD void dump() const;
