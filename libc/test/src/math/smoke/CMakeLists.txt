@@ -5184,6 +5184,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  erfcf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    erfcf16_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.math.erfcf16
+)
+
+add_fp_unittest(
   pow_test
   SUITE
     libc-math-smoke-tests
