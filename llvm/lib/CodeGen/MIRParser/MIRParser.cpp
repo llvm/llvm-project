@@ -396,7 +396,7 @@ static bool isSSA(const MachineFunction &MF) {
 
     // Subregister defs are invalid in SSA.
     const MachineOperand *RegDef = MRI.getOneDef(Reg);
-    if (RegDef && RegDef->getSubReg() != 0)
+    if (RegDef && RegDef->getSubReg() != 0 && !RegDef->isUndef())
       return false;
   }
   return true;

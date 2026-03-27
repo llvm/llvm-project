@@ -1,0 +1,10 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass=none -x mir < %s | FileCheck %s
+
+# CHECK: isSSA: true
+
+---
+name: undef_subreg_def_is_ssa
+body: |
+  bb.0:
+    undef %0.sub0:vreg_64 = V_MOV_B32_e32 0, implicit $exec
+...

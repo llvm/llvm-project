@@ -2,6 +2,7 @@
 ; RUN: llc -mtriple=x86_64-linux-gnu -mcpu=skx        -global-isel -verify-machineinstrs < %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=SKX
 ; RUN: llc -mtriple=x86_64-linux-gnu -mcpu=core-avx2  -global-isel -verify-machineinstrs < %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=AVX2
 ; RUN: llc -mtriple=x86_64-linux-gnu -mcpu=corei7-avx -global-isel -verify-machineinstrs < %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=AVX1
+; RUN: llc -mtriple=x86_64-linux-gnu -mcpu=corei7-avx -global-isel -verify-machineinstrs < %s -o - -stop-after=instruction-select | llc -mtriple=x86_64-linux-gnu -mcpu=corei7-avx -global-isel -verify-machineinstrs -x mir -o - -start-after=instruction-select | FileCheck %s --check-prefix=ALL --check-prefix=AVX1
 
 
 define <16 x i8> @test_add_v16i8(<16 x i8> %arg1, <16 x i8> %arg2) {
