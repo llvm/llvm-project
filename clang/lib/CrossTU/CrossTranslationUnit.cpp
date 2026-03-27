@@ -733,12 +733,22 @@ CrossTranslationUnitContext::ASTLoader::loadFromSource(
 }
 
 llvm::Expected<InvocationListTy>
-parseInvocationList(StringRef FileContent, llvm::sys::path::Style PathStyle) {
+parseInvocationList(StringRef FileContent, llvm::sys::path::Style PathStyle,
+                    StringRef FilePath) {
   InvocationListTy InvocationList;
 
   /// LLVM YAML parser is used to extract information from invocation list file.
   llvm::SourceMgr SM;
   llvm::yaml::Stream InvocationFile(FileContent, SM);
+
+  auto getLine = [&SM](llvm::yaml::Node *N) -> int {
+    return N ? SM.FindLineNumber(N->getSourceRange().Start) : 0;
+  };
+  auto wrongFormat = [&](llvm::yaml::Node *N) {
+    return llvm::make_error<IndexError>(
+        index_error_code::invocation_list_wrong_format, std::string(FilePath),
+        getLine(N));
+  };
 
   /// Only the first document is processed.
   llvm::yaml::document_iterator FirstInvocationFile = InvocationFile.begin();
@@ -758,15 +768,13 @@ parseInvocationList(StringRef FileContent, llvm::sys::path::Style PathStyle) {
   /// parts.
   auto *Mappings = dyn_cast<llvm::yaml::MappingNode>(DocumentRoot);
   if (!Mappings)
-    return llvm::make_error<IndexError>(
-        index_error_code::invocation_list_wrong_format);
+    return wrongFormat(DocumentRoot);
 
   for (auto &NextMapping : *Mappings) {
     /// The keys should be strings, which represent a source-file path.
     auto *Key = dyn_cast<llvm::yaml::ScalarNode>(NextMapping.getKey());
     if (!Key)
-      return llvm::make_error<IndexError>(
-          index_error_code::invocation_list_wrong_format);
+      return wrongFormat(NextMapping.getKey());
 
     SmallString<32> ValueStorage;
     StringRef SourcePath = Key->getValue(ValueStorage);
@@ -786,14 +794,12 @@ parseInvocationList(StringRef FileContent, llvm::sys::path::Style PathStyle) {
     /// the invocation.
     auto *Args = dyn_cast<llvm::yaml::SequenceNode>(NextMapping.getValue());
     if (!Args)
-      return llvm::make_error<IndexError>(
-          index_error_code::invocation_list_wrong_format);
+      return wrongFormat(NextMapping.getValue());
 
     for (auto &Arg : *Args) {
       auto *CmdString = dyn_cast<llvm::yaml::ScalarNode>(&Arg);
       if (!CmdString)
-        return llvm::make_error<IndexError>(
-            index_error_code::invocation_list_wrong_format);
+        return wrongFormat(&Arg);
       /// Every conversion starts with an empty working storage, as it is not
       /// clear if this is a requirement of the YAML parser.
       ValueStorage.clear();
@@ -802,8 +808,7 @@ parseInvocationList(StringRef FileContent, llvm::sys::path::Style PathStyle) {
     }
 
     if (InvocationList[InvocationKey].empty())
-      return llvm::make_error<IndexError>(
-          index_error_code::invocation_list_wrong_format);
+      return wrongFormat(Key);
   }
 
   return InvocationList;
@@ -828,19 +833,12 @@ llvm::Error CrossTranslationUnitContext::ASTLoader::lazyInitInvocationList() {
                           "should not be nullptr.");
 
   llvm::Expected<InvocationListTy> ExpectedInvocationList =
-      parseInvocationList(ContentBuffer->getBuffer(), PathStyle);
+      parseInvocationList(ContentBuffer->getBuffer(), PathStyle,
+                          InvocationListFilePath);
 
-  // Handle the error to store the code and filename for next call to this
-  // function.
   if (!ExpectedInvocationList) {
     llvm::handleAllErrors(ExpectedInvocationList.takeError(),
-                          [&](const IndexError &E) {
-                            PreviousError = IndexError(
-                                E.getCode(),
-                                E.getFileName().empty()
-                                    ? std::string(InvocationListFilePath)
-                                    : E.getFileName());
-                          });
+                          [&](const IndexError &E) { PreviousError = E; });
     return llvm::make_error<IndexError>(*PreviousError);
   }
 

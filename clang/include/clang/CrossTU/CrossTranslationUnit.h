@@ -107,7 +107,8 @@ using InvocationListTy = llvm::StringMap<llvm::SmallVector<std::string, 32>>;
 /// will be used to produce the AST of the TU.
 llvm::Expected<InvocationListTy> parseInvocationList(
     StringRef FileContent,
-    llvm::sys::path::Style PathStyle = llvm::sys::path::Style::posix);
+    llvm::sys::path::Style PathStyle = llvm::sys::path::Style::posix,
+    StringRef FilePath = "");
 
 /// Returns true if it makes sense to import a foreign variable definition.
 /// For instance, we don't want to import variables that have non-trivial types

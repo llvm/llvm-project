@@ -191,6 +191,24 @@ TEST(CrossTranslationUnit, EmptyInvocationListIsNotValid) {
   EXPECT_TRUE(IsWrongFromatError);
 }
 
+TEST(CrossTranslationUnit, WrongFormatInvocationListHasLineNumber) {
+  // The first entry is valid; the second has a scalar value instead of a
+  // sequence. The error should report the line of the malformed value.
+  auto Input = "/tmp/valid.cpp:\n  - clang++\n/tmp/bad.cpp: not_a_sequence\n";
+
+  llvm::Expected<InvocationListTy> Result = parseInvocationList(Input);
+  EXPECT_FALSE(static_cast<bool>(Result));
+  bool IsWrongFormatError = false;
+  int LineNum = 0;
+  llvm::handleAllErrors(Result.takeError(), [&](IndexError &Err) {
+    IsWrongFormatError =
+        Err.getCode() == index_error_code::invocation_list_wrong_format;
+    LineNum = Err.getLineNum();
+  });
+  EXPECT_TRUE(IsWrongFormatError);
+  EXPECT_EQ(LineNum, 3);
+}
+
 TEST(CrossTranslationUnit, AmbiguousInvocationListIsDetected) {
   // The same source file occurs twice (for two different architecture) in
   // this test case. The disambiguation is the responsibility of the user.
