@@ -3676,41 +3676,83 @@ TEST_CONSTEXPR(match_v32qi(_mm256_maskz_alignr_epi8((__mmask32)0xf000000f, ((__m
 __m128i test_mm_dbsad_epu8(__m128i __A, __m128i __B) {
   // CHECK-LABEL: test_mm_dbsad_epu8
   // CHECK: @llvm.x86.avx512.dbpsadbw.128
-  return _mm_dbsad_epu8(__A, __B, 170); 
+  return _mm_dbsad_epu8(__A, __B, 170);
 }
+// imm8=4: blockA=A[0..3]={0,1,2,3}, blockB=A[4..7]={4,5,6,7}
+// J=0: B[0..3]={1,2,3,4} vs blockA=4, vs blockB=12
+// J=1: B[4..7]={5,6,7,8} vs blockA=20, vs blockB=4
+// J=2: B[8..11]={9,10,11,12} vs blockA=36, vs blockB=20
+// J=3: B[12..15]={13,14,15,16} vs blockA=52, vs blockB=36
+TEST_CONSTEXPR(match_v8hu(_mm_dbsad_epu8(
+  ((__m128i)(__v16qu){0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}),
+  ((__m128i)(__v16qu){1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}),
+  4), 4, 12, 20, 4, 36, 20, 52, 36));
+// imm8=0: blockA=blockB=A[0..3]={0,1,2,3}
+TEST_CONSTEXPR(match_v8hu(_mm_dbsad_epu8(
+  ((__m128i)(__v16qu){0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}),
+  ((__m128i)(__v16qu){1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}),
+  0), 4, 4, 20, 20, 36, 36, 52, 52));
+// Test with unsigned values > 127 (signed overflow territory)
+// A[0..3]={200,100,50,25}, B[0..3]={180,120,40,30}
+// imm8=0: blockA=blockB=A[0..3]
+// SAD = |180-200|+|120-100|+|40-50|+|30-25| = 20+20+10+5 = 55
+TEST_CONSTEXPR(match_v8hu(_mm_dbsad_epu8(
+  ((__m128i)(__v16qu){200, 100, 50, 25, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}),
+  ((__m128i)(__v16qu){180, 120, 40, 30, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}),
+  0), 55, 55, 375, 375, 375, 375, 375, 375));
 
 __m128i test_mm_mask_dbsad_epu8(__m128i __W, __mmask8 __U, __m128i __A, __m128i __B) {
   // CHECK-LABEL: test_mm_mask_dbsad_epu8
   // CHECK: @llvm.x86.avx512.dbpsadbw.128
   // CHECK: select <8 x i1> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}
-  return _mm_mask_dbsad_epu8(__W, __U, __A, __B, 170); 
+  return _mm_mask_dbsad_epu8(__W, __U, __A, __B, 170);
 }
+// Test masked version: mask=0x55 (keep even elements, passthrough odd)
+TEST_CONSTEXPR(match_v8hu(_mm_mask_dbsad_epu8(
+  ((__m128i)(__v8hu){99, 99, 99, 99, 99, 99, 99, 99}), (__mmask8)0x55,
+  ((__m128i)(__v16qu){0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}),
+  ((__m128i)(__v16qu){1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}),
+  4), 4, 99, 20, 99, 36, 99, 52, 99));
 
 __m128i test_mm_maskz_dbsad_epu8(__mmask8 __U, __m128i __A, __m128i __B) {
   // CHECK-LABEL: test_mm_maskz_dbsad_epu8
   // CHECK: @llvm.x86.avx512.dbpsadbw.128
   // CHECK: select <8 x i1> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}
-  return _mm_maskz_dbsad_epu8(__U, __A, __B, 170); 
+  return _mm_maskz_dbsad_epu8(__U, __A, __B, 170);
 }
+// Test zero-masked version: mask=0xAA (keep odd elements, zero even)
+TEST_CONSTEXPR(match_v8hu(_mm_maskz_dbsad_epu8((__mmask8)0xAA,
+  ((__m128i)(__v16qu){0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}),
+  ((__m128i)(__v16qu){1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}),
+  4), 0, 12, 0, 4, 0, 20, 0, 36));
 
 __m256i test_mm256_dbsad_epu8(__m256i __A, __m256i __B) {
   // CHECK-LABEL: test_mm256_dbsad_epu8
   // CHECK: @llvm.x86.avx512.dbpsadbw.256
-  return _mm256_dbsad_epu8(__A, __B, 170); 
+  return _mm256_dbsad_epu8(__A, __B, 170);
 }
+// 256-bit: 2 lanes, imm8=0: blockA=blockB=lane[0..3]
+// Lane 0: same as 128-bit test above
+// Lane 1: A[16..19]={16,17,18,19}, B[16..19]={17,18,19,20} -> SAD=4
+TEST_CONSTEXPR(match_v16hu(_mm256_dbsad_epu8(
+  ((__m256i)(__v32qu){0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+                     16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}),
+  ((__m256i)(__v32qu){1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+                     17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32}),
+  0), 4, 4, 20, 20, 36, 36, 52, 52, 4, 4, 20, 20, 36, 36, 52, 52));
 
 __m256i test_mm256_mask_dbsad_epu8(__m256i __W, __mmask16 __U, __m256i __A, __m256i __B) {
   // CHECK-LABEL: test_mm256_mask_dbsad_epu8
   // CHECK: @llvm.x86.avx512.dbpsadbw.256
   // CHECK: select <16 x i1> %{{.*}}, <16 x i16> %{{.*}}, <16 x i16> %{{.*}}
-  return _mm256_mask_dbsad_epu8(__W, __U, __A, __B, 170); 
+  return _mm256_mask_dbsad_epu8(__W, __U, __A, __B, 170);
 }
 
 __m256i test_mm256_maskz_dbsad_epu8(__mmask16 __U, __m256i __A, __m256i __B) {
   // CHECK-LABEL: test_mm256_maskz_dbsad_epu8
   // CHECK: @llvm.x86.avx512.dbpsadbw.256
   // CHECK: select <16 x i1> %{{.*}}, <16 x i16> %{{.*}}, <16 x i16> %{{.*}}
-  return _mm256_maskz_dbsad_epu8(__U, __A, __B, 170); 
+  return _mm256_maskz_dbsad_epu8(__U, __A, __B, 170);
 }
 __mmask8 test_mm_movepi16_mask(__m128i __A) {
   // CHECK-LABEL: test_mm_movepi16_mask

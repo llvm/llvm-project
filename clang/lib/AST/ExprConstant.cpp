@@ -12564,6 +12564,63 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
 
+  case clang::X86::BI__builtin_ia32_dbpsadbw128:
+  case clang::X86::BI__builtin_ia32_dbpsadbw256:
+  case clang::X86::BI__builtin_ia32_dbpsadbw512: {
+    APValue SourceA, SourceB, SourceImm;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceA) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceB) ||
+        !EvaluateAsRValue(Info, E->getArg(2), SourceImm))
+      return false;
+
+    unsigned SourceLen = SourceA.getVectorLength();
+    unsigned LaneSize = 16; // 128-bit lane = 16 bytes
+    unsigned NumLanes = SourceLen / LaneSize;
+    unsigned Imm = SourceImm.getInt().getZExtValue();
+    unsigned BlockOffsetA = (Imm & 0x3) * 4;
+    unsigned BlockOffsetB = ((Imm >> 2) & 0x3) * 4;
+
+    auto *DestTy = E->getType()->castAs<VectorType>();
+    QualType DestEltTy = DestTy->getElementType();
+    bool DestUnsigned = DestEltTy->isUnsignedIntegerOrEnumerationType();
+    SmallVector<APValue, 32> ResultElements;
+    ResultElements.reserve(SourceLen / 2);
+
+    for (unsigned Lane = 0; Lane < NumLanes; ++Lane) {
+      unsigned LaneStart = Lane * LaneSize;
+
+      for (unsigned J = 0; J < 4; ++J) {
+        // Compute SAD of SourceB[4*J..4*J+3] vs blockA from SourceA
+        unsigned SadA = 0;
+        unsigned SadB = 0;
+        for (unsigned K = 0; K < 4; ++K) {
+          // Treat input bytes as unsigned
+          unsigned A = static_cast<uint8_t>(
+              SourceA.getVectorElt(LaneStart + BlockOffsetA + K)
+                  .getInt()
+                  .getZExtValue());
+          unsigned B = static_cast<uint8_t>(
+              SourceB.getVectorElt(LaneStart + 4 * J + K)
+                  .getInt()
+                  .getZExtValue());
+          SadA += (B > A) ? (B - A) : (A - B);
+
+          unsigned A2 = static_cast<uint8_t>(
+              SourceA.getVectorElt(LaneStart + BlockOffsetB + K)
+                  .getInt()
+                  .getZExtValue());
+          SadB += (B > A2) ? (B - A2) : (A2 - B);
+        }
+        ResultElements.push_back(
+            APValue(APSInt(APInt(16, SadA), DestUnsigned)));
+        ResultElements.push_back(
+            APValue(APSInt(APInt(16, SadB), DestUnsigned)));
+      }
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+
   case clang::X86::BI__builtin_ia32_pmulhuw128:
   case clang::X86::BI__builtin_ia32_pmulhuw256:
   case clang::X86::BI__builtin_ia32_pmulhuw512:

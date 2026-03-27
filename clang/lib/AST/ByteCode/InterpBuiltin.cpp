@@ -2820,6 +2820,65 @@ static bool interp__builtin_ia32_pmul(
   return true;
 }
 
+static bool interp__builtin_ia32_dbpsadbw(InterpState &S, CodePtr OpPC,
+                                          const CallExpr *Call) {
+  assert(Call->getNumArgs() == 3);
+  QualType Arg2Type = Call->getArg(2)->getType();
+  APSInt ImmVal = popToAPSInt(S, Arg2Type);
+  unsigned Imm = ImmVal.getZExtValue();
+
+  const Pointer &Src2 = S.Stk.pop<Pointer>();
+  const Pointer &Src1 = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  const auto *SrcVT = Call->getArg(0)->getType()->castAs<VectorType>();
+  PrimType SrcElemT = *S.getContext().classify(SrcVT->getElementType());
+  unsigned SourceLen = SrcVT->getNumElements();
+
+  const auto *DestVT = Call->getType()->castAs<VectorType>();
+  PrimType DestElemT = *S.getContext().classify(DestVT->getElementType());
+  bool DestUnsigned = Call->getType()->isUnsignedIntegerOrEnumerationType();
+
+  unsigned LaneSize = 16; // 128-bit lane = 16 bytes
+  unsigned NumLanes = SourceLen / LaneSize;
+  unsigned BlockOffsetA = (Imm & 0x3) * 4;
+  unsigned BlockOffsetB = ((Imm >> 2) & 0x3) * 4;
+
+  unsigned DstIdx = 0;
+  for (unsigned Lane = 0; Lane < NumLanes; ++Lane) {
+    unsigned LaneStart = Lane * LaneSize;
+
+    for (unsigned J = 0; J < 4; ++J) {
+      unsigned SadA = 0;
+      unsigned SadB = 0;
+      for (unsigned K = 0; K < 4; ++K) {
+        unsigned A1Val, A2Val, BVal;
+        INT_TYPE_SWITCH_NO_BOOL(SrcElemT, {
+          // Treat as unsigned bytes
+          A1Val = static_cast<uint8_t>(
+              Src1.elem<T>(LaneStart + BlockOffsetA + K).toAPSInt().getZExtValue());
+          A2Val = static_cast<uint8_t>(
+              Src1.elem<T>(LaneStart + BlockOffsetB + K).toAPSInt().getZExtValue());
+          BVal = static_cast<uint8_t>(
+              Src2.elem<T>(LaneStart + 4 * J + K).toAPSInt().getZExtValue());
+        });
+        SadA += (BVal > A1Val) ? (BVal - A1Val) : (A1Val - BVal);
+        SadB += (BVal > A2Val) ? (BVal - A2Val) : (A2Val - BVal);
+      }
+      INT_TYPE_SWITCH_NO_BOOL(DestElemT, {
+        Dst.elem<T>(DstIdx) =
+            static_cast<T>(APSInt(APInt(16, SadA), DestUnsigned));
+        Dst.elem<T>(DstIdx + 1) =
+            static_cast<T>(APSInt(APInt(16, SadB), DestUnsigned));
+      });
+      DstIdx += 2;
+    }
+  }
+
+  Dst.initializeAllElements();
+  return true;
+}
+
 static bool interp_builtin_horizontal_int_binop(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
     llvm::function_ref<APInt(const APSInt &, const APSInt &)> Fn) {
@@ -4860,6 +4919,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           return (LoLHS.sext(BitWidth) * LoRHS.sext(BitWidth)) +
                  (HiLHS.sext(BitWidth) * HiRHS.sext(BitWidth));
         });
+
+  case clang::X86::BI__builtin_ia32_dbpsadbw128:
+  case clang::X86::BI__builtin_ia32_dbpsadbw256:
+  case clang::X86::BI__builtin_ia32_dbpsadbw512:
+    return interp__builtin_ia32_dbpsadbw(S, OpPC, Call);
 
   case clang::X86::BI__builtin_ia32_pmulhuw128:
   case clang::X86::BI__builtin_ia32_pmulhuw256:
