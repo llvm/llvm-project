@@ -80,6 +80,7 @@ public:
   bool Pre(parser::EndSubmoduleStmt &) { return false; }
   bool Pre(parser::EndSubroutineStmt &) { return false; }
   bool Pre(parser::EndTypeStmt &) { return false; }
+  bool Pre(parser::EndEnumerationTypeStmt &) { return false; }
 
   bool Pre(parser::OmpBlockConstruct &);
   bool Pre(parser::OpenMPLoopConstruct &);
