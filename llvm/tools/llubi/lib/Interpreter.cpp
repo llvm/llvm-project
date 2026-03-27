@@ -118,20 +118,6 @@ static AnyValue mulNoWrap(const APInt &LHS, const APInt &RHS, bool HasNSW,
   return Res;
 }
 
-static APFloat handleDenormal(APFloat Val,
-                              DenormalMode::DenormalModeKind Mode) {
-  if (!Val.isDenormal())
-    return Val;
-  if (Mode == DenormalMode::PositiveZero)
-    return APFloat::getZero(Val.getSemantics(), false);
-  if (Mode == DenormalMode::PreserveSign)
-    return APFloat::getZero(Val.getSemantics(), Val.isNegative());
-  // Default case for IEEE, Dynamic, and Invalid
-  // Currently we treat Dynamic the same as IEEE, since we don't support
-  // changing the mode at this point.
-  return Val;
-}
-
 /// Instruction executor using the visitor pattern.
 /// Unlike the Context class that manages the global state,
 /// InstExecutor only maintains the state for call frames.
@@ -173,6 +159,26 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
     if (Status)
       Status &= Handler.onInstructionExecuted(I, V);
     CurrentFrame->ValueMap.insert_or_assign(&I, std::move(V));
+  }
+
+  APFloat handleDenormal(APFloat Val, DenormalMode::DenormalModeKind Mode,
+                         bool NonDet = false) {
+    if (!Val.isDenormal())
+      return Val;
+    if (NonDet) {
+      // Non-deterministically choose between flushing or preserving the
+      // denormal value.
+      if (Ctx.getRandomBool())
+        return Val;
+    }
+    if (Mode == DenormalMode::PositiveZero)
+      return APFloat::getZero(Val.getSemantics(), false);
+    if (Mode == DenormalMode::PreserveSign)
+      return APFloat::getZero(Val.getSemantics(), Val.isNegative());
+    // Default case for IEEE, Dynamic, and Invalid
+    // Currently we treat Dynamic the same as IEEE, since we don't support
+    // changing the mode at this point.
+    return Val;
   }
 
   AnyValue handleFMFFlags(AnyValue Val, FastMathFlags FMF) {
@@ -300,8 +306,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
       APFloat RawResult = ScalarFn(FLHS, FRHS).asFloat();
 
       // Flush output denormals and handle fast-math flags.
-      AnyValue FResult =
-          handleFMFFlags(handleDenormal(RawResult, DenormMode.Output), FMF);
+      AnyValue FResult = handleFMFFlags(
+          handleDenormal(RawResult, DenormMode.Output, true), FMF);
 
       if (FResult.isPoison())
         return FResult;
