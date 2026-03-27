@@ -344,12 +344,22 @@ void CIRGenFunction::LexicalScope::cleanup() {
     return;
 
   // Get rid of any empty block at the end of the scope.
-  bool entryBlock = builder.getInsertionBlock()->isEntryBlock();
-  if (!entryBlock && curBlock->empty()) {
+  bool isEntryBlock = builder.getInsertionBlock()->isEntryBlock();
+  if (!isEntryBlock && curBlock->empty()) {
     curBlock->erase();
     for (mlir::Block *retBlock : retBlocks) {
       if (retBlock->getUses().empty())
         retBlock->erase();
+    }
+    // The empty block was created by a terminator (return/break/continue)
+    // and is now erased. If there are pending cleanup scopes (from variables
+    // with destructors), we need to pop them and ensure the containing scope
+    // block gets a proper terminator (e.g. cir.yield). Without this, the
+    // cleanup-scope-op popping that would otherwise happen in
+    // ~RunCleanupsScope leaves the scope block without a terminator.
+    if (hasPendingCleanups()) {
+      builder.setInsertionPointToEnd(entryBlock);
+      insertCleanupAndLeave(entryBlock);
     }
     return;
   }
@@ -1268,7 +1278,7 @@ CIRGenFunction::emitArrayLength(const clang::ArrayType *origArrayType,
   // If it's a VLA, we have to load the stored size.  Note that
   // this is the size of the VLA in bytes, not its size in elements.
   if (isa<VariableArrayType>(arrayType)) {
-    assert(cir::MissingFeatures::vlas());
+    assert(!cir::MissingFeatures::vlas());
     cgm.errorNYI(*currSrcLoc, "VLAs");
     return builder.getConstInt(*currSrcLoc, sizeTy, 0);
   }

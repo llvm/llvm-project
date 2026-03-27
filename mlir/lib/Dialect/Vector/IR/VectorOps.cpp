@@ -40,6 +40,7 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Repeated.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SmallVectorExtras.h"
@@ -1352,19 +1353,6 @@ ExtractOp::inferReturnTypes(MLIRContext *, std::optional<Location>,
         vectorType.getScalableDims().drop_front(n)));
   }
   return success();
-}
-
-bool ExtractOp::isCompatibleReturnTypes(TypeRange l, TypeRange r) {
-  // Allow extracting 1-element vectors instead of scalars.
-  auto isCompatible = [](TypeRange l, TypeRange r) {
-    auto vectorType = llvm::dyn_cast<VectorType>(l.front());
-    return vectorType && vectorType.getShape().equals({1}) &&
-           vectorType.getElementType() == r.front();
-  };
-  if (l.size() == 1 && r.size() == 1 &&
-      (isCompatible(l, r) || isCompatible(r, l)))
-    return true;
-  return l == r;
 }
 
 LogicalResult vector::ExtractOp::verify() {
@@ -3734,8 +3722,8 @@ public:
         continue;
       }
 
-      SmallVector<Type> elementToInsertTypes(insertSize,
-                                             srcVectorType.getElementType());
+      Repeated<Type> elementToInsertTypes(insertSize,
+                                          srcVectorType.getElementType());
       // Get all elements from the vector in row-major order.
       auto elementsToInsert = vector::ToElementsOp::create(
           rewriter, op.getLoc(), elementToInsertTypes, valueToStore);

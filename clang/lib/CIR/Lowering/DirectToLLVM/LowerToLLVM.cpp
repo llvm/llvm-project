@@ -1094,11 +1094,16 @@ getLLVMAtomicBinOp(cir::AtomicFetchKind k, bool isInt, bool isSignedInt) {
     return isSignedInt ? mlir::LLVM::AtomicBinOp::min
                        : mlir::LLVM::AtomicBinOp::umin;
   }
+  case cir::AtomicFetchKind::UIncWrap:
+    return mlir::LLVM::AtomicBinOp::uinc_wrap;
+  case cir::AtomicFetchKind::UDecWrap:
+    return mlir::LLVM::AtomicBinOp::udec_wrap;
   }
   llvm_unreachable("Unknown atomic fetch opcode");
 }
 
-static llvm::StringLiteral getLLVMBinop(cir::AtomicFetchKind k, bool isInt) {
+static llvm::StringLiteral getLLVMBinopForPostAtomic(cir::AtomicFetchKind k,
+                                                     bool isInt) {
   switch (k) {
   case cir::AtomicFetchKind::Add:
     return isInt ? mlir::LLVM::AddOp::getOperationName()
@@ -1118,6 +1123,9 @@ static llvm::StringLiteral getLLVMBinop(cir::AtomicFetchKind k, bool isInt) {
   case cir::AtomicFetchKind::Max:
   case cir::AtomicFetchKind::Min:
     llvm_unreachable("handled in buildMinMaxPostOp");
+  case cir::AtomicFetchKind::UIncWrap:
+  case cir::AtomicFetchKind::UDecWrap:
+    llvm_unreachable("uinc_wrap and udec_wrap are always fetch_first");
   }
   llvm_unreachable("Unknown atomic fetch opcode");
 }
@@ -1130,7 +1138,8 @@ mlir::Value CIRToLLVMAtomicFetchOpLowering::buildPostOp(
   SmallVector<mlir::Type> atomicResTys = {rmwVal.getType()};
   return rewriter
       .create(op.getLoc(),
-              rewriter.getStringAttr(getLLVMBinop(op.getBinop(), isInt)),
+              rewriter.getStringAttr(
+                  getLLVMBinopForPostAtomic(op.getBinop(), isInt)),
               atomicOperands, atomicResTys, {})
       ->getResult(0);
 }
@@ -2569,8 +2578,10 @@ void CIRToLLVMGlobalOpLowering::setupRegionInitializedLLVMGlobalOp(
   //        in CIRToLLVMGlobalOpLowering::matchAndRewrite() but that will go
   //        away when the placeholders are no longer needed.
   const bool isConst = op.getConstant();
-  assert(!cir::MissingFeatures::addressSpace());
-  const unsigned addrSpace = 0;
+  unsigned addrSpace = 0;
+  if (auto targetAS = mlir::dyn_cast_if_present<cir::TargetAddressSpaceAttr>(
+          op.getAddrSpaceAttr()))
+    addrSpace = targetAS.getValue();
   const bool isDsoLocal = op.getDsoLocal();
   const bool isThreadLocal = (bool)op.getTlsModelAttr();
   const uint64_t alignment = op.getAlignment().value_or(0);
@@ -2626,11 +2637,14 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   // This is the LLVM dialect type.
   const mlir::Type llvmType =
       convertTypeForMemory(*getTypeConverter(), dataLayout, cirSymType);
+
   // FIXME: These default values are placeholders until the the equivalent
   //        attributes are available on cir.global ops.
   const bool isConst = op.getConstant();
-  assert(!cir::MissingFeatures::addressSpace());
-  const unsigned addrSpace = 0;
+  unsigned addrSpace = 0;
+  if (auto targetAS = mlir::dyn_cast_if_present<cir::TargetAddressSpaceAttr>(
+          op.getAddrSpaceAttr()))
+    addrSpace = targetAS.getValue();
   const bool isDsoLocal = op.getDsoLocal();
   const bool isThreadLocal = (bool)op.getTlsModelAttr();
   const uint64_t alignment = op.getAlignment().value_or(0);

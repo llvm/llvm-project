@@ -1820,9 +1820,9 @@ def ffile_compilation_dir_EQ : Joined<["-"], "ffile-compilation-dir=">, Group<f_
     HelpText<"The compilation directory to embed in the debug info and coverage mapping.">;
 defm debug_info_for_profiling : BoolFOption<"debug-info-for-profiling",
   CodeGenOpts<"DebugInfoForProfiling">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+  PosFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option],
           "Emit extra debug info to make sample profile more accurate">,
-  NegFlag<SetFalse>>;
+  NegFlag<SetFalse, [], [ClangOption, FlangOption]>>;
 def fprofile_generate_cold_function_coverage : Flag<["-"], "fprofile-generate-cold-function-coverage">,
     Group<f_Group>, Visibility<[ClangOption, CLOption]>,
     HelpText<"Generate instrumented code to collect coverage info for cold functions into default.profraw file (overridden by '=' form of option or LLVM_PROFILE_FILE env var)">;
@@ -2131,6 +2131,26 @@ defm constant_cfstrings : BoolFOption<"constant-cfstrings",
           "Disable creation of CodeFoundation-type constant strings">,
   PosFlag<SetFalse>>;
 def fconstant_string_class_EQ : Joined<["-"], "fconstant-string-class=">, Group<f_Group>;
+defm objc_constant_literals : BoolFOption<"objc-constant-literals",
+  LangOpts<"ObjCConstantLiterals">, DefaultFalse,
+  PosFlag<SetTrue, [], [CC1Option], "Enable">,
+  NegFlag<SetFalse, [], [], "Disable">,
+  BothFlags<[], [ClangOption], " compile-time constant ObjC literals">>;
+def fconstant_array_class_EQ : Joined<["-"], "fconstant-array-class=">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  MarshallingInfoString<LangOpts<"ObjCConstantArrayClass">>;
+def fconstant_dictionary_class_EQ : Joined<["-"], "fconstant-dictionary-class=">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  MarshallingInfoString<LangOpts<"ObjCConstantDictionaryClass">>;
+def fconstant_integer_number_class_EQ : Joined<["-"], "fconstant-integer-number-class=">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  MarshallingInfoString<LangOpts<"ObjCConstantIntegerNumberClass">>;
+def fconstant_float_number_class_EQ : Joined<["-"], "fconstant-float-number-class=">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  MarshallingInfoString<LangOpts<"ObjCConstantFloatNumberClass">>;
+def fconstant_double_number_class_EQ : Joined<["-"], "fconstant-double-number-class=">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  MarshallingInfoString<LangOpts<"ObjCConstantDoubleNumberClass">>;
 def fconstexpr_depth_EQ : Joined<["-"], "fconstexpr-depth=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Set the maximum depth of recursive constexpr function calls">,
@@ -3776,6 +3796,21 @@ def fno_builtin : Flag<["-"], "fno-builtin">, Group<f_Group>,
 def fno_builtin_ : Joined<["-"], "fno-builtin-">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
   HelpText<"Disable implicit builtin knowledge of a specific function">;
+defm constant_nsnumber_literals : BoolFOption<"constant-nsnumber-literals",
+  LangOpts<"ConstantNSNumberLiterals">, DefaultFalse,
+  PosFlag<SetTrue, [], [CC1Option], "Enable">,
+  NegFlag<SetFalse, [], [], "Disable">,
+  BothFlags<[], [ClangOption], " compile-time constant NSNumber literals">>;
+defm constant_nsarray_literals : BoolFOption<"constant-nsarray-literals",
+  LangOpts<"ConstantNSArrayLiterals">, DefaultFalse,
+  PosFlag<SetTrue, [], [CC1Option], "Enable">,
+  NegFlag<SetFalse, [], [], "Disable">,
+  BothFlags<[], [ClangOption], " compile-time constant NSArray literals">>;
+defm constant_nsdictionary_literals : BoolFOption<"constant-nsdictionary-literals",
+  LangOpts<"ConstantNSDictionaryLiterals">, DefaultFalse,
+  PosFlag<SetTrue, [], [CC1Option], "Enable">,
+  NegFlag<SetFalse, [], [], "Disable">,
+  BothFlags<[], [ClangOption], " compile-time constant NSDictionary literals">>;
 def fno_common : Flag<["-"], "fno-common">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
     HelpText<"Compile common globals like normal definitions">;
@@ -5638,9 +5673,13 @@ def mno_bti_at_return_twice : Flag<["-"], "mno-bti-at-return-twice">,
   HelpText<"Do not add a BTI instruction after a setjmp or other"
            " return-twice construct (Arm/AArch64 only)">;
 
-foreach i = {1-31} in
+foreach i = {1-7,9-15,18,20-28} in
   def ffixed_x#i : Flag<["-"], "ffixed-x"#i>, Group<m_Group>,
     HelpText<"Reserve the x"#i#" register (AArch64/RISC-V only)">;
+
+foreach i = {8,16,17,19,29-31} in
+  def ffixed_x#i : Flag<["-"], "ffixed-x"#i>, Group<m_Group>,
+    HelpText<"Reserve the x"#i#" register (RISC-V only)">;
 
 def mlr_for_calls_only : Flag<["-"], "mlr-for-calls-only">, Group<m_aarch64_Features_Group>,
   HelpText<"Do not allocate the LR register for general purpose usage, only for calls. (AArch64 only)">;

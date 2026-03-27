@@ -188,14 +188,14 @@ ObjectContainerUniversalMachO::GetObjectFile(const FileSpec *file) {
   return ObjectFileSP();
 }
 
-size_t ObjectContainerUniversalMachO::GetModuleSpecifications(
+ModuleSpecList ObjectContainerUniversalMachO::GetModuleSpecifications(
     const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
     lldb::offset_t data_offset, lldb::offset_t file_offset,
-    lldb::offset_t file_size, lldb_private::ModuleSpecList &specs) {
-  const size_t initial_count = specs.GetSize();
+    lldb::offset_t file_size) {
   if (!extractor_sp)
-    return initial_count;
+    return {};
 
+  ModuleSpecList specs;
   DataExtractorSP data_extractor_sp =
       extractor_sp->GetSubsetExtractorSP(data_offset);
   if (ObjectContainerUniversalMachO::MagicBytesMatch(*data_extractor_sp)) {
@@ -206,11 +206,12 @@ size_t ObjectContainerUniversalMachO::GetModuleSpecifications(
         const lldb::offset_t slice_file_offset =
             fat_arch.GetOffset() + file_offset;
         if (fat_arch.GetOffset() < file_size && file_size > slice_file_offset) {
-          ObjectFile::GetModuleSpecifications(
-              file, slice_file_offset, file_size - slice_file_offset, specs);
+          ModuleSpecList arch_specs = ObjectFile::GetModuleSpecifications(
+              file, slice_file_offset, file_size - slice_file_offset);
+          specs.Append(arch_specs);
         }
       }
     }
   }
-  return specs.GetSize() - initial_count;
+  return specs;
 }

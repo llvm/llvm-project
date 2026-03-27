@@ -527,7 +527,7 @@ void JSONGenerator::serializeInfo(const TemplateInfo &Template, Object &Obj) {
       bool VerticalDisplay =
           Template.Specialization->Params.size() > getMaxParamWrapLimit();
       serializeArray(Template.Specialization->Params, TemplateSpecializationObj,
-                     "Parameters", SerializeTemplateParam, "End",
+                     "Parameters", SerializeTemplateParam, "SpecParamEnd",
                      [VerticalDisplay](Object &JsonObj) {
                        JsonObj["VerticalDisplay"] = VerticalDisplay;
                      });

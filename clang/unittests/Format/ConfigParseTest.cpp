@@ -337,8 +337,7 @@ TEST(ConfigParseTest, ParsesConfiguration) {
 #define CHECK_ALIGN_CONSECUTIVE(FIELD)                                         \
   do {                                                                         \
     Style.FIELD.Enabled = true;                                                \
-    CHECK_PARSE(#FIELD ": None", FIELD,                                        \
-                FormatStyle::AlignConsecutiveStyle({}));                       \
+    CHECK_PARSE(#FIELD ": None", FIELD, FormatStyle::AlignConsecutiveStyle{}); \
     CHECK_PARSE(                                                               \
         #FIELD ": Consecutive", FIELD,                                         \
         FormatStyle::AlignConsecutiveStyle(                                    \
@@ -369,7 +368,7 @@ TEST(ConfigParseTest, ParsesConfiguration) {
              /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
     /* For backwards compability, false / true should still parse */           \
     CHECK_PARSE(#FIELD ": false", FIELD,                                       \
-                FormatStyle::AlignConsecutiveStyle({}));                       \
+                FormatStyle::AlignConsecutiveStyle{});                         \
     CHECK_PARSE(                                                               \
         #FIELD ": true", FIELD,                                                \
         FormatStyle::AlignConsecutiveStyle(                                    \
@@ -1094,7 +1093,7 @@ TEST(ConfigParseTest, ParsesConfiguration) {
       FormatStyle::SortIncludesOptions(
           {/*Enabled=*/true, /*IgnoreCase=*/false, /*IgnoreExtension=*/false}));
   CHECK_PARSE("SortIncludes: false", SortIncludes,
-              FormatStyle::SortIncludesOptions({}));
+              FormatStyle::SortIncludesOptions{});
   CHECK_PARSE(
       "SortIncludes: CaseInsensitive", SortIncludes,
       FormatStyle::SortIncludesOptions(
@@ -1104,7 +1103,7 @@ TEST(ConfigParseTest, ParsesConfiguration) {
       FormatStyle::SortIncludesOptions(
           {/*Enabled=*/true, /*IgnoreCase=*/false, /*IgnoreExtension=*/false}));
   CHECK_PARSE("SortIncludes: Never", SortIncludes,
-              FormatStyle::SortIncludesOptions({}));
+              FormatStyle::SortIncludesOptions{});
 
   Style.RawStringFormats.clear();
   std::vector<FormatStyle::RawStringFormat> ExpectedRawStringFormats = {
