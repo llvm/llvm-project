@@ -16,8 +16,8 @@
 // There is no way to limit the number of threads on windows
 // UNSUPPORTED: windows
 
-// AIX, macOS and FreeBSD seem to limit the number of processes, not threads via RLIMIT_NPROC
-// But there is RLIMIT_THREADS in AIX which can be used here to limit the threads.
+// AIX, macOS and FreeBSD seem to limit the number of processes, not threads via RLIMIT_NPROC.
+// IN AIX RLIMIT_THREADS can be used to limit the threads.
 // XFAIL: target={{.+}}-apple-{{.*}}
 // XFAIL: freebsd
 
@@ -33,19 +33,20 @@
 
 #if __has_include(<sys/resource.h>)
 #  include <sys/resource.h>
-
-void force_thread_creation_failure() {
-  rlimit lim = {1, 1};
+// Using the macro TEST_RLIMIT to determine the type of RLIMIT based on the platform.
 #  if defined(_AIX) && defined(RLIMIT_THREADS)
-  assert(setrlimit(RLIMIT_THREADS, &lim) == 0);
+#    define TEST_RLIMIT RLIMIT_THREADS
 #  elif defined(RLIMIT_NPROC)
-  assert(setrlimit(RLIMIT_NPROC, &lim) == 0);
+#    define TEST_RLIMIT RLIMIT_NPROC
 #  else
 #    error "No known way to force only one thread being available"
 #  endif
 #else
 #  error "No known way to force only one thread being available"
 #endif
+void force_thread_creation_failure() {
+  rlimit lim = {1, 1};
+  assert(setrlimit(TEST_RLIMIT, &lim) == 0);
 }
 
 int main(int, char**) {
