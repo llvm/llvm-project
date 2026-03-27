@@ -521,6 +521,7 @@ off_t NativeFile::SeekFromEnd(off_t offset, Status *error_ptr) {
       else
         error_ptr->Clear();
     }
+    return result;
   }
 
   if (error_ptr)

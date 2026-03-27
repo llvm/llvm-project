@@ -51,6 +51,7 @@ protected:
   /// Split a vector store into multiple scalar stores.
   /// \returns The resulting chain.
 
+  SDValue LowerCTLS(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFCEIL(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFTRUNC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFRINT(SDValue Op, SelectionDAG &DAG) const;
