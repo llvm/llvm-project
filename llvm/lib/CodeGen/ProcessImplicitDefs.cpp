@@ -102,6 +102,10 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
   }
 
   // This is a physreg implicit-def.
+  // Trim any extra operands.
+  for (unsigned i = MI->getNumOperands() - 1; i; --i)
+    MI->removeOperand(i);
+
   // Try to add undef flag to all uses.  If all uses are updated remove
   // implicit-def.
   MachineBasicBlock::instr_iterator SearchMI = MI->getIterator();
@@ -122,13 +126,24 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
       if (!SearchReg.isPhysical() || !TRI->regsOverlap(Reg, SearchReg))
         continue;
       // SearchMI uses or redefines Reg. Set <undef> flags on all uses.
-      if (MO.isUse())
-        MO.setIsUndef();
-      if (MO.isDef() && TRI->isSubRegisterEq(SearchReg, Reg))
-        ImplicitDefIsDead = true;
+      if (MO.isUse()) {
+        if (TRI->isSubRegisterEq(Reg, SearchReg))
+          MO.setIsUndef();
+        else
+          // Use is larger than Reg.  It is not safe to add undef to this use.
+          return;
+      }
+      if (MO.isDef()) {
+        if (TRI->isSubRegisterEq(SearchReg, Reg))
+          ImplicitDefIsDead = true;
+        else
+          // Reg is larger than definition.  It is not safe to add undef to any
+          // subsequent uses of Reg.
+          return;
+      }
     }
     if (ImplicitDefIsDead) {
-      LLVM_DEBUG(dbgs() << "Physreg def: " << *SearchMI);
+      LLVM_DEBUG(dbgs() << "Physreg redefine: " << *SearchMI);
       break;
     }
   }
@@ -138,14 +153,8 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
   if (ImplicitDefIsDead ||
       (SearchedWholeBlock && MI->getParent()->succ_empty())) {
     MI->eraseFromParent();
-    return;
+    LLVM_DEBUG(dbgs() << "Deleting implicit-def: " << *MI);
   }
-
-  // Using instr wasn't found, it could be in another block.
-  // Leave the physreg IMPLICIT_DEF, but trim any extra operands.
-  for (unsigned i = MI->getNumOperands() - 1; i; --i)
-    MI->removeOperand(i);
-  LLVM_DEBUG(dbgs() << "Keeping physreg: " << *MI);
 }
 
 bool ProcessImplicitDefsLegacy::runOnMachineFunction(MachineFunction &MF) {
