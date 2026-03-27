@@ -978,7 +978,8 @@ Address ObjectFileELF::GetImageInfoAddress(Target *target) {
       if (symbol.d_tag == DT_MIPS_RLD_MAP) {
         // DT_MIPS_RLD_MAP tag stores an absolute address of the debug pointer.
         Address addr;
-        if (target->ReadPointerFromMemory(d_load_addr, error, addr, true))
+        if (target->ReadPointerFromMemory(Address(d_load_addr), error, addr,
+                                          true))
           return addr;
       }
       if (symbol.d_tag == DT_MIPS_RLD_MAP_REL) {
@@ -986,7 +987,8 @@ Address ObjectFileELF::GetImageInfoAddress(Target *target) {
         // relative to the address of the tag.
         uint64_t rel_offset;
         rel_offset = target->ReadUnsignedIntegerFromMemory(
-            d_load_addr, GetAddressByteSize(), UINT64_MAX, error, true);
+            Address(d_load_addr), GetAddressByteSize(), UINT64_MAX, error,
+            true);
         if (error.Success() && rel_offset != UINT64_MAX) {
           Address addr;
           addr_t debug_ptr_address =
@@ -1025,7 +1027,7 @@ Address ObjectFileELF::GetBaseAddress() {
       if (header.sh_flags & SHF_ALLOC)
         return Address(GetSectionList()->FindSectionByID(SectionIndex(I)), 0);
     }
-    return LLDB_INVALID_ADDRESS;
+    return Address();
   }
 
   for (const auto &EnumPHdr : llvm::enumerate(ProgramHeaders())) {
@@ -1036,7 +1038,7 @@ Address ObjectFileELF::GetBaseAddress() {
     return Address(
         GetSectionList()->FindSectionByID(SegmentID(EnumPHdr.index())), 0);
   }
-  return LLDB_INVALID_ADDRESS;
+  return Address();
 }
 
 size_t ObjectFileELF::ParseDependentModules() {

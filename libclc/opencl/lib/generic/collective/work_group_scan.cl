@@ -1,4 +1,4 @@
-//===-- C standard library header time.h ----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_TIME_H
-#define LLVM_LIBC_TIME_H
+#include "clc/collective/clc_work_group_scan.h"
 
-#include "__llvm-libc-common.h"
-#include "llvm-libc-macros/time-macros.h"
+#define __CLC_BODY "work_group_scan.inc"
+#include "clc/integer/gentype.inc"
 
-%%public_api()
-
-#endif // LLVM_LIBC_TIME_H
+#define __CLC_BODY "work_group_scan.inc"
+#include "clc/math/gentype.inc"
