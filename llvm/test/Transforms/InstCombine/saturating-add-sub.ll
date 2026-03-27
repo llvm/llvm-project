@@ -2902,8 +2902,8 @@ define i8 @fold_umin_to_uadd_sat_with_commuted_operations(i8 %a, i8 %b) {
 }
 
 ; Multi-use test: zext-add-umin-trunc, but add has multi use
-define i8 @no_fold_umin_to_uadd_sat_if_has_multi_use(i8 %a, i8 %b) {
-; CHECK-LABEL: @no_fold_umin_to_uadd_sat_if_has_multi_use(
+define i8 @no_fold_umin_to_uadd_sat_if_has_multi_use_for_add(i8 %a, i8 %b) {
+; CHECK-LABEL: @no_fold_umin_to_uadd_sat_if_has_multi_use_for_add(
 ; CHECK-NEXT:    [[ZA:%.*]] = zext i8 [[A:%.*]] to i16
 ; CHECK-NEXT:    [[ZB:%.*]] = zext i8 [[B:%.*]] to i16
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i16 [[ZB]], [[ZA]]
@@ -2916,6 +2916,43 @@ define i8 @no_fold_umin_to_uadd_sat_if_has_multi_use(i8 %a, i8 %b) {
   %zb = zext i8 %b to i16
   %add = add nuw nsw i16 %zb, %za
   call void @usei16(i16 %add)
+  %cmp = call i16 @llvm.umin.i16(i16 %add, i16 255)
+  %r = trunc nuw i16 %cmp to i8
+  ret i8 %r
+}
+
+; Multi-use test: zext-add-umin-trunc, but umin has multi use
+define i8 @no_fold_umin_to_uadd_sat_if_has_multi_use_for_umin(i8 %a, i8 %b) {
+; CHECK-LABEL: @no_fold_umin_to_uadd_sat_if_has_multi_use_for_umin(
+; CHECK-NEXT:    [[ZA:%.*]] = zext i8 [[A:%.*]] to i16
+; CHECK-NEXT:    [[ZB:%.*]] = zext i8 [[B:%.*]] to i16
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i16 [[ZB]], [[ZA]]
+; CHECK-NEXT:    [[CMP:%.*]] = call i16 @llvm.umin.i16(i16 [[ADD]], i16 255)
+; CHECK-NEXT:    [[R:%.*]] = trunc nuw i16 [[CMP]] to i8
+; CHECK-NEXT:    call void @usei16(i16 [[CMP]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %za = zext i8 %a to i16
+  %zb = zext i8 %b to i16
+  %add = add nuw nsw i16 %zb, %za
+  %cmp = call i16 @llvm.umin.i16(i16 %add, i16 255)
+  %r = trunc nuw i16 %cmp to i8
+  call void @usei16(i16 %cmp)
+  ret i8 %r
+}
+
+; Multi-use test: zext-add-umin-trunc, and zext has multi use
+define i8 @fold_umin_to_uadd_sat_if_has_multi_use_for_zext(i8 %a, i8 %b) {
+; CHECK-LABEL: @fold_umin_to_uadd_sat_if_has_multi_use_for_zext(
+; CHECK-NEXT:    [[ZA:%.*]] = zext i8 [[A:%.*]] to i16
+; CHECK-NEXT:    call void @usei16(i16 [[ZA]])
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[B:%.*]], i8 [[A]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %za = zext i8 %a to i16
+  %zb = zext i8 %b to i16
+  %add = add nuw nsw i16 %zb, %za
+  call void @usei16(i16 %za)
   %cmp = call i16 @llvm.umin.i16(i16 %add, i16 255)
   %r = trunc nuw i16 %cmp to i8
   ret i8 %r
