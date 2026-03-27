@@ -4631,7 +4631,7 @@ private:
 
         mlir::Type baseTy = fir::getBase(selector).getType();
         auto selectorBoxType = llvm::cast<fir::BaseBoxType>(baseTy);
-        bool isArray = selectorBoxType.isArray();
+        const bool isArray = selectorBoxType.isArray();
         const fir::BoxValue *selectorBox = selector.getBoxOf<fir::BoxValue>();
         if (std::holds_alternative<Fortran::parser::Default>(guard.u)) {
           // CLASS DEFAULT

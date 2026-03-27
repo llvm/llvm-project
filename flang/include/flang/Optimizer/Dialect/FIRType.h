@@ -48,7 +48,7 @@ public:
   mlir::Type getEleTy() const;
 
   /// Get the raw address type of the memory described by the box.
-  /// When \p dropHeapOrPtr is true, the returned type is always and
+  /// When \p dropHeapOrPtr is true, the returned type is always a
   /// fir::ReferenceType.
   mlir::Type getBaseAddressType(bool dropHeapOrPtr = false) const;
 
