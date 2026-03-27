@@ -256,8 +256,10 @@ getDisjunctionWeights(const SmallVector<T1, 2> &B1,
   // the product of sums, the subtracted one cancels out).
   assert(B1.size() == 2);
   assert(B2.size() == 2);
-  uint64_t FalseWeight = B1[1] * B2[1];
-  uint64_t TrueWeight = B1[0] * (B2[0] + B2[1]) + B1[1] * B2[0];
+  uint64_t FalseWeight = static_cast<uint64_t>(B1[1]) * B2[1];
+  uint64_t TrueWeight =
+      static_cast<uint64_t>(B1[0]) * (static_cast<uint64_t>(B2[0]) + B2[1]) +
+      static_cast<uint64_t>(B1[1]) * B2[0];
   return {TrueWeight, FalseWeight};
 }
 } // namespace llvm
