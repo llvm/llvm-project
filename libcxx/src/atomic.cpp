@@ -260,20 +260,33 @@ static void __platform_wake_by_address(void const* __ptr, bool __notify_one) {
 
 #elif defined(__Fuchsia__)
 
-static inline zx_futex_t const* __libcpp_zx_futex(__cxx_atomic_contention_t const volatile* ptr) {
+template <std::size_t _Size>
+static inline zx_futex_t const* __get_zx_futex(void const* __ptr) {
+  static_assert(_Size == sizeof(zx_futex_t), "Can only wait/wake on zx_futex_t-compatible value");
+
   // Implicitly link against the vDSO system call ABI without requiring the
   // final link to specify -lzircon explicitly when statically linking libc++.
 #  pragma comment(lib, "zircon")
-  return const_cast<zx_futex_t const*>(reinterpret_cast<zx_futex_t const volatile*>(&ptr->__a_value));
+
+  return const_cast<zx_futex_t const*>(reinterpret_cast<zx_futex_t const*>(__ptr));
 }
 
-static void
-__libcpp_platform_wait_on_address(__cxx_atomic_contention_t const volatile* __ptr, __cxx_contention_t __val) {
-  _zx_futex_wait(__libcpp_zx_futex(__ptr), __val, ZX_HANDLE_INVALID, ZX_TIME_INFINITE);
+template <std::size_t _Size, class MaybeTimeout>
+static void __platform_wait_on_address(void const* __ptr, void const* __val, MaybeTimeout maybe_timeout_ns) {
+  zx_futex_t val;
+  std::memcpy(&val, __val, _Size);
+  zx_instant_mono_t deadline;
+  if constexpr (is_same_v<MaybeTimeout, NoTimeout>) {
+    deadline = ZX_TIME_INFINITE;
+  } else {
+    deadline = _zx_deadline_after(maybe_timeout_ns);
+  }
+  _zx_futex_wait(__get_zx_futex<_Size>(__ptr), val, ZX_HANDLE_INVALID, deadline);
 }
 
-static void __libcpp_platform_wake_by_address(__cxx_atomic_contention_t const volatile* __ptr, bool __notify_one) {
-  _zx_futex_wake(__libcpp_zx_futex(__ptr), __notify_one ? 1 : UINT32_MAX);
+template <std::size_t _Size>
+static void __platform_wake_by_address(void const* __ptr, bool __notify_one) {
+  _zx_futex_wake(__get_zx_futex<_Size>(__ptr), __notify_one ? 1 : UINT32_MAX);
 }
 
 #else // <- Add other operating systems here
