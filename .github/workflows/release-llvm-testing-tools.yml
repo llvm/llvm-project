@@ -29,7 +29,7 @@ jobs:
           ninja split-file FileCheck
       - name: Build Package
         run: |
-          cd ../llvm/utils/llvm-testing-tools
+          cd llvm/utils/llvm-testing-tools
           mkdir ./src/binaries
           cp ../../../build/bin/FileCheck ./src/binaries/FileCheck
           cp ../../../build/bin/split-file ./src/binaries/split-file
