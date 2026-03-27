@@ -946,13 +946,13 @@ void DefFormat::genStructPrinter(StructDirective *el, FmtContext &ctx,
         os << tgfmt("$_printer << \"$0 = \";\n", &ctx, param->getName());
         auto *paramEl = dyn_cast<ParameterElement>(arg);
         if (paramEl && isUndelimitedArrayRefParam(paramEl) &&
-            elemIdx != elems.size() - 1)
+            elemIdx + 1 < elems.size())
           os << tgfmt("$_printer << \"[\";\n", &ctx);
       },
       [&](FormatElement *arg) {
         auto *paramEl = dyn_cast<ParameterElement>(arg);
         if (paramEl && isUndelimitedArrayRefParam(paramEl) &&
-            elemIdx != elems.size() - 1)
+            elemIdx + 1 < elems.size())
           os << tgfmt("$_printer << \"]\";\n", &ctx);
         ++elemIdx;
       });
