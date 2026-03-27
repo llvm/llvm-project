@@ -130,7 +130,7 @@ public:
   bool vaCopyIsMemcpy() { return true; }
 
   // Per-target overrides of special symbols.
-  virtual bool ignoreFunction(Function *F) { return false; }
+  virtual bool ignoreFunction(const Function *F) { return false; }
 
   // Any additional address spaces used in va intrinsics that should be
   // expanded.
@@ -994,7 +994,7 @@ struct SPIRV final : public VariadicABIInfo {
   }
 
   // The SPIR-V backend has special handling for builtins.
-  bool ignoreFunction(Function *F) override {
+  bool ignoreFunction(const Function *F) override {
     if (!F->isDeclaration())
       return false;
 
