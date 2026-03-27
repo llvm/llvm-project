@@ -238,6 +238,7 @@ Changes to LLDB
 
 * ``SBTarget::GetDataByteSize()``, ``SBTarget::GetCodeByteSize()``, and ``SBSection::GetTargetByteSize()``
   have been deprecated. They always return 1, as before.
+* A new ``webinspector-wasm`` platform was added to list and attach to WebAssebly processes in Safari.
 
 ### FreeBSD
 

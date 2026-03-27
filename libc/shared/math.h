@@ -81,6 +81,7 @@
 #include "math/dfmaf128.h"
 #include "math/dfmal.h"
 #include "math/dsqrtl.h"
+#include "math/erfcf16.h"
 #include "math/erff.h"
 #include "math/erff16.h"
 #include "math/exp.h"
