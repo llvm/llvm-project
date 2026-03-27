@@ -2104,7 +2104,9 @@ def main():
         level=(
             logging.DEBUG
             if opts.verbose > 1
-            else logging.INFO if opts.verbose > 0 else logging.WARNING
+            else logging.INFO
+            if opts.verbose > 0
+            else logging.WARNING
         ),
     )
 

@@ -40,7 +40,10 @@ class DAPTestCaseBase(TestBase):
             is_exe(self.lldbDAPExec), "lldb-dap must exist and be executable"
         )
         if self.dap_server_count:
-            log_file_path = self.getLogBasenameForCurrentTest() + f"-dap-{self.dap_server_count}.log"
+            log_file_path = (
+                self.getLogBasenameForCurrentTest()
+                + f"-dap-{self.dap_server_count}.log"
+            )
         else:
             log_file_path = self.getLogBasenameForCurrentTest() + "-dap.log"
         self.dap_server_count += 1
