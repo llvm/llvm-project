@@ -28,31 +28,18 @@ static void dump_type_value(lldb_private::CompilerType &fields_type, T value,
                             lldb_private::Stream &strm) {
   lldb::ByteOrder target_order = exe_scope->CalculateProcess()->GetByteOrder();
 
-  // For the bitfield types we generate, it is expected that the fields are
-  // in what is usually a big endian order. Most significant field first.
-  // This is also clang's internal ordering and the order we want to print
-  // them. On a big endian host this all matches up, for a little endian
-  // host we have to swap the order of the fields before display.
-  if (target_order == lldb::ByteOrder::eByteOrderLittle) {
-    value = reg_info.flags_type->ReverseFieldOrder(value);
-  }
-
-  // Then we need to match the target's endian on a byte level as well.
+  // The type will be rendered in the target's type system, so it must match
+  // its endian.
   if (lldb_private::endian::InlHostByteOrder() != target_order)
     value = llvm::byteswap(value);
 
-  lldb_private::DataExtractor data_extractor{
-      &value, sizeof(T), lldb_private::endian::InlHostByteOrder(), 8};
+  lldb_private::DataExtractor data_extractor{&value, sizeof(T), target_order,
+                                             8};
 
   lldb::ValueObjectSP vobj_sp = lldb_private::ValueObjectConstResult::Create(
       exe_scope, fields_type, lldb_private::ConstString(), data_extractor);
   lldb_private::DumpValueObjectOptions dump_options;
-  lldb_private::DumpValueObjectOptions::ChildPrintingDecider decider =
-      [](lldb_private::ConstString varname) {
-        // Unnamed bit-fields are padding that we don't want to show.
-        return varname.GetLength();
-      };
-  dump_options.SetChildPrintingDecider(decider).SetHideRootType(true);
+  dump_options.SetHideRootType(true);
 
   if (llvm::Error error = vobj_sp->Dump(strm, dump_options))
     strm << "error: " << toString(std::move(error));
