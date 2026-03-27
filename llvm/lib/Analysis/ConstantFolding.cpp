@@ -213,142 +213,78 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
   }
 
   // Now we know that the input and output vectors are both integer vectors
-  // of the same size, and that their #elements is not the same.  Do the
-  // conversion here, which depends on whether the input or output has
-  // more elements.
+  // of the same size, and that their #elements is not the same. 
+  // Use data buffer for easy non-integer element ratio vectors handling,
+  // For example: <4 x i24> to <3 x i32>.
   bool isLittleEndian = DL.isLittleEndian();
   unsigned SrcBitSize = SrcEltTy->getPrimitiveSizeInBits();
   unsigned DstBitSize = DL.getTypeSizeInBits(DstEltTy);
   SmallVector<Constant*, 32> Result;
   unsigned SrcElt = 0;
-  APInt Rest(std::max(SrcBitSize, DstBitSize), 0);
-  unsigned RestBitSize = 0;
-  bool HasUndef = true;
-  bool HasPoison = false;
 
-  if (NumDstElt < NumSrcElt) {
-    // Handle: bitcast (<4 x i32> <i32 0, i32 1, i32 2, i32 3> to <2 x i64>)
-    //         bitcast (<4 x i24> <i24 0, i24 1, i24 2, i24 3> to <3 x i32>)
-    APInt Zero = APInt::getZero(DstBitSize);
-    while (Result.size() != NumDstElt) {
-      APInt NextVecElem;
-      if (!HasUndef)
-        NextVecElem = Zero;
-      while (RestBitSize < DstBitSize) {
-        assert(SrcElt < NumSrcElt && "Source vector overflow.");
-        auto *Element = C->getAggregateElement(SrcElt++);
-        if (!Element) // Reject constantexpr elements.
-          return ConstantExpr::getBitCast(C, DestTy);
+  APInt Buffer(2 * std::max(SrcBitSize, DstBitSize), 0);
+  APInt UndefMask(Buffer.getBitWidth(), 0);
+  APInt PoisonMask(Buffer.getBitWidth(), 0);
+  unsigned BufferBitSize = 0;
+  
+  while (Result.size() != NumDstElt) {
+    // Load SrcElts into Buffer.
+    while (BufferBitSize < DstBitSize) {
+      Constant *Element = C->getAggregateElement(SrcElt++);
+      if (!Element) // Reject constantexpr elements
+        return ConstantExpr::getBitCast(C, DestTy);
 
-        RestBitSize += SrcBitSize;
-        HasUndef = isa<UndefValue>(Element);
-        if (HasUndef) {
-          HasPoison |= isa<PoisonValue>(Element);
-          continue;
-        }
+      // Shift Buffer & Masks to fit next SrcElt.
+      unsigned ShiftAmt = isLittleEndian ? 0 : SrcBitSize;
+      Buffer = Buffer.shl(ShiftAmt);
+      UndefMask = UndefMask.shl(ShiftAmt);
+      PoisonMask = PoisonMask.shl(ShiftAmt);
 
+      APInt SrcValue;
+      unsigned BitPosition = isLittleEndian ? BufferBitSize : 0;
+      if (isa<UndefValue>(Element)) {
+        // Set masks fragments bits.
+        UndefMask.setBits(BitPosition, BitPosition+SrcBitSize);
+        if (isa<PoisonValue>(Element))
+          PoisonMask.setBits(BitPosition, BitPosition+SrcBitSize);
+        SrcValue = APInt::getZero(DstBitSize);
+      } else {
         auto *Src = dyn_cast<ConstantInt>(Element);
         if (!Src)
           return ConstantExpr::getBitCast(C, DestTy);
-        NextVecElem = Src->getValue();
-        NextVecElem = NextVecElem.zext(DstBitSize);
+        SrcValue = Src->getValue();
+      } 
 
-        // Shift next SrcElt to right place, depending on endianness.
-        if (isLittleEndian) {
-          Rest |= NextVecElem << RestBitSize - SrcBitSize;
-        } else {
-          if (RestBitSize <= DstBitSize)
-            Rest |= NextVecElem << (DstBitSize - RestBitSize);
-          else
-            Rest |= NextVecElem.lshr(RestBitSize - DstBitSize);
-        }
-      }
+      // Insert src element bits into Buffer on correct position.
+      Buffer.insertBits(SrcValue, BitPosition);
+      BufferBitSize += SrcBitSize;
+    }
 
-      RestBitSize -= DstBitSize;
-      if (NextVecElem.getBitWidth() != DstBitSize) {
-        if (HasPoison)
+    // Create DstElts from Buffer.
+    while (BufferBitSize >= DstBitSize) {
+      unsigned ShiftAmt = isLittleEndian ? 0 : BufferBitSize - DstBitSize;
+      // Emit undef/poison, if all undef mask fragment bits are set.
+      if (UndefMask.lshr(ShiftAmt).trunc(DstBitSize).isAllOnes()) {
+        // Push poison, if any bit in poison mask fragment is set.
+        if (!PoisonMask.lshr(ShiftAmt).trunc(DstBitSize).isZero()) {
           Result.push_back(PoisonValue::get(DstEltTy));
-        else
+        } else {
           Result.push_back(UndefValue::get(DstEltTy));
-        continue;
-      }
-      Result.push_back(ConstantInt::get(DstEltTy, Rest));
-
-      // Shift unused bits from last SrcElt to next DstElt right place.
-      if (isLittleEndian)
-        Rest = NextVecElem.lshr(SrcBitSize - RestBitSize);
-      else
-        Rest = NextVecElem << (DstBitSize - RestBitSize);
-    }
-    return ConstantVector::get(Result);
-  }
-
-  // Handle: bitcast (<2 x i64> <i64 0, i64 1> to <4 x i32>)
-  //         bitcast (<3 x i64> <i64 0, i64 1, i64 2> to <8 x i24>)
-  unsigned Ratio = NumDstElt/NumSrcElt;
-  while (Result.size() != NumDstElt) {
-    unsigned UnusedBits = SrcBitSize - RestBitSize;
-    if (RestBitSize >= DstBitSize) {
-      if (!HasUndef) {
-        APInt Elt =
-            Rest.lshr(isLittleEndian ? UnusedBits : (RestBitSize - DstBitSize));
-        Result.push_back(ConstantInt::get(DstEltTy, Elt.trunc(DstBitSize)));
-      } else if (HasPoison) {
-        Result.push_back(PoisonValue::get(DstEltTy));
-        HasPoison = RestBitSize > DstBitSize;
+        }
       } else {
-        Result.push_back(UndefValue::get(DstEltTy));
-        HasUndef = RestBitSize > DstBitSize;
+        // Create and push DstElt.
+        APInt Elt = Buffer.lshr(ShiftAmt).trunc(DstBitSize);
+        Result.push_back(ConstantInt::get(DstEltTy, Elt));
       }
-      RestBitSize -= DstBitSize;
-      continue;
-    }
-    auto *Element = C->getAggregateElement(SrcElt++);
-    if (!Element) // Reject constantexpr elements.
-      return ConstantExpr::getBitCast(C, DestTy);
 
-    APInt NextVecElem;
-    if (isa<UndefValue>(Element)) {
-      // Correctly Propagate undef values.
-      HasUndef = true;
-      HasPoison = isa<PoisonValue>(Element);
-      if (RestBitSize == 0) {
-        RestBitSize += SrcBitSize;
-        continue;
-      }
-      NextVecElem = APInt::getZero(SrcBitSize);
-    } else {
-      auto *Src = dyn_cast<ConstantInt>(Element);
-      if (!Src)
-        return ConstantExpr::getBitCast(C, DestTy);
-      NextVecElem = Src->getValue();
-      HasUndef = false;
-    }
-    APInt Value = Rest;
-    if (SrcBitSize % DstBitSize)
-      Rest = NextVecElem;
-    if (RestBitSize != 0) {
-      // Shift the Rest into the right place, shift NextVecElem to fit Rest.
+      // Shift unused Buffer fragment to lower bits.
       if (isLittleEndian) {
-        Value.lshrInPlace(UnusedBits);
-        NextVecElem <<= RestBitSize;
-      } else {
-        Value <<= UnusedBits;
-        NextVecElem.lshrInPlace(RestBitSize);
+        Buffer.lshrInPlace(DstBitSize);
+        UndefMask.lshrInPlace(DstBitSize);
+        PoisonMask.lshrInPlace(DstBitSize); 
       }
+      BufferBitSize -= DstBitSize;
     }
-    Value |= NextVecElem;
-    unsigned ShiftAmt = isLittleEndian ? 0 : SrcBitSize - DstBitSize;
-    for (unsigned j = 0; j != Ratio; ++j) {
-      // Shift the piece of the value into the right place, depending on
-      // endianness.
-      APInt Elt = Value.lshr(ShiftAmt);
-      ShiftAmt += isLittleEndian ? DstBitSize : -DstBitSize;
-
-      // Truncate and remember this piece.
-      Result.push_back(ConstantInt::get(DstEltTy, Elt.trunc(DstBitSize)));
-    }
-    RestBitSize += SrcBitSize - Ratio * DstBitSize;
   }
 
   return ConstantVector::get(Result);
