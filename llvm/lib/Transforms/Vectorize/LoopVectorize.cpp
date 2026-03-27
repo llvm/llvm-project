@@ -7799,11 +7799,11 @@ VPRecipeBuilder::tryToOptimizeInductionTruncate(VPInstruction *VPI,
 
   // Wrap flags from the original induction do not apply to the truncated type,
   // so do not propagate them.
+  VPIRFlags Flags = VPIRFlags::WrapFlagsTy(false, false);
   VPValue *Step =
       vputils::getOrCreateVPValueForSCEVExpr(Plan, IndDesc.getStep());
   return new VPWidenIntOrFpInductionRecipe(
-      Phi, Start, Step, &Plan.getVF(), IndDesc, I,
-      VPIRFlags::WrapFlagsTy(false, false), VPI->getDebugLoc());
+      Phi, Start, Step, &Plan.getVF(), IndDesc, I, Flags, VPI->getDebugLoc());
 }
 
 VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(VPInstruction *VPI,
