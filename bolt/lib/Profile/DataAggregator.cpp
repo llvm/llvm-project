@@ -544,24 +544,24 @@ void DataAggregator::parsePerfTextData(BinaryContext &BC) {
   outs() << "PERF2BOLT: parsing a hybrid perf-script events...\n";
   NamedRegionTimer T("parsePerfTextData", "Parsing perf-script events",
                      TimerGroupName, TimerGroupDesc, opts::TimeAggregator);
+  if (!Filename.empty()) {
+    ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
+        MemoryBuffer::getFileOrSTDIN(Filename);
+    if (std::error_code EC = MB.getError()) {
+      errs() << "PERF2BOLT-ERROR: cannot open " << Filename << ": "
+             << EC.message() << "\n";
+      exit(1);
+    }
 
-  ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
-      MemoryBuffer::getFileOrSTDIN(Filename);
-  if (std::error_code EC = MB.getError()) {
-    errs() << "PERF2BOLT-ERROR: cannot open " << Filename << ": "
-           << EC.message() << "\n";
-    exit(1);
+    ParsingBuf = (*MB)->getBuffer();
+    Col = 0;
+    Line = 1;
+    if (std::error_code EC = parsePerfTextFileHeader()) {
+      errs() << "PERF2BOLT-ERROR: failed to parse text header" << EC.message()
+             << "\n";
+      exit(1);
+    }
   }
-
-  ParsingBuf = (*MB)->getBuffer();
-  Col = 0;
-  Line = 1;
-  if (std::error_code EC = parsePerfTextFileHeader()) {
-    errs() << "PERF2BOLT-ERROR: failed to parse text header" << EC.message()
-           << "\n";
-    exit(1);
-  }
-
   parsePerfData(BC);
 }
 
@@ -654,6 +654,9 @@ void DataAggregator::filterBinaryMMapInfo() {
 int DataAggregator::prepareToParse(StringRef Name, PerfProcessInfo &Process,
                                    PerfProcessErrorCallbackTy Callback) {
   if (opts::ReadPerfTextProfile) {
+    // No profile, ParsingBuf is set directly in unittests.
+    if (Filename.empty())
+      return 0;
     if (Process.Length == 0) {
       errs() << "PERF2BOLT-WARNING: your input profile was generated with "
              << "parsing " << Process.Type << " event enabled. "
