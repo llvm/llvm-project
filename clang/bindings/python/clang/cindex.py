@@ -4656,7 +4656,7 @@ class Config:
 
         return library
 
-    def get_version(self):
+    def get_clang_version(self) -> str:
         """
         Returns the libclang version string used by the bindings
         """
