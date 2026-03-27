@@ -29,6 +29,8 @@ jobs:
           ninja split-file FileCheck
       - name: Build Package
         run: |
+          apt-get update
+          apt-get install -y python3-build
           cd llvm/utils/llvm-testing-tools
           mkdir ./src/binaries
           cp ../../../build/bin/FileCheck ./src/binaries/FileCheck
