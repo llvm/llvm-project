@@ -487,7 +487,7 @@ bool executeAssemblerImpl(AssemblerInvocation &Opts, DiagnosticsEngine &Diags,
         T, Ctx, std::unique_ptr<MCAsmBackend>(MAB),
         MAB->createObjectWriter(*Out), std::unique_ptr<MCCodeEmitter>(CE),
         *STI));
-    Str.get()->initSections(Opts.NoExecStack, *STI);
+    Str.get()->initSections(*STI);
   }
 
   bool Failed = false;

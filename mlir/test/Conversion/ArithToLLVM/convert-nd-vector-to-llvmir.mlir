@@ -125,6 +125,21 @@ func.func @fptrunc_vector(%arg0 : vector<1x2x3xf64>) -> vector<1x2x3xf16> {
   return %0 : vector<1x2x3xf16>
 }
 
+// CHECK-LABEL: @convertf
+func.func @convertf_vector(%arg0 : vector<1x2x3xf16>) -> vector<1x2x3xbf16> {
+  // CHECK: llvm.mlir.poison : !llvm.array<1 x array<2 x vector<3xbf16>>>
+  // CHECK: llvm.extractvalue %{{.*}}[0, 0] : !llvm.array<1 x array<2 x vector<3xf16>>>
+  // CHECK: llvm.fpext %{{.*}} : vector<3xf16> to vector<3xf32>
+  // CHECK: llvm.fptrunc %{{.*}} : vector<3xf32> to vector<3xbf16>
+  // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[0, 0] : !llvm.array<1 x array<2 x vector<3xbf16>>>
+  // CHECK: llvm.extractvalue %{{.*}}[0, 1] : !llvm.array<1 x array<2 x vector<3xf16>>>
+  // CHECK: llvm.fpext %{{.*}} : vector<3xf16> to vector<3xf32>
+  // CHECK: llvm.fptrunc %{{.*}} : vector<3xf32> to vector<3xbf16>
+  // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[0, 1] : !llvm.array<1 x array<2 x vector<3xbf16>>>
+  %0 = arith.convertf %arg0: vector<1x2x3xf16> to vector<1x2x3xbf16>
+  return %0 : vector<1x2x3xbf16>
+}
+
 // CHECK-LABEL: @trunci
 func.func @trunci_vector(%arg0 : vector<1x2x3xi64>) -> vector<1x2x3xi16> {
   // CHECK: llvm.mlir.poison : !llvm.array<1 x array<2 x vector<3xi16>>>

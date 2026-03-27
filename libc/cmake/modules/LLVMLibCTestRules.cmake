@@ -336,14 +336,17 @@ function(create_libc_unittest fq_target_name)
     )
   endif()
 
+  # The SUITE variable can be used to group tests into a custom target. 
+  # If a target named ${LIBC_UNITTEST_SUITE}-build exists, we add the 
+  # test executable to it as a dependency. This allows building the 
+  # test binaries for Lit without triggering their execution.
   if(LIBC_UNITTEST_SUITE)
-    add_dependencies(
-      ${LIBC_UNITTEST_SUITE}
-      ${fq_target_name}
-    )
+    add_dependencies(${LIBC_UNITTEST_SUITE} ${fq_target_name})
+    if(TARGET ${LIBC_UNITTEST_SUITE}-build)
+      add_dependencies(${LIBC_UNITTEST_SUITE}-build ${fq_build_target_name})
+    endif()
   endif()
   add_dependencies(libc-unit-tests ${fq_target_name})
-  # Also add dependency to build-only target for lit
   if(TARGET libc-unit-tests-build)
     add_dependencies(libc-unit-tests-build ${fq_build_target_name})
   endif()
@@ -666,7 +669,18 @@ function(add_integration_test test_name)
     COMMAND_EXPAND_LISTS
     COMMENT "Running integration test ${fq_target_name}"
   )
-  add_dependencies(${INTEGRATION_TEST_SUITE} ${fq_target_name})
+  if(INTEGRATION_TEST_SUITE)
+    add_dependencies(${INTEGRATION_TEST_SUITE} ${fq_target_name})
+    # If a target named ${INTEGRATION_TEST_SUITE}-build exists, we add the 
+    # test executable to it as a dependency. This allows building the 
+    # test binaries for Lit without triggering their execution.
+    if(TARGET ${INTEGRATION_TEST_SUITE}-build)
+      add_dependencies(${INTEGRATION_TEST_SUITE}-build ${fq_build_target_name})
+    endif()
+  endif()
+  if(TARGET libc-integration-tests-build)
+    add_dependencies(libc-integration-tests-build ${fq_build_target_name})
+  endif()
 endfunction(add_integration_test)
 
 # Rule to add a hermetic program. A hermetic program is one whose executable is fully
@@ -906,7 +920,15 @@ function(add_libc_hermetic test_name)
     # If it is a benchmark, it will already have been added to the
     # gpu-benchmark target
     add_dependencies(libc-hermetic-tests ${fq_target_name})
-    # Also add dependency to build-only target for lit
+    if(LIBC_HERMETIC_TEST_SUITE)
+      add_dependencies(${LIBC_HERMETIC_TEST_SUITE} ${fq_target_name})
+      # If a target named ${LIBC_HERMETIC_TEST_SUITE}-build exists, we add the 
+      # test executable to it as a dependency. This allows building the 
+      # test binaries for Lit without triggering their execution.
+      if(TARGET ${LIBC_HERMETIC_TEST_SUITE}-build)
+        add_dependencies(${LIBC_HERMETIC_TEST_SUITE}-build ${fq_build_target_name})
+      endif()
+    endif()
     if(TARGET libc-hermetic-tests-build)
       add_dependencies(libc-hermetic-tests-build ${fq_build_target_name})
     endif()
