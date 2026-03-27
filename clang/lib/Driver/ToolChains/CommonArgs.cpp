@@ -2484,7 +2484,8 @@ void tools::AddRunTimeLibs(const ToolChain &TC, const Driver &D,
       // Issue error diagnostic if libgcc is explicitly specified
       // through command line as --rtlib option argument.
       Arg *A = Args.getLastArg(options::OPT_rtlib_EQ);
-      if (A && A->getValue() != StringRef("platform")) {
+      if (A && A->getValue() != StringRef("platform") &&
+          A->getValue() != StringRef("")) {
         TC.getDriver().Diag(diag::err_drv_unsupported_rtlib_for_platform)
             << A->getValue() << "MSVC";
       }
