@@ -197,8 +197,7 @@ CoroIdElider::CoroIdElider(CoroIdInst *CoroId, FunctionElideInfo &FEI,
         default:
           llvm_unreachable("unexpected coro.subfn.addr constant");
         }
-      }
-      else if (auto *II = dyn_cast<CoroDeadInst>(U))
+      } else if (auto *II = dyn_cast<CoroDeadInst>(U))
         CoroDeads.push_back(II);
     }
   }
