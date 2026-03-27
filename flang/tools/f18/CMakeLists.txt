@@ -50,6 +50,20 @@ endif()
 # these module files will be contributed from the CMakeLists in flang/tools/f18.
 set(module_objects "")
 
+# Check both top-level and per-target runtimes lists, since openmp may only
+# be enabled for specific triples via RUNTIMES_<target>_LLVM_ENABLE_RUNTIMES.
+set(openmp_in_runtimes FALSE)
+if ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES)
+  set(openmp_in_runtimes TRUE)
+else()
+  foreach(_target ${LLVM_RUNTIME_TARGETS})
+    if ("openmp" IN_LIST RUNTIMES_${_target}_LLVM_ENABLE_RUNTIMES)
+      set(openmp_in_runtimes TRUE)
+      break()
+    endif()
+  endforeach()
+endif()
+
 # Create module files directly from the top-level module source directory.
 # If CMAKE_CROSSCOMPILING, then the newly built flang executable was
 # cross compiled, and thus can't be executed on the build system and thus
@@ -137,7 +151,7 @@ if (NOT CMAKE_CROSSCOMPILING)
   # Special case for omp_lib.mod, because its source comes from openmp/runtime/src/include.
   # It also produces two module files: omp_lib.mod and omp_lib_kinds.mod.  Compile these
   # files only if OpenMP support has been configured.
-  if ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES)
+  if (openmp_in_runtimes)
     message(STATUS "OpenMP runtime support enabled via LLVM_ENABLE_RUNTIMES, assuming omp_lib.mod is built there")
   else()
     message(WARNING "Not building omp_lib.mod, no OpenMP runtime in either LLVM_ENABLE_PROJECTS or LLVM_ENABLE_RUNTIMES")
@@ -153,7 +167,7 @@ set_target_properties(module_files PROPERTIES FOLDER "Flang/Resources")
 
 # TODO Move this to a more suitable location
 # Copy the generated omp_lib.h header file, if OpenMP support has been configured.
-if ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES)
+if (openmp_in_runtimes)
   message(STATUS "OpenMP runtime support enabled via LLVM_ENABLE_RUNTIMES, assuming omp_lib.h is built there")
 else()
   message(STATUS "Not copying omp_lib.h, no OpenMP runtime in either LLVM_ENABLE_PROJECTS or LLVM_ENABLE_RUNTIMES")

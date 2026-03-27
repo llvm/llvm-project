@@ -552,8 +552,14 @@ if(build_runtimes)
     list(APPEND extra_cmake_args "-DCMAKE_PROGRAM_PATH=${CMAKE_PROGRAM_PATH}")
   endif()
 
-  # TODO: We need to consider passing it as '-DRUNTIMES_x86_64_LLVM_ENABLE_RUNTIMES'.
-  if("libclc" IN_LIST LLVM_ENABLE_RUNTIMES)
+  # Top level list of all enabled runtimes across all runtime targets.
+  set(_all_runtimes ${LLVM_ENABLE_RUNTIMES})
+  foreach(_target ${LLVM_RUNTIME_TARGETS})
+    list(APPEND _all_runtimes ${RUNTIMES_${_target}_LLVM_ENABLE_RUNTIMES})
+  endforeach()
+  list(REMOVE_DUPLICATES _all_runtimes)
+
+  if("libclc" IN_LIST _all_runtimes)
     foreach(dep clang llvm-link opt llvm-ar llvm-ranlib)
       if(TARGET ${dep})
         list(APPEND extra_deps ${dep})
@@ -561,7 +567,7 @@ if(build_runtimes)
     endforeach()
   endif()
   # Tools needed by build_symbolizer.sh.
-  if("compiler-rt" IN_LIST LLVM_ENABLE_RUNTIMES AND COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER)
+  if("compiler-rt" IN_LIST _all_runtimes AND COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER)
     foreach(dep clang llvm-tblgen opt llvm-ar llvm-link)
       if(TARGET ${dep})
         list(APPEND extra_deps ${dep})
@@ -569,14 +575,17 @@ if(build_runtimes)
     endforeach()
   endif()
   # Allow openmp to see the Fortran compiler
-  if ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES AND "flang" IN_LIST LLVM_ENABLE_PROJECTS)
+  if ("openmp" IN_LIST _all_runtimes AND "flang" IN_LIST LLVM_ENABLE_PROJECTS)
     list(APPEND extra_args ENABLE_FORTRAN)
   endif()
-  if("openmp" IN_LIST LLVM_ENABLE_RUNTIMES OR "offload" IN_LIST LLVM_ENABLE_RUNTIMES)
+  if("openmp" IN_LIST _all_runtimes OR "offload" IN_LIST _all_runtimes)
     if (${LLVM_TOOL_FLANG_BUILD})
       message(STATUS "Configuring build of omp_lib.mod and omp_lib_kinds.mod via flang")
       set(LIBOMP_FORTRAN_MODULES_COMPILER "${CMAKE_BINARY_DIR}/bin/flang")
       set(LIBOMP_MODULES_INSTALL_PATH "${CMAKE_INSTALL_INCLUDEDIR}/flang")
+      list(APPEND extra_cmake_args
+        "-DLIBOMP_FORTRAN_MODULES_COMPILER=${LIBOMP_FORTRAN_MODULES_COMPILER}"
+        "-DLIBOMP_MODULES_INSTALL_PATH=${LIBOMP_MODULES_INSTALL_PATH}")
       # TODO: This is a workaround until flang becomes a first-class project
       # in llvm/CMakeList.txt.  Until then, this line ensures that flang is
       # built before "openmp" is built as a runtime project.  Besides "flang"
@@ -602,7 +611,7 @@ if(build_runtimes)
   if(LLVM_LIBC_FULL_BUILD)
     list(APPEND extra_cmake_args "-DLLVM_LIBC_FULL_BUILD=ON")
   endif()
-  if("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+  if("flang-rt" IN_LIST _all_runtimes)
     list(APPEND extra_args ENABLE_FORTRAN)
   endif ()
 
