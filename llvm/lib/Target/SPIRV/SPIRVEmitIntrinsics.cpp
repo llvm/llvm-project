@@ -854,10 +854,8 @@ Type *SPIRVEmitIntrinsics::getGEPType(GetElementPtrInst *Ref) {
   // useful here
   if (isNestedPointer(Ref->getSourceElementType())) {
     Ty = Ref->getSourceElementType();
-    for (Use &U : drop_begin(Ref->indices())) {
-      abort();
+    for (Use &U : drop_begin(Ref->indices()))
       Ty = GetElementPtrInst::getTypeAtIndex(Ty, U.get());
-    }
   } else {
     Ty = Ref->getResultElementType();
   }
