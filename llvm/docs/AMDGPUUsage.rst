@@ -1168,102 +1168,114 @@ This is different to the OpenCL [OpenCL]_ memory model which does not have scope
 inclusion and requires the memory scopes to exactly match. However, this
 is conservatively correct for OpenCL.
 
-  .. table:: AMDHSA LLVM Sync Scopes
-     :name: amdgpu-amdhsa-llvm-sync-scopes-table
+There is a ``one-as`` variant for each sync scope. If a ``release`` or
+``acquire`` operation with a ``one-as`` sync scope participates in a
+synchronization, only the effects of memory operations in the address space of
+the ``one-as`` operation are synchronized. The address space of a ``fence``
+instruction with ``one-as`` sync scope is specified via
+``amdgpu-synchronize-as`` MMRAs (see :ref:`amdgpu-fence-as`).
 
-     ======================= ===================================================
-     LLVM Sync Scope         Description
-     ======================= ===================================================
-     *none*                  The default: ``system``.
+.. note::
+  The behavior of ``one-as`` sync scopes is currently not well-founded in the
+  memory model. Synchronization via a ``one-as`` sync scope effectively causes
+  the happens-before relation to be non-transitive.
 
-                             Synchronizes with, and participates in modification
-                             and seq_cst total orderings with, other operations
-                             (except image operations) for all address spaces
-                             (except private, or generic that accesses private)
-                             provided the other operation's sync scope is:
+.. table:: AMDHSA LLVM Sync Scopes
+    :name: amdgpu-amdhsa-llvm-sync-scopes-table
 
-                             - ``system``.
-                             - ``agent`` and executed by a thread on the same
-                               agent.
-                             - ``workgroup`` and executed by a thread in the
-                               same work-group.
-                             - ``wavefront`` and executed by a thread in the
-                               same wavefront.
+    ======================= ===================================================
+    LLVM Sync Scope         Description
+    ======================= ===================================================
+    *none*                  The default: ``system``.
 
-     ``agent``               Synchronizes with, and participates in modification
-                             and seq_cst total orderings with, other operations
-                             (except image operations) for all address spaces
-                             (except private, or generic that accesses private)
-                             provided the other operation's sync scope is:
+                            Synchronizes with, and participates in modification
+                            and seq_cst total orderings with, other operations
+                            (except image operations) for all address spaces
+                            (except private, or generic that accesses private)
+                            provided the other operation's sync scope is:
 
-                             - ``system`` or ``agent`` and executed by a thread
-                               on the same agent.
-                             - ``workgroup`` and executed by a thread in the
-                               same work-group.
-                             - ``wavefront`` and executed by a thread in the
-                               same wavefront.
+                            - ``system``.
+                            - ``agent`` and executed by a thread on the same
+                              agent.
+                            - ``workgroup`` and executed by a thread in the
+                              same work-group.
+                            - ``wavefront`` and executed by a thread in the
+                              same wavefront.
 
-     ``cluster``             Synchronizes with, and participates in modification
-                             and seq_cst total orderings with, other operations
-                             (except image operations) for all address spaces
-                             (except private, or generic that accesses private)
-                             provided the other operation's sync scope is:
+    ``agent``               Synchronizes with, and participates in modification
+                            and seq_cst total orderings with, other operations
+                            (except image operations) for all address spaces
+                            (except private, or generic that accesses private)
+                            provided the other operation's sync scope is:
 
-                             - ``system``, ``agent`` or ``cluster`` and
-                               executed by a thread on the same cluster.
-                             - ``workgroup`` and executed by a thread in the
-                               same work-group.
-                             - ``wavefront`` and executed by a thread in the
-                               same wavefront.
+                            - ``system`` or ``agent`` and executed by a thread
+                              on the same agent.
+                            - ``workgroup`` and executed by a thread in the
+                              same work-group.
+                            - ``wavefront`` and executed by a thread in the
+                              same wavefront.
 
-                             On targets that do not support workgroup cluster
-                             launch mode, this behaves like ``agent`` scope instead.
+    ``cluster``             Synchronizes with, and participates in modification
+                            and seq_cst total orderings with, other operations
+                            (except image operations) for all address spaces
+                            (except private, or generic that accesses private)
+                            provided the other operation's sync scope is:
 
-     ``workgroup``           Synchronizes with, and participates in modification
-                             and seq_cst total orderings with, other operations
-                             (except image operations) for all address spaces
-                             (except private, or generic that accesses private)
-                             provided the other operation's sync scope is:
+                            - ``system``, ``agent`` or ``cluster`` and
+                              executed by a thread on the same cluster.
+                            - ``workgroup`` and executed by a thread in the
+                              same work-group.
+                            - ``wavefront`` and executed by a thread in the
+                              same wavefront.
 
-                             - ``system``, ``agent`` or ``workgroup`` and
-                               executed by a thread in the same work-group.
-                             - ``wavefront`` and executed by a thread in the
-                               same wavefront.
+                            On targets that do not support workgroup cluster
+                            launch mode, this behaves like ``agent`` scope instead.
 
-     ``wavefront``           Synchronizes with, and participates in modification
-                             and seq_cst total orderings with, other operations
-                             (except image operations) for all address spaces
-                             (except private, or generic that accesses private)
-                             provided the other operation's sync scope is:
+    ``workgroup``           Synchronizes with, and participates in modification
+                            and seq_cst total orderings with, other operations
+                            (except image operations) for all address spaces
+                            (except private, or generic that accesses private)
+                            provided the other operation's sync scope is:
 
-                             - ``system``, ``agent``, ``workgroup`` or
-                               ``wavefront`` and executed by a thread in the
-                               same wavefront.
+                            - ``system``, ``agent`` or ``workgroup`` and
+                              executed by a thread in the same work-group.
+                            - ``wavefront`` and executed by a thread in the
+                              same wavefront.
 
-     ``singlethread``        Only synchronizes with and participates in
-                             modification and seq_cst total orderings with,
-                             other operations (except image operations) running
-                             in the same thread for all address spaces (for
-                             example, in signal handlers).
+    ``wavefront``           Synchronizes with, and participates in modification
+                            and seq_cst total orderings with, other operations
+                            (except image operations) for all address spaces
+                            (except private, or generic that accesses private)
+                            provided the other operation's sync scope is:
 
-     ``one-as``              Same as ``system`` but only synchronizes with other
-                             operations within the same address space.
+                            - ``system``, ``agent``, ``workgroup`` or
+                              ``wavefront`` and executed by a thread in the
+                              same wavefront.
 
-     ``agent-one-as``        Same as ``agent`` but only synchronizes with other
-                             operations within the same address space.
+    ``singlethread``        Only synchronizes with and participates in
+                            modification and seq_cst total orderings with,
+                            other operations (except image operations) running
+                            in the same thread for all address spaces (for
+                            example, in signal handlers).
 
-     ``cluster-one-as``      Same as ``cluster`` but only synchronizes with other
-                             operations within the same address space.
+    ``one-as``              Same as ``system`` but only synchronizes with other
+                            operations within the same address space.
 
-     ``workgroup-one-as``    Same as ``workgroup`` but only synchronizes with
-                             other operations within the same address space.
+    ``agent-one-as``        Same as ``agent`` but only synchronizes with other
+                            operations within the same address space.
 
-     ``wavefront-one-as``    Same as ``wavefront`` but only synchronizes with
-                             other operations within the same address space.
+    ``cluster-one-as``      Same as ``cluster`` but only synchronizes with other
+                            operations within the same address space.
 
-     ``singlethread-one-as`` Same as ``singlethread`` but only synchronizes with
-                             other operations within the same address space.
-     ======================= ===================================================
+    ``workgroup-one-as``    Same as ``workgroup`` but only synchronizes with
+                            other operations within the same address space.
+
+    ``wavefront-one-as``    Same as ``wavefront`` but only synchronizes with
+                            other operations within the same address space.
+
+    ``singlethread-one-as`` Same as ``singlethread`` but only synchronizes with
+                            other operations within the same address space.
+    ======================= ===================================================
 
 Target Types
 ------------
