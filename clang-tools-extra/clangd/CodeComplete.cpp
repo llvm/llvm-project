@@ -2369,7 +2369,7 @@ bool isIndexedForCodeCompletion(const NamedDecl &ND, ASTContext &ASTCtx) {
   };
   // We only complete symbol's name, which is the same as the name of the
   // *primary* template in case of template specializations or instantiation.
-  if (isExplicitTemplateSpecialization(&ND) || isTemplateInstantiation(&ND))
+  if (isExplicitTemplateSpecialization(&ND) || isTemplateInstantiationScope(&ND))
     return false;
 
   // Category decls are not useful on their own outside the interface or

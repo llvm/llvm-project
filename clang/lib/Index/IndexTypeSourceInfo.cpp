@@ -196,15 +196,15 @@ public:
 
   bool TraverseSubstTemplateTypeParmTypeLoc(SubstTemplateTypeParmTypeLoc TL,
                                             bool TraverseQualifier) {
-    // TODO: For now if we are a templated field and the substituted type is of
-    // form `A<B>`, we will only record a reference to `A`, but it is reasonable
-    // to also expect a reference to `B` to be recorded.
     const auto *T = TL.getTypePtr();
     if (!T)
       return true;
     auto QT = T->getReplacementType();
     if (QT.isNull())
       return true;
+    // TODO: For now if we are a templated field and the substituted type is of
+    // form `A<B>`, we will only record a reference to `A`, but it is reasonable
+    // to also expect a reference to `B` to be recorded.
     auto *CXXRD = QT->getAsCXXRecordDecl();
     if (!CXXRD)
       return true;

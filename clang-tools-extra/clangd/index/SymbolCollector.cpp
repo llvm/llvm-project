@@ -34,6 +34,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/Specifiers.h"
 #include "clang/Index/IndexSymbol.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/Token.h"
@@ -679,9 +680,7 @@ bool SymbolCollector::handleDeclOccurrence(
   bool CollectRef = static_cast<bool>(Opts.RefFilter & toRefKind(Roles));
   // For now we only want the bare minimum of information for a class
   // instantiation such that we have symbols for the `BaseOf` relation.
-  if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(D);
-      CTSD && CTSD->hasDefinition() && !CTSD->bases().empty() &&
-      !CTSD->isExplicitSpecialization()) {
+  if (isTemplateInstantiationScope(ND)) {
     CollectRef = false;
   }
   // Unlike other fields, e.g. Symbols (which use spelling locations), we use
@@ -1119,7 +1118,7 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND, SymbolID ID,
     S.Flags |= Symbol::Deprecated;
 
   // Computing doc comments is expensive, so if we can skip it we should do so.
-  if (isImplicitTemplateInstantiation(&ND) ||
+  if (isTemplateInstantiationScope(&ND) ||
       (!(S.Flags & Symbol::IndexedForCodeCompletion) &&
        !Opts.StoreAllDocumentation)) {
     Symbols.insert(S);

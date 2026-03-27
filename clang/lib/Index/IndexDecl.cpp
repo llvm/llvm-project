@@ -752,8 +752,8 @@ public:
           // For now we are only interested in instantiations with inheritance.
           if (!CTSD || !CTSD->hasDefinition() || CTSD->bases().empty())
             continue;
-          // Explicit specialization is handled elsewhere
-          if (CTSD->isExplicitSpecialization())
+          // Explicit instantiations and specializations are handled elsewhere
+          if (CTSD->isExplicitInstantiationOrSpecialization())
             continue;
           Visit(RD);
         }
