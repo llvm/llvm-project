@@ -13,6 +13,7 @@
 
 #include <ctime>
 #include <memory>
+#include <system_error>
 
 namespace llvm {
 class MemoryBufferRef;
