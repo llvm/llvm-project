@@ -30,17 +30,9 @@ static _CLC_OVERLOAD _CLC_CONST __CLC_GENTYPE scan_op(
   case __CLC_WORK_GROUP_SCAN_ADD:
     return x + y;
   case __CLC_WORK_GROUP_SCAN_MIN:
-#ifdef __CLC_FPSIZE
-    return __clc_fmin(x, y);
-#else
     return __clc_min(x, y);
-#endif
   case __CLC_WORK_GROUP_SCAN_MAX:
-#ifdef __CLC_FPSIZE
-    return __clc_fmax(x, y);
-#else
     return __clc_max(x, y);
-#endif
   }
 }
 
@@ -50,7 +42,7 @@ static _CLC_OVERLOAD _CLC_CONST __CLC_GENTYPE work_group_scan_identity_value(
   (void)x;
   switch (opcode) {
   case __CLC_WORK_GROUP_SCAN_ADD:
-    return (__CLC_GENTYPE)0.0;
+    return __CLC_FP_LIT(0.0);
   case __CLC_WORK_GROUP_SCAN_MIN:
     return (__CLC_GENTYPE)INFINITY;
   case __CLC_WORK_GROUP_SCAN_MAX:
@@ -126,32 +118,38 @@ static _CLC_OVERLOAD __CLC_GENTYPE __clc_work_group_scan_impl(
 
 _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE
 __clc_work_group_scan_inclusive_add(__CLC_GENTYPE a) {
-  return __clc_work_group_scan_impl(a, __CLC_WORK_GROUP_SCAN_ADD, true);
+  return __clc_work_group_scan_impl(a, __CLC_WORK_GROUP_SCAN_ADD,
+                                    /*inclusive=*/true);
 }
 
 _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE
 __clc_work_group_scan_inclusive_min(__CLC_GENTYPE a) {
-  return __clc_work_group_scan_impl(a, __CLC_WORK_GROUP_SCAN_MIN, true);
+  return __clc_work_group_scan_impl(a, __CLC_WORK_GROUP_SCAN_MIN,
+                                    /*inclusive=*/true);
 }
 
 _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE
 __clc_work_group_scan_inclusive_max(__CLC_GENTYPE a) {
-  return __clc_work_group_scan_impl(a, __CLC_WORK_GROUP_SCAN_MAX, true);
+  return __clc_work_group_scan_impl(a, __CLC_WORK_GROUP_SCAN_MAX,
+                                    /*inclusive=*/true);
 }
 
 _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE
 __clc_work_group_scan_exclusive_add(__CLC_GENTYPE a) {
-  return __clc_work_group_scan_impl(a, __CLC_WORK_GROUP_SCAN_ADD, false);
+  return __clc_work_group_scan_impl(a, __CLC_WORK_GROUP_SCAN_ADD,
+                                    /*inclusive=*/false);
 }
 
 _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE
 __clc_work_group_scan_exclusive_min(__CLC_GENTYPE a) {
-  return __clc_work_group_scan_impl(a, __CLC_WORK_GROUP_SCAN_MIN, false);
+  return __clc_work_group_scan_impl(a, __CLC_WORK_GROUP_SCAN_MIN,
+                                    /*inclusive=*/false);
 }
 
 _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE
 __clc_work_group_scan_exclusive_max(__CLC_GENTYPE a) {
-  return __clc_work_group_scan_impl(a, __CLC_WORK_GROUP_SCAN_MAX, false);
+  return __clc_work_group_scan_impl(a, __CLC_WORK_GROUP_SCAN_MAX,
+                                    /*inclusive=*/false);
 }
 
 #endif
