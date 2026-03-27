@@ -26,19 +26,16 @@ class TestConstexpr(unittest.TestCase):
 
         f1 = get_cursor(tu, "f1")
         f2 = get_cursor(tu, "f2")
-        self.assertIsNotNone(f1)
         self.assertTrue(f1.is_constexpr)
         self.assertFalse(f2.is_constexpr)
 
         v1 = get_cursor(tu, "v1")
         v2 = get_cursor(tu, "v2")
-        self.assertIsNotNone(v1)
         self.assertTrue(v1.is_constexpr)
         self.assertFalse(v2.is_constexpr)
 
         local_v1 = get_cursor(f1, "local_v1")
         local_v2 = get_cursor(f1, "local_v2")
-        self.assertIsNotNone(local_v1)
         self.assertTrue(local_v1.is_constexpr)
         self.assertFalse(local_v2.is_constexpr)
 
@@ -48,7 +45,6 @@ class TestConstexpr(unittest.TestCase):
         m3 = get_cursor(S, "m3")
         m4 = get_cursor(S, "m4")
 
-        self.assertIsNotNone(m1)
         self.assertTrue(m1.is_constexpr)
         self.assertFalse(m2.is_constexpr)
         self.assertTrue(m3.is_constexpr)
