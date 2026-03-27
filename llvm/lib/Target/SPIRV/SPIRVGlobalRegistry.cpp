@@ -2280,12 +2280,6 @@ void SPIRVGlobalRegistry::addStructOffsetDecorations(
 void SPIRVGlobalRegistry::addArrayStrideDecorations(
     Register Reg, Type *ElementType, MachineIRBuilder &MIRBuilder) {
   uint32_t SizeInBytes = DataLayout().getTypeSizeInBits(ElementType) / 8;
-  // Vulkan requires vec3 to have the same alignment as vec4
-  if (auto *VecTy = dyn_cast<FixedVectorType>(ElementType);
-      VecTy && VecTy->getNumElements() == 3) {
-    uint32_t ScalarSize = VecTy->getScalarSizeInBits() / 8;
-    SizeInBytes = 4 * ScalarSize;
-  }
   buildOpDecorate(Reg, MIRBuilder, SPIRV::Decoration::ArrayStride,
                   {SizeInBytes});
 }

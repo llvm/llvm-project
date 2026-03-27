@@ -1,6 +1,6 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-unknown-vulkan %s -stop-after=spirv-legalize-bitcast -o - | FileCheck %s --check-prefix=IRCHECK
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-unknown-vulkan %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan1.3-compute %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan1.3-compute %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 --scalar-block-layout %}
 
 ; CHECK-DAG: [[FLOAT:%[0-9]+]] = OpTypeFloat 32
 ; CHECK-DAG: [[VEC3FLOAT:%[0-9]+]] = OpTypeVector [[FLOAT]] 3
