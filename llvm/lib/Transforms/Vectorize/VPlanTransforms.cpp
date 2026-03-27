@@ -2754,7 +2754,7 @@ void VPlanTransforms::truncateToMinimalBitwidths(
         continue;
 
       VPValue *ResultVPV = R.getVPSingleValue();
-      auto *UI = ResultVPV->getUnderlyingInstr();
+      Instruction *UI = ResultVPV->getUnderlyingInstr();
       unsigned NewResSizeInBits = MinBWs.lookup(UI);
       if (!NewResSizeInBits)
         continue;
