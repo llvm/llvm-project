@@ -120,6 +120,10 @@ public:
                                 uint16_t &ModuleIndex) const;
   Expected<ModuleDebugStreamRef> getModuleDebugStream(uint32_t Index) const;
 
+#ifndef NDEBUG
+  const auto &getAddrToModuleIndex() const { return AddrToModuleIndex; }
+#endif
+
 private:
   void initializeExeSymbol();
   void parseSectionContribs();

@@ -255,27 +255,21 @@ bool NativeSession::addressForRVA(uint32_t RVA, uint32_t &Section,
 
 std::unique_ptr<PDBSymbol>
 NativeSession::findSymbolByAddress(uint64_t Address, PDB_SymType Type) {
-  uint32_t Section;
-  uint32_t Offset;
-  addressForVA(Address, Section, Offset);
-  return findSymbolBySectOffset(Section, Offset, Type);
+  if (AddrToModuleIndex.empty())
+    parseSectionContribs();
+
+  return Cache.findSymbolByVA(Address, Type);
 }
 
 std::unique_ptr<PDBSymbol> NativeSession::findSymbolByRVA(uint32_t RVA,
                                                           PDB_SymType Type) {
-  uint32_t Section;
-  uint32_t Offset;
-  addressForRVA(RVA, Section, Offset);
-  return findSymbolBySectOffset(Section, Offset, Type);
+  return findSymbolByAddress(getLoadAddress() + RVA, Type);
 }
 
 std::unique_ptr<PDBSymbol>
 NativeSession::findSymbolBySectOffset(uint32_t Sect, uint32_t Offset,
                                       PDB_SymType Type) {
-  if (AddrToModuleIndex.empty())
-    parseSectionContribs();
-
-  return Cache.findSymbolBySectOffset(Sect, Offset, Type);
+  return findSymbolByAddress(getVAFromSectOffset(Sect, Offset), Type);
 }
 
 std::unique_ptr<IPDBEnumLineNumbers>
