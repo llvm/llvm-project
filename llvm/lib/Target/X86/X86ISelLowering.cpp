@@ -148,7 +148,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   // For 64-bit, since we have so many registers, use the ILP scheduler.
   // For 32-bit, use the register pressure specific scheduling.
   // For Atom, always use ILP scheduling.
-  if (Subtarget.isAtom())
+  if (Subtarget.alwaysILP())
     setSchedulingPreference(Sched::ILP);
   else if (Subtarget.is64Bit())
     setSchedulingPreference(Sched::ILP);
