@@ -1475,6 +1475,9 @@ class CursorKind(BaseEnumeration):
     # OpenMP flatten directive.
     OMP_FLATTEN_DIRECTIVE = 314
 
+    # OpenMP taskgraph directive.
+    OMP_TASKGRAPH_DIRECTIVE = 315
+
     # OpenACC Compute Construct.
     OPEN_ACC_COMPUTE_DIRECTIVE = 320
 
