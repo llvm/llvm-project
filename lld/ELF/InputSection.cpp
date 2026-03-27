@@ -1550,12 +1550,9 @@ void MergeInputSection::splitIntoPieces() {
 SectionPiece &MergeInputSection::getSectionPiece(uint64_t offset) {
   // Pre-resolved by splitSections: pieceIdx + 1 in upper bits,
   // intra-piece offset in lower bits.
-  if (uint32_t idx = offset >> mergeValueShift; idx && idx <= pieces.size())
+  if (uint32_t idx = offset >> mergeValueShift)
     return pieces[idx - 1];
-  if (content().size() <= offset) {
-    Err(getCtx()) << this << ": offset is outside the section";
-    return pieces[0];
-  }
+  assert(offset < content().size());
   // For non-string fixed-size records, piece index = offset / entsize.
   if (!(flags & SHF_STRINGS))
     return pieces[offset / entsize];
@@ -1567,7 +1564,7 @@ SectionPiece &MergeInputSection::getSectionPiece(uint64_t offset) {
 uint64_t MergeInputSection::getParentOffset(uint64_t offset) const {
   // Pre-resolved by splitSections: pieceIdx + 1 in upper bits,
   // intra-piece offset in lower bits.
-  if (uint32_t idx = offset >> mergeValueShift; idx && idx <= pieces.size())
+  if (uint32_t idx = offset >> mergeValueShift)
     return pieces[idx - 1].outputOff +
            (offset & llvm::maskTrailingOnes<uint64_t>(mergeValueShift));
   const SectionPiece &piece = getSectionPiece(offset);
