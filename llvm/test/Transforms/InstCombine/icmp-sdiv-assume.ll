@@ -20,8 +20,7 @@ define i1 @icmp_sdiv_domcond(i32 %x) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[X]], 255
 ; CHECK-NEXT:    br i1 [[COND]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i32 [[DIV]], 2
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       if.false:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -48,8 +47,7 @@ define i1 @icmp_add_sdiv_domcond(i32 %x) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[ADD]], 255
 ; CHECK-NEXT:    br i1 [[COND]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i32 [[DIV]], 2
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       if.false:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -101,7 +99,7 @@ define i1 @icmp_sdiv_domcond_too_weak(i32 %x) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[X]], 127
 ; CHECK-NEXT:    br i1 [[COND]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i32 [[DIV]], 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X]], 194
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ; CHECK:       if.false:
 ; CHECK-NEXT:    ret i1 false
@@ -140,7 +138,7 @@ define i1 @icmp_sdiv_domcond_boundary(i32 %x) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[X]], 194
 ; CHECK-NEXT:    br i1 [[COND]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i32 [[DIV]], 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X]], 259
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ; CHECK:       if.false:
 ; CHECK-NEXT:    ret i1 false
