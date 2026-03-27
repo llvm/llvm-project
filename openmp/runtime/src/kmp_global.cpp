@@ -375,6 +375,9 @@ int kmp_c_debug = 0;
 int kmp_d_debug = 0;
 int kmp_e_debug = 0;
 int kmp_f_debug = 0;
+#if OMP_TASKGRAPH_EXPERIMENTAL
+int kmp_g_debug = 0;
+#endif
 int kmp_diag = 0;
 #endif
 
