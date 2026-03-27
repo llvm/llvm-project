@@ -230,11 +230,10 @@ struct VPlanTransforms {
   /// Explicitly unroll \p Plan by \p UF.
   static void unrollByUF(VPlan &Plan, unsigned UF);
 
-  /// Replace replicating VPReplicateRecipe, VPScalarIVStepsRecipe and
-  /// VPInstruction in \p Plan with \p VF single-scalar recipes. Replicate
-  /// regions are dissolved by replicating their blocks and their recipes \p VF
-  /// times.
-  /// TODO: Also dissolve replicate regions with live outs.
+  /// Replace each replicating VPReplicateRecipe and VPInstruction outside of
+  /// any replicate region in \p Plan with \p VF single-scalar recipes.
+  /// TODO: Also replicate VPScalarIVSteps and VPReplicateRecipes inside
+  /// replicate regions, thereby dissolving the latter.
   static void replicateByVF(VPlan &Plan, ElementCount VF);
 
   /// Optimize \p Plan based on \p BestVF and \p BestUF. This may restrict the
