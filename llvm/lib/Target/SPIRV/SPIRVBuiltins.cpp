@@ -1281,21 +1281,24 @@ static bool generateExtInst(const SPIRV::IncomingCall *Call,
   }
 
   // Derive fast-math flags from nofpclass attributes on the called function.
-  if (const Function *F = CB.getCalledFunction()) {
-    bool AddNoNan = !!(CB.getRetNoFPClass() & fcNan);
-    bool AddNoInf = !!(CB.getRetNoFPClass() & fcInf);
-    for (unsigned I = 0, E = F->getFunctionType()->getNumParams();
-         I != E && (AddNoNan || AddNoInf); ++I) {
-      if (!F->getFunctionType()->getParamType(I)->isFloatingPointTy())
-        continue;
-      FPClassTest ArgTest = CB.getParamNoFPClass(I);
-      AddNoNan = AddNoNan && !!(ArgTest & fcNan);
-      AddNoInf = AddNoInf && !!(ArgTest & fcInf);
+  if (ST.isKernel() &&
+      ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2)) {
+    if (const Function *F = CB.getCalledFunction()) {
+      bool AddNoNan = !!(CB.getRetNoFPClass() & fcNan);
+      bool AddNoInf = !!(CB.getRetNoFPClass() & fcInf);
+      for (unsigned I = 0, E = F->getFunctionType()->getNumParams();
+           I != E && (AddNoNan || AddNoInf); ++I) {
+        if (!F->getFunctionType()->getParamType(I)->isFloatingPointTy())
+          continue;
+        FPClassTest ArgTest = CB.getParamNoFPClass(I);
+        AddNoNan = AddNoNan && !!(ArgTest & fcNan);
+        AddNoInf = AddNoInf && !!(ArgTest & fcInf);
+      }
+      if (AddNoNan)
+        MIB.getInstr()->setFlag(MachineInstr::MIFlag::FmNoNans);
+      if (AddNoInf)
+        MIB.getInstr()->setFlag(MachineInstr::MIFlag::FmNoInfs);
     }
-    if (AddNoNan)
-      MIB.getInstr()->setFlag(MachineInstr::MIFlag::FmNoNans);
-    if (AddNoInf)
-      MIB.getInstr()->setFlag(MachineInstr::MIFlag::FmNoInfs);
   }
 
   return true;
