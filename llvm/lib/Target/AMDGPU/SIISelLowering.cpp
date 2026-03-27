@@ -5741,6 +5741,9 @@ getDPPOpcForWaveReduction(unsigned Opc, const GCNSubtarget &ST) {
   case AMDGPU::V_CMP_GT_I64_e64: // max.i64
   case AMDGPU::S_ADD_U64_PSEUDO:
   case AMDGPU::S_SUB_U64_PSEUDO:
+  case AMDGPU::S_AND_B64:
+  case AMDGPU::S_OR_B64:
+  case AMDGPU::S_XOR_B64:
     DPPOpc = AMDGPU::V_MOV_B64_DPP_PSEUDO;
     break;
   default:
@@ -5752,6 +5755,12 @@ getDPPOpcForWaveReduction(unsigned Opc, const GCNSubtarget &ST) {
       ClampOpc = AMDGPU::S_ADD_I32;
     if (Opc == AMDGPU::S_ADD_U64_PSEUDO || Opc == AMDGPU::S_SUB_U64_PSEUDO)
       ClampOpc = AMDGPU::V_ADD_CO_U32_e64;
+    else if (Opc == AMDGPU::S_AND_B64)
+      ClampOpc = AMDGPU::V_AND_B32_e64;
+    else if (Opc == AMDGPU::S_OR_B64)
+      ClampOpc = AMDGPU::V_OR_B32_e64;
+    else if (Opc == AMDGPU::S_XOR_B64)
+      ClampOpc = AMDGPU::V_XOR_B32_e64;
     else
       ClampOpc = ST.getInstrInfo()->getVALUOp(ClampOpc);
   }
@@ -6360,8 +6369,10 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
       auto BuildPostDPPInstr = [&](Register Src0, Register Src1) {
         bool isAddSubOpc =
             Opc == AMDGPU::S_ADD_U64_PSEUDO || Opc == AMDGPU::S_SUB_U64_PSEUDO;
+        bool isBitWiseOpc = Opc == AMDGPU::S_AND_B64 ||
+                            Opc == AMDGPU::S_OR_B64 || Opc == AMDGPU::S_XOR_B64;
         Register ReturnReg = MRI.createVirtualRegister(SrcRegClass);
-        if (isAddSubOpc) {
+        if (isAddSubOpc || isBitWiseOpc) {
           Register ResLo = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
           Register ResHi = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
           MachineOperand Src0Operand =
