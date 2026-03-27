@@ -115,7 +115,7 @@ module attributes { mpi.dlti = #dlti.map<"MPI:comm_world_rank" = 7> } {
     %arg0 : tensor<3x4xf32>) -> tensor<3x4xf32> {
     // CHECK-DAG: [[vc1_i32:%.*]] = arith.constant 1 : i32
     // CHECK-DAG: [[vc2_i32:%.*]] = arith.constant 2 : i32
-    // CHECK: [[v0:%.*]] = bufferization.to_buffer [[varg0]] : tensor<3x4xf32> to memref<3x4xf32>
+    // CHECK: [[v0:%.*]] = bufferization.to_buffer [[varg0]] read_only : tensor<3x4xf32> to memref<3x4xf32>
     // CHECK: [[valloc:%.*]] = memref.alloc() : memref<3x4xf32>
     // CHECK: linalg.copy ins([[v0]] : memref<3x4xf32>) outs([[valloc]] : memref<3x4xf32>)
     // CHECK: [[v1:%.*]] = mpi.comm_world : !mpi.comm
@@ -181,7 +181,7 @@ module attributes { mpi.dlti = #dlti.map<"MPI:comm_world_rank" = 7> } {
     // CHECK: [[vexpanded:%.*]] = tensor.expand_shape [[varg0]] {{\[\[}}0], [1, 2]] output_shape [2, 3, 4] : tensor<2x12xf32> into tensor<2x3x4xf32>
     // CHECK: [[vempty:%.*]] = tensor.empty() : tensor<3x2x4xf32>
     // CHECK: [[vtransposed:%.*]] = linalg.transpose ins([[vexpanded]] : tensor<2x3x4xf32>) outs([[vempty]] : tensor<3x2x4xf32>) permutation = [1, 0, 2]
-    // CHECK: [[vtobuf:%.*]] = bufferization.to_buffer [[vtransposed]] : tensor<3x2x4xf32> to memref<3x2x4xf32>
+    // CHECK: [[vtobuf:%.*]] = bufferization.to_buffer [[vtransposed]] read_only : tensor<3x2x4xf32> to memref<3x2x4xf32>
     // CHECK: [[valloctmp:%.*]] = memref.alloc() : memref<3x2x4xf32>
     // CHECK: linalg.copy ins([[vtobuf]] : memref<3x2x4xf32>) outs([[valloctmp]] : memref<3x2x4xf32>)
     // CHECK: [[valloc:%.*]] = memref.alloc() : memref<2x4xf32>
@@ -198,7 +198,7 @@ module attributes { mpi.dlti = #dlti.map<"MPI:comm_world_rank" = 7> } {
     // CHECK-DAG: [[vc1_i32:%.*]] = arith.constant 1 : i32
     // CHECK-DAG: [[vc2_i32:%.*]] = arith.constant 2 : i32
     // CHECK-DAG: [[vc4:%.*]] = arith.constant 4 : index
-    // CHECK: [[v0:%.*]] = bufferization.to_buffer [[varg0]] : tensor<3x4xf32> to memref<3x4xf32>
+    // CHECK: [[v0:%.*]] = bufferization.to_buffer [[varg0]] read_only : tensor<3x4xf32> to memref<3x4xf32>
     // CHECK: [[v1:%.*]] = mpi.comm_world : !mpi.comm
     // CHECK: [[vnewcomm:%.*]] = mpi.comm_split([[v1]], [[vc2_i32]], [[vc1_i32]]) : !mpi.comm
     // CHECK: [[vsize:%.*]] = mpi.comm_size([[vnewcomm]]) : i32
@@ -222,7 +222,7 @@ module attributes { mpi.dlti = #dlti.map<"MPI:comm_world_rank" = 7> } {
     // CHECK-DAG: [[vc2_i32:%.*]] = arith.constant 2 : i32
     // CHECK-DAG: [[vc1_i32:%.*]] = arith.constant 1 : i32
     // CHECK-DAG: [[vc5:%.*]] = arith.constant 5 : index
-    // CHECK: [[v0:%.*]] = bufferization.to_buffer [[varg0]] : tensor<3x4xf32> to memref<3x4xf32>
+    // CHECK: [[v0:%.*]] = bufferization.to_buffer [[varg0]] read_only : tensor<3x4xf32> to memref<3x4xf32>
     // CHECK: [[v1:%.*]] = mpi.comm_world : !mpi.comm
     // CHECK: [[vnewcomm:%.*]] = mpi.comm_split([[v1]], [[vc1_i32]], [[vc2_i32]]) : !mpi.comm
     // CHECK: [[vsize:%.*]] = mpi.comm_size([[vnewcomm]]) : i32
@@ -505,7 +505,7 @@ func.func @mlp_1dgrid(%arg0: tensor<512x512xf32>, %arg1: tensor<2048x256xf32>, %
   // CHECK-DAG: [[vc0:%.*]] = arith.constant 0 : index
   %c0 = arith.constant 0 : index
   // CHECK-DAG: [[vc4:%.*]] = arith.constant 4 : index
-  // CHECK: [[v0:%.*]] = bufferization.to_buffer [[varg0]] : tensor<512x512xf32> to memref<512x512xf32>
+  // CHECK: [[v0:%.*]] = bufferization.to_buffer [[varg0]] read_only : tensor<512x512xf32> to memref<512x512xf32>
   // CHECK: [[v1:%.*]] = mpi.comm_world : !mpi.comm
   // CHECK: [[vsize:%.*]] = mpi.comm_size([[v1]]) : i32
   // CHECK: [[v2:%.*]] = arith.index_cast [[vsize]] : i32 to index
@@ -541,7 +541,7 @@ func.func @mlp_1dgrid(%arg0: tensor<512x512xf32>, %arg1: tensor<2048x256xf32>, %
   }
   // CHECK: [[v16:%.*]] = linalg.matmul ins([[v9]], [[varg2]] : tensor<512x256xf32>, tensor<256x2048xf32>) outs([[v15]] : tensor<512x2048xf32>) -> tensor<512x2048xf32>
   %8 = linalg.matmul ins(%3, %arg2 : tensor<512x256xf32>, tensor<256x2048xf32>) outs(%7 : tensor<512x2048xf32>) -> tensor<512x2048xf32>
-  // CHECK: [[v17:%.*]] = bufferization.to_buffer [[v16]] : tensor<512x2048xf32> to memref<512x2048xf32>
+  // CHECK: [[v17:%.*]] = bufferization.to_buffer [[v16]] read_only : tensor<512x2048xf32> to memref<512x2048xf32>
   // CHECK: [[valloc_0:%.*]] = memref.alloc() : memref<512x2048xf32>
   // CHECK: linalg.copy ins([[v17]] : memref<512x2048xf32>) outs([[valloc_0]] : memref<512x2048xf32>)
   // CHECK: [[v18:%.*]] = mpi.comm_world : !mpi.comm

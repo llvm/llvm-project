@@ -5,7 +5,7 @@ add_entrypoint_object(
   HDRS
     iswalpha.h
   DEPENDS
-    libc.src.__support.wctype_utils    
+    libc.src.__support.wctype_utils
 )
 
 add_entrypoint_object(
@@ -106,4 +106,27 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.wint_t
     libc.src.__support.wctype_utils
+)
+
+add_entrypoint_object(
+  iswpunct
+  SRCS
+    iswpunct.cpp
+  HDRS
+    iswpunct.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.wctype_utils
+    libc.hdr.types.wint_t
+)
+
+add_entrypoint_object(
+  iswprint
+  SRCS
+    iswprint.cpp
+  HDRS
+    iswprint.h
+  DEPENDS
+    libc.src.__support.wctype_utils
+    libc.hdr.types.wint_t
 )

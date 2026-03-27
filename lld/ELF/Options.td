@@ -844,14 +844,10 @@ defm check_dynamic_relocations: BB<"check-dynamic-relocations",
 
 defm load_pass_plugins: EEq<"load-pass-plugin", "Load passes from plugin library">;
 
-// Hidden options, used by clang's -fsanitize=memtag-* options to emit an ELF
-// note to designate what kinds of memory (stack/heap) should be protected using
-// ARM's MTE on armv8.5+. A binary's desire for stack MTE can't be obtained
-// implicitly, so we have a specific bit in the note to signal to the loader to
-// remap the stack as PROT_MTE.
-defm android_memtag_stack: BB<"android-memtag-stack",
-    "Instruct the dynamic loader to prepare for MTE stack instrumentation", "">;
-defm android_memtag_heap: BB<"android-memtag-heap",
-    "Instruct the dynamic loader to enable MTE protection for the heap", "">;
-defm android_memtag_mode: EEq<"android-memtag-mode",
-    "Instruct the dynamic loader to start under MTE mode {async, sync, none}">;
+// Hidden option, used by clang's -fsanitize=memtag-* option to emit an ELF note
+// to designate what kinds of memory (stack/heap) should be protected using
+// ARM's MTE on armv8.5+. This note is Android-specific and it is used only in
+// older SDK versions.
+defm android_memtag_note
+    : BB<"android-memtag-note", "Emit the Android-specific legacy memtag note",
+         "">;

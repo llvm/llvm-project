@@ -15,7 +15,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Function Attrs: noinline nounwind uwtable
 declare i32 @y3inner() #0
 
-define i32 @main() local_unnamed_addr #0 {
+define i32 @main() #0 {
 entry:
   br label %do.body
 

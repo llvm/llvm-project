@@ -138,8 +138,10 @@ TEST(InstructionsTest, UncondBrInst) {
   const UncondBrInst *b0 = UncondBrInst::Create(bb0);
 
   // Test legacy BranchInst API.
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   EXPECT_TRUE(cast<BranchInst>(b0)->isUnconditional());
   EXPECT_FALSE(cast<BranchInst>(b0)->isConditional());
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
   EXPECT_EQ(1U, b0->getNumSuccessors());
 
@@ -169,8 +171,10 @@ TEST(InstructionsTest, CondBrInst) {
   CondBrInst *b1 = CondBrInst::Create(One, bb0, bb1);
 
   // Test legacy BranchInst API.
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   EXPECT_FALSE(cast<BranchInst>(b1)->isUnconditional());
   EXPECT_TRUE(cast<BranchInst>(b1)->isConditional());
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
   EXPECT_EQ(2U, b1->getNumSuccessors());
 
@@ -186,16 +190,16 @@ TEST(InstructionsTest, CondBrInst) {
   EXPECT_EQ(One, b1->getCondition());
   ++b;
 
-  // check ELSE
-  EXPECT_EQ(bb1, *b);
-  EXPECT_EQ(bb1, b1->getOperand(1));
-  EXPECT_EQ(bb1, b1->getSuccessor(1));
-  ++b;
-
   // check THEN
   EXPECT_EQ(bb0, *b);
-  EXPECT_EQ(bb0, b1->getOperand(2));
+  EXPECT_EQ(bb0, b1->getOperand(1));
   EXPECT_EQ(bb0, b1->getSuccessor(0));
+  ++b;
+
+  // check ELSE
+  EXPECT_EQ(bb1, *b);
+  EXPECT_EQ(bb1, b1->getOperand(2));
+  EXPECT_EQ(bb1, b1->getSuccessor(1));
   ++b;
 
   EXPECT_EQ(b1->op_end(), b);

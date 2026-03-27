@@ -624,11 +624,11 @@ static bool expandCondLoop(Function &Intr) {
   for (User *U : llvm::make_early_inc_range(Intr.users())) {
     auto *Call = cast<CallInst>(U);
 
-    auto *Br = cast<BranchInst>(
+    auto *Br = cast<UncondBrInst>(
         SplitBlockAndInsertIfThen(Call->getArgOperand(0), Call, false,
                                   getExplicitlyUnknownBranchWeightsIfProfiled(
                                       *Call->getFunction(), DEBUG_TYPE)));
-    Br->setSuccessor(0, Br->getParent());
+    Br->setSuccessor(Br->getParent());
     Call->eraseFromParent();
   }
   return true;
@@ -641,8 +641,8 @@ static bool expandLoopTrap(Function &Intr) {
         std::all_of(Call->getParent()->begin(), BasicBlock::iterator(Call),
                     [](Instruction &I) { return !I.mayHaveSideEffects(); })) {
       for (auto *BB : predecessors(Call->getParent())) {
-        auto *BI = dyn_cast<BranchInst>(BB->getTerminator());
-        if (!BI || BI->isUnconditional())
+        auto *BI = dyn_cast<CondBrInst>(BB->getTerminator());
+        if (!BI)
           continue;
         IRBuilder<> B(BI);
         Value *Cond;

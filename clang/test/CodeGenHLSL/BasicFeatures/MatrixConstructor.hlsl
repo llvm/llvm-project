@@ -60,26 +60,26 @@ float3x2 case2() {
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) <6 x float> @_Z5case3Dv3_fS_(
 // CHECK-SAME: <3 x float> noundef nofpclass(nan inf) [[A:%.*]], <3 x float> noundef nofpclass(nan inf) [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <3 x float>, align 16
-// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <3 x float>, align 16
-// CHECK-NEXT:    store <3 x float> [[A]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    store <3 x float> [[B]], ptr [[B_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <3 x float>, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <3 x float>, align 4
+// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <3 x float>, align 4
+// CHECK-NEXT:    store <3 x float> [[A]], ptr [[A_ADDR]], align 4
+// CHECK-NEXT:    store <3 x float> [[B]], ptr [[B_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load <3 x float>, ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <3 x float> [[TMP0]], i64 0
 // CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <6 x float> poison, float [[VECEXT]], i32 0
-// CHECK-NEXT:    [[TMP1:%.*]] = load <3 x float>, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP1:%.*]] = load <3 x float>, ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[VECEXT1:%.*]] = extractelement <3 x float> [[TMP1]], i64 1
 // CHECK-NEXT:    [[VECINIT2:%.*]] = insertelement <6 x float> [[VECINIT]], float [[VECEXT1]], i32 3
-// CHECK-NEXT:    [[TMP2:%.*]] = load <3 x float>, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP2:%.*]] = load <3 x float>, ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[VECEXT3:%.*]] = extractelement <3 x float> [[TMP2]], i64 2
 // CHECK-NEXT:    [[VECINIT4:%.*]] = insertelement <6 x float> [[VECINIT2]], float [[VECEXT3]], i32 1
-// CHECK-NEXT:    [[TMP3:%.*]] = load <3 x float>, ptr [[B_ADDR]], align 16
+// CHECK-NEXT:    [[TMP3:%.*]] = load <3 x float>, ptr [[B_ADDR]], align 4
 // CHECK-NEXT:    [[VECEXT5:%.*]] = extractelement <3 x float> [[TMP3]], i64 0
 // CHECK-NEXT:    [[VECINIT6:%.*]] = insertelement <6 x float> [[VECINIT4]], float [[VECEXT5]], i32 4
-// CHECK-NEXT:    [[TMP4:%.*]] = load <3 x float>, ptr [[B_ADDR]], align 16
+// CHECK-NEXT:    [[TMP4:%.*]] = load <3 x float>, ptr [[B_ADDR]], align 4
 // CHECK-NEXT:    [[VECEXT7:%.*]] = extractelement <3 x float> [[TMP4]], i64 1
 // CHECK-NEXT:    [[VECINIT8:%.*]] = insertelement <6 x float> [[VECINIT6]], float [[VECEXT7]], i32 2
-// CHECK-NEXT:    [[TMP5:%.*]] = load <3 x float>, ptr [[B_ADDR]], align 16
+// CHECK-NEXT:    [[TMP5:%.*]] = load <3 x float>, ptr [[B_ADDR]], align 4
 // CHECK-NEXT:    [[VECEXT9:%.*]] = extractelement <3 x float> [[TMP5]], i64 2
 // CHECK-NEXT:    [[VECINIT10:%.*]] = insertelement <6 x float> [[VECINIT8]], float [[VECEXT9]], i32 5
 // CHECK-NEXT:    ret <6 x float> [[VECINIT10]]

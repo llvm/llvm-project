@@ -55,6 +55,8 @@ module {
     cir.store %34, %2 : !s32i, !cir.ptr<!s32i>
     %37 = cir.max %32, %33 : !s32i
     // CHECK: = llvm.intr.smax
+    %38 = cir.min %32, %33 : !s32i
+    // CHECK: = llvm.intr.smin
     cir.return
   }
 }

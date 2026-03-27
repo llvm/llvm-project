@@ -166,15 +166,19 @@ endif()
 if (APPLE)
   set(default_enable_mte OFF)
 
-  execute_process(
-      COMMAND sysctl -n hw.optional.arm.FEAT_MTE4
-      OUTPUT_VARIABLE SYSCTL_OUTPUT
-      ERROR_QUIET
-      RESULT_VARIABLE SYSCTL_RESULT
-      OUTPUT_STRIP_TRAILING_WHITESPACE
-  )
-  if(SYSCTL_RESULT EQUAL 0)
-    set(default_enable_mte ON)
+  # The MTE launcher complicates injecting the sanitizer runtime libraries.
+  # Default to OFF when any sanitizer is enabled.
+  if (NOT LLVM_USE_SANITIZER)
+    execute_process(
+        COMMAND sysctl -n hw.optional.arm.FEAT_MTE4
+        OUTPUT_VARIABLE SYSCTL_OUTPUT
+        ERROR_QUIET
+        RESULT_VARIABLE SYSCTL_RESULT
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if(SYSCTL_RESULT EQUAL 0 AND SYSCTL_OUTPUT STREQUAL "1")
+      set(default_enable_mte ON)
+    endif()
   endif()
 
   option(LLDB_ENABLE_MTE "Run the LLDB test suite with MTE enabled." ${default_enable_mte})
@@ -182,6 +186,8 @@ if (APPLE)
   if (LLDB_ENABLE_MTE)
     message(STATUS "Running the LLDB test suite with MTE")
   endif()
+else()
+  set(LLDB_ENABLE_MTE OFF)
 endif()
 
 if (LLDB_ENABLE_PYTHON)

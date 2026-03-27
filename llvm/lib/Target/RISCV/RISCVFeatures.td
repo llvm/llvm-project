@@ -1114,7 +1114,7 @@ def HasStdExtSmctrOrSsctr : Predicate<"Subtarget->hasStdExtSmctrOrSsctr()">,
 
 // Packed SIMD Extensions
 def FeatureStdExtP
-    : RISCVExperimentalExtension<0, 19,
+    : RISCVExperimentalExtension<0, 21,
                                  "'Base P' (Packed SIMD)",
                                  [FeatureStdExtZmmul, FeatureStdExtZba,
                                   FeatureStdExtZbb, FeatureStdExtZicsr]>;
@@ -1670,13 +1670,6 @@ def FeatureVendorXqci
 
 // Rivos Extension(s)
 
-def FeatureVendorXRivosVisni
-    :  RISCVExperimentalExtension<0, 1, "Rivos Vector Integer Small New">;
-def HasVendorXRivosVisni
-    : Predicate<"Subtarget->hasVendorXRivosVisni()">,
-      AssemblerPredicate<(all_of FeatureVendorXRivosVisni),
-                         "'XRivosVisni' (Rivos Vector Integer Small New)">;
-
 def FeatureVendorXRivosVizip
     :  RISCVExperimentalExtension<0, 1, "Rivos Vector Register Zips">;
 def HasVendorXRivosVizip
@@ -2001,6 +1994,13 @@ def TuneShortForwardBranchILoad
           [TuneShortForwardBranchIALU]>;
 def HasShortForwardBranchILoad : Predicate<"Subtarget->hasShortForwardBranchILoad()">;
 
+def TuneShortForwardBranchImm
+    : SubtargetFeature<"short-forward-branch-imm", "HasShortForwardBranchImm",
+                       "true", "Enable short forward branch optimization for branches with immediates",
+                       [TuneShortForwardBranchIALU]>;
+def HasShortForwardBranchImm : Predicate<"Subtarget->hasShortForwardBranchImm()">;
+def NoShortForwardBranchImm : Predicate<"!Subtarget->hasShortForwardBranchImm()">;
+
 // Some subtargets require a S2V transfer buffer to move scalars into vectors.
 // FIXME: Forming .vx/.vf/.wx/.wf can reduce register pressure.
 def TuneNoSinkSplatOperands
@@ -2030,6 +2030,12 @@ def TuneHasSingleElementVecFP64
 def TuneVXRMPipelineFlush
     : RISCVSimpleTuneFeature<"vxrm-pipeline-flush", "HasVXRMPipelineFlush",
                              "true", "VXRM writes causes pipeline flush">;
+
+def TunePreferAscendingLoadStore
+    : RISCVSimpleTuneFeature<"prefer-ascending-load-store",
+                             "PreferAscendingLoadStore", "true",
+                             "Prefer ascending load/store order for better "
+                             "clustering and performance">;
 
 def TunePreferVsetvliOverReadVLENB
     : RISCVSimpleTuneFeature<

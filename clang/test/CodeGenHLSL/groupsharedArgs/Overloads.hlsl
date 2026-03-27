@@ -17,7 +17,7 @@ void main() {
   fn2(11.xxxx);
 }
 
-// CHECK-LABEL: define hidden void @_Z2fnA2_Dv4_f(ptr noalias noundef align 16 %Arr)
+// CHECK-LABEL: define hidden void @_Z2fnA2_Dv4_f(ptr noalias noundef align 4 %Arr)
 void fn(inout float4 Arr[2]) {
   Arr[1] = 5.0.xxxx;
 }
@@ -27,12 +27,12 @@ void fn2(int4 Local) {
   int X = Local.y;
 }
 
-// CHECK-LABEL: define hidden void @_Z2fnRA2_U3AS3Dv4_f(ptr addrspace(3) noundef align 16 dereferenceable(32) %Arr)
+// CHECK-LABEL: define hidden void @_Z2fnRA2_U3AS3Dv4_f(ptr addrspace(3) noundef align 4 dereferenceable(32) %Arr)
 void fn(groupshared float4 Arr[2]) {
   Arr[1] = 7.0.xxxx;
 }
 
-// CHECK-LABEL: define hidden void @_Z3fn2RU3AS3Dv4_i(ptr addrspace(3) noundef align 16 dereferenceable(16) %Shared)
+// CHECK-LABEL: define hidden void @_Z3fn2RU3AS3Dv4_i(ptr addrspace(3) noundef align 4 dereferenceable(16) %Shared)
 void fn2(groupshared int4 Shared) {
   Shared.x = 10;
 }
