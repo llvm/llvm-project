@@ -32,7 +32,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y python3-build
           cd llvm/utils/llvm-testing-tools
-          mkdir ./src/binaries
-          cp ../../../build/bin/FileCheck ./src/binaries/FileCheck
-          cp ../../../build/bin/split-file ./src/binaries/split-file
+          mkdir ./src/llvm_testing_tools/binaries
+          cp ../../../build/bin/FileCheck ./src/llvm_testing_tools/binaries/FileCheck
+          cp ../../../build/bin/split-file ./src/llvm_testing_tools/binaries/split-file
           python3 -m build
