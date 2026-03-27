@@ -4559,6 +4559,15 @@ unsigned clang_Cursor_isFunctionInlined(CXCursor C) {
   return FD->isInlined();
 }
 
+unsigned clang_Cursor_isConstexpr(CXCursor C) {
+  const Decl *D = getCursorDecl(C);
+  if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D))
+    return FD->isConstexpr();
+  if (const VarDecl *VD = dyn_cast_or_null<VarDecl>(D))
+    return VD->isConstexpr();
+  return false;
+}
+
 static StringLiteral *getCFSTR_value(CallExpr *callExpr) {
   if (callExpr->getNumArgs() != 1) {
     return nullptr;

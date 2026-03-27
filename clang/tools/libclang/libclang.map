@@ -87,6 +87,7 @@ LLVM_13 {
     clang_Cursor_isDynamicCall;
     clang_Cursor_isExternalSymbol;
     clang_Cursor_isFunctionInlined;
+    clang_Cursor_isConstexpr;
     clang_Cursor_isInlineNamespace;
     clang_Cursor_isMacroBuiltin;
     clang_Cursor_isMacroFunctionLike;

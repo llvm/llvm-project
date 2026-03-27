@@ -3352,6 +3352,12 @@ CINDEX_LINKAGE unsigned clang_Cursor_isMacroBuiltin(CXCursor C);
 CINDEX_LINKAGE unsigned clang_Cursor_isFunctionInlined(CXCursor C);
 
 /**
+ * Determine whether a CXCursor that is a function or variable declaration is
+ * a constexpr declaration.
+ */
+CINDEX_LINKAGE unsigned clang_Cursor_isConstexpr(CXCursor C);
+
+/**
  * Determine whether a CXType has the "volatile" qualifier set,
  * without looking through typedefs that may have added "volatile" at
  * a different level.
