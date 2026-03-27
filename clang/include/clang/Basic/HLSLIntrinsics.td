@@ -397,17 +397,20 @@ the screen-space y-coordinate.
 
 // Returns a distance scalar between X and Y.
 // The distance between X and Y is length(X - Y).
-def hlsl_distance : HLSLTwoArgDetail<"distance", "distance_impl"> {
+def hlsl_distance : HLSLBuiltin<"distance"> {
   let Doc = [{
 \fn K distance(T X, T Y)
 \brief Returns a distance scalar between \a X and \a Y.
 \param X The X input value.
 \param Y The Y input value.
 }];
-  let DetailFunc = "distance_impl";
+  let Body = "return __detail::length_impl(X - Y);";
   let ParamNames = ["X", "Y"];
+  let Args = [Varying, Varying];
   let ReturnType = VaryingElemType;
   let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingScalar = 1;
+  let VaryingVecSizes = [2, 3, 4];
   let VaryingMatDims = [];
 }
 
