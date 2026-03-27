@@ -248,9 +248,10 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
   const char *Ext = emitASM ? ".s" : ".obj";
   for (unsigned i = 0; i != maxTasks; ++i) {
     StringRef bitcodeFilePath;
-    // Get the native object contents either from the cache or from memory.  Do
-    // not use the cached MemoryBuffer directly, or the PDB will not be
-    // deterministic.
+    // Get the native object contents either from a MemoryBuffer, for example
+    // from the cache or an external DTLTO backend compilation, or by reading
+    // from memory. Do not use the provided MemoryBuffer directly, or the PDB
+    // will not be deterministic.
     StringRef objBuf;
     if (files[i]) {
       objBuf = files[i]->getBuffer();

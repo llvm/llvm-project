@@ -392,8 +392,10 @@ SmallVector<std::unique_ptr<InputFile>, 0> BitcodeCompiler::compile() {
     StringRef bitcodeFilePath;
     StringRef objBuf;
     if (files[i]) {
-      // When files[i] is not null, we get the native relocatable file from the
-      // cache. filenames[i] contains the original BitcodeFile's identifier.
+      // When files[i] is not null, it holds a native relocatable file provided
+      // as a MemoryBuffer, for example from the cache or from an external DTLTO
+      // backend compilation. filenames[i] contains the original BitcodeFile's
+      // identifier.
       objBuf = files[i]->getBuffer();
       bitcodeFilePath = filenames[i];
     } else {
