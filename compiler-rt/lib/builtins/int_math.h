@@ -31,13 +31,7 @@
 #if defined(_MSC_VER) && !defined(__clang__)
 #define CRT_INFINITY INFINITY
 #else
-#if defined(LONG_DOUBLE_80_BIT_PRECISION)
-#define CRT_INFINITY __builtin_huge_vall()
-#elif defined(QUAD_PRECISION)
-#if defined(CRT_HAS_128BIT) && defined(CRT_HAS_F128)
-#define CRT_INFINITY __builtin_huge_valf128()
-#endif
-#elif defined(DOUBLE_PRECISION)
+#if defined(DOUBLE_PRECISION)
 #define CRT_INFINITY __builtin_huge_val()
 #else
 #define CRT_INFINITY __builtin_huge_valf()
