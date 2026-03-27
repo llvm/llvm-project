@@ -2773,7 +2773,7 @@ static DiffContext getDiffContext(SourceMgr &SM, unsigned LineNo,
 // Unified View: A standard top-to-bottom (-Expected / +Actual) format.
 static void renderDiff(DiffFormatType Mode, unsigned ExpectedLineNo,
                        unsigned ActualLineNo, StringRef ActualLine,
-                       const std::string &ExpectedText, const DiffContext &Ctx,
+                       StringRef ExpectedText, const DiffContext &Ctx,
                        unsigned OverwriteActualLine) {
   auto &OS = llvm::errs();
 
@@ -2816,10 +2816,7 @@ static bool printDiff(DiffFormatType Mode, const FileCheckString &CheckStr,
   SMLoc PatternLoc = CheckStr.Pat.getLoc();
   unsigned ExpectedLineNo = SM.getLineAndColumn(PatternLoc).first;
   const char *PatPtr = PatternLoc.getPointer();
-  StringRef FullExpectedLine = StringRef(PatPtr).split('\n').first.trim();
-
-  std::string ExpectedText;
-  ExpectedText = FullExpectedLine.str();
+  StringRef ExpectedText = StringRef(PatPtr).split('\n').first.rtrim();
 
   // Resolve the Actual (Input) line number.
   // Priority: 1. OverwriteActualLine (Found via Fuzzy match)
@@ -2976,11 +2973,17 @@ bool FileCheck::checkInput(SourceMgr &SM, StringRef Buffer,
         break;
       }
 
-      // Extra strict check (only in diff mode)
+      // Extra strict match (only in diff mode)
       if (IsDiffMode && IsStrict && MatchPos > 0) {
         StringRef Skipped = CheckRegion.slice(0, MatchPos);
         if (!Skipped.trim().empty()) {
-          handleDiffFailure(CheckStr, CheckRegion, SM, Req, Diags, OS,
+          // Create a temporary view that starts with next new line.
+          size_t CurrentLineEnd = CheckRegion.find_first_of("\n\r");
+          StringRef NextLineRegion =
+              (CurrentLineEnd != StringRef::npos)
+                  ? CheckRegion.drop_front(CurrentLineEnd + 1).ltrim(" \t\n\r")
+                  : CheckRegion.ltrim(" \t\n\r");
+          handleDiffFailure(CheckStr, NextLineRegion, SM, Req, Diags, OS,
                             HeaderPrinted, TotalMismatches);
           ChecksFailed = true;
           i = j;
