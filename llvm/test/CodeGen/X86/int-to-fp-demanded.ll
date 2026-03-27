@@ -4,6 +4,37 @@
 
 declare void @use.i1(i1)
 declare void @use.i32(i32)
+
+; Verify that extracting the sign bit of a bfloat via bitcast does not crash
+; or miscompile. SimplifyDemandedBits tried to lower this through FGETSIGN but
+; created a type-mismatched SHL because bf16 was not excluded alongside f16.
+define i16 @bf16_bitcast_signbit(float %a) nounwind {
+; X86-LABEL: bf16_bitcast_signbit:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    fstps (%esp)
+; X86-NEXT:    calll __truncsfbf2
+; X86-NEXT:    # kill: def $ax killed $ax def $eax
+; X86-NEXT:    andl $32768, %eax # imm = 0x8000
+; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    popl %ecx
+; X86-NEXT:    retl
+;
+; X64-LABEL: bf16_bitcast_signbit:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    callq __truncsfbf2@PLT
+; X64-NEXT:    pextrw $0, %xmm0, %eax
+; X64-NEXT:    andl $32768, %eax # imm = 0x8000
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    popq %rcx
+; X64-NEXT:    retq
+  %bf = fptrunc float %a to bfloat
+  %i = bitcast bfloat %bf to i16
+  %r = and i16 %i, -32768
+  ret i16 %r
+}
 define i32 @sitofp_signbit_only(i32 %i_in) nounwind {
 ; X86-LABEL: sitofp_signbit_only:
 ; X86:       # %bb.0:

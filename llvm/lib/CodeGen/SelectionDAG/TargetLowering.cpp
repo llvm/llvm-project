@@ -2742,7 +2742,7 @@ bool TargetLowering::SimplifyDemandedBits(
       bool OpVTLegal = isOperationLegalOrCustom(ISD::FGETSIGN, VT);
       bool i32Legal = isOperationLegalOrCustom(ISD::FGETSIGN, MVT::i32);
       if ((OpVTLegal || i32Legal) && VT.isSimple() && SrcVT != MVT::f16 &&
-          SrcVT != MVT::f128) {
+          SrcVT != MVT::bf16 && SrcVT != MVT::f128) {
         // Cannot eliminate/lower SHL for f128 yet.
         EVT Ty = OpVTLegal ? VT : MVT::i32;
         // Make a FGETSIGN + SHL to move the sign bit into the appropriate
