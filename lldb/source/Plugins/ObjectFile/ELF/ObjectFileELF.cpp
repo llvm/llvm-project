@@ -152,7 +152,7 @@ lldb::SectionSP MergeSections(lldb::SectionSP lhs, lldb::SectionSP rhs) {
         "actual: {3:x}",
         lhs->GetTypeAsCString(),
         rhs_module_parent->GetFileSpec().GetPathAsConstString().GetCString(),
-        lhs->GetByteSize(), rhs->GetByteSize());
+        lhs->GetFileAddress(), rhs->GetFileAddress());
 
   // We want to take the greater of two sections. If LHS and RHS are both
   // SHT_NOBITS, we should default to LHS. If RHS has a bigger section,

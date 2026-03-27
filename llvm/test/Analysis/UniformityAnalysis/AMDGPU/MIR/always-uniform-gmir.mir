@@ -21,7 +21,7 @@ body:             |
   bb.1:
     liveins: $sgpr4_sgpr5
     ; CHECK-LABEL: MachineUniformityInfo for function:  @icmp
-    ; CHECK-NEXT: ALL VALUES UNIFORM
+    ; CHECK: ALL VALUES UNIFORM
 
     %3:_(p4) = COPY $sgpr4_sgpr5
     %13:_(s32) = G_CONSTANT i32 0
@@ -41,7 +41,7 @@ body:             |
   bb.1:
     liveins: $sgpr4_sgpr5
     ; CHECK-LABEL: MachineUniformityInfo for function:  @fcmp
-    ; CHECK-NEXT: ALL VALUES UNIFORM
+    ; CHECK: ALL VALUES UNIFORM
 
     %3:_(p4) = COPY $sgpr4_sgpr5
     %10:_(s32) = G_CONSTANT i32 0
@@ -64,7 +64,7 @@ body:             |
   bb.1:
     liveins: $sgpr4_sgpr5
     ; CHECK-LABEL: MachineUniformityInfo for function:  @ballot
-    ; CHECK-NEXT: ALL VALUES UNIFORM
+    ; CHECK: ALL VALUES UNIFORM
 
     %2:_(p4) = COPY $sgpr4_sgpr5
     %10:_(p1) = G_IMPLICIT_DEF
