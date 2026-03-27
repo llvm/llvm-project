@@ -1,10 +1,10 @@
 ; RUN: llc < %s -mtriple=i386-apple-darwin | FileCheck %s
 
-; FIXME: The first two instructions, movl and addl, should have been combined to
-; "leal 16(%eax), %edx" by the backend (PR20776).
-; CHECK: movl    %eax, %edx
-; CHECK: addl    $16, %edx
+; CHECK: leal    16(%eax), %edx
 ; CHECK: align
+; CHECK: leal    4(%esi), %edi
+; CHECK: movl    %edi, (%esp)
+; CHECK: movl    %esi, (%edx)
 ; CHECK: addl    $4, %edx
 ; CHECK: decl    %ecx
 ; CHECK: jne     LBB0_2

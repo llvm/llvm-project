@@ -275,7 +275,7 @@ bool FixupLEAsImpl::runOnMachineFunction(MachineFunction &MF) {
 
     // Second pass for creating LEAs. This may reverse some of the
     // transformations above.
-    if (LEAUsesAG && !IsSlowLEA) {
+    if (LEAUsesAG) {
       for (MachineBasicBlock::iterator I = MBB.begin(); I != MBB.end(); ++I)
         processInstruction(I, MBB);
     }

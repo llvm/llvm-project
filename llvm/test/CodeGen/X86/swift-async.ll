@@ -91,8 +91,7 @@ define ptr @context_in_func() "frame-pointer"="non-leaf" {
 
 define void @write_frame_context(ptr swiftasync %ctx, ptr %newctx) "frame-pointer"="non-leaf" {
 ; CHECK-LABEL: write_frame_context:
-; CHECK: movq    %rbp, [[TMP:%.*]]
-; CHECK: subq    $8, [[TMP]]
+; CHECK: leaq    -8(%rbp), [[TMP:%.*]]
 ; CHECK: movq    %rdi, ([[TMP]])
 
   %ptr = call ptr @llvm.swift.async.context.addr()

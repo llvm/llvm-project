@@ -25,8 +25,7 @@ define void @test1(ptr nocapture %x, i32 %y) nounwind {
 ; CHECK-NEXT:    addl $15, %edx
 ; CHECK-NEXT:    andl $-16, %edx
 ; CHECK-NEXT:    subl %edx, %eax
-; CHECK-NEXT:    movl %eax, %esp
-; CHECK-NEXT:    subl $4, %esp
+; CHECK-NEXT:    leal -4(%eax), %esp
 ; CHECK-NEXT:    movl 84(%ecx), %edi
 ; CHECK-NEXT:    movl 80(%ecx), %ebx
 ; CHECK-NEXT:    movl 76(%ecx), %edx
@@ -189,8 +188,7 @@ define void @test2(ptr nocapture %x, i32 %y, ptr %z) nounwind {
 ; CHECK-NEXT:    addl $15, %edi
 ; CHECK-NEXT:    andl $-16, %edi
 ; CHECK-NEXT:    subl %edi, %eax
-; CHECK-NEXT:    movl %eax, %esp
-; CHECK-NEXT:    subl $12, %esp
+; CHECK-NEXT:    leal -12(%eax), %esp
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    calll _baz
 ; CHECK-NEXT:    leal -12(%ebp), %esp

@@ -60,7 +60,7 @@ entry:
 ; EFI: andq  $-16, [[R1]]
 ; EFI: movq  %rsp, [[R64:%r.*]]
 ; EFI: subq  [[R1]], [[R64]]
-; EFI: movq  [[R64]], %rsp
+; EFI: leaq  -48([[R64]]), %rsp
 
   %r = call i64 @bar(i64 %n, i64 %x, i64 %n, ptr %buf0, ptr %buf1) nounwind
 
@@ -74,7 +74,6 @@ entry:
 ; W64: leaq  -128(%rbp), %r9
 ; W64: callq bar
 
-; EFI: subq  $48, %rsp
 ; EFI: movq  [[R64]], 32(%rsp)
 ; EFI: leaq  -[[B0OFS]](%rbp), %r9
 ; EFI: callq _bar
@@ -101,7 +100,7 @@ entry:
 ; M64: subq  %rax, %rsp
 ; M64: movq  %rsp, [[R2:%r.*]]
 ; M64: andq  $-128, [[R2]]
-; M64: movq  [[R2]], %rsp
+; M64: leaq  -48([[R2]]), %rsp
 
 ; W64: leaq  15(%{{.*}}), %rax
 ; W64: andq  $-16, %rax
@@ -109,26 +108,23 @@ entry:
 ; W64: subq  %rax, %rsp
 ; W64: movq  %rsp, [[R2:%r.*]]
 ; W64: andq  $-128, [[R2]]
-; W64: movq  [[R2]], %rsp
+; W64: leaq  -48([[R2]]), %rsp
 
 ; EFI: leaq  15(%{{.*}}), [[R1:%r.*]]
 ; EFI: andq  $-16, [[R1]]
 ; EFI: movq  %rsp, [[R64:%r.*]]
 ; EFI: subq  [[R1]], [[R64]]
 ; EFI: andq  $-128, [[R64]]
-; EFI: movq  [[R64]], %rsp
+; EFI: leaq  -48([[R64]]), %rsp
 
   %r = call i64 @bar(i64 %n, i64 %x, i64 %n, ptr undef, ptr %buf1) nounwind
 
-; M64: subq  $48, %rsp
 ; M64: movq  [[R2]], 32(%rsp)
 ; M64: callq bar
 
-; W64: subq  $48, %rsp
 ; W64: movq  [[R2]], 32(%rsp)
 ; W64: callq bar
 
-; EFI: subq  $48, %rsp
 ; EFI: movq  [[R64]], 32(%rsp)
 ; EFI: callq _bar
 
