@@ -626,8 +626,8 @@ public:
                          __func__);
   }
 
-  Error getEventElapsedTimeImpl(void *StartEventPtr, void *EndEventPtr,
-                                float *ElapsedTime) override {
+  Expected<float> getEventElapsedTimeImpl(void *StartEventPtr,
+                                          void *EndEventPtr) override {
     return Plugin::error(error::ErrorCode::UNKNOWN, "%s not implemented yet\n",
                          __func__);
   }

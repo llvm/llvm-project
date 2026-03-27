@@ -859,8 +859,13 @@ Error olGetEventElapsedTime_impl(ol_event_handle_t StartEvent,
         ErrorCode::INVALID_DEVICE,
         "StartEvent and EndEvent must belong to the same device");
 
-  return StartEvent->Device->Device->getEventElapsedTime(
-      StartEvent->EventInfo, EndEvent->EventInfo, ElapsedTime);
+  auto ElapsedTimeOrErr = StartEvent->Device->Device->getEventElapsedTime(
+      StartEvent->EventInfo, EndEvent->EventInfo);
+  if (!ElapsedTimeOrErr)
+    return ElapsedTimeOrErr.takeError();
+
+  *ElapsedTime = *ElapsedTimeOrErr;
+  return Error::success();
 }
 
 Error olDestroyEvent_impl(ol_event_handle_t Event) {

@@ -995,10 +995,9 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   virtual Error syncEventImpl(void *EventPtr) = 0;
 
   /// Get the elapsed time in milliseconds between two events.
-  Error getEventElapsedTime(void *StartEventPtr, void *EndEventPtr,
-                            float *ElapsedTime);
-  virtual Error getEventElapsedTimeImpl(void *StartEventPtr, void *EndEventPtr,
-                                        float *ElapsedTime) = 0;
+  Expected<float> getEventElapsedTime(void *StartEventPtr, void *EndEventPtr);
+  virtual Expected<float> getEventElapsedTimeImpl(void *StartEventPtr,
+                                                  void *EndEventPtr) = 0;
 
   /// Obtain information about the device.
   Expected<InfoTreeNode> obtainInfo();

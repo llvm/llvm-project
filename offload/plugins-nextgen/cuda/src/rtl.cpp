@@ -1087,13 +1087,17 @@ struct CUDADeviceTy : public GenericDeviceTy {
   }
 
   /// Get the elapsed time in milliseconds between two events.
-  Error getEventElapsedTimeImpl(void *StartEventPtr, void *EndEventPtr,
-                                float *ElapsedTime) override {
+  Expected<float> getEventElapsedTimeImpl(void *StartEventPtr,
+                                          void *EndEventPtr) override {
     CUevent StartEvent = reinterpret_cast<CUevent>(StartEventPtr);
     CUevent EndEvent = reinterpret_cast<CUevent>(EndEventPtr);
 
-    CUresult Res = cuEventElapsedTime(ElapsedTime, StartEvent, EndEvent);
-    return Plugin::check(Res, "error in cuEventElapsedTime: %s");
+    float ElapsedTime = 0.0f;
+    CUresult Res = cuEventElapsedTime(&ElapsedTime, StartEvent, EndEvent);
+    if (auto Err = Plugin::check(Res, "error in cuEventElapsedTime: %s"))
+      return std::move(Err);
+
+    return ElapsedTime;
   }
 
   /// Print information about the device.

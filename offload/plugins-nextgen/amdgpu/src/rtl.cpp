@@ -1769,7 +1769,7 @@ struct AMDGPUEventTy {
   }
 
   /// Return the elapsed time in milliseconds between this event and EndEvent.
-  Error elapsedTime(AMDGPUEventTy &EndEvent, float &ElapsedTime);
+  Expected<float> getElapsedTime(AMDGPUEventTy &EndEvent);
 
 protected:
   /// Release the retained timing signal, if any, back to the signal manager.
@@ -2995,8 +2995,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
 
   /// Get the elapsed time in milliseconds between two events.
-  Error getEventElapsedTimeImpl(void *StartEventPtr, void *EndEventPtr,
-                                float *ElapsedTime) override {
+  Expected<float> getEventElapsedTimeImpl(void *StartEventPtr,
+                                          void *EndEventPtr) override {
     AMDGPUEventTy *StartEvent =
         reinterpret_cast<AMDGPUEventTy *>(StartEventPtr);
     AMDGPUEventTy *EndEvent = reinterpret_cast<AMDGPUEventTy *>(EndEventPtr);
@@ -3004,7 +3004,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     if (!StartEvent || !EndEvent)
       return Plugin::error(ErrorCode::INVALID_ARGUMENT, "invalid event handle");
 
-    return StartEvent->elapsedTime(*EndEvent, *ElapsedTime);
+    return StartEvent->getElapsedTime(*EndEvent);
   }
 
   /// Print information about the device.
@@ -3606,7 +3606,7 @@ Error AMDGPUEventTy::releaseTimingSignal() {
   return Plugin::success();
 }
 
-Error AMDGPUEventTy::elapsedTime(AMDGPUEventTy &EndEvent, float &ElapsedTime) {
+Expected<float> AMDGPUEventTy::getElapsedTime(AMDGPUEventTy &EndEvent) {
   if (this == &EndEvent) {
     std::lock_guard<std::mutex> Lock(Mutex);
 
@@ -3617,8 +3617,7 @@ Error AMDGPUEventTy::elapsedTime(AMDGPUEventTy &EndEvent, float &ElapsedTime) {
     if (TimingSignal->load())
       return Plugin::error(ErrorCode::UNKNOWN, "event timing is not ready");
 
-    ElapsedTime = 0.0f;
-    return Plugin::success();
+    return 0.0f;
   }
 
   std::scoped_lock<std::mutex, std::mutex> Lock(Mutex, EndEvent.Mutex);
@@ -3649,23 +3648,21 @@ Error AMDGPUEventTy::elapsedTime(AMDGPUEventTy &EndEvent, float &ElapsedTime) {
       TimingAgent, TimingSignal->get(), &StartTime);
   if (auto Err = Plugin::check(
           Status, "error in hsa_amd_profiling_get_dispatch_time: %s"))
-    return Err;
+    return std::move(Err);
 
   Status = hsa_amd_profiling_get_dispatch_time(
       EndEvent.TimingAgent, EndEvent.TimingSignal->get(), &StopTime);
   if (auto Err = Plugin::check(
           Status, "error in hsa_amd_profiling_get_dispatch_time: %s"))
-    return Err;
+    return std::move(Err);
 
   const int64_t DeltaTicks =
       static_cast<int64_t>(StopTime.end) - static_cast<int64_t>(StartTime.end);
   constexpr double MillisecondsPerSecond = 1000.0;
 
-  ElapsedTime = static_cast<float>(static_cast<double>(DeltaTicks) *
-                                   MillisecondsPerSecond /
-                                   static_cast<double>(TicksPerSecond));
-
-  return Plugin::success();
+  return static_cast<float>(static_cast<double>(DeltaTicks) *
+                            MillisecondsPerSecond /
+                            static_cast<double>(TicksPerSecond));
 }
 
 /// Class implementing the AMDGPU-specific functionalities of the global

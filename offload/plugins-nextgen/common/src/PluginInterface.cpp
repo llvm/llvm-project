@@ -1568,13 +1568,9 @@ Error GenericDeviceTy::syncEvent(void *EventPtr) {
   return syncEventImpl(EventPtr);
 }
 
-Error GenericDeviceTy::getEventElapsedTime(void *StartEventPtr,
-                                           void *EndEventPtr,
-                                           float *ElapsedTime) {
-  if (!ElapsedTime)
-    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                         "elapsed time output pointer is null");
-  return getEventElapsedTimeImpl(StartEventPtr, EndEventPtr, ElapsedTime);
+Expected<float> GenericDeviceTy::getEventElapsedTime(void *StartEventPtr,
+                                                     void *EndEventPtr) {
+  return getEventElapsedTimeImpl(StartEventPtr, EndEventPtr);
 }
 
 bool GenericDeviceTy::useAutoZeroCopy() { return useAutoZeroCopyImpl(); }
@@ -2100,14 +2096,16 @@ int32_t GenericPluginTy::get_event_elapsed_time(int32_t DeviceId,
                                                 void *StartEventPtr,
                                                 void *EndEventPtr,
                                                 float *ElapsedTime) {
-  auto Err = getDevice(DeviceId).getEventElapsedTime(StartEventPtr, EndEventPtr,
-                                                     ElapsedTime);
-  if (Err) {
+  auto ElapsedTimeOrErr =
+      getDevice(DeviceId).getEventElapsedTime(StartEventPtr, EndEventPtr);
+  if (!ElapsedTimeOrErr) {
     REPORT() << "Failure to get elapsed time between events " << StartEventPtr
-             << " and " << EndEventPtr << ": " << toString(std::move(Err));
+             << " and " << EndEventPtr << ": "
+             << toString(ElapsedTimeOrErr.takeError());
     return OFFLOAD_FAIL;
   }
 
+  *ElapsedTime = *ElapsedTimeOrErr;
   return OFFLOAD_SUCCESS;
 }
 
