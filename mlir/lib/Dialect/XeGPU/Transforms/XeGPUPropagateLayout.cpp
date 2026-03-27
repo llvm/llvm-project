@@ -635,8 +635,14 @@ void LayoutInfoPropagation::visitVectorMultiReductionOp(
   Type resultTy = reduction.getDestType();
   // The layout of the result must be present.
   LayoutInfo resLayoutInfo = results[0]->getValue();
-  if (llvm::isa<VectorType>(resultTy) && !resLayoutInfo.isAssigned())
-    return;
+
+  xegpu::DistributeLayoutAttr consumerLayoutAttr;
+  if (!resultTy.isIntOrFloat())
+    if (!resLayoutInfo.isAssigned())
+      return;
+    else
+      consumerLayoutAttr =
+          dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
 
   VectorType sourceTy = reduction.getSourceVectorType();
   SmallVector<int64_t> reductionDims(reduction.getReductionDims());
@@ -644,29 +650,15 @@ void LayoutInfoPropagation::visitVectorMultiReductionOp(
   const uArch *uArch = getUArch(xegpu::getChipStr(reduction).value_or(""));
   if (!uArch)
     return;
-  xegpu::DistributeLayoutAttr consumerLayoutAttr;
-  if (!llvm::isa<VectorType>(resultTy)) {
-    auto sgSize = uArch->getSubgroupSize();
-    auto numSgOrErr = getNumSg(reduction, sgSize);
+  int numSg = 0;
+  if (layoutKind == xegpu::LayoutKind::Subgroup) {
+    auto numSgOrErr = getNumSg(reduction, uArch->getSubgroupSize());
     if (failed(numSgOrErr)) {
       reduction.emitWarning(
           "Unable to determine the number of subgroups for the operation.");
       return;
     }
-    auto srcShape = sourceTy.getShape();
-    int srcRank = srcShape.size();
-    SmallVector<int32_t> sgLayout(srcRank, 1);
-    SmallVector<int32_t> sgData(srcRank, 1);
-    sgLayout.back() = numSgOrErr.value();
-    MLIRContext *context = reduction.getContext();
-    consumerLayoutAttr = xegpu::LayoutAttr::get(
-        context, DenseI32ArrayAttr::get(context, sgLayout),
-        DenseI32ArrayAttr::get(context, sgData),
-        /*inst_data =*/nullptr, /*lane_layout =*/nullptr,
-        /*lane_data =*/nullptr, /*order =*/nullptr);
-  } else {
-    consumerLayoutAttr =
-        dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
+    numSg = numSgOrErr.value();
   }
 
   // The result layout represents the layout requirements of the operation.
@@ -675,7 +667,7 @@ void LayoutInfoPropagation::visitVectorMultiReductionOp(
   // propagated from consumer op, the conflict is resolved in later phase by
   // converting the required result layout to the consumer layout
   auto requiredResLayoutAttr = xegpu::setupMultiReductionResultLayout(
-      layoutKind, sourceTy, consumerLayoutAttr, reductionDims, uArch);
+      layoutKind, sourceTy, consumerLayoutAttr, reductionDims, numSg, uArch);
 
   xegpu::setTemporaryLayout(reduction->getResult(0), requiredResLayoutAttr);
 
@@ -831,7 +823,7 @@ void LayoutInfoPropagation::visitDpasOp(
       numSg = numSgOrErr.value();
     }
     auto layouts = xegpu::setupDpasLayout(layoutKind, aTy, bTy, cdTy,
-                                          consumerLayoutAttr, uArch, numSg);
+                                          consumerLayoutAttr, numSg, uArch);
     if (!layouts.has_value()) {
       dpas.emitWarning(
           "Failed to determine required layouts for DPAS operands.");

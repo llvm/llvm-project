@@ -124,7 +124,7 @@ SliceAttr setupMultiReductionResultLayout(LayoutKind layoutKind,
                                           VectorType srcVectorTy,
                                           DistributeLayoutAttr consumerLayout,
                                           SmallVector<int64_t> reductionDims,
-                                          const uArch::uArch *uArch);
+                                          int numSg, const uArch::uArch *uArch);
 
 /// Sets up layout for Reduction operations by creating a SliceAttr for the
 /// result.
@@ -180,8 +180,8 @@ DistributeLayoutAttr setupStoreMatrixAnchorLayout(LayoutKind layoutKind,
 std::optional<std::tuple<DistributeLayoutAttr, DistributeLayoutAttr,
                          DistributeLayoutAttr>>
 setupDpasLayout(LayoutKind layoutKind, VectorType aTy, VectorType bTy,
-                VectorType cdTy, DistributeLayoutAttr consumerLayout,
-                const uArch::uArch *uArch, int numSg);
+                VectorType cdTy, DistributeLayoutAttr consumerLayout, int numSg,
+                const uArch::uArch *uArch);
 
 /// Gets the expected layout for a given consumer operand. This will check if
 /// the owning operation of the consumer operand is one of the special layout

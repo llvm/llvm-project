@@ -404,7 +404,7 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
 /// Examples:
 ///   1. Subgroup layout - Row reduction on 2D tensor:
 ///      srcShape=[32, 128], reductionDims=[1], resShape=[32], subgroupSize=16,
-///      workgroupSize=32
+///      NumSg=32
 ///      * Consumer Layout:
 ///        #xegpu.slice<#xegpu.layout<sg_layout=[4, 8], sg_data=[8, 8]>, dims =
 ///        [1]>}
@@ -445,11 +445,11 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
 xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
     xegpu::LayoutKind layoutKind, VectorType srcVecTy,
     DistributeLayoutAttr consumerLayout, SmallVector<int64_t> reductionDims,
-    const xegpu::uArch::uArch *uArch) {
+    int numSg, const xegpu::uArch::uArch *uArch) {
 
   auto srcShape = srcVecTy.getShape();
   int srcRank = srcShape.size();
-  auto context = consumerLayout.getContext();
+  auto context = srcVecTy.getContext();
 
   // Reduction layout requires at least 2D tensors
   if (srcRank < 2)
@@ -461,21 +461,12 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
     return DenseI32ArrayAttr::get(context, vec32);
   };
 
-  const int workgroupSize = consumerLayout.getNumSubgroups();
   const int subgroupSize = uArch->getSubgroupSize();
   int64_t maxReduceVectorSize = 1; // could extend to spirv vector Size
-
-  SmallVector<int64_t> consumerSgLayout =
-      consumerLayout.getEffectiveSgLayoutAsInt();
-  SmallVector<int64_t> consumerLaneLayout =
-      consumerLayout.getEffectiveLaneLayoutAsInt();
-  SmallVector<int64_t> consumerOrder = consumerLayout.getEffectiveOrderAsInt();
-  DenseI32ArrayAttr orderAttr = consumerLayout.getOrder();
-
   xegpu::DistributeLayoutAttr srcLayout;
   if (layoutKind == xegpu::LayoutKind::Subgroup) {
     xegpu::SliceAttr consumerSliceLayout =
-        dyn_cast<xegpu::SliceAttr>(consumerLayout);
+        consumerLayout ? dyn_cast<xegpu::SliceAttr>(consumerLayout) : nullptr;
     if (consumerSliceLayout &&
         consumerSliceLayout.getDims().asArrayRef().equals(reductionDims)) {
       srcLayout = consumerSliceLayout.getParent();
@@ -487,9 +478,16 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
           srcLayout = srcLayout.setDimData(dim, srcSgData.value()[dim], -1, -1);
         }
     } else {
-
+      SmallVector<int64_t> consumerSgLayout =
+          consumerLayout ? consumerLayout.getEffectiveSgLayoutAsInt()
+                         : SmallVector<int64_t>();
+      SmallVector<int64_t> consumerOrder =
+          consumerLayout ? consumerLayout.getEffectiveOrderAsInt()
+                         : SmallVector<int64_t>();
+      DenseI32ArrayAttr orderAttr =
+          consumerLayout ? consumerLayout.getOrder() : nullptr;
       SmallVector<int64_t> sgLayout(srcRank), sgData(srcRank), order(srcRank);
-      int remainingSgCount = workgroupSize;
+      int remainingSgCount = numSg;
       int consumerIdx = 0;
 
       // First pass: Match consumer's layout on non-reduction dimensions
@@ -507,6 +505,7 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
       }
 
       // Second pass: Distribute remaining subgroups across reduction dimensions
+      // the reduction to scalar case is handled only by this loop
       int64_t remainOrder = consumerSgLayout.size();
       for (int i = 0; i < srcRank; i++) {
         if (llvm::is_contained(reductionDims, i)) {
@@ -535,7 +534,6 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
     instData[srcRank - 1] =
         std::min(static_cast<int64_t>(subgroupSize), srcShape[srcRank - 1]);
     srcLayout = xegpu::LayoutAttr::get(context, toInt32Attr(instData));
-
   } else if (layoutKind == xegpu::LayoutKind::Lane) {
 
     SmallVector<int64_t> laneLayout(srcRank, 1), laneData(srcRank, 1);
@@ -967,8 +965,8 @@ std::optional<
                xegpu::DistributeLayoutAttr>>
 xegpu::setupDpasLayout(xegpu::LayoutKind layoutKind, VectorType aTy,
                        VectorType bTy, VectorType cdTy,
-                       xegpu::DistributeLayoutAttr consumerLayout,
-                       const xegpu::uArch::uArch *uArch, int numSg) {
+                       xegpu::DistributeLayoutAttr consumerLayout, int numSg,
+                       const xegpu::uArch::uArch *uArch) {
   auto context = aTy.getContext();
   const auto *uArchInstruction =
       dyn_cast<xegpu::uArch::SubgroupMatrixMultiplyAcc>(uArch->getInstruction(
