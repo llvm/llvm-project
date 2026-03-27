@@ -33,22 +33,20 @@
 
 #if __has_include(<sys/resource.h>)
 #  include <sys/resource.h>
+
+void force_thread_creation_failure() {
+  rlimit lim = {1, 1};
 #  if defined(_AIX) && defined(RLIMIT_THREADS)
-void force_thread_creation_failure() {
-  rlimit lim = {1, 1};
   assert(setrlimit(RLIMIT_THREADS, &lim) == 0);
-}
 #  elif defined(RLIMIT_NPROC)
-void force_thread_creation_failure() {
-  rlimit lim = {1, 1};
   assert(setrlimit(RLIMIT_NPROC, &lim) == 0);
-}
 #  else
 #    error "No known way to force only one thread being available"
 #  endif
 #else
 #  error "No known way to force only one thread being available"
 #endif
+}
 
 int main(int, char**) {
   force_thread_creation_failure();
