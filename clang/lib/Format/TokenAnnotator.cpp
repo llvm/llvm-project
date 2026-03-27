@@ -1444,9 +1444,9 @@ private:
                   Scopes.back() == ST_Class)) {
         Tok->setType(TT_BitFieldColon);
       } else if (Contexts.size() == 1 &&
-                 Line.getFirstNonComment()->isNoneOf(tok::kw_enum, tok::kw_case,
+                 Line.getFirstNonComment()->isNoneOf(tok::kw_case,
                                                      tok::kw_default) &&
-                 !Line.startsWith(tok::kw_typedef, tok::kw_enum)) {
+                 !Line.startsWith(tok::kw_typedef)) {
         if (Prev->isOneOf(tok::r_paren, tok::kw_noexcept) ||
             Prev->ClosesRequiresClause) {
           Tok->setType(TT_CtorInitializerColon);

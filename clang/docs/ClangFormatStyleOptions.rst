@@ -6834,12 +6834,14 @@ the configuration (without a prefix: ``Auto``).
 .. _SpaceBeforeInheritanceColon:
 
 **SpaceBeforeInheritanceColon** (``Boolean``) :versionbadge:`clang-format 7` :ref:`¶ <SpaceBeforeInheritanceColon>`
-  If ``false``, spaces will be removed before inheritance colon.
+  If ``false``, spaces will be removed before inheritance colon
+  and enum underlying type colon.
 
   .. code-block:: c++
 
      true:                                  false:
      class Foo : Bar {}             vs.     class Foo: Bar {}
+     enum E : int {}                        enum E: int {}
 
 .. _SpaceBeforeJsonColon:
 
