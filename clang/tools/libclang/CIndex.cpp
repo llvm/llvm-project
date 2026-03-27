@@ -2764,6 +2764,12 @@ void OMPClauseEnqueue::VisitOMPIsDevicePtrClause(
     const OMPIsDevicePtrClause *C) {
   VisitOMPClauseList(C);
 }
+void OMPClauseEnqueue::VisitOMPGraphIdClause(const OMPGraphIdClause *C) {
+  Visitor->AddStmt(C->getId());
+}
+void OMPClauseEnqueue::VisitOMPGraphResetClause(const OMPGraphResetClause *C) {
+  Visitor->AddStmt(C->getCondition());
+}
 void OMPClauseEnqueue::VisitOMPHasDeviceAddrClause(
     const OMPHasDeviceAddrClause *C) {
   VisitOMPClauseList(C);

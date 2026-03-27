@@ -330,6 +330,8 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
   case OMPC_when:
   case OMPC_append_args:
   case OMPC_looprange:
+  case OMPC_graph_id:
+  case OMPC_graph_reset:
     break;
   default:
     break;
@@ -728,6 +730,8 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
   case OMPC_when:
   case OMPC_append_args:
   case OMPC_looprange:
+  case OMPC_graph_id:
+  case OMPC_graph_reset:
     break;
   default:
     break;
