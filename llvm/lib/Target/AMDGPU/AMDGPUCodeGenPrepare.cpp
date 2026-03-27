@@ -2049,7 +2049,7 @@ Value *AMDGPUCodeGenPrepareImpl::matchFractPat(IntrinsicInst &I) {
   Value *Arg1 = I.getArgOperand(1);
 
   const APFloat *C;
-  if (!match(Arg1, m_APFloat(C)))
+  if (!match(Arg1, m_APFloatAllowPoison(C)))
     return nullptr;
 
   APFloat One(1.0);
