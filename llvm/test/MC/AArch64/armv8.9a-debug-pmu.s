@@ -1773,11 +1773,6 @@ trcit x1
 // CHECK-ERROR: error: instruction requires: ite
 // CHECK-UNKNOWN:  d50b72e1      sys #3, c7, c2, #7, x1
 
-sys #3, c7, c2, #7, x2
-// CHECK-INST: trcit x2
-// CHECK-ENCODING: encoding: [0xe2,0x72,0x0b,0xd5]
-// CHECK-UNKNOWN:  d50b72e2      sys #3, c7, c2, #7, x2
-
 // FEAT_SPE_FDS
 mrs x3, PMSDSFR_EL1
 // CHECK-INST: mrs x3, PMSDSFR_EL1

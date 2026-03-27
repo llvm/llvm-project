@@ -34,11 +34,6 @@
 // CHECK-ENCODING: encoding: [0x1e,0x70,0x0e,0xd5]
 // CHECK-UNKNOWN:  d50e701e      apas x30
 
-  sys #6, c7, c0, #0, x3
-// CHECK-INST: apas x3
-// CHECK-ENCODING: encoding: [0x03,0x70,0x0e,0xd5]
-// CHECK-UNKNOWN:  d50e7003      apas x3
-
   mrs x3, GPCBW_EL3
 // CHECK-INST: mrs x3, GPCBW_EL3
 // CHECK-ENCODING: encoding: [0xa3,0x21,0x3e,0xd5]

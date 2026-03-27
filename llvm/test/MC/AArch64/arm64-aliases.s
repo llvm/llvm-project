@@ -1,4 +1,8 @@
 ; RUN: llvm-mc -triple arm64-apple-darwin -mattr=neon -output-asm-variant=1 -show-encoding -print-imm-hex < %s | FileCheck %s
+; RUN: llvm-mc -triple arm64-apple-darwin -mattr=neon,+ite -filetype=obj < %s | llvm-objdump -d --mattr=+ite --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-ITE
+; RUN: llvm-mc -triple arm64-apple-darwin -mattr=neon,+gcs -filetype=obj < %s | llvm-objdump -d --mattr=+gcs --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-GCS
+; RUN: llvm-mc -triple arm64-apple-darwin -mattr=neon,+brbe -filetype=obj < %s | llvm-objdump -d --mattr=+brbe --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-BRBE
+; RUN: llvm-mc -triple arm64-apple-darwin -mattr=neon -filetype=obj < %s | llvm-objdump -d --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-RME
 
 foo:
 ;-----------------------------------------------------------------------------
@@ -525,6 +529,34 @@ foo:
 ; CHECK: sys #0x4, c8, c7, #0x6, x30
   sys #4, c8, c7, #6, x31
 ; CHECK: tlbi vmalls12e1
+
+  sys #3, c7, c2, #7, x2
+; CHECK-ITE: trcit x2
+
+  sys #3, c7, c7, #2, x20
+; CHECK-GCS: gcsss1 x20
+  sysl x23, #3, c7, c7, #3
+; CHECK-GCS: gcsss2 x23
+  sys #3, c7, c7, #0, x24
+; CHECK-GCS: gcspushm x24
+  sysl xzr, #3, c7, c7, #1
+; CHECK-GCS: gcspopm
+  sysl x24, #3, c7, c7, #1
+; CHECK-GCS: gcspopm x24
+  sys #0, c7, c7, #4
+; CHECK-GCS: gcspushx
+  sys #0, c7, c7, #5
+; CHECK-GCS: gcspopcx
+  sys #0, c7, c7, #6
+; CHECK-GCS: gcspopx
+
+  sys #1, c7, c2, #4
+; CHECK-BRBE: brb iall
+  sys #1, c7, c2, #5
+; CHECK-BRBE: brb inj
+
+  sys #6, c7, c0, #0, x3
+; CHECK-RME: apas x3
 
   ic ialluis
 ; CHECK: ic ialluis                 ; encoding: [0x1f,0x71,0x08,0xd5]

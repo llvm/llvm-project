@@ -119,21 +119,11 @@ gcsss1 x21
 // CHECK-ERROR: error: instruction requires: gcs
 // CHECK-UNKNOWN:  d50b7755 sys #3, c7, c7, #2, x21
 
-sys #3, c7, c7, #2, x20
-// CHECK-INST: gcsss1 x20
-// CHECK-ENCODING: encoding: [0x54,0x77,0x0b,0xd5]
-// CHECK-UNKNOWN:  d50b7754 sys #3, c7, c7, #2, x20
-
 gcsss2 x22
 // CHECK-INST: gcsss2 x22
 // CHECK-ENCODING: encoding: [0x76,0x77,0x2b,0xd5]
 // CHECK-ERROR: error: instruction requires: gcs
 // CHECK-UNKNOWN:  d52b7776 sysl x22, #3, c7, c7, #3
-
-sysl x23, #3, c7, c7, #3
-// CHECK-INST: gcsss2 x23
-// CHECK-ENCODING: encoding: [0x77,0x77,0x2b,0xd5]
-// CHECK-UNKNOWN:  d52b7777 sysl x23, #3, c7, c7, #3
 
 gcspushm x25
 // CHECK-INST: gcspushm x25
@@ -141,20 +131,10 @@ gcspushm x25
 // CHECK-ERROR: error: instruction requires: gcs
 // CHECK-UNKNOWN:  d50b7719 sys #3, c7, c7, #0, x25
 
-sys #3, c7, c7, #0, x24
-// CHECK-INST: gcspushm x24
-// CHECK-ENCODING: encoding: [0x18,0x77,0x0b,0xd5]
-// CHECK-UNKNOWN:  d50b7718 sys #3, c7, c7, #0, x24
-
 gcspopm
 // CHECK-INST: gcspopm
 // CHECK-ENCODING: encoding: [0x3f,0x77,0x2b,0xd5]
 // CHECK-ERROR: error: instruction requires: gcs
-// CHECK-UNKNOWN:  d52b773f sysl xzr, #3, c7, c7, #1
-
-sysl xzr, #3, c7, c7, #1
-// CHECK-INST: gcspopm
-// CHECK-ENCODING: encoding: [0x3f,0x77,0x2b,0xd5]
 // CHECK-UNKNOWN:  d52b773f sysl xzr, #3, c7, c7, #1
 
 gcspopm xzr
@@ -168,11 +148,6 @@ gcspopm x25
 // CHECK-ENCODING: encoding: [0x39,0x77,0x2b,0xd5]
 // CHECK-ERROR: error: instruction requires: gcs
 // CHECK-UNKNOWN:  d52b7739 sysl x25, #3, c7, c7, #1
-
-sysl x24, #3, c7, c7, #1
-// CHECK-INST: gcspopm x24
-// CHECK-ENCODING: encoding: [0x38,0x77,0x2b,0xd5]
-// CHECK-UNKNOWN:  d52b7738 sysl x24, #3, c7, c7, #1
 
 gcsstr x26, [x27]
 // CHECK-INST: gcsstr x26, [x27]
@@ -204,31 +179,16 @@ gcspushx
 // CHECK-ERROR: error: instruction requires: gcs
 // CHECK-UNKNOWN:  d508779f sys #0, c7, c7, #4
 
-sys #0, c7, c7, #4
-// CHECK-INST: gcspushx
-// CHECK-ENCODING: encoding: [0x9f,0x77,0x08,0xd5]
-// CHECK-UNKNOWN:  d508779f sys #0, c7, c7, #4
-
 gcspopcx
 // CHECK-INST: gcspopcx
 // CHECK-ENCODING: encoding: [0xbf,0x77,0x08,0xd5]
 // CHECK-ERROR: error: instruction requires: gcs
 // CHECK-UNKNOWN:  d50877bf sys #0, c7, c7, #5
 
-sys #0, c7, c7, #5
-// CHECK-INST: gcspopcx
-// CHECK-ENCODING: encoding: [0xbf,0x77,0x08,0xd5]
-// CHECK-UNKNOWN:  d50877bf sys #0, c7, c7, #5
-
 gcspopx
 // CHECK-INST: gcspopx
 // CHECK-ENCODING: encoding: [0xdf,0x77,0x08,0xd5]
 // CHECK-ERROR: error: instruction requires: gcs
-// CHECK-UNKNOWN:  d50877df sys #0, c7, c7, #6
-
-sys #0, c7, c7, #6
-// CHECK-INST: gcspopx
-// CHECK-ENCODING: encoding: [0xdf,0x77,0x08,0xd5]
 // CHECK-UNKNOWN:  d50877df sys #0, c7, c7, #6
 
 gcsb dsync
