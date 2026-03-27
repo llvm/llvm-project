@@ -570,7 +570,7 @@ bool DynamicLoaderMacOS::SetNotificationBreakpoint() {
       // We may not have a dyld binary mapped to this address yet;
       // don't try to express the Address object as section+offset,
       // only as a raw load address.
-      so_addr.SetRawAddress(notification_addr);
+      so_addr = Address(notification_addr);
       Breakpoint *dyld_break =
           m_process->GetTarget().CreateBreakpoint(so_addr, true, false).get();
       dyld_break->SetCallback(DynamicLoaderMacOS::NotifyBreakpointHit, this,

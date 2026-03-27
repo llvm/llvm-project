@@ -830,7 +830,7 @@ bool AppleObjCRuntimeV2::GetDynamicTypeAndAddress(
     ClassDescriptorSP objc_class_sp(GetNonKVOClassDescriptor(in_value));
     if (objc_class_sp) {
       const addr_t object_ptr = in_value.GetPointerValue().address;
-      address.SetRawAddress(object_ptr);
+      address = Address(object_ptr);
 
       ConstString class_name(objc_class_sp->GetClassName());
       class_type_or_name.SetName(class_name);

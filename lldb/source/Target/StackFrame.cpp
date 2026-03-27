@@ -258,7 +258,7 @@ bool StackFrame::ChangePC(addr_t pc) {
   // We can't change the pc value of a history stack frame - it is immutable.
   if (IsHistorical())
     return false;
-  m_frame_code_addr.SetRawAddress(pc);
+  m_frame_code_addr = Address(pc);
   m_sc.Clear(false);
   m_flags.Reset(0);
   ThreadSP thread_sp(GetThread());

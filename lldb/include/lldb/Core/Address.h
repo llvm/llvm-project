@@ -160,7 +160,7 @@ public:
   ///     A list of sections, one of which may contain the \a file_addr.
   Address(lldb::addr_t file_addr, const SectionList *section_list);
 
-  explicit Address(lldb::addr_t abs_addr);
+  explicit Address(lldb::addr_t abs_addr) : m_offset(abs_addr) {}
 
 /// Assignment operator.
 ///
@@ -442,11 +442,6 @@ public:
     bool changed = m_offset != offset;
     m_offset = offset;
     return changed;
-  }
-
-  void SetRawAddress(lldb::addr_t addr) {
-    m_section_wp.reset();
-    m_offset = addr;
   }
 
   bool Slide(int64_t offset) {
