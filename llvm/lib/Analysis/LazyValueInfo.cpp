@@ -2096,7 +2096,91 @@ Constant *LazyValueInfo::getPredicateOnEdge(CmpInst::Predicate Pred, Value *V,
   ValueLatticeElement Result =
       getOrCreateImpl(M).getValueOnEdge(V, FromBB, ToBB, CxtI);
 
-  return getPredicateResult(Pred, C, Result, M->getDataLayout());
+  Constant *Ret = getPredicateResult(Pred, C, Result, M->getDataLayout());
+  if (Ret)
+    return Ret;
+
+  // Note: The following bit of code is somewhat distinct from the rest of LVI;
+  // LVI as a whole tries to compute a lattice value which is conservatively
+  // correct on a given edge, and then checks the predicate against that
+  // merged edge result. In this case, we have an equality predicate on a
+  // switch edge which we weren't able to prove from the edge lattice alone,
+  // and we're reasoning directly from the switch partition instead. As a
+  // motivating example, consider:
+  // sw:
+  //   switch i32 %x, label %default [
+  //     i32 1, label %case
+  //     i32 3, label %case
+  //   ]
+  // case:
+  //   ; sw -> case: %x ∈ [1, 4) = [1, 2) ∪ [3, 4)
+  //   %pred = icmp eq i32 %x, 2
+  // On the edge sw -> case, the generic edge lattice for %x may conservatively
+  // merge the incoming values 1 and 3 into a range like [1, 4), which is too
+  // imprecise to prove '%pred' false because 2 is still inside that range. By
+  // looking at the switch partition directly, we know the only values reaching
+  // %case are exactly 1 and 3, so '%pred' must be false. We limit this
+  // reasoning to the originating switch and value, optionally constant-folding
+  // a single foldable use of the switch condition per case.
+  if (auto *SW = dyn_cast<SwitchInst>(FromBB->getTerminator());
+      SW && ICmpInst::isEquality(Pred)) {
+    assert(isa<ConstantInt>(C) && "Expected integer C");
+    const APInt &CmpInt = cast<ConstantInt>(C)->getValue();
+    bool ValUsesConditionAndMayBeFoldable = false;
+    auto *Condition = SW->getCondition();
+    if (Condition != V) {
+      User *Usr = dyn_cast<User>(V);
+      // Check if Val has Condition as an operand.
+      ValUsesConditionAndMayBeFoldable =
+          Usr && isOperationFoldable(Usr) && usesOperand(Usr, Condition);
+      if (!ValUsesConditionAndMayBeFoldable)
+        return nullptr;
+    }
+
+    auto GetValueOnCase = [&](const APInt &CaseVal) -> std::optional<APInt> {
+      return ValUsesConditionAndMayBeFoldable
+                 ? constantFoldUser(cast<User>(V), Condition, CaseVal,
+                                    ToBB->getDataLayout())
+                       .asConstantInteger()
+                 : CaseVal;
+    };
+    const bool IsDefault = ToBB == SW->getDefaultDest();
+    // Collect related cases
+    auto Filter = [&](const SwitchInst::CaseHandle &Case) {
+      return IsDefault ? Case.getCaseSuccessor() != ToBB
+                       : Case.getCaseSuccessor() == ToBB;
+    };
+    auto EqC = [&](const SwitchInst::CaseHandle &Case) {
+      auto Value = GetValueOnCase(Case.getCaseValue()->getValue());
+      return Value ? *Value == CmpInt : false;
+    };
+    auto NeC = [&](const SwitchInst::CaseHandle &Case) {
+      auto Value = GetValueOnCase(Case.getCaseValue()->getValue());
+      return Value ? *Value != CmpInt : false;
+    };
+    // For V eq/ne C in edge SW -> ToBB, we consider the following situations:
+    // ToBB == SW.getDefaultDest():
+    //   cases = { case.value | case.dest != ToBB }, i.e., all arms --/-> ToBB
+    //       Pred = eq: ∃ c ∈ cases, c == C --> V == C must be false
+    //       Pred = ne: ∃ c ∈ cases, c == C --> V != C must be true
+    // ToBB != SW.getDefaultDest():
+    //   cases = { case.value | case.dest == ToBB }, i.e., all arms ----> ToBB
+    //       Pred = eq: ∀ c ∈ cases, c != C --> V == C must be false
+    //       Pred = ne: ∀ c ∈ cases, c != C --> V != C must be true
+    auto FilteredCases = make_filter_range(SW->cases(), Filter);
+
+    std::optional<bool> Res =
+        IsDefault ? (any_of(FilteredCases, EqC)
+                         ? std::optional(Pred == ICmpInst::ICMP_NE)
+                         : std::nullopt)
+                  : (all_of(FilteredCases, NeC)
+                         ? std::optional(Pred == ICmpInst::ICMP_NE)
+                         : std::nullopt);
+    if (!Res)
+      return nullptr;
+    return ConstantInt::getBool(Type::getInt1Ty(V->getContext()), *Res);
+  }
+  return nullptr;
 }
 
 Constant *LazyValueInfo::getPredicateAt(CmpInst::Predicate Pred, Value *V,

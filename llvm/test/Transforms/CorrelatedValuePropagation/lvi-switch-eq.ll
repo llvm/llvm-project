@@ -17,8 +17,7 @@ define i1 @default_eq_false(i32 %x) {
 ; CHECK:       [[OTHER]]:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       [[DEFAULT]]:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[PRED]], 3
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %pred = add i32 %x, 1
@@ -45,8 +44,7 @@ define i1 @default_ne_true(i32 %x) {
 ; CHECK:       [[OTHER]]:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       [[DEFAULT]]:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[PRED]], 3
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %pred = add i32 %x, 1
@@ -74,8 +72,7 @@ define i1 @case_eq_false(i32 %x) {
 ; CHECK:       [[OTHER]]:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       [[CASE]]:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[PRED]], 3
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %pred = add i32 %x, 1
@@ -104,8 +101,7 @@ define i1 @case_ne_true(i32 %x) {
 ; CHECK:       [[OTHER]]:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       [[CASE]]:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[PRED]], 3
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %pred = add i32 %x, 1
