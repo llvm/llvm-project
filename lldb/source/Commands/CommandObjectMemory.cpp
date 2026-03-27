@@ -655,7 +655,7 @@ protected:
         return;
       }
 
-      Address address(addr, nullptr);
+      Address address(addr);
       bytes_read = target->ReadMemory(address, data_sp->GetBytes(),
                                       data_sp->GetByteSize(), error, true);
       if (bytes_read == 0) {
