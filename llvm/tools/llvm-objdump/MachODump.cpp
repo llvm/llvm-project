@@ -2765,8 +2765,7 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
         }
         if (MachOObjectFile *O =
                 dyn_cast<MachOObjectFile>(&*ChildOrErr.get())) {
-          ProcessMachO(Filename, O, O->getFileName(),
-                        ArchitectureName);
+          ProcessMachO(Filename, O, O->getFileName(), ArchitectureName);
         }
       }
       if (Err)
