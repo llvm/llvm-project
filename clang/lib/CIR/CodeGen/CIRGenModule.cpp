@@ -666,9 +666,9 @@ void CIRGenModule::setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op) {
 
   const Decl *d = gd.getDecl();
   if (d) {
-    if (auto globalOp = mlir::dyn_cast<cir::GlobalOp>(op)) {
+    if (auto gvi = mlir::dyn_cast<cir::CIRGlobalValueInterface>(op)) {
       if (const auto *sa = d->getAttr<SectionAttr>())
-        globalOp.setSectionAttr(builder.getStringAttr(sa->getName()));
+        gvi.setSection(builder.getStringAttr(sa->getName()));
     }
   }
 
@@ -1256,7 +1256,6 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
                                                   /*ExcludeDtor=*/true)));
   // If it is in a read-only section, mark it 'constant'.
   if (const SectionAttr *sa = vd->getAttr<SectionAttr>()) {
-    gv.setSectionAttr(getBuilder().getStringAttr(sa->getName()));
     const ASTContext::SectionInfo &si = astContext.SectionInfos[sa->getName()];
     if ((si.SectionFlags & ASTContext::PSF_Write) == 0)
       gv.setConstant(true);
