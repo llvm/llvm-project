@@ -25976,6 +25976,7 @@ bool SLPVectorizerPass::vectorizeStores(
     SmallVector<std::unique_ptr<StoreChainContext>> AllContexts;
     BoUpSLP::ValueList Operands;
     SmallVector<StoreChainContext::SizePair> RangeSizes;
+    unsigned MaxStride = EnableStridedStores ? MaxProfitableStride : 1;
 
     // All chains that we're still building
     struct PartialChainStatus {
@@ -25993,8 +25994,7 @@ bool SLPVectorizerPass::vectorizeStores(
       // What is the Stride of this chain
       unsigned Stride;
     };
-    SmallVector<SmallVector<PartialChainStatus, 1>> Chains(MaxProfitableStride +
-                                                           1);
+    SmallVector<SmallVector<PartialChainStatus, 1>> Chains(MaxStride + 1);
     auto GetChainsKey = [&](int64_t Query) -> unsigned {
       // Just modulo function, get the index into Chains for a given query
       int64_t Rem = (Query % (int64_t)Chains.size());
@@ -26033,11 +26033,10 @@ bool SLPVectorizerPass::vectorizeStores(
                                Status.Stride});
         FoundStrides[Status.Stride] = true;
       }
-
+      Chains[GetChainsKey(Dist)].clear();
       // For any stride lengths that we didn't append to a chain for,
       // instead start a new chain
-      for (auto Stride : seq<unsigned>(
-               1, (EnableStridedStores ? MaxProfitableStride : 1) + 1)) {
+      for (auto Stride : seq<unsigned>(1, MaxStride + 1)) {
         if (FoundStrides[Stride])
           continue;
         unsigned Key = GetChainsKey(Dist + Stride);
