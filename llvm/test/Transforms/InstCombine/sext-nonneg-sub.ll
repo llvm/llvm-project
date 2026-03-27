@@ -63,9 +63,9 @@ define i64 @neg_unguarded_sub(i32 %a, i32 %b) {
 }
 
 ; Test that select i1 (X < Y) ? 0 : X - Y is recognized as non-negative, converting sext to zext
-define i64 @select_nonnegative_slt(i32 %x, i32 %y) {
+define i64 @select_nonnegative_slt(i32 noundef %x, i32 %y) {
 ; CHECK-LABEL: define i64 @select_nonnegative_slt(
-; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-SAME: i32 noundef [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smin.i32(i32 [[Y]], i32 [[X]])
 ; CHECK-NEXT:    [[COND:%.*]] = sub nsw i32 [[X]], [[TMP1]]
 ; CHECK-NEXT:    [[CONV:%.*]] = zext nneg i32 [[COND]] to i64
@@ -80,9 +80,9 @@ define i64 @select_nonnegative_slt(i32 %x, i32 %y) {
 }
 
 ; Test that select <4 x i1> (X < Y) ? 0 : X - Y is recognized as non-negative, converting sext to zext
-define <4 x i64> @select_nonnegative_slt_vec(<4 x i32> %x, <4 x i32> %y) {
+define <4 x i64> @select_nonnegative_slt_vec(<4 x i32> noundef %x, <4 x i32> %y) {
 ; CHECK-LABEL: define <4 x i64> @select_nonnegative_slt_vec(
-; CHECK-SAME: <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]]) {
+; CHECK-SAME: <4 x i32> noundef [[X:%.*]], <4 x i32> [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[Y]], <4 x i32> [[X]])
 ; CHECK-NEXT:    [[COND:%.*]] = sub nsw <4 x i32> [[X]], [[TMP1]]
 ; CHECK-NEXT:    [[CONV:%.*]] = zext nneg <4 x i32> [[COND]] to <4 x i64>
@@ -96,9 +96,9 @@ define <4 x i64> @select_nonnegative_slt_vec(<4 x i32> %x, <4 x i32> %y) {
 }
 
 ; Scalable vector should transform
-define <vscale x 4 x i64> @select_nonnegative_slt_scalable(<vscale x 4 x i32> %x, <vscale x 4 x i32> %y) {
+define <vscale x 4 x i64> @select_nonnegative_slt_scalable(<vscale x 4 x i32> noundef %x, <vscale x 4 x i32> %y) {
 ; CHECK-LABEL: define <vscale x 4 x i64> @select_nonnegative_slt_scalable(
-; CHECK-SAME: <vscale x 4 x i32> [[X:%.*]], <vscale x 4 x i32> [[Y:%.*]]) {
+; CHECK-SAME: <vscale x 4 x i32> noundef [[X:%.*]], <vscale x 4 x i32> [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.smin.nxv4i32(<vscale x 4 x i32> [[Y]], <vscale x 4 x i32> [[X]])
 ; CHECK-NEXT:    [[COND:%.*]] = sub nsw <vscale x 4 x i32> [[X]], [[TMP1]]
 ; CHECK-NEXT:    [[CONV:%.*]] = zext nneg <vscale x 4 x i32> [[COND]] to <vscale x 4 x i64>
@@ -111,12 +111,12 @@ define <vscale x 4 x i64> @select_nonnegative_slt_scalable(<vscale x 4 x i32> %x
   ret <vscale x 4 x i64> %conv
 }
 
-define i64 @slt_commuted(i32 %x, i32 %y) {
+define i64 @slt_commuted(i32 %x, i32 noundef %y) {
 ; CHECK-LABEL: define i64 @slt_commuted(
-; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[SMIN:%.*]] = call i32 @llvm.smin.i32(i32 [[Y]], i32 [[X]])
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[Y]], [[SMIN]]
-; CHECK-NEXT:    [[EXT:%.*]] = zext nneg i32 [[SUB]] to i64
+; CHECK-SAME: i32 [[X:%.*]], i32 noundef [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smin.i32(i32 [[Y]], i32 [[X]])
+; CHECK-NEXT:    [[SEL:%.*]] = sub nsw i32 [[Y]], [[TMP1]]
+; CHECK-NEXT:    [[EXT:%.*]] = zext nneg i32 [[SEL]] to i64
 ; CHECK-NEXT:    ret i64 [[EXT]]
 ;
   %cmp = icmp sgt i32 %y, %x
@@ -126,9 +126,9 @@ define i64 @slt_commuted(i32 %x, i32 %y) {
   ret i64 %ext
 }
 
-define i64 @sgt_commuted(i32 %x, i32 %y) {
+define i64 @sgt_commuted(i32 noundef %x, i32 %y) {
 ; CHECK-LABEL: define i64 @sgt_commuted(
-; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-SAME: i32 noundef [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smin.i32(i32 [[X]], i32 [[Y]])
 ; CHECK-NEXT:    [[SEL:%.*]] = sub nsw i32 [[X]], [[TMP1]]
 ; CHECK-NEXT:    [[EXT:%.*]] = zext nneg i32 [[SEL]] to i64
@@ -142,9 +142,9 @@ define i64 @sgt_commuted(i32 %x, i32 %y) {
 }
 
 ; NEGATIVE TEST: FVal is negative
-define i64 @sgt_negative_fval(i32 %x, i32 %y) {
+define i64 @sgt_negative_fval(i32 noundef %x, i32 %y) {
 ; CHECK-LABEL: define i64 @sgt_negative_fval(
-; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-SAME: i32 noundef [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[Y]], [[X]]
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X]], [[Y]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[SUB]], i32 -1
@@ -159,9 +159,9 @@ define i64 @sgt_negative_fval(i32 %x, i32 %y) {
 }
 
 ; NEGATIVE TEST: Wrong operand in select arm
-define i64 @slt_wrong_sub_order(i32 %x, i32 %y) {
+define i64 @slt_wrong_sub_order(i32 noundef %x, i32 %y) {
 ; CHECK-LABEL: define i64 @slt_wrong_sub_order(
-; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-SAME: i32 noundef [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X]], [[Y]]
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X]], [[Y]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[SUB]], i32 0
@@ -176,10 +176,10 @@ define i64 @slt_wrong_sub_order(i32 %x, i32 %y) {
 }
 
 ; NEGATIVE TEST: TVal is negative
-define i64 @slt_negative_tval(i32 %x, i32 %y) {
+define i64 @slt_negative_tval(i32 %x, i32 noundef %y) {
 ;
 ; CHECK-LABEL: define i64 @slt_negative_tval(
-; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-SAME: i32 [[X:%.*]], i32 noundef [[Y:%.*]]) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X]], [[Y]]
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[Y]], [[X]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 -1, i32 [[SUB]]
