@@ -160,7 +160,7 @@ public:
   ///     A list of sections, one of which may contain the \a file_addr.
   Address(lldb::addr_t file_addr, const SectionList *section_list);
 
-  Address(lldb::addr_t abs_addr);
+  explicit Address(lldb::addr_t abs_addr);
 
 /// Assignment operator.
 ///
