@@ -3551,12 +3551,19 @@ lldb::ValueObjectSP ValueObject::CreateValueObjectFromAddress(
     if (!do_deref)
       pointer_type = type;
     if (pointer_type) {
+#ifdef _AIX
+      lldb::ValueObjectSP ptr_result_valobj_sp(ValueObjectConstResult::Create(
+          exe_ctx.GetBestExecutionContextScope(), pointer_type,
+          ConstString(name), address, eAddressTypeHost,
+          exe_ctx.GetAddressByteSize()));
+#else
       lldb::DataBufferSP buffer(
           new lldb_private::DataBufferHeap(&address, sizeof(lldb::addr_t)));
       lldb::ValueObjectSP ptr_result_valobj_sp(ValueObjectConstResult::Create(
           exe_ctx.GetBestExecutionContextScope(), pointer_type,
           ConstString(name), buffer, exe_ctx.GetByteOrder(),
           exe_ctx.GetAddressByteSize()));
+#endif
       if (ptr_result_valobj_sp) {
         if (do_deref)
           ptr_result_valobj_sp->GetValue().SetValueType(

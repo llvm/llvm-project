@@ -538,7 +538,7 @@ bool EmulateInstructionPPC64::EmulateBC(uint32_t opcode) {
   const bool AA = Bits32(opcode, 1, 1);
   const bool LK = Bits32(opcode, 0, 0);
 
-  const int64_t target_addr = llvm::SignExtend64<16>(BD) << 2;
+  const int64_t target_addr = llvm::SignExtend64<16>(BD << 2);
   const uint32_t M = m_is_64bit ? 0 : 32;
 
   // Extract BO field bits

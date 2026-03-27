@@ -86,6 +86,10 @@ ObjectFile *ObjectFileXCOFF::CreateInstance(const lldb::ModuleSP &module_sp,
     data_offset = 0;
     extractor_sp = std::make_shared<lldb_private::DataExtractor>(data_sp);
   }
+  const uint16_t magic = GetMagicBytes(extractor_sp, 0, length);
+  extractor_sp->SetAddressByteSize((magic == XCOFF::XCOFF64) ? 8 : 4);
+  extractor_sp->SetByteOrder(lldb::eByteOrderBig);
+
   auto objfile_up = std::make_unique<ObjectFileXCOFF>(
       module_sp, extractor_sp, data_offset, file, file_offset, length);
   if (!objfile_up)
