@@ -88,6 +88,29 @@ bool hasEqualKnownFields(const llvm::Triple &Lhs, const llvm::Triple &Rhs) {
   return true;
 }
 
+/// Returns a human-readable language/dialect description for diagnostics.
+/// Checks flags from highest to lowest standard since they are cumulative
+/// (e.g. CPlusPlus20 implies CPlusPlus17).
+/// This does not cover all possible languages (e.g. Obj-C or flavors of C),
+/// because CTU currently does not differentiate between them.
+static std::string getLangDescription(const LangOptions &LO) {
+  if (!LO.CPlusPlus)
+    return "non-C++";
+  if (LO.CPlusPlus26)
+    return "C++26";
+  if (LO.CPlusPlus23)
+    return "C++23";
+  if (LO.CPlusPlus20)
+    return "C++20";
+  if (LO.CPlusPlus17)
+    return "C++17";
+  if (LO.CPlusPlus14)
+    return "C++14";
+  if (LO.CPlusPlus11)
+    return "C++11";
+  return "C++98";
+}
+
 // FIXME: This class is will be removed after the transition to llvm::Error.
 class IndexErrorCategory : public std::error_category {
 public:
@@ -330,7 +353,9 @@ llvm::Expected<const T *> CrossTranslationUnitContext::getCrossTUDefinitionImpl(
   // different dialects of C++.
   if (LangTo.CPlusPlus != LangFrom.CPlusPlus) {
     ++NumLangMismatch;
-    return llvm::make_error<IndexError>(index_error_code::lang_mismatch);
+    return llvm::make_error<IndexError>(
+        index_error_code::lang_mismatch, std::string(Unit->getMainFileName()),
+        getLangDescription(LangTo), getLangDescription(LangFrom));
   }
 
   // If CPP dialects are different then return with error.
@@ -351,8 +376,10 @@ llvm::Expected<const T *> CrossTranslationUnitContext::getCrossTUDefinitionImpl(
       LangTo.CPlusPlus17 != LangFrom.CPlusPlus17 ||
       LangTo.CPlusPlus20 != LangFrom.CPlusPlus20) {
     ++NumLangDialectMismatch;
-    return llvm::make_error<IndexError>(
-        index_error_code::lang_dialect_mismatch);
+    return llvm::make_error<IndexError>(index_error_code::lang_dialect_mismatch,
+                                        std::string(Unit->getMainFileName()),
+                                        getLangDescription(LangTo),
+                                        getLangDescription(LangFrom));
   }
 
   TranslationUnitDecl *TU = Unit->getASTContext().getTranslationUnitDecl();
@@ -386,36 +413,92 @@ void CrossTranslationUnitContext::emitCrossTUDiagnostics(const IndexError &IE,
     Context.getDiagnostics().Report(Loc, diag::err_ctu_error_opening)
         << IE.getFileName();
     return;
+
   case index_error_code::invalid_index_format:
     Context.getDiagnostics().Report(Loc, diag::err_extdefmap_parsing)
         << IE.getFileName() << IE.getLineNum();
     return;
+
   case index_error_code::multiple_definitions:
     Context.getDiagnostics().Report(Loc, diag::err_multiple_def_index)
         << IE.getLineNum();
     return;
+
   case index_error_code::triple_mismatch:
     Context.getDiagnostics().Report(Loc, diag::warn_ctu_incompat_triple)
-        << IE.getFileName() << IE.getTripleToName() << IE.getTripleFromName();
+        << IE.getFileName() << IE.getConfigToName() << IE.getConfigFromName();
     return;
+
+  case index_error_code::missing_definition:
+    // Ignore missing definitions because it is very common to have some symbols
+    // defined outside of the analysis scope: they may be defined in 3-rd party
+    // and standard libraries, generated code, and files excluded from the
+    // analysis.
+    // Even ignoring it with Ignored diagnostic might generate too much traffic.
+    return;
+
+  case index_error_code::failed_import:
+  case index_error_code::unspecified: // FIXME: remove?
+    // Not clear what happened exactly, but the outcome is a missing definition
+    // This is not a big deal, and is expected since ASTImporter is incomplete.
+    Context.getDiagnostics().Report(Loc, diag::warn_ctu_import_failure)
+        << Category->message(static_cast<int>(IE.getCode()));
+    return;
+
+  case index_error_code::failed_to_generate_usr:
+    // This is unlikely, so it is worth looking into, hence an error.
+  case index_error_code::failed_to_get_external_ast:
+    // This is suspicious, since the external AST is mentioned in the external
+    // defmap, so it should exist.
+    Context.getDiagnostics().Report(Loc, diag::err_ctu_import_failure)
+        << Category->message(static_cast<int>(IE.getCode()));
+    return;
+
+  case index_error_code::invocation_list_file_not_found:
+    // If the external def-map refers to source files, you must provide an
+    // invocation list file. Otherwise, CTU does not work at all, so you should
+    // check your build and analysis configuration.
+    Context.getDiagnostics().Report(Loc, diag::err_ctu_error_opening)
+        << IE.getFileName();
+    return;
+
+  case index_error_code::load_threshold_reached:
+    // This is expected. It is still useful to be aware of, but it is normal operation.
+    Context.getDiagnostics().Report(Loc,
+                                    diag::remark_ctu_import_threshold_reached);
+    return;
+
+  case index_error_code::lang_mismatch:
+  case index_error_code::lang_dialect_mismatch:
+    // Similar to target triple mismatch.
+    Context.getDiagnostics().Report(Loc, diag::warn_ctu_incompat_lang)
+        << IE.getFileName() << IE.getConfigToName() << IE.getConfigFromName();
+    return;
+
+  case index_error_code::invocation_list_wrong_format:
+  case index_error_code::invocation_list_empty: // FIXME: remove?
+    // Without parsable invocation list, CTU cannot function.
+    Context.getDiagnostics().Report(Loc, diag::err_invlist_parsing)
+        << IE.getFileName() << IE.getLineNum();
+    return;
+
+  case index_error_code::invocation_list_ambiguous:
+    // For automatically generated invocation lists, it is common to list multiple invocations,
+    // if a file is compiled in multiple contexts. No need to block CTU because of this.
+    Context.getDiagnostics().Report(Loc, diag::warn_multiple_entries_invlist)
+        << IE.getFileName();
+    return;
+
+  case index_error_code::invocation_list_lookup_unsuccessful:
+    // Some files might be missing in the invocation list. It is sad but not fatal,
+    // and CTU can take advantage of the definitions in files with known invocations.
+    Context.getDiagnostics().Report(Loc, diag::warn_invlist_missing_file)
+        << IE.getFileName();
+    return;
+
   case index_error_code::success:
     llvm_unreachable("There should not be a success error. This case should "
                      "have been handled by the caller.");
-    return;
-  case index_error_code::unspecified:
-  case index_error_code::missing_definition:
-  case index_error_code::failed_import:
-  case index_error_code::failed_to_get_external_ast:
-  case index_error_code::failed_to_generate_usr:
-  case index_error_code::lang_mismatch:
-  case index_error_code::lang_dialect_mismatch:
-  case index_error_code::load_threshold_reached:
-  case index_error_code::invocation_list_ambiguous:
-  case index_error_code::invocation_list_file_not_found:
-  case index_error_code::invocation_list_empty:
-  case index_error_code::invocation_list_wrong_format:
-  case index_error_code::invocation_list_lookup_unsuccessful:
-    // FIXME: Silently dropping these errors
     return;
   }
   llvm_unreachable("Unrecognized index_error_code.");
@@ -624,7 +707,8 @@ CrossTranslationUnitContext::ASTLoader::loadFromSource(
   auto Invocation = InvocationList->find(SourceFilePath);
   if (Invocation == InvocationList->end())
     return llvm::make_error<IndexError>(
-        index_error_code::invocation_list_lookup_unsuccessful);
+        index_error_code::invocation_list_lookup_unsuccessful,
+        std::string(SourceFilePath));
 
   const InvocationListTy::mapped_type &InvocationCommand = Invocation->second;
 
@@ -695,7 +779,8 @@ parseInvocationList(StringRef FileContent, llvm::sys::path::Style PathStyle) {
 
     if (InvocationList.contains(InvocationKey))
       return llvm::make_error<IndexError>(
-          index_error_code::invocation_list_ambiguous);
+          index_error_code::invocation_list_ambiguous,
+          std::string(InvocationKey));
 
     /// The values should be sequences of strings, each representing a part of
     /// the invocation.
@@ -728,14 +813,15 @@ llvm::Error CrossTranslationUnitContext::ASTLoader::lazyInitInvocationList() {
   /// Lazily initialize the invocation list member used for on-demand parsing.
   if (InvocationList)
     return llvm::Error::success();
-  if (index_error_code::success != PreviousParsingResult)
-    return llvm::make_error<IndexError>(PreviousParsingResult);
+  if (PreviousError)
+    return llvm::make_error<IndexError>(*PreviousError);
 
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> FileContent =
       CI.getVirtualFileSystem().getBufferForFile(InvocationListFilePath);
   if (!FileContent) {
-    PreviousParsingResult = index_error_code::invocation_list_file_not_found;
-    return llvm::make_error<IndexError>(PreviousParsingResult);
+    PreviousError = IndexError(index_error_code::invocation_list_file_not_found,
+                               std::string(InvocationListFilePath));
+    return llvm::make_error<IndexError>(*PreviousError);
   }
   std::unique_ptr<llvm::MemoryBuffer> ContentBuffer = std::move(*FileContent);
   assert(ContentBuffer && "If no error was produced after loading, the pointer "
@@ -744,12 +830,18 @@ llvm::Error CrossTranslationUnitContext::ASTLoader::lazyInitInvocationList() {
   llvm::Expected<InvocationListTy> ExpectedInvocationList =
       parseInvocationList(ContentBuffer->getBuffer(), PathStyle);
 
-  // Handle the error to store the code for next call to this function.
+  // Handle the error to store the code and filename for next call to this
+  // function.
   if (!ExpectedInvocationList) {
-    llvm::handleAllErrors(
-        ExpectedInvocationList.takeError(),
-        [&](const IndexError &E) { PreviousParsingResult = E.getCode(); });
-    return llvm::make_error<IndexError>(PreviousParsingResult);
+    llvm::handleAllErrors(ExpectedInvocationList.takeError(),
+                          [&](const IndexError &E) {
+                            PreviousError = IndexError(
+                                E.getCode(),
+                                E.getFileName().empty()
+                                    ? std::string(InvocationListFilePath)
+                                    : E.getFileName());
+                          });
+    return llvm::make_error<IndexError>(*PreviousError);
   }
 
   InvocationList = *ExpectedInvocationList;

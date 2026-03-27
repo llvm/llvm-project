@@ -67,22 +67,22 @@ public:
   IndexError(index_error_code C, std::string FileName, std::string TripleToName,
              std::string TripleFromName)
       : Code(C), FileName(std::move(FileName)),
-        TripleToName(std::move(TripleToName)),
-        TripleFromName(std::move(TripleFromName)) {}
+        ConfigToName(std::move(TripleToName)),
+        ConfigFromName(std::move(TripleFromName)) {}
   void log(raw_ostream &OS) const override;
   std::error_code convertToErrorCode() const override;
   index_error_code getCode() const { return Code; }
   int getLineNum() const { return LineNo; }
   std::string getFileName() const { return FileName; }
-  std::string getTripleToName() const { return TripleToName; }
-  std::string getTripleFromName() const { return TripleFromName; }
+  std::string getConfigToName() const { return ConfigToName; }
+  std::string getConfigFromName() const { return ConfigFromName; }
 
 private:
   index_error_code Code;
   std::string FileName;
   int LineNo;
-  std::string TripleToName;
-  std::string TripleFromName;
+  std::string ConfigToName;
+  std::string ConfigFromName;
 };
 
 /// This function parses an index file that determines which
@@ -264,7 +264,7 @@ private:
     /// In case of on-demand parsing, the invocations for parsing the source
     /// files is stored.
     std::optional<InvocationListTy> InvocationList;
-    index_error_code PreviousParsingResult = index_error_code::success;
+    std::optional<IndexError> PreviousError;
   };
 
   /// Maintain number of AST loads and check for reaching the load limit.
