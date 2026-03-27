@@ -468,10 +468,11 @@ private:
   /// If no upper bound is available, return NULL.
   const SCEV *collectUpperBound(const Loop *l, Type *T) const;
 
-  /// collectConstantUpperBound - Calls collectUpperBound(), then
-  /// attempts to cast it to SCEVConstant. If the cast fails,
-  /// returns NULL.
-  const SCEVConstant *collectConstantUpperBound(const Loop *l, Type *T) const;
+  /// collectNonNegativeConstantUpperBound - Calls collectUpperBound(), then
+  /// attempts to cast it to APInt. If the cast fails, or the value is negative,
+  /// returns std::nullopt.
+  std::optional<APInt> collectNonNegativeConstantUpperBound(const Loop *L,
+                                                            Type *T) const;
 
   /// classifyPair - Examines the subscript pair (the Src and Dst SCEVs)
   /// and classifies it as either ZIV, SIV, RDIV, MIV, or Nonlinear.
@@ -588,17 +589,6 @@ private:
                      const SCEV *SrcConst, const SCEV *DstConst,
                      const Loop *SrcLoop, const Loop *DstLoop,
                      FullDependence &Result) const;
-
-  /// symbolicRDIVtest - Tests the RDIV subscript pair for dependence.
-  /// Things of the form [c1 + a*i] and [c2 + b*j],
-  /// where i and j are induction variable, c1 and c2 are loop invariant,
-  /// and a and b are constants.
-  /// Returns true if any possible dependence is disproved.
-  /// Works in some cases that exactRDIVtest doesn't,
-  /// and vice versa. Can also be used as a backup for
-  /// ordinary SIV tests.
-  bool symbolicRDIVtest(const SCEVAddRecExpr *Src,
-                        const SCEVAddRecExpr *Dst) const;
 
   /// gcdMIVtest - Tests an MIV subscript pair for dependence.
   /// Returns true if any possible dependence is disproved.

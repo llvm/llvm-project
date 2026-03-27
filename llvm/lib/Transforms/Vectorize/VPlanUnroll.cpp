@@ -543,6 +543,42 @@ void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF) {
   VPlanTransforms::removeDeadRecipes(Plan);
 }
 
+/// Add a lane offset to the start index of \p Steps.
+static void addLaneToStartIndex(VPScalarIVStepsRecipe *Steps, unsigned Lane,
+                                VPlan &Plan, VPRecipeBase *InsertPt) {
+  assert(Lane > 0 && "Zero lane adds no offset to start index");
+  VPTypeAnalysis TypeInfo(Plan);
+  Type *BaseIVTy = TypeInfo.inferScalarType(Steps->getOperand(0));
+
+  VPValue *OldStartIndex = Steps->getStartIndex();
+  VPValue *LaneOffset;
+  unsigned AddOpcode;
+  // TODO: Retrieve the flags from Steps unconditionally.
+  VPIRFlags Flags;
+  if (BaseIVTy->isFloatingPointTy()) {
+    int SignedLane = static_cast<int>(Lane);
+    if (!OldStartIndex && Steps->getInductionOpcode() == Instruction::FSub)
+      SignedLane = -SignedLane;
+    LaneOffset = Plan.getOrAddLiveIn(ConstantFP::get(BaseIVTy, SignedLane));
+    AddOpcode = Steps->getInductionOpcode();
+    Flags = VPIRFlags(FastMathFlags());
+  } else {
+    unsigned BaseIVBits = BaseIVTy->getScalarSizeInBits();
+    LaneOffset = Plan.getConstantInt(
+        APInt(BaseIVBits, Lane, /*isSigned*/ false, /*implicitTrunc*/ true));
+    AddOpcode = Instruction::Add;
+    Flags = VPIRFlags(VPIRFlags::WrapFlagsTy(false, false));
+  }
+
+  VPValue *NewStartIndex = LaneOffset;
+  if (OldStartIndex) {
+    VPBuilder Builder(InsertPt);
+    NewStartIndex =
+        Builder.createNaryOp(AddOpcode, {OldStartIndex, LaneOffset}, Flags);
+  }
+  Steps->setStartIndex(NewStartIndex);
+}
+
 /// Create a single-scalar clone of \p DefR (must be a VPReplicateRecipe,
 /// VPInstruction or VPScalarIVStepsRecipe) for lane \p Lane. Use \p
 /// Def2LaneDefs to look up scalar definitions for operands of \DefR.
@@ -616,38 +652,8 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
     if (auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(New)) {
       // Skip lane 0: an absent start index is implicitly zero.
       unsigned KnownLane = Lane.getKnownLane();
-      if (KnownLane != 0) {
-        VPTypeAnalysis TypeInfo(Plan);
-        Type *BaseIVTy = TypeInfo.inferScalarType(DefR->getOperand(0));
-
-        VPValue *StartIndex = Steps->getStartIndex();
-        VPValue *LaneOffset;
-        unsigned AddOp;
-        VPIRFlags Flags;
-        if (BaseIVTy->isFloatingPointTy()) {
-          int SignedLane = static_cast<int>(KnownLane);
-          if (!StartIndex && Steps->getInductionOpcode() == Instruction::FSub)
-            SignedLane = -SignedLane;
-          LaneOffset =
-              Plan.getOrAddLiveIn(ConstantFP::get(BaseIVTy, SignedLane));
-          AddOp = Steps->getInductionOpcode();
-          Flags = VPIRFlags(FastMathFlags());
-        } else {
-          unsigned BaseIVBits = BaseIVTy->getScalarSizeInBits();
-          LaneOffset = Plan.getConstantInt(APInt(BaseIVBits, KnownLane,
-                                                 /*isSigned*/ false,
-                                                 /*implicitTrunc*/ true));
-          AddOp = Instruction::Add;
-          Flags = VPIRFlags(VPIRFlags::WrapFlagsTy(false, false));
-        }
-
-        if (StartIndex) {
-          VPBuilder LaneBuilder(DefR);
-          LaneOffset =
-              LaneBuilder.createNaryOp(AddOp, {StartIndex, LaneOffset}, Flags);
-        }
-        Steps->setStartIndex(LaneOffset);
-      }
+      if (KnownLane != 0)
+        addLaneToStartIndex(Steps, KnownLane, Plan, DefR);
     }
   }
   New->insertBefore(DefR);
