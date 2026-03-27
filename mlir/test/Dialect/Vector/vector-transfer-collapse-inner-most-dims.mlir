@@ -266,14 +266,13 @@ func.func @contiguous_inner_most_dim_with_subview_2d_scalable_inner_dim(%src: me
 
 // -----
 
-func.func @contiguous_inner_most_masked_read(%src: memref<1x1x8x1xf32, strided<[3072, 8, 1, 1], offset: ?>>, %mask: vector<1x8x1xi1>) -> vector<1x8x1xf32>{
+func.func @contiguous_inner_most_with_mask(%src: memref<1x1x8x1xf32, strided<[3072, 8, 1, 1], offset: ?>>, %mask: vector<1x8x1xi1>) -> vector<1x8x1xf32>{
   %c0 = arith.constant 0 : index
   %pad = arith.constant 0.0 : f32
   %v = vector.transfer_read %src[%c0, %c0, %c0, %c0], %pad, %mask {in_bounds = [true, true, true]} : memref<1x1x8x1xf32, strided<[3072, 8, 1, 1], offset: ?>>, vector<1x8x1xf32>
   return %v : vector<1x8x1xf32>
 }
-
-//      CHECK: func @contiguous_inner_most_masked_read(%[[SRC:.+]]: memref<1x1x8x1xf32, strided<[3072, 8, 1, 1], offset: ?>>, %[[MASK:.+]]: vector<1x8x1xi1>)
+//      CHECK: func @contiguous_inner_most_with_mask(%[[SRC:.+]]: memref<1x1x8x1xf32, strided<[3072, 8, 1, 1], offset: ?>>, %[[MASK:.+]]: vector<1x8x1xi1>)
 //      CHECK:   %[[SRC_0:.+]] = memref.subview %[[SRC]]
 // CHECK-SAME:    memref<1x1x8x1xf32, strided<[3072, 8, 1, 1], offset: ?>> to memref<1x1x8xf32, strided<[3072, 8, 1], offset: ?>>
 //      CHECK:   %[[REDUCED_MASK:.+]] = vector.shape_cast %[[MASK]] : vector<1x8x1xi1> to vector<1x8xi1>
@@ -598,13 +597,12 @@ func.func @contiguous_inner_most_dim_with_subview_2d_scalable(%dest: memref<1000
 
 // -----
 
-func.func @contiguous_inner_most_masked_write(%dest: memref<1x1x8x1xf32, strided<[3072, 8, 1, 1], offset: ?>>, %vec: vector<1x8x1xf32>, %mask: vector<1x8x1xi1>) {
+func.func @contiguous_inner_most_with_mask(%dest: memref<1x1x8x1xf32, strided<[3072, 8, 1, 1], offset: ?>>, %vec: vector<1x8x1xf32>, %mask: vector<1x8x1xi1>) {
   %c0 = arith.constant 0 : index
   vector.transfer_write %vec, %dest[%c0, %c0, %c0, %c0], %mask {in_bounds = [true, true, true]} : vector<1x8x1xf32>, memref<1x1x8x1xf32, strided<[3072, 8, 1, 1], offset: ?>>
   return
 }
-
-//      CHECK: func @contiguous_inner_most_masked_write(%[[DEST:.+]]: memref<1x1x8x1xf32, strided<[3072, 8, 1, 1], offset: ?>>, %[[VEC:.+]]: vector<1x8x1xf32>, %[[MASK:.+]]: vector<1x8x1xi1>)
+//      CHECK: func @contiguous_inner_most_with_mask(%[[DEST:.+]]: memref<1x1x8x1xf32, strided<[3072, 8, 1, 1], offset: ?>>, %[[VEC:.+]]: vector<1x8x1xf32>, %[[MASK:.+]]: vector<1x8x1xi1>)
 //      CHECK:   %[[DEST_0:.+]] = memref.subview %[[DEST]]
 // CHECK-SAME:    memref<1x1x8x1xf32, strided<[3072, 8, 1, 1], offset: ?>> to memref<1x1x8xf32, strided<[3072, 8, 1], offset: ?>>
 //      CHECK:   %[[REDUCED_VEC:.+]] = vector.shape_cast %[[VEC]] : vector<1x8x1xf32> to vector<1x8xf32>
