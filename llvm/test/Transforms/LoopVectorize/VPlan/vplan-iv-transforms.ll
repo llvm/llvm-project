@@ -160,7 +160,7 @@ define void @iv_truncated_wrap_flags(ptr %dst, i64 %n) {
 ; CHECK-NEXT:  <x1> vector loop: {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      EMIT vp<[[VP3:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]> (truncated to i16)
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]> (truncated to i16)
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%ptr> = getelementptr inbounds ir<%dst>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%ptr>
