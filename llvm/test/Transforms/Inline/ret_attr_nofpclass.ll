@@ -55,3 +55,42 @@ define float @caller_not_intersecting_nofpclass() {
   ret float %r
 }
 
+define float @callee_nofpclass_inf_nan_multi_ret(i1 %c) {
+; CHECK-LABEL: define float @callee_nofpclass_inf_nan_multi_ret(i1 %c) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 %c, label %bb1, label %bb2
+; CHECK:       bb1:
+; CHECK-NEXT:    [[R1:%.*]] = call nofpclass(nan) float @use.val(float 1.000000e+00)
+; CHECK-NEXT:    ret float [[R1]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[R2:%.*]] = call nofpclass(inf) float @use.val(float 2.000000e+00)
+; CHECK-NEXT:    ret float [[R2]]
+;
+entry:
+  br i1 %c, label %bb1, label %bb2
+
+bb1:
+  %r1 = call nofpclass(nan) float @use.val(float 1.0)
+  ret float %r1
+
+bb2:
+  %r2 = call nofpclass(inf) float @use.val(float 2.0)
+  ret float %r2
+}
+
+define float @caller_okay_intersect_nofpclass_multi_ret(i1 %c) {
+; CHECK-LABEL: define float @caller_okay_intersect_nofpclass_multi_ret(
+; CHECK-NEXT:    br i1 %c, label %bb1.i, label %bb2.i
+; CHECK:       bb1.i:
+; CHECK-NEXT:    [[R1_I:%.*]] = call nofpclass(nan zero) float @use.val(float 1.000000e+00)
+; CHECK-NEXT:    br label %callee_nofpclass_inf_nan_multi_ret.exit
+; CHECK:       bb2.i:
+; CHECK-NEXT:    [[R2_I:%.*]] = call nofpclass(inf zero) float @use.val(float 2.000000e+00)
+; CHECK-NEXT:    br label %callee_nofpclass_inf_nan_multi_ret.exit
+; CHECK:       callee_nofpclass_inf_nan_multi_ret.exit:
+; CHECK-NEXT:    [[R:%.*]] = phi float [ [[R1_I]], %bb1.i ], [ [[R2_I]], %bb2.i ]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = call nofpclass(zero) float @callee_nofpclass_inf_nan_multi_ret(i1 %c)
+  ret float %r
+}

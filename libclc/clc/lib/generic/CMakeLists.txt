@@ -62,10 +62,12 @@ libclc_configure_source_list(CLC_GENERIC_SOURCES
   math/clc_asinh.cl
   math/clc_asinpi.cl
   math/clc_atan.cl
+  math/clc_atan_helpers.cl
   math/clc_atan2.cl
   math/clc_atan2pi.cl
   math/clc_atanh.cl
   math/clc_atanpi.cl
+  math/clc_canonicalize.cl
   math/clc_cbrt.cl
   math/clc_ceil.cl
   math/clc_copysign.cl
@@ -75,17 +77,18 @@ libclc_configure_source_list(CLC_GENERIC_SOURCES
   math/clc_div_cr.cl
   math/clc_div_fast.cl
   math/clc_ep.cl
-  math/clc_ep_log.cl
   math/clc_erf.cl
   math/clc_erfc.cl
   math/clc_exp.cl
   math/clc_exp2.cl
+  math/clc_exp2_fast.cl
   math/clc_exp10.cl
   math/clc_exp_helper.cl
   math/clc_expm1.cl
   math/clc_fabs.cl
   math/clc_fdim.cl
   math/clc_floor.cl
+  math/clc_flush_if_daz.cl
   math/clc_fma.cl
   math/clc_fmax.cl
   math/clc_fmin.cl
@@ -93,6 +96,7 @@ libclc_configure_source_list(CLC_GENERIC_SOURCES
   math/clc_fract.cl
   math/clc_frexp.cl
   math/clc_frexp_exp.cl
+  math/clc_get_twobypi_bits.cl
   math/clc_half_cos.cl
   math/clc_half_divide.cl
   math/clc_half_exp.cl
@@ -114,6 +118,7 @@ libclc_configure_source_list(CLC_GENERIC_SOURCES
   math/clc_lgamma_r.cl
   math/clc_log.cl
   math/clc_log2.cl
+  math/clc_log2_fast.cl
   math/clc_log10.cl
   math/clc_log1p.cl
   math/clc_logb.cl
@@ -151,6 +156,7 @@ libclc_configure_source_list(CLC_GENERIC_SOURCES
   math/clc_rsqrt.cl
   math/clc_sin.cl
   math/clc_sincos.cl
+  math/clc_sincospi.cl
   math/clc_sincos_helpers.cl
   math/clc_sinh.cl
   math/clc_sinpi.cl
@@ -162,7 +168,9 @@ libclc_configure_source_list(CLC_GENERIC_SOURCES
   math/clc_tanh.cl
   math/clc_tanpi.cl
   math/clc_tgamma.cl
+  math/clc_trigpi_helpers.cl
   math/clc_trunc.cl
+  mem_fence/clc_mem_fence.cl
   misc/clc_shuffle.cl
   misc/clc_shuffle2.cl
   relational/clc_all.cl
@@ -190,6 +198,7 @@ libclc_configure_source_list(CLC_GENERIC_SOURCES
   shared/clc_qualifier.cl
   shared/clc_vload.cl
   shared/clc_vstore.cl
+  subnormal_config.cl
   subgroup/sub_group_barrier.cl
   workitem/clc_get_global_id.cl
   workitem/clc_get_global_linear_id.cl

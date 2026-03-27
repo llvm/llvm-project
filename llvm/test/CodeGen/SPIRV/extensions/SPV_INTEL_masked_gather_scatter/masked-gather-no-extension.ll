@@ -1,3 +1,7 @@
+; Test that llvm.masked.gather produces an error when the
+; SPV_INTEL_masked_gather_scatter extension is not enabled, since vector of
+; pointers is not supported in SPIR-V without this extension.
+
 ; RUN: not llc -O0 -mtriple=spirv64-unknown-unknown %s -o /dev/null 2>&1 | FileCheck %s
 
 declare <4 x i32> @llvm.masked.gather.v4i32.v4p1(<4 x ptr addrspace(1)>, i32, <4 x i1>, <4 x i32>)

@@ -4673,23 +4673,22 @@ RoutineOp::getBindNameValue() {
 
 std::optional<std::variant<mlir::SymbolRefAttr, mlir::StringAttr>>
 RoutineOp::getBindNameValue(mlir::acc::DeviceType deviceType) {
-  if (!hasDeviceTypeValues(getBindIdNameDeviceType()) &&
-      !hasDeviceTypeValues(getBindStrNameDeviceType())) {
-    return std::nullopt;
+  if (hasDeviceTypeValues(getBindIdNameDeviceType())) {
+    if (auto pos = findSegment(*getBindIdNameDeviceType(), deviceType)) {
+      auto attr = (*getBindIdName())[*pos];
+      auto symbolRefAttr = dyn_cast<mlir::SymbolRefAttr>(attr);
+      assert(symbolRefAttr && "expected SymbolRef");
+      return symbolRefAttr;
+    }
   }
 
-  if (auto pos = findSegment(*getBindIdNameDeviceType(), deviceType)) {
-    auto attr = (*getBindIdName())[*pos];
-    auto symbolRefAttr = dyn_cast<mlir::SymbolRefAttr>(attr);
-    assert(symbolRefAttr && "expected SymbolRef");
-    return symbolRefAttr;
-  }
-
-  if (auto pos = findSegment(*getBindStrNameDeviceType(), deviceType)) {
-    auto attr = (*getBindStrName())[*pos];
-    auto stringAttr = dyn_cast<mlir::StringAttr>(attr);
-    assert(stringAttr && "expected String");
-    return stringAttr;
+  if (hasDeviceTypeValues(getBindStrNameDeviceType())) {
+    if (auto pos = findSegment(*getBindStrNameDeviceType(), deviceType)) {
+      auto attr = (*getBindStrName())[*pos];
+      auto stringAttr = dyn_cast<mlir::StringAttr>(attr);
+      assert(stringAttr && "expected String");
+      return stringAttr;
+    }
   }
 
   return std::nullopt;

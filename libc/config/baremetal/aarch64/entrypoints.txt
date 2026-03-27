@@ -300,6 +300,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wchar.wcslen
     libc.src.wchar.wctob
 
+    # wctype.h entrypoints
+    libc.src.wctype.iswpunct
+
     # internal entrypoints
     libc.startup.baremetal.init
     libc.startup.baremetal.fini
@@ -786,6 +789,7 @@ endif()
 
 list(APPEND TARGET_LIBM_ENTRYPOINTS
   # bfloat16 entrypoints
+  libc.src.math.atanbf16
   libc.src.math.bf16add
   libc.src.math.bf16addf
   libc.src.math.bf16addl

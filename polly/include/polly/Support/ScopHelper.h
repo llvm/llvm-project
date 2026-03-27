@@ -398,15 +398,6 @@ llvm::Value *expandCodeFor(Scop &S, llvm::ScalarEvolution &SE,
                            llvm::BasicBlock::iterator IP, ValueMapT *VMap,
                            LoopToScevMapT *LoopMap, llvm::BasicBlock *RTCBB);
 
-/// Return the condition for the terminator @p TI.
-///
-/// For unconditional branches the "i1 true" condition will be returned.
-///
-/// @param TI The terminator to get the condition from.
-///
-/// @return The condition of @p TI and nullptr if none could be extracted.
-llvm::Value *getConditionFromTerminator(llvm::Instruction *TI);
-
 /// Get the smallest loop that contains @p S but is not in @p S.
 llvm::Loop *getLoopSurroundingScop(Scop &S, llvm::LoopInfo &LI);
 

@@ -463,20 +463,6 @@ Value *polly::expandCodeFor(Scop &S, llvm::ScalarEvolution &SE,
   return Expander.expandCodeFor(E, Ty, IP);
 }
 
-Value *polly::getConditionFromTerminator(Instruction *TI) {
-  if (BranchInst *BR = dyn_cast<BranchInst>(TI)) {
-    if (BR->isUnconditional())
-      return ConstantInt::getTrue(Type::getInt1Ty(TI->getContext()));
-
-    return BR->getCondition();
-  }
-
-  if (SwitchInst *SI = dyn_cast<SwitchInst>(TI))
-    return SI->getCondition();
-
-  return nullptr;
-}
-
 Loop *polly::getLoopSurroundingScop(Scop &S, LoopInfo &LI) {
   // Start with the smallest loop containing the entry and expand that
   // loop until it contains all blocks in the region. If there is a loop

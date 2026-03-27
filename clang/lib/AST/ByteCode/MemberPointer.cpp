@@ -8,7 +8,6 @@
 
 #include "MemberPointer.h"
 #include "Context.h"
-#include "FunctionPointer.h"
 #include "Program.h"
 #include "Record.h"
 
@@ -74,11 +73,6 @@ std::optional<Pointer> MemberPointer::toPointer(const Context &Ctx) const {
 
   assert(Offset <= CastedBase.block()->getSize());
   return Pointer(const_cast<Block *>(Base.block()), Offset, Offset);
-}
-
-FunctionPointer MemberPointer::toFunctionPointer(const Context &Ctx) const {
-  return FunctionPointer(
-      Ctx.getProgram().getFunction(cast<FunctionDecl>(getDecl())));
 }
 
 APValue MemberPointer::toAPValue(const ASTContext &ASTCtx) const {

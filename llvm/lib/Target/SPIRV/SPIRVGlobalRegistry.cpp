@@ -307,6 +307,18 @@ const MachineInstr *SPIRVGlobalRegistry::createConstOrTypeAtFunctionEntry(
   // point set above that is always the first MBB.
   assert(ConstOrType->getParent() == NewMBB);
   LastInsertedType->second = ConstOrType;
+  // Advance past any continued instructions so that the next type/constant
+  // is inserted after the full group, preserving required adjacency.
+  while (auto *Next = LastInsertedType->second->getNextNode()) {
+    unsigned Opc = Next->getOpcode();
+    if (Opc == SPIRV::OpTypeStructContinuedINTEL ||
+        Opc == SPIRV::OpConstantCompositeContinuedINTEL ||
+        Opc == SPIRV::OpSpecConstantCompositeContinuedINTEL ||
+        Opc == SPIRV::OpCompositeConstructContinuedINTEL)
+      LastInsertedType->second = Next;
+    else
+      break;
+  }
 
   MIRBuilder.setInsertPt(*OldMBB, oldInsertPoint);
   return ConstOrType;
@@ -316,7 +328,6 @@ SPIRVTypeInst
 SPIRVGlobalRegistry::getOpTypeVector(uint32_t NumElems, SPIRVTypeInst ElemType,
                                      MachineIRBuilder &MIRBuilder) {
   auto EleOpc = ElemType->getOpcode();
-  (void)EleOpc;
   assert(NumElems >= 2 && "SPIR-V OpTypeVector requires at least 2 components");
 
   if (EleOpc == SPIRV::OpTypePointer) {
@@ -1040,7 +1051,7 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOpTypeStruct(
           auto MIBCont =
               MIRBuilder.buildInstr(SPIRV::OpTypeStructContinuedINTEL);
           for (size_t J = I; J < std::min(I + MaxNumElements, NumElements); ++J)
-            MIBCont.addUse(FieldTypes[I]);
+            MIBCont.addUse(FieldTypes[J]);
         }
         return MIBStruct;
       });
@@ -1122,6 +1133,11 @@ SPIRVTypeInst SPIRVGlobalRegistry::findSPIRVType(
     const Type *Ty, MachineIRBuilder &MIRBuilder,
     SPIRV::AccessQualifier::AccessQualifier AccQual,
     bool ExplicitLayoutRequired, bool EmitIR) {
+  // Treat <1 x T> as T.
+  if (auto *FVT = dyn_cast<FixedVectorType>(Ty);
+      FVT && FVT->getNumElements() == 1)
+    return findSPIRVType(FVT->getElementType(), MIRBuilder, AccQual,
+                         ExplicitLayoutRequired, EmitIR);
   Ty = adjustIntTypeByWidth(Ty);
   // TODO: findMI needs to know if a layout is required.
   if (const MachineInstr *MI =
@@ -1943,6 +1959,9 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVVectorType(
 SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVVectorType(
     SPIRVTypeInst BaseType, unsigned NumElements, MachineInstr &I,
     const SPIRVInstrInfo &TII) {
+  // At this point of time all 1-element vectors are resolved. Add assertion
+  // to fire if anything changes.
+  assert(NumElements >= 2 && "SPIR-V vectors must have at least 2 components");
   Type *Ty = FixedVectorType::get(
       const_cast<Type *>(getTypeForSPIRVType(BaseType)), NumElements);
   if (const MachineInstr *MI = findMI(Ty, false, CurMF))
