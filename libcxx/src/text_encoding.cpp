@@ -263,7 +263,7 @@ _LIBCPP_EXPORTED_FROM_ABI std::text_encoding __get_locale_encoding(const char* _
   return std::text_encoding();
 }
 
-#else  // POSIX
+#else // POSIX
 _LIBCPP_EXPORTED_FROM_ABI std::text_encoding __get_locale_encoding(const char* __name) {
   std::text_encoding __e;
 

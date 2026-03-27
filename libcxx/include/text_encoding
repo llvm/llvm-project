@@ -572,11 +572,11 @@ public:
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static consteval text_encoding literal() noexcept {
     // TODO: Remove this branch once we have __GNUC_EXECUTION_CHARSET_NAME or __clang_literal_encoding__ unconditionally
 #    ifdef __GNUC_EXECUTION_CHARSET_NAME
-    return __te_impl(__GNUC_EXECUTION_CHARSET_NAME);
+    return text_encoding(__GNUC_EXECUTION_CHARSET_NAME);
 #    elif defined(__clang_literal_encoding__)
     return text_encoding(__clang_literal_encoding__);
 #    else
-    return __te_impl();
+    return text_encoding();
 #    endif
   }
 
