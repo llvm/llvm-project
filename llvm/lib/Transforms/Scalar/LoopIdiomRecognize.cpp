@@ -3735,9 +3735,8 @@ public:
     // `isLoadMemcmpCandidate()` for more information.
     auto *LoadLHS = dyn_cast<LoadInst>(CI->getOperand(0));
     auto *LoadRHS = dyn_cast<LoadInst>(CI->getOperand(1));
-    if (!LoadLHS || !LoadRHS) {
+    if (!LoadLHS || !LoadRHS)
       return false;
-    }
 
     const SCEVUnknown *BaseLHS;
     const SCEVUnknown *BaseRHS;
