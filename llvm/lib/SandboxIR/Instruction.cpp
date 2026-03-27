@@ -11,18 +11,6 @@
 
 namespace llvm::sandboxir {
 
-const char *Instruction::getOpcodeName(Opcode Opc) {
-  switch (Opc) {
-#define OP(OPC)                                                                \
-  case Opcode::OPC:                                                            \
-    return #OPC;
-#define OPCODES(...) __VA_ARGS__
-#define DEF_INSTR(ID, OPC, CLASS) OPC
-#include "llvm/SandboxIR/Values.def"
-  }
-  llvm_unreachable("Unknown Opcode");
-}
-
 llvm::Instruction *Instruction::getTopmostLLVMInstruction() const {
   Instruction *Prev = getPrevNode();
   if (Prev == nullptr) {
