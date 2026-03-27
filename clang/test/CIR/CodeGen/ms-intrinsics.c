@@ -32,10 +32,10 @@ void *test_ReturnAddress(void) {
   // CIR: {{%.*}} = cir.return_address([[ARG]])
 
   // LLVM-LABEL: test_ReturnAddress
-  // LLVM: {{%.*}} = call ptr @llvm.returnaddress(i32 0)
+  // LLVM: {{%.*}} = call ptr @llvm.returnaddress.p0(i32 0)
 
   // OGCG-LABEL: test_ReturnAddress
-  // OGCG: {{%.*}} = call ptr @llvm.returnaddress(i32 0)
+  // OGCG: {{%.*}} = call ptr @llvm.returnaddress.p0(i32 0)
 }
 
 #if defined(__i386__) || defined(__x86_64__) || defined (__aarch64__)

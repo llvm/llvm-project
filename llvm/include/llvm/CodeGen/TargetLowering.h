@@ -443,7 +443,7 @@ public:
   /// G_INSERT_VECTOR_ELT, G_EXTRACT_VECTOR_ELT,
   /// G_INSERT_SUBVECTOR, and G_EXTRACT_SUBVECTOR
   LLT getVectorIdxLLT(const DataLayout &DL) const {
-    return LLT::integer(getVectorIdxWidth(DL));
+    return LLT::scalar(getVectorIdxWidth(DL));
   }
 
   /// Returns the type to be used for the EVL/AVL operand of VP nodes:
@@ -4009,6 +4009,11 @@ public:
   ~TargetLowering() override;
 
   bool isPositionIndependent() const;
+
+  // If set to true, SelectionDAG nodes will be consistently processed in
+  // topological order. This is a temporary hook until sorting can be
+  // enabled globally.
+  virtual bool useTopologicalSorting() const { return false; }
 
   virtual bool isSDNodeSourceOfDivergence(const SDNode *N,
                                           FunctionLoweringInfo *FLI,

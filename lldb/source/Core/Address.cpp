@@ -748,7 +748,7 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
               DumpAddressRange(s->AsRawOstream(), range->GetRangeBase(),
                                range->GetRangeEnd(), addr_size);
             s->PutCString(", location = ");
-            var_sp->DumpLocations(s, all_ranges ? LLDB_INVALID_ADDRESS : *this);
+            var_sp->DumpLocations(s, all_ranges ? Address() : *this);
             s->PutCString(", decl = ");
             var_sp->GetDeclaration().DumpStopContext(s, false);
             s->EOL();

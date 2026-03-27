@@ -518,6 +518,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   setOperationAction({ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF}, MVT::i32, Custom);
   setOperationAction({ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF}, MVT::i32, Custom);
+  setOperationAction(ISD::CTLS, MVT::i32, Custom);
 
   // We only really have 32-bit BFE instructions (and 16-bit on VI).
   //
@@ -7011,6 +7012,14 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MI.getOperand(0).setReg(OriginalExec);
     return BB;
   }
+  case AMDGPU::V_DOT2_F32_F16:
+  case AMDGPU::V_DOT2_F32_BF16: {
+    // Hint RA to assign dst and src2 the same physical register.
+    // For targets without VOP2, but with VOPD, variant of the instruction this
+    // is one of the conditions to attempt converting VOP3P to VOPD.
+    MRI.setSimpleHint(MI.getOperand(0).getReg(), MI.getOperand(6).getReg());
+    return BB;
+  }
   default:
     if (TII->isImage(MI) || TII->isMUBUF(MI)) {
       if (!MI.mayStore())
@@ -10640,8 +10649,6 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_fmul_legacy:
     return DAG.getNode(AMDGPUISD::FMUL_LEGACY, DL, VT, Op.getOperand(1),
                        Op.getOperand(2));
-  case Intrinsic::amdgcn_sffbh:
-    return DAG.getNode(AMDGPUISD::FFBH_I32, DL, VT, Op.getOperand(1));
   case Intrinsic::amdgcn_sbfe:
     return DAG.getNode(AMDGPUISD::BFE_I32, DL, VT, Op.getOperand(1),
                        Op.getOperand(2), Op.getOperand(3));
@@ -15752,6 +15759,21 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
     }
   }
 
+  // umin(sffbh(x), bitwidth) -> sffbh(x) if x is known to be not 0 or -1.
+  SDValue FfbhSrc;
+  uint64_t Clamp = 0;
+  if (Opc == ISD::UMIN &&
+      sd_match(Op0,
+               m_IntrinsicWOChain<Intrinsic::amdgcn_sffbh>(m_Value(FfbhSrc))) &&
+      sd_match(Op1, m_ConstInt(Clamp))) {
+    unsigned BitWidth = FfbhSrc.getValueType().getScalarSizeInBits();
+    if (Clamp >= BitWidth) {
+      KnownBits Known = DAG.computeKnownBits(FfbhSrc);
+      if (Known.isNonZero() && !Known.isAllOnes())
+        return Op0;
+    }
+  }
+
   // min(max(x, K0), K1), K0 < K1 -> med3(x, K0, K1)
   // max(min(x, K0), K1), K1 < K0 -> med3(x, K1, K0)
   if (Opc == ISD::SMIN && Op0.getOpcode() == ISD::SMAX && Op0.hasOneUse()) {
@@ -17000,6 +17022,10 @@ SDValue SITargetLowering::performPtrAddCombine(SDNode *N,
   return SDValue();
 }
 
+static bool isCtlzOpc(unsigned Opc) {
+  return Opc == ISD::CTLZ || Opc == ISD::CTLZ_ZERO_UNDEF;
+}
+
 SDValue SITargetLowering::performSubCombine(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -17045,6 +17071,27 @@ SDValue SITargetLowering::performSubCombine(SDNode *N,
     SDValue Args[] = {LHS.getOperand(0), RHS, LHS.getOperand(2)};
     return DAG.getNode(ISD::USUBO_CARRY, SDLoc(N), LHS->getVTList(), Args);
   }
+
+  // sub (ctlz (xor x, (sra x, 31))), 1 -> ctls x.
+  if (isOneConstant(RHS) && isCtlzOpc(LHS.getOpcode())) {
+    SDValue CtlzSrc = LHS.getOperand(0);
+    // Check for xor x, (sra x, 31) pattern.
+    if (CtlzSrc.getOpcode() == ISD::XOR) {
+      SDValue X = CtlzSrc.getOperand(0);
+      SDValue SignExt = CtlzSrc.getOperand(1);
+      // Try both ordering of XOR operands.
+      if (SignExt.getOpcode() != ISD::SRA)
+        std::swap(X, SignExt);
+      if (SignExt.getOpcode() == ISD::SRA && SignExt.getOperand(0) == X) {
+        ConstantSDNode *ShiftAmt =
+            dyn_cast<ConstantSDNode>(SignExt.getOperand(1));
+        unsigned BitWidth = X.getValueType().getScalarSizeInBits();
+        if (ShiftAmt && ShiftAmt->getZExtValue() == BitWidth - 1)
+          return DAG.getNode(ISD::CTLS, SL, VT, X);
+      }
+    }
+  }
+
   return SDValue();
 }
 

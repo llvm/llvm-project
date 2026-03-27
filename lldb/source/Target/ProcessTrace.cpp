@@ -66,7 +66,7 @@ void ProcessTrace::DidAttach(ArchSpec &process_arch) {
 
   SetCanJIT(false);
   StartPrivateStateThread(lldb::eStateStopped, false);
-  if (!m_current_private_state_thread) {
+  if (!m_current_private_state_thread_sp) {
     LLDB_LOG(GetLog(LLDBLog::Process), "ProcessTrace: failed to start private "
                                        "state thread.");
     return;
@@ -106,12 +106,8 @@ size_t ProcessTrace::ReadMemory(addr_t addr, void *buf, size_t size,
 void ProcessTrace::Clear() { m_thread_list.Clear(); }
 
 void ProcessTrace::Initialize() {
-  static llvm::once_flag g_once_flag;
-
-  llvm::call_once(g_once_flag, []() {
-    PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                  GetPluginDescriptionStatic(), CreateInstance);
-  });
+  PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                GetPluginDescriptionStatic(), CreateInstance);
 }
 
 ArchSpec ProcessTrace::GetArchitecture() {
