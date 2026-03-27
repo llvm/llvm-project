@@ -1225,11 +1225,13 @@ TEST(Error, NonNullSuccess) {
   int *ptr = &tmp;
   const int *cptr = ptr;
   const int *const ccptr = ptr;
+  auto uptr = std::make_unique<int>(0);
 
   EXPECT_EQ(ptr, checkNotNull(&tmp));
   EXPECT_EQ(ptr, checkNotNull(ptr));
   EXPECT_EQ(ptr, checkNotNull(cptr));
   EXPECT_EQ(ptr, checkNotNull(ccptr));
+  EXPECT_EQ(uptr, checkNotNull(std::move(uptr)));
 }
 
 #if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
@@ -1240,6 +1242,12 @@ TEST(Error, NonNullFails) {
       << "checkNotNull(NullPtr) did not cause an abort for null pointer";
 
   EXPECT_DEATH(NullPtr = checkNotNull(nullptr),
+               "Expected a non-null pointer but got a null pointer")
+      << "checkNotNull(NullPtr) did not cause an abort for null pointer";
+
+  auto UniquePtr = std::make_unique<int>(0);
+  UniquePtr.release();
+  EXPECT_DEATH(auto TmpUniquePtr = checkNotNull(std::move(UniquePtr)),
                "Expected a non-null pointer but got a null pointer")
       << "checkNotNull(NullPtr) did not cause an abort for null pointer";
 
