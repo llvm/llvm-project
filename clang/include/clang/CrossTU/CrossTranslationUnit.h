@@ -64,11 +64,11 @@ public:
   IndexError(index_error_code C) : Code(C), LineNo(0) {}
   IndexError(index_error_code C, std::string FileName, int LineNo = 0)
       : Code(C), FileName(std::move(FileName)), LineNo(LineNo) {}
-  IndexError(index_error_code C, std::string FileName, std::string TripleToName,
-             std::string TripleFromName)
+  IndexError(index_error_code C, std::string FileName, std::string ConfigToName,
+             std::string ConfigFromName)
       : Code(C), FileName(std::move(FileName)),
-        ConfigToName(std::move(TripleToName)),
-        ConfigFromName(std::move(TripleFromName)) {}
+        ConfigToName(std::move(ConfigToName)),
+        ConfigFromName(std::move(ConfigFromName)) {}
   void log(raw_ostream &OS) const override;
   std::error_code convertToErrorCode() const override;
   index_error_code getCode() const { return Code; }
