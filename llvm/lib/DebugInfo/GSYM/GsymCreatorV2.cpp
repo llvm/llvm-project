@@ -74,6 +74,12 @@ llvm::Error GsymCreatorV2::encode(FileWriter &O) const {
   const uint64_t HeaderSize = sizeof(HeaderV2);
   uint64_t CurOffset = HeaderSize + GlobalDataArraySize;
 
+  // UUID section (first, no alignment requirement).
+  const uint64_t UUIDOffset = CurOffset;
+  const uint64_t UUIDSectionSize = UUID.size();
+  if (HasUUID)
+    CurOffset += UUIDSectionSize;
+
   // AddrOffsets section.
   CurOffset = llvm::alignTo(CurOffset, AddrOffSize);
   const uint64_t AddrOffsetsOffset = CurOffset;
@@ -116,10 +122,6 @@ llvm::Error GsymCreatorV2::encode(FileWriter &O) const {
   const uint64_t FISectionOffset = CurOffset;
   CurOffset += FISectionSize;
 
-  // UUID section.
-  const uint64_t UUIDOffset = CurOffset;
-  const uint64_t UUIDSectionSize = UUID.size();
-
   // Build and write the header.
   HeaderV2 Hdr;
   Hdr.Magic = GSYM_MAGIC;
@@ -136,6 +138,8 @@ llvm::Error GsymCreatorV2::encode(FileWriter &O) const {
     return Err;
 
   // Write GlobalData entries.
+  if (HasUUID)
+    GlobalData{GlobalInfoType::UUID, 0, UUIDOffset, UUIDSectionSize}.encode(O);
   GlobalData{GlobalInfoType::AddrOffsets, 0,
              AddrOffsetsOffset, AddrOffsetsSize}.encode(O);
   GlobalData{GlobalInfoType::AddrInfoOffsets, 0,
@@ -146,9 +150,13 @@ llvm::Error GsymCreatorV2::encode(FileWriter &O) const {
              StringTableOffset, StringTableSize}.encode(O);
   GlobalData{GlobalInfoType::FunctionInfo, 0,
              FISectionOffset, FISectionSize}.encode(O);
-  if (HasUUID)
-    GlobalData{GlobalInfoType::UUID, 0, UUIDOffset, UUIDSectionSize}.encode(O);
   GlobalData{GlobalInfoType::EndOfList, 0, 0, 0}.encode(O);
+
+  // Write UUID section.
+  if (HasUUID) {
+    assert(O.tell() == UUIDOffset);
+    O.writeData(ArrayRef<uint8_t>(UUID.data(), UUID.size()));
+  }
 
   // Write AddrOffsets section.
   assert(O.tell() == AddrOffsetsOffset);
@@ -183,12 +191,6 @@ llvm::Error GsymCreatorV2::encode(FileWriter &O) const {
   assert(O.tell() == FISectionOffset);
   O.writeData(ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(FIBuf.data()),
                                 FIBuf.size()));
-
-  // Write UUID section.
-  if (HasUUID) {
-    assert(O.tell() == UUIDOffset);
-    O.writeData(ArrayRef<uint8_t>(UUID.data(), UUID.size()));
-  }
 
   return Error::success();
 }
