@@ -121,7 +121,7 @@ llvm::DIBasicType *DebugTranslation::translateImpl(DIBasicTypeAttr attr) {
 
 llvm::DICompileUnit *DebugTranslation::translateImpl(DICompileUnitAttr attr) {
   llvm::DIBuilder builder(llvmModule);
-  return builder.createCompileUnit(
+  llvm::DICompileUnit *cu = builder.createCompileUnit(
       attr.getSourceLanguage(), translate(attr.getFile()),
       attr.getProducer() ? attr.getProducer().getValue() : "",
       attr.getIsOptimized(),
@@ -130,9 +130,17 @@ llvm::DICompileUnit *DebugTranslation::translateImpl(DICompileUnitAttr attr) {
                                    : "",
       static_cast<llvm::DICompileUnit::DebugEmissionKind>(
           attr.getEmissionKind()),
-      0, true, false,
+      0, true, attr.getIsDebugInfoForProfiling(),
       static_cast<llvm::DICompileUnit::DebugNameTableKind>(
           attr.getNameTableKind()));
+
+  llvm::SmallVector<llvm::Metadata *> importNodes;
+  for (DINodeAttr importNode : attr.getImportedEntities())
+    importNodes.push_back(translate(importNode));
+  if (!importNodes.empty())
+    cu->replaceImportedEntities(llvm::MDTuple::get(llvmCtx, importNodes));
+
+  return cu;
 }
 
 /// Returns a new `DINodeT` that is either distinct or not, depending on

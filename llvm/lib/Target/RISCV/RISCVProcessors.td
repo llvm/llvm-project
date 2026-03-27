@@ -899,7 +899,8 @@ def SPACEMIT_X60 : RISCVProcessorModel<"spacemit-x60",
                                         TuneOptimizedNF3SegmentLoadStore,
                                         TuneOptimizedNF4SegmentLoadStore,
                                         TuneEnableSelectOptimize,
-                                        TuneVXRMPipelineFlush]> {
+                                        TuneVXRMPipelineFlush,
+                                        TunePreferAscendingLoadStore]> {
   let MVendorID = 0x710;
   let MArchID = 0x8000000058000001;
   let MImpID = 0x1000000049772200;

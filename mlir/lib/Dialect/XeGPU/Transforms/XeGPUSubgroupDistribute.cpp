@@ -152,6 +152,10 @@ struct MoveFuncBodyToWarpOp : public OpRewritePattern<gpu::GPUFuncOp> {
       return rewriter.notifyMatchFailure(
           gpuFuncOp, "Subgroup distribution requires target attribute attached "
                      "to set the warp size");
+    if (!gpuFuncOp.getBody().hasOneBlock())
+      return rewriter.notifyMatchFailure(
+          gpuFuncOp, "expected gpu.func to have a single block");
+
     // If the function only contains a single void return, skip.
     if (llvm::all_of(gpuFuncOp.getBody().getOps(), [](Operation &op) {
           return isa<gpu::ReturnOp>(op) && !op.getNumOperands();
@@ -2083,11 +2087,14 @@ struct ConvertLayoutDistribution
                                 PatternRewriter &rewriter) const override {
     auto inputLayout = op.getInputLayoutAttr();
     auto targetLayout = op.getTargetLayoutAttr();
+    auto resShape = cast<VectorType>(op.getResult().getType()).getShape();
 
     if (!inputLayout || !targetLayout)
       return rewriter.notifyMatchFailure(op, "missing layout attributes");
 
-    if (!inputLayout.isCompatibleWith(targetLayout, xegpu::LayoutKind::Lane)) {
+    SmallVector<int64_t> resShapeVec(resShape.begin(), resShape.end());
+    if (!inputLayout.isCompatibleWith(targetLayout, resShapeVec,
+                                      xegpu::LayoutKind::Lane)) {
       return rewriter.notifyMatchFailure(
           op, "lowering incompatible convert_layout not yet supported");
     }

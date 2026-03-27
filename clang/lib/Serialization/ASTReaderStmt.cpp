@@ -108,6 +108,10 @@ namespace clang {
     /// itself.
     static const unsigned NumExprFields = NumStmtFields + 2;
 
+    /// The number of record fields required for the ObjCObjectLiteral class
+    /// itself (Expr fields + isExpressibleAsConstantInitializer).
+    static const unsigned NumObjCObjectLiteralFields = NumExprFields + 1;
+
     /// The number of bits required for the packing bits for the Expr class.
     static const unsigned NumExprBits = 10;
 
@@ -1500,14 +1504,19 @@ void ASTStmtReader::VisitAtomicExpr(AtomicExpr *E) {
 //===----------------------------------------------------------------------===//
 // Objective-C Expressions and Statements
 
-void ASTStmtReader::VisitObjCStringLiteral(ObjCStringLiteral *E) {
+void ASTStmtReader::VisitObjCObjectLiteral(ObjCObjectLiteral *E) {
   VisitExpr(E);
+  E->setExpressibleAsConstantInitializer(Record.readInt());
+}
+
+void ASTStmtReader::VisitObjCStringLiteral(ObjCStringLiteral *E) {
+  VisitObjCObjectLiteral(E);
   E->setString(cast<StringLiteral>(Record.readSubStmt()));
   E->setAtLoc(readSourceLocation());
 }
 
 void ASTStmtReader::VisitObjCBoxedExpr(ObjCBoxedExpr *E) {
-  VisitExpr(E);
+  VisitObjCObjectLiteral(E);
   // could be one of several IntegerLiteral, FloatLiteral, etc.
   E->SubExpr = Record.readSubStmt();
   E->BoxingMethod = readDeclAs<ObjCMethodDecl>();
@@ -1515,7 +1524,7 @@ void ASTStmtReader::VisitObjCBoxedExpr(ObjCBoxedExpr *E) {
 }
 
 void ASTStmtReader::VisitObjCArrayLiteral(ObjCArrayLiteral *E) {
-  VisitExpr(E);
+  VisitObjCObjectLiteral(E);
   unsigned NumElements = Record.readInt();
   assert(NumElements == E->getNumElements() && "Wrong number of elements");
   Expr **Elements = E->getElements();
@@ -1526,7 +1535,7 @@ void ASTStmtReader::VisitObjCArrayLiteral(ObjCArrayLiteral *E) {
 }
 
 void ASTStmtReader::VisitObjCDictionaryLiteral(ObjCDictionaryLiteral *E) {
-  VisitExpr(E);
+  VisitObjCObjectLiteral(E);
   unsigned NumElements = Record.readInt();
   assert(NumElements == E->getNumElements() && "Wrong number of elements");
   bool HasPackExpansions = Record.readInt();
@@ -3496,14 +3505,14 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
 
     case EXPR_OBJC_ARRAY_LITERAL:
-      S = ObjCArrayLiteral::CreateEmpty(Context,
-                                        Record[ASTStmtReader::NumExprFields]);
+      S = ObjCArrayLiteral::CreateEmpty(
+          Context, Record[ASTStmtReader::NumObjCObjectLiteralFields]);
       break;
 
     case EXPR_OBJC_DICTIONARY_LITERAL:
-      S = ObjCDictionaryLiteral::CreateEmpty(Context,
-            Record[ASTStmtReader::NumExprFields],
-            Record[ASTStmtReader::NumExprFields + 1]);
+      S = ObjCDictionaryLiteral::CreateEmpty(
+          Context, Record[ASTStmtReader::NumObjCObjectLiteralFields],
+          Record[ASTStmtReader::NumObjCObjectLiteralFields + 1]);
       break;
 
     case EXPR_OBJC_ENCODE:

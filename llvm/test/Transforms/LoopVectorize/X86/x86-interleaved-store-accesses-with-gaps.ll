@@ -18,7 +18,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; (relates to the testcase in PR50566)
 
 ; Function Attrs: nofree norecurse nosync nounwind uwtable
-define dso_local void @test1(ptr noalias nocapture %points, ptr noalias nocapture readonly %x, ptr noalias nocapture readonly %y) local_unnamed_addr {
+define void @test1(ptr noalias nocapture %points, ptr noalias nocapture readonly %x, ptr noalias nocapture readonly %y) {
 ; DISABLED_MASKED_STRIDED-LABEL: @test1(
 ; DISABLED_MASKED_STRIDED-NEXT:  entry:
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -122,7 +122,7 @@ for.end:
 ;     }
 
 ; Function Attrs: nofree norecurse nosync nounwind uwtable
-define dso_local void @test2(ptr noalias nocapture %points, i32 %numPoints, ptr noalias nocapture readonly %x, ptr noalias nocapture readonly %y) local_unnamed_addr {
+define void @test2(ptr noalias nocapture %points, i32 %numPoints, ptr noalias nocapture readonly %x, ptr noalias nocapture readonly %y) {
 ; DISABLED_MASKED_STRIDED-LABEL: @test2(
 ; DISABLED_MASKED_STRIDED-NEXT:  entry:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[CMP15:%.*]] = icmp sgt i32 [[NUMPOINTS:%.*]], 0
@@ -304,7 +304,7 @@ for.end:
 ;         points[i*3] = x[i];
 ;     }
 ; Function Attrs: nofree norecurse nosync nounwind uwtable
-define dso_local void @test(ptr noalias nocapture %points, ptr noalias nocapture readonly %x, ptr noalias nocapture readnone %y) local_unnamed_addr {
+define void @test(ptr noalias nocapture %points, ptr noalias nocapture readonly %x, ptr noalias nocapture readnone %y) {
 ; DISABLED_MASKED_STRIDED-LABEL: @test(
 ; DISABLED_MASKED_STRIDED-NEXT:  entry:
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
