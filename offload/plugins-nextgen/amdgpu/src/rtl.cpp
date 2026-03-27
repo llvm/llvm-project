@@ -3620,6 +3620,11 @@ Expected<float> AMDGPUEventTy::getElapsedTime(AMDGPUEventTy &EndEvent) {
     return 0.0f;
   }
 
+  const uint64_t TicksPerSecond = Device.getSystemTimestampFrequency();
+  if (TicksPerSecond == 0)
+    return Plugin::error(ErrorCode::UNSUPPORTED,
+                         "HSA system timestamp frequency is unavailable");
+
   std::scoped_lock<std::mutex, std::mutex> Lock(Mutex, EndEvent.Mutex);
 
   if (&Device != &EndEvent.Device)
@@ -3635,11 +3640,6 @@ Expected<float> AMDGPUEventTy::getElapsedTime(AMDGPUEventTy &EndEvent) {
     return Plugin::error(
         ErrorCode::UNKNOWN,
         "timing information is not ready for one or both events");
-
-  const uint64_t TicksPerSecond = Device.getSystemTimestampFrequency();
-  if (TicksPerSecond == 0)
-    return Plugin::error(ErrorCode::UNSUPPORTED,
-                         "HSA system timestamp frequency is unavailable");
 
   hsa_amd_profiling_dispatch_time_t StartTime = {};
   hsa_amd_profiling_dispatch_time_t StopTime = {};
