@@ -780,8 +780,7 @@ void BuiltinTypeMethodBuilder::setMipsHandleField(LocalVar &ResourceRecord) {
 
   ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
   QualType MipsTy = MipsField->getType();
-  const auto *RT = MipsTy->getAs<RecordType>();
-  assert(RT && "mips field must be a record type");
+  const auto *RT = MipsTy->castAs<RecordType>();
   CXXRecordDecl *MipsRecord = cast<CXXRecordDecl>(RT->getDecl());
 
   // The mips record should have a single field that is the handle.
@@ -1431,14 +1430,12 @@ CXXRecordDecl *BuiltinTypeDeclBuilder::addMipsSliceType(ResourceDimension Dim,
   // that takes the coordinate and performs the actual resource load.
   CXXRecordDecl *MipsSliceRecord = addPrivateNestedRecord("mips_slice_type");
   BuiltinTypeDeclBuilder MipsSliceBuilder(SemaRef, MipsSliceRecord);
-  MipsSliceBuilder.addFriend(Record);
-  MipsSliceBuilder.addHandleMember(getResourceAttrs().ResourceClass, Dim,
-                                   getResourceAttrs().IsROV, false, ReturnType,
-                                   AccessSpecifier::AS_public);
-  MipsSliceBuilder.addMemberVariable("__level", IntTy, {},
-                                     AccessSpecifier::AS_public);
-
-  MipsSliceBuilder.addDefaultHandleConstructor(AccessSpecifier::AS_protected)
+  MipsSliceBuilder.addFriend(Record)
+      .addHandleMember(getResourceAttrs().ResourceClass, Dim,
+                       getResourceAttrs().IsROV, false, ReturnType,
+                       AccessSpecifier::AS_public)
+      .addMemberVariable("__level", IntTy, {}, AccessSpecifier::AS_public)
+      .addDefaultHandleConstructor(AccessSpecifier::AS_protected)
       .addCopyConstructor(AccessSpecifier::AS_protected)
       .addCopyAssignmentOperator(AccessSpecifier::AS_protected);
 
