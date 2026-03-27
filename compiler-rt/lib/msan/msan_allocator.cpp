@@ -130,6 +130,20 @@ struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
 };
 
 using PrimaryAllocator = SizeClassAllocator64<AP64>;
+#elif defined(__hexagon__)
+const uptr kMaxAllowedMallocSize = 2UL << 30;
+
+struct AP32 {
+  static const uptr kSpaceBeg = 0x10000000;
+  static const u64 kSpaceSize = 0x08000000;  // 128MB
+  static const uptr kMetadataSize = sizeof(Metadata);
+  using SizeClassMap = __sanitizer::CompactSizeClassMap;
+  static const uptr kRegionSizeLog = 20;
+  using AddressSpaceView = LocalAddressSpaceView;
+  using MapUnmapCallback = MsanMapUnmapCallback;
+  static const uptr kFlags = 0;
+};
+using PrimaryAllocator = SizeClassAllocator32<AP32>;
 #elif defined(__aarch64__)
 const uptr kMaxAllowedMallocSize = 8UL << 30;
 
