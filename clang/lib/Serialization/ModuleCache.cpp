@@ -104,7 +104,7 @@ void clang::maybePruneImpl(StringRef Path, time_t PruneInterval,
 llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
 clang::readImpl(StringRef FileName, off_t &Size, time_t &ModTime) {
   std::error_code EC;
-  int FD;
+  llvm::sys::fs::file_t FD;
   if ((EC = llvm::sys::fs::openFileForRead(FileName, FD)))
     return EC;
   llvm::sys::fs::file_status Status;
