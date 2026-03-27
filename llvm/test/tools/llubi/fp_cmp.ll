@@ -17,7 +17,7 @@ define void @main() {
 ; CHECK-NEXT:   %eq = fcmp oeq float 1.000000e+00, 1.000000e+00 => T
 ; CHECK-NEXT:   %ne = fcmp one float 1.000000e+00, 2.000000e+00 => T
 ; CHECK-NEXT:   %gt = fcmp ogt float 2.000000e+00, 1.000000e+00 => T
-; CHECK-NEXT:   %nan = fdiv float 0.000000e+00, 0.000000e+00 => float NaN
+; CHECK-NEXT:   %nan = fdiv float 0.000000e+00, 0.000000e+00 => float 0xFFC00000
 ; CHECK-NEXT:   %ord_nan = fcmp oeq float %nan, 1.000000e+00 => F
 ; CHECK-NEXT:   %uno_nan = fcmp uno float %nan, 1.000000e+00 => T
 ; CHECK-NEXT:   %une_nan = fcmp une float %nan, 1.000000e+00 => T
