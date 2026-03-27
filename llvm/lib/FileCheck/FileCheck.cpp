@@ -2827,31 +2827,30 @@ static bool printDiff(DiffFormatType Mode, const FileCheckString &CheckStr,
   //           3. Direct pointer resolution via SourceMgr.
   SMLoc InputLoc = SMLoc::getFromPointer(CheckRegion.data());
 
+  unsigned ActualLineNo = OverwriteActualLine;
 
-unsigned ActualLineNo = OverwriteActualLine;
+  if (ActualLineNo == 0) {
+    bool FoundFuzzy = false;
 
-if (ActualLineNo == 0) {
-  bool FoundFuzzy = false;
-
-  if (Diags) {
-    for (const auto &D : llvm::reverse(*Diags)) {
-      if (D.CheckLoc == PatternLoc &&
-          D.MatchTy == FileCheckDiag::MatchFuzzy) {
-        ActualLineNo = D.InputStartLine;
-        FoundFuzzy = true;
-        break;
+    if (Diags) {
+      for (const auto &D : llvm::reverse(*Diags)) {
+        if (D.CheckLoc == PatternLoc &&
+            D.MatchTy == FileCheckDiag::MatchFuzzy) {
+          ActualLineNo = D.InputStartLine;
+          FoundFuzzy = true;
+          break;
+        }
       }
     }
-  }
 
-  // If no diagnostic match was found, calculate the line number directly
-  // from the InputLoc pointer using the SourceManager.
-  if (ActualLineNo == 0)
-    ActualLineNo = SM.getLineAndColumn(InputLoc).first;
+    // If no Fuzzy match was found, calculate the line number directly
+    // from the InputLoc pointer using the SourceManager.
+    if (ActualLineNo == 0)
+      ActualLineNo = SM.getLineAndColumn(InputLoc).first;
 
-    // if we are at an empty line, usually the relevant context is the line just
-    // before it.
-    if (ActualLine.empty() && ActualLineNo > 1)
+    // if we are at an empty line (and not from fuzzy), usually the relevant
+    // context is the line just before it.
+    if (!FoundFuzzy && ActualLine.empty() && ActualLineNo > 1)
       ActualLineNo--;
   }
 
@@ -2971,6 +2970,7 @@ bool FileCheck::checkInput(SourceMgr &SM, StringRef Buffer,
   bool ChecksFailed = false;
   unsigned TotalMismatches = 0;
   bool HeaderPrinted = false;
+  bool IsDiffMode = Req.DiffMode != DiffFormatType::Standard;
   auto &OS = llvm::errs();
 
   unsigned i = 0, j = 0, e = CheckStrings.size();
@@ -3004,49 +3004,38 @@ bool FileCheck::checkInput(SourceMgr &SM, StringRef Buffer,
     if (i != 0 && Req.EnableVarScope)
       PatternContext->clearLocalVars();
 
+    // Check each string within the scanned region, including a second check
+    // of any final CHECK-LABEL (to verify CHECK-NOT and CHECK-DAG)
     for (; i != j; ++i) {
       const FileCheckString &CheckStr = CheckStrings[i];
 
-      // Check each string within the scanned region, including a second check
-      // of any final CHECK-LABEL (to verify CHECK-NOT and CHECK-DAG)
-      size_t MatchLen = 0;
-      size_t MatchPos = StringRef::npos;
-      // Determine if the pattern requires strict adjacency (CHECK-NEXT/EMPTY).
       bool IsStrict = CheckStr.Pat.getCheckTy() == Check::CheckNext ||
                       CheckStr.Pat.getCheckTy() == Check::CheckEmpty;
+      bool AllowSearch = Req.DiffMode != DiffFormatType::Standard && !IsStrict;
 
-      if (Req.DiffMode != DiffFormatType::Standard) {
-        // Try to match the pattern (Search only if not strict)
-        MatchPos =
-            CheckStr.Check(SM, CheckRegion, !IsStrict, MatchLen, Req, Diags);
-      } else {
-        MatchPos = CheckStr.Check(SM, CheckRegion, false, MatchLen, Req, Diags);
-      }
+      // Match the pattern and return its position within the current region.
+      // (Searches only if not strict and doing diff)
+      size_t MatchLen = 0;
+      size_t MatchPos =
+          CheckStr.Check(SM, CheckRegion, AllowSearch, MatchLen, Req, Diags);
 
-      if (Req.DiffMode != DiffFormatType::Standard) {
-        if (MatchPos == StringRef::npos) {
-          // Case 1: No match at all. Always diff.
+      // Handle failure
+      if (MatchPos == StringRef::npos) {
+        if (IsDiffMode) {
           handleDiffFailure(CheckStr, CheckRegion, SM, Req, Diags, OS,
                             HeaderPrinted, TotalMismatches);
-          ChecksFailed = true;
-          i = j;
-          break;
-        } else if (IsStrict && MatchPos > 0) {
-          // Case 2: Match found, but is it "Strictly" next?
-          // Check if the skipped characters are JUST whitespace/newlines.
-          StringRef Skipped = CheckRegion.slice(0, MatchPos);
-          if (!Skipped.trim().empty()) {
-            // There is actual text (noise) between the last match and this one.
-            handleDiffFailure(CheckStr, CheckRegion, SM, Req, Diags, OS,
-                              HeaderPrinted, TotalMismatches);
-            ChecksFailed = true;
-            i = j;
-            break;
-          }
         }
-      } else {
-        // Standard Mode Logic
-        if (MatchPos == StringRef::npos) {
+        ChecksFailed = true;
+        i = j;
+        break;
+      }
+
+      // Extra strict check (only in diff mode)
+      if (IsDiffMode && IsStrict && MatchPos > 0) {
+        StringRef Skipped = CheckRegion.slice(0, MatchPos);
+        if (!Skipped.trim().empty()) {
+          handleDiffFailure(CheckStr, CheckRegion, SM, Req, Diags, OS,
+                            HeaderPrinted, TotalMismatches);
           ChecksFailed = true;
           i = j;
           break;
