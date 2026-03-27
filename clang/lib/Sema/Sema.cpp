@@ -1427,13 +1427,11 @@ void Sema::ActOnEndOfTranslationUnit() {
         if (!DefInPMF)
           continue;
       }
-      Diag(FD->getLocation(), diag::err_export_inline_not_defined)
-          << DefInPMF;
+      Diag(FD->getLocation(), diag::err_export_inline_not_defined) << DefInPMF;
       // If we have a PMF it should be at the end of the ModuleScopes.
       if (DefInPMF &&
           ModuleScopes.back().Module->Kind == Module::PrivateModuleFragment) {
-        Diag(ModuleScopes.back().BeginLoc,
-             diag::note_private_module_fragment);
+        Diag(ModuleScopes.back().BeginLoc, diag::note_private_module_fragment);
       }
     }
     PendingInlineFuncDecls.clear();
