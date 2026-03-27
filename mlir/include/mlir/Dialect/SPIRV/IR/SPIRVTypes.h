@@ -36,6 +36,7 @@ struct PointerTypeStorage;
 struct RuntimeArrayTypeStorage;
 struct SampledImageTypeStorage;
 struct StructTypeStorage;
+struct VectorOfPointerTypeStorage;
 
 } // namespace detail
 
@@ -513,6 +514,25 @@ public:
   ArrayRef<int64_t> getShape() const;
   bool hasRank() const { return !getShape().empty(); }
   operator ShapedType() const { return cast<ShapedType>(*this); }
+};
+
+/// SPIR-V vector of pointers type. Represents an OpTypeVector whose element
+/// type is an OpTypePointer. This is needed because MLIR's built-in VectorType
+/// does not support pointer element types. Used by the
+/// SPV_INTEL_masked_gather_scatter extension.
+class VectorOfPointerType
+    : public Type::TypeBase<VectorOfPointerType, CompositeType,
+                            detail::VectorOfPointerTypeStorage> {
+public:
+  using Base::Base;
+
+  static constexpr StringLiteral name = "spirv.vecptr";
+
+  static VectorOfPointerType get(PointerType elementType, unsigned numElements);
+
+  PointerType getElementType() const;
+
+  unsigned getNumElements() const;
 };
 
 } // namespace spirv

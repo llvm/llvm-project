@@ -626,6 +626,18 @@ LogicalResult Serializer::prepareBasicType(
     return success();
   }
 
+  if (auto vecPtrType = dyn_cast<spirv::VectorOfPointerType>(type)) {
+    uint32_t elementTypeID = 0;
+    if (failed(processTypeImpl(loc, vecPtrType.getElementType(), elementTypeID,
+                               serializationCtx))) {
+      return failure();
+    }
+    typeEnum = spirv::Opcode::OpTypeVector;
+    operands.push_back(elementTypeID);
+    operands.push_back(vecPtrType.getNumElements());
+    return success();
+  }
+
   if (auto imageType = dyn_cast<spirv::ImageType>(type)) {
     typeEnum = spirv::Opcode::OpTypeImage;
     uint32_t sampledTypeID = 0;

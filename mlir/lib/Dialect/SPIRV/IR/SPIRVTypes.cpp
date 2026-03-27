@@ -50,6 +50,9 @@ public:
             [this](auto concreteType) { addConcrete(concreteType); })
         .Case<ArrayType, ImageType, MatrixType, RuntimeArrayType, VectorType>(
             [this](auto concreteType) { add(concreteType.getElementType()); })
+        .Case([this](VectorOfPointerType concreteType) {
+          add(concreteType.getElementType());
+        })
         .Case([this](SampledImageType concreteType) {
           add(concreteType.getImageType());
         })
@@ -98,6 +101,9 @@ public:
               RuntimeArrayType, ScalarType, TensorArmType, VectorType>(
             [this](auto concreteType) { addConcrete(concreteType); })
         .Case([this](ArrayType concreteType) {
+          add(concreteType.getElementType());
+        })
+        .Case([this](VectorOfPointerType concreteType) {
           add(concreteType.getElementType());
         })
         .Case([this](SampledImageType concreteType) {
@@ -181,8 +187,8 @@ bool CompositeType::classof(Type type) {
   if (auto vectorType = dyn_cast<VectorType>(type))
     return isValid(vectorType);
   return isa<spirv::ArrayType, spirv::CooperativeMatrixType, spirv::MatrixType,
-             spirv::RuntimeArrayType, spirv::StructType, spirv::TensorArmType>(
-      type);
+             spirv::RuntimeArrayType, spirv::StructType, spirv::TensorArmType,
+             spirv::VectorOfPointerType>(type);
 }
 
 bool CompositeType::isValid(VectorType type) {
@@ -195,6 +201,9 @@ Type CompositeType::getElementType(unsigned index) const {
   return TypeSwitch<Type, Type>(*this)
       .Case<ArrayType, CooperativeMatrixType, RuntimeArrayType, VectorType,
             TensorArmType>([](auto type) { return type.getElementType(); })
+      .Case([](VectorOfPointerType type) -> Type {
+        return type.getElementType();
+      })
       .Case([](MatrixType type) { return type.getColumnType(); })
       .Case([index](StructType type) { return type.getElementType(index); })
       .DefaultUnreachable("Invalid composite type");
@@ -202,7 +211,8 @@ Type CompositeType::getElementType(unsigned index) const {
 
 unsigned CompositeType::getNumElements() const {
   return TypeSwitch<SPIRVType, unsigned>(*this)
-      .Case<ArrayType, StructType, TensorArmType, VectorType>(
+      .Case<ArrayType, StructType, TensorArmType, VectorType,
+            VectorOfPointerType>(
           [](auto type) { return type.getNumElements(); })
       .Case([](MatrixType type) { return type.getNumColumns(); })
       .DefaultUnreachable("Invalid type for number of elements query");
@@ -1326,10 +1336,48 @@ TensorArmType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
 }
 
 //===----------------------------------------------------------------------===//
+// VectorOfPointerType
+//===----------------------------------------------------------------------===//
+
+struct spirv::detail::VectorOfPointerTypeStorage final : TypeStorage {
+  using KeyTy = std::pair<PointerType, unsigned>;
+
+  static VectorOfPointerTypeStorage *construct(TypeStorageAllocator &allocator,
+                                               const KeyTy &key) {
+    return new (allocator.allocate<VectorOfPointerTypeStorage>())
+        VectorOfPointerTypeStorage(key);
+  }
+
+  bool operator==(const KeyTy &key) const {
+    return key == KeyTy(elementType, numElements);
+  }
+
+  VectorOfPointerTypeStorage(const KeyTy &key)
+      : elementType(key.first), numElements(key.second) {}
+
+  PointerType elementType;
+  unsigned numElements;
+};
+
+VectorOfPointerType VectorOfPointerType::get(PointerType elementType,
+                                             unsigned numElements) {
+  return Base::get(elementType.getContext(), elementType, numElements);
+}
+
+PointerType VectorOfPointerType::getElementType() const {
+  return getImpl()->elementType;
+}
+
+unsigned VectorOfPointerType::getNumElements() const {
+  return getImpl()->numElements;
+}
+
+//===----------------------------------------------------------------------===//
 // SPIR-V Dialect
 //===----------------------------------------------------------------------===//
 
 void SPIRVDialect::registerTypes() {
   addTypes<ArrayType, CooperativeMatrixType, ImageType, MatrixType, PointerType,
-           RuntimeArrayType, SampledImageType, StructType, TensorArmType>();
+           RuntimeArrayType, SampledImageType, StructType, TensorArmType,
+           VectorOfPointerType>();
 }

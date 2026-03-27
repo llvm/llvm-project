@@ -837,6 +837,43 @@ static Type parseStructType(SPIRVDialect const &dialect,
                          structDecorationInfo);
 }
 
+// vecptr-type ::= `vecptr` `<` integer-literal `x` pointer-type `>`
+static Type parseVectorOfPointerType(SPIRVDialect const &dialect,
+                                     DialectAsmParser &parser) {
+  if (parser.parseLess())
+    return Type();
+
+  int64_t count = 0;
+  SMLoc countLoc = parser.getCurrentLocation();
+  if (parser.parseInteger(count))
+    return Type();
+
+  if (parser.parseComma())
+    return Type();
+  if (!llvm::is_contained({2, 3, 4, 8, 16}, count)) {
+    parser.emitError(countLoc,
+                     "vector length must be 2, 3, 4, 8, or 16, but got ")
+        << count;
+    return Type();
+  }
+
+  Type elementType = parseAndVerifyType(dialect, parser);
+  if (!elementType)
+    return Type();
+
+  auto ptrType = dyn_cast<spirv::PointerType>(elementType);
+  if (!ptrType) {
+    parser.emitError(parser.getNameLoc(),
+                     "vecptr element type must be a spirv.ptr type");
+    return Type();
+  }
+
+  if (parser.parseGreater())
+    return Type();
+
+  return VectorOfPointerType::get(ptrType, count);
+}
+
 // spirv-type ::= array-type
 //              | element-type
 //              | image-type
@@ -844,6 +881,7 @@ static Type parseStructType(SPIRVDialect const &dialect,
 //              | runtime-array-type
 //              | sampled-image-type
 //              | struct-type
+//              | vecptr-type
 Type SPIRVDialect::parseType(DialectAsmParser &parser) const {
   StringRef keyword;
   if (parser.parseKeyword(&keyword))
@@ -867,6 +905,8 @@ Type SPIRVDialect::parseType(DialectAsmParser &parser) const {
     return parseMatrixType(*this, parser);
   if (keyword == "arm.tensor")
     return parseTensorArmType(*this, parser);
+  if (keyword == "vecptr")
+    return parseVectorOfPointerType(*this, parser);
   parser.emitError(parser.getNameLoc(), "unknown SPIR-V type: ") << keyword;
   return Type();
 }
@@ -998,11 +1038,16 @@ static void print(TensorArmType type, DialectAsmPrinter &os) {
   os << "x" << type.getElementType() << ">";
 }
 
+static void print(VectorOfPointerType type, DialectAsmPrinter &os) {
+  os << "vecptr<" << type.getNumElements() << ", " << type.getElementType()
+     << ">";
+}
+
 void SPIRVDialect::printType(Type type, DialectAsmPrinter &os) const {
   TypeSwitch<Type>(type)
       .Case<ArrayType, CooperativeMatrixType, PointerType, RuntimeArrayType,
-            ImageType, SampledImageType, StructType, MatrixType, TensorArmType>(
-          [&](auto type) { print(type, os); })
+            ImageType, SampledImageType, StructType, MatrixType, TensorArmType,
+            VectorOfPointerType>([&](auto type) { print(type, os); })
       .DefaultUnreachable("Unhandled SPIR-V type");
 }
 

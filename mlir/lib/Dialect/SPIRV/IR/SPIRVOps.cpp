@@ -1416,6 +1416,71 @@ LogicalResult spirv::INTELSubgroupBlockWriteOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.INTEL.MaskedGather
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::INTELMaskedGatherOp::verify() {
+  auto ptrVecType = cast<spirv::VectorOfPointerType>(getPtrVector().getType());
+  auto resultType = cast<VectorType>(getResult().getType());
+  unsigned numElems = resultType.getNumElements();
+
+  // Verify pointee type matches result element type.
+  if (ptrVecType.getElementType().getPointeeType() !=
+      resultType.getElementType())
+    return emitOpError(
+        "pointer pointee type must match result vector element type");
+
+  // Verify element counts match.
+  if (ptrVecType.getNumElements() != numElems)
+    return emitOpError(
+        "ptr_vector must have the same number of elements as result");
+
+  // Verify mask is a vector of i1.
+  auto maskType = cast<VectorType>(getMask().getType());
+  if (!maskType.getElementType().isInteger(1))
+    return emitOpError("mask must be a vector of i1");
+  if (maskType.getNumElements() != numElems)
+    return emitOpError("mask must have the same number of elements as result");
+
+  // Verify fill_empty matches result type.
+  if (getFillEmpty().getType() != resultType)
+    return emitOpError("fill_empty must have the same type as result");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.INTEL.MaskedScatter
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::INTELMaskedScatterOp::verify() {
+  auto ptrVecType = cast<spirv::VectorOfPointerType>(getPtrVector().getType());
+  auto inputType = cast<VectorType>(getInputVector().getType());
+  unsigned numElems = inputType.getNumElements();
+
+  // Verify pointee type matches input element type.
+  if (ptrVecType.getElementType().getPointeeType() !=
+      inputType.getElementType())
+    return emitOpError(
+        "pointer pointee type must match input vector element type");
+
+  // Verify element counts match.
+  if (ptrVecType.getNumElements() != numElems)
+    return emitOpError(
+        "ptr_vector must have the same number of elements as input_vector");
+
+  // Verify mask is a vector of i1.
+  auto maskType = cast<VectorType>(getMask().getType());
+  if (!maskType.getElementType().isInteger(1))
+    return emitOpError("mask must be a vector of i1");
+  if (maskType.getNumElements() != numElems)
+    return emitOpError(
+        "mask must have the same number of elements as input_vector");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.IAddCarryOp
 //===----------------------------------------------------------------------===//
 

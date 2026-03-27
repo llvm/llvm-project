@@ -252,4 +252,117 @@ def SPIRV_INTELControlBarrierWaitOp
 
 // -----
 
+def SPIRV_INTELMaskedGatherOp : SPIRV_IntelVendorOp<"MaskedGather", []> {
+  let summary = "See extension SPV_INTEL_masked_gather_scatter";
+
+  let description = [{
+    Reads values from a vector of pointers gathering them into a result
+    vector. Lanes where the mask is false receive the corresponding
+    FillEmpty value.
+
+    Result Type must be a vector of numerical type.
+
+    PtrVector must be a vector of pointers to the scalar element type of
+    Result Type. It must have the same number of components as Result Type.
+
+    Alignment is the known minimum alignment in bytes of each pointer in
+    PtrVector.
+
+    Mask must be a vector of boolean type with the same number of components
+    as Result Type.
+
+    FillEmpty must have the same type as Result Type.
+
+    #### Example:
+
+    ```mlir
+    %result = spirv.INTEL.MaskedGather %ptrs, %alignment, %mask, %fill
+              : !spirv.vecptr<4, !spirv.ptr<f32, CrossWorkgroup>>, i32,
+                vector<4xi1>, vector<4xf32> -> vector<4xf32>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[SPV_INTEL_masked_gather_scatter]>,
+    Capability<[SPIRV_C_MaskedGatherScatterINTEL]>
+  ];
+
+  let arguments = (ins
+    SPIRV_AnyVectorOfPointer:$ptr_vector,
+    SPIRV_Int32:$alignment,
+    SPIRV_Vector:$mask,
+    SPIRV_Vector:$fill_empty
+  );
+
+  let results = (outs
+    SPIRV_Vector:$result
+  );
+
+  let assemblyFormat = [{
+    $ptr_vector `,` $alignment `,` $mask `,` $fill_empty attr-dict `:`
+      type($ptr_vector) `,` type($alignment) `,`
+      type($mask) `,` type($fill_empty) `->` type($result)
+  }];
+
+  let hasVerifier = 1;
+}
+
+// -----
+
+def SPIRV_INTELMaskedScatterOp : SPIRV_IntelVendorOp<"MaskedScatter", []> {
+  let summary = "See extension SPV_INTEL_masked_gather_scatter";
+
+  let description = [{
+    Writes values from a vector into memory locations pointed to by a
+    vector of pointers. Only lanes where the mask is true are written.
+
+    PtrVector must be a vector of pointers to the scalar element type of
+    InputVector. It must have the same number of components as InputVector.
+
+    Alignment is the known minimum alignment in bytes of each pointer in
+    PtrVector.
+
+    Mask must be a vector of boolean type with the same number of components
+    as InputVector.
+
+    InputVector is the vector of values to scatter into memory.
+
+    #### Example:
+
+    ```mlir
+    spirv.INTEL.MaskedScatter %ptrs, %alignment, %mask, %values
+              : !spirv.vecptr<4, !spirv.ptr<f32, CrossWorkgroup>>, i32,
+                vector<4xi1>, vector<4xf32>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[SPV_INTEL_masked_gather_scatter]>,
+    Capability<[SPIRV_C_MaskedGatherScatterINTEL]>
+  ];
+
+  let arguments = (ins
+    SPIRV_AnyVectorOfPointer:$ptr_vector,
+    SPIRV_Int32:$alignment,
+    SPIRV_Vector:$mask,
+    SPIRV_Vector:$input_vector
+  );
+
+  let results = (outs);
+
+  let assemblyFormat = [{
+    $ptr_vector `,` $alignment `,` $mask `,` $input_vector attr-dict `:`
+      type($ptr_vector) `,` type($alignment) `,`
+      type($mask) `,` type($input_vector)
+  }];
+
+  let hasVerifier = 1;
+}
+
+// -----
+
 #endif // MLIR_DIALECT_SPIRV_IR_INTEL_EXT_OPS
