@@ -830,6 +830,7 @@ public:
 
     mif::populateMIFOpConversionPatterns(patterns);
 
+    target.addLegalDialect<fir::FIROpsDialect, mlir::cf::ControlFlowDialect>();
     target.addLegalOp<mlir::ModuleOp>();
 
     if (mlir::failed(mlir::applyPartialConversion(getOperation(), target,
