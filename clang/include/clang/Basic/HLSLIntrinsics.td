@@ -894,6 +894,18 @@ direction.
   let VaryingMatDims = [];
 }
 
+// Return fused multiply-add of double-precision arguments: a * b + c.
+def hlsl_fma : HLSLThreeArgBuiltin<"fma", "__builtin_elementwise_fma"> {
+  let Doc = [{
+\fn double fma(double a, double b, double c)
+\brief Returns the double-precision fused multiply-addition of a * b + c.
+\param a The first value in the fused multiply-addition.
+\param b The second value in the fused multiply-addition.
+\param c The third value in the fused multiply-addition.
+}];
+  let VaryingTypes = [DoubleTy];
+}
+
 // Returns the location of the first set bit starting from the lowest order bit
 // and working upward, per component.
 def hlsl_firstbitlow : HLSLOneArgBuiltin<"firstbitlow",
@@ -977,6 +989,19 @@ with regard to the x and y screen space coordinates.
   let ParamNames = ["input"];
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingMatDims = [];
+}
+
+// Blocks execution of all threads in a group until all group shared accesses
+// have been completed and all threads in the group have reached this call.
+def hlsl_group_memory_barrier :
+    HLSLBuiltin<"GroupMemoryBarrier",
+                "__builtin_hlsl_group_memory_barrier"> {
+  let Doc = [{
+\fn void GroupMemoryBarrier(void)
+\brief Blocks execution of all threads in a group until all group shared
+accesses have been completed.
+}];
+  let IsConvergent = 1;
 }
 
 // Blocks execution of all threads in a group until all group shared accesses
@@ -1248,6 +1273,19 @@ def hlsl_quad_read_across_x :
                       "__builtin_hlsl_quad_read_across_x"> {
   let Doc = [{
 \brief Reads the value from the lane across the X axis of the quad.
+\param Val The input value.
+}];
+  let VaryingTypes = AllNumericTypes;
+  let IsConvergent = 1;
+  let VaryingMatDims = [];
+}
+
+// Reads the value from the lane across the X axis of the quad.
+def hlsl_quad_read_across_y :
+    HLSLOneArgBuiltin<"QuadReadAcrossY",
+                      "__builtin_hlsl_quad_read_across_y"> {
+  let Doc = [{
+\brief Reads the value from the lane across the Y axis of the quad.
 \param Val The input value.
 }];
   let VaryingTypes = AllNumericTypes;
