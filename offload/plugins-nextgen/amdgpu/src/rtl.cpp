@@ -1695,7 +1695,7 @@ struct AMDGPUEventTy {
   /// Create an empty event.
   AMDGPUEventTy(AMDGPUDeviceTy &Device)
       : Device(Device), RecordedStream(nullptr), RecordedSlot(-1),
-        RecordedSyncCycle(-1), TimingSignal(nullptr), TimingAgent({0}) {}
+        RecordedSyncCycle(-1), TimingSignal(nullptr) {}
 
   /// Initialize and deinitialize.
   Error init() { return resetState(); }
@@ -1706,7 +1706,6 @@ struct AMDGPUEventTy {
     RecordedStream = nullptr;
     RecordedSlot = -1;
     RecordedSyncCycle = -1;
-    TimingAgent = {0};
 
     if (auto Err = releaseTimingSignal())
       return Err;
@@ -1791,10 +1790,6 @@ protected:
   /// unavailable for the current recording.
   AMDGPUSignalTy *TimingSignal;
 
-  /// The agent that owns the queue where the timing barrier was recorded. A
-  /// zero handle means timing is unavailable for the current recording.
-  hsa_agent_t TimingAgent;
-
   /// Mutex to safely access event fields.
   mutable std::mutex Mutex;
 
@@ -1836,10 +1831,8 @@ Error AMDGPUStreamTy::recordEvent(AMDGPUEventTy &Event) {
   if (Queue->isProfilingEnabled()) {
     OutputSignal->increaseUseCount();
     Event.TimingSignal = OutputSignal;
-    Event.TimingAgent = Agent;
   } else {
     Event.TimingSignal = nullptr;
-    Event.TimingAgent = {0};
   }
 
   assert(Event.RecordedSyncCycle >= 0 && "Invalid recorded sync cycle");
@@ -3645,13 +3638,13 @@ Expected<float> AMDGPUEventTy::getElapsedTime(AMDGPUEventTy &EndEvent) {
   hsa_amd_profiling_dispatch_time_t StopTime = {};
 
   hsa_status_t Status = hsa_amd_profiling_get_dispatch_time(
-      TimingAgent, TimingSignal->get(), &StartTime);
+      Device.getAgent(), TimingSignal->get(), &StartTime);
   if (auto Err = Plugin::check(
           Status, "error in hsa_amd_profiling_get_dispatch_time: %s"))
     return std::move(Err);
 
   Status = hsa_amd_profiling_get_dispatch_time(
-      EndEvent.TimingAgent, EndEvent.TimingSignal->get(), &StopTime);
+      EndEvent.Device.getAgent(), EndEvent.TimingSignal->get(), &StopTime);
   if (auto Err = Plugin::check(
           Status, "error in hsa_amd_profiling_get_dispatch_time: %s"))
     return std::move(Err);
