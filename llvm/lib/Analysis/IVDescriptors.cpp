@@ -1390,7 +1390,7 @@ InductionDescriptor::InductionDescriptor(Value *Start, InductionKind K,
 
 ConstantInt *InductionDescriptor::getConstIntStepValue() const {
   if (isa<SCEVConstant>(Step))
-    return dyn_cast<ConstantInt>(cast<SCEVConstant>(Step)->getValue());
+    return cast<SCEVConstant>(Step)->getValue();
   return nullptr;
 }
 

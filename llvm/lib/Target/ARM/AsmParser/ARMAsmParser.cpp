@@ -6880,7 +6880,7 @@ static bool isThumbI8Relocation(MCParsedAsmOperand &MCOp) {
   const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Op.getImm());
   if (CE)
     return false;
-  const MCExpr *E = dyn_cast<MCExpr>(Op.getImm());
+  const MCExpr *E = Op.getImm();
   if (!E)
     return false;
   auto *ARM16Expr = dyn_cast<MCSpecifierExpr>(E);
@@ -7655,7 +7655,7 @@ static bool isARMMCExpr(MCParsedAsmOperand &MCOp) {
   const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Op.getImm());
   if (CE)
     return false;
-  const MCExpr *E = dyn_cast<MCExpr>(Op.getImm());
+  const MCExpr *E = Op.getImm();
   if (!E)
     return false;
   return true;
@@ -8288,7 +8288,7 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
     ARMOperand &Op = static_cast<ARMOperand &>(*Operands[i]);
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Op.getImm());
     if (CE) break;
-    const MCExpr *E = dyn_cast<MCExpr>(Op.getImm());
+    const MCExpr *E = Op.getImm();
     if (!E) break;
     auto *ARM16Expr = dyn_cast<MCSpecifierExpr>(E);
     if (!ARM16Expr || (ARM16Expr->getSpecifier() != ARM::S_HI16 &&
