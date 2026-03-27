@@ -621,6 +621,43 @@ TEST(GSYMTest, TestFileWriter) {
   TestFileWriterHelper(llvm::endianness::big);
 }
 
+static void TestWriteUnsignedHelper(llvm::endianness ByteOrder) {
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  FileWriter FW(OutStrm, ByteOrder);
+  const bool IsLittleEndian = ByteOrder == llvm::endianness::little;
+
+  // Write values of sizes 1 through 8.
+  FW.writeUnsigned(0x01, 1);
+  FW.writeUnsigned(0x0102, 2);
+  FW.writeUnsigned(0x010203, 3);
+  FW.writeUnsigned(0x01020304, 4);
+  FW.writeUnsigned(0x0102030405, 5);
+  FW.writeUnsigned(0x010203040506, 6);
+  FW.writeUnsigned(0x01020304050607, 7);
+  FW.writeUnsigned(0x0102030405060708, 8);
+
+  std::string Bytes(OutStrm.str());
+  DataExtractor Data(Bytes, IsLittleEndian, 8);
+  uint64_t Offset = 0;
+
+  EXPECT_EQ(0x01U, Data.getUnsigned(&Offset, 1));
+  EXPECT_EQ(0x0102U, Data.getUnsigned(&Offset, 2));
+  EXPECT_EQ(0x010203U, Data.getUnsigned(&Offset, 3));
+  EXPECT_EQ(0x01020304U, Data.getUnsigned(&Offset, 4));
+  EXPECT_EQ(0x0102030405U, Data.getUnsigned(&Offset, 5));
+  EXPECT_EQ(0x010203040506U, Data.getUnsigned(&Offset, 6));
+  EXPECT_EQ(0x01020304050607U, Data.getUnsigned(&Offset, 7));
+  EXPECT_EQ(0x0102030405060708U, Data.getUnsigned(&Offset, 8));
+  EXPECT_EQ(Offset, Str.size());
+}
+
+TEST(GSYMTest, TestWriteUnsigned) {
+  TestWriteUnsignedHelper(llvm::endianness::little);
+  TestWriteUnsignedHelper(llvm::endianness::big);
+  TestWriteUnsignedHelper(llvm::endianness::native);
+}
+
 TEST(GSYMTest, TestAddressRangeEncodeDecode) {
   // Test encoding and decoding AddressRange objects. AddressRange objects
   // are always stored as offsets from the a base address. The base address

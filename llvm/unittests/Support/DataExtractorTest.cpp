@@ -72,90 +72,41 @@ TEST(DataExtractorTest, UnsignedNumbers) {
   EXPECT_EQ(8U, offset);
 }
 
-TEST(DataExtractorTest, GetUnsigned) {
+static void TestGetUnsignedHelper(bool IsLittleEndian) {
   // Use data with distinct byte values so each size produces a unique result.
   const char data[] = "\x01\x02\x03\x04\x05\x06\x07\x08";
-  uint64_t offset;
+  DataExtractor DE(StringRef(data, sizeof(data) - 1), IsLittleEndian, 8);
 
-  // Big-endian data.
-  DataExtractor DE(StringRef(data, sizeof(data) - 1), false, 8);
+  // Expected values for big-endian: bytes are read high-to-low.
+  // Expected values for little-endian: bytes are read low-to-high.
+  const uint64_t Expected[] = {
+      0,
+      IsLittleEndian ? 0x01U : 0x01U,
+      IsLittleEndian ? 0x0201U : 0x0102U,
+      IsLittleEndian ? 0x030201U : 0x010203U,
+      IsLittleEndian ? 0x04030201U : 0x01020304U,
+      IsLittleEndian ? 0x0504030201U : 0x0102030405U,
+      IsLittleEndian ? 0x060504030201U : 0x010203040506U,
+      IsLittleEndian ? 0x07060504030201U : 0x01020304050607U,
+      IsLittleEndian ? 0x0807060504030201U : 0x0102030405060708U,
+  };
 
-  offset = 0;
-  EXPECT_EQ(0x01U, DE.getUnsigned(&offset, 1));
-  EXPECT_EQ(1U, offset);
-
-  offset = 0;
-  EXPECT_EQ(0x0102U, DE.getUnsigned(&offset, 2));
-  EXPECT_EQ(2U, offset);
-
-  offset = 0;
-  EXPECT_EQ(0x010203U, DE.getUnsigned(&offset, 3));
-  EXPECT_EQ(3U, offset);
-
-  offset = 0;
-  EXPECT_EQ(0x01020304U, DE.getUnsigned(&offset, 4));
-  EXPECT_EQ(4U, offset);
-
-  offset = 0;
-  EXPECT_EQ(0x0102030405U, DE.getUnsigned(&offset, 5));
-  EXPECT_EQ(5U, offset);
-
-  offset = 0;
-  EXPECT_EQ(0x010203040506U, DE.getUnsigned(&offset, 6));
-  EXPECT_EQ(6U, offset);
-
-  offset = 0;
-  EXPECT_EQ(0x01020304050607U, DE.getUnsigned(&offset, 7));
-  EXPECT_EQ(7U, offset);
-
-  offset = 0;
-  EXPECT_EQ(0x0102030405060708U, DE.getUnsigned(&offset, 8));
-  EXPECT_EQ(8U, offset);
+  for (uint32_t Size = 1; Size <= 8; ++Size) {
+    uint64_t Offset = 0;
+    EXPECT_EQ(Expected[Size], DE.getUnsigned(&Offset, Size));
+    EXPECT_EQ(uint64_t(Size), Offset);
+  }
 
   // Non-zero starting offset.
-  offset = 3;
-  EXPECT_EQ(0x040506U, DE.getUnsigned(&offset, 3));
-  EXPECT_EQ(6U, offset);
+  uint64_t Offset = 3;
+  uint64_t ExpectedAt3 = IsLittleEndian ? 0x060504U : 0x040506U;
+  EXPECT_EQ(ExpectedAt3, DE.getUnsigned(&Offset, 3));
+  EXPECT_EQ(6U, Offset);
+}
 
-  // Little-endian data.
-  DE = DataExtractor(StringRef(data, sizeof(data) - 1), true, 8);
-
-  offset = 0;
-  EXPECT_EQ(0x01U, DE.getUnsigned(&offset, 1));
-  EXPECT_EQ(1U, offset);
-
-  offset = 0;
-  EXPECT_EQ(0x0201U, DE.getUnsigned(&offset, 2));
-  EXPECT_EQ(2U, offset);
-
-  offset = 0;
-  EXPECT_EQ(0x030201U, DE.getUnsigned(&offset, 3));
-  EXPECT_EQ(3U, offset);
-
-  offset = 0;
-  EXPECT_EQ(0x04030201U, DE.getUnsigned(&offset, 4));
-  EXPECT_EQ(4U, offset);
-
-  offset = 0;
-  EXPECT_EQ(0x0504030201U, DE.getUnsigned(&offset, 5));
-  EXPECT_EQ(5U, offset);
-
-  offset = 0;
-  EXPECT_EQ(0x060504030201U, DE.getUnsigned(&offset, 6));
-  EXPECT_EQ(6U, offset);
-
-  offset = 0;
-  EXPECT_EQ(0x07060504030201U, DE.getUnsigned(&offset, 7));
-  EXPECT_EQ(7U, offset);
-
-  offset = 0;
-  EXPECT_EQ(0x0807060504030201U, DE.getUnsigned(&offset, 8));
-  EXPECT_EQ(8U, offset);
-
-  // Non-zero starting offset.
-  offset = 3;
-  EXPECT_EQ(0x060504U, DE.getUnsigned(&offset, 3));
-  EXPECT_EQ(6U, offset);
+TEST(DataExtractorTest, GetUnsigned) {
+  TestGetUnsignedHelper(false);
+  TestGetUnsignedHelper(true);
 }
 
 TEST(DataExtractorTest, SignedNumbers) {

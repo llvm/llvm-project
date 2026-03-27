@@ -147,10 +147,10 @@ uint64_t DataExtractor::getUnsigned(uint64_t *offset_ptr, uint32_t byte_size,
   std::memcpy(&val, &Data.data()[offset], byte_size);
   if (sys::IsLittleEndianHost != IsLittleEndian)
     // Say byte_size is 3.
-    //                             high                low
-    // The read value would be:    00 00 00 00 00 AA BB CC
-    // The swapped bytes would be: CC BB AA 00 00 00 00 00
-    // The shifted bytes would be: 00 00 00 00 00 CC BB AA
+    //                high                low
+    // Read bytes:    00 00 00 00 00 AA BB CC
+    // Swapped bytes: CC BB AA 00 00 00 00 00
+    // Shifted bytes: 00 00 00 00 00 CC BB AA
     val = sys::getSwappedBytes(val) >> (8 * (8 - byte_size));
 
   // Advance the offset
