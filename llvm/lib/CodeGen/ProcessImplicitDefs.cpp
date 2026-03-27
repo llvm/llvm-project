@@ -111,7 +111,6 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
   constexpr unsigned SearchLimit = 60000;
   unsigned Count = 0;
   for (++SearchMI; SearchMI != SearchE; ++SearchMI) {
-    bool DefinesReg = false;
     if (++Count > SearchLimit) {
       SearchedWholeBlock = false;
       break;
@@ -126,10 +125,10 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
       if (MO.isUse())
         MO.setIsUndef();
       if (MO.isDef() && TRI->isSubRegisterEq(SearchReg, Reg))
-        DefinesReg = true;
+        ImplicitDefIsDead = true;
     }
-    if (DefinesReg) {
-      ImplicitDefIsDead = true;
+    if (ImplicitDefIsDead) {
+      LLVM_DEBUG(dbgs() << "Physreg def: " << *SearchMI);
       break;
     }
   }
@@ -138,8 +137,6 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
   // MI or there are no successors), we can erase the IMPLICIT_DEF.
   if (ImplicitDefIsDead ||
       (SearchedWholeBlock && MI->getParent()->succ_empty())) {
-    if (ImplicitDefIsDead)
-      LLVM_DEBUG(dbgs() << "Physreg def: " << *SearchMI);
     MI->eraseFromParent();
     return;
   }
