@@ -21,7 +21,7 @@ using namespace llvm::ELF;
 using namespace bolt;
 
 namespace opts {
-extern cl::opt<std::string> ReadPerfEvents;
+extern cl::opt<bool> ReadPerfTextProfile;
 } // namespace opts
 
 namespace {
@@ -93,12 +93,15 @@ INSTANTIATE_TEST_SUITE_P(AArch64, MemoryMapsTester,
 TEST_P(MemoryMapsTester, ParseMultipleSegments) {
   const int Pid = 1234;
   StringRef Filename = "BINARY";
-  opts::ReadPerfEvents = formatv(
-      "name       0 [000]     0.000000: PERF_RECORD_MMAP2 {0}/{0}: "
-      "[0xabc0000000(0x1000000) @ 0x11c0000 103:01 1573523 0]: r-xp {1}\n"
-      "name       0 [000]     0.000000: PERF_RECORD_MMAP2 {0}/{0}: "
-      "[0xabc2000000(0x8000000) @ 0x31d0000 103:01 1573523 0]: r-xp {1}\n",
-      Pid, Filename);
+  opts::ReadPerfTextProfile = true;
+  std::string MemEvents =
+      formatv(
+          "name       0 [000]     0.000000: PERF_RECORD_MMAP2 {0}/{0}: "
+          "[0xabc0000000(0x1000000) @ 0x11c0000 103:01 1573523 0]: r-xp {1}\n"
+          "name       0 [000]     0.000000: PERF_RECORD_MMAP2 {0}/{0}: "
+          "[0xabc2000000(0x8000000) @ 0x31d0000 103:01 1573523 0]: r-xp {1}\n",
+          Pid, Filename)
+          .str();
 
   BC->SegmentMapInfo[0x11da000] = SegmentInfo{
       0x11da000, 0x10da000, 0x11ca000, 0x10da000, 0x10000, true, false};
@@ -106,6 +109,7 @@ TEST_P(MemoryMapsTester, ParseMultipleSegments) {
       0x31d0000, 0x51ac82c, 0x31d0000, 0x3000000, 0x200000, true, false};
 
   DataAggregator DA("");
+  DA.setParsingBuffer(MemEvents);
   BC->setFilename(Filename);
   Error Err = DA.preprocessProfile(*BC);
 
@@ -124,12 +128,15 @@ TEST_P(MemoryMapsTester, ParseMultipleSegments) {
 TEST_P(MemoryMapsTester, MultipleSegmentsMismatchedBaseAddress) {
   const int Pid = 1234;
   StringRef Filename = "BINARY";
-  opts::ReadPerfEvents = formatv(
-      "name       0 [000]     0.000000: PERF_RECORD_MMAP2 {0}/{0}: "
-      "[0xabc0000000(0x1000000) @ 0x11c0000 103:01 1573523 0]: r-xp {1}\n"
-      "name       0 [000]     0.000000: PERF_RECORD_MMAP2 {0}/{0}: "
-      "[0xabc2000000(0x8000000) @ 0x31d0000 103:01 1573523 0]: r-xp {1}\n",
-      Pid, Filename);
+  opts::ReadPerfTextProfile = true;
+  std::string MemEvents =
+      formatv(
+          "name       0 [000]     0.000000: PERF_RECORD_MMAP2 {0}/{0}: "
+          "[0xabc0000000(0x1000000) @ 0x11c0000 103:01 1573523 0]: r-xp {1}\n"
+          "name       0 [000]     0.000000: PERF_RECORD_MMAP2 {0}/{0}: "
+          "[0xabc2000000(0x8000000) @ 0x31d0000 103:01 1573523 0]: r-xp {1}\n",
+          Pid, Filename)
+          .str();
 
   BC->SegmentMapInfo[0x11da000] = SegmentInfo{
       0x11da000, 0x10da000, 0x11ca000, 0x10da000, 0x10000, true, false};
@@ -139,6 +146,7 @@ TEST_P(MemoryMapsTester, MultipleSegmentsMismatchedBaseAddress) {
       0x31d0000, 0x51ac82c, 0x31d0fff, 0x3000000, 0x200000, true, false};
 
   DataAggregator DA("");
+  DA.setParsingBuffer(MemEvents);
   BC->setFilename(Filename);
   ASSERT_DEBUG_DEATH(
       { Error Err = DA.preprocessProfile(*BC); },
