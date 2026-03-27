@@ -146,7 +146,7 @@ void addParallelMetadata(LLVMContext &Ctx, SmallVector<Metadata *, 3> *Args,
 }
 
 void ScopAnnotator::annotateLoopLatch(
-    BranchInst *B, bool IsParallel,
+    CondBrInst *B, bool IsParallel,
     std::optional<bool> EnableVectorizeMetadata) const {
   LLVMContext &Ctx = SE->getContext();
   SmallVector<Metadata *, 3> Args;

@@ -97,7 +97,7 @@ SymbolFileDWARFDebugMap::CompileUnitInfo::GetFileRangeMap(
       for (uint32_t idx = comp_unit_info->first_symbol_index +
                           2; // Skip the N_SO and N_OSO
            idx < oso_end_idx; ++idx) {
-        Symbol *exe_symbol = exe_symtab->SymbolAtIndex(idx);
+        const Symbol *exe_symbol = exe_symtab->SymbolAtIndex(idx);
         if (exe_symbol) {
           if (!exe_symbol->IsDebug())
             continue;
@@ -117,9 +117,10 @@ SymbolFileDWARFDebugMap::CompileUnitInfo::GetFileRangeMap(
             // correctly to the new addresses in the main executable.
 
             // First we find the original symbol in the .o file's symbol table
-            Symbol *oso_fun_symbol = oso_symtab->FindFirstSymbolWithNameAndType(
-                exe_symbol->GetMangled().GetName(Mangled::ePreferMangled),
-                eSymbolTypeCode, Symtab::eDebugNo, Symtab::eVisibilityAny);
+            const Symbol *oso_fun_symbol =
+                oso_symtab->FindFirstSymbolWithNameAndType(
+                    exe_symbol->GetMangled().GetName(Mangled::ePreferMangled),
+                    eSymbolTypeCode, Symtab::eDebugNo, Symtab::eVisibilityAny);
             if (oso_fun_symbol) {
               // Add the inverse OSO file address to debug map entry mapping
               exe_symfile->AddOSOFileRange(
@@ -146,7 +147,7 @@ SymbolFileDWARFDebugMap::CompileUnitInfo::GetFileRangeMap(
 
             // Next we find the non-stab entry that corresponds to the N_GSYM
             // in the .o file
-            Symbol *oso_gsym_symbol =
+            const Symbol *oso_gsym_symbol =
                 oso_symtab->FindFirstSymbolWithNameAndType(
                     exe_symbol->GetMangled().GetName(Mangled::ePreferMangled),
                     eSymbolTypeData, Symtab::eDebugNo, Symtab::eVisibilityAny);
@@ -599,6 +600,15 @@ CompUnitSP SymbolFileDWARFDebugMap::ParseCompileUnitAtIndex(uint32_t cu_idx) {
     if (oso_module) {
       FileSpec so_file_spec;
       if (GetFileSpecForSO(cu_idx, so_file_spec)) {
+        // Apply the module's source path remappings so that compile units
+        // created from N_SO stabs (which may contain paths rewritten by
+        // -fdebug-prefix-map at build time) report their real on-disk paths.
+        // This mirrors what MakeAbsoluteAndRemap does for the dSYM case.
+        if (ModuleSP module_sp = m_objfile_sp->GetModule())
+          if (auto remapped =
+                  module_sp->RemapSourceFile(so_file_spec.GetPath()))
+            so_file_spec.SetFile(*remapped, FileSpec::Style::native);
+
         // User zero as the ID to match the compile unit at offset zero in each
         // .o file.
         lldb::user_id_t cu_id = 0;
@@ -1563,7 +1573,7 @@ Status SymbolFileDWARFDebugMap::CalculateFrameVariableError(StackFrame &frame) {
       const DebugMap::Entry *debug_map_entry =
           m_debug_map.FindEntryThatContains(pc_addr.GetFileAddress());
       if (debug_map_entry) {
-        Symbol *symbol =
+        const Symbol *symbol =
             symtab->SymbolAtIndex(debug_map_entry->data.GetExeSymbolIndex());
         if (symbol) {
           uint32_t oso_idx = 0;

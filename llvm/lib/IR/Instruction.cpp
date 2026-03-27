@@ -572,11 +572,13 @@ void Instruction::dropUBImplyingAttrsAndUnknownMetadata(
 void Instruction::dropUBImplyingAttrsAndMetadata(ArrayRef<unsigned> Keep) {
   // !annotation and !prof metadata does not impact semantics.
   // !range, !nonnull and !align produce poison, so they are safe to speculate.
+  // !fpmath specifies floating-point precision and does not imply UB.
   // !noundef and various AA metadata must be dropped, as it generally produces
   // immediate undefined behavior.
   static const unsigned KnownIDs[] = {
       LLVMContext::MD_annotation, LLVMContext::MD_range,
-      LLVMContext::MD_nonnull, LLVMContext::MD_align, LLVMContext::MD_prof};
+      LLVMContext::MD_nonnull,    LLVMContext::MD_align,
+      LLVMContext::MD_fpmath,     LLVMContext::MD_prof};
   SmallVector<unsigned> KeepIDs;
   KeepIDs.reserve(Keep.size() + std::size(KnownIDs));
   append_range(KeepIDs, (!ProfcheckDisableMetadataFixes ? KnownIDs
@@ -795,7 +797,8 @@ const char *Instruction::getOpcodeName(unsigned OpCode) {
   switch (OpCode) {
   // Terminators
   case Ret:    return "ret";
-  case Br:     return "br";
+  case UncondBr: return "br";
+  case CondBr: return "br";
   case Switch: return "switch";
   case IndirectBr: return "indirectbr";
   case Invoke: return "invoke";
@@ -1349,11 +1352,24 @@ void Instruction::setSuccessor(unsigned idx, BasicBlock *B) {
   llvm_unreachable("not a terminator");
 }
 
+iterator_range<Instruction::const_succ_iterator>
+Instruction::successors() const {
+  switch (getOpcode()) {
+#define HANDLE_TERM_INST(N, OPC, CLASS)                                        \
+  case Instruction::OPC:                                                       \
+    return static_cast<const CLASS *>(this)->successors();
+#include "llvm/IR/Instruction.def"
+  default:
+    break;
+  }
+  llvm_unreachable("not a terminator");
+}
+
 void Instruction::replaceSuccessorWith(BasicBlock *OldBB, BasicBlock *NewBB) {
-  for (unsigned Idx = 0, NumSuccessors = Instruction::getNumSuccessors();
-       Idx != NumSuccessors; ++Idx)
-    if (getSuccessor(Idx) == OldBB)
-      setSuccessor(Idx, NewBB);
+  auto Succs = successors();
+  for (auto I = Succs.begin(), E = Succs.end(); I != E; ++I)
+    if (*I == OldBB)
+      I.getUse()->set(NewBB);
 }
 
 Instruction *Instruction::cloneImpl() const {

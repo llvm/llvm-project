@@ -107,8 +107,10 @@ func.func @remap_input_1_to_N_remaining_use(%arg0: f32) {
 // CHECK-LABEL: func @remap_materialize_1_to_1(%{{.*}}: i43)
 func.func @remap_materialize_1_to_1(%arg0: i42) {
   // CHECK: %[[V:.*]] = "test.cast"(%arg0) : (i43) -> i42
-  // CHECK: "test.return"(%[[V]])
-  "test.return"(%arg0) : (i42) -> ()
+  // CHECK-NEXT: "work"(%[[V]])
+  // expected-remark@+1 {{op 'work' is not legalizable}}
+  "work"(%arg0) : (i42) -> ()
+  "test.return"() : () -> ()
 }
 
 // -----
@@ -224,7 +226,7 @@ func.func @bounded_recursion() {
 builtin.module {
 
   func.func @fail_to_convert_illegal_op() -> i32 {
-    // expected-error@+1 {{failed to legalize operation 'test.illegal_op_f'}}
+    // expected-error@+1 {{failed to legalize operation 'test.illegal_op_f' that was explicitly marked illegal: %0 = "test.illegal_op_f"() : () -> i32}}
     %result = "test.illegal_op_f"() : () -> (i32)
     return %result : i32
   }
@@ -251,7 +253,7 @@ func.func @replace_block_arg_1_to_n() {
 // -----
 
 // CHECK-LABEL: @replace_op_result_1_to_n
-func.func @replace_op_result_1_to_n() {
+func.func @replace_op_result_1_to_n() -> i32 {
   // CHECK: %[[orig:.*]] = "test.legal_op"() : () -> i32
   // CHECK: %[[repl:.*]] = "test.legal_op"() : () -> i16
   %0 = "test.legal_op"() : () -> i32
@@ -432,7 +434,7 @@ func.func @test_lookup_without_converter() {
 // expected-remark@-1 {{applyPartialConversion failed}}
 
 func.func @test_skip_1to1_pattern(%arg0: f32) {
-  // expected-error@+1 {{failed to legalize operation 'test.type_consumer'}}
+  // expected-error@+1 {{failed to legalize operation 'test.type_consumer' that was explicitly marked illegal}}
   "test.type_consumer"(%arg0) : (f32) -> ()
   return
 }

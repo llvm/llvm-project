@@ -99,6 +99,29 @@ def GPU_AddressSpaceEnum : GPU_I32Enum<
 def GPU_AddressSpaceAttr :
   GPU_I32EnumAttr<"address_space", GPU_AddressSpaceEnum>;
 
+def GPU_AddressSpaceAttrArray : TypedArrayAttrBase<GPU_AddressSpaceAttr, "GPU Address Space array">;
+
+def GPU_Dimension : GPU_I32Enum<"Dimension",
+    "a dimension, either 'x', 'y', or 'z'",
+    [
+      I32EnumAttrCase<"x", 0>,
+      I32EnumAttrCase<"y", 1>,
+      I32EnumAttrCase<"z", 2>
+    ]>;
+
+def GPU_DimensionAttr : EnumAttr<GPU_Dialect, GPU_Dimension, "dim">;
+
+def GPU_DimensionKind : I32Enum<"DimensionKind",
+  "the possible kinds of launch dimension",
+  [
+    I32EnumCase<"Other", 0, "other">,
+    I32EnumCase<"Block", 1, "block">,
+    I32EnumCase<"Grid", 2, "grid">,
+    I32EnumCase<"Cluster", 3, "cluster">
+  ]> {
+  let cppNamespace = "::mlir::gpu";
+}
+
 //===----------------------------------------------------------------------===//
 // GPU Types.
 //===----------------------------------------------------------------------===//

@@ -23,6 +23,12 @@ namespace {
 // FIXME: This matcher exists in some other code-review as well.
 // It should probably move to ASTMatchers.
 AST_MATCHER(VarDecl, isLocal) { return Node.isLocalVarDecl(); }
+// FIXME: The matcher 'hasName(Name)' asserts that its argument 'Name' is
+// nonempty. Perhaps remove that assertion and replace 'isUnnamed()' with
+// 'hasName("")'.
+AST_MATCHER(VarDecl, isUnnamed) {
+  return Node.getDeclName().isIdentifier() && Node.getName().empty();
+}
 AST_MATCHER_P(DeclStmt, containsAnyDeclaration,
               ast_matchers::internal::Matcher<Decl>, InnerMatcher) {
   return ast_matchers::internal::matchesFirstInPointerRange(
@@ -148,7 +154,7 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
 
   if (AnalyzeParameters) {
     const auto ParamMatcher =
-        parmVarDecl(unless(CommonExcludeTypes),
+        parmVarDecl(unless(CommonExcludeTypes), unless(isUnnamed()),
                     anyOf(hasType(referenceType()), hasType(pointerType())))
             .bind("value");
 
@@ -316,10 +322,9 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
           CheckPointee();
       }
       if (const auto *AT = dyn_cast<ArrayType>(VT)) {
-        if (!AT->getElementType().isConstQualified()) {
-          assert(AT->getElementType()->isPointerType());
+        assert(AT->getElementType()->isPointerType());
+        if (!AT->getElementType()->getPointeeType().isConstQualified())
           CheckPointee();
-        }
       }
     }
     return;

@@ -31,6 +31,7 @@
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/LibcallLoweringInfo.h"
 #include "llvm/CodeGen/LowLevelTypeUtils.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SelectionDAG.h"
@@ -218,15 +219,14 @@ public:
     TypeScalarizeVector, // Replace this one-element vector with its element.
     TypeSplitVector,     // Split this vector into two of half the size.
     TypeWidenVector,     // This vector should be widened into a larger vector.
-    TypePromoteFloat,    // Replace this float with a larger one.
     TypeSoftPromoteHalf, // Soften half to i16 and use float to do arithmetic.
-    TypeScalarizeScalableVector, // This action is explicitly left unimplemented.
-                                 // While it is theoretically possible to
-                                 // legalize operations on scalable types with a
-                                 // loop that handles the vscale * #lanes of the
-                                 // vector, this is non-trivial at SelectionDAG
-                                 // level and these types are better to be
-                                 // widened or promoted.
+    TypeScalarizeScalableVector, // This action is explicitly left
+                                 // unimplemented. While it is theoretically
+                                 // possible to legalize operations on scalable
+                                 // types with a loop that handles the vscale *
+                                 // #lanes of the vector, this is non-trivial at
+                                 // SelectionDAG level and these types are
+                                 // better to be widened or promoted.
   };
 
   /// LegalizeKind holds the legalization kind that needs to happen to EVT
@@ -546,20 +546,6 @@ public:
     return TypePromoteInteger;
   }
 
-  /// Warning: this option is problem-prone and tends to introduce
-  /// float miscompilations:
-  ///
-  /// - https://github.com/llvm/llvm-project/issues/97975
-  /// - https://github.com/llvm/llvm-project/issues/97981
-  ///
-  /// It should not be overridden to `false` except for special cases.
-  ///
-  /// Return true if the half type should be promoted using soft promotion rules
-  /// where each operation is promoted to f32 individually, then converted to
-  /// fp16. The default behavior is to promote chains of operations, keeping
-  /// intermediate results in f32 precision and range.
-  virtual bool softPromoteHalfType() const { return true; }
-
   // Return true if, for soft-promoted half, the half type should be passed to
   // and returned from functions as f32. The default behavior is to pass as
   // i16. If soft-promoted half is not used, this function is ignored and
@@ -637,9 +623,6 @@ public:
   const DenseMap<unsigned int, unsigned int> &getBypassSlowDivWidths() const {
     return BypassSlowDivWidths;
   }
-
-  /// Return true only if vscale must be a power of two.
-  virtual bool isVScaleKnownToBeAPowerOfTwo() const { return false; }
 
   /// Return true if Flow Control is an expensive operation that should be
   /// avoided.
@@ -1259,14 +1242,13 @@ public:
   };
 
   /// Given an intrinsic, checks if on the target the intrinsic will need to map
-  /// to a MemIntrinsicNode (touches memory). If this is the case, it returns
-  /// true and store the intrinsic information into the IntrinsicInfo that was
-  /// passed to the function.
-  virtual bool getTgtMemIntrinsic(IntrinsicInfo &, const CallBase &,
-                                  MachineFunction &,
-                                  unsigned /*Intrinsic*/) const {
-    return false;
-  }
+  /// to a MemIntrinsicNode (touches memory). If this is the case, it stores
+  /// the intrinsic information into the IntrinsicInfo vector passed to the
+  /// function. The vector may contain multiple entries for intrinsics that
+  /// access multiple memory locations.
+  virtual void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
+                                  const CallBase &I, MachineFunction &MF,
+                                  unsigned Intrinsic) const {}
 
   /// Returns true if the target can instruction select the specified FP
   /// immediate natively. If false, the legalizer will materialize the FP
@@ -1506,52 +1488,64 @@ public:
     return isOperationExpand(Op, VT) || getOperationAction(Op, VT) == LibCall;
   }
 
+  /// Returns an alternative action to use when the coarser lookups (configured
+  /// through `setLoadExtAction` and `setAtomicLoadExtAction`) yield
+  /// `LegalizeAction::Custom`. Allows targets to use builtin behaviors (e.g.
+  /// Legal, Promote) specialized by Alignment and AddrSpace, rather than just
+  /// types.
+  virtual LegalizeAction
+  getCustomLoadAction(EVT ValVT, EVT MemVT, Align Alignment, unsigned AddrSpace,
+                      unsigned ExtType, bool Atomic) const {
+    return LegalizeAction::Custom;
+  }
+
   /// Return how this load with extension should be treated: either it is legal,
   /// needs to be promoted to a larger size, needs to be expanded to some other
   /// code sequence, or the target has a custom expander for it.
-  LegalizeAction getLoadExtAction(unsigned ExtType, EVT ValVT,
-                                  EVT MemVT) const {
-    if (ValVT.isExtended() || MemVT.isExtended()) return Expand;
-    unsigned ValI = (unsigned) ValVT.getSimpleVT().SimpleTy;
-    unsigned MemI = (unsigned) MemVT.getSimpleVT().SimpleTy;
-    assert(ExtType < ISD::LAST_LOADEXT_TYPE && ValI < MVT::VALUETYPE_SIZE &&
-           MemI < MVT::VALUETYPE_SIZE && "Table isn't big enough!");
-    unsigned Shift = 4 * ExtType;
-    return (LegalizeAction)((LoadExtActions[ValI][MemI] >> Shift) & 0xf);
-  }
-
-  /// Return true if the specified load with extension is legal on this target.
-  bool isLoadExtLegal(unsigned ExtType, EVT ValVT, EVT MemVT) const {
-    return getLoadExtAction(ExtType, ValVT, MemVT) == Legal;
-  }
-
-  /// Return true if the specified load with extension is legal or custom
-  /// on this target.
-  bool isLoadExtLegalOrCustom(unsigned ExtType, EVT ValVT, EVT MemVT) const {
-    return getLoadExtAction(ExtType, ValVT, MemVT) == Legal ||
-           getLoadExtAction(ExtType, ValVT, MemVT) == Custom;
-  }
-
-  /// Same as getLoadExtAction, but for atomic loads.
-  LegalizeAction getAtomicLoadExtAction(unsigned ExtType, EVT ValVT,
-                                        EVT MemVT) const {
-    if (ValVT.isExtended() || MemVT.isExtended()) return Expand;
+  LegalizeAction getLoadAction(EVT ValVT, EVT MemVT, Align Alignment,
+                               unsigned AddrSpace, unsigned ExtType,
+                               bool Atomic) const {
+    if (ValVT.isExtended() || MemVT.isExtended())
+      return Expand;
     unsigned ValI = (unsigned)ValVT.getSimpleVT().SimpleTy;
     unsigned MemI = (unsigned)MemVT.getSimpleVT().SimpleTy;
     assert(ExtType < ISD::LAST_LOADEXT_TYPE && ValI < MVT::VALUETYPE_SIZE &&
            MemI < MVT::VALUETYPE_SIZE && "Table isn't big enough!");
     unsigned Shift = 4 * ExtType;
-    LegalizeAction Action =
-        (LegalizeAction)((AtomicLoadExtActions[ValI][MemI] >> Shift) & 0xf);
-    assert((Action == Legal || Action == Expand) &&
-           "Unsupported atomic load extension action.");
+
+    LegalizeAction Action;
+    if (Atomic) {
+      Action =
+          (LegalizeAction)((AtomicLoadExtActions[ValI][MemI] >> Shift) & 0xf);
+      assert((Action == Legal || Action == Expand) &&
+             "Unsupported atomic load extension action.");
+    } else {
+      Action = (LegalizeAction)((LoadExtActions[ValI][MemI] >> Shift) & 0xf);
+    }
+
+    if (Action == LegalizeAction::Custom) {
+      return getCustomLoadAction(ValVT, MemVT, Alignment, AddrSpace, ExtType,
+                                 Atomic);
+    }
+
     return Action;
   }
 
-  /// Return true if the specified atomic load with extension is legal on
-  /// this target.
-  bool isAtomicLoadExtLegal(unsigned ExtType, EVT ValVT, EVT MemVT) const {
-    return getAtomicLoadExtAction(ExtType, ValVT, MemVT) == Legal;
+  /// Return true if the specified load with extension is legal on this target.
+  bool isLoadLegal(EVT ValVT, EVT MemVT, Align Alignment, unsigned AddrSpace,
+                   unsigned ExtType, bool Atomic) const {
+    return getLoadAction(ValVT, MemVT, Alignment, AddrSpace, ExtType, Atomic) ==
+           Legal;
+  }
+
+  /// Return true if the specified load with extension is legal or custom
+  /// on this target.
+  bool isLoadLegalOrCustom(EVT ValVT, EVT MemVT, Align Alignment,
+                           unsigned AddrSpace, unsigned ExtType,
+                           bool Atomic) const {
+    LegalizeAction Action =
+        getLoadAction(ValVT, MemVT, Alignment, AddrSpace, ExtType, Atomic);
+    return Action == Legal || Action == Custom;
   }
 
   /// Return how this store with truncation should be treated: either it is
@@ -3180,7 +3174,8 @@ public:
       LType = ISD::SEXTLOAD;
     }
 
-    return isLoadExtLegal(LType, VT, LoadVT);
+    return isLoadLegal(VT, LoadVT, Load->getAlign(),
+                       Load->getPointerAddressSpace(), LType, false);
   }
 
   /// Return true if any actual instruction that defines a value of type FromTy
@@ -4199,16 +4194,20 @@ public:
     }
   };
 
-  /// Determines the optimal series of memory ops to replace the memset / memcpy.
-  /// Return true if the number of memory ops is below the threshold (Limit).
-  /// Note that this is always the case when Limit is ~0.
-  /// It returns the types of the sequence of memory ops to perform
-  /// memset / memcpy by reference.
-  virtual bool
-  findOptimalMemOpLowering(LLVMContext &Context, std::vector<EVT> &MemOps,
-                           unsigned Limit, const MemOp &Op, unsigned DstAS,
-                           unsigned SrcAS,
-                           const AttributeList &FuncAttributes) const;
+  /// Determines the optimal series of memory ops to replace the memset /
+  /// memcpy. Return true if the number of memory ops is below the threshold
+  /// (Limit). Note that this is always the case when Limit is ~0. It returns
+  /// the types of the sequence of memory ops to perform memset / memcpy by
+  /// reference. If LargestVT is non-null, the target may set it to the largest
+  /// EVT that should be used for generating the memset value (e.g., for vector
+  /// splats). If LargestVT is null or left unchanged, the caller will compute
+  /// it from MemOps.
+  virtual bool findOptimalMemOpLowering(LLVMContext &Context,
+                                        std::vector<EVT> &MemOps,
+                                        unsigned Limit, const MemOp &Op,
+                                        unsigned DstAS, unsigned SrcAS,
+                                        const AttributeList &FuncAttributes,
+                                        EVT *LargestVT = nullptr) const;
 
   /// Check to see if the specified operand of the specified instruction is a
   /// constant integer.  If so, check to see if there are any bits set in the
@@ -5436,7 +5435,8 @@ public:
   /// comparison may check if the operand is NAN, INF, zero, normal, etc. The
   /// result should be used as the condition operand for a select or branch.
   virtual SDValue getSqrtInputTest(SDValue Operand, SelectionDAG &DAG,
-                                   const DenormalMode &Mode) const;
+                                   const DenormalMode &Mode,
+                                   SDNodeFlags Flags = {}) const;
 
   /// Return a target-dependent result if the input operand is not suitable for
   /// use with a square root estimate calculation.
@@ -5602,6 +5602,12 @@ public:
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandVPCTLZ(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand CTLS (count leading sign bits) nodes.
+  /// CTLS(x) = CTLZ(OR(SHL(XOR(x, SRA(x, BW-1)), 1), 1))
+  /// \param N Node to expand
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandCTLS(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand CTTZ via Table Lookup.
   /// \param N Node to expand
@@ -5922,6 +5928,10 @@ public:
                                        EVT InVecVT, SDValue EltNo,
                                        LoadSDNode *OriginalLoad,
                                        SelectionDAG &DAG) const;
+
+protected:
+  void setTypeIdForCallsiteInfo(const CallBase *CB, MachineFunction &MF,
+                                MachineFunction::CallSiteInfo &CSInfo) const;
 
 private:
   SDValue foldSetCCWithAnd(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,

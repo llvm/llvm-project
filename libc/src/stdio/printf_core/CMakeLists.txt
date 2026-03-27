@@ -28,6 +28,9 @@ endif()
 if(LIBC_CONF_PRINTF_RUNTIME_DISPATCH)
   list(APPEND printf_config_copts "-DLIBC_COPT_PRINTF_RUNTIME_DISPATCH")
 endif()
+if(LIBC_CONF_PRINTF_MODULAR)
+  list(APPEND printf_config_copts "-DLIBC_COPT_PRINTF_MODULAR")
+endif()
 if(printf_config_copts)
   list(PREPEND printf_config_copts "COMPILE_OPTIONS")
 endif()
@@ -49,10 +52,13 @@ if(LIBC_CONF_PRINTF_DISABLE_WIDE)
 else()
   set(wchar_deps
     libc.hdr.types.wchar_t
+    libc.hdr.types.char32_t
+    libc.hdr.types.char8_t
     libc.hdr.types.wint_t
     libc.hdr.wchar_macros
     libc.src.__support.wchar.wcrtomb
     libc.src.__support.wchar.mbstate
+    libc.src.__support.wchar.string_converter
   )
   set(parser_wchar_deps
     libc.hdr.types.wint_t
@@ -129,6 +135,7 @@ add_header_library(
     .writer
     libc.include.inttypes
     libc.hdr.limits_macros
+    libc.src.string.string_utils
     libc.src.__support.big_int
     libc.src.__support.common
     libc.src.__support.CPP.limits
@@ -146,10 +153,12 @@ add_header_library(
     ${wchar_deps}
 )
 
-add_header_library(
+add_object_library(
   printf_main
   HDRS
     printf_main.h
+  SRCS
+    float_impl.cpp
   DEPENDS
     .parser
     .converter

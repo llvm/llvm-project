@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/DylibManager.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
@@ -38,10 +39,10 @@ public:
   /// If \p AddAbsoluteSymbols is provided, it is used to add the symbols to the
   /// \c JITDylib; otherwise it uses JD.define(absoluteSymbols(...)).
   EPCDynamicLibrarySearchGenerator(
-      ExecutionSession &ES, tpctypes::DylibHandle H,
+      ExecutionSession &ES, DylibManager &DylibMgr, tpctypes::DylibHandle H,
       SymbolPredicate Allow = SymbolPredicate(),
       AddAbsoluteSymbolsFn AddAbsoluteSymbols = nullptr)
-      : EPC(ES.getExecutorProcessControl()), H(H), Allow(std::move(Allow)),
+      : ES(ES), DylibMgr(DylibMgr), H(H), Allow(std::move(Allow)),
         AddAbsoluteSymbols(std::move(AddAbsoluteSymbols)) {}
 
   /// Create an EPCDynamicLibrarySearchGenerator that resolves all symbols
@@ -52,9 +53,9 @@ public:
   /// "missing symbol" behavior in ORC. This distinction shouldn't matter for
   /// most use-cases).
   EPCDynamicLibrarySearchGenerator(
-      ExecutionSession &ES, SymbolPredicate Allow,
+      ExecutionSession &ES, DylibManager &DylibMgr, SymbolPredicate Allow,
       AddAbsoluteSymbolsFn AddAbsoluteSymbols = nullptr)
-      : EPC(ES.getExecutorProcessControl()), Allow(std::move(Allow)),
+      : ES(ES), DylibMgr(DylibMgr), Allow(std::move(Allow)),
         AddAbsoluteSymbols(std::move(AddAbsoluteSymbols)) {}
 
   /// Permanently loads the library at the given path and, on success, returns
@@ -62,17 +63,18 @@ public:
   /// definitions in the library. On failure returns the reason the library
   /// failed to load.
   static Expected<std::unique_ptr<EPCDynamicLibrarySearchGenerator>>
-  Load(ExecutionSession &ES, const char *LibraryPath,
+  Load(ExecutionSession &ES, DylibManager &DylibMgr, const char *LibraryPath,
        SymbolPredicate Allow = SymbolPredicate(),
        AddAbsoluteSymbolsFn AddAbsoluteSymbols = nullptr);
 
   /// Creates a EPCDynamicLibrarySearchGenerator that searches for symbols in
   /// the target process.
   static Expected<std::unique_ptr<EPCDynamicLibrarySearchGenerator>>
-  GetForTargetProcess(ExecutionSession &ES,
+  GetForTargetProcess(ExecutionSession &ES, DylibManager &DylibMgr,
                       SymbolPredicate Allow = SymbolPredicate(),
                       AddAbsoluteSymbolsFn AddAbsoluteSymbols = nullptr) {
-    return Load(ES, nullptr, std::move(Allow), std::move(AddAbsoluteSymbols));
+    return Load(ES, DylibMgr, nullptr, std::move(Allow),
+                std::move(AddAbsoluteSymbols));
   }
 
   Error tryToGenerate(LookupState &LS, LookupKind K, JITDylib &JD,
@@ -82,7 +84,8 @@ public:
 private:
   Error addAbsolutes(JITDylib &JD, SymbolMap Symbols);
 
-  ExecutorProcessControl &EPC;
+  ExecutionSession &ES;
+  DylibManager &DylibMgr;
   std::optional<tpctypes::DylibHandle> H;
   SymbolPredicate Allow;
   AddAbsoluteSymbolsFn AddAbsoluteSymbols;

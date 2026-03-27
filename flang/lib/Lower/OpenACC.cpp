@@ -73,11 +73,6 @@ static llvm::cl::opt<bool> enableSymbolRemapping(
     llvm::cl::desc("Whether to remap symbols that appears in data clauses."),
     llvm::cl::init(true));
 
-static llvm::cl::opt<bool> enableDevicePtrRemap(
-    "openacc-remap-device-ptr-symbols",
-    llvm::cl::desc("sub-option of openacc-remap-symbols for deviceptr clause"),
-    llvm::cl::init(false));
-
 // Special value for * passed in device_type or gang clauses.
 static constexpr std::int64_t starCst = -1;
 
@@ -780,16 +775,9 @@ genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
       if (auto *defOp = op.getVar().getDefiningOp())
         addDeclareAttr(builder, defOp, dataClause);
 
-    // TODO: no_create remapping could currently cause segfaults because of the
-    // fir.box_addr that may be inserted in the remapping in the region.
-    // This is an issue if the variable is not mapped (which is OK if its
-    // accesses are not reached inside the construct).
-    bool isNoCreateWithBounds =
-        std::is_same_v<Op, mlir::acc::NoCreateOp> && !bounds.empty();
-
     // Track the symbol and its corresponding mlir::Value if requested so that
     // accesses inside regions can be remapped.
-    if (dataMap && !isNoCreateWithBounds) {
+    if (dataMap) {
       if (componentRef)
         dataMap->emplaceComponent(op.getAccVar(), std::move(*componentRef),
                                   baseAddr);
@@ -1073,15 +1061,31 @@ genDataExitOperations(fir::FirOpBuilder &builder,
 /// Return the corresponding enum value for the mlir::acc::ReductionOperator
 /// from the parser representation.
 static mlir::acc::ReductionOperator
-getReductionOperator(const Fortran::parser::ReductionOperator &op) {
+getReductionOperator(const Fortran::parser::ReductionOperator &op,
+                     mlir::Type reductionTy,
+                     const Fortran::lower::AbstractConverter &converter) {
+  Fortran::common::FPMaxminBehavior maxminMode =
+      converter.getLoweringOptions().getFPMaxminBehavior();
   switch (op.v) {
   case Fortran::parser::ReductionOperator::Operator::Plus:
     return mlir::acc::ReductionOperator::AccAdd;
   case Fortran::parser::ReductionOperator::Operator::Multiply:
     return mlir::acc::ReductionOperator::AccMul;
   case Fortran::parser::ReductionOperator::Operator::Max:
+    if (fir::isa_real(reductionTy)) {
+      if (maxminMode == Fortran::common::FPMaxminBehavior::Extremum)
+        return mlir::acc::ReductionOperator::AccMaximumf;
+      else if (maxminMode == Fortran::common::FPMaxminBehavior::ExtremeNum)
+        return mlir::acc::ReductionOperator::AccMaxnumf;
+    }
     return mlir::acc::ReductionOperator::AccMax;
   case Fortran::parser::ReductionOperator::Operator::Min:
+    if (fir::isa_real(reductionTy)) {
+      if (maxminMode == Fortran::common::FPMaxminBehavior::Extremum)
+        return mlir::acc::ReductionOperator::AccMinimumf;
+      else if (maxminMode == Fortran::common::FPMaxminBehavior::ExtremeNum)
+        return mlir::acc::ReductionOperator::AccMinnumf;
+    }
     return mlir::acc::ReductionOperator::AccMin;
   case Fortran::parser::ReductionOperator::Operator::Iand:
     return mlir::acc::ReductionOperator::AccIand;
@@ -1127,7 +1131,6 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   const auto &objects = std::get<Fortran::parser::AccObjectList>(objectList.t);
   const auto &op = std::get<Fortran::parser::ReductionOperator>(objectList.t);
-  mlir::acc::ReductionOperator mlirOp = getReductionOperator(op);
   Fortran::evaluate::ExpressionAnalyzer ea{semanticsContext};
   for (const auto &accObject : objects.v) {
     llvm::SmallVector<mlir::Value> bounds;
@@ -1155,6 +1158,9 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
 
     if (!isSupportedReductionType(reductionTy))
       TODO(operandLocation, "reduction with unsupported type");
+
+    mlir::acc::ReductionOperator mlirOp =
+        getReductionOperator(op, reductionTy, converter);
 
     if (designator) {
       Fortran::semantics::SomeExpr someExpr = *designator;
@@ -2434,12 +2440,11 @@ static Op createComputeOp(
     } else if (const auto *devicePtrClause =
                    std::get_if<Fortran::parser::AccClause::Deviceptr>(
                        &clause.u)) {
-      AccDataMap *symPairs = enableDevicePtrRemap ? &dataMap : nullptr;
       genDataOperandOperations<mlir::acc::DevicePtrOp>(
           devicePtrClause->v, converter, semanticsContext, stmtCtx,
           dataClauseOperands, mlir::acc::DataClause::acc_deviceptr,
           /*structured=*/true, /*implicit=*/false, async, asyncDeviceTypes,
-          asyncOnlyDeviceTypes, /*setDeclareAttr=*/false, symPairs);
+          asyncOnlyDeviceTypes, /*setDeclareAttr=*/false, &dataMap);
     } else if (const auto *attachClause =
                    std::get_if<Fortran::parser::AccClause::Attach>(&clause.u)) {
       auto crtDataStart = dataClauseOperands.size();
@@ -2827,52 +2832,77 @@ genACCHostDataOp(Fortran::lower::AbstractConverter &converter,
 
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
+  // When CUDA Fortran is enabled, extra symbols are created in the host_data
+  // scope for use_device objects. Bind them to the outer scope's symbols before
+  // processing any clauses, since the if clause may reference these symbols.
+  if (semanticsContext.IsEnabled(Fortran::common::LanguageFeature::CUDA)) {
+    for (const Fortran::parser::AccClause &clause : accClauseList.v) {
+      if (const auto *useDevice =
+              std::get_if<Fortran::parser::AccClause::UseDevice>(&clause.u)) {
+        const Fortran::parser::AccObjectList &objectList{useDevice->v};
+        for (const auto &accObject : objectList.v) {
+          const Fortran::semantics::Symbol *newSym = nullptr;
+          if (const auto *designator =
+                  std::get_if<Fortran::parser::Designator>(&accObject.u)) {
+            if (const auto *name =
+                    Fortran::parser::GetDesignatorNameIfDataRef(*designator)) {
+              newSym = name->symbol;
+            } else if (const auto *arrayElement = Fortran::parser::Unwrap<
+                           Fortran::parser::ArrayElement>(*designator)) {
+              const Fortran::parser::Name &name =
+                  Fortran::parser::GetLastName(arrayElement->Base());
+              newSym = name.symbol;
+            } else if (const auto *component = Fortran::parser::Unwrap<
+                           Fortran::parser::StructureComponent>(*designator)) {
+              const Fortran::parser::DataRef &base{component->Base()};
+              if (const auto *name =
+                      std::get_if<Fortran::parser::Name>(&base.u)) {
+                newSym = name->symbol;
+              }
+            }
+          } else if (const auto *name =
+                         std::get_if<Fortran::parser::Name>(&accObject.u)) {
+            newSym = name->symbol;
+          }
+          if (newSym) {
+            const Fortran::semantics::Symbol *origSym =
+                localSymbols.lookupSymbolByName(newSym->name().ToString());
+            if (origSym)
+              localSymbols.copySymbolBinding(*origSym, *newSym);
+          }
+        }
+      }
+    }
+  }
+
   AccDataMap dataMap;
   for (const Fortran::parser::AccClause &clause : accClauseList.v) {
     mlir::Location clauseLocation = converter.genLocation(clause.source);
     if (const auto *ifClause =
             std::get_if<Fortran::parser::AccClause::If>(&clause.u)) {
       genIfClause(converter, clauseLocation, ifClause, ifCond, stmtCtx);
+    } else if (std::get_if<Fortran::parser::AccClause::IfPresent>(&clause.u)) {
+      addIfPresentAttr = true;
     } else if (const auto *useDevice =
                    std::get_if<Fortran::parser::AccClause::UseDevice>(
                        &clause.u)) {
-      // When CUDA Fortran is enabled, extra symbols are used in the host_data
-      // region. Look for them and bind their values with the symbols in the
-      // outer scope.
-      if (semanticsContext.IsEnabled(Fortran::common::LanguageFeature::CUDA)) {
-        const Fortran::parser::AccObjectList &objectList{useDevice->v};
-        for (const auto &accObject : objectList.v) {
-          Fortran::semantics::Symbol &symbol =
-              getSymbolFromAccObject(accObject);
-          const Fortran::semantics::Symbol *baseSym =
-              localSymbols.lookupSymbolByName(symbol.name().ToString());
-          localSymbols.copySymbolBinding(*baseSym, symbol);
-        }
-      }
       genDataOperandOperations<mlir::acc::UseDeviceOp>(
           useDevice->v, converter, semanticsContext, stmtCtx, dataOperands,
           mlir::acc::DataClause::acc_use_device,
           /*structured=*/true, /*implicit=*/false, /*async=*/{},
           /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{},
           /*setDeclareAttr=*/false, &dataMap);
-    } else if (std::get_if<Fortran::parser::AccClause::IfPresent>(&clause.u)) {
-      addIfPresentAttr = true;
     }
   }
 
   if (ifCond) {
     if (auto cst =
-            mlir::dyn_cast<mlir::arith::ConstantOp>(ifCond.getDefiningOp()))
+            mlir::dyn_cast<mlir::arith::ConstantOp>(ifCond.getDefiningOp())) {
       if (auto boolAttr = mlir::dyn_cast<mlir::BoolAttr>(cst.getValue())) {
-        if (boolAttr.getValue()) {
-          // get rid of the if condition if it is always true.
+        if (boolAttr.getValue()) // get rid of the if condition when true.
           ifCond = mlir::Value();
-        } else {
-          // Do not generate the acc.host_data op if the if condition is always
-          // false.
-          return;
-        }
       }
+    }
   }
 
   // Prepare the operand segment size attribute and the operands value range.
@@ -4102,7 +4132,8 @@ void createOpenACCRoutineConstruct(
                                 workerDeviceTypes, vectorDeviceTypes) &&
           routineOp.getNohost() == hasNohost)
         return;
-      mlir::emitError(loc, "Routine already specified with different clauses");
+      fir::emitFatalError(loc,
+                          "Routine already specified with different clauses");
     }
   }
   std::stringstream routineOpName;
@@ -4310,20 +4341,26 @@ genACC(Fortran::lower::AbstractConverter &converter,
           fir::substBase(hostExv, cacheOp.getAccVar());
       converter.bindSymbol(symbol, cacheExv);
     } else {
-      // Must be a derived type component reference.
+      // Derived type component reference.
       assert(designator && "expected designator for non-symbol cache operand");
       std::optional<Fortran::evaluate::Component> componentRef =
           extractComponentFromDesignator(designator);
       assert(componentRef &&
              "expected component reference for derived type cache operand");
-      // Component references are lowered to designate operations.
-      auto designate = base.getDefiningOp<hlfir::DesignateOp>();
-      assert(designate && "expected designate op for component reference");
+      // When component is mapped via a data clause, base may be a declare op
+      // instead of a designate op.
+      auto varIface = base.getDefiningOp<fir::FortranVariableOpInterface>();
+      assert(varIface &&
+             "expected FortranVariableOpInterface for component reference");
+      fir::FortranVariableFlagsAttr attrs;
+      if (auto fortranAttrs = varIface.getFortranAttrs())
+        attrs = fir::FortranVariableFlagsAttr::get(builder.getContext(),
+                                                   *fortranAttrs);
       auto declareOp = hlfir::DeclareOp::create(
           builder, operandLocation, cacheOp.getAccVar(), asFortran.str(),
-          designate.getShape(), designate.getTypeparams(),
+          varIface.getShape(), varIface.getExplicitTypeParams(),
           /*dummyScope=*/nullptr, /*storage=*/nullptr,
-          /*storageOffset=*/0, designate.getFortranAttrsAttr());
+          /*storageOffset=*/0, attrs);
       converter.getSymbolMap().addComponentOverride(*componentRef, declareOp);
     }
   }
@@ -4396,9 +4433,10 @@ void Fortran::lower::attachDeclarePostAllocAction(
   fctName << converter.mangleName(sym) << declarePostAllocSuffix.str();
   mlir::Operation *op = &builder.getInsertionBlock()->back();
 
-  if (auto resOp = mlir::dyn_cast<fir::ResultOp>(*op)) {
-    assert(resOp.getOperands().size() == 0 &&
-           "expect only fir.result op with no operand");
+  if (op && op->hasTrait<mlir::OpTrait::IsTerminator>()) {
+    if (op->getNumOperands() != 0)
+      fir::emitFatalError(op->getLoc(),
+                          "expect only terminator op with no operand");
     op = op->getPrevNode();
   }
   assert(op && "expect operation to attach the post allocation action");
@@ -4469,9 +4507,10 @@ void Fortran::lower::attachDeclarePostDeallocAction(
   std::stringstream fctName;
   fctName << converter.mangleName(sym) << declarePostDeallocSuffix.str();
   mlir::Operation *op = &builder.getInsertionBlock()->back();
-  if (auto resOp = mlir::dyn_cast<fir::ResultOp>(*op)) {
-    assert(resOp.getOperands().size() == 0 &&
-           "expect only fir.result op with no operand");
+  if (op && op->hasTrait<mlir::OpTrait::IsTerminator>()) {
+    if (op->getNumOperands() != 0)
+      fir::emitFatalError(op->getLoc(),
+                          "expect only terminator op with no operand");
     op = op->getPrevNode();
   }
   assert(op && "expect operation to attach the post deallocation action");

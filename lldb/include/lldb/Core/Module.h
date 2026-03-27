@@ -510,8 +510,7 @@ public:
   ///     \b true if it is, \b false otherwise.
   bool IsLoadedInTarget(Target *target);
 
-  bool LoadScriptingResourceInTarget(Target *target, Status &error,
-                                     Stream &feedback_stream);
+  bool LoadScriptingResourceInTarget(Target *target, Status &error);
 
   /// Get the number of compile units for this module.
   ///
@@ -846,7 +845,7 @@ public:
   ///     /b true if \a orig_spec was successfully located and
   ///     \a new_spec is filled in with an existing file spec,
   ///     \b false otherwise.
-  bool FindSourceFile(const FileSpec &orig_spec, FileSpec &new_spec) const;
+  bool FindSourceFile(const FileSpec &orig_spec, FileSpec &new_spec);
 
   /// Remaps a source file given \a path into \a new_path.
   ///
@@ -860,8 +859,13 @@ public:
   /// \return
   ///     The newly remapped filespec that is may or may not exist if
   ///     \a path was successfully located.
-  std::optional<std::string> RemapSourceFile(llvm::StringRef path) const;
+  std::optional<std::string> RemapSourceFile(llvm::StringRef path);
   bool RemapSourceFile(const char *, std::string &) const = delete;
+
+  /// Register a directory to be searched for \c compilation-prefix-map.json
+  /// on the first call to RemapSourceFile or FindSourceFile. Duplicate
+  /// directories are silently ignored.
+  void AddPrefixMapSearchDir(FileSpec dir);
 
   /// Update the ArchSpec to a more specific variant.
   bool MergeArchitecture(const ArchSpec &arch_spec);
@@ -1044,10 +1048,10 @@ protected:
   uint64_t m_object_offset = 0;
   llvm::sys::TimePoint<> m_object_mod_time;
 
-  /// DataBuffer containing the module image, if it was provided at
+  /// DataExtractor containing the module image, if it was provided at
   /// construction time. Otherwise the data will be retrieved by mapping
   /// one of the FileSpec members above.
-  lldb::DataBufferSP m_data_sp;
+  lldb::DataExtractorSP m_extractor_sp;
 
   lldb::ObjectFileSP m_objfile_sp; ///< A shared pointer to the object file
                                    /// parser for this module as it may or may
@@ -1068,6 +1072,15 @@ protected:
   /// module that doesn't match where the sources currently are.
   PathMappingList m_source_mappings =
       ModuleList::GetGlobalModuleListProperties().GetSymlinkMappings();
+
+  /// Directories registered via AddPrefixMapSearchDir, searched lazily on the
+  /// first call to RemapSourceFile or FindSourceFile. Cleared after searching.
+  llvm::DenseSet<ConstString> m_prefix_map_search_dirs;
+
+  /// Search each registered directory upward for compilation-prefix-map.json
+  /// and apply any found mappings to m_source_mappings. Called at most once.
+  /// Must be called with m_mutex held.
+  void LoadPrefixMapsIfNeeded();
 
   lldb::SectionListUP m_sections_up; ///< Unified section list for module that
                                      /// is used by the ObjectFile and
@@ -1101,8 +1114,6 @@ protected:
                                         SymbolContextList &sc_list);
 
   bool SetArchitecture(const ArchSpec &new_arch);
-
-  void SetUUID(const lldb_private::UUID &uuid);
 
   SectionList *GetUnifiedSectionList();
 

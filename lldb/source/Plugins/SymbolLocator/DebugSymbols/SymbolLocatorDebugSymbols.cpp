@@ -203,13 +203,17 @@ std::optional<ModuleSpec> SymbolLocatorDebugSymbols::LocateExecutableObjectFile(
 
           // Check if the requested image is in our shared cache.
           if (!success) {
+            SymbolSharedCacheUse sc_mode =
+                ModuleList::GetGlobalModuleListProperties()
+                    .GetSharedCacheBinaryLoading();
             SharedCacheImageInfo image_info = HostInfo::GetSharedCacheImageInfo(
-                module_spec.GetFileSpec().GetPath());
+                module_spec.GetFileSpec().GetPathAsConstString(), sc_mode);
 
             // If we found it and it has the correct UUID, let's proceed with
             // creating a module from the memory contents.
-            if (image_info.uuid && (!module_spec.GetUUID() ||
-                                    module_spec.GetUUID() == image_info.uuid)) {
+            if (image_info.GetUUID() &&
+                (!module_spec.GetUUID() ||
+                 module_spec.GetUUID() == image_info.GetUUID())) {
               success = true;
               return_module_spec.GetFileSpec() = module_spec.GetFileSpec();
               LLDB_LOGF(log,
@@ -476,10 +480,8 @@ static bool LocateDSYMInVincinityOfExecutable(const ModuleSpec &module_spec,
   if (exec_fspec) {
     if (::LookForDsymNextToExecutablePath(module_spec, exec_fspec,
                                           dsym_fspec)) {
-      if (log) {
-        LLDB_LOGF(log, "dSYM with matching UUID & arch found at %s",
-                  dsym_fspec.GetPath().c_str());
-      }
+      LLDB_LOGF(log, "dSYM with matching UUID & arch found at %s",
+                dsym_fspec.GetPath().c_str());
       return true;
     } else {
       FileSpec parent_dirs = exec_fspec;
@@ -508,10 +510,8 @@ static bool LocateDSYMInVincinityOfExecutable(const ModuleSpec &module_spec,
         if (::strchr(fn, '.') != nullptr) {
           if (::LookForDsymNextToExecutablePath(module_spec, parent_dirs,
                                                 dsym_fspec)) {
-            if (log) {
-              LLDB_LOGF(log, "dSYM with matching UUID & arch found at %s",
-                        dsym_fspec.GetPath().c_str());
-            }
+            LLDB_LOGF(log, "dSYM with matching UUID & arch found at %s",
+                      dsym_fspec.GetPath().c_str());
             return true;
           }
         }
@@ -645,13 +645,17 @@ static int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
 
           // Check if the requested image is in our shared cache.
           if (!success) {
+            SymbolSharedCacheUse sc_mode =
+                ModuleList::GetGlobalModuleListProperties()
+                    .GetSharedCacheBinaryLoading();
             SharedCacheImageInfo image_info = HostInfo::GetSharedCacheImageInfo(
-                module_spec.GetFileSpec().GetPath());
+                module_spec.GetFileSpec().GetPathAsConstString(), sc_mode);
 
             // If we found it and it has the correct UUID, let's proceed with
             // creating a module from the memory contents.
-            if (image_info.uuid && (!module_spec.GetUUID() ||
-                                    module_spec.GetUUID() == image_info.uuid)) {
+            if (image_info.GetUUID() &&
+                (!module_spec.GetUUID() ||
+                 module_spec.GetUUID() == image_info.GetUUID())) {
               success = true;
               return_module_spec.GetFileSpec() = module_spec.GetFileSpec();
               LLDB_LOGF(log,
@@ -1087,20 +1091,24 @@ bool SymbolLocatorDebugSymbols::DownloadObjectAndSymbolFile(
   int exit_status = -1;
   int signo = -1;
   std::string command_output;
+  std::string error_output;
   error = Host::RunShellCommand(
       command.GetData(),
       FileSpec(),      // current working directory
       &exit_status,    // Exit status
       &signo,          // Signal int *
       &command_output, // Command output
+      &error_output,   // Command error output
       std::chrono::seconds(
           640), // Large timeout to allow for long dsym download times
       false);   // Don't run in a shell (we don't need shell expansion)
 
   if (error.Fail() || exit_status != 0 || command_output.empty()) {
-    LLDB_LOGF(log, "'%s' failed (exit status: %d, error: '%s', output: '%s')",
+    LLDB_LOGF(log,
+              "'%s' failed (exit status: %d, error: '%s', stdout: '%s', "
+              "stderr: '%s')",
               command.GetData(), exit_status, error.AsCString(),
-              command_output.c_str());
+              command_output.c_str(), error_output.c_str());
     return false;
   }
 
@@ -1115,6 +1123,7 @@ bool SymbolLocatorDebugSymbols::DownloadObjectAndSymbolFile(
   if (!plist.get()) {
     LLDB_LOGF(log, "'%s' failed: output is not a valid plist",
               command.GetData());
+    LLDB_LOGF(log, "Response:\n%s\n", command_output.c_str());
     return false;
   }
 

@@ -68,6 +68,18 @@ INTERFACE WEAK void SCUDO_PREFIX(free)(void *ptr) {
   SCUDO_ALLOCATOR.deallocate(ptr, scudo::Chunk::Origin::Malloc);
 }
 
+INTERFACE WEAK void SCUDO_PREFIX(free_sized)(void *ptr, size_t size) {
+  reportDeallocation(ptr);
+  SCUDO_ALLOCATOR.deallocateSized(ptr, scudo::Chunk::Origin::Malloc, size);
+}
+
+INTERFACE WEAK void
+SCUDO_PREFIX(free_aligned_sized)(void *ptr, size_t alignment, size_t size) {
+  reportDeallocation(ptr);
+  SCUDO_ALLOCATOR.deallocateSizedAligned(ptr, scudo::Chunk::Origin::Malloc,
+                                         size, alignment);
+}
+
 INTERFACE WEAK struct SCUDO_MALLINFO SCUDO_PREFIX(mallinfo)(void) {
   struct SCUDO_MALLINFO Info = {};
   scudo::StatCounters Stats;
@@ -217,6 +229,19 @@ INTERFACE WEAK void *SCUDO_PREFIX(realloc)(void *ptr, size_t size) {
   return scudo::setErrnoOnNull(NewPtr);
 }
 
+INTERFACE WEAK void *SCUDO_PREFIX(reallocarray)(void *ptr, size_t nmemb,
+                                                size_t size) {
+  scudo::uptr Product;
+  if (UNLIKELY(scudo::checkForCallocOverflow(size, nmemb, &Product))) {
+    if (SCUDO_ALLOCATOR.canReturnNull()) {
+      errno = ENOMEM;
+      return nullptr;
+    }
+    scudo::reportReallocarrayOverflow(nmemb, size);
+  }
+  return SCUDO_PREFIX(realloc)(ptr, Product);
+}
+
 INTERFACE WEAK void *SCUDO_PREFIX(valloc)(size_t size) {
   void *Ptr = SCUDO_ALLOCATOR.allocate(size, scudo::Chunk::Origin::Memalign,
                                        scudo::getPageSizeCached());
@@ -265,6 +290,9 @@ INTERFACE WEAK int SCUDO_PREFIX(mallopt)(int param, int value) {
   } else if (param == M_PURGE) {
     SCUDO_ALLOCATOR.releaseToOS(scudo::ReleaseToOS::Force);
     return 1;
+  } else if (param == M_PURGE_FAST) {
+    SCUDO_ALLOCATOR.releaseToOS(scudo::ReleaseToOS::ForceFast);
+    return 1;
   } else if (param == M_PURGE_ALL) {
     SCUDO_ALLOCATOR.releaseToOS(scudo::ReleaseToOS::ForceAll);
     return 1;
@@ -308,7 +336,7 @@ INTERFACE WEAK void *SCUDO_PREFIX(aligned_alloc)(size_t alignment,
   }
 
   void *Ptr =
-      SCUDO_ALLOCATOR.allocate(size, scudo::Chunk::Origin::Malloc, alignment);
+      SCUDO_ALLOCATOR.allocate(size, scudo::Chunk::Origin::Memalign, alignment);
   reportAllocation(Ptr, size);
 
   return scudo::setErrnoOnNull(Ptr);

@@ -38,10 +38,6 @@ using namespace CodeGen;
 //                        Aggregate Expression Emitter
 //===----------------------------------------------------------------------===//
 
-namespace llvm {
-extern cl::opt<bool> EnableSingleByteCoverage;
-} // namespace llvm
-
 namespace {
 class AggExprEmitter : public StmtVisitor<AggExprEmitter> {
   CodeGenFunction &CGF;
@@ -138,7 +134,7 @@ public:
 
     if (llvm::Value *Result = ConstantEmitter(CGF).tryEmitConstantExpr(E)) {
       CGF.CreateCoercedStore(
-          Result, Dest.getAddress(),
+          Result, E->getType(), Dest.getAddress(),
           llvm::TypeSize::getFixed(
               Dest.getPreferredSize(CGF.getContext(), E->getType())
                   .getQuantity()),
@@ -290,8 +286,22 @@ void AggExprEmitter::withReturnValueSlot(
   // We need to always provide our own temporary if destruction is required.
   // Otherwise, EmitCall will emit its own, notice that it's "unused", and end
   // its lifetime before we have the chance to emit a proper destructor call.
+  //
+  // We also need a temporary if the destination is in a different address space
+  // from the alloca AS, to avoid an invalid addrspacecast on the sret pointer.
+  // Look through addrspacecasts to avoid unnecessary temps when the
+  // destination is already in the alloca AS.
+  unsigned SRetAS = CGF.getContext().getTargetAddressSpace(
+      CGF.CGM.getASTAllocaAddressSpace());
+  bool DestASMismatch = !Dest.isIgnored() &&
+                        RetTy.isTriviallyCopyableType(CGF.getContext()) &&
+                        Dest.getAddress()
+                                .getBasePointer()
+                                ->stripPointerCasts()
+                                ->getType()
+                                ->getPointerAddressSpace() != SRetAS;
   bool UseTemp = Dest.isPotentiallyAliased() || Dest.requiresGCollection() ||
-                 (RequiresDestruction && Dest.isIgnored());
+                 (RequiresDestruction && Dest.isIgnored()) || DestASMismatch;
 
   Address RetAddr = Address::invalid();
 
@@ -299,6 +309,13 @@ void AggExprEmitter::withReturnValueSlot(
   llvm::IntrinsicInst *LifetimeStartInst = nullptr;
   if (!UseTemp) {
     RetAddr = Dest.getAddress();
+    if (RetAddr.isValid() && RetAddr.getAddressSpace() != SRetAS) {
+      llvm::Type *SRetPtrTy =
+          llvm::PointerType::get(CGF.getLLVMContext(), SRetAS);
+      RetAddr = RetAddr.withPointer(
+          CGF.performAddrSpaceCast(RetAddr.getBasePointer(), SRetPtrTy),
+          RetAddr.isKnownNonNull());
+    }
   } else {
     RetAddr = CGF.CreateMemTempWithoutCast(RetTy, "tmp");
     if (CGF.EmitLifetimeStart(RetAddr.getBasePointer())) {
@@ -1374,10 +1391,7 @@ void AggExprEmitter::VisitAbstractConditionalOperator(
 
   eval.begin(CGF);
   CGF.EmitBlock(LHSBlock);
-  if (llvm::EnableSingleByteCoverage)
-    CGF.incrementProfileCounter(E->getTrueExpr());
-  else
-    CGF.incrementProfileCounter(E);
+  CGF.incrementProfileCounter(CGF.UseExecPath, E);
   Visit(E->getTrueExpr());
   eval.end(CGF);
 
@@ -1392,8 +1406,7 @@ void AggExprEmitter::VisitAbstractConditionalOperator(
 
   eval.begin(CGF);
   CGF.EmitBlock(RHSBlock);
-  if (llvm::EnableSingleByteCoverage)
-    CGF.incrementProfileCounter(E->getFalseExpr());
+  CGF.incrementProfileCounter(CGF.UseSkipPath, E);
   Visit(E->getFalseExpr());
   eval.end(CGF);
 
@@ -1402,8 +1415,6 @@ void AggExprEmitter::VisitAbstractConditionalOperator(
                     E->getType());
 
   CGF.EmitBlock(ContBlock);
-  if (llvm::EnableSingleByteCoverage)
-    CGF.incrementProfileCounter(E);
 }
 
 void AggExprEmitter::VisitChooseExpr(const ChooseExpr *CE) {
@@ -2344,6 +2355,7 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
 
   auto *Inst = Builder.CreateMemCpy(DestPtr, SrcPtr, SizeVal, isVolatile);
   addInstToCurrentSourceAtom(Inst, nullptr);
+  emitPFPPostCopyUpdates(DestPtr, SrcPtr, Ty);
 
   // Determine the metadata to describe the position of any padding in this
   // memcpy, as well as the TBAA tags for the members of the struct, in case

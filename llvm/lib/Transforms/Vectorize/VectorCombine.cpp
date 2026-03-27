@@ -150,6 +150,7 @@ private:
   bool foldCastFromReductions(Instruction &I);
   bool foldSignBitReductionCmp(Instruction &I);
   bool foldICmpEqZeroVectorReduce(Instruction &I);
+  bool foldEquivalentReductionCmp(Instruction &I);
   bool foldSelectShuffle(Instruction &I, bool FromReduction = false);
   bool foldInterleaveIntrinsics(Instruction &I);
   bool shrinkType(Instruction &I);
@@ -1104,13 +1105,15 @@ bool VectorCombine::foldBitcastShuffle(Instruction &I) {
   if (DestEltSize <= SrcEltSize) {
     // The bitcast is from wide to narrow/equal elements. The shuffle mask can
     // always be expanded to the equivalent form choosing narrower elements.
-    assert(SrcEltSize % DestEltSize == 0 && "Unexpected shuffle mask");
+    if (SrcEltSize % DestEltSize != 0)
+      return false;
     unsigned ScaleFactor = SrcEltSize / DestEltSize;
     narrowShuffleMaskElts(ScaleFactor, Mask, NewMask);
   } else {
     // The bitcast is from narrow elements to wide elements. The shuffle mask
     // must choose consecutive elements to allow casting first.
-    assert(DestEltSize % SrcEltSize == 0 && "Unexpected shuffle mask");
+    if (DestEltSize % SrcEltSize != 0)
+      return false;
     unsigned ScaleFactor = DestEltSize / SrcEltSize;
     if (!widenShuffleMaskElts(ScaleFactor, Mask, NewMask))
       return false;
@@ -1654,7 +1657,13 @@ bool VectorCombine::foldSelectsFromBitcast(Instruction &I) {
     }
 
     // Create the vector select and bitcast once for this condition.
-    Builder.SetInsertPoint(BC->getNextNode());
+    auto InsertPt = std::next(BC->getIterator());
+
+    if (auto *CondInst = dyn_cast<Instruction>(Cond))
+      if (DT.dominates(BC, CondInst))
+        InsertPt = std::next(CondInst->getIterator());
+
+    Builder.SetInsertPoint(InsertPt);
     Value *VecSel =
         Builder.CreateSelect(Cond, SrcVec, Constant::getNullValue(SrcVecTy));
     Value *NewBC = Builder.CreateBitCast(VecSel, DstVecTy);
@@ -2489,7 +2498,7 @@ bool VectorCombine::foldPermuteOfBinops(Instruction &I) {
   }
   if (Match1) {
     InstructionCost Shuf1Cost = TTI.getShuffleCost(
-        TargetTransformInfo::SK_PermuteTwoSrc, BinOpTy, Op0Ty, Mask0, CostKind,
+        TargetTransformInfo::SK_PermuteTwoSrc, BinOpTy, Op1Ty, Mask1, CostKind,
         0, nullptr, {Op10, Op11}, cast<Instruction>(BinOp->getOperand(1)));
     OldCost += Shuf1Cost;
     if (!BinOp->hasOneUse() || !BinOp->getOperand(1)->hasOneUse())
@@ -2536,8 +2545,8 @@ bool VectorCombine::foldPermuteOfBinops(Instruction &I) {
 bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
   ArrayRef<int> OldMask;
   Instruction *LHS, *RHS;
-  if (!match(&I, m_Shuffle(m_OneUse(m_Instruction(LHS)),
-                           m_OneUse(m_Instruction(RHS)), m_Mask(OldMask))))
+  if (!match(&I, m_Shuffle(m_Instruction(LHS), m_Instruction(RHS),
+                           m_Mask(OldMask))))
     return false;
 
   // TODO: Add support for addlike etc.
@@ -2568,6 +2577,7 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
   if (!ShuffleDstTy || !BinResTy || !BinOpTy || X->getType() != Z->getType())
     return false;
 
+  bool SameBinOp = LHS == RHS;
   unsigned NumSrcElts = BinOpTy->getNumElements();
 
   // If we have something like "add X, Y" and "add Z, X", swap ops to match.
@@ -2598,12 +2608,17 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
   }
 
   // Try to replace a binop with a shuffle if the shuffle is not costly.
-  InstructionCost OldCost =
-      TTI.getInstructionCost(LHS, CostKind) +
-      TTI.getInstructionCost(RHS, CostKind) +
-      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, ShuffleDstTy,
-                         BinResTy, OldMask, CostKind, 0, nullptr, {LHS, RHS},
-                         &I);
+  // When SameBinOp, only count the binop cost once.
+  InstructionCost LHSCost = TTI.getInstructionCost(LHS, CostKind);
+  InstructionCost RHSCost = TTI.getInstructionCost(RHS, CostKind);
+
+  InstructionCost OldCost = LHSCost;
+  if (!SameBinOp) {
+    OldCost += RHSCost;
+  }
+  OldCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc,
+                                ShuffleDstTy, BinResTy, OldMask, CostKind, 0,
+                                nullptr, {LHS, RHS}, &I);
 
   // Handle shuffle(binop(shuffle(x),y),binop(z,shuffle(w))) style patterns
   // where one use shuffles have gotten split across the binop/cmp. These
@@ -2635,7 +2650,9 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
   ReducedInstCount |= MergeInner(Z, NumSrcElts, NewMask0, CostKind);
   ReducedInstCount |= MergeInner(W, NumSrcElts, NewMask1, CostKind);
   bool SingleSrcBinOp = (X == Y) && (Z == W) && (NewMask0 == NewMask1);
-  ReducedInstCount |= SingleSrcBinOp;
+  // SingleSrcBinOp only reduces instruction count if we also eliminate the
+  // original binop(s). If binops have multiple uses, they won't be eliminated.
+  ReducedInstCount |= SingleSrcBinOp && LHS->hasOneUser() && RHS->hasOneUser();
 
   auto *ShuffleCmpTy =
       FixedVectorType::get(BinOpTy->getElementType(), ShuffleDstTy);
@@ -2653,6 +2670,12 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
         TTI.getCmpSelInstrCost(LHS->getOpcode(), ShuffleCmpTy, ShuffleDstTy,
                                PredLHS, CostKind, Op0Info, Op1Info);
   }
+  // If LHS/RHS have other uses, we need to account for the cost of keeping
+  // the original instructions. When SameBinOp, only add the cost once.
+  if (!LHS->hasOneUser())
+    NewCost += LHSCost;
+  if (!SameBinOp && !RHS->hasOneUser())
+    NewCost += RHSCost;
 
   LLVM_DEBUG(dbgs() << "Found a shuffle feeding two binops: " << I
                     << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
@@ -2734,8 +2757,8 @@ bool VectorCombine::foldShuffleOfSelects(Instruction &I) {
                                 nullptr, {T1, T2});
   NewCost += TTI.getShuffleCost(SK, DstVecTy, SrcVecTy, Mask, CostKind, 0,
                                 nullptr, {F1, F2});
-  auto *C1C2ShuffledVecTy = cast<FixedVectorType>(
-      toVectorTy(Type::getInt1Ty(I.getContext()), DstVecTy->getNumElements()));
+  auto *C1C2ShuffledVecTy = FixedVectorType::get(
+      Type::getInt1Ty(I.getContext()), DstVecTy->getNumElements());
   NewCost += TTI.getCmpSelInstrCost(SelOp, DstVecTy, C1C2ShuffledVecTy,
                                     CmpInst::BAD_ICMP_PREDICATE, CostKind);
 
@@ -2842,7 +2865,7 @@ bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
   // Try to replace a castop with a shuffle if the shuffle is not costly.
   InstructionCost CostC0 =
       TTI.getCastInstrCost(C0->getOpcode(), CastDstTy, CastSrcTy,
-                           TTI::CastContextHint::None, CostKind);
+                           TTI::CastContextHint::None, CostKind, C0);
 
   TargetTransformInfo::ShuffleKind ShuffleKind;
   if (IsBinaryShuffle)
@@ -2863,7 +2886,7 @@ bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
   if (IsBinaryShuffle) {
     InstructionCost CostC1 =
         TTI.getCastInstrCost(C1->getOpcode(), CastDstTy, CastSrcTy,
-                             TTI::CastContextHint::None, CostKind);
+                             TTI::CastContextHint::None, CostKind, C1);
     OldCost += CostC1;
     if (!C1->hasOneUse())
       NewCost += CostC1;
@@ -4191,22 +4214,29 @@ bool VectorCombine::foldCastFromReductions(Instruction &I) {
 ///   - reduce.{and,umin}: 1 if all elements are negative, 0 if any isn't
 ///   - reduce.add: count of negative elements (0 to NumElts)
 ///
-/// We transform to a direct sign check on reduce.{or,umax} or
-/// reduce.{and,umin} without explicit sign-bit extraction.
+/// Both lshr and ashr are supported:
+///   - lshr produces 0 or 1, so reduce.add range is [0, N]
+///   - ashr produces 0 or -1, so reduce.add range is [-N, 0]
+///
+/// The fold generalizes to multiple source vectors combined with the same
+/// operation as the reduction. For example:
+///   reduce.or(or(shr A, shr B)) conceptually extends the vector
+/// For reduce.add, this changes the count to M*N where M is the number of
+/// source vectors.
+///
+/// We transform to a direct sign check on the original vector using
+/// reduce.{or,umax} or reduce.{and,umin}.
 ///
 /// In spirit, it's similar to foldSignBitCheck in InstCombine.
 bool VectorCombine::foldSignBitReductionCmp(Instruction &I) {
   CmpPredicate Pred;
-  Value *ReduceOp;
+  IntrinsicInst *ReduceOp;
   const APInt *CmpVal;
-  if (!match(&I, m_ICmp(Pred, m_Value(ReduceOp), m_APInt(CmpVal))))
+  if (!match(&I,
+             m_ICmp(Pred, m_OneUse(m_AnyIntrinsic(ReduceOp)), m_APInt(CmpVal))))
     return false;
 
-  auto *II = dyn_cast<IntrinsicInst>(ReduceOp);
-  if (!II || !II->hasOneUse())
-    return false;
-
-  Intrinsic::ID OrigIID = II->getIntrinsicID();
+  Intrinsic::ID OrigIID = ReduceOp->getIntrinsicID();
   switch (OrigIID) {
   case Intrinsic::vector_reduce_or:
   case Intrinsic::vector_reduce_umax:
@@ -4218,51 +4248,159 @@ bool VectorCombine::foldSignBitReductionCmp(Instruction &I) {
     return false;
   }
 
-  Value *ReductionSrc = II->getArgOperand(0);
-  if (!ReductionSrc->hasOneUse())
-    return false;
-
+  Value *ReductionSrc = ReduceOp->getArgOperand(0);
   auto *VecTy = dyn_cast<FixedVectorType>(ReductionSrc->getType());
   if (!VecTy)
     return false;
 
   unsigned BitWidth = VecTy->getScalarSizeInBits();
+  if (BitWidth == 1)
+    return false;
+
   unsigned NumElts = VecTy->getNumElements();
 
-  // For reduce.add, the result is the count of negative elements
-  // (0 to NumElts). This must fit in the scalar type without overflow.
-  // Otherwise, reduce.add can wrap and identity doesn't hold.
-  if (OrigIID == Intrinsic::vector_reduce_add && !isUIntN(BitWidth, NumElts))
-    return false;
+  // Determine the expected tree opcode for multi-vector patterns.
+  // The tree opcode must match the reduction's underlying operation.
+  //
+  // TODO: for pairs of equivalent operators, we should match both,
+  //       not only the most common.
+  Instruction::BinaryOps TreeOpcode;
+  switch (OrigIID) {
+  case Intrinsic::vector_reduce_or:
+  case Intrinsic::vector_reduce_umax:
+    TreeOpcode = Instruction::Or;
+    break;
+  case Intrinsic::vector_reduce_and:
+  case Intrinsic::vector_reduce_umin:
+    TreeOpcode = Instruction::And;
+    break;
+  case Intrinsic::vector_reduce_add:
+    TreeOpcode = Instruction::Add;
+    break;
+  default:
+    llvm_unreachable("Unexpected intrinsic");
+  }
 
-  // Match sign-bit extraction: shr X, (bitwidth-1)
-  Value *X;
-  if (!match(ReductionSrc, m_Shr(m_Value(X), m_SpecificInt(BitWidth - 1))))
-    return false;
+  // Collect sign-bit extraction leaves from an associative tree of TreeOpcode.
+  // The tree conceptually extends the vector being reduced.
+  SmallVector<Value *, 8> Worklist;
+  SmallVector<Value *, 8> Sources; // Original vectors (X in shr X, BW-1)
+  Worklist.push_back(ReductionSrc);
+  std::optional<bool> IsAShr;
+  constexpr unsigned MaxSources = 8;
 
-  // MaxVal: 1 for or/and/umax/umin, NumElts for add
-  APInt MaxVal(CmpVal->getBitWidth(),
-               OrigIID == Intrinsic::vector_reduce_add ? NumElts : 1);
+  // Calculate old cost: all shifts + tree ops + reduction
+  InstructionCost OldCost = TTI.getInstructionCost(ReduceOp, CostKind);
 
-  // In addition to direct comparisons EQ 0, NE 0, EQ 1, NE 1, etc. we support
-  // inequalities that can be interpreted as either EQ or NE considering a
-  // rather narrow range of possible value of sign-bit reductions.
-  bool IsEq;
-  bool TestsHigh;
-  if (ICmpInst::isEquality(Pred)) {
-    // EQ/NE: comparison must be against 0 or MaxVal
-    if (!CmpVal->isZero() && *CmpVal != MaxVal)
+  while (!Worklist.empty() && Worklist.size() <= MaxSources &&
+         Sources.size() <= MaxSources) {
+    Value *V = Worklist.pop_back_val();
+
+    // Try to match sign-bit extraction: shr X, (bitwidth-1)
+    Value *X;
+    if (match(V, m_OneUse(m_Shr(m_Value(X), m_SpecificInt(BitWidth - 1))))) {
+      auto *Shr = cast<Instruction>(V);
+
+      // All shifts must be the same type (all lshr or all ashr)
+      bool ThisIsAShr = Shr->getOpcode() == Instruction::AShr;
+      if (!IsAShr)
+        IsAShr = ThisIsAShr;
+      else if (*IsAShr != ThisIsAShr)
+        return false;
+
+      Sources.push_back(X);
+
+      // As part of the fold, we remove all of the shifts, so we need to keep
+      // track of their costs.
+      OldCost += TTI.getInstructionCost(Shr, CostKind);
+
+      continue;
+    }
+
+    // Try to extend through a tree node of the expected opcode
+    Value *A, *B;
+    if (!match(V, m_OneUse(m_BinOp(TreeOpcode, m_Value(A), m_Value(B)))))
       return false;
+
+    // We are potentially replacing these operations as well, so we add them
+    // to the costs.
+    OldCost += TTI.getInstructionCost(cast<Instruction>(V), CostKind);
+
+    Worklist.push_back(A);
+    Worklist.push_back(B);
+  }
+
+  // Must have at least one source and not exceed limit
+  if (Sources.empty() || Sources.size() > MaxSources ||
+      Worklist.size() > MaxSources || !IsAShr)
+    return false;
+
+  unsigned NumSources = Sources.size();
+
+  // For reduce.add, the total count must fit as a signed integer.
+  // Range is [0, M*N] for lshr or [-M*N, 0] for ashr.
+  if (OrigIID == Intrinsic::vector_reduce_add &&
+      !isIntN(BitWidth, NumSources * NumElts))
+    return false;
+
+  // Compute the boundary value when all elements are negative:
+  // - Per-element contribution: 1 for lshr, -1 for ashr
+  // - For add: M*N (total elements across all sources); for others: just 1
+  unsigned Count =
+      (OrigIID == Intrinsic::vector_reduce_add) ? NumSources * NumElts : 1;
+  APInt NegativeVal(CmpVal->getBitWidth(), Count);
+  if (*IsAShr)
+    NegativeVal.negate();
+
+  // Range is [min(0, AllNegVal), max(0, AllNegVal)]
+  APInt Zero = APInt::getZero(CmpVal->getBitWidth());
+  APInt RangeLow = APIntOps::smin(Zero, NegativeVal);
+  APInt RangeHigh = APIntOps::smax(Zero, NegativeVal);
+
+  // Determine comparison semantics:
+  // - IsEq: true for equality test, false for inequality
+  // - TestsNegative: true if testing against AllNegVal, false for zero
+  //
+  // In addition to EQ/NE against 0 or AllNegVal, we support inequalities
+  // that fold to boundary tests given the narrow value range:
+  //   < RangeHigh  -> != RangeHigh
+  //   > RangeHigh-1 -> == RangeHigh
+  //   > RangeLow   -> != RangeLow
+  //   < RangeLow+1 -> == RangeLow
+  //
+  // For inequalities, we work with signed predicates only. Unsigned predicates
+  // are canonicalized to signed when the range is non-negative (where they are
+  // equivalent). When the range includes negative values, unsigned predicates
+  // would have different semantics due to wrap-around, so we reject them.
+  if (!ICmpInst::isEquality(Pred) && !ICmpInst::isSigned(Pred)) {
+    if (RangeLow.isNegative())
+      return false;
+    Pred = ICmpInst::getSignedPredicate(Pred);
+  }
+
+  bool IsEq;
+  bool TestsNegative;
+  if (ICmpInst::isEquality(Pred)) {
+    if (CmpVal->isZero()) {
+      TestsNegative = false;
+    } else if (*CmpVal == NegativeVal) {
+      TestsNegative = true;
+    } else {
+      return false;
+    }
     IsEq = Pred == ICmpInst::ICMP_EQ;
-    TestsHigh = *CmpVal == MaxVal;
-  } else if (ICmpInst::isLT(Pred) && *CmpVal == MaxVal) {
-    // s/ult MaxVal -> ne MaxVal
+  } else if (Pred == ICmpInst::ICMP_SLT && *CmpVal == RangeHigh) {
     IsEq = false;
-    TestsHigh = true;
-  } else if (ICmpInst::isGT(Pred) && *CmpVal == MaxVal - 1) {
-    // s/ugt MaxVal-1 -> eq MaxVal
+    TestsNegative = (RangeHigh == NegativeVal);
+  } else if (Pred == ICmpInst::ICMP_SGT && *CmpVal == RangeHigh - 1) {
     IsEq = true;
-    TestsHigh = true;
+    TestsNegative = (RangeHigh == NegativeVal);
+  } else if (Pred == ICmpInst::ICMP_SGT && *CmpVal == RangeLow) {
+    IsEq = false;
+    TestsNegative = (RangeLow == NegativeVal);
+  } else if (Pred == ICmpInst::ICMP_SLT && *CmpVal == RangeLow + 1) {
+    IsEq = true;
+    TestsNegative = (RangeLow == NegativeVal);
   } else {
     return false;
   }
@@ -4322,14 +4460,14 @@ bool VectorCombine::foldSignBitReductionCmp(Instruction &I) {
   switch (OrigIID) {
   case Intrinsic::vector_reduce_or:
   case Intrinsic::vector_reduce_umax:
-    Base = TestsHigh ? AnyNeg : AllNonNeg;
+    Base = TestsNegative ? AnyNeg : AllNonNeg;
     break;
   case Intrinsic::vector_reduce_and:
   case Intrinsic::vector_reduce_umin:
-    Base = TestsHigh ? AllNeg : AnyNonNeg;
+    Base = TestsNegative ? AllNeg : AnyNonNeg;
     break;
   case Intrinsic::vector_reduce_add:
-    Base = TestsHigh ? AllNeg : AllNonNeg;
+    Base = TestsNegative ? AllNeg : AllNonNeg;
     break;
   default:
     llvm_unreachable("Unexpected intrinsic");
@@ -4337,17 +4475,13 @@ bool VectorCombine::foldSignBitReductionCmp(Instruction &I) {
 
   CheckKind Check = IsEq ? Base : Invert(Base);
 
-  // Calculate old cost: shift + reduction
-  InstructionCost OldCost =
-      TTI.getInstructionCost(cast<Instruction>(ReductionSrc), CostKind);
-  OldCost += TTI.getInstructionCost(II, CostKind);
-
   auto PickCheaper = [&](Intrinsic::ID Arith, Intrinsic::ID MinMax) {
     InstructionCost ArithCost =
         TTI.getArithmeticReductionCost(getArithmeticReductionInstruction(Arith),
                                        VecTy, std::nullopt, CostKind);
     InstructionCost MinMaxCost =
-        TTI.getMinMaxReductionCost(MinMax, VecTy, FastMathFlags(), CostKind);
+        TTI.getMinMaxReductionCost(getMinMaxReductionIntrinsicOp(MinMax), VecTy,
+                                   FastMathFlags(), CostKind);
     return ArithCost <= MinMaxCost ? std::make_pair(Arith, ArithCost)
                                    : std::make_pair(MinMax, MinMaxCost);
   };
@@ -4359,17 +4493,34 @@ bool VectorCombine::foldSignBitReductionCmp(Instruction &I) {
                                : PickCheaper(Intrinsic::vector_reduce_and,
                                              Intrinsic::vector_reduce_umin);
 
+  // Add cost of combining multiple sources with or/and
+  if (NumSources > 1) {
+    unsigned CombineOpc =
+        RequiresOr(Check) ? Instruction::Or : Instruction::And;
+    NewCost += TTI.getArithmeticInstrCost(CombineOpc, VecTy, CostKind) *
+               (NumSources - 1);
+  }
+
   LLVM_DEBUG(dbgs() << "Found sign-bit reduction cmp: " << I << "\n  OldCost: "
                     << OldCost << " vs NewCost: " << NewCost << "\n");
 
   if (NewCost > OldCost)
     return false;
 
-  // Generate comparison based on encoding's neg bit: slt 0 for neg, sgt -1 for
-  // non-neg
+  // Generate the combined input and reduction
   Builder.SetInsertPoint(&I);
   Type *ScalarTy = VecTy->getScalarType();
-  Value *NewReduce = Builder.CreateIntrinsic(ScalarTy, NewIID, {X});
+
+  Value *Input;
+  if (NumSources == 1) {
+    Input = Sources[0];
+  } else {
+    // Combine sources with or/and based on check type
+    Input = RequiresOr(Check) ? Builder.CreateOr(Sources)
+                              : Builder.CreateAnd(Sources);
+  }
+
+  Value *NewReduce = Builder.CreateIntrinsic(ScalarTy, NewIID, {Input});
   Value *NewCmp = IsNegativeCheck(Check) ? Builder.CreateIsNeg(NewReduce)
                                          : Builder.CreateIsNotNeg(NewReduce);
   replaceValue(I, *NewCmp);
@@ -4521,10 +4672,10 @@ bool VectorCombine::foldICmpEqZeroVectorReduce(Instruction &I) {
     case Intrinsic::vector_reduce_umax:
     case Intrinsic::vector_reduce_smin:
     case Intrinsic::vector_reduce_smax:
-      OldReduceCost =
-          TTI.getMinMaxReductionCost(IID, FXTy, FastMathFlags(), CostKind);
-      NewReduceCost =
-          TTI.getMinMaxReductionCost(IID, XTy, FastMathFlags(), CostKind);
+      OldReduceCost = TTI.getMinMaxReductionCost(
+          getMinMaxReductionIntrinsicOp(IID), FXTy, FastMathFlags(), CostKind);
+      NewReduceCost = TTI.getMinMaxReductionCost(
+          getMinMaxReductionIntrinsicOp(IID), XTy, FastMathFlags(), CostKind);
       break;
     default:
       llvm_unreachable("Unexpected reduction");
@@ -4552,6 +4703,149 @@ bool VectorCombine::foldICmpEqZeroVectorReduce(Instruction &I) {
   Value *NewReduce = Builder.CreateIntrinsic(Ty, II->getIntrinsicID(), {X});
   Value *NewCmp =
       Builder.CreateICmp(Pred, NewReduce, ConstantInt::getNullValue(Ty));
+  replaceValue(I, *NewCmp);
+  return true;
+}
+
+/// Fold comparisons of reduce.or/reduce.and with reduce.umax/reduce.umin
+/// based on cost, preserving the comparison semantics.
+///
+/// We use two fundamental properties for each pair:
+///
+///   1. or(X) == 0 <=> umax(X) == 0
+///   2. or(X) == 1 <=> umax(X) == 1
+///   3. sign(or(X)) == sign(umax(X))
+///
+///   1. and(X) == -1 <=> umin(X) == -1
+///   2. and(X) == -2 <=> umin(X) == -2
+///   3. sign(and(X)) == sign(umin(X))
+///
+/// From these we can infer the following transformations:
+///   a. or(X) ==/!= 0   <-> umax(X) ==/!= 0
+///   b. or(X) s< 0      <-> umax(X) s< 0
+///   c. or(X) s> -1     <-> umax(X) s> -1
+///   d. or(X) s< 1      <-> umax(X) s< 1
+///   e. or(X) ==/!= 1   <-> umax(X) ==/!= 1
+///   f. or(X) s< 2      <-> umax(X) s< 2
+///   g. and(X) ==/!= -1 <-> umin(X) ==/!= -1
+///   h. and(X) s< 0     <-> umin(X) s< 0
+///   i. and(X) s> -1    <-> umin(X) s> -1
+///   j. and(X) s> -2    <-> umin(X) s> -2
+///   k. and(X) ==/!= -2 <-> umin(X) ==/!= -2
+///   l. and(X) s> -3    <-> umin(X) s> -3
+///
+bool VectorCombine::foldEquivalentReductionCmp(Instruction &I) {
+  CmpPredicate Pred;
+  Value *ReduceOp;
+  const APInt *CmpVal;
+  if (!match(&I, m_ICmp(Pred, m_Value(ReduceOp), m_APInt(CmpVal))))
+    return false;
+
+  auto *II = dyn_cast<IntrinsicInst>(ReduceOp);
+  if (!II || !II->hasOneUse())
+    return false;
+
+  const auto IsValidOrUmaxCmp = [&]() {
+    // or === umax for i1
+    if (CmpVal->getBitWidth() == 1)
+      return true;
+
+    // Cases a and e
+    bool IsEquality =
+        (CmpVal->isZero() || CmpVal->isOne()) && ICmpInst::isEquality(Pred);
+    // Case c
+    bool IsPositive = CmpVal->isAllOnes() && Pred == ICmpInst::ICMP_SGT;
+    // Cases b, d, and f
+    bool IsNegative = (CmpVal->isZero() || CmpVal->isOne() || *CmpVal == 2) &&
+                      Pred == ICmpInst::ICMP_SLT;
+    return IsEquality || IsPositive || IsNegative;
+  };
+
+  const auto IsValidAndUminCmp = [&]() {
+    // and === umin for i1
+    if (CmpVal->getBitWidth() == 1)
+      return true;
+
+    const auto LeadingOnes = CmpVal->countl_one();
+
+    // Cases g and k
+    bool IsEquality =
+        (CmpVal->isAllOnes() || LeadingOnes + 1 == CmpVal->getBitWidth()) &&
+        ICmpInst::isEquality(Pred);
+    // Case h
+    bool IsNegative = CmpVal->isZero() && Pred == ICmpInst::ICMP_SLT;
+    // Cases i, j, and l
+    bool IsPositive =
+        // if the number has at least N - 2 leading ones
+        // and the two LSBs are:
+        //   - 1 x 1 -> -1
+        //   - 1 x 0 -> -2
+        //   - 0 x 1 -> -3
+        LeadingOnes + 2 >= CmpVal->getBitWidth() &&
+        ((*CmpVal)[0] || (*CmpVal)[1]) && Pred == ICmpInst::ICMP_SGT;
+    return IsEquality || IsNegative || IsPositive;
+  };
+
+  Intrinsic::ID OriginalIID = II->getIntrinsicID();
+  Intrinsic::ID AlternativeIID;
+
+  // Check if this is a valid comparison pattern and determine the alternate
+  // reduction intrinsic.
+  switch (OriginalIID) {
+  case Intrinsic::vector_reduce_or:
+    if (!IsValidOrUmaxCmp())
+      return false;
+    AlternativeIID = Intrinsic::vector_reduce_umax;
+    break;
+  case Intrinsic::vector_reduce_umax:
+    if (!IsValidOrUmaxCmp())
+      return false;
+    AlternativeIID = Intrinsic::vector_reduce_or;
+    break;
+  case Intrinsic::vector_reduce_and:
+    if (!IsValidAndUminCmp())
+      return false;
+    AlternativeIID = Intrinsic::vector_reduce_umin;
+    break;
+  case Intrinsic::vector_reduce_umin:
+    if (!IsValidAndUminCmp())
+      return false;
+    AlternativeIID = Intrinsic::vector_reduce_and;
+    break;
+  default:
+    return false;
+  }
+
+  Value *X = II->getArgOperand(0);
+  auto *VecTy = dyn_cast<FixedVectorType>(X->getType());
+  if (!VecTy)
+    return false;
+
+  const auto GetReductionCost = [&](Intrinsic::ID IID) -> InstructionCost {
+    unsigned ReductionOpc = getArithmeticReductionInstruction(IID);
+    if (ReductionOpc != Instruction::ICmp)
+      return TTI.getArithmeticReductionCost(ReductionOpc, VecTy, std::nullopt,
+                                            CostKind);
+    return TTI.getMinMaxReductionCost(getMinMaxReductionIntrinsicOp(IID), VecTy,
+                                      FastMathFlags(), CostKind);
+  };
+
+  InstructionCost OrigCost = GetReductionCost(OriginalIID);
+  InstructionCost AltCost = GetReductionCost(AlternativeIID);
+
+  LLVM_DEBUG(dbgs() << "Found equivalent reduction cmp: " << I
+                    << "\n  OrigCost: " << OrigCost
+                    << " vs AltCost: " << AltCost << "\n");
+
+  if (AltCost >= OrigCost)
+    return false;
+
+  Builder.SetInsertPoint(&I);
+  Type *ScalarTy = VecTy->getScalarType();
+  Value *NewReduce = Builder.CreateIntrinsic(ScalarTy, AlternativeIID, {X});
+  Value *NewCmp =
+      Builder.CreateICmp(Pred, NewReduce, ConstantInt::get(ScalarTy, *CmpVal));
+
   replaceValue(I, *NewCmp);
   return true;
 }
@@ -5303,6 +5597,11 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
 
       for (llvm::Use &Use : I.uses()) {
         auto *Shuffle = cast<ShuffleVectorInst>(Use.getUser());
+
+        // Ignore shufflevector instructions that have no uses.
+        if (Shuffle->use_empty())
+          continue;
+
         ArrayRef<int> OldMask = Shuffle->getShuffleMask();
 
         // Create entry for new use.
@@ -5591,6 +5890,8 @@ bool VectorCombine::run() {
         if (foldSignBitReductionCmp(I))
           return true;
         if (foldICmpEqZeroVectorReduce(I))
+          return true;
+        if (foldEquivalentReductionCmp(I))
           return true;
         [[fallthrough]];
       case Instruction::FCmp:

@@ -166,7 +166,7 @@ RESOURCE<float> Buffer;
 // CHECK-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-NEXT: CompoundStmt
 // CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' prefix '*' cannot overflow
+// CHECK-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' lvalue prefix '*' cannot overflow
 // CHECK-NEXT: CStyleCastExpr {{.*}} 'hlsl_device element_type *'
 // CHECK-NEXT: CallExpr
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}}  '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
@@ -179,11 +179,11 @@ RESOURCE<float> Buffer;
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' lvalue ParmVar {{.*}}  'Index' 'unsigned int'
 // CHECK-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
-// CHECK-UAV-NEXT: CXXMethodDecl {{.*}} operator[] 'hlsl_device element_type &(unsigned int)'
+// CHECK-UAV: CXXMethodDecl {{.*}} operator[] 'hlsl_device element_type &(unsigned int)'
 // CHECK-UAV-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-UAV-NEXT: CompoundStmt
 // CHECK-UAV-NEXT: ReturnStmt
-// CHECK-UAV-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' prefix '*' cannot overflow
+// CHECK-UAV-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' lvalue prefix '*' cannot overflow
 // CHECK-UAV-NEXT: CStyleCastExpr {{.*}} 'hlsl_device element_type *'
 // CHECK-UAV-NEXT: CallExpr
 // CHECK-UAV-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}}  '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
@@ -197,11 +197,11 @@ RESOURCE<float> Buffer;
 
 // Load method
 
-// CHECK-NEXT: CXXMethodDecl {{.*}} Load 'element_type (unsigned int)'
+// CHECK: CXXMethodDecl {{.*}} Load 'element_type (unsigned int)'
 // CHECK-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-NEXT: CompoundStmt
 // CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' prefix '*' cannot overflow
+// CHECK-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' lvalue prefix '*' cannot overflow
 // CHECK-NEXT: CStyleCastExpr {{.*}} 'hlsl_device element_type *'
 // CHECK-NEXT: CallExpr
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}}  '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
@@ -235,7 +235,7 @@ RESOURCE<float> Buffer;
 
 // GetDimensions method
 
-// CHECK-NEXT: CXXMethodDecl {{.*}} GetDimensions 'void (out unsigned int)'
+// CHECK: CXXMethodDecl {{.*}} GetDimensions 'void (out unsigned int)'
 // CHECK-NEXT: ParmVarDecl {{.*}} dim 'unsigned int &__restrict'
 // CHECK-NEXT: HLSLParamModifierAttr {{.*}} out
 // CHECK-NEXT: CompoundStmt

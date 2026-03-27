@@ -69,14 +69,14 @@ bool CIRGenTypes::isFuncTypeConvertible(const FunctionType *ft) {
 mlir::Type CIRGenTypes::convertFunctionTypeInternal(QualType qft) {
   assert(qft.isCanonical());
   const FunctionType *ft = cast<FunctionType>(qft.getTypePtr());
-  // First, check whether we can build the full function type. If the function
-  // type depends on an incomplete type (e.g. a struct or enum), we cannot lower
-  // the function type.
-  if (!isFuncTypeConvertible(ft)) {
-    cgm.errorNYI(SourceLocation(), "function type involving an incomplete type",
-                 qft);
-    return cir::FuncType::get(SmallVector<mlir::Type, 1>{}, cgm.voidTy);
-  }
+
+  // In classic codegen, if the function type depends on an incomplete type
+  // (e.g. a struct or enum), it cannot lower the function type due to ABI
+  // handling requirements and returns a placeholder. In CIR, ABI handling is
+  // deferred until after codegen, and record types are identified by name, so
+  // incomplete record type references in the function type will automatically
+  // see the complete type once the record is defined. We can always produce a
+  // proper function type here.
 
   const CIRGenFunctionInfo *fi;
   if (const auto *fpt = dyn_cast<FunctionProtoType>(ft)) {
@@ -265,10 +265,6 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
   (void)eraseResult;
   assert(eraseResult && "record not in RecordsBeingLaidOut set?");
 
-  // If this record blocked a FunctionType conversion, then recompute whatever
-  // was derived from that.
-  assert(!cir::MissingFeatures::skippedLayout());
-
   // If we're done converting the outer-most record, then convert any deferred
   // records as well.
   if (recordsBeingLaidOut.empty())
@@ -372,6 +368,10 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
       break;
     case BuiltinType::SveFloat64:
       resultType = cir::VectorType::get(builder.getDoubleTy(), 2,
+                                        /*is_scalable=*/true);
+      break;
+    case BuiltinType::SveBool:
+      resultType = cir::VectorType::get(builder.getUIntNTy(1), 16,
                                         /*is_scalable=*/true);
       break;
 
@@ -505,15 +505,11 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   case Type::ConstantArray: {
     const ConstantArrayType *arrTy = cast<ConstantArrayType>(ty);
     mlir::Type elemTy = convertTypeForMem(arrTy->getElementType());
-
-    // TODO(CIR): In LLVM, "lower arrays of undefined struct type to arrays of
-    // i8 just to have a concrete type"
-    if (!cir::isSized(elemTy)) {
-      cgm.errorNYI(SourceLocation(), "arrays of undefined struct type", type);
-      resultType = cgm.uInt32Ty;
-      break;
-    }
-
+    // In classic codegen, arrays of unsized types which it assumes are "arrays
+    // of undefined struct type" are lowered to arrays of i8 "just to have a
+    // concrete type", but in CIR, we can get here with abstract types like
+    // !cir.method and !cir.data_member, so we just create an array of the type
+    // and handle it during lowering if we still don't have a sized type.
     resultType = cir::ArrayType::get(elemTy, arrTy->getSize().getZExtValue());
     break;
   }
@@ -540,13 +536,17 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   case Type::MemberPointer: {
     const auto *mpt = cast<MemberPointerType>(ty);
 
-    mlir::Type memberTy = convertType(mpt->getPointeeType());
+    NestedNameSpecifier mptNNS = mpt->getQualifier();
     auto clsTy = mlir::cast<cir::RecordType>(
-        convertType(QualType(mpt->getQualifier().getAsType(), 0)));
+        convertType(QualType(mptNNS.getAsType(), 0)));
     if (mpt->isMemberDataPointer()) {
+      mlir::Type memberTy = convertType(mpt->getPointeeType());
       resultType = cir::DataMemberType::get(memberTy, clsTy);
     } else {
-      auto memberFuncTy = mlir::cast<cir::FuncType>(memberTy);
+      auto memberFuncTy = getFunctionType(cgm.getTypes().arrangeCXXMethodType(
+          mptNNS.getAsRecordDecl(),
+          mpt->getPointeeType()->getAs<clang::FunctionProtoType>(),
+          /*methodDecl=*/nullptr));
       resultType = cir::MethodType::get(memberFuncTy, clsTy);
     }
     break;
@@ -598,7 +598,10 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 
 mlir::Type CIRGenTypes::convertTypeForMem(clang::QualType qualType,
                                           bool forBitField) {
-  assert(!qualType->isConstantMatrixType() && "Matrix types NYI");
+  if (qualType->isConstantMatrixType()) {
+    cgm.errorNYI("Matrix type conversion");
+    return cgm.sInt32Ty;
+  }
 
   mlir::Type convertedType = convertType(qualType);
 
@@ -662,15 +665,16 @@ bool CIRGenTypes::isZeroInitializable(const RecordDecl *rd) {
   return getCIRGenRecordLayout(rd).isZeroInitializable();
 }
 
-const CIRGenFunctionInfo &
-CIRGenTypes::arrangeCIRFunctionInfo(CanQualType returnType,
-                                    llvm::ArrayRef<CanQualType> argTypes,
-                                    RequiredArgs required) {
+const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
+    CanQualType returnType, bool isInstanceMethod,
+    llvm::ArrayRef<CanQualType> argTypes, FunctionType::ExtInfo info,
+    RequiredArgs required) {
   assert(llvm::all_of(argTypes,
                       [](CanQualType t) { return t.isCanonicalAsParam(); }));
   // Lookup or create unique function info.
   llvm::FoldingSetNodeID id;
-  CIRGenFunctionInfo::Profile(id, required, returnType, argTypes);
+  CIRGenFunctionInfo::Profile(id, isInstanceMethod, info, required, returnType,
+                              argTypes);
 
   void *insertPos = nullptr;
   CIRGenFunctionInfo *fi = functionInfos.FindNodeOrInsertPos(id, insertPos);
@@ -687,7 +691,8 @@ CIRGenTypes::arrangeCIRFunctionInfo(CanQualType returnType,
   assert(!cir::MissingFeatures::opCallCallConv());
 
   // Construction the function info. We co-allocate the ArgInfos.
-  fi = CIRGenFunctionInfo::create(returnType, argTypes, required);
+  fi = CIRGenFunctionInfo::create(info, isInstanceMethod, returnType, argTypes,
+                                  required);
   functionInfos.InsertNode(fi, insertPos);
 
   return *fi;
@@ -742,4 +747,14 @@ void CIRGenTypes::updateCompletedType(const TagDecl *td) {
   // If necessary, provide the full definition of a type only used with a
   // declaration so far.
   assert(!cir::MissingFeatures::generateDebugInfo());
+}
+
+unsigned CIRGenTypes::getTargetAddressSpace(QualType ty) const {
+  // Return the address space for the type. If the type is a
+  // function type without an address space qualifier, the
+  // program address space is used. Otherwise, the target picks
+  // the best address space based on the type information
+  return ty->isFunctionType() && !ty.hasAddressSpace()
+             ? cgm.getDataLayout().getProgramAddressSpace()
+             : getASTContext().getTargetAddressSpace(ty.getAddressSpace());
 }

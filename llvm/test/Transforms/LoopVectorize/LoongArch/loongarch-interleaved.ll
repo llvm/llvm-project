@@ -6,7 +6,7 @@
 ; CHECK: %{{.*}} = add {{.*}}, 8
 
 ; Function Attrs: nofree norecurse nosync nounwind writeonly
-define dso_local void @foo(i32 signext %n, ptr nocapture %A) local_unnamed_addr #0 {
+define void @foo(i32 signext %n, ptr nocapture %A) #0 {
 entry:
   %cmp5 = icmp sgt i32 %n, 0
   br i1 %cmp5, label %for.body.preheader, label %for.cond.cleanup

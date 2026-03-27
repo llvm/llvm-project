@@ -35,9 +35,9 @@
 // CK6-DAG: @.__omp_offloading_{{.*}}implicit_maps_host_global{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 
 // CK6-DAG: [[GBL:@Gi]] ={{.*}} global i32 0
-// CK6-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 4]
+// CK6-DAG: [[SIZES:@.+]] = {{.+}}constant [2 x i64] [i64 4, i64 0]
 // Map types: OMP_MAP_PRIVATE_VAL | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 800
-// CK6-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 800]
+// CK6-DAG: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 800, i64 288]
 
 // CK6-LABEL: implicit_maps_host_global{{.*}}(
 int Gi;
@@ -58,14 +58,14 @@ void implicit_maps_host_global (int a){
 // CK6-64-DAG: [[GBLVAL]] = load i32, ptr [[GBL]],
 // CK6-32-DAG: [[VAL]] = load i[[sz]], ptr [[GBLVAL:%.+]],
 
-// CK6: call void [[KERNEL:@.+]](i[[sz]] [[VAL]])
+// CK6: call void [[KERNEL:@.+]](i[[sz]] [[VAL]], ptr null)
 #pragma omp target
   {
     ++Gi;
   }
 }
 
-// CK6: define internal void [[KERNEL]](i[[sz]] noundef [[ARG:%.+]])
+// CK6: define internal void [[KERNEL]](i[[sz]] noundef [[ARG:%.+]], ptr {{[^)]*}})
 // CK6: [[ADDR:%.+]] = alloca i[[sz]],
 // CK6: store i[[sz]] [[ARG]], ptr [[ADDR]],
 // CK6-64: {{.+}} = load i32, ptr [[ADDR]],

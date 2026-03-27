@@ -227,16 +227,17 @@ private:
   /// successful, returns C and update UserChain as a def-use chain from C to V;
   /// otherwise, UserChain is empty.
   ///
-  /// \p V            The given expression
-  /// \p SignExtended Whether V will be sign-extended in the computation of the
-  ///                 GEP index
-  /// \p ZeroExtended Whether V will be zero-extended in the computation of the
-  ///                 GEP index
-  /// \p NonNegative  Whether V is guaranteed to be non-negative. For example,
-  ///                 an index of an inbounds GEP is guaranteed to be
-  ///                 non-negative. Levaraging this, we can better split
-  ///                 inbounds GEPs.
-  APInt find(Value *V, bool SignExtended, bool ZeroExtended, bool NonNegative);
+  /// \p V              The given expression
+  /// \p GEP            The base GEP instruction, used for determining relevant
+  ///                   types, flags, and non-negativity needed for safe
+  ///                   reassociation
+  /// \p Idx            The original index of the GEP
+  /// \p SignExtended   Whether V will be sign-extended in the computation of
+  ///                   the GEP index
+  /// \p ZeroExtended   Whether V will be zero-extended in the computation of
+  ///                   the GEP index
+  APInt find(Value *V, GetElementPtrInst *GEP, Value *Idx, bool SignExtended,
+             bool ZeroExtended);
 
   /// A helper function to look into both operands of a binary operator.
   APInt findInEitherOperand(BinaryOperator *BO, bool SignExtended,
@@ -290,14 +291,11 @@ private:
   ///
   /// \p SignExtended Whether BO is surrounded by sext
   /// \p ZeroExtended Whether BO is surrounded by zext
-  /// \p NonNegative Whether BO is known to be non-negative, e.g., an in-bound
-  ///                array index.
-  bool CanTraceInto(bool SignExtended, bool ZeroExtended, BinaryOperator *BO,
-                    bool NonNegative);
-
-  /// Analyze XOR instruction to extract disjoint constant bits that behave
-  /// like addition operations for improved address mode folding.
-  APInt extractDisjointBitsFromXor(BinaryOperator *XorInst);
+  /// \p GEP          The base GEP instruction, used for determining relevant
+  ///                 types and flags needed for safe reassociation.
+  /// \p Idx          The original index of the GEP
+  bool canTraceInto(bool SignExtended, bool ZeroExtended, BinaryOperator *BO,
+                    GetElementPtrInst *GEP, Value *Idx);
 
   /// The path from the constant offset to the old GEP index. e.g., if the GEP
   /// index is "a * b + (c + 5)". After running function find, UserChain[0] will
@@ -478,10 +476,117 @@ FunctionPass *llvm::createSeparateConstOffsetFromGEPPass(bool LowerGEP) {
   return new SeparateConstOffsetFromGEPLegacyPass(LowerGEP);
 }
 
-bool ConstantOffsetExtractor::CanTraceInto(bool SignExtended,
-                                            bool ZeroExtended,
-                                            BinaryOperator *BO,
-                                            bool NonNegative) {
+// Checks if it is safe to reorder an add/sext result used in a GEP.
+//
+// An inbounds GEP does not guarantee that the index is non-negative.
+// This helper checks first if the index is known non-negative. If the index is
+// non-negative, the transform is always safe.
+// Second, it checks whether the GEP is inbounds and directly based on a global
+// or an alloca, which are required to prove futher transform validity.
+// If the GEP:
+// - Has a zero offset from the base, the index is non-negative (any negative
+//   value would produce poison/UB)
+// - Has ObjectSize < (2^(N-1) - C + 1) * stride, where C is a constant from the
+//   add, stride is the element size of Idx, and N is bitwidth of Idx.
+//   This is because with this pattern:
+//     %add = add iN %val, C
+//     %sext = sext iN %add to i64
+//     %gep = getelementptr inbounds TYPE, %sext
+//   The worst-case is when %val sign-flips to produce the smallest magnitude
+//   negative value, at 2^(N-1)-1. In this case, the add/sext is -(2^(N-1)-C+1),
+//   and the sext/add is 2^(N-1)+C-1 (2^N difference). The original add/sext
+//   only produces a defined GEP when -(2^(N-1)-C+1) is inbounds. So, if
+//   ObjectSize < (2^(N-1) - C + 1) * stride, it is impossible for the
+//   worst-case sign-flip to be defined.
+//   Note that in this case the GEP is not neccesarily non-negative, but any
+//   negative results will still produce the same behavior in the reordered
+//   version with a defined GEP.
+//   This can also work for negative C, but the threshold is instead
+//   (2^(N-1)+C)*stride, since the sign-flip is done in reverse and is instead
+//   producing a large positive value that still needs to be inbounds to the
+//   object size. If C is negative, we cannot make any useful assumptions based
+//   on the offset, since it would need to be extremely large.
+static bool canReorderAddSextToGEP(const GetElementPtrInst *GEP,
+                                   const Value *Idx, const BinaryOperator *Add,
+                                   const DataLayout &DL) {
+  if (isKnownNonNegative(Idx, DL))
+    return true;
+
+  if (!GEP->isInBounds())
+    return false;
+
+  const Value *Ptr = GEP->getPointerOperand();
+  int64_t Offset = 0;
+  const Value *Base =
+      GetPointerBaseWithConstantOffset(const_cast<Value *>(Ptr), Offset, DL);
+
+  // We need one of the operands to be a constant to be able to trace into the
+  // operator.
+  const ConstantInt *CI = dyn_cast<ConstantInt>(Add->getOperand(0));
+  if (!CI)
+    CI = dyn_cast<ConstantInt>(Add->getOperand(1));
+  if (!CI)
+    return false;
+  // Calculate the threshold
+  APInt Threshold;
+  unsigned N = Add->getType()->getIntegerBitWidth();
+  TypeSize ElemSize = DL.getTypeAllocSize(GEP->getSourceElementType());
+  if (ElemSize.isScalable())
+    return false;
+  uint64_t Stride = ElemSize.getFixedValue();
+  if (!CI->isNegative()) {
+    // (2^(N-1) - C + 1) * stride
+    Threshold = (APInt::getSignedMinValue(N).zext(128) -
+                 CI->getValue().zextOrTrunc(128) + 1) *
+                APInt(128, Stride);
+  } else {
+    // (2^(N-1) + C) * stride
+    Threshold = (APInt::getSignedMinValue(N).zext(128) +
+                 CI->getValue().sextOrTrunc(128)) *
+                APInt(128, Stride);
+  }
+
+  if (Base && (isa<AllocaInst>(Base) || isa<GlobalObject>(Base)) &&
+      !CI->isNegative()) {
+    // If the offset is zero from an alloca or global, inbounds is sufficient to
+    // prove non-negativity if one add operand is non-negative
+    if (Offset == 0)
+      return true;
+
+    // Check if the Offset < Threshold (positive CI only) otherwise
+    if (Offset < 0)
+      return true;
+    if (APInt(128, (uint64_t)Offset).ult(Threshold))
+      return true;
+  } else {
+    // If we can't determine the offset from the base object, we can still use
+    // the underlying object and type size constraints
+    Base = getUnderlyingObject(Ptr);
+    // Can only prove non-negativity if the base object is known
+    if (!(isa<AllocaInst>(Base) || isa<GlobalObject>(Base)))
+      return false;
+  }
+
+  // Check if the ObjectSize < Threshold (for both positive or negative C)
+  uint64_t ObjSize = 0;
+  if (const auto *AI = dyn_cast<AllocaInst>(Base)) {
+    if (auto AllocSize = AI->getAllocationSize(DL))
+      if (!AllocSize->isScalable())
+        ObjSize = AllocSize->getFixedValue();
+  } else if (const auto *GV = dyn_cast<GlobalVariable>(Base)) {
+    TypeSize GVSize = DL.getTypeAllocSize(GV->getValueType());
+    if (!GVSize.isScalable())
+      ObjSize = GVSize.getFixedValue();
+  }
+  if (ObjSize > 0 && APInt(128, ObjSize).ult(Threshold))
+    return true;
+
+  return false;
+}
+
+bool ConstantOffsetExtractor::canTraceInto(bool SignExtended, bool ZeroExtended,
+                                           BinaryOperator *BO,
+                                           GetElementPtrInst *GEP, Value *Idx) {
   // We only consider ADD, SUB and OR, because a non-zero constant found in
   // expressions composed of these operations can be easily hoisted as a
   // constant offset by reassociation.
@@ -491,7 +596,6 @@ bool ConstantOffsetExtractor::CanTraceInto(bool SignExtended,
     return false;
   }
 
-  Value *LHS = BO->getOperand(0), *RHS = BO->getOperand(1);
   // Do not trace into "or" unless it is equivalent to "add nuw nsw".
   // This is the case if the or's disjoint flag is set.
   if (BO->getOpcode() == Instruction::Or &&
@@ -515,24 +619,26 @@ bool ConstantOffsetExtractor::CanTraceInto(bool SignExtended,
   //       1       |      0       | sext(BO) == sext(A) op sext(B)
   //       1       |      1       | zext(sext(BO)) ==
   //               |              |     zext(sext(A)) op zext(sext(B))
-  if (BO->getOpcode() == Instruction::Add && !ZeroExtended && NonNegative) {
+  if (BO->getOpcode() == Instruction::Add && !ZeroExtended && GEP) {
     // If a + b >= 0 and (a >= 0 or b >= 0), then
     //   sext(a + b) = sext(a) + sext(b)
     // even if the addition is not marked nsw.
     //
     // Leveraging this invariant, we can trace into an sext'ed inbound GEP
-    // index if the constant offset is non-negative.
+    // index under certain conditions (see canReorderAddSextToGEP).
     //
     // Verified in @sext_add in split-gep.ll.
-    if (ConstantInt *ConstLHS = dyn_cast<ConstantInt>(LHS)) {
-      if (!ConstLHS->isNegative())
-        return true;
-    }
-    if (ConstantInt *ConstRHS = dyn_cast<ConstantInt>(RHS)) {
-      if (!ConstRHS->isNegative())
-        return true;
-    }
+    if (canReorderAddSextToGEP(GEP, Idx, BO, DL))
+      return true;
   }
+
+  // For a sext(add nuw), allow tracing through when the enclosing GEP is both
+  // inbounds and nuw.
+  bool GEPInboundsNUW =
+      GEP ? (GEP->isInBounds() && GEP->hasNoUnsignedWrap()) : false;
+  if (BO->getOpcode() == Instruction::Add && SignExtended && !ZeroExtended &&
+      GEPInboundsNUW && BO->hasNoUnsignedWrap())
+    return true;
 
   // sext (add/sub nsw A, B) == add/sub nsw (sext A), (sext B)
   // zext (add/sub nuw A, B) == add/sub nuw (zext A), (zext B)
@@ -553,10 +659,9 @@ APInt ConstantOffsetExtractor::findInEitherOperand(BinaryOperator *BO,
   // Save off the current height of the chain, in case we need to restore it.
   size_t ChainLength = UserChain.size();
 
-  // BO being non-negative does not shed light on whether its operands are
-  // non-negative. Clear the NonNegative flag here.
-  APInt ConstantOffset = find(BO->getOperand(0), SignExtended, ZeroExtended,
-                              /* NonNegative */ false);
+  // BO cannot use information from the base GEP at this point, so clear it.
+  APInt ConstantOffset =
+      find(BO->getOperand(0), nullptr, nullptr, SignExtended, ZeroExtended);
   // If we found a constant offset in the left operand, stop and return that.
   // This shortcut might cause us to miss opportunities of combining the
   // constant offsets in both operands, e.g., (a + 4) + (b + 5) => (a + b) + 9.
@@ -568,8 +673,8 @@ APInt ConstantOffsetExtractor::findInEitherOperand(BinaryOperator *BO,
   // since visiting the LHS didn't pan out.
   UserChain.resize(ChainLength);
 
-  ConstantOffset = find(BO->getOperand(1), SignExtended, ZeroExtended,
-                        /* NonNegative */ false);
+  ConstantOffset =
+      find(BO->getOperand(1), nullptr, nullptr, SignExtended, ZeroExtended);
   // If U is a sub operator, negate the constant offset found in the right
   // operand.
   if (BO->getOpcode() == Instruction::Sub)
@@ -582,8 +687,9 @@ APInt ConstantOffsetExtractor::findInEitherOperand(BinaryOperator *BO,
   return ConstantOffset;
 }
 
-APInt ConstantOffsetExtractor::find(Value *V, bool SignExtended,
-                                    bool ZeroExtended, bool NonNegative) {
+APInt ConstantOffsetExtractor::find(Value *V, GetElementPtrInst *GEP,
+                                    Value *Idx, bool SignExtended,
+                                    bool ZeroExtended) {
   // TODO(jingyue): We could trace into integer/pointer casts, such as
   // inttoptr, ptrtoint, bitcast, and addrspacecast. We choose to handle only
   // integers because it gives good enough results for our benchmarks.
@@ -599,26 +705,22 @@ APInt ConstantOffsetExtractor::find(Value *V, bool SignExtended,
     ConstantOffset = CI->getValue();
   } else if (BinaryOperator *BO = dyn_cast<BinaryOperator>(V)) {
     // Trace into subexpressions for more hoisting opportunities.
-    if (CanTraceInto(SignExtended, ZeroExtended, BO, NonNegative))
+    if (canTraceInto(SignExtended, ZeroExtended, BO, GEP, Idx))
       ConstantOffset = findInEitherOperand(BO, SignExtended, ZeroExtended);
-    // Handle XOR with disjoint bits that can be treated as addition.
-    else if (BO->getOpcode() == Instruction::Xor)
-      ConstantOffset = extractDisjointBitsFromXor(BO);
   } else if (isa<TruncInst>(V)) {
     ConstantOffset =
-        find(U->getOperand(0), SignExtended, ZeroExtended, NonNegative)
+        find(U->getOperand(0), GEP, Idx, SignExtended, ZeroExtended)
             .trunc(BitWidth);
   } else if (isa<SExtInst>(V)) {
-    ConstantOffset = find(U->getOperand(0), /* SignExtended */ true,
-                          ZeroExtended, NonNegative).sext(BitWidth);
+    ConstantOffset =
+        find(U->getOperand(0), GEP, Idx, /* SignExtended */ true, ZeroExtended)
+            .sext(BitWidth);
   } else if (isa<ZExtInst>(V)) {
     // As an optimization, we can clear the SignExtended flag because
     // sext(zext(a)) = zext(a). Verified in @sext_zext in split-gep.ll.
-    //
-    // Clear the NonNegative flag, because zext(a) >= 0 does not imply a >= 0.
-    ConstantOffset =
-        find(U->getOperand(0), /* SignExtended */ false,
-             /* ZeroExtended */ true, /* NonNegative */ false).zext(BitWidth);
+    ConstantOffset = find(U->getOperand(0), GEP, Idx, /* SignExtended */ false,
+                          /* ZeroExtended */ true)
+                         .zext(BitWidth);
   }
 
   // If we found a non-zero constant offset, add it to the path for
@@ -723,20 +825,11 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
   Value *NextInChain = removeConstOffset(ChainIndex - 1);
   Value *TheOther = BO->getOperand(1 - OpNo);
 
+  // If NextInChain is 0 and not the LHS of a sub, we can simplify the
+  // sub-expression to be just TheOther.
   if (ConstantInt *CI = dyn_cast<ConstantInt>(NextInChain)) {
-    if (CI->isZero()) {
-      // Custom XOR handling for disjoint bits - preserves original XOR
-      // with non-disjoint constant bits.
-      // TODO: The design should be updated to support partial constant
-      // extraction.
-      if (BO->getOpcode() == Instruction::Xor)
-        return BO;
-
-      // If NextInChain is 0 and not the LHS of a sub, we can simplify the
-      // sub-expression to be just TheOther.
-      if (!(BO->getOpcode() == Instruction::Sub && OpNo == 0))
-        return TheOther;
-    }
+    if (CI->isZero() && !(BO->getOpcode() == Instruction::Sub && OpNo == 0))
+      return TheOther;
   }
 
   BinaryOperator::BinaryOps NewOp = BO->getOpcode();
@@ -765,67 +858,6 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
   }
   NewBO->takeName(BO);
   return NewBO;
-}
-
-/// Analyze XOR instruction to extract disjoint constant bits for address
-/// folding
-///
-/// This function identifies bits in an XOR constant operand that are disjoint
-/// from the base operand's known set bits. For these disjoint bits, XOR behaves
-/// identically to addition, allowing us to extract them as constant offsets
-/// that can be folded into addressing modes.
-///
-/// Transformation: `Base ^ Const` becomes `(Base ^ NonDisjointBits) +
-/// DisjointBits` where DisjointBits = Const & KnownZeros(Base)
-///
-/// Example with ptr having known-zero low bit:
-///   Original: `xor %ptr, 3`    ; 3 = 0b11
-///   Analysis: DisjointBits = 3 & KnownZeros(%ptr) = 0b11 & 0b01 = 0b01
-///   Result:   `(xor %ptr, 2) + 1` where 1 can be folded into address mode
-///
-/// \param XorInst The XOR binary operator to analyze
-/// \return APInt containing the disjoint bits that can be extracted as offset,
-///         or zero if no disjoint bits exist
-APInt ConstantOffsetExtractor::extractDisjointBitsFromXor(
-    BinaryOperator *XorInst) {
-  assert(XorInst && XorInst->getOpcode() == Instruction::Xor &&
-         "Expected XOR instruction");
-
-  const unsigned BitWidth = XorInst->getType()->getScalarSizeInBits();
-  Value *BaseOperand;
-  ConstantInt *XorConstant;
-
-  // Match pattern: xor BaseOperand, Constant.
-  if (!match(XorInst, m_Xor(m_Value(BaseOperand), m_ConstantInt(XorConstant))))
-    return APInt::getZero(BitWidth);
-
-  // Compute known bits for the base operand.
-  const SimplifyQuery SQ(DL);
-  const KnownBits BaseKnownBits = computeKnownBits(BaseOperand, SQ);
-  const APInt &ConstantValue = XorConstant->getValue();
-
-  // Identify disjoint bits: constant bits that are known zero in base.
-  const APInt DisjointBits = ConstantValue & BaseKnownBits.Zero;
-
-  // Early exit if no disjoint bits found.
-  if (DisjointBits.isZero())
-    return APInt::getZero(BitWidth);
-
-  // Compute the remaining non-disjoint bits that stay in the XOR.
-  const APInt NonDisjointBits = ConstantValue & ~DisjointBits;
-
-  // FIXME: Enhance XOR constant extraction to handle nested binary operations.
-  // Currently we only extract disjoint bits from the immediate XOR constant,
-  // but we could recursively process cases like:
-  //   xor (add %base, C1), C2  ->  add %base, (C1 ^ disjoint_bits(C2))
-  // This requires careful analysis to ensure the transformation preserves
-  // semantics, particularly around sign extension and overflow behavior.
-
-  // Add the non-disjoint constant to the user chain for later transformation
-  // This will replace the original constant in the XOR with the new
-  // constant.
-  UserChain.push_back(ConstantInt::get(XorInst->getType(), NonDisjointBits));
-  return DisjointBits;
 }
 
 /// A helper function to check if reassociating through an entry in the user
@@ -857,9 +889,8 @@ Value *ConstantOffsetExtractor::Extract(Value *Idx, GetElementPtrInst *GEP,
                                         bool &PreservesNUW) {
   ConstantOffsetExtractor Extractor(GEP->getIterator());
   // Find a non-zero constant offset first.
-  APInt ConstantOffset =
-      Extractor.find(Idx, /* SignExtended */ false, /* ZeroExtended */ false,
-                     GEP->isInBounds());
+  APInt ConstantOffset = Extractor.find(Idx, GEP, Idx, /* SignExtended */ false,
+                                        /* ZeroExtended */ false);
   if (ConstantOffset == 0) {
     UserChainTail = nullptr;
     PreservesNUW = true;
@@ -875,10 +906,8 @@ Value *ConstantOffsetExtractor::Extract(Value *Idx, GetElementPtrInst *GEP,
 }
 
 APInt ConstantOffsetExtractor::Find(Value *Idx, GetElementPtrInst *GEP) {
-  // If Idx is an index of an inbound GEP, Idx is guaranteed to be non-negative.
   return ConstantOffsetExtractor(GEP->getIterator())
-      .find(Idx, /* SignExtended */ false, /* ZeroExtended */ false,
-            GEP->isInBounds());
+      .find(Idx, GEP, Idx, /* SignExtended */ false, /* ZeroExtended */ false);
 }
 
 bool SeparateConstOffsetFromGEP::canonicalizeArrayIndicesToIndexSize(
@@ -1056,12 +1085,11 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   // offset from each is accumulated.
   Value *NewBase;
   const APInt *BaseOffset;
-  const bool ExtractBase =
-      match(GEP->getPointerOperand(),
-            m_PtrAdd(m_Value(NewBase), m_APInt(BaseOffset)));
+  bool ExtractBase = match(GEP->getPointerOperand(),
+                           m_PtrAdd(m_Value(NewBase), m_APInt(BaseOffset)));
 
   unsigned IdxWidth = DL->getIndexTypeSizeInBits(GEP->getType());
-  const APInt BaseByteOffset =
+  APInt BaseByteOffset =
       ExtractBase ? BaseOffset->sextOrTrunc(IdxWidth) : APInt(IdxWidth, 0);
 
   // The backend can already nicely handle the case where all indices are
@@ -1072,8 +1100,8 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   bool Changed = canonicalizeArrayIndicesToIndexSize(GEP);
 
   bool NeedsExtraction;
-  APInt AccumulativeByteOffset =
-      BaseByteOffset + accumulateByteOffset(GEP, NeedsExtraction);
+  APInt NonBaseByteOffset = accumulateByteOffset(GEP, NeedsExtraction);
+  APInt AccumulativeByteOffset = BaseByteOffset + NonBaseByteOffset;
 
   TargetTransformInfo &TTI = GetTTI(*GEP->getFunction());
 
@@ -1095,7 +1123,21 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
             GEP->getResultElementType(),
             /*BaseGV=*/nullptr, AccumulativeByteOffset.getSExtValue(),
             /*HasBaseReg=*/true, /*Scale=*/0, AddrSpace)) {
-      return Changed;
+      // If the addressing mode was not legal and the base byte offset was not
+      // 0, it could be a case where the total offset became too large for
+      // the addressing mode. Try again without extracting the base offset.
+      if (!ExtractBase)
+        return Changed;
+      ExtractBase = false;
+      BaseByteOffset = APInt(IdxWidth, 0);
+      AccumulativeByteOffset = NonBaseByteOffset;
+      if (!TTI.isLegalAddressingMode(
+              GEP->getResultElementType(),
+              /*BaseGV=*/nullptr, AccumulativeByteOffset.getSExtValue(),
+              /*HasBaseReg=*/true, /*Scale=*/0, AddrSpace))
+        return Changed;
+      // We can proceed with just extracting the other (non-base) offsets.
+      NeedsExtraction = true;
     }
   }
 

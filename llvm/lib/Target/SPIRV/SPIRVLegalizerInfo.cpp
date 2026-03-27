@@ -356,6 +356,9 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .legalFor({s1, s128})
       .legalFor(allFloatAndIntScalarsAndPtrs)
       .legalFor(allowedVectorTypes)
+      .legalIf([](const LegalityQuery &Query) {
+        return Query.Types[0].isPointerVector();
+      })
       .moreElementsToNextPow2(0)
       .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
                        LegalizeMutations::changeElementCountTo(
@@ -366,11 +369,25 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   getActionDefinitionsBuilder(G_INTTOPTR)
       .legalForCartesianProduct(allPtrs, allIntScalars)
       .legalIf(
-          all(typeInSet(0, allPtrs), typeOfExtendedScalars(1, IsExtendedInts)));
+          all(typeInSet(0, allPtrs), typeOfExtendedScalars(1, IsExtendedInts)))
+      .legalIf([](const LegalityQuery &Query) {
+        const LLT DstTy = Query.Types[0];
+        const LLT SrcTy = Query.Types[1];
+        return DstTy.isPointerVector() && SrcTy.isVector() &&
+               !SrcTy.isPointer() &&
+               DstTy.getNumElements() == SrcTy.getNumElements();
+      });
   getActionDefinitionsBuilder(G_PTRTOINT)
       .legalForCartesianProduct(allIntScalars, allPtrs)
       .legalIf(
-          all(typeOfExtendedScalars(0, IsExtendedInts), typeInSet(1, allPtrs)));
+          all(typeOfExtendedScalars(0, IsExtendedInts), typeInSet(1, allPtrs)))
+      .legalIf([](const LegalityQuery &Query) {
+        const LLT DstTy = Query.Types[0];
+        const LLT SrcTy = Query.Types[1];
+        return SrcTy.isPointerVector() && DstTy.isVector() &&
+               !DstTy.isPointer() &&
+               DstTy.getNumElements() == SrcTy.getNumElements();
+      });
   getActionDefinitionsBuilder(G_PTR_ADD)
       .legalForCartesianProduct(allPtrs, allIntScalars)
       .legalIf(
@@ -382,6 +399,10 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .unsupportedIf(LegalityPredicates::any(
           all(typeIs(0, p9), typeInSet(1, allPtrs), typeIsNot(1, p9)),
           all(typeInSet(0, allPtrs), typeIsNot(0, p9), typeIs(1, p9))))
+      .legalIf([IsExtendedInts](const LegalityQuery &Query) {
+        const LLT Ty = Query.Types[1];
+        return IsExtendedInts && Ty.isValid() && !Ty.isPointerOrPointerVector();
+      })
       .customIf(all(typeInSet(0, allBoolScalarsAndVectors),
                     typeInSet(1, allPtrsScalarsAndVectors)));
 
@@ -434,11 +455,14 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   // tighten these requirements. Many of these math functions are only legal on
   // specific bitwidths, so they are not selectable for
   // allFloatScalarsAndVectors.
+  // clang-format off
   getActionDefinitionsBuilder({G_STRICT_FSQRT,
                                G_FPOW,
                                G_FEXP,
                                G_FMODF,
+                               G_FSINCOS,
                                G_FEXP2,
+                               G_FEXP10,
                                G_FLOG,
                                G_FLOG2,
                                G_FLOG10,
@@ -466,6 +490,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                                G_FMAXIMUM,
                                G_INTRINSIC_ROUNDEVEN})
       .legalFor(allFloatScalarsAndVectors);
+  // clang-format on
 
   getActionDefinitionsBuilder(G_FCOPYSIGN)
       .legalForCartesianProduct(allFloatScalarsAndVectors,
@@ -522,7 +547,7 @@ static bool legalizeInsertVectorElt(LegalizerHelper &Helper, MachineInstr &MI,
   return true;
 }
 
-static Register convertPtrToInt(Register Reg, LLT ConvTy, SPIRVType *SpvType,
+static Register convertPtrToInt(Register Reg, LLT ConvTy, SPIRVTypeInst SpvType,
                                 LegalizerHelper &Helper,
                                 MachineRegisterInfo &MRI,
                                 SPIRVGlobalRegistry *GR) {
@@ -676,7 +701,7 @@ bool SPIRVLegalizerInfo::legalizeCustom(
       LLT ConvT = LLT::scalar(ST->getPointerSize());
       Type *LLVMTy = IntegerType::get(MI.getMF()->getFunction().getContext(),
                                       ST->getPointerSize());
-      SPIRVType *SpirvTy = GR->getOrCreateSPIRVType(
+      SPIRVTypeInst SpirvTy = GR->getOrCreateSPIRVType(
           LLVMTy, Helper.MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
       Op0.setReg(convertPtrToInt(Reg0, ConvT, SpirvTy, Helper, MRI, GR));
       Op1.setReg(convertPtrToInt(Reg1, ConvT, SpirvTy, Helper, MRI, GR));
@@ -702,14 +727,14 @@ createStackTemporaryForVector(LegalizerHelper &Helper, SPIRVGlobalRegistry *GR,
       TypeSize::getFixed(SrcTy.getSizeInBytes()), VecAlign, PtrInfo);
 
   // Set the type of StackTemp to a pointer to an array of the element type.
-  SPIRVType *SpvSrcTy = GR->getSPIRVTypeForVReg(SrcReg);
-  SPIRVType *EltSpvTy = GR->getScalarOrVectorComponentType(SpvSrcTy);
+  SPIRVTypeInst SpvSrcTy = GR->getSPIRVTypeForVReg(SrcReg);
+  SPIRVTypeInst EltSpvTy = GR->getScalarOrVectorComponentType(SpvSrcTy);
   const Type *LLVMEltTy = GR->getTypeForSPIRVType(EltSpvTy);
   const Type *LLVMArrTy =
       ArrayType::get(const_cast<Type *>(LLVMEltTy), SrcTy.getNumElements());
-  SPIRVType *ArrSpvTy = GR->getOrCreateSPIRVType(
+  SPIRVTypeInst ArrSpvTy = GR->getOrCreateSPIRVType(
       LLVMArrTy, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
-  SPIRVType *PtrToArrSpvTy = GR->getOrCreateSPIRVPointerType(
+  SPIRVTypeInst PtrToArrSpvTy = GR->getOrCreateSPIRVPointerType(
       ArrSpvTy, MIRBuilder, SPIRV::StorageClass::Function);
 
   Register StackReg = StackTemp.getReg(0);
@@ -761,7 +786,7 @@ static bool legalizeSpvInsertElt(LegalizerHelper &Helper, MachineInstr &MI,
       uint64_t IdxVal = foldImm(IdxOperand, &MRI);
       if (IdxVal < SrcTy.getNumElements()) {
         SmallVector<Register, 8> Regs;
-        SPIRVType *ElementType =
+        SPIRVTypeInst ElementType =
             GR->getScalarOrVectorComponentType(GR->getSPIRVTypeForVReg(DstReg));
         LLT ElementLLTTy = GR->getRegType(ElementType);
         for (unsigned I = 0, E = SrcTy.getNumElements(); I < E; ++I) {
@@ -826,7 +851,7 @@ static bool legalizeSpvExtractElt(LegalizerHelper &Helper, MachineInstr &MI,
       if (IdxVal < SrcTy.getNumElements()) {
         LLT DstTy = MRI.getType(DstReg);
         SmallVector<Register, 8> Regs;
-        SPIRVType *DstSpvTy = GR->getSPIRVTypeForVReg(DstReg);
+        SPIRVTypeInst DstSpvTy = GR->getSPIRVTypeForVReg(DstReg);
         for (unsigned I = 0, E = SrcTy.getNumElements(); I < E; ++I) {
           if (I == IdxVal) {
             Regs.push_back(DstReg);
@@ -889,8 +914,8 @@ static bool legalizeSpvConstComposite(LegalizerHelper &Helper, MachineInstr &MI,
     // The "null" case: no values are attached.
     LLT EltTy = DstTy.getElementType();
     auto Zero = MIRBuilder.buildConstant(EltTy, 0);
-    SPIRVType *SpvDstTy = GR->getSPIRVTypeForVReg(DstReg);
-    SPIRVType *SpvEltTy = GR->getScalarOrVectorComponentType(SpvDstTy);
+    SPIRVTypeInst SpvDstTy = GR->getSPIRVTypeForVReg(DstReg);
+    SPIRVTypeInst SpvEltTy = GR->getScalarOrVectorComponentType(SpvDstTy);
     GR->assignSPIRVTypeToVReg(SpvEltTy, Zero.getReg(0), MIRBuilder.getMF());
     for (unsigned i = 0; i < DstTy.getNumElements(); ++i)
       SrcRegs.push_back(Zero.getReg(0));
@@ -953,7 +978,7 @@ bool SPIRVLegalizerInfo::legalizeIsFPClass(
       IntegerType::get(MIRBuilder.getContext(), DstTy.getScalarSizeInBits());
   if (DstTy.isVector())
     LLVMDstTy = VectorType::get(LLVMDstTy, DstTy.getElementCount());
-  SPIRVType *SPIRVDstTy = GR->getOrCreateSPIRVType(
+  SPIRVTypeInst SPIRVDstTy = GR->getOrCreateSPIRVType(
       LLVMDstTy, MIRBuilder, SPIRV::AccessQualifier::ReadWrite,
       /*EmitIR*/ true);
 
@@ -966,7 +991,7 @@ bool SPIRVLegalizerInfo::legalizeIsFPClass(
     IntTy = LLT::vector(SrcTy.getElementCount(), IntTy);
     LLVMIntTy = VectorType::get(LLVMIntTy, SrcTy.getElementCount());
   }
-  SPIRVType *SPIRVIntTy = GR->getOrCreateSPIRVType(
+  SPIRVTypeInst SPIRVIntTy = GR->getOrCreateSPIRVType(
       LLVMIntTy, MIRBuilder, SPIRV::AccessQualifier::ReadWrite,
       /*EmitIR*/ true);
 
@@ -979,7 +1004,7 @@ bool SPIRVLegalizerInfo::legalizeIsFPClass(
     LLT MITy = MRI.getType(MI.getReg(0));
     assert((MITy == IntTy || MITy == DstTyCopy) &&
            "Unexpected LLT type while lowering G_IS_FPCLASS");
-    auto *SPVTy = MITy == IntTy ? SPIRVIntTy : SPIRVDstTy;
+    SPIRVTypeInst SPVTy = MITy == IntTy ? SPIRVIntTy : SPIRVDstTy;
     GR->assignSPIRVTypeToVReg(SPVTy, MI.getReg(0), MF);
     return MI;
   };
@@ -991,7 +1016,7 @@ bool SPIRVLegalizerInfo::legalizeIsFPClass(
     auto ScalarC = MIRBuilder.buildConstant(Ty.getScalarType(), C);
     assert((Ty == IntTy || Ty == DstTyCopy) &&
            "Unexpected LLT type while lowering constant for G_IS_FPCLASS");
-    SPIRVType *VecEltTy = GR->getOrCreateSPIRVType(
+    SPIRVTypeInst VecEltTy = GR->getOrCreateSPIRVType(
         (Ty == IntTy ? LLVMIntTy : LLVMDstTy)->getScalarType(), MIRBuilder,
         SPIRV::AccessQualifier::ReadWrite,
         /*EmitIR*/ true);

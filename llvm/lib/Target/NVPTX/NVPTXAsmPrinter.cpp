@@ -17,12 +17,14 @@
 #include "MCTargetDesc/NVPTXMCAsmInfo.h"
 #include "MCTargetDesc/NVPTXTargetStreamer.h"
 #include "NVPTX.h"
+#include "NVPTXDwarfDebug.h"
 #include "NVPTXMCExpr.h"
 #include "NVPTXMachineFunctionInfo.h"
 #include "NVPTXRegisterInfo.h"
 #include "NVPTXSubtarget.h"
 #include "NVPTXTargetMachine.h"
 #include "NVPTXUtilities.h"
+#include "NVVMProperties.h"
 #include "TargetInfo/NVPTXTargetInfo.h"
 #include "cl_common_defines.h"
 #include "llvm/ADT/APFloat.h"
@@ -93,6 +95,21 @@
 using namespace llvm;
 
 #define DEPOTNAME "__local_depot"
+
+static StringRef getTextureName(const Value &V) {
+  assert(V.hasName() && "Found texture variable with no name");
+  return V.getName();
+}
+
+static StringRef getSurfaceName(const Value &V) {
+  assert(V.hasName() && "Found surface variable with no name");
+  return V.getName();
+}
+
+static StringRef getSamplerName(const Value &V) {
+  assert(V.hasName() && "Found sampler variable with no name");
+  return V.getName();
+}
 
 /// discoverDependentGlobals - Return a set of GlobalVariables on which \p V
 /// depends.
@@ -258,8 +275,8 @@ void NVPTXAsmPrinter::printReturnValStr(const Function *F, raw_ostream &O) {
   };
   if (shouldPassAsArray(Ty)) {
     const unsigned TotalSize = DL.getTypeAllocSize(Ty);
-    const Align RetAlignment = TLI->getFunctionArgumentAlignment(
-        F, Ty, AttributeList::ReturnIndex, DL);
+    const Align RetAlignment =
+        getFunctionArgumentAlignment(F, Ty, AttributeList::ReturnIndex, DL);
     O << ".param .align " << RetAlignment.value() << " .b8 func_retval0["
       << TotalSize << "]";
   } else if (Ty->isFloatingPointTy()) {
@@ -676,6 +693,11 @@ void NVPTXAsmPrinter::emitStartOfAsmFile(Module &M) {
   OutStreamer->emitRawText(OS1.str());
 }
 
+/// Create NVPTX-specific DwarfDebug handler.
+DwarfDebug *NVPTXAsmPrinter::createDwarfDebug() {
+  return new NVPTXDwarfDebug(this);
+}
+
 bool NVPTXAsmPrinter::doInitialization(Module &M) {
   const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
   const NVPTXSubtarget &STI = *NTM.getSubtargetImpl();
@@ -865,12 +887,14 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
     O << ".weak ";
   }
 
-  if (isTexture(*GVar)) {
+  const PTXOpaqueType OpaqueType = getPTXOpaqueType(*GVar);
+
+  if (OpaqueType == PTXOpaqueType::Texture) {
     O << ".global .texref " << getTextureName(*GVar) << ";\n";
     return;
   }
 
-  if (isSurface(*GVar)) {
+  if (OpaqueType == PTXOpaqueType::Surface) {
     O << ".global .surfref " << getSurfaceName(*GVar) << ";\n";
     return;
   }
@@ -884,7 +908,7 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
     return;
   }
 
-  if (isSampler(*GVar)) {
+  if (OpaqueType == PTXOpaqueType::Sampler) {
     O << ".global .samplerref " << getSamplerName(*GVar);
 
     const Constant *Initializer = nullptr;
@@ -1333,33 +1357,37 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
 
     // Handle image/sampler parameters
     if (IsKernelFunc) {
-      const bool IsSampler = isSampler(Arg);
-      const bool IsTexture = !IsSampler && isImageReadOnly(Arg);
-      const bool IsSurface = !IsSampler && !IsTexture &&
-                             (isImageReadWrite(Arg) || isImageWriteOnly(Arg));
-      if (IsSampler || IsTexture || IsSurface) {
+      const PTXOpaqueType ArgOpaqueType = getPTXOpaqueType(Arg);
+      if (ArgOpaqueType != PTXOpaqueType::None) {
         const bool EmitImgPtr = !MFI || !MFI->checkImageHandleSymbol(ParamSym);
         O << "\t.param ";
         if (EmitImgPtr)
           O << ".u64 .ptr ";
 
-        if (IsSampler)
+        switch (ArgOpaqueType) {
+        case PTXOpaqueType::Sampler:
           O << ".samplerref ";
-        else if (IsTexture)
+          break;
+        case PTXOpaqueType::Texture:
           O << ".texref ";
-        else // IsSurface
+          break;
+        case PTXOpaqueType::Surface:
           O << ".surfref ";
+          break;
+        case PTXOpaqueType::None:
+          llvm_unreachable("handled above");
+        }
         O << ParamSym;
         continue;
       }
     }
 
-    auto GetOptimalAlignForParam = [TLI, &DL, F, &Arg](Type *Ty) -> Align {
+    auto GetOptimalAlignForParam = [&DL, F, &Arg](Type *Ty) -> Align {
       if (MaybeAlign StackAlign =
               getAlign(*F, Arg.getArgNo() + AttributeList::FirstArgIndex))
         return StackAlign.value();
 
-      Align TypeAlign = TLI->getFunctionParamOptimizedAlign(F, Ty, DL);
+      Align TypeAlign = getFunctionParamOptimizedAlign(F, Ty, DL);
       MaybeAlign ParamAlign =
           Arg.hasByValAttr() ? Arg.getParamAlign() : MaybeAlign();
       return std::max(TypeAlign, ParamAlign.valueOrOne());
@@ -1376,7 +1404,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       // size = typeallocsize of element type
       const Align OptimalAlign =
           IsKernelFunc ? GetOptimalAlignForParam(ETy)
-                       : TLI->getFunctionByValParamAlign(
+                       : getFunctionByValParamAlign(
                              F, ETy, Arg.getParamAlign().valueOrOne(), DL);
 
       O << "\t.param .align " << OptimalAlign.value() << " .b8 " << ParamSym

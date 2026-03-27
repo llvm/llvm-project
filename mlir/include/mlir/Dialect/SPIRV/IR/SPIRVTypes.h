@@ -84,9 +84,9 @@ public:
 
   static bool classof(Type type);
 
-  /// Returns true if the given integer type is valid for the SPIR-V dialect.
-  static bool isValid(FloatType);
   /// Returns true if the given float type is valid for the SPIR-V dialect.
+  static bool isValid(FloatType);
+  /// Returns true if the given integer type is valid for the SPIR-V dialect.
   static bool isValid(IntegerType);
 };
 
@@ -425,8 +425,9 @@ public:
 };
 
 // SPIR-V matrix type
-class MatrixType : public Type::TypeBase<MatrixType, CompositeType,
-                                         detail::MatrixTypeStorage> {
+class MatrixType
+    : public Type::TypeBase<MatrixType, CompositeType,
+                            detail::MatrixTypeStorage, ShapedType::Trait> {
 public:
   using Base::Base;
 
@@ -457,6 +458,26 @@ public:
 
   /// Returns the elements' type (i.e, single element type).
   Type getElementType() const;
+
+  operator ShapedType() const { return cast<ShapedType>(*this); }
+
+  ArrayRef<int64_t> getShape() const;
+
+  bool hasRank() const { return true; }
+
+  MatrixType cloneWith(std::optional<ArrayRef<int64_t>> shape,
+                       Type elementType) const {
+    if (!shape)
+      return get(elementType, getNumColumns());
+
+    assert(shape.value().size() == 2);
+
+    auto vectorType = cast<VectorType>(elementType);
+    Type newElementType =
+        vectorType.cloneWith({shape.value()[0]}, vectorType.getElementType());
+
+    return get(newElementType, shape.value()[1]);
+  }
 };
 
 /// SPIR-V TensorARM Type

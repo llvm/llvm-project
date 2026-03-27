@@ -51,6 +51,17 @@ transform.sequence failures(propagate) {
 
 // -----
 
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @foo(%arg0: !transform.any_op {transform.readonly}) {
+    // expected-error @+2 {{expected children ops to implement TransformOpInterface}}
+    // expected-note @below {{op without interface}}
+    "test.unknown_op" () : () -> ()
+    transform.yield
+  }
+}
+
+// -----
+
 // expected-error @below {{expects the types of the terminator operands to match the types of the result}}
 %0 = transform.sequence -> !transform.any_op failures(propagate) {
 ^bb0(%arg0: !transform.any_op):
@@ -500,7 +511,7 @@ module attributes { transform.with_named_sequence} {
   // expected-error @below {{expected 'transform.yield' as terminator}}
   transform.named_sequence @nested() {
     // expected-note @below {{terminator}}
-    func.call @foo() : () -> ()
+    func.return 
   }
 }
 
@@ -960,4 +971,17 @@ module attributes { transform.with_named_sequence } {
     "transform.include"(%arg0) <{target = @print_message}> : (!transform.any_op) -> ()
     "transform.yield"() : () -> ()
   }) : () -> ()
+}
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/60213:
+// Verifying a transform.sequence with an empty body region must not crash.
+// Previously, verifyTransformOpInterface called getEffects, which called
+// getBodyBlock() -> Region::front() on an empty region, causing an assertion.
+transform.sequence failures(propagate) {
+^bb0(%arg0: !pdl.operation):
+// expected-error @below {{region #0 ('body') failed to verify constraint: region with 1 blocks}}
+  "transform.sequence"(%arg0) <{failure_propagation_mode = 1 : i32, operandSegmentSizes = array<i32: 1, 0>}> ({
+  }) : (!pdl.operation) -> ()
 }

@@ -22,17 +22,41 @@ from . import irdl
 from ._ods_common import _cext, segmented_accessor
 from .irdl import Variadicity
 from ..passmanager import PassManager
+from contextlib import nullcontext
 
 ir = _cext.ir
 
 __all__ = [
     "Dialect",
+    "Operation",
     "Operand",
     "Result",
+    "Region",
+    "Type",
+    "Attribute",
+    "result",
 ]
 
 Operand = ir.Value
 Result = ir.OpResult
+Region = ir.Region
+
+
+def construct_instance(origin, args):
+    if not issubclass(origin, ir.Type | ir.Attribute):
+        raise TypeError(f"unsupported type in constraints: {origin}")
+
+    # `origin.get` is to construct an instance of MLIR type or attribute.
+    return origin.get(
+        *(
+            (
+                construct_instance(get_origin(arg), get_args(arg))
+                if get_origin(arg)
+                else arg
+            )
+            for arg in args
+        )
+    )
 
 
 class ConstraintLoweringContext:
@@ -61,14 +85,19 @@ class ConstraintLoweringContext:
             return irdl.any()
         elif isinstance(type_, TypeVar):
             return self.lower(type_)
+        elif origin and issubclass(origin, Type | Attribute):
+            return irdl.parametric(
+                base_type=[origin._dialect_name, origin._name],
+                args=[self.lower(arg) for arg in get_args(type_)],
+            )
         elif origin and issubclass(origin, ir.Type):
-            # `origin.get` is to construct an instance of MLIR type.
-            t = origin.get(*get_args(type_))
+            t = construct_instance(origin, get_args(type_))
             return irdl.is_(ir.TypeAttr.get(t))
         elif origin and issubclass(origin, ir.Attribute):
-            # `origin.get` is to construct an instance of MLIR attribute.
-            attr = origin.get(*get_args(type_))
+            attr = construct_instance(origin, get_args(type_))
             return irdl.is_(attr)
+        elif issubclass(type_, Type | Attribute):
+            return irdl.base(base_ref=[type_._dialect_name, type_._name])
         elif issubclass(type_, ir.Type):
             return irdl.base(base_name=f"!{type_.type_name}")
         elif issubclass(type_, ir.Attribute):
@@ -77,22 +106,47 @@ class ConstraintLoweringContext:
         raise TypeError(f"unsupported type in constraints: {type_}")
 
 
-def infer_type(type_) -> Optional[Callable[[], ir.Type]]:
+@dataclass
+class FieldSpecifier:
+    infer_type: bool = False
+    default_is_none: bool = False
+
+    def __post_init__(self):
+        if self.infer_type and self.default_is_none:
+            raise ValueError(
+                "a field cannot be marked with both infer_type and default_is_none"
+            )
+
+    def kw_only(self) -> bool:
+        return self.default_is_none or self.infer_type
+
+
+def result(*, infer_type: bool = False) -> Any:
+    """
+    A field specifier for `Result` definitions.
+    """
+
+    return FieldSpecifier(infer_type=infer_type)
+
+
+def infer_type_impl(type_) -> Callable[[], ir.Type]:
     """
     A function to infer ir.Type from type annotation.
-    Returns a callable that returns the inferred ir.Type,
-    or None if the type cannot be inferred.
+    Returns a callable that returns the inferred ir.Type.
     We use callables so that MLIR contexts are not required
     while calling this function.
     """
 
     origin = get_origin(type_)
-    if origin and issubclass(origin, ir.Type):
-        # `origin.get` is to construct an instance of MLIR type/attribute.
-        return lambda: origin.get(*get_args(type_))
+    if origin and issubclass(origin, ir.Type | ir.Attribute):
+        args = [
+            infer_type_impl(arg) if get_origin(arg) else lambda: arg
+            for arg in get_args(type_)
+        ]
+        return lambda: origin.get(*[arg() for arg in args])
     elif isinstance(type_, TypeVar):
-        return infer_type(type_.__bound__)
-    return None
+        return infer_type_impl(type_.__bound__)
+    raise TypeError(f"unsupported type for inferring: {type_}")
 
 
 @dataclass
@@ -102,11 +156,13 @@ class FieldDef:
     """
 
     name: str
-    constraint: Any
     variadicity: Variadicity
+    constraint: Any
+
+    kw_only: bool = False
 
     @staticmethod
-    def from_type_hint(name, type_) -> "FieldDef":
+    def from_type_hint(name, type_, specifier) -> "FieldDef":
         variadicity = Variadicity.single
         if inner := match_optional(type_):
             variadicity = Variadicity.optional
@@ -117,38 +173,85 @@ class FieldDef:
 
         origin = get_origin(type_)
         if origin is ir.OpResult:
-            return ResultDef(name, get_args(type_)[0], variadicity)
+            constraint = get_args(type_)[0]
+            return ResultDef(
+                name,
+                variadicity,
+                constraint,
+                kw_only=specifier.kw_only(),
+                infer_type=(
+                    infer_type_impl(constraint) if specifier.infer_type else None
+                ),
+            )
         elif origin is ir.Value:
-            return OperandDef(name, get_args(type_)[0], variadicity)
-        elif issubclass(origin or type_, ir.Attribute):
-            return AttributeDef(name, type_, variadicity)
-        raise TypeError(f"unsupported type in operation definition: {type_}")
+            return OperandDef(
+                name,
+                variadicity,
+                get_args(type_)[0],
+                kw_only=specifier.kw_only(),
+            )
+        elif type_ is ir.Region:
+            return RegionDef(name, variadicity, Any)
+        return AttributeDef(name, variadicity, type_)
 
 
 @dataclass
 class OperandDef(FieldDef):
-    pass
+    def __post_init__(self):
+        if self.variadicity != Variadicity.optional and self.kw_only:
+            raise ValueError(f"only optional operand can be a keyword parameter")
 
 
 @dataclass
 class ResultDef(FieldDef):
-    pass
+    infer_type: Callable[[], ir.Type] | None = None
+
+    def __post_init__(self):
+        if (
+            self.variadicity != Variadicity.optional
+            and not self.infer_type
+            and self.kw_only
+        ):
+            raise ValueError(f"only optional result can be a keyword parameter")
+
+        if self.infer_type and self.variadicity != Variadicity.single:
+            raise ValueError(
+                f"type of variadic or optional result '{self.name}' cannot be inferred"
+            )
+
+    def process_type(self, type_):
+        if type_:
+            return type_
+
+        if self.infer_type:
+            return self.infer_type()
+
+        return None
 
 
 @dataclass
 class AttributeDef(FieldDef):
+
     def __post_init__(self):
         if self.variadicity != Variadicity.single:
-            raise ValueError("optional attribute is not supported in IRDL")
+            raise ValueError("optional attribute is not currently supported")
+
+
+@dataclass
+class RegionDef(FieldDef):
+    def __post_init__(self):
+        if self.variadicity != Variadicity.single:
+            raise ValueError("optional region is not currently supported")
 
 
 def partition_fields(
     fields: List[FieldDef],
-) -> Tuple[List[OperandDef], List[AttributeDef], List[ResultDef]]:
+) -> Tuple[List[OperandDef], List[AttributeDef], List[ResultDef], List[RegionDef]]:
     operands = [i for i in fields if isinstance(i, OperandDef)]
     attrs = [i for i in fields if isinstance(i, AttributeDef)]
     results = [i for i in fields if isinstance(i, ResultDef)]
-    return operands, attrs, results
+    regions = [i for i in fields if isinstance(i, RegionDef)]
+    return operands, attrs, results, regions
 
 
 def normalize_value_range(
@@ -183,14 +286,33 @@ def match_optional(type_) -> Optional[Any]:
 
 class Operation(ir.OpView):
     """
-    Base class of Python-defined operation.
+    Base class of Python-defined operations.
 
-    NOTE: Usually you don't need to use it directly.
-    Use `Dialect` and `.Operation` of `Dialect` subclasses instead.
+    The following example shows two ways to define operations via this class:
+    ```python
+    class MyOp(MyDialect.Operation, name=..):
+      ...
+
+    class MyOp(Operation, dialect=MyDialect, name=..):
+      ...
+    ```
     """
 
+    def __init__(*args, **kwargs):
+        raise TypeError(
+            "This class is a template and cannot be instantiated directly. "
+            "Please use a subclass that defines the operation."
+        )
+
     @classmethod
-    def __init_subclass__(cls, *, name: str = None, **kwargs):
+    def __init_subclass__(
+        cls,
+        *,
+        name: str | None = None,
+        traits: list[type] | None = None,
+        dialect: type | None = None,
+        **kwargs,
+    ):
         """
         This method is to perform all magic to make a `Operation` subclass works like a dataclass, like:
         - generate the method to emit IRDL operations,
@@ -206,27 +328,68 @@ class Operation(ir.OpView):
             if hasattr(base, "_fields"):
                 fields.extend(base._fields)
         for key, value in cls.__annotations__.items():
-            field = FieldDef.from_type_hint(key, value)
+            # if the class variable is not defined, we treat it as a default specifier;
+            # if it is assigned with `None`, we treat it as a specifier with `default_is_none=True`.
+            # e.g. x : int         # default specifier
+            #      y : int = None  # specifier with default_is_none=True
+            specifier = cls.__dict__.get(key, FieldSpecifier()) or FieldSpecifier(
+                default_is_none=True
+            )
+            # treat all other values as invalid
+            if not isinstance(specifier, FieldSpecifier):
+                raise TypeError(
+                    f"the field specifier of field '{key}' is not supported"
+                )
+            field = FieldDef.from_type_hint(key, value, specifier)
             fields.append(field)
 
         cls._fields = fields
+
+        traits = traits or []
+
+        for base in cls.__bases__:
+            if hasattr(base, "_traits"):
+                traits = base._traits + traits
+
+        cls._traits = traits
+
+        if dialect:
+            if hasattr(cls, "_dialect_obj"):
+                raise RuntimeError(
+                    f"This operation has already been attached to dialect '{cls._dialect_obj.DIALECT_NAMESPACE}'."
+                )
+            cls._dialect_obj = dialect
 
         # for subclasses without "name" parameter,
         # just treat them as normal classes
         if not name:
             return
 
+        if not hasattr(cls, "_dialect_obj"):
+            raise RuntimeError(
+                "Operation subclasses must either inherit from a Dialect's Operation subclass "
+                "or provide the dialect as a class keyword argument."
+            )
+
         op_name = name
         cls._op_name = op_name
-        dialect_name = cls._dialect_name
+        dialect_name = cls._dialect_obj.DIALECT_NAMESPACE
         dialect_obj = cls._dialect_obj
 
         cls._generate_class_attributes(dialect_name, op_name, fields)
         cls._generate_init_method(fields)
-        operands, attrs, results = partition_fields(fields)
+        operands, attrs, results, regions = partition_fields(fields)
         cls._generate_attr_properties(attrs)
         cls._generate_operand_properties(operands)
         cls._generate_result_properties(results)
+        cls._generate_region_properties(regions)
+
+        cls.Adaptor = type(
+            "Adaptor",
+            (OperationAdator,),
+            dict(),
+            operation=cls,
+        )
 
         dialect_obj.operations.append(cls)
 
@@ -237,7 +400,7 @@ class Operation(ir.OpView):
     @staticmethod
     def _generate_segments(
         operands_or_results: List[Union[OperandDef, ResultDef]],
-    ) -> List[int]:
+    ) -> List[int] | None:
         if any(i.variadicity != Variadicity.single for i in operands_or_results):
             return [
                 Operation._variadicity_to_segment(i.variadicity)
@@ -246,25 +409,17 @@ class Operation(ir.OpView):
         return None
 
     @staticmethod
-    def _generate_init_signature(
-        fields: List[FieldDef], can_infer_types: bool
-    ) -> Signature:
-        result_args = (
-            [] if can_infer_types else [i for i in fields if isinstance(i, ResultDef)]
-        )
-        # results are placed at the beginning of the parameter list,
-        # but operands and attributes can appear in any relative order.
-        args = result_args + [i for i in fields if not isinstance(i, ResultDef)]
-        positional_args = [
-            i.name for i in args if i.variadicity != Variadicity.optional
-        ]
-        optional_args = [i.name for i in args if i.variadicity == Variadicity.optional]
+    def _generate_init_signature(fields: List[FieldDef]) -> Signature:
+        args = [i for i in fields if not isinstance(i, RegionDef)]
 
         params = [Parameter("self", Parameter.POSITIONAL_ONLY)]
-        for i in positional_args:
-            params.append(Parameter(i, Parameter.POSITIONAL_OR_KEYWORD))
-        for i in optional_args:
-            params.append(Parameter(i, Parameter.KEYWORD_ONLY, default=None))
+
+        for i in args:
+            if i.kw_only:
+                params.append(Parameter(i.name, Parameter.KEYWORD_ONLY, default=None))
+            else:
+                params.append(Parameter(i.name, Parameter.POSITIONAL_OR_KEYWORD))
+
         params.append(Parameter("loc", Parameter.KEYWORD_ONLY, default=None))
         params.append(Parameter("ip", Parameter.KEYWORD_ONLY, default=None))
 
@@ -272,16 +427,9 @@ class Operation(ir.OpView):
 
     @classmethod
     def _generate_init_method(cls, fields: List[FieldDef]) -> None:
-        operands, attrs, results = partition_fields(fields)
-        inferred_types = [infer_type(i.constraint) for i in results]
+        operands, attrs, results, regions = partition_fields(fields)
 
-        # we infer result types only when all result types can be inferred
-        # and all results are single (not optional or variadic)
-        can_infer_types = all(inferred_types) and all(
-            i.variadicity == Variadicity.single for i in results
-        )
-
-        init_sig = cls._generate_init_signature(fields, can_infer_types)
+        init_sig = cls._generate_init_signature(fields)
 
         def __init__(*args, **kwargs):
             bound = init_sig.bind(*args, **kwargs)
@@ -289,17 +437,13 @@ class Operation(ir.OpView):
             args = bound.arguments
 
             _operands = [args[operand.name] for operand in operands]
-            _results = (
-                [t() for t in inferred_types]
-                if can_infer_types
-                else [args[result.name] for result in results]
-            )
+            _results = [result.process_type(args[result.name]) for result in results]
             _attributes = dict(
                 (attr.name, args[attr.name])
                 for attr in attrs
                 if args[attr.name] is not None
             )
-            _regions = None
+            _regions = len(regions) or None
             _ods_successors = None
             self = args["self"]
             super(Operation, self).__init__(
@@ -323,13 +467,13 @@ class Operation(ir.OpView):
     def _generate_class_attributes(
         cls, dialect_name: str, op_name: str, fields: List[FieldDef]
     ) -> None:
-        operands, attrs, results = partition_fields(fields)
+        operands, attrs, results, regions = partition_fields(fields)
 
         operand_segments = cls._generate_segments(operands)
         result_segments = cls._generate_segments(results)
 
         cls.OPERATION_NAME = f"{dialect_name}.{op_name}"
-        cls._ODS_REGIONS = (0, True)
+        cls._ODS_REGIONS = (len(regions), True)
         cls._ODS_OPERAND_SEGMENTS = operand_segments
         cls._ODS_RESULT_SEGMENTS = result_segments
 
@@ -340,6 +484,15 @@ class Operation(ir.OpView):
                 cls,
                 attr.name,
                 property(lambda self, name=attr.name: self.attributes[name]),
+            )
+
+    @classmethod
+    def _generate_region_properties(cls, regions: List[RegionDef]) -> None:
+        for i, region in enumerate(regions):
+            setattr(
+                cls,
+                region.name,
+                property(lambda self, i=i: self.regions[i]),
             )
 
     @classmethod
@@ -377,9 +530,19 @@ class Operation(ir.OpView):
                 setattr(cls, result.name, property(lambda self, i=i: self.results[i]))
 
     @classmethod
+    def _attach_traits(cls) -> None:
+        for trait in cls._traits:
+            trait.attach(cls.OPERATION_NAME)
+
+        if hasattr(cls, "verify_invariants") or hasattr(
+            cls, "verify_region_invariants"
+        ):
+            ir.DynamicOpTrait.attach(cls.OPERATION_NAME, cls)
+
+    @classmethod
     def _emit_operation(cls) -> None:
         ctx = ConstraintLoweringContext()
-        operands, attrs, results = partition_fields(cls._fields)
+        operands, attrs, results, regions = partition_fields(cls._fields)
 
         op = irdl.operation_(cls._op_name)
         with ir.InsertionPoint(op.body):
@@ -400,6 +563,220 @@ class Operation(ir.OpView):
                     [i.name for i in results],
                     [i.variadicity for i in results],
                 )
+            if regions:
+                irdl.regions_(
+                    [irdl.region([]) for _ in regions],
+                    [i.name for i in regions],
+                )
+
+
+class OperationAdator(ir.OpAdaptor):
+    @classmethod
+    def __init_subclass__(cls, *, operation: type):
+        cls.OPERATION_NAME = operation.OPERATION_NAME
+        cls._operation_cls = operation
+
+        operands, attrs, results, regions = partition_fields(operation._fields)
+
+        for attr in attrs:
+            setattr(
+                cls,
+                attr.name,
+                property(lambda self, name=attr.name: self.attributes[name]),
+            )
+
+        for i, operand in enumerate(operands):
+            if operation._ODS_OPERAND_SEGMENTS:
+
+                def getter(self, i=i, operand=operand):
+                    operand_range = segmented_accessor(
+                        self.operands,
+                        self.attributes["operandSegmentSizes"],
+                        i,
+                    )
+                    return normalize_value_range(operand_range, operand.variadicity)
+
+                setattr(cls, operand.name, property(getter))
+            else:
+                setattr(cls, operand.name, property(lambda self, i=i: self.operands[i]))
+
+
+@dataclass
+class ParamDef:
+    name: str
+    constraint: Any
+
+
+class Type(ir.DynamicType):
+    """
+    Base class of Python-defined types.
+
+    The following example shows two ways to define types via this class:
+    ```python
+    class MyType(MyDialect.Type, name=..):
+      ...
+
+    class MyType(Type, dialect=MyDialect, name=..):
+      ...
+    ```
+    """
+
+    @classmethod
+    def __init_subclass__(
+        cls,
+        *,
+        name: str | None = None,
+        dialect: type | None = None,
+        **kwargs,
+    ):
+        super().__init_subclass__(**kwargs)
+
+        fields = []
+
+        for base in cls.__bases__:
+            if hasattr(base, "_fields"):
+                fields.extend(base._fields)
+        for key, value in cls.__annotations__.items():
+            field = ParamDef(key, value)
+            fields.append(field)
+
+        cls._fields = fields
+
+        if dialect:
+            if hasattr(cls, "_dialect_obj"):
+                raise RuntimeError(
+                    f"This type has already been attached to dialect '{cls._dialect_obj.DIALECT_NAMESPACE}'."
+                )
+            cls._dialect_obj = dialect
+
+        # for subclasses without "name" parameter,
+        # just treat them as normal classes
+        if not name:
+            return
+
+        if not hasattr(cls, "_dialect_obj"):
+            raise RuntimeError(
+                "Type subclasses must either inherit from a Dialect's Type subclass "
+                "or provide the dialect as a class keyword argument."
+            )
+
+        cls._name = name
+        cls._dialect_name = cls._dialect_obj.DIALECT_NAMESPACE
+        cls.type_name = f"{cls._dialect_name}.{name}"
+
+        for i, field in enumerate(cls._fields):
+            setattr(
+                cls,
+                field.name,
+                property(lambda self, i=i: self.params[i]),
+            )
+
+        cls._dialect_obj.types.append(cls)
+
+    @classmethod
+    def get(cls, *args, context=None):
+        args = [
+            ir.TypeAttr.get(arg, context) if isinstance(arg, ir.Type) else arg
+            for arg in args
+        ]
+        return cls(ir.DynamicType.get(cls.type_name, args, context=context))
+
+    @classmethod
+    def _emit_type(cls) -> None:
+        ctx = ConstraintLoweringContext()
+
+        t = irdl.type_(cls._name)
+        with ir.InsertionPoint(t.body):
+            irdl.parameters(
+                [ctx.lower(f.constraint) for f in cls._fields],
+                [f.name for f in cls._fields],
+            )
+
+
+class Attribute(ir.DynamicAttr):
+    """
+    Base class of Python-defined attributes.
+
+    The following example shows two ways to define attributes via this class:
+    ```python
+    class MyAttr(MyDialect.Attribute, name=..):
+      ...
+
+    class MyAttr(Attribute, dialect=MyDialect, name=..):
+      ...
+    ```
+    """
+
+    @classmethod
+    def __init_subclass__(
+        cls,
+        *,
+        name: str | None = None,
+        dialect: type | None = None,
+        **kwargs,
+    ):
+        super().__init_subclass__(**kwargs)
+
+        fields = []
+
+        for base in cls.__bases__:
+            if hasattr(base, "_fields"):
+                fields.extend(base._fields)
+        for key, value in cls.__annotations__.items():
+            field = ParamDef(key, value)
+            fields.append(field)
+
+        cls._fields = fields
+
+        if dialect:
+            if hasattr(cls, "_dialect_obj"):
+                raise RuntimeError(
+                    f"This attribute has already been attached to dialect '{cls._dialect_obj.DIALECT_NAMESPACE}'."
+                )
+            cls._dialect_obj = dialect
+
+        # for subclasses without "name" parameter,
+        # just treat them as normal classes
+        if not name:
+            return
+
+        if not hasattr(cls, "_dialect_obj"):
+            raise RuntimeError(
+                "Attribute subclasses must either inherit from a Dialect's Attribute subclass "
+                "or provide the dialect as a class keyword argument."
+            )
+
+        cls._name = name
+        cls._dialect_name = cls._dialect_obj.DIALECT_NAMESPACE
+        cls.attr_name = f"{cls._dialect_name}.{name}"
+
+        for i, field in enumerate(cls._fields):
+            setattr(
+                cls,
+                field.name,
+                property(lambda self, i=i: self.params[i]),
+            )
+
+        cls._dialect_obj.attributes.append(cls)
+
+    @classmethod
+    def get(cls, *args, context=None):
+        args = [
+            ir.TypeAttr.get(arg, context) if isinstance(arg, ir.Type) else arg
+            for arg in args
+        ]
+        return cls(ir.DynamicAttr.get(cls.attr_name, args, context=context))
+
+    @classmethod
+    def _emit_attr(cls) -> None:
+        ctx = ConstraintLoweringContext()
+
+        t = irdl.attribute(cls._name)
+        with ir.InsertionPoint(t.body):
+            irdl.parameters(
+                [ctx.lower(f.constraint) for f in cls._fields],
+                [f.name for f in cls._fields],
+            )
 
 
 class Dialect(ir.Dialect):
@@ -432,40 +809,78 @@ class Dialect(ir.Dialect):
         cls.Operation = type(
             "Operation",
             (Operation,),
-            {"_dialect_obj": cls, "_dialect_name": name},
+            dict(),
+            dialect=cls,
+        )
+        cls.types = []
+        cls.Type = type(
+            "Type",
+            (Type,),
+            dict(),
+            dialect=cls,
+        )
+        cls.attributes = []
+        cls.Attribute = type(
+            "Attribute",
+            (Attribute,),
+            dict(),
+            dialect=cls,
         )
 
     @classmethod
     def _emit_dialect(cls) -> None:
         d = irdl.dialect(cls.name)
         with ir.InsertionPoint(d.body):
+            for type_ in cls.types:
+                type_._emit_type()
+            for attr in cls.attributes:
+                attr._emit_attr()
             for op in cls.operations:
                 op._emit_operation()
 
     @classmethod
     def _emit_module(cls) -> ir.Module:
-        m = ir.Module.create()
-        with ir.InsertionPoint(m.body):
-            cls._emit_dialect()
+        with ir.Location.unknown() if not ir.Location.current else nullcontext():
+            m = ir.Module.create()
+            with ir.InsertionPoint(m.body):
+                cls._emit_dialect()
 
         return m
 
     @classmethod
-    def load(cls) -> None:
-        if hasattr(cls, "_mlir_module"):
-            raise RuntimeError(f"Dialect {cls.name} is already loaded.")
+    def load(
+        cls,
+        *,
+        reload: bool = False,
+    ) -> None:
+        if hasattr(cls, "_mlir_module") and not reload:
+            if cls._mlir_module.context is not ir.Context.current:
+                raise RuntimeError(
+                    "This dialect was loaded in a different context. "
+                    "Please set reload=True to reload the dialect in the current context."
+                )
+            return
 
-        mlir_module = cls._emit_module()
-
+        cls._mlir_module = cls._emit_module()
         pm = PassManager()
         pm.add("canonicalize, cse")
-        pm.run(mlir_module.operation)
+        pm.run(cls._mlir_module.operation)
 
-        irdl.load_dialects(mlir_module)
-
-        _cext.register_dialect(cls)
+        irdl.load_dialects(cls._mlir_module)
 
         for op in cls.operations:
-            _cext.register_operation(cls)(op)
+            op._attach_traits()
 
-        cls._mlir_module = mlir_module
+        _cext.globals._register_dialect_impl(cls.DIALECT_NAMESPACE, cls, replace=reload)
+
+        for type_ in cls.types:
+            typeid = ir.DynamicType.lookup_typeid(type_.type_name)
+            _cext.register_type_caster(typeid, replace=reload)(type_)
+
+        for attr in cls.attributes:
+            typeid = ir.DynamicAttr.lookup_typeid(attr.attr_name)
+            _cext.register_type_caster(typeid, replace=reload)(attr)
+
+        for op in cls.operations:
+            _cext.register_operation(cls, replace=reload)(op)
+            _cext.register_op_adaptor(op, replace=reload)(op.Adaptor)

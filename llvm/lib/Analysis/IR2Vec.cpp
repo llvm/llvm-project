@@ -40,7 +40,7 @@ namespace ir2vec {
 cl::OptionCategory IR2VecCategory("IR2Vec Options");
 
 // FIXME: Use a default vocab when not specified
-static cl::opt<std::string>
+cl::opt<std::string>
     VocabFile("ir2vec-vocab-path", cl::Optional,
               cl::desc("Path to the vocabulary file for IR2Vec"), cl::init(""),
               cl::cat(IR2VecCategory));
@@ -180,8 +180,9 @@ Embedding Embedder::computeEmbeddings(const BasicBlock &BB) const {
   Embedding BBVector(Dimension, 0);
 
   // We consider only the non-debug and non-pseudo instructions
-  for (const auto &I : BB.instructionsWithoutDebug())
-    BBVector += computeEmbeddings(I);
+  for (const auto &I : BB)
+    if (!I.isDebugOrPseudoInst())
+      BBVector += computeEmbeddings(I);
   return BBVector;
 }
 

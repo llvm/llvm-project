@@ -19,7 +19,6 @@
 #include "llvm/IR/DiagnosticInfo.h"
 
 #define GET_INSTRINFO_HEADER
-#define GET_INSTRINFO_OPERAND_ENUM
 #include "RISCVGenInstrInfo.inc"
 #include "RISCVGenRegisterInfo.inc"
 
@@ -64,6 +63,7 @@ enum CondCode {
 };
 
 CondCode getInverseBranchCondition(CondCode);
+unsigned getInverseBranchOpcode(unsigned BCC);
 unsigned getBrCond(CondCode CC, unsigned SelectOpc = 0);
 
 } // end of namespace RISCVCC
@@ -175,10 +175,6 @@ public:
   bool isBranchOffsetInRange(unsigned BranchOpc,
                              int64_t BrOffset) const override;
 
-  bool analyzeSelect(const MachineInstr &MI,
-                     SmallVectorImpl<MachineOperand> &Cond, unsigned &TrueOp,
-                     unsigned &FalseOp, bool &Optimizable) const override;
-
   MachineInstr *optimizeSelect(MachineInstr &MI,
                                SmallPtrSetImpl<MachineInstr *> &SeenMIs,
                                bool) const override;
@@ -236,6 +232,7 @@ public:
 
   bool shouldOutlineFromFunctionByDefault(MachineFunction &MF) const override;
 
+  bool analyzeCandidate(outliner::Candidate &C) const;
   // Calculate target-specific information for a set of outlining candidates.
   std::optional<std::unique_ptr<outliner::OutlinedFunction>>
   getOutliningCandidateInfo(
@@ -333,6 +330,14 @@ public:
   /// Return true if \p MI is a COPY to a vector register of a specific \p LMul,
   /// or any kind of vector registers when \p LMul is zero.
   bool isVRegCopy(const MachineInstr *MI, unsigned LMul = 0) const;
+
+  /// Return true if the instruction requires an NTL hint to be emitted.
+  bool requiresNTLHint(const MachineInstr &MI) const;
+
+  /// Return true if moving \p From down to \p To won't cause any physical
+  /// register reads or writes to be clobbered and no visible side effects are
+  /// affected. From and To must be in the same block.
+  static bool isSafeToMove(const MachineInstr &From, const MachineInstr &To);
 
   /// Return true if pairing the given load or store may be paired with another.
   static bool isPairableLdStInstOpc(unsigned Opc);

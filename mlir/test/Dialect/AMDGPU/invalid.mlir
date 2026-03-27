@@ -396,9 +396,9 @@ func.func @make_gather_dma_base_invalid_addressspace(%idx: index, %smem : memref
 
 // -----
 
-func.func @make_dma_base_invalid_barrier(%base: !amdgpu.tdm_base<i32>, %barrier: memref<8xi32>, %idx: index) {
+func.func @make_dma_base_invalid_barrier(%base: !amdgpu.tdm_base<i32>, %barrier: memref<8x!amdgpu.ds_barrier_state>, %idx: index) {
   // expected-error@+1 {{'amdgpu.make_dma_descriptor' op atomic barrier address must be in LDS.}}
-  amdgpu.make_dma_descriptor %base globalSize [64, 64] globalStride [64, 1] sharedSize [64, 64] atomicBarrier(%barrier[%idx] : memref<8xi32>) : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+  amdgpu.make_dma_descriptor %base globalSize [64, 64] globalStride [64, 1] sharedSize [64, 64] atomicBarrier(%barrier[%idx] : memref<8x!amdgpu.ds_barrier_state>) : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
   return
 }
 
@@ -515,4 +515,148 @@ func.func @sparse_mfma_wrong_dest_count(%a: vector<4xf16>, %b: vector<8xf16>, %c
   // expected-error@+1 {{'amdgpu.sparse_mfma' op expected 4 result values for this operation but got 16}}
   %d = amdgpu.sparse_mfma 16x16x32 %a * %b + %c sparse(%idx : vector<4xi8>) : vector<4xf16>, vector<8xf16>, vector<16xf32>
   func.return %d : vector<16xf32>
+}
+
+// -----
+
+func.func @dpp_rejects_scalable(%a: vector<[16]x[16]xi8>, %b: vector<[16]x[16]xi8>) {
+  // expected-error @+1 {{fixed-length vector of integer or float with element bitwidth <= 64 values of ranks 1}}
+  %0 = amdgpu.dpp %a %b row_shl(1 : i32) : vector<[16]x[16]xi8>
+  func.return
+}
+
+// -----
+
+func.func @ds_barrier_init_non_workgroup(%barrier: memref<!amdgpu.ds_barrier_state>, %participants: i32) {
+  // expected-error@+1 {{'amdgpu.ds_barrier_init' op barrier must be in workgroup (LDS) memory}}
+  amdgpu.ds_barrier_init %barrier[], %participants : memref<!amdgpu.ds_barrier_state>, i32
+  func.return
+}
+
+// -----
+
+func.func @ds_barrier_poll_state_non_workgroup(%barrier: memref<!amdgpu.ds_barrier_state, #gpu.address_space<global>>) -> !amdgpu.ds_barrier_state {
+  // expected-error@+1 {{'amdgpu.ds_barrier_poll_state' op barrier must be in workgroup (LDS) memory}}
+  %state = amdgpu.ds_barrier_poll_state %barrier[] : memref<!amdgpu.ds_barrier_state, #gpu.address_space<global>> -> !amdgpu.ds_barrier_state
+  func.return %state : !amdgpu.ds_barrier_state
+}
+
+// -----
+
+func.func @ds_barrier_arrive_non_workgroup(%barrier: memref<!amdgpu.ds_barrier_state, #amdgpu.address_space<fat_raw_buffer>>, %count: i64) -> !amdgpu.ds_barrier_state {
+  // expected-error@+1 {{'amdgpu.ds_barrier_arrive' op barrier must be in workgroup (LDS) memory}}
+  %old_state = amdgpu.ds_barrier_arrive %barrier[], %count : memref<!amdgpu.ds_barrier_state, #amdgpu.address_space<fat_raw_buffer>>, i64 -> !amdgpu.ds_barrier_state
+  func.return %old_state : !amdgpu.ds_barrier_state
+}
+
+// -----
+
+func.func @sparse_wmma_invalid_m(%a: vector<8xf16>, %b: vector<16xf16>, %c: vector<8xf32>, %idx: vector<4xi8>) -> vector<8xf32> {
+  // expected-error@+1 {{'amdgpu.sparse_wmma' op attribute 'm' failed to satisfy constraint: 32-bit signless integer attribute whose value is one of {16}}}
+  %d = amdgpu.sparse_wmma 32x16x32 %a * %b + %c sparse(%idx : vector<4xi8>) : vector<8xf16>, vector<16xf16>, vector<8xf32>
+  func.return %d : vector<8xf32>
+}
+
+// -----
+
+func.func @sparse_wmma_invalid_n(%a: vector<8xf16>, %b: vector<16xf16>, %c: vector<8xf32>, %idx: vector<4xi8>) -> vector<8xf32> {
+  // expected-error@+1 {{'amdgpu.sparse_wmma' op attribute 'n' failed to satisfy constraint: 32-bit signless integer attribute whose value is one of {16}}}
+  %d = amdgpu.sparse_wmma 16x32x32 %a * %b + %c sparse(%idx : vector<4xi8>) : vector<8xf16>, vector<16xf16>, vector<8xf32>
+  func.return %d : vector<8xf32>
+}
+
+// -----
+
+func.func @sparse_wmma_invalid_k(%a: vector<8xf16>, %b: vector<16xf16>, %c: vector<8xf32>, %idx: vector<4xi8>) -> vector<8xf32> {
+  // expected-error@+1 {{'amdgpu.sparse_wmma' op attribute 'k' failed to satisfy constraint: 32-bit signless integer attribute whose value is one of {32, 64, 128}}}
+  %d = amdgpu.sparse_wmma 16x16x16 %a * %b + %c sparse(%idx : vector<4xi8>) : vector<8xf16>, vector<16xf16>, vector<8xf32>
+  func.return %d : vector<8xf32>
+}
+
+// -----
+
+func.func @sparse_wmma_dense_not_double_sparse(%a: vector<8xf16>, %b: vector<8xf16>, %c: vector<8xf32>, %idx: vector<4xi8>) -> vector<8xf32> {
+  // expected-error@+1 {{'amdgpu.sparse_wmma' op expected dense source operand to have exactly double the number of elements of the sparse source operand}}
+  %d = amdgpu.sparse_wmma 16x16x32 %a * %b + %c sparse(%idx : vector<4xi8>) : vector<8xf16>, vector<8xf16>, vector<8xf32>
+  func.return %d : vector<8xf32>
+}
+
+// -----
+
+func.func @sparse_wmma_dense_too_many_elements(%a: vector<8xf16>, %b: vector<32xf16>, %c: vector<8xf32>, %idx: vector<4xi8>) -> vector<8xf32> {
+  // expected-error@+1 {{'amdgpu.sparse_wmma' op expected dense source operand to have exactly double the number of elements of the sparse source operand}}
+  %d = amdgpu.sparse_wmma 16x16x32 %a * %b + %c sparse(%idx : vector<4xi8>) : vector<8xf16>, vector<32xf16>, vector<8xf32>
+  func.return %d : vector<8xf32>
+}
+
+// -----
+
+func.func @sparse_wmma_mismatched_element_types(%a: vector<8xf16>, %b: vector<16xbf16>, %c: vector<8xf32>, %idx: vector<4xi8>) -> vector<8xf32> {
+  // expected-error@+1 {{'amdgpu.sparse_wmma' op expected source operands to have the same element type}}
+  %d = amdgpu.sparse_wmma 16x16x32 %a * %b + %c sparse(%idx : vector<4xi8>) : vector<8xf16>, vector<16xbf16>, vector<8xf32>
+  func.return %d : vector<8xf32>
+}
+
+// -----
+
+func.func @sparse_wmma_mismatched_integer_types(%a: vector<8xi8>, %b: vector<16xi4>, %c: vector<8xi32>, %idx: vector<4xi8>) -> vector<8xi32> {
+  // expected-error@+1 {{'amdgpu.sparse_wmma' op expected source operands to have the same element type}}
+  %d = amdgpu.sparse_wmma 16x16x32 %a * %b + %c sparse(%idx : vector<4xi8>) : vector<8xi8>, vector<16xi4>, vector<8xi32>
+  func.return %d : vector<8xi32>
+}
+
+// -----
+
+func.func @sparse_wmma_invalid_sparse_idx_type(%a: vector<8xf16>, %b: vector<16xf16>, %c: vector<8xf32>, %idx: vector<2xi16>) -> vector<8xf32> {
+  // expected-error@+1 {{'amdgpu.sparse_wmma' op operand #3 must be fixed-length vector of 8-bit signless integer values of length 4, but got 'vector<2xi16>'}}
+  %d = amdgpu.sparse_wmma 16x16x32 %a * %b + %c sparse(%idx : vector<2xi16>) : vector<8xf16>, vector<16xf16>, vector<8xf32>
+  func.return %d : vector<8xf32>
+}
+
+// -----
+
+func.func @sparse_wmma_invalid_sparse_idx_length(%a: vector<8xf16>, %b: vector<16xf16>, %c: vector<8xf32>, %idx: vector<8xi8>) -> vector<8xf32> {
+  // expected-error@+1 {{'amdgpu.sparse_wmma' op operand #3 must be fixed-length vector of 8-bit signless integer values of length 4, but got 'vector<8xi8>'}}
+  %d = amdgpu.sparse_wmma 16x16x32 %a * %b + %c sparse(%idx : vector<8xi8>) : vector<8xf16>, vector<16xf16>, vector<8xf32>
+  func.return %d : vector<8xf32>
+}
+
+// -----
+
+func.func @sparse_wmma_invalid_accumulator_type(%a: vector<8xf16>, %b: vector<16xf16>, %c: vector<4xi32>, %idx: vector<4xi8>) -> vector<4xi32> {
+  // expected-error@+1 {{'amdgpu.sparse_wmma' op source operand and destination operands must all be either integer or float types}}
+  %d = amdgpu.sparse_wmma 16x16x32 %a * %b + %c sparse(%idx : vector<4xi8>) : vector<8xf16>, vector<16xf16>, vector<4xi32>
+  func.return %d : vector<4xi32>
+}
+
+// -----
+
+func.func @sparse_wmma_wave64_i4_equal_length_wrong_k(%a: vector<8xi4>, %b: vector<8xi4>, %c: vector<4xi32>, %idx: vector<4xi8>) -> vector<4xi32> {
+  // expected-error@+1 {{'amdgpu.sparse_wmma' op expected dense source operand to have exactly double the number of elements of the sparse source operand}}
+  %d = amdgpu.sparse_wmma 16x16x64 %a * %b + %c sparse(%idx : vector<4xi8>) {wave64} : vector<8xi4>, vector<8xi4>, vector<4xi32>
+  func.return %d : vector<4xi32>
+}
+
+// -----
+
+func.func @sparse_wmma_wave32_i4_should_not_have_equal_length(%a: vector<8xi4>, %b: vector<8xi4>, %c: vector<8xi32>, %idx: vector<4xi8>) -> vector<8xi32> {
+  // expected-error@+1 {{'amdgpu.sparse_wmma' op expected dense source operand to have exactly double the number of elements of the sparse source operand}}
+  %d = amdgpu.sparse_wmma 16x16x32 %a * %b + %c sparse(%idx : vector<4xi8>) : vector<8xi4>, vector<8xi4>, vector<8xi32>
+  func.return %d : vector<8xi32>
+}
+
+// -----
+
+func.func @sparse_wmma_invalid_output_vector_length(%a: vector<16xf16>, %b: vector<32xf16>, %c: vector<16xf32>, %idx: vector<4xi8>) -> vector<16xf32> {
+  // expected-error@+1 {{'amdgpu.sparse_wmma' op expected 8 result values for this operation but got 16}}
+  %d = amdgpu.sparse_wmma 16x16x64 %a * %b + %c sparse(%idx : vector<4xi8>) : vector<16xf16>, vector<32xf16>, vector<16xf32>
+  func.return %d : vector<16xf32>
+}
+
+// -----
+
+func.func @sparse_wmma_i4_requires_equal_length_wave64(%a: vector<8xi4>, %b: vector<16xi4>, %c: vector<4xi32>, %idx: vector<4xi8>) -> vector<4xi32> {
+  // expected-error@+1 {{'amdgpu.sparse_wmma' op expected dense source operand to have exactly the same the number of elements}}
+  %d = amdgpu.sparse_wmma 16x16x32 %a * %b + %c sparse(%idx : vector<4xi8>) {wave64} : vector<8xi4>, vector<16xi4>, vector<4xi32>
+  func.return %d : vector<4xi32>
 }

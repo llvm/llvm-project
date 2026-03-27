@@ -44,7 +44,7 @@ struct annotated_ptr {
 // SANITIZE-WITH-ATTR-NEXT:    [[BUF:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // SANITIZE-WITH-ATTR-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[BUF]], align 8, !tbaa [[_ZTS3FOOPTR_TBAA8:![0-9]+]]
 // SANITIZE-WITH-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INDEX]] to i64
-// SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds ptr, ptr [[TMP4]], i64 [[IDXPROM]]
+// SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP4]], i64 [[IDXPROM]]
 // SANITIZE-WITH-ATTR-NEXT:    store ptr [[VALUE]], ptr [[ARRAYIDX]], align 8, !tbaa [[_ZTS3FOOPTR_TBAA14:![0-9]+]]
 // SANITIZE-WITH-ATTR-NEXT:    ret void
 //
@@ -54,7 +54,7 @@ struct annotated_ptr {
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[BUF:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[BUF]], align 8, !tbaa [[_ZTS3FOOPTR_TBAA6:![0-9]+]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INDEX]] to i64
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i64 [[IDXPROM]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP0]], i64 [[IDXPROM]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    store ptr [[VALUE]], ptr [[ARRAYIDX]], align 8, !tbaa [[_ZTS3FOOPTR_TBAA12:![0-9]+]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    ret void
 //
@@ -64,7 +64,7 @@ struct annotated_ptr {
 // SANITIZE-WITHOUT-ATTR-NEXT:    [[BUF:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[BUF]], align 8, !tbaa [[_ZTS3FOOPTR_TBAA6:![0-9]+]]
 // SANITIZE-WITHOUT-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INDEX]] to i64
-// SANITIZE-WITHOUT-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i64 [[IDXPROM]]
+// SANITIZE-WITHOUT-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP0]], i64 [[IDXPROM]]
 // SANITIZE-WITHOUT-ATTR-NEXT:    store ptr [[VALUE]], ptr [[ARRAYIDX]], align 8, !tbaa [[_ZTS3FOOPTR_TBAA12:![0-9]+]]
 // SANITIZE-WITHOUT-ATTR-NEXT:    ret void
 //
@@ -74,7 +74,7 @@ struct annotated_ptr {
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[BUF:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[BUF]], align 8, !tbaa [[_ZTS3FOOPTR_TBAA6:![0-9]+]]
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INDEX]] to i64
-// NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i64 [[IDXPROM]]
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP0]], i64 [[IDXPROM]]
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    store ptr [[VALUE]], ptr [[ARRAYIDX]], align 8, !tbaa [[_ZTS3FOOPTR_TBAA12:![0-9]+]]
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    ret void
 //
@@ -99,7 +99,7 @@ void test1(struct annotated_ptr *p, int index, struct foo *value) {
 // SANITIZE-WITH-ATTR-NEXT:    [[BUF:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // SANITIZE-WITH-ATTR-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[BUF]], align 8, !tbaa [[_ZTS3FOOPTR_TBAA8]]
 // SANITIZE-WITH-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INDEX]] to i64
-// SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds ptr, ptr [[TMP4]], i64 [[IDXPROM]]
+// SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP4]], i64 [[IDXPROM]]
 // SANITIZE-WITH-ATTR-NEXT:    store ptr [[VALUE]], ptr [[ARRAYIDX]], align 8, !tbaa [[_ZTS3FOOPTR_TBAA14]]
 // SANITIZE-WITH-ATTR-NEXT:    ret void
 //
@@ -109,7 +109,7 @@ void test1(struct annotated_ptr *p, int index, struct foo *value) {
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[BUF:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[BUF]], align 8, !tbaa [[_ZTS3FOOPTR_TBAA6]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INDEX]] to i64
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i64 [[IDXPROM]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP0]], i64 [[IDXPROM]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    store ptr [[VALUE]], ptr [[ARRAYIDX]], align 8, !tbaa [[_ZTS3FOOPTR_TBAA12]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    ret void
 //
@@ -119,7 +119,7 @@ void test1(struct annotated_ptr *p, int index, struct foo *value) {
 // SANITIZE-WITHOUT-ATTR-NEXT:    [[BUF:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[BUF]], align 8, !tbaa [[_ZTS3FOOPTR_TBAA6]]
 // SANITIZE-WITHOUT-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INDEX]] to i64
-// SANITIZE-WITHOUT-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i64 [[IDXPROM]]
+// SANITIZE-WITHOUT-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP0]], i64 [[IDXPROM]]
 // SANITIZE-WITHOUT-ATTR-NEXT:    store ptr [[VALUE]], ptr [[ARRAYIDX]], align 8, !tbaa [[_ZTS3FOOPTR_TBAA12]]
 // SANITIZE-WITHOUT-ATTR-NEXT:    ret void
 //
@@ -129,7 +129,7 @@ void test1(struct annotated_ptr *p, int index, struct foo *value) {
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[BUF:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[BUF]], align 8, !tbaa [[_ZTS3FOOPTR_TBAA6]]
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INDEX]] to i64
-// NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i64 [[IDXPROM]]
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP0]], i64 [[IDXPROM]]
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    store ptr [[VALUE]], ptr [[ARRAYIDX]], align 8, !tbaa [[_ZTS3FOOPTR_TBAA12]]
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    ret void
 //
@@ -154,7 +154,7 @@ void test2(struct annotated_ptr *p, int index, struct foo *value) {
 // SANITIZE-WITH-ATTR-NEXT:    [[BUF:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // SANITIZE-WITH-ATTR-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[BUF]], align 8, !tbaa [[_ZTS3FOOPTR_TBAA8]]
 // SANITIZE-WITH-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INDEX]] to i64
-// SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds ptr, ptr [[TMP4]], i64 [[IDXPROM]]
+// SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP4]], i64 [[IDXPROM]]
 // SANITIZE-WITH-ATTR-NEXT:    store ptr [[VALUE]], ptr [[ARRAYIDX]], align 8, !tbaa [[_ZTS3FOOPTR_TBAA14]]
 // SANITIZE-WITH-ATTR-NEXT:    ret void
 //
@@ -164,7 +164,7 @@ void test2(struct annotated_ptr *p, int index, struct foo *value) {
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[BUF:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[BUF]], align 8, !tbaa [[_ZTS3FOOPTR_TBAA6]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INDEX]] to i64
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i64 [[IDXPROM]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP0]], i64 [[IDXPROM]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    store ptr [[VALUE]], ptr [[ARRAYIDX]], align 8, !tbaa [[_ZTS3FOOPTR_TBAA12]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    ret void
 //
@@ -174,7 +174,7 @@ void test2(struct annotated_ptr *p, int index, struct foo *value) {
 // SANITIZE-WITHOUT-ATTR-NEXT:    [[BUF:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[BUF]], align 8, !tbaa [[_ZTS3FOOPTR_TBAA6]]
 // SANITIZE-WITHOUT-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INDEX]] to i64
-// SANITIZE-WITHOUT-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i64 [[IDXPROM]]
+// SANITIZE-WITHOUT-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP0]], i64 [[IDXPROM]]
 // SANITIZE-WITHOUT-ATTR-NEXT:    store ptr [[VALUE]], ptr [[ARRAYIDX]], align 8, !tbaa [[_ZTS3FOOPTR_TBAA12]]
 // SANITIZE-WITHOUT-ATTR-NEXT:    ret void
 //
@@ -184,7 +184,7 @@ void test2(struct annotated_ptr *p, int index, struct foo *value) {
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[BUF:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[BUF]], align 8, !tbaa [[_ZTS3FOOPTR_TBAA6]]
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INDEX]] to i64
-// NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i64 [[IDXPROM]]
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP0]], i64 [[IDXPROM]]
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    store ptr [[VALUE]], ptr [[ARRAYIDX]], align 8, !tbaa [[_ZTS3FOOPTR_TBAA12]]
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    ret void
 //

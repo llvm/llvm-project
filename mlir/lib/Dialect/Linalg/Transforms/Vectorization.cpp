@@ -38,6 +38,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/InterleavedRange.h"
@@ -644,19 +645,19 @@ mlir::linalg::getCombinerOpKind(Operation *combinerOp) {
   return llvm::TypeSwitch<Operation *, std::optional<CombiningKind>>(combinerOp)
       .Case<arith::AddIOp, arith::AddFOp>(
           [&](auto op) { return CombiningKind::ADD; })
-      .Case<arith::AndIOp>([&](auto op) { return CombiningKind::AND; })
-      .Case<arith::MaxSIOp>([&](auto op) { return CombiningKind::MAXSI; })
-      .Case<arith::MaxUIOp>([&](auto op) { return CombiningKind::MAXUI; })
-      .Case<arith::MaximumFOp>([&](auto op) { return CombiningKind::MAXIMUMF; })
-      .Case<arith::MaxNumFOp>([&](auto op) { return CombiningKind::MAXNUMF; })
-      .Case<arith::MinSIOp>([&](auto op) { return CombiningKind::MINSI; })
-      .Case<arith::MinUIOp>([&](auto op) { return CombiningKind::MINUI; })
-      .Case<arith::MinimumFOp>([&](auto op) { return CombiningKind::MINIMUMF; })
-      .Case<arith::MinNumFOp>([&](auto op) { return CombiningKind::MINNUMF; })
+      .Case([&](arith::AndIOp op) { return CombiningKind::AND; })
+      .Case([&](arith::MaxSIOp op) { return CombiningKind::MAXSI; })
+      .Case([&](arith::MaxUIOp op) { return CombiningKind::MAXUI; })
+      .Case([&](arith::MaximumFOp op) { return CombiningKind::MAXIMUMF; })
+      .Case([&](arith::MaxNumFOp op) { return CombiningKind::MAXNUMF; })
+      .Case([&](arith::MinSIOp op) { return CombiningKind::MINSI; })
+      .Case([&](arith::MinUIOp op) { return CombiningKind::MINUI; })
+      .Case([&](arith::MinimumFOp op) { return CombiningKind::MINIMUMF; })
+      .Case([&](arith::MinNumFOp op) { return CombiningKind::MINNUMF; })
       .Case<arith::MulIOp, arith::MulFOp>(
           [&](auto op) { return CombiningKind::MUL; })
-      .Case<arith::OrIOp>([&](auto op) { return CombiningKind::OR; })
-      .Case<arith::XOrIOp>([&](auto op) { return CombiningKind::XOR; })
+      .Case([&](arith::OrIOp op) { return CombiningKind::OR; })
+      .Case([&](arith::XOrIOp op) { return CombiningKind::XOR; })
       .Default(std::nullopt);
 }
 
@@ -710,8 +711,8 @@ static Operation *buildMultiDimReduce(OpBuilder &b, Operation *reduceOp,
 }
 
 static SmallVector<bool> getDimsToReduce(LinalgOp linalgOp) {
-  return llvm::to_vector(
-      llvm::map_range(linalgOp.getIteratorTypesArray(), isReductionIterator));
+  return llvm::map_to_vector(linalgOp.getIteratorTypesArray(),
+                             isReductionIterator);
 }
 
 /// Check if `op` is a linalg.reduce or a linalg.generic that has at least one
@@ -1092,6 +1093,11 @@ getTensorExtractMemoryAccessPattern(tensor::ExtractOp extractOp,
   if (inputShape.getShape().empty())
     return VectorMemoryAccessKind::ScalarBroadcast;
 
+  // 0a. Is the result a 0-D vector? If yes, there are no iteration dimensions
+  // so the tensor.extract is a single scalar load regardless of the index.
+  if (resType.getRank() == 0)
+    return VectorMemoryAccessKind::ScalarBroadcast;
+
   // True for vectors that are effectively 1D, e.g. `vector<1x4x1xi32>`, false
   // otherwise.
   bool isOutput1DVector =
@@ -1253,19 +1259,22 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
         rewriter, loc, resultType, extractOp.getTensor(), transferReadIdxs,
         /*padding=*/std::nullopt, permutationMap, inBounds);
 
-    // Mask this broadcasting xfer_read here rather than relying on the generic
-    // path (the generic path assumes identity masking map, which wouldn't be
-    // valid here).
-    SmallVector<int64_t> readMaskShape = {1};
-    auto readMaskType = VectorType::get(readMaskShape, rewriter.getI1Type());
-    auto allTrue = vector::ConstantMaskOp::create(
-        rewriter, loc, readMaskType, vector::ConstantMaskKind::AllTrue);
-    auto *maskedReadOp =
-        mlir::vector::maskOperation(rewriter, transferReadOp, allTrue);
+    Operation *readOrMaskedReadOp = transferReadOp;
+    if (dstRank > 0) {
+      // Mask this broadcasting xfer_read here rather than relying on the
+      // generic path (the generic path assumes identity masking map, which
+      // wouldn't be valid here).
+      SmallVector<int64_t> readMaskShape = {1};
+      auto readMaskType = VectorType::get(readMaskShape, rewriter.getI1Type());
+      auto allTrue = vector::ConstantMaskOp::create(
+          rewriter, loc, readMaskType, vector::ConstantMaskKind::AllTrue);
+      readOrMaskedReadOp =
+          mlir::vector::maskOperation(rewriter, transferReadOp, allTrue);
+    }
 
     LDBG() << "Vectorised as scalar broadcast load: " << extractOp;
     return VectorizationHookResult{VectorizationHookStatus::NewOp,
-                                   maskedReadOp};
+                                   readOrMaskedReadOp};
   }
 
   // 2b. Handle contiguous access.
@@ -2109,7 +2118,7 @@ vectorizeDynamicConvOpPrecondition(linalg::LinalgOp conv,
 static LogicalResult
 vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op,
                                      bool flatten1DDepthwiseConv) {
-  if (isa<ConvolutionOpInterface>(op.getOperation()))
+  if (isaConvolutionOpInterface(op))
     return vectorizeDynamicConvOpPrecondition(op, flatten1DDepthwiseConv);
 
   if (hasReductionIterator(op))
@@ -2684,21 +2693,21 @@ LogicalResult mlir::linalg::vectorizeOpPrecondition(
     return failure();
 
   return TypeSwitch<Operation *, LogicalResult>(op)
-      .Case<linalg::LinalgOp>([&](auto linalgOp) {
+      .Case([&](linalg::LinalgOp linalgOp) {
         return vectorizeLinalgOpPrecondition(linalgOp, inputVectorSizes,
                                              vectorizeNDExtract,
                                              flatten1DDepthwiseConv);
       })
-      .Case<tensor::PadOp>([&](auto padOp) {
+      .Case([&](tensor::PadOp padOp) {
         return vectorizePadOpPrecondition(padOp, inputVectorSizes);
       })
-      .Case<linalg::PackOp>([&](auto packOp) {
+      .Case([&](linalg::PackOp packOp) {
         return vectorizePackOpPrecondition(packOp, inputVectorSizes);
       })
-      .Case<linalg::UnPackOp>([&](auto unpackOp) {
+      .Case([&](linalg::UnPackOp unpackOp) {
         return vectorizeUnPackOpPrecondition(unpackOp, inputVectorSizes);
       })
-      .Case<tensor::InsertSliceOp>([&](auto sliceOp) {
+      .Case([&](tensor::InsertSliceOp sliceOp) {
         return vectorizeInsertSliceOpPrecondition(sliceOp, inputVectorSizes);
       })
       .Default(failure());
@@ -2755,7 +2764,7 @@ FailureOr<VectorizationResult> mlir::linalg::vectorize(
   SmallVector<Value> results;
   auto vectorizeResult =
       TypeSwitch<Operation *, LogicalResult>(op)
-          .Case<linalg::LinalgOp>([&](auto linalgOp) {
+          .Case([&](linalg::LinalgOp linalgOp) {
             // Check for both named as well as generic convolution ops.
             if (isaConvolutionOpInterface(linalgOp)) {
               FailureOr<Operation *> convOr = vectorizeConvolution(
@@ -2789,20 +2798,20 @@ FailureOr<VectorizationResult> mlir::linalg::vectorize(
             // notified and we will end up with read-after-free issues!
             return vectorizeAsLinalgGeneric(rewriter, state, linalgOp, results);
           })
-          .Case<tensor::PadOp>([&](auto padOp) {
+          .Case([&](tensor::PadOp padOp) {
             return vectorizeAsTensorPadOp(rewriter, padOp, inputVectorSizes,
                                           results);
           })
-          .Case<linalg::PackOp>([&](auto packOp) {
+          .Case([&](linalg::PackOp packOp) {
             return vectorizeAsTensorPackOp(rewriter, packOp, inputVectorSizes,
                                            results);
           })
-          .Case<linalg::UnPackOp>([&](auto unpackOp) {
+          .Case([&](linalg::UnPackOp unpackOp) {
             return vectorizeAsTensorUnpackOp(rewriter, unpackOp,
                                              inputVectorSizes,
                                              inputScalableVecDims, results);
           })
-          .Case<tensor::InsertSliceOp>([&](auto sliceOp) {
+          .Case([&](tensor::InsertSliceOp sliceOp) {
             return vectorizeAsInsertSliceOp(rewriter, sliceOp, inputVectorSizes,
                                             results);
           })
@@ -3847,8 +3856,12 @@ public:
 
     const int64_t srcWidth = srcElementType.getIntOrFloatBitWidth();
     const int64_t dstWidth = dstElementType.getIntOrFloatBitWidth();
-    const Type dstType =
-        cast<ShapedType>(val.getType()).cloneWith(std::nullopt, dstElementType);
+    // Handle both shaped as well as scalar types.
+    Type dstType;
+    if (auto shapedType = dyn_cast<ShapedType>(val.getType()))
+      dstType = shapedType.cloneWith(std::nullopt, dstElementType);
+    else
+      dstType = dstElementType;
 
     if (isa<IntegerType>(srcElementType) && isa<FloatType>(dstElementType)) {
       return arith::SIToFPOp::create(rewriter, loc, dstType, val);
@@ -3887,6 +3900,8 @@ public:
   // convolution.
   Value conv1dSliceAsOuterProduct(RewriterBase &rewriter, Location loc,
                                   Value lhs, Value rhs, Value res) {
+    lhs = promote(rewriter, loc, lhs, res.getType());
+    rhs = promote(rewriter, loc, rhs, res.getType());
     return vector::OuterProductOp::create(rewriter, loc, res.getType(), lhs,
                                           rhs, res, vector::CombiningKind::ADD);
   }

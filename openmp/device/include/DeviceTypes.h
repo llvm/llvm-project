@@ -131,7 +131,17 @@ struct IdentTy {
 
 using __kmpc_impl_lanemask_t = LaneMaskTy;
 
-using ParallelRegionFnTy = void *;
+#ifdef __SPIRV__
+// Function pointers in SPIRV backend have a special address space 9.
+// Since function pointers are passed as regular void * pointers it is
+// necessary to annotate them with proper address space to avoid casting
+// errors during compilation.
+using FnPtrTy = void [[clang::address_space(9)]] *;
+#else
+using FnPtrTy = void *;
+#endif
+
+using ParallelRegionFnTy = FnPtrTy;
 
 using CriticalNameTy = int32_t[8];
 
@@ -161,9 +171,29 @@ typedef enum omp_allocator_handle_t {
   KMP_ALLOCATOR_MAX_HANDLE = ~(0LU)
 } omp_allocator_handle_t;
 
+typedef enum omp_memspace_handle_t {
+  omp_null_mem_space = 0,
+  omp_default_mem_space = 99,
+  omp_large_cap_mem_space = 1,
+  omp_const_mem_space = 2,
+  omp_high_bw_mem_space = 3,
+  omp_low_lat_mem_space = 4,
+  omp_cgroup_mem_space = 5,
+  KMP_MEMSPACE_MAX_HANDLE = ~(0LU)
+} omp_memspace_handle_t;
+
 #define __PRAGMA(STR) _Pragma(#STR)
 #define OMP_PRAGMA(STR) __PRAGMA(omp STR)
 
 ///}
+
+/// The OpenMP access group type. The criterion for grupping tasks using a
+/// specific grouping property.
+enum omp_access_t {
+  /// Groups the tasks based on the contention group to which they belong.
+  omp_access_cgroup = 0,
+  /// Groups the tasks based on the parallel region to which they bind.
+  omp_access_pteam = 1,
+};
 
 #endif

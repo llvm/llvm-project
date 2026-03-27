@@ -10,6 +10,7 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANUTILS_H
 
 #include "VPlan.h"
+#include "VPlanPatternMatch.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
@@ -113,9 +114,9 @@ inline VPRecipeBase *findRecipe(VPValue *Start, PredT Pred) {
   for (unsigned I = 0; I != Worklist.size(); ++I) {
     VPValue *Cur = Worklist[I];
     auto *R = Cur->getDefiningRecipe();
-    // TODO: Skip live-ins once no degenerate reductions (ones with constant
-    // backedge values) are generated.
-    if (R && Pred(R))
+    if (!R)
+      continue;
+    if (Pred(R))
       return R;
     for (VPUser *U : Cur->users()) {
       for (VPValue *V : cast<VPRecipeBase>(U)->definedValues())
@@ -124,6 +125,31 @@ inline VPRecipeBase *findRecipe(VPValue *Start, PredT Pred) {
   }
   return nullptr;
 }
+
+/// If \p V is used by a recipe matching pattern \p P, return it. Otherwise
+/// return nullptr;
+template <typename MatchT>
+static VPRecipeBase *findUserOf(VPValue *V, const MatchT &P) {
+  auto It = find_if(V->users(), match_fn(P));
+  return It == V->user_end() ? nullptr : cast<VPRecipeBase>(*It);
+}
+
+/// If \p V is used by a VPInstruction with \p Opcode, return it. Otherwise
+/// return nullptr.
+template <unsigned Opcode> static VPInstruction *findUserOf(VPValue *V) {
+  using namespace llvm::VPlanPatternMatch;
+  return cast_or_null<VPInstruction>(findUserOf(V, m_VPInstruction<Opcode>()));
+}
+
+/// Find the ComputeReductionResult recipe for \p PhiR, looking through selects
+/// inserted for predicated reductions or tail folding.
+VPInstruction *findComputeReductionResult(VPReductionPHIRecipe *PhiR);
+
+/// Collect the header mask with the pattern:
+/// (ICMP_ULE, WideCanonicalIV, backedge-taken-count)
+/// TODO: Introduce explicit recipe for header-mask instead of searching
+/// the header-mask pattern manually.
+VPSingleDefRecipe *findHeaderMask(VPlan &Plan);
 
 } // namespace vputils
 
@@ -142,8 +168,7 @@ public:
   /// successors are moved from \p BlockPtr to \p NewBlock. \p NewBlock must
   /// have neither successors nor predecessors.
   static void insertBlockAfter(VPBlockBase *NewBlock, VPBlockBase *BlockPtr) {
-    assert(NewBlock->getSuccessors().empty() &&
-           NewBlock->getPredecessors().empty() &&
+    assert(!NewBlock->hasSuccessors() && !NewBlock->hasPredecessors() &&
            "Can't insert new block with predecessors or successors.");
     NewBlock->setParent(BlockPtr->getParent());
     transferSuccessors(BlockPtr, NewBlock);
@@ -155,8 +180,7 @@ public:
   /// NewBlock. Add \p NewBlock as predecessor of \p BlockPtr and \p BlockPtr as
   /// successor of \p NewBlock.
   static void insertBlockBefore(VPBlockBase *NewBlock, VPBlockBase *BlockPtr) {
-    assert(NewBlock->getSuccessors().empty() &&
-           NewBlock->getPredecessors().empty() &&
+    assert(!NewBlock->hasSuccessors() && !NewBlock->hasPredecessors() &&
            "Can't insert new block with predecessors or successors.");
     NewBlock->setParent(BlockPtr->getParent());
     for (VPBlockBase *Pred : to_vector(BlockPtr->predecessors())) {
@@ -175,9 +199,8 @@ public:
   /// predecessors.
   static void insertTwoBlocksAfter(VPBlockBase *IfTrue, VPBlockBase *IfFalse,
                                    VPBlockBase *BlockPtr) {
-    assert(IfTrue->getSuccessors().empty() &&
-           "Can't insert IfTrue with successors.");
-    assert(IfFalse->getSuccessors().empty() &&
+    assert(!IfTrue->hasSuccessors() && "Can't insert IfTrue with successors.");
+    assert(!IfFalse->hasSuccessors() &&
            "Can't insert IfFalse with successors.");
     BlockPtr->setTwoSuccessors(IfTrue, IfFalse);
     IfTrue->setPredecessors({BlockPtr});
@@ -236,6 +259,13 @@ public:
     New->setSuccessors(Old->getSuccessors());
     Old->clearSuccessors();
   }
+
+  /// Clone the CFG for all nodes reachable from \p Entry, including cloning
+  /// the blocks and their recipes. Operands of cloned recipes will NOT be
+  /// updated. Remapping of operands must be done separately. Returns a pair
+  /// with the new entry and exiting blocks of the cloned region. If \p Entry
+  /// isn't part of a region, return nullptr for the exiting block.
+  static std::pair<VPBlockBase *, VPBlockBase *> cloneFrom(VPBlockBase *Entry);
 
   /// Return an iterator range over \p Range which only includes \p BlockTy
   /// blocks. The accesses are casted to \p BlockTy.

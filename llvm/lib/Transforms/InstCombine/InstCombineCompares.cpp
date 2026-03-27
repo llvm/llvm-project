@@ -41,6 +41,10 @@ using namespace PatternMatch;
 // How many times is a select replaced by one of its operands?
 STATISTIC(NumSel, "Number of select opts");
 
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
+
 /// Compute Result = In1+In2, returning true if the result overflowed for this
 /// type.
 static bool addWithOverflow(APInt &Result, const APInt &In1, const APInt &In2,
@@ -71,7 +75,7 @@ static bool subWithOverflow(APInt &Result, const APInt &In1, const APInt &In2,
 /// branch on sign bit comparison.
 static bool hasBranchUse(ICmpInst &I) {
   for (auto *U : I.users())
-    if (isa<BranchInst>(U))
+    if (isa<CondBrInst>(U))
       return true;
   return false;
 }
@@ -1415,7 +1419,7 @@ Instruction *InstCombinerImpl::foldICmpWithDominatingICmp(ICmpInst &Cmp) {
     return nullptr;
   };
 
-  for (BranchInst *BI : DC.conditionsFor(X)) {
+  for (CondBrInst *BI : DC.conditionsFor(X)) {
     CmpPredicate DomPred;
     const APInt *DomC;
     if (!match(BI->getCondition(),
@@ -1782,11 +1786,8 @@ Instruction *InstCombinerImpl::foldICmpAndConstConst(ICmpInst &Cmp,
                                                      const APInt &C1) {
   bool isICMP_NE = Cmp.getPredicate() == ICmpInst::ICMP_NE;
 
-  // For vectors: icmp ne (and X, 1), 0 --> trunc X to N x i1
-  // TODO: We canonicalize to the longer form for scalars because we have
-  // better analysis/folds for icmp, and codegen may be better with icmp.
-  if (isICMP_NE && Cmp.getType()->isVectorTy() && C1.isZero() &&
-      match(And->getOperand(1), m_One()))
+  // icmp ne (and X, 1), 0 --> trunc X to i1
+  if (isICMP_NE && C1.isZero() && match(And->getOperand(1), m_One()))
     return new TruncInst(And->getOperand(0), Cmp.getType());
 
   const APInt *C2;
@@ -2005,8 +2006,8 @@ Instruction *InstCombinerImpl::foldICmpAndConstant(ICmpInst &Cmp,
   {
     Value *A;
     const APInt *Addend, *Msk;
-    if (match(And, m_And(m_OneUse(m_Add(m_Value(A), m_APInt(Addend))),
-                         m_LowBitMask(Msk))) &&
+    if (match(And, m_OneUse(m_And(m_OneUse(m_Add(m_Value(A), m_APInt(Addend))),
+                                  m_LowBitMask(Msk)))) &&
         C.ule(*Msk)) {
       APInt NewComperand = (C - *Addend) & *Msk;
       Value *MaskA = Builder.CreateAnd(A, ConstantInt::get(A->getType(), *Msk));
@@ -3089,10 +3090,10 @@ Instruction *InstCombinerImpl::foldICmpBinOpWithConstantViaTruthTable(
     ICmpInst &Cmp, BinaryOperator *BO, const APInt &C) {
   Value *A, *B;
   Constant *C1, *C2, *C3, *C4;
-  if (!(match(BO->getOperand(0),
-              m_Select(m_Value(A), m_Constant(C1), m_Constant(C2)))) ||
+  if (!match(BO->getOperand(0),
+             m_SelectLike(m_Value(A), m_Constant(C1), m_Constant(C2))) ||
       !match(BO->getOperand(1),
-             m_Select(m_Value(B), m_Constant(C3), m_Constant(C4))) ||
+             m_SelectLike(m_Value(B), m_Constant(C3), m_Constant(C4))) ||
       Cmp.getType() != A->getType() || Cmp.getType() != B->getType())
     return nullptr;
 
@@ -3129,35 +3130,7 @@ Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
                                                    const APInt &C) {
   Value *Y = Add->getOperand(1);
   Value *X = Add->getOperand(0);
-
-  Value *Op0, *Op1;
-  Instruction *Ext0, *Ext1;
   const CmpPredicate Pred = Cmp.getCmpPredicate();
-  if (match(Add,
-            m_Add(m_CombineAnd(m_Instruction(Ext0), m_ZExtOrSExt(m_Value(Op0))),
-                  m_CombineAnd(m_Instruction(Ext1),
-                               m_ZExtOrSExt(m_Value(Op1))))) &&
-      Op0->getType()->isIntOrIntVectorTy(1) &&
-      Op1->getType()->isIntOrIntVectorTy(1)) {
-    unsigned BW = C.getBitWidth();
-    std::bitset<4> Table;
-    auto ComputeTable = [&](bool Op0Val, bool Op1Val) {
-      APInt Res(BW, 0);
-      if (Op0Val)
-        Res += APInt(BW, isa<ZExtInst>(Ext0) ? 1 : -1, /*isSigned=*/true);
-      if (Op1Val)
-        Res += APInt(BW, isa<ZExtInst>(Ext1) ? 1 : -1, /*isSigned=*/true);
-      return ICmpInst::compare(Res, C, Pred);
-    };
-
-    Table[0] = ComputeTable(false, false);
-    Table[1] = ComputeTable(false, true);
-    Table[2] = ComputeTable(true, false);
-    Table[3] = ComputeTable(true, true);
-    if (auto *Cond =
-            createLogicFromTable(Table, Op0, Op1, Builder, Add->hasOneUse()))
-      return replaceInstUsesWith(Cmp, Cond);
-  }
 
   // icmp ult (add nuw A, (lshr A, ShAmtC)), C --> icmp ult A, C
   // when C <= (1 << ShAmtC).
@@ -4301,6 +4274,32 @@ Instruction *InstCombinerImpl::foldICmpIntrinsicWithConstant(ICmpInst &Cmp,
                             II->getArgOperand(1));
     }
     break;
+  case Intrinsic::abs: {
+    if (!II->hasOneUse())
+      return nullptr;
+
+    Value *X = II->getArgOperand(0);
+    bool IsIntMinPoison =
+        cast<ConstantInt>(II->getArgOperand(1))->getValue().isOne();
+
+    // If C >= 0:
+    // abs(X) u> C --> X + C u> 2 * C
+    if (Pred == CmpInst::ICMP_UGT && C.isNonNegative()) {
+      return new ICmpInst(ICmpInst::ICMP_UGT,
+                          Builder.CreateAdd(X, ConstantInt::get(Ty, C)),
+                          ConstantInt::get(Ty, 2 * C));
+    }
+
+    // If abs(INT_MIN) is poison and C >= 1:
+    // abs(X) u< C --> X + (C - 1) u<= 2 * (C - 1)
+    if (IsIntMinPoison && Pred == CmpInst::ICMP_ULT && C.sge(1)) {
+      return new ICmpInst(ICmpInst::ICMP_ULE,
+                          Builder.CreateAdd(X, ConstantInt::get(Ty, C - 1)),
+                          ConstantInt::get(Ty, 2 * (C - 1)));
+    }
+
+    break;
+  }
   default:
     break;
   }
@@ -4395,7 +4394,8 @@ Instruction *InstCombinerImpl::foldSelectICmp(CmpPredicate Pred, SelectInst *SI,
       Op1 = Builder.CreateICmp(Pred, SI->getOperand(1), RHS, I.getName());
     if (!Op2)
       Op2 = Builder.CreateICmp(Pred, SI->getOperand(2), RHS, I.getName());
-    return SelectInst::Create(SI->getOperand(0), Op1, Op2);
+    return SelectInst::Create(SI->getOperand(0), Op1, Op2, "", nullptr,
+                              ProfcheckDisableMetadataFixes ? nullptr : SI);
   }
 
   return nullptr;
@@ -5934,15 +5934,17 @@ enum class OffsetKind { Invalid, Value, Select };
 struct OffsetResult {
   OffsetKind Kind;
   Value *V0, *V1, *V2;
+  Instruction *MDFrom;
 
   static OffsetResult invalid() {
-    return {OffsetKind::Invalid, nullptr, nullptr, nullptr};
+    return {OffsetKind::Invalid, nullptr, nullptr, nullptr, nullptr};
   }
   static OffsetResult value(Value *V) {
-    return {OffsetKind::Value, V, nullptr, nullptr};
+    return {OffsetKind::Value, V, nullptr, nullptr, nullptr};
   }
-  static OffsetResult select(Value *Cond, Value *TrueV, Value *FalseV) {
-    return {OffsetKind::Select, Cond, TrueV, FalseV};
+  static OffsetResult select(Value *Cond, Value *TrueV, Value *FalseV,
+                             Instruction *MDFrom) {
+    return {OffsetKind::Select, Cond, TrueV, FalseV, MDFrom};
   }
   bool isValid() const { return Kind != OffsetKind::Invalid; }
   Value *materialize(InstCombiner::BuilderTy &Builder) const {
@@ -5952,7 +5954,8 @@ struct OffsetResult {
     case OffsetKind::Value:
       return V0;
     case OffsetKind::Select:
-      return Builder.CreateSelect(V0, V1, V2);
+      return Builder.CreateSelect(
+          V0, V1, V2, "", ProfcheckDisableMetadataFixes ? nullptr : MDFrom);
     }
     llvm_unreachable("Unknown OffsetKind enum");
   }
@@ -6018,7 +6021,7 @@ static Instruction *foldICmpEqualityWithOffset(ICmpInst &I,
       Value *FalseVal = ApplyOffsetImpl(Sel->getFalseValue(), BinOpc, RHS);
       if (!FalseVal)
         return OffsetResult::invalid();
-      return OffsetResult::select(Sel->getCondition(), TrueVal, FalseVal);
+      return OffsetResult::select(Sel->getCondition(), TrueVal, FalseVal, Sel);
     }
     if (Value *Simplified = ApplyOffsetImpl(V, BinOpc, RHS))
       return OffsetResult::value(Simplified);
@@ -6833,8 +6836,8 @@ static bool isChainSelectCmpBranch(const SelectInst *SI) {
   const BasicBlock *BB = SI->getParent();
   if (!BB)
     return false;
-  auto *BI = dyn_cast_or_null<BranchInst>(BB->getTerminator());
-  if (!BI || BI->getNumSuccessors() != 2)
+  auto *BI = dyn_cast_or_null<CondBrInst>(BB->getTerminator());
+  if (!BI)
     return false;
   auto *IC = dyn_cast<ICmpInst>(BI->getCondition());
   if (!IC || (IC->getOperand(0) != SI && IC->getOperand(1) != SI))
@@ -7492,6 +7495,46 @@ static Instruction *foldICmpInvariantGroup(ICmpInst &I) {
   return nullptr;
 }
 
+static Instruction *foldICmpOfVectorReduce(ICmpInst &I, const DataLayout &DL,
+                                           IRBuilderBase &Builder) {
+  if (!ICmpInst::isEquality(I.getPredicate()))
+    return nullptr;
+
+  // The caller puts constants after non-constants.
+  Value *Op = I.getOperand(0);
+  Value *Const = I.getOperand(1);
+
+  // For Cond an equality condition, fold
+  //
+  //   icmp (eq|ne) (vreduce_(or|and) Op), (Zero|AllOnes) ->
+  //   icmp (eq|ne) Op, (Zero|AllOnes)
+  //
+  // with a bitcast.
+  Value *Vec;
+  if ((match(Const, m_ZeroInt()) &&
+       match(Op, m_OneUse(m_Intrinsic<Intrinsic::vector_reduce_or>(
+                     m_Value(Vec))))) ||
+      (match(Const, m_AllOnes()) &&
+       match(Op, m_OneUse(m_Intrinsic<Intrinsic::vector_reduce_and>(
+                     m_Value(Vec)))))) {
+    auto *VecTy = dyn_cast<FixedVectorType>(Vec->getType());
+    if (!VecTy)
+      return nullptr;
+    Type *VecEltTy = VecTy->getElementType();
+    unsigned ScalarBW =
+        DL.getTypeSizeInBits(VecEltTy) * VecTy->getNumElements();
+    if (!DL.fitsInLegalInteger(ScalarBW))
+      return nullptr;
+    Type *ScalarTy = IntegerType::get(I.getContext(), ScalarBW);
+    Value *NewConst = match(Const, m_ZeroInt())
+                          ? ConstantInt::get(ScalarTy, 0)
+                          : ConstantInt::getAllOnesValue(ScalarTy);
+    return CmpInst::Create(Instruction::ICmp, I.getPredicate(),
+                           Builder.CreateBitCast(Vec, ScalarTy), NewConst);
+  }
+  return nullptr;
+}
+
 /// This function folds patterns produced by lowering of reduce idioms, such as
 /// llvm.vector.reduce.and which are lowered into instruction chains. This code
 /// attempts to generate fewer number of scalar comparisons instead of vector
@@ -7825,12 +7868,16 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
       // Check whether comparison of TrueValues can be simplified
       if (Value *Res = simplifyICmpInst(Pred, A, C, SQ)) {
         Value *NewICMP = Builder.CreateICmp(Pred, B, D);
-        return SelectInst::Create(Cond, Res, NewICMP);
+        return SelectInst::Create(
+            Cond, Res, NewICMP, /*NameStr=*/"", /*InsertBefore=*/nullptr,
+            ProfcheckDisableMetadataFixes ? nullptr : cast<Instruction>(Op0));
       }
       // Check whether comparison of FalseValues can be simplified
       if (Value *Res = simplifyICmpInst(Pred, B, D, SQ)) {
         Value *NewICMP = Builder.CreateICmp(Pred, A, C);
-        return SelectInst::Create(Cond, NewICMP, Res);
+        return SelectInst::Create(
+            Cond, NewICMP, Res, /*NameStr=*/"", /*InsertBefore=*/nullptr,
+            ProfcheckDisableMetadataFixes ? nullptr : cast<Instruction>(Op0));
       }
     }
   }
@@ -7961,6 +8008,9 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
     return Res;
 
   if (Instruction *Res = foldICmpOfUAddOv(I))
+    return Res;
+
+  if (Instruction *Res = foldICmpOfVectorReduce(I, DL, Builder))
     return Res;
 
   // The 'cmpxchg' instruction returns an aggregate containing the old value and
@@ -8623,6 +8673,36 @@ static Instruction *foldFCmpFSubIntoFCmp(FCmpInst &I, Instruction *LHSI,
         I.setHasNoNaNs(true);
       return &I;
     }
+    // fcmp `pred (C - Y), C` -> `fcmp swap(pred), Y, 0`
+    // where C and Y can't be arbitrary floating-point values.
+    // For example, with `C = 1.0f` and `Y = 0x1p-149`, `1.0f - Y` rounds back
+    // to `1.0f`, so the source compare is false while the rewritten compare is
+    // true.
+    // We need to make sure (C - Y) never rounds back to C
+    const APFloat *C;
+    Value *IntSrc;
+    if (match(RHSC, m_APFloat(C)) &&
+        match(LHSI, m_FSub(m_Specific(RHSC), m_IToFP(m_Value(IntSrc)))) &&
+        C->isNormal()) {
+      // Requirements on C and Y:
+      // 1. C is finite, nonzero, normal.
+      // 2. C shouldn't be too large, that is, ULP(C) <= 1.
+      // 3. Y must be the form of `[su]itofp`, so the finite nonzero result of Y
+      // must be integer-valued with an absolute value of at least 1;
+      // as long as the step size near C does not exceed 1,
+      // C - Y cannot be rounded back to C when Y != 0.
+      // 4. If Y = 0, `fcmp pred (C - 0), C` are equivalent to `fcmp swap(pred)
+      // 0, 0` for ordered and unordered predicates as long as C is finite and
+      // nonzero.
+      int MantissaWidth = LHSI->getType()->getFPMantissaWidth();
+      if (MantissaWidth != -1 && ilogb(*C) < MantissaWidth) {
+        Constant *ZeroC = ConstantFP::getZero(LHSI->getType());
+        I.setPredicate(I.getSwappedPredicate());
+        CI.replaceOperand(I, 0, Y);
+        CI.replaceOperand(I, 1, ZeroC);
+        return &I;
+      }
+    }
     break;
   }
 
@@ -8870,7 +8950,9 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   // Ignore signbit of bitcasted int when comparing equality to FP 0.0:
   // fcmp oeq/une (bitcast X), 0.0 --> (and X, SignMaskC) ==/!= 0
   if (match(Op1, m_PosZeroFP()) &&
-      match(Op0, m_OneUse(m_ElementWiseBitCast(m_Value(X))))) {
+      match(Op0, m_OneUse(m_ElementWiseBitCast(m_Value(X)))) &&
+      !F.getDenormalMode(Op1->getType()->getScalarType()->getFltSemantics())
+           .inputsMayBeZero()) {
     ICmpInst::Predicate IntPred = ICmpInst::BAD_ICMP_PREDICATE;
     if (Pred == FCmpInst::FCMP_OEQ)
       IntPred = ICmpInst::ICMP_EQ;

@@ -174,9 +174,7 @@ static void printAllocatableOp(mlir::OpAsmPrinter &p, OP &op) {
   p.printOptionalAttrDict(op->getAttrs(), {"in_type", "operandSegmentSizes"});
 }
 
-/// Returns true if the given box value may be absent.
-/// The given value must have BaseBoxType.
-static bool mayBeAbsentBox(mlir::Value val) {
+bool fir::mayBeAbsentBox(mlir::Value val) {
   assert(mlir::isa<fir::BaseBoxType>(val.getType()) && "expected box argument");
   while (val) {
     mlir::Operation *defOp = val.getDefiningOp();
@@ -229,7 +227,25 @@ mlir::Value fir::AllocaOp::getDefaultValue(const mlir::MemorySlot &slot,
 
 void fir::AllocaOp::handleBlockArgument(const mlir::MemorySlot &slot,
                                         mlir::BlockArgument argument,
-                                        mlir::OpBuilder &builder) {}
+                                        mlir::OpBuilder &builder) {
+  // When there is a fir.declare, fir.debug_value must be emitted at each value
+  // change and at each beginning of a block where the reaching value is
+  // propagated as a block argument.
+  // TODO: in order to get proper inter-dialect mem2reg, the
+  // PromotableOpInterface should be provided with a
+  // requiresInsertedBlockArguments similar to requiresReplacedValues so that
+  // fir::DeclareOp can be the one dictating that this needs to happen instead
+  // of the allocation. There are other challenges to inter dialect mem2reg to
+  // solve first, like having a common concept for going through converts and
+  // no-ops like fir.declare (i.e., to replace the FIR specific
+  // isSlotOrDeclaredSlot).
+  for (mlir::Operation *user : getOperation()->getUsers())
+    if (auto declareOp = mlir::dyn_cast<fir::DeclareOp>(user))
+      fir::DeclareValueOp::create(
+          builder, declareOp.getLoc(), argument, declareOp.getDummyScope(),
+          declareOp.getUniqNameAttr(), declareOp.getFortranAttrsAttr(),
+          declareOp.getDataAttrAttr(), declareOp.getDummyArgNoAttr());
+}
 
 std::optional<mlir::PromotableAllocationOpInterface>
 fir::AllocaOp::handlePromotionComplete(const mlir::MemorySlot &slot,
@@ -544,6 +560,16 @@ struct SimplifyArrayCoorOp : public mlir::OpRewritePattern<fir::ArrayCoorOp> {
         return mlir::failure();
     } else if (auto reboxOp = mlir::dyn_cast_or_null<fir::ReboxOp>(
                    memref.getDefiningOp())) {
+      // Don't pull in rebox when the array_coor is inside an ACC construct
+      // and the rebox result is referenced by an ACC data clause.
+      // The data legalization pipeline relies on the rebox result being the
+      // copyin var; folding through it would leave the rebox source as an
+      // unhandled live-in inside the compute region.
+      if (op->getParentOfType<ACC_COMPUTE_AND_DATA_CONSTRUCT_OPS>() &&
+          llvm::any_of(memref.getUsers(), [](mlir::Operation *u) {
+            return mlir::isa<ACC_DATA_ENTRY_OPS>(u);
+          }))
+        return mlir::failure();
       boxedMemref = reboxOp.getBox();
       boxedShape = reboxOp.getShape();
       // Avoid pulling in rebox that performs reshaping.
@@ -1117,17 +1143,16 @@ void fir::BoxAddrOp::build(mlir::OpBuilder &builder,
                            mlir::OperationState &result, mlir::Value val) {
   mlir::Type type =
       llvm::TypeSwitch<mlir::Type, mlir::Type>(val.getType())
-          .Case<fir::BaseBoxType>([&](fir::BaseBoxType ty) -> mlir::Type {
+          .Case([&](fir::BaseBoxType ty) -> mlir::Type {
             mlir::Type eleTy = ty.getEleTy();
             if (fir::isa_ref_type(eleTy))
               return eleTy;
             return fir::ReferenceType::get(eleTy);
           })
-          .Case<fir::BoxCharType>([&](fir::BoxCharType ty) -> mlir::Type {
+          .Case([&](fir::BoxCharType ty) -> mlir::Type {
             return fir::ReferenceType::get(ty.getEleTy());
           })
-          .Case<fir::BoxProcType>(
-              [&](fir::BoxProcType ty) { return ty.getEleTy(); })
+          .Case([&](fir::BoxProcType ty) { return ty.getEleTy(); })
           .Default([&](const auto &) { return mlir::Type{}; });
   assert(type && "bad val type");
   build(builder, result, type, val);
@@ -1335,6 +1360,56 @@ void fir::CallOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
   result.addTypes(results);
 }
 
+void fir::CallOp::setCalleeFromCallable(mlir::CallInterfaceCallable callee) {
+  if (auto symbolRef = llvm::dyn_cast<mlir::SymbolRefAttr>(callee)) {
+    // Handling a direct call.
+    bool wasIndirect = llvm::isa<mlir::Value>(getCallableForCallee());
+    (*this)->setAttr(getCalleeAttrName(), symbolRef);
+    // If it was indirect before, the operand list and associated attributes
+    // needs to be fixed up.
+    if (wasIndirect) {
+      assert(getNumOperands() > 0 && "indirect call must have callee operand");
+      (*this)->eraseOperand(0);
+      // Fix arg_attrs to remove the first (callee) operand if needed.
+      if (auto argAttrs = getArgAttrsAttr()) {
+        // Since we already removed the first operand, check that number
+        // of attributes is one more than number of operands.
+        assert(argAttrs.size() == getNumOperands() + 1 &&
+               "arg_attrs must be one-per-operand");
+        llvm::SmallVector<mlir::Attribute> newAttrs(argAttrs.begin() + 1,
+                                                    argAttrs.end());
+        if (newAttrs.empty())
+          (*this)->removeAttr(getArgAttrsAttrName());
+        else
+          (*this)->setAttr(getArgAttrsAttrName(),
+                           mlir::ArrayAttr::get(getContext(), newAttrs));
+      }
+    }
+    return;
+  }
+  // The provided callee makes this an indirect call now.
+  bool wasIndirect = llvm::isa<mlir::Value>(getCallableForCallee());
+  (*this)->removeAttr(getCalleeAttrNameStr());
+  mlir::Value calleeVal = llvm::cast<mlir::Value>(callee);
+  if (wasIndirect) {
+    setOperand(0, calleeVal);
+  } else {
+    (*this)->insertOperands(0, calleeVal);
+    // Make arg_attrs consistent in size with operands by adding an empty dict
+    // for the callee.
+    if (auto argAttrs = getArgAttrsAttr()) {
+      assert(argAttrs.size() == getNumOperands() - 1 &&
+             "arg_attrs must be one-per-operand");
+      llvm::SmallVector<mlir::Attribute> newAttrs;
+      newAttrs.reserve(1 + argAttrs.size());
+      newAttrs.push_back(mlir::DictionaryAttr::get(getContext(), {}));
+      newAttrs.append(argAttrs.begin(), argAttrs.end());
+      (*this)->setAttr(getArgAttrsAttrName(),
+                       mlir::ArrayAttr::get(getContext(), newAttrs));
+    }
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // CharConvertOp
 //===----------------------------------------------------------------------===//
@@ -1404,6 +1479,54 @@ static mlir::ParseResult parseCmpOp(mlir::OpAsmParser &parser,
   result.attributes = attrs;
   result.addTypes({i1Type});
   return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// BitcastOp
+//===----------------------------------------------------------------------===//
+
+static bool isBitcastCompatibleType(mlir::Type ty) {
+  return mlir::isa<mlir::IntegerType, mlir::FloatType, fir::LogicalType>(ty) ||
+         (mlir::isa<fir::CharacterType>(ty) &&
+          mlir::cast<fir::CharacterType>(ty).getLen() ==
+              fir::CharacterType::singleton());
+}
+
+static std::optional<unsigned> getBitcastBitSize(mlir::Type ty) {
+  if (auto intTy = mlir::dyn_cast<mlir::IntegerType>(ty))
+    return intTy.getWidth();
+  if (auto floatTy = mlir::dyn_cast<mlir::FloatType>(ty))
+    return floatTy.getWidth();
+  // Bit size of fir.logical and fir.char depends on the kind map which is not
+  // available in the verifier without an expensive lookup.
+  return std::nullopt;
+}
+
+llvm::LogicalResult fir::BitcastOp::verify() {
+  mlir::Type inType = getValue().getType();
+  mlir::Type outType = getType();
+  if (!isBitcastCompatibleType(inType))
+    return emitOpError("input type is not bitcast compatible: ") << inType;
+  if (!isBitcastCompatibleType(outType))
+    return emitOpError("output type is not bitcast compatible: ") << outType;
+  auto inBits = getBitcastBitSize(inType);
+  auto outBits = getBitcastBitSize(outType);
+  if (inBits && outBits && *inBits != *outBits)
+    return emitOpError("bit size mismatch: input has ")
+           << *inBits << " bits but output has " << *outBits << " bits";
+  return mlir::success();
+}
+
+mlir::OpFoldResult fir::BitcastOp::fold(FoldAdaptor adaptor) {
+  if (getValue().getType() == getType())
+    return getValue();
+  if (auto inner = getValue().getDefiningOp<fir::BitcastOp>()) {
+    if (inner.getValue().getType() == getType())
+      return inner.getValue();
+    getValueMutable().assign(inner.getValue());
+    return getResult();
+  }
+  return {};
 }
 
 //===----------------------------------------------------------------------===//
@@ -1727,11 +1850,11 @@ void fir::CoordinateOp::build(mlir::OpBuilder &builder,
   bool anyField = false;
   for (fir::IntOrValue index : coor) {
     llvm::TypeSwitch<fir::IntOrValue>(index)
-        .Case<mlir::IntegerAttr>([&](mlir::IntegerAttr intAttr) {
+        .Case([&](mlir::IntegerAttr intAttr) {
           fieldIndices.push_back(intAttr.getInt());
           anyField = true;
         })
-        .Case<mlir::Value>([&](mlir::Value value) {
+        .Case([&](mlir::Value value) {
           dynamicIndices.push_back(value);
           fieldIndices.push_back(fir::CoordinateOp::kDynamicIndex);
         });
@@ -1754,7 +1877,7 @@ void fir::CoordinateOp::print(mlir::OpAsmPrinter &p) {
     for (auto index : getIndices()) {
       p << ", ";
       llvm::TypeSwitch<fir::IntOrValue>(index)
-          .Case<mlir::IntegerAttr>([&](mlir::IntegerAttr intAttr) {
+          .Case([&](mlir::IntegerAttr intAttr) {
             if (auto recordType = llvm::dyn_cast<fir::RecordType>(eleTy)) {
               int fieldId = intAttr.getInt();
               if (fieldId < static_cast<int>(recordType.getNumFields())) {
@@ -1769,7 +1892,7 @@ void fir::CoordinateOp::print(mlir::OpAsmPrinter &p) {
             // investigated.
             p << intAttr;
           })
-          .Case<mlir::Value>([&](mlir::Value value) { p << value; });
+          .Case([&](mlir::Value value) { p << value; });
     }
   }
   p.printOptionalAttrDict(
@@ -1923,6 +2046,15 @@ fir::CoordinateIndicesAdaptor fir::CoordinateOp::getIndices() {
 std::optional<std::int64_t> fir::CoordinateOp::getViewOffset(mlir::OpResult) {
   // TODO: we can try to compute the constant offset.
   return std::nullopt;
+}
+
+mlir::Speculation::Speculatability fir::CoordinateOp::getSpeculatability() {
+  const mlir::Type refTy = getRef().getType();
+  if (fir::isa_ref_type(refTy))
+    return mlir::Speculation::Speculatable;
+
+  return mayBeAbsentBox(getRef()) ? mlir::Speculation::NotSpeculatable
+                                  : mlir::Speculation::Speculatable;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2955,8 +3087,17 @@ llvm::SmallVector<mlir::Attribute> fir::LenParamIndexOp::getAttributes() {
 // LoadOp
 //===----------------------------------------------------------------------===//
 
+static bool isSlotOrDeclaredSlot(mlir::Value val,
+                                 const mlir::MemorySlot &slot) {
+  if (val == slot.ptr)
+    return true;
+  if (auto declareOp = val.getDefiningOp<fir::DeclareOp>())
+    return declareOp.getMemref() == slot.ptr;
+  return false;
+}
+
 bool fir::LoadOp::loadsFrom(const mlir::MemorySlot &slot) {
-  return getMemref() == slot.ptr;
+  return isSlotOrDeclaredSlot(getMemref(), slot);
 }
 
 bool fir::LoadOp::storesTo(const mlir::MemorySlot &slot) { return false; }
@@ -2976,7 +3117,7 @@ bool fir::LoadOp::canUsesBeRemoved(
   if (blockingUses.size() != 1)
     return false;
   mlir::Value blockingUse = (*blockingUses.begin())->get();
-  return blockingUse == slot.ptr && getMemref() == slot.ptr;
+  return isSlotOrDeclaredSlot(blockingUse, slot) && getMemref() == blockingUse;
 }
 
 mlir::DeletionKind fir::LoadOp::removeBlockingUses(
@@ -4391,7 +4532,7 @@ llvm::LogicalResult fir::SliceOp::verify() {
 bool fir::StoreOp::loadsFrom(const mlir::MemorySlot &slot) { return false; }
 
 bool fir::StoreOp::storesTo(const mlir::MemorySlot &slot) {
-  return getMemref() == slot.ptr;
+  return isSlotOrDeclaredSlot(getMemref(), slot);
 }
 
 mlir::Value fir::StoreOp::getStored(const mlir::MemorySlot &slot,
@@ -4409,8 +4550,8 @@ bool fir::StoreOp::canUsesBeRemoved(
   if (blockingUses.size() != 1)
     return false;
   mlir::Value blockingUse = (*blockingUses.begin())->get();
-  return blockingUse == slot.ptr && getMemref() == slot.ptr &&
-         getValue() != slot.ptr;
+  return isSlotOrDeclaredSlot(blockingUse, slot) &&
+         getMemref() == blockingUse && getValue() != blockingUse;
 }
 
 mlir::DeletionKind fir::StoreOp::removeBlockingUses(
@@ -5178,7 +5319,7 @@ bool fir::isDummyArgument(mlir::Value v) {
 mlir::Type fir::applyPathToType(mlir::Type eleTy, mlir::ValueRange path) {
   for (auto i = path.begin(), end = path.end(); eleTy && i < end;) {
     eleTy = llvm::TypeSwitch<mlir::Type, mlir::Type>(eleTy)
-                .Case<fir::RecordType>([&](fir::RecordType ty) {
+                .Case([&](fir::RecordType ty) {
                   if (auto *op = (*i++).getDefiningOp()) {
                     if (auto off = mlir::dyn_cast<fir::FieldIndexOp>(op))
                       return ty.getType(off.getFieldName());
@@ -5187,7 +5328,7 @@ mlir::Type fir::applyPathToType(mlir::Type eleTy, mlir::ValueRange path) {
                   }
                   return mlir::Type{};
                 })
-                .Case<fir::SequenceType>([&](fir::SequenceType ty) {
+                .Case([&](fir::SequenceType ty) {
                   bool valid = true;
                   const auto rank = ty.getDimension();
                   for (std::remove_const_t<decltype(rank)> ii = 0;
@@ -5195,13 +5336,13 @@ mlir::Type fir::applyPathToType(mlir::Type eleTy, mlir::ValueRange path) {
                     valid = i < end && fir::isa_integer((*i++).getType());
                   return valid ? ty.getEleTy() : mlir::Type{};
                 })
-                .Case<mlir::TupleType>([&](mlir::TupleType ty) {
+                .Case([&](mlir::TupleType ty) {
                   if (auto *op = (*i++).getDefiningOp())
                     if (auto off = mlir::dyn_cast<mlir::arith::ConstantOp>(op))
                       return ty.getType(fir::toInt(off));
                   return mlir::Type{};
                 })
-                .Case<mlir::ComplexType>([&](mlir::ComplexType ty) {
+                .Case([&](mlir::ComplexType ty) {
                   if (fir::isa_integer((*i++).getType()))
                     return ty.getElementType();
                   return mlir::Type{};
@@ -5242,6 +5383,22 @@ std::optional<int64_t> fir::getAllocaByteSize(fir::AllocaOp alloca,
 }
 
 //===----------------------------------------------------------------------===//
+// DeclareValueOp
+//===----------------------------------------------------------------------===//
+
+static bool isLegalTypeForValueDeclare(mlir::Type type) {
+  return mlir::isa<mlir::IntegerType, mlir::FloatType, mlir::ComplexType,
+                   fir::LogicalType>(type);
+}
+
+llvm::LogicalResult fir::DeclareValueOp::verify() {
+  if (!isLegalTypeForValueDeclare(getValue().getType()))
+    return emitOpError(
+        "value must be a simple scalar (integer, real, complex, or logical)");
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // DeclareOp
 //===----------------------------------------------------------------------===//
 
@@ -5249,6 +5406,45 @@ llvm::LogicalResult fir::DeclareOp::verify() {
   auto fortranVar =
       mlir::cast<fir::FortranVariableOpInterface>(this->getOperation());
   return fortranVar.verifyDeclareLikeOpImpl(getMemref());
+}
+
+bool fir::DeclareOp::canUsesBeRemoved(
+    const mlir::SmallPtrSetImpl<mlir::OpOperand *> &blockingUses,
+    mlir::SmallVectorImpl<mlir::OpOperand *> &newBlockingUses,
+    const mlir::DataLayout &dataLayout) {
+  if (!isLegalTypeForValueDeclare(fir::unwrapRefType(getType())))
+    return false;
+  // MLIR's mem2reg computes defining blocks only from direct users of
+  // the slot pointer. Stores through fir.declare are not direct users,
+  // so they are not registered as defining blocks. This causes missing
+  // phi nodes at join points (e.g., loop headers). Restrict promotion
+  // to the single-block case where no phi nodes are needed.
+  mlir::Block *declBlock = getOperation()->getBlock();
+  for (mlir::OpOperand &use : getResult().getUses()) {
+    if (use.getOwner()->getBlock() != declBlock)
+      return false;
+    newBlockingUses.push_back(&use);
+  }
+  return true;
+}
+
+mlir::DeletionKind fir::DeclareOp::removeBlockingUses(
+    const mlir::SmallPtrSetImpl<mlir::OpOperand *> &blockingUses,
+    mlir::OpBuilder &builder) {
+  return mlir::DeletionKind::Delete;
+}
+
+bool fir::DeclareOp::requiresReplacedValues() { return true; }
+
+void fir::DeclareOp::visitReplacedValues(
+    llvm::ArrayRef<std::pair<mlir::Operation *, mlir::Value>> definitions,
+    mlir::OpBuilder &builder) {
+  for (auto [op, value] : definitions) {
+    builder.setInsertionPointAfter(op);
+    fir::DeclareValueOp::create(builder, getLoc(), value, getDummyScope(),
+                                getUniqNameAttr(), getFortranAttrsAttr(),
+                                getDataAttrAttr(), getDummyArgNoAttr());
+  }
 }
 
 //===----------------------------------------------------------------------===//

@@ -24,13 +24,13 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Debuginfod/BuildIDFetcher.h"
 #include "llvm/Debuginfod/Debuginfod.h"
-#include "llvm/Debuginfod/HTTPClient.h"
 #include "llvm/Object/BuildID.h"
 #include "llvm/ProfileData/Coverage/CoverageMapping.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/HTTP/HTTPClient.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -147,7 +147,7 @@ private:
   std::vector<StringRef> ObjectFilenames;
   CoverageViewOptions ViewOpts;
   CoverageFiltersMatchAll Filters;
-  CoverageFilters IgnoreFilenameFilters;
+  CoverageFilters FilenameFilters;
 
   /// True if InputSourceFiles are provided.
   bool HadSourceFiles = false;
@@ -222,7 +222,7 @@ void CodeCoverageTool::addCollectedPath(const std::string &Path) {
     return;
   }
   sys::path::remove_dots(EffectivePath, /*remove_dot_dot=*/true);
-  if (!IgnoreFilenameFilters.matchesFilename(EffectivePath))
+  if (!FilenameFilters.matchesFilename(EffectivePath))
     SourceFiles.emplace_back(EffectivePath.str());
   HadSourceFiles = !SourceFiles.empty();
 }
@@ -690,7 +690,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       "debug-file-directory",
       cl::desc("Directories to search for object files by build ID"));
   cl::opt<bool> Debuginfod(
-      "debuginfod", cl::ZeroOrMore,
+      "debuginfod",
       cl::desc("Use debuginfod to look up object files from profile"),
       cl::init(canUseDebuginfod()));
 
@@ -732,6 +732,12 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       "ignore-filename-regex", cl::Optional,
       cl::desc("Skip source code files with file paths that match the given "
                "regular expression"),
+      cl::cat(FilteringCategory));
+
+  cl::list<std::string> IncludeFilenameRegexFilters(
+      "include-filename-regex", cl::Optional,
+      cl::desc("Only include source code files with file paths that match the "
+               "given regular expression"),
       cl::cat(FilteringCategory));
 
   cl::opt<double> RegionCoverageLtFilter(
@@ -935,8 +941,11 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
 
     // Create the ignore filename filters.
     for (const auto &RE : IgnoreFilenameRegexFilters)
-      IgnoreFilenameFilters.push_back(
-          std::make_unique<NameRegexCoverageFilter>(RE));
+      FilenameFilters.push_back(std::make_unique<NameRegexCoverageFilter>(RE));
+
+    for (const auto &RE : IncludeFilenameRegexFilters)
+      FilenameFilters.push_back(std::make_unique<NameRegexCoverageFilter>(
+          RE, NameRegexCoverageFilter::FilterType::Include));
 
     if (!Arches.empty()) {
       for (const std::string &Arch : Arches) {
@@ -953,7 +962,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       }
     }
 
-    // IgnoreFilenameFilters are applied even when InputSourceFiles specified.
+    // FilenameFilters are applied even when InputSourceFiles specified.
     for (const std::string &File : InputSourceFiles)
       collectPaths(File);
 
@@ -1164,7 +1173,7 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
   if (SourceFiles.empty() && !HadSourceFiles)
     // Get the source files from the function coverage mapping.
     for (StringRef Filename : Coverage->getUniqueSourceFiles()) {
-      if (!IgnoreFilenameFilters.matchesFilename(Filename))
+      if (!FilenameFilters.matchesFilename(Filename))
         SourceFiles.push_back(std::string(Filename));
     }
 
@@ -1276,7 +1285,7 @@ int CodeCoverageTool::doReport(int argc, const char **argv,
   CoverageReport Report(ViewOpts, *Coverage);
   if (!ShowFunctionSummaries) {
     if (SourceFiles.empty())
-      Report.renderFileReports(llvm::outs(), IgnoreFilenameFilters);
+      Report.renderFileReports(llvm::outs(), FilenameFilters);
     else
       Report.renderFileReports(llvm::outs(), SourceFiles);
   } else {
@@ -1360,7 +1369,7 @@ int CodeCoverageTool::doExport(int argc, const char **argv,
   }
 
   if (SourceFiles.empty())
-    Exporter->renderRoot(IgnoreFilenameFilters);
+    Exporter->renderRoot(FilenameFilters);
   else
     Exporter->renderRoot(SourceFiles);
 

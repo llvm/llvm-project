@@ -115,7 +115,8 @@ void FEnvSafeTest::expect_fenv_eq(const fenv_t &before_fenv,
 
 #else
   // No arch-specific `fenv_t` support, so nothing to compare.
-
+  (void)before_fenv;
+  (void)after_fenv;
 #endif
 }
 

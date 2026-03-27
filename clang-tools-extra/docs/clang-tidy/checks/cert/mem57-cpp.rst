@@ -1,4 +1,6 @@
 .. title:: clang-tidy - cert-mem57-cpp
+.. meta::
+   :http-equiv=refresh: 5;URL=../bugprone/default-operator-new-on-overaligned-type.html
 
 cert-mem57-cpp
 ==============

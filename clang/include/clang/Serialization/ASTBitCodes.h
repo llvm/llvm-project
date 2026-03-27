@@ -44,7 +44,7 @@ namespace serialization {
 /// Version 4 of AST files also requires that the version control branch and
 /// revision match exactly, since there is no backward compatibility of
 /// AST files at this time.
-const unsigned VERSION_MAJOR = 35;
+const unsigned VERSION_MAJOR = 37;
 
 /// AST file minor version number supported by this version of
 /// Clang.
@@ -1618,6 +1618,9 @@ enum StmtCode {
   /// A SYCLKernelCallStmt record.
   STMT_SYCLKERNELCALL,
 
+  /// An UnresolvedSYCLKernelCallStmt record.
+  STMT_UNRESOLVED_SYCL_KERNEL_CALL,
+
   /// A GCC-style AsmStmt record.
   STMT_GCCASM,
 
@@ -1695,6 +1698,9 @@ enum StmtCode {
 
   /// An ExtVectorElementExpr record.
   EXPR_EXT_VECTOR_ELEMENT,
+
+  /// A MatrixElementExpr record.
+  EXPR_MATRIX_ELEMENT,
 
   /// An InitListExpr record.
   EXPR_INIT_LIST,
@@ -1927,6 +1933,9 @@ enum StmtCode {
   EXPR_CXX_FOLD,                          // CXXFoldExpr
   EXPR_CONCEPT_SPECIALIZATION,            // ConceptSpecializationExpr
   EXPR_REQUIRES,                          // RequiresExpr
+
+  // Reflection
+  EXPR_REFLECT,
 
   // CUDA
   EXPR_CUDA_KERNEL_CALL, // CUDAKernelCallExpr

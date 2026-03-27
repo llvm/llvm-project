@@ -21,8 +21,7 @@ define i32 @f0(half %x) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 320
 ; CHECK-NEXT:    # kill: def $f0h killed $f0h def $f0d
 ; CHECK-NEXT:    lgdr %r0, %f0
-; CHECK-NEXT:    srlg %r0, %r0, 48
-; CHECK-NEXT:    lhr %r0, %r0
+; CHECK-NEXT:    risbg %r0, %r0, 32, 175, 32
 ; CHECK-NEXT:    chi %r0, 0
 ; CHECK-NEXT:    ipm %r0
 ; CHECK-NEXT:    risbg %r13, %r0, 63, 191, 36

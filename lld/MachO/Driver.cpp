@@ -874,13 +874,12 @@ static PlatformVersion parsePlatformVersion(const Arg *arg) {
           .Default(PLATFORM_UNKNOWN);
   if (platformVersion.platform == PLATFORM_UNKNOWN)
     error(Twine("malformed platform: ") + platformStr);
-  // TODO: check validity of version strings, which varies by platform
-  // NOTE: ld64 accepts version strings with 5 components
-  // llvm::VersionTuple accepts no more than 4 components
-  // Has Apple ever published version strings with 5 components?
-  if (platformVersion.minimum.tryParse(minVersionStr))
+  // The underlying load command only supports 3 components.
+  if (platformVersion.minimum.tryParse(minVersionStr) ||
+      platformVersion.minimum.getBuild())
     error(Twine("malformed minimum version: ") + minVersionStr);
-  if (platformVersion.sdk.tryParse(sdkVersionStr))
+  if (platformVersion.sdk.tryParse(sdkVersionStr) ||
+      platformVersion.sdk.getBuild())
     error(Twine("malformed sdk version: ") + sdkVersionStr);
   return platformVersion;
 }

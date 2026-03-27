@@ -363,27 +363,6 @@ public:
         static_cast<const BasicBlock *>(this)->getFirstMayFaultInst());
   }
 
-  /// Return a const iterator range over the instructions in the block, skipping
-  /// any debug instructions. Skip any pseudo operations as well if \c
-  /// SkipPseudoOp is true.
-  LLVM_ABI
-  iterator_range<filter_iterator<BasicBlock::const_iterator,
-                                 std::function<bool(const Instruction &)>>>
-  instructionsWithoutDebug(bool SkipPseudoOp = true) const;
-
-  /// Return an iterator range over the instructions in the block, skipping any
-  /// debug instructions. Skip and any pseudo operations as well if \c
-  /// SkipPseudoOp is true.
-  LLVM_ABI iterator_range<
-      filter_iterator<BasicBlock::iterator, std::function<bool(Instruction &)>>>
-  instructionsWithoutDebug(bool SkipPseudoOp = true);
-
-  /// Return the size of the basic block ignoring debug instructions
-  LLVM_ABI
-  filter_iterator<BasicBlock::const_iterator,
-                  std::function<bool(const Instruction &)>>::difference_type
-  sizeWithoutDebug() const;
-
   /// Unlink 'this' from the containing function, but do not delete it.
   LLVM_ABI void removeFromParent();
 
@@ -623,9 +602,6 @@ public:
 
   /// Split the basic block into two basic blocks at the specified instruction.
   ///
-  /// If \p Before is true, splitBasicBlockBefore handles the
-  /// block splitting. Otherwise, execution proceeds as described below.
-  ///
   /// Note that all instructions BEFORE the specified iterator
   /// stay as part of the original basic block, an unconditional branch is added
   /// to the original BB, and the rest of the instructions in the BB are moved
@@ -639,11 +615,9 @@ public:
   ///
   /// Also note that this doesn't preserve any passes. To split blocks while
   /// keeping loop information consistent, use the SplitBlock utility function.
-  LLVM_ABI BasicBlock *splitBasicBlock(iterator I, const Twine &BBName = "",
-                                       bool Before = false);
-  BasicBlock *splitBasicBlock(Instruction *I, const Twine &BBName = "",
-                              bool Before = false) {
-    return splitBasicBlock(I->getIterator(), BBName, Before);
+  LLVM_ABI BasicBlock *splitBasicBlock(iterator I, const Twine &BBName = "");
+  BasicBlock *splitBasicBlock(Instruction *I, const Twine &BBName = "") {
+    return splitBasicBlock(I->getIterator(), BBName);
   }
 
   /// Split the basic block into two basic blocks at the specified instruction

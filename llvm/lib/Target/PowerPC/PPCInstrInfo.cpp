@@ -3027,11 +3027,29 @@ unsigned PPCInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     (void)F.getFnAttribute("patchable-function-entry")
         .getValueAsString()
         .getAsInteger(10, Num);
-    return Num * 4;
+    if (Num || MF->getTarget().getTargetTriple().isOSAIX() ||
+        !MF->getTarget().getTargetTriple().isLittleEndian())
+      return Num * 4;
+    // Size of xray sled.
+    return 7 * 4;
+  }
+  case TargetOpcode::PATCHABLE_RET: {
+    // Size of xray sled.
+    unsigned RetOpcode = MI.getOperand(0).getImm();
+    bool IsConditional = RetOpcode == PPC::BCCLR;
+    return (8 + IsConditional) * 4;
   }
   default:
     return get(Opcode).getSize();
   }
+}
+
+TargetInstrInfo::InstSizeVerifyMode
+PPCInstrInfo::getInstSizeVerifyMode(const MachineInstr &MI) const {
+  // FIXME: The size of STACKMAP is currently over-estimated.
+  return MI.getOpcode() == TargetOpcode::STACKMAP
+             ? InstSizeVerifyMode::AllowOverEstimate
+             : InstSizeVerifyMode::ExactSize;
 }
 
 std::pair<unsigned, unsigned>
@@ -3867,7 +3885,8 @@ bool PPCInstrInfo::convertToImmediateForm(MachineInstr &MI,
 
   // If this is not a reg+reg, but the DefMI is LI/LI8, check if its user MI
   // can be simpified to LI.
-  if (!HasImmForm && simplifyToLI(MI, *DefMI, ForwardingOperand, KilledDef))
+  if (!HasImmForm &&
+      simplifyToLI(MI, *DefMI, ForwardingOperand, KilledDef, &RegsToUpdate))
     return true;
 
   return false;
@@ -4634,7 +4653,8 @@ bool PPCInstrInfo::isImmElgibleForForwarding(const MachineOperand &ImmMO,
 
 bool PPCInstrInfo::simplifyToLI(MachineInstr &MI, MachineInstr &DefMI,
                                 unsigned OpNoForForwarding,
-                                MachineInstr **KilledDef) const {
+                                MachineInstr **KilledDef,
+                                SmallSet<Register, 4> *RegsToUpdate) const {
   if ((DefMI.getOpcode() != PPC::LI && DefMI.getOpcode() != PPC::LI8) ||
       !DefMI.getOperand(1).isImm())
     return false;
@@ -4702,6 +4722,11 @@ bool PPCInstrInfo::simplifyToLI(MachineInstr &MI, MachineInstr &DefMI,
           dbgs() << "Found LI -> CMPI -> ISEL, replacing with a copy.\n");
       LLVM_DEBUG(DefMI.dump(); MI.dump(); CompareUseMI.dump());
       LLVM_DEBUG(dbgs() << "Is converted to:\n");
+      if (RegsToUpdate) {
+        for (const MachineOperand &MO : CompareUseMI.operands())
+          if (MO.isReg())
+            RegsToUpdate->insert(MO.getReg());
+      }
       // Convert to copy and remove unneeded operands.
       CompareUseMI.setDesc(get(PPC::COPY));
       CompareUseMI.removeOperand(3);

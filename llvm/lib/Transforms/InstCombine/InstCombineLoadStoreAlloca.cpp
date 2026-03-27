@@ -176,13 +176,11 @@ isOnlyCopiedFromConstantMemory(AAResults *AA,
 /// Returns true if V is dereferenceable for size of alloca.
 static bool isDereferenceableForAllocaSize(const Value *V, const AllocaInst *AI,
                                            const DataLayout &DL) {
-  if (AI->isArrayAllocation())
-    return false;
-  uint64_t AllocaSize = DL.getTypeStoreSize(AI->getAllocatedType());
-  if (!AllocaSize)
+  std::optional<TypeSize> AllocaSize = AI->getAllocationSize(DL);
+  if (!AllocaSize || AllocaSize->isScalable())
     return false;
   return isDereferenceableAndAlignedPointer(V, AI->getAlign(),
-                                            APInt(64, AllocaSize), DL);
+                                            APInt(64, *AllocaSize), DL);
 }
 
 static Instruction *simplifyAllocaArraySize(InstCombinerImpl &IC,
@@ -212,7 +210,7 @@ static Instruction *simplifyAllocaArraySize(InstCombinerImpl &IC,
   }
 
   if (isa<UndefValue>(AI.getArraySize()))
-    return IC.replaceInstUsesWith(AI, Constant::getNullValue(AI.getType()));
+    return IC.replaceInstUsesWith(AI, PoisonValue::get(AI.getType()));
 
   // Ensure that the alloca array size argument has type equal to the offset
   // size of the alloca() pointer, which, in the tyical case, is intptr_t,
@@ -503,40 +501,39 @@ Instruction *InstCombinerImpl::visitAllocaInst(AllocaInst &AI) {
   if (auto *I = simplifyAllocaArraySize(*this, AI, DT))
     return I;
 
-  if (AI.getAllocatedType()->isSized()) {
-    // Move all alloca's of zero byte objects to the entry block and merge them
-    // together.  Note that we only do this for alloca's, because malloc should
-    // allocate and return a unique pointer, even for a zero byte allocation.
-    if (DL.getTypeAllocSize(AI.getAllocatedType()).getKnownMinValue() == 0) {
-      // For a zero sized alloca there is no point in doing an array allocation.
-      // This is helpful if the array size is a complicated expression not used
-      // elsewhere.
-      if (AI.isArrayAllocation())
-        return replaceOperand(AI, 0,
-            ConstantInt::get(AI.getArraySize()->getType(), 1));
+  // Move all alloca's of zero byte objects to the entry block and merge them
+  // together.  Note that we only do this for alloca's, because malloc should
+  // allocate and return a unique pointer, even for a zero byte allocation.
+  std::optional<TypeSize> Size = AI.getAllocationSize(DL);
+  if (Size && Size->isZero()) {
+    // For a zero sized alloca there is no point in doing an array allocation.
+    // This is helpful if the array size is a complicated expression not used
+    // elsewhere.
+    if (AI.isArrayAllocation())
+      return replaceOperand(AI, 0,
+                            ConstantInt::get(AI.getArraySize()->getType(), 1));
 
-      // Get the first instruction in the entry block.
-      BasicBlock &EntryBlock = AI.getParent()->getParent()->getEntryBlock();
-      BasicBlock::iterator FirstInst = EntryBlock.getFirstNonPHIOrDbg();
-      if (&*FirstInst != &AI) {
-        // If the entry block doesn't start with a zero-size alloca then move
-        // this one to the start of the entry block.  There is no problem with
-        // dominance as the array size was forced to a constant earlier already.
-        AllocaInst *EntryAI = dyn_cast<AllocaInst>(FirstInst);
-        if (!EntryAI || !EntryAI->getAllocatedType()->isSized() ||
-            DL.getTypeAllocSize(EntryAI->getAllocatedType())
-                    .getKnownMinValue() != 0) {
-          AI.moveBefore(FirstInst);
-          return &AI;
-        }
-
-        // Replace this zero-sized alloca with the one at the start of the entry
-        // block after ensuring that the address will be aligned enough for both
-        // types.
-        const Align MaxAlign = std::max(EntryAI->getAlign(), AI.getAlign());
-        EntryAI->setAlignment(MaxAlign);
-        return replaceInstUsesWith(AI, EntryAI);
+    // Get the first instruction in the entry block.
+    BasicBlock &EntryBlock = AI.getParent()->getParent()->getEntryBlock();
+    BasicBlock::iterator FirstInst = EntryBlock.getFirstNonPHIOrDbg();
+    if (&*FirstInst != &AI) {
+      // If the entry block doesn't start with a zero-size alloca then move
+      // this one to the start of the entry block.  There is no problem with
+      // dominance as the array size was forced to a constant earlier already.
+      AllocaInst *EntryAI = dyn_cast<AllocaInst>(FirstInst);
+      std::optional<TypeSize> EntryAISize =
+          EntryAI ? EntryAI->getAllocationSize(DL) : std::nullopt;
+      if (!EntryAISize || !EntryAISize->isZero()) {
+        AI.moveBefore(FirstInst);
+        return &AI;
       }
+
+      // Replace this zero-sized alloca with the one at the start of the entry
+      // block after ensuring that the address will be aligned enough for both
+      // types.
+      const Align MaxAlign = std::max(EntryAI->getAlign(), AI.getAlign());
+      EntryAI->setAlignment(MaxAlign);
+      return replaceInstUsesWith(AI, EntryAI);
     }
   }
 
@@ -998,6 +995,15 @@ static Instruction *replaceGEPIdxWithZero(InstCombinerImpl &IC, Value *Ptr,
       NewGEPI->setOperand(Idx,
         ConstantInt::get(GEPI->getOperand(Idx)->getType(), 0));
       IC.InsertNewInstBefore(NewGEPI, GEPI->getIterator());
+      // If the memory instruction is guaranteed to execute whenever the GEP
+      // does, the dereference proves the index is unconditionally zero.
+      // Replace the GEP for all users so they all benefit.
+      if (GEPI->getParent() == MemI.getParent() &&
+          isGuaranteedToTransferExecutionToSuccessor(GEPI->getIterator(),
+                                                     MemI.getIterator())) {
+        IC.replaceInstUsesWith(*GEPI, NewGEPI);
+        IC.eraseInstFromFunction(*GEPI);
+      }
       return NewGEPI;
     }
   }
@@ -1574,10 +1580,9 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
   if (StoreBB == DestBB || OtherBB == DestBB)
     return false;
 
-  // Verify that the other block ends in a branch and is not otherwise empty.
+  // Verify that the other block is not empty apart from the terminator.
   BasicBlock::iterator BBI(OtherBB->getTerminator());
-  BranchInst *OtherBr = dyn_cast<BranchInst>(BBI);
-  if (!OtherBr || BBI == OtherBB->begin())
+  if (BBI == OtherBB->begin())
     return false;
 
   auto OtherStoreIsMergeable = [&](StoreInst *OtherStore) -> bool {
@@ -1594,7 +1599,7 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
   // If the other block ends in an unconditional branch, check for the 'if then
   // else' case. There is an instruction before the branch.
   StoreInst *OtherStore = nullptr;
-  if (OtherBr->isUnconditional()) {
+  if (isa<UncondBrInst>(BBI)) {
     --BBI;
     // Skip over debugging info and pseudo probes.
     while (BBI->isDebugOrPseudoInst()) {
@@ -1607,7 +1612,7 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
     OtherStore = dyn_cast<StoreInst>(BBI);
     if (!OtherStoreIsMergeable(OtherStore))
       return false;
-  } else {
+  } else if (auto *OtherBr = dyn_cast<CondBrInst>(BBI)) {
     // Otherwise, the other block ended with a conditional branch. If one of the
     // destinations is StoreBB, then we have the if/then case.
     if (OtherBr->getSuccessor(0) != StoreBB &&
@@ -1637,7 +1642,8 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
       if (I->mayReadFromMemory() || I->mayThrow() || I->mayWriteToMemory())
         return false;
     }
-  }
+  } else
+    return false;
 
   // Insert a PHI node now if we need it.
   Value *MergedVal = OtherStore->getValueOperand();
