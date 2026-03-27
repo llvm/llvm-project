@@ -674,7 +674,6 @@ void CIRGenModule::setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op) {
 
   assert(!cir::MissingFeatures::opGlobalUsedOrCompilerUsed());
   assert(!cir::MissingFeatures::opFuncCPUAndFeaturesAttributes());
-  assert(!cir::MissingFeatures::opFuncSection());
 
   getTargetCIRGenInfo().setTargetAttributes(gd.getDecl(), op, *this);
 }
