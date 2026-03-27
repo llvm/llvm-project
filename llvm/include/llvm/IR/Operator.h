@@ -213,57 +213,52 @@ private:
   }
 
   void setHasAllowReassoc(bool B) {
-    SubclassOptionalData =
-    (SubclassOptionalData & ~FastMathFlags::AllowReassoc) |
-    (B * FastMathFlags::AllowReassoc);
+    auto *I = dyn_cast<Instruction>(this);
+    I->setHasAllowReassoc(B);
   }
 
   void setHasNoNaNs(bool B) {
-    SubclassOptionalData =
-      (SubclassOptionalData & ~FastMathFlags::NoNaNs) |
-      (B * FastMathFlags::NoNaNs);
+    auto *I = dyn_cast<Instruction>(this);
+    I->setHasNoNaNs(B);
   }
 
   void setHasNoInfs(bool B) {
-    SubclassOptionalData =
-      (SubclassOptionalData & ~FastMathFlags::NoInfs) |
-      (B * FastMathFlags::NoInfs);
+    auto *I = dyn_cast<Instruction>(this);
+    I->setHasNoInfs(B);
   }
 
   void setHasNoSignedZeros(bool B) {
-    SubclassOptionalData =
-      (SubclassOptionalData & ~FastMathFlags::NoSignedZeros) |
-      (B * FastMathFlags::NoSignedZeros);
+    auto *I = dyn_cast<Instruction>(this);
+    I->setHasNoSignedZeros(B);
   }
 
   void setHasAllowReciprocal(bool B) {
-    SubclassOptionalData =
-      (SubclassOptionalData & ~FastMathFlags::AllowReciprocal) |
-      (B * FastMathFlags::AllowReciprocal);
+    auto *I = dyn_cast<Instruction>(this);
+    I->setHasAllowReciprocal(B);
   }
 
   void setHasAllowContract(bool B) {
-    SubclassOptionalData =
-        (SubclassOptionalData & ~FastMathFlags::AllowContract) |
-        (B * FastMathFlags::AllowContract);
+    auto *I = dyn_cast<Instruction>(this);
+    I->setHasAllowContract(B);
   }
 
   void setHasApproxFunc(bool B) {
-    SubclassOptionalData =
-        (SubclassOptionalData & ~FastMathFlags::ApproxFunc) |
-        (B * FastMathFlags::ApproxFunc);
+    auto *I = dyn_cast<Instruction>(this);
+    I->setHasApproxFunc(B);
   }
 
   /// Convenience function for setting multiple fast-math flags.
   /// FMF is a mask of the bits to set.
   void setFastMathFlags(FastMathFlags FMF) {
-    SubclassOptionalData |= FMF.Flags;
+    auto *I = dyn_cast<Instruction>(this);
+    I->setFastMathFlags(FMF);
   }
 
   /// Convenience function for copying all fast-math flags.
   /// All values in FMF are transferred to this operator.
   void copyFastMathFlags(FastMathFlags FMF) {
-    SubclassOptionalData = FMF.Flags;
+    auto *I = dyn_cast<Instruction>(this);
+    I->copyFastMathFlags(FMF);
   }
 
   /// Returns true if `Ty` is composed of a single kind of float-poing type
@@ -284,54 +279,57 @@ private:
 public:
   /// Test if this operation allows all non-strict floating-point transforms.
   bool isFast() const {
-    return ((SubclassOptionalData & FastMathFlags::AllowReassoc) != 0 &&
-            (SubclassOptionalData & FastMathFlags::NoNaNs) != 0 &&
-            (SubclassOptionalData & FastMathFlags::NoInfs) != 0 &&
-            (SubclassOptionalData & FastMathFlags::NoSignedZeros) != 0 &&
-            (SubclassOptionalData & FastMathFlags::AllowReciprocal) != 0 &&
-            (SubclassOptionalData & FastMathFlags::AllowContract) != 0 &&
-            (SubclassOptionalData & FastMathFlags::ApproxFunc) != 0);
+    const auto *I = dyn_cast<Instruction>(this);
+    return I->isFast();
   }
 
   /// Test if this operation may be simplified with reassociative transforms.
   bool hasAllowReassoc() const {
-    return (SubclassOptionalData & FastMathFlags::AllowReassoc) != 0;
+    const auto *I = dyn_cast<Instruction>(this);
+    return I->hasAllowReassoc();
   }
 
   /// Test if this operation's arguments and results are assumed not-NaN.
   bool hasNoNaNs() const {
-    return (SubclassOptionalData & FastMathFlags::NoNaNs) != 0;
+    const auto *I = dyn_cast<Instruction>(this);
+    return I->hasNoNaNs();
   }
 
   /// Test if this operation's arguments and results are assumed not-infinite.
   bool hasNoInfs() const {
-    return (SubclassOptionalData & FastMathFlags::NoInfs) != 0;
+    const auto *I = dyn_cast<Instruction>(this);
+    return I->hasNoInfs();
   }
 
   /// Test if this operation can ignore the sign of zero.
   bool hasNoSignedZeros() const {
-    return (SubclassOptionalData & FastMathFlags::NoSignedZeros) != 0;
+    const auto *I = dyn_cast<Instruction>(this);
+    return I->hasNoSignedZeros();
   }
 
   /// Test if this operation can use reciprocal multiply instead of division.
   bool hasAllowReciprocal() const {
-    return (SubclassOptionalData & FastMathFlags::AllowReciprocal) != 0;
+    const auto *I = dyn_cast<Instruction>(this);
+    return I->hasAllowReciprocal();
   }
 
   /// Test if this operation can be floating-point contracted (FMA).
   bool hasAllowContract() const {
-    return (SubclassOptionalData & FastMathFlags::AllowContract) != 0;
+    const auto *I = dyn_cast<Instruction>(this);
+    return I->hasAllowContract();
   }
 
   /// Test if this operation allows approximations of math library functions or
   /// intrinsics.
   bool hasApproxFunc() const {
-    return (SubclassOptionalData & FastMathFlags::ApproxFunc) != 0;
+    const auto *I = dyn_cast<Instruction>(this);
+    return I->hasApproxFunc();
   }
 
   /// Convenience function for getting all the fast-math flags
   FastMathFlags getFastMathFlags() const {
-    return FastMathFlags(SubclassOptionalData);
+    const auto *I = dyn_cast<Instruction>(this);
+    return I->getFastMathFlags();
   }
 
   /// Get the maximum error permitted by this operation in ULPs. An accuracy of

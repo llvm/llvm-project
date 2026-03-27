@@ -616,92 +616,99 @@ void Instruction::setFast(bool B) {
 
 void Instruction::setHasAllowReassoc(bool B) {
   assert(isa<FPMathOperator>(this) && "setting fast-math flag on invalid op");
-  cast<FPMathOperator>(this)->setHasAllowReassoc(B);
+  FMFValue = (FMFValue & ~FastMathFlags::AllowReassoc) |
+             (B * FastMathFlags::AllowReassoc);
 }
 
 void Instruction::setHasNoNaNs(bool B) {
   assert(isa<FPMathOperator>(this) && "setting fast-math flag on invalid op");
-  cast<FPMathOperator>(this)->setHasNoNaNs(B);
+  FMFValue = (FMFValue & ~FastMathFlags::NoNaNs) | (B * FastMathFlags::NoNaNs);
 }
 
 void Instruction::setHasNoInfs(bool B) {
   assert(isa<FPMathOperator>(this) && "setting fast-math flag on invalid op");
-  cast<FPMathOperator>(this)->setHasNoInfs(B);
+  FMFValue = (FMFValue & ~FastMathFlags::NoInfs) | (B * FastMathFlags::NoInfs);
 }
 
 void Instruction::setHasNoSignedZeros(bool B) {
   assert(isa<FPMathOperator>(this) && "setting fast-math flag on invalid op");
-  cast<FPMathOperator>(this)->setHasNoSignedZeros(B);
+  FMFValue = (FMFValue & ~FastMathFlags::NoSignedZeros) |
+             (B * FastMathFlags::NoSignedZeros);
 }
 
 void Instruction::setHasAllowReciprocal(bool B) {
   assert(isa<FPMathOperator>(this) && "setting fast-math flag on invalid op");
-  cast<FPMathOperator>(this)->setHasAllowReciprocal(B);
+  FMFValue = (FMFValue & ~FastMathFlags::AllowReciprocal) |
+             (B * FastMathFlags::AllowReciprocal);
 }
 
 void Instruction::setHasAllowContract(bool B) {
   assert(isa<FPMathOperator>(this) && "setting fast-math flag on invalid op");
-  cast<FPMathOperator>(this)->setHasAllowContract(B);
+  FMFValue = (FMFValue & ~FastMathFlags::AllowContract) |
+             (B * FastMathFlags::AllowContract);
 }
 
 void Instruction::setHasApproxFunc(bool B) {
   assert(isa<FPMathOperator>(this) && "setting fast-math flag on invalid op");
-  cast<FPMathOperator>(this)->setHasApproxFunc(B);
+  FMFValue =
+      (FMFValue & ~FastMathFlags::ApproxFunc) | (B * FastMathFlags::ApproxFunc);
 }
 
 void Instruction::setFastMathFlags(FastMathFlags FMF) {
   assert(isa<FPMathOperator>(this) && "setting fast-math flag on invalid op");
-  cast<FPMathOperator>(this)->setFastMathFlags(FMF);
+  FMFValue |= FMF.Flags;
 }
 
 void Instruction::copyFastMathFlags(FastMathFlags FMF) {
   assert(isa<FPMathOperator>(this) && "copying fast-math flag on invalid op");
-  cast<FPMathOperator>(this)->copyFastMathFlags(FMF);
+  FMFValue = FMF.Flags;
 }
 
 bool Instruction::isFast() const {
   assert(isa<FPMathOperator>(this) && "getting fast-math flag on invalid op");
-  return cast<FPMathOperator>(this)->isFast();
+  return hasAllowReassoc() && hasNoNaNs() && hasNoInfs() &&
+         hasNoSignedZeros() && hasAllowReciprocal() && hasAllowContract() &&
+         hasApproxFunc();
 }
 
 bool Instruction::hasAllowReassoc() const {
   assert(isa<FPMathOperator>(this) && "getting fast-math flag on invalid op");
-  return cast<FPMathOperator>(this)->hasAllowReassoc();
+  return FMFValue & FastMathFlags::AllowReassoc;
 }
 
 bool Instruction::hasNoNaNs() const {
   assert(isa<FPMathOperator>(this) && "getting fast-math flag on invalid op");
-  return cast<FPMathOperator>(this)->hasNoNaNs();
+  return FMFValue & FastMathFlags::NoNaNs;
 }
 
 bool Instruction::hasNoInfs() const {
   assert(isa<FPMathOperator>(this) && "getting fast-math flag on invalid op");
-  return cast<FPMathOperator>(this)->hasNoInfs();
+  return FMFValue & FastMathFlags::NoInfs;
 }
 
 bool Instruction::hasNoSignedZeros() const {
   assert(isa<FPMathOperator>(this) && "getting fast-math flag on invalid op");
-  return cast<FPMathOperator>(this)->hasNoSignedZeros();
+  return FMFValue & FastMathFlags::NoSignedZeros;
 }
 
 bool Instruction::hasAllowReciprocal() const {
   assert(isa<FPMathOperator>(this) && "getting fast-math flag on invalid op");
-  return cast<FPMathOperator>(this)->hasAllowReciprocal();
+  return FMFValue & FastMathFlags::AllowReciprocal;
 }
 
 bool Instruction::hasAllowContract() const {
   assert(isa<FPMathOperator>(this) && "getting fast-math flag on invalid op");
-  return cast<FPMathOperator>(this)->hasAllowContract();
+  return FMFValue & FastMathFlags::AllowContract;
 }
 
 bool Instruction::hasApproxFunc() const {
   assert(isa<FPMathOperator>(this) && "getting fast-math flag on invalid op");
-  return cast<FPMathOperator>(this)->hasApproxFunc();
+  return FMFValue & FastMathFlags::ApproxFunc;
 }
 
 FastMathFlags Instruction::getFastMathFlags() const {
   assert(isa<FPMathOperator>(this) && "getting fast-math flag on invalid op");
-  return cast<FPMathOperator>(this)->getFastMathFlags();
+  return FMFValue;
 }
 
 void Instruction::copyFastMathFlags(const Instruction *I) {
@@ -1436,6 +1443,7 @@ Instruction *Instruction::clone() const {
 #undef HANDLE_INST
   }
 
+  New->FMFValue = FMFValue;
   New->SubclassOptionalData = SubclassOptionalData;
   New->copyMetadata(*this);
   return New;

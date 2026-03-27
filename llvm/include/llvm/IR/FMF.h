@@ -22,7 +22,7 @@ class raw_ostream;
 /// Convenience struct for specifying and reasoning about fast-math flags.
 class FastMathFlags {
 private:
-  friend class FPMathOperator;
+  friend class Instruction;
 
   unsigned Flags = 0;
 

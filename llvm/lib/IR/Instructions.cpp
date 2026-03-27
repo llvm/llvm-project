@@ -802,6 +802,7 @@ CallInst::CallInst(const CallInst &CI, AllocInfo AllocInfo)
   std::copy(CI.bundle_op_info_begin(), CI.bundle_op_info_end(),
             bundle_op_info_begin());
   SubclassOptionalData = CI.SubclassOptionalData;
+  FMFValue = CI.FMFValue;
 }
 
 CallInst *CallInst::Create(CallInst *CI, ArrayRef<OperandBundleDef> OpB,
@@ -813,6 +814,7 @@ CallInst *CallInst::Create(CallInst *CI, ArrayRef<OperandBundleDef> OpB,
   NewCI->setTailCallKind(CI->getTailCallKind());
   NewCI->setCallingConv(CI->getCallingConv());
   NewCI->SubclassOptionalData = CI->SubclassOptionalData;
+  NewCI->FMFValue = CI->FMFValue;
   NewCI->setAttributes(CI->getAttributes());
   NewCI->setDebugLoc(CI->getDebugLoc());
   return NewCI;

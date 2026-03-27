@@ -114,6 +114,9 @@ private:
   /// O(1) local dominance checks between instructions.
   mutable unsigned Order = 0;
 
+protected:
+  unsigned short FMFValue = 0; // fast-math flag values
+
 public:
   /// Optional marker recording the position for debugging information that
   /// takes effect immediately before this instruction. Null unless there is
