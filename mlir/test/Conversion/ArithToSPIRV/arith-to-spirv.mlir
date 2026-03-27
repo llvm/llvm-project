@@ -1578,20 +1578,20 @@ func.func @ops_flags(%arg0: i64, %arg1: i64) {
 // -----
 
 module attributes {
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64], []>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.4, [Int8, Int16, Int64, Float16, Float64, Shader], []>, #spirv.resource_limits<>>
 } {
 
-// No decorations should be generated is corresponding Extensions/Capabilities are missing
-// CHECK-LABEL: @ops_flags
-func.func @ops_flags(%arg0: i64, %arg1: i64) {
-  // CHECK: %{{.*}} = spirv.IAdd %{{.*}}, %{{.*}} : i64
+// Decorations should be generated with SPIR-V >= v1.4 even without the extension.
+// CHECK-LABEL: @ops_flags_v1_4
+func.func @ops_flags_v1_4(%arg0: i64, %arg1: i64) {
+  // CHECK: %{{.*}} = spirv.IAdd %{{.*}}, %{{.*}} {no_signed_wrap} : i64
   %0 = arith.addi %arg0, %arg1 overflow<nsw> : i64
-  // CHECK: %{{.*}} = spirv.ISub %{{.*}}, %{{.*}} : i64
+  // CHECK: %{{.*}} = spirv.ISub %{{.*}}, %{{.*}} {no_unsigned_wrap} : i64
   %1 = arith.subi %arg0, %arg1 overflow<nuw> : i64
-  // CHECK: %{{.*}} = spirv.IMul %{{.*}}, %{{.*}} : i64
+  // CHECK: %{{.*}} = spirv.IMul %{{.*}}, %{{.*}} {no_signed_wrap, no_unsigned_wrap} : i64
   %2 = arith.muli %arg0, %arg1 overflow<nsw, nuw> : i64
-  // CHECK: %{{.*}} = spirv.IMul %{{.*}}, %{{.*}} : i64
-  %3 = arith.muli %arg0, %arg1 overflow<nsw, nuw> : i64
+  // CHECK: %{{.*}} = spirv.ShiftLeftLogical %{{.*}}, %{{.*}} {no_signed_wrap, no_unsigned_wrap} : i64
+  %3 = arith.shli %arg0, %arg1 overflow<nsw, nuw> : i64
   return
 }
 

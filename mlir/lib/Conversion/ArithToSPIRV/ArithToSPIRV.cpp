@@ -200,9 +200,18 @@ struct ElementwiseArithOpPattern final : OpConversionPattern<Op> {
     auto overflowFlags = arith::IntegerOverflowFlags::none;
     if (auto overflowIface =
             dyn_cast<arith::ArithIntegerOverflowFlagsInterface>(*op)) {
-      if (converter->getTargetEnv().allows(
-              spirv::Extension::SPV_KHR_no_integer_wrap_decoration))
-        overflowFlags = overflowIface.getOverflowAttr().getValue();
+      overflowFlags = overflowIface.getOverflowAttr().getValue();
+      if (overflowFlags != arith::IntegerOverflowFlags::none) {
+        const auto &targetEnv = converter->getTargetEnv();
+        bool wrapDecorationAvailable =
+            targetEnv.getVersion() >= spirv::Version::V_1_4 ||
+            targetEnv.allows(
+                spirv::Extension::SPV_KHR_no_integer_wrap_decoration);
+        if (!wrapDecorationAvailable)
+          return rewriter.notifyMatchFailure(
+              op->getLoc(), "overflow flags require SPIR-V >= v1.4 or "
+                            "SPV_KHR_no_integer_wrap_decoration extension");
+      }
     }
 
     auto newOp = rewriter.template replaceOpWithNewOp<SPIRVOp>(
