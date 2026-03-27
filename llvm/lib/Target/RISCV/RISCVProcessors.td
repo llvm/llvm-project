@@ -351,7 +351,7 @@ def SIFIVE_X390 : RISCVProcessorModel<"sifive-x390",
 }
 
 def SIFIVE_X160 : RISCVProcessorModel<"sifive-x160",
-                                      NoSchedModel,
+                                      SiFiveX100Model,
                                       [Feature32Bit,
                                        FeatureStdExtI,
                                        FeatureStdExtM,
@@ -394,7 +394,7 @@ def SIFIVE_X160 : RISCVProcessorModel<"sifive-x160",
                                        SiFiveIntelligenceTuneFeatures>;
 
 def SIFIVE_X180 : RISCVProcessorModel<"sifive-x180",
-                                      NoSchedModel,
+                                      SiFiveX100Model,
                                       [Feature64Bit,
                                        FeatureStdExtI,
                                        FeatureStdExtM,
@@ -442,7 +442,9 @@ def SIFIVE_X180 : RISCVProcessorModel<"sifive-x180",
                                        FeatureStdExtZicfilp,
                                        FeatureStdExtZvdot4a8i,
                                        FeatureStdExtZvfbfa],
-                                       SiFiveIntelligenceTuneFeatures>;
+                                       SiFiveIntelligenceTuneFeatures> {
+  let ConfigurableTuneFeatures = [TuneHasSingleElementVecFP64];
+}
 
 defvar SiFiveP400TuneFeatures = [TuneNoDefaultUnroll,
                                  TuneConditionalCompressedMoveFusion,
@@ -897,7 +899,8 @@ def SPACEMIT_X60 : RISCVProcessorModel<"spacemit-x60",
                                         TuneOptimizedNF3SegmentLoadStore,
                                         TuneOptimizedNF4SegmentLoadStore,
                                         TuneEnableSelectOptimize,
-                                        TuneVXRMPipelineFlush]> {
+                                        TuneVXRMPipelineFlush,
+                                        TunePreferAscendingLoadStore]> {
   let MVendorID = 0x710;
   let MArchID = 0x8000000058000001;
   let MImpID = 0x1000000049772200;

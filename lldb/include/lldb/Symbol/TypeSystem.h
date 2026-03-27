@@ -178,6 +178,8 @@ public:
   virtual bool
   IsMemberFunctionPointerType(lldb::opaque_compiler_type_t type) = 0;
 
+  virtual bool IsMemberDataPointerType(lldb::opaque_compiler_type_t type) = 0;
+
   virtual bool IsBlockPointerType(lldb::opaque_compiler_type_t type,
                                   CompilerType *function_pointer_type_ptr) = 0;
 

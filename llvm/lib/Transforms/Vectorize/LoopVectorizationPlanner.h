@@ -609,8 +609,8 @@ public:
   /// \return The most profitable vectorization factor and the cost of that VF
   /// for vectorizing the epilogue. Returns VectorizationFactor::Disabled if
   /// epilogue vectorization is not supported for the loop.
-  VectorizationFactor
-  selectEpilogueVectorizationFactor(const ElementCount MainLoopVF, unsigned IC);
+  VectorizationFactor selectEpilogueVectorizationFactor(ElementCount MainLoopVF,
+                                                        unsigned IC);
 
   /// Emit remarks for recipes with invalid costs in the available VPlans.
   void emitInvalidCostRemarks(OptimizationRemarkEmitter *ORE);

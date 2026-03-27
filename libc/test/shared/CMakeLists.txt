@@ -27,6 +27,7 @@ add_fp_unittest(
     libc.src.__support.math.atan2f
     libc.src.__support.math.atan2f128
     libc.src.__support.math.atan2f16
+    libc.src.__support.math.atanbf16
     libc.src.__support.math.atanf
     libc.src.__support.math.atanf16
     libc.src.__support.math.atanhf
@@ -79,6 +80,7 @@ add_fp_unittest(
     libc.src.__support.math.dsqrtl
     libc.src.__support.math.exp10m1f
     libc.src.__support.math.exp10m1f16
+    libc.src.__support.math.erfcf16
     libc.src.__support.math.erff
     libc.src.__support.math.erff16
     libc.src.__support.math.exp
@@ -245,6 +247,7 @@ add_fp_unittest(
     libc.src.__support.math.sinpif
     libc.src.__support.math.sinpif16
     libc.src.__support.math.sqrt
+    libc.src.__support.math.sqrtbf16
     libc.src.__support.math.sqrtf
     libc.src.__support.math.tan
     libc.src.__support.math.tanf
@@ -253,4 +256,14 @@ add_fp_unittest(
     libc.src.__support.math.tanhf16
     libc.src.__support.math.tanpif
     libc.src.__support.math.tanpif16
+)
+
+add_fp_unittest(
+  shared_math_constexpr_test
+  SUITE
+    libc-shared-tests
+  SRCS
+    shared_math_constexpr_test.cpp
+  DEPENDS
+    .shared_math_test
 )
