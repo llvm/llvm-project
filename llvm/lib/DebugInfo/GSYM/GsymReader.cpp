@@ -61,10 +61,14 @@ GsymReader::openFile(StringRef Path) {
       return R.takeError();
     return std::make_unique<GsymReaderV2>(std::move(*R));
   }
-  auto R = GsymReaderV1::openFile(Path);
-  if (!R)
-    return R.takeError();
-  return std::make_unique<GsymReaderV1>(std::move(*R));
+  if (*VersionOrErr == GSYM_VERSION_1) {
+    auto R = GsymReaderV1::openFile(Path);
+    if (!R)
+      return R.takeError();
+    return std::make_unique<GsymReaderV1>(std::move(*R));
+  }
+  return createStringError(std::errc::invalid_argument,
+                           "unsupported GSYM version %u", *VersionOrErr);
 }
 
 llvm::Expected<std::unique_ptr<GsymReader>>
@@ -78,10 +82,14 @@ GsymReader::copyBuffer(StringRef Bytes) {
       return R.takeError();
     return std::make_unique<GsymReaderV2>(std::move(*R));
   }
-  auto R = GsymReaderV1::copyBuffer(Bytes);
-  if (!R)
-    return R.takeError();
-  return std::make_unique<GsymReaderV1>(std::move(*R));
+  if (*VersionOrErr == GSYM_VERSION_1) {
+    auto R = GsymReaderV1::copyBuffer(Bytes);
+    if (!R)
+      return R.takeError();
+    return std::make_unique<GsymReaderV1>(std::move(*R));
+  }
+  return createStringError(std::errc::invalid_argument,
+                           "unsupported GSYM version %u", *VersionOrErr);
 }
 
 std::optional<uint64_t> GsymReader::getAddress(size_t Index) const {

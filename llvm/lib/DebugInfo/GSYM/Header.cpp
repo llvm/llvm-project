@@ -42,7 +42,7 @@ llvm::Error Header::checkForError() const {
   if (Magic != GSYM_MAGIC)
     return createStringError(std::errc::invalid_argument,
                              "invalid GSYM magic 0x%8.8x", Magic);
-  if (Version != GSYM_VERSION)
+  if (Version != GSYM_VERSION_1)
     return createStringError(std::errc::invalid_argument,
                              "unsupported GSYM version %u", Version);
   switch (AddrOffSize) {

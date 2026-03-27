@@ -902,7 +902,7 @@ static void TestHeaderDecodeError(StringRef Bytes,
 // Populate a GSYM header with valid values.
 static void InitHeader(Header &H) {
   H.Magic = GSYM_MAGIC;
-  H.Version = GSYM_VERSION;
+  H.Version = GSYM_VERSION_1;
   H.AddrOffSize = 4;
   H.UUIDSize = 16;
   H.BaseAddress = 0x1000;
@@ -947,7 +947,7 @@ TEST(GSYMTest, TestHeaderDecodeErrors) {
   FW.fixup32(GSYM_MAGIC, offsetof(Header, Magic));
   FW.fixup32(12, offsetof(Header, Version));
   TestHeaderDecodeError(OutStrm.str(), "unsupported GSYM version 12");
-  FW.fixup32(GSYM_VERSION, offsetof(Header, Version));
+  FW.fixup32(GSYM_VERSION_1, offsetof(Header, Version));
   FW.fixup32(12, offsetof(Header, AddrOffSize));
   TestHeaderDecodeError(OutStrm.str(), "invalid address offset size 12");
   FW.fixup32(4, offsetof(Header, AddrOffSize));
@@ -1085,11 +1085,11 @@ TEST(GSYMTest, TestGsymCreatorV11ByteAddrOffsets) {
   OutputAggregator Null(nullptr);
   Error Err = GC.finalize(Null);
   ASSERT_FALSE(Err);
-  TestEncodeDecode(GC, llvm::endianness::little, GSYM_VERSION, AddrOffSize,
+  TestEncodeDecode(GC, llvm::endianness::little, GSYM_VERSION_1, AddrOffSize,
                    BaseAddr,
                    2, // NumAddresses
                    ArrayRef<uint8_t>(UUID));
-  TestEncodeDecode(GC, llvm::endianness::big, GSYM_VERSION, AddrOffSize,
+  TestEncodeDecode(GC, llvm::endianness::big, GSYM_VERSION_1, AddrOffSize,
                    BaseAddr,
                    2, // NumAddresses
                    ArrayRef<uint8_t>(UUID));
@@ -1108,11 +1108,11 @@ TEST(GSYMTest, TestGsymCreatorV12ByteAddrOffsets) {
   OutputAggregator Null(nullptr);
   Error Err = GC.finalize(Null);
   ASSERT_FALSE(Err);
-  TestEncodeDecode(GC, llvm::endianness::little, GSYM_VERSION, AddrOffSize,
+  TestEncodeDecode(GC, llvm::endianness::little, GSYM_VERSION_1, AddrOffSize,
                    BaseAddr,
                    2, // NumAddresses
                    ArrayRef<uint8_t>(UUID));
-  TestEncodeDecode(GC, llvm::endianness::big, GSYM_VERSION, AddrOffSize,
+  TestEncodeDecode(GC, llvm::endianness::big, GSYM_VERSION_1, AddrOffSize,
                    BaseAddr,
                    2, // NumAddresses
                    ArrayRef<uint8_t>(UUID));
@@ -1131,11 +1131,11 @@ TEST(GSYMTest, TestGsymCreatorV14ByteAddrOffsets) {
   OutputAggregator Null(nullptr);
   Error Err = GC.finalize(Null);
   ASSERT_FALSE(Err);
-  TestEncodeDecode(GC, llvm::endianness::little, GSYM_VERSION, AddrOffSize,
+  TestEncodeDecode(GC, llvm::endianness::little, GSYM_VERSION_1, AddrOffSize,
                    BaseAddr,
                    2, // NumAddresses
                    ArrayRef<uint8_t>(UUID));
-  TestEncodeDecode(GC, llvm::endianness::big, GSYM_VERSION, AddrOffSize,
+  TestEncodeDecode(GC, llvm::endianness::big, GSYM_VERSION_1, AddrOffSize,
                    BaseAddr,
                    2, // NumAddresses
                    ArrayRef<uint8_t>(UUID));
@@ -1154,11 +1154,11 @@ TEST(GSYMTest, TestGsymCreatorV18ByteAddrOffsets) {
   OutputAggregator Null(nullptr);
   Error Err = GC.finalize(Null);
   ASSERT_FALSE(Err);
-  TestEncodeDecode(GC, llvm::endianness::little, GSYM_VERSION, AddrOffSize,
+  TestEncodeDecode(GC, llvm::endianness::little, GSYM_VERSION_1, AddrOffSize,
                    BaseAddr,
                    2, // NumAddresses
                    ArrayRef<uint8_t>(UUID));
-  TestEncodeDecode(GC, llvm::endianness::big, GSYM_VERSION, AddrOffSize,
+  TestEncodeDecode(GC, llvm::endianness::big, GSYM_VERSION_1, AddrOffSize,
                    BaseAddr,
                    2, // NumAddresses
                    ArrayRef<uint8_t>(UUID));
@@ -2486,11 +2486,11 @@ TEST(GSYMTest, TestGsymCreatorV1MultipleSymbolsWithNoSize) {
   OutputAggregator Null(nullptr);
   Error Err = GC.finalize(Null);
   ASSERT_FALSE(Err);
-  TestEncodeDecode(GC, llvm::endianness::little, GSYM_VERSION, AddrOffSize,
+  TestEncodeDecode(GC, llvm::endianness::little, GSYM_VERSION_1, AddrOffSize,
                    BaseAddr,
                    1, // NumAddresses
                    ArrayRef<uint8_t>(UUID));
-  TestEncodeDecode(GC, llvm::endianness::big, GSYM_VERSION, AddrOffSize,
+  TestEncodeDecode(GC, llvm::endianness::big, GSYM_VERSION_1, AddrOffSize,
                    BaseAddr,
                    1, // NumAddresses
                    ArrayRef<uint8_t>(UUID));
