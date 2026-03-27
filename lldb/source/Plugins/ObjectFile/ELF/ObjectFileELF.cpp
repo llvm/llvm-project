@@ -694,8 +694,8 @@ ModuleSpecList ObjectFileELF::GetModuleSpecifications(
               ProgramHeaderColl program_headers;
               GetProgramHeaderInfo(program_headers, *extractor_sp, header);
 
-              core_notes_crc =
-                  CalculateELFNotesSegmentsCRC32(program_headers, *extractor_sp);
+              core_notes_crc = CalculateELFNotesSegmentsCRC32(program_headers,
+                                                              *extractor_sp);
             } else {
               gnu_debuglink_crc = calc_crc32(0, *extractor_sp);
             }
