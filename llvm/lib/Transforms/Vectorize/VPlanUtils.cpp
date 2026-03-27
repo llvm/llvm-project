@@ -611,15 +611,14 @@ VPSingleDefRecipe *vputils::findHeaderMask(VPlan &Plan) {
 
 SmallVector<VPBasicBlock *>
 VPBlockUtils::blocksChainBetween(VPBasicBlock *FirstBB, VPBasicBlock *LastBB) {
-  assert(FirstBB->getEnclosingLoopRegion() ==
-             LastBB->getEnclosingLoopRegion() &&
+  assert(FirstBB->getParent() == LastBB->getParent() &&
          "FirstBB and LastBB from different regions");
 #ifndef NDEBUG
   bool InSingleSuccChain = false;
   for (VPBlockBase *Succ = FirstBB; Succ; Succ = Succ->getSingleSuccessor())
     InSingleSuccChain |= (Succ == LastBB);
   assert(InSingleSuccChain &&
-         "LastBB not reachable from FirstBB in single-successor chain");
+         "LastBB unreachable from FirstBB in single-successor chain");
 #endif
   auto Blocks = to_vector(
       VPBlockUtils::blocksOnly<VPBasicBlock>(vp_depth_first_deep(FirstBB)));
