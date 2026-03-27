@@ -37,8 +37,10 @@ class TestMainExecutable(TestBase):
 
         return info
 
-    @skipIf(bugnumber="rdar://problem/54322424", # This test is unreliable.
-            setting=('symbols.use-swift-clangimporter', 'false'))
+    @skipIf(
+        bugnumber="rdar://problem/54322424",  # This test is unreliable.
+        setting=("symbols.use-swift-clangimporter", "false"),
+    )
     @swiftTest
     @skipIfWindows
     def test_implementation_only_import_main_executable(self):
@@ -60,8 +62,10 @@ class TestMainExecutable(TestBase):
         self.expect("expr container", substrs=["(main.ContainsTwoInts)", "wrapped = (first = 2, second = 3)", "other = 10"])
         self.expect("expr TwoInts(4, 5)", substrs=["(SomeLibrary.TwoInts)", "= (first = 4, second = 5)"])
 
-    @skipIf(bugnumber="rdar://problem/54322424", # This test is unreliable.
-            setting=('symbols.use-swift-clangimporter', 'false'))
+    @skipIf(
+        bugnumber="rdar://problem/54322424",  # This test is unreliable.
+        setting=("symbols.use-swift-clangimporter", "false"),
+    )
     @swiftTest
     @skipIfWindows
     @skipIfLinux # rdar://problem/67348391

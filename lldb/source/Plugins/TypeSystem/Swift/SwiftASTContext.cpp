@@ -428,8 +428,7 @@ public:
   }
 };
 
-namespace std {
-template <> struct less<swift::ClusteredBitVector> {
+struct ClusteredBitVectorLess {
   bool operator()(const swift::ClusteredBitVector &lhs,
                   const swift::ClusteredBitVector &rhs) const {
     int iL = lhs.size() - 1;
@@ -445,7 +444,6 @@ template <> struct less<swift::ClusteredBitVector> {
     return false;
   }
 };
-} // namespace std
 
 static std::string Dump(const swift::ClusteredBitVector &bit_vector) {
   std::string buffer;
@@ -596,7 +594,9 @@ public:
 
 private:
   swift::ClusteredBitVector m_nopayload_elems_bitmask;
-  std::map<swift::ClusteredBitVector, std::unique_ptr<ElementInfo>> m_elements;
+  std::map<swift::ClusteredBitVector, std::unique_ptr<ElementInfo>,
+           ClusteredBitVectorLess>
+      m_elements;
   std::map<uint64_t, ElementInfo *> m_element_indexes;
   bool m_is_objc_enum = false;
 };

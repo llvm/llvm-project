@@ -1529,6 +1529,9 @@ class Base(unittest.TestCase):
     def getDebugInfo(self):
         return self.getVariant("debug_info")
 
+    def getSwiftModuleImporterVariant(self):
+        return self.getVariant("swift_module_importer")
+
     def build(
         self,
         *,
@@ -1830,10 +1833,14 @@ class Base(unittest.TestCase):
 class TestVariant:
     """Describes a test variant dimension for test method expansion.
 
-    Test variants add extra dimensions to the test matrix. When a variant is
-    registered in `_test_variants`, the `LLDBTestCaseFactory` metaclass
-    iterates over every `test*` method and, for each method that matches the
-    variant's predicate, replaces it with one copy per enabled value.
+    Test variants multiply test methods by different configurations.
+    Each variant adds a new dimension to the test matrix, creating copies
+    of test methods for each category in the variant. For example, Swift
+    tests are run with both 'clangimporter' and 'dwarfimporter' settings.
+
+    When a variant is registered in `_test_variants`, the `LLDBTestCaseFactory`
+    metaclass iterates over every `test*` method and, for each method that
+    matches the variant's predicate, replaces it with one copy per enabled value.
 
     For example, a variant with values `{"a": True, "b": True}` turns
     `test_foo` into `test_foo_a` and `test_foo_b`.  If multiple variants
@@ -1964,7 +1971,22 @@ def _expand_test_variants(attrname, methods, variant, xfail_fns, skip_fns):
     return expanded
 
 
-_test_variants = []
+def _swift_module_importer_setup(test_instance, variant_value):
+    if variant_value == "dwarfimporter":
+        test_instance.runCmd("settings set symbols.use-swift-clangimporter false")
+    elif variant_value == "clangimporter":
+        test_instance.runCmd("settings set symbols.use-swift-clangimporter true")
+
+
+_test_variants = [
+    TestVariant(
+        name="swift_module_importer",
+        values=test_categories.swift_module_importer_categories,
+        predicate=lambda m: getattr(m, "__swift_test__", False),
+        setup_fn=_swift_module_importer_setup,
+        attrs_to_preserve=("debug_info",),
+    ),
+]
 
 
 class LLDBTestCaseFactory(type):
@@ -2049,7 +2071,7 @@ class LLDBTestCaseFactory(type):
                     # NO_DEBUG_INFO_TESTCASE — put method in newattrs for variant expansion
                     newattrs[attrname] = attrvalue
 
-                # Expand test variants (e.g. additional variant dimensions)
+                # Expand test variants (e.g. swift clangimporter/dwarfimporter)
                 for variant in _test_variants:
                     if variant.should_expand(attrvalue):
                         xfail_fns = getattr(attrvalue, "__variant_xfail__", {})
@@ -2180,7 +2202,7 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
         # And the result object.
         self.res = lldb.SBCommandReturnObject()
 
-        # Apply variant-specific settings.
+        # Apply variant-specific settings (e.g. swift clangimporter/dwarfimporter).
         for variant in _test_variants:
             variant_value = self.getVariant(variant.name)
             if variant_value is not None:

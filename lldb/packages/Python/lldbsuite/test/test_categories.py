@@ -20,6 +20,11 @@ debug_info_categories = {
     "gmodules": False,
 }
 
+swift_module_importer_categories = {
+    "clangimporter": True,
+    "dwarfimporter": True,
+}
+
 all_categories = {
     "basic_process": "Basic process execution sniff tests.",
     "cmdline": "Tests related to the LLDB command-line interface",
@@ -49,6 +54,8 @@ all_categories = {
     "stresstest": "Tests related to stressing lldb limits",
     "swiftmaccatalyst": "Tests which require swift maccatalyst stdlib support",
     "watchpoint": "Watchpoint-related tests",
+    "clangimporter": "Tests run with the Swift ClangImporter",
+    "dwarfimporter": "Tests run with the Swift DWARFImporter",
 }
 
 
