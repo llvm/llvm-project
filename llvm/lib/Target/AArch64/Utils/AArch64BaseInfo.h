@@ -453,9 +453,6 @@ struct SysAliasOptionalReg : SysAlias {
   constexpr SysAliasOptionalReg(const char *N, uint16_t E, SysAliasRegUse R,
                                 FeatureBitset F)
       : SysAlias(N, E, F), RegUse(R) {}
-
-  constexpr bool needsReg() const { return RegUse == REG_REQUIRED; }
-  constexpr bool optionalReg() const { return RegUse == REG_OPTIONAL; }
 };
 
 struct SysAliasImm : SysAlias {

@@ -1021,10 +1021,10 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
     if (!TLBI || !TLBI->haveFeatures(STI.getFeatureBits()))
       return false;
 
-    NeedsReg = TLBI->needsReg();
+    NeedsReg = TLBI->RegUse == REG_REQUIRED;
     if (STI.hasFeature(AArch64::FeatureAll) ||
         STI.hasFeature(AArch64::FeatureTLBID))
-      OptionalReg = TLBI->optionalReg();
+      OptionalReg = TLBI->RegUse == REG_OPTIONAL;
     Ins = "tlbi\t";
     Name = std::string(TLBI->Name);
   } else if (CnVal == 12) {
@@ -1053,10 +1053,10 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
     if (!PLBI || !PLBI->haveFeatures(STI.getFeatureBits()))
       return false;
 
-    NeedsReg = PLBI->needsReg();
+    NeedsReg = PLBI->RegUse == REG_REQUIRED;
     if (STI.hasFeature(AArch64::FeatureAll) ||
         STI.hasFeature(AArch64::FeatureTLBID))
-      OptionalReg = PLBI->optionalReg();
+      OptionalReg = PLBI->RegUse == REG_OPTIONAL;
     Ins = "plbi\t";
     Name = std::string(PLBI->Name);
   } else

@@ -857,27 +857,22 @@ def : TIndex<"nb", 0b1>;
 //===----------------------------------------------------------------------===//
 
 def SysAliasRegUse : GenericEnum {
-  let ValueField = "Value";
-  let FilterClass = "SysAliasRegUse";
-  let UnderlyingType = "uint8_t";
+  let FilterClass = "RegValue";
 }
 
-class SysAliasRegUse<bits<2> value> {
+class RegValue<bits<2> value> {
   bits<2> Value = value;
 }
 
-def REG_NONE     : SysAliasRegUse<0b00>;
-def REG_OPTIONAL : SysAliasRegUse<0b01>;
-def REG_REQUIRED : SysAliasRegUse<0b10>;
-
-class SysAliasRegUseField<SysAliasRegUse reguse> {
-  SysAliasRegUse RegUse = reguse;
-}
+def REG_NONE     : RegValue<0b00>;
+def REG_OPTIONAL : RegValue<0b01>;
+def REG_REQUIRED : RegValue<0b10>;
 
 class TLBICommon<string name, bits<3> op1, bits<4> crn, bits<4> crm,
-                 bits<3> op2, SysAliasRegUse reguse> : SysAliasRegUseField<reguse> {
+                 bits<3> op2, RegValue reguse> {
   string Name = name;
   bits<14> Encoding;
+  RegValue RegUse = reguse;
   let Encoding{13-11} = op1;
   let Encoding{10-7} = crn;
   let Encoding{6-3} = crm;
@@ -888,11 +883,11 @@ class TLBICommon<string name, bits<3> op1, bits<4> crn, bits<4> crm,
 }
 
 class TLBIEntry<string name, bits<3> op1, bits<4> crn, bits<4> crm,
-                bits<3> op2, SysAliasRegUse reguse>
+                bits<3> op2, RegValue reguse>
   : TLBICommon<name, op1, crn, crm, op2, reguse>;
 
 class TLBIPEntry<string name, bits<3> op1, bits<4> crn, bits<4> crm,
-                 bits<3> op2, SysAliasRegUse reguse>
+                 bits<3> op2, RegValue reguse>
   : TLBICommon<name, op1, crn, crm, op2, reguse>;
 
 multiclass TLBITableBase {
@@ -914,7 +909,7 @@ defm TLBI  : TLBITableBase;
 defm TLBIP : TLBITableBase;
 
 multiclass TLBI<string name, bit hasTLBIP, bits<3> op1, bits<4> crn, bits<4> crm,
-             bits<3> op2, SysAliasRegUse reguse = REG_REQUIRED> {
+             bits<3> op2, RegValue reguse> {
   def : TLBIEntry<name, op1, crn, crm, op2, reguse>;
   def : TLBIEntry<!strconcat(name, "nXS"), op1, crn, crm, op2, reguse> {
     let Encoding{7} = 1;
@@ -2844,9 +2839,10 @@ foreach n = 0-1 in {
 }
 
 class PLBIEntry<bits<3> op1, bits<4> crn, bits<4> crm, bits<3> op2, string name,
-                SysAliasRegUse reguse> : SysAliasRegUseField<reguse> {
+                RegValue reguse> {
   string Name = name;
   bits<14> Encoding;
+  RegValue RegUse = reguse;
   let Encoding{13-11} = op1;
   let Encoding{10-7} = crn;
   let Encoding{6-3} = crm;
@@ -2870,7 +2866,7 @@ def lookupPLBIByName : SearchIndex {
 }
 
 multiclass PLBI<string name, bits<3> op1, bits<4> crn, bits<3> op2,
-                SysAliasRegUse reguse, bit optionalIS = 0> {
+                RegValue reguse, bit optionalIS = 0> {
   // Entries containing "IS" or "OS" allow optional regs when +tlbid enabled
   defvar ISOSRegUse = !if(optionalIS, REG_OPTIONAL, reguse);
   def : PLBIEntry<op1, crn, 0b0111, op2, name,         reguse>;
