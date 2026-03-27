@@ -230,6 +230,33 @@ template <typename T> [[nodiscard]] int countr_zero(T Val) {
 /// Count number of 0's from the most significant bit to the least
 ///   stopping at the first 1.
 ///
+/// A constexpr version of countl_zero.
+///
+/// Only unsigned integral types are allowed.
+///
+/// Returns std::numeric_limits<T>::digits on an input of 0.
+template <typename T> [[nodiscard]] constexpr int countl_zero_constexpr(T Val) {
+  static_assert(std::is_unsigned_v<T>,
+                "Only unsigned integral types are allowed.");
+
+  constexpr int Digits = std::numeric_limits<T>::digits;
+
+  if (!Val)
+    return Digits;
+
+  Val |= (Val >> 1);
+  Val |= (Val >> 2);
+  Val |= (Val >> 4);
+  if constexpr (Digits > 8)  Val |= (Val >> 8);
+  if constexpr (Digits > 16) Val |= (Val >> 16);
+  if constexpr (Digits > 32) Val |= (Val >> 32);
+
+  return Digits - llvm::popcount(Val);
+}
+
+/// Count number of 0's from the most significant bit to the least
+///   stopping at the first 1.
+///
 /// Only unsigned integral types are allowed.
 ///
 /// Returns std::numeric_limits<T>::digits on an input of 0.
@@ -258,16 +285,7 @@ template <typename T> [[nodiscard]] int countl_zero(T Val) {
 #endif
   }
 
-  // Fall back to the bisection method.
-  unsigned ZeroBits = 0;
-  for (T Shift = std::numeric_limits<T>::digits >> 1; Shift; Shift >>= 1) {
-    T Tmp = Val >> Shift;
-    if (Tmp)
-      Val = Tmp;
-    else
-      ZeroBits |= Shift;
-  }
-  return ZeroBits;
+  return countl_zero_constexpr(Val);
 }
 
 /// Count the number of ones from the most significant bit to the first
