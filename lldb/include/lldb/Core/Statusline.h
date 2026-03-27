@@ -33,7 +33,7 @@ public:
   void Redraw(std::optional<ExecutionContextRef> exe_ctx_ref);
 
   /// Clear the cached execution context to discard stale pointers.
-  void Flush();
+  void ClearExecutionContext();
 
   /// Inform the statusline that the terminal dimensions have changed.
   void TerminalSizeChanged();

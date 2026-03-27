@@ -458,7 +458,7 @@ public:
   void RedrawStatusline(std::optional<ExecutionContextRef> exe_ctx_ref);
 
   /// Flush cached state (e.g. stale execution context in the statusline).
-  void Flush();
+  void FlushStatusLine();
 
   /// This is the correct way to query the state of Interruption.
   /// If you are on the RunCommandInterpreter thread, it will check the

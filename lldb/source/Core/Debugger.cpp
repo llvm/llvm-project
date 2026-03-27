@@ -1284,13 +1284,13 @@ void Debugger::RedrawStatusline(
   m_statusline->Redraw(exe_ctx_ref);
 }
 
-void Debugger::Flush() {
+void Debugger::FlushStatusLine() {
   std::lock_guard<std::mutex> guard(m_statusline_mutex);
 
   if (!m_statusline)
     return;
 
-  m_statusline->Flush();
+  m_statusline->ClearExecutionContext();
 }
 
 ExecutionContext Debugger::GetSelectedExecutionContext() {
