@@ -1374,7 +1374,12 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
   const SCEV *SrcConst = Src->getStart();
   const SCEV *DstConst = Dst->getStart();
 
+  // Constant values zero and the minimum signed value are equal to themselves
+  // when negated. They are both invalid values for `Coeff`. If `Coeff` is
+  // zero, we have a ZIV test. If `Coeff` is the minimum signed value, the right
+  // test is `strongSIVtest`.
   assert(Coeff == SE->getNegativeSCEV(Dst->getStepRecurrence(*SE)) &&
+         Coeff != SE->getNegativeSCEV(Coeff) &&
          "Unexpected input for weakCrossingSIVtest");
 
   LLVM_DEBUG(dbgs() << "\tWeak-Crossing SIV test\n");
@@ -1386,9 +1391,11 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
   Level--;
   const SCEV *Delta = SE->getMinusSCEV(DstConst, SrcConst);
   LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
+
   const SCEVConstant *ConstCoeff = dyn_cast<SCEVConstant>(Coeff);
   if (!ConstCoeff)
     return false;
+
   if (Delta->isZero() && SE->isKnownNonZero(Coeff)) {
     Result.DV[Level].Direction &= ~Dependence::DVEntry::LT;
     Result.DV[Level].Direction &= ~Dependence::DVEntry::GT;
