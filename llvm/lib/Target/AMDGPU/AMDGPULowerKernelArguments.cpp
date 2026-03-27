@@ -114,6 +114,7 @@ static void addAliasScopeMetadata(Function &F, const DataLayout &DL,
         PtrArgs.push_back(Arg);
       }
     } else {
+      // Not a memory access and not a call — nothing to annotate.
       continue;
     }
 
@@ -123,6 +124,8 @@ static void addAliasScopeMetadata(Function &F, const DataLayout &DL,
     SmallVector<Metadata *, 4u> NoAliases;
 
     if (!PtrArgs.empty()) {
+      // Trace pointer arguments back to underlying objects and decide which
+      // noalias scopes apply based on provenance and capture analysis.
       for (const Value *Val : PtrArgs) {
         SmallVector<const Value *, 4u> Objects;
         getUnderlyingObjects(Val, Objects);
@@ -170,10 +173,12 @@ static void addAliasScopeMetadata(Function &F, const DataLayout &DL,
             Scopes.push_back(NewScopes[Arg]);
         }
     } else {
-      // The instruction accesses memory but has no pointer arguments (e.g. a
-      // call without pointer args like a threadIdx() builtin). It cannot
-      // access memory through any noalias kernel argument, so all noalias
-      // scopes apply.
+      // The instruction accesses memory but has no pointer arguments
+      // (e.g. a HIP builtin like threadIdx()). Since none of its operands
+      // derive from any noalias kernel argument, it cannot possibly alias
+      // them. Mark it as !noalias w.r.t. every noalias scope so that
+      // ScopedNoAliasAA can prove non-aliasing when other instructions
+      // reference those scopes via !alias.scope.
       for (const Argument *Arg : NoAliasArgs)
         NoAliases.push_back(NewScopes[Arg]);
     }
