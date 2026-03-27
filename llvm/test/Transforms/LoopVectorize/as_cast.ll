@@ -22,7 +22,7 @@ loop:
 ; CHECK: [[ID2:%.*]] = add i64 %{{.*}}, 1
 ; CHECK: [[AS2:%.*]] = addrspacecast ptr addrspace(1) %in to ptr
 ; CHECK: [[GEP2:%.*]] = getelementptr inbounds i64, ptr [[AS2]], i64 [[ID2]]
-; CHECK: store i64 [[ID2]], ptr %9, align 4
+; CHECK: store i64 [[ID2]], ptr [[GEP2]], align 4
 
   %cmp = icmp eq i64 %next, 7
   br i1 %cmp, label %exit, label %loop

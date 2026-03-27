@@ -959,7 +959,8 @@ uint32_t SymbolFileCTF::ResolveSymbolContext(const Address &so_addr,
   // Resolve variables.
   if (resolve_scope & eSymbolContextVariable) {
     for (VariableSP variable_sp : m_variables) {
-      if (variable_sp->LocationIsValidForAddress(so_addr.GetFileAddress())) {
+      if (variable_sp->LocationIsValidForAddress(
+              Address(so_addr.GetFileAddress()))) {
         sc.variable = variable_sp.get();
         break;
       }

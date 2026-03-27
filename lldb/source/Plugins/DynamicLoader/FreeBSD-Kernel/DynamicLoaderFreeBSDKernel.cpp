@@ -255,8 +255,6 @@ void DynamicLoaderFreeBSDKernel::DebuggerInit(
 DynamicLoaderFreeBSDKernel::DynamicLoaderFreeBSDKernel(Process *process,
                                                        addr_t kernel_address)
     : DynamicLoader(process), m_process(process),
-      m_linker_file_list_struct_addr(LLDB_INVALID_ADDRESS),
-      m_linker_file_head_addr(LLDB_INVALID_ADDRESS),
       m_kernel_load_address(kernel_address), m_mutex() {
   process->SetCanRunCode(false);
 }

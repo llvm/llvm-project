@@ -24,10 +24,9 @@ define <4 x i32> @smmla.v4i32.v16i8(<4 x i32> %r, <16 x i8> %a, <16 x i8> %b) sa
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <16 x i1> [[TMP5]] to <16 x i8>
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x i32> @llvm.aarch64.neon.ummla.v4i32.v16i8(<4 x i32> zeroinitializer, <16 x i8> [[TMP4]], <16 x i8> [[TMP6]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne <4 x i32> [[TMP7]], splat (i32 8)
-; CHECK-NEXT:    [[TMP9:%.*]] = sext <4 x i1> [[TMP8]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp ne <4 x i32> [[TMP0]], zeroinitializer
-; CHECK-NEXT:    [[TMP11:%.*]] = sext <4 x i1> [[TMP10]] to <4 x i32>
-; CHECK-NEXT:    [[TMP12:%.*]] = or <4 x i32> [[TMP9]], [[TMP11]]
+; CHECK-NEXT:    [[TMP11:%.*]] = or <4 x i1> [[TMP8]], [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = sext <4 x i1> [[TMP11]] to <4 x i32>
 ; CHECK-NEXT:    [[VMMLA1_I:%.*]] = tail call <4 x i32> @llvm.aarch64.neon.smmla.v4i32.v16i8(<4 x i32> [[R]], <16 x i8> [[A]], <16 x i8> [[B]])
 ; CHECK-NEXT:    store <4 x i32> [[TMP12]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[VMMLA1_I]]
@@ -51,10 +50,9 @@ define <4 x i32> @ummla.v4i32.v16i8(<4 x i32> %r, <16 x i8> %a, <16 x i8> %b) sa
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <16 x i1> [[TMP5]] to <16 x i8>
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x i32> @llvm.aarch64.neon.ummla.v4i32.v16i8(<4 x i32> zeroinitializer, <16 x i8> [[TMP4]], <16 x i8> [[TMP6]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne <4 x i32> [[TMP7]], splat (i32 8)
-; CHECK-NEXT:    [[TMP9:%.*]] = sext <4 x i1> [[TMP8]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp ne <4 x i32> [[TMP0]], zeroinitializer
-; CHECK-NEXT:    [[TMP11:%.*]] = sext <4 x i1> [[TMP10]] to <4 x i32>
-; CHECK-NEXT:    [[TMP12:%.*]] = or <4 x i32> [[TMP9]], [[TMP11]]
+; CHECK-NEXT:    [[TMP11:%.*]] = or <4 x i1> [[TMP8]], [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = sext <4 x i1> [[TMP11]] to <4 x i32>
 ; CHECK-NEXT:    [[VMMLA1_I:%.*]] = tail call <4 x i32> @llvm.aarch64.neon.ummla.v4i32.v16i8(<4 x i32> [[R]], <16 x i8> [[A]], <16 x i8> [[B]])
 ; CHECK-NEXT:    store <4 x i32> [[TMP12]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[VMMLA1_I]]
@@ -78,10 +76,9 @@ define <4 x i32> @usmmla.v4i32.v16i8(<4 x i32> %r, <16 x i8> %a, <16 x i8> %b) s
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <16 x i1> [[TMP5]] to <16 x i8>
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x i32> @llvm.aarch64.neon.ummla.v4i32.v16i8(<4 x i32> zeroinitializer, <16 x i8> [[TMP4]], <16 x i8> [[TMP6]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne <4 x i32> [[TMP7]], splat (i32 8)
-; CHECK-NEXT:    [[TMP9:%.*]] = sext <4 x i1> [[TMP8]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp ne <4 x i32> [[TMP0]], zeroinitializer
-; CHECK-NEXT:    [[TMP11:%.*]] = sext <4 x i1> [[TMP10]] to <4 x i32>
-; CHECK-NEXT:    [[TMP12:%.*]] = or <4 x i32> [[TMP9]], [[TMP11]]
+; CHECK-NEXT:    [[TMP11:%.*]] = or <4 x i1> [[TMP8]], [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = sext <4 x i1> [[TMP11]] to <4 x i32>
 ; CHECK-NEXT:    [[VUSMMLA1_I:%.*]] = tail call <4 x i32> @llvm.aarch64.neon.usmmla.v4i32.v16i8(<4 x i32> [[R]], <16 x i8> [[A]], <16 x i8> [[B]])
 ; CHECK-NEXT:    store <4 x i32> [[TMP12]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[VUSMMLA1_I]]

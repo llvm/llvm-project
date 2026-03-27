@@ -24,8 +24,7 @@ SelfExecutorProcessControl::SelfExecutorProcessControl(
     Triple TargetTriple, unsigned PageSize,
     std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr)
     : ExecutorProcessControl(std::move(SSP), std::move(D)),
-      IPMA(TargetTriple.isArch64Bit()),
-      IPDM(TargetTriple.isOSBinFormatMachO() ? '_' : '\0') {
+      IPMA(TargetTriple.isArch64Bit()) {
 
   OwnedMemMgr = std::move(MemMgr);
   if (!OwnedMemMgr)
@@ -36,7 +35,6 @@ SelfExecutorProcessControl::SelfExecutorProcessControl(
   this->PageSize = PageSize;
   this->MemMgr = OwnedMemMgr.get();
   this->MemAccess = &IPMA;
-  this->DylibMgr = &IPDM;
   this->JDI = {ExecutorAddr::fromPtr(jitDispatchViaWrapperFunctionManager),
                ExecutorAddr::fromPtr(this)};
 
@@ -105,6 +103,12 @@ void SelfExecutorProcessControl::callWrapperAsync(ExecutorAddr WrapperFnAddr,
 Error SelfExecutorProcessControl::disconnect() {
   D->shutdown();
   return Error::success();
+}
+
+Expected<std::unique_ptr<DylibManager>>
+SelfExecutorProcessControl::createDefaultDylibMgr() {
+  char Prefix = TargetTriple.isOSBinFormatMachO() ? '_' : '\0';
+  return std::make_unique<InProcessDylibManager>(Prefix);
 }
 
 shared::CWrapperFunctionBuffer

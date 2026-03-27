@@ -1826,7 +1826,7 @@ void SymbolFileNativePDB::ParseInlineSite(PdbCompilandSymId id,
         S_INLINESITE) {
       // Its parent is another inline site, lookup parent site's range vector
       // for callsite line.
-      ParseInlineSite(parent_id, func_base);
+      ParseInlineSite(parent_id, Address(func_base));
       std::shared_ptr<InlineSite> parent_site =
           m_inline_sites[toOpaqueUid(parent_id)];
       FileSpec &parent_decl_file =

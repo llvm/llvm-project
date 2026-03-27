@@ -1292,7 +1292,16 @@ add_entrypoint_object(
     ../erff16.h
   DEPENDS
     libc.src.__support.math.erff16
-    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  erfcf16
+  SRCS
+    erfcf16.cpp
+  HDRS
+    ../erfcf16.h
+  DEPENDS
+    libc.src.__support.math.erfcf16
 )
 
 add_entrypoint_object(

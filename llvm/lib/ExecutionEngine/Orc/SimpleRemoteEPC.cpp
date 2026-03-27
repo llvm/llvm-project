@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
+#include "llvm/ExecutionEngine/Orc/EPCGenericDylibManager.h"
 #include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -83,6 +84,14 @@ void SimpleRemoteEPC::callWrapperAsync(ExecutorAddr WrapperFnAddr,
 
     getExecutionSession().reportError(std::move(Err));
   }
+}
+
+Expected<std::unique_ptr<DylibManager>>
+SimpleRemoteEPC::createDefaultDylibMgr() {
+  auto DM = EPCGenericDylibManager::CreateWithDefaultBootstrapSymbols(*this);
+  if (!DM)
+    return DM.takeError();
+  return std::make_unique<EPCGenericDylibManager>(std::move(*DM));
 }
 
 Error SimpleRemoteEPC::disconnect() {
@@ -331,14 +340,6 @@ Error SimpleRemoteEPC::setup(Setup S) {
            {RunAsVoidFunctionAddr, rt::RunAsVoidFunctionWrapperName},
            {RunAsIntFunctionAddr, rt::RunAsIntFunctionWrapperName}}))
     return Err;
-
-  if (auto DM =
-          EPCGenericDylibManager::CreateWithDefaultBootstrapSymbols(*this))
-    EPCDylibMgr = std::make_unique<EPCGenericDylibManager>(std::move(*DM));
-  else
-    return DM.takeError();
-
-  this->DylibMgr = EPCDylibMgr.get();
 
   // Set a default CreateMemoryManager if none is specified.
   if (!S.CreateMemoryManager)

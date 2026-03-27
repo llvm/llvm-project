@@ -92,9 +92,9 @@ define i64 @select_non_const_iv_start_signed_guard(ptr %a, i64 %rdx_start, i64 %
 ; CHECK-VF4IC4-NEXT:    [[VEC_PHI5:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP18:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF4IC4-NEXT:    [[VEC_PHI6:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP12:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF4IC4-NEXT:    [[VEC_PHI7:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP13:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-VF4IC4-NEXT:    [[STEP_ADD:%.*]] = add <4 x i64> [[VEC_IND1]], splat (i64 4)
-; CHECK-VF4IC4-NEXT:    [[STEP_ADD_2:%.*]] = add <4 x i64> [[STEP_ADD]], splat (i64 4)
-; CHECK-VF4IC4-NEXT:    [[VEC_IND:%.*]] = add <4 x i64> [[STEP_ADD_2]], splat (i64 4)
+; CHECK-VF4IC4-NEXT:    [[STEP_ADD:%.*]] = add nsw <4 x i64> [[VEC_IND1]], splat (i64 4)
+; CHECK-VF4IC4-NEXT:    [[STEP_ADD_2:%.*]] = add nsw <4 x i64> [[STEP_ADD]], splat (i64 4)
+; CHECK-VF4IC4-NEXT:    [[VEC_IND:%.*]] = add nsw <4 x i64> [[STEP_ADD_2]], splat (i64 4)
 ; CHECK-VF4IC4-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[IV_START]], [[INDEX]]
 ; CHECK-VF4IC4-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[OFFSET_IDX]]
 ; CHECK-VF4IC4-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i64 4

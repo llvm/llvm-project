@@ -1042,17 +1042,19 @@ struct UnrollConvertLayoutOp : public UnrollPattern<xegpu::ConvertLayoutOp> {
   LogicalResult matchAndRewrite(xegpu::ConvertLayoutOp op,
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
-    VectorType valueTy = llvm::dyn_cast<VectorType>(op.getType());
-    assert(valueTy && "the value type must be vector type!");
-
-    std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
-    if (!targetShape || targetShape->size() != (size_t)valueTy.getRank())
-      return failure();
+    Type valType = op.getType();
 
     xegpu::DistributeLayoutAttr inputLayout = op.getInputLayoutAttr();
     xegpu::DistributeLayoutAttr targetLayout = op.getTargetLayoutAttr();
     if (!inputLayout || !targetLayout)
       return rewriter.notifyMatchFailure(op, "missing layout attributes.");
+
+    if (valType.isIntOrFloat()) {
+      rewriter.replaceOp(op, op.getSource());
+      assert(!inputLayout.dropInstData() && !targetLayout.dropInstData() &&
+             "unexpected layout attributes for scalar type");
+      return success();
+    }
 
     if (inputLayout.getEffectiveInstDataAsInt().empty() ||
         targetLayout.getEffectiveInstDataAsInt().empty())
@@ -1060,6 +1062,13 @@ struct UnrollConvertLayoutOp : public UnrollPattern<xegpu::ConvertLayoutOp> {
 
     inputLayout = inputLayout.dropInstData();
     targetLayout = targetLayout.dropInstData();
+
+    VectorType valueTy = llvm::dyn_cast<VectorType>(op.getType());
+    assert(valueTy && "the value type must be vector type!");
+
+    std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
+    if (!targetShape || targetShape->size() != (size_t)valueTy.getRank())
+      return failure();
 
     Value newSource = op.getSource();
     SmallVector<Value> newOps;

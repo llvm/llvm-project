@@ -30,8 +30,7 @@ define void @constant_fold_commutative_and(ptr %ptr.n, ptr noalias %p, i1 %cond)
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[TMP1]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[P]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i1> [[PREDPHI3]], i32 0
 ; CHECK-NEXT:    store i1 [[TMP9]], ptr [[TMP8]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]

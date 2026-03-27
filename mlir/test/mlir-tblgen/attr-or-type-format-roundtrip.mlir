@@ -36,7 +36,24 @@ attributes {
   // CHECK: #test<simple_enum"+">
   attr_14 = #test<simple_enum "+">,
   // CHECK: #test<simple_enum"dash-separated-sentence">
-  attr_15 = #test<simple_enum "dash-separated-sentence">
+  attr_15 = #test<simple_enum "dash-separated-sentence">,
+  // Test that ArrayRefParameter in non-last struct position is wrapped in
+  // brackets to avoid ambiguity with the struct-level comma (issue #156623).
+  // CHECK: #test.arr_struct<elements = [1, 2, 3], count = 42>
+  attr_arr_struct = #test.arr_struct<count = 42, elements = [1, 2, 3]>,
+  // ArrayRefParameter in LAST declared/printed position must NOT be wrapped.
+  // Input must provide count first so elements is parsed last (no ambiguity).
+  // CHECK: #test.arr_struct_last<count = 5, elements = 1, 2, 3>
+  attr_arr_struct_last = #test.arr_struct_last<count = 5, elements = 1, 2, 3>,
+  // Single-element array in non-last position is still wrapped.
+  // CHECK: #test.arr_struct<elements = [7], count = 1>
+  attr_arr_struct_single = #test.arr_struct<count = 1, elements = [7]>,
+  // OptionalArrayRefParameter in non-last struct position (present).
+  // CHECK: #test.opt_arr_struct<elements = [4, 5], count = 9>
+  attr_opt_arr_struct = #test.opt_arr_struct<count = 9, elements = [4, 5]>,
+  // OptionalArrayRefParameter absent: no key emitted.
+  // CHECK: #test.opt_arr_struct<count = 3>
+  attr_opt_arr_struct_absent = #test.opt_arr_struct<count = 3>
 }
 
 // CHECK-LABEL: @test_roundtrip_default_parsers_struct

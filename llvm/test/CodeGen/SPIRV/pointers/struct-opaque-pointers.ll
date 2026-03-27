@@ -1,12 +1,10 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
-; RUNx: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
-; FIXME: re-enable when validator issue if fixed
-; https://github.com/llvm/llvm-project/issues/186756
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: %[[TyInt64:.*]] = OpTypeInt 64 0
 ; CHECK-DAG: %[[TyInt64Ptr:.*]] = OpTypePointer {{[a-zA-Z]+}} %[[TyInt64]]
 ; CHECK-DAG: %[[TyStruct:.*]] = OpTypeStruct %[[TyInt64Ptr]] %[[TyInt64Ptr]]
-; CHECK-DAG: %[[ConstStruct:.*]] = OpConstantComposite %[[TyStruct]] %[[ConstField:.*]] %[[ConstField]]
+; CHECK-DAG: %[[ConstStruct:.*]] = OpSpecConstantComposite %[[TyStruct]] %[[ConstField:.*]] %[[ConstField]]
 ; CHECK-DAG: %[[TyStructPtr:.*]] = OpTypePointer {{[a-zA-Z]+}} %[[TyStruct]]
 ; CHECK-DAG: OpVariable %[[TyStructPtr]] {{[a-zA-Z]+}} %[[ConstStruct]]
 

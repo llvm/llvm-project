@@ -59,6 +59,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.cospi();
   case Operation::Erf:
     return mpfrInput.erf();
+  case Operation::Erfc:
+    return mpfrInput.erfc();
   case Operation::Exp:
     return mpfrInput.exp();
   case Operation::Exp2:

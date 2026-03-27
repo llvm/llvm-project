@@ -1086,6 +1086,28 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
 
   Value *A, *B;
   Constant *C;
+
+  // trunc(u/smin(zext(a) + zext(b), MAX)) --> uadd.sat(a, b)
+  if (match(Src,
+            m_OneUse(m_CombineOr(
+                m_UMin(m_OneUse(m_Add(m_ZExt(m_Value(A)), m_ZExt(m_Value(B)))),
+                       m_SpecificInt(APInt::getMaxValue(DestWidth))),
+                m_SMin(m_OneUse(m_Add(m_ZExt(m_Value(A)), m_ZExt(m_Value(B)))),
+                       m_SpecificInt(APInt::getMaxValue(DestWidth)))))) &&
+      A->getType() == DestTy && B->getType() == DestTy) {
+    return replaceInstUsesWith(
+        Trunc, Builder.CreateBinaryIntrinsic(Intrinsic::uadd_sat, A, B));
+  }
+
+  // trunc(smax(zext(a) - zext(b), 0)) --> usub.sat(a, b)
+  if (match(Src, m_OneUse(m_SMax(
+                     m_OneUse(m_Sub(m_ZExt(m_Value(A)), m_ZExt(m_Value(B)))),
+                     m_Zero()))) &&
+      A->getType() == DestTy && B->getType() == DestTy) {
+    return replaceInstUsesWith(
+        Trunc, Builder.CreateBinaryIntrinsic(Intrinsic::usub_sat, A, B));
+  }
+
   if (match(Src, m_LShr(m_SExt(m_Value(A)), m_Constant(C)))) {
     unsigned AWidth = A->getType()->getScalarSizeInBits();
     unsigned MaxShiftAmt = SrcWidth - std::max(DestWidth, AWidth);

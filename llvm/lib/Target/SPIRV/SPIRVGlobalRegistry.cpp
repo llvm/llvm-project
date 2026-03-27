@@ -1243,18 +1243,22 @@ SPIRVTypeInst SPIRVGlobalRegistry::createSPIRVType(
   }
 
   unsigned AddrSpace = typeToAddressSpace(Ty);
-  SPIRVTypeInst SpvElementType = nullptr;
-  if (Type *ElemTy = ::getPointeeType(Ty))
-    SpvElementType = getOrCreateSPIRVType(ElemTy, MIRBuilder, AccQual, EmitIR);
-  else
-    SpvElementType = getOrCreateSPIRVIntegerType(8, MIRBuilder);
 
   // Get access to information about available extensions
   const SPIRVSubtarget *ST =
       static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
   auto SC = addressSpaceToStorageClass(AddrSpace, *ST);
 
+  SPIRVTypeInst SpvElementType = nullptr;
   Type *ElemTy = ::getPointeeType(Ty);
+  if (ElemTy && isa<FunctionType>(ElemTy) &&
+      !ST->canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers))
+    ElemTy = nullptr;
+  if (ElemTy)
+    SpvElementType = getOrCreateSPIRVType(ElemTy, MIRBuilder, AccQual, EmitIR);
+  else
+    SpvElementType = getOrCreateSPIRVIntegerType(8, MIRBuilder);
+
   if (!ElemTy) {
     ElemTy = Type::getInt8Ty(MIRBuilder.getContext());
   }

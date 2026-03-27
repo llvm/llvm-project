@@ -280,9 +280,14 @@ class HeaderFile:
             self.include_lines(self.template_file is None)
             + self.macro_lines()
             + self.enum_lines()
-            + ["\n__BEGIN_C_DECLS\n"]
         )
+        content.append("")
+        has_decls = self.functions or self.objects
+        if has_decls:
+            content.append("__BEGIN_C_DECLS")
+            content.append("")
 
+        # Emit function declarations.
         current_guard = None
         last_name = None
         for function in sorted(self.functions):
@@ -317,10 +322,13 @@ class HeaderFile:
             content.append(f"#endif // {current_guard}")
             content.append("")
 
+        # Emit object declarations.
         content.extend(str(object) for object in self.objects)
         if self.objects:
             content.append("")
-        content.append("__END_C_DECLS")
+
+        if has_decls:
+            content.append("__END_C_DECLS")
 
         return "\n".join(content)
 

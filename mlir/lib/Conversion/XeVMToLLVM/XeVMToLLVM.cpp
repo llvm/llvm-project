@@ -915,7 +915,7 @@ class LLVMLoadStoreToOCLPattern : public OpConversionPattern<OpType> {
     std::optional<ArrayAttr> optCacheControls =
         getCacheControlMetadata(rewriter, op);
     if (!optCacheControls) {
-      op->removeAttr("cache_control");
+      rewriter.modifyOpInPlace(op, [&]() { op->removeAttr("cache_control"); });
       return success();
     }
 
@@ -929,8 +929,10 @@ class LLVMLoadStoreToOCLPattern : public OpConversionPattern<OpType> {
         rewriter, op->getLoc(), ptr, *optCacheControls, moduleOp);
 
     // Replace the pointer operand with the annotated one.
-    op->setOperand(ptrIdx, annotatedPtr);
-    op->removeAttr("cache_control");
+    rewriter.modifyOpInPlace(op, [&]() {
+      op->setOperand(ptrIdx, annotatedPtr);
+      op->removeAttr("cache_control");
+    });
     return success();
   }
 };

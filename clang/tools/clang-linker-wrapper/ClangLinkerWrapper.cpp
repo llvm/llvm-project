@@ -1332,7 +1332,7 @@ int main(int Argc, char **Argv) {
         Args.hasArg(OPT_help_hidden), Args.hasArg(OPT_help_hidden));
     return EXIT_SUCCESS;
   }
-  if (Args.hasArg(OPT_v)) {
+  if (Args.hasArg(OPT_version)) {
     printVersion(outs());
     return EXIT_SUCCESS;
   }

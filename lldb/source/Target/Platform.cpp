@@ -275,10 +275,8 @@ Status Platform::GetSharedModule(
 
 bool Platform::GetModuleSpec(const FileSpec &module_file_spec,
                              const ArchSpec &arch, ModuleSpec &module_spec) {
-  ModuleSpecList module_specs;
-  if (ObjectFile::GetModuleSpecifications(module_file_spec, 0, 0,
-                                          module_specs) == 0)
-    return false;
+  ModuleSpecList module_specs =
+      ObjectFile::GetModuleSpecifications(module_file_spec, 0, 0);
 
   ModuleSpec matched_module_spec;
   return module_specs.FindMatchingModuleSpec(ModuleSpec(module_file_spec, arch),

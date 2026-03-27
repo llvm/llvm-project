@@ -60,6 +60,13 @@ gpu.func @convert_layout_wg(%a: vector<32x64xf16>) {
   gpu.return
 }
 
+gpu.func @convert_layout_wg_scalar(%a: f16) {
+  // CHECK: xegpu.convert_layout
+  // CHECK-SAME: <{input_layout = #xegpu.slice<#xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16], lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0, 1]>, target_layout = #xegpu.slice<#xegpu.layout<sg_layout = [4, 2], sg_data = [8, 32], lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0, 1]>}> : f16
+  %2 = xegpu.convert_layout %a <{input_layout = #xegpu.slice<#xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16], lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0, 1]>, target_layout = #xegpu.slice<#xegpu.layout<sg_layout = [4, 2], sg_data = [8, 32], lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0, 1]>}> : f16
+  gpu.return
+}
+
 gpu.func @slice_attr() {
   //CHECK: arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [16, 1, 1], sg_data = [1, 8, 2]>, dims = [2]>} dense<8> : vector<16x8xindex>
   %cst = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [16, 1, 1], sg_data = [1, 8, 2]>, dims = [2]>} dense<8> : vector<16x8xindex>

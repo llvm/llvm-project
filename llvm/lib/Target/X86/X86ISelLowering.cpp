@@ -1115,14 +1115,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FMINIMUMNUM, VT, Custom);
     }
 
-    for (auto VT : { MVT::v2i8, MVT::v4i8, MVT::v8i8,
-                     MVT::v2i16, MVT::v4i16, MVT::v2i32 }) {
-      setOperationAction(ISD::SDIV, VT, Custom);
-      setOperationAction(ISD::SREM, VT, Custom);
-      setOperationAction(ISD::UDIV, VT, Custom);
-      setOperationAction(ISD::UREM, VT, Custom);
-    }
-
     setOperationAction(ISD::MUL,                MVT::v2i8,  Custom);
     setOperationAction(ISD::MUL,                MVT::v4i8,  Custom);
     setOperationAction(ISD::MUL,                MVT::v8i8,  Custom);
@@ -34962,27 +34954,6 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::UDIV:
   case ISD::SREM:
   case ISD::UREM: {
-    EVT VT = N->getValueType(0);
-    if (VT.isVector()) {
-      assert(getTypeAction(*DAG.getContext(), VT) == TypeWidenVector &&
-             "Unexpected type action!");
-      // If this RHS is a constant splat vector we can widen this and let
-      // division/remainder by constant optimize it.
-      // TODO: Can we do something for non-splat?
-      APInt SplatVal;
-      if (ISD::isConstantSplatVector(N->getOperand(1).getNode(), SplatVal)) {
-        unsigned NumConcats = 128 / VT.getSizeInBits();
-        SmallVector<SDValue, 8> Ops0(NumConcats, DAG.getUNDEF(VT));
-        Ops0[0] = N->getOperand(0);
-        EVT ResVT = getTypeToTransformTo(*DAG.getContext(), VT);
-        SDValue N0 = DAG.getNode(ISD::CONCAT_VECTORS, dl, ResVT, Ops0);
-        SDValue N1 = DAG.getConstant(SplatVal, dl, ResVT);
-        SDValue Res = DAG.getNode(Opc, dl, ResVT, N0, N1);
-        Results.push_back(Res);
-      }
-      return;
-    }
-
     SDValue V = LowerWin64_i128OP(SDValue(N,0), DAG);
     Results.push_back(V);
     return;

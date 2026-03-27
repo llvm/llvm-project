@@ -2130,9 +2130,11 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
 
       bool BitField = FieldToInit->isBitField();
       if (BitField && Activate)
-        return this->emitInitBitFieldActivate(T, FieldToInit, E);
+        return this->emitInitBitFieldActivate(T, FieldToInit->Offset,
+                                              FieldToInit->bitWidth(), E);
       if (BitField)
-        return this->emitInitBitField(T, FieldToInit, E);
+        return this->emitInitBitField(T, FieldToInit->Offset,
+                                      FieldToInit->bitWidth(), E);
       if (Activate)
         return this->emitInitFieldActivate(T, FieldToInit->Offset, E);
       return this->emitInitField(T, FieldToInit->Offset, E);
@@ -4630,6 +4632,9 @@ template <class Emitter> bool Compiler<Emitter>::visitAsLValue(const Expr *E) {
 }
 
 template <class Emitter> bool Compiler<Emitter>::visitBool(const Expr *E) {
+  OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/false,
+                             /*NewInitializing=*/false, /*ToLValue=*/ToLValue);
+
   OptPrimType T = classify(E->getType());
   if (!T) {
     // Convert complex values to bool.
@@ -5361,7 +5366,8 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
       if (!this->visitAPValue(F, *PT, E))
         return false;
       if (RF->isBitField())
-        return this->emitInitBitFieldActivate(*PT, RF, E);
+        return this->emitInitBitFieldActivate(*PT, RF->Offset, RF->bitWidth(),
+                                              E);
       return this->emitInitFieldActivate(*PT, RF->Offset, E);
     }
 
@@ -6669,9 +6675,9 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
       if (!this->visit(InitExpr))
         return false;
 
-      bool BitField = F->isBitField();
-      if (BitField)
-        return this->emitInitThisBitField(*T, F, FieldOffset, InitExpr);
+      if (F->isBitField())
+        return this->emitInitThisBitField(*T, FieldOffset, F->bitWidth(),
+                                          InitExpr);
       return this->emitInitThisField(*T, FieldOffset, InitExpr);
     }
     // Non-primitive case. Get a pointer to the field-to-initialize

@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/ADT/SetVector.h"
@@ -515,7 +516,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     BasicBlock *FirstExitingBlock = nullptr;
     SmallVector<BasicBlock *> ExitingBlocks;
   };
-  DenseMap<BasicBlock *, ExitInfo> ExitInfos;
+  MapVector<BasicBlock *, ExitInfo> ExitInfos;
   SmallVector<BasicBlock *, 4> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
   for (auto *ExitingBlock : ExitingBlocks) {

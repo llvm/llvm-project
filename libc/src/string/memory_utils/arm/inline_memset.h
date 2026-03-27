@@ -153,4 +153,4 @@ inline_memset_arm_dispatch(Ptr dst, uint8_t value, size_t size) {
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_ARM_INLINE_MEMCPY_H
+#endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_ARM_INLINE_MEMSET_H

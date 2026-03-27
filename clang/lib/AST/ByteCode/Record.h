@@ -32,6 +32,10 @@ public:
 
     bool isBitField() const { return Decl->isBitField(); }
     bool isUnnamedBitField() const { return Decl->isUnnamedBitField(); }
+    unsigned bitWidth() const {
+      assert(isBitField());
+      return Decl->getBitWidthValue();
+    }
 
     Field(const FieldDecl *D, const Descriptor *Desc, unsigned Offset)
         : Decl(D), Desc(Desc), Offset(Offset) {}

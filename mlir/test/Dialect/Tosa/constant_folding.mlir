@@ -1489,4 +1489,16 @@ func.func @test_concat_shape_total_rank9_shapes() -> !tosa.shape<9> {
 
   return %abc : !tosa.shape<9>
 }
+
+// -----
+
+// CHECK-LABEL: @test_slice_shape
+// CHECK: tosa.const_shape  {values = dense<[3, 4, 5, 6]> : tensor<4xindex>} : () -> !tosa.shape<4>
+func.func @test_slice_shape() -> !tosa.shape<4> {
+  %a = tosa.const_shape {values = dense<[1, 2, 3, 4, 5, 6]> : tensor<6xindex>} : () -> !tosa.shape<6>
+  %b = "tosa.const"() {values = dense<2> : tensor<1xi32>} : () -> tensor<1xi32>
+  %c = "tosa.const"() {values = dense<4> : tensor<1xi32>} : () -> tensor<1xi32>
+  %d = tosa.slice_shape %a, %b, %c : (!tosa.shape<6>, tensor<1xi32>, tensor<1xi32>) -> !tosa.shape<4>
+  return %d : !tosa.shape<4>
+}
 // -----

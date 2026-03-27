@@ -951,10 +951,6 @@ LogicalResult LegalizeLaunchFuncOpPattern::matchAndRewrite(
   if (failed(areAllLLVMTypes(launchOp, adaptor.getOperands(), rewriter)))
     return failure();
 
-  if (launchOp.getAsyncDependencies().size() > 1)
-    return rewriter.notifyMatchFailure(
-        launchOp, "Cannot convert with more than one async dependency.");
-
   // Fail when the synchronous version of the op has async dependencies. The
   // lowering destroys the stream, and we do not want to check that there is no
   // use of the stream after this op.
@@ -965,8 +961,35 @@ LogicalResult LegalizeLaunchFuncOpPattern::matchAndRewrite(
   Location loc = launchOp.getLoc();
 
   Value stream = Value();
-  if (!adaptor.getAsyncDependencies().empty())
+  if (!adaptor.getAsyncDependencies().empty()) {
     stream = adaptor.getAsyncDependencies().front();
+    // Synchronize additional async dependencies onto the primary stream using
+    // events, following the same approach as gpu.wait async lowering.
+    if (adaptor.getAsyncDependencies().size() > 1) {
+      auto insertionPoint = rewriter.saveInsertionPoint();
+      SmallVector<Value, 4> events;
+      for (auto [origDep, convertedDep] :
+           llvm::zip(launchOp.getAsyncDependencies().drop_front(),
+                     adaptor.getAsyncDependencies().drop_front())) {
+        if (!isDefinedByCallTo(convertedDep,
+                               streamCreateCallBuilder.functionName)) {
+          events.push_back(convertedDep);
+          continue;
+        }
+        Operation *defOp = origDep.getDefiningOp();
+        rewriter.setInsertionPointAfter(defOp);
+        Value event =
+            eventCreateCallBuilder.create(loc, rewriter, {}).getResult();
+        eventRecordCallBuilder.create(loc, rewriter, {event, convertedDep});
+        events.push_back(event);
+      }
+      rewriter.restoreInsertionPoint(insertionPoint);
+      for (Value event : events)
+        streamWaitEventCallBuilder.create(loc, rewriter, {stream, event});
+      for (Value event : events)
+        eventDestroyCallBuilder.create(loc, rewriter, {event});
+    }
+  }
   // If the async keyword is present and there are no dependencies, then a
   // stream must be created to pass to subsequent operations.
   else if (launchOp.getAsyncToken())

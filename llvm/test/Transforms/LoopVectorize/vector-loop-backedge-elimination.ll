@@ -629,10 +629,7 @@ define void @scev_expand_step(i64 %x, ptr %dst) {
 ; VF8UF1-NEXT:    [[TMP4:%.*]] = extractelement <8 x i1> [[TMP3]], i32 0
 ; VF8UF1-NEXT:    br i1 [[TMP4]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; VF8UF1:       [[PRED_STORE_IF]]:
-; VF8UF1-NEXT:    [[TMP5:%.*]] = mul i64 0, [[STEP]]
-; VF8UF1-NEXT:    [[TMP6:%.*]] = add i64 0, [[TMP5]]
-; VF8UF1-NEXT:    [[TMP7:%.*]] = add i64 [[TMP6]], [[STEP]]
-; VF8UF1-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP7]]
+; VF8UF1-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[DST]], i64 [[STEP]]
 ; VF8UF1-NEXT:    store i8 0, ptr [[TMP8]], align 1
 ; VF8UF1-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; VF8UF1:       [[PRED_STORE_CONTINUE]]:
@@ -733,10 +730,7 @@ define void @scev_expand_step(i64 %x, ptr %dst) {
 ; VF8UF2-NEXT:    [[TMP5:%.*]] = extractelement <8 x i1> [[TMP3]], i32 0
 ; VF8UF2-NEXT:    br i1 [[TMP5]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; VF8UF2:       [[PRED_STORE_IF]]:
-; VF8UF2-NEXT:    [[TMP6:%.*]] = mul i64 0, [[STEP]]
-; VF8UF2-NEXT:    [[TMP7:%.*]] = add i64 0, [[TMP6]]
-; VF8UF2-NEXT:    [[TMP8:%.*]] = add i64 [[TMP7]], [[STEP]]
-; VF8UF2-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP8]]
+; VF8UF2-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[DST]], i64 [[STEP]]
 ; VF8UF2-NEXT:    store i8 0, ptr [[TMP9]], align 1
 ; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; VF8UF2:       [[PRED_STORE_CONTINUE]]:
@@ -916,10 +910,7 @@ define void @scev_expand_step(i64 %x, ptr %dst) {
 ; VF16UF1-NEXT:    [[TMP4:%.*]] = extractelement <16 x i1> [[TMP3]], i32 0
 ; VF16UF1-NEXT:    br i1 [[TMP4]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; VF16UF1:       [[PRED_STORE_IF]]:
-; VF16UF1-NEXT:    [[TMP5:%.*]] = mul i64 0, [[STEP]]
-; VF16UF1-NEXT:    [[TMP6:%.*]] = add i64 0, [[TMP5]]
-; VF16UF1-NEXT:    [[TMP7:%.*]] = add i64 [[TMP6]], [[STEP]]
-; VF16UF1-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP7]]
+; VF16UF1-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[DST]], i64 [[STEP]]
 ; VF16UF1-NEXT:    store i8 0, ptr [[TMP8]], align 1
 ; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; VF16UF1:       [[PRED_STORE_CONTINUE]]:

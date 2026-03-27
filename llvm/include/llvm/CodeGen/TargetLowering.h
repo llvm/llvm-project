@@ -4010,6 +4010,11 @@ public:
 
   bool isPositionIndependent() const;
 
+  // If set to true, SelectionDAG nodes will be consistently processed in
+  // topological order. This is a temporary hook until sorting can be
+  // enabled globally.
+  virtual bool useTopologicalSorting() const { return false; }
+
   virtual bool isSDNodeSourceOfDivergence(const SDNode *N,
                                           FunctionLoweringInfo *FLI,
                                           UniformityInfo *UA) const {

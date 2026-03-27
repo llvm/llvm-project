@@ -25,7 +25,7 @@ struct string {
 string __attribute__((noinline)) get_string() {
   string unused;
   string result = 3;
-  // DEBUGGER: break 23
+  // DEBUGGER: break 29
   stop();
   return result;
 }
@@ -41,7 +41,7 @@ string2 __attribute__((noinline)) get_string2() {
   some_function(result.i);
   // Test that the debugger can get the value of result after another
   // function is called.
-  // DEBUGGER: break 39
+  // DEBUGGER: break 45
   stop();
   return result;
 }

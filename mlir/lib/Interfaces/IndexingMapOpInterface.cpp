@@ -56,7 +56,9 @@ LogicalResult mlir::IndexingMapOpInterface::verifyImpl() {
            << ") to be equal to the number of input/output operands ("
            << getOperation()->getNumOperands() << ")";
 
-  SmallVector<int64_t> allShapesSizes;
+  // Inline size chosen empirically based on compilation profiling.
+  // Profiled: 7.5M calls, avg=5.9+-3.1. N=8 covers 67% of cases inline.
+  SmallVector<int64_t, 8> allShapesSizes;
 
   for (OpOperand &opOperand : getOperation()->getOpOperands()) {
     Type ty = opOperand.get().getType();

@@ -1,4 +1,4 @@
-; RUN: not llc -O0 -mtriple=spirv-vulkan-compute --spirv-ext=+SPV_KHR_non_semantic_info %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llc -O0 -mtriple=spirv-vulkan-compute %s -o /dev/null 2>&1 | FileCheck %s
 
 ; CHECK: error: SampleErrorsDebug.ll:24:10: Non-constant offsets are not supported in sample instructions.
 

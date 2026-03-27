@@ -5673,9 +5673,13 @@ def mno_bti_at_return_twice : Flag<["-"], "mno-bti-at-return-twice">,
   HelpText<"Do not add a BTI instruction after a setjmp or other"
            " return-twice construct (Arm/AArch64 only)">;
 
-foreach i = {1-31} in
+foreach i = {1-7,9-15,18,20-28} in
   def ffixed_x#i : Flag<["-"], "ffixed-x"#i>, Group<m_Group>,
     HelpText<"Reserve the x"#i#" register (AArch64/RISC-V only)">;
+
+foreach i = {8,16,17,19,29-31} in
+  def ffixed_x#i : Flag<["-"], "ffixed-x"#i>, Group<m_Group>,
+    HelpText<"Reserve the x"#i#" register (RISC-V only)">;
 
 def mlr_for_calls_only : Flag<["-"], "mlr-for-calls-only">, Group<m_aarch64_Features_Group>,
   HelpText<"Do not allocate the LR register for general purpose usage, only for calls. (AArch64 only)">;

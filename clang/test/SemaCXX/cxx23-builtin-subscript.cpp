@@ -62,3 +62,6 @@ void f() {
   p.three[1, 2][3] = 4; // expected-error {{property subscript expects exactly one argument}}
   p.three[1][2, 3] = 4; // expected-error {{property subscript expects exactly one argument}}
 }
+
+template<class T>
+void dependent(T x) { x[0, 0]; }

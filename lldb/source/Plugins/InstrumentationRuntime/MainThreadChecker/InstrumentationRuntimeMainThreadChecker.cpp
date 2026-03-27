@@ -103,7 +103,7 @@ InstrumentationRuntimeMainThreadChecker::RetrieveReportData(
 
   std::string apiName;
   Status read_error;
-  target.ReadCStringFromMemory(apiname_ptr, apiName, read_error);
+  target.ReadCStringFromMemory(Address(apiname_ptr), apiName, read_error);
   if (read_error.Fail())
     return StructuredData::ObjectSP();
 

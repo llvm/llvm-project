@@ -29,6 +29,8 @@ def XeGPU_ValueType: FixedVectorOfNonZeroRankOf<[XeGPU_ScalarType]>;
 def XeGPU_VectorType: VectorOfRankAndType<[1,2,3,4,5,6], [XeGPU_ScalarType]>;
 def XeGPU_VectorOrOffsetVectorType
     : VectorOfRankAndType<[1,2,3,4,5,6], [XeGPU_ScalarType, Index]>;
+def XeGPU_ConvertLayoutType
+    : AnyTypeOf<[VectorOfRankAndType<[1,2,3,4,5,6], [XeGPU_ScalarType, Index]>, XeGPU_ScalarType]>;
 def XeGPU_GatherScatterBaseAddrType
     : AnyTypeOf<[MemRefRankOf<[XeGPU_ScalarType], [1]>, XeGPU_PointerType]>;
 

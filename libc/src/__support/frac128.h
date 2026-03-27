@@ -57,4 +57,4 @@ struct Frac128 : public UInt<128> {
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC___SUPPORT_UINT128_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FRAC128_H

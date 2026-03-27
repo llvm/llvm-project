@@ -157,10 +157,9 @@ Module::Module(const ModuleSpec &module_spec)
 
   // First extract all module specifications from the file using the local file
   // path. If there are no specifications, then don't fill anything in
-  ModuleSpecList modules_specs;
-  if (ObjectFile::GetModuleSpecifications(module_spec.GetFileSpec(), 0,
-                                          file_size, modules_specs,
-                                          extractor_sp) == 0)
+  ModuleSpecList modules_specs = ObjectFile::GetModuleSpecifications(
+      module_spec.GetFileSpec(), 0, file_size, extractor_sp);
+  if (modules_specs.GetSize() == 0)
     return;
 
   // Now make sure that one of the module specifications matches what we just

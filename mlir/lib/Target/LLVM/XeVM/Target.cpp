@@ -107,9 +107,8 @@ gpu::GPUModuleOp SerializeGPUModuleBase::getGPUModuleOp() {
 // There are 2 ways to access IGC: AOT (ocloc) and JIT (L0 runtime).
 // - L0 runtime consumes IL and is external to MLIR codebase (rt wrappers).
 // - `ocloc` tool can be "queried" from within MLIR.
-FailureOr<SmallVector<char, 0>>
-SerializeGPUModuleBase::compileToBinary(StringRef asmStr,
-                                        StringRef inputFormat) {
+FailureOr<SmallVector<char, 0>> SerializeGPUModuleBase::compileToBinary(
+    StringRef asmStr, StringRef inputFormat = "-spirv_input") {
   using TmpFile = std::pair<llvm::SmallString<128>, llvm::FileRemover>;
   // Find the `ocloc` tool.
   std::optional<std::string> oclocCompiler = findTool("ocloc");
@@ -341,7 +340,20 @@ SPIRVSerializer::moduleToObject(llvm::Module &llvmModule) {
     return SmallVector<char, 0>(bin.begin(), bin.end());
   }
 
-  // Level zero runtime is set up to accept SPIR-V binary
+  // Binary generation path for SPIR-V target. Optimization and SPIR-V
+  // extensions are enabled in this path. In this path, first the SPIR-V binary
+  // is generated directly using the SPIR-V backends `SPIRVTranslateModule` API.
+  // Resultant SPIR-V is then fed to `ocloc` compiler (Intel's OpenCL Offline
+  // Compiler) to generate the final binary for Intel GPUs.
+
+  // @TODO: This part is doing exact same SPIR-V code generation as the previous
+  // section under (targetOptions.getCompilationTarget() ==
+  // gpu::CompilationTarget::Assembly) condition. Only execption is, it enables
+  // optimization and SPIRV extensions support for SPIRV binary output. We need
+  // to decide which one do we use for our SPIRV code generation, and remove the
+  // other one to avoid confusion. For now, we keep both to have more
+  // flexibility for testing and comparison.
+
   std::string serializedSPIRVBinary;
   std::string ErrMsg;
   std::vector<std::string> Opts;
@@ -361,8 +373,9 @@ SPIRVSerializer::moduleToObject(llvm::Module &llvmModule) {
     return getGPUModuleOp().emitError()
            << "SPIRV code size must be a multiple of 4.";
 
-  StringRef bin(serializedSPIRVBinary.c_str(), serializedSPIRVBinary.size());
-  return SmallVector<char, 0>(bin.begin(), bin.end());
+  StringRef spirvBin(serializedSPIRVBinary.c_str(),
+                     serializedSPIRVBinary.size());
+  return compileToBinary(spirvBin, "-spirv_input");
 #endif // LLVM_HAS_SPIRV_TARGET
 }
 

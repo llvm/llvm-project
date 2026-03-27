@@ -479,33 +479,38 @@ ModuleSpecList ObjectContainerBSDArchive::GetModuleSpecifications(
             continue;
           FileSpec child = GetChildFileSpecificationsFromThin(
               object->ar_name.GetStringRef(), file);
-          if (lldb_private::ObjectFile::GetModuleSpecifications(
-                  child, 0, object->file_size, specs)) {
-            ModuleSpec &spec =
-                specs.GetModuleSpecRefAtIndex(specs.GetSize() - 1);
+          ModuleSpecList object_specs =
+              lldb_private::ObjectFile::GetModuleSpecifications(
+                  child, 0, object->file_size);
+          if (object_specs.GetSize() > 0) {
+            ModuleSpec &spec = object_specs.GetModuleSpecRefAtIndex(
+                object_specs.GetSize() - 1);
             llvm::sys::TimePoint<> object_mod_time(
                 std::chrono::seconds(object->modification_time));
             spec.GetObjectName() = object->ar_name;
             spec.SetObjectOffset(0);
             spec.SetObjectSize(object->file_size);
             spec.GetObjectModificationTime() = object_mod_time;
+            specs.Append(spec);
           }
           continue;
         }
         const lldb::offset_t object_file_offset =
             file_offset + object->file_offset;
         if (object->file_offset < file_size && file_size > object_file_offset) {
-          if (lldb_private::ObjectFile::GetModuleSpecifications(
-                  file, object_file_offset, file_size - object_file_offset,
-                  specs)) {
-            ModuleSpec &spec =
-                specs.GetModuleSpecRefAtIndex(specs.GetSize() - 1);
+          ModuleSpecList object_specs =
+              lldb_private::ObjectFile::GetModuleSpecifications(
+                  file, object_file_offset, file_size - object_file_offset);
+          if (object_specs.GetSize() > 0) {
+            ModuleSpec &spec = object_specs.GetModuleSpecRefAtIndex(
+                object_specs.GetSize() - 1);
             llvm::sys::TimePoint<> object_mod_time(
                 std::chrono::seconds(object->modification_time));
             spec.GetObjectName() = object->ar_name;
             spec.SetObjectOffset(object_file_offset);
             spec.SetObjectSize(object->file_size);
             spec.GetObjectModificationTime() = object_mod_time;
+            specs.Append(spec);
           }
         }
       }

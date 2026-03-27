@@ -125,7 +125,7 @@ lldb_private::formatters::GetArrayAddressOrPointerValue(ValueObject &valobj) {
       data_addr.type == eAddressTypeFile)
     return Address(data_addr.address, valobj.GetModule()->GetSectionList());
 
-  return data_addr.address;
+  return Address(data_addr.address);
 }
 
 void lldb_private::formatters::DumpCxxSmartPtrPointerSummary(

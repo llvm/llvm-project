@@ -191,3 +191,40 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+// collectFreedValues should not crash on ops that don't implement
+// MemoryEffectOpInterface (e.g. pdl ops inside with_pdl_patterns).
+// https://github.com/llvm/llvm-project/issues/120944
+
+// CHECK-LABEL: func @foo
+func.func @foo(%arg0: index, %arg1: index, %arg2: index) {
+  scf.for %i = %arg0 to %arg1 step %arg2 {
+    %0 = arith.constant 0 : i32
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root: !transform.any_op) {
+    transform.with_pdl_patterns %root : !transform.any_op {
+    ^bb0(%arg0: !transform.any_op):
+      pdl.pattern @match_const : benefit(1) {
+        %0 = pdl.operands
+        %1 = pdl.types
+        %2 = pdl.operation "arith.constant"(%0 : !pdl.range<value>) -> (%1 : !pdl.range<type>)
+        pdl.rewrite %2 with "transform.dialect"
+      }
+      sequence %arg0 : !transform.any_op failures(propagate) {
+      ^bb1(%arg1: !transform.any_op):
+        %0 = transform.pdl_match @match_const in %arg1 : (!transform.any_op) -> !transform.any_op
+        %1 = transform.get_parent_op %0 {op_name = "scf.for"} : (!transform.any_op) -> !transform.any_op
+        alternatives %1 : !transform.any_op {
+        ^bb2(%arg2: !transform.any_op):
+        }
+      }
+    }
+    transform.yield
+  }
+}

@@ -3464,7 +3464,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   bool maybeHandleUnknownIntrinsic(IntrinsicInst &I) {
     if (maybeHandleUnknownIntrinsicUnlogged(I)) {
       if (ClDumpHeuristicInstructions)
-        dumpInst(I);
+        dumpInst(I, "Heuristic");
 
       LLVM_DEBUG(dbgs() << "UNKNOWN INSTRUCTION HANDLED HEURISTICALLY: " << I
                         << "\n");
@@ -5673,13 +5673,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         ExpectedRTy->getElementCount(),
         ConstantInt::get(ExpectedRTy->getElementType(), 0x8));
 
-    ShadowAB = IRB.CreateSExt(IRB.CreateICmpNE(ShadowAB, FullyInit),
-                              ShadowAB->getType());
+    ShadowAB = IRB.CreateICmpNE(ShadowAB, FullyInit);
 
-    ShadowR = IRB.CreateSExt(
-        IRB.CreateICmpNE(ShadowR, getCleanShadow(ExpectedRTy)), ExpectedRTy);
+    ShadowR = IRB.CreateICmpNE(ShadowR, getCleanShadow(ExpectedRTy));
+    ShadowR = IRB.CreateOr(ShadowAB, ShadowR);
 
-    setShadow(&I, IRB.CreateOr(ShadowAB, ShadowR));
+    setShadow(&I, IRB.CreateSExt(ShadowR, ExpectedRTy));
     setOriginForNaryOp(I);
   }
 
@@ -7739,15 +7738,16 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
-  void dumpInst(Instruction &I) {
+  void dumpInst(Instruction &I, const Twine &Prefix) {
     // Instruction name only
     // For intrinsics, the full/overloaded name is used
     //
     // e.g., "call llvm.aarch64.neon.uqsub.v16i8"
     if (CallInst *CI = dyn_cast<CallInst>(&I)) {
-      errs() << "ZZZ call " << CI->getCalledFunction()->getName() << "\n";
+      errs() << "ZZZ:" << Prefix << " call "
+             << CI->getCalledFunction()->getName() << "\n";
     } else {
-      errs() << "ZZZ " << I.getOpcodeName() << "\n";
+      errs() << "ZZZ:" << Prefix << " " << I.getOpcodeName() << "\n";
     }
 
     // Instruction prototype (including return type and parameter types)
@@ -7756,7 +7756,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // e.g., "call <16 x i8> @llvm.aarch64.neon.uqsub(<16 x i8>, <16 x i8>)"
     unsigned NumOperands = I.getNumOperands();
     if (CallInst *CI = dyn_cast<CallInst>(&I)) {
-      errs() << "YYY call " << *I.getType() << " @";
+      errs() << "YYY:" << Prefix << " call " << *I.getType() << " @";
 
       if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(CI))
         errs() << Intrinsic::getBaseName(II->getIntrinsicID());
@@ -7768,7 +7768,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       // The last operand of a CallInst is the function itself.
       NumOperands--;
     } else
-      errs() << "YYY " << *I.getType() << " " << I.getOpcodeName() << "(";
+      errs() << "YYY:" << Prefix << " " << *I.getType() << " "
+             << I.getOpcodeName() << "(";
 
     for (size_t i = 0; i < NumOperands; i++) {
       if (i > 0)
@@ -7785,7 +7786,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // e.g., "%vqsubq_v.i15 = call noundef <16 x i8>
     //            @llvm.aarch64.neon.uqsub.v16i8(<16 x i8> %vext21.i,
     //            <16 x i8> splat (i8 1)), !dbg !66"
-    errs() << "QQQ " << I << "\n";
+    errs() << "QQQ:" << Prefix << " " << I << "\n";
   }
 
   void visitResumeInst(ResumeInst &I) {
@@ -7917,7 +7918,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void visitInstruction(Instruction &I) {
     // Everything else: stop propagating and check for poisoned shadow.
     if (ClDumpStrictInstructions)
-      dumpInst(I);
+      dumpInst(I, "Strict");
     LLVM_DEBUG(dbgs() << "DEFAULT: " << I << "\n");
     for (size_t i = 0, n = I.getNumOperands(); i < n; i++) {
       Value *Operand = I.getOperand(i);

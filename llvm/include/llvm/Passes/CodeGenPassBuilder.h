@@ -698,6 +698,12 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addISelPasses(
   if (TM.useEmulatedTLS())
     addModulePass(LowerEmuTLSPass(), PMW);
 
+  // ObjCARCContract operates on ObjC intrinsics and must run before
+  // PreISelIntrinsicLowering.
+  if (getOptLevel() != CodeGenOptLevel::None) {
+    addFunctionPass(ObjCARCContractPass(), PMW);
+    flushFPMsToMPM(PMW);
+  }
   addModulePass(PreISelIntrinsicLoweringPass(&TM), PMW);
   addFunctionPass(ExpandIRInstsPass(TM, getOptLevel()), PMW);
 
@@ -855,9 +861,6 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addISelPrepare(
 
   if (Opt.RequiresCodeGenSCCOrder && !AddInCGSCCOrder)
     requireCGSCCOrder(PMW);
-
-  if (getOptLevel() != CodeGenOptLevel::None)
-    addFunctionPass(ObjCARCContractPass(), PMW);
 
   addFunctionPass(InlineAsmPreparePass(), PMW);
   // Add both the safe stack and the stack protection passes: each of them will

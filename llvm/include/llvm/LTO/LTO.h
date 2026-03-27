@@ -367,13 +367,15 @@ LLVM_ABI ThinBackend createInProcessThinBackend(
 /// backend compilations.
 /// SaveTemps is a debugging tool that prevents temporary files created by this
 /// backend from being cleaned up.
+/// AddBuffer is used to add a pre-existing native object buffer to the link.
 LLVM_ABI ThinBackend createOutOfProcessThinBackend(
     ThreadPoolStrategy Parallelism, IndexWriteCallback OnWrite,
     bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles,
     StringRef LinkerOutputFile, StringRef Distributor,
     ArrayRef<StringRef> DistributorArgs, StringRef RemoteCompiler,
     ArrayRef<StringRef> RemoteCompilerPrependArgs,
-    ArrayRef<StringRef> RemoteCompilerArgs, bool SaveTemps);
+    ArrayRef<StringRef> RemoteCompilerArgs, bool SaveTemps,
+    AddBufferFn AddBuffer);
 
 /// This ThinBackend writes individual module indexes to files, instead of
 /// running the individual backend jobs. This backend is for distributed builds

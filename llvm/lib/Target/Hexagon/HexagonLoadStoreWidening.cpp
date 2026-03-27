@@ -581,6 +581,18 @@ MachineInstr *HexagonLoadStoreWidening::widenLoadStoreAddAsl(
   MachineInstr *WidenedInstr = nullptr;
   auto Reg1 = AddaslDef->getOperand(1).getReg();
   auto Reg2 = AddaslDef->getOperand(2).getReg();
+  unsigned Reg2SubReg = AddaslDef->getOperand(2).getSubReg();
+
+  // S4_storerd_rr and L4_loadrd_rr require IntRegs for Reg2.
+  const TargetRegisterClass *Reg2RC = MRI->getRegClass(Reg2);
+  // Cannot widen if:
+  // 1. DoubleReg without subreg, or
+  // 2. Neither DoubleReg nor IntReg
+  if ((Hexagon::DoubleRegsRegClass.hasSubClassEq(Reg2RC) && Reg2SubReg == 0) ||
+      (!Hexagon::DoubleRegsRegClass.hasSubClassEq(Reg2RC) &&
+       !Hexagon::IntRegsRegClass.hasSubClassEq(Reg2RC)))
+    return nullptr;
+
   auto Reg3 = AddaslDef->getOperand(3).getImm();
   MachineInstrBuilder MIB;
 
@@ -590,12 +602,12 @@ MachineInstr *HexagonLoadStoreWidening::widenLoadStoreAddAsl(
               .addDef(NewPairReg, getKillRegState(LdOp.isKill()),
                       LdOp.getSubReg())
               .addReg(Reg1)
-              .addReg(Reg2)
+              .addReg(Reg2, {}, Reg2SubReg)
               .addImm(Reg3);
   } else {
     MIB = BuildMI(*MF, DL, TII->get(Hexagon::S4_storerd_rr))
               .addReg(Reg1)
-              .addReg(Reg2)
+              .addReg(Reg2, {}, Reg2SubReg)
               .addImm(Reg3)
               .addReg(NewPairReg);
   }

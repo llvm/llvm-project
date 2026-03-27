@@ -25,23 +25,20 @@
 # (DW_OP_plus_uconst, 8, DW_OP_deref)
 # CHECK: LocalSym {
 # CHECK-NEXT:   Kind: S_LOCAL (0x113E)
-# CHECK-NEXT:   Type: string (0x
+# CHECK-NEXT:   Type: string& (0x
 # CHECK-NEXT:   Flags [ (0x0)
 # CHECK-NEXT:   ]
 # CHECK-NEXT:   VarName: Result
 # CHECK-NEXT: }
-# CHECK-NEXT: DefRangeRegisterRelIndirSym {
-# CHECK-NEXT:   Kind: S_DEFRANGE_REGISTER_REL_INDIR (0x1177)
-# CHECK-NEXT:   BaseRegister: VFRAME (0x
-# CHECK-NEXT:   HasSpilledUDTMember: No
-# CHECK-NEXT:   OffsetInParent: 0
-# CHECK-NEXT:   BasePointerOffset: 8
-# CHECK-NEXT:   OffsetInUDT: 0
+# CHECK-NEXT: DefRangeFramePointerRelSym {
+# CHECK-NEXT:   Kind: S_DEFRANGE_FRAMEPOINTER_REL (0x1142)
+# CHECK-NEXT:   Offset: 8
 # CHECK-NEXT:   LocalVariableAddrRange {
 # CHECK-NEXT:     OffsetStart: .text+0x5
 # CHECK-NEXT:     ISectStart: 0x0
 # CHECK-NEXT:     Range: 0x18
 # CHECK-NEXT:   }
+# CHECK-NEXT: }
 # (DW_OP_constu, 4, DW_OP_minus)
 # CHECK: LocalSym {
 # CHECK-NEXT:   Kind: S_LOCAL (0x113E)

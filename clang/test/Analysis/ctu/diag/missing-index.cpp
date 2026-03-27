@@ -8,11 +8,8 @@
 // RUN:   -analyzer-config ctu-index-name=non-existing.txt \
 // RUN:   -verify %s
 
-// We expect an error in this file, but without a location.
-// expected-error-re@./missing-index.cpp:*{{error opening '{{.+}}non-existing.txt': required by the CrossTU functionality}}
-
 int foo(int);
 
 void test() {
-  foo(1);
+  foo(1); // expected-error-re{{error opening '{{.+}}non-existing.txt': required by the CrossTU functionality}}
 }

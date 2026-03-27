@@ -605,10 +605,8 @@ define void @forced_scalar_instr(ptr %gep.dst) {
 ; COMMON-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[TMP1]], i32 0
 ; COMMON-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; COMMON:       [[PRED_STORE_IF]]:
-; COMMON-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 0
-; COMMON-NEXT:    [[TMP4:%.*]] = add i32 [[TMP0]], 0
-; COMMON-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[GEP_DST]], i64 [[TMP3]]
-; COMMON-NEXT:    [[TMP6:%.*]] = or i32 [[TMP4]], 1
+; COMMON-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[GEP_DST]], i64 [[INDEX]]
+; COMMON-NEXT:    [[TMP6:%.*]] = or i32 [[TMP0]], 1
 ; COMMON-NEXT:    store i32 [[TMP6]], ptr [[TMP5]], align 4
 ; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; COMMON:       [[PRED_STORE_CONTINUE]]:

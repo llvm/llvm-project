@@ -55,11 +55,20 @@ public:
         arch, addr, length, prot, flags, fd, offset);
   }
 
+protected:
+  /// Find a free TCP port by binding to port 0.
+  static llvm::Expected<uint16_t> FindFreeTCPPort();
+
+  static auto GetArgRange(const Args &args) {
+    return llvm::make_range(args.GetArgumentArrayRef().begin(),
+                            args.GetArgumentArrayRef().end());
+  }
+
+  PlatformWasm() : RemoteAwarePlatform(/*is_host=*/false) {}
+
 private:
   static lldb::PlatformSP CreateInstance(bool force, const ArchSpec *arch);
   static void DebuggerInitialize(Debugger &debugger);
-
-  PlatformWasm() : RemoteAwarePlatform(/*is_host=*/false) {}
 };
 
 } // namespace lldb_private

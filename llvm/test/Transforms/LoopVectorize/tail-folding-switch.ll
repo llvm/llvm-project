@@ -20,8 +20,7 @@ define void @tail_fold_switch(ptr %dst, i32 %0) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[TMP3]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    store i32 0, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:

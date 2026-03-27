@@ -4967,6 +4967,16 @@ def SPIRV_TosaExtAccTypeAttr : SPIRV_I32EnumAttr<
 
 // NOTE: This is an attribute in the SPIR-V *dialect* but a constant (<id>) in
 // SPIR-V proper.
+def SPIRV_TosaExtResizeModeAttr : SPIRV_I32EnumAttr<
+  "TosaExtResizeModeType", "Tosa Ext Resize Mode Type",
+  "tosa_ext_resize_mode_type",
+  [
+      I32EnumAttrCase<"NearestNeighbor", 1>,
+      I32EnumAttrCase<"Bilinear", 2>,
+  ]>;
+
+// NOTE: This is an attribute in the SPIR-V *dialect* but a constant (<id>) in
+// SPIR-V proper.
 def SPIRV_TosaExtNaNPropagationModeAttr : SPIRV_I32EnumAttr<
   "TosaExtNaNPropagationModeType", "Tosa Ext NaN Propoagation Mode Type",
   "tosa_ext_nan_propagation_mode_type",

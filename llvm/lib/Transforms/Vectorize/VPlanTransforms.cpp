@@ -572,9 +572,7 @@ static void addReplicateRegions(VPlan &Plan) {
   }
 }
 
-/// Remove redundant VPBasicBlocks by merging them into their predecessor if
-/// the predecessor has a single successor.
-static bool mergeBlocksIntoPredecessors(VPlan &Plan) {
+bool VPlanTransforms::mergeBlocksIntoPredecessors(VPlan &Plan) {
   SmallVector<VPBasicBlock *> WorkList;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
@@ -3366,11 +3364,9 @@ void VPlanTransforms::addExplicitVectorLength(
   OpVPEVL = Builder.createScalarZExtOrTrunc(
       OpVPEVL, CanIVTy, I32Ty, CanonicalIVIncrement->getDebugLoc());
 
-  auto *NextIter = Builder.createAdd(OpVPEVL, CurrentIteration,
-                                     CanonicalIVIncrement->getDebugLoc(),
-                                     "current.iteration.next",
-                                     {CanonicalIVIncrement->hasNoUnsignedWrap(),
-                                      CanonicalIVIncrement->hasNoSignedWrap()});
+  auto *NextIter = Builder.createAdd(
+      OpVPEVL, CurrentIteration, CanonicalIVIncrement->getDebugLoc(),
+      "current.iteration.next", CanonicalIVIncrement->getNoWrapFlags());
   CurrentIteration->addOperand(NextIter);
 
   VPValue *NextAVL =
@@ -3796,8 +3792,6 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
     assert(StepTy->isIntegerTy() && "Truncation requires an integer type");
     Step = Builder.createScalarCast(Instruction::Trunc, Step, Ty, DL);
     Start = Builder.createScalarCast(Instruction::Trunc, Start, Ty, DL);
-    // Truncation doesn't preserve WrapFlags.
-    Flags.dropPoisonGeneratingFlags();
     StepTy = Ty;
   }
 

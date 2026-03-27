@@ -33,11 +33,9 @@ Static Compiler Commands
    Command: `llc -O1 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_ALTERA_arbitrary_precision_integers input.ll -o output.spvt`
    Description: Compiles an LLVM IL file to SPIR-V with (`-O1`) optimizations, targeting a 64-bit architecture. It enables the SPV_ALTERA_arbitrary_precision_integers extension.
 
-3. **Compilation with NonSemantic.Shader.DebugInfo support**
-   Command: `llc -g --spirv-ext=+SPV_KHR_non_semantic_info input.ll -o output.spvt`
-   Description: Compiles an LLVM IL file to SPIR-V with NonSemantic.Shader.DebugInfo.100 instructions. The ``-g`` flag causes the backend to emit NSDI instructions when the module contains debug metadata. The required SPV_KHR_non_semantic_info extension must be enabled explicitly.
-
-   Note: ``--spv-emit-nonsemantic-debug-info`` is a deprecated synonym for ``-g`` and will be removed in a future release.
+3. **Compilation with experimental NonSemantic.Shader.DebugInfo.100 support**
+   Command: `llc --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info input.ll -o output.spvt`
+   Description: Compiles an LLVM IL file to SPIR-V with additional NonSemantic.Shader.DebugInfo.100 instructions. It enables the required SPV_KHR_non_semantic_info extension.
 
 4. **SPIR-V Binary Generation**
    Command: `llc -O0 -mtriple=spirv64-unknown-unknown -filetype=obj input.ll -o output.spvt`

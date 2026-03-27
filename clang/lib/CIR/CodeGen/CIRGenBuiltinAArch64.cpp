@@ -134,10 +134,9 @@ static cir::VectorType getNeonType(CIRGenFunction *cgf, NeonTypeFlags typeFlags,
                                 v1Ty ? 1 : (4 << isQuad));
   case NeonTypeFlags::BFloat16:
     if (allowBFloatArgsAndRet)
-      cgf->getCIRGenModule().errorNYI(loc, std::string("NEON type: BFloat16"));
-    else
-      cgf->getCIRGenModule().errorNYI(loc, std::string("NEON type: BFloat16"));
-    [[fallthrough]];
+      return cir::VectorType::get(cgf->getCIRGenModule().bFloat16Ty,
+                                  v1Ty ? 1 : (4 << isQuad));
+    return cir::VectorType::get(cgf->uInt16Ty, v1Ty ? 1 : (4 << isQuad));
   case NeonTypeFlags::Float16:
     if (hasLegalHalfType)
       cgf->getCIRGenModule().errorNYI(loc, std::string("NEON type: Float16"));
@@ -169,6 +168,20 @@ static cir::VectorType getNeonType(CIRGenFunction *cgf, NeonTypeFlags typeFlags,
   llvm_unreachable("Unknown vector element type!");
 }
 
+static int64_t getIntValueFromConstOp(mlir::Value val) {
+  return val.getDefiningOp<cir::ConstantOp>().getIntValue().getSExtValue();
+}
+
+static mlir::Value emitNeonSplat(CIRGenBuilderTy &builder, mlir::Location loc,
+                                 mlir::Value v, mlir::Value lane,
+                                 unsigned int resEltCnt) {
+  assert(isa<cir::ConstantOp>(lane.getDefiningOp()) &&
+         "lane number is not a constant!");
+  int64_t laneCst = getIntValueFromConstOp(lane);
+  llvm::SmallVector<int64_t, 4> shuffleMask(resEltCnt, laneCst);
+  return builder.createVecShuffle(loc, v, shuffleMask);
+}
+
 static mlir::Value emitCommonNeonBuiltinExpr(
     CIRGenFunction &cgf, unsigned builtinID, unsigned llvmIntrinsic,
     unsigned altLLVMIntrinsic, const char *nameHint, unsigned modifier,
@@ -191,7 +204,8 @@ static mlir::Value emitCommonNeonBuiltinExpr(
 
   // The value of allowBFloatArgsAndRet is true for AArch64, but it should
   // come from ABI info.
-  const bool allowBFloatArgsAndRet = false;
+  // TODO(cir): Use ABInfo to extract this information
+  const bool allowBFloatArgsAndRet = cgf.getTarget().hasFastHalfType();
   // FIXME
   // getTargetHooks().getABIInfo().allowBFloatArgsAndRet();
 
@@ -205,7 +219,15 @@ static mlir::Value emitCommonNeonBuiltinExpr(
   case NEON::BI__builtin_neon_splat_lane_v:
   case NEON::BI__builtin_neon_splat_laneq_v:
   case NEON::BI__builtin_neon_splatq_lane_v:
-  case NEON::BI__builtin_neon_splatq_laneq_v:
+  case NEON::BI__builtin_neon_splatq_laneq_v: {
+    uint64_t numElements = vTy.getSize();
+    if (builtinID == NEON::BI__builtin_neon_splatq_lane_v)
+      numElements *= 2;
+    if (builtinID == NEON::BI__builtin_neon_splat_laneq_v)
+      numElements /= 2;
+    ops[0] = cgf.getBuilder().createBitcast(loc, ops[0], vTy);
+    return emitNeonSplat(cgf.getBuilder(), loc, ops[0], ops[1], numElements);
+  }
   case NEON::BI__builtin_neon_vpadd_v:
   case NEON::BI__builtin_neon_vpaddq_v:
   case NEON::BI__builtin_neon_vabs_v:
@@ -2208,8 +2230,16 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vfmad_lane_f64:
   case NEON::BI__builtin_neon_vfmad_laneq_f64:
   case NEON::BI__builtin_neon_vmull_v:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented AArch64 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
   case NEON::BI__builtin_neon_vmax_v:
   case NEON::BI__builtin_neon_vmaxq_v:
+    intrName = usgn ? "aarch64.neon.umax" : "aarch64.neon.smax";
+    if (cir::isFPOrVectorOfFPType(ty))
+      intrName = "aarch64.neon.fmax";
+    return emitNeonCall(cgm, builder, {ty, ty}, ops, intrName, ty, loc);
   case NEON::BI__builtin_neon_vmaxh_f16:
   case NEON::BI__builtin_neon_vmin_v:
   case NEON::BI__builtin_neon_vminq_v:
@@ -2233,8 +2263,14 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vminnm_v:
   case NEON::BI__builtin_neon_vminnmq_v:
   case NEON::BI__builtin_neon_vminnmh_f16:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented AArch64 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
   case NEON::BI__builtin_neon_vmaxnm_v:
   case NEON::BI__builtin_neon_vmaxnmq_v:
+    intrName = "aarch64.neon.fmaxnm";
+    return emitNeonCall(cgm, builder, {ty, ty}, ops, intrName, ty, loc);
   case NEON::BI__builtin_neon_vmaxnmh_f16:
   case NEON::BI__builtin_neon_vrecpss_f32:
   case NEON::BI__builtin_neon_vrecpsd_f64:

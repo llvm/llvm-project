@@ -1051,3 +1051,75 @@ spirv.ARM.Graph @transpose_fp(%arg0: !spirv.arm.tensor<42x22x49xi1>) -> (!spirv.
   // CHECK: spirv.ARM.GraphOutputs {{%.*}} : !spirv.arm.tensor<49x42x22xi1>
   spirv.ARM.GraphOutputs %1 : !spirv.arm.tensor<49x42x22xi1>
 }
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Gather - PRO-INT
+//===----------------------------------------------------------------------===//
+
+spirv.ARM.Graph @gather_int(%arg0: !spirv.arm.tensor<31x11x45xi32>, %arg1: !spirv.arm.tensor<31x15xi32>) -> (!spirv.arm.tensor<31x15x45xi32>) {
+  // CHECK: {{%.*}} = spirv.Tosa.Gather %arg0, %arg1 : !spirv.arm.tensor<31x11x45xi32>, !spirv.arm.tensor<31x15xi32> -> !spirv.arm.tensor<31x15x45xi32>
+  %0 = spirv.Tosa.Gather %arg0, %arg1 : !spirv.arm.tensor<31x11x45xi32>, !spirv.arm.tensor<31x15xi32> -> !spirv.arm.tensor<31x15x45xi32>
+  // CHECK: spirv.ARM.GraphOutputs {{%.*}} : !spirv.arm.tensor<31x15x45xi32>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<31x15x45xi32>
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Gather - PRO-FP
+//===----------------------------------------------------------------------===//
+
+spirv.ARM.Graph @gather_fp(%arg0: !spirv.arm.tensor<59x61x19xf32>, %arg1: !spirv.arm.tensor<59x65xi32>) -> (!spirv.arm.tensor<59x65x19xf32>) {
+  // CHECK: {{%.*}} = spirv.Tosa.Gather %arg0, %arg1 : !spirv.arm.tensor<59x61x19xf32>, !spirv.arm.tensor<59x65xi32> -> !spirv.arm.tensor<59x65x19xf32>
+  %0 = spirv.Tosa.Gather %arg0, %arg1 : !spirv.arm.tensor<59x61x19xf32>, !spirv.arm.tensor<59x65xi32> -> !spirv.arm.tensor<59x65x19xf32>
+  // CHECK: spirv.ARM.GraphOutputs {{%.*}} : !spirv.arm.tensor<59x65x19xf32>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<59x65x19xf32>
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Scatter - PRO-INT
+//===----------------------------------------------------------------------===//
+
+spirv.ARM.Graph @scatter_int(%arg0: !spirv.arm.tensor<34x28x54xi32>, %arg1: !spirv.arm.tensor<34x18xi32>, %arg2: !spirv.arm.tensor<34x18x54xi32>) -> (!spirv.arm.tensor<34x28x54xi32>) {
+  // CHECK: {{%.*}} = spirv.Tosa.Scatter %arg0, %arg1, %arg2 : !spirv.arm.tensor<34x28x54xi32>, !spirv.arm.tensor<34x18xi32>, !spirv.arm.tensor<34x18x54xi32> -> !spirv.arm.tensor<34x28x54xi32>
+  %0 = spirv.Tosa.Scatter %arg0, %arg1, %arg2 : !spirv.arm.tensor<34x28x54xi32>, !spirv.arm.tensor<34x18xi32>, !spirv.arm.tensor<34x18x54xi32> -> !spirv.arm.tensor<34x28x54xi32>
+  // CHECK: spirv.ARM.GraphOutputs {{%.*}} : !spirv.arm.tensor<34x28x54xi32>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<34x28x54xi32>
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Scatter - PRO-FP
+//===----------------------------------------------------------------------===//
+
+spirv.ARM.Graph @scatter_fp(%arg0: !spirv.arm.tensor<18x34x25xf16>, %arg1: !spirv.arm.tensor<18x20xi32>, %arg2: !spirv.arm.tensor<18x20x25xf16>) -> (!spirv.arm.tensor<18x34x25xf16>) {
+  // CHECK: {{%.*}} = spirv.Tosa.Scatter %arg0, %arg1, %arg2 : !spirv.arm.tensor<18x34x25xf16>, !spirv.arm.tensor<18x20xi32>, !spirv.arm.tensor<18x20x25xf16> -> !spirv.arm.tensor<18x34x25xf16>
+  %0 = spirv.Tosa.Scatter %arg0, %arg1, %arg2 : !spirv.arm.tensor<18x34x25xf16>, !spirv.arm.tensor<18x20xi32>, !spirv.arm.tensor<18x20x25xf16> -> !spirv.arm.tensor<18x34x25xf16>
+  // CHECK: spirv.ARM.GraphOutputs {{%.*}} : !spirv.arm.tensor<18x34x25xf16>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<18x34x25xf16>
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Resize - PRO-INT
+//===----------------------------------------------------------------------===//
+
+spirv.ARM.Graph @resize_int(%arg0: !spirv.arm.tensor<1x1x31x55xi8>) -> (!spirv.arm.tensor<1x1x278x55xi8>) {
+  %1 = spirv.Constant dense<[16, 1, 9, 1]> : !spirv.arm.tensor<4xi32>
+  %2 = spirv.Constant dense<0> : !spirv.arm.tensor<2xi32>
+  %3 = spirv.Constant dense<[0, 7]> : !spirv.arm.tensor<2xi32>
+  // CHECK: {{%.*}} = spirv.Tosa.Resize mode = <NearestNeighbor>, %arg0, {{%.*}}, {{%.*}}, {{%.*}} : !spirv.arm.tensor<1x1x31x55xi8>, !spirv.arm.tensor<4xi32>, !spirv.arm.tensor<2xi32>, !spirv.arm.tensor<2xi32> -> !spirv.arm.tensor<1x1x278x55xi8>
+  %4 = spirv.Tosa.Resize mode = <NearestNeighbor>, %arg0, %1, %2, %3 : !spirv.arm.tensor<1x1x31x55xi8>, !spirv.arm.tensor<4xi32>, !spirv.arm.tensor<2xi32>, !spirv.arm.tensor<2xi32> -> !spirv.arm.tensor<1x1x278x55xi8>
+  // CHECK: spirv.ARM.GraphOutputs {{%.*}} : !spirv.arm.tensor<1x1x278x55xi8>
+  spirv.ARM.GraphOutputs %4 : !spirv.arm.tensor<1x1x278x55xi8>
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Resize - PRO-FP
+//===----------------------------------------------------------------------===//
+
+spirv.ARM.Graph @resize_fp(%arg0: !spirv.arm.tensor<1x48x33x63xf32>) -> (!spirv.arm.tensor<1x753x297x63xf32>) {
+  %1 = spirv.Constant dense<[16, 1, 9, 1]> : !spirv.arm.tensor<4xi32>
+  %2 = spirv.Constant dense<0> : !spirv.arm.tensor<2xi32>
+  %3 = spirv.Constant dense<[0, 8]> : !spirv.arm.tensor<2xi32>
+  // CHECK: {{%.*}} = spirv.Tosa.Resize mode = <Bilinear>, %arg0, {{%.*}}, {{%.*}}, {{%.*}} : !spirv.arm.tensor<1x48x33x63xf32>, !spirv.arm.tensor<4xi32>, !spirv.arm.tensor<2xi32>, !spirv.arm.tensor<2xi32> -> !spirv.arm.tensor<1x753x297x63xf32>
+  %4 = spirv.Tosa.Resize mode = <Bilinear>, %arg0, %1, %2, %3 : !spirv.arm.tensor<1x48x33x63xf32>, !spirv.arm.tensor<4xi32>, !spirv.arm.tensor<2xi32>, !spirv.arm.tensor<2xi32> -> !spirv.arm.tensor<1x753x297x63xf32>
+  // CHECK: spirv.ARM.GraphOutputs {{%.*}} : !spirv.arm.tensor<1x753x297x63xf32>
+  spirv.ARM.GraphOutputs %4 : !spirv.arm.tensor<1x753x297x63xf32>
+}

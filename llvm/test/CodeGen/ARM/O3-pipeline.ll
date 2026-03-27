@@ -3,6 +3,11 @@
 ; REQUIRES: asserts
 
 ; CHECK:       ModulePass Manager
+; CHECK-NEXT:    FunctionPass Manager
+; CHECK-NEXT:      Dominator Tree Construction
+; CHECK-NEXT:      Basic Alias Analysis (stateless AA impl)
+; CHECK-NEXT:      Function Alias Analysis Results
+; CHECK-NEXT:      ObjC ARC contraction
 ; CHECK-NEXT:    Pre-ISel Intrinsic Lowering
 ; CHECK-NEXT:    FunctionPass Manager
 ; CHECK-NEXT:      Expand IR instructions
@@ -68,14 +73,11 @@
 ; CHECK-NEXT:        Transform predicated vector loops to use MVE tail predication
 ; CHECK-NEXT:      A No-Op Barrier Pass
 ; CHECK-NEXT:      FunctionPass Manager
-; CHECK-NEXT:      Dominator Tree Construction
-; CHECK-NEXT:      Basic Alias Analysis (stateless AA impl)
-; CHECK-NEXT:      Function Alias Analysis Results
-; CHECK-NEXT:      ObjC ARC contraction
 ; CHECK-NEXT:      Prepare inline asm insts
 ; CHECK-NEXT:      Safe Stack instrumentation pass
 ; CHECK-NEXT:      Insert stack protectors
 ; CHECK-NEXT:      Module Verifier
+; CHECK-NEXT:      Dominator Tree Construction
 ; CHECK-NEXT:      Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:      Function Alias Analysis Results
 ; CHECK-NEXT:      Natural Loop Information

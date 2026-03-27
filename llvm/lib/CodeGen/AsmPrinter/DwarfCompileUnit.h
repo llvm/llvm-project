@@ -89,6 +89,11 @@ class DwarfCompileUnit final : public DwarfUnit {
 
   DenseMap<const DINode *, std::unique_ptr<DbgEntity>> AbstractEntities;
 
+  /// Cache of artificial DIEs created for DW_OP_LLVM_implicit_pointer
+  /// lowering, keyed by (pointee type, constant value). Enables reuse when
+  /// multiple pointer variables reference the same constant.
+  DenseMap<std::pair<const DIType *, int64_t>, DIE *> ImplicitPointerDIEs;
+
   /// DWO ID for correlating skeleton and split units.
   uint64_t DWOId = 0;
 
@@ -123,6 +128,14 @@ class DwarfCompileUnit final : public DwarfUnit {
                                           DIE &VariableDie);
 
   ///@}
+
+  /// Lower DW_OP_LLVM_implicit_pointer by creating an artificial variable DIE
+  /// for the dereferenced value and emitting DW_OP_implicit_pointer (DWARF 5)
+  /// or DW_OP_GNU_implicit_pointer (DWARF 4) for the pointer's location.
+  ///
+  /// \returns true if the implicit pointer was handled successfully.
+  bool emitImplicitPointerLocation(const Loc::Single &Single,
+                                   const DbgVariable &DV, DIE &VariableDie);
 
   bool isDwoUnit() const override;
 

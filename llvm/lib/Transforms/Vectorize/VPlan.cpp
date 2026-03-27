@@ -689,14 +689,8 @@ void VPBasicBlock::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-static std::pair<VPBlockBase *, VPBlockBase *> cloneFrom(VPBlockBase *Entry);
-
-// Clone the CFG for all nodes reachable from \p Entry, this includes cloning
-// the blocks and their recipes. Operands of cloned recipes will NOT be updated.
-// Remapping of operands must be done separately. Returns a pair with the new
-// entry and exiting blocks of the cloned region. If \p Entry isn't part of a
-// region, return nullptr for the exiting block.
-static std::pair<VPBlockBase *, VPBlockBase *> cloneFrom(VPBlockBase *Entry) {
+std::pair<VPBlockBase *, VPBlockBase *>
+VPBlockUtils::cloneFrom(VPBlockBase *Entry) {
   DenseMap<VPBlockBase *, VPBlockBase *> Old2NewVPBlocks;
   VPBlockBase *Exiting = nullptr;
   bool InRegion = Entry->getParent();
@@ -747,7 +741,7 @@ static std::pair<VPBlockBase *, VPBlockBase *> cloneFrom(VPBlockBase *Entry) {
 }
 
 VPRegionBlock *VPRegionBlock::clone() {
-  const auto &[NewEntry, NewExiting] = cloneFrom(getEntry());
+  const auto &[NewEntry, NewExiting] = VPBlockUtils::cloneFrom(getEntry());
   VPlan &Plan = *getPlan();
   VPRegionBlock *NewRegion =
       isReplicator()
@@ -1212,7 +1206,7 @@ static void remapOperands(VPBlockBase *Entry, VPBlockBase *NewEntry,
 VPlan *VPlan::duplicate() {
   unsigned NumBlocksBeforeCloning = CreatedBlocks.size();
   // Clone blocks.
-  const auto &[NewEntry, __] = cloneFrom(Entry);
+  const auto &[NewEntry, __] = VPBlockUtils::cloneFrom(Entry);
 
   BasicBlock *ScalarHeaderIRBB = getScalarHeader()->getIRBasicBlock();
   VPIRBasicBlock *NewScalarHeader = nullptr;

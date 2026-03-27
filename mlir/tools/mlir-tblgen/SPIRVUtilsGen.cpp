@@ -502,6 +502,7 @@ constexpr llvm::StringLiteral constantIdEnumAttrs[] = {
     "SPIRV_MemorySemanticsAttr",
     "SPIRV_MatrixLayoutAttr",
     "SPIRV_TosaExtAccTypeAttr",
+    "SPIRV_TosaExtResizeModeAttr",
     "SPIRV_TosaExtNaNPropagationModeAttr",
     "SPIRV_QuadSwapDirectionAttr",
 };

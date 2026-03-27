@@ -13,29 +13,16 @@ class TestObjCClassMethod(TestBase):
         # Find the line numbers to break inside main().
         self.main_source = lldb.SBFileSpec("class.m")
 
-    SHARED_BUILD_TESTCASE = False
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipUnlessDarwin
-    @skipUnlessCompilerSupports("-fobjc-msgsend-class-selector-stubs")
     @add_test_categories(["pyapi"])
     def test_without_class_stubs(self):
-        self.do_test_with_python_api("-fno-objc-msgsend-class-selector-stubs")
+        self.do_test_with_python_api()
 
-    @skipUnlessDarwin
-    @skipUnlessCompilerSupports("-fobjc-msgsend-class-selector-stubs")
-    @add_test_categories(["pyapi"])
-    def test_using_class_stubs(self):
-        self.do_test_with_python_api("-fobjc-msgsend-class-selector-stubs")
-
-    def do_test_with_python_api(self, compiler_flags):
+    def do_test_with_python_api(self):
         """Test calling functions in class methods."""
-        d = {}
-        if len(compiler_flags):
-            d["CFLAGS_EXTRAS"] = compiler_flags
-
-        self.build(dictionary=d)
-
+        self.build()
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, "Set a breakpoint here", self.main_source
         )

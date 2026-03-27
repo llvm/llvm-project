@@ -5173,7 +5173,8 @@ ExprResult Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base,
   // Issue a better diagnostic if we tried to pass multiple arguments to
   // a builtin subscript operator rather than diagnosing this as a generic
   // overload resolution failure.
-  if (ArgExprs.size() != 1 && !base->getType()->isRecordType() &&
+  if (ArgExprs.size() != 1 && !base->getType()->isDependentType() &&
+      !base->getType()->isRecordType() &&
       !base->getType()->isObjCObjectPointerType()) {
     Diag(base->getExprLoc(), diag::err_ovl_builtin_subscript_expects_single_arg)
         << base->getType() << base->getSourceRange();

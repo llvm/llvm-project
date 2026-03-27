@@ -1037,7 +1037,8 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
               current_symbol->GetName().GetCString(),
               actual_symbol->GetName().GetCString(),
               target_addr.GetLoadAddress(target_sp.get()));
-          addresses.push_back(target_addr.GetLoadAddress(target_sp.get()));
+          addresses.push_back(
+              Address(target_addr.GetLoadAddress(target_sp.get())));
         }
       }
     }

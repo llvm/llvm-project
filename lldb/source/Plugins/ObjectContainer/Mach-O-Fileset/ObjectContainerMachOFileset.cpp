@@ -236,10 +236,13 @@ ModuleSpecList ObjectContainerMachOFileset::GetModuleSpecifications(
     if (ParseHeader(*data_extractor_sp, file, file_offset, entries)) {
       for (const Entry &entry : entries) {
         const lldb::offset_t entry_offset = entry.fileoff + file_offset;
-        if (ObjectFile::GetModuleSpecifications(
-                file, entry_offset, file_size - entry_offset, specs)) {
-          ModuleSpec &spec = specs.GetModuleSpecRefAtIndex(specs.GetSize() - 1);
+        ModuleSpecList entry_specs = ObjectFile::GetModuleSpecifications(
+            file, entry_offset, file_size - entry_offset);
+        if (entry_specs.GetSize() > 0) {
+          ModuleSpec &spec =
+              entry_specs.GetModuleSpecRefAtIndex(entry_specs.GetSize() - 1);
           spec.GetObjectName() = ConstString(entry.id);
+          specs.Append(spec);
         }
       }
     }

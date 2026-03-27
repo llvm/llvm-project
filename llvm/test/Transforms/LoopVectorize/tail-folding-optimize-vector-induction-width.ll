@@ -15,8 +15,7 @@ define void @canonical_small_tc_i8(ptr nocapture noundef writeonly %p) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i1> [[TMP0]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 [[INDEX]]
 ; CHECK-NEXT:    store i16 1, ptr [[TMP3]], align 2
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
@@ -66,8 +65,7 @@ define void @canonical_upper_limit_i8(ptr nocapture noundef writeonly %p) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i1> [[TMP0]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 [[INDEX]]
 ; CHECK-NEXT:    store i16 1, ptr [[TMP3]], align 2
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
@@ -117,8 +115,7 @@ define void @canonical_lower_limit_i16(ptr nocapture noundef writeonly %p) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i1> [[TMP0]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 [[INDEX]]
 ; CHECK-NEXT:    store i16 1, ptr [[TMP3]], align 2
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
@@ -168,8 +165,7 @@ define void @canonical_upper_limit_i16(ptr nocapture noundef writeonly %p) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i1> [[TMP0]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 [[INDEX]]
 ; CHECK-NEXT:    store i16 1, ptr [[TMP3]], align 2
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
@@ -219,8 +215,7 @@ define void @canonical_lower_limit_i32(ptr nocapture noundef writeonly %p) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i1> [[TMP0]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 [[INDEX]]
 ; CHECK-NEXT:    store i16 1, ptr [[TMP3]], align 2
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
@@ -270,8 +265,7 @@ define void @canonical_upper_limit_i32(ptr nocapture noundef writeonly %p) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i1> [[TMP0]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 [[INDEX]]
 ; CHECK-NEXT:    store i16 1, ptr [[TMP3]], align 2
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
@@ -321,8 +315,7 @@ define void @canonical_lower_limit_i64(ptr nocapture noundef writeonly %p) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i1> [[TMP0]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 [[INDEX]]
 ; CHECK-NEXT:    store i16 1, ptr [[TMP3]], align 2
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
@@ -372,8 +365,7 @@ define void @canonical_upper_limit_i64(ptr nocapture noundef writeonly %p) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i1> [[TMP0]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 [[INDEX]]
 ; CHECK-NEXT:    store i16 1, ptr [[TMP3]], align 2
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
@@ -423,8 +415,7 @@ define void @canonical_lower_limit_i128(ptr nocapture noundef writeonly %p) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i1> [[TMP0]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = add i256 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[P]], i256 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[P]], i256 [[INDEX]]
 ; CHECK-NEXT:    store i16 1, ptr [[TMP3]], align 2
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
