@@ -395,7 +395,7 @@ define void @test_widen_truncated_induction(ptr %A) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i8> [ <i8 0, i8 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw nsw <2 x i8> [[VEC_IND]], splat (i8 2)
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <2 x i8> [[VEC_IND]], splat (i8 2)
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 2
 ; CHECK-NEXT:    store <2 x i8> [[VEC_IND]], ptr [[TMP1]], align 1

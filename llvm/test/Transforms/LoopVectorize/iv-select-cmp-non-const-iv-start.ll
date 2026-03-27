@@ -355,9 +355,9 @@ define i32 @select_trunc_non_const_iv_start_signed_guard(ptr %a, i32 %rdx_start,
 ; CHECK-VF4IC4-NEXT:    [[TMP22:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP25:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF4IC4-NEXT:    [[TMP23:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP26:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF4IC4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-VF4IC4-NEXT:    [[STEP_ADD:%.*]] = add nsw <4 x i32> [[VEC_IND]], splat (i32 4)
-; CHECK-VF4IC4-NEXT:    [[STEP_ADD_2:%.*]] = add nsw <4 x i32> [[STEP_ADD]], splat (i32 4)
-; CHECK-VF4IC4-NEXT:    [[STEP_ADD_3:%.*]] = add nsw <4 x i32> [[STEP_ADD_2]], splat (i32 4)
+; CHECK-VF4IC4-NEXT:    [[STEP_ADD:%.*]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
+; CHECK-VF4IC4-NEXT:    [[STEP_ADD_2:%.*]] = add <4 x i32> [[STEP_ADD]], splat (i32 4)
+; CHECK-VF4IC4-NEXT:    [[STEP_ADD_3:%.*]] = add <4 x i32> [[STEP_ADD_2]], splat (i32 4)
 ; CHECK-VF4IC4-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[TMP0]], [[INDEX]]
 ; CHECK-VF4IC4-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[OFFSET_IDX]]
 ; CHECK-VF4IC4-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i64 4
