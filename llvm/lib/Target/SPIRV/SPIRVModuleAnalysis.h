@@ -25,6 +25,7 @@ namespace llvm {
 class SPIRVSubtarget;
 class MachineFunction;
 class MachineModuleInfo;
+class Module;
 
 namespace SPIRV {
 // The enum contains logical module sections for the instruction collection.
@@ -258,5 +259,8 @@ private:
   const SPIRVInstrInfo *TII;
   MachineModuleInfo *MMI;
 };
+
+SPIRV::ModuleAnalysisInfo *getCachedSPIRVModuleAnalysis(const Module &M);
+void clearCachedSPIRVModuleAnalysis(const Module &M);
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVMODULEANALYSIS_H

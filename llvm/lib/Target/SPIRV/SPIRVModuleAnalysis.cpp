@@ -28,10 +28,16 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include <memory>
 
 using namespace llvm;
 
 #define DEBUG_TYPE "spirv-module-analysis"
+
+namespace {
+DenseMap<const Module *, std::unique_ptr<SPIRV::ModuleAnalysisInfo>>
+    CachedModuleAnalyses;
+} // namespace
 
 static cl::opt<bool>
     SPVDumpDeps("spv-dump-deps",
@@ -2910,6 +2916,16 @@ bool SPIRVModuleAnalysis::runOnModule(Module &M) {
 
   // Set maximum ID used.
   GR->setBound(MAI.MaxID);
+  CachedModuleAnalyses[&M] = std::make_unique<SPIRV::ModuleAnalysisInfo>(MAI);
 
   return false;
+}
+
+SPIRV::ModuleAnalysisInfo *llvm::getCachedSPIRVModuleAnalysis(const Module &M) {
+  auto It = CachedModuleAnalyses.find(&M);
+  return It == CachedModuleAnalyses.end() ? nullptr : It->second.get();
+}
+
+void llvm::clearCachedSPIRVModuleAnalysis(const Module &M) {
+  CachedModuleAnalyses.erase(&M);
 }

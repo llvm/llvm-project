@@ -60,6 +60,9 @@ config.substitutions.append(("%mlir_src_root", config.mlir_src_root))
 config.substitutions.append(("%host_cxx", config.host_cxx.strip()))
 config.substitutions.append(("%host_cc", config.host_cc.strip()))
 
+if config.run_xevm_tests:
+    config.available_features.add("xevm-conversions")
+
 
 # Searches for a runtime library with the given name and returns the found path.
 # Correctly handles the platforms shared library directory and naming conventions.
