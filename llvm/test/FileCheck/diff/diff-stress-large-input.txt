@@ -1,5 +1,5 @@
 ; RUN: split-file %s %t
-; RUN: python3 -c "for i in range(5000): print(f'DATA_{i}')" > %t/input.txt
+; RUN: %python -c "for i in range(5000): print(f'DATA_{i}')" > %t/input.txt
 ; RUN: %ProtectFileCheckOutput not FileCheck %t/check.txt --input-file=%t/input.txt --diff=unidiff 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=DIFF
 

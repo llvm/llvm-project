@@ -116,12 +116,7 @@ static cl::opt<bool> VerboseVerbose(
 static cl::opt<DiffFormatType> DiffMode(
     "diff", cl::desc("Show mismatches using a diff-style format.\n"),
     cl::values(clEnumValN(Standard, "standard", "Outputs a Standard diff"),
-               clEnumValN(Split, "split", "Outputs a Split diff"),
-               clEnumValN(Unified, "unidiff", "Outputs a Unified diff"),
-               clEnumValN(SplitNoSubstitution, "split-no-substitutions",
-                          "Outputs a Split diff with no substitutions"),
-               clEnumValN(UnifiedNoSubstitution, "unidiff-no-substitutions",
-                          "Outputs a Unified diff with no substitutions")));
+               clEnumValN(Unified, "unidiff", "Outputs a Unified diff")));
 
 // The order of DumpInputValue members affects their precedence, as documented
 // for -dump-input below.

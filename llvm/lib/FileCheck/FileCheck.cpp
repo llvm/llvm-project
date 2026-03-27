@@ -2732,42 +2732,13 @@ void FileCheckPatternContext::clearLocalVars() {
     GlobalNumericVariableTable.erase(Var);
 }
 
-/// Extract a fixed-width "window" from string \p S, centered around \p DiffPos.
-///
-/// This is used for side-by-side diffing of long lines (e.g., metadata
-/// or long symbol names). It ensures that the "point of divergence" is visible
-/// within the provided \p Width. If the string is truncated, ellipses (...)
-/// are inserted at the boundaries.
-static std::string getCenteredView(StringRef S, size_t DiffPos, size_t Width) {
-  if (S.size() <= Width)
-    return S.str() + std::string(Width - S.size(), ' ');
-
-  size_t HalfWidth = Width / 2;
-  size_t Start = (DiffPos > HalfWidth) ? DiffPos - HalfWidth : 0;
-
-  if (Start + Width > S.size())
-    Start = (S.size() > Width) ? S.size() - Width : 0;
-
-  std::string View = S.substr(Start, Width).str();
-
-  if (Start > 0 && Width > 3)
-    View.replace(0, 3, "...");
-
-  if (S.size() > Start + Width && View.size() > 3)
-    View.replace(View.size() - 3, 3, "...");
-
-  return View;
-}
-
 struct DiffContext {
   StringRef Line;
   StringRef LineBefore;
   StringRef LineAfter;
 };
 
-/// Populates a \c DiffContext by fetching the line at \p LineNo
-/// as well as the lines before and after it from the \p SourceMgr. This
-/// provides the "surrounding context" seen in standard diff tools.
+// Provides the "surrounding context" seen in standard diff tools.
 static DiffContext getDiffContext(SourceMgr &SM, unsigned LineNo,
                                   unsigned BufID) {
   const MemoryBuffer *Buffer = SM.getMemoryBuffer(BufID);
@@ -2796,139 +2767,42 @@ static DiffContext getDiffContext(SourceMgr &SM, unsigned LineNo,
           getLineText(LineNo + 1)};
 }
 
-/// Converts a raw pattern string (e.g., "val [[VAL]]") into a
-/// human-readable diagnostic string (e.g., "val 42") by replacing
-/// "[[...]]" tags with the values stored in the \c Substitutions vector.
-std::string Pattern::getSubstitutedRegex(StringRef PatternText) const {
-  std::string Result = PatternText.str();
-
-  // We iterate through substitutions. Since they are stored in the order
-  // they appear in the pattern, we can replace tags from left to right.
-  for (const auto &Substitution : Substitutions) {
-    Expected<std::string> ValueOrErr = Substitution->getResultForDiagnostics();
-    std::string CleanValue;
-
-    if (!ValueOrErr) {
-      consumeError(ValueOrErr.takeError());
-      CleanValue = "<UNDEFINED>";
-    } else {
-      CleanValue = *ValueOrErr;
-      // Numeric substitutions arrive wrapped in quotes so we need to strip
-      // them.
-      if (CleanValue.size() >= 2 && CleanValue.front() == '"' &&
-          CleanValue.back() == '"')
-        CleanValue = CleanValue.substr(1, CleanValue.size() - 2);
-    }
-
-    // Find the first occurrence of a variable tag
-    size_t Start = Result.find("[[");
-    if (Start == std::string::npos)
-      break;
-
-    size_t End = Result.find("]]", Start);
-    if (End == std::string::npos)
-      break;
-
-    size_t TagLen = (End + 2) - Start;
-    Result.replace(Start, TagLen, CleanValue);
-  }
-  return Result;
-}
-
-/// Renders a diagnostic diff to \c llvm::errs().
-///
-/// Supports two modes:
-/// 1. Split View: A side-by-side comparison (Expected | Actual) using a
-///    sliding window centered on the first difference.
-/// 2. Unified View: A standard top-to-bottom (-Expected / +Actual) format.
+// Renders a diagnostic diff to llvm::errs().
+//
+// Supported mode:
+// Unified View: A standard top-to-bottom (-Expected / +Actual) format.
 static void renderDiff(DiffFormatType Mode, unsigned ExpectedLineNo,
                        unsigned ActualLineNo, StringRef ActualLine,
                        const std::string &ExpectedText, const DiffContext &Ctx,
                        unsigned OverwriteActualLine) {
   auto &OS = llvm::errs();
 
-  constexpr unsigned ColWidth = 45;
-  constexpr StringRef Sep = " | ";
-
-  bool IsSplit = (Mode == Split || Mode == SplitNoSubstitution);
-
-  // Identify the first index where the expected and actual text diverge.
-  size_t DiffPos = 0;
-  size_t MinLen = std::min(ExpectedText.size(), ActualLine.size());
-  while (DiffPos < MinLen && ExpectedText[DiffPos] == ActualLine[DiffPos])
-    ++DiffPos;
-
-  auto GetView = [&](StringRef S) {
-    return getCenteredView(S, DiffPos, ColWidth - 1);
-  };
-
   // Header
   OS.changeColor(raw_ostream::CYAN);
-  if (IsSplit)
-    OS << "@@ L:" << ExpectedLineNo << " R:" << ActualLineNo << " @@\n";
-  else
-    OS << "@@ -" << ExpectedLineNo << " +" << ActualLineNo << " @@\n";
+  OS << "@@ -" << ExpectedLineNo << " +" << ActualLineNo << " @@\n";
   OS.resetColor();
 
   // Before Context
   if (!Ctx.LineBefore.empty()) {
-    if (IsSplit)
-      OS << "  " << GetView(Ctx.LineBefore) << Sep << GetView(Ctx.LineBefore)
-         << "\n";
-    else
-      OS << " " << Ctx.LineBefore << "\n";
+    OS << " " << Ctx.LineBefore << "\n";
   }
 
   // Mismatch
-  if (IsSplit) {
-    OS << "  ";
+  OS.changeColor(raw_ostream::RED);
+  OS << "-" << ExpectedText << "\n";
 
-    OS.changeColor(raw_ostream::RED);
-    OS << GetView(ExpectedText);
-    OS.resetColor();
-
-    bool IsWrongLine = (OverwriteActualLine != 0);
-
-    if (IsWrongLine) {
-      // Use a bold yellow '!' to signify that the text might match,
-      // but it was found on the wrong line.
-      OS.changeColor(raw_ostream::YELLOW, true);
-      OS << " ! ";
-      OS.resetColor();
-    } else {
-      OS << " | ";
-    }
-
-    OS.changeColor(raw_ostream::GREEN);
-    OS << GetView(ActualLine) << "\n";
-    OS.resetColor();
-
-  } else {
-    OS.changeColor(raw_ostream::RED);
-    OS << "-" << ExpectedText << "\n";
-
-    OS.changeColor(raw_ostream::GREEN);
-    OS << "+" << ActualLine << "\n";
-    OS.resetColor();
-  }
+  OS.changeColor(raw_ostream::GREEN);
+  OS << "+" << ActualLine << "\n";
+  OS.resetColor();
 
   // After Context
   if (!Ctx.LineAfter.empty()) {
-    if (IsSplit)
-      OS << "  " << GetView(Ctx.LineAfter) << Sep << GetView(Ctx.LineAfter)
-         << "\n";
-    else
-      OS << " " << Ctx.LineAfter << "\n";
+    OS << " " << Ctx.LineAfter << "\n";
   }
 }
 
-/// Prepares and prints a visual comparison between a CHECK pattern and the
-/// input.
-///
-/// This function acts as a bridge between the FileCheck engine and the diff
-/// renderer. It resolves the line numbers for both the pattern (Expected) and
-/// the input (Actual), performs variable substitution if requested, and fetches
-/// the surrounding context lines.
+// Prepares and prints a visual comparison between a CHECK pattern and the
+// input.
 static bool printDiff(DiffFormatType Mode, const FileCheckString &CheckStr,
                       StringRef CheckRegion, SourceMgr &SM,
                       const FileCheckRequest &Req,
@@ -2945,39 +2819,35 @@ static bool printDiff(DiffFormatType Mode, const FileCheckString &CheckStr,
   StringRef FullExpectedLine = StringRef(PatPtr).split('\n').first.trim();
 
   std::string ExpectedText;
-  if (Mode == DiffFormatType::SplitNoSubstitution ||
-      Mode == DiffFormatType::UnifiedNoSubstitution)
-    ExpectedText = FullExpectedLine.str(); // Raw pattern: [[VAR]]
-  else
-    ExpectedText = CheckStr.Pat.getSubstitutedRegex(
-        FullExpectedLine); // Substituted: value
+  ExpectedText = FullExpectedLine.str();
 
   // Resolve the Actual (Input) line number.
   // Priority: 1. OverwriteActualLine (explicit override)
   //           2. Fuzzy Match Diag (where FileCheck 'thinks' the line was)
   //           3. Direct pointer resolution via SourceMgr.
   SMLoc InputLoc = SMLoc::getFromPointer(CheckRegion.data());
-  unsigned ActualLineNo = OverwriteActualLine;
 
-  if (ActualLineNo == 0) {
-    ActualLineNo = SM.getLineAndColumn(InputLoc).first;
-    bool FoundFuzzy = false;
 
-    // Search backward to find most recent fuzzy match for this pattern.
-    if (Diags) {
-      for (const auto &D : llvm::reverse(*Diags)) {
-        if (D.CheckLoc == PatternLoc &&
-            D.MatchTy == FileCheckDiag::MatchFuzzy) {
-          ActualLineNo = D.InputStartLine;
-          FoundFuzzy = true;
-          break;
-        }
+unsigned ActualLineNo = OverwriteActualLine;
+
+if (ActualLineNo == 0) {
+  bool FoundFuzzy = false;
+
+  if (Diags) {
+    for (const auto &D : llvm::reverse(*Diags)) {
+      if (D.CheckLoc == PatternLoc &&
+          D.MatchTy == FileCheckDiag::MatchFuzzy) {
+        ActualLineNo = D.InputStartLine;
+        FoundFuzzy = true;
+        break;
       }
     }
-    // If no diagnostic match was found, calculate the line number directly
-    // from the InputLoc pointer using the SourceManager.
-    if (!FoundFuzzy)
-      ActualLineNo = SM.getLineAndColumn(InputLoc).first;
+  }
+
+  // If no diagnostic match was found, calculate the line number directly
+  // from the InputLoc pointer using the SourceManager.
+  if (ActualLineNo == 0)
+    ActualLineNo = SM.getLineAndColumn(InputLoc).first;
 
     // if we are at an empty line, usually the relevant context is the line just
     // before it.
@@ -3085,7 +2955,7 @@ static bool handleDiffFailure(const FileCheckString &CheckStr,
             TargetLineNo);
   TotalMismatches++;
 
-  // Updates \p CheckRegion to advance the search pointer past the error.
+  // Updates CheckRegion to advance the search pointer past the error.
   if (AdvanceToResync && ResyncPos != StringRef::npos)
     CheckRegion = CheckRegion.substr(ResyncPos + ResyncMatchLen);
   else if (EOL != StringRef::npos)

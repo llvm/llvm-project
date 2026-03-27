@@ -28,13 +28,7 @@ class SourceMgr;
 template <typename T> class SmallVectorImpl;
 
 // Diff the output on failures.
-enum DiffFormatType {
-  Standard,
-  Split,
-  Unified,
-  SplitNoSubstitution,
-  UnifiedNoSubstitution
-};
+enum DiffFormatType { Standard, Unified };
 
 /// Contains info about various FileCheck options.
 struct FileCheckRequest {

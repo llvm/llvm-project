@@ -740,8 +740,6 @@ public:
                        std::vector<FileCheckDiag> *Diags,
                        const FileCheckRequest &Req) const;
 
-  std::string getSubstitutedRegex(StringRef PatternText) const;
-
   bool hasVariable() const {
     return !(Substitutions.empty() && VariableDefs.empty());
   }
