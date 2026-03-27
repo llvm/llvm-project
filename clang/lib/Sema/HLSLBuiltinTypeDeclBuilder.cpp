@@ -1487,15 +1487,11 @@ CXXRecordDecl *BuiltinTypeDeclBuilder::addMipsType(ResourceDimension Dim,
       AST.DeclarationNames.getCXXOperatorName(OO_Subscript);
 
   // Locate the fields in the slice type so we can initialize them.
-  FieldDecl *MipsSliceHandleField = nullptr;
-  FieldDecl *LevelField = nullptr;
-  for (auto *F : MipsSliceRecord->fields()) {
-    if (F->getName() == "__handle")
-      MipsSliceHandleField = F;
-    else if (F->getName() == "__level")
-      LevelField = F;
-  }
-  assert(MipsSliceHandleField && LevelField &&
+  auto FieldIt = MipsSliceRecord->field_begin();
+  FieldDecl *MipsSliceHandleField = *FieldIt;
+  FieldDecl *LevelField = *++FieldIt;
+  assert(MipsSliceHandleField->getName() == "__handle" &&
+         LevelField->getName() == "__level" &&
          "Could not find fields on mips_slice_type");
 
   // operator[](int level) on mips_type
