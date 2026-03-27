@@ -338,12 +338,7 @@ template <typename T> [[nodiscard]] int bit_width(T Value) {
 template <typename T> [[nodiscard]] constexpr int bit_width_constexpr(T Value) {
   static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
-  int Width = 0;
-  while (Value > 0) {
-    Value >>= 1;
-    ++Width;
-  }
-  return Width;
+  return std::numeric_limits<T>::digits - llvm::countl_zero_constexpr(Value);
 }
 
 /// Returns the largest integral power of two no greater than Value if Value is
