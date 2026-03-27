@@ -51,11 +51,7 @@ defm merged_functions_filter :
      "When used with --address/--addresses-from-stdin and --merged-functions,\n"
      "filters the merged functions output to only show functions matching any of the specified regex patterns.\n"
      "Can be specified multiple times.">;
-defm reader_version :
-  Eq<"reader-version",
-     "Force the GSYM reader version (auto, v1, v2). Default: auto-detect from file.">,
-  Flags<[HelpHidden]>;
-defm creator_version :
-  Eq<"creator-version",
-     "Force the GSYM creator version (v1, v2). Default: v1.">,
+defm output_version :
+  Eq<"output-version",
+     "Set the GSYM output version (v1, v2). Default: v1.">,
   Flags<[HelpHidden]>;

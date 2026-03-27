@@ -45,8 +45,6 @@
 #include "llvm/DebugInfo/GSYM/GsymCreatorV1.h"
 #include "llvm/DebugInfo/GSYM/GsymCreatorV2.h"
 #include "llvm/DebugInfo/GSYM/GsymReader.h"
-#include "llvm/DebugInfo/GSYM/GsymReaderV1.h"
-#include "llvm/DebugInfo/GSYM/GsymReaderV2.h"
 #include "llvm/DebugInfo/GSYM/Header.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
 #include "llvm/DebugInfo/GSYM/LineTable.h"
@@ -110,11 +108,8 @@ static bool LoadDwarfCallSites = false;
 static std::string CallSiteYamlPath;
 static std::vector<std::string> MergedFunctionsFilters;
 
-enum class ReaderVersion { Auto, V1, V2 };
-static ReaderVersion ForceReaderVersion = ReaderVersion::Auto;
-
-enum class CreatorVersion { V1, V2 };
-static CreatorVersion ForceCreatorVersion = CreatorVersion::V1;
+enum class OutputVersion { V1, V2 };
+static OutputVersion ForceOutputVersion = OutputVersion::V1;
 
 static void parseArgs(int argc, char **argv) {
   GSYMUtilOptTable Tbl;
@@ -227,31 +222,15 @@ static void parseArgs(int argc, char **argv) {
     }
   }
 
-  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_reader_version_EQ)) {
-    StringRef Val = A->getValue();
-    if (Val == "auto")
-      ForceReaderVersion = ReaderVersion::Auto;
-    else if (Val == "v1")
-      ForceReaderVersion = ReaderVersion::V1;
-    else if (Val == "v2")
-      ForceReaderVersion = ReaderVersion::V2;
-    else {
-      llvm::errs() << ToolName
-                   << ": for the --reader-version option: '" << Val
-                   << "' is invalid. Use 'auto', 'v1', or 'v2'.\n";
-      std::exit(1);
-    }
-  }
-
-  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_creator_version_EQ)) {
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_output_version_EQ)) {
     StringRef Val = A->getValue();
     if (Val == "v1")
-      ForceCreatorVersion = CreatorVersion::V1;
+      ForceOutputVersion = OutputVersion::V1;
     else if (Val == "v2")
-      ForceCreatorVersion = CreatorVersion::V2;
+      ForceOutputVersion = OutputVersion::V2;
     else {
       llvm::errs() << ToolName
-                   << ": for the --creator-version option: '" << Val
+                   << ": for the --output-version option: '" << Val
                    << "' is invalid. Use 'v1' or 'v2'.\n";
       std::exit(1);
     }
@@ -393,7 +372,7 @@ static llvm::Error handleObjectFile(ObjectFile &Obj, const std::string &OutFile,
       NumThreads > 0 ? NumThreads : std::thread::hardware_concurrency();
 
   std::unique_ptr<GsymCreator> GsymPtr;
-  if (ForceCreatorVersion == CreatorVersion::V2)
+  if (ForceOutputVersion == OutputVersion::V2)
     GsymPtr = std::make_unique<GsymCreatorV2>(Quiet);
   else
     GsymPtr = std::make_unique<GsymCreatorV1>(Quiet);
@@ -539,22 +518,6 @@ static llvm::Error handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
   return Error::success();
 }
 
-/// Open a GSYM file, auto-detecting the version unless forced.
-static Expected<std::unique_ptr<GsymReader>> openGsymFile(StringRef Path) {
-  if (ForceReaderVersion == ReaderVersion::Auto)
-    return GsymReader::openFile(Path);
-  if (ForceReaderVersion == ReaderVersion::V2) {
-    auto R = GsymReaderV2::openFile(Path);
-    if (!R)
-      return R.takeError();
-    return std::make_unique<GsymReaderV2>(std::move(*R));
-  }
-  auto R = GsymReaderV1::openFile(Path);
-  if (!R)
-    return R.takeError();
-  return std::make_unique<GsymReaderV1>(std::move(*R));
-}
-
 /// Check if a file starts with the GSYM magic bytes.
 static bool isGSYMFile(StringRef Filename) {
   auto BuffOrErr = MemoryBuffer::getFileOrSTDIN(Filename, /*IsText=*/false,
@@ -629,13 +592,13 @@ static void fixupFunctionInfo(const GsymReader &Reader,
 static llvm::Error handleGSYMConversion(StringRef Filename,
                                         const std::string &OutFile,
                                         OutputAggregator &Out) {
-  auto ReaderOrErr = openGsymFile(Filename);
+  auto ReaderOrErr = GsymReader::openFile(Filename);
   if (!ReaderOrErr)
     return ReaderOrErr.takeError();
   auto &Reader = **ReaderOrErr;
 
   std::unique_ptr<GsymCreator> CreatorPtr;
-  if (ForceCreatorVersion == CreatorVersion::V2)
+  if (ForceOutputVersion == OutputVersion::V2)
     CreatorPtr = std::make_unique<GsymCreatorV2>(Quiet);
   else
     CreatorPtr = std::make_unique<GsymCreatorV1>(Quiet);
@@ -653,7 +616,7 @@ static llvm::Error handleGSYMConversion(StringRef Filename,
   if (auto Err = Creator.finalize(Out))
     return Err;
 
-  Out << "Output file (" << (ForceCreatorVersion == CreatorVersion::V2 ? "v2" : "v1")
+  Out << "Output file (" << (ForceOutputVersion == OutputVersion::V2 ? "v2" : "v1")
       << "): " << OutFile << "\n";
 
   if (auto Err = Creator.save(OutFile, llvm::endianness::native))
@@ -851,7 +814,7 @@ int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
           llvm::StringRef{StrippedInputLine}.split(' ');
 
       if (GSYMPath != CurrentGSYMPath) {
-        auto GsymOrErr = openGsymFile(GSYMPath);
+        auto GsymOrErr = GsymReader::openFile(GSYMPath);
         if (!GsymOrErr)
           error(GSYMPath, GsymOrErr.takeError());
         CurrentGsym = std::move(*GsymOrErr);
@@ -876,7 +839,7 @@ int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
 
   // Dump or access data inside GSYM files
   for (const auto &GSYMPath : InputFilenames) {
-    auto Gsym = openGsymFile(GSYMPath);
+    auto Gsym = GsymReader::openFile(GSYMPath);
     if (!Gsym)
       error(GSYMPath, Gsym.takeError());
 
