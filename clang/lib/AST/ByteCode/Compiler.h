@@ -406,6 +406,11 @@ private:
     return *this->classify(T->getAs<VectorType>()->getElementType());
   }
 
+  PrimType classifyMatrixElementType(QualType T) const {
+    assert(T->isMatrixType());
+    return *this->classify(T->getAs<MatrixType>()->getElementType());
+  }
+
   bool emitComplexReal(const Expr *SubExpr);
   bool emitComplexBoolCast(const Expr *E);
   bool emitComplexComparison(const Expr *LHS, const Expr *RHS,
@@ -592,7 +597,7 @@ public:
         typename Emitter::LabelTy EndLabel = this->Ctx->getLabel();
         if (!this->Ctx->emitGetLocalEnabled(Local.Offset, E))
           return false;
-        if (!this->Ctx->jumpFalse(EndLabel))
+        if (!this->Ctx->jumpFalse(EndLabel, E))
           return false;
 
         if (!this->Ctx->emitGetPtrLocal(Local.Offset, E))

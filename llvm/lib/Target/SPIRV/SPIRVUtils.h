@@ -347,7 +347,11 @@ bool matchPeeledArrayPattern(const StructType *Ty, Type *&OriginalElementType,
 Type *reconstitutePeeledArrayType(Type *Ty);
 
 inline bool hasInitializer(const GlobalVariable *GV) {
-  return GV->hasInitializer() && !isa<UndefValue>(GV->getInitializer());
+  if (!GV->hasInitializer())
+    return false;
+  if (const auto *Init = GV->getInitializer(); isa<UndefValue>(Init))
+    return GV->isConstant() && Init->getType()->isAggregateType();
+  return true;
 }
 
 // True if this is an instance of TypedPointerType.

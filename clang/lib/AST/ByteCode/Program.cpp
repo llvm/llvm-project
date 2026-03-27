@@ -384,7 +384,7 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
           (Desc->isPrimitiveArray() && Desc->getPrimType() == PT_Ptr) ||
           (Desc->ElemRecord && Desc->ElemRecord->hasPtrField());
     } else {
-      return nullptr;
+      Desc = allocateDescriptor(FD);
     }
     Fields.emplace_back(FD, Desc, BaseSize);
     BaseSize += align(Desc->getAllocSize());
@@ -481,6 +481,16 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
 
     return allocateDescriptor(D, *ElemTy, MDSize, VT->getNumElements(), IsConst,
                               IsTemporary, IsMutable);
+  }
+
+  // Same with constant matrix types.
+  if (const auto *MT = Ty->getAs<ConstantMatrixType>()) {
+    OptPrimType ElemTy = Ctx.classify(MT->getElementType());
+    if (!ElemTy)
+      return nullptr;
+
+    return allocateDescriptor(D, *ElemTy, MDSize, MT->getNumElementsFlattened(),
+                              IsConst, IsTemporary, IsMutable);
   }
 
   return nullptr;

@@ -49,11 +49,10 @@ static void rewriteUses(mlir::Value oldVal, mlir::Value newVal,
                         mlir::Operation *targetContract,
                         mlir::PatternRewriter &rewriter) {
   for (mlir::OpOperand &use : llvm::make_early_inc_range(oldVal.getUses())) {
-
     mlir::Operation *user = use.getOwner();
     if (mlir::isa<mlir::vector::ContractionOp>(user) ||
         mlir::isa<mlir::scf::ForOp>(user)) {
-      use.set(newVal);
+      rewriter.modifyOpInPlace(user, [&]() { use.set(newVal); });
     }
   }
 }
@@ -67,7 +66,15 @@ static void packNonUnitDimOperandToVNNI(mlir::PatternRewriter &rewriter,
                                         mlir::vector::ContractionOp contractB,
                                         int64_t nonUnitDimAcc,
                                         mlir::VectorType Ty) {
-  mlir::Operation *insertAfter = opA->isBeforeInBlock(opB) ? opB : opA;
+
+  bool opABeforeopB = opA->isBeforeInBlock(opB);
+
+  if (opABeforeopB)
+    rewriter.moveOpAfter(opB, opA);
+  else
+    rewriter.moveOpAfter(opA, opB);
+
+  mlir::Operation *insertAfter = opABeforeopB ? opB : opA;
 
   rewriter.setInsertionPointAfter(insertAfter);
   mlir::Location loc = insertAfter->getLoc();
@@ -326,14 +333,6 @@ struct VectorContractToPackedTypeDotProduct
           return rewriter.notifyMatchFailure(
               contractOp, "Could not find a valid contract pair");
 
-        if (contractOp->getBlock() ==
-                nonUnitDimReadOpPairContract->getBlock() &&
-            contractOp->isBeforeInBlock(nonUnitDimReadOpPairContract))
-          return rewriter.notifyMatchFailure(
-              contractOp,
-              "The load/read operation of pair contract operation is "
-              "after the contractOp");
-
         VectorType nonUnitDimTy = rhsHasMultipleNonUnitDims
                                       ? contractOp.getRhsType()
                                       : contractOp.getLhsType();
@@ -384,7 +383,7 @@ struct VectorContractToPackedTypeDotProduct
         rewriter, loc, castNonUnitDim.getResult().getType(), broadcastUnitDim);
 
     if (lhsTy.getElementType().isBF16()) {
-      dp = x86::DotBF16Op::create(
+      dp = x86::avx512::DotBF16Op::create(
           rewriter, loc,
           VectorType::get(nonUnitDimValue, rewriter.getF32Type()), castAcc,
           bitcastUnitDimPkType, castNonUnitDim);
@@ -392,12 +391,12 @@ struct VectorContractToPackedTypeDotProduct
 
     if (lhsTy.getElementType().isSignlessInteger(8)) {
       if (nonUnitDimAcc.front() == 16) {
-        dp = x86::AVX10DotInt8Op::create(
+        dp = x86::avx10::AVX10DotInt8Op::create(
             rewriter, loc,
             VectorType::get(nonUnitDimValue, rewriter.getIntegerType(32)),
             castAcc, bitcastUnitDimPkType, castNonUnitDim);
       } else {
-        dp = x86::DotInt8Op::create(
+        dp = x86::avx::DotInt8Op::create(
             rewriter, loc,
             VectorType::get(nonUnitDimValue, rewriter.getIntegerType(32)),
             castAcc, bitcastUnitDimPkType, castNonUnitDim);

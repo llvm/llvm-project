@@ -67,6 +67,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Timer.h"
+#include <chrono>
 #include <cstring>
 #include <deque>
 #include <string>
@@ -86,8 +87,7 @@ using namespace llvm::orc;
 
 static cl::OptionCategory JITLinkCategory("JITLink Options");
 
-static cl::list<std::string> InputFiles(cl::Positional, cl::OneOrMore,
-                                        cl::desc("input files"),
+static cl::list<std::string> InputFiles(cl::Positional, cl::desc("input files"),
                                         cl::cat(JITLinkCategory));
 
 static cl::list<bool> LazyLink("lazy",
@@ -352,6 +352,16 @@ static cl::opt<bool> ForceLoadObjC(
              "Objective-C classes or categories, or Swift structs, "
              "classes or extensions"),
     cl::init(false), cl::cat(JITLinkCategory));
+
+static cl::opt<std::string> WaitingOnGraphCapture(
+    "waiting-on-graph-capture",
+    cl::desc("Record WaitingOnGraph operations to the given file"),
+    cl::init(""), cl::cat(JITLinkCategory));
+
+static cl::opt<std::string> WaitingOnGraphReplay(
+    "waiting-on-graph-replay",
+    cl::desc("Replay WaitingOnGraph operations from the given file"),
+    cl::init(""), cl::cat(JITLinkCategory));
 
 static ExitOnError ExitOnErr;
 
@@ -881,7 +891,7 @@ static Error loadProcessSymbols(Session &S) {
       };
   S.ProcessSymsJD->addGenerator(
       ExitOnErr(orc::EPCDynamicLibrarySearchGenerator::GetForTargetProcess(
-          S.ES, std::move(FilterMainEntryPoint))));
+          S.ES, *S.DylibMgr, std::move(FilterMainEntryPoint))));
 
   return Error::success();
 }
@@ -1212,7 +1222,26 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
 
   ErrorAsOutParameter _(&Err);
 
+  if (auto DM = ES.getExecutorProcessControl().createDefaultDylibMgr())
+    DylibMgr = std::move(*DM);
+  else {
+    Err = DM.takeError();
+    return;
+  }
+
   ES.setErrorReporter(reportLLVMJITLinkError);
+
+  // Attach WaitingOnGraph recorder if requested.
+  if (!WaitingOnGraphCapture.empty()) {
+    if (auto GRecorderOrErr =
+            WaitingOnGraphOpRecorder::Create(WaitingOnGraphCapture)) {
+      GOpRecorder = std::move(*GRecorderOrErr);
+      ES.setWaitingOnGraphOpRecorder(*GOpRecorder);
+    } else {
+      Err = GRecorderOrErr.takeError();
+      return;
+    }
+  }
 
   if (!NoProcessSymbols)
     ExitOnErr(loadProcessSymbols(*this));
@@ -1461,7 +1490,8 @@ Expected<JITDylib *> Session::getOrLoadDynamicLibrary(StringRef LibPath) {
   if (It != DynLibJDs.end()) {
     return It->second;
   }
-  auto G = EPCDynamicLibrarySearchGenerator::Load(ES, LibPath.data());
+  auto G =
+      EPCDynamicLibrarySearchGenerator::Load(ES, *DylibMgr, LibPath.data());
   if (!G)
     return G.takeError();
   auto JD = &ES.createBareJITDylib(LibPath.str());
@@ -1756,6 +1786,15 @@ static std::pair<Triple, SubtargetFeatures> getFirstFileTripleAndFeatures() {
 }
 
 static Error sanitizeArguments(const Triple &TT, const char *ArgV0) {
+
+  if (InputFiles.empty())
+    return make_error<StringError>(
+        "Not enough positional command line arguments specified! (see "
+        "llvm-jitlink --help)",
+        inconvertibleErrorCode());
+
+  // If we're in replay mode we should never get here.
+  assert(WaitingOnGraphReplay.empty());
 
   // -noexec and --args should not be used together.
   if (NoExec && !InputArgv.empty())
@@ -2214,7 +2253,8 @@ LoadLibraryWeak(Session &S, StringRef Path) {
     return Symbols.takeError();
 
   return std::make_unique<EPCDynamicLibrarySearchGenerator>(
-      S.ES, [Symbols = std::move(*Symbols)](const SymbolStringPtr &Sym) {
+      S.ES, *S.DylibMgr,
+      [Symbols = std::move(*Symbols)](const SymbolStringPtr &Sym) {
         return Symbols.count(Sym);
       });
 }
@@ -2747,12 +2787,12 @@ static Error runChecks(Session &S, Triple TT, SubtargetFeatures Features) {
   LLVM_DEBUG(dbgs() << "Running checks...\n");
 
   auto IsSymbolValid = [&S](StringRef Symbol) {
-    auto InternedSymbol = S.ES.getSymbolStringPool()->intern(Symbol);
+    auto InternedSymbol = S.ES.intern(Symbol);
     return S.isSymbolRegistered(InternedSymbol);
   };
 
   auto GetSymbolInfo = [&S](StringRef Symbol) {
-    auto InternedSymbol = S.ES.getSymbolStringPool()->intern(Symbol);
+    auto InternedSymbol = S.ES.intern(Symbol);
     return S.findSymbolInfo(InternedSymbol, "Can not get symbol info");
   };
 
@@ -2874,6 +2914,61 @@ static Error symbolicateBacktraces() {
   return Error::success();
 }
 
+static Error waitingOnGraphReplay() {
+  // Warn about ignored options.
+  {
+    bool PrintedHeader = false;
+    for (auto &[OptName, Opt] : cl::getRegisteredOptions()) {
+      if (Opt == &WaitingOnGraphReplay)
+        continue;
+      if (Opt->getNumOccurrences()) {
+        if (!PrintedHeader) {
+          errs() << "Warning: Running in -waiting-on-graph-replay mode. "
+                    "The following options will be ignored:\n";
+          PrintedHeader = true;
+        }
+        errs() << "  " << OptName << "\n";
+      }
+    }
+  }
+
+  // Read the replay buffer file.
+  auto GraphOpsBuffer = getFile(WaitingOnGraphReplay);
+  if (!GraphOpsBuffer)
+    return GraphOpsBuffer.takeError();
+
+  using Replay = orc::detail::WaitingOnGraphOpReplay<uintptr_t, uintptr_t>;
+  using Graph = typename Replay::Graph;
+  using Replayer = typename Replay::Replayer;
+
+  std::vector<typename Replay::Op> RecordedOps;
+
+  // First read the buffer to build the Ops vector. Doing this up-front allows
+  // us to avoid polluting the timings below with the cost of parsing.
+  Error Err = Error::success();
+  for (auto &Op :
+       orc::detail::readWaitingOnGraphOpsFromBuffer<uintptr_t, uintptr_t>(
+           (*GraphOpsBuffer)->getBuffer(), Err))
+    RecordedOps.push_back(std::move(Op));
+  if (Err)
+    return Err;
+
+  // Now replay the Ops:
+  Graph G;
+  Replayer R(G);
+
+  outs() << "Replaying WaitingOnGraph operations from " << WaitingOnGraphReplay
+         << "...\n";
+  auto ReplayStart = std::chrono::high_resolution_clock::now();
+  for (auto &Op : RecordedOps)
+    R.replay(std::move(Op));
+  auto ReplayEnd = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> ReplayDiff = ReplayEnd - ReplayStart;
+  outs() << ReplayDiff.count() << "s to replay " << RecordedOps.size()
+         << " ops (wall-clock time)\n";
+  return Error::success();
+}
+
 namespace {
 struct JITLinkTimers {
   TimerGroup JITLinkTG{"llvm-jitlink timers", "timers for llvm-jitlink phases"};
@@ -2893,6 +2988,12 @@ int main(int argc, char *argv[]) {
   cl::HideUnrelatedOptions({&JITLinkCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv, "llvm jitlink tool");
   ExitOnErr.setBanner(std::string(argv[0]) + ": ");
+
+  // Check for WaitingOnGraph replay mode.
+  if (!WaitingOnGraphReplay.empty()) {
+    ExitOnErr(waitingOnGraphReplay());
+    return 0;
+  }
 
   /// If timers are enabled, create a JITLinkTimers instance.
   std::unique_ptr<JITLinkTimers> Timers =

@@ -3144,7 +3144,7 @@ const Symbol &ExpressionAnalyzer::AccessSpecific(
 }
 
 void ExpressionAnalyzer::EmitGenericResolutionError(const Symbol &symbol,
-    bool dueToAmbiguity, bool isSubroutine, ActualArguments &arguments,
+    bool dueToAmbiguity, bool isSubroutine, const ActualArguments &arguments,
     const SymbolVector &tried, const AdjustActuals &adjustment) {
   if (auto *msg{Say(dueToAmbiguity
               ? "The actual arguments to the generic procedure '%s' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface"_err_en_US
@@ -3158,16 +3158,12 @@ void ExpressionAnalyzer::EmitGenericResolutionError(const Symbol &symbol,
       if (auto procChars{characteristics::Procedure::Characterize(
               specific, GetFoldingContext())}) {
         if (procChars->HasExplicitInterface()) {
-          ActualArguments *actuals{&arguments};
-          ActualArguments adjustedActuals;
+          ActualArguments adjusted{arguments};
           if (specific.has<semantics::ProcBindingDetails>() &&
               adjustment.has_value()) {
-            adjustedActuals = arguments;
-            if ((*adjustment)(specific, adjustedActuals)) {
-              actuals = &adjustedActuals;
-            }
+            (*adjustment)(specific, adjusted);
           }
-          auto reasons{semantics::CheckExplicitInterface(*procChars, *actuals,
+          auto reasons{semantics::CheckExplicitInterface(*procChars, adjusted,
               context_, /*scope=*/nullptr, /*intrinsic=*/nullptr,
               /*allocActualArgumentConversions=*/false,
               /*extentErrors=*/false,

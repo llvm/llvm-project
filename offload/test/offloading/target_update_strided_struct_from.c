@@ -1,5 +1,4 @@
 // RUN: %libomptarget-compile-run-and-check-generic
-// XFAIL: intelgpu
 // This test checks that "update from" with user-defined mapper supports strided
 // sections using fixed-size arrays in structs.
 

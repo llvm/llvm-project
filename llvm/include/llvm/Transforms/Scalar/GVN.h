@@ -37,8 +37,8 @@ class AAResults;
 class AssumeInst;
 class AssumptionCache;
 class BasicBlock;
-class BranchInst;
 class CallInst;
+class CondBrInst;
 class ExtractValueInst;
 class Function;
 class FunctionPass;
@@ -401,7 +401,7 @@ private:
   bool
   propagateEquality(Value *LHS, Value *RHS,
                     const std::variant<BasicBlockEdge, Instruction *> &Root);
-  bool processFoldableCondBr(BranchInst *BI);
+  bool processFoldableCondBr(CondBrInst *BI);
   void addDeadBlock(BasicBlock *BB);
   void assignValNumForDeadCode();
   void assignBlockRPONumber(Function &F);

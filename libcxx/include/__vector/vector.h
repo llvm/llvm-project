@@ -104,8 +104,8 @@ public:
   // Users might provide custom allocators, and prior to C++20 we have no existing way to detect whether the allocator's
   // pointer type is contiguous (though it has to be by the Standard). Using the wrapper type ensures the iterator is
   // considered contiguous.
-  using iterator       = __bounded_iter<__wrap_iter<pointer> >;
-  using const_iterator = __bounded_iter<__wrap_iter<const_pointer> >;
+  using iterator       = __bounded_iter<pointer>;
+  using const_iterator = __bounded_iter<const_pointer>;
 #else
   using iterator       = __wrap_iter<pointer>;
   using const_iterator = __wrap_iter<const_pointer>;
@@ -676,10 +676,7 @@ private:
     // current implementation, there is no connection between a bounded iterator and its associated container, so we
     // don't have a way to update existing valid iterators when the container is resized and thus have to go with
     // a laxer approach.
-    return std::__make_bounded_iter(
-        std::__wrap_iter<pointer>(__p),
-        std::__wrap_iter<pointer>(this->__begin_),
-        std::__wrap_iter<pointer>(this->__cap_));
+    return std::__make_bounded_iter(__p, this->__begin_, this->__cap_);
 #else
     return iterator(__p);
 #endif // _LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR
@@ -688,10 +685,7 @@ private:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_iterator __make_iter(const_pointer __p) const _NOEXCEPT {
 #ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR
     // Bound the iterator according to the capacity, rather than the size.
-    return std::__make_bounded_iter(
-        std::__wrap_iter<const_pointer>(__p),
-        std::__wrap_iter<const_pointer>(this->__begin_),
-        std::__wrap_iter<const_pointer>(this->__cap_));
+    return std::__make_bounded_iter(__p, const_pointer(this->__begin_), const_pointer(this->__cap_));
 #else
     return const_iterator(__p);
 #endif // _LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR
@@ -820,22 +814,9 @@ private:
     return __p;
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __swap_layouts(_SplitBuffer& __sb) {
-    auto __vector_begin    = __begin_;
-    auto __vector_sentinel = __end_;
-    auto __vector_cap      = __cap_;
-
-    auto __sb_begin    = __sb.begin();
-    auto __sb_sentinel = __sb.__raw_sentinel();
-    auto __sb_cap      = __sb.__raw_capacity();
-
-    // TODO: replace with __set_valid_range and __set_capacity when vector supports it.
-    __begin_ = __sb_begin;
-    __end_   = __sb_sentinel;
-    __cap_   = __sb_cap;
-
-    __sb.__set_valid_range(__vector_begin, __vector_sentinel);
-    __sb.__set_capacity(__vector_cap);
+  _LIBCPP_NODEBUG _LIBCPP_ALWAYS_INLINE _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
+  __swap_layouts(_SplitBuffer& __sb) {
+    __sb.__swap_layouts(__begin_, __end_, __cap_);
   }
 };
 

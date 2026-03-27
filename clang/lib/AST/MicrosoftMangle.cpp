@@ -1180,7 +1180,9 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(GlobalDecl GD,
 
       if (const NamespaceDecl *NS = dyn_cast<NamespaceDecl>(ND)) {
         if (NS->isAnonymousNamespace()) {
-          Out << "?A0x" << Context.getAnonymousNamespaceHash() << '@';
+          llvm::SmallString<16> Name("?A0x");
+          Name += Context.getAnonymousNamespaceHash();
+          mangleSourceName(Name);
           break;
         }
       }
@@ -2151,6 +2153,11 @@ void MicrosoftCXXNameMangler::mangleTemplateArgValue(QualType T,
       Out << '@';
     }
     Out << "@@";
+    return;
+  }
+
+  case APValue::Matrix: {
+    Error("template argument (value type: matrix)");
     return;
   }
 

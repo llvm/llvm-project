@@ -2,7 +2,6 @@ header: sys/socket.h
 header_template: socket.h.def
 macros: []
 types:
-  - type_name: struct_sockaddr_un
   - type_name: struct_sockaddr
   - type_name: socklen_t
   - type_name: sa_family_t
@@ -19,7 +18,7 @@ functions:
     return_type: int
     arguments:
       - type: int
-      - type: sockaddr *__restrict
+      - type: struct sockaddr *__restrict
       - type: socklen_t *__restrict
   - name: bind
     standards:
