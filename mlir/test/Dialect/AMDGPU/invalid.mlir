@@ -693,8 +693,17 @@ func.func @global_prefetch_wrong_num_indices(%src: memref<64x64xf16, #gpu.addres
 
 // GlobalPrefetchOp: NT temporal hint is not supported
 func.func @global_prefetch_nt_mode(%src: memref<64x64xf16, #gpu.address_space<global>>, %i: i64, %j: i64) {
-  // expected-error@+1 {{'amdgpu.global_prefetch' op does not support NT mode}}
+  // expected-error@+1 {{'amdgpu.global_prefetch' op does not support NT and LU modes}}
   amdgpu.global_prefetch %src[%i, %j] NT SYS : memref<64x64xf16, #gpu.address_space<global>>
+  func.return
+}
+
+// -----
+
+// GlobalPrefetchOp: LU temporal hint is not supported
+func.func @global_prefetch_lu_mode(%src: memref<64x64xf16, #gpu.address_space<global>>, %i: i64, %j: i64) {
+  // expected-error@+1 {{'amdgpu.global_prefetch' op does not support NT and LU modes}}
+  amdgpu.global_prefetch %src[%i, %j] LU DEV : memref<64x64xf16, #gpu.address_space<global>>
   func.return
 }
 

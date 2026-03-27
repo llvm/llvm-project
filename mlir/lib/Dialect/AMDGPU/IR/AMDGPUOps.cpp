@@ -1323,8 +1323,15 @@ LogicalResult GlobalPrefetchOp::verify() {
 
   const TemporalHint temporalHint = getTemporalHint();
   const bool isSpeculative = getSpeculative();
-  if (temporalHint == TemporalHint::NT)
-    return this->emitOpError("does not support NT mode");
+
+  // Note that temporal hints are shared between load, store,
+  // prefetch, etc. instructions. However, some instructions
+  // operate only with a subset of hints according to the ISA
+  // documentation. In case of global prefetch, non-temporal (NT)
+  // and last-use (LU) hints are not used. The extra bits of encoding
+  // are used to encode speculative or non-speculative instruction behavior
+  if (llvm::is_contained({TemporalHint::NT, TemporalHint::LU}, temporalHint))
+    return this->emitOpError("does not support NT and LU modes");
 
   if (llvm::is_contained(
           {TemporalHint::NT_RT, TemporalHint::RT_NT, TemporalHint::NT_HT},

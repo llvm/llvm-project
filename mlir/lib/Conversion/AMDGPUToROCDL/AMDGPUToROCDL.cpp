@@ -3990,10 +3990,9 @@ struct GlobalPrefetchOpLowering
     Value prefetchPtr = getStridedElementPtr(
         rewriter, loc, memRefType, descriptor, indices, inboundsFlags);
 
-    Operation *newOp = ROCDL::GlobalPrefetchOp::create(
-        rewriter, loc, prefetchPtr, immArgAttr, {}, {}, {});
-
-    rewriter.replaceOp(op, newOp);
+    rewriter.replaceOpWithNewOp<ROCDL::GlobalPrefetchOp>(
+        op, prefetchPtr, immArgAttr, mlir::ArrayAttr{}, mlir::ArrayAttr{},
+        mlir::ArrayAttr{});
     return success();
   }
 
