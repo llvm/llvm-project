@@ -247,10 +247,15 @@ template <typename T> [[nodiscard]] constexpr int countl_zero_constexpr(T Val) {
   Val |= (Val >> 1);
   Val |= (Val >> 2);
   Val |= (Val >> 4);
-  if constexpr (Digits > 8)  Val |= (Val >> 8);
-  if constexpr (Digits > 16) Val |= (Val >> 16);
-  if constexpr (Digits > 32) Val |= (Val >> 32);
-
+  if constexpr (Digits > 8) {
+    Val |= (Val >> 8);
+  }
+  if constexpr (Digits > 16) {
+    Val |= (Val >> 16);
+  }
+  if constexpr (Digits > 32) {
+    Val |= (Val >> 32);
+  }
   return Digits - llvm::popcount(Val);
 }
 
