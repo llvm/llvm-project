@@ -6435,8 +6435,7 @@ static SDValue BuildExactSDIV(const TargetLowering &TLI, SDNode *N,
   };
 
   // Collect all magic values from the build vector.
-  if (!ISD::matchUnaryPredicate(Op1, BuildSDIVPattern, /*AllowUndefs=*/false,
-                                /*AllowTruncation=*/true))
+  if (!ISD::matchUnaryPredicate(Op1, BuildSDIVPattern))
     return SDValue();
 
   SDValue Shift, Factor;
@@ -6498,8 +6497,7 @@ static SDValue BuildExactUDIV(const TargetLowering &TLI, SDNode *N,
   SDValue Op1 = N->getOperand(1);
 
   // Collect all magic values from the build vector.
-  if (!ISD::matchUnaryPredicate(Op1, BuildUDIVPattern, /*AllowUndefs=*/false,
-                                /*AllowTruncation=*/true))
+  if (!ISD::matchUnaryPredicate(Op1, BuildUDIVPattern))
     return SDValue();
 
   SDValue Shift, Factor;
