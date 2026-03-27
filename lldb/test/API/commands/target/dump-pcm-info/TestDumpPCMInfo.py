@@ -26,7 +26,7 @@ class TestCase(TestBase):
         self.runCmd(f"settings set symbols.clang-modules-cache-path '{mod_cache}'")
 
         # Cause lldb to generate a Darwin-*.pcm
-        self.runCmd("expression @import Darwin")
+        self.runCmd("expression @import Darwin;")
 
         # root/<config-hash>/<module-name>-<modulemap-path-hash>.pcm
         pcm_paths = glob.glob(os.path.join(mod_cache, "*", "Darwin-*.pcm"))

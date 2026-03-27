@@ -20,6 +20,6 @@ class TestCase(TestBase):
             + '"'
         )
 
-        self.runCmd("expr @import myModule")
+        self.runCmd("expr @import myModule;")
         self.expect_expr("m.propConflict", result_value="5")
         self.expect_expr("MyClass.propConflict", result_value="6")

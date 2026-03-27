@@ -75,7 +75,7 @@ class TestWeakSymbolsInExpressions(TestBase):
         self.assertTrue(self.frame.IsValid(), "Got a good frame")
         options = lldb.SBExpressionOptions()
         options.SetLanguage(lldb.eLanguageTypeObjC)
-        result = self.frame.EvaluateExpression("@import Dylib", options)
+        result = self.frame.EvaluateExpression("@import Dylib;", options)
 
         # Now run an expression that references an absent weak symbol:
         self.run_weak_var_check("absent_weak_int", False)

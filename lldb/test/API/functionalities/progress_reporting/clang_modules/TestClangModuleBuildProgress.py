@@ -38,7 +38,7 @@ class TestCase(TestBase):
         )
 
         # Trigger module builds.
-        self.expect("expression @import MyModule")
+        self.expect("expression @import MyModule;")
 
         event = lldbutil.fetch_next_event(self, listener, broadcaster)
         payload = lldb.SBDebugger.GetProgressFromEvent(event)

@@ -28,5 +28,5 @@ class ObjCModulesTestCase(TestBase):
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "Set breakpoint here", self.main_source_file
         )
-        self.runCmd("expr @import Foo")
+        self.runCmd("expr @import Foo;")
         self.assertTrue(os.path.isdir(mod_cache), "module cache exists")

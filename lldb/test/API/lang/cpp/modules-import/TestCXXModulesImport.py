@@ -28,10 +28,10 @@ class CXXModulesImportTestCase(TestBase):
             self, "break here", lldb.SBFileSpec("main.cpp")
         )
 
-        self.expect("expr -l Objective-C++ -- @import Bar")
+        self.expect("expr -l Objective-C++ -- @import Bar;")
         self.expect("expr -- Bar()", substrs=["success"])
         self.expect(
-            "expr -l Objective-C++ -- @import THIS_MODULE_DOES_NOT_EXIST", error=True
+            "expr -l Objective-C++ -- @import THIS_MODULE_DOES_NOT_EXIST;", error=True
         )
 
     @skipUnlessDarwin
@@ -44,4 +44,4 @@ class CXXModulesImportTestCase(TestBase):
             self, "break here", lldb.SBFileSpec("main.cpp")
         )
 
-        self.expect("expr -l Objective-C++ -- @import Bar", error=True)
+        self.expect("expr -l Objective-C++ -- @import Bar;", error=True)

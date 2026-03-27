@@ -16,7 +16,7 @@ class TestCase(TestBase):
         )
 
         # Import foundation to get some ObjC types.
-        self.expect("expr --lang objc -- @import Foundation")
+        self.expect("expr --lang objc -- @import Foundation;")
         # Do something with NSString (which requires special handling when
         # preparing to run in the target). The expression most likely can't
         # be prepared to run in the target but it should at least not crash LLDB.
