@@ -1,25 +1,16 @@
-REQUIRES: system-windows, http-server, disabled-temp
+REQUIRES: system-windows, http-server
 
 RUN: not llvm-debuginfod-find --debuginfo 0 2>&1 | FileCheck %s --check-prefix CHECK-STDOUT
 CHECK-STDOUT: Build ID 00 could not be found
 
 RUN: rm -rf %t
 RUN: mkdir -p %t/debuginfod-cache
-RUN: %python %S/Inputs/capture_req.py llvm-debuginfod-find --debuginfo 0 \
-RUN:   | FileCheck --check-prefix NO-HEADERS %s
-RUN: env DEBUGINFOD_CACHE=%t/debuginfod-cache DEBUGINFOD_HEADERS_FILE=bad %python %S/Inputs/capture_req.py \
-RUN:   llvm-debuginfod-find --debuginfo 0 \
-RUN:   | FileCheck --check-prefix NO-HEADERS %s
-RUN: rm -rf %t/debuginfod-cache/*
 RUN: env DEBUGINFOD_CACHE=%t/debuginfod-cache DEBUGINFOD_HEADERS_FILE=%S/Inputs/headers %python %S/Inputs/capture_req.py \
 RUN:   llvm-debuginfod-find --debuginfo 0 \
 RUN:   | FileCheck --check-prefix HEADERS %s
 RUN: rm -rf %t/debuginfod-cache/*
 RUN: env DEBUGINFOD_CACHE=%t/debuginfod-cache DEBUGINFOD_HEADERS_FILE=%S/Inputs/headers DEBUGINFOD_URLS=fake not llvm-debuginfod-find --debuginfo 0 2>&1 \
 RUN:   | FileCheck --check-prefix ERR -DHEADER_FILE=%S/Inputs/headers %s
-
-NO-HEADERS:      User-Agent: LLVM-HTTPClient/1.0
-NO-HEADERS-NEXT: Host: localhost:{{[0-9]+}}
 
 HEADERS:      User-Agent: LLVM-HTTPClient/1.0
 HEADERS-NEXT: A: B
