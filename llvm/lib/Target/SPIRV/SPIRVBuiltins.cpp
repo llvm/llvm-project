@@ -1941,6 +1941,28 @@ static bool generateWaveInst(const SPIRV::IncomingCall *Call,
       /* isConst= */ false, /* LinkageType= */ std::nullopt);
 }
 
+// Build a SPIR-V instruction with struct return via sret pointer:
+//     Res = Opcode RetType Op1 Op2
+//     OpStore SRetReg Res
+static void buildSRetInst(unsigned Opcode, Register SRetReg, Register Op1Reg,
+                          Register Op2Reg, SPIRVTypeInst RetType,
+                          MachineIRBuilder &MIRBuilder,
+                          SPIRVGlobalRegistry *GR) {
+  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+  Register ResReg = MRI->createVirtualRegister(&SPIRV::iIDRegClass);
+  if (const TargetRegisterClass *DstRC = MRI->getRegClassOrNull(Op1Reg)) {
+    MRI->setRegClass(ResReg, DstRC);
+    MRI->setType(ResReg, MRI->getType(Op1Reg));
+  }
+  GR->assignSPIRVTypeToVReg(RetType, ResReg, MIRBuilder.getMF());
+  MIRBuilder.buildInstr(Opcode)
+      .addDef(ResReg)
+      .addUse(GR->getSPIRVTypeID(RetType))
+      .addUse(Op1Reg)
+      .addUse(Op2Reg);
+  MIRBuilder.buildInstr(SPIRV::OpStore).addUse(SRetReg).addUse(ResReg);
+}
+
 // We expect a builtin
 //     Name(ptr sret([RetType]) %result, Type %operand1, Type %operand1)
 // where %result is a pointer to where the result of the builtin execution
@@ -1977,22 +1999,8 @@ static bool generateICarryBorrowInst(const SPIRV::IncomingCall *Call,
       break;
     }
 
-  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
-  Register ResReg = MRI->createVirtualRegister(&SPIRV::iIDRegClass);
-  if (const TargetRegisterClass *DstRC =
-          MRI->getRegClassOrNull(Call->Arguments[1])) {
-    MRI->setRegClass(ResReg, DstRC);
-    MRI->setType(ResReg, MRI->getType(Call->Arguments[1]));
-  } else {
-    MRI->setType(ResReg, LLT::scalar(64));
-  }
-  GR->assignSPIRVTypeToVReg(RetType, ResReg, MIRBuilder.getMF());
-  MIRBuilder.buildInstr(Opcode)
-      .addDef(ResReg)
-      .addUse(GR->getSPIRVTypeID(RetType))
-      .addUse(Call->Arguments[1])
-      .addUse(Call->Arguments[2]);
-  MIRBuilder.buildInstr(SPIRV::OpStore).addUse(SRetReg).addUse(ResReg);
+  buildSRetInst(Opcode, SRetReg, Call->Arguments[1], Call->Arguments[2],
+                RetType, MIRBuilder, GR);
   return true;
 }
 
@@ -2022,7 +2030,7 @@ static bool generateMulExtendedInst(const SPIRV::IncomingCall *Call,
   Register Op1Reg = IsSret ? Call->Arguments[1] : Call->Arguments[0];
   Register Op2Reg = IsSret ? Call->Arguments[2] : Call->Arguments[1];
 
-  SPIRVTypeInst RetType;
+  SPIRVTypeInst RetType = nullptr;
   if (IsSret) {
     Register SRetReg = Call->Arguments[0];
     SPIRVTypeInst PtrRetType = GR->getSPIRVTypeForVReg(SRetReg);
@@ -2053,26 +2061,11 @@ static bool generateMulExtendedInst(const SPIRV::IncomingCall *Call,
   if (OpType1 != Member0Type)
     report_fatal_error("Operand type must match the struct member type");
 
-  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
-
   if (IsSret) {
-    Register ResReg = MRI->createVirtualRegister(&SPIRV::iIDRegClass);
-    if (const TargetRegisterClass *DstRC = MRI->getRegClassOrNull(Op1Reg)) {
-      MRI->setRegClass(ResReg, DstRC);
-      MRI->setType(ResReg, MRI->getType(Op1Reg));
-    } else {
-      MRI->setType(ResReg, LLT::scalar(64));
-    }
-    GR->assignSPIRVTypeToVReg(RetType, ResReg, MIRBuilder.getMF());
-    MIRBuilder.buildInstr(Opcode)
-        .addDef(ResReg)
-        .addUse(GR->getSPIRVTypeID(RetType))
-        .addUse(Op1Reg)
-        .addUse(Op2Reg);
-    MIRBuilder.buildInstr(SPIRV::OpStore)
-        .addUse(Call->Arguments[0])
-        .addUse(ResReg);
+    buildSRetInst(Opcode, Call->Arguments[0], Op1Reg, Op2Reg, RetType,
+                  MIRBuilder, GR);
   } else {
+    MachineRegisterInfo *MRI = MIRBuilder.getMRI();
     Register ResReg = Call->ReturnRegister;
     if (const TargetRegisterClass *DstRC = MRI->getRegClassOrNull(Op1Reg)) {
       MRI->setRegClass(ResReg, DstRC);
