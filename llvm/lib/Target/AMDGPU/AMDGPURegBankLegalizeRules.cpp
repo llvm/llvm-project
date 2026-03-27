@@ -1739,4 +1739,24 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S16, {{UniInVgprS16}, {IntrId, Vgpr32, Vgpr32, Vgpr32}})
       .Div(S16, {{Vgpr16}, {IntrId, Vgpr32, Vgpr32, Vgpr32}});
 
+  addRulesForIOpcs({amdgcn_div_fmas}, Standard)
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32, Vcc}})
+      .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32, Vgpr32, Vcc}})
+      .Div(S64, {{Vgpr64}, {IntrId, Vgpr64, Vgpr64, Vgpr64, Vcc}})
+      .Uni(S64, {{UniInVgprS64}, {IntrId, Vgpr64, Vgpr64, Vgpr64, Vcc}});
+
+  addRulesForIOpcs({amdgcn_div_fixup}, Standard)
+      .Div(S16, {{Vgpr16}, {IntrId, Vgpr16, Vgpr16, Vgpr16}})
+      .Uni(S16, {{UniInVgprS16}, {IntrId, Vgpr16, Vgpr16, Vgpr16}})
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}})
+      .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}})
+      .Div(S64, {{Vgpr64}, {IntrId, Vgpr64, Vgpr64, Vgpr64}})
+      .Uni(S64, {{UniInVgprS64}, {IntrId, Vgpr64, Vgpr64, Vgpr64}});
+
+  addRulesForIOpcs({amdgcn_div_scale}, Standard)
+      .Div(S32, {{Vgpr32, Vcc}, {IntrId, Vgpr32, Vgpr32}})
+      .Uni(S32, {{UniInVgprS32, UniInVcc}, {IntrId, Vgpr32, Vgpr32}})
+      .Div(S64, {{Vgpr64, Vcc}, {IntrId, Vgpr64, Vgpr64}})
+      .Uni(S64, {{UniInVgprS64, UniInVcc}, {IntrId, Vgpr64, Vgpr64}});
+
 } // end initialize rules

@@ -258,7 +258,6 @@ std::optional<ModuleSpec> SymbolLocatorDebugSymbols::LocateExecutableObjectFile(
                           path);
                 FileSpec file_spec(path);
                 FileSystem::Instance().Resolve(file_spec);
-                ModuleSpecList module_specs;
                 ModuleSpec matched_module_spec;
                 using namespace llvm::sys::fs;
                 switch (get_file_type(file_spec.GetPath())) {
@@ -274,12 +273,11 @@ std::optional<ModuleSpec> SymbolLocatorDebugSymbols::LocateExecutableObjectFile(
                                                            sizeof(path) - 1)) {
                       FileSpec bundle_exe_file_spec(path);
                       FileSystem::Instance().Resolve(bundle_exe_file_spec);
-                      if (ObjectFile::GetModuleSpecifications(
-                              bundle_exe_file_spec, 0, 0, module_specs) &&
+                      if (ModuleSpecList module_specs =
+                              ObjectFile::GetModuleSpecifications(
+                                  bundle_exe_file_spec, 0, 0);
                           module_specs.FindMatchingModuleSpec(
-                              module_spec, matched_module_spec))
-
-                      {
+                              module_spec, matched_module_spec)) {
                         ++items_found;
                         return_module_spec.GetFileSpec() = bundle_exe_file_spec;
                         LLDB_LOGF(log,
@@ -302,12 +300,10 @@ std::optional<ModuleSpec> SymbolLocatorDebugSymbols::LocateExecutableObjectFile(
                 case file_type::symlink_file:
                 case file_type::block_file:
                 case file_type::character_file:
-                  if (ObjectFile::GetModuleSpecifications(file_spec, 0, 0,
-                                                          module_specs) &&
-                      module_specs.FindMatchingModuleSpec(module_spec,
-                                                          matched_module_spec))
-
-                  {
+                  if (ModuleSpecList module_specs =
+                          ObjectFile::GetModuleSpecifications(file_spec, 0, 0);
+                      module_specs.FindMatchingModuleSpec(
+                          module_spec, matched_module_spec)) {
                     ++items_found;
                     return_module_spec.GetFileSpec() = file_spec;
                     LLDB_LOGF(log,
@@ -348,8 +344,9 @@ std::optional<FileSpec> SymbolLocatorDebugSymbols::FindSymbolFileInBundle(
       continue;
 
     FileSpec dsym_fspec(Iter->path());
-    ModuleSpecList module_specs;
-    if (ObjectFile::GetModuleSpecifications(dsym_fspec, 0, 0, module_specs)) {
+    ModuleSpecList module_specs =
+        ObjectFile::GetModuleSpecifications(dsym_fspec, 0, 0);
+    if (module_specs.GetSize() > 0) {
       ModuleSpec spec;
       for (size_t i = 0; i < module_specs.GetSize(); ++i) {
         bool got_spec = module_specs.GetModuleSpecAtIndex(i, spec);
@@ -372,8 +369,9 @@ std::optional<FileSpec> SymbolLocatorDebugSymbols::FindSymbolFileInBundle(
 static bool FileAtPathContainsArchAndUUID(const FileSpec &file_fspec,
                                           const ArchSpec *arch,
                                           const lldb_private::UUID *uuid) {
-  ModuleSpecList module_specs;
-  if (ObjectFile::GetModuleSpecifications(file_fspec, 0, 0, module_specs)) {
+  ModuleSpecList module_specs =
+      ObjectFile::GetModuleSpecifications(file_fspec, 0, 0);
+  if (module_specs.GetSize() > 0) {
     ModuleSpec spec;
     for (size_t i = 0; i < module_specs.GetSize(); ++i) {
       bool got_spec = module_specs.GetModuleSpecAtIndex(i, spec);
@@ -700,7 +698,6 @@ static int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
                           path);
                 FileSpec file_spec(path);
                 FileSystem::Instance().Resolve(file_spec);
-                ModuleSpecList module_specs;
                 ModuleSpec matched_module_spec;
                 using namespace llvm::sys::fs;
                 switch (get_file_type(file_spec.GetPath())) {
@@ -716,12 +713,11 @@ static int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
                                                            sizeof(path) - 1)) {
                       FileSpec bundle_exe_file_spec(path);
                       FileSystem::Instance().Resolve(bundle_exe_file_spec);
-                      if (ObjectFile::GetModuleSpecifications(
-                              bundle_exe_file_spec, 0, 0, module_specs) &&
+                      if (ModuleSpecList module_specs =
+                              ObjectFile::GetModuleSpecifications(
+                                  bundle_exe_file_spec, 0, 0);
                           module_specs.FindMatchingModuleSpec(
-                              module_spec, matched_module_spec))
-
-                      {
+                              module_spec, matched_module_spec)) {
                         ++items_found;
                         return_module_spec.GetFileSpec() = bundle_exe_file_spec;
                         LLDB_LOGF(log,
@@ -744,12 +740,10 @@ static int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
                 case file_type::symlink_file:
                 case file_type::block_file:
                 case file_type::character_file:
-                  if (ObjectFile::GetModuleSpecifications(file_spec, 0, 0,
-                                                          module_specs) &&
-                      module_specs.FindMatchingModuleSpec(module_spec,
-                                                          matched_module_spec))
-
-                  {
+                  if (ModuleSpecList module_specs =
+                          ObjectFile::GetModuleSpecifications(file_spec, 0, 0);
+                      module_specs.FindMatchingModuleSpec(
+                          module_spec, matched_module_spec)) {
                     ++items_found;
                     return_module_spec.GetFileSpec() = file_spec;
                     LLDB_LOGF(log,
