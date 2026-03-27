@@ -1,4 +1,4 @@
-name: Release mlgo-utils
+name: Release llvm-testing-tools
 
 permissions:
   contents: read
