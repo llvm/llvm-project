@@ -4534,6 +4534,14 @@ getUnknownRegionParams(Sema &SemaRef) {
 }
 
 static SmallVector<SemaOpenMP::CapturedParamNameType>
+getTaskgraphRegionParams(Sema &SemaRef) {
+  SmallVector<SemaOpenMP::CapturedParamNameType> Params{
+      std::make_pair(StringRef(), QualType()) // __context with shared vars
+  };
+  return Params;
+}
+
+static SmallVector<SemaOpenMP::CapturedParamNameType>
 getTaskloopRegionParams(Sema &SemaRef) {
   ASTContext &Context = SemaRef.getASTContext();
   QualType KmpInt32Ty =
@@ -4605,6 +4613,10 @@ static void processCapturedRegions(Sema &SemaRef, OpenMPDirectiveKind DKind,
       // Mark this captured region as inlined, because we don't use outlined
       // function directly.
       MarkAsInlined(SemaRef.getCurCapturedRegion());
+      break;
+    case OMPD_taskgraph:
+      SemaRef.ActOnCapturedRegionStart(
+          Loc, CurScope, CR_OpenMP, getTaskgraphRegionParams(SemaRef), Level);
       break;
     case OMPD_target:
       SemaRef.ActOnCapturedRegionStart(Loc, CurScope, CR_OpenMP,
@@ -6579,6 +6591,12 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
            "No associated statement allowed for 'omp taskwait' directive");
     Res = ActOnOpenMPTaskwaitDirective(ClausesWithImplicit, StartLoc, EndLoc);
     break;
+  case OMPD_taskgraph:
+    assert(AStmt &&
+           "Associated statement required for 'omp taskgraph' directive");
+    Res = ActOnOpenMPTaskgraphDirective(ClausesWithImplicit, AStmt, StartLoc,
+                                        EndLoc);
+    break;
   case OMPD_taskgroup:
     Res = ActOnOpenMPTaskgroupDirective(ClausesWithImplicit, AStmt, StartLoc,
                                         EndLoc);
@@ -6793,10 +6811,6 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
   case OMPD_begin_declare_variant:
   case OMPD_end_declare_variant:
     llvm_unreachable("OpenMP Directive is not allowed");
-  case OMPD_taskgraph:
-    Diag(StartLoc, diag::err_omp_unexpected_directive)
-        << 1 << getOpenMPDirectiveName(OMPD_taskgraph);
-    return StmtError();
   case OMPD_unknown:
   default:
     llvm_unreachable("Unknown OpenMP directive");
@@ -11763,6 +11777,25 @@ SemaOpenMP::ActOnOpenMPTaskwaitDirective(ArrayRef<OMPClause *> Clauses,
 
   return OMPTaskwaitDirective::Create(getASTContext(), StartLoc, EndLoc,
                                       Clauses);
+}
+
+StmtResult
+SemaOpenMP::ActOnOpenMPTaskgraphDirective(ArrayRef<OMPClause *> Clauses,
+                                          Stmt *AStmt, SourceLocation StartLoc,
+                                          SourceLocation EndLoc) {
+  llvm::omp::Version OMPVersion = getLangOpts().getOpenMPVersion();
+  if (!OMPVersion || OMPVersion < 60) {
+    Diag(StartLoc, diag::err_omp_unexpected_directive)
+        << 1 << getOpenMPDirectiveName(OMPD_taskgraph, OMPVersion);
+    return StmtError();
+  }
+  if (!AStmt)
+    return StmtError();
+
+  assert(isa<CapturedStmt>(AStmt) && "Captured statement expected");
+
+  return OMPTaskgraphDirective::Create(getASTContext(), StartLoc, EndLoc,
+                                       Clauses, AStmt);
 }
 
 StmtResult

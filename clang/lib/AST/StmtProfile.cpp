@@ -1193,6 +1193,10 @@ void StmtProfiler::VisitOMPAssumeDirective(const OMPAssumeDirective *S) {
   VisitOMPExecutableDirective(S);
 }
 
+void StmtProfiler::VisitOMPTaskgraphDirective(const OMPTaskgraphDirective *S) {
+  VisitOMPExecutableDirective(S);
+}
+
 void StmtProfiler::VisitOMPErrorDirective(const OMPErrorDirective *S) {
   VisitOMPExecutableDirective(S);
 }
