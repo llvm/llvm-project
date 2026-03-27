@@ -1238,6 +1238,25 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
     }
   }
 
+  switch (Style.BreakInheritanceList) {
+  case FormatStyle::BILS_BeforeColon:
+  case FormatStyle::BILS_AfterComma:
+    CurrentState.IsAligned = CurrentState.IsAligned ||
+                             Current.is(TT_InheritanceColon) ||
+                             Previous.is(TT_InheritanceComma);
+    break;
+  case FormatStyle::BILS_BeforeComma:
+    CurrentState.IsAligned =
+        CurrentState.IsAligned ||
+        Current.isOneOf(TT_InheritanceColon, TT_InheritanceComma);
+    break;
+  case FormatStyle::BILS_AfterColon:
+    CurrentState.IsAligned =
+        CurrentState.IsAligned ||
+        Previous.isOneOf(TT_InheritanceColon, TT_InheritanceComma);
+    break;
+  }
+
   if ((PreviousNonComment &&
        PreviousNonComment->isOneOf(tok::comma, tok::semi) &&
        !CurrentState.AvoidBinPacking) ||
