@@ -23,8 +23,7 @@ define void @pr45679(ptr %A) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i1> [[TMP0]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[INDEX]]
 ; CHECK-NEXT:    store i32 13, ptr [[TMP3]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK:       pred.store.continue:
@@ -75,8 +74,7 @@ define void @pr45679(ptr %A) {
 ; VF2UF2-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP0]], i32 0
 ; VF2UF2-NEXT:    br i1 [[TMP2]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; VF2UF2:       pred.store.if:
-; VF2UF2-NEXT:    [[TMP3:%.*]] = add i32 [[INDEX]], 0
-; VF2UF2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[TMP3]]
+; VF2UF2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[INDEX]]
 ; VF2UF2-NEXT:    store i32 13, ptr [[TMP4]], align 1
 ; VF2UF2-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; VF2UF2:       pred.store.continue:
@@ -188,8 +186,7 @@ define void @load_variant(ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i1> [[TMP0]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    store i64 [[TMP4]], ptr [[B:%.*]], align 8
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
@@ -244,8 +241,7 @@ define void @load_variant(ptr noalias %a, ptr noalias %b) {
 ; VF2UF2-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP0]], i32 0
 ; VF2UF2-NEXT:    br i1 [[TMP2]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; VF2UF2:       pred.store.if:
-; VF2UF2-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 0
-; VF2UF2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP3]]
+; VF2UF2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
 ; VF2UF2-NEXT:    [[TMP5:%.*]] = load i64, ptr [[TMP4]], align 8
 ; VF2UF2-NEXT:    store i64 [[TMP5]], ptr [[B:%.*]], align 8
 ; VF2UF2-NEXT:    br label [[PRED_STORE_CONTINUE]]
