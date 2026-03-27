@@ -1,6 +1,6 @@
 header: cpio.h
 standards:
-  - POSIX
+  - posix
 macros:
   - macro_name: C_IRUSR
     macro_value: "000400"
