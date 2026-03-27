@@ -92,11 +92,25 @@ void selfMove() {
 void * operator new(size_t, void *p);
 
 // Don't flag an explicit destructor call
-void explicitDestrucotr() {
+void explicitDestructor() {
   alignas(A) char storage[sizeof(A)];
   A& a = *new (storage) A();
   std::move(a);
   a.~A(); // It's always valid to destruct a moved object.
+
+  A& b = *new (storage) A();
+  std::move(b);
+  (b).~A(); // Parenthesis should not change the behavior.
+  b.foo(); // But destruction is not a reinitialization.
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'b' used after it was moved
+  // CHECK-NOTES: [[@LINE-4]]:3: note: move occurred here
+
+  A& c = *new (storage) A();
+  std::move(c);
+  c.foo();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'c' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:3: note: move occurred here
+  c.~A();
 }
 
 // A warning should only be emitted for one use-after-move.
