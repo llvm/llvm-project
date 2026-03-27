@@ -6,6 +6,7 @@
 ;
 ; CHECK-LABEL: define void @test(
 ; CHECK-LABEL: entry:
+; CHECK-NOT: br i1 %{{[0-9]+}}, label %{{[0-9]+}}, label %{{[0-9]+}}{{$}}
 ; CHECK: br i1 %{{[0-9]+}}, label %{{[0-9]+}}, label %{{[0-9]+}}, !prof ![[BW:[0-9]+]]
 ; CHECK: ![[BW]] = !{!"branch_weights", i32 {{-?[0-9]+}}, i32 {{-?[0-9]+}}}
 
