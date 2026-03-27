@@ -796,7 +796,6 @@ void BuiltinTypeMethodBuilder::setMipsHandleField(LocalVar &ResourceRecord) {
       AST, HandleResExpr, false, HandleField, HandleField->getType(), VK_LValue,
       OK_Ordinary);
 
-  Expr *ResExpr = convertPlaceholder(ResourceRecord);
   MemberExpr *MipsMemberExpr =
       MemberExpr::CreateImplicit(AST, HandleResExpr, false, MipsField,
                                  MipsField->getType(), VK_LValue, OK_Ordinary);
