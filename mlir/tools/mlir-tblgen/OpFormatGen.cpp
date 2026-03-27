@@ -428,13 +428,36 @@ struct OperationFormat {
 // Parser Gen
 //===----------------------------------------------------------------------===//
 
+/// Returns the Record to use when constructing an EnumInfo for the given
+/// attribute. For legacy EnumAttrInfo-based attributes, this is the attribute
+/// def itself (which extends both EnumInfo and Attr). For newer EnumAttr-based
+/// attributes (which extend AttrDef), this is the `enum` sub-field.
+static const llvm::Record *getEnumInfoRecord(const Attribute &attr) {
+  if (attr.isSubClassOf("EnumAttr"))
+    return attr.getDef().getValueAsDef("enum");
+  return &attr.getDef();
+}
+
 /// Returns true if we can format the given attribute as an enum in the
 /// parser format.
 static bool canFormatEnumAttr(const NamedAttribute *attr) {
   Attribute baseAttr = attr->attr.getBaseAttr();
   if (!baseAttr.isEnumAttr())
     return false;
-  EnumInfo enumInfo(&baseAttr.getDef());
+
+  // For newer EnumAttr-based attributes (which extend AttrDef), only apply
+  // enum keyword formatting when the attribute uses the default "$value"
+  // assembly format. If it has a custom format (e.g., `<` $value `>`), the
+  // attribute's own AttrDef parser/printer handles formatting — using the
+  // keyword path here would conflict with that custom format.
+  if (baseAttr.isSubClassOf("EnumAttr")) {
+    llvm::StringRef asmFmt =
+        baseAttr.getDef().getValueAsString("assemblyFormat");
+    if (asmFmt != "$value")
+      return false;
+  }
+
+  EnumInfo enumInfo(getEnumInfoRecord(baseAttr));
 
   // The attribute must have a valid underlying type and a constant builder.
   return !enumInfo.getUnderlyingType().empty() &&
@@ -1162,7 +1185,7 @@ static void genEnumAttrParser(const NamedAttribute *var, MethodBody &body,
                               FmtContext &attrTypeCtx, bool parseAsOptional,
                               bool useProperties, StringRef opCppClassName) {
   Attribute baseAttr = var->attr.getBaseAttr();
-  EnumInfo enumInfo(&baseAttr.getDef());
+  EnumInfo enumInfo(getEnumInfoRecord(baseAttr));
   std::vector<EnumCase> cases = enumInfo.getAllCases();
 
   // Generate the code for building an attribute for this enum.
@@ -2263,7 +2286,7 @@ static MethodBody &genTypeOperandPrinter(FormatElement *arg, const Operator &op,
 static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
                                MethodBody &body) {
   Attribute baseAttr = var->attr.getBaseAttr();
-  const EnumInfo enumInfo(&baseAttr.getDef());
+  const EnumInfo enumInfo(getEnumInfoRecord(baseAttr));
   std::vector<EnumCase> cases = enumInfo.getAllCases();
 
   body << formatv(enumAttrBeginPrinterCode,
