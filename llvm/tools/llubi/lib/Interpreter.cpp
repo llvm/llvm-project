@@ -334,6 +334,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
             return QuietNaN(FLHS);
           if (FRHS.isNaN())
             return QuietNaN(FRHS);
+          return QuietNaN(Result);
         }
         if (Choice == 2) {
           // Unchanged NaN propagation: the quiet bit and payload are copied
@@ -347,6 +348,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
             return FlipSign(FLHS);
           if (FRHS.isNaN())
             return FlipSign(FRHS);
+          return FlipSign(Result);
         }
         if (Choice == 3) {
           // Target-specific NaN: the quiet bit is set and the payload is picked
