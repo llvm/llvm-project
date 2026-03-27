@@ -118,7 +118,8 @@ functions:
     arguments:
       - type: int
   - name: pkey_get
-    standards: GNU
+    standards:
+      - GNU
     return_type: int
     arguments:
       - type: int
@@ -132,7 +133,8 @@ functions:
       - type: int
       - type: int
   - name: pkey_set
-    standards: GNU
+    standards:
+      - GNU
     return_type: int
     arguments:
       - type: int
