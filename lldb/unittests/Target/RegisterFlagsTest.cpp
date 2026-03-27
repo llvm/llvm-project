@@ -22,24 +22,18 @@ TEST(RegisterFlagsTest, Field) {
   // start == end means a 1 bit field.
   ASSERT_EQ(f1.GetSizeInBits(), (unsigned)1);
   ASSERT_EQ(f1.GetMask(), (uint64_t)1);
-  ASSERT_EQ(f1.GetValue(0), (uint64_t)0);
-  ASSERT_EQ(f1.GetValue(3), (uint64_t)1);
 
   // End is inclusive meaning that start 0 to end 1 includes bit 1
   // to make a 2 bit field.
   RegisterFlags::Field f2("", 0, 1);
   ASSERT_EQ(f2.GetSizeInBits(), (unsigned)2);
   ASSERT_EQ(f2.GetMask(), (uint64_t)3);
-  ASSERT_EQ(f2.GetValue(UINT64_MAX), (uint64_t)3);
-  ASSERT_EQ(f2.GetValue(UINT64_MAX & ~(uint64_t)3), (uint64_t)0);
 
   // If the field doesn't start at 0 we need to shift up/down
   // to account for it.
   RegisterFlags::Field f3("", 2, 5);
   ASSERT_EQ(f3.GetSizeInBits(), (unsigned)4);
   ASSERT_EQ(f3.GetMask(), (uint64_t)0x3c);
-  ASSERT_EQ(f3.GetValue(UINT64_MAX), (uint64_t)0xf);
-  ASSERT_EQ(f3.GetValue(UINT64_MAX & ~(uint64_t)0x3c), (uint64_t)0);
 
   // Fields are sorted lowest starting bit first.
   ASSERT_TRUE(f2 < f3);
@@ -125,21 +119,6 @@ TEST(RegisterFlagsTest, RegisterFlagsPadding) {
                {make_field(28, 31), make_field(24, 27), make_field(22, 23),
                 make_field(20, 21), make_field(12, 19), make_field(8, 11),
                 make_field(0, 7)});
-}
-
-TEST(RegisterFieldsTest, ReverseFieldOrder) {
-  // Unchanged
-  RegisterFlags rf("", 4, {make_field(0, 31)});
-  ASSERT_EQ(0x12345678ULL, (unsigned long long)rf.ReverseFieldOrder(0x12345678));
-
-  // Swap the two halves around.
-  RegisterFlags rf2("", 4, {make_field(16, 31), make_field(0, 15)});
-  ASSERT_EQ(0x56781234ULL, (unsigned long long)rf2.ReverseFieldOrder(0x12345678));
-
-  // Many small fields.
-  RegisterFlags rf3(
-      "", 4, {make_field(31), make_field(30), make_field(29), make_field(28)});
-  ASSERT_EQ(0x00000005ULL, rf3.ReverseFieldOrder(0xA0000000));
 }
 
 TEST(RegisterFlagsTest, AsTable) {

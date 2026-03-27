@@ -38,9 +38,14 @@ RegisterTypeBuilderClang::RegisterTypeBuilderClang(Target &target)
 CompilerType RegisterTypeBuilderClang::GetRegisterType(
     const std::string &name, const lldb_private::RegisterFlags &flags,
     uint32_t byte_size) {
-  lldb::TypeSystemClangSP type_system =
-      ScratchTypeSystemClang::GetForTarget(m_target);
+  lldb::TypeSystemClangSP type_system = ScratchTypeSystemClang::GetForTarget(
+      m_target, ScratchTypeSystemClang::IsolatedASTKind::Registers);
   assert(type_system);
+
+  if (!m_external_ast) {
+    m_external_ast = llvm::makeIntrusiveRefCnt<RegisterExternalASTSource>();
+    type_system->SetExternalSource(m_external_ast);
+  }
 
   std::string register_type_name = "__lldb_register_fields_" + name;
   // See if we have made this type before and can reuse it.
@@ -60,6 +65,7 @@ CompilerType RegisterTypeBuilderClang::GetRegisterType(
         nullptr, OptionalClangModuleID(), register_type_name,
         llvm::to_underlying(clang::TagTypeKind::Struct), lldb::eLanguageTypeC);
     type_system->StartTagDeclarationDefinition(fields_type);
+    llvm::DenseMap<const clang::FieldDecl *, uint64_t> field_offsets;
 
     // We assume that RegisterFlags has padded and sorted the fields
     // already.
@@ -104,9 +110,14 @@ CompilerType RegisterTypeBuilderClang::GetRegisterType(
         }
       }
 
-      type_system->AddFieldToRecordType(fields_type, field.GetName(),
-                                        field_type, field.GetSizeInBits());
+      clang::FieldDecl *field_decl = type_system->AddFieldToRecordType(
+          fields_type, field.GetName(), field_type, field.GetSizeInBits());
+      field_offsets.insert({field_decl, field.GetStart()});
     }
+
+    m_external_ast->m_struct_layouts.insert(
+        {type_system->GetAsRecordDecl(fields_type),
+         RegisterExternalASTSource::LayoutInfo{byte_size, field_offsets}});
 
     type_system->CompleteTagDeclarationDefinition(fields_type);
     // So that the size of the type matches the size of the register.

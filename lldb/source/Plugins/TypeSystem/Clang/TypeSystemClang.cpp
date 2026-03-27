@@ -9631,6 +9631,8 @@ GetNameForIsolatedASTKind(ScratchTypeSystemClang::IsolatedASTKind kind) {
   switch (kind) {
   case ScratchTypeSystemClang::IsolatedASTKind::CppModules:
     return "C++ modules";
+  case ScratchTypeSystemClang::IsolatedASTKind::Registers:
+    return "Registers";
   }
   llvm_unreachable("Unimplemented IsolatedASTKind?");
 }
@@ -9722,6 +9724,8 @@ GetSpecializedASTName(ScratchTypeSystemClang::IsolatedASTKind feature) {
   switch (feature) {
   case ScratchTypeSystemClang::IsolatedASTKind::CppModules:
     return "scratch ASTContext for C++ module types";
+  case ScratchTypeSystemClang::IsolatedASTKind::Registers:
+    return "scratch ASContext for register types";
   }
   llvm_unreachable("Unimplemented ASTFeature kind?");
 }

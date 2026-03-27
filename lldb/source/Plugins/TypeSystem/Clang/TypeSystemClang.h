@@ -1274,7 +1274,10 @@ public:
     /// type information from a C++ module. The templates from a C++ module
     /// often conflict with the templates we generate from debug information,
     /// so we put these types in their own AST.
-    CppModules
+    CppModules,
+    /// Register "flags" types are converted into structures but their layout
+    /// does not follow the ABI of the target.
+    Registers
   };
 
   /// Alias for requesting the default scratch TypeSystemClang in GetForTarget.
