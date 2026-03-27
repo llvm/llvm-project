@@ -268,7 +268,7 @@ static inline zx_futex_t const* __get_zx_futex(void const* __ptr) {
   // final link to specify -lzircon explicitly when statically linking libc++.
 #  pragma comment(lib, "zircon")
 
-  return const_cast<zx_futex_t const*>(reinterpret_cast<zx_futex_t const*>(__ptr));
+  return reinterpret_cast<zx_futex_t const*>(__ptr);
 }
 
 template <std::size_t _Size, class MaybeTimeout>
