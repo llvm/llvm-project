@@ -57,7 +57,7 @@ public:
 
   // TODO: Virtualize writing PCM files.
 
-  virtual llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
+  virtual Expected<std::unique_ptr<llvm::MemoryBuffer>>
   read(StringRef FileName, off_t &Size, time_t &ModTime) = 0;
 
   virtual ~ModuleCache() = default;
@@ -72,8 +72,8 @@ std::shared_ptr<ModuleCache> createCrossProcessModuleCache();
 /// Shared implementation of `ModuleCache::maybePrune()`.
 void maybePruneImpl(StringRef Path, time_t PruneInterval, time_t PruneAfter);
 
-/// Shared implementation of `ModuleCache::load()`.
-llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
+/// Shared implementation of `ModuleCache::read()`.
+Expected<std::unique_ptr<llvm::MemoryBuffer>>
 readImpl(StringRef FileName, off_t &Size, time_t &ModTime);
 } // namespace clang
 

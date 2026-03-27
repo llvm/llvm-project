@@ -188,31 +188,30 @@ ModuleManager::AddModuleResult ModuleManager::addModule(
     // import it earlier.
     return OutOfDate;
   } else {
-    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buf = nullptr;
-    if (FileName.getImplicitModuleSuffixLength()) {
-      Buf = ModCache.read(FileName, Size, ModTime);
-    } else {
-      OptionalFileEntryRef Entry = expectedToOptional(
+    auto Buf = [&]() -> Expected<std::unique_ptr<llvm::MemoryBuffer>> {
+      if (FileName.getImplicitModuleSuffixLength())
+        return ModCache.read(FileName, Size, ModTime);
+
+      Expected<FileEntryRef> Entry =
           FileName == StringRef("-")
               ? FileMgr.getSTDIN()
               : FileMgr.getFileRef(FileName, /*OpenFile=*/true,
-                                   /*CacheFailure=*/false));
-      if (!Entry) {
-        ErrorStr = "module file not found";
-        return Missing;
-      }
+                                   /*CacheFailure=*/false);
+      if (!Entry)
+        return Entry.takeError();
 
       Size = Entry->getSize();
       ModTime = Entry->getModificationTime();
 
       // RequiresNullTerminator is false because module files don't need it, and
       // this allows the file to still be mmapped.
-      Buf = FileMgr.getBufferForFile(*Entry, /*IsVolatile=*/false,
-                                     /*RequiresNullTerminator=*/false);
-    }
+      return llvm::errorOrToExpected(
+          FileMgr.getBufferForFile(*Entry, /*IsVolatile=*/false,
+                                   /*RequiresNullTerminator=*/false));
+    }();
 
     if (!Buf) {
-      ErrorStr = Buf.getError().message();
+      ErrorStr = llvm::toString(Buf.takeError());
       return Missing;
     }
 

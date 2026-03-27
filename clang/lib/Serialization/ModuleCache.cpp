@@ -101,22 +101,24 @@ void clang::maybePruneImpl(StringRef Path, time_t PruneInterval,
   }
 }
 
-llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
+Expected<std::unique_ptr<llvm::MemoryBuffer>>
 clang::readImpl(StringRef FileName, off_t &Size, time_t &ModTime) {
+  Expected<llvm::sys::fs::file_t> FD =
+      llvm::sys::fs::openNativeFileForRead(FileName);
+  if (!FD)
+    return FD.takeError();
   std::error_code EC;
-  llvm::sys::fs::file_t FD;
-  if ((EC = llvm::sys::fs::openFileForRead(FileName, FD)))
-    return EC;
   llvm::sys::fs::file_status Status;
-  if ((EC = llvm::sys::fs::status(FD, Status)))
-    return EC;
-  auto BufOrErr = llvm::MemoryBuffer::getOpenFile(
-      FD, FileName, Status.getSize(), /*RequiresNullTerminator=*/false);
-  if (!BufOrErr)
-    return BufOrErr.getError();
+  if ((EC = llvm::sys::fs::status(*FD, Status)))
+    return llvm::errorCodeToError(EC);
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buf =
+      llvm::MemoryBuffer::getOpenFile(*FD, FileName, Status.getSize(),
+                                      /*RequiresNullTerminator=*/false);
+  if (!Buf)
+    return llvm::errorCodeToError(Buf.getError());
   Size = Status.getSize();
   ModTime = llvm::sys::toTimeT(Status.getLastModificationTime());
-  return std::move(*BufOrErr);
+  return std::move(*Buf);
 }
 
 namespace {
@@ -180,7 +182,7 @@ public:
     return InMemory;
   }
 
-  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
+  Expected<std::unique_ptr<llvm::MemoryBuffer>>
   read(StringRef FileName, off_t &Size, time_t &ModTime) override {
     // This is a compiler-internal input/output, let's bypass the sandbox.
     auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
