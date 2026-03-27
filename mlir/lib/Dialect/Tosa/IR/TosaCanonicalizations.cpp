@@ -1073,6 +1073,16 @@ static DenseElementsAttr unaryFolder(DenseElementsAttr val, ShapedType returnTy,
   return {};
 }
 
+static FailureOr<int64_t> getSingleI64From1ElementTensor(Value v) {
+  DenseIntElementsAttr dense{};
+  if (!matchPattern(v, m_Constant(&dense)))
+    return failure();
+
+  assert(dense.isSplat());
+  APInt a = dense.getSplatValue<APInt>();
+  return a.getSExtValue();
+}
+
 struct AddFoldAdaptor {
   static FailureOr<APInt> fold(const APInt &lhs, const APInt &rhs,
                                const bool isUnsigned) {
@@ -2142,6 +2152,52 @@ OpFoldResult concatShapeFold(tosa::ConcatShapeOp *op) {
   return DenseElementsAttr::get(rankedTy, concatDims);
 }
 
+OpFoldResult sliceShapeFold(tosa::SliceShapeOp *op) {
+  auto const input1 = op->getInput();
+  auto const input2 = op->getStart();
+  auto const input3 = op->getSize();
+
+  auto input1ConstShape = dyn_cast<tosa::ConstShapeOp>(input1.getDefiningOp());
+
+  if (!input1ConstShape)
+    return {};
+
+  auto const input1Attr = cast<DenseElementsAttr>(input1ConstShape.getValues());
+  if (!input1Attr)
+    return {};
+
+  auto const input1Vals = input1Attr.getValues<APInt>();
+  auto const totalInput1 = input1Vals.size();
+
+  auto const start = getSingleI64From1ElementTensor(input2);
+  auto const size = getSingleI64From1ElementTensor(input3);
+
+  if (failed(start) || failed(size))
+    return {};
+
+  auto const startV = static_cast<int32_t>(start.value());
+  auto const sizeV = static_cast<int32_t>(size.value());
+
+  if ((sizeV <= 0) || (startV < 0) ||
+      (static_cast<size_t>(startV + sizeV) > totalInput1))
+    return {};
+
+  SmallVector<APInt> sliceOfInput;
+  sliceOfInput.reserve(totalInput1);
+
+  for (auto i = startV; i < (startV + sizeV); i++) {
+    sliceOfInput.push_back(input1Vals[i]);
+  }
+
+  auto *ctx = op->getContext();
+  assert(ctx != nullptr && "ctx is nullptr");
+
+  auto const rankedTy = RankedTensorType::get(
+      {static_cast<int64_t>(sliceOfInput.size())}, IndexType::get(ctx));
+
+  return DenseElementsAttr::get(rankedTy, sliceOfInput);
+}
+
 OpFoldResult tosa::AddShapeOp::fold(FoldAdaptor adaptor) {
   return binaryFold<AddShapeOp, AddFoldAdaptor>(this);
 }
@@ -2188,4 +2244,8 @@ OpFoldResult tosa::Log2FloorShapeOp::fold(FoldAdaptor adaptor) {
 
 OpFoldResult tosa::ConcatShapeOp::fold(FoldAdaptor adaptor) {
   return concatShapeFold(this);
+}
+
+OpFoldResult tosa::SliceShapeOp::fold(FoldAdaptor adaptor) {
+  return sliceShapeFold(this);
 }
