@@ -11,8 +11,8 @@
 
 typedef unsigned int uint;
 
-// GFX9: error: option 'wavefrontsize32' cannot be specified on this target
-__attribute__((target("wavefrontsize32"))) // gfx9-error@*:* {{option 'wavefrontsize32' cannot be specified on this target}}
+// GFX9: error: option '+wavefrontsize32' cannot be specified on this target
+__attribute__((target("wavefrontsize32"))) // gfx9-error@*:* {{option '+wavefrontsize32' cannot be specified on this target}}
 void test_ballot_wave32_target_attr(global uint* out, int a, int b) {
   *out = __builtin_amdgcn_ballot_w32(a == b);
 }

@@ -22,7 +22,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE T trunc(T x) {
+LIBC_INLINE constexpr T trunc(T x) {
   using StorageType = typename FPBits<T>::StorageType;
   FPBits<T> bits(x);
 
@@ -52,7 +52,7 @@ LIBC_INLINE T trunc(T x) {
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE T ceil(T x) {
+LIBC_INLINE constexpr T ceil(T x) {
   using StorageType = typename FPBits<T>::StorageType;
   FPBits<T> bits(x);
 
@@ -95,7 +95,7 @@ LIBC_INLINE T ceil(T x) {
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE T floor(T x) {
+LIBC_INLINE constexpr T floor(T x) {
   FPBits<T> bits(x);
   if (bits.is_neg()) {
     return -ceil(-x);
@@ -105,7 +105,7 @@ LIBC_INLINE T floor(T x) {
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE T round(T x) {
+LIBC_INLINE constexpr T round(T x) {
   using StorageType = typename FPBits<T>::StorageType;
   FPBits<T> bits(x);
 
@@ -244,7 +244,7 @@ round_using_specific_rounding_mode(T x, int rnd) {
 }
 
 template <typename T>
-LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<T>, T>
 round_using_current_rounding_mode(T x) {
   int rounding_mode = quick_get_round();
 
@@ -350,7 +350,7 @@ template <typename FloatType, typename IntType,
           cpp::enable_if_t<cpp::is_floating_point_v<FloatType> &&
                                cpp::is_integral_v<IntType>,
                            int> = 0>
-LIBC_INLINE IntType rounded_float_to_signed_integer(FloatType x) {
+LIBC_INLINE constexpr IntType rounded_float_to_signed_integer(FloatType x) {
   constexpr IntType INTEGER_MIN = (IntType(1) << (sizeof(IntType) * 8 - 1));
   constexpr IntType INTEGER_MAX = -(INTEGER_MIN + 1);
   FPBits<FloatType> bits(x);
@@ -390,7 +390,7 @@ template <typename FloatType, typename IntType,
           cpp::enable_if_t<cpp::is_floating_point_v<FloatType> &&
                                cpp::is_integral_v<IntType>,
                            int> = 0>
-LIBC_INLINE IntType round_to_signed_integer(FloatType x) {
+LIBC_INLINE constexpr IntType round_to_signed_integer(FloatType x) {
   return internal::rounded_float_to_signed_integer<FloatType, IntType>(
       round(x));
 }
@@ -399,7 +399,7 @@ template <typename FloatType, typename IntType,
           cpp::enable_if_t<cpp::is_floating_point_v<FloatType> &&
                                cpp::is_integral_v<IntType>,
                            int> = 0>
-LIBC_INLINE IntType
+LIBC_INLINE constexpr IntType
 round_to_signed_integer_using_current_rounding_mode(FloatType x) {
   return internal::rounded_float_to_signed_integer<FloatType, IntType>(
       round_using_current_rounding_mode(x));

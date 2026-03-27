@@ -116,7 +116,7 @@ Value sparse_tensor::SparseTensorDescriptor::getCrdMemRefOrView(
   size = arith::DivUIOp::create(builder, loc, size, stride);
   return memref::SubViewOp::create(
       builder, loc, getMemRefField(SparseTensorFieldKind::CrdMemRef, cooStart),
-      /*offset=*/ValueRange{constantIndex(builder, loc, lvl - cooStart)},
-      /*size=*/ValueRange{size},
+      /*offsets=*/ValueRange{constantIndex(builder, loc, lvl - cooStart)},
+      /*sizes=*/ValueRange{size},
       /*step=*/ValueRange{stride});
 }

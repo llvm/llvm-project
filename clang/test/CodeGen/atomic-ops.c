@@ -165,13 +165,13 @@ _Bool fi4d(_Atomic(int) *i, int _AS1 *ptr2) {
 
 float ff1(_Atomic(float) *d) {
   // CHECK-LABEL: @ff1
-  // CHECK: load atomic i32, ptr {{.*}} monotonic, align 4
+  // CHECK: load atomic float, ptr {{.*}} monotonic, align 4
   return __c11_atomic_load(d, memory_order_relaxed);
 }
 
 void ff2(_Atomic(float) *d) {
   // CHECK-LABEL: @ff2
-  // CHECK: store atomic i32 {{.*}} release, align 4
+  // CHECK: store atomic float {{.*}} release, align 4
   __c11_atomic_store(d, 1, memory_order_release);
 }
 
@@ -255,9 +255,21 @@ _Bool fd4(struct S *a, struct S *b, struct S *c) {
   return __atomic_compare_exchange(a, b, c, 1, 5, 5);
 }
 
+int ui1(int* p) {
+  // CHECK-LABEL: @ui1
+  // CHECK: atomicrmw uinc_wrap ptr {{.*}}, i32 {{.*}} release
+  return __atomic_fetch_uinc(p, 42, memory_order_release);
+}
+
+int ud1(int* p) {
+  // CHECK-LABEL: @ud1
+  // CHECK: atomicrmw udec_wrap ptr {{.*}}, i32 {{.*}} release
+  return __atomic_fetch_udec(p, 42, memory_order_release);
+}
+
 int* fp1(_Atomic(int*) *p) {
   // CHECK-LABEL: @fp1
-  // CHECK: load atomic i32, ptr {{.*}} seq_cst, align 4
+  // CHECK: load atomic ptr, ptr {{.*}} seq_cst, align 4
   return __c11_atomic_load(p, memory_order_seq_cst);
 }
 

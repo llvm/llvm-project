@@ -21,11 +21,12 @@ include "SparcInstrFormats.td"
 //===----------------------------------------------------------------------===//
 
 // True when generating 32-bit code.
-def Is32Bit : Predicate<"!Subtarget->is64Bit()">;
+def Is32Bit : Predicate<"!Subtarget->is64Bit()">,
+              AssemblerPredicate<(all_of (not Feature64Bit))>;
 
 // True when generating 64-bit code. This also implies HasV9.
 def Is64Bit : Predicate<"Subtarget->is64Bit()">,
-              AssemblerPredicate<(all_of FeatureV9)>;
+              AssemblerPredicate<(all_of Feature64Bit)>;
 
 def UseSoftMulDiv : Predicate<"Subtarget->useSoftMulDiv()">,
               AssemblerPredicate<(all_of FeatureSoftMulDiv)>;
@@ -1094,7 +1095,7 @@ def CPBCONDA : CPBranchSPA<(ins brtarget:$imm22, CCOp:$cond),
 
 // Section B.24 - Call and Link Instruction, p. 125
 // This is the only Format 1 instruction
-let Uses = [O6],
+let Uses = [O6], Defs = [O7],
     hasDelaySlot = 1, isCall = 1 in {
   def CALL : InstSP<(outs), (ins calltarget:$disp, variable_ops),
                     "call $disp",
@@ -1588,8 +1589,8 @@ let Uses = [O6], isCall = 1, hasDelaySlot = 1 in
 //===----------------------------------------------------------------------===//
 // Instructions for tail calls.
 //===----------------------------------------------------------------------===//
-let isCodeGenOnly = 1, isReturn = 1,  hasDelaySlot = 1,
-    isTerminator = 1, isBarrier = 1 in {
+let isCodeGenOnly = 1, isReturn = 1, hasDelaySlot = 1, isTerminator = 1,
+    isBarrier = 1, isCall = 1 in {
   def TAIL_CALL : InstSP<(outs), (ins calltarget:$disp, variable_ops),
                          "call $disp",
                          [(tailcall tglobaladdr:$disp)]> {
@@ -1602,8 +1603,8 @@ let isCodeGenOnly = 1, isReturn = 1,  hasDelaySlot = 1,
 def : Pat<(tailcall (iPTR texternalsym:$dst)),
           (TAIL_CALL texternalsym:$dst)>;
 
-let isCodeGenOnly = 1, isReturn = 1,  hasDelaySlot = 1,  isTerminator = 1,
-    isBarrier = 1, rd = 0 in {
+let isCodeGenOnly = 1, isReturn = 1, hasDelaySlot = 1, isTerminator = 1,
+    isBarrier = 1, isCall = 1, rd = 0 in {
   def TAIL_CALLri : F3_2<2, 0b111000,
                          (outs), (ins (MEMri $rs1, $simm13):$addr, variable_ops),
                          "jmp $addr",

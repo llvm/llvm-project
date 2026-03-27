@@ -69,7 +69,6 @@ define float @fmax_f32(<4 x float> %a, <4 x float> %b) {
   ret float %r
 }
 
-
 define i32 @add_i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: add_i32:
 ; CHECK:       # %bb.0:
@@ -261,24 +260,3 @@ define i32 @smax_i32(<4 x i32> %a, <4 x i32> %b) {
   ret i32 %r
 }
 
-declare float @llvm.vector.reduce.fadd.f32.v4f32(float, <4 x float>)
-declare float @llvm.vector.reduce.fmul.f32.v4f32(float, <4 x float>)
-declare float @llvm.vector.reduce.fmin.v4f32(<4 x float>)
-declare float @llvm.vector.reduce.fmax.v4f32(<4 x float>)
-declare i32 @llvm.vector.reduce.add.i32.v4i32(<4 x i32>)
-declare i16 @llvm.vector.reduce.add.i16.v32i16(<32 x i16>)
-declare i16 @llvm.vector.reduce.add.i16.v16i16(<16 x i16>)
-declare i32 @llvm.vector.reduce.mul.i32.v4i32(<4 x i32>)
-declare i32 @llvm.vector.reduce.and.i32.v4i32(<4 x i32>)
-declare i32 @llvm.vector.reduce.or.i32.v4i32(<4 x i32>)
-declare i32 @llvm.vector.reduce.xor.i32.v4i32(<4 x i32>)
-declare i32 @llvm.vector.reduce.umin.i32.v4i32(<4 x i32>)
-declare i32 @llvm.vector.reduce.umax.i32.v4i32(<4 x i32>)
-declare i32 @llvm.vector.reduce.smin.i32.v4i32(<4 x i32>)
-declare i32 @llvm.vector.reduce.smax.i32.v4i32(<4 x i32>)
-declare float @llvm.minnum.f32(float, float)
-declare float @llvm.maxnum.f32(float, float)
-declare i32 @llvm.umin.i32(i32, i32)
-declare i32 @llvm.umax.i32(i32, i32)
-declare i32 @llvm.smin.i32(i32, i32)
-declare i32 @llvm.smax.i32(i32, i32)

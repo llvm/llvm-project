@@ -51,6 +51,7 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/ScriptedMetadata.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StructuredData.h"
@@ -60,6 +61,7 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
 
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -306,7 +308,7 @@ protected:
         return;
       }
 
-      auto on_error = llvm::make_scope_exit(
+      llvm::scope_exit on_error(
           [&target_list = debugger.GetTargetList(), &target_sp]() {
             target_list.DeleteTarget(target_sp);
           });
@@ -439,8 +441,8 @@ protected:
                                         core_file.GetPath());
         }
       } else {
-        result.AppendMessageWithFormat(
-            "Current executable set to '%s' (%s).\n",
+        result.AppendMessageWithFormatv(
+            "Current executable set to '{0}' ({1}).",
             file_spec.GetPath().c_str(),
             target_sp->GetArchitecture().GetArchitectureName());
         result.SetStatus(eReturnStatusSuccessFinishNoResult);
@@ -1045,13 +1047,10 @@ protected:
         const char *to = command.GetArgumentAtIndex(i + 1);
 
         if (from[0] && to[0]) {
-          Log *log = GetLog(LLDBLog::Host);
-          if (log) {
-            LLDB_LOGF(log,
-                      "target modules search path adding ImageSearchPath "
-                      "pair: '%s' -> '%s'",
-                      from, to);
-          }
+          LLDB_LOGF(GetLog(LLDBLog::Host),
+                    "target modules search path adding ImageSearchPath "
+                    "pair: '%s' -> '%s'",
+                    from, to);
           bool last_pair = ((argc - i) == 2);
           target.GetImageSearchPathList().Append(
               from, to, last_pair); // Notify if this is the last pair
@@ -1587,7 +1586,7 @@ static uint32_t LookupSymbolInModule(CommandInterpreter &interpreter,
         name, interpreter.GetDebugger().GetRegexMatchAnsiPrefix(),
         interpreter.GetDebugger().GetRegexMatchAnsiSuffix());
     for (uint32_t i = 0; i < num_matches; ++i) {
-      Symbol *symbol = symtab->SymbolAtIndex(match_indexes[i]);
+      const Symbol *symbol = symtab->SymbolAtIndex(match_indexes[i]);
       if (symbol) {
         if (symbol->ValueIsAddress()) {
           DumpAddress(
@@ -3014,9 +3013,9 @@ protected:
                           if (target.SetSectionLoadAddress(section_sp,
                                                            load_addr))
                             changed = true;
-                          result.AppendMessageWithFormat(
-                              "section '%s' loaded at 0x%" PRIx64 "\n",
-                              sect_name, load_addr);
+                          result.AppendMessageWithFormatv(
+                              "section '{0}' loaded at {1:x}", sect_name,
+                              load_addr);
                         }
                       } else {
                         result.AppendErrorWithFormat("no section found that "
@@ -3118,7 +3117,7 @@ protected:
             if (matching_modules.GetModulePointerAtIndex(i)
                     ->GetFileSpec()
                     .GetPath(path, sizeof(path)))
-              result.AppendMessageWithFormat("%s\n", path);
+              result.AppendMessageWithFormatv("{0}", path);
           }
         } else {
           result.AppendErrorWithFormat(
@@ -4387,8 +4386,8 @@ protected:
         if (object_file && object_file->GetFileSpec() == symbol_fspec) {
           // Provide feedback that the symfile has been successfully added.
           const FileSpec &module_fs = module_sp->GetFileSpec();
-          result.AppendMessageWithFormat(
-              "symbol file '%s' has been added to '%s'\n", symfile_path,
+          result.AppendMessageWithFormatv(
+              "symbol file '{0}' has been added to '{1}'", symfile_path,
               module_fs.GetPath().c_str());
 
           // Let clients know something changed in the module if it is
@@ -4400,9 +4399,7 @@ protected:
           // Make sure we load any scripting resources that may be embedded
           // in the debug info files in case the platform supports that.
           Status error;
-          StreamString feedback_stream;
-          module_sp->LoadScriptingResourceInTarget(target, error,
-                                                   feedback_stream);
+          module_sp->LoadScriptingResourceInTarget(target, error);
           if (error.Fail() && error.AsCString())
             result.AppendWarningWithFormat(
                 "unable to load scripting data for module %s - error "
@@ -4411,8 +4408,6 @@ protected:
                     .GetFileNameStrippingExtension()
                     .GetCString(),
                 error.AsCString());
-          else if (feedback_stream.GetSize())
-            result.AppendWarning(feedback_stream.GetData());
 
           flush = true;
           result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -5076,8 +5071,8 @@ protected:
       Target::StopHookCommandLine *hook_ptr =
           static_cast<Target::StopHookCommandLine *>(new_hook_sp.get());
       hook_ptr->SetActionFromStrings(m_options.m_one_liner);
-      result.AppendMessageWithFormat("Stop hook #%" PRIu64 " added.\n",
-                                     new_hook_sp->GetID());
+      result.AppendMessageWithFormatv("Stop hook #{0} added.",
+                                      new_hook_sp->GetID());
     } else if (!m_python_class_options.GetName().empty()) {
       // This is a scripted stop hook:
       Target::StopHookScripted *hook_ptr =
@@ -5086,8 +5081,8 @@ protected:
           m_python_class_options.GetName(),
           m_python_class_options.GetStructuredData());
       if (error.Success())
-        result.AppendMessageWithFormat("Stop hook #%" PRIu64 " added.\n",
-                                       new_hook_sp->GetID());
+        result.AppendMessageWithFormatv("Stop hook #{0} added.",
+                                        new_hook_sp->GetID());
       else {
         // FIXME: Set the stop hook ID counter back.
         result.AppendErrorWithFormat("Couldn't add stop hook: %s",
@@ -5401,6 +5396,200 @@ public:
   ~CommandObjectTargetDump() override = default;
 };
 
+#pragma mark CommandObjectTargetFrameProvider
+
+#define LLDB_OPTIONS_target_frame_provider_register
+#include "CommandOptions.inc"
+
+class CommandObjectTargetFrameProviderRegister : public CommandObjectParsed {
+public:
+  CommandObjectTargetFrameProviderRegister(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "target frame-provider register",
+            "Register frame provider for all threads in this target.", nullptr,
+            eCommandRequiresTarget),
+
+        m_class_options("target frame-provider", true, 'C', 'k', 'v', 0) {
+    m_all_options.Append(&m_class_options, LLDB_OPT_SET_1 | LLDB_OPT_SET_2,
+                         LLDB_OPT_SET_ALL);
+    m_all_options.Finalize();
+  }
+
+  ~CommandObjectTargetFrameProviderRegister() override = default;
+
+  Options *GetOptions() override { return &m_all_options; }
+
+  std::optional<std::string> GetRepeatCommand(Args &current_command_args,
+                                              uint32_t index) override {
+    return std::string("");
+  }
+
+protected:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    ScriptedMetadataSP metadata_sp = std::make_shared<ScriptedMetadata>(
+        m_class_options.GetName(), m_class_options.GetStructuredData());
+
+    Target *target = m_exe_ctx.GetTargetPtr();
+    if (!target)
+      target = &GetDebugger().GetDummyTarget();
+
+    // Create the interface for calling static methods.
+    ScriptedFrameProviderInterfaceSP interface_sp =
+        GetDebugger()
+            .GetScriptInterpreter()
+            ->CreateScriptedFrameProviderInterface();
+
+    // Create a descriptor from the metadata (applies to all threads by
+    // default).
+    ScriptedFrameProviderDescriptor descriptor(metadata_sp);
+    descriptor.interface_sp = interface_sp;
+
+    auto id_or_err = target->AddScriptedFrameProviderDescriptor(descriptor);
+    if (!id_or_err) {
+      result.SetError(id_or_err.takeError());
+      return;
+    }
+
+    result.AppendMessageWithFormatv(
+        "successfully registered scripted frame provider '{0}' for target",
+        m_class_options.GetName().c_str());
+  }
+
+  OptionGroupPythonClassWithDict m_class_options;
+  OptionGroupOptions m_all_options;
+};
+
+class CommandObjectTargetFrameProviderClear : public CommandObjectParsed {
+public:
+  CommandObjectTargetFrameProviderClear(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "target frame-provider clear",
+            "Clear all registered frame providers from this target.", nullptr,
+            eCommandRequiresTarget) {}
+
+  ~CommandObjectTargetFrameProviderClear() override = default;
+
+protected:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    Target *target = m_exe_ctx.GetTargetPtr();
+    if (!target) {
+      result.AppendError("invalid target");
+      return;
+    }
+
+    target->ClearScriptedFrameProviderDescriptors();
+
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+  }
+};
+
+class CommandObjectTargetFrameProviderList : public CommandObjectParsed {
+public:
+  CommandObjectTargetFrameProviderList(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "target frame-provider list",
+            "List all registered frame providers for the target.", nullptr,
+            eCommandRequiresTarget) {}
+
+  ~CommandObjectTargetFrameProviderList() override = default;
+
+protected:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    Target *target = m_exe_ctx.GetTargetPtr();
+    if (!target)
+      target = &GetDebugger().GetDummyTarget();
+
+    const auto &descriptors = target->GetScriptedFrameProviderDescriptors();
+    if (descriptors.empty()) {
+      result.AppendMessage("no frame providers registered for this target.");
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+      return;
+    }
+
+    result.AppendMessageWithFormat("%u frame provider(s) registered:\n\n",
+                                   descriptors.size());
+
+    for (const auto &entry : descriptors) {
+      const ScriptedFrameProviderDescriptor &descriptor = entry.second;
+      descriptor.Dump(&result.GetOutputStream());
+      result.GetOutputStream().PutChar('\n');
+    }
+
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+  }
+};
+
+class CommandObjectTargetFrameProviderRemove : public CommandObjectParsed {
+public:
+  CommandObjectTargetFrameProviderRemove(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "target frame-provider remove",
+            "Remove a registered frame provider from the target by id.",
+            "target frame-provider remove <provider-id>",
+            eCommandRequiresTarget) {
+    AddSimpleArgumentList(eArgTypeUnsignedInteger, eArgRepeatPlus);
+  }
+
+  ~CommandObjectTargetFrameProviderRemove() override = default;
+
+protected:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    Target *target = m_exe_ctx.GetTargetPtr();
+    if (!target)
+      target = &GetDebugger().GetDummyTarget();
+
+    std::vector<uint32_t> removed_provider_ids;
+    for (size_t i = 0; i < command.GetArgumentCount(); i++) {
+      uint32_t provider_id = 0;
+      if (!llvm::to_integer(command[i].ref(), provider_id)) {
+        result.AppendError("target frame-provider remove requires integer "
+                           "provider id argument");
+        return;
+      }
+
+      if (!target->RemoveScriptedFrameProviderDescriptor(provider_id)) {
+        result.AppendErrorWithFormat(
+            "no frame provider named '%u' found in target\n", provider_id);
+        return;
+      }
+      removed_provider_ids.push_back(provider_id);
+    }
+
+    if (size_t num_removed_providers = removed_provider_ids.size()) {
+      result.AppendMessageWithFormatv(
+          "Successfully removed {0} frame-providers.", num_removed_providers);
+      result.SetStatus(eReturnStatusSuccessFinishNoResult);
+    } else {
+      result.AppendError("0 frame providers removed.\n");
+    }
+  }
+};
+
+class CommandObjectTargetFrameProvider : public CommandObjectMultiword {
+public:
+  CommandObjectTargetFrameProvider(CommandInterpreter &interpreter)
+      : CommandObjectMultiword(
+            interpreter, "target frame-provider",
+            "Commands for registering and viewing frame providers for the "
+            "target.",
+            "target frame-provider [<sub-command-options>] ") {
+    LoadSubCommand("register",
+                   CommandObjectSP(new CommandObjectTargetFrameProviderRegister(
+                       interpreter)));
+    LoadSubCommand("clear",
+                   CommandObjectSP(
+                       new CommandObjectTargetFrameProviderClear(interpreter)));
+    LoadSubCommand(
+        "list",
+        CommandObjectSP(new CommandObjectTargetFrameProviderList(interpreter)));
+    LoadSubCommand(
+        "remove", CommandObjectSP(
+                      new CommandObjectTargetFrameProviderRemove(interpreter)));
+  }
+
+  ~CommandObjectTargetFrameProvider() override = default;
+};
+
 #pragma mark CommandObjectMultiwordTarget
 
 // CommandObjectMultiwordTarget
@@ -5416,6 +5605,9 @@ CommandObjectMultiwordTarget::CommandObjectMultiwordTarget(
                  CommandObjectSP(new CommandObjectTargetDelete(interpreter)));
   LoadSubCommand("dump",
                  CommandObjectSP(new CommandObjectTargetDump(interpreter)));
+  LoadSubCommand(
+      "frame-provider",
+      CommandObjectSP(new CommandObjectTargetFrameProvider(interpreter)));
   LoadSubCommand("list",
                  CommandObjectSP(new CommandObjectTargetList(interpreter)));
   LoadSubCommand("select",

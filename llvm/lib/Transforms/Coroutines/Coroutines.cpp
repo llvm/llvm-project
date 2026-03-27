@@ -118,11 +118,10 @@ bool coro::declaresIntrinsics(const Module &M, ArrayRef<Intrinsic::ID> List) {
   return false;
 }
 
-// Replace all coro.frees associated with the provided CoroId either with 'null'
-// if Elide is true and with its frame parameter otherwise.
-void coro::replaceCoroFree(CoroIdInst *CoroId, bool Elide) {
+// Replace all coro.frees associated with the provided frame with 'null'
+void coro::elideCoroFree(Value *FramePtr) {
   SmallVector<CoroFreeInst *, 4> CoroFrees;
-  for (User *U : CoroId->users())
+  for (User *U : FramePtr->users())
     if (auto CF = dyn_cast<CoroFreeInst>(U))
       CoroFrees.push_back(CF);
 
@@ -130,10 +129,7 @@ void coro::replaceCoroFree(CoroIdInst *CoroId, bool Elide) {
     return;
 
   Value *Replacement =
-      Elide
-          ? ConstantPointerNull::get(PointerType::get(CoroId->getContext(), 0))
-          : CoroFrees.front()->getFrame();
-
+      ConstantPointerNull::get(PointerType::get(FramePtr->getContext(), 0));
   for (CoroFreeInst *CF : CoroFrees) {
     CF->replaceAllUsesWith(Replacement);
     CF->eraseFromParent();
@@ -666,7 +662,7 @@ void CoroIdAsyncInst::checkWellFormed() const {
 
 static void checkAsyncContextProjectFunction(const Instruction *I,
                                              Function *F) {
-  auto *FunTy = cast<FunctionType>(F->getValueType());
+  auto *FunTy = F->getFunctionType();
   if (!FunTy->getReturnType()->isPointerTy())
     fail(I,
          "llvm.coro.suspend.async resume function projection function must "

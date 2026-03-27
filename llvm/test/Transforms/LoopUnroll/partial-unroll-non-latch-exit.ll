@@ -62,7 +62,7 @@ define i1 @test(ptr %a1, ptr %a2) {
 ; CHECK-NEXT:    [[EXITCOND2_4:%.*]] = icmp eq i64 [[LOAD1_4]], [[LOAD2_4]]
 ; CHECK-NEXT:    br i1 [[EXITCOND2_4]], label [[LOOP]], label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[EXIT_VAL:%.*]] = phi i1 [ false, [[LATCH]] ], [ false, [[LATCH_1]] ], [ false, [[LATCH_2]] ], [ false, [[LATCH_3]] ], [ true, [[LOOP_4]] ], [ false, [[LATCH_4]] ]
+; CHECK-NEXT:    [[EXIT_VAL:%.*]] = phi i1 [ false, [[LATCH]] ], [ false, [[LATCH_4]] ], [ true, [[LOOP_4]] ], [ false, [[LATCH_1]] ], [ false, [[LATCH_3]] ], [ false, [[LATCH_2]] ]
 ; CHECK-NEXT:    ret i1 [[EXIT_VAL]]
 ;
 start:

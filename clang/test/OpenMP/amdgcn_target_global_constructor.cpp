@@ -49,13 +49,13 @@ S A;
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_ZN1SD1Ev
-// CHECK-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// CHECK-SAME: (ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[THIS_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[THIS_ADDR]] to ptr
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    call void @_ZN1SD2Ev(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]]) #[[ATTR4:[0-9]+]]
+// CHECK-NEXT:    call void @_ZN1SD2Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[THIS1]]) #[[ATTR4:[0-9]+]]
 // CHECK-NEXT:    ret void
 //
 //
@@ -79,7 +79,7 @@ S A;
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_ZN1SD2Ev
-// CHECK-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// CHECK-SAME: (ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[THIS_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[THIS_ADDR]] to ptr
@@ -104,8 +104,7 @@ S A;
 //.
 // CHECK: [[META0:![0-9]+]] = !{i32 1, !"A", i32 0, i32 0}
 // CHECK: [[META1:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 600}
-// CHECK: [[META2:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// CHECK: [[META3:![0-9]+]] = !{i32 7, !"openmp", i32 51}
-// CHECK: [[META4:![0-9]+]] = !{i32 7, !"openmp-device", i32 51}
-// CHECK: [[META5:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// CHECK: [[META2:![0-9]+]] = !{i32 7, !"openmp", i32 51}
+// CHECK: [[META3:![0-9]+]] = !{i32 7, !"openmp-device", i32 51}
+// CHECK: [[META4:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.

@@ -21,16 +21,16 @@ namespace clang::tidy::readability {
 static SourceRange
 getFullInitRangeInclWhitespaces(SourceRange Range, const SourceManager &SM,
                                 const LangOptions &LangOpts) {
-  const Token PrevToken =
+  const std::optional<Token> PrevToken =
       utils::lexer::getPreviousToken(Range.getBegin(), SM, LangOpts, false);
-  if (PrevToken.is(tok::unknown))
+  if (!PrevToken)
     return Range;
 
-  if (PrevToken.isNot(tok::equal))
-    return {PrevToken.getEndLoc(), Range.getEnd()};
+  if (PrevToken->isNot(tok::equal))
+    return {PrevToken->getEndLoc(), Range.getEnd()};
 
   return getFullInitRangeInclWhitespaces(
-      {PrevToken.getLocation(), Range.getEnd()}, SM, LangOpts);
+      {PrevToken->getLocation(), Range.getEnd()}, SM, LangOpts);
 }
 
 void RedundantMemberInitCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {

@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1250 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX1250-ERR --implicit-check-not=error: --strict-whitespace %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1250 -filetype=null %s 2>&1 | FileCheck --check-prefix=GFX1250-ERR --implicit-check-not=error: --strict-whitespace %s
 
 global_load_b96 v[1:3], v[0:1], off
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
@@ -129,3 +129,9 @@ cluster_load_async_to_lds_b128 v1, v[2:3], off th:TH_STORE_BYPASS scope:SCOPE_SY
 
 cluster_load_async_to_lds_b128 v1, v2, s[2:3] th:TH_STORE_NT_HT scope:SCOPE_DEV
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid th value for load instructions
+
+flat_atomic_swap_b32 v1, v2, s[2:3] scale_offset th:TH_ATOMIC_RETURN
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: th:TH_ATOMIC_RETURN requires a destination operand
+
+flat_atomic_swap_b32 v0, v1, v2, s[2:3] scale_offset
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction must use th:TH_ATOMIC_RETURN

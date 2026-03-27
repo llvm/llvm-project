@@ -30,7 +30,6 @@
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Parser/Parser.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/Support/ThreadPool.h"
 
 #include <cstddef>
 #include <memory>
@@ -652,6 +651,12 @@ MlirContext mlirOperationGetContext(MlirOperation op) {
   return wrap(unwrap(op)->getContext());
 }
 
+bool mlirOperationNameHasTrait(MlirStringRef opName, MlirTypeID traitTypeID,
+                               MlirContext context) {
+  return OperationName(unwrap(opName), unwrap(context))
+      .hasTrait(unwrap(traitTypeID));
+}
+
 MlirLocation mlirOperationGetLocation(MlirOperation op) {
   return wrap(unwrap(op)->getLoc());
 }
@@ -712,6 +717,10 @@ intptr_t mlirOperationGetNumOperands(MlirOperation op) {
 
 MlirValue mlirOperationGetOperand(MlirOperation op, intptr_t pos) {
   return wrap(unwrap(op)->getOperand(static_cast<unsigned>(pos)));
+}
+
+MlirOpOperand mlirOperationGetOpOperand(MlirOperation op, intptr_t pos) {
+  return wrap(&unwrap(op)->getOpOperand(static_cast<unsigned>(pos)));
 }
 
 void mlirOperationSetOperand(MlirOperation op, intptr_t pos,
@@ -835,7 +844,8 @@ void mlirOperationPrintWithState(MlirOperation op, MlirAsmState state,
   detail::CallbackOstream stream(callback, userData);
   if (state.ptr)
     unwrap(op)->print(stream, *unwrap(state));
-  unwrap(op)->print(stream);
+  else
+    unwrap(op)->print(stream);
 }
 
 void mlirOperationWriteBytecode(MlirOperation op, MlirStringCallback callback,
@@ -900,6 +910,11 @@ void mlirOperationWalk(MlirOperation op, MlirOperationWalkCallback callback,
           return unwrap(callback(wrap(op), userData));
         });
   }
+}
+
+void mlirOperationReplaceUsesOfWith(MlirOperation op, MlirValue oldValue,
+                                    MlirValue newValue) {
+  unwrap(op)->replaceUsesOfWith(unwrap(oldValue), unwrap(newValue));
 }
 
 //===----------------------------------------------------------------------===//

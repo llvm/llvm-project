@@ -70,9 +70,9 @@ static bool optimizeSQRT(CallInst *Call, Function *CalledFunc,
       Builder.getTrue(), Call->getNextNode(), /*Unreachable=*/false,
       /*BranchWeights*/ nullptr, DTU);
 
-  auto *CurrBBTerm = cast<BranchInst>(CurrBB.getTerminator());
+  auto *CurrBBTerm = cast<CondBrInst>(CurrBB.getTerminator());
   // We want an 'else' block though, not a 'then' block.
-  cast<BranchInst>(CurrBBTerm)->swapSuccessors();
+  CurrBBTerm->swapSuccessors();
 
   // Create phi that will merge results of either sqrt and replace all uses.
   BasicBlock *JoinBB = LibCallTerm->getSuccessor(0);

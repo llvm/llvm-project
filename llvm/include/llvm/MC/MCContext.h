@@ -175,7 +175,7 @@ private:
   unsigned GetInstance(unsigned LocalLabelVal);
 
   /// SHT_LLVM_BB_ADDR_MAP version to emit.
-  uint8_t BBAddrMapVersion = 4;
+  uint8_t BBAddrMapVersion = 5;
 
   /// The file name of the log file from the environment variable
   /// AS_SECURE_LOG_FILE.  Which must be set before the .secure_log_unique
@@ -460,7 +460,7 @@ public:
 
   /// Get or create a symbol for a basic block. For non-always-emit symbols,
   /// this behaves like createTempSymbol, except that it uses the
-  /// PrivateLabelPrefix instead of the PrivateGlobalPrefix. When AlwaysEmit is
+  /// PrivateLabelPrefix instead of the InternalSymbolPrefix. When AlwaysEmit is
   /// true, behaves like getOrCreateSymbol, prefixed with PrivateLabelPrefix.
   LLVM_ABI MCSymbol *createBlockSymbol(const Twine &Name,
                                        bool AlwaysEmit = false);

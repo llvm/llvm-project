@@ -390,10 +390,10 @@ constexpr T* test_dangling() {
 }
 static_assert(__builtin_is_within_lifetime(test_dangling<int>())); // expected-note {{in instantiation of function template specialization}}
 // expected-error@-1 {{static assertion expression is not an integral constant expression}}
-//   expected-note@-2 {{read of variable whose lifetime has ended}}
+//   expected-note@-2 {{read of object outside its lifetime}}
 static_assert(__builtin_is_within_lifetime(test_dangling<int[1]>())); // expected-note {{in instantiation of function template specialization}}
 // expected-error@-1 {{static assertion expression is not an integral constant expression}}
-//   expected-note@-2 {{read of variable whose lifetime has ended}}
+//   expected-note@-2 {{read of object outside its lifetime}}
 
 template<auto F>
 concept CanCallAndPassToIsWithinLifetime = std::bool_constant<__builtin_is_within_lifetime(F())>::value;

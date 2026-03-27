@@ -64,6 +64,9 @@ static cl::opt<bool> DisableI2pP2iOpt(
 std::optional<TypeSize>
 AllocaInst::getAllocationSize(const DataLayout &DL) const {
   TypeSize Size = DL.getTypeAllocSize(getAllocatedType());
+  // Zero-sized types can return early since 0 * N = 0 for any array size N.
+  if (Size.isZero())
+    return Size;
   if (isArrayAllocation()) {
     auto *C = dyn_cast<ConstantInt>(getArraySize());
     if (!C)
@@ -137,14 +140,12 @@ PHINode::PHINode(const PHINode &PN)
 // predecessor basic block is deleted.
 Value *PHINode::removeIncomingValue(unsigned Idx, bool DeletePHIIfEmpty) {
   Value *Removed = getIncomingValue(Idx);
-
-  // Move everything after this operand down.
-  //
-  // FIXME: we could just swap with the end of the list, then erase.  However,
-  // clients might not expect this to happen.  The code as it is thrashes the
-  // use/def lists, which is kinda lame.
-  std::copy(op_begin() + Idx + 1, op_end(), op_begin() + Idx);
-  copyIncomingBlocks(drop_begin(blocks(), Idx + 1), Idx);
+  // Swap with the end of the list.
+  unsigned Last = getNumOperands() - 1;
+  if (Idx != Last) {
+    setIncomingValue(Idx, getIncomingValue(Last));
+    setIncomingBlock(Idx, getIncomingBlock(Last));
+  }
 
   // Nuke the last value.
   Op<-1>().set(nullptr);
@@ -161,28 +162,22 @@ Value *PHINode::removeIncomingValue(unsigned Idx, bool DeletePHIIfEmpty) {
 
 void PHINode::removeIncomingValueIf(function_ref<bool(unsigned)> Predicate,
                                     bool DeletePHIIfEmpty) {
-  SmallDenseSet<unsigned> RemoveIndices;
-  for (unsigned Idx = 0; Idx < getNumIncomingValues(); ++Idx)
-    if (Predicate(Idx))
-      RemoveIndices.insert(Idx);
+  unsigned NumOps = getNumIncomingValues();
 
-  if (RemoveIndices.empty())
-    return;
+  // Loop backwards in case the predicate is purely index based.
+  for (unsigned Idx = NumOps; Idx-- > 0;) {
+    if (Predicate(Idx)) {
+      unsigned LastIdx = NumOps - 1;
+      if (Idx != LastIdx) {
+        setIncomingValue(Idx, getIncomingValue(LastIdx));
+        setIncomingBlock(Idx, getIncomingBlock(LastIdx));
+      }
+      getOperandUse(LastIdx).set(nullptr);
+      NumOps--;
+    }
+  }
 
-  // Remove operands.
-  auto NewOpEnd = remove_if(operands(), [&](Use &U) {
-    return RemoveIndices.contains(U.getOperandNo());
-  });
-  for (Use &U : make_range(NewOpEnd, op_end()))
-    U.set(nullptr);
-
-  // Remove incoming blocks.
-  (void)std::remove_if(const_cast<block_iterator>(block_begin()),
-                 const_cast<block_iterator>(block_end()), [&](BasicBlock *&BB) {
-                   return RemoveIndices.contains(&BB - block_begin());
-                 });
-
-  setNumHungOffUseOperands(getNumOperands() - RemoveIndices.size());
+  setNumHungOffUseOperands(NumOps);
 
   // If the PHI node is dead, because it has zero entries, nuke it now.
   if (getNumOperands() == 0 && DeletePHIIfEmpty) {
@@ -202,7 +197,7 @@ void PHINode::growOperands() {
   if (NumOps < 2) NumOps = 2;      // 2 op PHI nodes are VERY common.
 
   ReservedSpace = NumOps;
-  growHungoffUses(ReservedSpace, /* IsPhi */ true);
+  growHungoffUses(ReservedSpace, /*WithExtraValues=*/true);
 }
 
 /// hasConstantValue - If the specified PHI node always merges together the same
@@ -620,7 +615,8 @@ bool CallBase::hasReadingOperandBundles() const {
   // ptrauth) forces a callsite to be at least readonly.
   return hasOperandBundlesOtherThan({LLVMContext::OB_ptrauth,
                                      LLVMContext::OB_kcfi,
-                                     LLVMContext::OB_convergencectrl}) &&
+                                     LLVMContext::OB_convergencectrl,
+                                     LLVMContext::OB_deactivation_symbol}) &&
          getIntrinsicID() != Intrinsic::assume;
 }
 
@@ -628,7 +624,8 @@ bool CallBase::hasClobberingOperandBundles() const {
   return hasOperandBundlesOtherThan(
              {LLVMContext::OB_deopt, LLVMContext::OB_funclet,
               LLVMContext::OB_ptrauth, LLVMContext::OB_kcfi,
-              LLVMContext::OB_convergencectrl}) &&
+              LLVMContext::OB_convergencectrl,
+              LLVMContext::OB_deactivation_symbol}) &&
          getIntrinsicID() != Intrinsic::assume;
 }
 
@@ -1189,60 +1186,67 @@ UnreachableInst::UnreachableInst(LLVMContext &Context,
                   AllocMarker, InsertBefore) {}
 
 //===----------------------------------------------------------------------===//
-//                        BranchInst Implementation
+//                        UncondBrInst Implementation
 //===----------------------------------------------------------------------===//
 
-void BranchInst::AssertOK() {
-  if (isConditional())
-    assert(getCondition()->getType()->isIntegerTy(1) &&
-           "May only branch on boolean predicates!");
+// Suppress deprecation warnings from BranchInst.
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
+
+UncondBrInst::UncondBrInst(BasicBlock *Target, InsertPosition InsertBefore)
+    : BranchInst(Type::getVoidTy(Target->getContext()), Instruction::UncondBr,
+                 AllocMarker, InsertBefore) {
+  Op<-1>() = Target;
 }
 
-BranchInst::BranchInst(BasicBlock *IfTrue, AllocInfo AllocInfo,
+UncondBrInst::UncondBrInst(const UncondBrInst &BI)
+    : BranchInst(Type::getVoidTy(BI.getContext()), Instruction::UncondBr,
+                 AllocMarker) {
+  Op<-1>() = BI.Op<-1>();
+  SubclassOptionalData = BI.SubclassOptionalData;
+}
+
+//===----------------------------------------------------------------------===//
+//                        CondBrInst Implementation
+//===----------------------------------------------------------------------===//
+
+void CondBrInst::AssertOK() {
+  assert(getCondition()->getType()->isIntegerTy(1) &&
+         "May only branch on boolean predicates!");
+}
+
+CondBrInst::CondBrInst(Value *Cond, BasicBlock *IfTrue, BasicBlock *IfFalse,
                        InsertPosition InsertBefore)
-    : Instruction(Type::getVoidTy(IfTrue->getContext()), Instruction::Br,
-                  AllocInfo, InsertBefore) {
-  assert(IfTrue && "Branch destination may not be null!");
-  Op<-1>() = IfTrue;
-}
-
-BranchInst::BranchInst(BasicBlock *IfTrue, BasicBlock *IfFalse, Value *Cond,
-                       AllocInfo AllocInfo, InsertPosition InsertBefore)
-    : Instruction(Type::getVoidTy(IfTrue->getContext()), Instruction::Br,
-                  AllocInfo, InsertBefore) {
+    : BranchInst(Type::getVoidTy(IfTrue->getContext()), Instruction::CondBr,
+                 AllocMarker, InsertBefore) {
   // Assign in order of operand index to make use-list order predictable.
   Op<-3>() = Cond;
-  Op<-2>() = IfFalse;
-  Op<-1>() = IfTrue;
+  Op<-2>() = IfTrue;
+  Op<-1>() = IfFalse;
 #ifndef NDEBUG
   AssertOK();
 #endif
 }
 
-BranchInst::BranchInst(const BranchInst &BI, AllocInfo AllocInfo)
-    : Instruction(Type::getVoidTy(BI.getContext()), Instruction::Br,
-                  AllocInfo) {
-  assert(getNumOperands() == BI.getNumOperands() &&
-         "Wrong number of operands allocated");
+CondBrInst::CondBrInst(const CondBrInst &BI)
+    : BranchInst(Type::getVoidTy(BI.getContext()), Instruction::CondBr,
+                 AllocMarker) {
   // Assign in order of operand index to make use-list order predictable.
-  if (BI.getNumOperands() != 1) {
-    assert(BI.getNumOperands() == 3 && "BR can have 1 or 3 operands!");
-    Op<-3>() = BI.Op<-3>();
-    Op<-2>() = BI.Op<-2>();
-  }
+  Op<-3>() = BI.Op<-3>();
+  Op<-2>() = BI.Op<-2>();
   Op<-1>() = BI.Op<-1>();
   SubclassOptionalData = BI.SubclassOptionalData;
 }
 
-void BranchInst::swapSuccessors() {
-  assert(isConditional() &&
-         "Cannot swap successors of an unconditional branch");
+void CondBrInst::swapSuccessors() {
   Op<-1>().swap(Op<-2>());
 
   // Update profile metadata if present and it matches our structural
   // expectations.
   swapProfMetadata();
 }
+
+// Suppress deprecation warnings from BranchInst.
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
 //===----------------------------------------------------------------------===//
 //                        AllocaInst Implementation
@@ -1494,6 +1498,10 @@ StringRef AtomicRMWInst::getOperationName(BinOp Op) {
     return "fmaximum";
   case AtomicRMWInst::FMinimum:
     return "fminimum";
+  case AtomicRMWInst::FMaximumNum:
+    return "fmaximumnum";
+  case AtomicRMWInst::FMinimumNum:
+    return "fminimumnum";
   case AtomicRMWInst::UIncWrap:
     return "uinc_wrap";
   case AtomicRMWInst::UDecWrap:
@@ -2324,7 +2332,7 @@ bool ShuffleVectorInst::isOneUseSingleSourceMask(ArrayRef<int> Mask, int VF) {
     return false;
   for (unsigned K = 0, Sz = Mask.size(); K < Sz; K += VF) {
     ArrayRef<int> SubMask = Mask.slice(K, VF);
-    if (all_of(SubMask, [](int Idx) { return Idx == PoisonMaskElem; }))
+    if (all_of(SubMask, equal_to(PoisonMaskElem)))
       continue;
     SmallBitVector Used(VF, false);
     for (int Idx : SubMask) {
@@ -3243,7 +3251,16 @@ CastInst::getCastOpcode(
       DestTy->getPrimitiveSizeInBits().getFixedValue(); // 0 for ptr
 
   // Run through the possibilities ...
-  if (DestTy->isIntegerTy()) {                      // Casting to integral
+  if (DestTy->isByteTy()) {     // Casting to byte
+    if (SrcTy->isIntegerTy()) { // Casting from integral
+      assert(DestBits == SrcBits && "Illegal cast from integer to byte type");
+      return BitCast;
+    } else if (SrcTy->isPointerTy()) { // Casting from pointer
+      assert(DestBits == SrcBits && "Illegal cast from pointer to byte type");
+      return BitCast;
+    }
+    llvm_unreachable("Illegal cast to byte type");
+  } else if (DestTy->isIntegerTy()) {               // Casting to integral
     if (SrcTy->isIntegerTy()) {                     // Casting from integral
       if (DestBits < SrcBits)
         return Trunc;                               // int -> smaller int
@@ -3375,7 +3392,10 @@ CastInst::castIsValid(Instruction::CastOps op, Type *SrcTy, Type *DstTy) {
     PointerType *DstPtrTy = dyn_cast<PointerType>(DstTy->getScalarType());
 
     // BitCast implies a no-op cast of type only. No bits change.
-    // However, you can't cast pointers to anything but pointers.
+    // However, you can't cast pointers to anything but pointers/bytes.
+    if ((SrcPtrTy && DstTy->isByteOrByteVectorTy()) ||
+        (SrcTy->isByteOrByteVectorTy() && DstPtrTy))
+      return true;
     if (!SrcPtrTy != !DstPtrTy)
       return false;
 
@@ -3810,22 +3830,6 @@ CmpInst::Predicate CmpInst::getFlippedStrictnessPredicate(Predicate pred) {
   llvm_unreachable("Unknown predicate!");
 }
 
-bool CmpInst::isUnsigned(Predicate predicate) {
-  switch (predicate) {
-    default: return false;
-    case ICmpInst::ICMP_ULT: case ICmpInst::ICMP_ULE: case ICmpInst::ICMP_UGT:
-    case ICmpInst::ICMP_UGE: return true;
-  }
-}
-
-bool CmpInst::isSigned(Predicate predicate) {
-  switch (predicate) {
-    default: return false;
-    case ICmpInst::ICMP_SLT: case ICmpInst::ICMP_SLE: case ICmpInst::ICMP_SGT:
-    case ICmpInst::ICMP_SGE: return true;
-  }
-}
-
 bool ICmpInst::compare(const APInt &LHS, const APInt &RHS,
                        ICmpInst::Predicate Pred) {
   assert(ICmpInst::isIntPredicate(Pred) && "Only for integer predicates!");
@@ -4074,7 +4078,7 @@ SwitchInst::SwitchInst(Value *Value, BasicBlock *Default, unsigned NumCases,
                        InsertPosition InsertBefore)
     : Instruction(Type::getVoidTy(Value->getContext()), Instruction::Switch,
                   AllocMarker, InsertBefore) {
-  init(Value, Default, 2+NumCases*2);
+  init(Value, Default, 2 + NumCases);
 }
 
 SwitchInst::SwitchInst(const SwitchInst &SI)
@@ -4082,10 +4086,12 @@ SwitchInst::SwitchInst(const SwitchInst &SI)
   init(SI.getCondition(), SI.getDefaultDest(), SI.getNumOperands());
   setNumHungOffUseOperands(SI.getNumOperands());
   Use *OL = getOperandList();
+  ConstantInt **VL = case_values();
   const Use *InOL = SI.getOperandList();
-  for (unsigned i = 2, E = SI.getNumOperands(); i != E; i += 2) {
+  ConstantInt *const *InVL = SI.case_values();
+  for (unsigned i = 2, E = SI.getNumOperands(); i != E; ++i) {
     OL[i] = InOL[i];
-    OL[i+1] = InOL[i+1];
+    VL[i - 2] = InVL[i - 2];
   }
   SubclassOptionalData = SI.SubclassOptionalData;
 }
@@ -4095,11 +4101,11 @@ SwitchInst::SwitchInst(const SwitchInst &SI)
 void SwitchInst::addCase(ConstantInt *OnVal, BasicBlock *Dest) {
   unsigned NewCaseIdx = getNumCases();
   unsigned OpNo = getNumOperands();
-  if (OpNo+2 > ReservedSpace)
+  if (OpNo + 1 > ReservedSpace)
     growOperands();  // Get more space!
   // Initialize some new operands.
-  assert(OpNo+1 < ReservedSpace && "Growing didn't work!");
-  setNumHungOffUseOperands(OpNo+2);
+  assert(OpNo < ReservedSpace && "Growing didn't work!");
+  setNumHungOffUseOperands(OpNo + 1);
   CaseHandle Case(this, NewCaseIdx);
   Case.setValue(OnVal);
   Case.setSuccessor(Dest);
@@ -4110,21 +4116,22 @@ void SwitchInst::addCase(ConstantInt *OnVal, BasicBlock *Dest) {
 SwitchInst::CaseIt SwitchInst::removeCase(CaseIt I) {
   unsigned idx = I->getCaseIndex();
 
-  assert(2 + idx*2 < getNumOperands() && "Case index out of range!!!");
+  assert(2 + idx < getNumOperands() && "Case index out of range!!!");
 
   unsigned NumOps = getNumOperands();
   Use *OL = getOperandList();
+  ConstantInt **VL = case_values();
 
   // Overwrite this case with the end of the list.
-  if (2 + (idx + 1) * 2 != NumOps) {
-    OL[2 + idx * 2] = OL[NumOps - 2];
-    OL[2 + idx * 2 + 1] = OL[NumOps - 1];
+  if (2 + idx + 1 != NumOps) {
+    OL[2 + idx] = OL[NumOps - 1];
+    VL[idx] = VL[NumOps - 2 - 1];
   }
 
   // Nuke the last value.
-  OL[NumOps-2].set(nullptr);
-  OL[NumOps-2+1].set(nullptr);
-  setNumHungOffUseOperands(NumOps-2);
+  OL[NumOps - 1].set(nullptr);
+  VL[NumOps - 2 - 1] = nullptr;
+  setNumHungOffUseOperands(NumOps - 1);
 
   return CaseIt(this, idx);
 }
@@ -4137,7 +4144,7 @@ void SwitchInst::growOperands() {
   unsigned NumOps = e*3;
 
   ReservedSpace = NumOps;
-  growHungoffUses(ReservedSpace);
+  growHungoffUses(ReservedSpace, /*WithExtraValues=*/true);
 }
 
 void SwitchInstProfUpdateWrapper::init() {
@@ -4499,9 +4506,12 @@ ReturnInst *ReturnInst::cloneImpl() const {
   return new (AllocMarker) ReturnInst(*this, AllocMarker);
 }
 
-BranchInst *BranchInst::cloneImpl() const {
-  IntrusiveOperandsAllocMarker AllocMarker{getNumOperands()};
-  return new (AllocMarker) BranchInst(*this, AllocMarker);
+UncondBrInst *UncondBrInst::cloneImpl() const {
+  return new (AllocMarker) UncondBrInst(*this);
+}
+
+CondBrInst *CondBrInst::cloneImpl() const {
+  return new (AllocMarker) CondBrInst(*this);
 }
 
 SwitchInst *SwitchInst::cloneImpl() const { return new SwitchInst(*this); }

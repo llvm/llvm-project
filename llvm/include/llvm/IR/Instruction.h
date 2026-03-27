@@ -71,6 +71,38 @@ public:
   using InstListType = SymbolTableList<Instruction, ilist_iterator_bits<true>,
                                        ilist_parent<BasicBlock>>;
 
+  /// Iterator type that casts an operand to a basic block.
+  ///
+  /// All terminators store successors as adjacent operands.
+  struct succ_iterator
+      : iterator_adaptor_base<succ_iterator, op_iterator,
+                              std::random_access_iterator_tag, BasicBlock *,
+                              ptrdiff_t, BasicBlock *, BasicBlock *> {
+    succ_iterator() = default;
+    explicit succ_iterator(op_iterator I) : iterator_adaptor_base(I) {}
+
+    BasicBlock *operator*() const { return cast<BasicBlock>(*I); }
+    BasicBlock *operator->() const { return operator*(); }
+
+    op_iterator getUse() const { return I; }
+  };
+
+  /// The const version of `succ_iterator`.
+  struct const_succ_iterator
+      : iterator_adaptor_base<const_succ_iterator, const_op_iterator,
+                              std::random_access_iterator_tag,
+                              const BasicBlock *, ptrdiff_t, const BasicBlock *,
+                              const BasicBlock *> {
+    const_succ_iterator() = default;
+    explicit const_succ_iterator(const_op_iterator I)
+        : iterator_adaptor_base(I) {}
+
+    const BasicBlock *operator*() const { return cast<BasicBlock>(*I); }
+    const BasicBlock *operator->() const { return operator*(); }
+
+    const_op_iterator getUse() const { return I; }
+  };
+
 private:
   DebugLoc DbgLoc;                         // 'dbg' Metadata cache.
 
@@ -762,6 +794,12 @@ public:
   /// applied to any type.
   ///
   LLVM_ABI bool isCommutative() const LLVM_READONLY;
+
+  /// Checks if the operand is commutative. In commutative operations, not all
+  /// operands might commutable, e.g. for fmuladd only 2 first operands are
+  /// commutable.
+  LLVM_ABI bool isCommutableOperand(unsigned Op) const LLVM_READONLY;
+
   static bool isCommutative(unsigned Opcode) {
     switch (Opcode) {
     case Add: case FAdd:
@@ -968,6 +1006,14 @@ public:
   /// Update the specified successor to point at the provided block. This
   /// instruction must be a terminator.
   LLVM_ABI void setSuccessor(unsigned Idx, BasicBlock *BB);
+
+  LLVM_ABI iterator_range<const_succ_iterator> successors() const LLVM_READONLY;
+  LLVM_ABI iterator_range<succ_iterator> successors() {
+    auto Ops = static_cast<const Instruction *>(this)->successors();
+    Use *Begin = const_cast<Use *>(Ops.begin().getUse());
+    Use *End = const_cast<Use *>(Ops.end().getUse());
+    return make_range(succ_iterator(Begin), succ_iterator(End));
+  }
 
   /// Replace specified successor OldBB to point at the provided block.
   /// This instruction must be a terminator.

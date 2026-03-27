@@ -16,7 +16,6 @@
 #include "FixedPoint.h"
 #include "Floating.h"
 #include "Function.h"
-#include "FunctionPointer.h"
 #include "Integral.h"
 #include "IntegralAP.h"
 #include "InterpFrame.h"
@@ -138,9 +137,16 @@ static size_t getNumDisplayWidth(size_t N) {
   return L;
 }
 
-LLVM_DUMP_METHOD void Function::dump() const { dump(llvm::errs()); }
+LLVM_DUMP_METHOD void Function::dump(CodePtr PC) const {
+  dump(llvm::errs(), PC);
+}
 
-LLVM_DUMP_METHOD void Function::dump(llvm::raw_ostream &OS) const {
+LLVM_DUMP_METHOD void Function::dump(llvm::raw_ostream &OS,
+                                     CodePtr OpPC) const {
+  if (OpPC) {
+    assert(OpPC >= getCodeBegin());
+    assert(OpPC <= getCodeEnd());
+  }
   {
     ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_GREEN, true});
     OS << getName() << " " << (const void *)this << "\n";
@@ -154,6 +160,7 @@ LLVM_DUMP_METHOD void Function::dump(llvm::raw_ostream &OS) const {
     size_t Addr;
     std::string Op;
     bool IsJump;
+    bool CurrentOp = false;
     llvm::SmallVector<std::string> Args;
   };
 
@@ -171,6 +178,7 @@ LLVM_DUMP_METHOD void Function::dump(llvm::raw_ostream &OS) const {
     auto Op = PC.read<Opcode>();
     Text.Addr = Addr;
     Text.IsJump = isJumpOpcode(Op);
+    Text.CurrentOp = (PC == OpPC);
     switch (Op) {
 #define GET_DISASM
 #include "Opcodes.inc"
@@ -198,9 +206,15 @@ LLVM_DUMP_METHOD void Function::dump(llvm::raw_ostream &OS) const {
   Text.reserve(Code.size());
   size_t LongestLine = 0;
   // Print code to a string, one at a time.
-  for (auto C : Code) {
+  for (const auto &C : Code) {
     std::string Line;
     llvm::raw_string_ostream LS(Line);
+    if (OpPC) {
+      if (C.CurrentOp)
+        LS << " * ";
+      else
+        LS << "   ";
+    }
     LS << C.Addr;
     LS.indent(LongestAddr - getNumDisplayWidth(C.Addr) + 4);
     LS << C.Op;
@@ -504,8 +518,14 @@ LLVM_DUMP_METHOD void InterpFrame::dump(llvm::raw_ostream &OS,
     OS << " (" << F->getName() << ")";
   }
   OS << "\n";
-  OS.indent(Spaces) << "This: " << getThis() << "\n";
-  OS.indent(Spaces) << "RVO: " << getRVOPtr() << "\n";
+  if (hasThisPointer())
+    OS.indent(Spaces) << "This: " << getThis() << "\n";
+  else
+    OS.indent(Spaces) << "This: -\n";
+  if (Func && Func->hasRVO())
+    OS.indent(Spaces) << "RVO: " << getRVOPtr() << "\n";
+  else
+    OS.indent(Spaces) << "RVO: -\n";
   OS.indent(Spaces) << "Depth: " << Depth << "\n";
   OS.indent(Spaces) << "ArgSize: " << ArgSize << "\n";
   OS.indent(Spaces) << "Args: " << (void *)Args << "\n";

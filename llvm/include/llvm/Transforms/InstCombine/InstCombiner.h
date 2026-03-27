@@ -257,7 +257,7 @@ public:
         if (shouldAvoidAbsorbingNotIntoSelect(*cast<SelectInst>(I)))
           return false;
         break;
-      case Instruction::Br:
+      case Instruction::CondBr:
         assert(U.getOperandNo() == 0 && "Must be branching on that value.");
         break; // Free to invert by swapping true/false values/destinations.
       case Instruction::Xor: // Can invert 'xor' if it's a 'not', by ignoring
@@ -329,6 +329,17 @@ public:
       Out[i] = isa<UndefValue>(C) ? SafeC : C;
     }
     return ConstantVector::get(Out);
+  }
+
+  /// Ignore all operations which only change the sign of a value, returning the
+  /// underlying magnitude value.
+  static Value *stripSignOnlyFPOps(Value *Val) {
+    using namespace llvm::PatternMatch;
+
+    match(Val, m_FNeg(m_Value(Val)));
+    match(Val, m_FAbs(m_Value(Val)));
+    match(Val, m_CopySign(m_Value(Val), m_Value()));
+    return Val;
   }
 
   void addToWorklist(Instruction *I) { Worklist.push(I); }

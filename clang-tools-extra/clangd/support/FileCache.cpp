@@ -35,7 +35,7 @@ void FileCache::read(
 
   std::lock_guard<std::mutex> Lock(Mu);
   // We're going to update the cache and return whatever's in it.
-  auto Return = llvm::make_scope_exit(Read);
+  llvm::scope_exit Return(Read);
 
   // Return any sufficiently recent result without doing any further work.
   if (ValidTime > FreshTime)
@@ -43,7 +43,7 @@ void FileCache::read(
 
   // Ensure we always bump ValidTime, so that FreshTime imposes a hard limit on
   // how often we do IO.
-  auto BumpValidTime = llvm::make_scope_exit(
+  llvm::scope_exit BumpValidTime(
       [&] { ValidTime = std::chrono::steady_clock::now(); });
 
   // stat is cheaper than opening the file. It's usually unchanged.

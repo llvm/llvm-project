@@ -71,7 +71,7 @@ void OverrideWithDifferentVisibilityCheck::storeOptions(
 void OverrideWithDifferentVisibilityCheck::registerMatchers(
     MatchFinder *Finder) {
   const auto IgnoredDecl =
-      namedDecl(matchers::matchesAnyListedName(IgnoredFunctions));
+      namedDecl(matchers::matchesAnyListedRegexName(IgnoredFunctions));
   const auto FilterDestructors =
       CheckDestructors ? decl() : decl(unless(cxxDestructorDecl()));
   const auto FilterOperators =
@@ -79,8 +79,7 @@ void OverrideWithDifferentVisibilityCheck::registerMatchers(
   Finder->addMatcher(
       cxxMethodDecl(
           isVirtual(), FilterDestructors, FilterOperators,
-          ofClass(
-              cxxRecordDecl(unless(isExpansionInSystemHeader())).bind("class")),
+          ofClass(cxxRecordDecl().bind("class")),
           forEachOverridden(cxxMethodDecl(ofClass(cxxRecordDecl().bind("base")),
                                           unless(IgnoredDecl))
                                 .bind("base_func")))

@@ -823,6 +823,25 @@ TEST(DiagnosticTest, ClangTidyNoLiteralDataInMacroToken) {
   EXPECT_THAT(TU.build().getDiagnostics(), UnorderedElementsAre()); // no-crash
 }
 
+TEST(DiagnosticTest, BadSignalToKillThreadInPreamble) {
+  Annotations Main(R"cpp(
+    #include "signal.h"
+    using pthread_t = int;
+    int pthread_kill(pthread_t thread, int sig);
+    int func() {
+      pthread_t thread;
+      return pthread_kill(thread, 15);
+    }
+  )cpp");
+  TestTU TU = TestTU::withCode(Main.code());
+  TU.HeaderFilename = "signal.h";
+  TU.HeaderCode = "#define SIGTERM 15";
+  TU.ClangTidyProvider = addTidyChecks("bugprone-bad-signal-to-kill-thread");
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              ifTidyChecks(UnorderedElementsAre(
+                  diagName("bugprone-bad-signal-to-kill-thread"))));
+}
+
 TEST(DiagnosticTest, ClangTidyMacroToEnumCheck) {
   Annotations Main(R"cpp(
     #if 1
@@ -2149,6 +2168,27 @@ TEST(DiagnosticsTest, UnusedInHeader) {
   // https://github.com/clangd/vscode-clangd/issues/360
   TU.Filename = "test.h";
   EXPECT_THAT(TU.build().getDiagnostics(), IsEmpty());
+}
+
+TEST(DiagnosticsTest, DontSuppressSubcategories) {
+  Annotations Source(R"cpp(
+  /*error-ok*/
+    void bar(int x) {
+      switch(x) {
+      default:
+        break;
+        break;
+      }
+    })cpp");
+  TestTU TU;
+  TU.ExtraArgs.push_back("-Wunreachable-code-aggressive");
+  TU.Code = Source.code().str();
+  Config Cfg;
+  // This shouldn't suppress subcategory unreachable-break.
+  Cfg.Diagnostics.Suppress = {"unreachable-code"};
+  WithContextValue SuppressFilterWithCfg(Config::Key, std::move(Cfg));
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              ElementsAre(diagName("-Wunreachable-code-break")));
 }
 
 } // namespace

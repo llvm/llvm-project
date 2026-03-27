@@ -20,7 +20,8 @@ subroutine loop_transformation_construct1
   end do
   !$omp end fuse
 
-  !ERROR: The loop range indicated in the LOOPRANGE(5,2) clause must not be out of the bounds of the Loop Sequence following the construct.
+  !ERROR: This construct requires a sequence of 6 loops, but the loop sequence has a length of 2
+  !BECAUSE: LOOPRANGE clause was specified with a count of 2 starting at loop 5
   !$omp fuse looprange(5,2)
   do x = 1, i
     v(x) = x * 2
@@ -62,5 +63,19 @@ subroutine loop_transformation_construct1
   do x = 1, i
     v(x) = x * 2
   end do
+  !$omp end fuse
+
+  ! This is ok aside from the warnings about compiler directives
+  !$omp fuse looprange(1,3)
+    do x = 1, 10; end do        ! 1 loop
+    !WARNING: Compiler directives are not allowed inside OpenMP loop constructs
+    !dir$ novector
+    !$omp fuse looprange(1,2)   ! 2 loops
+      do x = 1, 10; end do
+      !WARNING: Compiler directives are not allowed inside OpenMP loop constructs
+      !dir$ nounroll
+      do x = 1, 10; end do
+      do x = 1, 10; end do
+    !$omp end fuse
   !$omp end fuse
 end subroutine

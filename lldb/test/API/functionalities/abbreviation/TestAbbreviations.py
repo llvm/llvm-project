@@ -41,7 +41,7 @@ class AbbreviationsTestCase(TestBase):
         # "pl" could be "platform" or "plugin".
         command_interpreter.ResolveCommand("pl", result)
         self.assertFalse(result.Succeeded())
-        self.assertTrue(result.GetError().startswith("Ambiguous command"))
+        self.assertTrue(result.GetError().startswith("error: ambiguous command"))
 
         # Make sure an unabbreviated command is not mangled.
         command_interpreter.ResolveCommand(

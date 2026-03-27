@@ -17,12 +17,14 @@ def ForStmt : StmtNode<Stmt>;
 def GotoStmt : StmtNode<Stmt>;
 def IndirectGotoStmt : StmtNode<Stmt>;
 def ReturnStmt : StmtNode<Stmt>;
+def DeferStmt : StmtNode<Stmt>;
 def DeclStmt  : StmtNode<Stmt>;
 def SwitchCase : StmtNode<Stmt, 1>;
 def CaseStmt : StmtNode<SwitchCase>;
 def DefaultStmt : StmtNode<SwitchCase>;
 def CapturedStmt : StmtNode<Stmt>;
 def SYCLKernelCallStmt : StmtNode<Stmt>;
+def UnresolvedSYCLKernelCallStmt : StmtNode<Stmt>;
 
 // Break/continue.
 def LoopControlStmt : StmtNode<Stmt, 1>;
@@ -74,6 +76,7 @@ def UnaryOperator : StmtNode<Expr>;
 def OffsetOfExpr : StmtNode<Expr>;
 def UnaryExprOrTypeTraitExpr : StmtNode<Expr>;
 def ArraySubscriptExpr : StmtNode<Expr>;
+def MatrixSingleSubscriptExpr : StmtNode<Expr>;
 def MatrixSubscriptExpr : StmtNode<Expr>;
 def ArraySectionExpr : StmtNode<Expr>;
 def OMPIteratorExpr : StmtNode<Expr>;
@@ -91,6 +94,7 @@ def CStyleCastExpr : StmtNode<ExplicitCastExpr>;
 def OMPArrayShapingExpr : StmtNode<Expr>;
 def CompoundLiteralExpr : StmtNode<Expr>;
 def ExtVectorElementExpr : StmtNode<Expr>;
+def MatrixElementExpr : StmtNode<Expr>;
 def InitListExpr : StmtNode<Expr>;
 def DesignatedInitExpr : StmtNode<Expr>;
 def DesignatedInitUpdateExpr : StmtNode<Expr>;
@@ -177,11 +181,15 @@ def CoyieldExpr : StmtNode<CoroutineSuspendExpr>;
 def ConceptSpecializationExpr : StmtNode<Expr>;
 def RequiresExpr : StmtNode<Expr>;
 
+// c++ 26 reflection
+def CXXReflectExpr : StmtNode<Expr>;
+
 // Obj-C Expressions.
-def ObjCStringLiteral : StmtNode<Expr>;
-def ObjCBoxedExpr : StmtNode<Expr>;
-def ObjCArrayLiteral : StmtNode<Expr>;
-def ObjCDictionaryLiteral : StmtNode<Expr>;
+def ObjCObjectLiteral : StmtNode<Expr, 1>;
+def ObjCStringLiteral : StmtNode<ObjCObjectLiteral>;
+def ObjCBoxedExpr : StmtNode<ObjCObjectLiteral>;
+def ObjCArrayLiteral : StmtNode<ObjCObjectLiteral>;
+def ObjCDictionaryLiteral : StmtNode<ObjCObjectLiteral>;
 def ObjCEncodeExpr : StmtNode<Expr>;
 def ObjCMessageExpr : StmtNode<Expr>;
 def ObjCSelectorExpr : StmtNode<Expr>;

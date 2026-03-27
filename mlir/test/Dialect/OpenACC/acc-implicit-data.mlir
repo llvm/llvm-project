@@ -13,7 +13,7 @@ func.func @test_scalar_in_serial() {
 }
 
 // CHECK-LABEL: func.func @test_scalar_in_serial
-// CHECK: acc.firstprivate varPtr({{.*}} : memref<i64>) -> memref<i64> {implicit = true, name = ""}
+// CHECK: acc.firstprivate varPtr({{.*}} : memref<i64>) recipe({{.*}}) -> memref<i64> {implicit = true, name = ""}
 
 // -----
 
@@ -28,7 +28,7 @@ func.func @test_scalar_in_parallel() {
 }
 
 // CHECK-LABEL: func.func @test_scalar_in_parallel
-// CHECK: acc.firstprivate varPtr({{.*}} : memref<f32>) -> memref<f32> {implicit = true, name = ""}
+// CHECK: acc.firstprivate varPtr({{.*}} : memref<f32>) recipe({{.*}}) -> memref<f32> {implicit = true, name = ""}
 
 // -----
 
@@ -126,7 +126,7 @@ func.func @test_scalar_parallel_defaultpresent() {
 }
 
 // CHECK-LABEL: func.func @test_scalar_parallel_defaultpresent
-// CHECK: acc.firstprivate varPtr({{.*}} : memref<f32>) -> memref<f32> {implicit = true, name = ""}
+// CHECK: acc.firstprivate varPtr({{.*}} : memref<f32>) recipe({{.*}}) -> memref<f32> {implicit = true, name = ""}
 
 // -----
 
@@ -197,7 +197,7 @@ func.func @test_multiple_variables() {
 }
 
 // CHECK-LABEL: func.func @test_multiple_variables
-// CHECK: acc.firstprivate varPtr({{.*}} : memref<f32>) -> memref<f32> {implicit = true, name = ""}
+// CHECK: acc.firstprivate varPtr({{.*}} : memref<f32>) recipe({{.*}}) -> memref<f32> {implicit = true, name = ""}
 // CHECK: %[[COPYIN:.*]] = acc.copyin varPtr({{.*}} : memref<10xi32>) -> memref<10xi32> {dataClause = #acc<data_clause acc_copy>, implicit = true, name = ""}
 // CHECK: acc.copyout accPtr(%[[COPYIN]] : memref<10xi32>) to varPtr({{.*}} : memref<10xi32>) {dataClause = #acc<data_clause acc_copy>, implicit = true, name = ""}
 
@@ -222,3 +222,40 @@ func.func @test_memref_view(%size: index) {
 // CHECK-LABEL: func.func @test_memref_view
 // CHECK: acc.present varPtr({{.*}} : memref<8x64xf32>) -> memref<8x64xf32> {implicit = true, name = ""}
 
+// -----
+
+// Test device data (memref with GPU address space) - should generate deviceptr
+func.func @test_device_data_in_parallel() {
+  %alloc = memref.alloca() : memref<10xf32, #gpu.address_space<global>>
+  acc.parallel {
+    %c0 = arith.constant 0 : index
+    %load = memref.load %alloc[%c0] : memref<10xf32, #gpu.address_space<global>>
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @test_device_data_in_parallel
+// CHECK: acc.deviceptr varPtr({{.*}} : memref<10xf32, #gpu.address_space<global>>) -> memref<10xf32, #gpu.address_space<global>> {implicit = true, name = ""}
+// CHECK-NOT: acc.copyin
+// CHECK-NOT: acc.copyout
+
+// -----
+
+// Test device global (memref.global with GPU address space) - should generate deviceptr
+memref.global @device_global : memref<10xf32, #gpu.address_space<global>>
+
+func.func @test_device_global_in_parallel() {
+  %global = memref.get_global @device_global : memref<10xf32, #gpu.address_space<global>>
+  acc.parallel {
+    %c0 = arith.constant 0 : index
+    %load = memref.load %global[%c0] : memref<10xf32, #gpu.address_space<global>>
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @test_device_global_in_parallel
+// CHECK: acc.deviceptr varPtr({{.*}} : memref<10xf32, #gpu.address_space<global>>) -> memref<10xf32, #gpu.address_space<global>> {implicit = true, name = ""}
+// CHECK-NOT: acc.copyin
+// CHECK-NOT: acc.copyout

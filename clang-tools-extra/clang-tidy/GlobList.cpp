@@ -22,7 +22,7 @@ static bool consumeNegativeIndicator(StringRef &GlobList) {
 // Extracts the first glob from the comma-separated list of globs,
 // removes it and the trailing comma from the GlobList and
 // returns the extracted glob.
-static llvm::StringRef extractNextGlob(StringRef &GlobList) {
+static StringRef extractNextGlob(StringRef &GlobList) {
   const StringRef UntrimmedGlob =
       GlobList.substr(0, GlobList.find_first_of(",\n"));
   const StringRef Glob = UntrimmedGlob.trim();
@@ -59,10 +59,9 @@ GlobList::GlobList(StringRef Globs, bool KeepNegativeGlobs /* =true */) {
 bool GlobList::contains(StringRef S) const {
   // Iterating the container backwards as the last match determins if S is in
   // the list.
-  for (const GlobListItem &Item : llvm::reverse(Items)) {
+  for (const GlobListItem &Item : llvm::reverse(Items))
     if (Item.Regex.match(S))
       return Item.IsPositive;
-  }
   return false;
 }
 

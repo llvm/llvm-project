@@ -12,25 +12,12 @@ target triple = "hexagon"
 define <64 x i16> @f0(ptr %a0, i32 %a1) #0 {
 ; CHECK-LABEL: @f0(
 ; CHECK-NEXT:  b0:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i16, ptr [[A0:%.*]], i32 [[A1:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [2 x i8], ptr [[A0:%.*]], i32 [[A1:%.*]]
 ; CHECK-NEXT:    [[V1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 128
-; CHECK-NEXT:    [[PTI:%.*]] = ptrtoint ptr [[V1]] to i32
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[PTI]], -128
-; CHECK-NEXT:    [[ITP:%.*]] = inttoptr i32 [[AND]] to ptr
-; CHECK-NEXT:    [[PTI1:%.*]] = ptrtoint ptr [[V1]] to i32
-; CHECK-NEXT:    [[ALD14:%.*]] = load <32 x i32>, ptr [[ITP]], align 128, !tbaa [[TBAA0:![0-9]+]]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[ITP]], i32 128
-; CHECK-NEXT:    [[ALD2:%.*]] = load <128 x i8>, ptr [[GEP]], align 128, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[CST12:%.*]] = load <64 x i16>, ptr [[V1]], align 2, !tbaa [[TBAA0:![0-9]+]]
+; CHECK-NEXT:    [[ITP:%.*]] = getelementptr [2 x i8], ptr [[A0]], i32 [[A1]]
 ; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr [[ITP]], i32 256
-; CHECK-NEXT:    [[AND4:%.*]] = and i32 [[PTI1]], 127
-; CHECK-NEXT:    [[ISZ:%.*]] = icmp ne i32 [[AND4]], 0
-; CHECK-NEXT:    [[CUP:%.*]] = call <32 x i32> @llvm.hexagon.V6.vL32b.pred.ai.128B(i1 [[ISZ]], ptr [[GEP3]], i32 0), !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[CST5:%.*]] = bitcast <128 x i8> [[ALD2]] to <32 x i32>
-; CHECK-NEXT:    [[CUP7:%.*]] = call <32 x i32> @llvm.hexagon.V6.valignb.128B(<32 x i32> [[CST5]], <32 x i32> [[ALD14]], i32 [[PTI1]])
-; CHECK-NEXT:    [[CST12:%.*]] = bitcast <32 x i32> [[CUP7]] to <64 x i16>
-; CHECK-NEXT:    [[CST9:%.*]] = bitcast <128 x i8> [[ALD2]] to <32 x i32>
-; CHECK-NEXT:    [[CUP10:%.*]] = call <32 x i32> @llvm.hexagon.V6.valignb.128B(<32 x i32> [[CUP]], <32 x i32> [[CST9]], i32 [[PTI1]])
-; CHECK-NEXT:    [[CST13:%.*]] = bitcast <32 x i32> [[CUP10]] to <64 x i16>
+; CHECK-NEXT:    [[CST13:%.*]] = load <64 x i16>, ptr [[GEP3]], align 2, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[V8:%.*]] = add <64 x i16> [[CST12]], [[CST13]]
 ; CHECK-NEXT:    ret <64 x i16> [[V8]]
 ;
@@ -50,25 +37,12 @@ b0:
 define <64 x i16> @f1(ptr %a0, i32 %a1) #0 {
 ; CHECK-LABEL: @f1(
 ; CHECK-NEXT:  b0:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i16, ptr [[A0:%.*]], i32 [[A1:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [2 x i8], ptr [[A0:%.*]], i32 [[A1:%.*]]
 ; CHECK-NEXT:    [[V1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 128
-; CHECK-NEXT:    [[PTI:%.*]] = ptrtoint ptr [[V1]] to i32
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[PTI]], -128
-; CHECK-NEXT:    [[ITP:%.*]] = inttoptr i32 [[AND]] to ptr
-; CHECK-NEXT:    [[PTI1:%.*]] = ptrtoint ptr [[V1]] to i32
-; CHECK-NEXT:    [[ALD14:%.*]] = load <32 x i32>, ptr [[ITP]], align 128, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[ITP]], i32 128
-; CHECK-NEXT:    [[ALD2:%.*]] = load <128 x i8>, ptr [[GEP]], align 128
+; CHECK-NEXT:    [[CST12:%.*]] = load <64 x i16>, ptr [[V1]], align 2, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[ITP:%.*]] = getelementptr [2 x i8], ptr [[A0]], i32 [[A1]]
 ; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr [[ITP]], i32 256
-; CHECK-NEXT:    [[AND4:%.*]] = and i32 [[PTI1]], 127
-; CHECK-NEXT:    [[ISZ:%.*]] = icmp ne i32 [[AND4]], 0
-; CHECK-NEXT:    [[CUP:%.*]] = call <32 x i32> @llvm.hexagon.V6.vL32b.pred.ai.128B(i1 [[ISZ]], ptr [[GEP3]], i32 0)
-; CHECK-NEXT:    [[CST5:%.*]] = bitcast <128 x i8> [[ALD2]] to <32 x i32>
-; CHECK-NEXT:    [[CUP7:%.*]] = call <32 x i32> @llvm.hexagon.V6.valignb.128B(<32 x i32> [[CST5]], <32 x i32> [[ALD14]], i32 [[PTI1]])
-; CHECK-NEXT:    [[CST12:%.*]] = bitcast <32 x i32> [[CUP7]] to <64 x i16>
-; CHECK-NEXT:    [[CST9:%.*]] = bitcast <128 x i8> [[ALD2]] to <32 x i32>
-; CHECK-NEXT:    [[CUP10:%.*]] = call <32 x i32> @llvm.hexagon.V6.valignb.128B(<32 x i32> [[CUP]], <32 x i32> [[CST9]], i32 [[PTI1]])
-; CHECK-NEXT:    [[CST13:%.*]] = bitcast <32 x i32> [[CUP10]] to <64 x i16>
+; CHECK-NEXT:    [[CST13:%.*]] = load <64 x i16>, ptr [[GEP3]], align 2
 ; CHECK-NEXT:    [[V8:%.*]] = add <64 x i16> [[CST12]], [[CST13]]
 ; CHECK-NEXT:    ret <64 x i16> [[V8]]
 ;
@@ -88,25 +62,12 @@ b0:
 define <64 x i16> @f2(ptr %a0, i32 %a1) #0 {
 ; CHECK-LABEL: @f2(
 ; CHECK-NEXT:  b0:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i16, ptr [[A0:%.*]], i32 [[A1:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [2 x i8], ptr [[A0:%.*]], i32 [[A1:%.*]]
 ; CHECK-NEXT:    [[V1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 128
-; CHECK-NEXT:    [[PTI:%.*]] = ptrtoint ptr [[V1]] to i32
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[PTI]], -128
-; CHECK-NEXT:    [[ITP:%.*]] = inttoptr i32 [[AND]] to ptr
-; CHECK-NEXT:    [[PTI1:%.*]] = ptrtoint ptr [[V1]] to i32
-; CHECK-NEXT:    [[ALD14:%.*]] = load <32 x i32>, ptr [[ITP]], align 128, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[ITP]], i32 128
-; CHECK-NEXT:    [[ALD2:%.*]] = load <128 x i8>, ptr [[GEP]], align 128
+; CHECK-NEXT:    [[CST12:%.*]] = load <64 x i16>, ptr [[V1]], align 2, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[ITP:%.*]] = getelementptr [2 x i8], ptr [[A0]], i32 [[A1]]
 ; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr [[ITP]], i32 256
-; CHECK-NEXT:    [[AND4:%.*]] = and i32 [[PTI1]], 127
-; CHECK-NEXT:    [[ISZ:%.*]] = icmp ne i32 [[AND4]], 0
-; CHECK-NEXT:    [[CUP:%.*]] = call <32 x i32> @llvm.hexagon.V6.vL32b.pred.ai.128B(i1 [[ISZ]], ptr [[GEP3]], i32 0), !tbaa [[TBAA3:![0-9]+]]
-; CHECK-NEXT:    [[CST5:%.*]] = bitcast <128 x i8> [[ALD2]] to <32 x i32>
-; CHECK-NEXT:    [[CUP7:%.*]] = call <32 x i32> @llvm.hexagon.V6.valignb.128B(<32 x i32> [[CST5]], <32 x i32> [[ALD14]], i32 [[PTI1]])
-; CHECK-NEXT:    [[CST12:%.*]] = bitcast <32 x i32> [[CUP7]] to <64 x i16>
-; CHECK-NEXT:    [[CST9:%.*]] = bitcast <128 x i8> [[ALD2]] to <32 x i32>
-; CHECK-NEXT:    [[CUP10:%.*]] = call <32 x i32> @llvm.hexagon.V6.valignb.128B(<32 x i32> [[CUP]], <32 x i32> [[CST9]], i32 [[PTI1]])
-; CHECK-NEXT:    [[CST13:%.*]] = bitcast <32 x i32> [[CUP10]] to <64 x i16>
+; CHECK-NEXT:    [[CST13:%.*]] = load <64 x i16>, ptr [[GEP3]], align 2, !tbaa [[TBAA3:![0-9]+]]
 ; CHECK-NEXT:    [[V8:%.*]] = add <64 x i16> [[CST12]], [[CST13]]
 ; CHECK-NEXT:    ret <64 x i16> [[V8]]
 ;
@@ -126,7 +87,7 @@ b0:
 define void @f3(ptr %a0, i32 %a1, <64 x i16> %a2, <64 x i16> %a3) #0 {
 ; CHECK-LABEL: @f3(
 ; CHECK-NEXT:  b0:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i16, ptr [[A0:%.*]], i32 [[A1:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [2 x i8], ptr [[A0:%.*]], i32 [[A1:%.*]]
 ; CHECK-NEXT:    [[V1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 128
 ; CHECK-NEXT:    [[PTI:%.*]] = ptrtoint ptr [[V1]] to i32
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[PTI]], -128
@@ -179,7 +140,7 @@ b0:
 define void @f4(ptr %a0, i32 %a1, <64 x i16> %a2, <64 x i16> %a3) #0 {
 ; CHECK-LABEL: @f4(
 ; CHECK-NEXT:  b0:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i16, ptr [[A0:%.*]], i32 [[A1:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [2 x i8], ptr [[A0:%.*]], i32 [[A1:%.*]]
 ; CHECK-NEXT:    [[V1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 128
 ; CHECK-NEXT:    [[PTI:%.*]] = ptrtoint ptr [[V1]] to i32
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[PTI]], -128
@@ -232,7 +193,7 @@ b0:
 define void @f5(ptr %a0, i32 %a1, <64 x i16> %a2, <64 x i16> %a3) #0 {
 ; CHECK-LABEL: @f5(
 ; CHECK-NEXT:  b0:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i16, ptr [[A0:%.*]], i32 [[A1:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [2 x i8], ptr [[A0:%.*]], i32 [[A1:%.*]]
 ; CHECK-NEXT:    [[V1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 128
 ; CHECK-NEXT:    [[PTI:%.*]] = ptrtoint ptr [[V1]] to i32
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[PTI]], -128

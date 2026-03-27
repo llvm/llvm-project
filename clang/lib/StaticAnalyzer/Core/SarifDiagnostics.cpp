@@ -218,7 +218,7 @@ SarifDiagnostics::createResult(const PathDiagnostic *Diag,
                     .setRuleId(CheckName)
                     .setDiagnosticMessage(Diag->getVerboseDescription())
                     .setDiagnosticLevel(SarifResultLevel::Warning)
-                    .setLocations({Range})
+                    .addLocations({Range})
                     .addPartialFingerprint(IssueHashKey, IssueHash)
                     .setHostedViewerURI(HtmlReportURL)
                     .setThreadFlows(Flows);
