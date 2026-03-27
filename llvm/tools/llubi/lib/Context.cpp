@@ -499,6 +499,11 @@ uint64_t Context::getEffectiveTypeStoreSize(Type *Ty) {
   return getEffectiveTypeSize(DL.getTypeStoreSize(Ty));
 }
 
+bool Context::getRandomBool() {
+  // We use the lowest bit of the raw bits from RNG as the result:
+  return static_cast<bool>(Rng() & 1);
+}
+
 void MemoryObject::markAsFreed() {
   State = MemoryObjectState::Freed;
   Bytes.clear();

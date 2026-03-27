@@ -262,6 +262,8 @@ public:
   /// error occurred during execution.
   bool runFunction(Function &F, ArrayRef<AnyValue> Args, AnyValue &RetVal,
                    EventHandler &Handler);
+
+  bool getRandomBool();
 };
 
 } // namespace llvm::ubi
