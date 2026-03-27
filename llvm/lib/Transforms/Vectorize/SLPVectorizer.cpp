@@ -26007,7 +26007,8 @@ bool SLPVectorizerPass::vectorizeStores(
       auto &[Dist, InstIdx] = Data;
       // Clean up chains that can't be continued
       if (Idx > 0)
-        for (int64_t D = LastDist; D < Dist; ++D)
+        for (int64_t D = LastDist;
+             D < std::min(Dist, LastDist + (int64_t)Chains.size()); ++D)
           Chains[GetChainsKey(D)].clear();
       LastDist = Dist;
 
