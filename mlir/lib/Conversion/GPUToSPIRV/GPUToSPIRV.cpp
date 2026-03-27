@@ -130,6 +130,18 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
+/// Pattern to convert a gpu.subgroup_broadcast op into a
+/// spirv.GroupNonUniformBroadcast op.
+class GPUSubgroupBroadcastConversion final
+    : public OpConversionPattern<gpu::SubgroupBroadcastOp> {
+public:
+  using Base::Base;
+
+  LogicalResult
+  matchAndRewrite(gpu::SubgroupBroadcastOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
 class GPUPrintfConversion final : public OpConversionPattern<gpu::PrintfOp> {
 public:
   using Base::Base;
@@ -543,6 +555,32 @@ LogicalResult GPURotateConversion::matchAndRewrite(
 }
 
 //===----------------------------------------------------------------------===//
+// Subgroup broadcast
+//===----------------------------------------------------------------------===//
+
+LogicalResult GPUSubgroupBroadcastConversion::matchAndRewrite(
+    gpu::SubgroupBroadcastOp op, OpAdaptor adaptor,
+    ConversionPatternRewriter &rewriter) const {
+  Location loc = op.getLoc();
+  auto scope = rewriter.getAttr<spirv::ScopeAttr>(spirv::Scope::Subgroup);
+  Value result;
+
+  switch (op.getBroadcastType()) {
+  case gpu::BroadcastType::specific_lane:
+    result = spirv::GroupNonUniformBroadcastOp::create(
+        rewriter, loc, scope, adaptor.getSrc(), adaptor.getLane());
+    break;
+  case gpu::BroadcastType::first_active_lane:
+    result = spirv::GroupNonUniformBroadcastFirstOp::create(
+        rewriter, loc, scope, adaptor.getSrc());
+    break;
+  }
+
+  rewriter.replaceOp(op, result);
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // Group ops
 //===----------------------------------------------------------------------===//
 
@@ -832,6 +870,7 @@ void mlir::populateGPUToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
   patterns.add<
       GPUBarrierConversion, GPUFuncOpConversion, GPUModuleConversion,
       GPUReturnOpConversion, GPUShuffleConversion, GPURotateConversion,
+      GPUSubgroupBroadcastConversion,
       LaunchConfigConversion<gpu::BlockIdOp, spirv::BuiltIn::WorkgroupId>,
       LaunchConfigConversion<gpu::GridDimOp, spirv::BuiltIn::NumWorkgroups>,
       LaunchConfigConversion<gpu::BlockDimOp, spirv::BuiltIn::WorkgroupSize>,
