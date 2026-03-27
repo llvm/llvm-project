@@ -202,6 +202,7 @@ public:
   uint32_t getMaxStackDepth() const { return MaxStackDepth; }
   void setUndefValueBehavior(UndefValueBehavior UB) { UndefBehavior = UB; }
   void reseed(uint32_t Seed) { Rng.seed(Seed); }
+  std::mt19937_64 &getRng() { return Rng; }
 
   LLVMContext &getContext() const { return Ctx; }
   const DataLayout &getDataLayout() const { return DL; }

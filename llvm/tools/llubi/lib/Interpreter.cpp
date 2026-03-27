@@ -299,12 +299,63 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
       APFloat FLHS = handleDenormal(LHS.asFloat(), DenormMode.Input);
       APFloat FRHS = handleDenormal(RHS.asFloat(), DenormMode.Input);
 
-      APFloat Result = ScalarFn(FLHS, FRHS).asFloat();
+      APFloat RawResult = ScalarFn(FLHS, FRHS).asFloat();
 
-      // Flush output denormals
-      APFloat FResult = handleDenormal(Result, DenormMode.Output);
+      // Flush output denormals and handle fast-math flags.
+      AnyValue FResult =
+          handleFMFFlags(handleDenormal(RawResult, DenormMode.Output), FMF);
 
-      return handleFMFFlags(FResult, FMF);
+      if (FResult.isPoison())
+        return FResult;
+
+      APFloat Result = FResult.asFloat();
+      // NaN payload propagation
+      if (Result.isNaN()) {
+        // We non-deterministically choose from the four cases as specified in
+        // the language reference. The sign is also non-deterministic
+        const int8_t Choice = static_cast<int8_t>(Ctx.getRng()() % 4);
+        const bool Sign = Ctx.getRandomBool();
+        if (Choice == 0) {
+          // Preferred NaN: the quiet bit is set and the payload is all-zero
+          return APFloat::getQNaN(Result.getSemantics(), Sign);
+        }
+        if (Choice == 1) {
+          // Quieting NaN propagation: the quiet bit is set and the payload is
+          // copied from any input operand that is a NaN. We implement this by
+          // directly set the quiet bit of the input NaN, and
+          // non-deterministically flip its sign bit
+          auto QuietNaN = [&](APFloat &Input) {
+            APFloat Quieted = Input.makeQuiet();
+            if (Sign)
+              Quieted.changeSign();
+            return Quieted;
+          };
+          if (FLHS.isNaN())
+            return QuietNaN(FLHS);
+          if (FRHS.isNaN())
+            return QuietNaN(FRHS);
+        }
+        if (Choice == 2) {
+          // Unchanged NaN propagation: the quiet bit and payload are copied
+          // from any input operand that is a NaN
+          auto FlipSign = [&](APFloat &Input) {
+            if (Sign)
+              Input.changeSign();
+            return Input;
+          };
+          if (FLHS.isNaN())
+            return FlipSign(FLHS);
+          if (FRHS.isNaN())
+            return FlipSign(FRHS);
+        }
+        if (Choice == 3) {
+          // Target-specific NaN: the quiet bit is set and the payload is picked
+          // from a target-specific set of "extra" possible NaN payloads. We
+          // approximate this by filling the payload with random values.
+          auto Payload = APInt(64, Ctx.getRng()());
+          return APFloat::getQNaN(Result.getSemantics(), Sign, &Payload);
+        }
+      }
     });
   }
 
