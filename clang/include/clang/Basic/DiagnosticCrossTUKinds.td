@@ -23,7 +23,8 @@ def err_multiple_def_index : Error<
   "multiple definitions are found for the same key in index ">;
 
 def warn_multiple_entries_invlist : Warning<
-  "multiple invocations for '%0' are found in the invocation list ">;
+  "multiple invocations for '%0' are found in the invocation list ">,
+  InGroup<CrossTU>;
 
 def warn_invlist_missing_file : Warning<
   "invocation for '%0' is missing in the invocation list">, InGroup<CrossTU>;
