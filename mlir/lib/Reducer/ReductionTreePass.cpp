@@ -15,7 +15,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/DialectInterface.h"
-#include "mlir/IR/OpDefinition.h"
 #include "mlir/Reducer/Passes.h"
 #include "mlir/Reducer/ReductionNode.h"
 #include "mlir/Reducer/ReductionPatternInterface.h"
@@ -24,12 +23,10 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/ManagedStatic.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_REDUCTIONTREE
+#define GEN_PASS_DEF_REDUCTIONTREEPASS
 #include "mlir/Reducer/Passes.h.inc"
 } // namespace mlir
 
@@ -56,16 +53,17 @@ static void applyPatterns(Region &region,
       opsInRange.push_back(&op.value());
   }
 
-  // `applyOpPatternsAndFold` may erase the ops so we can't do the pattern
-  // matching in above iteration. Besides, erase op not-in-range may end up in
-  // invalid module, so `applyOpPatternsAndFold` should come before that
-  // transform.
+  // `applyOpPatternsGreedily` with folding may erase the ops so we can't do the
+  // pattern matching in above iteration. Besides, erase op not-in-range may end
+  // up in invalid module, so `applyOpPatternsGreedily` with folding should come
+  // before that transform.
   for (Operation *op : opsInRange) {
-    // `applyOpPatternsAndFold` returns whether the op is convered. Omit it
-    // because we don't have expectation this reduction will be success or not.
-    GreedyRewriteConfig config;
-    config.strictMode = GreedyRewriteStrictness::ExistingOps;
-    (void)applyOpPatternsAndFold(op, patterns, config);
+    // `applyOpPatternsGreedily` with folding returns whether the op is
+    // converted. Omit it because we don't have expectation this reduction will
+    // be success or not.
+    (void)applyOpPatternsGreedily(op, patterns,
+                                  GreedyRewriteConfig().setStrictness(
+                                      GreedyRewriteStrictness::ExistingOps));
   }
 
   if (eraseOpNotInRange)
@@ -147,19 +145,63 @@ static LogicalResult findOptimal(ModuleOp module, Region &region,
   return success();
 }
 
+/// This function attempts to erase all operations within the region currently
+/// being processed.
+static LogicalResult eraseAllOpsInRegion(ModuleOp module, Region &region,
+                                         const Tester &test) {
+  std::pair<Tester::Interestingness, size_t> initStatus =
+      test.isInteresting(module);
+
+  // While exploring the reduction tree, we always branch from an interesting
+  // node. Thus the root node must be interesting.
+  if (initStatus.first != Tester::Interestingness::True)
+    return module.emitWarning() << "uninterested module will not be reduced";
+  llvm::SpecificBumpPtrAllocator<ReductionNode> allocator;
+
+  // Setting the ranges to {{0, 0}} will result in the deletion of all ops
+  // within the region.
+  std::vector<ReductionNode::Range> ranges{{0, 0}};
+
+  // We allocate memory on the stack, and the 'allocator' is only used to
+  // construct the 'root node'. Since we won't be constructing any child nodes
+  // for emptyRegionNode, it is only used within the current scope.
+  ReductionNode emptyRegionNode(nullptr, ranges, allocator);
+  ReductionNode *root = &emptyRegionNode;
+
+  // Create a copy of the current IR.
+  if (failed(root->initialize(module, region)))
+    llvm_unreachable("unexpected initialization failure");
+
+  // Erase all operations within the corresponding region of the clone.
+  applyPatterns(root->getRegion(), {}, root->getRanges(), true);
+  root->update(test.isInteresting(root->getModule()));
+  if (root->isInteresting() == Tester::Interestingness::True) {
+    // If we can successfully remove all ops in the region, we apply the same
+    // transformation to the original IR and return success.
+    applyPatterns(region, {}, root->getRanges(), true);
+    return success();
+  }
+  return failure();
+}
+
 template <typename IteratorType>
 static LogicalResult findOptimal(ModuleOp module, Region &region,
                                  const FrozenRewritePatternSet &patterns,
                                  const Tester &test) {
-  // We separate the reduction process into 2 steps, the first one is to erase
+  // We separate the reduction process into 3 steps, the first one is to erase
   // redundant operations and the second one is to apply the reducer patterns.
 
-  // In the first phase, we don't apply any patterns so that we only select the
+  // In the first phase, we attempt to erase all operations within the entire
+  // region.
+  if (succeeded(eraseAllOpsInRegion(module, region, test)))
+    return success();
+
+  // In the second phase, we don't apply any patterns so that we only select the
   // range of operations to keep to the module stay interesting.
   if (failed(findOptimal<IteratorType>(module, region, /*patterns=*/{}, test,
                                        /*eraseOpNotInRange=*/true)))
     return failure();
-  // In the second phase, we suppose that no operation is redundant, so we try
+  // In the third phase, we suppose that no operation is redundant, so we try
   // to rewrite the operation into simpler form.
   return findOptimal<IteratorType>(module, region, patterns, test,
                                    /*eraseOpNotInRange=*/false);
@@ -177,9 +219,12 @@ public:
   using Base::Base;
 
   // Collect the reduce patterns defined by each dialect.
-  void populateReductionPatterns(RewritePatternSet &pattern) const {
-    for (const DialectReductionPatternInterface &interface : *this)
+  void populateReductionPatterns(RewritePatternSet &pattern,
+                                 Tester &tester) const {
+    for (const DialectReductionPatternInterface &interface : *this) {
       interface.populateReductionPatterns(pattern);
+      interface.populateReductionPatternsWithTester(pattern, tester);
+    }
   }
 };
 
@@ -190,10 +235,10 @@ public:
 /// This class defines the Reduction Tree Pass. It provides a framework to
 /// to implement a reduction pass using a tree structure to keep track of the
 /// generated reduced variants.
-class ReductionTreePass : public impl::ReductionTreeBase<ReductionTreePass> {
+class ReductionTreePass
+    : public impl::ReductionTreePassBase<ReductionTreePass> {
 public:
-  ReductionTreePass() = default;
-  ReductionTreePass(const ReductionTreePass &pass) = default;
+  using Base::Base;
 
   LogicalResult initialize(MLIRContext *context) override;
 
@@ -203,15 +248,21 @@ public:
 private:
   LogicalResult reduceOp(ModuleOp module, Region &region);
 
+  Tester tester;
   FrozenRewritePatternSet reducerPatterns;
 };
 
 } // namespace
 
 LogicalResult ReductionTreePass::initialize(MLIRContext *context) {
+  tester.setTestScript(testerName);
+  tester.setTestScriptArgs(testerArgs);
+
   RewritePatternSet patterns(context);
+
   ReductionPatternInterfaceCollection reducePatternCollection(context);
-  reducePatternCollection.populateReductionPatterns(patterns);
+  reducePatternCollection.populateReductionPatterns(patterns, tester);
+
   reducerPatterns = std::move(patterns);
   return success();
 }
@@ -246,16 +297,11 @@ void ReductionTreePass::runOnOperation() {
 }
 
 LogicalResult ReductionTreePass::reduceOp(ModuleOp module, Region &region) {
-  Tester test(testerName, testerArgs);
   switch (traversalModeId) {
   case TraversalMode::SinglePath:
     return findOptimal<ReductionNode::iterator<TraversalMode::SinglePath>>(
-        module, region, reducerPatterns, test);
+        module, region, reducerPatterns, tester);
   default:
     return module.emitError() << "unsupported traversal mode detected";
   }
-}
-
-std::unique_ptr<Pass> mlir::createReductionTreePass() {
-  return std::make_unique<ReductionTreePass>();
 }

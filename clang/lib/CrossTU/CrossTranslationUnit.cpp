@@ -13,15 +13,18 @@
 #include "clang/AST/ASTImporter.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/ParentMapContext.h"
+#include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CrossTU/CrossTUDiagnostic.h"
+#include "clang/Driver/CreateASTUnitFromArgs.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
-#include "clang/Index/USRGeneration.h"
+#include "clang/UnifiedSymbolResolution/USRGeneration.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/YAMLParser.h"
@@ -199,10 +202,10 @@ parseCrossTUIndex(StringRef IndexPath) {
     SmallString<32> FilePath(FilePathInIndex);
     llvm::sys::path::native(FilePath, llvm::sys::path::Style::posix);
 
-    bool InsertionOccured;
-    std::tie(std::ignore, InsertionOccured) =
+    bool InsertionOccurred;
+    std::tie(std::ignore, InsertionOccurred) =
         Result.try_emplace(LookupName, FilePath.begin(), FilePath.end());
-    if (!InsertionOccured)
+    if (!InsertionOccurred)
       return llvm::make_error<IndexError>(
           index_error_code::multiple_definitions, IndexPath.str(), LineNo);
 
@@ -237,14 +240,23 @@ template <typename T> static bool hasBodyOrInit(const T *D) {
 }
 
 CrossTranslationUnitContext::CrossTranslationUnitContext(CompilerInstance &CI)
-    : Context(CI.getASTContext()), ASTStorage(CI) {}
+    : Context(CI.getASTContext()), ASTStorage(CI) {
+  if (CI.getAnalyzerOpts().ShouldEmitErrorsOnInvalidConfigValue &&
+      !CI.getAnalyzerOpts().CTUDir.empty()) {
+    auto S = CI.getVirtualFileSystem().status(CI.getAnalyzerOpts().CTUDir);
+    if (!S || S->getType() != llvm::sys::fs::file_type::directory_file)
+      CI.getDiagnostics().Report(diag::err_analyzer_config_invalid_input)
+          << "ctu-dir"
+          << "a filename";
+  }
+}
 
 CrossTranslationUnitContext::~CrossTranslationUnitContext() {}
 
 std::optional<std::string>
-CrossTranslationUnitContext::getLookupName(const NamedDecl *ND) {
+CrossTranslationUnitContext::getLookupName(const Decl *D) {
   SmallString<128> DeclUSR;
-  bool Ret = index::generateUSRForDecl(ND, DeclUSR);
+  bool Ret = index::generateUSRForDecl(D, DeclUSR);
   if (Ret)
     return {};
   return std::string(DeclUSR);
@@ -367,27 +379,46 @@ CrossTranslationUnitContext::getCrossTUDefinition(const VarDecl *VD,
                                   DisplayCTUProgress);
 }
 
-void CrossTranslationUnitContext::emitCrossTUDiagnostics(const IndexError &IE) {
+void CrossTranslationUnitContext::emitCrossTUDiagnostics(const IndexError &IE,
+                                                         SourceLocation Loc) {
   switch (IE.getCode()) {
   case index_error_code::missing_index_file:
-    Context.getDiagnostics().Report(diag::err_ctu_error_opening)
+    Context.getDiagnostics().Report(Loc, diag::err_ctu_error_opening)
         << IE.getFileName();
-    break;
+    return;
   case index_error_code::invalid_index_format:
-    Context.getDiagnostics().Report(diag::err_extdefmap_parsing)
+    Context.getDiagnostics().Report(Loc, diag::err_extdefmap_parsing)
         << IE.getFileName() << IE.getLineNum();
-    break;
+    return;
   case index_error_code::multiple_definitions:
-    Context.getDiagnostics().Report(diag::err_multiple_def_index)
+    Context.getDiagnostics().Report(Loc, diag::err_multiple_def_index)
         << IE.getLineNum();
-    break;
+    return;
   case index_error_code::triple_mismatch:
-    Context.getDiagnostics().Report(diag::warn_ctu_incompat_triple)
+    Context.getDiagnostics().Report(Loc, diag::warn_ctu_incompat_triple)
         << IE.getFileName() << IE.getTripleToName() << IE.getTripleFromName();
-    break;
-  default:
-    break;
+    return;
+  case index_error_code::success:
+    llvm_unreachable("There should not be a success error. This case should "
+                     "have been handled by the caller.");
+    return;
+  case index_error_code::unspecified:
+  case index_error_code::missing_definition:
+  case index_error_code::failed_import:
+  case index_error_code::failed_to_get_external_ast:
+  case index_error_code::failed_to_generate_usr:
+  case index_error_code::lang_mismatch:
+  case index_error_code::lang_dialect_mismatch:
+  case index_error_code::load_threshold_reached:
+  case index_error_code::invocation_list_ambiguous:
+  case index_error_code::invocation_list_file_not_found:
+  case index_error_code::invocation_list_empty:
+  case index_error_code::invocation_list_wrong_format:
+  case index_error_code::invocation_list_lookup_unsuccessful:
+    // FIXME: Silently dropping these errors
+    return;
   }
+  llvm_unreachable("Unrecognized index_error_code.");
 }
 
 CrossTranslationUnitContext::ASTUnitStorage::ASTUnitStorage(
@@ -453,7 +484,8 @@ CrossTranslationUnitContext::ASTUnitStorage::getASTUnitForFunction(
       return std::move(IndexLoadError);
 
     // Check if there is an entry in the index for the function.
-    if (!NameFileMap.count(FunctionName)) {
+    auto It = NameFileMap.find(FunctionName);
+    if (It == NameFileMap.end()) {
       ++NumNotInOtherTU;
       return llvm::make_error<IndexError>(index_error_code::missing_definition);
     }
@@ -461,7 +493,7 @@ CrossTranslationUnitContext::ASTUnitStorage::getASTUnitForFunction(
     // Search in the index for the filename where the definition of FunctionName
     // resides.
     if (llvm::Expected<ASTUnit *> FoundForFile =
-            getASTUnitForFile(NameFileMap[FunctionName], DisplayCTUProgress)) {
+            getASTUnitForFile(It->second, DisplayCTUProgress)) {
 
       // Update the cache.
       NameASTUnitMap[FunctionName] = *FoundForFile;
@@ -559,16 +591,15 @@ CrossTranslationUnitContext::ASTLoader::load(StringRef Identifier) {
 
 CrossTranslationUnitContext::LoadResultTy
 CrossTranslationUnitContext::ASTLoader::loadFromDump(StringRef ASTDumpPath) {
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
+  auto DiagOpts = std::make_shared<DiagnosticOptions>();
   TextDiagnosticPrinter *DiagClient =
-      new TextDiagnosticPrinter(llvm::errs(), &*DiagOpts);
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
-  IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
-      new DiagnosticsEngine(DiagID, &*DiagOpts, DiagClient));
+      new TextDiagnosticPrinter(llvm::errs(), *DiagOpts);
+  auto Diags = llvm::makeIntrusiveRefCnt<DiagnosticsEngine>(
+      DiagnosticIDs::create(), *DiagOpts, DiagClient);
   return ASTUnit::LoadFromASTFile(
       ASTDumpPath, CI.getPCHContainerOperations()->getRawReader(),
-      ASTUnit::LoadEverything, Diags, CI.getFileSystemOpts(),
-      CI.getHeaderSearchOptsPtr());
+      ASTUnit::LoadEverything, CI.getVirtualFileSystemPtr(), DiagOpts, Diags,
+      CI.getFileSystemOpts(), CI.getHeaderSearchOpts());
 }
 
 /// Load the AST from a source-file, which is supposed to be located inside the
@@ -602,17 +633,19 @@ CrossTranslationUnitContext::ASTLoader::loadFromSource(
                  CommandLineArgs.begin(),
                  [](auto &&CmdPart) { return CmdPart.c_str(); });
 
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts{&CI.getDiagnosticOpts()};
+  auto DiagOpts = std::make_shared<DiagnosticOptions>(CI.getDiagnosticOpts());
   auto *DiagClient = new ForwardingDiagnosticConsumer{CI.getDiagnosticClient()};
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID{
       CI.getDiagnostics().getDiagnosticIDs()};
-  IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
-      new DiagnosticsEngine{DiagID, &*DiagOpts, DiagClient});
+  auto Diags = llvm::makeIntrusiveRefCnt<DiagnosticsEngine>(DiagID, *DiagOpts,
+                                                            DiagClient);
 
-  return ASTUnit::LoadFromCommandLine(CommandLineArgs.begin(),
-                                      (CommandLineArgs.end()),
-                                      CI.getPCHContainerOperations(), Diags,
-                                      CI.getHeaderSearchOpts().ResourceDir);
+  // This runs the driver which isn't expected to be free of sandbox violations.
+  auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+  return CreateASTUnitFromCommandLine(
+      CommandLineArgs.begin(), (CommandLineArgs.end()),
+      CI.getPCHContainerOperations(), DiagOpts, Diags,
+      CI.getHeaderSearchOpts().ResourceDir);
 }
 
 llvm::Expected<InvocationListTy>
@@ -699,7 +732,7 @@ llvm::Error CrossTranslationUnitContext::ASTLoader::lazyInitInvocationList() {
     return llvm::make_error<IndexError>(PreviousParsingResult);
 
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> FileContent =
-      llvm::MemoryBuffer::getFile(InvocationListFilePath);
+      CI.getVirtualFileSystem().getBufferForFile(InvocationListFilePath);
   if (!FileContent) {
     PreviousParsingResult = index_error_code::invocation_list_file_not_found;
     return llvm::make_error<IndexError>(PreviousParsingResult);

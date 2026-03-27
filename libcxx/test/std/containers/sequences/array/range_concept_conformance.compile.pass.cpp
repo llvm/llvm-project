@@ -17,7 +17,6 @@
 
 using range = std::array<int, 10>;
 
-
 static_assert(!std::ranges::view<range>);
 static_assert(std::same_as<std::ranges::iterator_t<range>, range::iterator>);
 static_assert(std::ranges::common_range<range>);

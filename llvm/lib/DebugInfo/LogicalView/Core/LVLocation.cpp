@@ -156,7 +156,7 @@ std::string LVOperation::getOperandsDWARFInfo() {
     Stream << "push_object_address";
     break;
   case dwarf::DW_OP_form_tls_address:
-    Stream << "form_tls_address " << hexString(Operands[0]);
+    Stream << "form_tls_address";
     break;
   case dwarf::DW_OP_call_frame_cfa:
     Stream << "call_frame_cfa";
@@ -308,7 +308,7 @@ std::string LVOperation::getOperandsDWARFInfo() {
     PrintRegisterInfo(dwarf::DW_OP_reg0);
     break;
   case dwarf::DW_OP_GNU_push_tls_address:
-    Stream << "gnu_push_tls_address " << hexString(Operands[0]);
+    Stream << "gnu_push_tls_address";
     break;
   case dwarf::DW_OP_GNU_addr_index:
     Stream << "gnu_addr_index " << unsigned(Operands[0]);
@@ -373,6 +373,12 @@ std::string LVOperation::getOperandsCodeViewInfo() {
   case codeview::SymbolKind::S_DEFRANGE_REGISTER_REL:
     Stream << "register_rel " << getReader().getRegisterName(Opcode, Operands)
            << " offset " << int(Operands[1]);
+    break;
+  // Operands: [Register, Offset, OffsetInUdt].
+  case codeview::SymbolKind::S_DEFRANGE_REGISTER_REL_INDIR:
+    Stream << "register_rel_indir "
+           << getReader().getRegisterName(Opcode, Operands) << " offset "
+           << int(Operands[1]) << " offset_in_udt " << int(Operands[2]);
     break;
 
   // Operands: [Program].

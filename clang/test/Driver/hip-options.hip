@@ -22,7 +22,6 @@
 // RUN: %clang -### -nogpulib -nogpuinc --target=x86_64-unknown-linux-gnu -mprintf-kind=hostcall  %s -save-temps 2>&1 | FileCheck -check-prefix=HOSTC %s
 // HOSTC: "-cc1" "-triple" "amdgcn-amd-amdhsa"{{.*}}"-mprintf-kind=hostcall" "-Werror=format-invalid-specifier"{{.*}}"-E" {{.*}}
 // HOSTC: "-cc1" "-triple" "amdgcn-amd-amdhsa"{{.*}} "-mprintf-kind=hostcall" "-Werror=format-invalid-specifier" {{.*}}"-x" "hip-cpp-output"
-// HOSTC: "-cc1" "-triple" "amdgcn-amd-amdhsa"{{.*}} "-mprintf-kind=hostcall" "-Werror=format-invalid-specifier" {{.*}}"-x" "ir"
 // HOSTC: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}} "-E" {{.*}}
 // HOSTC: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-x" "ir"
 
@@ -30,7 +29,6 @@
 // RUN: %clang -### -nogpulib -nogpuinc --target=x86_64-unknown-linux-gnu -mprintf-kind=buffered  %s -save-temps 2>&1 | FileCheck -check-prefix=BUFF %s
 // BUFF: "-cc1" "-triple" "amdgcn-amd-amdhsa"{{.*}}"-mprintf-kind=buffered" "-Werror=format-invalid-specifier"{{.*}}"-E" {{.*}}
 // BUFF: "-cc1" "-triple" "amdgcn-amd-amdhsa"{{.*}} "-mprintf-kind=buffered" "-Werror=format-invalid-specifier" {{.*}}"-x" "hip-cpp-output"
-// BUFF: "-cc1" "-triple" "amdgcn-amd-amdhsa"{{.*}} "-mprintf-kind=buffered" "-Werror=format-invalid-specifier" {{.*}}"-x" "ir"
 // BUFF: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}} "-E" {{.*}}
 // BUFF: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-x" "ir"
 
@@ -54,11 +52,11 @@
 
 // RUN: %clang -### -nogpuinc -nogpulib -munsafe-fp-atomics \
 // RUN:   --cuda-gpu-arch=gfx906  %s 2>&1 | FileCheck -check-prefix=UNSAFE-FP-ATOMICS %s
-// UNSAFE-FP-ATOMICS: clang{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-munsafe-fp-atomics"
+// UNSAFE-FP-ATOMICS: clang{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-fatomic-ignore-denormal-mode"
 
 // RUN: %clang -### -nogpuinc -nogpulib \
 // RUN:   --cuda-gpu-arch=gfx906  %s 2>&1 | FileCheck -check-prefix=DEFAULT-UNSAFE-FP-ATOMICS %s
-// DEFAULT-UNSAFE-FP-ATOMICS-NOT: clang{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-munsafe-fp-atomics"
+// DEFAULT-UNSAFE-FP-ATOMICS-NOT: clang{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-fatomic-ignore-denormal-mode"
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib -fgpu-exclude-wrong-side-overloads \
 // RUN:   --cuda-gpu-arch=gfx906  %s 2>&1 | FileCheck -check-prefix=FIX-OVERLOAD %s
@@ -83,16 +81,22 @@
 // RUN:   --cuda-gpu-arch=gfx906 -foffload-lto=thin -fwhole-program-vtables %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=HIPTHINLTO %s
 
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
-// RUN:   --cuda-gpu-arch=gfx906 -fgpu-rdc -foffload-lto=thin -fwhole-program-vtables %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=HIPTHINLTO %s
-
 // Ensure we don't error about -fwhole-program-vtables for the non-device offload compile.
 // HIPTHINLTO-NOT: error: invalid argument '-fwhole-program-vtables' only allowed with '-flto'
 // HIPTHINLTO-NOT: "-cc1"{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-flto-unit"
 // HIPTHINLTO: "-cc1"{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-flto=thin" "-flto-unit" {{.*}} "-fwhole-program-vtables"
 // HIPTHINLTO-NOT: "-cc1"{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-flto-unit"
-// HIPTHINLTO: lld{{.*}}"-plugin-opt=mcpu=gfx906" "-plugin-opt=thinlto" "-plugin-opt=-force-import-all"
+// HIPTHINLTO: clang-linker-wrapper{{.*}} "--device-compiler=amdgcn-amd-amdhsa=-flto=thin"
+
+// Check -no-canonical-prefixes is propagated correctly.
+
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
+// RUN:   --cuda-gpu-arch=gfx906 -foffload-lto=thin -fwhole-program-vtables -no-canonical-prefixes %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=HIPTHINLTO-NO-CANON-PREFIXES %s
+
+// Ensure that we invoke clang-linker-wrapper with --no-canonical-prefixes and
+// pass -no-canonical-prefixes as a device compiler flag.
+// HIPTHINLTO-NO-CANON-PREFIXES: clang-linker-wrapper{{.*}} "--device-compiler=amdgcn-amd-amdhsa=-no-canonical-prefixes" {{.*}} "--no-canonical-prefixes"
 
 // Check that -flto=thin is handled correctly, particularly with -fwhole-program-vtables.
 //
@@ -115,20 +119,12 @@
 // OMP-NOT: "-cc1"{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-fopenmp"
 // OMP: "-cc1"{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-fopenmp"
 
-// RUN: not %clang --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
-// RUN:   --offload-arch=gfx906 -fopenmp=libomp -fopenmp-targets=amdgcn %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=OMPTGT %s
-// OMPTGT: unsupported option '-fopenmp-targets=' for language mode 'HIP'
-
 // Check -Xoffload-linker option is passed to lld.
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
 // RUN:   --cuda-gpu-arch=gfx906 -fgpu-rdc -Xoffload-linker --build-id=md5 %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=OFL-LINK %s
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
-// RUN:   --cuda-gpu-arch=gfx906 -Xoffload-linker --build-id=md5 %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=OFL-LINK %s
-// OFL-LINK: lld{{.*}}"--build-id=md5"
+// OFL-LINK: clang-linker-wrapper{{.*}}"--device-linker=--build-id=md5"
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
 // RUN:   --offload-arch=gfx906 -fhip-kernel-arg-name %s 2>&1 \
@@ -242,3 +238,26 @@
 // NO-WARN-ATOMIC: clang{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-Werror=atomic-alignment" {{.*}} "-Wno-error=atomic-alignment"
 // NO-WARN-ATOMIC-NOT: clang{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-Werror=atomic-alignment"
 // NO-WARN-ATOMIC-NOT: clang{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-Wno-error=atomic-alignment"
+
+// Check --offload-compress --offload-jobs=N does not cause warning.
+// RUN: %clang -### -Werror --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
+// RUN:   --offload-arch=gfx1100 --offload-compress --offload-host-only -M %s \
+// RUN:   --offload-jobs=4 --offload-new-driver
+
+// Check --offload-jobs=N option.
+
+// RUN: %clang -### -Werror --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
+// RUN:   --offload-arch=gfx1100 --offload-new-driver --offload-jobs=4 %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=JOBS %s
+// JOBS: clang-linker-wrapper{{.*}} "--wrapper-jobs=4"
+
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
+// RUN:   --offload-arch=gfx1100 --offload-new-driver --offload-jobs=0x4 %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=INVJOBS %s
+// INVJOBS: clang: error: invalid integral value '0x4' in '--offload-jobs=0x4'
+
+// RUN: %clang -### -Werror --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
+// RUN:   --offload-arch=gfx1100 --offload-new-driver --offload-jobs=jobserver %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=JOBSV %s
+// JOBSV: clang-linker-wrapper{{.*}} "--wrapper-jobs=jobserver"
+

@@ -5,8 +5,9 @@ set(RTSAN_CXX_SOURCES
   rtsan_context.cpp
   rtsan_diagnostics.cpp
   rtsan_flags.cpp
-  rtsan_interceptors.cpp
+  rtsan_interceptors_posix.cpp
   rtsan_stats.cpp
+  rtsan_suppressions.cpp
   )
 
 set(RTSAN_PREINIT_SOURCES
@@ -14,21 +15,22 @@ set(RTSAN_PREINIT_SOURCES
 
 set(RTSAN_HEADERS
   rtsan.h
+  rtsan_checks.inc
   rtsan_assertions.h
   rtsan_context.h
   rtsan_diagnostics.h
   rtsan_flags.h
   rtsan_flags.inc
   rtsan_stats.h
+  rtsan_suppressions.h
   )
 
 set(RTSAN_DEPS)
 
 set(RTSAN_CFLAGS
-  ${COMPILER_RT_COMMON_CFLAGS}
-  ${COMPILER_RT_CXX_CFLAGS}
+  ${SANITIZER_COMMON_CFLAGS}
   -DSANITIZER_COMMON_NO_REDEFINE_BUILTINS)
-set(RTSAN_LINK_FLAGS ${COMPILER_RT_COMMON_LINK_FLAGS})
+set(RTSAN_LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS})
 set(RTSAN_DYNAMIC_LIBS
   ${COMPILER_RT_UNWINDER_LINK_LIBS}
   ${SANITIZER_CXX_ABI_LIBRARIES}

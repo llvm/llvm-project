@@ -1535,17 +1535,17 @@ vector unsigned long long test_vec_extracth_ul(void) {
 }
 
 vector signed int test_vec_vec_splati_si(void) {
-  // CHECK: ret <4 x i32> <i32 -17, i32 -17, i32 -17, i32 -17>
+  // CHECK: ret <4 x i32> splat (i32 -17)
   return vec_splati(-17);
 }
 
 vector unsigned int test_vec_vec_splati_ui(void) {
-  // CHECK: ret <4 x i32> <i32 16, i32 16, i32 16, i32 16>
+  // CHECK: ret <4 x i32> splat (i32 16)
   return vec_splati(16U);
 }
 
 vector float test_vec_vec_splati_f(void) {
-  // CHECK: ret <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+  // CHECK: ret <4 x float> splat (float 1.000000e+00)
   return vec_splati(1.0f);
 }
 
@@ -1863,7 +1863,7 @@ vector bool __int128 test_vec_cmpeq_bool_int128(void) {
 vector bool __int128 test_vec_cmpne_s128(void) {
   // CHECK-LABEL: @test_vec_cmpne_s128(
   // CHECK: call <1 x i128> @llvm.ppc.altivec.vcmpequq(<1 x i128>
-  // CHECK-NEXT: %not.i = xor <1 x i128> %4, <i128 -1>
+  // CHECK-NEXT: %not.i = xor <1 x i128> %4, splat (i128 -1)
   // CHECK-NEXT: ret <1 x i128> %not.i
   return vec_cmpne(vsi128a, vsi128b);
 }
@@ -1871,7 +1871,7 @@ vector bool __int128 test_vec_cmpne_s128(void) {
 vector bool __int128 test_vec_cmpne_u128(void) {
   // CHECK-LABEL: @test_vec_cmpne_u128(
   // CHECK: call <1 x i128> @llvm.ppc.altivec.vcmpequq(<1 x i128>
-  // CHECK-NEXT: xor <1 x i128> %4, <i128 -1>
+  // CHECK-NEXT: xor <1 x i128> %4, splat (i128 -1)
   // CHECK-NEXT: ret <1 x i128>
   return vec_cmpne(vui128a, vui128b);
 }
@@ -1879,7 +1879,7 @@ vector bool __int128 test_vec_cmpne_u128(void) {
 vector bool __int128 test_vec_cmpne_bool_int128(void) {
   // CHECK-LABEL: @test_vec_cmpne_bool_int128(
   // CHECK: call <1 x i128> @llvm.ppc.altivec.vcmpequq(<1 x i128>
-  // CHECK-NEXT: xor <1 x i128> %4, <i128 -1>
+  // CHECK-NEXT: xor <1 x i128> %4, splat (i128 -1)
   // CHECK-NEXT: ret <1 x i128>
   return vec_cmpne(vbi128a, vbi128b);
 }
@@ -1915,7 +1915,7 @@ vector bool __int128 test_vec_cmplt_u128(void) {
 vector bool __int128 test_vec_cmpge_s128(void) {
   // CHECK-LABEL: @test_vec_cmpge_s128(
   // CHECK: call <1 x i128> @llvm.ppc.altivec.vcmpgtsq(<1 x i128>
-  // CHECK-NEXT: xor <1 x i128> %6, <i128 -1>
+  // CHECK-NEXT: xor <1 x i128> %6, splat (i128 -1)
   // CHECK-NEXT: ret <1 x i128>
   return vec_cmpge(vsi128a, vsi128b);
 }
@@ -1923,7 +1923,7 @@ vector bool __int128 test_vec_cmpge_s128(void) {
 vector bool __int128 test_vec_cmpge_u128(void) {
   // CHECK-LABEL: @test_vec_cmpge_u128(
   // CHECK: call <1 x i128> @llvm.ppc.altivec.vcmpgtuq(<1 x i128>
-  // CHECK-NEXT: xor <1 x i128> %6, <i128 -1>
+  // CHECK-NEXT: xor <1 x i128> %6, splat (i128 -1)
   // CHECK-NEXT: ret <1 x i128>
   return vec_cmpge(vui128a, vui128b);
 }
@@ -1931,7 +1931,7 @@ vector bool __int128 test_vec_cmpge_u128(void) {
 vector bool __int128 test_vec_cmple_s128(void) {
   // CHECK-LABEL: @test_vec_cmple_s128(
   // CHECK: call <1 x i128> @llvm.ppc.altivec.vcmpgtsq(<1 x i128>
-  // CHECK-NEXT: xor <1 x i128> %8, <i128 -1>
+  // CHECK-NEXT: xor <1 x i128> %8, splat (i128 -1)
   // CHECK-NEXT: ret <1 x i128>
   return vec_cmple(vsi128a, vsi128b);
 }
@@ -1939,7 +1939,7 @@ vector bool __int128 test_vec_cmple_s128(void) {
 vector bool __int128 test_vec_cmple_u128(void) {
   // CHECK-LABEL: @test_vec_cmple_u128(
   // CHECK: call <1 x i128> @llvm.ppc.altivec.vcmpgtuq(<1 x i128>
-  // CHECK-NEXT: xor <1 x i128> %8, <i128 -1>
+  // CHECK-NEXT: xor <1 x i128> %8, splat (i128 -1)
   // CHECK-NEXT: ret <1 x i128>
   return vec_cmple(vui128a, vui128b);
 }

@@ -10,6 +10,6 @@ defined:
         .section __DATA,__tim2
 later:
 
-// CHECK-ERROR: 3:9: error: symbol 'thing' can not be undefined in a subtraction expression
-// CHECK-ERROR: 4:9: error: symbol 'thing2' can not be undefined in a subtraction expression
-// CHECK-ERROR: 5:9: error: Section too large, can't encode r_address (0x100000b) into 24 bits of scattered relocation entry.
+// CHECK-ERROR: 3:24: error: symbol 'thing' can not be undefined in a subtraction expression
+// CHECK-ERROR: 4:26: error: symbol 'thing2' can not be undefined in a subtraction expression
+// CHECK-ERROR: 5:24: error: Section too large, can't encode r_address (0x100000b) into 24 bits of scattered relocation entry.

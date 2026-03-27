@@ -156,9 +156,10 @@ public:
     m_s.Format("    {0}: ", item.id);
 
     if (m_options.show_timestamps) {
-      m_s.Format("[{0}] ", item.timestamp
-                               ? formatv("{0:3} ns", *item.timestamp).str()
-                               : "unavailable");
+      if (item.timestamp)
+        m_s << formatv("[{0:3} ns]", *item.timestamp);
+      else
+        m_s << "[unavailable]";
     }
 
     if (item.event) {
@@ -510,9 +511,9 @@ CalculateDisass(const TraceDumper::SymbolInfo &symbol_info,
   const ArchSpec arch = target.GetArchitecture();
   lldb_private::AddressRange range(symbol_info.address,
                                    arch.GetMaximumOpcodeByteSize());
-  DisassemblerSP disassembler =
-      Disassembler::DisassembleRange(arch, /*plugin_name*/ nullptr,
-                                     /*flavor*/ nullptr, target, range);
+  DisassemblerSP disassembler = Disassembler::DisassembleRange(
+      arch, /*plugin_name=*/nullptr,
+      /*flavor=*/nullptr, /*cpu=*/nullptr, /*features=*/nullptr, target, range);
   return std::make_tuple(
       disassembler,
       disassembler ? disassembler->GetInstructionList().GetInstructionAtAddress(

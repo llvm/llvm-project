@@ -151,8 +151,8 @@ class ScopedHashTable : detail::AllocatorHolder<AllocatorTy> {
   using AllocTy = detail::AllocatorHolder<AllocatorTy>;
 
 public:
-  /// ScopeTy - This is a helpful typedef that allows clients to get easy access
-  /// to the name of the scope for this hash table.
+  /// ScopeTy - A type alias for easy access to the name of the scope for this
+  /// hash table.
   using ScopeTy = ScopedHashTableScope<K, V, KInfo, AllocatorTy>;
   using size_type = unsigned;
 

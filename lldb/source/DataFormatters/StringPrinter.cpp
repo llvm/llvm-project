@@ -9,11 +9,11 @@
 #include "lldb/DataFormatters/StringPrinter.h"
 
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ConvertUTF.h"
@@ -404,8 +404,7 @@ static bool ReadEncodedBufferAndDumpToStream(
   if (!options.GetStream())
     return false;
 
-  if (options.GetLocation() == 0 ||
-      options.GetLocation() == LLDB_INVALID_ADDRESS)
+  if (options.GetLocation() == Address(0) || options.GetLocation() == Address())
     return false;
 
   lldb::TargetSP target_sp = options.GetTargetSP();

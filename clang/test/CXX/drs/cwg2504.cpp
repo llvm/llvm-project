@@ -21,7 +21,7 @@ struct B : A {
 struct C : B {};
 void foo() { C c; } // bar is not invoked, because the V subobject is not initialized as part of B
 #endif
-}
+} // namespace cwg2504
 
 // FIXME: As specified in the comment above (which comes from an example in the Standard),
 //        we are not supposed to unconditionally call `bar()` and call a constructor

@@ -32,6 +32,7 @@
 #include "llvm/ADT/GenericSSAContext.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -52,6 +53,10 @@ private:
   /// The parent cycle. Is null for the root "cycle". Top-level cycles point
   /// at the root.
   GenericCycle *ParentCycle = nullptr;
+
+  /// The top-level cycle this cycle is part of. Points to itself if this is
+  /// a top-level cycle.
+  GenericCycle *TopLevelCycle;
 
   /// The entry block(s) of the cycle. The header is the only entry if
   /// this is a loop. Is empty for the root "cycle", to avoid
@@ -74,16 +79,27 @@ private:
   ///       always have the same depth.
   unsigned Depth = 0;
 
+  /// Cache for the results of GetExitBlocks
+  mutable SmallVector<BlockT *, 4> ExitBlocksCache;
+
   void clear() {
     Entries.clear();
     Children.clear();
     Blocks.clear();
     Depth = 0;
     ParentCycle = nullptr;
+    clearCache();
   }
 
-  void appendEntry(BlockT *Block) { Entries.push_back(Block); }
-  void appendBlock(BlockT *Block) { Blocks.insert(Block); }
+  void appendEntry(BlockT *Block) {
+    Entries.push_back(Block);
+    clearCache();
+  }
+
+  void appendBlock(BlockT *Block) {
+    Blocks.insert(Block);
+    clearCache();
+  }
 
   GenericCycle(const GenericCycle &) = delete;
   GenericCycle &operator=(const GenericCycle &) = delete;
@@ -91,7 +107,7 @@ private:
   GenericCycle &operator=(GenericCycle &&Rhs) = delete;
 
 public:
-  GenericCycle() = default;
+  GenericCycle() : TopLevelCycle(this) {}
 
   /// \brief Whether the cycle is a natural loop.
   bool isReducible() const { return Entries.size() == 1; }
@@ -101,6 +117,11 @@ public:
   const SmallVectorImpl<BlockT *> & getEntries() const {
     return Entries;
   }
+
+  /// Clear the cache of the cycle.
+  /// This should be run in all non-const function in GenericCycle
+  /// and GenericCycleInfo.
+  void clearCache() const { ExitBlocksCache.clear(); }
 
   /// \brief Return whether \p Block is an entry block of the cycle.
   bool isEntry(const BlockT *Block) const {
@@ -112,6 +133,7 @@ public:
     assert(contains(Block));
     Entries.clear();
     Entries.push_back(Block);
+    clearCache();
   }
 
   /// \brief Return whether \p Block is contained in the cycle.
@@ -213,13 +235,9 @@ public:
 
   Printable printEntries(const ContextT &Ctx) const {
     return Printable([this, &Ctx](raw_ostream &Out) {
-      bool First = true;
-      for (auto *Entry : Entries) {
-        if (!First)
-          Out << ' ';
-        First = false;
-        Out << Ctx.print(Entry);
-      }
+      ListSeparator LS(" ");
+      for (auto *Entry : Entries)
+        Out << LS << Ctx.print(Entry);
     });
   }
 
@@ -248,12 +266,10 @@ public:
 
 private:
   ContextT Context;
+  unsigned BlockNumberEpoch;
 
-  /// Map basic blocks to their inner-most containing cycle.
-  DenseMap<BlockT *, CycleT *> BlockMap;
-
-  /// Map basic blocks to their top level containing cycle.
-  DenseMap<BlockT *, CycleT *> BlockMapTopLevel;
+  /// Map basic block numbers to their inner-most containing cycle.
+  SmallVector<CycleT *> BlockMap;
 
   /// Top-level cycles discovered by any DFS.
   ///
@@ -266,6 +282,9 @@ private:
   /// Note: This is an incomplete operation that does not update the depth of
   /// the subtree.
   void moveTopLevelCycleToNewParent(CycleT *NewParent, CycleT *Child);
+
+  void verifyBlockNumberEpoch(const FunctionT *Fn) const;
+  void addToBlockMap(BlockT *Block, CycleT *Cycle);
 
 public:
   GenericCycleInfo() = default;
@@ -281,8 +300,9 @@ public:
 
   CycleT *getCycle(const BlockT *Block) const;
   CycleT *getSmallestCommonCycle(CycleT *A, CycleT *B) const;
+  CycleT *getSmallestCommonCycle(BlockT *A, BlockT *B) const;
   unsigned getCycleDepth(const BlockT *Block) const;
-  CycleT *getTopLevelParentCycle(BlockT *Block);
+  CycleT *getTopLevelParentCycle(const BlockT *Block) const;
 
   /// Assumes that \p Cycle is the innermost cycle containing \p Block.
   /// \p Block will be appended to \p Cycle and all of its parent cycles.

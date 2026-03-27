@@ -2,7 +2,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %S/Inputs/compress-debug.s -o %t2.o
-# RUN: ld.lld %t2.o %t.o -o %t1 --compress-debug-sections=zlib -Ttext=0
+# RUN: ld.lld %t2.o %t.o -o %t1 --compress-debug-sections=zlib --image-base=0 -Ttext=0
 # RUN: llvm-dwarfdump %t1 -debug-str | FileCheck %s
 # These two checks correspond to the patched values of a_sym and a_debug_sym.
 # D = 0x44 - address of .text input section for this file (the start address of

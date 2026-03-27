@@ -40,7 +40,7 @@ entry:
   store i32 1, ptr addrspace(5) %tmp2
   %tmp3 = getelementptr [2 x i32], ptr addrspace(5) %tmp, i32 0, i32 %in
   %tmp4 = load i32, ptr addrspace(5) %tmp3
-  %tmp5 = load volatile i32, ptr addrspace(1) undef
+  %tmp5 = load volatile i32, ptr addrspace(1) poison
   %tmp6 = add i32 %tmp4, %tmp5
   store i32 %tmp6, ptr addrspace(1) %out
   ret void
@@ -95,5 +95,3 @@ declare i32 @llvm.amdgcn.workitem.id.x() #1
 attributes #0 = { nounwind "amdgpu-flat-work-group-size"="64,64" }
 attributes #1 = { nounwind readnone }
 
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

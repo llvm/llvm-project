@@ -50,9 +50,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "scalarizer"
 
-namespace {
-
-BasicBlock::iterator skipPastPhiNodesAndDbg(BasicBlock::iterator Itr) {
+static BasicBlock::iterator skipPastPhiNodesAndDbg(BasicBlock::iterator Itr) {
   BasicBlock *BB = Itr->getParent();
   if (isa<PHINode>(Itr))
     Itr = BB->getFirstInsertionPt();
@@ -75,6 +73,8 @@ using ScatterMap = std::map<std::pair<Value *, Type *>, ValueVector>;
 // Lists Instructions that have been replaced with scalar implementations,
 // along with a pointer to their scattered forms.
 using GatherList = SmallVector<std::pair<Instruction *, ValueVector *>, 16>;
+
+namespace {
 
 struct VectorSplit {
   // The type of the vector.
@@ -196,6 +196,25 @@ struct VectorLayout {
   // The size of each (non-remainder) fragment in bytes.
   uint64_t SplitSize = 0;
 };
+} // namespace
+
+static bool isStructOfMatchingFixedVectors(Type *Ty) {
+  if (!isa<StructType>(Ty))
+    return false;
+  unsigned StructSize = Ty->getNumContainedTypes();
+  if (StructSize < 1)
+    return false;
+  FixedVectorType *VecTy = dyn_cast<FixedVectorType>(Ty->getContainedType(0));
+  if (!VecTy)
+    return false;
+  unsigned VecSize = VecTy->getNumElements();
+  for (unsigned I = 1; I < StructSize; I++) {
+    VecTy = dyn_cast<FixedVectorType>(Ty->getContainedType(I));
+    if (!VecTy || VecSize != VecTy->getNumElements())
+      return false;
+  }
+  return true;
+}
 
 /// Concatenate the given fragments to a single vector value of the type
 /// described in @p VS.
@@ -233,7 +252,14 @@ static Value *concatenate(IRBuilder<> &Builder, ArrayRef<Value *> Fragments,
       Res = Builder.CreateInsertElement(Res, Fragment, I * VS.NumPacked,
                                         Name + ".upto" + Twine(I));
     } else {
-      Fragment = Builder.CreateShuffleVector(Fragment, Fragment, ExtendMask);
+      if (NumPacked < VS.NumPacked) {
+        // If last pack of remained bits not match current ExtendMask size.
+        ExtendMask.truncate(NumPacked);
+        ExtendMask.resize(NumElements, -1);
+      }
+
+      Fragment = Builder.CreateShuffleVector(
+          Fragment, PoisonValue::get(Fragment->getType()), ExtendMask);
       if (I == 0) {
         Res = Fragment;
       } else {
@@ -250,6 +276,7 @@ static Value *concatenate(IRBuilder<> &Builder, ArrayRef<Value *> Fragments,
   return Res;
 }
 
+namespace {
 class ScalarizerVisitor : public InstVisitor<ScalarizerVisitor, bool> {
 public:
   ScalarizerVisitor(DominatorTree *DT, const TargetTransformInfo *TTI,
@@ -260,8 +287,6 @@ public:
         ScalarizeMinBits(Options.ScalarizeMinBits) {}
 
   bool visit(Function &F);
-
-  bool isTriviallyScalarizable(Intrinsic::ID ID);
 
   // InstVisitor methods.  They return true if the instruction was scalarized,
   // false if nothing changed.
@@ -276,6 +301,7 @@ public:
   bool visitBitCastInst(BitCastInst &BCI);
   bool visitInsertElementInst(InsertElementInst &IEI);
   bool visitExtractElementInst(ExtractElementInst &EEI);
+  bool visitExtractValueInst(ExtractValueInst &EVI);
   bool visitShuffleVectorInst(ShuffleVectorInst &SVI);
   bool visitPHINode(PHINode &PHI);
   bool visitLoadInst(LoadInst &LI);
@@ -441,8 +467,10 @@ bool ScalarizerVisitor::visit(Function &F) {
       Instruction *I = &*II;
       bool Done = InstVisitor::visit(I);
       ++II;
-      if (Done && I->getType()->isVoidTy())
+      if (Done && I->getType()->isVoidTy()) {
         I->eraseFromParent();
+        Scalarized = true;
+      }
     }
   }
   return finish();
@@ -664,17 +692,16 @@ bool ScalarizerVisitor::splitBinary(Instruction &I, const Splitter &Split) {
   return true;
 }
 
-bool ScalarizerVisitor::isTriviallyScalarizable(Intrinsic::ID ID) {
-  if (isTriviallyVectorizable(ID))
-    return true;
-  return Intrinsic::isTargetIntrinsic(ID) &&
-         TTI->isTargetIntrinsicTriviallyScalarizable(ID);
-}
-
 /// If a call to a vector typed intrinsic function, split into a scalar call per
 /// element if possible for the intrinsic.
 bool ScalarizerVisitor::splitCall(CallInst &CI) {
-  std::optional<VectorSplit> VS = getVectorSplit(CI.getType());
+  Type *CallType = CI.getType();
+  bool AreAllVectorsOfMatchingSize = isStructOfMatchingFixedVectors(CallType);
+  std::optional<VectorSplit> VS;
+  if (AreAllVectorsOfMatchingSize)
+    VS = getVectorSplit(CallType->getContainedType(0));
+  else
+    VS = getVectorSplit(CallType);
   if (!VS)
     return false;
 
@@ -684,7 +711,7 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
 
   Intrinsic::ID ID = F->getIntrinsicID();
 
-  if (ID == Intrinsic::not_intrinsic || !isTriviallyScalarizable(ID))
+  if (ID == Intrinsic::not_intrinsic || !isTriviallyScalarizable(ID, TTI))
     return false;
 
   // unsigned NumElems = VT->getNumElements();
@@ -696,9 +723,25 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
 
   SmallVector<llvm::Type *, 3> Tys;
   // Add return type if intrinsic is overloaded on it.
-  if (isVectorIntrinsicWithOverloadTypeAtArg(ID, -1))
+  if (isVectorIntrinsicWithOverloadTypeAtArg(ID, -1, TTI))
     Tys.push_back(VS->SplitTy);
 
+  if (AreAllVectorsOfMatchingSize) {
+    for (unsigned I = 1; I < CallType->getNumContainedTypes(); I++) {
+      std::optional<VectorSplit> CurrVS =
+          getVectorSplit(cast<FixedVectorType>(CallType->getContainedType(I)));
+      // It is possible for VectorSplit.NumPacked >= NumElems. If that happens a
+      // VectorSplit is not returned and we will bailout of handling this call.
+      // The secondary bailout case is if NumPacked does not match. This can
+      // happen if ScalarizeMinBits is not set to the default. This means with
+      // certain ScalarizeMinBits intrinsics like frexp will only scalarize when
+      // the struct elements have the same bitness.
+      if (!CurrVS || CurrVS->NumPacked != VS->NumPacked)
+        return false;
+      if (isVectorIntrinsicWithStructReturnOverloadAtField(ID, I, TTI))
+        Tys.push_back(CurrVS->SplitTy);
+    }
+  }
   // Assumes that any vector type has the same number of elements as the return
   // vector type, which is true for all current intrinsics.
   for (unsigned I = 0; I != NumArgs; ++I) {
@@ -719,13 +762,13 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
       }
 
       Scattered[I] = scatter(&CI, OpI, *OpVS);
-      if (isVectorIntrinsicWithOverloadTypeAtArg(ID, I)) {
+      if (isVectorIntrinsicWithOverloadTypeAtArg(ID, I, TTI)) {
         OverloadIdx[I] = Tys.size();
         Tys.push_back(OpVS->SplitTy);
       }
     } else {
       ScalarOperands[I] = OpI;
-      if (isVectorIntrinsicWithOverloadTypeAtArg(ID, I))
+      if (isVectorIntrinsicWithOverloadTypeAtArg(ID, I, TTI))
         Tys.push_back(OpI->getType());
     }
   }
@@ -733,7 +776,8 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
   ValueVector Res(VS->NumFragments);
   ValueVector ScalarCallOps(NumArgs);
 
-  Function *NewIntrin = Intrinsic::getDeclaration(F->getParent(), ID, Tys);
+  Function *NewIntrin =
+      Intrinsic::getOrInsertDeclaration(F->getParent(), ID, Tys);
   IRBuilder<> Builder(&CI);
 
   // Perform actual scalarization, taking care to preserve any scalar operands.
@@ -745,7 +789,7 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
       Tys[0] = VS->RemainderTy;
 
     for (unsigned J = 0; J != NumArgs; ++J) {
-      if (isVectorIntrinsicWithScalarOpAtArg(ID, J)) {
+      if (isVectorIntrinsicWithScalarOpAtArg(ID, J, TTI)) {
         ScalarCallOps.push_back(ScalarOperands[J]);
       } else {
         ScalarCallOps.push_back(Scattered[J][I]);
@@ -755,7 +799,7 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
     }
 
     if (IsRemainder)
-      NewIntrin = Intrinsic::getDeclaration(F->getParent(), ID, Tys);
+      NewIntrin = Intrinsic::getOrInsertDeclaration(F->getParent(), ID, Tys);
 
     Res[I] = Builder.CreateCall(NewIntrin, ScalarCallOps,
                                 CI.getName() + ".i" + Twine(I));
@@ -1028,6 +1072,56 @@ bool ScalarizerVisitor::visitInsertElementInst(InsertElementInst &IEI) {
   return true;
 }
 
+bool ScalarizerVisitor::visitExtractValueInst(ExtractValueInst &EVI) {
+  Value *Op = EVI.getOperand(0);
+  Type *OpTy = Op->getType();
+  ValueVector Res;
+  if (!isStructOfMatchingFixedVectors(OpTy))
+    return false;
+  if (CallInst *CI = dyn_cast<CallInst>(Op)) {
+    Function *F = CI->getCalledFunction();
+    if (!F)
+      return false;
+    Intrinsic::ID ID = F->getIntrinsicID();
+    if (ID == Intrinsic::not_intrinsic || !isTriviallyScalarizable(ID, TTI))
+      return false;
+    // Note: Fall through means Operand is a`CallInst` and it is defined in
+    // `isTriviallyScalarizable`.
+  } else
+    return false;
+  Type *VecType = cast<FixedVectorType>(OpTy->getContainedType(0));
+  std::optional<VectorSplit> VS = getVectorSplit(VecType);
+  if (!VS)
+    return false;
+  for (unsigned I = 1; I < OpTy->getNumContainedTypes(); I++) {
+    std::optional<VectorSplit> CurrVS =
+        getVectorSplit(cast<FixedVectorType>(OpTy->getContainedType(I)));
+    // It is possible for VectorSplit.NumPacked >= NumElems. If that happens a
+    // VectorSplit is not returned and we will bailout of handling this call.
+    // The secondary bailout case is if NumPacked does not match. This can
+    // happen if ScalarizeMinBits is not set to the default. This means with
+    // certain ScalarizeMinBits intrinsics like frexp will only scalarize when
+    // the struct elements have the same bitness.
+    if (!CurrVS || CurrVS->NumPacked != VS->NumPacked)
+      return false;
+  }
+  IRBuilder<> Builder(&EVI);
+  Scatterer Op0 = scatter(&EVI, Op, *VS);
+  assert(!EVI.getIndices().empty() && "Make sure an index exists");
+  // Note for our use case we only care about the top level index.
+  unsigned Index = EVI.getIndices()[0];
+  for (unsigned OpIdx = 0; OpIdx < Op0.size(); ++OpIdx) {
+    Value *ResElem = Builder.CreateExtractValue(
+        Op0[OpIdx], Index, EVI.getName() + ".elem" + Twine(Index));
+    Res.push_back(ResElem);
+  }
+
+  Type *ActualVecType = cast<FixedVectorType>(OpTy->getContainedType(Index));
+  std::optional<VectorSplit> AVS = getVectorSplit(ActualVecType);
+  gather(&EVI, Res, *AVS);
+  return true;
+}
+
 bool ScalarizerVisitor::visitExtractElementInst(ExtractElementInst &EEI) {
   std::optional<VectorSplit> VS = getVectorSplit(EEI.getOperand(0)->getType());
   if (!VS)
@@ -1039,6 +1133,8 @@ bool ScalarizerVisitor::visitExtractElementInst(ExtractElementInst &EEI) {
 
   if (auto *CI = dyn_cast<ConstantInt>(ExtIdx)) {
     unsigned Idx = CI->getZExtValue();
+    if (Idx >= VS->VecTy->getNumElements())
+      return false;
     unsigned Fragment = Idx / VS->NumPacked;
     Value *Res = Op0[Fragment];
     bool IsPacked = VS->NumPacked > 1;
@@ -1207,6 +1303,35 @@ bool ScalarizerVisitor::finish() {
         Res = concatenate(Builder, CV, VS, Op->getName());
 
         Res->takeName(Op);
+      } else if (auto *Ty = dyn_cast<StructType>(Op->getType())) {
+        BasicBlock *BB = Op->getParent();
+        IRBuilder<> Builder(Op);
+        if (isa<PHINode>(Op))
+          Builder.SetInsertPoint(BB, BB->getFirstInsertionPt());
+
+        // Iterate over each element in the struct
+        unsigned NumOfStructElements = Ty->getNumElements();
+        SmallVector<ValueVector, 4> ElemCV(NumOfStructElements);
+        for (unsigned I = 0; I < NumOfStructElements; ++I) {
+          for (auto *CVelem : CV) {
+            Value *Elem = Builder.CreateExtractValue(
+                CVelem, I, Op->getName() + ".elem" + Twine(I));
+            ElemCV[I].push_back(Elem);
+          }
+        }
+        Res = PoisonValue::get(Ty);
+        for (unsigned I = 0; I < NumOfStructElements; ++I) {
+          Type *ElemTy = Ty->getElementType(I);
+          assert(isa<FixedVectorType>(ElemTy) &&
+                 "Only Structs of all FixedVectorType supported");
+          VectorSplit VS = *getVectorSplit(ElemTy);
+          assert(VS.NumFragments == CV.size());
+
+          Value *ConcatenatedVector =
+              concatenate(Builder, ElemCV[I], VS, Op->getName());
+          Res = Builder.CreateInsertValue(Res, ConcatenatedVector, I,
+                                          Op->getName() + ".insert");
+        }
       } else {
         assert(CV.size() == 1 && Op->getType() == CV[0]->getType());
         Res = CV[0];

@@ -501,9 +501,8 @@ define void @arm_q15_to_q31_altorder(ptr nocapture noundef readonly %pSrc, ptr n
 ; CHECK-NEXT:    lsls r2, r2, #16
 ; CHECK-NEXT:    str r2, [r1, #48]
 ; CHECK-NEXT:    adds r1, #64
-; CHECK-NEXT:    subs r3, r3, #4
 ; CHECK-NEXT:    adds r0, #32
-; CHECK-NEXT:    cmp r3, #0
+; CHECK-NEXT:    subs r3, r3, #4
 ; CHECK-NEXT:    bne .LBB1_5
 ; CHECK-NEXT:  .LBB1_6: @ %while.end
 ; CHECK-NEXT:    movs r2, #3

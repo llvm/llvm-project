@@ -15,12 +15,12 @@
 #define LLVM_LIB_TARGET_HEXAGON_MCTARGETDESC_HEXAGONMCCODEEMITTER_H
 
 #include "MCTargetDesc/HexagonFixupKinds.h"
+#include "MCTargetDesc/HexagonMCExpr.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include <cstddef>
 #include <cstdint>
-#include <memory>
 
 namespace llvm {
 
@@ -77,7 +77,7 @@ private:
 
   Hexagon::Fixups getFixupNoBits(MCInstrInfo const &MCII, const MCInst &MI,
                                  const MCOperand &MO,
-                                 const MCSymbolRefExpr::VariantKind Kind) const;
+                                 HexagonMCExpr::VariantKind Kind) const;
 
   // Return parse bits for instruction `MCI' inside bundle `MCB'
   uint32_t parseBits(size_t Last, MCInst const &MCB, MCInst const &MCI) const;

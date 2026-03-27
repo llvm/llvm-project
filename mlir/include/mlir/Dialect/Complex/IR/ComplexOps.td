@@ -432,7 +432,7 @@ def NotEqualOp : Complex_Op<"neq",
 def PowOp : ComplexArithmeticOp<"pow"> {
   let summary = "complex power function";
   let description = [{
-    The `sqrt` operation takes a complex number raises it to the given complex
+    The `pow` operation takes a complex number raises it to the given complex
     exponent.
 
     Example:
@@ -441,6 +441,36 @@ def PowOp : ComplexArithmeticOp<"pow"> {
     %a = complex.pow %b, %c : complex<f32>
     ```
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// PowiOp
+//===----------------------------------------------------------------------===//
+
+def PowiOp : Complex_Op<"powi",
+    [Pure, Elementwise, SameOperandsAndResultShape,
+     AllTypesMatch<["lhs", "result"]>,
+     DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
+  let summary = "complex number raised to signed integer power";
+  let description = [{
+    The `powi` operation takes a `base` operand of complex type and a `power`
+    operand of signed integer type and returns one result of the same type
+    as `base`. The result is `base` raised to the power of `power`.
+
+    Example:
+
+    ```mlir
+    %a = complex.powi %b, %c : complex<f32>, i32
+    ```
+  }];
+
+  let arguments = (ins Complex<AnyFloat>:$lhs,
+                       AnySignlessInteger:$rhs,
+                       OptionalAttr<Arith_FastMathAttr>:$fastmath);
+  let results = (outs Complex<AnyFloat>:$result);
+
+  let assemblyFormat =
+      "$lhs `,` $rhs (`fastmath` `` $fastmath^)? attr-dict `:` type($result) `,` type($rhs)";
 }
 
 //===----------------------------------------------------------------------===//

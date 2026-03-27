@@ -81,6 +81,116 @@ func.func @erf_scalar(%arg0: f32) -> f32 {
   return %0 : f32
 }
 
+// CHECK-LABEL: func @erfc_scalar(
+// CHECK-SAME:    %[[val_arg0:.*]]: f32) -> f32 {
+// CHECK-DAG:     %[[c127_i32:.*]] = arith.constant 127 : i32
+// CHECK-DAG:     %[[c23_i32:.*]] = arith.constant 23 : i32
+// CHECK-DAG:     %[[cst:.*]] = arith.constant 1.270000e+02 : f32
+// CHECK-DAG:     %[[cst_0:.*]] = arith.constant -1.270000e+02 : f32
+// CHECK-DAG:     %[[cst_1:.*]] = arith.constant 8.880000e+01 : f32
+// CHECK-DAG:     %[[cst_2:.*]] = arith.constant -8.780000e+01 : f32
+// CHECK-DAG:     %[[cst_3:.*]] = arith.constant 0.166666657 : f32
+// CHECK-DAG:     %[[cst_4:.*]] = arith.constant 0.0416657962 : f32
+// CHECK-DAG:     %[[cst_5:.*]] = arith.constant 0.00833345205 : f32
+// CHECK-DAG:     %[[cst_6:.*]] = arith.constant 0.00139819994 : f32
+// CHECK-DAG:     %[[cst_7:.*]] = arith.constant 1.98756912E-4 : f32
+// CHECK-DAG:     %[[cst_8:.*]] = arith.constant 2.12194442E-4 : f32
+// CHECK-DAG:     %[[cst_9:.*]] = arith.constant -0.693359375 : f32
+// CHECK-DAG:     %[[cst_10:.*]] = arith.constant 1.44269502 : f32
+// CHECK-DAG:     %[[cst_11:.*]] = arith.constant 0.276978403 : f32
+// CHECK-DAG:     %[[cst_12:.*]] = arith.constant -0.0927639827 : f32
+// CHECK-DAG:     %[[cst_13:.*]] = arith.constant -0.166031361 : f32
+// CHECK-DAG:     %[[cst_14:.*]] = arith.constant 0.164055392 : f32
+// CHECK-DAG:     %[[cst_15:.*]] = arith.constant -0.0542046614 : f32
+// CHECK-DAG:     %[[cst_16:.*]] = arith.constant -8.059920e-03 : f32
+// CHECK-DAG:     %[[cst_17:.*]] = arith.constant 0.00863227434 : f32
+// CHECK-DAG:     %[[cst_18:.*]] = arith.constant 0.00131355342 : f32
+// CHECK-DAG:     %[[cst_19:.*]] = arith.constant -0.0012307521 : f32
+// CHECK-DAG:     %[[cst_20:.*]] = arith.constant -4.01139259E-4 : f32
+// CHECK-DAG:     %[[cst_true:.*]] = arith.constant true
+// CHECK-DAG:     %[[cst_21:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK-DAG:     %[[cst_22:.*]] = arith.constant 1.000000e+00 : f32
+// CHECK-DAG:     %[[cst_23:.*]] = arith.constant 5.000000e-01 : f32
+// CHECK-DAG:     %[[cst_24:.*]] = arith.constant -4.000000e+00 : f32
+// CHECK-DAG:     %[[cst_25:.*]] = arith.constant -2.000000e+00 : f32
+// CHECK-DAG:     %[[cst_26:.*]] = arith.constant 2.000000e+00 : f32
+// CHECK-DAG:     %[[cst_27:.*]] = arith.constant 0x7F800000 : f32
+// CHECK-DAG:     %[[cst_28:.*]] = arith.constant 10.0546875 : f32
+// CHECK:         %[[val_2:.*]] = math.absf %[[val_arg0]] : f32
+// CHECK-NEXT:    %[[val_3:.*]] = arith.addf %[[val_2]], %[[cst_26]] : f32
+// CHECK-NEXT:    %[[val_4:.*]] = arith.divf %[[cst_22]], %[[val_3]] : f32
+// CHECK-NEXT:    %[[val_5:.*]] = math.fma %[[cst_24]], %[[val_4]], %[[cst_22]] : f32
+// CHECK-NEXT:    %[[val_6:.*]] = arith.addf %[[val_5]], %[[cst_22]] : f32
+// CHECK-NEXT:    %[[val_7:.*]] = math.fma %[[val_6]], %[[cst_25]], %[[val_2]] : f32
+// CHECK-NEXT:    %[[val_8:.*]] = arith.negf %[[val_2]] : f32
+// CHECK-NEXT:    %[[val_9:.*]] = math.fma %[[val_8]], %[[val_5]], %[[val_7]] : f32
+// CHECK-NEXT:    %[[val_10:.*]] = math.fma %[[val_4]], %[[val_9]], %[[val_5]] : f32
+// CHECK-NEXT:    %[[val_11:.*]] = math.fma %[[cst_20]], %[[val_10]], %[[cst_19]] : f32
+// CHECK-NEXT:    %[[val_12:.*]] = math.fma %[[val_11]], %[[val_10]], %[[cst_18]] : f32
+// CHECK-NEXT:    %[[val_13:.*]] = math.fma %[[val_12]], %[[val_10]], %[[cst_17]] : f32
+// CHECK-NEXT:    %[[val_14:.*]] = math.fma %[[val_13]], %[[val_10]], %[[cst_16]] : f32
+// CHECK-NEXT:    %[[val_15:.*]] = math.fma %[[val_14]], %[[val_10]], %[[cst_15]] : f32
+// CHECK-NEXT:    %[[val_16:.*]] = math.fma %[[val_15]], %[[val_10]], %[[cst_14]] : f32
+// CHECK-NEXT:    %[[val_17:.*]] = math.fma %[[val_16]], %[[val_10]], %[[cst_13]] : f32
+// CHECK-NEXT:    %[[val_18:.*]] = math.fma %[[val_17]], %[[val_10]], %[[cst_12]] : f32
+// CHECK-NEXT:    %[[val_19:.*]] = math.fma %[[val_18]], %[[val_10]], %[[cst_11]] : f32
+// CHECK-NEXT:    %[[val_20:.*]] = math.fma %[[cst_26]], %[[val_2]], %[[cst_22]] : f32
+// CHECK-NEXT:    %[[val_21:.*]] = arith.divf %[[cst_22]], %[[val_20]] : f32
+// CHECK-NEXT:    %[[val_22:.*]] = math.fma %[[val_19]], %[[val_21]], %[[val_21]] : f32
+// CHECK-NEXT:    %[[val_23:.*]] = arith.negf %[[val_2]] : f32
+// CHECK-NEXT:    %[[val_24:.*]] = math.fma %[[val_22]], %[[val_23]], %[[cst_23]] : f32
+// CHECK-NEXT:    %[[val_25:.*]] = arith.subf %[[val_19]], %[[val_22]] : f32
+// CHECK-NEXT:    %[[val_26:.*]] = math.fma %[[val_24]], %[[cst_26]], %[[val_25]] : f32
+// CHECK-NEXT:    %[[val_27:.*]] = math.fma %[[val_26]], %[[val_21]], %[[val_22]] : f32
+// CHECK-NEXT:    %[[val_28:.*]] = arith.mulf %[[val_2]], %[[val_2]] : f32
+// CHECK-NEXT:    %[[val_29:.*]] = arith.negf %[[val_28]] : f32
+// CHECK-NEXT:    %[[val_30:.*]] = arith.cmpf uge, %[[val_29]], %[[cst_2]] : f32
+// CHECK-NEXT:    %[[val_31:.*]] = arith.select %[[val_30]], %[[val_29]], %[[cst_2]] : f32
+// CHECK-NEXT:    %[[val_32:.*]] = arith.cmpf ule, %[[val_31]], %[[cst_1]] : f32
+// CHECK-NEXT:    %[[val_33:.*]] = arith.select %[[val_32]], %[[val_31]], %[[cst_1]] : f32
+// CHECK-NEXT:    %[[val_34:.*]] = math.fma %[[val_33]], %[[cst_10]], %[[cst_23]] : f32
+// CHECK-NEXT:    %[[val_35:.*]] = math.floor %[[val_34]] : f32
+// CHECK-NEXT:    %[[val_36:.*]] = arith.cmpf uge, %[[val_35]], %[[cst_0]] : f32
+// CHECK-NEXT:    %[[val_37:.*]] = arith.select %[[val_36]], %[[val_35]], %[[cst_0]] : f32
+// CHECK-NEXT:    %[[val_38:.*]] = arith.cmpf ule, %[[val_37]], %[[cst]] : f32
+// CHECK-NEXT:    %[[val_39:.*]] = arith.select %[[val_38]], %[[val_37]], %[[cst]] : f32
+// CHECK-NEXT:    %[[val_40:.*]] = math.fma %[[cst_9]], %[[val_39]], %[[val_33]] : f32
+// CHECK-NEXT:    %[[val_41:.*]] = math.fma %[[cst_8]], %[[val_39]], %[[val_40]] : f32
+// CHECK-NEXT:    %[[val_42:.*]] = math.fma %[[val_41]], %[[cst_7]], %[[cst_6]] : f32
+// CHECK-NEXT:    %[[val_43:.*]] = math.fma %[[val_42]], %[[val_41]], %[[cst_5]] : f32
+// CHECK-NEXT:    %[[val_44:.*]] = math.fma %[[val_43]], %[[val_41]], %[[cst_4]] : f32
+// CHECK-NEXT:    %[[val_45:.*]] = math.fma %[[val_44]], %[[val_41]], %[[cst_3]] : f32
+// CHECK-NEXT:    %[[val_46:.*]] = math.fma %[[val_45]], %[[val_41]], %[[cst_23]] : f32
+// CHECK-NEXT:    %[[val_47:.*]] = arith.mulf %[[val_41]], %[[val_41]] : f32
+// CHECK-NEXT:    %[[val_48:.*]] = math.fma %[[val_46]], %[[val_47]], %[[val_41]] : f32
+// CHECK-NEXT:    %[[val_49:.*]] = arith.addf %[[val_48]], %[[cst_22]] : f32
+// CHECK-NEXT:    %[[val_50:.*]] = arith.fptosi %[[val_39]] : f32 to i32
+// CHECK-NEXT:    %[[val_51:.*]] = arith.addi %[[val_50]], %[[c127_i32]] : i32
+// CHECK-NEXT:    %[[val_52:.*]] = arith.shli %[[val_51]], %[[c23_i32]] : i32
+// CHECK-NEXT:    %[[val_53:.*]] = arith.bitcast %[[val_52]] : i32 to f32
+// CHECK-NEXT:    %[[val_54:.*]] = arith.mulf %[[val_49]], %[[val_53]] : f32
+// CHECK-NEXT:    %[[val_55:.*]] = arith.negf %[[val_2]] : f32
+// CHECK-NEXT:    %[[val_56:.*]] = math.fma %[[val_55]], %[[val_2]], %[[val_28]] : f32
+// CHECK-NEXT:    %[[val_57:.*]] = arith.mulf %[[val_27]], %[[val_54]] : f32
+// CHECK-NEXT:    %[[val_58:.*]] = arith.mulf %[[val_57]], %[[val_56]] : f32
+// CHECK-NEXT:    %[[val_59:.*]] = math.fma %[[val_27]], %[[val_54]], %[[val_58]] : f32
+// CHECK-NEXT:    %[[val_60:.*]] = arith.cmpf olt, %[[val_2]], %[[cst_27]] : f32
+// CHECK-NEXT:    %[[val_61:.*]] = arith.xori %[[val_60]], %[[cst_true]] : i1
+// CHECK-NEXT:    %[[val_62:.*]] = arith.addf %[[val_arg0]], %[[val_arg0]] : f32
+// CHECK-NEXT:    %[[val_63:.*]] = arith.select %[[val_61]], %[[val_62]], %[[val_59]] : f32
+// CHECK-NEXT:    %[[val_64:.*]] = arith.cmpf ogt, %[[val_2]], %[[cst_28]] : f32
+// CHECK-NEXT:    %[[val_65:.*]] = arith.select %[[val_64]], %[[cst_21]], %[[val_63]] : f32
+// CHECK-NEXT:    %[[val_66:.*]] = arith.cmpf olt, %[[val_arg0]], %[[cst_21]] : f32
+// CHECK-NEXT:    %[[val_67:.*]] = arith.subf %[[cst_26]], %[[val_65]] : f32
+// CHECK-NEXT:    %[[val_68:.*]] = arith.select %[[val_66]], %[[val_67]], %[[val_65]] : f32
+// CHECK-NEXT:    return %[[val_68]] : f32
+// CHECK-NEXT: }
+
+func.func @erfc_scalar(%arg0: f32) -> f32 {
+  %0 = math.erfc %arg0 : f32
+  return %0 : f32
+}
+
 // CHECK-LABEL:   func @erf_vector(
 // CHECK-SAME:                     %[[arg0:.*]]: vector<8xf32>) -> vector<8xf32> {
 // CHECK:           %[[zero:.*]] = arith.constant dense<0.000000e+00> : vector<8xf32>
@@ -581,7 +691,7 @@ func.func @rsqrt_scalar(%arg0: f32) -> f32 {
 // AVX2:   %[[VAL_6:.*]] = arith.cmpf olt, %[[VAL_0]], %[[VAL_4]] : vector<8xf32>
 // AVX2:   %[[VAL_7:.*]] = arith.cmpf oeq, %[[VAL_0]], %[[VAL_1]] : vector<8xf32>
 // AVX2:   %[[VAL_8:.*]] = arith.ori %[[VAL_6]], %[[VAL_7]] : vector<8xi1>
-// AVX2:   %[[VAL_9:.*]] = x86vector.avx.rsqrt %[[VAL_0]] : vector<8xf32>
+// AVX2:   %[[VAL_9:.*]] = x86.avx.rsqrt %[[VAL_0]] : vector<8xf32>
 // AVX2:   %[[VAL_10:.*]] = arith.mulf %[[VAL_5]], %[[VAL_9]] : vector<8xf32>
 // AVX2:   %[[VAL_11:.*]] = math.fma %[[VAL_9]], %[[VAL_10]], %[[VAL_2]] : vector<8xf32>
 // AVX2:   %[[VAL_12:.*]] = arith.mulf %[[VAL_9]], %[[VAL_11]] : vector<8xf32>
@@ -615,9 +725,9 @@ func.func @rsqrt_vector_5xf32(%arg0: vector<5xf32>) -> vector<5xf32> {
 // AVX2:          %[[INIT:.*]] = arith.constant dense<0.000000e+00> : vector<2x8xf32>
 // AVX2:          %[[EXPAND:.*]] = vector.shape_cast %[[ARG]] : vector<16xf32> to vector<2x8xf32>
 // AVX2:          %[[VEC0:.*]] = vector.extract %[[EXPAND]][0]
-// AVX2:          %[[RSQRT0:.*]] = x86vector.avx.rsqrt %[[VEC0]]
+// AVX2:          %[[RSQRT0:.*]] = x86.avx.rsqrt %[[VEC0]]
 // AVX2:          %[[VEC1:.*]] = vector.extract %[[EXPAND]][1]
-// AVX2:          %[[RSQRT1:.*]] = x86vector.avx.rsqrt %[[VEC1]]
+// AVX2:          %[[RSQRT1:.*]] = x86.avx.rsqrt %[[VEC1]]
 // AVX2:          %[[RESULT0:.*]] = vector.insert %[[RSQRT0]], %[[INIT]] [0]
 // AVX2:          %[[RESULT1:.*]] = vector.insert %[[RSQRT1]], %[[RESULT0]] [1]
 // AVX2:          %[[RSQRT:.*]] = vector.shape_cast %[[RESULT1]] : vector<2x8xf32> to vector<16xf32>
@@ -636,9 +746,9 @@ func.func @rsqrt_vector_16xf32(%arg0: vector<16xf32>) -> vector<16xf32> {
 // AVX2:          %[[INIT:.*]] = arith.constant dense<0.000000e+00> : vector<2x8xf32>
 // AVX2-NOT:      vector.shape_cast
 // AVX2:          %[[VEC0:.*]] = vector.extract %[[ARG]][0]
-// AVX2:          %[[RSQRT0:.*]] = x86vector.avx.rsqrt %[[VEC0]]
+// AVX2:          %[[RSQRT0:.*]] = x86.avx.rsqrt %[[VEC0]]
 // AVX2:          %[[VEC1:.*]] = vector.extract %[[ARG]][1]
-// AVX2:          %[[RSQRT1:.*]] = x86vector.avx.rsqrt %[[VEC1]]
+// AVX2:          %[[RSQRT1:.*]] = x86.avx.rsqrt %[[VEC1]]
 // AVX2:          %[[RESULT0:.*]] = vector.insert %[[RSQRT0]], %[[INIT]] [0]
 // AVX2:          %[[RESULT1:.*]] = vector.insert %[[RSQRT1]], %[[RESULT0]] [1]
 // AVX2-NOT:      vector.shape_cast
@@ -658,13 +768,13 @@ func.func @rsqrt_vector_2x8xf32(%arg0: vector<2x8xf32>) -> vector<2x8xf32> {
 // AVX2:          %[[INIT:.*]] = arith.constant dense<0.000000e+00> : vector<2x2x8xf32>
 // AVX2:          %[[EXPAND:.*]] = vector.shape_cast %[[ARG]] : vector<2x16xf32> to vector<2x2x8xf32>
 // AVX2:          %[[VEC00:.*]] = vector.extract %[[EXPAND]][0, 0]
-// AVX2:          %[[RSQRT00:.*]] = x86vector.avx.rsqrt %[[VEC00]]
+// AVX2:          %[[RSQRT00:.*]] = x86.avx.rsqrt %[[VEC00]]
 // AVX2:          %[[VEC01:.*]] = vector.extract %[[EXPAND]][0, 1]
-// AVX2:          %[[RSQRT01:.*]] = x86vector.avx.rsqrt %[[VEC01]]
+// AVX2:          %[[RSQRT01:.*]] = x86.avx.rsqrt %[[VEC01]]
 // AVX2:          %[[VEC10:.*]] = vector.extract %[[EXPAND]][1, 0]
-// AVX2:          %[[RSQRT10:.*]] = x86vector.avx.rsqrt %[[VEC10]]
+// AVX2:          %[[RSQRT10:.*]] = x86.avx.rsqrt %[[VEC10]]
 // AVX2:          %[[VEC11:.*]] = vector.extract %[[EXPAND]][1, 1]
-// AVX2:          %[[RSQRT11:.*]] = x86vector.avx.rsqrt %[[VEC11]]
+// AVX2:          %[[RSQRT11:.*]] = x86.avx.rsqrt %[[VEC11]]
 // AVX2:          %[[RESULT0:.*]] = vector.insert %[[RSQRT00]], %[[INIT]] [0, 0]
 // AVX2:          %[[RESULT1:.*]] = vector.insert %[[RSQRT01]], %[[RESULT0]] [0, 1]
 // AVX2:          %[[RESULT2:.*]] = vector.insert %[[RSQRT10]], %[[RESULT1]] [1, 0]
@@ -894,6 +1004,47 @@ func.func @math_f16(%arg0 : vector<4xf16>) -> vector<4xf16> {
   return %11 : vector<4xf16>
 }
 
+// CHECK-LABEL: @math_zero_rank
+func.func @math_zero_rank(%arg0 : vector<f16>) -> vector<f16> {
+
+  // CHECK-NOT: math.atan
+  %0 = "math.atan"(%arg0) : (vector<f16>) -> vector<f16>
+
+  // CHECK-NOT: math.atan2
+  %1 = "math.atan2"(%0, %arg0) : (vector<f16>, vector<f16>) -> vector<f16>
+
+  // CHECK-NOT: math.tanh
+  %2 = "math.tanh"(%1) : (vector<f16>) -> vector<f16>
+
+  // CHECK-NOT: math.log
+  %3 = "math.log"(%2) : (vector<f16>) -> vector<f16>
+
+  // CHECK-NOT: math.log2
+  %4 = "math.log2"(%3) : (vector<f16>) -> vector<f16>
+
+  // CHECK-NOT: math.log1p
+  %5 = "math.log1p"(%4) : (vector<f16>) -> vector<f16>
+
+  // CHECK-NOT: math.erf
+  %6 = "math.erf"(%5) : (vector<f16>) -> vector<f16>
+
+  // CHECK-NOT: math.exp
+  %7 = "math.exp"(%6) : (vector<f16>) -> vector<f16>
+
+  // CHECK-NOT: math.expm1
+  %8 = "math.expm1"(%7) : (vector<f16>) -> vector<f16>
+
+  // CHECK-NOT: math.cbrt
+  %9 = "math.cbrt"(%8) : (vector<f16>) -> vector<f16>
+
+  // CHECK-NOT: math.sin
+  %10 = "math.sin"(%9) : (vector<f16>) -> vector<f16>
+
+  // CHECK-NOT: math.cos
+  %11 = "math.cos"(%10) : (vector<f16>) -> vector<f16>
+
+  return %11 : vector<f16>
+}
 
 // AVX2-LABEL: @rsqrt_f16
 func.func @rsqrt_f16(%arg0 : vector<2x8xf16>) -> vector<2x8xf16> {

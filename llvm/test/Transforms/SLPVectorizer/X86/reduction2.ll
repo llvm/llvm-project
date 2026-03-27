@@ -52,7 +52,7 @@ define double @foo(ptr nocapture %D) {
 
 define i1 @two_wide_fcmp_reduction(<2 x double> %a0) {
 ; CHECK-LABEL: @two_wide_fcmp_reduction(
-; CHECK-NEXT:    [[A:%.*]] = fcmp ogt <2 x double> [[A0:%.*]], <double 1.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    [[A:%.*]] = fcmp ogt <2 x double> [[A0:%.*]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    [[B:%.*]] = extractelement <2 x i1> [[A]], i32 0
 ; CHECK-NEXT:    [[C:%.*]] = extractelement <2 x i1> [[A]], i32 1
 ; CHECK-NEXT:    [[D:%.*]] = and i1 [[B]], [[C]]
@@ -67,7 +67,7 @@ define i1 @two_wide_fcmp_reduction(<2 x double> %a0) {
 
 define double @fadd_reduction(<2 x double> %a0) {
 ; CHECK-LABEL: @fadd_reduction(
-; CHECK-NEXT:    [[A:%.*]] = fadd fast <2 x double> [[A0:%.*]], <double 1.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    [[A:%.*]] = fadd fast <2 x double> [[A0:%.*]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    [[B:%.*]] = extractelement <2 x double> [[A]], i32 0
 ; CHECK-NEXT:    [[C:%.*]] = extractelement <2 x double> [[A]], i32 1
 ; CHECK-NEXT:    [[D:%.*]] = fadd fast double [[B]], [[C]]
@@ -87,11 +87,10 @@ define i1 @fcmp_lt_gt(double %a, double %b, double %c) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[FNEG:%.*]] = fneg double [[B:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[A:%.*]], 2.000000e+00
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[C:%.*]], i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[FNEG]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> <i32 1, i32 poison>
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[B]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = fsub <2 x double> [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[ADD:%.*]] = fsub double [[C:%.*]], [[B]]
+; CHECK-NEXT:    [[SUB:%.*]] = fsub double [[FNEG]], [[C]]
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[SUB]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP0]], double [[ADD]], i32 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> poison, double [[MUL]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = fdiv <2 x double> [[TMP4]], [[TMP6]]
@@ -102,7 +101,7 @@ define i1 @fcmp_lt_gt(double %a, double %b, double %c) {
 ; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[CMP]], [[CMP4]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[CLEANUP:%.*]], label [[LOR_LHS_FALSE:%.*]]
 ; CHECK:       lor.lhs.false:
-; CHECK-NEXT:    [[TMP10:%.*]] = fcmp ule <2 x double> [[TMP7]], <double 1.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    [[TMP10:%.*]] = fcmp ule <2 x double> [[TMP7]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[TMP10]], i32 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i1> [[TMP10]], i32 1
 ; CHECK-NEXT:    [[NOT_OR_COND9:%.*]] = or i1 [[TMP11]], [[TMP12]]
@@ -136,15 +135,14 @@ define i1 @fcmp_lt(double %a, double %b, double %c) {
 ; CHECK-LABEL: @fcmp_lt(
 ; CHECK-NEXT:    [[FNEG:%.*]] = fneg double [[B:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[A:%.*]], 2.000000e+00
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[C:%.*]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[FNEG]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <2 x i32> <i32 1, i32 poison>
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[B]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = fsub <2 x double> [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[ADD:%.*]] = fsub double [[C:%.*]], [[B]]
+; CHECK-NEXT:    [[SUB:%.*]] = fsub double [[FNEG]], [[C]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[SUB]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> [[TMP1]], double [[ADD]], i32 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> poison, double [[MUL]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP6]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = fdiv <2 x double> [[TMP5]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = fcmp uge <2 x double> [[TMP8]], <double 0x3EB0C6F7A0B5ED8D, double 0x3EB0C6F7A0B5ED8D>
+; CHECK-NEXT:    [[TMP9:%.*]] = fcmp uge <2 x double> [[TMP8]], splat (double 0x3EB0C6F7A0B5ED8D)
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP9]], i32 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[TMP9]], i32 1
 ; CHECK-NEXT:    [[NOT_OR_COND:%.*]] = or i1 [[TMP10]], [[TMP11]]

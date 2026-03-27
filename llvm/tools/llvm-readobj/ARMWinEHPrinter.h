@@ -107,6 +107,8 @@ class Decoder {
                         unsigned Length, bool Prologue);
   bool opcode_save_freg_x(const uint8_t *Opcodes, unsigned &Offset,
                           unsigned Length, bool Prologue);
+  bool opcode_alloc_z(const uint8_t *Opcodes, unsigned &Offset, unsigned Length,
+                      bool Prologue);
   bool opcode_alloc_l(const uint8_t *Opcodes, unsigned &Offset, unsigned Length,
                       bool Prologue);
   bool opcode_setfp(const uint8_t *Opcodes, unsigned &Offset, unsigned Length,
@@ -120,6 +122,12 @@ class Decoder {
   bool opcode_end_c(const uint8_t *Opcodes, unsigned &Offset, unsigned Length,
                     bool Prologue);
   bool opcode_save_next(const uint8_t *Opcodes, unsigned &Offset,
+                        unsigned Length, bool Prologue);
+  bool opcode_e7(const uint8_t *Opcodes, unsigned &Offset, unsigned Length,
+                 bool Prologue);
+  bool opcode_save_zreg(const uint8_t *Opcodes, unsigned &Offset,
+                        unsigned Length, bool Prologue);
+  bool opcode_save_preg(const uint8_t *Opcodes, unsigned &Offset,
                         unsigned Length, bool Prologue);
   bool opcode_save_any_reg(const uint8_t *Opcodes, unsigned &Offset,
                            unsigned Length, bool Prologue);

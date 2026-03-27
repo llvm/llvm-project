@@ -15,7 +15,9 @@
 #include "mlir/TableGen/AttrOrTypeDef.h"
 #include "mlir/TableGen/Attribute.h"
 #include "mlir/TableGen/Dialect.h"
+#include "mlir/TableGen/EnumInfo.h"
 #include "mlir/TableGen/GenInfo.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/TableGen/Record.h"
 
@@ -24,6 +26,10 @@ using namespace mlir::tblgen;
 using llvm::formatv;
 using llvm::Record;
 using llvm::RecordKeeper;
+
+// Declared in OpPythonBindingGen.cpp; the two generators share the same
+// -bind-dialect option to allow filtering enum registrations by dialect.
+extern std::string dialectNameStorage;
 
 /// File header and includes.
 constexpr const char *fileHeader = R"Py(
@@ -44,14 +50,14 @@ static std::string makePythonEnumCaseName(StringRef name) {
 }
 
 /// Emits the Python class for the given enum.
-static void emitEnumClass(EnumAttr enumAttr, raw_ostream &os) {
-  os << formatv("class {0}({1}):\n", enumAttr.getEnumClassName(),
-                enumAttr.isBitEnum() ? "IntFlag" : "IntEnum");
-  if (!enumAttr.getSummary().empty())
-    os << formatv("    \"\"\"{0}\"\"\"\n", enumAttr.getSummary());
+static void emitEnumClass(EnumInfo enumInfo, raw_ostream &os) {
+  os << formatv("class {0}({1}):\n", enumInfo.getEnumClassName(),
+                enumInfo.isBitEnum() ? "IntFlag" : "IntEnum");
+  if (!enumInfo.getSummary().empty())
+    os << formatv("    \"\"\"{0}\"\"\"\n", enumInfo.getSummary());
   os << "\n";
 
-  for (const EnumAttrCase &enumCase : enumAttr.getAllCases()) {
+  for (const EnumCase &enumCase : enumInfo.getAllCases()) {
     os << formatv("    {0} = {1}\n",
                   makePythonEnumCaseName(enumCase.getSymbol()),
                   enumCase.getValue() >= 0 ? std::to_string(enumCase.getValue())
@@ -60,55 +66,47 @@ static void emitEnumClass(EnumAttr enumAttr, raw_ostream &os) {
 
   os << "\n";
 
-  if (enumAttr.isBitEnum()) {
+  if (enumInfo.isBitEnum()) {
     os << formatv("    def __iter__(self):\n"
                   "        return iter([case for case in type(self) if "
-                  "(self & case) is case])\n");
+                  "(self & case) is case and self is not case])\n");
     os << formatv("    def __len__(self):\n"
                   "        return bin(self).count(\"1\")\n");
     os << "\n";
   }
 
   os << formatv("    def __str__(self):\n");
-  if (enumAttr.isBitEnum())
+  if (enumInfo.isBitEnum())
     os << formatv("        if len(self) > 1:\n"
                   "            return \"{0}\".join(map(str, self))\n",
-                  enumAttr.getDef().getValueAsString("separator"));
-  for (const EnumAttrCase &enumCase : enumAttr.getAllCases()) {
-    os << formatv("        if self is {0}.{1}:\n", enumAttr.getEnumClassName(),
+                  enumInfo.getDef().getValueAsString("separator"));
+  for (const EnumCase &enumCase : enumInfo.getAllCases()) {
+    os << formatv("        if self is {0}.{1}:\n", enumInfo.getEnumClassName(),
                   makePythonEnumCaseName(enumCase.getSymbol()));
     os << formatv("            return \"{0}\"\n", enumCase.getStr());
   }
   os << formatv("        raise ValueError(\"Unknown {0} enum entry.\")\n\n\n",
-                enumAttr.getEnumClassName());
+                enumInfo.getEnumClassName());
   os << "\n";
-}
-
-/// Attempts to extract the bitwidth B from string "uintB_t" describing the
-/// type. This bitwidth information is not readily available in ODS. Returns
-/// `false` on success, `true` on failure.
-static bool extractUIntBitwidth(StringRef uintType, int64_t &bitwidth) {
-  if (!uintType.consume_front("uint"))
-    return true;
-  if (!uintType.consume_back("_t"))
-    return true;
-  return uintType.getAsInteger(/*Radix=*/10, bitwidth);
 }
 
 /// Emits an attribute builder for the given enum attribute to support automatic
 /// conversion between enum values and attributes in Python. Returns
 /// `false` on success, `true` on failure.
-static bool emitAttributeBuilder(const EnumAttr &enumAttr, raw_ostream &os) {
-  int64_t bitwidth;
-  if (extractUIntBitwidth(enumAttr.getUnderlyingType(), bitwidth)) {
-    llvm::errs() << "failed to identify bitwidth of "
-                 << enumAttr.getUnderlyingType();
-    return true;
-  }
+static bool emitAttributeBuilder(const EnumInfo &enumInfo, raw_ostream &os) {
+  std::optional<Attribute> enumAttrInfo = enumInfo.asEnumAttr();
+  if (!enumAttrInfo)
+    return false;
 
-  os << formatv("@register_attribute_builder(\"{0}\")\n",
-                enumAttr.getAttrDefName());
-  os << formatv("def _{0}(x, context):\n", enumAttr.getAttrDefName().lower());
+  int64_t bitwidth = enumInfo.getBitwidth();
+  // These builders may be emitted by multiple dialect enum_gen files when
+  // dialects share enum definitions via .td includes. Use allow_existing=True
+  // so that the first loaded dialect registers the builder and subsequent
+  // loads silently skip (first-registration wins).
+  os << formatv("@register_attribute_builder(\"{0}\", allow_existing=True)\n",
+                enumAttrInfo->getAttrDefName());
+  os << formatv("def _{0}(x, context):\n",
+                enumAttrInfo->getAttrDefName().lower());
   os << formatv("    return "
                 "_ods_ir.IntegerAttr.get(_ods_ir.IntegerType.get_signless({0}, "
                 "context=context), int(x))\n\n",
@@ -119,10 +117,12 @@ static bool emitAttributeBuilder(const EnumAttr &enumAttr, raw_ostream &os) {
 /// Emits an attribute builder for the given dialect enum attribute to support
 /// automatic conversion between enum values and attributes in Python. Returns
 /// `false` on success, `true` on failure.
-static bool emitDialectEnumAttributeBuilder(StringRef attrDefName,
+static bool emitDialectEnumAttributeBuilder(StringRef dialect,
+                                            StringRef attrDefName,
                                             StringRef formatString,
                                             raw_ostream &os) {
-  os << formatv("@register_attribute_builder(\"{0}\")\n", attrDefName);
+  os << formatv("@register_attribute_builder(\"{0}.{1}\")\n", dialect,
+                attrDefName);
   os << formatv("def _{0}(x, context):\n", attrDefName.lower());
   os << formatv("    return "
                 "_ods_ir.Attribute.parse(f'{0}', context=context)\n\n",
@@ -135,14 +135,20 @@ static bool emitDialectEnumAttributeBuilder(StringRef attrDefName,
 static bool emitPythonEnums(const RecordKeeper &records, raw_ostream &os) {
   os << fileHeader;
   for (const Record *it :
-       records.getAllDerivedDefinitionsIfDefined("EnumAttrInfo")) {
-    EnumAttr enumAttr(*it);
-    emitEnumClass(enumAttr, os);
-    emitAttributeBuilder(enumAttr, os);
+       records.getAllDerivedDefinitionsIfDefined("EnumInfo")) {
+    EnumInfo enumInfo(*it);
+    emitEnumClass(enumInfo, os);
+    emitAttributeBuilder(enumInfo, os);
   }
   for (const Record *it :
        records.getAllDerivedDefinitionsIfDefined("EnumAttr")) {
     AttrOrTypeDef attr(&*it);
+    StringRef dialect = attr.getDialect().getName();
+    // When -bind-dialect is specified, only emit builders for EnumAttr records
+    // belonging to that dialect. This prevents duplicate registrations when
+    // multiple dialects include the same .td files.
+    if (!dialectNameStorage.empty() && dialect != dialectNameStorage)
+      continue;
     if (!attr.getMnemonic()) {
       llvm::errs() << "enum case " << attr
                    << " needs mnemonic for python enum bindings generation";
@@ -150,14 +156,13 @@ static bool emitPythonEnums(const RecordKeeper &records, raw_ostream &os) {
     }
     StringRef mnemonic = attr.getMnemonic().value();
     std::optional<StringRef> assemblyFormat = attr.getAssemblyFormat();
-    StringRef dialect = attr.getDialect().getName();
     if (assemblyFormat == "`<` $value `>`") {
       emitDialectEnumAttributeBuilder(
-          attr.getName(),
+          dialect, attr.getName(),
           formatv("#{0}.{1}<{{str(x)}>", dialect, mnemonic).str(), os);
     } else if (assemblyFormat == "$value") {
       emitDialectEnumAttributeBuilder(
-          attr.getName(),
+          dialect, attr.getName(),
           formatv("#{0}<{1} {{str(x)}>", dialect, mnemonic).str(), os);
     } else {
       llvm::errs()

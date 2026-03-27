@@ -131,7 +131,7 @@ define i1 @test_v8i64(<8 x i64> %a0) {
 ;
 ; AVX512-LABEL: test_v8i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
 ; AVX512-NEXT:    vpcmpneqd %zmm1, %zmm0, %k0
 ; AVX512-NEXT:    kortestw %k0, %k0
 ; AVX512-NEXT:    sete %al
@@ -199,7 +199,7 @@ define i1 @test_v16i64(<16 x i64> %a0) {
 ; AVX512-LABEL: test_v16i64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpandq %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
 ; AVX512-NEXT:    vpcmpneqd %zmm1, %zmm0, %k0
 ; AVX512-NEXT:    kortestw %k0, %k0
 ; AVX512-NEXT:    setne %al
@@ -353,7 +353,7 @@ define i1 @test_v16i32(<16 x i32> %a0) {
 ;
 ; AVX512-LABEL: test_v16i32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
 ; AVX512-NEXT:    vpcmpneqd %zmm1, %zmm0, %k0
 ; AVX512-NEXT:    kortestw %k0, %k0
 ; AVX512-NEXT:    setne %al
@@ -421,7 +421,7 @@ define i1 @test_v32i32(<32 x i32> %a0) {
 ; AVX512-LABEL: test_v32i32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpandd %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
 ; AVX512-NEXT:    vpcmpneqd %zmm1, %zmm0, %k0
 ; AVX512-NEXT:    kortestw %k0, %k0
 ; AVX512-NEXT:    sete %al
@@ -594,7 +594,7 @@ define i1 @test_v32i16(<32 x i16> %a0) {
 ;
 ; AVX512-LABEL: test_v32i16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
 ; AVX512-NEXT:    vpcmpneqd %zmm1, %zmm0, %k0
 ; AVX512-NEXT:    kortestw %k0, %k0
 ; AVX512-NEXT:    sete %al
@@ -662,7 +662,7 @@ define i1 @test_v64i16(<64 x i16> %a0) {
 ; AVX512-LABEL: test_v64i16:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpandq %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
 ; AVX512-NEXT:    vpcmpneqd %zmm1, %zmm0, %k0
 ; AVX512-NEXT:    kortestw %k0, %k0
 ; AVX512-NEXT:    setne %al
@@ -854,7 +854,7 @@ define i1 @test_v64i8(<64 x i8> %a0) {
 ;
 ; AVX512-LABEL: test_v64i8:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
 ; AVX512-NEXT:    vpcmpneqd %zmm1, %zmm0, %k0
 ; AVX512-NEXT:    kortestw %k0, %k0
 ; AVX512-NEXT:    setne %al
@@ -922,7 +922,7 @@ define i1 @test_v128i8(<128 x i8> %a0) {
 ; AVX512-LABEL: test_v128i8:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpandq %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
 ; AVX512-NEXT:    vpcmpneqd %zmm1, %zmm0, %k0
 ; AVX512-NEXT:    kortestw %k0, %k0
 ; AVX512-NEXT:    sete %al

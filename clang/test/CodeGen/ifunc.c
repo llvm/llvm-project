@@ -12,6 +12,13 @@
 // RUN: %clang_cc1 -triple arm64-apple-macosx -fsanitize=address -O2 -emit-llvm -o - %s | FileCheck %s --check-prefix=SAN
 // RUN: %clang_cc1 -triple x86_64-apple-macosx -fsanitize=address -O2 -emit-llvm -o - %s | FileCheck %s --check-prefix=SAN
 // RUN: %clang_cc1 -triple avr-unknown-unknown -emit-llvm -o - %s | FileCheck %s --check-prefix=AVR
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -O2 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -fsanitize=thread -O2 -emit-llvm -o - %s | FileCheck %s --check-prefix=SAN
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -fsanitize=address -O2 -emit-llvm -o - %s | FileCheck %s --check-prefix=SAN
+// RUN: %clang_cc1 -triple powerpc64-ibm-aix-xcoff -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple powerpc64-ibm-aix-xcoff -O2 -emit-llvm -o - %s | FileCheck %s
+
 
 /// The ifunc is emitted before its resolver.
 int foo(int) __attribute__ ((ifunc("foo_ifunc")));
@@ -60,7 +67,7 @@ extern void hoo(int) __attribute__ ((ifunc("hoo_ifunc")));
 // AVR: @goo = ifunc void (), ptr addrspace(1) @goo_ifunc
 // AVR: @hoo = ifunc void (i16), ptr addrspace(1) @hoo_ifunc
 
-// CHECK: call i32 @foo(i32
+// CHECK: call {{(signext )?}}i32 @foo(i32
 // CHECK: call void @goo()
 
 // SAN: define {{(dso_local )?}}noalias {{(noundef )?}}ptr @goo_ifunc() #[[#GOO_IFUNC:]] {

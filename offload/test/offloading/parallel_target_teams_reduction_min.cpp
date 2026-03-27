@@ -3,9 +3,10 @@
 
 // FIXME: This is a bug in host offload, this should run fine.
 // REQUIRES: gpu
+// XFAIL: intelgpu
 
 // This test validates that the OpenMP target reductions to find a minimum work
-// as indended for a few common data types.
+// as intended for a few common data types.
 
 #include <algorithm>
 #include <cassert>

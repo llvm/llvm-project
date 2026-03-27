@@ -48,7 +48,7 @@ void ThreadContext::OnStarted(void *arg) {
   dtls_ = args->dtls;
 }
 
-void ThreadStart(u32 tid, tid_t os_id, ThreadType thread_type) {
+void ThreadStart(u32 tid, ThreadID os_id, ThreadType thread_type) {
   OnStartedArgs args;
   GetThreadStackAndTls(tid == kMainTid, &args.stack_begin, &args.stack_end,
                        &args.tls_begin, &args.tls_end);
@@ -57,7 +57,7 @@ void ThreadStart(u32 tid, tid_t os_id, ThreadType thread_type) {
   ThreadContextLsanBase::ThreadStart(tid, os_id, thread_type, &args);
 }
 
-bool GetThreadRangesLocked(tid_t os_id, uptr *stack_begin, uptr *stack_end,
+bool GetThreadRangesLocked(ThreadID os_id, uptr *stack_begin, uptr *stack_end,
                            uptr *tls_begin, uptr *tls_end, uptr *cache_begin,
                            uptr *cache_end, DTLS **dtls) {
   ThreadContext *context = static_cast<ThreadContext *>(
@@ -97,6 +97,7 @@ void InstallAtExitCheckLeaks() {
 }
 
 static void BeforeFork() {
+  VReport(2, "BeforeFork tid: %llu\n", GetTid());
   LockGlobal();
   LockThreads();
   LockAllocator();
@@ -108,6 +109,7 @@ static void AfterFork(bool fork_child) {
   UnlockAllocator();
   UnlockThreads();
   UnlockGlobal();
+  VReport(2, "AfterFork tid: %llu\n", GetTid());
 }
 
 void InstallAtForkHandler() {

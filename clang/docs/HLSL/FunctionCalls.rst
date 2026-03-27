@@ -248,13 +248,14 @@ which is a term made up for HLSL. A cx-value is a temporary value which may be
 the result of a cast, and stores its value back to an lvalue when the value
 expires.
 
-To represent this concept in Clang we introduce a new ``HLSLOutParamExpr``. An
-``HLSLOutParamExpr`` has two forms, one with a single sub-expression and one
-with two sub-expressions.
+To represent this concept in Clang we introduce a new ``HLSLOutArgExpr``. An
+``HLSLOutArgExpr`` has three sub-expressions:
 
-The single sub-expression form is used when the argument expression and the
-function parameter are the same type, so no cast is required. As in this
-example:
+* An OpaqueValueExpr of the argument lvalue expression.
+* An OpaqueValueExpr of the copy-initialized parameter temporary.
+* A BinaryOpExpr assigning the first with the value of the second.
+
+Given this example:
 
 .. code-block:: c++
 
@@ -267,23 +268,36 @@ example:
     Init(V);
   }
 
-The expected AST formulation for this code would be something like:
+The expected AST formulation for this code would be something like the example
+below. Due to the nature of OpaqueValueExpr nodes, the nodes repeat in the AST
+dump. The fake addresses ``0xSOURCE`` and ``0xTEMPORARY`` denote the source
+lvalue and argument temporary lvalue expressions.
 
 .. code-block:: text
 
   CallExpr 'void'
   |-ImplicitCastExpr 'void (*)(int &)' <FunctionToPointerDecay>
   | `-DeclRefExpr 'void (int &)' lvalue Function  'Init' 'void (int &)'
-  |-HLSLOutParamExpr 'int' lvalue inout
-    `-DeclRefExpr 'int' lvalue Var 'V' 'int'
+  `-HLSLOutArgExpr <col:10> 'int' lvalue inout
+    |-OpaqueValueExpr 0xSOURCE <col:10> 'int' lvalue
+    | `-DeclRefExpr <col:10> 'int' lvalue Var 'V' 'int'
+    |-OpaqueValueExpr 0xTEMPORARY <col:10> 'int' lvalue
+    | `-ImplicitCastExpr <col:10> 'int' <LValueToRValue>
+    |   `-OpaqueValueExpr 0xSOURCE <col:10> 'int' lvalue
+    |     `-DeclRefExpr <col:10> 'int' lvalue Var 'V' 'int'
+    `-BinaryOperator <col:10> 'int' lvalue '='
+      |-OpaqueValueExpr 0xSOURCE <col:10> 'int' lvalue
+      | `-DeclRefExpr <col:10> 'int' lvalue Var 'V' 'int'
+      `-ImplicitCastExpr <col:10> 'int' <LValueToRValue>
+        `-OpaqueValueExpr 0xTEMPORARY <col:10> 'int' lvalue
+          `-ImplicitCastExpr <col:10> 'int' <LValueToRValue>
+            `-OpaqueValueExpr 0xSOURCE <col:10> 'int' lvalue
+              `-DeclRefExpr <col:10> 'int' lvalue Var 'V' 'int'
 
-The ``HLSLOutParamExpr`` captures that the value is ``inout`` vs ``out`` to
-denote whether or not the temporary is initialized from the sub-expression. If
-no casting is required the sub-expression denotes the lvalue expression that the
-cx-value will be copied to when the value expires.
+The ``HLSLOutArgExpr`` captures that the value is ``inout`` vs ``out`` to
+denote whether or not the temporary is initialized from the sub-expression.
 
-The two sub-expression form of the AST node is required when the argument type
-is not the same as the parameter type. Given this example:
+The example below demonstrates argument casting:
 
 .. code-block:: c++
 
@@ -295,7 +309,7 @@ is not the same as the parameter type. Given this example:
     Trunc(F);
   }
 
-For this case the ``HLSLOutParamExpr`` will have sub-expressions to record both
+For this case the ``HLSLOutArgExpr`` will have sub-expressions to record both
 casting expression sequences for the initialization and write back:
 
 .. code-block:: text
@@ -303,20 +317,31 @@ casting expression sequences for the initialization and write back:
   -CallExpr 'void'
     |-ImplicitCastExpr 'void (*)(int3 &)' <FunctionToPointerDecay>
     | `-DeclRefExpr 'void (int3 &)' lvalue Function 'inc_i32' 'void (int3 &)'
-    `-HLSLOutParamExpr 'int3' lvalue inout
-      |-ImplicitCastExpr 'float3' <IntegralToFloating>
-      | `-ImplicitCastExpr 'int3' <LValueToRValue>
-      |   `-OpaqueValueExpr 'int3' lvalue
-      `-ImplicitCastExpr 'int3' <FloatingToIntegral>
-        `-ImplicitCastExpr 'float3' <LValueToRValue>
-          `-DeclRefExpr 'float3' lvalue 'F' 'float3'
+    `-HLSLOutArgExpr <col:11> 'int3':'vector<int, 3>' lvalue inout
+      |-OpaqueValueExpr 0xSOURCE <col:11> 'float3':'vector<float, 3>' lvalue
+      | `-DeclRefExpr <col:11> 'float3':'vector<float, 3>' lvalue Var 'F' 'float3':'vector<float, 3>'
+      |-OpaqueValueExpr 0xTEMPORARY <col:11> 'int3':'vector<int, 3>' lvalue
+      | `-ImplicitCastExpr <col:11> 'vector<int, 3>' <FloatingToIntegral>
+      |   `-ImplicitCastExpr <col:11> 'float3':'vector<float, 3>' <LValueToRValue>
+      |     `-OpaqueValueExpr 0xSOURCE <col:11> 'float3':'vector<float, 3>' lvalue
+      |       `-DeclRefExpr <col:11> 'float3':'vector<float, 3>' lvalue Var 'F' 'float3':'vector<float, 3>'
+      `-BinaryOperator <col:11> 'float3':'vector<float, 3>' lvalue '='
+        |-OpaqueValueExpr 0xSOURCE <col:11> 'float3':'vector<float, 3>' lvalue
+        | `-DeclRefExpr <col:11> 'float3':'vector<float, 3>' lvalue Var 'F' 'float3':'vector<float, 3>'
+        `-ImplicitCastExpr <col:11> 'vector<float, 3>' <IntegralToFloating>
+          `-ImplicitCastExpr <col:11> 'int3':'vector<int, 3>' <LValueToRValue>
+            `-OpaqueValueExpr 0xTEMPORARY <col:11> 'int3':'vector<int, 3>' lvalue
+              `-ImplicitCastExpr <col:11> 'vector<int, 3>' <FloatingToIntegral>
+                `-ImplicitCastExpr <col:11> 'float3':'vector<float, 3>' <LValueToRValue>
+                  `-OpaqueValueExpr 0xSOURCE <col:11> 'float3':'vector<float, 3>' lvalue
+                    `-DeclRefExpr <col:11> 'float3':'vector<float, 3>' lvalue Var 'F' 'float3':'vector<float, 3>'
 
-In this formation the write-back casts are captured as the first sub-expression
-and they cast from an ``OpaqueValueExpr``. In IR generation we can use the
-``OpaqueValueExpr`` as a placeholder for the ``HLSLOutParamExpr``'s temporary
-value on function return.
+The AST representation is the same whether casting is required or not, which
+simplifies the code generation. IR generation does the following:
 
-In code generation this can be implemented with some targeted extensions to the
-Objective-C write-back support. Specifically extending CGCall.cpp's
-``EmitWriteback`` function to support casting expressions and emission of
-aggregate lvalues.
+* Emit the argument lvalue expression.
+* Initialize the argument:
+  * For ``inout`` arguments, emit the copy-initialization expression.
+  * For ``out`` arguments, emit an uninitialized temporary.
+* Emit the call
+* Emit the write-back BinaryOperator expression.

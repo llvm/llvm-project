@@ -17,6 +17,7 @@
 #include "llvm/ExecutionEngine/JITLink/aarch32.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFObjectFile.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
 
@@ -31,7 +32,7 @@ namespace llvm {
 namespace jitlink {
 
 /// Translate from ELF relocation type to JITLink-internal edge kind.
-Expected<aarch32::EdgeKind_aarch32>
+LLVM_ABI Expected<aarch32::EdgeKind_aarch32>
 getJITLinkEdgeKind(uint32_t ELFType, const aarch32::ArmConfig &ArmCfg) {
   switch (ELFType) {
   case ELF::R_ARM_ABS32:
@@ -75,7 +76,7 @@ getJITLinkEdgeKind(uint32_t ELFType, const aarch32::ArmConfig &ArmCfg) {
 }
 
 /// Translate from JITLink-internal edge kind back to ELF relocation type.
-Expected<uint32_t> getELFRelocationType(Edge::Kind Kind) {
+LLVM_ABI Expected<uint32_t> getELFRelocationType(Edge::Kind Kind) {
   switch (static_cast<aarch32::EdgeKind_aarch32>(Kind)) {
   case aarch32::Data_Delta32:
     return ELF::R_ARM_REL32;
@@ -219,11 +220,13 @@ protected:
 
 public:
   ELFLinkGraphBuilder_aarch32(StringRef FileName,
-                              const llvm::object::ELFFile<ELFT> &Obj, Triple TT,
-                              SubtargetFeatures Features,
+                              const llvm::object::ELFFile<ELFT> &Obj,
+                              std::shared_ptr<orc::SymbolStringPool> SSP,
+                              Triple TT, SubtargetFeatures Features,
                               aarch32::ArmConfig ArmCfg)
-      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(TT), std::move(Features),
-                                  FileName, getELFAArch32EdgeKindName),
+      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(SSP), std::move(TT),
+                                  std::move(Features), FileName,
+                                  getELFAArch32EdgeKindName),
         ArmCfg(std::move(ArmCfg)) {}
 };
 
@@ -239,8 +242,8 @@ Error buildTables_ELF_aarch32(LinkGraph &G) {
   return Error::success();
 }
 
-Expected<std::unique_ptr<LinkGraph>>
-createLinkGraphFromELFObject_aarch32(MemoryBufferRef ObjectBuffer) {
+Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromELFObject_aarch32(
+    MemoryBufferRef ObjectBuffer, std::shared_ptr<orc::SymbolStringPool> SSP) {
   LLVM_DEBUG({
     dbgs() << "Building jitlink graph for new input "
            << ObjectBuffer.getBufferIdentifier() << "...\n";
@@ -273,16 +276,16 @@ createLinkGraphFromELFObject_aarch32(MemoryBufferRef ObjectBuffer) {
   case Triple::thumb: {
     auto &ELFFile = cast<ELFObjectFile<ELF32LE>>(**ELFObj).getELFFile();
     return ELFLinkGraphBuilder_aarch32<llvm::endianness::little>(
-               (*ELFObj)->getFileName(), ELFFile, TT, std::move(*Features),
-               ArmCfg)
+               (*ELFObj)->getFileName(), ELFFile, std::move(SSP), TT,
+               std::move(*Features), ArmCfg)
         .buildGraph();
   }
   case Triple::armeb:
   case Triple::thumbeb: {
     auto &ELFFile = cast<ELFObjectFile<ELF32BE>>(**ELFObj).getELFFile();
     return ELFLinkGraphBuilder_aarch32<llvm::endianness::big>(
-               (*ELFObj)->getFileName(), ELFFile, TT, std::move(*Features),
-               ArmCfg)
+               (*ELFObj)->getFileName(), ELFFile, std::move(SSP), TT,
+               std::move(*Features), ArmCfg)
         .buildGraph();
   }
   default:

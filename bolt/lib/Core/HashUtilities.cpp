@@ -67,6 +67,11 @@ std::string hashExpr(BinaryContext &BC, const MCExpr &Expr) {
         .append(hashInteger(BinaryExpr.getOpcode()))
         .append(hashExpr(BC, *BinaryExpr.getRHS()));
   }
+  case MCExpr::Specifier: {
+    const auto &SpecExpr = cast<MCSpecifierExpr>(Expr);
+    return hashInteger(SpecExpr.getSpecifier())
+        .append(hashExpr(BC, *SpecExpr.getSubExpr()));
+  }
   case MCExpr::Target:
     return std::string();
   }
@@ -145,7 +150,7 @@ std::string hashBlockLoose(BinaryContext &BC, const BinaryBasicBlock &BB) {
       continue;
     }
 
-    std::string Mnemonic = BC.InstPrinter->getMnemonic(&Inst).first;
+    std::string Mnemonic = BC.InstPrinter->getMnemonic(Inst).first;
     llvm::erase_if(Mnemonic, [](unsigned char ch) { return std::isspace(ch); });
     Opcodes.insert(Mnemonic);
   }

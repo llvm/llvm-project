@@ -55,8 +55,9 @@ DynamicLoader *DynamicLoaderMacOS::CreateInstance(Process *process,
       case llvm::Triple::IOS:
       case llvm::Triple::TvOS:
       case llvm::Triple::WatchOS:
-      case llvm::Triple::XROS:
       case llvm::Triple::BridgeOS:
+      case llvm::Triple::DriverKit:
+      case llvm::Triple::XROS:
         create = triple_ref.getVendor() == llvm::Triple::Apple;
         break;
       default:
@@ -215,8 +216,9 @@ void DynamicLoaderMacOS::DoInitialImageFetch() {
       LLDB_LOGF(log, "Initial module fetch:  Adding %" PRId64 " modules.\n",
                 (uint64_t)image_infos.size());
 
-      UpdateSpecialBinariesFromNewImageInfos(image_infos);
-      AddModulesUsingImageInfos(image_infos);
+      auto images = PreloadModulesFromImageInfos(image_infos);
+      UpdateSpecialBinariesFromPreloadedModules(images);
+      AddModulesUsingPreloadedModules(images);
     }
   }
 
@@ -367,7 +369,7 @@ bool DynamicLoaderMacOS::NotifyBreakpointHit(void *baton,
               dyld_instance->UnloadAllImages();
               dyld_instance->ClearDYLDModule();
               process->GetTarget().GetImages().Clear();
-              process->GetTarget().GetSectionLoadList().Clear();
+              process->GetTarget().ClearSectionLoadList();
 
               addr_t all_image_infos = process->GetImageInfoAddress();
               int addr_size =
@@ -425,8 +427,9 @@ void DynamicLoaderMacOS::AddBinaries(
               ->GetAsArray()
               ->GetSize() == load_addresses.size()) {
     if (JSONImageInformationIntoImageInfo(binaries_info_sp, image_infos)) {
-      UpdateSpecialBinariesFromNewImageInfos(image_infos);
-      AddModulesUsingImageInfos(image_infos);
+      auto images = PreloadModulesFromImageInfos(image_infos);
+      UpdateSpecialBinariesFromPreloadedModules(images);
+      AddModulesUsingPreloadedModules(images);
     }
     m_dyld_image_infos_stop_id = m_process->GetStopID();
   }
@@ -527,7 +530,7 @@ bool DynamicLoaderMacOS::SetNotificationBreakpoint() {
           m_process->GetTarget()
               .CreateBreakpoint(&dyld_filelist, source_files,
                                 "lldb_image_notifier", eFunctionNameTypeFull,
-                                eLanguageTypeUnknown, 0, skip_prologue,
+                                eLanguageTypeUnknown, 0, false, skip_prologue,
                                 internal, hardware)
               .get();
       breakpoint->SetCallback(DynamicLoaderMacOS::NotifyBreakpointHit, this,
@@ -543,8 +546,9 @@ bool DynamicLoaderMacOS::SetNotificationBreakpoint() {
             m_process->GetTarget()
                 .CreateBreakpoint(&dyld_filelist, source_files,
                                   "gdb_image_notifier", eFunctionNameTypeFull,
-                                  eLanguageTypeUnknown, 0, skip_prologue,
-                                  internal, hardware)
+                                  eLanguageTypeUnknown, 0,
+                                  /*offset_is_insn_count = */ false,
+                                  skip_prologue, internal, hardware)
                 .get();
         breakpoint->SetCallback(DynamicLoaderMacOS::NotifyBreakpointHit, this,
                                 true);
@@ -612,7 +616,7 @@ DynamicLoaderMacOS::GetDyldLockVariableAddressFromModule(Module *module) {
     num_matches =
         symtab->AppendSymbolIndexesWithName(g_symbol_name, match_indexes);
     if (num_matches == 1) {
-      Symbol *symbol = symtab->SymbolAtIndex(match_indexes[0]);
+      const Symbol *symbol = symtab->SymbolAtIndex(match_indexes[0]);
       if (symbol &&
           (symbol->ValueIsAddress() || symbol->GetAddressRef().IsValid())) {
         return symbol->GetAddressRef().GetOpcodeLoadAddress(&target);
@@ -687,11 +691,13 @@ Status DynamicLoaderMacOS::CanLoadImage() {
 
 bool DynamicLoaderMacOS::GetSharedCacheInformation(
     lldb::addr_t &base_address, UUID &uuid, LazyBool &using_shared_cache,
-    LazyBool &private_shared_cache) {
+    LazyBool &private_shared_cache, FileSpec &shared_cache_path,
+    std::optional<uint64_t> &size) {
   base_address = LLDB_INVALID_ADDRESS;
   uuid.Clear();
   using_shared_cache = eLazyBoolCalculate;
   private_shared_cache = eLazyBoolCalculate;
+  size.reset();
 
   if (m_process) {
     StructuredData::ObjectSP info = m_process->GetSharedCacheInfo();
@@ -700,12 +706,17 @@ bool DynamicLoaderMacOS::GetSharedCacheInformation(
       info_dict = info->GetAsDictionary();
     }
 
-    // {"shared_cache_base_address":140735683125248,"shared_cache_uuid
-    // ":"DDB8D70C-
-    // C9A2-3561-B2C8-BE48A4F33F96","no_shared_cache":false,"shared_cache_private_cache":false}
+    // { "shared_cache_base_address":6580879360,
+    //   "shared_cache_uuid":"71E62C65-D8D9-32D0-9A0B-7F5154C8049F",
+    //   "no_shared_cache":false,
+    //   "shared_cache_private_cache":false,
+    //   "shared_cache_path":"/S/V/P/C/OS/Sm/L/dyld/dyld_shared_cache_arm64e",
+    //   "shared_cache_size":6012010496
+    // }
 
     if (info_dict && info_dict->HasKey("shared_cache_uuid") &&
         info_dict->HasKey("no_shared_cache") &&
+        info_dict->HasKey("shared_cache_private_cache") &&
         info_dict->HasKey("shared_cache_base_address")) {
       base_address = info_dict->GetValueForKey("shared_cache_base_address")
                          ->GetUnsignedIntegerValue(LLDB_INVALID_ADDRESS);
@@ -722,7 +733,17 @@ bool DynamicLoaderMacOS::GetSharedCacheInformation(
         private_shared_cache = eLazyBoolYes;
       else
         private_shared_cache = eLazyBoolNo;
-
+      if (info_dict->HasKey("shared_cache_path")) {
+        llvm::StringRef filepath =
+            info_dict->GetValueForKey("shared_cache_path")->GetStringValue();
+        shared_cache_path.SetPath(filepath);
+      }
+      if (info_dict->HasKey("shared_cache_size")) {
+        uint64_t val = info_dict->GetValueForKey("shared_cache_size")
+                           ->GetUnsignedIntegerValue(LLDB_INVALID_ADDRESS);
+        if (val != LLDB_INVALID_ADDRESS)
+          size = val;
+      }
       return true;
     }
   }

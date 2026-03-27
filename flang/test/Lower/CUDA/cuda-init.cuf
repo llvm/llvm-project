@@ -1,0 +1,11 @@
+! RUN: bbc -emit-fir -hlfir -fcuda %s -o - | FileCheck %s --check-prefixes=ALL,CUDA
+! RUN: bbc -emit-fir -hlfir %s -o - | FileCheck %s --check-prefixes=ALL,NOCUDA
+
+program test_init
+
+end 
+
+! ALL-LABEL: func.func @main
+! ALL: fir.call @_FortranAProgramStart
+! CUDA: fir.call @_FortranACUFInit() fastmath<contract> : () -> ()
+! NOCUDA-NOT: fir.call @_FortranACUFInit() fastmath<contract> : () -> ()

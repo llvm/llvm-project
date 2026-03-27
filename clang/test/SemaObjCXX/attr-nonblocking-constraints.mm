@@ -23,4 +23,17 @@ void nb4() [[clang::nonblocking]] {
 	}
 	@catch (...) { // expected-warning {{function with 'nonblocking' attribute must not throw or catch exceptions}}
 	}
+	@finally { // expected-warning {{function with 'nonblocking' attribute must not throw or catch exceptions}}
+	}
+}
+
+@class Lock;
+extern Lock *someLock;
+
+void nb5() [[clang::nonblocking]] {
+	@autoreleasepool { // expected-warning {{function with 'nonblocking' attribute must not access ObjC methods or properties}}
+	}
+
+	@synchronized(someLock) { // expected-warning {{function with 'nonblocking' attribute must not access ObjC methods or properties}}
+	}
 }

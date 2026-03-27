@@ -11,24 +11,29 @@
 #define LLDB_TOOLS_LLDB_DAP_INSTRUCTIONBREAKPOINT_H
 
 #include "Breakpoint.h"
-#include "llvm/ADT/StringRef.h"
+#include "DAPForward.h"
+#include "Protocol/ProtocolTypes.h"
+#include "lldb/lldb-types.h"
+#include <cstdint>
 
 namespace lldb_dap {
 
-// Instruction Breakpoint
-struct InstructionBreakpoint : public Breakpoint {
+/// Instruction Breakpoint
+class InstructionBreakpoint : public Breakpoint {
+public:
+  InstructionBreakpoint(DAP &d,
+                        const protocol::InstructionBreakpoint &breakpoint);
 
-  lldb::addr_t instructionAddressReference;
-  int32_t id;
-  int32_t offset;
+  /// Set instruction breakpoint in LLDB as a new breakpoint.
+  void SetBreakpoint();
 
-  InstructionBreakpoint()
-      : Breakpoint(), instructionAddressReference(LLDB_INVALID_ADDRESS), id(0),
-        offset(0) {}
-  InstructionBreakpoint(const llvm::json::Object &obj);
+  lldb::addr_t GetInstructionAddressReference() const {
+    return m_instruction_address_reference;
+  }
 
-  // Set instruction breakpoint in LLDB as a new breakpoint
-  void SetInstructionBreakpoint();
+protected:
+  lldb::addr_t m_instruction_address_reference;
+  int32_t m_offset;
 };
 
 } // namespace lldb_dap

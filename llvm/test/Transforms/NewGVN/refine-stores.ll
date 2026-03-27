@@ -12,13 +12,13 @@ target triple = "x86_64-apple-darwin16.5.0"
 
 %struct.eggs = type {}
 
-define void @spam(ptr %a) {
+define void @spam(ptr %a, i1 %arg) {
 ; CHECK-LABEL: @spam(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    store ptr null, ptr [[A:%.*]], align 8
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    br i1 undef, label [[BB3:%.*]], label [[BB2:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[BB3:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    call void @baz()
 ; CHECK-NEXT:    br label [[BB1]]
@@ -32,7 +32,7 @@ bb:
   br label %bb1
 
 bb1:                                              ; preds = %bb2, %bb
-  br i1 undef, label %bb3, label %bb2
+  br i1 %arg, label %bb3, label %bb2
 
 bb2:                                              ; preds = %bb1
   call void @baz()
@@ -52,7 +52,7 @@ bb3:                                              ; preds = %bb1
 declare void @baz()
 
 
-define void @a() {
+define void @a(i1 %arg) {
 ; CHECK-LABEL: @a(
 ; CHECK-NEXT:  b:
 ; CHECK-NEXT:    br label [[C:%.*]]
@@ -61,7 +61,7 @@ define void @a() {
 ; CHECK-NEXT:    br label [[E:%.*]]
 ; CHECK:       e:
 ; CHECK-NEXT:    store ptr undef, ptr null, align 8
-; CHECK-NEXT:    br i1 undef, label [[C]], label [[E]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[C]], label [[E]]
 ;
 b:
   br label %c
@@ -76,19 +76,19 @@ e:                                                ; preds = %e, %c
 ;; need to make sure the right set of values get marked as changed after memory leaders change
   %g = load ptr, ptr null
   store ptr undef, ptr null
-  br i1 undef, label %c, label %e
+  br i1 %arg, label %c, label %e
 }
 
 %struct.hoge = type {}
 
-define void @widget(ptr %arg) {
+define void @widget(ptr %arg, i1 %arg2) {
 ; CHECK-LABEL: @widget(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[TMP:%.*]] = phi ptr [ [[ARG:%.*]], [[BB:%.*]] ], [ null, [[BB1]] ]
 ; CHECK-NEXT:    store ptr [[TMP]], ptr undef, align 8
-; CHECK-NEXT:    br i1 undef, label [[BB1]], label [[BB2:%.*]]
+; CHECK-NEXT:    br i1 [[ARG2:%.*]], label [[BB1]], label [[BB2:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi i64 [ [[TMP8:%.*]], [[BB7:%.*]] ], [ 0, [[BB1]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[TMP3]], 0
@@ -108,7 +108,7 @@ bb:
 bb1:                                              ; preds = %bb1, %bb
   %tmp = phi ptr [ %arg, %bb ], [ null, %bb1 ]
   store ptr %tmp, ptr undef
-  br i1 undef, label %bb1, label %bb2
+  br i1 %arg2, label %bb1, label %bb2
 
 bb2:                                              ; preds = %bb7, %bb1
   %tmp3 = phi i64 [ %tmp8, %bb7 ], [ 0, %bb1 ]
@@ -132,7 +132,7 @@ declare void @quux()
 
 %struct.a = type {}
 
-define void @b() {
+define void @b(i1 %arg) {
 ; CHECK-LABEL: @b(
 ; CHECK-NEXT:    [[C:%.*]] = alloca [[STRUCT_A:%.*]], align 8
 ; CHECK-NEXT:    br label [[D:%.*]]
@@ -140,9 +140,9 @@ define void @b() {
 ; CHECK-NEXT:    unreachable
 ; CHECK:       d:
 ; CHECK-NEXT:    [[E:%.*]] = load i32, ptr [[C]], align 4
-; CHECK-NEXT:    br i1 undef, label [[I:%.*]], label [[J:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[I:%.*]], label [[J:%.*]]
 ; CHECK:       i:
-; CHECK-NEXT:    br i1 undef, label [[K:%.*]], label [[M:%.*]]
+; CHECK-NEXT:    br i1 true, label [[K:%.*]], label [[M:%.*]]
 ; CHECK:       k:
 ; CHECK-NEXT:    br label [[L:%.*]]
 ; CHECK:       l:
@@ -160,10 +160,10 @@ m:                                                ; preds = %j, %i
 d:                                                ; preds = %0
   %h = getelementptr i8, ptr %c
   %e = load i32, ptr %h
-  br i1 undef, label %i, label %j
+  br i1 %arg, label %i, label %j
 
 i:                                                ; preds = %d
-  br i1 undef, label %k, label %m
+  br i1 %arg, label %k, label %m
 
 k:                                                ; preds = %i
   br label %l

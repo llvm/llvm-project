@@ -7,12 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Parallel.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/ExponentialBackoff.h"
+#include "llvm/Support/Jobserver.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Threading.h"
 
 #include <atomic>
 #include <future>
+#include <memory>
+#include <mutex>
 #include <thread>
 #include <vector>
 
@@ -49,6 +54,9 @@ public:
 class ThreadPoolExecutor : public Executor {
 public:
   explicit ThreadPoolExecutor(ThreadPoolStrategy S) {
+    if (S.UseJobserver)
+      TheJobserver = JobserverClient::getInstance();
+
     ThreadCount = S.compute_thread_count();
     // Spawn all but one of the threads in another thread as spawning threads
     // can take a while.
@@ -60,7 +68,7 @@ public:
     auto &Thread0 = Threads[0];
     Thread0 = std::thread([this, S] {
       for (unsigned I = 1; I < ThreadCount; ++I) {
-        Threads.emplace_back([=] { work(S, I); });
+        Threads.emplace_back([this, S, I] { work(S, I); });
         if (Stop)
           break;
       }
@@ -68,6 +76,10 @@ public:
       work(S, 0);
     });
   }
+
+  // To make sure the thread pool executor can only be created with a parallel
+  // strategy.
+  ThreadPoolExecutor() = delete;
 
   void stop() {
     {
@@ -78,10 +90,7 @@ public:
     }
     Cond.notify_all();
     ThreadsCreated.get_future().wait();
-  }
 
-  ~ThreadPoolExecutor() override {
-    stop();
     std::thread::id CurrentThreadId = std::this_thread::get_id();
     for (std::thread &T : Threads)
       if (T.get_id() == CurrentThreadId)
@@ -89,6 +98,8 @@ public:
       else
         T.join();
   }
+
+  ~ThreadPoolExecutor() override { stop(); }
 
   struct Creator {
     static void *call() { return new ThreadPoolExecutor(strategy); }
@@ -111,15 +122,60 @@ private:
   void work(ThreadPoolStrategy S, unsigned ThreadID) {
     threadIndex = ThreadID;
     S.apply_thread_strategy(ThreadID);
+    // Note on jobserver deadlock avoidance:
+    // GNU Make grants each invoked process one implicit job slot. Our
+    // JobserverClient models this by returning an implicit JobSlot on the
+    // first successful tryAcquire() in a process. This guarantees forward
+    // progress without requiring a dedicated "always-on" thread here.
+
     while (true) {
-      std::unique_lock<std::mutex> Lock(Mutex);
-      Cond.wait(Lock, [&] { return Stop || !WorkStack.empty(); });
-      if (Stop)
-        break;
-      auto Task = std::move(WorkStack.back());
-      WorkStack.pop_back();
-      Lock.unlock();
-      Task();
+      if (TheJobserver) {
+        // Jobserver-mode scheduling:
+        // - Acquire one job slot (with exponential backoff to avoid busy-wait).
+        // - While holding the slot, drain and run tasks from the local queue.
+        // - Release the slot when the queue is empty or when shutting down.
+        // Rationale: Holding a slot amortizes acquire/release overhead over
+        // multiple tasks and avoids requeue/yield churn, while still enforcing
+        // the jobserver’s global concurrency limit. With K available slots,
+        // up to K workers run tasks in parallel; within each worker tasks run
+        // sequentially until the local queue is empty.
+        ExponentialBackoff Backoff(std::chrono::hours(24));
+        JobSlot Slot;
+        do {
+          if (Stop)
+            return;
+          Slot = TheJobserver->tryAcquire();
+          if (Slot.isValid())
+            break;
+        } while (Backoff.waitForNextAttempt());
+
+        llvm::scope_exit SlotReleaser(
+            [&] { TheJobserver->release(std::move(Slot)); });
+
+        while (true) {
+          std::function<void()> Task;
+          {
+            std::unique_lock<std::mutex> Lock(Mutex);
+            Cond.wait(Lock, [&] { return Stop || !WorkStack.empty(); });
+            if (Stop && WorkStack.empty())
+              return;
+            if (WorkStack.empty())
+              break;
+            Task = std::move(WorkStack.back());
+            WorkStack.pop_back();
+          }
+          Task();
+        }
+      } else {
+        std::unique_lock<std::mutex> Lock(Mutex);
+        Cond.wait(Lock, [&] { return Stop || !WorkStack.empty(); });
+        if (Stop)
+          break;
+        auto Task = std::move(WorkStack.back());
+        WorkStack.pop_back();
+        Lock.unlock();
+        Task();
+      }
     }
   }
 
@@ -130,27 +186,15 @@ private:
   std::promise<void> ThreadsCreated;
   std::vector<std::thread> Threads;
   unsigned ThreadCount;
+
+  JobserverClient *TheJobserver = nullptr;
 };
 
 Executor *Executor::getDefaultExecutor() {
 #ifdef _WIN32
   // The ManagedStatic enables the ThreadPoolExecutor to be stopped via
-  // llvm_shutdown() which allows a "clean" fast exit, e.g. via _exit(). This
-  // stops the thread pool and waits for any worker thread creation to complete
-  // but does not wait for the threads to finish. The wait for worker thread
-  // creation to complete is important as it prevents intermittent crashes on
-  // Windows due to a race condition between thread creation and process exit.
-  //
-  // The ThreadPoolExecutor will only be destroyed when the static unique_ptr to
-  // it is destroyed, i.e. in a normal full exit. The ThreadPoolExecutor
-  // destructor ensures it has been stopped and waits for worker threads to
-  // finish. The wait is important as it prevents intermittent crashes on
-  // Windows when the process is doing a full exit.
-  //
-  // The Windows crashes appear to only occur with the MSVC static runtimes and
-  // are more frequent with the debug static runtime.
-  //
-  // This also prevents intermittent deadlocks on exit with the MinGW runtime.
+  // llvm_shutdown() on Windows. This is important to avoid various race
+  // conditions at process exit that can cause crashes or deadlocks.
 
   static ManagedStatic<ThreadPoolExecutor, ThreadPoolExecutor::Creator,
                        ThreadPoolExecutor::Deleter>
@@ -212,26 +256,31 @@ void llvm::parallelFor(size_t Begin, size_t End,
                        llvm::function_ref<void(size_t)> Fn) {
 #if LLVM_ENABLE_THREADS
   if (parallel::strategy.ThreadsRequested != 1) {
-    auto NumItems = End - Begin;
-    // Limit the number of tasks to MaxTasksPerGroup to limit job scheduling
-    // overhead on large inputs.
-    auto TaskSize = NumItems / parallel::detail::MaxTasksPerGroup;
-    if (TaskSize == 0)
-      TaskSize = 1;
+    size_t NumItems = End - Begin;
+    if (NumItems == 0)
+      return;
+    // Distribute work via an atomic counter shared by NumWorkers threads,
+    // keeping the task count (and thus Linux futex calls) at O(ThreadCount)
+    // For lld, per-file work is somewhat uneven, so a multipler > 1 is safer.
+    // While 2 vs 4 vs 8 makes no measurable difference, 4 is used as a
+    // reasonable default.
+    size_t NumWorkers = std::min<size_t>(NumItems, parallel::getThreadCount());
+    size_t ChunkSize = std::max(size_t(1), NumItems / (NumWorkers * 4));
+    std::atomic<size_t> Idx{Begin};
+    auto Worker = [&] {
+      while (true) {
+        size_t I = Idx.fetch_add(ChunkSize, std::memory_order_relaxed);
+        if (I >= End)
+          break;
+        size_t IEnd = std::min(I + ChunkSize, End);
+        for (; I < IEnd; ++I)
+          Fn(I);
+      }
+    };
 
     parallel::TaskGroup TG;
-    for (; Begin + TaskSize < End; Begin += TaskSize) {
-      TG.spawn([=, &Fn] {
-        for (size_t I = Begin, E = Begin + TaskSize; I != E; ++I)
-          Fn(I);
-      });
-    }
-    if (Begin != End) {
-      TG.spawn([=, &Fn] {
-        for (size_t I = Begin; I != End; ++I)
-          Fn(I);
-      });
-    }
+    for (size_t I = 0; I != NumWorkers; ++I)
+      TG.spawn(Worker);
     return;
   }
 #endif

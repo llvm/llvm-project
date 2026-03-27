@@ -1,4 +1,4 @@
-//===- ClangOptionDocEmitter.cpp - Documentation for command line flags ---===//
+//===-- ClangOptionDocEmitter.cpp - Documentation for command line flags --===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,11 +9,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "TableGenBackends.h"
-#include "llvm/TableGen/Error.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <cctype>
@@ -110,13 +109,17 @@ Documentation extractDocumentation(const RecordKeeper &Records,
     // Pretend no-X and Xno-Y options are aliases of X and XY.
     std::string Name = std::string(R->getValueAsString("Name"));
     if (Name.size() >= 4) {
-      if (Name.substr(0, 3) == "no-" && OptionsByName[Name.substr(3)]) {
-        Aliases[OptionsByName[Name.substr(3)]].push_back(R);
-        continue;
+      if (Name.substr(0, 3) == "no-") {
+        if (const Record *Opt = OptionsByName[Name.substr(3)]) {
+          Aliases[Opt].push_back(R);
+          continue;
+        }
       }
-      if (Name.substr(1, 3) == "no-" && OptionsByName[Name[0] + Name.substr(4)]) {
-        Aliases[OptionsByName[Name[0] + Name.substr(4)]].push_back(R);
-        continue;
+      if (Name.substr(1, 3) == "no-") {
+        if (const Record *Opt = OptionsByName[Name[0] + Name.substr(4)]) {
+          Aliases[Opt].push_back(R);
+          continue;
+        }
       }
     }
 
@@ -170,11 +173,11 @@ Documentation extractDocumentation(const RecordKeeper &Records,
 // Get the first and successive separators to use for an OptionKind.
 std::pair<StringRef,StringRef> getSeparatorsForKind(const Record *OptionKind) {
   return StringSwitch<std::pair<StringRef, StringRef>>(OptionKind->getName())
-    .Cases("KIND_JOINED", "KIND_JOINED_OR_SEPARATE",
-           "KIND_JOINED_AND_SEPARATE",
-           "KIND_REMAINING_ARGS_JOINED", {"", " "})
-    .Case("KIND_COMMAJOINED", {"", ","})
-    .Default({" ", " "});
+      .Cases({"KIND_JOINED", "KIND_JOINED_OR_SEPARATE",
+              "KIND_JOINED_AND_SEPARATE", "KIND_REMAINING_ARGS_JOINED"},
+             {"", " "})
+      .Case("KIND_COMMAJOINED", {"", ","})
+      .Default({" ", " "});
 }
 
 const unsigned UnlimitedArgs = unsigned(-1);
@@ -183,12 +186,13 @@ const unsigned UnlimitedArgs = unsigned(-1);
 // arguments are accepted.
 unsigned getNumArgsForKind(const Record *OptionKind, const Record *Option) {
   return StringSwitch<unsigned>(OptionKind->getName())
-    .Cases("KIND_JOINED", "KIND_JOINED_OR_SEPARATE", "KIND_SEPARATE", 1)
-    .Cases("KIND_REMAINING_ARGS", "KIND_REMAINING_ARGS_JOINED",
-           "KIND_COMMAJOINED", UnlimitedArgs)
-    .Case("KIND_JOINED_AND_SEPARATE", 2)
-    .Case("KIND_MULTIARG", Option->getValueAsInt("NumArgs"))
-    .Default(0);
+      .Cases({"KIND_JOINED", "KIND_JOINED_OR_SEPARATE", "KIND_SEPARATE"}, 1)
+      .Cases({"KIND_REMAINING_ARGS", "KIND_REMAINING_ARGS_JOINED",
+              "KIND_COMMAJOINED"},
+             UnlimitedArgs)
+      .Case("KIND_JOINED_AND_SEPARATE", 2)
+      .Case("KIND_MULTIARG", Option->getValueAsInt("NumArgs"))
+      .Default(0);
 }
 
 std::string escapeRST(StringRef Str) {
@@ -202,10 +206,7 @@ std::string escapeRST(StringRef Str) {
 }
 
 StringRef getSphinxOptionID(StringRef OptionName) {
-  for (auto I = OptionName.begin(), E = OptionName.end(); I != E; ++I)
-    if (!isalnum(*I) && *I != '-')
-      return OptionName.substr(0, I - OptionName.begin());
-  return OptionName;
+  return OptionName.take_while([](char C) { return isalnum(C) || C == '-'; });
 }
 
 bool canSphinxCopeWithOption(const Record *Option) {
@@ -336,9 +337,8 @@ void emitOption(const DocumentedOption &Option, const Record *DocInfo,
   });
   assert(!SphinxOptionIDs.empty() && "no flags for option");
   static std::map<std::string, int> NextSuffix;
-  int SphinxWorkaroundSuffix = NextSuffix[*std::max_element(
-      SphinxOptionIDs.begin(), SphinxOptionIDs.end(),
-      [&](const std::string &A, const std::string &B) {
+  int SphinxWorkaroundSuffix = NextSuffix[*llvm::max_element(
+      SphinxOptionIDs, [&](const std::string &A, const std::string &B) {
         return NextSuffix[A] < NextSuffix[B];
       })];
   for (auto &S : SphinxOptionIDs)
@@ -367,13 +367,13 @@ void emitOption(const DocumentedOption &Option, const Record *DocInfo,
   for (const Record *VisibilityHelp :
        R->getValueAsListOfDefs("HelpTextsForVariants")) {
     // This is a list of visibilities.
-    ArrayRef<Init *> Visibilities =
-        VisibilityHelp->getValueAsListInit("Visibilities")->getValues();
+    ArrayRef<const Init *> Visibilities =
+        VisibilityHelp->getValueAsListInit("Visibilities")->getElements();
 
     // See if any of the program's visibilities are in the list.
     for (StringRef DocInfoMask :
          DocInfo->getValueAsListOfStrings("VisibilityMask")) {
-      for (Init *Visibility : Visibilities) {
+      for (const Init *Visibility : Visibilities) {
         if (Visibility->getAsUnquotedString() == DocInfoMask) {
           // Use the first one we find.
           Description = escapeRST(VisibilityHelp->getValueAsString("Text"));

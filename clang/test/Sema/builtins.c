@@ -40,7 +40,7 @@ void test9(short v) {
 
   old = __sync_fetch_and_add();  // expected-error {{too few arguments to function call}}
   old = __sync_fetch_and_add(&old);  // expected-error {{too few arguments to function call}}
-  old = __sync_fetch_and_add((unsigned*)0, 42i); // expected-warning {{imaginary constants are a GNU extension}}
+  old = __sync_fetch_and_add((unsigned*)0, 42i); // expected-warning {{imaginary constants are a C2y extension}}
 
   // PR7600: Pointers are implicitly casted to integers and back.
   void *old_ptr = __sync_val_compare_and_swap((void**)0, 0, 0);

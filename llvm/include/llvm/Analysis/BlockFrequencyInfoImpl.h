@@ -72,9 +72,6 @@ namespace bfi_detail {
 
 struct IrreducibleGraph;
 
-// This is part of a workaround for a GCC 4.7 crash on lambdas.
-template <class BT> struct BlockEdgesAdder;
-
 /// Mass of a block.
 ///
 /// This class implements a sort of fixed-point fraction always between 0.0 and
@@ -843,9 +840,6 @@ void IrreducibleGraph::addEdges(const BlockNode &Node,
 ///         (Running this until fixed point would "solve" the geometric
 ///         series by simulation.)
 template <class BT> class BlockFrequencyInfoImpl : BlockFrequencyInfoImplBase {
-  // This is part of a workaround for a GCC 4.7 crash on lambdas.
-  friend struct bfi_detail::BlockEdgesAdder<BT>;
-
   using BlockT = typename bfi_detail::TypeMap<BT>::BlockT;
   using BlockKeyT = typename bfi_detail::TypeMap<BT>::BlockKeyT;
   using FunctionT = typename bfi_detail::TypeMap<BT>::FunctionT;
@@ -863,21 +857,10 @@ template <class BT> class BlockFrequencyInfoImpl : BlockFrequencyInfoImplBase {
   const FunctionT *F = nullptr;
 
   // All blocks in reverse postorder.
-  std::vector<const BlockT *> RPOT;
-  DenseMap<BlockKeyT, std::pair<BlockNode, BFICallbackVH>> Nodes;
+  std::vector<BFICallbackVH> RPOT;
+  DenseMap<const BlockT *, BlockNode> Nodes;
 
-  using rpot_iterator = typename std::vector<const BlockT *>::const_iterator;
-
-  rpot_iterator rpot_begin() const { return RPOT.begin(); }
-  rpot_iterator rpot_end() const { return RPOT.end(); }
-
-  size_t getIndex(const rpot_iterator &I) const { return I - rpot_begin(); }
-
-  BlockNode getNode(const rpot_iterator &I) const {
-    return BlockNode(getIndex(I));
-  }
-
-  BlockNode getNode(const BlockT *BB) const { return Nodes.lookup(BB).first; }
+  BlockNode getNode(const BlockT *BB) const { return Nodes.lookup(BB); }
 
   const BlockT *getBlock(const BlockNode &Node) const {
     assert(Node.Index < RPOT.size());
@@ -1041,7 +1024,10 @@ public:
     // We don't erase corresponding items from `Freqs`, `RPOT` and other to
     // avoid invalidating indices. Doing so would have saved some memory, but
     // it's not worth it.
-    Nodes.erase(BB);
+    auto It = Nodes.find(BB);
+    assert(It != Nodes.end() && "cannot forget block that was never seen");
+    RPOT[It->second.Index] = {}; // Clear value handle.
+    Nodes.erase(It);
   }
 
   Scaled64 getFloatingBlockFreq(const BlockT *BB) const {
@@ -1085,15 +1071,24 @@ public:
   void deleted() override {
     BFIImpl->forgetBlock(cast<BasicBlock>(getValPtr()));
   }
+
+  operator const BasicBlock *() const {
+    Value *V = *static_cast<const CallbackVH *>(this);
+    return cast<BasicBlock>(V);
+  }
 };
 
 /// Dummy implementation since MachineBasicBlocks aren't Values, so ValueHandles
 /// don't apply to them.
 template <class BFIImplT>
 class BFICallbackVH<MachineBasicBlock, BFIImplT> {
+  const MachineBasicBlock *MBB;
+
 public:
   BFICallbackVH() = default;
-  BFICallbackVH(const MachineBasicBlock *, BFIImplT *) {}
+  BFICallbackVH(const MachineBasicBlock *MBB, BFIImplT *) : MBB(MBB) {}
+
+  operator const MachineBasicBlock *() const { return MBB; }
 };
 
 } // end namespace bfi_detail
@@ -1143,15 +1138,17 @@ void BlockFrequencyInfoImpl<BT>::calculate(const FunctionT &F,
 template <class BT>
 void BlockFrequencyInfoImpl<BT>::setBlockFreq(const BlockT *BB,
                                               BlockFrequency Freq) {
-  if (Nodes.count(BB))
-    BlockFrequencyInfoImplBase::setBlockFreq(getNode(BB), Freq);
+  auto [It, Inserted] = Nodes.try_emplace(BB);
+  if (!Inserted)
+    BlockFrequencyInfoImplBase::setBlockFreq(It->second, Freq);
   else {
     // If BB is a newly added block after BFI is done, we need to create a new
     // BlockNode for it assigned with a new index. The index can be determined
     // by the size of Freqs.
     BlockNode NewNode(Freqs.size());
-    Nodes[BB] = {NewNode, BFICallbackVH(BB, this)};
+    It->second = NewNode;
     Freqs.emplace_back();
+    RPOT.emplace_back(BB, this);
     BlockFrequencyInfoImplBase::setBlockFreq(NewNode, Freq);
   }
 }
@@ -1159,18 +1156,18 @@ void BlockFrequencyInfoImpl<BT>::setBlockFreq(const BlockT *BB,
 template <class BT> void BlockFrequencyInfoImpl<BT>::initializeRPOT() {
   const BlockT *Entry = &F->front();
   RPOT.reserve(F->size());
-  std::copy(po_begin(Entry), po_end(Entry), std::back_inserter(RPOT));
+  for (const BlockT *BB : post_order(Entry))
+    RPOT.emplace_back(BB, this);
   std::reverse(RPOT.begin(), RPOT.end());
 
   assert(RPOT.size() - 1 <= BlockNode::getMaxIndex() &&
          "More nodes in function than Block Frequency Info supports");
 
   LLVM_DEBUG(dbgs() << "reverse-post-order-traversal\n");
-  for (rpot_iterator I = rpot_begin(), E = rpot_end(); I != E; ++I) {
-    BlockNode Node = getNode(I);
-    LLVM_DEBUG(dbgs() << " - " << getIndex(I) << ": " << getBlockName(Node)
-                      << "\n");
-    Nodes[*I] = {Node, BFICallbackVH(*I, this)};
+  for (auto [Idx, Block] : enumerate(RPOT)) {
+    BlockNode Node = BlockNode(Idx);
+    LLVM_DEBUG(dbgs() << " - " << Idx << ": " << getBlockName(Node) << "\n");
+    Nodes[Block] = Node;
   }
 
   Working.reserve(RPOT.size());
@@ -1328,13 +1325,12 @@ bool BlockFrequencyInfoImpl<BT>::tryToComputeMassInFunction() {
   assert(!Working[0].isLoopHeader() && "entry block is a loop header");
 
   Working[0].getMass() = BlockMass::getFull();
-  for (rpot_iterator I = rpot_begin(), IE = rpot_end(); I != IE; ++I) {
+  for (size_t i = 0, n = RPOT.size(); i != n; ++i) {
     // Check for nodes that have been packaged.
-    BlockNode Node = getNode(I);
-    if (Working[Node.Index].isPackaged())
+    if (Working[i].isPackaged())
       continue;
 
-    if (!propagateMassToSuccessors(nullptr, Node))
+    if (!propagateMassToSuccessors(nullptr, BlockNode(i)))
       return false;
   }
   return true;
@@ -1409,11 +1405,10 @@ template <class BT> void BlockFrequencyInfoImpl<BT>::applyIterativeInference() {
     auto Node = getNode(&BB);
     if (!Node.isValid())
       continue;
-    if (BlockIndex.count(&BB)) {
-      Freqs[Node.Index].Scaled = Freq[BlockIndex[&BB]];
-    } else {
+    if (auto It = BlockIndex.find(&BB); It != BlockIndex.end())
+      Freqs[Node.Index].Scaled = Freq[It->second];
+    else
       Freqs[Node.Index].Scaled = Scaled64::getZero();
-    }
   }
 }
 
@@ -1571,7 +1566,8 @@ void BlockFrequencyInfoImpl<BT>::initTransitionProbabilities(
     SmallPtrSet<const BlockT *, 2> UniqueSuccs;
     for (const auto SI : children<const BlockT *>(BB)) {
       // Ignore cold blocks
-      if (!BlockIndex.contains(SI))
+      auto BlockIndexIt = BlockIndex.find(SI);
+      if (BlockIndexIt == BlockIndex.end())
         continue;
       // Ignore parallel edges between BB and SI blocks
       if (!UniqueSuccs.insert(SI).second)
@@ -1583,7 +1579,7 @@ void BlockFrequencyInfoImpl<BT>::initTransitionProbabilities(
 
       auto EdgeProb =
           Scaled64::getFraction(EP.getNumerator(), EP.getDenominator());
-      size_t Dst = BlockIndex.find(SI)->second;
+      size_t Dst = BlockIndexIt->second;
       Succs[Src].push_back(std::make_pair(Dst, EdgeProb));
       SumProb[Src] += EdgeProb;
     }
@@ -1631,29 +1627,6 @@ BlockFrequencyInfoImplBase::Scaled64 BlockFrequencyInfoImpl<BT>::discrepancy(
 }
 #endif
 
-/// \note This should be a lambda, but that crashes GCC 4.7.
-namespace bfi_detail {
-
-template <class BT> struct BlockEdgesAdder {
-  using BlockT = BT;
-  using LoopData = BlockFrequencyInfoImplBase::LoopData;
-  using Successor = GraphTraits<const BlockT *>;
-
-  const BlockFrequencyInfoImpl<BT> &BFI;
-
-  explicit BlockEdgesAdder(const BlockFrequencyInfoImpl<BT> &BFI)
-      : BFI(BFI) {}
-
-  void operator()(IrreducibleGraph &G, IrreducibleGraph::IrrNode &Irr,
-                  const LoopData *OuterLoop) {
-    const BlockT *BB = BFI.RPOT[Irr.Node.Index];
-    for (const auto *Succ : children<const BlockT *>(BB))
-      G.addEdge(Irr, BFI.getNode(Succ), OuterLoop);
-  }
-};
-
-} // end namespace bfi_detail
-
 template <class BT>
 void BlockFrequencyInfoImpl<BT>::computeIrreducibleMass(
     LoopData *OuterLoop, std::list<LoopData>::iterator Insert) {
@@ -1664,9 +1637,12 @@ void BlockFrequencyInfoImpl<BT>::computeIrreducibleMass(
 
   using namespace bfi_detail;
 
-  // Ideally, addBlockEdges() would be declared here as a lambda, but that
-  // crashes GCC 4.7.
-  BlockEdgesAdder<BT> addBlockEdges(*this);
+  auto addBlockEdges = [&](IrreducibleGraph &G, IrreducibleGraph::IrrNode &Irr,
+                           const LoopData *OuterLoop) {
+    const BlockT *BB = RPOT[Irr.Node.Index];
+    for (const auto *Succ : children<const BlockT *>(BB))
+      G.addEdge(Irr, getNode(Succ), OuterLoop);
+  };
   IrreducibleGraph G(*this, OuterLoop, addBlockEdges);
 
   for (auto &L : analyzeIrreducible(G, OuterLoop, Insert))
@@ -1745,13 +1721,13 @@ void BlockFrequencyInfoImpl<BT>::verifyMatch(
   for (auto &Entry : Nodes) {
     const BlockT *BB = Entry.first;
     if (BB) {
-      ValidNodes[BB] = Entry.second.first;
+      ValidNodes[BB] = Entry.second;
     }
   }
   for (auto &Entry : Other.Nodes) {
     const BlockT *BB = Entry.first;
     if (BB) {
-      OtherValidNodes[BB] = Entry.second.first;
+      OtherValidNodes[BB] = Entry.second;
     }
   }
   unsigned NumValidNodes = ValidNodes.size();
@@ -1764,8 +1740,8 @@ void BlockFrequencyInfoImpl<BT>::verifyMatch(
     for (auto &Entry : ValidNodes) {
       const BlockT *BB = Entry.first;
       BlockNode Node = Entry.second;
-      if (OtherValidNodes.count(BB)) {
-        BlockNode OtherNode = OtherValidNodes[BB];
+      if (auto It = OtherValidNodes.find(BB); It != OtherValidNodes.end()) {
+        BlockNode OtherNode = It->second;
         const auto &Freq = Freqs[Node.Index];
         const auto &OtherFreq = Other.Freqs[OtherNode.Index];
         if (Freq.Integer != OtherFreq.Integer) {
@@ -1836,9 +1812,7 @@ struct BFIDOTGraphTraitsBase : public DefaultDOTGraphTraits {
     if (Freq < HotFreq)
       return Result;
 
-    raw_string_ostream OS(Result);
-    OS << "color=\"red\"";
-    OS.flush();
+    raw_string_ostream(Result) << "color=\"red\"";
     return Result;
   }
 
@@ -1893,12 +1867,9 @@ struct BFIDOTGraphTraitsBase : public DefaultDOTGraphTraits {
       BlockFrequency HotFreq = BlockFrequency(MaxFrequency) *
                                BranchProbability(HotPercentThreshold, 100);
 
-      if (EFreq >= HotFreq) {
+      if (EFreq >= HotFreq)
         OS << ",color=\"red\"";
-      }
     }
-
-    OS.flush();
     return Str;
   }
 };

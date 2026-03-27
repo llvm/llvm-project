@@ -1,6 +1,6 @@
 ; RUN: opt < %s -loop-reduce
 
-define void @resolve_name() nounwind uwtable ssp {
+define void @resolve_name(i1 %arg, i8 %arg2) nounwind uwtable ssp {
   br label %while.cond40.preheader
 while.cond132.while.cond.loopexit_crit_edge:
   br label %while.cond40.preheader
@@ -9,7 +9,7 @@ while.cond40.preheader:
 while.cond40:
   %indvars.iv194 = phi ptr [ null, %while.cond40.preheader ], [ %scevgep, %while.body51 ]
   %tmp.1 = phi ptr [ undef, %while.cond40.preheader ], [ %incdec.ptr, %while.body51 ]
-  switch i8 undef, label %while.body51 [
+  switch i8 %arg2, label %while.body51 [
     i8 0, label %if.then59
   ]
 while.body51:                                     ; preds = %land.end50
@@ -17,7 +17,7 @@ while.body51:                                     ; preds = %land.end50
   %scevgep = getelementptr i8, ptr %indvars.iv194, i64 1
   br label %while.cond40
 if.then59:                                        ; preds = %while.end
-  br i1 undef, label %if.then64, label %if.end113
+  br i1 %arg, label %if.then64, label %if.end113
 if.then64:                                        ; preds = %if.then59
   %incdec.ptr88.tmp.2 = select i1 undef, ptr undef, ptr undef
   br label %if.end113
@@ -33,5 +33,5 @@ while.body139.lr.ph:                              ; preds = %while.cond132.prehe
   br label %while.body139
 while.body139:                                    ; preds = %while.body139, %while.body139.lr.ph
   %start_of_var.0177 = phi ptr [ %tmp.1, %while.body139.lr.ph ], [ null, %while.body139 ]
-  br i1 undef, label %while.cond132.while.cond.loopexit_crit_edge, label %while.body139
+  br i1 %arg, label %while.cond132.while.cond.loopexit_crit_edge, label %while.body139
 }

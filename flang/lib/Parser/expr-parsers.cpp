@@ -68,7 +68,7 @@ TYPE_PARSER(construct<AcImpliedDoControl>(
 // type-param-inquiry is parsed as a structure component, except for
 // substring%KIND/LEN
 constexpr auto primary{instrumented("primary"_en_US,
-    first(construct<Expr>(indirect(Parser<CharLiteralConstantSubstring>{})),
+    first(construct<Expr>(indirect(charLiteralConstantSubstring)),
         construct<Expr>(literalConstant),
         construct<Expr>(construct<Expr::Parentheses>("(" >>
             expr / !","_tok / recovery(")"_tok, SkipPastNested<'(', ')'>{}))),
@@ -80,10 +80,13 @@ constexpr auto primary{instrumented("primary"_en_US,
         // PGI/XLF extension: COMPLEX constructor (x,y)
         construct<Expr>(parenthesized(
             construct<Expr::ComplexConstructor>(expr, "," >> expr))),
-        extension<LanguageFeature::PercentLOC>(
-            "nonstandard usage: %LOC"_port_en_US,
-            construct<Expr>("%LOC" >> parenthesized(construct<Expr::PercentLoc>(
-                                          indirect(variable)))))))};
+        // prevent confusing error on missing primary expression
+        lookAhead("%LOC"_tok) >>
+            extension<LanguageFeature::PercentLOC>(
+                "nonstandard usage: %LOC"_port_en_US,
+                construct<Expr>("%LOC" >>
+                    parenthesized(
+                        construct<Expr::PercentLoc>(indirect(variable)))))))};
 
 // R1002 level-1-expr -> [defined-unary-op] primary
 // TODO: Reasonable extension: permit multiple defined-unary-ops

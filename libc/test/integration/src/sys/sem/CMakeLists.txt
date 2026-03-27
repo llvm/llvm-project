@@ -1,0 +1,29 @@
+add_custom_target(sys-sem-integration-tests)
+add_dependencies(libc-integration-tests sys-sem-integration-tests)
+
+add_integration_test(
+  sem_test
+  SUITE
+    sys-sem-integration-tests
+  SRCS
+    sem_test.cpp
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.hdr.sys_ipc_macros
+    libc.hdr.sys_sem_macros
+    libc.hdr.types.struct_sembuf
+    libc.src.__support.threads.sleep
+    libc.src.fcntl.open
+    libc.src.signal.kill
+    libc.src.stdlib.exit
+    libc.src.sys.ipc.ftok
+    libc.src.sys.sem.semctl
+    libc.src.sys.sem.semget
+    libc.src.sys.sem.semop
+    libc.src.sys.wait.waitpid
+    libc.src.unistd.close
+    libc.src.unistd.fork
+    libc.src.unistd.unlink
+    libc.include.signal
+    libc.include.sys_wait
+)

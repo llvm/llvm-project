@@ -30,11 +30,11 @@
 
 # CHECK:      error: undefined symbol: foo(int)
 # CHECK-NEXT: >>> referenced by undef.s
-# CHECK-NEXT: >>>               {{.*}}:(.text+0x1A)
+# CHECK-NEXT: >>>               {{.*}}:(.text+0x1a)
 
 # CHECK:      error: undefined symbol: Pi
 # CHECK-NEXT: >>> referenced by undef.s
-# CHECK-NEXT: >>>               {{.*}}:(.text+0x1F)
+# CHECK-NEXT: >>>               {{.*}}:(.text+0x1f)
 
 # CHECK:      error: undefined symbol: D main
 # CHECK-NEXT: >>> referenced by undef.s

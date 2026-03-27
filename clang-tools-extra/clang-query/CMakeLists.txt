@@ -4,7 +4,7 @@ set(LLVM_LINK_COMPONENTS
   FrontendOpenMP
   )
 
-add_clang_library(clangQuery
+add_clang_library(clangQuery STATIC
   Query.cpp
   QueryParser.cpp
 

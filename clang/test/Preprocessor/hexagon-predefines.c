@@ -105,7 +105,20 @@
 // CHECK-V68HVX-128B: #define __HVX_ARCH__ 68
 // CHECK-V68HVX-128B: #define __HVX_LENGTH__ 128
 // CHECK-V68HVX-128B: #define __HVX__ 1
+// CHECK-V68HVX-128B-NOT: #define __HVX_IEEE_FP__ 1
 // CHECK-V68HVX-128B: #define __hexagon__ 1
+
+// RUN: %clang_cc1 -E -dM -triple hexagon-unknown-elf -target-cpu hexagonv68 \
+// RUN: -target-feature +hvxv68 -target-feature +hvx-length128b \
+// RUN: -target-feature +hvx-ieee-fp %s | FileCheck \
+// RUN: %s -check-prefix CHECK-V68HVX-IEEE-FP
+// CHECK-V68HVX-IEEE-FP: #define __HEXAGON_ARCH__ 68
+// CHECK-V68HVX-IEEE-FP: #define __HEXAGON_V68__ 1
+// CHECK-V68HVX-IEEE-FP: #define __HVX_ARCH__ 68
+// CHECK-V68HVX-IEEE-FP: #define __HVX_IEEE_FP__ 1
+// CHECK-V68HVX-IEEE-FP: #define __HVX_LENGTH__ 128
+// CHECK-V68HVX-IEEE-FP: #define __HVX__ 1
+// CHECK-V68HVX-IEEE-FP: #define __hexagon__ 1
 
 // RUN: %clang_cc1 -E -dM -triple hexagon-unknown-elf -target-cpu hexagonv69 \
 // RUN: -target-feature +hvxv69 -target-feature +hvx-length128b %s | FileCheck \
@@ -137,6 +150,56 @@
 // CHECK-V73HVX-128B: #define __HVX__ 1
 // CHECK-V73HVX-128B: #define __hexagon__ 1
 
+// RUN: %clang_cc1 -E -dM -triple hexagon-unknown-elf -target-cpu hexagonv75 %s\
+// RUN: | FileCheck %s -check-prefix CHECK-V75
+// CHECK-V75: #define __HEXAGON_ARCH__ 75
+// CHECK-V75: #define __HEXAGON_PHYSICAL_SLOTS__ 4
+// CHECK-V75: #define __HEXAGON_V75__ 1
+// CHECK-V75: #define __hexagon__ 1
+
+// RUN: %clang_cc1 -E -dM -triple hexagon-unknown-elf -target-cpu hexagonv75 \
+// RUN: -target-feature +hvxv75 -target-feature +hvx-length128b %s | FileCheck \
+// RUN: %s -check-prefix CHECK-V75HVX-128B
+// CHECK-V75HVX-128B: #define __HEXAGON_ARCH__ 75
+// CHECK-V75HVX-128B: #define __HEXAGON_V75__ 1
+// CHECK-V75HVX-128B: #define __HVX_ARCH__ 75
+// CHECK-V75HVX-128B: #define __HVX_LENGTH__ 128
+// CHECK-V75HVX-128B: #define __HVX__ 1
+// CHECK-V75HVX-128B: #define __hexagon__ 1
+
+// RUN: %clang_cc1 -E -dM -triple hexagon-unknown-elf -target-cpu hexagonv79 %s\
+// RUN: | FileCheck %s -check-prefix CHECK-V79
+// CHECK-V79: #define __HEXAGON_ARCH__ 79
+// CHECK-V79: #define __HEXAGON_PHYSICAL_SLOTS__ 4
+// CHECK-V79: #define __HEXAGON_V79__ 1
+// CHECK-V79: #define __hexagon__ 1
+
+// RUN: %clang_cc1 -E -dM -triple hexagon-unknown-elf -target-cpu hexagonv79 \
+// RUN: -target-feature +hvxv79 -target-feature +hvx-length128b %s | FileCheck \
+// RUN: %s -check-prefix CHECK-V79HVX-128B
+// CHECK-V79HVX-128B: #define __HEXAGON_ARCH__ 79
+// CHECK-V79HVX-128B: #define __HEXAGON_V79__ 1
+// CHECK-V79HVX-128B: #define __HVX_ARCH__ 79
+// CHECK-V79HVX-128B: #define __HVX_LENGTH__ 128
+// CHECK-V79HVX-128B: #define __HVX__ 1
+// CHECK-V79HVX-128B: #define __hexagon__ 1
+
+// RUN: %clang_cc1 -E -dM -triple hexagon-unknown-elf -target-cpu hexagonv81 %s\
+// RUN: | FileCheck %s -check-prefix CHECK-V81
+// CHECK-V81: #define __HEXAGON_ARCH__ 81
+// CHECK-V81: #define __HEXAGON_PHYSICAL_SLOTS__ 4
+// CHECK-V81: #define __HEXAGON_V81__ 1
+// CHECK-V81: #define __hexagon__ 1
+
+// RUN: %clang_cc1 -E -dM -triple hexagon-unknown-elf -target-cpu hexagonv81 \
+// RUN: -target-feature +hvxv81 -target-feature +hvx-length128b %s | FileCheck \
+// RUN: %s -check-prefix CHECK-V81HVX-128B
+// CHECK-V81HVX-128B: #define __HEXAGON_ARCH__ 81
+// CHECK-V81HVX-128B: #define __HEXAGON_V81__ 1
+// CHECK-V81HVX-128B: #define __HVX_ARCH__ 81
+// CHECK-V81HVX-128B: #define __HVX_LENGTH__ 128
+// CHECK-V81HVX-128B: #define __HVX__ 1
+// CHECK-V81HVX-128B: #define __hexagon__ 1
 
 // RUN: %clang_cc1 -E -dM -triple hexagon-unknown-elf -target-cpu hexagonv67 \
 // RUN: -target-feature +hvxv67 -target-feature +hvx-length128b %s | FileCheck \
@@ -186,3 +249,9 @@
 // RUN: %s -check-prefix CHECK-INTERFERENCE-73
 // CHECK-INTERFERENCE-73: #define __GCC_CONSTRUCTIVE_SIZE 64
 // CHECK-INTERFERENCE-73: #define __GCC_DESTRUCTIVE_SIZE 64
+
+// RUN: %clang_cc1 -E -dM -triple hexagon-unknown-qurt %s | FileCheck \
+// RUN: %s -check-prefix CHECK-QURT
+// CHECK-QURT: #define __hexagon__ 1
+// CHECK-QURT: #define __qurt__ 1
+// CHECK-QURT-NOT: #define __linux__

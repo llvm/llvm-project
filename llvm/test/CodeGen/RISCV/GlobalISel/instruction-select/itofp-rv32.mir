@@ -59,7 +59,7 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; CHECK-NEXT: [[FCVT_D_W:%[0-9]+]]:fpr64 = nofpexcept FCVT_D_W [[COPY]], 0
+    ; CHECK-NEXT: [[FCVT_D_W:%[0-9]+]]:fpr64 = FCVT_D_W [[COPY]], 0
     ; CHECK-NEXT: $f10_d = COPY [[FCVT_D_W]]
     ; CHECK-NEXT: PseudoRET implicit $f10_d
     %0:gprb(s32) = COPY $x10
@@ -81,7 +81,7 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; CHECK-NEXT: [[FCVT_D_WU:%[0-9]+]]:fpr64 = nofpexcept FCVT_D_WU [[COPY]], 0
+    ; CHECK-NEXT: [[FCVT_D_WU:%[0-9]+]]:fpr64 = FCVT_D_WU [[COPY]], 0
     ; CHECK-NEXT: $f10_d = COPY [[FCVT_D_WU]]
     ; CHECK-NEXT: PseudoRET implicit $f10_d
     %0:gprb(s32) = COPY $x10

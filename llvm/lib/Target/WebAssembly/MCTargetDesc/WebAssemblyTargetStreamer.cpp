@@ -13,13 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/WebAssemblyTargetStreamer.h"
-#include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "MCTargetDesc/WebAssemblyMCAsmInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionWasm.h"
-#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbolWasm.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
 using namespace llvm;
@@ -98,24 +96,24 @@ void WebAssemblyTargetAsmStreamer::emitTagType(const MCSymbolWasm *Sym) {
 
 void WebAssemblyTargetAsmStreamer::emitImportModule(const MCSymbolWasm *Sym,
                                                     StringRef ImportModule) {
-  OS << "\t.import_module\t" << Sym->getName() << ", "
-                             << ImportModule << '\n';
+  OS << "\t.import_module\t" << Sym->getName() << ", \"" << ImportModule
+     << "\"\n";
 }
 
 void WebAssemblyTargetAsmStreamer::emitImportName(const MCSymbolWasm *Sym,
                                                   StringRef ImportName) {
-  OS << "\t.import_name\t" << Sym->getName() << ", "
-                           << ImportName << '\n';
+  OS << "\t.import_name\t" << Sym->getName() << ", \"" << ImportName << "\"\n";
 }
 
 void WebAssemblyTargetAsmStreamer::emitExportName(const MCSymbolWasm *Sym,
                                                   StringRef ExportName) {
-  OS << "\t.export_name\t" << Sym->getName() << ", "
-                           << ExportName << '\n';
+  OS << "\t.export_name\t" << Sym->getName() << ", \"" << ExportName << "\"\n";
 }
 
 void WebAssemblyTargetAsmStreamer::emitIndIdx(const MCExpr *Value) {
-  OS << "\t.indidx  \t" << *Value << '\n';
+  OS << "\t.indidx\t";
+  getContext().getAsmInfo()->printExpr(OS, *Value);
+  OS << '\n';
 }
 
 void WebAssemblyTargetWasmStreamer::emitLocal(ArrayRef<wasm::ValType> Types) {

@@ -16,9 +16,11 @@
 #include <vector>
 
 #include "lldb/Core/UserSettingsController.h"
+#include "lldb/Host/HostThread.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/RegisterCheckpoint.h"
 #include "lldb/Target/StackFrameList.h"
+#include "lldb/Target/SyntheticFrameProvider.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/Event.h"
@@ -26,6 +28,7 @@
 #include "lldb/Utility/UnimplementedError.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 #define LLDB_THREAD_MAX_STOP_EXC_DATA 8
@@ -131,6 +134,7 @@ public:
         register_backup_sp; // You need to restore the registers, of course...
     uint32_t current_inlined_depth;
     lldb::addr_t current_inlined_pc;
+    lldb::addr_t stopped_at_unexecuted_bp;
   };
 
   /// Constructor
@@ -200,11 +204,13 @@ public:
   ///    The User resume state for this thread.
   lldb::StateType GetResumeState() const { return m_resume_state; }
 
-  // This function is called on all the threads before "ShouldResume" and
-  // "WillResume" in case a thread needs to change its state before the
-  // ThreadList polls all the threads to figure out which ones actually will
-  // get to run and how.
-  void SetupForResume();
+  // This function is called to determine whether the thread needs to
+  // step over a breakpoint and if so, push a step-over-breakpoint thread
+  // plan.
+  ///
+  /// \return
+  ///    True if we pushed a ThreadPlanStepOverBreakpoint
+  bool SetupToStepOverBreakpointIfNeeded(lldb::RunDirection direction);
 
   // Do not override this function, it is for thread plan logic only
   bool ShouldResume(lldb::StateType resume_state);
@@ -380,6 +386,26 @@ public:
 
   virtual void SetQueueLibdispatchQueueAddress(lldb::addr_t dispatch_queue_t) {}
 
+  /// When a thread stops at an enabled BreakpointSite that has not executed,
+  /// the Process plugin should call SetThreadStoppedAtUnexecutedBP(pc).
+  /// If that BreakpointSite was actually triggered (the instruction was
+  /// executed, for a software breakpoint), regardless of whether the
+  /// breakpoint is valid for this thread, SetThreadHitBreakpointSite()
+  /// should be called to record that fact.
+  ///
+  /// Depending on the structure of the Process plugin, it may be easiest
+  /// to call SetThreadStoppedAtUnexecutedBP(pc) unconditionally when at
+  /// a BreakpointSite, and later when it is known that it was triggered,
+  /// SetThreadHitBreakpointSite() can be called.  These two methods
+  /// overwrite the same piece of state in the Thread, the last one
+  /// called on a Thread wins.
+  void SetThreadStoppedAtUnexecutedBP(lldb::addr_t pc) {
+    m_stopped_at_unexecuted_bp = pc;
+  }
+  void SetThreadHitBreakpointSite() {
+    m_stopped_at_unexecuted_bp = LLDB_INVALID_ADDRESS;
+  }
+
   /// Whether this Thread already has all the Queue information cached or not
   ///
   /// A Thread may be associated with a libdispatch work Queue at a given
@@ -456,6 +482,11 @@ public:
   bool SetSelectedFrameByIndexNoisily(uint32_t frame_idx,
                                       Stream &output_stream);
 
+  /// Resets the selected frame index of this object.
+  void ClearSelectedFrameIndex() {
+    return GetStackFrameList()->ClearSelectedFrameIndex();
+  }
+
   void SetDefaultFileAndLineToSelectedFrame() {
     GetStackFrameList()->SetDefaultFileAndLineToSelectedFrame();
   }
@@ -466,6 +497,26 @@ public:
   CreateRegisterContextForFrame(StackFrame *frame) = 0;
 
   virtual void ClearStackFrames();
+
+  /// Sets the thread that is backed by this thread.
+  /// If backed_thread.GetBackedThread() is null, this method also calls
+  /// backed_thread.SetBackingThread(this).
+  /// If backed_thread.GetBackedThread() is non-null, asserts that it is equal
+  /// to `this`.
+  void SetBackedThread(Thread &backed_thread) {
+    m_backed_thread = backed_thread.shared_from_this();
+
+    // Ensure the bidrectional relationship is preserved.
+    Thread *backing_thread = backed_thread.GetBackingThread().get();
+    assert(backing_thread == nullptr || backing_thread == this);
+    if (backing_thread == nullptr)
+      backed_thread.SetBackingThread(shared_from_this());
+  }
+
+  void ClearBackedThread() { m_backed_thread.reset(); }
+
+  /// Returns the thread that is backed by this thread, if any.
+  lldb::ThreadSP GetBackedThread() const { return m_backed_thread.lock(); }
 
   virtual bool SetBackingThread(const lldb::ThreadSP &thread_sp) {
     return false;
@@ -1247,6 +1298,32 @@ public:
   ///     an empty std::optional is returned in that case.
   std::optional<lldb::addr_t> GetPreviousFrameZeroPC();
 
+  lldb::StackFrameListSP GetStackFrameList();
+
+  /// Push/pop provider input frames for the current host thread.
+  /// Used by SyntheticStackFrameList to scope re-entrant frame lookups.
+  void PushProviderFrameList(lldb::StackFrameListSP frames);
+  void PopProviderFrameList();
+
+  /// Get a frame list by its unique identifier.
+  lldb::StackFrameListSP GetFrameListByIdentifier(lldb::frame_list_id_t id);
+
+  llvm::Error
+  LoadScriptedFrameProvider(const ScriptedFrameProviderDescriptor &descriptor);
+
+  llvm::Expected<ScriptedFrameProviderDescriptor>
+  GetScriptedFrameProviderDescriptorForID(lldb::frame_list_id_t id) const;
+
+  void ClearScriptedFrameProvider();
+
+  const llvm::DenseMap<lldb::frame_list_id_t, lldb::SyntheticFrameProviderSP> &
+  GetFrameProviders() const {
+    return m_frame_providers;
+  }
+
+  /// Returns true if any host thread is currently inside a provider.
+  bool IsAnyProviderActive();
+
 protected:
   friend class ThreadPlan;
   friend class ThreadList;
@@ -1288,8 +1365,6 @@ protected:
     return StructuredData::ObjectSP();
   }
 
-  lldb::StackFrameListSP GetStackFrameList();
-
   void SetTemporaryResumeState(lldb::StateType new_state) {
     m_temporary_resume_state = new_state;
   }
@@ -1314,6 +1389,9 @@ protected:
   bool m_should_run_before_public_stop;  // If this thread has "stop others" 
                                          // private work to do, then it will
                                          // set this.
+  lldb::addr_t m_stopped_at_unexecuted_bp; // Set to the address of a breakpoint
+                                           // instruction that we have not yet
+                                           // hit, but will hit when we resume.
   const uint32_t m_index_id; ///< A unique 1 based index assigned to each thread
                              /// for easy UI/command line access.
   lldb::RegisterContextSP m_reg_context_sp; ///< The register context for this
@@ -1323,8 +1401,25 @@ protected:
       m_state_mutex;       ///< Multithreaded protection for m_state.
   mutable std::recursive_mutex
       m_frame_mutex; ///< Multithreaded protection for m_state.
+  lldb::StackFrameListSP
+      m_unwinder_frames_sp;                ///< The unwinder frame list (ID 0).
   lldb::StackFrameListSP m_curr_frames_sp; ///< The stack frames that get lazily
                                            ///populated after a thread stops.
+  /// Per-host-thread stack of active provider input frames. A provider
+  /// always operates on its parent StackFrameList — not the synthetic list
+  /// currently being constructed. While a provider is running, its parent
+  /// list is pushed here so that any code the provider executes that
+  /// fetches a StackFrameList (e.g. GetFrameAtIndex, EvaluateExpression)
+  /// transparently sees the parent list rather than the in-construction
+  /// list at the end of the provider chain.
+  ///
+  /// Keyed by host thread so the provider's own thread and the private state
+  /// thread get the parent list, while unrelated threads proceed normally.
+  /// ClearStackFrames() is also guarded: frame state is shared, so it must
+  /// not be torn down while any provider is mid-construction.
+  std::mutex m_provider_frames_mutex;
+  llvm::DenseMap<HostThread, std::vector<lldb::StackFrameListSP>>
+      m_active_frame_providers_by_thread;
   lldb::StackFrameListSP m_prev_frames_sp; ///< The previous stack frames from
                                            ///the last time this thread stopped.
   std::optional<lldb::addr_t>
@@ -1345,6 +1440,27 @@ protected:
                          // classes call DestroyThread.
   LazyBool m_override_should_notify;
   mutable std::unique_ptr<ThreadPlanStack> m_null_plan_stack_up;
+
+  /// The Thread backed by this thread, if any.
+  lldb::ThreadWP m_backed_thread;
+
+  /// Map from frame list ID to its frame provider.
+  /// Cleared in ClearStackFrames(), repopulated in GetStackFrameList().
+  llvm::DenseMap<lldb::frame_list_id_t, lldb::SyntheticFrameProviderSP>
+      m_frame_providers;
+
+  /// Ordered chain of provider IDs.
+  /// Persists across ClearStackFrames() to maintain stable provider IDs.
+  std::vector<std::pair<ScriptedFrameProviderDescriptor, lldb::frame_list_id_t>>
+      m_provider_chain_ids;
+
+  /// Map from frame list identifier to frame list weak pointer.
+  mutable llvm::DenseMap<lldb::frame_list_id_t, lldb::StackFrameListWP>
+      m_frame_lists_by_id;
+
+  /// Counter for assigning unique provider IDs. Starts at 1 since 0 is
+  /// reserved for normal unwinder frames. Persists across ClearStackFrames.
+  lldb::frame_list_id_t m_next_provider_id = 1;
 
 private:
   bool m_extended_info_fetched; // Have we tried to retrieve the m_extended_info

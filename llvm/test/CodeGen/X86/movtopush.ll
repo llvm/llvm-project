@@ -1,6 +1,7 @@
 ; RUN: llc < %s -mtriple=i686-windows | FileCheck %s -check-prefix=NORMAL
 ; RUN: llc < %s -mtriple=i686-windows -no-x86-call-frame-opt | FileCheck %s -check-prefix=NOPUSH
 ; RUN: llc < %s -mtriple=x86_64-windows | FileCheck %s -check-prefix=X64
+; RUN: llc < %s -mtriple=x86_64-uefi | FileCheck %s -check-prefix=X64
 ; RUN: llc < %s -mtriple=i686-pc-linux | FileCheck %s -check-prefix=LINUX
 
 %class.Class = type { i32 }

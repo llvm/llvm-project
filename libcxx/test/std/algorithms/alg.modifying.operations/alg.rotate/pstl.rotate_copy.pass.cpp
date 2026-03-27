@@ -27,6 +27,7 @@
 #include "test_macros.h"
 #include "test_execution_policies.h"
 #include "test_iterators.h"
+#include "type_algorithms.h"
 
 template <class Iter>
 struct Test {

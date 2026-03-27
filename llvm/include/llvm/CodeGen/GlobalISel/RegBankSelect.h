@@ -510,9 +510,6 @@ protected:
   /// Optimization mode of the pass.
   Mode OptMode;
 
-  /// Current target configuration. Controls how the pass handles errors.
-  const TargetPassConfig *TPC;
-
   /// Assign the register bank of each operand of \p MI.
   /// \return True on success, false otherwise.
   bool assignInstr(MachineInstr &MI);
@@ -617,26 +614,22 @@ protected:
 
 public:
   /// Create a RegBankSelect pass with the specified \p RunningMode.
-  RegBankSelect(char &PassID = ID, Mode RunningMode = Fast);
+  RegBankSelect(Mode RunningMode = Fast);
 
   StringRef getPassName() const override { return "RegBankSelect"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties()
-        .set(MachineFunctionProperties::Property::IsSSA)
-        .set(MachineFunctionProperties::Property::Legalized);
+    return MachineFunctionProperties().setIsSSA().setLegalized();
   }
 
   MachineFunctionProperties getSetProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::RegBankSelected);
+    return MachineFunctionProperties().setRegBankSelected();
   }
 
   MachineFunctionProperties getClearedProperties() const override {
-    return MachineFunctionProperties()
-      .set(MachineFunctionProperties::Property::NoPHIs);
+    return MachineFunctionProperties().setNoPHIs();
   }
 
   /// Check that our input is fully legal: we require the function to have the

@@ -9,9 +9,9 @@
 #include "pthread_rwlockattr_setkind_np.h"
 
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 
-#include <errno.h>
 #include <pthread.h> // pthread_rwlockattr_t
 
 namespace LIBC_NAMESPACE_DECL {

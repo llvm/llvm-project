@@ -60,12 +60,13 @@ static_assert(__has_feature(ptrauth_type_info_vtable_pointer_discrimination) == 
 extern "C" int disc_std_type_info = __builtin_ptrauth_string_discriminator("_ZTVSt9type_info");
 
 // CHECK: @_ZTV10TestStruct = unnamed_addr constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr @_ZTI10TestStruct, ptr ptrauth (ptr @_ZN10TestStructD1Ev, i32 0, i64 52216, ptr getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTV10TestStruct, i32 0, i32 0, i32 2)), ptr ptrauth (ptr @_ZN10TestStructD0Ev, i32 0, i64 39671, ptr getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTV10TestStruct, i32 0, i32 0, i32 3))] }, align 8
-// CHECK: @_ZTVN10__cxxabiv117__class_type_infoE = external global [0 x ptr]
-// CHECK: @_ZTS10TestStruct = constant [13 x i8] c"10TestStruct\00", align 1
 
 // NODISC: @_ZTI10TestStruct = constant { ptr, ptr } { ptr ptrauth (ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv117__class_type_infoE, i64 2), i32 2), ptr @_ZTS10TestStruct }, align 8
 
-// DISC: @_ZTI10TestStruct = constant { ptr, ptr } { ptr ptrauth (ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv117__class_type_infoE, i64 2), i32 2, i64 [[STDTYPEINFO_DISC]]), ptr @_ZTS10TestStruct }, align 8
+// DISC: @_ZTI10TestStruct = constant { ptr, ptr } { ptr ptrauth (ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv117__class_type_infoE, i64 2), i32 2, i64 [[STDTYPEINFO_DISC]], ptr @_ZTI10TestStruct), ptr @_ZTS10TestStruct }, align 8
+
+// CHECK: @_ZTVN10__cxxabiv117__class_type_infoE = external global [0 x ptr]
+// CHECK: @_ZTS10TestStruct = constant [13 x i8] c"10TestStruct\00", align 1
 
 struct TestStruct {
   virtual ~TestStruct();

@@ -4,11 +4,11 @@
 define void @func_set_rounding_dyn(i32 %rm) {
 ; CHECK-LABEL: func_set_rounding_dyn:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub w9, w0, #1
+; CHECK-NEXT:    lsl w9, w0, #22
 ; CHECK-NEXT:    mrs x8, FPCR
-; CHECK-NEXT:    and w9, w9, #0x3
 ; CHECK-NEXT:    and x8, x8, #0xffffffffff3fffff
-; CHECK-NEXT:    lsl w9, w9, #22
+; CHECK-NEXT:    sub w9, w9, #1024, lsl #12 // =4194304
+; CHECK-NEXT:    and w9, w9, #0xc00000
 ; CHECK-NEXT:    orr x8, x8, x9
 ; CHECK-NEXT:    msr FPCR, x8
 ; CHECK-NEXT:    ret

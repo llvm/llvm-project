@@ -2,13 +2,12 @@
 
 func.func @_QPsub1() {
   %0 = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", uniq_name = "_QFsub1Ea"}
-  %1 = fir.alloca i32
+  %s = fir.alloca i64
   %pinned = fir.alloca i1
   %4:2 = hlfir.declare %0 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFsub1Ea"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
   %11 = fir.convert %4#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
-  %s = fir.load %1 : !fir.ref<i32>
   // expected-error@+1{{'cuf.allocate' op pinned and stream cannot appears at the same time}}
-  %13 = cuf.allocate %11 : !fir.ref<!fir.box<none>> stream(%s : i32) pinned(%pinned : !fir.ref<i1>) {data_attr = #cuf.cuda<device>} -> i32
+  %13 = cuf.allocate %11 : !fir.ref<!fir.box<none>> stream(%s : !fir.ref<i64>) pinned(%pinned : !fir.ref<i1>) {data_attr = #cuf.cuda<device>} -> i32
   return
 }
 
@@ -124,4 +123,74 @@ func.func @_QPsub1(%arg0: !fir.ref<!fir.array<?xf32>> {cuf.data_attr = #cuf.cuda
   // expected-error@+1{{'cuf.data_transfer' op shape can only be specified on data transfer with references}}
   cuf.data_transfer %20#0 to %11#0, %19 : !fir.shape<1> {transfer_kind = #cuf.cuda_transfer<host_device>} : !fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>
   return
+}
+
+// -----
+
+module attributes {gpu.container_module} {
+  gpu.module @cuda_device_mod {
+    gpu.func @_QPsub_device1() {
+      gpu.return
+    }
+  }
+  llvm.func internal @__cudaFortranConstructor() {
+    %0 = cuf.register_module @cuda_device_mod -> !llvm.ptr
+    // expected-error@+1{{'cuf.register_kernel' op only kernel gpu.func can be registered}}
+    cuf.register_kernel @cuda_device_mod::@_QPsub_device1(%0 : !llvm.ptr)
+    llvm.return
+  }
+}
+
+// -----
+
+module attributes {gpu.container_module} {
+  gpu.module @cuda_device_mod {
+    gpu.func @_QPsub_device1() {
+      gpu.return
+    }
+  }
+  llvm.func internal @__cudaFortranConstructor() {
+    %0 = cuf.register_module @cuda_device_mod -> !llvm.ptr
+    // expected-error@+1{{'cuf.register_kernel' op device function not found}}
+    cuf.register_kernel @cuda_device_mod::@_QPsub_device2(%0 : !llvm.ptr)
+    llvm.return
+  }
+}
+
+// -----
+
+module attributes {gpu.container_module} {
+  llvm.func internal @__cudaFortranConstructor() {
+    %0 = cuf.register_module @cuda_device_mod -> !llvm.ptr
+    // expected-error@+1{{'cuf.register_kernel' op gpu module not found}}
+    cuf.register_kernel @cuda_device_mod::@_QPsub_device1(%0 : !llvm.ptr)
+    llvm.return
+  }
+}
+
+// -----
+
+module attributes {gpu.container_module} {
+  llvm.func internal @__cudaFortranConstructor() {
+    %0 = cuf.register_module @cuda_device_mod -> !llvm.ptr
+    // expected-error@+1{{'cuf.register_kernel' op expect a module and a kernel name}}
+    cuf.register_kernel @_QPsub_device1(%0 : !llvm.ptr)
+    llvm.return
+  }
+}
+
+// -----
+
+module attributes {gpu.container_module} {
+  gpu.module @cuda_device_mod {
+    llvm.func @_QPsub_device1() {
+      llvm.return
+    }
+  }
+  llvm.func internal @__cudaFortranConstructor() {
+    %0 = cuf.register_module @cuda_device_mod -> !llvm.ptr
+    // expected-error@+1{{'cuf.register_kernel' op only gpu.kernel llvm.func can be registered}}
+    cuf.register_kernel @cuda_device_mod::@_QPsub_device1(%0 : !llvm.ptr)
+    llvm.return
+  }
 }

@@ -15,6 +15,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include <memory>
 #include <vector>
 
@@ -66,13 +67,13 @@ public:
       const ImportedFunctionsInliningStatistics &) = delete;
 
   /// Set information like AllFunctions, ImportedFunctions, ModuleName.
-  void setModuleInfo(const Module &M);
+  LLVM_ABI void setModuleInfo(const Module &M);
   /// Record inline of @param Callee to @param Caller for statistis.
-  void recordInline(const Function &Caller, const Function &Callee);
+  LLVM_ABI void recordInline(const Function &Caller, const Function &Callee);
   /// Dump stats computed with InlinerStatistics class.
   /// If @param Verbose is true then separate statistics for every inlined
   /// function will be printed.
-  void dump(bool Verbose);
+  LLVM_ABI void dump(bool Verbose);
 
 private:
   /// Creates new Node in NodeMap and sets attributes, or returns existed one.

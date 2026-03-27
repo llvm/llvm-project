@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -machine-sink-split=0 < %s
+; RUN: llc -mtriple=hexagon -machine-sink-split=0 < %s
 ; REQUIRES: asserts
 ; Used to fail with: Assertion `ScavengingFrameIndex >= 0 && "Cannot scavenge register without an emergency spill slot!"' failed.
 

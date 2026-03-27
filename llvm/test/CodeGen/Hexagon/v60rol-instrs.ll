@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O0 < %s | FileCheck %s
 
 ; CHECK: r{{[0-9]*}} += rol(r{{[0-9]*}},#31)
 ; CHECK: r{{[0-9]*}} &= rol(r{{[0-9]*}},#31)

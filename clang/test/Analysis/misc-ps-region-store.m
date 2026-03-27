@@ -1,5 +1,5 @@
-// RUN: %clang_analyze_cc1 -triple i386-apple-darwin9 -analyzer-checker=core,alpha.core.CastToStruct,alpha.security.ReturnPtrRange,alpha.security.ArrayBound -verify -fblocks -Wno-objc-root-class -Wno-strict-prototypes -Wno-error=implicit-function-declaration %s
-// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin9 -DTEST_64 -analyzer-checker=core,alpha.core.CastToStruct,alpha.security.ReturnPtrRange,alpha.security.ArrayBound -verify -fblocks   -Wno-objc-root-class -Wno-strict-prototypes -Wno-error=implicit-function-declaration %s
+// RUN: %clang_analyze_cc1 -triple i386-apple-darwin9 -analyzer-checker=core,alpha.core.CastToStruct,alpha.security.ReturnPtrRange,security.ArrayBound -verify -fblocks -Wno-objc-root-class -Wno-strict-prototypes -Wno-error=implicit-function-declaration %s
+// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin9 -DTEST_64 -analyzer-checker=core,alpha.core.CastToStruct,alpha.security.ReturnPtrRange,security.ArrayBound -verify -fblocks   -Wno-objc-root-class -Wno-strict-prototypes -Wno-error=implicit-function-declaration %s
 
 typedef long unsigned int size_t;
 void *memcpy(void *, const void *, size_t);
@@ -910,13 +910,13 @@ void pr6302(id x, Class y) {
 
 //===----------------------------------------------------------------------===//
 // Specially handle global variables that are declared constant.  In the
-// example below, this forces the loop to take exactly 2 iterations.
+// example below, this forces the loop to take exactly 1 iteration.
 //===----------------------------------------------------------------------===//
 
-const int pr6288_L_N = 2;
+const int pr6288_L_N = 1;
 void pr6288_(void) {
-  int x[2];
-  int *px[2];
+  int x[1];
+  int *px[1];
   int i;
   for (i = 0; i < pr6288_L_N; i++)
     px[i] = &x[i];
@@ -924,22 +924,35 @@ void pr6288_(void) {
 }
 
 void pr6288_pos(int z) {
-  int x[2];
-  int *px[2];
+  int x[1];
+  int *px[1];
   int i;
   for (i = 0; i < z; i++)
-    px[i] = &x[i]; // expected-warning{{Access out-of-bound array element (buffer overflow)}}
+    px[i] = &x[i]; // expected-warning{{Out of bound access to memory after the end of 'px'}}
   *(px[0]) = 0; // expected-warning{{Dereference of undefined pointer value}}
 }
 
 void pr6288_b(void) {
-  const int L_N = 2;
-  int x[2];
-  int *px[2];
+  const int L_N = 1;
+  int x[1];
+  int *px[1];
   int i;
   for (i = 0; i < L_N; i++)
     px[i] = &x[i];
   *(px[0]) = 0; // no-warning
+}
+
+void pr6288_no_third_iter(int z) {
+  int x[2];
+  int *px[2];
+  int i;
+  // If the loop condition is opaque, we assume that there may be two
+  // iterations (becasuse otherwise the loop could be replaced by an if); but
+  // we do not assume that there may be a third iteration. Therefore,
+  // unlike 'pr6288_pos', this testcase does not produce an out-of-bounds error.
+  for (i = 0; i < z; i++)
+    px[i] = &x[i];
+  *(px[0]) = 0; // expected-warning{{Dereference of undefined pointer value}}
 }
 
 // A bug in RemoveDeadBindings was causing instance variable bindings to get
@@ -963,12 +976,17 @@ void rdar7817800_qux(void*);
 }
 @end
 
-// PR 6036 - This test case triggered a crash inside StoreManager::CastRegion because the size
-// of 'unsigned long (*)[0]' is 0.
+// PR 6036 - This test case triggered a crash inside StoreManager::CastRegion
+// because the size of 'unsigned long (*)[0]' is 0.
+// NOTE: This old crash was probably triggered via the old alpha checker
+// `alpha.security.ArrayBound` (which was logic that's different from the
+// current `security.ArrayBound`). Although that code was removed, it's worth
+// to keep this testcase as a generic example of a zero-sized type.
 struct pr6036_a { int pr6036_b; };
 struct pr6036_c;
 void u132monitk (struct pr6036_c *pr6036_d) {
-  (void) ((struct pr6036_a *) (unsigned long (*)[0]) ((char *) pr6036_d - 1))->pr6036_b; // expected-warning{{Casting a non-structure type to a structure type and accessing a field can lead to memory access errors or data corruption}}
+  (void) ((struct pr6036_a *) (unsigned long (*)[0]) ((char *) pr6036_d - 1))->pr6036_b;
+  // expected-warning@-1 {{Casting a non-structure type to a structure type and accessing a field can lead to memory access errors or data corruption}}
 }
 
 // ?-expressions used as a base of a member expression should be treated as an lvalue

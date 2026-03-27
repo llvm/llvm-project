@@ -70,7 +70,7 @@ define amdgpu_kernel void @addrspacecast_flat_undef_to_local(ptr addrspace(1) %o
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    CF_END
 ; CHECK-NEXT:    PAD
-  store ptr addrspace(3) addrspacecast (ptr undef to ptr addrspace(3)), ptr addrspace(1) %out
+  store ptr addrspace(3) addrspacecast (ptr poison to ptr addrspace(3)), ptr addrspace(1) %out
   ret void
 }
 

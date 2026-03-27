@@ -5,11 +5,11 @@
 
 ; CHECK-LABEL: vector.body:
 ; CHECK-LABEL: middle.block:
-; CHECK-NEXT:    br i1 true,
+; CHECK-NEXT:    br label %while.end.loopexit
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 
-define dso_local void @foo(ptr noalias nocapture readonly %A, ptr noalias nocapture readonly %B, ptr noalias nocapture %C, i32 %N) {
+define void @foo(ptr noalias nocapture readonly %A, ptr noalias nocapture readonly %B, ptr noalias nocapture %C, i32 %N) {
 entry:
   %cmp6 = icmp eq i32 %N, 0
   br i1 %cmp6, label %while.end, label %while.body.preheader
@@ -43,10 +43,10 @@ while.end:
 ; Make sure a loop is successfully vectorized with fold-tail when the backedge
 ; taken count is constant and used inside the loop. Issue revealed by D76992.
 ;
-define void @reuse_const_btc(ptr %A) optsize {
+define void @reuse_const_btc(ptr %A) {
 ; CHECK-LABEL: @reuse_const_btc
-; CHECK: {{%.*}} = icmp ule <4 x i32> {{%.*}}, <i32 13, i32 13, i32 13, i32 13>
-; CHECK: {{%.*}} = select <4 x i1> {{%.*}}, <4 x i32> <i32 12, i32 12, i32 12, i32 12>, <4 x i32> <i32 13, i32 13, i32 13, i32 13>
+; CHECK: {{%.*}} = icmp ule <4 x i32> {{%.*}}, splat (i32 13)
+; CHECK: {{%.*}} = select <4 x i1> {{%.*}}, <4 x i32> splat (i32 13), <4 x i32> splat (i32 12)
 ;
 entry:
   br label %loop

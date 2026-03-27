@@ -20,7 +20,6 @@
 
 #include <cinttypes>
 #include <complex>
-#include <vector>
 
 using namespace mlir::sparse_tensor;
 

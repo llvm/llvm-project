@@ -26,7 +26,6 @@ body: |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 0
   ; CHECK-NEXT:   $x10 = frame-setup PseudoReadVLENB
   ; CHECK-NEXT:   $x10 = frame-setup SLLI killed $x10, 1
   ; CHECK-NEXT:   $x2 = frame-setup SUB $x2, killed $x10
@@ -36,6 +35,7 @@ body: |
   ; CHECK-NEXT:   $x10 = frame-destroy PseudoReadVLENB
   ; CHECK-NEXT:   $x10 = frame-destroy SLLI killed $x10, 1
   ; CHECK-NEXT:   $x2 = frame-destroy ADD $x2, killed $x10
+  ; CHECK-NEXT:   frame-destroy CFI_INSTRUCTION def_cfa $x2, 0
   ; CHECK-NEXT:   PseudoRET
   bb.0:
   bb.1:

@@ -54,7 +54,7 @@ def SPIRV_ControlBarrierOp : SPIRV_Op<"ControlBarrier", []> {
     #### Example:
 
     ```mlir
-    spirv.ControlBarrier "Workgroup", "Device", "Acquire|UniformMemory"
+    spirv.ControlBarrier <Workgroup>, <Device>, <Acquire|UniformMemory>
     ```
   }];
 

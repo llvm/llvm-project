@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -25,7 +26,6 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Triple.h"
 #include "gmock/gmock.h"
@@ -584,7 +584,7 @@ TEST(MachineInstrTest, SpliceOperands) {
   // test tied operands
   MCRegisterClass MRC{
       0, 0, 0, 0, 0, 0, 0, 0, /*Allocatable=*/true, /*BaseClass=*/true};
-  TargetRegisterClass RC{&MRC, 0, 0, {}, 0, 0, 0, 0, 0, 0, 0};
+  TargetRegisterClass RC{&MRC, 0, 0, {}, 0, 0, 0, 0, 0, 0, 0, 0};
   // MachineRegisterInfo will be very upset if these registers aren't
   // allocatable.
   assert(RC.isAllocatable() && "unusable TargetRegisterClass");
@@ -611,6 +611,64 @@ TEST(MachineInstrTest, SpliceOperands) {
   EXPECT_EQ(MI->getNumOperands(), 10U);
   MI->insert(MI->operands_begin(), {});
   EXPECT_EQ(MI->getNumOperands(), 10U);
+}
+
+// Checks the iterator returned by MacineInstr::eraseFromParent().
+TEST(MachineInstr, EraseFromParentReturnedIterator) {
+  LLVMContext Ctx;
+  Module Mod("Module", Ctx);
+  auto MF = createMachineFunction(Ctx, Mod);
+  auto MBB = MF->CreateMachineBasicBlock();
+
+  MCInstrDesc MCID = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  MachineInstr *MI1 = MF->CreateMachineInstr(MCID, DebugLoc());
+  MBB->insert(MBB->end(), MI1);
+  MachineInstr *MI2 = MF->CreateMachineInstr(MCID, DebugLoc());
+  MBB->insert(MBB->end(), MI2);
+
+  MachineBasicBlock::iterator It1 = MI1->eraseFromParent();
+  EXPECT_EQ(It1, MI2->getIterator());
+  MachineBasicBlock::iterator It2 = MI2->eraseFromParent();
+  EXPECT_EQ(It2, MBB->end());
+}
+
+// Checks the iterator returned by MacineInstr::eraseFromParent() when
+// instructions are in bundles.
+TEST(MachineInstr, EraseFromParentReturnedIteratorBundle) {
+  LLVMContext Ctx;
+  Module Mod("Module", Ctx);
+  auto MF = createMachineFunction(Ctx, Mod);
+  auto MBB = MF->CreateMachineBasicBlock();
+  MCInstrDesc MCID = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+  // Bundle1 {
+  //   MI1B1
+  //   MI2B1
+  // }
+  // Bundle2 {
+  //   MI1B2
+  //   MI2B2
+  // }
+  MachineInstr *MI1B1 = MF->CreateMachineInstr(MCID, DebugLoc());
+  MBB->insert(MBB->end(), MI1B1);
+  MachineInstr *MI2B1 = MF->CreateMachineInstr(MCID, DebugLoc());
+  MBB->insert(MBB->end(), MI2B1);
+  MI2B1->bundleWithPred();
+
+  MachineInstr *MI1B2 = MF->CreateMachineInstr(MCID, DebugLoc());
+  MBB->insert(MBB->end(), MI1B2);
+  MachineInstr *MI2B2 = MF->CreateMachineInstr(MCID, DebugLoc());
+  MBB->insert(MBB->end(), MI2B2);
+  MI2B2->bundleWithPred();
+
+  // MI1B1->eraseFromParent() erases the whole Bundle1.
+  // The returned iterator matches the head of Bundle2.
+  MachineBasicBlock::iterator It1 = MI1B1->eraseFromParent();
+  EXPECT_EQ(It1, MI1B2->getIterator());
+
+  // Erasing MI1B2 erases the whole Bundle2.
+  MachineBasicBlock::iterator It2 = MI1B2->eraseFromParent();
+  EXPECT_EQ(It2, MBB->end());
 }
 
 } // end namespace

@@ -26,26 +26,26 @@ define void @add_v4i32(ptr %x, ptr %y) {
 define void @add_v2i64(ptr %x, ptr %y) {
 ; RV32-LABEL: add_v2i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lw a2, 0(a1)
-; RV32-NEXT:    lw a3, 4(a1)
-; RV32-NEXT:    lw a4, 0(a0)
-; RV32-NEXT:    lw a5, 4(a0)
-; RV32-NEXT:    lw a6, 8(a0)
-; RV32-NEXT:    lw a7, 12(a0)
-; RV32-NEXT:    lw t0, 8(a1)
-; RV32-NEXT:    lw a1, 12(a1)
-; RV32-NEXT:    add a3, a5, a3
-; RV32-NEXT:    add a2, a4, a2
-; RV32-NEXT:    sltu a4, a2, a4
-; RV32-NEXT:    add a3, a3, a4
-; RV32-NEXT:    add a1, a7, a1
-; RV32-NEXT:    add t0, a6, t0
-; RV32-NEXT:    sltu a4, t0, a6
-; RV32-NEXT:    add a1, a1, a4
-; RV32-NEXT:    sw t0, 8(a0)
-; RV32-NEXT:    sw a2, 0(a0)
-; RV32-NEXT:    sw a1, 12(a0)
-; RV32-NEXT:    sw a3, 4(a0)
+; RV32-NEXT:    lw a2, 0(a0)
+; RV32-NEXT:    lw a3, 4(a0)
+; RV32-NEXT:    lw a4, 8(a0)
+; RV32-NEXT:    lw a5, 12(a0)
+; RV32-NEXT:    lw a6, 4(a1)
+; RV32-NEXT:    lw a7, 0(a1)
+; RV32-NEXT:    lw t0, 12(a1)
+; RV32-NEXT:    lw a1, 8(a1)
+; RV32-NEXT:    add a3, a3, a6
+; RV32-NEXT:    add a7, a2, a7
+; RV32-NEXT:    add a5, a5, t0
+; RV32-NEXT:    add a1, a4, a1
+; RV32-NEXT:    sltu a2, a7, a2
+; RV32-NEXT:    sltu a4, a1, a4
+; RV32-NEXT:    add a2, a3, a2
+; RV32-NEXT:    add a4, a5, a4
+; RV32-NEXT:    sw a7, 0(a0)
+; RV32-NEXT:    sw a2, 4(a0)
+; RV32-NEXT:    sw a1, 8(a0)
+; RV32-NEXT:    sw a4, 12(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: add_v2i64:
@@ -56,8 +56,8 @@ define void @add_v2i64(ptr %x, ptr %y) {
 ; RV64-NEXT:    ld a1, 8(a1)
 ; RV64-NEXT:    add a2, a2, a4
 ; RV64-NEXT:    add a1, a3, a1
-; RV64-NEXT:    sd a1, 8(a0)
 ; RV64-NEXT:    sd a2, 0(a0)
+; RV64-NEXT:    sd a1, 8(a0)
 ; RV64-NEXT:    ret
   %a = load <2 x i64>, ptr %x
   %b = load <2 x i64>, ptr %y
@@ -140,8 +140,8 @@ define void @fadd_v2f64(ptr %x, ptr %y) {
 ; CHECK-NEXT:    fld fa2, 8(a1)
 ; CHECK-NEXT:    fadd.d fa5, fa5, fa3
 ; CHECK-NEXT:    fadd.d fa4, fa4, fa2
-; CHECK-NEXT:    fsd fa4, 8(a0)
 ; CHECK-NEXT:    fsd fa5, 0(a0)
+; CHECK-NEXT:    fsd fa4, 8(a0)
 ; CHECK-NEXT:    ret
   %a = load <2 x double>, ptr %x
   %b = load <2 x double>, ptr %y

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -O0 -emit-llvm -ftrapv -ftrap-function=mytrap %s -o - | FileCheck %s -check-prefix=TRAPFUNC
-// RUN: %clang_cc1 -O0 -emit-llvm -ftrapv %s -o - | FileCheck %s -check-prefix=NOOPTION
+// RUN: %clang_cc1 -O0 -emit-llvm -Wno-error=return-type -ftrapv -ftrap-function=mytrap %s -o - | FileCheck %s -check-prefix=TRAPFUNC
+// RUN: %clang_cc1 -O0 -emit-llvm -Wno-error=return-type -ftrapv %s -o - | FileCheck %s -check-prefix=NOOPTION
 
 // TRAPFUNC-LABEL: define {{(dso_local )?}}void @{{_Z12test_builtinv|\"\?test_builtin@@YAXXZ\"}}
 // TRAPFUNC: call void @llvm.trap() [[ATTR0:#[0-9]+]]

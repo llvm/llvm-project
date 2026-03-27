@@ -1,4 +1,4 @@
-; RUN: opt < %s -mcpu=core-avx2 -passes=loop-vectorize -S | llc -mcpu=core-avx2 | FileCheck %s
+; RUN: opt < %s -mcpu=core-avx2 -passes=loop-vectorize -S | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx"
@@ -8,7 +8,7 @@ target triple = "x86_64-apple-macosx"
 
 ; If we need to scalarize the fptoui and then use inserts to build up the
 ; vector again, then there is certainly no value in going 256-bit wide.
-; CHECK-NOT: vinserti128
+; CHECK-NOT: fptoui <4 x float>
 
 define void @convert(i32 %N) {
 entry:

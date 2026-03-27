@@ -28,7 +28,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(EnumValueInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(TemplateParamInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(TypedefInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(BaseRecordInfo)
-LLVM_YAML_IS_SEQUENCE_VECTOR(std::unique_ptr<CommentInfo>)
+LLVM_YAML_IS_SEQUENCE_VECTOR(OwnedPtr<CommentInfo>)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::SmallString<16>)
 
 namespace llvm {
@@ -65,6 +65,34 @@ template <> struct ScalarEnumerationTraits<InfoType> {
   }
 };
 
+template <> struct ScalarEnumerationTraits<clang::doc::CommentKind> {
+  static void enumeration(IO &IO, clang::doc::CommentKind &Value) {
+    IO.enumCase(Value, "FullComment", clang::doc::CommentKind::CK_FullComment);
+    IO.enumCase(Value, "ParagraphComment",
+                clang::doc::CommentKind::CK_ParagraphComment);
+    IO.enumCase(Value, "TextComment", clang::doc::CommentKind::CK_TextComment);
+    IO.enumCase(Value, "InlineCommandComment",
+                clang::doc::CommentKind::CK_InlineCommandComment);
+    IO.enumCase(Value, "HTMLStartTagComment",
+                clang::doc::CommentKind::CK_HTMLStartTagComment);
+    IO.enumCase(Value, "HTMLEndTagComment",
+                clang::doc::CommentKind::CK_HTMLEndTagComment);
+    IO.enumCase(Value, "BlockCommandComment",
+                clang::doc::CommentKind::CK_BlockCommandComment);
+    IO.enumCase(Value, "ParamCommandComment",
+                clang::doc::CommentKind::CK_ParamCommandComment);
+    IO.enumCase(Value, "TParamCommandComment",
+                clang::doc::CommentKind::CK_TParamCommandComment);
+    IO.enumCase(Value, "VerbatimBlockComment",
+                clang::doc::CommentKind::CK_VerbatimBlockComment);
+    IO.enumCase(Value, "VerbatimBlockLineComment",
+                clang::doc::CommentKind::CK_VerbatimBlockLineComment);
+    IO.enumCase(Value, "VerbatimLineComment",
+                clang::doc::CommentKind::CK_VerbatimLineComment);
+    IO.enumCase(Value, "Unknown", clang::doc::CommentKind::CK_Unknown);
+  }
+};
+
 // Scalars to YAML output.
 template <unsigned U> struct ScalarTraits<SmallString<U>> {
 
@@ -81,22 +109,20 @@ template <unsigned U> struct ScalarTraits<SmallString<U>> {
   static QuotingType mustQuote(StringRef) { return QuotingType::Single; }
 };
 
-template <> struct ScalarTraits<std::array<unsigned char, 20>> {
+template <> struct ScalarTraits<SymbolID> {
 
-  static void output(const std::array<unsigned char, 20> &S, void *,
-                     llvm::raw_ostream &OS) {
+  static void output(const SymbolID &S, void *, llvm::raw_ostream &OS) {
     OS << toHex(toStringRef(S));
   }
 
-  static StringRef input(StringRef Scalar, void *,
-                         std::array<unsigned char, 20> &Value) {
+  static StringRef input(StringRef Scalar, void *, SymbolID &Value) {
     if (Scalar.size() != 40)
       return "Error: Incorrect scalar size for USR.";
-    Value = StringToSymbol(Scalar);
+    Value = stringToSymbol(Scalar);
     return StringRef();
   }
 
-  static SymbolID StringToSymbol(llvm::StringRef Value) {
+  static SymbolID stringToSymbol(llvm::StringRef Value) {
     SymbolID USR;
     std::string HexString = fromHex(Value);
     std::copy(HexString.begin(), HexString.end(), USR.begin());
@@ -108,17 +134,17 @@ template <> struct ScalarTraits<std::array<unsigned char, 20>> {
 
 // Helper functions to map infos to YAML.
 
-static void TypeInfoMapping(IO &IO, TypeInfo &I) {
+static void typeInfoMapping(IO &IO, TypeInfo &I) {
   IO.mapOptional("Type", I.Type, Reference());
 }
 
-static void FieldTypeInfoMapping(IO &IO, FieldTypeInfo &I) {
-  TypeInfoMapping(IO, I);
+static void fieldTypeInfoMapping(IO &IO, FieldTypeInfo &I) {
+  typeInfoMapping(IO, I);
   IO.mapOptional("Name", I.Name, SmallString<16>());
   IO.mapOptional("DefaultValue", I.DefaultValue, SmallString<16>());
 }
 
-static void InfoMapping(IO &IO, Info &I) {
+static void infoMapping(IO &IO, Info &I) {
   IO.mapRequired("USR", I.USR);
   IO.mapOptional("Name", I.Name, SmallString<16>());
   IO.mapOptional("Path", I.Path, SmallString<128>());
@@ -126,14 +152,14 @@ static void InfoMapping(IO &IO, Info &I) {
   IO.mapOptional("Description", I.Description);
 }
 
-static void SymbolInfoMapping(IO &IO, SymbolInfo &I) {
-  InfoMapping(IO, I);
+static void symbolInfoMapping(IO &IO, SymbolInfo &I) {
+  infoMapping(IO, I);
   IO.mapOptional("DefLocation", I.DefLoc, std::optional<Location>());
   IO.mapOptional("Location", I.Loc, llvm::SmallVector<Location, 2>());
 }
 
-static void RecordInfoMapping(IO &IO, RecordInfo &I) {
-  SymbolInfoMapping(IO, I);
+static void recordInfoMapping(IO &IO, RecordInfo &I) {
+  symbolInfoMapping(IO, I);
   IO.mapOptional("TagType", I.TagType);
   IO.mapOptional("IsTypeDef", I.IsTypeDef, false);
   IO.mapOptional("Members", I.Members);
@@ -141,15 +167,15 @@ static void RecordInfoMapping(IO &IO, RecordInfo &I) {
   IO.mapOptional("Parents", I.Parents, llvm::SmallVector<Reference, 4>());
   IO.mapOptional("VirtualParents", I.VirtualParents,
                  llvm::SmallVector<Reference, 4>());
-  IO.mapOptional("ChildRecords", I.Children.Records, std::vector<Reference>());
+  IO.mapOptional("ChildRecords", I.Children.Records, OwningVec<Reference>());
   IO.mapOptional("ChildFunctions", I.Children.Functions);
   IO.mapOptional("ChildEnums", I.Children.Enums);
   IO.mapOptional("ChildTypedefs", I.Children.Typedefs);
   IO.mapOptional("Template", I.Template);
 }
 
-static void CommentInfoMapping(IO &IO, CommentInfo &I) {
-  IO.mapOptional("Kind", I.Kind, SmallString<16>());
+static void commentInfoMapping(IO &IO, CommentInfo &I) {
+  IO.mapOptional("Kind", I.Kind, CommentKind::CK_Unknown);
   IO.mapOptional("Text", I.Text, SmallString<64>());
   IO.mapOptional("Name", I.Name, SmallString<16>());
   IO.mapOptional("Direction", I.Direction, SmallString<8>());
@@ -169,7 +195,7 @@ static void CommentInfoMapping(IO &IO, CommentInfo &I) {
 
 template <> struct MappingTraits<Location> {
   static void mapping(IO &IO, Location &Loc) {
-    IO.mapOptional("LineNumber", Loc.LineNumber, 0);
+    IO.mapOptional("LineNumber", Loc.StartLineNumber, 0);
     IO.mapOptional("Filename", Loc.Filename, SmallString<32>());
   }
 };
@@ -185,12 +211,12 @@ template <> struct MappingTraits<Reference> {
 };
 
 template <> struct MappingTraits<TypeInfo> {
-  static void mapping(IO &IO, TypeInfo &I) { TypeInfoMapping(IO, I); }
+  static void mapping(IO &IO, TypeInfo &I) { typeInfoMapping(IO, I); }
 };
 
 template <> struct MappingTraits<FieldTypeInfo> {
   static void mapping(IO &IO, FieldTypeInfo &I) {
-    TypeInfoMapping(IO, I);
+    typeInfoMapping(IO, I);
     IO.mapOptional("Name", I.Name, SmallString<16>());
     IO.mapOptional("DefaultValue", I.DefaultValue, SmallString<16>());
   }
@@ -198,7 +224,7 @@ template <> struct MappingTraits<FieldTypeInfo> {
 
 template <> struct MappingTraits<MemberTypeInfo> {
   static void mapping(IO &IO, MemberTypeInfo &I) {
-    FieldTypeInfoMapping(IO, I);
+    fieldTypeInfoMapping(IO, I);
     // clang::AccessSpecifier::AS_none is used as the default here because it's
     // the AS that shouldn't be part of the output. Even though AS_public is the
     // default in the struct, it should be displayed in the YAML output.
@@ -209,11 +235,10 @@ template <> struct MappingTraits<MemberTypeInfo> {
 
 template <> struct MappingTraits<NamespaceInfo> {
   static void mapping(IO &IO, NamespaceInfo &I) {
-    InfoMapping(IO, I);
+    infoMapping(IO, I);
     IO.mapOptional("ChildNamespaces", I.Children.Namespaces,
-                   std::vector<Reference>());
-    IO.mapOptional("ChildRecords", I.Children.Records,
-                   std::vector<Reference>());
+                   OwningVec<Reference>());
+    IO.mapOptional("ChildRecords", I.Children.Records, OwningVec<Reference>());
     IO.mapOptional("ChildFunctions", I.Children.Functions);
     IO.mapOptional("ChildEnums", I.Children.Enums);
     IO.mapOptional("ChildTypedefs", I.Children.Typedefs);
@@ -221,12 +246,12 @@ template <> struct MappingTraits<NamespaceInfo> {
 };
 
 template <> struct MappingTraits<RecordInfo> {
-  static void mapping(IO &IO, RecordInfo &I) { RecordInfoMapping(IO, I); }
+  static void mapping(IO &IO, RecordInfo &I) { recordInfoMapping(IO, I); }
 };
 
 template <> struct MappingTraits<BaseRecordInfo> {
   static void mapping(IO &IO, BaseRecordInfo &I) {
-    RecordInfoMapping(IO, I);
+    recordInfoMapping(IO, I);
     IO.mapOptional("IsVirtual", I.IsVirtual, false);
     // clang::AccessSpecifier::AS_none is used as the default here because it's
     // the AS that shouldn't be part of the output. Even though AS_public is the
@@ -246,7 +271,7 @@ template <> struct MappingTraits<EnumValueInfo> {
 
 template <> struct MappingTraits<EnumInfo> {
   static void mapping(IO &IO, EnumInfo &I) {
-    SymbolInfoMapping(IO, I);
+    symbolInfoMapping(IO, I);
     IO.mapOptional("Scoped", I.Scoped, false);
     IO.mapOptional("BaseType", I.BaseType);
     IO.mapOptional("Members", I.Members);
@@ -255,7 +280,7 @@ template <> struct MappingTraits<EnumInfo> {
 
 template <> struct MappingTraits<TypedefInfo> {
   static void mapping(IO &IO, TypedefInfo &I) {
-    SymbolInfoMapping(IO, I);
+    symbolInfoMapping(IO, I);
     IO.mapOptional("Underlying", I.Underlying.Type);
     IO.mapOptional("IsUsing", I.IsUsing, false);
   }
@@ -263,7 +288,7 @@ template <> struct MappingTraits<TypedefInfo> {
 
 template <> struct MappingTraits<FunctionInfo> {
   static void mapping(IO &IO, FunctionInfo &I) {
-    SymbolInfoMapping(IO, I);
+    symbolInfoMapping(IO, I);
     IO.mapOptional("IsMethod", I.IsMethod, false);
     IO.mapOptional("Parent", I.Parent, Reference());
     IO.mapOptional("Params", I.Params);
@@ -298,13 +323,13 @@ template <> struct MappingTraits<TemplateInfo> {
 };
 
 template <> struct MappingTraits<CommentInfo> {
-  static void mapping(IO &IO, CommentInfo &I) { CommentInfoMapping(IO, I); }
+  static void mapping(IO &IO, CommentInfo &I) { commentInfoMapping(IO, I); }
 };
 
-template <> struct MappingTraits<std::unique_ptr<CommentInfo>> {
-  static void mapping(IO &IO, std::unique_ptr<CommentInfo> &I) {
+template <> struct MappingTraits<OwnedPtr<CommentInfo>> {
+  static void mapping(IO &IO, OwnedPtr<CommentInfo> &I) {
     if (I)
-      CommentInfoMapping(IO, *I);
+      commentInfoMapping(IO, *I);
   }
 };
 
@@ -319,21 +344,20 @@ class YAMLGenerator : public Generator {
 public:
   static const char *Format;
 
-  llvm::Error generateDocs(StringRef RootDir,
-                           llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
-                           const ClangDocContext &CDCtx) override;
+  llvm::Error generateDocumentation(
+      StringRef RootDir, llvm::StringMap<doc::OwnedPtr<doc::Info>> Infos,
+      const ClangDocContext &CDCtx, std::string DirName) override;
   llvm::Error generateDocForInfo(Info *I, llvm::raw_ostream &OS,
                                  const ClangDocContext &CDCtx) override;
 };
 
 const char *YAMLGenerator::Format = "yaml";
 
-llvm::Error
-YAMLGenerator::generateDocs(StringRef RootDir,
-                            llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
-                            const ClangDocContext &CDCtx) {
+llvm::Error YAMLGenerator::generateDocumentation(
+    StringRef RootDir, llvm::StringMap<doc::OwnedPtr<doc::Info>> Infos,
+    const ClangDocContext &CDCtx, std::string DirName) {
   for (const auto &Group : Infos) {
-    doc::Info *Info = Group.getValue().get();
+    doc::Info *Info = getPtr(Group.getValue());
 
     // Output file names according to the USR except the global namesapce.
     // Anonymous namespaces are taken care of in serialization, so here we can
@@ -347,7 +371,7 @@ YAMLGenerator::generateDocs(StringRef RootDir,
     }
 
     std::error_code FileErr;
-    llvm::raw_fd_ostream InfoOS(Path, FileErr, llvm::sys::fs::OF_None);
+    llvm::raw_fd_ostream InfoOS(Path, FileErr, llvm::sys::fs::OF_Text);
     if (FileErr) {
       return llvm::createStringError(FileErr, "Error opening file '%s'",
                                      Path.c_str());
@@ -379,6 +403,10 @@ llvm::Error YAMLGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS,
     break;
   case InfoType::IT_typedef:
     InfoYAML << *static_cast<clang::doc::TypedefInfo *>(I);
+    break;
+  case InfoType::IT_concept:
+  case InfoType::IT_variable:
+  case InfoType::IT_friend:
     break;
   case InfoType::IT_default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),

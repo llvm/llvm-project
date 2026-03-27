@@ -1,5 +1,7 @@
 # RUN: llc -o - %s -mtriple=aarch64-- -mattr=+fuse-addsub-2reg-const1 -run-pass postmisched | FileCheck %s --check-prefixes=CHECK,FUSION
+# RUN: llc -o - %s -mtriple=aarch64-- -mattr=+fuse-addsub-2reg-const1 -passes=postmisched | FileCheck %s --check-prefixes=CHECK,FUSION
 # RUN: llc -o - %s -mtriple=aarch64-- -mattr=-fuse-addsub-2reg-const1 -run-pass postmisched | FileCheck %s --check-prefixes=CHECK,NOFUSION
+# RUN: llc -o - %s -mtriple=aarch64-- -mattr=-fuse-addsub-2reg-const1 -passes=postmisched | FileCheck %s --check-prefixes=CHECK,NOFUSION
 ---
 # CHECK-LABEL: name: addsub2reg
 # CHECK: $w8 = ADDWrr killed renamable $w0, killed renamable $w1

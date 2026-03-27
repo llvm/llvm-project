@@ -1,6 +1,6 @@
 # REQUIRES: systemz
 # RUN: llvm-mc -filetype=obj -triple=s390x-unknown-linux %s -o %t.o
-# RUN: echo '.tbss; .globl b, c; b: .zero 4; c:' | llvm-mc -filetype=obj -triple=s390x-unknown-linux - -o %t1.o
+# RUN: echo '.tbss; .globl b, c; b: .zero 4; c:' | llvm-mc -filetype=obj -triple=s390x --crel - -o %t1.o
 # RUN: ld.lld -shared -soname=t1.so %t1.o -o %t1.so
 
 # RUN: ld.lld -shared %t.o %t1.o -o %t.so
@@ -58,17 +58,17 @@
 
 ## TP offset of a is at 0x1002218
 # LE-NEXT: lgrl    %r2, 0x1002218
-# LE-NEXT: brcl    0,
+# LE-NEXT: jgnop
 # LE-NEXT: lgf     %r2, 0(%r2,%r7)
 
 ## TP offset of b is at 0x1002220
 # LE-NEXT: lgrl    %r2, 0x1002220
-# LE-NEXT: brcl    0,
+# LE-NEXT: jgnop
 # LE-NEXT: lgf     %r2, 0(%r2,%r7)
 
 ## TP offset of c is at 0x1002228
 # LE-NEXT: lgrl    %r2, 0x1002228
-# LE-NEXT: brcl    0,
+# LE-NEXT: jgnop
 # LE-NEXT: lgf     %r2, 0(%r2,%r7)
 
 ## TP offsets
@@ -88,7 +88,7 @@
 
 ## TP offset of a is at 0x1002340
 # IE-NEXT: lgrl    %r2, 0x1002340
-# IE-NEXT: brcl    0,
+# IE-NEXT: jgnop
 # IE-NEXT: lgf     %r2, 0(%r2,%r7)
 
 ## GOT offset of the TP offset for b is at 0x1002348

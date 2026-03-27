@@ -4,15 +4,14 @@
 ; The UDiv in the latch may never be executed. The backedge-taken-count
 ; expressions must account for the fact that evaluating the UDiv
 ; unconditionally may trigger UB.
-; FIXME: umin_seq should be used instead of umin  for BTCs.
 define i64 @multi_exit_exit_count_with_udiv_by_value_in_latch(ptr %dst, i64 %N) {
 ; CHECK-LABEL: 'multi_exit_exit_count_with_udiv_by_value_in_latch'
 ; CHECK-NEXT:  Determining loop execution counts for: @multi_exit_exit_count_with_udiv_by_value_in_latch
-; CHECK-NEXT:  Loop %loop.header: <multiple exits> backedge-taken count is ((42 /u %N) umin (0 smax %N))
+; CHECK-NEXT:  Loop %loop.header: <multiple exits> backedge-taken count is ((0 smax %N) umin_seq (42 /u %N))
 ; CHECK-NEXT:    exit count for loop.header: (0 smax %N)
 ; CHECK-NEXT:    exit count for loop.latch: (42 /u %N)
 ; CHECK-NEXT:  Loop %loop.header: constant max backedge-taken count is i64 42
-; CHECK-NEXT:  Loop %loop.header: symbolic max backedge-taken count is ((42 /u %N) umin (0 smax %N))
+; CHECK-NEXT:  Loop %loop.header: symbolic max backedge-taken count is ((0 smax %N) umin_seq (42 /u %N))
 ; CHECK-NEXT:    symbolic max exit count for loop.header: (0 smax %N)
 ; CHECK-NEXT:    symbolic max exit count for loop.latch: (42 /u %N)
 ; CHECK-NEXT:  Loop %loop.header: Trip multiple is 1
@@ -41,7 +40,6 @@ exit:
 ; The UDiv in the latch may never be executed. The backedge-taken-count
 ; expressions must account for the fact that evaluating the UDiv
 ; unconditionally may trigger UB.
-; FIXME: umin_seq should be used instead of umin  for BTCs.
 define i64 @multi_exit_exit_count_with_udiv_by_value_in_latch_different_bounds(ptr %dst, i64 %N, i64 %M) {
 ; CHECK-LABEL: 'multi_exit_exit_count_with_udiv_by_value_in_latch_different_bounds'
 ; CHECK-NEXT:  Determining loop execution counts for: @multi_exit_exit_count_with_udiv_by_value_in_latch_different_bounds

@@ -14,13 +14,13 @@
 #include "X86IntelInstPrinter.h"
 #include "X86BaseInfo.h"
 #include "X86InstComments.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstdint>
@@ -33,7 +33,7 @@ using namespace llvm;
 #define PRINT_ALIAS_INSTR
 #include "X86GenAsmWriter1.inc"
 
-void X86IntelInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
+void X86IntelInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
   markup(OS, Markup::Register) << getRegisterName(Reg);
 }
 
@@ -120,8 +120,8 @@ bool X86IntelInstPrinter::printVecCompareInstr(const MCInst *MI, raw_ostream &OS
   case X86::VCMPPSZ128rmik:  case X86::VCMPPSZ128rrik:
   case X86::VCMPPSZ256rmik:  case X86::VCMPPSZ256rrik:
   case X86::VCMPPSZrmik:     case X86::VCMPPSZrrik:
-  case X86::VCMPSDZrmi_Intk: case X86::VCMPSDZrri_Intk:
-  case X86::VCMPSSZrmi_Intk: case X86::VCMPSSZrri_Intk:
+  case X86::VCMPSDZrmik_Int: case X86::VCMPSDZrrik_Int:
+  case X86::VCMPSSZrmik_Int: case X86::VCMPSSZrrik_Int:
   case X86::VCMPPDZ128rmbi:  case X86::VCMPPDZ128rmbik:
   case X86::VCMPPDZ256rmbi:  case X86::VCMPPDZ256rmbik:
   case X86::VCMPPDZrmbi:     case X86::VCMPPDZrmbik:
@@ -130,8 +130,8 @@ bool X86IntelInstPrinter::printVecCompareInstr(const MCInst *MI, raw_ostream &OS
   case X86::VCMPPSZrmbi:     case X86::VCMPPSZrmbik:
   case X86::VCMPPDZrrib:     case X86::VCMPPDZrribk:
   case X86::VCMPPSZrrib:     case X86::VCMPPSZrribk:
-  case X86::VCMPSDZrrib_Int: case X86::VCMPSDZrrib_Intk:
-  case X86::VCMPSSZrrib_Int: case X86::VCMPSSZrrib_Intk:
+  case X86::VCMPSDZrrib_Int: case X86::VCMPSDZrribk_Int:
+  case X86::VCMPSSZrrib_Int: case X86::VCMPSSZrribk_Int:
   case X86::VCMPPHZ128rmi:   case X86::VCMPPHZ128rri:
   case X86::VCMPPHZ256rmi:   case X86::VCMPPHZ256rri:
   case X86::VCMPPHZrmi:      case X86::VCMPPHZrri:
@@ -140,21 +140,21 @@ bool X86IntelInstPrinter::printVecCompareInstr(const MCInst *MI, raw_ostream &OS
   case X86::VCMPPHZ128rmik:  case X86::VCMPPHZ128rrik:
   case X86::VCMPPHZ256rmik:  case X86::VCMPPHZ256rrik:
   case X86::VCMPPHZrmik:     case X86::VCMPPHZrrik:
-  case X86::VCMPSHZrmi_Intk: case X86::VCMPSHZrri_Intk:
+  case X86::VCMPSHZrmik_Int: case X86::VCMPSHZrrik_Int:
   case X86::VCMPPHZ128rmbi:  case X86::VCMPPHZ128rmbik:
   case X86::VCMPPHZ256rmbi:  case X86::VCMPPHZ256rmbik:
   case X86::VCMPPHZrmbi:     case X86::VCMPPHZrmbik:
   case X86::VCMPPHZrrib:     case X86::VCMPPHZrribk:
-  case X86::VCMPSHZrrib_Int: case X86::VCMPSHZrrib_Intk:
-  case X86::VCMPPBF16Z128rmi:  case X86::VCMPPBF16Z128rri:
-  case X86::VCMPPBF16Z256rmi:  case X86::VCMPPBF16Z256rri:
-  case X86::VCMPPBF16Zrmi:     case X86::VCMPPBF16Zrri:
-  case X86::VCMPPBF16Z128rmik: case X86::VCMPPBF16Z128rrik:
-  case X86::VCMPPBF16Z256rmik: case X86::VCMPPBF16Z256rrik:
-  case X86::VCMPPBF16Zrmik:    case X86::VCMPPBF16Zrrik:
-  case X86::VCMPPBF16Z128rmbi: case X86::VCMPPBF16Z128rmbik:
-  case X86::VCMPPBF16Z256rmbi: case X86::VCMPPBF16Z256rmbik:
-  case X86::VCMPPBF16Zrmbi:    case X86::VCMPPBF16Zrmbik:
+  case X86::VCMPSHZrrib_Int: case X86::VCMPSHZrribk_Int:
+  case X86::VCMPBF16Z128rmi:  case X86::VCMPBF16Z128rri:
+  case X86::VCMPBF16Z256rmi:  case X86::VCMPBF16Z256rri:
+  case X86::VCMPBF16Zrmi:     case X86::VCMPBF16Zrri:
+  case X86::VCMPBF16Z128rmik: case X86::VCMPBF16Z128rrik:
+  case X86::VCMPBF16Z256rmik: case X86::VCMPBF16Z256rrik:
+  case X86::VCMPBF16Zrmik:    case X86::VCMPBF16Zrrik:
+  case X86::VCMPBF16Z128rmbi: case X86::VCMPBF16Z128rmbik:
+  case X86::VCMPBF16Z256rmbi: case X86::VCMPBF16Z256rmbik:
+  case X86::VCMPBF16Zrmbi:    case X86::VCMPBF16Zrmbik:
     if (Imm >= 0 && Imm <= 31) {
       OS << '\t';
       printCMPMnemonic(MI, /*IsVCMP*/true, OS);
@@ -296,18 +296,18 @@ bool X86IntelInstPrinter::printVecCompareInstr(const MCInst *MI, raw_ostream &OS
   case X86::VPCMPWZ128rmik:  case X86::VPCMPWZ128rrik:
   case X86::VPCMPWZ256rmik:  case X86::VPCMPWZ256rrik:
   case X86::VPCMPWZrmik:     case X86::VPCMPWZrrik:
-  case X86::VPCMPDZ128rmib:  case X86::VPCMPDZ128rmibk:
-  case X86::VPCMPDZ256rmib:  case X86::VPCMPDZ256rmibk:
-  case X86::VPCMPDZrmib:     case X86::VPCMPDZrmibk:
-  case X86::VPCMPQZ128rmib:  case X86::VPCMPQZ128rmibk:
-  case X86::VPCMPQZ256rmib:  case X86::VPCMPQZ256rmibk:
-  case X86::VPCMPQZrmib:     case X86::VPCMPQZrmibk:
-  case X86::VPCMPUDZ128rmib: case X86::VPCMPUDZ128rmibk:
-  case X86::VPCMPUDZ256rmib: case X86::VPCMPUDZ256rmibk:
-  case X86::VPCMPUDZrmib:    case X86::VPCMPUDZrmibk:
-  case X86::VPCMPUQZ128rmib: case X86::VPCMPUQZ128rmibk:
-  case X86::VPCMPUQZ256rmib: case X86::VPCMPUQZ256rmibk:
-  case X86::VPCMPUQZrmib:    case X86::VPCMPUQZrmibk:
+  case X86::VPCMPDZ128rmbi:  case X86::VPCMPDZ128rmbik:
+  case X86::VPCMPDZ256rmbi:  case X86::VPCMPDZ256rmbik:
+  case X86::VPCMPDZrmbi:     case X86::VPCMPDZrmbik:
+  case X86::VPCMPQZ128rmbi:  case X86::VPCMPQZ128rmbik:
+  case X86::VPCMPQZ256rmbi:  case X86::VPCMPQZ256rmbik:
+  case X86::VPCMPQZrmbi:     case X86::VPCMPQZrmbik:
+  case X86::VPCMPUDZ128rmbi: case X86::VPCMPUDZ128rmbik:
+  case X86::VPCMPUDZ256rmbi: case X86::VPCMPUDZ256rmbik:
+  case X86::VPCMPUDZrmbi:    case X86::VPCMPUDZrmbik:
+  case X86::VPCMPUQZ128rmbi: case X86::VPCMPUQZ128rmbik:
+  case X86::VPCMPUQZ256rmbi: case X86::VPCMPUQZ256rmbik:
+  case X86::VPCMPUQZrmbi:    case X86::VPCMPUQZrmbik:
     if ((Imm >= 0 && Imm <= 2) || (Imm >= 4 && Imm <= 6)) {
       OS << '\t';
       printVPCMPMnemonic(MI, OS);
@@ -369,11 +369,11 @@ void X86IntelInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   if (Op.isReg()) {
     printRegName(O, Op.getReg());
   } else if (Op.isImm()) {
-    markup(O, Markup::Immediate) << formatImm((int64_t)Op.getImm());
+    markup(O, Markup::Immediate) << formatImm(Op.getImm());
   } else {
     assert(Op.isExpr() && "unknown operand kind in printOperand");
     O << "offset ";
-    Op.getExpr()->print(O, &MAI);
+    MAI.printExpr(O, *Op.getExpr());
   }
 }
 
@@ -416,7 +416,7 @@ void X86IntelInstPrinter::printMemReference(const MCInst *MI, unsigned Op,
   if (!DispSpec.isImm()) {
     if (NeedPlus) O << " + ";
     assert(DispSpec.isExpr() && "non-immediate displacement for LEA?");
-    DispSpec.getExpr()->print(O, &MAI);
+    MAI.printExpr(O, *DispSpec.getExpr());
   } else {
     int64_t DispVal = DispSpec.getImm();
     if (DispVal || (!IndexReg.getReg() && !BaseReg.getReg())) {
@@ -471,7 +471,7 @@ void X86IntelInstPrinter::printMemOffset(const MCInst *MI, unsigned Op,
     markup(O, Markup::Immediate) << formatImm(DispSpec.getImm());
   } else {
     assert(DispSpec.isExpr() && "non-immediate displacement?");
-    DispSpec.getExpr()->print(O, &MAI);
+    MAI.printExpr(O, *DispSpec.getExpr());
   }
 
   O << ']';
@@ -480,7 +480,7 @@ void X86IntelInstPrinter::printMemOffset(const MCInst *MI, unsigned Op,
 void X86IntelInstPrinter::printU8Imm(const MCInst *MI, unsigned Op,
                                      raw_ostream &O) {
   if (MI->getOperand(Op).isExpr())
-    return MI->getOperand(Op).getExpr()->print(O, &MAI);
+    return MAI.printExpr(O, *MI->getOperand(Op).getExpr());
 
   markup(O, Markup::Immediate) << formatImm(MI->getOperand(Op).getImm() & 0xff);
 }

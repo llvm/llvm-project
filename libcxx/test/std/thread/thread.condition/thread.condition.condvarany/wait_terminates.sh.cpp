@@ -137,7 +137,7 @@ int main(int argc, char **argv) {
       case 4: cv.wait_for(mut, wait, pred_function); break;
       case 5: cv.wait_until(mut, Clock::now() + wait); break;
       case 6: cv.wait_until(mut, Clock::now() + wait, pred_function); break;
-#if TEST_STD_VER >= 20 && !(defined(_LIBCPP_VERSION) && !_LIBCPP_AVAILABILITY_HAS_SYNC)
+#if TEST_STD_VER >= 20
       case 7: cv.wait(mut, std::stop_source{}.get_token(), pred_function); break;
       case 8: cv.wait_for(mut, std::stop_source{}.get_token(), wait, pred_function); break;
       case 9: cv.wait_until(mut, std::stop_source{}.get_token(), Clock::now() + wait, pred_function); break;

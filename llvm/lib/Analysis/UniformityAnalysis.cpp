@@ -8,9 +8,9 @@
 
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/ADT/GenericUniformityImpl.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -28,20 +28,6 @@ template <>
 bool llvm::GenericUniformityAnalysisImpl<SSAContext>::markDefsDivergent(
     const Instruction &Instr) {
   return markDivergent(cast<Value>(&Instr));
-}
-
-template <> void llvm::GenericUniformityAnalysisImpl<SSAContext>::initialize() {
-  for (auto &I : instructions(F)) {
-    if (TTI->isSourceOfDivergence(&I))
-      markDivergent(I);
-    else if (TTI->isAlwaysUniform(&I))
-      addUniformOverride(I);
-  }
-  for (auto &Arg : F.args()) {
-    if (TTI->isSourceOfDivergence(&Arg)) {
-      markDivergent(&Arg);
-    }
-  }
 }
 
 template <>
@@ -64,6 +50,65 @@ void llvm::GenericUniformityAnalysisImpl<SSAContext>::pushUsers(
 }
 
 template <>
+bool llvm::GenericUniformityAnalysisImpl<SSAContext>::printDivergentArgs(
+    raw_ostream &OS) const {
+  bool haveDivergentArgs = false;
+  for (const auto &Arg : F.args()) {
+    if (isDivergent(&Arg)) {
+      if (!haveDivergentArgs) {
+        OS << "DIVERGENT ARGUMENTS:\n";
+        haveDivergentArgs = true;
+      }
+      OS << "  DIVERGENT: " << Context.print(&Arg) << '\n';
+    }
+  }
+  return haveDivergentArgs;
+}
+
+template <> void llvm::GenericUniformityAnalysisImpl<SSAContext>::initialize() {
+  // Pre-populate UniformValues with uniform values, then seed divergence.
+  // NeverUniform values are not inserted -- they are divergent by definition
+  // and will be reported as such by isDivergent() (not in UniformValues).
+  SmallVector<const Value *, 4> DivergentArgs;
+  for (auto &Arg : F.args()) {
+    if (TTI->getInstructionUniformity(&Arg) ==
+        InstructionUniformity::NeverUniform)
+      DivergentArgs.push_back(&Arg);
+    else
+      UniformValues.insert(&Arg);
+  }
+  for (auto &I : instructions(F)) {
+    InstructionUniformity IU = TTI->getInstructionUniformity(&I);
+    switch (IU) {
+    case InstructionUniformity::AlwaysUniform:
+      UniformValues.insert(&I);
+      addUniformOverride(I);
+      continue;
+    case InstructionUniformity::NeverUniform:
+      // Skip inserting -- divergent by definition. Add to Worklist directly
+      // so compute() propagates divergence to users.
+      if (I.isTerminator())
+        DivergentTermBlocks.insert(I.getParent());
+      Worklist.push_back(&I);
+      continue;
+    case InstructionUniformity::Custom:
+      UniformValues.insert(&I);
+      addCustomUniformityCandidate(&I);
+      continue;
+    case InstructionUniformity::Default:
+      UniformValues.insert(&I);
+      break;
+    }
+  }
+  // Arguments are not instructions and cannot go on the Worklist, so we
+  // propagate their divergence to users explicitly here. This must happen
+  // after all instructions are in UniformValues so markDivergent (called
+  // inside pushUsers) can successfully erase user instructions from the set.
+  for (const Value *Arg : DivergentArgs)
+    pushUsers(Arg);
+}
+
+template <>
 bool llvm::GenericUniformityAnalysisImpl<SSAContext>::usesValueFromCycle(
     const Instruction &I, const Cycle &DefCycle) const {
   assert(!isAlwaysUniform(I));
@@ -80,13 +125,12 @@ template <>
 void llvm::GenericUniformityAnalysisImpl<
     SSAContext>::propagateTemporalDivergence(const Instruction &I,
                                              const Cycle &DefCycle) {
-  if (isDivergent(I))
-    return;
   for (auto *User : I.users()) {
     auto *UserInstr = cast<Instruction>(User);
     if (DefCycle.contains(UserInstr->getParent()))
       continue;
     markDivergent(*UserInstr);
+    recordTemporalDivergence(&I, UserInstr, &DefCycle);
   }
 }
 
@@ -101,6 +145,15 @@ bool llvm::GenericUniformityAnalysisImpl<SSAContext>::isDivergentUse(
     return isTemporalDivergent(*UseInstr->getParent(), *DefInstr);
   }
   return false;
+}
+
+template <>
+bool GenericUniformityAnalysisImpl<SSAContext>::isCustomUniform(
+    const Instruction &I) const {
+  SmallBitVector UniformArgs(I.getNumOperands());
+  for (auto [Idx, Use] : enumerate(I.operands()))
+    UniformArgs[Idx] = !isDivergentUse(Use);
+  return TTI->isUniform(&I, UniformArgs);
 }
 
 // This ensures explicit instantiation of
@@ -145,17 +198,15 @@ PreservedAnalyses UniformityInfoPrinterPass::run(Function &F,
 
 char UniformityInfoWrapperPass::ID = 0;
 
-UniformityInfoWrapperPass::UniformityInfoWrapperPass() : FunctionPass(ID) {
-  initializeUniformityInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+UniformityInfoWrapperPass::UniformityInfoWrapperPass() : FunctionPass(ID) {}
 
 INITIALIZE_PASS_BEGIN(UniformityInfoWrapperPass, "uniformity",
-                      "Uniformity Analysis", true, true)
+                      "Uniformity Analysis", false, true)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(CycleInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(UniformityInfoWrapperPass, "uniformity",
-                    "Uniformity Analysis", true, true)
+                    "Uniformity Analysis", false, true)
 
 void UniformityInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
@@ -182,6 +233,7 @@ bool UniformityInfoWrapperPass::runOnFunction(Function &F) {
 
 void UniformityInfoWrapperPass::print(raw_ostream &OS, const Module *) const {
   OS << "UniformityInfo for function '" << m_function->getName() << "':\n";
+  m_uniformityInfo.print(OS);
 }
 
 void UniformityInfoWrapperPass::releaseMemory() {

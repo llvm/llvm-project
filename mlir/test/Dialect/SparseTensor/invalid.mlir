@@ -105,7 +105,7 @@ func.func @invalid_positions_dense(%arg0: tensor<128xf64>) -> memref<?xindex> {
 
 func.func @invalid_positions_unranked(%arg0: tensor<*xf64>) -> memref<?xindex> {
   // expected-error@+1 {{'sparse_tensor.positions' op operand #0 must be sparse tensor of any type values, but got 'tensor<*xf64>'}}
-  %0 = sparse_tensor.positions %arg0 { level = 0 : index } : tensor<*xf64> to memref<?xindex>
+  %0 = "sparse_tensor.positions"(%arg0) { level = 0 : index } : (tensor<*xf64>) -> (memref<?xindex>)
   return %0 : memref<?xindex>
 }
 
@@ -141,7 +141,7 @@ func.func @invalid_indices_dense(%arg0: tensor<10x10xi32>) -> memref<?xindex> {
 
 func.func @invalid_indices_unranked(%arg0: tensor<*xf64>) -> memref<?xindex> {
   // expected-error@+1 {{'sparse_tensor.coordinates' op operand #0 must be sparse tensor of any type values, but got 'tensor<*xf64>'}}
-  %0 = sparse_tensor.coordinates %arg0 { level = 0 : index } : tensor<*xf64> to memref<?xindex>
+  %0 = "sparse_tensor.coordinates"(%arg0) { level = 0 : index } : (tensor<*xf64>) -> (memref<?xindex>)
   return %0 : memref<?xindex>
 }
 
@@ -240,7 +240,7 @@ func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#SparseVector>)
 
 #SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 
-func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#SparseVector>) -> i64 {
+func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#SparseVector>) -> index {
   // expected-error@+1 {{requested slice data on non-slice tensor}}
   %0 = sparse_tensor.storage_specifier.get %arg0 dim_offset at 0
        : !sparse_tensor.storage_specifier<#SparseVector>
@@ -347,7 +347,7 @@ func.func @sparse_wrong_arity_compression(%arg0: memref<?xf64>,
 // -----
 
 func.func @sparse_convert_unranked(%arg0: tensor<*xf32>) -> tensor<10xf32> {
-  // expected-error@+1 {{unexpected type in convert}}
+  // expected-error@+1 {{invalid kind of type specified: expected builtin.tensor, but found 'tensor<*xf32>'}}
   %0 = sparse_tensor.convert %arg0 : tensor<*xf32> to tensor<10xf32>
   return %0 : tensor<10xf32>
 }
@@ -626,6 +626,20 @@ func.func @invalid_reduce_wrong_yield(%arg0: f64, %arg1: f64) -> f64 {
         %cst = arith.constant 2 : i64
         tensor.yield %cst : i64
     }
+  return %r : f64
+}
+
+// -----
+
+func.func @invalid_reduce_wrong_terminator(%arg0: f64, %arg1: f64) -> f64 {
+  %cf1 = arith.constant 1.0 : f64
+  // expected-error@+1 {{reduce region must end with a terminator}}
+  %r = sparse_tensor.reduce %arg0, %arg1, %cf1 : f64 {
+  ^bb0(%arg2: f64, %arg3: f64):
+    %0 = arith.addf %arg2, %arg3 : f64
+    sparse_tensor.yield %0 : f64
+    %1 = arith.fptosi %0 : f64 to i32
+  }
   return %r : f64
 }
 
@@ -1184,7 +1198,7 @@ func.func @sparse_iterate(%sp : tensor<4x8xf32, #COO>, %i : index) -> f32 {
 
 func.func @sparse_iterate(%sp : tensor<4x8xf32, #COO>, %i : index, %j : index) -> index {
   %l1 = sparse_tensor.extract_iteration_space %sp lvls = 0 : tensor<4x8xf32, #COO> -> !sparse_tensor.iter_space<#COO, lvls = 0>
-  // expected-error @+1 {{'sparse_tensor.iterate' op 0-th region iter_arg and 0-th yielded value have different type: 'index' != 'f32'}}
+  // expected-error @+1 {{'sparse_tensor.iterate' op types mismatch between 0th yield value and defined value}}
   %r1 = sparse_tensor.iterate %it1 in %l1 at (%crd) iter_args(%si = %i): !sparse_tensor.iter_space<#COO, lvls = 0> -> index {
     %y = arith.constant 1.0 :  f32
     sparse_tensor.yield %y : f32

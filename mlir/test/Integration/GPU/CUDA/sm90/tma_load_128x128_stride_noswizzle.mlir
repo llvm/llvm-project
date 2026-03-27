@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s \
 // RUN:  -gpu-lower-to-nvvm-pipeline="cubin-chip=sm_90 cubin-features=+ptx80 opt-level=3" \
-// RUN:  | mlir-cpu-runner \
+// RUN:  | mlir-runner \
 // RUN:   --shared-libs=%mlir_cuda_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \
 // RUN:   --shared-libs=%mlir_c_runner_utils \
@@ -57,7 +57,7 @@ module {
     %s4 = gpu.memcpy async [%s3] %srcMemref, %srcMemref_host : memref<128x128xf16>, memref<128x128xf16>
     %s5 = gpu.memcpy async [%s4] %dstMemref, %dstMemref_host : memref<128x128xf16>, memref<128x128xf16>
 
-    %expand_shape = memref.expand_shape %srcMemref [[0, 1], [2, 3]] : memref<128x128xf16> into memref<2x64x2x64xf16>
+    %expand_shape = memref.expand_shape %srcMemref [[0, 1], [2, 3]] output_shape [2, 64, 2, 64] : memref<128x128xf16> into memref<2x64x2x64xf16>
     %transpose = memref.transpose %expand_shape (d0, d1, d2, d3) -> (d0, d2, d1, d3) : memref<2x64x2x64xf16> to memref<2x2x64x64xf16, strided<[8192, 64, 128, 1]>>
     %cast = memref.cast %transpose : memref<2x2x64x64xf16, strided<[8192, 64, 128, 1]>> to memref<*xf16>
     %24 = nvgpu.tma.create.descriptor %cast box[%c2, %c2, %c64, %c64] : memref<*xf16> -> <tensor = memref<2x2x64x64xf16, 3>, swizzle = none, l2promo = none, oob = zero, interleave = none>
@@ -70,17 +70,17 @@ module {
       %26 = gpu.dynamic_shared_memory : memref<?xi8, #gpu.address_space<workgroup>>
       %view = memref.view %26[%c0][] : memref<?xi8, #gpu.address_space<workgroup>> to memref<2x2x64x64xf16, #gpu.address_space<workgroup>>
       %27 = nvgpu.mbarrier.create -> <memorySpace = #gpu.address_space<workgroup>>
-      %thread_id_x = gpu.thread_id  x
+      %thread_id_x = gpu.thread_id x
       %28 = arith.index_cast %thread_id_x : index to i32
       %29 = arith.shrui %28, %c5_i32 : i32
-      %30 = nvvm.shfl.sync  idx %c-1_i32, %29, %c0_i32, %c31_i32 : i32 -> i32
+      %30 = nvvm.shfl.sync idx %c-1_i32, %29, %c0_i32, %c31_i32 : i32 -> i32
       %31 = arith.cmpi eq, %30, %c0_i32 : i32
       %32 = nvvm.elect.sync -> i1
       %33 = arith.andi %31, %32 : i1
       scf.if %33 {
         nvgpu.mbarrier.init %27[%c0], %c1 : <memorySpace = #gpu.address_space<workgroup>>
       }
-      %34 = nvvm.shfl.sync  idx %c-1_i32, %29, %c0_i32, %c31_i32 : i32 -> i32
+      %34 = nvvm.shfl.sync idx %c-1_i32, %29, %c0_i32, %c31_i32 : i32 -> i32
       %35 = arith.cmpi eq, %34, %c0_i32 : i32
       %36 = nvvm.elect.sync -> i1
       %37 = arith.andi %35, %36 : i1
@@ -95,13 +95,13 @@ module {
           %39 = arith.muli %arg15, %c64 : index
           %subview = memref.subview %view[%arg14, %arg15, 0, 0] [1, 1, 64, 64] [1, 1, 1, 1] : memref<2x2x64x64xf16, #gpu.address_space<workgroup>> to memref<64x64xf16, strided<[64, 1], offset: ?>, #gpu.address_space<workgroup>>
           %subview_0 = memref.subview %dstMemref[%38, %39] [64, 64] [1, 1] : memref<128x128xf16> to memref<64x64xf16, strided<[128, 1], offset: ?>>
-          %block_dim_x = gpu.block_dim  x
-          %thread_id_y = gpu.thread_id  y
+          %block_dim_x = gpu.block_dim x
+          %thread_id_y = gpu.thread_id y
           %40 = arith.muli %thread_id_y, %block_dim_x : index
           %41 = arith.addi %thread_id_x, %40 : index
-          %block_dim_y = gpu.block_dim  y
+          %block_dim_y = gpu.block_dim y
           %42 = arith.muli %block_dim_x, %block_dim_y : index
-          %thread_id_z = gpu.thread_id  z
+          %thread_id_z = gpu.thread_id z
           %43 = arith.muli %thread_id_z, %42 : index
           %44 = arith.addi %41, %43 : index
           %45 = arith.cmpi eq, %44, %c0 : index

@@ -17,7 +17,6 @@
 #include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/ObjectYAML/YAML.h"
 #include <cstdint>
-#include <vector>
 
 namespace llvm {
 

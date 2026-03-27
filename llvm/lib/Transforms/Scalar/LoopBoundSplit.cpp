@@ -21,18 +21,17 @@
 
 #define DEBUG_TYPE "loop-bound-split"
 
-namespace llvm {
-
+using namespace llvm;
 using namespace PatternMatch;
 
 namespace {
 struct ConditionInfo {
   /// Branch instruction with this condition
-  BranchInst *BI = nullptr;
+  CondBrInst *BI = nullptr;
   /// ICmp instruction with this condition
   ICmpInst *ICmp = nullptr;
   /// Preciate info
-  ICmpInst::Predicate Pred = ICmpInst::BAD_ICMP_PREDICATE;
+  CmpPredicate Pred = ICmpInst::BAD_ICMP_PREDICATE;
   /// AddRec llvm value
   Value *AddRecValue = nullptr;
   /// Non PHI AddRec llvm value
@@ -157,7 +156,7 @@ static bool hasProcessableCondition(const Loop &L, ScalarEvolution &SE,
 }
 
 static bool isProcessableCondBI(const ScalarEvolution &SE,
-                                const BranchInst *BI) {
+                                const CondBrInst *BI) {
   BasicBlock *TrueSucc = nullptr;
   BasicBlock *FalseSucc = nullptr;
   Value *LHS, *RHS;
@@ -202,7 +201,7 @@ static bool canSplitLoopBound(const Loop &L, const DominatorTree &DT,
   if (!ExitingBB)
     return false;
 
-  BranchInst *ExitingBI = dyn_cast<BranchInst>(ExitingBB->getTerminator());
+  CondBrInst *ExitingBI = dyn_cast<CondBrInst>(ExitingBB->getTerminator());
   if (!ExitingBI)
     return false;
 
@@ -219,7 +218,7 @@ static bool canSplitLoopBound(const Loop &L, const DominatorTree &DT,
   return true;
 }
 
-static bool isProfitableToTransform(const Loop &L, const BranchInst *BI) {
+static bool isProfitableToTransform(const Loop &L, const CondBrInst *BI) {
   // If the conditional branch splits a loop into two halves, we could
   // generally say it is profitable.
   //
@@ -239,7 +238,7 @@ static bool isProfitableToTransform(const Loop &L, const BranchInst *BI) {
   return true;
 }
 
-static BranchInst *findSplitCandidate(const Loop &L, ScalarEvolution &SE,
+static CondBrInst *findSplitCandidate(const Loop &L, ScalarEvolution &SE,
                                       ConditionInfo &ExitingCond,
                                       ConditionInfo &SplitCandidateCond) {
   for (auto *BB : L.blocks()) {
@@ -247,7 +246,7 @@ static BranchInst *findSplitCandidate(const Loop &L, ScalarEvolution &SE,
     if (L.getLoopLatch() == BB)
       continue;
 
-    auto *BI = dyn_cast<BranchInst>(BB->getTerminator());
+    auto *BI = dyn_cast<CondBrInst>(BB->getTerminator());
     if (!BI)
       continue;
 
@@ -358,8 +357,7 @@ static bool splitLoopBound(Loop &L, DominatorTree &DT, LoopInfo &LI,
   IRBuilder<> Builder(&PostLoopPreHeader->front());
 
   // Update phi nodes in header of post-loop.
-  bool isExitingLatch =
-      (L.getExitingBlock() == L.getLoopLatch()) ? true : false;
+  bool isExitingLatch = L.getExitingBlock() == L.getLoopLatch();
   Value *ExitingCondLCSSAPhi = nullptr;
   for (PHINode &PN : L.getHeader()->phis()) {
     // Create LCSSA phi node in preheader of post-loop.
@@ -403,8 +401,7 @@ static bool splitLoopBound(Loop &L, DominatorTree &DT, LoopInfo &LI,
                      ? SE.getSMinExpr(NewBoundSCEV, SplitBoundSCEV)
                      : SE.getUMinExpr(NewBoundSCEV, SplitBoundSCEV);
 
-  SCEVExpander Expander(
-      SE, L.getHeader()->getDataLayout(), "split");
+  SCEVExpander Expander(SE, "split");
   Instruction *InsertPt = SplitLoopPH->getTerminator();
   Value *NewBoundValue =
       Expander.expandCodeFor(NewBoundSCEV, NewBoundSCEV->getType(), InsertPt);
@@ -418,8 +415,8 @@ static bool splitLoopBound(Loop &L, DominatorTree &DT, LoopInfo &LI,
   SplitCandidateCond.BI->setCondition(ConstantInt::getTrue(Context));
 
   // Replace cloned SplitCandidateCond.BI's condition in post-loop by False.
-  BranchInst *ClonedSplitCandidateBI =
-      cast<BranchInst>(VMap[SplitCandidateCond.BI]);
+  CondBrInst *ClonedSplitCandidateBI =
+      cast<CondBrInst>(VMap[SplitCandidateCond.BI]);
   ClonedSplitCandidateBI->setCondition(ConstantInt::getFalse(Context));
 
   // Replace exit branch target of pre-loop by post-loop's preheader.
@@ -472,8 +469,7 @@ static bool splitLoopBound(Loop &L, DominatorTree &DT, LoopInfo &LI,
 PreservedAnalyses LoopBoundSplitPass::run(Loop &L, LoopAnalysisManager &AM,
                                           LoopStandardAnalysisResults &AR,
                                           LPMUpdater &U) {
-  Function &F = *L.getHeader()->getParent();
-  (void)F;
+  [[maybe_unused]] Function &F = *L.getHeader()->getParent();
 
   LLVM_DEBUG(dbgs() << "Spliting bound of loop in " << F.getName() << ": " << L
                     << "\n");
@@ -486,5 +482,3 @@ PreservedAnalyses LoopBoundSplitPass::run(Loop &L, LoopAnalysisManager &AM,
 
   return getLoopPassPreservedAnalyses();
 }
-
-} // end namespace llvm

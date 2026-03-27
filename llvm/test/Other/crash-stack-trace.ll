@@ -1,4 +1,4 @@
-; REQUIRES: asserts
+; REQUIRES: asserts, backtrace
 
 ; RUN: not --crash opt -passes=trigger-crash-module %s -disable-output 2>&1 | \
 ; RUN: FileCheck %s --check-prefix=CHECK-MODULE

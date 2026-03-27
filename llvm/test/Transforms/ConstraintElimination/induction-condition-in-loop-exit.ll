@@ -763,3 +763,47 @@ exit.2:
   %t.2 = icmp ult i32 %iv, %N
   ret i1 %t.2
 }
+
+define i1 @test_non_dedicated_exit(i16 %n) {
+; CHECK-LABEL: define i1 @test_non_dedicated_exit(
+; CHECK-SAME: i16 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp slt i16 [[N]], 1
+; CHECK-NEXT:    br i1 [[COND]], label %[[EXIT:.*]], label %[[LOOP_PREHEADER:.*]]
+; CHECK:       [[LOOP_PREHEADER]]:
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i16 [[N]], -1
+; CHECK-NEXT:    [[EXT:%.*]] = zext nneg i16 [[SUB]] to i32
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[INDVAR:%.*]] = phi i32 [ [[INDVAR_INC:%.*]], %[[LOOP_LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INDVAR]], [[EXT]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT]], label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[INDVAR_INC]] = add nuw nsw i32 [[INDVAR]], 1
+; CHECK-NEXT:    br label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i16 [[N]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %cond = icmp slt i16 %n, 1
+  br i1 %cond, label %exit, label %loop.preheader
+
+loop.preheader:
+  %sub = add nsw i16 %n, -1
+  %ext = zext nneg i16 %sub to i32
+  br label %loop
+
+loop:
+  %indvar = phi i32 [ %indvar.inc, %loop.latch ], [ 0, %loop.preheader ]
+  %exitcond = icmp eq i32 %indvar, %ext
+  br i1 %exitcond, label %exit, label %loop.latch
+
+loop.latch:
+  %indvar.inc = add nuw nsw i32 %indvar, 1
+  br label %loop
+
+exit:
+  %cmp = icmp sgt i16 %n, 0
+  ret i1 %cmp
+}

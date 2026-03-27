@@ -3,6 +3,7 @@
 # RUN: llc -mtriple thumbv6m-arm-none-eabi -run-pass greedy %s -o - | FileCheck %s
 # RUN: llc -mtriple thumbv6m-arm-none-eabi -run-pass regallocfast %s -o - | FileCheck %s --check-prefix=FAST
 # RUN: llc -mtriple thumbv6m-arm-none-eabi -passes=regallocfast %s -o - | FileCheck %s --check-prefix=FAST
+# RUN: llc -mtriple thumbv6m-arm-none-eabi -passes=greedy %s -o - | FileCheck %s
 
 ...
 ---

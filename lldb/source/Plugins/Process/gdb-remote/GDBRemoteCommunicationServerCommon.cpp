@@ -212,6 +212,8 @@ GDBRemoteCommunicationServerCommon::Handle_qHostInfo(
     response.PutCString("ostype:tvos;");
 #elif defined(TARGET_OS_WATCH) && TARGET_OS_WATCH == 1
     response.PutCString("ostype:watchos;");
+#elif defined(TARGET_OS_XR) && TARGET_OS_XR == 1
+    response.PutCString("ostype:xros;");
 #elif defined(TARGET_OS_BRIDGE) && TARGET_OS_BRIDGE == 1
     response.PutCString("ostype:bridgeos;");
 #else
@@ -231,7 +233,8 @@ GDBRemoteCommunicationServerCommon::Handle_qHostInfo(
       host_arch.GetMachine() == llvm::Triple::aarch64_32 ||
       host_arch.GetMachine() == llvm::Triple::aarch64_be ||
       host_arch.GetMachine() == llvm::Triple::arm ||
-      host_arch.GetMachine() == llvm::Triple::armeb || host_arch.IsMIPS())
+      host_arch.GetMachine() == llvm::Triple::armeb || host_arch.IsMIPS() ||
+      host_arch.GetTriple().isPPC64() || host_arch.GetTriple().isLoongArch())
     response.Printf("watchpoint_exceptions_received:before;");
   else
     response.Printf("watchpoint_exceptions_received:after;");
@@ -749,7 +752,7 @@ GDBRemoteCommunicationServerCommon::Handle_qPlatform_shell(
       FileSystem::Instance().Resolve(working_spec);
       Status err =
           Host::RunShellCommand(path.c_str(), working_spec, &status, &signo,
-                                &output, std::chrono::seconds(10));
+                                &output, nullptr, std::chrono::seconds(10));
       StreamGDBRemote response;
       if (err.Fail()) {
         response.PutCString("F,");
@@ -1350,9 +1353,9 @@ GDBRemoteCommunicationServerCommon::GetModuleInfo(llvm::StringRef module_path,
 
   const ModuleSpec module_spec(actual_module_path_spec, arch);
 
-  ModuleSpecList module_specs;
-  if (!ObjectFile::GetModuleSpecifications(actual_module_path_spec, file_offset,
-                                           file_size, module_specs))
+  ModuleSpecList module_specs = ObjectFile::GetModuleSpecifications(
+      actual_module_path_spec, file_offset, file_size);
+  if (module_specs.GetSize() == 0)
     return ModuleSpec();
 
   ModuleSpec matched_module_spec;
@@ -1374,7 +1377,7 @@ GDBRemoteCommunicationServerCommon::GetModuleInfo(llvm::StringRef module_path,
 
 std::vector<std::string> GDBRemoteCommunicationServerCommon::HandleFeatures(
     const llvm::ArrayRef<llvm::StringRef> client_features) {
-  // 128KBytes is a reasonable max packet size--debugger can always use less.
+  // 128 KiB is a reasonable max packet size--debugger can always use less.
   constexpr uint32_t max_packet_size = 128 * 1024;
 
   // Features common to platform server and llgs.

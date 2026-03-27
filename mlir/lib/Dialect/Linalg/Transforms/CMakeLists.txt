@@ -7,13 +7,13 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   ConvertConv2DToImg2Col.cpp
   DataLayoutPropagation.cpp
   DecomposeLinalgOps.cpp
-  Detensorize.cpp
   DropUnitDims.cpp
   ElementwiseOpFusion.cpp
   ElementwiseToLinalg.cpp
   EliminateEmptyTensors.cpp
   EraseUnusedOperandsAndResults.cpp
   FoldAddIntoDest.cpp
+  FoldIntoElementwise.cpp
   FusePadOpWithLinalgProducer.cpp
   Fusion.cpp
   Generalization.cpp
@@ -22,11 +22,15 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   InlineScalarOperands.cpp
   Interchange.cpp
   Loops.cpp
+  MorphOps.cpp
   TransposeMatmul.cpp
-  MeshShardingInterfaceImpl.cpp
-  NamedOpConversions.cpp
+  ShardingInterfaceImpl.cpp
+  SimplifyDepthwiseConv.cpp
+  NamedToElementwise.cpp
   BlockPackMatmul.cpp
+  PackAndUnpackPatterns.cpp
   Padding.cpp
+  PadTilingInterface.cpp
   Promotion.cpp
   RuntimeOpVerification.cpp
   Specialize.cpp
@@ -38,6 +42,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   TilingInterfaceImpl.cpp
   Transforms.cpp
   TransposeConv2D.cpp
+  DecomposeGenericByUnfoldingPermutation.cpp
   Vectorization.cpp
   WinogradConv2D.cpp
 
@@ -49,14 +54,11 @@ add_mlir_dialect_library(MLIRLinalgTransforms
 
   LINK_LIBS PUBLIC
   MLIRAffineDialect
-  MLIRAffineTransforms
   MLIRAffineUtils
   MLIRAnalysis
   MLIRArithDialect
   MLIRArithTransforms
   MLIRArithUtils
-  MLIRBufferizationDialect
-  MLIRBufferizationTransforms
   MLIRComplexDialect
   MLIRDestinationStyleOpInterface
   MLIRDialectUtils
@@ -67,20 +69,16 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRIR
   MLIRMemRefDialect
   MLIRMemRefTransforms
-  MLIRMeshDialect
-  MLIRMeshTransforms
+  MLIRShardTransforms
   MLIRLinalgDialect
   MLIRLinalgUtils
   MLIRSCFDialect
   MLIRSCFTransforms
-  MLIRSCFUtils
   MLIRPass
-  MLIRShardingInterface
   MLIRSubsetOpInterface
   MLIRSparseTensorDialect
   MLIRTensorDialect
   MLIRTensorTilingInterfaceImpl
-  MLIRTensorTransforms
   MLIRTransforms
   MLIRTransformUtils
   MLIRValueBoundsOpInterface

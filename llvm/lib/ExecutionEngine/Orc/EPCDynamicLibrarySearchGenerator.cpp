@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
+
+#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
 #include "llvm/Support/Error.h"
 
@@ -17,14 +19,14 @@ namespace orc {
 
 Expected<std::unique_ptr<EPCDynamicLibrarySearchGenerator>>
 EPCDynamicLibrarySearchGenerator::Load(
-    ExecutionSession &ES, const char *LibraryPath, SymbolPredicate Allow,
-    AddAbsoluteSymbolsFn AddAbsoluteSymbols) {
-  auto Handle = ES.getExecutorProcessControl().loadDylib(LibraryPath);
+    ExecutionSession &ES, DylibManager &DylibMgr, const char *LibraryPath,
+    SymbolPredicate Allow, AddAbsoluteSymbolsFn AddAbsoluteSymbols) {
+  auto Handle = DylibMgr.loadDylib(LibraryPath);
   if (!Handle)
     return Handle.takeError();
 
   return std::make_unique<EPCDynamicLibrarySearchGenerator>(
-      ES, *Handle, std::move(Allow), std::move(AddAbsoluteSymbols));
+      ES, DylibMgr, *Handle, std::move(Allow), std::move(AddAbsoluteSymbols));
 }
 
 Error EPCDynamicLibrarySearchGenerator::tryToGenerate(
@@ -39,6 +41,18 @@ Error EPCDynamicLibrarySearchGenerator::tryToGenerate(
              << Symbols << "\n";
     });
 
+  // If there's no handle then resolve all requested symbols to null.
+  if (!H) {
+    assert(Allow && "No handle or filter?");
+    SymbolMap Nulls;
+    for (auto &[Name, LookupFlags] : Symbols) {
+      if (Allow(Name))
+        Nulls[Name] = {};
+    }
+    return addAbsolutes(JD, std::move(Nulls));
+  }
+
+  // Otherwise proceed with lookup in the remote.
   SymbolLookupSet LookupSymbols;
 
   for (auto &KV : Symbols) {
@@ -48,10 +62,10 @@ Error EPCDynamicLibrarySearchGenerator::tryToGenerate(
     LookupSymbols.add(KV.first, SymbolLookupFlags::WeaklyReferencedSymbol);
   }
 
-  ExecutorProcessControl::LookupRequest Request(H, LookupSymbols);
+  DylibManager::LookupRequest Request(*H, LookupSymbols);
   // Copy-capture LookupSymbols, since LookupRequest keeps a reference.
-  EPC.lookupSymbolsAsync(Request, [this, &JD, LS = std::move(LS),
-                                   LookupSymbols](auto Result) mutable {
+  DylibMgr.lookupSymbolsAsync(Request, [this, &JD, LS = std::move(LS),
+                                        LookupSymbols](auto Result) mutable {
     if (!Result) {
       LLVM_DEBUG({
         dbgs() << "EPCDynamicLibrarySearchGenerator lookup failed due to error";
@@ -63,12 +77,16 @@ Error EPCDynamicLibrarySearchGenerator::tryToGenerate(
     assert(Result->front().size() == LookupSymbols.size() &&
            "Result has incorrect number of elements");
 
+    auto SymsIt = Result->front().begin();
+    SymbolNameSet MissingSymbols;
     SymbolMap NewSymbols;
-    auto ResultI = Result->front().begin();
-    for (auto &KV : LookupSymbols) {
-      if (ResultI->getAddress())
-        NewSymbols[KV.first] = *ResultI;
-      ++ResultI;
+    for (auto &[Name, Flags] : LookupSymbols) {
+      const auto &Sym = *SymsIt++;
+      if (Sym && Sym->getAddress())
+        NewSymbols[Name] = *Sym;
+      else if (LLVM_UNLIKELY(!Sym &&
+                             Flags == SymbolLookupFlags::RequiredSymbol))
+        MissingSymbols.insert(Name);
     }
 
     LLVM_DEBUG({
@@ -80,15 +98,23 @@ Error EPCDynamicLibrarySearchGenerator::tryToGenerate(
     if (NewSymbols.empty())
       return LS.continueLookup(Error::success());
 
+    if (LLVM_UNLIKELY(!MissingSymbols.empty()))
+      return LS.continueLookup(make_error<SymbolsNotFound>(
+          this->ES.getSymbolStringPool(), std::move(MissingSymbols)));
+
     // Define resolved symbols.
-    Error Err = AddAbsoluteSymbols
-                    ? AddAbsoluteSymbols(JD, std::move(NewSymbols))
-                    : JD.define(absoluteSymbols(std::move(NewSymbols)));
+    Error Err = addAbsolutes(JD, std::move(NewSymbols));
 
     LS.continueLookup(std::move(Err));
   });
 
   return Error::success();
+}
+
+Error EPCDynamicLibrarySearchGenerator::addAbsolutes(JITDylib &JD,
+                                                     SymbolMap Symbols) {
+  return AddAbsoluteSymbols ? AddAbsoluteSymbols(JD, std::move(Symbols))
+                            : JD.define(absoluteSymbols(std::move(Symbols)));
 }
 
 } // end namespace orc

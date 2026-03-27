@@ -16,6 +16,17 @@ define <2 x i64> @mul_v2i64(<2 x i64> %op1, <2 x i64> %op2) #0 {
   ret <2 x i64> %res
 }
 
+define <2 x i64> @mul_imm_v2i64(<2 x i64> %op1) #0 {
+; CHECK-LABEL: mul_imm_v2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    mul z0.d, z0.d, #123
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    ret
+  %res = mul <2 x i64> %op1, splat (i64 123)
+  ret <2 x i64> %res
+}
+
 define <4 x i32> @sdiv_v4i32(<4 x i32> %op1, <4 x i32> %op2) #0 {
 ; CHECK-LABEL: sdiv_v4i32:
 ; CHECK:       // %bb.0:

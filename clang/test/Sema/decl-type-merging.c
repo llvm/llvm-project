@@ -9,8 +9,8 @@ int (*a)(int (*x)[], int (*y)[5]);
 void b(void) {
   int x[10], y[5];
   a(&x, &y);
-  a(&y, &y); // expected-warning {{incompatible pointer}}
-  a(&x, &x); // expected-warning {{incompatible pointer}}
+  a(&y, &y); // expected-error {{incompatible pointer}}
+  a(&x, &x); // expected-error {{incompatible pointer}}
 }
 
 

@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_TYPES_ENTRY_H
 #define LLVM_LIBC_TYPES_ENTRY_H
 
-typedef struct {
+typedef struct entry {
   char *key;
   void *data;
 } ENTRY;

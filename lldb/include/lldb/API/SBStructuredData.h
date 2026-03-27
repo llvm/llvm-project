@@ -9,6 +9,7 @@
 #ifndef LLDB_API_SBSTRUCTUREDDATA_H
 #define LLDB_API_SBSTRUCTUREDDATA_H
 
+#include "lldb/API/SBCommandReturnObject.h"
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBModule.h"
 #include "lldb/API/SBScriptObject.h"
@@ -108,10 +109,42 @@ public:
   /// Return the generic pointer if this data structure is a generic type.
   lldb::SBScriptObject GetGenericValue() const;
 
+  /// Set the value corresponding to a key. If this data structure
+  /// is not a dictionary type, reset the type to be dictionary and overwrite
+  /// the previous data.
+  void SetValueForKey(const char *key, SBStructuredData &value);
+
+  /// Change the type to unsigned integer and overwrite the previous data with
+  /// the new value.
+  void SetUnsignedIntegerValue(uint64_t value);
+
+  /// Change the type to signed integer and overwrite the previous data with
+  /// the new value.
+  void SetSignedIntegerValue(int64_t value);
+
+  /// Change the type to float and overwrite the previous data with the new
+  /// value.
+  void SetFloatValue(double value);
+
+  /// Change the type to boolean and overwrite the previous data with the new
+  /// value.
+  void SetBooleanValue(bool value);
+
+  /// Change the type to string and overwrite the previous data with the new
+  /// value.
+  void SetStringValue(const char *value);
+
+  /// Change the type to generic and overwrite the previous data with the new
+  /// value.
+  void SetGenericValue(SBScriptObject value);
+
 protected:
   friend class SBAttachInfo;
+  friend class SBCommandReturnObject;
   friend class SBLaunchInfo;
   friend class SBDebugger;
+  friend class SBFrame;
+  friend class SBError;
   friend class SBTarget;
   friend class SBProcess;
   friend class SBThread;
@@ -123,6 +156,7 @@ protected:
   friend class lldb_private::python::SWIGBridge;
   friend class lldb_private::lua::SWIGBridge;
   friend class SBCommandInterpreter;
+  friend class SBInstruction;
 
   SBStructuredData(const lldb_private::StructuredDataImpl &impl);
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+
 import pandas as pd
 import numpy as np
 import re
@@ -37,7 +38,7 @@ def radar_factory(num_vars, frame='circle'):
 
     frame_dict = {'polygon': draw_poly_frame, 'circle': draw_circle_frame}
     if frame not in frame_dict:
-        raise ValueError, 'unknown value for `frame`: %s' % frame
+        raise ValueError("unknown value for `frame`: %s" % frame)
 
     class RadarAxes(PolarAxes):
         """
@@ -143,7 +144,7 @@ def readFile(fname):
             res["counters"] = readCounters(f)
             return res
     except (OSError, IOError):
-        print "Cannot open " + fname
+        print("Cannot open " + fname)
         return None
 
 def usefulValues(l):
@@ -235,7 +236,7 @@ def compPie(data):
             compKeys[key] = data[key]
         else:
             nonCompKeys[key] = data[key]
-    print "comp keys:", compKeys, "\n\n non comp keys:", nonCompKeys
+    print("comp keys:", compKeys, "\n\n non comp keys:", nonCompKeys)
     return [compKeys, nonCompKeys]
 
 def drawMainPie(data, filebase, colors):
@@ -299,10 +300,10 @@ def main():
                 chartType = "radar"
                 drawRadarChart(data, s, filebase, params, colors[n])
                 """radar Charts finish here"""
-                plt.savefig(filebase+"_"+s+"_"+chartType, bbox_inches='tight')
-            elif s == 'timers':
-                print "overheads in "+filebase
-                numThreads = tmp[s]['SampleCount']['Total_OMP_parallel']
+                plt.savefig(filebase + "_" + s + "_" + chartType, bbox_inches="tight")
+            elif s == "timers":
+                print("overheads in " + filebase)
+                numThreads = tmp[s]["SampleCount"]["Total_OMP_parallel"]
                 for key in data.keys():
                     if key[0:5] == 'Total':
                         del data[key]

@@ -52,7 +52,7 @@ def TGTmul24_oneuse : PatFrag<
 // SDAG: OPC_CheckPredicate0, // Predicate_TGTmul24_oneuse
 
 // SCUSTOM: return N->hasOneUse();
-// SBUILTIN: if (!SDValue(N, 0).hasOneUse()) return false;
+// SBUILTIN: if (!N->hasNUsesOfValue(1, 0)) return false;
 
 // GISEL: GIM_CheckOpcode, /*MI*/1, GIMT_Encode2(TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS),
 // GISEL: GIM_CheckIntrinsicID, /*MI*/1, /*Op*/1, GIMT_Encode2(Intrinsic::tgt_mul24),

@@ -12,20 +12,25 @@
 
 #include <iterator>
 #include <memory>
+#include <type_traits>
 
 #include "test_macros.h"
 
 // An iterator type that overloads operator== and operator!= without any constraints, which
 // can trip up some algorithms if we compare iterators against types that we're not allowed to.
 //
-// See https://github.com/llvm/llvm-project/issues/69334 for details.
+// See https://llvm.org/PR69334 for details.
 template <class Iterator>
 struct overload_compare_iterator {
+  static_assert(
+      std::is_base_of<std::forward_iterator_tag, typename std::iterator_traits<Iterator>::iterator_category>::value,
+      "overload_compare_iterator can only adapt forward iterators");
+
   using value_type        = typename std::iterator_traits<Iterator>::value_type;
   using difference_type   = typename std::iterator_traits<Iterator>::difference_type;
   using reference         = typename std::iterator_traits<Iterator>::reference;
   using pointer           = typename std::iterator_traits<Iterator>::pointer;
-  using iterator_category = typename std::iterator_traits<Iterator>::iterator_category;
+  using iterator_category = std::forward_iterator_tag;
 
   overload_compare_iterator() = default;
 

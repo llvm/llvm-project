@@ -26,6 +26,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/VFABIDemangler.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
@@ -47,6 +48,7 @@ STATISTIC(NumFuncUsedAdded,
 /// Function.
 Function *getTLIFunction(Module *M, FunctionType *VectorFTy,
                          const StringRef TLIName,
+                         std::optional<CallingConv::ID> CC,
                          Function *ScalarFunc = nullptr) {
   Function *TLIFunc = M->getFunction(TLIName);
   if (!TLIFunc) {
@@ -54,6 +56,8 @@ Function *getTLIFunction(Module *M, FunctionType *VectorFTy,
         Function::Create(VectorFTy, Function::ExternalLinkage, TLIName, *M);
     if (ScalarFunc)
       TLIFunc->copyAttributesFrom(ScalarFunc);
+    if (CC)
+      TLIFunc->setCallingConv(*CC);
 
     LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": Added vector library function `"
                       << TLIName << "` of type `" << *(TLIFunc->getType())
@@ -92,6 +96,7 @@ static void replaceWithTLIFunction(IntrinsicInst *II, VFInfo &Info,
   // Preserve fast math flags for FP math.
   if (isa<FPMathOperator>(Replacement))
     Replacement->copyFastMathFlags(II);
+  Replacement->setCallingConv(TLIVecFunc->getCallingConv());
 }
 
 /// Returns true when successfully replaced \p II, which is a call to a
@@ -100,20 +105,36 @@ static void replaceWithTLIFunction(IntrinsicInst *II, VFInfo &Info,
 static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
                                     IntrinsicInst *II) {
   assert(II != nullptr && "Intrinsic cannot be null");
+  Intrinsic::ID IID = II->getIntrinsicID();
+  Type *RetTy = II->getType();
+  Type *ScalarRetTy = RetTy->getScalarType();
   // At the moment VFABI assumes the return type is always widened unless it is
   // a void type.
-  auto *VTy = dyn_cast<VectorType>(II->getType());
+  auto *VTy = dyn_cast<VectorType>(RetTy);
   ElementCount EC(VTy ? VTy->getElementCount() : ElementCount::getFixed(0));
+
+  // OloadTys collects types used in scalar intrinsic overload name.
+  SmallVector<Type *, 3> OloadTys;
+  if (!RetTy->isVoidTy() &&
+      isVectorIntrinsicWithOverloadTypeAtArg(IID, -1, /*TTI=*/nullptr))
+    OloadTys.push_back(ScalarRetTy);
+
   // Compute the argument types of the corresponding scalar call and check that
   // all vector operands match the previously found EC.
   SmallVector<Type *, 8> ScalarArgTypes;
-  Intrinsic::ID IID = II->getIntrinsicID();
   for (auto Arg : enumerate(II->args())) {
     auto *ArgTy = Arg.value()->getType();
-    if (isVectorIntrinsicWithScalarOpAtArg(IID, Arg.index())) {
+    bool IsOloadTy = isVectorIntrinsicWithOverloadTypeAtArg(IID, Arg.index(),
+                                                            /*TTI=*/nullptr);
+    if (isVectorIntrinsicWithScalarOpAtArg(IID, Arg.index(), /*TTI=*/nullptr)) {
       ScalarArgTypes.push_back(ArgTy);
+      if (IsOloadTy)
+        OloadTys.push_back(ArgTy);
     } else if (auto *VectorArgTy = dyn_cast<VectorType>(ArgTy)) {
-      ScalarArgTypes.push_back(VectorArgTy->getElementType());
+      auto *ScalarArgTy = VectorArgTy->getElementType();
+      ScalarArgTypes.push_back(ScalarArgTy);
+      if (IsOloadTy)
+        OloadTys.push_back(ScalarArgTy);
       // When return type is void, set EC to the first vector argument, and
       // disallow vector arguments with different ECs.
       if (EC.isZero())
@@ -129,7 +150,7 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
   // using scalar argument types.
   std::string ScalarName =
       Intrinsic::isOverloaded(IID)
-          ? Intrinsic::getName(IID, ScalarArgTypes, II->getModule())
+          ? Intrinsic::getName(IID, OloadTys, II->getModule())
           : Intrinsic::getName(IID).str();
 
   // Try to find the mapping for the scalar version of this intrinsic and the
@@ -146,7 +167,6 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
 
   // Replace the call to the intrinsic with a call to the vector library
   // function.
-  Type *ScalarRetTy = II->getType()->getScalarType();
   FunctionType *ScalarFTy =
       FunctionType::get(ScalarRetTy, ScalarArgTypes, /*isVarArg*/ false);
   const std::string MangledName = VD->getVectorFunctionABIVariantString();
@@ -180,7 +200,7 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
 
   Function *TLIFunc =
       getTLIFunction(II->getModule(), VectorFTy, VD->getVectorFnName(),
-                     II->getCalledFunction());
+                     VD->getCallingConv(), II->getCalledFunction());
   replaceWithTLIFunction(II, *OptInfo, TLIFunc);
   LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": Replaced call to `" << ScalarName
                     << "` with call to `" << TLIFunc->getName() << "`.\n");
@@ -193,6 +213,8 @@ static bool runImpl(const TargetLibraryInfo &TLI, Function &F) {
   for (auto &I : instructions(F)) {
     // Process only intrinsic calls that return void or a vector.
     if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
+      if (II->getIntrinsicID() == Intrinsic::not_intrinsic)
+        continue;
       if (!II->getType()->isVectorTy() && !II->getType()->isVoidTy())
         continue;
 

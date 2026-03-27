@@ -27,9 +27,11 @@ else()
     libclang
     clangAST
     clangBasic
+    clangDriver
     clangFrontend
     clangIndex
     clangSerialization
+    clangUnifiedSymbolResolution
   )
 endif()
 

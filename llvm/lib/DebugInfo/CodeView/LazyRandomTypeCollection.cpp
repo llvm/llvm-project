@@ -10,10 +10,8 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/CodeViewError.h"
 #include "llvm/DebugInfo/CodeView/RecordName.h"
-#include "llvm/DebugInfo/CodeView/RecordSerialization.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Error.h"
 #include <algorithm>
@@ -95,17 +93,23 @@ CVType LazyRandomTypeCollection::getType(TypeIndex Index) {
   return Records[Index.toArrayIndex()].Type;
 }
 
-std::optional<CVType> LazyRandomTypeCollection::tryGetType(TypeIndex Index) {
+llvm::Expected<CVType>
+LazyRandomTypeCollection::getTypeOrError(TypeIndex Index) {
   if (Index.isSimple())
-    return std::nullopt;
+    return llvm::createStringError("Type index too low (%d)", Index.getIndex());
 
   if (auto EC = ensureTypeExists(Index)) {
-    consumeError(std::move(EC));
-    return std::nullopt;
+    return EC;
   }
 
-  assert(contains(Index));
+  if (!contains(Index))
+    return llvm::createStringError("Type index too high (%d)",
+                                   Index.getIndex());
   return Records[Index.toArrayIndex()].Type;
+}
+
+std::optional<CVType> LazyRandomTypeCollection::tryGetType(TypeIndex Index) {
+  return llvm::expectedToOptional(getTypeOrError(Index));
 }
 
 StringRef LazyRandomTypeCollection::getTypeName(TypeIndex Index) {

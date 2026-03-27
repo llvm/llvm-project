@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___LOCALE_LOCALE_BASE_API_IBM_H
-#define _LIBCPP___LOCALE_LOCALE_BASE_API_IBM_H
+#ifndef _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_IBM_H
+#define _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_IBM_H
 
 #if defined(__MVS__)
 #  include <__support/ibm/locale_mgmt_zos.h>
@@ -53,11 +53,6 @@ private:
 
 // The following are not POSIX routines.  These are quick-and-dirty hacks
 // to make things pretend to work
-inline _LIBCPP_HIDE_FROM_ABI long long strtoll_l(const char* __nptr, char** __endptr, int __base, locale_t locale) {
-  __setAndRestore __newloc(locale);
-  return ::strtoll(__nptr, __endptr, __base);
-}
-
 inline _LIBCPP_HIDE_FROM_ABI double strtod_l(const char* __nptr, char** __endptr, locale_t locale) {
   __setAndRestore __newloc(locale);
   return ::strtod(__nptr, __endptr);
@@ -71,12 +66,6 @@ inline _LIBCPP_HIDE_FROM_ABI float strtof_l(const char* __nptr, char** __endptr,
 inline _LIBCPP_HIDE_FROM_ABI long double strtold_l(const char* __nptr, char** __endptr, locale_t locale) {
   __setAndRestore __newloc(locale);
   return ::strtold(__nptr, __endptr);
-}
-
-inline _LIBCPP_HIDE_FROM_ABI unsigned long long
-strtoull_l(const char* __nptr, char** __endptr, int __base, locale_t locale) {
-  __setAndRestore __newloc(locale);
-  return ::strtoull(__nptr, __endptr, __base);
 }
 
 inline _LIBCPP_HIDE_FROM_ABI
@@ -105,4 +94,4 @@ _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 2, 0) int vasprintf(char** strp, const char
   return str_size;
 }
 
-#endif // _LIBCPP___LOCALE_LOCALE_BASE_API_IBM_H
+#endif // _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_IBM_H

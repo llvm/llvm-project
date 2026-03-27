@@ -10,13 +10,12 @@
 
 // <mdspan>
 
-#include <mdspan>
 #include <array>
 #include <cassert>
-#include <concepts>
+#include <cstddef>
 #include <cstdint>
+#include <mdspan>
 #include <span> // dynamic_extent
-#include <type_traits>
 #include <utility>
 
 #include "test_macros.h"

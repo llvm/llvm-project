@@ -19,7 +19,6 @@
 #include <atomic>
 #include <fcntl.h>
 #include <functional>
-#include <thread>
 
 #ifndef _WIN32
 #include <poll.h>
@@ -82,10 +81,21 @@ static Expected<int> getSocketFD(StringRef SocketPath) {
                                          "Create socket failed");
   }
 
+#ifdef __CYGWIN__
+  // On Cygwin, UNIX sockets involve a handshake between connect and accept
+  // to enable SO_PEERCRED/getpeereid handling.  This necessitates accept being
+  // called before connect can return, but at least the tests in
+  // llvm/unittests/Support/raw_socket_stream_test do both on the same thread
+  // (first connect and then accept), resulting in a deadlock.  This call turns
+  // off the handshake (and SO_PEERCRED/getpeereid support).
+  setsockopt(Socket, SOL_SOCKET, SO_PEERCRED, NULL, 0);
+#endif
   struct sockaddr_un Addr = setSocketAddr(SocketPath);
-  if (::connect(Socket, (struct sockaddr *)&Addr, sizeof(Addr)) == -1)
+  if (::connect(Socket, (struct sockaddr *)&Addr, sizeof(Addr)) == -1) {
+    ::close(Socket);
     return llvm::make_error<StringError>(getLastSocketErrorCode(),
                                          "Connect socket failed");
+  }
 
 #ifdef _WIN32
   return _open_osfhandle(Socket, 0);
@@ -148,6 +158,15 @@ Expected<ListeningSocket> ListeningSocket::createUnix(StringRef SocketPath,
     return llvm::make_error<StringError>(getLastSocketErrorCode(),
                                          "socket create failed");
 
+#ifdef __CYGWIN__
+  // On Cygwin, UNIX sockets involve a handshake between connect and accept
+  // to enable SO_PEERCRED/getpeereid handling.  This necessitates accept being
+  // called before connect can return, but at least the tests in
+  // llvm/unittests/Support/raw_socket_stream_test do both on the same thread
+  // (first connect and then accept), resulting in a deadlock.  This call turns
+  // off the handshake (and SO_PEERCRED/getpeereid support).
+  setsockopt(Socket, SOL_SOCKET, SO_PEERCRED, NULL, 0);
+#endif
   struct sockaddr_un Addr = setSocketAddr(SocketPath);
   if (::bind(Socket, (struct sockaddr *)&Addr, sizeof(Addr)) == -1) {
     // Grab error code from call to ::bind before calling ::close
@@ -238,7 +257,7 @@ manageTimeout(const std::chrono::milliseconds &Timeout,
   // has been canceled by another thread
   if (getActiveFD() == -1 || (CancelFD.has_value() && FD[1].revents & POLLIN))
     return std::make_error_code(std::errc::operation_canceled);
-#if _WIN32
+#ifdef _WIN32
   if (PollStatus == SOCKET_ERROR)
 #else
   if (PollStatus == -1)
@@ -315,7 +334,7 @@ ListeningSocket::~ListeningSocket() {
 raw_socket_stream::raw_socket_stream(int SocketFD)
     : raw_fd_stream(SocketFD, true) {}
 
-raw_socket_stream::~raw_socket_stream() {}
+raw_socket_stream::~raw_socket_stream() = default;
 
 Expected<std::unique_ptr<raw_socket_stream>>
 raw_socket_stream::createConnectedUnix(StringRef SocketPath) {

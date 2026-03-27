@@ -20,20 +20,27 @@ target_link_libraries(bbc PRIVATE
   CUFDialect
   FIRDialect
   FIRDialectSupport
+  FIROpenACCSupport
+  FIROpenMPSupport
   FIRSupport
   FIRTransforms
   FIRBuilder
   HLFIRDialect
   HLFIRTransforms
+  flangFrontend
   flangPasses
   FlangOpenMPTransforms
-  ${dialect_libs}
-  ${extension_libs}
-  MLIRAffineToStandard
-  MLIRSCFToControlFlow
-  FortranCommon
+  FortranSupport
   FortranParser
   FortranEvaluate
   FortranSemantics
   FortranLower
+  MIFDialect
+)
+
+mlir_target_link_libraries(bbc PRIVATE
+  ${dialect_libs}
+  ${extension_libs}
+  MLIRAffineToStandard
+  MLIRSCFToControlFlow
 )

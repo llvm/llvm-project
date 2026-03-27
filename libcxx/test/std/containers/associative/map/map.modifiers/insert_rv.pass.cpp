@@ -24,85 +24,83 @@
 #include "test_macros.h"
 
 template <class Container, class Pair>
-void do_insert_rv_test()
-{
-    typedef Container M;
-    typedef Pair P;
-    typedef std::pair<typename M::iterator, bool> R;
+void do_insert_rv_test() {
+  typedef Container M;
+  typedef Pair P;
+  typedef std::pair<typename M::iterator, bool> R;
+  M m;
+  R r = m.insert(P(2, 2));
+  assert(r.second);
+  assert(r.first == m.begin());
+  assert(m.size() == 1);
+  assert(r.first->first == 2);
+  assert(r.first->second == 2);
+
+  r = m.insert(P(1, 1));
+  assert(r.second);
+  assert(r.first == m.begin());
+  assert(m.size() == 2);
+  assert(r.first->first == 1);
+  assert(r.first->second == 1);
+
+  r = m.insert(P(3, 3));
+  assert(r.second);
+  assert(r.first == std::prev(m.end()));
+  assert(m.size() == 3);
+  assert(r.first->first == 3);
+  assert(r.first->second == 3);
+
+  r = m.insert(P(3, 3));
+  assert(!r.second);
+  assert(r.first == std::prev(m.end()));
+  assert(m.size() == 3);
+  assert(r.first->first == 3);
+  assert(r.first->second == 3);
+}
+
+int main(int, char**) {
+  do_insert_rv_test<std::map<int, MoveOnly>, std::pair<int, MoveOnly>>();
+  do_insert_rv_test<std::map<int, MoveOnly>, std::pair<const int, MoveOnly>>();
+
+  {
+    typedef std::map<int, MoveOnly, std::less<int>, min_allocator<std::pair<const int, MoveOnly>>> M;
+    typedef std::pair<int, MoveOnly> P;
+    typedef std::pair<const int, MoveOnly> CP;
+    do_insert_rv_test<M, P>();
+    do_insert_rv_test<M, CP>();
+  }
+  {
+    typedef std::map<int, MoveOnly> M;
+    typedef std::pair<M::iterator, bool> R;
     M m;
-    R r = m.insert(P(2, 2));
+    R r = m.insert({2, MoveOnly(2)});
     assert(r.second);
     assert(r.first == m.begin());
     assert(m.size() == 1);
     assert(r.first->first == 2);
     assert(r.first->second == 2);
 
-    r = m.insert(P(1, 1));
+    r = m.insert({1, MoveOnly(1)});
     assert(r.second);
     assert(r.first == m.begin());
     assert(m.size() == 2);
     assert(r.first->first == 1);
     assert(r.first->second == 1);
 
-    r = m.insert(P(3, 3));
+    r = m.insert({3, MoveOnly(3)});
     assert(r.second);
     assert(r.first == std::prev(m.end()));
     assert(m.size() == 3);
     assert(r.first->first == 3);
     assert(r.first->second == 3);
 
-    r = m.insert(P(3, 3));
+    r = m.insert({3, MoveOnly(3)});
     assert(!r.second);
     assert(r.first == std::prev(m.end()));
     assert(m.size() == 3);
     assert(r.first->first == 3);
     assert(r.first->second == 3);
-}
-
-int main(int, char**)
-{
-    do_insert_rv_test<std::map<int, MoveOnly>, std::pair<int, MoveOnly>>();
-    do_insert_rv_test<std::map<int, MoveOnly>, std::pair<const int, MoveOnly>>();
-
-    {
-        typedef std::map<int, MoveOnly, std::less<int>, min_allocator<std::pair<const int, MoveOnly>>> M;
-        typedef std::pair<int, MoveOnly> P;
-        typedef std::pair<const int, MoveOnly> CP;
-        do_insert_rv_test<M, P>();
-        do_insert_rv_test<M, CP>();
-    }
-    {
-        typedef std::map<int, MoveOnly> M;
-        typedef std::pair<M::iterator, bool> R;
-        M m;
-        R r = m.insert({2, MoveOnly(2)});
-        assert(r.second);
-        assert(r.first == m.begin());
-        assert(m.size() == 1);
-        assert(r.first->first == 2);
-        assert(r.first->second == 2);
-
-        r = m.insert({1, MoveOnly(1)});
-        assert(r.second);
-        assert(r.first == m.begin());
-        assert(m.size() == 2);
-        assert(r.first->first == 1);
-        assert(r.first->second == 1);
-
-        r = m.insert({3, MoveOnly(3)});
-        assert(r.second);
-        assert(r.first == std::prev(m.end()));
-        assert(m.size() == 3);
-        assert(r.first->first == 3);
-        assert(r.first->second == 3);
-
-        r = m.insert({3, MoveOnly(3)});
-        assert(!r.second);
-        assert(r.first == std::prev(m.end()));
-        assert(m.size() == 3);
-        assert(r.first->first == 3);
-        assert(r.first->second == 3);
-    }
+  }
 
   return 0;
 }

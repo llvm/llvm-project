@@ -80,7 +80,7 @@
 //  - .loh AdrpAdrp L2, L1:
 //    L2: ADRP xA, sym1@PAGE
 //    L1: ADRP xA, sym2@PAGE
-//    L2 dominates L1 and xA is not redifined between L2 and L1
+//    L2 dominates L1 and xA is not redefined between L2 and L1
 // This LOH aims at getting rid of redundant ADRP instructions.
 //
 // The overall design for emitting the LOHs is:
@@ -98,7 +98,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
-#include "AArch64InstrInfo.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
@@ -109,7 +108,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetMachine.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "aarch64-collect-loh"
@@ -124,34 +122,6 @@ STATISTIC(NumADRPToLDR, "Number of simplifiable LDR reachable by ADRP");
 STATISTIC(NumADRSimpleCandidate, "Number of simplifiable ADRP + ADD");
 
 #define AARCH64_COLLECT_LOH_NAME "AArch64 Collect Linker Optimization Hint (LOH)"
-
-namespace {
-
-struct AArch64CollectLOH : public MachineFunctionPass {
-  static char ID;
-  AArch64CollectLOH() : MachineFunctionPass(ID) {}
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
-  }
-
-  StringRef getPassName() const override { return AARCH64_COLLECT_LOH_NAME; }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    MachineFunctionPass::getAnalysisUsage(AU);
-    AU.setPreservesAll();
-  }
-};
-
-char AArch64CollectLOH::ID = 0;
-
-} // end anonymous namespace.
-
-INITIALIZE_PASS(AArch64CollectLOH, "aarch64-collect-loh",
-                AARCH64_COLLECT_LOH_NAME, false, false)
 
 static bool canAddBePartOfLOH(const MachineInstr &MI) {
   // Check immediate to see if the immediate is an address.
@@ -235,7 +205,7 @@ static bool isCandidateLoad(const MachineInstr &MI) {
   }
 }
 
-/// Check whether the given instruction can load a litteral.
+/// Check whether the given instruction can load a literal.
 static bool supportLoadFromLiteral(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   default:
@@ -250,10 +220,21 @@ static bool supportLoadFromLiteral(const MachineInstr &MI) {
   }
 }
 
-/// Number of GPR registers traked by mapRegToGPRIndex()
+/// Returns \p true if there are no non-debug instructions between \p First and
+/// \p Second
+static bool areInstructionsConsecutive(const MachineInstr *First,
+                                       const MachineInstr *Second) {
+  auto It = First->getIterator();
+  auto EndIt = First->getParent()->instr_end();
+  if (It == EndIt)
+    return false;
+  return next_nodbg(It, EndIt) == Second->getIterator();
+}
+
+/// Number of GPR registers tracked by mapRegToGPRIndex()
 static const unsigned N_GPR_REGS = 31;
 /// Map register number to index from 0-30.
-static int mapRegToGPRIndex(MCPhysReg Reg) {
+static int mapRegToGPRIndex(MCRegister Reg) {
   static_assert(AArch64::X28 - AArch64::X0 + 3 == N_GPR_REGS, "Number of GPRs");
   static_assert(AArch64::W30 - AArch64::W0 + 1 == N_GPR_REGS, "Number of GPRs");
   if (AArch64::X0 <= Reg && Reg <= AArch64::X28)
@@ -274,9 +255,12 @@ static int mapRegToGPRIndex(MCPhysReg Reg) {
 /// datastructure for each tracked general purpose register.
 struct LOHInfo {
   MCLOHType Type : 8;           ///< "Best" type of LOH possible.
-  bool IsCandidate : 1;         ///< Possible LOH candidate.
-  bool OneUser : 1;             ///< Found exactly one user (yet).
-  bool MultiUsers : 1;          ///< Found multiple users.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsCandidate : 1;     ///< Possible LOH candidate.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned OneUser : 1;         ///< Found exactly one user (yet).
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned MultiUsers : 1;      ///< Found multiple users.
   const MachineInstr *MI0;      ///< First instruction involved in the LOH.
   const MachineInstr *MI1;      ///< Second instruction involved in the LOH
                                 ///  (if any).
@@ -415,7 +399,7 @@ static void handleADRP(const MachineInstr &MI, AArch64FunctionInfo &AFI,
         ++NumADRPToLDR;
       }
       break;
-    case MCLOH_AdrpAddLdr: {
+    case MCLOH_AdrpAddLdr:
       // There is a possibility that the linker may try to rewrite:
       // adrp x0, @sym@PAGE
       // add x1, x0, @sym@PAGEOFF
@@ -432,28 +416,24 @@ static void handleADRP(const MachineInstr &MI, AArch64FunctionInfo &AFI,
       // FIXME: Implement proper liveness tracking for all registers. For now,
       // don't emit the LOH if there are any instructions between the add and
       // the ldr.
-      MachineInstr *AddMI = const_cast<MachineInstr *>(Info.MI1);
-      const MachineInstr *LdrMI = Info.MI0;
-      auto AddIt = MachineBasicBlock::iterator(AddMI);
-      auto EndIt = AddMI->getParent()->end();
-      if (AddMI->getIterator() == EndIt || LdrMI != &*next_nodbg(AddIt, EndIt))
+      if (!areInstructionsConsecutive(Info.MI1, Info.MI0))
         break;
-
       LLVM_DEBUG(dbgs() << "Adding MCLOH_AdrpAddLdr:\n"
                         << '\t' << MI << '\t' << *Info.MI1 << '\t'
                         << *Info.MI0);
       AFI.addLOHDirective(MCLOH_AdrpAddLdr, {&MI, Info.MI1, Info.MI0});
       ++NumADDToLDR;
       break;
-    }
     case MCLOH_AdrpAddStr:
-      if (Info.MI1 != nullptr) {
-        LLVM_DEBUG(dbgs() << "Adding MCLOH_AdrpAddStr:\n"
-                          << '\t' << MI << '\t' << *Info.MI1 << '\t'
-                          << *Info.MI0);
-        AFI.addLOHDirective(MCLOH_AdrpAddStr, {&MI, Info.MI1, Info.MI0});
-        ++NumADDToSTR;
-      }
+      if (!Info.MI1)
+        break;
+      if (!areInstructionsConsecutive(Info.MI1, Info.MI0))
+        break;
+      LLVM_DEBUG(dbgs() << "Adding MCLOH_AdrpAddStr:\n"
+                        << '\t' << MI << '\t' << *Info.MI1 << '\t'
+                        << *Info.MI0);
+      AFI.addLOHDirective(MCLOH_AdrpAddStr, {&MI, Info.MI1, Info.MI0});
+      ++NumADDToSTR;
       break;
     case MCLOH_AdrpLdrGotLdr:
       LLVM_DEBUG(dbgs() << "Adding MCLOH_AdrpLdrGotLdr:\n"
@@ -529,10 +509,9 @@ static void handleNormalInst(const MachineInstr &MI, LOHInfo *LOHInfos) {
   }
 }
 
-bool AArch64CollectLOH::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
+namespace {
 
+void runAArch64CollectLOH(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** AArch64 Collect LOH **********\n"
                     << "Looking in function " << MF.getName() << '\n');
 
@@ -583,11 +562,49 @@ bool AArch64CollectLOH::runOnMachineFunction(MachineFunction &MF) {
       handleNormalInst(MI, LOHInfos);
     }
   }
+}
 
-  // Return "no change": The pass only collects information.
-  return false;
+struct AArch64CollectLOHLegacy : public MachineFunctionPass {
+  static char ID;
+  AArch64CollectLOHLegacy() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    if (skipFunction(MF.getFunction()))
+      return false;
+    runAArch64CollectLOH(MF);
+
+    // Return "no change": The pass only collects information.
+    return false;
+  }
+
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setNoVRegs();
+  }
+
+  StringRef getPassName() const override { return AARCH64_COLLECT_LOH_NAME; }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    MachineFunctionPass::getAnalysisUsage(AU);
+    AU.setPreservesAll();
+  }
+};
+
+char AArch64CollectLOHLegacy::ID = 0;
+
+} // end anonymous namespace.
+
+INITIALIZE_PASS(AArch64CollectLOHLegacy, "aarch64-collect-loh",
+                AARCH64_COLLECT_LOH_NAME, false, false)
+
+PreservedAnalyses
+AArch64CollectLOHPass::run(MachineFunction &MF,
+                           MachineFunctionAnalysisManager &MFAM) {
+  runAArch64CollectLOH(MF);
+
+  // This pass only collects information.
+  return PreservedAnalyses::all();
 }
 
 FunctionPass *llvm::createAArch64CollectLOHPass() {
-  return new AArch64CollectLOH();
+  return new AArch64CollectLOHLegacy();
 }

@@ -177,7 +177,7 @@ Available checks are:
      problems at higher optimization levels.
   -  ``-fsanitize=pointer-overflow``: Performing pointer arithmetic which
      overflows, or where either the old or new pointer value is a null pointer
-     (or in C, when they both are).
+     (excluding the case where both are null pointers).
   -  ``-fsanitize=return``: In C++, reaching the end of a
      value-returning function without returning a value.
   -  ``-fsanitize=returns-nonnull-attribute``: Returning null pointer
@@ -214,13 +214,14 @@ Available checks are:
      the wrong dynamic type, or that its lifetime has not begun or has ended.
      Incompatible with ``-fno-rtti``. Link must be performed by ``clang++``, not
      ``clang``, to make sure C++-specific parts of the runtime library and C++
-     standard libraries are present.
+     standard libraries are present. The check is not a part of the ``undefined``
+     group. Also it does not support ``-fsanitize-trap=vptr``.
 
 You can also use the following check groups:
   -  ``-fsanitize=undefined``: All of the checks listed above other than
      ``float-divide-by-zero``, ``unsigned-integer-overflow``,
-     ``implicit-conversion``, ``local-bounds`` and the ``nullability-*`` group
-     of checks.
+     ``implicit-conversion``, ``local-bounds``, ``vptr`` and the
+     ``nullability-*`` group of checks.
   -  ``-fsanitize=undefined-trap``: Deprecated alias of
      ``-fsanitize=undefined``.
   -  ``-fsanitize=implicit-integer-truncation``: Catches lossy integral
@@ -256,6 +257,8 @@ Volatile
 The ``null``, ``alignment``, ``object-size``, ``local-bounds``, and ``vptr`` checks do not apply
 to pointers to types with the ``volatile`` qualifier.
 
+.. _minimal-runtime:
+
 Minimal Runtime
 ===============
 
@@ -274,8 +277,8 @@ Stack traces and report symbolization
 If you want UBSan to print symbolized stack trace for each error report, you
 will need to:
 
-#. Compile with ``-g`` and ``-fno-omit-frame-pointer`` to get proper debug
-   information in your binary.
+#. Compile with ``-g``, ``-fno-sanitize-merge`` and ``-fno-omit-frame-pointer``
+   to get proper debug information in your binary.
 #. Run your program with environment variable
    ``UBSAN_OPTIONS=print_stacktrace=1``.
 #. Make sure ``llvm-symbolizer`` binary is in ``PATH``.
@@ -377,6 +380,56 @@ This attribute may not be
 supported by other compilers, so consider using it together with
 ``#if defined(__clang__)``.
 
+Interaction of Inlining with Disabling Sanitizer Instrumentation
+-----------------------------------------------------------------
+
+Unlike many of the other sanitizers (e.g., ASan/MSan, TSan), UBSan is largely
+compatible with inlining, both the compiler's heuristic inlining as well as
+``__attribute__((always_inline))``.
+
+There are (at least) two exceptions:
+
+* inlining may change the layout of variables, which can affect whether
+  the `alignment` check detects an under-aligned variable
+* combining `__attribute((no_sanitize("local-bounds")))` with
+  `__attribute((always_inline))` is not supported
+
+Disabling Overflow Instrumentation with ``__attribute__((overflow_behavior(wrap)))``
+------------------------------------------------------------------------------------
+
+For more fine-grained control over how integer overflow is handled, you can use
+the ``__attribute__((overflow_behavior(wrap)))`` attribute. This attribute can
+be applied to ``typedef`` declarations and integer types to specify that
+arithmetic operations on that type should wrap on overflow. This can be used to
+disable overflow sanitization for specific types, while leaving it enabled for
+all other types.
+
+The ``overflow_behavior`` attribute not only affects UBSan instrumentation
+but also changes the fundamental overflow behavior of arithmetic operations
+on the annotated type. Operations on types marked with ``wrap`` will have
+well-defined wrapping semantics, while operations on types marked with
+``trap`` will be checked for overflow (regardless of global flags like
+``-fwrapv``).
+
+The attribute also affects implicit type promotion rules: when an overflow
+behavior type participates in arithmetic operations with standard integer
+types, the result maintains the overflow behavior type's characteristics,
+including its bit-width. This means annotated types can preserve narrower
+widths that would normally be promoted, allowing operations to stay within
+the constraints of the smallest annotated type in the expression.
+
+For more information, see :doc:`OverflowBehaviorTypes`.
+
+Enforcing Overflow Instrumentation with ``__attribute__((overflow_behavior(trap)))``
+---------------------------------------------------------------------------------------
+
+Conversely, you can use ``__attribute__((overflow_behavior(trap)))`` to
+enforce overflow checks for a specific type, even when ``-fwrapv`` is enabled
+globally. This is useful for ensuring that critical calculations are always
+checked for overflow, regardless of the global compiler settings.
+
+For more information, see :doc:`OverflowBehaviorTypes`.
+
 Suppressing Errors in Recompiled Code (Ignorelist)
 --------------------------------------------------
 
@@ -415,6 +468,15 @@ There are several limitations:
   most of UBSan checks are recoverable by default.
 * Check groups (like ``undefined``) can't be used in suppressions file, only
   fine-grained checks are supported.
+
+Security Considerations
+=======================
+
+UndefinedBehaviorSanitizer's runtime is meant for testing purposes and its usage
+in production environment should be carefully considered from security
+perspective as it may compromise the security of the resulting executable.
+For security-sensitive applications consider using :ref:`Minimal Runtime
+<minimal-runtime>` or trap mode for all checks.
 
 Supported Platforms
 ===================

@@ -16,7 +16,7 @@ define i1 @icmp_shl_ugt_1(i8 %x) {
 
 define <2 x i1> @icmp_shl_ugt_2(<2 x i32> %_x) {
 ; CHECK-LABEL: @icmp_shl_ugt_2(
-; CHECK-NEXT:    [[X:%.*]] = add <2 x i32> [[_X:%.*]], <i32 42, i32 42>
+; CHECK-NEXT:    [[X:%.*]] = add <2 x i32> [[_X:%.*]], splat (i32 42)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i32> [[X]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
@@ -28,7 +28,7 @@ define <2 x i1> @icmp_shl_ugt_2(<2 x i32> %_x) {
 
 define <3 x i1> @icmp_shl_uge_1(<3 x i7> %x) {
 ; CHECK-LABEL: @icmp_shl_uge_1(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <3 x i7> [[X:%.*]], <i7 -1, i7 -1, i7 -1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <3 x i7> [[X:%.*]], splat (i7 -1)
 ; CHECK-NEXT:    ret <3 x i1> [[CMP]]
 ;
   %add = shl <3 x i7> %x, <i7 1, i7 1, i7 1>
@@ -63,8 +63,8 @@ define i1 @icmp_shl_ult_1(i16 %x) {
 
 define <4 x i1> @icmp_shl_ult_2(<4 x i4> %_x) {
 ; CHECK-LABEL: @icmp_shl_ult_2(
-; CHECK-NEXT:    [[X:%.*]] = add <4 x i4> [[_X:%.*]], <i4 -6, i4 -6, i4 -6, i4 -6>
-; CHECK-NEXT:    [[ADD:%.*]] = shl <4 x i4> [[X]], <i4 1, i4 1, i4 1, i4 1>
+; CHECK-NEXT:    [[X:%.*]] = add <4 x i4> [[_X:%.*]], splat (i4 -6)
+; CHECK-NEXT:    [[ADD:%.*]] = shl <4 x i4> [[X]], splat (i4 1)
 ; CHECK-NEXT:    call void @usev4(<4 x i4> [[ADD]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <4 x i4> [[X]], zeroinitializer
 ; CHECK-NEXT:    ret <4 x i1> [[CMP]]
@@ -78,7 +78,7 @@ define <4 x i1> @icmp_shl_ult_2(<4 x i4> %_x) {
 
 define <2 x i1> @icmp_shl_ule_1(<2 x i8> %x) {
 ; CHECK-LABEL: @icmp_shl_ule_1(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i8> [[X:%.*]], <i8 1, i8 1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i8> [[X:%.*]], splat (i8 1)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %add = shl <2 x i8> %x, <i8 1, i8 poison>
@@ -110,7 +110,7 @@ define i1 @icmp_shl_eq_1(i8 %x) {
 
 define <2 x i1> @icmp_shl_eq_2(<2 x i8> %_x) {
 ; CHECK-LABEL: @icmp_shl_eq_2(
-; CHECK-NEXT:    [[X:%.*]] = sdiv <2 x i8> <i8 42, i8 42>, [[_X:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = sdiv <2 x i8> splat (i8 42), [[_X:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[X]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;

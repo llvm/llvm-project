@@ -212,11 +212,6 @@ ADCEChanged AggressiveDeadCodeElimination::performDeadCodeElimination() {
   return removeDeadInstructions();
 }
 
-static bool isUnconditionalBranch(Instruction *Term) {
-  auto *BR = dyn_cast<BranchInst>(Term);
-  return BR && BR->isUnconditional();
-}
-
 void AggressiveDeadCodeElimination::initialize() {
   auto NumBlocks = F.size();
 
@@ -232,7 +227,7 @@ void AggressiveDeadCodeElimination::initialize() {
     auto &Info = BlockInfo[&BB];
     Info.BB = &BB;
     Info.Terminator = BB.getTerminator();
-    Info.UnconditionalBranch = isUnconditionalBranch(Info.Terminator);
+    Info.UnconditionalBranch = isa<UncondBrInst>(Info.Terminator);
   }
 
   // Initialize instruction map and set pointers to block info.
@@ -339,7 +334,7 @@ bool AggressiveDeadCodeElimination::isAlwaysLive(Instruction &I) {
   }
   if (!I.isTerminator())
     return false;
-  if (RemoveControlFlowFlag && (isa<BranchInst>(I) || isa<SwitchInst>(I)))
+  if (RemoveControlFlowFlag && isa<UncondBrInst, CondBrInst, SwitchInst>(I))
     return false;
   return true;
 }
@@ -485,10 +480,8 @@ void AggressiveDeadCodeElimination::markLiveBranchesFromControlDependences() {
   // which currently have dead terminators that are control
   // dependence sources of a block which is in NewLiveBlocks.
 
-  const SmallPtrSet<BasicBlock *, 16> BWDT{
-      BlocksWithDeadTerminators.begin(),
-      BlocksWithDeadTerminators.end()
-  };
+  const SmallPtrSet<BasicBlock *, 16> BWDT(llvm::from_range,
+                                           BlocksWithDeadTerminators);
   SmallVector<BasicBlock *, 32> IDFBlocks;
   ReverseIDFCalculator IDFs(PDT);
   IDFs.setDefiningBlocks(NewLiveBlocks);
@@ -564,20 +557,7 @@ ADCEChanged AggressiveDeadCodeElimination::removeDeadInstructions() {
     if (isLive(&I))
       continue;
 
-    if (auto *DII = dyn_cast<DbgInfoIntrinsic>(&I)) {
-      // Avoid removing a dbg.assign that is linked to instructions because it
-      // holds information about an existing store.
-      if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(DII))
-        if (!at::getAssignmentInsts(DAI).empty())
-          continue;
-      // Check if the scope of this variable location is alive.
-      if (AliveScopes.count(DII->getDebugLoc()->getScope()))
-        continue;
-
-      // Fallthrough and drop the intrinsic.
-    } else {
-      Changed.ChangedNonDebugInstr = true;
-    }
+    Changed.ChangedNonDebugInstr = true;
 
     // Prepare to delete.
     Worklist.push_back(&I);
@@ -697,8 +677,8 @@ void AggressiveDeadCodeElimination::makeUnconditional(BasicBlock *BB,
     collectLiveScopes(*DL);
 
   // Just mark live an existing unconditional branch
-  if (isUnconditionalBranch(PredTerm)) {
-    PredTerm->setSuccessor(0, Target);
+  if (auto *BI = dyn_cast<UncondBrInst>(PredTerm)) {
+    BI->setSuccessor(Target);
     InstInfo[PredTerm].Live = true;
     return;
   }

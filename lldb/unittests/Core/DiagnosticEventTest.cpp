@@ -22,7 +22,6 @@
 
 using namespace lldb;
 using namespace lldb_private;
-using namespace lldb_private::repro;
 
 static const constexpr std::chrono::seconds TIMEOUT(0);
 static const constexpr size_t DEBUGGERS = 3;

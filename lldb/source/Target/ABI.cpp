@@ -9,7 +9,6 @@
 #include "lldb/Target/ABI.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/TypeSystem.h"
@@ -17,6 +16,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "llvm/MC/TargetRegistry.h"
 #include <cctype>
 
@@ -25,20 +25,11 @@ using namespace lldb_private;
 
 ABISP
 ABI::FindPlugin(lldb::ProcessSP process_sp, const ArchSpec &arch) {
-  ABISP abi_sp;
-  ABICreateInstance create_callback;
-
-  for (uint32_t idx = 0;
-       (create_callback = PluginManager::GetABICreateCallbackAtIndex(idx)) !=
-       nullptr;
-       ++idx) {
-    abi_sp = create_callback(process_sp, arch);
-
-    if (abi_sp)
+  for (auto create_callback : PluginManager::GetABICreateCallbacks()) {
+    if (ABISP abi_sp = create_callback(process_sp, arch))
       return abi_sp;
   }
-  abi_sp.reset();
-  return abi_sp;
+  return {};
 }
 
 ABI::~ABI() = default;
@@ -232,13 +223,13 @@ bool ABI::GetFallbackRegisterLocation(
 }
 
 std::unique_ptr<llvm::MCRegisterInfo> ABI::MakeMCRegisterInfo(const ArchSpec &arch) {
-  std::string triple = arch.GetTriple().getTriple();
+  const llvm::Triple &triple = arch.GetTriple();
   std::string lookup_error;
   const llvm::Target *target =
       llvm::TargetRegistry::lookupTarget(triple, lookup_error);
   if (!target) {
     LLDB_LOG(GetLog(LLDBLog::Process),
-             "Failed to create an llvm target for {0}: {1}", triple,
+             "Failed to create an llvm target for {0}: {1}", triple.str(),
              lookup_error);
     return nullptr;
   }

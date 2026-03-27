@@ -22,7 +22,7 @@ define ptr @get_preemptable_var() nounwind {
 ; PIC-NEXT:  @ %bb.1:
 ; PIC-NEXT:  .LCPI0_0:
 ; PIC-NEXT:  .Ltmp0:
-; PIC-NEXT:    .long preemptable_var(GOT_PREL)-((.LPC0_0+8)-.Ltmp0)
+; PIC-NEXT:    .long preemptable_var(GOT_PREL)-(.LPC0_0+8-.Ltmp0)
   ret ptr @preemptable_var
 }
 
@@ -127,7 +127,7 @@ define dso_preemptable ptr @preemptable_func() nounwind {
 ; PIC-NEXT:  @ %bb.1:
 ; PIC-NEXT:  .LCPI5_0:
 ; PIC-NEXT:  .Ltmp1:
-; PIC-NEXT:    .long preemptable_func(GOT_PREL)-((.LPC5_0+8)-.Ltmp1)
+; PIC-NEXT:    .long preemptable_func(GOT_PREL)-(.LPC5_0+8-.Ltmp1)
   ret ptr @preemptable_func
 }
 

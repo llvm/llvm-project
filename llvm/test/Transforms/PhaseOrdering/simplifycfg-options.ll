@@ -9,7 +9,7 @@ define i1 @PR33605(i32 %a, i32 %b, ptr %c) {
 ; CHECK-LABEL: @PR33605(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[C:%.*]], i64 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[C:%.*]], i64 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[OR]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
@@ -70,8 +70,8 @@ declare void @foo()
 define double @max_of_loads(ptr %x, ptr %y, i64 %i) {
 ; CHECK-LABEL: @max_of_loads(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[XI_PTR:%.*]] = getelementptr double, ptr [[X:%.*]], i64 [[I:%.*]]
-; CHECK-NEXT:    [[YI_PTR:%.*]] = getelementptr double, ptr [[Y:%.*]], i64 [[I]]
+; CHECK-NEXT:    [[XI_PTR:%.*]] = getelementptr [8 x i8], ptr [[X:%.*]], i64 [[I:%.*]]
+; CHECK-NEXT:    [[YI_PTR:%.*]] = getelementptr [8 x i8], ptr [[Y:%.*]], i64 [[I]]
 ; CHECK-NEXT:    [[XI:%.*]] = load double, ptr [[XI_PTR]], align 8
 ; CHECK-NEXT:    [[YI:%.*]] = load double, ptr [[YI_PTR]], align 8
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt double [[XI]], [[YI]]

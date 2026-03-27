@@ -21,16 +21,11 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
-#include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 #define DEBUG_TYPE "bpf-preserve-di-type"
-
-namespace llvm {
-constexpr StringRef BPFCoreSharedInfo::TypeIdAttr;
-} // namespace llvm
 
 using namespace llvm;
 
@@ -95,15 +90,6 @@ static bool BPFPreserveDITypeImpl(Function &F) {
       Ty = DTy->getBaseType();
     }
 
-    if (Reloc == BTF::BTF_TYPE_ID_REMOTE) {
-      if (Ty->getName().empty()) {
-        if (isa<DISubroutineType>(Ty))
-          report_fatal_error(
-              "SubroutineType not supported for BTF_TYPE_ID_REMOTE reloc");
-        else
-          report_fatal_error("Empty type name for BTF_TYPE_ID_REMOTE reloc");
-      }
-    }
     MD = Ty;
 
     BasicBlock *BB = Call->getParent();

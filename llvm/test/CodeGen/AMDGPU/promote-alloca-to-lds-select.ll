@@ -1,13 +1,11 @@
 ; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -mcpu=kaveri -passes=amdgpu-promote-alloca < %s | FileCheck %s
 
-target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5"
-
 ; CHECK-LABEL: @lds_promoted_alloca_select_invalid_pointer_operand(
 ; CHECK: %alloca = alloca i32
-; CHECK: select i1 undef, ptr addrspace(5) undef, ptr addrspace(5) %alloca
+; CHECK: select i1 undef, ptr addrspace(5) poison, ptr addrspace(5) %alloca
 define amdgpu_kernel void @lds_promoted_alloca_select_invalid_pointer_operand() #0 {
   %alloca = alloca i32, align 4, addrspace(5)
-  %select = select i1 undef, ptr addrspace(5) undef, ptr addrspace(5) %alloca
+  %select = select i1 undef, ptr addrspace(5) poison, ptr addrspace(5) %alloca
   store i32 0, ptr addrspace(5) %select, align 4
   ret void
 }
@@ -87,7 +85,7 @@ entry:
 
 bb1:
   %ptr2 = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 %c
-  %select0 = select i1 undef, ptr addrspace(5) undef, ptr addrspace(5) %ptr2
+  %select0 = select i1 undef, ptr addrspace(5) poison, ptr addrspace(5) %ptr2
   store i32 0, ptr addrspace(5) %ptr1
   br label %bb2
 
@@ -106,7 +104,7 @@ bb:
   %tmp = alloca double, align 8, addrspace(5)
   store double 0.000000e+00, ptr addrspace(5) %tmp, align 8
   %tmp2 = icmp eq i32 %arg1, 0
-  %tmp3 = select i1 %tmp2, ptr addrspace(5) %tmp, ptr addrspace(5) null
+  %tmp3 = select i1 %tmp2, ptr addrspace(5) %tmp, ptr addrspace(5) zeroinitializer
   store double 1.000000e+00, ptr addrspace(5) %tmp3, align 8
   %tmp4 = load double, ptr addrspace(5) %tmp, align 8
   store double %tmp4, ptr addrspace(1) %arg
@@ -121,7 +119,7 @@ bb:
   %tmp = alloca double, align 8, addrspace(5)
   store double 0.000000e+00, ptr addrspace(5) %tmp, align 8
   %tmp2 = icmp eq i32 %arg1, 0
-  %tmp3 = select i1 %tmp2, ptr addrspace(5) null, ptr addrspace(5) %tmp
+  %tmp3 = select i1 %tmp2, ptr addrspace(5) zeroinitializer, ptr addrspace(5) %tmp
   store double 1.000000e+00, ptr addrspace(5) %tmp3, align 8
   %tmp4 = load double, ptr addrspace(5) %tmp, align 8
   store double %tmp4, ptr addrspace(1) %arg

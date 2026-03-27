@@ -17,7 +17,6 @@
 #include <__system_error/errc.h>
 #include <__system_error/error_category.h>
 #include <__system_error/error_condition.h>
-#include <cstddef>
 #include <string>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -27,7 +26,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS is_error_code_enum : public false_type {};
+struct is_error_code_enum : public false_type {};
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>
@@ -72,20 +71,20 @@ public:
     __cat_ = &system_category();
   }
 
-  _LIBCPP_HIDE_FROM_ABI int value() const _NOEXCEPT { return __val_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI int value() const _NOEXCEPT { return __val_; }
 
-  _LIBCPP_HIDE_FROM_ABI const error_category& category() const _NOEXCEPT { return *__cat_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const error_category& category() const _NOEXCEPT { return *__cat_; }
 
-  _LIBCPP_HIDE_FROM_ABI error_condition default_error_condition() const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI error_condition default_error_condition() const _NOEXCEPT {
     return __cat_->default_error_condition(__val_);
   }
 
-  string message() const;
+  [[__nodiscard__]] string message() const;
 
   _LIBCPP_HIDE_FROM_ABI explicit operator bool() const _NOEXCEPT { return __val_ != 0; }
 };
 
-inline _LIBCPP_HIDE_FROM_ABI error_code make_error_code(errc __e) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI error_code make_error_code(errc __e) _NOEXCEPT {
   return error_code(static_cast<int>(__e), generic_category());
 }
 
@@ -132,7 +131,7 @@ inline _LIBCPP_HIDE_FROM_ABI strong_ordering operator<=>(const error_code& __x, 
 #endif // _LIBCPP_STD_VER <= 17
 
 template <>
-struct _LIBCPP_TEMPLATE_VIS hash<error_code> : public __unary_function<error_code, size_t> {
+struct hash<error_code> : public __unary_function<error_code, size_t> {
   _LIBCPP_HIDE_FROM_ABI size_t operator()(const error_code& __ec) const _NOEXCEPT {
     return static_cast<size_t>(__ec.value());
   }

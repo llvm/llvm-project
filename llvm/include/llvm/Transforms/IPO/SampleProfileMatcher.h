@@ -14,8 +14,11 @@
 #ifndef LLVM_TRANSFORMS_IPO_SAMPLEPROFILEMATCHER_H
 #define LLVM_TRANSFORMS_IPO_SAMPLEPROFILEMATCHER_H
 
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Transforms/Utils/SampleProfileLoaderBaseImpl.h"
+
+#include <unordered_set>
 
 namespace llvm {
 
@@ -74,7 +77,7 @@ class SampleProfileMatcher {
   // The new functions found by the call graph matching. The map's key is the
   // the new(renamed) function pointer and the value is old(unused) profile
   // name.
-  std::unordered_map<Function *, FunctionId> FuncToProfileNameMap;
+  MapVector<Function *, FunctionId> FuncToProfileNameMap;
 
   // A map pointer to the FuncNameToProfNameMap in SampleProfileLoader,
   // which maps the function name to the matched profile name. This is used
@@ -201,22 +204,10 @@ private:
   void UpdateWithSalvagedProfiles();
 
   LocToLocMap &getIRToProfileLocationMap(const Function &F) {
-    auto Ret = FuncMappings.try_emplace(
-        FunctionSamples::getCanonicalFnName(F.getName()), LocToLocMap());
-    return Ret.first->second;
+    return FuncMappings[FunctionSamples::getCanonicalFnName(F.getName())];
   }
   void distributeIRToProfileLocationMap();
   void distributeIRToProfileLocationMap(FunctionSamples &FS);
-  // This function implements the Myers diff algorithm used for stale profile
-  // matching. The algorithm provides a simple and efficient way to find the
-  // Longest Common Subsequence(LCS) or the Shortest Edit Script(SES) of two
-  // sequences. For more details, refer to the paper 'An O(ND) Difference
-  // Algorithm and Its Variations' by Eugene W. Myers.
-  // In the scenario of profile fuzzy matching, the two sequences are the IR
-  // callsite anchors and profile callsite anchors. The subsequence equivalent
-  // parts from the resulting SES are used to remap the IR locations to the
-  // profile locations. As the number of function callsite is usually not big,
-  // we currently just implements the basic greedy version(page 6 of the paper).
   LocToLocMap longestCommonSequence(const AnchorList &IRCallsiteAnchors,
                                     const AnchorList &ProfileCallsiteAnchors,
                                     bool MatchUnusedFunction);
@@ -248,6 +239,9 @@ private:
   // which are supposed to be new functions. We use them as the targets for
   // call graph matching.
   void findFunctionsWithoutProfile();
+  // Match orphan IR functions to unused top-level profile entries by demangled
+  // basename, without requiring a matched caller in the call graph.
+  void matchFunctionsWithoutProfileByBasename();
   void reportOrPersistProfileStats();
 };
 } // end namespace llvm

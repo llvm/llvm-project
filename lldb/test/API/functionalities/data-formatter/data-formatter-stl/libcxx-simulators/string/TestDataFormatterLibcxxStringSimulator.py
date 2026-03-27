@@ -11,6 +11,7 @@ import functools
 
 
 class LibcxxStringDataFormatterSimulatorTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
     NO_DEBUG_INFO_TESTCASE = True
 
     def _run_test(self, defines):
@@ -27,14 +28,16 @@ class LibcxxStringDataFormatterSimulatorTestCase(TestBase):
 
 
 for v in [None, "ALTERNATE_LAYOUT"]:
-    for r in range(5):
-        for c in range(3):
+    for r in range(6):
+        for c in range(5):
             name = "test_r%d_c%d" % (r, c)
             defines = ["REVISION=%d" % r, "COMPRESSED_PAIR_REV=%d" % c]
             if v:
                 name += "_" + v
                 defines += [v]
-            f = functools.partialmethod(
-                LibcxxStringDataFormatterSimulatorTestCase._run_test, defines
-            )
-            setattr(LibcxxStringDataFormatterSimulatorTestCase, name, f)
+
+            @functools.wraps(LibcxxStringDataFormatterSimulatorTestCase._run_test)
+            def test_method(self, defines=defines):
+                LibcxxStringDataFormatterSimulatorTestCase._run_test(self, defines)
+
+            setattr(LibcxxStringDataFormatterSimulatorTestCase, name, test_method)

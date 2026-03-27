@@ -19,13 +19,12 @@
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Tosa/IR/TargetEnv.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
-#include "mlir/Dialect/Tosa/Utils/QuantUtils.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
 
 namespace mlir {
@@ -55,6 +54,7 @@ public:
     target.addLegalOp<tosa::ApplyScaleOp>();
     target.addLegalOp<tosa::IfOp>();
     target.addLegalOp<tosa::ConstOp>();
+    target.addLegalOp<tosa::ConstShapeOp>();
     target.addLegalOp<tosa::WhileOp>();
     target.addLegalOp<tosa::ConcatOp>();
     target.addLegalOp<tosa::SliceOp>();
@@ -81,10 +81,12 @@ std::unique_ptr<Pass> mlir::tosa::createTosaToLinalg() {
 void mlir::tosa::addTosaToLinalgPasses(
     OpPassManager &pm, const TosaToLinalgOptions &options,
     const TosaToLinalgNamedOptions &tosaToLinalgNamedOptions,
-    std::optional<tosa::TosaValidationOptions> validationOptions) {
+    std::optional<tosa::TosaValidationOptions> validationOptions,
+    std::optional<TosaAttachTargetOptions> attachTargetOptions) {
   // Optional decompositions are designed to benefit linalg.
   if (!options.disableTosaDecompositions)
-    pm.addNestedPass<func::FuncOp>(tosa::createTosaOptionalDecompositions());
+    pm.addNestedPass<func::FuncOp>(
+        tosa::createTosaOptionalDecompositionsPass());
   pm.addNestedPass<func::FuncOp>(createCanonicalizerPass());
 
   pm.addNestedPass<func::FuncOp>(tosa::createTosaInferShapesPass());
@@ -96,6 +98,14 @@ void mlir::tosa::addTosaToLinalgPasses(
   pm.addNestedPass<func::FuncOp>(tosa::createTosaLayerwiseConstantFoldPass(
       {options.aggressiveReduceConstant}));
   pm.addNestedPass<func::FuncOp>(tosa::createTosaMakeBroadcastablePass());
+  if (!attachTargetOptions) {
+    attachTargetOptions = TosaAttachTargetOptions();
+    attachTargetOptions->profiles = {"pro_int", "pro_fp"};
+    // TODO: populate with all the extensions that the tosa->linalg conversion
+    // supports
+    attachTargetOptions->extensions = {"doubleround"};
+  }
+  pm.addPass(tosa::createTosaAttachTarget(*attachTargetOptions));
   if (validationOptions)
     pm.addPass(tosa::createTosaValidation(*validationOptions));
   pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalg());
@@ -115,9 +125,8 @@ void mlir::tosa::registerTosaToLinalgPipelines() {
         TosaToLinalgOptions tosaToLinalgOptions;
         TosaToLinalgNamedOptions tosaToLinalgNamedOptions;
         TosaValidationOptions validationOptions;
-        validationOptions.profile = tosa::TosaProfileEnum::BaseInference;
-        validationOptions.StrictOperationSpecAlignment = true;
-        validationOptions.level = tosa::TosaLevelEnum::EightK;
+        validationOptions.strictOpSpecAlignment = false;
+        validationOptions.allowInvalidOpDatatypeCombinations = false;
         tosa::addTosaToLinalgPasses(pm, tosaToLinalgOptions,
                                     tosaToLinalgNamedOptions,
                                     validationOptions);

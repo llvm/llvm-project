@@ -855,15 +855,16 @@ func.func @affine_prefetch_invariant() {
   affine.for %i0 = 0 to 10 {
     affine.for %i1 = 0 to 10 {
       %1 = affine.load %0[%i0, %i1] : memref<10x10xf32>
+      // A prefetch shouldn't be hoisted.
       affine.prefetch %0[%i0, %i0], write, locality<0>, data : memref<10x10xf32>
     }
   }
 
   // CHECK:      memref.alloc() : memref<10x10xf32>
   // CHECK-NEXT: affine.for %{{.*}} = 0 to 10 {
-  // CHECK-NEXT:   affine.prefetch
   // CHECK-NEXT:   affine.for %{{.*}} = 0 to 10 {
-  // CHECK-NEXT:     %{{.*}}  = affine.load %{{.*}}[%{{.*}}  : memref<10x10xf32>
+  // CHECK-NEXT:     affine.load %{{.*}}[%{{.*}}  : memref<10x10xf32>
+  // CHECK-NEXT:     affine.prefetch
   // CHECK-NEXT:   }
   // CHECK-NEXT: }
   return

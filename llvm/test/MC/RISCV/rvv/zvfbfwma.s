@@ -40,29 +40,3 @@ vfwmaccbf16.vf v8, fa0, v4, v0.t
 # CHECK-ERROR: instruction requires the following: 'Zvfbfwma' (Vector BF16 widening mul-add){{$}}
 # CHECK-UNKNOWN: ee455457 <unknown>
 vfwmaccbf16.vf v8, fa0, v4
-
-# Check scalar half FP load/store/move included in this extension.
-
-# CHECK-INST: flh ft0, 12(a0)
-# CHECK-ENCODING: [0x07,0x10,0xc5,0x00]
-# CHECK-ERROR: instruction requires the following: 'Zfh' (Half-Precision Floating-Point) or 'Zfhmin' (Half-Precision Floating-Point Minimal) or 'Zfbfmin' (Scalar BF16 Converts){{$}}
-# CHECK-UNKNOWN: 00c51007 <unknown>
-flh f0, 12(a0)
-
-# CHECK-INST: fsh ft6, 2047(s4)
-# CHECK-ENCODING: [0xa7,0x1f,0x6a,0x7e]
-# CHECK-ERROR: instruction requires the following: 'Zfh' (Half-Precision Floating-Point) or 'Zfhmin' (Half-Precision Floating-Point Minimal) or 'Zfbfmin' (Scalar BF16 Converts){{$}}
-# CHECK-UNKNOWN: 7e6a1fa7 <unknown>
-fsh f6, 2047(s4)
-
-# CHECK-INST: fmv.x.h a2, fs7
-# CHECK-ENCODING: [0x53,0x86,0x0b,0xe4]
-# CHECK-ERROR: instruction requires the following: 'Zfh' (Half-Precision Floating-Point) or 'Zfhmin' (Half-Precision Floating-Point Minimal) or 'Zfbfmin' (Scalar BF16 Converts){{$}}
-# CHECK-UNKNOWN: e40b8653 <unknown>
-fmv.x.h a2, fs7
-
-# CHECK-INST: fmv.h.x ft1, a6
-# CHECK-ENCODING: [0xd3,0x00,0x08,0xf4]
-# CHECK-ERROR: instruction requires the following: 'Zfh' (Half-Precision Floating-Point) or 'Zfhmin' (Half-Precision Floating-Point Minimal) or 'Zfbfmin' (Scalar BF16 Converts){{$}}
-# CHECK-UNKNOWN: f40800d3 <unknown>
-fmv.h.x ft1, a6

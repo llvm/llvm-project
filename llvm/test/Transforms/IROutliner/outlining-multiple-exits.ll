@@ -104,19 +104,19 @@ block_7:
 ; CHECK-NEXT:    [[B2:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    br label [[BLOCK_2]]
 ; CHECK:       block_2:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[A2VAL_LOC]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[B2VAL_LOC]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[AVAL_LOC]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[BVAL_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A2VAL_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[B2VAL_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[AVAL_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[BVAL_LOC]])
 ; CHECK-NEXT:    [[TARGETBLOCK:%.*]] = call i1 @outlined_ir_func_0(ptr [[A]], ptr [[B]], ptr [[OUTPUT]], ptr [[RESULT]], ptr [[A2VAL_LOC]], ptr [[B2VAL_LOC]], ptr [[AVAL_LOC]], ptr [[BVAL_LOC]])
 ; CHECK-NEXT:    [[A2VAL_RELOAD:%.*]] = load i32, ptr [[A2VAL_LOC]], align 4
 ; CHECK-NEXT:    [[B2VAL_RELOAD:%.*]] = load i32, ptr [[B2VAL_LOC]], align 4
 ; CHECK-NEXT:    [[AVAL_RELOAD:%.*]] = load i32, ptr [[AVAL_LOC]], align 4
 ; CHECK-NEXT:    [[BVAL_RELOAD:%.*]] = load i32, ptr [[BVAL_LOC]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[A2VAL_LOC]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[B2VAL_LOC]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[AVAL_LOC]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[BVAL_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A2VAL_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[B2VAL_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[AVAL_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[BVAL_LOC]])
 ; CHECK-NEXT:    br i1 [[TARGETBLOCK]], label [[BLOCK_6:%.*]], label [[BLOCK_7:%.*]]
 ; CHECK:       block_6:
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[AVAL_RELOAD]], [[BVAL_RELOAD]]
@@ -144,19 +144,19 @@ block_7:
 ; CHECK-NEXT:    [[B2:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    br label [[BLOCK_2]]
 ; CHECK:       block_2:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[A2VAL_LOC]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[B2VAL_LOC]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[AVAL_LOC]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[BVAL_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A2VAL_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[B2VAL_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[AVAL_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[BVAL_LOC]])
 ; CHECK-NEXT:    [[TARGETBLOCK:%.*]] = call i1 @outlined_ir_func_0(ptr [[A]], ptr [[B]], ptr [[OUTPUT]], ptr [[RESULT]], ptr [[A2VAL_LOC]], ptr [[B2VAL_LOC]], ptr [[AVAL_LOC]], ptr [[BVAL_LOC]])
 ; CHECK-NEXT:    [[A2VAL_RELOAD:%.*]] = load i32, ptr [[A2VAL_LOC]], align 4
 ; CHECK-NEXT:    [[B2VAL_RELOAD:%.*]] = load i32, ptr [[B2VAL_LOC]], align 4
 ; CHECK-NEXT:    [[AVAL_RELOAD:%.*]] = load i32, ptr [[AVAL_LOC]], align 4
 ; CHECK-NEXT:    [[BVAL_RELOAD:%.*]] = load i32, ptr [[BVAL_LOC]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[A2VAL_LOC]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[B2VAL_LOC]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[AVAL_LOC]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[BVAL_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A2VAL_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[B2VAL_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[AVAL_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[BVAL_LOC]])
 ; CHECK-NEXT:    br i1 [[TARGETBLOCK]], label [[BLOCK_7:%.*]], label [[BLOCK_6:%.*]]
 ; CHECK:       block_6:
 ; CHECK-NEXT:    [[DIFF:%.*]] = sub i32 [[A2VAL_RELOAD]], [[B2VAL_RELOAD]]

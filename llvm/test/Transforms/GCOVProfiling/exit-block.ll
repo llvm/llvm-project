@@ -3,13 +3,9 @@
 ; RUN: echo '!19 = !{!"%/t/exit-block.ll", !0}' > %t/1
 ; RUN: cat %s %t/1 > %t/2
 
-; By default, the exit block is the second.
+; The exit block is the second.
 ; RUN: opt -passes=insert-gcov-profiling -disable-output %t/2
-; RUN: llvm-cov gcov -n -dump %t/exit-block.gcno 2>&1 | FileCheck --check-prefixes=CHECK,EXIT-SECOND %s
-
-; But we can optionally emit it last, to match GCC<4.8 (r189778).
-; RUN: opt -passes=insert-gcov-profiling -default-gcov-version='407*' -disable-output %t/2
-; RUN: llvm-cov gcov -n -dump %t/exit-block.gcno 2>&1 | FileCheck --check-prefixes=CHECK,EXIT-LAST %s
+; RUN: llvm-cov gcov -n -dump %t/exit-block.gcno 2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -17,7 +13,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @A = common global i32 0, align 4, !dbg !9
 
 ; Function Attrs: nounwind uwtable
-define void @test() #0 !dbg !4 {
+define void @test() !dbg !4 {
 entry:
   tail call void (...) @f() #2, !dbg !14
   %0 = load i32, ptr @A, align 4, !dbg !15
@@ -32,12 +28,10 @@ if.end:                                           ; preds = %entry, %if.then
   ret void, !dbg !18
 }
 
-declare void @f(...) #1
+declare void @f(...)
 
-declare void @g(...) #1
+declare void @g(...)
 
-attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #2 = { nounwind }
 
 !llvm.gcov = !{!19}
@@ -66,10 +60,7 @@ attributes #2 = { nounwind }
 
 ; There should be no destination edges for the exit block.
 ; CHECK: Block : 1 Counter : 0
-; EXIT-LAST:       Destination Edges
-; EXIT-SECOND-NOT: Destination Edges
 ; CHECK: Block : 2 Counter : 0
 ; CHECK: Block : 4 Counter : 0
-; EXIT-LAST-NOT: Destination Edges
-; EXIT-SECOND:   Destination Edges
+; CHECK:         Destination Edges
 ; CHECK-NOT: Block :

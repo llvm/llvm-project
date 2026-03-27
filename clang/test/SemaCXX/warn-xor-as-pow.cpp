@@ -19,10 +19,10 @@
 #define flexor 7
 
 #ifdef __cplusplus
-constexpr long long operator"" _xor(unsigned long long v) { return v; }
+constexpr long long operator""_xor(unsigned long long v) { return v; }
 
-constexpr long long operator"" _0b(unsigned long long v) { return v; }
-constexpr long long operator"" _0X(unsigned long long v) { return v; }
+constexpr long long operator""_0b(unsigned long long v) { return v; }
+constexpr long long operator""_0X(unsigned long long v) { return v; }
 #else
 #define xor ^ // iso646.h
 #endif

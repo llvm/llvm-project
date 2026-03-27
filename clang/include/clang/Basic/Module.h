@@ -48,10 +48,113 @@ namespace clang {
 
 class FileManager;
 class LangOptions;
+class ModuleMap;
 class TargetInfo;
 
 /// Describes the name of a module.
 using ModuleId = SmallVector<std::pair<std::string, SourceLocation>, 2>;
+
+/// Deduplication key for a loaded module file in \c ModuleManager.
+///
+/// For implicitly-built modules, this is the \c DirectoryEntry of the module
+/// cache and the module file name with the (optional) context hash.
+/// This enables using \c FileManager's inode-based canonicalization of the
+/// user-provided module cache path without hitting issues on file systems that
+/// recycle inodes for recompiled module files.
+///
+/// For explicitly-built modules, this is \c FileEntry.
+/// This uses \c FileManager's inode-based canonicalization of the user-provided
+/// module file path. Because input explicitly-built modules do not change
+/// during the lifetime of the compiler, inode recycling is not of concern here.
+class ModuleFileKey {
+  /// The FileManager entity used for deduplication.
+  const void *Ptr;
+  /// The path relative to the module cache path for implicit module file, empty
+  /// for other kinds of module files.
+  std::string ImplicitModulePathSuffix;
+
+  friend class ModuleFileName;
+  friend llvm::DenseMapInfo<ModuleFileKey>;
+
+  ModuleFileKey(const void *Ptr) : Ptr(Ptr) {}
+
+  ModuleFileKey(const FileEntry *ModuleFile) : Ptr(ModuleFile) {}
+
+  ModuleFileKey(const DirectoryEntry *ModuleCacheDir, StringRef PathSuffix)
+      : Ptr(ModuleCacheDir), ImplicitModulePathSuffix(PathSuffix) {}
+
+public:
+  bool operator==(const ModuleFileKey &Other) const {
+    return Ptr == Other.Ptr &&
+           ImplicitModulePathSuffix == Other.ImplicitModulePathSuffix;
+  }
+
+  bool operator!=(const ModuleFileKey &Other) const {
+    return !operator==(Other);
+  }
+};
+
+/// Identifies a module file to be loaded.
+///
+/// For implicitly-built module files, the path is split into the module cache
+/// path and the module file name with the (optional) context hash. For all
+/// other types of module files, this is just the file system path.
+class ModuleFileName {
+  std::string Path;
+  unsigned ImplicitModuleSuffixLength = 0;
+
+public:
+  /// Creates an empty module file name.
+  ModuleFileName() = default;
+
+  /// Creates a file name for an explicit module.
+  static ModuleFileName makeExplicit(std::string Name) {
+    ModuleFileName File;
+    File.Path = std::move(Name);
+    return File;
+  }
+
+  /// Creates a file name for an explicit module.
+  static ModuleFileName makeExplicit(StringRef Name) {
+    return makeExplicit(Name.str());
+  }
+
+  /// Creates a file name for an implicit module.
+  static ModuleFileName makeImplicit(std::string Name, unsigned SuffixLength) {
+    assert(SuffixLength != 0 && "Empty suffix for implicit module file name");
+    assert(SuffixLength <= Name.size() &&
+           "Suffix for implicit module file name out-of-bounds");
+    ModuleFileName File;
+    File.Path = std::move(Name);
+    File.ImplicitModuleSuffixLength = SuffixLength;
+    return File;
+  }
+
+  /// Creates a file name for an implicit module.
+  static ModuleFileName makeImplicit(StringRef Name, unsigned SuffixLength) {
+    return makeImplicit(Name.str(), SuffixLength);
+  }
+
+  /// Returns the suffix length for an implicit module name, zero otherwise.
+  unsigned getImplicitModuleSuffixLength() const {
+    return ImplicitModuleSuffixLength;
+  }
+
+  /// Returns the plain module file name.
+  StringRef str() const { return Path; }
+
+  /// Converts to StringRef representing the plain module file name.
+  operator StringRef() const { return Path; }
+
+  /// Checks whether the module file name is empty.
+  bool empty() const { return Path.empty(); }
+
+  /// Creates the deduplication key for use in \c ModuleManager.
+  /// Returns an empty optional if:
+  /// * the module cache does not exist for an implicit module name,
+  /// * the module file does not exist for an explicit module name.
+  std::optional<ModuleFileKey> makeKey(FileManager &FileMgr) const;
+};
 
 /// The signature of a module, which is a hash of the AST content.
 struct ASTFileSignature : std::array<uint8_t, 20> {
@@ -62,6 +165,11 @@ struct ASTFileSignature : std::array<uint8_t, 20> {
   ASTFileSignature(BaseT S = {{0}}) : BaseT(std::move(S)) {}
 
   explicit operator bool() const { return *this != BaseT({{0}}); }
+
+  // Support implicit cast to ArrayRef.  Note that ASTFileSignature::size
+  // prevents implicit cast to ArrayRef because one of the implicit constructors
+  // of ArrayRef requires access to BaseT::size.
+  operator ArrayRef<uint8_t>() const { return ArrayRef<uint8_t>(data(), size); }
 
   /// Returns the value truncated to the size of an uint64_t.
   uint64_t truncatedValue() const {
@@ -97,6 +205,39 @@ struct ASTFileSignature : std::array<uint8_t, 20> {
     std::copy(First, Last, Signature.begin());
     return Signature;
   }
+};
+
+/// The set of attributes that can be attached to a module.
+struct ModuleAttributes {
+  /// Whether this is a system module.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsSystem : 1;
+
+  /// Whether this is an extern "C" module.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsExternC : 1;
+
+  /// Whether this is an exhaustive set of configuration macros.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsExhaustive : 1;
+
+  /// Whether files in this module can only include non-modular headers
+  /// and headers from used modules.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned NoUndeclaredIncludes : 1;
+
+  ModuleAttributes()
+      : IsSystem(false), IsExternC(false), IsExhaustive(false),
+        NoUndeclaredIncludes(false) {}
+};
+
+/// Required to construct a Module.
+///
+/// This tag type is only constructible by ModuleMap, guaranteeing it ownership
+/// of all Module instances.
+class ModuleConstructorTag {
+  explicit ModuleConstructorTag() = default;
+  friend ModuleMap;
 };
 
 /// Describes a module or submodule.
@@ -217,11 +358,12 @@ private:
 
   /// A mapping from the submodule name to the index into the
   /// \c SubModules vector at which that submodule resides.
-  llvm::StringMap<unsigned> SubModuleIndex;
+  mutable llvm::StringMap<unsigned> SubModuleIndex;
 
-  /// The AST file if this is a top-level module which has a
+  /// The AST file name and key if this is a top-level module which has a
   /// corresponding serialized AST file, or null otherwise.
-  OptionalFileEntryRef ASTFile;
+  std::optional<ModuleFileName> ASTFileName;
+  std::optional<ModuleFileKey> ASTFileKey;
 
   /// The top-level headers associated with this module.
   llvm::SmallSetVector<FileEntryRef, 2> TopHeaders;
@@ -243,8 +385,6 @@ public:
     HK_PrivateTextual,
     HK_Excluded
   };
-  static const int NumHeaderKinds = HK_Excluded + 1;
-
   /// Information about a header directive as found in the module map
   /// file.
   struct Header {
@@ -253,16 +393,35 @@ public:
     FileEntryRef Entry;
   };
 
-  /// Information about a directory name as found in the module map
-  /// file.
+private:
+  static const int NumHeaderKinds = HK_Excluded + 1;
+  // The begin index for a HeaderKind also acts the end index of HeaderKind - 1.
+  // The extra element at the end acts as the end index of the last HeaderKind.
+  unsigned HeaderKindBeginIndex[NumHeaderKinds + 1] = {};
+  SmallVector<Header, 2> HeadersStorage;
+
+public:
+  ArrayRef<Header> getAllHeaders() const { return HeadersStorage; }
+  ArrayRef<Header> getHeaders(HeaderKind HK) const {
+    assert(HK < NumHeaderKinds && "Invalid Module::HeaderKind");
+    auto BeginIt = HeadersStorage.begin() + HeaderKindBeginIndex[HK];
+    auto EndIt = HeadersStorage.begin() + HeaderKindBeginIndex[HK + 1];
+    return {BeginIt, EndIt};
+  }
+  void addHeader(HeaderKind HK, Header H) {
+    assert(HK < NumHeaderKinds && "Invalid Module::HeaderKind");
+    auto EndIt = HeadersStorage.begin() + HeaderKindBeginIndex[HK + 1];
+    HeadersStorage.insert(EndIt, std::move(H));
+    for (unsigned HKI = HK + 1; HKI != NumHeaderKinds + 1; ++HKI)
+      ++HeaderKindBeginIndex[HKI];
+  }
+
+  /// Information about a directory name as found in the module map file.
   struct DirectoryName {
     std::string NameAsWritten;
     std::string PathRelativeToRootModuleDirectory;
     DirectoryEntryRef Entry;
   };
-
-  /// The headers that are part of this module.
-  SmallVector<Header, 2> Headers[5];
 
   /// Stored information about a header directive that was found in the
   /// module map file but has not been resolved to a file.
@@ -497,8 +656,9 @@ public:
   std::vector<Conflict> Conflicts;
 
   /// Construct a new module or submodule.
-  Module(StringRef Name, SourceLocation DefinitionLoc, Module *Parent,
-         bool IsFramework, bool IsExplicit, unsigned VisibilityID);
+  Module(ModuleConstructorTag, StringRef Name, SourceLocation DefinitionLoc,
+         Module *Parent, bool IsFramework, bool IsExplicit,
+         unsigned VisibilityID);
 
   ~Module();
 
@@ -584,7 +744,6 @@ public:
   void setParent(Module *M) {
     assert(!Parent);
     Parent = M;
-    Parent->SubModuleIndex[Name] = Parent->SubModules.size();
     Parent->SubModules.push_back(this);
   }
 
@@ -677,15 +836,26 @@ public:
     return getTopLevelModule()->Name;
   }
 
-  /// The serialized AST file for this module, if one was created.
-  OptionalFileEntryRef getASTFile() const {
-    return getTopLevelModule()->ASTFile;
+  /// The serialized AST file name for this module, if one was created.
+  const ModuleFileName *getASTFileName() const {
+    const Module *TopLevel = getTopLevelModule();
+    return TopLevel->ASTFileName ? &*TopLevel->ASTFileName : nullptr;
   }
 
-  /// Set the serialized AST file for the top-level module of this module.
-  void setASTFile(OptionalFileEntryRef File) {
-    assert((!getASTFile() || getASTFile() == File) && "file path changed");
-    getTopLevelModule()->ASTFile = File;
+  /// The serialized AST file key for this module, if one was created.
+  const ModuleFileKey *getASTFileKey() const {
+    const Module *TopLevel = getTopLevelModule();
+    return TopLevel->ASTFileKey ? &*TopLevel->ASTFileKey : nullptr;
+  }
+
+  /// Set the serialized module file for the top-level module of this module.
+  void setASTFileNameAndKey(ModuleFileName NewName, ModuleFileKey NewKey) {
+    assert(((!getASTFileName() && !getASTFileKey()) ||
+            *getASTFileKey() == NewKey) &&
+           "file path changed");
+    Module *TopLevel = getTopLevelModule();
+    TopLevel->ASTFileName = NewName;
+    TopLevel->ASTFileKey = NewKey;
   }
 
   /// Retrieve the umbrella directory as written.
@@ -749,7 +919,6 @@ public:
   ///
   /// \returns The submodule if found, or NULL otherwise.
   Module *findSubmodule(StringRef Name) const;
-  Module *findOrInferSubmodule(StringRef Name);
 
   /// Get the Global Module Fragment (sub-module) for this module, it there is
   /// one.
@@ -838,7 +1007,7 @@ public:
 
   /// Get the location at which the import of a module was triggered.
   SourceLocation getImportLoc(const Module *M) const {
-    return M->getVisibilityID() < ImportLocs.size()
+    return M && M->getVisibilityID() < ImportLocs.size()
                ? ImportLocs[M->getVisibilityID()]
                : SourceLocation();
   }
@@ -855,10 +1024,11 @@ public:
                          StringRef Message)>;
 
   /// Make a specific module visible.
-  void setVisible(Module *M, SourceLocation Loc,
-                  VisibleCallback Vis = [](Module *) {},
-                  ConflictCallback Cb = [](ArrayRef<Module *>, Module *,
-                                           StringRef) {});
+  void setVisible(
+      Module *M, SourceLocation Loc, bool IncludeExports = true,
+      VisibleCallback Vis = [](Module *) {},
+      ConflictCallback Cb = [](ArrayRef<Module *>, Module *, StringRef) {});
+
 private:
   /// Import locations for each visible module. Indexed by the module's
   /// VisibilityID.
@@ -869,5 +1039,24 @@ private:
 };
 
 } // namespace clang
+
+template <> struct llvm::DenseMapInfo<clang::ModuleFileKey> {
+  static clang::ModuleFileKey getEmptyKey() {
+    return DenseMapInfo<const void *>::getEmptyKey();
+  }
+
+  static clang::ModuleFileKey getTombstoneKey() {
+    return DenseMapInfo<const void *>::getTombstoneKey();
+  }
+
+  static unsigned getHashValue(const clang::ModuleFileKey &Val) {
+    return hash_combine(Val.Ptr, Val.ImplicitModulePathSuffix);
+  }
+
+  static bool isEqual(const clang::ModuleFileKey &LHS,
+                      const clang::ModuleFileKey &RHS) {
+    return LHS == RHS;
+  }
+};
 
 #endif // LLVM_CLANG_BASIC_MODULE_H

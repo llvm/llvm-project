@@ -8,8 +8,8 @@
 
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cinttypes>
 #include <cstdint>
 
@@ -136,7 +136,7 @@ void DWARFDebugAbbrev::dump(raw_ostream &OS) const {
   }
 
   for (const auto &I : AbbrDeclSets) {
-    OS << format("Abbrev table for offset: 0x%8.8" PRIx64 "\n", I.first);
+    OS << formatv("Abbrev table for offset: {0:x+8}\n", I.first);
     I.second.dump(OS);
   }
 }

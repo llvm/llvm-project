@@ -1,6 +1,6 @@
-# RUN: not llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.a1.o %s 2>&1 | FileCheck %s --check-prefix=MVP
+# RUN: not llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -mcpu=mvp -o %t.a1.o %s 2>&1 | FileCheck %s --check-prefix=MVP
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -mattr=+reference-types -o %t.a1.rt.o %s
-# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/call-indirect.s -o %t.a2.o
+# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -mcpu=mvp %p/Inputs/call-indirect.s -o %t.a2.o
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -mattr=+reference-types %p/Inputs/call-indirect.s -o %t.a2.rt.o
 # RUN: not wasm-ld --allow-undefined --export-dynamic --no-entry -o %t.wasm %t.a1.rt.o %t.a2.o 2>&1 | FileCheck %s --check-prefix=RT-MVP
 # RUN: wasm-ld --allow-undefined --export-dynamic --no-entry -o- %t.a1.rt.o %t.a2.rt.o | obj2yaml | FileCheck %s
@@ -26,7 +26,7 @@ call_indirect_explicit_tables:
   call_indirect table_b, () -> ()
   end_function
 
-# RT-MVP: wasm-ld: error: object file not built with 'reference-types' feature conflicts with import of table table_a by file
+# RT-MVP: wasm-ld: error: object file not built with 'reference-types' or 'call-indirect-overlong' feature conflicts with import of table table_a by file
 
 # CHECK:      --- !WASM
 # CHECK-NEXT: FileHeader:
@@ -87,7 +87,7 @@ call_indirect_explicit_tables:
 # CHECK-NEXT:         Mutable:         true
 # CHECK-NEXT:         InitExpr:
 # CHECK-NEXT:           Opcode:          I32_CONST
-# CHECK-NEXT:           Value:           66576
+# CHECK-NEXT:           Value:           65536
 # CHECK-NEXT:   - Type:            EXPORT
 # CHECK-NEXT:     Exports:
 # CHECK-NEXT:       - Name:            memory
@@ -127,14 +127,14 @@ call_indirect_explicit_tables:
 # CHECK-NEXT:         Body:            42010B
 # CHECK-NEXT:       - Index:           3
 # CHECK-NEXT:         Locals:          []
-# CHECK-NEXT:         Body:            41002802808880800011818080800083808080001A41002802848880800011828080800083808080001A0B
+# CHECK-NEXT:         Body:            41002802808084800011818080800083808080001A41002802848084800011828080800083808080001A0B
 # CHECK-NEXT:   - Type:            DATA
 # CHECK-NEXT:     Segments:
-# CHECK-NEXT:       - SectionOffset:   7
+# CHECK-NEXT:       - SectionOffset:   8
 # CHECK-NEXT:         InitFlags:       0
 # CHECK-NEXT:         Offset:
 # CHECK-NEXT:           Opcode:          I32_CONST
-# CHECK-NEXT:           Value:           1024
+# CHECK-NEXT:           Value:           65536
 # CHECK-NEXT:         Content:         '0100000002000000'
 # CHECK-NEXT:   - Type:            CUSTOM
 # CHECK-NEXT:     Name:            name

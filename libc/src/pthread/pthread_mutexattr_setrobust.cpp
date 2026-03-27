@@ -10,9 +10,9 @@
 #include "pthread_mutexattr.h"
 
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 
-#include <errno.h>
 #include <pthread.h>
 
 namespace LIBC_NAMESPACE_DECL {

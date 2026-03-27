@@ -44,6 +44,6 @@ function func8() result(res) bind(c)
 end
 
 function func9() result(res) bind(c)
-  ! ERROR: Interoperable function result may not be a coarray
+  ! ERROR: Function result may not be a coarray
   integer :: res[10, *]
 end

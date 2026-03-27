@@ -48,7 +48,7 @@ MachineModuleInfo::MachineModuleInfo(MachineModuleInfo &&MMI)
   TheModule = MMI.TheModule;
 }
 
-MachineModuleInfo::MachineModuleInfo(const LLVMTargetMachine *TM)
+MachineModuleInfo::MachineModuleInfo(const TargetMachine *TM)
     : TM(*TM), Context(TM->getTargetTriple(), TM->getMCAsmInfo(),
                        TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(),
                        nullptr, &TM->Options.MCOptions, false) {
@@ -56,7 +56,7 @@ MachineModuleInfo::MachineModuleInfo(const LLVMTargetMachine *TM)
   initialize();
 }
 
-MachineModuleInfo::MachineModuleInfo(const LLVMTargetMachine *TM,
+MachineModuleInfo::MachineModuleInfo(const TargetMachine *TM,
                                      MCContext *ExtContext)
     : TM(*TM), Context(TM->getTargetTriple(), TM->getMCAsmInfo(),
                        TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(),
@@ -151,16 +151,12 @@ FunctionPass *llvm::createFreeMachineFunctionPass() {
 }
 
 MachineModuleInfoWrapperPass::MachineModuleInfoWrapperPass(
-    const LLVMTargetMachine *TM)
-    : ImmutablePass(ID), MMI(TM) {
-  initializeMachineModuleInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+    const TargetMachine *TM)
+    : ImmutablePass(ID), MMI(TM) {}
 
 MachineModuleInfoWrapperPass::MachineModuleInfoWrapperPass(
-    const LLVMTargetMachine *TM, MCContext *ExtContext)
-    : ImmutablePass(ID), MMI(TM, ExtContext) {
-  initializeMachineModuleInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+    const TargetMachine *TM, MCContext *ExtContext)
+    : ImmutablePass(ID), MMI(TM, ExtContext) {}
 
 // Handle the Pass registration stuff necessary to use DataLayout's.
 INITIALIZE_PASS(MachineModuleInfoWrapperPass, "machinemoduleinfo",

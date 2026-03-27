@@ -20,7 +20,7 @@ void array_struct_bitfield_1() {
 int array_struct_bitfield_2() {
   BITFIELD_CAST ff = {0};
   BITFIELD_CAST *pff = &ff;
-  int a = *((int *)pff + 2); // expected-warning{{Assigned value is garbage or undefined [core.uninitialized.Assign]}}
+  int a = *((int *)pff + 2); // expected-warning{{Assigned value is uninitialized [core.uninitialized.Assign]}}
   return a;
 }
 

@@ -49,27 +49,12 @@ using namespace llvm;
 STATISTIC(NumInlined, "Number of functions inlined");
 STATISTIC(NumDeleted, "Number of functions deleted because all callers found");
 
-cl::opt<bool> CtxProfPromoteAlwaysInline(
+static cl::opt<bool> CtxProfPromoteAlwaysInline(
     "ctx-prof-promote-alwaysinline", cl::init(false), cl::Hidden,
     cl::desc("If using a contextual profile in this module, and an indirect "
              "call target is marked as alwaysinline, perform indirect call "
              "promotion for that target. If multiple targets for an indirect "
              "call site fit this description, they are all promoted."));
-
-/// Return true if the specified inline history ID
-/// indicates an inline history that includes the specified function.
-static bool inlineHistoryIncludes(
-    Function *F, int InlineHistoryID,
-    const SmallVectorImpl<std::pair<Function *, int>> &InlineHistory) {
-  while (InlineHistoryID != -1) {
-    assert(unsigned(InlineHistoryID) < InlineHistory.size() &&
-           "Invalid inline history ID");
-    if (InlineHistory[InlineHistoryID].first == F)
-      return true;
-    InlineHistoryID = InlineHistory[InlineHistoryID].second;
-  }
-  return false;
-}
 
 InlineAdvisor &ModuleInlinerPass::getAdvisor(const ModuleAnalysisManager &MAM,
                                              FunctionAnalysisManager &FAM,
@@ -137,7 +122,7 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
   InlineAdvisor &Advisor = getAdvisor(MAM, FAM, M);
   Advisor.onPassEntry();
 
-  auto AdvisorOnExit = make_scope_exit([&] { Advisor.onPassExit(); });
+  llvm::scope_exit AdvisorOnExit([&] { Advisor.onPassExit(); });
 
   // In the module inliner, a priority-based worklist is used for calls across
   // the entire Module. With this module inliner, the inline order is not
@@ -171,8 +156,8 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
                      << setIsVerbose();
             });
           }
-        } else if (CtxProfPromoteAlwaysInline && CtxProf &&
-                   CB->isIndirectCall()) {
+        } else if (CtxProfPromoteAlwaysInline &&
+                   CtxProf.isInSpecializedModule() && CB->isIndirectCall()) {
           CtxProfAnalysis::collectIndirectCallPromotionList(*CB, CtxProf,
                                                             ICPCandidates);
         }
@@ -260,7 +245,7 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
           // iteration because the next iteration may not happen and we may
           // miss inlining it.
           // FIXME: enable for ctxprof.
-          if (!CtxProf)
+          if (CtxProf.isInSpecializedModule())
             if (tryPromoteCall(*ICB))
               NewCallee = ICB->getCalledFunction();
         }
@@ -284,6 +269,10 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
         Calls->erase_if([&](const std::pair<CallBase *, int> &Call) {
           return Call.first->getCaller() == &Callee;
         });
+
+        // Report inlining decision BEFORE deleting function contents, so we
+        // can still access e.g. the DebugLoc
+        Advice->recordInliningWithCalleeDeleted();
         // Clear the body and queue the function itself for deletion when we
         // finish inlining.
         // Note that after this point, it is an error to do anything other
@@ -295,9 +284,7 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
         CalleeWasDeleted = true;
       }
     }
-    if (CalleeWasDeleted)
-      Advice->recordInliningWithCalleeDeleted();
-    else
+    if (!CalleeWasDeleted)
       Advice->recordInlining();
   }
 

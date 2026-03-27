@@ -11,6 +11,12 @@ add_header(
 )
 
 add_header(
+  poll-macros
+  HDR
+    poll-macros.h
+)
+
+add_header(
   sched_macros
   HDR
     sched-macros.h
@@ -29,9 +35,21 @@ add_header(
 )
 
 add_header(
+  sys_ipc_macros
+  HDR
+    sys-ipc-macros.h
+)
+
+add_header(
   sys_random_macros
   HDR
     sys-random-macros.h
+)
+
+add_header(
+  sys_sem_macros
+  HDR
+    sys-sem-macros.h
 )
 
 add_header(

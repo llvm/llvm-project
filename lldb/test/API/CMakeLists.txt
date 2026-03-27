@@ -49,6 +49,41 @@ set(LLDB_DEFAULT_TEST_EXECUTABLE "${LLVM_RUNTIME_OUTPUT_INTDIR}/lldb${CMAKE_EXEC
 
 set(LLDB_DEFAULT_TEST_DSYMUTIL "${LLVM_TOOLS_BINARY_DIR}/dsymutil${CMAKE_EXECUTABLE_SUFFIX}")
 
+if(LLDB_TEST_MAKE)
+  set(LLDB_DEFAULT_TEST_MAKE ${LLDB_TEST_MAKE})
+else()
+  # Prefer gmake as it will be a version of GNU make. 'make' could be GNU compatible or not.
+  set(MAKE_NAMES "gmake" "make")
+  find_program(LLDB_DEFAULT_TEST_MAKE NAMES ${MAKE_NAMES})
+  if(LLDB_DEFAULT_TEST_MAKE)
+    message(STATUS "Found make: ${LLDB_DEFAULT_TEST_MAKE}")
+    execute_process(COMMAND ${LLDB_DEFAULT_TEST_MAKE} --version OUTPUT_VARIABLE MAKE_VERSION
+           ERROR_QUIET)
+    if(NOT MAKE_VERSION MATCHES "^GNU Make")
+      message(WARNING "'make' tool ${LLDB_DEFAULT_TEST_MAKE} may not be GNU make compatible. "
+             "Some tests may fail to build. Provide a GNU compatible 'make' tool by setting "
+             "LLDB_TEST_MAKE.")
+    endif()
+  else()
+    list(JOIN "${MAKE_NAMES}" " " MAKE_NAMES_SPACES)
+    string(REPLACE ";" " " MAKE_NAMES_SPACES "${MAKE_NAMES}")
+    message(STATUS "Did not find one of: ${MAKE_NAMES_SPACES}")
+    message(WARNING
+          "Many LLDB API tests require a 'make' tool. Please provide it in Path "
+          "or pass via LLDB_TEST_MAKE.")
+  endif()
+endif()
+
+find_program(LLDB_DIRNAME_PATH dirname)
+if(LLDB_DIRNAME_PATH)
+  message(STATUS "Found dirname: ${LLDB_DIRNAME_PATH}")
+else()
+  message(STATUS "Could NOT find 'dirname'")
+  message(WARNING
+        "Many LLDB API tests require the GNU coreutils tools. Please make "
+        "sure they are installed and in PATH.")
+endif()
+
 if (TARGET clang)
   set(LLDB_DEFAULT_TEST_COMPILER "${LLVM_TOOLS_BINARY_DIR}/clang${CMAKE_EXECUTABLE_SUFFIX}")
 else()
@@ -58,6 +93,7 @@ endif()
 set(LLDB_TEST_EXECUTABLE "${LLDB_DEFAULT_TEST_EXECUTABLE}" CACHE PATH "lldb executable used for testing")
 set(LLDB_TEST_COMPILER "${LLDB_DEFAULT_TEST_COMPILER}" CACHE PATH "C Compiler to use for building LLDB test inferiors")
 set(LLDB_TEST_DSYMUTIL "${LLDB_DEFAULT_TEST_DSYMUTIL}" CACHE PATH "dsymutil used for generating dSYM bundles")
+set(LLDB_TEST_MAKE "${LLDB_DEFAULT_TEST_MAKE}" CACHE PATH "make tool used for building test executables")
 
 if ("${LLDB_TEST_COMPILER}" STREQUAL "")
   message(FATAL_ERROR "LLDB test compiler not specified. Tests will not run.")
@@ -81,14 +117,6 @@ if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
   endif()
 endif()
 
-if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Windows|Darwin")
-  list(APPEND LLDB_TEST_COMMON_ARGS_VAR
-    --env ARCHIVER=${CMAKE_AR} --env OBJCOPY=${CMAKE_OBJCOPY})
-else()
-  list(APPEND LLDB_TEST_COMMON_ARGS_VAR
-    --env OBJCOPY=${LLVM_TOOLS_BINARY_DIR}/llvm-objcopy${CMAKE_EXECUTABLE_SUFFIX})
-endif()
-
 if (NOT "${LLDB_LIT_TOOLS_DIR}" STREQUAL "")
   if (NOT EXISTS "${LLDB_LIT_TOOLS_DIR}")
     message(WARNING "LLDB_LIT_TOOLS_DIR ${LLDB_LIT_TOOLS_DIR} does not exist.")
@@ -96,10 +124,6 @@ if (NOT "${LLDB_LIT_TOOLS_DIR}" STREQUAL "")
 endif()
 
 if(CMAKE_HOST_APPLE)
-  if(LLDB_BUILD_FRAMEWORK)
-    set(LLDB_FRAMEWORK_DIR ${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/LLDB.framework)
-  endif()
-
   if(LLDB_USE_SYSTEM_DEBUGSERVER)
     lldb_find_system_debugserver(system_debugserver_path)
     if(LLDB_BUILD_FRAMEWORK)
@@ -119,6 +143,17 @@ if(CMAKE_HOST_APPLE)
   else()
     message(STATUS "LLDB tests use just-built debug server")
   endif()
+endif()
+
+if(WIN32 AND CMAKE_BUILD_TYPE STREQUAL Debug)
+  if(${CMAKE_VERSION} VERSION_LESS "3.30")
+    message(WARNING "CMake version is inferior to 3.30. Some lldb tests will fail.")
+    set(LLDB_PYTHON_API_TEST_EXECUTABLE "${Python3_EXECUTABLE}")
+  else()
+    set(LLDB_PYTHON_API_TEST_EXECUTABLE "${Python3_EXECUTABLE_DEBUG}")
+  endif()
+else()
+  set(LLDB_PYTHON_API_TEST_EXECUTABLE "${Python3_EXECUTABLE}")
 endif()
 
 set(dotest_args_replacement ${LLVM_BUILD_MODE})

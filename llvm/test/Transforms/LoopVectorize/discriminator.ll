@@ -15,11 +15,11 @@
 ;  6     a[i] += b[i];
 ;  7 }
 
-@a = local_unnamed_addr global ptr null, align 8
-@b = local_unnamed_addr global ptr null, align 8
+@a = global ptr null, align 8
+@b = global ptr null, align 8
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
-define void @_Z3foov() local_unnamed_addr #0 !dbg !6 {
+define void @_Z3foov() #0 !dbg !6 {
   %1 = load ptr, ptr @b, align 8, !dbg !8, !tbaa !9
   %2 = load ptr, ptr @a, align 8, !dbg !13, !tbaa !9
   br label %3, !dbg !14
@@ -32,8 +32,8 @@ define void @_Z3foov() local_unnamed_addr #0 !dbg !6 {
   %7 = load i32, ptr %6, align 4, !dbg !17, !tbaa !15
   %8 = add nsw i32 %7, %5, !dbg !17
 ;PSEUDO_PROBE-COUNT-5: call void @llvm.pseudoprobe(i64 6699318081062747564, i64 2, i32 0, i64 -1), !dbg ![[#PROBE:]]
-;DBG_VALUE: #dbg_declare{{.*}} ![[DBG:[0-9]*]]
-  call void @llvm.dbg.declare(metadata i32 %8, metadata !22, metadata !DIExpression()), !dbg !17
+;DBG_VALUE: #dbg_value{{.*}} ![[DBG:[0-9]*]]
+  call void @llvm.dbg.value(metadata i32 %8, metadata !22, metadata !DIExpression()), !dbg !17
   store i32 %8, ptr %6, align 4, !dbg !17, !tbaa !15
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !18
   %exitcond = icmp eq i64 %indvars.iv.next, 4096, !dbg !19
@@ -49,8 +49,8 @@ define void @_Z3foov() local_unnamed_addr #0 !dbg !6 {
 ;LOOPUNROLL_5: discriminator: 21
 ; When unrolling after loop vectorize, both vec_body and remainder loop
 ; are unrolled.
-;LOOPVEC_UNROLL: discriminator: 9
 ;LOOPVEC_UNROLL: discriminator: 385
+;LOOPVEC_UNROLL: discriminator: 9
 ;DBG_VALUE: ![[DBG]] = {{.*}}, scope: ![[TOP]]
 ; Pseudo probe should not have duplication factor assigned.
 ;PSEUDO_PROBE: ![[TOP:[0-9]*]] = distinct !DISubprogram(name: "foo"

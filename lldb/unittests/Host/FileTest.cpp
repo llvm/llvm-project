@@ -8,11 +8,16 @@
 
 #include "lldb/Host/File.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "gtest/gtest.h"
+
+#ifdef _WIN32
+#include "lldb/Host/windows/windows.h"
+#endif
 
 using namespace lldb;
 using namespace lldb_private;
@@ -31,8 +36,12 @@ TEST(File, GetWaitableHandleFileno) {
   FILE *stream = fdopen(fd, "r");
   ASSERT_TRUE(stream);
 
-  NativeFile file(stream, true);
-  EXPECT_EQ(file.GetWaitableHandle(), fd);
+  NativeFile file(stream, File::eOpenOptionReadWrite, true);
+#ifdef _WIN32
+  EXPECT_EQ(file.GetWaitableHandle(), (HANDLE)_get_osfhandle(fd));
+#else
+  EXPECT_EQ(file.GetWaitableHandle(), (file_t)fd);
+#endif
 }
 
 TEST(File, GetStreamFromDescriptor) {
@@ -53,5 +62,58 @@ TEST(File, GetStreamFromDescriptor) {
   ASSERT_TRUE(stream != NULL);
 
   EXPECT_EQ(file.GetDescriptor(), fd);
-  EXPECT_EQ(file.GetWaitableHandle(), fd);
+#ifdef _WIN32
+  EXPECT_EQ(file.GetWaitableHandle(), (HANDLE)_get_osfhandle(fd));
+#else
+  EXPECT_EQ(file.GetWaitableHandle(), (file_t)fd);
+#endif
+}
+
+TEST(File, SeekFromEndStream) {
+  const auto *Info = testing::UnitTest::GetInstance()->current_test_info();
+  llvm::SmallString<128> name;
+  int fd;
+  llvm::sys::fs::createTemporaryFile(llvm::Twine(Info->test_case_name()) + "-" +
+                                         Info->name(),
+                                     "test", fd, name);
+  llvm::FileRemover remover(name);
+  ASSERT_GE(fd, 0);
+
+  FILE *stream = fdopen(fd, "w+");
+  ASSERT_TRUE(stream);
+
+  // Write some data so the file has a known size.
+  const char data[] = "0123456789";
+  ASSERT_EQ(fwrite(data, 1, sizeof(data) - 1, stream), sizeof(data) - 1);
+  ASSERT_EQ(fflush(stream), 0);
+
+  // Use the stream-based NativeFile to exercise the stream path in
+  // SeekFromEnd. Before the fix, the stream path was missing a return
+  // statement, causing the error to be incorrectly set to "invalid file
+  // handle".
+  NativeFile file(stream, File::eOpenOptionReadWrite, true);
+
+  Status error;
+  off_t result = file.SeekFromEnd(-5, &error);
+  EXPECT_TRUE(error.Success());
+  EXPECT_EQ(result, 0); // fseek returns 0 on success
+}
+
+TEST(File, ReadOnlyModeNotWritable) {
+  const auto *Info = testing::UnitTest::GetInstance()->current_test_info();
+  llvm::SmallString<128> name;
+  int fd;
+  llvm::sys::fs::createTemporaryFile(llvm::Twine(Info->test_case_name()) + "-" +
+                                         Info->name(),
+                                     "test", fd, name);
+
+  llvm::FileRemover remover(name);
+  ASSERT_GE(fd, 0);
+
+  NativeFile file(fd, File::eOpenOptionReadOnly, true);
+  ASSERT_TRUE(file.IsValid());
+  llvm::StringLiteral buf = "Hello World";
+  size_t bytes_written = buf.size();
+  Status error = file.Write(buf.data(), bytes_written);
+  EXPECT_EQ(error.Fail(), true);
 }

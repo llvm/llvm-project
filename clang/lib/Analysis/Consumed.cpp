@@ -27,9 +27,6 @@
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <memory>
@@ -1229,6 +1226,9 @@ bool ConsumedAnalyzer::splitState(const CFGBlock *CurrBlock,
 
   if (const auto *IfNode =
           dyn_cast_or_null<IfStmt>(CurrBlock->getTerminator().getStmt())) {
+    if (IfNode->isConsteval())
+      return false;
+
     const Expr *Cond = IfNode->getCond();
 
     PInfo = Visitor.getInfo(Cond);
@@ -1354,12 +1354,13 @@ void ConsumedAnalyzer::run(AnalysisDeclContext &AC) {
 
       case CFGElement::AutomaticObjectDtor: {
         const CFGAutomaticObjDtor &DTor = B.castAs<CFGAutomaticObjDtor>();
+        const auto *DD = DTor.getDestructorDecl(AC.getASTContext());
+        if (!DD)
+          break;
+
         SourceLocation Loc = DTor.getTriggerStmt()->getEndLoc();
         const VarDecl *Var = DTor.getVarDecl();
-
-        Visitor.checkCallability(PropagationInfo(Var),
-                                 DTor.getDestructorDecl(AC.getASTContext()),
-                                 Loc);
+        Visitor.checkCallability(PropagationInfo(Var), DD, Loc);
         break;
       }
 

@@ -18,7 +18,7 @@
 #include <__config>
 #include <stdlib.h>
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 #  include <wchar.h>
 #endif
 
@@ -32,14 +32,6 @@ inline _LIBCPP_HIDE_FROM_ABI double strtod_l(const char* __nptr, char** __endptr
 
 inline _LIBCPP_HIDE_FROM_ABI long double strtold_l(const char* __nptr, char** __endptr, locale_t) {
   return ::strtold(__nptr, __endptr);
-}
-
-inline _LIBCPP_HIDE_FROM_ABI long long strtoll_l(const char* __nptr, char** __endptr, int __base, locale_t) {
-  return ::strtoll(__nptr, __endptr, __base);
-}
-
-inline _LIBCPP_HIDE_FROM_ABI unsigned long long strtoull_l(const char* __nptr, char** __endptr, int __base, locale_t) {
-  return ::strtoull(__nptr, __endptr, __base);
 }
 
 #endif // _LIBCPP___SUPPORT_XLOCALE_STRTONUM_FALLBACK_H

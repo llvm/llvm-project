@@ -20,7 +20,6 @@
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/LoopRotationUtils.h"
@@ -39,9 +38,10 @@ static cl::opt<bool> PrepareForLTOOption(
     cl::desc("Run loop-rotation in the prepare-for-lto stage. This option "
              "should be used for testing only."));
 
-LoopRotatePass::LoopRotatePass(bool EnableHeaderDuplication, bool PrepareForLTO)
+LoopRotatePass::LoopRotatePass(bool EnableHeaderDuplication, bool PrepareForLTO,
+                               bool CheckExitCount)
     : EnableHeaderDuplication(EnableHeaderDuplication),
-      PrepareForLTO(PrepareForLTO) {}
+      PrepareForLTO(PrepareForLTO), CheckExitCount(CheckExitCount) {}
 
 void LoopRotatePass::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
@@ -54,7 +54,11 @@ void LoopRotatePass::printPipeline(
 
   if (!PrepareForLTO)
     OS << "no-";
-  OS << "prepare-for-lto";
+  OS << "prepare-for-lto;";
+
+  if (!CheckExitCount)
+    OS << "no-";
+  OS << "check-exit-count";
   OS << ">";
 }
 
@@ -75,9 +79,10 @@ PreservedAnalyses LoopRotatePass::run(Loop &L, LoopAnalysisManager &AM,
   std::optional<MemorySSAUpdater> MSSAU;
   if (AR.MSSA)
     MSSAU = MemorySSAUpdater(AR.MSSA);
-  bool Changed = LoopRotation(&L, &AR.LI, &AR.TTI, &AR.AC, &AR.DT, &AR.SE,
-                              MSSAU ? &*MSSAU : nullptr, SQ, false, Threshold,
-                              false, PrepareForLTO || PrepareForLTOOption);
+  bool Changed =
+      LoopRotation(&L, &AR.LI, &AR.TTI, &AR.AC, &AR.DT, &AR.SE,
+                   MSSAU ? &*MSSAU : nullptr, SQ, false, Threshold, false,
+                   PrepareForLTO || PrepareForLTOOption, CheckExitCount);
 
   if (!Changed)
     return PreservedAnalyses::all();

@@ -13,7 +13,7 @@ define i32 @sterix(i32, i8, i64) {
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[MUL]], [[SH_PROM]]
 ; CHECK-NEXT:    [[CONV2:%.*]] = zext i32 [[SHR]] to i64
 ; CHECK-NEXT:    [[MUL3:%.*]] = mul nuw nsw i64 [[CONV]], [[CONV2]]
-; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ult i64 [[MUL3]], 4294967296
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp samesign ult i64 [[MUL3]], 4294967296
 ; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[LOR_RHS:%.*]], label [[LOR_END:%.*]]
 ; CHECK:       lor.rhs:
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[TMP2]], [[MUL3]]
@@ -57,11 +57,10 @@ define void @PR33765(i8 %beth) {
 ; CHECK-LABEL: @PR33765(
 ; CHECK-NEXT:    br i1 false, label [[IF_THEN9:%.*]], label [[IF_THEN9]]
 ; CHECK:       if.then9:
-; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[BETH:%.*]] to i32
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i32 [[CONV]], [[CONV]]
+; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[BETH:%.*]] to i16
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i16 [[CONV]], [[CONV]]
 ; CHECK-NEXT:    [[TINKY:%.*]] = load i16, ptr @glob, align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw i32 [[MUL]] to i16
-; CHECK-NEXT:    [[CONV14:%.*]] = and i16 [[TINKY]], [[TMP1]]
+; CHECK-NEXT:    [[CONV14:%.*]] = and i16 [[MUL]], [[TINKY]]
 ; CHECK-NEXT:    store i16 [[CONV14]], ptr @glob, align 2
 ; CHECK-NEXT:    ret void
 ;

@@ -9,8 +9,7 @@
 #ifndef FORTRAN_RUNTIME_CUDA_COMMON_H_
 #define FORTRAN_RUNTIME_CUDA_COMMON_H_
 
-#include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
-#include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/descriptor-consts.h"
 #include "flang/Runtime/entry-names.h"
 
 /// Type of memory for allocation/deallocation
@@ -31,20 +30,19 @@ static constexpr unsigned kDeviceToDevice = 2;
     const char *name = cudaGetErrorName(err); \
     if (!name) \
       name = "<unknown>"; \
-    Terminator terminator{__FILE__, __LINE__}; \
+    Fortran::runtime::Terminator terminator{__FILE__, __LINE__}; \
     terminator.Crash("'%s' failed with '%s'", #expr, name); \
   }(expr)
 
-static inline unsigned getMemType(cuf::DataAttribute attr) {
-  if (attr == cuf::DataAttribute::Device)
-    return kMemTypeDevice;
-  if (attr == cuf::DataAttribute::Managed)
-    return kMemTypeManaged;
-  if (attr == cuf::DataAttribute::Unified)
-    return kMemTypeUnified;
-  if (attr == cuf::DataAttribute::Pinned)
-    return kMemTypePinned;
-  llvm::report_fatal_error("unsupported memory type");
-}
+#define CUDA_REPORT_IF_ERROR_LOC(expr, file, line) \
+  [](cudaError_t err, const char *sourceFile, int sourceLine) { \
+    if (err == cudaSuccess) \
+      return; \
+    const char *name = cudaGetErrorName(err); \
+    if (!name) \
+      name = "<unknown>"; \
+    Fortran::runtime::Terminator terminator{sourceFile, sourceLine}; \
+    terminator.Crash("'%s' failed with '%s'", #expr, name); \
+  }(expr, sourceFile, sourceLine)
 
 #endif // FORTRAN_RUNTIME_CUDA_COMMON_H_

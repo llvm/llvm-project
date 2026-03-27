@@ -1,21 +1,21 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 
-; CHECK-SPIRV:     OpName %[[#NAME_FSHL_FUNC_32:]] "spirv.llvm_fshl_i32"
-; CHECK-SPIRV:     OpName %[[#NAME_FSHL_FUNC_16:]] "spirv.llvm_fshl_i16"
-; CHECK-SPIRV:     OpName %[[#NAME_FSHL_FUNC_VEC_INT_16:]] "spirv.llvm_fshl_v2i16"
-; CHECK-SPIRV:     %[[#TYPE_INT_32:]] = OpTypeInt 32 0
-; CHECK-SPIRV:     %[[#TYPE_ORIG_FUNC_32:]] = OpTypeFunction %[[#TYPE_INT_32]] %[[#TYPE_INT_32]] %[[#TYPE_INT_32]]
-; CHECK-SPIRV:     %[[#TYPE_INT_16:]] = OpTypeInt 16 0
-; CHECK-SPIRV:     %[[#TYPE_ORIG_FUNC_16:]] = OpTypeFunction %[[#TYPE_INT_16]] %[[#TYPE_INT_16]] %[[#TYPE_INT_16]]
-; CHECK-SPIRV:     %[[#TYPE_VEC_INT_16:]] = OpTypeVector %[[#TYPE_INT_16]] 2
-; CHECK-SPIRV:     %[[#TYPE_ORIG_FUNC_VEC_INT_16:]] = OpTypeFunction %[[#TYPE_VEC_INT_16]] %[[#TYPE_VEC_INT_16]] %[[#TYPE_VEC_INT_16]]
-; CHECK-SPIRV:     %[[#TYPE_FSHL_FUNC_32:]] = OpTypeFunction %[[#TYPE_INT_32]] %[[#TYPE_INT_32]] %[[#TYPE_INT_32]] %[[#TYPE_INT_32]]
-; CHECK-SPIRV:     %[[#TYPE_FSHL_FUNC_16:]] = OpTypeFunction %[[#TYPE_INT_16]] %[[#TYPE_INT_16]] %[[#TYPE_INT_16]] %[[#TYPE_INT_16]]
-; CHECK-SPIRV:     %[[#TYPE_FSHL_FUNC_VEC_INT_16:]] = OpTypeFunction %[[#TYPE_VEC_INT_16]] %[[#TYPE_VEC_INT_16]] %[[#TYPE_VEC_INT_16]] %[[#TYPE_VEC_INT_16]]
-; CHECK-SPIRV-DAG: %[[#CONST_ROTATE_32:]] = OpConstant %[[#TYPE_INT_32]] 8
-; CHECK-SPIRV-DAG: %[[#CONST_ROTATE_16:]] = OpConstant %[[#TYPE_INT_16]] 8
-; CHECK-SPIRV:     %[[#CONST_ROTATE_VEC_INT_16:]] = OpConstantComposite %[[#TYPE_VEC_INT_16]] %[[#CONST_ROTATE_16]] %[[#CONST_ROTATE_16]]
-; CHECK-SPIRV-DAG: %[[#CONST_TYPE_SIZE_32:]] = OpConstant %[[#TYPE_INT_32]] 32
+; CHECK-SPIRV-DAG:     OpName %[[#NAME_FSHL_FUNC_32:]] "spirv.llvm_fshl_i32"
+; CHECK-SPIRV-DAG:     OpName %[[#NAME_FSHL_FUNC_16:]] "spirv.llvm_fshl_i16"
+; CHECK-SPIRV-DAG:     OpName %[[#NAME_FSHL_FUNC_VEC_INT_16:]] "spirv.llvm_fshl_v2i16"
+; CHECK-SPIRV-DAG:     %[[#TYPE_INT_32:]] = OpTypeInt 32 0
+; CHECK-SPIRV-DAG:     %[[#TYPE_ORIG_FUNC_32:]] = OpTypeFunction %[[#TYPE_INT_32]] %[[#TYPE_INT_32]] %[[#TYPE_INT_32]]
+; CHECK-SPIRV-DAG:     %[[#TYPE_INT_16:]] = OpTypeInt 16 0
+; CHECK-SPIRV-DAG:     %[[#TYPE_ORIG_FUNC_16:]] = OpTypeFunction %[[#TYPE_INT_16]] %[[#TYPE_INT_16]] %[[#TYPE_INT_16]]
+; CHECK-SPIRV-DAG:     %[[#TYPE_VEC_INT_16:]] = OpTypeVector %[[#TYPE_INT_16]] 2
+; CHECK-SPIRV-DAG:     %[[#TYPE_ORIG_FUNC_VEC_INT_16:]] = OpTypeFunction %[[#TYPE_VEC_INT_16]] %[[#TYPE_VEC_INT_16]] %[[#TYPE_VEC_INT_16]]
+; CHECK-SPIRV-DAG:     %[[#TYPE_FSHL_FUNC_32:]] = OpTypeFunction %[[#TYPE_INT_32]] %[[#TYPE_INT_32]] %[[#TYPE_INT_32]] %[[#TYPE_INT_32]]
+; CHECK-SPIRV-DAG:     %[[#TYPE_FSHL_FUNC_16:]] = OpTypeFunction %[[#TYPE_INT_16]] %[[#TYPE_INT_16]] %[[#TYPE_INT_16]] %[[#TYPE_INT_16]]
+; CHECK-SPIRV-DAG:     %[[#TYPE_FSHL_FUNC_VEC_INT_16:]] = OpTypeFunction %[[#TYPE_VEC_INT_16]] %[[#TYPE_VEC_INT_16]] %[[#TYPE_VEC_INT_16]] %[[#TYPE_VEC_INT_16]]
+; CHECK-SPIRV-DAG:     %[[#CONST_ROTATE_32:]] = OpConstant %[[#TYPE_INT_32]] 8
+; CHECK-SPIRV-DAG:     %[[#CONST_ROTATE_16:]] = OpConstant %[[#TYPE_INT_16]] 8
+; CHECK-SPIRV-DAG:     %[[#CONST_ROTATE_VEC_INT_16:]] = OpConstantComposite %[[#TYPE_VEC_INT_16]] %[[#CONST_ROTATE_16]] %[[#CONST_ROTATE_16]]
+; CHECK-SPIRV-DAG:     %[[#CONST_TYPE_SIZE_32:]] = OpConstant %[[#TYPE_INT_32]] 32
 
 ; CHECK-SPIRV: %[[#]] = OpFunction %[[#TYPE_INT_32]] {{.*}} %[[#TYPE_ORIG_FUNC_32]]
 ; CHECK-SPIRV: %[[#X:]] = OpFunctionParameter %[[#TYPE_INT_32]]

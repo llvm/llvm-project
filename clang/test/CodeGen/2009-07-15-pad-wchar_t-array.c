@@ -14,4 +14,5 @@ typedef __WCHAR_TYPE__ wchar_t;
 signed short _iodbcdm_sqlerror(void)
 {
   wchar_t _sqlState[6] = { L"\0" };
+  return 0;
 }

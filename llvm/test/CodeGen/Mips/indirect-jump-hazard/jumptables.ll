@@ -356,7 +356,7 @@ define ptr @_Z3fooi(i32 signext %Letter) {
 ; PIC-MIPS32R2-NEXT:    lw $3, %got($JTI0_0)($2)
 ; PIC-MIPS32R2-NEXT:    addu $1, $1, $3
 ; PIC-MIPS32R2-NEXT:    lw $1, %lo($JTI0_0)($1)
-; PIC-MIPS32R2-NEXT:    addu $1, $1, $2
+; PIC-MIPS32R2-NEXT:    addu $1, $2, $1
 ; PIC-MIPS32R2-NEXT:    jr.hb $1
 ; PIC-MIPS32R2-NEXT:    nop
 ; PIC-MIPS32R2-NEXT:  $BB0_2: # %sw.bb
@@ -418,7 +418,7 @@ define ptr @_Z3fooi(i32 signext %Letter) {
 ; PIC-MIPS32R6-NEXT:    lw $3, %got($JTI0_0)($2)
 ; PIC-MIPS32R6-NEXT:    addu $1, $1, $3
 ; PIC-MIPS32R6-NEXT:    lw $1, %lo($JTI0_0)($1)
-; PIC-MIPS32R6-NEXT:    addu $1, $1, $2
+; PIC-MIPS32R6-NEXT:    addu $1, $2, $1
 ; PIC-MIPS32R6-NEXT:    jr.hb $1
 ; PIC-MIPS32R6-NEXT:    nop
 ; PIC-MIPS32R6-NEXT:  $BB0_2: # %sw.bb
@@ -481,7 +481,7 @@ define ptr @_Z3fooi(i32 signext %Letter) {
 ; PIC-MIPS64R2-NEXT:    ld $3, %got_page(.LJTI0_0)($2)
 ; PIC-MIPS64R2-NEXT:    daddu $1, $1, $3
 ; PIC-MIPS64R2-NEXT:    ld $1, %got_ofst(.LJTI0_0)($1)
-; PIC-MIPS64R2-NEXT:    daddu $1, $1, $2
+; PIC-MIPS64R2-NEXT:    daddu $1, $2, $1
 ; PIC-MIPS64R2-NEXT:    jr.hb $1
 ; PIC-MIPS64R2-NEXT:    nop
 ; PIC-MIPS64R2-NEXT:  .LBB0_2: # %sw.bb
@@ -544,7 +544,7 @@ define ptr @_Z3fooi(i32 signext %Letter) {
 ; PIC-MIPS64R6-NEXT:    ld $3, %got_page(.LJTI0_0)($2)
 ; PIC-MIPS64R6-NEXT:    daddu $1, $1, $3
 ; PIC-MIPS64R6-NEXT:    ld $1, %got_ofst(.LJTI0_0)($1)
-; PIC-MIPS64R6-NEXT:    daddu $1, $1, $2
+; PIC-MIPS64R6-NEXT:    daddu $1, $2, $1
 ; PIC-MIPS64R6-NEXT:    jr.hb $1
 ; PIC-MIPS64R6-NEXT:    nop
 ; PIC-MIPS64R6-NEXT:  .LBB0_2: # %sw.bb

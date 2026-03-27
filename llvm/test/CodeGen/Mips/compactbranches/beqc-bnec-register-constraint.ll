@@ -1,5 +1,5 @@
-; RUN: llc -march=mips -mcpu=mips32r6 -O1 -start-after=dwarf-eh-prepare < %s | FileCheck %s
-; RUN: llc -march=mips64 -mcpu=mips64r6 -O1 -start-after=dwarf-eh-prepare < %s | FileCheck %s
+; RUN: llc -mtriple=mips -mcpu=mips32r6 -O1 -start-after=dwarf-eh-prepare < %s | FileCheck %s
+; RUN: llc -mtriple=mips64 -mcpu=mips64r6 -O1 -start-after=dwarf-eh-prepare < %s | FileCheck %s
 
 
 ; beqc/bnec have the constraint that $rs < $rt && $rs != 0 && $rt != 0

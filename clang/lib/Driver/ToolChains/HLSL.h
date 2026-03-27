@@ -29,6 +29,33 @@ public:
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
+
+class LLVM_LIBRARY_VISIBILITY MetalConverter : public Tool {
+public:
+  MetalConverter(const ToolChain &TC)
+      : Tool("hlsl::MetalConverter", "metal-shaderconverter", TC) {}
+
+  bool hasIntegratedCPP() const override { return false; }
+
+  void ConstructJob(Compilation &C, const JobAction &JA,
+                    const InputInfo &Output, const InputInfoList &Inputs,
+                    const llvm::opt::ArgList &TCArgs,
+                    const char *LinkingOutput) const override;
+};
+
+class LLVM_LIBRARY_VISIBILITY LLVMObjcopy : public Tool {
+public:
+  LLVMObjcopy(const ToolChain &TC)
+      : Tool("hlsl::LLVMObjcopy", "llvm-objcopy", TC) {}
+
+  bool hasIntegratedCPP() const override { return false; }
+
+  void ConstructJob(Compilation &C, const JobAction &JA,
+                    const InputInfo &Output, const InputInfoList &Inputs,
+                    const llvm::opt::ArgList &TCArgs,
+                    const char *LinkingOutput) const override;
+};
+
 } // namespace hlsl
 } // namespace tools
 
@@ -51,12 +78,25 @@ public:
                 Action::OffloadKind DeviceOffloadKind) const override;
   static std::optional<std::string> parseTargetProfile(StringRef TargetProfile);
   bool requiresValidation(llvm::opt::DerivedArgList &Args) const;
+  bool requiresBinaryTranslation(llvm::opt::DerivedArgList &Args) const;
+  bool requiresObjcopy(llvm::opt::DerivedArgList &Args) const;
+
+  /// If we are targeting DXIL then the last job should output the DXContainer
+  /// to the specified output file with /Fo. Otherwise, we will emit to a
+  /// temporary file for the next job to use.
+  ///
+  /// Returns true if we should output to the final result file.
+  bool isLastJob(llvm::opt::DerivedArgList &Args, Action::ActionClass AC) const;
 
   // Set default DWARF version to 4 for DXIL uses version 4.
   unsigned GetDefaultDwarfVersion() const override { return 4; }
 
+  void addClangWarningOptions(llvm::opt::ArgStringList &CC1Args) const override;
+
 private:
   mutable std::unique_ptr<tools::hlsl::Validator> Validator;
+  mutable std::unique_ptr<tools::hlsl::MetalConverter> MetalConverter;
+  mutable std::unique_ptr<tools::hlsl::LLVMObjcopy> LLVMObjcopy;
 };
 
 } // end namespace toolchains

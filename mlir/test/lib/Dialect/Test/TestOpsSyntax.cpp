@@ -21,6 +21,7 @@ using namespace test;
 
 //===----------------------------------------------------------------------===//
 // Parsing
+//===----------------------------------------------------------------------===//
 
 static ParseResult parseCustomOptionalOperand(
     OpAsmParser &parser,
@@ -155,6 +156,7 @@ static ParseResult parseCustomDirectiveOptionalOperandRef(
 
 //===----------------------------------------------------------------------===//
 // Printing
+//===----------------------------------------------------------------------===//
 
 static void printCustomOptionalOperand(OpAsmPrinter &printer, Operation *,
                                        Value optOperand) {
@@ -291,6 +293,7 @@ void ParseB64BytesOp::print(OpAsmPrinter &p) {
 
 //===----------------------------------------------------------------------===//
 // Test WrapRegionOp - wrapping op exercising `parseGenericOperation()`.
+//===----------------------------------------------------------------------===//
 
 ParseResult WrappingRegionOp::parse(OpAsmParser &parser,
                                     OperationState &result) {
@@ -310,7 +313,7 @@ ParseResult WrappingRegionOp::parse(OpAsmParser &parser,
   SmallVector<Value, 8> returnOperands(wrappedOp->getResults());
   OpBuilder builder(parser.getContext());
   builder.setInsertionPointToEnd(&block);
-  builder.create<TestReturnOp>(wrappedOp->getLoc(), returnOperands);
+  TestReturnOp::create(builder, wrappedOp->getLoc(), returnOperands);
 
   // Get the results type for the wrapping op from the terminator operands.
   Operation &returnOp = body.back().back();
@@ -394,7 +397,7 @@ ParseResult PrettyPrintedRegionOp::parse(OpAsmParser &parser,
       builder.create(opLoc, innerOpName, /*operands=*/{lhs, rhs}, innerOpType);
 
   // Insert a return statement in the block returning the inner-op's result.
-  builder.create<TestReturnOp>(innerOp->getLoc(), innerOp->getResults());
+  TestReturnOp::create(builder, innerOp->getLoc(), innerOp->getResults());
 
   // Populate the op operation-state with result-type and location.
   result.addTypes(opFntype.getResults());
@@ -482,6 +485,25 @@ static ParseResult parseOptionalLoc(OpAsmParser &p, Attribute &loc) {
 
 static void printOptionalLoc(OpAsmPrinter &p, Operation *op, Attribute loc) {
   p.printOptionalLocationSpecifier(cast<LocationAttr>(loc));
+}
+
+//===----------------------------------------------------------------------===//
+// ParseCustomOperationNameAPI
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseCustomOperationNameEntry(OpAsmParser &p,
+                                                 Attribute &name) {
+  FailureOr<OperationName> opName = p.parseCustomOperationName();
+  if (failed(opName))
+    return ParseResult::failure();
+
+  name = p.getBuilder().getStringAttr(opName->getStringRef());
+  return ParseResult::success();
+}
+
+static void printCustomOperationNameEntry(OpAsmPrinter &p, Operation *op,
+                                          Attribute name) {
+  p << cast<StringAttr>(name).getValue();
 }
 
 #define GET_OP_CLASSES

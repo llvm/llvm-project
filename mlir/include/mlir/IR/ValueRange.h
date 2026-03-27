@@ -17,6 +17,7 @@
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/Repeated.h"
 #include "llvm/ADT/Sequence.h"
 #include <optional>
 
@@ -36,6 +37,7 @@ class MutableOperandRangeRange;
 
 //===----------------------------------------------------------------------===//
 // OperandRange
+//===----------------------------------------------------------------------===//
 
 /// This class implements the operand iterators for the Operation class.
 class OperandRange final : public llvm::detail::indexed_accessor_range_base<
@@ -73,6 +75,7 @@ private:
 
 //===----------------------------------------------------------------------===//
 // OperandRangeRange
+//===----------------------------------------------------------------------===//
 
 /// This class represents a contiguous range of operand ranges, e.g. from a
 /// VariadicOfVariadic operand group.
@@ -109,6 +112,7 @@ private:
 
 //===----------------------------------------------------------------------===//
 // MutableOperandRange
+//===----------------------------------------------------------------------===//
 
 /// This class provides a mutable adaptor for a range of operands. It allows for
 /// setting, inserting, and erasing operands from the given range.
@@ -123,7 +127,7 @@ public:
   /// and range length. `operandSegments` is an optional set of operand segments
   /// to be updated when mutating the operand list.
   MutableOperandRange(Operation *owner, unsigned start, unsigned length,
-                      ArrayRef<OperandSegment> operandSegments = std::nullopt);
+                      ArrayRef<OperandSegment> operandSegments = {});
   MutableOperandRange(Operation *owner);
 
   /// Construct a new mutable range for the given OpOperand.
@@ -196,6 +200,7 @@ private:
 
 //===----------------------------------------------------------------------===//
 // MutableOperandRangeRange
+//===----------------------------------------------------------------------===//
 
 /// This class represents a contiguous range of mutable operand ranges, e.g.
 /// from a VariadicOfVariadic operand group.
@@ -235,6 +240,7 @@ private:
 
 //===----------------------------------------------------------------------===//
 // ResultRange
+//===----------------------------------------------------------------------===//
 
 /// This class implements the result iterators for the Operation class.
 class ResultRange final
@@ -368,6 +374,7 @@ private:
 
 //===----------------------------------------------------------------------===//
 // ValueRange
+//===----------------------------------------------------------------------===//
 
 /// This class provides an abstraction over the different types of ranges over
 /// Values. In many cases, this prevents the need to explicitly materialize a
@@ -377,13 +384,14 @@ private:
 class ValueRange final
     : public llvm::detail::indexed_accessor_range_base<
           ValueRange,
-          PointerUnion<const Value *, OpOperand *, detail::OpResultImpl *>,
+          PointerUnion<const Value *, OpOperand *, detail::OpResultImpl *,
+                       const Repeated<Value> *>,
           Value, Value, Value> {
 public:
   /// The type representing the owner of a ValueRange. This is either a list of
-  /// values, operands, or results.
-  using OwnerT =
-      PointerUnion<const Value *, OpOperand *, detail::OpResultImpl *>;
+  /// values, operands, results, or a repeated single value.
+  using OwnerT = PointerUnion<const Value *, OpOperand *,
+                              detail::OpResultImpl *, const Repeated<Value> *>;
 
   using RangeBaseT::RangeBaseT;
 
@@ -391,9 +399,11 @@ public:
             typename = std::enable_if_t<
                 std::is_constructible<ArrayRef<Value>, Arg>::value &&
                 !std::is_convertible<Arg, Value>::value>>
-  ValueRange(Arg &&arg) : ValueRange(ArrayRef<Value>(std::forward<Arg>(arg))) {}
-  ValueRange(const Value &value) : ValueRange(&value, /*count=*/1) {}
-  ValueRange(const std::initializer_list<Value> &values)
+  ValueRange(Arg &&arg LLVM_LIFETIME_BOUND)
+      : ValueRange(ArrayRef<Value>(std::forward<Arg>(arg))) {}
+  ValueRange(const Value &value LLVM_LIFETIME_BOUND)
+      : ValueRange(&value, /*count=*/1) {}
+  ValueRange(const std::initializer_list<Value> &values LLVM_LIFETIME_BOUND)
       : ValueRange(ArrayRef<Value>(values)) {}
   ValueRange(iterator_range<OperandRange::iterator> values)
       : ValueRange(OperandRange(values)) {}
@@ -401,9 +411,13 @@ public:
       : ValueRange(ResultRange(values)) {}
   ValueRange(ArrayRef<BlockArgument> values)
       : ValueRange(ArrayRef<Value>(values.data(), values.size())) {}
-  ValueRange(ArrayRef<Value> values = std::nullopt);
+  ValueRange(ArrayRef<Value> values = {});
   ValueRange(OperandRange values);
   ValueRange(ResultRange values);
+  /// Constructs a range from a repeated value. The Repeated object must outlive
+  /// this range.
+  ValueRange(const Repeated<Value> &repeatedValue LLVM_LIFETIME_BOUND)
+      : RangeBaseT(&repeatedValue, repeatedValue.count) {}
 
   /// Returns the types of the values within this range.
   using type_iterator = ValueTypeIterator<iterator>;

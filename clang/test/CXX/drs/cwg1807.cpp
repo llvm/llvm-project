@@ -15,7 +15,7 @@ struct S {
 void f() {
   S s[3];
 }
-}
+} // namespace cwg1807
 
 // CHECK-LABEL:      define dso_local void @cwg1807::f()
 // CHECK:              invoke void @cwg1807::S::S(){{.+}}

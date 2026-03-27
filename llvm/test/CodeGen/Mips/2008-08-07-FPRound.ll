@@ -1,4 +1,4 @@
-; RUN: llc -march=mips -mattr=single-float  < %s | FileCheck %s
+; RUN: llc -mtriple=mips -mattr=single-float  < %s | FileCheck %s
 
 define float @round2float(double %a) nounwind {
 entry:

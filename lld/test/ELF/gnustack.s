@@ -1,17 +1,20 @@
 # REQUIRES: x86
-# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t1
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64 a.s -o a.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 x.s -o x.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 nox.s -o nox.o
 
-# RUN: ld.lld %t1 -z execstack -o %t
-# RUN: llvm-readobj --program-headers -S %t | FileCheck --check-prefix=RWX %s
+# RUN: ld.lld a.o -z execstack -o out
+# RUN: llvm-readobj --program-headers -S out | FileCheck --check-prefix=RWX %s
 
-# RUN: ld.lld %t1 -o %t
-# RUN: llvm-readobj --program-headers -S %t | FileCheck --check-prefix=RW %s
+# RUN: ld.lld a.o -o out
+# RUN: llvm-readobj --program-headers -S out | FileCheck --check-prefix=RW %s
 
-# RUN: ld.lld %t1 -o %t -z noexecstack
-# RUN: llvm-readobj --program-headers -S %t | FileCheck --check-prefix=RW %s
+# RUN: ld.lld a.o -o out -z noexecstack
+# RUN: llvm-readobj --program-headers -S out | FileCheck --check-prefix=RW %s
 
-# RUN: ld.lld %t1 -o %t -z nognustack
-# RUN: llvm-readobj --program-headers -s %t | FileCheck --check-prefix=NOGNUSTACK %s
+# RUN: ld.lld a.o -o out -z nognustack
+# RUN: llvm-readobj --program-headers -s out | FileCheck --check-prefix=NOGNUSTACK %s
 
 # RW:      Type: PT_GNU_STACK
 # RW-NEXT: Offset: 0x0
@@ -40,5 +43,19 @@
 
 # NOGNUSTACK-NOT: Type: PT_GNU_STACK
 
+# RUN: not ld.lld a.o x.o nox.o x.o 2>&1 | FileCheck %s --check-prefix=ERR --implicit-check-not=error:
+# RUN: not ld.lld a.o x.o nox.o x.o -z nognustack 2>&1 | FileCheck %s --check-prefix=ERR --implicit-check-not=error:
+# ERR-COUNT-2: error: x.o: requires an executable stack, but -z execstack is not specified
+
+# RUN: ld.lld a.o x.o nox.o x.o -z execstack --fatal-warnings
+# RUN: ld.lld -r x.o --fatal-warnings
+
+#--- a.s
 .globl _start
 _start:
+
+#--- x.s
+.section .note.GNU-stack,"x"
+
+#--- nox.s
+.section .note.GNU-stack,""

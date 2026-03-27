@@ -20,6 +20,7 @@
 #include "llvm/IR/TrackingMDRef.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/SMLoc.h"
+#include "llvm/Support/UniqueBBID.h"
 #include <map>
 #include <utility>
 
@@ -37,9 +38,7 @@ class TargetRegisterClass;
 class TargetSubtargetInfo;
 
 struct VRegInfo {
-  enum uint8_t {
-    UNKNOWN, NORMAL, GENERIC, REGBANK
-  } Kind = UNKNOWN;
+  enum : uint8_t { UNKNOWN, NORMAL, GENERIC, REGBANK } Kind = UNKNOWN;
   bool Explicit = false; ///< VReg was explicitly specified in the .mir file.
   union {
     const TargetRegisterClass *RC;
@@ -47,6 +46,7 @@ struct VRegInfo {
   } D;
   Register VReg;
   Register PreferredReg;
+  uint8_t Flags = 0;
 };
 
 using Name2RegClassMap = StringMap<const TargetRegisterClass *>;
@@ -150,6 +150,8 @@ public:
   /// Return null if the name isn't a register bank.
   const RegisterBank *getRegBank(StringRef Name);
 
+  bool getVRegFlagValue(StringRef FlagName, uint8_t &FlagValue) const;
+
   PerTargetMIParsingState(const TargetSubtargetInfo &STI)
     : Subtarget(STI) {
     initNames2RegClasses();
@@ -237,6 +239,8 @@ bool parseVirtualRegisterReference(PerFunctionMIParsingState &PFS,
 bool parseStackObjectReference(PerFunctionMIParsingState &PFS, int &FI,
                                StringRef Src, SMDiagnostic &Error);
 
+bool parsePrefetchTarget(PerFunctionMIParsingState &PFS, CallsiteID &Target,
+                         StringRef Src, SMDiagnostic &Error);
 bool parseMDNode(PerFunctionMIParsingState &PFS, MDNode *&Node, StringRef Src,
                  SMDiagnostic &Error);
 

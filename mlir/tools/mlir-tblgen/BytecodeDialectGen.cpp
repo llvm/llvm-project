@@ -10,6 +10,7 @@
 #include "mlir/TableGen/GenInfo.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/TableGen/Error.h"
@@ -46,8 +47,9 @@ public:
 private:
   /// Emits parse calls to construct given kind.
   void emitParseHelper(StringRef kind, StringRef returnType, StringRef builder,
-                       ArrayRef<Init *> args, ArrayRef<std::string> argNames,
-                       StringRef failure, mlir::raw_indented_ostream &ios);
+                       ArrayRef<const Init *> args,
+                       ArrayRef<std::string> argNames, StringRef failure,
+                       mlir::raw_indented_ostream &ios);
 
   /// Emits print instructions.
   void emitPrintHelper(const Record *memberRec, StringRef kind,
@@ -135,21 +137,23 @@ void Generator::emitParse(StringRef kind, const Record &x) {
       R"(static {0} read{1}(MLIRContext* context, DialectBytecodeReader &reader) )";
   mlir::raw_indented_ostream os(output);
   std::string returnType = getCType(&x);
-  os << formatv(head, kind == "attribute" ? "::mlir::Attribute" : "::mlir::Type", x.getName());
-  DagInit *members = x.getValueAsDag("members");
+  os << formatv(head,
+                kind == "attribute" ? "::mlir::Attribute" : "::mlir::Type",
+                x.getName());
+  const DagInit *members = x.getValueAsDag("members");
   SmallVector<std::string> argNames =
-      llvm::to_vector(map_range(members->getArgNames(), [](StringInit *init) {
+      llvm::map_to_vector(members->getArgNames(), [](const StringInit *init) {
         return init->getAsUnquotedString();
-      }));
+      });
   StringRef builder = x.getValueAsString("cBuilder").trim();
   emitParseHelper(kind, returnType, builder, members->getArgs(), argNames,
                   returnType + "()", os);
   os << "\n\n";
 }
 
-void printParseConditional(mlir::raw_indented_ostream &ios,
-                           ArrayRef<Init *> args,
-                           ArrayRef<std::string> argNames) {
+static void printParseConditional(mlir::raw_indented_ostream &ios,
+                                  ArrayRef<const Init *> args,
+                                  ArrayRef<std::string> argNames) {
   ios << "if ";
   auto parenScope = ios.scope("(", ") {");
   ios.indent();
@@ -158,17 +162,16 @@ void printParseConditional(mlir::raw_indented_ostream &ios,
     return formatv("read{0}", capitalize(name));
   };
 
-  auto parsedArgs =
-      llvm::to_vector(make_filter_range(args, [](Init *const attr) {
-        const Record *def = cast<DefInit>(attr)->getDef();
-        if (def->isSubClassOf("Array"))
-          return true;
-        return !def->getValueAsString("cParser").empty();
-      }));
+  auto parsedArgs = llvm::filter_to_vector(args, [](const Init *const attr) {
+    const Record *def = cast<DefInit>(attr)->getDef();
+    if (def->isSubClassOf("Array"))
+      return true;
+    return !def->getValueAsString("cParser").empty();
+  });
 
   interleave(
       zip(parsedArgs, argNames),
-      [&](std::tuple<llvm::Init *&, const std::string &> it) {
+      [&](std::tuple<const Init *&, const std::string &> it) {
         const Record *attr = cast<DefInit>(std::get<0>(it))->getDef();
         std::string parser;
         if (auto optParser = attr->getValueAsOptionalString("cParser")) {
@@ -196,21 +199,24 @@ void printParseConditional(mlir::raw_indented_ostream &ios,
 }
 
 void Generator::emitParseHelper(StringRef kind, StringRef returnType,
-                                StringRef builder, ArrayRef<Init *> args,
+                                StringRef builder, ArrayRef<const Init *> args,
                                 ArrayRef<std::string> argNames,
                                 StringRef failure,
                                 mlir::raw_indented_ostream &ios) {
   auto funScope = ios.scope("{\n", "}");
 
   if (args.empty()) {
-    ios << formatv("return get<{0}>(context);\n", returnType);
+    ios << formatv(
+        "return getChecked<{0}>([&]() {{ return reader.emitError(); }, "
+        "context);\n",
+        returnType);
     return;
   }
 
   // Print decls.
   std::string lastCType = "";
   for (auto [arg, name] : zip(args, argNames)) {
-    DefInit *first = dyn_cast<DefInit>(arg);
+    const DefInit *first = dyn_cast<DefInit>(arg);
     if (!first)
       PrintFatalError("Unexpected type for " + name);
     const Record *def = first->getDef();
@@ -251,15 +257,14 @@ void Generator::emitParseHelper(StringRef kind, StringRef returnType,
     std::string returnType = getCType(def);
     ios << "auto " << listHelperName(name) << " = [&]() -> FailureOr<"
         << returnType << "> ";
-    SmallVector<Init *> args;
+    SmallVector<const Init *> args;
     SmallVector<std::string> argNames;
     if (def->isSubClassOf("CompositeBytecode")) {
-      DagInit *members = def->getValueAsDag("members");
+      const DagInit *members = def->getValueAsDag("members");
       args = llvm::to_vector(members->getArgs());
-      argNames = llvm::to_vector(
-          map_range(members->getArgNames(), [](StringInit *init) {
-            return init->getAsUnquotedString();
-          }));
+      argNames = llvm::map_to_vector(
+          members->getArgNames(),
+          [](const StringInit *init) { return init->getAsUnquotedString(); });
     } else {
       args = {def->getDefInit()};
       argNames = {"temp"};
@@ -274,8 +279,8 @@ void Generator::emitParseHelper(StringRef kind, StringRef returnType,
   printParseConditional(ios, args, argNames);
 
   // Compute args to pass to create method.
-  auto passedArgs = llvm::to_vector(make_filter_range(
-      argNames, [](StringRef str) { return !str.starts_with("_"); }));
+  auto passedArgs = llvm::filter_to_vector(
+      argNames, [](StringRef str) { return !str.starts_with("_"); });
   std::string argStr;
   raw_string_ostream argStream(argStr);
   interleaveComma(passedArgs, argStream,
@@ -299,7 +304,7 @@ void Generator::emitPrint(StringRef kind, StringRef type,
     return;
 
   char const *head =
-      R"(static void write({0} {1}, DialectBytecodeWriter &writer) )";
+      R"(static LogicalResult write({0} {1}, DialectBytecodeWriter &writer) )";
   mlir::raw_indented_ostream os(output);
   os << formatv(head, type, kind);
   auto funScope = os.scope("{\n", "}\n\n");
@@ -313,7 +318,7 @@ void Generator::emitPrint(StringRef kind, StringRef type,
         StringRef pred = rec->getValueAsString("printerPredicate");
         if (vec.size() > 1 && pred.empty())
           PrintError(rec->getLoc(),
-                     "Requires parsing predicate given common cType");
+                     "Requires printing predicate given common cType");
       }
       PrintFatalError("Unspecified for shared cType " + type);
     }
@@ -332,17 +337,21 @@ void Generator::emitPrint(StringRef kind, StringRef type,
     auto *members = rec->getValueAsDag("members");
     for (auto [arg, name] :
          llvm::zip(members->getArgs(), members->getArgNames())) {
-      DefInit *def = dyn_cast<DefInit>(arg);
+      const DefInit *def = dyn_cast<DefInit>(arg);
       assert(def);
       const Record *memberRec = def->getDef();
       emitPrintHelper(memberRec, kind, kind, name->getAsUnquotedString(), os);
     }
 
     if (!pred.empty()) {
+      os << "return success();\n";
       os.unindent();
       os << "}\n";
+    } else {
+      os << "return success();\n";
     }
   }
+  os << "return failure();\n";
 }
 
 void Generator::emitPrintHelper(const Record *memberRec, StringRef kind,
@@ -385,7 +394,7 @@ void Generator::emitPrintHelper(const Record *memberRec, StringRef kind,
     auto *members = memberRec->getValueAsDag("members");
     for (auto [arg, argName] :
          zip(members->getArgs(), members->getArgNames())) {
-      DefInit *def = dyn_cast<DefInit>(arg);
+      const DefInit *def = dyn_cast<DefInit>(arg);
       assert(def);
       emitPrintHelper(def->getDef(), kind, parent,
                       argName->getAsUnquotedString(), ios);
@@ -416,7 +425,7 @@ void Generator::emitPrintDispatch(StringRef kind, ArrayRef<std::string> vec) {
 
     os << "\n.Case([&](" << type << " t)";
     auto caseScope = os.scope(" {\n", "})");
-    os << "return write(t, writer), success();\n";
+    os << "return write(t, writer);\n";
   }
   os << "\n.Default([&](" << capitalize(kind) << ") { return failure(); });\n";
 }
@@ -473,9 +482,8 @@ static bool emitBCRW(const RecordKeeper &records, raw_ostream &os) {
     gen.emitParseDispatch(kind, *vec);
 
     SmallVector<std::string> types;
-    for (const auto &it : perType) {
+    for (const auto &it : perType)
       types.push_back(it.first);
-    }
     gen.emitPrintDispatch(kind, types);
   }
 

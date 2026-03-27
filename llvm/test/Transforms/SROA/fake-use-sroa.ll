@@ -1,5 +1,5 @@
 ; RUN: opt -S -passes=sroa %s | FileCheck %s
-; With fake use instrinsics generated for small aggregates, check that when
+; With fake use intrinsics generated for small aggregates, check that when
 ; SROA slices the aggregate, we generate individual fake use intrinsics for
 ; the individual values.
 
