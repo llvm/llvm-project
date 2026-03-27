@@ -1,16 +1,29 @@
 import os
 
-config.my_src_root = r'@CMAKE_CURRENT_SOURCE_DIR@'
-config.my_obj_root = r'@CMAKE_CURRENT_BINARY_DIR@'
+def _fwd(p):
+    """Normalize path to forward slashes so it is safe in bash scripts."""
+    return p.replace("\\", "/")
+
+config.my_src_root = _fwd(r'@CMAKE_CURRENT_SOURCE_DIR@')
+config.my_obj_root = _fwd(r'@CMAKE_CURRENT_BINARY_DIR@')
 
 config.comgr_disable_spirv = @COMGR_DISABLE_SPIRV@
 
-# Needed for Comgr binaries
-config.environment['PATH'] = os.pathsep.join(["@CMAKE_CURRENT_BINARY_DIR@",
+config.llvm_tools_dir = _fwd(r'@LLVM_TOOLS_BINARY_DIR@')
+config.comgr_obj_dir = config.my_obj_root
+config.comgr_lib_dir = _fwd(os.path.dirname(config.my_obj_root))
+
+# Needed for clang, llvm-dis, etc.
+config.environment['PATH'] = os.pathsep.join([config.llvm_tools_dir,
                                               config.environment['PATH']])
 
-# Set path to LLVM tools for substitutions
-config.llvm_tools_dir = r'@LLVM_TOOLS_BINARY_DIR@'
+# Needed for amd_comgr shared library (DLL on Windows)
+config.environment['PATH'] = os.pathsep.join([config.comgr_lib_dir,
+                                              config.environment['PATH']])
+
+# Needed for Comgr test binaries
+config.environment['PATH'] = os.pathsep.join([config.comgr_obj_dir,
+                                              config.environment['PATH']])
 
 lit_config.load_config(
       config, os.path.join(config.my_src_root, "lit.cfg.py"))
