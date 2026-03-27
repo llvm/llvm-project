@@ -1,6 +1,7 @@
 // RUN: mlir-tblgen -gen-op-defs -I %S/../../include %s | FileCheck %s
 
 include "mlir/IR/OpBase.td"
+include "mlir/IR/EnumAttr.td"
 
 def TestDialect : Dialect {
   let name = "test";
@@ -101,6 +102,79 @@ def CustomStringLiteralC : TestFormat_Op<[{
 def CustomStringLiteralD : TestFormat_Op<[{
   custom<Foo>(prop-dict) attr-dict
 }]>;
+
+//===----------------------------------------------------------------------===//
+// EnumAttr formatting
+//===----------------------------------------------------------------------===//
+
+// Test that EnumAttr (backed by EnumInfo, not EnumAttrInfo) is recognized as
+// an enum attribute and uses the enum-keyword format path.
+
+def TestEnumCase0 : I32EnumCase<"Case0", 0>;
+def TestEnumCase1 : I32EnumCase<"Case1", 1>;
+
+def TestEnum : I32Enum<"TestEnum", "a test enum", [TestEnumCase0, TestEnumCase1]> {
+  let cppNamespace = "::test";
+}
+
+def TestEnumAttr : EnumAttr<TestDialect, TestEnum, "enum">;
+
+// Default-valued optional attributes have a non-optional getter.
+
+// CHECK-LABEL: DefaultOptionalEnumAttrOp::print
+// CHECK: auto caseValue = getAttr();
+def DefaultOptionalEnumAttrOp : TestFormat_Op<"($attr^)? attr-dict">,
+    Arguments<(ins DefaultValuedOptionalAttr<
+        TestEnumAttr, "::test::TestEnum::Case0">:$attr)>;
+
+// CHECK-LABEL: EnumAttrOp::parse
+// CHECK: symbolizeTestEnum
+// CHECK-LABEL: EnumAttrOp::print
+// CHECK: stringifyTestEnum
+def EnumAttrOp : TestFormat_Op<"$attr attr-dict">,
+    Arguments<(ins TestEnumAttr:$attr)>;
+
+// Unquoted bit enums use a separator-aware attribute parser instead of the
+// operation-level enum parser, which only accepts one keyword or string.
+
+def TestBitEnumNone : I32BitEnumCaseNone<"None">;
+def TestBitEnumBit0 : I32BitEnumCaseBit<"Bit0", 0>;
+def TestBitEnumBit1 : I32BitEnumCaseBit<"Bit1", 1>;
+
+def TestBitEnum : I32BitEnum<"TestBitEnum", "a test bit enum",
+                             [TestBitEnumNone, TestBitEnumBit0,
+                              TestBitEnumBit1]> {
+  let cppNamespace = "::test";
+  let printBitEnumQuoted = 0;
+}
+
+def TestBitEnumAttr : EnumAttr<TestDialect, TestBitEnum, "bit_enum">;
+
+// CHECK-LABEL: EnumAttrUnquotedBitOp::parse
+// CHECK: parseCustomAttributeWithFallback
+// CHECK-NOT: symbolizeTestBitEnum
+// CHECK-LABEL: EnumAttrUnquotedBitOp::print
+// CHECK: printStrippedAttrOrType(getAttrAttr())
+def EnumAttrUnquotedBitOp : TestFormat_Op<"$attr attr-dict">,
+    Arguments<(ins TestBitEnumAttr:$attr)>;
+
+// Test that legacy EnumAttrInfo-based attributes (I32EnumAttr) also use the
+// enum-keyword format path.
+
+def LegacyEnumCase0 : I32EnumAttrCase<"LCase0", 0>;
+def LegacyEnumCase1 : I32EnumAttrCase<"LCase1", 1>;
+
+def LegacyTestEnum : I32EnumAttr<"LegacyTestEnum", "a legacy test enum",
+                                 [LegacyEnumCase0, LegacyEnumCase1]> {
+  let cppNamespace = "::test";
+}
+
+// CHECK-LABEL: LegacyEnumAttrOp::parse
+// CHECK: symbolizeLegacyTestEnum
+// CHECK-LABEL: LegacyEnumAttrOp::print
+// CHECK: stringifyLegacyTestEnum
+def LegacyEnumAttrOp : TestFormat_Op<"$attr attr-dict">,
+    Arguments<(ins LegacyTestEnum:$attr)>;
 
 //===----------------------------------------------------------------------===//
 // Optional Groups
