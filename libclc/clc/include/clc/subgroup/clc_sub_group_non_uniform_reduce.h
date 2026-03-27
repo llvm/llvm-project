@@ -11,10 +11,10 @@
 
 #include "clc/internal/clc.h"
 
-#define __CLC_BODY "clc/subgroup/clc_sub_group_non_uniform_reduce.inc"
+#define __CLC_BODY "clc/subgroup/clc_sub_group_non_uniform_reduce_decl.inc"
 #include "clc/integer/gentype.inc"
 
-#define __CLC_BODY "clc/subgroup/clc_sub_group_non_uniform_reduce.inc"
+#define __CLC_BODY "clc/subgroup/clc_sub_group_non_uniform_reduce_decl.inc"
 #include "clc/math/gentype.inc"
 
 _CLC_DECL _CLC_OVERLOAD int
