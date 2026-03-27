@@ -695,10 +695,7 @@ private:
     // current implementation, there is no connection between a bounded iterator and its associated container, so we
     // don't have a way to update existing valid iterators when the container is resized and thus have to go with
     // a laxer approach.
-    return std::__make_bounded_iter(
-        std::__wrap_iter<pointer>(__p),
-        std::__wrap_iter<pointer>(this->__layout_.__begin_ptr()),
-        std::__wrap_iter<pointer>(this->__layout_.__capacity_ptr()));
+    return std::__make_bounded_iter(__p, __layout_.__begin_ptr(),__layout_.__capacity_ptr());
 #else
     return iterator(__p);
 #endif // _LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR
@@ -707,10 +704,7 @@ private:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_iterator __make_iter(const_pointer __p) const _NOEXCEPT {
 #ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR
     // Bound the iterator according to the capacity, rather than the size.
-    return std::__make_bounded_iter(
-        std::__wrap_iter<const_pointer>(__p),
-        std::__wrap_iter<const_pointer>(this->__layout_.__begin_ptr()),
-        std::__wrap_iter<const_pointer>(this->__layout_.__capacity_ptr()));
+    return std::__make_bounded_iter(__p, __layout_.__begin_ptr(), __layout_.__capacity_ptr());
 #else
     return const_iterator(__p);
 #endif // _LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR
