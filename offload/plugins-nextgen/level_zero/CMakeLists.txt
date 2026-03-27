@@ -1,3 +1,10 @@
+# Find Level Zero headers and libraries
+find_path(LIBOMPTARGET_DEP_LEVEL_ZERO_INCLUDE_DIR NAMES level_zero/ze_api.h)
+if(LIBOMPTARGET_DEP_LEVEL_ZERO_INCLUDE_DIR)
+  find_library(LIBOMPTARGET_DEP_LEVEL_ZERO_LIBRARY NAMES ze_loader)
+endif()
+
+
 # Create the library and add the default arguments.
 add_target_library(omptarget.rtl.level_zero LEVEL_ZERO)
 
@@ -28,7 +35,7 @@ target_include_directories(omptarget.rtl.level_zero PRIVATE
 if (LIBOMPTARGET_DEP_LEVEL_ZERO_LIBRARY AND NOT "level_zero" IN_LIST LIBOMPTARGET_DLOPEN_PLUGINS)
   message(STATUS "Building Level Zero NG plugin linked against level_zero library")
   target_include_directories(omptarget.rtl.level_zero PRIVATE
-    ${LIBOMPTARGET_DEP_LEVEL_ZERO_INCLUDE_DIRS}
+    ${LIBOMPTARGET_DEP_LEVEL_ZERO_INCLUDE_DIR}
   )
   if(UNIX)
     target_link_libraries(omptarget.rtl.level_zero PRIVATE
