@@ -34,7 +34,7 @@ def ReductionTreePass : Pass<"reduction-tree"> {
   ] # CommonReductionPassOptions.options;
 }
 
-def OptReductionPass : Pass<"opt-reduction-pass", "ModuleOp"> {
+def OptReductionPass : Pass<"opt-reduction-pass"> {
   let summary = "A wrapper pass that reduces the file with optimization passes";
 
   let options = [
