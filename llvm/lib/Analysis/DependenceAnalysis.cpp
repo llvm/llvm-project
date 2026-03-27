@@ -85,8 +85,6 @@ STATISTIC(WeakZeroSIVsuccesses, "Weak-Zero SIV successes");
 STATISTIC(WeakZeroSIVindependence, "Weak-Zero SIV independence");
 STATISTIC(ExactRDIVapplications, "Exact RDIV applications");
 STATISTIC(ExactRDIVindependence, "Exact RDIV independence");
-STATISTIC(SymbolicRDIVapplications, "Symbolic RDIV applications");
-STATISTIC(SymbolicRDIVindependence, "Symbolic RDIV independence");
 STATISTIC(GCDapplications, "GCD applications");
 STATISTIC(GCDsuccesses, "GCD successes");
 STATISTIC(GCDindependence, "GCD independence");
@@ -121,7 +119,6 @@ enum class DependenceTestType {
   ExactSIV,
   WeakZeroSIV,
   ExactRDIV,
-  SymbolicRDIV,
   GCDMIV,
   BanerjeeMIV,
 };
@@ -148,8 +145,6 @@ static cl::opt<DependenceTestType> EnableDependenceTest(
                           "Enable only Weak-Zero SIV test."),
                clEnumValN(DependenceTestType::ExactRDIV, "exact-rdiv",
                           "Enable only Exact RDIV test."),
-               clEnumValN(DependenceTestType::SymbolicRDIV, "symbolic-rdiv",
-                          "Enable only Symbolic RDIV test."),
                clEnumValN(DependenceTestType::GCDMIV, "gcd-miv",
                           "Enable only GCD MIV test."),
                clEnumValN(DependenceTestType::BanerjeeMIV, "banerjee-miv",
@@ -1141,13 +1136,18 @@ const SCEV *DependenceInfo::collectUpperBound(const Loop *L, Type *T) const {
   return nullptr;
 }
 
-// Calls collectUpperBound(), then attempts to cast it to SCEVConstant.
-// If the cast fails, returns NULL.
-const SCEVConstant *DependenceInfo::collectConstantUpperBound(const Loop *L,
-                                                              Type *T) const {
+// Calls collectUpperBound(), then attempts to cast it to APInt.
+// If the cast fails, returns std::nullopt.
+std::optional<APInt>
+DependenceInfo::collectNonNegativeConstantUpperBound(const Loop *L,
+                                                     Type *T) const {
   if (const SCEV *UB = collectUpperBound(L, T))
-    return dyn_cast<SCEVConstant>(UB);
-  return nullptr;
+    if (auto *C = dyn_cast<SCEVConstant>(UB)) {
+      APInt Res = C->getAPInt();
+      if (Res.isNonNegative())
+        return Res;
+    }
+  return std::nullopt;
 }
 
 /// Returns \p A - \p B if it guaranteed not to signed wrap. Otherwise returns
@@ -1246,15 +1246,6 @@ bool DependenceInfo::strongSIVtest(const SCEVAddRecExpr *Src,
   ++StrongSIVapplications;
   assert(0 < Level && Level <= CommonLevels && "level out of range");
   Level--;
-
-  // First try to prove independence based on the ranges of the two subscripts.
-  ConstantRange SrcRange = SE->getSignedRange(Src);
-  ConstantRange DstRange = SE->getSignedRange(Dst);
-  if (SrcRange.intersectWith(DstRange).isEmptySet()) {
-    ++StrongSIVindependence;
-    ++StrongSIVsuccesses;
-    return true;
-  }
 
   const SCEV *Delta = minusSCEVNoSignedOverflow(SrcConst, DstConst, *SE);
   if (!Delta)
@@ -1372,14 +1363,19 @@ bool DependenceInfo::strongSIVtest(const SCEVAddRecExpr *Src,
 // Can determine iteration for splitting.
 //
 // Return true if dependence disproved.
-bool DependenceInfo::weakCrossingSIVtest(const SCEV *Coeff,
-                                         const SCEV *SrcConst,
-                                         const SCEV *DstConst,
-                                         const Loop *CurSrcLoop,
-                                         const Loop *CurDstLoop, unsigned Level,
+bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
+                                         const SCEVAddRecExpr *Dst,
+                                         unsigned Level,
                                          FullDependence &Result) const {
   if (!isDependenceTestEnabled(DependenceTestType::WeakCrossingSIV))
     return false;
+
+  const SCEV *Coeff = Src->getStepRecurrence(*SE);
+  const SCEV *SrcConst = Src->getStart();
+  const SCEV *DstConst = Dst->getStart();
+
+  assert(Coeff == SE->getNegativeSCEV(Dst->getStepRecurrence(*SE)) &&
+         "Unexpected input for weakCrossingSIVtest");
 
   LLVM_DEBUG(dbgs() << "\tWeak-Crossing SIV test\n");
   LLVM_DEBUG(dbgs() << "\t    Coeff = " << *Coeff << "\n");
@@ -1390,7 +1386,7 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEV *Coeff,
   Level--;
   const SCEV *Delta = SE->getMinusSCEV(DstConst, SrcConst);
   LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
-  if (Delta->isZero()) {
+  if (Delta->isZero() && SE->isKnownNonZero(Coeff)) {
     Result.DV[Level].Direction &= ~Dependence::DVEntry::LT;
     Result.DV[Level].Direction &= ~Dependence::DVEntry::GT;
     ++WeakCrossingSIVsuccesses;
@@ -1430,6 +1426,7 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEV *Coeff,
 
   // We're certain that Delta > 0 and ConstCoeff > 0.
   // Check Delta/(2*ConstCoeff) against upper loop bound
+  const Loop *CurSrcLoop = Src->getLoop();
   if (const SCEV *UpperBound =
           collectUpperBound(CurSrcLoop, Delta->getType())) {
     LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound << "\n");
@@ -1437,12 +1434,6 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEV *Coeff,
     const SCEV *ML =
         SE->getMulExpr(SE->getMulExpr(ConstCoeff, UpperBound), ConstantTwo);
     LLVM_DEBUG(dbgs() << "\t    ML = " << *ML << "\n");
-    if (SE->isKnownPredicate(CmpInst::ICMP_SGT, Delta, ML)) {
-      // Delta too big, no dependence
-      ++WeakCrossingSIVindependence;
-      ++WeakCrossingSIVsuccesses;
-      return true;
-    }
     if (SE->isKnownPredicate(CmpInst::ICMP_EQ, Delta, ML)) {
       // i = i' = UB
       Result.DV[Level].Direction &= ~Dependence::DVEntry::LT;
@@ -1473,10 +1464,7 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEV *Coeff,
   LLVM_DEBUG(dbgs() << "\t    Distance = " << Distance << "\n");
 
   // if 2*Coeff doesn't divide Delta, then the equal direction isn't possible
-  APInt Two = APInt(Distance.getBitWidth(), 2, true);
-  Remainder = Distance.srem(Two);
-  LLVM_DEBUG(dbgs() << "\t    Remainder = " << Remainder << "\n");
-  if (Remainder != 0) {
+  if (Distance[0]) {
     // Equal direction isn't possible
     Result.DV[Level].Direction &= ~Dependence::DVEntry::EQ;
     ++WeakCrossingSIVsuccesses;
@@ -1567,11 +1555,11 @@ ceilingOfQuotient(const OverflowSafeSignedAPInt &OA,
 /// integer, infer the possible range of k based on the known range of the
 /// affine expression. If we know A*k + B is non-negative, i.e.,
 ///
-///   A*k + B >= 0
+///   A*k + B >=s 0
 ///
 /// we can derive the following inequalities for k when A is positive:
 ///
-///   k >= -B / A
+///   k >=s -B / A
 ///
 /// Since k is an integer, it means k is greater than or equal to the
 /// ceil(-B / A).
@@ -1579,11 +1567,11 @@ ceilingOfQuotient(const OverflowSafeSignedAPInt &OA,
 /// If the upper bound of the affine expression \p UB is passed, the following
 /// inequality can be derived as well:
 ///
-///   A*k + B <= UB
+///   A*k + B <=s UB
 ///
 /// which leads to:
 ///
-///   k <= (UB - B) / A
+///   k <=s (UB - B) / A
 ///
 /// Again, as k is an integer, it means k is less than or equal to the
 /// floor((UB - B) / A).
@@ -1591,12 +1579,14 @@ ceilingOfQuotient(const OverflowSafeSignedAPInt &OA,
 /// The similar logic applies when A is negative, but the inequalities sign flip
 /// while working with them.
 ///
-/// Preconditions: \p A is non-zero, and we know A*k + B is non-negative.
+/// Preconditions: \p A is non-zero, and we know A*k + B and \p UB are
+/// non-negative.
 static std::pair<OverflowSafeSignedAPInt, OverflowSafeSignedAPInt>
 inferDomainOfAffine(OverflowSafeSignedAPInt A, OverflowSafeSignedAPInt B,
                     OverflowSafeSignedAPInt UB) {
   assert(A && B && "A and B must be available");
   assert(*A != 0 && "A must be non-zero");
+  assert((!UB || UB->isNonNegative()) && "UB must be non-negative");
   OverflowSafeSignedAPInt TL, TU;
   if (A->sgt(0)) {
     TL = ceilingOfQuotient(-B, A);
@@ -1683,13 +1673,10 @@ bool DependenceInfo::exactSIVtest(const SCEVAddRecExpr *Src,
   LLVM_DEBUG(dbgs() << "\t    X = " << X << ", Y = " << Y << "\n");
 
   // since SCEV construction normalizes, LM = 0
-  std::optional<APInt> UM;
-  // UM is perhaps unavailable, let's check
-  if (const SCEVConstant *CUB =
-          collectConstantUpperBound(Src->getLoop(), Delta->getType())) {
-    UM = CUB->getAPInt();
+  std::optional<APInt> UM =
+      collectNonNegativeConstantUpperBound(Src->getLoop(), Delta->getType());
+  if (UM)
     LLVM_DEBUG(dbgs() << "\t    UM = " << *UM << "\n");
-  }
 
   APInt TU(APInt::getSignedMaxValue(Bits));
   APInt TL(APInt::getSignedMinValue(Bits));
@@ -1796,6 +1783,71 @@ static bool isRemainderZero(const SCEVConstant *Dividend,
   return ConstDividend.srem(ConstDivisor) == 0;
 }
 
+bool DependenceInfo::weakZeroSIVtestImpl(const SCEVAddRecExpr *AR,
+                                         const SCEV *Const, unsigned Level,
+                                         FullDependence &Result) const {
+  const SCEV *ARCoeff = AR->getStepRecurrence(*SE);
+  const SCEV *ARConst = AR->getStart();
+
+  if (!AR->hasNoSignedWrap())
+    return false;
+
+  if (Const == ARConst && SE->isKnownNonZero(ARCoeff)) {
+    if (Level < CommonLevels) {
+      Result.DV[Level].Direction &= Dependence::DVEntry::LE;
+      ++WeakZeroSIVsuccesses;
+    }
+    return false; // dependences caused by first iteration
+  }
+
+  const SCEV *Delta = minusSCEVNoSignedOverflow(Const, ARConst, *SE);
+  if (!Delta)
+    return false;
+  const SCEVConstant *ConstCoeff = dyn_cast<SCEVConstant>(ARCoeff);
+  if (!ConstCoeff)
+    return false;
+
+  const SCEV *NewDelta =
+      SE->isKnownNegative(ConstCoeff) ? SE->getNegativeSCEV(Delta) : Delta;
+
+  if (const SCEV *UpperBound =
+          collectUpperBound(AR->getLoop(), Delta->getType())) {
+    LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound << "\n");
+    bool OverlapAtLast = [&] {
+      if (!SE->isKnownNonZero(ConstCoeff))
+        return false;
+      const SCEV *Last = AR->evaluateAtIteration(UpperBound, *SE);
+      return Last == Const;
+    }();
+    if (OverlapAtLast) {
+      // dependences caused by last iteration
+      if (Level < CommonLevels) {
+        Result.DV[Level].Direction &= Dependence::DVEntry::GE;
+        ++WeakZeroSIVsuccesses;
+      }
+      return false;
+    }
+  }
+
+  // check that Delta/ARCoeff >= 0
+  // really check that NewDelta >= 0
+  if (SE->isKnownNegative(NewDelta)) {
+    // No dependence, newDelta < 0
+    ++WeakZeroSIVindependence;
+    ++WeakZeroSIVsuccesses;
+    return true;
+  }
+
+  // if ARCoeff doesn't divide Delta, then no dependence
+  if (isa<SCEVConstant>(Delta) &&
+      !isRemainderZero(cast<SCEVConstant>(Delta), ConstCoeff)) {
+    ++WeakZeroSIVindependence;
+    ++WeakZeroSIVsuccesses;
+    return true;
+  }
+  return false;
+}
+
 // weakZeroSrcSIVtest -
 // From the paper, Practical Dependence Testing, Section 4.2.2
 //
@@ -1835,8 +1887,8 @@ bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *SrcConst,
   // For the WeakSIV test, it's possible the loop isn't common to
   // the Src and Dst loops. If it isn't, then there's no need to
   // record a direction.
-  const SCEV *DstCoeff = Dst->getStepRecurrence(*SE);
-  const SCEV *DstConst = Dst->getStart();
+  [[maybe_unused]] const SCEV *DstCoeff = Dst->getStepRecurrence(*SE);
+  [[maybe_unused]] const SCEV *DstConst = Dst->getStart();
   LLVM_DEBUG(dbgs() << "\tWeak-Zero (src) SIV test\n");
   LLVM_DEBUG(dbgs() << "\t    DstCoeff = " << *DstCoeff << "\n");
   LLVM_DEBUG(dbgs() << "\t    SrcConst = " << *SrcConst << "\n");
@@ -1845,68 +1897,15 @@ bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *SrcConst,
   assert(0 < Level && Level <= MaxLevels && "Level out of range");
   Level--;
 
-  ConstantRange SrcRange = SE->getSignedRange(SrcConst);
-  ConstantRange DstRange = SE->getSignedRange(Dst);
-  if (SrcRange.intersectWith(DstRange).isEmptySet()) {
-    ++WeakZeroSIVindependence;
-    ++WeakZeroSIVsuccesses;
-    return true;
-  }
-
-  if (SrcConst == DstConst && SE->isKnownNonZero(DstCoeff)) {
-    if (Level < CommonLevels) {
-      Result.DV[Level].Direction &= Dependence::DVEntry::GE;
-      ++WeakZeroSIVsuccesses;
-    }
-    return false; // dependences caused by first iteration
-  }
-  const SCEV *Delta = minusSCEVNoSignedOverflow(SrcConst, DstConst, *SE);
-  if (!Delta)
-    return false;
-  LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
-  const SCEVConstant *ConstCoeff = dyn_cast<SCEVConstant>(DstCoeff);
-  if (!ConstCoeff)
-    return false;
-
-  // Since ConstCoeff is constant, !isKnownNegative means it's non-negative.
-  // TODO: Bail out if it's a signed minimum value.
-  const SCEV *AbsCoeff = SE->isKnownNegative(ConstCoeff)
-                             ? SE->getNegativeSCEV(ConstCoeff)
-                             : ConstCoeff;
-  const SCEV *NewDelta =
-      SE->isKnownNegative(ConstCoeff) ? SE->getNegativeSCEV(Delta) : Delta;
-
-  if (const SCEV *UpperBound =
-          collectUpperBound(Dst->getLoop(), Delta->getType())) {
-    LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound << "\n");
-    const SCEV *Product = SE->getMulExpr(AbsCoeff, UpperBound);
-    if (SE->isKnownPredicate(CmpInst::ICMP_EQ, NewDelta, Product)) {
-      // dependences caused by last iteration
-      if (Level < CommonLevels) {
-        Result.DV[Level].Direction &= Dependence::DVEntry::LE;
-        ++WeakZeroSIVsuccesses;
-      }
-      return false;
-    }
-  }
-
-  // check that Delta/SrcCoeff >= 0
-  // really check that NewDelta >= 0
-  if (SE->isKnownNegative(NewDelta)) {
-    // No dependence, newDelta < 0
-    ++WeakZeroSIVindependence;
-    ++WeakZeroSIVsuccesses;
-    return true;
-  }
-
-  // if SrcCoeff doesn't divide Delta, then no dependence
-  if (isa<SCEVConstant>(Delta) &&
-      !isRemainderZero(cast<SCEVConstant>(Delta), ConstCoeff)) {
-    ++WeakZeroSIVindependence;
-    ++WeakZeroSIVsuccesses;
-    return true;
-  }
-  return false;
+  // We have analyzed a dependence from Src to Dst, so \c Result may represent a
+  // dependence in that direction. However, \c weakZeroSIVtestImpl will analyze
+  // a dependence from \c Dst to \c SrcConst. To keep the consistency, we need
+  // to negate the current result before passing it to \c weakZeroSIVtestImpl,
+  // and negate it back after that.
+  Result.negate(*SE);
+  bool Res = weakZeroSIVtestImpl(Dst, SrcConst, Level, Result);
+  Result.negate(*SE);
+  return Res;
 }
 
 // weakZeroDstSIVtest -
@@ -1946,8 +1945,8 @@ bool DependenceInfo::weakZeroDstSIVtest(const SCEVAddRecExpr *Src,
 
   // For the WeakSIV test, it's possible the loop isn't common to the
   // Src and Dst loops. If it isn't, then there's no need to record a direction.
-  const SCEV *SrcCoeff = Src->getStepRecurrence(*SE);
-  const SCEV *SrcConst = Src->getStart();
+  [[maybe_unused]] const SCEV *SrcCoeff = Src->getStepRecurrence(*SE);
+  [[maybe_unused]] const SCEV *SrcConst = Src->getStart();
   LLVM_DEBUG(dbgs() << "\tWeak-Zero (dst) SIV test\n");
   LLVM_DEBUG(dbgs() << "\t    SrcCoeff = " << *SrcCoeff << "\n");
   LLVM_DEBUG(dbgs() << "\t    SrcConst = " << *SrcConst << "\n");
@@ -1956,68 +1955,7 @@ bool DependenceInfo::weakZeroDstSIVtest(const SCEVAddRecExpr *Src,
   assert(0 < Level && Level <= SrcLevels && "Level out of range");
   Level--;
 
-  ConstantRange SrcRange = SE->getSignedRange(Src);
-  ConstantRange DstRange = SE->getSignedRange(DstConst);
-  if (SrcRange.intersectWith(DstRange).isEmptySet()) {
-    ++WeakZeroSIVindependence;
-    ++WeakZeroSIVsuccesses;
-    return true;
-  }
-
-  if (DstConst == SrcConst && SE->isKnownNonZero(SrcCoeff)) {
-    if (Level < CommonLevels) {
-      Result.DV[Level].Direction &= Dependence::DVEntry::LE;
-      ++WeakZeroSIVsuccesses;
-    }
-    return false; // dependences caused by first iteration
-  }
-  const SCEV *Delta = minusSCEVNoSignedOverflow(DstConst, SrcConst, *SE);
-  if (!Delta)
-    return false;
-  LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
-  const SCEVConstant *ConstCoeff = dyn_cast<SCEVConstant>(SrcCoeff);
-  if (!ConstCoeff)
-    return false;
-
-  // Since ConstCoeff is constant, !isKnownNegative means it's non-negative.
-  // TODO: Bail out if it's a signed minimum value.
-  const SCEV *AbsCoeff = SE->isKnownNegative(ConstCoeff)
-                             ? SE->getNegativeSCEV(ConstCoeff)
-                             : ConstCoeff;
-  const SCEV *NewDelta =
-      SE->isKnownNegative(ConstCoeff) ? SE->getNegativeSCEV(Delta) : Delta;
-
-  if (const SCEV *UpperBound =
-          collectUpperBound(Src->getLoop(), Delta->getType())) {
-    LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound << "\n");
-    const SCEV *Product = SE->getMulExpr(AbsCoeff, UpperBound);
-    if (SE->isKnownPredicate(CmpInst::ICMP_EQ, NewDelta, Product)) {
-      // dependences caused by last iteration
-      if (Level < CommonLevels) {
-        Result.DV[Level].Direction &= Dependence::DVEntry::GE;
-        ++WeakZeroSIVsuccesses;
-      }
-      return false;
-    }
-  }
-
-  // check that Delta/SrcCoeff >= 0
-  // really check that NewDelta >= 0
-  if (SE->isKnownNegative(NewDelta)) {
-    // No dependence, newDelta < 0
-    ++WeakZeroSIVindependence;
-    ++WeakZeroSIVsuccesses;
-    return true;
-  }
-
-  // if SrcCoeff doesn't divide Delta, then no dependence
-  if (isa<SCEVConstant>(Delta) &&
-      !isRemainderZero(cast<SCEVConstant>(Delta), ConstCoeff)) {
-    ++WeakZeroSIVindependence;
-    ++WeakZeroSIVsuccesses;
-    return true;
-  }
-  return false;
+  return weakZeroSIVtestImpl(Src, DstConst, Level, Result);
 }
 
 // exactRDIVtest - Tests the RDIV subscript pair for dependence.
@@ -2062,21 +2000,15 @@ bool DependenceInfo::exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   LLVM_DEBUG(dbgs() << "\t    X = " << X << ", Y = " << Y << "\n");
 
   // since SCEV construction seems to normalize, LM = 0
-  std::optional<APInt> SrcUM;
-  // SrcUM is perhaps unavailable, let's check
-  if (const SCEVConstant *UpperBound =
-          collectConstantUpperBound(SrcLoop, Delta->getType())) {
-    SrcUM = UpperBound->getAPInt();
+  std::optional<APInt> SrcUM =
+      collectNonNegativeConstantUpperBound(SrcLoop, Delta->getType());
+  if (SrcUM)
     LLVM_DEBUG(dbgs() << "\t    SrcUM = " << *SrcUM << "\n");
-  }
 
-  std::optional<APInt> DstUM;
-  // UM is perhaps unavailable, let's check
-  if (const SCEVConstant *UpperBound =
-          collectConstantUpperBound(DstLoop, Delta->getType())) {
-    DstUM = UpperBound->getAPInt();
+  std::optional<APInt> DstUM =
+      collectNonNegativeConstantUpperBound(DstLoop, Delta->getType());
+  if (DstUM)
     LLVM_DEBUG(dbgs() << "\t    DstUM = " << *DstUM << "\n");
-  }
 
   APInt TU(APInt::getSignedMaxValue(Bits));
   APInt TL(APInt::getSignedMinValue(Bits));
@@ -2132,66 +2064,6 @@ bool DependenceInfo::exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   return TL.sgt(TU);
 }
 
-// symbolicRDIVtest -
-// In Section 4.5 of the Practical Dependence Testing paper,the authors
-// introduce a special case of Banerjee's Inequalities (also called the
-// Extreme-Value Test) that can handle some of the SIV and RDIV cases,
-// particularly cases with symbolics. Since it's only able to disprove
-// dependence (not compute distances or directions), we'll use it as a
-// fall back for the other tests.
-//
-// When we have a pair of subscripts of the form [c1 + a1*i] and [c2 + a2*j]
-// where i and j are induction variables and c1 and c2 are loop invariants,
-// we can use the symbolic tests to disprove some dependences, serving as a
-// backup for the RDIV test. Note that i and j can be the same variable,
-// letting this test serve as a backup for the various SIV tests.
-//
-// For a dependence to exist, c1 + a1*i must equal c2 + a2*j for some
-//  0 <= i <= N1 and some 0 <= j <= N2, where N1 and N2 are the (normalized)
-// loop bounds for the i and j loops, respectively. So, ...
-//
-// c1 + a1*i = c2 + a2*j
-// a1*i - a2*j = c2 - c1
-//
-// To test for a dependence, we compute c2 - c1 and make sure it's in the
-// range of the maximum and minimum possible values of a1*i - a2*j.
-// Considering the signs of a1 and a2, we have 4 possible cases:
-//
-// 1) If a1 >= 0 and a2 >= 0, then
-//        a1*0 - a2*N2 <= c2 - c1 <= a1*N1 - a2*0
-//              -a2*N2 <= c2 - c1 <= a1*N1
-//
-// 2) If a1 >= 0 and a2 <= 0, then
-//        a1*0 - a2*0 <= c2 - c1 <= a1*N1 - a2*N2
-//                  0 <= c2 - c1 <= a1*N1 - a2*N2
-//
-// 3) If a1 <= 0 and a2 >= 0, then
-//        a1*N1 - a2*N2 <= c2 - c1 <= a1*0 - a2*0
-//        a1*N1 - a2*N2 <= c2 - c1 <= 0
-//
-// 4) If a1 <= 0 and a2 <= 0, then
-//        a1*N1 - a2*0  <= c2 - c1 <= a1*0 - a2*N2
-//        a1*N1         <= c2 - c1 <=       -a2*N2
-//
-// return true if dependence disproved
-bool DependenceInfo::symbolicRDIVtest(const SCEVAddRecExpr *Src,
-                                      const SCEVAddRecExpr *Dst) const {
-  if (!isDependenceTestEnabled(DependenceTestType::SymbolicRDIV))
-    return false;
-
-  ++SymbolicRDIVapplications;
-  LLVM_DEBUG(dbgs() << "\ttry symbolic RDIV test\n");
-  ConstantRange SrcRange = SE->getSignedRange(Src);
-  ConstantRange DstRange = SE->getSignedRange(Dst);
-  LLVM_DEBUG(dbgs() << "\n SrcRange: " << SrcRange << "\n");
-  LLVM_DEBUG(dbgs() << "\n DstRange: " << DstRange << "\n");
-  if (SrcRange.intersectWith(DstRange).isEmptySet()) {
-    ++SymbolicRDIVindependence;
-    return true;
-  }
-  return false;
-}
-
 // testSIV -
 // When we have a pair of subscripts of the form [c1 + a1*i] and [c2 - a2*i]
 // where i is an induction variable, c1 and c2 are loop invariant, and a1 and
@@ -2208,8 +2080,6 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
   const SCEVAddRecExpr *SrcAddRec = dyn_cast<SCEVAddRecExpr>(Src);
   const SCEVAddRecExpr *DstAddRec = dyn_cast<SCEVAddRecExpr>(Dst);
   if (SrcAddRec && DstAddRec) {
-    const SCEV *SrcConst = SrcAddRec->getStart();
-    const SCEV *DstConst = DstAddRec->getStart();
     const SCEV *SrcCoeff = SrcAddRec->getStepRecurrence(*SE);
     const SCEV *DstCoeff = DstAddRec->getStepRecurrence(*SE);
     const Loop *CurSrcLoop = SrcAddRec->getLoop();
@@ -2223,12 +2093,10 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
       disproven = strongSIVtest(SrcAddRec, DstAddRec, Level, Result,
                                 UnderRuntimeAssumptions);
     else if (SrcCoeff == SE->getNegativeSCEV(DstCoeff))
-      disproven = weakCrossingSIVtest(SrcCoeff, SrcConst, DstConst, CurSrcLoop,
-                                      CurDstLoop, Level, Result);
+      disproven = weakCrossingSIVtest(SrcAddRec, DstAddRec, Level, Result);
     else
       disproven = exactSIVtest(SrcAddRec, DstAddRec, Level, Result);
-    return disproven || gcdMIVtest(Src, Dst, Result) ||
-           symbolicRDIVtest(SrcAddRec, DstAddRec);
+    return disproven || gcdMIVtest(Src, Dst, Result);
   }
   if (SrcAddRec) {
     const Loop *CurSrcLoop = SrcAddRec->getLoop();
@@ -2277,7 +2145,7 @@ bool DependenceInfo::testRDIV(const SCEV *Src, const SCEV *Dst,
     llvm_unreachable("RDIV expected at least one AddRec");
   return exactRDIVtest(SrcCoeff, DstCoeff, SrcConst, DstConst, SrcLoop, DstLoop,
                        Result) ||
-         gcdMIVtest(Src, Dst, Result) || symbolicRDIVtest(SrcAddRec, DstAddRec);
+         gcdMIVtest(Src, Dst, Result);
 }
 
 // Tests the single-subscript MIV pair (Src and Dst) for dependence.
@@ -3371,6 +3239,13 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   // Test each subscript individually
   for (unsigned SI = 0; SI < Pairs; ++SI) {
     LLVM_DEBUG(dbgs() << "testing subscript " << SI);
+
+    // Attempt signed range test first.
+    ConstantRange SrcRange = SE->getSignedRange(Pair[SI].Src);
+    ConstantRange DstRange = SE->getSignedRange(Pair[SI].Dst);
+    if (SrcRange.intersectWith(DstRange).isEmptySet())
+      return nullptr;
+
     switch (Pair[SI].Classification) {
     case Subscript::NonLinear:
       // ignore these, but collect loops for later

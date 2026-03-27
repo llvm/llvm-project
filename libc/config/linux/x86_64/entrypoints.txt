@@ -305,12 +305,13 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.stat.mkdir
     libc.src.sys.stat.mkdirat
     libc.src.sys.stat.stat
+    libc.src.sys.stat.utimensat
 
     # sys/statvfs.h
     libc.src.sys.statvfs.fstatvfs
     libc.src.sys.statvfs.statvfs
 
-    # sys/utimes.h entrypoints
+    # sys/time.h entrypoints
     libc.src.sys.time.utimes
 
     # sys/utsname.h entrypoints
@@ -758,6 +759,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.coshf16
     libc.src.math.cospif16
     libc.src.math.erff16
+    libc.src.math.erfcf16
     libc.src.math.exp10f16
     libc.src.math.exp10m1f16
     libc.src.math.exp2f16

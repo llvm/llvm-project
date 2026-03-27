@@ -2139,7 +2139,7 @@ public:
   LowerMatrixMultiplyFused(CallInst *MatMul,
                            SmallPtrSetImpl<Instruction *> &FusedInsts,
                            SmallVector<IntrinsicInst *, 16> &LifetimeEnds) {
-    if (!FuseMatrix || !DT)
+    if (!FuseMatrix || !DT || TileSize == 0)
       return;
 
     assert(AA && LI && "Analyses should be available");

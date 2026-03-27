@@ -13,6 +13,7 @@ subroutine non_perfectly_nested_loop_behind
     do j = 1, 42
       print *, j
     end do
+    !BECAUSE: This code prevents perfect nesting
     print *, i
   end do
 end subroutine
@@ -26,6 +27,7 @@ subroutine non_perfectly_nested_loop_before
   !BECAUSE: SIZES clause was specified with 2 arguments
   !$omp tile sizes(2,2)
   do i = 1, 5
+    !BECAUSE: This code prevents perfect nesting
     print *, i
     do j = 1, 42
       print *, j
