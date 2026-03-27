@@ -13416,17 +13416,20 @@ SDValue SITargetLowering::lowerFSQRTF64(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
 
   SDValue X = Op.getOperand(0);
-  SDValue ScaleConstant = DAG.getConstantFP(0x1.0p-767, DL, MVT::f64);
-
-  SDValue Scaling = DAG.getSetCC(DL, MVT::i1, X, ScaleConstant, ISD::SETOLT);
-
   SDValue ZeroInt = DAG.getConstant(0, DL, MVT::i32);
 
-  // Scale up input if it is too small.
-  SDValue ScaleUpFactor = DAG.getConstant(256, DL, MVT::i32);
-  SDValue ScaleUp =
-      DAG.getNode(ISD::SELECT, DL, MVT::i32, Scaling, ScaleUpFactor, ZeroInt);
-  SDValue SqrtX = DAG.getNode(ISD::FLDEXP, DL, MVT::f64, X, ScaleUp, Flags);
+  SDValue SqrtX = X;
+  SDValue Scaling;
+  if (!Flags.hasApproximateFuncs()) {
+    SDValue ScaleConstant = DAG.getConstantFP(0x1.0p-767, DL, MVT::f64);
+    Scaling = DAG.getSetCC(DL, MVT::i1, X, ScaleConstant, ISD::SETOLT);
+
+    // Scale up input if it is too small.
+    SDValue ScaleUpFactor = DAG.getConstant(256, DL, MVT::i32);
+    SDValue ScaleUp =
+        DAG.getNode(ISD::SELECT, DL, MVT::i32, Scaling, ScaleUpFactor, ZeroInt);
+    SqrtX = DAG.getNode(ISD::FLDEXP, DL, MVT::f64, X, ScaleUp, Flags);
+  }
 
   SDValue SqrtY = DAG.getNode(AMDGPUISD::RSQ, DL, MVT::f64, SqrtX);
 
@@ -13448,16 +13451,19 @@ SDValue SITargetLowering::lowerFSQRTF64(SDValue Op, SelectionDAG &DAG) const {
 
   SDValue SqrtS2 = DAG.getNode(ISD::FMA, DL, MVT::f64, SqrtD0, SqrtH1, SqrtS1);
 
-  SDValue NegSqrtS2 = DAG.getNode(ISD::FNEG, DL, MVT::f64, SqrtS2);
-  SDValue SqrtD1 =
-      DAG.getNode(ISD::FMA, DL, MVT::f64, NegSqrtS2, SqrtS2, SqrtX);
+  SDValue SqrtRet = SqrtS2;
+  if (!Flags.hasApproximateFuncs()) {
+    SDValue NegSqrtS2 = DAG.getNode(ISD::FNEG, DL, MVT::f64, SqrtS2);
+    SDValue SqrtD1 =
+        DAG.getNode(ISD::FMA, DL, MVT::f64, NegSqrtS2, SqrtS2, SqrtX);
 
-  SDValue SqrtRet = DAG.getNode(ISD::FMA, DL, MVT::f64, SqrtD1, SqrtH1, SqrtS2);
+    SqrtRet = DAG.getNode(ISD::FMA, DL, MVT::f64, SqrtD1, SqrtH1, SqrtS2);
 
-  SDValue ScaleDownFactor = DAG.getSignedConstant(-128, DL, MVT::i32);
-  SDValue ScaleDown =
-      DAG.getNode(ISD::SELECT, DL, MVT::i32, Scaling, ScaleDownFactor, ZeroInt);
-  SqrtRet = DAG.getNode(ISD::FLDEXP, DL, MVT::f64, SqrtRet, ScaleDown, Flags);
+    SDValue ScaleDownFactor = DAG.getSignedConstant(-128, DL, MVT::i32);
+    SDValue ScaleDown = DAG.getNode(ISD::SELECT, DL, MVT::i32, Scaling,
+                                    ScaleDownFactor, ZeroInt);
+    SqrtRet = DAG.getNode(ISD::FLDEXP, DL, MVT::f64, SqrtRet, ScaleDown, Flags);
+  }
 
   // TODO: Check for DAZ and expand to subnormals
 
