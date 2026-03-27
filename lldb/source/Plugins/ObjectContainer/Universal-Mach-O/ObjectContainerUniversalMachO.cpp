@@ -206,8 +206,9 @@ ModuleSpecList ObjectContainerUniversalMachO::GetModuleSpecifications(
         const lldb::offset_t slice_file_offset =
             fat_arch.GetOffset() + file_offset;
         if (fat_arch.GetOffset() < file_size && file_size > slice_file_offset) {
-          ObjectFile::GetModuleSpecifications(
-              file, slice_file_offset, file_size - slice_file_offset, specs);
+          ModuleSpecList arch_specs = ObjectFile::GetModuleSpecifications(
+              file, slice_file_offset, file_size - slice_file_offset);
+          specs.Append(arch_specs);
         }
       }
     }

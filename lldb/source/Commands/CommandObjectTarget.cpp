@@ -4303,9 +4303,10 @@ protected:
     ModuleList matching_modules;
 
     // First extract all module specs from the symbol file
-    lldb_private::ModuleSpecList symfile_module_specs;
-    if (ObjectFile::GetModuleSpecifications(module_spec.GetSymbolFileSpec(),
-                                            0, 0, symfile_module_specs)) {
+    lldb_private::ModuleSpecList symfile_module_specs =
+        ObjectFile::GetModuleSpecifications(module_spec.GetSymbolFileSpec(), 0,
+                                            0);
+    if (symfile_module_specs.GetSize() > 0) {
       // Now extract the module spec that matches the target architecture
       ModuleSpec target_arch_module_spec;
       ModuleSpec symfile_module_spec;
