@@ -2825,25 +2825,25 @@ static bool printDiff(DiffFormatType Mode, const FileCheckString &CheckStr,
 
   unsigned ActualLineNo = OverwriteActualLine;
 
-    // If no Fuzzy match was found, calculate the line number directly
-    // from the InputLoc pointer using the SourceManager.
-    if (ActualLineNo == 0)
-      ActualLineNo = SM.getLineAndColumn(InputLoc).first;
+  // If no Fuzzy match was found, calculate the line number directly
+  // from the InputLoc pointer using the SourceManager.
+  if (ActualLineNo == 0)
+    ActualLineNo = SM.getLineAndColumn(InputLoc).first;
 
-    // if we are at an empty line (and not from fuzzy), usually the relevant
-    // context is the line just before it.
-    if (ActualLine.empty() && ActualLineNo > 1)
-      ActualLineNo--;
+  // if we are at an empty line (and not from fuzzy), usually the relevant
+  // context is the line just before it.
+  if (ActualLine.empty() && ActualLineNo > 1)
+    ActualLineNo--;
 
-    // Gather contextual diff to print (a line above and a line below).
-    unsigned BufID = SM.FindBufferContainingLoc(InputLoc);
-    DiffContext Context = getDiffContext(SM, ActualLineNo, BufID);
+  // Gather contextual diff to print (a line above and a line below).
+  unsigned BufID = SM.FindBufferContainingLoc(InputLoc);
+  DiffContext Context = getDiffContext(SM, ActualLineNo, BufID);
 
-    renderDiff(Mode, ExpectedLineNo, ActualLineNo, ActualLine, ExpectedText,
-               Context, OverwriteActualLine);
+  renderDiff(Mode, ExpectedLineNo, ActualLineNo, ActualLine, ExpectedText,
+             Context, OverwriteActualLine);
 
-    llvm::errs() << "\n";
-    return true;
+  llvm::errs() << "\n";
+  return true;
 }
 
 // Report the mismatch on the current line and advance to the next line.
