@@ -90,6 +90,7 @@
 ; GCN-O2-NEXT: require<profile-summary>
 ; GCN-O2-NEXT: require<collector-metadata>
 ; GCN-O2-NEXT: require<runtime-libcall-info>
+; GCN-O2-NEXT: function(objc-arc-contract)
 ; GCN-O2-NEXT: pre-isel-intrinsic-lowering
 ; GCN-O2-NEXT: function(expand-ir-insts<O2>)
 ; GCN-O2-NEXT: amdgpu-remove-incompatible-functions
@@ -150,7 +151,6 @@
 ; GCN-O2-NEXT: lcssa))
 ; GCN-O2-NEXT: amdgpu-perf-hint
 ; GCN-O2-NEXT: cgscc(function(require<uniformity>
-; GCN-O2-NEXT: objc-arc-contract
 ; GCN-O2-NEXT: callbr-prepare
 ; GCN-O2-NEXT: safe-stack
 ; GCN-O2-NEXT: stack-protector
@@ -261,6 +261,7 @@
 ; GCN-O3-NEXT: require<profile-summary>
 ; GCN-O3-NEXT: require<collector-metadata>
 ; GCN-O3-NEXT: require<runtime-libcall-info>
+; GCN-O3-NEXT: function(objc-arc-contract)
 ; GCN-O3-NEXT: pre-isel-intrinsic-lowering
 ; GCN-O3-NEXT: function(expand-ir-insts<O3>)
 ; GCN-O3-NEXT: amdgpu-remove-incompatible-functions
@@ -321,7 +322,6 @@
 ; GCN-O3-NEXT: lcssa))
 ; GCN-O3-NEXT: amdgpu-perf-hint
 ; GCN-O3-NEXT: cgscc(function(require<uniformity>
-; GCN-O3-NEXT: objc-arc-contract
 ; GCN-O3-NEXT: callbr-prepare
 ; GCN-O3-NEXT: safe-stack
 ; GCN-O3-NEXT: stack-protector
