@@ -387,7 +387,7 @@ otherwise, false.
   let VaryingMatDims = [];
 }
 
-// Returns the boolean AND of two bool values or vectors.
+// Returns the boolean AND of two boolean scalars, vectors, or matrices.
 def hlsl_and : HLSLTwoArgBuiltin<"and", "__builtin_hlsl_and"> {
   let Doc = [{
 \fn bool and(bool x, bool y)
@@ -1217,7 +1217,7 @@ Normalize is based on the following formula: x / length(x).
   let VaryingMatDims = [];
 }
 
-// Returns the boolean OR of two bool values or vectors.
+// Returns the boolean OR of two boolean scalars, vectors, or matrices.
 def hlsl_or : HLSLTwoArgBuiltin<"or", "__builtin_hlsl_or"> {
   let Doc = [{
 \fn bool or(bool x, bool y)
@@ -1525,8 +1525,8 @@ group. Otherwise, the result is false.
   let VaryingMatDims = [];
 }
 
-// WaveActiveAllEqual — half and 16-bit integer types (no SM6.0 availability;
-// _HLSL_16BIT_AVAILABILITY_SHADERMODEL_DEFAULT() is emitted automatically).
+// WaveActiveAllEqual — half and 16-bit integer types. The 6.2 availability 
+// annotations for the half and 16-bit types are emitted automatically.
 def hlsl_wave_active_all_equal_16bit :
     HLSLOneArgBuiltin<"WaveActiveAllEqual",
                 "__builtin_hlsl_wave_active_all_equal"> {
