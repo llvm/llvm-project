@@ -4630,6 +4630,9 @@ template <class Emitter> bool Compiler<Emitter>::visitAsLValue(const Expr *E) {
 }
 
 template <class Emitter> bool Compiler<Emitter>::visitBool(const Expr *E) {
+  OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/false,
+                             /*NewInitializing=*/false, /*ToLValue=*/ToLValue);
+
   OptPrimType T = classify(E->getType());
   if (!T) {
     // Convert complex values to bool.
