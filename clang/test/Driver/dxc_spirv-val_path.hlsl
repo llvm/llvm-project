@@ -2,15 +2,18 @@
 // RUN: env PATH="" %clang_dxc -spirv -I test -Tlib_6_3 -Fo %t.dir/a.spv  -### %s 2>&1 | FileCheck %s
 
 // Make sure report warning, and only once.
-// CHECK:spirv-val not found
-// CHECK-NOT:spirv-val not found
+// CHECK:spirv-val not found; resulting SPIR-V will not be validated
+// CHECK-NOT:spirv-val not found; resulting SPIR-V will not be validated
 
 // RUN: echo "spirv-val" > %t.dir/spirv-val && chmod 754 %t.dir/spirv-val && %clang_dxc -spirv --spirv-val-path=%t.dir %s -Tlib_6_3 -Fo %t.dir/a.spv -### 2>&1 | FileCheck %s --check-prefix=SPIRV_VAL_PATH
-// SPIRV_VAL_PATH:spirv-val{{(.exe)?}}" "{{.*}}.spv"
+// SPIRV_VAL_PATH:spirv-val{{(.exe)?}}" "--target-env" "vulkan1.3" "--scalar-block-layout" "{{.*}}.spv"
+
+// RUN: echo "spirv-val" > %t.dir/spirv-val && chmod 754 %t.dir/spirv-val && %clang_dxc -spirv --spirv-val-path=%t.dir %s -Tlib_6_3 -fspv-target-env=vulkan1.2 -Fo %t.dir/a.spv -### 2>&1 | FileCheck %s --check-prefix=SPIRV_VAL_VK12
+// SPIRV_VAL_VK12:spirv-val{{(.exe)?}}" "--target-env" "vulkan1.2" "--scalar-block-layout" "{{.*}}.spv"
 
 // RUN: %clang_dxc -spirv -I test -Vd -Tlib_6_3  -### %s 2>&1 | FileCheck %s --check-prefix=VD
 // VD:"-cc1"{{.*}}"-triple" "spirv1.6-unknown-vulkan1.3-library"
-// VD-NOT:spirv-val not found
+// VD-NOT:spirv-val not found; resulting SPIR-V will not be validated
 
 // RUN: %clang_dxc -spirv -Tlib_6_3 -ccc-print-bindings --spirv-val-path=%t.dir -Fo %t.spv  %s 2>&1 | FileCheck %s --check-prefix=BINDINGS
 // BINDINGS: "spirv1.6-unknown-vulkan1.3-library" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[spv:.+]].spv"

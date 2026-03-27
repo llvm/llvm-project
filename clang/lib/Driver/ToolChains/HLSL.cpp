@@ -325,6 +325,13 @@ void tools::hlsl::SPIRV_Validator::ConstructJob(
   ArgStringList CmdArgs;
   assert(Inputs.size() == 1 && "Unable to handle multiple inputs.");
   const InputInfo &Input = Inputs[0];
+
+  const llvm::Triple &T = getToolChain().getTriple();
+  CmdArgs.push_back("--target-env");
+  CmdArgs.push_back(Args.MakeArgString(T.getOSName()));
+
+  CmdArgs.push_back("--scalar-block-layout");
+
   CmdArgs.push_back(Input.getFilename());
 
   const char *Exec = Args.MakeArgString(SPIRVValPath);
@@ -608,7 +615,7 @@ bool HLSLToolChain::requiresValidation(DerivedArgList &Args,
   if (DisableValidation || !HasFo)
     return false;
 
-  if (getArch() != llvm::Triple::spirv) {
+  if (getArch() == llvm::Triple::dxil) {
     std::string DxvPath = GetProgramPath("dxv");
     if (DxvPath != "dxv")
       return true;
