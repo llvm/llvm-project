@@ -1725,7 +1725,8 @@ struct AMDGPUEventTy {
     RecordedStream = &Stream;
 
     if (auto Err = Stream.recordEvent(*this)) {
-      llvm::consumeError(resetState());
+      if (auto ResetErr = resetState())
+        return joinErrors(std::move(Err), std::move(ResetErr));
       return Err;
     }
 
@@ -1821,8 +1822,11 @@ Error AMDGPUStreamTy::recordEvent(AMDGPUEventTy &Event) {
   // need a packet-backed completion signal to retrieve dispatch timing.
   if (auto Err = Queue->pushBarrier(OutputSignal, InputSignal, nullptr)) {
     rollbackConsumedSlot(Curr);
+
     if (OutputSignal->decreaseUseCount())
-      llvm::consumeError(SignalManager.returnResource(OutputSignal));
+      if (auto ReturnErr = SignalManager.returnResource(OutputSignal))
+        return joinErrors(std::move(Err), std::move(ReturnErr));
+
     return Err;
   }
 
