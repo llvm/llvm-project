@@ -7,7 +7,7 @@
 
 ; CHECK-LABEL: test_pred_andn:
 ; CHECK: cmp
-define i32 @test_pred_andn(i32 %a, i32 %b, i32 %c) #0 {
+define i32 @test_pred_andn(i32 %a, i32 %b, i32 %c) {
 entry:
   %cmp1 = icmp sgt i32 %a, 0
   %cmp2 = icmp sgt i32 %b, 0
@@ -19,7 +19,7 @@ entry:
 
 ; CHECK-LABEL: test_pred_orn:
 ; CHECK: cmp
-define i32 @test_pred_orn(i32 %a, i32 %b, i32 %c) #0 {
+define i32 @test_pred_orn(i32 %a, i32 %b, i32 %c) {
 entry:
   %cmp1 = icmp sgt i32 %a, 0
   %cmp2 = icmp sgt i32 %b, 0
@@ -33,7 +33,7 @@ entry:
 ; and or_or (C4_or_or).
 ; CHECK-LABEL: test_pred_chain:
 ; CHECK: cmp
-define i32 @test_pred_chain(i32 %a, i32 %b, i32 %c, i32 %d) #0 {
+define i32 @test_pred_chain(i32 %a, i32 %b, i32 %c, i32 %d) {
 entry:
   %cmp1 = icmp sgt i32 %a, 0
   %cmp2 = icmp sgt i32 %b, 0
@@ -47,7 +47,7 @@ entry:
 ; Predicate comparison against 0: exercise C2_cmpeqi path.
 ; CHECK-LABEL: test_pred_cmp0:
 ; CHECK: cmp
-define i32 @test_pred_cmp0(i32 %a, i32 %b) #0 {
+define i32 @test_pred_cmp0(i32 %a, i32 %b) {
 entry:
   %cmp = icmp eq i32 %a, 0
   %ext = zext i1 %cmp to i32
@@ -59,7 +59,7 @@ entry:
 ; == 0 conversion path).
 ; CHECK-LABEL: test_cmpeq_zero:
 ; CHECK: cmp
-define i32 @test_cmpeq_zero(i32 %a, i32 %b, i32 %x, i32 %y) #0 {
+define i32 @test_cmpeq_zero(i32 %a, i32 %b, i32 %x, i32 %y) {
 entry:
   %c1 = icmp eq i32 %a, 0
   %c2 = icmp sgt i32 %b, 0
@@ -72,7 +72,7 @@ entry:
 ; == 0 conversion path).
 ; CHECK-LABEL: test_cmpne_zero:
 ; CHECK: cmp
-define i32 @test_cmpne_zero(i32 %a, i32 %b, i32 %x, i32 %y) #0 {
+define i32 @test_cmpne_zero(i32 %a, i32 %b, i32 %x, i32 %y) {
 entry:
   %c1 = icmp ne i32 %a, 0
   %c2 = icmp sgt i32 %b, 0
@@ -85,7 +85,7 @@ entry:
 ; signed ge and signed le (exercises C2_cmpgei / C4_cmpltei paths).
 ; CHECK-LABEL: test_deep_pred_chain:
 ; CHECK: cmp
-define i32 @test_deep_pred_chain(i32 %a, i32 %b, i32 %c, i32 %d, i32 %x, i32 %y) #0 {
+define i32 @test_deep_pred_chain(i32 %a, i32 %b, i32 %c, i32 %d, i32 %x, i32 %y) {
 entry:
   %c1 = icmp sge i32 %a, 10
   %c2 = icmp sle i32 %b, 20
@@ -101,7 +101,7 @@ entry:
 ; Test predicate OR-NOT chain (exercises C2_orn path in GenPredicate).
 ; CHECK-LABEL: test_pred_orn_chain:
 ; CHECK: cmp
-define i32 @test_pred_orn_chain(i32 %a, i32 %b, i32 %c, i32 %x, i32 %y) #0 {
+define i32 @test_pred_orn_chain(i32 %a, i32 %b, i32 %c, i32 %x, i32 %y) {
 entry:
   %c1 = icmp sgt i32 %a, 0
   %c2 = icmp sgt i32 %b, 0
@@ -116,7 +116,7 @@ entry:
 ; Test byte comparisons to exercise A4_cmpb* in isScalarCmp.
 ; CHECK-LABEL: test_byte_cmp:
 ; CHECK: cmp
-define i32 @test_byte_cmp(i32 %a, i32 %b, i32 %x, i32 %y) #0 {
+define i32 @test_byte_cmp(i32 %a, i32 %b, i32 %x, i32 %y) {
 entry:
   %a8 = and i32 %a, 255
   %b8 = and i32 %b, 255
@@ -127,4 +127,3 @@ entry:
   ret i32 %sel
 }
 
-attributes #0 = { nounwind "target-cpu"="hexagonv60" }

@@ -8,7 +8,7 @@
 ; TC3x: multiply instructions
 ; CHECK-LABEL: test_multiply_timing:
 ; CHECK: mpyi
-define i32 @test_multiply_timing(i32 %a, i32 %b, i32 %c) #0 {
+define i32 @test_multiply_timing(i32 %a, i32 %b, i32 %c) {
 entry:
   %m1 = mul i32 %a, %b
   %m2 = mul i32 %m1, %c
@@ -19,7 +19,7 @@ entry:
 ; TC4x: multiply-accumulate instructions
 ; CHECK-LABEL: test_mac_timing:
 ; CHECK: mpyi
-define i32 @test_mac_timing(i32 %a, i32 %b, i32 %c, i32 %d) #0 {
+define i32 @test_mac_timing(i32 %a, i32 %b, i32 %c, i32 %d) {
 entry:
   %m1 = mul i32 %a, %b
   %add1 = add i32 %m1, %c
@@ -32,7 +32,7 @@ entry:
 ; scheduling decisions that query timing classes.
 ; CHECK-LABEL: test_alu_mix:
 ; CHECK: add
-define i32 @test_alu_mix(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) #0 {
+define i32 @test_alu_mix(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 entry:
   %add1 = add i32 %a, %b
   %mul1 = mul i32 %c, %d
@@ -47,7 +47,7 @@ entry:
 ; TC2early: compare + jump patterns that exercise early-timing predicates.
 ; CHECK-LABEL: test_cmp_jump:
 ; CHECK: cmp
-define i32 @test_cmp_jump(i32 %a, i32 %b, i32 %c) #0 {
+define i32 @test_cmp_jump(i32 %a, i32 %b, i32 %c) {
 entry:
   %cmp = icmp sgt i32 %a, %b
   br i1 %cmp, label %if.then, label %if.else
@@ -68,7 +68,7 @@ if.end:
 ; Exercise 64-bit operations that may use different timing classes.
 ; CHECK-LABEL: test_64bit_ops:
 ; CHECK: add
-define i64 @test_64bit_ops(i64 %a, i64 %b, i32 %c) #0 {
+define i64 @test_64bit_ops(i64 %a, i64 %b, i32 %c) {
 entry:
   %add = add i64 %a, %b
   %ext = zext i32 %c to i64
@@ -76,4 +76,3 @@ entry:
   ret i64 %mul
 }
 
-attributes #0 = { nounwind "target-cpu"="hexagonv60" }
