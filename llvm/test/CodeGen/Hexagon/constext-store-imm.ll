@@ -6,7 +6,7 @@
 
 ; CHECK-LABEL: test_store_imm:
 ; CHECK: ##
-define void @test_store_imm(ptr %p) #0 {
+define void @test_store_imm(ptr %p) {
 entry:
   %p0 = getelementptr i8, ptr %p, i32 100000
   %p1 = getelementptr i8, ptr %p, i32 100004
@@ -25,7 +25,7 @@ entry:
 
 ; CHECK-LABEL: test_load_large_offsets:
 ; CHECK: ##
-define i32 @test_load_large_offsets() #0 {
+define i32 @test_load_large_offsets() {
 entry:
   %p0 = getelementptr [100000 x i32], ptr @big_array, i32 0, i32 25000
   %p1 = getelementptr [100000 x i32], ptr @big_array, i32 0, i32 25001
@@ -44,7 +44,7 @@ entry:
 ; Exercise constant extender with arithmetic using large immediates.
 ; CHECK-LABEL: test_arith_large_imm:
 ; CHECK: ##
-define i32 @test_arith_large_imm(i32 %a, i32 %b, i32 %c) #0 {
+define i32 @test_arith_large_imm(i32 %a, i32 %b, i32 %c) {
 entry:
   %add1 = add i32 %a, 100000
   %add2 = add i32 %b, 100000
@@ -54,4 +54,3 @@ entry:
   ret i32 %s2
 }
 
-attributes #0 = { nounwind "target-cpu"="hexagonv60" }

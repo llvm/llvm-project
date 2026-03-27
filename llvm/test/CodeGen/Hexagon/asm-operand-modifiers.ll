@@ -5,7 +5,7 @@
 
 ; CHECK-LABEL: test_asm_reg:
 ; CHECK: r{{[0-9]+}}
-define void @test_asm_reg(i32 %a) #0 {
+define void @test_asm_reg(i32 %a) {
 entry:
   call void asm sideeffect "nop // $0", "r"(i32 %a)
   ret void
@@ -14,7 +14,7 @@ entry:
 ; Exercise the memory operand printing path.
 ; CHECK-LABEL: test_asm_mem:
 ; CHECK: memw
-define i32 @test_asm_mem(ptr %p) #0 {
+define i32 @test_asm_mem(ptr %p) {
 entry:
   %val = call i32 asm sideeffect "$0 = memw($1)", "=r,*m"(ptr elementtype(i32) %p)
   ret i32 %val
@@ -23,10 +23,9 @@ entry:
 ; Exercise immediate operand with 'I' modifier.
 ; CHECK-LABEL: test_asm_imm:
 ; CHECK: nop
-define void @test_asm_imm() #0 {
+define void @test_asm_imm() {
 entry:
   call void asm sideeffect "nop // $0", "i"(i32 42)
   ret void
 }
 
-attributes #0 = { nounwind "target-cpu"="hexagonv60" }

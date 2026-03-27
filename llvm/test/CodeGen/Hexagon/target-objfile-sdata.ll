@@ -14,7 +14,7 @@
 ; CHECK: memw(gp+#small_global)
 ; NOSDATA-LABEL: test_small_data:
 ; NOSDATA: memw(##small_global)
-define i32 @test_small_data() #0 {
+define i32 @test_small_data() {
 entry:
   %val = load i32, ptr @small_global, align 4
   ret i32 %val
@@ -23,7 +23,7 @@ entry:
 ; Large arrays should NOT go into small data.
 ; CHECK-LABEL: test_large_data:
 ; CHECK: ##large_global
-define i32 @test_large_data() #0 {
+define i32 @test_large_data() {
 entry:
   %val = load i32, ptr @large_global, align 4
   ret i32 %val
@@ -32,10 +32,9 @@ entry:
 ; Initialized small data should also be accessible via GP.
 ; CHECK-LABEL: test_init:
 ; CHECK: memw(gp+#small_init)
-define i32 @test_init() #0 {
+define i32 @test_init() {
 entry:
   %val = load i32, ptr @small_init, align 4
   ret i32 %val
 }
 
-attributes #0 = { nounwind "target-cpu"="hexagonv60" }

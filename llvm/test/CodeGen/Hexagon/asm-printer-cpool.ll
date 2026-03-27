@@ -7,7 +7,7 @@
 
 ; CHECK-LABEL: test_constpool:
 ; CHECK: ##
-define float @test_constpool(float %x) #0 {
+define float @test_constpool(float %x) {
 entry:
   %add = fadd float %x, 0x400921FB60000000
   ret float %add
@@ -15,7 +15,7 @@ entry:
 
 ; CHECK-LABEL: test_global_addr:
 ; CHECK: ##global_arr
-define ptr @test_global_addr(i32 %idx) #0 {
+define ptr @test_global_addr(i32 %idx) {
 entry:
   %gep = getelementptr [100 x i32], ptr @global_arr, i32 0, i32 %idx
   ret ptr %gep
@@ -24,11 +24,10 @@ entry:
 ; Exercise the block address path.
 ; CHECK-LABEL: test_blockaddr:
 ; CHECK: ##.Ltmp
-define ptr @test_blockaddr() #0 {
+define ptr @test_blockaddr() {
 entry:
   br label %target
 target:
   ret ptr blockaddress(@test_blockaddr, %target)
 }
 
-attributes #0 = { nounwind "target-cpu"="hexagonv60" }
