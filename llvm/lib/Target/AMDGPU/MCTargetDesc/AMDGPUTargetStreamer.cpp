@@ -15,6 +15,7 @@
 #include "AMDGPUMCKernelDescriptor.h"
 #include "AMDGPUMCTargetDesc.h"
 #include "AMDGPUPTNote.h"
+#include "SIDefines.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "Utils/AMDKernelCodeTUtils.h"
 #include "llvm/BinaryFormat/AMDGPUMetadataVerifier.h"
@@ -25,6 +26,7 @@
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCSymbolELF.h"
 #include "llvm/Support/AMDGPUMetadata.h"
 #include "llvm/Support/AMDHSAKernelDescriptor.h"
 #include "llvm/Support/CommandLine.h"
@@ -689,8 +691,40 @@ MCELFStreamer &AMDGPUTargetELFStreamer::getStreamer() {
 
 // A hook for emitting stuff at the end.
 // We use it for emitting the accumulated PAL metadata as a .note record.
-// The PAL metadata is reset after it is emitted.
+// The PAL metadata is reset after it is emitted and emitting default function
+// resource usage values for functions with undetermined resource usage.
 void AMDGPUTargetELFStreamer::finish() {
+  if (STI.getTargetTriple().getOS() == Triple::AMDHSA) {
+    // Use conservative defaults.
+    uint32_t NumVGPR = IsaInfo::getAddressableNumVGPRs(&STI, 0);
+    uint32_t NumAGPR =
+        hasMAIInsts(STI) ? IsaInfo::getAddressableNumArchVGPRs(&STI) : 0;
+    uint32_t NumSGPR = IsaInfo::getAddressableNumSGPRs(&STI);
+    uint32_t NumNamedBarrier = AMDGPU::Barrier::NAMED_BARRIER_LAST;
+    // Computed similarly to GCNSubtarget::getMaxWaveScratchSize.
+    uint32_t PrivateSegmentSize;
+    if (isGFX12Plus(STI))
+      PrivateSegmentSize = (64 * 4) * ((1 << 18) - 1);
+    else if (isGFX11(STI))
+      PrivateSegmentSize = (64 * 4) * ((1 << 15) - 1);
+    else
+      PrivateSegmentSize = (256 * 4) * ((1 << 13) - 1);
+    // Assumes all boolean flags set: uses_vcc | uses_flat_scratch |
+    // has_dyn_sized_stack.
+    uint32_t Flags = 0x7;
+
+    for (const MCSymbol &Sym : getStreamer().getAssembler().symbols()) {
+      // Only emit conservative defaults for function with no resource usage
+      // info entries yet.
+      auto &SymELF = static_cast<const MCSymbolELF &>(Sym);
+      if (SymELF.getType() == ELF::STT_FUNC && SymELF.isDefined() &&
+          !FunctionsWithResourceUsage.contains(&Sym))
+        emitResourceUsageEntry(const_cast<MCSymbol *>(&Sym), NumVGPR, NumAGPR,
+                               NumSGPR, NumNamedBarrier, PrivateSegmentSize,
+                               Flags);
+    }
+  }
+
   ELFObjectWriter &W = getStreamer().getWriter();
   W.setELFHeaderEFlags(getEFlags());
   W.setOverrideABIVersion(
@@ -1080,6 +1114,8 @@ void AMDGPUTargetELFStreamer::EmitAmdhsaKernelDescriptor(
 void AMDGPUTargetELFStreamer::emitResourceUsageEntry(
     MCSymbol *FnSym, uint32_t NumVGPR, uint32_t NumAGPR, uint32_t NumSGPR,
     uint32_t NumNamedBarrier, uint32_t PrivateSegmentSize, uint32_t Flags) {
+  FunctionsWithResourceUsage.insert(FnSym);
+
   auto &S = getStreamer();
   auto &Context = S.getContext();
   const unsigned ResourceInfoEntrySize = 24;

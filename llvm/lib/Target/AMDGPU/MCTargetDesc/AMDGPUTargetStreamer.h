@@ -12,6 +12,7 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "Utils/AMDGPUPALMetadata.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/MC/MCStreamer.h"
 
 namespace llvm {
@@ -191,6 +192,9 @@ class AMDGPUTargetELFStreamer final : public AMDGPUTargetStreamer {
 
   // Counter for computing relocation offsets.
   unsigned ResourceInfoEntryCount = 0;
+
+  // Track functions with explicit resource usage entries.
+  SmallPtrSet<const MCSymbol *, 8> FunctionsWithResourceUsage;
 
   void EmitNote(StringRef Name, const MCExpr *DescSize, unsigned NoteType,
                 function_ref<void(MCELFStreamer &)> EmitDesc);

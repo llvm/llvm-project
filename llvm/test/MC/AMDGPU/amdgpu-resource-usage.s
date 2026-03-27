@@ -19,6 +19,10 @@ baz:
 foo:
   s_endpgm
 
+.type quux,@function
+quux:
+  s_endpgm
+
 .extern external_fn
 
 // ASM: .amdgpu_resource_usage bar
@@ -84,10 +88,13 @@ foo:
 		.has_dyn_sized_stack 0
 	.end_amdgpu_resource_usage
 
-// ELF-SEC: .AMDGPU.resource_usage PROGBITS {{[0-9a-f]+}} {{[0-9a-f]+}} 000048 18 E 0 0 1
+// ASM-NOT: .amdgpu_resource_usage quux
+
+// ELF-SEC: .AMDGPU.resource_usage PROGBITS {{[0-9a-f]+}} {{[0-9a-f]+}} 000060 18 E 0 0 1
 
 // ELF-RELOC:      Relocation section '.rela.AMDGPU.resource_usage'
 // ELF-RELOC:      0000000000000000 {{[0-9a-f]+}} R_AMDGPU_NONE {{[0-9a-f]+}} bar + 0
 // ELF-RELOC-NEXT: 0000000000000018 {{[0-9a-f]+}} R_AMDGPU_NONE {{[0-9a-f]+}} foo + 0
 // ELF-RELOC-NEXT: 0000000000000030 {{[0-9a-f]+}} R_AMDGPU_NONE {{[0-9a-f]+}} baz + 0
+// ELF-RELOC-NEXT: 0000000000000048 {{[0-9a-f]+}} R_AMDGPU_NONE {{[0-9a-f]+}} quux + 0
 

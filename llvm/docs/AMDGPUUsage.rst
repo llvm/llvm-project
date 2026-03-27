@@ -2419,16 +2419,16 @@ callees' resource usage.
      ====================================== ========= ======================== ===================================================================================================
      Directive                              Required? Occurrences Per Function Description
      ====================================== ========= ======================== ===================================================================================================
-     .amdgpu_resource_usage <function name> yes       1                        Denotes the start of resource usage directives for <function name>
-     .end_amdgpu_resource_usage             yes       1                        Denotes end of resource usage directives
-     .num_vgpr <i32>                        yes       1                        Number of VGPRs used by the function
-     .num_agpr <i32>                        yes       1                        Number of AGPRs used by the function
-     .num_sgpr <i32>                        yes       1                        Number of SGPRs used by the function
-     .named_barrier <i32>                   yes       1                        Number of named barriers used by the function
-     .private_seg_size <i32>                yes       1                        Total stack size required for the function
-     .uses_vcc <i1>                         yes       1                        Boolean denoting whether vcc is used in the function
-     .uses_flat_scratch <i1>                yes       1                        Boolean denoting whether flat scratch is used in the function
-     .has_dyn_sized_stack <i1>              yes       1                        Boolean denoting whether stack in the function is dynamically sized
+     .amdgpu_resource_usage <function name> no        0 or 1                   Denotes the start of resource usage directives for <function name>
+     .end_amdgpu_resource_usage             no        0 or 1                   Denotes end of resource usage directives
+     .num_vgpr <i32>                        no        0 or 1                   Number of VGPRs used by the function (default: max addressable VGPRs)
+     .num_agpr <i32>                        no        0 or 1                   Number of AGPRs used by the function (default: max addressable AGPRs, or 0 if unsupported)
+     .num_sgpr <i32>                        no        0 or 1                   Number of SGPRs used by the function (default: max addressable SGPRs)
+     .named_barrier <i32>                   no        0 or 1                   Number of named barriers used by the function (default: 16)
+     .private_seg_size <i32>                no        0 or 1                   Total stack size required for the function (default: max wave scratch size)
+     .uses_vcc <i1>                         no        0 or 1                   Boolean denoting whether vcc is used in the function (default: 1)
+     .uses_flat_scratch <i1>                no        0 or 1                   Boolean denoting whether flat scratch is used in the function (default: 1)
+     .has_dyn_sized_stack <i1>              no        0 or 1                   Boolean denoting whether stack in the function is dynamically sized (default: 1)
      ====================================== ========= ======================== ===================================================================================================
 
 Function Resource Usage ELF Section

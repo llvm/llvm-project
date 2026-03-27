@@ -6805,14 +6805,6 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGPUResourceUsage() {
       return TokError("unknown field '" + ID + "' in .amdgpu_resource_usage");
   }
 
-  for (StringRef StrRef : {".num_vgpr", ".num_agpr", ".num_sgpr",
-                           ".named_barrier", ".private_seg_size", ".uses_vcc",
-                           ".uses_flat_scratch", ".has_dyn_sized_stack"}) {
-    if (!Seen.contains(StrRef))
-      return TokError("missing required " + StrRef +
-                      " directive in .amdgpu_resource_usage");
-  }
-
   uint32_t Flags = 0;
   Flags |= (UsesVCC ? 1u : 0u) << 0;
   Flags |= (UsesFlatScratch ? 1u : 0u) << 1;
