@@ -3,17 +3,17 @@
 ; RUN:   | FileCheck %s --check-prefix=DIFF
 
 ;--- input.txt
-FUNC_A
-  mov r0, #1
-FUNC_B
-  mov r1, #2
+START_TRANS
+  [LOG] Transaction initiated...
+END_TRANS
 
 ;--- check.txt
-; CHECK-LABEL: FUNC_A
-; CHECK-NEXT:  mov r0, #5
-; CHECK-LABEL: FUNC_B
+; CHECK:       START_TRANS
+; CHECK-EMPTY:
+; CHECK:       END_TRANS
 
 ; DIFF:      @@ -[[#]] +[[#]] @@
-; DIFF-NEXT:  FUNC_A
-; DIFF-NEXT: -mov r0, #5
-; DIFF-NEXT: +mov r0, #1
+; DIFF-NEXT:  START_TRANS
+; DIFF-NEXT:  -
+; DIFF-NEXT:  +[LOG] Transaction initiated...
+; DIFF-NEXT:  END_TRANS

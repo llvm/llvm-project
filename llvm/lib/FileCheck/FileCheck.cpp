@@ -2792,7 +2792,7 @@ static void renderDiff(DiffFormatType Mode, unsigned ExpectedLineNo,
   OS << "-" << ExpectedText << "\n";
 
   OS.changeColor(raw_ostream::GREEN);
-  OS << "+" << ActualLine << "\n";
+  OS << "+" << ActualLine.ltrim() << "\n";
   OS.resetColor();
 
   // After Context
@@ -2822,26 +2822,11 @@ static bool printDiff(DiffFormatType Mode, const FileCheckString &CheckStr,
   ExpectedText = FullExpectedLine.str();
 
   // Resolve the Actual (Input) line number.
-  // Priority: 1. OverwriteActualLine (explicit override)
-  //           2. Fuzzy Match Diag (where FileCheck 'thinks' the line was)
-  //           3. Direct pointer resolution via SourceMgr.
+  // Priority: 1. OverwriteActualLine (Found via Fuzzy match)
+  //           2. Direct pointer resolution via SourceMgr.
   SMLoc InputLoc = SMLoc::getFromPointer(CheckRegion.data());
 
   unsigned ActualLineNo = OverwriteActualLine;
-
-  if (ActualLineNo == 0) {
-    bool FoundFuzzy = false;
-
-    if (Diags) {
-      for (const auto &D : llvm::reverse(*Diags)) {
-        if (D.CheckLoc == PatternLoc &&
-            D.MatchTy == FileCheckDiag::MatchFuzzy) {
-          ActualLineNo = D.InputStartLine;
-          FoundFuzzy = true;
-          break;
-        }
-      }
-    }
 
     // If no Fuzzy match was found, calculate the line number directly
     // from the InputLoc pointer using the SourceManager.
@@ -2850,47 +2835,35 @@ static bool printDiff(DiffFormatType Mode, const FileCheckString &CheckStr,
 
     // if we are at an empty line (and not from fuzzy), usually the relevant
     // context is the line just before it.
-    if (!FoundFuzzy && ActualLine.empty() && ActualLineNo > 1)
+    if (ActualLine.empty() && ActualLineNo > 1)
       ActualLineNo--;
-  }
 
-  // Gather contextual diff to print (a line above and a line below).
-  unsigned BufID = SM.FindBufferContainingLoc(InputLoc);
-  DiffContext Context = getDiffContext(SM, ActualLineNo, BufID);
+    // Gather contextual diff to print (a line above and a line below).
+    unsigned BufID = SM.FindBufferContainingLoc(InputLoc);
+    DiffContext Context = getDiffContext(SM, ActualLineNo, BufID);
 
-  renderDiff(Mode, ExpectedLineNo, ActualLineNo, ActualLine, ExpectedText,
-             Context, OverwriteActualLine);
+    renderDiff(Mode, ExpectedLineNo, ActualLineNo, ActualLine, ExpectedText,
+               Context, OverwriteActualLine);
 
-  llvm::errs() << "\n";
-  return true;
+    llvm::errs() << "\n";
+    return true;
 }
 
-/// Handles a mismatch by attempting to resynchronize the pattern with the
-/// input.
-///
-/// When a pattern fails to match at the current location, this function
-/// explores several recovery strategies:
-/// 1. Stray Line Detection: Check if the pattern matches perfectly on the very
-///    next line (suggesting an unexpected line was inserted).
-/// 2. Search/Resync: Search forward in the region to find a perfect match
-///    later on (suggesting a block of unexpected code).
-/// 3. Fuzzy Matching: Use existing diagnostics to find "near misses" (typos)
-///    on the current or nearby lines.
-///
-/// It then calls \c renderDiff via \c printDiff and advances \p CheckRegion
-/// to the appropriate recovery point
+// Report the mismatch on the current line and advance to the next line.
 static bool handleDiffFailure(const FileCheckString &CheckStr,
                               StringRef &CheckRegion, SourceMgr &SM,
                               FileCheckRequest &Req,
                               std::vector<FileCheckDiag> *Diags,
                               raw_ostream &OS, bool &HeaderPrinted,
                               unsigned &TotalMismatches) {
+  // Print headers once per file.
   if (!HeaderPrinted) {
     StringRef CheckFile =
         SM.getMemoryBuffer(SM.getMainFileID())->getBufferIdentifier();
     unsigned InputBufID =
         SM.FindBufferContainingLoc(SMLoc::getFromPointer(CheckRegion.data()));
     StringRef InputFile = SM.getMemoryBuffer(InputBufID)->getBufferIdentifier();
+
     OS.changeColor(raw_ostream::WHITE, true);
     OS << "--- " << CheckFile << "\n";
     OS << "+++ " << InputFile << "\n";
@@ -2898,66 +2871,42 @@ static bool handleDiffFailure(const FileCheckString &CheckStr,
     HeaderPrinted = true;
   }
 
+  // Identify the line that failed to match.
   CheckRegion = CheckRegion.ltrim("\n\r");
-
-  SMLoc CurrentLoc = SMLoc::getFromPointer(CheckRegion.data());
-  unsigned CurrentLineNo = 0;
-  if (!CheckRegion.empty())
-    CurrentLineNo = SM.getLineAndColumn(CurrentLoc).first;
-
   size_t EOL = CheckRegion.find('\n');
-  StringRef MismatchLine =
-      (EOL == StringRef::npos) ? CheckRegion : CheckRegion.substr(0, EOL);
+  SMLoc CurrentLoc = SMLoc::getFromPointer(CheckRegion.data());
 
-  // Try to find where this pattern actually appears next
-  std::vector<FileCheckDiag> ResyncDiags;
-  size_t ResyncMatchLen = 0;
-  size_t ResyncPos = CheckStr.Check(SM, CheckRegion, /*Search=*/true,
-                                    ResyncMatchLen, Req, &ResyncDiags);
+  StringRef TargetLine;
+  unsigned TargetLineNo = 0;
 
-  StringRef TargetLine = MismatchLine;
-  unsigned TargetLineNo = CurrentLineNo;
-  bool AdvanceToResync = false;
-
-  if (ResyncPos == 0) {
-    // Perfect match right here (usually triggered by CHECK-NEXT noise)
-    TargetLine = MismatchLine;
-  } else if (ResyncPos != StringRef::npos) {
-    // Found it further down. Is it just one line away? (Stray line case)
-    size_t NextLinePos = CheckRegion.find('\n');
-    if (NextLinePos != StringRef::npos && ResyncPos == NextLinePos + 1) {
-      // This is a stray line. Diff the expected vs the stray line, then skip
-      // stray.
-      TargetLine = MismatchLine;
-      AdvanceToResync = false;
-    } else if (CheckStr.Pat.getCheckTy() != llvm::Check::CheckNext) {
-      // Regular CHECK: skip the "noise" and sync to the match
-      SMLoc MatchLoc = SMLoc::getFromPointer(CheckRegion.data() + ResyncPos);
-      TargetLineNo = SM.getLineAndColumn(MatchLoc).first;
-      TargetLine = CheckRegion.substr(ResyncPos).split('\n').first;
-      AdvanceToResync = true;
-    }
-  } else {
-    // Fallback to Fuzzy matching if no perfect match exists
-    for (const auto &D : llvm::reverse(ResyncDiags)) {
-      if (D.MatchTy == FileCheckDiag::MatchFuzzy) {
+  // Check if the existing diagnostics already found a fuzzy match.
+  if (Diags) {
+    for (const auto &D : llvm::reverse(*Diags)) {
+      if (D.CheckLoc == CheckStr.Pat.getLoc() &&
+          D.MatchTy == FileCheckDiag::MatchFuzzy) {
         TargetLineNo = D.InputStartLine;
-        SMLoc FuzzyLoc = SM.FindLocForLineAndColumn(
-            SM.FindBufferContainingLoc(CurrentLoc), TargetLineNo, 1);
-        TargetLine = StringRef(FuzzyLoc.getPointer()).split('\n').first.trim();
+        // Get the actual text of that fuzzy match from the SourceMgr
+        unsigned BufID = SM.FindBufferContainingLoc(CurrentLoc);
+        SMLoc FuzzyLoc = SM.FindLocForLineAndColumn(BufID, TargetLineNo, 1);
+        TargetLine = StringRef(FuzzyLoc.getPointer()).split('\n').first;
         break;
       }
     }
   }
 
-  printDiff(Req.DiffMode, CheckStr, TargetLine, SM, Req, &ResyncDiags,
-            TargetLineNo);
+  // If no fuzzy match was found by the engine, just use the next line.
+  if (TargetLine.empty()) {
+    TargetLine =
+        (EOL == StringRef::npos) ? CheckRegion : CheckRegion.substr(0, EOL);
+    TargetLineNo = SM.getLineAndColumn(CurrentLoc).first;
+  }
+
+  // Render the diff for this specific line.
+  printDiff(Req.DiffMode, CheckStr, TargetLine, SM, Req, Diags, TargetLineNo);
   TotalMismatches++;
 
-  // Updates CheckRegion to advance the search pointer past the error.
-  if (AdvanceToResync && ResyncPos != StringRef::npos)
-    CheckRegion = CheckRegion.substr(ResyncPos + ResyncMatchLen);
-  else if (EOL != StringRef::npos)
+  // Advance CheckRegion past the current line to recover for the next CHECK.
+  if (EOL != StringRef::npos)
     CheckRegion = CheckRegion.substr(EOL + 1);
   else
     CheckRegion = "";
@@ -3011,13 +2960,10 @@ bool FileCheck::checkInput(SourceMgr &SM, StringRef Buffer,
 
       bool IsStrict = CheckStr.Pat.getCheckTy() == Check::CheckNext ||
                       CheckStr.Pat.getCheckTy() == Check::CheckEmpty;
-      bool AllowSearch = Req.DiffMode != DiffFormatType::Standard && !IsStrict;
 
-      // Match the pattern and return its position within the current region.
-      // (Searches only if not strict and doing diff)
       size_t MatchLen = 0;
       size_t MatchPos =
-          CheckStr.Check(SM, CheckRegion, AllowSearch, MatchLen, Req, Diags);
+          CheckStr.Check(SM, CheckRegion, false, MatchLen, Req, Diags);
 
       // Handle failure
       if (MatchPos == StringRef::npos) {

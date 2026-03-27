@@ -1,5 +1,5 @@
 ; RUN: split-file %s %t
-; RUN: not FileCheck %t/check.txt --input-file=%t/input.txt --diff=unidiff 2>&1 \
+; RUN: %ProtectFileCheckOutput not FileCheck %t/check.txt --input-file=%t/input.txt --diff=unidiff 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=DIFF
 
 ;--- input.txt
