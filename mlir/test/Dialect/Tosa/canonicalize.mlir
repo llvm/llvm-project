@@ -850,6 +850,19 @@ func.func @transpose_no_op(%arg0: tensor<3x4x5x6xf32>) -> tensor<3x4x5x6xf32> {
 
 // -----
 
+// Do not fold identity transpose to the input when result type differs from
+// input type (e.g. unranked result type); the transpose_is_reshape pattern
+// handles it instead. (https://github.com/llvm/llvm-project/issues/187974)
+// CHECK-LABEL: @transpose_no_op_unranked_result
+func.func @transpose_no_op_unranked_result(%arg0: tensor<3x2xi32>) -> tensor<*xi32> {
+  // CHECK: tosa.reshape
+  // CHECK-NOT: return %arg0
+  %0 = tosa.transpose %arg0 {perms = array<i32: 0, 1>} : (tensor<3x2xi32>) -> tensor<*xi32>
+  return %0 : tensor<*xi32>
+}
+
+// -----
+
 // CHECK-LABEL: @transpose_is_reshape
 func.func @transpose_is_reshape(%arg0: tensor<1x4x5x1xf32>) -> tensor<1x4x1x5xf32> {
   // CHECK: %[[CONST0:.+]] = tosa.const_shape {values = dense<[1, 4, 1, 5]> : tensor<4xindex>} : () -> !tosa.shape<4>

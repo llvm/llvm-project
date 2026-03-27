@@ -1969,6 +1969,12 @@ OpFoldResult TransposeOp::fold(FoldAdaptor adaptor) {
   if (!llvm::equal(llvm::seq<int32_t>(0, perms.size()), perms))
     return {};
 
+  // Only fold when the input type matches the result type. They may differ
+  // when the result type is unranked (e.g. tensor<*xi32>) while the input is
+  // ranked.
+  if (getInput1().getType() != resultTy)
+    return {};
+
   return getInput1();
 }
 
