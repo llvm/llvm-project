@@ -703,8 +703,8 @@ protected:
         std::string buffer;
         buffer.resize(item_byte_size + 1, 0);
         Status error;
-        size_t read = target->ReadCStringFromMemory(data_addr, &buffer[0],
-                                                    item_byte_size + 1, error);
+        size_t read = target->ReadCStringFromMemory(
+            Address(data_addr), &buffer[0], item_byte_size + 1, error);
         if (error.Fail()) {
           result.AppendErrorWithFormat(
               "failed to read memory from 0x%" PRIx64 ".\n", addr);

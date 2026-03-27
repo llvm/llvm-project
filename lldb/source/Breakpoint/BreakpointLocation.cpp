@@ -49,8 +49,8 @@ BreakpointLocation::BreakpointLocation(break_id_t loc_id, Breakpoint &owner,
 
 BreakpointLocation::BreakpointLocation(break_id_t loc_id, Breakpoint &owner)
     : m_should_resolve_indirect_functions(false), m_is_reexported(false),
-      m_is_indirect(false), m_address(LLDB_INVALID_ADDRESS), m_owner(owner),
-      m_condition_hash(0), m_loc_id(loc_id), m_hit_counter() {
+      m_is_indirect(false), m_owner(owner), m_condition_hash(0),
+      m_loc_id(loc_id), m_hit_counter() {
   SetThreadIDInternal(LLDB_INVALID_THREAD_ID);
 }
 
