@@ -1,5 +1,7 @@
 """Test the SBDModule APIs."""
 
+import re
+
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -109,4 +111,74 @@ class SBModuleAPICase(TestBase):
         error = process.Destroy()
         self.assertSuccess(
             error, "couldn't destroy process %s" % background_process.pid
+        )
+
+    @skipIfRemote
+    def test_module_spec_list_indexing(self):
+        """Test that SBModuleSpecList supports Pythonic indexing."""
+        self.build()
+        libfoo_path = self.getBuildArtifact("libfoo.a")
+        specs = lldb.SBModuleSpecList.GetModuleSpecifications(libfoo_path)
+        count = specs.GetSize()
+        self.assertGreater(count, 0, "Archive should have at least one module spec")
+
+        # Integer indexing: positive indices
+        for i in range(count):
+            self.assertEqual(
+                str(specs[i]),
+                str(specs.GetSpecAtIndex(i)),
+                "specs[%d] should match GetSpecAtIndex(%d)" % (i, i),
+            )
+
+        # Integer indexing: negative indices
+        self.assertEqual(
+            str(specs[-1]),
+            str(specs.GetSpecAtIndex(count - 1)),
+            "specs[-1] should match last element",
+        )
+        self.assertEqual(
+            str(specs[-count]),
+            str(specs.GetSpecAtIndex(0)),
+            "specs[-count] should match first element",
+        )
+
+        # Integer indexing: out of bounds raises IndexError
+        self.assertRaises(IndexError, lambda: specs[count])
+        self.assertRaises(IndexError, lambda: specs[-count - 1])
+
+        # Unsupported key type raises TypeError
+        self.assertRaises(TypeError, lambda: specs[1.5])
+
+        # String indexing: lookup by file basename
+        spec0 = specs.GetSpecAtIndex(0)
+        basename = spec0.GetFileSpec().GetFilename()
+        if basename:
+            found = specs[basename]
+            self.assertIsNotNone(found, "Should find spec by basename '%s'" % basename)
+            self.assertEqual(
+                found.GetFileSpec().GetFilename(),
+                basename,
+                "Found spec basename should match",
+            )
+
+        # String indexing: missing basename returns None
+        self.assertIsNone(
+            specs["nonexistent_file.xyz"],
+            "Lookup of nonexistent basename should return None",
+        )
+
+        # Regex indexing: match all specs
+        all_matches = specs[re.compile(r".*")]
+        self.assertEqual(
+            len(all_matches),
+            count,
+            "Regex '.*' should match all specs",
+        )
+
+        # Regex indexing: no matches returns empty list
+        no_matches = specs[re.compile(r"^ZZZZZ_no_match$")]
+        self.assertEqual(
+            len(no_matches),
+            0,
+            "Regex with no matches should return empty list",
         )
