@@ -798,8 +798,7 @@ RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
         // - Mask must fit into element in vector unit so VMV won't require a
         // VSETVL prior to VMV
         // - Mask must fit into a scalar register
-        if (!Mask.empty() &&
-            Mask.size() <= ST->getXLen() &&
+        if (!Mask.empty() && Mask.size() <= ST->getXLen() &&
             Mask.size() <= LT.second.getScalarSizeInBits()) {
           APInt Imm(Mask.size(), 0);
           for (auto [Idx, M] : enumerate(Mask))
