@@ -10,6 +10,7 @@
 
 #include <assert.h>
 #include <inttypes.h>
+#include <map>
 
 #include "llvm/DebugInfo/GSYM/GlobalData.h"
 #include "llvm/Support/DataExtractor.h"
@@ -49,15 +50,11 @@ GsymReaderV2::create(std::unique_ptr<MemoryBuffer> &MB) {
   return std::move(GR);
 }
 
-/// Helper to parse GlobalData entries and populate section offsets/sizes.
-static llvm::Error
+/// Helper to parse GlobalData entries from a GSYM V2 file.
+static llvm::Expected<std::map<GlobalInfoType, GlobalData>>
 parseGlobalDataEntries(DataExtractor &DE, uint64_t &Offset,
-                       uint64_t BufSize,
-                       uint64_t &AddrOffsetsOff, uint64_t &AddrOffsetsSize,
-                       uint64_t &AddrInfoOffsetsOff, uint64_t &AddrInfoOffsetsSize,
-                       uint64_t &StringTableOff, uint64_t &StringTableSize,
-                       uint64_t &FileTableOff, uint64_t &FileTableSize,
-                       uint64_t &FuncInfoOff, uint64_t &FuncInfoSize) {
+                       uint64_t BufSize) {
+  std::map<GlobalInfoType, GlobalData> Sections;
   while (Offset + sizeof(GlobalData) <= BufSize) {
     auto GDOrErr = GlobalData::decode(DE, Offset);
     if (!GDOrErr)
@@ -65,7 +62,7 @@ parseGlobalDataEntries(DataExtractor &DE, uint64_t &Offset,
     const GlobalData &GD = *GDOrErr;
 
     if (GD.Type == GlobalInfoType::EndOfList)
-      return Error::success();
+      return Sections;
 
     if (GD.FileOffset + GD.FileSize > BufSize)
       return createStringError(std::errc::invalid_argument,
@@ -75,32 +72,7 @@ parseGlobalDataEntries(DataExtractor &DE, uint64_t &Offset,
                                static_cast<uint32_t>(GD.Type), GD.FileOffset,
                                GD.FileSize, BufSize);
 
-    switch (GD.Type) {
-    case GlobalInfoType::AddrOffsets:
-      AddrOffsetsOff = GD.FileOffset;
-      AddrOffsetsSize = GD.FileSize;
-      break;
-    case GlobalInfoType::AddrInfoOffsets:
-      AddrInfoOffsetsOff = GD.FileOffset;
-      AddrInfoOffsetsSize = GD.FileSize;
-      break;
-    case GlobalInfoType::StringTable:
-      StringTableOff = GD.FileOffset;
-      StringTableSize = GD.FileSize;
-      break;
-    case GlobalInfoType::FileTable:
-      FileTableOff = GD.FileOffset;
-      FileTableSize = GD.FileSize;
-      break;
-    case GlobalInfoType::FunctionInfo:
-      FuncInfoOff = GD.FileOffset;
-      FuncInfoSize = GD.FileSize;
-      break;
-    case GlobalInfoType::UUID:
-      break;
-    case GlobalInfoType::EndOfList:
-      llvm_unreachable("handled above");
-    }
+    Sections[GD.Type] = GD;
   }
   return createStringError(std::errc::invalid_argument,
                            "GlobalData array not terminated by EndOfList");
@@ -154,73 +126,74 @@ llvm::Error GsymReaderV2::parse() {
 
   // Parse GlobalData entries to find section locations.
   uint64_t Offset = sizeof(HeaderV2);
-  uint64_t AddrOffsetsOff = 0, AddrOffsetsSize = 0;
-  uint64_t AddrInfoOffsetsOff = 0, AddrInfoOffsetsSize = 0;
-  uint64_t StringTableOff = 0, StringTableSize = 0;
-  uint64_t FileTableOff = 0, FileTableSize = 0;
-  uint64_t FuncInfoOff = 0, FuncInfoSize = 0;
+  auto SectionsOrErr = parseGlobalDataEntries(DE, Offset, BufSize);
+  if (!SectionsOrErr)
+    return SectionsOrErr.takeError();
+  auto &Sections = *SectionsOrErr;
 
-  if (auto Err = parseGlobalDataEntries(
-          DE, Offset, BufSize, AddrOffsetsOff, AddrOffsetsSize,
-          AddrInfoOffsetsOff, AddrInfoOffsetsSize, StringTableOff,
-          StringTableSize, FileTableOff, FileTableSize, FuncInfoOff,
-          FuncInfoSize))
-    return Err;
-
-  if (!AddrOffsetsSize)
+  if (!Sections.count(GlobalInfoType::AddrOffsets))
     return createStringError(std::errc::invalid_argument,
                              "missing AddrOffsets section");
-  if (!AddrInfoOffsetsSize)
+  if (!Sections.count(GlobalInfoType::AddrInfoOffsets))
     return createStringError(std::errc::invalid_argument,
                              "missing AddrInfoOffsets section");
-  if (!StringTableSize)
+  if (!Sections.count(GlobalInfoType::StringTable))
     return createStringError(std::errc::invalid_argument,
                              "missing StringTable section");
-  if (!FileTableSize)
+  if (!Sections.count(GlobalInfoType::FileTable))
     return createStringError(std::errc::invalid_argument,
                              "missing FileTable section");
 
-  if (AddrOffsetsSize !=
+  const GlobalData &AddrOffsetsGD = Sections[GlobalInfoType::AddrOffsets];
+  const GlobalData &AddrInfoOffsetsGD = Sections[GlobalInfoType::AddrInfoOffsets];
+  const GlobalData &StringTableGD = Sections[GlobalInfoType::StringTable];
+  const GlobalData &FileTableGD = Sections[GlobalInfoType::FileTable];
+
+  if (AddrOffsetsGD.FileSize !=
       static_cast<uint64_t>(Hdr->NumAddresses) * Hdr->AddrOffSize)
     return createStringError(std::errc::invalid_argument,
                              "AddrOffsets section size mismatch");
 
-  if (AddrInfoOffsetsSize !=
+  if (AddrInfoOffsetsGD.FileSize !=
       static_cast<uint64_t>(Hdr->NumAddresses) * Hdr->AddrInfoOffSize)
     return createStringError(std::errc::invalid_argument,
                              "AddrInfoOffsets section size mismatch");
 
   if (!Swap) {
     AddrOffsets = ArrayRef<uint8_t>(
-        reinterpret_cast<const uint8_t *>(Buf.data() + AddrOffsetsOff),
-        AddrOffsetsSize);
+        reinterpret_cast<const uint8_t *>(Buf.data() +
+                                          AddrOffsetsGD.FileOffset),
+        AddrOffsetsGD.FileSize);
 
     if (Hdr->AddrInfoOffSize == 4) {
       AddrInfoOffsets = ArrayRef<uint32_t>(
-          reinterpret_cast<const uint32_t *>(Buf.data() + AddrInfoOffsetsOff),
+          reinterpret_cast<const uint32_t *>(Buf.data() +
+                                             AddrInfoOffsetsGD.FileOffset),
           Hdr->NumAddresses);
     } else {
       return createStringError(std::errc::not_supported,
                                "8-byte AddrInfoOffsets not yet supported");
     }
 
-    if (FileTableSize < 4)
+    if (FileTableGD.FileSize < 4)
       return createStringError(std::errc::invalid_argument,
                                "FileTable section too small");
     uint32_t NumFiles;
-    memcpy(&NumFiles, Buf.data() + FileTableOff, 4);
-    if (FileTableSize < 4 + NumFiles * sizeof(FileEntry))
+    memcpy(&NumFiles, Buf.data() + FileTableGD.FileOffset, 4);
+    if (FileTableGD.FileSize < 4 + NumFiles * sizeof(FileEntry))
       return createStringError(std::errc::invalid_argument,
                                "FileTable section too small for %u files",
                                NumFiles);
     Files = ArrayRef<FileEntry>(
-        reinterpret_cast<const FileEntry *>(Buf.data() + FileTableOff + 4),
+        reinterpret_cast<const FileEntry *>(Buf.data() +
+                                            FileTableGD.FileOffset + 4),
         NumFiles);
 
-    StrTab.Data = Buf.substr(StringTableOff, StringTableSize);
+    StrTab.Data = Buf.substr(StringTableGD.FileOffset,
+                             StringTableGD.FileSize);
   } else {
-    uint64_t AOff = AddrOffsetsOff;
-    Swap->AddrOffsets.resize(AddrOffsetsSize);
+    uint64_t AOff = AddrOffsetsGD.FileOffset;
+    Swap->AddrOffsets.resize(AddrOffsetsGD.FileSize);
     switch (Hdr->AddrOffSize) {
     case 1:
       if (!DE.getU8(&AOff, Swap->AddrOffsets.data(), Hdr->NumAddresses))
@@ -252,7 +225,7 @@ llvm::Error GsymReaderV2::parse() {
     AddrOffsets = ArrayRef<uint8_t>(Swap->AddrOffsets);
 
     if (Hdr->AddrInfoOffSize == 4) {
-      uint64_t AIOff = AddrInfoOffsetsOff;
+      uint64_t AIOff = AddrInfoOffsetsGD.FileOffset;
       Swap->AddrInfoOffsets.resize(Hdr->NumAddresses);
       if (!DE.getU32(&AIOff, Swap->AddrInfoOffsets.data(), Hdr->NumAddresses))
         return createStringError(std::errc::invalid_argument,
@@ -263,7 +236,7 @@ llvm::Error GsymReaderV2::parse() {
                                "8-byte AddrInfoOffsets not yet supported");
     }
 
-    uint64_t FTOff = FileTableOff;
+    uint64_t FTOff = FileTableGD.FileOffset;
     uint32_t NumFiles = DE.getU32(&FTOff);
     if (NumFiles > 0) {
       Swap->Files.resize(NumFiles);
@@ -273,7 +246,8 @@ llvm::Error GsymReaderV2::parse() {
       Files = ArrayRef<FileEntry>(Swap->Files);
     }
 
-    StrTab.Data = Buf.substr(StringTableOff, StringTableSize);
+    StrTab.Data = Buf.substr(StringTableGD.FileOffset,
+                             StringTableGD.FileSize);
   }
   return Error::success();
 }
