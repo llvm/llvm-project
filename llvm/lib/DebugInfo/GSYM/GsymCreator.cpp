@@ -421,8 +421,7 @@ void GsymCreator::fixupInlineInfo(const GsymCreator &SrcGC, InlineInfo &II) {
     fixupInlineInfo(SrcGC, ChildII);
 }
 
-uint64_t GsymCreator::copyFunctionInfo(const GsymCreator &SrcGC,
-                                       size_t FuncIdx) {
+uint64_t GsymCreator::copyFunctionInfo(const GsymCreator &SrcGC, size_t FuncIdx) {
   // To copy a function info we need to copy any files and strings over into
   // this GsymCreator and then copy the function info and update the string
   // table offsets to match the new offsets.
