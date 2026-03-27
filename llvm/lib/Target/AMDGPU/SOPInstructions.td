@@ -1178,8 +1178,7 @@ let isCommutable = 1, Constraints = "$sdst = $src0" in {
 }
 
 let SubtargetPredicate = isGFX6GFX7GFX8GFX9, isBranch = 1,
-    isTerminator = 1, isIndirectBranch = 1,
-    Uses = [EXEC, MODE],
+    isTerminator = 1, Uses = [EXEC, MODE],
     Defs = !listconcat([EXEC, MODE], !foreach(i, !range(0, 23), SGPR#i)) in
 def S_CBRANCH_I_FORK : SOPK_Pseudo <
   "s_cbranch_i_fork",
