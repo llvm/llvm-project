@@ -1551,6 +1551,19 @@ void SwitchOp::getSuccessorRegions(
   llvm::append_range(successors, getRegions());
 }
 
+/// Returns the int64_t value of an IntegerAttr regardless of whether its type
+/// is signless, signed, or unsigned. Returns std::nullopt for unknown types.
+static std::optional<int64_t> getIntAttrValue(IntegerAttr attr) {
+  Type type = attr.getType();
+  if (type.isIndex() || type.isSignlessInteger())
+    return attr.getInt();
+  if (type.isSignedInteger())
+    return attr.getSInt();
+  if (type.isUnsignedInteger())
+    return static_cast<int64_t>(attr.getUInt());
+  return std::nullopt;
+}
+
 void SwitchOp::getEntrySuccessorRegions(
     ArrayRef<Attribute> operands,
     SmallVectorImpl<RegionSuccessor> &successors) {
@@ -1563,10 +1576,17 @@ void SwitchOp::getEntrySuccessorRegions(
     return;
   }
 
+  std::optional<int64_t> argValue = getIntAttrValue(arg);
+  if (!argValue) {
+    // Unknown type; conservatively treat all regions as possible.
+    llvm::append_range(successors, getRegions());
+    return;
+  }
+
   // Otherwise, try to find a case with a matching value. If not, the
   // default region is the only successor.
   for (auto [caseValue, caseRegion] : llvm::zip(getCases(), getCaseRegions())) {
-    if (caseValue == arg.getInt()) {
+    if (caseValue == *argValue) {
       successors.emplace_back(&caseRegion);
       return;
     }
@@ -1583,8 +1603,15 @@ void SwitchOp::getRegionInvocationBounds(
     return;
   }
 
+  std::optional<int64_t> maybeIntValue = getIntAttrValue(operandValue);
+  if (!maybeIntValue) {
+    // Unknown type; conservatively treat all regions as possible.
+    bounds.append(getNumRegions(), InvocationBounds(/*lb=*/0, /*ub=*/1));
+    return;
+  }
+
   unsigned liveIndex = getNumRegions() - 1;
-  const auto *iteratorToInt = llvm::find(getCases(), operandValue.getInt());
+  const auto *iteratorToInt = llvm::find(getCases(), *maybeIntValue);
 
   liveIndex = iteratorToInt != getCases().end()
                   ? std::distance(getCases().begin(), iteratorToInt)
