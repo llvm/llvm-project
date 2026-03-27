@@ -58,44 +58,43 @@ parseGlobalDataEntries(DataExtractor &DE, uint64_t &Offset,
                        uint64_t &StringTableOff, uint64_t &StringTableSize,
                        uint64_t &FileTableOff, uint64_t &FileTableSize,
                        uint64_t &FuncInfoOff, uint64_t &FuncInfoSize) {
-  while (Offset + 24 <= BufSize) {
-    auto Type = static_cast<GlobalInfoType>(DE.getU32(&Offset));
-    uint32_t Pad = DE.getU32(&Offset);
-    uint64_t FileOffset = DE.getU64(&Offset);
-    uint64_t FileSize = DE.getU64(&Offset);
-    (void)Pad;
+  while (Offset + sizeof(GlobalData) <= BufSize) {
+    auto GDOrErr = GlobalData::decode(DE, Offset);
+    if (!GDOrErr)
+      return GDOrErr.takeError();
+    const GlobalData &GD = *GDOrErr;
 
-    if (Type == GlobalInfoType::EndOfList)
+    if (GD.Type == GlobalInfoType::EndOfList)
       return Error::success();
 
-    if (FileOffset + FileSize > BufSize)
+    if (GD.FileOffset + GD.FileSize > BufSize)
       return createStringError(std::errc::invalid_argument,
                                "GlobalData section type %u extends beyond "
                                "buffer (offset=%" PRIu64 ", size=%" PRIu64
                                ", bufsize=%" PRIu64 ")",
-                               static_cast<uint32_t>(Type), FileOffset,
-                               FileSize, BufSize);
+                               static_cast<uint32_t>(GD.Type), GD.FileOffset,
+                               GD.FileSize, BufSize);
 
-    switch (Type) {
+    switch (GD.Type) {
     case GlobalInfoType::AddrOffsets:
-      AddrOffsetsOff = FileOffset;
-      AddrOffsetsSize = FileSize;
+      AddrOffsetsOff = GD.FileOffset;
+      AddrOffsetsSize = GD.FileSize;
       break;
     case GlobalInfoType::AddrInfoOffsets:
-      AddrInfoOffsetsOff = FileOffset;
-      AddrInfoOffsetsSize = FileSize;
+      AddrInfoOffsetsOff = GD.FileOffset;
+      AddrInfoOffsetsSize = GD.FileSize;
       break;
     case GlobalInfoType::StringTable:
-      StringTableOff = FileOffset;
-      StringTableSize = FileSize;
+      StringTableOff = GD.FileOffset;
+      StringTableSize = GD.FileSize;
       break;
     case GlobalInfoType::FileTable:
-      FileTableOff = FileOffset;
-      FileTableSize = FileSize;
+      FileTableOff = GD.FileOffset;
+      FileTableSize = GD.FileSize;
       break;
     case GlobalInfoType::FunctionInfo:
-      FuncInfoOff = FileOffset;
-      FuncInfoSize = FileSize;
+      FuncInfoOff = GD.FileOffset;
+      FuncInfoSize = GD.FileSize;
       break;
     case GlobalInfoType::UUID:
       break;

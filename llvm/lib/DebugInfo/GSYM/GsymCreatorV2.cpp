@@ -136,27 +136,19 @@ llvm::Error GsymCreatorV2::encode(FileWriter &O) const {
     return Err;
 
   // Write GlobalData entries.
-  if (auto Err = GlobalData{GlobalInfoType::AddrOffsets, 0,
-                            AddrOffsetsOffset, AddrOffsetsSize}.encode(O))
-    return Err;
-  if (auto Err = GlobalData{GlobalInfoType::AddrInfoOffsets, 0,
-                            AddrInfoOffsetsOffset, AddrInfoOffsetsSize}.encode(O))
-    return Err;
-  if (auto Err = GlobalData{GlobalInfoType::FileTable, 0,
-                            FileTableOffset, FileTableSize}.encode(O))
-    return Err;
-  if (auto Err = GlobalData{GlobalInfoType::StringTable, 0,
-                            StringTableOffset, StringTableSize}.encode(O))
-    return Err;
-  if (auto Err = GlobalData{GlobalInfoType::FunctionInfo, 0,
-                            FISectionOffset, FISectionSize}.encode(O))
-    return Err;
+  GlobalData{GlobalInfoType::AddrOffsets, 0,
+             AddrOffsetsOffset, AddrOffsetsSize}.encode(O);
+  GlobalData{GlobalInfoType::AddrInfoOffsets, 0,
+             AddrInfoOffsetsOffset, AddrInfoOffsetsSize}.encode(O);
+  GlobalData{GlobalInfoType::FileTable, 0,
+             FileTableOffset, FileTableSize}.encode(O);
+  GlobalData{GlobalInfoType::StringTable, 0,
+             StringTableOffset, StringTableSize}.encode(O);
+  GlobalData{GlobalInfoType::FunctionInfo, 0,
+             FISectionOffset, FISectionSize}.encode(O);
   if (HasUUID)
-    if (auto Err = GlobalData{GlobalInfoType::UUID, 0,
-                              UUIDOffset, UUIDSectionSize}.encode(O))
-      return Err;
-  if (auto Err = GlobalData{GlobalInfoType::EndOfList, 0, 0, 0}.encode(O))
-    return Err;
+    GlobalData{GlobalInfoType::UUID, 0, UUIDOffset, UUIDSectionSize}.encode(O);
+  GlobalData{GlobalInfoType::EndOfList, 0, 0, 0}.encode(O);
 
   // Write AddrOffsets section.
   assert(O.tell() == AddrOffsetsOffset);

@@ -59,8 +59,7 @@ struct GlobalData {
   /// Encode this GlobalData entry into a FileWriter stream.
   ///
   /// \param O The binary stream to write the data to.
-  /// \returns An error object that indicates success or failure.
-  LLVM_ABI llvm::Error encode(FileWriter &O) const;
+  LLVM_ABI void encode(FileWriter &O) const;
 
   /// Decode a GlobalData entry from a binary data stream.
   ///
