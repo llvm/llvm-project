@@ -3794,8 +3794,6 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
     assert(StepTy->isIntegerTy() && "Truncation requires an integer type");
     Step = Builder.createScalarCast(Instruction::Trunc, Step, Ty, DL);
     Start = Builder.createScalarCast(Instruction::Trunc, Start, Ty, DL);
-    // Truncation doesn't preserve WrapFlags.
-    Flags.dropPoisonGeneratingFlags();
     StepTy = Ty;
   }
 
