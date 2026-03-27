@@ -383,8 +383,7 @@ struct CloneRegionBeforeOp : public RewritePattern {
       return failure();
     for (Region &r : op->getRegions())
       rewriter.cloneRegionBefore(r, op->getBlock());
-    rewriter.modifyOpInPlace(
-        op, [&]() { op->setAttr("was_cloned", rewriter.getUnitAttr()); });
+    op->setAttr("was_cloned", rewriter.getUnitAttr());
     return success();
   }
 };
