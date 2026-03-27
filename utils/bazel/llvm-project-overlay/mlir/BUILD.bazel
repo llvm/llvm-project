@@ -8682,6 +8682,7 @@ cc_library(
     ],
     includes = ["include"],
     deps = [
+        ":BytecodeDialectInterfaceIncGen",
         ":BytecodeOpInterfaceIncGen",
         ":IR",
         "//llvm:Support",
