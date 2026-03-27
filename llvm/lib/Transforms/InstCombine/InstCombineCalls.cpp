@@ -1883,29 +1883,26 @@ static Instruction *foldNeonShift(IntrinsicInst *II, InstCombinerImpl &IC) {
 
 // If II is llvm.sin(x) or llvm.cos(x), and there is a matching
 // llvm.cos(x) or llvm.sin(x) using the same argument, combine them
-// into a single llvm.sincos(x) call. Returns the sin or cos result
-// extracted from sincos via ResultForII, and the matched instruction
-// via MatchedInst, or returns false if no match is found.
-static bool foldSinCosToSinCos(IntrinsicInst *II, IRBuilderBase &B,
-                               Value *&ResultForII,
-                               IntrinsicInst *&MatchedInst) {
+// into a single llvm.sincos(x) call. Returns the result for II
+// extracted from sincos, or nullptr if no match is found.
+static Value *foldSinCosToSinCos(IntrinsicInst *II, IRBuilderBase &B,
+                                 InstCombinerImpl &IC) {
   Intrinsic::ID IID = II->getIntrinsicID();
-  bool IsSin = (IID == Intrinsic::sin);
+  bool IsSin = IID == Intrinsic::sin;
   Intrinsic::ID MatchID = IsSin ? Intrinsic::cos : Intrinsic::sin;
 
   Value *Arg = II->getArgOperand(0);
 
   // Don't bother looking through uses of constants.
   if (isa<Constant>(Arg))
-    return false;
+    return nullptr;
 
   // Look for a matching cos/sin intrinsic with the same argument.
   IntrinsicInst *Match = nullptr;
   for (User *U : Arg->users()) {
     if (auto *Cand = dyn_cast<IntrinsicInst>(U)) {
       if (Cand != II && !Cand->use_empty() &&
-          Cand->getIntrinsicID() == MatchID &&
-          Cand->getFunction() == II->getFunction()) {
+          Cand->getIntrinsicID() == MatchID) {
         Match = Cand;
         break;
       }
@@ -1913,7 +1910,7 @@ static bool foldSinCosToSinCos(IntrinsicInst *II, IRBuilderBase &B,
   }
 
   if (!Match)
-    return false;
+    return nullptr;
 
   // Insert sincos right after the argument definition.
   IRBuilderBase::InsertPointGuard Guard(B);
@@ -1930,11 +1927,10 @@ static bool foldSinCosToSinCos(IntrinsicInst *II, IRBuilderBase &B,
   Value *Sin = B.CreateExtractValue(SinCos, 0, "sin");
   Value *Cos = B.CreateExtractValue(SinCos, 1, "cos");
 
-  // Replace the matching call and return both results.
-  Match->replaceAllUsesWith(IsSin ? Cos : Sin);
-  MatchedInst = Match;
-  ResultForII = IsSin ? Sin : Cos;
-  return true;
+  // Replace the matching call and erase it.
+  IC.replaceInstUsesWith(*Match, IsSin ? Cos : Sin);
+  IC.eraseInstFromFunction(*Match);
+  return IsSin ? Sin : Cos;
 }
 
 /// CallInst simplification. This mostly only handles folding of intrinsic
@@ -3238,12 +3234,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return replaceOperand(*II, 0, X);
     }
     if (IID == Intrinsic::cos) {
-      Value *Result;
-      IntrinsicInst *Match;
-      if (foldSinCosToSinCos(II, Builder, Result, Match)) {
-        eraseInstFromFunction(*Match);
+      if (Value *Result = foldSinCosToSinCos(II, Builder, *this))
         return replaceInstUsesWith(*II, Result);
-      }
     }
     break;
   }
@@ -3260,12 +3252,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return UnaryOperator::CreateFNegFMF(NewFunc, II);
     }
     if (IID == Intrinsic::sin) {
-      Value *Result;
-      IntrinsicInst *Match;
-      if (foldSinCosToSinCos(II, Builder, Result, Match)) {
-        eraseInstFromFunction(*Match);
+      if (Value *Result = foldSinCosToSinCos(II, Builder, *this))
         return replaceInstUsesWith(*II, Result);
-      }
     }
     break;
   }

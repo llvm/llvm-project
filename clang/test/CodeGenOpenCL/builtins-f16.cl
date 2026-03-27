@@ -3,8 +3,6 @@
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
 // CHECK-LABEL: define{{.*}} void @test_half_builtins
-// sin and cos with the same argument are combined into sincos
-// CHECK: call { half, half } @llvm.sincos.f16(half %h0)
 void test_half_builtins(half h0, half h1, half h2, int i0) {
   volatile half res;
 
@@ -28,10 +26,6 @@ void test_half_builtins(half h0, half h1, half h2, int i0) {
 
   // CHECK: call half @llvm.ceil.f16(half %h0)
   res = __builtin_ceilf16(h0);
-
-  // cos result extracted from sincos above
-  // CHECK: store volatile half %cos
-  res = __builtin_cosf16(h0);
 
   // CHECK: call half @llvm.cosh.f16(half %h0)
   res = __builtin_coshf16(h0);
@@ -78,10 +72,6 @@ void test_half_builtins(half h0, half h1, half h2, int i0) {
   // CHECK: call half @llvm.round.f16(half %h0)
   res = __builtin_roundf16(h0);
 
-  // sin result extracted from sincos above
-  // CHECK: store volatile half %sin
-  res = __builtin_sinf16(h0);
-
   // CHECK: call half @llvm.sinh.f16(half %h0)
   res = __builtin_sinhf16(h0);
 
@@ -102,4 +92,19 @@ void test_half_builtins(half h0, half h1, half h2, int i0) {
 
   // CHECK: call half @llvm.ldexp.f16.i32(half %h0, i32 %i0)
   res = __builtin_ldexpf16(h0, i0);
+}
+
+// sin and cos are split into separate functions to avoid sincos combining.
+// CHECK-LABEL: define{{.*}} void @test_half_sin
+// CHECK: call half @llvm.sin.f16(half %h0)
+void test_half_sin(half h0) {
+  volatile half res;
+  res = __builtin_sinf16(h0);
+}
+
+// CHECK-LABEL: define{{.*}} void @test_half_cos
+// CHECK: call half @llvm.cos.f16(half %h0)
+void test_half_cos(half h0) {
+  volatile half res;
+  res = __builtin_cosf16(h0);
 }
