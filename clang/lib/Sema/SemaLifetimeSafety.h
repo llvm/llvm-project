@@ -38,15 +38,47 @@ inline bool IsLifetimeSafetyDiagnosticEnabled(Sema &S, const Decl *D) {
                           D->getBeginLoc());
 }
 
+inline void reportAssignmentImpl(Sema &S, const Expr *IssueExpr,
+                                 const ValueDecl *LHS, const Expr *RHS,
+                                 const SourceLocation LHSExploc) {
+  const auto [IssueMsg, _] = FormatIssueExprForSema(IssueExpr);
+  const auto SrcMsgList = FormatSrcExprForSema(RHS);
+  if (SrcMsgList.size() == 1 &&
+      llvm::isa<DeclRefExpr>(SrcMsgList[0].CurrExpr)) {
+    S.Diag(LHSExploc, diag::note_lifetime_safety_note_alias_chain)
+        << FormatValueDeclForSema(LHS) << IssueMsg;
+  } else {
+    for (const auto &SrcMsg : llvm::reverse(SrcMsgList))
+      S.Diag(RHS->getBeginLoc(), diag::note_lifetime_safety_note_alias_chain)
+          << SrcMsg.CurrExpr->getSourceRange() << SrcMsg.Value << IssueMsg;
+    S.Diag(LHSExploc, diag::note_lifetime_safety_note_alias_chain)
+        << FormatValueDeclForSema(LHS) << IssueMsg;
+  }
+}
+
+inline void reportAssignment(Sema &S, const Expr *IssueExpr,
+                             const OriginDestExpr &LHS, const Expr *RHS) {
+  if (!LHS || !RHS) {
+    return;
+  }
+
+  if (const DeclRefExpr *LDExpr = llvm::dyn_cast<const DeclRefExpr *>(LHS)) {
+    reportAssignmentImpl(S, IssueExpr, LDExpr->getDecl(), RHS,
+                         LDExpr->getExprLoc());
+  } else if (const ValueDecl *LVDecl = llvm::dyn_cast<const ValueDecl *>(LHS)) {
+    reportAssignmentImpl(S, IssueExpr, LVDecl, RHS, LVDecl->getLocation());
+  }
+}
+
 class LifetimeSafetySemaHelperImpl : public LifetimeSafetySemaHelper {
 
 public:
   LifetimeSafetySemaHelperImpl(Sema &S) : S(S) {}
 
-  void reportUseAfterFree(const Expr *IssueExpr, const Expr *UseExpr,
-                          const Expr *MovedExpr,
-                          const llvm::SmallVector<AssignmentPair> AliasList,
-                          SourceLocation FreeLoc) override {
+  void reportUseAfterFree(
+      const Expr *IssueExpr, const Expr *UseExpr, const Expr *MovedExpr,
+      const std::optional<llvm::SmallVector<AssignmentPair>> AliasList,
+      SourceLocation FreeLoc) override {
     S.Diag(IssueExpr->getExprLoc(),
            MovedExpr ? diag::warn_lifetime_safety_use_after_scope_moved
                      : diag::warn_lifetime_safety_use_after_scope)
@@ -56,50 +88,9 @@ public:
           << MovedExpr->getSourceRange();
     S.Diag(FreeLoc, diag::note_lifetime_safety_destroyed_here);
 
-    for (auto AliasStmt = AliasList.rbegin(); AliasStmt != AliasList.rend();
-         ++AliasStmt) {
-      if (const auto *CurrDeclExpr =
-              llvm::dyn_cast<const DeclRefExpr *>((*AliasStmt).first)) {
-        S.Diag(CurrDeclExpr->getExprLoc(),
-               diag::note_lifetime_safety_note_alias_chain)
-            << (*AliasStmt).second->getNameAsString()
-            << CurrDeclExpr->getDecl()->getNameAsString();
-      } else if (const auto *CurrDeclExpr =
-                     llvm::dyn_cast<const CXXTemporaryObjectExpr *>(
-                         (*AliasStmt).first)) {
-        S.Diag(CurrDeclExpr->getExprLoc(),
-               diag::note_lifetime_safety_note_alias_chain)
-            << (*AliasStmt).second->getNameAsString()
-            << CurrDeclExpr->getConstructor()->getNameAsString() + "()";
-      } else if (const auto *CurrCallExpr =
-                     llvm::dyn_cast<const CallExpr *>((*AliasStmt).first)) {
-        std::string OutStr;
-        llvm::raw_string_ostream OutStream(OutStr);
-        LangOptions Lo;
-        PrintingPolicy Policy(Lo);
-
-        if (const Expr *Callee = CurrCallExpr->getCallee()) {
-          Callee->IgnoreParenCasts()->printPretty(OutStream, nullptr, Policy);
-        }
-
-        OutStream << "(";
-        for (size_t i = 0; i < CurrCallExpr->getNumArgs(); ++i) {
-          const Expr *CurrArg = CurrCallExpr->getArg(i);
-          if (CurrArg) {
-            CurrArg->printPretty(OutStream, nullptr, Policy);
-          }
-
-          if (i < CurrCallExpr->getNumArgs() - 1) {
-            OutStream << ", ";
-          }
-        }
-        OutStream << ")";
-
-        S.Diag(CurrCallExpr->getExprLoc(),
-               diag::note_lifetime_safety_note_alias_chain)
-            << (*AliasStmt).second->getNameAsString() << OutStream.str();
-      }
-    }
+    if (AliasList.has_value())
+      for (const auto &AliasStmt : llvm::reverse(AliasList.value()))
+        reportAssignment(S, IssueExpr, AliasStmt.first, AliasStmt.second);
 
     S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
         << UseExpr->getSourceRange();

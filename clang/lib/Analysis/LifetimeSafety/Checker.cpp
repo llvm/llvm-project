@@ -254,17 +254,13 @@ public:
           // Scope-based expiry (use-after-scope).
           const struct AssignmentQueryContext Context = {
               LoanPropagation, MovedLoans, LiveOrigins, FactMgr, ADC};
-          const CFGStmtMap *CurrCFGStmtMap = ADC.getCFGStmtMap();
-          const auto AliasExprs =
-              getAliasList(Context, UF, LID,
-                           CurrCFGStmtMap->getBlock(UF->getUseExpr()) ==
-                               CurrCFGStmtMap->getBlock(IssueExpr));
+          const auto AliasExprs = getAliasList(Context, UF, LID, IssueExpr);
           if (!AliasExprs.has_value()) {
             llvm::dbgs() << "Search variable assignment chain failed\n";
           }
 
           SemaHelper->reportUseAfterFree(IssueExpr, UF->getUseExpr(), MovedExpr,
-                                         AliasExprs.value_or({}), ExpiryLoc);
+                                         AliasExprs, ExpiryLoc);
         }
       } else if (const auto *OEF =
                      CausingFact.dyn_cast<const OriginEscapesFact *>()) {

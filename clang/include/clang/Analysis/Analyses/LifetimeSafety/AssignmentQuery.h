@@ -15,7 +15,6 @@
 #define LLVM_CLANG_ANALYSIS_ANALYSES_ASSIGNMENTQUERY_H
 
 #include "clang/AST/Decl.h"
-#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeSafety.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LiveOrigins.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LoanPropagation.h"
@@ -23,12 +22,39 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 
+namespace clang::lifetimes {
+
+using OriginDestExpr =
+    llvm::PointerUnion<const DeclRefExpr *, const ValueDecl *>;
+
+using AssignmentPair = std::pair<OriginDestExpr, const Expr *>;
+
+struct ExprPrintingResult {
+  llvm::SmallString<32> Value;
+  const Expr *CurrExpr;
+};
+
+ExprPrintingResult FormatIssueExprForSema(const Expr *IssueExpr);
+llvm::SmallVector<ExprPrintingResult> FormatSrcExprForSema(const Expr *SrcExpr);
+
+inline __attribute__((always_inline)) llvm::SmallString<32>
+FormatValueDeclForSema(const ValueDecl *TargetValue) {
+  llvm::SmallString<32> Result;
+  if (TargetValue) {
+    Result += "variable '";
+    Result += TargetValue->getName();
+    Result += "'";
+  }
+  return Result;
+}
+} // namespace clang::lifetimes
+
 namespace clang::lifetimes::internal {
 
 struct AliasAssignmentSearchResult {
   const llvm::SmallVector<AssignmentPair> Payload;
   bool SearchComplete;
-  const ValueDecl *LastDestDecl;
+  const std::optional<OriginDestExpr> LastDestDecl;
   std::optional<OriginID> LastOrigin;
 };
 
@@ -45,8 +71,8 @@ struct AssignmentQueryContext {
 /// To help users understand the data flow, we track where the problematic
 /// address originated.
 std::optional<llvm::SmallVector<AssignmentPair>>
-getAliasList(const AssignmentQueryContext &Context, const UseFact *UF,
-             const LoanID End, const bool InOneBlock);
+getAliasList(const AssignmentQueryContext &Context, const Fact *CausingFact,
+             const LoanID End, const Expr *IssueExpr);
 } // namespace clang::lifetimes::internal
 
 #endif

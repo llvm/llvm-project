@@ -21,6 +21,7 @@
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_H
 
 #include "clang/AST/Decl.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/AssignmentQuery.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeStats.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LiveOrigins.h"
@@ -46,11 +47,6 @@ enum class SuggestionScope {
   IntraTU  // For suggestions on definitions local to a Translation Unit.
 };
 
-using OriginSrcExpr =
-    llvm::PointerUnion<const DeclRefExpr *, const CXXTemporaryObjectExpr *,
-                       const CallExpr *>;
-using AssignmentPair = std::pair<OriginSrcExpr, const ValueDecl *>;
-
 /// Abstract interface for operations requiring Sema access.
 ///
 /// This class exists to break a circular dependency: the LifetimeSafety
@@ -66,11 +62,10 @@ public:
   LifetimeSafetySemaHelper() = default;
   virtual ~LifetimeSafetySemaHelper() = default;
 
-  virtual void
-  reportUseAfterFree(const Expr *IssueExpr, const Expr *UseExpr,
-                     const Expr *MovedExpr,
-                     const llvm::SmallVector<AssignmentPair> AliasList,
-                     SourceLocation FreeLoc) {}
+  virtual void reportUseAfterFree(
+      const Expr *IssueExpr, const Expr *UseExpr, const Expr *MovedExpr,
+      const std::optional<llvm::SmallVector<AssignmentPair>> AliasList,
+      SourceLocation FreeLoc) {}
 
   virtual void reportUseAfterReturn(const Expr *IssueExpr,
                                     const Expr *ReturnExpr,

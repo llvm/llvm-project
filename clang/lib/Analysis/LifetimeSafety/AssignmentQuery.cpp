@@ -24,54 +24,54 @@ using namespace clang;
 using namespace clang::lifetimes;
 using namespace clang::lifetimes::internal;
 
-std::optional<OriginSrcExpr> GetPureSrcExpr(const Expr *TargetExpr) {
+std::optional<const Expr *> GetPureSrcExpr(const Expr *TargetExpr) {
   if (!TargetExpr)
     return std::nullopt;
   const Expr *SExpr = TargetExpr->IgnoreParenCasts();
   if (!SExpr)
     return std::nullopt;
 
-  if (const auto *SDRExpr = llvm::dyn_cast<DeclRefExpr>(SExpr)) {
-    return SDRExpr;
-  }
-  if (const auto *STMExpr = llvm::dyn_cast<CXXTemporaryObjectExpr>(SExpr)) {
-    return STMExpr;
-  }
-  if (const auto *SCExpr = llvm::dyn_cast<CallExpr>(SExpr)) {
-    return SCExpr;
-  }
+  if (llvm::isa<DeclRefExpr, CXXTemporaryObjectExpr, ConditionalOperator,
+                CXXConstructExpr>(SExpr) &&
+      !SExpr->getExprLoc().isInvalid())
+    return SExpr;
 
-  if (const auto *SCCExpr = llvm::dyn_cast<CXXConstructExpr>(SExpr)) {
-    if (SCCExpr->getNumArgs() > 0)
-      return GetPureSrcExpr(SCCExpr->getArg(0));
-  }
-  if (const auto *SUOExpr = llvm::dyn_cast<UnaryOperator>(SExpr)) {
+  if (const auto *SCExpr = llvm::dyn_cast<CallExpr>(SExpr);
+      SCExpr && !SCExpr->getExprLoc().isInvalid() &&
+      !SCExpr->getCallee()->IgnoreParenCasts()->getExprLoc().isInvalid())
+    return SCExpr;
+
+  if (const auto *SMExpr = llvm::dyn_cast<MemberExpr>(SExpr))
+    return GetPureSrcExpr(SMExpr->getBase());
+  if (const auto *SCExpr = llvm::dyn_cast<CXXMemberCallExpr>(SExpr))
+    return GetPureSrcExpr(SCExpr->getCallee());
+  if (const auto *SUOExpr = llvm::dyn_cast<UnaryOperator>(SExpr))
     return GetPureSrcExpr(SUOExpr->getSubExpr());
-  }
-  if (const auto *SCBExpr = llvm::dyn_cast<CXXBindTemporaryExpr>(SExpr)) {
+  if (const auto *SCBExpr = llvm::dyn_cast<CXXBindTemporaryExpr>(SExpr))
     return GetPureSrcExpr(SCBExpr->getSubExpr());
-  }
 
   return std::nullopt;
 }
 
-AliasAssignmentSearchResult
-getAliasListCore(const AssignmentQueryContext &Context, const CFGBlock *Block,
-                 const LoanID EndLoanID, OriginID *TargetOID,
-                 const ValueDecl *LastDestDecl = nullptr,
-                 const std::optional<OriginID> LastOriginID = std::nullopt) {
+AliasAssignmentSearchResult getAliasListCore(
+    const AssignmentQueryContext &Context, const CFGBlock *Block,
+    const LoanID EndLoanID, OriginID *TargetOID,
+    const std::optional<OriginDestExpr> LastDestDecl = std::nullopt,
+    const std::optional<OriginID> LastOriginID = std::nullopt) {
+  std::optional<OriginID> CurrOrigin = std::nullopt;
+  std::optional<OriginDestExpr> DestDecl = LastDestDecl;
+  std::optional<const Expr *> SrcExpr = std::nullopt;
   llvm::SmallVector<AssignmentPair> AliasStmts;
-  const ValueDecl *DestDecl = LastDestDecl;
   const auto Facts = Context.FactMgr.getFacts(Block);
   bool FetchLoan = false;
   auto IssueOriginID = LastOriginID;
 
-  for (auto F = Facts.rbegin(); F != Facts.rend(); ++F) {
-    if (const auto *OFF = (*F)->getAs<OriginFlowFact>()) {
+  for (const auto &F : llvm::reverse(Facts)) {
+    if (const auto *OFF = F->getAs<OriginFlowFact>()) {
       if (IssueOriginID.has_value() &&
-          OFF->getDestOriginID() == IssueOriginID.value()) {
+          OFF->getDestOriginID() == IssueOriginID.value())
         FetchLoan = true;
-      }
+
       if (OFF->getDestOriginID() == *TargetOID) {
         const auto HeldLoans =
             Context.LoanPropagation.getLoans(OFF->getSrcOriginID(), OFF);
@@ -80,9 +80,11 @@ getAliasListCore(const AssignmentQueryContext &Context, const CFGBlock *Block,
           const auto TargetOrigin =
               Context.FactMgr.getOriginMgr().getOrigin(OFF->getDestOriginID());
 
-          if (DestDecl == nullptr) {
-            if (const ValueDecl *DDecl = TargetOrigin.getDecl()) {
-              DestDecl = DDecl;
+          if (!DestDecl.has_value()) {
+            if (const ValueDecl *DVecl = TargetOrigin.getDecl();
+                DVecl && !DVecl->getLocation().isInvalid()) {
+              CurrOrigin = *TargetOID;
+              DestDecl = DVecl;
             }
           } else {
             auto SExpr = GetPureSrcExpr(TargetOrigin.getExpr());
@@ -93,16 +95,35 @@ getAliasListCore(const AssignmentQueryContext &Context, const CFGBlock *Block,
             }
 
             if (SExpr.has_value()) {
-              AliasStmts.push_back({SExpr.value(), DestDecl});
-              DestDecl = nullptr;
+              AliasStmts.push_back({DestDecl.value(), SExpr.value()});
+              SrcExpr = SExpr.value();
+              DestDecl = std::nullopt;
+              CurrOrigin = std::nullopt;
             }
           }
           *TargetOID = OFF->getSrcOriginID();
         }
       }
-    } else if (const auto *IF = (*F)->getAs<IssueFact>()) {
+    } else if (const auto *IF = F->getAs<IssueFact>()) {
       if (IF->getLoanID() == EndLoanID) {
         IssueOriginID = IF->getOriginID();
+      }
+    } else if (const auto *UF = F->getAs<UseFact>()) {
+      if (CurrOrigin.has_value()) {
+        for (const OriginList *Cur = UF->getUsedOrigins(); Cur;
+             Cur = Cur->peelOuterOrigin()) {
+          if (Cur->getOuterOriginID() == CurrOrigin.value() &&
+              UF->isWritten()) {
+            const auto UExpr = GetPureSrcExpr(UF->getUseExpr());
+            if (UExpr.has_value()) {
+              if (const auto *UDExpr =
+                      llvm::dyn_cast<DeclRefExpr>(UExpr.value())) {
+                DestDecl = UDExpr;
+                break;
+              }
+            }
+          }
+        }
       }
     }
 
@@ -117,7 +138,7 @@ std::optional<llvm::SmallVector<AssignmentPair>>
 getAliasListInMultiBlock(const AssignmentQueryContext &Context,
                          const CFGBlock *StartBlock, const LoanID EndLoanID,
                          OriginID *StartOID) {
-  const ValueDecl *LastDestDecl = nullptr;
+  std::optional<OriginDestExpr> LastDestDecl = std::nullopt;
   llvm::SmallVector<const CFGBlock *> PendingBlocks;
   std::optional<AssignmentPair> StartStmt = std::nullopt;
   std::optional<AssignmentPair> EndStmt = std::nullopt;
@@ -128,9 +149,8 @@ getAliasListInMultiBlock(const AssignmentQueryContext &Context,
   const auto AliasStmtFilter = [&VistedExprs](const AssignmentPair StartStmt,
                                               const AssignmentPair EndStmt) {
     llvm::SmallVector<AssignmentPair> AliasStmts;
-    for (auto Stmt = StartStmt; Stmt != EndStmt; Stmt = VistedExprs.at(Stmt)) {
+    for (auto Stmt = StartStmt; Stmt != EndStmt; Stmt = VistedExprs.at(Stmt))
       AliasStmts.push_back(Stmt);
-    }
     AliasStmts.push_back(EndStmt);
     return AliasStmts;
   };
@@ -149,13 +169,11 @@ getAliasListInMultiBlock(const AssignmentQueryContext &Context,
       LastOriginID = CurrLastOriginID;
 
     if (!BlockAliasList.empty()) {
-      if (VistedExprs.empty()) {
+      if (VistedExprs.empty())
         StartStmt = BlockAliasList[0];
-      }
 
-      for (size_t i = 0; i < BlockAliasList.size() - 1; ++i) {
+      for (size_t i = 0; i < BlockAliasList.size() - 1; ++i)
         VistedExprs.insert({BlockAliasList[i], BlockAliasList[i + 1]});
-      }
 
       if (EndStmt.has_value())
         VistedExprs.insert({EndStmt.value(), BlockAliasList[0]});
@@ -163,49 +181,129 @@ getAliasListInMultiBlock(const AssignmentQueryContext &Context,
       EndStmt = BlockAliasList[BlockAliasList.size() - 1];
     }
 
-    if (Success && StartStmt.has_value() && EndStmt.has_value()) {
+    if (Success && StartStmt.has_value() && EndStmt.has_value())
       return AliasStmtFilter(StartStmt.value(), EndStmt.value());
-    }
 
-    for (const auto Block : CurrBlock->preds()) {
+    for (const auto &Block : CurrBlock->preds())
       if (Block && VistedBlocks.insert(Block).second)
         PendingBlocks.push_back(Block);
-    }
 
     if (VistedBlocks.size() >= 32 && StartStmt.has_value() &&
-        EndStmt.has_value()) {
+        EndStmt.has_value())
       return AliasStmtFilter(StartStmt.value(), EndStmt.value());
-    }
   }
 
-  if (StartStmt.has_value() && EndStmt.has_value()) {
+  if (StartStmt.has_value() && EndStmt.has_value())
     return AliasStmtFilter(StartStmt.value(), EndStmt.value());
-  }
 
   return std::nullopt;
 }
 } // namespace
 
+namespace clang::lifetimes {
+
+ExprPrintingResult FormatIssueExprForSema(const Expr *IssueExpr) {
+  if (!IssueExpr)
+    return {};
+  const auto *PureExpr = IssueExpr->IgnoreParenCasts();
+  if (!PureExpr)
+    return {};
+
+  if (const auto *IDeclExpr = llvm::dyn_cast<DeclRefExpr>(PureExpr))
+    return {FormatValueDeclForSema(IDeclExpr->getDecl()), IssueExpr};
+  return {{"the temporary"}, IssueExpr};
+}
+
+llvm::SmallVector<ExprPrintingResult>
+FormatSrcExprForSema(const Expr *SrcExpr) {
+  if (!SrcExpr)
+    return {};
+  const auto *PureExpr = SrcExpr->IgnoreParenCasts();
+  if (!PureExpr)
+    return {};
+
+  if (const auto *IOpCallExpr = llvm::dyn_cast<CXXOperatorCallExpr>(PureExpr);
+      IOpCallExpr && !IOpCallExpr->getExprLoc().isInvalid())
+    return {{{"expression"}, IOpCallExpr->getArg(0)}};
+  if (const auto *IDeclExpr = llvm::dyn_cast<DeclRefExpr>(PureExpr);
+      IDeclExpr && !IDeclExpr->getExprLoc().isInvalid())
+    return {{{}, IDeclExpr}};
+
+  if (const auto *ICXXCallExpr = llvm::dyn_cast<CXXMemberCallExpr>(PureExpr);
+      ICXXCallExpr && !ICXXCallExpr->getExprLoc().isInvalid()) {
+    llvm::SmallVector<ExprPrintingResult> Result;
+    if (!ICXXCallExpr->getCallee()->getExprLoc().isInvalid())
+      Result.push_back({{"function call result"}, ICXXCallExpr});
+    if (const auto *SubExpr = ICXXCallExpr->getImplicitObjectArgument();
+        SubExpr && !llvm::isa<DeclRefExpr>(SubExpr->IgnoreParenCasts())) {
+      Result.append(FormatSrcExprForSema(SubExpr));
+    }
+    return Result;
+  }
+  if (const auto *ICallExpr = llvm::dyn_cast<CallExpr>(PureExpr);
+      ICallExpr && !ICallExpr->getExprLoc().isInvalid()) {
+    llvm::SmallVector<ExprPrintingResult> Result;
+    if (!ICallExpr->getCallee()->getExprLoc().isInvalid())
+      Result.push_back({{"function call result"}, ICallExpr});
+    if (const auto *SubExpr = ICallExpr->getCallee();
+        SubExpr && !llvm::isa<DeclRefExpr>(SubExpr->IgnoreParenCasts())) {
+      Result.append(FormatSrcExprForSema(SubExpr));
+    }
+    return Result;
+  }
+  if (const auto *IMemberExpr = llvm::dyn_cast<MemberExpr>(PureExpr);
+      IMemberExpr && !IMemberExpr->getExprLoc().isInvalid()) {
+    llvm::SmallVector<ExprPrintingResult> Result;
+    Result.push_back({{"member access"}, IMemberExpr});
+    if (const auto *SubExpr = IMemberExpr->getBase();
+        SubExpr && !llvm::isa<DeclRefExpr>(SubExpr->IgnoreParenCasts())) {
+      Result.append(FormatSrcExprForSema(SubExpr));
+    }
+    return Result;
+  }
+
+  if (const auto *ICCExpr = llvm::dyn_cast<CXXConstructExpr>(PureExpr)) {
+    if (ICCExpr->getNumArgs() > 0) {
+      if (const auto *SubExpr = ICCExpr->getArg(0);
+          SubExpr && !llvm::isa<DeclRefExpr>(SubExpr->IgnoreParenCasts())) {
+        return FormatSrcExprForSema(SubExpr);
+      }
+    }
+  }
+  if (const auto *ITempExpr = llvm::dyn_cast<CXXBindTemporaryExpr>(PureExpr)) {
+    if (const auto *SubExpr = ITempExpr->getSubExpr();
+        SubExpr && !llvm::isa<DeclRefExpr>(SubExpr->IgnoreParenCasts())) {
+      return FormatSrcExprForSema(SubExpr);
+    }
+  }
+
+  return {};
+}
+} // namespace clang::lifetimes
+
 namespace clang::lifetimes::internal {
 
 std::optional<llvm::SmallVector<AssignmentPair>>
-getAliasList(const AssignmentQueryContext &Context, const UseFact *UF,
-             const LoanID End, const bool InOneBlock) {
-  const CFGBlock *IssueBlock =
+getAliasList(const AssignmentQueryContext &Context, const Fact *CausingFact,
+             const LoanID End, const Expr *IssueExpr) {
+  const auto *UF = llvm::dyn_cast<UseFact>(CausingFact);
+  const CFGBlock *StartBlock =
       Context.ADC.getCFGStmtMap()->getBlock(UF->getUseExpr());
-  assert(IssueBlock && "Searching CFGBlock failed");
+  assert(StartBlock && "Searching CFGBlock failed");
+  const CFGBlock *EndBlock = Context.ADC.getCFGStmtMap()->getBlock(IssueExpr);
+  assert(EndBlock && "Searching CFGBlock failed");
 
   for (const OriginList *Cur = UF->getUsedOrigins(); Cur;
        Cur = Cur->peelOuterOrigin()) {
     auto TargetOID = Cur->getOuterOriginID();
-    if (InOneBlock) {
+    if (StartBlock == EndBlock) {
       AliasAssignmentSearchResult Result =
-          getAliasListCore(Context, IssueBlock, End, &TargetOID);
+          getAliasListCore(Context, StartBlock, End, &TargetOID);
       if (!Result.Payload.empty())
         return Result.Payload;
     } else {
       auto Result =
-          getAliasListInMultiBlock(Context, IssueBlock, End, &TargetOID);
+          getAliasListInMultiBlock(Context, StartBlock, End, &TargetOID);
       if (Result.has_value())
         return Result.value();
     }
