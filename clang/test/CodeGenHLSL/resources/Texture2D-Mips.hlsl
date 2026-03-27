@@ -18,8 +18,6 @@ float4 test_mips(float2 loc : LOC) : SV_Target {
   return t.mips[0][int2(loc)];
 }
 
-// TODO: Some of the checks use %{{.*}}. We should be trying to match the ids correctly to make sure we have the right connections.
-
 // CHECK: define linkonce_odr hidden void @hlsl::Texture2D<float vector[4]>::mips_type::operator[](int) const(ptr  {{.*}} %agg.result, ptr {{.*}} %this, i32 {{.*}} %Level)
 // CHECK: entry:
 // CHECK: %{{.*}} = alloca ptr
