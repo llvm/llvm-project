@@ -611,13 +611,16 @@ VPSingleDefRecipe *vputils::findHeaderMask(VPlan &Plan) {
 
 SmallVector<VPBasicBlock *>
 VPBlockUtils::blocksChainBetween(VPBasicBlock *FirstBB, VPBasicBlock *LastBB) {
-  assert(FirstBB->getPlan() == LastBB->getPlan() &&
-         "FirstBB and LastBB from different VPlans");
+  assert(FirstBB->getEnclosingLoopRegion() ==
+             LastBB->getEnclosingLoopRegion() &&
+         "FirstBB and LastBB from different regions");
 #ifndef NDEBUG
-  VPDominatorTree VPDT(*FirstBB->getPlan());
+  bool InSingleSuccChain = false;
+  for (VPBlockBase *Succ = FirstBB; Succ; Succ = Succ->getSingleSuccessor())
+    InSingleSuccChain |= (Succ == LastBB);
+  assert(InSingleSuccChain &&
+         "LastBB not reachable from FirstBB in single-successor chain");
 #endif
-  assert(VPDT.properlyDominates(FirstBB, LastBB) &&
-         "Expected FirstBB to dominate LastBB");
   auto Blocks = to_vector(
       VPBlockUtils::blocksOnly<VPBasicBlock>(vp_depth_first_deep(FirstBB)));
   auto *LastIt = find(Blocks, LastBB);
