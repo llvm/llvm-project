@@ -63,10 +63,10 @@ private:
   llvm::FunctionCallee getMessageSendFn() const {
     // Add the non-lazy-bind attribute, since objc_msgSend is likely to
     // be called a lot.
-    // Suppress when ptrauth is enabled (inline GOT loads bypass auth stubs).
+    // Suppress on arm64e (inline GOT loads bypass auth stubs).
     llvm::Type *params[] = {ObjectPtrTy, SelectorPtrTy};
     llvm::AttributeList Attrs;
-    if (!CGM.getCodeGenOpts().PointerAuth.FunctionPointers.isEnabled()) {
+    if (!CGM.getTriple().isArm64e()) {
       Attrs = llvm::AttributeList::get(CGM.getLLVMContext(),
                                        llvm::AttributeList::FunctionIndex,
                                        llvm::Attribute::NonLazyBind);
@@ -557,7 +557,7 @@ public:
     // This is specifically the prototype for x86.
     llvm::Type *params[] = {CGM.DefaultPtrTy};
     llvm::AttributeList Attrs;
-    if (!CGM.getCodeGenOpts().PointerAuth.FunctionPointers.isEnabled()) {
+    if (!CGM.getTriple().isArm64e()) {
       Attrs = llvm::AttributeList::get(CGM.getLLVMContext(),
                                        llvm::AttributeList::FunctionIndex,
                                        llvm::Attribute::NonLazyBind);
@@ -709,7 +709,7 @@ public:
     llvm::Type *params[] = {Int8PtrPtrTy};
     llvm::LLVMContext &C = CGM.getLLVMContext();
     llvm::SmallVector<llvm::Attribute, 3> AttrVec;
-    if (!CGM.getCodeGenOpts().PointerAuth.FunctionPointers.isEnabled()) {
+    if (!CGM.getTriple().isArm64e()) {
       AttrVec.push_back(llvm::Attribute::get(C, llvm::Attribute::NonLazyBind));
     }
     AttrVec.push_back(
