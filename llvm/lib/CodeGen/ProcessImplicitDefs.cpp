@@ -108,7 +108,7 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
   MachineBasicBlock::instr_iterator SearchE = MI->getParent()->instr_end();
   bool ImplicitDefIsDead = false;
   bool SearchedWholeBlock = true;
-  constexpr unsigned SearchLimit = 60000;
+  constexpr unsigned SearchLimit = 35;
   unsigned Count = 0;
   for (++SearchMI; SearchMI != SearchE; ++SearchMI) {
     if (++Count > SearchLimit) {
