@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/UB/IR/UBOps.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -54,35 +55,32 @@ struct LowerDelinearizeIndexOps
       return success();
     }
 
-    // Vector case: unroll to per-element scalar affine.apply operations.
+    // Vector case: unroll to per-element scalar affine.apply operations
+    // using StaticTileOffsetRange for multi-dimensional vector support.
     if (vecTy.isScalable())
       return rewriter.notifyMatchFailure(op, "scalable vectors not supported");
 
-    int64_t numElems = vecTy.getNumElements();
     unsigned numResults = op.getNumResults();
+    ArrayRef<int64_t> shape = vecTy.getShape();
+    SmallVector<int64_t> tileShape(shape.size(), 1);
 
-    // Initialize result vectors with a poison/undef-like value.
     SmallVector<Value> resultVecs(numResults);
     Value poison = ub::PoisonOp::create(rewriter, loc, vecTy);
     for (unsigned r = 0; r < numResults; ++r)
       resultVecs[r] = poison;
 
-    for (int64_t i = 0; i < numElems; ++i) {
-      // Extract scalar element.
-      Value idx = arith::ConstantIndexOp::create(rewriter, loc, i);
-      Value scalar = vector::ExtractOp::create(rewriter, loc, linearIndex, idx);
+    for (SmallVector<int64_t> pos : StaticTileOffsetRange(shape, tileShape)) {
+      Value scalar = vector::ExtractOp::create(rewriter, loc, linearIndex, pos);
 
-      // Apply scalar delinearization.
       FailureOr<SmallVector<Value>> scalarResults =
           delinearizeIndex(rewriter, loc, scalar, op.getEffectiveBasis(),
                            /*hasOuterBound=*/false);
       if (failed(scalarResults))
         return failure();
 
-      // Insert results back into vectors.
       for (unsigned r = 0; r < numResults; ++r)
         resultVecs[r] = vector::InsertOp::create(
-            rewriter, loc, (*scalarResults)[r], resultVecs[r], idx);
+            rewriter, loc, (*scalarResults)[r], resultVecs[r], pos);
     }
 
     rewriter.replaceOp(op, resultVecs);
@@ -118,33 +116,30 @@ struct LowerLinearizeIndexOps final : OpRewritePattern<AffineLinearizeIndexOp> {
       return success();
     }
 
-    // Vector case: unroll to per-element scalar affine.apply operations.
+    // Vector case: unroll to per-element scalar affine.apply operations
+    // using StaticTileOffsetRange for multi-dimensional vector support.
     if (vecTy.isScalable())
       return rewriter.notifyMatchFailure(op, "scalable vectors not supported");
 
-    int64_t numElems = vecTy.getNumElements();
+    ArrayRef<int64_t> shape = vecTy.getShape();
+    SmallVector<int64_t> tileShape(shape.size(), 1);
     ValueRange multiIndex = op.getMultiIndex();
 
     Value result = ub::PoisonOp::create(rewriter, loc, vecTy);
 
-    for (int64_t i = 0; i < numElems; ++i) {
-      Value idx = arith::ConstantIndexOp::create(rewriter, loc, i);
-
-      // Extract scalar elements from each multi_index vector.
+    for (SmallVector<int64_t> pos : StaticTileOffsetRange(shape, tileShape)) {
       SmallVector<OpFoldResult> scalarIndices;
       for (Value vec : multiIndex)
         scalarIndices.push_back(
-            vector::ExtractOp::create(rewriter, loc, vec, idx).getResult());
+            vector::ExtractOp::create(rewriter, loc, vec, pos).getResult());
 
-      // Apply scalar linearization.
       OpFoldResult linearIndex =
           linearizeIndex(rewriter, loc, scalarIndices, op.getMixedBasis());
       Value scalarResult =
           getValueOrCreateConstantIntOp(rewriter, loc, linearIndex);
 
-      // Insert result back into vector.
       result =
-          vector::InsertOp::create(rewriter, loc, scalarResult, result, idx);
+          vector::InsertOp::create(rewriter, loc, scalarResult, result, pos);
     }
 
     rewriter.replaceOp(op, result);
