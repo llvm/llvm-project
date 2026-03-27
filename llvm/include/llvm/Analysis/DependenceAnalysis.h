@@ -535,10 +535,8 @@ private:
   /// Returns true if any possible dependence is disproved.
   /// If there might be a dependence, returns false.
   /// Sets appropriate direction entry.
-  bool weakCrossingSIVtest(const SCEV *SrcCoeff, const SCEV *SrcConst,
-                           const SCEV *DstConst, const Loop *CurrentSrcLoop,
-                           const Loop *CurrentDstLoop, unsigned Level,
-                           FullDependence &Result) const;
+  bool weakCrossingSIVtest(const SCEVAddRecExpr *Src, const SCEVAddRecExpr *Dst,
+                           unsigned Level, FullDependence &Result) const;
 
   /// ExactSIVtest - Tests the SIV subscript pair
   /// (Src and Dst) for dependence.
