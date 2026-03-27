@@ -4,7 +4,8 @@ Texture2D<float4> t;
 
 template<class T>
 float4 foo(T t) {
-  return t[int2(0, 0)];
+  int2 c = {0,0};
+  return t[c];
 }
 
 [shader("pixel")]
@@ -26,10 +27,7 @@ float4 test_mips() : SV_Target {
   // expected-note@*:* {{implicitly declared protected here}}
   auto c = t.mips;
 
-  // Note: t.mips[0] correctly returns a mips_slice_type prvalue.
-  // Passing it to a template function like 'foo(t.mips[0])' currently crashes 
-  // the compiler due to an unrelated bug in HLSL template instantiation.
-  // See: https://github.com/llvm/llvm-project/issues/188556
-  // return t.mips[0][int2(0, 0)] + foo(t.mips[0]);
-  return t.mips[0][int2(0, 0)];
+  // expected-error@+2 {{calling a protected constructor of class 'hlsl::Texture2D<>::mips_slice_type'}}
+  // expected-note@*:* {{implicitly declared protected here}}
+  return t.mips[0][int2(0, 0)] + foo(t.mips[0]);
 }
