@@ -29,6 +29,7 @@ libclc_configure_source_list(CLC_AMDGPU_SOURCES
   mem_fence/clc_mem_fence.cl
   subgroup/clc_subgroup.cl
   subgroup/clc_sub_group_broadcast.cl
+  subgroup/clc_sub_group_non_uniform_reduce.cl
   subgroup/clc_sub_group_reduce.cl
   subgroup/clc_sub_group_scan.cl
   synchronization/clc_sub_group_barrier.cl
