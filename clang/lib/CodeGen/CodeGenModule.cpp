@@ -7391,10 +7391,15 @@ ConstantAddress CodeGenModule::GetAddrOfGlobalTemporary(
           E->getStorageDuration() == SD_Thread) && "not a global temporary");
   const auto *VD = cast<VarDecl>(E->getExtendingDecl());
 
-  // If we're not materializing a subobject of the temporary, keep the
-  // cv-qualifiers from the type of the MaterializeTemporaryExpr.
+  // Use the MaterializeTemporaryExpr's type if it has the same unqualified
+  // base type as Init. This preserves cv-qualifiers (e.g. const from a
+  // constexpr or const-ref binding) that skipRValueSubobjectAdjustments may
+  // have dropped via NoOp casts, while correctly falling back to Init's type
+  // when a real subobject adjustment changed the type (e.g. member access or
+  // base-class cast in C++98), where E->getType() reflects the reference type,
+  // not the actual storage type.
   QualType MaterializedType = Init->getType();
-  if (Init == E->getSubExpr())
+  if (getContext().hasSameUnqualifiedType(E->getType(), MaterializedType))
     MaterializedType = E->getType();
 
   CharUnits Align = getContext().getTypeAlignInChars(MaterializedType);
