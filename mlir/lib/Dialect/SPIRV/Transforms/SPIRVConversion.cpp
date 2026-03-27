@@ -1320,8 +1320,8 @@ Value spirv::getPushConstantValue(Operation *op, unsigned elementCount,
       loc, parent->getRegion(0).front(), elementCount, builder, integerType);
 
   Value zeroOp = spirv::ConstantOp::getZero(integerType, loc, builder);
-  Value offsetOp = spirv::ConstantOp::create(builder, loc, integerType,
-                                             builder.getI32IntegerAttr(offset));
+  Value offsetOp = spirv::ConstantOp::create(
+      builder, loc, integerType, builder.getIntegerAttr(integerType, offset));
   auto addrOp = spirv::AddressOfOp::create(builder, loc, varOp);
   auto acOp = spirv::AccessChainOp::create(builder, loc, addrOp,
                                            llvm::ArrayRef({zeroOp, offsetOp}));
