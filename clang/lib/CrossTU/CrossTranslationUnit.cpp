@@ -438,7 +438,7 @@ void CrossTranslationUnitContext::emitCrossTUDiagnostics(const IndexError &IE,
     return;
 
   case index_error_code::failed_import:
-  case index_error_code::unspecified: // FIXME: remove?
+  case index_error_code::unspecified:
     // Not clear what happened exactly, but the outcome is a missing definition
     // This is not a big deal, and is expected since ASTImporter is incomplete.
     Context.getDiagnostics().Report(Loc, diag::warn_ctu_import_failure)
@@ -476,7 +476,7 @@ void CrossTranslationUnitContext::emitCrossTUDiagnostics(const IndexError &IE,
     return;
 
   case index_error_code::invocation_list_wrong_format:
-  case index_error_code::invocation_list_empty: // FIXME: remove?
+  case index_error_code::invocation_list_empty:
     // Without parsable invocation list, CTU cannot function.
     Context.getDiagnostics().Report(Loc, diag::err_invlist_parsing)
         << IE.getFileName() << IE.getLineNum();
