@@ -261,7 +261,7 @@ void GsymReaderV2::dump(raw_ostream &OS) {
   const auto &Header = getHeader();
   OS << Header << "\n";
   OS << "Address Table:\n";
-  OS << "INDEX  OFFSET" << format("%2u", CachedAddrOffSize * 8) << " (ADDRESS)\n";
+  OS << "INDEX  OFFSET" << format("%-2u", CachedAddrOffSize * 8) << " (ADDRESS)\n";
   OS << "====== =============================== \n";
   for (uint32_t I = 0; I < CachedNumAddresses; ++I) {
     OS << format("[%4u] ", I);
