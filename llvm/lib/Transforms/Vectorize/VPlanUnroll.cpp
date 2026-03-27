@@ -179,17 +179,22 @@ void UnrollState::unrollWidenInductionByUF(
       IV->getParent()->getEnclosingLoopRegion()->getSinglePredecessor());
   Type *IVTy = TypeInfo.inferScalarType(IV);
   auto &ID = IV->getInductionDescriptor();
-  VPIRFlags Flags;
-  if (isa_and_present<FPMathOperator>(ID.getInductionBinOp()))
-    Flags = ID.getInductionBinOp()->getFastMathFlags();
+  FastMathFlags FMF;
+  VPIRFlags::WrapFlagsTy WrapFlags(false, false);
+  if (auto *IntOrFPInd = dyn_cast<VPWidenIntOrFpInductionRecipe>(IV)) {
+    if (IntOrFPInd->hasFastMathFlags())
+      FMF = IntOrFPInd->getFastMathFlags();
+    if (IntOrFPInd->hasNoWrapFlags())
+      WrapFlags = IntOrFPInd->getNoWrapFlags();
+  }
 
   VPValue *ScalarStep = IV->getStepValue();
   VPBuilder Builder(PH);
   Type *VectorStepTy =
       IVTy->isPointerTy() ? TypeInfo.inferScalarType(ScalarStep) : IVTy;
   VPInstruction *VectorStep = Builder.createNaryOp(
-      VPInstruction::WideIVStep, {&Plan.getVF(), ScalarStep}, VectorStepTy,
-      Flags, IV->getDebugLoc());
+      VPInstruction::WideIVStep, {&Plan.getVF(), ScalarStep}, VectorStepTy, FMF,
+      IV->getDebugLoc());
 
   ToSkip.insert(VectorStep);
 
@@ -214,10 +219,10 @@ void UnrollState::unrollWidenInductionByUF(
     AddFlags = GEPNoWrapFlags::none();
   } else if (IVTy->isFloatingPointTy()) {
     AddOpc = ID.getInductionOpcode();
-    AddFlags = Flags; // FMF flags
+    AddFlags = FMF;
   } else {
     AddOpc = Instruction::Add;
-    AddFlags = VPIRFlags::getDefaultFlags(AddOpc);
+    AddFlags = WrapFlags;
     if (cast<VPWidenIntOrFpInductionRecipe>(IV)->isCanonical())
       AddFlags = VPIRFlags::WrapFlagsTy(/*NUW=*/true, /*NSW=*/false);
   }
