@@ -37,23 +37,6 @@ COERCE_FUNC(__clc_amdgpu_ds_swizzle_bcastx32_lane15, SWIZZLE_BCASTX32_LANE15);
 COERCE_FUNC(__clc_amdgpu_ds_swizzle_quad_perm_shift_right1,
             SWIZZLE_QUAD_PERM(0, 0, 1, 2));
 
-#elif defined(__CLC_GENSIZE) && __CLC_GENSIZE < 32 ||                          \
-    defined(__CLC_FPSIZE) && __CLC_FPSIZE < 32
-
-#define PROMOTE_FUNC_UINT(func_name)                                           \
-  static _CLC_OVERLOAD __CLC_GENTYPE func_name(__CLC_GENTYPE x) {              \
-    return __CLC_AS_GENTYPE(__CLC_CONVERT_U_GENTYPE(                           \
-        func_name(__clc_convert_uint(__CLC_AS_U_GENTYPE(x)))));                \
-  }
-
-PROMOTE_FUNC_UINT(__clc_amdgpu_ds_swizzle_bcastx2_lane0)
-PROMOTE_FUNC_UINT(__clc_amdgpu_ds_swizzle_bcastx4_lane1)
-PROMOTE_FUNC_UINT(__clc_amdgpu_ds_swizzle_bcastx8_lane3)
-PROMOTE_FUNC_UINT(__clc_amdgpu_ds_swizzle_bcastx16_lane7)
-PROMOTE_FUNC_UINT(__clc_amdgpu_ds_swizzle_bcastx32_lane15)
-
-PROMOTE_FUNC_UINT(__clc_amdgpu_ds_swizzle_quad_perm_shift_right1)
-
 #elif defined(__CLC_GENSIZE) && __CLC_GENSIZE == 64 ||                         \
     defined(__CLC_FPSIZE) && __CLC_FPSIZE == 64
 

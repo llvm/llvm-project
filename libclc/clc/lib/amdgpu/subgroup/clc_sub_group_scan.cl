@@ -66,9 +66,7 @@
 #define __CLC_SUBGROUP_SCAN_ID_VAL __CLC_GEN_MAX
 #define __CLC_BODY "clc_sub_group_scan.inc"
 #include "clc/integer/gentype.inc"
-#undef __CLC_FUNCTION_IMPL
 
-#define __CLC_FUNCTION_IMPL(x, y) __clc_fmin(x, y)
 #define __CLC_BODY "clc_sub_group_scan.inc"
 #include "clc/math/gentype.inc"
 #undef __CLC_FUNCTION_IMPL
@@ -87,14 +85,10 @@
 
 #define __CLC_BODY "clc_sub_group_scan.inc"
 #include "clc/integer/gentype.inc"
-#undef __CLC_FUNCTION_IMPL
 
-#define __CLC_FUNCTION_IMPL(x, y) __clc_fmax(x, y)
 #define __CLC_BODY "clc_sub_group_scan.inc"
 #include "clc/math/gentype.inc"
 #undef __CLC_FUNCTION_IMPL
-
 #undef __CLC_FUNCTION_INCLUSIVE
 #undef __CLC_FUNCTION_EXCLUSIVE
-#undef __CLC_FUNCTION_IMPL
 #undef __CLC_SUBGROUP_SCAN_ID_VAL
