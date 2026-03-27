@@ -1440,7 +1440,7 @@ CXXRecordDecl *BuiltinTypeDeclBuilder::addMipsSliceType(ResourceDimension Dim,
       .addCopyAssignmentOperator(AccessSpecifier::AS_protected);
 
   FieldDecl *LevelField = MipsSliceBuilder.Fields["__level"];
-  assert(LevelField && "Could not find the level field.\n");
+  assert(LevelField && "Could not find the level field.");
 
   DeclarationName SubscriptName =
       AST.DeclarationNames.getCXXOperatorName(OO_Subscript);
