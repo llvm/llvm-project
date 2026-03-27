@@ -5,8 +5,7 @@ define void @bool_ne_1(ptr %p) {
 ; CHECK-LABEL: bool_ne_1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    cmp w8, #1
-; CHECK-NEXT:    b.eq .LBB0_2
+; CHECK-NEXT:    cbnz w8, .LBB0_2
 ; CHECK-NEXT:  // %bb.1: // %if.else
 ; CHECK-NEXT:    b bar
 ; CHECK-NEXT:  .LBB0_2: // %if.then
@@ -29,9 +28,8 @@ define void @bool_ne_1_with_memcpy(ptr %this, ptr %v) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldrb w8, [x0, #40]
 ; CHECK-NEXT:    ldr q0, [x1]
-; CHECK-NEXT:    cmp w8, #1
 ; CHECK-NEXT:    str q0, [x0]
-; CHECK-NEXT:    b.ne .LBB1_2
+; CHECK-NEXT:    cbz w8, .LBB1_2
 ; CHECK-NEXT:  // %bb.1: // %if.then
 ; CHECK-NEXT:    b foo
 ; CHECK-NEXT:  .LBB1_2: // %if.else
@@ -55,8 +53,7 @@ define void @bool_eq_1(ptr %p) {
 ; CHECK-LABEL: bool_eq_1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    cmp w8, #1
-; CHECK-NEXT:    b.ne .LBB2_2
+; CHECK-NEXT:    cbz w8, .LBB2_2
 ; CHECK-NEXT:  // %bb.1: // %if.then
 ; CHECK-NEXT:    b foo
 ; CHECK-NEXT:  .LBB2_2: // %if.else
@@ -78,8 +75,7 @@ define void @bool_ne_1_i32(ptr %p) {
 ; CHECK-LABEL: bool_ne_1_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    cmp w8, #1
-; CHECK-NEXT:    b.eq .LBB3_2
+; CHECK-NEXT:    cbnz w8, .LBB3_2
 ; CHECK-NEXT:  // %bb.1: // %if.else
 ; CHECK-NEXT:    b bar
 ; CHECK-NEXT:  .LBB3_2: // %if.then
@@ -101,8 +97,7 @@ define void @bool_eq_1_i32(ptr %p) {
 ; CHECK-LABEL: bool_eq_1_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    cmp w8, #1
-; CHECK-NEXT:    b.ne .LBB4_2
+; CHECK-NEXT:    cbz w8, .LBB4_2
 ; CHECK-NEXT:  // %bb.1: // %if.then
 ; CHECK-NEXT:    b foo
 ; CHECK-NEXT:  .LBB4_2: // %if.else
@@ -148,11 +143,13 @@ if.else:
 define void @conjunction_ccmp(ptr %x_ptr, ptr %y_ptr, ptr %z_ptr) {
 ; CHECK-LABEL: conjunction_ccmp:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldrh w8, [x1]
-; CHECK-NEXT:    ldr w9, [x0]
-; CHECK-NEXT:    cmp w8, #10
-; CHECK-NEXT:    ccmp w9, #0, #0, ne
-; CHECK-NEXT:    ccmp w8, #14, #4, ne
+; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    ldrh w9, [x1]
+; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    ccmp w9, #10, #4, eq
+; CHECK-NEXT:    cset w8, eq
+; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    ccmp w9, #14, #4, ne
 ; CHECK-NEXT:    b.eq .LBB6_2
 ; CHECK-NEXT:  // %bb.1: // %if.then
 ; CHECK-NEXT:    str wzr, [x2]
