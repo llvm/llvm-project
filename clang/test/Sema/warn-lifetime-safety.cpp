@@ -2394,18 +2394,15 @@ std::string_view return_dangling_view_through_owner() {
   return sv; // expected-note {{returned here}}
 }
 
-// FIXME: False negative. The loan on `local` doesn't reach `s->getData()`:
-// (1) move assignment is not defaulted, so origins don't propagate to `ups`,
-// and (2) even if they did, `ups.get()` connects to the owner's storage
-// origin, not the value origin holding the loan.
+// FIXME: False negative. Move assignment of unique_ptr is not defaulted,
+// so origins from `local` don't propagate to `ups`.
 void owner_outlives_lifetimebound_source() {
   std::unique_ptr<S> ups;
   {
     std::string local;
     ups = getUniqueS(local);
   }
-  S* s = ups.get();
-  use(s->getData()); // Should warn.
+  (void)ups; // Should warn.
 }
 
 } // namespace track_origins_for_lifetimebound_record_type
