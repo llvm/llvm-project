@@ -2812,8 +2812,10 @@ Type *SPIRVEmitIntrinsics::deduceFunParamElementType(
       return KnownTy;
     // try to deduce from the operand itself
     Visited.clear();
-    if (Type *Ty = deduceElementTypeHelper(OpArg, Visited, false))
+    if (Type *Ty = deduceElementTypeHelper(OpArg, Visited, false)) {
+      abort();
       return Ty;
+    }
     // search in actual parameter's users
     for (User *OpU : OpArg->users()) {
       Instruction *Inst = dyn_cast<Instruction>(OpU);
