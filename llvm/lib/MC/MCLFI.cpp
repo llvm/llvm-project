@@ -35,16 +35,6 @@ cl::opt<bool> FlagEnableRewriting("lfi-enable-rewriter",
 void initializeLFIMCStreamer(MCStreamer &Streamer, MCContext &Ctx,
                              const Triple &TheTriple) {
   assert(TheTriple.isLFI());
-  const char *NoteName;
-  const char *NoteArch;
-  switch (TheTriple.getArch()) {
-  case Triple::aarch64:
-    NoteName = ".note.LFI.ABI.aarch64";
-    NoteArch = "aarch64";
-    break;
-  default:
-    reportFatalUsageError("Unsupported architecture for LFI");
-  }
 
   std::string Error; // empty
   const Target *TheTarget = TargetRegistry::lookupTarget(TheTriple, Error);
@@ -58,6 +48,22 @@ void initializeLFIMCStreamer(MCStreamer &Streamer, MCContext &Ctx,
     Streamer.setLFIRewriter(std::unique_ptr<MCLFIRewriter>(
         TheTarget->createMCLFIRewriter(Ctx, std::move(MRI), std::move(MII))));
   }
+}
+
+void emitLFINoteSection(MCStreamer &Streamer, MCContext &Ctx) {
+  const Triple &TheTriple = Ctx.getTargetTriple();
+  assert(TheTriple.isLFI());
+
+  const char *NoteName;
+  const char *NoteArch;
+  switch (TheTriple.getArch()) {
+  case Triple::aarch64:
+    NoteName = ".note.LFI.ABI.aarch64";
+    NoteArch = "aarch64";
+    break;
+  default:
+    reportFatalUsageError("Unsupported architecture for LFI");
+  }
 
   // Emit an ELF Note section in its own COMDAT group which identifies LFI
   // object files.
@@ -65,7 +71,6 @@ void initializeLFIMCStreamer(MCStreamer &Streamer, MCContext &Ctx,
                                          ELF::SHF_ALLOC | ELF::SHF_GROUP, 0,
                                          NoteName, /*IsComdat=*/true);
 
-  Streamer.pushSection();
   Streamer.switchSection(Note);
   Streamer.emitIntValue(strlen(NoteNamespace) + 1, 4);
   Streamer.emitIntValue(strlen(NoteArch) + 1, 4);
@@ -76,7 +81,6 @@ void initializeLFIMCStreamer(MCStreamer &Streamer, MCContext &Ctx,
   Streamer.emitBytes(NoteArch);
   Streamer.emitIntValue(0, 1); // NUL terminator
   Streamer.emitValueToAlignment(Align(4));
-  Streamer.popSection();
 }
 
 } // namespace llvm

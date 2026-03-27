@@ -632,10 +632,8 @@ int main(int argc, char **argv) {
                                            std::move(CE), std::move(MAB)));
 
     Triple T(TripleName);
-    if (T.isLFI()) {
-      Str->initSections(*STI);
+    if (T.isLFI())
       initializeLFIMCStreamer(*Str.get(), Ctx, T);
-    }
   } else if (FileType == OFT_Null) {
     Str.reset(TheTarget->createNullStreamer(Ctx));
   } else {
