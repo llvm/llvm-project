@@ -89,8 +89,7 @@ void SBAddress::SetAddress(lldb::SBSection section, lldb::addr_t offset) {
   LLDB_INSTRUMENT_VA(this, section, offset);
 
   Address &addr = ref();
-  addr.SetSection(section.GetSP());
-  addr.SetOffset(offset);
+  addr = Address(section.GetSP(), offset);
 }
 
 void SBAddress::SetAddress(const Address &address) { ref() = address; }
