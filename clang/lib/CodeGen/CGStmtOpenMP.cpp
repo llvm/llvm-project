@@ -1699,6 +1699,7 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
     case OMPD_error:
     case OMPD_barrier:
     case OMPD_taskwait:
+    case OMPD_taskgraph:
     case OMPD_taskgroup:
     case OMPD_flush:
     case OMPD_depobj:
@@ -5911,6 +5912,20 @@ void CodeGenFunction::EmitOMPTaskwaitDirective(const OMPTaskwaitDirective &S) {
   buildDependences(S, Data);
   Data.HasNowaitClause = S.hasClausesOfKind<OMPNowaitClause>();
   CGM.getOpenMPRuntime().emitTaskwaitCall(*this, S.getBeginLoc(), Data);
+}
+
+void CodeGenFunction::EmitOMPTaskgraphDirective(
+    const OMPTaskgraphDirective &S) {
+  const Expr *IfCond = nullptr;
+  for (const auto *C : S.getClausesOfKind<OMPIfClause>()) {
+    if (C->getNameModifier() == OMPD_unknown ||
+        C->getNameModifier() == OMPD_taskgraph) {
+      IfCond = C->getCondition();
+      break;
+    }
+  }
+
+  CGM.getOpenMPRuntime().emitTaskgraphCall(*this, S.getBeginLoc(), S, IfCond);
 }
 
 static bool isSupportedByOpenMPIRBuilder(const OMPTaskgroupDirective &T) {
