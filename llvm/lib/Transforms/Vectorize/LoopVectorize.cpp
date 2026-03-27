@@ -7797,14 +7797,13 @@ VPRecipeBuilder::tryToOptimizeInductionTruncate(VPInstruction *VPI,
   VPIRValue *Start = WidenIV->getStartValue();
   const InductionDescriptor &IndDesc = WidenIV->getInductionDescriptor();
 
-  // It is always safe to copy over the NoWrap and FastMath flags. In
-  // particular, when folding tail by masking, the masked-off lanes are never
-  // used, so it is safe.
-  VPIRFlags Flags = vputils::getFlagsFromIndDesc(IndDesc);
+  // Wrap flags from the original induction do not apply to the truncated type,
+  // so do not propagate them.
   VPValue *Step =
       vputils::getOrCreateVPValueForSCEVExpr(Plan, IndDesc.getStep());
   return new VPWidenIntOrFpInductionRecipe(
-      Phi, Start, Step, &Plan.getVF(), IndDesc, I, Flags, VPI->getDebugLoc());
+      Phi, Start, Step, &Plan.getVF(), IndDesc, I,
+      VPIRFlags::WrapFlagsTy(false, false), VPI->getDebugLoc());
 }
 
 VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(VPInstruction *VPI,
