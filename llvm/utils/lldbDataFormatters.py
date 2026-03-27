@@ -33,16 +33,16 @@ def __lldb_init_module(debugger: lldb.SBDebugger, internal_dict) -> None:
         '-e -s "size=${svar%#}" '
         '-x "^llvm::SmallVector<.+,.+>$"'
     )
-    debugger.HandleCommand(
-        "type synthetic add -w llvm "
-        f"-l {__name__}.ArrayRefSynthProvider "
-        '-x "^llvm::ArrayRef<.+>$"'
-    )
-    debugger.HandleCommand(
-        "type summary add -w llvm "
-        '-e -s "size=${svar%#}" '
-        '-x "^llvm::ArrayRef<.+>$"'
-    )
+    #debugger.HandleCommand(
+    #    "type synthetic add -w llvm "
+    #    f"-l {__name__}.ArrayRefSynthProvider "
+    #    '-x "^llvm::ArrayRef<.+>$"'
+    #)
+    #debugger.HandleCommand(
+    #    "type summary add -w llvm "
+    #    '-e -s "size=${svar%#}" '
+    #    '-x "^llvm::ArrayRef<.+>$"'
+    #)
     debugger.HandleCommand(
         "type summary add -w llvm "
         f"-F {__name__}.SmallStringSummaryProvider "
@@ -58,16 +58,16 @@ def __lldb_init_module(debugger: lldb.SBDebugger, internal_dict) -> None:
         f"-F {__name__}.ConstStringSummaryProvider "
         "lldb_private::ConstString"
     )
-    debugger.HandleCommand(
-        "type synthetic add -w llvm "
-        f"-l {__name__}.PointerIntPairSynthProvider "
-        '-x "^llvm::PointerIntPair<.+>$"'
-    )
-    debugger.HandleCommand(
-        "type synthetic add -w llvm "
-        f"-l {__name__}.PointerUnionSynthProvider "
-        '-x "^llvm::PointerUnion<.+>$"'
-    )
+    #debugger.HandleCommand(
+    #    "type synthetic add -w llvm "
+    #    f"-l {__name__}.PointerIntPairSynthProvider "
+    #    '-x "^llvm::PointerIntPair<.+>$"'
+    #)
+    #debugger.HandleCommand(
+    #    "type synthetic add -w llvm "
+    #    f"-l {__name__}.PointerUnionSynthProvider "
+    #    '-x "^llvm::PointerUnion<.+>$"'
+    #)
     debugger.HandleCommand(
         "type summary add -w llvm "
         f"-e -F {__name__}.DenseMapSummary "
