@@ -30,6 +30,19 @@ def MergeOverflow : NativeCodeCall<"mergeOverflowFlags($0, $1)">;
 // Default overflow flag (all wraparounds allowed).
 defvar DefOverflow = ConstantEnumCase<Arith_IntegerOverflowAttr, "none">;
 
+// Constraint: constant c0+c1 does not overflow under the merged flags of ovf1
+// and ovf2. Without this guard, folding addi(addi(x, c0), c1) -> addi(x, c0+c1)
+// is unsound when the constant sum wraps and the result carries nsw/nuw.
+def AddAttrsNoOverflow :
+    Constraint<CPred<"addAttrsNoOverflow($0, $1, $2, $3)">,
+               "constant addition does not overflow with merged flags">;
+
+// Constraint: constant c0-c1 does not overflow under the merged flags of ovf1
+// and ovf2.
+def SubAttrsNoOverflow :
+    Constraint<CPred<"subAttrsNoOverflow($0, $1, $2, $3)">,
+               "constant subtraction does not overflow with merged flags">;
+
 class cast<string type> : NativeCodeCall<"::mlir::cast<" # type # ">($0)">;
 
 //===----------------------------------------------------------------------===//
@@ -40,12 +53,15 @@ class cast<string type> : NativeCodeCall<"::mlir::cast<" # type # ">($0)">;
 // as the second operand.
 
 // addi(addi(x, c0), c1) -> addi(x, c0 + c1)
+// Guard: the constant sum c0+c1 must not overflow under the merged flags,
+// otherwise the folded op would produce poison where the originals did not.
 def AddIAddConstant :
     Pat<(Arith_AddIOp:$res
           (Arith_AddIOp $x, (ConstantLikeMatcher APIntAttr:$c0), $ovf1),
           (ConstantLikeMatcher APIntAttr:$c1), $ovf2),
         (Arith_AddIOp $x, (Arith_ConstantOp (AddIntAttrs $res, $c0, $c1)),
-            (MergeOverflow $ovf1, $ovf2))>;
+            (MergeOverflow $ovf1, $ovf2)),
+        [(AddAttrsNoOverflow $c0, $c1, $ovf1, $ovf2)]>;
 
 // addi(subi(x, c0), c1) -> addi(x, c1 - c0)
 def AddISubConstantRHS :
@@ -53,7 +69,8 @@ def AddISubConstantRHS :
           (Arith_SubIOp $x, (ConstantLikeMatcher APIntAttr:$c0), $ovf1),
           (ConstantLikeMatcher APIntAttr:$c1), $ovf2),
         (Arith_AddIOp $x, (Arith_ConstantOp (SubIntAttrs $res, $c1, $c0)),
-            (MergeOverflow $ovf1, $ovf2))>;
+            (MergeOverflow $ovf1, $ovf2)),
+        [(SubAttrsNoOverflow $c1, $c0, $ovf1, $ovf2)]>;
 
 // addi(subi(c0, x), c1) -> subi(c0 + c1, x)
 def AddISubConstantLHS :
@@ -61,7 +78,8 @@ def AddISubConstantLHS :
           (Arith_SubIOp (ConstantLikeMatcher APIntAttr:$c0), $x, $ovf1),
           (ConstantLikeMatcher APIntAttr:$c1), $ovf2),
         (Arith_SubIOp (Arith_ConstantOp (AddIntAttrs $res, $c0, $c1)), $x,
-            (MergeOverflow $ovf1, $ovf2))>;
+            (MergeOverflow $ovf1, $ovf2)),
+        [(AddAttrsNoOverflow $c0, $c1, $ovf1, $ovf2)]>;
 
 def IsScalarOrSplatNegativeOne :
     Constraint<And<[
@@ -123,7 +141,8 @@ def SubILHSAddConstant :
           (ConstantLikeMatcher APIntAttr:$c1),
           (Arith_AddIOp $x, (ConstantLikeMatcher APIntAttr:$c0), $ovf1), $ovf2),
         (Arith_SubIOp (Arith_ConstantOp (SubIntAttrs $res, $c1, $c0)), $x,
-            (MergeOverflow $ovf1, $ovf2))>;
+            (MergeOverflow $ovf1, $ovf2)),
+        [(SubAttrsNoOverflow $c1, $c0, $ovf1, $ovf2)]>;
 
 // subi(subi(x, c0), c1) -> subi(x, c0 + c1)
 def SubIRHSSubConstantRHS :
@@ -131,7 +150,8 @@ def SubIRHSSubConstantRHS :
           (Arith_SubIOp $x, (ConstantLikeMatcher APIntAttr:$c0), $ovf1),
           (ConstantLikeMatcher APIntAttr:$c1), $ovf2),
         (Arith_SubIOp $x, (Arith_ConstantOp (AddIntAttrs $res, $c0, $c1)),
-            (MergeOverflow $ovf1, $ovf2))>;
+            (MergeOverflow $ovf1, $ovf2)),
+        [(AddAttrsNoOverflow $c0, $c1, $ovf1, $ovf2)]>;
 
 // subi(subi(c0, x), c1) -> subi(c0 - c1, x)
 def SubIRHSSubConstantLHS :
@@ -139,7 +159,8 @@ def SubIRHSSubConstantLHS :
           (Arith_SubIOp (ConstantLikeMatcher APIntAttr:$c0), $x, $ovf1),
           (ConstantLikeMatcher APIntAttr:$c1), $ovf2),
         (Arith_SubIOp (Arith_ConstantOp (SubIntAttrs $res, $c0, $c1)), $x,
-            (MergeOverflow $ovf1, $ovf2))>;
+            (MergeOverflow $ovf1, $ovf2)),
+        [(SubAttrsNoOverflow $c0, $c1, $ovf1, $ovf2)]>;
 
 // subi(c1, subi(x, c0)) -> subi(c0 + c1, x)
 def SubILHSSubConstantRHS :
@@ -147,7 +168,8 @@ def SubILHSSubConstantRHS :
           (ConstantLikeMatcher APIntAttr:$c1),
           (Arith_SubIOp $x, (ConstantLikeMatcher APIntAttr:$c0), $ovf1), $ovf2),
         (Arith_SubIOp (Arith_ConstantOp (AddIntAttrs $res, $c0, $c1)), $x,
-            (MergeOverflow $ovf1, $ovf2))>;
+            (MergeOverflow $ovf1, $ovf2)),
+        [(AddAttrsNoOverflow $c0, $c1, $ovf1, $ovf2)]>;
 
 // subi(c1, subi(c0, x)) -> addi(x, c1 - c0)
 def SubILHSSubConstantLHS :
@@ -155,7 +177,8 @@ def SubILHSSubConstantLHS :
           (ConstantLikeMatcher APIntAttr:$c1),
           (Arith_SubIOp (ConstantLikeMatcher APIntAttr:$c0), $x, $ovf1), $ovf2),
         (Arith_AddIOp $x, (Arith_ConstantOp (SubIntAttrs $res, $c1, $c0)),
-            (MergeOverflow $ovf1, $ovf2))>;
+            (MergeOverflow $ovf1, $ovf2)),
+        [(SubAttrsNoOverflow $c1, $c0, $ovf1, $ovf2)]>;
 
 // subi(subi(a, b), a) -> subi(0, b)
 def SubISubILHSRHSLHS :

@@ -1310,9 +1310,14 @@ func.func @tripleSubSub1(%arg0: index) -> index {
 }
 
 // CHECK-LABEL: @tripleSubSub1Ovf
-//       CHECK:   %[[cres:.+]] = arith.constant -25 : index
-//       CHECK:   %[[add:.+]] = arith.subi %[[cres]], %arg0 overflow<nsw, nuw> : index
-//       CHECK:   return %[[add]]
+// Folding subi(subi(c0, x), c1) -> subi(c0-c1, x) is unsound when c0-c1
+// unsigned-wraps and nuw is set, because the original always produces poison
+// while the folded form may not. Do not fold.
+//       CHECK:   %[[c17:.+]] = arith.constant 17 : index
+//       CHECK:   %[[c42:.+]] = arith.constant 42 : index
+//       CHECK:   %[[sub1:.+]] = arith.subi %[[c17]], %arg0 overflow<nsw, nuw>
+//       CHECK:   %[[sub2:.+]] = arith.subi %[[sub1]], %[[c42]] overflow<nsw, nuw>
+//       CHECK:   return %[[sub2]]
 func.func @tripleSubSub1Ovf(%arg0: index) -> index {
   %c17 = arith.constant 17 : index
   %c42 = arith.constant 42 : index
@@ -3562,5 +3567,43 @@ func.func @convertf_fold_f8() -> f8E5M2 {
   %c = arith.constant 2.0 : f8E4M3FN
   %result = arith.convertf %c : f8E4M3FN to f8E5M2
   return %result : f8E5M2
+}
+
+// -----
+
+// addi(addi(x, c0), c1) -> addi(x, c0+c1) must not fold when c0+c1 wraps
+// under the merged overflow flags. Here c0=-2, c1=-1 for i2: -2 + -1 = -3,
+// which wraps to +1 in i2. Since both ops have nsw the fold is unsound
+// (for x=1: original gives -2 with no poison, folded gives poison).
+//
+// CHECK-LABEL: @addi_no_fold_const_signed_overflow_nsw
+//       CHECK:   %[[cm2:.+]] = arith.constant -2 : i2
+//       CHECK:   %[[cm1:.+]] = arith.constant -1 : i2
+//       CHECK:   %[[t:.+]] = arith.addi %arg0, %[[cm2]] overflow<nsw>
+//       CHECK:   %[[r:.+]] = arith.addi %[[t]], %[[cm1]] overflow<nsw>
+//       CHECK:   return %[[r]]
+func.func @addi_no_fold_const_signed_overflow_nsw(%arg0: i2) -> i2 {
+  %cm2 = arith.constant -2 : i2
+  %cm1 = arith.constant -1 : i2
+  %t = arith.addi %arg0, %cm2 overflow<nsw> : i2
+  %r = arith.addi %t, %cm1 overflow<nsw> : i2
+  return %r : i2
+}
+
+// -----
+
+// When c0+c1 does not overflow, the fold is sound.
+// c0=1, c1=2 for i4: 1+2=3, no overflow in signed or unsigned sense.
+//
+// CHECK-LABEL: @addi_fold_const_no_overflow
+//       CHECK:   %[[c3:.+]] = arith.constant 3 : i4
+//       CHECK:   %[[r:.+]] = arith.addi %arg0, %[[c3]] overflow<nsw, nuw>
+//       CHECK:   return %[[r]]
+func.func @addi_fold_const_no_overflow(%arg0: i4) -> i4 {
+  %c1 = arith.constant 1 : i4
+  %c2 = arith.constant 2 : i4
+  %t = arith.addi %arg0, %c1 overflow<nsw, nuw> : i4
+  %r = arith.addi %t, %c2 overflow<nsw, nuw> : i4
+  return %r : i4
 }
 
