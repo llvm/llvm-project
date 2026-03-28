@@ -511,6 +511,17 @@ static void processBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la,
     // Do (2)
     BitVector successorNonLive =
         markLives(operandValues, nonLiveSet, la).flip();
+    // A block argument should not be considered dead if the liveness analysis
+    // determines it is live. This can happen when this branch is in a
+    // statically unreachable (dead) block: the forwarded operand appears dead
+    // because it is in the dead block, but the successor block argument may
+    // still be live because it is also forwarded from other live predecessor
+    // branches.
+    for (auto [index, blockArg] :
+         llvm::enumerate(successorBlock->getArguments())) {
+      if (successorNonLive[index] && hasLive({blockArg}, nonLiveSet, la))
+        successorNonLive.reset(index);
+    }
     collectNonLiveValues(nonLiveSet, successorBlock->getArguments(),
                          successorNonLive);
 

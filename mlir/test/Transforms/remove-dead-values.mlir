@@ -868,3 +868,29 @@ module @func_with_non_call_users {
   }
   spirv.EntryPoint "GLCompute" @callee
 }
+
+// -----
+
+// Regression test: verify that the pass does not crash when a branch op
+// forwards a value through intermediate block arguments to a join block.
+// Previously, processBranchOp incorrectly used forwarded operand liveness
+// to determine successor block argument liveness, causing incorrect marking
+// of live values as dead. (https://github.com/llvm/llvm-project/issues/182263)
+//
+// CHECK-LABEL: func.func @branch_forwarded_block_arg_liveness
+// CHECK-CANONICALIZE-LABEL: func.func @branch_forwarded_block_arg_liveness
+func.func @branch_forwarded_block_arg_liveness(%x: i64) -> i64 {
+  %c1 = arith.constant 1 : i64
+  %c2 = arith.constant 2 : i64
+  %cmp = arith.cmpi slt, %c1, %c2 : i64
+  cf.cond_br %cmp, ^bb1(%c1 : i64), ^bb2(%c1 : i64)
+^bb1(%a: i64):
+  cf.br ^bb3(%a : i64)
+^bb2(%b: i64):
+  cf.br ^bb3(%b : i64)
+^bb3(%arg0: i64):
+  // CHECK: arith.addi
+  // CHECK-CANONICALIZE: arith.addi
+  %final = arith.addi %c1, %arg0 : i64
+  func.return %final : i64
+}
