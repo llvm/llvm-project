@@ -999,6 +999,51 @@ template<> void ClassTmpl<int>::importedStatic() {} // non-gnu-error{{cannot def
 
 template <> void ImportClassTmplMembers<int>::normalDecl() = delete; // non-gnu-error{{cannot define non-inline dllimport template specialization}} \
                                                                         non-gnu-error{{attribute 'dllimport' cannot be applied to a deleted function}}
+struct InstTrig {
+    struct Spec;
+    struct Impl;
+    struct Decl;
+};
+template<bool InstDef, typename... Triggers>
+struct ClassTmplSpecializedMember {
+  void specializedMember1();
+  void specializedMember2();
+  void instantiatedMember1();
+  void instantiatedMember2();
+  void member() {}
+};
+
+template <> void ClassTmplSpecializedMember<false, InstTrig::Spec>::specializedMember1();
+extern template struct __declspec(dllimport) ClassTmplSpecializedMember<false, InstTrig::Spec>;
+template <> void ClassTmplSpecializedMember<true, InstTrig::Spec>::specializedMember1();
+template struct __declspec(dllimport) ClassTmplSpecializedMember<true, InstTrig::Spec>;
+
+void anchor(ClassTmplSpecializedMember<false, InstTrig::Impl> &x) { x.instantiatedMember1(); }
+extern template struct __declspec(dllimport) ClassTmplSpecializedMember<false, InstTrig::Impl>;
+void anchor(ClassTmplSpecializedMember<true, InstTrig::Impl> &x) { x.instantiatedMember1(); }
+template struct __declspec(dllimport) ClassTmplSpecializedMember<true, InstTrig::Impl>;
+
+template <> void ClassTmplSpecializedMember<false, InstTrig::Spec, InstTrig::Spec>::specializedMember1();
+template <> void ClassTmplSpecializedMember<false, InstTrig::Spec, InstTrig::Spec>::specializedMember2();
+extern template struct __declspec(dllimport) ClassTmplSpecializedMember<false, InstTrig::Spec, InstTrig::Spec>;
+template <> void ClassTmplSpecializedMember<true, InstTrig::Spec, InstTrig::Spec>::specializedMember1();
+template <> void ClassTmplSpecializedMember<true, InstTrig::Spec, InstTrig::Spec>::specializedMember2();
+template struct __declspec(dllimport) ClassTmplSpecializedMember<true, InstTrig::Spec, InstTrig::Spec>;
+
+template <> void ClassTmplSpecializedMember<false, InstTrig::Spec, InstTrig::Impl>::specializedMember1();
+void anchor(ClassTmplSpecializedMember<false, InstTrig::Spec, InstTrig::Impl> &x) { x.instantiatedMember1(); }
+extern template struct __declspec(dllimport) ClassTmplSpecializedMember<false, InstTrig::Spec, InstTrig::Impl>;
+template <> void ClassTmplSpecializedMember<true, InstTrig::Spec, InstTrig::Impl>::specializedMember1();
+void anchor(ClassTmplSpecializedMember<true, InstTrig::Spec, InstTrig::Impl> &x) { x.instantiatedMember1(); }
+template struct __declspec(dllimport) ClassTmplSpecializedMember<true, InstTrig::Spec, InstTrig::Impl>;
+
+void anchor(ClassTmplSpecializedMember<false, InstTrig::Impl, InstTrig::Spec> &x) { x.instantiatedMember1(); }
+template <> void ClassTmplSpecializedMember<false, InstTrig::Impl, InstTrig::Spec>::specializedMember1();
+extern template struct __declspec(dllimport) ClassTmplSpecializedMember<false, InstTrig::Impl, InstTrig::Spec>;
+void anchor(ClassTmplSpecializedMember<true, InstTrig::Impl, InstTrig::Spec> &x) { x.instantiatedMember1(); }
+template <> void ClassTmplSpecializedMember<true, InstTrig::Impl, InstTrig::Spec>::specializedMember1();
+template struct __declspec(dllimport) ClassTmplSpecializedMember<true, InstTrig::Impl, InstTrig::Spec>;
+
 
 //===----------------------------------------------------------------------===//
 // Class template member templates
