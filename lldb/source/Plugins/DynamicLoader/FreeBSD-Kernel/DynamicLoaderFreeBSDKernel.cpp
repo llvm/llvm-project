@@ -200,9 +200,17 @@ lldb_private::UUID DynamicLoaderFreeBSDKernel::CheckForKernelImageAtAddress(
   if (header.e_type != llvm::ELF::ET_EXEC)
     return UUID();
 
-  ModuleSP memory_module_sp =
+  llvm::Expected<ModuleSP> memory_module_sp_or_err =
       process->ReadModuleFromMemory(FileSpec("temp_freebsd_kernel"), addr);
+  if (auto err = memory_module_sp_or_err.takeError()) {
+    LLDB_LOG_ERROR(log, std::move(err),
+                   "DynamicLoaderFreeBSDKernel::CheckForKernelImageAtAddress: "
+                   "Failed to read module in memory -- {0}");
+    *read_error = true;
+    return UUID();
+  }
 
+  ModuleSP memory_module_sp = *memory_module_sp_or_err;
   if (!memory_module_sp.get()) {
     *read_error = true;
     return UUID();
@@ -247,8 +255,6 @@ void DynamicLoaderFreeBSDKernel::DebuggerInit(
 DynamicLoaderFreeBSDKernel::DynamicLoaderFreeBSDKernel(Process *process,
                                                        addr_t kernel_address)
     : DynamicLoader(process), m_process(process),
-      m_linker_file_list_struct_addr(LLDB_INVALID_ADDRESS),
-      m_linker_file_head_addr(LLDB_INVALID_ADDRESS),
       m_kernel_load_address(kernel_address), m_mutex() {
   process->SetCanRunCode(false);
 }
@@ -291,8 +297,15 @@ bool DynamicLoaderFreeBSDKernel::KModImageInfo::ReadMemoryModule(
     }
   }
 
-  memory_module_sp =
+  llvm::Expected<ModuleSP> memory_module_sp_or_err =
       process->ReadModuleFromMemory(file_spec, m_load_address, size_to_read);
+  if (auto err = memory_module_sp_or_err.takeError()) {
+    LLDB_LOG_ERROR(log, std::move(err),
+                   "KextImageInfo::ReadMemoryModule: Failed to read module "
+                   "from memory -- {0}");
+    return false;
+  }
+  memory_module_sp = *memory_module_sp_or_err;
 
   if (!memory_module_sp)
     return false;

@@ -547,7 +547,7 @@ std::optional<uint64_t> MarkupFilter::parseAddr(StringRef Str) const {
     reportTypeError(Str, "address");
     return std::nullopt;
   }
-  if (all_of(Str, [](char C) { return C == '0'; }))
+  if (all_of(Str, equal_to('0')))
     return 0;
   if (!Str.starts_with("0x")) {
     reportTypeError(Str, "address");

@@ -13,7 +13,9 @@
 namespace clang {
 namespace doc {
 
-TEST(MergeTest, mergeNamespaceInfos) {
+class MergeTest : public ClangDocContextTest {};
+
+TEST_F(MergeTest, mergeNamespaceInfos) {
   NamespaceInfo One;
   One.Name = "Namespace";
   One.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
@@ -42,11 +44,11 @@ TEST(MergeTest, mergeNamespaceInfos) {
   Two.Children.Enums.emplace_back();
   Two.Children.Enums.back().Name = "TwoEnum";
 
-  std::vector<std::unique_ptr<Info>> Infos;
-  Infos.emplace_back(std::make_unique<NamespaceInfo>(std::move(One)));
-  Infos.emplace_back(std::make_unique<NamespaceInfo>(std::move(Two)));
+  OwningPtrVec<Info> Infos;
+  Infos.emplace_back(allocatePtr<NamespaceInfo>(std::move(One)));
+  Infos.emplace_back(allocatePtr<NamespaceInfo>(std::move(Two)));
 
-  auto Expected = std::make_unique<NamespaceInfo>();
+  auto Expected = allocatePtr<NamespaceInfo>();
   Expected->Name = "Namespace";
   Expected->Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
@@ -75,7 +77,7 @@ TEST(MergeTest, mergeNamespaceInfos) {
                      InfoAsNamespace(Actual.get().get()));
 }
 
-TEST(MergeTest, mergeRecordInfos) {
+TEST_F(MergeTest, mergeRecordInfos) {
   RecordInfo One;
   One.Name = "r";
   One.IsTypeDef = true;
@@ -114,11 +116,11 @@ TEST(MergeTest, mergeRecordInfos) {
   Two.Children.Enums.emplace_back();
   Two.Children.Enums.back().Name = "TwoEnum";
 
-  std::vector<std::unique_ptr<Info>> Infos;
-  Infos.emplace_back(std::make_unique<RecordInfo>(std::move(One)));
-  Infos.emplace_back(std::make_unique<RecordInfo>(std::move(Two)));
+  OwningPtrVec<Info> Infos;
+  Infos.emplace_back(allocatePtr<RecordInfo>(std::move(One)));
+  Infos.emplace_back(allocatePtr<RecordInfo>(std::move(Two)));
 
-  auto Expected = std::make_unique<RecordInfo>();
+  auto Expected = allocatePtr<RecordInfo>();
   Expected->Name = "r";
   Expected->IsTypeDef = true;
   Expected->Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
@@ -153,7 +155,7 @@ TEST(MergeTest, mergeRecordInfos) {
                   InfoAsRecord(Actual.get().get()));
 }
 
-TEST(MergeTest, mergeFunctionInfos) {
+TEST_F(MergeTest, mergeFunctionInfos) {
   FunctionInfo One;
   One.Name = "f";
   One.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
@@ -167,9 +169,9 @@ TEST(MergeTest, mergeFunctionInfos) {
   One.Description.emplace_back();
   auto *OneFullComment = &One.Description.back();
   OneFullComment->Kind = CommentKind::CK_FullComment;
-  auto OneParagraphComment = std::make_unique<CommentInfo>();
+  auto OneParagraphComment = allocatePtr<CommentInfo>();
   OneParagraphComment->Kind = CommentKind::CK_ParagraphComment;
-  auto OneTextComment = std::make_unique<CommentInfo>();
+  auto OneTextComment = allocatePtr<CommentInfo>();
   OneTextComment->Kind = CommentKind::CK_TextComment;
   OneTextComment->Text = "This is a text comment.";
   OneParagraphComment->Children.push_back(std::move(OneTextComment));
@@ -187,19 +189,19 @@ TEST(MergeTest, mergeFunctionInfos) {
   Two.Description.emplace_back();
   auto *TwoFullComment = &Two.Description.back();
   TwoFullComment->Kind = CommentKind::CK_FullComment;
-  auto TwoParagraphComment = std::make_unique<CommentInfo>();
+  auto TwoParagraphComment = allocatePtr<CommentInfo>();
   TwoParagraphComment->Kind = CommentKind::CK_ParagraphComment;
-  auto TwoTextComment = std::make_unique<CommentInfo>();
+  auto TwoTextComment = allocatePtr<CommentInfo>();
   TwoTextComment->Kind = CommentKind::CK_TextComment;
   TwoTextComment->Text = "This is a text comment.";
   TwoParagraphComment->Children.push_back(std::move(TwoTextComment));
   TwoFullComment->Children.push_back(std::move(TwoParagraphComment));
 
-  std::vector<std::unique_ptr<Info>> Infos;
-  Infos.emplace_back(std::make_unique<FunctionInfo>(std::move(One)));
-  Infos.emplace_back(std::make_unique<FunctionInfo>(std::move(Two)));
+  OwningPtrVec<Info> Infos;
+  Infos.emplace_back(allocatePtr<FunctionInfo>(std::move(One)));
+  Infos.emplace_back(allocatePtr<FunctionInfo>(std::move(Two)));
 
-  auto Expected = std::make_unique<FunctionInfo>();
+  auto Expected = allocatePtr<FunctionInfo>();
   Expected->Name = "f";
   Expected->Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
@@ -214,9 +216,9 @@ TEST(MergeTest, mergeFunctionInfos) {
   Expected->Description.emplace_back();
   auto *ExpectedFullComment = &Expected->Description.back();
   ExpectedFullComment->Kind = CommentKind::CK_FullComment;
-  auto ExpectedParagraphComment = std::make_unique<CommentInfo>();
+  auto ExpectedParagraphComment = allocatePtr<CommentInfo>();
   ExpectedParagraphComment->Kind = CommentKind::CK_ParagraphComment;
-  auto ExpectedTextComment = std::make_unique<CommentInfo>();
+  auto ExpectedTextComment = allocatePtr<CommentInfo>();
   ExpectedTextComment->Kind = CommentKind::CK_TextComment;
   ExpectedTextComment->Text = "This is a text comment.";
   ExpectedParagraphComment->Children.push_back(std::move(ExpectedTextComment));
@@ -228,7 +230,7 @@ TEST(MergeTest, mergeFunctionInfos) {
                     InfoAsFunction(Actual.get().get()));
 }
 
-TEST(MergeTest, mergeEnumInfos) {
+TEST_F(MergeTest, mergeEnumInfos) {
   EnumInfo One;
   One.Name = "e";
   One.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
@@ -247,11 +249,11 @@ TEST(MergeTest, mergeEnumInfos) {
   Two.Members.emplace_back("X");
   Two.Members.emplace_back("Y");
 
-  std::vector<std::unique_ptr<Info>> Infos;
-  Infos.emplace_back(std::make_unique<EnumInfo>(std::move(One)));
-  Infos.emplace_back(std::make_unique<EnumInfo>(std::move(Two)));
+  OwningPtrVec<Info> Infos;
+  Infos.emplace_back(allocatePtr<EnumInfo>(std::move(One)));
+  Infos.emplace_back(allocatePtr<EnumInfo>(std::move(Two)));
 
-  auto Expected = std::make_unique<EnumInfo>();
+  auto Expected = allocatePtr<EnumInfo>();
   Expected->Name = "e";
   Expected->Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 

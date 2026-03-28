@@ -9,6 +9,7 @@
 // RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +avx512bf16 -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
 
 #include <immintrin.h>
+#include "builtin_test_helpers.h"
 
 float test_mm_cvtsbh_ss(__bf16 A) {
   // CHECK-LABEL: test_mm_cvtsbh_ss
@@ -16,6 +17,7 @@ float test_mm_cvtsbh_ss(__bf16 A) {
   // CHECK: ret float %{{.*}}
   return _mm_cvtsbh_ss(A);
 }
+TEST_CONSTEXPR(_mm_cvtsbh_ss(-1.0f) == -1.0f);
 
 __m512bh test_mm512_cvtne2ps_pbh(__m512 A, __m512 B) {
   // CHECK-LABEL: test_mm512_cvtne2ps_pbh
@@ -79,23 +81,23 @@ __m512 test_mm512_mask_dpbf16_ps(__m512 D, __m512bh A, __m512bh B, __mmask16 U) 
 
 __m512 test_mm512_cvtpbh_ps(__m256bh A) {
   // CHECK-LABEL: test_mm512_cvtpbh_ps
-  // CHECK: sext <16 x i16> %{{.*}} to <16 x i32>
-  // CHECK: call <16 x i32> @llvm.x86.avx512.pslli.d.512(<16 x i32> %{{.*}}, i32 %{{.*}})
+  // CHECK: fpext <16 x bfloat> %{{.*}} to <16 x float>
   return _mm512_cvtpbh_ps(A);
 }
+TEST_CONSTEXPR(match_m512(_mm512_cvtpbh_ps((__m256bh){-0.0f, 1.0f, -2.0f, 4.0f, -8.0f, 16.0f, -32.0f, 64.0f, -128.0f, -0.5f, 0.25f, -0.125f, -4.0f, 2.0f, -1.0f, 0.0f}), -0.0f, 1.0f, -2.0f, 4.0f, -8.0f, 16.0f, -32.0f, 64.0f, -128.0f, -0.5f, 0.25f, -0.125f, -4.0f, 2.0f, -1.0f, 0.0f));
 
 __m512 test_mm512_maskz_cvtpbh_ps(__mmask16 M, __m256bh A) {
   // CHECK-LABEL: test_mm512_maskz_cvtpbh_ps
-  // CHECK: sext <16 x i16> %{{.*}} to <16 x i32>
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
-  // CHECK: call <16 x i32> @llvm.x86.avx512.pslli.d.512(<16 x i32> %{{.*}}, i32 %{{.*}})
+  // CHECK: fpext <16 x bfloat> %{{.*}} to <16 x float>
+  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   return _mm512_maskz_cvtpbh_ps(M, A);
 }
+TEST_CONSTEXPR(match_m512(_mm512_maskz_cvtpbh_ps(0xA753, (__m256bh){-0.0f, 1.0f, -2.0f, 4.0f, -8.0f, 16.0f, -32.0f, 64.0f, -128.0f, -0.5f, 0.25f, -0.125f, -4.0f, 2.0f, -1.0f, 0.0f}), -0.0f, 1.0f, 0.0f, 0.0f, -8.0f, 0.0f, -32.0f, 0.0f, -128.0f, -0.5f, 0.25f, 0.0f, 0.0f, 2.0f, 0.0f, 0.0f));
 
 __m512 test_mm512_mask_cvtpbh_ps(__m512 S, __mmask16 M, __m256bh A) {
   // CHECK-LABEL: test_mm512_mask_cvtpbh_ps
-  // CHECK: sext <16 x i16> %{{.*}} to <16 x i32>
-  // CHECK: call <16 x i32> @llvm.x86.avx512.pslli.d.512(<16 x i32> %{{.*}}, i32 %{{.*}})
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
+  // CHECK: fpext <16 x bfloat> %{{.*}} to <16 x float>
+  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   return _mm512_mask_cvtpbh_ps(S, M, A);
 }
+TEST_CONSTEXPR(match_m512(_mm512_mask_cvtpbh_ps((__m512){ 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f }, 0xA753, (__m256bh){-0.0f, 1.0f, -2.0f, 4.0f, -8.0f, 16.0f, -32.0f, 64.0f, -128.0f, -0.5f, 0.25f, -0.125f, -4.0f, 2.0f, -1.0f, 0.0f}), -0.0f, 1.0f, 99.0f, 99.0f, -8.0f, 99.0f, -32.0f, 99.0f, -128.0f, -0.5f, 0.25f, 99.0f, 99.0f, 2.0f, 99.0f, 0.0f));

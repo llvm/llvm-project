@@ -4,8 +4,8 @@
 target datalayout = "e-m:e-p:32:32-f64:32:64-f80:32-n8:16:32-S128"
 target triple = "i386-unknown-linux-gnu"
 
-@src = common local_unnamed_addr global [120 x half] zeroinitializer, align 4
-@dst = common local_unnamed_addr global [120 x half] zeroinitializer, align 4
+@src = common global [120 x half] zeroinitializer, align 4
+@dst = common global [120 x half] zeroinitializer, align 4
 
 ; Function Attrs: norecurse nounwind
 define void @stride8(half %k, i32 %width_) {
@@ -99,7 +99,7 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
 define void @stride3(half %k, i32 %width_) {
 entry:
 
-; CHECK: LV: Found an estimated cost of 18 for VF 32 For instruction:   %0 = load half
+; CHECK: LV: Found an estimated cost of 18 for VF 32 For instruction: %0 = load half, ptr %arrayidx, align 4
 
   %cmp27 = icmp sgt i32 %width_, 0
   br i1 %cmp27, label %for.body.lr.ph, label %for.cond.cleanup

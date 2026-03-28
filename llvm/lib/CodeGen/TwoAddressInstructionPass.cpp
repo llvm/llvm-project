@@ -51,6 +51,7 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
@@ -80,10 +81,15 @@ EnableRescheduling("twoaddr-reschedule",
                    cl::desc("Coalesce copies by rescheduling (default=true)"),
                    cl::init(true), cl::Hidden);
 
+static cl::opt<bool> AnalyzeRevCopyTied(
+    "twoaddr-analyze-revcopy-tied",
+    cl::desc("Analyze tied operands when looking for reversed copy chain"),
+    cl::init(true), cl::Hidden);
+
 // Limit the number of dataflow edges to traverse when evaluating the benefit
 // of commuting operands.
 static cl::opt<unsigned> MaxDataFlowEdge(
-    "dataflow-edge-limit", cl::Hidden, cl::init(3),
+    "dataflow-edge-limit", cl::Hidden, cl::init(10),
     cl::desc("Maximum number of dataflow edges to traverse when evaluating "
              "the benefit of commuting operands"));
 
@@ -97,7 +103,6 @@ class TwoAddressInstructionImpl {
   MachineRegisterInfo *MRI = nullptr;
   LiveVariables *LV = nullptr;
   LiveIntervals *LIS = nullptr;
-  AliasAnalysis *AA = nullptr;
   CodeGenOptLevel OptLevel = CodeGenOptLevel::None;
 
   // The current basic block being processed.
@@ -191,7 +196,8 @@ class TwoAddressInstructionImpl {
 public:
   TwoAddressInstructionImpl(MachineFunction &MF, MachineFunctionPass *P);
   TwoAddressInstructionImpl(MachineFunction &MF,
-                            MachineFunctionAnalysisManager &MFAM);
+                            MachineFunctionAnalysisManager &MFAM,
+                            LiveIntervals *LIS);
   void setOptLevel(CodeGenOptLevel Level) { OptLevel = Level; }
   bool run();
 };
@@ -200,10 +206,7 @@ class TwoAddressInstructionLegacyPass : public MachineFunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  TwoAddressInstructionLegacyPass() : MachineFunctionPass(ID) {
-    initializeTwoAddressInstructionLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
+  TwoAddressInstructionLegacyPass() : MachineFunctionPass(ID) {}
 
   /// Pass entry point.
   bool runOnMachineFunction(MachineFunction &MF) override {
@@ -217,7 +220,6 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addUsedIfAvailable<AAResultsWrapperPass>();
     AU.addUsedIfAvailable<LiveVariablesWrapperPass>();
     AU.addPreserved<LiveVariablesWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();
@@ -235,7 +237,9 @@ TwoAddressInstructionPass::run(MachineFunction &MF,
                                MachineFunctionAnalysisManager &MFAM) {
   // Disable optimizations if requested. We cannot skip the whole pass as some
   // fixups are necessary for correctness.
-  TwoAddressInstructionImpl Impl(MF, MFAM);
+  LiveIntervals *LIS = MFAM.getCachedResult<LiveIntervalsAnalysis>(MF);
+
+  TwoAddressInstructionImpl Impl(MF, MFAM, LIS);
   if (MF.getFunction().hasOptNone())
     Impl.setOptLevel(CodeGenOptLevel::None);
 
@@ -244,11 +248,16 @@ TwoAddressInstructionPass::run(MachineFunction &MF,
   if (!Changed)
     return PreservedAnalyses::all();
   auto PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserve<LiveIntervalsAnalysis>();
+
+  // SlotIndexes are only maintained when LiveIntervals is available. Only
+  // preserve SlotIndexes if we had LiveIntervals available and updated them.
+  if (LIS)
+    PA.preserve<SlotIndexesAnalysis>();
+
   PA.preserve<LiveVariablesAnalysis>();
+  PA.preserve<LiveIntervalsAnalysis>();
   PA.preserve<MachineDominatorTreeAnalysis>();
   PA.preserve<MachineLoopAnalysis>();
-  PA.preserve<SlotIndexesAnalysis>();
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }
@@ -257,25 +266,18 @@ char TwoAddressInstructionLegacyPass::ID = 0;
 
 char &llvm::TwoAddressInstructionPassID = TwoAddressInstructionLegacyPass::ID;
 
-INITIALIZE_PASS_BEGIN(TwoAddressInstructionLegacyPass, DEBUG_TYPE,
-                      "Two-Address instruction pass", false, false)
-INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_END(TwoAddressInstructionLegacyPass, DEBUG_TYPE,
-                    "Two-Address instruction pass", false, false)
+INITIALIZE_PASS(TwoAddressInstructionLegacyPass, DEBUG_TYPE,
+                "Two-Address instruction pass", false, false)
 
 TwoAddressInstructionImpl::TwoAddressInstructionImpl(
-    MachineFunction &Func, MachineFunctionAnalysisManager &MFAM)
+    MachineFunction &Func, MachineFunctionAnalysisManager &MFAM,
+    LiveIntervals *LIS)
     : MF(&Func), TII(Func.getSubtarget().getInstrInfo()),
       TRI(Func.getSubtarget().getRegisterInfo()),
       InstrItins(Func.getSubtarget().getInstrItineraryData()),
       MRI(&Func.getRegInfo()),
-      LV(MFAM.getCachedResult<LiveVariablesAnalysis>(Func)),
-      LIS(MFAM.getCachedResult<LiveIntervalsAnalysis>(Func)),
-      OptLevel(Func.getTarget().getOptLevel()) {
-  auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(Func)
-                  .getManager();
-  AA = FAM.getCachedResult<AAManager>(Func.getFunction());
-}
+      LV(MFAM.getCachedResult<LiveVariablesAnalysis>(Func)), LIS(LIS),
+      OptLevel(Func.getTarget().getOptLevel()) {}
 
 TwoAddressInstructionImpl::TwoAddressInstructionImpl(MachineFunction &Func,
                                                      MachineFunctionPass *P)
@@ -287,10 +289,6 @@ TwoAddressInstructionImpl::TwoAddressInstructionImpl(MachineFunction &Func,
   LV = LVWrapper ? &LVWrapper->getLV() : nullptr;
   auto *LISWrapper = P->getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
   LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
-  if (auto *AAPass = P->getAnalysisIfAvailable<AAResultsWrapperPass>())
-    AA = &AAPass->getAAResults();
-  else
-    AA = nullptr;
 }
 
 /// Return the MachineInstr* if it is the single def of the Reg in current BB.
@@ -309,6 +307,14 @@ TwoAddressInstructionImpl::getSingleDef(Register Reg,
   return Ret;
 }
 
+static bool getTiedUse(Register DefReg, MachineInstr *MI,
+                       const TargetRegisterInfo *TRI, unsigned &TiedOpIdx) {
+  int DefRegIdx = MI->findRegisterDefOperandIdx(DefReg, TRI);
+  if (DefRegIdx < 0)
+    return false;
+  return MI->isRegTiedToUseOperand(DefRegIdx, &TiedOpIdx);
+}
+
 /// Check if there is a reversed copy chain from FromReg to ToReg:
 /// %Tmp1 = copy %Tmp2;
 /// %FromReg = copy %Tmp1;
@@ -321,10 +327,21 @@ bool TwoAddressInstructionImpl::isRevCopyChain(Register FromReg, Register ToReg,
   Register TmpReg = FromReg;
   for (int i = 0; i < Maxlen; i++) {
     MachineInstr *Def = getSingleDef(TmpReg, MBB);
-    if (!Def || !Def->isCopy())
+    if (!Def)
       return false;
 
-    TmpReg = Def->getOperand(1).getReg();
+    if (Def->isCopy())
+      TmpReg = Def->getOperand(1).getReg();
+    else if (unsigned TiedOpIdx;
+             AnalyzeRevCopyTied && getTiedUse(TmpReg, Def, TRI, TiedOpIdx)) {
+      Register TiedUseReg = Def->getOperand(TiedOpIdx).getReg();
+      // Tied use reg matches def reg. It's not a copy chain. We won't make any
+      // forward progress anymore, stop the traversal here.
+      if (TiedUseReg == TmpReg)
+        return false;
+      TmpReg = TiedUseReg;
+    } else
+      return false;
 
     if (TmpReg == ToReg)
       return true;
@@ -364,10 +381,10 @@ bool TwoAddressInstructionImpl::isCopyToReg(MachineInstr &MI, Register &SrcReg,
                                             bool &IsDstPhys) const {
   SrcReg = 0;
   DstReg = 0;
-  if (MI.isCopy()) {
+  if (MI.isCopy() || MI.isSubregToReg()) {
     DstReg = MI.getOperand(0).getReg();
     SrcReg = MI.getOperand(1).getReg();
-  } else if (MI.isInsertSubreg() || MI.isSubregToReg()) {
+  } else if (MI.isInsertSubreg()) {
     DstReg = MI.getOperand(0).getReg();
     SrcReg = MI.getOperand(2).getReg();
   } else {
@@ -1612,7 +1629,7 @@ void TwoAddressInstructionImpl::processTiedPairs(MachineInstr *MI,
                                       TII->get(TargetOpcode::COPY), RegA);
     // If this operand is folding a truncation, the truncation now moves to the
     // copy so that the register classes remain valid for the operands.
-    MIB.addReg(RegB, 0, SubRegB);
+    MIB.addReg(RegB, {}, SubRegB);
     const TargetRegisterClass *RC = MRI->getRegClass(RegB);
     if (SubRegB) {
       if (RegA.isVirtual()) {
@@ -1878,8 +1895,10 @@ bool TwoAddressInstructionImpl::run() {
 
       // Expand REG_SEQUENCE instructions. This will position mi at the first
       // expanded instruction.
-      if (mi->isRegSequence())
+      if (mi->isRegSequence()) {
         eliminateRegSequence(mi);
+        MadeChange = true;
+      }
 
       DistanceMap.insert(std::make_pair(&*mi, ++Dist));
 
@@ -2019,6 +2038,16 @@ void TwoAddressInstructionImpl::eliminateRegSequence(
     }
   }
 
+  // If there are no live intervals information, we scan the use list once
+  // in order to find which subregisters are used.
+  LaneBitmask UsedLanes = LaneBitmask::getNone();
+  if (!LIS) {
+    for (MachineOperand &Use : MRI->use_nodbg_operands(DstReg)) {
+      if (unsigned SubReg = Use.getSubReg())
+        UsedLanes |= TRI->getSubRegIndexLaneMask(SubReg);
+    }
+  }
+
   LaneBitmask UndefLanes = LaneBitmask::getNone();
   bool DefEmitted = false;
   for (unsigned i = 1, e = MI.getNumOperands(); i < e; i += 2) {
@@ -2026,9 +2055,14 @@ void TwoAddressInstructionImpl::eliminateRegSequence(
     Register SrcReg = UseMO.getReg();
     unsigned SubIdx = MI.getOperand(i+1).getImm();
     // Nothing needs to be inserted for undef operands.
+    // Unless there are no live intervals, and they are used at a later
+    // instruction as operand.
     if (UseMO.isUndef()) {
-      UndefLanes |= TRI->getSubRegIndexLaneMask(SubIdx);
-      continue;
+      LaneBitmask LaneMask = TRI->getSubRegIndexLaneMask(SubIdx);
+      if (LIS || (UsedLanes & LaneMask).none()) {
+        UndefLanes |= LaneMask;
+        continue;
+      }
     }
 
     // Defer any kill flag to the last operand using SrcReg. Otherwise, we

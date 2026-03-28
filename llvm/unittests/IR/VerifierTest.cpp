@@ -33,11 +33,11 @@ TEST(VerifierTest, Branch_i1) {
   BasicBlock *Exit = BasicBlock::Create(C, "exit", F);
   ReturnInst::Create(C, Exit);
 
-  // To avoid triggering an assertion in BranchInst::Create, we first create
+  // To avoid triggering an assertion in CondBrInst::Create, we first create
   // a branch with an 'i1' condition ...
 
   Constant *False = ConstantInt::getFalse(C);
-  BranchInst *BI = BranchInst::Create(Exit, Exit, False, Entry);
+  CondBrInst *BI = CondBrInst::Create(False, Exit, Exit, Entry);
 
   // ... then use setOperand to redirect it to a value of different type.
 
@@ -76,7 +76,7 @@ TEST(VerifierTest, Freeze) {
 
   FI_dbl->eraseFromParent();
 
-  // Valid type : freeze(i32*)
+  // Valid type : freeze(ptr)
   PointerType *PT = PointerType::get(C, 0);
   ConstantPointerNull *CPN = ConstantPointerNull::get(PT);
   FreezeInst *FI_ptr = new FreezeInst(CPN);
@@ -318,9 +318,9 @@ TEST(VerifierTest, SwitchInst) {
 
   BasicBlock *Exit = BasicBlock::Create(C, "exit", F);
 
-  BranchInst::Create(Exit, Default);
-  BranchInst::Create(Exit, OnTwo);
-  BranchInst::Create(Exit, OnOne);
+  UncondBrInst::Create(Exit, Default);
+  UncondBrInst::Create(Exit, OnTwo);
+  UncondBrInst::Create(Exit, OnOne);
   ReturnInst::Create(C, Exit);
 
   Value *Cond = F->getArg(0);
@@ -329,9 +329,6 @@ TEST(VerifierTest, SwitchInst) {
   Switch->addCase(ConstantInt::get(Int32Ty, 2), OnTwo);
 
   EXPECT_FALSE(verifyFunction(*F));
-  // set one case value to function argument.
-  Switch->setOperand(2, F->getArg(1));
-  EXPECT_TRUE(verifyFunction(*F));
 }
 
 TEST(VerifierTest, CrossFunctionRef) {

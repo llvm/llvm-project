@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdpal < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -mtriple=amdgcn--amdpal -mattr=+dx10-clamp-and-ieee-mode < %s | FileCheck -check-prefix=SI %s
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=tonga < %s | FileCheck -check-prefix=VI %s
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx900 < %s | FileCheck -check-prefix=GFX9 -enable-var-scope %s
 
@@ -66,7 +66,7 @@ define amdgpu_vs half @vs_amdpal(half %arg0) #0 {
   ret half %add
 }
 
-attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #0 = { denormal_fpenv(float: preservesign) }
 
 ; amdgpu.pal.metadata.msgpack represents this:
 ;

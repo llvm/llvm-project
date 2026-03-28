@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTXTargetTransformInfo.h"
-#include "NVPTXUtilities.h"
+#include "NVVMProperties.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -207,12 +207,8 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
       return {Intrinsic::fma, FTZ_MustBeOn, true};
     case Intrinsic::nvvm_fma_rn_bf16:
       return {Intrinsic::fma, FTZ_MustBeOff, true};
-    case Intrinsic::nvvm_fma_rn_ftz_bf16:
-      return {Intrinsic::fma, FTZ_MustBeOn, true};
     case Intrinsic::nvvm_fma_rn_bf16x2:
       return {Intrinsic::fma, FTZ_MustBeOff, true};
-    case Intrinsic::nvvm_fma_rn_ftz_bf16x2:
-      return {Intrinsic::fma, FTZ_MustBeOn, true};
     case Intrinsic::nvvm_fmax_d:
       return {Intrinsic::maxnum, FTZ_Any};
     case Intrinsic::nvvm_fmax_f:
@@ -407,7 +403,7 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
 // Returns true/false when we know the answer, nullopt otherwise.
 static std::optional<bool> evaluateIsSpace(Intrinsic::ID IID, unsigned AS) {
   if (AS == NVPTXAS::ADDRESS_SPACE_GENERIC ||
-      AS == NVPTXAS::ADDRESS_SPACE_PARAM)
+      AS == NVPTXAS::ADDRESS_SPACE_ENTRY_PARAM)
     return std::nullopt; // Got to check at run-time.
   switch (IID) {
   case Intrinsic::nvvm_isspacep_global:
@@ -583,7 +579,7 @@ Value *NVPTXTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
     IRBuilder<> Builder(II);
     const unsigned NewAS = NewV->getType()->getPointerAddressSpace();
     if (NewAS == NVPTXAS::ADDRESS_SPACE_CONST ||
-        NewAS == NVPTXAS::ADDRESS_SPACE_PARAM)
+        NewAS == NVPTXAS::ADDRESS_SPACE_ENTRY_PARAM)
       return Builder.CreateUnaryIntrinsic(Intrinsic::nvvm_prefetch_tensormap,
                                           NewV);
     return nullptr;
@@ -673,4 +669,12 @@ void NVPTXTTIImpl::collectKernelLaunchBounds(
     LB.push_back({"maxntidy", MaxNTID[1]});
   if (MaxNTID.size() > 2)
     LB.push_back({"maxntidz", MaxNTID[2]});
+}
+
+InstructionUniformity
+NVPTXTTIImpl::getInstructionUniformity(const Value *V) const {
+  if (isSourceOfDivergence(V))
+    return InstructionUniformity::NeverUniform;
+
+  return InstructionUniformity::Default;
 }

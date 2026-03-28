@@ -2,7 +2,7 @@
 // RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1251 --amdhsa-code-object-version=4 -filetype=obj < %s > %t
 // RUN: llvm-readelf -S -r -s %t | FileCheck --check-prefix=READOBJ %s
 // RUN: llvm-objdump -s -j .rodata %t | FileCheck --check-prefix=OBJDUMP %s
-// RUN: not llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1251 -mattr=+wavefrontsize64,-wavefrontsize32 --amdhsa-code-object-version=4 < %s 2>&1 | FileCheck --check-prefix=W64-ERR %s
+// RUN: not llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1251 -mattr=+wavefrontsize64,-wavefrontsize32 --amdhsa-code-object-version=4 < %s -filetype=null 2>&1 | FileCheck --check-prefix=W64-ERR %s
 
 // READOBJ: Section Headers
 // READOBJ: .text   PROGBITS {{[0-9a-f]+}} {{[0-9a-f]+}} {{[0-9a-f]+}} {{[0-9]+}} AX {{[0-9]+}} {{[0-9]+}} 256

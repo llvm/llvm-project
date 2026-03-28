@@ -129,20 +129,6 @@ elimination and inlining), but you might lose the ability to modify the program
 and call functions which were optimized out of the program, or inlined away
 completely.
 
-The :doc:`LLVM test-suite <TestSuiteMakefileGuide>` provides a framework to
-test the optimizer's handling of debugging information.  It can be run like
-this:
-
-.. code-block:: bash
-
-  % cd llvm/projects/test-suite/MultiSource/Benchmarks  # or some other level
-  % make TEST=dbgopt
-
-This will test impact of debugging information on optimization passes.  If
-debugging information influences optimization passes then it will be reported
-as a failure.  See :doc:`TestingGuide` for more information on LLVM test
-infrastructure and how to run various tests.
-
 .. _variables_and_variable_fragments:
 
 Variables and Variable Fragments
@@ -529,17 +515,17 @@ defines internal-only opcodes which have no direct analog in DWARF.
   generation time all fragments for the same variable are collected together
   and DWARF ``DW_OP_piece`` and ``DW_OP_bit_piece`` opcodes are used to
   describe a composite with pieces corresponding to the fragments. (This does
-  not affect the semantics of the expression containing it.) -
-  ``DW_OP_LLVM_convert, 16, DW_ATE_signed`` specifies a bit size and encoding
+  not affect the semantics of the expression containing it.)
+- ``DW_OP_LLVM_convert, 16, DW_ATE_signed`` specifies a bit size and encoding
   (``16`` and ``DW_ATE_signed`` here, respectively) to which the top of the
   expression stack is to be converted. Maps into a ``DW_OP_convert`` operation
-  that references a base type constructed from the supplied values. -
-  ``DW_OP_LLVM_tag_offset, tag_offset`` specifies that a memory tag should be
+  that references a base type constructed from the supplied values.
+- ``DW_OP_LLVM_tag_offset, tag_offset`` specifies that a memory tag should be
   optionally applied to the pointer. The memory tag is derived from the given
   tag offset in an implementation-defined manner. (This does not affect the
-  semantics of the expression containing it.) - ``DW_OP_LLVM_entry_value, N``
-  evaluates a sub-expression as-if it were evaluated upon entry to the current
-  call frame.
+  semantics of the expression containing it.)
+- ``DW_OP_LLVM_entry_value, N`` evaluates a sub-expression as-if it were
+  evaluated upon entry to the current call frame.
 
   The sub-expression replaces the operations which comprise it, i.e. all such
   operations are evaluated only in the frame entry context.

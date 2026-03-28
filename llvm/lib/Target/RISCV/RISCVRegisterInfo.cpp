@@ -551,7 +551,7 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                 Opc == RISCV::PseudoLD_RV32_OPT ||
                 Opc == RISCV::PseudoSD_RV32_OPT) &&
                Lo12 >= 2044) {
-      // This instruction will be split into 2 instructions. The second
+      // This instruction will/might be split into 2 instructions. The second
       // instruction will add 4 to the immediate. If that would overflow 12
       // bits, we can't fold the offset.
       MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);
@@ -871,6 +871,7 @@ bool RISCVRegisterInfo::getRegAllocationHints(
   unsigned HintType = Hint.first;
   Register Partner = Hint.second;
 
+  MCRegister TargetReg;
   if (HintType == RISCVRI::RegPairEven || HintType == RISCVRI::RegPairOdd) {
     // Check if we want the even or odd register of a consecutive pair
     bool WantOdd = (HintType == RISCVRI::RegPairOdd);
@@ -879,7 +880,7 @@ bool RISCVRegisterInfo::getRegAllocationHints(
     if (Partner.isVirtual() && VRM && VRM->hasPhys(Partner)) {
       MCRegister PartnerPhys = VRM->getPhys(Partner);
       // Calculate the exact register we need for consecutive pairing
-      MCRegister TargetReg = PartnerPhys.id() + (WantOdd ? 1 : -1);
+      TargetReg = PartnerPhys.id() + (WantOdd ? 1 : -1);
 
       // Verify it's valid and available
       if (RISCV::GPRRegClass.contains(TargetReg) &&
@@ -890,7 +891,8 @@ bool RISCVRegisterInfo::getRegAllocationHints(
     // Second priority: Try to find consecutive register pairs in the allocation
     // order
     for (MCPhysReg PhysReg : Order) {
-      if (!PhysReg)
+      // Don't add the hint if we already added above.
+      if (TargetReg == PhysReg)
         continue;
 
       unsigned RegNum = getEncodingValue(PhysReg);
@@ -963,13 +965,16 @@ bool RISCVRegisterInfo::getRegAllocationHints(
     case RISCV::ADDIW:
       return MI.getOperand(2).isImm() && isInt<6>(MI.getOperand(2).getImm());
     case RISCV::MUL:
+      // c.mul
+      NeedGPRC = true;
+      return Subtarget.hasStdExtZcb();
     case RISCV::SEXT_B:
     case RISCV::SEXT_H:
     case RISCV::ZEXT_H_RV32:
     case RISCV::ZEXT_H_RV64:
-      // c.mul, c.sext.b, c.sext.h, c.zext.h
+      // c.sext.b, c.sext.h, c.zext.h
       NeedGPRC = true;
-      return Subtarget.hasStdExtZcb();
+      return Subtarget.hasStdExtZcb() && Subtarget.hasStdExtZbb();
     case RISCV::ADD_UW:
       // c.zext.w
       NeedGPRC = true;
@@ -980,6 +985,13 @@ bool RISCVRegisterInfo::getRegAllocationHints(
       NeedGPRC = true;
       return Subtarget.hasStdExtZcb() && MI.getOperand(2).isImm() &&
              MI.getOperand(2).getImm() == -1;
+    case RISCV::QC_EXTU:
+      return MI.getOperand(2).getImm() >= 6 && MI.getOperand(3).getImm() == 0;
+    case RISCV::BSETI:
+    case RISCV::BEXTI:
+      // qc.c.bseti, qc.c.bexti
+      NeedGPRC = true;
+      return Subtarget.hasVendorXqcibm() && MI.getOperand(2).getImm() != 0;
     }
   };
 

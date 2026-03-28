@@ -15,8 +15,9 @@ define i32 @select_of_symmetric_selects(i32 %a, i32 %b, i1 %c1, i1 %c2) {
 
 define i32 @select_of_symmetric_selects_negative1(i32 %a, i32 %b, i1 %c1, i1 %c2) {
 ; CHECK-LABEL: @select_of_symmetric_selects_negative1(
-; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[C1:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = select i1 [[C2:%.*]], i32 [[SEL1]], i32 [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[C1:%.*]], true
+; CHECK-NEXT:    [[C2:%.*]] = select i1 [[C3:%.*]], i1 [[TMP1]], i1 false
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[C2]], i32 [[SEL1:%.*]], i32 [[A:%.*]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %sel1 = select i1 %c1, i32 %a, i32 %b

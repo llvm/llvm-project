@@ -12,11 +12,6 @@
 
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 
-#include <cassert>
-#include <cstdint>
-#include <functional>
-#include <optional>
-
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -33,7 +28,13 @@
 #include "mlir/IR/TypeUtilities.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/FormatVariadic.h"
+
+#include <cassert>
+#include <cstdint>
+#include <functional>
+#include <optional>
 
 #define DEBUG_TYPE "vector-to-vector"
 
@@ -105,10 +106,10 @@ struct MultiReduceToContract
     rewriter.replaceOpWithNewOp<mlir::vector::ContractionOp>(
         reduceOp, mulOp->getOperand(0), mulOp->getOperand(1), reduceOp.getAcc(),
         rewriter.getAffineMapArrayAttr({srcMap, srcMap, dstMap}),
-        rewriter.getArrayAttr(llvm::to_vector(llvm::map_range(
+        rewriter.getArrayAttr(llvm::map_to_vector(
             iteratorTypes, [&](IteratorType t) -> mlir::Attribute {
               return IteratorTypeAttr::get(rewriter.getContext(), t);
-            }))));
+            })));
     return success();
   }
 };
@@ -453,6 +454,8 @@ struct ReorderCastOpsOnBroadcast
                                 PatternRewriter &rewriter) const override {
     if (op->getNumOperands() != 1)
       return failure();
+    if (!isa<VectorType>(op->getResult(0).getType()))
+      return failure();
     auto bcastOp = op->getOperand(0).getDefiningOp<vector::BroadcastOp>();
     if (!bcastOp)
       return failure();
@@ -552,9 +555,8 @@ struct ReorderElementwiseOpsOnTranspose final
 
 // Returns the values in `arrayAttr` as an integer vector.
 static SmallVector<int64_t> getIntValueVector(ArrayAttr arrayAttr) {
-  return llvm::to_vector<4>(
-      llvm::map_range(arrayAttr.getAsRange<IntegerAttr>(),
-                      [](IntegerAttr attr) { return attr.getInt(); }));
+  return llvm::map_to_vector<4>(arrayAttr.getAsRange<IntegerAttr>(),
+                                [](IntegerAttr attr) { return attr.getInt(); });
 }
 
 // Shuffles vector.bitcast op after vector.extract op.
@@ -1561,10 +1563,6 @@ class DropInnerMostUnitDimsTransferRead
     if (readOp.getTransferRank() == 0)
       return failure();
 
-    // TODO: support mask.
-    if (readOp.getMask())
-      return failure();
-
     auto srcType = dyn_cast<MemRefType>(readOp.getBase().getType());
     if (!srcType)
       return failure();
@@ -1612,12 +1610,22 @@ class DropInnerMostUnitDimsTransferRead
                                   readOp.getBase(), offsets, sizes, strides);
     auto permMap = getTransferMinorIdentityMap(
         cast<ShapedType>(rankedReducedView.getType()), resultTargetVecType);
+
+    // If there is a mask, shape_cast it to drop the same inner unit dims.
+    Value mask = readOp.getMask();
+    if (mask) {
+      auto maskType = cast<VectorType>(mask.getType());
+      auto reducedMaskType = VectorType::get(
+          maskType.getShape().drop_back(dimsToDrop), maskType.getElementType(),
+          maskType.getScalableDims().drop_back(dimsToDrop));
+      mask = rewriter.createOrFold<vector::ShapeCastOp>(loc, reducedMaskType,
+                                                        mask);
+    }
+
     Value result = vector::TransferReadOp::create(
         rewriter, loc, resultTargetVecType, rankedReducedView,
         readOp.getIndices().drop_back(dimsToDrop), AffineMapAttr::get(permMap),
-        readOp.getPadding(),
-        // TODO: support mask.
-        /*mask=*/Value(), inBoundsAttr);
+        readOp.getPadding(), mask, inBoundsAttr);
     rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(readOp, targetType,
                                                      result);
     return success();
@@ -1650,10 +1658,6 @@ class DropInnerMostUnitDimsTransferWrite
                                 PatternRewriter &rewriter) const override {
     // TODO: support 0-d corner case.
     if (writeOp.getTransferRank() == 0)
-      return failure();
-
-    // TODO: support mask.
-    if (writeOp.getMask())
       return failure();
 
     auto srcType = dyn_cast<MemRefType>(writeOp.getBase().getType());
@@ -1707,16 +1711,27 @@ class DropInnerMostUnitDimsTransferWrite
 
     auto shapeCast = rewriter.createOrFold<vector::ShapeCastOp>(
         loc, resultTargetVecType, writeOp.getVector());
+
+    // If there is a mask, shape_cast it to drop the same inner unit dims.
+    Value mask = writeOp.getMask();
+    if (mask) {
+      auto maskType = cast<VectorType>(mask.getType());
+      auto reducedMaskType = VectorType::get(
+          maskType.getShape().drop_back(dimsToDrop), maskType.getElementType(),
+          maskType.getScalableDims().drop_back(dimsToDrop));
+      mask = rewriter.createOrFold<vector::ShapeCastOp>(loc, reducedMaskType,
+                                                        mask);
+    }
+
     rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
         writeOp, shapeCast, rankedReducedView,
         writeOp.getIndices().drop_back(dimsToDrop), AffineMapAttr::get(permMap),
-        // TODO: support mask.
-        /*mask=*/Value(), inBoundsAttr);
+        mask, inBoundsAttr);
     return success();
   }
 };
 
-/// Canonicalization of a `vector.contraction %a, %b, %c` with row-major matmul
+/// Canonicalization of a `vector.contract %a, %b, %c` with row-major matmul
 /// semantics to a contraction suitable for MMT (matrix matrix multiplication
 /// with the RHS transposed) lowering.
 struct CanonicalizeContractMatmulToMMT final

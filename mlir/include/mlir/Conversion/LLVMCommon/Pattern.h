@@ -54,17 +54,37 @@ LogicalResult intrinsicRewrite(Operation *op, StringRef intrinsic,
                                const LLVMTypeConverter &typeConverter,
                                RewriterBase &rewriter);
 
+/// Return "true" if the given type is an unsupported floating point type.
+/// In case of a vector type, return "true" if the element type is an
+/// unsupported floating point type.
+bool isUnsupportedFloatingPointType(const TypeConverter &typeConverter,
+                                    Type type);
+/// Return "true" if the given op has any unsupported floating point
+/// types (either operands or results).
+bool opHasUnsupportedFloatingPointTypes(Operation *op,
+                                        const TypeConverter &typeConverter);
 } // namespace detail
 
 /// Decomposes a `src` value into a set of values of type `dstType` through
-/// series of bitcasts and vector ops. Src and dst types are expected to be int
-/// or float types or vector types of them.
-SmallVector<Value> decomposeValue(OpBuilder &builder, Location loc, Value src,
-                                  Type dstType);
+/// series of bitcasts and vector ops. Handles int, float, vector types as well
+/// as LLVM aggregate types (LLVMArrayType, LLVMStructType) by recursively
+/// extracting elements.
+///
+/// When a non-aggregate's bitwidth is not evenly divisible by the bitwidth of
+/// `dstType` width, the source value will be zero-extended to the next
+/// (multiple of) that bitwidth before decomposition.
+///
+/// When `permitVariablySizedScalars` is true, leaf types that have no fixed
+/// bit width (e.g., `!llvm.ptr`) are passed through as-is (1 element in
+/// result). When false (default), encountering such a type returns failure.
+LogicalResult decomposeValue(OpBuilder &builder, Location loc, Value src,
+                             Type dstType, SmallVectorImpl<Value> &result,
+                             bool permitVariablySizedScalars = false);
 
 /// Composes a set of `src` values into a single value of type `dstType` through
-/// series of bitcasts and vector ops. Inversely to `decomposeValue`, this
-/// function is used to combine multiple values into a single value.
+/// series of bitcasts and vector ops, and aggregate builders. This is the
+/// inverse of `decomposeValue` and expects the values in `src` to have the
+/// order and padding bits that that function would produce.
 Value composeValue(OpBuilder &builder, Location loc, ValueRange src,
                    Type dstType);
 
@@ -203,7 +223,7 @@ protected:
 
 /// Utility class for operation conversions targeting the LLVM dialect that
 /// match exactly one source operation.
-template <typename SourceOp>
+template <typename SourceOp, bool FailOnUnsupportedFP = false>
 class ConvertOpToLLVMPattern : public ConvertToLLVMPattern {
 public:
   using OpAdaptor = typename SourceOp::Adaptor;
@@ -220,12 +240,24 @@ public:
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
+    // Bail on unsupported floating point types. (These are type-converted to
+    // integer types.)
+    if (FailOnUnsupportedFP && LLVM::detail::opHasUnsupportedFloatingPointTypes(
+                                   op, *this->typeConverter)) {
+      return rewriter.notifyMatchFailure(op, "unsupported floating point type");
+    }
     auto sourceOp = cast<SourceOp>(op);
     return matchAndRewrite(sourceOp, OpAdaptor(operands, sourceOp), rewriter);
   }
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<ValueRange> operands,
                   ConversionPatternRewriter &rewriter) const final {
+    // Bail on unsupported floating point types. (These are type-converted to
+    // integer types.)
+    if (FailOnUnsupportedFP && LLVM::detail::opHasUnsupportedFloatingPointTypes(
+                                   op, *this->typeConverter)) {
+      return rewriter.notifyMatchFailure(op, "unsupported floating point type");
+    }
     auto sourceOp = cast<SourceOp>(op);
     return matchAndRewrite(sourceOp, OneToNOpAdaptor(operands, sourceOp),
                            rewriter);

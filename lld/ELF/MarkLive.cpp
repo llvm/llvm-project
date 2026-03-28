@@ -145,6 +145,11 @@ void MarkLive<ELFT, TrackWhyLive>::resolveReloc(InputSectionBase &sec,
         offset += rel.addend;
       else
         offset += getAddend<ELFT>(ctx, sec, rel);
+      // Skip out-of-bounds offsets to avoid an assertion failure in
+      // getSectionPiece.
+      if (auto *ms = dyn_cast<MergeInputSection>(relSec);
+          ms && offset >= ms->content().size())
+        return;
     }
 
     // fromFDE being true means this is referenced by a FDE in a .eh_frame
@@ -202,6 +207,9 @@ void MarkLive<ELFT, TrackWhyLive>::resolveReloc(InputSectionBase &sec,
 // LSDAs and personality functions if we found that they were unused.
 template <class ELFT, bool TrackWhyLive>
 void MarkLive<ELFT, TrackWhyLive>::scanEhFrameSection(EhInputSection &eh) {
+  if (TrackWhyLive)
+    whyLive.try_emplace(&eh,
+                        LiveReason{std::nullopt, "exception handling frame"});
   ArrayRef<Relocation> rels = eh.rels;
   for (const EhSectionPiece &cie : eh.cies)
     if (cie.firstRelocation != unsigned(-1))
@@ -443,9 +451,13 @@ void MarkLive<ELFT, TrackWhyLive>::run() {
 
     for (Symbol *sym : ctx.symtab->getSymbols())
       handleSym(sym);
+    // Handle local symbols, skipping the symbol at index 0 and section
+    // symbols, which usually have empty names and technically not live. Note:
+    // a live section may lack an associated section symbol, making them
+    // unreliable liveness indicators.
     for (ELFFileBase *file : ctx.objectFiles)
       for (Symbol *sym : file->getSymbols())
-        if (sym->isLocal())
+        if (sym->isLocal() && sym->isDefined() && !sym->isSection())
           handleSym(sym);
   }
 }

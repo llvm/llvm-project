@@ -169,13 +169,13 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK-NEXT: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 42
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64noip = SUBREG_TO_REG 0, killed [[MOVi32imm]], %subreg.sub_32
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64noip = SUBREG_TO_REG killed [[MOVi32imm]], %subreg.sub_32
     ; CHECK-NEXT: [[PAC:%[0-9]+]]:gpr64 = PAC [[COPY]], 2, 42, killed $noreg, implicit-def dead $x16, implicit-def dead $x17
     ; CHECK-NEXT: $x0 = COPY [[PAC]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr64 = COPY $x0
     %1:gpr32 = MOVi32imm 42
-    %2:gpr64noip = SUBREG_TO_REG 0, killed %1, %subreg.sub_32
+    %2:gpr64noip = SUBREG_TO_REG killed %1, %subreg.sub_32
     %3:gpr64 = PAC %0, 2, 0, killed %2, implicit-def dead $x16, implicit-def dead $x17
     $x0 = COPY %3
     RET_ReallyLR implicit $x0
@@ -192,13 +192,13 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK-NEXT: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm target-flags(aarch64-pageoff, aarch64-nc) @globalvar
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64noip = SUBREG_TO_REG 0, killed [[MOVi32imm]], %subreg.sub_32
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64noip = SUBREG_TO_REG killed [[MOVi32imm]], %subreg.sub_32
     ; CHECK-NEXT: [[PAC:%[0-9]+]]:gpr64 = PAC [[COPY]], 2, 0, killed [[SUBREG_TO_REG]], implicit-def dead $x16, implicit-def dead $x17
     ; CHECK-NEXT: $x0 = COPY [[PAC]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr64 = COPY $x0
     %1:gpr32 = MOVi32imm target-flags(aarch64-pageoff, aarch64-nc) @globalvar
-    %2:gpr64noip = SUBREG_TO_REG 0, killed %1, %subreg.sub_32
+    %2:gpr64noip = SUBREG_TO_REG killed %1, %subreg.sub_32
     %3:gpr64 = PAC %0, 2, 0, killed %2, implicit-def dead $x16, implicit-def dead $x17
     $x0 = COPY %3
     RET_ReallyLR implicit $x0

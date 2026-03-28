@@ -44,6 +44,12 @@ func.func @no_layout_builtin() {
   // CHECK: preferred = 16
   // CHECK: size = {minimal_size = 16 : index, scalable}
   "test.data_layout_query"() : () -> vector<[4]xi32>
+  // CHECK: alignment = 2
+  // CHECK: bitsize = {minimal_size = 16 : index, scalable}
+  // CHECK: index = 0
+  // CHECK: preferred = 2
+  // CHECK: size = {minimal_size = 2 : index, scalable}
+  "test.data_layout_query"() : () -> vector<[16]xi1>
   return
 
 }

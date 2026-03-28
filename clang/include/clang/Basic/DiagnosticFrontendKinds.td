@@ -94,6 +94,12 @@ def err_fe_backend_error_attr :
 def warn_fe_backend_warning_attr :
   Warning<"call to '%0' declared with 'warning' attribute: %1">, BackendInfo,
   InGroup<BackendWarningAttributes>;
+def note_fe_backend_in : Note<"called by function '%0'">, BackendInfo;
+def note_fe_backend_inlined : Note<"inlined by function '%0'">, BackendInfo;
+def note_fe_backend_inlining_debug_info
+    : Note<"use '-gline-directives-only' (implied by '-g1') or higher for "
+           "more accurate inlining chain locations">,
+      BackendInfo;
 def warn_toc_unsupported_type : Warning<"-mtocdata option is ignored "
   "for %0 because %1">, InGroup<BackendWarningAttributes>;
 
@@ -109,8 +115,7 @@ def err_fe_expected_clang_command : Error<
     "expected a clang compiler command">;
 def err_fe_remap_missing_to_file : Error<
     "could not remap file '%0' to the contents of file '%1'">, DefaultFatal;
-def err_fe_unable_to_load_pch : Error<
-    "unable to load PCH file">;
+def err_fe_unable_to_load_ast_file : Error<"unable to load precompiled file">;
 def err_fe_unable_to_load_plugin : Error<
     "unable to load plugin '%0': '%1'">;
 def err_fe_unable_to_create_target : Error<
@@ -188,6 +193,16 @@ def err_verify_no_directives : Error<
     "no expected directives found: consider use of '%0-no-diagnostics'">;
 def err_verify_nonconst_addrspace : Error<
   "qualifier 'const' is needed for variables in address space '%0'">;
+def err_verify_message_partial_match : Error<
+  "diagnostic messages of '%0' severity not fully matched: %1">;
+def err_verify_directive_out_of_order : Error<
+  "all diagnostics were successfully matched, but out-of-order directives "
+  "were found: %0">;
+def err_verify_non_singular_match : Error<
+  "diagnostic verification mode disallows use of a diagnostic quantifier">;
+def err_verify_wildcard_loc : Error<
+  "diagnostic verification mode disallows use of a wildcard for diagnostic "
+  "location">;
 
 def note_fixit_applied : Note<"FIX-IT applied suggested code changes">;
 def note_fixit_in_macro : Note<
@@ -218,11 +233,8 @@ def note_incompatible_analyzer_plugin_api : Note<
 
 def err_module_build_requires_fmodules : Error<
   "module compilation requires '-fmodules'">;
-def err_module_interface_requires_cpp_modules : Error<
-  "module interface compilation requires '-std=c++20'">;
-def warn_module_config_mismatch : Warning<
-  "module file %0 cannot be loaded due to a configuration mismatch with the current "
-  "compilation">, InGroup<DiagGroup<"module-file-config-mismatch">>, DefaultError;
+def err_module_interface_requires_cpp_modules
+    : Error<"module interface compilation requires '-std=c++20'">;
 def err_module_map_not_found : Error<"module map file '%0' not found">,
   DefaultFatal;
 def err_missing_module_name : Error<
@@ -383,6 +395,29 @@ def warn_profile_data_misexpect : Warning<
   BackendInfo, InGroup<MisExpect>;
 } // end of instrumentation issue category
 
+def warn_ssaf_extract_tu_summary_file_unknown_output_format :
+  Warning<"unknown output summary file format '%0' "
+  "specified by '--ssaf-tu-summary-file=%1'">,
+  InGroup<ScalableStaticAnalysisFramework>, DefaultError;
+
+def warn_ssaf_extract_tu_summary_file_unknown_format :
+  Warning<"failed to parse the value of '--ssaf-tu-summary-file=%0' "
+  "the value must follow the '<path>.<format>' pattern">,
+  InGroup<ScalableStaticAnalysisFramework>, DefaultError;
+
+def warn_ssaf_must_enable_summary_extractors :
+  Warning<"must enable some summary extractors using the "
+        "'--ssaf-extract-summaries=' option">,
+  InGroup<ScalableStaticAnalysisFramework>, DefaultError;
+
+def warn_ssaf_extract_summary_unknown_extractor_name :
+  Warning<"no summary extractor%s0 %plural{1:was|:were}0 registered with name: %1">,
+  InGroup<ScalableStaticAnalysisFramework>, DefaultError;
+
+def warn_ssaf_write_tu_summary_failed :
+  Warning<"failed to write TU summary to '%0': %1">,
+  InGroup<ScalableStaticAnalysisFramework>, DefaultError;
+
 def err_extract_api_ignores_file_not_found :
   Error<"file '%0' specified by '--extract-api-ignores=' not found">, DefaultFatal;
 
@@ -399,10 +434,72 @@ def err_invalid_llvm_ir : Error<"invalid LLVM IR input: %0">;
 def err_os_unsupport_riscv_fmv : Error<
   "function multiversioning is currently only supported on Linux">;
 
+def warn_unreachable_version
+    : Warning<"function version '%0' is unreachable; ignoring version">,
+      InGroup<FunctionMultiVersioning>;
+
 def warn_hlsl_langstd_minimal :
   Warning<"support for HLSL language version %0 is incomplete, "
           "recommend using %1 instead">,
   InGroup<HLSLDXCCompat>;
+
+def err_data_layout_mismatch : Error<"backend data layout '%0' does not match "
+                                     "expected target description '%1'">;
+def err_failed_to_open_for_embedding
+    : Error<"could not open '%0' for embedding">;
+def err_unsupported_cxx_abi_feature
+    : Error<"cannot yet compile %0 in this ABI">;
+
+def err_target_region_offloading_entry_incorrect
+    : Error<"offloading entry for target region in %0 is incorrect: either the "
+            "address or the ID is invalid">;
+def err_target_var_offloading_entry_incorrect_with_parent
+    : Error<"offloading entry for declare target variable %0 is incorrect: the "
+            "address is invalid">;
+def err_target_var_offloading_entry_incorrect
+    : Error<"offloading entry for declare target variable is incorrect: the "
+            "address is invalid">;
+
+def err_missing_mandatory_offloading
+    : Error<"no offloading entry generated while offloading is mandatory">;
+
+def err_reading_profile : Error<"error in reading profile %0: %1">;
+def err_open_hotpatch_file_failed
+    : Error<"failed to open hotpatch functions file "
+            "(-fms-hotpatch-functions-file): %0 : %1">;
+
+def err_codegen_unsupported : Error<"cannot compile this %0 yet">;
+
+def warn_trivial_auto_var_limit
+    : Warning<"-ftrivial-auto-var-init-stop-after=%0 has been enabled to limit "
+              "the number of times ftrivial-auto-var-init=%1 gets applied">,
+      InGroup<TrivialAutoVarInit>;
+
+def warn_simdlen_1_no_effect
+    : Warning<"the clause simdlen(1) has no effect when targeting aarch64">,
+      InGroup<SIMDLen>;
+def warn_simdlen_requires_power_of_2
+    : Warning<"the value specified in simdlen must be a power of 2 when "
+              "targeting Advanced SIMD">,
+      InGroup<SIMDLen>;
+def warn_simdlen_must_fit_lanes
+    : Warning<"the clause simdlen must fit the %0-bit lanes in the "
+              "architectural constraints for SVE (min is 128-bit, max is "
+              "2048-bit, by steps of 128-bit)">,
+      InGroup<SIMDLen>;
+
+def warn_pgo_condition_limit
+    : Warning<"unsupported MC/DC boolean expression; number of conditions (%0) "
+              "exceeds max (%1). Expression will not be covered">,
+      InGroup<PGOCoverage>;
+def warn_pgo_test_vector_limit
+    : Warning<"unsupported MC/DC boolean expression; number of test vectors "
+              "(%0) exceeds max (%1). Expression will not be covered">,
+      InGroup<PGOCoverage>;
+
+def err_member_ptr_requires_complete_type
+    : Error<"member pointer representation requires a complete class type for "
+            "%0 to perform this expression">;
 
 // ClangIR frontend errors
 def err_cir_to_cir_transform_failed : Error<

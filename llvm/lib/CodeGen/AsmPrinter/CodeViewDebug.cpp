@@ -2122,7 +2122,7 @@ TypeIndex CodeViewDebug::lowerTypeMemberFunction(const DISubroutineType *Ty,
   // Lower the containing class type.
   TypeIndex ClassType = getTypeIndex(ClassTy);
 
-  DITypeRefArray ReturnAndArgs = Ty->getTypeArray();
+  DITypeArray ReturnAndArgs = Ty->getTypeArray();
 
   unsigned Index = 0;
   SmallVector<TypeIndex, 8> ArgTypeIndices;

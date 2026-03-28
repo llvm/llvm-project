@@ -826,7 +826,7 @@ _mm_maskz_rsqrt_pbh(__mmask8 __U, __m128bh __A) {
       (__v8bf)_mm_setzero_pbh(), (__mmask8)(__U)))
 
 static __inline__ __m256bh __DEFAULT_FN_ATTRS256 _mm256_sqrt_pbh(__m256bh __A) {
-  return (__m256bh)__builtin_ia32_vsqrtbf16256((__v16bf)__A);
+  return __builtin_elementwise_sqrt(__A);
 }
 
 static __inline__ __m256bh __DEFAULT_FN_ATTRS256
@@ -843,7 +843,7 @@ _mm256_maskz_sqrt_pbh(__mmask16 __U, __m256bh __A) {
 }
 
 static __inline__ __m128bh __DEFAULT_FN_ATTRS128 _mm_sqrt_pbh(__m128bh __A) {
-  return (__m128bh)__builtin_ia32_vsqrtbf16((__v8bf)__A);
+  return __builtin_elementwise_sqrt(__A);
 }
 
 static __inline__ __m128bh __DEFAULT_FN_ATTRS128

@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/ADT/SetVector.h"
@@ -515,13 +516,13 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     BasicBlock *FirstExitingBlock = nullptr;
     SmallVector<BasicBlock *> ExitingBlocks;
   };
-  DenseMap<BasicBlock *, ExitInfo> ExitInfos;
+  MapVector<BasicBlock *, ExitInfo> ExitInfos;
   SmallVector<BasicBlock *, 4> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
   for (auto *ExitingBlock : ExitingBlocks) {
     // The folding code is not prepared to deal with non-branch instructions
     // right now.
-    auto *BI = dyn_cast<BranchInst>(ExitingBlock->getTerminator());
+    auto *BI = dyn_cast<CondBrInst>(ExitingBlock->getTerminator());
     if (!BI)
       continue;
 
@@ -572,12 +573,13 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   // (2b) latch is conditional and is an exiting block
   // FIXME: The implementation can be extended to work with more complicated
   // cases, e.g. loops with multiple latches.
-  BranchInst *LatchBI = dyn_cast<BranchInst>(LatchBlock->getTerminator());
+  Instruction *LatchTerm = LatchBlock->getTerminator();
 
   // A conditional branch which exits the loop, which can be optimized to an
   // unconditional branch in the unrolled loop in some cases.
   bool LatchIsExiting = L->isLoopExiting(LatchBlock);
-  if (!LatchBI || (LatchBI->isConditional() && !LatchIsExiting)) {
+  if (!isa<UncondBrInst>(LatchTerm) &&
+      !(isa<CondBrInst>(LatchTerm) && LatchIsExiting)) {
     LLVM_DEBUG(
         dbgs() << "Can't unroll; a conditional latch must exit the loop");
     return LoopUnrollResult::Unmodified;
@@ -918,6 +920,12 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     Latches[i]->getTerminator()->replaceSuccessorWith(Headers[i], Headers[j]);
   }
 
+  // Remove loop metadata copied from the original loop latch to branches that
+  // are no longer latches.
+  for (unsigned I = 0, E = Latches.size() - (CompletelyUnroll ? 0 : 1); I < E;
+       ++I)
+    Latches[I]->getTerminator()->setMetadata(LLVMContext::MD_loop, nullptr);
+
   // Update dominators of blocks we might reach through exits.
   // Immediate dominator of such block might change, because we add more
   // routes which can lead to the exit: we can now reach it from the copied
@@ -946,7 +954,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
   SmallVector<DominatorTree::UpdateType> DTUpdates;
   auto SetDest = [&](BasicBlock *Src, bool WillExit, bool ExitOnTrue) {
-    auto *Term = cast<BranchInst>(Src->getTerminator());
+    auto *Term = cast<CondBrInst>(Src->getTerminator());
     const unsigned Idx = ExitOnTrue ^ WillExit;
     BasicBlock *Dest = Term->getSuccessor(Idx);
     BasicBlock *DeadSucc = Term->getSuccessor(1-Idx);
@@ -955,7 +963,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     DeadSucc->removePredecessor(Src, /* KeepOneInputPHIs */ true);
 
     // Replace the conditional branch with an unconditional one.
-    auto *BI = BranchInst::Create(Dest, Term->getIterator());
+    auto *BI = UncondBrInst::Create(Dest, Term->getIterator());
     BI->setDebugLoc(Term->getDebugLoc());
     Term->eraseFromParent();
 
@@ -1058,13 +1066,12 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
   // Merge adjacent basic blocks, if possible.
   for (BasicBlock *Latch : Latches) {
-    BranchInst *Term = dyn_cast<BranchInst>(Latch->getTerminator());
-    assert((Term ||
+    assert((isa<UncondBrInst, CondBrInst>(Latch->getTerminator()) ||
             (CompletelyUnroll && !LatchIsExiting && Latch == Latches.back())) &&
            "Need a branch as terminator, except when fully unrolling with "
            "unconditional latch");
-    if (Term && Term->isUnconditional()) {
-      BasicBlock *Dest = Term->getSuccessor(0);
+    if (auto *Term = dyn_cast<UncondBrInst>(Latch->getTerminator())) {
+      BasicBlock *Dest = Term->getSuccessor();
       BasicBlock *Fold = Dest->getUniquePredecessor();
       if (MergeBlockIntoPredecessor(Dest, /*DTU=*/DTUToUse, LI,
                                     /*MSSAU=*/nullptr, /*MemDep=*/nullptr,
@@ -1093,6 +1100,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       if (!RdxResult) {
         RdxResult = PartialReductions.front();
         IRBuilder Builder(ExitBlock, ExitBlock->getFirstNonPHIIt());
+        Builder.setFastMathFlags(Reductions.begin()->second.getFastMathFlags());
         RecurKind RK = Reductions.begin()->second.getRecurrenceKind();
         for (Instruction *RdxPart : drop_begin(PartialReductions)) {
           RdxResult = Builder.CreateBinOp(
@@ -1245,6 +1253,15 @@ MDNode *llvm::GetUnrollMetadata(MDNode *LoopID, StringRef Name) {
   return nullptr;
 }
 
+// Returns the loop hint metadata node with the given name (for example,
+// "llvm.loop.unroll.count").  If no such metadata node exists, then nullptr is
+// returned.
+MDNode *llvm::getUnrollMetadataForLoop(const Loop *L, StringRef Name) {
+  if (MDNode *LoopID = L->getLoopID())
+    return GetUnrollMetadata(LoopID, Name);
+  return nullptr;
+}
+
 std::optional<RecurrenceDescriptor>
 llvm::canParallelizeReductionWhenUnrolling(PHINode &Phi, Loop *L,
                                            ScalarEvolution *SE) {
@@ -1253,14 +1270,18 @@ llvm::canParallelizeReductionWhenUnrolling(PHINode &Phi, Loop *L,
                                             /*DemandedBits=*/nullptr,
                                             /*AC=*/nullptr, /*DT=*/nullptr, SE))
     return std::nullopt;
+  if (RdxDesc.hasUsesOutsideReductionChain())
+    return std::nullopt;
   RecurKind RK = RdxDesc.getRecurrenceKind();
   // Skip unsupported reductions.
   // TODO: Handle additional reductions, including FP and min-max
   // reductions.
-  if (!RecurrenceDescriptor::isIntegerRecurrenceKind(RK) ||
-      RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) ||
-      RecurrenceDescriptor::isFindIVRecurrenceKind(RK) ||
+  if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) ||
+      RecurrenceDescriptor::isFindRecurrenceKind(RK) ||
       RecurrenceDescriptor::isMinMaxRecurrenceKind(RK))
+    return std::nullopt;
+
+  if (RdxDesc.hasExactFPMath())
     return std::nullopt;
 
   if (RdxDesc.IntermediateStore)

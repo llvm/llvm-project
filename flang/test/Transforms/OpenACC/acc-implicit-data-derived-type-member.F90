@@ -22,7 +22,7 @@ program test
   d2%member0 = 123
   !$acc serial copyin(d2%member0) copyout(d4%member0)
   do i0 = 1, 1
-    d4%member0 = d2%member0
+    d4 = d2
   end do
   !$acc end serial
 end program

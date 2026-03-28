@@ -19,7 +19,7 @@ namespace N1 {
   template<typename T>
   struct A {
     friend void f() noexcept;
-    // FIXME: This error is emitted if no other errors occured (i.e. Sema::hasUncompilableErrorOccurred() is false).
+    // FIXME: This error is emitted if no other errors occurred (i.e. Sema::hasUncompilableErrorOccurred() is false).
     friend void g() noexcept(x); // expected-error {{no member 'x' in 'N1::A<int>'; it has not yet been instantiated}}
                                  // expected-note@-1 {{in instantiation of exception specification}}
     static constexpr bool x = false; // expected-note {{not-yet-instantiated member is declared here}}

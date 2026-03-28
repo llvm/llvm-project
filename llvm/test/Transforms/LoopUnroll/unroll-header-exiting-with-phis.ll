@@ -66,7 +66,7 @@ define i16 @partial_unroll(ptr %A) {
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP3_1]]
 ; CHECK:       for.cond.cleanup3.1:
 ; CHECK-NEXT:    [[INC9_1:%.*]] = add nuw nsw i64 [[I_0]], 2
-; CHECK-NEXT:    [[CMP_2:%.*]] = icmp ult i64 [[INC9_1]], 200
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp samesign ult i64 [[INC9_1]], 200
 ; CHECK-NEXT:    br i1 [[CMP_2]], label [[FOR_COND_CLEANUP3_2]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.cond.cleanup3.2:
 ; CHECK-NEXT:    [[INC9_2]] = add nuw nsw i64 [[I_0]], 3

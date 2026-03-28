@@ -105,7 +105,7 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
       DwarfRegs.push_back(Register::createRegister(-1, nullptr));
       return true;
     }
-    // Try getting dwarf register for virtual register anyway, eg. for NVPTX.
+    // Try getting dwarf register for targets that use virtual registers.
     int64_t Reg = TRI.getDwarfRegNumForVirtReg(MachineReg, false);
     if (Reg > 0) {
       DwarfRegs.push_back(Register::createRegister(Reg, nullptr));
@@ -164,7 +164,7 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
 
     // If this sub-register has a DWARF number and we haven't covered
     // its range, and its range covers the value, emit a DWARF piece for it.
-    if (Offset < MaxSize && CurSubReg.test(Coverage)) {
+    if (Offset < MaxSize && !CurSubReg.subsetOf(Coverage)) {
       // Emit a piece for any gap in the coverage.
       if (Offset > CurPos)
         DwarfRegs.push_back(Register::createSubRegister(
@@ -723,6 +723,12 @@ bool DwarfExpression::addExpression(
       emitUnsigned(Op->getArg(0));
       emitSigned(Op->getArg(1));
       break;
+    case dwarf::DW_OP_LLVM_implicit_pointer:
+      // Handled in DwarfCompileUnit::emitImplicitPointerLocation for
+      // Loc::Single variables. If we reach here, the variable has a
+      // location list or other unsupported path. Drop the
+      // location rather than crashing.
+      return false;
     default:
       llvm_unreachable("unhandled opcode found in expression");
     }

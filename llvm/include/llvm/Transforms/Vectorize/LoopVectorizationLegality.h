@@ -196,6 +196,15 @@ private:
 
   /// Interface to emit optimization remarks.
   OptimizationRemarkEmitter &ORE;
+
+  /// Reports a condition where loop vectorization is disallowed: prints
+  /// \p DebugMsg for debugging purposes along with the corresponding
+  /// optimization remark \p RemarkName, with \p RemarkMsg as the user-facing
+  /// message. The loop \p L is used for the location of the remark.
+  void reportDisallowedVectorization(const StringRef DebugMsg,
+                                     const StringRef RemarkName,
+                                     const StringRef RemarkMsg,
+                                     const Loop *L) const;
 };
 
 /// This holds vectorization requirements that must be verified late in
@@ -235,6 +244,13 @@ struct HistogramInfo {
   HistogramInfo(LoadInst *Load, Instruction *Update, StoreInst *Store)
       : Load(Load), Update(Update), Store(Store) {}
 };
+
+/// Indicates the characteristics of a loop with an uncountable exit.
+/// * None      -- No uncountable exit present.
+/// * ReadOnly  -- At least one uncountable exit in a readonly loop.
+/// * ReadWrite -- At least one uncountable exit in a loop with side effects
+///                that may require masking.
+enum class UncountableExitTrait { None, ReadOnly, ReadWrite };
 
 /// LoopVectorizationLegality checks if it is legal to vectorize a loop, and
 /// to what vectorization factor.
@@ -355,7 +371,7 @@ public:
 
   /// Return true if the block BB needs to be predicated in order for the loop
   /// to be vectorized.
-  bool blockNeedsPredication(BasicBlock *BB) const;
+  bool blockNeedsPredication(const BasicBlock *BB) const;
 
   /// Check if this pointer is consecutive when vectorizing. This happens
   /// when the last index of the GEP is the induction variable, or that the
@@ -398,13 +414,17 @@ public:
     return LAI->getDepChecker().getMaxSafeVectorWidthInBits();
   }
 
-  /// Returns true if the loop has exactly one uncountable early exit, i.e. an
-  /// uncountable exit that isn't the latch block.
-  bool hasUncountableEarlyExit() const { return UncountableExitingBB; }
+  /// Returns information about whether this loop contains at least one
+  /// uncountable early exit, and if so, if it also contains instructions (such
+  /// as stores) that cause side-effects.
+  UncountableExitTrait getUncountableExitTrait() const {
+    return UncountableExitType;
+  }
 
-  /// Returns the uncountable early exiting block, if there is exactly one.
-  BasicBlock *getUncountableEarlyExitingBlock() const {
-    return UncountableExitingBB;
+  /// Returns true if the loop has uncountable early exits, i.e. uncountable
+  /// exits that aren't the latch block.
+  bool hasUncountableEarlyExit() const {
+    return getUncountableExitTrait() != UncountableExitTrait::None;
   }
 
   /// Returns true if this is an early exit loop with state-changing or
@@ -412,7 +432,7 @@ public:
   /// exit must be determined before any of the state changes or potentially
   /// faulting operations take place.
   bool hasUncountableExitWithSideEffects() const {
-    return UncountableExitWithSideEffects;
+    return getUncountableExitTrait() == UncountableExitTrait::ReadWrite;
   }
 
   /// Return true if there is store-load forwarding dependencies.
@@ -452,12 +472,6 @@ public:
 
   /// Returns a list of all known histogram operations in the loop.
   bool hasHistograms() const { return !Histograms.empty(); }
-
-  /// Returns potentially faulting loads.
-  const SmallPtrSetImpl<const Instruction *> &
-  getPotentiallyFaultingLoads() const {
-    return PotentiallyFaultingLoads;
-  }
 
   PredicatedScalarEvolution *getPredicatedScalarEvolution() const {
     return &PSE;
@@ -714,9 +728,6 @@ private:
   /// may work on the same memory location.
   SmallVector<HistogramInfo, 1> Histograms;
 
-  /// Hold potentially faulting loads.
-  SmallPtrSet<const Instruction *, 4> PotentiallyFaultingLoads;
-
   /// Whether or not creating SCEV predicates is allowed.
   bool AllowRuntimeSCEVChecks;
 
@@ -734,13 +745,9 @@ private:
   /// the exact backedge taken count is not computable.
   SmallVector<BasicBlock *, 4> CountableExitingBlocks;
 
-  /// Keep track of an uncountable exiting block, if there is exactly one early
-  /// exit.
-  BasicBlock *UncountableExitingBB = nullptr;
-
-  /// If true, the loop has at least one uncountable exit and operations within
-  /// the loop may have observable side effects.
-  bool UncountableExitWithSideEffects = false;
+  /// Records whether we have an uncountable early exit in a loop that's
+  /// either read-only or read-write.
+  UncountableExitTrait UncountableExitType = UncountableExitTrait::None;
 };
 
 } // namespace llvm
