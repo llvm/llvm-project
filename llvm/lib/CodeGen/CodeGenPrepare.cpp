@@ -255,14 +255,6 @@ static cl::opt<bool> EnableICMP_EQToICMP_ST(
     "cgp-icmp-eq2icmp-st", cl::Hidden, cl::init(false),
     cl::desc("Enable ICMP_EQ to ICMP_S(L|G)T conversion."));
 
-#ifdef EXPENSIVE_CHECKS
-static bool VerifyDT = true;
-#else
-static bool VerifyDT = false;
-#endif
-static cl::opt<bool, true> VerifyDTUpdates(
-    "cgp-verify-dt-updates", cl::location(VerifyDT), cl::Hidden,
-    cl::desc("Verify dominator tree updates in CodeGenPrepare"));
 
 static cl::opt<bool>
     VerifyBFIUpdates("cgp-verify-bfi-updates", cl::Hidden, cl::init(false),
@@ -659,7 +651,7 @@ bool CodeGenPrepare::_run(Function &F) {
     resetLoopInfo();
 
 #ifndef NDEBUG
-  if (VerifyDT)
+  if (VerifyDomInfo)
     assert(getDT().verify(DominatorTree::VerificationLevel::Fast) &&
            "Incorrect DominatorTree updates in CGP");
 
@@ -723,7 +715,7 @@ bool CodeGenPrepare::_run(Function &F) {
       eliminateFallThrough(F);
 
 #ifndef NDEBUG
-    if (VerifyDT)
+    if (VerifyDomInfo)
       assert(getDT().verify(DominatorTree::VerificationLevel::Fast) &&
              "Incorrect DominatorTree updates in CGP");
 
