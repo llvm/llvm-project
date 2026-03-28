@@ -258,6 +258,8 @@ declare <32 x i64> @llvm.matrix.multiply.v32i64.v8i64.v16i64(<8 x i64>, <16 x i6
 define void @multiply_alias_2x2(ptr %A, ptr %B, ptr %C) {
 ; CHECK-LABEL: @multiply_alias_2x2(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP6:%.*]] = alloca [4 x float], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = alloca [4 x float], align 4
 ; CHECK-NEXT:    [[STORE_END:%.*]] = getelementptr inbounds nuw i8, ptr [[C:%.*]], i64 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[A:%.*]], [[STORE_END]]
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[ALIAS_CONT:%.*]], label [[NO_ALIAS:%.*]]
@@ -266,7 +268,7 @@ define void @multiply_alias_2x2(ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[C]], [[LOAD_END]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[COPY:%.*]], label [[NO_ALIAS]]
 ; CHECK:       copy:
-; CHECK-NEXT:    [[TMP2:%.*]] = alloca [4 x float], align 4
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP2]])
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(16) [[TMP2]], ptr noundef nonnull align 8 dereferenceable(16) [[A]], i64 16, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS]]
 ; CHECK:       no_alias:
@@ -279,7 +281,7 @@ define void @multiply_alias_2x2(ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult ptr [[C]], [[LOAD_END5]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[COPY2:%.*]], label [[NO_ALIAS3]]
 ; CHECK:       copy2:
-; CHECK-NEXT:    [[TMP6:%.*]] = alloca [4 x float], align 4
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP6]])
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(16) [[TMP6]], ptr noundef nonnull align 8 dereferenceable(16) [[B]], i64 16, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS3]]
 ; CHECK:       no_alias3:
@@ -341,6 +343,8 @@ define void @multiply_alias_2x2(ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:    [[COLS_COND_NOT:%.*]] = icmp eq i64 [[COLS_IV]], 0
 ; CHECK-NEXT:    br i1 [[COLS_COND_NOT]], label [[CONTINUE:%.*]], label [[COLS_HEADER]], !prof [[PROF4]]
 ; CHECK:       continue:
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TMP2]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TMP6]])
 ; CHECK-NEXT:    ret void
 ;
 

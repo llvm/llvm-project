@@ -9,6 +9,10 @@ target triple = "aarch64-apple-ios"
 define void @test(ptr %A, ptr %B, ptr %C, i1 %cond) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP38:%.*]] = alloca [6 x double], align 8
+; CHECK-NEXT:    [[TMP34:%.*]] = alloca [6 x double], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = alloca [6 x double], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = alloca [6 x double], align 8
 ; CHECK-NEXT:    [[COL_LOAD133:%.*]] = load <3 x double>, ptr [[A:%.*]], align 8
 ; CHECK-NEXT:    [[VEC_GEP134:%.*]] = getelementptr i8, ptr [[A]], i64 24
 ; CHECK-NEXT:    [[COL_LOAD135:%.*]] = load <3 x double>, ptr [[VEC_GEP134]], align 8
@@ -25,7 +29,7 @@ define void @test(ptr %A, ptr %B, ptr %C, i1 %cond) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[C]], [[LOAD_END]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[COPY:%.*]], label [[NO_ALIAS]]
 ; CHECK:       copy:
-; CHECK-NEXT:    [[TMP2:%.*]] = alloca [6 x double], align 8
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP2]])
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(48) [[TMP2]], ptr noundef nonnull align 8 dereferenceable(48) [[A]], i64 48, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS]]
 ; CHECK:       no_alias:
@@ -38,7 +42,7 @@ define void @test(ptr %A, ptr %B, ptr %C, i1 %cond) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult ptr [[C]], [[LOAD_END5]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[COPY2:%.*]], label [[NO_ALIAS3]]
 ; CHECK:       copy2:
-; CHECK-NEXT:    [[TMP6:%.*]] = alloca [6 x double], align 8
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP6]])
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(48) [[TMP6]], ptr noundef nonnull align 8 dereferenceable(48) [[B]], i64 48, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS3]]
 ; CHECK:       no_alias3:
@@ -129,7 +133,7 @@ define void @test(ptr %A, ptr %B, ptr %C, i1 %cond) {
 ; CHECK-NEXT:    [[TMP33:%.*]] = icmp ult ptr [[C]], [[LOAD_END63]]
 ; CHECK-NEXT:    br i1 [[TMP33]], label [[COPY62:%.*]], label [[NO_ALIAS63]]
 ; CHECK:       copy60:
-; CHECK-NEXT:    [[TMP34:%.*]] = alloca [6 x double], align 8
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP34]])
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(48) [[TMP34]], ptr noundef nonnull align 8 dereferenceable(48) [[A]], i64 48, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS63]]
 ; CHECK:       no_alias61:
@@ -142,7 +146,7 @@ define void @test(ptr %A, ptr %B, ptr %C, i1 %cond) {
 ; CHECK-NEXT:    [[TMP37:%.*]] = icmp ult ptr [[C]], [[LOAD_END68]]
 ; CHECK-NEXT:    br i1 [[TMP37]], label [[COPY69:%.*]], label [[NO_ALIAS70]]
 ; CHECK:       copy65:
-; CHECK-NEXT:    [[TMP38:%.*]] = alloca [6 x double], align 8
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP38]])
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(48) [[TMP38]], ptr noundef nonnull align 8 dereferenceable(48) [[B]], i64 48, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS70]]
 ; CHECK:       no_alias66:
