@@ -39,7 +39,7 @@ LIBC_INLINE bfloat16 asinbf16(bfloat16 x) {
   float x_sq = xf_abs * xf_abs;
 
   // Case 1: |x| <= 0.5
-  if (x_abs <= 0x3F00) {
+  if (x_abs <= 0x3F00) { // x_abs <= 0.5
     // |x| = {0}
     if (LIBC_UNLIKELY(x_abs == 0))
       return x; // with sign
@@ -54,14 +54,13 @@ LIBC_INLINE bfloat16 asinbf16(bfloat16 x) {
     }
 
     float xp = fputil::cast<float>(inv_trigf_utils_internal::asin_eval(x_sq));
-    float result =
-        xf * static_cast<float>(fputil::multiply_add<float>(x_sq, xp, 1.0));
+    float result = xf * (fputil::multiply_add<float>(x_sq, xp, 1.0f));
     return fputil::cast<bfloat16>(result);
   }
 
   // Case 2: 0.5 <|x| <= 1
   //  using reduction: asin(x) = pi/2 - 2*asin(sqrt((1-x)/2))
-  if (x_abs <= 0x3F80 && x_abs > 0x3F00) {
+  if (x_abs <= 0x3F80) { // x_abs <= 1
     // |x| = {1}
     if (LIBC_UNLIKELY(x_abs == 0x3F80)) {
       return fputil::cast<bfloat16>(x_sign * PI_2);
@@ -70,8 +69,7 @@ LIBC_INLINE bfloat16 asinbf16(bfloat16 x) {
     float t = fputil::multiply_add<float>(xf_abs, -0.5f, 0.5f);
     float t_sqrt = fputil::sqrt<float>(t);
     float tp = fputil::cast<float>(inv_trigf_utils_internal::asin_eval(t));
-    float asin_sqrt_t =
-        t_sqrt * static_cast<float>(fputil::multiply_add<float>(t, tp, 1.0));
+    float asin_sqrt_t = t_sqrt * (fputil::multiply_add<float>(t, tp, 1.0f));
     float result = fputil::multiply_add<float>(-2.0f, asin_sqrt_t, PI_2);
     return fputil::cast<bfloat16>(x_sign * result);
   }
