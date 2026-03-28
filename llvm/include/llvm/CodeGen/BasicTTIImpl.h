@@ -255,7 +255,7 @@ private:
           getScalarizationOverhead(
               FixedVectorType::get(Type::getInt1Ty(DataTy->getContext()), VF),
               /*Insert=*/false, /*Extract=*/true, CostKind) +
-          VF * (thisT()->getCFInstrCost(Instruction::Br, CostKind) +
+          VF * (thisT()->getCFInstrCost(Instruction::CondBr, CostKind) +
                 thisT()->getCFInstrCost(Instruction::PHI, CostKind));
     }
 
@@ -305,8 +305,7 @@ private:
       std::optional<unsigned> CallRetElementIndex = {}) const {
     Type *RetTy = ICA.getReturnType();
     // Vector variants of the intrinsic can be mapped to a vector library call.
-    auto const *LibInfo = ICA.getLibInfo();
-    if (!LibInfo || !isa<StructType>(RetTy) ||
+    if (!isa<StructType>(RetTy) ||
         !isVectorizedStructTy(cast<StructType>(RetTy)))
       return std::nullopt;
 
@@ -802,9 +801,8 @@ public:
     return BaseT::preferPredicateOverEpilogue(TFI);
   }
 
-  TailFoldingStyle
-  getPreferredTailFoldingStyle(bool IVUpdateMayOverflow = true) const override {
-    return BaseT::getPreferredTailFoldingStyle(IVUpdateMayOverflow);
+  TailFoldingStyle getPreferredTailFoldingStyle() const override {
+    return BaseT::getPreferredTailFoldingStyle();
   }
 
   std::optional<Instruction *>
@@ -1260,10 +1258,32 @@ public:
         EVT ExtVT = EVT::getEVT(Dst);
         EVT LoadVT = EVT::getEVT(Src);
         unsigned LType =
-          ((Opcode == Instruction::ZExt) ? ISD::ZEXTLOAD : ISD::SEXTLOAD);
-        if (DstLT.first == SrcLT.first &&
-            TLI->isLoadExtLegal(LType, ExtVT, LoadVT))
-          return 0;
+            Opcode == Instruction::ZExt ? ISD::ZEXTLOAD : ISD::SEXTLOAD;
+        if (I) {
+          if (auto *LI = dyn_cast<LoadInst>(I->getOperand(0))) {
+            if (DstLT.first == SrcLT.first &&
+                TLI->isLoadLegal(ExtVT, LoadVT, LI->getAlign(),
+                                 LI->getPointerAddressSpace(), LType, false))
+              return 0;
+          } else if (auto *II = dyn_cast<IntrinsicInst>(I->getOperand(0))) {
+            switch (II->getIntrinsicID()) {
+            case Intrinsic::masked_load: {
+              Type *PtrType = II->getArgOperand(0)->getType();
+              assert(PtrType->isPointerTy());
+
+              if (DstLT.first == SrcLT.first &&
+                  TLI->isLoadLegal(
+                      ExtVT, LoadVT, II->getParamAlign(0).valueOrOne(),
+                      PtrType->getPointerAddressSpace(), LType, false))
+                return 0;
+
+              break;
+            }
+            default:
+              break;
+            }
+          }
+        }
       }
       break;
     case Instruction::AddrSpaceCast:
@@ -1555,7 +1575,8 @@ public:
       if (Opcode == Instruction::Store)
         LA = getTLI()->getTruncStoreAction(LT.second, MemVT);
       else
-        LA = getTLI()->getLoadExtAction(ISD::EXTLOAD, LT.second, MemVT);
+        LA = getTLI()->getLoadAction(LT.second, MemVT, Alignment, AddressSpace,
+                                     ISD::EXTLOAD, false);
 
       if (LA != TargetLowering::Legal && LA != TargetLowering::Custom) {
         // This is a vector load/store for some illegal type that is scalarized.
@@ -2063,32 +2084,33 @@ public:
       InstructionCost Cost = 0;
       Cost +=
           thisT()->getArithmeticInstrCost(BinaryOperator::Or, RetTy, CostKind);
-      Cost +=
-          thisT()->getArithmeticInstrCost(BinaryOperator::Sub, RetTy, CostKind);
       Cost += thisT()->getArithmeticInstrCost(
           BinaryOperator::Shl, RetTy, CostKind, OpInfoX,
           {OpInfoZ.Kind, TTI::OP_None});
       Cost += thisT()->getArithmeticInstrCost(
           BinaryOperator::LShr, RetTy, CostKind, OpInfoY,
           {OpInfoZ.Kind, TTI::OP_None});
-      // Non-constant shift amounts requires a modulo. If the typesize is a
-      // power-2 then this will be converted to an and, otherwise it will use a
-      // urem.
-      if (!OpInfoZ.isConstant())
+
+      if (!OpInfoZ.isConstant()) {
+        Cost += thisT()->getArithmeticInstrCost(BinaryOperator::Sub, RetTy,
+                                                CostKind);
+        // Non-constant shift amounts requires a modulo. If the typesize is a
+        // power-2 then this will be converted to an and, otherwise it will use
+        // a urem.
         Cost += thisT()->getArithmeticInstrCost(
             isPowerOf2_32(RetTy->getScalarSizeInBits()) ? BinaryOperator::And
                                                         : BinaryOperator::URem,
             RetTy, CostKind, OpInfoZ,
             {TTI::OK_UniformConstantValue, TTI::OP_None});
-      // For non-rotates (X != Y) we must add shift-by-zero handling costs.
-      if (X != Y) {
-        Type *CondTy = RetTy->getWithNewBitWidth(1);
-        Cost +=
-            thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
-                                        CmpInst::ICMP_EQ, CostKind);
-        Cost +=
-            thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
-                                        CmpInst::ICMP_EQ, CostKind);
+        // For non-rotates (X != Y) we must add shift-by-zero handling costs.
+        if (X != Y) {
+          Type *CondTy = RetTy->getWithNewBitWidth(1);
+          Cost += thisT()->getCmpSelInstrCost(
+              BinaryOperator::ICmp, RetTy, CondTy, CmpInst::ICMP_EQ, CostKind);
+          Cost +=
+              thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
+                                          CmpInst::ICMP_EQ, CostKind);
+        }
       }
       return Cost;
     }

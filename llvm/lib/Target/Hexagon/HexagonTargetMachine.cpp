@@ -88,7 +88,7 @@ static cl::opt<bool> EnableEarlyIf("hexagon-eif", cl::init(true), cl::Hidden,
                                    cl::desc("Enable early if-conversion"));
 
 static cl::opt<bool> EnableCopyHoist("hexagon-copy-hoist", cl::init(true),
-                                     cl::Hidden, cl::ZeroOrMore,
+                                     cl::Hidden,
                                      cl::desc("Enable Hexagon copy hoisting"));
 
 static cl::opt<bool>

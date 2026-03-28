@@ -1101,39 +1101,18 @@ LogicalResult ConvertLayoutOp::verify() {
     return emitOpError("expected input layout and target layout be WgLayout or "
                        "SgLayout at the same time.");
 
-  auto shape = getSource().getType().getShape();
-  if (!XeGPUDialect::isEvenlyDistributable(shape, srcLayout))
-    return emitOpError(
-        "invalid input layout, data cannot be evenly distributed.");
+  Type srcType = getSource().getType();
+  if (llvm::isa<VectorType>(srcType)) {
+    auto shape = llvm::cast<VectorType>(srcType).getShape();
+    if (!XeGPUDialect::isEvenlyDistributable(shape, srcLayout))
+      return emitOpError(
+          "invalid input layout, data cannot be evenly distributed.");
 
-  if (!XeGPUDialect::isEvenlyDistributable(shape, resLayout))
-    return emitOpError(
-        "invalid target layout, data cannot be evenly distributed.");
-
-  return mlir::success();
-}
-
-OpFoldResult ConvertLayoutOp::fold(FoldAdaptor adaptor) {
-  if (getInputLayout() == getTargetLayout())
-    return getSource();
-  return {};
-}
-
-struct FoldConvertLayoutOp : public OpRewritePattern<xegpu::ConvertLayoutOp> {
-  using OpRewritePattern<xegpu::ConvertLayoutOp>::OpRewritePattern;
-  LogicalResult matchAndRewrite(xegpu::ConvertLayoutOp op,
-                                PatternRewriter &rewriter) const override {
-    if (op.getInputLayout() == op.getTargetLayout()) {
-      rewriter.replaceOp(op, op.getSource());
-      return success();
-    }
-    return failure();
+    if (!XeGPUDialect::isEvenlyDistributable(shape, resLayout))
+      return emitOpError(
+          "invalid target layout, data cannot be evenly distributed.");
   }
-};
-
-void ConvertLayoutOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
-                                                  MLIRContext *context) {
-  patterns.add<FoldConvertLayoutOp>(context);
+  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//

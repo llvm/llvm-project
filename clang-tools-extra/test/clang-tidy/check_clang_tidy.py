@@ -156,6 +156,14 @@ class CheckRunner:
         # implementations of relevant APIs.
         self.clang_extra_args.append("-nostdinc++")
 
+        # Include stub std headers directory as a system include
+        # path so individual tests don't need to specify it.
+        headers_dir = os.path.join(
+            os.path.dirname(__file__), "checkers", "Inputs", "Headers", "std"
+        )
+        if os.path.isdir(headers_dir):
+            self.clang_extra_args.extend(["-isystem", headers_dir])
+
         if self.resource_dir is not None:
             self.clang_extra_args.append("-resource-dir=%s" % self.resource_dir)
 

@@ -655,7 +655,7 @@ protected:
         return;
       }
 
-      Address address(addr, nullptr);
+      Address address(addr);
       bytes_read = target->ReadMemory(address, data_sp->GetBytes(),
                                       data_sp->GetByteSize(), error, true);
       if (bytes_read == 0) {
@@ -703,8 +703,8 @@ protected:
         std::string buffer;
         buffer.resize(item_byte_size + 1, 0);
         Status error;
-        size_t read = target->ReadCStringFromMemory(data_addr, &buffer[0],
-                                                    item_byte_size + 1, error);
+        size_t read = target->ReadCStringFromMemory(
+            Address(data_addr), &buffer[0], item_byte_size + 1, error);
         if (error.Fail()) {
           result.AppendErrorWithFormat(
               "failed to read memory from 0x%" PRIx64 ".\n", addr);
@@ -1110,8 +1110,8 @@ protected:
           result.AppendMessage("no more matches within the range.\n");
         break;
       }
-      result.AppendMessageWithFormat("data found at location: 0x%" PRIx64 "\n",
-                                     found_location);
+      result.AppendMessageWithFormatv("data found at location: {0:x}",
+                                      found_location);
 
       DataBufferHeap dumpbuffer(32, 0);
       process->ReadMemory(
@@ -1567,7 +1567,7 @@ protected:
     }
 
     Status error;
-    lldb::addr_t addr = OptionArgParser::ToAddress(
+    lldb::addr_t addr = OptionArgParser::ToRawAddress(
         &m_exe_ctx, command[0].ref(), LLDB_INVALID_ADDRESS, &error);
 
     if (addr == LLDB_INVALID_ADDRESS) {
@@ -1699,8 +1699,8 @@ protected:
         range_info.GetDirtyPageList();
     if (dirty_page_list) {
       const size_t page_count = dirty_page_list->size();
-      result.AppendMessageWithFormat(
-          "Modified memory (dirty) page list provided, %zu entries.\n",
+      result.AppendMessageWithFormatv(
+          "Modified memory (dirty) page list provided, {0} entries.",
           page_count);
       if (page_count > 0) {
         bool print_comma = false;
@@ -1712,7 +1712,7 @@ protected:
             print_comma = true;
           result.AppendMessageWithFormat("0x%" PRIx64, (*dirty_page_list)[i]);
         }
-        result.AppendMessageWithFormat(".\n");
+        result.AppendMessage(".");
       }
     }
   }

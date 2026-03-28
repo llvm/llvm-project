@@ -252,7 +252,7 @@ static KnownFPClass fadd_impl(const KnownFPClass &KnownLHS,
     // This can't underflow if one of the operands is known normal.
     if (KnownLHS.isKnownNever(fcZero | fcPosSubnormal) ||
         KnownRHS.isKnownNever(fcZero | fcPosSubnormal))
-      Known.knownNot(fcZero);
+      Known.knownNot(fcZero | fcPosSubnormal);
   }
 
   if (KnownLHS.cannotBeOrderedGreaterThanZero() &&
@@ -262,7 +262,7 @@ static KnownFPClass fadd_impl(const KnownFPClass &KnownLHS,
     // This can't underflow if one of the operands is known normal.
     if (KnownLHS.isKnownNever(fcZero | fcNegSubnormal) ||
         KnownRHS.isKnownNever(fcZero | fcNegSubnormal))
-      Known.knownNot(fcZero);
+      Known.knownNot(fcZero | fcNegSubnormal);
   }
 
   return Known;
@@ -368,6 +368,15 @@ KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
   KnownFPClass Known = KnownFPClass::fmul(KnownLHS, KnownFPClass(CRHS), Mode);
   if (CannotBeSubnormal)
     Known.knownNot(fcSubnormal);
+
+  // Multiply of values <= 1 cannot introduce overflow.
+  if (KnownLHS.isKnownNever(fcInf)) {
+    if (MinKnownExponent < 0)
+      Known.knownNot(fcInf);
+    else if (MinKnownExponent == 0 && CRHS.compareAbsoluteValue(APFloat::getOne(
+                                          Flt)) == APFloat::cmpEqual)
+      Known.knownNot(fcInf);
+  }
 
   return Known;
 }

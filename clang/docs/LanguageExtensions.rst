@@ -839,13 +839,13 @@ of different sizes and signs is forbidden in binary and ternary builtins.
  T __builtin_elementwise_copysign(T x, T y)     return the magnitude of x with the sign of y.                          floating point types
  T __builtin_elementwise_fmod(T x, T y)         return the floating-point remainder of (x/y) whose sign                floating point types
                                                 matches the sign of x.
- T __builtin_elementwise_max(T x, T y)          return x or y, whichever is larger                                     integer and floating point types
-                                                For floating point types, follows semantics of maxNum
+ T __builtin_elementwise_max(T x, T y)          return x or y, whichever is larger                                     integer
+                                                For floating point types, follows semantics of maxNum                  floating point types (deprecated)
                                                 in IEEE 754-2008. See `LangRef
                                                 <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                 for the comparison.
- T __builtin_elementwise_min(T x, T y)          return x or y, whichever is smaller                                    integer and floating point types
-                                                For floating point types, follows semantics of minNum
+ T __builtin_elementwise_min(T x, T y)          return x or y, whichever is smaller                                    integer
+                                                For floating point types, follows semantics of minNum                  floating point types (deprecated)
                                                 in IEEE 754-2008. See `LangRef
                                                 <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                 for the comparison.
@@ -2710,8 +2710,9 @@ programming patterns, makes programs more concise, and improves the safety of
 container creation.  There are several feature macros associated with object
 literals and subscripting: ``__has_feature(objc_array_literals)`` tests the
 availability of array literals; ``__has_feature(objc_dictionary_literals)``
-tests the availability of dictionary literals;
-``__has_feature(objc_subscripting)`` tests the availability of object
+tests the availability of dictionary literals; ``objc_constant_literals``
+tests the availability of having number, array, and dictionary literals
+emitted at compile time; ``__has_feature(objc_subscripting)`` tests the availability of object
 subscripting.
 
 Objective-C Autosynthesis of Properties
@@ -5992,6 +5993,23 @@ statements S1 and S2 above.
 If Loop Distribution is turned on globally with
 ``-mllvm -enable-loop-distribution``, specifying ``distribute(disable)`` can
 be used the disable it on a per-loop basis.
+
+Disable Loop Invariant Code Motion
+----------------------------------
+
+Loop Invariant Code Motion (LICM) moves loop invariant code outside of the loop.
+If ``licm(disable))`` is specified, compiler will skip LICM on the specific loop.
+
+.. code-block:: c++
+
+  #pragma clang loop licm(disable)
+  while (i < Length) {
+    List[i] = A[x] * i * 2;
+    i++;
+  }
+
+The load for A[x] is loop invariant, it will not be hoisted out of the loop
+when LICM is disabled.
 
 Additional Information
 ----------------------

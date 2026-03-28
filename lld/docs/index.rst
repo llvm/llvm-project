@@ -9,8 +9,7 @@ The linker supports ELF (Unix), PE/COFF (Windows), Mach-O (macOS) and
 WebAssembly in descending order of completeness. Internally, LLD consists of
 several different linkers. The ELF port is the one that will be described in
 this document. The PE/COFF port is complete, including
-Windows debug info (PDB) support. The WebAssembly port is still a work in
-progress (See :doc:`WebAssembly`).
+Windows debug info (PDB) support.
 
 Features
 --------

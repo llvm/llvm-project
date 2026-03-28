@@ -77,30 +77,6 @@ resolveUnrealizedConversionCastOp(UnrealizedConversionCastOp castOp) {
   }
 }
 
-// This pattern lowers ConvertLayoutOp by removing the inst_data field from the
-// layout attributes. Since both producer and consumer operations handle data
-// partitioning based on their own inst_data, while maintaining original input
-// and output shape, ConvertLayoutOp does not need to manage inst_data.
-struct ConvertLayoutOpPattern
-    : public OpRewritePattern<xegpu::ConvertLayoutOp> {
-  using OpRewritePattern::OpRewritePattern;
-  LogicalResult matchAndRewrite(xegpu::ConvertLayoutOp op,
-                                PatternRewriter &rewriter) const override {
-    xegpu::DistributeLayoutAttr inputLayout = op.getInputLayoutAttr();
-    xegpu::DistributeLayoutAttr targetLayout = op.getTargetLayoutAttr();
-    if (inputLayout.getEffectiveInstDataAsInt().empty() ||
-        targetLayout.getEffectiveInstDataAsInt().empty())
-      return rewriter.notifyMatchFailure(op, "Not a target ConvertLayoutOp.");
-
-    inputLayout = inputLayout.dropInstData();
-    targetLayout = targetLayout.dropInstData();
-    auto newOp = rewriter.createOrFold<xegpu::ConvertLayoutOp>(
-        op.getLoc(), op.getType(), op.getSource(), inputLayout, targetLayout);
-    rewriter.replaceOp(op, newOp);
-    return success();
-  }
-};
-
 //===------------------------------------------------------------------------===//
 // The XeGPUBlockingPass leverages the unroll patterns for XeGPU and Vector ops
 // to partition operations that process large shapes into multiple operations on
@@ -177,6 +153,18 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
       return getTileShape(loadGatherOp->getOpOperand(0));
   }
 
+  if (auto convertLayoutOp = dyn_cast<xegpu::ConvertLayoutOp>(op)) {
+    auto inputInstData =
+        convertLayoutOp.getInputLayout().getEffectiveInstDataAsInt();
+    auto targetInstData =
+        convertLayoutOp.getTargetLayout().getEffectiveInstDataAsInt();
+    // return the one with larger size
+    if (computeProduct(inputInstData) >= computeProduct(targetInstData))
+      return inputInstData;
+    else
+      return targetInstData;
+  }
+
   if (auto storeScatterOp = dyn_cast<xegpu::StoreScatterOp>(op))
     return getTileShape(storeScatterOp.getOffsets()
                             ? storeScatterOp->getOpOperand(0)
@@ -214,7 +202,8 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
     return getTileShape(op->getOpOperand(0));
 
   if (isa<vector::TransposeOp, vector::BroadcastOp, vector::StepOp,
-          vector::ConstantMaskOp, vector::CreateMaskOp>(op))
+          vector::ShapeCastOp, vector::ConstantMaskOp, vector::CreateMaskOp>(
+          op))
     return getTileShape(op->getOpResult(0));
 
   return std::nullopt;
@@ -259,7 +248,16 @@ bool XeGPUBlockingPass::needsUnroll(Operation *op) const {
         std::optional<SmallVector<int64_t>> tileShape = getTileShape(result);
         return tileShape.has_value() && isUnrollable(result, *tileShape);
       });
-  return hasUnrollableOperands || hasUnrollableResults;
+  // ConvertLayoutOp must be processed to drop the inst_data in the layout
+  bool isConvertLayoutWithInstData = false;
+  if (auto convertLayoutOp = dyn_cast<xegpu::ConvertLayoutOp>(op)) {
+    auto targettLayout = convertLayoutOp.getTargetLayout();
+    if (targettLayout && !targettLayout.getEffectiveInstDataAsInt().empty()) {
+      isConvertLayoutWithInstData = true;
+    }
+  }
+  return hasUnrollableOperands || hasUnrollableResults ||
+         isConvertLayoutWithInstData;
 }
 
 void XeGPUBlockingPass::runOnOperation() {
@@ -377,14 +375,17 @@ void XeGPUBlockingPass::runOnOperation() {
   });
 
   RewritePatternSet patterns(ctx);
-  patterns.add<ConvertLayoutOpPattern>(ctx);
-
   vector::UnrollVectorOptions vectorOptions;
   vectorOptions.setNativeShapeFn(options.nativeShape);
 
   populateXeGPUUnrollPatterns(patterns, options);
   vector::populateVectorUnrollPatterns(patterns, vectorOptions);
 
+  // Note: The pattern driver does op folding as well and clean up.
+  // But intermediate insert/extract strided slice ops with
+  // unrealized conversion cast ops in the middle does not get
+  // cleaned up in this step. One more round of folding is needed
+  // after the walk to resolve those unrealized conversion cast ops.
   (void)applyPatternsGreedily(op, std::move(patterns));
 
   op->walk([](Operation *op) {
@@ -409,4 +410,9 @@ void XeGPUBlockingPass::runOnOperation() {
     if (auto castOp = dyn_cast<UnrealizedConversionCastOp>(op))
       resolveUnrealizedConversionCastOp(castOp);
   });
+
+  // One more round of folding to clean up the intermediate
+  // insert/extract strided slice ops.
+  RewritePatternSet emptyPatterns(ctx);
+  (void)applyPatternsGreedily(op, std::move(emptyPatterns));
 }

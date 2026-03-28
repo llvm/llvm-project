@@ -3,12 +3,23 @@ add_custom_target(libc-unit-tests)
 add_custom_target(libc-hermetic-tests)
 add_dependencies(check-libc libc-unit-tests libc-hermetic-tests)
 
+if (TARGET check-hdrgen)
+  add_dependencies(check-libc check-hdrgen)
+endif()
+
 add_custom_target(exhaustive-check-libc)
 add_custom_target(libc-long-running-tests)
 
 # Build-only targets for lit (don't run tests, just build executables)
 add_custom_target(libc-unit-tests-build)
 add_custom_target(libc-hermetic-tests-build)
+add_custom_target(libc-integration-tests-build)
+add_custom_target(libc_include_tests-build)
+
+# Resolve the GPU loader executable path for the lit site config.
+if(TARGET libc.utils.gpu.loader)
+  get_target_property(LIBC_GPU_LOADER_EXECUTABLE libc.utils.gpu.loader "EXECUTABLE")
+endif()
 
 # Configure the site config file for lit
 configure_lit_site_cfg(
@@ -23,12 +34,13 @@ configure_lit_site_cfg(
   "LLVM_LIBS_DIR"
   "LIBC_SOURCE_DIR"
   "LIBC_BUILD_DIR"
+  "LIBC_GPU_LOADER_EXECUTABLE"
 )
 
 add_lit_testsuite(check-libc-lit
   "Running libc tests via lit"
   ${LIBC_BUILD_DIR}/test
-  DEPENDS libc-unit-tests-build libc-hermetic-tests-build
+  DEPENDS libc-unit-tests-build libc-hermetic-tests-build libc-integration-tests-build libc_include_tests-build
 )
 
 add_subdirectory(UnitTest)

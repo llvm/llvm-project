@@ -1816,8 +1816,6 @@ CGOpenMPRuntimeGPU::translateParameter(const FieldDecl *FD,
   }
   ArgType = CGM.getContext().getPointerType(PointeeTy);
   QC.addRestrict();
-  enum { NVPTX_local_addr = 5 };
-  QC.addAddressSpace(getLangASFromTargetAS(NVPTX_local_addr));
   ArgType = QC.apply(CGM.getContext(), ArgType);
   if (isa<ImplicitParamDecl>(NativeParam))
     return ImplicitParamDecl::Create(
@@ -2266,15 +2264,15 @@ bool CGOpenMPRuntimeGPU::hasAllocateAttributeForGlobalVar(const VarDecl *VD,
 // Get current OffloadArch and ignore any unknown values
 static OffloadArch getOffloadArch(CodeGenModule &CGM) {
   if (!CGM.getTarget().hasFeature("ptx"))
-    return OffloadArch::UNKNOWN;
+    return OffloadArch::Unknown;
   for (const auto &Feature : CGM.getTarget().getTargetOpts().FeatureMap) {
     if (Feature.getValue()) {
       OffloadArch Arch = StringToOffloadArch(Feature.getKey());
-      if (Arch != OffloadArch::UNKNOWN)
+      if (Arch != OffloadArch::Unknown)
         return Arch;
     }
   }
-  return OffloadArch::UNKNOWN;
+  return OffloadArch::Unknown;
 }
 
 /// Check to see if target architecture supports unified addressing which is
@@ -2379,13 +2377,14 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
       case OffloadArch::GFX1201:
       case OffloadArch::GFX1250:
       case OffloadArch::GFX1251:
+      case OffloadArch::GFX12_5_GENERIC:
       case OffloadArch::GFX1310:
       case OffloadArch::AMDGCNSPIRV:
       case OffloadArch::Generic:
       case OffloadArch::GRANITERAPIDS:
       case OffloadArch::BMG_G21:
-      case OffloadArch::UNUSED:
-      case OffloadArch::UNKNOWN:
+      case OffloadArch::Unused:
+      case OffloadArch::Unknown:
         break;
       case OffloadArch::LAST:
         llvm_unreachable("Unexpected GPU arch.");

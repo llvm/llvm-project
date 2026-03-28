@@ -38,9 +38,6 @@ const MCAsmInfo::AtSpecifier COFFAtSpecifiers[] = {
 
 const MCAsmInfo::AtSpecifier ELFAtSpecifiers[] = {
     {AArch64::S_GOT, "GOT"},
-    {AArch64::S_GOTPCREL, "GOTPCREL"},
-    {AArch64::S_PLT, "PLT"},
-    {AArch64::S_FUNCINIT, "FUNCINIT"},
 };
 
 const MCAsmInfo::AtSpecifier MachOAtSpecifiers[] = {
@@ -114,10 +111,24 @@ StringRef AArch64::getSpecifierName(AArch64::Specifier S) {
   case AArch64::S_GOT_AUTH:            return ":got_auth:";
   case AArch64::S_GOT_AUTH_PAGE:       return ":got_auth:";
   case AArch64::S_GOT_AUTH_LO12:       return ":got_auth_lo12:";
+
+  case AArch64::S_GOTPCREL:            return "%gotpcrel";
+  case AArch64::S_PLT:                 return "%pltpcrel";
+  case AArch64::S_DTPREL:              return "%dtprel";
+  case AArch64::S_FUNCINIT:            return "%funcinit";
   default:
     llvm_unreachable("Invalid relocation specifier");
   }
   // clang-format on
+}
+
+AArch64::Specifier AArch64::parsePercentSpecifierName(StringRef name) {
+  return StringSwitch<AArch64::Specifier>(name)
+      .Case("pltpcrel", AArch64::S_PLT)
+      .Case("gotpcrel", AArch64::S_GOTPCREL)
+      .Case("dtprel", AArch64::S_DTPREL)
+      .Case("funcinit", AArch64::S_FUNCINIT)
+      .Default(0);
 }
 
 static bool evaluate(const MCSpecifierExpr &Expr, MCValue &Res,
@@ -133,7 +144,7 @@ AArch64MCAsmInfoDarwin::AArch64MCAsmInfoDarwin(bool IsILP32) {
   // form when targeting Darwin.
   AssemblerDialect = AsmWriterVariant == Default ? Apple : AsmWriterVariant;
 
-  PrivateGlobalPrefix = "L";
+  InternalSymbolPrefix = "L";
   PrivateLabelPrefix = "L";
   SeparatorString = "%%";
   CommentString = ";";
@@ -206,7 +217,7 @@ AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T) {
   AlignmentIsInBytes = false;
 
   CommentString = "//";
-  PrivateGlobalPrefix = ".L";
+  InternalSymbolPrefix = ".L";
   PrivateLabelPrefix = ".L";
 
   Data16bitsDirective = "\t.hword\t";
@@ -232,8 +243,13 @@ void AArch64MCAsmInfoELF::printSpecifierExpr(
     raw_ostream &OS, const MCSpecifierExpr &Expr) const {
   if (auto *AE = dyn_cast<AArch64AuthMCExpr>(&Expr))
     return AE->print(OS, this);
-  OS << AArch64::getSpecifierName(Expr.getSpecifier());
+  auto Str = AArch64::getSpecifierName(Expr.getSpecifier());
+  OS << Str;
+  if (!Str.empty() && Str[0] == '%')
+    OS << '(';
   printExpr(OS, *Expr.getSubExpr());
+  if (!Str.empty() && Str[0] == '%')
+    OS << ')';
 }
 
 bool AArch64MCAsmInfoELF::evaluateAsRelocatableImpl(
@@ -242,7 +258,7 @@ bool AArch64MCAsmInfoELF::evaluateAsRelocatableImpl(
 }
 
 AArch64MCAsmInfoMicrosoftCOFF::AArch64MCAsmInfoMicrosoftCOFF() {
-  PrivateGlobalPrefix = ".L";
+  InternalSymbolPrefix = ".L";
   PrivateLabelPrefix = ".L";
 
   Data16bitsDirective = "\t.hword\t";
@@ -272,7 +288,7 @@ bool AArch64MCAsmInfoMicrosoftCOFF::evaluateAsRelocatableImpl(
 }
 
 AArch64MCAsmInfoGNUCOFF::AArch64MCAsmInfoGNUCOFF() {
-  PrivateGlobalPrefix = ".L";
+  InternalSymbolPrefix = ".L";
   PrivateLabelPrefix = ".L";
 
   Data16bitsDirective = "\t.hword\t";

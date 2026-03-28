@@ -486,15 +486,32 @@ lldb::SBValue SBValue::CreateBoolValue(const char *name, bool value) {
   LLDB_INSTRUMENT_VA(this, name);
 
   lldb::SBValue sb_value;
-  lldb::ValueObjectSP new_value_sp;
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
-  lldb::TargetSP target_sp = m_opaque_sp->GetTargetSP();
-  if (value_sp && target_sp) {
-    new_value_sp =
-        ValueObject::CreateValueObjectFromBool(target_sp, value, name);
-  }
-  sb_value.SetSP(new_value_sp);
+
+  auto get_new_value = [&]() -> lldb::ValueObjectSP {
+    if (!value_sp)
+      return {};
+
+    lldb::TargetSP target_sp = value_sp->GetTargetSP();
+    if (!target_sp)
+      return {};
+
+    lldb::LanguageType language = lldb::eLanguageTypeC;
+    ExecutionContext exe_ctx(value_sp->GetExecutionContextRef());
+    if (StackFrame *frame = exe_ctx.GetFramePtr())
+      language = frame->GuessLanguage().AsLanguageType();
+    auto type_system_or_err =
+        target_sp->GetScratchTypeSystemForLanguage(language);
+    if (!type_system_or_err) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Types), type_system_or_err.takeError(),
+                     "cannot get a type system: {0}");
+      return {};
+    }
+    return ValueObject::CreateValueObjectFromBool(exe_ctx, *type_system_or_err,
+                                                  value, name);
+  };
+  sb_value.SetSP(get_new_value());
   return sb_value;
 }
 
