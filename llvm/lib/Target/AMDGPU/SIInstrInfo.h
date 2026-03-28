@@ -109,7 +109,8 @@ private:
     VCCNZ = 2,
     VCCZ = -2,
     EXECNZ = -3,
-    EXECZ = 3
+    EXECZ = 3,
+    IFORK_MASK_PASS = 4
   };
 
   using SetVectorType = SmallSetVector<MachineInstr *, 32>;

@@ -371,7 +371,7 @@ def S_MOVRELD_B64 : SOP1_64_movreld <"s_movreld_b64">;
 let SubtargetPredicate = isGFX6GFX7GFX8GFX9,
     isBranch = 1, isIndirectBranch = 1,
     isTerminator = 1, Defs = [EXEC, MODE],
-    Uses = !listconcat([MODE], !foreach(i, !range(0, 23), !cast<Register>("SGPR"#i))) in {
+    Uses = !listconcat([MODE], !foreach(i, !range(0, 24), !cast<Register>("SGPR"#i))) in {
 def S_CBRANCH_JOIN : SOP1_0_32R <"s_cbranch_join">;
 } // End SubtargetPredicate = isGFX6GFX7GFX8GFX9
 
@@ -887,7 +887,8 @@ def S_CBRANCH_G_FORK : SOP2_Pseudo <
   let isTerminator = 1;
   let isIndirectBranch = 1;
   let Uses = [EXEC, MODE];
-  let Defs = !listconcat([EXEC, MODE], !foreach(i, !range(0, 23), !cast<Register>("SGPR"#i)));
+  let Defs = !listconcat([EXEC, MODE],
+                         !foreach(i, !range(0, 24), !cast<Register>("SGPR"#i)));
   let has_sdst = 0;
   let SubtargetPredicate = isGFX6GFX7GFX8GFX9;
 }
@@ -1179,7 +1180,7 @@ let isCommutable = 1, Constraints = "$sdst = $src0" in {
 
 let SubtargetPredicate = isGFX6GFX7GFX8GFX9, isBranch = 1,
     isTerminator = 1, Uses = [EXEC, MODE],
-    Defs = !listconcat([EXEC, MODE], !foreach(i, !range(0, 23), !cast<Register>("SGPR"#i))) in
+    Defs = !listconcat([EXEC, MODE], !foreach(i, !range(0, 24), !cast<Register>("SGPR"#i))) in
 def S_CBRANCH_I_FORK : SOPK_Pseudo <
   "s_cbranch_i_fork",
   (outs), (ins SReg_64:$sdst, SOPPBrTarget:$simm16),

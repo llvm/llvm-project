@@ -3006,7 +3006,9 @@ bool SIInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
 
 MachineBasicBlock *
 SIInstrInfo::getBranchDestBlock(const MachineInstr &MI) const {
-  return MI.getOperand(0).getMBB();
+  return MI.getOpcode() != llvm::AMDGPU::S_CBRANCH_I_FORK
+             ? MI.getOperand(0).getMBB()
+             : MI.getOperand(1).getMBB();
 }
 
 bool SIInstrInfo::hasDivergentBranch(const MachineBasicBlock *MBB) const {
@@ -3177,6 +3179,8 @@ unsigned SIInstrInfo::getBranchOpcode(SIInstrInfo::BranchPredicate Cond) {
     return AMDGPU::S_CBRANCH_EXECNZ;
   case SIInstrInfo::EXECZ:
     return AMDGPU::S_CBRANCH_EXECZ;
+  case SIInstrInfo::IFORK_MASK_PASS:
+    return AMDGPU::S_CBRANCH_I_FORK;
   default:
     llvm_unreachable("invalid branch predicate");
   }
@@ -3196,6 +3200,8 @@ SIInstrInfo::BranchPredicate SIInstrInfo::getBranchPredicate(unsigned Opcode) {
     return EXECNZ;
   case AMDGPU::S_CBRANCH_EXECZ:
     return EXECZ;
+  case AMDGPU::S_CBRANCH_I_FORK:
+    return IFORK_MASK_PASS;
   default:
     return INVALID_BR;
   }
@@ -3217,9 +3223,16 @@ bool SIInstrInfo::analyzeBranchImpl(MachineBasicBlock &MBB,
   if (Pred == INVALID_BR)
     return true;
 
-  MachineBasicBlock *CondBB = I->getOperand(0).getMBB();
+  MachineBasicBlock *CondBB = getBranchDestBlock(*I);
   Cond.push_back(MachineOperand::CreateImm(Pred));
-  Cond.push_back(I->getOperand(1)); // Save the branch register.
+  /// Save the condition register (which is operand 0), and all the
+  /// implicit operands to preserve their flags
+  if (Pred == IFORK_MASK_PASS) {
+    Cond.push_back(I->getOperand(0));
+  }
+  for (MachineOperand &ImpOp: I->implicit_operands()) {
+    Cond.push_back(ImpOp);
+  }
 
   ++I;
 
@@ -3323,20 +3336,29 @@ unsigned SIInstrInfo::insertBranch(MachineBasicBlock &MBB,
     return 1;
   }
 
-  assert(TBB && Cond[0].isImm());
+  assert(TBB && Cond[0].isImm() && Cond.size() >= 2);
 
   unsigned Opcode
     = getBranchOpcode(static_cast<BranchPredicate>(Cond[0].getImm()));
 
+
+
+  MachineInstrBuilder CondBrBuilder = BuildMI(&MBB, DL, get(Opcode));
+  if (Opcode == AMDGPU::S_CBRANCH_I_FORK)
+    CondBrBuilder->addOperand(Cond[1]);
+
+  CondBrBuilder.addMBB(TBB);
+  fixImplicitOperands(*CondBrBuilder);
+  ArrayRef<MachineOperand> ImpConds =
+      Cond.drop_front(Opcode == AMDGPU::S_CBRANCH_I_FORK ? 2 : 1);
+  for (auto [ImpOp, ImpCond] :
+       zip_equal(CondBrBuilder->implicit_operands(), ImpConds)) {
+    ImpOp.isDef() ? ImpOp.setIsDead(ImpCond.isDead())
+                  : ImpOp.setIsKill(ImpCond.isKill());
+    ImpOp.setIsUndef(ImpCond.isUndef());
+  }
+
   if (!FBB) {
-    MachineInstr *CondBr =
-      BuildMI(&MBB, DL, get(Opcode))
-      .addMBB(TBB);
-
-    // Copy the flags onto the implicit condition register operand.
-    preserveCondRegFlags(CondBr->getOperand(1), Cond[1]);
-    fixImplicitOperands(*CondBr);
-
     if (BytesAdded)
       *BytesAdded = ST.hasOffset3fBug() ? 8 : 4;
     return 1;
@@ -3344,16 +3366,8 @@ unsigned SIInstrInfo::insertBranch(MachineBasicBlock &MBB,
 
   assert(TBB && FBB);
 
-  MachineInstr *CondBr =
-    BuildMI(&MBB, DL, get(Opcode))
-    .addMBB(TBB);
-  fixImplicitOperands(*CondBr);
   BuildMI(&MBB, DL, get(AMDGPU::S_BRANCH))
     .addMBB(FBB);
-
-  MachineOperand &CondReg = CondBr->getOperand(1);
-  CondReg.setIsUndef(Cond[1].isUndef());
-  CondReg.setIsKill(Cond[1].isKill());
 
   if (BytesAdded)
     *BytesAdded = ST.hasOffset3fBug() ? 16 : 8;
@@ -3367,8 +3381,8 @@ bool SIInstrInfo::reverseBranchCondition(
     return true;
   }
 
-  if (Cond[0].isImm()) {
-    Cond[0].setImm(-Cond[0].getImm());
+  if (MachineOperand &C = Cond[0]; C.isImm() && C.getImm() != IFORK_MASK_PASS) {
+    C.setImm(-C.getImm());
     return false;
   }
 
