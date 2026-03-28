@@ -2512,7 +2512,6 @@ add_fp_unittest(
     libc.src.math.asin
 )
 
-
 add_fp_unittest(
   asinbf16_test
   NEED_MPFR
