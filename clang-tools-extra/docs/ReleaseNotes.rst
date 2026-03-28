@@ -403,7 +403,8 @@ Changes in existing checks
     condition expression involved temporaries (e.g. passing a string literal to
     a ``const std::string&`` parameter).
 
-  - Warn and provide fix-its when ``NULL`` is defined in system headers.
+  - Warn and provide fix-its when a macro defined in a system header (e.g.
+    ``NULL``) is implicitly converted to ``bool``.
 
 - Improved :doc:`readability-non-const-parameter
   <clang-tidy/checks/readability/non-const-parameter>` check by avoiding false
