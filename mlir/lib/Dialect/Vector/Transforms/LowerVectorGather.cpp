@@ -195,16 +195,6 @@ struct Gather1DToConditionalLoads : OpRewritePattern<vector::GatherOp> {
     // correct N-D load indices from the 1-D gather index.
     bool useDelinearization = false;
     if (auto memType = dyn_cast<MemRefType>(base.getType())) {
-      // vector.load requires the most minor memref dim to have unit stride
-      // (unless reading exactly 1 element).
-      if (auto stridesAttr =
-              dyn_cast_if_present<StridedLayoutAttr>(memType.getLayout())) {
-        if (stridesAttr.getStrides().back() != 1 &&
-            resultTy.getNumElements() != 1)
-          return rewriter.notifyMatchFailure(
-              op, "most minor memref dim must have unit stride");
-      }
-
       if (memType.getRank() > 1)
         useDelinearization = true;
     }

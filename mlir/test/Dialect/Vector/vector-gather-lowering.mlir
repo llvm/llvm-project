@@ -360,3 +360,31 @@ func.func @gather_memref_2d_delinearize_nonzero_offsets(
       vector<2xi1>, vector<2xf32> into vector<2xf32>
   return %0 : vector<2xf32>
 }
+
+// -----
+
+// Verify that gather on a rank-1 strided memref (from rank-reducing subview)
+// is correctly scalarized to per-element vector.load ops.
+
+// CHECK-LABEL: @gather_rank1_strided_memref
+// CHECK-SAME:    (%[[BASE:.+]]: memref<4xf32, strided<[6]>>
+// CHECK-NOT:     vector.gather
+// CHECK:         vector.extract {{.*}}[0]
+// CHECK:         scf.if {{.*}} -> (vector<3xf32>)
+// CHECK:           vector.load %[[BASE]][%{{.*}}] : memref<4xf32, strided<[6]>>, vector<1xf32>
+// CHECK:         vector.extract {{.*}}[1]
+// CHECK:         scf.if {{.*}} -> (vector<3xf32>)
+// CHECK:           vector.load %[[BASE]][%{{.*}}] : memref<4xf32, strided<[6]>>, vector<1xf32>
+// CHECK:         vector.extract {{.*}}[2]
+// CHECK:         scf.if {{.*}} -> (vector<3xf32>)
+// CHECK:           vector.load %[[BASE]][%{{.*}}] : memref<4xf32, strided<[6]>>, vector<1xf32>
+func.func @gather_rank1_strided_memref(
+    %base: memref<4xf32, strided<[6]>>,
+    %v: vector<3xindex>, %mask: vector<3xi1>,
+    %pass_thru: vector<3xf32>) -> vector<3xf32> {
+  %c0 = arith.constant 0 : index
+  %0 = vector.gather %base[%c0][%v], %mask, %pass_thru
+    : memref<4xf32, strided<[6]>>, vector<3xindex>,
+      vector<3xi1>, vector<3xf32> into vector<3xf32>
+  return %0 : vector<3xf32>
+}
