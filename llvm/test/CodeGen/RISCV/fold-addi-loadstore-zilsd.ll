@@ -28,6 +28,245 @@ entry:
   ret void
 }
 
+@h_0 = dso_local global i64 0
+@h_1 = dso_local global i64 0, align 1
+@h_2 = dso_local global i64 0, align 2
+@h_4 = dso_local global i64 0, align 4
+@h_8 = dso_local global i64 0, align 8
+@h_16 = dso_local global i64 0, align 16
+
+define dso_local i64 @load_h_0() nounwind {
+; CHECK-LABEL: load_h_0:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:  .Lpcrel_hi2:
+; CHECK-NEXT:    auipc a0, %pcrel_hi(h_0)
+; CHECK-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi2)
+; CHECK-NEXT:    ld a0, 0(a0)
+; CHECK-NEXT:    ret
+entry:
+  %0 = load i64, ptr @h_0
+  ret i64 %0
+}
+
+define dso_local i64 @load_h_1() nounwind {
+; CHECK-LABEL: load_h_1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:  .Lpcrel_hi3:
+; CHECK-NEXT:    auipc a0, %pcrel_hi(h_1)
+; CHECK-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi3)
+; CHECK-NEXT:    ld a0, 0(a0)
+; CHECK-NEXT:    ret
+entry:
+  %0 = load i64, ptr @h_1
+  ret i64 %0
+}
+
+define dso_local i64 @load_h_2() nounwind {
+; CHECK-LABEL: load_h_2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:  .Lpcrel_hi4:
+; CHECK-NEXT:    auipc a0, %pcrel_hi(h_2)
+; CHECK-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi4)
+; CHECK-NEXT:    ld a0, 0(a0)
+; CHECK-NEXT:    ret
+entry:
+  %0 = load i64, ptr @h_2
+  ret i64 %0
+}
+
+define dso_local i64 @load_h_4() nounwind {
+; CHECK-LABEL: load_h_4:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:  .Lpcrel_hi5:
+; CHECK-NEXT:    auipc a0, %pcrel_hi(h_4)
+; CHECK-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi5)
+; CHECK-NEXT:    ld a0, 0(a0)
+; CHECK-NEXT:    ret
+entry:
+  %0 = load i64, ptr @h_4
+  ret i64 %0
+}
+
+define dso_local i64 @load_h_8() nounwind {
+; CHECK-LABEL: load_h_8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:  .Lpcrel_hi6:
+; CHECK-NEXT:    auipc a0, %pcrel_hi(h_8)
+; CHECK-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi6)
+; CHECK-NEXT:    ld a0, 0(a0)
+; CHECK-NEXT:    ret
+entry:
+  %0 = load i64, ptr @h_8
+  ret i64 %0
+}
+
+define dso_local i64 @load_h_16() nounwind {
+; CHECK-LABEL: load_h_16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:  .Lpcrel_hi7:
+; CHECK-NEXT:    auipc a0, %pcrel_hi(h_16)
+; CHECK-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi7)
+; CHECK-NEXT:    ld a0, 0(a0)
+; CHECK-NEXT:    ret
+entry:
+  %0 = load i64, ptr @h_16
+  ret i64 %0
+}
+
+define dso_local void @store_h_4() nounwind {
+; CHECK-LABEL: store_h_4:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:  .Lpcrel_hi8:
+; CHECK-NEXT:    auipc a0, %pcrel_hi(h_4)
+; CHECK-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi8)
+; CHECK-NEXT:    sd zero, 0(a0)
+; CHECK-NEXT:    ret
+entry:
+   store i64 0, ptr @h_4
+   ret void
+}
+
+define dso_local void @store_h_8() nounwind {
+; CHECK-LABEL: store_h_8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:  .Lpcrel_hi9:
+; CHECK-NEXT:    auipc a0, %pcrel_hi(h_8)
+; CHECK-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi9)
+; CHECK-NEXT:    sd zero, 0(a0)
+; CHECK-NEXT:    ret
+entry:
+   store i64 0, ptr @h_8
+   ret void
+}
+
+@ga_8 = dso_local local_unnamed_addr global [2 x i64] zeroinitializer, align 8
+@ga_16 = dso_local local_unnamed_addr global [2 x i64] zeroinitializer, align 16
+
+define dso_local i64 @load_ga_8() nounwind {
+; CHECK-LABEL: load_ga_8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:  .Lpcrel_hi10:
+; CHECK-NEXT:    auipc a0, %pcrel_hi(ga_8)
+; CHECK-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi10)
+; CHECK-NEXT:    ld a0, 8(a0)
+; CHECK-NEXT:    ret
+entry:
+  %0 = load i64, ptr getelementptr inbounds ([2 x i64], ptr @ga_8, i32 0, i32 1)
+  ret i64 %0
+}
+
+define dso_local i64 @load_ga_16() nounwind {
+; CHECK-LABEL: load_ga_16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:  .Lpcrel_hi11:
+; CHECK-NEXT:    auipc a0, %pcrel_hi(ga_16)
+; CHECK-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi11)
+; CHECK-NEXT:    ld a0, 8(a0)
+; CHECK-NEXT:    ret
+entry:
+  %0 = load i64, ptr getelementptr inbounds ([2 x i64], ptr @ga_16, i32 0, i32 1)
+  ret i64 %0
+}
+
+; Check if we can fold ADDI into the offset of store instructions,
+; when store instructions is the root node in DAG.
+
+@g_4_i64 = global i64 0, align 4
+
+define dso_local void @inc_g_i64() nounwind {
+; CHECK-LABEL: inc_g_i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:  .Lpcrel_hi12:
+; CHECK-NEXT:    auipc a0, %pcrel_hi(g_4_i64)
+; CHECK-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi12)
+; CHECK-NEXT:    ld a2, 0(a0)
+; CHECK-NEXT:    addi a2, a2, 1
+; CHECK-NEXT:    seqz a1, a2
+; CHECK-NEXT:    add a3, a3, a1
+; CHECK-NEXT:    sd a2, 0(a0)
+; CHECK-NEXT:    ret
+entry:
+  %0 = load i64, ptr @g_4_i64
+  %inc = add i64 %0, 1
+  store i64 %inc, ptr @g_4_i64
+  br label %if.end
+
+if.end:
+  ret void
+}
+
+@tl_4 = dso_local thread_local global i64 0, align 4
+@tl_8 = dso_local thread_local global i64 0, align 8
+
+define dso_local i64 @load_tl_4() nounwind {
+; CHECK-LABEL: load_tl_4:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lui a0, %tprel_hi(tl_4)
+; CHECK-NEXT:    add a0, a0, tp, %tprel_add(tl_4)
+; CHECK-NEXT:    ld a0, %tprel_lo(tl_4)(a0)
+; CHECK-NEXT:    ret
+entry:
+  %0 = load i64, ptr @tl_4
+  ret i64 %0
+}
+
+define dso_local i64 @load_tl_8() nounwind {
+; CHECK-LABEL: load_tl_8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lui a0, %tprel_hi(tl_8)
+; CHECK-NEXT:    add a0, a0, tp, %tprel_add(tl_8)
+; CHECK-NEXT:    ld a0, %tprel_lo(tl_8)(a0)
+; CHECK-NEXT:    ret
+entry:
+  %0 = load i64, ptr @tl_8
+  ret i64 %0
+}
+
+define dso_local i64 @load_const_ok() nounwind {
+; CHECK-LABEL: load_const_ok:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    ld a0, 2040(zero)
+; CHECK-NEXT:    ret
+entry:
+  %0 = load i64, ptr inttoptr (i32 2040 to ptr)
+  ret i64 %0
+}
+
+define dso_local i64 @load_cost_overflow() nounwind {
+; CHECK-LABEL: load_cost_overflow:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    ld a0, 2044(zero)
+; CHECK-NEXT:    ret
+entry:
+  %0 = load i64, ptr inttoptr (i64 2044 to ptr)
+  ret i64 %0
+}
+
+define dso_local i64 @load_const_medium() nounwind {
+; CHECK-LABEL: load_const_medium:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lui a0, 1
+; CHECK-NEXT:    ld a0, -16(a0)
+; CHECK-NEXT:    ret
+entry:
+  %0 = load i64, ptr inttoptr (i64 4080 to ptr)
+  ret i64 %0
+}
+
+; The constant here is 0x7ffff800, this value requires LUI+ADDIW on RV64,
+; LUI+ADDI would produce a different constant so we can't fold into the load
+; offset.
+define dso_local i64 @load_const_large() nounwind {
+; CHECK-LABEL: load_const_large:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lui a0, 524288
+; CHECK-NEXT:    ld a0, -2048(a0)
+; CHECK-NEXT:    ret
+entry:
+  %0 = load i64, ptr inttoptr (i64 2147481600 to ptr)
+  ret i64 %0
+}
+
 %struct.S = type { double, double }
 
 define double @fold_addi_from_different_bb(i32 %k, i32 %n, ptr %a) nounwind {
@@ -38,25 +277,25 @@ define double @fold_addi_from_different_bb(i32 %k, i32 %n, ptr %a) nounwind {
 ; CHECK-NEXT:    sw s4, 24(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd s2, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    blez a1, .LBB2_3
+; CHECK-NEXT:    blez a1, .LBB19_3
 ; CHECK-NEXT:  # %bb.1: # %for.body.lr.ph
 ; CHECK-NEXT:    mv s2, a2
 ; CHECK-NEXT:    mv s3, a1
 ; CHECK-NEXT:    fmv.d s0, zero
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add s4, a2, a0
-; CHECK-NEXT:  .LBB2_2: # %for.body
+; CHECK-NEXT:  .LBB19_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    mv a0, s2
 ; CHECK-NEXT:    call f
 ; CHECK-NEXT:    ld a0, 8(s4)
 ; CHECK-NEXT:    addi s3, s3, -1
 ; CHECK-NEXT:    fadd.d s0, a0, s0
-; CHECK-NEXT:    bnez s3, .LBB2_2
-; CHECK-NEXT:    j .LBB2_4
-; CHECK-NEXT:  .LBB2_3:
+; CHECK-NEXT:    bnez s3, .LBB19_2
+; CHECK-NEXT:    j .LBB19_4
+; CHECK-NEXT:  .LBB19_3:
 ; CHECK-NEXT:    fmv.d s0, zero
-; CHECK-NEXT:  .LBB2_4: # %for.cond.cleanup
+; CHECK-NEXT:  .LBB19_4: # %for.cond.cleanup
 ; CHECK-NEXT:    fmv.d a0, s0
 ; CHECK-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    lw s4, 24(sp) # 4-byte Folded Reload
