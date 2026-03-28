@@ -537,7 +537,13 @@ getCopyToParts(SelectionDAG &DAG, const SDLoc &DL, SDValue Val, SDValue *Parts,
     // If the parts cover more bits than the value has, promote the value.
     if (PartVT.isFloatingPoint() && ValueVT.isFloatingPoint()) {
       assert(NumParts == 1 && "Do not know what to promote to!");
-      Val = DAG.getNode(ISD::FP_EXTEND, DL, PartVT, Val);
+      if (PartVT.isVector()) {
+        ValueVT = EVT::getFloatingPointVT(PartBits);
+        Val = DAG.getNode(ISD::FP_EXTEND, DL, ValueVT, Val);
+        Val = DAG.getNode(ISD::BITCAST, DL, PartVT, Val);
+      } else {
+        Val = DAG.getNode(ISD::FP_EXTEND, DL, PartVT, Val);
+      }
     } else {
       if (ValueVT.isFloatingPoint()) {
         // FP values need to be bitcast, then extended if they are being put
