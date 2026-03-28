@@ -2344,9 +2344,9 @@ struct DefaultedOuter {
 
 DefaultedOuter getDefaultedOuter(const std::string &s [[clang::lifetimebound]]);
 
-// FIXME: False positive. The defaulted outer copy ctor invokes
-// SWithUserDefinedCopyLikeOps's user-defined copy ctor, so `copy` should be
-// semantically safe.
+// The defaulted outer copy ctor propagates origins even though the inner
+// user-defined copy ctor may break the borrow. This is intentional: this
+// pattern does not fit the ownership model this analysis supports.
 DefaultedOuter nested_defaulted_outer_with_user_defined_inner() {
   std::string str{"abc"};
   DefaultedOuter o = getDefaultedOuter(str); // expected-warning {{address of stack memory is returned later}}
