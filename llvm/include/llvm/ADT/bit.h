@@ -274,7 +274,7 @@ template <typename T> [[nodiscard]] int countl_zero(T Val) {
   // Use the intrinsic if available.
   if constexpr (sizeof(T) <= 4) {
     constexpr int ExtraBits =
-      std::numeric_limits<uint32_t>::digits - std::numeric_limits<T>::digits;
+        std::numeric_limits<uint32_t>::digits - std::numeric_limits<T>::digits;
 #if __has_builtin(__builtin_clz) || defined(__GNUC__)
     return __builtin_clz(Val) - ExtraBits;
 #elif defined(_MSC_VER)
