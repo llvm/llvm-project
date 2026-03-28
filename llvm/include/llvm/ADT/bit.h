@@ -273,12 +273,14 @@ template <typename T> [[nodiscard]] int countl_zero(T Val) {
 
   // Use the intrinsic if available.
   if constexpr (sizeof(T) <= 4) {
+    constexpr int ExtraBits =
+      std::numeric_limits<uint32_t>::digits - std::numeric_limits<T>::digits;
 #if __has_builtin(__builtin_clz) || defined(__GNUC__)
-    return __builtin_clz(Val);
+    return __builtin_clz(Val) - ExtraBits;
 #elif defined(_MSC_VER)
     unsigned long Index;
     _BitScanReverse(&Index, Val);
-    return Index ^ 31;
+    return static_cast<int>((std::numeric_limits<T>::digits - 1) - Index);
 #endif
   } else if constexpr (sizeof(T) == 8) {
 #if __has_builtin(__builtin_clzll) || defined(__GNUC__)
