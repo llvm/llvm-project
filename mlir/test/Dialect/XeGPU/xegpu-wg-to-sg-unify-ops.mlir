@@ -959,6 +959,20 @@ gpu.module @test_distribution {
     gpu.return
   }
 
+  // CHECK-LABEL: convert_layout_reduce_to_scalar
+  gpu.func @convert_layout_reduce_to_scalar(%arg0: memref<32x32xf32>) {
+    %mask = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>} dense<true> : vector<32x32xi1>
+    %offset = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>} dense<0> : vector<32x32xindex>
+    %cst_0 = arith.constant 0.000000e+00 : f32
+    %intptr = memref.extract_aligned_pointer_as_index %arg0 : memref<32x32xf32> -> index
+    %10 = arith.index_cast %intptr : index to i64
+    %11 = xegpu.load %10[%offset], %mask <{layout = #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>}> {layout_operand_1 = #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>, layout_operand_2 = #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>} : i64, vector<32x32xindex>, vector<32x32xi1> -> vector<32x32xf32>
+    %12 = vector.multi_reduction <add>, %11, %cst_0 {layout_operand_0 = #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>, layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>, dims = [0, 1]>} [0, 1] : vector<32x32xf32> to f32
+    // CHECK-NOT: xegpu.convert_layout
+    %13 = xegpu.convert_layout %12 <{input_layout = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>, dims = [0, 1]>, target_layout = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>, dims = [0, 1]>}> : f32
+    gpu.return
+  }
+
   // CHECK-LABEL: distribute_nested_slice
   // CHECK: %[[V0:.*]] = vector.shape_cast %{{.*}} : vector<32x32xf32> to vector<32x1x32x1xf32>
   // CHECK: %[[V1:.*]] = vector.broadcast %[[V0]] : vector<32x1x32x1xf32> to vector<32x16x32x16xf32>
