@@ -2287,7 +2287,7 @@ public:
     auto *CE = dyn_cast<CallExpr>(S);
     if (!CE || !CE->getDirectCallee())
       return false;
-    const auto *FD = dyn_cast<FunctionDecl>(CE->getDirectCallee());
+    const FunctionDecl *FD = CE->getDirectCallee();
     if (!FD)
       return false;
 
@@ -2495,7 +2495,7 @@ public:
       const auto *UO = dyn_cast<UnaryOperator>(S);
       if (!UO || UO->getOpcode() != UO_Deref)
         return;
-      const auto *CE = dyn_cast<Expr>(UO->getSubExpr());
+      const Expr *CE = UO->getSubExpr();
       if (!CE)
         return;
       CE = CE->IgnoreParenImpCasts();
@@ -2960,7 +2960,8 @@ static void populateStmtsForFindingGadgets(SmallVector<const Stmt *> &Stmts,
   if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
     AddStmt(FD->getBody());
     for (const auto *PD : FD->parameters())
-      AddStmt(PD->getDefaultArg());
+      if (PD->hasDefaultArg() && !PD->hasUninstantiatedDefaultArg())
+        AddStmt(PD->getDefaultArg());
     if (const auto *CtorD = dyn_cast<CXXConstructorDecl>(FD))
       llvm::append_range(
           Stmts, llvm::map_range(CtorD->inits(),

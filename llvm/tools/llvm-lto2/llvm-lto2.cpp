@@ -26,7 +26,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Threading.h"
@@ -285,11 +284,7 @@ static int run(int argc, char **argv) {
 
   if (TimeTrace)
     timeTraceProfilerInitialize(TimeTraceGranularity, argv[0]);
-  llvm::scope_exit ShutdownScopeExit([]() {
-    // llvm_shutdown must be called before finalizing the time trace to
-    // ensure that time trace scopes from ManagedStatic destructors are
-    // flushed and recorded.
-    llvm::llvm_shutdown();
+  llvm::scope_exit TimeTraceScopeExit([]() {
     if (TimeTrace) {
       check(timeTraceProfilerWrite(TimeTraceFile, OutputFilename),
             "timeTraceProfilerWrite failed");
@@ -416,6 +411,24 @@ static int run(int argc, char **argv) {
   auto DTLTOCompilerArgsSV = llvm::to_vector<0>(llvm::map_range(
       DTLTOCompilerArgs, [](const std::string &S) { return StringRef(S); }));
 
+  auto AddStream =
+      [&](size_t Task,
+          const Twine &ModuleName) -> std::unique_ptr<CachedFileStream> {
+    std::string Path = OutputFilename + "." + utostr(Task);
+
+    std::error_code EC;
+    auto S = std::make_unique<raw_fd_ostream>(Path, EC, sys::fs::OF_None);
+    check(EC, Path);
+    return std::make_unique<CachedFileStream>(std::move(S), Path);
+  };
+
+  auto AddBuffer = [&](size_t Task, const Twine &ModuleName,
+                       std::unique_ptr<MemoryBuffer> MB) {
+    auto Stream = AddStream(Task, ModuleName);
+    *Stream->OS << MB->getBuffer();
+    check(Stream->commit(), "Failed to commit cache");
+  };
+
   ThinBackend Backend;
   if (ThinLTODistributedIndexes)
     Backend = createWriteIndexesThinBackend(llvm::hardware_concurrency(Threads),
@@ -430,7 +443,7 @@ static int run(int argc, char **argv) {
         llvm::heavyweight_hardware_concurrency(Threads),
         /*OnWrite=*/{}, ThinLTOEmitIndexes, ThinLTOEmitImports, OutputFilename,
         DTLTODistributor, DTLTODistributorArgsSV, DTLTOCompiler,
-        DTLTOCompilerPrependArgsSV, DTLTOCompilerArgsSV, SaveTemps);
+        DTLTOCompilerPrependArgsSV, DTLTOCompilerArgsSV, SaveTemps, AddBuffer);
   } else
     Backend = createInProcessThinBackend(
         llvm::heavyweight_hardware_concurrency(Threads),
@@ -500,24 +513,6 @@ static int run(int argc, char **argv) {
   }
   if (HasErrors)
     return 1;
-
-  auto AddStream =
-      [&](size_t Task,
-          const Twine &ModuleName) -> std::unique_ptr<CachedFileStream> {
-    std::string Path = OutputFilename + "." + utostr(Task);
-
-    std::error_code EC;
-    auto S = std::make_unique<raw_fd_ostream>(Path, EC, sys::fs::OF_None);
-    check(EC, Path);
-    return std::make_unique<CachedFileStream>(std::move(S), Path);
-  };
-
-  auto AddBuffer = [&](size_t Task, const Twine &ModuleName,
-                       std::unique_ptr<MemoryBuffer> MB) {
-    auto Stream = AddStream(Task, ModuleName);
-    *Stream->OS << MB->getBuffer();
-    check(Stream->commit(), "Failed to commit cache");
-  };
 
   FileCache Cache;
   if (!CacheDir.empty())

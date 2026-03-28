@@ -586,3 +586,13 @@ func.func @subgroup_broadcast(%arg0 : f32, %arg1 : i32) -> (f32, f32) {
   %1 = gpu.subgroup_broadcast %arg0, specific_lane %arg1 : f32
   func.return %0, %1 : f32, f32
 }
+
+// CHECK-LABEL: func @ballot
+//  CHECK-SAME: (%[[PRED:.*]]: i1)
+func.func @ballot(%pred: i1) -> (i32, i64) {
+  // CHECK: gpu.ballot %[[PRED]] : i32
+  %0 = gpu.ballot %pred : i32
+  // CHECK: gpu.ballot %[[PRED]] : i64
+  %1 = gpu.ballot %pred : i64
+  func.return %0, %1 : i32, i64
+}
