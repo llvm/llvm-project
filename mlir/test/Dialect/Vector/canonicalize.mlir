@@ -3807,9 +3807,9 @@ func.func @insert_vector_poison_idx_non_cst(%a: vector<4x5xf32>, %b: vector<5xf3
 
 // -----
 
-// Similar to the test above, but now the destination is a dense constant.
-// foldDenseElementsAttrDestInsertOp must not crash when the dynamic index
-// constant is -1 (the poison sentinel). Instead it should fold to ub.poison.
+// Similar to the test above, but with a dense constant destination. This exercises
+// foldDenseElementsAttrDestInsertOp, which must not crash when the dynamic index
+// constant is -1 (the poison sentinel). The IR should instead fold to ub.poison.
 // Regression test for https://github.com/llvm/llvm-project/issues/188404
 
 // CHECK-LABEL: @insert_scalar_poison_idx_dense_dest
