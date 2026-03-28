@@ -46,7 +46,7 @@ enum class ScanningOutputFormat {
 };
 
 #define DSS_LAST_BITMASK_ENUM(Id)                                              \
-  LLVM_MARK_AS_BITMASK_ENUM(Id), All = llvm::NextPowerOf2(Id) - 1
+  LLVM_MARK_AS_BITMASK_ENUM(Id), All = llvm::NextPowerOf2Constexpr(Id) - 1
 
 enum class ScanningOptimizations {
   None = 0,
