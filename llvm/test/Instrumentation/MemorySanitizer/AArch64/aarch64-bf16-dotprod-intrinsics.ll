@@ -78,10 +78,9 @@ define <4 x float> @test_vbfmmlaq_f32(<4 x float> %r, <8 x bfloat> %a, <8 x bflo
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext <16 x i1> [[TMP7]] to <16 x i8>
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <4 x i32> @llvm.aarch64.neon.ummla.v4i32.v16i8(<4 x i32> zeroinitializer, <16 x i8> [[TMP6]], <16 x i8> [[TMP8]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp ne <4 x i32> [[TMP9]], splat (i32 8)
-; CHECK-NEXT:    [[TMP11:%.*]] = sext <4 x i1> [[TMP10]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp ne <4 x i32> [[TMP0]], zeroinitializer
-; CHECK-NEXT:    [[TMP13:%.*]] = sext <4 x i1> [[TMP12]] to <4 x i32>
-; CHECK-NEXT:    [[TMP14:%.*]] = or <4 x i32> [[TMP11]], [[TMP13]]
+; CHECK-NEXT:    [[TMP13:%.*]] = or <4 x i1> [[TMP10]], [[TMP12]]
+; CHECK-NEXT:    [[TMP14:%.*]] = sext <4 x i1> [[TMP13]] to <4 x i32>
 ; CHECK-NEXT:    [[VBFMMLAQ_V3_I:%.*]] = call <4 x float> @llvm.aarch64.neon.bfmmla(<4 x float> [[R]], <8 x bfloat> [[A]], <8 x bfloat> [[B]])
 ; CHECK-NEXT:    store <4 x i32> [[TMP14]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x float> [[VBFMMLAQ_V3_I]]

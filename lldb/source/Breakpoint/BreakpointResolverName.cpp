@@ -339,7 +339,7 @@ BreakpointResolverName::SearchCallback(SearchFilter &filter,
       if (m_skip_prologue && break_addr.IsValid()) {
         const uint32_t prologue_byte_size = sc.function->GetPrologueByteSize();
         if (prologue_byte_size)
-          break_addr.SetOffset(break_addr.GetOffset() + prologue_byte_size);
+          break_addr.Slide(prologue_byte_size);
       }
     } else if (sc.symbol) {
       if (sc.symbol->GetType() == eSymbolTypeReExported) {
@@ -356,7 +356,7 @@ BreakpointResolverName::SearchCallback(SearchFilter &filter,
       if (m_skip_prologue && break_addr.IsValid()) {
         const uint32_t prologue_byte_size = sc.symbol->GetPrologueByteSize();
         if (prologue_byte_size)
-          break_addr.SetOffset(break_addr.GetOffset() + prologue_byte_size);
+          break_addr.Slide(prologue_byte_size);
         else {
           const Architecture *arch =
               breakpoint.GetTarget().GetArchitecturePlugin();

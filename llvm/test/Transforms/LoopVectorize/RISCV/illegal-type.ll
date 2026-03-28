@@ -3,7 +3,7 @@
 target triple = "riscv64-linux-gnu"
 
 ;
-define dso_local void @loop_i128(ptr nocapture %ptr, i64 %N) {
+define void @loop_i128(ptr nocapture %ptr, i64 %N) {
 ; CHECK-LABEL: @loop_i128(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -36,7 +36,7 @@ for.end:
   ret void
 }
 
-define dso_local void @loop_f128(ptr nocapture %ptr, i64 %N) {
+define void @loop_f128(ptr nocapture %ptr, i64 %N) {
 ; CHECK-LABEL: @loop_f128(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -69,7 +69,7 @@ for.end:
   ret void
 }
 
-define dso_local void @loop_invariant_i128(ptr nocapture %ptr, i128 %val, i64 %N) {
+define void @loop_invariant_i128(ptr nocapture %ptr, i128 %val, i64 %N) {
 ; CHECK-LABEL: @loop_invariant_i128(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -160,7 +160,7 @@ end:
   ret void
 }
 
-define dso_local void @loop_fixed_width_i128(ptr nocapture %ptr, i64 %N) {
+define void @loop_fixed_width_i128(ptr nocapture %ptr, i64 %N) {
 ; CHECK-LABEL: @loop_fixed_width_i128(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]

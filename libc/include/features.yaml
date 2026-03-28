@@ -1,7 +1,6 @@
 header: features.h
-header_template: features.h.def
 standards:
-  - stdc
+  - gnu
 macros: []
 types: []
 enums: []
