@@ -131,7 +131,7 @@ struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
 
 using PrimaryAllocator = SizeClassAllocator64<AP64>;
 #elif defined(__hexagon__)
-const uptr kMaxAllowedMallocSize = 2UL << 30;
+const uptr kMaxAllowedMallocSize = 1UL << 30;  // 1G
 
 struct AP32 {
   static const uptr kSpaceBeg = 0x10000000;
