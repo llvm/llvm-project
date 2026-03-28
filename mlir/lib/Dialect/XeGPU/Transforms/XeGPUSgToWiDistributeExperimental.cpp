@@ -5,7 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/Index/IR/IndexDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
@@ -752,26 +751,28 @@ struct SgToWiVectorBitcast : public OpConversionPattern<vector::BitCastOp> {
 };
 
 /// Distributes a subgroup-level vector.create_mask or vector.constant_mask op
-/// to workitem-level. Each lane computes its own mask bounds based on its
-/// lane coordinates. For each dimension i, the new mask bound is:
-///   new_bound[i] = original_bound[i] - lane_coord[i] * wi_elem_count[i]
-/// where `wi_elem_count[i]` is the number of elements each workitem holds
-/// along dimension i (i.e., `distType.getShape()[i]`).
-/// `vector.create_mask` implicitly clamps the bounds to
-/// `[0, wi_elem_count[i]]`, so no explicit clamping is needed.
-/// For constant_mask, the constant dim sizes are first materialized as
-/// Values, then the same logic applies, producing a vector.create_mask.
+/// to workitem-level. Uses `computeDistributedCoords()` to obtain the
+/// coordinates each workitem owns, then compares each coordinate against the
+/// original mask bounds using `arith.cmpi slt`. The per-element boolean
+/// results are assembled into the distributed mask vector.
 ///
-/// Example:
+/// For multi-dimensional masks, the element is in-bounds when ALL dimensions
+/// satisfy `coord[i] < bound[i]`.
+///
+/// Example (1D):
 ///   layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>
 ///   %mask = vector.create_mask %m0 : vector<16xi1>
-/// For lane k, wi_elem_count = [1], so:
-///   new_bound = m0 - k * 1
-/// Distributed to:
-///   %lane = gpu.lane_id
-///   %new_bound = affine.apply affine_map<()[s0, s1] -> (-s0 + s1)>
-///                  ()[%lane, %m0]
-///   %mask = vector.create_mask %new_bound : vector<1xi1>
+/// For lane k, computeDistributedCoords gives coord = [k], so:
+///   %in_bounds = arith.cmpi slt, %k, %m0  →  i1
+///   %mask = vector.broadcast %in_bounds : i1 to vector<1xi1>
+///
+/// Example (2D):
+///   layout = #xegpu.layout<lane_layout = [8, 2], lane_data = [1, 1]>
+///   %mask = vector.create_mask %m0, %m1 : vector<8x4xi1>
+/// Each WI owns a 1x2 slice. computeDistributedCoords returns 2 coords:
+///   [[r0, c0], [r0, c1]]
+/// For each coord: in_bounds = (r < m0) && (c < m1)
+///   %mask = vector.from_elements %bit0, %bit1 : vector<1x2xi1>
 template <typename OpType,
           typename = std::enable_if_t<llvm::is_one_of<
               OpType, vector::CreateMaskOp, vector::ConstantMaskOp>::value>>
@@ -797,49 +798,58 @@ struct SgToWiCreateMask : public OpConversionPattern<OpType> {
     VectorType distType = distTypeOrFailure.value();
     Location loc = op.getLoc();
 
-    // Materialize the original mask operands as Values.
-    SmallVector<Value> origOperands;
+    // Materialize the original mask bounds as Values.
+    SmallVector<Value> origBounds;
     if constexpr (std::is_same_v<OpType, vector::CreateMaskOp>) {
-      origOperands.append(op.getOperands().begin(), op.getOperands().end());
+      origBounds.append(op.getOperands().begin(), op.getOperands().end());
     } else {
       auto dimSizes = op.getMaskDimSizesAttr().asArrayRef();
       for (auto dimSize : dimSizes)
-        origOperands.push_back(
+        origBounds.push_back(
             arith::ConstantIndexOp::create(rewriter, loc, dimSize).getResult());
     }
 
     ArrayRef<int64_t> origShape = origType.getShape();
-    ArrayRef<int64_t> distShape = distType.getShape();
 
-    // Delinearize lane ID using the layout.
+    // Use computeDistributedCoords to get the coordinates each WI owns.
     Value laneId = gpu::LaneIdOp::create(rewriter, loc, rewriter.getIndexType(),
                                          /*upperBound=*/mlir::IntegerAttr());
-    auto maybeIds = layout.delinearizeId(rewriter, loc, laneId);
-    if (failed(maybeIds))
+    auto maybeCoordsVec =
+        layout.computeDistributedCoords(rewriter, loc, laneId, origShape);
+    if (failed(maybeCoordsVec))
       return rewriter.notifyMatchFailure(
-          op, "failed to delinearize lane ID from layout");
-    SmallVector<Value> laneIds = maybeIds.value();
+          op, "failed to compute distributed coordinates from layout");
 
-    // Compute new mask operands.
-    AffineExpr s0, s1;
-    bindSymbols(rewriter.getContext(), s0, s1);
-    SmallVector<Value> newOperands;
-    for (int i = 0, e = distShape.size(); i < e; ++i) {
-      if (origShape[i] == distShape[i]) {
-        // Dimension is not distributed, keep the original operand.
-        newOperands.push_back(origOperands[i]);
-      } else {
-        // new_bound = original_bound - lane_coord * dist_size
-        Value maskDimIdx = affine::makeComposedAffineApply(
-            rewriter, loc, s1 - s0 * distShape[i],
-            {laneIds[i], origOperands[i]});
-        newOperands.push_back(maskDimIdx);
+    SmallVector<SmallVector<Value>> coordsVec = maybeCoordsVec.value();
+    int64_t numElements = distType.getNumElements();
+    assert(static_cast<int64_t>(coordsVec.size()) == numElements &&
+           "number of coordinate sets must match number of distributed "
+           "elements");
+
+    // For each element, compare all coordinates against bounds.
+    Value trueVal =
+        arith::ConstantIntOp::create(rewriter, loc, /*value=*/1, /*width=*/1);
+    SmallVector<Value> maskBits;
+    for (auto &coords : coordsVec) {
+      Value inBounds = trueVal;
+      for (size_t i = 0; i < coords.size(); ++i) {
+        Value cmp = arith::CmpIOp::create(
+            rewriter, loc, arith::CmpIPredicate::slt, coords[i], origBounds[i]);
+        inBounds = arith::AndIOp::create(rewriter, loc, inBounds, cmp);
       }
+      maskBits.push_back(inBounds);
     }
 
-    auto newMask =
-        vector::CreateMaskOp::create(rewriter, loc, distType, newOperands);
-    rewriter.replaceOp(op, newMask.getResult());
+    // Build the distributed mask vector.
+    Value result;
+    if (numElements == 1) {
+      result =
+          vector::BroadcastOp::create(rewriter, loc, distType, maskBits[0]);
+    } else {
+      result =
+          vector::FromElementsOp::create(rewriter, loc, distType, maskBits);
+    }
+    rewriter.replaceOp(op, result);
     return success();
   }
 };

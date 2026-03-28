@@ -2,12 +2,6 @@
 // RUN: mlir-opt  --xevm-attach-target='module=xevm_* chip=pvc' --allow-unregistered-dialect \
 // RUN: --test-xegpu-sg-to-wi-distribute-experimental --split-input-file %s | FileCheck %s
 
-// CHECK-DAG: #[[$MAP:.*]] = affine_map<()[s0, s1] -> (-s0 + s1)>
-// CHECK-DAG: #[[$MAP1:.*]] = affine_map<()[s0] -> (-s0 + 4)>
-// CHECK-DAG: #[[$MAP2:.*]] = affine_map<()[s0, s1] -> (s0 * -2 + s1)>
-// CHECK-DAG: #[[$MAP3:.*]] = affine_map<()[s0] -> (-s0 + 2)>
-// CHECK-DAG: #[[$MAP4:.*]] = affine_map<()[s0] -> (s0 * -2 + 3)>
-
 gpu.module @xevm_module {
 // CHECK-LABEL: gpu.func @create_nd_tdesc
 // CHECK: %[[C0:.*]] = arith.constant 0 : index
@@ -504,10 +498,10 @@ gpu.func @vector_bitcast() {
 // CHECK-LABEL: gpu.func @create_mask_1d
 //  CHECK-SAME: (%[[M0:.*]]: index)
 //   CHECK-DAG:   %[[LANE:.*]] = gpu.lane_id
-//   CHECK-DAG:   %[[C16:.*]] = arith.constant 16 : index
-//       CHECK:   %[[LANE_ID:.*]] = arith.remui %[[LANE]], %[[C16]] : index
-//       CHECK:   %[[NEW_BOUND:.*]] = affine.apply #[[$MAP]]()[%[[LANE_ID]], %[[M0]]]
-//       CHECK:   %[[MASK:.*]] = vector.create_mask %[[NEW_BOUND]] : vector<1xi1>
+//   CHECK-DAG:   %[[TRUE:.*]] = arith.constant true
+//       CHECK:   %[[CMP:.*]] = arith.cmpi slt, %{{.*}}, %[[M0]] : index
+//       CHECK:   %[[AND:.*]] = arith.andi %[[TRUE]], %[[CMP]] : i1
+//       CHECK:   %[[MASK:.*]] = vector.broadcast %[[AND]] : i1 to vector<1xi1>
 //       CHECK:   gpu.return
 gpu.func @create_mask_1d(%m0: index) {
   %mask = vector.create_mask %m0
@@ -519,10 +513,10 @@ gpu.func @create_mask_1d(%m0: index) {
 // CHECK-LABEL: gpu.func @constant_mask_1d
 //   CHECK-DAG:   %[[C4:.*]] = arith.constant 4 : index
 //   CHECK-DAG:   %[[LANE:.*]] = gpu.lane_id
-//   CHECK-DAG:   %[[C16:.*]] = arith.constant 16 : index
-//       CHECK:   %[[LANE_ID:.*]] = arith.remui %[[LANE]], %[[C16]] : index
-//       CHECK:   %[[NEW_BOUND:.*]] = affine.apply #[[$MAP1]]()[%[[LANE_ID]]]
-//       CHECK:   %[[MASK:.*]] = vector.create_mask %[[NEW_BOUND]] : vector<1xi1>
+//   CHECK-DAG:   %[[TRUE:.*]] = arith.constant true
+//       CHECK:   %[[CMP:.*]] = arith.cmpi slt, %{{.*}}, %[[C4]] : index
+//       CHECK:   %[[AND:.*]] = arith.andi %[[TRUE]], %[[CMP]] : i1
+//       CHECK:   %[[MASK:.*]] = vector.broadcast %[[AND]] : i1 to vector<1xi1>
 //       CHECK:   gpu.return
 gpu.func @constant_mask_1d() {
   %mask = vector.constant_mask [4]
@@ -534,14 +528,16 @@ gpu.func @constant_mask_1d() {
 // CHECK-LABEL: gpu.func @create_mask_2d
 //  CHECK-SAME: (%[[M0:.*]]: index, %[[M1:.*]]: index)
 //   CHECK-DAG:   %[[LANE:.*]] = gpu.lane_id
-//   CHECK-DAG:   %[[C2:.*]] = arith.constant 2 : index
-//       CHECK:   %[[REM1:.*]] = arith.remui %[[LANE]], %[[C2]] : index
-//       CHECK:   %[[DIV:.*]] = arith.divui %[[LANE]], %[[C2]] : index
-//   CHECK-DAG:   %[[C8:.*]] = arith.constant 8 : index
-//       CHECK:   %[[REM2:.*]] = arith.remui %[[DIV]], %[[C8]] : index
-//       CHECK:   %[[BOUND0:.*]] = affine.apply #[[$MAP]]()[%[[REM2]], %[[M0]]]
-//       CHECK:   %[[BOUND1:.*]] = affine.apply #[[$MAP2]]()[%[[REM1]], %[[M1]]]
-//       CHECK:   %[[MASK:.*]] = vector.create_mask %[[BOUND0]], %[[BOUND1]] : vector<1x2xi1>
+//   CHECK-DAG:   %[[TRUE:.*]] = arith.constant true
+//       CHECK:   %[[CMP_R0:.*]] = arith.cmpi slt, %{{.*}}, %[[M0]] : index
+//       CHECK:   %[[AND0:.*]] = arith.andi %[[TRUE]], %[[CMP_R0]] : i1
+//       CHECK:   %[[CMP_C0:.*]] = arith.cmpi slt, %{{.*}}, %[[M1]] : index
+//       CHECK:   %[[BIT0:.*]] = arith.andi %[[AND0]], %[[CMP_C0]] : i1
+//       CHECK:   %[[CMP_R1:.*]] = arith.cmpi slt, %{{.*}}, %[[M0]] : index
+//       CHECK:   %[[AND1:.*]] = arith.andi %[[TRUE]], %[[CMP_R1]] : i1
+//       CHECK:   %[[CMP_C1:.*]] = arith.cmpi slt, %{{.*}}, %[[M1]] : index
+//       CHECK:   %[[BIT1:.*]] = arith.andi %[[AND1]], %[[CMP_C1]] : i1
+//       CHECK:   %[[MASK:.*]] = vector.from_elements %[[BIT0]], %[[BIT1]] : vector<1x2xi1>
 //       CHECK:   gpu.return
 gpu.func @create_mask_2d(%m0: index, %m1: index) {
   %mask = vector.create_mask %m0, %m1
@@ -551,17 +547,19 @@ gpu.func @create_mask_2d(%m0: index, %m1: index) {
 }
 
 // CHECK-LABEL: gpu.func @constant_mask_2d
-//   CHECK-DAG:   %[[C2_CONST:.*]] = arith.constant 2 : index
+//   CHECK-DAG:   %[[C2:.*]] = arith.constant 2 : index
 //   CHECK-DAG:   %[[C3:.*]] = arith.constant 3 : index
 //   CHECK-DAG:   %[[LANE:.*]] = gpu.lane_id
-//   CHECK-DAG:   %[[C2:.*]] = arith.constant 2 : index
-//       CHECK:   %[[REM1:.*]] = arith.remui %[[LANE]], %[[C2]] : index
-//       CHECK:   %[[DIV:.*]] = arith.divui %[[LANE]], %[[C2]] : index
-//   CHECK-DAG:   %[[C8:.*]] = arith.constant 8 : index
-//       CHECK:   %[[REM2:.*]] = arith.remui %[[DIV]], %[[C8]] : index
-//       CHECK:   %[[BOUND0:.*]] = affine.apply #[[$MAP3]]()[%[[REM2]]]
-//       CHECK:   %[[BOUND1:.*]] = affine.apply #[[$MAP4]]()[%[[REM1]]]
-//       CHECK:   %[[MASK:.*]] = vector.create_mask %[[BOUND0]], %[[BOUND1]] : vector<1x2xi1>
+//   CHECK-DAG:   %[[TRUE:.*]] = arith.constant true
+//       CHECK:   %[[CMP_R0:.*]] = arith.cmpi slt, %{{.*}}, %[[C2]] : index
+//       CHECK:   %[[AND0:.*]] = arith.andi %[[TRUE]], %[[CMP_R0]] : i1
+//       CHECK:   %[[CMP_C0:.*]] = arith.cmpi slt, %{{.*}}, %[[C3]] : index
+//       CHECK:   %[[BIT0:.*]] = arith.andi %[[AND0]], %[[CMP_C0]] : i1
+//       CHECK:   %[[CMP_R1:.*]] = arith.cmpi slt, %{{.*}}, %[[C2]] : index
+//       CHECK:   %[[AND1:.*]] = arith.andi %[[TRUE]], %[[CMP_R1]] : i1
+//       CHECK:   %[[CMP_C1:.*]] = arith.cmpi slt, %{{.*}}, %[[C3]] : index
+//       CHECK:   %[[BIT1:.*]] = arith.andi %[[AND1]], %[[CMP_C1]] : i1
+//       CHECK:   %[[MASK:.*]] = vector.from_elements %[[BIT0]], %[[BIT1]] : vector<1x2xi1>
 //       CHECK:   gpu.return
 gpu.func @constant_mask_2d() {
   %mask = vector.constant_mask [2, 3]
