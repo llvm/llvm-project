@@ -704,6 +704,8 @@ void M68kInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   }
 
   // Asymmetric register copies
+  // NOTE: There is no implicit sext/zext occurring during these moves, so the
+  // upper bits will be undefined.
   // 8 -> 16
   else if (M68k::DR8RegClass.contains(SrcReg) &&
            M68k::XR16RegClass.contains(DstReg)) {
@@ -720,6 +722,7 @@ void M68kInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   // Copy from CCR
   // NOTE: M68000 uses MOVE from SR to copy from CCR, all other variants use
+  // MOVE from CCR.
   else if (SrcReg == M68k::CCR) {
     if (M68k::DR8RegClass.contains(DstReg) ||
         M68k::DR16RegClass.contains(DstReg) ||
@@ -754,6 +757,19 @@ void M68kInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     llvm_unreachable("Cannot emit physreg copy instruction");
   }
 
+  // FIXME
+  // Below is a workaround to prevent a live CCR from being killed by the COPY
+  // instruction. LLVM sometimes inserts a COPY pseudo instruction between
+  // compare and branch during MIR generation (e.g. during PHI node elimination)
+  // without any idea that on M68k, this is extremely likely to implicitly kill
+  // the CCR.
+  // The workaround checks whether CCR is live during this copy, and if so,
+  // backs up CCR and restores it after the copy. It's inefficient and prevents
+  // M68000-targeted builds from running on 010+ (because 000 uses MOVE from SR
+  // and 010+ uses MOVE from CCR).
+  // The fix condition is to prevent COPY from ever being inserted while CCR is
+  // live (which would also stop this workaround from ever triggering).
+
   unsigned CCRSrcReg = STI.isM68000() ? M68k::SR : M68k::CCR;
 
   // Get the live registers right before the COPY instruction. If CCR is
@@ -782,7 +798,7 @@ void M68kInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   // CCR is live, so we must restore it after the copy. Prepare push/pop ops.
   // 68000 must use MOVE from SR, 68010+ must use MOVE from CCR. In either
-  // case, MOVE to CCR masks out the upper byte.
+  // case, upon moving back, MOVE to CCR will mask out the upper byte anyway.
 
   // Look for an available data register for the CCR, or push to stack if
   // there are none
