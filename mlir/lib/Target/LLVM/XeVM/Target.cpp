@@ -106,11 +106,6 @@ gpu::GPUModuleOp SerializeGPUModuleBase::getGPUModuleOp() {
   return dyn_cast<gpu::GPUModuleOp>(&SerializeGPUModuleBase::getOperation());
 }
 
-// There is 1 way to finalize IL to native code: IGC
-// There are 2 ways to access IGC: AOT (ocloc) and JIT (L0 runtime).
-// - L0 runtime consumes IL and is external to MLIR codebase (rt wrappers).
-// - `ocloc` tool can be "queried" from within MLIR.
-
 // ----------------------------------------------------------------------------
 // compile via the ocloc shared-library API (in-process, no temp files).  Only
 // compiled when the library is available at build time.
@@ -397,6 +392,10 @@ SPIRVTranslateModule(Module *M, std::string &SpirvObj, std::string &ErrMsg,
 } // namespace llvm
 #endif
 
+// There is 1 way to finalize IL to native code: IGC
+// There are 2 ways to access IGC: AOT (ocloc) and JIT (L0 runtime).
+// - L0 runtime consumes IL and is external to MLIR codebase (rt wrappers).
+// - `ocloc` tool can be "queried" from within MLIR.
 FailureOr<SmallVector<char, 0>>
 SPIRVSerializer::moduleToObject(llvm::Module &llvmModule) {
 #define DEBUG_TYPE "serialize-to-llvm"
