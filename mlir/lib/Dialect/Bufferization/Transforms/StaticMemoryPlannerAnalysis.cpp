@@ -6,24 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements an analysis-only pass that discovers same-block
-// memref.alloc / memref.dealloc pairs eligible for static memory planning.
+// Walk each block in a function and find memref.alloc / memref.dealloc pairs
+// that can be reasoned about statically. For each eligible alloc compute a
+// conservative alias-aware lifetime interval via BufferViewFlowAnalysis and
+// report it as an op remark. Ineligible allocs get a skip reason instead.
 //
-// For each eligible allocation the pass:
-//   - Computes a conservative alias-aware lifetime interval using
-//     BufferViewFlowAnalysis.
-//   - Collects metadata (static size in bytes, alignment, memory space).
-//   - Emits the results as op remarks on the alloc op.
-//
-// Ineligible allocations also receive a remark describing the skip reason.
-//
-// This pass is the first upstream step for the static memory planner project.
-// It is intentionally analysis-only (no IR mutations) and covers the simplest
-// structured case: same-block, static-shape, non-escaping allocations not
-// nested inside loops or conditionals.
-//
-// Expected pipeline position: after ownership-based-buffer-deallocation and
-// bufferization-lower-deallocations.
+// Meant to run after ownership-based-buffer-deallocation followed by
+// bufferization-lower-deallocations, once all pairs are explicit in the IR.
 //
 //===----------------------------------------------------------------------===//
 
@@ -56,9 +45,8 @@ namespace {
 // Helper utilities
 //===----------------------------------------------------------------------===//
 
-/// Returns true if `op` is nested inside any loop or conditional region,
-/// i.e., any ancestor op (up to but not including the nearest
-/// IsIsolatedFromAbove boundary) is a loop or conditional.
+/// Returns true if `op` lives inside a loop or conditional body. Stops
+/// walking at function/isolated-region boundaries.
 static bool isNestedInLoopOrConditional(Operation *op) {
   Operation *parent = op->getParentOp();
   while (parent) {
@@ -73,8 +61,8 @@ static bool isNestedInLoopOrConditional(Operation *op) {
   return false;
 }
 
-/// Returns the unique user of `value` that carries a MemoryEffects::Free
-/// effect, or nullptr when there are zero or multiple such users.
+/// Returns the single user of `value` with a MemoryEffects::Free effect, or
+/// nullptr if there are zero or more than one.
 static Operation *findUniqueFreeSideEffectUser(Value value) {
   Operation *freeUser = nullptr;
   for (Operation *user : value.getUsers()) {
@@ -86,7 +74,7 @@ static Operation *findUniqueFreeSideEffectUser(Value value) {
     for (const auto &effect : effects) {
       if (isa<MemoryEffects::Free>(effect.getEffect())) {
         if (freeUser)
-          return nullptr; // Multiple free users — not uniquely deallocated.
+          return nullptr; // more than one free user, not uniquely deallocated
         freeUser = user;
       }
     }
@@ -94,7 +82,7 @@ static Operation *findUniqueFreeSideEffectUser(Value value) {
   return freeUser;
 }
 
-/// Builds a block-local operation index map: op → position in block order.
+/// Numbers each op in `block` by its position (0-based).
 static DenseMap<Operation *, unsigned> buildOpIndexMap(Block *block) {
   DenseMap<Operation *, unsigned> indexMap;
   unsigned idx = 0;
@@ -103,8 +91,7 @@ static DenseMap<Operation *, unsigned> buildOpIndexMap(Block *block) {
   return indexMap;
 }
 
-/// Returns the static allocation size in bytes for `type`, or -1 if it cannot
-/// be determined (e.g., non-integer/float element types such as index).
+/// Returns the size of `type` in bytes, or -1 for non int/float element types.
 static int64_t getStaticSizeBytes(MemRefType type) {
   Type elemType = type.getElementType();
   if (!elemType.isIntOrFloat())
@@ -130,31 +117,23 @@ public:
     if (func.isExternal())
       return;
 
-    // Build alias/view-flow analysis once for the entire function.
-    // BufferViewFlowAnalysis::resolve(v) gives the transitive closure of all
-    // values derived from v (subviews, expands, casts, etc.).
+    // Build alias analysis once; we call resolve() per alloc below.
     BufferViewFlowAnalysis aliasAnalysis(func);
 
-    // Lazily-populated per-block operation index maps.
-    // Keyed by Block*; maps each Op* to its zero-based position in the block.
+    // Op index maps, built on demand per block.
     DenseMap<Block *, DenseMap<Operation *, unsigned>> blockIndexMaps;
 
-    // Walk every memref.alloc in the function and classify it.
     func.walk([&](memref::AllocOp allocOp) {
       auto memrefType = allocOp.getType();
 
-      //----------------------------------------------------------------
-      // Eligibility check 1: static shape.
-      //----------------------------------------------------------------
+      // Skip dynamic shapes; size is not known at compile time.
       if (!memrefType.hasStaticShape()) {
         ++numSkipDynamic;
         (void)allocOp.emitRemark("static-memory-planner: skip: dynamic shape");
         return;
       }
 
-      //----------------------------------------------------------------
-      // Eligibility check 2: not nested inside a loop or conditional.
-      //----------------------------------------------------------------
+      // Skip allocs inside loops or conditionals.
       if (isNestedInLoopOrConditional(allocOp)) {
         ++numSkipNested;
         (void)allocOp.emitRemark(
@@ -162,9 +141,7 @@ public:
         return;
       }
 
-      //----------------------------------------------------------------
-      // Eligibility check 3: unique same-block dealloc.
-      //----------------------------------------------------------------
+      // Need exactly one dealloc in the same block to form a pair.
       Value allocResult = allocOp.getResult();
       Operation *deallocOp = findUniqueFreeSideEffectUser(allocResult);
       if (!deallocOp || deallocOp->getBlock() != allocOp->getBlock()) {
@@ -176,12 +153,7 @@ public:
 
       Block *block = allocOp->getBlock();
 
-      //----------------------------------------------------------------
-      // Eligibility check 4: no cross-block alias or escaping use.
-      // Resolve the full alias set and verify every user is in the same
-      // block (or is the dealloc itself). A use in func.return also
-      // counts as escaping.
-      //----------------------------------------------------------------
+      // Skip if any alias escapes or is used in a different block.
       const BufferViewFlowAnalysis::ValueSetT &aliases =
           aliasAnalysis.resolve(allocResult);
       bool escapes = false;
@@ -204,11 +176,7 @@ public:
         return;
       }
 
-      //----------------------------------------------------------------
-      // Compute alias-aware lifetime interval.
-      // Start  = block-local index of the alloc op.
-      // End    = max(dealloc index, last use index of any alias in block).
-      //----------------------------------------------------------------
+      // Interval: [allocIdx, max(deallocIdx, last alias use in block)].
       auto &indexMap = blockIndexMaps.try_emplace(block).first->second;
       if (indexMap.empty())
         indexMap = buildOpIndexMap(block);
@@ -221,8 +189,7 @@ public:
         for (Operation *user : alias.getUsers()) {
           if (user == deallocOp)
             continue;
-          // Lift the user to the ancestor op that lives directly in `block`
-          // (handles users inside nested regions attached to block-level ops).
+          // Users in nested regions: lift to the ancestor in this block.
           if (Operation *ancestor = block->findAncestorOpInBlock(*user)) {
             auto it = indexMap.find(ancestor);
             if (it != indexMap.end() && it->second > endIdx)
@@ -231,15 +198,9 @@ public:
         }
       }
 
-      //----------------------------------------------------------------
-      // Collect metadata.
-      //----------------------------------------------------------------
       int64_t sizeBytes = getStaticSizeBytes(memrefType);
       std::optional<uint64_t> alignment = allocOp.getAlignment();
 
-      //----------------------------------------------------------------
-      // Emit eligibility remark and update statistics.
-      //----------------------------------------------------------------
       ++numEligible;
 
       LDBG() << "eligible: " << allocOp << " size=" << sizeBytes

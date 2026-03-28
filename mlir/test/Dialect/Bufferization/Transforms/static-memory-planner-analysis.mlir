@@ -13,10 +13,8 @@
 //   3: memref.dealloc %alloc1
 //   4: return
 //
-// alloc0 interval = [0, 1] — dealloc is lastUse, no other users.
-// alloc1 interval = [2, 3] — dealloc is lastUse, no other users.
-// The two intervals are non-overlapping: a future planner can reuse the same
-// static region for both buffers.
+// alloc0 interval = [0, 1] — dealloc is the last use, no other users.
+// alloc1 interval = [2, 3] — same. The two intervals don't overlap.
 
 func.func @simple_sequential() {
   // expected-remark @below {{static-memory-planner: eligible: size=4096 bytes, interval=[0,1]}}
@@ -31,8 +29,7 @@ func.func @simple_sequential() {
 // -----
 
 // Test 2: Dynamic-shape allocation — skipped.
-// The alloc has a runtime dimension (%n), so the pass cannot compute a static
-// size or reason about it conservatively for static planning.
+// The alloc has a runtime dimension (%n); size is unknown at compile time.
 
 func.func @dynamic_shape_skipped(%n: index) {
   // expected-remark @below {{static-memory-planner: skip: dynamic shape}}
@@ -43,8 +40,7 @@ func.func @dynamic_shape_skipped(%n: index) {
 // -----
 
 // Test 3: No same-block dealloc — skipped.
-// The alloc is unmatched (no memref.dealloc in any block), so the pass
-// cannot establish a lifetime interval.
+// No memref.dealloc anywhere, so we can't form a pair.
 
 func.func @no_dealloc_skipped() {
   // expected-remark @below {{static-memory-planner: skip: no unique same-block dealloc}}
@@ -55,8 +51,7 @@ func.func @no_dealloc_skipped() {
 // -----
 
 // Test 4: Alloc inside scf.if (conditional) — skipped.
-// Allocations nested inside conditionals are excluded from v1 scope because
-// their liveness depends on runtime predicate evaluation.
+// Liveness depends on a runtime predicate, so we skip it.
 
 func.func @conditional_alloc_skipped(%cond: i1) {
   scf.if %cond {
@@ -71,8 +66,7 @@ func.func @conditional_alloc_skipped(%cond: i1) {
 // -----
 
 // Test 5: Alloc inside scf.for (loop) — skipped.
-// Allocations inside loop bodies may execute a dynamic number of times;
-// static planning requires reasoning outside loop nests.
+// Iteration count is not known statically; skip the alloc.
 
 func.func @loop_alloc_skipped(%lb: index, %ub: index, %step: index) {
   scf.for %i = %lb to %ub step %step {
@@ -94,14 +88,31 @@ func.func @loop_alloc_skipped(%lb: index, %ub: index, %step: index) {
 // endIdx = max(deallocIdx=2, lastAliasUse=1) = 2.
 // Interval = [0, 2].
 //
-// This test verifies that the presence of a derived alias does not cause
-// misclassification or a crash.
-
 func.func @view_alias_tracked() {
   // expected-remark @below {{static-memory-planner: eligible: size=4096 bytes, interval=[0,2]}}
   %alloc = memref.alloc() : memref<1024xf32>
   %view = memref.expand_shape %alloc [[0, 1]] output_shape [2, 512]
           : memref<1024xf32> into memref<2x512xf32>
+  memref.dealloc %alloc : memref<1024xf32>
+  return
+}
+
+// -----
+
+// Test 7: Cross-block use — skipped.
+// %alloc has a unique same-block dealloc, so it passes the dealloc check.
+// However it is also used inside an scf.if body (a different block), which
+// the alias/escape analysis detects as a cross-block use.
+
+func.func @cross_block_use_skipped(%cond: i1) {
+  // expected-remark @below {{static-memory-planner: skip: escaping or cross-block alias}}
+  %alloc = memref.alloc() : memref<1024xf32>
+  scf.if %cond {
+    %c0 = arith.constant 0 : index
+    %cst = arith.constant 0.0 : f32
+    memref.store %cst, %alloc[%c0] : memref<1024xf32>
+    scf.yield
+  }
   memref.dealloc %alloc : memref<1024xf32>
   return
 }
