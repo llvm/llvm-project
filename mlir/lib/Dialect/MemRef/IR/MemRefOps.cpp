@@ -1593,6 +1593,12 @@ LogicalResult GenericAtomicRMWOp::verify() {
   if (getResult().getType() != body.getArgument(0).getType())
     return emitOpError("expected block argument of the same type result type");
 
+  MemRefType memrefType = getMemref().getType();
+  if (getIndices().size() != static_cast<size_t>(memrefType.getRank()))
+    return emitOpError("index count (")
+           << getIndices().size() << ") does not match memref rank ("
+           << memrefType.getRank() << ")";
+
   bool hasSideEffects =
       body.walk([&](Operation *nestedOp) {
             if (isMemoryEffectFree(nestedOp))

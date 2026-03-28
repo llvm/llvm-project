@@ -1125,6 +1125,17 @@ func.func @atomic_yield_type_mismatch(%I: memref<10xf32>, %i : index) {
 
 // -----
 
+func.func @generic_atomic_rmw_rank_mismatch(%arg0: memref<i32>, %idx: index) {
+  // expected-error@+1 {{index count (1) does not match memref rank (0)}}
+  %r = memref.generic_atomic_rmw %arg0[%idx] : memref<i32> {
+  ^bb0(%v: i32):
+    memref.atomic_yield %v : i32
+  }
+  return
+}
+
+// -----
+
 #map0 = affine_map<(d0) -> (d0 floordiv 8, d0 mod 8)>
 func.func @memref_realloc_layout(%src : memref<256xf32, #map0>) -> memref<?xf32>{
   // expected-error@+1 {{unsupported layout}}
