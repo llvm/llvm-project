@@ -3352,7 +3352,7 @@ unsigned SIInstrInfo::insertBranch(MachineBasicBlock &MBB,
   ArrayRef<MachineOperand> ImpConds =
       Cond.drop_front(Opcode == AMDGPU::S_CBRANCH_I_FORK ? 2 : 1);
   for (auto [ImpOp, ImpCond] :
-       zip_equal(CondBrBuilder->implicit_operands(), ImpConds)) {
+       zip_first(CondBrBuilder->implicit_operands(), ImpConds)) {
     ImpOp.isDef() ? ImpOp.setIsDead(ImpCond.isDead())
                   : ImpOp.setIsKill(ImpCond.isKill());
     ImpOp.setIsUndef(ImpCond.isUndef());
