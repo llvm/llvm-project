@@ -2853,12 +2853,11 @@ static bool interp__builtin_ia32_dbpsadbw(InterpState &S, CodePtr OpPC,
         unsigned A1Val, A2Val, BVal;
         INT_TYPE_SWITCH_NO_BOOL(SrcElemT, {
           // Treat as unsigned bytes
-          A1Val = static_cast<uint8_t>(
-              Src1.elem<T>(LaneStart + BlockOffsetA + K));
-          A2Val = static_cast<uint8_t>(
-              Src1.elem<T>(LaneStart + BlockOffsetB + K));
-          BVal = static_cast<uint8_t>(
-              Src2.elem<T>(LaneStart + 4 * J + K));
+          A1Val =
+              static_cast<uint8_t>(Src1.elem<T>(LaneStart + BlockOffsetA + K));
+          A2Val =
+              static_cast<uint8_t>(Src1.elem<T>(LaneStart + BlockOffsetB + K));
+          BVal = static_cast<uint8_t>(Src2.elem<T>(LaneStart + 4 * J + K));
         });
         SadA += (BVal > A1Val) ? (BVal - A1Val) : (A1Val - BVal);
         SadB += (BVal > A2Val) ? (BVal - A2Val) : (A2Val - BVal);
