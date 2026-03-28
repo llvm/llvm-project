@@ -4826,6 +4826,24 @@ the configuration (without a prefix: ``Auto``).
          #endif
        #endif
 
+  * ``PPDIS_BeforeHashWithCode`` (in configuration: ``BeforeHashWithCode``)
+    Indents directives before the hash and align with the surrounding
+    C++ indentation level. Code inside a PP conditional block is indented
+    one further level relative to the directive that guards it.
+
+    .. code-block:: c++
+
+      enum class Feature {
+        NONE,
+        #if PLATFORM_FULL
+          WIFI,
+          #ifdef HAS_BLE
+            BLE,
+          #endif
+        #endif
+        BASIC
+      };
+
   * ``PPDIS_Leave`` (in configuration: ``Leave``)
     Leaves indentation of directives as-is.
 

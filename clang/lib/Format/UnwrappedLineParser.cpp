@@ -1006,7 +1006,12 @@ void UnwrappedLineParser::parseChildBlock() {
 
 void UnwrappedLineParser::parsePPDirective() {
   assert(FormatTok->is(tok::hash) && "'#' expected");
-  ScopedMacroState MacroState(*Line, Tokens, FormatTok);
+  // PP directives are indented at the surrounding code level. Preserving
+  // Line->Level allows ScopedMacroState to keep the code context level
+  // instead of resetting it to 0.
+  const bool PreserveLevel =
+      Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHashWithCode;
+  ScopedMacroState MacroState(*Line, Tokens, FormatTok, PreserveLevel);
 
   nextToken();
 
@@ -1234,6 +1239,18 @@ void UnwrappedLineParser::parsePPUnknown() {
     nextToken();
   if (Style.IndentPPDirectives != FormatStyle::PPDIS_None)
     Line->Level += PPBranchLevel + 1;
+  if (Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHashWithCode &&
+      !PPStack.empty() && PPStack.back().Kind == PP_Unreachable) {
+    // PP directives inside unreachable branches must not be emitted: in
+    // multi-pass formatting the surrounding C++ braces may have been skipped
+    // (PP_Unreachable code is not parsed), leaving Line->Level too low. The
+    // resulting incorrect replacement would conflict with the correct one
+    // produced by the reachable pass, causing an "overlapping replacement"
+    // error and an empty output. Simply discard the accumulated tokens so
+    // the reachable pass wins.
+    Line->Tokens.clear();
+    return;
+  }
   addUnwrappedLine();
 }
 
@@ -2521,11 +2538,31 @@ bool UnwrappedLineParser::parseBracedList(bool IsAngleBracket, bool IsEnum) {
         parseChildBlock();
       }
     }
+    // For BeforeHashWithCode enum bodies: whenever readToken just processed a
+    // PP directive and returned the first post-PP token (AtEndOfPPLine ==
+    // true), flush the accumulated pre-PP body tokens as their own
+    // UnwrappedLine. This gives each PP-separated segment its own line so the
+    // IsACodeLineInsidePPBlock level-boost in addUnwrappedLine can apply the
+    // correct indentation.
+    if (IsEnum && !IsAngleBracket &&
+        Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHashWithCode &&
+        Style.AllowShortEnumsOnASingleLine && AtEndOfPPLine &&
+        !Line->Tokens.empty()) {
+      addUnwrappedLine();
+    }
     if (FormatTok->is(IsAngleBracket ? tok::greater : tok::r_brace)) {
       if (IsEnum) {
         FormatTok->setBlockKind(BK_Block);
-        if (!Style.AllowShortEnumsOnASingleLine)
+        if (!Style.AllowShortEnumsOnASingleLine) {
           addUnwrappedLine();
+        } else if (Style.IndentPPDirectives ==
+                       FormatStyle::PPDIS_BeforeHashWithCode &&
+                   !Line->Tokens.empty()) {
+          // For BeforeHashWithCode, flush any remaining enum body tokens
+          // before the closing brace so they get their own UnwrappedLine
+          // with the correct indentation level.
+          addUnwrappedLine();
+        }
       }
       nextToken();
       return !HasError;
@@ -3882,12 +3919,15 @@ bool UnwrappedLineParser::parseEnum() {
   }
   // Parse enum body.
   nextToken();
-  if (!Style.AllowShortEnumsOnASingleLine) {
+  const bool UpdateLevel =
+      !Style.AllowShortEnumsOnASingleLine ||
+      Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHashWithCode;
+  if (UpdateLevel) {
     addUnwrappedLine();
     Line->Level += 1;
   }
   bool HasError = !parseBracedList(/*IsAngleBracket=*/false, /*IsEnum=*/true);
-  if (!Style.AllowShortEnumsOnASingleLine)
+  if (UpdateLevel)
     Line->Level -= 1;
   if (HasError) {
     if (FormatTok->is(tok::semi))
@@ -4647,7 +4687,27 @@ void UnwrappedLineParser::addUnwrappedLine(LineLevel AdjustLevel) {
     // At the top level we only get here when no unexpansion is going on, or
     // when conditional formatting led to unfinished macro reconstructions.
     assert(!Reconstruct || (CurrentLines != &Lines) || !PPStack.empty());
+    // For BeforeHashWithCode, code lines inside PP conditional blocks must be
+    // indented by the PP nesting depth so that code appears more indented than
+    // its enclosing PP directive (mirroring how C++ block content is indented
+    // relative to the opening brace). PP directive lines already have
+    // PPBranchLevel+1 added in parsePPUnknown; code lines need the same
+    // treatment. We temporarily adjust Level here and restore it afterwards so
+    // that the next line still starts from the correct C++ brace level.
+    // For BeforeHashWithCode, code lines inside PP blocks need their level
+    // raised to match the enclosing PP directive's nesting depth. Using
+    // Line->PPLevel (set at first-token push time) instead of the current
+    // PPBranchLevel, which may have been altered by later PP directives that
+    // readToken processed after the code tokens but before addUnwrappedLine.
+    const bool IsACodeLineInsidePPBlock =
+        Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHashWithCode &&
+        !Line->InPPDirective && Line->PPLevel > 0;
+    const unsigned PPAdj = IsACodeLineInsidePPBlock ? Line->PPLevel : 0;
+    if (IsACodeLineInsidePPBlock)
+      Line->Level += PPAdj;
     CurrentLines->push_back(std::move(*Line));
+    if (IsACodeLineInsidePPBlock)
+      Line->Level -= PPAdj;
   }
   Line->Tokens.clear();
   Line->MatchingOpeningBlockLineIndex = UnwrappedLine::kInvalidIndex;
@@ -4817,9 +4877,9 @@ void UnwrappedLineParser::nextToken(int LevelDifference) {
   if (Style.isVerilog()) {
     // Blocks in Verilog can have `begin` and `end` instead of braces.  For
     // keywords like `begin`, we can't treat them the same as left braces
-    // because some contexts require one of them.  For example structs use
+    // because some contexts require one of them. For example structs use
     // braces and if blocks use keywords, and a left brace can occur in an if
-    // statement, but it is not a block.  For keywords like `end`, we simply
+    // statement, but it is not a block. For keywords like `end`, we simply
     // treat them the same as right braces.
     if (Keywords.isVerilogEnd(*FormatTok))
       FormatTok->Tok.setKind(tok::r_brace);
@@ -4933,17 +4993,45 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
       // If there is an unfinished unwrapped line, we flush the preprocessor
       // directives only after that unwrapped line was finished later.
       bool SwitchToPreprocessorLines = !Line->Tokens.empty();
+      // Save CurrentLines before ScopedLineState may switch it to
+      // PreprocessorDirectives, so we can detect child-block contexts later.
+      const auto *OrigCurrentLines = CurrentLines;
       ScopedLineState BlockState(*this, SwitchToPreprocessorLines);
+      // For BeforeHashWithCode, the PP directive is indented at the surrounding
+      // code level. Apply LevelDifference to get the correct code context level
+      // (e.g. leaving a block), but do NOT apply PPBranchLevel since PP
+      // directives should align with the code rather than nesting PP levels.
       assert((LevelDifference >= 0 ||
               static_cast<unsigned>(-LevelDifference) <= Line->Level) &&
              "LevelDifference makes Line->Level negative");
       Line->Level += LevelDifference;
-      // Comments stored before the preprocessor directive need to be output
-      // before the preprocessor directive, at the same level as the
-      // preprocessor directive, as we consider them to apply to the directive.
-      if (Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHash &&
-          PPBranchLevel > 0) {
-        Line->Level += PPBranchLevel;
+      if (Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHashWithCode) {
+        // When this PP directive is being deferred to PreprocessorDirectives
+        // (SwitchToPreprocessorLines=true), it may be encountered at a deeper
+        // C++ brace nesting than the opening PP directive of the same
+        // conditional block. This happens inside child-block contexts (e.g.
+        // lambda bodies): the opening #if is processed by readToken() before
+        // parseChildBlock()'s ScopedLineState adds +1 to Line->Level, while
+        // the closing #endif is processed after, giving it a Level one higher
+        // than the #if. Detect child-block context by checking OrigCurrentLines
+        // (saved before ScopedLineState may switch CurrentLines): inside a
+        // child block it points to the parent's token children list rather than
+        // the top-level Lines vector. Use the level recorded for the first
+        // deferred directive (the opening #if) so that all directives of the
+        // same conditional block share the same C++ level.
+        if (SwitchToPreprocessorLines && !PreprocessorDirectives.empty() &&
+            OrigCurrentLines != &Lines) {
+          Line->Level = PreprocessorDirectives.front().Level;
+        }
+      } else {
+        // Comments stored before the preprocessor directive need to be output
+        // before the preprocessor directive, at the same level as the
+        // preprocessor directive, as we consider them to apply to the
+        // directive.
+        if (Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHash &&
+            PPBranchLevel > 0) {
+          Line->Level += PPBranchLevel;
+        }
       }
       assert(Line->Level >= Line->UnbracedBodyLevel);
       Line->Level -= Line->UnbracedBodyLevel;
@@ -5129,6 +5217,15 @@ UnwrappedLineParser::parseMacroCall() {
 }
 
 void UnwrappedLineParser::pushToken(FormatToken *Tok) {
+  // For BeforeHashWithCode style, record the actual PP nesting depth when the
+  // first token of a code (non-PP) line is pushed. This captures the true PP
+  // context at line-start time, before readToken may subsequently process
+  // more PP directives and change PPBranchLevel before addUnwrappedLine.
+  if (Line->Tokens.empty() && !Line->InPPDirective &&
+      Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHashWithCode) {
+    Line->PPLevel =
+        PPBranchLevel >= 0 ? static_cast<unsigned>(PPBranchLevel + 1) : 0;
+  }
   Line->Tokens.push_back(UnwrappedLineNode(Tok));
   if (AtEndOfPPLine) {
     auto &Tok = *Line->Tokens.back().Tok;

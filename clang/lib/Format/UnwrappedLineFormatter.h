@@ -47,7 +47,8 @@ private:
                         const AnnotatedLine *PreviousLine,
                         const AnnotatedLine *PrevPrevLine,
                         const SmallVectorImpl<AnnotatedLine *> &Lines,
-                        unsigned Indent, unsigned NewlineIndent);
+                        unsigned Indent, unsigned NewlineIndent,
+                        unsigned PPNestingLevel = 0);
 
   /// Returns the column limit for a line, taking into account whether we
   /// need an escaped newline due to a continued preprocessor directive.

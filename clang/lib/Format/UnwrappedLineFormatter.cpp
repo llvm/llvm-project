@@ -68,6 +68,14 @@ public:
                    ? (Line.Level - Line.PPLevel) * Style.IndentWidth +
                          AdditionalIndent
                    : Line.First->OriginalColumn;
+    } else if (Style.IndentPPDirectives ==
+                   FormatStyle::PPDIS_BeforeHashWithCode &&
+               Line.InPPDirective && !Line.InMacroBody) {
+      // For BeforeHashWithCode, PP directives are indented at the surrounding
+      // code level, using the same indentation as regular code (not
+      // PPIndentWidth).
+      Indent = getIndent(Line.Level);
+      Indent += AdditionalIndent;
     } else if (Style.IndentPPDirectives != FormatStyle::PPDIS_None &&
                (Line.InPPDirective ||
                 (Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHash &&
@@ -1556,7 +1564,8 @@ unsigned UnwrappedLineFormatter::format(
       if (!DryRun) {
         bool LastLine = TheLine.First->is(tok::eof);
         formatFirstToken(TheLine, PreviousLine, PrevPrevLine, Lines, Indent,
-                         LastLine ? LastStartColumn : NextStartColumn + Indent);
+                         LastLine ? LastStartColumn : NextStartColumn + Indent,
+                         /*PPNestingLevel=*/0);
       }
 
       NextLine = Joiner.getNextMergedLine(DryRun, IndentTracker);
@@ -1605,7 +1614,8 @@ unsigned UnwrappedLineFormatter::format(
         if (ReformatLeadingWhitespace) {
           formatFirstToken(TheLine, PreviousLine, PrevPrevLine, Lines,
                            TheLine.First->OriginalColumn,
-                           TheLine.First->OriginalColumn);
+                           TheLine.First->OriginalColumn,
+                           /*PPNestingLevel=*/0);
         } else {
           Whitespaces->addUntouchableToken(*TheLine.First,
                                            TheLine.InPPDirective);
@@ -1738,7 +1748,7 @@ void UnwrappedLineFormatter::formatFirstToken(
     const AnnotatedLine &Line, const AnnotatedLine *PreviousLine,
     const AnnotatedLine *PrevPrevLine,
     const SmallVectorImpl<AnnotatedLine *> &Lines, unsigned Indent,
-    unsigned NewlineIndent) {
+    unsigned NewlineIndent, unsigned PPNestingLevel) {
   FormatToken &RootToken = *Line.First;
   if (RootToken.is(tok::eof)) {
     unsigned Newlines = std::min(

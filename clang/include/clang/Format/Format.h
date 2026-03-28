@@ -3368,6 +3368,22 @@ struct FormatStyle {
     ///    #endif
     /// \endcode
     PPDIS_BeforeHash,
+    /// Indents directives before the hash and align with the surrounding
+    /// C++ indentation level. Code inside a PP conditional block is indented
+    /// one further level relative to the directive that guards it.
+    /// \code
+    ///   enum class Feature {
+    ///     NONE,
+    ///     #if PLATFORM_FULL
+    ///       WIFI,
+    ///       #ifdef HAS_BLE
+    ///         BLE,
+    ///       #endif
+    ///     #endif
+    ///     BASIC
+    ///   };
+    /// \endcode
+    PPDIS_BeforeHashWithCode,
     /// Leaves indentation of directives as-is.
     /// \note
     ///  Ignores ``PPIndentWidth``.
