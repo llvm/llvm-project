@@ -13,10 +13,10 @@
 ; RUN:     --check-prefixes=CHECK,ZVFBFMIN,ZVFHMIN,ZVFHMIN64
 ; RUN: llc -mtriple=riscv32 -mattr=+zfh,+zvfhmin,+experimental-zvfbfa,+v \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s \
-; RUN:     --check-prefixes=CHECK,ZVFBFA,ZVFHMIN,ZVFHMIN32
+; RUN:     --check-prefixes=CHECK,ZVFHMIN,ZVFHMIN32,ZVFBFA
 ; RUN: llc -mtriple=riscv64 -mattr=+zfh,+zvfhmin,+experimental-zvfbfa,+v \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s \
-; RUN:     --check-prefixes=CHECK,ZVFBFA,ZVFHMIN,ZVFHMIN64
+; RUN:     --check-prefixes=CHECK,ZVFHMIN,ZVFHMIN64,ZVFBFA
 
 ; FIXME: The scalar/vector operations ('fv' tests) should swap operands and
 ; condition codes accordingly in order to generate a 'vf' instruction.

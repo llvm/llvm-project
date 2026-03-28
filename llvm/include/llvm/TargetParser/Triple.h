@@ -252,9 +252,11 @@ public:
     Serenity,
     Vulkan, // Vulkan SPIR-V
     CheriotRTOS,
+    OpenCL,
     ChipStar,
     Firmware,
-    LastOSType = Firmware
+    QURT,
+    LastOSType = QURT
   };
   enum EnvironmentType {
     UnknownEnvironment,
@@ -314,7 +316,6 @@ public:
     Mesh,
     Amplification,
     RootSignature,
-    OpenCL,
     OpenHOS,
     Mlibc,
 
@@ -795,6 +796,9 @@ public:
     return getOS() == Triple::Serenity;
   }
 
+  /// Tests whether the OS is QURT.
+  bool isOSQurt() const { return getOS() == Triple::QURT; }
+
   /// Tests whether the OS uses the ELF binary format.
   bool isOSBinFormatELF() const {
     return getObjectFormat() == Triple::ELF;
@@ -1058,6 +1062,8 @@ public:
                : PointerWidth == 64;
   }
 
+  bool isAVR() const { return getArch() == Triple::avr; }
+
   /// Tests whether the target is 32-bit LoongArch.
   bool isLoongArch32() const { return getArch() == Triple::loongarch32; }
 
@@ -1232,6 +1238,9 @@ public:
   bool hasDefaultDataSections() const {
     return isOSBinFormatXCOFF() || isWasm();
   }
+
+  /// Returns the default wchar_t size (in bytes) for this target triple.
+  unsigned getDefaultWCharSize() const;
 
   /// Tests if the environment supports dllimport/export annotations.
   bool hasDLLImportExport() const { return isOSWindows() || isPS(); }

@@ -24,6 +24,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+LLDB_PLUGIN_DEFINE(ScriptedFrameProvider)
+
 void ScriptedFrameProvider::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                 "Provides synthetic frames via scripting",
@@ -216,13 +218,3 @@ ScriptedFrameProvider::GetFrameAtIndex(uint32_t idx) {
 
   return synth_frame_sp;
 }
-
-namespace lldb_private {
-void lldb_initialize_ScriptedFrameProvider() {
-  ScriptedFrameProvider::Initialize();
-}
-
-void lldb_terminate_ScriptedFrameProvider() {
-  ScriptedFrameProvider::Terminate();
-}
-} // namespace lldb_private

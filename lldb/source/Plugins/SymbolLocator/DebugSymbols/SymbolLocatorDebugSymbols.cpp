@@ -203,8 +203,11 @@ std::optional<ModuleSpec> SymbolLocatorDebugSymbols::LocateExecutableObjectFile(
 
           // Check if the requested image is in our shared cache.
           if (!success) {
+            SymbolSharedCacheUse sc_mode =
+                ModuleList::GetGlobalModuleListProperties()
+                    .GetSharedCacheBinaryLoading();
             SharedCacheImageInfo image_info = HostInfo::GetSharedCacheImageInfo(
-                module_spec.GetFileSpec().GetPath());
+                module_spec.GetFileSpec().GetPathAsConstString(), sc_mode);
 
             // If we found it and it has the correct UUID, let's proceed with
             // creating a module from the memory contents.
@@ -255,7 +258,6 @@ std::optional<ModuleSpec> SymbolLocatorDebugSymbols::LocateExecutableObjectFile(
                           path);
                 FileSpec file_spec(path);
                 FileSystem::Instance().Resolve(file_spec);
-                ModuleSpecList module_specs;
                 ModuleSpec matched_module_spec;
                 using namespace llvm::sys::fs;
                 switch (get_file_type(file_spec.GetPath())) {
@@ -271,12 +273,11 @@ std::optional<ModuleSpec> SymbolLocatorDebugSymbols::LocateExecutableObjectFile(
                                                            sizeof(path) - 1)) {
                       FileSpec bundle_exe_file_spec(path);
                       FileSystem::Instance().Resolve(bundle_exe_file_spec);
-                      if (ObjectFile::GetModuleSpecifications(
-                              bundle_exe_file_spec, 0, 0, module_specs) &&
+                      if (ModuleSpecList module_specs =
+                              ObjectFile::GetModuleSpecifications(
+                                  bundle_exe_file_spec, 0, 0);
                           module_specs.FindMatchingModuleSpec(
-                              module_spec, matched_module_spec))
-
-                      {
+                              module_spec, matched_module_spec)) {
                         ++items_found;
                         return_module_spec.GetFileSpec() = bundle_exe_file_spec;
                         LLDB_LOGF(log,
@@ -299,12 +300,10 @@ std::optional<ModuleSpec> SymbolLocatorDebugSymbols::LocateExecutableObjectFile(
                 case file_type::symlink_file:
                 case file_type::block_file:
                 case file_type::character_file:
-                  if (ObjectFile::GetModuleSpecifications(file_spec, 0, 0,
-                                                          module_specs) &&
-                      module_specs.FindMatchingModuleSpec(module_spec,
-                                                          matched_module_spec))
-
-                  {
+                  if (ModuleSpecList module_specs =
+                          ObjectFile::GetModuleSpecifications(file_spec, 0, 0);
+                      module_specs.FindMatchingModuleSpec(
+                          module_spec, matched_module_spec)) {
                     ++items_found;
                     return_module_spec.GetFileSpec() = file_spec;
                     LLDB_LOGF(log,
@@ -345,8 +344,9 @@ std::optional<FileSpec> SymbolLocatorDebugSymbols::FindSymbolFileInBundle(
       continue;
 
     FileSpec dsym_fspec(Iter->path());
-    ModuleSpecList module_specs;
-    if (ObjectFile::GetModuleSpecifications(dsym_fspec, 0, 0, module_specs)) {
+    ModuleSpecList module_specs =
+        ObjectFile::GetModuleSpecifications(dsym_fspec, 0, 0);
+    if (module_specs.GetSize() > 0) {
       ModuleSpec spec;
       for (size_t i = 0; i < module_specs.GetSize(); ++i) {
         bool got_spec = module_specs.GetModuleSpecAtIndex(i, spec);
@@ -369,8 +369,9 @@ std::optional<FileSpec> SymbolLocatorDebugSymbols::FindSymbolFileInBundle(
 static bool FileAtPathContainsArchAndUUID(const FileSpec &file_fspec,
                                           const ArchSpec *arch,
                                           const lldb_private::UUID *uuid) {
-  ModuleSpecList module_specs;
-  if (ObjectFile::GetModuleSpecifications(file_fspec, 0, 0, module_specs)) {
+  ModuleSpecList module_specs =
+      ObjectFile::GetModuleSpecifications(file_fspec, 0, 0);
+  if (module_specs.GetSize() > 0) {
     ModuleSpec spec;
     for (size_t i = 0; i < module_specs.GetSize(); ++i) {
       bool got_spec = module_specs.GetModuleSpecAtIndex(i, spec);
@@ -477,10 +478,8 @@ static bool LocateDSYMInVincinityOfExecutable(const ModuleSpec &module_spec,
   if (exec_fspec) {
     if (::LookForDsymNextToExecutablePath(module_spec, exec_fspec,
                                           dsym_fspec)) {
-      if (log) {
-        LLDB_LOGF(log, "dSYM with matching UUID & arch found at %s",
-                  dsym_fspec.GetPath().c_str());
-      }
+      LLDB_LOGF(log, "dSYM with matching UUID & arch found at %s",
+                dsym_fspec.GetPath().c_str());
       return true;
     } else {
       FileSpec parent_dirs = exec_fspec;
@@ -509,10 +508,8 @@ static bool LocateDSYMInVincinityOfExecutable(const ModuleSpec &module_spec,
         if (::strchr(fn, '.') != nullptr) {
           if (::LookForDsymNextToExecutablePath(module_spec, parent_dirs,
                                                 dsym_fspec)) {
-            if (log) {
-              LLDB_LOGF(log, "dSYM with matching UUID & arch found at %s",
-                        dsym_fspec.GetPath().c_str());
-            }
+            LLDB_LOGF(log, "dSYM with matching UUID & arch found at %s",
+                      dsym_fspec.GetPath().c_str());
             return true;
           }
         }
@@ -646,8 +643,11 @@ static int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
 
           // Check if the requested image is in our shared cache.
           if (!success) {
+            SymbolSharedCacheUse sc_mode =
+                ModuleList::GetGlobalModuleListProperties()
+                    .GetSharedCacheBinaryLoading();
             SharedCacheImageInfo image_info = HostInfo::GetSharedCacheImageInfo(
-                module_spec.GetFileSpec().GetPath());
+                module_spec.GetFileSpec().GetPathAsConstString(), sc_mode);
 
             // If we found it and it has the correct UUID, let's proceed with
             // creating a module from the memory contents.
@@ -698,7 +698,6 @@ static int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
                           path);
                 FileSpec file_spec(path);
                 FileSystem::Instance().Resolve(file_spec);
-                ModuleSpecList module_specs;
                 ModuleSpec matched_module_spec;
                 using namespace llvm::sys::fs;
                 switch (get_file_type(file_spec.GetPath())) {
@@ -714,12 +713,11 @@ static int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
                                                            sizeof(path) - 1)) {
                       FileSpec bundle_exe_file_spec(path);
                       FileSystem::Instance().Resolve(bundle_exe_file_spec);
-                      if (ObjectFile::GetModuleSpecifications(
-                              bundle_exe_file_spec, 0, 0, module_specs) &&
+                      if (ModuleSpecList module_specs =
+                              ObjectFile::GetModuleSpecifications(
+                                  bundle_exe_file_spec, 0, 0);
                           module_specs.FindMatchingModuleSpec(
-                              module_spec, matched_module_spec))
-
-                      {
+                              module_spec, matched_module_spec)) {
                         ++items_found;
                         return_module_spec.GetFileSpec() = bundle_exe_file_spec;
                         LLDB_LOGF(log,
@@ -742,12 +740,10 @@ static int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
                 case file_type::symlink_file:
                 case file_type::block_file:
                 case file_type::character_file:
-                  if (ObjectFile::GetModuleSpecifications(file_spec, 0, 0,
-                                                          module_specs) &&
-                      module_specs.FindMatchingModuleSpec(module_spec,
-                                                          matched_module_spec))
-
-                  {
+                  if (ModuleSpecList module_specs =
+                          ObjectFile::GetModuleSpecifications(file_spec, 0, 0);
+                      module_specs.FindMatchingModuleSpec(
+                          module_spec, matched_module_spec)) {
                     ++items_found;
                     return_module_spec.GetFileSpec() = file_spec;
                     LLDB_LOGF(log,
@@ -1089,20 +1085,24 @@ bool SymbolLocatorDebugSymbols::DownloadObjectAndSymbolFile(
   int exit_status = -1;
   int signo = -1;
   std::string command_output;
+  std::string error_output;
   error = Host::RunShellCommand(
       command.GetData(),
       FileSpec(),      // current working directory
       &exit_status,    // Exit status
       &signo,          // Signal int *
       &command_output, // Command output
+      &error_output,   // Command error output
       std::chrono::seconds(
           640), // Large timeout to allow for long dsym download times
       false);   // Don't run in a shell (we don't need shell expansion)
 
   if (error.Fail() || exit_status != 0 || command_output.empty()) {
-    LLDB_LOGF(log, "'%s' failed (exit status: %d, error: '%s', output: '%s')",
+    LLDB_LOGF(log,
+              "'%s' failed (exit status: %d, error: '%s', stdout: '%s', "
+              "stderr: '%s')",
               command.GetData(), exit_status, error.AsCString(),
-              command_output.c_str());
+              command_output.c_str(), error_output.c_str());
     return false;
   }
 
@@ -1117,6 +1117,7 @@ bool SymbolLocatorDebugSymbols::DownloadObjectAndSymbolFile(
   if (!plist.get()) {
     LLDB_LOGF(log, "'%s' failed: output is not a valid plist",
               command.GetData());
+    LLDB_LOGF(log, "Response:\n%s\n", command_output.c_str());
     return false;
   }
 

@@ -13,14 +13,20 @@
 ; RUN: opt -passes=loop-vectorize -mtriple=arm64 -mcpu=neoverse-v3 -S %s | FileCheck --check-prefix=INTERLEAVE-4 %s
 ; RUN: opt -passes=loop-vectorize -mtriple=arm64 -mcpu=neoverse-v3ae -S %s | FileCheck --check-prefix=INTERLEAVE-4 %s
 ; RUN: opt -passes=loop-vectorize -mtriple=arm64 -mcpu=exynos-m5 -S %s | FileCheck --check-prefix=INTERLEAVE-4 %s
+; RUN: opt -passes=loop-vectorize -mtriple=arm64 -mcpu=cortex-x1 -S %s | FileCheck --check-prefix=INTERLEAVE-4 %s
+; RUN: opt -passes=loop-vectorize -mtriple=arm64 -mcpu=cortex-x2 -S %s | FileCheck --check-prefix=INTERLEAVE-4 %s
+; RUN: opt -passes=loop-vectorize -mtriple=arm64 -mcpu=cortex-x3 -S %s | FileCheck --check-prefix=INTERLEAVE-4 %s
+; RUN: opt -passes=loop-vectorize -mtriple=arm64 -mcpu=cortex-x4 -S %s | FileCheck --check-prefix=INTERLEAVE-4 %s
+; RUN: opt -passes=loop-vectorize -mtriple=arm64 -mcpu=cortex-x925 -S %s | FileCheck --check-prefix=INTERLEAVE-4 %s
+; RUN: opt -passes=loop-vectorize -mtriple=arm64 -mcpu=c1-ultra -S %s | FileCheck --check-prefix=INTERLEAVE-4 %s
 
 ; Tests for selecting interleave counts for loops with loads and stores.
 
 define void @interleave_single_load_store(ptr %src, ptr %dst, i64 %N, i8 %a, i8 %b) {
 ; INTERLEAVE-2-LABEL: @interleave_single_load_store(
 ; INTERLEAVE-2-NEXT:  iter.check:
-; INTERLEAVE-2-NEXT:    [[SRC2:%.*]] = ptrtoint ptr [[SRC:%.*]] to i64
-; INTERLEAVE-2-NEXT:    [[DST1:%.*]] = ptrtoint ptr [[DST:%.*]] to i64
+; INTERLEAVE-2-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC:%.*]] to i64
+; INTERLEAVE-2-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST:%.*]] to i64
 ; INTERLEAVE-2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], 8
 ; INTERLEAVE-2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; INTERLEAVE-2:       vector.memcheck:
@@ -107,8 +113,8 @@ define void @interleave_single_load_store(ptr %src, ptr %dst, i64 %N, i8 %a, i8 
 ;
 ; INTERLEAVE-4-LABEL: @interleave_single_load_store(
 ; INTERLEAVE-4-NEXT:  iter.check:
-; INTERLEAVE-4-NEXT:    [[SRC2:%.*]] = ptrtoint ptr [[SRC:%.*]] to i64
-; INTERLEAVE-4-NEXT:    [[DST1:%.*]] = ptrtoint ptr [[DST:%.*]] to i64
+; INTERLEAVE-4-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC:%.*]] to i64
+; INTERLEAVE-4-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST:%.*]] to i64
 ; INTERLEAVE-4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], 8
 ; INTERLEAVE-4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; INTERLEAVE-4:       vector.memcheck:

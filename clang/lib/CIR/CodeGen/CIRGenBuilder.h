@@ -12,7 +12,9 @@
 #include "Address.h"
 #include "CIRGenRecordLayout.h"
 #include "CIRGenTypeCache.h"
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Support/LLVM.h"
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
@@ -22,11 +24,16 @@
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/FPEnv.h"
 
 namespace clang::CIRGen {
 
 class CIRGenBuilderTy : public cir::CIRBaseBuilderTy {
   const CIRGenTypeCache &typeCache;
+  bool isFPConstrained = false;
+  llvm::fp::ExceptionBehavior defaultConstrainedExcept = llvm::fp::ebStrict;
+  llvm::RoundingMode defaultConstrainedRounding = llvm::RoundingMode::Dynamic;
+
   llvm::StringMap<unsigned> recordNames;
   llvm::StringMap<unsigned> globalsVersioning;
 
@@ -38,7 +45,8 @@ public:
   /// Note: This is different from what is returned by
   /// mlir::Builder::getStringAttr() which is an mlir::StringAttr.
   mlir::Attribute getString(llvm::StringRef str, mlir::Type eltTy,
-                            std::optional<size_t> size) {
+                            std::optional<size_t> size,
+                            bool ensureNullTerm = true) {
     size_t finalSize = size.value_or(str.size());
 
     size_t lastNonZeroPos = str.find_last_not_of('\0');
@@ -48,18 +56,24 @@ public:
       auto arrayTy = cir::ArrayType::get(eltTy, finalSize);
       return cir::ZeroAttr::get(arrayTy);
     }
-    // We emit trailing zeros only if there are multiple trailing zeros.
-    size_t trailingZerosNum = 0;
-    if (finalSize > lastNonZeroPos + 2)
-      trailingZerosNum = finalSize - lastNonZeroPos - 1;
+
+    // We emit trailing zeros for all trailing zeros, so the null-terminator in
+    // a constant is always in trailing zeros, and the null-terminator is
+    // skipped in the CIR representation.
+    size_t trailingZerosNum = finalSize - lastNonZeroPos - 1;
     auto truncatedArrayTy =
         cir::ArrayType::get(eltTy, finalSize - trailingZerosNum);
+    auto strAttr = mlir::StringAttr::get(str.drop_back(trailingZerosNum),
+                                         truncatedArrayTy);
+
+    // Most C strings are null terminated, so if we are ensuring there is one,
+    // grow the array size by 1 to add a trailing zero if necessary. The 'auto'
+    // calculation of trailing zeros (the difference between the provided string
+    // and the type) will ensure we get the count correct.
+    finalSize += (ensureNullTerm && trailingZerosNum == 0);
+
     auto fullArrayTy = cir::ArrayType::get(eltTy, finalSize);
-    return cir::ConstArrayAttr::get(
-        fullArrayTy,
-        mlir::StringAttr::get(str.drop_back(trailingZerosNum),
-                              truncatedArrayTy),
-        trailingZerosNum);
+    return cir::ConstArrayAttr::get(fullArrayTy, strAttr);
   }
 
   cir::ConstArrayAttr getConstArray(mlir::Attribute attrs,
@@ -104,6 +118,43 @@ public:
     }
 
     return baseName + "." + std::to_string(recordNames[baseName]++);
+  }
+
+  //
+  // Floating point specific helpers
+  // -------------------------------
+  //
+
+  /// Enable/Disable use of constrained floating point math. When enabled the
+  /// CreateF<op>() calls instead create constrained floating point intrinsic
+  /// calls. Fast math flags are unaffected by this setting.
+  void setIsFPConstrained(bool isCon) { isFPConstrained = isCon; }
+
+  /// Query for the use of constrained floating point math
+  bool getIsFPConstrained() const { return isFPConstrained; }
+
+  /// Set the exception handling to be used with constrained floating point
+  void setDefaultConstrainedExcept(llvm::fp::ExceptionBehavior newExcept) {
+    assert(llvm::convertExceptionBehaviorToStr(newExcept) &&
+           "Garbage strict exception behavior!");
+    defaultConstrainedExcept = newExcept;
+  }
+
+  /// Get the exception handling used with constrained floating point
+  llvm::fp::ExceptionBehavior getDefaultConstrainedExcept() const {
+    return defaultConstrainedExcept;
+  }
+
+  /// Set the rounding mode handling to be used with constrained floating point
+  void setDefaultConstrainedRounding(llvm::RoundingMode newRounding) {
+    assert(llvm::convertRoundingModeToStr(newRounding) &&
+           "Garbage strict rounding mode!");
+    defaultConstrainedRounding = newRounding;
+  }
+
+  /// Get the rounding mode handling used with constrained floating point
+  llvm::RoundingMode getDefaultConstrainedRounding() const {
+    return defaultConstrainedRounding;
   }
 
   cir::LongDoubleType getLongDoubleTy(const llvm::fltSemantics &format) const {
@@ -198,10 +249,22 @@ public:
     return cir::MemCpyOp::create(*this, loc, dst, src, len);
   }
 
+  cir::MemMoveOp createMemMove(mlir::Location loc, mlir::Value dst,
+                               mlir::Value src, mlir::Value len) {
+    return cir::MemMoveOp::create(*this, loc, dst, src, len);
+  }
+
   cir::MemSetOp createMemSet(mlir::Location loc, mlir::Value dst,
                              mlir::Value val, mlir::Value len) {
     assert(val.getType() == getUInt8Ty());
-    return cir::MemSetOp::create(*this, loc, dst, val, len);
+    return cir::MemSetOp::create(*this, loc, dst, {}, val, len);
+  }
+
+  cir::MemSetOp createMemSet(mlir::Location loc, Address dst, mlir::Value val,
+                             mlir::Value len) {
+    mlir::IntegerAttr align = getAlignmentAttr(dst.getAlignment());
+    assert(val.getType() == getUInt8Ty());
+    return cir::MemSetOp::create(*this, loc, dst.getPointer(), align, val, len);
   }
   // ---------------------------
 
@@ -334,6 +397,43 @@ public:
   }
   bool isInt(mlir::Type i) { return mlir::isa<cir::IntType>(i); }
 
+  cir::IntType getExtendedIntTy(cir::IntType ty, bool isSigned) {
+    switch (ty.getWidth()) {
+    case 8:
+      return isSigned ? typeCache.sInt16Ty : typeCache.uInt16Ty;
+    case 16:
+      return isSigned ? typeCache.sInt32Ty : typeCache.uInt32Ty;
+    case 32:
+      return isSigned ? typeCache.sInt64Ty : typeCache.uInt64Ty;
+    default:
+      llvm_unreachable("NYI");
+    }
+  }
+
+  cir::IntType getTruncatedIntTy(cir::IntType ty, bool isSigned) {
+    switch (ty.getWidth()) {
+    case 16:
+      return isSigned ? typeCache.sInt8Ty : typeCache.uInt8Ty;
+    case 32:
+      return isSigned ? typeCache.sInt16Ty : typeCache.uInt16Ty;
+    case 64:
+      return isSigned ? typeCache.sInt32Ty : typeCache.uInt32Ty;
+    default:
+      llvm_unreachable("NYI");
+    }
+  }
+
+  cir::VectorType
+  getExtendedOrTruncatedElementVectorType(cir::VectorType vt, bool isExtended,
+                                          bool isSigned = false) {
+    auto elementTy = mlir::dyn_cast_or_null<cir::IntType>(vt.getElementType());
+    assert(elementTy && "expected int vector");
+    return cir::VectorType::get(isExtended
+                                    ? getExtendedIntTy(elementTy, isSigned)
+                                    : getTruncatedIntTy(elementTy, isSigned),
+                                vt.getSize());
+  }
+
   // Fetch the type representing a pointer to unsigned int8 values.
   cir::PointerType getUInt8PtrTy() { return typeCache.uInt8PtrTy; }
 
@@ -345,10 +445,9 @@ public:
     return getType<cir::RecordType>(members, packed, padded, kind);
   }
 
-  //
+  //===--------------------------------------------------------------------===//
   // Constant creation helpers
-  // -------------------------
-  //
+  //===--------------------------------------------------------------------===//
   cir::ConstantOp getSInt32(int32_t c, mlir::Location loc) {
     return getConstantInt(loc, getSInt32Ty(), c);
   }
@@ -362,33 +461,69 @@ public:
     return getConstantInt(loc, getUInt64Ty(), c);
   }
 
+  //===--------------------------------------------------------------------===//
+  // UnaryOp creation helpers
+  //===--------------------------------------------------------------------===//
   mlir::Value createNeg(mlir::Value value) {
 
     if (auto intTy = mlir::dyn_cast<cir::IntType>(value.getType())) {
       // Source is a unsigned integer: first cast it to signed.
       if (intTy.isUnsigned())
         value = createIntCast(value, getSIntNTy(intTy.getWidth()));
-      return cir::UnaryOp::create(*this, value.getLoc(), value.getType(),
-                                  cir::UnaryOpKind::Minus, value);
+      return createMinus(value.getLoc(), value);
     }
 
     llvm_unreachable("negation for the given type is NYI");
   }
 
-  cir::IsFPClassOp createIsFPClass(mlir::Location loc, mlir::Value src,
-                                   cir::FPClassTest flags) {
-    return cir::IsFPClassOp::create(*this, loc, src, flags);
+  mlir::Value createFNeg(mlir::Value value) {
+    assert(mlir::isa<cir::FPTypeInterface>(value.getType()) &&
+           "Non-fp input type!");
+
+    assert(!cir::MissingFeatures::metaDataNode());
+    assert(!cir::MissingFeatures::fpConstraints());
+    assert(!cir::MissingFeatures::fastMathFlags());
+
+    return createMinus(value.getLoc(), value);
   }
 
-  /// Create constant nullptr for pointer-to-data-member type ty.
-  cir::ConstantOp getNullDataMemberPtr(cir::DataMemberType ty,
-                                       mlir::Location loc) {
-    return cir::ConstantOp::create(*this, loc, getNullDataMemberAttr(ty));
+  //===--------------------------------------------------------------------===//
+  // BinaryOp creation helpers
+  //===--------------------------------------------------------------------===//
+  mlir::Value createFSub(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
+    assert(!cir::MissingFeatures::metaDataNode());
+    assert(!cir::MissingFeatures::fpConstraints());
+    assert(!cir::MissingFeatures::fastMathFlags());
+
+    return cir::SubOp::create(*this, loc, lhs, rhs);
   }
 
-  cir::ConstantOp getNullMethodPtr(cir::MethodType ty, mlir::Location loc) {
-    return cir::ConstantOp::create(*this, loc, getNullMethodAttr(ty));
+  mlir::Value createFAdd(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
+    assert(!cir::MissingFeatures::metaDataNode());
+    assert(!cir::MissingFeatures::fpConstraints());
+    assert(!cir::MissingFeatures::fastMathFlags());
+
+    return cir::AddOp::create(*this, loc, lhs, rhs);
   }
+
+  mlir::Value createFMul(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
+    assert(!cir::MissingFeatures::metaDataNode());
+    assert(!cir::MissingFeatures::fpConstraints());
+    assert(!cir::MissingFeatures::fastMathFlags());
+
+    return cir::MulOp::create(*this, loc, lhs, rhs);
+  }
+  mlir::Value createFDiv(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
+    assert(!cir::MissingFeatures::metaDataNode());
+    assert(!cir::MissingFeatures::fpConstraints());
+    assert(!cir::MissingFeatures::fastMathFlags());
+
+    return cir::DivOp::create(*this, loc, lhs, rhs);
+  }
+
+  //===--------------------------------------------------------------------===//
+  // CastOp creation helpers
+  //===--------------------------------------------------------------------===//
 
   // TODO: split this to createFPExt/createFPTrunc when we have dedicated cast
   // operations.
@@ -397,36 +532,6 @@ public:
 
     return cir::CastOp::create(*this, v.getLoc(), destType,
                                cir::CastKind::floating, v);
-  }
-
-  mlir::Value createFSub(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
-    assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fpConstraints());
-    assert(!cir::MissingFeatures::fastMathFlags());
-
-    return cir::BinOp::create(*this, loc, cir::BinOpKind::Sub, lhs, rhs);
-  }
-
-  mlir::Value createFAdd(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
-    assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fpConstraints());
-    assert(!cir::MissingFeatures::fastMathFlags());
-
-    return cir::BinOp::create(*this, loc, cir::BinOpKind::Add, lhs, rhs);
-  }
-  mlir::Value createFMul(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
-    assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fpConstraints());
-    assert(!cir::MissingFeatures::fastMathFlags());
-
-    return cir::BinOp::create(*this, loc, cir::BinOpKind::Mul, lhs, rhs);
-  }
-  mlir::Value createFDiv(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
-    assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fpConstraints());
-    assert(!cir::MissingFeatures::fastMathFlags());
-
-    return cir::BinOp::create(*this, loc, cir::BinOpKind::Div, lhs, rhs);
   }
 
   mlir::Value createDynCast(mlir::Location loc, mlir::Value src,
@@ -448,6 +553,9 @@ public:
         cir::DynamicCastInfoAttr{}, vtableUseRelativeLayout);
   }
 
+  //===--------------------------------------------------------------------===//
+  // Address creation helpers
+  //===--------------------------------------------------------------------===//
   Address createBaseClassAddr(mlir::Location loc, Address addr,
                               mlir::Type destType, unsigned offset,
                               bool assumeNotNull) {
@@ -474,6 +582,9 @@ public:
     return Address(derivedAddr, destType, addr.getAlignment());
   }
 
+  //===--------------------------------------------------------------------===//
+  // Virtual Address creation helpers
+  //===--------------------------------------------------------------------===//
   mlir::Value createVTTAddrPoint(mlir::Location loc, mlir::Type retTy,
                                  mlir::Value addr, uint64_t offset) {
     return cir::VTTAddrPointOp::create(*this, loc, retTy,
@@ -484,6 +595,14 @@ public:
                                  mlir::FlatSymbolRefAttr sym, uint64_t offset) {
     return cir::VTTAddrPointOp::create(*this, loc, retTy, sym, mlir::Value{},
                                        offset);
+  }
+
+  //===--------------------------------------------------------------------===//
+  // Other creation helpers
+  //===--------------------------------------------------------------------===//
+  cir::IsFPClassOp createIsFPClass(mlir::Location loc, mlir::Value src,
+                                   cir::FPClassTest flags) {
+    return cir::IsFPClassOp::create(*this, loc, src, flags);
   }
 
   /// Cast the element type of the given address to a different type,
@@ -599,13 +718,19 @@ public:
       int64_t offset, mlir::Type ty, cir::CIRDataLayout layout,
       llvm::SmallVectorImpl<int64_t> &indices);
 
+  // Convert high-level indices (e.g. from GlobalViewAttr) to byte offset.
+  uint64_t computeOffsetFromGlobalViewIndices(const cir::CIRDataLayout &layout,
+                                              mlir::Type ty,
+                                              llvm::ArrayRef<int64_t> indices);
+
   /// Creates a versioned global variable. If the symbol is already taken, an ID
   /// will be appended to the symbol. The returned global must always be queried
   /// for its name so it can be referenced correctly.
   [[nodiscard]] cir::GlobalOp
   createVersionedGlobal(mlir::ModuleOp module, mlir::Location loc,
                         mlir::StringRef name, mlir::Type type, bool isConstant,
-                        cir::GlobalLinkageKind linkage) {
+                        cir::GlobalLinkageKind linkage,
+                        mlir::ptr::MemorySpaceAttrInterface addrSpace = {}) {
     // Create a unique name if the given name is already taken.
     std::string uniqueName;
     if (unsigned version = globalsVersioning[name.str()]++)
@@ -613,7 +738,8 @@ public:
     else
       uniqueName = name.str();
 
-    return createGlobal(module, loc, uniqueName, type, isConstant, linkage);
+    return createGlobal(module, loc, uniqueName, type, isConstant, linkage,
+                        addrSpace);
   }
 
   cir::StackSaveOp createStackSave(mlir::Location loc, mlir::Type ty) {
@@ -622,6 +748,40 @@ public:
 
   cir::StackRestoreOp createStackRestore(mlir::Location loc, mlir::Value v) {
     return cir::StackRestoreOp::create(*this, loc, v);
+  }
+
+  cir::CmpThreeWayOp createThreeWayCmpTotalOrdering(
+      mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
+      const llvm::APSInt &ltRes, const llvm::APSInt &eqRes,
+      const llvm::APSInt &gtRes, cir::CmpOrdering ordering) {
+    assert(ltRes.getBitWidth() == eqRes.getBitWidth() &&
+           ltRes.getBitWidth() == gtRes.getBitWidth() &&
+           "the three comparison results must have the same bit width");
+    assert((ordering == cir::CmpOrdering::Strong ||
+            ordering == cir::CmpOrdering::Weak) &&
+           "total ordering must be strong or weak");
+    cir::IntType cmpResultTy = getSIntNTy(ltRes.getBitWidth());
+    auto infoAttr = cir::CmpThreeWayInfoAttr::get(
+        getContext(), ordering, ltRes.getSExtValue(), eqRes.getSExtValue(),
+        gtRes.getSExtValue());
+    return cir::CmpThreeWayOp::create(*this, loc, cmpResultTy, lhs, rhs,
+                                      infoAttr);
+  }
+
+  cir::CmpThreeWayOp createThreeWayCmpPartialOrdering(
+      mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
+      const llvm::APSInt &ltRes, const llvm::APSInt &eqRes,
+      const llvm::APSInt &gtRes, const llvm::APSInt &unorderedRes) {
+    assert(ltRes.getBitWidth() == eqRes.getBitWidth() &&
+           ltRes.getBitWidth() == gtRes.getBitWidth() &&
+           ltRes.getBitWidth() == unorderedRes.getBitWidth() &&
+           "the four comparison results must have the same bit width");
+    cir::IntType cmpResultTy = getSIntNTy(ltRes.getBitWidth());
+    auto infoAttr = cir::CmpThreeWayInfoAttr::get(
+        getContext(), ltRes.getSExtValue(), eqRes.getSExtValue(),
+        gtRes.getSExtValue(), unorderedRes.getSExtValue());
+    return cir::CmpThreeWayOp::create(*this, loc, cmpResultTy, lhs, rhs,
+                                      infoAttr);
   }
 
   mlir::Value createSetBitfield(mlir::Location loc, mlir::Type resultType,
@@ -658,6 +818,22 @@ public:
                                       storageType, info.name, info.size, offset,
                                       info.isSigned, isLvalueVolatile,
                                       addr.getAlignment().getAsAlign().value());
+  }
+
+  mlir::Value createMaskedLoad(mlir::Location loc, mlir::Type ty,
+                               mlir::Value ptr, llvm::Align alignment,
+                               mlir::Value mask, mlir::Value passThru) {
+    assert(mlir::isa<cir::VectorType>(ty) && "Type should be vector");
+    assert(mask && "Mask should not be all-ones (null)");
+
+    if (!passThru)
+      passThru = this->getConstant(loc, cir::PoisonAttr::get(ty));
+
+    auto alignAttr =
+        this->getI64IntegerAttr(static_cast<int64_t>(alignment.value()));
+
+    return cir::VecMaskedLoadOp::create(*this, loc, ty, ptr, mask, passThru,
+                                        alignAttr);
   }
 
   cir::VecShuffleOp

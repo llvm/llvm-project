@@ -28,7 +28,7 @@ void foo(int *iptr, char *cptr, unsigned ustride) {
   iptr - ustride;
   // CHECK: %[[#STRIDE:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!u32i>, !u32i
   // CHECK: %[[#SIGNSTRIDE:]] = cir.cast integral %[[#STRIDE]] : !u32i -> !s32i
-  // CHECK: %[[#NEGSTRIDE:]] = cir.unary(minus, %[[#SIGNSTRIDE]]) : !s32i, !s32i
+  // CHECK: %[[#NEGSTRIDE:]] = cir.minus %[[#SIGNSTRIDE]] : !s32i
   // CHECK: cir.ptr_stride %{{.+}}, %[[#NEGSTRIDE]] : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
 
   4 + iptr;

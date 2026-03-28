@@ -260,6 +260,7 @@ public:
   bool visitIntrinsicInst(IntrinsicInst &I);
   bool visitFMinLike(IntrinsicInst &I);
   bool visitSqrt(IntrinsicInst &I);
+  bool visitLog(FPMathOperator &Log, Intrinsic::ID IID);
   bool visitMbcntLo(IntrinsicInst &I) const;
   bool visitMbcntHi(IntrinsicInst &I) const;
   bool run();
@@ -1952,7 +1953,7 @@ static bool isPtrKnownNeverNull(const Value *V, const DataLayout &DL,
   // TODO: Use ValueTracking's isKnownNeverNull if it becomes aware that some
   // address spaces have non-zero null values.
   auto SrcPtrKB = computeKnownBits(V, DL);
-  const auto NullVal = TM.getNullPointerValue(AS);
+  const auto NullVal = AMDGPU::getNullPointerValue(AS);
 
   assert(SrcPtrKB.getBitWidth() == DL.getPointerSizeInBits(AS));
   assert((NullVal == 0 || NullVal == -1) &&
@@ -1998,13 +1999,20 @@ bool AMDGPUCodeGenPrepareImpl::visitAddrSpaceCastInst(AddrSpaceCastInst &I) {
 }
 
 bool AMDGPUCodeGenPrepareImpl::visitIntrinsicInst(IntrinsicInst &I) {
-  switch (I.getIntrinsicID()) {
+  Intrinsic::ID IID = I.getIntrinsicID();
+  switch (IID) {
   case Intrinsic::minnum:
   case Intrinsic::minimumnum:
   case Intrinsic::minimum:
     return visitFMinLike(I);
   case Intrinsic::sqrt:
     return visitSqrt(I);
+  case Intrinsic::log:
+  case Intrinsic::log10:
+    return visitLog(cast<FPMathOperator>(I), IID);
+  case Intrinsic::log2:
+    // No reason to handle log2.
+    return false;
   case Intrinsic::amdgcn_mbcnt_lo:
     return visitMbcntLo(I);
   case Intrinsic::amdgcn_mbcnt_hi:
@@ -2041,16 +2049,14 @@ Value *AMDGPUCodeGenPrepareImpl::matchFractPat(IntrinsicInst &I) {
   Value *Arg1 = I.getArgOperand(1);
 
   const APFloat *C;
-  if (!match(Arg1, m_APFloat(C)))
+  if (!match(Arg1, m_APFloatAllowPoison(C)))
     return nullptr;
 
-  APFloat One(1.0);
-  bool LosesInfo;
-  One.convert(C->getSemantics(), APFloat::rmNearestTiesToEven, &LosesInfo);
+  APFloat OneNextDown = APFloat::getOne(C->getSemantics());
+  OneNextDown.next(true);
 
   // Match nextafter(1.0, -1)
-  One.next(true);
-  if (One != *C)
+  if (OneNextDown != *C)
     return nullptr;
 
   Value *FloorSrc;
@@ -2142,6 +2148,43 @@ bool AMDGPUCodeGenPrepareImpl::visitSqrt(IntrinsicInst &Sqrt) {
   NewSqrt->takeName(&Sqrt);
   Sqrt.replaceAllUsesWith(NewSqrt);
   DeadVals.push_back(&Sqrt);
+  return true;
+}
+
+/// Replace log and log10 intrinsic calls based on fpmath metadata.
+bool AMDGPUCodeGenPrepareImpl::visitLog(FPMathOperator &Log,
+                                        Intrinsic::ID IID) {
+  Type *Ty = Log.getType();
+  if (!Ty->getScalarType()->isHalfTy() || !ST.has16BitInsts())
+    return false;
+
+  FastMathFlags FMF = Log.getFastMathFlags();
+
+  // Defer fast math cases to codegen.
+  if (FMF.approxFunc())
+    return false;
+
+  // Limit experimentally determined from OpenCL conformance test (1.79)
+  if (Log.getFPAccuracy() < 1.80f)
+    return false;
+
+  IRBuilder<> Builder(&cast<CallInst>(Log));
+
+  // Use the generic intrinsic for convenience in the vector case. Codegen will
+  // recognize the denormal handling is not necessary from the fpext.
+  // TODO: Move to generic code
+  Value *Log2 =
+      Builder.CreateUnaryIntrinsic(Intrinsic::log2, Log.getOperand(0), FMF);
+
+  double Log2BaseInverted =
+      IID == Intrinsic::log10 ? numbers::ln2 / numbers::ln10 : numbers::ln2;
+  Value *Mul =
+      Builder.CreateFMulFMF(Log2, ConstantFP::get(Ty, Log2BaseInverted), FMF);
+
+  Mul->takeName(&Log);
+
+  Log.replaceAllUsesWith(Mul);
+  DeadVals.push_back(&Log);
   return true;
 }
 

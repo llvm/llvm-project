@@ -113,8 +113,8 @@ define i64 @pointer_induction_only(ptr %start, ptr %end) {
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext <4 x i32> [[WIDE_LOAD]] to <4 x i64>
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i64> [[TMP7]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i64> [[TMP7]], i32 2
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i64> [[TMP7]], i32 3
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -298,8 +298,8 @@ define i64 @test_ptr_ivs_and_widened_ivs(ptr %src, i32 %N) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = zext <4 x i32> [[TMP9]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP13:%.*]] = zext <4 x i32> [[STEP_ADD]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP10:%.*]] = shl <4 x i64> [[TMP12]], [[TMP13]]
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i64> [[TMP10]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i64> [[TMP10]], i32 2
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i64> [[TMP10]], i32 3
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -437,7 +437,6 @@ define i32 @load_from_pointer_induction(ptr %start, ptr %end) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP29:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP30:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP31:%.*]] = add i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 3
@@ -445,7 +444,7 @@ define i32 @load_from_pointer_induction(ptr %start, ptr %end) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 5
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[INDEX]], 6
 ; CHECK-NEXT:    [[TMP32:%.*]] = add i64 [[INDEX]], 7
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP12]]
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[NEXT_GEP5:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP31]]
 ; CHECK-NEXT:    [[NEXT_GEP6:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP6]]
@@ -583,6 +582,8 @@ define void@sext_sub_nsw_for_address(ptr %base, i64 %n, ptr %src) #0 {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP1]], 8
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[IND_END:%.*]] = mul i64 [[N_VEC]], 2
+; CHECK-NEXT:    [[IND_END32:%.*]] = sub i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i32
 ; CHECK-NEXT:    [[TMP26:%.*]] = mul i32 [[DOTCAST]], 2
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -664,10 +665,6 @@ define void@sext_sub_nsw_for_address(ptr %base, i64 %n, ptr %src) #0 {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP1]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-NEXT:    [[IND_END:%.*]] = mul i64 [[N_VEC]], 2
-; CHECK-NEXT:    [[IND_END32:%.*]] = sub i64 [[N]], [[N_VEC]]
-; CHECK-NEXT:    [[DOTCAST33:%.*]] = trunc i64 [[N_VEC]] to i32
-; CHECK-NEXT:    [[IND_END34:%.*]] = mul i32 [[DOTCAST33]], 2
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 2
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF23:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
@@ -712,7 +709,7 @@ define void@sext_sub_nsw_for_address(ptr %base, i64 %n, ptr %src) #0 {
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL29:%.*]] = phi i64 [ [[TMP84]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL30:%.*]] = phi i64 [ [[TMP85]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END32]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[N]], %[[VECTOR_MEMCHECK]] ], [ [[N]], %[[VECTOR_SCEVCHECK]] ], [ [[N]], %[[ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL31:%.*]] = phi i32 [ [[TMP86]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END34]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL31:%.*]] = phi i32 [ [[TMP86]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP26]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL29]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -772,11 +769,12 @@ define i64 @live_out_extract_from_ptr_iv_increment(i64 %count, ptr %start, ptr n
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 16
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP87:%.*]] = mul i64 [[N_VEC]], 3
+; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP87]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[INDEX]], 3
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP1]], 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP1]], 6
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP1]], 9
@@ -792,7 +790,7 @@ define i64 @live_out_extract_from_ptr_iv_increment(i64 %count, ptr %start, ptr n
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP1]], 39
 ; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[TMP1]], 42
 ; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[TMP1]], 45
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP2]]
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP5]]
@@ -884,8 +882,6 @@ define i64 @live_out_extract_from_ptr_iv_increment(i64 %count, ptr %start, ptr n
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-NEXT:    [[TMP87:%.*]] = mul i64 [[N_VEC]], 3
-; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP87]]
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 8
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF8]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
@@ -898,7 +894,6 @@ define i64 @live_out_extract_from_ptr_iv_increment(i64 %count, ptr %start, ptr n
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX19:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT28:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX19]], 3
-; CHECK-NEXT:    [[TMP90:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP91:%.*]] = add i64 [[OFFSET_IDX]], 3
 ; CHECK-NEXT:    [[TMP92:%.*]] = add i64 [[OFFSET_IDX]], 6
 ; CHECK-NEXT:    [[TMP93:%.*]] = add i64 [[OFFSET_IDX]], 9
@@ -906,7 +901,7 @@ define i64 @live_out_extract_from_ptr_iv_increment(i64 %count, ptr %start, ptr n
 ; CHECK-NEXT:    [[TMP95:%.*]] = add i64 [[OFFSET_IDX]], 15
 ; CHECK-NEXT:    [[TMP96:%.*]] = add i64 [[OFFSET_IDX]], 18
 ; CHECK-NEXT:    [[TMP97:%.*]] = add i64 [[OFFSET_IDX]], 21
-; CHECK-NEXT:    [[NEXT_GEP20:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP90]]
+; CHECK-NEXT:    [[NEXT_GEP20:%.*]] = getelementptr i8, ptr [[START]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[NEXT_GEP21:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP91]]
 ; CHECK-NEXT:    [[NEXT_GEP22:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP92]]
 ; CHECK-NEXT:    [[NEXT_GEP23:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP93]]

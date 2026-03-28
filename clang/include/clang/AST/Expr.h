@@ -777,14 +777,14 @@ public:
   ///
   /// \param Type - How to evaluate the size of the Expr, as defined by the
   /// "type" parameter of __builtin_object_size
-  bool tryEvaluateObjectSize(uint64_t &Result, ASTContext &Ctx,
-                             unsigned Type) const;
+  std::optional<uint64_t> tryEvaluateObjectSize(const ASTContext &Ctx,
+                                                unsigned Type) const;
 
   /// If the current Expr is a pointer, this will try to statically
   /// determine the strlen of the string pointed to.
   /// Returns true if all of the above holds and we were able to figure out the
   /// strlen, false otherwise.
-  bool tryEvaluateStrLen(uint64_t &Result, ASTContext &Ctx) const;
+  std::optional<uint64_t> tryEvaluateStrLen(const ASTContext &Ctx) const;
 
   bool EvaluateCharRangeAsString(std::string &Result,
                                  const Expr *SizeExpression,
@@ -6233,12 +6233,14 @@ class GenericSelectionExpr final
   // GenericSelectionExpr is followed by several trailing objects.
   // They are (in order):
   //
-  // * A single Stmt * for the controlling expression or a TypeSourceInfo * for
-  //   the controlling type, depending on the result of isTypePredicate() or
-  //   isExprPredicate().
-  // * An array of getNumAssocs() Stmt * for the association expressions.
-  // * An array of getNumAssocs() TypeSourceInfo *, one for each of the
-  //   association expressions.
+  // * An array of either
+  //   - getNumAssocs() (if what controls the generic is not an expression), or
+  //   - getNumAssocs() + 1 (if what controls the generic is an expression)
+  //   Stmt * for the association expressions.
+  // * An array of
+  //   - getNumAssocs() (if what controls the generic is not a type), or
+  //   - getNumAssocs() + 1 (if what controls the generic is a type)
+  //   TypeSourceInfo * for the association types.
   unsigned numTrailingObjects(OverloadToken<Stmt *>) const {
     // Add one to account for the controlling expression; the remainder
     // are the associated expressions.

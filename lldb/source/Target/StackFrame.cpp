@@ -65,7 +65,7 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
     : m_thread_wp(thread_sp), m_frame_index(frame_idx),
       m_concrete_frame_index(unwind_frame_index), m_reg_context_sp(),
       m_id(pc, cfa, nullptr, thread_sp->GetProcess().get()),
-      m_frame_code_addr(pc), m_sc(), m_flags(), m_frame_base(),
+      m_frame_code_addr(Address(pc)), m_sc(), m_flags(), m_frame_base(),
       m_frame_base_error(), m_cfa_is_valid(cfa_is_valid),
       m_stack_frame_kind(kind), m_artificial(artificial),
       m_behaves_like_zeroth_frame(behaves_like_zeroth_frame),
@@ -93,7 +93,7 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
       m_concrete_frame_index(unwind_frame_index),
       m_reg_context_sp(reg_context_sp),
       m_id(pc, cfa, nullptr, thread_sp->GetProcess().get()),
-      m_frame_code_addr(pc), m_sc(), m_flags(), m_frame_base(),
+      m_frame_code_addr(Address(pc)), m_sc(), m_flags(), m_frame_base(),
       m_frame_base_error(), m_cfa_is_valid(true),
       m_stack_frame_kind(StackFrame::Kind::Regular), m_artificial(false),
       m_behaves_like_zeroth_frame(behaves_like_zeroth_frame),
@@ -237,7 +237,7 @@ Address StackFrame::GetFrameCodeAddressForSymbolication() {
 
   addr_t offset = lookup_addr.GetOffset();
   if (offset > 0) {
-    lookup_addr.SetOffset(offset - 1);
+    lookup_addr.Slide(-1);
   } else {
     // lookup_addr is the start of a section.  We need do the math on the
     // actual load address and re-compute the section.  We're working with
@@ -524,13 +524,13 @@ StackFrame::GetInScopeVariableList(bool get_file_globals,
 
 ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
     llvm::StringRef var_expr, DynamicValueType use_dynamic, uint32_t options,
-    VariableSP &var_sp, Status &error) {
+    VariableSP &var_sp, Status &error, lldb::DILMode mode) {
   ExecutionContext exe_ctx;
   CalculateExecutionContext(exe_ctx);
   bool use_DIL = exe_ctx.GetTargetRef().GetUseDIL(&exe_ctx);
   if (use_DIL)
     return DILGetValueForVariableExpressionPath(var_expr, use_dynamic, options,
-                                                var_sp, error);
+                                                var_sp, error, mode);
 
   return LegacyGetValueForVariableExpressionPath(var_expr, use_dynamic, options,
                                                  var_sp, error);
@@ -538,7 +538,8 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
 
 ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
     llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
-    uint32_t options, lldb::VariableSP &var_sp, Status &error) {
+    uint32_t options, lldb::VariableSP &var_sp, Status &error,
+    lldb::DILMode mode) {
 
   const bool check_ptr_vs_member =
       (options & eExpressionPathOptionCheckPtrVsMember) != 0;
@@ -548,7 +549,7 @@ ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
       (options & eExpressionPathOptionsNoSyntheticChildren) != 0;
 
   // Lex the expression.
-  auto lex_or_err = dil::DILLexer::Create(var_expr);
+  auto lex_or_err = dil::DILLexer::Create(var_expr, mode);
   if (!lex_or_err) {
     error = Status::FromError(lex_or_err.takeError());
     return ValueObjectConstResult::Create(nullptr, std::move(error));
@@ -1945,7 +1946,7 @@ bool StackFrame::DumpUsingFormat(Stream &strm,
 }
 
 void StackFrame::DumpUsingSettingsFormat(Stream *strm, bool show_unique,
-                                         const char *frame_marker) {
+                                         const llvm::StringRef frame_marker) {
   if (strm == nullptr)
     return;
 
@@ -2044,7 +2045,8 @@ bool StackFrame::HasCachedData() const {
 }
 
 bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
-                           bool show_unique, const char *frame_marker) {
+                           bool show_unique,
+                           const llvm::StringRef frame_marker) {
   if (show_frame_info) {
     strm.Indent();
     DumpUsingSettingsFormat(&strm, show_unique, frame_marker);
@@ -2076,7 +2078,8 @@ bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
           size_t num_lines =
               target->GetSourceManager().DisplaySourceLinesWithLineNumbers(
                   source_file_sp, start_line, m_sc.line_entry.column,
-                  source_lines_before, source_lines_after, "->", &strm);
+                  source_lines_before, source_lines_after, "->", &strm,
+                  /*bp_locs=*/nullptr, GetLanguage().AsLanguageType());
           if (num_lines != 0)
             have_source = true;
           // TODO: Give here a one time warning if source file is missing.

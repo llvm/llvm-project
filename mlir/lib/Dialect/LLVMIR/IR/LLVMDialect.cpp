@@ -1000,7 +1000,8 @@ void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
         /*no_caller_saved_registers=*/nullptr, /*nocallback=*/nullptr,
         /*modular_format=*/nullptr, /*nobuiltins=*/nullptr,
         /*allocsize=*/nullptr, /*optsize=*/nullptr, /*minsize=*/nullptr,
-        /*nobuiltin=*/nullptr, /*save_reg_params=*/nullptr,
+        /*builtin=*/nullptr, /*nobuiltin=*/nullptr,
+        /*save_reg_params=*/nullptr,
         /*zero_call_used_regs=*/nullptr, /*trap_func_name=*/nullptr,
         /*default_func_attrs=*/nullptr,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
@@ -1039,7 +1040,8 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
         /*no_caller_saved_registers=*/nullptr, /*nocallback=*/nullptr,
         /*modular_format=*/nullptr, /*nobuiltins=*/nullptr,
         /*allocsize=*/nullptr, /*optsize=*/nullptr, /*minsize=*/nullptr,
-        /*nobuiltin=*/nullptr, /*save_reg_params=*/nullptr,
+        /*builtin=*/nullptr, /*nobuiltin=*/nullptr,
+        /*save_reg_params=*/nullptr,
         /*zero_call_used_regs=*/nullptr, /*trap_func_name=*/nullptr,
         /*default_func_attrs=*/nullptr,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
@@ -1064,7 +1066,8 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
         /*no_caller_saved_registers=*/nullptr, /*nocallback=*/nullptr,
         /*modular_format=*/nullptr, /*nobuiltins=*/nullptr,
         /*allocsize=*/nullptr, /*optsize=*/nullptr, /*minsize=*/nullptr,
-        /*nobuiltin=*/nullptr, /*save_reg_params=*/nullptr,
+        /*builtin=*/nullptr, /*nobuiltin=*/nullptr,
+        /*save_reg_params=*/nullptr,
         /*zero_call_used_regs=*/nullptr, /*trap_func_name=*/nullptr,
         /*default_func_attrs=*/nullptr,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
@@ -1089,7 +1092,8 @@ void CallOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
         /*no_caller_saved_registers=*/nullptr, /*nocallback=*/nullptr,
         /*modular_format=*/nullptr, /*nobuiltins=*/nullptr,
         /*allocsize=*/nullptr, /*optsize=*/nullptr, /*minsize=*/nullptr,
-        /*nobuiltin=*/nullptr, /*save_reg_params=*/nullptr,
+        /*builtin=*/nullptr, /*nobuiltin=*/nullptr,
+        /*save_reg_params=*/nullptr,
         /*zero_call_used_regs=*/nullptr, /*trap_func_name=*/nullptr,
         /*default_func_attrs=*/nullptr,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
@@ -3031,6 +3035,15 @@ void LLVMFuncOp::build(OpBuilder &builder, OperationState &result,
   if (functionEntryCount)
     result.addAttribute(getFunctionEntryCountAttrName(result.name),
                         builder.getI64IntegerAttr(functionEntryCount.value()));
+#ifndef NDEBUG
+  std::optional<NamedAttribute> duplicate = result.attributes.findDuplicate();
+  if (duplicate.has_value()) {
+    llvm::report_fatal_error(
+        Twine("LLVMFuncOp propagated an attribute that is meant "
+              "to be constructed by the builder: ") +
+        duplicate->getName().str());
+  }
+#endif
   if (argAttrs.empty())
     return;
 
@@ -3854,6 +3867,22 @@ LogicalResult LLVM::BitcastOp::verify() {
   return success();
 }
 
+LogicalResult LLVM::PtrToAddrOp::verify() {
+  auto pointerType =
+      cast<LLVM::LLVMPointerType>(extractVectorElementType(getArg().getType()));
+  auto integerType = cast<IntegerType>(extractVectorElementType(getType()));
+
+  auto dataLayout = DataLayout::closest(*this);
+  std::optional<unsigned> width = dataLayout.getTypeIndexBitwidth(pointerType);
+  assert(width && "pointers always return an index bitwidth");
+  if (width != integerType.getWidth())
+    return emitOpError("bit-width of integer result type ")
+           << integerType << " must match the pointer bitwidth (" << *width
+           << ") specified in the datalayout";
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // Folder for LLVM::AddrSpaceCastOp
 //===----------------------------------------------------------------------===//
@@ -4151,11 +4180,13 @@ LLVMFuncOp BlockAddressOp::getFunction(SymbolTableCollection &symbolTable) {
 }
 
 BlockTagOp BlockAddressOp::getBlockTagOp() {
-  auto funcOp = dyn_cast<LLVMFuncOp>(mlir::SymbolTable::lookupNearestSymbolFrom(
-      parentLLVMModule(*this), getBlockAddr().getFunction()));
+  Operation *sym = mlir::SymbolTable::lookupNearestSymbolFrom(
+      parentLLVMModule(*this), getBlockAddr().getFunction());
+  if (!sym)
+    return nullptr;
+  auto funcOp = dyn_cast<LLVMFuncOp>(sym);
   if (!funcOp)
     return nullptr;
-
   BlockTagOp blockTagOp = nullptr;
   funcOp.walk([&](LLVM::BlockTagOp labelOp) {
     if (labelOp.getTag() == getBlockAddr().getTag()) {

@@ -234,8 +234,8 @@ static LogicalResult deserializeCacheControlDecoration(
     DenseMap<uint32_t, NamedAttrList> &decorations, ArrayRef<uint32_t> words,
     StringAttr symbol, StringRef decorationName, StringRef cacheControlKind) {
   if (words.size() != 4) {
-    return emitError(loc, "OpDecoration with ")
-           << decorationName << "needs a cache control integer literal and a "
+    return emitError(loc, "OpDecorate with ")
+           << decorationName << " needs a cache control integer literal and a "
            << cacheControlKind << " cache control literal";
   }
   unsigned cacheLevel = words[2];
@@ -285,6 +285,12 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
     break;
   case spirv::Decoration::DescriptorSet:
   case spirv::Decoration::Binding:
+  case spirv::Decoration::Location:
+  case spirv::Decoration::SpecId:
+  case spirv::Decoration::Index:
+  case spirv::Decoration::Offset:
+  case spirv::Decoration::XfbBuffer:
+  case spirv::Decoration::XfbStride:
     if (words.size() != 3) {
       return emitError(unknownLoc, "OpDecorate with ")
              << decorationName << " needs a single integer literal";
@@ -348,20 +354,10 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
   case spirv::Decoration::Patch:
   case spirv::Decoration::Coherent:
     if (words.size() != 2) {
-      return emitError(unknownLoc, "OpDecoration with ")
-             << decorationName << "needs a single target <id>";
+      return emitError(unknownLoc, "OpDecorate with ")
+             << decorationName << " needs a single target <id>";
     }
     decorations[words[0]].set(symbol, opBuilder.getUnitAttr());
-    break;
-  case spirv::Decoration::Location:
-  case spirv::Decoration::SpecId:
-  case spirv::Decoration::Index:
-    if (words.size() != 3) {
-      return emitError(unknownLoc, "OpDecoration with ")
-             << decorationName << "needs a single integer literal";
-    }
-    decorations[words[0]].set(
-        symbol, opBuilder.getI32IntegerAttr(static_cast<int32_t>(words[2])));
     break;
   case spirv::Decoration::CacheControlLoadINTEL: {
     LogicalResult res = deserializeCacheControlDecoration<

@@ -982,10 +982,7 @@ void TargetPassConfig::addISelPrepare() {
   if (requiresCodeGenSCCOrder())
     addPass(new DummyCGSCCPass);
 
-  if (getOptLevel() != CodeGenOptLevel::None)
-    addPass(createObjCARCContractPass());
-
-  addPass(createCallBrPass());
+  addPass(createInlineAsmPreparePass());
 
   // Add both the safe stack and the stack protection passes: each of them will
   // only protect functions that have corresponding attributes.
@@ -1095,6 +1092,10 @@ bool TargetPassConfig::addISelPasses() {
     addPass(createLowerEmuTLSPass());
 
   PM->add(createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));
+  // ObjCARCContract operates on ObjC intrinsics and must run before
+  // PreISelIntrinsicLowering.
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addPass(createObjCARCContractPass());
   addPass(createPreISelIntrinsicLoweringPass());
   addPass(createExpandIRInstsPass(getOptLevel()));
   addIRPasses();

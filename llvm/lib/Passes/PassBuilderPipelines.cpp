@@ -512,8 +512,8 @@ PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
   LPM1.addPass(LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap,
                         /*AllowSpeculation=*/false));
 
-  LPM1.addPass(LoopRotatePass(/* Disable header duplication */ true,
-                              isLTOPreLink(Phase)));
+  LPM1.addPass(
+      LoopRotatePass(/*EnableHeaderDuplication=*/true, isLTOPreLink(Phase)));
   // TODO: Investigate promotion cap for O1.
   LPM1.addPass(LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap,
                         /*AllowSpeculation=*/true));
@@ -1579,7 +1579,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   // Disable header duplication at -Oz.
   LPM.addPass(LoopRotatePass(EnableLoopHeaderDuplication ||
                                  Level != OptimizationLevel::Oz,
-                             LTOPreLink));
+                             LTOPreLink, /*CheckExitCount=*/true));
   // Some loops may have become dead by now. Try to delete them.
   // FIXME: see discussion in https://reviews.llvm.org/D112851,
   //        this may need to be revisited once we run GVN before loop deletion

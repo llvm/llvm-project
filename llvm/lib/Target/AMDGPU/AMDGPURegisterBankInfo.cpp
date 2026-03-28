@@ -3285,6 +3285,9 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       constrainOpWithReadfirstlane(B, MI, 2); // M0
       return;
     }
+    case Intrinsic::amdgcn_s_alloc_vgpr:
+      constrainOpWithReadfirstlane(B, MI, 2);
+      return;
     case Intrinsic::amdgcn_s_sendmsg:
     case Intrinsic::amdgcn_s_sendmsghalt: {
       // FIXME: Should this use a waterfall loop?
@@ -3299,7 +3302,9 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       constrainOpWithReadfirstlane(B, MI, 1); // M0
       return;
     case Intrinsic::amdgcn_raw_buffer_load_lds:
-    case Intrinsic::amdgcn_raw_ptr_buffer_load_lds: {
+    case Intrinsic::amdgcn_raw_buffer_load_async_lds:
+    case Intrinsic::amdgcn_raw_ptr_buffer_load_lds:
+    case Intrinsic::amdgcn_raw_ptr_buffer_load_async_lds: {
       applyDefaultMapping(OpdMapper);
       constrainOpWithReadfirstlane(B, MI, 1); // rsrc
       constrainOpWithReadfirstlane(B, MI, 2); // M0
@@ -3307,7 +3312,9 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       return;
     }
     case Intrinsic::amdgcn_struct_buffer_load_lds:
-    case Intrinsic::amdgcn_struct_ptr_buffer_load_lds: {
+    case Intrinsic::amdgcn_struct_buffer_load_async_lds:
+    case Intrinsic::amdgcn_struct_ptr_buffer_load_lds:
+    case Intrinsic::amdgcn_struct_ptr_buffer_load_async_lds: {
       applyDefaultMapping(OpdMapper);
       constrainOpWithReadfirstlane(B, MI, 1); // rsrc
       constrainOpWithReadfirstlane(B, MI, 2); // M0
@@ -3323,7 +3330,9 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       return;
     }
     case Intrinsic::amdgcn_load_to_lds:
-    case Intrinsic::amdgcn_global_load_lds: {
+    case Intrinsic::amdgcn_load_async_to_lds:
+    case Intrinsic::amdgcn_global_load_lds:
+    case Intrinsic::amdgcn_global_load_async_lds: {
       applyDefaultMapping(OpdMapper);
       constrainOpWithReadfirstlane(B, MI, 2);
       return;
@@ -3379,12 +3388,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       constrainOpWithReadfirstlane(B, MI, 2);
       constrainOpWithReadfirstlane(B, MI, 3);
       constrainOpWithReadfirstlane(B, MI, 4);
-      return;
-    }
-    case Intrinsic::amdgcn_tensor_load_to_lds_d2:
-    case Intrinsic::amdgcn_tensor_store_from_lds_d2: {
-      constrainOpWithReadfirstlane(B, MI, 1);
-      constrainOpWithReadfirstlane(B, MI, 2);
+      constrainOpWithReadfirstlane(B, MI, 5);
       return;
     }
     default: {
@@ -3499,6 +3503,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     executeInWaterfallLoop(B, make_range(Start, End), SGPROperandRegs);
     break;
   }
+  case AMDGPU::G_AMDGPU_FLAT_LOAD_MONITOR:
+  case AMDGPU::G_AMDGPU_GLOBAL_LOAD_MONITOR:
   case AMDGPU::G_LOAD:
   case AMDGPU::G_ZEXTLOAD:
   case AMDGPU::G_SEXTLOAD: {
@@ -4069,8 +4075,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_INTRINSIC_ROUNDEVEN:
   case AMDGPU::G_FMINNUM:
   case AMDGPU::G_FMAXNUM:
-  case AMDGPU::G_FMINIMUM:
-  case AMDGPU::G_FMAXIMUM:
   case AMDGPU::G_FMINIMUMNUM:
   case AMDGPU::G_FMAXIMUMNUM:
   case AMDGPU::G_INTRINSIC_TRUNC:
@@ -4081,6 +4085,15 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
     unsigned Size = Ty.getSizeInBits();
     if (Subtarget.hasSALUFloatInsts() && Ty.isScalar() &&
+        (Size == 32 || Size == 16) && isSALUMapping(MI))
+      return getDefaultMappingSOP(MI);
+    return getDefaultMappingVOP(MI);
+  }
+  case AMDGPU::G_FMINIMUM:
+  case AMDGPU::G_FMAXIMUM: {
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    unsigned Size = Ty.getSizeInBits();
+    if (Subtarget.hasSALUMinimumMaximumInsts() && Ty.isScalar() &&
         (Size == 32 || Size == 16) && isSALUMapping(MI))
       return getDefaultMappingSOP(MI);
     return getDefaultMappingVOP(MI);
@@ -5342,12 +5355,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_ds_load_tr16_b128:
     case Intrinsic::amdgcn_ds_load_tr4_b64:
     case Intrinsic::amdgcn_ds_load_tr6_b96:
-    case Intrinsic::amdgcn_flat_load_monitor_b32:
-    case Intrinsic::amdgcn_flat_load_monitor_b64:
-    case Intrinsic::amdgcn_flat_load_monitor_b128:
-    case Intrinsic::amdgcn_global_load_monitor_b32:
-    case Intrinsic::amdgcn_global_load_monitor_b64:
-    case Intrinsic::amdgcn_global_load_monitor_b128:
     case Intrinsic::amdgcn_ds_read_tr4_b64:
     case Intrinsic::amdgcn_ds_read_tr6_b96:
     case Intrinsic::amdgcn_ds_read_tr8_b64:
@@ -5389,6 +5396,10 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[5] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, 32);
       OpdsMapping[6] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, 32);
       OpdsMapping[8] = getSGPROpMapping(MI.getOperand(8).getReg(), MRI, *TRI);
+      break;
+    case Intrinsic::amdgcn_s_alloc_vgpr:
+      OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, 1);
+      OpdsMapping[2] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, 32);
       break;
     case Intrinsic::amdgcn_s_sendmsg:
     case Intrinsic::amdgcn_s_sendmsghalt: {
@@ -5449,7 +5460,9 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
     }
     case Intrinsic::amdgcn_raw_buffer_load_lds:
-    case Intrinsic::amdgcn_raw_ptr_buffer_load_lds: {
+    case Intrinsic::amdgcn_raw_buffer_load_async_lds:
+    case Intrinsic::amdgcn_raw_ptr_buffer_load_lds:
+    case Intrinsic::amdgcn_raw_ptr_buffer_load_async_lds: {
       OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
       OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
       OpdsMapping[4] = getVGPROpMapping(MI.getOperand(4).getReg(), MRI, *TRI);
@@ -5482,7 +5495,9 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
     }
     case Intrinsic::amdgcn_struct_buffer_load_lds:
-    case Intrinsic::amdgcn_struct_ptr_buffer_load_lds: {
+    case Intrinsic::amdgcn_struct_buffer_load_async_lds:
+    case Intrinsic::amdgcn_struct_ptr_buffer_load_lds:
+    case Intrinsic::amdgcn_struct_ptr_buffer_load_async_lds: {
       OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
       OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
       OpdsMapping[4] = getVGPROpMapping(MI.getOperand(4).getReg(), MRI, *TRI);
@@ -5623,8 +5638,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     }
     case Intrinsic::amdgcn_pops_exiting_wave_id:
       return getDefaultMappingSOP(MI);
-    case Intrinsic::amdgcn_tensor_load_to_lds_d2:
-    case Intrinsic::amdgcn_tensor_store_from_lds_d2:
     case Intrinsic::amdgcn_tensor_load_to_lds:
     case Intrinsic::amdgcn_tensor_store_from_lds: {
       // Lie and claim everything is legal, even all operands need to be
@@ -5762,6 +5775,14 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_AMDGPU_WHOLE_WAVE_FUNC_RETURN:
     OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VCCRegBankID, 1);
     break;
+  case AMDGPU::G_AMDGPU_FLAT_LOAD_MONITOR:
+  case AMDGPU::G_AMDGPU_GLOBAL_LOAD_MONITOR: {
+    unsigned Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, *TRI);
+    unsigned PtrSize = getSizeInBits(MI.getOperand(1).getReg(), MRI, *TRI);
+    OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
+    OpdsMapping[1] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, PtrSize);
+    break;
+  }
   }
 
   return getInstructionMapping(/*ID*/1, /*Cost*/1,

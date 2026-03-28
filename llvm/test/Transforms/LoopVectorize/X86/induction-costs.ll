@@ -21,9 +21,9 @@ define i32 @iv_used_widened_and_truncated(ptr %dst, i64 %N) #0 {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <8 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND4:%.*]] = phi <8 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT9:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <8 x i64> [[VEC_IND]], splat (i64 8)
-; CHECK-NEXT:    [[STEP_ADD1:%.*]] = add <8 x i64> [[STEP_ADD]], splat (i64 8)
-; CHECK-NEXT:    [[STEP_ADD2:%.*]] = add <8 x i64> [[STEP_ADD1]], splat (i64 8)
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw <8 x i64> [[VEC_IND]], splat (i64 8)
+; CHECK-NEXT:    [[STEP_ADD1:%.*]] = add nuw <8 x i64> [[STEP_ADD]], splat (i64 8)
+; CHECK-NEXT:    [[STEP_ADD2:%.*]] = add nuw <8 x i64> [[STEP_ADD1]], splat (i64 8)
 ; CHECK-NEXT:    [[STEP_ADD5:%.*]] = add <8 x i32> [[VEC_IND4]], splat (i32 8)
 ; CHECK-NEXT:    [[STEP_ADD6:%.*]] = add <8 x i32> [[STEP_ADD5]], splat (i32 8)
 ; CHECK-NEXT:    [[STEP_ADD7:%.*]] = add <8 x i32> [[STEP_ADD6]], splat (i32 8)
@@ -255,7 +255,6 @@ define void @multiple_pointer_ivs_with_scalar_uses_only(ptr %A, ptr %B) #0 {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <16 x i32> [ <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 2048>, [[VECTOR_PH]] ], [ [[TMP22:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], 6
@@ -271,7 +270,7 @@ define void @multiple_pointer_ivs_with_scalar_uses_only(ptr %A, ptr %B) #0 {
 ; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[OFFSET_IDX]], 26
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[OFFSET_IDX]], 28
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[OFFSET_IDX]], 30
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP0]]
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[NEXT_GEP7:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[NEXT_GEP8:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[NEXT_GEP9:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP3]]
@@ -461,9 +460,9 @@ define i32 @test_scalar_predicated_cost(i64 %x, i64 %y, ptr %A) #0 {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH1]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <8 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, [[VECTOR_PH1]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <8 x i64> [[VEC_IND]], splat (i64 8)
-; CHECK-NEXT:    [[STEP_ADD1:%.*]] = add <8 x i64> [[STEP_ADD]], splat (i64 8)
-; CHECK-NEXT:    [[STEP_ADD2:%.*]] = add <8 x i64> [[STEP_ADD1]], splat (i64 8)
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw <8 x i64> [[VEC_IND]], splat (i64 8)
+; CHECK-NEXT:    [[STEP_ADD1:%.*]] = add nuw <8 x i64> [[STEP_ADD]], splat (i64 8)
+; CHECK-NEXT:    [[STEP_ADD2:%.*]] = add nuw <8 x i64> [[STEP_ADD1]], splat (i64 8)
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt <8 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp ugt <8 x i64> [[STEP_ADD]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp ugt <8 x i64> [[STEP_ADD1]], [[BROADCAST_SPLAT]]
@@ -585,8 +584,7 @@ define void @wide_iv_trunc(ptr %dst, i64 %N) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[TMP2]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
-; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP1]], 0
-; CHECK-NEXT:    store i32 [[TMP4]], ptr [[DST]], align 4
+; CHECK-NEXT:    store i32 [[TMP1]], ptr [[DST]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK:       pred.store.continue:
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i1> [[TMP2]], i32 1

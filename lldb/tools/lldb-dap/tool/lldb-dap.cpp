@@ -70,6 +70,7 @@
 #undef GetObject
 #include <io.h>
 typedef int socklen_t;
+#include "lldb/Host/windows/PythonPathSetup/PythonPathSetup.h"
 #else
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -410,7 +411,7 @@ validateConnection(llvm::StringRef conn) {
 static llvm::Error serveConnection(
     const Socket::SocketProtocol &protocol, llvm::StringRef name, Log &log,
     const ReplMode default_repl_mode,
-    const std::vector<std::string> &pre_init_commands, bool no_lldbinit,
+    const std::vector<protocol::String> &pre_init_commands, bool no_lldbinit,
     std::optional<std::chrono::seconds> connection_timeout_seconds) {
   Status status;
   static std::unique_ptr<Socket> listener = Socket::Create(protocol, status);
@@ -540,6 +541,30 @@ int main(int argc, char *argv[]) {
     PrintVersion();
     return EXIT_SUCCESS;
   }
+
+#ifdef _WIN32
+  if (input_args.hasArg(OPT_check_python)) {
+    auto python_path_or_err = SetupPythonRuntimeLibrary();
+    if (!python_path_or_err) {
+      llvm::WithColor::error()
+          << llvm::toString(python_path_or_err.takeError()) << '\n';
+      return EXIT_FAILURE;
+    }
+    std::string python_path = *python_path_or_err;
+    if (python_path.empty()) {
+      llvm::WithColor::error()
+          << "unable to look for the Python shared library" << '\n';
+      return EXIT_FAILURE;
+    }
+    llvm::outs() << python_path << '\n';
+    return EXIT_SUCCESS;
+  }
+
+  auto python_path_or_err = SetupPythonRuntimeLibrary();
+  if (!python_path_or_err)
+    llvm::WithColor::error()
+        << llvm::toString(python_path_or_err.takeError()) << '\n';
+#endif
 
   if (input_args.hasArg(OPT_client)) {
     if (llvm::Error error = LaunchClient(input_args)) {
@@ -680,7 +705,7 @@ int main(int argc, char *argv[]) {
     lldb::SBDebugger::Terminate();
   });
 
-  std::vector<std::string> pre_init_commands;
+  std::vector<protocol::String> pre_init_commands;
   for (const std::string &arg :
        input_args.getAllArgValues(OPT_pre_init_command)) {
     pre_init_commands.push_back(arg);

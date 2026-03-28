@@ -144,8 +144,12 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(UDot, udot)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Dot4AddI8Packed, dot4add_i8packed)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Dot4AddU8Packed, dot4add_u8packed)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveAllEqual, wave_all_equal)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveAllTrue, wave_all)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveAnyTrue, wave_any)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveBitOr, wave_reduce_or)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveBitXor, wave_reduce_xor)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveBitAnd, wave_reduce_and)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveMax, wave_reduce_max)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveUMax, wave_reduce_umax)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveMin, wave_reduce_min)
@@ -154,6 +158,8 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveIsFirstLane, wave_is_first_lane)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveGetLaneCount, wave_get_lane_count)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveReadLaneAt, wave_readlane)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(QuadReadAcrossX, quad_read_across_x)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(QuadReadAcrossY, quad_read_across_y)
   GENERATE_HLSL_INTRINSIC_FUNCTION(FirstBitUHigh, firstbituhigh)
   GENERATE_HLSL_INTRINSIC_FUNCTION(FirstBitSHigh, firstbitshigh)
   GENERATE_HLSL_INTRINSIC_FUNCTION(FirstBitLow, firstbitlow)
@@ -165,6 +171,17 @@ public:
                                    resource_getpointer)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Sample, resource_sample)
   GENERATE_HLSL_INTRINSIC_FUNCTION(SampleClamp, resource_sample_clamp)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(SampleBias, resource_samplebias)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(SampleBiasClamp, resource_samplebias_clamp)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(SampleGrad, resource_samplegrad)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(SampleGradClamp, resource_samplegrad_clamp)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(SampleLevel, resource_samplelevel)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(SampleCmp, resource_samplecmp)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(SampleCmpClamp, resource_samplecmp_clamp)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(SampleCmpLevelZero,
+                                   resource_samplecmplevelzero)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(Gather, resource_gather)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(GatherCmp, resource_gather_cmp)
   GENERATE_HLSL_INTRINSIC_FUNCTION(CreateHandleFromBinding,
                                    resource_handlefrombinding)
   GENERATE_HLSL_INTRINSIC_FUNCTION(CreateHandleFromImplicitBinding,
@@ -172,9 +189,11 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(NonUniformResourceIndex,
                                    resource_nonuniformindex)
   GENERATE_HLSL_INTRINSIC_FUNCTION(BufferUpdateCounter, resource_updatecounter)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(GroupMemoryBarrier, group_memory_barrier)
   GENERATE_HLSL_INTRINSIC_FUNCTION(GroupMemoryBarrierWithGroupSync,
                                    group_memory_barrier_with_group_sync)
   GENERATE_HLSL_INTRINSIC_FUNCTION(GetDimensionsX, resource_getdimensions_x)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(LoadLevel, resource_load_level)
   GENERATE_HLSL_INTRINSIC_FUNCTION(DdxCoarse, ddx_coarse)
   GENERATE_HLSL_INTRINSIC_FUNCTION(DdyCoarse, ddy_coarse)
   GENERATE_HLSL_INTRINSIC_FUNCTION(DdxFine, ddx_fine)
@@ -271,6 +290,9 @@ public:
   std::optional<LValue> emitBufferArraySubscriptExpr(
       const ArraySubscriptExpr *E, CodeGenFunction &CGF,
       llvm::function_ref<llvm::Value *(bool Promote)> EmitIdxAfterBase);
+
+  RawAddress createBufferMatrixTempAddress(const LValue &LV, SourceLocation Loc,
+                                           CodeGenFunction &CGF);
 
   bool emitBufferCopy(CodeGenFunction &CGF, Address DestPtr, Address SrcPtr,
                       QualType CType);

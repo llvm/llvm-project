@@ -178,6 +178,9 @@ def Jt : JumpOpcode;
 // [Bool] -> [], jumps if false.
 def Jf : JumpOpcode;
 
+def PushIgnoreDiags : Opcode;
+def PopIgnoreDiags : Opcode;
+
 def StartSpeculation : Opcode;
 def EndSpeculation : Opcode;
 def BCP : Opcode {
@@ -332,9 +335,13 @@ def GetPtrThisField : OffsetOpcode;
 def GetPtrBase : OffsetOpcode;
 // [Pointer] -> [Pointer]
 def GetPtrBasePop : OffsetOpcode { let Args = [ArgUint32, ArgBool]; }
-def GetMemberPtrBasePop : Opcode {
+def CastMemberPtrBasePop : Opcode {
   // Offset of field, which is a base.
-  let Args = [ArgSint32];
+  let Args = [ArgSint32, ArgRecordDecl];
+}
+def CastMemberPtrDerivedPop : Opcode {
+  // Offset of field, which is a base.
+  let Args = [ArgSint32, ArgRecordDecl];
 }
 
 def FinishInitPop : Opcode;
@@ -410,7 +417,8 @@ class AccessOpcode : Opcode {
 
 class BitFieldOpcode : Opcode {
   let Types = [IntegralTypeClass];
-  let Args = [ArgRecordField];
+  //          FieldOffset, FieldBitWidth
+  let Args = [ArgUint32, ArgUint32];
   let HasGroup = 1;
 }
 
@@ -478,16 +486,7 @@ def SetThisField : AccessOpcode;
 def InitThisField : AccessOpcode;
 def InitThisFieldActivate : AccessOpcode;
 // [Value] -> []
-def InitThisBitField : Opcode {
-  let Types = [AluTypeClass];
-  let Args = [ArgRecordField, ArgUint32];
-  let HasGroup = 1;
-}
-def InitThisBitFieldActivate : Opcode {
-  let Types = [AluTypeClass];
-  let Args = [ArgRecordField, ArgUint32];
-  let HasGroup = 1;
-}
+def InitThisBitField : BitFieldOpcode;
 // [Pointer, Value] -> []
 def InitField : AccessOpcode;
 def InitFieldActivate : AccessOpcode;
@@ -877,13 +876,13 @@ def Alloc : Opcode {
 }
 
 def AllocN : Opcode {
-  let Types = [IntegerTypeClass];
+  let Types = [IntegralTypeClass];
   let Args = [ArgPrimType, ArgExpr, ArgBool];
   let HasGroup = 1;
 }
 
 def AllocCN : Opcode {
-  let Types = [IntegerTypeClass];
+  let Types = [IntegralTypeClass];
   let Args = [ArgDesc, ArgBool];
   let HasGroup = 1;
 }

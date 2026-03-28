@@ -107,7 +107,7 @@ public:
 ThreadProperties::ThreadProperties(bool is_global) : Properties() {
   if (is_global) {
     m_collection_sp = std::make_shared<ThreadOptionValueProperties>("thread");
-    m_collection_sp->Initialize(g_thread_properties);
+    m_collection_sp->Initialize(g_thread_properties_def);
   } else
     m_collection_sp =
         OptionValueProperties::CreateLocalCopy(Thread::GetGlobalProperties());
@@ -267,6 +267,10 @@ void Thread::DestroyThread() {
   m_frame_providers.clear();
   m_provider_chain_ids.clear();
   m_frame_lists_by_id.clear();
+  {
+    std::lock_guard<std::mutex> pguard(m_provider_frames_mutex);
+    m_active_frame_providers_by_thread.clear();
+  }
   m_prev_framezero_pc.reset();
 }
 
@@ -1084,14 +1088,15 @@ Vote Thread::ShouldReportRun(Event *event_ptr) {
   if (GetPlans().AnyCompletedPlans()) {
     // Pass skip_private = false to GetCompletedPlan, since we want to ask
     // the last plan, regardless of whether it is private or not.
+    ThreadPlanSP plan = GetPlans().GetCompletedPlan(/*skip_private=*/false);
+
     LLDB_LOGF(log,
               "Current Plan for thread %d(%p) (0x%4.4" PRIx64
               ", %s): %s being asked whether we should report run.",
               GetIndexID(), static_cast<void *>(this), GetID(),
-              StateAsCString(GetTemporaryResumeState()),
-              GetCompletedPlan()->GetName());
+              StateAsCString(GetTemporaryResumeState()), plan->GetName());
 
-    return GetPlans().GetCompletedPlan(false)->ShouldReportRun(event_ptr);
+    return plan->ShouldReportRun(event_ptr);
   } else {
     LLDB_LOGF(log,
               "Current Plan for thread %d(%p) (0x%4.4" PRIx64
@@ -1142,10 +1147,8 @@ void Thread::PushPlan(ThreadPlanSP thread_plan_sp) {
 void Thread::PopPlan() {
   Log *log = GetLog(LLDBLog::Step);
   ThreadPlanSP popped_plan_sp = GetPlans().PopPlan();
-  if (log) {
-    LLDB_LOGF(log, "Popping plan: \"%s\", tid = 0x%4.4" PRIx64 ".",
-              popped_plan_sp->GetName(), popped_plan_sp->GetThread().GetID());
-  }
+  LLDB_LOGF(log, "Popping plan: \"%s\", tid = 0x%4.4" PRIx64 ".",
+            popped_plan_sp->GetName(), popped_plan_sp->GetThread().GetID());
 }
 
 void Thread::DiscardPlan() {
@@ -1260,12 +1263,10 @@ void Thread::DiscardThreadPlansUpToPlan(ThreadPlan *up_to_plan_ptr) {
 
 void Thread::DiscardThreadPlans(bool force) {
   Log *log = GetLog(LLDBLog::Step);
-  if (log) {
-    LLDB_LOGF(log,
-              "Discarding thread plans for thread (tid = 0x%4.4" PRIx64
-              ", force %d)",
-              GetID(), force);
-  }
+  LLDB_LOGF(log,
+            "Discarding thread plans for thread (tid = 0x%4.4" PRIx64
+            ", force %d)",
+            GetID(), force);
 
   if (force) {
     GetPlans().DiscardAllPlans();
@@ -1455,8 +1456,69 @@ void Thread::CalculateExecutionContext(ExecutionContext &exe_ctx) {
   exe_ctx.SetContext(shared_from_this());
 }
 
+void Thread::PushProviderFrameList(StackFrameListSP frames) {
+  std::lock_guard<std::mutex> guard(m_provider_frames_mutex);
+  HostThread current(Host::GetCurrentThread());
+  auto &stack = m_active_frame_providers_by_thread[current];
+  LLDB_LOG(GetLog(LLDBLog::Thread),
+           "Thread::PushProviderFrameList: tid = 0x{0:x}, depth = {1} -> {2}",
+           GetID(), stack.size(), stack.size() + 1);
+  stack.push_back(std::move(frames));
+}
+
+void Thread::PopProviderFrameList() {
+  std::lock_guard<std::mutex> guard(m_provider_frames_mutex);
+  HostThread current(Host::GetCurrentThread());
+  auto it = m_active_frame_providers_by_thread.find(current);
+  size_t pre_pop_depth =
+      (it != m_active_frame_providers_by_thread.end()) ? it->second.size() : 0;
+  LLDB_LOG(GetLog(LLDBLog::Thread),
+           "Thread::PopProviderFrameList: tid = 0x{0:x}, depth = {1} -> {2}",
+           GetID(), pre_pop_depth, pre_pop_depth ? pre_pop_depth - 1 : 0);
+  assert(it != m_active_frame_providers_by_thread.end() && !it->second.empty());
+  if (it == m_active_frame_providers_by_thread.end() || it->second.empty())
+    return;
+  it->second.pop_back();
+  if (it->second.empty())
+    m_active_frame_providers_by_thread.erase(it);
+}
+
+bool Thread::IsAnyProviderActive() {
+  std::lock_guard<std::mutex> guard(m_provider_frames_mutex);
+  return !m_active_frame_providers_by_thread.empty();
+}
+
 StackFrameListSP Thread::GetStackFrameList() {
   std::lock_guard<std::recursive_mutex> guard(m_frame_mutex);
+
+  // If a provider is currently fetching frames, return the provider's input
+  // frames instead of m_curr_frames_sp. m_curr_frames_sp IS the
+  // SyntheticStackFrameList, and accessing it would trigger provider code on
+  // THIS thread too. That is dangerous because:
+  //  - On the provider's own host thread: circular dependency / deadlock.
+  //  - On the private state thread: the provider may call EvaluateExpression
+  //    which needs the private state thread to process events -> deadlock.
+  //  - On any other thread: would run the provider concurrently.
+  // Returning the input (parent) frames is always safe.
+  {
+    std::lock_guard<std::mutex> pguard(m_provider_frames_mutex);
+    if (!m_active_frame_providers_by_thread.empty()) {
+      // Check if the current host thread is inside a provider call.
+      HostThread current(Host::GetCurrentThread());
+      auto it = m_active_frame_providers_by_thread.find(current);
+      if (it != m_active_frame_providers_by_thread.end() && !it->second.empty())
+        return it->second.back();
+
+      // If the private state thread calls GetStackFrameList while a provider
+      // is active on another thread, return parent frames too. The provider
+      // may call EvaluateExpression which needs the private state thread to
+      // process events — touching m_curr_frames_sp (the synthetic list) would
+      // trigger the provider and deadlock.
+      ProcessSP process_sp = GetProcess();
+      if (process_sp && process_sp->CurrentThreadIsPrivateStateThread())
+        return m_active_frame_providers_by_thread.begin()->second.back();
+    }
+  }
 
   if (m_curr_frames_sp)
     return m_curr_frames_sp;
@@ -1570,8 +1632,15 @@ llvm::Error Thread::LoadScriptedFrameProvider(
         last_id);
   }
 
+  // Protect provider construction (__init__) from re-entrancy. If the
+  // provider calls back into the frame machinery (e.g. HandleCommand("bt"))
+  // during __init__, GetStackFrameList() will find this thread in the
+  // active-provider map and return input_frames instead of trying to
+  // build a new synthetic list — preventing infinite recursion.
+  PushProviderFrameList(input_frames);
   auto provider_or_err =
       SyntheticFrameProvider::CreateInstance(input_frames, descriptor);
+  PopProviderFrameList();
   if (!provider_or_err)
     return provider_or_err.takeError();
 
@@ -1625,6 +1694,15 @@ std::optional<addr_t> Thread::GetPreviousFrameZeroPC() {
 
 void Thread::ClearStackFrames() {
   std::lock_guard<std::recursive_mutex> guard(m_frame_mutex);
+
+  // If any host thread is inside a frame provider call (e.g. the provider
+  // called EvaluateExpression which resumes the process), don't tear down the
+  // frame state. The synthetic frame list is still being constructed and the
+  // thread will stop right back where it was after the expression finishes.
+  // This must be a global check (not per-host-thread) because the frame state
+  // is shared and clearing it would destroy in-progress provider work.
+  if (IsAnyProviderActive())
+    return;
 
   GetUnwinder().Clear();
   m_prev_framezero_pc.reset();
@@ -1961,9 +2039,9 @@ size_t Thread::GetStatus(Stream &strm, uint32_t start_frame,
                          uint32_t num_frames, uint32_t num_frames_with_source,
                          bool stop_format, bool show_hidden, bool only_stacks) {
 
+  ExecutionContext exe_ctx(shared_from_this());
+  Target *target = exe_ctx.GetTargetPtr();
   if (!only_stacks) {
-    ExecutionContext exe_ctx(shared_from_this());
-    Target *target = exe_ctx.GetTargetPtr();
     Process *process = exe_ctx.GetProcessPtr();
     strm.Indent();
     bool is_selected = false;
@@ -1997,16 +2075,19 @@ size_t Thread::GetStatus(Stream &strm, uint32_t start_frame,
 
     const bool show_frame_info = true;
     const bool show_frame_unique = only_stacks;
-    const char *selected_frame_marker = nullptr;
+    bool show_selected_frame = false;
     if (num_frames == 1 || only_stacks ||
         (GetID() != GetProcess()->GetThreadList().GetSelectedThread()->GetID()))
       strm.IndentMore();
     else
-      selected_frame_marker = "* ";
+      show_selected_frame = true;
 
+    bool show_hidden_marker =
+        target && target->GetDebugger().GetMarkHiddenFrames();
     num_frames_shown = GetStackFrameList()->GetStatus(
         strm, start_frame, num_frames, show_frame_info, num_frames_with_source,
-        show_frame_unique, show_hidden, selected_frame_marker);
+        show_frame_unique, show_hidden, show_hidden_marker,
+        show_selected_frame);
     if (num_frames == 1)
       strm.IndentLess();
     strm.IndentLess();
@@ -2106,9 +2187,13 @@ size_t Thread::GetStackFrameStatus(Stream &strm, uint32_t first_frame,
                                    uint32_t num_frames, bool show_frame_info,
                                    uint32_t num_frames_with_source,
                                    bool show_hidden) {
-  return GetStackFrameList()->GetStatus(strm, first_frame, num_frames,
-                                        show_frame_info, num_frames_with_source,
-                                        /*show_unique*/ false, show_hidden);
+  ExecutionContext exe_ctx(shared_from_this());
+  Target *target = exe_ctx.GetTargetPtr();
+  bool show_hidden_marker =
+      target && target->GetDebugger().GetMarkHiddenFrames();
+  return GetStackFrameList()->GetStatus(
+      strm, first_frame, num_frames, show_frame_info, num_frames_with_source,
+      /*show_unique*/ false, show_hidden, show_hidden_marker);
 }
 
 Unwind &Thread::GetUnwinder() {

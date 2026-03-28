@@ -21,7 +21,6 @@ LLVM_LIBC_FUNCTION(void, clearerr, (::FILE * stream)) {
         buffer->data[0] = file::from_stream(stream);
       },
       [&](rpc::Buffer *, uint32_t) {});
-  port.close();
 }
 
 } // namespace LIBC_NAMESPACE_DECL

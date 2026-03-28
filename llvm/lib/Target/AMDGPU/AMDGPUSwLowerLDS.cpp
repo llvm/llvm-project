@@ -774,6 +774,7 @@ void AMDGPUSwLowerLDS::lowerKernelLDSAccesses(Function *Func,
   auto *PrevEntryBlock = &Func->getEntryBlock();
   SetVector<Instruction *> LDSInstructions;
   getLDSMemoryInstructions(Func, LDSInstructions);
+  const DataLayout &DL = M.getDataLayout();
 
   // Create malloc block.
   auto *MallocBlock = BasicBlock::Create(Ctx, "Malloc", Func, PrevEntryBlock);
@@ -867,8 +868,9 @@ void AMDGPUSwLowerLDS::lowerKernelLDSAccesses(Function *Func,
 
   // Create a call to malloc function which does device global memory allocation
   // with size equals to all LDS global accesses size in this kernel.
-  Value *ReturnAddress =
-      IRB.CreateIntrinsic(Intrinsic::returnaddress, {IRB.getInt32(0)});
+  Value *ReturnAddress = IRB.CreateIntrinsic(
+      Intrinsic::returnaddress, IRB.getPtrTy(DL.getProgramAddressSpace()),
+      {IRB.getInt32(0)});
   FunctionCallee MallocFunc = M.getOrInsertFunction(
       StringRef("__asan_malloc_impl"),
       FunctionType::get(Int64Ty, {Int64Ty, Int64Ty}, false));
@@ -933,8 +935,9 @@ void AMDGPUSwLowerLDS::lowerKernelLDSAccesses(Function *Func,
   FunctionCallee AsanFreeFunc = M.getOrInsertFunction(
       StringRef("__asan_free_impl"),
       FunctionType::get(IRB.getVoidTy(), {Int64Ty, Int64Ty}, false));
-  Value *ReturnAddr =
-      IRB.CreateIntrinsic(Intrinsic::returnaddress, IRB.getInt32(0));
+  Value *ReturnAddr = IRB.CreateIntrinsic(
+      Intrinsic::returnaddress, IRB.getPtrTy(DL.getProgramAddressSpace()),
+      IRB.getInt32(0));
   Value *RAPToInt = IRB.CreatePtrToInt(ReturnAddr, Int64Ty);
   Value *MallocPtrToInt = IRB.CreatePtrToInt(LoadMallocPtr, Int64Ty);
   IRB.CreateCall(AsanFreeFunc, {MallocPtrToInt, RAPToInt});
@@ -990,7 +993,6 @@ void AMDGPUSwLowerLDS::buildNonKernelLDSBaseTable(
   auto &Kernels = NKLDSParams.OrderedKernels;
   if (Kernels.empty())
     return;
-  Type *Int32Ty = IRB.getInt32Ty();
   const size_t NumberKernels = Kernels.size();
   ArrayType *AllKernelsOffsetsType =
       ArrayType::get(IRB.getPtrTy(AMDGPUAS::LOCAL_ADDRESS), NumberKernels);
@@ -998,12 +1000,7 @@ void AMDGPUSwLowerLDS::buildNonKernelLDSBaseTable(
   for (size_t i = 0; i < NumberKernels; i++) {
     Function *Func = Kernels[i];
     auto &LDSParams = FuncLDSAccessInfo.KernelToLDSParametersMap[Func];
-    GlobalVariable *SwLDS = LDSParams.SwLDS;
-    assert(SwLDS);
-    Constant *GEPIdx[] = {ConstantInt::get(Int32Ty, 0)};
-    Constant *GEP =
-        ConstantExpr::getGetElementPtr(SwLDS->getType(), SwLDS, GEPIdx, true);
-    OverallConstantExprElts[i] = GEP;
+    OverallConstantExprElts[i] = LDSParams.SwLDS;
   }
   Constant *init =
       ConstantArray::get(AllKernelsOffsetsType, OverallConstantExprElts);

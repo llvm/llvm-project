@@ -22,7 +22,6 @@ LLVM_LIBC_FUNCTION(int, fclose, (::FILE * stream)) {
   port.send_and_recv(
       [=](rpc::Buffer *buffer, uint32_t) { buffer->data[0] = file; },
       [&](rpc::Buffer *buffer, uint32_t) { ret = buffer->data[0]; });
-  port.close();
 
   if (ret != 0)
     return EOF;

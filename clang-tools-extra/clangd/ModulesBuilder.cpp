@@ -268,29 +268,29 @@ bool IsModuleFileUpToDate(PathRef ModuleFilePath,
   std::shared_ptr<ModuleCache> ModCache = createCrossProcessModuleCache();
   PCHContainerOperations PCHOperations;
   CodeGenOptions CodeGenOpts;
-  ASTReader Reader(PP, *ModCache, /*ASTContext=*/nullptr,
-                   PCHOperations.getRawReader(), CodeGenOpts, {});
+  ASTReader Reader(
+      PP, *ModCache, /*ASTContext=*/nullptr, PCHOperations.getRawReader(),
+      CodeGenOpts, {},
+      /*isysroot=*/"",
+      /*DisableValidationKind=*/DisableValidationForModuleKind::None,
+      /*AllowASTWithCompilerErrors=*/false,
+      /*AllowConfigurationMismatch=*/false,
+      /*ValidateSystemInputs=*/false,
+      /*ForceValidateUserInputs=*/true,
+      /*ValidateASTInputFilesContent=*/true);
 
   // We don't need any listener here. By default it will use a validator
   // listener.
   Reader.setListener(nullptr);
 
-  if (Reader.ReadAST(ModuleFilePath, serialization::MK_MainFile,
-                     SourceLocation(),
-                     ASTReader::ARR_None) != ASTReader::Success)
-    return false;
-
-  bool UpToDate = true;
-  Reader.getModuleManager().visit([&](serialization::ModuleFile &MF) -> bool {
-    Reader.visitInputFiles(
-        MF, /*IncludeSystem=*/false, /*Complain=*/false,
-        [&](const serialization::InputFile &IF, bool isSystem) {
-          if (!IF.getFile() || IF.isOutOfDate())
-            UpToDate = false;
-        });
-    return !UpToDate;
-  });
-  return UpToDate;
+  // Use ARR_OutOfDate so that ReadAST returns OutOfDate instead of Failure
+  // when input files are modified. This allows us to detect staleness
+  // without treating it as a hard error.
+  // ReadAST will validate all input files internally and return OutOfDate
+  // if any file is modified.
+  return Reader.ReadAST(ModuleFileName::makeExplicit(ModuleFilePath),
+                        serialization::MK_MainFile, SourceLocation(),
+                        ASTReader::ARR_OutOfDate) == ASTReader::Success;
 }
 
 bool IsModuleFilesUpToDate(
@@ -584,12 +584,20 @@ void ModulesBuilder::ModulesBuilderImpl::getPrebuiltModuleFile(
     if (BuiltModuleFiles.isModuleUnitBuilt(ModuleName))
       continue;
 
-    if (IsModuleFileUpToDate(ModuleFilePath, BuiltModuleFiles,
+    // Convert relative path to absolute path based on the compilation directory
+    llvm::SmallString<256> AbsoluteModuleFilePath;
+    if (llvm::sys::path::is_relative(ModuleFilePath)) {
+      AbsoluteModuleFilePath = Inputs.CompileCommand.Directory;
+      llvm::sys::path::append(AbsoluteModuleFilePath, ModuleFilePath);
+    } else
+      AbsoluteModuleFilePath = ModuleFilePath;
+
+    if (IsModuleFileUpToDate(AbsoluteModuleFilePath, BuiltModuleFiles,
                              TFS.view(std::nullopt))) {
       log("Reusing prebuilt module file {0} of module {1} for {2}",
-          ModuleFilePath, ModuleName, ModuleUnitFileName);
+          AbsoluteModuleFilePath, ModuleName, ModuleUnitFileName);
       BuiltModuleFiles.addModuleFile(
-          PrebuiltModuleFile::make(ModuleName, ModuleFilePath));
+          PrebuiltModuleFile::make(ModuleName, AbsoluteModuleFilePath));
     }
   }
 }

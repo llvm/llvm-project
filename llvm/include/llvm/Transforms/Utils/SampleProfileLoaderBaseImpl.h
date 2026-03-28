@@ -87,6 +87,7 @@ template <> struct IRTraits<BasicBlock> {
 // SampleProfileProber.
 class PseudoProbeManager {
   DenseMap<uint64_t, PseudoProbeDescriptor> GUIDToProbeDescMap;
+  DenseSet<uint64_t> GUIDIsWeakSymbol;
 
 public:
   PseudoProbeManager(const Module &M) {
@@ -100,6 +101,14 @@ public:
                         ->getZExtValue();
         GUIDToProbeDescMap.try_emplace(GUID, PseudoProbeDescriptor(GUID, Hash));
       }
+      for (const auto &Func : M) {
+        if (Func.hasWeakLinkage() || Func.hasExternalWeakLinkage()) {
+          auto GUID = Function::getGUIDAssumingExternalLinkage(
+              FunctionSamples::getCanonicalFnName(Func));
+          if (GUIDToProbeDescMap.contains(GUID))
+            GUIDIsWeakSymbol.insert(GUID);
+        }
+      }
     }
   }
 
@@ -109,12 +118,17 @@ public:
   }
 
   const PseudoProbeDescriptor *getDesc(StringRef FProfileName) const {
-    return getDesc(Function::getGUIDAssumingExternalLinkage(FProfileName));
+    return getDesc(Function::getGUIDAssumingExternalLinkage(
+        FunctionSamples::getCanonicalFnName(FProfileName)));
   }
 
   const PseudoProbeDescriptor *getDesc(const Function &F) const {
     return getDesc(Function::getGUIDAssumingExternalLinkage(
         FunctionSamples::getCanonicalFnName(F)));
+  }
+
+  bool probeFromWeakSymbol(uint64_t GUID) const {
+    return GUIDIsWeakSymbol.count(GUID);
   }
 
   bool profileIsHashMismatched(const PseudoProbeDescriptor &FuncDesc,

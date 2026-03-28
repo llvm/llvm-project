@@ -109,12 +109,9 @@ void loadWithThreadFence(DataPtr d) {
   // CIR:    cir.atomic.fence syncscope(system) seq_cst
   // CIR:    %[[LOAD_DATA:.*]] = cir.load{{.*}} %[[DATA]] : !cir.ptr<!cir.ptr<!rec_Data>>, !cir.ptr<!rec_Data>
   // CIR:    %[[DATA_VALUE:.*]] = cir.get_member %[[LOAD_DATA]][1] {name = "ptr"} : !cir.ptr<!rec_Data> -> !cir.ptr<!cir.ptr<!void>>
-  // CIR:    %[[CASTED_DATA_VALUE:.*]] = cir.cast bitcast %[[DATA_VALUE]] : !cir.ptr<!cir.ptr<!void>> -> !cir.ptr<!u64i>
-  // CIR:    %[[CASTED_ATOMIC_TEMP:.*]] = cir.cast bitcast %[[ATOMIC_TEMP]] : !cir.ptr<!cir.ptr<!void>> -> !cir.ptr<!u64i>
-  // CIR:    %[[ATOMIC_LOAD:.*]] = cir.load{{.*}} atomic(seq_cst) %[[CASTED_DATA_VALUE]] : !cir.ptr<!u64i>, !u64i
-  // CIR:    cir.store{{.*}} %[[ATOMIC_LOAD]], %[[CASTED_ATOMIC_TEMP]] : !u64i, !cir.ptr<!u64i>
-  // CIR:    %[[DOUBLE_CASTED_ATOMIC_TEMP:.*]] = cir.cast bitcast %[[CASTED_ATOMIC_TEMP]] : !cir.ptr<!u64i> -> !cir.ptr<!cir.ptr<!void>>
-  // CIR:    %[[ATOMIC_LOAD_PTR:.*]] = cir.load{{.*}} %[[DOUBLE_CASTED_ATOMIC_TEMP]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
+  // CIR:    %[[ATOMIC_LOAD:.*]] = cir.load{{.*}} atomic(seq_cst) %[[DATA_VALUE]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
+  // CIR:    cir.store{{.*}} %[[ATOMIC_LOAD]], %[[ATOMIC_TEMP]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
+  // CIR:    %[[ATOMIC_LOAD_PTR:.*]] = cir.load{{.*}} %[[ATOMIC_TEMP]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
   // CIR:    cir.return
 
   // LLVM-LABEL: @loadWithThreadFence
@@ -123,8 +120,8 @@ void loadWithThreadFence(DataPtr d) {
   // LLVM:    fence seq_cst
   // LLVM:    %[[DATA_PTR:.*]] = load ptr, ptr %[[DATA]], align 8
   // LLVM:    %[[DATA_VALUE:.*]] = getelementptr %struct.Data, ptr %[[DATA_PTR]], i32 0, i32 1
-  // LLVM:    %[[ATOMIC_LOAD:.*]] = load atomic i64, ptr %[[DATA_VALUE]] seq_cst, align 8
-  // LLVM:    store i64 %[[ATOMIC_LOAD]], ptr %[[DATA_TEMP]], align 8
+  // LLVM:    %[[ATOMIC_LOAD:.*]] = load atomic ptr, ptr %[[DATA_VALUE]] seq_cst, align 8
+  // LLVM:    store ptr %[[ATOMIC_LOAD]], ptr %[[DATA_TEMP]], align 8
   // LLVM:    %[[DATA_TEMP_LOAD:.*]] = load ptr, ptr %[[DATA_TEMP]], align 8
   // LLVM:    ret void
 
@@ -134,8 +131,8 @@ void loadWithThreadFence(DataPtr d) {
   // OGCG:    fence seq_cst
   // OGCG:    %[[DATA_PTR:.*]] = load ptr, ptr %[[DATA]], align 8
   // OGCG:    %[[DATA_VALUE:.*]] = getelementptr inbounds nuw %struct.Data, ptr %[[DATA_PTR]], i32 0, i32 1
-  // OGCG:    %[[ATOMIC_LOAD:.*]] = load atomic i64, ptr %[[DATA_VALUE]] seq_cst, align 8
-  // OGCG:    store i64 %[[ATOMIC_LOAD]], ptr %[[DATA_TEMP]], align 8
+  // OGCG:    %[[ATOMIC_LOAD:.*]] = load atomic ptr, ptr %[[DATA_VALUE]] seq_cst, align 8
+  // OGCG:    store ptr %[[ATOMIC_LOAD]], ptr %[[DATA_TEMP]], align 8
   // OGCG:    %[[DATA_TEMP_LOAD:.*]] = load ptr, ptr %[[DATA_TEMP]], align 8
   // OGCG:    ret void
 }
@@ -149,12 +146,9 @@ void loadWithSignalFence(DataPtr d) {
   // CIR:    cir.atomic.fence syncscope(single_thread) seq_cst
   // CIR:    %[[LOAD_DATA:.*]] = cir.load{{.*}} %[[DATA]] : !cir.ptr<!cir.ptr<!rec_Data>>, !cir.ptr<!rec_Data>
   // CIR:    %[[DATA_PTR:.*]] = cir.get_member %[[LOAD_DATA]][1] {name = "ptr"} : !cir.ptr<!rec_Data> -> !cir.ptr<!cir.ptr<!void>>
-  // CIR:    %[[CASTED_DATA_PTR:.*]] = cir.cast bitcast %[[DATA_PTR]] : !cir.ptr<!cir.ptr<!void>> -> !cir.ptr<!u64i>
-  // CIR:    %[[CASTED_ATOMIC_TEMP:.*]] = cir.cast bitcast %[[ATOMIC_TEMP]] : !cir.ptr<!cir.ptr<!void>> -> !cir.ptr<!u64i>
-  // CIR:    %[[ATOMIC_LOAD:.*]] = cir.load{{.*}} atomic(seq_cst) %[[CASTED_DATA_PTR]] : !cir.ptr<!u64i>, !u64i
-  // CIR:    cir.store{{.*}} %[[ATOMIC_LOAD]], %[[CASTED_ATOMIC_TEMP]] : !u64i, !cir.ptr<!u64i>
-  // CIR:    %[[DOUBLE_CASTED_ATOMIC_TEMP:.*]] = cir.cast bitcast %[[CASTED_ATOMIC_TEMP]] : !cir.ptr<!u64i> -> !cir.ptr<!cir.ptr<!void>>
-  // CIR:    %[[LOAD_ATOMIC_TEMP:.*]] = cir.load{{.*}} %[[DOUBLE_CASTED_ATOMIC_TEMP]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
+  // CIR:    %[[ATOMIC_LOAD:.*]] = cir.load{{.*}} atomic(seq_cst) %[[DATA_PTR]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
+  // CIR:    cir.store{{.*}} %[[ATOMIC_LOAD]], %[[ATOMIC_TEMP]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
+  // CIR:    %[[LOAD_ATOMIC_TEMP:.*]] = cir.load{{.*}} %[[ATOMIC_TEMP]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
   // CIR:    cir.return
 
   // LLVM-LABEL: @loadWithSignalFence
@@ -163,8 +157,8 @@ void loadWithSignalFence(DataPtr d) {
   // LLVM:    fence syncscope("singlethread") seq_cst
   // LLVM:    %[[DATA_PTR:.*]] = load ptr, ptr %[[DATA]], align 8
   // LLVM:    %[[DATA_VALUE:.*]] = getelementptr %struct.Data, ptr %[[DATA_PTR]], i32 0, i32 1
-  // LLVM:    %[[ATOMIC_LOAD:.*]] = load atomic i64, ptr %[[DATA_VALUE]] seq_cst, align 8
-  // LLVM:    store i64 %[[ATOMIC_LOAD]], ptr %[[DATA_TEMP]], align 8
+  // LLVM:    %[[ATOMIC_LOAD:.*]] = load atomic ptr, ptr %[[DATA_VALUE]] seq_cst, align 8
+  // LLVM:    store ptr %[[ATOMIC_LOAD]], ptr %[[DATA_TEMP]], align 8
   // LLVM:    %[[DATA_TEMP_LOAD]] = load ptr, ptr %[[DATA_TEMP]], align 8
   // LLVM:    ret void
 
@@ -174,8 +168,8 @@ void loadWithSignalFence(DataPtr d) {
   // OGCG:    fence syncscope("singlethread") seq_cst
   // OGCG:    %[[DATA_PTR:.*]] = load ptr, ptr %[[DATA]], align 8
   // OGCG:    %[[DATA_VALUE:.*]] = getelementptr inbounds nuw %struct.Data, ptr %[[DATA_PTR]], i32 0, i32 1
-  // OGCG:    %[[ATOMIC_LOAD:.*]] = load atomic i64, ptr %[[DATA_VALUE]] seq_cst, align 8
-  // OGCG:    store i64 %[[ATOMIC_LOAD]], ptr %[[DATA_TEMP]], align 8
+  // OGCG:    %[[ATOMIC_LOAD:.*]] = load atomic ptr, ptr %[[DATA_VALUE]] seq_cst, align 8
+  // OGCG:    store ptr %[[ATOMIC_LOAD]], ptr %[[DATA_TEMP]], align 8
   // OGCG:    %[[DATA_TEMP_LOAD]] = load ptr, ptr %[[DATA_TEMP]], align 8
   // OGCG:    ret void
 }

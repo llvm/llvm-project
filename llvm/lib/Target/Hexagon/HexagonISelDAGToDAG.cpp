@@ -594,7 +594,8 @@ void HexagonDAGToDAGISel::SelectSHL(SDNode *N) {
     SDValue Mul_1 = Shl_0.getOperand(1); // Const
     // RHS of mul is const.
     if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Mul_1)) {
-      int32_t ValConst = C->getSExtValue() << ShlConst;
+      int32_t ValConst = static_cast<int32_t>(
+          static_cast<uint32_t>(C->getSExtValue()) << ShlConst);
       if (isInt<9>(ValConst)) {
         SDValue Val = CurDAG->getTargetConstant(ValConst, dl, MVT::i32);
         SDNode *Result = CurDAG->getMachineNode(Hexagon::M2_mpysmi, dl,
@@ -615,7 +616,8 @@ void HexagonDAGToDAGISel::SelectSHL(SDNode *N) {
       SDValue Shl2_0 = Sub_1.getOperand(0); // Val
       SDValue Shl2_1 = Sub_1.getOperand(1); // Const
       if (ConstantSDNode *C2 = dyn_cast<ConstantSDNode>(Shl2_1)) {
-        int32_t ValConst = 1 << (ShlConst + C2->getSExtValue());
+        int32_t ValConst =
+            static_cast<int32_t>(1U << (ShlConst + C2->getSExtValue()));
         if (isInt<9>(-ValConst)) {
           SDValue Val =
               CurDAG->getSignedTargetConstant(-ValConst, dl, MVT::i32);

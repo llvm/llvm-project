@@ -2700,13 +2700,7 @@ def fir_CallOp : fir_Op<"call",
     }
 
     /// Set the callee for this operation.
-    void setCalleeFromCallable(mlir::CallInterfaceCallable callee) {
-      if (auto calling =
-          (*this)->getAttrOfType<mlir::SymbolRefAttr>(getCalleeAttrName()))
-        (*this)->setAttr(getCalleeAttrName(),
-                         llvm::cast<mlir::SymbolRefAttr>(callee));
-      setOperand(0, llvm::cast<mlir::Value>(callee));
-    }
+    void setCalleeFromCallable(mlir::CallInterfaceCallable callee);
   }];
 }
 
@@ -2979,6 +2973,34 @@ def fir_ConvertOp
     mlir::Speculation::Speculatability getSpeculatability();
   }];
   let hasCanonicalizer = 1;
+}
+
+def fir_BitcastOp : fir_SimpleOneResultOp<"bitcast", [Pure]> {
+  let summary = "bitcast between Fortran scalar types of the same bit size";
+
+  let description = [{
+    Reinterpret the bits of a value from one type to another. Both types must
+    have the same bit size. This is a pure bitwise reinterpretation: no value
+    normalization or conversion takes place, unlike `fir.convert`.
+
+    The supported types are integer, floating-point, `fir.logical`, and
+    singleton `fir.char` (i.e. `fir.char<K>` with length 1 for any kind K).
+    Pointer types are not allowed.
+
+    ```
+      %0 = fir.bitcast %v : (i32) -> !fir.logical<4>
+    ```
+  }];
+
+  let arguments = (ins AnyType:$value);
+  let results = (outs AnyType:$res);
+
+  let assemblyFormat = [{
+    $value attr-dict `:` functional-type($value, results)
+  }];
+
+  let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 def FortranTypeAttr : Attr<And<[CPred<"mlir::isa<mlir::TypeAttr>($_self)">,
@@ -3399,6 +3421,9 @@ def fir_DeclareOp
                          MemoryEffects<[MemAlloc<DebuggingResource>]>,
                          DeclareOpInterfaceMethods<
                              fir_FortranVariableStorageOpInterface>,
+                         DeclareOpInterfaceMethods<PromotableOpInterface,
+                                                   ["requiresReplacedValues",
+                                                    "visitReplacedValues"]>,
                          fir_FortranObjectViewOpInterface]> {
   let summary = "declare a variable";
 
@@ -3468,6 +3493,42 @@ def fir_DeclareOp
     // FortranObjectViewOpInterface methods:
     mlir::Value getViewSource(mlir::OpResult) { return getMemref(); }
     std::optional<std::int64_t> getViewOffset(mlir::OpResult) { return 0; }
+  }];
+
+  let hasVerifier = 1;
+}
+
+def fir_DeclareValueOp
+    : fir_Op<"declare_value", [MemoryEffects<[MemAlloc<DebuggingResource>]>]> {
+  let summary = "declare a value";
+
+  let description = [{
+    Tie the properties of a simple scalar Fortran variable to a value.
+    The value must be a scalar integer, real, complex, or logical.
+    This is the value based version of fir.declare. It is used to keep track
+    of variable properties and debug info after mem2reg promotion.
+
+    Note that there is currently nothing that allows pinning this operation
+    relatively to the operation using the value of the variable,
+    this means that the when a mem2reg variable was assigned several
+    values, the variable value printed in the debugger at a given code
+    point may not be the actual value the variable had at that code point
+    if instructions using the value were moved above the fir.declare_value.
+  }];
+
+  let arguments = (ins AnyType:$value,
+      Optional<fir_DummyScopeType>:$dummy_scope,
+      Builtin_StringAttr:$uniq_name,
+      OptionalAttr<fir_FortranVariableFlagsAttr>:$fortran_attrs,
+      OptionalAttr<cuf_DataAttributeAttr>:$data_attr,
+      OptionalAttr<UI32Attr>:$dummy_arg_no);
+
+  let results = (outs);
+
+  let assemblyFormat = [{
+    $value
+    (`dummy_scope` $dummy_scope^ (`arg` $dummy_arg_no^)?)?
+    attr-dict `:` type($value)
   }];
 
   let hasVerifier = 1;

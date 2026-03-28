@@ -44,9 +44,10 @@ enum {
   GFX90A = 8,
   GFX940 = 9,
   GFX11 = 10,
-  GFX12 = 11,
-  GFX1250 = 12,
-  GFX13 = 13,
+  GFX1170 = 11,
+  GFX12 = 12,
+  GFX1250 = 13,
+  GFX13 = 14,
 };
 }
 
@@ -500,6 +501,14 @@ enum StreamId : unsigned { // Stream ID, (2) [9:8].
 };
 
 } // namespace SendMsg
+
+namespace WaitEvent { // Encoding of SIMM16 used in s_wait_event
+enum Id {
+  DONT_WAIT_EXPORT_READY = 1 << 0, // Only used in gfx11
+  EXPORT_READY = 1 << 1,           // gfx12+
+};
+
+} // namespace WaitEvent
 
 namespace Hwreg { // Encoding of SIMM16 used in s_setreg/getreg* insns.
 

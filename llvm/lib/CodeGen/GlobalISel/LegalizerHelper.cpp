@@ -2816,6 +2816,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     switch (Opcode) {
     case TargetOpcode::G_CTTZ:
     case TargetOpcode::G_CTTZ_ZERO_UNDEF:
+    case TargetOpcode::G_CTLZ_ZERO_UNDEF: // undef bits shifted out below
       ExtOpc = TargetOpcode::G_ANYEXT;
       break;
     case TargetOpcode::G_CTLS:
@@ -5619,6 +5620,7 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_CTTZ:
   case G_CTTZ_ZERO_UNDEF:
   case G_CTPOP:
+  case G_CTLS:
   case G_FCOPYSIGN:
   case G_ZEXT:
   case G_SEXT:
@@ -5648,6 +5650,9 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_STRICT_FMA:
   case G_STRICT_FLDEXP:
   case G_FFREXP:
+  case G_TRUNC_SSAT_S:
+  case G_TRUNC_SSAT_U:
+  case G_TRUNC_USAT_U:
     return fewerElementsVectorMultiEltType(GMI, NumElts);
   case G_ICMP:
   case G_FCMP:
@@ -6326,8 +6331,9 @@ Register LegalizerHelper::buildVariableShiftPart(unsigned Opcode,
   // For G_ASHR, individual parts don't have their own sign bit, only the
   // complete value does. So we use LSHR for the main operand shift in ASHR
   // context.
-  unsigned MainOpcode =
-      (Opcode == TargetOpcode::G_ASHR) ? TargetOpcode::G_LSHR : Opcode;
+  unsigned MainOpcode = (Opcode == TargetOpcode::G_ASHR)
+                            ? static_cast<unsigned>(TargetOpcode::G_LSHR)
+                            : Opcode;
 
   // Perform the primary shift on the main operand
   Register MainShifted =
@@ -7582,26 +7588,22 @@ LegalizerHelper::narrowScalarCTLS(MachineInstr &MI, unsigned TypeIdx,
   auto ShAmt = B.buildConstant(NarrowTy, NarrowSize - 1);
   auto Sign = B.buildAShr(NarrowTy, Hi, ShAmt);
 
-  auto LoSign = B.buildAShr(NarrowTy, Lo, ShAmt);
-  auto LoSameSign = B.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1),
-                                LoSign.getReg(0), Sign.getReg(0));
+  auto HiIsSign = B.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1), Hi, Sign);
 
-  auto HiIsSign =
-      B.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1), Hi, Sign.getReg(0));
+  // Invert Lo if Hi is negative. Then count the leading zeros. If there are no
+  // leading zeros, then the MSB of Lo is different than the MSB of Hi.
+  // Otherwise the leading zeros represent additional sign bits of the original
+  // value.
+  auto LoInv = B.buildXor(DstTy, Lo, Sign);
+  auto LoCTLZ = B.buildCTLZ(DstTy, LoInv);
 
-  auto LoCTLS = B.buildCTLS(DstTy, Lo);
-  auto GNarrowSize = B.buildConstant(DstTy, NarrowSize);
-  auto HiIsSignCTLS = B.buildAdd(DstTy, LoCTLS, GNarrowSize);
-
-  // If the low half flips sign, the run of redundant bits stops at the
-  // boundary, so use (NarrowSize - 1) instead of extending into Lo.
-  auto GNarrowSizeMinus1 = B.buildConstant(DstTy, NarrowSize - 1);
-  auto HiSignResult =
-      B.buildSelect(DstTy, LoSameSign, HiIsSignCTLS, GNarrowSizeMinus1);
+  // Add NarrowSize-1 to LoCTLZ. This is the full CTLS if Hi is all sign bits.
+  auto C_NarrowSizeM1 = B.buildConstant(DstTy, NarrowSize - 1);
+  auto HiIsSignCTLS = B.buildAdd(DstTy, LoCTLZ, C_NarrowSizeM1);
 
   auto HiCTLS = B.buildCTLS(DstTy, Hi);
 
-  B.buildSelect(DstReg, HiIsSign, HiSignResult, HiCTLS);
+  B.buildSelect(DstReg, HiIsSign, HiIsSignCTLS, HiCTLS);
 
   MI.eraseFromParent();
   return Legalized;
@@ -7802,7 +7804,19 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI) {
     auto C_B8Mask4HiTo0 = B.buildConstant(Ty, B8Mask4HiTo0);
     auto B8Count = B.buildAnd(Ty, B8CountDirty4Hi, C_B8Mask4HiTo0);
 
-    assert(Size<=128 && "Scalar size is too large for CTPOP lower algorithm");
+    assert(Size <= 128 && "Scalar size is too large for CTPOP lower algorithm");
+
+    // Avoid the multiply when shift-add is cheaper.
+    if (Size == 16 && !Ty.isVector()) {
+      // v = (v + (v >> 8)) & 0xFF;
+      auto C_8 = B.buildConstant(Ty, 8);
+      auto HighSum = B.buildLShr(Ty, B8Count, C_8);
+      auto Res = B.buildAdd(Ty, B8Count, HighSum);
+      B.buildAnd(MI.getOperand(0).getReg(), Res, B.buildConstant(Ty, 0xFF));
+      MI.eraseFromParent();
+      return Legalized;
+    }
+
     // 8 bits can hold CTPOP result of 128 bit int or smaller. Mul with this
     // bitmask will set 8 msb in ResTmp to sum of all B8Counts in 8 bit blocks.
     auto MulMask = B.buildConstant(Ty, APInt::getSplat(Size, APInt(8, 0x01)));
@@ -9436,22 +9450,39 @@ LegalizerHelper::lowerExtract(MachineInstr &MI) {
     }
   }
 
-  if (DstTy.isScalar() &&
-      (SrcTy.isScalar() ||
+  const DataLayout &DL = MIRBuilder.getDataLayout();
+  if ((SrcTy.isPointer() &&
+       DL.isNonIntegralAddressSpace(SrcTy.getAddressSpace())) ||
+      (DstTy.isPointer() &&
+       DL.isNonIntegralAddressSpace(DstTy.getAddressSpace()))) {
+    LLVM_DEBUG(dbgs() << "Not casting non-integral address space integer\n");
+    return UnableToLegalize;
+  }
+
+  if ((DstTy.isScalar() || DstTy.isPointer()) &&
+      (SrcTy.isScalar() || SrcTy.isPointer() ||
        (SrcTy.isVector() && DstTy == SrcTy.getElementType()))) {
     LLT SrcIntTy = SrcTy;
     if (!SrcTy.isScalar()) {
       SrcIntTy = LLT::scalar(SrcTy.getSizeInBits());
-      SrcReg = MIRBuilder.buildBitcast(SrcIntTy, SrcReg).getReg(0);
+      SrcReg = MIRBuilder.buildCast(SrcIntTy, SrcReg).getReg(0);
     }
 
+    Register ResultReg = DstReg;
+    if (DstTy.isPointer())
+      ResultReg =
+          MRI.createGenericVirtualRegister(LLT::scalar(DstTy.getSizeInBits()));
+
     if (Offset == 0)
-      MIRBuilder.buildTrunc(DstReg, SrcReg);
+      MIRBuilder.buildTrunc(ResultReg, SrcReg);
     else {
       auto ShiftAmt = MIRBuilder.buildConstant(SrcIntTy, Offset);
       auto Shr = MIRBuilder.buildLShr(SrcIntTy, SrcReg, ShiftAmt);
-      MIRBuilder.buildTrunc(DstReg, Shr);
+      MIRBuilder.buildTrunc(ResultReg, Shr);
     }
+
+    if (DstTy.isPointer())
+      MIRBuilder.buildIntToPtr(DstReg, ResultReg);
 
     MI.eraseFromParent();
     return Legalized;
@@ -9467,9 +9498,22 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerInsert(MachineInstr &MI) {
   LLT DstTy = MRI.getType(Src);
   LLT InsertTy = MRI.getType(InsertSrc);
 
+  const DataLayout &DL = MIRBuilder.getDataLayout();
+  bool IsNonIntegralInsert =
+      InsertTy.isPointerOrPointerVector() &&
+      DL.isNonIntegralAddressSpace(InsertTy.getAddressSpace());
+  bool IsNonIntegralDst = DstTy.isPointerOrPointerVector() &&
+                          DL.isNonIntegralAddressSpace(DstTy.getAddressSpace());
+
   // Insert sub-vector or one element
-  if (DstTy.isVector() && !InsertTy.isPointer()) {
+  if (DstTy.isVector()) {
     LLT EltTy = DstTy.getElementType();
+
+    if ((IsNonIntegralInsert || IsNonIntegralDst) && InsertTy != EltTy) {
+      LLVM_DEBUG(dbgs() << "Not casting non-integral address space integer\n");
+      return UnableToLegalize;
+    }
+
     unsigned EltSize = EltTy.getSizeInBits();
     unsigned InsertSize = InsertTy.getSizeInBits();
 
@@ -9491,6 +9535,10 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerInsert(MachineInstr &MI) {
           DstElts.push_back(UnmergeInsertSrc.getReg(i));
         }
       } else {
+        if (InsertTy.isPointer() && !EltTy.isPointer())
+          InsertSrc = MIRBuilder.buildPtrToInt(EltTy, InsertSrc).getReg(0);
+        else if (!InsertTy.isPointer() && EltTy.isPointer())
+          InsertSrc = MIRBuilder.buildIntToPtr(EltTy, InsertSrc).getReg(0);
         DstElts.push_back(InsertSrc);
         ++Idx;
       }
@@ -9510,11 +9558,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerInsert(MachineInstr &MI) {
       (DstTy.isVector() && DstTy.getElementType() != InsertTy))
     return UnableToLegalize;
 
-  const DataLayout &DL = MIRBuilder.getDataLayout();
-  if ((DstTy.isPointer() &&
-       DL.isNonIntegralAddressSpace(DstTy.getAddressSpace())) ||
-      (InsertTy.isPointer() &&
-       DL.isNonIntegralAddressSpace(InsertTy.getAddressSpace()))) {
+  if (IsNonIntegralDst || IsNonIntegralInsert) {
     LLVM_DEBUG(dbgs() << "Not casting non-integral address space integer\n");
     return UnableToLegalize;
   }
