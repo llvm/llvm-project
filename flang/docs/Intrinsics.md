@@ -1253,6 +1253,7 @@ elapsed since last call.
 - **Standard:** Intel/classic-flang extension
 - **Class:** function
 - **Syntax:** `RESULT = TIMEF()`
+- **Return type**: REAL(8)
 
 ### Non-Standard Intrinsics: UNLINK
 

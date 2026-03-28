@@ -427,15 +427,12 @@ std::int64_t RTNAME(time)() { return time(nullptr); }
  */
 double RTNAME(Timef)() {
 #ifndef _WIN32
-
   // posix-compliant
   static clock_t start = (clock_t)-1;
   static long ticks_per_sec = 0;
-
   struct tms b;
   clock_t current;
   double duration;
-
   {
     CriticalSection critical{timef_lock};
     if (ticks_per_sec <= 0) {
