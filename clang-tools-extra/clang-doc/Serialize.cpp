@@ -182,8 +182,8 @@ StringRef Serializer::getTypeAlias(const TypeAliasDecl *Alias) {
 //
 // }
 // }
-StringRef Serializer::getInfoRelativePath(
-    const llvm::SmallVectorImpl<doc::Reference> &Namespaces) {
+StringRef
+Serializer::getInfoRelativePath(llvm::ArrayRef<doc::Reference> Namespaces) {
   llvm::SmallString<128> Path;
   for (auto R = Namespaces.rbegin(), E = Namespaces.rend(); R != E; ++R)
     llvm::sys::path::append(Path, R->Name);
@@ -258,9 +258,7 @@ void ClangDocCommentVisitor::visitInlineCommandComment(
   for (unsigned I = 0, E = C->getNumArgs(); I != E; ++I)
     Args.push_back(internString(C->getArgText(I).trim()));
   if (!Args.empty()) {
-    StringRef *ArgsMem = TransientArena.Allocate<StringRef>(Args.size());
-    std::uninitialized_copy(Args.begin(), Args.end(), ArgsMem);
-    CurrentCI.Args = llvm::ArrayRef<StringRef>(ArgsMem, Args.size());
+    CurrentCI.Args = allocateArray(Args, TransientArena);
   }
 }
 
@@ -276,16 +274,10 @@ void ClangDocCommentVisitor::visitHTMLStartTagComment(
     AttrValues.push_back(internString(Attr.Value));
   }
   if (!AttrKeys.empty()) {
-    StringRef *KeysMem = TransientArena.Allocate<StringRef>(AttrKeys.size());
-    std::uninitialized_copy(AttrKeys.begin(), AttrKeys.end(), KeysMem);
-    CurrentCI.AttrKeys = llvm::ArrayRef<StringRef>(KeysMem, AttrKeys.size());
+    CurrentCI.AttrKeys = allocateArray(AttrKeys, TransientArena);
   }
   if (!AttrValues.empty()) {
-    StringRef *ValuesMem =
-        TransientArena.Allocate<StringRef>(AttrValues.size());
-    std::uninitialized_copy(AttrValues.begin(), AttrValues.end(), ValuesMem);
-    CurrentCI.AttrValues =
-        llvm::ArrayRef<StringRef>(ValuesMem, AttrValues.size());
+    CurrentCI.AttrValues = allocateArray(AttrValues, TransientArena);
   }
 }
 
@@ -302,9 +294,7 @@ void ClangDocCommentVisitor::visitBlockCommandComment(
   for (unsigned I = 0, E = C->getNumArgs(); I < E; ++I)
     Args.push_back(internString(C->getArgText(I).trim()));
   if (!Args.empty()) {
-    StringRef *ArgsMem = TransientArena.Allocate<StringRef>(Args.size());
-    std::uninitialized_copy(Args.begin(), Args.end(), ArgsMem);
-    CurrentCI.Args = llvm::ArrayRef<StringRef>(ArgsMem, Args.size());
+    CurrentCI.Args = allocateArray(Args, TransientArena);
   }
 }
 
@@ -475,29 +465,35 @@ void Serializer::InsertChild(ScopeChildren &Scope, const NamespaceInfo &Info) {
 }
 
 void Serializer::InsertChild(ScopeChildren &Scope, const RecordInfo &Info) {
-  Scope.Records.emplace_back(Info.USR, Info.Name, InfoType::IT_record,
-                             Info.Name, getInfoRelativePath(Info.Namespace),
-                             Info.MangledName);
+  Reference *R = allocatePtr<Reference>(
+      Info.USR, Info.Name, InfoType::IT_record, Info.Name,
+      getInfoRelativePath(Info.Namespace), Info.MangledName);
+  Scope.Records.push_back(*R);
 }
 
 void Serializer::InsertChild(ScopeChildren &Scope, EnumInfo Info) {
-  Scope.Enums.push_back(std::move(Info));
+  EnumInfo *E = allocatePtr<EnumInfo>(std::move(Info));
+  Scope.Enums.push_back(*E);
 }
 
 void Serializer::InsertChild(ScopeChildren &Scope, FunctionInfo Info) {
-  Scope.Functions.push_back(std::move(Info));
+  FunctionInfo *F = allocatePtr<FunctionInfo>(std::move(Info));
+  Scope.Functions.push_back(*F);
 }
 
 void Serializer::InsertChild(ScopeChildren &Scope, TypedefInfo Info) {
-  Scope.Typedefs.push_back(std::move(Info));
+  TypedefInfo *T = allocatePtr<TypedefInfo>(std::move(Info));
+  Scope.Typedefs.push_back(*T);
 }
 
 void Serializer::InsertChild(ScopeChildren &Scope, ConceptInfo Info) {
-  Scope.Concepts.push_back(std::move(Info));
+  ConceptInfo *C = allocatePtr<ConceptInfo>(std::move(Info));
+  Scope.Concepts.push_back(*C);
 }
 
 void Serializer::InsertChild(ScopeChildren &Scope, VarInfo Info) {
-  Scope.Variables.push_back(std::move(Info));
+  VarInfo *V = allocatePtr<VarInfo>(std::move(Info));
+  Scope.Variables.push_back(*V);
 }
 
 // Creates a parent of the correct type for the given child and inserts it into
@@ -581,14 +577,18 @@ AccessSpecifier Serializer::getFinalAccessSpecifier(AccessSpecifier FirstAS,
 // record, the access specification of the field depends on the inheritance mode
 void Serializer::parseFields(RecordInfo &I, const RecordDecl *D,
                              bool PublicOnly, AccessSpecifier Access) {
+  SmallVector<MemberTypeInfo, 4> Members;
   for (const FieldDecl *F : D->fields()) {
     if (!shouldSerializeInfo(PublicOnly, /*IsInAnonymousNamespace=*/false, F))
       continue;
-    populateMemberTypeInfo(I, Access, F);
+    populateMemberTypeInfo(Members, Access, F);
   }
   const auto *CxxRD = dyn_cast<CXXRecordDecl>(D);
-  if (!CxxRD)
+  if (!CxxRD) {
+    if (!Members.empty())
+      I.Members = allocateArray<MemberTypeInfo>(Members, TransientArena);
     return;
+  }
   for (Decl *CxxDecl : CxxRD->decls()) {
     auto *VD = dyn_cast<VarDecl>(CxxDecl);
     if (!VD ||
@@ -596,40 +596,49 @@ void Serializer::parseFields(RecordInfo &I, const RecordDecl *D,
       continue;
 
     if (VD->isStaticDataMember())
-      populateMemberTypeInfo(I, Access, VD, /*IsStatic=*/true);
+      populateMemberTypeInfo(Members, Access, VD, /*IsStatic=*/true);
   }
+  if (!Members.empty())
+    I.Members = allocateArray<MemberTypeInfo>(Members, TransientArena);
 }
 
 void Serializer::parseEnumerators(EnumInfo &I, const EnumDecl *D) {
+  llvm::SmallVector<EnumValueInfo, 4> LocalMembers;
   for (const EnumConstantDecl *E : D->enumerators()) {
     std::string ValueExpr;
     if (const Expr *InitExpr = E->getInitExpr())
       ValueExpr = getSourceCode(D, InitExpr->getSourceRange());
     SmallString<16> ValueStr;
     E->getInitVal().toString(ValueStr);
-    I.Members.emplace_back(E->getNameAsString(), ValueStr.str(), ValueExpr);
+    EnumValueInfo &Member = LocalMembers.emplace_back(
+        E->getNameAsString(), ValueStr.str(), ValueExpr);
     ASTContext &Context = E->getASTContext();
     if (RawComment *Comment =
             E->getASTContext().getRawCommentForDeclNoCache(E)) {
       Comment->setAttached();
       if (comments::FullComment *Fc = Comment->parse(Context, nullptr, E)) {
-        EnumValueInfo &Member = I.Members.back();
-        Member.Description.emplace_back();
+        CommentInfo *NewCI = allocatePtr<CommentInfo>();
+        Member.Description.push_back(*NewCI);
         parseFullComment(Fc, Member.Description.back());
       }
     }
   }
+  if (!LocalMembers.empty())
+    I.Members = allocateArray<EnumValueInfo>(LocalMembers, TransientArena);
 }
 
 void Serializer::parseParameters(FunctionInfo &I, const FunctionDecl *D) {
+  llvm::SmallVector<FieldTypeInfo, 4> LocalParams;
   auto &LO = D->getLangOpts();
   for (const ParmVarDecl *P : D->parameters()) {
-    FieldTypeInfo &FieldInfo = I.Params.emplace_back(
+    FieldTypeInfo &FieldInfo = LocalParams.emplace_back(
         getTypeInfoForType(P->getOriginalType(), LO), P->getNameAsString());
     if (std::optional<StringRef> DefaultValue =
             getSourceCode(D, P->getDefaultArgRange()))
       FieldInfo.DefaultValue = *DefaultValue;
   }
+  if (!LocalParams.empty())
+    I.Params = allocateArray<FieldTypeInfo>(LocalParams, TransientArena);
 }
 
 // TODO: Remove the serialization of Parents and VirtualParents, this
@@ -639,28 +648,36 @@ void Serializer::parseBases(RecordInfo &I, const CXXRecordDecl *D) {
   if (!D->isThisDeclarationADefinition())
     return;
 
+  llvm::SmallVector<Reference, 4> LocalParents;
   for (const CXXBaseSpecifier &B : D->bases()) {
     if (B.isVirtual())
       continue;
     if (const auto *Ty = B.getType()->getAs<TemplateSpecializationType>()) {
       const TemplateDecl *D = Ty->getTemplateName().getAsTemplateDecl();
-      I.Parents.emplace_back(getUSRForDecl(D), B.getType().getAsString(),
-                             InfoType::IT_record, B.getType().getAsString());
+      LocalParents.emplace_back(getUSRForDecl(D), B.getType().getAsString(),
+                                InfoType::IT_record, B.getType().getAsString());
     } else if (const RecordDecl *P = getRecordDeclForType(B.getType()))
-      I.Parents.emplace_back(getUSRForDecl(P), P->getNameAsString(),
-                             InfoType::IT_record, P->getQualifiedNameAsString(),
-                             internString(getInfoRelativePath(P)));
-    else
-      I.Parents.emplace_back(SymbolID(), B.getType().getAsString());
-  }
-  for (const CXXBaseSpecifier &B : D->vbases()) {
-    if (const RecordDecl *P = getRecordDeclForType(B.getType()))
-      I.VirtualParents.emplace_back(
+      LocalParents.emplace_back(
           getUSRForDecl(P), P->getNameAsString(), InfoType::IT_record,
           P->getQualifiedNameAsString(), internString(getInfoRelativePath(P)));
     else
-      I.VirtualParents.emplace_back(SymbolID(), B.getType().getAsString());
+      LocalParents.emplace_back(SymbolID(), B.getType().getAsString());
   }
+  if (!LocalParents.empty())
+    I.Parents = allocateArray<Reference>(LocalParents, TransientArena);
+
+  llvm::SmallVector<Reference, 4> LocalVirtualParents;
+  for (const CXXBaseSpecifier &B : D->vbases()) {
+    if (const RecordDecl *P = getRecordDeclForType(B.getType()))
+      LocalVirtualParents.emplace_back(
+          getUSRForDecl(P), P->getNameAsString(), InfoType::IT_record,
+          P->getQualifiedNameAsString(), internString(getInfoRelativePath(P)));
+    else
+      LocalVirtualParents.emplace_back(SymbolID(), B.getType().getAsString());
+  }
+  if (!LocalVirtualParents.empty())
+    I.VirtualParents =
+        allocateArray<Reference>(LocalVirtualParents, TransientArena);
 }
 
 template <typename T>
@@ -708,10 +725,13 @@ void Serializer::populateTemplateParameters(
     if (!TemplateInfo) {
       TemplateInfo.emplace();
     }
+    llvm::SmallVector<TemplateParamInfo, 4> LocalParams;
     for (const NamedDecl *ND : *ParamList) {
-      TemplateInfo->Params.emplace_back(
-          getSourceCode(ND, ND->getSourceRange()));
+      LocalParams.emplace_back(getSourceCode(ND, ND->getSourceRange()));
     }
+    if (!LocalParams.empty())
+      TemplateInfo->Params =
+          allocateArray<TemplateParamInfo>(LocalParams, TransientArena);
   }
 }
 
@@ -774,9 +794,14 @@ void Serializer::populateInfo(Info &I, const T *D, const FullComment *C,
                           ConversionDecl->getConversionType().getAsString());
   else
     I.Name = internString(D->getNameAsString());
-  populateParentNamespaces(I.Namespace, D, IsInAnonymousNamespace);
+  llvm::SmallVector<Reference, 4> LocalNamespaces;
+  populateParentNamespaces(LocalNamespaces, D, IsInAnonymousNamespace);
+  if (!LocalNamespaces.empty())
+    I.Namespace = allocateArray<Reference>(LocalNamespaces, TransientArena);
   if (C) {
-    I.Description.emplace_back();
+
+    CommentInfo *NewCI = allocatePtr<CommentInfo>();
+    I.Description.push_back(*NewCI);
     parseFullComment(C, I.Description.back());
   }
 }
@@ -788,8 +813,10 @@ void Serializer::populateSymbolInfo(SymbolInfo &I, const T *D,
   populateInfo(I, D, C, IsInAnonymousNamespace);
   if (D->isThisDeclarationADefinition())
     I.DefLoc = Loc;
-  else
-    I.Loc.emplace_back(Loc);
+  else {
+    Location *NewL = allocatePtr<Location>(Loc);
+    I.Loc.push_back(*NewL);
+  }
 
   auto *Mangler = ItaniumMangleContext::create(
       D->getASTContext(), D->getASTContext().getDiagnostics());
@@ -811,7 +838,8 @@ void Serializer::populateSymbolInfo(SymbolInfo &I, const T *D,
 }
 
 void Serializer::handleCompoundConstraints(
-    const Expr *Constraint, OwningVec<ConstraintInfo> &ConstraintInfos) {
+    const Expr *Constraint,
+    llvm::SmallVectorImpl<ConstraintInfo> &ConstraintInfos) {
   if (Constraint->getStmtClass() == Stmt::ParenExprClass) {
     handleCompoundConstraints(dyn_cast<ParenExpr>(Constraint)->getSubExpr(),
                               ConstraintInfos);
@@ -835,6 +863,7 @@ void Serializer::populateConstraints(TemplateInfo &I, const TemplateDecl *D) {
 
   SmallVector<AssociatedConstraint> AssociatedConstraints;
   D->getAssociatedConstraints(AssociatedConstraints);
+  SmallVector<ConstraintInfo, 4> LocalConstraints;
   for (const auto &Constraint : AssociatedConstraints) {
     if (!Constraint)
       continue;
@@ -846,11 +875,14 @@ void Serializer::populateConstraints(TemplateInfo &I, const TemplateDecl *D) {
       ConstraintInfo CI(getUSRForDecl(ConstraintExpr->getNamedConcept()),
                         ConstraintExpr->getNamedConcept()->getNameAsString());
       CI.ConstraintExpr = internString(exprToString(ConstraintExpr));
-      I.Constraints.push_back(std::move(CI));
+      LocalConstraints.push_back(std::move(CI));
     } else {
-      handleCompoundConstraints(Constraint.ConstraintExpr, I.Constraints);
+      handleCompoundConstraints(Constraint.ConstraintExpr, LocalConstraints);
     }
   }
+  if (!LocalConstraints.empty())
+    I.Constraints =
+        allocateArray<ConstraintInfo>(LocalConstraints, TransientArena);
 }
 
 void Serializer::populateFunctionInfo(FunctionInfo &I, const FunctionDecl *D,
@@ -879,9 +911,13 @@ void Serializer::populateFunctionInfo(FunctionInfo &I, const FunctionDecl *D,
 
     // Template parameters to the specialization.
     if (FTSI->TemplateArguments) {
+      SmallVector<TemplateParamInfo, 4> LocalParams;
       for (const TemplateArgument &Arg : FTSI->TemplateArguments->asArray()) {
-        Specialization.Params.push_back(convertTemplateArgToInfo(D, Arg));
+        LocalParams.push_back(convertTemplateArgToInfo(D, Arg));
       }
+      if (!LocalParams.empty())
+        Specialization.Params =
+            allocateArray<TemplateParamInfo>(LocalParams, TransientArena);
     }
   }
 }
@@ -901,26 +937,28 @@ void Serializer::populateMemberTypeInfo(T &I, const Decl *D) {
 
   Comment->setAttached();
   if (comments::FullComment *Fc = Comment->parse(Context, nullptr, D)) {
-    I.Description.emplace_back();
+    CommentInfo *NewCI = allocatePtr<CommentInfo>();
+    I.Description.push_back(*NewCI);
     parseFullComment(Fc, I.Description.back());
   }
 }
 
-void Serializer::populateMemberTypeInfo(RecordInfo &I, AccessSpecifier &Access,
-                                        const DeclaratorDecl *D,
-                                        bool IsStatic) {
+void Serializer::populateMemberTypeInfo(
+    SmallVectorImpl<MemberTypeInfo> &Members, AccessSpecifier &Access,
+    const DeclaratorDecl *D, bool IsStatic) {
   // Use getAccessUnsafe so that we just get the default AS_none if it's not
   // valid, as opposed to an assert.
-  MemberTypeInfo &NewMember = I.Members.emplace_back(
+  MemberTypeInfo &NewMember = Members.emplace_back(
       getTypeInfoForType(D->getTypeSourceInfo()->getType(), D->getLangOpts()),
       D->getNameAsString(),
       getFinalAccessSpecifier(Access, D->getAccessUnsafe()), IsStatic);
   populateMemberTypeInfo(NewMember, D);
 }
 
-void Serializer::parseBases(RecordInfo &I, const CXXRecordDecl *D,
-                            bool IsFileInRootDir, bool PublicOnly,
-                            bool IsParent, AccessSpecifier ParentAccess) {
+void Serializer::parseBases(llvm::SmallVectorImpl<BaseRecordInfo> &Bases,
+                            const CXXRecordDecl *D, bool IsFileInRootDir,
+                            bool PublicOnly, bool IsParent,
+                            AccessSpecifier ParentAccess) {
   // Don't parse bases if this isn't a definition.
   if (!D->isThisDeclarationADefinition())
     return;
@@ -959,14 +997,15 @@ void Serializer::parseBases(RecordInfo &I, const CXXRecordDecl *D,
                                  IsInAnonymousNamespace);
             FI.Access =
                 getFinalAccessSpecifier(BI.Access, MD->getAccessUnsafe());
-            BI.Children.Functions.emplace_back(std::move(FI));
+            FunctionInfo *FIPtr = allocatePtr<FunctionInfo>(std::move(FI));
+            BI.Children.Functions.push_back(*FIPtr);
           }
-        I.Bases.emplace_back(std::move(BI));
+        Bases.emplace_back(std::move(BI));
         // Call this function recursively to get the inherited classes of
         // this base; these new bases will also get stored in the original
         // RecordInfo: I.
-        parseBases(I, Base, IsFileInRootDir, PublicOnly, false,
-                   I.Bases.back().Access);
+        parseBases(Bases, Base, IsFileInRootDir, PublicOnly, false,
+                   Bases.back().Access);
       }
     }
   }
@@ -995,6 +1034,8 @@ void Serializer::parseFriends(RecordInfo &RI, const CXXRecordDecl *D) {
   if (!D->hasDefinition() || !D->hasFriends())
     return;
 
+  llvm::SmallVector<FriendInfo, 4> LocalFriends;
+
   for (const FriendDecl *FD : D->friends()) {
     if (FD->isUnsupportedFriend())
       continue;
@@ -1016,9 +1057,12 @@ void Serializer::parseFriends(RecordInfo &RI, const CXXRecordDecl *D) {
       if (isa<RecordDecl>(ActualTD->getTemplatedDecl()))
         F.IsClass = true;
       F.Template.emplace();
+      llvm::SmallVector<TemplateParamInfo, 4> LocalParams;
       for (const auto *Param : ActualTD->getTemplateParameters()->asArray())
-        F.Template->Params.emplace_back(
-            getSourceCode(Param, Param->getSourceRange()));
+        LocalParams.emplace_back(getSourceCode(Param, Param->getSourceRange()));
+      if (!LocalParams.empty())
+        F.Template->Params =
+            allocateArray<TemplateParamInfo>(LocalParams, TransientArena);
       ActualDecl = ActualTD->getTemplatedDecl();
     }
 
@@ -1036,8 +1080,10 @@ void Serializer::parseFriends(RecordInfo &RI, const CXXRecordDecl *D) {
                   getInfoRelativePath(ActualDecl));
 
     populateMemberTypeInfo(F, ActualDecl);
-    RI.Friends.push_back(std::move(F));
+    LocalFriends.push_back(std::move(F));
   }
+  if (!LocalFriends.empty())
+    RI.Friends = allocateArray<FriendInfo>(LocalFriends, TransientArena);
 }
 
 std::pair<OwnedPtr<Info>, OwnedPtr<Info>>
@@ -1061,7 +1107,11 @@ Serializer::emitInfo(const RecordDecl *D, const FullComment *FC, Location Loc,
     }
     // TODO: remove first call to parseBases, that function should be deleted
     parseBases(*RI, C);
-    parseBases(*RI, C, /*IsFileInRootDir=*/true, PublicOnly, /*IsParent=*/true);
+    llvm::SmallVector<BaseRecordInfo, 4> LocalBases;
+    parseBases(LocalBases, C, /*IsFileInRootDir=*/true, PublicOnly,
+               /*IsParent=*/true);
+    if (!LocalBases.empty())
+      RI->Bases = allocateArray<BaseRecordInfo>(LocalBases, TransientArena);
     parseFriends(*RI, C);
   }
   RI->Path = internString(getInfoRelativePath(RI->Namespace));
@@ -1094,15 +1144,23 @@ Serializer::emitInfo(const RecordDecl *D, const FullComment *FC, Location Loc,
             dyn_cast<ClassTemplatePartialSpecializationDecl>(D)) {
       if (const ASTTemplateArgumentListInfo *AsWritten =
               CTPSD->getTemplateArgsAsWritten()) {
+        llvm::SmallVector<TemplateParamInfo, 4> LocalParams;
         for (unsigned Idx = 0; Idx < AsWritten->getNumTemplateArgs(); Idx++) {
-          Specialization.Params.emplace_back(
+          LocalParams.emplace_back(
               getSourceCode(D, (*AsWritten)[Idx].getSourceRange()));
         }
+        if (!LocalParams.empty())
+          Specialization.Params =
+              allocateArray<TemplateParamInfo>(LocalParams, TransientArena);
       }
     } else {
+      llvm::SmallVector<TemplateParamInfo, 4> LocalParams;
       for (const TemplateArgument &Arg : CTSD->getTemplateArgs().asArray()) {
-        Specialization.Params.push_back(convertTemplateArgToInfo(D, Arg));
+        LocalParams.push_back(convertTemplateArgToInfo(D, Arg));
       }
+      if (!LocalParams.empty())
+        Specialization.Params =
+            allocateArray<TemplateParamInfo>(LocalParams, TransientArena);
     }
   }
 
@@ -1164,8 +1222,9 @@ void Serializer::extractCommentFromDecl(const Decl *D, TypedefInfo &Info) {
 
   Comment->setAttached();
   if (comments::FullComment *Fc = Comment->parse(Context, nullptr, D)) {
-    Info.Description.emplace_back();
-    parseFullComment(Fc, Info.Description.back());
+    CommentInfo *NewCI = allocatePtr<CommentInfo>();
+    Info.Description.push_back(*NewCI);
+    parseFullComment(Fc, *NewCI);
   }
 }
 
@@ -1258,10 +1317,13 @@ Serializer::emitInfo(const ConceptDecl *D, const FullComment *FC,
   Concept.ConstraintExpression = exprToString(D->getConstraintExpr());
 
   if (auto *ConceptParams = D->getTemplateParameters()) {
+    llvm::SmallVector<TemplateParamInfo, 4> LocalParams;
     for (const auto *Param : ConceptParams->asArray()) {
-      Concept.Template.Params.emplace_back(
-          getSourceCode(Param, Param->getSourceRange()));
+      LocalParams.emplace_back(getSourceCode(Param, Param->getSourceRange()));
     }
+    if (!LocalParams.empty())
+      Concept.Template.Params =
+          allocateArray<TemplateParamInfo>(LocalParams, TransientArena);
   }
 
   if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
