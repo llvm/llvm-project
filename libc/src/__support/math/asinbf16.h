@@ -19,7 +19,6 @@
 #include "src/__support/math/inv_trigf_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
-
 namespace math {
 
 LIBC_INLINE bfloat16 asinbf16(bfloat16 x) {
@@ -36,62 +35,63 @@ LIBC_INLINE bfloat16 asinbf16(bfloat16 x) {
   float x_sign = (x_u >> 15) ? -1 : 1;
   float xf = x;
 
-  // case 1: |x|>=1, NaN or Inf
-  if (LIBC_UNLIKELY(x_abs >= 0x3F80)) {
-    if (x_abs == 0x3F80) {
-      return fputil::cast<bfloat16>(x_sign * PI_2);
-    }
-    // NaN
-    if (xbits.is_nan()) {
-      if (xbits.is_signaling_nan()) {
-        fputil::raise_except_if_required(FE_INVALID);
-        return FPBits::quiet_nan().get_val();
-      }
-      return x; // quiet NaN
-    }
-    // |x|>1 & inf
-    fputil::raise_except_if_required(FE_INVALID);
-    fputil::set_errno_if_required(EDOM); // Domain is bounded
-    return FPBits::quiet_nan().get_val();
-  }
-
-  // case 2:  |x| = {0}
-  if (LIBC_UNLIKELY(x_abs == 0))
-    return x; // with sign
-
-  if (LIBC_UNLIKELY(x_abs <= 0x3D00)) {
-    int rounding = fputil::quick_get_round();
-    if ((xbits.is_pos() && rounding == FE_UPWARD) ||
-        (xbits.is_neg() && rounding == FE_DOWNWARD)) {
-      return fputil::cast<bfloat16>(fputil::multiply_add(xf, 0x1.0p-13f, xf));
-    }
-    return x;
-  }
-
   float xf_abs = (xf < 0 ? -xf : xf);
   float x_sq = xf_abs * xf_abs;
 
-  // case 3: (0,0.5]
+  // Case 1: |x| <= 0.5
   if (x_abs <= 0x3F00) {
-    double xp = inv_trigf_utils_internal::asin_eval(x_sq);
+    // |x| = {0}
+    if (LIBC_UNLIKELY(x_abs == 0))
+      return x; // with sign
+
+    if (LIBC_UNLIKELY(x_abs <= 0x3D00)) {
+      int rounding = fputil::quick_get_round();
+      if ((xbits.is_pos() && rounding == FE_UPWARD) ||
+          (xbits.is_neg() && rounding == FE_DOWNWARD)) {
+        return fputil::cast<bfloat16>(fputil::multiply_add(xf, 0x1.0p-9f, xf));
+      }
+      return x;
+    }
+
+    float xp = fputil::cast<float>(inv_trigf_utils_internal::asin_eval(x_sq));
     float result =
-        xf * static_cast<float>(fputil::multiply_add<double>(x_sq, xp, 1.0));
+        xf * static_cast<float>(fputil::multiply_add<float>(x_sq, xp, 1.0));
     return fputil::cast<bfloat16>(result);
   }
 
-  // case 4: (0.5,1)
+  // Case 2: 0.5 <|x| <= 1
   //  using reduction: asin(x) = pi/2 - 2*asin(sqrt((1-x)/2))
-  float t = fputil::multiply_add<float>(xf_abs, -0.5f, 0.5f);
-  float t_sqrt = fputil::sqrt<float>(t);
-  double tp = inv_trigf_utils_internal::asin_eval(t);
-  float asin_sqrt_t =
-      t_sqrt * static_cast<float>(fputil::multiply_add<double>(t, tp, 1.0));
-  float result = fputil::multiply_add<float>(-2.0f, asin_sqrt_t, PI_2);
-  return fputil::cast<bfloat16>(x_sign * result);
+  if (x_abs <= 0x3F80 && x_abs > 0x3F00) {
+    // |x| = {1}
+    if (LIBC_UNLIKELY(x_abs == 0x3F80)) {
+      return fputil::cast<bfloat16>(x_sign * PI_2);
+    }
+
+    float t = fputil::multiply_add<float>(xf_abs, -0.5f, 0.5f);
+    float t_sqrt = fputil::sqrt<float>(t);
+    float tp = fputil::cast<float>(inv_trigf_utils_internal::asin_eval(t));
+    float asin_sqrt_t =
+        t_sqrt * static_cast<float>(fputil::multiply_add<float>(t, tp, 1.0));
+    float result = fputil::multiply_add<float>(-2.0f, asin_sqrt_t, PI_2);
+    return fputil::cast<bfloat16>(x_sign * result);
+  }
+
+  // Case 3: NaN and Inf
+  // NaN
+  if (xbits.is_nan()) {
+    if (xbits.is_signaling_nan()) {
+      fputil::raise_except_if_required(FE_INVALID);
+      return FPBits::quiet_nan().get_val();
+    }
+    return x; // quiet NaN
+  }
+  // |x|>1 & inf
+  fputil::raise_except_if_required(FE_INVALID);
+  fputil::set_errno_if_required(EDOM); // Domain is bounded
+  return FPBits::quiet_nan().get_val();
 }
 
 } // namespace math
-
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MATH_ASINBF16_H
