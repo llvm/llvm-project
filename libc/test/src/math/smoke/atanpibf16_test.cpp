@@ -31,8 +31,9 @@ public:
 
     EXPECT_FP_EQ_ALL_ROUNDING(bfloat16(0.5), LIBC_NAMESPACE::atanpibf16(inf));
     EXPECT_MATH_ERRNO(0);
-    
-    EXPECT_FP_EQ_ALL_ROUNDING(bfloat16(-0.5), LIBC_NAMESPACE::atanpibf16(neg_inf));
+
+    EXPECT_FP_EQ_ALL_ROUNDING(bfloat16(-0.5),
+                              LIBC_NAMESPACE::atanpibf16(neg_inf));
     EXPECT_MATH_ERRNO(0);
   }
 };
