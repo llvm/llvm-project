@@ -52,6 +52,7 @@ if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn" OR
   )
   get_target_property(_ocml_bc ocml IMPORTED_LOCATION)
   get_target_property(_ockl_bc ockl IMPORTED_LOCATION)
+  get_target_property(_asanrtl_bc asanrtl IMPORTED_LOCATION)
 
   if(NOT _ockl_bc)
     message(FATAL_ERROR "Could not find ockl.bc")
@@ -59,7 +60,18 @@ if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn" OR
   if(NOT _ocml_bc)
     message(FATAL_ERROR "Could not find ocml.bc")
   endif()
-  list(APPEND compile_flags "SHELL: -Xclang -mlink-builtin-bitcode -Xclang ${_ockl_bc}")
+  if(NOT _asanrtl_bc)
+    message(FATAL_ERROR "Could not find asanrtl.bc")
+  endif()
+  if(SANITIZER_AMDGPU)
+    list(APPEND compile_flags "SHELL: -DSANITIZER_AMDGPU=1")
+    # For ASan: Don't link asanrtl.bc and ockl.bc at compile time of libompdevice.a
+    # They will be linked once in POST_BUILD step to avoid duplicates symbols
+    # Note: Oclc control constants are provided using Platform.h
+    #
+  else()
+    list(APPEND compile_flags "SHELL: -Xclang -mlink-builtin-bitcode -Xclang ${_ockl_bc}")
+  endif()
   list(APPEND compile_flags "SHELL: -Xclang -mlink-builtin-bitcode -Xclang ${_ocml_bc}")
 endif()
 
@@ -129,6 +141,30 @@ endif()
 if(LLVM_DEFAULT_TARGET_TRIPLE)
   target_link_options(libompdevice PRIVATE "--target=${LLVM_DEFAULT_TARGET_TRIPLE}")
 endif()
+
+# For SANITIZER_AMDGPU: Use llvm-link POST_BUILD to merge ASAN runtime and OCKL
+# into the device library bitcode to resolve all and __asan_* __ockl_* symbols
+if(SANITIZER_AMDGPU)
+  find_program(LLVM_LINK_EXECUTABLE NAMES llvm-link HINTS ${LLVM_TOOLS_BINARY_DIR})
+  if(NOT LLVM_LINK_EXECUTABLE)
+    message(FATAL_ERROR "llvm-link not found")
+  endif()
+  add_custom_command(TARGET libompdevice POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy 
+      ${CMAKE_CURRENT_BINARY_DIR}/libomptarget-${target_name}.bc
+      ${CMAKE_CURRENT_BINARY_DIR}/libomptarget-${target_name}.bc.tmp
+    COMMAND ${LLVM_LINK_EXECUTABLE}
+      ${CMAKE_CURRENT_BINARY_DIR}/libomptarget-${target_name}.bc.tmp
+      ${_asanrtl_bc}
+      ${_ockl_bc}
+      --only-needed
+      -o ${CMAKE_CURRENT_BINARY_DIR}/libomptarget-${target_name}.bc
+    COMMAND ${CMAKE_COMMAND} -E remove
+      ${CMAKE_CURRENT_BINARY_DIR}/libomptarget-${target_name}.bc.tmp
+    COMMENT "Merging asanrtl.bc and ockl.bc into libomptarget-${target_name}.bc"
+  )
+endif()
+
 install(TARGETS libompdevice
         PERMISSIONS OWNER_WRITE OWNER_READ GROUP_READ WORLD_READ
         DESTINATION ${OPENMP_INSTALL_LIBDIR})
