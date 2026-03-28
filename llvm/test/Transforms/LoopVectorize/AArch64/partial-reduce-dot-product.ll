@@ -2113,8 +2113,8 @@ exit:                                 ; preds = %for.cond.cleanup.loopexit, %ent
   ret i64 %result
 }
 
-define dso_local i32 @not_dotp_vscale1(ptr %a, ptr %b, i32 %n, i64 %cost) #0 {
-; CHECK-INTERLEAVE1-LABEL: define dso_local i32 @not_dotp_vscale1(
+define i32 @not_dotp_vscale1(ptr %a, ptr %b, i32 %n, i64 %cost) #0 {
+; CHECK-INTERLEAVE1-LABEL: define i32 @not_dotp_vscale1(
 ; CHECK-INTERLEAVE1-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i32 [[N:%.*]], i64 [[COST:%.*]]) #[[ATTR0]] {
 ; CHECK-INTERLEAVE1-NEXT:  entry:
 ; CHECK-INTERLEAVE1-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[N]], 0
@@ -2155,7 +2155,7 @@ define dso_local i32 @not_dotp_vscale1(ptr %a, ptr %b, i32 %n, i64 %cost) #0 {
 ; CHECK-INTERLEAVE1-NEXT:    br i1 [[CMP_N]], label [[EXIT_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK-INTERLEAVE1:       scalar.ph:
 ;
-; CHECK-INTERLEAVED-LABEL: define dso_local i32 @not_dotp_vscale1(
+; CHECK-INTERLEAVED-LABEL: define i32 @not_dotp_vscale1(
 ; CHECK-INTERLEAVED-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i32 [[N:%.*]], i64 [[COST:%.*]]) #[[ATTR0]] {
 ; CHECK-INTERLEAVED-NEXT:  entry:
 ; CHECK-INTERLEAVED-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[N]], 0
@@ -2207,7 +2207,7 @@ define dso_local i32 @not_dotp_vscale1(ptr %a, ptr %b, i32 %n, i64 %cost) #0 {
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[CMP_N]], label [[EXIT_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK-INTERLEAVED:       scalar.ph:
 ;
-; CHECK-MAXBW-LABEL: define dso_local i32 @not_dotp_vscale1(
+; CHECK-MAXBW-LABEL: define i32 @not_dotp_vscale1(
 ; CHECK-MAXBW-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i32 [[N:%.*]], i64 [[COST:%.*]]) #[[ATTR0]] {
 ; CHECK-MAXBW-NEXT:  entry:
 ; CHECK-MAXBW-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[N]], 0
@@ -2276,8 +2276,8 @@ exit:                                 ; preds = %for.cond.cleanup.loopexit, %ent
 }
 
 
-define dso_local void @not_dotp_high_register_pressure(ptr %a, ptr %b, ptr %sum, i32 %n) #1 {
-; CHECK-INTERLEAVE1-LABEL: define dso_local void @not_dotp_high_register_pressure(
+define void @not_dotp_high_register_pressure(ptr %a, ptr %b, ptr %sum, i32 %n) #1 {
+; CHECK-INTERLEAVE1-LABEL: define void @not_dotp_high_register_pressure(
 ; CHECK-INTERLEAVE1-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[SUM:%.*]], i32 [[N:%.*]]) #[[ATTR1]] {
 ; CHECK-INTERLEAVE1-NEXT:  entry:
 ; CHECK-INTERLEAVE1-NEXT:    [[CMP100:%.*]] = icmp sgt i32 [[N]], 0
@@ -2377,7 +2377,7 @@ define dso_local void @not_dotp_high_register_pressure(ptr %a, ptr %b, ptr %sum,
 ; CHECK-INTERLEAVE1-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_FOR_COND_CLEANUP_CRIT_EDGE:%.*]], label [[SCALAR_PH]]
 ; CHECK-INTERLEAVE1:       scalar.ph:
 ;
-; CHECK-INTERLEAVED-LABEL: define dso_local void @not_dotp_high_register_pressure(
+; CHECK-INTERLEAVED-LABEL: define void @not_dotp_high_register_pressure(
 ; CHECK-INTERLEAVED-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[SUM:%.*]], i32 [[N:%.*]]) #[[ATTR1]] {
 ; CHECK-INTERLEAVED-NEXT:  entry:
 ; CHECK-INTERLEAVED-NEXT:    [[CMP100:%.*]] = icmp sgt i32 [[N]], 0
@@ -2477,7 +2477,7 @@ define dso_local void @not_dotp_high_register_pressure(ptr %a, ptr %b, ptr %sum,
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_FOR_COND_CLEANUP_CRIT_EDGE:%.*]], label [[SCALAR_PH]]
 ; CHECK-INTERLEAVED:       scalar.ph:
 ;
-; CHECK-MAXBW-LABEL: define dso_local void @not_dotp_high_register_pressure(
+; CHECK-MAXBW-LABEL: define void @not_dotp_high_register_pressure(
 ; CHECK-MAXBW-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[SUM:%.*]], i32 [[N:%.*]]) #[[ATTR1]] {
 ; CHECK-MAXBW-NEXT:  entry:
 ; CHECK-MAXBW-NEXT:    [[CMP100:%.*]] = icmp sgt i32 [[N]], 0

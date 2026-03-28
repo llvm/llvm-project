@@ -34,6 +34,7 @@
 ; SPIRV-O0-NEXT:    Expand variadic functions
 ; SPIRV-O0-NEXT:    FunctionPass Manager
 ; SPIRV-O0-NEXT:      SPIR-V Regularizer
+; SPIRV-O0-NEXT:    SPIRV lower ctors and dtors
 ; SPIRV-O0-NEXT:    SPIRV prepare functions
 ; SPIRV-O0-NEXT:    SPIRV prepare global variables
 ; SPIRV-O0-NEXT:    FunctionPass Manager
@@ -93,14 +94,19 @@
 ; SPIRV-Opt-NEXT:Target Pass Configuration
 ; SPIRV-Opt-NEXT:Machine Module Information
 ; SPIRV-Opt-NEXT:Target Transform Information
-; SPIRV-Opt-NEXT:Library Function Lowering Analysis
 ; SPIRV-Opt-NEXT:Assumption Cache Tracker
+; SPIRV-Opt-NEXT:Library Function Lowering Analysis
 ; SPIRV-Opt-NEXT:Type-Based Alias Analysis
 ; SPIRV-Opt-NEXT:Scoped NoAlias Alias Analysis
 ; SPIRV-Opt-NEXT:Profile summary info
 ; SPIRV-Opt-NEXT:Create Garbage Collector Module Metadata
 ; SPIRV-Opt-NEXT:Machine Branch Probability Analysis
 ; SPIRV-Opt-NEXT:  ModulePass Manager
+; SPIRV-Opt-NEXT:    FunctionPass Manager
+; SPIRV-Opt-NEXT:      Dominator Tree Construction
+; SPIRV-Opt-NEXT:      Basic Alias Analysis (stateless AA impl)
+; SPIRV-Opt-NEXT:      Function Alias Analysis Results
+; SPIRV-Opt-NEXT:      ObjC ARC contraction
 ; SPIRV-Opt-NEXT:    Pre-ISel Intrinsic Lowering
 ; SPIRV-Opt-NEXT:    FunctionPass Manager
 ; SPIRV-Opt-NEXT:      Expand IR instructions
@@ -140,6 +146,7 @@
 ; SPIRV-Opt-NEXT:    Expand variadic functions
 ; SPIRV-Opt-NEXT:    FunctionPass Manager
 ; SPIRV-Opt-NEXT:      SPIR-V Regularizer
+; SPIRV-Opt-NEXT:    SPIRV lower ctors and dtors
 ; SPIRV-Opt-NEXT:    SPIRV prepare functions
 ; SPIRV-Opt-NEXT:    SPIRV prepare global variables
 ; SPIRV-Opt-NEXT:    FunctionPass Manager
@@ -159,14 +166,11 @@
 ; SPIRV-Opt-NEXT:    SPIRV emit intrinsics
 ; SPIRV-Opt-NEXT:    FunctionPass Manager
 ; SPIRV-Opt-NEXT:      SPIRV legalize bitcast pass
-; SPIRV-Opt-NEXT:      Dominator Tree Construction
-; SPIRV-Opt-NEXT:      Basic Alias Analysis (stateless AA impl)
-; SPIRV-Opt-NEXT:      Function Alias Analysis Results
-; SPIRV-Opt-NEXT:      ObjC ARC contraction
 ; SPIRV-Opt-NEXT:      Prepare inline asm insts
 ; SPIRV-Opt-NEXT:      Safe Stack instrumentation pass
 ; SPIRV-Opt-NEXT:      Insert stack protectors
 ; SPIRV-Opt-NEXT:      Analysis containing CSE Info
+; SPIRV-Opt-NEXT:      Dominator Tree Construction
 ; SPIRV-Opt-NEXT:      Natural Loop Information
 ; SPIRV-Opt-NEXT:      Post-Dominator Tree Construction
 ; SPIRV-Opt-NEXT:      Branch Probability Analysis
