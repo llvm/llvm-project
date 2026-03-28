@@ -1756,15 +1756,27 @@ struct FoldTensorCastOfOutputIntoForallOp
                                bbArgs.front().getParentBlock(), ivsBlockArgs);
         });
 
-    // After `mergeBlocks` happened, the destinations in the terminator were
-    // mapped to the tensor.cast old-typed results of the output bbArgs. The
-    // destination have to be updated to point to the output bbArgs directly.
+    // After `mergeBlocks` happened, the destinations in the terminator may be
+    // mapped to tensor.cast values wrapping the new output bbArgs (introduced
+    // for indices in `tensorCastProducers`). Update those destinations to
+    // point directly to the output bbArgs, bypassing the casts.
+    //
+    // Note: we cannot zip yieldingOps with regionIterArgs by position because
+    // a parallel_insert_slice inside in_parallel may write to any shared
+    // output, not necessarily the one at the same position.
+    llvm::SmallDenseSet<Value> newIterArgSet(
+        newForallOp.getRegionIterArgs().begin(),
+        newForallOp.getRegionIterArgs().end());
     auto terminator = newForallOp.getTerminator();
-    for (auto [yieldingOp, outputBlockArg] : llvm::zip(
-             terminator.getYieldingOps(), newForallOp.getRegionIterArgs())) {
-      if (auto parallelCombingingOp =
-              dyn_cast<ParallelCombiningOpInterface>(yieldingOp)) {
-        parallelCombingingOp.getUpdatedDestinations().assign(outputBlockArg);
+    for (auto &yieldingOp : terminator.getYieldingOps()) {
+      auto parallelCombiningOp =
+          dyn_cast<ParallelCombiningOpInterface>(&yieldingOp);
+      if (!parallelCombiningOp)
+        continue;
+      for (OpOperand &dest : parallelCombiningOp.getUpdatedDestinations()) {
+        auto castOp = dest.get().getDefiningOp<tensor::CastOp>();
+        if (castOp && newIterArgSet.contains(castOp.getSource()))
+          dest.set(castOp.getSource());
       }
     }
 
