@@ -432,6 +432,7 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   ASSERT_EQ(Tokens.size(), 14u) << Tokens;
   EXPECT_TOKEN(Tokens[6], tok::r_paren, TT_Unknown); // Not TT_CastRParen
   EXPECT_TOKEN(Tokens[9], tok::amp, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[10], tok::identifier, TT_StartOfName);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUsesOfPlusAndMinus) {
