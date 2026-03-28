@@ -236,7 +236,6 @@ static mlir::Value emitCommonNeonBuiltinExpr(
   cir::VectorType vTy = getNeonType(&cgf, neonType, loc, hasLegalHalfType,
                                     false, allowBFloatArgsAndRet);
   mlir::Type ty = vTy;
-
   if (!ty)
     return nullptr;
 
@@ -1992,6 +1991,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   // defer to common code if it's been added to our special map.
   builtin = findARMVectorIntrinsicInMap(AArch64SIMDIntrinsicMap, builtinID,
                                         aarch64SIMDIntrinsicsProvenSorted);
+                                        
   if (builtin)
     return emitCommonNeonBuiltinExpr(
         *this, builtin->BuiltinID, builtin->LLVMIntrinsic,
