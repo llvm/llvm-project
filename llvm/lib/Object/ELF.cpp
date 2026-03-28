@@ -9,9 +9,9 @@
 #include "llvm/Object/ELF.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/Object/BBAddrMap.h"
 #include "llvm/Object/Decompressor.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/DataExtractor.h"
 
 using namespace llvm;
 using namespace object;
@@ -760,17 +760,6 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
         FunctionOffsetTranslations[Rela.r_offset] = Rela.r_addend;
     }
   }
-  auto GetAddressForRelocation =
-      [&](uint64_t RelocationOffsetInSection) -> Expected<uint64_t> {
-    auto FOTIterator =
-        FunctionOffsetTranslations.find(RelocationOffsetInSection);
-    if (FOTIterator == FunctionOffsetTranslations.end()) {
-      return createError("failed to get relocation data for offset: " +
-                         Twine::utohexstr(RelocationOffsetInSection) +
-                         " in section " + describe(EF, Sec));
-    }
-    return FOTIterator->second;
-  };
   Expected<ArrayRef<uint8_t>> ContentsOrErr = EF.getSectionContents(Sec);
   if (!ContentsOrErr)
     return ContentsOrErr.takeError();
@@ -796,16 +785,28 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
     Content = DecompressedContentRef;
   }
 
-  return llvm::object::decodeBBAddrMapPayload(
-      Content, EF.isLE(), sizeof(typename ELFFile<ELFT>::uintX_t),
-      [&](uint64_t RelocationOffsetInSection,
-          uint64_t RawValue) -> Expected<uint64_t> {
-        if (!IsRelocatable)
-          return RawValue;
-        assert(RawValue == 0);
-        return GetAddressForRelocation(RelocationOffsetInSection);
-      },
-      PGOAnalyses);
+  // Extract an address from the stream and resolve relocations if needed.
+  auto ExtractAddress = [&](DataExtractor &Data,
+                            DataExtractor::Cursor &Cur) -> Expected<uint64_t> {
+    uint64_t Offset = Cur.tell();
+    uint64_t Address = Data.getAddress(Cur);
+    if (!Cur)
+      return Cur.takeError();
+    if (!IsRelocatable)
+      return Address;
+    assert(Address == 0);
+    auto FOTIterator = FunctionOffsetTranslations.find(Offset);
+    if (FOTIterator == FunctionOffsetTranslations.end())
+      return createError("failed to get relocation data for offset: " +
+                         Twine::utohexstr(Offset) + " in section " +
+                         describe(EF, Sec));
+    return FOTIterator->second;
+  };
+
+  DataExtractor Data(Content, EF.isLE(),
+                     sizeof(typename ELFFile<ELFT>::uintX_t));
+  return llvm::object::decodeBBAddrMapPayload(Data, ExtractAddress,
+                                              PGOAnalyses);
 }
 
 template <class ELFT>

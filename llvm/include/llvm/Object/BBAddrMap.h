@@ -14,11 +14,11 @@
 #ifndef LLVM_OBJECT_BBADDRMAP_H
 #define LLVM_OBJECT_BBADDRMAP_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/BranchProbability.h"
+#include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/UniqueBBID.h"
 
@@ -255,21 +255,17 @@ struct PGOAnalysisMap {
 
 /// Decodes one BB address map section payload.
 ///
-/// \p Content the raw bytes of the section payload.
-/// \p IsLittleEndian endianness of the payload.
-/// \p AddressSize the size of an address in bytes (4 or 8).
-/// \p ResolveAddress callback invoked for each range base address. It receives
-///   the offset of the address field in \p Content and the raw value read from
-///   the stream, and returns the resolved address.
+/// \p Data a DataExtractor wrapping the raw section payload.
+/// \p ExtractAddress callback that reads and resolves an address from \p Data
+///   at the current cursor position. Handles format-specific details such as
+///   relocation resolution.
 /// \p PGOAnalyses if non-null, receives the decoded PGO analysis data. On
 ///   error, \p PGOAnalyses may be partially populated.
-Expected<std::vector<BBAddrMap>>
-decodeBBAddrMapPayload(ArrayRef<uint8_t> Content, bool IsLittleEndian,
-                       uint8_t AddressSize,
-                       function_ref<Expected<uint64_t>(uint64_t OffsetInSection,
-                                                       uint64_t RawValue)>
-                           ResolveAddress,
-                       std::vector<PGOAnalysisMap> *PGOAnalyses = nullptr);
+Expected<std::vector<BBAddrMap>> decodeBBAddrMapPayload(
+    DataExtractor &Data,
+    function_ref<Expected<uint64_t>(DataExtractor &, DataExtractor::Cursor &)>
+        ExtractAddress,
+    std::vector<PGOAnalysisMap> *PGOAnalyses = nullptr);
 
 } // end namespace object.
 } // end namespace llvm.

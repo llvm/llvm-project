@@ -13,7 +13,6 @@
 
 #include "llvm/Object/BBAddrMap.h"
 #include "llvm/Object/Error.h"
-#include "llvm/Support/DataExtractor.h"
 
 using namespace llvm;
 using namespace object;
@@ -45,32 +44,21 @@ static IntTy readULEB128As(DataExtractor &Data, DataExtractor::Cursor &Cur,
 } // end anonymous namespace
 
 Expected<std::vector<BBAddrMap>> llvm::object::decodeBBAddrMapPayload(
-    ArrayRef<uint8_t> Content, bool IsLittleEndian, uint8_t AddressSize,
-    function_ref<Expected<uint64_t>(uint64_t OffsetInSection,
-                                    uint64_t RawValue)>
-        ResolveAddress,
+    DataExtractor &Data,
+    function_ref<Expected<uint64_t>(DataExtractor &, DataExtractor::Cursor &)>
+        ExtractAddress,
     std::vector<PGOAnalysisMap> *PGOAnalyses) {
-  DataExtractor Data(Content, IsLittleEndian, AddressSize);
   std::vector<BBAddrMap> FunctionEntries;
 
   DataExtractor::Cursor Cur(0);
   Error ULEBSizeErr = Error::success();
   Error MetadataDecodeErr = Error::success();
 
-  // Helper lambda to extract an address at Cur and resolve it via the callback.
-  auto ExtractAddress = [&]() -> Expected<uint64_t> {
-    uint64_t OffsetInSection = Cur.tell();
-    uint64_t RawValue = Data.getAddress(Cur);
-    if (!Cur)
-      return Cur.takeError();
-    return ResolveAddress(OffsetInSection, RawValue);
-  };
-
   uint8_t Version = 0;
   uint16_t Feature = 0;
   BBAddrMap::Features FeatEnable{};
   while (!ULEBSizeErr && !MetadataDecodeErr && Cur &&
-         Cur.tell() < Content.size()) {
+         Cur.tell() < Data.getData().size()) {
     Version = Data.getU8(Cur);
     if (!Cur)
       break;
@@ -110,7 +98,7 @@ Expected<std::vector<BBAddrMap>> llvm::object::decodeBBAddrMapPayload(
         return createError("invalid zero number of BB ranges at offset " +
                            Twine::utohexstr(Cur.tell()));
     } else {
-      auto AddressOrErr = ExtractAddress();
+      auto AddressOrErr = ExtractAddress(Data, Cur);
       if (!AddressOrErr)
         return AddressOrErr.takeError();
       RangeBaseAddress = *AddressOrErr;
@@ -122,7 +110,7 @@ Expected<std::vector<BBAddrMap>> llvm::object::decodeBBAddrMapPayload(
          ++BBRangeIndex) {
       uint32_t PrevBBEndOffset = 0;
       if (FeatEnable.MultiBBRange) {
-        auto AddressOrErr = ExtractAddress();
+        auto AddressOrErr = ExtractAddress(Data, Cur);
         if (!AddressOrErr)
           return AddressOrErr.takeError();
         RangeBaseAddress = *AddressOrErr;
