@@ -125,6 +125,27 @@ struct __bracket_expr {
   typename _Traits::char_class_type __neg_mask_ = 0;
 };
 
+// This is essentially an optional<vector<sub_match<const _CharT*>>>, just back-ported to C++03
+// FIXME: This isn't exactly the optimal representation
+template <class _CharT>
+struct __search_result {
+  union {
+    struct {
+      const _CharT* __match_first_;
+      const _CharT* __match_last_;
+      vector<sub_match<const _CharT*>> __sub_matches_;
+    };
+  };
+  bool __matched_;
+
+  __search_result() : __matched_(false) {}
+  __search_result(const _CharT* __first, const _CharT* __last, vector<sub_match<const _CharT*>> __sub_matches)
+      : __match_first_(__first), __match_last_(__last), __sub_matches_(std::move(__sub_matches)), __matched_(true) {}
+  __search_result(const __search_result&)            = delete;
+  __search_result& operator=(const __search_result&) = delete;
+  ~__search_result() {}
+};
+
 template <class _CharT, class _Traits>
 class __interpreter {
   vector<__interpreter_info<_CharT> > __machine_;
@@ -777,15 +798,19 @@ public:
             const _CharT* __last,
             vector<sub_match<const _CharT*>>& __sub_matches) const {
     using __local_state = typename __global_execution_state::__local_execution_state;
-    __local_state __base_state;
-    __base_state.__sub_matches_ = std::move(__sub_matches);
-    __base_state.__current_     = __first;
-    if (!__initial_loop_values_.empty()) {
-      __base_state.__loop_values_ = std::make_unique_for_overwrite<size_t[]>(__initial_loop_values_.size());
+
+    __local_state __base_state{
+        .__current_     = __first,
+        .__sub_matches_ = std::move(__sub_matches),
+        .__current_pos_ = 0,
+        .__loop_values_ = __initial_loop_values_.empty()
+                            ? nullptr
+                            : std::make_unique_for_overwrite<size_t[]>(__initial_loop_values_.size()),
+        .__loop_starts_ =
+            __initial_loop_values_.empty() ? nullptr : std::make_unique<const _CharT*[]>(__initial_loop_values_.size()),
+    };
+    if (!__initial_loop_values_.empty())
       std::copy(__initial_loop_values_.begin(), __initial_loop_values_.end(), __base_state.__loop_values_.get());
-      __base_state.__loop_starts_ = std::make_unique<const _CharT*[]>(__initial_loop_values_.size());
-    }
-    __base_state.__current_pos_ = 0;
 
     __global_execution_state __gexec_state{{}, *this, __flags};
     auto [__base_state_matched, __gcounter] = __base_state.__execute(__first, __last, __gexec_state);
@@ -834,6 +859,44 @@ public:
       }
       return {false, {}};
     }
+  }
+
+  __search_result<_CharT> __execute_search(
+      const _CharT* __first, const _CharT* __last, regex_constants::match_flag_type __flags, size_t __marked_count) {
+    sub_match<const _CharT*> __unmatched;
+    __unmatched.first   = __last;
+    __unmatched.second  = __last;
+    __unmatched.matched = false;
+
+    vector<sub_match<const _CharT*>> __sub_matches(__marked_count, __unmatched);
+    if (auto [__success, __last_val] = __execute(
+            __flags | ((__flags & regex_constants::__no_update_pos) ? regex_constants::match_flag_type()
+                                                                    : regex_constants::__at_first),
+            __first,
+            __last,
+            __sub_matches);
+        __success) {
+      return {__first, __last_val, std::move(__sub_matches)};
+    }
+
+    if (__first == __last || (__flags & regex_constants::match_continuous))
+      return {};
+
+    __flags |= regex_constants::match_prev_avail;
+
+    for (++__first; __first != __last; ++__first) {
+      __sub_matches.assign(__marked_count, __unmatched);
+      if (auto [__success, __last_val] = __execute(__flags, __first, __last, __sub_matches); __success) {
+        return {__first, __last_val, std::move(__sub_matches)};
+      }
+    }
+
+    __sub_matches.assign(__marked_count, __unmatched);
+    if (auto [__success, __last_val] = __execute(__flags, __first, __last, __sub_matches); __success) {
+      return {__first, __last_val, std::move(__sub_matches)};
+    }
+
+    return {};
   }
 
   const _Traits& __get_traits() const { return __traits_; }
