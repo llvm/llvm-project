@@ -181,28 +181,40 @@ bool RISCVFoldMemOffset::foldOffset(
       case RISCV::FSW:
       case RISCV::LD:
       case RISCV::LD_RV32:
+      case RISCV::PseudoLD_RV32_OPT:
       case RISCV::FLD:
       case RISCV::SD:
       case RISCV::SD_RV32:
+      case RISCV::PseudoSD_RV32_OPT:
       case RISCV::FSD: {
         // Can't fold into store value.
         if (User.getOperand(0).getReg() == Reg)
           return false;
 
+        unsigned AddrRegIdx = 1, OffsetIdx = 2;
+        if (User.getOpcode() == RISCV::PseudoLD_RV32_OPT ||
+            User.getOpcode() == RISCV::PseudoSD_RV32_OPT) {
+          AddrRegIdx = 2;
+          OffsetIdx = 3;
+
+          if (User.getOperand(1).getReg() == Reg)
+            return false;
+        }
+
         // Existing offset must be immediate.
-        if (!User.getOperand(2).isImm())
+        if (!User.getOperand(OffsetIdx).isImm())
           return false;
 
         // Require at least one operation between the ADDI and the load/store.
         // We have other optimizations that should handle the simple case.
-        if (User.getOperand(1).getReg() == OrigReg)
+        if (User.getOperand(AddrRegIdx).getReg() == OrigReg)
           return false;
 
-        auto I = RegToOffsetMap.find(User.getOperand(1).getReg());
+        auto I = RegToOffsetMap.find(User.getOperand(AddrRegIdx).getReg());
         if (I == RegToOffsetMap.end())
           return false;
 
-        int64_t LocalOffset = User.getOperand(2).getImm();
+        int64_t LocalOffset = User.getOperand(OffsetIdx).getImm();
         assert(isInt<12>(LocalOffset));
         int64_t CombinedOffset = (uint64_t)LocalOffset + (uint64_t)I->second;
         if (!isInt<12>(CombinedOffset))
@@ -272,8 +284,14 @@ bool RISCVFoldMemOffset::runOnMachineFunction(MachineFunction &MF) {
 
       // We can fold this ADDI.
       // Rewrite all the instructions.
-      for (auto [MemMI, NewOffset] : FoldableInstrs)
-        MemMI->getOperand(2).setImm(NewOffset);
+      for (auto [MemMI, NewOffset] : FoldableInstrs) {
+        unsigned OffsetIdx = 2;
+        if (MemMI->getOpcode() == RISCV::PseudoLD_RV32_OPT ||
+            MemMI->getOpcode() == RISCV::PseudoSD_RV32_OPT)
+          OffsetIdx = 3;
+
+        MemMI->getOperand(OffsetIdx).setImm(NewOffset);
+      }
 
       MRI.replaceRegWith(MI.getOperand(0).getReg(), MI.getOperand(1).getReg());
       MRI.clearKillFlags(MI.getOperand(1).getReg());
