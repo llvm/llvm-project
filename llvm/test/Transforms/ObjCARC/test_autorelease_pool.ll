@@ -319,9 +319,7 @@ define ptr @function_that_might_autorelease() {
 ; is contained within the callee's own pool.
 define void @test_cross_function_inner_pool_caller() {
 ; CHECK-LABEL: define void @test_cross_function_inner_pool_caller() {
-; CHECK-NEXT:    [[POOL:%.*]] = call ptr @llvm.objc.autoreleasePoolPush() #[[ATTR0]]
 ; CHECK-NEXT:    call void @test_cross_function_inner_pool_callee()
-; CHECK-NEXT:    call void @llvm.objc.autoreleasePoolPop(ptr [[POOL]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret void
 ;
   %pool = call ptr @llvm.objc.autoreleasePoolPush()
