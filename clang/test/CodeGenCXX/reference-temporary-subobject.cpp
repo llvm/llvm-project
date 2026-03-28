@@ -10,6 +10,8 @@
 //
 // RUN: %clang_cc1 -std=c++98 -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -std=c++98 -triple x86_64-linux-gnu -emit-llvm -o - %s -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-linux-gnu -emit-llvm -o - %s -fexperimental-new-constant-interpreter | FileCheck %s
 
 // `const int &` bound to a member of an S temporary.
 // The backing store is the whole S object, which can't be stored const.
