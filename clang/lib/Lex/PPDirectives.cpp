@@ -4475,24 +4475,19 @@ void Preprocessor::HandleObjCImportDirective(Token &AtTok, Token &ImportTok) {
   if (!DirToks.back().isOneOf(tok::semi, tok::eod))
     CollectPPImportSuffix(DirToks);
 
-  if (DirToks.back().isNot(tok::eod))
-    CheckEndOfDirective(ImportTok.getIdentifierInfo()->getName());
-  else
-    DirToks.pop_back();
+  SourceLocation End =
+      DirToks.back().isNot(tok::eod)
+          ? CheckEndOfDirective(ImportTok.getIdentifierInfo()->getName(),
+                                /*EnableMacros=*/false, &DirToks)
 
-  // This is not a pp-import after all.
-  if (DirToks.back().isNot(tok::semi)) {
-    EnterModuleSuffixTokenStream(DirToks);
-    return;
-  }
+          : DirToks.pop_back_val().getLocation();
 
   Module *Imported = nullptr;
-  SourceLocation SemiLoc = DirToks.back().getLocation();
   if (getLangOpts().Modules) {
     Imported = TheModuleLoader.loadModule(ModuleImportLoc, Path, Module::Hidden,
                                           /*IsInclusionDirective=*/false);
     if (Imported)
-      makeModuleVisible(Imported, SemiLoc);
+      makeModuleVisible(Imported, End);
   }
 
   if (Callbacks)
