@@ -370,14 +370,10 @@ constexpr uint64_t MinAlign(uint64_t A, uint64_t B) {
 
 /// Returns the next power of two (in 64-bits) that is strictly greater than A.
 /// Returns zero on overflow.
-constexpr uint64_t NextPowerOf2(uint64_t A) {
-  A |= (A >> 1);
-  A |= (A >> 2);
-  A |= (A >> 4);
-  A |= (A >> 8);
-  A |= (A >> 16);
-  A |= (A >> 32);
-  return A + 1;
+inline uint64_t NextPowerOf2(uint64_t A) {
+  if (A > UINT64_MAX / 2)
+    return 0;
+  return UINT64_C(1) << Log2_64_Ceil(A + 1);
 }
 
 /// Returns the power of two which is greater than or equal to the given value.
