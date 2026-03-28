@@ -272,6 +272,28 @@ func.func @logical_vector(%arg0 : vector<4xi1>, %arg1 : vector<4xi1>) {
   return
 }
 
+// CHECK-LABEL: @bool_arith_scalar
+func.func @bool_arith_scalar(%arg0 : i1, %arg1 : i1) {
+  // CHECK: spirv.LogicalNotEqual
+  %0 = arith.addi %arg0, %arg1 : i1
+  // CHECK: spirv.LogicalNotEqual
+  %1 = arith.subi %arg0, %arg1 : i1
+  // CHECK: spirv.LogicalAnd
+  %2 = arith.muli %arg0, %arg1 : i1
+  return
+}
+
+// CHECK-LABEL: @bool_arith_vector
+func.func @bool_arith_vector(%arg0 : vector<4xi1>, %arg1 : vector<4xi1>) {
+  // CHECK: spirv.LogicalNotEqual
+  %0 = arith.addi %arg0, %arg1 : vector<4xi1>
+  // CHECK: spirv.LogicalNotEqual
+  %1 = arith.subi %arg0, %arg1 : vector<4xi1>
+  // CHECK: spirv.LogicalAnd
+  %2 = arith.muli %arg0, %arg1 : vector<4xi1>
+  return
+}
+
 // CHECK-LABEL: @shift_scalar
 func.func @shift_scalar(%arg0 : i32, %arg1 : i32) {
   // CHECK: spirv.ShiftLeftLogical

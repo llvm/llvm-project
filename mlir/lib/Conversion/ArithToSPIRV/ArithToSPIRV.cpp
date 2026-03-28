@@ -182,6 +182,11 @@ struct ElementwiseArithOpPattern final : OpConversionPattern<Op> {
   matchAndRewrite(Op op, typename Op::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     assert(adaptor.getOperands().size() <= 3);
+    // Reject boolean types to allow specialized boolean patterns to handle
+    // them (e.g., addi/subi on i1 should use LogicalNotEqual, not IAdd/ISub).
+    if (!adaptor.getOperands().empty() &&
+        isBoolScalarOrVector(adaptor.getOperands().front().getType()))
+      return failure();
     auto converter = this->template getTypeConverter<SPIRVTypeConverter>();
     Type dstType = converter->convertType(op.getType());
     if (!dstType) {
@@ -568,6 +573,27 @@ struct XOrIOpBooleanPattern final : public OpConversionPattern<arith::XOrIOp> {
 
     rewriter.replaceOpWithNewOp<spirv::LogicalNotEqualOp>(
         op, dstType, adaptor.getOperands());
+    return success();
+  }
+};
+
+/// Converts an arith integer op to the given SPIR-V boolean op if the type is
+/// i1 or vector of i1.
+template <typename ArithOp, typename SPIRVOp>
+struct BoolIOpPattern final : public OpConversionPattern<ArithOp> {
+  using OpConversionPattern<ArithOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(ArithOp op, typename ArithOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (!isBoolScalarOrVector(adaptor.getOperands().front().getType()))
+      return failure();
+
+    Type dstType = this->getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return getTypeConversionFailure(rewriter, op);
+
+    rewriter.replaceOpWithNewOp<SPIRVOp>(op, dstType, adaptor.getOperands());
     return success();
   }
 };
@@ -1410,8 +1436,11 @@ void mlir::arith::populateArithToSPIRVPatterns(
   patterns.add<
     ConstantCompositeOpPattern,
     ConstantScalarOpPattern,
+    BoolIOpPattern<arith::AddIOp, spirv::LogicalNotEqualOp>,
     ElementwiseArithOpPattern<arith::AddIOp, spirv::IAddOp>,
+    BoolIOpPattern<arith::SubIOp, spirv::LogicalNotEqualOp>,
     ElementwiseArithOpPattern<arith::SubIOp, spirv::ISubOp>,
+    BoolIOpPattern<arith::MulIOp, spirv::LogicalAndOp>,
     ElementwiseArithOpPattern<arith::MulIOp, spirv::IMulOp>,
     spirv::ElementwiseOpPattern<arith::DivUIOp, spirv::UDivOp>,
     spirv::ElementwiseOpPattern<arith::DivSIOp, spirv::SDivOp>,
