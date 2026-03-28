@@ -624,6 +624,9 @@ TYPE_PARSER(construct<format::IntrinsicTypeDataEditDesc>(
             "L " >> pure(format::IntrinsicTypeDataEditDesc::Kind::L),
         mandatoryWidth, noInt, noInt) ||
     construct<format::IntrinsicTypeDataEditDesc>(
+        "A " >> ("T " >> pure(format::IntrinsicTypeDataEditDesc::Kind::AT)),
+        noInt, noInt, noInt) ||
+    construct<format::IntrinsicTypeDataEditDesc>(
         "A " >> pure(format::IntrinsicTypeDataEditDesc::Kind::A), maybe(width),
         noInt, noInt) ||
     // PGI/Intel extension: omitting width (and all else that follows)

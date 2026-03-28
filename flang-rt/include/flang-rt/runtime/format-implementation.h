@@ -493,6 +493,7 @@ RT_API_ATTRS int FormatControl<CONTEXT>::CueUpNextDataEdit(
               (ch == 'A' || ch == 'I' || ch == 'B' || ch == 'E' || ch == 'D' ||
                   ch == 'O' || ch == 'Z' || ch == 'F' || ch == 'G' ||
                   ch == 'L')) ||
+          (ch == 'A' && next == 'T') ||
           (ch == 'E' && (next == 'N' || next == 'S' || next == 'X')) ||
           (ch == 'D' && next == 'T')) {
         // Data edit descriptor found
@@ -604,13 +605,20 @@ RT_API_ATTRS common::optional<DataEdit> FormatControl<CONTEXT>::GetNextDataEdit(
         edit.variation = next;
         ++offset_;
       }
+    } else if (edit.descriptor == 'A') {
+      if (static_cast<char>(Capitalize(PeekNext())) == 'T') {
+        edit.variation = 'T';
+        ++offset_;
+      }
     }
     // Width is optional for A[w] in the standard and optional
     // for Lw in most compilers.
+    // AT does not accept a width.
     // Intel & (presumably, from bug report) Fujitsu allow
     // a missing 'w' & 'd'/'m' for other edit descriptors -- but not
     // 'd'/'m' with a missing 'w' -- and so interpret "(E)" as "(E0)".
-    if (CharType ch{PeekNext()}; (ch >= '0' && ch <= '9') || ch == '.') {
+    if (CharType ch{PeekNext()};
+        edit.variation != 'T' && ((ch >= '0' && ch <= '9') || ch == '.')) {
       edit.width = GetIntField(context);
       if constexpr (std::is_base_of_v<InputStatementState, CONTEXT>) {
         if (edit.width.value_or(-1) == 0) {
