@@ -396,3 +396,51 @@ func.func @same_memref_source_and_tag(%arg0: index, %arg1: index) {
   return
 }
 // CHECK: affine.for
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/146015.
+// The double-buffer alloc created by pipeline-data-transfer should preserve
+// the alignment attribute from the original alloc.
+// CHECK-LABEL: func @preserve_alignment
+func.func @preserve_alignment() {
+  %A = memref.alloc() : memref<256 x f32>
+  // CHECK: memref.alloc() {alignment = 1024 : i64} : memref<2x32xf32, 1>
+  %Ah = memref.alloc() {alignment = 1024} : memref<32 x f32, 1>
+  %tag = memref.alloc() : memref<1 x f32>
+  %zero = arith.constant 0 : index
+  %num_elts = arith.constant 32 : index
+
+  affine.for %i = 0 to 8 {
+    affine.dma_start %A[%i], %Ah[%i], %tag[%zero], %num_elts : memref<256 x f32>, memref<32 x f32, 1>, memref<1 x f32>
+    affine.dma_wait %tag[%zero], %num_elts : memref<1 x f32>
+    %v = affine.load %Ah[%i] : memref<32 x f32, 1>
+  }
+  memref.dealloc %tag : memref<1 x f32>
+  memref.dealloc %Ah : memref<32 x f32, 1>
+  return
+}
+
+// -----
+
+// Negative test: alloc without alignment must NOT gain a spurious alignment
+// attribute on the double-buffer alloc.
+// CHECK-LABEL: func @no_alignment_not_propagated
+func.func @no_alignment_not_propagated() {
+  %A = memref.alloc() : memref<256 x f32>
+  // CHECK: memref.alloc() : memref<2x32xf32, 1>
+  // CHECK-NOT: {alignment
+  %Ah = memref.alloc() : memref<32 x f32, 1>
+  %tag = memref.alloc() : memref<1 x f32>
+  %zero = arith.constant 0 : index
+  %num_elts = arith.constant 32 : index
+
+  affine.for %i = 0 to 8 {
+    affine.dma_start %A[%i], %Ah[%i], %tag[%zero], %num_elts : memref<256 x f32>, memref<32 x f32, 1>, memref<1 x f32>
+    affine.dma_wait %tag[%zero], %num_elts : memref<1 x f32>
+    %v = affine.load %Ah[%i] : memref<32 x f32, 1>
+  }
+  memref.dealloc %tag : memref<1 x f32>
+  memref.dealloc %Ah : memref<32 x f32, 1>
+  return
+}
