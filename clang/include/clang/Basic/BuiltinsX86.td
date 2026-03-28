@@ -3207,6 +3207,9 @@ let Features = "avx512bw,avx512vl", Attributes = [NoThrow, Const, Constexpr, Req
 
 let Features = "avx512bw", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<512>] in {
   def dbpsadbw512 : X86Builtin<"_Vector<32, short>(_Vector<64, char>, _Vector<64, char>, _Constant int)">;
+}
+
+let Features = "avx512bw", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
   def psadbw512 : X86Builtin<"_Vector<8, long long int>(_Vector<64, char>, _Vector<64, char>)">;
 }
 
