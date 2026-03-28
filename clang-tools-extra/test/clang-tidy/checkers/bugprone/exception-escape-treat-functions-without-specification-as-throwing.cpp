@@ -80,6 +80,7 @@ struct S {
   // CHECK-MESSAGES-UNDEFINED: :[[@LINE-10]]:8: note: frame #0: an exception of unknown type may be thrown in function 'operator=' here
   // CHECK-MESSAGES-UNDEFINED: :[[@LINE-11]]:8: warning: an exception may be thrown in function '~S' which should not throw exceptions
   // CHECK-MESSAGES-UNDEFINED: :[[@LINE-12]]:8: note: frame #0: an exception of unknown type may be thrown in function '~S' here
+  // FIXME: clearly non-throwing functions should not be marked as throwing
   Member m;
 };
 
