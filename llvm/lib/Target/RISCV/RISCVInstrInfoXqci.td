@@ -1379,14 +1379,14 @@ def qc_access_symbol : Operand<XLenVT> {
 }
 
 // This is modelled after `PseudoAddTPRel` but with `mayLoad = true`
-let hasSideEffects = false, mayLoad = true, mayStore = false, Size = 32,
+let hasSideEffects = false, mayLoad = true, mayStore = false, Size = 4,
   isCodeGenOnly = false in
 class PseudoQCAccessLoad_ri<string opcodestr>
   : Pseudo<(outs GPR:$rd),
            (ins GPRMem:$rs1, simm12:$imm12, qc_access_symbol:$expr), [],
            opcodestr, "$rd, ${imm12}(${rs1}), $expr">;
 
-let hasSideEffects = false, mayLoad = false, mayStore = true, Size = 32,
+let hasSideEffects = false, mayLoad = false, mayStore = true, Size = 4,
   isCodeGenOnly = false in
 class PseudoQCAccessStore_rri<string opcodestr>
   : Pseudo<(outs), (ins GPR:$rs2, GPRMem:$rs1, simm12:$imm12, qc_access_symbol:$expr),
@@ -1398,7 +1398,7 @@ def PseudoQCAccessLB  : PseudoQCAccessLoad_ri<"lb">;
 def PseudoQCAccessLBU : PseudoQCAccessLoad_ri<"lbu">;
 def PseudoQCAccessLH  : PseudoQCAccessLoad_ri<"lh">;
 def PseudoQCAccessLHU : PseudoQCAccessLoad_ri<"lhu">;
-def PseudoQCAccessLW : PseudoQCAccessLoad_ri<"lw">;
+def PseudoQCAccessLW  : PseudoQCAccessLoad_ri<"lw">;
 
 let EmitPriority = 0 in {
 def : InstAlias<"lb $rd, (${rs1}), $expr", (PseudoQCAccessLB GPR:$rd, GPRMem:$rs1, 0, qc_access_symbol:$expr)>;
@@ -1419,14 +1419,14 @@ def : InstAlias<"sw $rs2, (${rs1}), $expr", (PseudoQCAccessSW GPR:$rs2, GPRMem:$
 }
 }
 
-let hasSideEffects = false, mayLoad = true, mayStore = false, Size = 16,
+let hasSideEffects = false, mayLoad = true, mayStore = false, Size = 2,
   isCodeGenOnly = false in
 class PseudoQCAccessCLoad_ri<string opcodestr, DAGOperand immop>
   : Pseudo<(outs GPRC:$rd),
            (ins GPRCMem:$rs1, immop:$imm, qc_access_symbol:$expr),
            [], opcodestr, "$rd, ${imm}(${rs1}), $expr">;
 
-let hasSideEffects = false, mayLoad = false, mayStore = true, Size = 16,
+let hasSideEffects = false, mayLoad = false, mayStore = true, Size = 2,
   isCodeGenOnly = false in
 class PseudoQCAccessCStore_rri<string opcodestr, DAGOperand immop>
   : Pseudo<(outs),
@@ -1446,7 +1446,7 @@ def : InstAlias<"c.sw $rs2, (${rs1}), $expr", (PseudoQCAccessC_SW GPRC:$rs2, GPR
 let Predicates = [IsRV32, HasStdExtZcb] in {
 // no C_LB so no PseudoQCAccessC_LB
 def PseudoQCAccessC_LBU : PseudoQCAccessCLoad_ri<"c.lbu", uimm2>;
-def PseudoQCAccessC_LH : PseudoQCAccessCLoad_ri<"c.lh", uimm2_lsb0>;
+def PseudoQCAccessC_LH  : PseudoQCAccessCLoad_ri<"c.lh", uimm2_lsb0>;
 def PseudoQCAccessC_LHU : PseudoQCAccessCLoad_ri<"c.lhu", uimm2_lsb0>;
 
 let EmitPriority = 0 in {

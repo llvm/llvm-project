@@ -71,13 +71,13 @@ FunctionPass *llvm::createRISCVQCRelaxMarkingPass() {
   return new RISCVQCRelaxMarking();
 }
 
-static bool isLoad(MachineInstr &MI) {
+static bool isLoad(const MachineInstr &MI) {
   return llvm::is_contained(
       {RISCV::LW, RISCV::LH, RISCV::LHU, RISCV::LB, RISCV::LBU},
       MI.getOpcode());
 }
 
-static bool isStore(MachineInstr &MI) {
+static bool isStore(const MachineInstr &MI) {
   return llvm::is_contained({RISCV::SW, RISCV::SH, RISCV::SB}, MI.getOpcode());
 }
 
@@ -171,8 +171,8 @@ bool RISCVQCRelaxMarking::runOnMachineFunction(MachineFunction &MF) {
           !(isLoad(*NextMI) || isStore(*NextMI)))
         continue;
 
-      LLVM_DEBUG(llvm::dbgs() << "Found QC_E_LI " << *MI);
-      LLVM_DEBUG(llvm::dbgs() << "Followed by Load/Store " << *NextMI);
+      LLVM_DEBUG(dbgs() << "Found QC_E_LI " << *MI);
+      LLVM_DEBUG(dbgs() << "Followed by Load/Store " << *NextMI);
 
       MachineOperand &OffsetOp = NextMI->getOperand(2);
       if (OffsetOp.getImm() != 0)

@@ -483,7 +483,7 @@ void RISCVMCCodeEmitter::expandPseudoQCAccess(
   if (!STI.hasFeature(RISCV::FeatureRelax))
     return;
 
-  MCOperand AccessSymbol = MI.getOperand(3);
+  const MCOperand &AccessSymbol = MI.getOperand(3);
   assert(AccessSymbol.isExpr() && "Expected expression in PseudoQCAccess");
 
   const auto *AccessExpr = dyn_cast<MCSpecifierExpr>(AccessSymbol.getExpr());
@@ -799,7 +799,6 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
       FixupKind = RISCV::fixup_riscv_qc_abs20_u;
       RelaxCandidate = true;
       break;
-
     case ELF::R_RISCV_GOT_HI20:
     case ELF::R_RISCV_TPREL_HI20:
     case ELF::R_RISCV_TLSDESC_HI20:
