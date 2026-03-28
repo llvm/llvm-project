@@ -40,8 +40,7 @@ define dso_local i64 @load_h_0() nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:  .Lpcrel_hi2:
 ; CHECK-NEXT:    auipc a0, %pcrel_hi(h_0)
-; CHECK-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi2)
-; CHECK-NEXT:    ld a0, 0(a0)
+; CHECK-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi2)(a0)
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i64, ptr @h_0
@@ -53,8 +52,7 @@ define dso_local i64 @load_h_1() nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:  .Lpcrel_hi3:
 ; CHECK-NEXT:    auipc a0, %pcrel_hi(h_1)
-; CHECK-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi3)
-; CHECK-NEXT:    ld a0, 0(a0)
+; CHECK-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi3)(a0)
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i64, ptr @h_1
@@ -66,8 +64,7 @@ define dso_local i64 @load_h_2() nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:  .Lpcrel_hi4:
 ; CHECK-NEXT:    auipc a0, %pcrel_hi(h_2)
-; CHECK-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi4)
-; CHECK-NEXT:    ld a0, 0(a0)
+; CHECK-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi4)(a0)
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i64, ptr @h_2
@@ -79,8 +76,7 @@ define dso_local i64 @load_h_4() nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:  .Lpcrel_hi5:
 ; CHECK-NEXT:    auipc a0, %pcrel_hi(h_4)
-; CHECK-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi5)
-; CHECK-NEXT:    ld a0, 0(a0)
+; CHECK-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi5)(a0)
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i64, ptr @h_4
@@ -92,8 +88,7 @@ define dso_local i64 @load_h_8() nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:  .Lpcrel_hi6:
 ; CHECK-NEXT:    auipc a0, %pcrel_hi(h_8)
-; CHECK-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi6)
-; CHECK-NEXT:    ld a0, 0(a0)
+; CHECK-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi6)(a0)
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i64, ptr @h_8
@@ -105,8 +100,7 @@ define dso_local i64 @load_h_16() nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:  .Lpcrel_hi7:
 ; CHECK-NEXT:    auipc a0, %pcrel_hi(h_16)
-; CHECK-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi7)
-; CHECK-NEXT:    ld a0, 0(a0)
+; CHECK-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi7)(a0)
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i64, ptr @h_16
@@ -118,8 +112,7 @@ define dso_local void @store_h_4() nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:  .Lpcrel_hi8:
 ; CHECK-NEXT:    auipc a0, %pcrel_hi(h_4)
-; CHECK-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi8)
-; CHECK-NEXT:    sd zero, 0(a0)
+; CHECK-NEXT:    sd zero, %pcrel_lo(.Lpcrel_hi8)(a0)
 ; CHECK-NEXT:    ret
 entry:
    store i64 0, ptr @h_4
@@ -131,8 +124,7 @@ define dso_local void @store_h_8() nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:  .Lpcrel_hi9:
 ; CHECK-NEXT:    auipc a0, %pcrel_hi(h_8)
-; CHECK-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi9)
-; CHECK-NEXT:    sd zero, 0(a0)
+; CHECK-NEXT:    sd zero, %pcrel_lo(.Lpcrel_hi9)(a0)
 ; CHECK-NEXT:    ret
 entry:
    store i64 0, ptr @h_8
@@ -146,9 +138,8 @@ define dso_local i64 @load_ga_8() nounwind {
 ; CHECK-LABEL: load_ga_8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:  .Lpcrel_hi10:
-; CHECK-NEXT:    auipc a0, %pcrel_hi(ga_8)
-; CHECK-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi10)
-; CHECK-NEXT:    ld a0, 8(a0)
+; CHECK-NEXT:    auipc a0, %pcrel_hi(ga_8+8)
+; CHECK-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi10)(a0)
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i64, ptr getelementptr inbounds ([2 x i64], ptr @ga_8, i32 0, i32 1)
@@ -159,9 +150,8 @@ define dso_local i64 @load_ga_16() nounwind {
 ; CHECK-LABEL: load_ga_16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:  .Lpcrel_hi11:
-; CHECK-NEXT:    auipc a0, %pcrel_hi(ga_16)
-; CHECK-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi11)
-; CHECK-NEXT:    ld a0, 8(a0)
+; CHECK-NEXT:    auipc a0, %pcrel_hi(ga_16+8)
+; CHECK-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi11)(a0)
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i64, ptr getelementptr inbounds ([2 x i64], ptr @ga_16, i32 0, i32 1)
@@ -178,12 +168,11 @@ define dso_local void @inc_g_i64() nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:  .Lpcrel_hi12:
 ; CHECK-NEXT:    auipc a0, %pcrel_hi(g_4_i64)
-; CHECK-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi12)
-; CHECK-NEXT:    ld a2, 0(a0)
+; CHECK-NEXT:    ld a2, %pcrel_lo(.Lpcrel_hi12)(a0)
 ; CHECK-NEXT:    addi a2, a2, 1
 ; CHECK-NEXT:    seqz a1, a2
 ; CHECK-NEXT:    add a3, a3, a1
-; CHECK-NEXT:    sd a2, 0(a0)
+; CHECK-NEXT:    sd a2, %pcrel_lo(.Lpcrel_hi12)(a0)
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i64, ptr @g_4_i64

@@ -474,6 +474,22 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
       CommonOffset = Offset;
       break;
     }
+    case RISCV::PseudoLD_RV32_OPT:
+    case RISCV::PseudoSD_RV32_OPT: {
+      if (UseMI.getOperand(2).isFI())
+        return false;
+      // Register defined by Lo should not be the value register.
+      if (DestReg == UseMI.getOperand(0).getReg() || DestReg == UseMI.getOperand(1).getReg() )
+        return false;
+      assert(DestReg == UseMI.getOperand(2).getReg() &&
+             "Expected base address use");
+      // All load/store instructions must use the same offset.
+      int64_t Offset = UseMI.getOperand(3).getImm();
+      if (CommonOffset && Offset != CommonOffset)
+        return false;
+      CommonOffset = Offset;
+      break;
+    }
     case RISCV::PseudoCCLD:
     case RISCV::PseudoCCLW:
     case RISCV::PseudoCCLWU:
@@ -604,6 +620,8 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
       case RISCV::PseudoCCLHU:
       case RISCV::PseudoCCLB:
       case RISCV::PseudoCCLBU:
+      case RISCV::PseudoLD_RV32_OPT:
+      case RISCV::PseudoSD_RV32_OPT:
         ImmIdx = 3;
         break;
       case RISCV::LB:
