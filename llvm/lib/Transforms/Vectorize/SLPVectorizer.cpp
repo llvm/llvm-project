@@ -13852,7 +13852,7 @@ bool BoUpSLP::matchesSelectOfBits(const TreeEntry &SelectTE) const {
     return false;
   if (!SelectTE.ReorderIndices.empty() || !SelectTE.ReuseShuffleIndices.empty())
     return false;
-  if (!UserIgnoreList)
+  if (!UserIgnoreList || SelectTE.Idx != 0)
     return false;
   if (any_of(SelectTE.Scalars, [](Value *V) { return !V->hasOneUse(); }))
     return false;
