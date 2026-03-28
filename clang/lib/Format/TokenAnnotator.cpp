@@ -6045,7 +6045,8 @@ bool TokenAnnotator::mustBreakBefore(AnnotatedLine &Line,
 
     if (Style.BraceWrapping.AfterEnum) {
       if (Line.startsWith(tok::kw_enum) ||
-          Line.startsWith(tok::kw_typedef, tok::kw_enum)) {
+          Line.startsWith(tok::kw_typedef, tok::kw_enum) ||
+          Line.startsWith(tok::kw_export, tok::kw_enum)) {
         return true;
       }
       // Ensure BraceWrapping for `public enum A {`.
