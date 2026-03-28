@@ -116,12 +116,15 @@ def FileLineColLoc : DialectAttribute<(attr
 }
 }
 
-let cType = "FusedLoc",
-    cBuilder = "cast<FusedLoc>(getChecked<FusedLoc>([&]() { return reader.emitError(); }, context, $_args))" in {
+let cType = "FusedLoc" in {
 def FusedLoc : DialectAttribute<(attr
   Array<Location>:$locations
 )> {
   let printerPredicate = "!$_val.getMetadata()";
+  // FusedLoc::get(context, locs) may return UnknownLoc when locs is empty.
+  // Pass Attribute() explicitly to bypass the folding logic and always
+  // construct a FusedLoc via Base::getChecked.
+  let cBuilder = "cast<FusedLoc>(getChecked<FusedLoc>([&]() { return reader.emitError(); }, context, $_args, Attribute()))";
 }
 
 def FusedLocWithMetadata : DialectAttribute<(attr
@@ -129,6 +132,7 @@ def FusedLocWithMetadata : DialectAttribute<(attr
   Attribute:$metadata
 )> {
   let printerPredicate = "$_val.getMetadata()";
+  let cBuilder = "cast<FusedLoc>(getChecked<FusedLoc>([&]() { return reader.emitError(); }, context, $_args))";
 }
 }
 
