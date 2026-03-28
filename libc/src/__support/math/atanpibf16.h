@@ -28,34 +28,27 @@ LIBC_INLINE bfloat16 atanpibf16(bfloat16 x) {
   bool x_sign = x_u >> 15;
   float sign = (x_sign ? -1.0f : 1.0f);
 
-  // Taylor series for atan-> [x - x^3/3 + x^5/5 - x^7/7 ...]
-  // x * [1 - x^2/3 + x^4/5 - x^6/7...] -> x * P(x)
-  // atan(x) = x * poly(x^2)
-  // atan(x)/x = poly(x^2)
-  // atan(x)/(x*pi) = 
+  // Taylor series for atan
+  // atan(x) = [x - x^3/3 + x^5/5 - x^7/7 ...]
+  //         =  x * [1 - x^2/3 + x^4/5 - x^6/7...]
+  //         =  x * P(x^2)
   //
-  // Degree 14 polynomial of atan(x) generated using Sollya with command :
+  // atan(x) = x * P(x^2)
+  //
+  // since atanpi(x) = atan(x)/pi
+  // atanpi(x) = x * poly(x^2)/pi
+  // where [poly(x^2)/pi] <= atan(x)/(x*pi)
+  //
+  // Degree 12 polynomial of atanpi(x) generated using Sollya with command :
   // > display = hexadecimal ;
-  // > P = fpminimax(atan(x)/(x*pi), [|0, 2, 4, 6, 8, 10, 12, 14|], [|1,SG,SG,SG,SG,SG,SG,SG|], [0, 1]);
+  // > P = fpminimax(atan(x)/(x*pi), [|0, 2, 4, 6, 8, 10, 12|], [|SG,SG,SG,SG,SG,SG,SG|], [0, 1]);
   //
   // relative error for the polynomial given by:
-  // > dirtyinfnorm(atan(x)/(x*pi) - P(x), [0, 1]);
-  // error - 0x1.6e4e44p-25
-  // worst case error for it being ~ 
-  // satisfying -> error < worst_case
-  auto atanpi_eval = [](float x0) {
-return fputil::polyeval(
-    x0,
-    0x1.45f304p-2f,
-    -0x1.b29476p-4f,
-    0x1.0458d4p-4f,
-    -0x1.6d6784p-5f,
-    0x1.021eep-5f,
-    -0x1.352efap-6f,
-    0x1.f724c8p-8f,
-    -0x1.84ac1ep-10f
-);
- };
+  // > dirtyinfnorm(atan(x)/(x*pi) - P(x^2), [0, 1]);
+  // error - 0x1.db939p-23
+auto atanpi_eval = [](float x0) {
+    return fputil::polyeval(x0, 0x1.45f2f8p-2f, -0x1.b28236p-4f, 0x1.0333bp-4f, -0x1.5f9b92p-5f, 0x1.b520c4p-6f, -0x1.819ef4p-7f, 0x1.4789p-9f);
+};
 
   float xf = x;
   float x_sq = xf * xf ;
@@ -74,8 +67,13 @@ return fputil::polyeval(
     return fputil::cast<bfloat16>(xf *result );
   }
 
-  // Case 2: |x| > 1 ( But not too large )
-    if(x_abs < 0x43a3){
+  // Case 2: |x| > 1 ( uses range reduction )
+    if(x_abs < 0x7F80){
+
+    // For Large x in bfloat16 the value is close to 0.5 but not exactly 0.5
+    if (LIBC_UNLIKELY(x_abs >= 0x43a3)) 
+    return fputil::cast<bfloat16>(sign * 0x1.fffffep-2f); 
+
     // atan(x) = sign(x) * (pi/2 - atan(1/|x|))
     // atan(x)/pi = sign(x) * ((pi/2)/pi) - ((atan(1/|x|))/pi))
     // atanpi(x) = sign(x) * ((0.5) - atanpi(1/|x|))
@@ -88,11 +86,7 @@ return fputil::polyeval(
     return fputil::cast<bfloat16>(sign * (0.5 - atan_inv));
   }
 
-  // Case 3: For Large x in bfloat16 the value is close to 0.5 but not exactly 0.5
-  if (LIBC_UNLIKELY(x_abs < 0x7F80)) 
-    return fputil::cast<bfloat16>(sign * 0x1.fffffep-2f); 
-
-  // Case 4: |x| is ±inf or NaN
+  // Case 3: |x| is ±inf or NaN
   if (xbits.is_nan()) {
     if (xbits.is_signaling_nan()) {
       fputil::raise_except_if_required(FE_INVALID);

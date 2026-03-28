@@ -3215,8 +3215,8 @@ libc_support_library(
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
         ":__support_fputil_sqrt",
-        ":hdr_fenv_macros",
         ":__support_macros_optimization",
+        ":hdr_fenv_macros",
     ],
 )
 
