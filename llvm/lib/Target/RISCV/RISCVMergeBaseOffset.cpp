@@ -479,7 +479,8 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
       if (UseMI.getOperand(2).isFI())
         return false;
       // Register defined by Lo should not be the value register.
-      if (DestReg == UseMI.getOperand(0).getReg() || DestReg == UseMI.getOperand(1).getReg() )
+      if (DestReg == UseMI.getOperand(0).getReg() ||
+          DestReg == UseMI.getOperand(1).getReg())
         return false;
       assert(DestReg == UseMI.getOperand(2).getReg() &&
              "Expected base address use");
