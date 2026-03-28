@@ -5373,6 +5373,8 @@ Action *Driver::ConstructPhaseAction(
            (Args.hasFlag(options::OPT_offload_new_driver,
                          options::OPT_no_offload_new_driver,
                          C.getActiveOffloadKinds() != Action::OFK_None) &&
+            !(Args.hasArg(options::OPT_S) &&
+              !Args.hasArg(options::OPT_emit_llvm)) &&
             (!offloadDeviceOnly() ||
              (Input->getOffloadingToolChain() &&
               TargetDeviceOffloadKind == Action::OFK_HIP &&
