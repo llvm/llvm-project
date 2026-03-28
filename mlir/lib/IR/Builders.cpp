@@ -496,11 +496,17 @@ OpBuilder::tryFold(Operation *op, SmallVectorImpl<Value> &results,
   if (failed(op->fold(foldResults)))
     return cleanupFailure();
 
+  // Bound the number of in-place fold iterations. Legitimate chains are very
+  // short (e.g. foldCommutative swaps once, then the op folds to a value).
+  // Without a bound, circular SSA uses in graph regions can cause an infinite
+  // loop (e.g. addi(x, 0) where x is the op's own result).
+  constexpr int kMaxInPlaceFolds = 64;
   int count = 0;
   do {
     LDBG() << "Folded in place #" << count
            << " times: " << OpWithFlags(op, OpPrintingFlags().skipRegions());
-    count++;
+    if (++count >= kMaxInPlaceFolds)
+      return cleanupFailure();
   } while (foldResults.empty() && succeeded(op->fold(foldResults)));
 
   // An in-place fold does not require generation of any constants.
