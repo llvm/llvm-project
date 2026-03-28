@@ -27,6 +27,8 @@
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "llvm/Support/Casting.h"
 
 using namespace mlir;
 using namespace mlir::sparse_tensor;
@@ -249,19 +251,20 @@ static void genParametersOut(OpBuilder &builder, Location loc, Value out,
                              Value kernelToken, SmallVectorImpl<Value> &scalars,
                              SmallVectorImpl<Value> &buffers,
                              SmallVectorImpl<Value> &args,
-                             SmallVectorImpl<Value> &tokens) {
+                             SmallVectorImpl<Value> &tokens,
+                             ArrayRef<bool> copyBack) {
   unsigned base = scalars.size();
   for (unsigned i = base, e = args.size(); i < e; i++) {
+    unsigned bufIdx = i - base;
     Value firstToken;
-    if (i == base) {
-      // Assumed output parameter: unregister or copy-out.
-      if (out) {
+    if (copyBack[bufIdx]) {
+      if (out && bufIdx == 0) {
         genHostUnregisterMemref(builder, loc, out);
         out = Value();
         continue;
       }
       firstToken =
-          genCopyMemRef(builder, loc, buffers[0], args[i], kernelToken);
+          genCopyMemRef(builder, loc, buffers[bufIdx], args[i], kernelToken);
     } else {
       firstToken = genFirstWait(builder, loc);
     }
@@ -1202,15 +1205,31 @@ struct ForallRewriter : public OpRewritePattern<scf::ParallelOp> {
     SmallVector<Value> constants;
     SmallVector<Value> scalars;
     SmallVector<Value> buffers;
+    SmallVector<bool> copyBack;
     for (Value val : invariants) {
       Type tp = val.getType();
       if (val.getDefiningOp<arith::ConstantOp>())
         constants.push_back(val);
       else if (isa<FloatType>(tp) || tp.isIntOrIndex())
         scalars.push_back(val);
-      else if (isa<MemRefType>(tp))
+      else if (isa<MemRefType>(tp)) {
         buffers.push_back(val);
-      else
+
+        bool isWrite = false;
+        for (Operation *user : val.getUsers()) {
+          if (isa<memref::StoreOp>(user)) {
+            isWrite = true;
+            break;
+          }
+          if (auto memInterface = dyn_cast<MemoryEffectOpInterface>(user)) {
+            if (memInterface.getEffectOnValue<MemoryEffects::Write>(val)) {
+              isWrite = true;
+              break;
+            }
+          }
+        }
+        copyBack.push_back(isWrite);
+      } else
         return failure(); // don't know how to share
     }
     // Pass outlined non-constant values.
@@ -1239,7 +1258,7 @@ struct ForallRewriter : public OpRewritePattern<scf::ParallelOp> {
         genLaunchGPUFunc(rewriter, gpuFunc, args, tokens, numThreads);
     // Finalize the outlined arguments.
     genParametersOut(rewriter, loc, out, kernelToken, scalars, buffers, args,
-                     tokens);
+                     tokens, copyBack);
     genBlockingWait(rewriter, loc, tokens);
     rewriter.eraseOp(forallOp);
     return success();
