@@ -1111,7 +1111,17 @@ static void expandIToFP(Instruction *IToFP) {
   Retval0->addIncoming(A4, IfEnd26);
   Retval0->addIncoming(ConstantFP::getZero(IToFP->getType(), false), Entry);
 
-  IToFP->replaceAllUsesWith(Retval0);
+  unsigned MaxExp = APFloat::semanticsMaxExponent(IToFP->getType()->getFltSemantics());
+  Value *OvfCmp = Builder.CreateICmpUGE(Sub1, Builder.getIntN(BitWidthNew, MaxExp + 2));
+  Value *Inf = ConstantFP::getInfinity(IToFP->getType());
+  if (IsSigned) {
+    Value *NegInf = ConstantFP::getInfinity(IToFP->getType(), true);
+    Value *SignCmp = Builder.CreateICmpSLT(IntVal, Constant::getNullValue(IntVal->getType()));
+    Inf = Builder.CreateSelect(SignCmp, NegInf, Inf);
+  }
+  Value *Result = Builder.CreateSelect(OvfCmp, Inf, Retval0);
+
+  IToFP->replaceAllUsesWith(Result);
   IToFP->dropAllReferences();
   IToFP->eraseFromParent();
 }
