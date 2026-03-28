@@ -5940,6 +5940,9 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectWaveExclusiveScanProduct(ResVReg, ResType, I);
   case Intrinsic::spv_quad_all:
     return selectQuadAll(ResVReg, ResType, I);
+  case Intrinsic::spv_quad_read_lane_at:
+    return selectWaveOpInst(ResVReg, ResType, I,
+                            SPIRV::OpGroupNonUniformQuadBroadcast);
   case Intrinsic::spv_quad_read_across_x: {
     return selectQuadSwap(ResVReg, ResType, I, /*Direction*/ 0);
   }
