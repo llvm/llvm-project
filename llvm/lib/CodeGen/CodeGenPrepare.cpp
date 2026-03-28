@@ -255,7 +255,6 @@ static cl::opt<bool> EnableICMP_EQToICMP_ST(
     "cgp-icmp-eq2icmp-st", cl::Hidden, cl::init(false),
     cl::desc("Enable ICMP_EQ to ICMP_S(L|G)T conversion."));
 
-
 static cl::opt<bool>
     VerifyBFIUpdates("cgp-verify-bfi-updates", cl::Hidden, cl::init(false),
                      cl::desc("Enable BFI update verification for "
