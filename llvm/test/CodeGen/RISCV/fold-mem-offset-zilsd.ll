@@ -82,26 +82,26 @@ define void @test_sh3add_store(ptr %p, i64 %x, i64 %y) {
 ; RV32ZILSD-LABEL: test_sh3add_store:
 ; RV32ZILSD:       # %bb.0: # %entry
 ; RV32ZILSD-NEXT:    mv a5, a4
-; RV32ZILSD-NEXT:    mv a7, a2
 ; RV32ZILSD-NEXT:    mv a4, a3
-; RV32ZILSD-NEXT:    mv a6, a1
+; RV32ZILSD-NEXT:    mv a3, a2
+; RV32ZILSD-NEXT:    mv a2, a1
 ; RV32ZILSD-NEXT:    slli a1, a1, 3
-; RV32ZILSD-NEXT:    slli a2, a3, 3
+; RV32ZILSD-NEXT:    slli a6, a4, 3
 ; RV32ZILSD-NEXT:    add a1, a0, a1
-; RV32ZILSD-NEXT:    add a0, a0, a2
-; RV32ZILSD-NEXT:    sd a6, 400(a1)
+; RV32ZILSD-NEXT:    add a0, a0, a6
+; RV32ZILSD-NEXT:    sd a2, 400(a1)
 ; RV32ZILSD-NEXT:    sd a4, 400(a0)
 ; RV32ZILSD-NEXT:    ret
 ;
 ; RV32ZILSDZBA-LABEL: test_sh3add_store:
 ; RV32ZILSDZBA:       # %bb.0: # %entry
 ; RV32ZILSDZBA-NEXT:    mv a5, a4
-; RV32ZILSDZBA-NEXT:    mv a7, a2
 ; RV32ZILSDZBA-NEXT:    mv a4, a3
-; RV32ZILSDZBA-NEXT:    mv a6, a1
+; RV32ZILSDZBA-NEXT:    mv a3, a2
+; RV32ZILSDZBA-NEXT:    mv a2, a1
 ; RV32ZILSDZBA-NEXT:    sh3add a1, a1, a0
-; RV32ZILSDZBA-NEXT:    sh3add a0, a3, a0
-; RV32ZILSDZBA-NEXT:    sd a6, 400(a1)
+; RV32ZILSDZBA-NEXT:    sh3add a0, a4, a0
+; RV32ZILSDZBA-NEXT:    sd a2, 400(a1)
 ; RV32ZILSDZBA-NEXT:    sd a4, 400(a0)
 ; RV32ZILSDZBA-NEXT:    ret
 entry:
@@ -117,28 +117,28 @@ define void @test_sh3add_store_optsize(ptr %p, i64 %x, i64 %y) optsize {
 ; RV32ZILSD-LABEL: test_sh3add_store_optsize:
 ; RV32ZILSD:       # %bb.0: # %entry
 ; RV32ZILSD-NEXT:    mv a5, a4
-; RV32ZILSD-NEXT:    mv a7, a2
-; RV32ZILSD-NEXT:    addi a0, a0, 400
 ; RV32ZILSD-NEXT:    mv a4, a3
-; RV32ZILSD-NEXT:    mv a6, a1
+; RV32ZILSD-NEXT:    mv a3, a2
+; RV32ZILSD-NEXT:    mv a2, a1
+; RV32ZILSD-NEXT:    addi a0, a0, 400
 ; RV32ZILSD-NEXT:    slli a1, a1, 3
-; RV32ZILSD-NEXT:    slli a2, a3, 3
+; RV32ZILSD-NEXT:    slli a6, a4, 3
 ; RV32ZILSD-NEXT:    add a1, a0, a1
-; RV32ZILSD-NEXT:    add a0, a0, a2
-; RV32ZILSD-NEXT:    sd a6, 0(a1)
+; RV32ZILSD-NEXT:    add a0, a0, a6
+; RV32ZILSD-NEXT:    sd a2, 0(a1)
 ; RV32ZILSD-NEXT:    sd a4, 0(a0)
 ; RV32ZILSD-NEXT:    ret
 ;
 ; RV32ZILSDZBA-LABEL: test_sh3add_store_optsize:
 ; RV32ZILSDZBA:       # %bb.0: # %entry
 ; RV32ZILSDZBA-NEXT:    mv a5, a4
-; RV32ZILSDZBA-NEXT:    mv a7, a2
-; RV32ZILSDZBA-NEXT:    addi a0, a0, 400
 ; RV32ZILSDZBA-NEXT:    mv a4, a3
-; RV32ZILSDZBA-NEXT:    mv a6, a1
+; RV32ZILSDZBA-NEXT:    mv a3, a2
+; RV32ZILSDZBA-NEXT:    mv a2, a1
+; RV32ZILSDZBA-NEXT:    addi a0, a0, 400
 ; RV32ZILSDZBA-NEXT:    sh3add a1, a1, a0
-; RV32ZILSDZBA-NEXT:    sh3add a0, a3, a0
-; RV32ZILSDZBA-NEXT:    sd a6, 0(a1)
+; RV32ZILSDZBA-NEXT:    sh3add a0, a4, a0
+; RV32ZILSDZBA-NEXT:    sd a2, 0(a1)
 ; RV32ZILSDZBA-NEXT:    sd a4, 0(a0)
 ; RV32ZILSDZBA-NEXT:    ret
 entry:

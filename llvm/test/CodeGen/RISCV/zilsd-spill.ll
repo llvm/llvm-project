@@ -64,117 +64,108 @@ define i64 @cmpxchg_i64_monotonic_monotonic(ptr %ptr, i64 %cmp, i64 %val) nounwi
   ; RV32I-ZILSD: bb.0 (%ir-block.0):
   ; RV32I-ZILSD-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x1, $x8_x9, $x18_x19, $x20_x21, $x22_x23, $x24_x25, $x26_x27
   ; RV32I-ZILSD-NEXT: {{  $}}
-  ; RV32I-ZILSD-NEXT:   $x2 = frame-setup ADDI $x2, -80
-  ; RV32I-ZILSD-NEXT:   frame-setup SW killed $x1, $x2, 76 :: (store (s32) into %stack.2)
-  ; RV32I-ZILSD-NEXT:   frame-setup SD_RV32 killed $x8_x9, $x2, 64 :: (store (s64) into %stack.3)
-  ; RV32I-ZILSD-NEXT:   frame-setup SD_RV32 killed $x18_x19, $x2, 56 :: (store (s64) into %stack.4)
-  ; RV32I-ZILSD-NEXT:   frame-setup SD_RV32 killed $x20_x21, $x2, 48 :: (store (s64) into %stack.5)
-  ; RV32I-ZILSD-NEXT:   frame-setup SD_RV32 killed $x22_x23, $x2, 40 :: (store (s64) into %stack.6)
-  ; RV32I-ZILSD-NEXT:   frame-setup SD_RV32 killed $x24_x25, $x2, 32 :: (store (s64) into %stack.7)
-  ; RV32I-ZILSD-NEXT:   frame-setup SD_RV32 killed $x26_x27, $x2, 24 :: (store (s64) into %stack.8)
-  ; RV32I-ZILSD-NEXT:   renamable $x17 = COPY $x12
-  ; RV32I-ZILSD-NEXT:   renamable $x16 = COPY $x11
-  ; RV32I-ZILSD-NEXT:   SD_RV32 killed renamable $x16_x17, $x2, 16 :: (store (s64) into %ir.1)
-  ; RV32I-ZILSD-NEXT:   $x11 = ADDI $x2, 16
+  ; RV32I-ZILSD-NEXT:   $x2 = frame-setup ADDI $x2, -64
+  ; RV32I-ZILSD-NEXT:   frame-setup SW killed $x1, $x2, 60 :: (store (s32) into %stack.1)
+  ; RV32I-ZILSD-NEXT:   frame-setup SD_RV32 killed $x8_x9, $x2, 48 :: (store (s64) into %stack.2)
+  ; RV32I-ZILSD-NEXT:   frame-setup SD_RV32 killed $x18_x19, $x2, 40 :: (store (s64) into %stack.3)
+  ; RV32I-ZILSD-NEXT:   frame-setup SD_RV32 killed $x20_x21, $x2, 32 :: (store (s64) into %stack.4)
+  ; RV32I-ZILSD-NEXT:   frame-setup SD_RV32 killed $x22_x23, $x2, 24 :: (store (s64) into %stack.5)
+  ; RV32I-ZILSD-NEXT:   frame-setup SD_RV32 killed $x24_x25, $x2, 16 :: (store (s64) into %stack.6)
+  ; RV32I-ZILSD-NEXT:   frame-setup SD_RV32 killed $x26_x27, $x2, 8 :: (store (s64) into %stack.7)
+  ; RV32I-ZILSD-NEXT:   renamable $x15 = COPY $x12
+  ; RV32I-ZILSD-NEXT:   PseudoSD_RV32_OPT $x11, killed renamable $x15, $x2, 0 :: (store (s32) into %ir.1, align 8), (store (s32) into %ir.1 + 4, basealign 8)
+  ; RV32I-ZILSD-NEXT:   $x11 = ADDI $x2, 0
   ; RV32I-ZILSD-NEXT:   $x12 = COPY killed renamable $x13
   ; RV32I-ZILSD-NEXT:   $x13 = COPY killed renamable $x14
   ; RV32I-ZILSD-NEXT:   $x14 = COPY $x0
   ; RV32I-ZILSD-NEXT:   $x15 = COPY $x0
   ; RV32I-ZILSD-NEXT:   PseudoCALL target-flags(riscv-call) @__atomic_compare_exchange_8, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit-def $x2, implicit-def dead $x10
-  ; RV32I-ZILSD-NEXT:   renamable $x10_x11 = LD_RV32 $x2, 16 :: (dereferenceable load (s64) from %ir.1)
-  ; RV32I-ZILSD-NEXT:   PseudoRV32ZdinxSD killed renamable $x10_x11, $x2, 8 :: (store (s64) into %stack.1, align 4)
+  ; RV32I-ZILSD-NEXT:   renamable $x30, renamable $x5 = PseudoLD_RV32_OPT $x2, 0 :: (dereferenceable load (s32) from %ir.1, align 8), (dereferenceable load (s32) from %ir.1 + 4, basealign 8)
   ; RV32I-ZILSD-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $x6, 12 /* clobber */, implicit-def dead early-clobber $x7, 12 /* clobber */, implicit-def dead early-clobber $x8, 12 /* clobber */, implicit-def dead early-clobber $x9, 12 /* clobber */, implicit-def dead early-clobber $x10, 12 /* clobber */, implicit-def dead early-clobber $x11, 12 /* clobber */, implicit-def dead early-clobber $x12, 12 /* clobber */, implicit-def dead early-clobber $x13, 12 /* clobber */, implicit-def dead early-clobber $x14, 12 /* clobber */, implicit-def dead early-clobber $x15, 12 /* clobber */, implicit-def dead early-clobber $x16, 12 /* clobber */, implicit-def dead early-clobber $x17, 12 /* clobber */, implicit-def dead early-clobber $x18, 12 /* clobber */, implicit-def dead early-clobber $x19, 12 /* clobber */, implicit-def dead early-clobber $x20, 12 /* clobber */, implicit-def dead early-clobber $x21, 12 /* clobber */, implicit-def dead early-clobber $x22, 12 /* clobber */, implicit-def dead early-clobber $x23, 12 /* clobber */, implicit-def dead early-clobber $x24, 12 /* clobber */, implicit-def dead early-clobber $x25, 12 /* clobber */, implicit-def dead early-clobber $x26, 12 /* clobber */, implicit-def dead early-clobber $x27, 12 /* clobber */, implicit-def dead early-clobber $x28, 12 /* clobber */, implicit-def dead early-clobber $x29, 12 /* clobber */, implicit-def dead early-clobber $x31
-  ; RV32I-ZILSD-NEXT:   renamable $x12_x13 = PseudoRV32ZdinxLD $x2, 8 :: (load (s64) from %stack.1, align 4)
-  ; RV32I-ZILSD-NEXT:   renamable $x10 = ADD renamable $x12, renamable $x12
-  ; RV32I-ZILSD-NEXT:   renamable $x11 = SLTU renamable $x10, renamable $x12
-  ; RV32I-ZILSD-NEXT:   renamable $x12 = ADD killed renamable $x13, renamable $x13
-  ; RV32I-ZILSD-NEXT:   renamable $x11 = ADD killed renamable $x12, killed renamable $x11
-  ; RV32I-ZILSD-NEXT:   $x1 = frame-destroy LW $x2, 76 :: (load (s32) from %stack.2)
-  ; RV32I-ZILSD-NEXT:   $x8_x9 = frame-destroy LD_RV32 $x2, 64 :: (load (s64) from %stack.3)
-  ; RV32I-ZILSD-NEXT:   $x18_x19 = frame-destroy LD_RV32 $x2, 56 :: (load (s64) from %stack.4)
-  ; RV32I-ZILSD-NEXT:   $x20_x21 = frame-destroy LD_RV32 $x2, 48 :: (load (s64) from %stack.5)
-  ; RV32I-ZILSD-NEXT:   $x22_x23 = frame-destroy LD_RV32 $x2, 40 :: (load (s64) from %stack.6)
-  ; RV32I-ZILSD-NEXT:   $x24_x25 = frame-destroy LD_RV32 $x2, 32 :: (load (s64) from %stack.7)
-  ; RV32I-ZILSD-NEXT:   $x26_x27 = frame-destroy LD_RV32 $x2, 24 :: (load (s64) from %stack.8)
-  ; RV32I-ZILSD-NEXT:   $x2 = frame-destroy ADDI $x2, 80
+  ; RV32I-ZILSD-NEXT:   renamable $x10 = ADD renamable $x30, renamable $x30
+  ; RV32I-ZILSD-NEXT:   renamable $x11 = SLTU renamable $x10, killed renamable $x30
+  ; RV32I-ZILSD-NEXT:   renamable $x5 = ADD killed renamable $x5, renamable $x5
+  ; RV32I-ZILSD-NEXT:   renamable $x11 = ADD killed renamable $x5, killed renamable $x11
+  ; RV32I-ZILSD-NEXT:   $x1 = frame-destroy LW $x2, 60 :: (load (s32) from %stack.1)
+  ; RV32I-ZILSD-NEXT:   $x8_x9 = frame-destroy LD_RV32 $x2, 48 :: (load (s64) from %stack.2)
+  ; RV32I-ZILSD-NEXT:   $x18_x19 = frame-destroy LD_RV32 $x2, 40 :: (load (s64) from %stack.3)
+  ; RV32I-ZILSD-NEXT:   $x20_x21 = frame-destroy LD_RV32 $x2, 32 :: (load (s64) from %stack.4)
+  ; RV32I-ZILSD-NEXT:   $x22_x23 = frame-destroy LD_RV32 $x2, 24 :: (load (s64) from %stack.5)
+  ; RV32I-ZILSD-NEXT:   $x24_x25 = frame-destroy LD_RV32 $x2, 16 :: (load (s64) from %stack.6)
+  ; RV32I-ZILSD-NEXT:   $x26_x27 = frame-destroy LD_RV32 $x2, 8 :: (load (s64) from %stack.7)
+  ; RV32I-ZILSD-NEXT:   $x2 = frame-destroy ADDI $x2, 64
   ; RV32I-ZILSD-NEXT:   PseudoRET implicit $x10, implicit $x11
   ;
   ; RV32I-ZILSD-UNALIGNED-LABEL: name: cmpxchg_i64_monotonic_monotonic
   ; RV32I-ZILSD-UNALIGNED: bb.0 (%ir-block.0):
   ; RV32I-ZILSD-UNALIGNED-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x1, $x8_x9, $x18_x19, $x20_x21, $x22_x23, $x24_x25, $x26_x27
   ; RV32I-ZILSD-UNALIGNED-NEXT: {{  $}}
-  ; RV32I-ZILSD-UNALIGNED-NEXT:   $x2 = frame-setup ADDI $x2, -80
-  ; RV32I-ZILSD-UNALIGNED-NEXT:   frame-setup SW killed $x1, $x2, 76 :: (store (s32) into %stack.2)
-  ; RV32I-ZILSD-UNALIGNED-NEXT:   frame-setup SD_RV32 killed $x8_x9, $x2, 68 :: (store (s64) into %stack.3, align 1)
-  ; RV32I-ZILSD-UNALIGNED-NEXT:   frame-setup SD_RV32 killed $x18_x19, $x2, 60 :: (store (s64) into %stack.4, align 1)
-  ; RV32I-ZILSD-UNALIGNED-NEXT:   frame-setup SD_RV32 killed $x20_x21, $x2, 52 :: (store (s64) into %stack.5, align 1)
-  ; RV32I-ZILSD-UNALIGNED-NEXT:   frame-setup SD_RV32 killed $x22_x23, $x2, 44 :: (store (s64) into %stack.6, align 1)
-  ; RV32I-ZILSD-UNALIGNED-NEXT:   frame-setup SD_RV32 killed $x24_x25, $x2, 36 :: (store (s64) into %stack.7, align 1)
-  ; RV32I-ZILSD-UNALIGNED-NEXT:   frame-setup SD_RV32 killed $x26_x27, $x2, 28 :: (store (s64) into %stack.8, align 1)
-  ; RV32I-ZILSD-UNALIGNED-NEXT:   renamable $x17 = COPY $x12
-  ; RV32I-ZILSD-UNALIGNED-NEXT:   renamable $x16 = COPY $x11
-  ; RV32I-ZILSD-UNALIGNED-NEXT:   SD_RV32 killed renamable $x16_x17, $x2, 16 :: (store (s64) into %ir.1)
-  ; RV32I-ZILSD-UNALIGNED-NEXT:   $x11 = ADDI $x2, 16
+  ; RV32I-ZILSD-UNALIGNED-NEXT:   $x2 = frame-setup ADDI $x2, -64
+  ; RV32I-ZILSD-UNALIGNED-NEXT:   frame-setup SW killed $x1, $x2, 60 :: (store (s32) into %stack.1)
+  ; RV32I-ZILSD-UNALIGNED-NEXT:   frame-setup SD_RV32 killed $x8_x9, $x2, 52 :: (store (s64) into %stack.2, align 1)
+  ; RV32I-ZILSD-UNALIGNED-NEXT:   frame-setup SD_RV32 killed $x18_x19, $x2, 44 :: (store (s64) into %stack.3, align 1)
+  ; RV32I-ZILSD-UNALIGNED-NEXT:   frame-setup SD_RV32 killed $x20_x21, $x2, 36 :: (store (s64) into %stack.4, align 1)
+  ; RV32I-ZILSD-UNALIGNED-NEXT:   frame-setup SD_RV32 killed $x22_x23, $x2, 28 :: (store (s64) into %stack.5, align 1)
+  ; RV32I-ZILSD-UNALIGNED-NEXT:   frame-setup SD_RV32 killed $x24_x25, $x2, 20 :: (store (s64) into %stack.6, align 1)
+  ; RV32I-ZILSD-UNALIGNED-NEXT:   frame-setup SD_RV32 killed $x26_x27, $x2, 12 :: (store (s64) into %stack.7, align 1)
+  ; RV32I-ZILSD-UNALIGNED-NEXT:   renamable $x15 = COPY $x12
+  ; RV32I-ZILSD-UNALIGNED-NEXT:   PseudoSD_RV32_OPT $x11, killed renamable $x15, $x2, 0 :: (store (s32) into %ir.1, align 8), (store (s32) into %ir.1 + 4, basealign 8)
+  ; RV32I-ZILSD-UNALIGNED-NEXT:   $x11 = ADDI $x2, 0
   ; RV32I-ZILSD-UNALIGNED-NEXT:   $x12 = COPY killed renamable $x13
   ; RV32I-ZILSD-UNALIGNED-NEXT:   $x13 = COPY killed renamable $x14
   ; RV32I-ZILSD-UNALIGNED-NEXT:   $x14 = COPY $x0
   ; RV32I-ZILSD-UNALIGNED-NEXT:   $x15 = COPY $x0
   ; RV32I-ZILSD-UNALIGNED-NEXT:   PseudoCALL target-flags(riscv-call) @__atomic_compare_exchange_8, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit-def $x2, implicit-def dead $x10
-  ; RV32I-ZILSD-UNALIGNED-NEXT:   renamable $x10_x11 = LD_RV32 $x2, 16 :: (dereferenceable load (s64) from %ir.1)
-  ; RV32I-ZILSD-UNALIGNED-NEXT:   SD_RV32 killed renamable $x10_x11, $x2, 8 :: (store (s64) into %stack.1, align 4)
+  ; RV32I-ZILSD-UNALIGNED-NEXT:   renamable $x30, renamable $x5 = PseudoLD_RV32_OPT $x2, 0 :: (dereferenceable load (s32) from %ir.1, align 8), (dereferenceable load (s32) from %ir.1 + 4, basealign 8)
   ; RV32I-ZILSD-UNALIGNED-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $x6, 12 /* clobber */, implicit-def dead early-clobber $x7, 12 /* clobber */, implicit-def dead early-clobber $x8, 12 /* clobber */, implicit-def dead early-clobber $x9, 12 /* clobber */, implicit-def dead early-clobber $x10, 12 /* clobber */, implicit-def dead early-clobber $x11, 12 /* clobber */, implicit-def dead early-clobber $x12, 12 /* clobber */, implicit-def dead early-clobber $x13, 12 /* clobber */, implicit-def dead early-clobber $x14, 12 /* clobber */, implicit-def dead early-clobber $x15, 12 /* clobber */, implicit-def dead early-clobber $x16, 12 /* clobber */, implicit-def dead early-clobber $x17, 12 /* clobber */, implicit-def dead early-clobber $x18, 12 /* clobber */, implicit-def dead early-clobber $x19, 12 /* clobber */, implicit-def dead early-clobber $x20, 12 /* clobber */, implicit-def dead early-clobber $x21, 12 /* clobber */, implicit-def dead early-clobber $x22, 12 /* clobber */, implicit-def dead early-clobber $x23, 12 /* clobber */, implicit-def dead early-clobber $x24, 12 /* clobber */, implicit-def dead early-clobber $x25, 12 /* clobber */, implicit-def dead early-clobber $x26, 12 /* clobber */, implicit-def dead early-clobber $x27, 12 /* clobber */, implicit-def dead early-clobber $x28, 12 /* clobber */, implicit-def dead early-clobber $x29, 12 /* clobber */, implicit-def dead early-clobber $x31
-  ; RV32I-ZILSD-UNALIGNED-NEXT:   renamable $x12_x13 = LD_RV32 $x2, 8 :: (load (s64) from %stack.1, align 4)
-  ; RV32I-ZILSD-UNALIGNED-NEXT:   renamable $x10 = ADD renamable $x12, renamable $x12
-  ; RV32I-ZILSD-UNALIGNED-NEXT:   renamable $x11 = SLTU renamable $x10, renamable $x12
-  ; RV32I-ZILSD-UNALIGNED-NEXT:   renamable $x12 = ADD killed renamable $x13, renamable $x13
-  ; RV32I-ZILSD-UNALIGNED-NEXT:   renamable $x11 = ADD killed renamable $x12, killed renamable $x11
-  ; RV32I-ZILSD-UNALIGNED-NEXT:   $x1 = frame-destroy LW $x2, 76 :: (load (s32) from %stack.2)
-  ; RV32I-ZILSD-UNALIGNED-NEXT:   $x8_x9 = frame-destroy LD_RV32 $x2, 68 :: (load (s64) from %stack.3, align 1)
-  ; RV32I-ZILSD-UNALIGNED-NEXT:   $x18_x19 = frame-destroy LD_RV32 $x2, 60 :: (load (s64) from %stack.4, align 1)
-  ; RV32I-ZILSD-UNALIGNED-NEXT:   $x20_x21 = frame-destroy LD_RV32 $x2, 52 :: (load (s64) from %stack.5, align 1)
-  ; RV32I-ZILSD-UNALIGNED-NEXT:   $x22_x23 = frame-destroy LD_RV32 $x2, 44 :: (load (s64) from %stack.6, align 1)
-  ; RV32I-ZILSD-UNALIGNED-NEXT:   $x24_x25 = frame-destroy LD_RV32 $x2, 36 :: (load (s64) from %stack.7, align 1)
-  ; RV32I-ZILSD-UNALIGNED-NEXT:   $x26_x27 = frame-destroy LD_RV32 $x2, 28 :: (load (s64) from %stack.8, align 1)
-  ; RV32I-ZILSD-UNALIGNED-NEXT:   $x2 = frame-destroy ADDI $x2, 80
+  ; RV32I-ZILSD-UNALIGNED-NEXT:   renamable $x10 = ADD renamable $x30, renamable $x30
+  ; RV32I-ZILSD-UNALIGNED-NEXT:   renamable $x11 = SLTU renamable $x10, killed renamable $x30
+  ; RV32I-ZILSD-UNALIGNED-NEXT:   renamable $x5 = ADD killed renamable $x5, renamable $x5
+  ; RV32I-ZILSD-UNALIGNED-NEXT:   renamable $x11 = ADD killed renamable $x5, killed renamable $x11
+  ; RV32I-ZILSD-UNALIGNED-NEXT:   $x1 = frame-destroy LW $x2, 60 :: (load (s32) from %stack.1)
+  ; RV32I-ZILSD-UNALIGNED-NEXT:   $x8_x9 = frame-destroy LD_RV32 $x2, 52 :: (load (s64) from %stack.2, align 1)
+  ; RV32I-ZILSD-UNALIGNED-NEXT:   $x18_x19 = frame-destroy LD_RV32 $x2, 44 :: (load (s64) from %stack.3, align 1)
+  ; RV32I-ZILSD-UNALIGNED-NEXT:   $x20_x21 = frame-destroy LD_RV32 $x2, 36 :: (load (s64) from %stack.4, align 1)
+  ; RV32I-ZILSD-UNALIGNED-NEXT:   $x22_x23 = frame-destroy LD_RV32 $x2, 28 :: (load (s64) from %stack.5, align 1)
+  ; RV32I-ZILSD-UNALIGNED-NEXT:   $x24_x25 = frame-destroy LD_RV32 $x2, 20 :: (load (s64) from %stack.6, align 1)
+  ; RV32I-ZILSD-UNALIGNED-NEXT:   $x26_x27 = frame-destroy LD_RV32 $x2, 12 :: (load (s64) from %stack.7, align 1)
+  ; RV32I-ZILSD-UNALIGNED-NEXT:   $x2 = frame-destroy ADDI $x2, 64
   ; RV32I-ZILSD-UNALIGNED-NEXT:   PseudoRET implicit $x10, implicit $x11
   ;
   ; RV32I-ZILSD-4BYTEALIGN-LABEL: name: cmpxchg_i64_monotonic_monotonic
   ; RV32I-ZILSD-4BYTEALIGN: bb.0 (%ir-block.0):
   ; RV32I-ZILSD-4BYTEALIGN-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x1, $x8_x9, $x18_x19, $x20_x21, $x22_x23, $x24_x25, $x26_x27
   ; RV32I-ZILSD-4BYTEALIGN-NEXT: {{  $}}
-  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   $x2 = frame-setup ADDI $x2, -80
-  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   frame-setup SW killed $x1, $x2, 76 :: (store (s32) into %stack.2)
-  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   frame-setup SD_RV32 killed $x8_x9, $x2, 68 :: (store (s64) into %stack.3, align 4)
-  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   frame-setup SD_RV32 killed $x18_x19, $x2, 60 :: (store (s64) into %stack.4, align 4)
-  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   frame-setup SD_RV32 killed $x20_x21, $x2, 52 :: (store (s64) into %stack.5, align 4)
-  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   frame-setup SD_RV32 killed $x22_x23, $x2, 44 :: (store (s64) into %stack.6, align 4)
-  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   frame-setup SD_RV32 killed $x24_x25, $x2, 36 :: (store (s64) into %stack.7, align 4)
-  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   frame-setup SD_RV32 killed $x26_x27, $x2, 28 :: (store (s64) into %stack.8, align 4)
-  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   renamable $x17 = COPY $x12
-  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   renamable $x16 = COPY $x11
-  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   SD_RV32 killed renamable $x16_x17, $x2, 16 :: (store (s64) into %ir.1)
-  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   $x11 = ADDI $x2, 16
+  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   $x2 = frame-setup ADDI $x2, -64
+  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   frame-setup SW killed $x1, $x2, 60 :: (store (s32) into %stack.1)
+  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   frame-setup SD_RV32 killed $x8_x9, $x2, 52 :: (store (s64) into %stack.2, align 4)
+  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   frame-setup SD_RV32 killed $x18_x19, $x2, 44 :: (store (s64) into %stack.3, align 4)
+  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   frame-setup SD_RV32 killed $x20_x21, $x2, 36 :: (store (s64) into %stack.4, align 4)
+  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   frame-setup SD_RV32 killed $x22_x23, $x2, 28 :: (store (s64) into %stack.5, align 4)
+  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   frame-setup SD_RV32 killed $x24_x25, $x2, 20 :: (store (s64) into %stack.6, align 4)
+  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   frame-setup SD_RV32 killed $x26_x27, $x2, 12 :: (store (s64) into %stack.7, align 4)
+  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   renamable $x15 = COPY $x12
+  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   PseudoSD_RV32_OPT $x11, killed renamable $x15, $x2, 0 :: (store (s32) into %ir.1, align 8), (store (s32) into %ir.1 + 4, basealign 8)
+  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   $x11 = ADDI $x2, 0
   ; RV32I-ZILSD-4BYTEALIGN-NEXT:   $x12 = COPY killed renamable $x13
   ; RV32I-ZILSD-4BYTEALIGN-NEXT:   $x13 = COPY killed renamable $x14
   ; RV32I-ZILSD-4BYTEALIGN-NEXT:   $x14 = COPY $x0
   ; RV32I-ZILSD-4BYTEALIGN-NEXT:   $x15 = COPY $x0
   ; RV32I-ZILSD-4BYTEALIGN-NEXT:   PseudoCALL target-flags(riscv-call) @__atomic_compare_exchange_8, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit-def $x2, implicit-def dead $x10
-  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   renamable $x10_x11 = LD_RV32 $x2, 16 :: (dereferenceable load (s64) from %ir.1)
-  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   SD_RV32 killed renamable $x10_x11, $x2, 8 :: (store (s64) into %stack.1, align 4)
+  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   renamable $x30, renamable $x5 = PseudoLD_RV32_OPT $x2, 0 :: (dereferenceable load (s32) from %ir.1, align 8), (dereferenceable load (s32) from %ir.1 + 4, basealign 8)
   ; RV32I-ZILSD-4BYTEALIGN-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $x6, 12 /* clobber */, implicit-def dead early-clobber $x7, 12 /* clobber */, implicit-def dead early-clobber $x8, 12 /* clobber */, implicit-def dead early-clobber $x9, 12 /* clobber */, implicit-def dead early-clobber $x10, 12 /* clobber */, implicit-def dead early-clobber $x11, 12 /* clobber */, implicit-def dead early-clobber $x12, 12 /* clobber */, implicit-def dead early-clobber $x13, 12 /* clobber */, implicit-def dead early-clobber $x14, 12 /* clobber */, implicit-def dead early-clobber $x15, 12 /* clobber */, implicit-def dead early-clobber $x16, 12 /* clobber */, implicit-def dead early-clobber $x17, 12 /* clobber */, implicit-def dead early-clobber $x18, 12 /* clobber */, implicit-def dead early-clobber $x19, 12 /* clobber */, implicit-def dead early-clobber $x20, 12 /* clobber */, implicit-def dead early-clobber $x21, 12 /* clobber */, implicit-def dead early-clobber $x22, 12 /* clobber */, implicit-def dead early-clobber $x23, 12 /* clobber */, implicit-def dead early-clobber $x24, 12 /* clobber */, implicit-def dead early-clobber $x25, 12 /* clobber */, implicit-def dead early-clobber $x26, 12 /* clobber */, implicit-def dead early-clobber $x27, 12 /* clobber */, implicit-def dead early-clobber $x28, 12 /* clobber */, implicit-def dead early-clobber $x29, 12 /* clobber */, implicit-def dead early-clobber $x31
-  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   renamable $x12_x13 = LD_RV32 $x2, 8 :: (load (s64) from %stack.1, align 4)
-  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   renamable $x10 = ADD renamable $x12, renamable $x12
-  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   renamable $x11 = SLTU renamable $x10, renamable $x12
-  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   renamable $x12 = ADD killed renamable $x13, renamable $x13
-  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   renamable $x11 = ADD killed renamable $x12, killed renamable $x11
-  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   $x1 = frame-destroy LW $x2, 76 :: (load (s32) from %stack.2)
-  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   $x8_x9 = frame-destroy LD_RV32 $x2, 68 :: (load (s64) from %stack.3, align 4)
-  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   $x18_x19 = frame-destroy LD_RV32 $x2, 60 :: (load (s64) from %stack.4, align 4)
-  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   $x20_x21 = frame-destroy LD_RV32 $x2, 52 :: (load (s64) from %stack.5, align 4)
-  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   $x22_x23 = frame-destroy LD_RV32 $x2, 44 :: (load (s64) from %stack.6, align 4)
-  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   $x24_x25 = frame-destroy LD_RV32 $x2, 36 :: (load (s64) from %stack.7, align 4)
-  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   $x26_x27 = frame-destroy LD_RV32 $x2, 28 :: (load (s64) from %stack.8, align 4)
-  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   $x2 = frame-destroy ADDI $x2, 80
+  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   renamable $x10 = ADD renamable $x30, renamable $x30
+  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   renamable $x11 = SLTU renamable $x10, killed renamable $x30
+  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   renamable $x5 = ADD killed renamable $x5, renamable $x5
+  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   renamable $x11 = ADD killed renamable $x5, killed renamable $x11
+  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   $x1 = frame-destroy LW $x2, 60 :: (load (s32) from %stack.1)
+  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   $x8_x9 = frame-destroy LD_RV32 $x2, 52 :: (load (s64) from %stack.2, align 4)
+  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   $x18_x19 = frame-destroy LD_RV32 $x2, 44 :: (load (s64) from %stack.3, align 4)
+  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   $x20_x21 = frame-destroy LD_RV32 $x2, 36 :: (load (s64) from %stack.4, align 4)
+  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   $x22_x23 = frame-destroy LD_RV32 $x2, 28 :: (load (s64) from %stack.5, align 4)
+  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   $x24_x25 = frame-destroy LD_RV32 $x2, 20 :: (load (s64) from %stack.6, align 4)
+  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   $x26_x27 = frame-destroy LD_RV32 $x2, 12 :: (load (s64) from %stack.7, align 4)
+  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   $x2 = frame-destroy ADDI $x2, 64
   ; RV32I-ZILSD-4BYTEALIGN-NEXT:   PseudoRET implicit $x10, implicit $x11
   %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val monotonic monotonic
   %1 = extractvalue { i64, i1 } %res, 0
