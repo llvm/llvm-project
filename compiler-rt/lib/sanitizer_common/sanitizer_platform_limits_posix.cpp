@@ -305,12 +305,9 @@ namespace __sanitizer {
   unsigned struct_ustat_sz = SIZEOF_STRUCT_USTAT;
   unsigned struct_rlimit64_sz = sizeof(struct rlimit64);
   unsigned struct_statvfs64_sz = sizeof(struct statvfs64);
-#  elif SANITIZER_LINUX && !SANITIZER_ANDROID
-  // On musl, rlimit64 is an alias for rlimit.
-  unsigned struct_rlimit64_sz = sizeof(struct rlimit);
-#  endif  // SANITIZER_GLIBC
+#endif // SANITIZER_GLIBC
 
-#  if SANITIZER_LINUX && !SANITIZER_ANDROID
+#if SANITIZER_LINUX && !SANITIZER_ANDROID
   unsigned struct_timex_sz = sizeof(struct timex);
   unsigned struct_msqid_ds_sz = sizeof(struct msqid_ds);
   unsigned struct_mq_attr_sz = sizeof(struct mq_attr);
