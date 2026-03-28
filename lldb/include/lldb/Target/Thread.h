@@ -1005,7 +1005,7 @@ public:
                                  bool stop_other_threads, Status &status);
 
   virtual lldb::ThreadPlanSP QueueThreadPlanForStepUntil(
-      bool abort_other_plans, lldb::addr_t *address_list, size_t num_addresses,
+      bool abort_other_plans, llvm::ArrayRef<lldb::addr_t> address_list,
       bool stop_others, uint32_t frame_idx, Status &status);
 
   virtual lldb::ThreadPlanSP
