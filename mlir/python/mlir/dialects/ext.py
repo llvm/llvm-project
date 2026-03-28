@@ -117,6 +117,7 @@ class FieldSpecifier:
     default_factory: Optional[Callable[[], Any]] = None
     kw_only: bool = False
 
+    @property
     def param_kind(self):
         if self.default_is_none or self.default_factory or self.infer_type:
             return ParameterKind.KEYWORD_ONLY_WITH_DEFAULT
@@ -236,7 +237,7 @@ class FieldDef:
                 name,
                 variadicity,
                 constraint,
-                param_kind=specifier.param_kind(),
+                param_kind=specifier.param_kind,
                 default_factory=specifier.default_factory,
                 default_is_none=specifier.default_is_none,
                 infer_type=(
@@ -252,7 +253,7 @@ class FieldDef:
                 name,
                 variadicity,
                 get_args(type_)[0],
-                param_kind=specifier.param_kind(),
+                param_kind=specifier.param_kind,
                 default_is_none=specifier.default_is_none,
             )
         elif type_ is ir.Region:
@@ -270,7 +271,7 @@ class FieldDef:
             name,
             variadicity,
             type_,
-            param_kind=specifier.param_kind(),
+            param_kind=specifier.param_kind,
             default_factory=specifier.default_factory,
         )
 
