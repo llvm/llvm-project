@@ -180,17 +180,22 @@ void UnrollState::unrollWidenInductionByUF(
       IV->getParent()->getEnclosingLoopRegion()->getSinglePredecessor());
   Type *IVTy = TypeInfo.inferScalarType(IV);
   auto &ID = IV->getInductionDescriptor();
-  VPIRFlags Flags;
-  if (isa_and_present<FPMathOperator>(ID.getInductionBinOp()))
-    Flags = ID.getInductionBinOp()->getFastMathFlags();
+  FastMathFlags FMF;
+  VPIRFlags::WrapFlagsTy WrapFlags(false, false);
+  if (auto *IntOrFPInd = dyn_cast<VPWidenIntOrFpInductionRecipe>(IV)) {
+    if (IntOrFPInd->hasFastMathFlags())
+      FMF = IntOrFPInd->getFastMathFlags();
+    if (IntOrFPInd->hasNoWrapFlags())
+      WrapFlags = IntOrFPInd->getNoWrapFlags();
+  }
 
   VPValue *ScalarStep = IV->getStepValue();
   VPBuilder Builder(PH);
   Type *VectorStepTy =
       IVTy->isPointerTy() ? TypeInfo.inferScalarType(ScalarStep) : IVTy;
   VPInstruction *VectorStep = Builder.createNaryOp(
-      VPInstruction::WideIVStep, {&Plan.getVF(), ScalarStep}, VectorStepTy,
-      Flags, IV->getDebugLoc());
+      VPInstruction::WideIVStep, {&Plan.getVF(), ScalarStep}, VectorStepTy, FMF,
+      IV->getDebugLoc());
 
   ToSkip.insert(VectorStep);
 
@@ -215,10 +220,10 @@ void UnrollState::unrollWidenInductionByUF(
     AddFlags = GEPNoWrapFlags::none();
   } else if (IVTy->isFloatingPointTy()) {
     AddOpc = ID.getInductionOpcode();
-    AddFlags = Flags; // FMF flags
+    AddFlags = FMF;
   } else {
     AddOpc = Instruction::Add;
-    AddFlags = VPIRFlags::getDefaultFlags(AddOpc);
+    AddFlags = WrapFlags;
     if (cast<VPWidenIntOrFpInductionRecipe>(IV)->isCanonical())
       AddFlags = VPIRFlags::WrapFlagsTy(/*NUW=*/true, /*NSW=*/false);
   }
@@ -677,7 +682,9 @@ static void convertRecipesInRegionBlocksToSingleScalar(VPlan &Plan, Type *IdxTy,
         // same block (already scalar), or values that are already single
         // scalars.
         auto *DefR = Op->getDefiningRecipe();
-        if ((DefR && DefR->getParent() == VPB) || vputils::isSingleScalar(Op))
+        if ((isa_and_present<VPScalarIVStepsRecipe>(DefR) &&
+             DefR->getParent() == VPB) ||
+            vputils::isSingleScalar(Op))
           continue;
 
         // Extract lane zero from values defined outside the region.
@@ -734,17 +741,17 @@ static void processLaneForReplicateRegion(VPlan &Plan, Type *IdxTy,
            zip_equal(OldR.definedValues(), NewR.definedValues()))
         Old2NewVPValues[OldV] = NewV;
 
-      if (auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(&NewR))
-        addLaneToStartIndex(Steps, Lane, Plan, Steps);
-      else if (match(&NewR, m_ExtractElement(m_VPValue(), m_ZeroInt())))
-        NewR.setOperand(1, IdxLane);
-
       // Remap operands to use lane-specific values.
       for (const auto &[I, OldOp] : enumerate(NewR.operands())) {
         // Use cloned value if operand was defined in the region.
         if (auto *NewOp = Old2NewVPValues.lookup(OldOp))
           NewR.setOperand(I, NewOp);
       }
+
+      if (auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(&NewR))
+        addLaneToStartIndex(Steps, Lane, Plan, Steps);
+      else if (match(&NewR, m_ExtractElement(m_VPValue(), m_ZeroInt())))
+        NewR.setOperand(1, IdxLane);
     }
   }
 }
@@ -778,13 +785,10 @@ static void dissolveReplicateRegion(VPRegionBlock *Region, ElementCount VF,
   VPBlockBase *NextLaneEntry = Successor;
   unsigned NumLanes = VF.getFixedValue();
   for (int Lane = NumLanes - 1; Lane > 0; --Lane) {
-    VPBlockBase *CurrentLaneEntry =
-        VPBlockUtils::cloneFrom(FirstLaneEntry).first;
-    VPBlockBase *CurrentLaneExiting;
-    for (VPBlockBase *VPB : vp_depth_first_shallow(CurrentLaneEntry)) {
+    const auto &[CurrentLaneEntry, CurrentLaneExiting] =
+        VPBlockUtils::cloneFrom(FirstLaneEntry);
+    for (VPBlockBase *VPB : vp_depth_first_shallow(CurrentLaneEntry))
       VPB->setParent(ParentRegion);
-      CurrentLaneExiting = VPB;
-    }
     processLaneForReplicateRegion(Plan, IdxTy, Lane,
                                   cast<VPBasicBlock>(FirstLaneEntry),
                                   cast<VPBasicBlock>(CurrentLaneEntry));
