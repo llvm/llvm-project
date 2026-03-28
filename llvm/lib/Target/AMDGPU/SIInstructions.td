@@ -22,6 +22,25 @@ class DivergentSextInreg<ValueType VT> : PatFrag<
   (sext_inreg $src, VT),
   [{ return N->isDivergent(); }]>;
 
+// True16 pseduo instruction for 16b/32b conversion
+// These are needed since 16b could be in sreg32/vgpr16
+// which has different reg size
+class TRUE16_EXT_TRUNC_PSEUDO<RegisterClassLike DstRC,
+                              RegisterOperand SrcOp>: PseudoInstSI<
+  (outs DstRC:$dst), (ins SrcOp:$src0)> {
+  let hasPostISelHook = 1;
+  let usesCustomInserter = 1;
+  let isPseudo = 1;
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+  let Uses = [EXEC];
+}
+def EXT_SRC16_V32_PSEUDO: TRUE16_EXT_TRUNC_PSEUDO<VGPR_32, VCSrcT_b16>;
+def EXT_SRC16_S32_PSEUDO: TRUE16_EXT_TRUNC_PSEUDO<SReg_32, VCSrcT_b16>;
+def TRUNC_SRC32_V16_PSEUDO: TRUE16_EXT_TRUNC_PSEUDO<VGPR_16, VCSrc_b32>;
+def TRUNC_SRC32_S16_PSEUDO: TRUE16_EXT_TRUNC_PSEUDO<SReg_32, VCSrc_b32>;
+
 include "SOPInstructions.td"
 include "VOPInstructions.td"
 include "SMInstructions.td"

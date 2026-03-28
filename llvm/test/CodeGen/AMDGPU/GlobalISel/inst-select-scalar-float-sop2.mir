@@ -15,8 +15,8 @@ body:             |
     ; GFX1150-NEXT: {{  $}}
     ; GFX1150-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX1150-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GFX1150-NEXT: %2:sreg_32 = nofpexcept S_ADD_F32 [[COPY]], [[COPY1]], implicit $mode
-    ; GFX1150-NEXT: $sgpr0 = COPY %2
+    ; GFX1150-NEXT: [[S_ADD_F32_:%[0-9]+]]:sreg_32 = nofpexcept S_ADD_F32 [[COPY]], [[COPY1]], implicit $mode
+    ; GFX1150-NEXT: $sgpr0 = COPY [[S_ADD_F32_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
     %2:sgpr(s32) = G_FADD %0, %1
@@ -36,8 +36,8 @@ body:             |
     ; GFX1150-NEXT: {{  $}}
     ; GFX1150-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX1150-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GFX1150-NEXT: %2:sreg_32 = nofpexcept S_SUB_F32 [[COPY]], [[COPY1]], implicit $mode
-    ; GFX1150-NEXT: $sgpr0 = COPY %2
+    ; GFX1150-NEXT: [[S_SUB_F32_:%[0-9]+]]:sreg_32 = nofpexcept S_SUB_F32 [[COPY]], [[COPY1]], implicit $mode
+    ; GFX1150-NEXT: $sgpr0 = COPY [[S_SUB_F32_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
     %2:sgpr(s32) = G_FSUB %0, %1
@@ -57,8 +57,8 @@ body:             |
     ; GFX1150-NEXT: {{  $}}
     ; GFX1150-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX1150-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GFX1150-NEXT: %2:sreg_32 = nofpexcept S_MUL_F32 [[COPY]], [[COPY1]], implicit $mode
-    ; GFX1150-NEXT: $sgpr0 = COPY %2
+    ; GFX1150-NEXT: [[S_MUL_F32_:%[0-9]+]]:sreg_32 = nofpexcept S_MUL_F32 [[COPY]], [[COPY1]], implicit $mode
+    ; GFX1150-NEXT: $sgpr0 = COPY [[S_MUL_F32_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
     %2:sgpr(s32) = G_FMUL %0, %1
@@ -78,8 +78,8 @@ body:             |
     ; GFX1150-NEXT: {{  $}}
     ; GFX1150-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX1150-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GFX1150-NEXT: %2:sreg_32 = nofpexcept S_MIN_F32 [[COPY]], [[COPY1]], implicit $mode
-    ; GFX1150-NEXT: $sgpr0 = COPY %2
+    ; GFX1150-NEXT: [[S_MIN_F32_:%[0-9]+]]:sreg_32 = nofpexcept S_MIN_F32 [[COPY]], [[COPY1]], implicit $mode
+    ; GFX1150-NEXT: $sgpr0 = COPY [[S_MIN_F32_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
     %2:sgpr(s32) = G_FMINNUM %0, %1
@@ -99,8 +99,8 @@ body:             |
     ; GFX1150-NEXT: {{  $}}
     ; GFX1150-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX1150-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GFX1150-NEXT: %2:sreg_32 = nofpexcept S_MAX_F32 [[COPY]], [[COPY1]], implicit $mode
-    ; GFX1150-NEXT: $sgpr0 = COPY %2
+    ; GFX1150-NEXT: [[S_MAX_F32_:%[0-9]+]]:sreg_32 = nofpexcept S_MAX_F32 [[COPY]], [[COPY1]], implicit $mode
+    ; GFX1150-NEXT: $sgpr0 = COPY [[S_MAX_F32_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
     %2:sgpr(s32) = G_FMAXNUM %0, %1
@@ -120,8 +120,9 @@ body:             |
     ; GFX1150-NEXT: {{  $}}
     ; GFX1150-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX1150-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GFX1150-NEXT: %4:sreg_32 = nofpexcept S_ADD_F16 [[COPY]], [[COPY1]], implicit $mode
-    ; GFX1150-NEXT: $sgpr0 = COPY %4
+    ; GFX1150-NEXT: [[S_ADD_F16_:%[0-9]+]]:sreg_32 = nofpexcept S_ADD_F16 [[COPY]], [[COPY1]], implicit $mode
+    ; GFX1150-NEXT: [[EXT_SRC:%[0-9]+]]:sreg_32 = EXT_SRC16_S32_PSEUDO [[S_ADD_F16_]], implicit $exec
+    ; GFX1150-NEXT: $sgpr0 = COPY [[EXT_SRC]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s16) = G_TRUNC %0(s32)
     %2:sgpr(s32) = COPY $sgpr1
@@ -144,8 +145,9 @@ body:             |
     ; GFX1150-NEXT: {{  $}}
     ; GFX1150-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX1150-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GFX1150-NEXT: %4:sreg_32 = nofpexcept S_SUB_F16 [[COPY]], [[COPY1]], implicit $mode
-    ; GFX1150-NEXT: $sgpr0 = COPY %4
+    ; GFX1150-NEXT: [[S_SUB_F16_:%[0-9]+]]:sreg_32 = nofpexcept S_SUB_F16 [[COPY]], [[COPY1]], implicit $mode
+    ; GFX1150-NEXT: [[EXT_SRC:%[0-9]+]]:sreg_32 = EXT_SRC16_S32_PSEUDO [[S_SUB_F16_]], implicit $exec
+    ; GFX1150-NEXT: $sgpr0 = COPY [[EXT_SRC]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s16) = G_TRUNC %0(s32)
     %2:sgpr(s32) = COPY $sgpr1
@@ -168,8 +170,9 @@ body:             |
     ; GFX1150-NEXT: {{  $}}
     ; GFX1150-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX1150-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GFX1150-NEXT: %4:sreg_32 = nofpexcept S_MUL_F16 [[COPY]], [[COPY1]], implicit $mode
-    ; GFX1150-NEXT: $sgpr0 = COPY %4
+    ; GFX1150-NEXT: [[S_MUL_F16_:%[0-9]+]]:sreg_32 = nofpexcept S_MUL_F16 [[COPY]], [[COPY1]], implicit $mode
+    ; GFX1150-NEXT: [[EXT_SRC:%[0-9]+]]:sreg_32 = EXT_SRC16_S32_PSEUDO [[S_MUL_F16_]], implicit $exec
+    ; GFX1150-NEXT: $sgpr0 = COPY [[EXT_SRC]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s16) = G_TRUNC %0(s32)
     %2:sgpr(s32) = COPY $sgpr1
@@ -192,8 +195,9 @@ body:             |
     ; GFX1150-NEXT: {{  $}}
     ; GFX1150-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX1150-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GFX1150-NEXT: %4:sreg_32 = nofpexcept S_MIN_F16 [[COPY]], [[COPY1]], implicit $mode
-    ; GFX1150-NEXT: $sgpr0 = COPY %4
+    ; GFX1150-NEXT: [[S_MIN_F16_:%[0-9]+]]:sreg_32 = nofpexcept S_MIN_F16 [[COPY]], [[COPY1]], implicit $mode
+    ; GFX1150-NEXT: [[EXT_SRC:%[0-9]+]]:sreg_32 = EXT_SRC16_S32_PSEUDO [[S_MIN_F16_]], implicit $exec
+    ; GFX1150-NEXT: $sgpr0 = COPY [[EXT_SRC]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s16) = G_TRUNC %0(s32)
     %2:sgpr(s32) = COPY $sgpr1
@@ -234,8 +238,8 @@ body:             |
     ; GFX1150-NEXT: {{  $}}
     ; GFX1150-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX1150-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GFX1150-NEXT: %2:sreg_32 = nofpexcept S_CVT_PK_RTZ_F16_F32 [[COPY]], [[COPY1]], implicit $mode
-    ; GFX1150-NEXT: $sgpr0 = COPY %2
+    ; GFX1150-NEXT: [[S_CVT_PK_RTZ_F16_F32_:%[0-9]+]]:sreg_32 = nofpexcept S_CVT_PK_RTZ_F16_F32 [[COPY]], [[COPY1]], implicit $mode
+    ; GFX1150-NEXT: $sgpr0 = COPY [[S_CVT_PK_RTZ_F16_F32_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
     %2:sgpr(<2 x s16>) = G_INTRINSIC intrinsic(@llvm.amdgcn.cvt.pkrtz), %0(s32), %1(s32)
@@ -256,8 +260,8 @@ body:             |
     ; GFX1150-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX1150-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
     ; GFX1150-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr2
-    ; GFX1150-NEXT: %3:sreg_32 = nofpexcept S_FMAC_F32 [[COPY1]], [[COPY2]], [[COPY]], implicit $mode
-    ; GFX1150-NEXT: $sgpr0 = COPY %3
+    ; GFX1150-NEXT: [[S_FMAC_F32_:%[0-9]+]]:sreg_32 = nofpexcept S_FMAC_F32 [[COPY1]], [[COPY2]], [[COPY]], implicit $mode
+    ; GFX1150-NEXT: $sgpr0 = COPY [[S_FMAC_F32_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
     %2:sgpr(s32) = COPY $sgpr2
@@ -279,8 +283,9 @@ body:             |
     ; GFX1150-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX1150-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
     ; GFX1150-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr2
-    ; GFX1150-NEXT: %6:sreg_32 = nofpexcept S_FMAC_F16 [[COPY1]], [[COPY2]], [[COPY]], implicit $mode
-    ; GFX1150-NEXT: $sgpr0 = COPY %6
+    ; GFX1150-NEXT: [[S_FMAC_F16_:%[0-9]+]]:sreg_32 = nofpexcept S_FMAC_F16 [[COPY1]], [[COPY2]], [[COPY]], implicit $mode
+    ; GFX1150-NEXT: [[EXT_SRC:%[0-9]+]]:sreg_32 = EXT_SRC16_S32_PSEUDO [[S_FMAC_F16_]], implicit $exec
+    ; GFX1150-NEXT: $sgpr0 = COPY [[EXT_SRC]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s16) = G_TRUNC %0(s32)
     %2:sgpr(s32) = COPY $sgpr1
