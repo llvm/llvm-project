@@ -259,7 +259,7 @@ class FieldDef:
         elif type_ is ir.Region:
             if specifier.type_ and specifier.type_ is not Region:
                 raise TypeError(
-                    f"currently no field specifier can be used for region fields"
+                    f"this field specifier can not be used for region fields"
                 )
             return RegionDef(name, variadicity, Any)
 

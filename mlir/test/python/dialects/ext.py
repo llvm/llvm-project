@@ -848,7 +848,7 @@ def testExtDialectFieldSpecifiers():
             default_factory=lambda: IntegerAttr.get(IntegerType.get_signless(32), 42)
         )
         c: StringAttr["a"] | StringAttr["b"] = attribute(
-            default_factory=lambda: StringAttr.get("a")
+            default_factory=lambda: StringAttr.get("a"), kw_only=True
         )
         d: IntegerAttr = attribute(kw_only=True)
 
