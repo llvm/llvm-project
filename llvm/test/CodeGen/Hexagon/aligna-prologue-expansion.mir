@@ -1,5 +1,6 @@
 # RUN: llc -mtriple=hexagon -run-pass prologepilog %s -o - | FileCheck %s
 # RUN: llc -mtriple=hexagon -run-pass prologepilog -spill-func-threshold=0 %s -o - | FileCheck --check-prefix=SPILL-FUNC %s
+# RUN: llc -mtriple=hexagon -run-pass prologepilog -verify-machineinstrs %s -o - | FileCheck %s
 #
 # Verify that PS_aligna is placed AFTER all CSR spills.
 #
@@ -14,11 +15,20 @@
 # CHECK: PS_aligna
 # CHECK-NOT: S2_storerd_io
 #
+# Verify that AP (R16) is added to liveins of blocks that use it.
+# CHECK: bb.3:
+# CHECK-NEXT: successors:
+# CHECK-NEXT: liveins: {{.*}}$r16
+#
 # SPILL-FUNC-LABEL: name: test_aligna_expansion
 # SPILL-FUNC: S2_allocframe
 # SPILL-FUNC: SAVE_REGISTERS_CALL_V4
 # SPILL-FUNC: PS_aligna
 # SPILL-FUNC-NOT: SAVE_REGISTERS_CALL_V4
+#
+# SPILL-FUNC: bb.3:
+# SPILL-FUNC-NEXT: successors:
+# SPILL-FUNC-NEXT: liveins: {{.*}}$r16
 
 --- |
   declare void @external_func()

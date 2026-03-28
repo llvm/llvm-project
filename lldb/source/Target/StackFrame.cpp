@@ -65,7 +65,7 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
     : m_thread_wp(thread_sp), m_frame_index(frame_idx),
       m_concrete_frame_index(unwind_frame_index), m_reg_context_sp(),
       m_id(pc, cfa, nullptr, thread_sp->GetProcess().get()),
-      m_frame_code_addr(pc), m_sc(), m_flags(), m_frame_base(),
+      m_frame_code_addr(Address(pc)), m_sc(), m_flags(), m_frame_base(),
       m_frame_base_error(), m_cfa_is_valid(cfa_is_valid),
       m_stack_frame_kind(kind), m_artificial(artificial),
       m_behaves_like_zeroth_frame(behaves_like_zeroth_frame),
@@ -93,7 +93,7 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
       m_concrete_frame_index(unwind_frame_index),
       m_reg_context_sp(reg_context_sp),
       m_id(pc, cfa, nullptr, thread_sp->GetProcess().get()),
-      m_frame_code_addr(pc), m_sc(), m_flags(), m_frame_base(),
+      m_frame_code_addr(Address(pc)), m_sc(), m_flags(), m_frame_base(),
       m_frame_base_error(), m_cfa_is_valid(true),
       m_stack_frame_kind(StackFrame::Kind::Regular), m_artificial(false),
       m_behaves_like_zeroth_frame(behaves_like_zeroth_frame),
@@ -237,7 +237,7 @@ Address StackFrame::GetFrameCodeAddressForSymbolication() {
 
   addr_t offset = lookup_addr.GetOffset();
   if (offset > 0) {
-    lookup_addr.SetOffset(offset - 1);
+    lookup_addr.Slide(-1);
   } else {
     // lookup_addr is the start of a section.  We need do the math on the
     // actual load address and re-compute the section.  We're working with

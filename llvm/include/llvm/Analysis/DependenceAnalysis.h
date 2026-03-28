@@ -468,10 +468,11 @@ private:
   /// If no upper bound is available, return NULL.
   const SCEV *collectUpperBound(const Loop *l, Type *T) const;
 
-  /// collectConstantUpperBound - Calls collectUpperBound(), then
-  /// attempts to cast it to SCEVConstant. If the cast fails,
-  /// returns NULL.
-  const SCEVConstant *collectConstantUpperBound(const Loop *l, Type *T) const;
+  /// collectNonNegativeConstantUpperBound - Calls collectUpperBound(), then
+  /// attempts to cast it to APInt. If the cast fails, or the value is negative,
+  /// returns std::nullopt.
+  std::optional<APInt> collectNonNegativeConstantUpperBound(const Loop *L,
+                                                            Type *T) const;
 
   /// classifyPair - Examines the subscript pair (the Src and Dst SCEVs)
   /// and classifies it as either ZIV, SIV, RDIV, MIV, or Nonlinear.
@@ -534,10 +535,8 @@ private:
   /// Returns true if any possible dependence is disproved.
   /// If there might be a dependence, returns false.
   /// Sets appropriate direction entry.
-  bool weakCrossingSIVtest(const SCEV *SrcCoeff, const SCEV *SrcConst,
-                           const SCEV *DstConst, const Loop *CurrentSrcLoop,
-                           const Loop *CurrentDstLoop, unsigned Level,
-                           FullDependence &Result) const;
+  bool weakCrossingSIVtest(const SCEVAddRecExpr *Src, const SCEVAddRecExpr *Dst,
+                           unsigned Level, FullDependence &Result) const;
 
   /// ExactSIVtest - Tests the SIV subscript pair
   /// (Src and Dst) for dependence.
