@@ -168,6 +168,17 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
     }
   }
 
+  if (auto *x{std::getenv("TIMEF_IN_MILLISECONDS")}) {
+    char *end;
+    auto n{std::strtol(x, &end, 10)};
+    if (n >= 0 && n <= 1 && *end == '\0') {
+      timefInMillisec = n != 0;
+    } else {
+      std::fprintf(stderr,
+          "Fortran runtime: TIMEF_IN_MILLISECONDS=%s is invalid; ignored\n", x);
+    }
+  }
+
   if (auto *x{std::getenv("DEFAULT_UTF8")}) {
     char *end;
     auto n{std::strtol(x, &end, 10)};
