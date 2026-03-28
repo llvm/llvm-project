@@ -8275,7 +8275,8 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
                                                    : MnemonicOpsEndInd + 1;
     ARMOperand &Op = static_cast<ARMOperand &>(*Operands[i]);
     const MCExpr *E = Op.getImm();
-    if (isa<MCConstantExpr>(E)) break;
+    if (isa<MCConstantExpr>(E))
+      break;
     auto *ARM16Expr = dyn_cast<MCSpecifierExpr>(E);
     if (!ARM16Expr || (ARM16Expr->getSpecifier() != ARM::S_HI16 &&
                        ARM16Expr->getSpecifier() != ARM::S_LO16))
