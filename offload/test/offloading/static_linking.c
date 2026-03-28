@@ -2,7 +2,6 @@
 // RUN: %libomptarget-compile-generic -DLIBRARY -c -o %t.o
 // RUN: ar rcs %t.a %t.o
 // RUN: %libomptarget-compile-generic %t.a && %libomptarget-run-generic 2>&1 | %fcheck-generic
-// XFAIL: intelgpu
 // clang-format on
 
 // UNSUPPORTED: nvptx64-nvidia-cuda-oldDriver
