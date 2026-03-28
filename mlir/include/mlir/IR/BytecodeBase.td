@@ -147,11 +147,23 @@ class DialectAttrOrType<dag d> {
 
 class DialectAttribute<dag d> : DialectAttrOrType<d>, AttributeKind {
   let cParser = "succeeded($_reader.readAttribute<$_resultType>($_var))";
-  let cBuilder = "getChecked<$_resultType>([&]() { return reader.emitError(); }, context, $_args)";
+  // Use get<> by default. Types with an explicit no-context getChecked
+  // (verifyInvariants that should return null instead of asserting) should
+  // override cBuilder to call T::getChecked or getChecked<T> explicitly.
+  // Avoid using the generic getChecked<T> helper for types that only inherit
+  // StorageUserBase::getChecked, because the SFINAE probe in that helper
+  // triggers a clang 21/22 compiler crash for such types.
+  let cBuilder = "get<$_resultType>(context, $_args)";
 }
 class DialectType<dag d> : DialectAttrOrType<d>, TypeKind {
   let cParser = "succeeded($_reader.readType<$_resultType>($_var))";
-  let cBuilder = "getChecked<$_resultType>([&]() { return reader.emitError(); }, context, $_args)";
+  // Use get<> by default. Types with an explicit no-context getChecked
+  // (verifyInvariants that should return null instead of asserting) should
+  // override cBuilder to call T::getChecked or getChecked<T> explicitly.
+  // Avoid using the generic getChecked<T> helper for types that only inherit
+  // StorageUserBase::getChecked, because the SFINAE probe in that helper
+  // triggers a clang 21/22 compiler crash for such types.
+  let cBuilder = "get<$_resultType>(context, $_args)";
 }
 
 class DialectAttributes<string d> {

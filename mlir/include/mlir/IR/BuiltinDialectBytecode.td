@@ -117,7 +117,7 @@ def FileLineColLoc : DialectAttribute<(attr
 }
 
 let cType = "FusedLoc",
-    cBuilder = "cast<FusedLoc>(getChecked<FusedLoc>([&]() { return reader.emitError(); }, context, $_args))" in {
+    cBuilder = "cast<FusedLoc>(get<FusedLoc>(context, $_args))" in {
 def FusedLoc : DialectAttribute<(attr
   Array<Location>:$locations
 )> {
@@ -144,7 +144,7 @@ def DenseResourceElementsAttr : DialectAttribute<(attr
   ResourceHandle<"DenseResourceElementsHandle">:$rawHandle
 )> {
   // Note: order of serialization does not match order of builder.
-  let cBuilder = "getChecked<$_resultType>([&]() { return reader.emitError(); }, context, type, *rawHandle)";
+  let cBuilder = "get<$_resultType>(context, type, *rawHandle)";
 }
 
 let cType = "RankedTensorType" in {
@@ -153,6 +153,9 @@ def RankedTensorType : DialectType<(type
   Type:$elementType
 )> {
   let printerPredicate = "!$_val.getEncoding()";
+  // Use getChecked to return null (and emit a diagnostic) instead of asserting
+  // when the element type is invalid.
+  let cBuilder = "getChecked<$_resultType>([&]() { return reader.emitError(); }, context, $_args)";
 }
 
 def RankedTensorTypeWithEncoding : DialectType<(type
@@ -237,7 +240,11 @@ def Float128Type : DialectType<(type)>;
 
 def ComplexType : DialectType<(type
   Type:$elementType
-)>;
+)> {
+  // Use getChecked to return null (and emit a diagnostic) instead of asserting
+  // when the element type is not a valid complex element type.
+  let cBuilder = "getChecked<$_resultType>([&]() { return reader.emitError(); }, context, $_args)";
+}
 
 def MemRefLayout: WithType<"MemRefLayoutAttrInterface", Attribute>;
 
@@ -248,6 +255,9 @@ def MemRefType : DialectType<(type
   MemRefLayout:$layout
 )> {
   let printerPredicate = "!$_val.getMemorySpace()";
+  // Use getChecked to return null (and emit a diagnostic) instead of asserting
+  // when element type or layout is invalid.
+  let cBuilder = "getChecked<$_resultType>([&]() { return reader.emitError(); }, context, $_args)";
 }
 
 def MemRefTypeWithMemSpace : DialectType<(type
@@ -288,7 +298,11 @@ def UnrankedMemRefTypeWithMemSpace : DialectType<(type
 
 def UnrankedTensorType : DialectType<(type
   Type:$elementType
-)>;
+)> {
+  // Use getChecked to return null (and emit a diagnostic) instead of asserting
+  // when the element type is invalid.
+  let cBuilder = "getChecked<$_resultType>([&]() { return reader.emitError(); }, context, $_args)";
+}
 
 let cType = "VectorType" in {
 def VectorType : DialectType<(type

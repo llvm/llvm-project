@@ -43,6 +43,18 @@ module {
 
 // -----
 
+// CHECK: invalid element type for complex
+// CHECK: failed to read bytecode
+// ComplexType whose element type is replaced by one that is neither int nor
+// float — previously crashed with an assertion when using get<ComplexType>.
+module {
+  func.func @complex_unsupported_elem_type(%arg0: complex<i32>) {
+    return
+  }
+}
+
+// -----
+
 // CHECK: DenseTypedElementsAttr element type must implement DenseElementTypeInterface, but got: '!test.i32'
 // CHECK: failed to read bytecode
 // DenseTypedElementsAttr whose element type is replaced by one that does not
