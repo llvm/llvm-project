@@ -1172,8 +1172,8 @@ private:
   /// Roll back the last consumed slot after a submission failure so the stream
   /// does not retain a slot for an operation that was never enqueued.
   void rollbackConsumedSlot(uint32_t Slot) {
-    assert(NextSlot > 0 && "cannot roll back an empty stream");
-    assert(Slot + 1 == NextSlot && "can only roll back the last consumed slot");
+    assert(NextSlot > 0 && "Cannot roll back an empty stream");
+    assert(Slot + 1 == NextSlot && "Can only roll back the last consumed slot");
 
     Slots[Slot].Signal = nullptr;
     Slots[Slot].Callbacks.clear();
