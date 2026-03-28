@@ -184,6 +184,68 @@ def OptimizeAllocationLivenessPass
   let dependentDialects = ["mlir::memref::MemRefDialect"];
 }
 
+def StaticMemoryPlannerAnalysisPass
+    : Pass<"static-memory-planner-analysis", "func::FuncOp"> {
+  let summary = "Identifies same-block alloc/dealloc pairs eligible for "
+                "static memory planning";
+  let description = [{
+    This analysis-only pass identifies `memref.alloc` / `memref.dealloc` pairs
+    in the same basic block that are candidates for static memory planning and
+    buffer reuse.
+
+    For each allocation the pass checks a conservative eligibility envelope:
+    - Static memref shape.
+    - Unique same-block dealloc (found via `MemoryEffects::Free`).
+    - Not nested inside any loop or conditional region (e.g., `scf.for`,
+      `scf.while`, `scf.forall`, `scf.parallel`, `scf.if`).
+    - No cross-block alias or escaping use (alias set resolved via
+      `BufferViewFlowAnalysis`).
+
+    Eligible allocations receive an alias-aware lifetime interval computed
+    using `BufferViewFlowAnalysis::resolve()`. The interval spans from the
+    alloc op's block-local index to the maximum of the dealloc index and the
+    last use index of any derived alias within the block. Allocation size in
+    bytes (for integer and floating-point element types) and alignment are
+    also reported where available.
+
+    Ineligible allocations receive a skip reason. Both eligibility results
+    and skip reasons are reported via op remarks. Aggregate counts are
+    reported as pass statistics.
+
+    No IR modifications are made by this pass.
+
+    This pass is expected to run after the deallocation pipeline
+    (`ownership-based-buffer-deallocation` followed by
+    `bufferization-lower-deallocations`).
+
+    Example:
+    ```mlir
+    func.func @example() {
+      // Remark: static-memory-planner: eligible: size=4096 bytes, interval=[0,2]
+      %0 = memref.alloc() : memref<1024xf32>
+      "some.use"(%0) : (memref<1024xf32>) -> ()
+      memref.dealloc %0 : memref<1024xf32>
+      return
+    }
+    ```
+  }];
+
+  let statistics =
+      [Statistic<"numEligible", "num-eligible",
+                 "Number of alloc/dealloc pairs eligible for static planning">,
+       Statistic<"numSkipDynamic", "num-skipped-dynamic",
+                 "Number of allocations skipped: dynamic shape">,
+       Statistic<
+           "numSkipNested", "num-skipped-nested",
+           "Number of allocations skipped: nested in loop or conditional">,
+       Statistic<"numSkipNoDealloc", "num-skipped-no-dealloc",
+                 "Number of allocations skipped: no unique same-block dealloc">,
+       Statistic<
+           "numSkipEscaping", "num-skipped-escaping",
+           "Number of allocations skipped: cross-block alias or escaping use">,
+  ];
+}
+
 def LowerDeallocationsPass : Pass<"bufferization-lower-deallocations"> {
   let summary = "Lowers `bufferization.dealloc` operations to `memref.dealloc`"
                 "operations";
