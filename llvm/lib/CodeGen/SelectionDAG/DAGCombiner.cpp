@@ -151,6 +151,10 @@ static cl::opt<bool> EnableShrinkLoadReplaceStoreWithStore(
     cl::desc("DAG combiner enable load/<replace bytes>/store with "
              "a narrower store"));
 
+static cl::opt<bool> EnableTopologicalSorting(
+    "combiner-topological-sorting", cl::Hidden, cl::init(false),
+    cl::desc("DAG combiner nodes consistently processed in topological order"));
+
 static cl::opt<bool> DisableCombines("combiner-disabled", cl::Hidden,
                                      cl::init(false),
                                      cl::desc("Disable the DAG combiner"));
@@ -1820,7 +1824,14 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
   LegalOperations = Level >= AfterLegalizeVectorOps;
   LegalTypes = Level >= AfterLegalizeTypes;
 
+  bool UseTopologicalSorting = EnableTopologicalSorting.getNumOccurrences() > 0
+                                   ? EnableTopologicalSorting
+                                   : TLI.useTopologicalSorting();
+
   WorklistInserter AddNodes(*this);
+
+  if (UseTopologicalSorting)
+    DAG.AssignTopologicalOrder();
 
   // Add all the dag nodes to the worklist.
   //
@@ -1828,8 +1839,13 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
   // nodes which can be deleted are those which have no uses and all other nodes
   // which would otherwise be added to the worklist by the first call to
   // getNextWorklistEntry are already present in it.
-  for (SDNode &Node : DAG.allnodes())
-    AddToWorklist(&Node, /* IsCandidateForPruning */ Node.use_empty());
+  if (UseTopologicalSorting) {
+    for (SDNode &Node : reverse(DAG.allnodes()))
+      AddToWorklist(&Node, /* IsCandidateForPruning */ Node.use_empty());
+  } else {
+    for (SDNode &Node : DAG.allnodes())
+      AddToWorklist(&Node, /* IsCandidateForPruning */ Node.use_empty());
+  }
 
   // Create a dummy node (which is not added to allnodes), that adds a reference
   // to the root node, preventing it from being deleted, and tracking any
@@ -5636,7 +5652,7 @@ SDValue DAGCombiner::visitMULHU(SDNode *N) {
   // fold (mulhu x, (1 << c)) -> x >> (bitwidth - c)
   if (isConstantOrConstantVector(N1, /*NoOpaques=*/true,
                                  /*AllowTruncation=*/true) &&
-      hasOperation(ISD::SRL, VT)) {
+      (!LegalOperations || hasOperation(ISD::SRL, VT))) {
     if (SDValue LogBase2 = BuildLogBase2(N1, DL)) {
       unsigned NumEltBits = VT.getScalarSizeInBits();
       SDValue SRLAmt = DAG.getNode(
@@ -6324,13 +6340,9 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
   }
 
   // If we know the range of vscale, see if we can fold it given a constant.
-  // TODO: Generalize this to other nodes by adding computeConstantRange
   if (N0.getOpcode() == ISD::VSCALE) {
     if (auto *C1 = dyn_cast<ConstantSDNode>(N1)) {
-      const Function &F = DAG.getMachineFunction().getFunction();
-      ConstantRange Range =
-          getVScaleRange(&F, VT.getScalarSizeInBits())
-              .multiply(ConstantRange(N0.getConstantOperandAPInt(0)));
+      ConstantRange Range = DAG.computeConstantRange(N0, 0);
 
       const APInt &C1V = C1->getAPIntValue();
       if ((Opcode == ISD::UMAX && Range.getUnsignedMax().ule(C1V)) ||

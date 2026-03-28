@@ -12,6 +12,7 @@
 
 #include "level_zero/ze_api.h"
 #include <cassert>
+#include <cstring>
 #include <deque>
 #include <exception>
 #include <functional>
@@ -379,16 +380,15 @@ struct StreamWrapper {
   }
 };
 
-static ze_module_handle_t loadModule(const void *data, size_t dataSize) {
+static ze_module_handle_t
+loadModule(const void *data, size_t dataSize,
+           ze_module_format_t format = ZE_MODULE_FORMAT_NATIVE) {
   assert(data);
   ze_module_handle_t zeModule;
-  ze_module_desc_t desc = {ZE_STRUCTURE_TYPE_MODULE_DESC,
-                           nullptr,
-                           ZE_MODULE_FORMAT_IL_SPIRV,
-                           dataSize,
-                           (const uint8_t *)data,
-                           nullptr,
-                           nullptr};
+  ze_module_desc_t desc = {
+      ZE_STRUCTURE_TYPE_MODULE_DESC, nullptr, format, dataSize,
+      (const uint8_t *)data,         nullptr, nullptr};
+
   ze_module_build_log_handle_t buildLogHandle;
   ze_result_t result =
       zeModuleCreate(getRtContext().context.get(), getRtContext().device, &desc,
@@ -518,6 +518,13 @@ extern "C" void mgpuMemset16(void *dst, unsigned short value, size_t count,
 extern "C" ze_module_handle_t mgpuModuleLoad(const void *data,
                                              size_t gpuBlobSize) {
   return catchAll([&]() { return loadModule(data, gpuBlobSize); });
+}
+
+extern "C" ze_module_handle_t mgpuModuleLoadJIT(void *data, int optLevel) {
+  return catchAll([&]() {
+    return loadModule(data, strlen(reinterpret_cast<char *>(data)),
+                      ZE_MODULE_FORMAT_IL_SPIRV);
+  });
 }
 
 extern "C" ze_kernel_handle_t mgpuModuleGetFunction(ze_module_handle_t module,

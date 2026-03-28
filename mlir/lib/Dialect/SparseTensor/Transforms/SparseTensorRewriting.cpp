@@ -309,7 +309,7 @@ public:
     });
 
     rewriter.replaceAllOpUsesWith(op, producer);
-    op->erase();
+    rewriter.eraseOp(op);
 
     return success();
   }
