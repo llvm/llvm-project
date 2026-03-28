@@ -183,6 +183,7 @@ add_fp_unittest(
     libc.src.__support.math.log2f
     libc.src.__support.math.log2f16
     libc.src.__support.math.logbf
+    libc.src.__support.math.logbbf16
     libc.src.__support.math.logbf128
     libc.src.__support.math.logbf16
     libc.src.__support.math.logf

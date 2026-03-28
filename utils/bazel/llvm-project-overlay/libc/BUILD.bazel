@@ -5290,6 +5290,17 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_logbbf16",
+    hdrs = ["src/__support/math/logbbf16.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_logbf",
     hdrs = ["src/__support/math/logbf.h"],
     deps = [
@@ -7982,6 +7993,11 @@ libc_math_function(
     additional_deps = [
         ":__support_math_logb",
     ],
+)
+
+libc_math_function(
+    name = "logbbf16",
+    additional_deps = [":__support_math_logbbf16"],
 )
 
 libc_math_function(
