@@ -126,7 +126,7 @@ namespace BitmaskEnumDetail {
 template <typename E> constexpr std::underlying_type_t<E> Mask() {
   // On overflow, NextPowerOf2 returns zero with the type uint64_t, so
   // subtracting 1 gives us the mask with all bits set, like we want.
-  return NextPowerOf2(largest_bitmask_enum_bit<E>::value) - 1;
+  return NextPowerOf2Constexpr(largest_bitmask_enum_bit<E>::value) - 1;
 }
 
 /// Check that Val is in range for E, and return Val cast to E's underlying
