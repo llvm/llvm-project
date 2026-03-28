@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=riscv32 -O3 -debug-pass=Structure < %s -o /dev/null 2>&1 | \
 ; RUN:   grep -v "Verify generated machine code" | \
-; RUN:   FileCheck %s --check-prefixes=CHECK
+; RUN:   FileCheck %s --check-prefixes=CHECK,RV32
 ; RUN: llc -mtriple=riscv64 -O3 -debug-pass=Structure < %s -o /dev/null 2>&1 | \
 ; RUN:   grep -v "Verify generated machine code" | \
 ; RUN:   FileCheck %s --check-prefixes=CHECK,RV64
@@ -227,7 +227,7 @@
 ; CHECK-NEXT:       RISC-V Zcmp move merging pass
 ; CHECK-NEXT:       RISC-V Zcmp Push/Pop optimization pass
 ; CHECK-NEXT:       RISC-V pseudo instruction expansion pass
-; CHECK-NEXT:       RISC-V QC Relaxation Marking
+; RV32-NEXT:        RISC-V QC Relaxation Marking
 ; CHECK-NEXT:       RISC-V atomic pseudo instruction expansion pass
 ; CHECK-NEXT:       Unpack machine instruction bundles
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
