@@ -1547,11 +1547,28 @@ private:
           Value shapeOp = reshapeOp.getShape();
           Value index = createIndexAttrConstant(rewriter, loc, indexType, i);
           dimSize = memref::LoadOp::create(rewriter, loc, shapeOp, index);
-          Type indexType = getIndexType();
-          if (dimSize.getType() != indexType)
-            dimSize = typeConverter->materializeTargetConversion(
-                rewriter, loc, indexType, dimSize);
-          assert(dimSize && "Invalid memref element type");
+          if (dimSize.getType() != indexType) {
+            // The shape memref element type may differ from the LLVM index
+            // type (i64 on 64-bit targets). For integer types narrower than
+            // the index type, emit llvm.zext to widen without producing an
+            // unresolvable unrealized_conversion_cast. For other types (e.g.
+            // the MLIR index type), fall back to materializeTargetConversion
+            // which inserts an unrealized cast that the type converter or
+            // reconcile-unrealized-casts can later resolve.
+            if (auto intType = dyn_cast<IntegerType>(dimSize.getType())) {
+              auto indexIntType = cast<IntegerType>(indexType);
+              if (intType.getWidth() < indexIntType.getWidth())
+                dimSize =
+                    LLVM::ZExtOp::create(rewriter, loc, indexType, dimSize);
+              else
+                dimSize = typeConverter->materializeTargetConversion(
+                    rewriter, loc, indexType, dimSize);
+            } else {
+              dimSize = typeConverter->materializeTargetConversion(
+                  rewriter, loc, indexType, dimSize);
+            }
+            assert(dimSize && "Invalid memref element type");
+          }
         }
 
         desc.setSize(rewriter, loc, i, dimSize);
