@@ -670,6 +670,21 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniBRC}, {{}, {}, VerifyAllSgprGPHI}})
       .Any({{DivBRC}, {{}, {}, VerifyAllSgprOrVgprGPHI}});
 
+  addRulesForGOpcs({G_EXTRACT_VECTOR_ELT})
+      .Any({{UniB32, UniBRC, UniS32}, {{SgprB32}, {SgprBRC, Sgpr32}}})
+      .Any({{DivB32, DivBRC, UniS32}, {{VgprB32}, {VgprBRC, Sgpr32}}})
+      .Any({{DivB32, UniBRC, DivS32},
+            {{VgprB32}, {VgprBRC, Vgpr32}, ExtrVecEltToSel}})
+      .Any({{DivB32, DivBRC, DivS32},
+            {{VgprB32}, {VgprBRC, Vgpr32}, ExtrVecEltToSel}})
+      .Any({{UniB64, UniBRC, UniS32}, {{SgprB64}, {SgprBRC, Sgpr32}}})
+      .Any({{DivB64, DivBRC, UniS32},
+            {{VgprB64}, {VgprBRC, Sgpr32}, ExtrVecEltTo32}})
+      .Any({{DivB64, UniBRC, DivS32},
+            {{VgprB64}, {VgprBRC, Vgpr32}, ExtrVecEltToSel}})
+      .Any({{DivB64, DivBRC, DivS32},
+            {{VgprB64}, {VgprBRC, Vgpr32}, ExtrVecEltToSel}});
+
   // LOAD       {Div}, {{VgprDst...}, {VgprSrc, ..., Sgpr_WF_RsrcIdx}}
   // LOAD       {Uni}, {{UniInVgprDst...}, {VgprSrc, ..., Sgpr_WF_RsrcIdx}}
   // LOAD_NORET {}, {{}, {Imm, VgprSrc, ..., Sgpr_WF_RsrcIdx}}
