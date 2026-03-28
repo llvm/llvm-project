@@ -188,24 +188,19 @@ static mlir::Value emitNeonSplat(CIRGenBuilderTy &builder, mlir::Location loc,
 static mlir::Value emitNeonShiftVector(CIRGenBuilderTy &builder,
                                        mlir::Value shiftVal,
                                        cir::VectorType vecTy,
-                                       mlir::Location loc, bool neg) {
-  int shiftAmt = getIntValueFromConstOp(shiftVal);
-  if (neg)
-    shiftAmt = -shiftAmt;
-  llvm::SmallVector<mlir::Attribute> vecAttr{
-      vecTy.getSize(),
-      // ConstVectorAttr requires cir::IntAttr
-      cir::IntAttr::get(vecTy.getElementType(), shiftAmt)};
-  cir::ConstVectorAttr constVecAttr = cir::ConstVectorAttr::get(
-      vecTy, mlir::ArrayAttr::get(builder.getContext(), vecAttr));
-  return cir::ConstantOp::create(builder, loc, constVecAttr);
+                                       mlir::Location loc) {   
+  mlir::Type eltTy = vecTy.getElementType();
+  if (shiftVal.getType() != eltTy) {
+    shiftVal = builder.createIntCast(shiftVal, eltTy);
+  }                         
+  return cir::VecSplatOp::create(builder, loc, vecTy, shiftVal);
 }
 
 static mlir::Value
 emitCommonNeonShift(CIRGenBuilderTy &builder, mlir::Location loc,
                     cir::VectorType resTy, mlir::Value shifTgt,
-                    mlir::Value shiftAmt, bool shiftLeft, bool negAmt = false) {
-  shiftAmt = emitNeonShiftVector(builder, shiftAmt, resTy, loc, negAmt);
+                    mlir::Value shiftAmt, bool shiftLeft) {
+  shiftAmt = emitNeonShiftVector(builder, shiftAmt, resTy, loc);
   return cir::ShiftOp::create(builder, loc, resTy,
                               builder.createBitcast(shifTgt, resTy), shiftAmt,
                               shiftLeft);
@@ -450,7 +445,7 @@ static mlir::Value emitCommonNeonBuiltinExpr(
   case NEON::BI__builtin_neon_vshl_n_v:
   case NEON::BI__builtin_neon_vshlq_n_v:
     return emitCommonNeonShift(cgf.getBuilder(), loc, vTy, ops[0], ops[1],
-                               true);
+                               /*shiftLeft=*/true);
   case NEON::BI__builtin_neon_vshll_n_v:
   case NEON::BI__builtin_neon_vshrn_n_v:
   case NEON::BI__builtin_neon_vshr_n_v:
