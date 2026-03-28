@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "FasterStringOperationCheck.h"
+#include "PreferSingleCharOverloadsCheck.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/Support/raw_ostream.h"
@@ -41,20 +41,20 @@ makeCharacterLiteral(const StringLiteral *Literal) {
   return Result;
 }
 
-FasterStringOperationCheck::FasterStringOperationCheck(
+PreferSingleCharOverloadsCheck::PreferSingleCharOverloadsCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       StringLikeClasses(utils::options::parseStringList(
           Options.get("StringLikeClasses",
                       "::std::basic_string;::std::basic_string_view"))) {}
 
-void FasterStringOperationCheck::storeOptions(
+void PreferSingleCharOverloadsCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "StringLikeClasses",
                 utils::options::serializeStringList(StringLikeClasses));
 }
 
-void FasterStringOperationCheck::registerMatchers(MatchFinder *Finder) {
+void PreferSingleCharOverloadsCheck::registerMatchers(MatchFinder *Finder) {
   const auto SingleChar =
       ignoringParenCasts(stringLiteral(hasSize(1)).bind("literal"));
 
@@ -78,7 +78,8 @@ void FasterStringOperationCheck::registerMatchers(MatchFinder *Finder) {
                      this);
 }
 
-void FasterStringOperationCheck::check(const MatchFinder::MatchResult &Result) {
+void PreferSingleCharOverloadsCheck::check(
+    const MatchFinder::MatchResult &Result) {
   const auto *Literal = Result.Nodes.getNodeAs<StringLiteral>("literal");
   const auto *FindFunc = Result.Nodes.getNodeAs<FunctionDecl>("func");
 
@@ -91,6 +92,13 @@ void FasterStringOperationCheck::check(const MatchFinder::MatchResult &Result) {
                                "efficient overload accepting a character")
       << FindFunc
       << FixItHint::CreateReplacement(Literal->getSourceRange(), *Replacement);
+
+  if (getID() == "performance-faster-string-find")
+    diag(Literal->getBeginLoc(),
+         "performance-faster-string-find is deprecated and will be removed in "
+         "future release, consider using "
+         "performance-prefer-single-char-overloads",
+         DiagnosticIDs::Note);
 }
 
 } // namespace clang::tidy::performance

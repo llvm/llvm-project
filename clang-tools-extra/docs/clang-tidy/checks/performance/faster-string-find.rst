@@ -1,10 +1,10 @@
 .. title:: clang-tidy - performance-faster-string-find
 .. meta::
-   :http-equiv=refresh: 5;URL=faster-string-operation.html
+   :http-equiv=refresh: 5;URL=prefer-single-char-overloads.html
 
 performance-faster-string-find
 ==============================
 
 The `performance-faster-string-find check` is an alias, please see
-:doc:`performance-faster-string-operation <faster-string-operation>`
+:doc:`performance-prefer-single-char-overloads <prefer-single-char-overloads>`
 for more information.

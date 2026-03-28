@@ -1,7 +1,7 @@
-.. title:: clang-tidy - performance-faster-string-operation
+.. title:: clang-tidy - performance-prefer-single-char-overloads
 
-performance-faster-string-operation
-===================================
+performance-prefer-single-char-overloads
+========================================
 
 Optimize calls to ``std::string::find()`` and friends when the needle passed is
 a single character string literal. The character literal overload is more
