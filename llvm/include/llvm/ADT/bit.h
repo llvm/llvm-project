@@ -239,24 +239,24 @@ template <typename T> [[nodiscard]] constexpr int countl_zero_constexpr(T Val) {
   static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
 
-  constexpr int Digits = std::numeric_limits<T>::digits;
+  constexpr int BitWidth = std::numeric_limits<T>::digits;
 
   if (!Val)
-    return Digits;
+    return BitWidth;
 
   Val |= (Val >> 1);
   Val |= (Val >> 2);
   Val |= (Val >> 4);
-  if constexpr (Digits > 8) {
+  if constexpr (BitWidth > 8) {
     Val |= (Val >> 8);
   }
-  if constexpr (Digits > 16) {
+  if constexpr (BitWidth > 16) {
     Val |= (Val >> 16);
   }
-  if constexpr (Digits > 32) {
+  if constexpr (BitWidth > 32) {
     Val |= (Val >> 32);
   }
-  return Digits - llvm::popcount(Val);
+  return BitWidth - llvm::popcount(Val);
 }
 
 /// Count number of 0's from the most significant bit to the least
@@ -268,19 +268,21 @@ template <typename T> [[nodiscard]] constexpr int countl_zero_constexpr(T Val) {
 template <typename T> [[nodiscard]] int countl_zero(T Val) {
   static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
+
+  constexpr int BitWidth = std::numeric_limits<T>::digits;
+
   if (!Val)
-    return std::numeric_limits<T>::digits;
+    return BitWidth;
 
   // Use the intrinsic if available.
   if constexpr (sizeof(T) <= 4) {
-    constexpr int ExtraBits =
-        std::numeric_limits<uint32_t>::digits - std::numeric_limits<T>::digits;
 #if __has_builtin(__builtin_clz) || defined(__GNUC__)
-    return __builtin_clz(Val) - ExtraBits;
+    constexpr int Padding = std::numeric_limits<uint32_t>::digits - BitWidth;
+    return __builtin_clz(Val) - Padding;
 #elif defined(_MSC_VER)
     unsigned long Index;
     _BitScanReverse(&Index, Val);
-    return static_cast<int>((std::numeric_limits<T>::digits - 1) - Index);
+    return static_cast<int>((BitWidth - 1) - Index);
 #endif
   } else if constexpr (sizeof(T) == 8) {
 #if __has_builtin(__builtin_clzll) || defined(__GNUC__)
