@@ -210,4 +210,5 @@ def MakeInlineTest(__file, __globals, decorators=None, name=None, build_dict=Non
     # correctly in test results.
     test_class.test_filename = __file
     test_class.mydir = TestBase.compute_mydir(__file)
+    test_class.SHARED_BUILD_TESTCASE = False
     return test_class

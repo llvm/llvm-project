@@ -1212,6 +1212,21 @@ public:
       && !isFileVarDecl();
   }
 
+  /// Returns true if this is a file-scope variable with internal linkage.
+  bool isInternalLinkageFileVar() const {
+    // Calling isExternallyVisible() can trigger linkage computation/caching,
+    // which may produce stale results when a decl's DeclContext changes after
+    // creation (e.g., OpenMP declare mapper variables), so here we determine
+    // it syntactically instead.
+    if (!isFileVarDecl())
+      return false;
+    // Linkage is determined by enclosing class/namespace for static data
+    // members.
+    if (getStorageClass() == SC_Static && !isStaticDataMember())
+      return true;
+    return isInAnonymousNamespace();
+  }
+
   /// Returns true if a variable has extern or __private_extern__
   /// storage.
   bool hasExternalStorage() const {
@@ -3771,6 +3786,12 @@ protected:
   /// True if this decl is currently being defined.
   void setBeingDefined(bool V = true) { TagDeclBits.IsBeingDefined = V; }
 
+  void printAnonymousTagDecl(llvm::raw_ostream &OS,
+                             const PrintingPolicy &Policy) const;
+
+  void printAnonymousTagDeclLocation(llvm::raw_ostream &OS,
+                                     const PrintingPolicy &Policy) const;
+
 public:
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
@@ -4040,6 +4061,11 @@ class EnumDecl : public TagDecl {
   /// and can be accessed with the provided accessors.
   unsigned ODRHash;
 
+  /// Source range covering the enum key:
+  ///  - 'enum'              (unscoped)
+  ///  - 'enum class|struct' (scoped)
+  SourceRange EnumKeyRange;
+
   EnumDecl(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
            SourceLocation IdLoc, IdentifierInfo *Id, EnumDecl *PrevDecl,
            bool Scoped, bool ScopedUsingClassTag, bool Fixed);
@@ -4076,6 +4102,10 @@ public:
   /// True if this is an Objective-C, C++11, or
   /// Microsoft-style enumeration with a fixed underlying type.
   void setFixed(bool Fixed = true) { EnumDeclBits.IsFixed = Fixed; }
+
+  SourceRange getEnumKeyRange() const { return EnumKeyRange; }
+
+  void setEnumKeyRange(SourceRange Range) { EnumKeyRange = Range; }
 
 private:
   /// True if a valid hash is stored in ODRHash.
@@ -4522,6 +4552,11 @@ public:
   // Whether there are any fields (non-static data members) in this record.
   bool field_empty() const {
     return field_begin() == field_end();
+  }
+
+  /// Returns the number of fields (non-static data members) in this record.
+  unsigned getNumFields() const {
+    return std::distance(field_begin(), field_end());
   }
 
   /// noload_fields - Iterate over the fields stored in this record

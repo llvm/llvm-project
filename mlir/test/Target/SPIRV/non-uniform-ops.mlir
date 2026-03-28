@@ -5,7 +5,7 @@
 // RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv --split-input-file --spirv-save-validation-files-with-prefix=%t/module %s %}
 // RUN: %if spirv-tools %{ spirv-val %t %}
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.3, [Shader, Linkage, GroupNonUniformBallot, GroupNonUniformArithmetic, GroupNonUniformClustered, GroupNonUniformShuffle, GroupNonUniformShuffleRelative, GroupNonUniformVote], []> {
+spirv.module Logical GLSL450 requires #spirv.vce<v1.3, [Shader, Linkage, GroupNonUniformBallot, GroupNonUniformArithmetic, GroupNonUniformClustered, GroupNonUniformShuffle, GroupNonUniformShuffleRelative, GroupNonUniformVote, GroupNonUniformQuad], []> {
   // CHECK-LABEL: @group_non_uniform_ballot
   spirv.func @group_non_uniform_ballot(%predicate: i1) -> vector<4xi32> "None" {
     // CHECK: %{{.*}} = spirv.GroupNonUniformBallot <Workgroup> %{{.*}}: vector<4xi32>
@@ -18,6 +18,13 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.3, [Shader, Linkage, GroupNo
     %one = spirv.Constant 1 : i32
     // CHECK: spirv.GroupNonUniformBroadcast <Subgroup> %{{.*}}, %{{.*}} : f32, i32
     %0 = spirv.GroupNonUniformBroadcast <Subgroup> %value, %one : f32, i32
+    spirv.ReturnValue %0: f32
+  }
+
+  // CHECK-LABEL: @group_non_uniform_broadcast_first
+  spirv.func @group_non_uniform_broadcast_first(%value: f32) -> f32 "None" {
+    // CHECK: spirv.GroupNonUniformBroadcastFirst <Subgroup> %{{.*}} : f32
+    %0 = spirv.GroupNonUniformBroadcastFirst <Subgroup> %value : f32
     spirv.ReturnValue %0: f32
   }
 
@@ -146,5 +153,17 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.3, [Shader, Linkage, GroupNo
     // CHECK: %{{.+}} = spirv.GroupNonUniformAllEqual <Subgroup> %{{.+}} : vector<4xi32>, i1
     %0 = spirv.GroupNonUniformAllEqual <Subgroup> %val : vector<4xi32>, i1
     spirv.ReturnValue %0: i1
+  }
+
+  spirv.func @group_non_uniform_quad_swap_vec(%val: vector<4xf32>) -> vector<4xf32> "None" {
+    // CHECK: %{{.+}} = spirv.GroupNonUniformQuadSwap <Subgroup> <Vertical> %{{.+}} : vector<4xf32>
+    %0 = spirv.GroupNonUniformQuadSwap <Subgroup> <Vertical> %val : vector<4xf32>
+    spirv.ReturnValue %0: vector<4xf32>
+  }
+
+  spirv.func @group_non_uniform_quad_swap_scalar(%val: f32) -> f32 "None" {
+    // CHECK: %{{.+}} = spirv.GroupNonUniformQuadSwap <Subgroup> <Horizontal> %{{.+}} : f32
+    %0 = spirv.GroupNonUniformQuadSwap <Subgroup> <Horizontal> %val : f32
+    spirv.ReturnValue %0: f32
   }
 }

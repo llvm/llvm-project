@@ -255,3 +255,55 @@ func.func @no_crash_with_different_source_type() {
   %1 = vector.broadcast %0 : i64 to vector<128xi64>
   llvm.return
 }
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/187972
+// DeadCodeAnalysis::visitRegionBranchEdges must not dereference the front()
+// of an empty region (acc.serial with no blocks).
+
+// CHECK-LABEL: no_crash_acc_serial_empty_region
+func.func @no_crash_acc_serial_empty_region() {
+  // CHECK: acc.serial
+  acc.serial {
+  }
+  return
+}
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/188408
+// isRegionOrCallableReturn must guard getTerminator() with mightHaveTerminator()
+// to avoid asserting on blocks in nested acc regions without terminators.
+
+// CHECK-LABEL: no_crash_acc_kernel_environment
+func.func @no_crash_acc_kernel_environment(%data: memref<8xi32>) {
+  // CHECK: acc.kernel_environment
+  acc.kernel_environment {
+    acc.compute_region {
+      acc.yield
+    } {origin = "acc.parallel"}
+  }
+  return
+}
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/187973
+// SwitchOp::getEntrySuccessorRegions must not call IntegerAttr::getInt() on
+// an unsigned integer type — that function asserts signless/index only.
+
+// CHECK-LABEL: no_crash_emitc_switch_unsigned_condition
+func.func @no_crash_emitc_switch_unsigned_condition() {
+  // CHECK: emitc.constant
+  %0 = "emitc.constant"() {value = 1 : ui32} : () -> ui32
+  // CHECK: emitc.switch
+  emitc.switch %0 : ui32
+  case 2 {
+    emitc.yield
+  }
+  default {
+    emitc.yield
+  }
+  return
+}

@@ -16,9 +16,9 @@
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Lex/HeaderSearch.h"
 #include "clang/Serialization/ModuleFile.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -57,15 +57,15 @@ class ModuleManager {
   // to implement short-circuiting logic when running DFS over the dependencies.
   SmallVector<ModuleFile *, 2> Roots;
 
-  /// All loaded modules, indexed by name.
-  llvm::DenseMap<const FileEntry *, ModuleFile *> Modules;
+  /// All loaded modules.
+  llvm::DenseMap<ModuleFileKey, ModuleFile *> Modules;
 
   /// FileManager that handles translating between filenames and
   /// FileEntry *.
   FileManager &FileMgr;
 
   /// Cache of PCM files.
-  IntrusiveRefCntPtr<ModuleCache> ModCache;
+  ModuleCache &ModCache;
 
   /// Knows how to unwrap module containers.
   const PCHContainerReader &PCHContainerRdr;
@@ -172,14 +172,14 @@ public:
   /// Returns the module associated with the given index
   ModuleFile &operator[](unsigned Index) const { return *Chain[Index]; }
 
-  /// Returns the module associated with the given file name.
-  ModuleFile *lookupByFileName(StringRef FileName) const;
-
   /// Returns the module associated with the given module name.
   ModuleFile *lookupByModuleName(StringRef ModName) const;
 
-  /// Returns the module associated with the given module file.
-  ModuleFile *lookup(const FileEntry *File) const;
+  /// Returns the module associated with the given module file name.
+  ModuleFile *lookupByFileName(ModuleFileName FileName) const;
+
+  /// Returns the module associated with the given module file key.
+  ModuleFile *lookup(ModuleFileKey Key) const;
 
   /// Returns the in-memory (virtual file) buffer with the given name
   std::unique_ptr<llvm::MemoryBuffer> lookupBuffer(StringRef Name);
@@ -238,14 +238,13 @@ public:
   ///
   /// \return A pointer to the module that corresponds to this file name,
   /// and a value indicating whether the module was loaded.
-  AddModuleResult addModule(StringRef FileName, ModuleKind Type,
-                            SourceLocation ImportLoc,
-                            ModuleFile *ImportedBy, unsigned Generation,
-                            off_t ExpectedSize, time_t ExpectedModTime,
+  AddModuleResult addModule(ModuleFileName FileName, ModuleKind Type,
+                            SourceLocation ImportLoc, ModuleFile *ImportedBy,
+                            unsigned Generation, off_t ExpectedSize,
+                            time_t ExpectedModTime,
                             ASTFileSignature ExpectedSignature,
                             ASTFileSignatureReader ReadSignature,
-                            ModuleFile *&Module,
-                            std::string &ErrorStr);
+                            ModuleFile *&Module, std::string &ErrorStr);
 
   /// Remove the modules starting from First (to the end).
   void removeModules(ModuleIterator First);
@@ -283,30 +282,10 @@ public:
   void visit(llvm::function_ref<bool(ModuleFile &M)> Visitor,
              llvm::SmallPtrSetImpl<ModuleFile *> *ModuleFilesHit = nullptr);
 
-  /// Attempt to resolve the given module file name to a file entry.
-  ///
-  /// \param FileName The name of the module file.
-  ///
-  /// \param ExpectedSize The size that the module file is expected to have.
-  /// If the actual size differs, the resolver should return \c true.
-  ///
-  /// \param ExpectedModTime The modification time that the module file is
-  /// expected to have. If the actual modification time differs, the resolver
-  /// should return \c true.
-  ///
-  /// \param File Will be set to the file if there is one, or null
-  /// otherwise.
-  ///
-  /// \returns True if a file exists but does not meet the size/
-  /// modification time criteria, false if the file is either available and
-  /// suitable, or is missing.
-  bool lookupModuleFile(StringRef FileName, off_t ExpectedSize,
-                        time_t ExpectedModTime, OptionalFileEntryRef &File);
-
   /// View the graphviz representation of the module graph.
   void viewGraph();
 
-  ModuleCache &getModuleCache() const { return *ModCache; }
+  ModuleCache &getModuleCache() const { return ModCache; }
 };
 
 } // namespace serialization

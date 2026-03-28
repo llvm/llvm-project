@@ -20,8 +20,9 @@
 #include "HLSLBufferLayoutBuilder.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/Attrs.inc"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/HLSLResource.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
@@ -35,6 +36,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -94,6 +96,14 @@ void addRootSignatureMD(llvm::dxbc::RootSignatureVersion RootSigVer,
   RootSignatureValMD->addOperand(MDVals);
 }
 
+// Find array variable declaration from DeclRef expression
+static const ValueDecl *getArrayDecl(const Expr *E) {
+  if (const DeclRefExpr *DRE =
+          dyn_cast_or_null<DeclRefExpr>(E->IgnoreImpCasts()))
+    return DRE->getDecl();
+  return nullptr;
+}
+
 // Find array variable declaration from nested array subscript AST nodes
 static const ValueDecl *getArrayDecl(const ArraySubscriptExpr *ASE) {
   const Expr *E = nullptr;
@@ -103,17 +113,15 @@ static const ValueDecl *getArrayDecl(const ArraySubscriptExpr *ASE) {
       return nullptr;
     ASE = dyn_cast<ArraySubscriptExpr>(E);
   }
-  if (const DeclRefExpr *DRE = dyn_cast_or_null<DeclRefExpr>(E))
-    return DRE->getDecl();
-  return nullptr;
+  return getArrayDecl(E);
 }
 
-// Get the total size of the array, or -1 if the array is unbounded.
+// Get the total size of the array, or 0 if the array is unbounded.
 static int getTotalArraySize(ASTContext &AST, const clang::Type *Ty) {
   Ty = Ty->getUnqualifiedDesugaredType();
   assert(Ty->isArrayType() && "expected array type");
   if (Ty->isIncompleteArrayType())
-    return -1;
+    return 0;
   return AST.getConstantArrayElementCount(cast<ConstantArrayType>(Ty));
 }
 
@@ -314,12 +322,6 @@ void CGHLSLRuntime::emitBufferGlobalsAndMetadata(
         // Emit static and groupshared variables and resource classes inside
         // cbuffer as regular globals
         CGM.EmitGlobal(VD);
-      } else {
-        // Anything else that is not in the hlsl_constant address space must be
-        // an empty struct or a zero-sized array and can be ignored
-        assert(BufDecl->getASTContext().getTypeSize(VDTy) == 0 &&
-               "constant buffer decl with non-zero sized type outside of "
-               "hlsl_constant address space");
       }
       continue;
     }
@@ -476,6 +478,12 @@ void CGHLSLRuntime::finishCodeGen() {
     addDxilValVersion(TargetOpts.DxilValidatorVersion, M);
   if (CodeGenOpts.ResMayAlias)
     M.setModuleFlag(llvm::Module::ModFlagBehavior::Error, "dx.resmayalias", 1);
+  if (CodeGenOpts.AllResourcesBound)
+    M.setModuleFlag(llvm::Module::ModFlagBehavior::Error,
+                    "dx.allresourcesbound", 1);
+  if (CodeGenOpts.OptimizationLevel == 0)
+    M.addModuleFlag(llvm::Module::ModFlagBehavior::Override,
+                    "dx.disable_optimizations", 1);
 
   // NativeHalfType corresponds to the -fnative-half-type clang option which is
   // aliased by clang-dxc's -enable-16bit-types option. This option is used to
@@ -513,8 +521,6 @@ void clang::CodeGen::CGHLSLRuntime::setHLSLEntryAttributes(
   // later in the compiler-flow for such module functions is not aware of and
   // hence not able to set attributes of the newly materialized entry functions.
   // So, set attributes of entry function here, as appropriate.
-  if (CGM.getCodeGenOpts().OptimizationLevel == 0)
-    Fn->addFnAttr(llvm::Attribute::OptimizeNone);
   Fn->addFnAttr(llvm::Attribute::NoInline);
 
   if (CGM.getLangOpts().HLSLSpvEnableMaximalReconvergence) {
@@ -582,20 +588,22 @@ static llvm::Value *createSPIRVLocationLoad(IRBuilder<> &B, llvm::Module &M,
   return B.CreateLoad(Ty, GV);
 }
 
-llvm::Value *
-CGHLSLRuntime::emitSPIRVUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
-                                         HLSLAppliedSemanticAttr *Semantic,
-                                         std::optional<unsigned> Index) {
+llvm::Value *CGHLSLRuntime::emitSPIRVUserSemanticLoad(
+    llvm::IRBuilder<> &B, llvm::Type *Type, const clang::DeclaratorDecl *Decl,
+    HLSLAppliedSemanticAttr *Semantic, std::optional<unsigned> Index) {
   Twine BaseName = Twine(Semantic->getAttrName()->getName());
   Twine VariableName = BaseName.concat(Twine(Index.value_or(0)));
 
   unsigned Location = SPIRVLastAssignedInputSemanticLocation;
+  if (auto *L = Decl->getAttr<HLSLVkLocationAttr>())
+    Location = L->getLocation();
 
   // DXC completely ignores the semantic/index pair. Location are assigned from
   // the first semantic to the last.
   llvm::ArrayType *AT = dyn_cast<llvm::ArrayType>(Type);
   unsigned ElementCount = AT ? AT->getNumElements() : 1;
   SPIRVLastAssignedInputSemanticLocation += ElementCount;
+
   return createSPIRVLocationLoad(B, CGM.getModule(), Type, Location,
                                  VariableName.str());
 }
@@ -616,10 +624,14 @@ static void createSPIRVLocationStore(IRBuilder<> &B, llvm::Module &M,
 
 void CGHLSLRuntime::emitSPIRVUserSemanticStore(
     llvm::IRBuilder<> &B, llvm::Value *Source,
-    HLSLAppliedSemanticAttr *Semantic, std::optional<unsigned> Index) {
+    const clang::DeclaratorDecl *Decl, HLSLAppliedSemanticAttr *Semantic,
+    std::optional<unsigned> Index) {
   Twine BaseName = Twine(Semantic->getAttrName()->getName());
   Twine VariableName = BaseName.concat(Twine(Index.value_or(0)));
+
   unsigned Location = SPIRVLastAssignedOutputSemanticLocation;
+  if (auto *L = Decl->getAttr<HLSLVkLocationAttr>())
+    Location = L->getLocation();
 
   // DXC completely ignores the semantic/index pair. Location are assigned from
   // the first semantic to the last.
@@ -671,7 +683,7 @@ llvm::Value *CGHLSLRuntime::emitUserSemanticLoad(
     IRBuilder<> &B, llvm::Type *Type, const clang::DeclaratorDecl *Decl,
     HLSLAppliedSemanticAttr *Semantic, std::optional<unsigned> Index) {
   if (CGM.getTarget().getTriple().isSPIRV())
-    return emitSPIRVUserSemanticLoad(B, Type, Semantic, Index);
+    return emitSPIRVUserSemanticLoad(B, Type, Decl, Semantic, Index);
 
   if (CGM.getTarget().getTriple().isDXIL())
     return emitDXILUserSemanticLoad(B, Type, Semantic, Index);
@@ -684,7 +696,7 @@ void CGHLSLRuntime::emitUserSemanticStore(IRBuilder<> &B, llvm::Value *Source,
                                           HLSLAppliedSemanticAttr *Semantic,
                                           std::optional<unsigned> Index) {
   if (CGM.getTarget().getTriple().isSPIRV())
-    return emitSPIRVUserSemanticStore(B, Source, Semantic, Index);
+    return emitSPIRVUserSemanticStore(B, Source, Decl, Semantic, Index);
 
   if (CGM.getTarget().getTriple().isDXIL())
     return emitDXILUserSemanticStore(B, Source, Semantic, Index);
@@ -693,8 +705,9 @@ void CGHLSLRuntime::emitUserSemanticStore(IRBuilder<> &B, llvm::Value *Source,
 }
 
 llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
-    IRBuilder<> &B, llvm::Type *Type, const clang::DeclaratorDecl *Decl,
-    HLSLAppliedSemanticAttr *Semantic, std::optional<unsigned> Index) {
+    IRBuilder<> &B, const FunctionDecl *FD, llvm::Type *Type,
+    const clang::DeclaratorDecl *Decl, HLSLAppliedSemanticAttr *Semantic,
+    std::optional<unsigned> Index) {
 
   std::string SemanticName = Semantic->getAttrName()->getName().upper();
   if (SemanticName == "SV_GROUPINDEX") {
@@ -730,8 +743,12 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
     return buildVectorInput(B, GroupIDIntrinsic, Type);
   }
 
+  const auto *ShaderAttr = FD->getAttr<HLSLShaderAttr>();
+  assert(ShaderAttr && "Entry point has no shader attribute");
+  llvm::Triple::EnvironmentType ST = ShaderAttr->getType();
+
   if (SemanticName == "SV_POSITION") {
-    if (CGM.getTriple().getEnvironment() == Triple::EnvironmentType::Pixel) {
+    if (ST == Triple::EnvironmentType::Pixel) {
       if (CGM.getTarget().getTriple().isSPIRV())
         return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
                                       Semantic->getAttrName()->getName(),
@@ -740,8 +757,19 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
         return emitDXILUserSemanticLoad(B, Type, Semantic, Index);
     }
 
-    if (CGM.getTriple().getEnvironment() == Triple::EnvironmentType::Vertex) {
+    if (ST == Triple::EnvironmentType::Vertex) {
       return emitUserSemanticLoad(B, Type, Decl, Semantic, Index);
+    }
+  }
+
+  if (SemanticName == "SV_VERTEXID") {
+    if (ST == Triple::EnvironmentType::Vertex) {
+      if (CGM.getTarget().getTriple().isSPIRV())
+        return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
+                                      Semantic->getAttrName()->getName(),
+                                      /* BuiltIn::VertexIndex */ 42);
+      else
+        return emitDXILUserSemanticLoad(B, Type, Semantic, Index);
     }
   }
 
@@ -783,6 +811,11 @@ void CGHLSLRuntime::emitSystemSemanticStore(IRBuilder<> &B, llvm::Value *Source,
     }
   }
 
+  if (SemanticName == "SV_TARGET") {
+    emitUserSemanticStore(B, Source, Decl, Semantic, Index);
+    return;
+  }
+
   llvm_unreachable(
       "Store hasn't been implemented yet for this system semantic. FIXME");
 }
@@ -793,7 +826,7 @@ llvm::Value *CGHLSLRuntime::handleScalarSemanticLoad(
 
   std::optional<unsigned> Index = Semantic->getSemanticIndex();
   if (Semantic->getAttrName()->getName().starts_with_insensitive("SV_"))
-    return emitSystemSemanticLoad(B, Type, Decl, Semantic, Index);
+    return emitSystemSemanticLoad(B, FD, Type, Decl, Semantic, Index);
   return emitUserSemanticLoad(B, Type, Decl, Semantic, Index);
 }
 
@@ -816,8 +849,7 @@ CGHLSLRuntime::handleStructSemanticLoad(
   const llvm::StructType *ST = cast<StructType>(Type);
   const clang::RecordDecl *RD = Decl->getType()->getAsRecordDecl();
 
-  assert(std::distance(RD->field_begin(), RD->field_end()) ==
-         ST->getNumElements());
+  assert(RD->getNumFields() == ST->getNumElements());
 
   llvm::Value *Aggregate = llvm::PoisonValue::get(Type);
   auto FieldDecl = RD->field_begin();
@@ -849,11 +881,10 @@ CGHLSLRuntime::handleStructSemanticStore(
     RD = Decl->getType()->getAsRecordDecl();
   assert(RD);
 
-  assert(std::distance(RD->field_begin(), RD->field_end()) ==
-         ST->getNumElements());
+  assert(RD->getNumFields() == ST->getNumElements());
 
   auto FieldDecl = RD->field_begin();
-  for (unsigned I = 0; I < ST->getNumElements(); ++I) {
+  for (unsigned I = 0; I < ST->getNumElements(); ++I, ++FieldDecl) {
     llvm::Value *Extract = B.CreateExtractValue(Source, I);
     AttrBegin =
         handleSemanticStore(B, FD, Extract, *FieldDecl, AttrBegin, AttrEnd);
@@ -925,7 +956,8 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
     OB.emplace_back("convergencectrl", bundleArgs);
   }
 
-  llvm::DenseMap<const DeclaratorDecl *, llvm::Value *> OutputSemantic;
+  llvm::DenseMap<const DeclaratorDecl *, std::pair<llvm::Value *, llvm::Type *>>
+      OutputSemantic;
 
   unsigned SRetOffset = 0;
   for (const auto &Param : Fn->args()) {
@@ -933,7 +965,7 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
       SRetOffset = 1;
       llvm::Type *VarType = Param.getParamStructRetType();
       llvm::Value *Var = B.CreateAlloca(VarType);
-      OutputSemantic.try_emplace(FD, Var);
+      OutputSemantic.try_emplace(FD, std::make_pair(Var, VarType));
       Args.push_back(Var);
       continue;
     }
@@ -969,12 +1001,14 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
   CI->setCallingConv(Fn->getCallingConv());
 
   if (Fn->getReturnType() != CGM.VoidTy)
-    OutputSemantic.try_emplace(FD, CI);
+    // Element type is unused, so set to dummy value (NULL).
+    OutputSemantic.try_emplace(FD, std::make_pair(CI, nullptr));
 
-  for (auto &[Decl, Source] : OutputSemantic) {
+  for (auto &[Decl, SourcePair] : OutputSemantic) {
+    llvm::Value *Source = SourcePair.first;
+    llvm::Type *ElementType = SourcePair.second;
     AllocaInst *AI = dyn_cast<AllocaInst>(Source);
-    llvm::Value *SourceValue =
-        AI ? B.CreateLoad(AI->getAllocatedType(), Source) : Source;
+    llvm::Value *SourceValue = AI ? B.CreateLoad(ElementType, Source) : Source;
 
     auto AttrBegin = Decl->specific_attr_begin<HLSLAppliedSemanticAttr>();
     auto AttrEnd = Decl->specific_attr_end<HLSLAppliedSemanticAttr>();
@@ -1090,9 +1124,7 @@ static void initializeBuffer(CodeGenModule &CGM, llvm::GlobalVariable *GV,
       /*ReturnType=*/HandleTy, IntrID, Args, nullptr,
       Twine(GV->getName()).concat("_h"));
 
-  llvm::Value *HandleRef = Builder.CreateStructGEP(GV->getValueType(), GV, 0);
-  Builder.CreateAlignedStore(CreateHandle, HandleRef,
-                             HandleRef->getPointerAlignment(DL));
+  Builder.CreateAlignedStore(CreateHandle, GV, GV->getPointerAlignment(DL));
   Builder.CreateRetVoid();
 
   CGM.AddCXXGlobalInit(InitResFunc);
@@ -1130,6 +1162,8 @@ void CGHLSLRuntime::initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
 void CGHLSLRuntime::handleGlobalVarDefinition(const VarDecl *VD,
                                               llvm::GlobalVariable *GV) {
   if (auto Attr = VD->getAttr<HLSLVkExtBuiltinInputAttr>())
+    addSPIRVBuiltinDecoration(GV, Attr->getBuiltIn());
+  if (auto Attr = VD->getAttr<HLSLVkExtBuiltinOutputAttr>())
     addSPIRVBuiltinDecoration(GV, Attr->getBuiltIn());
 }
 
@@ -1200,12 +1234,13 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
           ArraySubsExpr->getType()->isHLSLResourceRecordArray()) &&
          "expected resource array subscript expression");
 
-  // Let clang codegen handle local resource array subscripts,
+  // Let clang codegen handle local and static resource array subscripts,
   // or when the subscript references on opaque expression (as part of
   // ArrayInitLoopExpr AST node).
   const VarDecl *ArrayDecl =
       dyn_cast_or_null<VarDecl>(getArrayDecl(ArraySubsExpr));
-  if (!ArrayDecl || !ArrayDecl->hasGlobalStorage())
+  if (!ArrayDecl || !ArrayDecl->hasGlobalStorage() ||
+      ArrayDecl->getStorageClass() == SC_Static)
     return std::nullopt;
 
   // get the resource array type
@@ -1235,7 +1270,7 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
   // Find binding info for the resource array. For implicit binding
   // an HLSLResourceBindingAttr should have been added by SemaHLSL.
   ResourceBindingAttrs Binding(ArrayDecl);
-  assert((Binding.hasBinding()) &&
+  assert(Binding.hasBinding() &&
          "resource array must have a binding attribute");
 
   // Find the individual resource type.
@@ -1257,8 +1292,8 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
       AggValueSlot::DoesNotOverlap);
 
   // Calculate total array size (= range size).
-  llvm::Value *Range =
-      llvm::ConstantInt::get(CGM.IntTy, getTotalArraySize(AST, ResArrayTy));
+  llvm::Value *Range = llvm::ConstantInt::getSigned(
+      CGM.IntTy, getTotalArraySize(AST, ResArrayTy));
 
   // If the result of the subscript operation is a single resource, call the
   // constructor.
@@ -1291,6 +1326,75 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
   return CGF.MakeAddrLValue(TmpVar, ResultTy, AlignmentSource::Decl);
 }
 
+// If RHSExpr is a global resource array, initialize all of its resources and
+// set them into LHS. Returns false if no copy has been performed and the
+// array copy should be handled by Clang codegen.
+bool CGHLSLRuntime::emitResourceArrayCopy(LValue &LHS, Expr *RHSExpr,
+                                          CodeGenFunction &CGF) {
+  QualType ResultTy = RHSExpr->getType();
+  assert(ResultTy->isHLSLResourceRecordArray() && "expected resource array");
+
+  // Let Clang codegen handle local and static resource array copies.
+  const VarDecl *ArrayDecl = dyn_cast_or_null<VarDecl>(getArrayDecl(RHSExpr));
+  if (!ArrayDecl || !ArrayDecl->hasGlobalStorage() ||
+      ArrayDecl->getStorageClass() == SC_Static)
+    return false;
+
+  // Find binding info for the resource array. For implicit binding
+  // the HLSLResourceBindingAttr should have been added by SemaHLSL.
+  ResourceBindingAttrs Binding(ArrayDecl);
+  assert(Binding.hasBinding() &&
+         "resource array must have a binding attribute");
+
+  // Find the individual resource type.
+  ASTContext &AST = ArrayDecl->getASTContext();
+  QualType ResTy = AST.getBaseElementType(ResultTy);
+  const auto *ResArrayTy = cast<ConstantArrayType>(ResultTy.getTypePtr());
+
+  // Use the provided LHS for the result.
+  AggValueSlot ValueSlot = AggValueSlot::forAddr(
+      LHS.getAddress(), Qualifiers(), AggValueSlot::IsDestructed_t(true),
+      AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsAliased_t(false),
+      AggValueSlot::DoesNotOverlap);
+
+  // Create Value for index and total array size (= range size).
+  int Size = getTotalArraySize(AST, ResArrayTy);
+  llvm::Value *Zero = llvm::ConstantInt::get(CGM.IntTy, 0);
+  llvm::Value *Range = llvm::ConstantInt::get(CGM.IntTy, Size);
+
+  // Initialize individual resources in the array into LHS.
+  std::optional<llvm::Value *> EndIndex = initializeLocalResourceArray(
+      CGF, ResTy->getAsCXXRecordDecl(), ResArrayTy, ValueSlot, Range, Zero,
+      ArrayDecl->getName(), Binding, {Zero}, RHSExpr->getExprLoc());
+  return EndIndex.has_value();
+}
+
+RawAddress CGHLSLRuntime::createBufferMatrixTempAddress(const LValue &LV,
+                                                        SourceLocation Loc,
+                                                        CodeGenFunction &CGF) {
+
+  assert(LV.getType()->isConstantMatrixType() && "expected matrix type");
+  assert(LV.getType().getAddressSpace() == LangAS::hlsl_constant &&
+         "expected cbuffer matrix");
+
+  QualType MatQualTy = LV.getType();
+  llvm::Type *MemTy = CGF.ConvertTypeForMem(MatQualTy);
+  llvm::Type *LayoutTy = HLSLBufferLayoutBuilder(CGF.CGM).layOutType(MatQualTy);
+
+  if (LayoutTy == MemTy)
+    return LV.getAddress();
+
+  Address SrcAddr = LV.getAddress();
+  // NOTE: B\C CreateMemTemp flattens MatrixTypes which causes
+  // overlapping GEPs in emitBufferCopy. Use CreateTempAlloca with
+  // the non-padded layout.
+  CharUnits Align =
+      CharUnits::fromQuantity(CGF.CGM.getDataLayout().getABITypeAlign(MemTy));
+  RawAddress DestAlloca = CGF.CreateTempAlloca(MemTy, Align, "matrix.buf.copy");
+  emitBufferCopy(CGF, DestAlloca, SrcAddr, MatQualTy);
+  return DestAlloca;
+}
+
 std::optional<LValue> CGHLSLRuntime::emitBufferArraySubscriptExpr(
     const ArraySubscriptExpr *E, CodeGenFunction &CGF,
     llvm::function_ref<llvm::Value *(bool Promote)> EmitIdxAfterBase) {
@@ -1319,21 +1423,38 @@ std::optional<LValue> CGHLSLRuntime::emitBufferArraySubscriptExpr(
 
   LValueBaseInfo EltBaseInfo;
   TBAAAccessInfo EltTBAAInfo;
-  Address Addr =
-      CGF.EmitPointerWithAlignment(E->getBase(), &EltBaseInfo, &EltTBAAInfo);
-  llvm::Value *Idx = EmitIdxAfterBase(/*Promote*/ true);
 
   // Index into the object as-if we have an array of the padded element type,
   // and then dereference the element itself to avoid reading padding that may
   // be past the end of the in-memory object.
   SmallVector<llvm::Value *, 2> Indices;
+  llvm::Value *Idx = EmitIdxAfterBase(/*Promote*/ true);
   Indices.push_back(Idx);
   Indices.push_back(llvm::ConstantInt::get(CGF.Int32Ty, 0));
 
+  if (CGF.getLangOpts().EmitStructuredGEP) {
+    // The fact that we emit an array-to-pointer decay might be an oversight,
+    // but for now, we simply ignore it (see #179951).
+    const CastExpr *CE = cast<CastExpr>(E->getBase());
+    assert(CE->getCastKind() == CastKind::CK_ArrayToPointerDecay);
+
+    LValue LV = CGF.EmitLValue(CE->getSubExpr());
+    Address Addr = LV.getAddress();
+    LayoutTy = llvm::ArrayType::get(
+        LayoutTy,
+        cast<llvm::ArrayType>(Addr.getElementType())->getNumElements());
+    auto *GEP = cast<StructuredGEPInst>(CGF.Builder.CreateStructuredGEP(
+        LayoutTy, Addr.emitRawPointer(CGF), Indices, "cbufferidx"));
+    Addr =
+        Address(GEP, GEP->getResultElementType(), RowAlignedSize, KnownNonNull);
+    return CGF.MakeAddrLValue(Addr, E->getType(), EltBaseInfo, EltTBAAInfo);
+  }
+
+  Address Addr =
+      CGF.EmitPointerWithAlignment(E->getBase(), &EltBaseInfo, &EltTBAAInfo);
   llvm::Value *GEP = CGF.Builder.CreateGEP(LayoutTy, Addr.emitRawPointer(CGF),
                                            Indices, "cbufferidx");
   Addr = Address(GEP, Addr.getElementType(), RowAlignedSize, KnownNonNull);
-
   return CGF.MakeAddrLValue(Addr, E->getType(), EltBaseInfo, EltTBAAInfo);
 }
 
@@ -1353,7 +1474,7 @@ class HLSLBufferCopyEmitter {
                          llvm::ConstantInt *LoadIndex) {
     CurStoreIndices.push_back(StoreIndex);
     CurLoadIndices.push_back(LoadIndex);
-    auto RestoreIndices = llvm::make_scope_exit([&]() {
+    llvm::scope_exit RestoreIndices([&]() {
       CurStoreIndices.pop_back();
       CurLoadIndices.pop_back();
     });
@@ -1491,10 +1612,7 @@ LValue CGHLSLRuntime::emitBufferMemberExpr(CodeGenFunction &CGF,
   auto *Field = dyn_cast<FieldDecl>(E->getMemberDecl());
   assert(Field && "Unexpected access into HLSL buffer");
 
-  // Get the field index for the struct.
   const RecordDecl *Rec = Field->getParent();
-  unsigned FieldIdx =
-      CGM.getTypes().getCGRecordLayout(Rec).getLLVMFieldNo(Field);
 
   // Work out the buffer layout type to index into.
   QualType RecType = CGM.getContext().getCanonicalTagType(Rec);
@@ -1506,15 +1624,36 @@ LValue CGHLSLRuntime::emitBufferMemberExpr(CodeGenFunction &CGF,
   llvm::StructType *LayoutTy = HLSLBufferLayoutBuilder(CGM).layOutStruct(
       RecType->getAsCanonical<RecordType>(), EmptyOffsets);
 
+  // Get the field index for the layout struct, accounting for padding.
+  unsigned FieldIdx =
+      CGM.getTypes().getCGRecordLayout(Rec).getLLVMFieldNo(Field);
+  assert(FieldIdx < LayoutTy->getNumElements() &&
+         "Layout struct is smaller than member struct");
+  unsigned Skipped = 0;
+  for (unsigned I = 0; I <= FieldIdx;) {
+    llvm::Type *ElementTy = LayoutTy->getElementType(I + Skipped);
+    if (CGF.CGM.getTargetCodeGenInfo().isHLSLPadding(ElementTy))
+      ++Skipped;
+    else
+      ++I;
+  }
+  FieldIdx += Skipped;
+  assert(FieldIdx < LayoutTy->getNumElements() && "Access out of bounds");
+
   // Now index into the struct, making sure that the type we return is the
   // buffer layout type rather than the original type in the AST.
   QualType FieldType = Field->getType();
   llvm::Type *FieldLLVMTy = CGM.getTypes().ConvertTypeForMem(FieldType);
   CharUnits Align = CharUnits::fromQuantity(
       CGF.CGM.getDataLayout().getABITypeAlign(FieldLLVMTy));
-  Address Addr(CGF.Builder.CreateStructGEP(LayoutTy, Base.getPointer(CGF),
-                                           FieldIdx, Field->getName()),
-               FieldLLVMTy, Align, KnownNonNull);
+
+  Value *Ptr = CGF.getLangOpts().EmitStructuredGEP
+                   ? CGF.Builder.CreateStructuredGEP(
+                         LayoutTy, Base.getPointer(CGF),
+                         llvm::ConstantInt::get(CGM.IntTy, FieldIdx))
+                   : CGF.Builder.CreateStructGEP(LayoutTy, Base.getPointer(CGF),
+                                                 FieldIdx, Field->getName());
+  Address Addr(Ptr, FieldLLVMTy, Align, KnownNonNull);
 
   LValue LV = LValue::MakeAddr(Addr, FieldType, CGM.getContext(),
                                LValueBaseInfo(AlignmentSource::Type),

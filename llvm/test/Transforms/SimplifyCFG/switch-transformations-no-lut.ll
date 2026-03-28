@@ -24,7 +24,7 @@ define i32 @linear_transform_with_default(i32 %x) {
 ; TTINOLUT-NEXT:    [[SWITCH_OFFSET:%.*]] = add nsw i32 [[SWITCH_IDX_MULT]], 1
 ; TTINOLUT-NEXT:    br label %[[END]]
 ; TTINOLUT:       [[END]]:
-; TTINOLUT-NEXT:    [[IDX:%.*]] = phi i32 [ 13, %[[ENTRY]] ], [ [[SWITCH_OFFSET]], %[[SWITCH_LOOKUP]] ]
+; TTINOLUT-NEXT:    [[IDX:%.*]] = phi i32 [ [[SWITCH_OFFSET]], %[[SWITCH_LOOKUP]] ], [ 13, %[[ENTRY]] ]
 ; TTINOLUT-NEXT:    ret i32 [[IDX]]
 ;
 entry:
@@ -182,7 +182,7 @@ define i4 @bitmap_no_default(i32 %x) {
 ; OPTNOLUT:       [[DEFAULT]]:
 ; OPTNOLUT-NEXT:    unreachable
 ; OPTNOLUT:       [[END]]:
-; OPTNOLUT-NEXT:    [[SWITCH_MASKED:%.*]] = phi i4 [ 2, %[[CASE1]] ], [ 4, %[[CASE2]] ], [ -8, %[[CASE3]] ], [ 0, %[[ENTRY]] ]
+; OPTNOLUT-NEXT:    [[SWITCH_MASKED:%.*]] = phi i4 [ -8, %[[CASE3]] ], [ 2, %[[CASE1]] ], [ 4, %[[CASE2]] ], [ 0, %[[ENTRY]] ]
 ; OPTNOLUT-NEXT:    ret i4 [[SWITCH_MASKED]]
 ;
 ; TTINOLUT-LABEL: define i4 @bitmap_no_default(
@@ -237,7 +237,7 @@ define i4 @bitmap_with_default(i32 %x) {
 ; OPTNOLUT:       [[DEFAULT]]:
 ; OPTNOLUT-NEXT:    br label %[[END]]
 ; OPTNOLUT:       [[END]]:
-; OPTNOLUT-NEXT:    [[IDX:%.*]] = phi i4 [ 2, %[[CASE1]] ], [ 4, %[[CASE2]] ], [ -8, %[[CASE3]] ], [ -1, %[[DEFAULT]] ], [ 0, %[[ENTRY]] ]
+; OPTNOLUT-NEXT:    [[IDX:%.*]] = phi i4 [ -1, %[[DEFAULT]] ], [ 2, %[[CASE1]] ], [ 4, %[[CASE2]] ], [ -8, %[[CASE3]] ], [ 0, %[[ENTRY]] ]
 ; OPTNOLUT-NEXT:    ret i4 [[IDX]]
 ;
 ; TTINOLUT-LABEL: define i4 @bitmap_with_default(
@@ -427,13 +427,9 @@ define i1 @single_value_with_mask(i32 %x) {
 ; TTINOLUT-NEXT:    [[SWITCH_SHIFTED:%.*]] = lshr i64 4294967333, [[SWITCH_MASKINDEX]]
 ; TTINOLUT-NEXT:    [[SWITCH_LOBIT:%.*]] = trunc i64 [[SWITCH_SHIFTED]] to i1
 ; TTINOLUT-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP0]], i1 [[SWITCH_LOBIT]], i1 false
-; TTINOLUT-NEXT:    br i1 [[OR_COND]], label %[[END:.*]], label %[[DEFAULT:.*]]
-; TTINOLUT:       [[DEFAULT]]:
 ; TTINOLUT-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], 80
 ; TTINOLUT-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i1 false, i1 true
-; TTINOLUT-NEXT:    br label %[[END]]
-; TTINOLUT:       [[END]]:
-; TTINOLUT-NEXT:    [[RES:%.*]] = phi i1 [ [[SEL]], %[[DEFAULT]] ], [ false, %[[ENTRY]] ]
+; TTINOLUT-NEXT:    [[RES:%.*]] = select i1 [[OR_COND]], i1 false, i1 [[SEL]]
 ; TTINOLUT-NEXT:    ret i1 [[RES]]
 ;
 entry:

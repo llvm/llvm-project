@@ -48,9 +48,9 @@ ENUM_CLASS(Intent, Default, In, Out, InOut)
 // Union of specifiers for all I/O statements.
 ENUM_CLASS(IoSpecKind, Access, Action, Advance, Asynchronous, Blank, Decimal,
     Delim, Direct, Encoding, End, Eor, Err, Exist, File, Fmt, Form, Formatted,
-    Id, Iomsg, Iostat, Name, Named, Newunit, Nextrec, Nml, Number, Opened, Pad,
-    Pending, Pos, Position, Read, Readwrite, Rec, Recl, Round, Sequential, Sign,
-    Size, Status, Stream, Unformatted, Unit, Write,
+    Id, Iomsg, Iostat, Leading_Zero, Name, Named, Newunit, Nextrec, Nml, Number,
+    Opened, Pad, Pending, Pos, Position, Read, Readwrite, Rec, Recl, Round,
+    Sequential, Sign, Size, Status, Stream, Unformatted, Unit, Write,
     Carriagecontrol, // nonstandard
     Convert, // nonstandard
     Dispose, // nonstandard
@@ -71,6 +71,9 @@ ENUM_CLASS(
 // OpenACC device types
 ENUM_CLASS(
     OpenACCDeviceType, Star, Default, Nvidia, Radeon, Host, Multicore, None)
+
+// OpenMP dependence kinds
+ENUM_CLASS(OmpDependenceKind, In, Out, Inout, Inoutset, Mutexinoutset, Depobj)
 
 // OpenMP memory-order types
 ENUM_CLASS(OmpMemoryOrderType, Acq_Rel, Acquire, Relaxed, Release, Seq_Cst)

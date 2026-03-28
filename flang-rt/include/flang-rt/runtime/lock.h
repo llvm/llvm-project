@@ -16,7 +16,7 @@
 
 // Avoid <mutex> if possible to avoid introduction of C++ runtime
 // library dependence.
-#ifndef _WIN32
+#if !defined(_WIN32) && !RT_GPU_TARGET
 #define USE_PTHREADS 1
 #else
 #undef USE_PTHREADS

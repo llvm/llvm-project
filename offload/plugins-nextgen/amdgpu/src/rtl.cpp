@@ -75,6 +75,7 @@
 #include "hsa/hsa_ext_amd.h"
 #endif
 
+using namespace llvm::offload::debug;
 using namespace error;
 
 namespace llvm {
@@ -502,6 +503,16 @@ struct AMDGPUDeviceImageTy : public DeviceImageTy {
     return It->second;
   }
 
+  /// Return the maximum wavefront size across all known kernels in this image.
+  uint32_t getMaxWavefrontSize() const {
+    uint32_t Max = 0;
+    for (const auto &[Name, Info] : KernelInfoMap)
+      if (Info.WavefrontSize !=
+          offloading::amdgpu::AMDGPUKernelMetaData::KInvalidValue)
+        Max = std::max(Max, Info.WavefrontSize);
+    return Max;
+  }
+
 private:
   /// The executable loaded on the agent.
   hsa_executable_t Executable;
@@ -548,6 +559,9 @@ struct AMDGPUKernelTy : public GenericKernelTy {
         return Err;
     }
 
+    // Set the static block memory size required by the kernel.
+    StaticBlockMemSize = GroupSize;
+
     // Make sure it is a kernel symbol.
     if (SymbolType != HSA_SYMBOL_KIND_KERNEL)
       return Plugin::error(ErrorCode::INVALID_BINARY,
@@ -558,7 +572,7 @@ struct AMDGPUKernelTy : public GenericKernelTy {
 
     ImplicitArgsSize =
         hsa_utils::getImplicitArgsSize(AMDImage.getELFABIVersion());
-    DP("ELFABIVersion: %d\n", AMDImage.getELFABIVersion());
+    ODBG(OLDT_Module) << "ELFABIVersion: " << AMDImage.getELFABIVersion();
 
     // Get additional kernel info read from image
     KernelInfo = AMDImage.getKernelInfo(getName());
@@ -571,8 +585,8 @@ struct AMDGPUKernelTy : public GenericKernelTy {
 
   /// Launch the AMDGPU kernel function.
   Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads[3],
-                   uint32_t NumBlocks[3], KernelArgsTy &KernelArgs,
-                   KernelLaunchParamsTy LaunchParams,
+                   uint32_t NumBlocks[3], uint32_t DynBlockMemSize,
+                   KernelArgsTy &KernelArgs, KernelLaunchParamsTy LaunchParams,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override;
 
   /// Return maximum block size for maximum occupancy
@@ -1127,7 +1141,7 @@ private:
     // Set the output signal of the current slot.
     Slots[Curr].Signal = OutputSignal;
 
-    return std::make_pair(Curr, InputSignal);
+    return {Curr, InputSignal};
   }
 
   /// Complete all pending post actions and reset the stream after synchronizing
@@ -1960,7 +1974,7 @@ struct AMDHostDeviceTy : public AMDGenericDeviceTy {
                   const llvm::SmallVector<hsa_agent_t> &HostAgents)
       : AMDGenericDeviceTy(), Agents(HostAgents), ArgsMemoryManager(Plugin),
         PinnedMemoryManager(Plugin) {
-    assert(HostAgents.size() && "No host agent found");
+    assert(!HostAgents.empty() && "No host agent found");
   }
 
   /// Initialize the host device memory pools and the memory managers for
@@ -2351,6 +2365,11 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return getHardwareParallelism();
   }
 
+  /// In cases of mixed wave32 and wave64 code we need to over-alloacte memory.
+  uint32_t getRPCNumLanes() const override {
+    return MaxWavefrontSize ? MaxWavefrontSize : getWarpSize();
+  }
+
   /// Get the stream of the asynchronous info structure or get a new one.
   Error getStream(AsyncInfoWrapperTy &AsyncInfoWrapper,
                   AMDGPUStreamTy *&Stream) {
@@ -2373,6 +2392,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     // Load the HSA executable.
     if (Error Err = AMDImage->loadExecutable(*this))
       return std::move(Err);
+
+    if (uint32_t WFS = AMDImage->getMaxWavefrontSize())
+      MaxWavefrontSize = std::max(MaxWavefrontSize, WFS);
 
     return AMDImage;
   }
@@ -2430,7 +2452,10 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
 
   /// Query for the completion of the pending operations on the async info.
-  Error queryAsyncImpl(__tgt_async_info &AsyncInfo) override {
+  Error queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
+                       bool *IsQueueWorkCompleted) override {
+    if (IsQueueWorkCompleted)
+      *IsQueueWorkCompleted = false;
     AMDGPUStreamTy *Stream =
         reinterpret_cast<AMDGPUStreamTy *>(AsyncInfo.Queue);
     assert(Stream && "Invalid stream");
@@ -2443,11 +2468,16 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     if (!(*CompletedOrErr))
       return Plugin::success();
 
+    if (IsQueueWorkCompleted)
+      *IsQueueWorkCompleted = true;
     // Once the stream is completed, return it to stream pool and reset
     // AsyncInfo. This is to make sure the synchronization only works for its
     // own tasks.
-    AsyncInfo.Queue = nullptr;
-    return AMDGPUStreamManager.returnResource(Stream);
+    if (ReleaseQueue) {
+      AsyncInfo.Queue = nullptr;
+      return AMDGPUStreamManager.returnResource(Stream);
+    }
+    return Plugin::success();
   }
 
   /// Pin the host buffer and return the device pointer that should be used for
@@ -3193,7 +3223,7 @@ private:
     KernelArgsTy KernelArgs = {};
     uint32_t NumBlocksAndThreads[3] = {1u, 1u, 1u};
     if (auto Err = AMDGPUKernel.launchImpl(
-            *this, NumBlocksAndThreads, NumBlocksAndThreads, KernelArgs,
+            *this, NumBlocksAndThreads, NumBlocksAndThreads, 0, KernelArgs,
             KernelLaunchParamsTy{}, AsyncInfoWrapper))
       return Err;
 
@@ -3319,6 +3349,9 @@ private:
 
   /// The total number of concurrent work items that can be running on the GPU.
   uint64_t HardwareParallelism;
+
+  /// The largest wavefront size across all loaded images, used for RPC.
+  uint32_t MaxWavefrontSize = 0;
 
   /// Reference to the host device.
   AMDHostDeviceTy &HostDevice;
@@ -3488,7 +3521,7 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     hsa_status_t Status = hsa_init();
     if (Status != HSA_STATUS_SUCCESS) {
       // Cannot call hsa_success_string.
-      DP("Failed to initialize AMDGPU's HSA library\n");
+      ODBG(OLDT_Init) << "Failed to initialize AMDGPU's HSA library";
       return 0;
     }
 
@@ -3533,7 +3566,7 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     int32_t NumDevices = KernelAgents.size();
     if (NumDevices == 0) {
       // Do not initialize if there are no devices.
-      DP("There are no devices supporting AMDGPU.\n");
+      ODBG(OLDT_Init) << "There are no devices supporting AMDGPU.";
       return 0;
     }
 
@@ -3633,6 +3666,54 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     return KernelAgents;
   }
 
+  /// Create an HSA signal for the RPC doorbell and return the fields needed
+  /// for the GPU to fire interrupts that wake the server thread.
+  Error initRPCDoorbell(uint64_t *&Value, uint64_t *&Mailbox,
+                        uint32_t &EventID) override {
+    // Lazily initialize the RPC signal on first use so we don't leak an HSA
+    // signal when no device uses RPC.
+    {
+      const std::lock_guard<std::mutex> Lock(RPCSignalMutex);
+      if (!RPCSignal.get().handle) {
+        if (auto Err = RPCSignal.init(0))
+          return Err;
+      }
+    }
+
+    // Pull out the necessary fields to communicate with the signal from the
+    // device. These are not exposed but are unlikely to be changed.
+    struct AMDSignal {
+      int64_t kind;
+      int64_t value;
+      uint64_t event_mailbox_ptr;
+      uint32_t event_id;
+    };
+    auto *Doorbell = reinterpret_cast<AMDSignal *>(RPCSignal.get().handle);
+
+    // The event ID corresponds do the HSA signal's slot in the interrupt list.
+    Value = reinterpret_cast<uint64_t *>(&Doorbell->value);
+    Mailbox = reinterpret_cast<uint64_t *>(Doorbell->event_mailbox_ptr);
+    EventID = Doorbell->event_id;
+
+    hsa_signal_t Signal = RPCSignal.get();
+    getRPCServer().setSleepFunction(
+        [Signal]() {
+          hsa_signal_wait_scacquire(Signal, HSA_SIGNAL_CONDITION_NE, 0,
+                                    /*timeout_hint=*/UINT64_MAX,
+                                    HSA_WAIT_STATE_BLOCKED);
+        },
+        [Signal]() { hsa_signal_store_screlease(Signal, 1); });
+
+    return Plugin::success();
+  }
+
+  Error deinitRPCDoorbell() override {
+    const std::lock_guard<std::mutex> Lock(RPCSignalMutex);
+    if (RPCSignal.get().handle)
+      return RPCSignal.deinit();
+    return Plugin::success();
+  }
+
 private:
   /// Event handler that will be called by ROCr if an event is detected.
   static hsa_status_t eventHandler(const hsa_amd_event_t *Event,
@@ -3719,12 +3800,17 @@ private:
   /// only iterating functions. We cache the agents here for convenience.
   llvm::SmallVector<hsa_agent_t> KernelAgents;
 
+  /// HSA signal used as the RPC doorbell for GPU-to-host interrupts.
+  AMDGPUSignalTy RPCSignal;
+  std::mutex RPCSignalMutex;
+
   /// The device representing all HSA host agents.
   AMDHostDeviceTy *HostDevice;
 };
 
 Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                  uint32_t NumThreads[3], uint32_t NumBlocks[3],
+                                 uint32_t DynBlockMemSize,
                                  KernelArgsTy &KernelArgs,
                                  KernelLaunchParamsTy LaunchParams,
                                  AsyncInfoWrapperTy &AsyncInfoWrapper) const {
@@ -3736,13 +3822,6 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   void *AllArgs = nullptr;
   if (auto Err = ArgsMemoryManager.allocate(ArgsSize, &AllArgs))
     return Err;
-
-  // Account for user requested dynamic shared memory.
-  uint32_t GroupSize = getGroupSize();
-  if (uint32_t MaxDynCGroupMem = std::max(
-          KernelArgs.DynCGroupMem, GenericDevice.getDynamicMemorySize())) {
-    GroupSize += MaxDynCGroupMem;
-  }
 
   uint64_t StackSize;
   if (auto Err = GenericDevice.getDeviceStackSize(StackSize))
@@ -3795,9 +3874,13 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                            KernelArgs.DynCGroupMem);
   }
 
+  // HSA requires the group segment size to include both static and dynamic.
+  uint32_t TotalBlockMemSize = getStaticBlockMemSize() + DynBlockMemSize;
+
   // Push the kernel launch into the stream.
   return Stream->pushKernelLaunch(*this, AllArgs, NumThreads, NumBlocks,
-                                  GroupSize, StackSize, ArgsMemoryManager);
+                                  TotalBlockMemSize, StackSize,
+                                  ArgsMemoryManager);
 }
 
 Error AMDGPUKernelTy::printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
@@ -3860,7 +3943,7 @@ static Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
   const char *Desc = "unknown error";
   hsa_status_t Ret = hsa_status_string(ResultCode, &Desc);
   if (Ret != HSA_STATUS_SUCCESS)
-    REPORT("Unrecognized " GETNAME(TARGET_NAME) " error code %d\n", Code);
+    REPORT() << "Unrecognized " GETNAME(TARGET_NAME) " error code " << Code;
 
   // TODO: Add more entries to this switch
   ErrorCode OffloadErrCode;

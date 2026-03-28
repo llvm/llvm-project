@@ -71,8 +71,6 @@ std::pair<uint32_t, uint32_t>
 ABIAArch64::GetEHAndDWARFNums(llvm::StringRef name) {
   if (name == "pc")
     return {arm64_ehframe::pc, arm64_dwarf::pc};
-  if (name == "cpsr")
-    return {arm64_ehframe::cpsr, arm64_dwarf::cpsr};
   return MCBasedABI::GetEHAndDWARFNums(name);
 }
 

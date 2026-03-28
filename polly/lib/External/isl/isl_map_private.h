@@ -22,6 +22,7 @@
 #include <isl/vec.h>
 #include <isl/hash.h>
 #include <isl_blk.h>
+#include <isl_maybe_aff.h>
 
 /* A "basic map" is a relation between two sets of variables,
  * called the "in" and "out" variables.
@@ -230,6 +231,8 @@ __isl_give isl_basic_map *isl_basic_map_free_inequality(
 int isl_basic_map_alloc_div(__isl_keep isl_basic_map *bmap);
 __isl_give isl_basic_map *isl_basic_map_insert_div(
 	__isl_take isl_basic_map *bmap, int pos, __isl_keep isl_vec *div);
+__isl_give isl_basic_set *isl_basic_set_insert_div(
+	__isl_take isl_basic_set *bset, int pos, __isl_keep isl_vec *div);
 int isl_basic_set_alloc_div(__isl_keep isl_basic_set *bset);
 isl_stat isl_basic_map_free_div(__isl_keep isl_basic_map *bmap, unsigned n);
 __isl_give isl_basic_map *isl_basic_map_drop_div(
@@ -342,6 +345,9 @@ __isl_give isl_map *isl_map_drop(__isl_take isl_map *map,
 __isl_give isl_basic_map *isl_basic_map_drop_unrelated_constraints(
 	__isl_take isl_basic_map *bmap, __isl_take int *group);
 
+__isl_give isl_basic_map *isl_basic_map_remove_unknown_divs(
+	__isl_take isl_basic_map *bmap);
+
 __isl_give isl_basic_map *isl_basic_map_eliminate_pure_unit_divs(
 	__isl_take isl_basic_map *bmap);
 __isl_give isl_basic_map *isl_basic_map_remove_duplicate_constraints(
@@ -371,6 +377,8 @@ __isl_give isl_basic_map *isl_basic_map_add_div_constraint(
 	__isl_take isl_basic_map *bmap, unsigned div, int sign);
 __isl_give isl_basic_map *isl_basic_map_add_div_constraints(
 	__isl_take isl_basic_map *bmap, unsigned div);
+__isl_give isl_basic_set *isl_basic_set_add_div_constraints(
+	__isl_take isl_basic_set *bset, unsigned pos);
 __isl_give isl_basic_map *isl_basic_map_add_known_div_constraints(
 	__isl_take isl_basic_map *bmap);
 __isl_give isl_basic_map *isl_basic_map_drop_redundant_divs(
@@ -453,6 +461,8 @@ isl_size isl_basic_map_n_equality(__isl_keep isl_basic_map *bmap);
 isl_size isl_basic_set_n_inequality(__isl_keep isl_basic_set *bset);
 isl_size isl_basic_map_n_inequality(__isl_keep isl_basic_map *bmap);
 
+isl_bool isl_basic_map_div_is_integral(__isl_keep isl_basic_map *bmap, int div);
+
 __isl_give isl_basic_map *isl_basic_map_mark_div_unknown(
 	__isl_take isl_basic_map *bmap, int div);
 isl_bool isl_basic_map_div_is_marked_unknown(__isl_keep isl_basic_map *bmap,
@@ -511,6 +521,7 @@ isl_bool isl_map_compatible_range(__isl_keep isl_map *map,
 isl_bool isl_basic_map_plain_is_non_empty(__isl_keep isl_basic_map *bmap);
 isl_bool isl_basic_map_plain_is_single_valued(__isl_keep isl_basic_map *bmap);
 
+isl_bool isl_basic_map_is_set(__isl_keep isl_basic_map *bmap);
 isl_bool isl_map_is_set(__isl_keep isl_map *map);
 isl_bool isl_map_is_params(__isl_keep isl_map *map);
 
@@ -582,6 +593,23 @@ isl_stat isl_map_check_equal_space(__isl_keep isl_map *map1,
 
 isl_bool isl_basic_map_applies_range(__isl_keep isl_basic_map *bmap1,
 	__isl_keep isl_basic_map *bmap2);
+
+__isl_give isl_vec *isl_basic_map_inequality_extract_output_upper_bound(
+	__isl_keep isl_basic_map *bmap, int ineq, int pos);
+
+isl_bool isl_basic_map_div_expr_involves_vars(__isl_keep isl_basic_map *bmap,
+	int div, unsigned first, unsigned n);
+isl_bool isl_basic_map_any_div_involves_vars(__isl_keep isl_basic_map *bmap,
+	unsigned first, unsigned n);
+
+isl_size isl_basic_map_find_output_upper_div_constraint(
+	__isl_keep isl_basic_map *bmap, int pos);
+__isl_give isl_maybe_isl_aff isl_basic_map_try_find_output_mod(
+	__isl_keep isl_basic_map *bmap, int pos);
+__isl_give isl_maybe_isl_aff isl_basic_map_try_find_output_div_mod(
+	__isl_keep isl_basic_map *bmap, int pos);
+__isl_give isl_maybe_isl_aff isl_basic_map_try_find_any_output_div_mod(
+	__isl_keep isl_basic_map *bmap, int *pos);
 
 __isl_give isl_mat *isl_basic_set_extract_equalities(
 	__isl_keep isl_basic_set *bset);

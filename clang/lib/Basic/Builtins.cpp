@@ -383,6 +383,51 @@ bool Builtin::Context::isScanfLike(unsigned ID, unsigned &FormatIdx,
   return isLike(ID, FormatIdx, HasVAListArg, "sS");
 }
 
+static void parseCommaSeparatedIndices(const char *CurrPos,
+                                       llvm::SmallVectorImpl<int> &Indxs) {
+  assert(*CurrPos == '<' && "Expected '<' to start index list");
+  ++CurrPos;
+
+  char *EndPos;
+  int PosIdx = ::strtol(CurrPos, &EndPos, 10);
+  assert(PosIdx >= 0 && "Index is supposed to be positive!");
+  Indxs.push_back(PosIdx);
+
+  while (*EndPos == ',') {
+    const char *PayloadPos = EndPos + 1;
+
+    int PayloadIdx = ::strtol(PayloadPos, &EndPos, 10);
+    Indxs.push_back(PayloadIdx);
+  }
+
+  assert(*EndPos == '>' && "Index list must end with '>'");
+}
+
+bool Builtin::Context::isNonNull(unsigned ID, llvm::SmallVectorImpl<int> &Indxs,
+                                 Info::NonNullMode &Mode) const {
+
+  const char *AttrPos = ::strchr(getAttributesString(ID), 'N');
+  if (!AttrPos)
+    return false;
+
+  ++AttrPos;
+  assert(*AttrPos == ':' && "Format specifier must be followed by a ':'");
+  ++AttrPos;
+  if (*AttrPos == '0')
+    Mode = Info::NonNullMode::NonOptimizing;
+  else if (*AttrPos == '1')
+    Mode = Info::NonNullMode::Optimizing;
+  else
+    llvm_unreachable("Unrecognized NonNull optimization mode");
+  ++AttrPos; // skip mode
+  assert(*AttrPos == ':' && "Mode must be followed by a ':'");
+  ++AttrPos;
+
+  parseCommaSeparatedIndices(AttrPos, Indxs);
+
+  return true;
+}
+
 bool Builtin::Context::performsCallback(unsigned ID,
                                         SmallVectorImpl<int> &Encoding) const {
   const char *CalleePos = ::strchr(getAttributesString(ID), 'C');
@@ -390,23 +435,8 @@ bool Builtin::Context::performsCallback(unsigned ID,
     return false;
 
   ++CalleePos;
-  assert(*CalleePos == '<' &&
-         "Callback callee specifier must be followed by a '<'");
-  ++CalleePos;
+  parseCommaSeparatedIndices(CalleePos, Encoding);
 
-  char *EndPos;
-  int CalleeIdx = ::strtol(CalleePos, &EndPos, 10);
-  assert(CalleeIdx >= 0 && "Callee index is supposed to be positive!");
-  Encoding.push_back(CalleeIdx);
-
-  while (*EndPos == ',') {
-    const char *PayloadPos = EndPos + 1;
-
-    int PayloadIdx = ::strtol(PayloadPos, &EndPos, 10);
-    Encoding.push_back(PayloadIdx);
-  }
-
-  assert(*EndPos == '>' && "Callback callee specifier must end with a '>'");
   return true;
 }
 

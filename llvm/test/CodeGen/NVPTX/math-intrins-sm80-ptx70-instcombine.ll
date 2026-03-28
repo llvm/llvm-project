@@ -318,5 +318,5 @@ define <2 x half> @fma_rn_ftz_f16x2_no_attr(<2 x half> %0, <2 x half> %1, <2 x h
   ret <2 x half> %res
 }
 
-attributes #0 = { "denormal-fp-math"="preserve-sign" }
-attributes #1 = { "denormal-fp-math-f32"="preserve-sign" }
+attributes #0 = { denormal_fpenv(preservesign) }
+attributes #1 = { denormal_fpenv(float: preservesign) }

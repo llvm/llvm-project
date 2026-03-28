@@ -2,8 +2,6 @@
 ; RUN: sed 's/iXLen/i32/g' %s | llc -mtriple=riscv32 -mattr=+v -verify-machineinstrs | FileCheck %s
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+v -verify-machineinstrs | FileCheck %s
 
-declare <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, iXLen)
-
 define <vscale x 4 x i32> @different_imm_vl_with_ta(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl1, iXLen %vl2) {
 ; CHECK-LABEL: different_imm_vl_with_ta:
 ; CHECK:       # %bb.0:
@@ -349,4 +347,30 @@ entry:
   %3 = call <vscale x 2 x i64> @llvm.riscv.vmerge(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i64> %2, <vscale x 2 x i64> zeroinitializer, <vscale x 2 x i1> splat (i1 true), iXLen 0)
 
   ret <vscale x 2 x i64> %3
+}
+
+; TODO: We can reduce vlseg2e8.v's vl to a1.
+define void @vlseg2(ptr %p, iXLen %vl) {
+; CHECK-LABEL: vlseg2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vlseg2e32.v v8, (a0)
+; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; CHECK-NEXT:    vsseg2e32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %x = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vlseg2(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) poison, ptr %p, iXLen -1, iXLen 5)
+  call void @llvm.riscv.vsseg2(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) %x, ptr %p, iXLen %vl, iXLen 5)
+  ret void
+}
+
+define <vscale x 4 x i32> @vl1(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl1, iXLen %vl2) {
+; CHECK-LABEL: vl1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e32, m2, ta, ma
+; CHECK-NEXT:    vadd.vv v8, v10, v12
+; CHECK-NEXT:    vadd.vv v8, v8, v10
+; CHECK-NEXT:    ret
+  %v = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen 1)
+  %w = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %v, <vscale x 4 x i32> %a, iXLen 0)
+  ret <vscale x 4 x i32> %w
 }

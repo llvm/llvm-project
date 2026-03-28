@@ -76,24 +76,62 @@ acc.loop {
 
 // -----
 
-// expected-error@+1 {{'acc.loop' op duplicate device_type found in gang attribute}}
+// expected-error@+1 {{'acc.loop' op duplicate device_type `none` found in gang attribute}}
 acc.loop {
   acc.yield
 } attributes {gang = [#acc.device_type<none>, #acc.device_type<none>]}
 
 // -----
 
-// expected-error@+1 {{'acc.loop' op duplicate device_type found in worker attribute}}
+// expected-error@+1 {{'acc.loop' op duplicate device_type `none` found in worker attribute}}
 acc.loop {
   acc.yield
 } attributes {worker = [#acc.device_type<none>, #acc.device_type<none>]}
 
 // -----
 
-// expected-error@+1 {{'acc.loop' op duplicate device_type found in vector attribute}}
+// expected-error@+1 {{'acc.loop' op duplicate device_type `none` found in vector attribute}}
 acc.loop {
   acc.yield
 } attributes {vector = [#acc.device_type<none>, #acc.device_type<none>]}
+
+// -----
+
+// expected-error@+1 {{'acc.loop' op duplicate device_type `nvidia` found in gang attribute}}
+acc.loop {
+  acc.yield
+} attributes {gang = [#acc.device_type<nvidia>, #acc.device_type<nvidia>]}
+
+// -----
+
+// expected-error@+1 {{'acc.loop' op duplicate device_type `none` found in collapseDeviceType attribute}}
+acc.loop {
+  acc.yield
+} attributes {collapse = [1, 1], collapseDeviceType = [#acc.device_type<none>, #acc.device_type<none>], independent = [#acc.device_type<none>]}
+
+// -----
+
+%i64value = arith.constant 1 : i64
+// expected-error@+1 {{'acc.loop' op duplicate device_type `none` found in workerNumOperandsDeviceType attribute}}
+acc.loop worker(%i64value: i64, %i64value: i64) {
+  acc.yield
+} attributes {workerNumOperandsDeviceType = [#acc.device_type<none>, #acc.device_type<none>], independent = [#acc.device_type<none>]}
+
+// -----
+
+%i64value = arith.constant 1 : i64
+// expected-error@+1 {{'acc.loop' op duplicate device_type `none` found in vectorOperandsDeviceType attribute}}
+acc.loop vector(%i64value: i64, %i64value: i64) {
+  acc.yield
+} attributes {vectorOperandsDeviceType = [#acc.device_type<none>, #acc.device_type<none>], independent = [#acc.device_type<none>]}
+
+// -----
+
+func.func @acc_routine_parallelism() -> () {
+  return
+}
+// expected-error@+1 {{only one of `gang`, `worker`, `vector`, `seq` can be present at the same time for device_type `nvidia`}}
+"acc.routine"() <{func_name = @acc_routine_parallelism, sym_name = "acc_routine_parallelism_rout", gang = [#acc.device_type<nvidia>], worker = [#acc.device_type<nvidia>]}> : () -> ()
 
 // -----
 
@@ -916,5 +954,33 @@ func.func @verify_data(%arg0 : memref<i32>) {
   acc.data dataOperands(%arg0 : memref<i32>) {
     acc.terminator
   }
+  return
+}
+
+// -----
+
+func.func @verify_host_data_duplicate_use_device(%arg0 : memref<i32>) {
+  %0 = acc.use_device varPtr(%arg0 : memref<i32>) -> memref<i32>
+  %1 = acc.use_device varPtr(%arg0 : memref<i32>) -> memref<i32>
+// expected-error @below {{duplicate use_device variable}}
+  acc.host_data dataOperands(%0, %1 : memref<i32>, memref<i32>) {
+    acc.terminator
+  }
+  return
+}
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/107027.
+// acc.parallel with async operands but no asyncOperandsDeviceType attribute
+// must produce a diagnostic instead of crashing in verifyDeviceTypeCountMatch.
+
+func.func @verify_parallel_async_missing_device_type(%arg0: i64) {
+// expected-error @below {{async operands count must match async device_type count}}
+  "acc.parallel"(%arg0) <{
+    operandSegmentSizes = array<i32: 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>
+  }> ({
+    acc.yield
+  }) : (i64) -> ()
   return
 }

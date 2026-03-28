@@ -841,6 +841,8 @@ ConstantRange ConstantRange::zeroExtend(uint32_t DstTySize) const {
   if (isEmptySet()) return getEmpty(DstTySize);
 
   unsigned SrcTySize = getBitWidth();
+  if (DstTySize == SrcTySize)
+    return *this;
   assert(SrcTySize < DstTySize && "Not a value extension");
   if (isFullSet() || isUpperWrapped()) {
     // Change into [0, 1 << src bit width)
@@ -858,6 +860,8 @@ ConstantRange ConstantRange::signExtend(uint32_t DstTySize) const {
   if (isEmptySet()) return getEmpty(DstTySize);
 
   unsigned SrcTySize = getBitWidth();
+  if (DstTySize == SrcTySize)
+    return *this;
   assert(SrcTySize < DstTySize && "Not a value extension");
 
   // special case: [X, INT_MIN) -- not really wrapping around
@@ -874,6 +878,8 @@ ConstantRange ConstantRange::signExtend(uint32_t DstTySize) const {
 
 ConstantRange ConstantRange::truncate(uint32_t DstTySize,
                                       unsigned NoWrapKind) const {
+  if (DstTySize == getBitWidth())
+    return *this;
   assert(getBitWidth() > DstTySize && "Not a value truncation");
   if (isEmptySet())
     return getEmpty(DstTySize);
@@ -1856,16 +1862,16 @@ ConstantRange::ashr(const ConstantRange &Other) const {
   APInt max, min;
   if (getSignedMin().isNonNegative()) {
     // Upper and Lower of LHS are non-negative.
-    min = PosMin;
-    max = PosMax;
+    min = std::move(PosMin);
+    max = std::move(PosMax);
   } else if (getSignedMax().isNegative()) {
     // Upper and Lower of LHS are negative.
-    min = NegMin;
-    max = NegMax;
+    min = std::move(NegMin);
+    max = std::move(NegMax);
   } else {
     // Upper is non-negative and Lower is negative.
-    min = NegMin;
-    max = PosMax;
+    min = std::move(NegMin);
+    max = std::move(PosMax);
   }
   return getNonEmpty(std::move(min), std::move(max));
 }

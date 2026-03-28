@@ -48,18 +48,37 @@ bool llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::markDefsDivergent(
 
 template <>
 void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::initialize() {
+  // Pre-populate UniformValues with all register defs. Physical register defs
+  // are included because they are never analyzed for divergence (initialize
+  // and markDefsDivergent skip them), so they must be in UniformValues to
+  // avoid being falsely reported as divergent.
+  for (const MachineBasicBlock &BB : F) {
+    for (const MachineInstr &MI : BB.instrs()) {
+      for (const MachineOperand &Op : MI.all_defs()) {
+        Register Reg = Op.getReg();
+        if (Reg)
+          UniformValues.insert(Reg);
+      }
+    }
+  }
+
   const auto &InstrInfo = *F.getSubtarget().getInstrInfo();
 
   for (const MachineBasicBlock &block : F) {
     for (const MachineInstr &instr : block) {
       auto uniformity = InstrInfo.getInstructionUniformity(instr);
-      if (uniformity == InstructionUniformity::AlwaysUniform) {
-        addUniformOverride(instr);
-        continue;
-      }
 
-      if (uniformity == InstructionUniformity::NeverUniform) {
+      switch (uniformity) {
+      case InstructionUniformity::AlwaysUniform:
+        addUniformOverride(instr);
+        break;
+      case InstructionUniformity::NeverUniform:
         markDivergent(instr);
+        break;
+      case InstructionUniformity::Custom:
+        break;
+      case InstructionUniformity::Default:
+        break;
       }
     }
   }
@@ -148,6 +167,12 @@ bool llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::isDivergentUse(
   return isTemporalDivergent(*UseInstr->getParent(), *DefInstr);
 }
 
+template <>
+bool GenericUniformityAnalysisImpl<MachineSSAContext>::isCustomUniform(
+    const MachineInstr &MI) const {
+  llvm_unreachable("no MIR instructions use Custom uniformity yet");
+}
+
 // This ensures explicit instantiation of
 // GenericUniformityAnalysisImpl::ImplDeleter::operator()
 template class llvm::GenericUniformityInfo<MachineSSAContext>;
@@ -207,9 +232,7 @@ MachineUniformityPrinterPass::run(MachineFunction &MF,
 char MachineUniformityAnalysisPass::ID = 0;
 
 MachineUniformityAnalysisPass::MachineUniformityAnalysisPass()
-    : MachineFunctionPass(ID) {
-  initializeMachineUniformityAnalysisPassPass(*PassRegistry::getPassRegistry());
-}
+    : MachineFunctionPass(ID) {}
 
 INITIALIZE_PASS_BEGIN(MachineUniformityAnalysisPass, "machine-uniformity",
                       "Machine Uniformity Info Analysis", false, true)
@@ -245,10 +268,7 @@ void MachineUniformityAnalysisPass::print(raw_ostream &OS,
 char MachineUniformityInfoPrinterPass::ID = 0;
 
 MachineUniformityInfoPrinterPass::MachineUniformityInfoPrinterPass()
-    : MachineFunctionPass(ID) {
-  initializeMachineUniformityInfoPrinterPassPass(
-      *PassRegistry::getPassRegistry());
-}
+    : MachineFunctionPass(ID) {}
 
 INITIALIZE_PASS_BEGIN(MachineUniformityInfoPrinterPass,
                       "print-machine-uniformity",

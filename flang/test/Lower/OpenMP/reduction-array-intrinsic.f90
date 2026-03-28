@@ -9,7 +9,7 @@ subroutine max_array_reduction(l, r)
   !$omp end parallel
 end subroutine
 
-! CHECK-LABEL:   omp.declare_reduction @max_byref_box_Uxi32 : !fir.ref<!fir.box<!fir.array<?xi32>>> alloc {
+! CHECK-LABEL:   omp.declare_reduction @max_byref_box_Uxi32 : !fir.ref<!fir.box<!fir.array<?xi32>>> {{.*}} alloc {
 ! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.array<?xi32>>
 ! CHECK:           omp.yield(%[[VAL_3]] : !fir.ref<!fir.box<!fir.array<?xi32>>>)
 ! CHECK-LABEL:   } init {
@@ -85,8 +85,7 @@ end subroutine
 ! CHECK-DAG:               %[[VAL_20:.*]] = fir.load %[[VAL_19]] : !fir.ref<i32>
 ! CHECK-DAG:               %[[VAL_21:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_13]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 ! CHECK-DAG:               %[[VAL_22:.*]] = fir.load %[[VAL_21]] : !fir.ref<i32>
-! CHECK:               %[[VAL_23:.*]] = arith.cmpi sgt, %[[VAL_20]], %[[VAL_22]] : i32
-! CHECK:               %[[VAL_24:.*]] = arith.select %[[VAL_23]], %[[VAL_20]], %[[VAL_22]] : i32
+! CHECK:               %[[VAL_24:.*]] = arith.maxsi %[[VAL_20]], %[[VAL_22]] : i32
 ! CHECK:               hlfir.yield_element %[[VAL_24]] : i32
 ! CHECK:             }
 ! CHECK:             %[[VAL_25:.*]] = fir.load %[[VAL_7]]#0 : !fir.ref<!fir.box<!fir.array<?xi32>>>

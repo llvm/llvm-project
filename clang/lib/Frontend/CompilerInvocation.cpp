@@ -27,7 +27,6 @@
 #include "clang/Basic/Version.h"
 #include "clang/Basic/XRayInstr.h"
 #include "clang/Config/config.h"
-#include "clang/Driver/Driver.h"
 #include "clang/Frontend/CommandLineSourceLoc.h"
 #include "clang/Frontend/DependencyOutputOptions.h"
 #include "clang/Frontend/FrontendOptions.h"
@@ -623,6 +622,11 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
     LangOpts.RawStringLiterals = true;
   }
 
+  if (Args.hasArg(OPT_freflection) && !LangOpts.CPlusPlus26) {
+    Diags.Report(diag::err_drv_reflection_requires_cxx26)
+        << Args.getLastArg(options::OPT_freflection)->getAsString(Args);
+  }
+
   LangOpts.NamedLoops =
       Args.hasFlag(OPT_fnamed_loops, OPT_fno_named_loops, LangOpts.C2y);
 
@@ -654,6 +658,18 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
   if (Args.hasArg(OPT_gpu_max_threads_per_block_EQ) && !LangOpts.HIP)
     Diags.Report(diag::warn_ignored_hip_only_option)
         << Args.getLastArg(OPT_gpu_max_threads_per_block_EQ)->getAsString(Args);
+
+  // HLSL invocations should always have -Wconversion, -Wvector-conversion, and
+  // -Wmatrix-conversion by default.
+  if (LangOpts.HLSL) {
+    auto &Warnings = Invocation.getDiagnosticOpts().Warnings;
+    if (!llvm::is_contained(Warnings, "conversion"))
+      Warnings.insert(Warnings.begin(), "conversion");
+    if (!llvm::is_contained(Warnings, "vector-conversion"))
+      Warnings.insert(Warnings.begin(), "vector-conversion");
+    if (!llvm::is_contained(Warnings, "matrix-conversion"))
+      Warnings.insert(Warnings.begin(), "matrix-conversion");
+  }
 
   // When these options are used, the compiler is allowed to apply
   // optimizations that may affect the final result. For example
@@ -2245,7 +2261,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   if (UsingSampleProfile)
     NeedLocTracking = true;
 
-  if (!Opts.StackUsageOutput.empty())
+  if (!Opts.StackUsageFile.empty())
     NeedLocTracking = true;
 
   // If the user requested a flag that requires source locations available in
@@ -2541,6 +2557,10 @@ void CompilerInvocationBase::GenerateDiagnosticArgs(
     if (Prefix != "expected")
       GenerateArg(Consumer, OPT_verify_EQ, Prefix);
 
+  if (Opts.VerifyDirectives) {
+    GenerateArg(Consumer, OPT_verify_directives);
+  }
+
   DiagnosticLevelMask VIU = Opts.getVerifyIgnoreUnexpected();
   if (VIU == DiagnosticLevelMask::None) {
     // This is the default, don't generate anything.
@@ -2639,6 +2659,7 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
   Opts.ShowColors = parseShowColorsArgs(Args, DefaultDiagColor);
 
   Opts.VerifyDiagnostics = Args.hasArg(OPT_verify) || Args.hasArg(OPT_verify_EQ);
+  Opts.VerifyDirectives = Args.hasArg(OPT_verify_directives);
   Opts.VerifyPrefixes = Args.getAllArgValues(OPT_verify_EQ);
   if (Args.hasArg(OPT_verify))
     Opts.VerifyPrefixes.push_back("expected");
@@ -2670,7 +2691,7 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
   return Diags->getNumErrors() == NumErrorsBefore;
 }
 
-unsigned clang::getOptimizationLevel(ArgList &Args, InputKind IK,
+unsigned clang::getOptimizationLevel(const ArgList &Args, InputKind IK,
                                      DiagnosticsEngine &Diags) {
   unsigned DefaultOpt = 0;
   if ((IK.getLanguage() == Language::OpenCL ||
@@ -2709,7 +2730,7 @@ unsigned clang::getOptimizationLevel(ArgList &Args, InputKind IK,
   return DefaultOpt;
 }
 
-unsigned clang::getOptimizationLevelSize(ArgList &Args) {
+unsigned clang::getOptimizationLevelSize(const ArgList &Args) {
   if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
     if (A->getOption().matches(options::OPT_O)) {
       switch (A->getValue()[0]) {
@@ -3273,13 +3294,6 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   return Diags.getNumErrors() == NumErrorsBefore;
 }
 
-std::string CompilerInvocation::GetResourcesPath(const char *Argv0,
-                                                 void *MainAddr) {
-  std::string ClangExecutable =
-      llvm::sys::fs::getMainExecutable(Argv0, MainAddr);
-  return driver::Driver::GetResourcesPath(ClangExecutable);
-}
-
 static void GenerateHeaderSearchArgs(const HeaderSearchOptions &Opts,
                                      ArgumentConsumer Consumer) {
   const HeaderSearchOptions *HeaderSearchOpts = &Opts;
@@ -3701,6 +3715,10 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
       GenerateArg(Consumer, OPT_pic_is_pie);
     for (StringRef Sanitizer : serializeSanitizerKinds(Opts.Sanitize))
       GenerateArg(Consumer, OPT_fsanitize_EQ, Sanitizer);
+    for (StringRef Sanitizer :
+         serializeSanitizerKinds(Opts.UBSanFeatureIgnoredSanitize))
+      GenerateArg(Consumer, OPT_fsanitize_ignore_for_ubsan_feature_EQ,
+                  Sanitizer);
 
     return;
   }
@@ -3900,6 +3918,9 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
 
   for (StringRef Sanitizer : serializeSanitizerKinds(Opts.Sanitize))
     GenerateArg(Consumer, OPT_fsanitize_EQ, Sanitizer);
+  for (StringRef Sanitizer :
+       serializeSanitizerKinds(Opts.UBSanFeatureIgnoredSanitize))
+    GenerateArg(Consumer, OPT_fsanitize_ignore_for_ubsan_feature_EQ, Sanitizer);
 
   // Conflating '-fsanitize-system-ignorelist' and '-fsanitize-ignorelist'.
   for (const std::string &F : Opts.NoSanitizeFiles)
@@ -3956,22 +3977,17 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
                 std::to_string(*Opts.AllocTokenMax));
 
   if (Opts.AllocTokenMode) {
-    StringRef S;
-    switch (*Opts.AllocTokenMode) {
-    case llvm::AllocTokenMode::Increment:
-      S = "increment";
-      break;
-    case llvm::AllocTokenMode::Random:
-      S = "random";
-      break;
-    case llvm::AllocTokenMode::TypeHash:
-      S = "typehash";
-      break;
-    case llvm::AllocTokenMode::TypeHashPointerSplit:
-      S = "typehashpointersplit";
-      break;
-    }
+    StringRef S = llvm::getAllocTokenModeAsString(*Opts.AllocTokenMode);
     GenerateArg(Consumer, OPT_falloc_token_mode_EQ, S);
+  }
+  // Generate args for matrix types.
+  if (Opts.MatrixTypes) {
+    if (Opts.getDefaultMatrixMemoryLayout() ==
+        LangOptions::MatrixMemoryLayout::MatrixColMajor)
+      GenerateArg(Consumer, OPT_fmatrix_memory_layout_EQ, "column-major");
+    if (Opts.getDefaultMatrixMemoryLayout() ==
+        LangOptions::MatrixMemoryLayout::MatrixRowMajor)
+      GenerateArg(Consumer, OPT_fmatrix_memory_layout_EQ, "row-major");
   }
 }
 
@@ -3995,6 +4011,10 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     Opts.PIE = Args.hasArg(OPT_pic_is_pie);
     parseSanitizerKinds("-fsanitize=", Args.getAllArgValues(OPT_fsanitize_EQ),
                         Diags, Opts.Sanitize);
+    parseSanitizerKinds(
+        "-fsanitize-ignore-for-ubsan-feature=",
+        Args.getAllArgValues(OPT_fsanitize_ignore_for_ubsan_feature_EQ), Diags,
+        Opts.UBSanFeatureIgnoredSanitize);
 
     return Diags.getNumErrors() == NumErrorsBefore;
   }
@@ -4412,6 +4432,10 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   // Parse -fsanitize= arguments.
   parseSanitizerKinds("-fsanitize=", Args.getAllArgValues(OPT_fsanitize_EQ),
                       Diags, Opts.Sanitize);
+  parseSanitizerKinds(
+      "-fsanitize-ignore-for-ubsan-feature=",
+      Args.getAllArgValues(OPT_fsanitize_ignore_for_ubsan_feature_EQ), Diags,
+      Opts.UBSanFeatureIgnoredSanitize);
   Opts.NoSanitizeFiles = Args.getAllArgValues(OPT_fsanitize_ignorelist_EQ);
   std::vector<std::string> systemIgnorelists =
       Args.getAllArgValues(OPT_fsanitize_system_ignorelist_EQ);
@@ -4565,6 +4589,27 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       Opts.AllocTokenMode = Mode;
     else
       Diags.Report(diag::err_drv_invalid_value) << Arg->getAsString(Args) << S;
+  }
+
+  // Enable options for matrix types.
+  if (Opts.MatrixTypes) {
+    if (const Arg *A = Args.getLastArg(OPT_fmatrix_memory_layout_EQ)) {
+      StringRef ClangValue = A->getValue();
+      if (ClangValue == "row-major")
+        Opts.setDefaultMatrixMemoryLayout(
+            LangOptions::MatrixMemoryLayout::MatrixRowMajor);
+      else
+        Opts.setDefaultMatrixMemoryLayout(
+            LangOptions::MatrixMemoryLayout::MatrixColMajor);
+
+      for (Arg *A : Args.filtered(options::OPT_mllvm)) {
+        StringRef OptValue = A->getValue();
+        if (OptValue.consume_front("-matrix-default-layout=") &&
+            ClangValue != OptValue)
+          Diags.Report(diag::err_conflicting_matrix_layout_flags)
+              << ClangValue << OptValue;
+      }
+    }
   }
 
   // Validate options for HLSL
@@ -5133,7 +5178,7 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Invocation,
       Invocation, DummyInvocation, CommandLineArgs, Diags, Argv0);
 }
 
-std::string CompilerInvocation::getModuleHash() const {
+std::string CompilerInvocation::computeContextHash() const {
   // FIXME: Consider using SHA1 instead of MD5.
   llvm::HashBuilder<llvm::MD5, llvm::endianness::native> HBuilder;
 

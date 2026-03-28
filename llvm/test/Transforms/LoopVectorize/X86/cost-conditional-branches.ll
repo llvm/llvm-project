@@ -325,13 +325,13 @@ define i64 @avx512_cond_load_cost(ptr %src, i32 %a, i64 %b, i32 %c, i32 %d) #1 {
 ; CHECK-NEXT:    [[TMP68:%.*]] = sext <8 x i32> [[TMP67]] to <8 x i64>
 ; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr { i64, i64, i64 }, ptr [[SRC:%.*]], <8 x i64> [[TMP68]], i32 2
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <8 x i64> @llvm.masked.gather.v8i64.v8p0(<8 x ptr> align 8 [[TMP69]], <8 x i1> [[TMP1]], <8 x i64> poison)
-; CHECK-NEXT:    [[TMP70:%.*]] = or <8 x i64> [[WIDE_MASKED_GATHER]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <8 x i1> [[TMP1]], <8 x i64> [[TMP70]], <8 x i64> zeroinitializer
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 8
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <8 x i32> [[VEC_IND]], splat (i32 8)
 ; CHECK-NEXT:    [[TMP71:%.*]] = icmp eq i32 [[IV_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP71]], label [[MIDDLE_BLOCK:%.*]], label [[LOOP_HEADER]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
+; CHECK-NEXT:    [[TMP73:%.*]] = or <8 x i64> [[WIDE_MASKED_GATHER]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <8 x i1> [[TMP1]], <8 x i64> [[TMP73]], <8 x i64> zeroinitializer
 ; CHECK-NEXT:    [[TMP72:%.*]] = extractelement <8 x i64> [[PREDPHI]], i32 7
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP63]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
@@ -414,7 +414,7 @@ define void @cost_duplicate_recipe_for_sinking(ptr %A, i64 %N) #2 {
 ; CHECK-NEXT:    [[TMP8:%.*]] = shl nsw i64 [[TMP4]], 2
 ; CHECK-NEXT:    [[TMP9:%.*]] = shl nsw i64 [[TMP5]], 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = shl nsw i64 [[TMP6]], 2
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr nusw double, ptr [[A:%.*]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr double, ptr [[A:%.*]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr nusw double, ptr [[A]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr nusw double, ptr [[A]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr nusw double, ptr [[A]], i64 [[TMP10]]
@@ -433,10 +433,7 @@ define void @cost_duplicate_recipe_for_sinking(ptr %A, i64 %N) #2 {
 ; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x i1> [[TMP19]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP23]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP24:%.*]] = shl nsw i64 [[TMP3]], 2
-; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr double, ptr [[A]], i64 [[TMP24]]
-; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP25]], align 8
+; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP11]], align 8
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK:       pred.store.continue:
 ; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <4 x i1> [[TMP19]], i32 1
@@ -592,17 +589,14 @@ define void @cost_duplicate_recipe_for_sinking(ptr %A, i64 %N) #2 {
 ; CHECK:       vec.epilog.vector.body:
 ; CHECK-NEXT:    [[INDEX40:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL1]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT51:%.*]], [[PRED_STORE_CONTINUE50:%.*]] ]
 ; CHECK-NEXT:    [[TMP87:%.*]] = shl nsw i64 [[INDEX40]], 2
-; CHECK-NEXT:    [[TMP89:%.*]] = getelementptr nusw double, ptr [[A]], i64 [[TMP87]]
+; CHECK-NEXT:    [[TMP89:%.*]] = getelementptr double, ptr [[A]], i64 [[TMP87]]
 ; CHECK-NEXT:    [[WIDE_VEC41:%.*]] = load <16 x double>, ptr [[TMP89]], align 8
 ; CHECK-NEXT:    [[STRIDED_VEC42:%.*]] = shufflevector <16 x double> [[WIDE_VEC41]], <16 x double> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
 ; CHECK-NEXT:    [[TMP90:%.*]] = fcmp oeq <4 x double> [[STRIDED_VEC42]], zeroinitializer
 ; CHECK-NEXT:    [[TMP91:%.*]] = extractelement <4 x i1> [[TMP90]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP91]], label [[PRED_STORE_IF43:%.*]], label [[PRED_STORE_CONTINUE44:%.*]]
 ; CHECK:       pred.store.if43:
-; CHECK-NEXT:    [[TMP86:%.*]] = add i64 [[INDEX40]], 0
-; CHECK-NEXT:    [[TMP92:%.*]] = shl nsw i64 [[TMP86]], 2
-; CHECK-NEXT:    [[TMP93:%.*]] = getelementptr double, ptr [[A]], i64 [[TMP92]]
-; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP93]], align 8
+; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP89]], align 8
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE44]]
 ; CHECK:       pred.store.continue44:
 ; CHECK-NEXT:    [[TMP94:%.*]] = extractelement <4 x i1> [[TMP90]], i32 1
@@ -1192,13 +1186,13 @@ define i64 @test_predicated_udiv(i32 %d, i1 %c) #2 {
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE62]]
 ; CHECK:       pred.udiv.continue62:
 ; CHECK-NEXT:    [[TMP161:%.*]] = phi <32 x i32> [ [[TMP156]], [[PRED_UDIV_CONTINUE60]] ], [ [[TMP160]], [[PRED_UDIV_IF61]] ]
-; CHECK-NEXT:    [[TMP162:%.*]] = zext <32 x i32> [[TMP161]] to <32 x i64>
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[C]], <32 x i64> zeroinitializer, <32 x i64> [[TMP162]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 32
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <32 x i32> [[VEC_IND]], splat (i32 32)
 ; CHECK-NEXT:    [[TMP163:%.*]] = icmp eq i32 [[INDEX_NEXT]], 992
 ; CHECK-NEXT:    br i1 [[TMP163]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       middle.block:
+; CHECK-NEXT:    [[TMP207:%.*]] = zext <32 x i32> [[TMP161]] to <32 x i64>
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[C]], <32 x i64> zeroinitializer, <32 x i64> [[TMP207]]
 ; CHECK-NEXT:    [[TMP164:%.*]] = extractelement <32 x i64> [[PREDPHI]], i32 31
 ; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
@@ -1288,13 +1282,13 @@ define i64 @test_predicated_udiv(i32 %d, i1 %c) #2 {
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE84]]
 ; CHECK:       pred.udiv.continue84:
 ; CHECK-NEXT:    [[TMP206:%.*]] = phi <8 x i32> [ [[TMP201]], [[PRED_UDIV_CONTINUE82]] ], [ [[TMP205]], [[PRED_UDIV_IF83]] ]
-; CHECK-NEXT:    [[TMP207:%.*]] = zext <8 x i32> [[TMP206]] to <8 x i64>
-; CHECK-NEXT:    [[PREDPHI85:%.*]] = select i1 [[C]], <8 x i64> zeroinitializer, <8 x i64> [[TMP207]]
 ; CHECK-NEXT:    [[INDEX_NEXT86]] = add nuw i32 [[INDEX67]], 8
 ; CHECK-NEXT:    [[VEC_IND_NEXT87]] = add <8 x i32> [[VEC_IND68]], splat (i32 8)
 ; CHECK-NEXT:    [[TMP208:%.*]] = icmp eq i32 [[INDEX_NEXT86]], 1000
 ; CHECK-NEXT:    br i1 [[TMP208]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
+; CHECK-NEXT:    [[TMP210:%.*]] = zext <8 x i32> [[TMP206]] to <8 x i64>
+; CHECK-NEXT:    [[PREDPHI85:%.*]] = select i1 [[C]], <8 x i64> zeroinitializer, <8 x i64> [[TMP210]]
 ; CHECK-NEXT:    [[TMP209:%.*]] = extractelement <8 x i64> [[PREDPHI85]], i32 7
 ; CHECK-NEXT:    br i1 false, label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:

@@ -35,7 +35,6 @@ define void @conversion_cost1(i32 %n, ptr nocapture %A, ptr nocapture %B) nounwi
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[DOT_CRIT_EDGE_LOOPEXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
-; CHECK-NEXT:    [[IND_END5:%.*]] = add i64 3, [[N_VEC]]
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 4
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       vec.epilog.ph:
@@ -63,7 +62,7 @@ define void @conversion_cost1(i32 %n, ptr nocapture %A, ptr nocapture %B) nounwi
 ; CHECK-NEXT:    [[CMP_N12:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[CMP_N12]], label [[DOT_CRIT_EDGE_LOOPEXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL6:%.*]] = phi i64 [ [[IND_END4]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END5]], [[VEC_EPILOG_ITER_CHECK]] ], [ 3, [[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL6:%.*]] = phi i64 [ [[IND_END4]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END]], [[VEC_EPILOG_ITER_CHECK]] ], [ 3, [[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label [[DOTLR_PH:%.*]]
 ; CHECK:       .lr.ph:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[DOTLR_PH]] ], [ [[BC_RESUME_VAL6]], [[VEC_EPILOG_SCALAR_PH]] ]
@@ -126,9 +125,9 @@ define void @conversion_cost2(i32 %n, ptr nocapture %A, ptr nocapture %B) nounwi
 ; CHECK-NEXT:    [[TMP19:%.*]] = sitofp <2 x i64> [[TMP10]] to <2 x float>
 ; CHECK-NEXT:    [[TMP20:%.*]] = sitofp <2 x i64> [[TMP11]] to <2 x float>
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, ptr [[TMP13]], i32 2
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds float, ptr [[TMP13]], i32 4
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[TMP13]], i32 6
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, ptr [[TMP13]], i64 2
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds float, ptr [[TMP13]], i64 4
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[TMP13]], i64 6
 ; CHECK-NEXT:    store <2 x float> [[TMP12]], ptr [[TMP13]], align 4
 ; CHECK-NEXT:    store <2 x float> [[TMP18]], ptr [[TMP15]], align 4
 ; CHECK-NEXT:    store <2 x float> [[TMP19]], ptr [[TMP16]], align 4

@@ -15,6 +15,7 @@ class Mode(Enum):
 
 
 class LoongArch64LinuxRegisters(TestBase):
+    SHARED_BUILD_TESTCASE = False
     NO_DEBUG_INFO_TESTCASE = True
 
     def get_build_flags(self, mode):

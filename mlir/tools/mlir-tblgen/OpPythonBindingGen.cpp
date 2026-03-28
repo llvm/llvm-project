@@ -16,6 +16,7 @@
 #include "mlir/Support/IndentedOstream.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Operator.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -71,6 +72,15 @@ class {0}(_ods_ir.OpView):{2}
   OPERATION_NAME = "{1}"
 )Py";
 
+/// Template for operation class:
+///   {0} is the Python class name;
+///   {1} is the operation name。
+constexpr const char *opAdaptorClassTemplate = R"Py(
+@_ods_cext.register_op_adaptor({0})
+class {0}Adaptor(_ods_ir.OpAdaptor):
+  OPERATION_NAME = "{1}"
+)Py";
+
 /// Template for class level declarations of operand and result
 /// segment specs.
 ///   {0} is either "OPERAND" or "RESULT"
@@ -99,7 +109,7 @@ constexpr const char *opClassRegionSpecTemplate = R"Py(
 constexpr const char *opSingleTemplate = R"Py(
   @builtins.property
   def {0}(self) -> {3}:
-    return self.operation.{1}s[{2}]
+    return self.{1}s[{2}]
 )Py";
 
 /// Template for single-element accessor after a variable-length group:
@@ -113,8 +123,8 @@ constexpr const char *opSingleTemplate = R"Py(
 constexpr const char *opSingleAfterVariableTemplate = R"Py(
   @builtins.property
   def {0}(self) -> {4}:
-    _ods_variadic_group_length = len(self.operation.{1}s) - {2} + 1
-    return self.operation.{1}s[{3} + _ods_variadic_group_length - 1]
+    _ods_variadic_group_length = len(self.{1}s) - {2} + 1
+    return self.{1}s[{3} + _ods_variadic_group_length - 1]
 )Py";
 
 /// Template for an optional element accessor:
@@ -129,7 +139,7 @@ constexpr const char *opSingleAfterVariableTemplate = R"Py(
 constexpr const char *opOneOptionalTemplate = R"Py(
   @builtins.property
   def {0}(self) -> _Optional[{4}]:
-    return None if len(self.operation.{1}s) < {2} else self.operation.{1}s[{3}]
+    return None if len(self.{1}s) < {2} else self.{1}s[{3}]
 )Py";
 
 /// Template for the variadic group accessor in the single variadic group case:
@@ -141,8 +151,8 @@ constexpr const char *opOneOptionalTemplate = R"Py(
 constexpr const char *opOneVariadicTemplate = R"Py(
   @builtins.property
   def {0}(self) -> {4}:
-    _ods_variadic_group_length = len(self.operation.{1}s) - {2} + 1
-    return self.operation.{1}s[{3}:{3} + _ods_variadic_group_length]
+    _ods_variadic_group_length = len(self.{1}s) - {2} + 1
+    return self.{1}s[{3}:{3} + _ods_variadic_group_length]
 )Py";
 
 /// First part of the template for equally-sized variadic group accessor:
@@ -156,20 +166,20 @@ constexpr const char *opOneVariadicTemplate = R"Py(
 constexpr const char *opVariadicEqualPrefixTemplate = R"Py(
   @builtins.property
   def {0}(self) -> {6}:
-    start, elements_per_group = _ods_equally_sized_accessor(self.operation.{1}s, {2}, {3}, {4}, {5}))Py";
+    start, elements_per_group = _ods_equally_sized_accessor(self.{1}s, {2}, {3}, {4}, {5}))Py";
 
 /// Second part of the template for equally-sized case, accessing a single
 /// element:
 ///   {0} is either 'operand' or 'result'.
 constexpr const char *opVariadicEqualSimpleTemplate = R"Py(
-    return self.operation.{0}s[start]
+    return self.{0}s[start]
 )Py";
 
 /// Second part of the template for equally-sized case, accessing a variadic
 /// group:
 ///   {0} is either 'operand' or 'result'.
 constexpr const char *opVariadicEqualVariadicTemplate = R"Py(
-    return self.operation.{0}s[start:start + elements_per_group]
+    return self.{0}s[start:start + elements_per_group]
 )Py";
 
 /// Template for an attribute-sized group accessor:
@@ -177,14 +187,16 @@ constexpr const char *opVariadicEqualVariadicTemplate = R"Py(
 ///   {1} is either 'operand' or 'result';
 ///   {2} is the position of the group in the group list;
 ///   {3} is a return suffix (expected [0] for single-element, empty for
-///       variadic, and opVariadicSegmentOptionalTrailingTemplate for optional).
-///   {4} is the type hint.
+///       variadic, and opVariadicSegmentOptionalTrailingTemplate for optional);
+///   {4} is the type hint;
+///   {5} is the instance variable name in python;
+///   {6} is the instance variable name for attributes in python.
 constexpr const char *opVariadicSegmentTemplate = R"Py(
   @builtins.property
   def {0}(self) -> {4}:
     {1}_range = _ods_segmented_accessor(
-         self.operation.{1}s,
-         self.operation.attributes["{1}SegmentSizes"], {2})
+         self.{5}s,
+         self.{6}["{1}SegmentSizes"], {2})
     return {1}_range{3}
 )Py";
 
@@ -216,6 +228,28 @@ constexpr const char *optionalAttributeGetterTemplate = R"Py(
     return self.operation.attributes["{1}"]
 )Py";
 
+/// Template for an operation attribute getter for adaptors:
+///   {0} is the name of the attribute sanitized for Python;
+///   {1} is the original name of the attribute.
+///   {2} is the type hint.
+constexpr const char *adaptorAttributeGetterTemplate = R"Py(
+  @builtins.property
+  def {0}(self) -> {2}:
+    return self.attributes["{1}"]
+)Py";
+
+/// Template for an optional operation attribute getter for adaptors:
+///   {0} is the name of the attribute sanitized for Python;
+///   {1} is the original name of the attribute.
+///   {2} is the type hint.
+constexpr const char *adaptorOptionalAttributeGetterTemplate = R"Py(
+  @builtins.property
+  def {0}(self) -> _Optional[{2}]:
+    if "{1}" not in self.attributes:
+      return None
+    return self.attributes["{1}"]
+)Py";
+
 /// Template for a getter of a unit operation attribute, returns True of the
 /// unit attribute is present, False otherwise (unit attributes have meaning
 /// by mere presence):
@@ -225,6 +259,17 @@ constexpr const char *unitAttributeGetterTemplate = R"Py(
   @builtins.property
   def {0}(self) -> bool:
     return "{1}" in self.operation.attributes
+)Py";
+
+/// Template for a getter of a unit operation attribute for adaptors, returns
+/// True of the unit attribute is present, False otherwise (unit attributes have
+/// meaning by mere presence):
+///    {0} is the name of the attribute sanitized for Python,
+///    {1} is the original name of the attribute.
+constexpr const char *adaptorUnitAttributeGetterTemplate = R"Py(
+  @builtins.property
+  def {0}(self) -> bool:
+    return "{1}" in self.attributes
 )Py";
 
 /// Template for an operation attribute setter:
@@ -296,10 +341,13 @@ def {0}({2}) -> _Union[_ods_ir.OpResult, _ods_ir.OpResultList, {1}]:
 static llvm::cl::OptionCategory
     clOpPythonBindingCat("Options for -gen-python-op-bindings");
 
-static llvm::cl::opt<std::string>
+std::string dialectNameStorage;
+
+llvm::cl::opt<std::string, /*ExternalStorage=*/true>
     clDialectName("bind-dialect",
                   llvm::cl::desc("The dialect to run the generator for"),
-                  llvm::cl::init(""), llvm::cl::cat(clOpPythonBindingCat));
+                  llvm::cl::location(dialectNameStorage),
+                  llvm::cl::cat(clOpPythonBindingCat));
 
 static llvm::cl::opt<std::string> clDialectExtensionName(
     "dialect-extension", llvm::cl::desc("The prefix of the dialect extension"),
@@ -364,7 +412,8 @@ static void emitElementAccessors(
     const Operator &op, raw_ostream &os, const char *kind,
     unsigned numVariadicGroups, unsigned numElements,
     llvm::function_ref<const NamedTypeConstraint &(const Operator &, int)>
-        getElement) {
+        getElement,
+    bool isAdaptor = false) {
   assert(llvm::is_contained(SmallVector<StringRef, 2>{"operand", "result"},
                             kind) &&
          "unsupported kind");
@@ -374,6 +423,8 @@ static void emitElementAccessors(
                                       StringRef(kind).take_front().upper(),
                                       StringRef(kind).drop_front());
   std::string attrSizedTrait = attrSizedTraitForKind(kind);
+
+  std::string pyAttrName = isAdaptor ? kind : std::string("operation.") + kind;
 
   // If there is only one variable-length element group, its size can be
   // inferred from the total number of elements. If there are none, the
@@ -393,20 +444,20 @@ static void emitElementAccessors(
         type = llvm::formatv("{0}[{1}]", type, pythonType);
       if (element.isVariableLength()) {
         if (element.isOptional()) {
-          os << formatv(opOneOptionalTemplate, sanitizeName(element.name), kind,
-                        numElements, i, type);
+          os << formatv(opOneOptionalTemplate, sanitizeName(element.name),
+                        pyAttrName, numElements, i, type);
         } else {
           type = std::strcmp(kind, "operand") == 0 ? "_ods_ir.OpOperandList"
                                                    : "_ods_ir.OpResultList";
-          os << formatv(opOneVariadicTemplate, sanitizeName(element.name), kind,
-                        numElements, i, type);
+          os << formatv(opOneVariadicTemplate, sanitizeName(element.name),
+                        pyAttrName, numElements, i, type);
         }
       } else if (seenVariableLength) {
         os << formatv(opSingleAfterVariableTemplate, sanitizeName(element.name),
-                      kind, numElements, i, type);
+                      pyAttrName, numElements, i, type);
       } else {
-        os << formatv(opSingleTemplate, sanitizeName(element.name), kind, i,
-                      type);
+        os << formatv(opSingleTemplate, sanitizeName(element.name), pyAttrName,
+                      i, type);
       }
     }
     return;
@@ -444,12 +495,12 @@ static void emitElementAccessors(
             type += "[" + pythonType.str() + "]";
         }
         os << formatv(opVariadicEqualPrefixTemplate, sanitizeName(element.name),
-                      kind, numSimpleLength, numVariadicGroups,
+                      pyAttrName, numSimpleLength, numVariadicGroups,
                       numPrecedingSimple, numPrecedingVariadic, type);
         os << formatv(element.isVariableLength()
                           ? opVariadicEqualVariadicTemplate
                           : opVariadicEqualSimpleTemplate,
-                      kind);
+                      pyAttrName);
       }
       if (element.isVariableLength())
         ++numPrecedingVariadic;
@@ -490,7 +541,8 @@ static void emitElementAccessors(
       }
 
       os << formatv(opVariadicSegmentTemplate, sanitizeName(element.name), kind,
-                    i, trailing, type);
+                    i, trailing, type, pyAttrName,
+                    isAdaptor ? "attributes" : "operation.attributes");
     }
     return;
   }
@@ -621,6 +673,34 @@ static void emitAttributeAccessors(const Operator &op, raw_ostream &os) {
                     type);
       // Non-optional attributes cannot be deleted.
     }
+  }
+}
+
+/// Emits accessors to Op attributes for adaptors.
+static void emitAdaptorAttributeAccessors(const Operator &op, raw_ostream &os) {
+  for (const auto &namedAttr : op.getAttributes()) {
+    // Skip "derived" attributes because they are just C++ functions that we
+    // don't currently expose.
+    if (namedAttr.attr.isDerivedAttr())
+      continue;
+
+    if (namedAttr.name.empty())
+      continue;
+
+    std::string sanitizedName = sanitizeName(namedAttr.name);
+
+    // Unit attributes are handled specially.
+    if (namedAttr.attr.getStorageType().trim() == "::mlir::UnitAttr") {
+      os << formatv(adaptorUnitAttributeGetterTemplate, sanitizedName,
+                    namedAttr.name);
+      continue;
+    }
+
+    std::string type = "_ods_ir." + getPythonAttrName(namedAttr.attr);
+    os << formatv(namedAttr.attr.isOptional()
+                      ? adaptorOptionalAttributeGetterTemplate
+                      : adaptorAttributeGetterTemplate,
+                  sanitizedName, namedAttr.name, type);
   }
 }
 
@@ -810,11 +890,27 @@ populateBuilderLinesAttr(const Operator &op, ArrayRef<std::string> argNames,
       continue;
     }
 
+    // For EnumAttr-style attributes (those defined as EnumAttr<Dialect, ...>
+    // in tablegen), use a dialect-qualified key ("dialect.AttrName") so the
+    // lookup matches the registration emitted by EnumPythonBindingGen with
+    // -bind-dialect. For all other attributes (plain attrs like I32Attr,
+    // custom AttrDef, etc.), keep the unqualified name to match their
+    // registrations in ir.py or dialect-specific Python files.
+    Attribute baseAttr = attribute->attr.getBaseAttr();
+    Dialect attrDialect = baseAttr.isSubClassOf("EnumAttr")
+                              ? baseAttr.getDialect()
+                              : Dialect(nullptr);
+    std::string attrBuilderKey = attrDialect
+                                     ? formatv("{0}.{1}", attrDialect.getName(),
+                                               attribute->attr.getAttrDefName())
+                                           .str()
+                                     : attribute->attr.getAttrDefName().str();
+
     builderLines.push_back(formatv(
         attribute->attr.isOptional() || attribute->attr.hasDefaultValue()
             ? initOptionalAttributeWithBuilderTemplate
             : initAttributeWithBuilderTemplate,
-        argNames[i], attribute->name, attribute->attr.getAttrDefName()));
+        argNames[i], attribute->name, attrBuilderKey));
   }
 }
 
@@ -886,7 +982,7 @@ constexpr const char *firstAttrDerivedResultTypeTemplate =
   _ods_result_type_source_attr = attributes["{0}"]
   _ods_derived_result_type = (
     _ods_ir.TypeAttr(_ods_result_type_source_attr).value
-    if _ods_ir.TypeAttr.isinstance(_ods_result_type_source_attr) else
+    if isinstance(_ods_result_type_source_attr, _ods_ir.TypeAttr) else
     _ods_result_type_source_attr.type)
   results = [_ods_derived_result_type] * {1})Py";
 
@@ -1076,8 +1172,8 @@ static SmallVector<std::string> emitDefaultOpBuilder(const Operator &op,
 
   os << formatv(initTemplate, llvm::join(functionArgs, ", "),
                 llvm::join(builderLines, "\n    "), llvm::join(initArgs, ", "));
-  return llvm::to_vector<8>(
-      llvm::map_range(functionArgs, [](StringRef s) { return s.str(); }));
+  return llvm::map_to_vector<8>(functionArgs,
+                                [](StringRef s) { return s.str(); });
 }
 
 static void emitSegmentSpec(
@@ -1165,6 +1261,10 @@ static void emitValueBuilder(const Operator &op,
       results = ".results";
     } else if (op.getNumResults() == 1) {
       type = "_ods_ir.OpResult";
+      if (StringRef pythonType =
+              getPythonType(op.getResult(0).constraint.getCppType());
+          !pythonType.empty())
+        type = llvm::formatv("{0}[{1}]", type, pythonType);
       results = ".result";
     }
     os << formatv(valueBuilderTemplate, nameWithoutDialect,
@@ -1193,6 +1293,11 @@ static std::string makeDocStringForOp(const Operator &op) {
   return docString;
 }
 
+static void emitAdaptorOperandAccessors(const Operator &op, raw_ostream &os) {
+  emitElementAccessors(op, os, "operand", op.getNumVariableLengthOperands(),
+                       getNumOperands(op), getOperand, /*isAdaptor=*/true);
+}
+
 /// Emits bindings for a specific Op to the given output stream.
 static void emitOpBindings(const Operator &op, raw_ostream &os) {
   os << formatv(opClassTemplate, op.getCppClassName(), op.getOperationName(),
@@ -1212,6 +1317,12 @@ static void emitOpBindings(const Operator &op, raw_ostream &os) {
   emitAttributeAccessors(op, os);
   emitResultAccessors(op, os);
   emitRegionAccessors(op, os);
+
+  os << formatv(opAdaptorClassTemplate, op.getCppClassName(),
+                op.getOperationName());
+  emitAdaptorOperandAccessors(op, os);
+  emitAdaptorAttributeAccessors(op, os);
+
   emitValueBuilder(op, functionArgs, os);
 }
 
@@ -1219,18 +1330,18 @@ static void emitOpBindings(const Operator &op, raw_ostream &os) {
 /// headers and utilities. Returns `false` on success to comply with Tablegen
 /// registration requirements.
 static bool emitAllOps(const RecordKeeper &records, raw_ostream &os) {
-  if (clDialectName.empty())
+  if (dialectNameStorage.empty())
     llvm::PrintFatalError("dialect name not provided");
 
   os << fileHeader;
   if (!clDialectExtensionName.empty())
-    os << formatv(dialectExtensionTemplate, clDialectName.getValue());
+    os << formatv(dialectExtensionTemplate, dialectNameStorage);
   else
-    os << formatv(dialectClassTemplate, clDialectName.getValue());
+    os << formatv(dialectClassTemplate, dialectNameStorage);
 
   for (const Record *rec : records.getAllDerivedDefinitions("Op")) {
     Operator op(rec);
-    if (op.getDialectName() == clDialectName.getValue())
+    if (op.getDialectName() == dialectNameStorage)
       emitOpBindings(op, os);
   }
   return false;

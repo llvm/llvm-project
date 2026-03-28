@@ -69,12 +69,33 @@ class Process;
 class Stream;
 class SymbolContext;
 class Target;
+class Debugger;
 
-/// \class Debugger Debugger.h "lldb/Core/Debugger.h"
+#ifndef NDEBUG
+/// Global properties used in the LLDB testsuite.
+struct TestingProperties : public Properties {
+  TestingProperties();
+  bool GetInjectVarLocListError() const;
+  static TestingProperties &GetGlobalTestingProperties();
+
+  /// Overwrites the testing.safe-auto-load-paths settings.
+  void SetSafeAutoLoadPaths(FileSpecList paths);
+
+  /// Appends a path to the testing.safe-auto-load-paths setting.
+  void AppendSafeAutoLoadPaths(FileSpec path);
+
+private:
+  friend Debugger;
+
+  /// Callers should use Debugger::GetSafeAutoLoadPaths since it
+  /// accounts for default paths configured via CMake.
+  FileSpecList GetSafeAutoLoadPaths() const;
+};
+#endif
+
 /// A class to manage flag bits.
 ///
 /// Provides a global root objects for the debugger core.
-
 class Debugger : public std::enable_shared_from_this<Debugger>,
                  public UserID,
                  public Properties {
@@ -93,10 +114,6 @@ public:
   CreateInstance(lldb::LogOutputCallback log_callback = nullptr,
                  void *baton = nullptr);
 
-  static lldb::TargetSP FindTargetWithProcessID(lldb::pid_t pid);
-
-  static lldb::TargetSP FindTargetWithProcess(Process *process);
-
   static void Initialize(LoadPluginCallbackType load_plugin_callback);
 
   static void Terminate();
@@ -106,6 +123,9 @@ public:
   static void SettingsTerminate();
 
   static void Destroy(lldb::DebuggerSP &debugger_sp);
+
+  /// Get the build configuration as structured data.
+  static StructuredData::DictionarySP GetBuildConfiguration();
 
   static lldb::DebuggerSP FindDebuggerWithID(lldb::user_id_t id);
 
@@ -124,6 +144,12 @@ public:
 
   static void AssertCallback(llvm::StringRef message, llvm::StringRef backtrace,
                              llvm::StringRef prompt);
+
+  /// Get the list of paths that LLDB will consider automatically loading
+  /// scripting resources from. Currently whether to load scripts
+  /// unconditionally is controlled via the
+  /// `target.load-script-from-symbol-file` setting.
+  static FileSpecList GetSafeAutoLoadPaths();
 
   void Clear();
 
@@ -336,6 +362,8 @@ public:
   bool GetUseSourceCache() const;
 
   bool SetUseSourceCache(bool use_source_cache);
+
+  bool GetMarkHiddenFrames() const;
 
   bool GetHighlightSource() const;
 

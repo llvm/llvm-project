@@ -129,8 +129,7 @@ static std::optional<parser::Message> WhyNotDefinableBase(parser::CharBlock at,
         at, "'%s' is an INTENT(IN) dummy argument"_en_US, original);
   } else if (acceptAllocatable && IsAllocatable(ultimate) &&
       !flags.test(DefinabilityFlag::SourcedAllocation)) {
-    // allocating a function result doesn't count as a def'n
-    // unless there's SOURCE=
+    // allocating an allocatable doesn't count as a def'n unless there's SOURCE=
   } else if (!flags.test(DefinabilityFlag::DoNotNoteDefinition)) {
     scope.context().NoteDefinedSymbol(ultimate);
   }
@@ -221,8 +220,19 @@ static std::optional<parser::Message> WhyNotDefinableLast(parser::CharBlock at,
   }
   if (dyType && inPure) {
     if (const Symbol * impure{HasImpureFinal(ultimate)}) {
-      return BlameSymbol(at, "'%s' has an impure FINAL procedure '%s'"_en_US,
-          original, impure->name());
+      if (flags.test(DefinabilityFlag::OnlyWarnOnImpureFinalInPureContext)) {
+        if (scope.context().ShouldWarn(
+                common::UsageWarning::ImpureFinalInPure)) {
+          parser::Message message{at,
+              "'%s' has impure FINAL procedure '%s' and must be definable in this pure context"_warn_en_US,
+              original.name(), impure->name()};
+          evaluate::AttachDeclaration(message, original);
+          return message;
+        }
+      } else {
+        return BlameSymbol(at, "'%s' has an impure FINAL procedure '%s'"_en_US,
+            original, impure->name());
+      }
     }
     if (!flags.test(DefinabilityFlag::PolymorphicOkInPure)) {
       if (const DerivedTypeSpec * derived{GetDerivedTypeSpec(dyType)}) {

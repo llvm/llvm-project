@@ -1,5 +1,5 @@
-; RUN: opt < %s -passes=loop-vectorize,transform-warning -S -pass-remarks-missed='loop-vectorize' -pass-remarks-analysis='loop-vectorize'  2>&1 | FileCheck %s
-; RUN: opt < %s -passes=loop-vectorize,transform-warning -o /dev/null -pass-remarks-output=%t.yaml
+; RUN: opt < %s -passes=loop-vectorize,transform-warning -S -pass-remarks-missed='loop-vectorize' -pass-remarks-analysis='loop-vectorize' -vectorize-memory-check-threshold=1 -mtriple=x86_64-apple-macosx 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize,transform-warning -o /dev/null -pass-remarks-output=%t.yaml -vectorize-memory-check-threshold=1 -mtriple=x86_64-apple-macosx
 ; RUN: cat %t.yaml | FileCheck -check-prefix=YAML %s
 
 ; C/C++ code for tests
@@ -43,6 +43,8 @@
 ; }
 ; CHECK: remark: source.cpp:29:7: loop not vectorized: Control flow cannot be substituted for a select
 ; CHECK: remark: source.cpp:27:3: loop not vectorized
+
+; CHECK: loop not vectorized: too many memory checks needed
 
 ; YAML:       --- !Analysis
 ; YAML-NEXT: Pass:            loop-vectorize
@@ -117,15 +119,6 @@
 ; YAML-NEXT: ...
 ; YAML-NEXT: --- !Analysis
 ; YAML-NEXT: Pass:            loop-vectorize
-; YAML-NEXT: Name:            NonReductionValueUsedOutsideLoop
-; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 27, Column: 3 }
-; YAML-NEXT: Function:        test_multiple_failures
-; YAML-NEXT: Args:
-; YAML-NEXT:   - String:          'loop not vectorized: '
-; YAML-NEXT:   - String:          value that could not be identified as reduction is used outside the loop
-; YAML-NEXT: ...
-; YAML-NEXT: --- !Analysis
-; YAML-NEXT: Pass:            loop-vectorize
 ; YAML-NEXT: Name:            CantVectorizeLibcall
 ; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 29, Column: 11 }
 ; YAML-NEXT: Function:        test_multiple_failures
@@ -168,6 +161,13 @@
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          loop not vectorized
 ; YAML-NEXT: ...
+; YAML-NEXT: --- !AnalysisAliasing
+; YAML-NEXT: Pass:            loop-vectorize
+; YAML-NEXT: Name:            TooManyMemoryRuntimeChecks
+; YAML-NEXT: Function:        test_runtime_checks_threshold
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'loop not vectorized: too many memory checks needed'
+; YAML-NEXT: ...
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -175,22 +175,22 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 define void @_Z4testPii(ptr nocapture %A, i32 %Length) #0 !dbg !4 {
 entry:
   %cmp10 = icmp sgt i32 %Length, 0, !dbg !12
-  br i1 %cmp10, label %for.body, label %for.end, !dbg !12, !llvm.loop !14
+  br i1 %cmp10, label %loop, label %exit, !dbg !12, !llvm.loop !14
 
-for.body:                                         ; preds = %entry, %for.body
-  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv, !dbg !16
-  %0 = trunc i64 %indvars.iv to i32, !dbg !16
+loop:                                         ; preds = %entry, %loop
+  %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %iv, !dbg !16
+  %0 = trunc i64 %iv to i32, !dbg !16
   %ld = load i32, ptr %arrayidx, align 4
   store i32 %0, ptr %arrayidx, align 4, !dbg !16, !tbaa !18
   %cmp3 = icmp sle i32 %ld, %Length, !dbg !22
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !12
-  %1 = trunc i64 %indvars.iv.next to i32
+  %iv.next = add nuw nsw i64 %iv, 1, !dbg !12
+  %1 = trunc i64 %iv.next to i32
   %cmp = icmp slt i32 %1, %Length, !dbg !12
   %or.cond = and i1 %cmp3, %cmp, !dbg !22
-  br i1 %or.cond, label %for.body, label %for.end, !dbg !22
+  br i1 %or.cond, label %loop, label %exit, !dbg !22
 
-for.end:                                          ; preds = %for.body, %entry
+exit:                                          ; preds = %loop, %entry
   ret void, !dbg !24
 }
 
@@ -202,19 +202,19 @@ for.end:                                          ; preds = %for.body, %entry
 define void @_Z13test_disabledPii(ptr nocapture %A, i32 %Length) #0 !dbg !7 {
 entry:
   %cmp4 = icmp sgt i32 %Length, 0, !dbg !25
-  br i1 %cmp4, label %for.body, label %for.end, !dbg !25, !llvm.loop !27
+  br i1 %cmp4, label %loop, label %exit, !dbg !25, !llvm.loop !27
 
-for.body:                                         ; preds = %entry, %for.body
-  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv, !dbg !30
-  %0 = trunc i64 %indvars.iv to i32, !dbg !30
+loop:                                         ; preds = %entry, %loop
+  %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %iv, !dbg !30
+  %0 = trunc i64 %iv to i32, !dbg !30
   store i32 %0, ptr %arrayidx, align 4, !dbg !30, !tbaa !18
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !25
-  %lftr.wideiv = trunc i64 %indvars.iv.next to i32, !dbg !25
+  %iv.next = add nuw nsw i64 %iv, 1, !dbg !25
+  %lftr.wideiv = trunc i64 %iv.next to i32, !dbg !25
   %exitcond = icmp eq i32 %lftr.wideiv, %Length, !dbg !25
-  br i1 %exitcond, label %for.end, label %for.body, !dbg !25, !llvm.loop !27
+  br i1 %exitcond, label %exit, label %loop, !dbg !25, !llvm.loop !27
 
-for.end:                                          ; preds = %for.body, %entry
+exit:                                          ; preds = %loop, %entry
   ret void, !dbg !31
 }
 
@@ -226,29 +226,26 @@ for.end:                                          ; preds = %for.body, %entry
 define void @_Z17test_array_boundsPiS_i(ptr nocapture %A, ptr nocapture readonly %B, i32 %Length) #0 !dbg !8 {
 entry:
   %cmp9 = icmp sgt i32 %Length, 0, !dbg !32
-  br i1 %cmp9, label %for.body.preheader, label %for.end, !dbg !32, !llvm.loop !34
+  br i1 %cmp9, label %loop.preheader, label %exit, !dbg !32, !llvm.loop !34
 
-for.body.preheader:                               ; preds = %entry
-  br label %for.body, !dbg !32
+loop.preheader:                               ; preds = %entry
+  br label %loop, !dbg !32
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
-  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i32, ptr %B, i64 %indvars.iv, !dbg !35
+loop:                                         ; preds = %loop.preheader, %loop
+  %iv = phi i64 [ %iv.next, %loop ], [ 0, %loop.preheader ]
+  %arrayidx = getelementptr inbounds i32, ptr %B, i64 %iv, !dbg !35
   %0 = load i32, ptr %arrayidx, align 4, !dbg !35, !tbaa !18
   %idxprom1 = sext i32 %0 to i64, !dbg !35
   %arrayidx2 = getelementptr inbounds i32, ptr %A, i64 %idxprom1, !dbg !35
   %1 = load i32, ptr %arrayidx2, align 4, !dbg !35, !tbaa !18
-  %arrayidx4 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv, !dbg !35
+  %arrayidx4 = getelementptr inbounds i32, ptr %A, i64 %iv, !dbg !35
   store i32 %1, ptr %arrayidx4, align 4, !dbg !35, !tbaa !18
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !32
-  %lftr.wideiv = trunc i64 %indvars.iv.next to i32, !dbg !32
+  %iv.next = add nuw nsw i64 %iv, 1, !dbg !32
+  %lftr.wideiv = trunc i64 %iv.next to i32, !dbg !32
   %exitcond = icmp eq i32 %lftr.wideiv, %Length, !dbg !32
-  br i1 %exitcond, label %for.end.loopexit, label %for.body, !dbg !32, !llvm.loop !34
+  br i1 %exitcond, label %exit, label %loop, !dbg !32, !llvm.loop !34
 
-for.end.loopexit:                                 ; preds = %for.body
-  br label %for.end
-
-for.end:                                          ; preds = %for.end.loopexit, %entry
+exit:
   ret void, !dbg !36
 }
 
@@ -259,9 +256,9 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; Function Attrs: nounwind uwtable
 define i32 @test_multiple_failures(ptr nocapture readonly %A) #0 !dbg !46 {
 entry:
-  br label %for.body, !dbg !38
+  br label %loop, !dbg !38
 
-for.body:                                         ; preds = %entry, %for.inc
+loop:                                         ; preds = %entry, %for.inc
   %i.09 = phi i32 [ 0, %entry ], [ %add, %for.inc ]
   %k.09 = phi i32 [ 0, %entry ], [ %k.1, %for.inc ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i32 %i.09, !dbg !40
@@ -269,20 +266,40 @@ for.body:                                         ; preds = %entry, %for.inc
   %tobool = icmp eq i32 %0, 0, !dbg !40
   br i1 %tobool, label %for.inc, label %if.then, !dbg !40
 
-if.then:                                          ; preds = %for.body
+if.then:                                          ; preds = %loop
   %call = tail call i32 (...) @foo(), !dbg !41
   %.pre = load i32, ptr %arrayidx, align 4
   br label %for.inc, !dbg !42
 
-for.inc:                                          ; preds = %for.body, %if.then
-  %1 = phi i32 [ %.pre, %if.then ], [ 0, %for.body ], !dbg !43
-  %k.1 = phi i32 [ %call, %if.then ], [ %k.09, %for.body ]
+for.inc:                                          ; preds = %loop, %if.then
+  %1 = phi i32 [ %.pre, %if.then ], [ 0, %loop ], !dbg !43
+  %k.1 = phi i32 [ %call, %if.then ], [ %k.09, %loop ]
   %add = add nsw i32 %1, %i.09, !dbg !44
   %cmp = icmp slt i32 %add, 1000, !dbg !45
-  br i1 %cmp, label %for.body, label %for.cond.cleanup, !dbg !38
+  br i1 %cmp, label %loop, label %exit, !dbg !38
 
-for.cond.cleanup:                                 ; preds = %for.inc
+exit:                                 ; preds = %for.inc
   ret i32 %k.1, !dbg !39
+}
+
+define void @test_runtime_checks_threshold(i64 %n, ptr %A, ptr %B, ptr %C) {
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.B = getelementptr inbounds i32, ptr %B, i64 %iv
+  %0 = load i32, ptr %gep.B, align 4
+  %add = add nsw i32 %0, 1
+  %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv
+  store i32 %add, ptr %gep.A, align 4
+  store i32 %add, ptr %C, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
 }
 
 declare i32 @foo(...)

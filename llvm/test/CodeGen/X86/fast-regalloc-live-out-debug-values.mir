@@ -188,7 +188,7 @@ body:             |
 
     %0:gr32 = COPY $edi
     %1:gr32 = MOV32rm %stack.0.a.addr, 1, $noreg, 0, $noreg, debug-location !13 :: (dereferenceable load (s32) from %ir.a.addr)
-    %2:gr64_nosp = SUBREG_TO_REG 0, killed %1, %subreg.sub_32bit, debug-location !13
+    %2:gr64_nosp = SUBREG_TO_REG killed %1, %subreg.sub_32bit, debug-location !13
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !14
     %3:gr64 = COPY $rsp, debug-location !14
     $rsp = COPY %3, debug-location !14

@@ -193,8 +193,9 @@ TagDecl *ClangASTSource::FindCompleteType(const TagDecl *decl) {
     if (!namespace_map)
       return nullptr;
 
-    LLDB_LOGV(log, "      CTD Inspecting namespace map{0:x} ({1} entries)",
-              namespace_map.get(), namespace_map->size());
+    LLDB_LOG_VERBOSE(log,
+                     "      CTD Inspecting namespace map{0:x} ({1} entries)",
+                     namespace_map.get(), namespace_map->size());
 
     for (const ClangASTImporter::NamespaceMapItem &item : *namespace_map) {
       LLDB_LOG(log, "      CTD Searching namespace {0} in module {1}",
@@ -262,15 +263,13 @@ TagDecl *ClangASTSource::FindCompleteType(const TagDecl *decl) {
 void ClangASTSource::CompleteType(TagDecl *tag_decl) {
   Log *log = GetLog(LLDBLog::Expressions);
 
-  if (log) {
-    LLDB_LOG(log,
-             "    CompleteTagDecl on (ASTContext*){0} Completing "
-             "(TagDecl*){1:x} named {2}",
-             m_clang_ast_context->getDisplayName(), tag_decl,
-             tag_decl->getName());
+  LLDB_LOG(log,
+           "    CompleteTagDecl on (ASTContext*){0} Completing "
+           "(TagDecl*){1:x} named {2}",
+           m_clang_ast_context->getDisplayName(), tag_decl,
+           tag_decl->getName());
 
-    LLDB_LOG(log, "      CTD Before:\n{0}", ClangUtil::DumpDecl(tag_decl));
-  }
+  LLDB_LOG(log, "      CTD Before:\n{0}", ClangUtil::DumpDecl(tag_decl));
 
   auto iter = m_active_lexical_decls.find(tag_decl);
   if (iter != m_active_lexical_decls.end())
@@ -541,12 +540,11 @@ void ClangASTSource::FindExternalVisibleDecls(NameSearchContext &context) {
   }
 
   if (!context.m_namespace_map->empty()) {
-    if (log && log->GetVerbose())
-      LLDB_LOG(log, "  CAS::FEVD Registering namespace map {0:x} ({1} entries)",
-               context.m_namespace_map.get(), context.m_namespace_map->size());
+    LLDB_LOG_VERBOSE(
+        log, "  CAS::FEVD Registering namespace map {0:x} ({1} entries)",
+        context.m_namespace_map.get(), context.m_namespace_map->size());
 
-    NamespaceDecl *clang_namespace_decl =
-        AddNamespace(context, context.m_namespace_map);
+    NamespaceDecl *clang_namespace_decl = AddNamespace(context);
 
     if (clang_namespace_decl)
       clang_namespace_decl->setHasExternalVisibleStorage();
@@ -1330,8 +1328,9 @@ void ClangASTSource::LookupInNamespace(NameSearchContext &context) {
   ClangASTImporter::NamespaceMapSP namespace_map =
       m_ast_importer_sp->GetNamespaceMap(namespace_context);
 
-  LLDB_LOGV(log, "  CAS::FEVD Inspecting namespace map {0:x} ({1} entries)",
-            namespace_map.get(), namespace_map->size());
+  LLDB_LOG_VERBOSE(log,
+                   "  CAS::FEVD Inspecting namespace map {0:x} ({1} entries)",
+                   namespace_map.get(), namespace_map->size());
 
   if (!namespace_map)
     return;
@@ -1432,13 +1431,12 @@ void ClangASTSource::CompleteNamespaceMap(
   }
 }
 
-NamespaceDecl *ClangASTSource::AddNamespace(
-    NameSearchContext &context,
-    ClangASTImporter::NamespaceMapSP &namespace_decls) {
-  if (!namespace_decls)
+NamespaceDecl *ClangASTSource::AddNamespace(NameSearchContext &context) {
+  if (!context.m_namespace_map)
     return nullptr;
 
-  const CompilerDeclContext &namespace_decl = namespace_decls->begin()->second;
+  const CompilerDeclContext &namespace_decl =
+      context.m_namespace_map->begin()->second;
 
   clang::ASTContext *src_ast =
       TypeSystemClang::DeclContextGetTypeSystemClang(namespace_decl);
@@ -1463,7 +1461,7 @@ NamespaceDecl *ClangASTSource::AddNamespace(
   context.m_decls.push_back(copied_namespace_decl);
 
   m_ast_importer_sp->RegisterNamespaceMap(copied_namespace_decl,
-                                          namespace_decls);
+                                          context.m_namespace_map);
 
   return dyn_cast<NamespaceDecl>(copied_decl);
 }

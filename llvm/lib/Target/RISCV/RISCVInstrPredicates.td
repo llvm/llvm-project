@@ -12,11 +12,20 @@
 
 // This predicate is true when the rs2 operand of vlse or vsse is x0, false
 // otherwise.
-def VLDSX0Pred : MCSchedPredicate<CheckRegOperand<3, X0>>;
+// Note: in our pseudo RVV MachinInstr, rs2 is the fourth operand. However,
+// it's the third operand of its MCInst form, so this predicate will not
+// be triggered by llvm-mca, which checks against MCInst.
+def VLDSX0Pred
+    : AllOfSchedPreds<[FeatureSchedPredicate<TuneOptimizedZeroStrideLoad>,
+                       MCSchedPredicate<CheckRegOperand<3, X0>>]>;
 
 // This scheduling predicate is true when subtarget feature TuneHasSingleElementVecFP64
 // is enabled.
 def SingleElementVecFP64SchedPred : FeatureSchedPredicate<TuneHasSingleElementVecFP64>;
+
+// This scheduling predicate is true when the subtarget is RV32 (i.e. Feature64Bit
+// is not enabled).
+def RV32SchedPred : NotSchedPred<FeatureSchedPredicate<Feature64Bit>>;
 
 // Returns true if this is the sext.w pattern, addiw rd, rs1, 0.
 def isSEXT_W
@@ -136,12 +145,6 @@ def isScalarExtractInstr
                       !instances<Pseudo>("^PseudoVMV_X_S.*"),
                       !instances<Pseudo>("^PseudoVFMV_F.*_S.*")
                      ])>>>;
-
-def isVExtractInstr
-    : TIIPredicate<"isVExtractInstr",
-                   MCReturnStatement<
-                     CheckOpcode<
-                      !instances<Instruction>("^PseudoRI_VEXTRACT.*")>>>;
 
 def isScalarInsertInstr
     : TIIPredicate<"isScalarInsertInstr",

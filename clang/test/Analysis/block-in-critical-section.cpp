@@ -28,6 +28,12 @@ template<typename T>
 struct not_real_lock {
   not_real_lock<T>(std::mutex) {}
 };
+
+template<typename... MutexTypes>
+struct scoped_lock {
+  explicit scoped_lock(MutexTypes&...) {}
+  ~scoped_lock() {}
+};
 } // namespace std
 
 struct FILE;
@@ -293,6 +299,19 @@ void testBlockInCriticalSectionUniqueLock() {
 
 void testBlockInCriticalSectionUniqueLockNested() {
   testBlockInCriticalSectionUniqueLock(); // expected-note {{Calling 'testBlockInCriticalSectionUniqueLock'}}
+  sleep(1); // no-warning
+}
+
+void testBlockInCriticalSectionScopedLock() {
+  std::mutex m1;
+  std::mutex m2;
+  std::scoped_lock<std::mutex, std::mutex> lock(m1, m2); // expected-note {{Entering critical section here}}
+  sleep(1); // expected-warning {{Call to blocking function 'sleep' inside of critical section}}
+            // expected-note@-1 {{Call to blocking function 'sleep' inside of critical section}}
+}
+
+void testBlockInCriticalSectionScopedLockNested() {
+  testBlockInCriticalSectionScopedLock(); // expected-note {{Calling 'testBlockInCriticalSectionScopedLock'}}
   sleep(1); // no-warning
 }
 
