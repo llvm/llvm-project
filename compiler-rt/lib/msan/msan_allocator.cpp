@@ -135,7 +135,7 @@ const uptr kMaxAllowedMallocSize = 1UL << 30;  // 1G
 
 struct AP32 {
   static const uptr kSpaceBeg = 0x10000000;
-  static const u64 kSpaceSize = 0x08000000;  // 128MB
+  static const u64 kSpaceSize = 0x10000000;  // 256MB
   static const uptr kMetadataSize = sizeof(Metadata);
   using SizeClassMap = __sanitizer::CompactSizeClassMap;
   static const uptr kRegionSizeLog = 20;
