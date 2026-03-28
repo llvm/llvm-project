@@ -27,8 +27,8 @@ define void @s_add_use_fi_sgpr_offset(i32 inreg %soffset) #0 {
 ; GFX7-NEXT:    ; use s5
 ; GFX7-NEXT:    ;;#ASMEND
 ; GFX7-NEXT:    s_lshr_b32 s5, s33, 6
-; GFX7-NEXT:    s_or_b32 s4, s5, s4
-; GFX7-NEXT:    s_addk_i32 s4, 0x120
+; GFX7-NEXT:    s_addk_i32 s5, 0x120
+; GFX7-NEXT:    s_or_b32 s4, s4, s5
 ; GFX7-NEXT:    ;;#ASMSTART
 ; GFX7-NEXT:    ; use s4
 ; GFX7-NEXT:    ;;#ASMEND
@@ -55,8 +55,8 @@ define void @s_add_use_fi_sgpr_offset(i32 inreg %soffset) #0 {
 ; GFX8-NEXT:    ; use s5
 ; GFX8-NEXT:    ;;#ASMEND
 ; GFX8-NEXT:    s_lshr_b32 s5, s33, 6
-; GFX8-NEXT:    s_or_b32 s4, s5, s4
-; GFX8-NEXT:    s_addk_i32 s4, 0x120
+; GFX8-NEXT:    s_addk_i32 s5, 0x120
+; GFX8-NEXT:    s_or_b32 s4, s4, s5
 ; GFX8-NEXT:    ;;#ASMSTART
 ; GFX8-NEXT:    ; use s4
 ; GFX8-NEXT:    ;;#ASMEND
@@ -83,8 +83,8 @@ define void @s_add_use_fi_sgpr_offset(i32 inreg %soffset) #0 {
 ; GFX900-NEXT:    ; use s5
 ; GFX900-NEXT:    ;;#ASMEND
 ; GFX900-NEXT:    s_lshr_b32 s5, s33, 6
-; GFX900-NEXT:    s_or_b32 s4, s5, s4
-; GFX900-NEXT:    s_addk_i32 s4, 0x120
+; GFX900-NEXT:    s_addk_i32 s5, 0x120
+; GFX900-NEXT:    s_or_b32 s4, s4, s5
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s4
 ; GFX900-NEXT:    ;;#ASMEND
@@ -113,8 +113,8 @@ define void @s_add_use_fi_sgpr_offset(i32 inreg %soffset) #0 {
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ; use s5
 ; GFX10-NEXT:    ;;#ASMEND
-; GFX10-NEXT:    s_or_b32 s4, s9, s4
-; GFX10-NEXT:    s_addk_i32 s4, 0x120
+; GFX10-NEXT:    s_addk_i32 s9, 0x120
+; GFX10-NEXT:    s_or_b32 s4, s4, s9
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ; use s4
 ; GFX10-NEXT:    ;;#ASMEND
@@ -138,8 +138,8 @@ define void @s_add_use_fi_sgpr_offset(i32 inreg %soffset) #0 {
 ; GFX940-NEXT:    ;;#ASMSTART
 ; GFX940-NEXT:    ; use s1
 ; GFX940-NEXT:    ;;#ASMEND
-; GFX940-NEXT:    s_or_b32 s1, s33, s0
-; GFX940-NEXT:    s_or_b32 s0, s1, 0x120
+; GFX940-NEXT:    s_add_i32 s1, s33, 0x120
+; GFX940-NEXT:    s_or_b32 s0, s0, s1
 ; GFX940-NEXT:    ;;#ASMSTART
 ; GFX940-NEXT:    ; use s0
 ; GFX940-NEXT:    ;;#ASMEND
@@ -162,11 +162,11 @@ define void @s_add_use_fi_sgpr_offset(i32 inreg %soffset) #0 {
 ; GFX11-NEXT:    s_add_i32 s5, s33, 16
 ; GFX11-NEXT:    s_mov_b32 s1, s2
 ; GFX11-NEXT:    s_mov_b32 s2, s5
-; GFX11-NEXT:    s_or_b32 s5, s33, s0
+; GFX11-NEXT:    s_add_i32 s5, s33, 0x120
 ; GFX11-NEXT:    ;;#ASMSTART
 ; GFX11-NEXT:    ; use s1
 ; GFX11-NEXT:    ;;#ASMEND
-; GFX11-NEXT:    s_or_b32 s0, s5, 0x120
+; GFX11-NEXT:    s_or_b32 s0, s0, s5
 ; GFX11-NEXT:    ;;#ASMSTART
 ; GFX11-NEXT:    ; use s0
 ; GFX11-NEXT:    ;;#ASMEND
@@ -192,11 +192,11 @@ define void @s_add_use_fi_sgpr_offset(i32 inreg %soffset) #0 {
 ; GFX12-NEXT:    s_and_b32 s0, s0, 31
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_add_co_i32 s2, s33, 0x100
-; GFX12-NEXT:    s_or_b32 s5, s33, s0
+; GFX12-NEXT:    s_add_co_i32 s5, s33, 0x100
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_mov_b32 s1, s2
 ; GFX12-NEXT:    s_mov_b32 s2, s33
-; GFX12-NEXT:    s_or_b32 s0, s5, 0x100
+; GFX12-NEXT:    s_or_b32 s0, s0, s5
 ; GFX12-NEXT:    ;;#ASMSTART
 ; GFX12-NEXT:    ; use s1
 ; GFX12-NEXT:    ;;#ASMEND
