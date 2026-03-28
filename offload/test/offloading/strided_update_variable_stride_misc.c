@@ -1,5 +1,4 @@
 // RUN: %libomptarget-compile-run-and-check-generic
-// XFAIL: intelgpu
 // Miscellaneous variable stride tests: stride=1, stride=array_size, stride from
 // array subscript.
 

@@ -13963,10 +13963,10 @@ static NonConstCaptureKind isReferenceToNonConstCapture(Sema &S, Expr *E) {
   if (!DRE) return NCCK_None;
   if (!DRE->refersToEnclosingVariableOrCapture()) return NCCK_None;
 
-  ValueDecl *Value = dyn_cast<ValueDecl>(DRE->getDecl());
+  ValueDecl *Value = DRE->getDecl();
 
   // The declaration must be a value which is not declared 'const'.
-  if (!Value || Value->getType().isConstQualified())
+  if (Value->getType().isConstQualified())
     return NCCK_None;
 
   BindingDecl *Binding = dyn_cast<BindingDecl>(Value);

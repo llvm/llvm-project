@@ -1043,6 +1043,19 @@ void asan_free(void *ptr, BufferedStackTrace *stack) {
   instance.Deallocate(ptr, 0, 0, stack, FROM_MALLOC);
 }
 
+// TODO: Both the size and alignment arguments of Allocator::Deallocate
+// are actually unused when the alloc type is FROM_MALLOC. We should look
+// into why this is the case, but for now passing the arguments like so
+// is the correct thing to do.
+void asan_free_sized(void* ptr, uptr size, BufferedStackTrace* stack) {
+  instance.Deallocate(ptr, size, /*delete_alignment=*/0, stack, FROM_MALLOC);
+}
+
+void asan_free_aligned_sized(void* ptr, uptr alignment, uptr size,
+                             BufferedStackTrace* stack) {
+  instance.Deallocate(ptr, size, alignment, stack, FROM_MALLOC);
+}
+
 void *asan_malloc(uptr size, BufferedStackTrace *stack) {
   return SetErrnoOnNull(instance.Allocate(size, 8, stack, FROM_MALLOC, true));
 }

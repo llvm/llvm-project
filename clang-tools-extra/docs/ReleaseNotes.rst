@@ -272,6 +272,11 @@ Changes in existing checks
   like ``__builtin_clzg``) that use variadic declarations as an implementation
   detail.
 
+- Improved :doc:`cppcoreguidelines-rvalue-reference-param-not-moved
+  <clang-tidy/checks/cppcoreguidelines/rvalue-reference-param-not-moved>` check
+  by fixing a false positive on implicitly generated functions such as
+  inherited constructors.
+
 - Improved :doc:`llvm-use-ranges
   <clang-tidy/checks/llvm/use-ranges>` check by adding support for the following
   algorithms: ``std::accumulate``, ``std::replace_copy``, and

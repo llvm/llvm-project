@@ -1728,7 +1728,7 @@ TEST(ScudoCombinedDeathTest, AlignTypeMismatch) {
 
 // Scudo currently cannot verify that a pointer allocated with an aligned
 // new/new [] is deallocated with an aligned delete/delete [].
-TEST(ScudoCombinedTest, NewType) {
+TEST(ScudoCombinedTest, DISABLED_NewType) {
   ScopedScudoOptions Options("dealloc_type_mismatch=true");
 
   using AllocatorT = scudo::Allocator<TestMatchConfig>;

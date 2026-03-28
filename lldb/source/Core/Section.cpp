@@ -254,8 +254,7 @@ bool Section::ResolveContainedAddress(addr_t offset, Address &so_addr,
       return child_section->ResolveContainedAddress(offset - child_offset,
                                                     so_addr, allow_section_end);
   }
-  so_addr.SetOffset(offset);
-  so_addr.SetSection(const_cast<Section *>(this)->shared_from_this());
+  so_addr = Address(const_cast<Section *>(this)->shared_from_this(), offset);
 
   // Ensure that there are no orphaned (i.e., moduleless) sections.
   assert(GetModule().get());

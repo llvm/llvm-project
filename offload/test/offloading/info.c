@@ -7,6 +7,8 @@
 
 // FIXME: Fails due to optimized debugging in 'ptxas'.
 // UNSUPPORTED: nvptx64-nvidia-cuda-LTO
+// https://github.com/llvm/llvm-project/issues/182119
+// UNSUPPORTED: intelgpu
 
 #include <omp.h>
 #include <stdio.h>

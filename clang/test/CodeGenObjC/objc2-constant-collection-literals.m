@@ -2,6 +2,12 @@
 // RUN: %clang_cc1 -x objective-c++ -triple x86_64-apple-macosx11.0.0 -fobjc-runtime=macosx-11.0.0 -fobjc-constant-literals -fconstant-nsnumber-literals -fconstant-nsarray-literals -fconstant-nsdictionary-literals -I %S/Inputs -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK
 // RUN: %clang_cc1 -triple arm64-apple-ios14.0 -fobjc-runtime=ios-14.0 -fobjc-constant-literals -fconstant-nsnumber-literals -fconstant-nsarray-literals -fconstant-nsdictionary-literals -I %S/Inputs -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK
 
+// RUN: %clang_cc1 -triple x86_64-apple-macosx11.0.0 -fobjc-runtime=macosx-11.0.0 -fobjc-constant-literals -fconstant-nsnumber-literals -fconstant-nsarray-literals -fconstant-nsdictionary-literals -I %S/Inputs -emit-llvm -o - %s -fexperimental-new-constant-interpreter | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_cc1 -x objective-c++ -triple x86_64-apple-macosx11.0.0 -fobjc-runtime=macosx-11.0.0 -fobjc-constant-literals -fconstant-nsnumber-literals -fconstant-nsarray-literals -fconstant-nsdictionary-literals -I %S/Inputs -emit-llvm -o - %s -fexperimental-new-constant-interpreter | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_cc1 -triple arm64-apple-ios14.0 -fobjc-runtime=ios-14.0 -fobjc-constant-literals -fconstant-nsnumber-literals -fconstant-nsarray-literals -fconstant-nsdictionary-literals -I %S/Inputs -emit-llvm -o - %s -fexperimental-new-constant-interpreter | FileCheck %s --check-prefix=CHECK
+
+
+
 #if __has_feature(objc_constant_literals)
 
 #if __has_feature(objc_bool)

@@ -1,5 +1,4 @@
 // RUN: %libomptarget-compile-run-and-check-generic
-// XFAIL: intelgpu
 // This test checks that #pragma omp target update to(s.data[0:2:3]) correctly
 // updates every third element (stride 3) from the host to the device
 // for struct member arrays.

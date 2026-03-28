@@ -306,10 +306,10 @@ buildCacheControlPayloads(ArrayRef<Attribute> attrs) {
 
     // Produce: {SPIR-V decoration token:"L1 cache control,L3 cache control"}
     // The quote char (0x22) is embedded literally; LLVM IR prints it as \22.
-    std::string entry = llvm::formatv("'{'{0}:\"{1},{2}\"'}'",
-                                      tokenAttr.getValue().getZExtValue(),
-                                      secondAttr.getValue().getZExtValue(),
-                                      thirdAttr.getValue().getZExtValue());
+    std::string entry =
+        llvm::formatv("{{{0}:\"{1},{2}\"}", tokenAttr.getValue().getZExtValue(),
+                      secondAttr.getValue().getZExtValue(),
+                      thirdAttr.getValue().getZExtValue());
 
     // Deduplicate identical annotations.
     if (!seen.insert({entry, true}).second)

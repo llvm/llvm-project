@@ -1,6 +1,9 @@
 header: sys/mman.h
-header_template: mman.h.def
-macros: []
+standards:
+  - posix
+macros:
+  - macro_name: MAP_FAILED
+    macro_header: sys-mman-macros.h
 types:
   - type_name: mode_t
   - type_name: size_t

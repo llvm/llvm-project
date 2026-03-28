@@ -18,6 +18,7 @@
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include <cstddef>
 #include <type_traits>
@@ -31,6 +32,8 @@ struct MDProfLabels {
   LLVM_ABI static const char *ExpectedBranchWeights;
   LLVM_ABI static const char *UnknownBranchWeightsMarker;
 };
+
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 
 /// Profile-based loop metadata that should be accessed only by using
 /// \c llvm::getLoopEstimatedTripCount and \c llvm::setLoopEstimatedTripCount.
@@ -256,8 +259,18 @@ getDisjunctionWeights(const SmallVector<T1, 2> &B1,
   // the product of sums, the subtracted one cancels out).
   assert(B1.size() == 2);
   assert(B2.size() == 2);
-  uint64_t FalseWeight = B1[1] * B2[1];
-  uint64_t TrueWeight = B1[0] * (B2[0] + B2[1]) + B1[1] * B2[0];
+
+  uint64_t FalseWeight, TrueWeight;
+
+  if (!ProfcheckDisableMetadataFixes) {
+    FalseWeight = static_cast<uint64_t>(B1[1]) * B2[1];
+    TrueWeight =
+        static_cast<uint64_t>(B1[0]) * (static_cast<uint64_t>(B2[0]) + B2[1]) +
+        static_cast<uint64_t>(B1[1]) * B2[0];
+  } else {
+    FalseWeight = B1[1] * B2[1];
+    TrueWeight = B1[0] * (B2[0] + B2[1]) + B1[1] * B2[0];
+  }
   return {TrueWeight, FalseWeight};
 }
 } // namespace llvm

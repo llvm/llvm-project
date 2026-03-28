@@ -61,6 +61,28 @@ INTERCEPTOR(void, cfree, void *ptr) {
 }
 #endif // SANITIZER_INTERCEPT_CFREE
 
+#  if SANITIZER_INTERCEPT_FREE_SIZED
+INTERCEPTOR(void, free_sized, void* ptr, uptr size) {
+  if (UNLIKELY(!ptr))
+    return;
+  if (DlsymAlloc::PointerIsMine(ptr))
+    return DlsymAlloc::Free(ptr);
+  GET_STACK_TRACE_FREE;
+  asan_free_sized(ptr, size, &stack);
+}
+#  endif  // SANITIZER_INTERCEPT_FREE_SIZED
+
+#  if SANITIZER_INTERCEPT_FREE_ALIGNED_SIZED
+INTERCEPTOR(void, free_aligned_sized, void* ptr, uptr alignment, uptr size) {
+  if (UNLIKELY(!ptr))
+    return;
+  if (DlsymAlloc::PointerIsMine(ptr))
+    return DlsymAlloc::Free(ptr);
+  GET_STACK_TRACE_FREE;
+  asan_free_aligned_sized(ptr, alignment, size, &stack);
+}
+#  endif  // SANITIZER_INTERCEPT_FREE_ALIGNED_SIZED
+
 #  if SANITIZER_AIX
 // Unlike malloc, vec_malloc must return memory aligned to 16 bytes.
 INTERCEPTOR(void*, vec_malloc, uptr size) {

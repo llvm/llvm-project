@@ -2,9 +2,9 @@
 // supported when elements are updated in a non-contiguous manner with variable
 // count expression. Tests #pragma omp target update from/to(data[0:len/2:2])
 // where the count (len/2) is a variable expression, not a constant.
-
+// https://github.com/llvm/llvm-project/issues/182119
+// UNSUPPORTED: intelgpu
 // RUN: %libomptarget-compile-run-and-check-generic
-// XFAIL: intelgpu
 #include <omp.h>
 #include <stdio.h>
 

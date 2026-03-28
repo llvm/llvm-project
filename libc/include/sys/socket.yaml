@@ -1,6 +1,9 @@
 header: sys/socket.h
-header_template: socket.h.def
-macros: []
+standards:
+  - posix
+macros:
+  - macro_name: AF_UNSPEC
+    macro_header: sys-socket-macros.h
 types:
   - type_name: struct_sockaddr
   - type_name: socklen_t

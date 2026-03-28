@@ -64,6 +64,7 @@ void RvalueReferenceParamNotMovedCheck::registerMatchers(MatchFinder *Finder) {
           hasDeclContext(
               functionDecl(
                   isDefinition(), unless(isDeleted()), unless(isDefaulted()),
+                  unless(isImplicit()),
                   unless(cxxConstructorDecl(isMoveConstructor())),
                   unless(cxxMethodDecl(isMoveAssignmentOperator())), ToParam,
                   anyOf(cxxConstructorDecl(

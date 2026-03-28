@@ -2,7 +2,8 @@
 
 // REQUIRES: unified_shared_memory
 // UNSUPPORTED: clang-6, clang-7, clang-8, clang-9
-// XFAIL: intelgpu
+// https://github.com/llvm/llvm-project/issues/182119
+// UNSUPPORTED: intelgpu
 
 #include <omp.h>
 #include <stdio.h>

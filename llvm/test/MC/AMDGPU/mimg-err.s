@@ -58,7 +58,7 @@ image_atomic_cmpswap v[4:7], v[192:195], s[28:35] dmask:0xf tfe
 image_gather4_cl v[5:8], v[1:4], s[8:15], s[12:15] dmask:0x3
 // NOGCN: :[[@LINE-1]]:52: error: invalid image_gather dmask: only one bit must be set
 // NOGFX9: :[[@LINE-2]]:52: error: invalid image_gather dmask: only one bit must be set
-// NOGFX90A: :[[@LINE-3]]:1: error: instruction not supported on this GPU
+// NOGFX90A: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx90a): image_gather4_cl
 
 image_load    v4, v[236:239], s[28:35] tfe
 // NOGCN: :[[@LINE-1]]:1: error: image data size does not match dmask and tfe

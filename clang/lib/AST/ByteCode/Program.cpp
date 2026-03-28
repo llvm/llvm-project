@@ -232,10 +232,10 @@ UnsignedOrNone Program::createGlobal(const ValueDecl *VD, const Expr *Init) {
   return *Idx;
 }
 
-UnsignedOrNone Program::createGlobal(const Expr *E) {
+UnsignedOrNone Program::createGlobal(const Expr *E, QualType ExprType) {
   if (auto Idx = getGlobal(E))
     return Idx;
-  if (auto Idx = createGlobal(E, E->getType(), /*IsStatic=*/true,
+  if (auto Idx = createGlobal(E, ExprType, /*IsStatic=*/true,
                               /*IsExtern=*/false, /*IsWeak=*/false)) {
     GlobalIndices[E] = *Idx;
     return *Idx;
@@ -402,7 +402,6 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
                                       bool IsConst, bool IsTemporary,
                                       bool IsMutable, bool IsVolatile,
                                       const Expr *Init) {
-
   // Classes and structures.
   if (const auto *RD = Ty->getAsRecordDecl()) {
     if (const auto *Record = getOrCreateRecord(RD))

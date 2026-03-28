@@ -753,7 +753,49 @@ def testExtDialectWithInvalidOp():
             a: Operand[IntegerType[32]] = None
 
     except ValueError as e:
-        # CHECK: only optional operand can be a keyword parameter
+        # CHECK: only optional operand can be set to None
+        print(e)
+
+    try:
+
+        class AssignNoneOnnAttributeOp(
+            TestInvalid.Operation, name="assign_none_on_attribute"
+        ):
+            a: IntegerAttr = None
+
+    except ValueError as e:
+        # CHECK: only optional attribute can be set to None
+        print(e)
+
+    try:
+
+        class CannotInferTypeOp(TestInvalid.Operation, name="cannot_infer_type"):
+            a: Result[IntegerType] = result(infer_type=True)
+
+    except TypeError as e:
+        # CHECK: unsupported type for inferring
+        print(e)
+
+    try:
+
+        class WrongFieldSpecifierOp(
+            TestInvalid.Operation, name="wrong_field_specifier"
+        ):
+            a: Result[IntegerType] = operand()
+
+    except TypeError as e:
+        # CHECK: only `result` field specifier can be used for result fields
+        print(e)
+
+    try:
+
+        class WrongFieldSpecifierOp2(
+            TestInvalid.Operation, name="wrong_field_specifier2"
+        ):
+            a: IntegerAttr = operand()
+
+    except TypeError as e:
+        # CHECK: only `attribute` field specifier can be used for attribute fields
         print(e)
 
 
@@ -795,4 +837,60 @@ def testExtDialectWithAttrInOp():
         assert module.operation.verify()
         # CHECK: "ext_attr_in_op.op_with_attr"() {a = 42 : i32, b = i32} : () -> ()
         # CHECK: "ext_attr_in_op.op_with_attr"() {a = "hello", b = i64} : () -> ()
+        print(module)
+
+
+@run
+def testExtDialectFieldSpecifiers():
+    class TestFieldSpecifiers(Dialect, name="ext_field_specifiers"):
+        pass
+
+    class OperandSpecifierOp(TestFieldSpecifiers.Operation, name="operand_specifier"):
+        a: Operand[IntegerType[32]] = operand()
+        b: Optional[Operand[IntegerType[32]]] = None
+        c: Operand[IntegerType[32]] = operand(kw_only=True)
+
+    class ResultSpecifierOp(TestFieldSpecifiers.Operation, name="result_specifier"):
+        a: Result[IntegerType[32]] = result()
+        b: Result[IntegerType[16]] = result(infer_type=True)
+        c: Result[IntegerType] = result(
+            default_factory=lambda: IntegerType.get_signless(8)
+        )
+        d: Sequence[Result[IntegerType]] = result(default_factory=list)
+        e: Result[IntegerType[32]] = result(kw_only=True)
+
+    class AttributeSpecifierOp(
+        TestFieldSpecifiers.Operation, name="attribute_specifier"
+    ):
+        a: IntegerAttr = attribute()
+        b: IntegerAttr = attribute(
+            default_factory=lambda: IntegerAttr.get(IntegerType.get_signless(32), 42)
+        )
+        c: StringAttr["a"] | StringAttr["b"] = attribute(
+            default_factory=lambda: StringAttr.get("a"), kw_only=True
+        )
+        d: IntegerAttr = attribute(kw_only=True)
+
+    with Context(), Location.unknown():
+        TestFieldSpecifiers.load()
+
+        # CHECK: (self, /, a, *, b=None, c, loc=None, ip=None)
+        print(OperandSpecifierOp.__init__.__signature__)
+        # CHECK: (self, /, a, *, b=None, c=None, d=None, e, loc=None, ip=None)
+        print(ResultSpecifierOp.__init__.__signature__)
+        # CHECK: (self, /, a, *, b=None, c=None, d, loc=None, ip=None)
+        print(AttributeSpecifierOp.__init__.__signature__)
+
+        module = Module.create()
+        i32 = IntegerType.get_signless(32)
+        with InsertionPoint(module.body):
+            one = arith.constant(i32, 1)
+            OperandSpecifierOp(one, c=one)
+            ResultSpecifierOp(i32, e=i32)
+            AttributeSpecifierOp(IntegerAttr.get(i32, 43), d=IntegerAttr.get(i32, 100))
+
+        assert module.operation.verify()
+        # CHECK: "ext_field_specifiers.operand_specifier"(%c1_i32, %c1_i32) {operandSegmentSizes = array<i32: 1, 0, 1>} : (i32, i32) -> ()
+        # CHECK: %0:4 = "ext_field_specifiers.result_specifier"() {resultSegmentSizes = array<i32: 1, 1, 1, 0, 1>} : () -> (i32, i16, i8, i32)
+        # CHECK: "ext_field_specifiers.attribute_specifier"() {a = 43 : i32, b = 42 : i32, c = "a", d = 100 : i32} : () -> ()
         print(module)

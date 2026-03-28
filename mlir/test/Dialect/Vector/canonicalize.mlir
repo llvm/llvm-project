@@ -3807,6 +3807,25 @@ func.func @insert_vector_poison_idx_non_cst(%a: vector<4x5xf32>, %b: vector<5xf3
 
 // -----
 
+// Similar to the test above, but with a dense constant destination. This exercises
+// foldDenseElementsAttrDestInsertOp, which must not crash when the dynamic index
+// constant is -1 (the poison sentinel). The IR should instead fold to ub.poison.
+// Regression test for https://github.com/llvm/llvm-project/issues/188404
+
+// CHECK-LABEL: @insert_scalar_poison_idx_dense_dest
+func.func @insert_scalar_poison_idx_dense_dest() -> vector<2xf16> {
+  // CHECK-NEXT: %[[UB:.*]] = ub.poison : vector<2xf16>
+  //  CHECK-NOT: vector.insert
+  // CHECK-NEXT: return %[[UB]] : vector<2xf16>
+  %cst = arith.constant dense<0.0> : vector<2xf16>
+  %idx = arith.constant -1 : index
+  %val = arith.constant 2.5 : f16
+  %0 = vector.insert %val, %cst [%idx] : f16 into vector<2xf16>
+  return %0 : vector<2xf16>
+}
+
+// -----
+
 // Similar to test above, but now the index is out-of-bounds.
 
 // CHECK-LABEL: @no_fold_insert_scalar_idx_oob
