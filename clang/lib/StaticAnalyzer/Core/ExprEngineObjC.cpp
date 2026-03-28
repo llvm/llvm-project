@@ -111,18 +111,22 @@ void ExprEngine::VisitObjCForCollectionStmt(const ObjCForCollectionStmt *S,
   //    result in state splitting.
 
   const Stmt *elem = S->getElement();
-  const Stmt *collection = S->getCollection();
+  const Expr *collection = S->getCollection();
   const ConstCFGElementRef &elemRef = getCFGElementRef();
   ProgramStateRef state = Pred->getState();
+  
   SVal collectionV = state->getSVal(collection, Pred->getLocationContext());
 
-  SVal elementV;
+  SVal elementV = UnknownVal();
   if (const auto *DS = dyn_cast<DeclStmt>(elem)) {
     const VarDecl *elemD = cast<VarDecl>(DS->getSingleDecl());
     assert(elemD->getInit() == nullptr);
     elementV = state->getLValue(elemD, Pred->getLocationContext());
   } else {
-    elementV = state->getSVal(elem, Pred->getLocationContext());
+    const Expr *Ex = dyn_cast<Expr>(elem);
+    if (Ex) {
+      elementV = state->getSVal(Ex, Pred->getLocationContext());
+    }
   }
 
   bool isContainerNull = state->isNull(collectionV).isConstrainedTrue();

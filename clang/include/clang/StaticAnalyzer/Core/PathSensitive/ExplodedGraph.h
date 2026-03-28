@@ -169,8 +169,8 @@ public:
   }
 
   /// Get the value of an arbitrary expression at this node.
-  SVal getSVal(const Stmt *S) const {
-    return getState()->getSVal(S, getLocationContext());
+  SVal getSVal(const Expr *Ex) const {
+    return getState()->getSVal(Ex, getLocationContext());
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID,

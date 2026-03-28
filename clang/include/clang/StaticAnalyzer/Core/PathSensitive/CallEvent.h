@@ -199,8 +199,8 @@ protected:
   virtual void cloneTo(void *Dest) const = 0;
 
   /// Get the value of arbitrary expressions at this point in the path.
-  SVal getSVal(const Stmt *S) const {
-    return getState()->getSVal(S, getLocationContext());
+  SVal getSVal(const Expr *Ex) const {
+    return getState()->getSVal(Ex, getLocationContext());
   }
 
   using ValueList = SmallVectorImpl<SVal>;

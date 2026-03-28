@@ -301,15 +301,15 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
       // which is special cased to look up the subexpression RS->getRetValue()
       // in environment. Instead of relying on this hack, pass
       // RS->getRetValue() to getSVal() after checking it for nullness.
-      SVal V = State->getSVal(RS, LCtx);
+      SVal V = UndefinedVal();
+      if (RS->getRetValue())
+        V = State->getSVal(RS->getRetValue(), LCtx);
 
       // Ensure that the return type matches the type of the returned Expr.
       if (wasDifferentDeclUsedForInlining(Call, CalleeCtx)) {
-        QualType ReturnedTy =
-            CallEvent::getDeclaredResultType(CalleeCtx->getDecl());
+        QualType ReturnedTy = CallEvent::getDeclaredResultType(CalleeCtx->getDecl());
         if (!ReturnedTy.isNull()) {
-          V = adjustReturnValue(V, CE->getType(), ReturnedTy,
-                                getStoreManager());
+          V = adjustReturnValue(V, CE->getType(), ReturnedTy, getStoreManager());
         }
       }
 

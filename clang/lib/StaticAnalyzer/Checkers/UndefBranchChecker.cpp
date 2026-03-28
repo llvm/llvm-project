@@ -64,7 +64,12 @@ void UndefBranchChecker::checkBranchCondition(const Stmt *Condition,
   // ObjCForCollection is a loop, but has no actual condition.
   if (isa<ObjCForCollectionStmt>(Condition))
     return;
-  if (!Ctx.getSVal(Condition).isUndef())
+
+  const Expr *Ex = dyn_cast<Expr>(Condition);
+  if (!Ex)
+    return;
+
+  if (!Ctx.getSVal(Ex).isUndef())
     return;
 
   // Generate a sink node, which implicitly marks both outgoing branches as
@@ -87,7 +92,6 @@ void UndefBranchChecker::checkBranchCondition(const Stmt *Condition,
   // since all the BlockEdge did was act as an error sink since the value
   // had to already be undefined.
   assert(!N->pred_empty());
-  const Expr *Ex = cast<Expr>(Condition);
   ExplodedNode *PrevN = *N->pred_begin();
   ProgramPoint P = PrevN->getLocation();
   ProgramStateRef St = N->getState();
