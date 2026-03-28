@@ -15,15 +15,14 @@
 // text_encoding text_encoding::environment()
 // template<std::text_encoding::id> text_encoding text_encoding::environment_is()
 
-// environment() and environment_is() are deleted if there is libc++ is built
-// without localization.
+// environment() and environment_is() are deleted if libc++ is built without localization.
 
 #include <text_encoding>
 
 int main(int, char**) {
-  // expected-warning@+1 {{attempt to use a deleted function}}
+  // expected-error@+1 {{attempt to use a deleted function}}
   std::text_encoding::environment();
-  // expected-warning@+1 {{attempt to use a deleted function}}
+  // expected-error@+1 {{attempt to use a deleted function}}
   std::text_encoding::environment_is<std::text_encoding::UTF8>();
 
   return 0;

@@ -21,8 +21,6 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if defined(_LIBCPP_WIN32API)
-_LIBCPP_HIDDEN text_encoding __get_win32_acp(unsigned int __codepage);
-
 _LIBCPP_HIDDEN text_encoding static __get_win32_acp(unsigned int __codepage) {
   switch (__codepage) {
   case 0:

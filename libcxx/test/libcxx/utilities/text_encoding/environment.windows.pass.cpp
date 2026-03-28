@@ -20,16 +20,17 @@
 #include <cassert>
 #include <cstdlib>
 #include <text_encoding>
+#include <windows.h>
 
 #include "platform_support.h" // locale name macros
 
 int main(int, char**) {
   // On Windows, changes to the "LANG" environment variable don't affect the result
   // of std::text_encoding::environment() and environment_is()
-
-  ::setenv("LANG", LOCALE_fr_CA_ISO8859_1, 1);
-
   auto te = std::text_encoding::environment();
+
+  ::SetEnvironmentVariableA("LANG", LOCALE_fr_CA_ISO8859_1);
+
   assert(std::text_encoding::environment_is<std::text_encoding::id::windows1252>());
   assert(te == std::text_encoding::environment());
   assert(te.mib() == std::text_encoding::id::windows1252);
