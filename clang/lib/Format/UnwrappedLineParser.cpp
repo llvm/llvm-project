@@ -3895,9 +3895,9 @@ bool UnwrappedLineParser::parseEnum() {
     if (!ManageWhitesmithsBraces)
       ++Line->Level;
   }
-  const size_t OpeningLineIndex = CurrentLines->empty()
-                                      ? UnwrappedLine::kInvalidIndex
-                                      : CurrentLines->size() - 1;
+  const auto OpeningLineIndex = CurrentLines->empty()
+                                    ? UnwrappedLine::kInvalidIndex
+                                    : CurrentLines->size() - 1;
   bool HasError = !parseBracedList(/*IsAngleBracket=*/false, /*IsEnum=*/true);
   if (!Style.AllowShortEnumsOnASingleLine && !ManageWhitesmithsBraces)
     --Line->Level;

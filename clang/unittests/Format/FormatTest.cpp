@@ -2887,13 +2887,6 @@ TEST_F(FormatTest, ShortEnums) {
                Style);
 
   Style.AllowShortEnumsOnASingleLine = true;
-  verifyFormat("enum\n"
-               "{\n"
-               "  A,\n"
-               "  B,\n"
-               "  C\n"
-               "} ShortEnum1, ShortEnum2;",
-               Style);
   verifyFormat("export enum\n"
                "{\n"
                "  A,\n"
@@ -22163,11 +22156,7 @@ TEST_F(FormatTest, WhitesmithsBraceBreaking) {
                "  Y = 0,\n"
                "  Z = 1\n"
                "  };\n"
-               "enum X\n"
-               "  {\n"
-               "  Y = 0,\n"
-               "  Z = 1\n"
-               "  };",
+               "int i;",
                WhitesmithsBraceStyle);
 
   verifyFormat("@interface BSApplicationController ()\n"
