@@ -1796,20 +1796,23 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     CmdArgs.push_back("--export-dynamic-symbol=__cfi_check");
 
   if (SanArgs.hasMemTag()) {
-    if (TC.getTriple().isWasm()) {
-    }
-    else if (TC.getTriple().isAndroid()) {
+    if (!TC.getTriple().isWasm()) {
+      CmdArgs.push_back("-z");
       CmdArgs.push_back(
-          Args.MakeArgString("--android-memtag-mode=" + SanArgs.getMemtagMode()));
-      if (SanArgs.hasMemtagHeap())
-        CmdArgs.push_back("--android-memtag-heap");
-      if (SanArgs.hasMemtagStack())
-        CmdArgs.push_back("--android-memtag-stack");
-    }
-    else
-    {
-      TC.getDriver().Diag(diag::err_drv_unsupported_opt_for_target)
-          << "-fsanitize=memtag*" << TC.getTriple().str();
+          Args.MakeArgString("memtag-mode=" + SanArgs.getMemtagMode()));
+
+      if (SanArgs.hasMemtagHeap()) {
+        CmdArgs.push_back("-z");
+        CmdArgs.push_back("memtag-heap");
+      }
+
+      if (SanArgs.hasMemtagStack()) {
+        CmdArgs.push_back("-z");
+        CmdArgs.push_back("memtag-stack");
+      }
+
+      if (TC.getTriple().isAndroid())
+        CmdArgs.push_back("--android-memtag-note");
     }
   }
 
@@ -2350,6 +2353,16 @@ bool tools::checkDebugInfoOption(const Arg *A, const ArgList &Args,
   D.Diag(diag::warn_drv_unsupported_debug_info_opt_for_target)
       << A->getAsString(Args) << TC.getTripleString();
   return false;
+}
+
+void tools::addDebugInfoForProfilingArgs(const Driver &D, const ToolChain &TC,
+                                         const ArgList &Args,
+                                         ArgStringList &CmdArgs) {
+  if (Args.hasFlag(options::OPT_fdebug_info_for_profiling,
+                   options::OPT_fno_debug_info_for_profiling, false) &&
+      checkDebugInfoOption(
+          Args.getLastArg(options::OPT_fdebug_info_for_profiling), Args, D, TC))
+    CmdArgs.push_back("-fdebug-info-for-profiling");
 }
 
 void tools::AddAssemblerKPIC(const ToolChain &ToolChain, const ArgList &Args,

@@ -414,18 +414,21 @@ public:
     bool TreatBooleanAsSigned;
     bool EmitImplicitIntegerTruncationChecks;
     bool EmitImplicitIntegerSignChangeChecks;
+    /* Potential -fsanitize-undefined-ignore-overflow-pattern= */
+    bool PatternExcluded;
 
     ScalarConversionOpts()
         : TreatBooleanAsSigned(false),
           EmitImplicitIntegerTruncationChecks(false),
-          EmitImplicitIntegerSignChangeChecks(false) {}
+          EmitImplicitIntegerSignChangeChecks(false), PatternExcluded(false) {}
 
     ScalarConversionOpts(clang::SanitizerSet SanOpts)
         : TreatBooleanAsSigned(false),
           EmitImplicitIntegerTruncationChecks(
               SanOpts.hasOneOf(SanitizerKind::ImplicitIntegerTruncation)),
           EmitImplicitIntegerSignChangeChecks(
-              SanOpts.has(SanitizerKind::ImplicitIntegerSignChange)) {}
+              SanOpts.has(SanitizerKind::ImplicitIntegerSignChange)),
+          PatternExcluded(false) {}
   };
   Value *EmitScalarCast(Value *Src, QualType SrcType, QualType DstType,
                         llvm::Type *SrcTy, llvm::Type *DstTy,
@@ -1837,7 +1840,7 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
       (DstOBT && DstOBT->isWrapKind()) || (SrcOBT && SrcOBT->isWrapKind());
 
   if ((Opts.EmitImplicitIntegerTruncationChecks || OBTrapInvolved) &&
-      !OBWrapInvolved)
+      !OBWrapInvolved && !Opts.PatternExcluded)
     EmitIntegerTruncationCheck(Src, NoncanonicalSrcType, Res,
                                NoncanonicalDstType, Loc, OBTrapInvolved);
 
@@ -3437,6 +3440,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
         SrcType = promotedType;
       }
 
+      Opts.PatternExcluded = CGF.getContext().isUnaryOverflowPatternExcluded(E);
       value = EmitScalarConversion(value, promotedType, type, E->getExprLoc(),
                                    Opts);
 
@@ -3758,20 +3762,12 @@ Value *ScalarExprEmitter::VisitOffsetOfExpr(OffsetOfExpr *E) {
       auto *RD = CurrentType->castAsRecordDecl();
       const ASTRecordLayout &RL = CGF.getContext().getASTRecordLayout(RD);
 
-      // Compute the index of the field in its parent.
-      unsigned i = 0;
-      // FIXME: It would be nice if we didn't have to loop here!
-      for (RecordDecl::field_iterator Field = RD->field_begin(),
-                                      FieldEnd = RD->field_end();
-           Field != FieldEnd; ++Field, ++i) {
-        if (*Field == MemberDecl)
-          break;
-      }
-      assert(i < RL.getFieldCount() && "offsetof field in wrong type");
+      // Get the index of the field in its parent.
+      unsigned FieldIndex = MemberDecl->getFieldIndex();
 
       // Compute the offset to the field
-      int64_t OffsetInt = RL.getFieldOffset(i) /
-                          CGF.getContext().getCharWidth();
+      int64_t OffsetInt =
+          RL.getFieldOffset(FieldIndex) / CGF.getContext().getCharWidth();
       Offset = llvm::ConstantInt::get(ResultType, OffsetInt);
 
       // Save the element type.

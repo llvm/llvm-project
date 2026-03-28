@@ -468,7 +468,7 @@ public:
   void switchSectionNoPrint(MCSection *Section);
 
   /// Create the default sections and set the initial one.
-  virtual void initSections(bool NoExecStack, const MCSubtargetInfo &STI);
+  virtual void initSections(const MCSubtargetInfo &STI);
 
   MCSymbol *endSection(MCSection *Section);
 

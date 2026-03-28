@@ -1171,13 +1171,20 @@ enum CompactUnwindEncodings {
 uint64_t ARMAsmBackendDarwin::generateCompactUnwindEncoding(
     const MCDwarfFrameInfo *FI, const MCContext *Ctxt) const {
   DEBUG_WITH_TYPE("compact-unwind", llvm::dbgs() << "generateCU()\n");
+
   // Only armv7k uses CFI based unwinding.
   if (Subtype != MachO::CPU_SUBTYPE_ARM_V7K)
     return 0;
+
+  // Signal frames cannot be encoded in compact unwind.
+  if (FI->IsSignalFrame)
+    return CU::UNWIND_ARM_MODE_DWARF;
+
   // No .cfi directives means no frame.
   ArrayRef<MCCFIInstruction> Instrs = FI->Instructions;
   if (Instrs.empty())
     return 0;
+
   if (!isDarwinCanonicalPersonality(FI->Personality) &&
       !Ctxt->emitCompactUnwindNonCanonical())
     return CU::UNWIND_ARM_MODE_DWARF;

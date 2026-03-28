@@ -152,7 +152,7 @@ lldb::SectionSP MergeSections(lldb::SectionSP lhs, lldb::SectionSP rhs) {
         "actual: {3:x}",
         lhs->GetTypeAsCString(),
         rhs_module_parent->GetFileSpec().GetPathAsConstString().GetCString(),
-        lhs->GetByteSize(), rhs->GetByteSize());
+        lhs->GetFileAddress(), rhs->GetFileAddress());
 
   // We want to take the greater of two sections. If LHS and RHS are both
   // SHT_NOBITS, we should default to LHS. If RHS has a bigger section,
@@ -591,16 +591,14 @@ static bool GetOsFromOSABI(unsigned char osabi_byte,
   return ostype != llvm::Triple::OSType::UnknownOS;
 }
 
-size_t ObjectFileELF::GetModuleSpecifications(
+ModuleSpecList ObjectFileELF::GetModuleSpecifications(
     const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
     lldb::offset_t data_offset, lldb::offset_t file_offset,
-    lldb::offset_t length, lldb_private::ModuleSpecList &specs) {
+    lldb::offset_t length) {
   Log *log = GetLog(LLDBLog::Modules);
 
-  const size_t initial_count = specs.GetSize();
-
   if (!extractor_sp || !extractor_sp->HasData())
-    return 0;
+    return {};
   if (ObjectFileELF::MagicBytesMatch(extractor_sp->GetSharedDataBuffer(), 0,
                                      extractor_sp->GetByteSize())) {
     DataExtractor data;
@@ -723,12 +721,14 @@ size_t ObjectFileELF::GetModuleSpecifications(
           }
         }
 
+        ModuleSpecList specs;
         specs.Append(spec);
+        return specs;
       }
     }
   }
 
-  return specs.GetSize() - initial_count;
+  return {};
 }
 
 // ObjectFile protocol
@@ -978,7 +978,8 @@ Address ObjectFileELF::GetImageInfoAddress(Target *target) {
       if (symbol.d_tag == DT_MIPS_RLD_MAP) {
         // DT_MIPS_RLD_MAP tag stores an absolute address of the debug pointer.
         Address addr;
-        if (target->ReadPointerFromMemory(d_load_addr, error, addr, true))
+        if (target->ReadPointerFromMemory(Address(d_load_addr), error, addr,
+                                          true))
           return addr;
       }
       if (symbol.d_tag == DT_MIPS_RLD_MAP_REL) {
@@ -986,7 +987,8 @@ Address ObjectFileELF::GetImageInfoAddress(Target *target) {
         // relative to the address of the tag.
         uint64_t rel_offset;
         rel_offset = target->ReadUnsignedIntegerFromMemory(
-            d_load_addr, GetAddressByteSize(), UINT64_MAX, error, true);
+            Address(d_load_addr), GetAddressByteSize(), UINT64_MAX, error,
+            true);
         if (error.Success() && rel_offset != UINT64_MAX) {
           Address addr;
           addr_t debug_ptr_address =
@@ -1025,7 +1027,7 @@ Address ObjectFileELF::GetBaseAddress() {
       if (header.sh_flags & SHF_ALLOC)
         return Address(GetSectionList()->FindSectionByID(SectionIndex(I)), 0);
     }
-    return LLDB_INVALID_ADDRESS;
+    return Address();
   }
 
   for (const auto &EnumPHdr : llvm::enumerate(ProgramHeaders())) {
@@ -1036,7 +1038,7 @@ Address ObjectFileELF::GetBaseAddress() {
     return Address(
         GetSectionList()->FindSectionByID(SegmentID(EnumPHdr.index())), 0);
   }
-  return LLDB_INVALID_ADDRESS;
+  return Address();
 }
 
 size_t ObjectFileELF::ParseDependentModules() {

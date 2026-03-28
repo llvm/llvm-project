@@ -49,11 +49,10 @@ static void rewriteUses(mlir::Value oldVal, mlir::Value newVal,
                         mlir::Operation *targetContract,
                         mlir::PatternRewriter &rewriter) {
   for (mlir::OpOperand &use : llvm::make_early_inc_range(oldVal.getUses())) {
-
     mlir::Operation *user = use.getOwner();
     if (mlir::isa<mlir::vector::ContractionOp>(user) ||
         mlir::isa<mlir::scf::ForOp>(user)) {
-      use.set(newVal);
+      rewriter.modifyOpInPlace(user, [&]() { use.set(newVal); });
     }
   }
 }
@@ -384,7 +383,7 @@ struct VectorContractToPackedTypeDotProduct
         rewriter, loc, castNonUnitDim.getResult().getType(), broadcastUnitDim);
 
     if (lhsTy.getElementType().isBF16()) {
-      dp = x86::DotBF16Op::create(
+      dp = x86::avx512::DotBF16Op::create(
           rewriter, loc,
           VectorType::get(nonUnitDimValue, rewriter.getF32Type()), castAcc,
           bitcastUnitDimPkType, castNonUnitDim);
@@ -392,12 +391,12 @@ struct VectorContractToPackedTypeDotProduct
 
     if (lhsTy.getElementType().isSignlessInteger(8)) {
       if (nonUnitDimAcc.front() == 16) {
-        dp = x86::AVX10DotInt8Op::create(
+        dp = x86::avx10::AVX10DotInt8Op::create(
             rewriter, loc,
             VectorType::get(nonUnitDimValue, rewriter.getIntegerType(32)),
             castAcc, bitcastUnitDimPkType, castNonUnitDim);
       } else {
-        dp = x86::DotInt8Op::create(
+        dp = x86::avx::DotInt8Op::create(
             rewriter, loc,
             VectorType::get(nonUnitDimValue, rewriter.getIntegerType(32)),
             castAcc, bitcastUnitDimPkType, castNonUnitDim);

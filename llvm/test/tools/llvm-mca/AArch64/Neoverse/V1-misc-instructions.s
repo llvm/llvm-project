@@ -30,7 +30,7 @@ sysl x16, #5, c11, c8, #5
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      1     0.13                  U     at	s12e1r, x28
+# CHECK-NEXT:  1      1     0.13    *      *      U     at	s12e1r, x28
 # CHECK-NEXT:  1      1     0.13                  U     brk	#0x8415
 # CHECK-NEXT:  1      1     0.13    *      *      U     clrex
 # CHECK-NEXT:  1      1     0.13    *      *      U     csdb

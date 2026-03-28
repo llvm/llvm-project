@@ -597,6 +597,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #  include <__algorithm/remove_if.h>
 #  include <__assert>
 #  include <__config>
+#  include <__cstddef/size_t.h>
 #  include <__debug_utils/sanitizers.h>
 #  include <__format/enable_insertable.h>
 #  include <__functional/hash.h>
@@ -629,6 +630,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #  include <__type_traits/enable_if.h>
 #  include <__type_traits/is_allocator.h>
 #  include <__type_traits/is_array.h>
+#  include <__type_traits/is_constant_evaluated.h>
 #  include <__type_traits/is_convertible.h>
 #  include <__type_traits/is_generic_transparent_comparator.h>
 #  include <__type_traits/is_nothrow_assignable.h>
@@ -638,6 +640,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #  include <__type_traits/is_trivially_constructible.h>
 #  include <__type_traits/is_trivially_copyable.h>
 #  include <__type_traits/is_trivially_relocatable.h>
+#  include <__type_traits/remove_cv.h>
 #  include <__type_traits/remove_cvref.h>
 #  include <__utility/default_three_way_comparator.h>
 #  include <__utility/exception_guard.h>
