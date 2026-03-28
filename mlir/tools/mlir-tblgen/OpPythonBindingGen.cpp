@@ -47,6 +47,14 @@ _ods_cext.globals.register_traceback_file_exclusion(__file__)
 
 import builtins
 from typing import Any as _Any, Sequence as _Sequence, Union as _Union, Optional as _Optional
+import sys as _sys
+if _sys.version_info >= (3, 12):
+  from collections.abc import Buffer as _Buffer
+else:
+  try:
+    from typing_extensions import Buffer as _Buffer
+  except ImportError:
+    _Buffer = _Any
 
 )Py";
 
@@ -494,8 +502,9 @@ static void emitElementAccessors(
         }
         if (StringRef pythonType =
                 getPythonType(element.constraint.getCppType());
-            !pythonType.empty())
+            !pythonType.empty()) {
           type = llvm::formatv("{0}[{1}]", type, pythonType);
+        }
         os << formatv(opVariadicEqualPrefixTemplate, sanitizeName(element.name),
                       pyAttrName, numSimpleLength, numVariadicGroups,
                       numPrecedingSimple, numPrecedingVariadic, type);
@@ -529,8 +538,9 @@ static void emitElementAccessors(
                                                  : "_ods_ir.OpResult";
         if (StringRef pythonType =
                 getPythonType(element.constraint.getCppType());
-            !pythonType.empty())
+            !pythonType.empty()) {
           type = llvm::formatv("{0}[{1}]", type, pythonType);
+        }
         if (!element.isVariableLength()) {
           trailing = "[0]";
         } else if (element.isOptional()) {
@@ -541,8 +551,9 @@ static void emitElementAccessors(
       } else {
         if (StringRef pythonType =
                 getPythonType(element.constraint.getCppType());
-            !pythonType.empty())
+            !pythonType.empty()) {
           type = llvm::formatv("{0}[{1}]", type, pythonType);
+        }
       }
 
       os << formatv(opVariadicSegmentTemplate, sanitizeName(element.name), kind,
@@ -669,6 +680,9 @@ static StringRef getPythonAttrRawType(mlir::tblgen::Attribute attr) {
               "DenseI64ArrayAttr"},
              "_Sequence[int]")
       .Cases({"DenseF32ArrayAttr", "DenseF64ArrayAttr"}, "_Sequence[float]")
+      .Cases({"I32ElementsAttr", "I64ElementsAttr", "IndexElementsAttr"},
+             "_Union[_Sequence[int], _Buffer]")
+      .Case("F64ElementsAttr", "_Union[_Sequence[float], _Buffer]")
       .Default(StringRef());
 }
 
@@ -1174,21 +1188,14 @@ static SmallVector<std::string> emitDefaultOpBuilder(const Operator &op,
       }
     } else if (auto *ntype =
                    llvm::dyn_cast_if_present<NamedTypeConstraint *>(arg)) {
-      if (ntype->isVariadic()) {
-        std::string type = "_ods_ir.Value";
-        if (StringRef pythonType =
-                getPythonType(ntype->constraint.getCppType());
-            !pythonType.empty())
-          type = llvm::formatv("{0}[{1}]", type, pythonType);
-        argTypes[idx] = llvm::formatv("_Sequence[{0}]", type);
-      } else {
-        std::string type = "_ods_ir.Value";
-        if (StringRef pythonType =
-                getPythonType(ntype->constraint.getCppType());
-            !pythonType.empty())
-          type = llvm::formatv("{0}[{1}]", type, pythonType);
-        argTypes[idx] = type;
+      std::string type = "_ods_ir.Value";
+      if (StringRef pythonType = getPythonType(ntype->constraint.getCppType());
+          !pythonType.empty()) {
+        type = llvm::formatv("{0}[{1}]", type, pythonType);
       }
+      if (ntype->isVariadic())
+        type = llvm::formatv("_Sequence[{0}]", type);
+      argTypes[idx] = type;
     }
     // NamedProperty args are skipped (no type hint).
   }
@@ -1207,15 +1214,20 @@ static SmallVector<std::string> emitDefaultOpBuilder(const Operator &op,
     argTypes[i] = "int";
   }
 
-  // Determine whether a builder arg is a keyword argument.
-  auto isKeywordArg = [&](size_t i) -> bool {
-    // Only operand/attr args can be keyword; results, successors, and regions
-    // are always positional.
-    if (i < numResultArgs || i >= numResultArgs + numOperandAttrArgs)
+  // Determine whether the argument corresponding to a given index into the
+  // builderArgs vector is a python keyword argument or not.
+  auto isKeywordArgFn = [&](size_t builderArgIndex) -> bool {
+    // All result, successor, and region arguments are positional arguments.
+    if (builderArgIndex < numResultArgs ||
+        builderArgIndex >= numResultArgs + numOperandAttrArgs)
       return false;
-    Argument a = op.getArg(i - numResultArgs);
+    // Keyword arguments:
+    // - optional named attributes (including unit attributes)
+    // - default-valued named attributes
+    // - optional operands
+    Argument a = op.getArg(builderArgIndex - numResultArgs);
     if (auto *nattr = llvm::dyn_cast_if_present<NamedAttribute *>(a))
-      return nattr->attr.isOptional() || nattr->attr.hasDefaultValue();
+      return (nattr->attr.isOptional() || nattr->attr.hasDefaultValue());
     if (auto *ntype = llvm::dyn_cast_if_present<NamedTypeConstraint *>(a))
       return ntype->isOptional();
     return false;
@@ -1225,26 +1237,27 @@ static SmallVector<std::string> emitDefaultOpBuilder(const Operator &op,
   auto formatArg = [](StringRef name, StringRef typeHint,
                       bool isKeyword) -> std::string {
     std::string result = name.str();
-    if (isKeyword && !typeHint.empty()) {
+    if (isKeyword && !typeHint.empty())
       result += ": _Optional[" + typeHint.str() + "] = None";
-    } else if (isKeyword) {
+    else if (isKeyword)
       result += "=None";
-    } else if (!typeHint.empty()) {
+    else if (!typeHint.empty())
       result += ": " + typeHint.str();
-    }
     return result;
   };
 
   // Build the function argument list: positional args, *, keyword args.
   SmallVector<std::string> functionArgs;
   for (size_t i = 0, cnt = builderArgs.size(); i < cnt; ++i)
-    if (!isKeywordArg(i))
+    if (!isKeywordArgFn(i))
       functionArgs.push_back(formatArg(builderArgs[i], argTypes[i], false));
 
+  // Add a bare '*' to indicate that all following arguments must be keyword
+  // arguments.
   functionArgs.push_back("*");
 
   for (size_t i = 0, cnt = builderArgs.size(); i < cnt; ++i)
-    if (isKeywordArg(i))
+    if (isKeywordArgFn(i))
       functionArgs.push_back(formatArg(builderArgs[i], argTypes[i], true));
 
   if (canInferType(op))
