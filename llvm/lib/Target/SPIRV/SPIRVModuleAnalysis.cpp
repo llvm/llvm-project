@@ -1832,6 +1832,7 @@ void addInstrRequirements(const MachineInstr &MI,
     }
     break;
   }
+  case SPIRV::OpGroupNonUniformQuadBroadcast:
   case SPIRV::OpGroupNonUniformQuadSwap:
     Reqs.addCapability(SPIRV::Capability::GroupNonUniformQuad);
     break;
