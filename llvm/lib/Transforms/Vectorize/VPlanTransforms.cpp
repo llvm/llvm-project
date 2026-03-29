@@ -597,10 +597,7 @@ bool VPlanTransforms::mergeBlocksIntoPredecessors(VPlan &Plan) {
     auto *ParentRegion = VPBB->getParent();
     if (ParentRegion && ParentRegion->getExiting() == VPBB)
       ParentRegion->setExiting(PredVPBB);
-    for (auto *Succ : to_vector(VPBB->successors())) {
-      VPBlockUtils::disconnectBlocks(VPBB, Succ);
-      VPBlockUtils::connectBlocks(PredVPBB, Succ);
-    }
+    VPBlockUtils::transferSuccessors(VPBB, PredVPBB);
     // VPBB is now dead and will be cleaned up when the plan gets destroyed.
   }
   return !WorkList.empty();
