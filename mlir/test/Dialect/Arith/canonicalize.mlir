@@ -1311,8 +1311,9 @@ func.func @tripleSubSub1(%arg0: index) -> index {
 
 // CHECK-LABEL: @tripleSubSub1Ovf
 // Folding subi(subi(c0, x), c1) -> subi(c0-c1, x) is unsound when c0-c1
-// unsigned-wraps and nuw is set, because the original always produces poison
-// while the folded form may not. Do not fold.
+// unsigned-wraps and nuw is set: the folded constant 17-42=-25 wraps unsigned,
+// so the folded op would produce poison on more inputs than the original.
+// Do not fold.
 //       CHECK:   %[[c17:.+]] = arith.constant 17 : index
 //       CHECK:   %[[c42:.+]] = arith.constant 42 : index
 //       CHECK:   %[[sub1:.+]] = arith.subi %[[c17]], %arg0 overflow<nsw, nuw>
@@ -3604,6 +3605,177 @@ func.func @addi_fold_const_no_overflow(%arg0: i4) -> i4 {
   %c2 = arith.constant 2 : i4
   %t = arith.addi %arg0, %c1 overflow<nsw, nuw> : i4
   %r = arith.addi %t, %c2 overflow<nsw, nuw> : i4
+  return %r : i4
+}
+
+// -----
+
+// addi(addi(x, c0), c1) must not fold when c0+c1 wraps unsigned and nuw is set.
+// c0=-2 (=6 unsigned), c1=3 for i3: 6+3=9 wraps unsigned (i3 unsigned max=7),
+// but -2+3=1 which does NOT overflow signed. With nuw only the fold is unsound.
+//
+// CHECK-LABEL: @addi_no_fold_const_unsigned_overflow_nuw
+//       CHECK:   %[[cm2:.+]] = arith.constant -2 : i3
+//       CHECK:   %[[c3:.+]] = arith.constant 3 : i3
+//       CHECK:   %[[t:.+]] = arith.addi %arg0, %[[cm2]] overflow<nuw>
+//       CHECK:   %[[r:.+]] = arith.addi %[[t]], %[[c3]] overflow<nuw>
+//       CHECK:   return %[[r]]
+func.func @addi_no_fold_const_unsigned_overflow_nuw(%arg0: i3) -> i3 {
+  %cm2 = arith.constant -2 : i3
+  %c3 = arith.constant 3 : i3
+  %t = arith.addi %arg0, %cm2 overflow<nuw> : i3
+  %r = arith.addi %t, %c3 overflow<nuw> : i3
+  return %r : i3
+}
+
+// -----
+
+// subi(subi(x, c0), c1) -> subi(x, c0+c1) must not fold when c0+c1 overflows
+// under the merged flags. c0=3, c1=1 for i3: 3+1=4 overflows signed (i3
+// signed max = 3). With nsw the fold is unsound.
+//
+// CHECK-LABEL: @subi_rhs_no_fold_const_overflow
+//       CHECK:   %[[c3:.+]] = arith.constant 3 : i3
+//       CHECK:   %[[c1:.+]] = arith.constant 1 : i3
+//       CHECK:   %[[t:.+]] = arith.subi %arg0, %[[c3]] overflow<nsw>
+//       CHECK:   %[[r:.+]] = arith.subi %[[t]], %[[c1]] overflow<nsw>
+//       CHECK:   return %[[r]]
+func.func @subi_rhs_no_fold_const_overflow(%arg0: i3) -> i3 {
+  %c3 = arith.constant 3 : i3
+  %c1 = arith.constant 1 : i3
+  %t = arith.subi %arg0, %c3 overflow<nsw> : i3
+  %r = arith.subi %t, %c1 overflow<nsw> : i3
+  return %r : i3
+}
+
+// -----
+
+// addi(subi(x, c0), c1) -> addi(x, c1-c0) must not fold when c1-c0 overflows
+// under the merged flags. c0=-3, c1=1 for i3: 1-(-3)=4 overflows signed.
+//
+// CHECK-LABEL: @addi_subi_rhs_no_fold_const_overflow
+//       CHECK:   %[[cm3:.+]] = arith.constant -3 : i3
+//       CHECK:   %[[c1:.+]] = arith.constant 1 : i3
+//       CHECK:   %[[t:.+]] = arith.subi %arg0, %[[cm3]] overflow<nsw>
+//       CHECK:   %[[r:.+]] = arith.addi %[[t]], %[[c1]] overflow<nsw>
+//       CHECK:   return %[[r]]
+func.func @addi_subi_rhs_no_fold_const_overflow(%arg0: i3) -> i3 {
+  %cm3 = arith.constant -3 : i3
+  %c1 = arith.constant 1 : i3
+  %t = arith.subi %arg0, %cm3 overflow<nsw> : i3
+  %r = arith.addi %t, %c1 overflow<nsw> : i3
+  return %r : i3
+}
+
+// -----
+
+// muli(muli(x, c0), c1) -> muli(x, c0*c1) must not fold when c0*c1 overflows
+// under the merged flags. c0=3, c1=3 for i4: 3*3=9 overflows signed (i4
+// signed max = 7). With nsw the fold is unsound.
+//
+// CHECK-LABEL: @muli_no_fold_const_overflow
+//       CHECK:   %[[c3:.+]] = arith.constant 3 : i4
+//       CHECK:   %[[t:.+]] = arith.muli %arg0, %[[c3]] overflow<nsw>
+//       CHECK:   %[[r:.+]] = arith.muli %[[t]], %[[c3]] overflow<nsw>
+//       CHECK:   return %[[r]]
+func.func @muli_no_fold_const_overflow(%arg0: i4) -> i4 {
+  %c3a = arith.constant 3 : i4
+  %c3b = arith.constant 3 : i4
+  %t = arith.muli %arg0, %c3a overflow<nsw> : i4
+  %r = arith.muli %t, %c3b overflow<nsw> : i4
+  return %r : i4
+}
+
+// -----
+
+// When c0*c1 does not overflow, the fold is sound.
+// c0=2, c1=2 for i4: 2*2=4, no overflow signed or unsigned.
+//
+// CHECK-LABEL: @muli_fold_const_no_overflow
+//       CHECK:   %[[c4:.+]] = arith.constant 4 : i4
+//       CHECK:   %[[r:.+]] = arith.muli %arg0, %[[c4]] overflow<nsw, nuw>
+//       CHECK:   return %[[r]]
+func.func @muli_fold_const_no_overflow(%arg0: i4) -> i4 {
+  %c2a = arith.constant 2 : i4
+  %c2b = arith.constant 2 : i4
+  %t = arith.muli %arg0, %c2a overflow<nsw, nuw> : i4
+  %r = arith.muli %t, %c2b overflow<nsw, nuw> : i4
+  return %r : i4
+}
+
+// -----
+
+// addi(subi(c0, x), c1) -> subi(c0+c1, x) must not fold when c0+c1 overflows
+// under the merged flags. c0=5, c1=4 for i4: 5+4=9 overflows signed (i4 max=7).
+//
+// CHECK-LABEL: @addi_subi_lhs_no_fold_const_overflow
+//       CHECK:   %[[c5:.+]] = arith.constant 5 : i4
+//       CHECK:   %[[c4:.+]] = arith.constant 4 : i4
+//       CHECK:   %[[t:.+]] = arith.subi %[[c5]], %arg0 overflow<nsw>
+//       CHECK:   %[[r:.+]] = arith.addi %[[t]], %[[c4]] overflow<nsw>
+//       CHECK:   return %[[r]]
+func.func @addi_subi_lhs_no_fold_const_overflow(%arg0: i4) -> i4 {
+  %c5 = arith.constant 5 : i4
+  %c4 = arith.constant 4 : i4
+  %t = arith.subi %c5, %arg0 overflow<nsw> : i4
+  %r = arith.addi %t, %c4 overflow<nsw> : i4
+  return %r : i4
+}
+
+// -----
+
+// subi(c1, addi(x, c0)) -> subi(c1-c0, x) must not fold when c1-c0 overflows
+// under the merged flags. c1=3, c0=-5 for i4: 3-(-5)=8 overflows signed (i4 max=7).
+//
+// CHECK-LABEL: @subi_lhs_add_no_fold_const_overflow
+//       CHECK:   %[[cm5:.+]] = arith.constant -5 : i4
+//       CHECK:   %[[c3:.+]] = arith.constant 3 : i4
+//       CHECK:   %[[t:.+]] = arith.addi %arg0, %[[cm5]] overflow<nsw>
+//       CHECK:   %[[r:.+]] = arith.subi %[[c3]], %[[t]] overflow<nsw>
+//       CHECK:   return %[[r]]
+func.func @subi_lhs_add_no_fold_const_overflow(%arg0: i4) -> i4 {
+  %cm5 = arith.constant -5 : i4
+  %c3 = arith.constant 3 : i4
+  %t = arith.addi %arg0, %cm5 overflow<nsw> : i4
+  %r = arith.subi %c3, %t overflow<nsw> : i4
+  return %r : i4
+}
+
+// -----
+
+// subi(c1, subi(x, c0)) -> subi(c0+c1, x) must not fold when c0+c1 overflows
+// under the merged flags. c0=5, c1=4 for i4: 5+4=9 overflows signed (i4 max=7).
+//
+// CHECK-LABEL: @subi_lhs_subi_rhs_no_fold_const_overflow
+//       CHECK:   %[[c5:.+]] = arith.constant 5 : i4
+//       CHECK:   %[[c4:.+]] = arith.constant 4 : i4
+//       CHECK:   %[[t:.+]] = arith.subi %arg0, %[[c5]] overflow<nsw>
+//       CHECK:   %[[r:.+]] = arith.subi %[[c4]], %[[t]] overflow<nsw>
+//       CHECK:   return %[[r]]
+func.func @subi_lhs_subi_rhs_no_fold_const_overflow(%arg0: i4) -> i4 {
+  %c5 = arith.constant 5 : i4
+  %c4 = arith.constant 4 : i4
+  %t = arith.subi %arg0, %c5 overflow<nsw> : i4
+  %r = arith.subi %c4, %t overflow<nsw> : i4
+  return %r : i4
+}
+
+// -----
+
+// subi(c1, subi(c0, x)) -> addi(x, c1-c0) must not fold when c1-c0 overflows
+// under the merged flags. c1=3, c0=-5 for i4: 3-(-5)=8 overflows signed (i4 max=7).
+//
+// CHECK-LABEL: @subi_lhs_subi_lhs_no_fold_const_overflow
+//       CHECK:   %[[cm5:.+]] = arith.constant -5 : i4
+//       CHECK:   %[[c3:.+]] = arith.constant 3 : i4
+//       CHECK:   %[[t:.+]] = arith.subi %[[cm5]], %arg0 overflow<nsw>
+//       CHECK:   %[[r:.+]] = arith.subi %[[c3]], %[[t]] overflow<nsw>
+//       CHECK:   return %[[r]]
+func.func @subi_lhs_subi_lhs_no_fold_const_overflow(%arg0: i4) -> i4 {
+  %cm5 = arith.constant -5 : i4
+  %c3 = arith.constant 3 : i4
+  %t = arith.subi %cm5, %arg0 overflow<nsw> : i4
+  %r = arith.subi %c3, %t overflow<nsw> : i4
   return %r : i4
 }
 

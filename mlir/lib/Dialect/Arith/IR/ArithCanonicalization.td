@@ -38,10 +38,18 @@ def AddAttrsNoOverflow :
                "constant addition does not overflow with merged flags">;
 
 // Constraint: constant c0-c1 does not overflow under the merged flags of ovf1
-// and ovf2.
+// and ovf2. Without this guard, folding addi(subi(x, c0), c1) -> addi(x, c1-c0)
+// is unsound when the constant difference wraps and the result carries nsw/nuw.
 def SubAttrsNoOverflow :
     Constraint<CPred<"subAttrsNoOverflow($0, $1, $2, $3)">,
                "constant subtraction does not overflow with merged flags">;
+
+// Constraint: constant c0*c1 does not overflow under the merged flags of ovf1
+// and ovf2. Without this guard, folding muli(muli(x, c0), c1) -> muli(x, c0*c1)
+// is unsound when the constant product wraps and the result carries nsw/nuw.
+def MulAttrsNoOverflow :
+    Constraint<CPred<"mulAttrsNoOverflow($0, $1, $2, $3)">,
+               "constant multiplication does not overflow with merged flags">;
 
 class cast<string type> : NativeCodeCall<"::mlir::cast<" # type # ">($0)">;
 
@@ -103,6 +111,8 @@ def AddIMulNegativeOneLhs :
         [(IsScalarOrSplatNegativeOne $c0)]>;
 
 // muli(muli(x, c0), c1) -> muli(x, c0 * c1)
+// Guard: the constant product c0*c1 must not overflow under the merged flags,
+// otherwise the folded op would produce poison where the originals did not.
 def MulIMulIConstant :
     Pat<(Arith_MulIOp:$res
           (Arith_MulIOp $x, (ConstantLikeMatcher APIntAttr:$c0), $ovf1),
@@ -110,7 +120,8 @@ def MulIMulIConstant :
         (Arith_MulIOp $x, (Arith_ConstantOp (MulIntAttrs $res, $c0, $c1)),
             (MergeOverflow $ovf1, $ovf2)),
              [(Constraint<CPred<"$0.getType() == cast<IntegerAttr>($1).getType()">> $res, $c0),
-              (Constraint<CPred<"$0.getType() == cast<IntegerAttr>($1).getType()">> $res, $c1)]>;
+              (Constraint<CPred<"$0.getType() == cast<IntegerAttr>($1).getType()">> $res, $c1),
+              (MulAttrsNoOverflow $c0, $c1, $ovf1, $ovf2)]>;
 
 //===----------------------------------------------------------------------===//
 // AddUIExtendedOp

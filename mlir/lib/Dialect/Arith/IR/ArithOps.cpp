@@ -117,6 +117,8 @@ static bool addAttrsNoOverflow(Attribute c0, Attribute c1,
                                IntegerOverflowFlagsAttr ovf1,
                                IntegerOverflowFlagsAttr ovf2) {
   IntegerOverflowFlags merged = ovf1.getValue() & ovf2.getValue();
+  if (merged == IntegerOverflowFlags::none)
+    return true;
   const APInt &v0 = llvm::cast<IntegerAttr>(c0).getValue();
   const APInt &v1 = llvm::cast<IntegerAttr>(c1).getValue();
   return !addConstantWouldOverflow(v0, v1, merged);
@@ -127,9 +129,35 @@ static bool subAttrsNoOverflow(Attribute c0, Attribute c1,
                                IntegerOverflowFlagsAttr ovf1,
                                IntegerOverflowFlagsAttr ovf2) {
   IntegerOverflowFlags merged = ovf1.getValue() & ovf2.getValue();
+  if (merged == IntegerOverflowFlags::none)
+    return true;
   const APInt &v0 = llvm::cast<IntegerAttr>(c0).getValue();
   const APInt &v1 = llvm::cast<IntegerAttr>(c1).getValue();
   return !subConstantWouldOverflow(v0, v1, merged);
+}
+
+// Returns true if c0 * c1 would NOT overflow with the merged flags.
+static bool mulAttrsNoOverflow(Attribute c0, Attribute c1,
+                               IntegerOverflowFlagsAttr ovf1,
+                               IntegerOverflowFlagsAttr ovf2) {
+  IntegerOverflowFlags merged = ovf1.getValue() & ovf2.getValue();
+  if (merged == IntegerOverflowFlags::none)
+    return true;
+  const APInt &v0 = llvm::cast<IntegerAttr>(c0).getValue();
+  const APInt &v1 = llvm::cast<IntegerAttr>(c1).getValue();
+  if (bitEnumContainsAny(merged, IntegerOverflowFlags::nsw)) {
+    bool overflow = false;
+    (void)v0.smul_ov(v1, overflow);
+    if (overflow)
+      return false;
+  }
+  if (bitEnumContainsAny(merged, IntegerOverflowFlags::nuw)) {
+    bool overflow = false;
+    (void)v0.umul_ov(v1, overflow);
+    if (overflow)
+      return false;
+  }
+  return true;
 }
 
 /// Invert an integer comparison predicate.
