@@ -884,3 +884,24 @@ func.func @custom_types_bar(%arg: !test.test_tensor<[4, 4], f64>)
   // CHECK: return %[[out]]
   return %out : !test.test_tensor<[4, 8], f64>
 }
+
+// -----
+
+// Test that foldMemRefCasts does not downgrade a ranked return type to unranked
+// when the return value is produced by a memref.cast from unranked to ranked.
+// CHECK-LABEL: func.func @ranked_return_via_unranked_call(
+// CHECK-SAME:      %[[arg:.*]]: memref<64x20x40xf32
+// CHECK-SAME:  ) -> memref<64x20x40xf32
+func.func @ranked_return_via_unranked_call(%arg0: tensor<64x20x40xf32>) -> tensor<64x20x40xf32> {
+  // CHECK: %[[cast:.*]] = memref.cast %[[arg]]
+  // CHECK-SAME: to memref<*xf32>
+  %u = tensor.cast %arg0 : tensor<64x20x40xf32> to tensor<*xf32>
+  // CHECK: %[[call:.*]] = call @relu_unranked(%[[cast]])
+  %r = call @relu_unranked(%u) : (tensor<*xf32>) -> tensor<*xf32>
+  // CHECK: %[[cast2:.*]] = memref.cast %[[call]]
+  // CHECK-SAME: to memref<64x20x40xf32
+  %b = tensor.cast %r : tensor<*xf32> to tensor<64x20x40xf32>
+  // CHECK: return %[[cast2]]
+  return %b : tensor<64x20x40xf32>
+}
+func.func private @relu_unranked(tensor<*xf32>) -> tensor<*xf32>
