@@ -235,16 +235,15 @@ static LogicalResult eraseRedundantBlocksInRegion(ModuleOp module,
   mlir::OpBuilder b(context);
   while (Operation *branchTerminator = getBranchTerminatorInRegion(region)) {
     size_t numSuccessor = branchTerminator->getNumSuccessors();
-    // We allocate memory on the heap because the object will be assigned to
-    // 'smallestNode'.
-    ReductionNode *root = allocator.Allocate();
     std::vector<ReductionNode::Range> ranges{
         {0, std::distance(region.op_begin(), region.op_end())}};
-
     // Iterate through each successor of the branching terminator to try
     // reducing the control flow to a single-path execution.
     int branchIdx = -1;
     for (int i = 0, e = numSuccessor; i < e; ++i) {
+      // We allocate memory on the heap because the object will be assigned to
+      // 'smallestNode'.
+      ReductionNode *root = allocator.Allocate();
       new (root) ReductionNode(nullptr, ranges, allocator);
       mlir::IRMapping mapper;
       if (failed(root->initialize(module, region, mapper)))

@@ -85,6 +85,7 @@ func.func @br_reduction(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 //  CHECK-SAME:   %[[ARG1:.*]]: memref<2xf32>,
 //  CHECK-SAME:   %[[ARG2:.*]]: memref<2xf32>) {
 func.func @br_reduction_loop(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+  // select ^bb2
   cf.cond_br %arg0, ^bb1, ^bb2
 ^bb1:
   cf.br ^bb3(%arg1 : memref<2xf32>)
@@ -93,14 +94,12 @@ func.func @br_reduction_loop(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf3
   cf.br ^bb3(%0 : memref<2xf32>)
 ^bb3(%1: memref<2xf32>):
   "test.op_crash"(%1, %arg2) : (memref<2xf32>, memref<2xf32>) -> ()
+  // select ^bb4
   cf.cond_br %arg0, ^bb3(%1: memref<2xf32>), ^bb4
 ^bb4:
   return
 }
-// CHECK-NEXT:   cf.br ^bb1(%[[ARG1]] : memref<2xf32>)
-// CHECK-NEXT: ^bb1(%[[VAL_0:.*]]: memref<2xf32>):
-// CHECK-NEXT:   "test.op_crash"(%[[VAL_0]], %[[ARG2]])
-// CHECK-NEXT:   cf.br ^bb1(%[[VAL_0]] : memref<2xf32>)
+// CHECK-NEXT:  "test.op_crash"(%[[ARG1]], %[[ARG2]])
 
 // -----
 
