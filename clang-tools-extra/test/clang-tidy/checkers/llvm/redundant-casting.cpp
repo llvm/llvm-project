@@ -161,3 +161,19 @@ void testCastTemplateTrigger2(A* value, T other) {
   (void)a16; (void) other;
 }
 
+void testCastConst(const A& value) {
+  const A& a17 = llvm::cast<A>(value);
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: redundant use of 'cast' [llvm-redundant-casting]
+  // CHECK-MESSAGES: :[[@LINE-2]]:32: note: source expression has type 'const A'
+  // CHECK-FIXES: const A& a17 = value;
+  (void)a17;
+}
+
+void testCastConstPointer(const A* value) {
+  const A* a18 = llvm::cast<A>(value);
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: redundant use of 'cast' [llvm-redundant-casting]
+  // CHECK-MESSAGES: :[[@LINE-2]]:32: note: source expression has type 'const A *'
+  // CHECK-FIXES: const A* a18 = value;
+  (void)a18;
+}
+
