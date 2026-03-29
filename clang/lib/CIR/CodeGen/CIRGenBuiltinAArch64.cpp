@@ -192,7 +192,7 @@ static mlir::Value emitNeonShiftVector(CIRGenBuilderTy &builder,
   mlir::Type eltTy = vecTy.getElementType();
   if (shiftVal.getType() != eltTy) {
     shiftVal = builder.createIntCast(shiftVal, eltTy);
-  }                         
+  }
   return cir::VecSplatOp::create(builder, loc, vecTy, shiftVal);
 }
 
