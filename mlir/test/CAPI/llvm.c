@@ -59,6 +59,14 @@ static void testTypeCreation(MlirContext ctx) {
       mlirTypeParseGet(ctx, mlirStringRefCreateFromCString(i32_4_text));
   // CHECK: !llvm.array<4 x i32>: 1
   fprintf(stderr, "%s: %d\n", i32_4_text, mlirTypeEqual(i32_4, i32_4_ref));
+  // CHECK: array_isa: 1
+  fprintf(stderr, "array_isa: %d\n", mlirTypeIsALLVMArrayType(i32_4));
+  // CHECK: array_element_type: 1
+  fprintf(stderr, "array_element_type: %d\n",
+          mlirTypeEqual(mlirLLVMArrayTypeGetElementType(i32_4), i32));
+  // CHECK: array_num_elements: 4
+  fprintf(stderr, "array_num_elements: %u\n",
+          mlirLLVMArrayTypeGetNumElements(i32_4));
 
   const char *i8_i32_i64_text = "!llvm.func<i8 (i32, i64)>";
   const MlirType i32_i64_arr[] = {i32, i64};
@@ -270,7 +278,8 @@ static void testDebugInfoAttributes(MlirContext ctx) {
 
   MlirAttribute compile_unit = mlirLLVMDICompileUnitAttrGet(
       ctx, id, LLVMDWARFSourceLanguageC99, file, foo, false,
-      MlirLLVMDIEmissionKindFull, MlirLLVMDINameTableKindDefault, bar);
+      MlirLLVMDIEmissionKindFull, false, MlirLLVMDINameTableKindDefault, bar, 0,
+      NULL);
 
   // CHECK: #llvm.di_compile_unit<{{.*}}>
   mlirAttributeDump(compile_unit);

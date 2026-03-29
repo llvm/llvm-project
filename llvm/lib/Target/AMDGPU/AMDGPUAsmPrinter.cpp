@@ -561,7 +561,7 @@ SmallString<128> AMDGPUAsmPrinter::getMCExprStr(const MCExpr *Value) {
 void AMDGPUAsmPrinter::emitCommonFunctionComments(
     const MCExpr *NumVGPR, const MCExpr *NumAGPR, const MCExpr *TotalNumVGPR,
     const MCExpr *NumSGPR, const MCExpr *ScratchSize, uint64_t CodeSize,
-    const AMDGPUMachineFunction *MFI) {
+    const AMDGPUMachineFunctionInfo *MFI) {
   OutStreamer->emitRawComment(" codeLenInByte = " + Twine(CodeSize), false);
   OutStreamer->emitRawComment(" TotalNumSgprs: " + getMCExprStr(NumSGPR),
                               false);
@@ -681,7 +681,8 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
       &getAnalysis<AMDGPUResourceUsageAnalysisWrapperPass>().getResourceInfo();
   CurrentProgramInfo.reset(MF);
 
-  const AMDGPUMachineFunction *MFI = MF.getInfo<AMDGPUMachineFunction>();
+  const AMDGPUMachineFunctionInfo *MFI =
+      MF.getInfo<AMDGPUMachineFunctionInfo>();
   MCContext &Ctx = MF.getContext();
 
   // The starting address of all shader programs must be 256 bytes aligned.

@@ -462,7 +462,8 @@ private:
               ptrdiff_t *ArgOffsets, uint32_t &NumArgs,
               llvm::SmallVectorImpl<void *> &Args,
               llvm::SmallVectorImpl<void *> &Ptrs,
-              KernelLaunchEnvironmentTy *KernelLaunchEnvironment) const;
+              KernelLaunchEnvironmentTy *KernelLaunchEnvironment,
+              uint32_t Version) const;
 
   /// Get the number of threads and blocks for the kernel based on the
   /// user-defined threads and block clauses.
@@ -1022,7 +1023,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
     return GridValues.GV_Default_Num_Teams;
   }
   uint32_t getDebugKind() const { return OMPX_DebugKind; }
-  uint32_t getDynamicMemorySize() const { return OMPX_SharedMemorySize; }
   virtual uint64_t getClockFrequency() const { return CLOCKS_PER_SEC; }
 
   /// Get target compute unit kind (e.g., sm_80, or gfx908).
@@ -1195,7 +1195,6 @@ private:
 
   /// Environment variables defined by the LLVM OpenMP implementation.
   Int32Envar OMPX_DebugKind;
-  UInt32Envar OMPX_SharedMemorySize;
   UInt64Envar OMPX_TargetStackSize;
   UInt64Envar OMPX_TargetHeapSize;
 
@@ -1359,6 +1358,15 @@ struct GenericPluginTy {
     assert(RPCServer && "RPC server not initialized");
     return *RPCServer;
   }
+
+  /// Initialize the RPC doorbell if used by the target.
+  virtual Error initRPCDoorbell(uint64_t *&Value, uint64_t *&Mailbox,
+                                uint32_t &EventID) {
+    return Plugin::success();
+  }
+
+  /// Tear down any target-specific doorbell resources.
+  virtual Error deinitRPCDoorbell() { return Plugin::success(); }
 
   /// Get a reference to the record and replay interface for the plugin.
   RecordReplayTy &getRecordReplay() {

@@ -444,6 +444,15 @@ template <> void SymbolRecordImpl<DefRangeRegisterRelSym>::map(IO &IO) {
   IO.mapRequired("Gaps", Symbol.Gaps);
 }
 
+template <> void SymbolRecordImpl<DefRangeRegisterRelIndirSym>::map(IO &IO) {
+  IO.mapRequired("Register", Symbol.Hdr.Register);
+  IO.mapRequired("Flags", Symbol.Hdr.Flags);
+  IO.mapRequired("BasePointerOffset", Symbol.Hdr.BasePointerOffset);
+  IO.mapRequired("OffsetInUdt", Symbol.Hdr.OffsetInUdt);
+  IO.mapRequired("Range", Symbol.Range);
+  IO.mapRequired("Gaps", Symbol.Gaps);
+}
+
 template <> void SymbolRecordImpl<BlockSym>::map(IO &IO) {
   IO.mapOptional("PtrParent", Symbol.Parent, 0U);
   IO.mapOptional("PtrEnd", Symbol.End, 0U);

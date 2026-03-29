@@ -950,7 +950,7 @@ bool MipsFastISel::selectStore(const Instruction *I) {
 // This can cause a redundant sltiu to be generated.
 // FIXME: try and eliminate this in a future patch.
 bool MipsFastISel::selectBranch(const Instruction *I) {
-  const BranchInst *BI = cast<BranchInst>(I);
+  const CondBrInst *BI = cast<CondBrInst>(I);
   MachineBasicBlock *BrBB = FuncInfo.MBB;
   //
   // TBB is the basic block for the case where the comparison is true.

@@ -29,7 +29,7 @@ int base();
 // HOST-LABEL: define{{.*}} void @foo()
 // HOST: call i32 @hst(double noundef -1.000000e+00)
 // HOST: call i32 @hst(double noundef -2.000000e+00)
-// HOST: call void [[OFFL:@.+_foo_l36]]()
+// HOST: call void [[OFFL:@.+_foo_l36]](ptr null)
 void foo() {
   base(-1);
   hst(-2);
@@ -40,7 +40,7 @@ void foo() {
   }
 }
 
-// HOST: define {{.*}}void [[OFFL]]()
+// HOST: define {{.*}}void [[OFFL]](ptr {{[^,]+}})
 // HOST: call i32 @hst(double noundef -3.000000e+00)
 // HOST: call i32 @dev(double noundef -4.000000e+00)
 

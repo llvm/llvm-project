@@ -401,7 +401,8 @@ private:
 template <template <typename T> class Trait>
 class DynamicOpTraitImpl : public DynamicOpTrait {
 public:
-  TypeID getTypeID() const override { return TypeID::get<Trait>(); }
+  static TypeID getStaticTypeID() { return TypeID::get<Trait>(); }
+  TypeID getTypeID() const override { return getStaticTypeID(); }
 };
 
 namespace DynamicOpTraits {
@@ -566,7 +567,7 @@ public:
   Attribute getPropertiesAsAttr(Operation *op) final { return {}; }
   void copyProperties(OpaqueProperties lhs, OpaqueProperties rhs) final {}
   bool compareProperties(OpaqueProperties, OpaqueProperties) final {
-    return false;
+    return true;
   }
   llvm::hash_code hashProperties(OpaqueProperties prop) final { return {}; }
 

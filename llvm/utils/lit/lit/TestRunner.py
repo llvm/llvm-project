@@ -126,6 +126,8 @@ class TimeoutHelper(object):
         if not self.active():
             return
         self._timer.cancel()
+        # Break reference cycle so that thread stack is freed immediately.
+        self._timer = None
 
     def active(self):
         return self.timeout > 0
@@ -135,7 +137,9 @@ class TimeoutHelper(object):
             return
         needToRunKill = False
         with self._lock:
-            self._procs.append(proc)
+            # just store the pid, rather than the whole proc object.
+            # Holding the proc object keeps resources (eg pipes) open unnecessarily.
+            self._procs.append(proc.pid)
             # Avoid re-entering the lock by finding out if kill needs to be run
             # again here but call it if necessary once we have left the lock.
             # We could use a reentrant lock here instead but this code seems
@@ -175,8 +179,8 @@ class TimeoutHelper(object):
         the initial call to _kill()
         """
         with self._lock:
-            for p in self._procs:
-                lit.util.killProcessAndChildren(p.pid)
+            for pid in self._procs:
+                lit.util.killProcessAndChildren(pid)
             # Empty the list and note that we've done a pass over the list
             self._procs = []  # Python2 doesn't have list.clear()
             self._doneKillPass = True

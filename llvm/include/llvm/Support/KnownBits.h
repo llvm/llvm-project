@@ -361,7 +361,16 @@ public:
 
   /// Compute knownbits resulting from addition of LHS and RHS.
   static KnownBits add(const KnownBits &LHS, const KnownBits &RHS,
-                       bool NSW = false, bool NUW = false) {
+                       bool NSW = false, bool NUW = false,
+                       bool SelfAdd = false) {
+    // ADD(X,X) is equivalent to SHL(X,1), the low bit is always zero.
+    if (SelfAdd) {
+      // Shift amount bitwidth is independent of src bitwidth (and we're
+      // just shifting by one so don't have any bounds issues).
+      assert(LHS == RHS && "Expected matching knownbits");
+      KnownBits Amt = KnownBits::makeConstant(APInt(8, 1));
+      return KnownBits::shl(LHS, Amt, NUW, NSW, /*ShAmtNonZero=*/true);
+    }
     return computeForAddSub(/*Add=*/true, NSW, NUW, LHS, RHS);
   }
 

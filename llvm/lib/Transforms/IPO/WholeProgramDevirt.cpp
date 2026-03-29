@@ -489,7 +489,7 @@ struct VirtualCallSite {
       emitRemark(OptName, TargetName, OREGetter);
     CB.replaceAllUsesWith(New);
     if (auto *II = dyn_cast<InvokeInst>(&CB)) {
-      BranchInst::Create(II->getNormalDest(), CB.getIterator());
+      UncondBrInst::Create(II->getNormalDest(), CB.getIterator());
       II->getUnwindDest()->removePredecessor(II->getParent());
     }
     CB.eraseFromParent();

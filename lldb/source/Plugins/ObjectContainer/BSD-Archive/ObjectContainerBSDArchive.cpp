@@ -434,13 +434,13 @@ ObjectFileSP ObjectContainerBSDArchive::GetObjectFile(const FileSpec *file) {
   return ObjectFileSP();
 }
 
-size_t ObjectContainerBSDArchive::GetModuleSpecifications(
+ModuleSpecList ObjectContainerBSDArchive::GetModuleSpecifications(
     const FileSpec &file, lldb::DataExtractorSP &extractor_sp,
     lldb::offset_t data_offset, lldb::offset_t file_offset,
-    lldb::offset_t file_size, ModuleSpecList &specs) {
+    lldb::offset_t file_size) {
 
   if (!file || !extractor_sp)
-    return 0;
+    return {};
 
   DataExtractorSP data_extractor_sp =
       extractor_sp->GetSubsetExtractorSP(data_offset);
@@ -449,9 +449,8 @@ size_t ObjectContainerBSDArchive::GetModuleSpecifications(
   // contents for the archive and cache it
   ArchiveType archive_type = MagicBytesMatch(*data_extractor_sp);
   if (archive_type == ArchiveType::Invalid)
-    return 0;
+    return {};
 
-  const size_t initial_count = specs.GetSize();
   llvm::sys::TimePoint<> file_mod_time =
       FileSystem::Instance().GetModificationTime(file);
   ArchiveSP archive_sp(
@@ -469,6 +468,7 @@ size_t ObjectContainerBSDArchive::GetModuleSpecifications(
     }
   }
 
+  ModuleSpecList specs;
   if (archive_sp) {
     const size_t num_objects = archive_sp->GetNumObjects();
     for (size_t idx = 0; idx < num_objects; ++idx) {
@@ -479,44 +479,48 @@ size_t ObjectContainerBSDArchive::GetModuleSpecifications(
             continue;
           FileSpec child = GetChildFileSpecificationsFromThin(
               object->ar_name.GetStringRef(), file);
-          if (lldb_private::ObjectFile::GetModuleSpecifications(
-                  child, 0, object->file_size, specs)) {
-            ModuleSpec &spec =
-                specs.GetModuleSpecRefAtIndex(specs.GetSize() - 1);
+          ModuleSpecList object_specs =
+              lldb_private::ObjectFile::GetModuleSpecifications(
+                  child, 0, object->file_size);
+          if (object_specs.GetSize() > 0) {
+            ModuleSpec &spec = object_specs.GetModuleSpecRefAtIndex(
+                object_specs.GetSize() - 1);
             llvm::sys::TimePoint<> object_mod_time(
                 std::chrono::seconds(object->modification_time));
             spec.GetObjectName() = object->ar_name;
             spec.SetObjectOffset(0);
             spec.SetObjectSize(object->file_size);
             spec.GetObjectModificationTime() = object_mod_time;
+            specs.Append(spec);
           }
           continue;
         }
         const lldb::offset_t object_file_offset =
             file_offset + object->file_offset;
         if (object->file_offset < file_size && file_size > object_file_offset) {
-          if (lldb_private::ObjectFile::GetModuleSpecifications(
-                  file, object_file_offset, file_size - object_file_offset,
-                  specs)) {
-            ModuleSpec &spec =
-                specs.GetModuleSpecRefAtIndex(specs.GetSize() - 1);
+          ModuleSpecList object_specs =
+              lldb_private::ObjectFile::GetModuleSpecifications(
+                  file, object_file_offset, file_size - object_file_offset);
+          if (object_specs.GetSize() > 0) {
+            ModuleSpec &spec = object_specs.GetModuleSpecRefAtIndex(
+                object_specs.GetSize() - 1);
             llvm::sys::TimePoint<> object_mod_time(
                 std::chrono::seconds(object->modification_time));
             spec.GetObjectName() = object->ar_name;
             spec.SetObjectOffset(object_file_offset);
             spec.SetObjectSize(object->file_size);
             spec.GetObjectModificationTime() = object_mod_time;
+            specs.Append(spec);
           }
         }
       }
     }
   }
   const size_t end_count = specs.GetSize();
-  size_t num_specs_added = end_count - initial_count;
-  if (set_archive_arch && num_specs_added > 0) {
+  if (set_archive_arch && specs.GetSize() > 0) {
     // The archive was created but we didn't have an architecture so we need to
     // set it
-    for (size_t i = initial_count; i < end_count; ++i) {
+    for (size_t i = 0; i < end_count; ++i) {
       ModuleSpec module_spec;
       if (specs.GetModuleSpecAtIndex(i, module_spec)) {
         if (module_spec.GetArchitecture().IsValid()) {
@@ -526,5 +530,5 @@ size_t ObjectContainerBSDArchive::GetModuleSpecifications(
       }
     }
   }
-  return num_specs_added;
+  return specs;
 }

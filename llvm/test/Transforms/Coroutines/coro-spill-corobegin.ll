@@ -77,14 +77,16 @@ declare void @free(ptr)
 ; CHECK-NEXT:    [[GVAR_ADDR:%.*]] = getelementptr inbounds [[G_FRAME:%.*]], ptr [[INNERHDL_RELOAD]], i32 0, i32 4
 ; CHECK-NEXT:    [[GVAR:%.*]] = load i32, ptr [[GVAR_ADDR]], align 4
 ; CHECK-NEXT:    call void @print.i32(i32 [[GVAR]])
-; CHECK-NEXT:    call void @free(ptr [[HDL]])
+; CHECK-NEXT:    [[MEM:%.*]] = call ptr @llvm.coro.free(token poison, ptr [[HDL]])
+; CHECK-NEXT:    call void @free(ptr [[MEM]])
 ; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: define internal fastcc void @f.destroy(
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(32) [[HDL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY_DESTROY:.*:]]
-; CHECK-NEXT:    call void @free(ptr [[HDL]])
+; CHECK-NEXT:    [[MEM:%.*]] = call ptr @llvm.coro.free(token poison, ptr [[HDL]])
+; CHECK-NEXT:    call void @free(ptr [[MEM]])
 ; CHECK-NEXT:    ret void
 ;
 ;

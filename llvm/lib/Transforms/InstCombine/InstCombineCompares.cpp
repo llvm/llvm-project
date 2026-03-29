@@ -75,7 +75,7 @@ static bool subWithOverflow(APInt &Result, const APInt &In1, const APInt &In2,
 /// branch on sign bit comparison.
 static bool hasBranchUse(ICmpInst &I) {
   for (auto *U : I.users())
-    if (isa<BranchInst>(U))
+    if (isa<CondBrInst>(U))
       return true;
   return false;
 }
@@ -1419,7 +1419,7 @@ Instruction *InstCombinerImpl::foldICmpWithDominatingICmp(ICmpInst &Cmp) {
     return nullptr;
   };
 
-  for (BranchInst *BI : DC.conditionsFor(X)) {
+  for (CondBrInst *BI : DC.conditionsFor(X)) {
     CmpPredicate DomPred;
     const APInt *DomC;
     if (!match(BI->getCondition(),
@@ -6836,8 +6836,8 @@ static bool isChainSelectCmpBranch(const SelectInst *SI) {
   const BasicBlock *BB = SI->getParent();
   if (!BB)
     return false;
-  auto *BI = dyn_cast_or_null<BranchInst>(BB->getTerminator());
-  if (!BI || BI->getNumSuccessors() != 2)
+  auto *BI = dyn_cast_or_null<CondBrInst>(BB->getTerminator());
+  if (!BI)
     return false;
   auto *IC = dyn_cast<ICmpInst>(BI->getCondition());
   if (!IC || (IC->getOperand(0) != SI && IC->getOperand(1) != SI))
@@ -8672,6 +8672,36 @@ static Instruction *foldFCmpFSubIntoFCmp(FCmpInst &I, Instruction *LHSI,
       if (LHSI->hasNoNaNs())
         I.setHasNoNaNs(true);
       return &I;
+    }
+    // fcmp `pred (C - Y), C` -> `fcmp swap(pred), Y, 0`
+    // where C and Y can't be arbitrary floating-point values.
+    // For example, with `C = 1.0f` and `Y = 0x1p-149`, `1.0f - Y` rounds back
+    // to `1.0f`, so the source compare is false while the rewritten compare is
+    // true.
+    // We need to make sure (C - Y) never rounds back to C
+    const APFloat *C;
+    Value *IntSrc;
+    if (match(RHSC, m_APFloat(C)) &&
+        match(LHSI, m_FSub(m_Specific(RHSC), m_IToFP(m_Value(IntSrc)))) &&
+        C->isNormal()) {
+      // Requirements on C and Y:
+      // 1. C is finite, nonzero, normal.
+      // 2. C shouldn't be too large, that is, ULP(C) <= 1.
+      // 3. Y must be the form of `[su]itofp`, so the finite nonzero result of Y
+      // must be integer-valued with an absolute value of at least 1;
+      // as long as the step size near C does not exceed 1,
+      // C - Y cannot be rounded back to C when Y != 0.
+      // 4. If Y = 0, `fcmp pred (C - 0), C` are equivalent to `fcmp swap(pred)
+      // 0, 0` for ordered and unordered predicates as long as C is finite and
+      // nonzero.
+      int MantissaWidth = LHSI->getType()->getFPMantissaWidth();
+      if (MantissaWidth != -1 && ilogb(*C) < MantissaWidth) {
+        Constant *ZeroC = ConstantFP::getZero(LHSI->getType());
+        I.setPredicate(I.getSwappedPredicate());
+        CI.replaceOperand(I, 0, Y);
+        CI.replaceOperand(I, 1, ZeroC);
+        return &I;
+      }
     }
     break;
   }
