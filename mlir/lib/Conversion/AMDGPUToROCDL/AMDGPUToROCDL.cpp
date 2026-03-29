@@ -2102,12 +2102,12 @@ struct GlobalLoadAsyncToLDSOpLowering
                   cast<VectorType>(transferType).getElementTypeBitWidth()
             : transferType.getIntOrFloatBitWidth();
 
-    Value srcPtr = getStridedElementPtr(rewriter, loc, srcMemRefType,
-                                        adaptor.getSrc(),
-                                        adaptor.getSrcIndices());
-    Value dstPtr = getStridedElementPtr(rewriter, loc, dstMemRefType,
-                                        adaptor.getDst(),
-                                        adaptor.getDstIndices());
+    Value srcPtr =
+        getStridedElementPtr(rewriter, loc, srcMemRefType, adaptor.getSrc(),
+                             adaptor.getSrcIndices());
+    Value dstPtr =
+        getStridedElementPtr(rewriter, loc, dstMemRefType, adaptor.getDst(),
+                             adaptor.getDstIndices());
 
     auto offset = rewriter.getI32IntegerAttr(0);
     auto aux = rewriter.getI32IntegerAttr(0);
@@ -4192,9 +4192,8 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
            ScaledExtPackedMatrixOpLowering, ScaledExtPackedOpLowering,
            PackedScaledTruncOpLowering, PackedTrunc2xFp8OpLowering,
            PackedStochRoundFp8OpLowering, GatherToLDSOpLowering,
-           GlobalLoadAsyncToLDSOpLowering,
-           TransposeLoadOpLowering, AMDGPUPermlaneLowering,
-           AMDGPUMakeDmaBaseLowering<MakeDmaBaseOp>,
+           GlobalLoadAsyncToLDSOpLowering, TransposeLoadOpLowering,
+           AMDGPUPermlaneLowering, AMDGPUMakeDmaBaseLowering<MakeDmaBaseOp>,
            AMDGPUMakeDmaBaseLowering<MakeGatherDmaBaseOp>,
            AMDGPULowerDescriptor<MakeDmaDescriptorOp>,
            AMDGPULowerDescriptor<MakeGatherDmaDescriptorOp>,

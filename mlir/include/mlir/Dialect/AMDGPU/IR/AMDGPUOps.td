@@ -1307,7 +1307,7 @@ def AMDGPU_GlobalLoadAsyncToLDSOp :
     Results<(outs)> {
   let summary = "MLIR wrapper for async global load to lds instructions";
   let description = [{
-    AMDGPU wrapper for global.load.async.to.lds` instructions, which performs
+    AMDGPU wrapper for `global.load.async.to.lds` instructions, which performs
     asynchronous load of data from global memory into LDS while bypassing VGPRs.
 
     * `$src`: global memory memref to read from (global addrspace only, no fat buffer).
