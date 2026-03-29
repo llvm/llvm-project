@@ -180,7 +180,7 @@ static mlir::Value emitNeonSplat(CIRGenBuilderTy &builder, mlir::Location loc,
   int64_t laneCst = getIntValueFromConstOp(lane);
   llvm::SmallVector<int64_t, 4> shuffleMask(resEltCnt, laneCst);
   return builder.createVecShuffle(loc, v, shuffleMask);
-  }
+}
 
 /// Build a constant shift amount vector of `vecTy` to shift a vector
 /// Here `shitfVal` is a constant integer that will be splated into a
@@ -188,7 +188,7 @@ static mlir::Value emitNeonSplat(CIRGenBuilderTy &builder, mlir::Location loc,
 static mlir::Value emitNeonShiftVector(CIRGenBuilderTy &builder,
                                        mlir::Value shiftVal,
                                        cir::VectorType vecTy,
-                                       mlir::Location loc) {   
+                                       mlir::Location loc) {
   mlir::Type eltTy = vecTy.getElementType();
   if (shiftVal.getType() != eltTy) {
     shiftVal = builder.createIntCast(shiftVal, eltTy);
@@ -196,10 +196,12 @@ static mlir::Value emitNeonShiftVector(CIRGenBuilderTy &builder,
   return cir::VecSplatOp::create(builder, loc, vecTy, shiftVal);
 }
 
-static mlir::Value
-emitCommonNeonShift(CIRGenBuilderTy &builder, mlir::Location loc,
-                    cir::VectorType resTy, mlir::Value shifTgt,
-                    mlir::Value shiftAmt, bool shiftLeft) {
+static mlir::Value emitCommonNeonShift(CIRGenBuilderTy &builder, 
+                                       mlir::Location loc,
+                                       cir::VectorType resTy, 
+                                       mlir::Value shifTgt,
+                                       mlir::Value shiftAmt, 
+                                       bool shiftLeft) {
   shiftAmt = emitNeonShiftVector(builder, shiftAmt, resTy, loc);
   return cir::ShiftOp::create(builder, loc, resTy,
                               builder.createBitcast(shifTgt, resTy), shiftAmt,
