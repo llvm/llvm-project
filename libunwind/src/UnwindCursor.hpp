@@ -2114,13 +2114,24 @@ bool UnwindCursor<A, R>::getInfoFromSEH(pint_t pc) {
       // follows the UNWIND_INFO. (This follows how both Clang and MSVC emit
       // these structures.)
       // N.B. UNWIND_INFO structs are DWORD-aligned.
-      uint32_t lastcode = (xdata->CountOfCodes + 1) & ~1;
-      const uint32_t *handler = reinterpret_cast<uint32_t *>(&xdata->UnwindCodes[lastcode]);
-      _info.lsda = reinterpret_cast<unw_word_t>(handler+1);
+
+      // uint32_t lastcode = (xdata->CountOfCodes + 1) & ~1;
+      // NOTE: lastcode can be equal to or greater than 2, then accessing UnwindCodes[lastcode] is
+      // out of bound (i.e. undefined behavior). The external memory outside the class object 
+      // cannot be reached from a pointer to a subobject. The only valid case is when CountOfCodes
+      // is 0, and then lastcode will be equal 0.
+      // However, `reinterpret_cast` from a pointer to uint16[2] to a pointer to uint32 is not 
+      // allowed in any case (https://eel.is/c++draft/basic.compound#5, 
+      // https://eel.is/c++draft/basic.lval#11). (https://godbolt.org/z/vY1zKEvo6)
+      uint32_t handler;
+      memcpy(&handler, xdata->UnwindCodes, sizeof(uint32_t));
+      // FIXME: Does `xdata` actually point to an array of UNWIND_INFO?
+      // https://github.com/cplusplus/CWG/issues/874
+      _info.lsda = reinterpret_cast<unw_word_t>(xdata+1);
       _dispContext.HandlerData = reinterpret_cast<void *>(_info.lsda);
       _dispContext.LanguageHandler =
-          reinterpret_cast<EXCEPTION_ROUTINE *>(base + *handler);
-      if (*handler) {
+          reinterpret_cast<EXCEPTION_ROUTINE *>(base + handler);
+      if (handler) {
         _info.handler = reinterpret_cast<unw_word_t>(__libunwind_seh_personality);
       } else
         _info.handler = 0;
@@ -3351,7 +3362,7 @@ bool UnwindCursor<A, R>::isReadableAddr(const pint_t addr) const {
 
 #if defined(_LIBUNWIND_USE_CET) || defined(_LIBUNWIND_USE_GCS)
 extern "C" void *__libunwind_shstk_get_registers(unw_cursor_t *cursor) {
-  AbstractUnwindCursor *co = (AbstractUnwindCursor *)cursor;
+  AbstractUnwindCursor *co = dynamic_cast<AbstractUnwindCursor *>(reinterpret_cast<AbstractUnwindCursor *>(cursor->u.data));
   return co->get_registers();
 }
 #endif

@@ -83,11 +83,10 @@ _LIBUNWIND_HIDDEN int __unw_init_local(unw_cursor_t *cursor,
 # error Architecture not supported
 #endif
   // Use "placement new" to allocate UnwindCursor in the cursor buffer.
-  new (reinterpret_cast<UnwindCursor<LocalAddressSpace, REGISTER_KIND> *>(cursor))
+  auto *co = new (reinterpret_cast<UnwindCursor<LocalAddressSpace, REGISTER_KIND> *>(cursor->u.data))
       UnwindCursor<LocalAddressSpace, REGISTER_KIND>(
           context, LocalAddressSpace::sThisAddressSpace);
 #undef REGISTER_KIND
-  AbstractUnwindCursor *co = (AbstractUnwindCursor *)cursor;
   co->setInfoBasedOnIPRegister();
 
   return UNW_ESUCCESS;
@@ -100,7 +99,7 @@ _LIBUNWIND_HIDDEN int __unw_get_reg(unw_cursor_t *cursor, unw_regnum_t regNum,
   _LIBUNWIND_TRACE_API("__unw_get_reg(cursor=%p, regNum=%d, &value=%p)",
                        static_cast<void *>(cursor), regNum,
                        static_cast<void *>(value));
-  AbstractUnwindCursor *co = (AbstractUnwindCursor *)cursor;
+  AbstractUnwindCursor *co = dynamic_cast<AbstractUnwindCursor *>(reinterpret_cast<AbstractUnwindCursor *>(cursor->u.data));
   if (co->validReg(regNum)) {
     *value = co->getReg(regNum);
     return UNW_ESUCCESS;
@@ -116,7 +115,7 @@ _LIBUNWIND_HIDDEN int __unw_set_reg(unw_cursor_t *cursor, unw_regnum_t regNum,
                        ")",
                        static_cast<void *>(cursor), regNum, value);
   typedef LocalAddressSpace::pint_t pint_t;
-  AbstractUnwindCursor *co = (AbstractUnwindCursor *)cursor;
+  AbstractUnwindCursor *co = dynamic_cast<AbstractUnwindCursor *>(reinterpret_cast<AbstractUnwindCursor *>(cursor->u.data));
   if (co->validReg(regNum)) {
     // special case altering IP to re-find info (being called by personality
     // function)
@@ -188,7 +187,7 @@ _LIBUNWIND_HIDDEN int __unw_get_fpreg(unw_cursor_t *cursor, unw_regnum_t regNum,
   _LIBUNWIND_TRACE_API("__unw_get_fpreg(cursor=%p, regNum=%d, &value=%p)",
                        static_cast<void *>(cursor), regNum,
                        static_cast<void *>(value));
-  AbstractUnwindCursor *co = (AbstractUnwindCursor *)cursor;
+  AbstractUnwindCursor *co = dynamic_cast<AbstractUnwindCursor *>(reinterpret_cast<AbstractUnwindCursor *>(cursor->u.data));
   if (co->validFloatReg(regNum)) {
     *value = co->getFloatReg(regNum);
     return UNW_ESUCCESS;
@@ -207,7 +206,7 @@ _LIBUNWIND_HIDDEN int __unw_set_fpreg(unw_cursor_t *cursor, unw_regnum_t regNum,
   _LIBUNWIND_TRACE_API("__unw_set_fpreg(cursor=%p, regNum=%d, value=%g)",
                        static_cast<void *>(cursor), regNum, value);
 #endif
-  AbstractUnwindCursor *co = (AbstractUnwindCursor *)cursor;
+  AbstractUnwindCursor *co = dynamic_cast<AbstractUnwindCursor *>(reinterpret_cast<AbstractUnwindCursor *>(cursor->u.data));
   if (co->validFloatReg(regNum)) {
     co->setFloatReg(regNum, value);
     return UNW_ESUCCESS;
@@ -219,7 +218,7 @@ _LIBUNWIND_WEAK_ALIAS(__unw_set_fpreg, unw_set_fpreg)
 /// Move cursor to next frame.
 _LIBUNWIND_HIDDEN int __unw_step(unw_cursor_t *cursor) {
   _LIBUNWIND_TRACE_API("__unw_step(cursor=%p)", static_cast<void *>(cursor));
-  AbstractUnwindCursor *co = (AbstractUnwindCursor *)cursor;
+  AbstractUnwindCursor *co = dynamic_cast<AbstractUnwindCursor *>(reinterpret_cast<AbstractUnwindCursor *>(cursor->u.data));
   return co->step();
 }
 _LIBUNWIND_WEAK_ALIAS(__unw_step, unw_step)
@@ -229,7 +228,7 @@ _LIBUNWIND_WEAK_ALIAS(__unw_step, unw_step)
 extern "C" _LIBUNWIND_HIDDEN int __unw_step_stage2(unw_cursor_t *cursor) {
   _LIBUNWIND_TRACE_API("__unw_step_stage2(cursor=%p)",
                        static_cast<void *>(cursor));
-  AbstractUnwindCursor *co = (AbstractUnwindCursor *)cursor;
+  AbstractUnwindCursor *co = dynamic_cast<AbstractUnwindCursor *>(reinterpret_cast<AbstractUnwindCursor *>(cursor->u.data));
   return co->step(true);
 }
 
@@ -238,7 +237,7 @@ _LIBUNWIND_HIDDEN int __unw_get_proc_info(unw_cursor_t *cursor,
                                           unw_proc_info_t *info) {
   _LIBUNWIND_TRACE_API("__unw_get_proc_info(cursor=%p, &info=%p)",
                        static_cast<void *>(cursor), static_cast<void *>(info));
-  AbstractUnwindCursor *co = (AbstractUnwindCursor *)cursor;
+  AbstractUnwindCursor *co = dynamic_cast<AbstractUnwindCursor *>(reinterpret_cast<AbstractUnwindCursor *>(cursor->u.data));
   co->getInfo(info);
   if (info->end_ip == 0)
     return UNW_ENOINFO;
@@ -258,7 +257,7 @@ _LIBUNWIND_HIDDEN int __unw_resume_with_frames_walked(unw_cursor_t *cursor,
   __asan_handle_no_return();
 #endif
 #ifdef _LIBUNWIND_TRACE_RET_INJECT
-  AbstractUnwindCursor *co = (AbstractUnwindCursor *)cursor;
+  AbstractUnwindCursor *co = dynamic_cast<AbstractUnwindCursor *>(reinterpret_cast<AbstractUnwindCursor *>(cursor->u.data));
   co->setWalkedFrames(walkedFrames);
 #endif
   return __unw_resume(cursor);
@@ -273,7 +272,7 @@ _LIBUNWIND_HIDDEN int __unw_resume(unw_cursor_t *cursor) {
   // Inform the ASan runtime that now might be a good time to clean stuff up.
   __asan_handle_no_return();
 #endif
-  AbstractUnwindCursor *co = (AbstractUnwindCursor *)cursor;
+  AbstractUnwindCursor *co = dynamic_cast<AbstractUnwindCursor *>(reinterpret_cast<AbstractUnwindCursor *>(cursor->u.data));
   co->jumpto();
   return UNW_EUNSPEC;
 }
@@ -285,7 +284,7 @@ _LIBUNWIND_HIDDEN int __unw_get_proc_name(unw_cursor_t *cursor, char *buf,
   _LIBUNWIND_TRACE_API("__unw_get_proc_name(cursor=%p, &buf=%p, bufLen=%lu)",
                        static_cast<void *>(cursor), static_cast<void *>(buf),
                        static_cast<unsigned long>(bufLen));
-  AbstractUnwindCursor *co = (AbstractUnwindCursor *)cursor;
+  AbstractUnwindCursor *co = dynamic_cast<AbstractUnwindCursor *>(reinterpret_cast<AbstractUnwindCursor *>(cursor->u.data));
   if (co->getFunctionName(buf, bufLen, offset))
     return UNW_ESUCCESS;
   return UNW_EUNSPEC;
@@ -297,7 +296,7 @@ _LIBUNWIND_HIDDEN int __unw_is_fpreg(unw_cursor_t *cursor,
                                      unw_regnum_t regNum) {
   _LIBUNWIND_TRACE_API("__unw_is_fpreg(cursor=%p, regNum=%d)",
                        static_cast<void *>(cursor), regNum);
-  AbstractUnwindCursor *co = (AbstractUnwindCursor *)cursor;
+  AbstractUnwindCursor *co = dynamic_cast<AbstractUnwindCursor *>(reinterpret_cast<AbstractUnwindCursor *>(cursor->u.data));
   return co->validFloatReg(regNum);
 }
 _LIBUNWIND_WEAK_ALIAS(__unw_is_fpreg, unw_is_fpreg)
@@ -307,7 +306,7 @@ _LIBUNWIND_HIDDEN const char *__unw_regname(unw_cursor_t *cursor,
                                             unw_regnum_t regNum) {
   _LIBUNWIND_TRACE_API("__unw_regname(cursor=%p, regNum=%d)",
                        static_cast<void *>(cursor), regNum);
-  AbstractUnwindCursor *co = (AbstractUnwindCursor *)cursor;
+  AbstractUnwindCursor *co = dynamic_cast<AbstractUnwindCursor *>(reinterpret_cast<AbstractUnwindCursor *>(cursor->u.data));
   return co->getRegisterName(regNum);
 }
 _LIBUNWIND_WEAK_ALIAS(__unw_regname, unw_regname)
@@ -316,7 +315,7 @@ _LIBUNWIND_WEAK_ALIAS(__unw_regname, unw_regname)
 _LIBUNWIND_HIDDEN int __unw_is_signal_frame(unw_cursor_t *cursor) {
   _LIBUNWIND_TRACE_API("__unw_is_signal_frame(cursor=%p)",
                        static_cast<void *>(cursor));
-  AbstractUnwindCursor *co = (AbstractUnwindCursor *)cursor;
+  AbstractUnwindCursor *co = dynamic_cast<AbstractUnwindCursor *>(reinterpret_cast<AbstractUnwindCursor *>(cursor->u.data));
   return co->isSignalFrame();
 }
 _LIBUNWIND_WEAK_ALIAS(__unw_is_signal_frame, unw_is_signal_frame)
@@ -325,7 +324,7 @@ _LIBUNWIND_WEAK_ALIAS(__unw_is_signal_frame, unw_is_signal_frame)
 _LIBUNWIND_EXPORT uintptr_t __unw_get_data_rel_base(unw_cursor_t *cursor) {
   _LIBUNWIND_TRACE_API("unw_get_data_rel_base(cursor=%p)",
                        static_cast<void *>(cursor));
-  AbstractUnwindCursor *co = reinterpret_cast<AbstractUnwindCursor *>(cursor);
+  AbstractUnwindCursor *co = dynamic_cast<AbstractUnwindCursor *>(reinterpret_cast<AbstractUnwindCursor *>(cursor->u.data));
   return co->getDataRelBase();
 }
 _LIBUNWIND_WEAK_ALIAS(__unw_get_data_rel_base, unw_get_data_rel_base)
@@ -336,7 +335,7 @@ _LIBUNWIND_WEAK_ALIAS(__unw_get_data_rel_base, unw_get_data_rel_base)
 _LIBUNWIND_HIDDEN void __unw_save_vfp_as_X(unw_cursor_t *cursor) {
   _LIBUNWIND_TRACE_API("__unw_get_fpreg_save_vfp_as_X(cursor=%p)",
                        static_cast<void *>(cursor));
-  AbstractUnwindCursor *co = (AbstractUnwindCursor *)cursor;
+  AbstractUnwindCursor *co = dynamic_cast<AbstractUnwindCursor *>(reinterpret_cast<AbstractUnwindCursor *>(cursor->u.data));
   return co->saveVFPAsX();
 }
 _LIBUNWIND_WEAK_ALIAS(__unw_save_vfp_as_X, unw_save_vfp_as_X)
