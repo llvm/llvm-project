@@ -2061,16 +2061,16 @@ OptimizeGlobalVars(Module &M,
     if (!GV.hasName() && !GV.isDeclaration() && !GV.hasLocalLinkage())
       GV.setLinkage(GlobalValue::InternalLinkage);
     // Simplify the initializer.
-    if (GV.hasInitializer())
-      if (auto *C = dyn_cast<Constant>(GV.getInitializer())) {
-        auto &DL = M.getDataLayout();
-        // TLI is not used in the case of a Constant, so use default nullptr
-        // for that optional parameter, since we don't have a Function to
-        // provide GetTLI anyway.
-        Constant *New = ConstantFoldConstant(C, DL, /*TLI*/ nullptr);
-        if (New != C)
-          GV.setInitializer(New);
-      }
+    if (GV.hasInitializer()) {
+      const Constant *C = GV.getInitializer();
+      auto &DL = M.getDataLayout();
+      // TLI is not used in the case of a Constant, so use default nullptr
+      // for that optional parameter, since we don't have a Function to
+      // provide GetTLI anyway.
+      Constant *New = ConstantFoldConstant(C, DL, /*TLI*/ nullptr);
+      if (New != C)
+        GV.setInitializer(New);
+    }
 
     if (deleteIfDead(GV, NotDiscardableComdats)) {
       Changed = true;

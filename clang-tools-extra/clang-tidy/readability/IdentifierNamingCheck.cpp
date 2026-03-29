@@ -894,7 +894,7 @@ bool IdentifierNamingCheck::matchesStyle(
 
   // Ensure the name doesn't have any extra underscores beyond those specified
   // in the prefix and suffix.
-  if (Name.starts_with("_") || Name.ends_with("_"))
+  if (Name.starts_with('_') || Name.ends_with('_'))
     return false;
 
   if (Style.Case && !Matchers[static_cast<size_t>(*Style.Case)].match(Name))
@@ -950,7 +950,7 @@ std::string IdentifierNamingCheck::fixupWithCase(
   case IdentifierNamingCheck::CT_LowerCase:
     for (const auto &Word : Words) {
       if (&Word != &Words.front())
-        Fixup += "_";
+        Fixup += '_';
       Fixup += Word.lower();
     }
     break;
@@ -958,7 +958,7 @@ std::string IdentifierNamingCheck::fixupWithCase(
   case IdentifierNamingCheck::CT_UpperCase:
     for (const auto &Word : Words) {
       if (&Word != &Words.front())
-        Fixup += "_";
+        Fixup += '_';
       Fixup += Word.upper();
     }
     break;
@@ -984,7 +984,7 @@ std::string IdentifierNamingCheck::fixupWithCase(
   case IdentifierNamingCheck::CT_CamelSnakeCase:
     for (const auto &Word : Words) {
       if (&Word != &Words.front())
-        Fixup += "_";
+        Fixup += '_';
       Fixup += toupper(Word.front());
       Fixup += Word.substr(1).lower();
     }
@@ -993,7 +993,7 @@ std::string IdentifierNamingCheck::fixupWithCase(
   case IdentifierNamingCheck::CT_CamelSnakeBack:
     for (const auto &Word : Words) {
       if (&Word != &Words.front()) {
-        Fixup += "_";
+        Fixup += '_';
         Fixup += toupper(Word.front());
       } else {
         Fixup += tolower(Word.front());
@@ -1005,7 +1005,7 @@ std::string IdentifierNamingCheck::fixupWithCase(
   case IdentifierNamingCheck::CT_LeadingUpperSnakeCase:
     for (const auto &Word : Words) {
       if (&Word != &Words.front()) {
-        Fixup += "_";
+        Fixup += '_';
         Fixup += Word.lower();
       } else {
         Fixup += toupper(Word.front());
@@ -1100,7 +1100,7 @@ std::string IdentifierNamingCheck::fixupWithStyle(
     HungarianPrefix = HungarianNotation.getPrefix(D, HNOption);
     if (!HungarianPrefix.empty()) {
       if (Style.HPType == HungarianPrefixType::HPT_LowerCase)
-        HungarianPrefix += "_";
+        HungarianPrefix += '_';
 
       if (Style.HPType == HungarianPrefixType::HPT_CamelCase)
         Fixed[0] = toupper(Fixed[0]);

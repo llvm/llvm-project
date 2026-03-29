@@ -242,6 +242,7 @@ TEST(LlvmLibcSharedMathTest, AllDouble) {
 
   EXPECT_FP_EQ(0x1.921fb54442d18p+0, LIBC_NAMESPACE::shared::acos(0.0));
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::asin(0.0));
+  EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::asinpi(0.0));
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::atan(0.0));
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::atan2(0.0, 0.0));
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::cbrt(0.0));

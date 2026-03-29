@@ -12,6 +12,9 @@ add_mlir_dialect_library(MLIROpenMPDialect
   MLIROpenMPOpsInterfacesIncGen
   MLIROpenMPTypeInterfacesIncGen
 
+  LINK_COMPONENTS
+  TargetParser
+
   LINK_LIBS PUBLIC
   MLIRIR
   MLIRLLVMDialect

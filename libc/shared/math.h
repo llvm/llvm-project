@@ -23,6 +23,7 @@
 #include "math/asinf16.h"
 #include "math/asinhf.h"
 #include "math/asinhf16.h"
+#include "math/asinpi.h"
 #include "math/asinpif.h"
 #include "math/asinpif16.h"
 #include "math/atan.h"

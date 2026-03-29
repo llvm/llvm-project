@@ -120,9 +120,9 @@ public:
 
   private:
     MatchMode determineMatchMode(StringRef Regex) {
-      if (Regex.starts_with(":") || Regex.starts_with("^:"))
+      if (Regex.starts_with(':') || Regex.starts_with("^:"))
         return MatchMode::MatchFullyQualified;
-      return Regex.contains(":") ? MatchMode::MatchQualified
+      return Regex.contains(':') ? MatchMode::MatchQualified
                                  : MatchMode::MatchUnqualified;
     }
   };

@@ -1600,6 +1600,7 @@ class MLIR_PYTHON_API_EXPORTED PyOpResultList
     : public Sliceable<PyOpResultList, PyOpResult> {
 public:
   static constexpr const char *pyClassName = "OpResultList";
+  static constexpr std::array<const char *, 1> typeParams = {"_T"};
   using SliceableT = Sliceable<PyOpResultList, PyOpResult>;
 
   PyOpResultList(PyOperationRef operation, intptr_t startIndex = 0,
@@ -1676,6 +1677,7 @@ class MLIR_PYTHON_API_EXPORTED PyOpOperandList
     : public Sliceable<PyOpOperandList, PyValue> {
 public:
   static constexpr const char *pyClassName = "OpOperandList";
+  static constexpr std::array<const char *, 1> typeParams = {"_T"};
   using SliceableT = Sliceable<PyOpOperandList, PyValue>;
 
   PyOpOperandList(PyOperationRef operation, intptr_t startIndex = 0,

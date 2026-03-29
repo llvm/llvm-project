@@ -4758,6 +4758,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  asinpi_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    asinpi_test.cpp
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.math.asinpi
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   asinpif_test
   SUITE
     libc-math-smoke-tests

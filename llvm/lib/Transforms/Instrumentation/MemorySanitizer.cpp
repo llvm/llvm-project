@@ -508,6 +508,14 @@ static const MemoryMapParams Linux_LoongArch64_MemoryMapParams = {
     0x100000000000, // OriginBase
 };
 
+// hexagon Linux
+static const MemoryMapParams Linux_Hexagon_MemoryMapParams = {
+    0,          // AndMask (not used)
+    0x20000000, // XorMask
+    0,          // ShadowBase (not used)
+    0x50000000, // OriginBase
+};
+
 // riscv32 Linux
 // FIXME: Remove -msan-origin-base -msan-and-mask added by PR #109284 to tests
 // after picking good constants
@@ -572,6 +580,11 @@ static const PlatformMemoryMapParams Linux_ARM_MemoryMapParams = {
 static const PlatformMemoryMapParams Linux_LoongArch_MemoryMapParams = {
     nullptr,
     &Linux_LoongArch64_MemoryMapParams,
+};
+
+static const PlatformMemoryMapParams Linux_Hexagon_MemoryMapParams_P = {
+    &Linux_Hexagon_MemoryMapParams,
+    nullptr,
 };
 
 static const PlatformMemoryMapParams FreeBSD_ARM_MemoryMapParams = {
@@ -1100,6 +1113,9 @@ void MemorySanitizer::initializeModule(Module &M) {
         break;
       case Triple::loongarch64:
         MapParams = Linux_LoongArch_MemoryMapParams.bits64;
+        break;
+      case Triple::hexagon:
+        MapParams = Linux_Hexagon_MemoryMapParams_P.bits32;
         break;
       default:
         report_fatal_error("unsupported architecture");
@@ -9277,6 +9293,7 @@ using VarArgARM32Helper = VarArgGenericHelper;
 using VarArgRISCVHelper = VarArgGenericHelper;
 using VarArgMIPSHelper = VarArgGenericHelper;
 using VarArgLoongArch64Helper = VarArgGenericHelper;
+using VarArgHexagonHelper = VarArgGenericHelper;
 
 /// A no-op implementation of VarArgHelper.
 struct VarArgNoOpHelper : public VarArgHelper {
@@ -9338,6 +9355,9 @@ static VarArgHelper *CreateVarArgHelper(Function &Func, MemorySanitizer &Msan,
   if (TargetTriple.isLoongArch64())
     return new VarArgLoongArch64Helper(Func, Msan, Visitor,
                                        /*VAListTagSize=*/8);
+
+  if (TargetTriple.getArch() == Triple::hexagon)
+    return new VarArgHexagonHelper(Func, Msan, Visitor, /*VAListTagSize=*/12);
 
   return new VarArgNoOpHelper(Func, Msan, Visitor);
 }

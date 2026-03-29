@@ -650,7 +650,7 @@ void LoopConvertCheck::doConversion(
 
       VarNameOrStructuredBinding.erase(VarNameOrStructuredBinding.size() - 2,
                                        2);
-      VarNameOrStructuredBinding += "]";
+      VarNameOrStructuredBinding += ']';
     } else {
       VarNameOrStructuredBinding = AliasVar->getName().str();
 
