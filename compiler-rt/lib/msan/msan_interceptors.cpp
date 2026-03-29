@@ -1672,7 +1672,7 @@ static int msan_dl_iterate_phdr_cb(__sanitizer_dl_phdr_info *info, SIZE_T size,
   return cbdata->callback(info, size, cbdata->data);
 }
 
-#if SANITIZER_INTERCEPT_SHMCTL
+#if SANITIZER_INTERCEPT_SHMAT
 INTERCEPTOR(void *, shmat, int shmid, const void *shmaddr, int shmflg) {
   ENSURE_MSAN_INITED();
   void *p = REAL(shmat)(shmid, shmaddr, shmflg);
