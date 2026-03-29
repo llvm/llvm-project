@@ -333,6 +333,41 @@ func.func @gather_to_lds_non_lds(%idx1 : index, %mem1 : memref<32xf16>, %mem2 : 
 
 // -----
 
+func.func @global_load_async_to_lds_non_lds(%idx1 : index,
+    %mem1 : memref<32xf32, #gpu.address_space<global>>,
+    %mem2 : memref<32xf32>) {
+  // expected-error@+1 {{'amdgpu.global_load_async_to_lds' op destination memory address space must be Workgroup}}
+  amdgpu.global_load_async_to_lds %mem1[%idx1], %mem2[%idx1]
+    : f32, memref<32xf32, #gpu.address_space<global>>, memref<32xf32>
+  func.return
+}
+
+// -----
+
+func.func @global_load_async_to_lds_bad_size_16bit(%idx1 : index,
+    %mem1 : memref<32xf16, #gpu.address_space<global>>,
+    %mem2 : memref<32xf16, #gpu.address_space<workgroup>>) {
+  // expected-error@+1 {{'amdgpu.global_load_async_to_lds' op transfer type size must be 8, 32, 64, or 128 bits}}
+  amdgpu.global_load_async_to_lds %mem1[%idx1], %mem2[%idx1]
+    : f16, memref<32xf16, #gpu.address_space<global>>,
+      memref<32xf16, #gpu.address_space<workgroup>>
+  func.return
+}
+
+// -----
+
+func.func @global_load_async_to_lds_src_not_global(%idx1 : index,
+    %mem1 : memref<32xf32, #gpu.address_space<workgroup>>,
+    %mem2 : memref<32xf32, #gpu.address_space<workgroup>>) {
+  // expected-error@+1 {{'amdgpu.global_load_async_to_lds' op source memory address space must be global}}
+  amdgpu.global_load_async_to_lds %mem1[%idx1], %mem2[%idx1]
+    : f32, memref<32xf32, #gpu.address_space<workgroup>>,
+      memref<32xf32, #gpu.address_space<workgroup>>
+  func.return
+}
+
+// -----
+
 func.func @scaled_mfma_invalid_m(%arg0 : vector<4xf8E8M0FNU>, %arg1 : vector<32xf4E2M1FN>, %arg2 : vector<16xf32>) -> vector<16xf32> {
   // expected-error@+1 {{'amdgpu.scaled_mfma' op attribute 'm' failed to satisfy constraint: 32-bit signless integer attribute whose value is one of {16, 32}}}
   %0 = amdgpu.scaled_mfma 8x32x64 (%arg0[0] * %arg1) * (%arg0[1] * %arg1) + %arg2 : vector<4xf8E8M0FNU>, vector<32xf4E2M1FN>, vector<4xf8E8M0FNU>, vector<32xf4E2M1FN>, vector<16xf32>
