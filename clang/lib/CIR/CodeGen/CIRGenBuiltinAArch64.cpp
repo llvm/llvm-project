@@ -196,12 +196,11 @@ static mlir::Value emitNeonShiftVector(CIRGenBuilderTy &builder,
   return cir::VecSplatOp::create(builder, loc, vecTy, shiftVal);
 }
 
-static mlir::Value emitCommonNeonShift(CIRGenBuilderTy &builder, 
+static mlir::Value emitCommonNeonShift(CIRGenBuilderTy &builder,
                                        mlir::Location loc,
-                                       cir::VectorType resTy, 
+                                       cir::VectorType resTy,
                                        mlir::Value shifTgt,
-                                       mlir::Value shiftAmt, 
-                                       bool shiftLeft) {
+                                       mlir::Value shiftAmt, bool shiftLeft) {
   shiftAmt = emitNeonShiftVector(builder, shiftAmt, resTy, loc);
   return cir::ShiftOp::create(builder, loc, resTy,
                               builder.createBitcast(shifTgt, resTy), shiftAmt,
@@ -1992,7 +1991,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   // Not all intrinsics handled by the common case work for AArch64 yet, so only
   // defer to common code if it's been added to our special map.
   builtin = findARMVectorIntrinsicInMap(AArch64SIMDIntrinsicMap, builtinID,
-                                        aarch64SIMDIntrinsicsProvenSorted);                                      
+                                        aarch64SIMDIntrinsicsProvenSorted);
   if (builtin)
     return emitCommonNeonBuiltinExpr(
         *this, builtin->BuiltinID, builtin->LLVMIntrinsic,
