@@ -143,3 +143,4 @@ defm tail_predication : Eq<"tail-predication", "Tail predication mode">;
 defm aarch64_cb_offset_bits : Eq<"aarch64-cb-offset-bits", "AArch64 CB offset bits">;
 defm aarch64_enable_atomic_cfg_tidy : Eq<"aarch64-enable-atomic-cfg-tidy", "AArch64 enable atomic CFG tidy">;
 defm aarch64_min_jump_table_entries : Eq<"aarch64-min-jump-table-entries", "AArch64 min jump table entries">;
+

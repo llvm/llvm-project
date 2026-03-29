@@ -42,6 +42,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
@@ -51,6 +52,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -62,7 +64,6 @@
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <cassert>
-#include <list>
 #include <memory>
 #include <optional>
 using namespace llvm;
@@ -275,10 +276,8 @@ static void RecordLlcOpts(opt::InputArgList &Args,
     exit(0);
   }
 
-  for (const auto *A : Args) {
-    if (A->getOption().getID() == OPT_INPUT)
-      InputFilename = A->getValue();
-  }
+  if (const opt::Arg *A = Args.getLastArg(OPT_INPUT))
+    InputFilename = A->getValue();
 
   InstPrinterOptions = Args.getAllArgValues(OPT_M);
   if (const opt::Arg *A = Args.getLastArg(OPT_x_EQ, OPT_x))
@@ -475,14 +474,13 @@ int main(int argc, char **argv) {
   // string pointers to the original argv from main, but there's no easy way to
   // do this. Here, we instead reconstruct the arguments as strings and convert
   // them to `const char*`.
-  std::vector<const char *> NewArgv;
+  SmallVector<const char *, 8> NewArgv;
   NewArgv.push_back(argv[0]);
 
   // This is used as storage for arguments that need to be rendered and
-  // eventually passed into NewArgv. A std::list is used because it guarantees
-  // that additions to RenderedArgs can be made without invalidating any
-  // pointers to existing elements. These pointers are what we store in NewArgv.
-  std::list<std::string> RenderedArgs;
+  // eventually passed into NewArgv.
+  BumpPtrAllocator Alloc;
+  StringSaver RenderedArgs(Alloc);
 
   // Forward all options that are NOT locally consumed and NOT unknown/input.
   for (const auto *A : Args) {
@@ -503,17 +501,19 @@ int main(int argc, char **argv) {
     // to cl::ParseCommandLineOptions.
     opt::ArgStringList TempList;
     A->render(Args, TempList);
+    std::string prev;
     for (auto *ArgStr : TempList) {
       StringRef S(ArgStr);
       if (S.starts_with("=")) {
         // If the argument starts with "=", it means it's a joined argument,
         // and we should append it to the last rendered argument.
-        RenderedArgs.back().append(S.str());
-        NewArgv.back() = RenderedArgs.back().c_str();
+        assert(!prev.empty());
+        prev.append(S.str());
+        NewArgv.back() = RenderedArgs.save(prev).data();
       } else if (!S.empty()) {
         // Otherwise, it's a new argument, and we should add it to the list.
-        RenderedArgs.push_back(S.str());
-        NewArgv.push_back(RenderedArgs.back().c_str());
+        prev = S.str();
+        NewArgv.push_back(RenderedArgs.save(prev).data());
       }
     }
   }
