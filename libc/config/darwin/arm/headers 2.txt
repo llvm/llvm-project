@@ -1,0 +1,13 @@
+set(TARGET_PUBLIC_HEADERS
+    libc.include.ctype
+    libc.include.errno
+    libc.include.fenv
+    libc.include.float
+    libc.include.stdint
+    libc.include.inttypes
+    libc.include.limits
+    libc.include.math
+    libc.include.stdlib
+    libc.include.string
+    libc.include.strings
+)
