@@ -4467,7 +4467,7 @@ shouldBundleHIPAsmWithNewDriver(const Compilation &C,
     if (!TC)
       continue;
     const llvm::Triple &Tr = TC->getTriple();
-    if (Tr.isSPIRV() || Tr.getArch() != llvm::Triple::amdgcn)
+    if (!Tr.isAMDGPU())
       return false;
     HasAMDGCNHIPDevice = true;
   }
