@@ -30,7 +30,7 @@ AST_MATCHER_P(OverloadExpr, hasAnyUnresolvedName, ArrayRef<StringRef>, Names) {
 }
 } // namespace
 
-static StringRef FunctionNames[] = {
+static constexpr StringRef FunctionNames[] = {
     "cast",     "cast_or_null",     "cast_if_present",
     "dyn_cast", "dyn_cast_or_null", "dyn_cast_if_present"};
 
@@ -98,7 +98,7 @@ void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
     RetTy = TArg.getAsType()->getCanonicalTypeUnqualified();
     FuncName = UnresolvedCallee->getName().getAsString();
   } else {
-    return;
+    llvm_unreachable("");
   }
 
   const auto *Arg = Call->getArg(0);
@@ -118,9 +118,9 @@ void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
   diag(Call->getExprLoc(), "redundant use of '%0'")
       << FuncName
       << FixItHint::CreateReplacement(Call->getSourceRange(), ArgText);
-  diag(Arg->getExprLoc(), "source expression %0 has type %1",
+  diag(Arg->getExprLoc(), "source expression has type %1",
        DiagnosticIDs::Note)
-      << Arg << Arg->IgnoreParenImpCasts()->getType();
+      << Arg->getSourceRange() << Arg->IgnoreParenImpCasts()->getType();
 
   if (FromTy != RetTy) {
     diag(Arg->getExprLoc(), "%0 is a subtype of %1", DiagnosticIDs::Note)
