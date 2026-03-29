@@ -1708,7 +1708,7 @@ APInt APInt::urem(const APInt &RHS) const {
   if (RHS.isPowerOf2()) {
     // X % 2^w ===> X & (2^w - 1)
     APInt Result(*this);
-    Result.clearHighBits(BitWidth - RHS.logBase2());
+    Result.clearBits(RHS.logBase2(), BitWidth);
     return Result;
   }
 
