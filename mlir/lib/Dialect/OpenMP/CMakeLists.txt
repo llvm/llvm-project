@@ -2,6 +2,7 @@ add_subdirectory(IR)
 add_subdirectory(Transforms)
 add_subdirectory(Utils)
 
+if (DEFINED FIXCONFLICTMLIROPENDIALECT)
 add_mlir_dialect_library(ConflictMLIROpenMPDialect
   IR/OpenMPDialect.cpp
 
@@ -23,3 +24,4 @@ add_mlir_dialect_library(ConflictMLIROpenMPDialect
   MLIRFuncDialect
   MLIROpenACCMPCommon
   )
+endif()
