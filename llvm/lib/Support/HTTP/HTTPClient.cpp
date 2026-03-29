@@ -296,21 +296,23 @@ Error HTTPClient::perform(const HTTPRequest &Request,
   if (!Session->RequestHandle)
     return createStringError(errc::io_error, "Failed to open HTTP request");
 
-  // Enforce checks that certificate wasn't revoked.
-  DWORD EnableRevocationChecks = WINHTTP_ENABLE_SSL_REVOCATION;
-  if (!WinHttpSetOption(Session->RequestHandle, WINHTTP_OPTION_ENABLE_FEATURE,
-                        &EnableRevocationChecks,
-                        sizeof(EnableRevocationChecks)))
-    return createStringError(errc::io_error,
-                             "Failed to enable certificate revocation checks");
+  if (Secure) {
+    // Enforce checks that certificate wasn't revoked.
+    DWORD EnableRevocationChecks = WINHTTP_ENABLE_SSL_REVOCATION;
+    if (!WinHttpSetOption(Session->RequestHandle, WINHTTP_OPTION_ENABLE_FEATURE,
+                          &EnableRevocationChecks,
+                          sizeof(EnableRevocationChecks)))
+      return createStringError(
+          errc::io_error, "Failed to enable certificate revocation checks");
 
-  // Explicitly enforce default validation. This protects against insecure
-  // overrides like SECURITY_FLAG_IGNORE_UNKNOWN_CA.
-  DWORD SecurityFlags = 0;
-  if (!WinHttpSetOption(Session->RequestHandle, WINHTTP_OPTION_SECURITY_FLAGS,
-                        &SecurityFlags, sizeof(SecurityFlags)))
-    return createStringError(errc::io_error,
-                             "Failed to enforce security flags");
+    // Explicitly enforce default validation. This protects against insecure
+    // overrides like SECURITY_FLAG_IGNORE_UNKNOWN_CA.
+    DWORD SecurityFlags = 0;
+    if (!WinHttpSetOption(Session->RequestHandle, WINHTTP_OPTION_SECURITY_FLAGS,
+                          &SecurityFlags, sizeof(SecurityFlags)))
+      return createStringError(errc::io_error,
+                               "Failed to enforce security flags");
+  }
 
   // Add headers
   for (const std::string &Header : Request.Headers) {

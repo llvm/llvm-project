@@ -1363,14 +1363,19 @@ bool DependenceInfo::strongSIVtest(const SCEVAddRecExpr *Src,
 // Can determine iteration for splitting.
 //
 // Return true if dependence disproved.
-bool DependenceInfo::weakCrossingSIVtest(const SCEV *Coeff,
-                                         const SCEV *SrcConst,
-                                         const SCEV *DstConst,
-                                         const Loop *CurSrcLoop,
-                                         const Loop *CurDstLoop, unsigned Level,
+bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
+                                         const SCEVAddRecExpr *Dst,
+                                         unsigned Level,
                                          FullDependence &Result) const {
   if (!isDependenceTestEnabled(DependenceTestType::WeakCrossingSIV))
     return false;
+
+  const SCEV *Coeff = Src->getStepRecurrence(*SE);
+  const SCEV *SrcConst = Src->getStart();
+  const SCEV *DstConst = Dst->getStart();
+
+  assert(Coeff == SE->getNegativeSCEV(Dst->getStepRecurrence(*SE)) &&
+         "Unexpected input for weakCrossingSIVtest");
 
   LLVM_DEBUG(dbgs() << "\tWeak-Crossing SIV test\n");
   LLVM_DEBUG(dbgs() << "\t    Coeff = " << *Coeff << "\n");
@@ -1421,6 +1426,7 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEV *Coeff,
 
   // We're certain that Delta > 0 and ConstCoeff > 0.
   // Check Delta/(2*ConstCoeff) against upper loop bound
+  const Loop *CurSrcLoop = Src->getLoop();
   if (const SCEV *UpperBound =
           collectUpperBound(CurSrcLoop, Delta->getType())) {
     LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound << "\n");
@@ -1801,19 +1807,19 @@ bool DependenceInfo::weakZeroSIVtestImpl(const SCEVAddRecExpr *AR,
   if (!ConstCoeff)
     return false;
 
-  // Since ConstCoeff is constant, !isKnownNegative means it's non-negative.
-  // TODO: Bail out if it's a signed minimum value.
-  const SCEV *AbsCoeff = SE->isKnownNegative(ConstCoeff)
-                             ? SE->getNegativeSCEV(ConstCoeff)
-                             : ConstCoeff;
   const SCEV *NewDelta =
       SE->isKnownNegative(ConstCoeff) ? SE->getNegativeSCEV(Delta) : Delta;
 
   if (const SCEV *UpperBound =
           collectUpperBound(AR->getLoop(), Delta->getType())) {
     LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound << "\n");
-    const SCEV *Product = SE->getMulExpr(AbsCoeff, UpperBound);
-    if (SE->isKnownPredicate(CmpInst::ICMP_EQ, NewDelta, Product)) {
+    bool OverlapAtLast = [&] {
+      if (!SE->isKnownNonZero(ConstCoeff))
+        return false;
+      const SCEV *Last = AR->evaluateAtIteration(UpperBound, *SE);
+      return Last == Const;
+    }();
+    if (OverlapAtLast) {
       // dependences caused by last iteration
       if (Level < CommonLevels) {
         Result.DV[Level].Direction &= Dependence::DVEntry::GE;
@@ -2074,12 +2080,10 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
   const SCEVAddRecExpr *SrcAddRec = dyn_cast<SCEVAddRecExpr>(Src);
   const SCEVAddRecExpr *DstAddRec = dyn_cast<SCEVAddRecExpr>(Dst);
   if (SrcAddRec && DstAddRec) {
-    const SCEV *SrcConst = SrcAddRec->getStart();
-    const SCEV *DstConst = DstAddRec->getStart();
     const SCEV *SrcCoeff = SrcAddRec->getStepRecurrence(*SE);
     const SCEV *DstCoeff = DstAddRec->getStepRecurrence(*SE);
     const Loop *CurSrcLoop = SrcAddRec->getLoop();
-    const Loop *CurDstLoop = DstAddRec->getLoop();
+    [[maybe_unused]] const Loop *CurDstLoop = DstAddRec->getLoop();
     assert(haveSameSD(CurSrcLoop, CurDstLoop) &&
            "Loops in the SIV test should have the same iteration space and "
            "depth");
@@ -2089,8 +2093,7 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
       disproven = strongSIVtest(SrcAddRec, DstAddRec, Level, Result,
                                 UnderRuntimeAssumptions);
     else if (SrcCoeff == SE->getNegativeSCEV(DstCoeff))
-      disproven = weakCrossingSIVtest(SrcCoeff, SrcConst, DstConst, CurSrcLoop,
-                                      CurDstLoop, Level, Result);
+      disproven = weakCrossingSIVtest(SrcAddRec, DstAddRec, Level, Result);
     else
       disproven = exactSIVtest(SrcAddRec, DstAddRec, Level, Result);
     return disproven || gcdMIVtest(Src, Dst, Result);
