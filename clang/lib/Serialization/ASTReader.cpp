@@ -240,7 +240,7 @@ bool ChainedASTReaderListener::needsSystemInputFileVisitation() {
   Second->needsSystemInputFileVisitation();
 }
 
-void ChainedASTReaderListener::visitModuleFile(StringRef Filename,
+void ChainedASTReaderListener::visitModuleFile(ModuleFileName Filename,
                                                ModuleKind Kind) {
   First->visitModuleFile(Filename, Kind);
   Second->visitModuleFile(Filename, Kind);
@@ -2880,7 +2880,7 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
       std::string ErrorStr = "could not find file '";
       ErrorStr += *Filename;
       ErrorStr += "' referenced by AST file '";
-      ErrorStr += F.FileName;
+      ErrorStr += F.FileName.str();
       ErrorStr += "'";
       Error(ErrorStr);
     }
@@ -3193,8 +3193,7 @@ ASTReader::getModuleForRelocationChecks(ModuleFile &F, bool DirectoryCheck) {
   if (HSOpts.ModulesValidateOncePerBuildSession && IsImplicitModule) {
     if (F.InputFilesValidationTimestamp >= HSOpts.BuildSessionTimestamp)
       return {std::nullopt, IgnoreError};
-    if (static_cast<uint64_t>(F.File.getModificationTime()) >=
-        HSOpts.BuildSessionTimestamp)
+    if (static_cast<uint64_t>(F.ModTime) >= HSOpts.BuildSessionTimestamp)
       return {std::nullopt, IgnoreError};
   }
 
@@ -3477,8 +3476,9 @@ ASTReader::ReadControlBlock(ModuleFile &F,
 
       off_t StoredSize = 0;
       time_t StoredModTime = 0;
+      unsigned ImplicitModuleSuffixLength = 0;
       ASTFileSignature StoredSignature;
-      std::string ImportedFile;
+      ModuleFileName ImportedFile;
       std::string StoredFile;
       bool IgnoreImportedByNote = false;
 
@@ -3500,17 +3500,21 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       if (!IsImportingStdCXXModule) {
         StoredSize = (off_t)Record[Idx++];
         StoredModTime = (time_t)Record[Idx++];
+        ImplicitModuleSuffixLength = (unsigned)Record[Idx++];
 
         StringRef SignatureBytes = Blob.substr(0, ASTFileSignature::size);
         StoredSignature = ASTFileSignature::create(SignatureBytes.begin(),
                                                    SignatureBytes.end());
         Blob = Blob.substr(ASTFileSignature::size);
 
-        // Use BaseDirectoryAsWritten to ensure we use the same path in the
-        // ModuleCache as when writing.
         StoredFile = ReadPathBlob(BaseDirectoryAsWritten, Record, Idx, Blob);
         if (ImportedFile.empty()) {
-          ImportedFile = StoredFile;
+          ImportedFile = ImplicitModuleSuffixLength
+                             ? ModuleFileName::makeImplicit(
+                                   StoredFile, ImplicitModuleSuffixLength)
+                             : ModuleFileName::makeExplicit(StoredFile);
+          assert((ImportedKind == MK_ImplicitModule) ==
+                 (ImplicitModuleSuffixLength != 0));
         } else if (!getDiags().isIgnored(
                        diag::warn_module_file_mapping_mismatch,
                        CurrentImportLoc)) {
@@ -4588,10 +4592,11 @@ void ASTReader::ReadModuleOffsetMap(ModuleFile &F) const {
     uint16_t Len = endian::readNext<uint16_t, llvm::endianness::little>(Data);
     StringRef Name = StringRef((const char*)Data, Len);
     Data += Len;
-    ModuleFile *OM = (Kind == MK_PrebuiltModule || Kind == MK_ExplicitModule ||
-                              Kind == MK_ImplicitModule
-                          ? ModuleMgr.lookupByModuleName(Name)
-                          : ModuleMgr.lookupByFileName(Name));
+    ModuleFile *OM =
+        (Kind == MK_PrebuiltModule || Kind == MK_ExplicitModule ||
+                 Kind == MK_ImplicitModule
+             ? ModuleMgr.lookupByModuleName(Name)
+             : ModuleMgr.lookupByFileName(ModuleFileName::makeExplicit(Name)));
     if (!OM) {
       std::string Msg = "refers to unknown module, cannot find ";
       Msg.append(std::string(Name));
@@ -4647,17 +4652,17 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
             << F.ModuleName << F.BaseDirectory << M->Directory->getName();
 
       if (!canRecoverFromOutOfDate(F.FileName, ClientLoadCapabilities)) {
-        if (auto ASTFE = M ? M->getASTFile() : std::nullopt) {
+        if (auto ASTFileName = M ? M->getASTFileName() : nullptr) {
           // This module was defined by an imported (explicit) module.
-          Diag(diag::err_module_file_conflict) << F.ModuleName << F.FileName
-                                               << ASTFE->getName();
+          Diag(diag::err_module_file_conflict)
+              << F.ModuleName << F.FileName << *ASTFileName;
           // TODO: Add a note with the module map paths if they differ.
         } else {
           // This module was built with a different module map.
           Diag(diag::err_imported_module_not_found)
               << F.ModuleName << F.FileName
-              << (ImportedBy ? ImportedBy->FileName : "") << F.ModuleMapPath
-              << !ImportedBy;
+              << (ImportedBy ? ImportedBy->FileName.str() : "")
+              << F.ModuleMapPath << !ImportedBy;
           // In case it was imported by a PCH, there's a chance the user is
           // just missing to include the search path to the directory containing
           // the modulemap.
@@ -4913,7 +4918,8 @@ static bool SkipCursorToBlock(BitstreamCursor &Cursor, unsigned BlockID) {
   }
 }
 
-ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName, ModuleKind Type,
+ASTReader::ASTReadResult ASTReader::ReadAST(ModuleFileName FileName,
+                                            ModuleKind Type,
                                             SourceLocation ImportLoc,
                                             unsigned ClientLoadCapabilities,
                                             ModuleFile **NewLoadedModuleFile) {
@@ -5189,15 +5195,11 @@ static unsigned moduleKindForDiagnostic(ModuleKind Kind) {
   llvm_unreachable("unknown module kind");
 }
 
-ASTReader::ASTReadResult
-ASTReader::ReadASTCore(StringRef FileName,
-                       ModuleKind Type,
-                       SourceLocation ImportLoc,
-                       ModuleFile *ImportedBy,
-                       SmallVectorImpl<ImportedModule> &Loaded,
-                       off_t ExpectedSize, time_t ExpectedModTime,
-                       ASTFileSignature ExpectedSignature,
-                       unsigned ClientLoadCapabilities) {
+ASTReader::ASTReadResult ASTReader::ReadASTCore(
+    ModuleFileName FileName, ModuleKind Type, SourceLocation ImportLoc,
+    ModuleFile *ImportedBy, SmallVectorImpl<ImportedModule> &Loaded,
+    off_t ExpectedSize, time_t ExpectedModTime,
+    ASTFileSignature ExpectedSignature, unsigned ClientLoadCapabilities) {
   ModuleFile *M;
   std::string ErrorStr;
   ModuleManager::AddModuleResult AddResult
@@ -6142,8 +6144,8 @@ bool ASTReader::readASTFileControlBlock(
         continue;
       }
 
-      // Skip Size and ModTime.
-      Idx += 1 + 1;
+      // Skip Size, ModTime and ImplicitModuleSuffix.
+      Idx += 1 + 1 + 1;
       // Skip signature.
       Blob = Blob.substr(ASTFileSignature::size);
 
@@ -6337,15 +6339,17 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
                                        "too many submodules");
 
       if (!ParentModule) {
-        if (OptionalFileEntryRef CurFile = CurrentModule->getASTFile()) {
+        if ([[maybe_unused]] const ModuleFileKey *CurFileKey =
+                CurrentModule->getASTFileKey()) {
           // Don't emit module relocation error if we have -fno-validate-pch
           if (!bool(PP.getPreprocessorOpts().DisablePCHOrModuleValidation &
                     DisableValidationForModuleKind::Module)) {
-            assert(CurFile != F.File && "ModuleManager did not de-duplicate");
+            assert(*CurFileKey != F.FileKey &&
+                   "ModuleManager did not de-duplicate");
 
             Diag(diag::err_module_file_conflict)
-                << CurrentModule->getTopLevelModuleName() << CurFile->getName()
-                << F.File.getName();
+                << CurrentModule->getTopLevelModuleName()
+                << *CurrentModule->getASTFileName() << F.FileName;
 
             auto CurModMapFile =
                 ModMap.getContainingModuleMapFile(CurrentModule);
@@ -6359,7 +6363,7 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
         }
 
         F.DidReadTopLevelSubmodule = true;
-        CurrentModule->setASTFile(F.File);
+        CurrentModule->setASTFileNameAndKey(F.FileName, F.FileKey);
         CurrentModule->PresumedModuleMapFile = F.ModuleMapPath;
       }
 

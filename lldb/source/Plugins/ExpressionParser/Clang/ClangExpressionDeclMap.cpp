@@ -705,8 +705,9 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
     if (!namespace_map)
       return;
 
-    LLDB_LOGV(log, "  CEDM::FEVD Inspecting (NamespaceMap*){0:x} ({1} entries)",
-              namespace_map.get(), namespace_map->size());
+    LLDB_LOG_VERBOSE(
+        log, "  CEDM::FEVD Inspecting (NamespaceMap*){0:x} ({1} entries)",
+        namespace_map.get(), namespace_map->size());
 
     for (ClangASTImporter::NamespaceMapItem &n : *namespace_map) {
       LLDB_LOG(log, "  CEDM::FEVD Searching namespace {0} in module {1}",

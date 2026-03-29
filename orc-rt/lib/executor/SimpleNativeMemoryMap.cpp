@@ -14,6 +14,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/SimpleNativeMemoryMap.h"
+#include "orc-rt/Session.h"
+
+#include <optional>
 #include <sstream>
 
 #if defined(__APPLE__) || defined(__linux__)
@@ -24,10 +27,30 @@
 
 namespace orc_rt {
 
+Expected<std::unique_ptr<SimpleNativeMemoryMap>>
+SimpleNativeMemoryMap::Create(Session &S, SimpleSymbolTable &ST,
+                              const char *InstanceName,
+                              SimpleSymbolTable::MutatorFn AddInterface) {
+
+  std::unique_ptr<SimpleNativeMemoryMap> Instance(new SimpleNativeMemoryMap(S));
+
+  SimpleSymbolTable SNMMST;
+  if (auto Err = AddInterface(SNMMST))
+    return Err;
+  std::pair<const char *, const void *> InstanceSym[] = {
+      {InstanceName, static_cast<const void *>(Instance.get())}};
+  if (auto Err = SNMMST.addUnique(InstanceSym))
+    return std::move(Err);
+
+  if (auto Err = ST.addUnique(SNMMST))
+    return std::move(Err);
+
+  return std::move(Instance);
+}
+
 void SimpleNativeMemoryMap::reserve(OnReserveCompleteFn &&OnComplete,
                                     size_t Size) {
-  // FIXME: Get page size from session object.
-  if (Size % (64 * 1024)) {
+  if (Size % S.processInfo().pageSize()) {
     return OnComplete(make_error<StringError>(
         (std::ostringstream()
          << "SimpleNativeMemoryMap error: reserved size " << std::hex << Size
@@ -179,7 +202,8 @@ void SimpleNativeMemoryMap::deinitializeMultiple(
                    Error::success());
 }
 
-void SimpleNativeMemoryMap::onDetach(Service::OnCompleteFn OnComplete) {
+void SimpleNativeMemoryMap::onDetach(Service::OnCompleteFn OnComplete,
+                                     bool ShutdownRequested) {
   // Detach is a noop for now: we just retain all actions to run at shutdown
   // time.
   OnComplete();
@@ -203,9 +227,8 @@ void SimpleNativeMemoryMap::onShutdown(Service::OnCompleteFn OnComplete) {
 void SimpleNativeMemoryMap::releaseNext(OnReleaseCompleteFn &&OnComplete,
                                         std::vector<void *> Addrs,
                                         bool AnyError, Error LastErr) {
-  // TODO: Log error?
   if (LastErr) {
-    consumeError(std::move(LastErr));
+    S.reportError(std::move(LastErr));
     AnyError |= true;
   }
 
@@ -232,9 +255,8 @@ void SimpleNativeMemoryMap::releaseNext(OnReleaseCompleteFn &&OnComplete,
 void SimpleNativeMemoryMap::deinitializeNext(
     OnDeinitializeCompleteFn &&OnComplete, std::vector<void *> Addrs,
     bool AnyError, Error LastErr) {
-  // TODO: Log error?
   if (LastErr) {
-    consumeError(std::move(LastErr));
+    S.reportError(std::move(LastErr));
     AnyError |= true;
   }
 

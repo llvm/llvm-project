@@ -152,6 +152,10 @@ struct MoveFuncBodyToWarpOp : public OpRewritePattern<gpu::GPUFuncOp> {
       return rewriter.notifyMatchFailure(
           gpuFuncOp, "Subgroup distribution requires target attribute attached "
                      "to set the warp size");
+    if (!gpuFuncOp.getBody().hasOneBlock())
+      return rewriter.notifyMatchFailure(
+          gpuFuncOp, "expected gpu.func to have a single block");
+
     // If the function only contains a single void return, skip.
     if (llvm::all_of(gpuFuncOp.getBody().getOps(), [](Operation &op) {
           return isa<gpu::ReturnOp>(op) && !op.getNumOperands();
@@ -162,6 +166,11 @@ struct MoveFuncBodyToWarpOp : public OpRewritePattern<gpu::GPUFuncOp> {
           return isa<gpu::WarpExecuteOnLane0Op>(op);
         }))
       return failure();
+    gpu::ReturnOp origReturnOp = dyn_cast_if_present<gpu::ReturnOp>(
+        gpuFuncOp.getBlocks().back().getTerminator());
+    if (!origReturnOp)
+      return rewriter.notifyMatchFailure(
+          gpuFuncOp, "expected gpu.func terminator to be gpu.return");
     // Create a new function with the same signature and same attributes.
     SmallVector<Type> workgroupAttributionsTypes =
         llvm::map_to_vector(gpuFuncOp.getWorkgroupAttributions(),
@@ -187,12 +196,10 @@ struct MoveFuncBodyToWarpOp : public OpRewritePattern<gpu::GPUFuncOp> {
         newGpuFunc.getArgumentTypes());
     Block &warpBodyBlock = warpOp.getBodyRegion().front();
     // Replace the ReturnOp of the original gpu function with a YieldOp.
-    auto origRetunOp =
-        cast<gpu::ReturnOp>(gpuFuncOp.getBlocks().back().getTerminator());
-    rewriter.setInsertionPointAfter(origRetunOp);
-    gpu::YieldOp::create(rewriter, origRetunOp.getLoc(),
-                         origRetunOp.getOperands());
-    rewriter.eraseOp(origRetunOp);
+    rewriter.setInsertionPointAfter(origReturnOp);
+    gpu::YieldOp::create(rewriter, origReturnOp.getLoc(),
+                         origReturnOp.getOperands());
+    rewriter.eraseOp(origReturnOp);
     // Move the original function body to the WarpExecuteOnLane0Op body.
     rewriter.inlineRegionBefore(gpuFuncOp.getBody(), warpOp.getBodyRegion(),
                                 warpOp.getBodyRegion().begin());
@@ -2080,11 +2087,19 @@ struct ConvertLayoutDistribution
                                 PatternRewriter &rewriter) const override {
     auto inputLayout = op.getInputLayoutAttr();
     auto targetLayout = op.getTargetLayoutAttr();
+    Type valType = op.getResult().getType();
 
     if (!inputLayout || !targetLayout)
       return rewriter.notifyMatchFailure(op, "missing layout attributes");
 
-    if (!inputLayout.isCompatibleWith(targetLayout, xegpu::LayoutKind::Lane)) {
+    if (valType.isIntOrFloat()) {
+      rewriter.replaceOp(op, op.getSource());
+      return success();
+    }
+    auto resShape = cast<VectorType>(valType).getShape();
+    SmallVector<int64_t> resShapeVec(resShape.begin(), resShape.end());
+    if (!inputLayout.isCompatibleWith(targetLayout, resShapeVec,
+                                      xegpu::LayoutKind::Lane)) {
       return rewriter.notifyMatchFailure(
           op, "lowering incompatible convert_layout not yet supported");
     }

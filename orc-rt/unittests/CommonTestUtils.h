@@ -9,10 +9,27 @@
 #ifndef ORC_RT_UNITTEST_COMMONTESTUTILS_H
 #define ORC_RT_UNITTEST_COMMONTESTUTILS_H
 
+#include "orc-rt/Error.h"
+#include "orc-rt/ExecutorProcessInfo.h"
+#include "orc-rt/TaskDispatcher.h"
 #include "orc-rt/move_only_function.h"
 
 #include <cstddef>
 #include <future>
+
+inline void noErrors(orc_rt::Error Err) { orc_rt::cantFail(std::move(Err)); }
+
+inline orc_rt::ExecutorProcessInfo mockExecutorProcessInfo() noexcept {
+  return orc_rt::ExecutorProcessInfo("arm64-apple-darwin", 16384);
+}
+
+class NoDispatcher : public orc_rt::TaskDispatcher {
+public:
+  void dispatch(std::unique_ptr<orc_rt::Task> T) override {
+    assert(false && "strictly no dispatching!");
+  }
+  void shutdown() override {}
+};
 
 template <size_t Idx = 0> class OpCounter {
 public:

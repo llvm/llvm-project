@@ -712,6 +712,10 @@ static unsigned getEncodedRMWOperation(AtomicRMWInst::BinOp Op) {
     return bitc::RMW_FMAXIMUM;
   case AtomicRMWInst::FMinimum:
     return bitc::RMW_FMINIMUM;
+  case AtomicRMWInst::FMaximumNum:
+    return bitc::RMW_FMAXIMUMNUM;
+  case AtomicRMWInst::FMinimumNum:
+    return bitc::RMW_FMINIMUMNUM;
   case AtomicRMWInst::UIncWrap:
     return bitc::RMW_UINC_WRAP;
   case AtomicRMWInst::UDecWrap:
@@ -775,6 +779,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_DISABLE_SANITIZER_INSTRUMENTATION;
   case Attribute::FnRetThunkExtern:
     return bitc::ATTR_KIND_FNRETTHUNK_EXTERN;
+  case Attribute::Flatten:
+    return bitc::ATTR_KIND_FLATTEN;
   case Attribute::Hot:
     return bitc::ATTR_KIND_HOT;
   case Attribute::ElementType:

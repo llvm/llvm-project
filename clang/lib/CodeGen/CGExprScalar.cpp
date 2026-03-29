@@ -405,7 +405,8 @@ public:
   /// the sign of the value. It is not UB, so we use the value after conversion.
   /// NOTE: Src and Dst may be the exact same value! (point to the same thing)
   void EmitIntegerSignChangeCheck(Value *Src, QualType SrcType, Value *Dst,
-                                  QualType DstType, SourceLocation Loc);
+                                  QualType DstType, SourceLocation Loc,
+                                  bool OBTrapInvolved = false);
 
   /// Emit a conversion from the specified type to the specified destination
   /// type, both of which are LLVM scalar types.
@@ -413,18 +414,21 @@ public:
     bool TreatBooleanAsSigned;
     bool EmitImplicitIntegerTruncationChecks;
     bool EmitImplicitIntegerSignChangeChecks;
+    /* Potential -fsanitize-undefined-ignore-overflow-pattern= */
+    bool PatternExcluded;
 
     ScalarConversionOpts()
         : TreatBooleanAsSigned(false),
           EmitImplicitIntegerTruncationChecks(false),
-          EmitImplicitIntegerSignChangeChecks(false) {}
+          EmitImplicitIntegerSignChangeChecks(false), PatternExcluded(false) {}
 
     ScalarConversionOpts(clang::SanitizerSet SanOpts)
         : TreatBooleanAsSigned(false),
           EmitImplicitIntegerTruncationChecks(
               SanOpts.hasOneOf(SanitizerKind::ImplicitIntegerTruncation)),
           EmitImplicitIntegerSignChangeChecks(
-              SanOpts.has(SanitizerKind::ImplicitIntegerSignChange)) {}
+              SanOpts.has(SanitizerKind::ImplicitIntegerSignChange)),
+          PatternExcluded(false) {}
   };
   Value *EmitScalarCast(Value *Src, QualType SrcType, QualType DstType,
                         llvm::Type *SrcTy, llvm::Type *DstTy,
@@ -1303,8 +1307,10 @@ EmitIntegerSignChangeCheckHelper(Value *Src, QualType SrcType, Value *Dst,
 
 void ScalarExprEmitter::EmitIntegerSignChangeCheck(Value *Src, QualType SrcType,
                                                    Value *Dst, QualType DstType,
-                                                   SourceLocation Loc) {
-  if (!CGF.SanOpts.has(SanitizerKind::SO_ImplicitIntegerSignChange))
+                                                   SourceLocation Loc,
+                                                   bool OBTrapInvolved) {
+  if (!CGF.SanOpts.has(SanitizerKind::SO_ImplicitIntegerSignChange) &&
+      !OBTrapInvolved)
     return;
 
   llvm::Type *SrcTy = Src->getType();
@@ -1389,6 +1395,16 @@ void ScalarExprEmitter::EmitIntegerSignChangeCheck(Value *Src, QualType SrcType,
     CheckKind = ICCK_SignedIntegerTruncationOrSignChange;
     Checks.emplace_back(Check.second);
     // If the comparison result is 'i1 false', then the truncation was lossy.
+  }
+
+  if (!CGF.SanOpts.has(SanitizerKind::SO_ImplicitIntegerSignChange)) {
+    if (OBTrapInvolved) {
+      llvm::Value *Combined = Check.second.first;
+      for (const auto &C : Checks)
+        Combined = Builder.CreateAnd(Combined, C.first);
+      CGF.EmitTrapCheck(Combined, CheckHandler);
+    }
+    return;
   }
 
   llvm::Constant *StaticArgs[] = {
@@ -1824,13 +1840,14 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
       (DstOBT && DstOBT->isWrapKind()) || (SrcOBT && SrcOBT->isWrapKind());
 
   if ((Opts.EmitImplicitIntegerTruncationChecks || OBTrapInvolved) &&
-      !OBWrapInvolved)
+      !OBWrapInvolved && !Opts.PatternExcluded)
     EmitIntegerTruncationCheck(Src, NoncanonicalSrcType, Res,
                                NoncanonicalDstType, Loc, OBTrapInvolved);
 
-  if (Opts.EmitImplicitIntegerSignChangeChecks)
+  if (Opts.EmitImplicitIntegerSignChangeChecks ||
+      (OBTrapInvolved && !OBWrapInvolved))
     EmitIntegerSignChangeCheck(Src, NoncanonicalSrcType, Res,
-                               NoncanonicalDstType, Loc);
+                               NoncanonicalDstType, Loc, OBTrapInvolved);
 
   return Res;
 }
@@ -3423,6 +3440,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
         SrcType = promotedType;
       }
 
+      Opts.PatternExcluded = CGF.getContext().isUnaryOverflowPatternExcluded(E);
       value = EmitScalarConversion(value, promotedType, type, E->getExprLoc(),
                                    Opts);
 
@@ -3744,20 +3762,12 @@ Value *ScalarExprEmitter::VisitOffsetOfExpr(OffsetOfExpr *E) {
       auto *RD = CurrentType->castAsRecordDecl();
       const ASTRecordLayout &RL = CGF.getContext().getASTRecordLayout(RD);
 
-      // Compute the index of the field in its parent.
-      unsigned i = 0;
-      // FIXME: It would be nice if we didn't have to loop here!
-      for (RecordDecl::field_iterator Field = RD->field_begin(),
-                                      FieldEnd = RD->field_end();
-           Field != FieldEnd; ++Field, ++i) {
-        if (*Field == MemberDecl)
-          break;
-      }
-      assert(i < RL.getFieldCount() && "offsetof field in wrong type");
+      // Get the index of the field in its parent.
+      unsigned FieldIndex = MemberDecl->getFieldIndex();
 
       // Compute the offset to the field
-      int64_t OffsetInt = RL.getFieldOffset(i) /
-                          CGF.getContext().getCharWidth();
+      int64_t OffsetInt =
+          RL.getFieldOffset(FieldIndex) / CGF.getContext().getCharWidth();
       Offset = llvm::ConstantInt::get(ResultType, OffsetInt);
 
       // Save the element type.

@@ -306,10 +306,10 @@ buildCacheControlPayloads(ArrayRef<Attribute> attrs) {
 
     // Produce: {SPIR-V decoration token:"L1 cache control,L3 cache control"}
     // The quote char (0x22) is embedded literally; LLVM IR prints it as \22.
-    std::string entry = llvm::formatv("'{'{0}:\"{1},{2}\"'}'",
-                                      tokenAttr.getValue().getZExtValue(),
-                                      secondAttr.getValue().getZExtValue(),
-                                      thirdAttr.getValue().getZExtValue());
+    std::string entry =
+        llvm::formatv("{{{0}:\"{1},{2}\"}", tokenAttr.getValue().getZExtValue(),
+                      secondAttr.getValue().getZExtValue(),
+                      thirdAttr.getValue().getZExtValue());
 
     // Deduplicate identical annotations.
     if (!seen.insert({entry, true}).second)
@@ -915,7 +915,7 @@ class LLVMLoadStoreToOCLPattern : public OpConversionPattern<OpType> {
     std::optional<ArrayAttr> optCacheControls =
         getCacheControlMetadata(rewriter, op);
     if (!optCacheControls) {
-      op->removeAttr("cache_control");
+      rewriter.modifyOpInPlace(op, [&]() { op->removeAttr("cache_control"); });
       return success();
     }
 
@@ -929,8 +929,10 @@ class LLVMLoadStoreToOCLPattern : public OpConversionPattern<OpType> {
         rewriter, op->getLoc(), ptr, *optCacheControls, moduleOp);
 
     // Replace the pointer operand with the annotated one.
-    op->setOperand(ptrIdx, annotatedPtr);
-    op->removeAttr("cache_control");
+    rewriter.modifyOpInPlace(op, [&]() {
+      op->setOperand(ptrIdx, annotatedPtr);
+      op->removeAttr("cache_control");
+    });
     return success();
   }
 };
@@ -1122,14 +1124,26 @@ private:
   }
 };
 
+// Checks if shufflevector is used as a way to extract a contiguous slice
+// from a vector.
+// - source vector V1 and V2 are the same vector.
+// - mask size is not greater than the source vector size
+// - mask values represent a sequence of consecutive increasing numbers
+//   that stay in bounds of the source vector when used for indexing.
 static bool isExtractingContiguousSlice(LLVM::ShuffleVectorOp op) {
   if (op.getV1() != op.getV2())
     return false;
   auto maskAttr = op.getMask();
+  int64_t maskSize = static_cast<int64_t>(maskAttr.size());
+  int64_t sourceSize = op.getV1().getType().getNumElements();
+  if (maskSize > sourceSize)
+    return false;
   int64_t firstIndex = maskAttr[0];
-  for (int64_t i = 1; i < static_cast<int64_t>(maskAttr.size()); ++i) {
+  for (int64_t i = 1; i < maskSize; ++i) {
     int64_t index = maskAttr[i];
     if (index != firstIndex + i)
+      return false;
+    if (index >= sourceSize)
       return false;
   }
   return true;
@@ -1215,8 +1229,13 @@ class HandleVectorExtractPattern
             LLVM::BitcastOp::create(rewriter, loc, ty, newShuffle);
         rewriter.replaceOp(op, newBitcast);
       } else if (isa<LLVM::ShuffleVectorOp>(srcOp)) {
-        // 2. Merge with another shuffle vector op
+        // 2. Merge with source shuffle vector op if, the source op is
+        //    also extracting a contigous slice and create a new
+        //    shuffle vector op directly from the source of
+        //    the first shuffle.
         auto srcShuffle = cast<LLVM::ShuffleVectorOp>(srcOp);
+        if (!isExtractingContiguousSlice(srcShuffle))
+          return failure();
         auto srcMask = srcShuffle.getMask();
         SmallVector<int32_t> combinedMask;
         for (auto index : mask) {

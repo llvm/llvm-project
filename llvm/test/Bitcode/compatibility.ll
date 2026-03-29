@@ -955,6 +955,12 @@ define void @fp_atomics(ptr %word) {
 ; CHECK: %atomicrmw.fminimum = atomicrmw fminimum ptr %word, float 1.000000e+00 monotonic
   %atomicrmw.fminimum = atomicrmw fminimum ptr %word, float 1.0 monotonic
 
+; CHECK: %atomicrmw.fmaximumnum = atomicrmw fmaximumnum ptr %word, float 1.000000e+00 monotonic
+  %atomicrmw.fmaximumnum = atomicrmw fmaximumnum ptr %word, float 1.0 monotonic
+
+; CHECK: %atomicrmw.fminimumnum = atomicrmw fminimumnum ptr %word, float 1.000000e+00 monotonic
+  %atomicrmw.fminimumnum = atomicrmw fminimumnum ptr %word, float 1.0 monotonic
+
   ret void
 }
 
@@ -1881,7 +1887,7 @@ declare void @llvm.instrprof_increment(ptr, i64, i32, i32)
 !10 = !{!"rax"}
 define void @intrinsics.codegen() {
   call ptr @llvm.returnaddress(i32 1)
-  ; CHECK: call ptr @llvm.returnaddress(i32 1)
+  ; CHECK: call ptr @llvm.returnaddress.p0(i32 1)
   call ptr @llvm.frameaddress(i32 1)
   ; CHECK: call ptr @llvm.frameaddress.p0(i32 1)
 

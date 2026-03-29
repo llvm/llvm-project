@@ -53,6 +53,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/NVVMAttributes.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -166,6 +167,10 @@ static void restoreIPandDebugLoc(llvm::IRBuilderBase &Builder,
   llvm::BasicBlock::iterator I = Builder.GetInsertPoint();
   if (!BB->empty() && I == BB->end())
     Builder.SetCurrentDebugLocation(BB->back().getStableDebugLoc());
+}
+
+static bool hasGridValue(const Triple &T) {
+  return T.isAMDGPU() || T.isNVPTX() || T.isSPIRV();
 }
 
 static const omp::GV &getGridValue(const Triple &T, Function *Kernel) {
@@ -297,16 +302,14 @@ computeOpenMPScheduleType(ScheduleKind ClauseKind, bool HasChunks,
 ///             the current head of the IR construction).
 static void redirectTo(BasicBlock *Source, BasicBlock *Target, DebugLoc DL) {
   if (Instruction *Term = Source->getTerminator()) {
-    auto *Br = cast<BranchInst>(Term);
-    assert(!Br->isConditional() &&
-           "BB's terminator must be an unconditional branch (or degenerate)");
-    BasicBlock *Succ = Br->getSuccessor(0);
+    auto *Br = cast<UncondBrInst>(Term);
+    BasicBlock *Succ = Br->getSuccessor();
     Succ->removePredecessor(Source, /*KeepOneInputPHIs=*/true);
-    Br->setSuccessor(0, Target);
+    Br->setSuccessor(Target);
     return;
   }
 
-  auto *NewBr = BranchInst::Create(Target, Source);
+  auto *NewBr = UncondBrInst::Create(Target, Source);
   NewBr->setDebugLoc(DL);
 }
 
@@ -332,7 +335,7 @@ void llvm::spliceBB(IRBuilderBase::InsertPoint IP, BasicBlock *New,
     New->splice(New->begin(), Old, IP.getPoint(), Old->end());
 
   if (CreateBranch) {
-    auto *NewBr = BranchInst::Create(New, Old);
+    auto *NewBr = UncondBrInst::Create(New, Old);
     NewBr->setDebugLoc(DL);
   }
 }
@@ -2191,7 +2194,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
     /* Create the casting for the Bounds Values that can be used when outlining
      * to replace the uses of the fakes with real values */
     BasicBlock *CodeReplBB = StaleCI->getParent();
-    IRBuilderBase::InsertPoint CurrentIp = Builder.saveIP();
     Builder.SetInsertPoint(CodeReplBB->getFirstInsertionPt());
     Value *CastedLBVal =
         Builder.CreateIntCast(LBVal, Builder.getInt64Ty(), true, "lb64");
@@ -2199,7 +2201,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
         Builder.CreateIntCast(UBVal, Builder.getInt64Ty(), true, "ub64");
     Value *CastedStepVal =
         Builder.CreateIntCast(StepVal, Builder.getInt64Ty(), true, "step64");
-    Builder.restoreIP(CurrentIp);
 
     Builder.SetInsertPoint(StaleCI);
 
@@ -2779,7 +2780,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createSections(
           M.getContext(), "omp_section_loop.body.case", CurFn, Continue);
       SwitchStmt->addCase(Builder.getInt32(CaseNumber), CaseBB);
       Builder.SetInsertPoint(CaseBB);
-      BranchInst *CaseEndBr = Builder.CreateBr(Continue);
+      UncondBrInst *CaseEndBr = Builder.CreateBr(Continue);
       if (Error Err = SectionCB(InsertPointTy(), {CaseEndBr->getParent(),
                                                   CaseEndBr->getIterator()}))
         return Err;
@@ -6219,8 +6220,8 @@ OpenMPIRBuilder::applyDynamicWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
 
   // Then set the pre-header to jump to the OuterCond
   Instruction *Term = PreHeader->getTerminator();
-  auto *Br = cast<BranchInst>(Term);
-  Br->setSuccessor(0, OuterCond);
+  auto *Br = cast<UncondBrInst>(Term);
+  Br->setSuccessor(OuterCond);
 
   // Modify the inner condition:
   // * Use the UpperBound returned from the DynamicNext call.
@@ -6232,7 +6233,7 @@ OpenMPIRBuilder::applyDynamicWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
   CI->setOperand(1, UpperBound);
   // Redirect the inner exit to branch to outer condition.
   Instruction *Branch = &Cond->back();
-  auto *BI = cast<BranchInst>(Branch);
+  auto *BI = cast<CondBrInst>(Branch);
   assert(BI->getSuccessor(1) == Exit);
   BI->setSuccessor(1, OuterCond);
 
@@ -7451,7 +7452,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::EmitOMPInlinedRegion(
   // for conditional creation
   BasicBlock *EntryBB = Builder.GetInsertBlock();
   Instruction *SplitPos = EntryBB->getTerminator();
-  if (!isa_and_nonnull<BranchInst>(SplitPos))
+  if (!isa_and_nonnull<UncondBrInst, CondBrInst>(SplitPos))
     SplitPos = new UnreachableInst(Builder.getContext(), EntryBB);
   BasicBlock *ExitBB = EntryBB->splitBasicBlock(SplitPos, "omp_region.end");
   BasicBlock *FiniBB =
@@ -7482,7 +7483,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::EmitOMPInlinedRegion(
   auto merged = MergeBlockIntoPredecessor(ExitBB);
   BasicBlock *ExitPredBB = SplitPos->getParent();
   auto InsertBB = merged ? ExitPredBB : ExitBB;
-  if (!isa_and_nonnull<BranchInst>(SplitPos))
+  if (!isa_and_nonnull<UncondBrInst, CondBrInst>(SplitPos))
     SplitPos->eraseFromParent();
   Builder.SetInsertPoint(InsertBB);
 
@@ -7580,7 +7581,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createCopyinClauseBlocks(
 
   // If entry block is terminated, split to preserve the branch to following
   // basic block (i.e. OMP.Entry.Next), otherwise, leave everything as is.
-  if (isa_and_nonnull<BranchInst>(OMP_Entry->getTerminator())) {
+  if (isa_and_nonnull<CondBrInst>(OMP_Entry->getTerminator())) {
     CopyEnd = OMP_Entry->splitBasicBlock(OMP_Entry->getTerminator(),
                                          "copyin.not.master.end");
     OMP_Entry->getTerminator()->eraseFromParent();
@@ -7776,9 +7777,15 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInit(
   // If MaxThreads not set, select the maximum between the default workgroup
   // size and the MinThreads value.
   int32_t MaxThreadsVal = Attrs.MaxThreads.front();
-  if (MaxThreadsVal < 0)
-    MaxThreadsVal = std::max(
-        int32_t(getGridValue(T, Kernel).GV_Default_WG_Size), Attrs.MinThreads);
+  if (MaxThreadsVal < 0) {
+    if (hasGridValue(T)) {
+      MaxThreadsVal =
+          std::max(int32_t(getGridValue(T, Kernel).GV_Default_WG_Size),
+                   Attrs.MinThreads);
+    } else {
+      MaxThreadsVal = Attrs.MinThreads;
+    }
+  }
 
   if (MaxThreadsVal > 0)
     writeThreadBoundsForKernel(T, *Kernel, Attrs.MinThreads, MaxThreadsVal);
@@ -7947,8 +7954,8 @@ OpenMPIRBuilder::readThreadBoundsForKernel(const Triple &T, Function &Kernel) {
     return {LB, UB};
   }
 
-  if (Kernel.hasFnAttribute("nvvm.maxntid")) {
-    int32_t UB = Kernel.getFnAttributeAsParsedInteger("nvvm.maxntid");
+  if (Kernel.hasFnAttribute(NVVMAttr::MaxNTID)) {
+    int32_t UB = Kernel.getFnAttributeAsParsedInteger(NVVMAttr::MaxNTID);
     return {0, ThreadLimit ? std::min(ThreadLimit, UB) : UB};
   }
   return {0, ThreadLimit};
@@ -7965,7 +7972,7 @@ void OpenMPIRBuilder::writeThreadBoundsForKernel(const Triple &T,
     return;
   }
 
-  updateNVPTXAttr(Kernel, "nvvm.maxntid", UB, true);
+  updateNVPTXAttr(Kernel, NVVMAttr::MaxNTID, UB, true);
 }
 
 std::pair<int32_t, int32_t>
@@ -7978,7 +7985,7 @@ void OpenMPIRBuilder::writeTeamsForKernel(const Triple &T, Function &Kernel,
                                           int32_t LB, int32_t UB) {
   if (T.isNVPTX())
     if (UB > 0)
-      Kernel.addFnAttr("nvvm.maxclusterrank", llvm::utostr(UB));
+      Kernel.addFnAttr(NVVMAttr::MaxClusterRank, llvm::utostr(UB));
   if (T.isAMDGPU())
     Kernel.addFnAttr("amdgpu-max-num-workgroups", llvm::utostr(LB) + ",1,1");
 
@@ -10445,6 +10452,8 @@ Value *OpenMPIRBuilder::emitRMWOpAsInstruction(Value *Src1, Value *Src2,
   case AtomicRMWInst::FMin:
   case AtomicRMWInst::FMaximum:
   case AtomicRMWInst::FMinimum:
+  case AtomicRMWInst::FMaximumNum:
+  case AtomicRMWInst::FMinimumNum:
   case AtomicRMWInst::UIncWrap:
   case AtomicRMWInst::UDecWrap:
   case AtomicRMWInst::USubCond:
@@ -11625,9 +11634,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createIteratorLoop(
 
   // Body must either fallthrough to the latch or branch directly to it.
   if (Instruction *BodyTerminator = CLI->getBody()->getTerminator()) {
-    auto *BodyBr = dyn_cast<BranchInst>(BodyTerminator);
-    if (!BodyBr || !BodyBr->isUnconditional() ||
-        BodyBr->getSuccessor(0) != CLI->getLatch()) {
+    auto *BodyBr = dyn_cast<UncondBrInst>(BodyTerminator);
+    if (!BodyBr || BodyBr->getSuccessor() != CLI->getLatch()) {
       return make_error<StringError>(
           "iterator bodygen must terminate the canonical body with an "
           "unconditional branch to the loop latch",
@@ -12085,13 +12093,13 @@ void CanonicalLoopInfo::assertOK() const {
 
   // Verify standard control-flow we use for OpenMP loops.
   assert(Preheader);
-  assert(isa<BranchInst>(Preheader->getTerminator()) &&
+  assert(isa<UncondBrInst>(Preheader->getTerminator()) &&
          "Preheader must terminate with unconditional branch");
   assert(Preheader->getSingleSuccessor() == Header &&
          "Preheader must jump to header");
 
   assert(Header);
-  assert(isa<BranchInst>(Header->getTerminator()) &&
+  assert(isa<UncondBrInst>(Header->getTerminator()) &&
          "Header must terminate with unconditional branch");
   assert(Header->getSingleSuccessor() == Cond &&
          "Header must jump to exiting block");
@@ -12100,13 +12108,11 @@ void CanonicalLoopInfo::assertOK() const {
   assert(Cond->getSinglePredecessor() == Header &&
          "Exiting block only reachable from header");
 
-  assert(isa<BranchInst>(Cond->getTerminator()) &&
+  assert(isa<CondBrInst>(Cond->getTerminator()) &&
          "Exiting block must terminate with conditional branch");
-  assert(size(successors(Cond)) == 2 &&
-         "Exiting block must have two successors");
-  assert(cast<BranchInst>(Cond->getTerminator())->getSuccessor(0) == Body &&
+  assert(cast<CondBrInst>(Cond->getTerminator())->getSuccessor(0) == Body &&
          "Exiting block's first successor jump to the body");
-  assert(cast<BranchInst>(Cond->getTerminator())->getSuccessor(1) == Exit &&
+  assert(cast<CondBrInst>(Cond->getTerminator())->getSuccessor(1) == Exit &&
          "Exiting block's second successor must exit the loop");
 
   assert(Body);
@@ -12115,7 +12121,7 @@ void CanonicalLoopInfo::assertOK() const {
   assert(!isa<PHINode>(Body->front()));
 
   assert(Latch);
-  assert(isa<BranchInst>(Latch->getTerminator()) &&
+  assert(isa<UncondBrInst>(Latch->getTerminator()) &&
          "Latch must terminate with unconditional branch");
   assert(Latch->getSingleSuccessor() == Header && "Latch must jump to header");
   // TODO: To support simple redirecting of the end of the body code that has
@@ -12124,7 +12130,7 @@ void CanonicalLoopInfo::assertOK() const {
   assert(!isa<PHINode>(Latch->front()));
 
   assert(Exit);
-  assert(isa<BranchInst>(Exit->getTerminator()) &&
+  assert(isa<UncondBrInst>(Exit->getTerminator()) &&
          "Exit block must terminate with unconditional branch");
   assert(Exit->getSingleSuccessor() == After &&
          "Exit block must jump to after block");

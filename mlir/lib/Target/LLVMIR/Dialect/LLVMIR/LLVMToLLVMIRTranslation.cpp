@@ -410,6 +410,26 @@ static void convertModuleFlagsOp(ArrayAttr flags, llvm::IRBuilderBase &builder,
   }
 }
 
+/// Looks up the GlobalValue and FunctionType for a callee symbol that is not a
+/// regular LLVM function (i.e. an alias or ifunc). Returns the lowered
+/// GlobalValue and FunctionType derived from \p calleeFuncType.
+static std::pair<llvm::GlobalValue *, llvm::FunctionType *>
+lookupNonFunctionSymbolCallee(FlatSymbolRefAttr attr, mlir::Type calleeFuncType,
+                              Operation &opInst,
+                              LLVM::ModuleTranslation &moduleTranslation) {
+  Operation *moduleOp = parentLLVMModule(&opInst);
+  Operation *calleeOp =
+      moduleTranslation.symbolTable().lookupSymbolIn(moduleOp, attr);
+  llvm::FunctionType *calleeType = llvm::cast<llvm::FunctionType>(
+      moduleTranslation.convertType(calleeFuncType));
+  llvm::GlobalValue *calleeGV;
+  if (isa<LLVM::AliasOp>(calleeOp))
+    calleeGV = moduleTranslation.lookupAlias(calleeOp);
+  else
+    calleeGV = moduleTranslation.lookupIFunc(calleeOp);
+  return {calleeGV, calleeType};
+}
+
 static llvm::DILocalScope *
 getLocalScopeFromLoc(llvm::IRBuilderBase &builder, Location loc,
                      LLVM::ModuleTranslation &moduleTranslation) {
@@ -448,13 +468,9 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
               moduleTranslation.lookupFunction(attr.getValue())) {
         call = builder.CreateCall(function, operandsRef, opBundles);
       } else {
-        Operation *moduleOp = parentLLVMModule(&opInst);
-        Operation *ifuncOp =
-            moduleTranslation.symbolTable().lookupSymbolIn(moduleOp, attr);
-        llvm::GlobalValue *ifunc = moduleTranslation.lookupIFunc(ifuncOp);
-        llvm::FunctionType *calleeType = llvm::cast<llvm::FunctionType>(
-            moduleTranslation.convertType(callOp.getCalleeFunctionType()));
-        call = builder.CreateCall(calleeType, ifunc, operandsRef, opBundles);
+        auto [calleeGV, calleeType] = lookupNonFunctionSymbolCallee(
+            attr, callOp.getCalleeFunctionType(), opInst, moduleTranslation);
+        call = builder.CreateCall(calleeType, calleeGV, operandsRef, opBundles);
       }
     } else {
       llvm::FunctionType *calleeType = llvm::cast<llvm::FunctionType>(
@@ -639,11 +655,21 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     ArrayRef<llvm::Value *> operandsRef(operands);
     llvm::InvokeInst *result;
     if (auto attr = opInst.getAttrOfType<FlatSymbolRefAttr>("callee")) {
-      result = builder.CreateInvoke(
-          moduleTranslation.lookupFunction(attr.getValue()),
-          moduleTranslation.lookupBlock(invOp.getSuccessor(0)),
-          moduleTranslation.lookupBlock(invOp.getSuccessor(1)), operandsRef,
-          opBundles);
+      if (llvm::Function *function =
+              moduleTranslation.lookupFunction(attr.getValue())) {
+        result = builder.CreateInvoke(
+            function, moduleTranslation.lookupBlock(invOp.getSuccessor(0)),
+            moduleTranslation.lookupBlock(invOp.getSuccessor(1)), operandsRef,
+            opBundles);
+      } else {
+        auto [calleeGV, calleeType] = lookupNonFunctionSymbolCallee(
+            attr, invOp.getCalleeFunctionType(), opInst, moduleTranslation);
+        result = builder.CreateInvoke(
+            calleeType, calleeGV,
+            moduleTranslation.lookupBlock(invOp.getSuccessor(0)),
+            moduleTranslation.lookupBlock(invOp.getSuccessor(1)), operandsRef,
+            opBundles);
+      }
     } else {
       llvm::FunctionType *calleeType = llvm::cast<llvm::FunctionType>(
           moduleTranslation.convertType(invOp.getCalleeFunctionType()));
@@ -685,14 +711,14 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
   // Emit branches.  We need to look up the remapped blocks and ignore the
   // block arguments that were transformed into PHI nodes.
   if (auto brOp = dyn_cast<LLVM::BrOp>(opInst)) {
-    llvm::BranchInst *branch =
+    llvm::UncondBrInst *branch =
         builder.CreateBr(moduleTranslation.lookupBlock(brOp.getSuccessor()));
     moduleTranslation.mapBranch(&opInst, branch);
     moduleTranslation.setLoopMetadata(&opInst, branch);
     return success();
   }
   if (auto condbrOp = dyn_cast<LLVM::CondBrOp>(opInst)) {
-    llvm::BranchInst *branch = builder.CreateCondBr(
+    llvm::CondBrInst *branch = builder.CreateCondBr(
         moduleTranslation.lookupValue(condbrOp.getOperand(0)),
         moduleTranslation.lookupBlock(condbrOp.getSuccessor(0)),
         moduleTranslation.lookupBlock(condbrOp.getSuccessor(1)));

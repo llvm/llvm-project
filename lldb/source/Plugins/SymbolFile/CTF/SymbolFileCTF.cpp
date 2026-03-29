@@ -959,7 +959,8 @@ uint32_t SymbolFileCTF::ResolveSymbolContext(const Address &so_addr,
   // Resolve variables.
   if (resolve_scope & eSymbolContextVariable) {
     for (VariableSP variable_sp : m_variables) {
-      if (variable_sp->LocationIsValidForAddress(so_addr.GetFileAddress())) {
+      if (variable_sp->LocationIsValidForAddress(
+              Address(so_addr.GetFileAddress()))) {
         sc.variable = variable_sp.get();
         break;
       }
@@ -1013,8 +1014,8 @@ lldb_private::Type *SymbolFileCTF::ResolveTypeUID(lldb::user_id_t type_uid) {
   if (log) {
     StreamString ss;
     type_sp->Dump(&ss, true);
-    LLDB_LOGV(log, "Adding type {0}: {1}", type_sp->GetID(),
-              llvm::StringRef(ss.GetString()).rtrim());
+    LLDB_LOG_VERBOSE(log, "Adding type {0}: {1}", type_sp->GetID(),
+                     llvm::StringRef(ss.GetString()).rtrim());
   }
 
   m_types[type_uid] = type_sp;
