@@ -1,8 +1,9 @@
-message(STATUS "Building offloading runtime library libomptarget.")
-
 if(NOT TARGET "omp")
-  message(FATAL_ERROR "Error: omp target dependency of libomptarget not found. Please ensure 'openmp' is on LLVM_ENABLE_RUNTIMES list.")
+  message(WARNING "Not building libomptarget: 'omp' target not found. Add 'openmp' to LLVM_ENABLE_RUNTIMES to enable.")
+  return()
 endif()
+
+message(STATUS "Building offloading runtime library libomptarget.")
 
 add_llvm_library(omptarget
   SHARED
