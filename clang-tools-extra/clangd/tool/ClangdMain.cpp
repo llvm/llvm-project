@@ -525,6 +525,14 @@ opt<bool> PreambleParseForwardingFunctions{
     init(ParseOptions().PreambleParseForwardingFunctions),
 };
 
+opt<bool> SkipPreambleBuild{
+    "skip-preamble-build",
+    cat(Misc),
+    desc("If ture, skip preamble build"),
+    Hidden,
+    init(ParseOptions().SkipPreambleBuild),
+};
+
 #if defined(__GLIBC__) && CLANGD_MALLOC_TRIM
 opt<bool> EnableMallocTrim{
     "malloc-trim",
@@ -1005,6 +1013,16 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   }
   Opts.UseDirtyHeaders = UseDirtyHeaders;
   Opts.PreambleParseForwardingFunctions = PreambleParseForwardingFunctions;
+  if (ExperimentalModulesSupport &&
+      SkipPreambleBuild.getNumOccurrences() == 0) {
+    Opts.SkipPreambleBuild = true;
+    log("Experimental C++20 modules support is enabled. This leads to "
+        "disabling preamble build due to instability of mixed precompiled "
+        "headers and C++20 modules. To enable C++20 modules together with "
+        "preamble builds, pass --skip-preamble-build=false command line "
+        "option");
+  } else
+    Opts.SkipPreambleBuild = SkipPreambleBuild;
   Opts.ImportInsertions = ImportInsertions;
   Opts.QueryDriverGlobs = std::move(QueryDriverGlobs);
   Opts.TweakFilter = [&](const Tweak &T) {

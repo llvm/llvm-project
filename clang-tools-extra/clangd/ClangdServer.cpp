@@ -223,6 +223,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
       UseDirtyHeaders(Opts.UseDirtyHeaders),
       LineFoldingOnly(Opts.LineFoldingOnly),
       PreambleParseForwardingFunctions(Opts.PreambleParseForwardingFunctions),
+      SkipPreambleBuild(Opts.SkipPreambleBuild),
       ImportInsertions(Opts.ImportInsertions),
       PublishInactiveRegions(Opts.PublishInactiveRegions),
       WorkspaceRoot(Opts.WorkspaceRoot),
@@ -300,6 +301,7 @@ void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
   std::string ActualVersion = DraftMgr.addDraft(File, Version, Contents);
   ParseOptions Opts;
   Opts.PreambleParseForwardingFunctions = PreambleParseForwardingFunctions;
+  Opts.SkipPreambleBuild = SkipPreambleBuild;
   Opts.ImportInsertions = ImportInsertions;
 
   // Compile command is set asynchronously during update, as it can be slow.
@@ -459,6 +461,7 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
         Config::current().Completion.HeaderInsertion;
     CodeCompleteOpts.CodePatterns = Config::current().Completion.CodePatterns;
     CodeCompleteOpts.MacroFilter = Config::current().Completion.MacroFilter;
+    ParseInput.Opts.SkipPreambleBuild = SkipPreambleBuild;
     // FIXME(ibiryukov): even if Preamble is non-null, we may want to check
     // both the old and the new version in case only one of them matches.
     CodeCompleteResult Result = clangd::codeComplete(
