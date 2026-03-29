@@ -95,7 +95,8 @@ void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
       stripPointerOrReference(Arg->getType())->getCanonicalTypeUnqualified();
   const auto *FromDecl = FromTy->getAsCXXRecordDecl();
   const auto *RetDecl = RetTy->getAsCXXRecordDecl();
-  const bool IsDerived = FromDecl && RetDecl && FromDecl->isDerivedFrom(RetDecl);
+  const bool IsDerived =
+      FromDecl && RetDecl && FromDecl->isDerivedFrom(RetDecl);
   if (FromTy != RetTy && !IsDerived)
     return;
 
@@ -107,8 +108,7 @@ void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
   diag(Call->getExprLoc(), "redundant use of '%0'")
       << FuncName
       << FixItHint::CreateReplacement(Call->getSourceRange(), ArgText);
-  diag(Arg->getExprLoc(), "source expression has type %0",
-       DiagnosticIDs::Note)
+  diag(Arg->getExprLoc(), "source expression has type %0", DiagnosticIDs::Note)
       << Arg->getSourceRange() << Arg->IgnoreParenImpCasts()->getType();
 
   if (FromTy != RetTy) {
