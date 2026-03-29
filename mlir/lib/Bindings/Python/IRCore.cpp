@@ -2583,7 +2583,6 @@ bool PyDynamicOpTrait::attach(const nb::object &opName,
 
   // To ensure that the same dynamic trait gets the same TypeID despite how many
   // times `attach` is called, we store it as an attribute on the target class.
-  constexpr const char *typeIDAttr = "_TYPE_ID";
   if (!nb::hasattr(target, typeIDAttr)) {
     nb::setattr(target, typeIDAttr,
                 nb::cast(PyTypeID(PyGlobals::get().allocateTypeID())));
@@ -2617,6 +2616,7 @@ bool PyDynamicOpTraits::IsTerminator::attach(const nb::object &opName,
 void PyDynamicOpTraits::IsTerminator::bind(nb::module_ &m) {
   nb::class_<PyDynamicOpTraits::IsTerminator, PyDynamicOpTrait> cls(
       m, "IsTerminatorTrait");
+  cls.attr(typeIDAttr) = PyTypeID(mlirDynamicOpTraitIsTerminatorGetTypeID());
   cls.attr("attach") = classmethod(
       [](const nb::object &cls, const nb::object &opName,
          DefaultingPyMlirContext context) {
@@ -2635,6 +2635,7 @@ bool PyDynamicOpTraits::NoTerminator::attach(const nb::object &opName,
 void PyDynamicOpTraits::NoTerminator::bind(nb::module_ &m) {
   nb::class_<PyDynamicOpTraits::NoTerminator, PyDynamicOpTrait> cls(
       m, "NoTerminatorTrait");
+  cls.attr(typeIDAttr) = PyTypeID(mlirDynamicOpTraitNoTerminatorGetTypeID());
   cls.attr("attach") = classmethod(
       [](const nb::object &cls, const nb::object &opName,
          DefaultingPyMlirContext context) {
@@ -3938,7 +3939,19 @@ void populateIRCore(nb::module_ &m) {
              Args:
                callback: A callable that takes an Operation and returns a WalkResult.
                walk_order: The order of traversal (PRE_ORDER or POST_ORDER).
-               op_class: If provided, only operations of this type are passed to the callback.)");
+               op_class: If provided, only operations of this type are passed to the callback.)")
+      .def(
+          "has_trait",
+          [](PyOperationBase &self, nb::type_object &traitCls) {
+            PyTypeID traitTypeID =
+                nb::cast<PyTypeID>(traitCls.attr(PyDynamicOpTrait::typeIDAttr));
+            MlirIdentifier opName =
+                mlirOperationGetName(self.getOperation().get());
+            return mlirOperationNameHasTrait(
+                mlirIdentifierStr(opName), traitTypeID.get(),
+                self.getOperation().getContext()->get());
+          },
+          "trait_cls"_a, "Checks if the operation has a given trait.");
 
   nb::class_<PyOperation, PyOperationBase>(m, "Operation")
       .def_static(
@@ -4150,6 +4163,18 @@ void populateIRCore(nb::module_ &m) {
       nb::sig("def parse(cls, source: str, *, source_name: str = '', context: Context | None = None) -> typing.Self"),
       // clang-format on
       "Parses a specific, generated OpView based on class level attributes.");
+  opViewClass.attr("has_trait") = classmethod(
+      [](nb::object &self, nb::type_object &traitCls,
+         DefaultingPyMlirContext &context) {
+        PyTypeID traitTypeID =
+            nb::cast<PyTypeID>(traitCls.attr(PyDynamicOpTrait::typeIDAttr));
+        std::string opName = nb::cast<std::string>(self.attr("OPERATION_NAME"));
+        return mlirOperationNameHasTrait(
+            mlirStringRefCreate(opName.data(), opName.size()),
+            traitTypeID.get(), context->get());
+      },
+      "cls"_a, "trait_cls"_a, "context"_a = nb::none(),
+      "Checks if the operation has a given trait.");
 
   PyOpAdaptor::bind(m);
 

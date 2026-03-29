@@ -1144,8 +1144,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
           constructTypeDIE(VariantPart, Composite);
         }
       } else if (Tag == dwarf::DW_TAG_namelist) {
-        auto *Var = dyn_cast<DINode>(Element);
-        auto *VarDIE = getDIE(Var);
+        auto *VarDIE = getDIE(Element);
         if (VarDIE) {
           DIE &ItemDie = createAndAddDIE(dwarf::DW_TAG_namelist_item, Buffer);
           addDIEEntry(ItemDie, dwarf::DW_AT_namelist_item, *VarDIE);

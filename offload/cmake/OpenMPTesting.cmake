@@ -2,61 +2,16 @@
 set(ENABLE_CHECK_TARGETS TRUE)
 
 if (TARGET FileCheck)
-  set(OPENMP_FILECHECK_EXECUTABLE ${LLVM_TOOLS_BINARY_DIR}/FileCheck)
+  set(OFFLOAD_FILECHECK_EXECUTABLE ${LLVM_TOOLS_BINARY_DIR}/FileCheck)
 else()
   message(STATUS "Cannot find 'FileCheck'.")
   message(WARNING "The check targets will not be available!")
   set(ENABLE_CHECK_TARGETS FALSE)
 endif()
 
-set(OPENMP_NOT_EXECUTABLE ${LLVM_TOOLS_BINARY_DIR}/not)
+set(OFFLOAD_NOT_EXECUTABLE ${LLVM_TOOLS_BINARY_DIR}/not)
 set(OFFLOAD_DEVICE_INFO_EXECUTABLE ${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-offload-device-info)
 set(OFFLOAD_TBLGEN_EXECUTABLE ${LLVM_RUNTIME_OUTPUT_INTDIR}/offload-tblgen)
-
-# Macro to extract information about compiler from file. (no own scope)
-macro(extract_test_compiler_information lang file)
-  file(READ ${file} information)
-  list(GET information 0 path)
-  list(GET information 1 id)
-  list(GET information 2 version)
-  list(GET information 3 openmp_flags)
-  list(GET information 4 has_tsan_flags)
-  list(GET information 5 has_omit_frame_pointer_flags)
-  list(GET information 6 has_omp_h)
-
-  set(OPENMP_TEST_${lang}_COMPILER_PATH ${path})
-  set(OPENMP_TEST_${lang}_COMPILER_ID ${id})
-  set(OPENMP_TEST_${lang}_COMPILER_VERSION ${version})
-  set(OPENMP_TEST_${lang}_COMPILER_OPENMP_FLAGS ${openmp_flags})
-  set(OPENMP_TEST_${lang}_COMPILER_HAS_TSAN_FLAGS ${has_tsan_flags})
-  set(OPENMP_TEST_${lang}_COMPILER_HAS_OMIT_FRAME_POINTER_FLAGS ${has_omit_frame_pointer_flags})
-  set(OPENMP_TEST_${lang}_COMPILER_HAS_OMP_H ${has_omp_h})
-endmacro()
-
-# Function to set variables with information about the test compiler.
-function(set_test_compiler_information dir)
-  extract_test_compiler_information(C ${dir}/CCompilerInformation.txt)
-  extract_test_compiler_information(CXX ${dir}/CXXCompilerInformation.txt)
-  if (NOT("${OPENMP_TEST_C_COMPILER_ID}" STREQUAL "${OPENMP_TEST_CXX_COMPILER_ID}" AND
-          "${OPENMP_TEST_C_COMPILER_VERSION}" STREQUAL "${OPENMP_TEST_CXX_COMPILER_VERSION}"))
-    message(STATUS "Test compilers for C and C++ don't match.")
-    message(WARNING "The check targets will not be available!")
-    set(ENABLE_CHECK_TARGETS FALSE PARENT_SCOPE)
-  else()
-    set(OPENMP_TEST_COMPILER_ID "${OPENMP_TEST_C_COMPILER_ID}" PARENT_SCOPE)
-    set(OPENMP_TEST_COMPILER_VERSION "${OPENMP_TEST_C_COMPILER_VERSION}" PARENT_SCOPE)
-    set(OPENMP_TEST_COMPILER_OPENMP_FLAGS "${OPENMP_TEST_C_COMPILER_OPENMP_FLAGS}" PARENT_SCOPE)
-    set(OPENMP_TEST_COMPILER_HAS_TSAN_FLAGS "${OPENMP_TEST_C_COMPILER_HAS_TSAN_FLAGS}" PARENT_SCOPE)
-    set(OPENMP_TEST_COMPILER_HAS_OMIT_FRAME_POINTER_FLAGS "${OPENMP_TEST_C_COMPILER_HAS_OMIT_FRAME_POINTER_FLAGS}" PARENT_SCOPE)
-    set(OPENMP_TEST_COMPILER_HAS_OMP_H "${OPENMP_TEST_C_COMPILER_HAS_OMP_H}" PARENT_SCOPE)
-
-    # Determine major version.
-    string(REGEX MATCH "[0-9]+" major "${OPENMP_TEST_C_COMPILER_VERSION}")
-    string(REGEX MATCH "[0-9]+\\.[0-9]+" majorminor "${OPENMP_TEST_C_COMPILER_VERSION}")
-    set(OPENMP_TEST_COMPILER_VERSION_MAJOR "${major}" PARENT_SCOPE)
-    set(OPENMP_TEST_COMPILER_VERSION_MAJOR_MINOR "${majorminor}" PARENT_SCOPE)
-  endif()
-endfunction()
 
 # Set the information that we know.
 set(OPENMP_TEST_COMPILER_ID "Clang")
@@ -122,25 +77,20 @@ function(add_offload_testsuite target comment)
   cmake_parse_arguments(ARG "EXCLUDE_FROM_CHECK_ALL" "" "DEPENDS;ARGS" ${ARGN})
   # EXCLUDE_FROM_CHECK_ALL excludes the test ${target} out of check-offload.
   if (NOT ARG_EXCLUDE_FROM_CHECK_ALL)
-    # Register the testsuites and depends for the check-offload rule.
-    set_property(GLOBAL APPEND PROPERTY OPENMP_LIT_TESTSUITES ${ARG_UNPARSED_ARGUMENTS})
-    set_property(GLOBAL APPEND PROPERTY OPENMP_LIT_DEPENDS ${ARG_DEPENDS})
+    set_property(GLOBAL APPEND PROPERTY OFFLOAD_LIT_TESTSUITES ${ARG_UNPARSED_ARGUMENTS})
+    set_property(GLOBAL APPEND PROPERTY OFFLOAD_LIT_DEPENDS ${ARG_DEPENDS})
   endif()
 
-  if (ARG_EXCLUDE_FROM_CHECK_ALL)
-    add_lit_testsuite(${target}
-      ${comment}
-      ${ARG_UNPARSED_ARGUMENTS}
-      EXCLUDE_FROM_CHECK_ALL
-      DEPENDS clang FileCheck not ${ARG_DEPENDS}
-      ARGS ${ARG_ARGS}
-    )
-  else()
-    add_lit_testsuite(${target}
-      ${comment}
-      ${ARG_UNPARSED_ARGUMENTS}
-      DEPENDS clang FileCheck not ${ARG_DEPENDS}
-      ARGS ${ARG_ARGS}
-    )
+  set(extra_args)
+  if(ARG_EXCLUDE_FROM_CHECK_ALL)
+    list(APPEND extra_args EXCLUDE_FROM_CHECK_ALL)
   endif()
+
+  add_lit_testsuite(${target}
+    ${comment}
+    ${ARG_UNPARSED_ARGUMENTS}
+    ${extra_args}
+    DEPENDS clang FileCheck not ${ARG_DEPENDS}
+    ARGS ${ARG_ARGS}
+  )
 endfunction()

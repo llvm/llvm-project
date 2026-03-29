@@ -194,3 +194,10 @@ void unsigned_to_signed_cast(__ob_trap unsigned long long a) {
   // NOSAN-NEXT: br i1 %[[T1]], {{.*}}, label %trap
   (signed char)(a);
 }
+
+// EXCL-LABEL: define {{.*}} @pattern_exclusion_priority_over_obt
+void pattern_exclusion_priority_over_obt(unsigned char __ob_trap count) {
+  // EXCL: br label %while.cond
+  // EXCL-NOT: %truncheck
+  while (count--) {}
+}

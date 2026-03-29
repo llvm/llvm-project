@@ -172,16 +172,8 @@ public:
   /// Returns the module associated with the given index
   ModuleFile &operator[](unsigned Index) const { return *Chain[Index]; }
 
-  /// Returns the module associated with the given file name.
-  /// Soon to be removed.
-  ModuleFile *lookupByFileName(StringRef FileName) const;
-
   /// Returns the module associated with the given module name.
   ModuleFile *lookupByModuleName(StringRef ModName) const;
-
-  /// Returns the module associated with the given module file.
-  /// Soon to be removed.
-  ModuleFile *lookup(const FileEntry *File) const;
 
   /// Returns the module associated with the given module file name.
   ModuleFile *lookupByFileName(ModuleFileName FileName) const;
