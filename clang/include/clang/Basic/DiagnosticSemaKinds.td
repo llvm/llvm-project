@@ -163,6 +163,7 @@ def err_ice_too_large : Error<
   "integer constant expression evaluates to value %0 that cannot be "
   "represented in a %1-bit %select{signed|unsigned}2 integer type">;
 def err_expr_not_string_literal : Error<"expression is not a string literal">;
+def err_expr_not_builtin : Error<"expression must be a valid builtin function for the target">;
 def note_constexpr_assert_failed : Note<
   "assertion failed during evaluation of constant expression">;
 

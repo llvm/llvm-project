@@ -159,6 +159,10 @@ public:
   /// the provided string, ignoring all other features.
   bool checkFeatures(StringRef FS) const;
 
+  /// Check if a named feature is enabled in this subtarget.
+  /// Returns false for unknown/unrecognized feature names.
+  bool hasFeatureString(StringRef FeatureName) const;
+
   /// Get the machine model of a CPU.
   const MCSchedModel &getSchedModelForCPU(StringRef CPU) const;
 
