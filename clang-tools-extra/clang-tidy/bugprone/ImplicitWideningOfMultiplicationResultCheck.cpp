@@ -43,9 +43,7 @@ ImplicitWideningOfMultiplicationResultCheck::
           Options.get("UseCXXStaticCastsInCppSources", true)),
       UseCXXHeadersInCppSources(Options.get("UseCXXHeadersInCppSources", true)),
       IgnoreConstantIntExpr(Options.get("IgnoreConstantIntExpr", false)),
-      IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
-                                               utils::IncludeSorter::IS_LLVM),
-                      areDiagsSelfContained()) {}
+      IncludeInserter(areDiagsSelfContained()) {}
 
 void ImplicitWideningOfMultiplicationResultCheck::registerPPCallbacks(
     const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
@@ -58,7 +56,6 @@ void ImplicitWideningOfMultiplicationResultCheck::storeOptions(
                 UseCXXStaticCastsInCppSources);
   Options.store(Opts, "UseCXXHeadersInCppSources", UseCXXHeadersInCppSources);
   Options.store(Opts, "IgnoreConstantIntExpr", IgnoreConstantIntExpr);
-  Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
 }
 
 std::optional<FixItHint>

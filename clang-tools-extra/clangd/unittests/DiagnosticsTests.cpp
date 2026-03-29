@@ -920,7 +920,7 @@ TEST(DiagnosticTest, ClangTidySelfContainedDiags) {
   ExpectedDFix.Message = "variable 'D' is not initialized";
   ExpectedDFix.Edits.push_back(TextEdit{Main.range("DFix"), " = NAN"});
   ExpectedDFix.Edits.push_back(
-      TextEdit{Main.range("MathHeader"), "#include <math.h>\n\n"});
+      TextEdit{Main.range("MathHeader"), "#include <math.h>\n"});
   EXPECT_THAT(
       TU.build().getDiagnostics(),
       ifTidyChecks(UnorderedElementsAre(

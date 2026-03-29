@@ -25,14 +25,10 @@ AST_MATCHER(VarDecl, isLocalVarDecl) { return Node.isLocalVarDecl(); }
 
 InitVariablesCheck::InitVariablesCheck(StringRef Name,
                                        ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context),
-      IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
-                                               utils::IncludeSorter::IS_LLVM),
-                      areDiagsSelfContained()),
+    : ClangTidyCheck(Name, Context), IncludeInserter(areDiagsSelfContained()),
       MathHeader(Options.get("MathHeader", "<math.h>")) {}
 
 void InitVariablesCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
   Options.store(Opts, "MathHeader", MathHeader);
 }
 

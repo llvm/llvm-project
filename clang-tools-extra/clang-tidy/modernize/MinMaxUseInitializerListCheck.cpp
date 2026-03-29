@@ -205,16 +205,13 @@ MinMaxUseInitializerListCheck::MinMaxUseInitializerListCheck(
       IgnoreNonTrivialTypes(Options.get("IgnoreNonTrivialTypes", true)),
       IgnoreTrivialTypesOfSizeAbove(
           Options.get("IgnoreTrivialTypesOfSizeAbove", 32L)),
-      Inserter(Options.getLocalOrGlobal("IncludeStyle",
-                                        utils::IncludeSorter::IS_LLVM),
-               areDiagsSelfContained()) {}
+      Inserter(areDiagsSelfContained()) {}
 
 void MinMaxUseInitializerListCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreNonTrivialTypes", IgnoreNonTrivialTypes);
   Options.store(Opts, "IgnoreTrivialTypesOfSizeAbove",
                 IgnoreTrivialTypesOfSizeAbove);
-  Options.store(Opts, "IncludeStyle", Inserter.getStyle());
 }
 
 void MinMaxUseInitializerListCheck::registerMatchers(MatchFinder *Finder) {

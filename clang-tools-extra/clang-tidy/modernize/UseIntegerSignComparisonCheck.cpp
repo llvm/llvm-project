@@ -74,15 +74,11 @@ static StringRef parseOpCode(BinaryOperator::Opcode Code) {
 
 UseIntegerSignComparisonCheck::UseIntegerSignComparisonCheck(
     StringRef Name, ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context),
-      IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
-                                               utils::IncludeSorter::IS_LLVM),
-                      areDiagsSelfContained()),
+    : ClangTidyCheck(Name, Context), IncludeInserter(areDiagsSelfContained()),
       EnableQtSupport(Options.get("EnableQtSupport", false)) {}
 
 void UseIntegerSignComparisonCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
   Options.store(Opts, "EnableQtSupport", EnableQtSupport);
 }
 

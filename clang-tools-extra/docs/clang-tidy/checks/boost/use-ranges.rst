@@ -160,11 +160,6 @@ Transforms to:
 Options
 -------
 
-.. option:: IncludeStyle
-
-   A string specifying which include-style is used, `llvm` or `google`. Default
-   is `llvm`.
-
 .. option:: IncludeBoostSystem
 
    If `true` (default value) the boost headers are included as system headers

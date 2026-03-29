@@ -17,7 +17,6 @@ add_clang_library(clangTidyUtils STATIC
   FixItHintUtils.cpp
   HeaderGuard.cpp
   IncludeInserter.cpp
-  IncludeSorter.cpp
   LexerUtils.cpp
   Matchers.cpp
   NamespaceAliaser.cpp

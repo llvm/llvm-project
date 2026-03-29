@@ -18,10 +18,7 @@ namespace clang::tidy::modernize {
 
 ReplaceRandomShuffleCheck::ReplaceRandomShuffleCheck(StringRef Name,
                                                      ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context),
-      IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
-                                               utils::IncludeSorter::IS_LLVM),
-                      areDiagsSelfContained()) {}
+    : ClangTidyCheck(Name, Context), IncludeInserter(areDiagsSelfContained()) {}
 
 void ReplaceRandomShuffleCheck::registerMatchers(MatchFinder *Finder) {
   const auto Begin = hasArgument(0, expr());
@@ -42,11 +39,6 @@ void ReplaceRandomShuffleCheck::registerMatchers(MatchFinder *Finder) {
 void ReplaceRandomShuffleCheck::registerPPCallbacks(
     const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
   IncludeInserter.registerPreprocessor(PP);
-}
-
-void ReplaceRandomShuffleCheck::storeOptions(
-    ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
 }
 
 void ReplaceRandomShuffleCheck::check(const MatchFinder::MatchResult &Result) {

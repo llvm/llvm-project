@@ -14,10 +14,7 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::modernize {
 
 UseStdBitCheck::UseStdBitCheck(StringRef Name, ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context),
-      IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
-                                               utils::IncludeSorter::IS_LLVM),
-                      areDiagsSelfContained()) {}
+    : ClangTidyCheck(Name, Context), IncludeInserter(areDiagsSelfContained()) {}
 
 void UseStdBitCheck::registerMatchers(MatchFinder *Finder) {
   const auto MakeBinaryOperatorMatcher = [](auto Op) {
@@ -93,10 +90,6 @@ void UseStdBitCheck::registerPPCallbacks(const SourceManager &SM,
                                          Preprocessor *PP,
                                          Preprocessor *ModuleExpanderPP) {
   IncludeInserter.registerPreprocessor(PP);
-}
-
-void UseStdBitCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
 }
 
 void UseStdBitCheck::check(const MatchFinder::MatchResult &Result) {

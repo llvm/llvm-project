@@ -35,11 +35,6 @@ non-trivial types:
 Options
 =======
 
-.. option:: IncludeStyle
-
-  A string specifying which include-style is used, `llvm` or `google`. Default
-  is `llvm`.
-
 .. option:: IgnoreNonTrivialTypes
 
   A boolean specifying whether to ignore non-trivial types. Default is `true`.

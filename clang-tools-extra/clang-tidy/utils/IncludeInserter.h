@@ -9,10 +9,8 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_INCLUDEINSERTER_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_INCLUDEINSERTER_H
 
-#include "IncludeSorter.h"
 #include "clang/Basic/Diagnostic.h"
 #include "llvm/ADT/StringSet.h"
-#include <memory>
 #include <optional>
 
 namespace clang {
@@ -27,8 +25,7 @@ namespace tidy::utils {
 /// #include "../ClangTidyCheck.h"
 /// #include "../utils/IncludeInserter.h"
 ///
-/// namespace clang {
-/// namespace tidy {
+/// namespace clang::tidy {
 ///
 /// class MyCheck : public ClangTidyCheck {
 ///  public:
@@ -47,20 +44,13 @@ namespace tidy::utils {
 ///   }
 ///
 ///  private:
-///   utils::IncludeInserter Inserter{utils::IncludeSorter::IS_Google};
+///   utils::IncludeInserter Inserter;
 /// };
-/// } // namespace tidy
-/// } // namespace clang
+/// } // namespace clang::tidy
 /// \endcode
 class IncludeInserter {
 public:
-  /// Initializes the IncludeInserter using the IncludeStyle \p Style.
-  /// In most cases the \p Style will be retrieved from the ClangTidyOptions
-  /// using \code
-  ///   Options.getLocalOrGlobal("IncludeStyle", <DefaultStyle>)
-  /// \endcode
-  explicit IncludeInserter(IncludeSorter::IncludeStyle Style,
-                           bool SelfContainedDiags);
+  explicit IncludeInserter(bool SelfContainedDiags);
 
   /// Registers this with the Preprocessor \p PP, must be called before this
   /// class is used.
@@ -81,22 +71,20 @@ public:
   /// exists.
   std::optional<FixItHint> createMainFileIncludeInsertion(StringRef Header);
 
-  IncludeSorter::IncludeStyle getStyle() const { return Style; }
-
 private:
-  void addInclude(StringRef FileName, bool IsAngled,
-                  SourceLocation HashLocation, SourceLocation EndLocation);
+  struct InsertInfo {
+    SourceLocation InsertionLoc;
+    llvm::StringSet<> AlreadyPresentHeaders;
+  };
 
-  IncludeSorter &getOrCreate(FileID FileID);
-
-  llvm::DenseMap<FileID, std::unique_ptr<IncludeSorter>> IncludeSorterByFile;
-  llvm::DenseMap<FileID, llvm::StringSet<>> InsertedHeaders;
-  const SourceManager *SourceMgr{nullptr};
-  const IncludeSorter::IncludeStyle Style;
+  FileID CurrentFileID;
+  llvm::DenseMap<FileID, InsertInfo> InsertInfos;
+  const SourceManager *SourceMgr = nullptr;
   const bool SelfContainedDiags;
   friend class IncludeInserterCallback;
 };
 
 } // namespace tidy::utils
 } // namespace clang
+
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_INCLUDEINSERTER_H

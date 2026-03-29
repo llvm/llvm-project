@@ -27,9 +27,7 @@ StringFindStartswithCheck::StringFindStartswithCheck(StringRef Name,
     : ClangTidyCheck(Name, Context),
       StringLikeClasses(utils::options::parseStringList(
           Options.get("StringLikeClasses", DefaultStringLikeClasses))),
-      IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
-                                               utils::IncludeSorter::IS_LLVM),
-                      areDiagsSelfContained()),
+      IncludeInserter(areDiagsSelfContained()),
       AbseilStringsMatchHeader(
           Options.get("AbseilStringsMatchHeader", "absl/strings/match.h")) {}
 
@@ -138,7 +136,6 @@ void StringFindStartswithCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "StringLikeClasses",
                 utils::options::serializeStringList(StringLikeClasses));
-  Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
   Options.store(Opts, "AbseilStringsMatchHeader", AbseilStringsMatchHeader);
 }
 

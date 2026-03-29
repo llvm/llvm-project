@@ -41,10 +41,7 @@ static bool hasLoopStmtAncestor(const DeclRefExpr &DeclRef, const Decl &Decl,
 
 UnnecessaryValueParamCheck::UnnecessaryValueParamCheck(
     StringRef Name, ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context),
-      Inserter(Options.getLocalOrGlobal("IncludeStyle",
-                                        utils::IncludeSorter::IS_LLVM),
-               areDiagsSelfContained()),
+    : ClangTidyCheck(Name, Context), Inserter(areDiagsSelfContained()),
       AllowedTypes(
           utils::options::parseStringList(Options.get("AllowedTypes", ""))),
       IgnoreCoroutines(Options.get("IgnoreCoroutines", true)) {}
@@ -119,7 +116,6 @@ void UnnecessaryValueParamCheck::registerPPCallbacks(
 
 void UnnecessaryValueParamCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "IncludeStyle", Inserter.getStyle());
   Options.store(Opts, "AllowedTypes",
                 utils::options::serializeStringList(AllowedTypes));
   Options.store(Opts, "IgnoreCoroutines", IgnoreCoroutines);

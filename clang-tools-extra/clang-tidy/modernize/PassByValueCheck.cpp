@@ -212,15 +212,11 @@ collectParamDecls(const CXXConstructorDecl *Ctor,
 }
 
 PassByValueCheck::PassByValueCheck(StringRef Name, ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context),
-      Inserter(Options.getLocalOrGlobal("IncludeStyle",
-                                        utils::IncludeSorter::IS_LLVM),
-               areDiagsSelfContained()),
+    : ClangTidyCheck(Name, Context), Inserter(areDiagsSelfContained()),
       ValuesOnly(Options.get("ValuesOnly", false)),
       IgnoreMacros(Options.get("IgnoreMacros", false)) {}
 
 void PassByValueCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "IncludeStyle", Inserter.getStyle());
   Options.store(Opts, "ValuesOnly", ValuesOnly);
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);
 }

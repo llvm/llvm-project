@@ -27,19 +27,11 @@ AST_MATCHER_P(Type, isBuiltinType, BuiltinType::Kind, Kind) {
 
 TypePromotionInMathFnCheck::TypePromotionInMathFnCheck(
     StringRef Name, ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context),
-      IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
-                                               utils::IncludeSorter::IS_LLVM),
-                      areDiagsSelfContained()) {}
+    : ClangTidyCheck(Name, Context), IncludeInserter(areDiagsSelfContained()) {}
 
 void TypePromotionInMathFnCheck::registerPPCallbacks(
     const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
   IncludeInserter.registerPreprocessor(PP);
-}
-
-void TypePromotionInMathFnCheck::storeOptions(
-    ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
 }
 
 void TypePromotionInMathFnCheck::registerMatchers(MatchFinder *Finder) {

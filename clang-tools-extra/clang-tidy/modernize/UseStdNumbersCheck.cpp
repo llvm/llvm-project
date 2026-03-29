@@ -283,10 +283,7 @@ static bool isRangeOfCompleteMacro(const SourceRange &Range,
 
 UseStdNumbersCheck::UseStdNumbersCheck(const StringRef Name,
                                        ClangTidyContext *const Context)
-    : ClangTidyCheck(Name, Context),
-      IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
-                                               utils::IncludeSorter::IS_LLVM),
-                      areDiagsSelfContained()),
+    : ClangTidyCheck(Name, Context), IncludeInserter(areDiagsSelfContained()),
       DiffThresholdString{Options.get("DiffThreshold", "0.001")} {
   if (DiffThresholdString.getAsDouble(DiffThreshold)) {
     configurationDiag(
@@ -431,7 +428,6 @@ void UseStdNumbersCheck::registerPPCallbacks(
 }
 
 void UseStdNumbersCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
   Options.store(Opts, "DiffThreshold", DiffThresholdString);
 }
 } // namespace clang::tidy::modernize

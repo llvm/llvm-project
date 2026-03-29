@@ -28,9 +28,7 @@ UseStdFormatCheck::UseStdFormatCheck(StringRef Name, ClangTidyContext *Context)
           Options.get("StrFormatLikeFunctions", ""))),
       ReplacementFormatFunction(
           Options.get("ReplacementFormatFunction", "std::format")),
-      IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
-                                               utils::IncludeSorter::IS_LLVM),
-                      areDiagsSelfContained()),
+      IncludeInserter(areDiagsSelfContained()),
       MaybeHeaderToInclude(Options.get("FormatHeader")) {
   if (StrFormatLikeFunctions.empty())
     StrFormatLikeFunctions.emplace_back("absl::StrFormat");
@@ -63,7 +61,6 @@ void UseStdFormatCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "StrFormatLikeFunctions",
                 serializeStringList(StrFormatLikeFunctions));
   Options.store(Opts, "ReplacementFormatFunction", ReplacementFormatFunction);
-  Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
   if (MaybeHeaderToInclude)
     Options.store(Opts, "FormatHeader", *MaybeHeaderToInclude);
 }

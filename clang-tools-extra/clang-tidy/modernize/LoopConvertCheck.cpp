@@ -557,9 +557,7 @@ LoopConvertCheck::LoopConvertCheck(StringRef Name, ClangTidyContext *Context)
       MaxCopySize(Options.get("MaxCopySize", 16ULL)),
       MinConfidence(Options.get("MinConfidence", Confidence::CL_Reasonable)),
       NamingStyle(Options.get("NamingStyle", VariableNamer::NS_CamelCase)),
-      Inserter(Options.getLocalOrGlobal("IncludeStyle",
-                                        utils::IncludeSorter::IS_LLVM),
-               areDiagsSelfContained()),
+      Inserter(areDiagsSelfContained()),
       UseCxx20IfAvailable(Options.get("UseCxx20ReverseRanges", true)),
       ReverseFunction(Options.get("MakeReverseRangeFunction", "")),
       ReverseHeader(Options.get("MakeReverseRangeHeader", "")) {
@@ -580,7 +578,6 @@ void LoopConvertCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "MaxCopySize", MaxCopySize);
   Options.store(Opts, "MinConfidence", MinConfidence);
   Options.store(Opts, "NamingStyle", NamingStyle);
-  Options.store(Opts, "IncludeStyle", Inserter.getStyle());
   Options.store(Opts, "UseCxx20ReverseRanges", UseCxx20IfAvailable);
   Options.store(Opts, "MakeReverseRangeFunction", ReverseFunction);
   Options.store(Opts, "MakeReverseRangeHeader", ReverseHeader);

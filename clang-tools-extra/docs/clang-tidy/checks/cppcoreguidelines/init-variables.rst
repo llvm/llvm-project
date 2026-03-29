@@ -60,11 +60,6 @@ It warns for the uninitialized enum case, but without a FixIt:
 Options
 -------
 
-.. option:: IncludeStyle
-
-   A string specifying which include-style is used, `llvm` or `google`. Default
-   is `llvm`.
-
 .. option:: MathHeader
 
    A string specifying the header to include to get the definition of `NAN`.

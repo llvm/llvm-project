@@ -282,18 +282,11 @@ bool UseRangesCheck::isLanguageVersionSupported(
 }
 
 UseRangesCheck::UseRangesCheck(StringRef Name, ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context),
-      Inserter(Options.getLocalOrGlobal("IncludeStyle",
-                                        utils::IncludeSorter::IS_LLVM),
-               areDiagsSelfContained()) {}
+    : ClangTidyCheck(Name, Context), Inserter(areDiagsSelfContained()) {}
 
 void UseRangesCheck::registerPPCallbacks(const SourceManager &,
                                          Preprocessor *PP, Preprocessor *) {
   Inserter.registerPreprocessor(PP);
-}
-
-void UseRangesCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "IncludeStyle", Inserter.getStyle());
 }
 
 std::optional<std::string>

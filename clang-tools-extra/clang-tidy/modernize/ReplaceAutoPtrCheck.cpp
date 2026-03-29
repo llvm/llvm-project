@@ -39,14 +39,7 @@ AST_MATCHER(Expr, isLValue) { return Node.getValueKind() == VK_LValue; }
 
 ReplaceAutoPtrCheck::ReplaceAutoPtrCheck(StringRef Name,
                                          ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context),
-      Inserter(Options.getLocalOrGlobal("IncludeStyle",
-                                        utils::IncludeSorter::IS_LLVM),
-               areDiagsSelfContained()) {}
-
-void ReplaceAutoPtrCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "IncludeStyle", Inserter.getStyle());
-}
+    : ClangTidyCheck(Name, Context), Inserter(areDiagsSelfContained()) {}
 
 void ReplaceAutoPtrCheck::registerMatchers(MatchFinder *Finder) {
   auto AutoPtrDecl = recordDecl(hasName("auto_ptr"), isInStdNamespace());

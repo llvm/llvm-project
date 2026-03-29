@@ -55,9 +55,7 @@ static std::string escapeForDiagnostic(std::string ToEscape) {
 
 TransformerClangTidyCheck::TransformerClangTidyCheck(StringRef Name,
                                                      ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context),
-      Inserter(Options.getLocalOrGlobal("IncludeStyle", IncludeSorter::IS_LLVM),
-               areDiagsSelfContained()) {}
+    : ClangTidyCheck(Name, Context), Inserter(areDiagsSelfContained()) {}
 
 // This constructor cannot dispatch to the simpler one (below), because, in
 // order to get meaningful results from `getLangOpts` and `Options`, we need the
@@ -147,11 +145,6 @@ void TransformerClangTidyCheck::check(
            DiagnosticIDs::Note);
     }
   }
-}
-
-void TransformerClangTidyCheck::storeOptions(
-    ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "IncludeStyle", Inserter.getStyle());
 }
 
 } // namespace clang::tidy::utils

@@ -16,15 +16,7 @@ namespace clang::tidy::misc {
 
 UniqueptrResetReleaseCheck::UniqueptrResetReleaseCheck(
     StringRef Name, ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context),
-      Inserter(Options.getLocalOrGlobal("IncludeStyle",
-                                        utils::IncludeSorter::IS_LLVM),
-               areDiagsSelfContained()) {}
-
-void UniqueptrResetReleaseCheck::storeOptions(
-    ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "IncludeStyle", Inserter.getStyle());
-}
+    : ClangTidyCheck(Name, Context), Inserter(areDiagsSelfContained()) {}
 
 void UniqueptrResetReleaseCheck::registerPPCallbacks(
     const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
