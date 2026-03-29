@@ -104,6 +104,22 @@ public:
     Cond.notify_one();
   }
 
+  // Execute tasks from the work queue until the latch reaches zero.
+  // Used by nested TaskGroups (on worker threads) to prevent deadlock:
+  // instead of blocking in sync(), actively help drain the queue.
+  void helpSync(const parallel::detail::Latch &L) {
+    while (L.getCount() != 0) {
+      std::unique_lock<std::mutex> Lock(Mutex);
+      if (WorkStack.empty())
+        return;
+      auto Item = std::move(WorkStack.back());
+      WorkStack.pop_back();
+      Lock.unlock();
+      Item.F();
+      Item.L.get().dec();
+    }
+  }
+
   size_t getThreadCount() const { return ThreadCount; }
 
 private:
@@ -210,22 +226,24 @@ size_t parallel::getThreadCount() {
 }
 #endif
 
-// Latch::sync() called by the dtor may cause one thread to block. If is a dead
-// lock if all threads in the default executor are blocked. To prevent the dead
-// lock, only allow the root TaskGroup to run tasks parallelly. In the scenario
-// of nested parallel_for_each(), only the outermost one runs parallelly.
+// Nested TaskGroups on worker threads use helpSync() which executes tasks from
+// the queue while waiting, preventing deadlock while enabling nested
+// parallelism.
 TaskGroup::TaskGroup()
     : Parallel(
 #if LLVM_ENABLE_THREADS
-          strategy.ThreadsRequested != 1 && threadIndex == UINT_MAX
+          strategy.ThreadsRequested != 1
 #else
           false
 #endif
       ) {
 }
 TaskGroup::~TaskGroup() {
-  // We must ensure that all the workloads have finished before decrementing the
-  // instances count.
+#if LLVM_ENABLE_THREADS
+  // In a nested TaskGroup (threadIndex != -1u), actively help drain the queue.
+  if (Parallel && threadIndex != UINT_MAX)
+    getDefaultExecutor()->helpSync(L);
+#endif
   L.sync();
 }
 
