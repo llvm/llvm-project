@@ -1705,6 +1705,9 @@ APInt APInt::urem(const APInt &RHS) const {
   if (lhsWords == 1)
     // All high words are zero, just use native remainder
     return APInt(BitWidth, U.pVal[0] % RHS.U.pVal[0]);
+  if (RHS.isPowerOf2())
+    // X % 2^w ===> X & (2^w - 1)
+    return trunc(RHS.logBase2());
 
   // We have to compute it the hard way. Invoke the Knuth divide algorithm.
   APInt Remainder(BitWidth, 0);
@@ -1737,6 +1740,9 @@ uint64_t APInt::urem(uint64_t RHS) const {
   if (lhsWords == 1)
     // All high words are zero, just use native remainder
     return U.pVal[0] % RHS;
+  if (llvm::isPowerOf2_64(RHS))
+    // X % 2^w ===> X & (2^w - 1)
+    return getZExtValue() & (RHS - 1);
 
   // We have to compute it the hard way. Invoke the Knuth divide algorithm.
   uint64_t Remainder;
