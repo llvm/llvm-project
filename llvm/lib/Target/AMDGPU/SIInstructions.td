@@ -2397,9 +2397,8 @@ def : GCNPat <
 let True16Predicate = UseRealTrue16Insts in {
 def : GCNPat <
   (fcopysign fp16vt:$src0, fp16vt:$src1),
-  (EXTRACT_SUBREG (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00007fff)),
-    (REG_SEQUENCE VGPR_32, $src0, lo16, (i16 (IMPLICIT_DEF)), hi16),
-    (REG_SEQUENCE VGPR_32, $src1, lo16, (i16 (IMPLICIT_DEF)), hi16)), lo16)
+  (TRUNC_SRC32_V16_PSEUDO (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00007fff)),
+    (EXT_SRC16_V32_PSEUDO $src0), (EXT_SRC16_V32_PSEUDO $src1)))
 >;
 
 // TODO: Scalar case for 0 magnitude special case
@@ -2412,7 +2411,7 @@ def : GCNPat <
 def : GCNPat <
   (fcopysign f32:$src0, fp16vt:$src1),
   (V_BFI_B32_e64 (S_MOV_B32 (i32 0x7fffffff)), $src0,
-             (REG_SEQUENCE VGPR_32, (i16 (IMPLICIT_DEF)), lo16, $src1, hi16))
+             (EXT_SRC16_V32_PSEUDO $src1))
 >;
 
 // TODO: Scalar case for 0 magnitude special case
@@ -2428,13 +2427,13 @@ def : GCNPat <
   (REG_SEQUENCE VReg_64,
     (i32 (EXTRACT_SUBREG $src0, sub0)), sub0,
     (V_BFI_B32_e64 (S_MOV_B32 (i32 0x7fffffff)), (i32 (EXTRACT_SUBREG $src0, sub1)),
-               (REG_SEQUENCE VGPR_32, (i16 (IMPLICIT_DEF)), lo16, $src1, hi16)), sub1)
+               (V_LSHLREV_B32_e64 (i32 16), (EXT_SRC16_V32_PSEUDO $src1))), sub1)
 >;
 
 def : GCNPat <
   (fcopysign fp16vt:$src0, f32:$src1),
   (EXTRACT_SUBREG (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00007fff)),
-             (REG_SEQUENCE VGPR_32, $src0, lo16, (i16 (IMPLICIT_DEF)), hi16),
+             (EXT_SRC16_V32_PSEUDO $src0),
              (V_LSHRREV_B32_e64 (i32 16), $src1)), lo16)
 >;
 
@@ -2448,7 +2447,7 @@ def : GCNPat <
 def : GCNPat <
   (fcopysign fp16vt:$src0, f64:$src1),
   (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00007fff)),
-             (REG_SEQUENCE VGPR_32, $src0, lo16, (i16 (IMPLICIT_DEF)), hi16),
+             (EXT_SRC16_V32_PSEUDO $src0),
              (V_LSHRREV_B32_e64 (i32 16), (EXTRACT_SUBREG $src1, sub1)))
 >;
 }
