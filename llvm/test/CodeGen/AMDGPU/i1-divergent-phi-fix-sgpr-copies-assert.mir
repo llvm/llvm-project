@@ -54,6 +54,7 @@ body:             |
   ; CHECK-NEXT:   [[PHI3:%[0-9]+]]:sreg_64 = PHI [[COPY1]], %bb.1, [[S_MOV_B64_2]], %bb.3
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sreg_64 = COPY [[PHI2]]
   ; CHECK-NEXT:   [[DEF3:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vreg_64 = COPY [[PHI3]], implicit $exec
   ; CHECK-NEXT:   [[S_ANDN2_B64_1:%[0-9]+]]:sreg_64 = S_ANDN2_B64 [[PHI1]], $exec, implicit-def $scc
   ; CHECK-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64 = S_AND_B64 [[PHI3]], $exec, implicit-def $scc
   ; CHECK-NEXT:   [[S_OR_B64_2:%[0-9]+]]:sreg_64 = S_OR_B64 [[S_ANDN2_B64_1]], [[S_AND_B64_1]], implicit-def $scc

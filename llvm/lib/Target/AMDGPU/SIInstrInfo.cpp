@@ -7424,8 +7424,17 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
   // The register class of the operands must be the same type as the register
   // class of the output.
   if (MI.getOpcode() == AMDGPU::PHI) {
-    const TargetRegisterClass *VRC = getOpRegClass(MI, 0);
-    assert(!RI.isSGPRClass(VRC));
+    const TargetRegisterClass *RC = getOpRegClass(MI, 0);
+    assert(!RI.isSGPRClass(RC));
+
+    const TargetRegisterClass *SRC = nullptr, *VRC = nullptr;
+    for (unsigned i = 1, e = MI.getNumOperands(); i != e; i += 2) {
+      const TargetRegisterClass *OpRC = getOpRegClass(MI, i);
+      (RI.hasVectorRegisters(OpRC) ? VRC : SRC) = OpRC;
+    }
+    const TargetRegisterClass *SrcRC = VRC ? VRC : SRC;
+    RC = RI.isAGPRClass(RC) ? RI.getEquivalentAGPRClass(SrcRC)
+                            : RI.getEquivalentVGPRClass(SrcRC);
 
     // Update all the operands so they have the same type.
     for (unsigned I = 1, E = MI.getNumOperands(); I != E; I += 2) {
@@ -7439,7 +7448,7 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
 
       // Avoid creating no-op copies with the same src and dst reg class.  These
       // confuse some of the machine passes.
-      legalizeGenericOperand(*InsertBB, Insert, VRC, Op, MRI, MI.getDebugLoc());
+      legalizeGenericOperand(*InsertBB, Insert, RC, Op, MRI, MI.getDebugLoc());
     }
   }
 
