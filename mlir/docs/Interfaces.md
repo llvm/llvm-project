@@ -177,7 +177,6 @@ Interface methods are comprised of the following components:
 `PureVirtualInterfaceMethod` marks the method as pure virtual, but also makes the 
 constructor of the dialect calss protected.
 
-
 #### DialectInterfaceCollection
 
 An additional utility is provided via `DialectInterfaceCollection`. This class
