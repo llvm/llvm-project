@@ -108,6 +108,11 @@ static cl::opt<unsigned>
                         cl::desc("Max renaming uses in BB for jump threading"),
                         cl::init(800), cl::Hidden);
 
+static cl::opt<unsigned> UsesRenameBBThreshold(
+    "jump-threading-rename-bb-threshold",
+    cl::desc("Max BBs containing renaming uses for jump threading"),
+    cl::init(60), cl::Hidden);
+
 static cl::opt<bool> ThreadAcrossLoopHeaders(
     "jump-threading-across-loop-headers",
     cl::desc("Allow JumpThreading to thread across loop headers, for testing"),
@@ -463,6 +468,7 @@ getJumpThreadDuplicationCost(const TargetTransformInfo *TTI, BasicBlock *BB,
   // as that could introduce additional PHI nodes when rewriting the SSA, which
   // would lead to a substantial increase in compile time.
   unsigned UsesToRenameCount = 0;
+  SmallSet<BasicBlock *, 9> UseBBs;
   for (Instruction &I : *BB) {
     for (Use &U : I.uses()) {
       Instruction *User = cast<Instruction>(U.getUser());
@@ -472,6 +478,11 @@ getJumpThreadDuplicationCost(const TargetTransformInfo *TTI, BasicBlock *BB,
       } else if (User->getParent() == BB)
         continue;
       if (++UsesToRenameCount > UsesRenameThreshold)
+        return ~0U;
+      UseBBs.insert(User->getParent());
+      // Introducing additional PHI nodes to different BBs also lead to a
+      // substantial increase in compile time.
+      if (UseBBs.size() > UsesRenameBBThreshold)
         return ~0U;
     }
   }
