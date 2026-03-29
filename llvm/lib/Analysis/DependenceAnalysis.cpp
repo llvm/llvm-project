@@ -1424,6 +1424,27 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
     return true;
   }
 
+  // check that Coeff divides Delta
+  APInt APDelta = ConstDelta->getAPInt();
+  APInt APCoeff = ConstCoeff->getAPInt();
+  APInt Distance = APDelta; // these need to be initialzed
+  APInt Remainder = APDelta;
+  APInt::sdivrem(APDelta, APCoeff, Distance, Remainder);
+  LLVM_DEBUG(dbgs() << "\t    Remainder = " << Remainder << "\n");
+  if (Remainder != 0) {
+    // Coeff doesn't divide Delta, no dependence
+    ++WeakCrossingSIVindependence;
+    ++WeakCrossingSIVsuccesses;
+    return true;
+  }
+  LLVM_DEBUG(dbgs() << "\t    Distance = " << Distance << "\n");
+  // if 2*Coeff doesn't divide Delta, then the equal direction isn't possible
+  if (Distance[0]) {
+    // Equal direction isn't possible
+    Result.DV[Level].Direction &= ~Dependence::DVEntry::EQ;
+    ++WeakCrossingSIVsuccesses;
+  }
+
   // We're certain that Delta > 0 and ConstCoeff > 0.
   // Check Delta/(2*ConstCoeff) against upper loop bound
   const Loop *CurSrcLoop = Src->getLoop();
@@ -1448,27 +1469,6 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
     }
   }
 
-  // check that Coeff divides Delta
-  APInt APDelta = ConstDelta->getAPInt();
-  APInt APCoeff = ConstCoeff->getAPInt();
-  APInt Distance = APDelta; // these need to be initialzed
-  APInt Remainder = APDelta;
-  APInt::sdivrem(APDelta, APCoeff, Distance, Remainder);
-  LLVM_DEBUG(dbgs() << "\t    Remainder = " << Remainder << "\n");
-  if (Remainder != 0) {
-    // Coeff doesn't divide Delta, no dependence
-    ++WeakCrossingSIVindependence;
-    ++WeakCrossingSIVsuccesses;
-    return true;
-  }
-  LLVM_DEBUG(dbgs() << "\t    Distance = " << Distance << "\n");
-
-  // if 2*Coeff doesn't divide Delta, then the equal direction isn't possible
-  if (Distance[0]) {
-    // Equal direction isn't possible
-    Result.DV[Level].Direction &= ~Dependence::DVEntry::EQ;
-    ++WeakCrossingSIVsuccesses;
-  }
   return false;
 }
 
