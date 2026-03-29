@@ -69,6 +69,36 @@ TEST(File, GetStreamFromDescriptor) {
 #endif
 }
 
+TEST(File, SeekFromEndStream) {
+  const auto *Info = testing::UnitTest::GetInstance()->current_test_info();
+  llvm::SmallString<128> name;
+  int fd;
+  llvm::sys::fs::createTemporaryFile(llvm::Twine(Info->test_case_name()) + "-" +
+                                         Info->name(),
+                                     "test", fd, name);
+  llvm::FileRemover remover(name);
+  ASSERT_GE(fd, 0);
+
+  FILE *stream = fdopen(fd, "w+");
+  ASSERT_TRUE(stream);
+
+  // Write some data so the file has a known size.
+  const char data[] = "0123456789";
+  ASSERT_EQ(fwrite(data, 1, sizeof(data) - 1, stream), sizeof(data) - 1);
+  ASSERT_EQ(fflush(stream), 0);
+
+  // Use the stream-based NativeFile to exercise the stream path in
+  // SeekFromEnd. Before the fix, the stream path was missing a return
+  // statement, causing the error to be incorrectly set to "invalid file
+  // handle".
+  NativeFile file(stream, File::eOpenOptionReadWrite, true);
+
+  Status error;
+  off_t result = file.SeekFromEnd(-5, &error);
+  EXPECT_TRUE(error.Success());
+  EXPECT_EQ(result, 0); // fseek returns 0 on success
+}
+
 TEST(File, ReadOnlyModeNotWritable) {
   const auto *Info = testing::UnitTest::GetInstance()->current_test_info();
   llvm::SmallString<128> name;

@@ -582,7 +582,7 @@ Target::CreateAddressInModuleBreakpoint(lldb::addr_t file_addr, bool internal,
       std::make_shared<SearchFilterForUnconstrainedSearches>(
           shared_from_this());
   BreakpointResolverSP resolver_sp =
-      std::make_shared<BreakpointResolverAddress>(nullptr, file_addr,
+      std::make_shared<BreakpointResolverAddress>(nullptr, Address(file_addr),
                                                   file_spec);
   return CreateBreakpoint(filter_sp, resolver_sp, internal, request_hardware,
                           false);

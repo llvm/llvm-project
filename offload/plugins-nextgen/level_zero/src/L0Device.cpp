@@ -18,6 +18,7 @@
 #include "L0Trace.h"
 
 #include "GlobalHandler.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Object/ELF.h"
 
 namespace llvm::omp::target::plugin {
@@ -700,30 +701,36 @@ Expected<OmpInteropTy> L0DeviceTy::createInterop(int32_t InteropContext,
   Ret->rtl_property = new L0Interop::Property();
   if (InteropContext == kmp_interop_type_targetsync) {
     Ret->async_info = new __tgt_async_info();
+
+    // Ensure cleanup on error
+    llvm::scope_exit CleanupOnError([&]() {
+      if (Ret->async_info)
+        delete Ret->async_info;
+      if (Ret->rtl_property)
+        delete static_cast<L0Interop::Property *>(Ret->rtl_property);
+      delete Ret;
+    });
+
     auto L0 = static_cast<L0Interop::Property *>(Ret->rtl_property);
 
     bool InOrder = InteropSpec.attrs.inorder;
     Ret->attrs.inorder = InOrder;
     if (useImmForInterop()) {
       auto CmdListOrErr = createImmCmdList(InOrder);
-      if (!CmdListOrErr) {
-        delete Ret->async_info;
-        delete Ret;
+      if (!CmdListOrErr)
         return CmdListOrErr.takeError();
-      }
       Ret->async_info->Queue = *CmdListOrErr;
       L0->ImmCmdList = *CmdListOrErr;
     } else {
       auto QueueOrErr = createCommandQueue(InOrder);
-      if (!QueueOrErr) {
-        delete Ret->async_info;
-        delete Ret;
+      if (!QueueOrErr)
         return QueueOrErr.takeError();
-      }
       Ret->async_info->Queue = *QueueOrErr;
       L0->CommandQueue =
           static_cast<ze_command_queue_handle_t>(Ret->async_info->Queue);
     }
+
+    CleanupOnError.release();
   }
 
   return Ret;
@@ -791,9 +798,12 @@ Error L0DeviceTy::enqueueMemCopy(void *Dst, const void *Src, size_t Size,
     CALL_ZE_RET_ERROR(zeCommandListAppendMemoryCopy, CmdList, Dst, Src, Size,
                       nullptr, 0, nullptr);
     CALL_ZE_RET_ERROR(zeCommandListClose, CmdList);
+    llvm::scope_exit ResetOnExit(
+        [&]() { CALL_ZE_SILENT(zeCommandListReset, CmdList); });
     CALL_ZE_RET_ERROR_MTX(zeCommandQueueExecuteCommandLists, getMutex(),
                           CmdQueue, 1, &CmdList, nullptr);
     CALL_ZE_RET_ERROR(zeCommandQueueSynchronize, CmdQueue, L0DefaultTimeout);
+    ResetOnExit.release();
     CALL_ZE_RET_ERROR(zeCommandListReset, CmdList);
   }
   return Plugin::success();
@@ -1141,8 +1151,12 @@ Error L0DeviceTy::dataFence(__tgt_async_info *Async) {
     CmdQueue = *CmdQueueOrerr;
     CALL_ZE_RET_ERROR(zeCommandListAppendBarrier, CmdList, nullptr, 0, nullptr);
     CALL_ZE_RET_ERROR(zeCommandListClose, CmdList);
+    llvm::scope_exit ResetOnExit(
+        [&]() { CALL_ZE_SILENT(zeCommandListReset, CmdList); });
     CALL_ZE_RET_ERROR(zeCommandQueueExecuteCommandLists, CmdQueue, 1, &CmdList,
                       nullptr);
+    CALL_ZE_RET_ERROR(zeCommandQueueSynchronize, CmdQueue, L0DefaultTimeout);
+    ResetOnExit.release();
     CALL_ZE_RET_ERROR(zeCommandListReset, CmdList);
   }
 

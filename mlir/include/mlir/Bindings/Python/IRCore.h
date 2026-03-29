@@ -1842,6 +1842,8 @@ public:
                      const nanobind::object &target, PyMlirContext &context);
 
   static void bind(nanobind::module_ &m);
+
+  static inline const char *typeIDAttr = "_trait_typeid";
 };
 
 namespace PyDynamicOpTraits {
