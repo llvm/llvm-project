@@ -1101,7 +1101,7 @@ TEST(APIntTest, divrem_big_pow2) {
   APInt LHS{512, "ffffffffffffffffffffffffffffffffffffffffffffffff", 16};
   for (unsigned k : {1, 63, 64, 65, 127, 128, 200, 255, 256}) {
     APInt RHS = APInt{512, 1}.shl(k);
-    APInt RES = LHS.trunc(k);
+    APInt RES = LHS & (RHS - 1);
     testDiv(LHS, RHS, RES);
   }
 }
@@ -1169,7 +1169,7 @@ TEST(APIntTest, divremuint_pow2) {
   APInt LHS{512, "ffffffffffffffffffffffffffffffffffffffffffffffff", 16};
   for (unsigned k : {1, 2, 3, 7, 15, 31, 32, 33, 63}) {
     uint64_t RHS = 1ULL << k;
-    APInt RES = LHS.trunc(k);
+    APInt RES = LHS.urem(APInt{512, RHS});
     testDiv(LHS, RHS, RES);
   }
 }
