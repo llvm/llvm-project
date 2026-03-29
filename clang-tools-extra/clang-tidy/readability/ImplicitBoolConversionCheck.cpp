@@ -99,9 +99,9 @@ static void fixGenericExprCastToBool(DiagnosticBuilder &Diag,
   std::string StartLocInsertion;
 
   if (NeedOuterParens)
-    StartLocInsertion += "(";
+    StartLocInsertion += '(';
   if (NeedInnerParens)
-    StartLocInsertion += "(";
+    StartLocInsertion += '(';
 
   if (!StartLocInsertion.empty())
     Diag << FixItHint::CreateInsertion(Cast->getBeginLoc(), StartLocInsertion);
@@ -109,7 +109,7 @@ static void fixGenericExprCastToBool(DiagnosticBuilder &Diag,
   std::string EndLocInsertion;
 
   if (NeedInnerParens)
-    EndLocInsertion += ")";
+    EndLocInsertion += ')';
 
   if (InvertComparison)
     EndLocInsertion += " == ";
@@ -125,7 +125,7 @@ static void fixGenericExprCastToBool(DiagnosticBuilder &Diag,
     EndLocInsertion += ZeroLiteral;
 
   if (NeedOuterParens)
-    EndLocInsertion += ")";
+    EndLocInsertion += ')';
 
   const SourceLocation EndLoc = Lexer::getLocForEndOfToken(
       Cast->getEndLoc(), 0, Context.getSourceManager(), Context.getLangOpts());
