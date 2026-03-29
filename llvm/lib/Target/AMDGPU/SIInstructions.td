@@ -2884,14 +2884,14 @@ def : GCNPat<(i32 (DivergentUnaryFrag<trunc> (srl i64:$src0, (i32 ShiftAmt32Imm:
                           0, /* src1_modifiers */
                           (i32 (EXTRACT_SUBREG (i64 $src0), sub0)),
                           0, /* src2_modifiers */
-                          (i16 (EXTRACT_SUBREG VGPR_32:$src1, lo16)),
+                          (i16 (TRUNC_SRC32_V16_PSEUDO $src1)),
                           /* clamp */ 0, /* op_sel */ 0)>;
 
 def : GCNPat<(fshr i32:$src0, i32:$src1, i32:$src2),
           (V_ALIGNBIT_B32_t16_e64 /* src0_modifiers */ 0, $src0,
                           /* src1_modifiers */ 0, $src1,
                           /* src2_modifiers */ 0,
-                          (EXTRACT_SUBREG VGPR_32:$src2, lo16),
+                          (TRUNC_SRC32_V16_PSEUDO $src2),
                           /* clamp */ 0, /* op_sel */ 0)>;
 } // end True16Predicate = UseRealTrue16Insts
 
@@ -3043,15 +3043,13 @@ def : GCNPat <
 let True16Predicate = UseRealTrue16Insts in {
 def : GCNPat <
   (i16 (DivergentSextInreg<i1> i16:$src)),
-  (V_BFE_I32_e64
-   (REG_SEQUENCE VGPR_32, VGPR_16:$src, lo16, (i16 (IMPLICIT_DEF)), hi16),
+  (V_BFE_I32_e64 (EXT_SRC16_V32_PSEUDO $src),
    (i32 0), (i32 1))
 >;
 
 def : GCNPat <
   (i16 (DivergentSextInreg<i8> i16:$src)),
-  (V_BFE_I32_e64
-   (REG_SEQUENCE VGPR_32, VGPR_16:$src, lo16, (i16 (IMPLICIT_DEF)), hi16),
+  (V_BFE_I32_e64 (EXT_SRC16_V32_PSEUDO $src),
    (i32 0), (i32 8))
 >;
 }
@@ -3613,7 +3611,7 @@ def : GCNPat <
 
 def : GCNPat <
   (i32 (zext (bswap i16:$a))),
-  (V_PERM_B32_e64  (i32 0), (COPY VGPR_16:$a), (S_MOV_B32 (i32 0x0c0c0001)))
+  (V_PERM_B32_e64  (i32 0), (EXT_SRC16_V32_PSEUDO $a), (S_MOV_B32 (i32 0x0c0c0001)))
 >;
 }
 
