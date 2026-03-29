@@ -52,7 +52,7 @@ declare i16 @llvm.dx.quad.read.across.diagonal.i16(i16)
 declare i32 @llvm.dx.quad.read.across.diagonal.i32(i32)
 declare i64 @llvm.dx.quad.read.across.diagonal.i64(i64)
 
-; Test that for vector values, QuadReadAcrossX scalarizes and maps down to the
+; Test that for vector values, QuadReadAcrossDiagonal scalarizes and maps down to the
 ; DirectX op
 
 define noundef <2 x half> @quad_read_across_diagonal_v2half(<2 x half> noundef %expr) {
