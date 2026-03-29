@@ -252,13 +252,13 @@ class EncAnyType<int ArgCode=0> {
   int ret = !or(ID, ArgCode);
 }
 
-// (Mapping[Num] << 3) | AK.MatchType
+// (Num << 3) | AK.MatchType
 class EncMatchType<int Num=0> {
   int ID = 0x200;
   int ret = !or(ID, Num);
 }
 
-// (Mapping[Num] << 3) | ArgCodes[Mapping[Num]]
+// (Num << 3) | ArgCodes[Num]
 class EncSameWidth<int Num=0> {
   int ID = 0x300;
   int ret = !or(ID, Num);
@@ -270,26 +270,24 @@ class EncNextArgA<int dummy=0> {
   int ret = !or(ID, dummy);
 }
 
-// Mapping[Num]
+// Num
 class EncNextArgN<int Num=0> {
   int ID = 0x500;
   int ret = !or(ID, Num);
 }
 
 class ResolveArgCode<
-    list<int> Mapping,
     list<int> ArgCodes,
     int ACIdx,
     int ax> {
   int ah = !and(ax, 0xFF00);
   int al = !and(ax, 0x00FF);
-  int num = Mapping[al];
   int ret = !cond(
     !eq(ah, EncAnyType<>.ID)   : !or(!shl(ACIdx, 3), al),
-    !eq(ah, EncMatchType<>.ID) : !or(!shl(num, 3), ArgKind.MatchType),
-    !eq(ah, EncSameWidth<>.ID) : !or(!shl(num, 3), ArgCodes[num]),
+    !eq(ah, EncMatchType<>.ID) : !or(!shl(al, 3), ArgKind.MatchType),
+    !eq(ah, EncSameWidth<>.ID) : !or(!shl(al, 3), ArgCodes[al]),
     !eq(ah, EncNextArgA<>.ID)  : ACIdx,
-    !eq(ah, EncNextArgN<>.ID)  : num,
+    !eq(ah, EncNextArgN<>.ID)  : al,
     true : al);
 }
 
@@ -649,12 +647,7 @@ class MakeIdx<list<int> Set> {
       !foldl(0, !range(0, i), m, j, !add(m, Set[j])),
       -1));
 
-  list<int> RIdxsR = !foreach(i, !range(Set),
-    !foldl(-1, !range(Set), m, j,
-      !if(!and(Set[j], !eq(IdxsR[j], i)), j, m)));
-
   list<int> Idxs  = !foreach(a, IdxsR,  !if(!ge(a, 0), a, ?));
-  list<int> RIdxs = !foreach(a, RIdxsR, !if(!ge(a, 0), a, ?));
 }
 
 class TypeInfoGen<
@@ -673,16 +666,10 @@ class TypeInfoGen<
 
   list<int> ArgCodes = !foreach(ty, ACTys, ty.ArgCode);
 
-  // Mappings MatchTypeIdx to ACTys
-  list<int> MappingRIdxs = MakeIdx<
-    !foreach(ty, ACTys, ty.isAny)>.RIdxs;
-
-  // D63507: Exclude LLVMPointerType<llvm_any_ty>
-  bit isOverloaded = !not(!empty(!filter(ty, AllTypes,
-    !isa<LLVMAnyType>(ty))));
+  bit isOverloaded = !not(!empty(ACTys));
 
   list<LLVMType> Types = !foreach(ty, AllTypes,
-    !if(!isa<LLVMMatchType>(ty), ACTys[MappingRIdxs[ty.Number]], ty));
+    !if(!isa<LLVMMatchType>(ty), ACTys[ty.Number], ty));
 
   list<int> TypeSig = !listflatten(!listconcat(
     [!cond(
@@ -692,7 +679,6 @@ class TypeInfoGen<
     !foreach(i, !range(AllTypes),
       !foreach(a, AllTypes[i].Sig,
         ResolveArgCode<
-          MappingRIdxs,
           ArgCodes,
           ACIdxs[i],
           a>.ret))));
