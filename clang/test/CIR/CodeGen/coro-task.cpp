@@ -314,7 +314,7 @@ VoidTask silly_task() {
 // CIR: } cleanup  normal {
 // CIR:   %[[FreeMem:.*]] = cir.call @__builtin_coro_free(%[[CoroId]], %[[CoroFrameAddr]])
 // CIR:   %[[NullPtr2:.*]] = cir.const #cir.ptr<null>
-// CIR:   %[[Cond:.*]] = cir.cmp(ne, %[[FreeMem]], %[[NullPtr2]])
+// CIR:   %[[Cond:.*]] = cir.cmp ne %[[FreeMem]], %[[NullPtr2]]
 // CIR:   cir.if %[[Cond]] {
 // CIR:     %[[Size:.*]] = cir.call @__builtin_coro_size()
 // CIR:     cir.call @_ZdlPvm(%[[FreeMem]], %[[Size]])
@@ -734,7 +734,7 @@ folly::coro::Task<int> co_returns(int x) {
 // CIR:     },)
 // CIR:     %[[X_LOAD:.*]] = cir.load {{.*}} %[[X:.*]]
 // CIR:     %[[TWO:.*]] = cir.const #cir.int<2>
-// CIR:     %[[RES:.*]] = cir.binop(mul, %[[X_LOAD]], %[[TWO]])
+// CIR:     %[[RES:.*]] = cir.mul nsw %[[X_LOAD]], %[[TWO]]
 // CIR:     cir.call @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi(%[[PROMISE]], %[[RES]])
 // CIR:     cir.co_return
 // CIR:   }

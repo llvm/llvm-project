@@ -151,9 +151,8 @@ struct CallCoroDelete final : public EHScopeStack::Cleanup {
     mlir::Block *block = cmp->getBlock();
     mlir::Block::iterator it(cmp);
 
-    for (++it; it != block->end(); ++it) {
+    for (++it; it != block->end(); ++it)
       opsToMove.push_back(&*it);
-    }
 
     auto ifOp =
         cir::IfOp::create(builder, cgf.getLoc(deallocate->getSourceRange()),
