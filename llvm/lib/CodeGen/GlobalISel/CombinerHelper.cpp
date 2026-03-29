@@ -5575,6 +5575,229 @@ bool CombinerHelper::matchSubAddSameReg(MachineInstr &MI,
   return false;
 }
 
+static unsigned getSumOfDigitsChunkWidth(const APInt &Divisor,
+                                         unsigned BitWidth) {
+  if (Divisor.isZero())
+    return 0;
+
+  unsigned HBitWidth = BitWidth / 2;
+
+  // Search for a ChunkWidth (I) where (2^I) % D == 1.
+  // This allows us to use the "Sum of Digits" property in base 2^I.
+  for (unsigned I = HBitWidth, E = HBitWidth / 2; I > E; --I) {
+    APInt Mod = APInt::getOneBitSet(BitWidth, I).urem(Divisor);
+
+    if (Mod.isOne()) {
+      unsigned NumChunks = divideCeil(BitWidth, I);
+
+      // Safety check: Ensure the sum of chunks won't overflow the
+      // width of the registers we are using for the summation (HBitWidth).
+      if (I == HBitWidth || I + llvm::bit_width(NumChunks - 1) <= HBitWidth)
+        return I;
+    }
+  }
+
+  return 0;
+}
+
+// Optimize unsigned division or remainder by constants for types twice as large
+// as a legal VT.
+//
+// If (1 << (BitWidth / 2)) % Constant == 1, then the remainder
+// can be computed
+// as:
+//   Sum = __builtin_uadd_overflow(Lo, High, &Sum);
+//   Remainder = Sum % Constant;
+//
+// If (1 << (BitWidth / 2)) % Constant != 1, we can search for a smaller value
+// W such that W != (BitWidth / 2) and (1 << W) % Constant == 1. We can break
+// High:Low into 3 chunks of W bits and compute remainder as
+//   Sum = Chunk0 + Chunk1 + Chunk2;
+//   Remainder = Sum % Constant;
+//
+// This is based on "Remainder by Summing Digits" from Hacker's Delight.
+//
+// For division, we can compute the remainder using the algorithm described
+// above, subtract it from the dividend to get an exact multiple of Constant.
+// Then multiply that exact multiply by the multiplicative inverse modulo
+// (1 << (BitWidth / 2)) to get the quotient.
+
+// If Constant is even, we can shift right the dividend and the divisor by the
+// number of trailing zeros in Constant before applying the remainder algorithm.
+// If we're after the quotient, we can subtract this value from the shifted
+// dividend and multiply by the multiplicative inverse of the shifted divisor.
+// If we want the remainder, we shift the value left by the number of trailing
+// zeros and add the bits that were shifted out of the dividend.
+MachineInstr *
+CombinerHelper::buildUDivOrRemUsingChunkSummation(MachineInstr &MI) const {
+  // Only handle unsigned operations.
+  unsigned Opcode = MI.getOpcode();
+  if (Opcode == TargetOpcode::G_SREM || Opcode == TargetOpcode::G_SDIV)
+    return nullptr;
+  assert((Opcode == TargetOpcode::G_UREM || Opcode == TargetOpcode::G_UDIV) &&
+         "Unexpected opcode");
+
+  Register DivReg = MI.getOperand(2).getReg();
+  auto VRegAndVal = getIConstantVRegValWithLookThrough(DivReg, MRI);
+  if (!VRegAndVal)
+    return nullptr;
+
+  // Don't expand if optimizing for size.
+  const auto &MF = *MI.getMF();
+  if (MF.getFunction().hasMinSize() || MF.getFunction().hasOptSize())
+    return nullptr;
+
+  // Only apply to wide types (e.g., i128).
+  Register DstReg = MI.getOperand(0).getReg();
+  LLT Ty = MRI.getType(DstReg);
+  unsigned BitWidth = Ty.getSizeInBits();
+  if (BitWidth < 128)
+    return nullptr;
+
+  // Early out for 0 or 1 divisors.
+  APInt Divisor = VRegAndVal->Value;
+  if (Divisor.ule(1))
+    return nullptr;
+
+  // Divisor must be less than (1 << (BitWidth / 2)).
+  unsigned HBitWidth = BitWidth / 2;
+  if (Divisor.uge(APInt::getOneBitSet(BitWidth, HBitWidth)))
+    return nullptr;
+
+  LLT HiLoTy = LLT::scalar(HBitWidth);
+  assert(Ty.getScalarSizeInBits() == BitWidth &&
+         HiLoTy.getScalarSizeInBits() == HBitWidth && "Unexpected VTs");
+
+  // If the divisor is even, shift it until it becomes odd.
+  unsigned TZ = Divisor.countr_zero();
+  if (TZ > 0) {
+    Divisor.lshrInPlace(TZ);
+  }
+
+  // Find the best chunk width W where (2^W % D) == 1.
+  unsigned BestW = getSumOfDigitsChunkWidth(Divisor, BitWidth);
+  if (!BestW)
+    return nullptr;
+
+  Builder.setInstrAndDebugLoc(MI);
+
+  // Split input into LL and LH
+  Register SrcReg = MI.getOperand(1).getReg();
+  auto Unmerge = Builder.buildUnmerge(HiLoTy, SrcReg);
+  Register LL = Unmerge.getReg(0);
+  Register LH = Unmerge.getReg(1);
+
+  bool HasFSHR =
+      isLegalOrBeforeLegalizer({TargetOpcode::G_FSHR, {HiLoTy, HiLoTy}});
+
+  auto GetFSHR = [&](Register Lo, Register Hi, unsigned ShiftAmt) {
+    assert(ShiftAmt > 0 && ShiftAmt < HBitWidth);
+
+    if (HasFSHR) {
+      auto Amt = Builder.buildConstant(HiLoTy, ShiftAmt);
+      return Builder.buildInstr(TargetOpcode::G_FSHR, {HiLoTy}, {Hi, Lo, Amt})
+          .getReg(0);
+    }
+
+    // Fallback: (Lo >> ShiftAmt) | (Hi << (HBitWidth - ShiftAmt))
+    auto ShAmt = Builder.buildConstant(HiLoTy, ShiftAmt);
+    auto InvShAmt = Builder.buildConstant(HiLoTy, HBitWidth - ShiftAmt);
+
+    auto Part1 = Builder.buildLShr(HiLoTy, Lo, ShAmt);
+    auto Part2 = Builder.buildShl(HiLoTy, Hi, InvShAmt);
+
+    return Builder.buildOr(HiLoTy, Part1, Part2).getReg(0);
+  };
+
+  Register PartialRem = Builder.buildConstant(HiLoTy, 0).getReg(0);
+  if (TZ > 0) {
+    if (Opcode != TargetOpcode::G_UDIV) {
+      auto Mask =
+          Builder.buildConstant(HiLoTy, APInt::getLowBitsSet(HBitWidth, TZ));
+      PartialRem = Builder.buildAnd(HiLoTy, LL, Mask).getReg(0);
+    }
+    auto ShiftAmt = Builder.buildConstant(HiLoTy, TZ);
+    Register NewLL =
+        Builder.buildInstr(TargetOpcode::G_FSHR, {HiLoTy}, {LH, LL, ShiftAmt})
+            .getReg(0);
+    Register NewLH = Builder.buildLShr(HiLoTy, LH, ShiftAmt).getReg(0);
+    LL = NewLL;
+    LH = NewLH;
+  }
+
+  Register Sum = Register();
+  if (BestW == HBitWidth) {
+    // Specialized path: (1 << 64) % D == 1. Sum = LL + LH + Carry
+    auto Add = Builder.buildUAddo(HiLoTy, LLT::scalar(1), LL, LH);
+    auto Zero = Builder.buildConstant(HiLoTy, 0);
+    Sum = Builder
+              .buildUAdde(HiLoTy, LLT::scalar(1), Add.getReg(0), Zero,
+                          Add.getReg(1))
+              .getReg(0);
+  } else {
+    // General path for smaller chunk widths
+    Sum = Builder.buildConstant(HiLoTy, 0).getReg(0);
+    auto Mask =
+        Builder.buildConstant(HiLoTy, APInt::getLowBitsSet(HBitWidth, BestW));
+
+    for (unsigned I = 0; I < BitWidth - TZ; I += BestW) {
+      Register Chunk;
+      if (I == 0) {
+        Chunk = LL;
+      } else if (I >= HBitWidth) {
+        auto ShiftAmt = Builder.buildConstant(HiLoTy, I - HBitWidth);
+        Chunk = Builder.buildLShr(HiLoTy, LH, ShiftAmt).getReg(0);
+      } else {
+        Chunk = GetFSHR(LL, LH, I);
+      }
+      auto Masked = Builder.buildAnd(HiLoTy, Chunk, Mask);
+      Sum = Builder.buildAdd(HiLoTy, Sum, Masked).getReg(0);
+    }
+  }
+
+  // RemL = Sum % Divisor
+  auto RemL =
+      Builder
+          .buildURem(HiLoTy, Sum,
+                     Builder.buildConstant(HiLoTy, Divisor.trunc(HBitWidth)))
+          .getReg(0);
+
+  MachineInstr *Res = nullptr;
+
+  if (Opcode != TargetOpcode::G_UREM) {
+    // Quotient Calculation
+    Register ZExtLL = Builder.buildZExt(Ty, LL).getReg(0);
+    Register ZExtLH = Builder.buildZExt(Ty, LH).getReg(0);
+
+    Register ShiftedLH =
+        Builder
+            .buildShl(Ty, ZExtLH,
+                      Builder.buildConstant(Ty, HBitWidth).getReg(0))
+            .getReg(0);
+
+    Register Dividend = Builder.buildOr(Ty, ZExtLL, ShiftedLH).getReg(0);
+    Register ZExtRemL = Builder.buildZExt(Ty, RemL).getReg(0);
+    Register Sub = Builder.buildSub(Ty, Dividend, ZExtRemL).getReg(0);
+
+    APInt InvVal = Divisor.multiplicativeInverse();
+    Register Inv = Builder.buildConstant(Ty, InvVal).getReg(0);
+    Res = Builder.buildMul(Ty, Sub, Inv);
+  }
+
+  if (Opcode != TargetOpcode::G_UDIV) {
+    // Remainder Calculation
+    if (TZ > 0) {
+      auto Shl =
+          Builder.buildShl(HiLoTy, RemL, Builder.buildConstant(HiLoTy, TZ));
+      RemL = Builder.buildOr(HiLoTy, Shl, PartialRem).getReg(0);
+    }
+
+    Res = Builder.buildZExt(Ty, RemL);
+  }
+
+  return Res;
+}
+
 MachineInstr *CombinerHelper::buildUDivOrURemUsingMul(MachineInstr &MI) const {
   unsigned Opcode = MI.getOpcode();
   assert(Opcode == TargetOpcode::G_UDIV || Opcode == TargetOpcode::G_UREM);
@@ -5794,7 +6017,12 @@ bool CombinerHelper::matchUDivOrURemByConst(MachineInstr &MI) const {
 }
 
 void CombinerHelper::applyUDivOrURemByConst(MachineInstr &MI) const {
-  auto *NewMI = buildUDivOrURemUsingMul(MI);
+  // Try to build UDIV/UREM by Hacker's Delight's Remainder by Summing Digits.
+  auto *NewMI = buildUDivOrRemUsingChunkSummation(MI);
+
+  // If chunk summation didn't apply, try the multiplier fallback.
+  if (!NewMI)
+    NewMI = buildUDivOrURemUsingMul(MI);
   replaceSingleDefInstWithReg(MI, NewMI->getOperand(0).getReg());
 }
 

@@ -722,6 +722,13 @@ public:
   bool matchNarrowBinopFeedingAnd(MachineInstr &MI, BuildFnTy &MatchInfo) const;
 
   /// Given an G_UDIV \p MI or G_UREM \p MI expressing a divide by constant,
+  /// return an expression that implements chunk summation where constant Div
+  /// satisfies the condition (2^W % D)) == 1. Ref: "Hacker's Delight" or "The
+  /// PowerPC Compiler Writer's Guide", 10-19 Remainder by Summing Digite,
+  /// FIGURE 10–28, Unsigned remainder modulo 7.
+  MachineInstr *buildUDivOrRemUsingChunkSummation(MachineInstr &MI) const;
+
+  /// Given an G_UDIV \p MI or G_UREM \p MI expressing a divide by constant,
   /// return an expression that implements it by multiplying by a magic number.
   /// Ref: "Hacker's Delight" or "The PowerPC Compiler Writer's Guide".
   MachineInstr *buildUDivOrURemUsingMul(MachineInstr &MI) const;
