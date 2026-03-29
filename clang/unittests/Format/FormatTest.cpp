@@ -15563,6 +15563,12 @@ TEST_F(FormatTest, AllowShortRecordOnASingleLine) {
   verifyFormat("class foo {};\n"
                "class bar { int i; };",
                Style);
+  verifyFormat("namespace foo {\n"
+               "struct S {\n"
+               "} s;\n"
+               "} // namespace foo",
+               Style);
+
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
   Style.BraceWrapping.AfterClass = true;
   verifyFormat("class foo\n"
