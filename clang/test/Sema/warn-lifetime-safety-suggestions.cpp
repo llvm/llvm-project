@@ -439,3 +439,31 @@ struct MemberArrayReturn {
 };
 
 } // namespace array
+
+namespace GH180517 {
+// https://github.com/llvm/llvm-project/issues/180517
+
+struct A {
+  int *ptr;
+};
+
+A foo(int *ptr) { // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+  return {ptr};   // expected-note {{param returned here}}
+}
+
+A bar(int *ptr [[clang::lifetimebound]]) { return {ptr}; }
+A baz(int *ptr) {  // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+  return bar(ptr); // expected-note {{param returned here}}
+}
+
+struct C {
+  struct {
+    int *ptr;
+  } b;
+};
+
+C quux(int *ptr) { // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+  return {{ptr}};  // expected-note {{param returned here}}
+}
+
+} // namespace GH180517

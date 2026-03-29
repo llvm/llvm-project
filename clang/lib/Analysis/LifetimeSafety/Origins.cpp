@@ -56,10 +56,15 @@ bool hasOrigins(QualType QT) {
   const auto *RD = QT->getAsCXXRecordDecl();
   if (!RD)
     return false;
-  // TODO: Limit to lambdas for now. This will be extended to user-defined
-  // structs with pointer-like fields.
-  if (!RD->isLambda())
+  // Do not track record origins for types declared in namespace std.
+  if (RD->isInStdNamespace())
     return false;
+  // Skip unions for now. We cannot tell which union member is active, so we do
+  // not know which field's origins the union should use.
+  // TODO: Add union support once record origins can represent active members.
+  if (RD->isUnion())
+    return false;
+
   for (const auto *FD : RD->fields())
     if (hasOrigins(FD->getType()))
       return true;
