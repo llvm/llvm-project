@@ -16,15 +16,19 @@ type, or a derived type thereof.
   // replaced by:
   A x = a;
 
-  // Finds:
-  bool b = isa<A>(a) // always true
-
   struct B : public A {};
   B b;
   // Finds:
   A y = cast<A>(b);
   // replaced by:
   A y = b;
+
+  struct C : public A {};
+  C c;
+  // Finds:
+  bool r1 = isa<A>(a)    // always true
+  bool r2 = isa<A>(b)    // always true
+  bool r3 = isa<B, C>(c) // always true
 
 Supported functions:
  - ``llvm::cast``

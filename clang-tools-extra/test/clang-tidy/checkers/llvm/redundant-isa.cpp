@@ -2,11 +2,11 @@
 
 namespace llvm {
 #define ISA_FUNCTION(name)                                           \
-template <typename To, typename From>                                \
+template <typename ...To, typename From>                             \
 [[nodiscard]] inline bool name(const From &Val) {                    \
   return true;                                                       \
 }                                                                    \
-template <typename To, typename From>                                \
+template <typename ...To, typename From>                             \
 [[nodiscard]] inline bool name(const From *Val) {                    \
   return true;                                                       \
 }
@@ -123,4 +123,26 @@ void testIsaConstPointer(const A* value) {
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: call to 'isa' always succeeds [llvm-redundant-casting]
   // CHECK-MESSAGES: :[[@LINE-2]]:27: note: source expression has pointee type 'A'
   (void)b14;
+}
+
+void testIsaMulti(A& value) {
+  bool b15 = llvm::isa<int, A>(value);
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: call to 'isa' always succeeds [llvm-redundant-casting]
+  // CHECK-MESSAGES: :[[@LINE-2]]:32: note: source expression has type 'A'
+  (void)b15;
+}
+
+void testIsaMultiUpcast(B& value) {
+  bool b16 = llvm::isa<int, A, B>(value);
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: call to 'isa' always succeeds [llvm-redundant-casting]
+  // CHECK-MESSAGES: :[[@LINE-2]]:35: note: source expression has type 'B', which is a subtype of 'A'
+  (void)b16;
+}
+
+template <typename T>
+void testIsaTemplateMulti(const T* value) {
+  bool b17 = llvm::isa<A, T>(value);
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: call to 'isa' always succeeds [llvm-redundant-casting]
+  // CHECK-MESSAGES: :[[@LINE-2]]:30: note: source expression has pointee type 'T'
+  (void)b17;
 }
