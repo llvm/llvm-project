@@ -767,6 +767,12 @@ APInt APInt::byteSwap() const {
 
 APInt APInt::reverseBits() const {
   switch (BitWidth) {
+  case 128: {
+    APInt Result(BitWidth, 0);
+    Result.U.pVal[0] = llvm::reverseBits<uint64_t>(U.pVal[1]);
+    Result.U.pVal[1] = llvm::reverseBits<uint64_t>(U.pVal[0]);
+    return Result;
+  }
   case 64:
     return APInt(BitWidth, llvm::reverseBits<uint64_t>(U.VAL));
   case 32:
