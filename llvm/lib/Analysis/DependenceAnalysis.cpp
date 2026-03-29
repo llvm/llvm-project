@@ -1440,12 +1440,6 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
     LLVM_DEBUG(dbgs() << "\t    DeltaRange = " << DeltaRange << "\n");
 
     if (!MLRange.isFullSet()) {
-      if (APDelta.sgt(MLRange.getSignedMax())) {
-        // Delta too big, no dependence
-        ++WeakCrossingSIVindependence;
-        ++WeakCrossingSIVsuccesses;
-        return true;
-      }
       if (APDelta.eq(MLRange.getSignedMax())) {
         // i = i' = UB
         Result.DV[Level].Direction &= ~Dependence::DVEntry::LT;
