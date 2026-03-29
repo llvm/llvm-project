@@ -35,25 +35,20 @@ static constexpr StringRef FunctionNames[] = {
     "dyn_cast", "dyn_cast_or_null", "dyn_cast_if_present"};
 
 void RedundantCastingCheck::registerMatchers(MatchFinder *Finder) {
-  auto AnyCalleeName = [](ArrayRef<StringRef> CalleeName) {
-    return allOf(unless(isMacroID()), unless(cxxMemberCallExpr()),
-                 callee(expr(ignoringImpCasts(
-                     declRefExpr(to(namedDecl(hasAnyName(CalleeName))),
-                                 hasAnyTemplateArgumentLoc(anything()))
-                         .bind("callee")))));
-  };
+  auto AnyCalleeName =
+      allOf(unless(isMacroID()), unless(cxxMemberCallExpr()),
+            callee(expr(ignoringImpCasts(
+                declRefExpr(to(namedDecl(hasAnyName(FunctionNames))),
+                            hasAnyTemplateArgumentLoc(anything()))
+                    .bind("callee")))));
   auto AnyCalleeNameInUninstantiatedTemplate =
-      [](ArrayRef<StringRef> CalleeName) {
-        return allOf(unless(isMacroID()), unless(cxxMemberCallExpr()),
-                     callee(expr(ignoringImpCasts(
-                         unresolvedLookupExpr(hasAnyUnresolvedName(CalleeName))
-                             .bind("callee")))));
-      };
-  Finder->addMatcher(callExpr(AnyCalleeName(FunctionNames)).bind("call"), this);
+      allOf(unless(isMacroID()), unless(cxxMemberCallExpr()),
+            callee(expr(ignoringImpCasts(
+                unresolvedLookupExpr(hasAnyUnresolvedName(FunctionNames))
+                    .bind("callee")))));
+  Finder->addMatcher(callExpr(AnyCalleeName).bind("call"), this);
   Finder->addMatcher(
-      callExpr(AnyCalleeNameInUninstantiatedTemplate(FunctionNames))
-          .bind("call"),
-      this);
+      callExpr(AnyCalleeNameInUninstantiatedTemplate).bind("call"), this);
 }
 
 static QualType stripPointerOrReference(QualType Ty) {
