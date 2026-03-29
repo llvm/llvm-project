@@ -635,10 +635,13 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
       return success();
     }
 
-    // Do the trailing dim for source and destination match? If yes, then the
-    // corresponding index must be 0.
-    // FIXME: There's no way to tell for dynamic shapes, so we should bail out.
-    // However, that makes some tests fail, so we need to audit first.
+    // Do the trailing dim for source and destination match? If yes, and if the
+    // access indices are not all constant, then assume the last index is 0
+    // (byte-aligned). Note: for constant indices, the intraDataOffset computed
+    // below will give the exact value, so the trailingDimsMatch shortcut is
+    // not used in that case.
+    // FIXME: For dynamic indices where trailingDimsMatch, the assumption that
+    // the last index is 0 (byte-aligned) may be incorrect. See issue #131528.
     auto trailingDim = op.getBase().getType().getShape().back();
     bool trailingDimsMatch =
         ShapedType::isDynamic(trailingDim) || trailingDim == origElements;
@@ -646,8 +649,6 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
     auto stridedMetadata =
         memref::ExtractStridedMetadataOp::create(rewriter, loc, op.getBase());
 
-    // FIXME: ATM, we do not test cases where offsets, sizes, or strides are
-    // non-zero. As such, this is not needed.
     OpFoldResult linearizedIndices;
     memref::LinearizedMemRefInfo linearizedInfo;
     std::tie(linearizedInfo, linearizedIndices) =
@@ -658,10 +659,17 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
             stridedMetadata.getConstifiedMixedStrides(),
             getAsOpFoldResult(adaptor.getIndices()));
 
+    // Prefer the exact intraDataOffset when it can be folded (e.g. all-constant
+    // indices). Fall back to 0 only when the trailing dimension exactly matches
+    // the vector size (trailingDimsMatch), because in that case a dynamic last
+    // index implies byte-alignment (the caller is responsible for passing a
+    // valid, aligned index). If neither condition holds, bail out.
     std::optional<int64_t> foldedNumFrontPadElems =
-        (isDivisibleInSize && trailingDimsMatch)
-            ? 0
-            : getConstantIntValue(linearizedInfo.intraDataOffset);
+        getConstantIntValue(linearizedInfo.intraDataOffset);
+    if (!foldedNumFrontPadElems) {
+      if (isDivisibleInSize && trailingDimsMatch)
+        foldedNumFrontPadElems = 0;
+    }
 
     if (!foldedNumFrontPadElems) {
       return rewriter.notifyMatchFailure(
