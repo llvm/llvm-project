@@ -23,7 +23,7 @@ v_floor_f64 v[4:5], v[0:1] row_newbcast:15
 // GFX90A: v_floor_f64_dpp v[4:5], v[0:1] row_newbcast:15 row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x34,0x08,0x7e,0x00,0x5f,0x01,0xff]
 
 v_fmac_f64 v[0:1], v[2:3], v[4:5] row_newbcast:2
-// GFX900: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX900: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx900): v_fmac_f64
 // GFX90A: v_fmac_f64_dpp v[0:1], v[2:3], v[4:5] row_newbcast:2 row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x08,0x00,0x08,0x02,0x52,0x01,0xff]
 
 v_fract_f64 v[4:5], v[0:1] row_newbcast:1
