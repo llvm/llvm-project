@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++17 %s llvm-redundant-casting %t
+// RUN: %check_clang_tidy -std=c++17 %s llvm-redundant-casting %t -- -- -fno-delayed-template-parsing
 
 namespace llvm {
 #define CAST_FUNCTION(name)                                          \
