@@ -106,7 +106,7 @@ static cl::opt<unsigned> PhiDuplicateThreshold(
 static cl::opt<unsigned>
     UsesRenameThreshold("jump-threading-rename-threshold",
                         cl::desc("Max renaming uses in BB for jump threading"),
-                        cl::init(400), cl::Hidden);
+                        cl::init(800), cl::Hidden);
 
 static cl::opt<bool> ThreadAcrossLoopHeaders(
     "jump-threading-across-loop-headers",
@@ -432,25 +432,32 @@ static bool replaceFoldableUses(Instruction *Cond, Value *ToVal,
 /// Return the cost of duplicating a piece of this block from first non-phi
 /// and before StopAt instruction to thread across it. Stop scanning the block
 /// when exceeding the threshold. If duplication is impossible, returns ~0U.
-static unsigned getJumpThreadDuplicationCost(const TargetTransformInfo *TTI,
-                                             BasicBlock *BB,
-                                             Instruction *StopAt,
-                                             unsigned Threshold) {
+static unsigned
+getJumpThreadDuplicationCost(const TargetTransformInfo *TTI, BasicBlock *BB,
+                             const SmallVectorImpl<BasicBlock *> &PredBBs,
+                             Instruction *StopAt, unsigned Threshold) {
   assert(StopAt->getParent() == BB && "Not an instruction from proper BB?");
 
   // Do not duplicate the BB if it has a lot of PHI nodes.
   // If a threadable chain is too long then the number of PHI nodes can add
   // up, leading to an increase in compile time.
-  unsigned PhiCount = 0;
-  Instruction *FirstNonPHI = nullptr;
-  for (Instruction &I : *BB) {
-    if (!isa<PHINode>(&I)) {
-      FirstNonPHI = &I;
-      break;
+  // If there is only one predecessor, no PHI nodes will be duplicated.
+  if (PredBBs.size() > 1) {
+    unsigned PhiCount = 0;
+    for (PHINode &PHI : BB->phis()) {
+      Value *IncomingVal = PHI.getIncomingValueForBlock(PredBBs[0]);
+      // If all incoming values are the same value from predecessors, the PHI
+      // node is not duplicated.
+      if (llvm::all_of(
+              drop_begin(PredBBs), [&PHI, IncomingVal](const BasicBlock *Pred) {
+                return PHI.getIncomingValueForBlock(Pred) == IncomingVal;
+              })) {
+        continue;
+      }
+      if (++PhiCount > PhiDuplicateThreshold)
+        return ~0U;
     }
-    if (++PhiCount > PhiDuplicateThreshold)
-      return ~0U;
-  }
+  };
 
   // Scan all uses of this instruction to see if it is used outside its block,
   // as that could introduce additional PHI nodes when rewriting the SSA, which
@@ -470,7 +477,7 @@ static unsigned getJumpThreadDuplicationCost(const TargetTransformInfo *TTI,
   }
 
   /// Ignore PHI nodes, these will be flattened when duplication happens.
-  BasicBlock::const_iterator I(FirstNonPHI);
+  BasicBlock::const_iterator I(BB->getFirstNonPHIIt());
 
   // FIXME: THREADING will delete values that are just used to compute the
   // branch, so they shouldn't count against the duplication cost.
@@ -2272,11 +2279,15 @@ bool JumpThreadingPass::maybethreadThroughTwoBasicBlocks(BasicBlock *BB,
     return false;
   }
 
+  SmallVector<BasicBlock *, 1> PredPredBBs;
+  PredPredBBs.push_back(PredPredBB);
+  SmallVector<BasicBlock *, 1> PredBBs;
+  PredBBs.push_back(PredBB);
   // Compute the cost of duplicating BB and PredBB.
   unsigned BBCost = getJumpThreadDuplicationCost(
-      TTI, BB, BB->getTerminator(), BBDupThreshold);
+      TTI, BB, PredBBs, BB->getTerminator(), BBDupThreshold);
   unsigned PredBBCost = getJumpThreadDuplicationCost(
-      TTI, PredBB, PredBB->getTerminator(), BBDupThreshold);
+      TTI, PredBB, PredPredBBs, PredBB->getTerminator(), BBDupThreshold);
 
   // Give up if costs are too high.  We need to check BBCost and PredBBCost
   // individually before checking their sum because getJumpThreadDuplicationCost
@@ -2395,7 +2406,7 @@ bool JumpThreadingPass::tryThreadEdge(
   }
 
   unsigned JumpThreadCost = getJumpThreadDuplicationCost(
-      TTI, BB, BB->getTerminator(), BBDupThreshold);
+      TTI, BB, PredBBs, BB->getTerminator(), BBDupThreshold);
   if (JumpThreadCost > BBDupThreshold) {
     LLVM_DEBUG(dbgs() << "  Not threading BB '" << BB->getName()
                       << "' - Cost is too high: " << JumpThreadCost << "\n");
@@ -2669,7 +2680,7 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
   }
 
   unsigned DuplicationCost = getJumpThreadDuplicationCost(
-      TTI, BB, BB->getTerminator(), BBDupThreshold);
+      TTI, BB, PredBBs, BB->getTerminator(), BBDupThreshold);
   if (DuplicationCost > BBDupThreshold) {
     LLVM_DEBUG(dbgs() << "  Not duplicating BB '" << BB->getName()
                       << "' - Cost is too high: " << DuplicationCost << "\n");
@@ -3154,8 +3165,11 @@ bool JumpThreadingPass::threadGuard(BasicBlock *BB, IntrinsicInst *Guard,
 
   ValueToValueMapTy UnguardedMapping, GuardedMapping;
   Instruction *AfterGuard = Guard->getNextNode();
-  unsigned Cost =
-      getJumpThreadDuplicationCost(TTI, BB, AfterGuard, BBDupThreshold);
+  SmallVector<BasicBlock *, 2> PredBBs;
+  PredBBs.push_back(PredUnguardedBlock);
+  PredBBs.push_back(PredGuardedBlock);
+  unsigned Cost = getJumpThreadDuplicationCost(TTI, BB, PredBBs, AfterGuard,
+                                               BBDupThreshold);
   if (Cost > BBDupThreshold)
     return false;
   // Duplicate all instructions before the guard and the guard itself to the
