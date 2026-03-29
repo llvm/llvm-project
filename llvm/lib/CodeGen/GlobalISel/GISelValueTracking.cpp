@@ -301,10 +301,10 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
       // Upper bits are zero
       Known.Zero.setBitsFrom(LowBits);
       // Mask for lower bits
-      APInt Mask = APInt::getLowBitsSet(Known.getBitWidth(), LowBits);
-      // Propagate known bits from LHS for lower bits
-      Known.One |= (LHSKnown.One & Mask);
-      Known.Zero |= (LHSKnown.Zero & Mask);
+      KnownBits TruncLHS = LHSKnown.trunc(LowBits).zext(Known.getBitWidth());
+
+      Known.One |= TruncLHS.One;
+      Known.Zero |= TruncLHS.Zero;
       break;
     }
     if (!MaxRHS.isZero()) {
