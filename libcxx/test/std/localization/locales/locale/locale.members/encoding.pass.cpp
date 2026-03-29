@@ -17,6 +17,8 @@
 // text_encoding locale::encoding() const
 
 #include <cassert>
+#include <format>
+#include <iostream>
 #include <locale>
 #include <text_encoding>
 
@@ -28,7 +30,11 @@ int main(int, char**) {
     const std::locale utf8_locale(LOCALE_en_US_UTF_8);
     std::text_encoding te      = utf8_locale.encoding();
     std::text_encoding utf8_te = std::text_encoding(std::text_encoding::id::UTF8);
-    assert(te == std::text_encoding::id::UTF8);
+
+    if (te != std::text_encoding::id::UTF8) {
+      std::cerr << std::format("Expected UTF-8, received {{ {}, \"{}\" }}", int(te.mib()), te.name());
+      assert(false);
+    }
     assert(te == utf8_te);
   }
   return 0;

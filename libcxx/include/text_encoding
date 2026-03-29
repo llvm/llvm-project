@@ -351,9 +351,9 @@ private:
   static constexpr int __NATS_DANO_ADD_ = 34;
 
   // A __te_data structure stores:
-  // Index into an table of indexes that is an offset in the giant aliases string
+  // Index into a table of offsets in the giant aliases string
   // The MIB of that text encoding
-  // Number of aliases
+  // Number of aliases the current MIB holds
   struct __te_data {
     unsigned short __first_alias_index_;
     unsigned short __mib_rep_;
@@ -591,6 +591,8 @@ public:
 
   template <id _Id>
   [[nodiscard]] _LIBCPP_AVAILABILITY_TE_ENVIRONMENT _LIBCPP_HIDE_FROM_ABI static bool environment_is() {
+    // TODO: It may be worthwhile to implement an optimization for popular encodings, e.g. UTF-8,
+    // to allow checking the environment text encoding without needing to use the data tables.
     return environment() == _Id;
   }
 #    else
@@ -601,9 +603,9 @@ public:
 #    endif
 
 private:
-  constexpr const __te_data& __get() const { return __entries[__encoding_idx_]; }
+  _LIBCPP_HIDE_FROM_ABI constexpr const __te_data& __get() const { return __entries[__encoding_idx_]; }
 
-  static constexpr char const* __get_alias_from_idx_table_idx(unsigned short __idx) {
+  _LIBCPP_HIDE_FROM_ABI static constexpr char const* __get_alias_from_idx_table_idx(unsigned short __idx) {
     return __aliases_string + __alias_index_table_[__idx];
   }
 

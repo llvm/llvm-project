@@ -32,6 +32,26 @@ constexpr bool test() {
 
   static_assert(std::three_way_comparable<decltype(i)>);
 
+  { // iterator operator return types
+    ASSERT_SAME_TYPE(const char*, decltype(*i));
+    ASSERT_SAME_TYPE(const char*, decltype(i[0]));
+    ASSERT_SAME_TYPE(decltype(i), decltype(i + 1));
+    ASSERT_SAME_TYPE(decltype(i), decltype(1 + i));
+    ASSERT_SAME_TYPE(decltype(i), decltype(i - 1));
+    ASSERT_SAME_TYPE(std::add_lvalue_reference_t<decltype(i)>, decltype(++i));
+    ASSERT_SAME_TYPE(decltype(i), decltype(i++));
+    ASSERT_SAME_TYPE(std::add_lvalue_reference_t<decltype(i)>, decltype(--i));
+    ASSERT_SAME_TYPE(decltype(i), decltype(i--));
+    ASSERT_SAME_TYPE(std::add_lvalue_reference_t<decltype(i)>, decltype(i += 1));
+    ASSERT_SAME_TYPE(std::add_lvalue_reference_t<decltype(i)>, decltype(i -= 1));
+    ASSERT_SAME_TYPE(bool, decltype(i == j));
+    ASSERT_SAME_TYPE(bool, decltype(i != j));
+    ASSERT_SAME_TYPE(bool, decltype(i > j));
+    ASSERT_SAME_TYPE(bool, decltype(i < j));
+    ASSERT_SAME_TYPE(bool, decltype(i >= j));
+    ASSERT_SAME_TYPE(bool, decltype(i <= j));
+    ASSERT_SAME_TYPE(std::strong_ordering, decltype(i <=> j));
+  }
   {
     ASSERT_NOEXCEPT(i == j);
     ASSERT_NOEXCEPT(i != k);
@@ -67,7 +87,9 @@ constexpr bool test() {
     assert(i == te.aliases().begin());
     assert(i == j);
     assert(i != k);
-    assert(std::string_view(*i) == std::string_view(*j));
+    std::same_as<const char*> decltype(auto) str1 = *i;
+    std::same_as<const char*> decltype(auto) str2 = *j;
+    assert(std::string_view(str1) == std::string_view(str2));
   }
   {
     i++;
@@ -81,10 +103,10 @@ constexpr bool test() {
     ASSERT_NOEXCEPT(i + 1);
     ASSERT_NOEXCEPT(1 + i);
     ASSERT_NOEXCEPT(i - 1);
-    auto temp = i + 2;
+    std::same_as<decltype(j)> decltype(auto) temp = i + 2;
     assert(i != temp);
     assert(std::string_view(*temp) != std::string_view(*j));
-    auto temp2 = temp - 2;
+    std::same_as<decltype(j)> decltype(auto) temp2 = temp - 2;
     assert(std::string_view(*temp2) == std::string_view(*j));
   }
   {
@@ -97,11 +119,11 @@ constexpr bool test() {
     ASSERT_NOEXCEPT(++i);
     ASSERT_NOEXCEPT(i--);
     ASSERT_NOEXCEPT(--i);
-    auto& temp = ++i;
+    std::same_as<std::add_lvalue_reference_t<decltype(i)>> decltype(auto) temp = ++i;
     assert(temp == i);
     assert(&temp == &i);
 
-    auto temp2 = j++;
+    std::same_as<decltype(j)> decltype(auto) temp2 = j++;
     assert(temp2 == j - 1);
     assert(i == j);
   }
@@ -120,26 +142,6 @@ constexpr bool test() {
     assert(i == j);
     assert(i != tempi && (tempi - i) == 2);
     assert(j != tempj && (tempj - j) == 3);
-  }
-  { // iterator operator return types
-    ASSERT_SAME_TYPE(const char*, decltype(*i));
-    ASSERT_SAME_TYPE(const char*, decltype(i[0]));
-    ASSERT_SAME_TYPE(decltype(i), decltype(i + 1));
-    ASSERT_SAME_TYPE(decltype(i), decltype(1 + i));
-    ASSERT_SAME_TYPE(decltype(i), decltype(i - 1));
-    ASSERT_SAME_TYPE(std::add_lvalue_reference_t<decltype(i)>, decltype(++i));
-    ASSERT_SAME_TYPE(decltype(i), decltype(i++));
-    ASSERT_SAME_TYPE(std::add_lvalue_reference_t<decltype(i)>, decltype(--i));
-    ASSERT_SAME_TYPE(decltype(i), decltype(i--));
-    ASSERT_SAME_TYPE(std::add_lvalue_reference_t<decltype(i)>, decltype(i += 1));
-    ASSERT_SAME_TYPE(std::add_lvalue_reference_t<decltype(i)>, decltype(i -= 1));
-    ASSERT_SAME_TYPE(bool, decltype(i == j));
-    ASSERT_SAME_TYPE(bool, decltype(i != j));
-    ASSERT_SAME_TYPE(bool, decltype(i > j));
-    ASSERT_SAME_TYPE(bool, decltype(i < j));
-    ASSERT_SAME_TYPE(bool, decltype(i >= j));
-    ASSERT_SAME_TYPE(bool, decltype(i <= j));
-    ASSERT_SAME_TYPE(std::strong_ordering, decltype(i <=> j));
   }
 
   return true;
