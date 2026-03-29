@@ -25,7 +25,7 @@ entry:
   %recast = bitcast <8 x i32> %cast to <4 x i64>
   %extracted = extractelement <4 x i64> %recast, i64 0
   %int2ptr = inttoptr i64 %extracted to ptr addrspace(1)
-  %coords = insertelement <2 x i32> <i32 0, i32 undef>, i32 42, i32 1
+  %coords = insertelement <2 x i32> zeroinitializer, i32 42, i32 1
   %a1 = call ptr addrspace(1) @llvm.ptr.annotation.p1.p1(ptr addrspace(1) %int2ptr, ptr addrspace(1) @.str.cachecontrol, ptr addrspace(1) @.str.file, i32 0, ptr addrspace(1) null)
   %a2 = call ptr addrspace(1) @llvm.ptr.annotation.p1.p1(ptr addrspace(1) %a1, ptr addrspace(1) @.str.cachecontrol.1, ptr addrspace(1) @.str.file, i32 0, ptr addrspace(1) null)
   call spir_func void @_Z45intel_sub_group_2d_block_prefetch_16b_8r16x2cPU3AS1viiiDv2_i(ptr addrspace(1) nonnull %a2, i32 8192, i32 4096, i32 8192, <2 x i32> %coords) #0
