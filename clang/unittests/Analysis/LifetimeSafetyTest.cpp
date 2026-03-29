@@ -1408,7 +1408,7 @@ TEST_F(LifetimeAnalysisTest, TrivialClassDestructorsUAF) {
     }
   )");
   EXPECT_THAT(Origin("ptr"), HasLoansTo({"s"}, "p1"));
-  EXPECT_THAT(Origins({"ptr"}), MustBeLiveAt("p1"));
+  EXPECT_THAT(Origins({"ptr", "s"}), MustBeLiveAt("p1"));
 }
 
 TEST_F(LifetimeAnalysisTest, SimpleReturnStackAddress) {
