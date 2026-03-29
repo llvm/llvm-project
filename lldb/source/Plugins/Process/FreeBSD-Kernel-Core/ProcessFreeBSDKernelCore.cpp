@@ -69,10 +69,14 @@ public:
       CommandInterpreter &interpreter)
       : CommandObjectParsed(
             interpreter, "process plugin refresh-threads",
-            "Refresh the thread list from the FreeBSD kernel core dump. "
-            "This flushes the memory cache and re-reads the kernel's "
-            "allproc/zombie lists to rebuild the thread list from scratch.",
-            "process plugin refresh-threads") {}
+            "Refresh the thread list from the FreeBSD kernel core. The thread "
+            "list and related data structures may be being read from live "
+            "memory (/dev/mem), which may have changed since the last refresh. "
+            "This command clears LLDB's thread list and memory cache then "
+            "re-reads the kernel's allproc/zombie lists to rebuild the thread "
+            "list from scratch.",
+            "process plugin refresh-threads",
+            eCommandRequiresProcess | eCommandTryTargetAPILock) {}
 
   ~CommandObjectProcessFreeBSDKernelCoreRefreshThreads() override = default;
 
@@ -80,29 +84,28 @@ protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     // TODO: Return early for elf-core based implementation.
 
-    auto *process = static_cast<ProcessFreeBSDKernelCore *>(
+    auto process = static_cast<ProcessFreeBSDKernelCore *>(
         m_interpreter.GetExecutionContext().GetProcessPtr());
-    if (!process) {
-      result.AppendError("no process");
-      return;
-    }
 
-    // Clear the memory cache so DoUpdateThreadList() will re-read
-    // allproc, zombproc, and all thread/proc structures fresh from
-    // the core dump instead of getting stale cached values.
+    // Clear the memory cache so DoUpdateThreadList() will re-read allproc,
+    // zombproc, and all thread/proc structures fresh from the core dump instead
+    // of getting stale cached values.
     process->m_memory_cache.Clear();
 
-    // Explicitly clear the thread list after Flush() to guarantee that
-    // UpdateThreadListIfNeeded() sees size == 0 and enters the rebuild
-    // path regardless of stop-ID state.
-    process->GetThreadList().Clear();
+    // Clear both thread lists to guarantee that UpdateThreadListIfNeeded() sees
+    // size == 0 and enters the rebuild path regardless of stop-ID state.
+    // UpdateThreadListIfNeeded() passes m_thread_list_real as old_thread_list
+    // to DoUpdateThreadList(), and DoUpdateThreadList() only rebuilds from
+    // scratch when old_thread_list is empty. m_thread_list is the public copy
+    // that is sync'd from m_thread_list_real afterwards.
+    process->m_thread_list_real.Clear();
+    process->m_thread_list.Clear();
 
-    // Rebuild the process thread list.
-    process->UpdateThreadListIfNeeded();
-
-    const uint32_t num_threads = process->GetThreadList().GetSize(false);
-    result.AppendMessageWithFormat(
-        "Thread list refreshed, %u thread%s found.\n", num_threads,
+    // This calls UpdateThreadListIfNeeded() to rebuild the process thread list.
+    const uint32_t num_threads =
+        process->GetThreadList().GetSize(/*can_update=*/true);
+    result.AppendMessageWithFormatv(
+        "Thread list refreshed, {0} thread{1} found.", num_threads,
         num_threads == 1 ? "" : "s");
     result.SetStatus(eReturnStatusSuccessFinishResult);
   }
