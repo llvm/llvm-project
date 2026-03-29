@@ -72,12 +72,34 @@ LogicalResult EmulateFloatPattern::matchAndRewrite(
       rewriter.create(loc, op->getName().getIdentifier(), operands, resultTypes,
                       op->getAttrs(), op->getSuccessors(), /*regions=*/{});
   SmallVector<Value> newResults(expandedOp->getResults());
-  for (auto [res, oldType, newType] : llvm::zip_equal(
-           MutableArrayRef{newResults}, op->getResultTypes(), resultTypes)) {
+  for (auto [res, origResult, oldType, newType] :
+       llvm::zip_equal(MutableArrayRef{newResults}, op->getResults(),
+                       op->getResultTypes(), resultTypes)) {
     if (oldType != newType) {
-      auto truncFOp = arith::TruncFOp::create(rewriter, loc, oldType, res);
-      truncFOp.setFastmath(arith::FastMathFlags::contract);
-      res = truncFOp.getResult();
+      // If all uses of the original result are arith.extf ops that extend from
+      // the unsupported type to the target (wider) type, we can skip the
+      // intermediate truncf round-trip and directly replace those extf ops with
+      // the wider emulated value. This avoids emitting arith.extf on the
+      // unsupported type in the output, which cannot be lowered to LLVM for
+      // types that lack native hardware support (e.g. fp8 variants).
+      Type targetType = newType;
+      bool allUsersAreExtFToTargetType =
+          !origResult.use_empty() &&
+          llvm::all_of(origResult.getUsers(), [targetType](Operation *user) {
+            auto extFOp = dyn_cast<arith::ExtFOp>(user);
+            return extFOp && extFOp.getType() == targetType;
+          });
+      if (allUsersAreExtFToTargetType) {
+        // Replace all extf users directly with the wider emulated value.
+        for (Operation *user :
+             llvm::make_early_inc_range(origResult.getUsers()))
+          rewriter.replaceOp(user, res);
+        // No truncf needed; res already has the target (wider) type.
+      } else {
+        auto truncFOp = arith::TruncFOp::create(rewriter, loc, oldType, res);
+        truncFOp.setFastmath(arith::FastMathFlags::contract);
+        res = truncFOp.getResult();
+      }
     }
   }
   rewriter.replaceOp(op, newResults);
