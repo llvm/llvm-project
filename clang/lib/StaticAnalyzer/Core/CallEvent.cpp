@@ -623,7 +623,9 @@ RuntimeDefinition AnyFunctionCall::getRuntimeDefinition() const {
   if (!CTUDeclOrError) {
     handleAllErrors(CTUDeclOrError.takeError(),
                     [&](const cross_tu::IndexError &IE) {
-                      CTUCtx.emitCrossTUDiagnostics(IE);
+                      auto Loc = getOriginExpr() ? getOriginExpr()->getExprLoc()
+                                                 : FD->getLocation();
+                      CTUCtx.emitCrossTUDiagnostics(IE, Loc);
                     });
     return {};
   }

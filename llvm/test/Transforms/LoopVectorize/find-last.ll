@@ -280,13 +280,10 @@ define ptr @loop_inv_select_condition_issue_185682(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP1]])
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x ptr> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP4]] = select i1 [[TMP2]], <4 x i1> [[TMP0]], <4 x i1> [[TMP3]]
-; CHECK-NEXT:    [[TMP5]] = select i1 [[TMP2]], <4 x ptr> zeroinitializer, <4 x ptr> [[VEC_PHI]]
-; CHECK-NEXT:    br i1 true, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], <4 x i1> [[TMP0]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP6:%.*]] = call ptr @llvm.experimental.vector.extract.last.active.v4p0(<4 x ptr> [[TMP5]], <4 x i1> [[TMP4]], ptr null)
+; CHECK-NEXT:    [[TMP6:%.*]] = call ptr @llvm.experimental.vector.extract.last.active.v4p0(<4 x ptr> zeroinitializer, <4 x i1> [[TMP3]], ptr null)
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret ptr [[TMP6]]

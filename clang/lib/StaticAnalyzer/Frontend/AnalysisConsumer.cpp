@@ -309,7 +309,7 @@ public:
     if (!CTUDeclOrError) {
       handleAllErrors(CTUDeclOrError.takeError(),
                       [&](const cross_tu::IndexError &IE) {
-                        CTU.emitCrossTUDiagnostics(IE);
+                        CTU.emitCrossTUDiagnostics(IE, VD->getLocation());
                       });
     }
 

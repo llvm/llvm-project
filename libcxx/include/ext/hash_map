@@ -426,12 +426,10 @@ public:
   typedef const value_type& const_reference;
 
 private:
-  typedef std::pair<key_type, mapped_type> __value_type;
-  typedef __hash_map_hasher<__value_type, hasher> __hasher;
-  typedef __hash_map_equal<__value_type, key_equal> __key_equal;
-  typedef std::__rebind_alloc<std::allocator_traits<allocator_type>, __value_type> __allocator_type;
+  typedef __hash_map_hasher<value_type, hasher> __hasher;
+  typedef __hash_map_equal<value_type, key_equal> __key_equal;
 
-  typedef std::__hash_table<__value_type, __hasher, __key_equal, __allocator_type> __table;
+  typedef std::__hash_table<value_type, __hasher, __key_equal, allocator_type> __table;
 
   __table __table_;
 
@@ -577,7 +575,7 @@ typename hash_map<_Key, _Tp, _Hash, _Pred, _Alloc>::__node_holder
 hash_map<_Key, _Tp, _Hash, _Pred, _Alloc>::__construct_node(const key_type& __k) {
   __node_allocator& __na = __table_.__node_alloc();
   __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
-  __node_traits::construct(__na, std::addressof(__h->__get_value().first), __k);
+  __node_traits::construct(__na, const_cast<_Key*>(std::addressof(__h->__get_value().first)), __k);
   __h.get_deleter().__first_constructed = true;
   __node_traits::construct(__na, std::addressof(__h->__get_value().second));
   __h.get_deleter().__second_constructed = true;
@@ -647,12 +645,10 @@ public:
   typedef const value_type& const_reference;
 
 private:
-  typedef std::pair<key_type, mapped_type> __value_type;
-  typedef __hash_map_hasher<__value_type, hasher> __hasher;
-  typedef __hash_map_equal<__value_type, key_equal> __key_equal;
-  typedef std::__rebind_alloc<std::allocator_traits<allocator_type>, __value_type> __allocator_type;
+  typedef __hash_map_hasher<value_type, hasher> __hasher;
+  typedef __hash_map_equal<value_type, key_equal> __key_equal;
 
-  typedef std::__hash_table<__value_type, __hasher, __key_equal, __allocator_type> __table;
+  typedef std::__hash_table<value_type, __hasher, __key_equal, allocator_type> __table;
 
   __table __table_;
 

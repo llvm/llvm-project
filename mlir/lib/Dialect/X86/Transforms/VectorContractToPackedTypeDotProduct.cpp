@@ -49,11 +49,10 @@ static void rewriteUses(mlir::Value oldVal, mlir::Value newVal,
                         mlir::Operation *targetContract,
                         mlir::PatternRewriter &rewriter) {
   for (mlir::OpOperand &use : llvm::make_early_inc_range(oldVal.getUses())) {
-
     mlir::Operation *user = use.getOwner();
     if (mlir::isa<mlir::vector::ContractionOp>(user) ||
         mlir::isa<mlir::scf::ForOp>(user)) {
-      use.set(newVal);
+      rewriter.modifyOpInPlace(user, [&]() { use.set(newVal); });
     }
   }
 }
