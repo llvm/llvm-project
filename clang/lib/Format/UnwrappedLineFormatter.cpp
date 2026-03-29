@@ -988,8 +988,10 @@ private:
         if (I[1]->Last->is(TT_LineComment))
           return 0;
         do {
-          if (Tok->is(tok::l_brace) && Tok->isNot(BK_BracedInit))
+          if (Tok->isOneOf(tok::l_brace, tok::r_brace) &&
+              Tok->isNot(BK_BracedInit)) {
             return 0;
+          }
           Tok = Tok->Next;
         } while (Tok);
 
