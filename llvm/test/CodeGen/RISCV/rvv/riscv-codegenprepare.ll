@@ -3,7 +3,7 @@
 
 define float @reduce_fadd(ptr %f) {
 ; CHECK-LABEL: define float @reduce_fadd(
-; CHECK-SAME: ptr [[F:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: ptr [[F:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VSCALE:%.*]] = tail call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[VECSIZE:%.*]] = shl nuw nsw i64 [[VSCALE]], 2
@@ -44,7 +44,7 @@ exit:
 
 define i32 @vp_reduce_add(ptr %a) {
 ; CHECK-LABEL: define i32 @vp_reduce_add(
-; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -88,7 +88,7 @@ for.cond.cleanup:                                 ; preds = %vector.body
 
 define i32 @vp_reduce_and(ptr %a) {
 ; CHECK-LABEL: define i32 @vp_reduce_and(
-; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -132,7 +132,7 @@ for.cond.cleanup:                                 ; preds = %vector.body
 
 define i32 @vp_reduce_or(ptr %a) {
 ; CHECK-LABEL: define i32 @vp_reduce_or(
-; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -176,7 +176,7 @@ for.cond.cleanup:                                 ; preds = %vector.body
 
 define i32 @vp_reduce_xor(ptr %a) {
 ; CHECK-LABEL: define i32 @vp_reduce_xor(
-; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -220,7 +220,7 @@ for.cond.cleanup:                                 ; preds = %vector.body
 
 define i32 @vp_reduce_smax(ptr %a) {
 ; CHECK-LABEL: define i32 @vp_reduce_smax(
-; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -264,7 +264,7 @@ for.cond.cleanup:                                 ; preds = %vector.body
 
 define i32 @vp_reduce_smin(ptr %a) {
 ; CHECK-LABEL: define i32 @vp_reduce_smin(
-; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -308,7 +308,7 @@ for.cond.cleanup:                                 ; preds = %vector.body
 
 define i32 @vp_reduce_umax(ptr %a) {
 ; CHECK-LABEL: define i32 @vp_reduce_umax(
-; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -352,7 +352,7 @@ for.cond.cleanup:                                 ; preds = %vector.body
 
 define i32 @vp_reduce_umin(ptr %a) {
 ; CHECK-LABEL: define i32 @vp_reduce_umin(
-; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -396,7 +396,7 @@ for.cond.cleanup:                                 ; preds = %vector.body
 
 define float @vp_reduce_fadd(ptr %a) {
 ; CHECK-LABEL: define float @vp_reduce_fadd(
-; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -440,7 +440,7 @@ for.cond.cleanup:                                 ; preds = %vector.body
 
 define float @vp_reduce_fmax(ptr %a) {
 ; CHECK-LABEL: define float @vp_reduce_fmax(
-; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -484,7 +484,7 @@ for.cond.cleanup:                                 ; preds = %vector.body
 
 define float @vp_reduce_fmin(ptr %a) {
 ; CHECK-LABEL: define float @vp_reduce_fmin(
-; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -524,4 +524,58 @@ vector.body:                                      ; preds = %vector.body, %entry
 
 for.cond.cleanup:                                 ; preds = %vector.body
   ret float %red
+}
+
+define i64 @vfirst_use1(ptr %src, <vscale x 16 x i1> %mask, i32 %avl, i8 %value, i64 %index) {
+; CHECK-LABEL: define i64 @vfirst_use1(
+; CHECK-SAME: ptr [[SRC:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i32 [[AVL:%.*]], i8 [[VALUE:%.*]], i64 [[INDEX:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[VALUE]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+; CHECK-NEXT:    [[FFLOAD:%.*]] = call { <vscale x 16 x i8>, i32 } @llvm.vp.load.ff.nxv16i8.p0(ptr [[SRC]], <vscale x 16 x i1> [[MASK]], i32 [[AVL]])
+; CHECK-NEXT:    [[EVL:%.*]] = extractvalue { <vscale x 16 x i8>, i32 } [[FFLOAD]], 1
+; CHECK-NEXT:    [[EVL64:%.*]] = zext i32 [[EVL]] to i64
+; CHECK-NEXT:    [[ALM:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 [[EVL64]])
+; CHECK-NEXT:    [[DATA:%.*]] = extractvalue { <vscale x 16 x i8>, i32 } [[FFLOAD]], 0
+; CHECK-NEXT:    [[EEMASK:%.*]] = icmp eq <vscale x 16 x i8> [[DATA]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[SEL:%.*]] = select <vscale x 16 x i1> [[ALM]], <vscale x 16 x i1> [[EEMASK]], <vscale x 16 x i1> zeroinitializer
+; CHECK-NEXT:    [[SEL2:%.*]] = freeze <vscale x 16 x i1> [[SEL]]
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[EVL]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.riscv.vfirst.mask.nxv16i1.i64(<vscale x 16 x i1> [[EEMASK]], <vscale x 16 x i1> [[MASK]], i64 [[TMP0]])
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sge i64 [[TMP1]], 0
+; CHECK-NEXT:    br i1 [[TMP2]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_INTERIM:%.*]]
+; CHECK:       vector.body.interim:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       vector.early.exit:
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], [[TMP1]]
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ 0, [[VECTOR_BODY_INTERIM]] ], [ [[TMP4]], [[VECTOR_EARLY_EXIT]] ]
+; CHECK-NEXT:    ret i64 [[RETVAL]]
+;
+entry:
+  %broadcast.splatinsert = insertelement <vscale x 16 x i8> poison, i8 %value, i64 0
+  %broadcast.splat = shufflevector <vscale x 16 x i8> %broadcast.splatinsert, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+  %ffload = call { <vscale x 16 x i8>, i32 } @llvm.vp.load.ff.nxv16i8.p0(ptr %src, <vscale x 16 x i1> %mask, i32 %avl)
+  %EVL = extractvalue { <vscale x 16 x i8>, i32 } %ffload, 1
+  %EVL64 = zext i32 %EVL to i64
+  %ALM = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 %EVL64)
+  %data = extractvalue { <vscale x 16 x i8>, i32 } %ffload, 0
+  %eemask = icmp eq <vscale x 16 x i8> %data, %broadcast.splat
+  %sel = select <vscale x 16 x i1> %ALM, <vscale x 16 x i1> %eemask, <vscale x 16 x i1> zeroinitializer
+  %sel2 = freeze <vscale x 16 x i1> %sel
+  %early.exit = call i1 @llvm.vector.reduce.or.nxv16i1(<vscale x 16 x i1> %sel2)
+  br i1 %early.exit, label %vector.early.exit, label %vector.body.interim
+
+vector.body.interim:                              ; preds = %vector.body
+  br label %exit
+
+vector.early.exit:                                ; preds = %vector.body
+  %19 = call i64 @llvm.experimental.cttz.elts.i64.nxv16i1(<vscale x 16 x i1> %eemask, i1 false)
+  %20 = add i64 %index, %19
+  br label %exit
+
+exit:                                             ; preds = %vector.early.exit, %middle.block, %for.inc, %for.body
+  %retval = phi i64 [ 0, %vector.body.interim ], [ %20, %vector.early.exit ]
+  ret i64 %retval
 }
