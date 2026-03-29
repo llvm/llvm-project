@@ -1707,7 +1707,7 @@ APInt APInt::urem(const APInt &RHS) const {
     return APInt(BitWidth, U.pVal[0] % RHS.U.pVal[0]);
   if (RHS.isPowerOf2())
     // X % 2^w ===> X & (2^w - 1)
-    return trunc(RHS.logBase2());
+    return *this & (RHS - 1);
 
   // We have to compute it the hard way. Invoke the Knuth divide algorithm.
   APInt Remainder(BitWidth, 0);
