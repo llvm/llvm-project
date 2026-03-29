@@ -2376,6 +2376,15 @@ void gsl_owner_return() {
   use(v);
 }
 
+std::vector<std::string_view> createViews(const std::string &s [[clang::lifetimebound]]);
+
+std::span<std::string_view> owner_to_pointer_via_gsl_construction() {
+  std::string local;
+  auto views = createViews(local);
+  return views; // expected-warning {{address of stack memory is returned later}} \
+                // expected-note {{returned here}}
+}
+
 std::unique_ptr<S> getUniqueS(const std::string &s [[clang::lifetimebound]]);
 
 void owner_return_unique_ptr_s() {
@@ -2384,8 +2393,6 @@ void owner_return_unique_ptr_s() {
   (void)ptr;                                  // expected-note {{later used here}}
 }
 
-// FIXME: The warning here is from the local unique_ptr being destroyed on
-// return. The chain breaks and doesn't trace back to `auto ups = getUniqueS(local)`.
 std::string_view return_dangling_view_through_owner() {
   std::string local;
   auto ups = getUniqueS(local);

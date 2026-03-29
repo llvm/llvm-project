@@ -156,6 +156,12 @@ struct basic_string_view {
 };
 using string_view = basic_string_view<char>;
 
+template<typename T>
+struct span {
+  span();
+  span(const vector<T>&);
+};
+
 template<class _Mystr> struct iter {
     iter& operator-=(int);
 
