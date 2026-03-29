@@ -81,6 +81,8 @@ using namespace jumpthreading;
 #define DEBUG_TYPE "jump-threading"
 
 STATISTIC(NumThreads, "Number of jumps threaded");
+STATISTIC(MaxRenamingUsesInBB, "Max number of renaming uses in one BB");
+STATISTIC(NumRenamingUses, "Number of renaming uses");
 STATISTIC(NumFolds,   "Number of terminators folded");
 STATISTIC(NumDupes,   "Number of branch blocks duplicated to eliminate phi");
 
@@ -2000,6 +2002,7 @@ void JumpThreadingPass::updateSSA(BasicBlock *BB, BasicBlock *NewBB,
   SSAUpdater SSAUpdate;
   SmallVector<Use *, 16> UsesToRename;
   SmallVector<DbgVariableRecord *, 4> DbgVariableRecords;
+  unsigned RewriteUseCountInBB = 0;
 
   for (Instruction &I : *BB) {
     // Scan all uses of this instruction to see if it is used outside of its
@@ -2025,6 +2028,7 @@ void JumpThreadingPass::updateSSA(BasicBlock *BB, BasicBlock *NewBB,
     if (UsesToRename.empty() && DbgVariableRecords.empty())
       continue;
     LLVM_DEBUG(dbgs() << "JT: Renaming non-local uses of: " << I << "\n");
+    RewriteUseCountInBB += UsesToRename.size();
 
     // We found a use of I outside of BB.  Rename all uses of I that are outside
     // its block to be uses of the appropriate PHI node etc.  See ValuesInBlocks
@@ -2042,6 +2046,9 @@ void JumpThreadingPass::updateSSA(BasicBlock *BB, BasicBlock *NewBB,
 
     LLVM_DEBUG(dbgs() << "\n");
   }
+  if (RewriteUseCountInBB > MaxRenamingUsesInBB)
+    MaxRenamingUsesInBB = RewriteUseCountInBB;
+  NumRenamingUses += RewriteUseCountInBB;
 }
 
 static void remapSourceAtoms(ValueToValueMapTy &VM, BasicBlock::iterator Begin,
