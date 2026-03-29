@@ -101,6 +101,11 @@ static cl::opt<unsigned> PhiDuplicateThreshold(
     cl::desc("Max PHIs in BB to duplicate for jump threading"), cl::init(76),
     cl::Hidden);
 
+static cl::opt<unsigned>
+    UsesRenameThreshold("jump-threading-rename-threshold",
+                        cl::desc("Max renaming uses in BB for jump threading"),
+                        cl::init(400), cl::Hidden);
+
 static cl::opt<bool> ThreadAcrossLoopHeaders(
     "jump-threading-across-loop-headers",
     cl::desc("Allow JumpThreading to thread across loop headers, for testing"),
@@ -432,8 +437,8 @@ static unsigned getJumpThreadDuplicationCost(const TargetTransformInfo *TTI,
   assert(StopAt->getParent() == BB && "Not an instruction from proper BB?");
 
   // Do not duplicate the BB if it has a lot of PHI nodes.
-  // If a threadable chain is too long then the number of PHI nodes can add up,
-  // leading to a substantial increase in compile time when rewriting the SSA.
+  // If a threadable chain is too long then the number of PHI nodes can add
+  // up, leading to an increase in compile time.
   unsigned PhiCount = 0;
   Instruction *FirstNonPHI = nullptr;
   for (Instruction &I : *BB) {
@@ -443,6 +448,23 @@ static unsigned getJumpThreadDuplicationCost(const TargetTransformInfo *TTI,
     }
     if (++PhiCount > PhiDuplicateThreshold)
       return ~0U;
+  }
+
+  // Scan all uses of this instruction to see if it is used outside its block,
+  // as that could introduce additional PHI nodes when rewriting the SSA, which
+  // would lead to a substantial increase in compile time.
+  unsigned UsesToRenameCount = 0;
+  for (Instruction &I : *BB) {
+    for (Use &U : I.uses()) {
+      Instruction *User = cast<Instruction>(U.getUser());
+      if (PHINode *UserPN = dyn_cast<PHINode>(User)) {
+        if (UserPN->getIncomingBlock(U) == BB)
+          continue;
+      } else if (User->getParent() == BB)
+        continue;
+      if (++UsesToRenameCount > UsesRenameThreshold)
+        return ~0U;
+    }
   }
 
   /// Ignore PHI nodes, these will be flattened when duplication happens.
