@@ -26,6 +26,12 @@ public:
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }
+
+  std::optional<TraversalKind> getCheckTraversalKind() const override {
+    // Casts can be redundant for some instantiations but not others.
+    // Only emit warnings in templates in the uninstantated versions.
+    return TK_IgnoreUnlessSpelledInSource;
+  }
 };
 
 } // namespace clang::tidy::llvm_check

@@ -49,12 +49,7 @@ void RedundantCastingCheck::registerMatchers(MatchFinder *Finder) {
                          unresolvedLookupExpr(hasAnyUnresolvedName(CalleeName))
                              .bind("callee")))));
       };
-  Finder->addMatcher(
-      callExpr(
-          AnyCalleeName(FunctionNames),
-          hasAncestor(functionDecl().bind("context")))
-          .bind("call"),
-      this);
+  Finder->addMatcher(callExpr(AnyCalleeName(FunctionNames)).bind("call"), this);
   Finder->addMatcher(
       callExpr(AnyCalleeNameInUninstantiatedTemplate(FunctionNames))
           .bind("call"),
@@ -77,13 +72,7 @@ void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
   CanQualType RetTy;
   std::string FuncName;
   if (const auto *ResolvedCallee = Nodes.getNodeAs<DeclRefExpr>("callee")) {
-    const auto *F = dyn_cast<FunctionDecl>(ResolvedCallee->getDecl());
-    const auto *SurroundingFunc = Nodes.getNodeAs<FunctionDecl>("context");
-    // Casts can be redundant for some instantiations but not others.
-    // Only emit warnings in templates in the uninstantated versions.
-    if (SurroundingFunc->isTemplateInstantiation())
-      return;
-
+    const auto *F = cast<FunctionDecl>(ResolvedCallee->getDecl());
     RetTy = stripPointerOrReference(F->getReturnType())
                 ->getCanonicalTypeUnqualified();
     FuncName = F->getName();
