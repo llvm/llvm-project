@@ -24,6 +24,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/CodeGen/Analysis.h"
@@ -17130,17 +17131,81 @@ SITargetLowering::performAddCarrySubCarryCombine(SDNode *N,
   return SDValue();
 }
 
+// Return true if the BB we're selecting is known to be in a loop or false
+// otherwise (that is either not in a loop or we can't determine it).
+static bool isInsideLoop(SelectionDAG &DAG) {
+  // DAG.getPass() returns nullptr when using the new pass manager.
+  // TODO: Use DAG.getMFAM() to access LoopAnalysis for the new pass manager.
+  const Pass *P = DAG.getPass();
+  if (!P)
+    return false;
+
+  // Use LoopInfo only if it's available for free.
+  const auto *LIWP = P->getAnalysisIfAvailable<LoopInfoWrapperPass>();
+  if (!LIWP)
+    return false;
+
+  const BasicBlock *BB = DAG.getFunctionLoweringInfo()->MBB->getBasicBlock();
+  return LIWP->getLoopInfo().getLoopFor(BB) != nullptr;
+}
+
+// Create fma((cond ? -1.0 : 0.0), c, a)
+static SDValue createConditionalSubToFMA(SelectionDAG &DAG, SDLoc SL, EVT VT,
+                                         SDValue Cond, SDValue C, SDValue A) {
+  // FIXME: This should work but currently generates incorrect code.
+  if (isa<ConstantFPSDNode>(C) || isa<ConstantSDNode>(C))
+    return SDValue();
+  const SDValue MinusOne = DAG.getConstantFP(-1.0, SL, VT);
+  const SDValue Zero = DAG.getConstantFP(0.0, SL, VT);
+  SDValue Correction = DAG.getNode(ISD::SELECT, SL, VT, Cond, MinusOne, Zero);
+  return DAG.getNode(ISD::FMA, SL, VT, Correction, C, A);
+}
+
 SDValue SITargetLowering::performFAddCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
-  if (DCI.getDAGCombineLevel() < AfterLegalizeDAG)
-    return SDValue();
-
   SelectionDAG &DAG = DCI.DAG;
   EVT VT = N->getValueType(0);
 
   SDLoc SL(N);
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
+
+  // Match conditional subtraction patterns for FMA optimization:
+  //   result = a + (-(cond ? c : 0.0))
+  // and convert to:
+  //   result = fma((cond ? -1.0 : 0.0), c, a)
+  //
+  // This saves one v_cndmask per pattern. On GFX10+ (hasVOP3Literal) the
+  // literal 0xbff00000 (-1.0 hi bits) folds directly into v_cndmask_b32_e64,
+  // avoiding the extra v_mov_b32 that pre-GFX10 requires. Outside a loop the
+  // extra v_mov_b32 makes the transform neutral or worse on pre-GFX10, so
+  // restrict pre-GFX10 to loop bodies only (same as the GlobalISel path).
+  if (VT == MVT::f64 && (Subtarget->hasVOP3Literal() || isInsideLoop(DAG))) {
+    // Match the pattern: fadd %a, (fneg (select %cond, %c, 0.0))
+    // Also matches the canonicalized form: fneg(select(cond, c, -0.0)), which
+    // arises when a prior DAG combine folds select(cond, fneg(c), 0.0) into
+    // fneg(select(cond, c, -0.0)).  Since fneg(-0.0)==+0.0, both forms evaluate
+    // to `a` when cond is false, so either zero polarity is acceptable.
+    if (RHS.getOpcode() == ISD::FNEG && RHS.hasOneUse() &&
+        RHS.getOperand(0).getOpcode() == ISD::SELECT &&
+        RHS.getOperand(0).hasOneUse()) {
+      SDValue SelNode = RHS.getOperand(0);
+      SDValue Cond = SelNode.getOperand(0);     // condition
+      SDValue TrueVal = SelNode.getOperand(1);  // c
+      SDValue FalseVal = SelNode.getOperand(2); // should be 0.0 or -0.0
+
+      if (ConstantFPSDNode *FPConst = dyn_cast<ConstantFPSDNode>(FalseVal)) {
+        if (FPConst->isZero()) {
+          if (SDValue Result =
+                  createConditionalSubToFMA(DAG, SL, VT, Cond, TrueVal, LHS))
+            return Result;
+        }
+      }
+    }
+  }
+
+  if (DCI.getDAGCombineLevel() < AfterLegalizeDAG)
+    return SDValue();
 
   // These should really be instruction patterns, but writing patterns with
   // source modifiers is a pain.
@@ -17174,12 +17239,44 @@ SDValue SITargetLowering::performFAddCombine(SDNode *N,
 
 SDValue SITargetLowering::performFSubCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
-  if (DCI.getDAGCombineLevel() < AfterLegalizeDAG)
-    return SDValue();
-
   SelectionDAG &DAG = DCI.DAG;
   SDLoc SL(N);
   EVT VT = N->getValueType(0);
+
+  // Match conditional subtraction patterns for FMA optimization, see
+  // performFAddCombine:
+  //   result = a - (cond ? c : 0.0)
+  // and convert to:
+  //   result = fma((cond ? -1.0 : 0.0), c, a)
+  // See performFAddCombine for the rationale on the GFX10+ restriction.
+  if (VT == MVT::f64 && (Subtarget->hasVOP3Literal() || isInsideLoop(DAG))) {
+    SDValue LHS = N->getOperand(0); // a
+    SDValue RHS = N->getOperand(1); // sel
+
+    // Match the pattern: fsub %a, (select %cond, %c, 0.0)
+    if (RHS.getOpcode() == ISD::SELECT && RHS.hasOneUse()) {
+      SDValue Cond = RHS.getOperand(0);     // condition
+      SDValue TrueVal = RHS.getOperand(1);  // c
+      SDValue FalseVal = RHS.getOperand(2); // should be 0.0
+
+      if (ConstantFPSDNode *Zero = dyn_cast<ConstantFPSDNode>(FalseVal)) {
+        // Accept both +0.0 and -0.0: the canonicalized form
+        // fsub(a, select(cond, c, -0.0)) arises when a prior combine transforms
+        // fadd(a, fneg(select(cond, c, -0.0))) → fsub(a, select(cond, c,
+        // -0.0)). In both cases the false branch evaluates to zero, so either
+        // polarity is semantically valid for this optimization.
+        if (Zero->isZero()) {
+          if (SDValue Result =
+                  createConditionalSubToFMA(DAG, SL, VT, Cond, TrueVal, LHS))
+            return Result;
+        }
+      }
+    }
+  }
+
+  if (DCI.getDAGCombineLevel() < AfterLegalizeDAG)
+    return SDValue();
+
   assert(!VT.isVector());
 
   // Try to get the fneg to fold into the source modifier. This undoes generic
