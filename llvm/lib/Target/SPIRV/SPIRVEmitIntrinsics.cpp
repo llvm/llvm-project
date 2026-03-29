@@ -968,7 +968,13 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
                                           UnknownElemTypeI8);
     maybeAssignPtrType(Ty, I, RefTy, UnknownElemTypeI8);
   } else if (auto *Ref = dyn_cast<IntToPtrInst>(I)) {
-    maybeAssignPtrType(Ty, I, Ref->getDestTy(), UnknownElemTypeI8);
+    // Passing an untyped pointer to maybeAssignPtrType would record it as the
+    // pointee type, producing a pointer‑to‑pointer in SPIR-V (OpConvertUToPtr
+    // with a double‑pointer result type). In this case do not assign type,
+    // leave Ty as nullptr so this can be later refined from the actual users of
+    // the inttoptr.
+    if (!isUntypedPointerTy(Ref->getDestTy()))
+      maybeAssignPtrType(Ty, I, Ref->getDestTy(), UnknownElemTypeI8);
   } else if (auto *Ref = dyn_cast<BitCastInst>(I)) {
     if (Type *Src = Ref->getSrcTy(), *Dest = Ref->getDestTy();
         isPointerTy(Src) && isPointerTy(Dest))
