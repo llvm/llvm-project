@@ -50,6 +50,10 @@ LLVM_ABI extern thread_local unsigned threadIndex;
 inline unsigned getThreadIndex() { GET_THREAD_INDEX_IMPL; }
 #endif
 
+// getThreadIndex() is assigned by ThreadPoolExecutor and must be in the range
+// [0, getThreadCount()). Some users (e.g. PerThreadBumpPtrAllocator) rely on
+// this bound to size per-thread storage, so getThreadCount() represents the
+// maximum possible worker threads, not the current active count.
 LLVM_ABI size_t getThreadCount();
 #else
 inline unsigned getThreadIndex() { return 0; }

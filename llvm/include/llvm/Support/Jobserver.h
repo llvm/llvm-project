@@ -142,8 +142,8 @@ public:
   /// Releases a job slot back to the pool.
   virtual void release(JobSlot Slot) = 0;
 
-  /// Returns the number of job slots available, as determined on first use.
-  /// This value is cached. Returns 0 if no jobserver is active.
+  /// Returns the number of job slots if known (e.g. from -jN in MAKEFLAGS).
+  /// This value is cached. Returns 0 if unknown or no jobserver is active.
   virtual unsigned getNumJobs() const = 0;
 
   /// Returns the singleton instance of the JobserverClient.
