@@ -2959,6 +2959,48 @@ LogicalResult cir::AwaitOp::verify() {
   return success();
 }
 
+LogicalResult cir::CoReturnOp::verify() {
+  if (!getOperation()->getParentOfType<CoroBodyOp>())
+    return emitOpError("must be inside a cir.coro.body");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// CoroBody
+//===----------------------------------------------------------------------===//
+
+void cir::CoroBodyOp::getSuccessorRegions(
+    mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  if (!point.isParent()) {
+    regions.push_back(RegionSuccessor::parent());
+    return;
+  }
+
+  regions.push_back(RegionSuccessor(&getBodyRegion()));
+}
+
+mlir::ValueRange
+cir::CoroBodyOp::getSuccessorInputs(RegionSuccessor successor) {
+  return ValueRange();
+}
+
+LogicalResult cir::CoroBodyOp::verify() {
+  if (!getOperation()->getParentOfType<FuncOp>().getCoroutine())
+    return emitOpError("enclosing function must be a coroutine");
+  return success();
+}
+
+void cir::CoroBodyOp::build(OpBuilder &builder, OperationState &result,
+                            BuilderCallbackRef bodyBuilder) {
+  assert(bodyBuilder &&
+         "the builder callback for 'CoroBodyOp' must be present");
+  OpBuilder::InsertionGuard guard(builder);
+
+  Region *bodyRegion = result.addRegion();
+  builder.createBlock(bodyRegion);
+  bodyBuilder(builder, result.location);
+}
+
 //===----------------------------------------------------------------------===//
 // CopyOp Definitions
 //===----------------------------------------------------------------------===//
