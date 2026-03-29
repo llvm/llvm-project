@@ -3115,7 +3115,7 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::SDIV:        ExpandIntRes_SDIV(N, Lo, Hi); break;
   case ISD::SDIVREM:
   case ISD::UDIVREM:
-    ExpandIntRes_DIVREM(N, Lo, Hi);
+    ExpandIntRes_DIVREM(N, ResNo, Lo, Hi);
     break;
   case ISD::SIGN_EXTEND: ExpandIntRes_SIGN_EXTEND(N, Lo, Hi); break;
   case ISD::SIGN_EXTEND_INREG: ExpandIntRes_SIGN_EXTEND_INREG(N, Lo, Hi); break;
@@ -4904,8 +4904,8 @@ void DAGTypeLegalizer::ExpandIntRes_SADDSUBO(SDNode *Node,
   ReplaceValueWith(SDValue(Node, 1), Ovf);
 }
 
-void DAGTypeLegalizer::ExpandIntRes_DIVREM(SDNode *N, SDValue &Lo,
-                                           SDValue &Hi) {
+void DAGTypeLegalizer::ExpandIntRes_DIVREM(SDNode *N, unsigned ResNo,
+                                           SDValue &Lo, SDValue &Hi) {
   SDLoc dl(N);
   EVT VT = N->getValueType(0);
   bool IsSigned = (N->getOpcode() == ISD::SDIVREM);
@@ -4925,8 +4925,13 @@ void DAGTypeLegalizer::ExpandIntRes_DIVREM(SDNode *N, SDValue &Lo,
     SDValue Ops[2] = {N->getOperand(0), N->getOperand(1)};
     SDValue Q = DAG.getNode(DivOp, dl, VT, Ops);
     SDValue R = DAG.getNode(RemOp, dl, VT, Ops);
-    SplitInteger(Q, Lo, Hi);
-    ReplaceValueWith(SDValue(N, 1), R);
+    if (ResNo == 0) {
+      SplitInteger(Q, Lo, Hi);
+      ReplaceValueWith(SDValue(N, 1), R);
+    } else {
+      SplitInteger(R, Lo, Hi);
+      ReplaceValueWith(SDValue(N, 0), Q);
+    }
     return;
   }
 
@@ -4963,16 +4968,21 @@ void DAGTypeLegalizer::ExpandIntRes_DIVREM(SDNode *N, SDValue &Lo,
 
   std::pair<SDValue, SDValue> CallInfo = TLI.LowerCallTo(CLI);
 
-  // Quotient is the return value; split it into Lo/Hi for the expanded type.
-  SplitInteger(CallInfo.first, Lo, Hi);
-
-  // Remainder is written to the stack temporary; load it back and register
-  // it as the replacement for result 1 of the original SDIVREM/UDIVREM node.
+  // Load the remainder from the stack temporary.
   int FI = cast<FrameIndexSDNode>(FIPtr)->getIndex();
   SDValue Rem = DAG.getLoad(
       VT, dl, CallInfo.second, FIPtr,
       MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI));
-  ReplaceValueWith(SDValue(N, 1), Rem);
+
+  // Split the requested result into Lo/Hi and register the other result as its
+  // replacement.
+  if (ResNo == 0) {
+    SplitInteger(CallInfo.first, Lo, Hi);
+    ReplaceValueWith(SDValue(N, 1), Rem);
+  } else {
+    SplitInteger(Rem, Lo, Hi);
+    ReplaceValueWith(SDValue(N, 0), CallInfo.first);
+  }
 }
 
 void DAGTypeLegalizer::ExpandIntRes_SDIV(SDNode *N,

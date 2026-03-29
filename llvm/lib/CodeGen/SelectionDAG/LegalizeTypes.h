@@ -473,7 +473,7 @@ private:
   void ExpandIntRes_BSWAP             (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_PARITY            (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_MUL               (SDNode *N, SDValue &Lo, SDValue &Hi);
-  void ExpandIntRes_DIVREM            (SDNode *N, SDValue &Lo, SDValue &Hi);
+  void ExpandIntRes_DIVREM            (SDNode *N, unsigned ResNo, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_SDIV              (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_SREM              (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_UDIV              (SDNode *N, SDValue &Lo, SDValue &Hi);
