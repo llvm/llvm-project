@@ -1426,33 +1426,21 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
 
   // We're certain that Delta > 0 and ConstCoeff > 0.
   // Check Delta/(2*ConstCoeff) against upper loop bound
-  const Loop *CurSrcLoop = Src->getLoop();
-  if (const SCEV *UpperBound =
-          collectUpperBound(CurSrcLoop, Delta->getType())) {
-    LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound << "\n");
-    ConstantRange UBRange = SE->getSignedRange(UpperBound);
-    ConstantRange MLRange =
-        UBRange.smul_fast(ConstCoeff->getAPInt())
-            .smul_fast(APInt(Distance.getBitWidth(), 2, true));
-    ConstantRange DeltaRange(ConstDelta->getAPInt());
-    LLVM_DEBUG(dbgs() << "\t    UBRange = " << UBRange << "\n");
-    LLVM_DEBUG(dbgs() << "\t    MLRange = " << MLRange << "\n");
-    LLVM_DEBUG(dbgs() << "\t    DeltaRange = " << DeltaRange << "\n");
-
-    if (!MLRange.isFullSet()) {
-      if (APDelta.eq(MLRange.getSignedMax())) {
-        // i = i' = UB
-        Result.DV[Level].Direction &= ~Dependence::DVEntry::LT;
-        Result.DV[Level].Direction &= ~Dependence::DVEntry::GT;
-        ++WeakCrossingSIVsuccesses;
-        if (!Result.DV[Level].Direction) {
-          ++WeakCrossingSIVindependence;
-          return true;
-        }
-        Result.DV[Level].Distance = SE->getZero(Delta->getType());
-        return false;
-      }
+  ConstantRange SrcRange = SE->getSignedRange(Src);
+  ConstantRange DstRange = SE->getSignedRange(Dst);
+  LLVM_DEBUG(dbgs() << "\t    SrcRange = " << SrcRange << "\n");
+  LLVM_DEBUG(dbgs() << "\t    DstRange = " << DstRange << "\n");
+  if (SrcRange.intersectWith(DstRange).isSingleElement()) {
+    // The ranges touch at exactly one value (i = i' = Boundary).
+    Result.DV[Level].Direction &= ~Dependence::DVEntry::LT;
+    Result.DV[Level].Direction &= ~Dependence::DVEntry::GT;
+    ++WeakCrossingSIVsuccesses;
+    if (!Result.DV[Level].Direction) {
+      ++WeakCrossingSIVindependence;
+      return true;
     }
+    Result.DV[Level].Distance = SE->getZero(Delta->getType());
+    return false;
   }
 
   // check that Coeff divides Delta
