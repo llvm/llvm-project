@@ -3232,8 +3232,7 @@ __m512i test_mm512_mm_dbsad_epu8(__m512i __A, __m512i __B) {
   // CHECK: @llvm.x86.avx512.dbpsadbw.512
   return _mm512_dbsad_epu8(__A, __B, 170);
 }
-// 512-bit: 4 lanes, imm8=0: blockA=blockB=lane[0..3] for each lane
-// Each lane behaves the same as the 128-bit case with matching data
+// 512-bit: 4 lanes, imm8=0: all shuffle groups select block 0 per lane
 TEST_CONSTEXPR(match_v32hu(_mm512_dbsad_epu8(
   ((__m512i)(__v64qu){0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
                      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
@@ -3243,10 +3242,10 @@ TEST_CONSTEXPR(match_v32hu(_mm512_dbsad_epu8(
                      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
                      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
                      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}),
-  0), 4, 4, 20, 20, 36, 36, 52, 52,
-      4, 4, 20, 20, 36, 36, 52, 52,
-      4, 4, 20, 20, 36, 36, 52, 52,
-      4, 4, 20, 20, 36, 36, 52, 52));
+  0), 4, 8, 12, 12, 28, 28, 44, 44,
+      4, 8, 12, 12, 28, 28, 44, 44,
+      4, 8, 12, 12, 28, 28, 44, 44,
+      4, 8, 12, 12, 28, 28, 44, 44));
 
 __m512i test_mm512_mm_mask_dbsad_epu8(__m512i __W, __mmask32 __U, __m512i __A, __m512i __B) {
   // CHECK-LABEL: test_mm512_mm_mask_dbsad_epu8
