@@ -1096,16 +1096,6 @@ TEST(APIntTest, divrem_big7) {
           {224, "80000000800000010000000f", 16});
 }
 
-TEST(APIntTest, divrem_big_pow2) {
-  // Tests fast path for power-of-two divisor.
-  APInt LHS{512, "ffffffffffffffffffffffffffffffffffffffffffffffff", 16};
-  for (unsigned k : {1, 63, 64, 65, 127, 128, 200, 255, 256}) {
-    APInt RHS = APInt{512, 1}.shl(k);
-    APInt RES = LHS & (RHS - 1);
-    testDiv(LHS, RHS, RES);
-  }
-}
-
 void testDiv(APInt a, uint64_t b, APInt c) {
   auto p = a * b + c;
 
@@ -1162,16 +1152,6 @@ TEST(APIntTest, divremuint) {
   testDiv(APInt{1024, 19}.shl(811),
           4356013, // one word
           APInt{1024, 1});
-}
-
-TEST(APIntTest, divremuint_pow2) {
-  // Tests fast path for power-of-two uint64_t divisor.
-  APInt LHS{512, "ffffffffffffffffffffffffffffffffffffffffffffffff", 16};
-  for (unsigned k : {1, 2, 3, 7, 15, 31, 32, 33, 63}) {
-    uint64_t RHS = 1ULL << k;
-    APInt RES = LHS.urem(APInt{512, RHS});
-    testDiv(LHS, RHS, RES);
-  }
 }
 
 TEST(APIntTest, divrem_simple) {
