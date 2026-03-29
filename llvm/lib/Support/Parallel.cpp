@@ -99,7 +99,7 @@ public:
   void add(std::function<void()> F, parallel::detail::Latch &L) {
     {
       std::lock_guard<std::mutex> Lock(Mutex);
-      WorkStack.push_back({std::move(F), &L});
+      WorkStack.push_back({std::move(F), std::ref(L)});
     }
     Cond.notify_one();
   }
@@ -141,39 +141,35 @@ private:
             [&] { TheJobserver->release(std::move(Slot)); });
 
         while (true) {
-          WorkItem Item;
-          {
-            std::unique_lock<std::mutex> Lock(Mutex);
-            Cond.wait(Lock, [&] { return Stop || !WorkStack.empty(); });
-            if (Stop && WorkStack.empty())
-              return;
-            if (WorkStack.empty())
-              break;
-            Item = std::move(WorkStack.back());
-            WorkStack.pop_back();
-          }
-          Item.F();
-          Item.L->dec();
-        }
-      } else {
-        WorkItem Item;
-        {
           std::unique_lock<std::mutex> Lock(Mutex);
           Cond.wait(Lock, [&] { return Stop || !WorkStack.empty(); });
-          if (Stop)
+          if (Stop && WorkStack.empty())
+            return;
+          if (WorkStack.empty())
             break;
-          Item = std::move(WorkStack.back());
+          auto Item = std::move(WorkStack.back());
           WorkStack.pop_back();
+          Lock.unlock();
+          Item.F();
+          Item.L.get().dec();
         }
+      } else {
+        std::unique_lock<std::mutex> Lock(Mutex);
+        Cond.wait(Lock, [&] { return Stop || !WorkStack.empty(); });
+        if (Stop)
+          break;
+        auto Item = std::move(WorkStack.back());
+        WorkStack.pop_back();
+        Lock.unlock();
         Item.F();
-        Item.L->dec();
+        Item.L.get().dec();
       }
     }
   }
 
   struct WorkItem {
     std::function<void()> F;
-    parallel::detail::Latch *L = nullptr;
+    std::reference_wrapper<parallel::detail::Latch> L;
   };
 
   std::atomic<bool> Stop{false};
