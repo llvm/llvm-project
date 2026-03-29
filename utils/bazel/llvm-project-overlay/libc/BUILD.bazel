@@ -153,15 +153,7 @@ LLVM_LIBC_HEADERS = [
         has_def_template = True,
     ),
     libc_header_info(
-        "limits",
-        has_def_template = True,
-    ),
-    libc_header_info(
         "link",
-        has_def_template = True,
-    ),
-    libc_header_info(
-        "locale",
         has_def_template = True,
     ),
     libc_header_info(
@@ -269,21 +261,15 @@ LLVM_LIBC_HEADERS = [
         has_def_template = True,
     ),
     libc_header_info(
-        "time",
-        has_def_template = True,
-    ),
-    libc_header_info(
         "unistd",
-        has_def_template = True,
-    ),
-    libc_header_info(
-        "wchar",
         has_def_template = True,
     ),
     libc_header_info("ctype"),
     libc_header_info("dirent"),
     libc_header_info("dlfcn"),
     libc_header_info("fenv"),
+    libc_header_info("limits"),
+    libc_header_info("locale"),
     libc_header_info("nl_types"),
     libc_header_info("pthread"),
     libc_header_info("search"),
@@ -295,7 +281,9 @@ LLVM_LIBC_HEADERS = [
     libc_header_info("sys/statvfs"),
     libc_header_info("sys/utsname"),
     libc_header_info("threads"),
+    libc_header_info("time"),
     libc_header_info("uchar"),
+    libc_header_info("wchar"),
     libc_header_info("wctype"),
     libc_header_info(
         "stdlib",
