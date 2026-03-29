@@ -118,7 +118,7 @@ void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
   diag(Call->getExprLoc(), "redundant use of '%0'")
       << FuncName
       << FixItHint::CreateReplacement(Call->getSourceRange(), ArgText);
-  diag(Arg->getExprLoc(), "source expression has type %1",
+  diag(Arg->getExprLoc(), "source expression has type %0",
        DiagnosticIDs::Note)
       << Arg->getSourceRange() << Arg->IgnoreParenImpCasts()->getType();
 
