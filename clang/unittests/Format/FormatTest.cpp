@@ -17073,6 +17073,19 @@ TEST_F(FormatTest, ConfigurableUseOfTab) {
                "\t}\n"
                "};",
                Tab);
+  verifyFormat("aStreamObject << aaaaaaaaaaaaa\n"
+               "              << bbbbbbbbb;\n",
+               Tab);
+  verifyFormat("result = aaaaaaaaaaaaaaaaaaaaaaaa +\n"
+               "         bbbbbbbbbbbbbbbbbbbb;",
+               Tab);
+  verifyFormat("class C {\n"
+               "\tvoid foo() {\n"
+               "\t\taStreamObject << aaaaaaaaaaaaa\n"
+               "\t\t              << bbbbbbbbb;\n"
+               "\t}\n"
+               "};",
+               Tab);
   Tab.TabWidth = 8;
   Tab.IndentWidth = 4;
   verifyFormat("class TabWidth8Indent4 {\n"

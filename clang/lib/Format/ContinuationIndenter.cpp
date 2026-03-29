@@ -1273,8 +1273,10 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
       (PreviousNonComment && PreviousNonComment->is(tok::question))) {
     CurrentState.BreakBeforeParameter = true;
   }
-  if (Current.is(TT_BinaryOperator) && Current.CanBreakBefore)
+  if (Current.is(TT_BinaryOperator) && Current.CanBreakBefore) {
     CurrentState.BreakBeforeParameter = false;
+    CurrentState.IsAligned = true;
+  }
 
   if (!DryRun) {
     unsigned MaxEmptyLinesToKeep = Style.MaxEmptyLinesToKeep + 1;
