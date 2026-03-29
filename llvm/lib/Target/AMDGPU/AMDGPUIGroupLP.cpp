@@ -16,9 +16,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUIGroupLP.h"
+#include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
-#include "SIMachineFunctionInfo.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/MachineScheduler.h"
@@ -899,31 +899,32 @@ bool MFMASmallGemmOpt::applyIGLPStrategy(
 class MFMAExpInterleaveOpt final : public IGLPStrategy {
 private:
   // The count of TRANS SUs involved in the interleaved pipeline
-  static unsigned TransPipeCount;
+  unsigned TransPipeCount = 0;
   // The count of MFMA SUs involved in the interleaved pipeline
-  static unsigned MFMAPipeCount;
+  unsigned MFMAPipeCount = 0;
   // The count of Add SUs involved in the interleaved pipeline
-  static unsigned AddPipeCount;
+  unsigned AddPipeCount = 0;
   // The number of transitive MFMA successors for each TRANS SU
-  static unsigned MFMAEnablement;
+  unsigned MFMAEnablement = 0;
   // The number of transitive TRANS predecessors for each MFMA SU
-  static unsigned ExpRequirement;
+  unsigned ExpRequirement = 0;
   // The count of independent "chains" of MFMA instructions in the pipeline
-  static unsigned MFMAChains;
+  unsigned MFMAChains = 0;
   // The length of each independent "chain" of MFMA instructions
-  static unsigned MFMAChainLength;
+  unsigned MFMAChainLength = 0;
   // Whether or not the pipeline has V_CVT instructions
-  static bool HasCvt;
+  bool HasCvt = false;
   // Whether or not there are instructions between the TRANS instruction and
   // V_CVT
-  static bool HasChainBetweenCvt;
+  bool HasChainBetweenCvt = false;
   // The first occuring DS_READ which feeds an MFMA chain
-  static std::optional<unsigned> FirstPipeDSR;
+  std::optional<unsigned> FirstPipeDSR = std::nullopt;
   // The MFMAPipe SUs with no MFMA predecessors
   SmallVector<SUnit *, 4> MFMAChainSeeds;
   // Compute the heuristics for the pipeline, returning whether or not the DAG
   // is well formatted for the mutation
   bool analyzeDAG(const SIInstrInfo *TII);
+  bool AnalysisResult;
 
   /// Whether or not the instruction is a transitive predecessor of an MFMA
   /// instruction
@@ -1334,17 +1335,6 @@ public:
   }
 };
 
-unsigned MFMAExpInterleaveOpt::TransPipeCount = 0;
-unsigned MFMAExpInterleaveOpt::MFMAPipeCount = 0;
-unsigned MFMAExpInterleaveOpt::AddPipeCount = 0;
-unsigned MFMAExpInterleaveOpt::MFMAEnablement = 0;
-unsigned MFMAExpInterleaveOpt::ExpRequirement = 0;
-unsigned MFMAExpInterleaveOpt::MFMAChains = 0;
-unsigned MFMAExpInterleaveOpt::MFMAChainLength = 0;
-bool MFMAExpInterleaveOpt::HasCvt = false;
-bool MFMAExpInterleaveOpt::HasChainBetweenCvt = false;
-std::optional<unsigned> MFMAExpInterleaveOpt::FirstPipeDSR = std::nullopt;
-
 bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
   SmallVector<SUnit *, 10> ExpPipeCands;
   SmallVector<SUnit *, 10> MFMAPipeCands;
@@ -1367,6 +1357,12 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
     auto Opc = SU.getInstr()->getOpcode();
     if (TII->isTRANS(Opc)) {
       // Avoid counting a potential bonus V_EXP which all the MFMA depend on
+      // FIXME: This heuristic needs improvement/clarification!
+      // In general, the pipeline seems to look like this:
+      //   fma_f32 -> exp_f32 -> cvt_f16_f32 -> v_pack_b32_f16 -> mfma_.._f16
+      //   (with potential arithmetic between exp and cvt)
+      //   see
+      //   https://github.com/llvm/llvm-project/pull/80370#discussion_r1483660378
       if (SU.Succs.size() >= 7)
         continue;
       for (auto &Succ : SU.Succs) {
@@ -1457,6 +1453,7 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
     }
   }
 
+  MFMAChainSeeds.clear();
   MFMAChains = 0;
   for (auto &MFMAPipeSU : MFMAPipeSUs) {
     if (is_contained(MFMAChainSeeds, MFMAPipeSU))
@@ -1474,8 +1471,9 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
 
   for (auto Pred : MFMAChainSeeds[0]->Preds) {
     if (TII->isDS(Pred.getSUnit()->getInstr()->getOpcode()) &&
-        Pred.getSUnit()->getInstr()->mayLoad())
+        Pred.getSUnit()->getInstr()->mayLoad()) {
       FirstPipeDSR = Pred.getSUnit()->NodeNum;
+    }
   }
 
   MFMAChainLength = MFMAPipeCount / MFMAChains;
@@ -1527,18 +1525,16 @@ bool MFMAExpInterleaveOpt::shouldApplyStrategy(ScheduleDAGInstrs *DAG,
   const GCNSubtarget &ST = DAG->MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
 
-  if (Phase != AMDGPU::SchedulingPhase::PostRA)
-    MFMAChainSeeds.clear();
-  if (Phase != AMDGPU::SchedulingPhase::PostRA && !analyzeDAG(TII))
-    return false;
-
-  return true;
+  AnalysisResult = analyzeDAG(TII);
+  return AnalysisResult;
 }
 
 bool MFMAExpInterleaveOpt::applyIGLPStrategy(
     DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
     DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
     AMDGPU::SchedulingPhase Phase) {
+
+  assert(AnalysisResult && "no or failed DAG analysis");
 
   bool IsSmallKernelType =
       MFMAEnablement == 2 && ExpRequirement == 4 && TransPipeCount == 32;
@@ -1559,18 +1555,18 @@ bool MFMAExpInterleaveOpt::applyIGLPStrategy(
   unsigned CurrMFMAForTransPosition = 0;
 
   auto incrementTransPosition = [&MFMAChain, &PositionInChain,
-                                 &CurrMFMAForTransPosition]() {
+                                 &CurrMFMAForTransPosition, this]() {
     CurrMFMAForTransPosition += MFMAEnablement;
     PositionInChain = (CurrMFMAForTransPosition / MFMAChains);
     MFMAChain = CurrMFMAForTransPosition % MFMAChains;
   };
 
-  auto getNextTransPositionInChain = [&CurrMFMAForTransPosition]() {
+  auto getNextTransPositionInChain = [&CurrMFMAForTransPosition, this]() {
     auto TempMFMAForTrans = CurrMFMAForTransPosition + MFMAEnablement;
     return (TempMFMAForTrans / MFMAChains);
   };
 
-  auto getNextTransMFMAChain = [&CurrMFMAForTransPosition]() {
+  auto getNextTransMFMAChain = [&CurrMFMAForTransPosition, this]() {
     auto TempMFMAForTrans = CurrMFMAForTransPosition + MFMAEnablement;
     return TempMFMAForTrans % MFMAChains;
   };
@@ -1580,7 +1576,7 @@ bool MFMAExpInterleaveOpt::applyIGLPStrategy(
   unsigned PositionInChainForMFMA = 0;
 
   auto incrementMFMAPosition = [&CurrMFMAPosition, &MFMAChainForMFMA,
-                                &PositionInChainForMFMA]() {
+                                &PositionInChainForMFMA, this]() {
     ++CurrMFMAPosition;
     MFMAChainForMFMA = CurrMFMAPosition % MFMAChains;
     PositionInChainForMFMA = CurrMFMAPosition / MFMAChains;
@@ -2071,22 +2067,16 @@ public:
   }
 };
 
-static unsigned DSWCount = 0;
-static unsigned DSWWithPermCount = 0;
-static unsigned DSWWithSharedVMEMCount = 0;
-
 bool MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
     DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
     DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
     AMDGPU::SchedulingPhase Phase) {
   unsigned MFMACount = 0;
   unsigned DSRCount = 0;
+  unsigned DSWCount = 0;
+  unsigned DSWWithPermCount = 0;
+  unsigned DSWWithSharedVMEMCount = 0;
 
-  bool IsInitial = Phase == AMDGPU::SchedulingPhase::Initial;
-
-  assert((!IsInitial || (DSWCount == 0 && DSWWithPermCount == 0 &&
-                         DSWWithSharedVMEMCount == 0)) &&
-         "DSWCounters should be zero in pre-RA scheduling!");
   SmallVector<SUnit *, 6> DSWithPerms;
   for (auto &SU : DAG->SUnits) {
     auto *I = SU.getInstr();
@@ -2095,7 +2085,7 @@ bool MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
     else if (TII->isDS(*I)) {
       if (I->mayLoad())
         ++DSRCount;
-      else if (I->mayStore() && IsInitial) {
+      else if (I->mayStore()) {
         ++DSWCount;
         for (auto Pred : SU.Preds) {
           if (Pred.getSUnit()->getInstr()->getOpcode() ==
@@ -2108,58 +2098,54 @@ bool MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
     }
   }
 
-  if (IsInitial) {
-    DSWWithPermCount = DSWithPerms.size();
-    auto *I = DSWithPerms.begin();
-    auto *E = DSWithPerms.end();
+  DSWWithPermCount = DSWithPerms.size();
 
-    // Get the count of DS_WRITES with V_PERM predecessors which
-    // have loop carried dependencies (WAR) on the same VMEM_READs.
-    // We consider partial overlap as a miss -- in other words,
-    // for a given DS_W, we only consider another DS_W as matching
-    // if there is a corresponding (in terms of the VMEM_R it uses) V_PERM pred
-    // for every V_PERM pred of this DS_W.
-    DenseMap<MachineInstr *, SUnit *> VMEMLookup;
-    SmallVector<SUnit *, 6> Counted;
-    for (; I != E; I++) {
-      SUnit *Cand = nullptr;
-      bool MissedAny = false;
-      for (auto &Pred : (*I)->Preds) {
-        if (Pred.getSUnit()->getInstr()->getOpcode() != AMDGPU::V_PERM_B32_e64)
+  // Get the count of DS_WRITES with V_PERM predecessors which
+  // have loop carried dependencies (WAR) on the same VMEM_READs.
+  // We consider partial overlap as a miss -- in other words,
+  // for a given DS_W, we only consider another DS_W as matching
+  // if there is a corresponding (in terms of the VMEM_R it uses) V_PERM pred
+  // for every V_PERM pred of this DS_W.
+  DenseMap<MachineInstr *, SUnit *> VMEMLookup;
+  SmallVector<SUnit *, 6> Counted;
+  for (SUnit *DSWrite : DSWithPerms) {
+    SUnit *Cand = nullptr;
+    bool MissedAny = false;
+    for (auto &Pred : DSWrite->Preds) {
+      if (Pred.getSUnit()->getInstr()->getOpcode() != AMDGPU::V_PERM_B32_e64)
+        continue;
+
+      if (Cand && llvm::is_contained(Counted, Cand))
+        break;
+
+      for (auto &Succ : Pred.getSUnit()->Succs) {
+        auto *MI = Succ.getSUnit()->getInstr();
+        if (!TII->isVMEM(*MI) || !MI->mayLoad())
           continue;
 
-        if (Cand && llvm::is_contained(Counted, Cand))
+        if (MissedAny || !VMEMLookup.size()) {
+          MissedAny = true;
+          VMEMLookup[MI] = DSWrite;
+          continue;
+        }
+
+        auto [It, Inserted] = VMEMLookup.try_emplace(MI, DSWrite);
+        if (Inserted) {
+          MissedAny = true;
+          continue;
+        }
+
+        Cand = It->second;
+        if (llvm::is_contained(Counted, Cand)) {
+          MissedAny = true;
           break;
-
-        for (auto &Succ : Pred.getSUnit()->Succs) {
-          auto *MI = Succ.getSUnit()->getInstr();
-          if (!TII->isVMEM(*MI) || !MI->mayLoad())
-            continue;
-
-          if (MissedAny || !VMEMLookup.size()) {
-            MissedAny = true;
-            VMEMLookup[MI] = *I;
-            continue;
-          }
-
-          auto [It, Inserted] = VMEMLookup.try_emplace(MI, *I);
-          if (Inserted) {
-            MissedAny = true;
-            continue;
-          }
-
-          Cand = It->second;
-          if (llvm::is_contained(Counted, Cand)) {
-            MissedAny = true;
-            break;
-          }
         }
       }
-      if (!MissedAny && Cand) {
-        DSWWithSharedVMEMCount += 2;
-        Counted.push_back(Cand);
-        Counted.push_back(*I);
-      }
+    }
+    if (!MissedAny && Cand) {
+      DSWWithSharedVMEMCount += 2;
+      Counted.push_back(Cand);
+      Counted.push_back(DSWrite);
     }
   }
 
