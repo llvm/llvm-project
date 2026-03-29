@@ -6,19 +6,17 @@ define i1 @isfinite_bf16(bfloat %x) {
 ; CHECK-LABEL: isfinite_bf16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mov w8, #32640 // =0x7f80
-; CHECK-NEXT:    and w9, w9, #0x7fff
-; CHECK-NEXT:    cmp w9, w8
-; CHECK-NEXT:    cset w0, lt
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    ubfx w8, w8, #7, #8
+; CHECK-NEXT:    cmp w8, #255
+; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-NOFP-LABEL: isfinite_bf16:
 ; CHECK-NOFP:       // %bb.0: // %entry
-; CHECK-NOFP-NEXT:    mov w8, #32640 // =0x7f80
-; CHECK-NOFP-NEXT:    and w9, w0, #0x7fff
-; CHECK-NOFP-NEXT:    cmp w9, w8
-; CHECK-NOFP-NEXT:    cset w0, lt
+; CHECK-NOFP-NEXT:    ubfx w8, w0, #7, #8
+; CHECK-NOFP-NEXT:    cmp w8, #255
+; CHECK-NOFP-NEXT:    cset w0, lo
 ; CHECK-NOFP-NEXT:    ret
 entry:
   %0 = tail call i1 @llvm.is.fpclass.bf16(bfloat %x, i32 504)  ; 0x1f8 = "finite"
@@ -29,19 +27,17 @@ define i1 @not_isfinite_bf16(bfloat %x) {
 ; CHECK-LABEL: not_isfinite_bf16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mov w8, #32639 // =0x7f7f
-; CHECK-NEXT:    and w9, w9, #0x7fff
-; CHECK-NEXT:    cmp w9, w8
-; CHECK-NEXT:    cset w0, gt
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    ubfx w8, w8, #7, #8
+; CHECK-NEXT:    cmp w8, #254
+; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-NOFP-LABEL: not_isfinite_bf16:
 ; CHECK-NOFP:       // %bb.0: // %entry
-; CHECK-NOFP-NEXT:    mov w8, #32639 // =0x7f7f
-; CHECK-NOFP-NEXT:    and w9, w0, #0x7fff
-; CHECK-NOFP-NEXT:    cmp w9, w8
-; CHECK-NOFP-NEXT:    cset w0, gt
+; CHECK-NOFP-NEXT:    ubfx w8, w0, #7, #8
+; CHECK-NOFP-NEXT:    cmp w8, #254
+; CHECK-NOFP-NEXT:    cset w0, hi
 ; CHECK-NOFP-NEXT:    ret
 entry:
   %0 = tail call i1 @llvm.is.fpclass.bf16(bfloat %x, i32 519)  ; ~0x1f8 = "~finite"
@@ -52,27 +48,25 @@ entry:
 define <4 x i1> @isfinite_v4bf16(<4 x bfloat> %x) {
 ; CHECK-LABEL: isfinite_v4bf16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #32640 // =0x7f80
-; CHECK-NEXT:    bic v0.4h, #128, lsl #8
-; CHECK-NEXT:    dup v1.4h, w8
-; CHECK-NEXT:    cmgt v0.4h, v1.4h, v0.4h
+; CHECK-NEXT:    movi d1, #0xff00ff00ff00ff00
+; CHECK-NEXT:    add v0.4h, v0.4h, v0.4h
+; CHECK-NEXT:    cmhi v0.4h, v1.4h, v0.4h
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-NOFP-LABEL: isfinite_v4bf16:
 ; CHECK-NOFP:       // %bb.0: // %entry
-; CHECK-NOFP-NEXT:    mov w8, #32640 // =0x7f80
-; CHECK-NOFP-NEXT:    and w9, w0, #0x7fff
-; CHECK-NOFP-NEXT:    cmp w9, w8
-; CHECK-NOFP-NEXT:    and w9, w1, #0x7fff
-; CHECK-NOFP-NEXT:    cset w0, lt
-; CHECK-NOFP-NEXT:    cmp w9, w8
-; CHECK-NOFP-NEXT:    and w9, w2, #0x7fff
-; CHECK-NOFP-NEXT:    cset w1, lt
-; CHECK-NOFP-NEXT:    cmp w9, w8
-; CHECK-NOFP-NEXT:    and w9, w3, #0x7fff
-; CHECK-NOFP-NEXT:    cset w2, lt
-; CHECK-NOFP-NEXT:    cmp w9, w8
-; CHECK-NOFP-NEXT:    cset w3, lt
+; CHECK-NOFP-NEXT:    ubfx w8, w0, #7, #8
+; CHECK-NOFP-NEXT:    ubfx w9, w1, #7, #8
+; CHECK-NOFP-NEXT:    cmp w8, #255
+; CHECK-NOFP-NEXT:    ubfx w8, w2, #7, #8
+; CHECK-NOFP-NEXT:    cset w0, lo
+; CHECK-NOFP-NEXT:    cmp w9, #255
+; CHECK-NOFP-NEXT:    ubfx w9, w3, #7, #8
+; CHECK-NOFP-NEXT:    cset w1, lo
+; CHECK-NOFP-NEXT:    cmp w8, #255
+; CHECK-NOFP-NEXT:    cset w2, lo
+; CHECK-NOFP-NEXT:    cmp w9, #255
+; CHECK-NOFP-NEXT:    cset w3, lo
 ; CHECK-NOFP-NEXT:    ret
 entry:
   %0 = tail call <4 x i1> @llvm.is.fpclass.v4bf16(<4 x bfloat> %x, i32 504)  ; 0x1f8 = "finite"
@@ -82,27 +76,25 @@ entry:
 define <4 x i1> @not_isfinite_v4bf16(<4 x bfloat> %x) {
 ; CHECK-LABEL: not_isfinite_v4bf16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #32640 // =0x7f80
-; CHECK-NEXT:    bic v0.4h, #128, lsl #8
-; CHECK-NEXT:    dup v1.4h, w8
-; CHECK-NEXT:    cmge v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    movi d1, #0xff00ff00ff00ff00
+; CHECK-NEXT:    add v0.4h, v0.4h, v0.4h
+; CHECK-NEXT:    cmhs v0.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-NOFP-LABEL: not_isfinite_v4bf16:
 ; CHECK-NOFP:       // %bb.0: // %entry
-; CHECK-NOFP-NEXT:    mov w8, #32639 // =0x7f7f
-; CHECK-NOFP-NEXT:    and w9, w0, #0x7fff
-; CHECK-NOFP-NEXT:    cmp w9, w8
-; CHECK-NOFP-NEXT:    and w9, w1, #0x7fff
-; CHECK-NOFP-NEXT:    cset w0, gt
-; CHECK-NOFP-NEXT:    cmp w9, w8
-; CHECK-NOFP-NEXT:    and w9, w2, #0x7fff
-; CHECK-NOFP-NEXT:    cset w1, gt
-; CHECK-NOFP-NEXT:    cmp w9, w8
-; CHECK-NOFP-NEXT:    and w9, w3, #0x7fff
-; CHECK-NOFP-NEXT:    cset w2, gt
-; CHECK-NOFP-NEXT:    cmp w9, w8
-; CHECK-NOFP-NEXT:    cset w3, gt
+; CHECK-NOFP-NEXT:    ubfx w8, w0, #7, #8
+; CHECK-NOFP-NEXT:    ubfx w9, w1, #7, #8
+; CHECK-NOFP-NEXT:    cmp w8, #254
+; CHECK-NOFP-NEXT:    ubfx w8, w2, #7, #8
+; CHECK-NOFP-NEXT:    cset w0, hi
+; CHECK-NOFP-NEXT:    cmp w9, #254
+; CHECK-NOFP-NEXT:    ubfx w9, w3, #7, #8
+; CHECK-NOFP-NEXT:    cset w1, hi
+; CHECK-NOFP-NEXT:    cmp w8, #254
+; CHECK-NOFP-NEXT:    cset w2, hi
+; CHECK-NOFP-NEXT:    cmp w9, #254
+; CHECK-NOFP-NEXT:    cset w3, hi
 ; CHECK-NOFP-NEXT:    ret
 entry:
   %0 = tail call <4 x i1> @llvm.is.fpclass.v4bf16(<4 x bfloat> %x, i32 519)  ; ~0x1f8 = "~finite"
