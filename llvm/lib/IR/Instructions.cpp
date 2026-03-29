@@ -650,15 +650,20 @@ bool CallBase::hasClobberingOperandBundles() const {
 
 std::optional<MemoryEffects> CallBase::getFloatingPointMemoryEffects() const {
   if (Intrinsic::ID IntrID = getIntrinsicID())
-    if (const BasicBlock *BB = getParent())
-      if (const Function *F = BB->getParent())
-        if (Intrinsic::isFPOperation(IntrID)) {
+    if (Intrinsic::isFPOperation(IntrID)) {
+      if (const BasicBlock *BB = getParent()) {
+        if (const Function *F = BB->getParent()) {
           if (F->hasFnAttribute(Attribute::StrictFP))
             // Floating-point operations in strictfp function always have side
             // effect at least because they can raise exceptions.
             return MemoryEffects::inaccessibleMemOnly();
           return MemoryEffects::none();
         }
+      }
+      // If the instruction is not placed in a function yet, assume strictfp
+      // behavior, because it is more restrictive.
+      return MemoryEffects::inaccessibleMemOnly();
+    }
   return std::nullopt;
 }
 

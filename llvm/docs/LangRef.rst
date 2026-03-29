@@ -4102,35 +4102,36 @@ monotonic modification order with other operations that are not marked
 Floating-Point Environment
 --------------------------
 
-The execution of an operation on floating-point values is often a more complex
-process than simply evaluating a function of its input arguments. First, it can
-depend on various parameters like rounding mode, denormal behavior, trap masks
-and so on. These are referenced to as "control modes" and are stored in
+The execution of an operation involving floating-point values is often a more
+complex process than simply evaluating a function of its input arguments. First,
+it can depend on various parameters such as rounding mode, denormal behavior,
+trap masks and so on. These are referred to as "control modes" and are stored in
 floating-point control registers. In addition, the operation may set status bits
-in a status register. Floating-point environment is a collection of registers
-that hold control modes and status bits.
+in a status register. The floating-point environment is a collection of
+registers that hold control modes and status bits.
 
-Interaction with the floating-point environment, including reading control
-modes, writing status bits and trapping, is regarded as side effects. Depending
-on how the side effects are treated, compilation occurs in one of two modes.
+Interactions with the floating-point environment, including reading control
+modes, writing status bits, and trapping, are regarded as side effects. Depending
+on how these side effects are treated, compilation occurs in one of two modes.
+The compilation mode is defined for an entire function and is determined by the
+``strictfp`` attribute.
 
-In the ``strict mode``, all side effects produced by the floating-point
-operations are taken into account. Modifications to the floating-point
-environment are allowed only in this mode.
+If a function has the ``strictfp`` attribute, all side effects produced by
+floating-point operations are taken into account. Modifications to the
+floating-point environment are allowed only in this mode. Reading status bits
+produces the expected values according to IEEE-754 semantics.
 
-In the ``unconstrained mode``, control modes are not modified and status bits
-are not observed. This allows floating-point operations to be considered free
-of side effects, which facilitates code optimizations. An important case of this
-mode is the ``default mode``, in which the control modes have default values:
-rounding mode is "round to nearest, ties to even", traps are disabled, and
-subnormals are assumed to be preserved.
+If a function does not have the ``strictfp`` attribute, floating-point side
+effects are ignored. Control modes are assumed to be untouched, and status bits
+are not observed. This allows floating-point operations to be considered free of
+side effects, which facilitates code optimizations. The control modes under
+which the function runs can be specified by function attributes, such as
+:ref:`denormal_fpenv <denormal_fpenv>`.
 
-The compilation mode is defined for an entire function and is specified by
-``strictfp`` attribute. If this attribute is set, compilation occurs in strict
-mode. The value of the floating-point environment is specified by function
-attributes (such as :ref:`denormal_fpenv <denormal_fpenv>`) and can be modified
-either by intrinsic functions like ``llvm.set_rounding`` or external functions
-like ``fesetround``.
+An important case of non-strictfp mode is the ``default mode``, in which the
+control modes are not only constant, but also have default values: the rounding
+mode is "round to nearest, ties to even", traps are disabled, and subnormals are
+assumed to be preserved.
 
 .. _floatop:
 
@@ -4138,20 +4139,18 @@ Floating-point operations
 -------------------------
 
 Whether an operation interacts with the floating-point environment depends on
-the operation itself and the attributes of its containing function.
-Operations that can exhibit such
-interaction, and which may be ignored in the unconstrained mode, are referred to
-as ``floating-point operations``. These are computational operations that
-produce floating-point or integer results, round all results according to the
-value of the floating-point environment, and might signal floating-point
-exceptions.
+the operation itself and the attributes of its containing function. Operations
+that can exhibit such interaction, and whose side effects may be ignored in
+non-strictfp functions, are referred to as ``floating-point operations``. These
+are computational operations that use control modes to modify their results
+and/or may signal floating-point exceptions.
 
 Some operations on floating-point values are not classified as floating-point
-operations. For instance, ``llvm.copysign``, ``llvm.fabs`` or
+operations. For instance, ``llvm.copysign``, ``llvm.fabs``, and
 ``llvm.is_fpclass`` do not depend on control modes and cannot raise exceptions.
-The operations like ``llvm.set_rounding`` or ``llvm.set_fpenv`` interact with
-the floating-point environment, but they are not computational and their
-interaction cannot be ignored.
+Operations like ``llvm.set_rounding`` or ``llvm.set_fpenv`` interact with the
+floating-point environment, but they are not computational and their interaction
+cannot be ignored.
 
 .. _floatnan:
 
@@ -28828,6 +28827,13 @@ round-to-nearest and that floating-point exceptions will not be monitored.
 Constrained FP intrinsics are used to support non-default rounding modes and
 accurately preserve exception behavior without compromising LLVM's ability to
 optimize FP code when the default behavior is used.
+
+If any FP operation in a function is constrained then they all must be
+constrained. This is required for correct LLVM IR. Optimizations that
+move code around can create miscompiles if mixing of constrained and normal
+operations is done. The correct way to mix constrained and less constrained
+operations is to use the rounding mode and exception handling metadata to
+mark constrained intrinsics as having LLVM's default behavior.
 
 Each of these intrinsics corresponds to a normal floating-point operation. The
 data arguments and the return value are the same as the corresponding FP
