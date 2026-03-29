@@ -21,52 +21,52 @@
 
 // Describes a floating-point operation that is lowered to DAG nodes STRICT_*
 // in strictfp functions.
-#ifndef LEGACY_DAG
-#define LEGACY_DAG(N,R,D) FUNCTION(N,R,D)
+#ifndef STRICT_NODE
+#define STRICT_NODE(N,R,D) FUNCTION(N,R,D)
 #endif
 
 // Describes a floating-point operation that is lowered to DAG nodes STRICT_*
 // in strictfp functions, and requires special expansion in the DAG builder.
-#ifndef LEGACY_EXP
-#define LEGACY_EXP(N,R,D) FUNCTION(N,R,D)
+#ifndef SPECIAL_DAG
+#define SPECIAL_DAG(N,R,D) FUNCTION(N,R,D)
 #endif
 
-LEGACY_DAG(nearbyint,      1, FNEARBYINT)
-LEGACY_DAG(trunc,          0, FTRUNC)
-LEGACY_DAG(ceil,           0, FCEIL)
-LEGACY_DAG(floor,          0, FFLOOR)
-LEGACY_DAG(round,          0, FROUND)
-LEGACY_DAG(roundeven,      0, FROUNDEVEN)
-LEGACY_DAG(rint,           1, FRINT)
-LEGACY_DAG(lround,         0, LROUND)
-LEGACY_DAG(llround,        0, LLROUND)
-LEGACY_DAG(lrint,          1, LRINT)
-LEGACY_DAG(llrint,         1, LLRINT)
-LEGACY_DAG(minnum,         0, FMINNUM)
-LEGACY_DAG(maxnum,         0, FMAXNUM)
-LEGACY_DAG(minimum,        0, FMINIMUM)
-LEGACY_DAG(maximum,        0, FMAXIMUM)
-LEGACY_DAG(sqrt,           1, FSQRT)
-LEGACY_EXP(exp,            1, FEXP)
-LEGACY_EXP(exp2,           1, FEXP2)
-LEGACY_EXP(log,            1, FLOG)
-LEGACY_EXP(log2,           1, FLOG2)
-LEGACY_EXP(log10,          1, FLOG10)
-LEGACY_EXP(pow,            1, FPOW)
-LEGACY_EXP(powi,           1, FPOWI)
-LEGACY_DAG(sin,            1, FSIN)
-LEGACY_DAG(cos,            1, FCOS)
-LEGACY_DAG(tan,            1, FTAN)
-LEGACY_DAG(sinh,           1, FSINH)
-LEGACY_DAG(cosh,           1, FCOSH)
-LEGACY_DAG(tanh,           1, FTANH)
-LEGACY_DAG(asin,           1, FASIN)
-LEGACY_DAG(acos,           1, FACOS)
-LEGACY_DAG(atan,           1, FATAN)
-LEGACY_DAG(atan2,          1, FATAN2)
-LEGACY_DAG(ldexp,          1, FLDEXP)
-LEGACY_DAG(fma,            1, FMA)
+STRICT_NODE(nearbyint,      1, FNEARBYINT)
+STRICT_NODE(trunc,          0, FTRUNC)
+STRICT_NODE(ceil,           0, FCEIL)
+STRICT_NODE(floor,          0, FFLOOR)
+STRICT_NODE(round,          0, FROUND)
+STRICT_NODE(roundeven,      0, FROUNDEVEN)
+STRICT_NODE(rint,           1, FRINT)
+STRICT_NODE(lround,         0, LROUND)
+STRICT_NODE(llround,        0, LLROUND)
+STRICT_NODE(lrint,          1, LRINT)
+STRICT_NODE(llrint,         1, LLRINT)
+STRICT_NODE(minnum,         0, FMINNUM)
+STRICT_NODE(maxnum,         0, FMAXNUM)
+STRICT_NODE(minimum,        0, FMINIMUM)
+STRICT_NODE(maximum,        0, FMAXIMUM)
+STRICT_NODE(sqrt,           1, FSQRT)
+SPECIAL_DAG(exp,            1, FEXP)
+SPECIAL_DAG(exp2,           1, FEXP2)
+SPECIAL_DAG(log,            1, FLOG)
+SPECIAL_DAG(log2,           1, FLOG2)
+SPECIAL_DAG(log10,          1, FLOG10)
+SPECIAL_DAG(pow,            1, FPOW)
+SPECIAL_DAG(powi,           1, FPOWI)
+STRICT_NODE(sin,            1, FSIN)
+STRICT_NODE(cos,            1, FCOS)
+STRICT_NODE(tan,            1, FTAN)
+STRICT_NODE(sinh,           1, FSINH)
+STRICT_NODE(cosh,           1, FCOSH)
+STRICT_NODE(tanh,           1, FTANH)
+STRICT_NODE(asin,           1, FASIN)
+STRICT_NODE(acos,           1, FACOS)
+STRICT_NODE(atan,           1, FATAN)
+STRICT_NODE(atan2,          1, FATAN2)
+STRICT_NODE(ldexp,          1, FLDEXP)
+STRICT_NODE(fma,            1, FMA)
 
 #undef FUNCTION
-#undef LEGACY_DAG
-#undef LEGACY_EXP
+#undef STRICT_NODE
+#undef SPECIAL_BUILD

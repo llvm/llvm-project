@@ -260,7 +260,7 @@ public:
   /// getIntrinsicID() returns Intrinsic::not_intrinsic.
   bool isConstrainedFPIntrinsic() const;
 
-  /// Returns true if the function is a floating-point operations.
+  /// Returns true if the function is a floating-point operation.
   bool isFPOperation() const;
 
   /// Update internal caches that depend on the function name (such as the

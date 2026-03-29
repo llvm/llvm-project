@@ -187,38 +187,6 @@ IRBuilderBase::createCallHelper(Function *Callee, ArrayRef<Value *> Ops,
   return CI;
 }
 
-CallInst *IRBuilderBase::CreateCall(FunctionType *FTy, Value *Callee,
-                                    ArrayRef<Value *> Args,
-                                    ArrayRef<OperandBundleDef> OpBundles,
-                                    const Twine &Name, MDNode *FPMathTag) {
-  bool NeedUpdateMemoryEffects = false;
-  if (const auto *Func = dyn_cast<Function>(Callee))
-    if (Intrinsic::ID ID = Func->getIntrinsicID())
-      if (Intrinsic::isFPOperation(ID)) {
-        if (IsFPConstrained) {
-          // Due to potential setting FP exception bits, in modes other than
-          // the default, the memory effects must include read/write access
-          // to FPE.
-          MemoryEffects FME = Func->getMemoryEffects();
-          NeedUpdateMemoryEffects = !FME.doesAccessInaccessibleMem();
-        }
-      }
-
-  // If the call accesses FPE, update memory effects accordingly.
-  CallInst *CI = CallInst::Create(FTy, Callee, Args, OpBundles);
-  if (NeedUpdateMemoryEffects) {
-    MemoryEffects ME = MemoryEffects::inaccessibleMemOnly();
-    auto A = Attribute::getWithMemoryEffects(getContext(), ME);
-    CI->addFnAttr(A);
-  }
-
-  if (IsFPConstrained)
-    setConstrainedFPCallAttr(CI);
-  if (isa<FPMathOperator>(CI))
-    setFPAttrs(CI, FPMathTag, FMF);
-  return Insert(CI, Name);
-}
-
 static Value *CreateVScaleMultiple(IRBuilderBase &B, Type *Ty, uint64_t Scale) {
   Value *VScale = B.CreateVScale(Ty);
   if (Scale == 1)
