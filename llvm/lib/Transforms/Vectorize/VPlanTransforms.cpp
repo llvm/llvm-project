@@ -5702,25 +5702,27 @@ static VPWidenIntOrFpInductionRecipe *getExpressionIV(VPValue *V) {
   if (!BinOp || !Instruction::isBinaryOp(BinOp->getOpcode()))
     return nullptr;
 
-  VPValue *Op0 = BinOp->getOperand(0);
-  VPValue *Op1 = BinOp->getOperand(1);
-  if (!isa<VPWidenIntOrFpInductionRecipe>(Op0))
-    std::swap(Op0, Op1);
+  VPValue *WidenIVCandidate = BinOp->getOperand(0);
+  VPValue *InvariantCandidate = BinOp->getOperand(1);
+  if (!isa<VPWidenIntOrFpInductionRecipe>(WidenIVCandidate))
+    std::swap(WidenIVCandidate, InvariantCandidate);
 
-  if (!Op1->isDefinedOutsideLoopRegions())
+  if (!InvariantCandidate->isDefinedOutsideLoopRegions())
     return nullptr;
 
-  return dyn_cast<VPWidenIntOrFpInductionRecipe>(Op0);
+  return dyn_cast<VPWidenIntOrFpInductionRecipe>(WidenIVCandidate);
 }
 
-/// Create a scalar version of the binary op \p V and sink before \p InsertPt,
-/// replacing \p WidenIV with \p ScalarIV.
-static VPValue *sinkBinOpToMiddleBlock(VPWidenRecipe *BinOp, VPValue *ScalarIV,
-                                       VPWidenIntOrFpInductionRecipe *WidenIV) {
+/// Create a scalar version of \p BinOp and place it after \p ScalarIV's
+/// defining recipe, replacing \p WidenIV with \p ScalarIV.
+static VPValue *cloneBinOpForScalarIV(VPWidenRecipe *BinOp, VPValue *ScalarIV,
+                                      VPWidenIntOrFpInductionRecipe *WidenIV) {
+  assert(Instruction::isBinaryOp(BinOp->getOpcode()) &&
+         BinOp->getNumOperands() == 2 && "BinOp must have 2 operands");
   auto *ClonedOp = BinOp->clone();
-  if (ClonedOp->getOperand(0) == WidenIV)
+  if (ClonedOp->getOperand(0) == WidenIV) {
     ClonedOp->setOperand(0, ScalarIV);
-  else {
+  } else {
     assert(ClonedOp->getOperand(1) == WidenIV && "one operand must be WideIV");
     ClonedOp->setOperand(1, ScalarIV);
   }
@@ -5734,19 +5736,23 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
   ScalarEvolution &SE = *PSE.getSE();
   VPRegionBlock *VectorLoopRegion = Plan.getVectorLoopRegion();
 
-  // Helper lambda to check if the IV range excludes the sentinel value.
-  auto CheckSentinel = [&SE](const SCEV *IVSCEV, bool UseMax,
-                             bool Signed) -> std::optional<APInt> {
+  // Helper lambda to check if the IV range excludes the sentinel value. Try
+  // signed first, then unsigned.
+  auto CheckSentinel =
+      [&SE](const SCEV *IVSCEV,
+            bool UseMax) -> std::optional<std::pair<APInt, bool>> {
     unsigned BW = IVSCEV->getType()->getScalarSizeInBits();
-    APInt Sentinel =
-        UseMax
-            ? (Signed ? APInt::getSignedMinValue(BW) : APInt::getMinValue(BW))
-            : (Signed ? APInt::getSignedMaxValue(BW) : APInt::getMaxValue(BW));
+    for (bool Signed : {true, false}) {
+      APInt Sentinel = UseMax ? (Signed ? APInt::getSignedMinValue(BW)
+                                        : APInt::getMinValue(BW))
+                              : (Signed ? APInt::getSignedMaxValue(BW)
+                                        : APInt::getMaxValue(BW));
 
-    ConstantRange IVRange =
-        Signed ? SE.getSignedRange(IVSCEV) : SE.getUnsignedRange(IVSCEV);
-    if (!IVRange.contains(Sentinel))
-      return Sentinel;
+      ConstantRange IVRange =
+          Signed ? SE.getSignedRange(IVSCEV) : SE.getUnsignedRange(IVSCEV);
+      if (!IVRange.contains(Sentinel))
+        return std::make_pair(Sentinel, Signed);
+    }
     return std::nullopt;
   };
 
@@ -5765,66 +5771,67 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
     // If there's a header mask, the backedge select will not be the find-last
     // select.
     VPValue *BackedgeVal = PhiR->getBackedgeValue();
-    VPValue *CondSelect = BackedgeVal;
-    if (HeaderMask &&
-        !match(BackedgeVal, m_Select(m_Specific(HeaderMask),
-                                     m_VPValue(CondSelect), m_Specific(PhiR))))
+    VPValue *FindLastSelect = BackedgeVal;
+    if (HeaderMask && !match(BackedgeVal, m_Select(m_Specific(HeaderMask),
+                                                   m_VPValue(FindLastSelect),
+                                                   m_Specific(PhiR))))
       llvm_unreachable("expected header mask select");
 
-    // Get the IV from the conditional select of the reduction phi.
-    // The conditional select should be a select between the phi and the IV.
-    VPValue *Cond, *TrueVal, *FalseVal;
-    if (!match(CondSelect, m_Select(m_VPValue(Cond), m_VPValue(TrueVal),
-                                    m_VPValue(FalseVal))))
+    // The conditional select of the reduction phi should be a select between
+    // the phi and an IV-based expression. Get that expression.
+    VPValue *Cond, *FindLastExpression;
+    if (!match(FindLastSelect, m_Select(m_VPValue(Cond), m_Specific(PhiR),
+                                        m_VPValue(FindLastExpression))) &&
+        !match(FindLastSelect,
+               m_Select(m_VPValue(Cond), m_VPValue(FindLastExpression),
+                        m_Specific(PhiR))))
       continue;
 
-    // The non-phi operand of the select is the IV or an expression of IV.
-    assert(is_contained(CondSelect->getDefiningRecipe()->operands(), PhiR));
-    VPValue *ExprOfIV = TrueVal == PhiR ? FalseVal : TrueVal;
-
-    // Check if IV is a simple expression of a widened IV. If so, we can track
-    // the underlying IV and sink the expression.
-    auto *ExpressionIV = getExpressionIV(ExprOfIV);
+    // Check if FindLastExpression is a simple expression of a widened IV. If
+    // so, we can track the underlying IV and instead sink the expression.
+    auto *SinkExpressionIV = getExpressionIV(FindLastExpression);
     const SCEV *IVSCEV = vputils::getSCEVExprForVPValue(
-        ExpressionIV ? ExpressionIV : ExprOfIV, PSE, &L);
+        SinkExpressionIV ? SinkExpressionIV : FindLastExpression, PSE, &L);
     const SCEV *Step;
-    if (!match(IVSCEV, m_scev_AffineAddRec(m_SCEV(), m_SCEV(Step))))
+    if (!match(IVSCEV, m_scev_AffineAddRec(m_SCEV(), m_SCEV(Step)))) {
+      assert(!match(vputils::getSCEVExprForVPValue(FindLastExpression, PSE, &L),
+                    m_scev_AffineAddRec(m_SCEV(), m_SCEV())) &&
+             "SinkExpressionIV not being an AddRec must imply "
+             "FindLastExpression not being an AddRec.");
       continue;
+    }
 
     // Determine direction from SCEV step.
     if (!SE.isKnownNonZero(Step))
       continue;
 
-    bool UseMax;
+    // Positive step means we need UMax/SMax to find the last IV value, and
+    // UMin/SMin otherwise.
+    bool UseMax = SE.isKnownPositive(Step);
     bool UseSigned;
     std::optional<APInt> SentinelVal;
-    auto TryToGetSentinel = [&](const SCEV *IVSCEV, const SCEV *Step) {
-      // Positive step means we need UMax/SMax to find the last IV value, and
-      // UMin/SMin otherwise.
-      UseMax = SE.isKnownPositive(Step);
-      UseSigned = true;
-      SentinelVal = CheckSentinel(IVSCEV, UseMax, /*IsSigned=*/true);
-      if (!SentinelVal) {
-        SentinelVal = CheckSentinel(IVSCEV, UseMax, /*IsSigned=*/false);
-        UseSigned = false;
-      }
-    };
+    if (auto Sentinel = CheckSentinel(IVSCEV, UseMax)) {
+      SentinelVal = Sentinel->first;
+      UseSigned = Sentinel->second;
+    }
 
-    // First, check if we can vectorize with sentinel value with ExpressionIV if
-    // available and ExprOfIV otherwise.
-    TryToGetSentinel(IVSCEV, Step);
-    if (!SentinelVal && ExpressionIV) {
-      // If we weren't able to use a sentinel with ExpressionIV, try if it is
-      // possible with ExprOfIV.
-      const SCEV *ExprOfIVSCEV =
-          vputils::getSCEVExprForVPValue(ExprOfIV, PSE, &L);
-      if (match(ExprOfIVSCEV, m_scev_AffineAddRec(m_SCEV(), m_SCEV(Step)))) {
-        TryToGetSentinel(ExprOfIVSCEV, Step);
-        if (SentinelVal) {
+    // Sinking the expression may enable or disable a sentinel (e.g., if the
+    // expression is a multiply or divide by large constant, respectively).
+    // Avoid sinking if it disables a sentinel.
+    if (!SentinelVal && SinkExpressionIV) {
+      // If we weren't able to use a sentinel with SinkExpressionIV, try if it
+      // is possible with FindLastExpression.
+      const SCEV *FindLastExpressionSCEV =
+          vputils::getSCEVExprForVPValue(FindLastExpression, PSE, &L);
+      if (match(FindLastExpressionSCEV,
+                m_scev_AffineAddRec(m_SCEV(), m_SCEV(Step)))) {
+        if (auto Sentinel = CheckSentinel(FindLastExpressionSCEV, UseMax)) {
+          SentinelVal = Sentinel->first;
+          UseSigned = Sentinel->second;
           // We can use the sentinel value with the original expression, reset
-          // IVSCEV and clear ExpressionIV.
-          IVSCEV = ExprOfIVSCEV;
-          ExpressionIV = nullptr;
+          // IVSCEV and clear SinkExpressionIV.
+          IVSCEV = FindLastExpressionSCEV;
+          SinkExpressionIV = nullptr;
         }
       }
     }
@@ -5846,16 +5853,19 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
         BackedgeVal,
         match_fn(m_VPInstruction<VPInstruction::ComputeReductionResult>())));
 
-    // If IV is an expression, create a new select that tracks the underlying
-    // IV directly and update the backedge value.
-    if (ExpressionIV) {
-      auto *SelectR = CondSelect->getDefiningRecipe();
-      VPBuilder LoopBuilder(SelectR);
-      VPValue *SelectCond = Cond;
-      if (TrueVal == PhiR)
-        SelectCond = LoopBuilder.createNot(Cond);
-      CondSelect = LoopBuilder.createSelect(SelectCond, ExpressionIV, PhiR,
-                                            SelectR->getDebugLoc());
+    // If IV is an expression to sink, create a new select that tracks the
+    // underlying IV directly and update the backedge value.
+    auto *OrigSelectR = FindLastSelect->getDefiningRecipe();
+    if (SinkExpressionIV) {
+      VPBuilder LoopBuilder(OrigSelectR);
+      auto DL = OrigSelectR->getDebugLoc();
+      VPValue *Cond = OrigSelectR->getOperand(0);
+      if (OrigSelectR->getOperand(1) == PhiR)
+        FindLastSelect =
+            LoopBuilder.createSelect(Cond, PhiR, SinkExpressionIV, DL);
+      else
+        FindLastSelect =
+            LoopBuilder.createSelect(Cond, SinkExpressionIV, PhiR, DL);
     }
 
     // Create the reduction result in the middle block using sentinel directly.
@@ -5867,13 +5877,13 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
     DebugLoc ExitDL = RdxResult->getDebugLoc();
     VPBuilder MiddleBuilder(RdxResult);
     VPValue *ReducedIV = MiddleBuilder.createNaryOp(
-        VPInstruction::ComputeReductionResult, CondSelect, Flags, ExitDL);
+        VPInstruction::ComputeReductionResult, FindLastSelect, Flags, ExitDL);
 
     // If IV was an expression, sink the expression to the middle block.
-    VPValue *LoopExitingVal = ReducedIV;
-    if (ExpressionIV)
-      LoopExitingVal = sinkBinOpToMiddleBlock(cast<VPWidenRecipe>(ExprOfIV),
-                                              ReducedIV, ExpressionIV);
+    VPValue *VectorRegionExitingVal = ReducedIV;
+    if (SinkExpressionIV)
+      VectorRegionExitingVal = cloneBinOpForScalarIV(
+          cast<VPWidenRecipe>(FindLastExpression), ReducedIV, SinkExpressionIV);
 
     VPValue *NewRdxResult;
     VPValue *StartVPV = PhiR->getStartValue();
@@ -5883,8 +5893,8 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
       VPValue *Sentinel = Plan.getConstantInt(*SentinelVal);
       auto *Cmp = MiddleBuilder.createICmp(CmpInst::ICMP_NE, ReducedIV,
                                            Sentinel, ExitDL);
-      NewRdxResult =
-          MiddleBuilder.createSelect(Cmp, LoopExitingVal, StartVPV, ExitDL);
+      NewRdxResult = MiddleBuilder.createSelect(Cmp, VectorRegionExitingVal,
+                                                StartVPV, ExitDL);
       StartVPV = Sentinel;
     } else {
       // Introduce a boolean AnyOf reduction to track if the condition was ever
@@ -5897,14 +5907,14 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
 
       VPBuilder LoopBuilder(BackedgeVal->getDefiningRecipe());
       VPValue *AnyOfCond = Cond;
-      if (TrueVal == PhiR)
+      if (OrigSelectR->getOperand(1) == PhiR)
         AnyOfCond = LoopBuilder.createNot(Cond);
       VPValue *OrVal = LoopBuilder.createOr(AnyOfPhi, AnyOfCond);
       AnyOfPhi->setOperand(1, OrVal);
 
       NewRdxResult = MiddleBuilder.createNaryOp(
-          VPInstruction::ComputeAnyOfResult, {StartVPV, LoopExitingVal, OrVal},
-          {}, ExitDL);
+          VPInstruction::ComputeAnyOfResult,
+          {StartVPV, VectorRegionExitingVal, OrVal}, {}, ExitDL);
 
       // Initialize the IV reduction phi with the neutral element, not the
       // original start value, to ensure correct min/max reduction results.
@@ -5916,7 +5926,8 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
 
     auto *NewPhiR = new VPReductionPHIRecipe(
         cast<PHINode>(PhiR->getUnderlyingInstr()), RecurKind::FindIV, *StartVPV,
-        *CondSelect, RdxUnordered{1}, {}, PhiR->hasUsesOutsideReductionChain());
+        *FindLastSelect, RdxUnordered{1}, {},
+        PhiR->hasUsesOutsideReductionChain());
     NewPhiR->insertBefore(PhiR);
     PhiR->replaceAllUsesWith(NewPhiR);
     PhiR->eraseFromParent();
